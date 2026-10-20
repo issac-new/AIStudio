@@ -1,5 +1,5 @@
 <!-- overlay/custom/client/loop/orchestrator/components/EditorCanvas.vue -->
-<!-- P4 T6 —— 编辑画布（vue-flow 编辑模式，用法对齐 RunGraphCanvas：零新依赖）：
+<!-- P4 T6 —— 编辑画布（vue-flow 编辑模式，用法对齐 执行图画布：零新依赖）：
      面板拖入/点击落节点（父层 addToSpec 管唯一 id 与落位）、点选节点（右侧
      配置面板联动，Ctrl/Cmd+点击多选容器成员）、Handle 拖拽连线（父层 addEdge
      管回边自动 guard）、拖动节点落位（node-drag-stop 上抛坐标）。

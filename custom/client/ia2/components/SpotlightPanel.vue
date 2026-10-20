@@ -246,7 +246,7 @@ function openFullSearch(): void {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-  z-index: 1000;
+  z-index: var(--ia-z-modal);
   overflow: hidden;
 }
 

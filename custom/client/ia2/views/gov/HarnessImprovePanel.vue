@@ -548,7 +548,7 @@ onMounted(() => void refresh())
                       <code v-for="f in v.files.slice(0, 4)" :key="f.path">{{ f.path }}</code>
                       <span v-if="v.files.length > 4" class="hi__meta">+{{ v.files.length - 4 }}</span>
                     </div>
-                    <div v-if="v.deletions?.length" class="hi__del">-{{ v.deletions.length }} 删除</div>
+                    <div v-if="v.deletions?.length" class="hi__del">-{{ v.deletions.length }} {{ L.deletionsCount }}</div>
                   </td>
                   <td><span class="hi__add">+{{ v.diffSummary.added }}</span> / <span class="hi__del">-{{ v.diffSummary.removed }}</span></td>
                   <td>
@@ -587,7 +587,7 @@ onMounted(() => void refresh())
             </ul>
           </div>
 
-          <details class="hi__details" data-testid="`hi-actions-${p.id}`">
+          <details class="hi__details" :data-testid="`hi-actions-${p.id}`">
             <summary>{{ L.submit }} / {{ L.approve }} / {{ L.probes }} / {{ L.compose }} / {{ L.promote }}</summary>
             <div class="hi__actions">
               <div v-if="!p.baseline" class="hi__row">

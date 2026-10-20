@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import IaBreadcrumb from '@/custom/ia2/components/IaBreadcrumb.vue'
-import TabIntroBanner from '@/custom/ia2/components/TabIntroBanner.vue'
 // 交付案例面板（M2，分布式设计 §7 协作场景）：案例列表 → 阶段条 P1-P6 → 门禁灯
 // G1-G6 → 证据抽屉（gate 事件详情：evidence/decidedBy/reason/at）。数据来自
 // delivery-cases store（index 发现 + case state + timeline 事件投影）。
@@ -13,6 +11,7 @@ import { NButton, NCard, NEmpty, NSpin, NTag } from 'naive-ui'
 import { useDeliveryCasesStore, type DeliveryCaseView, type GateLight } from '../stores/delivery-cases'
 import { useQGateBridgeStore } from '../stores/qgate-bridge'
 import { fetchQgateVerdicts } from '@/custom/governance/api/governance'
+import { humanDateTime, humanEnum } from '@/custom/ia2/format'
 
 // v1.31.1 吸收轮：每案例"同步 QGate 判定"动作——governance qgate-verdicts →
 // qgate-bridge 逐门 delivery.gate 事件（机器执法判定流闭环，此前桥无生产调用方）。
@@ -85,7 +84,7 @@ function gateColor(gate: string, c: DeliveryCaseView): string {
   if (!hit) return 'var(--border-color)'
   return hit.verdict === 'pass' ? 'var(--success)' : hit.verdict === 'conditional' ? 'var(--ia-stale)' : 'var(--error)'
 }
-function fmtAt(at: number): string { return new Date(at).toLocaleString() }
+function fmtAt(at: number): string { return humanDateTime(at) }
 /** U8 降噪（推演审计二轮）：matrix 全形 ID（!room:host / @user:host）→ 短形展示，悬停见全形。 */
 function shortMatrixId(id: string | null | undefined): string {
   if (!id) return ''
@@ -99,8 +98,6 @@ function openRoom(roomId: string) {
 
 <template>
   <div class="delivery-cases">
-  <IaBreadcrumb />
-  <TabIntroBanner tab="cases" />
     <div class="head">
       <h2>{{ $t('ia2.delivery.title') }}</h2>
       <div class="head__actions">
@@ -122,9 +119,9 @@ function openRoom(roomId: string) {
         <input v-model="form.title" :placeholder="$t('ia2.delivery.formTitle')" class="in" />
         <input v-model="form.repoUrl" :placeholder="$t('ia2.delivery.formRepo')" class="in" />
         <select v-model="form.tier" class="in">
-          <option value="lite">lite</option>
-          <option value="standard">standard</option>
-          <option value="compliance">compliance</option>
+          <option value="lite">轻量</option>
+          <option value="standard">标准</option>
+          <option value="compliance">合规</option>
         </select>
         <NButton size="small" type="primary" :loading="launching" :disabled="!form.title.trim() || !form.repoUrl.trim()" @click="submitCase">
           {{ $t('ia2.delivery.submit') }}
@@ -154,7 +151,7 @@ function openRoom(roomId: string) {
       >
         <template #header-extra>
           <NTag v-if="c.completed" size="small" type="success" :bordered="false">{{ $t('ia2.delivery.completed') }}</NTag>
-          <NTag size="small" :bordered="false">{{ c.tier }}</NTag>
+          <NTag size="small" :bordered="false">{{ humanEnum(c.tier) }}</NTag>
           <NTag size="small" type="info" :bordered="false">{{ c.caseId }}</NTag>
           <NButton
             size="tiny"
@@ -192,7 +189,7 @@ function openRoom(roomId: string) {
     <NCard v-if="drawer" size="small" class="drawer" :title="drawer.gate">
       <template #header-extra>
         <NTag size="small" :type="drawer.verdict === 'pass' ? 'success' : drawer.verdict === 'conditional' ? 'warning' : 'error'">
-          {{ drawer.verdict }}
+          {{ humanEnum(drawer.verdict) }}
         </NTag>
       </template>
       <div class="evid">{{ drawer.evidence }}</div>

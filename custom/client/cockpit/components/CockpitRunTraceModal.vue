@@ -404,7 +404,7 @@ const hotspotKind = computed<Array<{ key: string; totalMs: number; count: number
 </template>
 <style scoped lang="scss">
 /* 内联定位：与协作看板一致，从注意力条下方(top:84px)展开 */
-.run-trace-modal { position: fixed; top: 84px; right: 0; bottom: 0; left: 0; z-index: 100; display: flex; flex-direction: column; background: var(--bg-primary); color: var(--text-primary); border-top: 1px solid var(--border-color); box-shadow: 0 -4px 16px rgba(0,0,0,0.08); }
+.run-trace-modal { position: fixed; top: 84px; right: 0; bottom: 0; left: 0; z-index: var(--ia-z-modal, 1000); display: flex; flex-direction: column; background: var(--bg-primary); color: var(--text-primary); border-top: 1px solid var(--border-color); box-shadow: 0 -4px 16px rgba(0,0,0,0.08); }
 
 /* ── 会话选择器 ── */
 .run-trace-session-picker { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }

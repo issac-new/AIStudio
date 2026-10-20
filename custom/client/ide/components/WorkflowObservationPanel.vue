@@ -2,7 +2,7 @@
 // WorkflowObservationPanel — zcode 工作流观测共享面板（循环×工作流融合 Phase 1，2026-10-01）。
 // 自 IdeWorkflowPane 抽出（IDE 侧栏 ⟐ 页签变薄壳引用本组件），双消费方：
 //   IDE 侧栏（ide/views/IdeWorkflowPane.vue）与运行中心「工作流」页签
-//   （loop/runcenter/views/RunCenterView.vue）。
+//   （运行中心整页已退役）。
 // 两段式：
 //   ① 会话运行行（数据源=投影 store workflowSessions——sessions-index conflated
 //      推送，实时；不按工作区过滤，任意挂载点可见；点行展开该 run 的事件流，

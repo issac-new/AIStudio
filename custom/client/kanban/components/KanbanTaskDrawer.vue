@@ -1899,9 +1899,9 @@ function statusDotClass(status: string): string {
 }
 
 .comment-input-sticky {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  width: 720px;
+  width: 100%;
   background: $bg-primary;
   border-top: 1px solid $border-light;
   padding: 10px 16px;

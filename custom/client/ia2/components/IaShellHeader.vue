@@ -366,12 +366,12 @@ function onPanelJumpTask(taskId: string): void {
 
 /* 态势内联面板浮层：贴页头下方、右锚定同列触发 chips（任务/在线现居页头右侧；
    left:12px 系旧版 chips 左置时的遗留，与现行触发点错位——2026-10-03 回归走查修正） */
-.cockpit-top__sitpanel { position: absolute; top: 100%; right: 12px; width: min(760px, calc(100vw - 48px)); z-index: 999; }
+.cockpit-top__sitpanel { position: absolute; top: 100%; right: 12px; width: min(760px, calc(100vw - 48px)); z-index: var(--ia-z-header-panel); }
 .cockpit-top__sitpanel :deep(.sitp) { margin: 6px 0 0; box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
-.cockpit-top__mask { position: fixed; inset: 0; z-index: 998; }
+.cockpit-top__mask { position: fixed; inset: 0; z-index: var(--ia-z-header-panel); }
 
 /* 探测结果下拉面板 */
-.cockpit-probe { position: absolute; top: 100%; right: 16px; min-width: 320px; max-width: 420px; max-height: 400px; overflow: auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 999; }
+.cockpit-probe { position: absolute; top: 100%; right: 16px; min-width: 320px; max-width: 420px; max-height: 400px; overflow: auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: var(--ia-z-header-panel); }
 .cockpit-probe__head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-color); font-size: 12px; font-weight: 600; color: var(--text-primary); }
 .cockpit-probe__close { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 0 4px; &:hover { color: var(--text-primary); } }
 .cockpit-probe__body { padding: 8px 14px 12px; }
@@ -385,5 +385,5 @@ function onPanelJumpTask(taskId: string): void {
 .cockpit-probe__section { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); }
 .cockpit-probe__section-title { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
 .cockpit-probe__footer { display: flex; gap: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); font-size: 10px; color: var(--text-muted); font-family: monospace; }
-.cockpit-probe__mask { position: fixed; inset: 0; z-index: 998; }
+.cockpit-probe__mask { position: fixed; inset: 0; z-index: var(--ia-z-header-panel); }
 </style>

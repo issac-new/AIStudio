@@ -68,8 +68,6 @@ async function saveBinding(r: Row): Promise<void> {
 
 <template>
   <div class="agw" data-testid="agents-page">
-  <IaBreadcrumb />
-  <TabIntroBanner tab="agents" />
     <header class="agw__head">
       <h1 class="agw__title">智能体管理</h1>
       <button type="button" class="agw__refresh" data-testid="agw-refresh" @click="load">刷新</button>

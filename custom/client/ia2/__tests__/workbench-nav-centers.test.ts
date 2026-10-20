@@ -31,8 +31,8 @@ describe('centerForPath 时序阶段高亮判定（D13：六阶段）', () => {
     expect(centerForPath('/app/board')).toBe('stage4') // /app/* 子路径归④
     // 2026-10-17 层级批：旧映射 sim→②需求/gov→③分析设计 与页面语义无关，
     // 顶栏高亮成假位置信号；按工具舱归属改判（与 routes.areaForPath 同步）
-    expect(centerForPath('/app/sim')).toBe('stage4')
-    expect(centerForPath('/app/sim/supervision')).toBe('stage4')
+    expect(centerForPath('/app/sim')).toBeNull()
+    expect(centerForPath('/app/sim/supervision')).toBeNull()
     expect(centerForPath('/app/gov')).toBe('stage6')
     expect(centerForPath('/app/gov/docs')).toBe('stage6')
     expect(centerForPath('/other')).toBe(null)
@@ -43,15 +43,15 @@ describe('activeStageForRoute — 来路阶段优先（2026-10-17 减负批）',
   it('query.from 合法时覆盖路径归属（同页跨阶段复用不再二选一）', () => {
     expect(activeStageForRoute('/app/gov/org-assets', '1')).toBe('stage1')
     expect(activeStageForRoute('/app/accounts', '1')).toBe('stage1')
-    expect(activeStageForRoute('/app/sim/ops', '1')).toBe('stage1')
+    expect(activeStageForRoute('/app/sim/ops', '1')).toBeNull()
     expect(activeStageForRoute('/app/gov/docs', '2')).toBe('stage2')
   })
 
   it('无/非法 from 回退路径归属；数组形式取首值', () => {
     expect(activeStageForRoute('/app/gov/docs', undefined)).toBe('stage6')
-    expect(activeStageForRoute('/app/sim', '9')).toBe('stage4')
-    expect(activeStageForRoute('/app/sim', 'abc')).toBe('stage4')
-    expect(activeStageForRoute('/app/sim', ['3'])).toBe('stage3')
+    expect(activeStageForRoute('/app/sim', '9')).toBeNull()
+    expect(activeStageForRoute('/app/sim', 'abc')).toBeNull()
+    expect(activeStageForRoute('/app/sim', ['3'])).toBeNull()
     expect(stageKeyFromQuery('0')).toBe(null)
   })
 
@@ -66,12 +66,12 @@ describe('activeStageForRoute — 来路阶段优先（2026-10-17 减负批）',
 describe('activeStagesForRoute — 页签级归属（2026-10-17 第二阶段）', () => {
   it('来路 from 优先于归属表', () => {
     expect(activeStagesForRoute('ia2.govDocs', '/app/gov/docs', '1')).toEqual(['stage1'])
-    expect(activeStagesForRoute('ia2.simSupervision', '/app/sim/supervision', '2')).toEqual(['stage2'])
+    expect(activeStagesForRoute('ia2.simSupervision', '/app/sim/supervision', '2')).toEqual([])
   })
 
   it('无来路按表：单归属/多归属/全程工具', () => {
     expect(activeStagesForRoute('ia2.govOrgAssets', '/app/gov/org-assets', undefined)).toEqual(['stage1'])
-    expect(activeStagesForRoute('ia2.simSupervision', '/app/sim/supervision', undefined)).toEqual(['stage3', 'stage4'])
+    expect(activeStagesForRoute('ia2.simSupervision', '/app/sim/supervision', undefined)).toEqual([])
     expect(activeStagesForRoute('ia2.govDocs', '/app/gov/docs', undefined)).toEqual(['stage2', 'stage5'])
     expect(activeStagesForRoute('ia2.inbox', '/app/inbox', undefined)).toEqual(['stage4', 'stage5'])
     // 全程工具：表内登记为空 → 不高亮
@@ -128,28 +128,28 @@ describe('13 键拆分注册表（三中心模块内事实源）', () => {
     expect(TASKS_TABS_TEXT.en.tabBoard).toBe('Board')
   })
 
-  it('i18n-gov-tabs 治理 7 键（过渡事实源，C1 消费），zh/en 键成对、值承接原值', () => {
+  it('i18n-gov-tabs 治理 5 键，zh/en 键成对、死键清退', () => {
     expect(Object.keys(GOV_TABS_TEXT.zh)).toEqual([
-      'tabGovRegistry', 'tabGovAudit', 'tabGovDocs', 'tabGovHarness',
-      'tabGovCluster', 'tabGovOntology', 'tabGovSessionHealth',
+      'tabGovRegistry', 'tabGovAudit', 'tabGovDocs', 'tabGovHarness', 'tabGovOntology',
     ])
     expect(Object.keys(GOV_TABS_TEXT.zh)).toEqual(Object.keys(GOV_TABS_TEXT.en))
     expect(GOV_TABS_TEXT.zh.tabGovRegistry).toBe('能力与规则')
     expect(GOV_TABS_TEXT.zh.tabGovOntology).toBe('本体校验')
     expect(GOV_TABS_TEXT.zh.tabGovHarness).toBe('研发效能')
-    expect(GOV_TABS_TEXT.en.tabGovSessionHealth).toBe('Session Health')
+    expect(GOV_TABS_TEXT.zh).not.toHaveProperty('tabGovCluster')
+    expect(GOV_TABS_TEXT.zh).not.toHaveProperty('tabGovSessionHealth')
   })
 
-  it('拆分守恒：工作台 3 + 治理 7 + 推演承接 3（sim-tabs tabTrace/tabDelivery/tabOps）= 13', async () => {
+  it('拆分守恒：工作台 3 + 治理 5 + 推演承接 1（sim-tabs tabOps）= 9', async () => {
     const { SIM_TABS_TEXT } = await import('../views/sim/sim-tabs')
-    for (const k of ['tabTrace', 'tabDelivery', 'tabOps'] as const) {
+    for (const k of ['tabOps'] as const) {
       expect(SIM_TABS_TEXT.zh, k).toHaveProperty(k)
     }
     expect(
       Object.keys(TASKS_TABS_TEXT.zh).length
       + Object.keys(GOV_TABS_TEXT.zh).length
-      + 3,
-    ).toBe(13)
+      + 1,
+    ).toBe(9)
   })
 })
 })

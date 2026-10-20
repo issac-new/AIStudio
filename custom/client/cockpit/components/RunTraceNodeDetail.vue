@@ -87,7 +87,7 @@ function fmtDuration(ms?: number): string {
 </template>
 
 <style scoped lang="scss">
-.node-detail { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; }
+.node-detail { position: fixed; inset: 0; z-index: var(--ia-z-modal, 1000); display: flex; align-items: center; justify-content: center; }
 .node-detail__mask { position: absolute; inset: 0; background: rgba(0,0,0,0.25); }
 .node-detail__panel { position: relative; width: min(520px, calc(100vw - 32px)); max-height: 80vh; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
 .node-detail__head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border-color); }

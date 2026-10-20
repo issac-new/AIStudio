@@ -115,7 +115,7 @@ const menuStyle = computed(() => ({
 .context-menu-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: var(--ia-z-modal, 1000);
 }
 
 .mx_MessageContextMenu {

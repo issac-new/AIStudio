@@ -121,7 +121,7 @@ export interface GatewayBlueprint {
 
 /** 蓝图目录（后端=运行时 venv python 导入 CATALOG，16 件；409=通道缺席）。
  *  契约纪律：永不 reject——fetch 本身失败（测试环境相对 URL / 网络断）转 error 分支，
- *  调用方（BlueprintGalleryPanel onMounted）按契约无 try/catch，裸抛会成 unhandled
+ *  历史消费方已退役；能力面仍保留失败语义
  *  rejection 漂浮到进程层（vitest 全量 13 个 unhandled 的根因，2026-10-02 实证）。
  *  error 分支带 status（网络断=0）：调用方按 HTTP 409 判通道缺席，不再依赖错误文案子串
  *  （2026-10-04 72h 审查遗留修复——文案改版即断的脆弱判定）。 */

@@ -11,17 +11,17 @@ import { fetchRunState, postureKind, type RunStateResponse } from '../../api/ove
 import { fetchTopology } from '../../api/ops'
 import { useRunContext } from '../../composables/useRunContext'
 import { runDisplayName } from '../../run-display'
+import { directorRunGuideError } from '../../utils/director-run'
+import { humanEnum } from '../../format'
 
 const router = useRouter()
 
 // run 口径与四个面板签同源（useRunContext）：query.run 优先，无 query 回落最近
 // 一次成功读取的记忆——本条挂在全流程推演壳头与②需求阶段页，两处都不该要求手打目录名
-const { run } = useRunContext()
+const { run } = useRunContext('sim')
 const state = ref<RunStateResponse | null>(null)
 const failServices = ref<number | null>(null)
 const loadError = ref('')
-
-const POSTURE_LABEL: Record<string, string> = { strict: 'strict', standard: 'standard', demo: 'demo' }
 
 async function load(): Promise<void> {
   loadError.value = ''
@@ -30,7 +30,7 @@ async function load(): Promise<void> {
   if (!run.value) return
   const [st, topo] = await Promise.allSettled([fetchRunState(run.value), fetchTopology()])
   if (st.status === 'fulfilled') state.value = st.value
-  else loadError.value = 'run-state 不可达'
+  else loadError.value = directorRunGuideError(run.value)?.message ?? '运行状态暂不可读'
   if (topo.status === 'fulfilled') {
     // 端点形状不符（缺 services）按未知处理，渲染「服务未探测」——不抛未处理拒绝
     const svcs = (topo.value as { services?: Record<string, { ok: boolean }> } | null)?.services
@@ -64,7 +64,7 @@ function goOverview(): void {
     <template v-else-if="state">
       <span class="cpb__dot" :class="`cpb__dot--${postureKind(state.posture)}`">●</span>
       <span class="cpb__run">{{ runDisplayName(run) }}</span>
-      <span class="cpb__badge">{{ POSTURE_LABEL[postureKind(state.posture)] ?? state.posture }}</span>
+      <span class="cpb__badge">{{ humanEnum(postureKind(state.posture)) }}</span>
       <span
         class="cpb__badge"
         :class="state.ledger.open > 0 ? 'cpb__badge--red' : 'cpb__badge--green'"
@@ -88,8 +88,12 @@ function goOverview(): void {
 <style scoped lang="scss">
 .cpb {
   display: inline-flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  text-align: left;
+  vertical-align: top;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: transparent;
@@ -114,6 +118,7 @@ function goOverview(): void {
 .cpb__badge--red { color: var(--ia-fail); background: rgba(221, 51, 51, 0.12); }
 .cpb__badge--green { color: var(--ia-fresh); background: rgba(46, 158, 91, 0.12); }
 .cpb__badge--muted { color: var(--text-muted); }
-.cpb__hint { color: var(--text-muted); }
+.cpb__hint { color: var(--text-muted); min-width: 180px; flex: 1; }
+.cpb__run, .cpb__badge, .cpb__fail { min-width: 0; max-width: 100%; }
 .cpb__fail { color: var(--ia-fail); }
 </style>

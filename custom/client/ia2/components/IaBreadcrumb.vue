@@ -50,8 +50,6 @@ const SIM_TAB_LABEL: Record<string, keyof typeof SIM_TABS_TEXT.zh> = {
   'ia2.simSupervision': 'tabSupervision',
   'ia2.simOps': 'tabOps',
   'ia2.simEvidence': 'tabEvidence',
-  'ia2.simDelivery': 'tabDelivery',
-  'ia2.simTrace': 'tabTrace',
 }
 
 const crumbs = computed<Crumb[]>(() => {  const name = String(route?.name ?? '')

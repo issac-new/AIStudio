@@ -43,16 +43,16 @@ describe('纯函数层', () => {
   })
   it('cliHealthEntries：对象→键值行；raw→原文；失败→错误行', () => {
     expect(cliHealthEntries({ ok: true, data: { ready: ['a', 'b'], since_s: 300 } })).toEqual([
-      { k: 'ready', v: '["a","b"]' }, { k: 'since_s', v: '300' },
+      { k: 'ready', v: '结构化数据（2 项）' }, { k: 'since s', v: '300' },
     ])
     expect(cliHealthEntries({ ok: true, data: { raw: 'line1\nline2' } })).toEqual([{ k: '输出', v: 'line1\nline2' }])
     expect(cliHealthEntries({ ok: false, error: 'boom' })).toEqual([{ k: '错误', v: 'boom' }])
   })
   it('sleepingRows：契约形状成表；形状漂移整表降级原文', () => {
     expect(sleepingRows({ ok: true, data: { idle_sec: 10, sleeping: [{ account: 'chen', silent_s: 900 }] } }))
-      .toEqual([{ account: 'chen', silent_s: '900' }])
+      .toEqual([{ account: 'chen', 'silent s': '900' }])
     expect(sleepingRows({ ok: true, data: { something: 'else' } }))
-      .toEqual([{ 输出: '{"something":"else"}' }])
+      .toEqual([{ 字段: '数据形状', 值: '服务端返回了未识别的结构；可刷新重试或查看技术日志' }])
     expect(sleepingRows({ ok: false, error: 'x' })).toEqual([{ 错误: 'x' }])
   })
 })

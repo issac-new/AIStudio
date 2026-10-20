@@ -65,7 +65,7 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .mx_ContextMenu {
   position: absolute;
-  z-index: 1000;
+  z-index: var(--ia-z-modal, 1000);
   min-width: 200px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);

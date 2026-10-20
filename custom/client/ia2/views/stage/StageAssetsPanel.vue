@@ -9,7 +9,7 @@ import GovModelProvidersSection from '../../components/gov/GovModelProvidersSect
 <template>
   <div class="sap">
     <section class="sap__block">
-      <h2 class="sap__h">密钥台账（不含密钥本体）</h2>
+      <h2 class="sap__h">密钥轮换台账</h2>
       <KeyLedgerSection />
     </section>
     <section class="sap__block">

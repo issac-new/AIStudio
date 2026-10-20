@@ -2,12 +2,12 @@
      六阶段工作页（2026-10-18 阶段页页签批）：
      每个阶段只保留一层页签，页签直接挂可操作组件；页面高度固定，只有当前
      页签内容区滚动。页签键与文案单一事实源=stage-tabs.ts；阶段文案与完成键
-     单一事实源=stage-meta.ts；运行进度/步骤进度单一读面=useStageProgress。
+     单一事实源=stage-meta.ts；运行进度/步骤进度单一读面=useDailyStageProgress。
      旧 /app/gov/* 深链由 routes 重定向到本页并带 ?tab=，页面不再有「治理中心」壳。
      日常与整轮推演分离：本页不内嵌运行监控/证据/交付等推演面板；②启动准备
      只核对条件并跳转「全流程推演·运行编排」。 -->
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, type Component } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
@@ -15,9 +15,10 @@ import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
 import OrgEditor from '../../components/gov/OrgEditor.vue'
 import ClearancePanel from '../gov/ClearancePanel.vue'
 import GovIssuesPanel from '../gov/GovIssuesPanel.vue'
-import TracePanel from '../sim/TracePanel.vue'
-import DeliveryPanel from '../sim/DeliveryPanel.vue'
-import StageG5Panel from './StageG5Panel.vue'
+import DailyTracePanel from './DailyTracePanel.vue'
+import DailyDeliveryPanel from './DailyDeliveryPanel.vue'
+import DailyUatPanel from './DailyUatPanel.vue'
+import DailyG5Panel from './DailyG5Panel.vue'
 import StageSetupSteps from './StageSetupSteps.vue'
 import StageRequirementsOverview from './StageRequirementsOverview.vue'
 import StagePreflight from './StagePreflight.vue'
@@ -31,7 +32,7 @@ import StageAssetsPanel from './StageAssetsPanel.vue'
 import StageDevApprovals from './StageDevApprovals.vue'
 import { STAGE_META, SETUP_STEPS, type StageMeta } from '../../stage-meta'
 import { STAGE_TABS, resolveTab, tabMeta } from '../../stage-tabs'
-import { useStageProgress } from '../../composables/useStageProgress'
+import { useDailyStageProgress } from '../../composables/useDailyStageProgress'
 import { stageBoardStatuses, stageBoardStatusLabel } from '../../stage-task-filter'
 
 const route = useRoute()
@@ -40,7 +41,7 @@ const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const props = defineProps<{ stage: 1 | 2 | 3 | 4 | 5 | 6 }>()
 
-const progress = useStageProgress()
+const progress = useDailyStageProgress()
 const meta = computed<StageMeta>(() => STAGE_META[props.stage - 1])
 const tabs = computed(() => STAGE_TABS[props.stage])
 const activeTab = computed(() => resolveTab(props.stage, route.query.tab))
@@ -52,8 +53,6 @@ const STATE_LABEL = {
   pending: { zh: '未开始', en: 'Not started' },
 } as const
 const stageState = computed(() => progress.stageState(props.stage))
-/** ②⑤⑥ 的页签内容按运行取数：日常阶段页只读最近一次推演，运行切换在推演模式。 */
-const needsRun = computed(() => [2, 5, 6].includes(props.stage))
 
 /** 阶段页主操作：只做「本阶段最该做的一步」，不堆第二排按钮。 */
 const STEP_TAB: Record<string, string> = {
@@ -86,6 +85,16 @@ function runPrimary(): void {
   if (primary.value.route) void router.push({ name: primary.value.route })
   else if (primary.value.tab) openTab(primary.value.tab)
 }
+
+// B6：页签横滚可发现性——右缘渐隐只在还有未滚内容时显示（滚到底隐藏）。
+// 左缘渐隐由 sticky 伪元素自持（未滚动时落在自身占位槽内，不遮内容）。
+const tabsEl = ref<HTMLElement | null>(null)
+const tabsAtEnd = ref(true)
+function syncTabsEnd(): void {
+  const el = tabsEl.value
+  tabsAtEnd.value = !el || el.scrollLeft + el.clientWidth >= el.scrollWidth - 1
+}
+onMounted(() => syncTabsEnd())
 
 // 任务抽屉：今日工作/排期页签点行就地打开，不整页跳看板
 const drawerTaskId = ref<string | null>(null)
@@ -154,10 +163,10 @@ const TAB_COMPONENTS: Record<string, Component> = {
   risk: StageRiskPanel,
   quality: StageGatePanel,
   acceptance: StageAcceptanceOverview,
-  trace: TracePanel,
-  delivery: DeliveryPanel,
-  uat: TracePanel,
-  g5: StageG5Panel,
+  trace: DailyTracePanel,
+  delivery: DailyDeliveryPanel,
+  uat: DailyUatPanel,
+  g5: DailyG5Panel,
   cases: AsyncCases,
   clearance: ClearancePanel,
   issues: GovIssuesPanel,
@@ -173,7 +182,6 @@ const TAB_PROPS: Record<string, Record<string, unknown>> = {
   g2: { gates: ['G2'] },
   analysis: { scope: 'g2' },
   quality: { gates: ['G3', 'G4'] },
-  uat: { onlyUnjudged: true },
 }
 /** ③④阶段页内嵌看板只显示本阶段在办的卡（映射单一事实源=stage-task-filter.ts）；
  *  其他阶段页签不传 statuses，行为与全量看板一致。 */
@@ -197,15 +205,12 @@ const currentProps = computed(() => {
         </div>
         <p class="stg__what">{{ meta.what }}</p>
       </div>
-      <span v-if="needsRun" class="stg__runhint" data-testid="stg-run-hint" title="运行切换在全流程推演模式；日常阶段页只读最近一次推演">
-        {{ zh ? '数据来自最近一次推演' : 'Data from the latest simulation run' }}
-      </span>
       <button type="button" class="stg__primary" data-testid="stg-primary" @click="runPrimary">
         {{ primary.label }} →
       </button>
     </header>
 
-    <nav class="stg__tabs" role="tablist" :aria-label="meta.title">
+    <nav ref="tabsEl" class="stg__tabs" :class="{ 'stg__tabs--end': tabsAtEnd }" role="tablist" :aria-label="meta.title" data-testid="stage-tabs-scroll" @scroll="syncTabsEnd">
       <button
         v-for="t in tabs"
         :key="t.key"
@@ -279,7 +284,7 @@ const currentProps = computed(() => {
 }
 .stg__primary:hover { background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
 .stg__primary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
-.stg__tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+.stg__tabs { position: relative; display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .stg__tab {
   border: 0; border-bottom: 2px solid transparent; background: transparent;
   padding: 7px 11px; font-family: inherit; font-size: 12.5px;
@@ -316,4 +321,9 @@ const currentProps = computed(() => {
   border: 1px solid var(--border-color); background: transparent; color: inherit;
   border-radius: 4px; padding: 2px 10px; font-size: 12px; cursor: pointer;
 }
+.stg__tabs::before, .stg__tabs::after { content: ''; position: sticky; top: 0; z-index: 1; width: 18px; flex: 0 0 18px; pointer-events: none; }
+.stg__tabs::before { left: 0; background: linear-gradient(to right, var(--bg-primary), transparent); }
+.stg__tabs::after { right: 0; background: linear-gradient(to left, var(--bg-primary), transparent); }
+/* B6：滚到底（或本就无溢出）时收起右缘渐隐，露出最后一个页签的右缘 */
+.stg__tabs--end::after { display: none; }
 </style>

@@ -9,9 +9,10 @@ import { authFetch } from '../../../ide/utils/auth-fetch'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
 import { useRouter } from 'vue-router'
 import { useRunContext } from '../../composables/useRunContext'
+import { humanDateTime, humanEnum } from '../../format'
 
 const router = useRouter()
-const { run, remember } = useRunContext()
+const { run, remember } = useRunContext('sim')
 const tail = ref(50)
 const loading = ref(false)
 const loadError = ref('')
@@ -47,7 +48,7 @@ const sourceLabel = computed(() => {
 
 // ── 产物信号（run21 10-18 立法：agent 健康=实物产出导向，日志活跃≠进展）──
 // 复用 /api/hermes/sim/branches（交付健康同源端点）；读取成功才渲染该区。
-interface ArtiBranch { name: string; count: number; lastTs: number | null }
+interface ArtiBranch { name: string; count: number; lastTs: number | null; pushTs?: number | null; localTs?: number | null }
 const artifactBranches = ref<ArtiBranch[] | null>(null)
 const artifactTs = ref('')
 async function loadArtifacts(): Promise<void> {
@@ -57,7 +58,13 @@ async function loadArtifacts(): Promise<void> {
     const res = await authFetch(`/api/hermes/sim/branches?run=${encodeURIComponent(r)}`)
     if (!res.ok) return
     const j = (await res.json()) as { branches?: Array<{ name: string; count?: number; pushTs?: number | null; localTs?: number }> }
-    artifactBranches.value = (j.branches ?? []).slice(0, 8)
+    artifactBranches.value = (j.branches ?? []).slice(0, 8).map(b => ({
+      name: b.name,
+      count: Number(b.count ?? 0),
+      lastTs: b.pushTs ?? b.localTs ?? null,
+      pushTs: b.pushTs ?? null,
+      localTs: b.localTs ?? null,
+    }))
     artifactTs.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
   } catch { /* 端点缺席=不渲染，监督面不受影响 */ }
 }
@@ -70,7 +77,7 @@ function fmtPush(ts: number | null | undefined): string {
 
 async function load(): Promise<void> {
   const r = run.value.trim()
-  if (!r) { loadError.value = '请输入运行目录名（如 20261015-v8-run20）'; return }
+  if (!r) { loadError.value = '还没有选择运行记录；请先在推演导演台选择或启动一轮。'; return }
   loading.value = true
   loadError.value = ''
   try {
@@ -95,7 +102,6 @@ watch(run, () => { if (run.value.trim()) void load() })
 <template>
   <div class="sup" data-testid="sup-panel">
     <div class="sup__bar">
-      <input v-model="run" class="sup__input" data-testid="sup-run" placeholder="运行目录名（如 20261015-v8-run20）" @keyup.enter="load">
       <select v-model.number="tail" class="sup__select" data-testid="sup-tail">
         <option :value="50">尾 50 行</option>
         <option :value="200">尾 200 行</option>
@@ -130,8 +136,8 @@ watch(run, () => { if (run.value.trim()) void load() })
         <div v-for="w in windowsDesc" :key="w.id" class="sup__win" :data-testid="`sup-win-${w.id}`">
           <div class="sup__win-head">
             <span class="sup__win-id">{{ w.id }}</span>
-            <span class="sup__win-ts">{{ w.startTs }}</span>
-            <span v-if="w.posture" class="sup__win-posture">{{ w.posture }}</span>
+            <span class="sup__win-ts">{{ humanDateTime(w.startTs) }}</span>
+            <span v-if="w.posture" class="sup__win-posture">{{ humanEnum(w.posture) }}</span>
           </div>
           <div class="sup__win-meta">
             轮数 {{ w.rounds }}｜有变化 {{ w.changedRounds }}｜闸事件 {{ w.gateEvents }}｜台账事件 {{ w.ledgerEvents }}｜缺陷单 {{ w.tickets }}
@@ -142,7 +148,7 @@ watch(run, () => { if (run.value.trim()) void load() })
           <summary>缺陷单 {{ organized.tickets.length }} 条（journal 原行可反查）</summary>
           <ul class="sup__ticket-list">
             <li v-for="(tk, i) in organized.tickets" :key="i" class="sup__ticket" role="button" @click="openLineDrawer(`缺陷单 ${tk.ts}`, tk)">
-              <span class="sup__ticket-meta">{{ tk.ts }}｜{{ tk.pr }}｜{{ tk.type }} ×{{ tk.count }}</span>
+              <span class="sup__ticket-meta">{{ humanDateTime(tk.ts) }}｜{{ tk.pr }}｜{{ humanEnum(tk.type) }} ×{{ tk.count }}</span>
               <span class="sup__ticket-text">{{ tk.ticket }}</span>
             </li>
           </ul>
@@ -154,8 +160,8 @@ watch(run, () => { if (run.value.trim()) void load() })
           <h4 class="sup__h">监督研判</h4>
           <p v-if="organized.briefs.length === 0" class="sup__hint">无研判行。</p>
           <ul v-else class="sup__tl">
-            <li v-for="(b, i) in organized.briefs" :key="i" class="sup__tl-row" role="button" data-testid="sup-brief-row" @click="openLineDrawer(`研判 ${b.ts}`, { t: 'situation_brief', ts: b.ts, brief: b.text })">
-              <span class="sup__tl-ts">{{ b.ts }}</span>
+            <li v-for="(b, i) in organized.briefs" :key="i" class="sup__tl-row" role="button" data-testid="sup-brief-row" @click="openLineDrawer(`研判 ${humanDateTime(b.ts)}`, { t: 'situation_brief', ts: b.ts, brief: b.text })">
+              <span class="sup__tl-ts">{{ humanDateTime(b.ts) }}</span>
               <span class="sup__tl-text">{{ briefText(b.text) }}</span>
             </li>
           </ul>
@@ -164,9 +170,9 @@ watch(run, () => { if (run.value.trim()) void load() })
           <h4 class="sup__h">停滞判定</h4>
           <p v-if="organized.verdicts.length === 0" class="sup__hint">无判定行。</p>
           <ul v-else class="sup__tl">
-            <li v-for="(v, i) in organized.verdicts" :key="i" class="sup__tl-row sup__tl-row--verdict" role="button" data-testid="sup-verdict-row" @click="openLineDrawer(`判定 ${v.ts}`, { t: 'stall_verdict', ts: v.ts, verdict: v.text })">
-              <span class="sup__tl-ts">{{ v.ts }}</span>
-              <span class="sup__tl-text">{{ v.text }}</span>
+            <li v-for="(v, i) in organized.verdicts" :key="i" class="sup__tl-row sup__tl-row--verdict" role="button" data-testid="sup-verdict-row" @click="openLineDrawer(`判定 ${humanDateTime(v.ts)}`, { t: 'stall_verdict', ts: v.ts, verdict: v.text })">
+              <span class="sup__tl-ts">{{ humanDateTime(v.ts) }}</span>
+              <span class="sup__tl-text">{{ humanEnum(v.text) }}</span>
             </li>
           </ul>
         </section>
@@ -188,14 +194,6 @@ watch(run, () => { if (run.value.trim()) void load() })
 <style scoped lang="scss">
 .sup { display: flex; flex-direction: column; gap: 10px; }
 .sup__bar { display: flex; gap: 6px; flex-wrap: wrap; }
-.sup__input {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 12px;
-  width: 260px;
-  font-family: var(--font-mono);
-}
 .sup__select, .sup__btn {
   border: 1px solid var(--border-color);
   border-radius: 4px;

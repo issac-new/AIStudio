@@ -135,10 +135,11 @@
 .is-collapsed { background: var(--bg-card); }
 
 // ── P5: 历史弹窗 overlay ──
-.cockpit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 40; }
+.cockpit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: var(--ia-z-surface, 40); }
 // 通知下拉面板：透明遮罩（仅用于点击外部关闭，不暗化背景）
-.cockpit-overlay--clear { background: transparent; z-index: 1000; }
-.cockpit-modal-anchor { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 41; }
+// B6：降到 overlay-clear(900)——原 z1000 与 modal 同层，打开期间压住所有弹窗按钮
+.cockpit-overlay--clear { background: transparent; z-index: var(--ia-z-overlay-clear, 900); }
+.cockpit-modal-anchor { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: calc(var(--ia-z-surface, 40) + 1); }
 
 // ── 统一滚动条 ──
 // 细窄、半透明，与主题边框色协调；仅覆盖 cockpit 内的可滚动区域

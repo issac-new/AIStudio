@@ -1,3 +1,15 @@
+
+:root {
+  // 与 ia2/z-layers.ts 成对同值（__tests__/z-layers.test.ts 对账）；
+  // headerPanel/overlayClear 必须低于 modal（B6：透明点击收层不得压住弹窗）。
+  --ia-z-surface: 40;
+  --ia-z-drawer: 600;
+  --ia-z-fullscreen: 700;
+  --ia-z-header-panel: 800;
+  --ia-z-overlay-clear: 900;
+  --ia-z-modal: 1000;
+  --ia-z-toast: 2000;
+}
 // overlay/custom/client/ia2/styles/ia2.scss
 // 驾驶舱统一壳样式（2026-09-18 统一导航重构 Task 2：IaShell = 全局页头 +
 // 六场景条 + router-view；slim 子页头退役）· Pure Ink（仅用 CSS 变量，
@@ -110,7 +122,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
-  z-index: 40;
+  z-index: var(--ia-z-surface);
 }
 
 .ia-area {

@@ -56,8 +56,8 @@ export function areaForPath(path: string): IaAreaKey | null {
   if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
   if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
   if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
-  // 与 nav-centers.centerForPath 同步：全流程推演归④开发、⑥治理归阶段页
-  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage4'
+  // 全流程推演是独立导航域（2026-10-20 拆分裁定）：不参与六阶段高亮。
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return null
   if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage6'
   if (path === '/app/agents' || path.startsWith('/app/agents/')) return 'stage1'
   if (path === '/app/teams' || path.startsWith('/app/teams/')) return 'stage1'
@@ -132,7 +132,8 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   // 旧版看板（横向八列、无滚动容器）与主界面看板重复；2026-10-20 收敛为
   // 重定向，保留 hermes.kanban 名称供上游按名跳转，深链不再落到重复页。
   { path: '/hermes/kanban', name: 'hermes.kanban', redirect: to => ({ path: '/app/board', query: to.query }) },
-  annex('/hermes/journey', 'hermes.journey'),
+  // 旧旅程页与 /app 流程总览重复，保留路由名供上游深链改道。
+  { path: '/hermes/journey', name: 'hermes.journey', redirect: () => ({ name: 'ia2.journey' }) },
   // 系统域（原 AppSidebar 系统组面）
   annex('/hermes/logs', 'hermes.logs'),
   annex('/hermes/usage', 'hermes.usage'),
@@ -310,20 +311,16 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/gov/GovSettingsView.vue'),
         },
         {
-          // D18：团队管理重新可达（设计正本 §5.3）。TeamsManagePanel 原唯一挂载点
-          // EngScene 已被 /app/eng 重定向架空，领导邀请/值守分派/派发列表整块不可达；
-          // 新路由薄壳异步挂载，零新端点（全走 Matrix 通道与看板 API）。
+          // 独立整页收敛到①搭建页签，避免团队管理出现双 URL 双入口。
           path: 'teams',
           name: 'ia2.teams',
-          component: () => import('./views/TeamsView.vue'),
+          redirect: to => ({ name: 'ia2.stage1', query: { ...to.query, tab: 'teams' } }),
         },
         {
-          // D20 智能体工作台（挂账清偿：模型绑定+启停，零新端点——上游
-          // PUT /api/hermes/config x-hermes-profile 定向 + profiles restart）。
-          // 旅程步骤 5 落此页（替代双门控默认关的 hermes.agentManager）。
+          // 独立整页收敛到①搭建页签。
           path: 'agents',
           name: 'ia2.agents',
-          component: () => import('./views/agents/AgentsView.vue'),
+          redirect: to => ({ name: 'ia2.stage1', query: { ...to.query, tab: 'agents' } }),
         },
         {
           // D20 模型服务商统一入口（治理·系统设置 资产域）：IDE 引擎模型目录
@@ -333,10 +330,10 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/gov/GovModelProvidersView.vue'),
         },
         {
-          // 账户管理（P6 补遗④）：matrix 系统管理员——建号/绑定/停用，roster 入仓
+          // 独立整页收敛到①搭建·账户管理签。
           path: 'accounts',
           name: 'ia2.accounts',
-          component: () => import('./views/AccountAdminView.vue'),
+          redirect: to => ({ name: 'ia2.stage1', query: { ...to.query, tab: 'accounts' } }),
         },
         {
           // B9（2026-10-16）：/app/eng 重定向编排挂面新家 /app/sim/orchestration
@@ -347,10 +344,10 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           redirect: () => ({ name: 'ia2.simOrchestration' }),
         },
         {
-          // 交付案例（M2：delivery 协议事件投影，工程场景 tab 的直达链接直达）
+          // 交付案例（M2）：独立整页退役，保留旧名改道⑤验收·交付案例签。
           path: 'cases',
           name: 'ia2.deliveryCases',
-          component: () => import('@/custom/matrix-teams/views/DeliveryCasesView.vue'),
+          redirect: to => ({ name: 'ia2.stage5', query: { ...to.query, tab: 'cases' } }),
         },
         // ── 全流程推演专区（2026-10-18 推演区批，原「仿真中心」）──────────────
         // 四签单层页签共用 SimCenterView：运行总览（默认 /app/sim）/ 监督面板 /
@@ -401,7 +398,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         {
           // 全部运行 → 全流程推演（B1，2026-10-16）：RunCenter 整页退役为重定向，
           // 保留一个版本周期（A13 升格=运行列表能力并入全流程推演后移除本记录）；
-          // 按名跳的既有调用面（IaGlobalTop/SpotlightPanel/inbox-center 等）随
+          // 按名跳的既有调用面（IaGlobalTop/SpotlightPanel 等）随
           // 重定向链落全流程推演，零改动。?tab=runs/?loop= 等 RunCenter 专属
           // query 无消费者（loop 预填随整页退役；vue-router redirect 会把
           // 原 query 并入目标 URL，落点路由不受影响）
