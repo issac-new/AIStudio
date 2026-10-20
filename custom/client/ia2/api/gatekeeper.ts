@@ -92,8 +92,22 @@ export function fetchInterventionsPending(): Promise<InterventionsView> {
   return getJson('/api/hermes/orgloop/interventions/pending')
 }
 
+// W4（2026-10-20 验收挂账清零轮）：台账端点未配置（fail-closed 503/「未配置」）时
+// 记一次失败并停轮询——同会话后续调用直接复用该失败（空态由调用方如实呈现），
+// 不再每页刷网络请求与控制台 503。
+let clearanceUnavailable: Error | null = null
+
+/** 测试专用：清未配置闩（生产代码勿调） */
+export function __resetClearanceUnavailableForTest(): void {
+  clearanceUnavailable = null
+}
+
 export function fetchClearanceLedger(): Promise<ClearanceLedgerView> {
-  return getJson('/api/hermes/orgloop/ledger')
+  if (clearanceUnavailable) return Promise.reject(clearanceUnavailable)
+  return getJson<ClearanceLedgerView>('/api/hermes/orgloop/ledger').catch((err) => {
+    if (err instanceof Error && /503|未配置/.test(err.message)) clearanceUnavailable = err
+    throw err
+  })
 }
 
 export async function resolveClearance(target: string, pr: string, commit?: string): Promise<ClearanceLedgerView> {

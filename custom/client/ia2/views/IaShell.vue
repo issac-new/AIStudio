@@ -93,7 +93,16 @@ onUnmounted(() => {
         <div v-if="featureView" class="ia-shell__feature">
           <component :is="featureView" />
         </div>
-        <router-view v-else />
+        <router-view v-else v-slot="{ Component }">
+          <!-- W2 加载反馈（2026-10-20 验收挂账清零轮）：重组件页签 chunk 加载期给文字反馈，
+               不再留白（冷启动首帧另有 index.html boot-fallback 覆盖） -->
+          <Suspense timeout="0">
+            <component :is="Component" />
+            <template #fallback>
+              <div class="ia-shell__loading" role="status">页面加载中…</div>
+            </template>
+          </Suspense>
+        </router-view>
       </div>
     </div>
 
@@ -108,3 +117,12 @@ onUnmounted(() => {
     <GovOverlay v-if="flow.govOpen" />
   </div>
 </template>
+
+<style scoped>
+.ia-shell__loading {
+  padding: 64px 24px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+</style>
