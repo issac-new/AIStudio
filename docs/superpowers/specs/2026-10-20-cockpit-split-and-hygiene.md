@@ -85,6 +85,29 @@
 - 矩阵定向：`share-link` 5 例、permalink 6 例、`server-url` 4 例、`server-moved-banner` 2 例全部通过；补丁 672 在当前注入树上 `git apply --reverse --check` 通过（正向 apply 因已注入而拒绝，属预期）。
 - 未验证：有真实 Matrix 凭据的房间分享活体点击（本环境不可登录外部 Matrix 账号）。
 
+## 九、接管验收轮（2026-10-20 22:30，独立会话）
+
+实施会话收口后（fdca2a24+e8f9ed17+3b0fa5da 合 main 并推 origin），独立会话对四点任务做验收走查与残留收尾。
+
+**独立验证结果**（证据 `.claude/walkthrough-takeover/report.json`+shots/，采集器 crawl.mjs 62 页 + 内链回访 24 + 1024 窄屏 5 页）：
+
+1. matrix 外链清零：全站 0 个 `matrix.to`/`qrserver`/裸 `matrix://` 链接（P2 PASS）。
+2. 域拆分：`/app/sim*` 六页全部呈现推演侧栏（back-daily 钩子），全部日常阶段页无推演侧栏（P3 PASS）；W3 修复生效——本轮 sim run-state/journal 404 归零（M3 基线各 4 页）。
+3. 旧独立页 redirect 四条全中：teams/agents/accounts → setup 签、cases → accept 签；/app/eng→sim/orchestration、/app/runs→/app/sim 兜底正常。
+4. 布局：1024 窄屏五旗舰页零横向溢出；`pageerror` 全站 0。裁切启发式命中的 `.ia-attn__text`/名称类单元格经截图复核均为设计内省略号（M3 同判）。
+5. 全量测试独立复跑：5511 通过/1 失败/8 跳过——唯一失败 `tool-waterfall-gate`（注入态 patch 顺序基线，与第八节记名一致），其余 9 个环境性失败本轮转绿。零新增失败。
+6. 三条「内链可疑」为采集器时序误报（hash 导航 1.8s 等待过短）：`/studio/agents`、`/hermes/usage`、`/hermes/api-relay` 直访均完整渲染（Agent 管理/用量统计/API 中转页）；其链接源是不可见的上游 studio-navigation-rail DOM 残留，非用户可见导航。
+
+**发现并修复的残留**（分支 fix/daily-assignee-display）：
+
+- 四个⑤验收日常面板「负责人/参与人」直出看板账号 localpart（如 `sim_pm_product_manager_a_aipay`）——用户第 1 点「机读信息」残留。修：新增 `views/stage/assignee-display.ts`（team registry 称谓映射+localpart 归一+无映射诚实回落），四面板接线；守门测试 2 例入 daily-acceptance.test.ts（映射/回落/空称谓不误称/localpart 归一）。
+- `utils/director-run.ts` 改道文案「导演运行——26 步视图不适用」→「这是导演台发起的运行，不适用按 26 步流程组织的视图；运行详情请到「导演台」查看」（guard 测试断言关键词「导演台」不受影响）。
+
+**挂账（如实登记，不阻塞收口）**：
+
+- /app/ide 对 `~/.hermes-web-ui/coding-agent/workspace/default/global` 的 files/list 400：活跃会话工作区指向的历史 home 与当前 dev 服务 hermes 基目录不同源，UI 诚实红字+重试（files.ts 沙箱拒绝），环境态非代码缺陷；生产部署两侧同源不触发。
+- orgloop/ledger 503：本环境未配置台账端点，W4 闩已把轮询降为每会话一次，UI 如实空态。
+
 ## 附录 A：B2 假功能/死链/黑话待修清单（file:line 为 2026-10-20 走查时点）
 
 1. `kanban/components/KanbanToolbar.vue:250`「？」按钮 `@click="() => {}"` 空对象 → 统一占位提示（D2）。

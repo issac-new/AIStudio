@@ -6,12 +6,14 @@ import { useI18n } from 'vue-i18n'
 import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
 import { useWorkspaceStore } from '../../store/workspace'
 import { isRecentTask, taskStatusLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
+import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'
 
 const emit = defineEmits<{ (e: 'open-all'): void; (e: 'open-task', id: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const workspace = useWorkspaceStore()
+const assigneeLabel = useAssigneeLabel()
 const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
   .filter(r => r.task.status === 'review' || (r.task.status === 'done' && isRecentTask(r.task)))
   .sort((a, b) => (b.task.completed_at ?? b.task.created_at) - (a.task.completed_at ?? a.task.created_at))
@@ -36,7 +38,7 @@ const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
       <div v-else class="dgp__rows">
         <button v-for="r in rows" :key="`${r.board}:${r.task.id}`" type="button" class="dgp__row" @click="emit('open-task', r.task.id)">
           <strong>{{ r.task.title }}</strong>
-          <span>{{ taskStatusLabel(r.task.status) }} · {{ r.task.assignee || '未指派' }} · {{ taskUpdatedLabel(r.task) }}</span>
+          <span>{{ taskStatusLabel(r.task.status) }} · {{ assigneeLabel(r.task.assignee) }} · {{ taskUpdatedLabel(r.task) }}</span>
         </button>
       </div>
       <DailySimReference what="发布准出台账" />
