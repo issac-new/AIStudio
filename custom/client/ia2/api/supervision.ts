@@ -4,6 +4,7 @@
 // GET /api/hermes/sim/anchor（四类锚识别反查）。纯函数层（journal 分窗组织）
 // =单测锚点；fetch 层薄封装，失败抛错由调用方如实呈现。
 import { authFetch } from '../../ide/utils/auth-fetch'
+import { directorRunGuideError } from '../utils/director-run'
 
 // ── 类型（服务端契约最小镜像）──
 
@@ -137,6 +138,8 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export function fetchJournal(run: string, tail = 50): Promise<JournalResponse> {
+  const guide = directorRunGuideError(run)
+  if (guide) return Promise.reject(guide)
   return getJson(`/api/hermes/sim/journal?run=${encodeURIComponent(run)}&tail=${tail}`)
 }
 
