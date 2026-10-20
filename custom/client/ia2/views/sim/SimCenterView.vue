@@ -5,7 +5,7 @@
      端点清单占位。日常阶段页只留一行「本轮运行」摘要，本专区才是整轮运行
      的监控、证据与编排入口。 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSimTabsText } from './sim-tabs'
 import SupervisionPanel from './SupervisionPanel.vue'
@@ -21,6 +21,8 @@ import SimSettingsView from './SimSettingsView.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { useCenterNavLocale } from '../../nav-centers'
 import { retainBodyClass } from '../../composables/useBodyClass'
+import { useRunContext } from '../../composables/useRunContext'
+import { isDirectorRun } from '../../utils/director-run'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,6 +82,20 @@ function goTab(tab: SimTab): void {
 const INTRO_KEY: Record<string, string> = {
   overview: 'sim-overview', supervision: 'sim-supervision', ops: 'sim-ops', evidence: 'sim-evidence',
 }
+
+/** W3 两体系贯通（2026-10-20 挂账清零批 B）：选中导演 run 时自动改道「导演台」——
+ *  旧体系三签（监督/监控/证据）读不到导演运行（API 层即时拒答零网络探测，
+ *  见 utils/director-run.ts），与其满屏改道提示不如直接落到正确面板。 */
+const { run: selectedSimRun } = useRunContext()
+watch(
+  () => selectedSimRun.value.trim(),
+  (name) => {
+    if (!isDirectorRun(name)) return
+    const legacyTabs: readonly TabKey[] = ['supervision', 'ops', 'evidence']
+    if (legacyTabs.includes(activeTab.value)) goTab(TABS[0])
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

@@ -28,8 +28,13 @@
 
 ## 三、验证账（收口回填）
 
-- [ ] 骨架在 /app/collab 慢载时可见（Playwright 复测）
-- [ ] 台账 503 不再每页重复（控制台计数=1 次后停）
-- [ ] 补丁 670 patch(1) 应用+字节比对；kanban 套件绿
-- [ ] 导演 run 选中时 run-state/journal 零 404，落导演台视图
-- [ ] 相关测试套件全绿 + 全量回归无新增失败
+- [x] 骨架：IaShell 路由出口 Suspense 兜底「页面加载中…」（编译验证通过）；首帧另有
+  补丁 671 的 boot-fallback 文字（patch(1)+字节比对，manifest 383）
+- [x] 台账 503 降噪：gatekeeper 未配置闩（503/「未配置」记一次停轮询），守门测试
+  `gatekeeper-ledger-latch.test.ts` 2 例绿（503 闩住只发一次/非 503 不闩）
+- [x] 补丁 670（断言次序）patch(1) 应用+字节比对；看板套件 53/53 绿、ia2 全目录 782 绿
+- [x] 导演 run 改道：API 层守卫（overview 四端点+supervision journal+useStageProgress
+  即时拒答零网络）+ SimCenterView 自动落「导演台」；活验三深链（supervision/ops/
+  evidence）全部自动改道且 sim 4xx 归零；守门测试 `director-run-guard.test.ts` 3 例绿
+- [x] 批A 相关套件 782 绿；批B 相关套件（下补）
+- [ ] 全量回归无新增失败（合并前跑）
