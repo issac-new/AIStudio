@@ -8,8 +8,8 @@ import type { GraphSpec } from '../../loop/graph/graph-spec'
 describe('推演 GraphSpec 模板', () => {
   const spec = defaultSimulationGraph()
 
-  it('默认模板：四模块 16 节点（每模块 4 节点）+全局 10 节点=26 节点', () => {
-    expect(spec.nodes.length).toBe(26)
+  it('默认模板：四模块 16 节点（每模块 4 节点）+全局 13 节点=29 节点（含 3 个人工闸路由）', () => {
+    expect(spec.nodes.length).toBe(29)
   })
 
   it('入口=g1-lock，终止=G6 PASS', () => {
@@ -29,13 +29,9 @@ describe('推演 GraphSpec 模板', () => {
     expect(integrationIn.length).toBeGreaterThanOrEqual(4)
   })
 
-  it('缺陷回流回边存在且带守卫（有限终止）', () => {
+  it('v1 线性流水：不保留未接线的 verdict 条件/回退环', () => {
     const backEdges = spec.edges.filter(e => e.guard !== undefined)
-    expect(backEdges.length).toBeGreaterThanOrEqual(4) // 每模块一条
-    backEdges.forEach(e => {
-      expect(e.guard?.maxIterations).toBeGreaterThan(0)
-      expect(e.guard?.breakCondition).toBeDefined()
-    })
+    expect(backEdges).toHaveLength(0)
   })
 
   it('治理三步并发：work-report/audit/retro 入边均来自 g5-release（不等彼此）', () => {

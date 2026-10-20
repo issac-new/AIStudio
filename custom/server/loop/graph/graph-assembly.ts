@@ -19,7 +19,7 @@ import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { projectMindAggregated } from './mind-projection'
 import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
-import { HttpKanbanBridge, registerSimulationNodeTypes } from '../../graph/node-executors'
+import { DryRunKanbanBridge, HttpKanbanBridge, registerSimulationNodeTypes } from '../../graph/node-executors'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
 import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEND_INTERVAL_MS } from './interrupt-timeout'
@@ -367,7 +367,25 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     },
   }
 
-  const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore, specRuntime, missionRegistry })
+  // 产品内导演：独立 spec runtime（不依赖 GRAPH_ENGINE=on 的全局调度接管）。
+  // 每次起跑按请求 JWT 构造真实 kanban 桥；无 token 时回退 DryRun（仅测试/预览）。
+  const directorKanbanBase = process.env.GRAPH_KANBAN_BASE?.trim()
+    || `http://127.0.0.1:${process.env.PORT?.trim() || '8647'}`
+  const directorRuntimeFactory = (token?: string) => {
+    const registry = createSpecRuntimeRegistry()
+    registerSimulationNodeTypes(registry, {
+      bridge: token
+        ? new HttpKanbanBridge({
+            baseUrl: directorKanbanBase,
+            authToken: token,
+            log: (m) => log?.(`[sim-director] ${m}`),
+          })
+        : new DryRunKanbanBridge(),
+      log: (msg) => log?.(`[sim-director-node] ${msg}`),
+    })
+    return new CustomSpecRuntime({ specStore, graphService, registry, log })
+  }
+  const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore, specRuntime, missionRegistry, directorRuntimeFactory })
 
   // P3 Task 8（spec §7B.4 最小版）：图引擎策略只读端点——设置页"图引擎策略"卡数据源。
   // 导出装配事实：当前模式 + 生效的默认审批超时/熔断阈值（只读展示；策略文件化

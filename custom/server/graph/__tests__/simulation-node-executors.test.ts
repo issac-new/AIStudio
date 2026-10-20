@@ -24,18 +24,18 @@ function makeRegistry(bridge?: KanbanBridge) {
 }
 
 describe('registerSimulationNodeTypes', () => {
-  it('注册全部六种模板节点类型', () => {
+  it('注册全部七种模板节点类型', () => {
     const { registry } = makeRegistry()
     for (const t of SIMULATION_NODE_TYPES) {
       expect(registry.listTypes()).toContain(t)
     }
-    expect(registry.listTypes()).toHaveLength(6)
+    expect(registry.listTypes()).toHaveLength(7)
   })
 
-  it('26 步模板 hydrate 不再 Unknown node type（一期核心验收）', () => {
+  it('推演模板 hydrate 不再 Unknown node type（一期核心验收）', () => {
     const { registry } = makeRegistry()
     const def = hydrateGraphSpec(defaultSimulationGraph(), registry, SIMULATION_REDUCERS)
-    expect(def.nodes.size).toBe(26)
+    expect(def.nodes.size).toBe(29)
   })
 
   it('agent-task：建卡→等卡→通道写入完成信号；幂等键防重建', async () => {
