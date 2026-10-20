@@ -67,6 +67,11 @@ export interface GraphSpecMeta {
     reuseCount: number
     lastReusedAt?: string
   }
+  /** 产品内导演场景溯源（origin='editor' 的 sim-director spec） */
+  director?: {
+    scenario?: boolean
+    createdBy?: string
+  }
 }
 
 /** P4 编辑守卫——警告级问题（不阻断 hydrate，编辑器实时渲染；错误级仍走 validateGraphSpec throw） */

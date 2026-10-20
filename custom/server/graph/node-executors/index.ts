@@ -96,6 +96,8 @@ export interface HttpKanbanBridgeOpts {
   baseUrl: string
   fetchImpl?: typeof fetch
   board?: string
+  /** 产品内导演运行时：透传请求方 JWT，kanban REST 需要认证。 */
+  authToken?: string
   log?: (msg: string) => void
 }
 
@@ -103,13 +105,22 @@ export class HttpKanbanBridge implements KanbanBridge {
   private readonly base: string
   private readonly doFetch: typeof fetch
   private readonly board?: string
+  private readonly authToken?: string
   private readonly log: (msg: string) => void
 
   constructor(opts: HttpKanbanBridgeOpts) {
     this.base = opts.baseUrl.replace(/\/+$/, '')
     this.doFetch = opts.fetchImpl ?? globalThis.fetch.bind(globalThis)
     this.board = opts.board
+    this.authToken = opts.authToken
     this.log = opts.log ?? (() => {})
+  }
+
+  private headers(extra: Record<string, string> = {}): Record<string, string> {
+    return {
+      ...extra,
+      ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
+    }
   }
 
   private normalize(data: unknown): KanbanTaskRef {
@@ -141,13 +152,15 @@ export class HttpKanbanBridge implements KanbanBridge {
     this.log(`createTask POST ${this.base}/api/hermes/kanban (${req.title})`)
     return this.normalize(await this.json(`${this.base}/api/hermes/kanban`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     }))
   }
 
   async getTask(id: string): Promise<KanbanTaskRef> {
-    return this.normalize(await this.json(`${this.base}/api/hermes/kanban/${encodeURIComponent(id)}`))
+    return this.normalize(await this.json(`${this.base}/api/hermes/kanban/${encodeURIComponent(id)}`, {
+      headers: this.headers(),
+    }))
   }
 }
 
@@ -232,6 +245,7 @@ export const SIMULATION_NODE_TYPES = [
   'agent-review',
   'agent-test',
   'human-gate',
+  'gate-router',
   'dispatch',
   'report-gen',
 ] as const
@@ -306,6 +320,24 @@ export function registerSimulationNodeTypes(
       },
     }),
     timeout: (config.timeoutMs as number) ?? 86400_000,
+  }))
+
+  // 人工闸后置路由：resume 值写入 __resume:<interruptId>，由图运行时在 resume 后执行本节点，
+  // 决定继续到 approvedTarget 还是结束（拒绝）。不能直接给 human-gate 挂条件边——
+  // 检查点在 resume 前计算，条件读不到 resume 值，会错误地结束整轮。
+  registry.register('gate-router', (config) => ({
+    id: config.id as string,
+    type: 'function' as const,
+    label: (config.label as string) ?? (config.id as string),
+    execute: async (state: unknown): Promise<NodeResult> => {
+      const st = (state && typeof state === 'object' ? state : {}) as Record<string, unknown>
+      const resume = st[`__resume:${String(config.interruptId ?? '')}`] as { approved?: unknown } | undefined
+      if (resume?.approved === true) {
+        return { goto: [String(config.approvedTarget ?? '')] }
+      }
+      return { end: { rejected: true, gate: config.interruptId ?? config.id } }
+    },
+    timeout: 60_000,
   }))
 
   registry.register('dispatch', (config) => ({
