@@ -7,6 +7,7 @@
 import { computed, ref, watch } from 'vue'
 import { authFetch } from '../../ide/utils/auth-fetch'
 import { LAST_RUN_KEY, useRunContext } from './useRunContext'
+import { directorRunGuideError } from '../utils/director-run'
 import { SETUP_STEPS, STAGE_META, type SetupStep } from '../stage-meta'
 
 export interface RunStateLike {
@@ -25,6 +26,9 @@ const inflight = new Map<string, Promise<RunStateLike>>()
 async function fetchRunState(run: string): Promise<RunStateLike> {
   const cached = cache.get(run)
   if (cached) return cached
+  // 导演 run 不属 26 步体系：即时拒答（零网络探测），改道提示由调用方呈现
+  const guide = directorRunGuideError(run)
+  if (guide) throw guide
   const pending = inflight.get(run)
   if (pending) return pending
   const request = (async () => {
