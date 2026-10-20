@@ -5,11 +5,13 @@
 import { ref, onMounted } from 'vue'
 import { fetchRegistry, saveRegistry, offboardAccount } from '@/custom/governance/api/adminRegistry'
 import { parseFirstTable, setCellAlign } from '@/custom/governance/utils/registry-md'
+import { fetchMatrixServerInfo } from '../../matrix-server-info'
 
 const COLS = ['账号', '角色', '汇报线(lead)', '板（team）', 'matrix 账号']
 const rows = ref<string[][]>([])
 const preamble = ref<string[]>([]); const after = ref<string[]>([])
 const commit = ref(''); const msg = ref(''); const busy = ref(false)
+const homeserverUrl = ref('')
 const wizard = ref<null | { step: number; name: string; handoverTo: string; taskIds: string; reason: string; adminToken: string; result: string }>(null)
 
 async function load() {
@@ -19,7 +21,10 @@ async function load() {
   rows.value = setCellAlign(table.rows, COLS.length)
   preamble.value = p; after.value = a
 }
-onMounted(() => { void load().catch(e => { msg.value = String(e) }) })
+onMounted(() => {
+  void load().catch(e => { msg.value = String(e) })
+  void fetchMatrixServerInfo().then(info => { homeserverUrl.value = info.homeserverUrl }).catch(() => {})
+})
 
 function addRow() { rows.value.push(['', '', '', '', '']) }
 function delRow(i: number) { rows.value.splice(i, 1) }
@@ -44,7 +49,7 @@ async function runWizard() {
     const r = await offboardAccount({
       localName: w.name, handoverTo: w.handoverTo,
       taskIds: w.taskIds.split(/[,，\s]+/).filter(Boolean),
-      reason: w.reason, adminToken: w.adminToken, homeserverUrl: 'http://127.0.0.1:8008',
+      reason: w.reason, adminToken: w.adminToken, homeserverUrl: homeserverUrl.value,
     })
     w.result = `移交@${r.handoverCommit} · 停用 ${r.deactivated.join(' ')} · 留痕@${r.auditCommit}`
     await load()

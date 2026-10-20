@@ -12,8 +12,10 @@ import { useRunContext } from '../../composables/useRunContext'
 import { compensationLabel } from '../../compensation-labels'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
+import DeliveryPanel from './DeliveryPanel.vue'
+import TracePanel from './TracePanel.vue'
 
-const { run } = useRunContext()
+const { run } = useRunContext('sim')
 
 const anchorId = ref('')
 const searching = ref(false)
@@ -170,7 +172,7 @@ function humanizeLedgerError(message: string): string {
 }
 
 function humanizeFramesError(message: string): string {
-  return /503/.test(message) ? '截图服务未配置：请联系管理员检查推演数据目录设置' : message
+  return /503/.test(message) ? '截图服务未配置；请在系统设置·平台连接中检查推演数据目录' : message
 }
 
 function fmtSize(bytes: number): string {
@@ -257,6 +259,13 @@ onMounted(() => {
         </table>
       </template>
     </section>
+
+    <details class="ev__box ev__reference" data-testid="ev-run-reference">
+      <summary>推演验收参照（交付健康 / 需求追溯）</summary>
+      <p class="ev__hint">以下两张表只读推演证据，不替代⑤验收的日常任务与审批判定。</p>
+      <DeliveryPanel />
+      <TracePanel />
+    </details>
 
     <div v-if="preview" class="ev__preview" data-testid="ev-frame-preview" @click.self="closePreview">
       <div class="ev__preview-inner">
@@ -346,7 +355,7 @@ onMounted(() => {
 .ev__frame-cap { display: block; padding: 3px 6px 0; font-size: 11px; color: var(--text-secondary); }
 .ev__frame-phase { display: block; padding: 0 6px 4px; font-size: 10px; color: var(--text-muted); }
 .ev__preview {
-  position: fixed; inset: 0; z-index: 60;
+  position: fixed; inset: 0; z-index: var(--ia-z-modal);
   background: rgba(0, 0, 0, 0.72);
   display: flex; align-items: center; justify-content: center; padding: 24px;
 }
@@ -357,4 +366,7 @@ onMounted(() => {
 }
 .ev__preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text-primary); font-size: 12px; }
 .ev__preview-name { font-family: var(--font-mono); word-break: break-all; }
+.ev__reference > summary { cursor: pointer; margin: 0; }
+.ev__reference[open] > summary { margin-bottom: 8px; }
+.ev__reference .dlv, .ev__reference .trc { margin-top: 10px; }
 </style>

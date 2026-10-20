@@ -1,6 +1,6 @@
 # 驾驶舱全面整治：matrix 链接修复 + 推演/日常拆分 + 噪声清理 + 布局修复
 
-> 状态：实施中（2026-10-20 起）。分支 `feat/cockpit-split-hygiene`。本文是本轮变更正本；三路只读走查（导航/内容/侵入/布局）的发现清单浓缩于第二节，逐处 file:line 见调查底稿。
+> 状态：实施完成并通过收口验证（2026-10-20；全量测试仅余 10 个环境性失败）。实施分支 `fix/cockpit-information-architecture`；本文是本轮变更正本，第二节仍是原始走查发现，第八节记录最终落地口径。
 
 ## 一、用户诉求（2026-10-20 原文要点）
 
@@ -64,9 +64,26 @@
 
 继续方可直接按附录 A-D 的 file:line 清单施工，不必重做走查。已提交的收编件：`chore(ux)` 提交未产生（首次尝试被 spec-first 拦截，在途改动仍留在工作树由继续方处置）。
 
-## 七、验证账（收口时由继续方回填）
+## 七、最终落地对账（2026-10-20 实施轮）
 
-待实施后回填：定向用例清单与结果、浏览器走查清单与结果、并行会话改动收编记录。
+1. **Matrix 链接**：分享弹窗/永久链接均产出 `#/app/s/room/:roomId` 产品内链；二维码本地生成，不再把房间 ID 发 qrserver；房间摘要卡不再把 `matrix://` 伪装成外链。登录/完整客户端入口走本部署 server-info（补丁 672 让服务端单源优先于 localStorage 旧地址）；存量凭据启动前与 server-info 对账，homeserver 真迁移时给「重新登录」横幅，不再继续打旧地址刷连接错误。
+2. **假功能与死链**：看板「？」改为可打开的帮助说明；IDE 简报「看板卡」落到 `#/app/board?task=<id>`；语音/视频占位改为轻 toast；内部调研署名、密钥台账黑话、模型路由“兜底/回落链”均改人话；`hi-actions-*` 绑定修正。
+3. **机读噪声**：新增 `custom/client/ia2/format.ts` 统一枚举/时间/路径/字段格式化；锚点抽屉首屏给字段表，原文与复制动作折叠；监督面板删除手打 run 输入与过期示例；推演/治理/交付面的枚举、时间戳和路径按同一规则降噪。
+4. **日常/推演拆分**：`useDailyStageProgress` 只读跨板任务；`useRunContext` 拆 sim/daily 记忆，`query.run` 只作为显式跨域链接；`/app/sim*` 不再高亮日常阶段；⑤验收四个页签改为 DailyTrace/DailyDelivery/DailyUat/DailyG5，判定写回任务卡或审批，不写推演台账；推演运行编排只读 graph specs/runs，不再读取日常 workspace store。
+5. **互验通道**：日常验收四签底部保留「推演参照」只读链接；推演证据签折叠展示交付健康/需求追溯两张旧证据表。两侧共享格式化、看板 API、审批组件等技术件，但导航与写入口不互串。
+6. **冗余清理**：旧 Orchestrate/Spec/EngScene/RunCenter/RunDetail/RunCanvas/GovCluster/GovSessionHealth 等死件删除；teams/agents/accounts/cases/hermes journey 独立入口保留名称并 redirect 到阶段签；sim/gov 死词条删除。
+7. **布局遮罩与溢出**：新增 `z-layers.ts` + CSS 变量账本；注意力条抽屉自持右对齐；看板评论输入 sticky；推演总览与工作台补 1100px 断点；追溯/交付表格横向滚动；阶段页签渐隐提示；归档任务列表内滚；GovOverlay 900px 单列；长链接/长路径增加断行与省略。
+
+## 八、验证账（收口）
+
+- 机械守门：新增 `domain-split.test.ts`、`cockpit-hygiene.test.ts`、`daily-acceptance.test.ts`、`cockpit-layout-guards.test.ts`、`z-layers.test.ts`。
+- 构建：`npm run build` 最终复跑 rc=0；8791 modules transformed，`verify-dist` 通过（出厂默认口令扫描零命中）。
+- 浏览器：8649 热更新走查 `/app`、`/app/sim`、`/app/stage/accept?tab=trace|delivery|g5`、`/app/teams`；`/app/teams` 实际落到 `/app/stage/setup?tab=teams`，无重复面包屑；新开干净 tab 控制台 error=0。
+- 设计机械检查：Impeccable detector 对本轮新增/重写核心目标（StagePreflight、Daily 四面板、DailySimReference、SimOrchestrationView、format/useDaily/useRunContext）返回 `[]`。
+- 全量测试：`npm test` 最终复跑 **5502 通过 / 10 失败 / 8 跳过（776 文件）**。10 个失败均为本轮改动外环境项：
+  `diagram-export`×3（系统 Chrome 启动 TargetClosed，下载 Playwright Chromium 超时）；`specialist-presets`×1（`upstream/routa/.../backlog-refiner.yaml` 缺席）；`tool-waterfall-gate`×1（注入态 patch 顺序基线）；`cua-node-backend-platforms`×5（`upstream/zcode` 未构建 node-backend.js）。
+- 矩阵定向：`share-link` 5 例、permalink 6 例、`server-url` 4 例、`server-moved-banner` 2 例全部通过；补丁 672 在当前注入树上 `git apply --reverse --check` 通过（正向 apply 因已注入而拒绝，属预期）。
+- 未验证：有真实 Matrix 凭据的房间分享活体点击（本环境不可登录外部 Matrix 账号）。
 
 ## 附录 A：B2 假功能/死链/黑话待修清单（file:line 为 2026-10-20 走查时点）
 

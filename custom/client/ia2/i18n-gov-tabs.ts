@@ -15,18 +15,14 @@ const GOV_TABS_TEXT = {
     tabGovAudit: '审计与变更',
     tabGovDocs: '文档评审',
     tabGovHarness: '研发效能',
-    tabGovCluster: '集群健康',
     tabGovOntology: '本体校验',
-    tabGovSessionHealth: '会话健康',
   },
   en: {
     tabGovRegistry: 'Capabilities & Rules',
     tabGovAudit: 'Audit & Changes',
     tabGovDocs: 'Doc Review',
     tabGovHarness: 'Engineering Effectiveness',
-    tabGovCluster: 'Cluster Health',
     tabGovOntology: 'Ontology Validation',
-    tabGovSessionHealth: 'Session Health',
   },
 } as const
 

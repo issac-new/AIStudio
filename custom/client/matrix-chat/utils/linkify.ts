@@ -36,7 +36,7 @@ export interface LinkifyResult {
 }
 
 /**
- * 纯文本 → 安全 HTML：卡链接（#/hermes/kanban?task= 深链）+ @我 高亮。
+ * 纯文本 → 安全 HTML：卡链接（#/app/board?task= 深链）+ @我 高亮。
  * currentUsername 为空时跳过 @我 判定（未登录态不高亮）。
  */
 export function linkifyPlainText(text: string, currentUsername: string | null | undefined): LinkifyResult {

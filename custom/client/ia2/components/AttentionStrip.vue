@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
-.ia-attn { display: flex; align-items: center; gap: 8px; }
+.ia-attn { position: relative; display: flex; align-items: center; gap: 8px; }
 .ia-attn__label {
   flex-shrink: 0; display: inline-flex; align-items: center;
   padding: 3px 10px; font-size: 11px; font-weight: 600;
@@ -164,7 +164,7 @@ onBeforeUnmount(() => {
 .ia-attn__caret { font-size: 9px; opacity: .7; }
 
 .ia-attn__panel {
-  position: absolute; top: calc(100% - 2px); left: 96px; z-index: 40;
+  position: absolute; top: calc(100% - 2px); right: 0; z-index: var(--ia-z-header-panel);
   width: min(460px, 72vw); max-height: 60vh;
   display: flex; flex-direction: column;
   background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;

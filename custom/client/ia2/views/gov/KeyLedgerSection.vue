@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/ia2/views/gov/KeyLedgerSection.vue -->
 <!-- 密钥最小台账（C11，R13/Q3——设计正本 §二 S15）：清单+归属+最近轮换+备注，
-     **不含密钥本体**（服务端字段守卫禁入）；轮换流程与扫描挂账下期（Q3）。
+     不保存密钥内容；轮换流程与自动扫描还在建设中。
      读 orgloop /key-ledger；整表替换保存（PUT）。 -->
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
@@ -55,7 +55,7 @@ onMounted(() => { void refresh() })
       <button class="kls__btn" type="button" data-testid="kls-save" :disabled="busy" @click="save">保存</button>
       <span v-if="saved" class="kls__saved" data-testid="kls-saved">已保存</span>
     </div>
-    <p class="kls__note" data-testid="kls-note">只存清单、归属与最近轮换时间，**不含密钥本体**（服务端字段守卫禁入）；轮换流程与扫描属下期件（Q3 裁定）。</p>
+    <p class="kls__note" data-testid="kls-note">这里只保存密钥名称、归属和最近轮换时间，不保存密钥内容；轮换流程与自动扫描还在建设中。</p>
     <p v-if="loadError" class="kls__error" data-testid="kls-error">{{ loadError }}</p>
     <p v-else-if="!entries" class="kls__hint">读取中……</p>
     <template v-else>

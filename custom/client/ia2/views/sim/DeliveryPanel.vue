@@ -13,7 +13,7 @@ interface BranchesResponse { run: string; graceMs: number; count: number; branch
 interface DeliverableRow { name: string; label: string; file: string | null }
 interface DeliverablesResponse { run: string; deliverables: DeliverableRow[]; scanned: number }
 
-const { run, remember } = useRunContext()
+const { run, remember } = useRunContext('sim')
 const router = useRouter()
 const loading = ref(false)
 const loadError = ref('')
@@ -92,7 +92,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 </template>
 
 <style scoped lang="scss">
-.dlv { display: flex; flex-direction: column; gap: 12px; }
+.dlv { display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-x: auto; }
 .dlv__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
 .dlv__hint { color: var(--text-muted); font-size: 12px; margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .dlv__action {
@@ -106,7 +106,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 }
 .dlv__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
 .dlv__h { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
-.dlv__table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dlv__table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 12px; }
 .dlv__table th, .dlv__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color); }
 .dlv__mono { font-family: var(--font-mono); }
 .dlv__fresh { padding: 0 6px; border-radius: 4px; font-size: 11px; }
@@ -114,7 +114,8 @@ watch(run, () => { if (run.value.trim()) void load() })
 .dlv__fresh--stale { color: var(--ia-stale); background: rgba(201, 150, 46, 0.14); }
 .dlv__fresh--old { color: var(--text-muted); background: rgba(127, 127, 127, 0.14); }
 .dlv__chain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
-.dlv__chain-item { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
+.dlv__chain-item { display: flex; gap: 8px; align-items: baseline; font-size: 12px; min-width: 0; }
+.dlv__chain-file { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dlv__chain-mark { width: 16px; text-align: center; }
 .dlv__chain-mark--present { color: var(--ia-fresh); }
 .dlv__chain-mark--absent { color: var(--ia-fail); }

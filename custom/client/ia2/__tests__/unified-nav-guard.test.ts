@@ -54,7 +54,7 @@ describe('v12 统一视图单测（双视图）', () => {
   })
 
   it('旧直达链接迁移表实走重定向（query 语义不丢关键路径）', async () => {
-    // push 会解析目标记录的懒组件——替换为桩，避免装载 RunCenterView/HistoryView
+    // push 会解析目标记录的懒组件——替换为桩，避免装载 HistoryView
     // 等重型视图的导入链（其内 upstream api/client 顶层 createWebHashHistory 在
     // node 环境无 location 即炸；本单测只验重定向本身）
     const Stub = { template: '<div />' }

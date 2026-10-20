@@ -6,6 +6,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { fetchIssues, joinIssueDisposal, type IssueLine } from '../../api/gov'
 import { useRunContext } from '../../composables/useRunContext'
+import { shortPath } from '../../format'
 
 const { run, remember } = useRunContext()
 const loading = ref(false)
@@ -52,7 +53,7 @@ watch(run, () => { if (run.value.trim()) void load() })
     <template v-if="lines">
       <p class="gis__stats" data-testid="gis-stats">
         问题 {{ disposedCount + openCount }}｜已处置 {{ disposedCount }}｜未处置 {{ openCount }}｜处置率 {{ rate == null ? '—' : `${Math.round(rate * 100)}%` }}<template v-if="openCount > 0">——未达 100% 处置，红项待清</template>
-        <span class="gis__src">数据源：{{ source }}（本次运行账本）</span>
+        <span class="gis__src" :title="source">数据源：{{ shortPath(source) }}（本次运行账本）</span>
       </p>
       <p v-if="rows.length === 0" class="gis__hint" data-testid="gis-empty">台账无 ISSUE 行。</p>
       <table v-else class="gis__table" data-testid="gis-table">

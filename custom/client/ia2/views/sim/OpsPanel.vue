@@ -13,7 +13,7 @@ import {
   type ServiceRow, type CliHealthResponse,
 } from '../../api/ops'
 
-const { run } = useRunContext()
+const { run } = useRunContext('sim')
 const loading = ref(false)
 const loadError = ref('')
 const checkedAt = ref('')
@@ -29,7 +29,7 @@ const liveness = ref<string>('')
 function humanizeOpsError(message: string): string {
   if (/SIM_DISPATCHER_HEALTH_CLI/.test(message)) return '调度器健康探测未接入（服务端未配置探测命令）'
   if (/SIM_SLEEPING_WORKERS_CLI/.test(message)) return '空闲工作者探测未接入（服务端未配置探测命令）'
-  if (/OBS_SIM_ROOT/.test(message)) return '推演数据目录未配置（请联系管理员）'
+  if (/OBS_SIM_ROOT/.test(message)) return '推演数据目录未配置；请在系统设置·平台连接中完成环境配置'
   return message
 }
 

@@ -4,14 +4,15 @@
      + 专题 + 系统设置；全流程推演改为顶栏独立模式，不再作为日常侧栏「整轮」组。
      推演模式 = 推演专区六签 + 返回日常工作台，侧栏不出现日常阶段与专题。
      三组子项共用 IaSideNavItem 一套行式（18px 前导槽 + 标签 + 右侧槽）。
-     状态数据走 useStageProgress 共享缓存；无运行/读取失败按未开始呈现，不假装完成。 -->
+     状态数据走 useDailyStageProgress 共享缓存；无运行/读取失败按未开始呈现，不假装完成。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { features } from '../../../../config/features'
 import { CENTER_NAVS, ISLAND_NAVS, useCenterNavLocale } from '../nav-centers'
 import { STAGE_META } from '../stage-meta'
-import { useStageProgress } from '../composables/useStageProgress'
+import { useDailyStageProgress } from '../composables/useDailyStageProgress'
+import { useRunContext } from '../composables/useRunContext'
 import { runShortLabel } from '../run-display'
 import { useDecisionRows } from '../composables/useDecisionRows'
 import { readSetting, writeSetting } from '@/custom/settings-layers'
@@ -20,7 +21,8 @@ import IaSideNavItem from './IaSideNavItem.vue'
 const route = useRoute()
 const router = useRouter()
 const navLocale = useCenterNavLocale()
-const progress = useStageProgress()
+const progress = useDailyStageProgress()
+const { run: simRun } = useRunContext('sim')
 const { decisionRows } = useDecisionRows()
 
 const zh = computed(() => navLocale.value === 'zh')
@@ -103,7 +105,7 @@ const stageStatusLabel = (status: 'done' | 'current' | 'pending'): string =>
 /** 左侧栏只放可读日期（10/17 运行），不暴露运行目录名/轮次号；
  *  完整目录名留在顶栏运行 chip 的 title 里供排查反查（2026-10-19 走查批） */
 const runTrail = computed(() => {
-  const r = progress.run.value.trim()
+  const r = simRun.value.trim()
   return r ? runShortLabel(r) : ''
 })
 

@@ -25,7 +25,7 @@ import { compensationLabel } from '../../compensation-labels'
 const router = useRouter()
 
 // ── run 定位：与页头 RunSelector/阶段页共用 useRunContext（query 优先+记忆回落）──
-const { run, remember } = useRunContext()
+const { run, remember } = useRunContext('sim')
 const loading = ref(false)
 const loadError = ref('')
 const runState = ref<RunStateResponse | null>(null)
@@ -380,9 +380,9 @@ function goSupervision(): void {
 .ov__posture--standard { background: rgba(217, 119, 6, 0.14); border-color: rgba(217, 119, 6, 0.4); }
 .ov__posture--demo { background: rgba(150, 84, 214, 0.14); border-color: rgba(150, 84, 214, 0.4); }
 .ov__posture-name { font-weight: 600; }
-.ov__posture-policy { flex: 1; min-width: 200px; }
+.ov__posture-policy { flex: 1; min-width: min(200px, 100%); }
 .ov__lamp {
-  padding: 1px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap;
+  padding: 1px 8px; border-radius: 4px; font-size: 11px; white-space: normal; text-align: left; min-width: 0;
   &.ov__lamp--red { color: var(--ia-fail); background: rgba(221, 51, 51, 0.12); border: 1px solid rgba(221, 51, 51, 0.35); }
   &.ov__lamp--green { color: var(--ia-fresh); background: rgba(46, 158, 91, 0.12); border: 1px solid rgba(46, 158, 91, 0.35); }
 }
@@ -462,4 +462,11 @@ function goSupervision(): void {
 .ov__kpi--link:hover { outline: 1px solid var(--border-color); outline-offset: 2px; }
 .ov__h--link { cursor: pointer; }
 .ov__h--link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 1100px) {
+  .ov__kpis { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .ov__grid { grid-template-columns: 1fr; }
+  .ov__side { position: static; max-height: none; overflow: visible; }
+  .ov__dl { grid-template-columns: 1fr; }
+}
 </style>

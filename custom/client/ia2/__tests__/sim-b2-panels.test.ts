@@ -71,9 +71,8 @@ describe('SupervisionPanel — S2 监督面板', () => {
       run: '20261015-v8-run20', tail: 50, count: LINES.length, skippedBadLines: 0,
       lines: LINES, source: '/runs/20261015-v8-run20/workflow-journal.ndjson',
     })
+    localStorage.setItem('ia2.lastRun', '20261015-v8-run20')
     const w = mount(SupervisionPanel)
-    await w.find('[data-testid="sup-run"]').setValue('20261015-v8-run20')
-    await w.find('[data-testid="sup-load"]').trigger('click')
     await flushPromises()
     expect(mockedFetchJournal).toHaveBeenCalledWith('20261015-v8-run20', 50)
     const first = w.find('[data-testid="sup-win-w2"]')
@@ -92,9 +91,8 @@ describe('SupervisionPanel — S2 监督面板', () => {
     mockedFetchJournal.mockResolvedValue({
       run: 'r', tail: 50, count: LINES.length, skippedBadLines: 0, lines: LINES, source: 's',
     })
+    localStorage.setItem('ia2.lastRun', 'r')
     const w = mount(SupervisionPanel)
-    await w.find('[data-testid="sup-run"]').setValue('r')
-    await w.find('[data-testid="sup-load"]').trigger('click')
     await flushPromises()
     await w.find('[data-testid="sup-verdict-row"]').trigger('click')
     const drawer = w.find('[data-testid="sim-anchor-drawer"]')
@@ -105,9 +103,8 @@ describe('SupervisionPanel — S2 监督面板', () => {
 
   it('端点失败如实报错（未配置 503 场景），不渲染窗流', async () => {
     mockedFetchJournal.mockRejectedValue(new Error('/api/hermes/sim/journal → 503'))
+    localStorage.setItem('ia2.lastRun', 'r')
     const w = mount(SupervisionPanel)
-    await w.find('[data-testid="sup-run"]').setValue('r')
-    await w.find('[data-testid="sup-load"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="sup-error"]').text()).toContain('暂不可用')
     expect(w.find('[data-testid="sup-error"]').attributes('title')).toContain('503')

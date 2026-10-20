@@ -54,7 +54,7 @@ export function alwaysAllowApprover(username: string): string {
   return `always-allow:${username}`
 }
 
-/** 本次会话内已自动放行过的 interruptId（模块级——同屏 InboxPanel 与 RunListTable
+/** 本次会话内已自动放行过的 interruptId（模块级——同屏多审批面板
  *  可各自挂载 ApprovalPanel，组件级 ref 挡不住两实例对同一 interrupt 各自发一次
  *  resume；改由模块级集合保证首发者胜出。封顶 512 条防长会话无界增长）。 */
 const autoFiredIds = new Set<string>()

@@ -60,9 +60,8 @@ export function centerForPath(path: string): CenterKey | null {
   if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
   if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
   if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
-  // 全流程推演=④开发的运行工具舱、六阶段治理=⑥治理（2026-10-17 层级批：
-  // 旧映射 sim→②需求 / gov→③分析设计 会让顶栏高亮与实际页面无关，用户实报「层次乱」）
-  if (path === '/app/sim' || path.startsWith('/app/sim/')) return 'stage4'
+  // 全流程推演是独立导航域（D5）：即使 URL 带 from 也不高亮日常阶段。
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return null
   if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage6'
   if (path === '/app' || path === '/app/') return 'stage1' // 裸路径=旅程页（默认入口，搭建区①高亮）
   if (path.startsWith('/app/')) return 'stage4'
@@ -83,6 +82,7 @@ export function stageKeyFromQuery(from: unknown): CenterKey | null {
 
 /** 单值版（粗粒度兜底，供只接受单阶段的调用方）：来路上下文优先，其次路径归属 */
 export function activeStageForRoute(path: string, from: unknown): CenterKey | null {
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return null
   return stageKeyFromQuery(from) ?? centerForPath(path)
 }
 
@@ -94,6 +94,7 @@ export function activeStageForRoute(path: string, from: unknown): CenterKey | nu
  * 4) 表外页面回退路径粗粒度归属（如旅程页→①）。
  */
 export function activeStagesForRoute(name: string, path: string, from: unknown): CenterKey[] {
+  if (path === '/app/sim' || path.startsWith('/app/sim/')) return []
   const fromKey = stageKeyFromQuery(from)
   if (fromKey) return [fromKey]
   if (hasStageAttribution(name)) return stageOwnersForRouteName(name).map(stageKeyOf)

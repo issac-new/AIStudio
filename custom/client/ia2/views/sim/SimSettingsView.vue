@@ -8,6 +8,7 @@ import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchSimSettings, putSimSettings, SETTING_FIELDS, type SimSettings } from '../../api/sim-settings'
+import { humanEnum } from '../../format'
 
 /** embedded=true 时作为全流程推演页签内容，不渲染面包屑/页头/返回钮 */
 const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
@@ -81,7 +82,7 @@ onMounted(() => { void load() })
       <section v-for="f in SETTING_FIELDS" :key="f.key" class="sst__row">
         <div class="sst__row-head">
           <span class="sst__label">{{ f.label }}</span>
-          <span class="sst__current">当前有效值：{{ values[f.key] }}</span>
+          <span class="sst__current">当前有效值：{{ f.kind === 'posture' || f.kind === 'policy' ? humanEnum(values[f.key]) : values[f.key] }}</span>
         </div>
         <p class="sst__hint">{{ f.hint }}</p>
         <select
@@ -90,7 +91,7 @@ onMounted(() => { void load() })
           class="sst__input"
           :data-testid="`sst-input-${f.key}`"
         >
-          <option v-for="o in POSTURE_OPTIONS" :key="o" :value="o">{{ o }}</option>
+          <option v-for="o in POSTURE_OPTIONS" :key="o" :value="o">{{ humanEnum(o) }}</option>
         </select>
         <select
           v-else-if="f.kind === 'policy'"
@@ -98,7 +99,7 @@ onMounted(() => { void load() })
           class="sst__input"
           :data-testid="`sst-input-${f.key}`"
         >
-          <option v-for="o in POLICY_OPTIONS" :key="o" :value="o">{{ o }}</option>
+          <option v-for="o in POLICY_OPTIONS" :key="o" :value="o">{{ o === 'block' ? '阻断' : '提醒' }}</option>
         </select>
         <input
           v-else

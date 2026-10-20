@@ -640,7 +640,7 @@ function fmtBytes(b: number): string {
   &__empty { text-align: center; opacity: 0.6; padding: 18px; }
 }
 .onto-modal {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 60;
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: var(--ia-z-modal, 1000);
   display: flex; align-items: center; justify-content: center;
   &__card {
     background: var(--bg-primary); border-radius: 14px; padding: 18px 20px; width: min(720px, 92vw);

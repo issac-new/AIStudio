@@ -9,8 +9,6 @@ import { useRouter } from 'vue-router'
 import { fetchRunState, type RunStateResponse } from '../../api/overview'
 import { ACTS_7, countStepsDone, resolveGateRows, resolveStepRows } from './steps-registry'
 import { useRunContext } from '../../composables/useRunContext'
-import { useWorkspaceStore } from '../../store/workspace'
-import { useDecisionRows } from '../../composables/useDecisionRows'
 import OverviewPanel from './OverviewPanel.vue'
 import {
   fetchDirectorScenarios, planDirectorScenario, startDirectorScenario,
@@ -22,9 +20,7 @@ import {
 } from '../../api/sim-director'
 
 const router = useRouter()
-const { run, remember } = useRunContext()
-const workspace = useWorkspaceStore()
-const { decisionRows } = useDecisionRows()
+const { run, remember } = useRunContext('sim')
 
 // ── 上半区：产品内图推演 ──────────────────────────────────────────────
 const FALLBACK_SCENARIO: DirectorScenario = {
@@ -45,6 +41,7 @@ const graphMsg = ref('')
 const graphRunId = ref('')
 const graphRun = ref<GraphRunState | null>(null)
 const graphEvents = ref<GraphEvent[]>([])
+const simCast = ref<string[]>([])
 const graphLoading = ref(false)
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -62,6 +59,7 @@ const EVENT_LABEL: Record<string, string> = {
 function applyScenario(s: DirectorScenario): void {
   const modules = s.modules ?? []
   const assignees = s.assignees ?? {}
+  simCast.value = modules.map(m => assignees[m] ?? '').filter(Boolean)
   form.value = {
     title: s.title,
     description: s.description,
@@ -104,6 +102,7 @@ async function preview(): Promise<void> {
   graphMsg.value = ''
   try {
     plan.value = await planDirectorScenario(buildInput())
+    simCast.value = plan.value.cast
     graphMsg.value = `已生成 ${plan.value.nodeCount} 个节点、${plan.value.gateCount} 道人工闸。`
   } catch (e) {
     plan.value = null
@@ -124,6 +123,7 @@ async function start(): Promise<void> {
   try {
     const r = await startDirectorScenario(input)
     graphRunId.value = r.runId
+    simCast.value = r.cast
     try { localStorage.setItem(GRAPH_RUN_KEY, r.runId) } catch { /* 隐私模式忽略 */ }
     graphMsg.value = `已起跑：${r.runId}（${r.cast.length} 位模拟员工）。`
     await refreshGraph()
@@ -296,20 +296,15 @@ const acts = computed(() => {
   })
 })
 
-const cast = computed(() => {
-  const counts = new Map<string, number>()
-  for (const e of workspace.rawTasks) {
-    const who = String(e.task.assignee ?? '').trim()
-    if (!who) continue
-    counts.set(who, (counts.get(who) ?? 0) + 1)
-  }
-  return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10)
-})
-const interventions = computed(() => decisionRows.value.slice(0, 3))
+const cast = computed(() => simCast.value.map(name => ({ name, count: 1 })))
+const interventions = computed(() => pendingGates.value.map(g => ({
+  id: g.interruptId,
+  title: g.prompt || g.nodeId,
+  kind: 'gate-review' as const,
+})))
 const openLedger = computed(() => state.value?.ledger.open ?? 0)
 
 function goOrchestration(): void { void router.push({ name: 'ia2.simOrchestration' }) }
-function goInbox(): void { void router.push({ name: 'ia2.inbox' }) }
 function goDaily(): void { void router.push({ name: 'ia2.collab' }) }
 
 onMounted(() => {
@@ -468,7 +463,7 @@ onBeforeUnmount(() => { stopPolling() })
             <h4 class="dir__h">模拟员工名册 <span class="dir__h-n">{{ cast.length }}</span></h4>
             <p v-if="!cast.length" class="dir__hint">本轮还没有任务执行人记录；派活后会在这里出现。</p>
             <template v-else>
-              <p class="dir__hint">按当前看板任务执行人聚合（人类账号与 agent 同列）。</p>
+              <p class="dir__hint">按本轮导演场景名册聚合；不看日常工作台的实时任务。</p>
               <ul class="dir__cast">
                 <li v-for="p in cast" :key="p.name" class="dir__cast-row"><span class="dir__cast-dot" aria-hidden="true" /><span class="dir__cast-name">{{ p.name }}</span><span class="dir__cast-n">{{ p.count }} 项</span></li>
               </ul>
@@ -479,10 +474,9 @@ onBeforeUnmount(() => { stopPolling() })
             <h4 class="dir__h">待人介入 <span class="dir__h-n">{{ interventions.length }}</span></h4>
             <p v-if="!interventions.length" class="dir__hint">没有等你拍板的事——推演按当前节奏继续。</p>
             <ul v-else class="dir__waits">
-              <li v-for="w in interventions" :key="w.id" class="dir__wait"><span class="dir__wait-title">{{ w.title }}</span><span class="dir__wait-tag">{{ w.kind === 'task-review' || w.kind === 'gate-review' ? '待审' : '待介入' }}</span></li>
+              <li v-for="w in interventions" :key="w.id" class="dir__wait"><span class="dir__wait-title">{{ w.title }}</span><span class="dir__wait-tag">{{ w.kind === 'gate-review' ? '待审' : '待介入' }}</span></li>
             </ul>
-            <button v-if="interventions.length" type="button" class="dir__link" data-testid="director-open-inbox" @click="goInbox">去审批收件箱处理 →</button>
-          </section>
+                      </section>
         </div>
 
         <div class="dir__tech">
