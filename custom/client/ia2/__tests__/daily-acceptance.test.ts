@@ -17,9 +17,18 @@ vi.mock('../store/workspace', () => ({
 vi.mock('@/custom/cockpit/components/ApprovalPanel.vue', () => ({
   default: { name: 'ApprovalPanel', template: '<div data-testid="approval-panel-stub" />' },
 }))
+const registryAccounts = vi.hoisted(() => ([
+  { userId: '@sim_pm_product_manager_a_aipay:matrix.test', displayName: '产品经理A' },
+  { userId: '@wei:matrix.test', displayName: '' },
+]))
+vi.mock('@/custom/matrix-teams/stores/team-registry', () => ({
+  useTeamRegistryStore: () => ({ accounts: registryAccounts }),
+}))
 
 import DailyTracePanel from '../views/stage/DailyTracePanel.vue'
 import DailyUatPanel from '../views/stage/DailyUatPanel.vue'
+import DailyDeliveryPanel from '../views/stage/DailyDeliveryPanel.vue'
+import { accountLocalpart } from '../views/stage/assignee-display'
 
 const task = (id: string, status: string, extra = {}) => ({
   board: 'main', task: { id, title: `任务 ${id}`, status, assignee: 'chen', created_at: 1, started_at: null, completed_at: null, workspace_path: '/work/repo/packages/client', branch_name: 'feature/x', result: status === 'done' ? '测试通过' : null, ...extra },
@@ -48,5 +57,29 @@ describe('daily acceptance panels', () => {
     w.find('[data-testid="daily-uat-t1"] button').trigger('click')
     expect(w.emitted('open-task')?.[0]).toEqual(['t1'])
     w.unmount()
+  })
+
+  it('负责人列映射注册表称谓，无映射时如实回落原始账号', async () => {
+    rawTasks.splice(0, rawTasks.length,
+      task('t1', 'review', { assignee: 'sim_pm_product_manager_a_aipay' }),
+      task('t2', 'review', { assignee: 'chen' }),
+      task('t3', 'review', { assignee: 'wei' }),
+      task('t4', 'review', { assignee: null }))
+    const w = mount(DailyDeliveryPanel)
+    await flushPromises()
+    const row1 = w.find('[data-testid="daily-delivery-t1"]')
+    expect(row1.text()).toContain('产品经理A')
+    expect(row1.text()).not.toContain('sim_pm_product_manager_a_aipay')
+    expect(w.find('[data-testid="daily-delivery-t2"]').text()).toContain('chen')
+    // displayName 为空的注册行不产生映射：wei 回落原始账号而非误称
+    expect(w.find('[data-testid="daily-delivery-t3"]').text()).toContain('wei')
+    expect(w.find('[data-testid="daily-delivery-t4"]').text()).toContain('未指派')
+    w.unmount()
+  })
+
+  it('accountLocalpart 归一 @ 前缀与 homeserver 域', () => {
+    expect(accountLocalpart('@sim_pm_product_manager_a_aipay:matrix.test')).toBe('sim_pm_product_manager_a_aipay')
+    expect(accountLocalpart('sim_pm_product_manager_a_aipay')).toBe('sim_pm_product_manager_a_aipay')
+    expect(accountLocalpart('@admin:matrix.test')).toBe('admin')
   })
 })
