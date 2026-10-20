@@ -1,0 +1,32 @@
+diff --git a/packages/client/index.html b/packages/client/index.html
+index ae518dd..64d712b 100644
+--- a/packages/client/index.html
++++ b/packages/client/index.html
+@@ -59,6 +59,19 @@
+     .boot-fallback__logo-wrap {
+       --studio-loading-size: 72px;
+     }
++
++    /* overlay[boot-caption]: 首帧文字反馈（原纯 logo 无提示，2026-10-20 W2 挂账清零） */
++    .boot-fallback__brand {
++      display: grid;
++      justify-items: center;
++      gap: 14px;
++    }
++
++    .boot-fallback__caption {
++      font-size: 13px;
++      color: var(--text-muted, #8a8a8a);
++      letter-spacing: 0.02em;
++    }
+   </style>
+ 
+   <!-- Prevent FOUC by applying theme classes immediately -->
+@@ -123,6 +136,7 @@
+         <span class="boot-fallback__logo-wrap studio-loading-logo">
+           <img src="/logo.png" alt="" />
+         </span>
++        <span class="boot-fallback__caption">SwarmStudio 加载中…</span>
+       </div>
+     </div>
+   </div>

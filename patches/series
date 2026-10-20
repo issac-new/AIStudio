@@ -891,3 +891,8 @@
 # 669: 登录页 homeserver 默认值——无 localStorage 记忆时取 /api/matrix/server-info 预填
 # （LAN 部署不再拿到写死的 localhost:8008）；localStorage 记忆优先逻辑不变。
 669-client-login-homeserver-prefill.patch
+# 670: kanban store fetchDiagnostics 断言次序——能力表已加载且 diagnostics 缺失时安静跳过
+# （原断言在自身 try/catch 外抛未捕获 pageerror，2026-10-20 M3 实证）；未加载维持旧行为。
+670-client-kanban-diagnostics-order.patch
+# 671: index.html boot-fallback 补首帧文字「SwarmStudio 加载中…」（原纯 logo 无提示=W2 白屏体感）。
+671-client-boot-fallback-caption.patch
