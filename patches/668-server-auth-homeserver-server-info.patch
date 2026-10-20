@@ -8,7 +8,7 @@ index 1ba1e385..159c2cf4 100644
 +import { getMatrixServerInfo } from '../../../custom/matrix/server-info'
  import { checkPassword, recordPasswordFailure, recordPasswordSuccess, extractIp, getLockedIps, unlockIp, unlockAll } from '../services/auth/login-limiter'
  import {
-   countActiveSuperAdmins,
+   createSuperAdmin,
 @@ -800,7 +802,7 @@ export async function matrixLogin(ctx: Context) {
   */
  export async function listMatrixUsers(ctx: Context) {

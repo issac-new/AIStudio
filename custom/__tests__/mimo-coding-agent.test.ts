@@ -68,7 +68,7 @@ describe('MiMo-Code 编码 Agent 接入（patch 393/394）', () => {
     const agentOptions = readFileSync(resolve(UPSTREAM_CLIENT, 'utils/agent-options.ts'), 'utf8')
     expect(agentOptions).toContain("{ label: 'MiMo Code', value: 'mimo' }")
     const avatar = readFileSync(resolve(UPSTREAM_CLIENT, 'utils/chat-agent-avatar.ts'), 'utf8')
-    expect(avatar).toContain("mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' }")
+    expect(avatar).toContain("mimo: { label: 'MiMo Code', src: deploymentUrl('/coding-agents/mimo.svg') }")
     expect(existsSync(resolve(UPSTREAM_CLIENT, '../public/coding-agents/mimo.svg')), 'mimo.svg 图标未注入').toBe(true)
   })
 

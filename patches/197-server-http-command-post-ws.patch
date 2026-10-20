@@ -1,19 +1,20 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index 955b69b06..bd2ac6e62 100644
+index c8cd639cd..00c1834fb 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
-@@ -21,6 +21,10 @@ import './skill-files-adapter'
+@@ -19,7 +19,11 @@ import { dshPluginUi } from '../modules/coding-agents/services'
+ import './chat-agent-runtime-adapter'
+ import './skill-files-adapter'
  import { setGroupChatServer } from '../modules/studio/routes/group-chat'
- // overlay[loop-socket]: Loop Engineering Socket.IO namespace
- import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
 +// overlay[command-post]: 2.13 指挥中心 —— 舰队 WS + 看板聚合 WS
 +import { setupCommandPostWebSockets } from '../custom/services/hermes/command-post'
 +import { authenticateUserToken as authenticateUserTokenForCommandPost, isAuthEnabled as isAuthEnabledForCommandPost } from '../modules/studio/public/auth'
 +import { userCanAccessProfile as userCanAccessProfileForCommandPost } from '../modules/studio/public/users'
+ // overlay[loop-socket]: Loop Engineering Socket.IO namespace
+ import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
  import { setChatRunServer } from '../modules/studio/public/chat-run'
  import { GroupChatServer } from '../modules/studio/public/group-chat'
- import {
-@@ -692,6 +696,19 @@ export async function bootstrap() {
+@@ -550,6 +676,19 @@ export async function bootstrap() {
      close: () => kanbanEventsWebSocket.close(),
      forceClose: () => kanbanEventsWebSocket.forceClose(),
    })
@@ -30,6 +31,6 @@ index 955b69b06..bd2ac6e62 100644
 +    close: () => commandPostSockets.close(),
 +    forceClose: () => commandPostSockets.forceClose(),
 +  })
-   const lanPeerSocketManager = getLanPeerSocketManager()
-   lanPeerSocketManager.setupServer(servers)
-   additionalShutdownSteps.push({
+   console.log('[bootstrap] terminal + kanban websocket setup')
+ 
+   const loopbackBaseUrl = getLoopbackBaseUrl(server)

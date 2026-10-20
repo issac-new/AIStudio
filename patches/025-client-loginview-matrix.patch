@@ -1,14 +1,16 @@
 diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
-index c278fbfa..efd007b4 100644
+index 15311bffc..efd007b47 100644
 --- a/packages/client/src/views/LoginView.vue
 +++ b/packages/client/src/views/LoginView.vue
-@@ -2,113 +2,155 @@
+@@ -1,115 +1,156 @@
+ <script setup lang="ts">
+-import { deploymentUrl } from '@/utils/deployment-url'
  import { ref, onMounted } from "vue";
  import { useRoute, useRouter } from "vue-router";
  import { useI18n } from "vue-i18n";
 -import { setApiKey, clearApiKey, hasApiKey } from "@/api/client";
 -import { fetchAuthStatus, loginWithPassword } from "@/api/studio/auth";
--import { isDesktopShell } from "@/utils/desktop-bridge";
+-import { desktopBridge, isDesktopShell } from "@/utils/desktop-bridge";
 +import { useAuthStore } from "@/stores/hermes/auth";
  import { resolveLoginRedirect } from "@/utils/login-redirect";
 -import { useTheme } from "@/composables/useTheme";
@@ -35,7 +37,7 @@ index c278fbfa..efd007b4 100644
  const loading = ref(false);
  const errorMsg = ref("");
 -const showLockResetHint = ref(false);
--const desktopShell = isDesktopShell();
+-const desktopShell = isDesktopShell() && desktopBridge()?.remoteMode !== true;
  
 -if (desktopShell) {
 -  // Desktop login is a recovery path. Drop stale JWTs before any background
@@ -177,7 +179,7 @@ index c278fbfa..efd007b4 100644
    <div class="login-view">
      <div class="login-card">
 -      <div class="login-logo">
--        <img src="/logo.png" alt="Ekko Studio" width="80" height="80" />
+-        <img :src="deploymentUrl('/logo.png')" alt="Ekko Studio" width="80" height="80" />
 -      </div>
        <h1 class="login-title">{{ t("login.title") }}</h1>
 -      <p class="login-desc">{{ t("login.description") }}</p>
@@ -237,7 +239,7 @@ index c278fbfa..efd007b4 100644
        </form>
      </div>
    </div>
-@@ -139,14 +181,6 @@ async function handlePasswordLogin() {
+@@ -140,14 +181,6 @@ async function handlePasswordLogin() {
    }
  }
  
@@ -252,7 +254,7 @@ index c278fbfa..efd007b4 100644
  .login-title {
    font-size: calc(var(--font-size-base, 14px) * 26 / 14);
    font-weight: 600;
-@@ -161,13 +195,6 @@ async function handlePasswordLogin() {
+@@ -162,13 +195,6 @@ async function handlePasswordLogin() {
    line-height: var(--line-height, 1.6);
  }
  
@@ -266,7 +268,7 @@ index c278fbfa..efd007b4 100644
  .login-form {
    display: flex;
    flex-direction: column;
-@@ -202,25 +229,6 @@ async function handlePasswordLogin() {
+@@ -203,25 +229,6 @@ async function handlePasswordLogin() {
    text-align: start;
  }
  
@@ -292,7 +294,7 @@ index c278fbfa..efd007b4 100644
  .login-btn {
    width: 100%;
    padding: calc(14px * var(--spacing-scale, 1));
-@@ -242,4 +250,41 @@ async function handlePasswordLogin() {
+@@ -243,4 +250,41 @@ async function handlePasswordLogin() {
      cursor: not-allowed;
    }
  }
