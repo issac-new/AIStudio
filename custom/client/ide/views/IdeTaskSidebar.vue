@@ -580,7 +580,7 @@ onMounted(async () => {
     </div>
 
     <!-- 任务视图（查看文件已右移 IdeSidePane files 页签，09-20 裁定） -->
-    <div>
+    <div class="ide-taskbar__body">
       <div v-if="newGroupDraft !== null" class="ide-taskbar__newgroup">
         <input
           v-model="newGroupDraft"
@@ -832,6 +832,9 @@ onMounted(async () => {
    * 左分割条「拖了不动」根因（2026-09-22）。列 flex 交叉轴默认拉伸，此处显式 100%。 */
   width: 100%;
   min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
@@ -1019,7 +1022,8 @@ onMounted(async () => {
   }
 }
 
-.ide-taskbar__scroll { flex: 1; overflow-y: auto; min-height: 0; padding: 0 4px 8px; }
+.ide-taskbar__scroll { flex: 1 1 0; height: 0; overflow-y: auto; min-height: 0; padding: 0 4px 8px; }
+.ide-taskbar__body { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
 
 .ide-taskbar__section { margin-top: 6px; }
 

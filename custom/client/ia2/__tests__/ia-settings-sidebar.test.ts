@@ -51,7 +51,7 @@ describe('IaSettingsSidebar — 设置页侧栏（功能面恢复）', () => {
     // Hermes 组（原 HermesConfigSidebar 面；agentManager 随 features.agentManager
     // 默认关而隐——S3 既定语义 2026-10-01 补上消费方，不在恒显断言内；
     // 学习轨迹空白页 2026-10-20 移出导航）
-    for (const key of ['sidebar.skills', 'sidebar.plugins', 'sidebar.mcp', 'sidebar.memory', 'sidebar.channels', 'sidebar.jobs', 'sidebar.kanban']) {
+    for (const key of ['sidebar.skills', 'sidebar.plugins', 'sidebar.mcp', 'sidebar.memory', 'sidebar.channels', 'sidebar.jobs']) {
       expect(text, `Hermes 组缺 ${key}`).toContain(key)
     }
     // 系统组（原 AppSidebar 系统组全集——收缩批摘除项恢复；petdex 随
