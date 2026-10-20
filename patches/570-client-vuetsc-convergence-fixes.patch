@@ -1,64 +1,28 @@
-diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 28c7b6e1e..197861be3 100644
---- a/packages/client/src/stores/hermes/chat.ts
-+++ b/packages/client/src/stores/hermes/chat.ts
-@@ -62,7 +62,6 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
-   if (id === 'antigravity') return 'antigravity'
-   if (id === 'cursor') return 'cursor'
-   if (id === 'claude-code') return 'claude'
--  if (id === 'zcode') return 'zcode'
-   if (id === 'ekko-agent') return 'ekko-agent'
-   return undefined
- }
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
-index 99b820fdd..1548ead5b 100644
+index b98738385..7a9739b4a 100644
 --- a/packages/client/src/utils/chat-agent-avatar.ts
 +++ b/packages/client/src/utils/chat-agent-avatar.ts
-@@ -1,5 +1,5 @@
+@@ -1,7 +1,7 @@
+ import { deploymentUrl } from './deployment-url'
+ 
  export interface ChatAgentAvatar {
 -  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'DeepSeek Harness' | 'Cursor' | 'Antigravity' | 'Qwen Code' | 'Kimi Code' | 'CodeBuddy' | 'Qoder' | 'GitHub Copilot' | 'ZCode'
 +  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'MiMo Code' | 'DeepSeek Harness' | 'Cursor' | 'Antigravity' | 'Qwen Code' | 'Kimi Code' | 'CodeBuddy' | 'Qoder' | 'GitHub Copilot' | 'ZCode'
    src: string
  }
  
-diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
-index 24cc76563..171f1caae 100644
---- a/packages/client/src/utils/group-agent-avatar.ts
-+++ b/packages/client/src/utils/group-agent-avatar.ts
-@@ -19,7 +19,6 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
-     copilot: '/coding-agents/copilot-logo.svg',
-     zcode: '/coding-agents/zcode-logo.png',
-     antigravity: '/coding-agents/antigravity.png',
--    zcode: '/coding-agents/zcode.svg',
- }
- 
- export function parseStoredAvatar(raw: unknown): ProfileAvatar | null {
-diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
-index 48e4ec318..31688898c 100644
---- a/packages/client/src/views/hermes/AgentManagerView.vue
-+++ b/packages/client/src/views/hermes/AgentManagerView.vue
-@@ -134,9 +134,9 @@ const hermesRuntimeStatus = ref<RuntimeVersionStatus | null>(null)
- const aiHelpDrawerVisible = ref(false)
- const aiHelpPrompt = ref('')
- const legacyDataMigrationChecked = ref(false)
--const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
--const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
--const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
-+const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
-+const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
-+const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
- const updateInfo = ref<Record<CodingAgentId, CodingAgentUpdateResult | null>>({
-   'claude-code': null,
-   codex: null,
 diff --git a/packages/client/src/views/hermes/CodingAgentConfigView.vue b/packages/client/src/views/hermes/CodingAgentConfigView.vue
-index 74bb37f44..d6916128a 100644
+index f533429b2..2d352e00a 100644
 --- a/packages/client/src/views/hermes/CodingAgentConfigView.vue
 +++ b/packages/client/src/views/hermes/CodingAgentConfigView.vue
-@@ -46,7 +46,6 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>
+@@ -46,8 +46,9 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>
    codebuddy: {},
    qoder: {},
    copilot: {},
 -  zcode: {},
    antigravity: { preference: 'memory', configuration: 'settings' },
-   mimo: { preference: 'memory', configuration: 'settings' },
-   zcode: {},
++  mimo: { preference: 'memory', configuration: 'settings' },
++  zcode: {},
+ }
+ 
+ const skillTargets: Partial<Record<CodingAgentId, SkillTarget>> = {

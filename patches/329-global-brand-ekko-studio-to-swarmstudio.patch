@@ -1,39 +1,8 @@
-diff --git a/packages/client/index.html b/packages/client/index.html
-index e93d1d33a..6679414cf 100644
---- a/packages/client/index.html
-+++ b/packages/client/index.html
-@@ -9,9 +9,9 @@
-   <link rel="manifest" href="/manifest.webmanifest" />
-   <meta name="theme-color" content="#f7f7f4" />
-   <meta name="apple-mobile-web-app-capable" content="yes" />
--  <meta name="apple-mobile-web-app-title" content="Ekko Studio" />
-+  <meta name="apple-mobile-web-app-title" content="SwarmStudio" />
-   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
--  <title>Ekko Studio</title>
-+  <title>SwarmStudio</title>
-   <style>
-     html,
-     body,
-diff --git a/packages/client/public/manifest.webmanifest b/packages/client/public/manifest.webmanifest
-index c13bd74ff..372efeeb6 100644
---- a/packages/client/public/manifest.webmanifest
-+++ b/packages/client/public/manifest.webmanifest
-@@ -1,7 +1,7 @@
- {
--  "name": "Ekko Studio",
--  "short_name": "Ekko Studio",
--  "description": "Ekko Studio is a local-first AI workspace for multi-agent chat, coding, and visual workflows, available on desktop and the web.",
-+  "name": "SwarmStudio",
-+  "short_name": "SwarmStudio",
-+  "description": "SwarmStudio is a local-first AI workspace for multi-agent chat, coding, and visual workflows, available on desktop and the web.",
-   "start_url": "/#/hermes/chat",
-   "scope": "/",
-   "display": "standalone",
 diff --git a/packages/client/src/components/hermes/connections/AppConnectionsPanel.vue b/packages/client/src/components/hermes/connections/AppConnectionsPanel.vue
-index b8ba79454..0f7d97046 100644
+index 923626cd3..17637ddfe 100644
 --- a/packages/client/src/components/hermes/connections/AppConnectionsPanel.vue
 +++ b/packages/client/src/components/hermes/connections/AppConnectionsPanel.vue
-@@ -44,8 +44,8 @@ const DEFAULT_MOBILE_RELEASE: StudioMobileRelease = {
+@@ -45,8 +45,8 @@ const DEFAULT_MOBILE_RELEASE: StudioMobileRelease = {
    channels: {
      androidApk: {
        version: '1.0.0',
@@ -44,1681 +13,20 @@ index b8ba79454..0f7d97046 100644
        online: true,
      },
      googlePlay: { version: '1.0.0', url: '', online: false },
-@@ -707,7 +707,7 @@ onUnmounted(() => {
+@@ -708,7 +708,7 @@ onUnmounted(() => {
              <div class="app-download-brand">
-               <img class="app-download-logo" src="/logo.png" alt="">
+               <img class="app-download-logo" :src="deploymentUrl('/logo.png')" alt="">
                <div>
 -                <span>Ekko Studio Mobile</span>
 +                <span>SwarmStudio Mobile</span>
                  <h3>{{ t('connections.app.downloadTitle') }}</h3>
                </div>
              </div>
-diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
-index 379f365d3..838390220 100644
---- a/packages/client/src/i18n/locales/ar.ts
-+++ b/packages/client/src/i18n/locales/ar.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesAr,
-   browser: {
--    title: 'المتصفح', settings: 'إعدادات المتصفح', desktopOnly: 'المتصفح المدمج متوفر فقط في Ekko Studio Desktop.', newTab: 'تبويب جديد',
-+    title: 'المتصفح', settings: 'إعدادات المتصفح', desktopOnly: 'المتصفح المدمج متوفر فقط في SwarmStudio Desktop.', newTab: 'تبويب جديد',
-     back: 'رجوع', forward: 'تقدّم', reload: 'إعادة تحميل', stop: 'إيقاف', addressPlaceholder: 'ابحث أو أدخل عنوانًا',
-     undoAnnotation: 'التراجع عن الأخير', deleteAnnotation: 'حذف التعليق {index}',
-     selectElement: 'تحديد عنصر', selectRegion: 'تحديد منطقة', annotationPlaceholder: 'اوصف ما يجب أن يفحصه الوكيل أو يغيّره…', selectionData: 'بيانات التحديد في المتصفح', annotationAdded: 'تمت إضافة لقطة الشاشة إلى محرّر المحادثة', annotationCount: '{count} تعليق', annotationLabel: 'تعليق {index}', clearAnnotations: 'مسح التعليقات', finishAnnotation: 'تم',
-@@ -289,7 +289,7 @@ export default {
-   },
-   // Login
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: 'أدخل اسم المستخدم وكلمة المرور للمتابعة.',
-     placeholder: 'رمز الوصول',
-     submit: 'تسجيل الدخول',
-@@ -472,7 +472,7 @@ export default {
-   apiRelay: {
-     title: "بوابة API",
-     headline: "نماذج الذكاء الاصطناعي الرائدة عبر بوابة واحدة",
--    description: "APIKEY.FAN هي بوابة API الشريكة لـ Ekko Studio. توفر وصولًا موحدًا إلى Claude وChatGPT وGrok وGemini وZhipu وKimi وDeepSeek وMiniMax، وهي متوافقة مع واجهات API وحزم SDK الرسمية.",
-+    description: "APIKEY.FAN هي بوابة API الشريكة لـ SwarmStudio. توفر وصولًا موحدًا إلى Claude وChatGPT وGrok وGemini وZhipu وKimi وDeepSeek وMiniMax، وهي متوافقة مع واجهات API وحزم SDK الرسمية.",
-     zhipu: "Zhipu",
-     viewNow: "عرض الآن",
-     apiCompatible: "متوافقة مع واجهات API الرسمية",
-@@ -613,13 +613,13 @@ export default {
-     aiHelpGeneralPrompt: 'استخدم Skill باسم `hermes-studio-installation` واتبع تعليمات التوجيه الخاصة به لاختيار المرجع المناسب للـ Agent والمشكلة. ساعدني في تشخيص أو إدارة تثبيت Agents أو تحديثها أو إزالتها على هذا الجهاز. افحص مصدر التثبيت الفعلي وكل مسارات الملفات التنفيذية التي تم حلها وبيئة Node/npm وبادئات مدير الحزم المناسبة. إذا كان السياق غير كافٍ، فاسأل أولاً عن Agent والعرض المطلوب حله. حافظ على إعدادات المستخدم وبيانات المصادقة والمحادثات واطلب التأكيد قبل أي تغييرات مدمرة.',
-     aiHelpPrompt: 'استخدم Skill باسم `hermes-studio-installation` واتبع تعليمات التوجيه الخاصة به لاختيار المرجع المناسب لهذا الـ Agent والمشكلة. شخّص هذا الفشل في صفحة Agents.\n\nAgent: {name}\nمعرّف Agent: {id}\nالعملية: {operation}\nالأمر التنفيذي: {command}\nحزمة npm: {package}\nالخطأ الأصلي:\n{error}\n\nافحص مصدر التثبيت وكل مسارات الملفات التنفيذية التي تم حلها وبيئة Node/npm وبادئات مدير الحزم المناسبة. حافظ على إعدادات المستخدم وبيانات المصادقة والمحادثات. اشرح السبب الجذري أولاً واطلب التأكيد قبل أي تغييرات مدمرة.',
-     legacyDataMigrationTitle: 'تم العثور على بيانات Hermes قديمة',
--    legacyDataMigrationDescription: 'عثر Ekko Studio على بيانات في مجلد Windows قديم. هل تريد نقلها إلى مجلد البيانات الحالي؟',
-+    legacyDataMigrationDescription: 'عثر SwarmStudio على بيانات في مجلد Windows قديم. هل تريد نقلها إلى مجلد البيانات الحالي؟',
-     legacyDataMigrationSource: 'المجلد القديم',
-     legacyDataMigrationTarget: 'المجلد الحالي',
-     legacyDataMigrationWarning: 'سيُعاد تشغيل Studio بعد التأكيد، وقبل بدء الخدمات المحلية ستُستبدل الملفات المتطابقة بالنسخ القديمة مع الاحتفاظ بالملفات الموجودة فقط في المجلد الحالي. سيظهر هذا السؤال مرة واحدة فقط.',
-     legacyDataMigrationPositive: 'نقل البيانات القديمة',
-     legacyDataMigrationNegative: 'عدم النقل',
--    legacyDataMigrationSuccess: 'تمت جدولة النقل. سيُعاد تشغيل Ekko Studio وينقل البيانات قبل بدء الخدمات المحلية.',
-+    legacyDataMigrationSuccess: 'تمت جدولة النقل. سيُعاد تشغيل SwarmStudio وينقل البيانات قبل بدء الخدمات المحلية.',
-     legacyDataMigrationFailed: 'فشل نقل بيانات Hermes القديمة: {error}',
-   },
- 
-@@ -639,8 +639,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS (سطح المكتب / الطرفية)',
-     dataDirectoryEnvLinux: 'Linux (بيئة تسجيل الدخول)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'بعد التغيير، أغلق Ekko Studio بالكامل ثم افتحه مجددًا. في Windows أو Linux، سجّل الخروج ثم الدخول إذا ظل تطبيق سطح المكتب يرى القيمة القديمة.',
--    cliUpdateDescription: 'في Hermes Runtime بالإصدار 0.19.1 والإصدارات الأحدث، يحدّث الأمر التالي Hermes Agent المضمّن فقط. ولا يحدّث تطبيق Ekko Studio لسطح المكتب أو Web UI. أغلق Ekko Studio بالكامل قبل تنفيذه:',
-+    dataDirectoryEnvRestart: 'بعد التغيير، أغلق SwarmStudio بالكامل ثم افتحه مجددًا. في Windows أو Linux، سجّل الخروج ثم الدخول إذا ظل تطبيق سطح المكتب يرى القيمة القديمة.',
-+    cliUpdateDescription: 'في Hermes Runtime بالإصدار 0.19.1 والإصدارات الأحدث، يحدّث الأمر التالي Hermes Agent المضمّن فقط. ولا يحدّث تطبيق SwarmStudio لسطح المكتب أو Web UI. أغلق SwarmStudio بالكامل قبل تنفيذه:',
-     webUiTitle: 'واجهة الويب',
-     platform: 'المنصة',
-     currentWebUi: 'واجهة الويب الحالية',
-@@ -649,10 +649,10 @@ export default {
-     chooseRuntimeDirectory: 'اختر مجلدًا',
-     resetRuntimeDirectory: 'استخدام الافتراضي للنظام',
-     runtimeDirectoryHint: 'يتم نسخ Runtime الحالي والتحقق منه قبل بدء الخدمات المحلية في التشغيل التالي. ويُحتفظ بالتخزين القديم، وتُخزَّن تنزيلات Runtime المستقبلية هنا.',
--    runtimeDirectorySaved: 'تم جدولة نقل Runtime. أعد تشغيل Ekko Studio لتطبيقه.',
-+    runtimeDirectorySaved: 'تم جدولة نقل Runtime. أعد تشغيل SwarmStudio لتطبيقه.',
-     runtimeMigrationPending: 'وجهة النقل المعلّقة: {directory}',
-     runtimeMigrationFailed: 'فشل نقل التخزين، وما زال التخزين السابق نشطًا',
--    runtimeActivationFailed: 'تعذر تشغيل Runtime المحدد، لذلك استخدم Ekko Studio إصدارًا آخر مثبتًا',
-+    runtimeActivationFailed: 'تعذر تشغيل Runtime المحدد، لذلك استخدم SwarmStudio إصدارًا آخر مثبتًا',
-     active: 'نشط',
-     installed: 'مثبّت',
-     download: 'تنزيل',
-@@ -671,7 +671,7 @@ export default {
-     remoteLoadFailed: 'تعذّر تحميل الإصدارات البعيدة',
-     downloadTasks: 'مهام التنزيل',
-     downloadStarted: 'بدأ التنزيل',
--    activateSuccess: 'تم حفظ اختيار الإصدار. أعد تشغيل Ekko Studio لاستخدامه.',
-+    activateSuccess: 'تم حفظ اختيار الإصدار. أعد تشغيل SwarmStudio لاستخدامه.',
-     restartPromptTitle: 'Runtime جاهز',
-     restartPromptContent: 'تم تثبيت Hermes Runtime {version}. هل تريد إعادة التشغيل الآن لاستخدامه؟',
-     restartLater: 'لاحقًا',
-@@ -765,9 +765,9 @@ export default {
-       viewList: 'القائمة',
-       viewDownload: 'تنزيل',
-       viewMessages: 'إرسال الرسائل',
--      downloadTitle: 'Ekko Studio على هاتفك',
-+      downloadTitle: 'SwarmStudio على هاتفك',
-       downloadDescription: 'نحن حاليًا في مرحلة اختبار تجريبي مغلق. يلزم رمز تسجيل لإنشاء حساب، وسننشر عددًا محدودًا من الرموز عبر حساباتنا على وسائل التواصل الاجتماعي.',
--      downloadPaidDescription: 'تم إطلاق تطبيق Ekko Studio رسميًا، وهو متاح الآن كمنتج مدفوع. للبدء، انتقل إلى صفحة الأسعار والشراء، واختر الخطة المناسبة، ثم أكمل عملية الشراء.',
-+      downloadPaidDescription: 'تم إطلاق تطبيق SwarmStudio رسميًا، وهو متاح الآن كمنتج مدفوع. للبدء، انتقل إلى صفحة الأسعار والشراء، واختر الخطة المناسبة، ثم أكمل عملية الشراء.',
-       downloadScan: 'امسح بهاتفك',
-       downloadScanHint: 'تنزيل Android متاح الآن',
-       available: 'متاح',
-@@ -803,7 +803,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'انتهت صلاحية الرمز المميز',
-         paidAccountRequired: 'الحساب الحالي غير مدفوع ولا يمكنه استخدام هذه الميزة',
--        cloudSubscriptionRequired: 'هذا الحساب لا يملك صلاحية الوصول إلى Ekko Studio Cloud',
-+        cloudSubscriptionRequired: 'هذا الحساب لا يملك صلاحية الوصول إلى SwarmStudio Cloud',
-         appAccessExpired: 'انتهت صلاحية الوصول للاختبار الداخلي أو الإصدار التجريبي العام',
-         required: 'لم يقدّم التطبيق استحقاق وصول',
-         invalid: 'استحقاق وصول التطبيق غير صالح',
-@@ -1215,7 +1215,7 @@ export default {
-     },
-     showToolCalls: 'إظهار نداءات الأدوات',
-     pushEnabled: 'تفعيل الإرسال',
--    pushNotConfigured: 'أعِدّ دفع الرسائل في «اتصالات الأجهزة» ضمن Ekko Studio قبل تفعيله.',
-+    pushNotConfigured: 'أعِدّ دفع الرسائل في «اتصالات الأجهزة» ضمن SwarmStudio قبل تفعيله.',
-     hideToolCalls: 'إخفاء نداءات الأدوات',
-     messageQueue: 'طابور الرسائل',
-     removeQueuedMessage: 'إزالة الرسالة من الطابور',
-@@ -2678,7 +2678,7 @@ export default {
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'إظهار إشعار من النظام عند انتهاء الذكاء الاصطناعي',
-       notifyOnCompleteMacHint: 'على macOS، اسمح بإشعارات المتصفح من إعدادات النظام.',
-       notifyOnCompleteDenied: 'تم رفض إذن الإشعارات',
-@@ -2700,7 +2700,7 @@ export default {
-       chatInputHeightHint: 'ارتفاع حقل إدخال المحادثة الافتراضي على سطح المكتب بالبكسل. يبقى الارتفاع تلقائياً على الجوال.',
-       linkOpenTarget: 'فتح روابط الويب في',
-       linkOpenTargetHint: 'اختر مكان فتح الروابط من الرسائل ومعاينات Markdown.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: 'المتصفح الافتراضي',
-     },
-     agent: {
-@@ -2890,10 +2890,10 @@ export default {
-         extract: 'جارٍ فك ضغط النموذج…', validate: 'جارٍ التحقق من النموذج…', install: 'جارٍ تثبيت النموذج…', completed: 'النموذج جاهز', failed: 'فشل التنزيل',
-       },
-       hermesConfigTitle: 'إعدادات Hermes Agent',
--      hermesConfigDescription: 'المزوّدون الأصليون الحاليون يبقون في بروفايل Hermes. مزوّدو واجهة الويب يظهرون لـ Hermes باسم Ekko Studio.',
-+      hermesConfigDescription: 'المزوّدون الأصليون الحاليون يبقون في بروفايل Hermes. مزوّدو واجهة الويب يظهرون لـ Hermes باسم SwarmStudio.',
-       hermesActiveProvider: 'المزوّد النشط',
-       hermesConfiguredProviders: 'المزوّدون المُهيّأون',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: 'السرعة',
-       providerSampleRate: 'معدل العيّنات',
-       providerBitRate: 'معدل البِت',
-@@ -2907,7 +2907,7 @@ export default {
-       optionDisabled: 'مُعطّل',
-       nativeProvider: 'مزوّد Hermes الأصلي',
-       selectNativeProvider: 'اختر مزوّد Hermes أصلي',
--      useHermesStudioProvider: 'استخدام مزوّد Ekko Studio',
-+      useHermesStudioProvider: 'استخدام مزوّد SwarmStudio',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
-index 1cd7f7a7b..d52d6754a 100644
---- a/packages/client/src/i18n/locales/de.ts
-+++ b/packages/client/src/i18n/locales/de.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesDe,
-   browser: {
--    title: 'Browser', settings: 'Browser-Einstellungen', desktopOnly: 'Der integrierte Browser ist nur in Ekko Studio Desktop verfügbar.', newTab: 'Neuer Tab',
-+    title: 'Browser', settings: 'Browser-Einstellungen', desktopOnly: 'Der integrierte Browser ist nur in SwarmStudio Desktop verfügbar.', newTab: 'Neuer Tab',
-     back: 'Zurück', forward: 'Vor', reload: 'Neu laden', stop: 'Stopp', addressPlaceholder: 'Suchen oder Adresse eingeben',
-     undoAnnotation: 'Letzte rückgängig machen', deleteAnnotation: 'Markierung {index} löschen',
-     selectElement: 'Element wählen', selectRegion: 'Bereich wählen', annotationPlaceholder: 'Beschreibe, was der Agent prüfen oder ändern soll…', selectionData: 'Browser-Auswahldaten', annotationAdded: 'Screenshot wurde zum Chat hinzugefügt', annotationCount: '{count} Markierung(en)', annotationLabel: 'Markierung {index}', clearAnnotations: 'Markierungen löschen', finishAnnotation: 'Fertig',
-@@ -301,7 +301,7 @@ export default {
-   },
-   // Login
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: 'Geben Sie Benutzername und Passwort ein, um fortzufahren.',
-     placeholder: 'Zugangs-Token',
-     submit: 'Anmelden',
-@@ -484,7 +484,7 @@ export default {
-   apiRelay: {
-     title: "API-Relay",
-     headline: "Führende KI-Modelle über ein Gateway",
--    description: "APIKEY.FAN ist das API-Gateway von Ekko Studios Partner. Es bietet einheitlichen Zugriff auf Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek und MiniMax und ist mit offiziellen APIs und SDKs kompatibel.",
-+    description: "APIKEY.FAN ist das API-Gateway von SwarmStudios Partner. Es bietet einheitlichen Zugriff auf Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek und MiniMax und ist mit offiziellen APIs und SDKs kompatibel.",
-     zhipu: "Zhipu",
-     viewNow: "Jetzt ansehen",
-     apiCompatible: "Mit offiziellen APIs kompatibel",
-@@ -625,13 +625,13 @@ export default {
-     aiHelpGeneralPrompt: 'Verwende den Skill `hermes-studio-installation` und folge seinen Routing-Anweisungen, um die passende Referenz für Agent und Problem auszuwählen. Hilf mir bei Installation, Updates oder Entfernung von Agents auf diesem Gerät. Prüfe die tatsächliche Installationsquelle, alle aufgelösten Programmpfade, die Node/npm-Umgebung und passende Paketmanager-Präfixe. Frage bei fehlendem Kontext zuerst nach Agent und Symptom. Erhalte Benutzerkonfiguration, Authentifizierung und Unterhaltungsdaten und frage vor destruktiven Änderungen erneut nach Bestätigung.',
-     aiHelpPrompt: 'Verwende den Skill `hermes-studio-installation` und folge seinen Routing-Anweisungen, um die passende Referenz für diesen Agent und dieses Problem auszuwählen. Untersuche diesen Fehler auf der Agents-Seite.\n\nAgent: {name}\nAgent-ID: {id}\nVorgang: {operation}\nBefehl: {command}\nnpm-Paket: {package}\nUrsprünglicher Fehler:\n{error}\n\nPrüfe Installationsquelle, alle aufgelösten Programmpfade, die Node/npm-Umgebung und passende Paketmanager-Präfixe. Erhalte Benutzerkonfiguration, Authentifizierung und Unterhaltungsdaten. Erkläre zuerst die Ursache und frage vor destruktiven Änderungen erneut nach Bestätigung.',
-     legacyDataMigrationTitle: 'Alte Hermes-Daten gefunden',
--    legacyDataMigrationDescription: 'Ekko Studio hat Daten in einem früheren Windows-Datenordner gefunden. Möchten Sie diese in den aktuellen Datenordner migrieren?',
-+    legacyDataMigrationDescription: 'SwarmStudio hat Daten in einem früheren Windows-Datenordner gefunden. Möchten Sie diese in den aktuellen Datenordner migrieren?',
-     legacyDataMigrationSource: 'Alter Ordner',
-     legacyDataMigrationTarget: 'Aktueller Ordner',
-     legacyDataMigrationWarning: 'Studio wird nach der Bestätigung neu gestartet und ersetzt vor dem Start der lokalen Dienste gleichnamige Dateien durch die alten Versionen. Nur im aktuellen Ordner vorhandene Dateien bleiben erhalten. Diese Frage wird nur einmal angezeigt.',
-     legacyDataMigrationPositive: 'Alte Daten migrieren',
-     legacyDataMigrationNegative: 'Nicht migrieren',
--    legacyDataMigrationSuccess: 'Die Migration wurde vorgemerkt. Ekko Studio wird neu gestartet und migriert die Daten vor dem Start der lokalen Dienste.',
-+    legacyDataMigrationSuccess: 'Die Migration wurde vorgemerkt. SwarmStudio wird neu gestartet und migriert die Daten vor dem Start der lokalen Dienste.',
-     legacyDataMigrationFailed: 'Migration der alten Hermes-Daten fehlgeschlagen: {error}',
-   },
- 
-@@ -651,8 +651,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS (Desktop / Terminal)',
-     dataDirectoryEnvLinux: 'Linux (Anmeldeumgebung)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'Beenden Sie Ekko Studio nach der Änderung vollständig und öffnen Sie es erneut. Wenn die Desktop-App unter Windows oder Linux weiterhin den alten Wert sieht, melden Sie sich ab und wieder an.',
--    cliUpdateDescription: 'Mit Hermes Runtime 0.19.1 und höher aktualisiert der folgende Befehl ausschließlich den integrierten Hermes Agent. Die Ekko Studio-Desktop-App und die Web UI werden nicht aktualisiert. Beenden Sie Ekko Studio vor der Ausführung vollständig:',
-+    dataDirectoryEnvRestart: 'Beenden Sie SwarmStudio nach der Änderung vollständig und öffnen Sie es erneut. Wenn die Desktop-App unter Windows oder Linux weiterhin den alten Wert sieht, melden Sie sich ab und wieder an.',
-+    cliUpdateDescription: 'Mit Hermes Runtime 0.19.1 und höher aktualisiert der folgende Befehl ausschließlich den integrierten Hermes Agent. Die SwarmStudio-Desktop-App und die Web UI werden nicht aktualisiert. Beenden Sie SwarmStudio vor der Ausführung vollständig:',
-     webUiTitle: 'Web UI',
-     platform: 'Plattform',
-     currentWebUi: 'Aktuelles Web UI',
-@@ -661,10 +661,10 @@ export default {
-     chooseRuntimeDirectory: 'Verzeichnis auswählen',
-     resetRuntimeDirectory: 'Systemstandard verwenden',
-     runtimeDirectoryHint: 'Die aktuelle Runtime wird beim nächsten Neustart vor den lokalen Diensten kopiert und geprüft. Der alte Speicher bleibt erhalten; künftige Runtime-Downloads landen ebenfalls hier.',
--    runtimeDirectorySaved: 'Runtime-Migration geplant. Starten Sie Ekko Studio neu, um sie auszuführen.',
-+    runtimeDirectorySaved: 'Runtime-Migration geplant. Starten Sie SwarmStudio neu, um sie auszuführen.',
-     runtimeMigrationPending: 'Ausstehendes Migrationsziel: {directory}',
-     runtimeMigrationFailed: 'Speichermigration fehlgeschlagen; der vorherige Speicher bleibt aktiv',
--    runtimeActivationFailed: 'Die ausgewählte Runtime konnte nicht gestartet werden; Ekko Studio verwendet eine andere installierte Version',
-+    runtimeActivationFailed: 'Die ausgewählte Runtime konnte nicht gestartet werden; SwarmStudio verwendet eine andere installierte Version',
-     active: 'Aktiv',
-     installed: 'Installiert',
-     download: 'Herunterladen',
-@@ -683,7 +683,7 @@ export default {
-     remoteLoadFailed: 'Remote-Versionen konnten nicht geladen werden',
-     downloadTasks: 'Download-Aufgaben',
-     downloadStarted: 'Download gestartet',
--    activateSuccess: 'Versionsauswahl gespeichert. Starten Sie Ekko Studio neu, um sie zu verwenden.',
-+    activateSuccess: 'Versionsauswahl gespeichert. Starten Sie SwarmStudio neu, um sie zu verwenden.',
-     restartPromptTitle: 'Runtime bereit',
-     restartPromptContent: 'Hermes Runtime {version} wurde installiert. Jetzt neu starten, um sie zu verwenden?',
-     restartLater: 'Später',
-@@ -777,9 +777,9 @@ export default {
-       viewList: 'Liste',
-       viewDownload: 'Download',
-       viewMessages: 'Nachrichtenversand',
--      downloadTitle: 'Ekko Studio auf deinem Smartphone',
-+      downloadTitle: 'SwarmStudio auf deinem Smartphone',
-       downloadDescription: 'Wir befinden uns derzeit in einer geschlossenen Beta. Für die Registrierung ist ein Registrierungscode erforderlich; einige Codes werden wir über unsere Social-Media-Kanäle veröffentlichen.',
--      downloadPaidDescription: 'Die Ekko Studio App ist jetzt offiziell als kostenpflichtiges Produkt verfügbar. Besuchen Sie die Preis- und Kaufseite, wählen Sie den passenden Tarif und schließen Sie den Kauf ab.',
-+      downloadPaidDescription: 'Die SwarmStudio App ist jetzt offiziell als kostenpflichtiges Produkt verfügbar. Besuchen Sie die Preis- und Kaufseite, wählen Sie den passenden Tarif und schließen Sie den Kauf ab.',
-       downloadScan: 'Mit dem Smartphone scannen',
-       downloadScanHint: 'Android-Download ist verfügbar',
-       available: 'Verfügbar',
-@@ -815,7 +815,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'Token ist abgelaufen',
-         paidAccountRequired: 'Das aktuelle Konto ist nicht kostenpflichtig und kann diese Funktion nicht verwenden',
--        cloudSubscriptionRequired: 'Dieses Konto hat keinen Zugriff auf Ekko Studio Cloud',
-+        cloudSubscriptionRequired: 'Dieses Konto hat keinen Zugriff auf SwarmStudio Cloud',
-         appAccessExpired: 'Der Zugriff auf den internen Test oder die öffentliche Beta ist abgelaufen',
-         required: 'Die App hat keine Zugriffsberechtigung übermittelt',
-         invalid: 'Die App-Zugriffsberechtigung ist ungültig',
-@@ -1174,7 +1174,7 @@ export default {
-     },
-     showToolCalls: 'Tool-Aufrufe anzeigen',
-     pushEnabled: 'Push aktivieren',
--    pushNotConfigured: 'Richte den Nachrichten-Push zuerst unter „Geräteverbindungen“ in Ekko Studio ein.',
-+    pushNotConfigured: 'Richte den Nachrichten-Push zuerst unter „Geräteverbindungen“ in SwarmStudio ein.',
-     hideToolCalls: 'Tool-Aufrufe ausblenden',
-     messageQueue: 'Nachrichtenwarteschlange',
-     removeQueuedMessage: 'Nachricht aus Warteschlange entfernen',
-@@ -2175,7 +2175,7 @@ jobTriggered: 'Job ausgelost',
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'Systembenachrichtigung anzeigen, wenn die KI fertig ist',
-       notifyOnCompleteMacHint: 'Unter macOS Browserbenachrichtigungen in den Systemeinstellungen erlauben.',
-       notifyOnCompleteDenied: 'Benachrichtigungsberechtigung wurde verweigert',
-@@ -2197,7 +2197,7 @@ jobTriggered: 'Job ausgelost',
-       chatInputHeightHint: 'Standardhöhe der Chat-Eingabe auf dem Desktop in Pixeln. Mobil bleibt die Höhe automatisch.',
-       linkOpenTarget: 'Weblinks öffnen in',
-       linkOpenTargetHint: 'Wählen Sie, wo Links aus Nachrichten und Markdown-Vorschauen geöffnet werden.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: 'Standardbrowser',
-     },
-     agent: {
-@@ -2359,10 +2359,10 @@ jobTriggered: 'Job ausgelost',
-         extract: 'Modell wird entpackt…', validate: 'Modell wird validiert…', install: 'Modell wird installiert…', completed: 'Modell ist bereit', failed: 'Download fehlgeschlagen',
-       },
-       hermesConfigTitle: 'Hermes-Agent-Konfiguration',
--      hermesConfigDescription: 'Vorhandene native Anbieter bleiben im Hermes-Profil; Web-UI-Anbieter erscheinen als Ekko Studio.',
-+      hermesConfigDescription: 'Vorhandene native Anbieter bleiben im Hermes-Profil; Web-UI-Anbieter erscheinen als SwarmStudio.',
-       hermesActiveProvider: 'Aktiver Anbieter',
-       hermesConfiguredProviders: 'Konfigurierte Anbieter',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: 'Geschwindigkeit',
-       providerSampleRate: 'Abtastrate',
-       providerBitRate: 'Bitrate',
-@@ -2376,7 +2376,7 @@ jobTriggered: 'Job ausgelost',
-       optionDisabled: 'Deaktiviert',
-       nativeProvider: 'Nativer Hermes-Anbieter',
-       selectNativeProvider: 'Nativen Hermes-Anbieter waehlen',
--      useHermesStudioProvider: 'Ekko Studio-Anbieter verwenden',
-+      useHermesStudioProvider: 'SwarmStudio-Anbieter verwenden',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
-index 4bc544b0b..aa9aa3072 100644
---- a/packages/client/src/i18n/locales/en.ts
-+++ b/packages/client/src/i18n/locales/en.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesEn,
-   browser: {
--    title: 'Browser', settings: 'Browser Settings', desktopOnly: 'The embedded browser is available only in Ekko Studio Desktop.', newTab: 'New Tab',
-+    title: 'Browser', settings: 'Browser Settings', desktopOnly: 'The embedded browser is available only in SwarmStudio Desktop.', newTab: 'New Tab',
-     back: 'Back', forward: 'Forward', reload: 'Reload', stop: 'Stop', addressPlaceholder: 'Search or enter an address',
-     undoAnnotation: 'Undo last', deleteAnnotation: 'Delete annotation {index}',
-     selectElement: 'Select element', selectRegion: 'Select region', annotationPlaceholder: 'Describe what the Agent should inspect or change…', selectionData: 'Browser selection data', annotationAdded: 'Screenshot added to the chat composer', annotationCount: '{count} annotation(s)', annotationLabel: 'Annotation {index}', clearAnnotations: 'Clear annotations', finishAnnotation: 'Done',
-@@ -289,7 +289,7 @@ export default {
-   },
-   // Login
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: 'Enter your username and password to continue.',
-     placeholder: 'Access token',
-     submit: 'Login',
-@@ -472,7 +472,7 @@ export default {
-   apiRelay: {
-     title: "API Relay",
-     headline: "Leading AI models, one gateway",
--    description: "APIKEY.FAN is Ekko Studio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.",
-+    description: "APIKEY.FAN is SwarmStudio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.",
-     zhipu: "Zhipu",
-     viewNow: "View now",
-     apiCompatible: "Official API compatibility",
-@@ -590,7 +590,7 @@ export default {
-     agentVersion: 'Hermes Agent version',
-     path: 'Path',
-     userCli: 'Hermes CLI',
--    userCliReadonly: 'Ekko Studio checks the current environment for a CLI first; CLI installations remain user managed.',
-+    userCliReadonly: 'SwarmStudio checks the current environment for a CLI first; CLI installations remain user managed.',
-     readOnly: 'Read only',
-     noUserCli: 'No available Hermes CLI was detected',
-     unknownVersion: 'Unknown version',
-@@ -613,13 +613,13 @@ export default {
-     aiHelpGeneralPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to the Agent and problem. Help me diagnose or manage Agent installation, updates, or removal on this device. Inspect the actual installation source, every resolved executable path, the Node/npm environment, and the applicable package-manager prefix. Ask which Agent and symptom I need help with if context is missing. Preserve user configuration, authentication, and conversation data, and ask for confirmation before making destructive changes.',
-     aiHelpPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to this Agent and problem. Diagnose this Agents page failure.\n\nAgent: {name}\nAgent ID: {id}\nOperation: {operation}\nExecutable: {command}\nnpm package: {package}\nOriginal error:\n{error}\n\nInspect the installation source, every resolved executable path, Node/npm environment, and applicable package-manager prefix. Preserve user configuration, authentication, and conversation data. Explain the root cause and ask for confirmation before making destructive changes.',
-     legacyDataMigrationTitle: 'Legacy Hermes data found',
--    legacyDataMigrationDescription: 'Ekko Studio found data in a legacy Windows data directory. Would you like to migrate it to the current data directory?',
-+    legacyDataMigrationDescription: 'SwarmStudio found data in a legacy Windows data directory. Would you like to migrate it to the current data directory?',
-     legacyDataMigrationSource: 'Legacy directory',
-     legacyDataMigrationTarget: 'Current directory',
-     legacyDataMigrationWarning: 'Studio will restart after confirmation and, before local services start, overwrite matching files with the legacy copies while preserving current-only files. This question is shown only once.',
-     legacyDataMigrationPositive: 'Migrate legacy data',
-     legacyDataMigrationNegative: 'Do not migrate',
--    legacyDataMigrationSuccess: 'Migration scheduled. Ekko Studio will restart and migrate the data before starting local services.',
-+    legacyDataMigrationSuccess: 'Migration scheduled. SwarmStudio will restart and migrate the data before starting local services.',
-     legacyDataMigrationFailed: 'Legacy Hermes data migration failed: {error}',
-   },
- 
-@@ -639,8 +639,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS (Desktop / terminal)',
-     dataDirectoryEnvLinux: 'Linux (login environment)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'Fully quit and reopen Ekko Studio after changing it. On Windows or Linux, sign out and back in if the desktop app still sees the old value.',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 and later can use the following command to update the bundled Hermes Agent only. It does not update the Ekko Studio desktop app or Web UI. Fully quit Ekko Studio before running:',
-+    dataDirectoryEnvRestart: 'Fully quit and reopen SwarmStudio after changing it. On Windows or Linux, sign out and back in if the desktop app still sees the old value.',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 and later can use the following command to update the bundled Hermes Agent only. It does not update the SwarmStudio desktop app or Web UI. Fully quit SwarmStudio before running:',
-     webUiTitle: 'Web UI',
-     platform: 'Platform',
-     currentWebUi: 'Current Web UI',
-@@ -649,10 +649,10 @@ export default {
-     chooseRuntimeDirectory: 'Choose directory',
-     resetRuntimeDirectory: 'Use system default',
-     runtimeDirectoryHint: 'The current Runtime is copied and verified before local services start on the next restart. Old storage is retained, and future Runtime downloads are stored here.',
--    runtimeDirectorySaved: 'Runtime migration scheduled. Restart Ekko Studio to apply it.',
-+    runtimeDirectorySaved: 'Runtime migration scheduled. Restart SwarmStudio to apply it.',
-     runtimeMigrationPending: 'Pending migration destination: {directory}',
-     runtimeMigrationFailed: 'Storage migration failed; the previous storage remains active',
--    runtimeActivationFailed: 'The selected Runtime could not start, so Ekko Studio used another installed version',
-+    runtimeActivationFailed: 'The selected Runtime could not start, so SwarmStudio used another installed version',
-     active: 'Active',
-     installed: 'Installed',
-     download: 'Download',
-@@ -671,7 +671,7 @@ export default {
-     remoteLoadFailed: 'Failed to load remote versions',
-     downloadTasks: 'Download tasks',
-     downloadStarted: 'Download started',
--    activateSuccess: 'Version selection saved. Restart Ekko Studio to use it.',
-+    activateSuccess: 'Version selection saved. Restart SwarmStudio to use it.',
-     restartPromptTitle: 'Runtime ready',
-     restartPromptContent: 'Hermes Runtime {version} has been installed. Restart now to use it?',
-     restartLater: 'Later',
-@@ -764,9 +764,9 @@ export default {
-       viewList: 'List',
-       viewDownload: 'Download',
-       viewMessages: 'Message Push',
--      downloadTitle: 'Ekko Studio on your phone',
-+      downloadTitle: 'SwarmStudio on your phone',
-       downloadDescription: 'We are currently in closed beta. A registration code is required to sign up, and we will share a limited number of codes on our social media channels.',
--      downloadPaidDescription: 'The Ekko Studio App is now officially available as a paid product. To get started, visit the pricing and purchase page, choose the plan that suits you, and complete your purchase.',
-+      downloadPaidDescription: 'The SwarmStudio App is now officially available as a paid product. To get started, visit the pricing and purchase page, choose the plan that suits you, and complete your purchase.',
-       downloadScan: 'Scan with your phone',
-       downloadScanHint: 'Android download available now',
-       available: 'Available',
-@@ -810,7 +810,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'Token expired',
-         paidAccountRequired: 'The current account is not a paid account and cannot use this feature',
--        cloudSubscriptionRequired: 'This account does not have Ekko Studio Cloud access',
-+        cloudSubscriptionRequired: 'This account does not have SwarmStudio Cloud access',
-         appAccessExpired: 'This internal test or public beta access has expired',
-         required: 'The App did not provide an access entitlement',
-         invalid: 'The App access entitlement is invalid',
-@@ -1222,7 +1222,7 @@ export default {
-     },
-     showToolCalls: 'Show tool calls',
-     pushEnabled: 'Enable push',
--    pushNotConfigured: 'Configure Message Push in Ekko Studio “Device Connections” before enabling it.',
-+    pushNotConfigured: 'Configure Message Push in SwarmStudio “Device Connections” before enabling it.',
-     hideToolCalls: 'Hide tool calls',
-     messageQueue: 'Message queue',
-     removeQueuedMessage: 'Remove queued message',
-@@ -2684,7 +2684,7 @@ export default {
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'Show a system notification when AI finishes',
-       notifyOnCompleteMacHint: 'On macOS, allow browser notifications in System Settings.',
-       notifyOnCompleteDenied: 'Notification permission was denied',
-@@ -2706,7 +2706,7 @@ export default {
-       chatInputHeightHint: 'Default desktop chat input height in pixels. Mobile keeps auto height.',
-       linkOpenTarget: 'Open web links in',
-       linkOpenTargetHint: 'Choose where links from messages and Markdown previews open.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: 'Default browser',
-     },
-     agent: {
-@@ -2903,10 +2903,10 @@ export default {
-         failed: 'Download failed',
-       },
-       hermesConfigTitle: 'Hermes Agent configuration',
--      hermesConfigDescription: 'Existing native providers remain in the Hermes profile. Web UI providers appear to Hermes as Ekko Studio.',
-+      hermesConfigDescription: 'Existing native providers remain in the Hermes profile. Web UI providers appear to Hermes as SwarmStudio.',
-       hermesActiveProvider: 'Active provider',
-       hermesConfiguredProviders: 'Configured providers',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: 'Speed',
-       providerSampleRate: 'Sample rate',
-       providerBitRate: 'Bit rate',
-@@ -2920,7 +2920,7 @@ export default {
-       optionDisabled: 'Disabled',
-       nativeProvider: 'Hermes native provider',
-       selectNativeProvider: 'Select a Hermes native provider',
--      useHermesStudioProvider: 'Use Ekko Studio provider',
-+      useHermesStudioProvider: 'Use SwarmStudio provider',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
-index 367519924..606e826e6 100644
---- a/packages/client/src/i18n/locales/es.ts
-+++ b/packages/client/src/i18n/locales/es.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesEs,
-   browser: {
--    title: 'Navegador', settings: 'Ajustes del navegador', desktopOnly: 'El navegador integrado solo está disponible en Ekko Studio Desktop.', newTab: 'Nueva pestaña',
-+    title: 'Navegador', settings: 'Ajustes del navegador', desktopOnly: 'El navegador integrado solo está disponible en SwarmStudio Desktop.', newTab: 'Nueva pestaña',
-     back: 'Atrás', forward: 'Adelante', reload: 'Recargar', stop: 'Detener', addressPlaceholder: 'Buscar o escribir una dirección',
-     undoAnnotation: 'Deshacer última', deleteAnnotation: 'Eliminar anotación {index}',
-     selectElement: 'Seleccionar elemento', selectRegion: 'Seleccionar región', annotationPlaceholder: 'Describe qué debe revisar o cambiar el Agent…', selectionData: 'Datos de selección del navegador', annotationAdded: 'Captura añadida al cuadro de chat', annotationCount: '{count} anotación(es)', annotationLabel: 'Anotación {index}', clearAnnotations: 'Borrar anotaciones', finishAnnotation: 'Listo',
-@@ -301,7 +301,7 @@ export default {
-   },
-   // Login
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: 'Introduce tu nombre de usuario y contrasena para continuar.',
-     placeholder: 'Token de acceso',
-     submit: 'Iniciar sesion',
-@@ -484,7 +484,7 @@ export default {
-   apiRelay: {
-     title: "Relay de API",
-     headline: "Los principales modelos de IA en una sola puerta de enlace",
--    description: "APIKEY.FAN es la puerta de enlace de API asociada de Ekko Studio. Ofrece acceso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek y MiniMax, y es compatible con las API y los SDK oficiales.",
-+    description: "APIKEY.FAN es la puerta de enlace de API asociada de SwarmStudio. Ofrece acceso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek y MiniMax, y es compatible con las API y los SDK oficiales.",
-     zhipu: "Zhipu",
-     viewNow: "Ver ahora",
-     apiCompatible: "Compatible con las API oficiales",
-@@ -625,13 +625,13 @@ export default {
-     aiHelpGeneralPrompt: 'Usa el Skill `hermes-studio-installation` y sigue sus instrucciones de enrutamiento para elegir la referencia adecuada según el Agent y el problema. Ayúdame a diagnosticar o gestionar la instalación, actualización o eliminación de Agents en este dispositivo. Comprueba el origen real de instalación, todas las rutas de ejecutables resueltas, el entorno Node/npm y los prefijos del gestor de paquetes aplicables. Si falta contexto, pregunta primero qué Agent y síntoma debo resolver. Conserva la configuración, autenticación y conversaciones del usuario y solicita confirmación antes de cualquier cambio destructivo.',
-     aiHelpPrompt: 'Usa el Skill `hermes-studio-installation` y sigue sus instrucciones de enrutamiento para elegir la referencia adecuada para este Agent y problema. Diagnostica este fallo de la página Agents.\n\nAgent: {name}\nID del Agent: {id}\nOperación: {operation}\nEjecutable: {command}\nPaquete npm: {package}\nError original:\n{error}\n\nComprueba el origen de instalación, todas las rutas de ejecutables resueltas, el entorno Node/npm y los prefijos del gestor de paquetes aplicables. Conserva la configuración, autenticación y conversaciones del usuario. Explica primero la causa y solicita confirmación antes de cualquier cambio destructivo.',
-     legacyDataMigrationTitle: 'Se encontraron datos antiguos de Hermes',
--    legacyDataMigrationDescription: 'Ekko Studio encontró datos en un directorio antiguo de Windows. ¿Desea migrarlos al directorio actual?',
-+    legacyDataMigrationDescription: 'SwarmStudio encontró datos en un directorio antiguo de Windows. ¿Desea migrarlos al directorio actual?',
-     legacyDataMigrationSource: 'Directorio antiguo',
-     legacyDataMigrationTarget: 'Directorio actual',
-     legacyDataMigrationWarning: 'Studio se reiniciará tras la confirmación y, antes de iniciar los servicios locales, sobrescribirá los archivos coincidentes con las copias antiguas, conservando los archivos exclusivos del directorio actual. Esta pregunta solo se mostrará una vez.',
-     legacyDataMigrationPositive: 'Migrar datos antiguos',
-     legacyDataMigrationNegative: 'No migrar',
--    legacyDataMigrationSuccess: 'La migración está programada. Ekko Studio se reiniciará y migrará los datos antes de iniciar los servicios locales.',
-+    legacyDataMigrationSuccess: 'La migración está programada. SwarmStudio se reiniciará y migrará los datos antes de iniciar los servicios locales.',
-     legacyDataMigrationFailed: 'Error al migrar los datos antiguos de Hermes: {error}',
-   },
- 
-@@ -651,8 +651,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS (escritorio / terminal)',
-     dataDirectoryEnvLinux: 'Linux (entorno de inicio de sesión)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'Después del cambio, cierra Ekko Studio por completo y vuelve a abrirlo. En Windows o Linux, cierra sesión y vuelve a iniciarla si la aplicación de escritorio sigue viendo el valor anterior.',
--    cliUpdateDescription: 'En Hermes Runtime 0.19.1 y posteriores, el siguiente comando solo actualiza el Hermes Agent integrado. No actualiza la aplicación de escritorio Ekko Studio ni la Web UI. Cierra Ekko Studio por completo antes de ejecutarlo:',
-+    dataDirectoryEnvRestart: 'Después del cambio, cierra SwarmStudio por completo y vuelve a abrirlo. En Windows o Linux, cierra sesión y vuelve a iniciarla si la aplicación de escritorio sigue viendo el valor anterior.',
-+    cliUpdateDescription: 'En Hermes Runtime 0.19.1 y posteriores, el siguiente comando solo actualiza el Hermes Agent integrado. No actualiza la aplicación de escritorio SwarmStudio ni la Web UI. Cierra SwarmStudio por completo antes de ejecutarlo:',
-     webUiTitle: 'Web UI',
-     platform: 'Plataforma',
-     currentWebUi: 'Web UI actual',
-@@ -661,10 +661,10 @@ export default {
-     chooseRuntimeDirectory: 'Elegir directorio',
-     resetRuntimeDirectory: 'Usar valor del sistema',
-     runtimeDirectoryHint: 'El Runtime actual se copiará y verificará antes de iniciar los servicios locales en el próximo reinicio. El almacenamiento anterior se conserva y las futuras descargas de Runtime se guardan aquí.',
--    runtimeDirectorySaved: 'Migración de Runtime programada. Reinicia Ekko Studio para ejecutarla.',
-+    runtimeDirectorySaved: 'Migración de Runtime programada. Reinicia SwarmStudio para ejecutarla.',
-     runtimeMigrationPending: 'Destino de migración pendiente: {directory}',
-     runtimeMigrationFailed: 'La migración del almacenamiento falló; se sigue usando el almacenamiento anterior',
--    runtimeActivationFailed: 'No se pudo iniciar el Runtime seleccionado; Ekko Studio está usando otra versión instalada',
-+    runtimeActivationFailed: 'No se pudo iniciar el Runtime seleccionado; SwarmStudio está usando otra versión instalada',
-     active: 'Activa',
-     installed: 'Instalada',
-     download: 'Descargar',
-@@ -683,7 +683,7 @@ export default {
-     remoteLoadFailed: 'No se pudieron cargar las versiones remotas',
-     downloadTasks: 'Tareas de descarga',
-     downloadStarted: 'Descarga iniciada',
--    activateSuccess: 'Selección de versión guardada. Reinicia Ekko Studio para usarla.',
-+    activateSuccess: 'Selección de versión guardada. Reinicia SwarmStudio para usarla.',
-     restartPromptTitle: 'Runtime listo',
-     restartPromptContent: 'Hermes Runtime {version} se ha instalado. ¿Reiniciar ahora para usarlo?',
-     restartLater: 'Más tarde',
-@@ -777,9 +777,9 @@ export default {
-       viewList: 'Lista',
-       viewDownload: 'Descargar',
-       viewMessages: 'Envío de mensajes',
--      downloadTitle: 'Ekko Studio en tu teléfono',
-+      downloadTitle: 'SwarmStudio en tu teléfono',
-       downloadDescription: 'Estamos en fase beta cerrada. Se necesita un código de registro para crear una cuenta y publicaremos algunos códigos en nuestras redes sociales.',
--      downloadPaidDescription: 'La app Ekko Studio ya se ha lanzado oficialmente y es de pago. Para empezar a usarla, visita la página de precios y compra, elige el plan que mejor se adapte a ti y completa la compra.',
-+      downloadPaidDescription: 'La app SwarmStudio ya se ha lanzado oficialmente y es de pago. Para empezar a usarla, visita la página de precios y compra, elige el plan que mejor se adapte a ti y completa la compra.',
-       downloadScan: 'Escanea con tu teléfono',
-       downloadScanHint: 'La descarga para Android ya está disponible',
-       available: 'Disponible',
-@@ -815,7 +815,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'El token ha caducado',
-         paidAccountRequired: 'La cuenta actual no es de pago y no puede usar esta función',
--        cloudSubscriptionRequired: 'Esta cuenta no tiene acceso a Ekko Studio Cloud',
-+        cloudSubscriptionRequired: 'Esta cuenta no tiene acceso a SwarmStudio Cloud',
-         appAccessExpired: 'El acceso a la prueba interna o beta pública ha caducado',
-         required: 'La App no proporcionó una autorización de acceso',
-         invalid: 'La autorización de acceso de la App no es válida',
-@@ -1174,7 +1174,7 @@ export default {
-     },
-     showToolCalls: 'Mostrar llamadas de herramientas',
-     pushEnabled: 'Activar envío',
--    pushNotConfigured: 'Configura las notificaciones en «Conexiones de dispositivos» de Ekko Studio antes de activarlas.',
-+    pushNotConfigured: 'Configura las notificaciones en «Conexiones de dispositivos» de SwarmStudio antes de activarlas.',
-     hideToolCalls: 'Ocultar llamadas de herramientas',
-     messageQueue: 'Cola de mensajes',
-     removeQueuedMessage: 'Quitar mensaje de la cola',
-@@ -2175,7 +2175,7 @@ jobTriggered: 'Job ejecutado',
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'Mostrar una notificacion del sistema cuando la IA termina',
-       notifyOnCompleteMacHint: 'En macOS, permite las notificaciones del navegador en Ajustes del Sistema.',
-       notifyOnCompleteDenied: 'Permiso de notificacion denegado',
-@@ -2197,7 +2197,7 @@ jobTriggered: 'Job ejecutado',
-       chatInputHeightHint: 'Altura predeterminada de la entrada del chat en escritorio, en píxeles. En móvil se mantiene automática.',
-       linkOpenTarget: 'Abrir enlaces web en',
-       linkOpenTargetHint: 'Elige dónde se abren los enlaces de mensajes y vistas previas de Markdown.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: 'Navegador predeterminado',
-     },
-     agent: {
-@@ -2359,10 +2359,10 @@ jobTriggered: 'Job ejecutado',
-         extract: 'Extrayendo modelo…', validate: 'Validando modelo…', install: 'Instalando modelo…', completed: 'El modelo está listo', failed: 'Descarga fallida',
-       },
-       hermesConfigTitle: 'Configuracion de Hermes Agent',
--      hermesConfigDescription: 'Los proveedores nativos existentes permanecen en el perfil de Hermes; los del Web UI aparecen como Ekko Studio.',
-+      hermesConfigDescription: 'Los proveedores nativos existentes permanecen en el perfil de Hermes; los del Web UI aparecen como SwarmStudio.',
-       hermesActiveProvider: 'Proveedor activo',
-       hermesConfiguredProviders: 'Proveedores configurados',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: 'Velocidad',
-       providerSampleRate: 'Frecuencia de muestreo',
-       providerBitRate: 'Tasa de bits',
-@@ -2376,7 +2376,7 @@ jobTriggered: 'Job ejecutado',
-       optionDisabled: 'Desactivado',
-       nativeProvider: 'Proveedor nativo de Hermes',
-       selectNativeProvider: 'Seleccionar proveedor nativo de Hermes',
--      useHermesStudioProvider: 'Usar proveedor Ekko Studio',
-+      useHermesStudioProvider: 'Usar proveedor SwarmStudio',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
-index 9aa822f81..450cd6b6b 100644
---- a/packages/client/src/i18n/locales/fr.ts
-+++ b/packages/client/src/i18n/locales/fr.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesFr,
-   browser: {
--    title: 'Navigateur', settings: 'Paramètres du navigateur', desktopOnly: 'Le navigateur intégré est disponible uniquement dans Ekko Studio Desktop.', newTab: 'Nouvel onglet',
-+    title: 'Navigateur', settings: 'Paramètres du navigateur', desktopOnly: 'Le navigateur intégré est disponible uniquement dans SwarmStudio Desktop.', newTab: 'Nouvel onglet',
-     back: 'Précédent', forward: 'Suivant', reload: 'Actualiser', stop: 'Arrêter', addressPlaceholder: 'Rechercher ou saisir une adresse',
-     undoAnnotation: 'Annuler la dernière', deleteAnnotation: 'Supprimer l’annotation {index}',
-     selectElement: 'Sélectionner un élément', selectRegion: 'Sélectionner une zone', annotationPlaceholder: 'Décrivez ce que l’Agent doit examiner ou modifier…', selectionData: 'Données de sélection du navigateur', annotationAdded: 'Capture ajoutée à la zone de discussion', annotationCount: '{count} annotation(s)', annotationLabel: 'Annotation {index}', clearAnnotations: 'Effacer les annotations', finishAnnotation: 'Terminé',
-@@ -301,7 +301,7 @@ export default {
-   },
-   // Login
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: 'Entrez votre nom d\'utilisateur et votre mot de passe pour continuer.',
-     placeholder: 'Jeton d\'acces',
-     submit: 'Connexion',
-@@ -484,7 +484,7 @@ export default {
-   apiRelay: {
-     title: "Relais API",
-     headline: "Les principaux modèles IA, une seule passerelle",
--    description: "APIKEY.FAN est la passerelle API partenaire d’Ekko Studio. Elle offre un accès unifié à Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek et MiniMax, et est compatible avec les API et SDK officiels.",
-+    description: "APIKEY.FAN est la passerelle API partenaire d’SwarmStudio. Elle offre un accès unifié à Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek et MiniMax, et est compatible avec les API et SDK officiels.",
-     zhipu: "Zhipu",
-     viewNow: "Voir maintenant",
-     apiCompatible: "Compatible avec les API officielles",
-@@ -625,13 +625,13 @@ export default {
-     aiHelpGeneralPrompt: 'Utilisez le Skill `hermes-studio-installation` et suivez ses instructions de routage pour choisir la référence adaptée à l’Agent et au problème. Aidez-moi à diagnostiquer ou gérer l’installation, la mise à jour ou la suppression d’Agents sur cet appareil. Vérifiez la source d’installation réelle, tous les chemins d’exécutables résolus, l’environnement Node/npm et les préfixes de gestionnaire de paquets applicables. Si le contexte manque, demandez d’abord quel Agent et quel symptôme traiter. Préservez la configuration, l’authentification et les conversations de l’utilisateur et demandez confirmation avant toute modification destructive.',
-     aiHelpPrompt: 'Utilisez le Skill `hermes-studio-installation` et suivez ses instructions de routage pour choisir la référence adaptée à cet Agent et à ce problème. Diagnostiquez cet échec de la page Agents.\n\nAgent : {name}\nID Agent : {id}\nOpération : {operation}\nExécutable : {command}\nPaquet npm : {package}\nErreur d’origine :\n{error}\n\nVérifiez la source d’installation, tous les chemins d’exécutables résolus, l’environnement Node/npm et les préfixes de gestionnaire de paquets applicables. Préservez la configuration, l’authentification et les conversations de l’utilisateur. Expliquez d’abord la cause et demandez confirmation avant toute modification destructive.',
-     legacyDataMigrationTitle: 'Anciennes données Hermes détectées',
--    legacyDataMigrationDescription: 'Ekko Studio a trouvé des données dans un ancien dossier Windows. Voulez-vous les migrer vers le dossier actuel ?',
-+    legacyDataMigrationDescription: 'SwarmStudio a trouvé des données dans un ancien dossier Windows. Voulez-vous les migrer vers le dossier actuel ?',
-     legacyDataMigrationSource: 'Ancien dossier',
-     legacyDataMigrationTarget: 'Dossier actuel',
-     legacyDataMigrationWarning: 'Studio redémarrera après confirmation et, avant le lancement des services locaux, remplacera les fichiers de même nom par les anciennes copies tout en conservant les fichiers propres au dossier actuel. Cette question ne sera affichée qu’une fois.',
-     legacyDataMigrationPositive: 'Migrer les anciennes données',
-     legacyDataMigrationNegative: 'Ne pas migrer',
--    legacyDataMigrationSuccess: 'La migration est planifiée. Ekko Studio va redémarrer et migrer les données avant de lancer les services locaux.',
-+    legacyDataMigrationSuccess: 'La migration est planifiée. SwarmStudio va redémarrer et migrer les données avant de lancer les services locaux.',
-     legacyDataMigrationFailed: 'Échec de la migration des anciennes données Hermes : {error}',
-   },
- 
-@@ -651,8 +651,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS (bureau / terminal)',
-     dataDirectoryEnvLinux: 'Linux (environnement de connexion)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'Après la modification, quittez complètement Ekko Studio puis rouvrez-le. Sous Windows ou Linux, déconnectez-vous puis reconnectez-vous si l’application de bureau voit encore l’ancienne valeur.',
--    cliUpdateDescription: 'Avec Hermes Runtime 0.19.1 et versions ultérieures, la commande suivante met uniquement à jour le Hermes Agent intégré. Elle ne met pas à jour l’application de bureau Ekko Studio ni la Web UI. Quittez complètement Ekko Studio avant de l’exécuter :',
-+    dataDirectoryEnvRestart: 'Après la modification, quittez complètement SwarmStudio puis rouvrez-le. Sous Windows ou Linux, déconnectez-vous puis reconnectez-vous si l’application de bureau voit encore l’ancienne valeur.',
-+    cliUpdateDescription: 'Avec Hermes Runtime 0.19.1 et versions ultérieures, la commande suivante met uniquement à jour le Hermes Agent intégré. Elle ne met pas à jour l’application de bureau SwarmStudio ni la Web UI. Quittez complètement SwarmStudio avant de l’exécuter :',
-     webUiTitle: 'Web UI',
-     platform: 'Plateforme',
-     currentWebUi: 'Web UI actuel',
-@@ -661,10 +661,10 @@ export default {
-     chooseRuntimeDirectory: 'Choisir un répertoire',
-     resetRuntimeDirectory: 'Utiliser le dossier système',
-     runtimeDirectoryHint: 'Le Runtime actuel sera copié et vérifié avant les services locaux au prochain redémarrage. L’ancien stockage est conservé et les prochains téléchargements de Runtime seront enregistrés ici.',
--    runtimeDirectorySaved: 'Migration du Runtime planifiée. Redémarrez Ekko Studio pour l’exécuter.',
-+    runtimeDirectorySaved: 'Migration du Runtime planifiée. Redémarrez SwarmStudio pour l’exécuter.',
-     runtimeMigrationPending: 'Destination de migration en attente : {directory}',
-     runtimeMigrationFailed: 'Échec de la migration du stockage ; le stockage précédent reste actif',
--    runtimeActivationFailed: 'Le Runtime sélectionné n’a pas pu démarrer ; Ekko Studio utilise une autre version installée',
-+    runtimeActivationFailed: 'Le Runtime sélectionné n’a pas pu démarrer ; SwarmStudio utilise une autre version installée',
-     active: 'Active',
-     installed: 'Installée',
-     download: 'Télécharger',
-@@ -683,7 +683,7 @@ export default {
-     remoteLoadFailed: 'Impossible de charger les versions distantes',
-     downloadTasks: 'Tâches de téléchargement',
-     downloadStarted: 'Téléchargement démarré',
--    activateSuccess: 'Sélection de version enregistrée. Redémarrez Ekko Studio pour l’utiliser.',
-+    activateSuccess: 'Sélection de version enregistrée. Redémarrez SwarmStudio pour l’utiliser.',
-     restartPromptTitle: 'Runtime prêt',
-     restartPromptContent: 'Hermes Runtime {version} a été installé. Redémarrer maintenant pour l’utiliser ?',
-     restartLater: 'Plus tard',
-@@ -777,9 +777,9 @@ export default {
-       viewList: 'Liste',
-       viewDownload: 'Télécharger',
-       viewMessages: 'Envoi de messages',
--      downloadTitle: 'Ekko Studio sur votre téléphone',
-+      downloadTitle: 'SwarmStudio sur votre téléphone',
-       downloadDescription: 'Nous sommes actuellement en bêta fermée. Un code d’inscription est nécessaire pour créer un compte, et nous en diffuserons quelques-uns sur nos réseaux sociaux.',
--      downloadPaidDescription: 'L’app Ekko Studio est officiellement disponible et son utilisation est payante. Pour commencer, consultez la page des tarifs et d’achat, choisissez l’offre qui vous convient et finalisez votre achat.',
-+      downloadPaidDescription: 'L’app SwarmStudio est officiellement disponible et son utilisation est payante. Pour commencer, consultez la page des tarifs et d’achat, choisissez l’offre qui vous convient et finalisez votre achat.',
-       downloadScan: 'Scanner avec votre téléphone',
-       downloadScanHint: 'Le téléchargement Android est disponible',
-       available: 'Disponible',
-@@ -815,7 +815,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'Le jeton a expiré',
-         paidAccountRequired: 'Le compte actuel n’est pas payant et ne peut pas utiliser cette fonctionnalité',
--        cloudSubscriptionRequired: 'Ce compte n’a pas accès à Ekko Studio Cloud',
-+        cloudSubscriptionRequired: 'Ce compte n’a pas accès à SwarmStudio Cloud',
-         appAccessExpired: 'L’accès au test interne ou à la bêta publique a expiré',
-         required: 'L’App n’a fourni aucune autorisation d’accès',
-         invalid: 'L’autorisation d’accès de l’App est invalide',
-@@ -1174,7 +1174,7 @@ export default {
-     },
-     showToolCalls: 'Afficher les appels d’outils',
-     pushEnabled: 'Activer l’envoi',
--    pushNotConfigured: 'Configurez les notifications dans « Connexions d’appareils » de Ekko Studio avant de les activer.',
-+    pushNotConfigured: 'Configurez les notifications dans « Connexions d’appareils » de SwarmStudio avant de les activer.',
-     hideToolCalls: 'Masquer les appels d’outils',
-     messageQueue: 'File de messages',
-     removeQueuedMessage: 'Retirer le message de la file',
-@@ -2175,7 +2175,7 @@ jobTriggered: 'Job declenche',
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'Afficher une notification systeme lorsque l\'IA a termine',
-       notifyOnCompleteMacHint: 'Sur macOS, autorisez les notifications du navigateur dans Reglages Systeme.',
-       notifyOnCompleteDenied: 'Autorisation de notification refusee',
-@@ -2197,7 +2197,7 @@ jobTriggered: 'Job declenche',
-       chatInputHeightHint: 'Hauteur par défaut de la zone de saisie sur ordinateur, en pixels. Le mobile reste automatique.',
-       linkOpenTarget: 'Ouvrir les liens web dans',
-       linkOpenTargetHint: 'Choisissez où ouvrir les liens des messages et des aperçus Markdown.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: 'Navigateur par défaut',
-     },
-     agent: {
-@@ -2359,10 +2359,10 @@ jobTriggered: 'Job declenche',
-         extract: 'Extraction du modèle…', validate: 'Validation du modèle…', install: 'Installation du modèle…', completed: 'Le modèle est prêt', failed: 'Échec du téléchargement',
-       },
-       hermesConfigTitle: 'Configuration de Hermes Agent',
--      hermesConfigDescription: 'Les fournisseurs natifs existants restent dans le profil Hermes ; ceux du Web UI apparaissent comme Ekko Studio.',
-+      hermesConfigDescription: 'Les fournisseurs natifs existants restent dans le profil Hermes ; ceux du Web UI apparaissent comme SwarmStudio.',
-       hermesActiveProvider: 'Fournisseur actif',
-       hermesConfiguredProviders: 'Fournisseurs configures',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: 'Vitesse',
-       providerSampleRate: 'Frequence d’echantillonnage',
-       providerBitRate: 'Debit binaire',
-@@ -2376,7 +2376,7 @@ jobTriggered: 'Job declenche',
-       optionDisabled: 'Desactive',
-       nativeProvider: 'Fournisseur natif Hermes',
-       selectNativeProvider: 'Choisir un fournisseur natif Hermes',
--      useHermesStudioProvider: 'Utiliser le fournisseur Ekko Studio',
-+      useHermesStudioProvider: 'Utiliser le fournisseur SwarmStudio',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
-index cdad79925..d9a3c92d4 100644
---- a/packages/client/src/i18n/locales/ja.ts
-+++ b/packages/client/src/i18n/locales/ja.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesJa,
-   browser: {
--    title: 'ブラウザー', settings: 'ブラウザー設定', desktopOnly: '内蔵ブラウザーは Ekko Studio Desktop でのみ利用できます。', newTab: '新しいタブ',
-+    title: 'ブラウザー', settings: 'ブラウザー設定', desktopOnly: '内蔵ブラウザーは SwarmStudio Desktop でのみ利用できます。', newTab: '新しいタブ',
-     back: '戻る', forward: '進む', reload: '再読み込み', stop: '停止', addressPlaceholder: '検索またはアドレスを入力',
-     undoAnnotation: '直前の注釈を取り消す', deleteAnnotation: '注釈 {index} を削除',
-     selectElement: '要素を選択', selectRegion: '範囲を選択', annotationPlaceholder: 'Agent に確認または変更してほしい内容を入力…', selectionData: 'ブラウザー選択データ', annotationAdded: 'スクリーンショットをチャット入力欄に追加しました', annotationCount: '{count} 件の注釈', annotationLabel: '注釈 {index}', clearAnnotations: '注釈を消去', finishAnnotation: '完了',
-@@ -301,7 +301,7 @@ export default {
-   },
-   // ログイン
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: 'ユーザー名とパスワードを入力して続行してください。',
-     placeholder: 'アクセストークン',
-     submit: 'ログイン',
-@@ -484,7 +484,7 @@ export default {
-   apiRelay: {
-     title: "APIリレー",
-     headline: "主要なAIモデルを一つの窓口で",
--    description: "APIKEY.FANはEkko Studioの提携APIゲートウェイです。Claude、ChatGPT、Grok、Gemini、Zhipu、Kimi、DeepSeek、MiniMaxに統一APIで接続でき、公式APIとSDKに対応しています。",
-+    description: "APIKEY.FANはSwarmStudioの提携APIゲートウェイです。Claude、ChatGPT、Grok、Gemini、Zhipu、Kimi、DeepSeek、MiniMaxに統一APIで接続でき、公式APIとSDKに対応しています。",
-     zhipu: "Zhipu",
-     viewNow: "今すぐ見る",
-     apiCompatible: "公式API互換",
-@@ -631,7 +631,7 @@ export default {
-     legacyDataMigrationWarning: '確認後に Studio が再起動し、ローカルサービスの開始前に同名ファイルを以前のデータで上書きします。現在のディレクトリにのみあるファイルは保持されます。この確認は一度だけ表示されます。',
-     legacyDataMigrationPositive: '以前のデータを移行',
-     legacyDataMigrationNegative: '移行しない',
--    legacyDataMigrationSuccess: '移行を予約しました。Ekko Studio を再起動し、ローカルサービスの開始前にデータを移行します。',
-+    legacyDataMigrationSuccess: '移行を予約しました。SwarmStudio を再起動し、ローカルサービスの開始前にデータを移行します。',
-     legacyDataMigrationFailed: '以前の Hermes データの移行に失敗しました：{error}',
-   },
- 
-@@ -651,8 +651,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS（デスクトップ / ターミナル）',
-     dataDirectoryEnvLinux: 'Linux（ログイン環境）',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: '変更後は Ekko Studio を完全に終了して再度開いてください。Windows または Linux のデスクトップアプリで古い値が残る場合は、サインアウトして再度サインインしてください。',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 以降では、次のコマンドで内蔵 Hermes Agent のみを更新できます。Ekko Studio デスクトップアプリや Web UI は更新されません。実行前に Ekko Studio を完全に終了してください：',
-+    dataDirectoryEnvRestart: '変更後は SwarmStudio を完全に終了して再度開いてください。Windows または Linux のデスクトップアプリで古い値が残る場合は、サインアウトして再度サインインしてください。',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 以降では、次のコマンドで内蔵 Hermes Agent のみを更新できます。SwarmStudio デスクトップアプリや Web UI は更新されません。実行前に SwarmStudio を完全に終了してください：',
-     webUiTitle: 'Web UI',
-     platform: 'プラットフォーム',
-     currentWebUi: '現在の Web UI',
-@@ -661,10 +661,10 @@ export default {
-     chooseRuntimeDirectory: 'ディレクトリを選択',
-     resetRuntimeDirectory: 'システム既定に戻す',
-     runtimeDirectoryHint: '次回再起動時にローカルサービスの起動前に現在の Runtime をコピーして検証します。元の保存先は保持され、今後の Runtime ダウンロードもここに保存されます。',
--    runtimeDirectorySaved: 'Runtime の移行を予約しました。Ekko Studio を再起動すると実行されます。',
-+    runtimeDirectorySaved: 'Runtime の移行を予約しました。SwarmStudio を再起動すると実行されます。',
-     runtimeMigrationPending: '移行先：{directory}',
-     runtimeMigrationFailed: '保存先の移行に失敗したため、以前の保存先を引き続き使用します',
--    runtimeActivationFailed: '選択した Runtime を起動できなかったため、Ekko Studio は別のインストール済みバージョンを使用しています',
-+    runtimeActivationFailed: '選択した Runtime を起動できなかったため、SwarmStudio は別のインストール済みバージョンを使用しています',
-     active: '有効',
-     installed: 'インストール済み',
-     download: 'ダウンロード',
-@@ -683,7 +683,7 @@ export default {
-     remoteLoadFailed: 'リモートバージョンの読み込みに失敗しました',
-     downloadTasks: 'ダウンロードタスク',
-     downloadStarted: 'ダウンロードを開始しました',
--    activateSuccess: 'バージョン選択を保存しました。Ekko Studio を再起動すると反映されます。',
-+    activateSuccess: 'バージョン選択を保存しました。SwarmStudio を再起動すると反映されます。',
-     restartPromptTitle: 'Runtime の準備が完了しました',
-     restartPromptContent: 'Hermes Runtime {version} がインストールされました。今すぐ再起動して使用しますか？',
-     restartLater: '後で',
-@@ -777,9 +777,9 @@ export default {
-       viewList: '一覧',
-       viewDownload: 'ダウンロード',
-       viewMessages: 'メッセージ送信',
--      downloadTitle: 'スマートフォンで Ekko Studio を使う',
-+      downloadTitle: 'スマートフォンで SwarmStudio を使う',
-       downloadDescription: '現在クローズドベータ中です。登録には登録コードが必要で、今後ソーシャルメディアで一部のコードを配布します。',
--      downloadPaidDescription: 'Ekko Studio App は正式にリリースされ、現在は有料でご利用いただけます。ご利用になるには、料金・購入ページで最適なプランを選び、購入手続きを完了してください。',
-+      downloadPaidDescription: 'SwarmStudio App は正式にリリースされ、現在は有料でご利用いただけます。ご利用になるには、料金・購入ページで最適なプランを選び、購入手続きを完了してください。',
-       downloadScan: 'スマートフォンでスキャン',
-       downloadScanHint: 'Android 版をダウンロードできます',
-       available: 'ダウンロード可能',
-@@ -815,7 +815,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'トークンの有効期限が切れています',
-         paidAccountRequired: '現在のアカウントは有料アカウントではないため、この機能を利用できません',
--        cloudSubscriptionRequired: 'このアカウントには Ekko Studio Cloud の利用権限がありません',
-+        cloudSubscriptionRequired: 'このアカウントには SwarmStudio Cloud の利用権限がありません',
-         appAccessExpired: '内部テストまたはパブリックベータの利用期限が切れています',
-         required: 'App からアクセス権限が送信されていません',
-         invalid: 'App のアクセス権限が無効です',
-@@ -1174,7 +1174,7 @@ export default {
-     },
-     showToolCalls: 'ツール呼び出しを表示',
-     pushEnabled: 'プッシュ通知を有効化',
--    pushNotConfigured: '有効にする前に、Ekko Studio の「デバイス接続」でメッセージプッシュを設定してください。',
-+    pushNotConfigured: '有効にする前に、SwarmStudio の「デバイス接続」でメッセージプッシュを設定してください。',
-     hideToolCalls: 'ツール呼び出しを非表示',
-     messageQueue: 'メッセージキュー',
-     removeQueuedMessage: 'キューのメッセージを削除',
-@@ -2175,7 +2175,7 @@ export default {
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'AI の応答完了時にシステム通知を表示',
-       notifyOnCompleteMacHint: 'macOS ではシステム設定でブラウザ通知を許可してください。',
-       notifyOnCompleteDenied: '通知権限が拒否されました',
-@@ -2197,7 +2197,7 @@ export default {
-       chatInputHeightHint: 'デスクトップでの既定の入力欄高さ（px）。モバイルでは自動高さを維持します。',
-       linkOpenTarget: 'Web リンクを開く場所',
-       linkOpenTargetHint: 'メッセージと Markdown プレビュー内のリンクを開く場所を選択します。',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: '既定のブラウザ',
-     },
-     agent: {
-@@ -2359,10 +2359,10 @@ export default {
-         extract: 'モデルを展開中…', validate: 'モデルを検証中…', install: 'モデルをインストール中…', completed: 'モデルを利用できます', failed: 'ダウンロード失敗',
-       },
-       hermesConfigTitle: 'Hermes Agent 設定',
--      hermesConfigDescription: 'Hermes プロファイルの既存ネイティブプロバイダーは保持され、Web UI のプロバイダーは Ekko Studio として表示されます。',
-+      hermesConfigDescription: 'Hermes プロファイルの既存ネイティブプロバイダーは保持され、Web UI のプロバイダーは SwarmStudio として表示されます。',
-       hermesActiveProvider: '有効なプロバイダー',
-       hermesConfiguredProviders: '設定済みプロバイダー',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: '速度',
-       providerSampleRate: 'サンプルレート',
-       providerBitRate: 'ビットレート',
-@@ -2376,7 +2376,7 @@ export default {
-       optionDisabled: '無効',
-       nativeProvider: 'Hermes ネイティブプロバイダー',
-       selectNativeProvider: 'Hermes ネイティブプロバイダーを選択',
--      useHermesStudioProvider: 'Ekko Studio プロバイダーを使用',
-+      useHermesStudioProvider: 'SwarmStudio プロバイダーを使用',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
-index 64aa7441d..a4c7e623b 100644
---- a/packages/client/src/i18n/locales/ko.ts
-+++ b/packages/client/src/i18n/locales/ko.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesKo,
-   browser: {
--    title: '브라우저', settings: '브라우저 설정', desktopOnly: '내장 브라우저는 Ekko Studio Desktop에서만 사용할 수 있습니다.', newTab: '새 탭',
-+    title: '브라우저', settings: '브라우저 설정', desktopOnly: '내장 브라우저는 SwarmStudio Desktop에서만 사용할 수 있습니다.', newTab: '새 탭',
-     back: '뒤로', forward: '앞으로', reload: '새로고침', stop: '중지', addressPlaceholder: '검색 또는 주소 입력',
-     undoAnnotation: '마지막 주석 취소', deleteAnnotation: '주석 {index} 삭제',
-     selectElement: '요소 선택', selectRegion: '영역 선택', annotationPlaceholder: 'Agent가 확인하거나 변경할 내용을 입력하세요…', selectionData: '브라우저 선택 데이터', annotationAdded: '스크린샷을 채팅 입력창에 추가했습니다', annotationCount: '주석 {count}개', annotationLabel: '주석 {index}', clearAnnotations: '주석 지우기', finishAnnotation: '완료',
-@@ -301,7 +301,7 @@ export default {
-   },
-   // 로그인
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: '계속하려면 사용자 이름과 비밀번호를 입력하세요.',
-     placeholder: '액세스 토큰',
-     submit: '로그인',
-@@ -484,7 +484,7 @@ export default {
-   apiRelay: {
-     title: "API 릴레이",
-     headline: "주요 AI 모델을 하나의 게이트웨이로",
--    description: "APIKEY.FAN은 Ekko Studio의 제휴 API 게이트웨이입니다. Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, MiniMax에 통합 API로 접근할 수 있으며, 공식 API 및 SDK와 호환됩니다.",
-+    description: "APIKEY.FAN은 SwarmStudio의 제휴 API 게이트웨이입니다. Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, MiniMax에 통합 API로 접근할 수 있으며, 공식 API 및 SDK와 호환됩니다.",
-     zhipu: "Zhipu",
-     viewNow: "지금 보기",
-     apiCompatible: "공식 API 호환",
-@@ -631,7 +631,7 @@ export default {
-     legacyDataMigrationWarning: '확인 후 Studio가 다시 시작되며, 로컬 서비스 시작 전에 같은 이름의 파일을 이전 복사본으로 덮어씁니다. 현재 디렉터리에만 있는 파일은 유지됩니다. 이 질문은 한 번만 표시됩니다.',
-     legacyDataMigrationPositive: '이전 데이터 이전',
-     legacyDataMigrationNegative: '이전하지 않음',
--    legacyDataMigrationSuccess: '이전이 예약되었습니다. Ekko Studio가 다시 시작되고 로컬 서비스 시작 전에 데이터를 이전합니다.',
-+    legacyDataMigrationSuccess: '이전이 예약되었습니다. SwarmStudio가 다시 시작되고 로컬 서비스 시작 전에 데이터를 이전합니다.',
-     legacyDataMigrationFailed: '이전 Hermes 데이터 이전 실패: {error}',
-   },
- 
-@@ -651,8 +651,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS(데스크톱 / 터미널)',
-     dataDirectoryEnvLinux: 'Linux(로그인 환경)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: '변경 후 Ekko Studio를 완전히 종료했다가 다시 여세요. Windows 또는 Linux 데스크톱 앱에서 이전 값이 계속 보이면 로그아웃한 뒤 다시 로그인하세요.',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 이상에서는 다음 명령으로 내장 Hermes Agent만 업데이트할 수 있습니다. Ekko Studio 데스크톱 앱이나 Web UI는 업데이트되지 않습니다. 실행 전에 Ekko Studio를 완전히 종료하세요:',
-+    dataDirectoryEnvRestart: '변경 후 SwarmStudio를 완전히 종료했다가 다시 여세요. Windows 또는 Linux 데스크톱 앱에서 이전 값이 계속 보이면 로그아웃한 뒤 다시 로그인하세요.',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 이상에서는 다음 명령으로 내장 Hermes Agent만 업데이트할 수 있습니다. SwarmStudio 데스크톱 앱이나 Web UI는 업데이트되지 않습니다. 실행 전에 SwarmStudio를 완전히 종료하세요:',
-     webUiTitle: 'Web UI',
-     platform: '플랫폼',
-     currentWebUi: '현재 Web UI',
-@@ -661,10 +661,10 @@ export default {
-     chooseRuntimeDirectory: '디렉터리 선택',
-     resetRuntimeDirectory: '시스템 기본값 사용',
-     runtimeDirectoryHint: '다음 재시작 시 로컬 서비스 시작 전에 현재 Runtime을 복사하고 검증합니다. 이전 저장소는 유지되며 이후 Runtime 다운로드도 여기에 저장됩니다.',
--    runtimeDirectorySaved: 'Runtime 마이그레이션을 예약했습니다. Ekko Studio를 다시 시작하면 실행됩니다.',
-+    runtimeDirectorySaved: 'Runtime 마이그레이션을 예약했습니다. SwarmStudio를 다시 시작하면 실행됩니다.',
-     runtimeMigrationPending: '마이그레이션 예정 위치: {directory}',
-     runtimeMigrationFailed: '저장소 마이그레이션에 실패하여 이전 저장소를 계속 사용합니다',
--    runtimeActivationFailed: '선택한 Runtime을 시작할 수 없어 Ekko Studio가 설치된 다른 버전을 사용했습니다',
-+    runtimeActivationFailed: '선택한 Runtime을 시작할 수 없어 SwarmStudio가 설치된 다른 버전을 사용했습니다',
-     active: '활성',
-     installed: '설치됨',
-     download: '다운로드',
-@@ -683,7 +683,7 @@ export default {
-     remoteLoadFailed: '원격 버전을 불러오지 못했습니다',
-     downloadTasks: '다운로드 작업',
-     downloadStarted: '다운로드를 시작했습니다',
--    activateSuccess: '버전 선택이 저장되었습니다. Ekko Studio를 다시 시작하면 적용됩니다.',
-+    activateSuccess: '버전 선택이 저장되었습니다. SwarmStudio를 다시 시작하면 적용됩니다.',
-     restartPromptTitle: 'Runtime 준비 완료',
-     restartPromptContent: 'Hermes Runtime {version} 설치가 완료되었습니다. 지금 다시 시작하여 사용하시겠습니까?',
-     restartLater: '나중에',
-@@ -777,9 +777,9 @@ export default {
-       viewList: '목록',
-       viewDownload: '다운로드',
-       viewMessages: '메시지 전송',
--      downloadTitle: '휴대폰에서 Ekko Studio 사용하기',
-+      downloadTitle: '휴대폰에서 SwarmStudio 사용하기',
-       downloadDescription: '현재 비공개 베타 테스트 중이며 가입하려면 등록 코드가 필요합니다. 일부 등록 코드는 소셜 미디어를 통해 공개할 예정입니다.',
--      downloadPaidDescription: 'Ekko Studio App이 정식 출시되었으며 현재 유료로 제공됩니다. 이용하려면 요금 및 구매 페이지에서 적합한 플랜을 선택하고 구매를 완료해 주세요.',
-+      downloadPaidDescription: 'SwarmStudio App이 정식 출시되었으며 현재 유료로 제공됩니다. 이용하려면 요금 및 구매 페이지에서 적합한 플랜을 선택하고 구매를 완료해 주세요.',
-       downloadScan: '휴대폰으로 스캔',
-       downloadScanHint: 'Android 다운로드 가능',
-       available: '다운로드 가능',
-@@ -815,7 +815,7 @@ export default {
-       accessFailures: {
-         tokenExpired: '토큰이 만료되었습니다',
-         paidAccountRequired: '현재 계정은 유료 계정이 아니므로 이 기능을 사용할 수 없습니다',
--        cloudSubscriptionRequired: '이 계정에는 Ekko Studio Cloud 이용 권한이 없습니다',
-+        cloudSubscriptionRequired: '이 계정에는 SwarmStudio Cloud 이용 권한이 없습니다',
-         appAccessExpired: '내부 테스트 또는 공개 베타 이용 기간이 만료되었습니다',
-         required: 'App에서 접근 권한을 제공하지 않았습니다',
-         invalid: 'App 접근 권한이 유효하지 않습니다',
-@@ -1174,7 +1174,7 @@ export default {
-     },
-     showToolCalls: '도구 호출 표시',
-     pushEnabled: '푸시 사용',
--    pushNotConfigured: '활성화하기 전에 Ekko Studio의 “기기 연결”에서 메시지 푸시를 설정하세요.',
-+    pushNotConfigured: '활성화하기 전에 SwarmStudio의 “기기 연결”에서 메시지 푸시를 설정하세요.',
-     hideToolCalls: '도구 호출 숨기기',
-     messageQueue: '메시지 대기열',
-     removeQueuedMessage: '대기열 메시지 제거',
-@@ -2175,7 +2175,7 @@ export default {
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'AI 응답 완료 시 시스템 알림 표시',
-       notifyOnCompleteMacHint: 'macOS 에서는 시스템 설정에서 브라우저 알림을 허용해야 합니다.',
-       notifyOnCompleteDenied: '알림 권한이 거부되었습니다',
-@@ -2197,7 +2197,7 @@ export default {
-       chatInputHeightHint: '데스크톱 채팅 입력창 기본 높이(px). 모바일은 자동 높이를 유지합니다.',
-       linkOpenTarget: '웹 링크 열기 위치',
-       linkOpenTargetHint: '메시지와 Markdown 미리보기의 링크를 열 위치를 선택합니다.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: '기본 브라우저',
-     },
-     agent: {
-@@ -2359,10 +2359,10 @@ export default {
-         extract: '모델 압축 해제 중…', validate: '모델 검증 중…', install: '모델 설치 중…', completed: '모델 사용 가능', failed: '다운로드 실패',
-       },
-       hermesConfigTitle: 'Hermes Agent 설정',
--      hermesConfigDescription: 'Hermes 프로필의 기존 네이티브 제공자는 유지되며 Web UI 제공자는 Ekko Studio로 표시됩니다.',
-+      hermesConfigDescription: 'Hermes 프로필의 기존 네이티브 제공자는 유지되며 Web UI 제공자는 SwarmStudio로 표시됩니다.',
-       hermesActiveProvider: '활성 제공자',
-       hermesConfiguredProviders: '설정된 제공자',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: '속도',
-       providerSampleRate: '샘플 레이트',
-       providerBitRate: '비트 레이트',
-@@ -2376,7 +2376,7 @@ export default {
-       optionDisabled: '사용 안 함',
-       nativeProvider: 'Hermes 네이티브 제공자',
-       selectNativeProvider: 'Hermes 네이티브 제공자 선택',
--      useHermesStudioProvider: 'Ekko Studio 제공자 사용',
-+      useHermesStudioProvider: 'SwarmStudio 제공자 사용',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
-index c079f1e56..03f034702 100644
---- a/packages/client/src/i18n/locales/pt.ts
-+++ b/packages/client/src/i18n/locales/pt.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesPt,
-   browser: {
--    title: 'Navegador', settings: 'Configurações do navegador', desktopOnly: 'O navegador integrado está disponível apenas no Ekko Studio Desktop.', newTab: 'Nova aba',
-+    title: 'Navegador', settings: 'Configurações do navegador', desktopOnly: 'O navegador integrado está disponível apenas no SwarmStudio Desktop.', newTab: 'Nova aba',
-     back: 'Voltar', forward: 'Avançar', reload: 'Recarregar', stop: 'Parar', addressPlaceholder: 'Pesquisar ou inserir endereço',
-     undoAnnotation: 'Desfazer última', deleteAnnotation: 'Excluir anotação {index}',
-     selectElement: 'Selecionar elemento', selectRegion: 'Selecionar área', annotationPlaceholder: 'Descreva o que o Agent deve verificar ou alterar…', selectionData: 'Dados da seleção do navegador', annotationAdded: 'Captura adicionada ao chat', annotationCount: '{count} anotação(ões)', annotationLabel: 'Anotação {index}', clearAnnotations: 'Limpar anotações', finishAnnotation: 'Concluído',
-@@ -301,7 +301,7 @@ export default {
-   },
-   // Login
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: 'Insira seu nome de usuário e senha para continuar.',
-     placeholder: 'Token de acesso',
-     submit: 'Entrar',
-@@ -484,7 +484,7 @@ export default {
-   apiRelay: {
-     title: "Relay de API",
-     headline: "Os principais modelos de IA em um só gateway",
--    description: "APIKEY.FAN é o gateway de API parceiro do Ekko Studio. Oferece acesso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek e MiniMax e é compatível com as APIs e os SDKs oficiais.",
-+    description: "APIKEY.FAN é o gateway de API parceiro do SwarmStudio. Oferece acesso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek e MiniMax e é compatível com as APIs e os SDKs oficiais.",
-     zhipu: "Zhipu",
-     viewNow: "Ver agora",
-     apiCompatible: "Compatível com as APIs oficiais",
-@@ -625,13 +625,13 @@ export default {
-     aiHelpGeneralPrompt: 'Use o Skill `hermes-studio-installation` e siga suas instruções de roteamento para escolher a referência adequada ao Agent e ao problema. Ajude-me a diagnosticar ou gerenciar a instalação, atualização ou remoção de Agents neste dispositivo. Verifique a origem real da instalação, todos os caminhos de executáveis resolvidos, o ambiente Node/npm e os prefixos aplicáveis do gerenciador de pacotes. Se faltar contexto, pergunte primeiro qual Agent e sintoma devo resolver. Preserve configurações, autenticação e conversas do usuário e peça confirmação antes de alterações destrutivas.',
-     aiHelpPrompt: 'Use o Skill `hermes-studio-installation` e siga suas instruções de roteamento para escolher a referência adequada a este Agent e problema. Diagnostique esta falha da página Agents.\n\nAgent: {name}\nID do Agent: {id}\nOperação: {operation}\nExecutável: {command}\nPacote npm: {package}\nErro original:\n{error}\n\nVerifique a origem da instalação, todos os caminhos de executáveis resolvidos, o ambiente Node/npm e os prefixos aplicáveis do gerenciador de pacotes. Preserve configurações, autenticação e conversas do usuário. Explique primeiro a causa e peça confirmação antes de alterações destrutivas.',
-     legacyDataMigrationTitle: 'Dados antigos do Hermes encontrados',
--    legacyDataMigrationDescription: 'O Ekko Studio encontrou dados em um diretório antigo do Windows. Deseja migrá-los para o diretório atual?',
-+    legacyDataMigrationDescription: 'O SwarmStudio encontrou dados em um diretório antigo do Windows. Deseja migrá-los para o diretório atual?',
-     legacyDataMigrationSource: 'Diretório antigo',
-     legacyDataMigrationTarget: 'Diretório atual',
-     legacyDataMigrationWarning: 'O Studio será reiniciado após a confirmação e, antes de iniciar os serviços locais, substituirá arquivos com o mesmo nome pelas cópias antigas, preservando os arquivos exclusivos do diretório atual. Esta pergunta será exibida apenas uma vez.',
-     legacyDataMigrationPositive: 'Migrar dados antigos',
-     legacyDataMigrationNegative: 'Não migrar',
--    legacyDataMigrationSuccess: 'A migração foi agendada. O Ekko Studio será reiniciado e migrará os dados antes de iniciar os serviços locais.',
-+    legacyDataMigrationSuccess: 'A migração foi agendada. O SwarmStudio será reiniciado e migrará os dados antes de iniciar os serviços locais.',
-     legacyDataMigrationFailed: 'Falha ao migrar os dados antigos do Hermes: {error}',
-   },
- 
-@@ -651,8 +651,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS (desktop / terminal)',
-     dataDirectoryEnvLinux: 'Linux (ambiente de login)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'Após a alteração, feche completamente o Ekko Studio e abra-o novamente. No Windows ou Linux, encerre a sessão e entre novamente se o aplicativo desktop ainda mostrar o valor antigo.',
--    cliUpdateDescription: 'No Hermes Runtime 0.19.1 e versões posteriores, o comando abaixo atualiza somente o Hermes Agent integrado. Ele não atualiza o aplicativo desktop Ekko Studio nem a Web UI. Feche completamente o Ekko Studio antes de executá-lo:',
-+    dataDirectoryEnvRestart: 'Após a alteração, feche completamente o SwarmStudio e abra-o novamente. No Windows ou Linux, encerre a sessão e entre novamente se o aplicativo desktop ainda mostrar o valor antigo.',
-+    cliUpdateDescription: 'No Hermes Runtime 0.19.1 e versões posteriores, o comando abaixo atualiza somente o Hermes Agent integrado. Ele não atualiza o aplicativo desktop SwarmStudio nem a Web UI. Feche completamente o SwarmStudio antes de executá-lo:',
-     webUiTitle: 'Web UI',
-     platform: 'Plataforma',
-     currentWebUi: 'Web UI atual',
-@@ -661,10 +661,10 @@ export default {
-     chooseRuntimeDirectory: 'Escolher diretório',
-     resetRuntimeDirectory: 'Usar padrão do sistema',
-     runtimeDirectoryHint: 'O Runtime atual será copiado e verificado antes dos serviços locais na próxima reinicialização. O armazenamento anterior será mantido e futuros downloads do Runtime serão salvos aqui.',
--    runtimeDirectorySaved: 'Migração do Runtime agendada. Reinicie o Ekko Studio para executá-la.',
-+    runtimeDirectorySaved: 'Migração do Runtime agendada. Reinicie o SwarmStudio para executá-la.',
-     runtimeMigrationPending: 'Destino de migração pendente: {directory}',
-     runtimeMigrationFailed: 'A migração do armazenamento falhou; o armazenamento anterior continua ativo',
--    runtimeActivationFailed: 'O Runtime selecionado não pôde iniciar; o Ekko Studio está usando outra versão instalada',
-+    runtimeActivationFailed: 'O Runtime selecionado não pôde iniciar; o SwarmStudio está usando outra versão instalada',
-     active: 'Ativa',
-     installed: 'Instalada',
-     download: 'Baixar',
-@@ -683,7 +683,7 @@ export default {
-     remoteLoadFailed: 'Falha ao carregar versões remotas',
-     downloadTasks: 'Tarefas de download',
-     downloadStarted: 'Download iniciado',
--    activateSuccess: 'Seleção de versão salva. Reinicie o Ekko Studio para usá-la.',
-+    activateSuccess: 'Seleção de versão salva. Reinicie o SwarmStudio para usá-la.',
-     restartPromptTitle: 'Runtime pronto',
-     restartPromptContent: 'O Hermes Runtime {version} foi instalado. Reiniciar agora para usá-lo?',
-     restartLater: 'Mais tarde',
-@@ -777,9 +777,9 @@ export default {
-       viewList: 'Lista',
-       viewDownload: 'Download',
-       viewMessages: 'Envio de mensagens',
--      downloadTitle: 'Ekko Studio no seu celular',
-+      downloadTitle: 'SwarmStudio no seu celular',
-       downloadDescription: 'Estamos em fase beta fechada. É necessário um código de registro para criar uma conta, e divulgaremos alguns códigos em nossas redes sociais.',
--      downloadPaidDescription: 'O app Ekko Studio foi lançado oficialmente e agora é pago. Para começar a usá-lo, acesse a página de preços e compra, escolha o plano mais adequado e conclua a compra.',
-+      downloadPaidDescription: 'O app SwarmStudio foi lançado oficialmente e agora é pago. Para começar a usá-lo, acesse a página de preços e compra, escolha o plano mais adequado e conclua a compra.',
-       downloadScan: 'Escaneie com o celular',
-       downloadScanHint: 'Download para Android disponível',
-       available: 'Disponível',
-@@ -815,7 +815,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'O token expirou',
-         paidAccountRequired: 'A conta atual não é paga e não pode usar este recurso',
--        cloudSubscriptionRequired: 'Esta conta não tem acesso ao Ekko Studio Cloud',
-+        cloudSubscriptionRequired: 'Esta conta não tem acesso ao SwarmStudio Cloud',
-         appAccessExpired: 'O acesso ao teste interno ou à beta pública expirou',
-         required: 'O App não forneceu uma autorização de acesso',
-         invalid: 'A autorização de acesso do App é inválida',
-@@ -1174,7 +1174,7 @@ export default {
-     },
-     showToolCalls: 'Mostrar chamadas de ferramentas',
-     pushEnabled: 'Ativar envio',
--    pushNotConfigured: 'Configure as notificações em “Conexões de dispositivos” no Ekko Studio antes de ativá-las.',
-+    pushNotConfigured: 'Configure as notificações em “Conexões de dispositivos” no SwarmStudio antes de ativá-las.',
-     hideToolCalls: 'Ocultar chamadas de ferramentas',
-     messageQueue: 'Fila de mensagens',
-     removeQueuedMessage: 'Remover mensagem da fila',
-@@ -2175,7 +2175,7 @@ jobTriggered: 'Job acionado',
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'Mostrar notificação do sistema quando a IA terminar',
-       notifyOnCompleteMacHint: 'No macOS, permita notificações do navegador nos Ajustes do Sistema.',
-       notifyOnCompleteDenied: 'Permissão de notificação negada',
-@@ -2197,7 +2197,7 @@ jobTriggered: 'Job acionado',
-       chatInputHeightHint: 'Altura padrão da entrada do chat no desktop, em pixels. No celular permanece automática.',
-       linkOpenTarget: 'Abrir links da web em',
-       linkOpenTargetHint: 'Escolha onde abrir links de mensagens e prévias de Markdown.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: 'Navegador padrão',
-     },
-     agent: {
-@@ -2359,10 +2359,10 @@ jobTriggered: 'Job acionado',
-         extract: 'Extraindo modelo…', validate: 'Validando modelo…', install: 'Instalando modelo…', completed: 'Modelo pronto', failed: 'Falha no download',
-       },
-       hermesConfigTitle: 'Configuracao do Hermes Agent',
--      hermesConfigDescription: 'Os provedores nativos existentes permanecem no perfil Hermes; os do Web UI aparecem como Ekko Studio.',
-+      hermesConfigDescription: 'Os provedores nativos existentes permanecem no perfil Hermes; os do Web UI aparecem como SwarmStudio.',
-       hermesActiveProvider: 'Provedor ativo',
-       hermesConfiguredProviders: 'Provedores configurados',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: 'Velocidade',
-       providerSampleRate: 'Taxa de amostragem',
-       providerBitRate: 'Taxa de bits',
-@@ -2376,7 +2376,7 @@ jobTriggered: 'Job acionado',
-       optionDisabled: 'Desativado',
-       nativeProvider: 'Provedor nativo Hermes',
-       selectNativeProvider: 'Selecionar provedor nativo Hermes',
--      useHermesStudioProvider: 'Usar provedor Ekko Studio',
-+      useHermesStudioProvider: 'Usar provedor SwarmStudio',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
-index c1e1f6f11..75ad15520 100644
---- a/packages/client/src/i18n/locales/ru.ts
-+++ b/packages/client/src/i18n/locales/ru.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesRu,
-   browser: {
--    title: 'Браузер', settings: 'Настройки браузера', desktopOnly: 'Встроенный браузер доступен только в Ekko Studio Desktop.', newTab: 'Новая вкладка',
-+    title: 'Браузер', settings: 'Настройки браузера', desktopOnly: 'Встроенный браузер доступен только в SwarmStudio Desktop.', newTab: 'Новая вкладка',
-     back: 'Назад', forward: 'Вперёд', reload: 'Обновить', stop: 'Остановить', addressPlaceholder: 'Поиск или адрес',
-     undoAnnotation: 'Отменить последнюю', deleteAnnotation: 'Удалить аннотацию {index}',
-     selectElement: 'Выбрать элемент', selectRegion: 'Выбрать область', annotationPlaceholder: 'Опишите, что Agent должен проверить или изменить…', selectionData: 'Данные выбора браузера', annotationAdded: 'Снимок добавлен в поле чата', annotationCount: 'Аннотаций: {count}', annotationLabel: 'Аннотация {index}', clearAnnotations: 'Очистить аннотации', finishAnnotation: 'Готово',
-@@ -289,7 +289,7 @@ export default {
-   },
- 
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: 'Введите имя пользователя и пароль для продолжения.',
-     placeholder: 'Токен доступа',
-     submit: 'Войти',
-@@ -398,7 +398,7 @@ export default {
-   apiRelay: {
-     title: "API-реле",
-     headline: "Ведущие модели ИИ через единый шлюз",
--    description: "APIKEY.FAN — партнёрский API-шлюз Ekko Studio. Он предоставляет единый доступ к Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek и MiniMax и совместим с официальными API и SDK.",
-+    description: "APIKEY.FAN — партнёрский API-шлюз SwarmStudio. Он предоставляет единый доступ к Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek и MiniMax и совместим с официальными API и SDK.",
-     zhipu: "Zhipu",
-     viewNow: "Посмотреть",
-     apiCompatible: "Совместимость с официальными API",
-@@ -535,13 +535,13 @@ export default {
-     aiHelpGeneralPrompt: 'Используй Skill `hermes-studio-installation` и следуй его правилам маршрутизации, чтобы выбрать подходящий reference для Agent и проблемы. Помоги мне диагностировать или выполнить установку, обновление либо удаление Agents на этом устройстве. Проверь фактический источник установки, все найденные пути исполняемых файлов, окружение Node/npm и применимые префиксы менеджера пакетов. Если контекста недостаточно, сначала спроси, какой Agent и симптом нужно разобрать. Сохрани пользовательские настройки, данные аутентификации и разговоров и запроси подтверждение перед любыми разрушительными изменениями.',
-     aiHelpPrompt: 'Используй Skill `hermes-studio-installation` и следуй его правилам маршрутизации, чтобы выбрать подходящий reference для этого Agent и проблемы. Диагностируй этот сбой на странице Agents.\n\nAgent: {name}\nID Agent: {id}\nОперация: {operation}\nКоманда: {command}\nПакет npm: {package}\nИсходная ошибка:\n{error}\n\nПроверь источник установки, все найденные пути исполняемого файла, окружение Node/npm и применимые префиксы менеджера пакетов. Сохрани пользовательские настройки, данные аутентификации и разговоров. Сначала объясни первопричину и запроси подтверждение перед любыми разрушительными изменениями.',
-     legacyDataMigrationTitle: 'Найдены прежние данные Hermes',
--    legacyDataMigrationDescription: 'Ekko Studio обнаружил данные в прежнем каталоге Windows. Перенести их в текущий каталог данных?',
-+    legacyDataMigrationDescription: 'SwarmStudio обнаружил данные в прежнем каталоге Windows. Перенести их в текущий каталог данных?',
-     legacyDataMigrationSource: 'Прежний каталог',
-     legacyDataMigrationTarget: 'Текущий каталог',
-     legacyDataMigrationWarning: 'После подтверждения Studio перезапустится и до запуска локальных служб заменит совпадающие файлы прежними копиями, сохранив файлы, существующие только в текущем каталоге. Этот вопрос будет показан только один раз.',
-     legacyDataMigrationPositive: 'Перенести прежние данные',
-     legacyDataMigrationNegative: 'Не переносить',
--    legacyDataMigrationSuccess: 'Миграция запланирована. Ekko Studio перезапустится и перенесёт данные до запуска локальных служб.',
-+    legacyDataMigrationSuccess: 'Миграция запланирована. SwarmStudio перезапустится и перенесёт данные до запуска локальных служб.',
-     legacyDataMigrationFailed: 'Не удалось перенести прежние данные Hermes: {error}',
-   },
- 
-@@ -561,8 +561,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS (настольное приложение / терминал)',
-     dataDirectoryEnvLinux: 'Linux (среда входа)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'После изменения полностью закройте Ekko Studio и откройте снова. Если приложение в Windows или Linux всё ещё видит старое значение, выйдите из системы и войдите снова.',
--    cliUpdateDescription: 'В Hermes Runtime версии 0.19.1 и новее следующая команда обновляет только встроенный Hermes Agent. Она не обновляет настольное приложение Ekko Studio или Web UI. Перед выполнением полностью закройте Ekko Studio:',
-+    dataDirectoryEnvRestart: 'После изменения полностью закройте SwarmStudio и откройте снова. Если приложение в Windows или Linux всё ещё видит старое значение, выйдите из системы и войдите снова.',
-+    cliUpdateDescription: 'В Hermes Runtime версии 0.19.1 и новее следующая команда обновляет только встроенный Hermes Agent. Она не обновляет настольное приложение SwarmStudio или Web UI. Перед выполнением полностью закройте SwarmStudio:',
-     webUiTitle: 'Web UI',
-     platform: 'Платформа',
-     currentWebUi: 'Текущий Web UI',
-@@ -571,10 +571,10 @@ export default {
-     chooseRuntimeDirectory: 'Выбрать каталог',
-     resetRuntimeDirectory: 'Системный каталог',
-     runtimeDirectoryHint: 'При следующем перезапуске текущий Runtime будет скопирован и проверен до запуска локальных сервисов. Старое хранилище сохранится, а будущие загрузки Runtime будут помещаться сюда.',
--    runtimeDirectorySaved: 'Миграция Runtime запланирована. Перезапустите Ekko Studio, чтобы выполнить ее.',
-+    runtimeDirectorySaved: 'Миграция Runtime запланирована. Перезапустите SwarmStudio, чтобы выполнить ее.',
-     runtimeMigrationPending: 'Ожидаемое место миграции: {directory}',
-     runtimeMigrationFailed: 'Перенос хранилища не выполнен; продолжает использоваться прежнее хранилище',
--    runtimeActivationFailed: 'Выбранный Runtime не удалось запустить; Ekko Studio использует другую установленную версию',
-+    runtimeActivationFailed: 'Выбранный Runtime не удалось запустить; SwarmStudio использует другую установленную версию',
-     active: 'Активна',
-     installed: 'Установлена',
-     download: 'Скачать',
-@@ -593,7 +593,7 @@ export default {
-     remoteLoadFailed: 'Не удалось загрузить удаленные версии',
-     downloadTasks: 'Задачи загрузки',
-     downloadStarted: 'Загрузка начата',
--    activateSuccess: 'Выбор версии сохранен. Перезапустите Ekko Studio, чтобы применить его.',
-+    activateSuccess: 'Выбор версии сохранен. Перезапустите SwarmStudio, чтобы применить его.',
-     restartPromptTitle: 'Runtime готов',
-     restartPromptContent: 'Hermes Runtime {version} установлен. Перезапустить сейчас, чтобы использовать его?',
-     restartLater: 'Позже',
-@@ -704,9 +704,9 @@ export default {
-       viewList: 'Список',
-       viewDownload: 'Скачать',
-       viewMessages: 'Отправка сообщений',
--      downloadTitle: 'Ekko Studio на вашем телефоне',
-+      downloadTitle: 'SwarmStudio на вашем телефоне',
-       downloadDescription: 'Сейчас мы проводим закрытое бета-тестирование. Для регистрации нужен код, часть кодов мы будем публиковать в наших социальных сетях.',
--      downloadPaidDescription: 'Приложение Ekko Studio официально запущено и доступно на платной основе. Чтобы начать, перейдите на страницу тарифов и покупки, выберите подходящий тариф и завершите покупку.',
-+      downloadPaidDescription: 'Приложение SwarmStudio официально запущено и доступно на платной основе. Чтобы начать, перейдите на страницу тарифов и покупки, выберите подходящий тариф и завершите покупку.',
-       downloadScan: 'Сканировать телефоном',
-       downloadScanHint: 'Версия для Android доступна',
-       available: 'Доступно',
-@@ -742,7 +742,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'Срок действия токена истёк',
-         paidAccountRequired: 'Текущая учётная запись не является платной и не может использовать эту функцию',
--        cloudSubscriptionRequired: 'У этой учётной записи нет доступа к Ekko Studio Cloud',
-+        cloudSubscriptionRequired: 'У этой учётной записи нет доступа к SwarmStudio Cloud',
-         appAccessExpired: 'Срок доступа к внутреннему тестированию или публичной бета-версии истёк',
-         required: 'App не предоставило разрешение на доступ',
-         invalid: 'Разрешение на доступ App недействительно',
-@@ -1115,7 +1115,7 @@ export default {
-     },
-     showToolCalls: 'Показать вызовы инструментов',
-     pushEnabled: 'Включить отправку',
--    pushNotConfigured: 'Перед включением настройте push-уведомления в разделе «Подключение устройств» Ekko Studio.',
-+    pushNotConfigured: 'Перед включением настройте push-уведомления в разделе «Подключение устройств» SwarmStudio.',
-     hideToolCalls: 'Скрыть вызовы инструментов',
-     messageQueue: 'Очередь сообщений',
-     removeQueuedMessage: 'Удалить сообщение из очереди',
-@@ -2450,7 +2450,7 @@ export default {
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
-+      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-       notifyOnCompleteHint: 'Показывать системное уведомление по окончании ответа AI',
-       notifyOnCompleteMacHint: 'В macOS разрешите уведомления браузера в системных настройках.',
-       notifyOnCompleteDenied: 'Разрешение на уведомления отклонено',
-@@ -2472,7 +2472,7 @@ export default {
-       chatInputHeightHint: 'Высота поля ввода чата на рабочем столе в пикселях. На мобильных остается авто.',
-       linkOpenTarget: 'Открывать веб-ссылки в',
-       linkOpenTargetHint: 'Выберите, где открывать ссылки из сообщений и предпросмотров Markdown.',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: 'Браузер по умолчанию',
-     },
-     agent: {
-@@ -2662,10 +2662,10 @@ export default {
-         extract: 'Распаковка модели…', validate: 'Проверка модели…', install: 'Установка модели…', completed: 'Модель готова', failed: 'Ошибка загрузки',
-       },
-       hermesConfigTitle: 'Конфигурация Hermes Agent',
--      hermesConfigDescription: 'Существующие нативные провайдеры остаются в профиле Hermes; провайдеры Web UI отображаются как Ekko Studio.',
-+      hermesConfigDescription: 'Существующие нативные провайдеры остаются в профиле Hermes; провайдеры Web UI отображаются как SwarmStudio.',
-       hermesActiveProvider: 'Активный провайдер',
-       hermesConfiguredProviders: 'Настроенные провайдеры',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: 'Скорость',
-       providerSampleRate: 'Частота дискретизации',
-       providerBitRate: 'Битрейт',
-@@ -2679,7 +2679,7 @@ export default {
-       optionDisabled: 'Выключено',
-       nativeProvider: 'Нативный провайдер Hermes',
-       selectNativeProvider: 'Выбрать нативный провайдер Hermes',
--      useHermesStudioProvider: 'Использовать провайдер Ekko Studio',
-+      useHermesStudioProvider: 'Использовать провайдер SwarmStudio',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
-index ee240008f..2ca06afae 100644
---- a/packages/client/src/i18n/locales/zh-TW.ts
-+++ b/packages/client/src/i18n/locales/zh-TW.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesZhTw,
-   browser: {
--    title: '瀏覽器', settings: '瀏覽器設定', desktopOnly: '內建瀏覽器僅在 Ekko Studio 桌面版可用。', newTab: '新分頁',
-+    title: '瀏覽器', settings: '瀏覽器設定', desktopOnly: '內建瀏覽器僅在 SwarmStudio 桌面版可用。', newTab: '新分頁',
-     back: '上一頁', forward: '下一頁', reload: '重新整理', stop: '停止', addressPlaceholder: '搜尋或輸入網址',
-     undoAnnotation: '復原上一個', deleteAnnotation: '刪除標註 {index}',
-     selectElement: '選取元素', selectRegion: '框選區域', annotationPlaceholder: '描述希望 Agent 檢查或修改的內容…', selectionData: '瀏覽器選取資料', annotationAdded: '截圖已加入對話輸入框', annotationCount: '已標註 {count} 處', annotationLabel: '標註 {index}', clearAnnotations: '清除標註', finishAnnotation: '完成',
-@@ -289,7 +289,7 @@ export default {
-   },
-   // 登入
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: '輸入使用者名稱和密碼以繼續。',
-     placeholder: '存取權杖',
-     submit: '登入',
-@@ -472,7 +472,7 @@ export default {
-   apiRelay: {
-     title: "API 中轉",
-     headline: "一站接入主流 AI 模型",
--    description: "APIKEY.FAN 是 Ekko Studio 的合作中轉服務，統一接入 Claude、ChatGPT、Grok、Gemini、智譜、Kimi、DeepSeek 和 MiniMax，相容官方 API 與 SDK。",
-+    description: "APIKEY.FAN 是 SwarmStudio 的合作中轉服務，統一接入 Claude、ChatGPT、Grok、Gemini、智譜、Kimi、DeepSeek 和 MiniMax，相容官方 API 與 SDK。",
-     zhipu: "智譜",
-     viewNow: "立即查看",
-     apiCompatible: "相容官方 API",
-@@ -613,13 +613,13 @@ export default {
-     aiHelpGeneralPrompt: '請使用 `hermes-studio-installation` Skill，並遵循 Skill 自己的路由說明，依 Agent 和問題類型選擇合適的 reference。協助我排查或管理這台裝置上的 Agent 安裝、更新或刪除問題。請檢查實際安裝來源、所有實際命中的可執行檔路徑、Node/npm 環境及對應的套件管理器前綴。如果上下文不足，請先詢問我要處理的 Agent 和具體症狀。不要刪除使用者設定、認證資訊或對話資料，任何破壞性修改都必須再次取得使用者確認。',
-     aiHelpPrompt: '請使用 `hermes-studio-installation` Skill，並遵循 Skill 自己的路由說明，依這次 Agent 和問題類型選擇合適的 reference，排查這次 Agents 頁面操作失敗。\n\nAgent：{name}\nAgent ID：{id}\n操作類型：{operation}\n可執行命令：{command}\nnpm 套件：{package}\n原始錯誤：\n{error}\n\n請檢查安裝來源、所有實際命中的可執行檔路徑、Node/npm 環境及對應的套件管理器前綴。不要刪除使用者設定、認證資訊或對話資料。先說明根因，任何破壞性修改都必須再次取得使用者確認。',
-     legacyDataMigrationTitle: '發現舊版 Hermes 資料',
--    legacyDataMigrationDescription: 'Ekko Studio 在舊版 Windows 資料目錄中發現了資料。是否將其遷移到目前資料目錄？',
-+    legacyDataMigrationDescription: 'SwarmStudio 在舊版 Windows 資料目錄中發現了資料。是否將其遷移到目前資料目錄？',
-     legacyDataMigrationSource: '舊目錄',
-     legacyDataMigrationTarget: '目前目錄',
-     legacyDataMigrationWarning: '同意後 Studio 將自動重新啟動，並在服務啟動前以舊目錄中的同名檔案覆蓋目前目錄；目前目錄獨有的檔案會保留。此詢問只會顯示一次。',
-     legacyDataMigrationPositive: '遷移舊資料',
-     legacyDataMigrationNegative: '不遷移',
--    legacyDataMigrationSuccess: '已記錄遷移選擇，Ekko Studio 將重新啟動並在服務啟動前遷移資料。',
-+    legacyDataMigrationSuccess: '已記錄遷移選擇，SwarmStudio 將重新啟動並在服務啟動前遷移資料。',
-     legacyDataMigrationFailed: '舊版 Hermes 資料遷移失敗：{error}',
-   },
- 
-@@ -639,8 +639,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS（桌面端 / 終端機）',
-     dataDirectoryEnvLinux: 'Linux（登入環境）',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: '修改後請完全結束並重新開啟 Ekko Studio。若 Windows 或 Linux 桌面端仍讀取舊值，請登出並重新登入系統。',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支援透過以下指令單獨升級內建的 Hermes Agent；此指令不會升級 Ekko Studio 桌面端或 Web UI。執行前請先完全結束 Ekko Studio：',
-+    dataDirectoryEnvRestart: '修改後請完全結束並重新開啟 SwarmStudio。若 Windows 或 Linux 桌面端仍讀取舊值，請登出並重新登入系統。',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支援透過以下指令單獨升級內建的 Hermes Agent；此指令不會升級 SwarmStudio 桌面端或 Web UI。執行前請先完全結束 SwarmStudio：',
-     webUiTitle: 'Web UI',
-     platform: '平台',
-     currentWebUi: '目前 Web UI',
-@@ -649,10 +649,10 @@ export default {
-     chooseRuntimeDirectory: '選擇目錄',
-     resetRuntimeDirectory: '恢復系統預設',
-     runtimeDirectoryHint: '下次重新啟動時會在本機服務啟動前複製並驗證目前 Runtime，舊目錄會保留；後續 Runtime 下載也會儲存在這裡。',
--    runtimeDirectorySaved: 'Runtime 遷移已排程，重新啟動 Ekko Studio 後執行。',
-+    runtimeDirectorySaved: 'Runtime 遷移已排程，重新啟動 SwarmStudio 後執行。',
-     runtimeMigrationPending: '待遷移至：{directory}',
-     runtimeMigrationFailed: '儲存目錄遷移失敗，已繼續使用原目錄',
--    runtimeActivationFailed: '所選 Runtime 無法啟動，Ekko Studio 已改用其他已安裝版本',
-+    runtimeActivationFailed: '所選 Runtime 無法啟動，SwarmStudio 已改用其他已安裝版本',
-     active: '已啟用',
-     installed: '已安裝',
-     download: '下載',
-@@ -671,7 +671,7 @@ export default {
-     remoteLoadFailed: '遠端版本載入失敗',
-     downloadTasks: '下載任務',
-     downloadStarted: '已開始下載',
--    activateSuccess: '版本選擇已儲存，重啟 Ekko Studio 後生效。',
-+    activateSuccess: '版本選擇已儲存，重啟 SwarmStudio 後生效。',
-     restartPromptTitle: 'Runtime 已就緒',
-     restartPromptContent: 'Hermes Runtime {version} 已安裝完成，是否立即重新啟動並使用此版本？',
-     restartLater: '稍後',
-@@ -765,9 +765,9 @@ export default {
-       viewList: '列表',
-       viewDownload: '下載',
-       viewMessages: '訊息推送',
--      downloadTitle: '在手機上使用 Ekko Studio',
-+      downloadTitle: '在手機上使用 SwarmStudio',
-       downloadDescription: '我們目前正處於封閉測試階段，必須使用註冊碼才能註冊；我們會在社群媒體上釋出部分註冊碼。',
--      downloadPaidDescription: 'Ekko Studio App 已正式上線，目前處於付費階段。如需體驗，請前往定價與購買頁面選擇合適的方案，完成購買後即可開始使用。',
-+      downloadPaidDescription: 'SwarmStudio App 已正式上線，目前處於付費階段。如需體驗，請前往定價與購買頁面選擇合適的方案，完成購買後即可開始使用。',
-       downloadScan: '用手機掃碼下載',
-       downloadScanHint: '目前提供 Android 安裝包',
-       available: '可下載',
-@@ -803,7 +803,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'Token 已失效',
-         paidAccountRequired: '目前帳號不是付費帳號，無法使用此功能',
--        cloudSubscriptionRequired: '目前帳號尚未開通 Ekko Studio Cloud，無法使用雲端連線',
-+        cloudSubscriptionRequired: '目前帳號尚未開通 SwarmStudio Cloud，無法使用雲端連線',
-         appAccessExpired: '目前內部測試或公開測試資格已過期，無法使用雲端連線',
-         required: 'App 未攜帶存取授權簽章',
-         invalid: 'App 存取授權簽章無效',
-@@ -1213,7 +1213,7 @@ export default {
-     },
-     showToolCalls: '顯示工具呼叫',
-     pushEnabled: '是否推送',
--    pushNotConfigured: '請先到 Ekko Studio「裝置互聯」中設定訊息推送。',
-+    pushNotConfigured: '請先到 SwarmStudio「裝置互聯」中設定訊息推送。',
-     hideToolCalls: '隱藏工具呼叫',
-     messageQueue: '訊息佇列',
-     removeQueuedMessage: '移除佇列訊息',
-@@ -2621,14 +2621,14 @@ export default {
-       approvalBellHint: '出現新的待處理審批或澄清時播放提示音',
-       notifyOnComplete: '完成彈窗通知',
-       notifyOnApproval: '審批桌面通知',
--      notifyOnApprovalHint: 'Ekko Studio 不在前景時，新的審批或澄清會傳送系統通知；通知不顯示敏感詳情',
-+      notifyOnApprovalHint: 'SwarmStudio 不在前景時，新的審批或澄清會傳送系統通知；通知不顯示敏感詳情',
-       notifyOnApprovalTest: '審批桌面通知已啟用。',
-       notifyOnApprovalTestButton: '測試',
-       notifyOnApprovalTestSent: '審批通知已傳送',
-       notifyOnApprovalTestFailed: '審批通知傳送失敗',
-       approvalNotificationTitle: '需要審批',
-       approvalNotificationClarifyTitle: '需要澄清',
--      approvalNotificationBody: '開啟 Ekko Studio 查看並處理。',
-+      approvalNotificationBody: '開啟 SwarmStudio 查看並處理。',
-       notifyOnCompleteHint: 'AI 回覆完成時顯示系統通知',
-       notifyOnCompleteMacHint: 'macOS 需要在系統設定中允許瀏覽器通知。',
-       notifyOnCompleteDenied: '通知權限已被拒絕',
-@@ -2650,7 +2650,7 @@ export default {
-       chatInputHeightHint: '桌面端聊天輸入框預設高度（像素）。行動端保持自動高度。',
-       linkOpenTarget: '網頁連結開啟方式',
-       linkOpenTargetHint: '選擇訊息與 Markdown 預覽中的網頁連結要在哪裡開啟。',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: '預設瀏覽器',
-     },
-     agent: {
-@@ -2840,10 +2840,10 @@ export default {
-         extract: '正在解壓縮模型……', validate: '正在驗證模型……', install: '正在安裝模型……', completed: '模型已可用', failed: '下載失敗',
-       },
-       hermesConfigTitle: 'Hermes Agent 設定',
--      hermesConfigDescription: 'Hermes profile 中原有的原生提供商會繼續保留；Web UI 管理的提供商對 Hermes 統一顯示為 Ekko Studio。',
-+      hermesConfigDescription: 'Hermes profile 中原有的原生提供商會繼續保留；Web UI 管理的提供商對 Hermes 統一顯示為 SwarmStudio。',
-       hermesActiveProvider: '目前提供商',
-       hermesConfiguredProviders: '已設定提供商',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: '語速',
-       providerSampleRate: '取樣率',
-       providerBitRate: '位元率',
-@@ -2857,7 +2857,7 @@ export default {
-       optionDisabled: '停用',
-       nativeProvider: 'Hermes 原生提供商',
-       selectNativeProvider: '選擇 Hermes 原生提供商',
--      useHermesStudioProvider: '使用 Ekko Studio 提供商',
-+      useHermesStudioProvider: '使用 SwarmStudio 提供商',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
-index afeb9dffc..eb23a70f1 100644
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -277,7 +277,7 @@ export default {
-   },
-   socialMessages: socialMessagesZh,
-   browser: {
--    title: '浏览器', settings: '浏览器设置', desktopOnly: '内置浏览器仅在 Ekko Studio 桌面端可用。', newTab: '新标签页',
-+    title: '浏览器', settings: '浏览器设置', desktopOnly: '内置浏览器仅在 SwarmStudio 桌面端可用。', newTab: '新标签页',
-     back: '后退', forward: '前进', reload: '刷新', stop: '停止', addressPlaceholder: '搜索或输入网址',
-     undoAnnotation: '撤销上一个', deleteAnnotation: '删除标注 {index}',
-     selectElement: '选择元素', selectRegion: '框选区域', annotationPlaceholder: '描述希望 Agent 检查或修改的内容…', selectionData: '浏览器选区数据', annotationAdded: '截图已添加到对话输入框', annotationCount: '已标注 {count} 处', annotationLabel: '标注 {index}', clearAnnotations: '清除标注', finishAnnotation: '完成',
-@@ -289,7 +289,7 @@ export default {
-   },
-   // 登录
-   login: {
--    title: 'Ekko Studio',
-+    title: 'SwarmStudio',
-     description: '输入用户名和密码以继续。',
-     placeholder: '访问令牌',
-     submit: '登录',
-@@ -472,7 +472,7 @@ export default {
-   apiRelay: {
-     title: "API 中转",
-     headline: "一站接入主流 AI 模型",
--    description: "APIKEY.FAN 是 Ekko Studio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。",
-+    description: "APIKEY.FAN 是 SwarmStudio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。",
-     zhipu: "智谱",
-     viewNow: "立即查看",
-     apiCompatible: "官方 API 兼容",
-@@ -613,13 +613,13 @@ export default {
-     aiHelpGeneralPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据 Agent 和问题类型选择合适的 reference。帮我排查或管理这台设备上的 Agent 安装、更新或删除问题。请检查实际安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。如果上下文不足，请先询问我要处理的 Agent 和具体症状。不要删除用户配置、认证信息或会话数据，任何破坏性修改都必须再次征得用户确认。',
-     aiHelpPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据这次 Agent 和问题类型选择合适的 reference，排查这次 Agents 页面操作失败。\n\nAgent：{name}\nAgent ID：{id}\n操作类型：{operation}\n可执行命令：{command}\nnpm 包：{package}\n原始错误：\n{error}\n\n请检查安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。不要删除用户配置、认证信息或会话数据。先说明根因，任何破坏性修改都必须再次征得用户确认。',
-     legacyDataMigrationTitle: '发现旧版 Hermes 数据',
--    legacyDataMigrationDescription: 'Ekko Studio 在旧版 Windows 数据目录中发现了数据。是否将其迁移到当前数据目录？',
-+    legacyDataMigrationDescription: 'SwarmStudio 在旧版 Windows 数据目录中发现了数据。是否将其迁移到当前数据目录？',
-     legacyDataMigrationSource: '旧目录',
-     legacyDataMigrationTarget: '当前目录',
-     legacyDataMigrationWarning: '同意后 Studio 将自动重启，并在服务启动前用旧目录中的同名文件覆盖当前目录；当前目录独有的文件会保留。此询问只会显示一次。',
-     legacyDataMigrationPositive: '迁移旧数据',
-     legacyDataMigrationNegative: '不迁移',
--    legacyDataMigrationSuccess: '已记录迁移选择，Ekko Studio 将重启并在服务启动前迁移数据。',
-+    legacyDataMigrationSuccess: '已记录迁移选择，SwarmStudio 将重启并在服务启动前迁移数据。',
-     legacyDataMigrationFailed: '旧版 Hermes 数据迁移失败：{error}',
-   },
- 
-@@ -639,8 +639,8 @@ export default {
-     dataDirectoryEnvMacos: 'macOS（桌面端 / 终端）',
-     dataDirectoryEnvLinux: 'Linux（登录环境）',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: '修改后请完全退出并重新打开 Ekko Studio。若 Windows 或 Linux 桌面端仍读取旧值，请注销并重新登录系统。',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支持通过以下命令单独升级内置的 Hermes Agent；该命令不会升级 Ekko Studio 桌面端或 Web UI。执行前请先完全退出 Ekko Studio：',
-+    dataDirectoryEnvRestart: '修改后请完全退出并重新打开 SwarmStudio。若 Windows 或 Linux 桌面端仍读取旧值，请注销并重新登录系统。',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支持通过以下命令单独升级内置的 Hermes Agent；该命令不会升级 SwarmStudio 桌面端或 Web UI。执行前请先完全退出 SwarmStudio：',
-     webUiTitle: 'Web UI',
-     platform: '平台',
-     currentWebUi: '当前 Web UI',
-@@ -649,10 +649,10 @@ export default {
-     chooseRuntimeDirectory: '选择目录',
-     resetRuntimeDirectory: '恢复系统默认',
-     runtimeDirectoryHint: '下次重启时会在本地服务启动前复制并校验当前 Runtime，旧目录会保留；后续 Runtime 下载也会保存在这里。',
--    runtimeDirectorySaved: 'Runtime 迁移已安排，重启 Ekko Studio 后执行。',
-+    runtimeDirectorySaved: 'Runtime 迁移已安排，重启 SwarmStudio 后执行。',
-     runtimeMigrationPending: '待迁移到：{directory}',
-     runtimeMigrationFailed: '存储目录迁移失败，已继续使用原目录',
--    runtimeActivationFailed: '所选 Runtime 无法启动，Ekko Studio 已改用其他已安装版本',
-+    runtimeActivationFailed: '所选 Runtime 无法启动，SwarmStudio 已改用其他已安装版本',
-     active: '已启用',
-     installed: '已安装',
-     download: '下载',
-@@ -671,7 +671,7 @@ export default {
-     remoteLoadFailed: '远程版本加载失败',
-     downloadTasks: '下载任务',
-     downloadStarted: '已开始下载',
--    activateSuccess: '版本选择已保存，重启 Ekko Studio 后生效。',
-+    activateSuccess: '版本选择已保存，重启 SwarmStudio 后生效。',
-     restartPromptTitle: 'Runtime 已就绪',
-     restartPromptContent: 'Hermes Runtime {version} 已安装完成，是否立即重启并使用该版本？',
-     restartLater: '稍后',
-@@ -764,9 +764,9 @@ export default {
-       viewList: '列表',
-       viewDownload: '下载',
-       viewMessages: '消息推送',
--      downloadTitle: '在手机上使用 Ekko Studio',
-+      downloadTitle: '在手机上使用 SwarmStudio',
-       downloadDescription: '我们正在内测阶段，需要注册码才有办法注册，我们会在社交媒体放出一部分注册码。',
--      downloadPaidDescription: 'Ekko Studio App 已正式上线，目前处于付费阶段。如需体验，请前往定价与购买页面选择合适的方案，完成购买后即可开始使用。',
-+      downloadPaidDescription: 'SwarmStudio App 已正式上线，目前处于付费阶段。如需体验，请前往定价与购买页面选择合适的方案，完成购买后即可开始使用。',
-       downloadScan: '手机扫码下载',
-       downloadScanHint: '当前提供 Android 安装包',
-       available: '可下载',
-@@ -810,7 +810,7 @@ export default {
-       accessFailures: {
-         tokenExpired: 'Token 已失效',
-         paidAccountRequired: '当前账户不是付费账号，无法使用该功能',
--        cloudSubscriptionRequired: '当前账号未开通 Ekko Studio Cloud，无法使用云端连接',
-+        cloudSubscriptionRequired: '当前账号未开通 SwarmStudio Cloud，无法使用云端连接',
-         appAccessExpired: '当前内测或公测资格已过期，无法使用云端连接',
-         required: 'App 未携带访问授权签名',
-         invalid: 'App 访问授权签名无效',
-@@ -1222,7 +1222,7 @@ export default {
-     },
-     showToolCalls: '显示工具调用',
-     pushEnabled: '是否推送',
--    pushNotConfigured: '请先到 Ekko Studio「设备互联」中配置消息推送。',
-+    pushNotConfigured: '请先到 SwarmStudio「设备互联」中配置消息推送。',
-     hideToolCalls: '隐藏工具调用',
-     messageQueue: '消息队列',
-     removeQueuedMessage: '移除队列消息',
-@@ -2715,14 +2715,14 @@ export default {
-       approvalBellHint: '出现新的待处理审批或澄清时播放提示音',
-       notifyOnComplete: '完成弹窗通知',
-       notifyOnApproval: '审批桌面通知',
--      notifyOnApprovalHint: 'Ekko Studio 不在前台时，出现新的审批或澄清会发送系统通知；通知不显示敏感详情',
-+      notifyOnApprovalHint: 'SwarmStudio 不在前台时，出现新的审批或澄清会发送系统通知；通知不显示敏感详情',
-       notifyOnApprovalTest: '审批桌面通知已启用。',
-       notifyOnApprovalTestButton: '测试',
-       notifyOnApprovalTestSent: '审批通知已发送',
-       notifyOnApprovalTestFailed: '审批通知发送失败',
-       approvalNotificationTitle: '需要审批',
-       approvalNotificationClarifyTitle: '需要澄清',
--      approvalNotificationBody: '打开 Ekko Studio 查看并处理。',
-+      approvalNotificationBody: '打开 SwarmStudio 查看并处理。',
-       notifyOnCompleteHint: 'AI 回复完成时显示系统通知',
-       notifyOnCompleteMacHint: 'macOS 需要在系统设置里允许浏览器通知。',
-       notifyOnCompleteDenied: '通知权限已被拒绝',
-@@ -2744,7 +2744,7 @@ export default {
-       chatInputHeightHint: '桌面端聊天输入框默认高度（像素）。移动端保持自动高度。',
-       linkOpenTarget: '网页链接打开方式',
-       linkOpenTargetHint: '选择消息和 Markdown 预览中的网页链接在哪里打开。',
--      linkOpenTargetHermesStudio: 'Ekko Studio',
-+      linkOpenTargetHermesStudio: 'SwarmStudio',
-       linkOpenTargetDefaultBrowser: '默认浏览器',
-     },
-     agent: {
-@@ -2941,10 +2941,10 @@ export default {
-         failed: '下载失败',
-       },
-       hermesConfigTitle: 'Hermes Agent 配置',
--      hermesConfigDescription: 'Hermes profile 中原有的原生提供商会继续保留；Web UI 管理的提供商对 Hermes 统一显示为 Ekko Studio。',
-+      hermesConfigDescription: 'Hermes profile 中原有的原生提供商会继续保留；Web UI 管理的提供商对 Hermes 统一显示为 SwarmStudio。',
-       hermesActiveProvider: '当前提供商',
-       hermesConfiguredProviders: '已配置提供商',
--      hermesStudioProvider: 'Ekko Studio',
-+      hermesStudioProvider: 'SwarmStudio',
-       providerSpeed: '语速',
-       providerSampleRate: '采样率',
-       providerBitRate: '比特率',
-@@ -2958,7 +2958,7 @@ export default {
-       optionDisabled: '停用',
-       nativeProvider: 'Hermes 原生提供商',
-       selectNativeProvider: '选择 Hermes 原生提供商',
--      useHermesStudioProvider: '使用 Ekko Studio 提供商',
-+      useHermesStudioProvider: '使用 SwarmStudio 提供商',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
 diff --git a/packages/client/src/main.ts b/packages/client/src/main.ts
-index 5051786a1..fceab9706 100644
+index 5051786a1..ef9827e15 100644
 --- a/packages/client/src/main.ts
 +++ b/packages/client/src/main.ts
-@@ -76,7 +76,7 @@ function renderFatalError(error: unknown): void {
+@@ -76,7 +88,7 @@ function renderFatalError(error: unknown): void {
    const container = document.createElement('main')
    container.style.cssText = 'min-height:100vh;box-sizing:border-box;padding:32px;background:#1a1a1a;color:#eee;font-family:system-ui'
    const title = document.createElement('h2')
@@ -1728,10 +36,10 @@ index 5051786a1..fceab9706 100644
    details.style.cssText = 'white-space:pre-wrap;color:#f88'
    details.textContent = error instanceof Error ? error.message : String(error)
 diff --git a/packages/client/src/views/hermes/ChatView.vue b/packages/client/src/views/hermes/ChatView.vue
-index 584bce9e1..d00fc781c 100644
+index 584bce9e1..11f9bf685 100644
 --- a/packages/client/src/views/hermes/ChatView.vue
 +++ b/packages/client/src/views/hermes/ChatView.vue
-@@ -34,7 +34,7 @@ const contentMode = computed<ChatContentMode>(() => {
+@@ -34,7 +36,7 @@ const contentMode = computed<ChatContentMode>(() => {
    if (route.name === 'hermes.models') return 'models'
    return 'chat'
  })
@@ -1741,7 +49,7 @@ index 584bce9e1..d00fc781c 100644
  const routeLoading = ref(false)
  let routeLoadSequence = 0
 diff --git a/packages/desktop/README.md b/packages/desktop/README.md
-index 51a9c30d3..936247d5d 100644
+index f442da1fd..66792971b 100644
 --- a/packages/desktop/README.md
 +++ b/packages/desktop/README.md
 @@ -1,6 +1,6 @@
@@ -1753,7 +61,7 @@ index 51a9c30d3..936247d5d 100644
  
  ## Install
  
-@@ -75,7 +75,7 @@ After the packaged desktop app starts, it installs managed command shims:
+@@ -170,7 +170,7 @@ After the packaged desktop app starts, it installs managed command shims:
  
  | Command | Description |
  | --- | --- |
@@ -1762,7 +70,7 @@ index 51a9c30d3..936247d5d 100644
  | `ekko-studio cli ...` | Run the bundled Hermes Agent CLI |
  | `ekko-studio web ...` | Run the bundled `hermes-web-ui` command |
  | `ekko-studio -h` | Show wrapper help |
-@@ -90,7 +90,7 @@ Use `ekko-studio cli -h` for Hermes Agent CLI help and
+@@ -185,7 +185,7 @@ Use `ekko-studio cli -h` for Hermes Agent CLI help and
  ## Data directories
  
  On Windows, the first packaged launch after the rename updates the existing
@@ -1789,10 +97,10 @@ index 0b2c2c66e..fbfa3e58d 100644
          "kind": "none",
          "opacity": 0.5
 diff --git a/packages/desktop/scripts/electron-builder.mjs b/packages/desktop/scripts/electron-builder.mjs
-index 5502f9c61..ee150c14c 100644
+index 8004e5eee..dc0ac8197 100644
 --- a/packages/desktop/scripts/electron-builder.mjs
 +++ b/packages/desktop/scripts/electron-builder.mjs
-@@ -17,7 +17,7 @@ function hasConfigOverride(sourceArgs, key) {
+@@ -18,7 +18,7 @@ function hasConfigOverride(sourceArgs, key) {
  const debConfigArgs = [
    '--config.productName=hermes-studio',
    '--config.linux.executableName=hermes-studio',
@@ -1836,7 +144,7 @@ index 60ef2f79e..eb3f2c0ed 100644
      .map(name => join(base, name, 'pending')))
  }
 diff --git a/packages/ekko-agent/README.md b/packages/ekko-agent/README.md
-index e8d9de9da..ea0500381 100644
+index 20af86fe2..466b27d04 100644
 --- a/packages/ekko-agent/README.md
 +++ b/packages/ekko-agent/README.md
 @@ -1,6 +1,6 @@
@@ -1847,7 +155,7 @@ index e8d9de9da..ea0500381 100644
  owns the model loop, provider adapters, tools, memory, skills, delegation,
  approvals, and structured request logging.
  
-@@ -193,7 +193,7 @@ threshold decision without starting a model call. A standalone Ekko host can
+@@ -198,7 +198,7 @@ threshold decision without starting a model call. A standalone Ekko host can
  instead implement and own its internal compression lifecycle. The global
  `compression` config provides a host policy surface for future integrations:
  `enabled`, `threshold`, `targetRatio`, `protectLastN`, and `protectFirstN`.
@@ -1856,7 +164,7 @@ index e8d9de9da..ea0500381 100644
  configuration and does not apply this Ekko config section.
  
  Model context and memory evidence are separate inputs. A host that adds derived
-@@ -259,7 +259,7 @@ do not fail startup. Every run receives current recovery details as temporary
+@@ -264,7 +264,7 @@ do not fail startup. Every run receives current recovery details as temporary
  system context; this context is never captured as memory. Built-in repair tools
  own the source/target paths and migrations, run a deterministic self-check after
  repair, and clear an incident only when the matching revision passes. A repaired
@@ -1865,7 +173,7 @@ index e8d9de9da..ea0500381 100644
  automatically closes that Setup after all active runs finish, so the next run
  opens the repaired persistent database. Standalone hosts must recreate their
  Setup at the same completed-run boundary.
-@@ -295,7 +295,7 @@ Each Profile receives `1password`, `apple-notes`, `apple-reminders`,
+@@ -300,7 +300,7 @@ Each Profile receives `1password`, `apple-notes`, `apple-reminders`,
  `xlsx`. Startup
  installs missing built-ins and updates only
  an unchanged Ekko-installed copy. A user-edited or pre-existing same-name Skill
@@ -1875,7 +183,7 @@ index e8d9de9da..ea0500381 100644
  document Skills bundle their Python helpers, references, tests, and license
  notices; optional Python, LibreOffice, Poppler, OCR, and model dependencies are
 diff --git a/packages/ekko-agent/docs/API.md b/packages/ekko-agent/docs/API.md
-index 4bff73524..f52a436e4 100644
+index a17d474a0..acd0625b0 100644
 --- a/packages/ekko-agent/docs/API.md
 +++ b/packages/ekko-agent/docs/API.md
 @@ -113,7 +113,7 @@ JavaScript 运行时也会为不与根字段冲突的 Profile 安装直接属性
@@ -1887,7 +195,7 @@ index 4bff73524..f52a436e4 100644
  
  根容器还保留配置/模型兼容转发方法：`readConfig`、`updateConfig`、`replaceConfig`、`resetConfig`；`list/get/set/update/deleteModelProviderPreset`、`installModelProviderPreset`；`list/get/set/update/deleteModelProvider`、`setDefaultModel`；`list/get/set/update/deleteModelAuthorization`、`modelAuthorizationNeedsRefresh`、`refreshModelAuthorization`、`resolveModelAuthorization`。参数和返回值与下文对应的 `config`、`model`、`authorization` 方法相同。
  
-@@ -481,7 +481,7 @@ Studio 的 `ekkoSkillsEnabled` 映射到此字段；共用参数为 `skillsCandi
+@@ -487,7 +487,7 @@ Responses 客户端会为原生推理历史记录 `reasoning.native.replayScope`
  
  `EkkoMcpServerConfig` 支持两种传输：stdio 使用 `command`，可选 `args` 和字符串 `env`；远程服务使用 `type: "streamable_http"`、`url` 和可选字符串 `headers`。`enabled` 控制是否加载。两种传输均使用官方 MCP Client；新 runtime 自动读取所选 Profile 的配置，显式 run-level `toolContext.mcpServers` 仍可覆盖它。
  
@@ -1896,7 +204,7 @@ index 4bff73524..f52a436e4 100644
  
  ## 文档 harness
  
-@@ -2419,7 +2419,7 @@ export function openCodeSessionHeaders( baseUrl: string, sessionId?: string, pro
+@@ -2440,7 +2440,7 @@ export function openCodeSessionHeaders( baseUrl: string, sessionId?: string, pro
  ### `src/model/openrouter-attribution.ts`
  
  ```ts
@@ -1906,7 +214,7 @@ index 4bff73524..f52a436e4 100644
  export function openRouterAttributionHeaders(baseUrl: string, provider?: string): Record<string, string>
  ```
 diff --git a/packages/ekko-agent/package.json b/packages/ekko-agent/package.json
-index 9174535d6..255e189c5 100644
+index e5f213c87..dfff7720c 100644
 --- a/packages/ekko-agent/package.json
 +++ b/packages/ekko-agent/package.json
 @@ -3,7 +3,7 @@
@@ -2056,7 +364,7 @@ index 16c764804..242e2f6ab 100644
  On restart Desktop:
  
 diff --git a/packages/ekko-agent/skills/hermes-studio-installation/references/studio.md b/packages/ekko-agent/skills/hermes-studio-installation/references/studio.md
-index ed3e2c250..831bb52f8 100644
+index e811e4984..c73f23df0 100644
 --- a/packages/ekko-agent/skills/hermes-studio-installation/references/studio.md
 +++ b/packages/ekko-agent/skills/hermes-studio-installation/references/studio.md
 @@ -1,10 +1,10 @@
@@ -2498,10 +806,10 @@ index 60ec870d4..6276309be 100644
    analogSetPinAttenuation(kPinBatteryAdc, ADC_11db);
    updateBatteryReading(true);
 diff --git a/packages/server/src/modules/coding-agents/protocol/adapters/responses.ts b/packages/server/src/modules/coding-agents/protocol/adapters/responses.ts
-index a353e9270..e1c827476 100644
+index e6f1b561f..8d1733a69 100644
 --- a/packages/server/src/modules/coding-agents/protocol/adapters/responses.ts
 +++ b/packages/server/src/modules/coding-agents/protocol/adapters/responses.ts
-@@ -131,7 +131,7 @@ const HERMES_STUDIO_SPLIT_MCP_TOOLS = new Map<string, Array<{
+@@ -23,7 +23,7 @@ const HERMES_STUDIO_SPLIT_MCP_TOOLS = new Map<string, Array<{
    ['mcp__ekko_studio_api', [
      {
        name: 'ekko_studio_api_openapi_get',
@@ -2510,7 +818,7 @@ index a353e9270..e1c827476 100644
        inputSchema: inputSchema({
          path: { type: 'string', description: 'Optional exact endpoint path filter.' },
          method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'] },
-@@ -141,7 +141,7 @@ const HERMES_STUDIO_SPLIT_MCP_TOOLS = new Map<string, Array<{
+@@ -33,7 +33,7 @@ const HERMES_STUDIO_SPLIT_MCP_TOOLS = new Map<string, Array<{
      },
      {
        name: 'ekko_studio_api_request',
@@ -2519,17 +827,12 @@ index a353e9270..e1c827476 100644
        inputSchema: inputSchema({
          method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'] },
          path: { type: 'string', description: 'Relative /api/... or /health path. Full URLs are rejected.' },
-@@ -156,15 +156,15 @@ const HERMES_STUDIO_SPLIT_MCP_TOOLS = new Map<string, Array<{
+@@ -48,11 +48,11 @@ const HERMES_STUDIO_SPLIT_MCP_TOOLS = new Map<string, Array<{
    ]],
    ['mcp__ekko_studio_browser', [categoryToolset(
      'ekko_studio_browser_toolset',
 -    'Discover and invoke Ekko Studio Desktop browser operations. Covers tabs and leases, navigation, accessibility snapshots, interaction, screenshots, and console logs.',
 +    'Discover and invoke SwarmStudio Desktop browser operations. Covers tabs and leases, navigation, accessibility snapshots, interaction, screenshots, and console logs.',
-   )]],
-   ['mcp__ekko_studio_devices', [categoryToolset(
-     'ekko_studio_devices_toolset',
--    'Discover and invoke Ekko Studio LAN and remote-device operations. Covers discovery, peer connections, terminals, structured commands, and file transfer.',
-+    'Discover and invoke SwarmStudio LAN and remote-device operations. Covers discovery, peer connections, terminals, structured commands, and file transfer.',
    )]],
    ['mcp__ekko_studio_use', [categoryToolset(
      'ekko_studio_use_toolset',
@@ -2565,10 +868,10 @@ index 6429d4bb3..73d6c50d4 100644
      }
      child.stdin?.write(JSON.stringify({
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
-index 01459dcd6..c59d0c5f3 100644
+index 6f253b02f..5824eede3 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -1182,7 +1182,7 @@ function inheritClaudeSettings(existingContent: string | null | undefined = ''):
+@@ -1179,7 +1187,7 @@ function inheritClaudeSettings(existingContent: string | null | undefined = ''):
      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
      const inherited = { ...parsed } as Record<string, unknown>
      // Scoped Coding Agent runs authenticate exclusively through the selected
@@ -2577,6 +880,128 @@ index 01459dcd6..c59d0c5f3 100644
      // routing, otherwise a stale OAuth session can override the profile.
      delete inherited.apiKeyHelper
      delete inherited.awsAuthRefresh
+@@ -1614,12 +1622,120 @@ function piMcpConfig(profile: string, runTokenFile: string | undefined, ...exter
+   }, null, 2)}\n`
+ }
+ 
++function opencodeFamilyRuntimeConfig(
++  family: OpenCodeFamilyId,
++  profile: string,
++  runtime: {
++    provider?: string
++    model?: string
++    baseUrl?: string
++    systemPrompt?: string
++    contextPolicy?: CodingAgentContextPolicy
++    studioMcpTokenFile?: string
++  },
++  ...existingContents: Array<string | null | undefined>
++): string {
++  const config = parseOpenCodeConfig(...existingContents)
++  const externalMcp = config.mcp && typeof config.mcp === 'object' && !Array.isArray(config.mcp)
++    ? { ...config.mcp }
++    : {}
++  for (const name of [...HERMES_MCP_SERVER_NAMES, ...LEGACY_HERMES_MCP_SERVER_NAMES]) delete externalMcp[name]
++  const familyVars = OPENCODE_FAMILY_VARS[family]
++  const disabledManaged = getDisabledManagedMcpServers(family, profile)
++  const managedMcp = Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {
++    const server = managedHermesMcpServerConfig(family, profile, item.name, item.toolset, runtime.studioMcpTokenFile)
++    return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
++  }))
++  const inheritedInstructions = Array.isArray(config.instructions)
++    ? config.instructions.map(String)
++    : typeof config.instructions === 'string'
++      ? [config.instructions]
++      : []
++  if (runtime.model) {
++    delete config.model
++    delete config.provider
++  }
++  delete config.instructions
++  return `${JSON.stringify({
++    ...config,
++    $schema: familyVars.schemaUrl,
++    ...(runtime.model ? {
++      model: `${OPENCODE_PROVIDER_ID}/${runtime.model}`,
++      provider: {
++        [OPENCODE_PROVIDER_ID]: {
++          npm: '@ai-sdk/openai',
++          name: runtime.provider || 'SwarmStudio',
++          options: {
++            baseURL: runtime.baseUrl || '',
++            apiKey: `{env:${familyVars.apiKeyEnv}}`,
++          },
++          models: {
++            [runtime.model]: {
++              name: displayNameForModel(runtime.model),
++              // Always forward images; let the upstream model handle support.
++              attachment: true,
++              modalities: { input: ['text', 'image'], output: ['text'] },
++              ...(runtime.contextPolicy ? { limit: {
++                context: runtime.contextPolicy.contextWindow,
++                input: runtime.contextPolicy.contextWindow,
++                output: runtime.contextPolicy.outputLimit,
++              } } : {}),
++            },
++          },
++        },
++      },
++    } : {}),
++    ...(runtime.contextPolicy ? { compaction: {
++      ...(config.compaction && typeof config.compaction === 'object' ? config.compaction : {}),
++      auto: true,
++      reserved: runtime.contextPolicy.contextWindow - runtime.contextPolicy.triggerTokens,
++    } } : {}),
++    ...((inheritedInstructions.length || runtime.systemPrompt) ? {
++      instructions: [...new Set([
++        ...inheritedInstructions,
++        ...(runtime.systemPrompt ? [runtime.systemPrompt] : []),
++      ])],
++    } : {}),
++    mcp: {
++      ...externalMcp,
++      ...managedMcp,
++    },
++    permission: { '*': 'allow' },
++  }, null, 2)}\n`
++}
++
++function openCodeRuntimeEnv(family: OpenCodeFamilyId, input: {
++  configDir: string
++  databasePath: string
++  runtimeConfig?: string
++  apiKey?: string
++}): Record<string, string> {
++  // OPENCODE_CONFIG_DIR is OpenCode's native global-config override. Keep it
++  // stable at the provider/profile root so OpenCode installs its plugin SDK
++  // once and discovers the same agents, commands, plugins, skills, memory, and
++  // MCP configuration for terminal, chat, group-chat, and workflow launches.
++  //
++  // Per-conversation provider credentials and model selection are applied with
++  // OPENCODE_CONFIG_CONTENT, which OpenCode intentionally loads last. The
++  // native database remains isolated per conversation. Do not redirect HOME or
++  // XDG because that would also redirect git, ssh, npm, and child shells.
++  const familyVars = OPENCODE_FAMILY_VARS[family]
++  return {
++    [familyVars.configDirEnv]: input.configDir,
++    [familyVars.databaseEnv]: input.databasePath,
++    ...(input.runtimeConfig ? { [familyVars.runtimeConfigEnv]: input.runtimeConfig } : {}),
++    // MiMo-Code gates Claude-Code skill import behind an opt-in flag already.
++    ...(family === 'opencode' ? { OPENCODE_DISABLE_CLAUDE_CODE: '1' } : {}),
++    ...(input.apiKey ? { [familyVars.apiKeyEnv]: input.apiKey } : {}),
++  }
++}
++
+ export function getCodingAgentManagedMcpServerConfigs(
+   id: CodingAgentId,
+   profile = 'default',
+   runTokenFile?: string,
+ ): Record<string, Record<string, unknown>> {
+-  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'].includes(id)) return {}
++  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'].includes(id)) return {}
+   if (id === 'zcode') return {}
+   const disabledManaged = getDisabledManagedMcpServers(id, profile)
+   return Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {
 diff --git a/packages/server/src/modules/coding-agents/services/opencode/config.ts b/packages/server/src/modules/coding-agents/services/opencode/config.ts
 index 1f1a17594..586948ad7 100644
 --- a/packages/server/src/modules/coding-agents/services/opencode/config.ts
@@ -2591,10 +1016,10 @@ index 1f1a17594..586948ad7 100644
                baseURL: runtime.baseUrl || '',
                apiKey: `{env:${OPENCODE_API_KEY_ENV}}`,
 diff --git a/packages/server/src/modules/coding-agents/services/zcode/runtime-config.ts b/packages/server/src/modules/coding-agents/services/zcode/runtime-config.ts
-index 893a7d39a..64bd50909 100644
+index 893a7d39a..50355ec8e 100644
 --- a/packages/server/src/modules/coding-agents/services/zcode/runtime-config.ts
 +++ b/packages/server/src/modules/coding-agents/services/zcode/runtime-config.ts
-@@ -50,7 +50,7 @@ export async function prepareZcodeScopedRuntime(input: ScopedRuntimeInput): Prom
+@@ -50,7 +63,7 @@ export async function prepareZcodeScopedRuntime(input: ScopedRuntimeInput): Prom
        modelApiRules: [], providerSiteRules: [], templateModelRules: [], builtinProviderModelRules: [] } } }))
    await write('providers', 'personal-providers.json', json({ schemaVersion: 1, config: {
      providerOrder: ['ekko-scoped'], providerConfigRules: { providerRules: [{ providerId: 'ekko-scoped',
@@ -2604,7 +1029,7 @@ index 893a7d39a..64bd50909 100644
          personalModelIds: [model] } }] },
      modelConfigRules: { providerModelRules: [], manualProviderModelRules: [] },
 diff --git a/packages/server/src/modules/ekko/services/mcp.ts b/packages/server/src/modules/ekko/services/mcp.ts
-index 9c63e92f0..28203d63e 100644
+index a68335580..130e57545 100644
 --- a/packages/server/src/modules/ekko/services/mcp.ts
 +++ b/packages/server/src/modules/ekko/services/mcp.ts
 @@ -180,7 +180,7 @@ export function injectManagedEkkoMcpServers(
@@ -2616,24 +1041,11 @@ index 9c63e92f0..28203d63e 100644
        })
        continue
      }
-diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
-index 7ced8697e..7b6c06125 100644
---- a/packages/server/src/modules/studio/controllers/auth.ts
-+++ b/packages/server/src/modules/studio/controllers/auth.ts
-@@ -427,7 +427,7 @@ async function localRelayMachineInfo(url: string) {
- /**
-  * POST /api/auth/mcu-login
-  * Authenticate with the existing username/password login for an MCU/device.
-- * When remote relay is requested or a legacy relay URL is provided, connect this Ekko Studio instance to it.
-+ * When remote relay is requested or a legacy relay URL is provided, connect this SwarmStudio instance to it.
-  * Body: { token, id, account, password, url? }.
-  */
- export async function microcontrollerLogin(ctx: Context) {
 diff --git a/packages/server/src/modules/studio/controllers/sessions.ts b/packages/server/src/modules/studio/controllers/sessions.ts
-index ab47893cd..127fdff89 100644
+index 8f32d6752..96c509574 100644
 --- a/packages/server/src/modules/studio/controllers/sessions.ts
 +++ b/packages/server/src/modules/studio/controllers/sessions.ts
-@@ -200,7 +200,7 @@ function mergeHermesHistorySessions(
+@@ -203,7 +204,7 @@ function mergeHermesHistorySessions(
    const importedIds = new Set(localSessions.map(session => session.id))
    const historySessionsById = new Map<string, any>()
    // Keep Hermes Agent state.db as the canonical summary when both stores have
@@ -2682,10 +1094,25 @@ index 14c6c4bc4..26f696e86 100644
   */
  export function createRequestBodyParser() {
 diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
-index 4fd98b4e9..b24c684e5 100644
+index 4fd98b4e9..26dc06b2e 100644
 --- a/packages/server/src/modules/studio/public/agent-status-registry.ts
 +++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
-@@ -70,7 +70,7 @@ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
+@@ -67,10 +70,22 @@ const DEFAULTS: Record<AgentStatusId, Omit<AgentStatusRecord, 'updatedAt'>> = {
+     error: '',
+     installations: [],
+   },
++  mimo: {
++    id: 'mimo',
++    name: 'MiMo Code',
++    provider: 'Xiaomi MiMo',
++    kind: 'coding-agent',
++    installed: false,
++    version: '',
++    source: 'not-installed',
++    path: '',
++    error: '',
++    installations: [],
++  },
    'ekko-agent': {
      id: 'ekko-agent',
      name: 'Ekko',
@@ -2708,10 +1135,16 @@ index 59ca30a88..d43330a52 100644
   * must always resolve from this global home instead.
   */
 diff --git a/packages/server/src/modules/studio/public/config.ts b/packages/server/src/modules/studio/public/config.ts
-index e12ea16bb..01fb4b212 100644
+index 06e3e7302..817e979fd 100644
 --- a/packages/server/src/modules/studio/public/config.ts
 +++ b/packages/server/src/modules/studio/public/config.ts
-@@ -31,7 +31,7 @@ import { homedir } from 'os'
+@@ -25,13 +25,13 @@ import { homedir } from 'os'
+  * - HERMES_GATEWAY_URL / GATEWAY_URL: Explicit Hermes gateway upstream URL for proxy routes.
+  * - GATEWAY_HOST: Default Hermes gateway upstream host. Default: 127.0.0.1.
+  * - GATEWAY_PORT: Default Hermes gateway upstream port. Default: 8642.
+  * - HERMES_DASHBOARD_URL: Base URL of the Hermes agent dashboard serving the kanban plugin page (embedded via iframe at /hermes/kanban). Overrides HERMES_DASHBOARD_HOST/PORT.
+  * - HERMES_DASHBOARD_HOST: Dashboard host. Default: 127.0.0.1.
+  * - HERMES_DASHBOARD_PORT: Dashboard port. Default: 9119.
   * - HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART: Disable Web UI gateway autostart checks and config-driven gateway start/stop reconciliation.
   * - HERMES_WEB_UI_MANAGED_GATEWAY: Web UI-managed Hermes gateway handling. Enabled by default; set 0/false/off to use CLI start.
   * - HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN: Whether Web UI shutdown also stops managed gateways.
@@ -2719,7 +1152,7 @@ index e12ea16bb..01fb4b212 100644
 + * - HERMES_WEB_UI_DISABLE_MCP_AUTOINJECT: Disable SwarmStudio MCP config injection.
   * - HERMES_WEB_UI_ALLOW_TRANSIENT_MCP_AUTOINJECT: Allow MCP injection when HERMES_WEB_UI_HOME is under a temp dir.
   * - HERMES_LAN_DISCOVERY_ENABLED: Set false/0/off to disable UDP LAN discovery responder.
-  * - HERMES_LAN_DISCOVERY_HTTP_PORTS: HTTP ports to probe during UDP discovery scans. Default: 8648,8748 plus current PORT.
+  *   Discovery probes are sent to the fixed UDP port 48640 plus legacy mapped ports for compatibility.
 diff --git a/packages/server/src/modules/studio/public/runs/prompt.ts b/packages/server/src/modules/studio/public/runs/prompt.ts
 index 9ab4b62ce..082b36de9 100644
 --- a/packages/server/src/modules/studio/public/runs/prompt.ts
@@ -2769,7 +1202,7 @@ index 326e4ddf7..3911c3713 100644
  
      const headers = normalizeHeaders(request.headers)
 diff --git a/packages/server/src/modules/studio/services/chat-run/session-command.ts b/packages/server/src/modules/studio/services/chat-run/session-command.ts
-index 60b73bc63..6e2c1f747 100644
+index 6e59fc2fc..fbddab757 100644
 --- a/packages/server/src/modules/studio/services/chat-run/session-command.ts
 +++ b/packages/server/src/modules/studio/services/chat-run/session-command.ts
 @@ -170,7 +170,7 @@ export async function handleSessionCommand(
@@ -2965,10 +1398,10 @@ index cff558778..099800c6f 100644
    }
  
 diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
-index 6c7e9fe28..4b1023a35 100644
+index 8e0bd5937..7fbb762c9 100644
 --- a/packages/server/src/modules/studio/sockets/chat-run.ts
 +++ b/packages/server/src/modules/studio/sockets/chat-run.ts
-@@ -206,7 +206,7 @@ function isBridgeRunSource(source?: string): boolean {
+@@ -207,7 +209,7 @@ function isBridgeRunSource(source?: string): boolean {
  function mobileLocationRunInstruction(sessionId: string | undefined, source: string | undefined): string {
    if (!sessionId || source === 'workflow' || source === 'group_chat') return ''
    return [
@@ -2977,7 +1410,7 @@ index 6c7e9fe28..4b1023a35 100644
      'Only when the user explicitly asks to use their current mobile-device location, use ekko_studio_use_toolset to describe and call ekko_studio_use_mobile_location with this exact session_id.',
      'The App will show a one-time confirmation before sharing WGS84 coordinates. Never request location proactively, in a delegated subtask, in a workflow node, or for background tracking.',
    ].join(' ')
-@@ -215,7 +215,7 @@ function mobileLocationRunInstruction(sessionId: string | undefined, source: str
+@@ -216,7 +218,7 @@ function mobileLocationRunInstruction(sessionId: string | undefined, source: str
  function mobileCalendarRunInstruction(sessionId: string | undefined, source: string | undefined): string {
    if (!sessionId || source === 'workflow' || source === 'group_chat') return ''
    return [
@@ -2986,7 +1419,7 @@ index 6c7e9fe28..4b1023a35 100644
      'Only when the user explicitly asks to read or change calendar events, use ekko_studio_use_toolset to describe and call ekko_studio_use_mobile_calendar with this exact session_id.',
      'Only when the user explicitly asks to read or change reminders, use ekko_studio_use_toolset to describe and call ekko_studio_use_mobile_reminders with this exact session_id.',
      'The App always asks the user to share once or confirm the write. Never use these tools proactively, in delegated/workflow/group tasks, or for background access. Delete only the exact listed item after fresh App confirmation; never delete a whole recurring series.',
-@@ -225,7 +225,7 @@ function mobileCalendarRunInstruction(sessionId: string | undefined, source: str
+@@ -226,7 +228,7 @@ function mobileCalendarRunInstruction(sessionId: string | undefined, source: str
  function mobileHealthRunInstruction(sessionId: string | undefined, source: string | undefined): string {
    if (!sessionId || source === 'workflow' || source === 'group_chat') return ''
    return [

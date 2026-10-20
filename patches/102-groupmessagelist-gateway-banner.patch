@@ -1,34 +1,8 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index 6992d61f..0e95fbec 100644
+index ba0078d71..98b313f1c 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -10,6 +10,7 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'
- import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff-presentation'
- import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
- import GroupMessageItem from './GroupMessageItem.vue'
-+import GatewayNoticeBanner from '@/custom/chat/components/GatewayNoticeBanner.vue'
- import GroupAgentRunCard from './GroupAgentRunCard.vue'
- import VirtualMessageList from '../chat/VirtualMessageList.vue'
- 
-@@ -43,9 +44,14 @@ const emptyStateAgents = [
-     { name: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
- ]
- const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
--    msg.role !== 'tool' ||
--    toolTraceVisible.value ||
--    msg.toolStatus === 'running',
-+    msg.systemType !== 'gateway' &&
-+    (
-+        msg.role !== 'tool' ||
-+        toolTraceVisible.value ||
-+        msg.toolStatus === 'running' ||
-+        msg.toolName === 'workspace_diff' ||
-+        msg.tool_name === 'workspace_diff'
-+    ),
- )))
- const supportsMessageSelection = computed(() => props.allowMessageDeletion && !store.inviteGuest)
- const {
-@@ -255,6 +261,7 @@ defineExpose({ scrollToBottom })
+@@ -256,6 +263,7 @@ defineExpose({ scrollToBottom })
  
  <template>
      <div class="group-message-list-shell">
