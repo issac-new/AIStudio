@@ -67,12 +67,18 @@
 - [x] 客户端 helper 单测绿（4/4）
 - [ ] 激活后活体（验收轮回填）：`curl 8647/element-web/config.json` 的 base_url=
   `http://127.0.0.1:8008`、server_name=`matrix.test`；`GET /api/matrix/server-info` 200
+- [x] 存量凭据对账收口（2026-10-20 接管轮）：`matrix-client.ts` initClient 起连前以
+  server-info 单源对账 localStorage 存量 homeserver（localhost↔127.0.0.1 与尾斜杠视为
+  等价，`matrix-chat/utils/server-url.ts` + 单测 4/4）；不一致 → 不起旧 client，置
+  `serverMoved`，`MatrixServerMovedBanner`（挂 MatrixChatPanel + WorkbenchView 中栏）人话
+  提示旧→新地址并引导重登（活体已验：伪造旧地址后横幅渲染、文案与按钮正确）
+- [x] 登录页预填优先级根治（补丁 672）：原 669 实现 localStorage 旧地址优先、单源仅兜底
+  ——迁移后表单永远预填失效地址（"报错链接不对"的完整根因链末端）；672 反转为单源优先，
+  全链注入验证（隔离 worktree 464 补丁序列 + 672 干净应用，终态与在线文件一致）
 
 ## 五、明确不做（挂账）
 
-1. AccountAdminView/OrgEditor 表单默认值改读 server-info（客户端 .vue，兄弟会话领地，
-   已对账提请；验收轮若仍未接则本会话补）。
+1. ~~AccountAdminView/OrgEditor 表单默认值改读 server-info~~（已接单源，2026-10-20 接管轮核对：两处均经 `fetchMatrixServerInfo` 预填，客户端零写死 8008）。
 2. gateway-env 模拟回落默认值与 SIMULATED_USERS 域名（D3）。
-3. matrix.to 分享链/二维码（兄弟会话 5d815c06 已修）。
-4. PlatformSettings.vue:414 的 `https://matrix.org` placeholder（纯提示文案，影响微，
-   登记在对账文档供兄弟会话择取）。
+3. ~~matrix.to 分享链/二维码~~（兄弟会话 5d815c06 已修；接管轮补：分享/导出/留房/清屏四个 body 级弹窗与 RunTraceNodeDetail 已挂 `--ia-z-modal` 账本变量）。
+4. ~~PlatformSettings.vue:414 placeholder~~（已清：客户端 `matrix.org`/`8008` 写死零残留）。
