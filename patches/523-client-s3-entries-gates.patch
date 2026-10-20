@@ -1,45 +1,5 @@
-diff --git a/packages/client/src/components/hermes/chat/ChatInput.vue b/packages/client/src/components/hermes/chat/ChatInput.vue
-index d4a2d0277..8fd432596 100644
---- a/packages/client/src/components/hermes/chat/ChatInput.vue
-+++ b/packages/client/src/components/hermes/chat/ChatInput.vue
-@@ -18,6 +18,8 @@ import { useI18n } from 'vue-i18n'
- import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
- import { extractClipboardFiles } from '@/utils/clipboard-files'
- import VoiceDialogueControls from './VoiceDialogueControls.vue'
-+// overlay[s3]（补遗⑤）：语音入口默认关（VITE_CUSTOM_VOICE 再开）——设置菜单项/作曲麦克风/语音舞台三处同门
-+import { features } from '@/custom/features'
- import BundleCreateModal from './BundleCreateModal.vue'
- import { BRIDGE_SESSION_COMMAND_DEFINITIONS } from '@/utils/hermes/bridge-session-commands'
- import { clampChatInputHeight, isMobileChatInputViewport } from '@/utils/chat-input-height'
-@@ -505,7 +507,8 @@ function startResize(e: MouseEvent) {
- }
- 
- const inputSettingsOptions = computed<DropdownOption[]>(() => [
--  {
-+  // overlay[s3]：语音模式入口随 features.voice 摘除（关时不留死菜单项）
-+  ...(features.voice ? [{
-     label: t('realtimeVoice.mode'),
-     key: 'voiceMode',
-     disabled: props.draft,
-@@ -513,7 +516,7 @@ const inputSettingsOptions = computed<DropdownOption[]>(() => [
-       class: 'settings-voice-mode-icon',
-       'aria-hidden': 'true',
-     }, '◉'),
--  },
-+  }] : []),
-   {
-     label: t('chat.showToolCalls'),
-     key: 'toolTrace',
-@@ -1455,6 +1458,7 @@ function openAttachmentPreview(attachment: Attachment) {
-         </div>
-         <div class="input-actions">
-           <VoiceDialogueControls
-+            v-if="features.voice"
-             :status="voiceInput.dialogue.status.value"
-             :transcript="voiceInput.transcript.value"
-             :error="voiceInput.error.value"
 diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
-index 47d92583b..cd5d6d320 100644
+index 5b7da32a4..be31e43e7 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
 @@ -1,4 +1,5 @@
@@ -48,7 +8,7 @@ index 47d92583b..cd5d6d320 100644
  import { hasApiKey, isStoredSuperAdmin } from '@/api/client'
  import { hasDesktopBrowserBridge } from '@/utils/desktop-bridge'
  import { resolveLoginRedirect } from '@/utils/login-redirect'
-@@ -320,6 +321,10 @@ function isDesktopShell(): boolean {
+@@ -305,6 +313,10 @@ function isDesktopShell(): boolean {
  }
  
  router.beforeEach(async (to, _from, next) => {
@@ -56,6 +16,6 @@ index 47d92583b..cd5d6d320 100644
 +  // VITE_CUSTOM_EXTERNAL_LINKS 再开；与 bootstrap externalLinks 摘除同键——router 守卫为第二层防线）
 +  if (to.meta.ekkoConfig && !features.ekko) { next("/app"); return }
 +  if ((to.name === "share.groupChat" || to.name === "groupChat.link") && !features.externalLinks) { next("/app"); return }
-   await ensureDesktopAuth()
- 
-   if (to.name === 'codingAgent.config' && ['plugins', 'presets'].includes(String(to.params.section)) && to.params.agentId !== 'dsh') {
+   if (to.path === '/hermes/models' && Object.prototype.hasOwnProperty.call(to.query, 'importProvider')) {
+     captureProviderImport(to.query.importProvider)
+     const query = { ...to.query }
