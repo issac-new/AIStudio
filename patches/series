@@ -881,3 +881,13 @@
 # 666: 图产物机械验收路由（diagram-design 吸收轮 项3）——/api/hermes/diagram/check
 # 语义唯一事实源=vendored self_check.py；路径政策=hermes base/已知任务 workspace。
 666-server-diagram-routes.patch
+# 667: element-web config.json homeserver 口径=server-info 单一事实源（2026-10-20 matrix 链接整治）——
+# 动态分支前移到静态分支之前（修 patch 008 引入的遮蔽死代码）；默认 https://matrix.org 退役；
+# ?hs= 显式覆盖保留（运维调试），覆盖时 server_name 仍按 URL hostname 推导。
+667-server-element-web-config-server-info.patch
+# 668: auth.ts 六处写死 localhost:8008 改 getMatrixServerInfo（matrix-users 列表/建号/改资料/
+# 删号/启停/重置密码）；四处回落保留用户级 matrix_homeserver_url 优先语义不变。
+668-server-auth-homeserver-server-info.patch
+# 669: 登录页 homeserver 默认值——无 localStorage 记忆时取 /api/matrix/server-info 预填
+# （LAN 部署不再拿到写死的 localhost:8008）；localStorage 记忆优先逻辑不变。
+669-client-login-homeserver-prefill.patch
