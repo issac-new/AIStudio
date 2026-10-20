@@ -9,6 +9,7 @@
 // 超出工单三函数清单的必要补件（如实注明）：fetchBranches 供 KPI「分支交付 n/6」
 // （详设签 1 KPI 行第二卡；端点 X1 已就绪=GET /api/hermes/sim/branches，只读消费）。
 import { authFetch } from '../../ide/utils/auth-fetch'
+import { directorRunGuideError } from '../utils/director-run'
 
 // ── 类型（服务端契约最小镜像，锚 simcenter-controller.ts） ──
 
@@ -63,19 +64,27 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export function fetchRunState(run: string): Promise<RunStateResponse> {
+  const guide = directorRunGuideError(run)
+  if (guide) return Promise.reject(guide)
   return getJson(`/api/hermes/sim/run-state?run=${encodeURIComponent(run)}`)
 }
 
 export function fetchDeliverables(run: string): Promise<DeliverablesResponse> {
+  const guide = directorRunGuideError(run)
+  if (guide) return Promise.reject(guide)
   return getJson(`/api/hermes/sim/deliverables?run=${encodeURIComponent(run)}`)
 }
 
 export function fetchIssues(run: string): Promise<IssuesResponse> {
+  const guide = directorRunGuideError(run)
+  if (guide) return Promise.reject(guide)
   return getJson(`/api/hermes/sim/issues?run=${encodeURIComponent(run)}`)
 }
 
 /** KPI 分支交付卡数据面（详设签 1；X1 就绪端点只读消费，SIM_BRANCHES_REPO 缺席=503 由调用方如实缺席呈现） */
 export function fetchBranches(run: string): Promise<BranchesResponse> {
+  const guide = directorRunGuideError(run)
+  if (guide) return Promise.reject(guide)
   return getJson(`/api/hermes/sim/branches?run=${encodeURIComponent(run)}`)
 }
 
