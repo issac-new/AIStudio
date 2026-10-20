@@ -20,11 +20,11 @@
 
 | # | 发现 | 严重度 | 处置 |
 |---|---|---|---|
-| W1 | 阶段③④看板页签未捕获异常：`Kanban capability "diagnostics" is not supported`（上游 store 的断言在自身 try/catch 之外抛出；dev 后端无此能力） | P1（页面可渲染但错误监控被污染） | **已修**：SwarmKanbanView 三处调用点改能力守卫（fetchDiagnosticsIfSupported），并补守门测试 1 例；活页面复验 pageerror 归零。上游 store 断言次序问题挂账（下轮补丁再生时处理） |
-| W2 | 工作台（/app/collab）首载 >3.8s 白屏（加载态无骨架屏） | P2 体验 | 挂账：加载骨架/数据并行化另立批 |
-| W3 | 导演 run（run-sim-director-*）出现在推演运行选择器，但旧 26 步 run-state/journal 体系读不到 → 四页 404 噪音（UI 已内联如实提示，useStageProgress 已会清死 run 记忆） | P2 结构性 | 挂账：导演 run 与 run-state 两套体系贯通是设计决策（见决策 D3），不在验收轮代决 |
-| W4 | orgloop/ledger 503 控制台噪音（UI 已优雅降级） | P3 | 挂账：端点未配置环境的前端降噪（可选项） |
-| W5 | dev 链 main.ts 以 admin/dev-bootstrap 自动超管登录（M8b 已知机制，服务端 HERMES_WEB_UI_DEV_BOOTSTRAP=1 门控建号） | 提示 | 挂账：装机/生产链须复核该桩不生效（安全轮范畴） |
+| W1 | 阶段③④看板页签未捕获异常：`Kanban capability "diagnostics" is not supported`（上游 store 的断言在自身 try/catch 之外抛出；dev 后端无此能力） | P1（页面可渲染但错误监控被污染） | **已修**：SwarmKanbanView 三处调用点改能力守卫（fetchDiagnosticsIfSupported），并补守门测试 1 例；活页面复验 pageerror 归零。上游根因由补丁 670 根治（断言改能力表安静跳过，批A 20f17ca3） |
+| W2 | 工作台（/app/collab）首载 >3.8s 白屏（加载态无骨架屏） | P2 体验 | **已闭环**：IaShell 路由出口 Suspense 兜底「页面加载中…」+ 补丁 671 boot-fallback 首帧文字（批A 20f17ca3） |
+| W3 | 导演 run（run-sim-director-*）出现在推演运行选择器，但旧 26 步 run-state/journal 体系读不到 → 四页 404 噪音 | P2 结构性 | **已闭环**：API 层守卫（overview 四端点+journal+useStageProgress 即时拒答零探测）+ SimCenterView 自动改道导演台；活验三深链 sim 4xx 归零（批B 80a7c395） |
+| W4 | orgloop/ledger 503 控制台噪音（UI 已优雅降级） | P3 | **已闭环**：gatekeeper 未配置闩（记一次失败停轮询）+ 守门测试 2 例（批A 20f17ca3） |
+| W5 | dev 链 main.ts 以 admin/dev-bootstrap 自动超管登录（M8b 已知机制，服务端 HERMES_WEB_UI_DEV_BOOTSTRAP=1 门控建号） | 提示 | **复核 PASS**：桩在 overlay dev 入口垫片（registries/client/entry.mts）且 `import.meta.env.DEV` 门控，生产/桌面构建走 upstream main.ts 不含此路径；服务端建号另有显式环境变量门控。无代码改动 |
 
 ### 2. matrix 链路活体验证
 
