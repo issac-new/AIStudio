@@ -62,7 +62,7 @@ const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> 
       { name: 'hermes.memory', icon: 'archive', labelKey: 'sidebar.memory' },
       { name: 'hermes.channels', icon: 'mail', labelKey: 'sidebar.channels' },
       { name: 'hermes.jobs', icon: 'clock', labelKey: 'sidebar.jobs' },
-      { name: 'hermes.kanban', icon: 'kanban', labelKey: 'sidebar.kanban' },
+      // 看板配置与主界面「看板」重复且是旧版横向列，移出设置导航
       // 学习轨迹页实测空白（仅加载图标），移出导航
       // ekko 运维面（2026-10-02 用户裁定开门）：上游 /ekko/* 四页（memory/skills/
       // mcp/settings）入口；superadmin+features.ekko 双门控，页面自带 ekkoConfig
