@@ -101,7 +101,7 @@ diff --git a/packages/client/src/utils/agent-options.ts b/packages/client/src/ut
 diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
 --- a/packages/client/src/utils/chat-agent-avatar.ts
 +++ b/packages/client/src/utils/chat-agent-avatar.ts
-@@ -19,4 +19,5 @@
+@@ -19,3 +19,4 @@
    grok: { label: 'Grok', src: deploymentUrl('/coding-agents/grok.svg') },
    opencode: { label: 'OpenCode', src: deploymentUrl('/coding-agents/opencode.png') },
 +  mimo: { label: 'MiMo Code', src: deploymentUrl('/coding-agents/mimo.svg') },
@@ -109,7 +109,7 @@ diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/sr
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -43,4 +43,5 @@
+@@ -43,2 +43,3 @@
      { name: 'OpenCode', src: deploymentUrl('/coding-agents/opencode.png') },
 +    { name: 'MiMo Code', src: deploymentUrl('/coding-agents/mimo.svg') },
      { name: 'DeepSeek Harness', src: deploymentUrl('/coding-agents/deepseek.svg') },
