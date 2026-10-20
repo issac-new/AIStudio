@@ -2,6 +2,7 @@
 import type Koa from 'koa';
 import Router from '@koa/router';
 import { readGatewayMatrixEnv } from './gateway-env';
+import { getMatrixServerInfo } from './server-info';
 
 /** TCP 对端是否本机回环（127.0.0.0/8 / ::1 / ::ffff:127.x）。 */
 function isLoopbackPeer(addr: string | undefined): boolean {
@@ -101,6 +102,14 @@ export function registerMatrixAuthRoutes(app: Koa) {
       accessToken: env.accessToken,
       userId: env.userId,
     };
+  });
+
+  // GET /api/matrix/server-info：Matrix 部署地址单一事实源（spec 2026-10-20）。
+  // 登录页预填 / 建号与邀请表单默认值 / element-web 入口共用。只暴露非敏感部署地址
+  // （homeserver 本就显示在登录表单里），不涉凭据——故不设 gateway-credentials 的
+  // 回环四闸：登录页在鉴权前、LAN 部署的浏览器同样需要它（决策 D4）。
+  router.get('/server-info', (ctx) => {
+    ctx.body = getMatrixServerInfo();
   });
 
   app.use(router.routes());
