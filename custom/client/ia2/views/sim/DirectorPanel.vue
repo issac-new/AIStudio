@@ -94,9 +94,9 @@ function goDaily(): void {
     <p v-if="loadError" class="dir__error" data-testid="director-error">{{ loadError }}</p>
     <div v-else-if="!state" class="dir__empty" data-testid="director-empty">
       <p class="dir__empty-title">还没有进行中的推演</p>
-      <p class="dir__empty-sub">从运行编排选择一个典型场景并启动；推演会模拟所有人类员工把需求走到治理。</p>
+      <p class="dir__empty-sub">推演由 harness 启动；这里展示当前运行、模拟员工与待人介入。启动/续跑请在 harness 侧完成。</p>
       <div class="dir__actions">
-        <button type="button" class="dir__btn dir__btn--primary" data-testid="director-start" @click="goOrchestration">打开运行编排 →</button>
+        <button type="button" class="dir__btn dir__btn--primary" data-testid="director-start" @click="goOrchestration">查看运行编排 →</button>
         <button type="button" class="dir__btn" data-testid="director-back-daily" @click="goDaily">返回日常工作台</button>
       </div>
     </div>
@@ -106,11 +106,11 @@ function goDaily(): void {
         <div>
           <h3 class="dir__title">导演台</h3>
           <p class="dir__sub">
-            当前运行 <b>{{ state.run }}</b> · 模式 {{ state.posture }} · 模拟所有人类员工协作走完全流程
+            当前运行 <b>{{ state.run }}</b> · 模式 {{ state.posture }} · 启动/续跑由 harness 执行，这里看导演视图
           </p>
         </div>
         <div class="dir__actions">
-          <button type="button" class="dir__btn dir__btn--primary" data-testid="director-orchestrate" @click="goOrchestration">继续运行编排 →</button>
+          <button type="button" class="dir__btn dir__btn--primary" data-testid="director-orchestrate" @click="goOrchestration">查看运行编排 →</button>
           <button type="button" class="dir__btn" data-testid="director-back-daily-2" @click="goDaily">返回日常工作台</button>
         </div>
       </header>
