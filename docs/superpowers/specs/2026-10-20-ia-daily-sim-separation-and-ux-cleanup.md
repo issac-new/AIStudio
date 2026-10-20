@@ -156,3 +156,7 @@
 - `npm run build` rc=0（补批后复跑，`verify-dist` 通过）。
 - 定向测试：`sim-center-shell` + `ia-settings-sidebar` + `engine-round5` 27/27 通过；`engine-round5` 单跑 13.5s，低于 15s 但接近阈值，全量并发时曾超时，登记为负载敏感。
 - 全量 `npm test` 早前结果：1 个服务端注入态基线失败（tool-waterfall-gate）+ 1 个 IDE 超时（并发负载，单跑通过），其余 5647 通过。
+
+## 决策记录（补批 2026-10-20 · 审计大列表）
+
+- D-11：统一审计保留 200 条查询上限，首屏渲染 50 条 + 加载更多；目标列已有 320px 省略 + title 全文，不再整页平铺 4 万字符。

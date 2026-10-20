@@ -21,6 +21,9 @@ const result = ref<AuditLogResult | null>(null)
 const loading = ref(false)
 const loadError = ref('')
 const provMsg = ref('')
+/** 审计事件大列表分页（2026-10-20）：端点 200 条，首屏 50 条，避免整页压满。 */
+const auditLimit = ref(50)
+const auditRows = computed(() => result.value ? result.value.events.slice(0, auditLimit.value) : [])
 
 /** PROV-O 导出（丁10 UI 化，2026-10-01）：audit 四源证据链下载为 W3C PROV JSON-LD。 */
 async function exportProv(): Promise<void> {
@@ -62,6 +65,7 @@ function onQueryInput(): void {
 async function refresh(): Promise<void> {
   loading.value = true
   loadError.value = ''
+  auditLimit.value = 50
   try {
     result.value = await fetchAuditLog({ sources: [...active.value], q: q.value, limit: 200 })
   } catch (e) {
@@ -109,7 +113,7 @@ onMounted(() => void refresh())
       <table v-else class="audit__table">
         <thead><tr><th>{{ L?.colTime }}</th><th>{{ L?.colSource }}</th><th>{{ L?.colActor }}</th><th>{{ L?.colAction }}</th><th>{{ L?.colTarget }}</th><th>{{ L?.colResult }}</th></tr></thead>
         <tbody>
-          <tr v-for="(e, i) in result.events" :key="i" :data-testid="`audit-row-${e.source}`">
+          <tr v-for="(e, i) in auditRows" :key="i" :data-testid="`audit-row-${e.source}`">
             <td class="audit__ts">{{ fmtTime(e.ts) }}</td>
             <td><span class="audit__badge" :class="`is-${e.source}`">{{ e.source }}</span></td>
             <td>{{ e.actor }}</td>
@@ -119,6 +123,10 @@ onMounted(() => void refresh())
           </tr>
         </tbody>
       </table>
+      <button v-if="result && result.events.length > auditLimit" type="button" class="audit__more"
+        data-testid="audit-more" @click="auditLimit += 50">
+        加载更多（已显示 {{ auditRows.length }} / {{ result.events.length }}）
+      </button>
     </div>
   </div>
 </template>
@@ -174,6 +182,11 @@ onMounted(() => void refresh())
   td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); vertical-align: top; } }
 .audit__ts { font-family: ui-monospace, monospace; font-size: 9.5px; white-space: nowrap; }
 .audit__target { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.audit__more {
+  align-self: flex-start; border: 1px solid var(--border-color); background: transparent;
+  color: var(--text-secondary); border-radius: 6px; padding: 3px 10px;
+  font-family: inherit; font-size: 11px; cursor: pointer;
+}
 .audit__badge { font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 5px; line-height: 1.6;
   &.is-approvals { color: var(--ia-compensated); background: color-mix(in srgb, var(--ia-compensated) 12%, transparent); }
   &.is-domain { color: var(--accent-info); background: rgba(var(--accent-info-rgb), 0.1); }
