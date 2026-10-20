@@ -401,8 +401,14 @@ watch(
     <div v-if="!useExternalTimeline && pagination.isLoadingOlder" class="paginate-loading">
       {{ t('matrixChat.stateLoadingOlder') }}
     </div>
-    <div v-else-if="!useExternalTimeline && historyError" class="timeline-error" :title="historyError">
-      {{ t('matrixChat.historyLoadError') }}（{{ historyError }}）
+    <div v-else-if="!useExternalTimeline && historyError" class="timeline-error">
+      {{ t('matrixChat.historyLoadError') }}
+      <!-- 原始错误可能含 homeserver URL（形如 GET https://.../ 500），默认折叠避免
+           裸地址吓到用户；排查时展开看全文。 -->
+      <details class="timeline-error__detail">
+        <summary>详细信息</summary>
+        <code>{{ historyError }}</code>
+      </details>
     </div>
     <div v-else-if="!useExternalTimeline && !pagination.hasMore && messages.length > 0" class="timeline-start">
       {{ t('matrixChat.stateNoMoreHistory') }}
@@ -512,6 +518,28 @@ watch(
   background: rgba(229, 62, 62, 0.06);
   border-radius: 6px;
   margin: 0 8px;
+}
+
+.timeline-error__detail {
+  margin-top: 4px;
+  text-align: left;
+  font-size: 11px;
+
+  summary {
+    cursor: pointer;
+    color: var(--text-secondary, inherit);
+    user-select: none;
+  }
+
+  code {
+    display: block;
+    margin-top: 4px;
+    padding: 4px 8px;
+    word-break: break-all;
+    white-space: pre-wrap;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 4px;
+  }
 }
 
 .matrix-timeline-empty {
