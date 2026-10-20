@@ -89,3 +89,12 @@ index f6cd2b0fd..23a7d59e2 100644
    dsh: null,
    cursor: null,
    antigravity: null,
+diff --git a/packages/client/src/utils/agent-options.ts b/packages/client/src/utils/agent-options.ts
+--- a/packages/client/src/utils/agent-options.ts
++++ b/packages/client/src/utils/agent-options.ts
+@@ -6,4 +6,5 @@
+   { label: 'Claude', value: 'claude-code' },
+   { label: 'Codex', value: 'codex' },
+   { label: 'Pi', value: 'pi' },
++  { label: 'MiMo Code', value: 'mimo' },
+   { label: 'Grok', value: 'grok' },
