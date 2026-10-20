@@ -16,7 +16,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
@@ -42,6 +42,9 @@ import { changelog } from '@/data/changelog'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
+/** 运行上下文 chip 只属于推演模式；日常顶栏不再出现运行目录/轮次。 */
+const isSimMode = computed(() => route.path === '/app/sim' || route.path.startsWith('/app/sim/'))
 // 层级批：品牌区旅程回家钮（旅程页是产品默认入口，此前顶栏无路可达）
 function goJourney(): void {
   void router.push({ name: 'ia2.journey' })
@@ -194,7 +197,7 @@ function onPanelJumpTask(taskId: string): void {
 <template>
   <div class="cockpit-top" data-testid="ia-shell-header">
     <div class="cockpit-top__brand">
-      <button type="button" class="cockpit-top__home" data-testid="ia-header-home" title="旅程首页（默认入口）" @click="goJourney">🧭</button>
+      <button type="button" class="cockpit-top__home" data-testid="ia-header-home" title="流程总览（默认入口）" @click="goJourney">🧭</button>
       <ThemeSwitch />
       <IaLocaleToggle />
       <span class="cockpit-top__conn"
@@ -204,7 +207,7 @@ function onPanelJumpTask(taskId: string): void {
     </div>
     <!-- 2026-10-18：六阶段移入左侧栏；顶栏只留「沟通协作 | IDE 工作区」独立切换 -->
     <IaWorkspaceSwitch />
-    <IaRunContextChip />
+    <IaRunContextChip v-if="isSimMode" />
     <div class="cockpit-top__div" />
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon"><CockpitIcon name="search" :size="12" /></span>
@@ -236,7 +239,7 @@ function onPanelJumpTask(taskId: string): void {
       :title="t('cockpit.scheduleTitle')" @click="workspace.openSchedule()"
     >
       <CockpitIcon name="calendar" />
-      <span v-if="scheduleTodayCount" class="cockpit-top__bdg cockpit-top__bdg--err">{{ t('ia2.header.scheduleToday') }}</span>
+      <span v-if="scheduleTodayCount" class="cockpit-top__bdg cockpit-top__bdg--err" :title="t('ia2.header.scheduleToday')">{{ scheduleTodayCount }}</span>
     </button>
     <div class="cockpit-top__div" />
     <button type="button" class="cockpit-top__btn" data-testid="ia-header-notify" @click="showNotify = !showNotify">

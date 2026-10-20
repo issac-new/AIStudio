@@ -49,8 +49,7 @@ const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> 
     entries: [
       { name: 'hermes.models', icon: 'cpu', labelKey: 'sidebar.models' },
       { name: 'hermes.workflow', icon: 'fork', labelKey: 'sidebar.workflow' },
-      { name: 'hermes.connections', icon: 'link', labelKey: 'sidebar.connections' },
-      { name: 'hermes.files', icon: 'folder', labelKey: 'sidebar.files' },
+      // 2026-10-20 走查：设备互联/文件为空白页与裸文件系统浏览器，移出员工导航
     ],
   },
   {
@@ -64,7 +63,7 @@ const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> 
       { name: 'hermes.channels', icon: 'mail', labelKey: 'sidebar.channels' },
       { name: 'hermes.jobs', icon: 'clock', labelKey: 'sidebar.jobs' },
       { name: 'hermes.kanban', icon: 'kanban', labelKey: 'sidebar.kanban' },
-      { name: 'hermes.journey', icon: 'history', labelKey: 'sidebar.journey' },
+      // 学习轨迹页实测空白（仅加载图标），移出导航
       // ekko 运维面（2026-10-02 用户裁定开门）：上游 /ekko/* 四页（memory/skills/
       // mcp/settings）入口；superadmin+features.ekko 双门控，页面自带 ekkoConfig
       // meta 守卫（patch 523）——四页经 URL 直达，本入口落配置页
@@ -74,17 +73,17 @@ const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> 
   {
     labelKey: 'sidebar.groupSystem',
     entries: [
+      // 日常设置统一入口（原生系统设置页）；以下为并入的高级设置页
+      { name: 'ia2.govSettings', icon: 'settings', label: '系统设置导航' },
       { name: 'hermes.settings', icon: 'settings', labelKey: 'sidebar.settings' },
       { name: 'hermes.profiles', icon: 'user', labelKey: 'sidebar.profiles', superAdmin: true },
       { name: 'hermes.theme', icon: 'palette', labelKey: 'sidebar.theme' },
-      { name: 'hermes.petdex', icon: 'users', labelKey: 'sidebar.petdex' },
       { name: 'hermes.skillsUsage', icon: 'specify', labelKey: 'sidebar.skillsUsage' },
       { name: 'hermes.logs', icon: 'file', labelKey: 'sidebar.logs' },
       { name: 'hermes.usage', icon: 'chart', labelKey: 'sidebar.usage' },
       { name: 'hermes.performance', icon: 'activity', labelKey: 'sidebar.performance', superAdmin: true },
-      { name: 'hermes.terminal', icon: 'terminal', labelKey: 'sidebar.terminal', superAdmin: true },
-      { name: 'hermes.browser', icon: 'globe', labelKey: 'sidebar.browser' },
       { name: 'hermes.versionPreview', icon: 'refresh', labelKey: 'sidebar.versionPreview' },
+      // 终端/浏览器/宠物图鉴为开发者或娱乐入口，移出员工导航
     ],
   },
 ]

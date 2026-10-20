@@ -108,6 +108,12 @@ const taskById = computed(() => {
 const workspaceOptions = computed(() => [...new Set(workspace.tasks.map(t => t.workspace).filter(Boolean))].sort())
 const assigneeOptions = computed(() => [...new Set(workspace.tasks.map(t => t.assignee).filter(Boolean))].sort())
 
+/** 工作区显示只取路径末两层；完整绝对路径留在 option title / 结果 title。 */
+function wsLabel(p: string): string {
+  const parts = String(p).split('/').filter(Boolean)
+  return parts.slice(-2).join('/') || p
+}
+
 function timeWithin(ts: number | null | undefined): boolean {
   if (timeFilter.value === 'all') return true
   if (!ts) return false
@@ -144,7 +150,7 @@ const sessionRowsResult = computed<ResultRow[]>(() => sessionRows.value
     key: `s:${s.kind}:${s.id}`,
     title: s.name,
     meta: [s.kind === 'room' ? (zh.value ? '房间' : 'Room') : s.kind === 'group' ? (zh.value ? '群聊' : 'Group') : (zh.value ? '会话' : 'Chat'),
-      sessionWorkspace(s.taskIds) || (zh.value ? '未关联工作区' : 'No workspace')].join(' · '),
+      sessionWorkspace(s.taskIds) ? wsLabel(sessionWorkspace(s.taskIds)!) : (zh.value ? '未关联工作区' : 'No workspace')].join(' · '),
     icon: s.kind === 'room' ? '#' : s.kind === 'group' ? '👥' : '💬',
     action: zh.value ? '打开' : 'Open',
     open: () => openSession(s.kind, s.id),
@@ -161,7 +167,7 @@ const taskRowsResult = computed<ResultRow[]>(() => workspace.tasks
   .map((t) => ({
     key: `t:${t.id}`,
     title: t.title,
-    meta: [t.id, t.workspace || (zh.value ? '未关联工作区' : 'No workspace'), STATUS_LABEL[t.status]?.[zh.value ? 'zh' : 'en'] ?? t.status, t.assignee].join(' · '),
+    meta: [t.id, t.workspace ? wsLabel(t.workspace) : (zh.value ? '未关联工作区' : 'No workspace'), STATUS_LABEL[t.status]?.[zh.value ? 'zh' : 'en'] ?? t.status, t.assignee].join(' · '),
     icon: '▦',
     action: zh.value ? '看板' : 'Board',
     open: () => { drawerTaskId.value = t.id; drawerOpen.value = true },
@@ -281,7 +287,7 @@ function reset(): void {
         <span>{{ zh ? '工作区' : 'Workspace' }}</span>
         <select v-model="workspaceFilter" data-testid="search-filter-workspace">
           <option value="">{{ zh ? '全部' : 'All' }}</option>
-          <option v-for="w in workspaceOptions" :key="w" :value="w">{{ w }}</option>
+          <option v-for="w in workspaceOptions" :key="w" :value="w" :title="w">{{ wsLabel(w) }}</option>
         </select>
       </label>
       <label class="srch__filter">
@@ -363,7 +369,7 @@ function reset(): void {
 .srch__reset { border: 1px solid var(--border-color); border-radius: 5px; background: transparent; color: var(--text-muted); font-family: inherit; font-size: 11.5px; padding: 2px 8px; cursor: pointer; }
 .srch__reset:hover { color: var(--text-primary); background: var(--bg-secondary); }
 .srch__body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
-.srch__group { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+.srch__group { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
 .srch__gh { margin: 0; padding: 8px 12px; font-size: 12px; color: var(--text-muted); background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); }
 .srch__gn { margin-left: 6px; font-variant-numeric: tabular-nums; }
 .srch__row { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border: 0; border-bottom: 1px solid var(--border-color); background: transparent; text-align: left; font-family: inherit; color: inherit; cursor: pointer; }

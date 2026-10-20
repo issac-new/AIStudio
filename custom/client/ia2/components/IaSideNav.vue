@@ -1,9 +1,8 @@
 <!-- overlay/custom/client/ia2/components/IaSideNav.vue
-     工作台左侧常驻导航（2026-10-18 用户裁定）：
-     常用（流程总览/工作台/看板/审批收件箱）+ 流程（六阶段）+ 整轮（全流程推演）
-     + 专题（流程架构/本体/评测/技能治理）+ 管理（系统设置）。
-     六阶段从此只在这里出现，顶栏不再渲染阶段条；「沟通协作 | IDE 工作区」
-     由 IaWorkspaceSwitch 独立承载（用户裁定保持不动，不与阶段条目穿插）。
+     工作台左侧常驻导航（2026-10-20 日常/推演拆分）：
+     日常模式 = 常用（流程总览/工作台/看板/审批收件箱/检索）+ 流程六阶段
+     + 专题 + 系统设置；全流程推演改为顶栏独立模式，不再作为日常侧栏「整轮」组。
+     推演模式 = 推演专区六签 + 返回日常工作台，侧栏不出现日常阶段与专题。
      三组子项共用 IaSideNavItem 一套行式（18px 前导槽 + 标签 + 右侧槽）。
      状态数据走 useStageProgress 共享缓存；无运行/读取失败按未开始呈现，不假装完成。 -->
 <script setup lang="ts">
@@ -27,6 +26,17 @@ const { decisionRows } = useDecisionRows()
 const zh = computed(() => navLocale.value === 'zh')
 const routeName = computed(() => String(route?.name ?? ''))
 const routePath = computed(() => String(route?.path ?? ''))
+const isSimMode = computed(() => routePath.value === '/app/sim' || routePath.value.startsWith('/app/sim/'))
+
+/** 推演模式侧栏（与 SimCenterView 六签同序；日常模式不再出现本组） */
+const simItems = computed(() => [
+  { key: 'sim-overview', lead: '◎', zh: '导演台', en: 'Director', name: 'ia2.sim', testid: 'ia-side-nav-sim' },
+  { key: 'sim-supervision', lead: '◉', zh: '监督面板', en: 'Supervision', name: 'ia2.simSupervision', testid: 'ia-side-nav-sim-supervision' },
+  { key: 'sim-ops', lead: '◈', zh: '运行监控', en: 'Run monitoring', name: 'ia2.simOps', testid: 'ia-side-nav-sim-ops' },
+  { key: 'sim-evidence', lead: '▤', zh: '证据库', en: 'Evidence', name: 'ia2.simEvidence', testid: 'ia-side-nav-sim-evidence' },
+  { key: 'sim-orchestration', lead: '⟐', zh: '运行编排', en: 'Orchestration', name: 'ia2.simOrchestration', testid: 'ia-side-nav-sim-orchestration' },
+  { key: 'sim-settings', lead: '⚙', zh: '推演设置', en: 'Simulation settings', name: 'ia2.simSettings', testid: 'ia-side-nav-sim-settings' },
+])
 
 /** 常用组：日常高频入口。match 覆盖同一功能的兄弟路由（会话/房间/群聊都算工作台） */
 const WORKBENCH_ROUTES = new Set([
@@ -90,7 +100,6 @@ const stageStatusLabel = (status: 'done' | 'current' | 'pending'): string =>
     : status === 'current' ? (zh.value ? '当前阶段' : 'Current')
       : (zh.value ? '未开始' : 'Not started')
 
-const runActive = computed(() => routeName.value.startsWith('ia2.sim') || routePath.value.startsWith('/app/sim'))
 /** 左侧栏只放可读日期（10/17 运行），不暴露运行目录名/轮次号；
  *  完整目录名留在顶栏运行 chip 的 title 里供排查反查（2026-10-19 走查批） */
 const runTrail = computed(() => {
@@ -173,65 +182,79 @@ function go(name: string): void {
     </div>
 
     <nav class="isn__scroll" aria-label="左侧导航分组">
-      <section class="isn__group">
-        <h2 v-if="!effectiveCollapsed" class="isn__label">{{ zh ? '常用' : 'Common' }}</h2>
-        <IaSideNavItem
-          v-for="item in commonItems"
-          :key="item.key"
-          :lead="item.lead"
-          :label="zh ? item.zh : item.en"
-          :active="item.match()"
-          :badge="item.key === 'inbox' && decisionRows.length ? decisionRows.length : ''"
-          :testid="item.testid"
-          @select="go(item.name)"
-        />
-      </section>
+      <!-- 推演模式：只出现推演六签，不出现日常阶段/专题/常用 -->
+      <template v-if="isSimMode">
+        <section class="isn__group">
+          <h2 v-if="!effectiveCollapsed" class="isn__label">{{ zh ? '全流程推演' : 'Full-run Simulation' }}</h2>
+          <IaSideNavItem
+            v-for="item in simItems"
+            :key="item.key"
+            :lead="item.lead"
+            :label="zh ? item.zh : item.en"
+            :trail="item.key === 'sim-overview' ? runTrail : ''"
+            :active="routeName === item.name"
+            :testid="item.testid"
+            @select="go(item.name)"
+          />
+        </section>
+      </template>
 
-      <section class="isn__group">
-        <h2 v-if="!effectiveCollapsed" class="isn__label">{{ zh ? '流程' : 'Process' }}</h2>
-        <IaSideNavItem
-          v-for="item in stageItems"
-          :key="item.key"
-          lead-kind="number"
-          :lead="item.lead"
-          :label="item.label"
-          :status="item.status"
-          :status-label="stageStatusLabel(item.status)"
-          :active="item.active"
-          :testid="`ia-side-nav-${item.key}`"
-          @select="go(item.name)"
-        />
-      </section>
+      <template v-else>
+        <section class="isn__group">
+          <h2 v-if="!effectiveCollapsed" class="isn__label">{{ zh ? '常用' : 'Common' }}</h2>
+          <IaSideNavItem
+            v-for="item in commonItems"
+            :key="item.key"
+            :lead="item.lead"
+            :label="zh ? item.zh : item.en"
+            :active="item.match()"
+            :badge="item.key === 'inbox' && decisionRows.length ? decisionRows.length : ''"
+            :testid="item.testid"
+            @select="go(item.name)"
+          />
+        </section>
 
-      <section class="isn__group">
-        <h2 v-if="!effectiveCollapsed" class="isn__label">{{ zh ? '整轮' : 'Full run' }}</h2>
-        <IaSideNavItem
-          lead="◎"
-          :label="zh ? '全流程推演' : 'Full-run Simulation'"
-          :trail="runTrail"
-          :active="runActive"
-          testid="ia-side-nav-run"
-          :title="zh ? '运行总览、监督、运行监控、证据、编排与设置' : 'Overview, supervision, monitoring, evidence, orchestration and settings'"
-          @select="go('ia2.sim')"
-        />
-      </section>
+        <section class="isn__group">
+          <h2 v-if="!effectiveCollapsed" class="isn__label">{{ zh ? '流程' : 'Process' }}</h2>
+          <IaSideNavItem
+            v-for="item in stageItems"
+            :key="item.key"
+            lead-kind="number"
+            :lead="item.lead"
+            :label="item.label"
+            :status="item.status"
+            :status-label="stageStatusLabel(item.status)"
+            :active="item.active"
+            :testid="`ia-side-nav-${item.key}`"
+            @select="go(item.name)"
+          />
+        </section>
 
-      <section v-if="topicItems.length" class="isn__group">
-        <h2 v-if="!effectiveCollapsed" class="isn__label">{{ zh ? '专题' : 'Topics' }}</h2>
-        <IaSideNavItem
-          v-for="item in topicItems"
-          :key="item.key"
-          :lead="item.lead"
-          :label="item.label"
-          :active="item.active"
-          :testid="item.key"
-          @select="go(item.name)"
-        />
-      </section>
+        <section v-if="topicItems.length" class="isn__group">
+          <h2 v-if="!effectiveCollapsed" class="isn__label">{{ zh ? '专题' : 'Topics' }}</h2>
+          <IaSideNavItem
+            v-for="item in topicItems"
+            :key="item.key"
+            :lead="item.lead"
+            :label="item.label"
+            :active="item.active"
+            :testid="item.key"
+            @select="go(item.name)"
+          />
+        </section>
+      </template>
     </nav>
 
     <div class="isn__foot">
       <IaSideNavItem
+        v-if="isSimMode"
+        lead="←"
+        :label="zh ? '返回日常工作台' : 'Back to daily'"
+        testid="ia-side-nav-back-daily"
+        @select="go('ia2.collab')"
+      />
+      <IaSideNavItem
+        v-else
         lead="⚙"
         :label="zh ? '系统设置' : 'Settings'"
         :active="settingsActive"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // IdePluginsPane — G7 插件目录：聚合 Hermes 技能 / MCP 服务 / zcode 插件（只读）。
 // 技能可启停、MCP 可重载/测试（全部走既有 API）；zcode 插件只列不装（需宿主通道）。
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { request } from '@/api/client'
 import { fetchSkills, toggleSkill, type SkillInfo } from '@/api/hermes/skills'
@@ -32,6 +32,10 @@ function hit(...parts: Array<string | undefined>): boolean {
 const skillsView = computed(() => skills.value.filter((s) => hit(s.name, s.description, s.category)))
 const mcpView = computed(() => mcp.value.filter((s) => hit(s.name, s.transport, String(s.tools))))
 const zcodeView = computed(() => zcode.value.filter((s) => hit(s.name, s.version ?? '')))
+/** 技能目录动辄 800+ 条：首屏只渲染 30 条，搜索/切签重置。 */
+const skillsLimit = ref(30)
+const skillsShown = computed(() => skillsView.value.slice(0, skillsLimit.value))
+watch([query, tab], () => { skillsLimit.value = 30 })
 
 async function load(): Promise<void> {
   loading.value = true
@@ -112,7 +116,7 @@ onMounted(() => void load())
         <section v-if="tab === 'all' || tab === 'skills'" class="ide-plugins__sec" data-testid="ide-plugins-skills">
           <h4>{{ tx.skills }} <small>{{ skillsView.length }}</small></h4>
           <ul class="ide-plugins__list">
-            <li v-for="s in skillsView" :key="s.name" class="ide-plugins__row">
+            <li v-for="s in skillsShown" :key="s.name" class="ide-plugins__row">
               <div class="ide-plugins__meta">
                 <span class="ide-plugins__name">{{ s.name }}</span>
                 <span class="ide-plugins__tag">{{ s.category }}</span>
@@ -125,6 +129,10 @@ onMounted(() => void load())
             </li>
           </ul>
           <p v-if="!skillsView.length" class="ide-plugins__hint">{{ tx.empty }}</p>
+          <button v-else-if="skillsView.length > skillsLimit" type="button" class="ide-plugins__btn ide-plugins__more"
+            data-testid="ide-plugins-more" @click="skillsLimit += 30">
+            {{ ideLocaleOf(locale) === 'zh' ? `加载更多（已显示 ${skillsShown.length} / ${skillsView.length}）` : `Load more (${skillsShown.length} / ${skillsView.length})` }}
+          </button>
         </section>
 
         <section v-if="tab === 'all' || tab === 'mcp'" class="ide-plugins__sec" data-testid="ide-plugins-mcp">
@@ -193,6 +201,7 @@ onMounted(() => void load())
 .ide-plugins__actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ide-plugins__btn { align-self: flex-start; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer; }
 .ide-plugins__btn:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
+.ide-plugins__more { margin: 6px 0 2px; align-self: stretch; }
 .ide-plugins__hint { color: var(--text-muted); padding: 4px 0; line-height: 1.5; }
 .ide-plugins__error { color: var(--error-color); line-height: 1.5; }
 .ide-plugins__result { color: var(--text-muted); font-size: 10.5px; }

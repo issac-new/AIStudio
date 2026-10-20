@@ -105,9 +105,9 @@ onMounted(() => {
       </ul>
     </section>
 
-    <section class="ops__box">
+    <section v-if="dispatcher || !dispatcherNote" class="ops__box" data-testid="ops-dispatcher">
       <h4 class="ops__h">调度器健康</h4>
-      <p v-if="!dispatcher" class="ops__hint">{{ dispatcherNote || '暂未读取到调度器状态。' }}</p>
+      <p v-if="!dispatcher" class="ops__hint">暂未读取到调度器状态。</p>
       <ul v-else class="ops__kv">
         <li v-for="(e, i) in cliHealthEntries(dispatcher)" :key="i" :data-testid="`ops-disp-kv-${i}`" :class="{ 'ops__kv--fail': !dispatcher.ok }">
           <span class="ops__kv-k">{{ e.k }}</span>
@@ -116,10 +116,9 @@ onMounted(() => {
       </ul>
     </section>
 
-    <section class="ops__box">
+    <section v-if="sleepingError || sleeping || !sleepingNote" class="ops__box" data-testid="ops-sleeping">
       <h4 class="ops__h">空闲工作者</h4>
       <p v-if="sleepingError" class="ops__error" data-testid="ops-sleeping-error">{{ sleepingError }}</p>
-      <p v-else-if="sleepingNote" class="ops__hint" data-testid="ops-sleeping-note">{{ sleepingNote }}</p>
       <p v-else-if="!sleeping" class="ops__hint">暂未读取到空闲工作者。</p>
       <template v-else>
         <p v-if="sleeping.length === 0" class="ops__hint" data-testid="ops-sleeping-empty">无空闲工作者。</p>

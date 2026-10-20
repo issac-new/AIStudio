@@ -10,7 +10,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { SIM_TABS_TEXT } from '../views/sim/sim-tabs'
 import { STAGE_META } from '../stage-meta'
 import { resolveTab, tabForLegacyRoute, tabMeta } from '../stage-tabs'
-import { stageContextQuery } from '../nav-centers'
 import { hasStageAttribution, stageCircles, stageOwnersForRouteName } from '../stage-attribution'
 
 interface Crumb { label: string; to?: { name: string; query?: Record<string, string> }; title?: string }
@@ -55,14 +54,17 @@ const SIM_TAB_LABEL: Record<string, keyof typeof SIM_TABS_TEXT.zh> = {
   'ia2.simTrace': 'tabTrace',
 }
 
-const crumbs = computed<Crumb[]>(() => {
-  const name = String(route?.name ?? '')
+const crumbs = computed<Crumb[]>(() => {  const name = String(route?.name ?? '')
   const short = name.replace(/^ia2\./, '')
   const zh = lang.value === 'zh'
-  const out: Crumb[] = [{ label: zh ? '流程总览' : 'Process Overview', to: { name: 'ia2.journey' } }]
+  const simKey = SIM_TAB_LABEL[name]
+  const isSimPage = Boolean(simKey || short === 'simOrchestration' || short === 'simSettings')
+  // 推演是独立模式：面包屑根=全流程推演，不再挂在日常「流程总览」下。
+  const out: Crumb[] = isSimPage
+    ? [{ label: simShellTitle.value, to: { name: 'ia2.sim' } }]
+    : [{ label: zh ? '流程总览' : 'Process Overview', to: { name: 'ia2.journey' } }]
 
   // 来路阶段随中心层级链保留：从②需求进文档评审，点面包屑回②需求仍亮②
-  const fromQ = stageContextQuery(route?.query?.from)
   const stage = STAGE_META.find(m => `ia2.stage${m.no}` === name)
   if (stage) {
     out.push({ label: `${'①②③④⑤⑥'[stage.no - 1]} ${zh ? stage.navLabel : stage.navLabelEn}` })
@@ -77,6 +79,11 @@ const crumbs = computed<Crumb[]>(() => {
     out.push({ label: `${'①②③④⑤⑥'[legacy.stage - 1]} ${zh ? m.navLabel : m.navLabelEn}` })
     const tm = tabMeta(legacy.stage, legacy.tab)
     if (tm) out.push({ label: zh ? tm.zh : tm.en })
+    return out
+  }
+  if (isSimPage) {
+    // 根路径不再追加默认签段；签级才加第二段
+    if (name !== 'ia2.sim') out.push({ label: simKey ? String(sim.value[simKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
     return out
   }
   // 页签级归属（2026-10-17）：单归属→①搭建；多归属→③④；表内空→全程工具。
@@ -95,13 +102,6 @@ const crumbs = computed<Crumb[]>(() => {
       }).join('、')
       out.push({ label: stageCircles(owners), title: zh ? `所属阶段：${names}` : names })
     }
-  }
-  const simKey = SIM_TAB_LABEL[name]
-  if (simKey || short === 'simOrchestration' || short === 'simSettings') {
-    out.push({ label: simShellTitle.value, to: { name: 'ia2.sim', query: fromQ } })
-    // 根路径不再追加默认签段；签级才加第三段
-    if (name !== 'ia2.sim') out.push({ label: simKey ? String(sim.value[simKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
-    return out
   }
   const page = PAGE_LABEL[short]
   if (page) out.push({ label: page[lang.value] })

@@ -102,11 +102,12 @@ describe('JourneyView — D18 旅程式旅程首页', () => {
     expect(w.find('[data-testid="jrn-state-2"]').text()).toContain('完成')
     expect(w.find('[data-testid="jrn-state-3"]').text()).toContain('进行中')
     expect(w.find('[data-testid="jrn-state-6"]').text()).toContain('未开始')
-    // 卡点提示条：第一道未过阶段+遗留项清算提示
+    // 卡点提示条：第一道未过阶段 + 「在推演中查看」跨模式入口
     const bn = w.find('[data-testid="jrn-bottleneck"]')
     expect(bn.exists()).toBe(true)
+    expect(bn.text()).toContain('最近推演')
     expect(bn.text()).toContain('分析设计')
-    expect(bn.text()).toContain('2 项遗留事项未清算')
+    expect(bn.text()).toContain('在推演中查看')
     expect(mockedFetch).toHaveBeenCalledWith('/api/hermes/sim/run-state?run=r')
     w.unmount()
   })

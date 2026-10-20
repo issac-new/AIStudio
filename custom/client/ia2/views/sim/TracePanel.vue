@@ -56,6 +56,13 @@ const rows = computed(() => {
   return props.onlyUnjudged ? all.filter(r => !r.uatVerdict) : all
 })
 
+/** 证据目录只展示工作区末两层；完整绝对路径留在 title 供排查。 */
+const evidenceLabel = computed(() => {
+  const p = trace.value?.source.evidenceDir ?? ''
+  const parts = p.split('/').filter(Boolean)
+  return parts.slice(-2).join('/')
+})
+
 /** UAT 判定三态徽（不通过红/有条件通过琥珀/通过绿；未判定=灰） */
 function verdictClass(v: string | null): string {
   if (!v) return 'none'
@@ -96,7 +103,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 
 <template>
   <div class="trc" data-testid="trc-panel">
-    <p v-if="loadError" class="trc__error" data-testid="trc-error">{{ loadError }}</p>
+    <p v-if="loadError" class="trc__error" data-testid="trc-error" :title="loadError">验收判定数据暂不可用（该运行可能尚未生成验收证据）。</p>
     <div v-else-if="!trace" class="trc__empty" data-testid="trc-no-run">
       <p class="trc__hint">在页头选择一次运行，读取验收判定链（冻结单×测试报告×验收书三源聚合）。</p>
       <p class="trc__hint">若页头列表为空，说明当前还没有历史运行；先完成一次运行，或到运行中心查看启动准备。</p>
@@ -117,7 +124,7 @@ watch(run, () => { if (run.value.trim()) void load() })
         <span :class="trace.meta.testReportPresent ? 'trc__ok' : 'trc__absent'">测试报告{{ trace.meta.testReportPresent ? '✓' : '缺' }}</span>
         <span :class="trace.meta.acceptancePresent ? 'trc__ok' : 'trc__absent'">验收书{{ trace.meta.acceptancePresent ? '✓' : '缺' }}</span>
         <span v-if="trace.meta.uatLedger" class="trc__ok">人工判定台账✓</span>
-        <span class="trc__src">证据目录：{{ trace.source.evidenceDir }}</span>
+        <span class="trc__src" :title="trace.source.evidenceDir">证据目录：{{ evidenceLabel }}</span>
       </p>
       <p v-if="rows.length === 0" class="trc__hint" data-testid="trc-empty">{{ props.onlyUnjudged ? '所有 AC 都已有 UAT 判定。' : '未提取到 AC 行。' }}</p>
       <table v-else class="trc__table" data-testid="trc-table">
@@ -126,7 +133,7 @@ watch(run, () => { if (run.value.trim()) void load() })
           <tr v-for="r in rows" :key="r.ac" :data-testid="`trc-row-${r.ac}`">
             <td class="trc__mono">{{ r.ac }}</td>
             <td>{{ r.criterion ?? '（冻结单缺席）' }}</td>
-            <td :class="{ 'trc__absent': !r.caseResult }">{{ r.caseResult ?? 'null' }}</td>
+            <td :class="{ 'trc__absent': !r.caseResult }">{{ r.caseResult ?? '未测试' }}</td>
             <td>
               <span class="trc__verdict" :class="`trc__verdict--${verdictClass(r.uatVerdict)}`">{{ r.uatVerdict ?? '未判' }}</span>
             </td>

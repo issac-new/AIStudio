@@ -11,7 +11,7 @@ import { useSimTabsText } from './sim-tabs'
 import SupervisionPanel from './SupervisionPanel.vue'
 import EvidencePanel from './EvidencePanel.vue'
 import OpsPanel from './OpsPanel.vue'
-import OverviewPanel from './OverviewPanel.vue'
+import DirectorPanel from './DirectorPanel.vue'
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import SimFlowStrip from './SimFlowStrip.vue'
@@ -92,8 +92,8 @@ const INTRO_KEY: Record<string, string> = {
 
     <p class="sim-center__lead">
       {{ navLocale === 'zh'
-        ? '本次运行 26 步怎么走、卡在哪、证据在哪。日常派活与沟通请用左侧「工作台 / 看板」。'
-        : 'How this 26-step run is going, where it is stuck, and where the evidence is. Daily work lives in Workbench / Board.' }}
+        ? '本次运行 26 步怎么走、卡在哪、证据在哪。日常派活与沟通请切换顶部「日常工作台」。'
+        : 'How this 26-step run is going, where it is stuck, and where the evidence is. Daily work lives in the top "Daily" mode.' }}
     </p>
 
     <nav class="sim-center__tabs" role="tablist" aria-label="全流程推演">
@@ -116,7 +116,7 @@ const INTRO_KEY: Record<string, string> = {
     <main class="sim-center__body">
       <section v-show="activeTab === 'overview'" class="sim-center__panel" data-testid="ia-sim-panel-overview">
         <TabIntroBanner :tab="INTRO_KEY.overview" />
-        <OverviewPanel />
+        <DirectorPanel />
       </section>
       <section v-show="activeTab === 'supervision'" class="sim-center__panel" data-testid="ia-sim-panel-supervision">
         <TabIntroBanner :tab="INTRO_KEY.supervision" />

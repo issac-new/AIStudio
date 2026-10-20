@@ -30,6 +30,11 @@ function openLineDrawer(title: string, line: JournalLine | Record<string, unknow
 }
 
 const windowsDesc = computed(() => (organized.value ? [...organized.value.windows].reverse() : []))
+/** 数据源只显示末两层（完整路径进 title，避免绝对路径占屏）。 */
+const sourceLabel = computed(() => {
+  const parts = source.value.split('/').filter(Boolean)
+  return parts.slice(-2).join('/')
+})
 
 // ── 产物信号（run21 10-18 立法：agent 健康=实物产出导向，日志活跃≠进展）──
 // 复用 /api/hermes/sim/branches（交付健康同源端点）；读取成功才渲染该区。
@@ -90,12 +95,12 @@ watch(run, () => { if (run.value.trim()) void load() })
       <button class="sup__btn" type="button" data-testid="sup-load" :disabled="loading" @click="load">读取</button>
     </div>
 
-    <p v-if="loadError" class="sup__error" data-testid="sup-error">{{ loadError }}</p>
+    <p v-if="loadError" class="sup__error" data-testid="sup-error" :title="loadError">观察窗数据暂不可用，请确认已选择运行或稍后重试。</p>
     <div v-else-if="!organized" class="sup__hint" data-testid="sup-empty">
-      <p>输入运行目录名读取观察窗 journal——主管不翻 agent.log 即可回答「现在卡在哪、谁没动」。</p>
-      <button type="button" class="sup__goto" data-testid="sup-goto-overview" @click="router.push({ name: 'ia2.sim' })">不知道目录名？去运行总览选取 →</button>
+      <p>选择运行后读取观察窗——不翻日志即可回答「现在卡在哪、谁没动」。</p>
+      <button type="button" class="sup__goto" data-testid="sup-goto-overview" @click="router.push({ name: 'ia2.sim' })">不知道选哪轮？去导演台 →</button>
     </div>
-    <p v-else-if="source" class="sup__src" :data-testid="'sup-src'">数据源：{{ source }}</p>
+    <p v-else-if="source" class="sup__src" data-testid="sup-src" :title="source">数据源：{{ sourceLabel }}</p>
 
     <div v-if="organized" class="sup__grid">
       <section class="sup__main">
@@ -137,7 +142,7 @@ watch(run, () => { if (run.value.trim()) void load() })
 
       <aside class="sup__side">
         <section class="sup__side-box">
-          <h4 class="sup__h">研判（接棒员局势）</h4>
+          <h4 class="sup__h">监督研判</h4>
           <p v-if="organized.briefs.length === 0" class="sup__hint">无研判行。</p>
           <ul v-else class="sup__tl">
             <li v-for="(b, i) in organized.briefs" :key="i" class="sup__tl-row" role="button" data-testid="sup-brief-row" @click="openLineDrawer(`研判 ${b.ts}`, { t: 'situation_brief', ts: b.ts, brief: b.text })">
@@ -147,7 +152,7 @@ watch(run, () => { if (run.value.trim()) void load() })
           </ul>
         </section>
         <section class="sup__side-box">
-          <h4 class="sup__h">判定（停滞判定）</h4>
+          <h4 class="sup__h">停滞判定</h4>
           <p v-if="organized.verdicts.length === 0" class="sup__hint">无判定行。</p>
           <ul v-else class="sup__tl">
             <li v-for="(v, i) in organized.verdicts" :key="i" class="sup__tl-row sup__tl-row--verdict" role="button" data-testid="sup-verdict-row" @click="openLineDrawer(`判定 ${v.ts}`, { t: 'stall_verdict', ts: v.ts, verdict: v.text })">
@@ -227,5 +232,10 @@ watch(run, () => { if (run.value.trim()) void load() })
 .sup__tl-row { cursor: pointer; display: flex; gap: 6px; font-size: 12px; padding: 4px 6px; border-radius: 4px; &:hover { background: rgba(127, 127, 127, 0.08); } }
 .sup__tl-row--verdict { border-left: 3px solid var(--accent-primary); }
 .sup__tl-ts { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
-.sup__tl-text { word-break: break-all; }
+.sup__tl-text {
+  word-break: break-word;
+  /* 研判原文可能是一整段 JSON/长句：首屏只给摘要高度，点行开抽屉看全文 */
+  display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;
+  overflow: hidden; white-space: pre-wrap;
+}
 </style>
