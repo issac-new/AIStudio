@@ -1,0 +1,65 @@
+diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+index 04996b18..2d5a16aa 100644
+--- a/packages/server/src/bootstrap/http.ts
++++ b/packages/server/src/bootstrap/http.ts
+@@ -25,6 +25,8 @@ import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
+ import { setupZcodeProjectionSocket } from '../custom/zcode/projection-socket'
+ // overlay[command-post]: 2.13 指挥中心 —— 舰队 WS + 看板聚合 WS
+ import { setupCommandPostWebSockets } from '../custom/services/hermes/command-post'
++// overlay[matrix-server-info]: element-web config.json 的 homeserver 口径=server-info 单一事实源
++import { getMatrixServerInfo } from '../custom/matrix/server-info'
+ import { authenticateUserToken as authenticateUserTokenForCommandPost, isAuthEnabled as isAuthEnabledForCommandPost } from '../modules/studio/public/auth'
+ import { userCanAccessProfile as userCanAccessProfileForCommandPost } from '../modules/studio/public/users'
+ import { setChatRunServer } from '../modules/studio/public/chat-run'
+@@ -543,26 +545,19 @@ export async function bootstrap() {
+   // Serve element-web static files at /element-web/*
+   const elementWebDir = resolve(__dirname, '..', 'element-web')
+   app.use(async (ctx, next) => {
+-    if (ctx.path.startsWith('/element-web/')) {
+-      const relativePath = ctx.path.replace(/^\/element-web\//, '') || 'index.html'
+-      try {
+-        await send(ctx, relativePath, { root: elementWebDir })
+-        return
+-      } catch {
+-        // Fall through to SPA fallback for index.html
+-        await send(ctx, 'index.html', { root: elementWebDir })
+-        return
+-      }
+-    }
+-    // Dynamic element-web config.json — inject homeserver from query params or default
++    // Dynamic element-web config.json — 必须先于下方静态分支（startsWith 会把它吞成
++    // index.html，patch 008 引入的遮蔽缺陷）；homeserver 口径=server-info 单一事实源，
++    // ?hs= 显式覆盖保留（运维调试），覆盖时 server_name 按 URL hostname 推导（维持旧行为）。
+     if (ctx.path === '/element-web/config.json') {
+-      const homeserverUrl = (ctx.query.hs as string) || 'https://matrix.org'
++      const hsOverride = typeof ctx.query.hs === 'string' && ctx.query.hs.trim() !== '' ? ctx.query.hs.trim() : ''
++      const info = getMatrixServerInfo()
++      const homeserverUrl = hsOverride || info.homeserverUrl
+       ctx.type = 'application/json'
+       ctx.body = JSON.stringify({
+         'default_server_config': {
+           'm.homeserver': {
+             'base_url': homeserverUrl,
+-            'server_name': new URL(homeserverUrl).hostname,
++            'server_name': hsOverride ? new URL(homeserverUrl).hostname : info.serverName,
+           },
+         },
+         'disable_custom_urls': true,
+@@ -571,6 +566,17 @@ export async function bootstrap() {
+       })
+       return
+     }
++    if (ctx.path.startsWith('/element-web/')) {
++      const relativePath = ctx.path.replace(/^\/element-web\//, '') || 'index.html'
++      try {
++        await send(ctx, relativePath, { root: elementWebDir })
++        return
++      } catch {
++        // Fall through to SPA fallback for index.html
++        await send(ctx, 'index.html', { root: elementWebDir })
++        return
++      }
++    }
+     await next()
+   })
+ 
