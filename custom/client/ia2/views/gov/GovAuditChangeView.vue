@@ -24,10 +24,22 @@ const tabText = useGovTabsText()
       </div>
     </header>
     <div class="gov-view__body">
-      <AuditSection />
-      <ChangeGovernanceSection />
-      <IncidentReportSection />
-      <GovEventStreamSection />
+      <details class="gov-fold" open data-testid="gov-fold-audit">
+        <summary>统一审计</summary>
+        <AuditSection />
+      </details>
+      <details class="gov-fold" data-testid="gov-fold-change">
+        <summary>变更治理</summary>
+        <ChangeGovernanceSection />
+      </details>
+      <details class="gov-fold" data-testid="gov-fold-incident">
+        <summary>事故报告</summary>
+        <IncidentReportSection />
+      </details>
+      <details class="gov-fold" data-testid="gov-fold-events">
+        <summary>治理事件流</summary>
+        <GovEventStreamSection />
+      </details>
     </div>
   </div>
 </template>
@@ -38,4 +50,9 @@ const tabText = useGovTabsText()
 .gov-view__title { margin: 0; font-size: 15px; font-weight: 600; }
 .gov-view__sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted); }
 .gov-view__body { display: flex; flex-direction: column; gap: 14px; }
+.gov-fold > summary {
+  cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  padding: 4px 0; list-style-position: inside;
+}
+.gov-fold[open] > summary { margin-bottom: 8px; }
 </style>
