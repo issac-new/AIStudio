@@ -33,7 +33,7 @@
 | `GET /api/matrix/server-info` | curl 8647 | PASS `{homeserverUrl:"http://127.0.0.1:8008",serverName:"matrix.test",elementWebUrl:"/element-web/"}` |
 | `GET /element-web/config.json` | curl 8647 | PASS base_url=`http://127.0.0.1:8008`、server_name=`matrix.test`（旧值 `https://matrix.org` 已退役；patch 008 遮蔽修复后动态分支真正可达） |
 | 登录页 homeserver 预填 | Playwright（清存储+拦截自动登录强制登录页现身，截图 m3-login-prefill.png） | PASS 输入框值=`http://127.0.0.1:8008`（补丁 669 生效，非写死 localhost） |
-| 分享对话框产品内链 | 兄弟 5d815c06（恢复后随带 share-link.test.ts 7 例全绿）；本环境无 matrix 凭据，活体房间分享未验（如实声明） | 测试证据通过 |
+| 分享对话框产品内链 | 兄弟 5d815c06（恢复后随带 share-link.test.ts 5 例全绿）；本环境无 matrix 凭据，活体房间分享未验（如实声明） | 测试证据通过 |
 
 ### 3. 全量回归
 
