@@ -1,16 +1,5 @@
-diff --git a/packages/client/public/coding-agents/mimo.svg b/packages/client/public/coding-agents/mimo.svg
-new file mode 100644
-index 000000000..f07f1beb8
---- /dev/null
-+++ b/packages/client/public/coding-agents/mimo.svg
-@@ -0,0 +1,5 @@
-+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MiMo Code">
-+  <rect width="32" height="32" rx="7" fill="#1B1B1F"/>
-+  <path d="M7 22.5V12.2c0-.66.54-1.2 1.2-1.2h1.5c.42 0 .81.22 1.03.58L14 17.4l3.27-5.82c.22-.36.61-.58 1.03-.58h1.5c.66 0 1.2.54 1.2 1.2v10.3c0 .55-.45 1-1 1s-1-.45-1-1v-8.16l-3.66 6.5a1 1 0 0 1-1.73 0L11 14.24v8.26c0 .55-.45 1-1 1s-1-.45-1-1z" fill="#FF6900"/>
-+  <circle cx="24.5" cy="11.5" r="2" fill="#FF6900" fill-opacity=".85"/>
-+</svg>
 diff --git a/packages/client/src/api/agent-status.ts b/packages/client/src/api/agent-status.ts
-index a011e106b..7fd1a2061 100644
+index a011e106b..e7d9000c7 100644
 --- a/packages/client/src/api/agent-status.ts
 +++ b/packages/client/src/api/agent-status.ts
 @@ -1,6 +1,6 @@
@@ -21,7 +10,7 @@ index a011e106b..7fd1a2061 100644
  export type AgentStatusSource = 'managed-runtime' | 'user-cli' | 'built-in' | 'not-installed'
  
  export interface AgentStatusRecord {
-@@ -42,6 +42,7 @@ const AGENT_STATUS_ALIASES: Record<string, AgentStatusId> = {
+@@ -42,6 +43,7 @@ const AGENT_STATUS_ALIASES: Record<string, AgentStatusId> = {
    pi: 'pi',
    grok: 'grok',
    opencode: 'opencode',
@@ -43,10 +32,10 @@ index a6d1954a4..80b765ae5 100644
  export const CODING_AGENT_API_MODES = [
    'chat_completions',
 diff --git a/packages/client/src/api/studio/chat.ts b/packages/client/src/api/studio/chat.ts
-index 6724df2a2..f378521b9 100644
+index 64e082afb..5a6e0b588 100644
 --- a/packages/client/src/api/studio/chat.ts
 +++ b/packages/client/src/api/studio/chat.ts
-@@ -138,7 +138,7 @@ export interface RunEvent {
+@@ -139,7 +139,7 @@ export interface RunEvent {
    }>
    generation?: string
    queue_id?: string
@@ -55,7 +44,7 @@ index 6724df2a2..f378521b9 100644
    phase?: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message' | 'cancelled'
    guarantee?: 'strict' | 'immediate'
    requested_at?: number
-@@ -194,7 +194,7 @@ export interface ResumeSessionPayload {
+@@ -195,7 +195,7 @@ export interface ResumeSessionPayload {
      generation: string
      run_id?: string
      queue_id: string
@@ -64,41 +53,39 @@ index 6724df2a2..f378521b9 100644
      phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn' | 'starting_queued_message'
      guarantee: 'strict' | 'immediate'
      requested_at: number
-diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index 22d8cda84..b324ea986 100644
---- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-+++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -36,6 +36,7 @@ const emptyStateAgents = [
-     { name: 'Pi', src: '/coding-agents/pi.svg' },
-     { name: 'Grok', src: '/coding-agents/grok.svg' },
-     { name: 'OpenCode', src: '/coding-agents/opencode.png' },
-+    { name: 'MiMo Code', src: '/coding-agents/mimo.svg' },
-     { name: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
- ]
- const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
-diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
-index a1daf64fc..a7cae4381 100644
---- a/packages/client/src/utils/chat-agent-avatar.ts
-+++ b/packages/client/src/utils/chat-agent-avatar.ts
-@@ -17,6 +17,8 @@ const AGENT_AVATARS = {
-   pi: { label: 'Pi', src: '/coding-agents/pi.svg' },
-   grok: { label: 'Grok', src: '/coding-agents/grok.svg' },
-   opencode: { label: 'OpenCode', src: '/coding-agents/opencode.png' },
-+  mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
-+  mimo: { label: 'MiMo Code', src: '/coding-agents/mimo.svg' },
-   dsh: { label: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
-   cursor: { label: 'Cursor', src: '/coding-agents/cursor-logo.png' },
-   qwen: { label: 'Qwen Code', src: '/coding-agents/qwen-logo.svg' },
 diff --git a/packages/client/src/utils/group-agent-avatar.ts b/packages/client/src/utils/group-agent-avatar.ts
-index fdab86a38..4f051115a 100644
+index fdab86a38..171f1caae 100644
 --- a/packages/client/src/utils/group-agent-avatar.ts
 +++ b/packages/client/src/utils/group-agent-avatar.ts
-@@ -9,6 +9,8 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
+@@ -9,6 +9,7 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
      pi: '/coding-agents/pi.svg',
      grok: '/coding-agents/grok.svg',
      opencode: '/coding-agents/opencode.png',
 +    mimo: '/coding-agents/mimo.svg',
-+    mimo: '/coding-agents/mimo.svg',
      dsh: '/coding-agents/deepseek.svg',
      cursor: '/coding-agents/cursor-logo.png',
      qwen: '/coding-agents/qwen-logo.svg',
+diff --git a/packages/client/src/views/hermes/AgentManagerView.vue b/packages/client/src/views/hermes/AgentManagerView.vue
+index f6cd2b0fd..23a7d59e2 100644
+--- a/packages/client/src/views/hermes/AgentManagerView.vue
++++ b/packages/client/src/views/hermes/AgentManagerView.vue
+@@ -133,15 +135,16 @@ const hermesRuntimeStatus = ref<RuntimeVersionStatus | null>(null)
+ const aiHelpDrawerVisible = ref(false)
+ const aiHelpPrompt = ref('')
+ const legacyDataMigrationChecked = ref(false)
+-const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
+-const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
+-const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
++const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
++const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
++const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
+ const updateInfo = ref<Record<CodingAgentId, CodingAgentUpdateResult | null>>({
+   'claude-code': null,
+   codex: null,
+   pi: null,
+   grok: null,
+   opencode: null,
++  mimo: null,
+   dsh: null,
+   cursor: null,
+   antigravity: null,

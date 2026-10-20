@@ -1,77 +1,31 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index fce92c540..22d8cda84 100644
+index ba0078d71..22d4a4c55 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -7,6 +7,7 @@ import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff
+@@ -11,6 +11,8 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'
+ import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff-presentation'
  import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
  import GroupMessageItem from './GroupMessageItem.vue'
- import GatewayNoticeBanner from '@/custom/chat/components/GatewayNoticeBanner.vue'
++import GatewayNoticeBanner from '@/custom/chat/components/GatewayNoticeBanner.vue'
 +import { isGatewayNotice } from '@/custom/chat/gateway-notice'
  import GroupAgentRunCard from './GroupAgentRunCard.vue'
  import VirtualMessageList from '../chat/VirtualMessageList.vue'
  
-@@ -38,7 +39,7 @@ const emptyStateAgents = [
-     { name: 'DeepSeek Harness', src: '/coding-agents/deepseek.svg' },
+@@ -44,9 +46,14 @@ const emptyStateAgents = [
+     { name: 'DeepSeek Harness', src: deploymentUrl('/coding-agents/deepseek.svg') },
  ]
  const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
--    msg.systemType !== 'gateway' &&
+-    msg.role !== 'tool' ||
+-    toolTraceVisible.value ||
+-    msg.toolStatus === 'running',
 +    !isGatewayNotice(msg.content) &&
-     (
-         msg.role !== 'tool' ||
-         toolTraceVisible.value ||
-diff --git a/packages/client/src/components/layout/PageSidebarNav.vue b/packages/client/src/components/layout/PageSidebarNav.vue
-index 2d8fa9669..4ec60ba48 100644
---- a/packages/client/src/components/layout/PageSidebarNav.vue
-+++ b/packages/client/src/components/layout/PageSidebarNav.vue
-@@ -62,6 +62,11 @@ function openGroupChat() {
-   void router.push({ name: 'hermes.groupChat' })
- }
- 
-+function openMatrixChat() {
-+  if (props.active === 'matrix') return
-+  void router.push({ name: 'hermes.matrixChat' })
-+}
-+
- function openWorkflow() {
-   if (props.active === 'workflow') return
-   void router.push({ name: 'hermes.workflow' })
-diff --git a/packages/client/src/custom-modules.d.ts b/packages/client/src/custom-modules.d.ts
-new file mode 100644
-index 000000000..10241d8f3
---- /dev/null
-+++ b/packages/client/src/custom-modules.d.ts
-@@ -0,0 +1,6 @@
-+// SwarmStudio overlay: custom modules live outside the upstream tree
-+// (overlay/custom/client) and are verified by overlay vitest + vite build,
-+// not by upstream's strict vue-tsc gate. Wildcard ambient declarations keep
-+// imports type-resolved (as any) so the upstream build stays green.
-+declare module '@/custom/*'
-+declare module '@custom/*' 
-diff --git a/packages/client/src/utils/agent-options.ts b/packages/client/src/utils/agent-options.ts
-index 39bbd0d1a..8c2f5aa3c 100644
---- a/packages/client/src/utils/agent-options.ts
-+++ b/packages/client/src/utils/agent-options.ts
-@@ -4,9 +4,11 @@ export const AGENT_OPTIONS = [
-   { label: 'Hermes', value: 'hermes' },
-   { label: 'Claude', value: 'claude-code' },
-   { label: 'Codex', value: 'codex' },
-+  { label: 'ZCode', value: 'zcode' },
-   { label: 'Pi', value: 'pi' },
-   { label: 'Grok', value: 'grok' },
-   { label: 'OpenCode', value: 'opencode' },
-+  { label: 'MiMo Code', value: 'mimo' },
-   { label: 'DeepSeek Harness', value: 'dsh' },
-   { label: 'Cursor', value: 'cursor' },
-   { label: 'Antigravity', value: 'antigravity' },
-diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
-index 5346e6273..cacf4a437 100644
---- a/packages/client/src/views/hermes/WorkflowView.vue
-+++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -80,7 +80,6 @@ import MessageList from '@/components/hermes/chat/MessageList.vue'
- import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
- import PageSidebarNav from '@/components/layout/PageSidebarNav.vue'
- import ListActionsMenu from '@/components/layout/ListActionsMenu.vue'
--import PageSidebarFooter from '@/components/layout/PageSidebarFooter.vue'
- import { useAppStore } from '@/stores/hermes/app'
- import { useChatStore } from '@/stores/hermes/chat'
- import { useProfilesStore } from '@/stores/hermes/profiles'
++    (
++        msg.role !== 'tool' ||
++        toolTraceVisible.value ||
++        msg.toolStatus === 'running' ||
++        msg.toolName === 'workspace_diff' ||
++        msg.tool_name === 'workspace_diff'
++    ),
+ )))
+ const supportsMessageSelection = computed(() => props.allowMessageDeletion && !store.inviteGuest)
+ const {
