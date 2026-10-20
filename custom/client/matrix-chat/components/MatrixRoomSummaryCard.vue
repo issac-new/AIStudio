@@ -75,11 +75,8 @@ const displayedTopic = computed(() => {
     /(https?:\/\/[^\s<>"]+)/g,
     '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
   )
-  // Auto-link matrix.to links
-  text = text.replace(
-    /(matrix:\/\/[^\s<>"]+)/g,
-    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
-  )
+  // matrix:// URI 不自动外链（浏览器无消费方，裸 target=_blank 只会报「打不开」）；
+  // 保留纯文本展示，需要跳转的房间链接走分享弹窗的产品内链。
   return text
 })
 // HERMES_CUSTOM[SecXssTopic] END

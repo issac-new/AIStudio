@@ -57,8 +57,8 @@ watch(run, () => { if (run.value.trim()) void load() })
     <p v-if="loadError" class="dlv__error" data-testid="dlv-error">{{ loadError }}</p>
     <div v-else-if="!branches && !deliverables" class="dlv__hint" data-testid="dlv-empty">
       <p>在页头选择一次运行，读取分支新鲜度与交付物链。</p>
-      <p>若页头列表为空，说明当前还没有历史运行；先完成一次运行，或到运行中心查看启动准备。</p>
-      <button type="button" class="dlv__action" data-testid="dlv-open-sim" @click="router.push({ name: 'ia2.sim' })">打开运行中心 →</button>
+      <p>若页头列表为空，说明当前还没有历史运行；先完成一次运行，或到全流程推演·运行总览查看启动准备。</p>
+      <button type="button" class="dlv__action" data-testid="dlv-open-sim" @click="router.push({ name: 'ia2.sim' })">打开全流程推演 →</button>
     </div>
 
     <section v-if="branches" class="dlv__box">

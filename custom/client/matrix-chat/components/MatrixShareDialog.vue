@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import QRCode from 'qrcode'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 
 const roomStore = useMatrixRoomStore()
@@ -18,20 +19,24 @@ const roomName = computed(() => room.value?.name ?? t('matrixChat.noRoomSelected
 const roomAlias = computed(() => roomStore.getRoomAlias(room.value))
 const roomId = computed(() => room.value?.roomId ?? '')
 
+// 2026-10-20 B1：分享链接改产品内链（与 useEventTileData permalink 同一规范）。
+// matrix.to 外链在私有 homeserver 上解析不到房间，用户点开只会跳到公共跳转站。
 const shareLink = computed(() => {
   if (!roomId.value) return ''
-  return `https://matrix.to/#/${roomId.value}`
+  const base = `${window.location.origin}${window.location.pathname}`
+  return `${base}#/app/s/room/${encodeURIComponent(roomId.value)}`
 })
 
-const qrCodeUrl = computed(() => {
-  if (!shareLink.value) return ''
-  return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareLink.value)}&margin=8`
-})
-
-const aliasLink = computed(() => {
-  if (!roomAlias.value) return ''
-  return `https://matrix.to/#/${roomAlias.value}`
-})
+// QR 本地生成（qrcode 依赖在上游 node_modules）——房间 ID 禁外发第三方服务。
+const qrDataUrl = ref('')
+watch(shareLink, async (link) => {
+  if (!link) { qrDataUrl.value = ''; return }
+  try {
+    qrDataUrl.value = await QRCode.toDataURL(link, { width: 150, margin: 2 })
+  } catch {
+    qrDataUrl.value = ''
+  }
+}, { immediate: true })
 
 async function handleCopyLink() {
   if (!shareLink.value) return
@@ -90,9 +95,9 @@ async function handleCopyAlias() {
           </div>
         </div>
 
-        <!-- Room ID -->
+        <!-- Room link（产品内链，本产品内可直接打开） -->
         <div class="share-section">
-          <label class="share-label">Matrix.to Link</label>
+          <label class="share-label">房间链接</label>
           <div class="share-copy-row">
             <code class="share-code share-code--link">{{ shareLink }}</code>
             <button class="share-copy-btn" @click="handleCopyLink">
@@ -104,9 +109,9 @@ async function handleCopyAlias() {
           </div>
         </div>
 
-        <!-- QR Code -->
-        <div v-if="qrCodeUrl" class="share-qr">
-          <img :src="qrCodeUrl" alt="QR Code" class="share-qr-img" />
+        <!-- QR Code（本地生成） -->
+        <div v-if="qrDataUrl" class="share-qr">
+          <img :src="qrDataUrl" alt="QR Code" class="share-qr-img" />
         </div>
 
         <!-- Copy confirmation -->
