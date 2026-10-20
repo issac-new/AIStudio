@@ -713,6 +713,8 @@ onUnmounted(() => {
   flex-shrink: 0;
   display: flex;
   min-height: 0;
+  overflow: hidden;
+  min-height: 0;
   position: relative;
 }
 
