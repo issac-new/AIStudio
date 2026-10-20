@@ -59,11 +59,12 @@
 
 ## 四、验证账（收口回填）
 
-- [ ] `git apply --check` 三补丁对当前注入树通过
-- [ ] `/tmp` 副本实测应用 + 目检 diff
-- [ ] `npx vitest run custom/server/matrix/__tests__/server-info.test.ts` 绿
-- [ ] `npx vitest run custom/server/matrix/__tests__/` 全目录绿
-- [ ] 客户端 helper 单测绿
+- [x] `git apply --check` 三补丁对当前注入树通过（667/668/669，于 upstream 仓根执行——
+  在他仓子目录内执行会被解析到该仓根而静默跳过，exit 0 假绿，已入账）
+- [x] 副本实测应用 + 逐字节比对：`patch -p1` 应用后与期望副本 IDENTICAL×3（2026-10-20）
+- [x] `vitest run custom/server/matrix/__tests__/server-info.test.ts` 绿（8/8）
+- [x] `vitest run custom/server/matrix/__tests__/` 全目录绿（89/89，12 文件）
+- [x] 客户端 helper 单测绿（4/4）
 - [ ] 激活后活体（验收轮回填）：`curl 8647/element-web/config.json` 的 base_url=
   `http://127.0.0.1:8008`、server_name=`matrix.test`；`GET /api/matrix/server-info` 200
 
