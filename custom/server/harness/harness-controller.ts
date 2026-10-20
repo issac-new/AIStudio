@@ -37,12 +37,15 @@ import { listLeases, registerLease, startSandboxJanitorIfEnabled, sweepExpiredLe
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 import { workbenchRoutes } from './workbench/controller'
+import { simLaunchRoutes } from './sim-launch'
 
 const router = new Router({ prefix: '/api/harness' })
 
 // Harness² 改进实验台（2026-10-19）：提案-探测-组合-冠军闭环，复用本路由前缀，
 // 不新增 bootstrap patch。子路由自带写面权限校验（super_admin）。
 router.use('/workbench', workbenchRoutes.routes(), workbenchRoutes.allowedMethods())
+// 受控 harness 推演启动（SIM_HARNESS_LAUNCH=1 + super_admin；固定脚本，不接受任意命令）
+router.use('/sim-launch', simLaunchRoutes.routes(), simLaunchRoutes.allowedMethods())
 
 function daysOf(v: unknown): number {
   const n = Number(v)

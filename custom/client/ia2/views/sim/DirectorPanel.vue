@@ -15,9 +15,10 @@ import OverviewPanel from './OverviewPanel.vue'
 import {
   fetchDirectorScenarios, planDirectorScenario, startDirectorScenario,
   fetchGraphRun, fetchGraphEvents, resumeGraphGate,
+  fetchSimLaunchStatus, startSimLaunch, stopSimLaunch,
   pendingGatesOf, recentEventRows,
   type DirectorScenario, type DirectorInput, type DirectorPlan,
-  type GraphEvent, type GraphRunState,
+  type GraphEvent, type GraphRunState, type SimLaunchStatus,
 } from '../../api/sim-director'
 
 const router = useRouter()
@@ -203,6 +204,56 @@ const planCounts = computed(() => {
 })
 const eventLabel = (kind: string): string => EVENT_LABEL[kind] ?? kind
 
+// ── 受控 harness 启动器 ─────────────────────────────────────────────
+const launch = ref<SimLaunchStatus | null>(null)
+const launchLoading = ref(false)
+const launchError = ref('')
+const launchMsg = ref('')
+const launchRunId = ref(`manual-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')}`)
+
+async function refreshLaunch(): Promise<void> {
+  launchLoading.value = true
+  launchError.value = ''
+  try {
+    launch.value = await fetchSimLaunchStatus()
+  } catch (e) {
+    launchError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    launchLoading.value = false
+  }
+}
+async function startLaunch(): Promise<void> {
+  const ok = window.confirm('启动真实 harness 推演会占用/重置 SIM 环境并持续较长时间，确认启动？')
+  if (!ok) return
+  launchLoading.value = true
+  launchError.value = ''
+  launchMsg.value = ''
+  try {
+    launch.value = await startSimLaunch(launchRunId.value.trim())
+    launchMsg.value = `已启动 ${launch.value.process?.runId ?? ''}`
+  } catch (e) {
+    launchError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    launchLoading.value = false
+  }
+}
+async function stopLaunch(): Promise<void> {
+  const ok = window.confirm('停止本次 harness 推演？只会终止由本页面拉起的进程。')
+  if (!ok) return
+  launchLoading.value = true
+  launchError.value = ''
+  launchMsg.value = ''
+  try {
+    await stopSimLaunch()
+    launchMsg.value = '已发送停止信号；稍后刷新状态。'
+    setTimeout(() => void refreshLaunch(), 1500)
+  } catch (e) {
+    launchError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    launchLoading.value = false
+  }
+}
+
 // ── 下半区：harness 运行只读视图 ──────────────────────────────────────
 const loading = ref(false)
 const loadError = ref('')
@@ -264,6 +315,7 @@ function goDaily(): void { void router.push({ name: 'ia2.collab' }) }
 onMounted(() => {
   void loadScenarios()
   void load()
+  void refreshLaunch()
   try { graphRunId.value = localStorage.getItem(GRAPH_RUN_KEY) ?? '' } catch { graphRunId.value = '' }
   if (graphRunId.value) { void refreshGraph(); startPolling() }
 })
@@ -345,6 +397,35 @@ onBeforeUnmount(() => { stopPolling() })
     <!-- 下半区：harness 运行只读视图 -->
     <section class="dir__harness" data-testid="director-harness">
       <h3 class="dir__title">Harness 运行</h3>
+
+      <section class="dir__card dir__launch" data-testid="director-harness-launch">
+        <header class="dir__run-head">
+          <h4 class="dir__h">受控 harness 启动</h4>
+          <span class="dir__status" :class="launch?.running ? 'dir__status--running' : 'dir__status--idle'">
+            {{ launch ? (launch.enabled ? (launch.running ? '运行中' : '可启动') : '未启用') : '读取中' }}
+          </span>
+          <button type="button" class="dir__link" :disabled="launchLoading" @click="refreshLaunch">刷新</button>
+        </header>
+        <p v-if="launch && !launch.enabled" class="dir__hint">
+          默认关闭：后端需以 <code>SIM_HARNESS_LAUNCH=1</code> 启动；启用后仅 super_admin 可拉起固定场景脚本。
+        </p>
+        <template v-else-if="launch">
+          <div v-if="launch.running" class="dir__launch-run">
+            <span>运行中 <b>{{ launch.process?.runId }}</b> · PID {{ launch.process?.pid ?? '—' }} · {{ launch.process?.startedAt }}</span>
+            <button type="button" class="dir__btn" :disabled="launchLoading" @click="stopLaunch">停止</button>
+          </div>
+          <div v-else class="dir__launch-start">
+            <input v-model="launchRunId" class="dir__launch-input" data-testid="director-launch-runid" placeholder="RUN_ID（字母/数字/._-）" />
+            <button type="button" class="dir__btn dir__btn--primary" :disabled="launchLoading || launch.driverLock" @click="startLaunch">启动 harness 推演</button>
+          </div>
+          <p v-if="launch.driverLock" class="dir__hint">检测到驱动锁 {{ launch.simRoot }}/.driver.lock.d —— 拒绝双开。</p>
+          <p v-if="launch.lastExit" class="dir__hint">上次结束：{{ launch.lastExit.runId }} · code={{ launch.lastExit.code ?? '—' }} · {{ launch.lastExit.endedAt }}</p>
+          <details v-if="launch.logTail" class="dir__events"><summary>日志尾部</summary><pre class="dir__log">{{ launch.logTail }}</pre></details>
+        </template>
+        <p v-if="launchError" class="dir__error" data-testid="director-launch-error">{{ launchError }}</p>
+        <p v-if="launchMsg" class="dir__ok" data-testid="director-launch-msg">{{ launchMsg }}</p>
+      </section>
+
       <p v-if="loadError" class="dir__error" data-testid="director-error">{{ loadError }}</p>
       <div v-else-if="!state" class="dir__empty" data-testid="director-empty">
         <p class="dir__empty-title">当前没有可读的 harness 运行</p>
@@ -490,4 +571,11 @@ onBeforeUnmount(() => { stopPolling() })
 .dir__events summary { cursor: pointer; }
 .dir__events ul { margin: 6px 0 0; padding-left: 16px; }
 .dir__harness { display: flex; flex-direction: column; gap: 12px; border-top: 1px dashed var(--border-color); padding-top: 14px; }
+.dir__status--idle { color: var(--text-muted); }
+.dir__launch-run, .dir__launch-start { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.dir__launch-input {
+  min-width: 280px; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px;
+  font-family: var(--font-mono); font-size: 12px; background: transparent; color: var(--text-primary);
+}
+.dir__log { max-height: 220px; overflow: auto; font-size: 10.5px; background: var(--bg-secondary); padding: 8px; border-radius: 6px; white-space: pre-wrap; }
 </style>

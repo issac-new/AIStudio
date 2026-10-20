@@ -146,3 +146,36 @@ export function recentEventRows(events: GraphEvent[], limit = 12): Array<{ kind:
     ts: String(e.ts ?? ''),
   }))
 }
+
+// ── 受控 harness 启动器（/api/harness/sim-launch；默认关闭）──────────────
+export interface SimLaunchStatus {
+  ok: boolean
+  enabled: boolean
+  running: boolean
+  process?: { runId: string; pid: number | null; startedAt: string; logFile: string } | null
+  lastExit?: { runId: string; code: number | null; signal: string | null; endedAt: string } | null
+  script: string
+  simRoot: string
+  driverLock: boolean
+  logTail?: string
+}
+
+export function fetchSimLaunchStatus(): Promise<SimLaunchStatus> {
+  return json<SimLaunchStatus>('/api/harness/sim-launch/status')
+}
+
+export function startSimLaunch(runId: string): Promise<SimLaunchStatus> {
+  return json<SimLaunchStatus>('/api/harness/sim-launch/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ runId }),
+  })
+}
+
+export function stopSimLaunch(): Promise<{ ok: boolean; stopping?: boolean; pid?: number; runId?: string }> {
+  return json('/api/harness/sim-launch/stop', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  })
+}
