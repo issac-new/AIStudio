@@ -94,7 +94,11 @@ const KANBAN_STATUSES: ReadonlySet<KanbanTaskStatus> = new Set<KanbanTaskStatus>
 /** UX 裁决 E：?new=1 直达链接直开列内建卡表单 */
 const autoOpenCreate = computed(() => route.query.new === '1' || route.query.new === 'true')
 
-/** route query → 看板预选（tab 切换 + status 过滤器 + task 搜索）。
+/** 任务直达：?task=<id> 直接打开任务抽屉（注意力条/通知/工作台共用落点）。
+ *  旧行为只把 ID 写进搜索框，任务若在屏外列（阻塞/进行中）用户会以为链接失效。 */
+const openTaskId = ref<string | null>(null)
+
+/** route query → 看板预选（tab 切换 + status 过滤器 + task 抽屉）。
  *  A0 旧签重定向：迁出 10 键整页跳目标中心（router.replace）；非法 status 忽略。 */
 function applyQuery(q: Record<string, unknown>): void {
   if (typeof q.tab === 'string') {
@@ -116,9 +120,7 @@ function applyQuery(q: Record<string, unknown>): void {
   if (typeof q.status === 'string' && KANBAN_STATUSES.has(q.status)) {
     kanban.setStatusFilter(q.status)
   }
-  if (typeof q.task === 'string' && q.task) {
-    kanban.setSearchQuery(q.task)
-  }
+  openTaskId.value = typeof q.task === 'string' && q.task ? q.task : null
 }
 
 onMounted(() => applyQuery(route.query as Record<string, unknown>))
@@ -167,7 +169,7 @@ watch(tab, (key) => {
     <TabIntroBanner :tab="tab" />
 
     <div v-if="tab === 'board'" class="ia-tasks__board">
-      <SwarmKanbanView :auto-open-create="autoOpenCreate" />
+      <SwarmKanbanView :auto-open-create="autoOpenCreate" :open-task-id="openTaskId" />
     </div>
     <!-- 任务协同图（2026-10-10 麦肯锡概念一轮）：以业务结果根卡为锚的人-Agent-控制点
          协同图 + 五问面板；容器只收溢出，视图根 flex:1 自适应 -->

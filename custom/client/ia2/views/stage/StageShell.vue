@@ -29,7 +29,6 @@ import StageRiskPanel from './StageRiskPanel.vue'
 import StageMetricsPanel from './StageMetricsPanel.vue'
 import StageAssetsPanel from './StageAssetsPanel.vue'
 import StageDevApprovals from './StageDevApprovals.vue'
-import RunSelector from '../sim/RunSelector.vue'
 import { STAGE_META, SETUP_STEPS, type StageMeta } from '../../stage-meta'
 import { STAGE_TABS, resolveTab, tabMeta } from '../../stage-tabs'
 import { useStageProgress } from '../../composables/useStageProgress'
@@ -53,7 +52,7 @@ const STATE_LABEL = {
   pending: { zh: '未开始', en: 'Not started' },
 } as const
 const stageState = computed(() => progress.stageState(props.stage))
-/** ②⑤⑥ 的页签内容按运行取数：运行选择器放在页头，页签内不再手打目录名 */
+/** ②⑤⑥ 的页签内容按运行取数：日常阶段页只读最近一次推演，运行切换在推演模式。 */
 const needsRun = computed(() => [2, 5, 6].includes(props.stage))
 
 /** 阶段页主操作：只做「本阶段最该做的一步」，不堆第二排按钮。 */
@@ -198,7 +197,9 @@ const currentProps = computed(() => {
         </div>
         <p class="stg__what">{{ meta.what }}</p>
       </div>
-      <RunSelector v-if="needsRun" class="stg__run" />
+      <span v-if="needsRun" class="stg__runhint" data-testid="stg-run-hint" title="运行切换在全流程推演模式；日常阶段页只读最近一次推演">
+        {{ zh ? '数据来自最近一次推演' : 'Data from the latest simulation run' }}
+      </span>
       <button type="button" class="stg__primary" data-testid="stg-primary" @click="runPrimary">
         {{ primary.label }} →
       </button>
@@ -265,7 +266,11 @@ const currentProps = computed(() => {
 .stg__state { font-size: 11px; color: var(--text-muted); }
 .stg__no--done ~ .stg__heading .stg__state { color: var(--ia-fresh); }
 .stg__what { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.55; }
-.stg__run { flex-shrink: 0; }
+.stg__runhint {
+  flex-shrink: 0; align-self: center;
+  font-size: 11px; color: var(--text-muted);
+  border: 1px dashed var(--border-color); border-radius: 999px; padding: 2px 10px;
+}
 .stg__primary {
   border: 1px solid var(--accent-primary); border-radius: 6px;
   background: transparent; color: var(--accent-primary);

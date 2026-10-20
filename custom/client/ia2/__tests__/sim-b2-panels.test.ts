@@ -84,7 +84,7 @@ describe('SupervisionPanel — S2 监督面板', () => {
     expect(w.findAll('[data-testid="sup-brief-row"]')).toHaveLength(1)
     expect(w.findAll('[data-testid="sup-verdict-row"]')).toHaveLength(1)
     expect(w.text()).toContain('未归类行 1 条')
-    expect(w.text()).toContain('数据源：/runs/20261015-v8-run20')
+    expect(w.text()).toContain('数据源：20261015-v8-run20/workflow-journal.ndjson')
     w.unmount()
   })
 
@@ -109,7 +109,8 @@ describe('SupervisionPanel — S2 监督面板', () => {
     await w.find('[data-testid="sup-run"]').setValue('r')
     await w.find('[data-testid="sup-load"]').trigger('click')
     await flushPromises()
-    expect(w.find('[data-testid="sup-error"]').text()).toContain('503')
+    expect(w.find('[data-testid="sup-error"]').text()).toContain('暂不可用')
+    expect(w.find('[data-testid="sup-error"]').attributes('title')).toContain('503')
     expect(w.find('[data-testid="sup-win-w1"]').exists()).toBe(false)
     w.unmount()
   })

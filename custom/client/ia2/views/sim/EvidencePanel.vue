@@ -189,15 +189,15 @@ onMounted(() => {
 
 <template>
   <div class="ev" data-testid="ev-panel">
-    <section class="ev__box">
-      <h4 class="ev__h">锚点检索</h4>
+    <details class="ev__box ev__advanced" data-testid="ev-advanced">
+      <summary class="ev__h">高级检索：按事件号 / commit 反查原文</summary>
       <div class="ev__row">
         <input v-model="anchorId" class="ev__input" data-testid="ev-anchor-input" placeholder="$ 事件号 或 7-40 位十六进制 commit（t_ 卡 / ! 房间亦可）" @keyup.enter="search">
         <button class="ev__btn" type="button" data-testid="ev-anchor-search" :disabled="searching" @click="search">反查</button>
       </div>
       <p v-if="anchorError" class="ev__error" data-testid="ev-anchor-error">{{ anchorError }}</p>
       <p v-else-if="anchorFound" class="ev__hint" :data-testid="'ev-anchor-found'">命中类型：{{ anchorFound.type }}（原文已进右侧抽屉）。</p>
-    </section>
+    </details>
 
     <section class="ev__box">
       <div class="ev__box-head">
@@ -283,6 +283,8 @@ onMounted(() => {
 <style scoped lang="scss">
 .ev { display: flex; flex-direction: column; gap: 12px; }
 .ev__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
+.ev__advanced > summary { cursor: pointer; margin: 0; }
+.ev__advanced[open] > summary { margin-bottom: 8px; }
 .ev__box-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .ev__h { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
 .ev__tools { display: flex; gap: 6px; align-items: center; }

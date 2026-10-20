@@ -2,7 +2,7 @@
 <!-- 技能治理工作台：安全扫描（Skill 三段治理第一段）+ 技能供给对账/供给。
      文案单一事实源=本模块 i18n.ts。供给默认干跑、执行需确认、只增不改。 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   skillgovApi,
@@ -68,6 +68,15 @@ const sorted = computed(() => {
 
 /** 左栏筛选（2026-10-19 P2-7）：名称/目录搜索 + 判定档位；危险优先序保持不变。 */
 const scanFiltered = computed(() => filterScanRows(sorted.value, scanQuery.value, scanVerdict.value))
+
+/** 大列表收敛（2026-10-20）：首屏 80 行，搜索/筛选变化时重置；路径只显示末两层。 */
+const scanLimit = ref(80)
+const scanVisible = computed(() => scanFiltered.value.slice(0, scanLimit.value))
+watch([scanQuery, scanVerdict], () => { scanLimit.value = 80 })
+function shortDir(path: string): string {
+  const parts = String(path).split('/').filter(Boolean)
+  return parts.slice(-2).join('/') || path
+}
 
 const verdictFilters = computed(() => [
   { key: 'all' as const, label: L.value.filters.all, count: summary.value?.results?.length ?? 0 },
@@ -278,14 +287,18 @@ onUnmounted(() => window.removeEventListener('keydown', onDrawerKey))
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in scanFiltered" :key="row.dir" :data-testid="`skillgov-row-${row.name}`" @click="openSkill(row)">
+            <tr v-for="row in scanVisible" :key="row.dir" :data-testid="`skillgov-row-${row.name}`" @click="openSkill(row)">
               <td class="mono">{{ row.name }}</td>
               <td :class="verdictClass(row.verdict)">{{ L.verdictNames[row.verdict] }}</td>
               <td>{{ row.findingsCount }}<span v-if="row.findingsCount > 0" class="muted"> ›</span></td>
-              <td class="mono muted">{{ row.dir }}</td>
+              <td class="mono muted" :title="row.dir">{{ shortDir(row.dir) }}</td>
             </tr>
           </tbody>
         </table>
+        <button v-if="scanFiltered.length > scanLimit" type="button" class="sgov-more" data-testid="skillgov-more"
+          @click="scanLimit += 120">
+          加载更多（已显示 {{ scanVisible.length }} / {{ scanFiltered.length }}）
+        </button>
       </template>
       <p v-else class="muted">{{ L.never }}</p>
 
@@ -523,6 +536,12 @@ button.ghost { background: transparent; color: inherit; border: 1px solid var(--
 .muted { opacity: 0.65; font-size: 12px; }
 .mono { font-family: var(--font-mono, monospace); font-size: 12px; }
 .sgov-view__hint { margin: 0; }
+.sgov-more {
+  margin-top: 8px; border: 1px solid var(--border-color); background: transparent;
+  color: var(--text-secondary); border-radius: 6px; padding: 4px 12px;
+  font-family: inherit; font-size: 12px; cursor: pointer;
+}
+.sgov-more:hover { color: var(--text-primary); }
 .fleet { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--border-color, #e5e7eb); padding-top: 10px;
   h2 { font-size: 15px; margin: 0; } }
 .fleet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

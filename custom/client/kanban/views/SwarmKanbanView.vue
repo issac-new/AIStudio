@@ -2,7 +2,8 @@
 
 // UX 裁决 E（2026-10-03）：?new=1 直达链接打开建卡表单——TasksView 传入后首列展开建卡器。
 // statuses：视图级状态过滤（阶段页用；空=全量）。不改 store，避免污染常用看板。
-const props = defineProps<{ autoOpenCreate?: boolean; statuses?: readonly string[] }>()
+// openTaskId：任务直达（?task=）——数据就绪后直接打开抽屉，不再只填搜索框。
+const props = defineProps<{ autoOpenCreate?: boolean; statuses?: readonly string[]; openTaskId?: string | null }>()
 import { ref, computed, onMounted, watch } from 'vue'
 import { NSpin, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
@@ -308,6 +309,23 @@ function handleAttentionOpen(taskId: string) {
   selectedTaskId.value = taskId
   showTaskDrawer.value = true
 }
+
+/** 外部任务直达（?task=）：等聚合数据到位后按全量 rawTasks 定位（不受板筛选影响），
+ *  切到任务所在板再开抽屉；同一 ID 只自动打开一次，用户关掉后不被 watch 重放。 */
+const externallyOpenedTask = ref<string | null>(null)
+watch(
+  [() => props.openTaskId, () => workspace.rawTasks],
+  ([taskId]) => {
+    if (!taskId || taskId === externallyOpenedTask.value) return
+    const entry = workspace.rawTasks.find(x => x.task.id === taskId)
+    if (!entry) return
+    if (entry.board && entry.board !== store.selectedBoard) store.setBoard(entry.board)
+    selectedTaskId.value = taskId
+    showTaskDrawer.value = true
+    externallyOpenedTask.value = taskId
+  },
+  { immediate: true },
+)
 
 function handleBulkClear() {
   store.clearSelection()

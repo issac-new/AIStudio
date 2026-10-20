@@ -17,7 +17,7 @@ const runName = computed(() => progress.run.value.trim())
 const checks = computed(() => [
   {
     key: 'run',
-    label: zh.value ? '已选择本轮运行' : 'A run is selected',
+    label: zh.value ? '已有最近推演' : 'A recent run exists',
     ok: !!runName.value,
     hint: runName.value || (zh.value ? '先在运行编排里选运行' : 'Select a run in orchestration'),
   },
@@ -40,8 +40,8 @@ const checks = computed(() => [
 const readyCount = computed(() => checks.value.filter(c => c.ok).length)
 
 function openRun(): void {
-  // 启动与续跑由 harness 执行；这里只把用户送到运行中心核对真实状态。
-  void router.push({ name: 'ia2.sim' })
+  // 启动与续跑由 harness 执行；日常阶段页只把用户送到推演模式的运行编排核对真实状态。
+  void router.push({ name: 'ia2.simOrchestration' })
 }
 </script>
 
@@ -69,7 +69,7 @@ function openRun(): void {
 
     <footer class="spf__foot">
       <span class="spf__note">{{ zh ? '运行编排页显示当前运行与任务链；启动前自动检查尚未接入，需在 harness 侧确认。' : 'Orchestration shows the current run and task chain; automated preflight is not wired in yet — confirm on the harness side.' }}</span>
-      <button type="button" class="spf__btn" data-testid="stg-preflight-run" @click="openRun">{{ zh ? '打开运行中心 →' : 'Open run center →' }}</button>
+      <button type="button" class="spf__btn" data-testid="stg-preflight-run" @click="openRun">{{ zh ? '在推演中打开运行编排 →' : 'Open orchestration in simulation →' }}</button>
     </footer>
   </section>
 </template>
