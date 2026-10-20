@@ -25,7 +25,7 @@ describe('P1 工具执行瀑布（注入态守门）', () => {
     // pre 在 authorizer 之后
     const authIdx = txt.indexOf('authorization && !authorization.approved')
     const preIdx = txt.indexOf("hook.preExecute?.(name, input, context)")
-    const execIdx = txt.indexOf('let result = await tool.execute(input, context)')
+    const execIdx = txt.indexOf('await tool.execute(input, context)')
     const postIdx = txt.indexOf('hook.postExecute?.(name, input, result, context)')
     expect(authIdx).toBeGreaterThan(-1)
     expect(preIdx).toBeGreaterThan(authIdx, 'pre 钩子必须在权限门之后')
