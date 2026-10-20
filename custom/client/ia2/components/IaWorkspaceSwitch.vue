@@ -1,8 +1,7 @@
 <!-- overlay/custom/client/ia2/components/IaWorkspaceSwitch.vue
-     沟通协作 / IDE 工作区 切换（2026-10-18 用户裁定：切换按钮保持不动）。
-     D18 把两者塞进六阶段④开发的分段控件里，导致「阶段」与「视图」两种语义
-     挤在同一排；本组件把切换拆成独立分段，六阶段全部移到左侧栏，顶栏只留
-     视图切换。切换保留当前会话（与退役的 IaViewSwitcher 同语义）。 -->
+     工作视图切换（2026-10-20 日常/推演拆分）：
+     日常工作台 | IDE 工作区 | 全流程推演。推演是独立模式，不再作为日常
+     侧栏的「整轮」分组；切换只改路由，不改组件树。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -11,15 +10,19 @@ import { useChatStore } from '@/stores/hermes/chat'
 
 const route = useRoute()
 const router = useRouter()
-const { t, locale } = useI18n()
+const { locale } = useI18n()
 const chatStore = useChatStore()
 
 const isZh = computed(() => String(locale?.value ?? 'zh').startsWith('zh'))
+const collabLabel = computed(() => isZh.value ? '日常工作台' : 'Daily')
 // 词条表（patch 316/317）没有 IDE 视图名，走本地字典；EN 下不能留中文。
 const ideLabel = computed(() => isZh.value ? 'IDE 工作区' : 'IDE Workspace')
+const simLabel = computed(() => isZh.value ? '全流程推演' : 'Full-run Simulation')
 const groupLabel = computed(() => isZh.value ? '工作视图' : 'Workspace view')
 
 const isIde = computed(() => route.path === '/app/ide' || route.path.startsWith('/app/ide/'))
+const isSim = computed(() => route.path === '/app/sim' || route.path.startsWith('/app/sim/'))
+const isCollab = computed(() => !isIde.value && !isSim.value)
 
 function goCollab(): void {
   const sid = chatStore.activeSessionId
@@ -30,6 +33,10 @@ function goIde(): void {
   const sid = chatStore.activeSessionId
   void router.push(sid ? { name: 'ide.shell', query: { session: sid } } : { name: 'ide.shell' })
 }
+
+function goSim(): void {
+  void router.push({ name: 'ia2.sim' })
+}
 </script>
 
 <template>
@@ -37,11 +44,11 @@ function goIde(): void {
     <button
       type="button"
       class="iws__btn"
-      :class="{ 'iws__btn--on': !isIde }"
+      :class="{ 'iws__btn--on': isCollab }"
       data-testid="ia-workspace-collab"
-      :aria-pressed="!isIde"
+      :aria-pressed="isCollab"
       @click="goCollab"
-    >{{ t('ia2.nav.collab') }}</button>
+    >{{ collabLabel }}</button>
     <button
       type="button"
       class="iws__btn"
@@ -50,6 +57,14 @@ function goIde(): void {
       :aria-pressed="isIde"
       @click="goIde"
     >{{ ideLabel }}</button>
+    <button
+      type="button"
+      class="iws__btn"
+      :class="{ 'iws__btn--on': isSim }"
+      data-testid="ia-workspace-sim"
+      :aria-pressed="isSim"
+      @click="goSim"
+    >{{ simLabel }}</button>
   </div>
 </template>
 

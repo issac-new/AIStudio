@@ -11,7 +11,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 const routerState = vi.hoisted(() => ({ hasRouteNames: new Set<string>([
-  'ia2.collab', 'ide.shell', 'hermes.models', 'hermes.workflow', 'hermes.connections',
+  'ia2.collab', 'ide.shell', 'ia2.govSettings', 'hermes.models', 'hermes.workflow', 'hermes.connections',
   'hermes.files', 'hermes.agentManager', 'hermes.skills', 'hermes.plugins', 'hermes.mcp',
   'hermes.memory', 'hermes.channels', 'hermes.jobs', 'hermes.kanban', 'hermes.journey',
   'hermes.settings', 'hermes.profiles', 'hermes.theme', 'hermes.petdex',
@@ -44,20 +44,23 @@ describe('IaSettingsSidebar — 设置页侧栏（功能面恢复）', () => {
     // 2026-09-30 裁定：视图双入口退役（与页头品牌位切换器重复）——零出现守门
     expect(text).not.toContain('ia2.brand')
     expect(text).not.toContain('sidebar.ideWorkspace')
-    // 工具组（原 PageSidebarNav 面）
-    for (const key of ['sidebar.models', 'sidebar.workflow', 'sidebar.connections', 'sidebar.files']) {
+    // 工具组（原 PageSidebarNav 面；2026-10-20 设备互联/文件死页与裸 FS 移出导航）
+    for (const key of ['sidebar.models', 'sidebar.workflow']) {
       expect(text, `工具组缺 ${key}`).toContain(key)
     }
     // Hermes 组（原 HermesConfigSidebar 面；agentManager 随 features.agentManager
-    // 默认关而隐——S3 既定语义 2026-10-01 补上消费方，不在恒显断言内）
-    for (const key of ['sidebar.skills', 'sidebar.plugins', 'sidebar.mcp', 'sidebar.memory', 'sidebar.channels', 'sidebar.jobs', 'sidebar.kanban', 'sidebar.journey']) {
+    // 默认关而隐——S3 既定语义 2026-10-01 补上消费方，不在恒显断言内；
+    // 学习轨迹空白页 2026-10-20 移出导航）
+    for (const key of ['sidebar.skills', 'sidebar.plugins', 'sidebar.mcp', 'sidebar.memory', 'sidebar.channels', 'sidebar.jobs', 'sidebar.kanban']) {
       expect(text, `Hermes 组缺 ${key}`).toContain(key)
     }
     // 系统组（原 AppSidebar 系统组全集——收缩批摘除项恢复；petdex 随
-    // features.pet 默认关而隐；terminal 为 2026-10-01 收编新增、superadmin 可见）
-    for (const key of ['sidebar.settings', 'sidebar.profiles', 'sidebar.theme', 'sidebar.skillsUsage', 'sidebar.logs', 'sidebar.usage', 'sidebar.performance', 'sidebar.terminal']) {
+    // features.pet 默认关而隐；terminal/browser 2026-10-20 移出员工导航）
+    for (const key of ['sidebar.settings', 'sidebar.profiles', 'sidebar.theme', 'sidebar.skillsUsage', 'sidebar.logs', 'sidebar.usage', 'sidebar.performance']) {
       expect(text, `系统组缺 ${key}`).toContain(key)
     }
+    // 原生系统设置统一入口（日常设置导航，2026-10-20 新增）
+    expect(text).toContain('系统设置导航')
     // ekko 运维面（2026-10-02 开门）：Hermes 组直书文案条目、superadmin 可见
     expect(text).toContain('ekko 运维')
     // 分组标签（既有词表键，零新增 i18n）

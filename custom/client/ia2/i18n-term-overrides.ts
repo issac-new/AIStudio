@@ -43,6 +43,10 @@ export const IA2_TERM_OVERRIDES_ZH = {
       scopeNote: '统计全部看板任务，不限当前运行；未全部完成时不会显示 100%。',
     },
     wm: { mergeBack: '合并回工作台' },
+    // 2026-10-20 走查：流程导航分组标题与交付案例状态在运行时缺键，界面裸显
+    // IA2.FLOW.CHATSECTION / ia2.delivery.completed。此处补两条双侧词条。
+    flow: { chatSection: '聊天' },
+    delivery: { completed: '已完成' },
     nav: STAGE_NAV_ZH,
   },
 } as const
@@ -53,6 +57,8 @@ export const IA2_TERM_OVERRIDES_EN = {
   ia2: {
     overview: { swarmKanbanLabel: 'Kanban', swarmKanbanHint: 'Open the Kanban board (all tasks)' },
     overviewDash: { scopeNote: 'Counts all board tasks, not the selected run; 100% only when every task is complete.' },
+    flow: { chatSection: 'Chats' },
+    delivery: { completed: 'Completed' },
     nav: STAGE_NAV_EN,
   },
 } as const

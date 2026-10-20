@@ -46,8 +46,8 @@ watch(run, () => { if (run.value.trim()) void load() })
 
 <template>
   <div class="gis" data-testid="gis-panel">
-    <p v-if="loadError" class="gis__error" data-testid="gis-error">{{ loadError }}</p>
-    <p v-else-if="!lines" class="gis__hint">在页头「本轮运行」选择一轮，读取本次运行的问题清单——问题全记账、复盘逐条清点。</p>
+    <p v-if="loadError" class="gis__error" data-testid="gis-error" :title="loadError">问题台账暂不可用（该运行可能尚未生成问题清单）。</p>
+    <p v-else-if="!lines" class="gis__hint">还没有可读的运行记录——先在全流程推演完成一次运行；日常页只读最近一次推演。</p>
 
     <template v-if="lines">
       <p class="gis__stats" data-testid="gis-stats">

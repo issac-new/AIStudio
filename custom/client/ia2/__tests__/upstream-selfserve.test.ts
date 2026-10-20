@@ -23,9 +23,10 @@ describe('A1 Web 终端收编三段链（routes → VIEW_LOADERS → 侧栏条�
     expect(shell).toContain("'hermes.terminal': () => import('@/views/hermes/TerminalView.vue')")
   })
 
-  it('IaSettingsSidebar 系统组含 terminal 条目（superadmin）', () => {
+  it('IaSettingsSidebar 员工导航已移除 terminal（2026-10-20 导航收敛）', () => {
     const sidebar = readOverlay('custom/client/ia2/components/IaSettingsSidebar.vue')
-    expect(sidebar).toContain("{ name: 'hermes.terminal', icon: 'terminal', labelKey: 'sidebar.terminal', superAdmin: true }")
+    expect(sidebar).not.toContain("name: 'hermes.terminal'")
+    expect(sidebar).toContain("name: 'ia2.govSettings'")
   })
 })
 

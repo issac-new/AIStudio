@@ -11,7 +11,7 @@ import { useI18n } from 'vue-i18n'
 const SIM_TABS_TEXT = {
   zh: {
     shellTitle: '全流程推演',
-    tabOverview: '运行总览',
+    tabOverview: '导演台',
     tabSupervision: '监督面板',
     tabOps: '运行监控',
     tabEvidence: '证据库',
@@ -23,7 +23,7 @@ const SIM_TABS_TEXT = {
   },
   en: {
     shellTitle: 'Full-run Simulation',
-    tabOverview: 'Run Overview',
+    tabOverview: 'Director',
     tabSupervision: 'Supervision',
     tabOps: 'Run Monitoring',
     tabEvidence: 'Evidence Library',

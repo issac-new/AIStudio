@@ -190,6 +190,7 @@ const tabCount = computed<Record<TdpTab, number>>(() => ({
   display: inline-flex; align-items: center; gap: 4px;
   border: 1px solid transparent; border-radius: 12px; background: transparent;
   color: var(--text-muted); font-size: 11px; padding: 3px 9px; cursor: pointer;
+  white-space: nowrap;
   &:hover { color: var(--text-primary); }
   &.is-active { color: var(--text-primary); background: var(--hover-bg); border-color: var(--border-color); }
 }

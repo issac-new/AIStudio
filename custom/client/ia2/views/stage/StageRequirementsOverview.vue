@@ -30,7 +30,7 @@ function openRun(): void {
   <section class="sro" data-testid="stg-req-overview">
     <div class="sro__cards">
       <article class="sro__card">
-        <span class="sro__label">{{ zh ? '本轮运行' : 'Current run' }}</span>
+        <span class="sro__label">{{ zh ? '最近推演' : 'Latest run' }}</span>
         <strong class="sro__value" data-testid="stg-req-run">{{ runName || (zh ? '未选择运行' : 'No run selected') }}</strong>
         <span class="sro__hint">{{ posture || (zh ? '运行模式在启动时选择' : 'Run mode is chosen at launch') }}</span>
       </article>

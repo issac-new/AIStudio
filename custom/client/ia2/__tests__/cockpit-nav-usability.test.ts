@@ -62,22 +62,20 @@ describe('IaBreadcrumb — 位置感（层级乱痛点）', () => {
     w.unmount()
   })
 
-  it('全流程推演根路径：流程总览＞全程＞全流程推演，不重复默认签', async () => {
+  it('全流程推演根路径：独立模式无面包屑（单层页面不自我指认），不挂流程总览', async () => {
     const { w } = await mountAt('/app/sim')
-    const text = w.find('[data-testid="ia-breadcrumb"]').text()
-    expect(text).toContain('全流程推演')
-    expect(text).not.toContain('运行总览')
-    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('全程')
+    expect(w.find('[data-testid="ia-breadcrumb"]').exists()).toBe(false)
+    expect(w.text()).not.toContain('流程总览')
     w.unmount()
   })
 
-  it('全流程推演签级：流程总览＞③④＞全流程推演＞监督面板（多归属如实列两阶段）', async () => {
+  it('全流程推演签级：全流程推演＞监督面板（不再显示日常阶段归属）', async () => {
     const { w } = await mountAt('/app/sim/supervision')
     const text = w.find('[data-testid="ia-breadcrumb"]').text()
-    expect(text).toContain('流程总览')
+    expect(text).not.toContain('流程总览')
     expect(text).toContain('全流程推演')
     expect(text).toContain('监督面板')
-    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').text()).toBe('③④')
+    expect(w.find('[data-testid="ia-breadcrumb-attribution"]').exists()).toBe(false)
     w.unmount()
   })
 

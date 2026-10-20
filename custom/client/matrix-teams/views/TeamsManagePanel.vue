@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useTeamRegistryStore } from '../stores/team-registry'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { agentTeamGlobalId, type AgentTeam, type AdmissionAnswers } from '../protocol'
@@ -13,8 +14,17 @@ import DispatchList from '../components/DispatchList.vue'
 
 const i18n = useI18n()
 const { t } = i18n
+const router = useRouter()
 const registry = useTeamRegistryStore()
 const matrixClientStore = useMatrixClientStore()
+
+/** Matrix 未连接时的恢复入口：账户管理维护 matrix 账号，工作台可回到日常协作。 */
+const offlineActions = computed(() => {
+  const zh = String((i18n as { locale?: { value?: string } }).locale?.value ?? 'zh').startsWith('zh')
+  return zh
+    ? { accounts: '去账户管理', workbench: '返回工作台' }
+    : { accounts: 'Manage accounts', workbench: 'Back to workbench' }
+})
 
 /** 准入词条按当前 locale 直取（模块内小事实源，不动 473）。 */
 const A = computed(() => {
@@ -83,7 +93,15 @@ watch(() => matrixClientStore.syncState, (state) => {
 
 <template>
   <div class="tmp" data-testid="teams-panel">
-    <div v-if="!matrixOnline" class="tmp__offline">{{ t('teams.matrixOffline') }}</div>
+    <div v-if="!matrixOnline" class="tmp__offline" data-testid="teams-offline">
+      <p class="tmp__offline-text">{{ t('teams.matrixOffline') }}</p>
+      <div class="tmp__offline-acts">
+        <button type="button" class="tmp__primary" data-testid="teams-offline-accounts"
+          @click="router.push({ name: 'ia2.accounts' })">{{ offlineActions.accounts }}</button>
+        <button type="button" class="tmp__ghost" data-testid="teams-offline-workbench"
+          @click="router.push({ name: 'ia2.collab' })">{{ offlineActions.workbench }}</button>
+      </div>
+    </div>
 
     <div v-else-if="!registry.registryRoomId" class="tmp__setup" data-testid="teams-setup">
       <div class="tmp__hint">{{ t('teams.registry.none') }}</div>
@@ -188,6 +206,9 @@ watch(() => matrixClientStore.syncState, (state) => {
 <style scoped>
 .tmp { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
 .tmp__offline,.tmp__setup { display: flex; flex-direction: column; gap: 8px; max-width: 420px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-standard); }
+.tmp__offline-text { margin: 0; }
+.tmp__offline-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.tmp__ghost { border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); border-radius: var(--radius-standard); padding: 4px 14px; cursor: pointer; font-family: inherit; }
 .tmp__hint { font-size: 12px; color: var(--text-secondary); }
 .tmp__input { border: 1px solid var(--border-color); border-radius: var(--radius-standard); padding: 4px 8px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
 .tmp__primary { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--bg-primary); border-radius: var(--radius-standard); padding: 4px 14px; cursor: pointer; font-family: inherit; }

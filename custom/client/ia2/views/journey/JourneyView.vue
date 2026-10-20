@@ -12,10 +12,9 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { STAGE_META, SETUP_STEPS, type SetupStep } from '../../stage-meta'
 import { useStageProgress } from '../../composables/useStageProgress'
-import RunSelector from '../sim/RunSelector.vue'
 
 const router = useRouter()
-// 与左侧栏/阶段页共用同一份 run-state 缓存：记忆里的运行自动带出，不再手打目录名。
+// 进度来自最近一次推演运行（只读状态，不在日常首页放运行选择器/卡点条）
 const progress = useStageProgress()
 const run = progress.run
 const runState = computed(() => progress.state.value)
@@ -35,12 +34,11 @@ function stageState(no: number): CardState {
   return s === 'current' ? 'active' : s
 }
 
-/** 当前卡点：第一个未完成阶段（含①搭建整体）；无=全部完成 */
+/** 当前卡点（仅展示最近一次推演的进度，不在日常首页提供运行切换） */
 const bottleneck = computed(() => {
   if (!progress.state.value) return null
   return STAGE_META.find(s => progress.stageState(s.no) !== 'done') ?? null
 })
-const openItems = computed(() => progress.state.value?.ledger?.open ?? 0)
 
 function goStep(st: SetupStep): void {
   // 来路阶段①：账号/环境等落点页跨阶段复用，顶栏高亮按搭建语境而非路径归属
@@ -58,16 +56,15 @@ function goStage(no: number): void {
     <header class="jrn__head">
       <h1 class="jrn__title" title="准备阶段五步把组织从零搭起来，交付阶段五阶段把需求交付到治理">流程总览：从 0 到 1，建组织、跑交付、做治理</h1>
       <div class="jrn__runbar">
-        <RunSelector />
-        <button class="jrn__btn jrn__btn--ghost" type="button" data-testid="jrn-dash-link" title="我的待办/待审评审/交付进度三卡概览" @click="router.push({ name: 'ia2.dash' })">工作台概览 →</button>
+        <button class="jrn__btn" type="button" data-testid="jrn-workbench-link" title="会话、任务与 IDE 工作区" @click="router.push({ name: 'ia2.collab' })">进入日常工作台 →</button>
       </div>
     </header>
 
-    <!-- 当前卡点提示条（有轮次数据时） -->
+    <!-- 最近一次推演的进度提示（只读；运行切换与卡点处置在全流程推演模式） -->
     <div v-if="runState && bottleneck" class="jrn__bottleneck" data-testid="jrn-bottleneck">
-      <span class="jrn__bottleneck-tag">当前卡点</span>
+      <span class="jrn__bottleneck-tag">最近推演</span>
       <span class="jrn__bottleneck-text">第 {{ bottleneck.no }} 阶段·{{ bottleneck.title }}——{{ bottleneck.act }}</span>
-      <button v-if="openItems > 0" type="button" class="jrn__bottleneck-debt jrn__bottleneck-debt--link" data-testid="jrn-bottleneck-debt" title="去⑥治理·遗留项清算处理" @click="router.push({ name: 'ia2.govClearance' })">另有 {{ openItems }} 项遗留事项未清算，启动新运行前须清零——去清算</button>
+      <button type="button" class="jrn__bottleneck-debt jrn__bottleneck-debt--link" data-testid="jrn-bottleneck-sim" title="在全流程推演中查看本轮运行" @click="router.push({ name: 'ia2.sim' })">在推演中查看 →</button>
     </div>
 
     <!-- 无轮引导态（D19 收敛：一句话+双按钮） -->

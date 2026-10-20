@@ -36,6 +36,11 @@ vi.mock('../api/gatekeeper', () => ({ fetchClearanceLedger: vi.fn(), resolveClea
 vi.mock('../api/gov', () => ({ fetchGateRepairs: vi.fn(), transitionGateRepair: vi.fn(), fetchKeyLedger: vi.fn(), putKeyLedger: vi.fn(), legalTransitions: () => [], GATE_STATE_LABEL: {}, GATE_FULL_NAME: {}, joinIssueDisposal: () => [], fetchIssues: vi.fn() }))
 vi.mock('../../kanban/handoff', () => ({ HANDOFF_TYPES: [], HANDOFF_STATES: [], HANDOFF_TYPE_LABEL: {}, HANDOFF_STATE_LABEL: {} }))
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: () => ({ sortedRuns: [] }) }))
+vi.mock('../store/workspace', () => ({ useWorkspaceStore: () => ({ rawTasks: [] }) }))
+vi.mock('../composables/useDecisionRows', async () => {
+  const { ref } = await import('vue')
+  return { useDecisionRows: () => ({ decisionRows: ref([]) }) }
+})
 
 // jsdom 无 ResizeObserver（迁入组件链上的图表件用）——桩化
 class RO { observe() {} unobserve() {} disconnect() {} }

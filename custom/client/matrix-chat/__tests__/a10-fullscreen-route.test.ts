@@ -72,6 +72,8 @@ describe('A10 全屏 Matrix 客户端路由复活', () => {
     })
     await w.vm.$nextTick()
     await w.find('[data-testid="matrix-open-full"]').trigger('click')
-    expect(routerPushMock).toHaveBeenCalledWith({ name: 'matrix.clientRoom', params: { roomId: '!r1:server' } })
+    // 2026-10-20：/matrix 全屏页无认证上下文（打开只有「未认证」），房间头入口
+    // 改为落工作台房间画布。
+    expect(routerPushMock).toHaveBeenCalledWith({ name: 'ia2.commsRoom', params: { roomId: '!r1:server' } })
   })
 })

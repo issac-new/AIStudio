@@ -17,9 +17,20 @@ import { SIM_TABS_TEXT } from '../views/sim/sim-tabs'
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({
   useRunCenterStore: () => ({ sortedRuns: [] }),
 }))
+vi.mock('../store/workspace', () => ({ useWorkspaceStore: () => ({ rawTasks: [] }) }))
+vi.mock('../composables/useDecisionRows', async () => {
+  const { ref } = await import('vue')
+  return { useDecisionRows: () => ({ decisionRows: ref([]) }) }
+})
+vi.mock('../api/overview', () => ({
+  fetchRunState: vi.fn().mockRejectedValue(new Error('no-run')),
+  fetchDeliverables: vi.fn().mockRejectedValue(new Error('no-run')),
+  fetchIssues: vi.fn().mockRejectedValue(new Error('no-run')),
+  fetchBranches: vi.fn().mockRejectedValue(new Error('no-run')),
+}))
 
 /** 六签文案（zh）：四路由签+两本页签 */
-const FOUR_TAB_LABELS = ['运行总览', '监督面板', '运行监控', '证据库'] as const
+const FOUR_TAB_LABELS = ['导演台', '监督面板', '运行监控', '证据库'] as const
 const SIX_TAB_LABELS = [...FOUR_TAB_LABELS, '运行编排', '推演设置'] as const
 const stubs = {
   OrchestrationView: { template: '<div data-testid="orchestration-stub" />' },
@@ -141,7 +152,7 @@ describe('全流程推演壳：渲染', () => {
     wrapper.unmount()
   })
 
-  it('默认签=运行总览；不再渲染「签 N」徽标', async () => {
+  it('默认签=导演台；不再渲染「签 N」徽标', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
@@ -152,7 +163,7 @@ describe('全流程推演壳：渲染', () => {
     }
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
-    expect(panel.find('[data-testid="ov-panel"]').exists()).toBe(true)
+    expect(panel.find('[data-testid="director-panel"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('签 1')
     expect(wrapper.text()).not.toContain('待实现')
     wrapper.unmount()
@@ -164,7 +175,7 @@ describe('全流程推演壳：渲染', () => {
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
     const live: ReadonlyArray<{ key: string; panel: string }> = [
-      { key: 'overview', panel: '[data-testid="ov-panel"]' },
+      { key: 'overview', panel: '[data-testid="director-panel"]' },
       { key: 'supervision', panel: '[data-testid="sup-panel"]' },
       { key: 'ops', panel: '[data-testid="ops-panel"]' },
       { key: 'evidence', panel: '[data-testid="ev-panel"]' },
