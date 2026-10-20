@@ -129,7 +129,9 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   annex('/hermes/channels', 'hermes.channels'),
   annex('/hermes/config/settings', 'hermes.configSettings'),
   annex('/hermes/jobs', 'hermes.jobs'),
-  annex('/hermes/kanban', 'hermes.kanban'),
+  // 旧版看板（横向八列、无滚动容器）与主界面看板重复；2026-10-20 收敛为
+  // 重定向，保留 hermes.kanban 名称供上游按名跳转，深链不再落到重复页。
+  { path: '/hermes/kanban', name: 'hermes.kanban', redirect: to => ({ path: '/app/board', query: to.query }) },
   annex('/hermes/journey', 'hermes.journey'),
   // 系统域（原 AppSidebar 系统组面）
   annex('/hermes/logs', 'hermes.logs'),
