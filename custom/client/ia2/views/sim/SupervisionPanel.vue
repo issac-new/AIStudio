@@ -30,6 +30,15 @@ function openLineDrawer(title: string, line: JournalLine | Record<string, unknow
 }
 
 const windowsDesc = computed(() => (organized.value ? [...organized.value.windows].reverse() : []))
+/** 研判原文常是整行 JSON：优先取 situation 字段做人话展示，原文留给抽屉。 */
+function briefText(text: string): string {
+  try {
+    const obj = JSON.parse(text) as { situation?: unknown; brief?: unknown }
+    if (typeof obj.situation === 'string') return obj.situation
+    if (typeof obj.brief === 'string') return obj.brief
+  } catch { /* 非 JSON 原文直接展示 */ }
+  return text
+}
 /** 数据源只显示末两层（完整路径进 title，避免绝对路径占屏）。 */
 const sourceLabel = computed(() => {
   const parts = source.value.split('/').filter(Boolean)
@@ -147,7 +156,7 @@ watch(run, () => { if (run.value.trim()) void load() })
           <ul v-else class="sup__tl">
             <li v-for="(b, i) in organized.briefs" :key="i" class="sup__tl-row" role="button" data-testid="sup-brief-row" @click="openLineDrawer(`研判 ${b.ts}`, { t: 'situation_brief', ts: b.ts, brief: b.text })">
               <span class="sup__tl-ts">{{ b.ts }}</span>
-              <span class="sup__tl-text">{{ b.text }}</span>
+              <span class="sup__tl-text">{{ briefText(b.text) }}</span>
             </li>
           </ul>
         </section>
