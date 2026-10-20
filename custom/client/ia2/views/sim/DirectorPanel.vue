@@ -189,9 +189,11 @@ const graphStatus = computed(() => {
     if (kind(last) === 'run.completed') return 'completed'
     if (kind(last) === 'run.failed') return 'failed'
     if (kind(last) === 'interrupt.raised') return 'awaiting-input'
+    // node.started / node.completed：代理正在执行或等卡，实例 status 可能仍是 paused
+    return 'running'
   }
   if (inst === 'paused') return 'paused'
-  return inst === 'unknown' && !graphEvents.value.length ? 'unknown' : 'running'
+  return inst === 'unknown' ? 'unknown' : 'running'
 })
 const graphStatusLabel = computed(() => GRAPH_STATUS_LABEL[graphStatus.value] ?? graphStatus.value)
 const planCounts = computed(() => {
