@@ -29,9 +29,9 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     'stage-accept': { what: 'G5 发布准出、完备性检查、UAT 逐条判定——交付完成。', source: '审批事件与验收书。', act: '判定只认结构化字段。' },
     'stage-govern': { what: '台账、审计、复盘、遗留项清算、度量检查——组织越跑越聪明。', source: 'issues.log/遗留项台账/巡检官。', act: '开新运行前遗留项必须清零。' },
     'sim-overview': {
-      what: '一轮运行的总览屏：跑到第几步、六道质量门过了几道、有没有遗留项，一屏看全。',
-      source: '运行状态文件与遗留项台账实读，数字全部实测、缺席如实标注。',
-      act: '启动后先来这里。「遗留项未清算」亮红=上轮遗留没清不能开新运行——去⑥治理·遗留项清算处理。',
+      what: '导演台：这次演到哪、谁在演、卡在谁、下一步做什么；26 步/交付物明细收在技术详情。',
+      source: '运行状态、任务执行人与待人介入实时汇总。',
+      act: '从运行编排启动后先来这里。卡住时去监督面板看研判，有等人决定的事去审批收件箱。',
     },
     'sim-supervision': {
       what: '值班盯盘位：观察窗时间线+接棒员研判，回答「现在卡在哪、谁没动」。',
@@ -131,7 +131,7 @@ export const TAB_INTROS: Record<'zh' | 'en', Record<string, TabIntro>> = {
     'stage-build': { what: 'Parallel development + independent testing; daily coordination lives here.', source: 'Kanban/chat/approval queue.', act: 'WIP limit 2; dual credentials.' },
     'stage-accept': { what: 'G5 release readiness, completeness, UAT verdicts.', source: 'Approval events.', act: 'Structured verdicts only.' },
     'stage-govern': { what: 'Ledger, audit, retro, closure of open items, metrics review.', source: 'issues.log/open-item ledger/inspector.', act: 'Clear open items before a new run.' },
-    'sim-overview': { what: 'Cockpit of a simulation run: step progress, six gates, compensation debt at a glance.', source: 'Run state file and ledger, live.', act: 'Start here after launching. Red clearance lamp = unresolved debt, settle it first.' },
+    'sim-overview': { what: 'Director console: where the run is, who is acting, who is stuck, and what is next. The 26-step table lives under technical details.', source: 'Run state, task assignees and pending decisions, live.', act: 'Start here after launching. Stuck? Read supervision briefs; decisions go to the approvals inbox.' },
     'sim-supervision': { what: 'On-duty watch desk: observation windows and analyst briefs answer "where is it stuck".', source: 'Read-only supervision journal.', act: 'Check periodically during a run; read briefs before intervening.' },
     'sim-ops': { what: 'Infrastructure health: four services, dispatcher, idle workers.', source: 'Live /health probes + hermes-agent commands.', act: 'When things feel dead, check red dots here first.' },
     'sim-evidence': { what: 'Evidence lookup: paste an event id or commit hash to see the original.', source: 'Live synapse/git lookups.', act: 'Distrust any number? Click it. Anchor drawer shows the source.' },

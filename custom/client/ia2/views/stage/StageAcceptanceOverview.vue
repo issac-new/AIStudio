@@ -39,7 +39,7 @@ const next = computed(() => [
       <div>
         <h2 class="sao__title">{{ zh ? '本轮验收进度' : 'Acceptance progress' }}</h2>
         <p class="sao__sub">{{ zh
-          ? '判定只认结构化字段；任一条不过回缺陷回流。当前运行：'
+          ? '判定只认结构化字段；任一条不过回缺陷回流。最近推演：'
           : 'Only structured verdicts count; a failed item returns to defects. Current run: ' }}{{ runName || (zh ? '未选择' : 'none') }}</p>
       </div>
     </header>

@@ -135,8 +135,17 @@ const instancesShown = computed(() => {
 async function refreshInstances(): Promise<void> {
   const r = await ontologyApi.listInstances(instFilter.value || undefined)
   instances.value = r.instances
+  instPage.value = 1
 }
-watch(() => tab.value, (t) => { if (t === 'instances' || t === 'versions' || t === 'export') void (t === 'instances' ? refreshInstances() : t === 'versions' ? refreshVersions() : loadExport()) })
+
+/** 实例大列表分页（2026-10-20）：1045 行一次性平铺会压满 DOM；每页 50。 */
+const INST_PAGE_SIZE = 50
+const instPage = ref(1)
+const instPageCount = computed(() => Math.max(1, Math.ceil(instancesShown.value.length / INST_PAGE_SIZE)))
+const instancesPaged = computed(() =>
+  instancesShown.value.slice((instPage.value - 1) * INST_PAGE_SIZE, instPage.value * INST_PAGE_SIZE))
+watch([instQuery, instFilter], () => { instPage.value = 1 })
+watch(() => tab.value, (t) => { if (t === 'instances' || t === 'versions' || t === 'export') void (t === 'instances' ? refreshInstances() : t === 'versions' ? refreshVersions() : loadExport()) }, { immediate: true })
 
 const showEditor = ref(false)
 const editing = ref<OntologyInstance | null>(null)
@@ -412,7 +421,7 @@ function fmtBytes(b: number): string {
       <table class="onto-table" data-testid="ontology-inst-table">
         <thead><tr><th>{{ L.instances.id }}</th><th>{{ L.instances.type }}</th><th>{{ L.instances.label }}</th><th>{{ L.instances.data }}</th><th>{{ L.instances.relations }}</th><th></th></tr></thead>
         <tbody>
-          <tr v-for="i in instancesShown" :key="i.id">
+          <tr v-for="i in instancesPaged" :key="i.id">
             <td><code>{{ i.id }}</code></td>
             <td><span class="onto-chip">{{ i.type }}</span></td>
             <td>{{ i.label }}</td>
@@ -426,6 +435,11 @@ function fmtBytes(b: number): string {
           <tr v-if="instancesShown.length === 0"><td colspan="6" class="onto-table__empty">{{ L.instances.empty }}</td></tr>
         </tbody>
       </table>
+      <div v-if="instancesShown.length > INST_PAGE_SIZE" class="onto-pager" data-testid="ontology-inst-pager">
+        <button type="button" class="onto__btn" :disabled="instPage <= 1" @click="instPage--">上一页</button>
+        <span>{{ instPage }} / {{ instPageCount }}（共 {{ instancesShown.length }} 条）</span>
+        <button type="button" class="onto__btn" :disabled="instPage >= instPageCount" @click="instPage++">下一页</button>
+      </div>
 
       <!-- 编辑抽屉 -->
       <div v-if="showEditor && editing" class="onto-modal" data-testid="ontology-inst-editor">
@@ -616,6 +630,7 @@ function fmtBytes(b: number): string {
   &__enum { font-size: 10.5px; opacity: 0.65; }
 }
 .onto-chip { display: inline-block; border-radius: 6px; padding: 1px 8px; font-size: 11px; background: var(--bg-tertiary); }
+.onto-pager { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
 .onto-table {
   width: 100%; border-collapse: collapse; font-size: 12.5px;
   th, td { border-bottom: 1px solid var(--onto-border); text-align: left; padding: 7px 8px; vertical-align: top; }

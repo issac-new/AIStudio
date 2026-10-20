@@ -209,7 +209,7 @@ watch(
       @click="ide.toggleInterfaceMode()"
     >{{ ide.isWorkMode ? modeText.workShort : modeText.codingShort }}</button>
     <IdeDevTools />
-    <span v-if="slotOn('workspace')" class="ide-statusbar__item" :style="{ order: slotOrder('workspace') }" :title="root ?? ''">
+    <span v-if="slotOn('workspace')" class="ide-statusbar__item ide-statusbar__workspace" :style="{ order: slotOrder('workspace') }" :title="root ?? ''">
       {{ root ?? t('ide.workspaceDefault') }}
     </span>
 
@@ -343,17 +343,24 @@ watch(
   color: var(--text-muted);
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .ide-statusbar__item {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 1;
 
   &.is-running {
     color: var(--success-color, var(--success-color));
   }
 }
+
+/* 工作区路径常是长绝对路径：限宽并让位给右侧指标（2026-10-20 溢出修复） */
+.ide-statusbar__workspace { flex: 0 1 auto; max-width: 34vw; }
 
 /* 编程/工作模式 chip：编程=主色，工作=绿；点击切换（快捷键同源） */
 .ide-statusbar__mode {

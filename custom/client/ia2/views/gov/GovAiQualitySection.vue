@@ -44,7 +44,7 @@ watch(run, () => { if (run.value.trim()) void load() })
     </div>
     <p v-if="loadError" class="gq__error" data-testid="gq-error">{{ loadError }}</p>
 
-    <p v-if="!quality" class="gq__hint" data-testid="gq-empty">在页头「本轮运行」选择一轮，读取变异得分与重复率；证据在该轮 evidence/ 落盘后可查，未跑如实显示「未跑」。</p>
+    <p v-if="!quality" class="gq__hint" data-testid="gq-empty">还没有可读的运行记录——先在全流程推演完成一次运行；日常页只读最近一次推演。证据在该轮 evidence/ 落盘后可查，未跑如实显示「未跑」。</p>
     <div v-else class="gq__grid">
       <div
         v-for="c in cards"

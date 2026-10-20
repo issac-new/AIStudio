@@ -82,7 +82,7 @@ beforeEach(() => {
 })
 
 describe('IaSideNav — 左侧常驻导航', () => {
-  it('常用组五个入口 + 六阶段 + 整轮 + 专题 + 设置都在位', async () => {
+  it('常用组五个入口 + 六阶段 + 专题 + 设置都在位（推演已移出日常侧栏）', async () => {
     const { w } = await mountAt('/app/stage/build')
     expect(w.find('[data-testid="ia-side-nav"]').exists()).toBe(true)
     for (const id of ['journey', 'workbench', 'board', 'inbox', 'search']) {
@@ -91,11 +91,25 @@ describe('IaSideNav — 左侧常驻导航', () => {
     for (let n = 1; n <= 6; n++) {
       expect(w.find(`[data-testid="ia-side-nav-stage${n}"]`).exists(), `stage${n}`).toBe(true)
     }
-    expect(w.find('[data-testid="ia-side-nav-run"]').exists()).toBe(true)
+    // 2026-10-20 日常/推演拆分：日常侧栏不再出现「整轮」推演入口
+    expect(w.find('[data-testid="ia-side-nav-run"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ia-side-nav-back-daily"]').exists()).toBe(false)
     expect(w.find('[data-testid="ia-side-nav-settings"]').exists()).toBe(true)
     // 专题按 feature 门控：BPA/本体/技能治理默认开，评测默认关
     expect(w.find('[data-testid="ia-nav-island-bpa"]').exists()).toBe(true)
     expect(w.find('[data-testid="ia-nav-island-ontology"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('推演模式：只显示推演六签与返回日常，不出现日常阶段/专题', async () => {
+    const { w } = await mountAt('/app/sim')
+    expect(w.find('[data-testid="ia-side-nav-sim"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ia-side-nav-sim-ops"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ia-side-nav-back-daily"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ia-side-nav-journey"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ia-side-nav-stage1"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ia-nav-island-bpa"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ia-side-nav-settings"]').exists()).toBe(false)
     w.unmount()
   })
 

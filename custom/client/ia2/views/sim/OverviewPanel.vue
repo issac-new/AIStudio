@@ -179,7 +179,7 @@ function goSupervision(): void {
     </div>
 
     <!-- N1/N2：run 缺席=引导不造假；主端点失败=如实报错 -->
-    <p v-if="loadError" class="ov__error" data-testid="ov-error">{{ loadError }}</p>
+    <p v-if="loadError" class="ov__error" data-testid="ov-error" :title="loadError">运行数据暂不可用，请重新选择运行或稍后刷新。</p>
     <p v-else-if="!runState" class="ov__hint" data-testid="ov-guide">
       还没有选择运行记录——在页头下拉选择一次运行；页面数字全部来自实测。
     </p>
@@ -300,7 +300,7 @@ function goSupervision(): void {
           </table>
 
           <h4 class="ov__h ov__h--link" title="去⑤验收·交付健康看分支推送与催办口径" @click="router.push({ name: 'ia2.simDelivery', query: { run } })">交付物链路（14 件，自动核对）→</h4>
-          <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error">暂不可用：{{ deliverablesError }}</p>
+          <p v-if="deliverablesError" class="ov__hint" data-testid="ov-deliverables-error" :title="deliverablesError">交付物核对暂不可用（不影响运行状态）。</p>
           <ul v-else class="ov__dl" data-testid="ov-deliverables">
             <li
               v-for="(d, i) in deliverableChain"
@@ -321,7 +321,7 @@ function goSupervision(): void {
         <aside class="ov__side">
           <section class="ov__side-box" data-testid="ov-gates">
             <h4 class="ov__h">六道质量门</h4>
-            <p v-if="issuesError" class="ov__hint" data-testid="ov-gate-rejects-absent">打回计数缺席：{{ issuesError }}</p>
+            <p v-if="issuesError" class="ov__hint" data-testid="ov-gate-rejects-absent" :title="issuesError">打回记录暂不可用（不阻断质量门状态）。</p>
             <ul class="ov__gates">
               <li v-for="g in gateRows" :key="g.id" class="ov__gate ov__gate--link" :data-testid="`ov-gate-${g.id}`" title="查看质量门修复单（⑥治理·质量门记录）" @click="router.push({ name: 'ia2.governance' })">
                 <SimGateBadge :gate="g.id" :status="g.passed ? 'pass' : 'pending'" :first-pass="g.passed && g.rejectCount === 0" :reject-count="issuesError ? null : g.rejectCount" />

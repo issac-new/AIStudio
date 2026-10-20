@@ -11,6 +11,8 @@ import { resolveMentions, type MentionKind } from '../utils/mention-resolution'
 const chatStore = useChatStore()
 const ide = useIdeStore()
 const open = ref(false)
+/** 常驻会与主输入框形成第二个 composer（2026-10-20 走查实锤）；默认只留 @ 引用按钮 */
+const expanded = ref(false)
 const kind = ref<MentionKind>('file')
 const target = ref('')
 const staged = ref<Array<{ raw: string; kind: MentionKind }>>([])
@@ -58,13 +60,23 @@ function send(): void {
   void chatStore.sendMessage?.(text)
   staged.value = []
   draft.value = ''
+  expanded.value = false
 }
 
 const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw), draft.value].join(' ')))
 </script>
 
 <template>
-  <div class="ide-mention" data-testid="ide-mention-picker">
+  <div class="ide-mention" :class="{ 'ide-mention--expanded': expanded }" data-testid="ide-mention-picker">
+    <button
+      v-if="!expanded"
+      type="button"
+      class="ide-mention__at ide-mention__at--collapsed"
+      data-testid="ide-mention-open"
+      title="@ 引用（文件/会话/技能/插件/子代理/画板/Wiki）"
+      @click="expanded = true; open = true"
+    >@ 引用</button>
+    <template v-else>
     <div class="ide-mention__row">
       <button type="button" class="ide-mention__at" data-testid="ide-mention-open" :title="'@ 六源引用（file/session/skill/plugin/subagent/whiteboard）'" @click="open = !open">@</button>
       <input
@@ -106,6 +118,7 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
     <div v-if="preview.length" class="ide-mention__preview" data-testid="ide-mention-preview">
       {{ preview.length }} 条引用 · 引用源 {{ preview.filter((r) => r.resolved).length }} 可解析
     </div>
+    </template>
   </div>
 </template>
 
@@ -118,6 +131,11 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
   border: 1px solid var(--border-color); background: transparent; border-radius: 4px;
   width: 26px; height: 26px; cursor: pointer; font-weight: 600;
 }
+.ide-mention__at--collapsed {
+  width: auto; height: 24px; padding: 0 8px; font-size: 11px;
+  color: var(--text-muted); font-weight: 500;
+}
+.ide-mention__at--collapsed:hover { color: var(--primary-color); border-color: var(--primary-color); }
 .ide-mention__input:focus { border-color: var(--primary-color); outline: none; }
 .ide-mention__input {
   flex: 1; border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 10px;

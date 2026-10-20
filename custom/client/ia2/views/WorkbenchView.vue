@@ -726,7 +726,14 @@ async function onDeleteGroup(roomId: string): Promise<void> {
 .wb--lf { grid-template-columns: 18px minmax(320px, 1fr) 480px; }
 .wb--rf { grid-template-columns: 280px minmax(320px, 1fr) 18px; }
 .wb--lf.wb--rf { grid-template-columns: 18px minmax(320px, 1fr) 18px; }
-.wb__left, .wb__right, .wb__center { min-height: 0; position: relative; }
+.wb__left, .wb__right, .wb__center {
+  min-height: 0; position: relative;
+  display: flex; flex-direction: column;
+}
+/* 栏头 26px 占列高：子面板用 flex 吃剩余高度，height:100% 会顶穿底栏（2026-10-20 走查） */
+.wb__left > .flow-nav, .wb__right > .tdp { flex: 1 1 auto; height: auto; min-height: 0; }
+.wb__center { overflow: hidden; }
+.wb__center > .sc { flex: 1 1 auto; height: auto; min-height: 0; }
 
 /* R6 补充：栏控独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） */
 .wb__colhead {

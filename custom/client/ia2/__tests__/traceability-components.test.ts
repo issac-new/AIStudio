@@ -43,7 +43,7 @@ vi.mock('naive-ui', () => ({ NSpin: { template: '<div class="nspin-stub" />' } }
 // TasksView 的看板页签重组件打桩（import 链带上游 vite define + 重 store，装配接线在
 // ia-views.test 单独断言；本文件聚焦页签/预选/矩阵行为）
 vi.mock('@/custom/kanban/views/SwarmKanbanView.vue', () => ({
-  default: { template: '<div class="kanban-stub" />' },
+  default: { props: ['openTaskId', 'autoOpenCreate'], template: '<div class="kanban-stub" :data-open-task="openTaskId" />' },
 }))
 // 全链路追踪页签（2026-10-01）：RunTraceOverview 打桩（useKanbanTaskGraph 数据面
 // 与弹窗态链重；页签接线守门在此，面板实体由 cockpit 域测试覆盖）
@@ -302,7 +302,9 @@ describe('TasksView 页签与深链预选', () => {
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
     expect(kanbanState.filterStatus).toBe('blocked')
-    expect(kanbanState.searchQuery).toBe('t_42')
+    // 2026-10-20：?task= 不再写搜索框，改为把任务 ID 传给看板直接开抽屉
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.kanban-stub').attributes('data-open-task')).toBe('t_42')
     // board 3 签注册表（追溯/交付健康/运行观测已迁推演中心，页签位消失）
     expect(wrapper.findAll('.ia-tasks__tab')).toHaveLength(3)
     expect(wrapper.find('[data-testid="ia-tasks-tab-trace"]').exists()).toBe(false)

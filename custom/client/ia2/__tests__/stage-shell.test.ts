@@ -151,7 +151,7 @@ describe('StageShell — 单层页签', () => {
     expect(w.find('[data-testid="stg-preflight-run"]').exists()).toBe(true)
     await w.find('[data-testid="stg-preflight-run"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.sim')
+    expect(router.currentRoute.value.name).toBe('ia2.simOrchestration')
     w.unmount()
   })
 
