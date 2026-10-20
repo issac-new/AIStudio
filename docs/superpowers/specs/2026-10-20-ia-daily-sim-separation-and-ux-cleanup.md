@@ -168,3 +168,10 @@
 ## 决策记录（补批 2026-10-20 · 旧看板去重）
 
 - D-13：`/hermes/kanban` 旧版横向看板不再作为独立页面，保留 `hermes.kanban` 名称并重定向到 `/app/board`；主界面看板为唯一实现。
+
+## 验证账（补批 2026-10-20 · 终态）
+
+- `/hermes/kanban` 已重定向 `/app/board`；`route-whitelist` / `routes` / `ia-settings-sidebar` 32/32 通过。
+- 审计与变更页折叠后首屏约 3.5k 字符、50 行、4 个折叠区（默认 1 开）。
+- 评审治理探针报告的「打分」覆盖为折叠 `<details>` 内元素，截图不可见，判定为探针误报，不修。
+- `npm run build` 终态 rc=0；`verify-dist` 通过。
