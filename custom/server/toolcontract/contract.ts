@@ -43,6 +43,36 @@ export interface IdempotencyPolicy {
   keyFields?: string[]
 }
 
+/**
+ * 入参/出参契约：JSON Schema 子集（type/required/enum/min/max/properties）。
+ * 2026-10-21 三号调研落地（《Agent 架构设计 16》工具定义六字段 + 《AIP 工具
+ * 双重描述》——参数描述进上下文是零成本 In-context Learning）。可选字段：
+ * 旧契约不声明即不检查；声明后调用参数可被 validateToolCallArgs 机械校验。
+ */
+export interface ToolParamSchema {
+  type?: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean'
+  required?: string[]
+  enum?: string[]
+  properties?: Record<string, ToolParamSchema>
+  min?: number
+  max?: number
+  description?: string
+}
+
+/**
+ * 鉴权规则（2026-10-21）：sideEffect 之外的第三面——这个工具谁能调。
+ *   none            —— 无声明（现状等价：只靠执法门全局闸）
+ *   permission-tag  —— 须持有标签（对接审批域 scope / 本体 Action permissionTags）
+ *   approval-bound  —— 须绑定在途审批凭证（对齐 A2A 审批宽度语义）
+ */
+export interface ToolAuthRule {
+  mode: 'none' | 'permission-tag' | 'approval-bound'
+  /** permission-tag 模式：满足其一即可（OR 语义）。 */
+  tags?: string[]
+  /** approval-bound 模式：审批须覆盖的 scope（如 kanban:write）。 */
+  scope?: string
+}
+
 export interface ToolContract {
   /** 匹配模式：精确名，或以 * 结尾的前缀。 */
   match: string
@@ -54,10 +84,18 @@ export interface ToolContract {
   redactKeys: string[]
   /** 审计参数摘要的字符上限。 */
   maxArgSummaryChars: number
+  /** 入参契约（可选；声明即机械校验）。 */
+  inputSchema?: ToolParamSchema
+  /** 出参契约（可选；用于结果护栏与评测断言）。 */
+  outputSchema?: ToolParamSchema
+  /** 鉴权规则（可选；声明后执法门可按标签/审批凭证二次校验）。 */
+  authRule?: ToolAuthRule
+  /** 工具级限速（每分钟最大调用数；缺省不限）。 */
+  rateLimitPerMinute?: number
 }
 
 /** 工具契约表版本：运行清单记录该值，回答“这次运行用的是哪版契约”。 */
-export const TOOL_CONTRACT_VERSION = '2026-10-18.1'
+export const TOOL_CONTRACT_VERSION = '2026-10-21.1'
 
 export const DEFAULT_TIMEOUT_MS = 60_000
 
@@ -155,7 +193,11 @@ export const BUILTIN_CONTRACTS: ToolContract[] = [
   readContract('skill_view'),
   readContract('session_search'),
   readContract('obs_recall'),
-  readContract('web_search', { timeoutMs: 30_000 }),
+  readContract('web_search', {
+    timeoutMs: 30_000,
+    rateLimitPerMinute: 20,
+    inputSchema: { type: 'object', required: ['query'], properties: { query: { type: 'string', description: '检索词' } } },
+  }),
   readContract('web_extract', { timeoutMs: 60_000 }),
   readContract('x_search', { timeoutMs: 30_000 }),
   readContract('feishu_doc_read'),
@@ -188,7 +230,11 @@ export const BUILTIN_CONTRACTS: ToolContract[] = [
   externalContract('desktop_*'),
   externalContract('drive_preview', { retry: NO_RETRY }),
   externalContract('cronjob_manage', { retry: NO_RETRY }),
-  externalContract('kanban_*', { timeoutMs: 60_000, idempotency: EXTERNAL_IDEMPOTENT }),
+  externalContract('kanban_*', {
+    timeoutMs: 60_000,
+    idempotency: EXTERNAL_IDEMPOTENT,
+    authRule: { mode: 'permission-tag', tags: ['kanban:write', 'sim:dispatch'] },
+  }),
   externalContract('react_to_message', { retry: NO_RETRY }),
   externalContract('setup_beat', { retry: NO_RETRY }),
   externalContract('focus_pane', { retry: NO_RETRY }),
@@ -329,8 +375,7 @@ export function computeBackoffMs({ attempt, retry, retryAfterMs, random = Math.r
   return Math.min(max, Math.max(0, Math.round(jittered)))
 }
 
-/** 稳定序列化：对象键排序、数组保序、深度/宽度有界。 */
-export function stableStringify(value: unknown, depth = 0): string {
+/** 稳定序列化：对象键排序、数组保序、深度/宽度有界。 */export function stableStringify(value: unknown, depth = 0): string {
   if (value === null || typeof value !== 'object') {
     if (typeof value === 'string') return JSON.stringify(value)
     if (typeof value === 'number' || typeof value === 'boolean') return String(value)
@@ -452,6 +497,104 @@ export function computeIdempotencyKey(input: IdempotencyKeyInput): string {
   }
   const material = `${input.tool}\n${input.userId ?? ''}\n${stableStringify(args)}\n${window}`
   return sha1(material).slice(0, 24)
+}
+
+// ---- 入参契约校验与鉴权判定（2026-10-21 三号调研落地） ----
+
+export interface SchemaIssue {
+  /** 违规字段的 JSON 路径（根= args）。 */
+  path: string
+  rule: 'type' | 'required' | 'enum' | 'min' | 'max'
+  detail: string
+}
+
+function jsTypeOf(v: unknown): string {
+  if (Array.isArray(v)) return 'array'
+  if (v === null) return 'null'
+  return typeof v
+}
+
+function schemaTypeOk(value: unknown, want: NonNullable<ToolParamSchema['type']>): boolean {
+  const got = jsTypeOf(value)
+  switch (want) {
+    case 'integer': return got === 'number' && Number.isInteger(value)
+    case 'number': return got === 'number'
+    default: return got === want
+  }
+}
+
+/** JSON Schema 子集求值器：type/required/enum/min/max/properties（嵌套限深 6）。 */
+export function validateAgainstSchema(value: unknown, schema: ToolParamSchema, path = 'args', depth = 0): SchemaIssue[] {
+  const issues: SchemaIssue[] = []
+  if (depth > 6) return issues
+  if (schema.type && !schemaTypeOk(value, schema.type)) {
+    issues.push({ path, rule: 'type', detail: `期望 ${schema.type}，实际 ${jsTypeOf(value)}` })
+    return issues
+  }
+  if (Array.isArray(schema.enum) && schema.enum.length) {
+    const hit = schema.enum.includes(String(value))
+    if (!hit) issues.push({ path, rule: 'enum', detail: `取值不在枚举内：${String(value)}` })
+  }
+  if (typeof value === 'number') {
+    if (schema.min !== undefined && value < schema.min) issues.push({ path, rule: 'min', detail: `${value} < min ${schema.min}` })
+    if (schema.max !== undefined && value > schema.max) issues.push({ path, rule: 'max', detail: `${value} > max ${schema.max}` })
+  }
+  if (schema.required?.length && value && typeof value === 'object' && !Array.isArray(value)) {
+    const obj = value as Record<string, unknown>
+    for (const key of schema.required) {
+      if (obj[key] === undefined) issues.push({ path, rule: 'required', detail: `缺少必填字段 ${key}` })
+    }
+  }
+  if (schema.properties && value && typeof value === 'object' && !Array.isArray(value)) {
+    const obj = value as Record<string, unknown>
+    for (const [key, sub] of Object.entries(schema.properties)) {
+      if (obj[key] === undefined) continue
+      issues.push(...validateAgainstSchema(obj[key], sub, `${path}.${key}`, depth + 1))
+    }
+  }
+  return issues
+}
+
+export interface ToolCallValidation {
+  tool: string
+  /** 无契约声明或零违规 = true。 */
+  ok: boolean
+  issues: SchemaIssue[]
+  contract: ToolContract
+}
+
+/** 工具调用参数面机械校验：契约未声明 schema = 不检查（如实放行）。 */
+export function validateToolCallArgs(tool: string, args: unknown): ToolCallValidation {
+  const contract = resolveToolContract(tool)
+  if (!contract.inputSchema) return { tool, ok: true, issues: [], contract }
+  const issues = validateAgainstSchema(args, contract.inputSchema)
+  return { tool, ok: issues.length === 0, issues, contract }
+}
+
+export interface ToolAuthzContext {
+  /** 调用方持有的权限标签（审批域 scope / 本体 Action permissionTags 并集）。 */
+  tags?: string[]
+  /** 在途审批凭证覆盖的 scope（approval-bound 模式消费）。 */
+  approvalScopes?: string[]
+}
+
+export type ToolAuthzDecision =
+  | { allowed: true; basis: 'no-rule' | 'tag' | 'approval' }
+  | { allowed: false; reason: 'missing-tag' | 'missing-approval'; need: string[] }
+
+/** 鉴权规则判定（纯函数；执法门/工具管线消费）。无声明=放行（向后兼容）。 */
+export function authzAllowed(contract: ToolContract, ctx: ToolAuthzContext): ToolAuthzDecision {
+  const rule = contract.authRule
+  if (!rule || rule.mode === 'none') return { allowed: true, basis: 'no-rule' }
+  if (rule.mode === 'permission-tag') {
+    const need = rule.tags ?? []
+    const have = new Set(ctx.tags ?? [])
+    if (need.some((t) => have.has(t))) return { allowed: true, basis: 'tag' }
+    return { allowed: false, reason: 'missing-tag', need }
+  }
+  const scope = rule.scope ?? ''
+  if ((ctx.approvalScopes ?? []).includes(scope)) return { allowed: true, basis: 'approval' }
+  return { allowed: false, reason: 'missing-approval', need: scope ? [scope] : [] }
 }
 
 export interface CallSignatureObservation {

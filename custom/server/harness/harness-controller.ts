@@ -33,6 +33,9 @@ import { planResume } from '../resume/resume-planner'
 import { collectProcessQuality } from '../observability/process-quality'
 import { collectObsSignals } from '../obssignals/collect'
 import { collectObsAlerts } from '../obsalerts/collect'
+import { CallgateRegistry } from '../callgate/callgate'
+import { ledgerPathForDisplay, listEntries, registerEntry } from '../taskledger/taskledger-store'
+import { summarizeLedger } from '../taskledger/taskledger'
 import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, type BudgetAction } from '../tokenbudget/budget-policy'
 import { listLeases, registerLease, startSandboxJanitorIfEnabled, sweepExpiredLeases } from '../sandbox/sandbox-lease'
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
@@ -41,6 +44,9 @@ import { workbenchRoutes } from './workbench/controller'
 import { simLaunchRoutes } from './sim-launch'
 
 const router = new Router({ prefix: '/api/harness' })
+
+// 调用闸注册表（进程内单例；观测面只读，执法接线后续轮启用）
+const callgateRegistry = new CallgateRegistry()
 
 // Harness² 改进实验台（2026-10-19）：提案-探测-组合-冠军闭环，复用本路由前缀，
 // 不新增 bootstrap patch。子路由自带写面权限校验（super_admin）。
@@ -281,6 +287,56 @@ router.get('/obs-signals', async (ctx) => {
 router.get('/obs-alerts', async (ctx) => {
   try {
     ctx.body = collectObsAlerts(daysOf(ctx.query.days))
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 统一任务生命周期账本（2026-10-21 三号调研）：五源（kanban/a2a/pipeline/
+// matrix/mention）状态映射到统一生命周期后的只读投影；登记走 POST。
+router.get('/taskledger', async (ctx) => {
+  try {
+    const source = typeof ctx.query.source === 'string' ? ctx.query.source : undefined
+    const lifecycle = typeof ctx.query.lifecycle === 'string' ? ctx.query.lifecycle : undefined
+    const entries = listEntries({ source, lifecycle } as Parameters<typeof listEntries>[0])
+    ctx.body = { ok: true, summary: summarizeLedger(entries), entries, store: ledgerPathForDisplay() }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+router.post('/taskledger', async (ctx) => {
+  if (writeDenied(ctx)) return
+  try {
+    const body = (ctx.request.body ?? {}) as Record<string, unknown>
+    const result = registerEntry({
+      source: body.source as Parameters<typeof registerEntry>[0]['source'],
+      sourceKey: String(body.sourceKey ?? ''),
+      externalStatus: String(body.externalStatus ?? ''),
+      title: typeof body.title === 'string' ? body.title : undefined,
+      assignee: typeof body.assignee === 'string' ? body.assignee : undefined,
+      parentInstructionId: typeof body.parentInstructionId === 'string' ? body.parentInstructionId : undefined,
+      instructionId: typeof body.instructionId === 'string' ? body.instructionId : undefined,
+    })
+    if (!result.ok) {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: [result.problem] }
+      return
+    }
+    ctx.body = { ok: true, entry: result.entry, transition: result.transition }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// LLM/MCP 调用闸（2026-10-21 三号调研）：限流/熔断/排队状态快照（只读；
+// 执法接线由调用方消费 callgate 域后启用，此处先给观测面）。
+router.get('/callgate', async (ctx) => {
+  try {
+    ctx.body = { ok: true, statuses: callgateRegistry.listStatuses() }
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
