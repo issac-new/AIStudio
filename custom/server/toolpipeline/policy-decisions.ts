@@ -10,6 +10,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { GENESIS, chainHashOfEntry, verifyForwardChain, type ChainVerifyResult } from '../auditchain/forward-chain'
 
 export interface PolicyDecisionEntry {
   ts: number
@@ -27,6 +28,9 @@ export interface PolicyDecisionEntry {
   risk?: 'low' | 'medium' | 'high'
   /** 拒绝原因摘要（≤200 字符）。 */
   reason?: string
+  /** 前向链字段（2026-10-21 AGT 吸收轮 B）：升级前落账的旧条目无此二字段（unchained）。 */
+  prevHash?: string
+  hash?: string
 }
 
 const DAY_CAP = 5000
@@ -77,14 +81,58 @@ function capDayFile(file: string): void {
   } catch { /* 裁剪失败继续追加 */ }
 }
 
-/** 追加一条执法决策（fail-soft）。测试环境未显式指定目录时不写（避免污染真实 home）。 */
+/** 追加一条执法决策（fail-soft）。测试环境未显式指定目录时不写（避免污染真实 home）。
+ *  2026-10-21 AGT 吸收轮 B：写入即入前向 hash 链（当日文件末条链哈希为 prev）；
+ *  日轮转/留存清理/当日裁剪造成的断锚在校验面如实标 anchor_dangling，不算篡改。 */
+const lastChainHashByFile = new Map<string, string>()
+
+function lastChainHash(file: string): string {
+  const cached = lastChainHashByFile.get(file)
+  if (cached) return cached
+  const lastHashOfLines = (lines: string[]): string | null => {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        const e = JSON.parse(lines[i]) as PolicyDecisionEntry
+        if (e.hash) return e.hash
+      } catch { /* 坏行向前继续找 */ }
+    }
+    return null
+  }
+  try {
+    if (existsSync(file)) {
+      const hit = lastHashOfLines(readFileSync(file, 'utf8').split('\n').filter(Boolean))
+      if (hit) return hit
+    }
+    // 本文件无链（新的一天）：从更早的日文件末条续链——跨日连续，不留日界缝隙。
+    const dir = policyDecisionDir()
+    const curName = file.split('/').pop() ?? ''
+    if (existsSync(dir)) {
+      const earlier = readdirSync(dir)
+        .filter((n) => /^policy-decisions-\d{4}-\d{2}-\d{2}\.jsonl$/.test(n) && n < curName)
+        .sort()
+      for (let i = earlier.length - 1; i >= 0; i--) {
+        try {
+          const hit = lastHashOfLines(readFileSync(join(dir, earlier[i]), 'utf8').split('\n').filter(Boolean))
+          if (hit) return hit
+        } catch { /* 单文件失败继续向前 */ }
+      }
+    }
+    return GENESIS
+  } catch {
+    return GENESIS
+  }
+}
+
 export function appendPolicyDecision(entry: Omit<PolicyDecisionEntry, 'ts'> & { ts?: number }): void {
   if (process.env.NODE_ENV === 'test' && !process.env.POLICY_DECISION_DIR) return
   try {
     mkdirSync(policyDecisionDir(), { recursive: true, mode: 0o700 })
     const file = decisionFile(entry.ts ?? Date.now())
     const full: PolicyDecisionEntry = { ts: entry.ts ?? Date.now(), ...entry }
+    full.prevHash = lastChainHash(file)
+    full.hash = chainHashOfEntry(full)
     appendFileSync(file, JSON.stringify(full) + '\n', { mode: 0o600 })
+    lastChainHashByFile.set(file, full.hash)
     if (Math.random() < 1 / 200) prune()
     capDayFile(file)
   } catch {
@@ -176,4 +224,49 @@ export function policyDecisionWriteFailures(): number {
 /** 测试隔离。 */
 export function _usePolicyDecisionDirForTests(dir: string): void {
   process.env.POLICY_DECISION_DIR = dir
+  lastChainHashByFile.clear()
+}
+
+export interface PolicyChainVerification extends ChainVerifyResult {
+  files: string[]
+  /** 异常条目明细（前 50 条，防大账爆响应）。 */
+  anomalies: Array<{ index: number; status: string; note?: string; ts?: number; tool?: string; rule?: string }>
+  at: number
+}
+
+/** 校验执法决策账前向链（按天文件时间序拼接，跨日连续）。
+ *  改写历史/删除中插/伪造追加在断点现形；日轮转/留存/裁剪断锚如实标 anchor_dangling。 */
+export function verifyPolicyDecisionChain(query: { days?: number } = {}, now = Date.now()): PolicyChainVerification {
+  const days = Math.min(90, Math.max(1, Math.round(query.days ?? 14)))
+  const cutoffDay = dayStamp(now - days * 86_400_000)
+  const files: string[] = []
+  const entries: PolicyDecisionEntry[] = []
+  try {
+    const dir = policyDecisionDir()
+    if (existsSync(dir)) {
+      for (const name of readdirSync(dir).sort()) {
+        if (!/^policy-decisions-\d{4}-\d{2}-\d{2}\.jsonl$/.test(name)) continue
+        if (name.slice(17, 27) < cutoffDay) continue
+        files.push(name)
+        try {
+          for (const line of readFileSync(join(dir, name), 'utf8').split('\n')) {
+            if (!line) continue
+            try {
+              const entry = JSON.parse(line) as PolicyDecisionEntry
+              if (typeof entry?.ts === 'number') entries.push(entry)
+            } catch { /* 坏行跳过（校验面不因坏行中断） */ }
+          }
+        } catch { /* 单文件失败跳过 */ }
+      }
+    }
+  } catch { /* 目录不可读按空账 */ }
+  const result = verifyForwardChain(entries)
+  const anomalies = result.checks
+    .filter((c) => c.status !== 'chained_ok')
+    .slice(0, 50)
+    .map((c) => {
+      const e = entries[c.index]
+      return { index: c.index, status: c.status, note: c.note, ts: e?.ts, tool: e?.tool, rule: e?.rule }
+    })
+  return { ...result, files, anomalies, at: now }
 }

@@ -7,6 +7,8 @@
 
 import type { ClusterSnapshot } from './collectors'
 import { collectGateway, collectProfiles, collectProfileToolUsage, collectSessionTelemetry, collectSessions } from './collectors'
+import { collectProcessScan } from './process-scan'
+import { collectMcpDrift } from '../mcpcatalog/mcp-drift'
 import { anomalyKey, convergenceEnabled, type ConvergenceItem, type ConvergenceReport, ConvergenceTracker } from './convergence'
 import { detectAll, type Anomaly } from './detectors'
 import { routeHintForDetector } from './route-hint'
@@ -601,6 +603,12 @@ export class ClusterInspector {
       if (this.deps.getDeliveryBranchIntel) {
         try { deliveryBranchIntel = await this.deps.getDeliveryBranchIntel() } catch { deliveryBranchIntel = [] }
       }
+      // 进程扫描面（AGT 吸收轮 C）：ps 子进程采集，失败=合法空态
+      let processScan: ClusterSnapshot['processScan']
+      try { processScan = await collectProcessScan(this.deps) } catch { processScan = undefined }
+      // MCP/插件漂移面（AGT 吸收轮 D）：只读比对，无基线=合法空态
+      let mcpDrift: ClusterSnapshot['mcpDrift']
+      try { mcpDrift = collectMcpDrift(this.deps) } catch { mcpDrift = undefined }
       const snap: ClusterSnapshot = {
         ts: t0,
         gateway: await collectGateway(this.deps),
@@ -624,6 +632,8 @@ export class ClusterInspector {
         toolUsage: (() => {
           try { return collectProfileToolUsage(this.deps) } catch { return undefined }
         })(),
+        processScan,
+        mcpDrift,
       }
       this.lastSnapshot = snap
       // dispatcher 僵死滞留计时（run19 根治）：ready 队列首次非空记起点，持续非空
