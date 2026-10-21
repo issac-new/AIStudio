@@ -886,12 +886,12 @@ Electron 桌面壳（可选）
 
 ## 8、决策台账（用户指令与裁决总账）
 
-> 本章是「用户发送的决策记录和指令」的总账。分三部分：140 条一次性决策（§8.2）、30 条常设原则（§8.3）、27 次对 AI 做法的纠正（§8.4）；129 为原档案件表行实数，另 11 条补录（5 条自原正本 22 行时间线，锚 git c28e8dd5；2026-10-21 补录 6 条：可见性口径 1 条、R3 晚批 3 条、R4 FIBO 2 条）。此前文档口径 108 条系研究代理的合并计数，以表行为准。引号内文字均为源文件原话照抄，无润色；无原话的标「转述」。
+> 本章是「用户发送的决策记录和指令」的总账。分三部分：146 条一次性决策（§8.2）、30 条常设原则（§8.3）、27 次对 AI 做法的纠正（§8.4）；129 为原档案件表行实数，另 17 条补录（5 条自原正本 22 行时间线，锚 git c28e8dd5；2026-10-21 补录 12 条：可见性口径 1、R3 晚批 3、R4 FIBO 2、R5 缺口区间实证 6）。此前文档口径 108 条系研究代理的合并计数，以表行为准。引号内文字均为源文件原话照抄，无润色；无原话的标「转述」。
 
 ### 8.1 决策记录的记载体系（四级）
 
 ①spec 的「## 决策记录」节（84 份 spec 含该节，表格式与编号列表式两种形态；越晚的 spec 越倾向同时给出否决的备选方案——决策=选择+反选择都留痕）；②方案正本的纪律条款（每条带「V8.xx，日期 用户裁定」版本锚，只增不改）；③AI 持久记忆（feedback-* 类文件存原话、情境、Why/How，网状互引）；④规则文件（AGENTS.md/CLAUDE.md 立法条目带事故日期注）。冲突时以需求冻结件与正本为准。spec-first 门禁要求决策记录节随分支提交（L2 pre-commit），--no-verify 被列为否选项，逃生门使用须如实落痕。
-### 8.2 用户决策总表（140 条，按日期升序）
+### 8.2 用户决策总表（146 条，按日期升序）
 
 列：日期｜决策（原话加引号，余为转述）｜类型｜推翻了什么／落地去向｜锚点。
 
@@ -901,6 +901,12 @@ Electron 桌面壳（可选）
 | 06-22 | swarm kanban 与原生看板解耦，独立新路由 | IA | patch 028 归档 | decouple-kanban:104-108 |
 | 06-22 | Threads 迁移采 C 档全面对齐 | 架构 | 消除三态魔法值 | threads-migration:26 |
 | 06-24 | 「所有原页面可编辑可配置项都要」+「除文件上传外保持草稿批量提交」 | 产品 | 草稿/即时双通道模型 | cockpit-workitem-kanban-migration:18-19 |
+| 07-01 | 渗透测试 11 项修复中，VULN-02（Matrix 提权）「经用户确认本机单用户场景保留 super_admin，不修复」 | 治理 | 10 修 1 保留 | 提交 4806e3c6 |
+| 07-11 | Loop Engineering 立项（GitHub issue #1）：个人/团队/SaaS「三层全要」+「预留扩展」→ State Store 一次抽象、全层共用 | 产品 | 循环工程能力起点；SwarmStudio 1.5 | loop-engineering-design:5,28,124 |
+| 08-27 | （转述）终端支持三类编码工具，优先顺序「claude code > codex > deepseek harness」 | 产品 | cockpit 终端多工具 + PATH 探测端点 | cockpit-terminal-multi-tool:11 |
+| 09-09 | loop graph 重构范围：图中心全面重构 + 可视化编排器（分期交付） | 架构 | AI 协作中心重构获批 | loop-graph-aihub-redesign:14-18 |
+| 09-09 | 状态存储策略：append-only 执行事件日志为唯一事实源；Matrix/PG 适配器降级为投影 | 架构 | 事件日志单一事实源 | 同上 :18 |
+| 09-09 | UI 骨架：信息架构从零重排（六区域导航，取代三栏驾驶舱） | IA | 六区域导航 | 同上 :18 |
 | 09-10 | R1 每日 Brief Matrix 投递「使用本机配置的登录身份」 | 架构 | patch 202 | loop-graph-p2-ledger:79 |
 | 09-11 | 旧 cockpit 与 IA 2.0 并行共存，回退窗口不关闭 | IA | 推翻退役计划 | loop-graph-p2-ledger:254 |
 | 09-14 | 「Loop Graph 页面菜单太多，整合为一个页面，以动态循环生长图为核心」 | IA | 多页面形态 | loop-cockpit-single-page:7 |
@@ -1113,7 +1119,11 @@ Electron 桌面壳（可选）
 **工作方式线**：四个反复强化的主题。一是说人话：四次反馈后升为全局规则，形成汇报、巡检、决策清单的分层沟通体系。二是闭环实证：三档验收锚，配测试未绿禁提交与机械门禁。三是协作纪律：worktree 立法、禁自动 push、撞车分工，均由多会话并行事故倒逼。四是文档纪律：终稿化、一事实一源、多格式一致、对账总表。用户介入方式从早期单点裁定，演进为后期「原则立法+机械门禁」。
 ### 8.6 统计
 
-140 条按月分布：6 月 4 条、9 月 20 条、10 月 116 条（含合并轮自原正本 22 行表补录 5 条、2026-10-21 补录 6 条）。10-15（治理收口日）15 条为全程最高峰；10-16/17/18 各 11-12 条。按类型：IA/界面约 30、产品方向约 27、推演纪律约 16、工作方式约 14、工程规则约 14、治理原则约 8。被推翻的既有决策/做法 27 处，其中方法论级推翻（拆闸/任务归因/程序越界/边裁边补/设计定稿/撞车抢树）6 处。84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21 当日实测含决策记录节（含「## 二、决策记录」等编号节形态）的业务 spec 共 20 份（不计本档与三域合一正本）：agent-governance-toolkit-research、backlog-closure、context-insights、fibo-official-reference-enhancement、fibo-ontology-calibration、fibo-ontology-studio-alignment、fibo-product-rollout-plan、fibo-ssot-merge、governance-surface-closure、ia-projection、ide-devtools-zcode-dsh、logout-entry-fix、secaudit-pipeline-and-eval-judging-discipline、sequence-guard、sim-visibility、tool-policy-engine、ycode-environment-recovery、zcode-3161-baseline-upgrade、zcode-context-trend、zcode-usage-ledger。84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21 当日 R3 实测含决策记录节（含「## 二、决策记录」等编号节形态）的 spec 共 10 份（不计本档）：ycode-environment-recovery、ia-projection、zcode-3161、sim-visibility、logout-entry-fix、ide-devtools-zcode-dsh、tool-policy-engine、zcode-usage-ledger、backlog-closure、governance-surface-closure。
+146 条按月分布：6 月 4 条、7 月 2 条、8 月 1 条、9 月 23 条、10 月 116 条（含合并轮自原正本 22 行表补录 5 条、2026-10-21 补录 12 条）。10-15（治理收口日）15 条为全程最高峰；10-16/17/18 各 11-12 条。按类型：IA/界面约 31、产品方向约 29、推演纪律约 16、工作方式约 14、工程规则约 14、治理原则约 9。被推翻的既有决策/做法 27 处，其中方法论级推翻（拆闸/任务归因/程序越界/边裁边补/设计定稿/撞车抢树）6 处。
+
+**来源覆盖声明（2026-10-21 R5 补录）**：06-25 至 09-08 一段曾在本表显示为空。查实原因：当时只认 spec 里的「用户原话/裁定」字样，而该段多数裁决发生在会话中、未落文档。本轮按一手证据补回 6 条：07-01 渗透测试保留项（提交 4806e3c6）、07-11 Loop Engineering 立项与三层范围（issue #1 + spec:28,124）、08-27 终端多工具优先顺序（spec:11）、09-09 loop graph 三个方向决策（spec §0.1）。该段仍可能有未落文档的裁决。本表只收可反查条目，不把「无记录」写成「无决策」。要完整补录需要会话记录，当前仓库内不可得。
+
+84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21 当日实测含决策记录节（含「## 二、决策记录」等编号节形态）的业务 spec 共 20 份（不计本档与三域合一正本）：agent-governance-toolkit-research、backlog-closure、context-insights、fibo-official-reference-enhancement、fibo-ontology-calibration、fibo-ontology-studio-alignment、fibo-product-rollout-plan、fibo-ssot-merge、governance-surface-closure、ia-projection、ide-devtools-zcode-dsh、logout-entry-fix、secaudit-pipeline-and-eval-judging-discipline、sequence-guard、sim-visibility、tool-policy-engine、ycode-environment-recovery、zcode-3161-baseline-upgrade、zcode-context-trend、zcode-usage-ledger。
 
 ---
 ### 8.7 贯穿性裁决
@@ -1254,6 +1264,10 @@ Electron 桌面壳（可选）
 | 06-23 | 驾驶舱去 mock 接看板真数据（patch 078/079） | 2026-06-23-cockpit-kanban-integration-design.md:39-59 |
 | 06-27 | 可观测性落地分析（对照 OpenRath）；RunTraceView L1/L2/L3 证据分层 | 2026-06-27-observability-landing-analysis.md:22；run-trace-view-design.md:56-65 |
 | 07-11 | Loop Engineering：五阶段循环+三层 State Store+三路验证 | 2026-07-11-loop-engineering-design.md:14 |
+| 07-12 | SwarmStudio 1.5 发布：Loop Engineering 个人/团队/SaaS 三层落地 | 提交 57c30b89；2026-07-12-loop-engineering-phase2-3.md |
+| 07-23 | Loop/Graph 合并为统一「循环工程」入口；Graph Engineering 多节点有向图 | 提交 ccf4e62e、acf51891 |
+| 08-27 | cockpit 终端多工具（Claude Code > Codex > DeepSeek Harness） | 2026-08-27-cockpit-terminal-multi-tool-design.md:11；提交 3b14abf8 |
+| 08-28 | SwarmStudio 2.9 发布（hermes-agent v0.20）；PTY 泄漏 P0 事故修复 | 提交 ff5c9ebd、d0523a64 |
 | 09-09/10 | loop graph 重构获批（图中心+事件日志唯一事实源）；P0-P2 收口 | 2026-09-09-loop-graph-aihub-redesign-design.md:14-22；loop-graph-p2-ledger.md:11 |
 | 09-14/15/16 | 单页驾驶舱（用户裁决）→3D 本体→壳+四场景（用户六项裁决） | loop-cockpit-single-page-design.md:7；loop-mind-3d-ontology-plan.md:12-17；loop-graph-multiview-design.md:9-20 |
 | 09-18 | 分布式交付网络（六阶段六门）；Matrix Fleet 多用户部署 v2 | distributed-delivery-network-design.md:50-62；matrix-fleet-deploy-design.md:33-37 |
@@ -1740,6 +1754,7 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 | D5 | 版本基线随合并刷新：zcode 补丁 7→8 条、源码基线 3.15.1→3.16.1、安装版 3.16.2；决策总账计数改用表行实数 134 条 | 并行会话 2026-10-21 基线升级已合 main（b52ebc65）；原「108 条」为研究代理合并计数，与表行不符 | 沿用旧数（否决：合并稿核实日即今日） | 是 |
 | D6 | R3 增量吸收不改写既有行：已闭环缺口保留原编号并标注闭环态；计数随表行刷新（135→138）；无用户原话的调研驱动轮（策略引擎/用量账本）入 §7/§14-15 演进史、不入 §8.2 用户决策表 | 历史可追溯；§8.2 语义=用户决策，无锚点不造行 | 重写 §9.3 全表（否决：丢历史）；调研轮硬塞用户表（否决：无原话即编造） | 是 |
 | D7 | R4 只补不重写：FIBO/安全审计/上下文趋势三条线的用户原话进 §8.2（138→140），文章吸收轮进 §7/§14；三域合一正本独立成篇并在 §0.1/附录 C 挂链接 | 合一正本跨三域，塞进本档会让产品正本变杂物间（U1）；本档仍是产品面细则正本 | 把合一正本并入本档（否决：跨域污染）；不挂链接（否决：读者找不到总纲） | 是 |
+| D8 | R5 只补有锚点的缺口区间条目（+6，140→146），并在 §8.6 增加来源覆盖声明 | 用户指出 06-24 至 09-10 断档不实：该段确有裁决，只是多数未落文档；补 07-01/07-11/08-27/09-09 可反查条目，同时把「无记录」与「无决策」区分开 | 只用会话记忆补满（否决：无锚点即编造）；只加声明不补行（否决：用户指出的空带仍在） | 是 |
 
 ---
 
@@ -1751,5 +1766,6 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 | 2026-10-21 | 合并 R2 | 整合合并轮：并入《设计复盘档案件》全卷（§7 吸收全卷/§8 决策总账 134 条/§11-15 演进史/附录 D-E）；落地交叉审读勘误 5 处；决策计数改表行实数；刷新 zcode 基线（8 补丁/3.16.1/3.16.2）；档案件独立文件删除（git 留档 3e26b6c2） | 用户指令「整合合并两份设计文档」 |
 | 2026-10-21 | 同步 R3 | 吸收合并后五轮：登出修复／ide-devtools 可打开／工具策略引擎／zcode 用量账本／遗留清偿批。§8.2 +3 行至 138 条；§9.1-9.4 状态刷新（治理面/404/导演分流/G5-UAT 四缺口闭环、run22 改在途）；§7/§14/§15 追加两调研轮与晚批史实（收口时并入同日 AGT 吸收轮索引，3e496140）；附录 B +2 路由、附录 C +10 spec、附录 D 数字复测（specs 230/全量 5574） | 用户指令「更新台账、决策记录、设计文档等」 |
 | 2026-10-21 | 同步 R4 | 吸收 R4 晚批：FIBO 单一事实源+产品化+官方参照、安全审计六阶段、评测判分纪律、上下文趋势 Ph2。§8.2 +2 行至 140 条；§4.9 本体岛/FIBO、§9.1 交付表+5 行、§9.2 验证账 R4 段；§7.3 +2 轮、§7.7 +2 行；§14.5 +2 机制段；附录 C +6 spec 与三域合一正本、附录 D 数字复测（specs 241） | 用户指令「再次更新，并整合 swarm studio、swarm yuan skill、hermes agent teams 等台账/决策/设计，形成一份整体文档」 |
+| 2026-10-21 | 补录 R5 | 用户指出 06-24 至 09-10 决策断档不实：按一手证据补 6 条（07-01 保留 super_admin、07-11 Loop Engineering 立项、08-27 终端多工具、09-09 三方向决策），表行 140→146；§8.6 增来源覆盖声明（区分「无记录」与「无决策」）；§11.1 补 07-12/07-23/08-27/08-28 四个事件；清理 §8.6 重复段 | 用户实报「6.24-9.10 之间的决策记录怎么是空的 这个不对」 |
 
 > **维护规则**：本档是全景汇编，不替代专题 spec。新增专题 spec 时，若改变产品形态/IA/机制结论，同步更新本档对应章与 §8 决策台账（新史实追加 §11-15 与附录 D）；纯实现细节不回写本档。
