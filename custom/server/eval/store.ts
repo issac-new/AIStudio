@@ -148,8 +148,28 @@ function validateAssertion(a: unknown, i: number, problems: string[]): void {
       if (it.s0.stopwords !== undefined && (!Array.isArray(it.s0.stopwords) || it.s0.stopwords.some((w) => typeof w !== 'string'))) {
         problems.push(`断言 #${i} s0.similarity.stopwords 须为字符串数组（[] = 关闭停用词清洁）`)
       }
+    } else if (it.s0.kind === 'required_tools') {
+      if (!Array.isArray(it.s0.tools) || it.s0.tools.length === 0) problems.push(`断言 #${i} s0.required_tools.tools 须为非空数组`)
+      else if (it.s0.tools.some((t) => typeof t !== 'string' || !t.trim())) problems.push(`断言 #${i} s0.required_tools.tools 每项须为非空工具名`)
+    } else if (it.s0.kind === 'no_loop') {
+      const allowed = it.s0.allowedConsecutive
+      if (allowed !== undefined
+        && (typeof allowed !== 'number' || !Number.isInteger(allowed) || allowed < 1)) {
+        problems.push(`断言 #${i} s0.no_loop.allowedConsecutive 须为 ≥1 的整数`)
+      }
+    } else if (it.s0.kind === 'redundant_ratio') {
+      if (typeof it.s0.max !== 'number' || !Number.isFinite(it.s0.max) || it.s0.max < 0 || it.s0.max > 1) {
+        problems.push(`断言 #${i} s0.redundant_ratio.max 须为 0~1`)
+      }
     } else {
-      problems.push(`断言 #${i} s0.kind 须为 regex/threshold/similarity`)
+      problems.push(`断言 #${i} s0.kind 须为 regex/threshold/similarity/required_tools/no_loop/redundant_ratio`)
+    }
+  }
+  if (it?.anchor !== undefined) {
+    if (!it.anchor || typeof it.anchor !== 'object'
+      || typeof it.anchor.yes !== 'string' || !it.anchor.yes.trim()
+      || typeof it.anchor.no !== 'string' || !it.anchor.no.trim()) {
+      problems.push(`断言 #${i} anchor 须为 { yes: 非空字符串, no: 非空字符串 }`)
     }
   }
 }

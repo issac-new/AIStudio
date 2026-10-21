@@ -162,6 +162,26 @@ describe('发现项与收敛', () => {
     expect(stale.finding.deferred).toBe(false)
   })
 
+  it('发现者不得验证自己的发现（自证拒绝，对抗性验证硬约束）', () => {
+    const added = must(addFinding(open(), {
+      file: 'packages/server/src/feature.ts', line: 7, body: '危险写法', severity: 'important', evidence: 'lint output',
+      author: 'hunter-1', authorKind: 'agent',
+    }, policy))
+    const selfVote = verifyFinding(added.case, added.finding.findingId, 'confirm', 'hunter-1', 'agent')
+    expect(selfVote.ok).toBe(false)
+    if (!selfVote.ok) expect(selfVote.code).toBe('self_verification_forbidden')
+
+    // 另一验证者可以投票；无名作者（author 未登记）不构成自证，允许投票
+    const otherVote = must(verifyFinding(added.case, added.finding.findingId, 'confirm', 'verifier-9', 'agent'))
+    expect(otherVote.finding.verifications).toHaveLength(1)
+
+    const anon = must(addFinding(open(), {
+      file: 'packages/server/src/feature.ts', line: 9, body: '无名发现', severity: 'important', evidence: 'log',
+    }, policy))
+    expect(anon.finding.author).toBeUndefined()
+    expect(must(verifyFinding(anon.case, anon.finding.findingId, 'confirm', 'anyone', 'agent')).finding.verifications).toHaveLength(1)
+  })
+
   it('重要发现需独立验证确认才阻塞；人类作者直接视为确认', () => {
     const agent = must(addFinding(open(), {
       file: 'packages/server/src/feature.ts', line: 3, body: '越界', severity: 'important', evidence: 'test log',

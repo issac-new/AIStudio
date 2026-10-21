@@ -73,7 +73,46 @@ export interface S0SimilarityRule {
   stopwords?: string[]
 }
 
-export type S0Rule = S0RegexRule | S0ThresholdRule | S0SimilarityRule
+/**
+ * S0 轨迹规则：必需工具全部出现（工具调用正确性维度）。
+ * 与 expectedToolCalls 的区别——后者算序列相似度（连续量），本规则给确定性的二值门。
+ */
+export interface S0RequiredToolsRule {
+  kind: 'required_tools'
+  tools: string[]
+}
+
+/**
+ * S0 死循环规则：连续相同动作签名（工具名+参数指纹）超过 allowedConsecutive 次即判循环。
+ * 默认 1=允许出现一次，连续第二次起算死循环（对应文章"认知死锁"检测）。
+ */
+export interface S0NoLoopRule {
+  kind: 'no_loop'
+  allowedConsecutive?: number
+}
+
+/** S0 冗余步规则：同一动作签名重复出现的步数占比上限（0~1）。 */
+export interface S0RedundantRatioRule {
+  kind: 'redundant_ratio'
+  max: number
+}
+
+export type S0Rule =
+  | S0RegexRule
+  | S0ThresholdRule
+  | S0SimilarityRule
+  | S0RequiredToolsRule
+  | S0NoLoopRule
+  | S0RedundantRatioRule
+
+/**
+ * 行为锚点（OpenAI Evals 教科书 Rubric 四要素之二）：为"成立/不成立"各写一条
+ * 可观测判据。只进判定问句，不进期望答案——锚点是判据，不是答案。
+ */
+export interface AssertionAnchor {
+  yes: string
+  no: string
+}
 
 /** 二元断言。expect=期望答案；risk 断言（红线）expect 必须为 'no'（坏事不应发生），实测 value='yes' 即命中红线。 */
 export interface RubricAssertion {
@@ -83,6 +122,8 @@ export interface RubricAssertion {
   kind: AssertionKind
   /** 链路六环节归属（可选；标注后聚合按环节分段出独立通过率）。 */
   link?: EvalLink
+  /** 行为锚点（可选；给裁判可观测的成立/不成立判据，抑制"看起来像"的宽松判定）。 */
+  anchor?: AssertionAnchor
   s0?: S0Rule
 }
 
@@ -167,6 +208,12 @@ export interface AttemptVerdict {
   source: VerdictSource
   /** S0 与 S1/人工结论相反：进仲裁（人工裁决 + Rubric Loop），value 保守取 unknown。 */
   conflict?: boolean
+  /**
+   * 偏差检验判为不稳定：参照答案移除后同题结论翻转 → 保守取 unknown。
+   * 与 conflict 分开记——一个是双源矛盾，一个是单源内部不稳。
+   */
+  unstable?: boolean
+  instability?: 'reference_leak'
   /** S1 判定概率（noul P(yes)），留痕供校准分析。 */
   p?: number
   /**
@@ -196,6 +243,35 @@ export interface ToolCallRecord {
   name: string
   ok: boolean
   durationMs?: number
+  /**
+   * 参数指纹（工具参数规范化后的短哈希）。死循环/冗余步判定按"同名同参"，
+   * 只有工具名会把"连续两次合法的同名调用"误判成循环。trace 未带参数时缺席。
+   */
+  argsSig?: string
+}
+
+/** 轨迹纪律读数（文章轨迹评估三维之二的确定性口径：死循环与冗余步）。 */
+export interface TrajectoryDiscipline {
+  /** 有工具调用记录的 attempt 数（分母；无工具调用=未测，不参与）。 */
+  attemptsAnalyzed: number
+  /** 含死循环的 attempt 数。 */
+  loopAttempts: number
+  /** 循环内的多余调用数（每次连续段长度-1 之和）。 */
+  loopCallCount: number
+  /** 冗余率=重复出现过的动作签名步数/总步数；无分析样本时 null。 */
+  redundantRatio: number | null
+  /** 全 run 内最长连续相同签名长度（1=无连续重复）。 */
+  maxConsecutiveRepeat: number
+}
+
+/** 判分稳定性读数（参照答案锚定检验：移除 expected_behavior 后结论是否翻转）。 */
+export interface JudgeStability {
+  /** 参与检验的断言判词数。 */
+  checked: number
+  /** 翻转数（首轮 yes/no → 次轮相反）。 */
+  flips: number
+  /** 翻转率；checked=0 时 null。 */
+  flipRate: number | null
 }
 
 export interface Attempt {
@@ -206,7 +282,15 @@ export interface Attempt {
   outcome?: { verifier: string; ok: boolean; detail?: string }
   efficiency?: AttemptEfficiency
   toolCalls?: ToolCallRecord[]
-  judgeMeta?: { backend: string; latencyMs: number | null; cached: boolean; online: boolean; models?: string[] }
+  judgeMeta?: {
+    backend: string
+    latencyMs: number | null
+    cached: boolean
+    online: boolean
+    models?: string[]
+    /** 参照答案锚定检验读数（仅显式开启时记录）。 */
+    referenceLeak?: { checked: number; flips: number; ids: string[] }
+  }
   passed?: boolean
   judgedAt?: number
 }
@@ -256,6 +340,10 @@ export interface RunAggregates {
   }
   /** 六维度量分面（信通院《云上 Agent 基准度量模型》）：未采集维 value=null 立账不造数。 */
   sixDimensions?: import('./metrics').SixDimensionRow[]
+  /** 轨迹纪律（死循环/冗余步）：无工具调用证据时缺省，不造 0 分。 */
+  trajectoryDiscipline?: TrajectoryDiscipline
+  /** 判分稳定性（参照答案锚定检验）：未开启检验时缺省。 */
+  judgeStability?: JudgeStability
   /** 发布门禁（腾讯启示⑦：上线就绪从主观判断转成可机械执行的 gate）；证据缺口项如实 no_data。 */
   releaseGate?: import('./releaseGate').ReleaseGateSummary
   /**

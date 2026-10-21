@@ -12,6 +12,7 @@ import { join } from 'path'
 import { estimateCost } from '../tokens/pricing'
 import { aggregateRun } from './aggregate'
 import { judgeAttempt, type JudgeDeps } from './judge'
+import { sha1Of } from './clef'
 import { runOutcomeCheck, type OutcomeRunContext } from './outcome'
 import { appendRun, getSet, getSetRevision, sealedAttemptCount } from './store'
 import type { Attempt, Evidence, EvalConfig, EvalRun, ToolCallRecord } from './types'
@@ -137,6 +138,8 @@ export function evidenceFromTraceLines(lines: TraceLine[]): Evidence {
         name: line.tool_name ?? 'unknown',
         ok: !line.error_message && line.status !== 'error' && line.outcome !== 'error',
         ...(typeof line.duration_ms === 'number' ? { durationMs: line.duration_ms } : {}),
+        // 参数指纹：死循环/冗余步按"同名同参"判定（无参数时留给签名退化为工具名）
+        ...(args ? { argsSig: sha1Of(args).slice(0, 12) } : {}),
       })
     } else if (line.kind === 'subagent_span') {
       parts.push(`[subagent] ${stringifyFragment(line.summary ?? line.status, 120)}`)
@@ -195,6 +198,8 @@ export interface ReplayRunInput {
   samples: Record<string, SampleInput[]>
   target?: EvalRun['target']
   crossValidate?: boolean
+  /** 参照答案锚定检验（成本翻倍；争议题/新集首轮建议开）。 */
+  referenceLeakCheck?: boolean
   note?: string
   actor?: string
   /** 同卷复评：按该版本快照判分（缺省=当前集）。 */
@@ -265,7 +270,10 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
     for (let i = 0; i < samples.length; i += 1) {
       const sample = samples[i]
       const evidence: Evidence = sample.evidence ?? (sample.sessionId ? await evidenceProvider(sample.sessionId) : {})
-      const judged = await judgeAttempt(task, evidence, deps.judge, { crossValidate: input.crossValidate })
+      const judged = await judgeAttempt(task, evidence, deps.judge, {
+        crossValidate: input.crossValidate,
+        referenceLeakCheck: input.referenceLeakCheck,
+      })
       const attempt: Attempt = {
         taskId: task.id,
         sampleIdx: i + 1,

@@ -56,6 +56,8 @@ export const STAGE_TABS: Readonly<Record<StageNo, readonly StageTabMeta[]>> = {
     { key: 'issues', zh: '问题清单', en: 'Issues', component: 'issues' },
     // 2026-10-21 AGT 吸收轮：治理姿态对账 + 审计链防篡改 + MCP 漂移 + 紧急停止
     { key: 'posture', zh: '治理姿态', en: 'Governance posture', component: 'posture' },
+    // 2026-10-21 Cloudflare security-audit-skill 吸收轮：覆盖账本/三态裁决/独立复核
+    { key: 'secAudit', zh: '安全审计', en: 'Security audit', component: 'secAudit' },
     { key: 'audit', zh: '审计与变更', en: 'Audit & changes', component: 'audit' },
     // 2026-10-19 评审治理批：风险分档/收敛规则/度量熔断（Anthropic Code Review 文章吸收）
     { key: 'reviewGov', zh: '评审治理', en: 'Review governance', component: 'reviewGov' },
