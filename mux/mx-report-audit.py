@@ -948,7 +948,7 @@ if STATE.exists():
             _state[_k.strip()] = _v.strip().strip('"').strip("'")
 _evals_f = EVID / 'evals' / 'eval-summary.json'
 if not _evals_f.exists():
-    (_fails if _v846 else warns).append(
+    (fails if _v846 else warns).append(
         '查15 评测摘要缺席（evidence/evals/eval-summary.json）——G4-E 未接线或未运行；'
         'run22 起为接线缺口，不得以「G4 已过」代替评测子门证据'
     )
@@ -983,7 +983,7 @@ else:
 # 快照缺席=run22 起接线缺口（FAIL）；端点失败=如实缺口（WARN）；报告必须带「证据九」。
 _closure_sum = EVID / 'governance-closure' / 'summary.json'
 if not _closure_sum.exists():
-    (_fails if _v846 else warns).append(
+    (fails if _v846 else warns).append(
         '查16 治理结果快照缺席（evidence/governance-closure/summary.json）——'
         '评审治理/观测告警/改进实验/发布门与 UAT 台账未采集；run22 起为接线缺口'
     )
