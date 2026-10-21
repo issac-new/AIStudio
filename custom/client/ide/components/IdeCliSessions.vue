@@ -501,6 +501,8 @@ onMounted(() => { void Promise.all([load(), loadUsage()]) })
 .ide-cli-sessions__bill {
   border: 1px solid var(--border-color); border-radius: 8px;
   padding: 8px 10px; background: var(--bg-secondary, transparent); font-size: 11.5px;
+  /* 侧栏窄容器：宽表（逐轮用量 8 列）横向滚动而非裁列 */
+  overflow-x: auto;
 }
 .ide-cli-sessions__bill-head {
   display: flex; align-items: baseline; gap: 8px; margin: 2px 0 6px;
