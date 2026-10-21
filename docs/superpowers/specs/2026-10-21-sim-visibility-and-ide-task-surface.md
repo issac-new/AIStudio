@@ -83,7 +83,9 @@
 - IDE 全目录回归：118 文件 / 720 用例全绿（含 `scss-syntax-guard`、`sidepane-tabs-i18n`）。
 - `domain-split` 3/3 通过；未新增跨域导入。
 - `vue-tsc --noEmit` 仍报既有 alias 解析基线错误（`@/api/client`、`@/stores/hermes/chat` 等，存量文件同族）；本轮新增模块未出现可区分的业务类型错误。
-- 未跑全量 `npm test` / `npm run build`、未做登录态浏览器走查：主工作树有 zcode 3.16.1 在途换装，避免并发构建/注入互踩；合并前按仓库规则补跑并补 UI 走查。
+- 全量 `npm test`（worktree，778 文件）：5525 通过 / 29 跳过 / 2 负载敏感超时（`engine-round5`、`raci-visibility`）；4 个失败文件单跑 48/48 全绿，无本轮新增失败。
+- 未跑 `npm run build`、未做登录态浏览器走查：主工作树有 zcode 3.16.2 在途换装，避免共享 dist/注入互踩；合并前建议补构建与 UI 走查。
+- 分支已 rebase 到 main `a5a54ff2`（设计文档单一正本合并轮）后复跑定向测试，仍 40/40。
 
 ## 五、不做（挂账）
 
@@ -91,4 +93,4 @@
 - harness 房间标记 / 独立观察员账号 / 独立 homeserver（D6，跨仓）。
 - 导演台 Matrix 发送（D5）。
 - IDE 内完整 Matrix 客户端（入口仍在工作台房间画布）。
-- 全量 `npm test` / `npm run build`：并行会话在途时默认不做，避免与换装/注入互踩；合并前按仓库规则补跑。
+- `npm run build` 与登录态浏览器走查：本轮未做（共享 dist 与在途换装风险）；合并前建议补。
