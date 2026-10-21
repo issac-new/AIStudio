@@ -13,6 +13,8 @@
 | D2 | 登出语义逐行复刻原 SidebarAccountControls.handleLogout | 清主题背景缓存→设 `hermes_manual_logout` 闸门（防网关自动登录拉回）→`localStorage.clear()`→整页重载回登录页；不发明新语义 |
 | D3 | 文案用既有词表键 `sidebar.logout`（零新增 i18n） | 键在上游词表长期在档（中=退出登录）；与组件「直书文案仅限品牌名」的既定规约一致 |
 | D4 | 守门测试断言渲染恒在+闸门+凭据清空；重载副作用不入单测 | jsdom 的 `location.reload` 不可 spy（non-configurable）；语义核心是闸门与凭据，重载只是落地动作 |
+| D5 | `entry.mts` 的 devAutoLogin 补同一手动登出闸门（2026-10-21 活体复盘追加） | 活体实锤：dev 垫片自动登录不查闸门，登出→重载 2s 内即被以 admin/dev-bootstrap 复活（Storage 原型侦查抓到 `/src/main.ts:96`（实为 entry.mts 垫片，经 vite alias 服务）栈迹写入令牌），D2 的闸门被绕过、登出形同虚设。闸门契约与 LoginView C2 自动登录一致：手动登录成功即清标记，新开标签页不受影响 |
+| D6 | D5 守门测试用源码行序断言（闸门检查须在登录 fetch 之前），挂在 entry-boot-order.test.ts | entry.mts 是重型启动模块（起 app/i18n/router），单测直接 import 会连带装载全链；本仓已有读源码钉时序的守门先例（同文件上方冷启动时序守门） |
 
 ## 验证
 
