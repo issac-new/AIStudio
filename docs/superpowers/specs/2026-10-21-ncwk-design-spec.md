@@ -417,6 +417,10 @@ diagram-export×3；cua×5；tool-waterfall×1；IDE 超时；Matrix 分享房�
 
 ---
 
+## 变更快照（2026-10-21 挂账清偿轮）
+
+五批全清（spec 正本 `2026-10-21-trace-reflow-debt-clearing.md`）：A 评审 Minor；B OTel 可消费+探测器单一事实源（controllers/hermes/trace 反向复用并修 trailer 死分支）；C exec-sandbox（darwin sandbox-exec/linux bwrap、HERMES_EXEC_SANDBOX=off 策略、写白名单 realpath 归一）+ qgate `sandbox:true` 档 fail-closed；D secaudit 12→15 面（repo 密钥/依赖声明/危险 API 只读采集器，漏洞判定指向在线门不造数）；E 8647 换装至 72a7ee4d（ts-node 全量编译即换装证据；两次抓出 main 坏提交：import.meta TS1343、release-hold 漏 import）。仍挂账：红队沙箱攻防接线（需执行型载荷）、obssignels 聚合消费 OTel（观测域）。
+
 ## 决策记录
 
 | # | 决策 | 理由 | 否决的备选 | 可逆 |
@@ -426,6 +430,7 @@ diagram-export×3；cua×5；tool-waterfall×1；IDE 超时；Matrix 分享房�
 | S3 | 原混合正本改导航页 | 避免三份并存 | 删除（否决：链接断裂） | 是 |
 | S4 | 附录 A-D 归设计正本引用 | 索引与教训服务维护者 | 产品文档挂索引（否决：读者错位） | 是 |
 | S5 | 设计正本保留历史复盘与决策 | 设计判断需要来路 | 拆第三份历史档（否决：三份并存） | 是 |
+| S6 | 生产失败回流轮挂账全清（2026-10-21 五批）：评审 Minor×5、OTel 采样/转题/复判+格式探测器收敛 trace-sampler、OS 级沙箱执行（exec-sandbox 归 qgate 域+command 沙箱档 fail-closed）、代码仓审计面（secaudit 15 面 repo 三采集器）、8647 换装（顺带热修并行会话 release-hold 漏 import 坏提交） | 用户指令「完成所有待办/挂账」；证据纪律优先不造引擎 | 造 SAST/造第二套 OTel 探测器/沙箱降级裸跑（均否决） | 是 |
 
 ## 文档变更记录
 
