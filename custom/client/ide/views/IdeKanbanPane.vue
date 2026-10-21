@@ -19,6 +19,7 @@ const router = useRouter()
 const overview = useIdeKanbanOverview()
 const boardFilter = ref('all')
 const loadError = ref('')
+const loadErrorDetail = ref('')
 const loading = ref(false)
 const view = ref<BoardView>('board')
 
@@ -71,8 +72,10 @@ async function load(): Promise<void> {
   try {
     await overview.refresh(true)
     loadError.value = ''
+    loadErrorDetail.value = ''
   } catch (err) {
-    loadError.value = err instanceof Error ? err.message : String(err)
+    loadErrorDetail.value = err instanceof Error ? err.message : String(err)
+    loadError.value = '看板任务暂不可用；点刷新重试。'
   } finally {
     loading.value = false
   }
@@ -173,7 +176,7 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
       >{{ board.name || board.slug }}<span class="ide-kanban__boardn">{{ boardCount(board.slug) }}</span></button>
     </div>
 
-    <p v-if="loadError" class="ide-kanban__error" data-testid="ide-kanban-error">{{ loadError }}</p>
+    <p v-if="loadError" class="ide-kanban__error" data-testid="ide-kanban-error" :title="loadErrorDetail">{{ loadError }}</p>
     <p v-else-if="!loading && !tasks.length" class="ui-empty-state ui-empty-state--compact" data-testid="ide-kanban-empty">{{ boardText.empty }}</p>
 
     <!-- board：列桶 -->
