@@ -27,10 +27,19 @@
 | D5 | ctxarchive 不并入 context 页签 | 21 页签整合时已裁定档案是知识组定位；互链足够 |
 | D6 | P1/P2/P3 走 A 类（custom/），P4 才动 patches（673+） | patch 面最小化；改上游行为必须走 patches 的规则 |
 | D7 | 参照仓 `upstream/dsh-context` 只读，语义对齐以其实测代码为准（audit 报告 2026-10-21） | spec 引用的 fold/口径细节见审计记录，不再复述 |
+| D8 | P2 趋势用 CSS 堆叠条带，不引 echarts（原计划 echarts，实施时改） | 页签体积/主题一致性/jsdom 可测；dsh 用 canvas 属其框架惯例 |
+| D9 | P4 会话卡用 token 迷你条不做组成环（原计划环，实施时收敛） | 环需逐会话 fold 消息，12 卡 N 次 fold 不值；环留 P5 Context Browser 一并做 |
+| D10 | P4 会话卡端点挂 /api/ide/usage-insights/sessions（patch 484 既有路由），patch 673 仅 UsageView 两行挂载 | patch 面最小化 |
 
 ## 验证
 
 - 组件：`npx vitest run custom/client/ide/__tests__/`（新 pane 用例：分区渲染/无遥测失败态/互链 testid；mock `../api/usage` 与 auth-fetch）
-- 服务端：`npx vitest run custom/server/tokens/__tests__/`（fold 序列正确性/压缩对齐/空会话 fail-soft）；新增服务端模块跑 `npm run typecheck:harness`
+- 服务端：`npx vitest run custom/server/tokens/__tests__/`（fold 序列正确性/压缩对齐/空会话 fail-soft）；新增服务端模块跑 `npm run typecheck:harness`（新模块已登记进脚本清单）
 - UI 走查：`npm run dev`（8649）浏览器验证 context 页签金路径 + 无遥测/无压缩/大会话三边缘态（默认热更新验证，不装机）
-- 合并前 `npm test`；P4 patch 跑 `npm run inject` 确认全 series 干净应用
+- 合并前 `npm test`；P4 patch 跑 `npm run inject` 确认全 series 干净应用（673 已 `git apply --check` 实测通过）
+
+## 实施记录（2026-10-21）
+
+- P1-P4 全部落地于 `feat/context-insights` worktree（overlay/.claude/worktrees/context-insights）
+- 分支提交：P1+P2 / P3 / P4 三笔；测试：ide pane 10 用例、server fold/控制器 25 用例、governance 5 用例、守门更新（21→22 签 ×3 处）
+- 实施中修复：fold run 边界收口时序 bug（当前消息先入桶再收口导致柱含下轮首条）；fleet BFS 环死循环（visited 集合）——均有测试锚定

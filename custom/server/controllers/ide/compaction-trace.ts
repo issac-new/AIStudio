@@ -150,4 +150,48 @@ router.get('/fleet/:sessionId', (ctx) => {
   }
 })
 
+router.get('/usage-insights/sessions', (ctx) => {
+  const dbPath = resolveStudioDb()
+  if (!existsSync(dbPath)) {
+    ctx.body = { ok: true, available: false, reason: 'db-unavailable' }
+    return
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { DatabaseSync } = require('node:sqlite')
+    const db = new DatabaseSync(dbPath, { readOnly: true })
+    const rows = db.prepare(
+      `SELECT id, title, agent, model, parent_session_id, message_count, tool_call_count,
+              input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
+              estimated_cost_usd, actual_cost_usd, last_active, is_archived
+       FROM sessions ORDER BY last_active DESC LIMIT 12`,
+    ).all() as Array<Record<string, unknown>>
+    db.close()
+    const cards = rows.map(r => {
+      const input = Number(r.input_tokens ?? 0)
+      const cacheRead = Number(r.cache_read_tokens ?? 0)
+      const cacheWrite = Number(r.cache_write_tokens ?? 0)
+      const denom = input + cacheRead + cacheWrite
+      return {
+        sessionId: String(r.id),
+        title: typeof r.title === 'string' && r.title ? r.title : String(r.id).slice(0, 12),
+        agent: String(r.agent ?? ''),
+        model: String(r.model ?? ''),
+        hasParent: typeof r.parent_session_id === 'string' && r.parent_session_id !== '',
+        messageCount: Number(r.message_count ?? 0),
+        toolCallCount: Number(r.tool_call_count ?? 0),
+        billedTokens: input + Number(r.output_tokens ?? 0) + cacheRead + cacheWrite,
+        cacheHitPercent: denom > 0 ? Math.round((cacheRead / denom) * 100) : null,
+        costUsd: typeof r.actual_cost_usd === 'number' ? r.actual_cost_usd : Number(r.estimated_cost_usd ?? 0),
+        lastActive: Number(r.last_active ?? 0),
+        isArchived: r.is_archived === 1,
+      }
+    })
+    ctx.body = { ok: true, available: true, cards }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+  }
+})
+
 export default router
