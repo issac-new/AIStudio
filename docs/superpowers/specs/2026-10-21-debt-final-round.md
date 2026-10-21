@@ -30,7 +30,11 @@
 4. exec-runs 不落库——每次真执行代价高且结果即时，无回归对比语义；文本红队 run 的落账不变。
 5. 载荷族固定四条不做成变异引擎——执行型攻击的活性验证要确定性可复现；变异扩展留后续。
 
-## 4. 验证
+## 4. 位置修正（真服换装抓出）
+
+- exec-sandbox 单一事实源从 qgate 包挪回 `custom/server/sandbox/exec-sandbox.ts`：qgate 包 `"type":"module"` 使包内 .ts 在 Node 语义为 ESM，server ts-node(CJS) require 跨包即 ERR_REQUIRE_ESM；custom/server/package.json 无 type 字段（CJS）是 server 域一直可被 require 的原因。qgate command executor 改 `createRequire` 动态探测加载（独立部署无宿主树→unavailable fail-closed，摘要注明）；类型用手写最小接口不经 `import type`（避免包外文件进 rootDir 编译面，TS6059）。
+
+## 5. 验证
 
 - F：collect.test 重写 OTel 用例（行级转换入聚 + 端到端聚合计数）11/11。
 - G：exec-probe.test 分类纯函数四例 + fail-closed + 真沙箱跑（写探针真落盘、pipe-exec 命中、裸 rm 如实 escaped）6/6；HTTP 端点禁用 503/可用 200（eval-baidu-http 8/8）。

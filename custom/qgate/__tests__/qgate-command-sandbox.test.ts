@@ -6,7 +6,8 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runCommandExecutor } from '../src/executors/command.js'
-import { detectSandboxSupport } from '../src/executors/exec-sandbox.js'
+// exec-sandbox 已挪至 server 树（单一事实源；见 debt-final spec §4）——测试直引该路径
+import { detectSandboxSupport } from '../../server/sandbox/exec-sandbox'
 import type { ExecutorSpec } from '../src/core/types.js'
 
 const scratch = mkdtempSync(join(tmpdir(), 'qgate-sandbox-'))

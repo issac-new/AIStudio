@@ -11,7 +11,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { s0Detect } from './detector'
-import { detectSandboxSupport, runSandboxed, type SandboxRunResult } from '../../qgate/src/executors/exec-sandbox'
+import { detectSandboxSupport, runSandboxed, type SandboxRunResult } from '../sandbox/exec-sandbox'
 
 export interface ExecPayload {
   id: string
