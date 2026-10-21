@@ -83,9 +83,121 @@ function parseRows(raw: string): TraceLine[] {
   return rows
 }
 
+// ── OTel 格式（单一事实源：controllers/hermes/trace 与本域共用同一谓词与转换）──
+
+export interface OTelSpan {
+  traceId: string
+  spanId: string
+  parentSpanId?: string | null
+  name: string
+  kind: string
+  startTime: number
+  endTime?: number
+  durationMs?: number
+  attributes?: Record<string, unknown>
+  status?: { code: string; message?: string }
+  otelFormat?: true
+  isTrailer?: boolean
+}
+
+/** 严格谓词：必须有 otelFormat 标志且 traceId/spanId 为字符串（裸 spanId 行不算 OTel）。 */
+export function isOTelSpanRow(row: unknown): row is OTelSpan {
+  return Boolean(
+    row
+    && (row as { otelFormat?: unknown }).otelFormat === true
+    && typeof (row as { traceId?: unknown }).traceId === 'string'
+    && typeof (row as { spanId?: unknown }).spanId === 'string',
+  )
+}
+
+function usToMs(us: number): number {
+  return Math.floor(us / 1000)
+}
+
+/** OTel span → legacy header/chunk/trailer 行（GenAI semconv 口径，agentscope 扩展键兼容）。 */
+export type LegacyRow = { type: string } & Record<string, unknown>
+export function otelRowToLegacy(span: OTelSpan): LegacyRow {
+  const attrs = span.attributes || {}
+  const sessionId = (attrs['gen_ai.conversation.id'] as string) || (attrs['agentscope.session.id'] as string) || span.traceId
+  const startedAtMs = usToMs(span.startTime)
+  const endedAtMs = span.endTime ? usToMs(span.endTime) : undefined
+  const opName = attrs['gen_ai.operation.name'] as string | undefined
+
+  if (span.isTrailer) {
+    return {
+      type: 'trailer',
+      session_id: sessionId,
+      ended_at: startedAtMs,
+      duration_ms: span.durationMs || 0,
+      outcome: attrs['agentscope.session.outcome'] as string | undefined,
+      error: span.status?.message,
+    }
+  }
+
+  if (opName === 'invoke_agent' && span.kind === 'SERVER' && !span.parentSpanId) {
+    return {
+      type: 'header',
+      version: '1.0.0',
+      session_id: sessionId,
+      started_at: startedAtMs,
+      model: attrs['gen_ai.request.model'] as string | undefined,
+      provider: attrs['gen_ai.provider.name'] as string | undefined,
+      source: 'hermes-agent',
+    }
+  }
+
+  if (opName === 'chat') {
+    const usage = attrs['gen_ai.usage.input_tokens'] !== undefined
+      ? { input_tokens: attrs['gen_ai.usage.input_tokens'] as number, output_tokens: attrs['gen_ai.usage.output_tokens'] as number }
+      : undefined
+    return {
+      type: 'chunk',
+      kind: 'llm_span',
+      phase: endedAtMs ? 'post' : 'pre',
+      session_id: sessionId,
+      api_request_id: span.spanId,
+      started_at: startedAtMs,
+      ended_at: endedAtMs,
+      duration_ms: span.durationMs,
+      usage,
+    }
+  }
+
+  if (opName === 'execute_tool') {
+    return {
+      type: 'chunk',
+      kind: 'tool_span',
+      session_id: sessionId,
+      tool_call_id: (attrs['gen_ai.tool.call.id'] as string) || span.spanId,
+      tool_name: attrs['gen_ai.tool.name'] as string | undefined,
+      args: attrs['gen_ai.tool.call.arguments'],
+      result: attrs['gen_ai.tool.call.result'],
+      duration_ms: span.durationMs,
+      status: span.status?.code === 'ERROR' ? 'error' : (endedAtMs ? 'ok' : undefined),
+      error_message: span.status?.message,
+    }
+  }
+
+  if (attrs['agentscope.subagent.label']) {
+    return {
+      type: 'chunk',
+      kind: 'subagent_span',
+      phase: endedAtMs ? 'stop' : 'start',
+      session_id: sessionId,
+      summary: attrs['agentscope.subagent.label'] as string,
+      started_at: startedAtMs,
+      ended_at: endedAtMs,
+      duration_ms: span.durationMs,
+      status: span.status?.code === 'ERROR' ? 'error' : (endedAtMs ? 'ok' : undefined),
+    }
+  }
+
+  return { type: 'chunk', kind: 'tool_span', session_id: sessionId, tool_call_id: span.spanId }
+}
+
 /**
  * 读取并检查 trace 文件。转题与 origin 复判共用这一事实源：
- * 路径不越界、hash 来自原始字节、legacy 完整性按 header/trailer 判定。
+ * 路径不越界、hash 来自原始字节、完整性按 header/trailer 判定（OTel 先转 legacy 投影再判）。
  */
 export function inspectTrace(sessionId: string, opts: { tracesDir?: string } = {}): TraceInspection {
   if (!safeSessionId(sessionId)) return { ok: false, sessionId, reason: 'sessionId 含非法字符' }
@@ -101,11 +213,13 @@ export function inspectTrace(sessionId: string, opts: { tracesDir?: string } = {
     }
     const bytes = readFileSync(target)
     const traceHash = createHash('sha256').update(bytes).digest('hex')
-    const rows = parseRows(bytes.toString('utf8'))
-    const hasLegacy = rows.some((row) => row.type === 'header' || row.type === 'chunk' || row.type === 'trailer')
-    const format: TraceFormat = rows.some((row) => row.otelFormat === true || (!row.type && ('traceId' in row || 'spanId' in row)))
-      ? 'otel'
-      : hasLegacy ? 'legacy' : 'unknown'
+    const rawRows = parseRows(bytes.toString('utf8'))
+    // OTel 文件：按严格谓词识别后整体转 legacy 投影（hash 仍锚原始字节）；
+    // 严格谓词防「裸 spanId 行」被判 OTel——与 controllers/hermes/trace 同一口径。
+    const otelRows = (rawRows as unknown[]).filter(isOTelSpanRow)
+    const hasLegacy = rawRows.some((row) => row.type === 'header' || row.type === 'chunk' || row.type === 'trailer')
+    const format: TraceFormat = otelRows.length > 0 ? 'otel' : hasLegacy ? 'legacy' : 'unknown'
+    const rows = format === 'otel' ? (otelRows.map(otelRowToLegacy) as unknown as TraceLine[]) : rawRows
     const header = rows.find((row) => row.type === 'header')
     const trailer = [...rows].reverse().find((row) => row.type === 'trailer')
     const complete = Boolean(

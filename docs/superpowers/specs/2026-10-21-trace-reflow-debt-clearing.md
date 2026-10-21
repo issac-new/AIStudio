@@ -47,3 +47,8 @@
 - 每批：新增 RED→GREEN 测试 + 相关域定向套件 + `typecheck:harness` + 全量 `npm test`。
 - 批次 C 在本机 darwin 做 `sandbox-exec` 真探测一次（能力真/假不编造）。
 - 批次 E（serve-main 换装 8647）在全部批次合入后执行，JWT 探活。
+
+## 5. 批次实录（随批追加）
+
+- 批次 A（9f79897→main f6eae313）：五件全落；全量 5826/0。
+- 批次 B：`isOTelSpanRow`/`otelRowToLegacy`/`LegacyRow` 落 trace-sampler；`inspectTrace` 对 OTel 整体转 legacy 投影（hash 锚原始字节）；trace-reflow/runner 放行 `otel` 只拒 `unknown`；controllers/hermes/trace 删本地实现改 import 并修 `converted.isTrailer` 恒假死分支（OTel trailer 曾落 chunks 致 meta 缺 ended/duration）；客户端 OTel 完整即可转题，unknown/未收尾禁用；文案同步。新增 `otel-sampler.test.ts` 六例。全量 5832/0、typecheck 0 错。
