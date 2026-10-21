@@ -15,6 +15,12 @@
  *
  * 总闸 HERMES_TOOL_ENFORCE=1 才生效（默认 0=零行为变化，对齐 toolresultguard
  * 先例）；内部任何异常 fail-open；每次拒绝发 govbus security/high 事件留痕。
+ *
+ * strict 可选姿态（2026-10-21 AGT 吸收轮 F，用户裁定「全做」）：HERMES_TOOL_ENFORCE_STRICT=1
+ * 时把失败语义翻转为 fail-closed——无任何策略配置 → 拒（strict-deny）；裁决面内部
+ * 异常 → 拒。默认不变（仍是 opt-in + fail-open，2026-10-16 整改方案 v2「零阻断
+ * 先预警」裁定原样保留）。对齐微软 Agent Governance Toolkit「策略没加载时默认
+ * allow 是假 governed」的批评：strict 是唯一能防住该静默失效的配置方式。
  */
 import { homedir } from 'os'
 import { join, resolve } from 'path'
@@ -57,6 +63,7 @@ export type EnforceRule =
   | 'mode-off'               // 全局模式矩阵判 OFF
   | 'mode-needs-approval'    // 全局模式矩阵判 RA（需审批，v1 无交互桥→拒并指引）
   | 'approval-passed'        // 审批桥放行（批单在案且未消费，consume-on-pass；applyApprovalBridge 终态）
+  | 'strict-deny'            // strict 模式无任何策略配置（deny-by-default；AGT 吸收轮 F）
   | 'sandbox-path'           // 显式路径超出沙箱根（P2-5）
   | 'sandbox-network'        // 浏览器 URL 被网络策略拒绝（P2-5）
   | 'budget-exceeded'        // 当日预算耗尽且策略动作为 block（残余项⑤）
@@ -204,6 +211,8 @@ export interface IdentityLite {
 
 export interface EnforceEnv {
   masterOn?: boolean
+  /** strict 姿态（HERMES_TOOL_ENFORCE_STRICT=1）：无配置/异常 → 拒。 */
+  strictOn?: boolean
   globalMode?: PermissionMode | null
   /** 会话档取值（v4 通道轮）：per-profile 会话权限档，优先于全局档、让位于阶梯。 */
   sessionModeOf?: (profileId?: string) => PermissionMode | null
@@ -394,6 +403,14 @@ export function evaluateEnforcement(
         ...policyMeta,
       }
     }
+    // strict（AGT 吸收轮 F）：开了总闸却无任何策略 = 假治理面，strict 下拒。
+    // 声明式策略已生效（policyActive）或身份白名单在执法时不算「无策略」，不误伤。
+    if (!identityEnforced && (env.strictOn ?? (process.env.HERMES_TOOL_ENFORCE_STRICT === '1'))) {
+      return {
+        enforcing: true, allow: false, rule: 'strict-deny',
+        error: 'strict 模式（HERMES_TOOL_ENFORCE_STRICT=1）：总闸已开但无任何策略配置（自治阶梯/权限模式/身份白名单/声明式策略均未配置）——deny-by-default，请配置策略或关闭 strict',
+      }
+    }
     return identityEnforced
       ? { enforcing: true, allow: true, rule: 'identity-pass' }
       : { enforcing: false, rule: 'no-config' }
@@ -542,10 +559,11 @@ function emitDenyEvent(tool: string, profileId: string | undefined, v: Extract<E
     .catch(() => { /* fail-soft */ })
 }
 
-/** 身份台账缓存（5s）：工具调用高频，不每次读盘；台账变更最多延迟 5s 生效。 */
+/** 身份台账缓存（5s）：工具调用高频，不每次读盘；台账变更最多延迟 5s 生效。
+ *  strict 开启时台账不可用按裁决异常处理（抛出→钩子层 fail-closed 拒）。 */
 let identityCache: { at: number; list: IdentityLite[] } | null = null
 
-async function identityOfUser(userId?: string): Promise<IdentityLite | null> {
+async function identityOfUser(userId?: string, strict = false): Promise<IdentityLite | null> {
   if (!userId) return null
   if (!identityCache || Date.now() - identityCache.at > 5_000) {
     try {
@@ -560,6 +578,7 @@ async function identityOfUser(userId?: string): Promise<IdentityLite | null> {
         })),
       }
     } catch {
+      if (strict) throw new Error('身份台账不可用（strict 模式按裁决异常处理）')
       return null // 台账不可用=不按身份执法（fail-open，与既有未配置语义一致）
     }
   }
@@ -596,8 +615,9 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
     }) {
       let verdict: EnforceVerdict
       let bridgeFacts: Awaited<ReturnType<typeof approvalBridgeFacts>> | null = null
+      const strictOn = process.env.HERMES_TOOL_ENFORCE_STRICT === '1'
       try {
-        const identity = await identityOfUser(context?.userId)
+        const identity = await identityOfUser(context?.userId, strictOn)
         let budgetBlocked = false
         if (process.env.HERMES_BUDGET_ENFORCE === '1') {
           try {
@@ -609,13 +629,19 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
           userId: context?.userId,
           identityOf: () => identity,
           budgetBlocked,
+          strictOn,
         })
         // 审批桥只对确认类裁决采事实（避免给硬边界/放行类挂单）
         if (verdict.enforcing && verdict.allow === false && APPROVAL_CLASS_RULES.has(verdict.rule)) {
           bridgeFacts = await approvalBridgeFacts(name, input, context?.profileId, verdict.rule, verdict.policyRuleId)
           verdict = applyApprovalBridge(verdict, bridgeFacts)
         }
-      } catch {
+      } catch (err) {
+        // strict（AGT 吸收轮 F）：裁决面异常 fail-closed 拒，不再无条件放行。
+        if (strictOn) {
+          const msg = err instanceof Error ? err.message : String(err)
+          return { allow: false as const, error: `执法面异常且 strict 模式开启（fail-closed）：${msg}` }
+        }
         return  // fail-open：裁决面异常不拦截（桥面异常在助手内吞——裁决仍拒，不因桥坏放行）
       }
       // ── 瀑布级挂起（H3 理想形态）：确认类+单在 pending+挂起开启 → 调用原地等待；

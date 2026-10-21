@@ -26,7 +26,8 @@ import { buildPrimitivesReport, collectPrimitiveCounts, type PrimitivesReport } 
 import { buildEvalLayers, collectEvalLayersInputs, type EvalLayersReport } from './eval-layers'
 import { collectRsiMaturity, type RsiMaturityReport } from './rsi-maturity'
 import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
-import { queryPolicyDecisions } from '../toolpipeline/policy-decisions'
+import { queryPolicyDecisions, verifyPolicyDecisionChain } from '../toolpipeline/policy-decisions'
+import { collectMcpDrift, snapshotMcpDrift } from '../mcpcatalog/mcp-drift'
 import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
 import { planResume } from '../resume/resume-planner'
 import { collectProcessQuality } from '../observability/process-quality'
@@ -176,6 +177,37 @@ router.get('/policy-decisions', async (ctx) => {
       outcome,
     })
     ctx.body = { ...result, ok: true }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 执法决策账前向链校验（AGT 吸收轮 B，2026-10-21）：防篡改对账——改写历史/
+// 删除中插/伪造追加在断点现形；日轮转/留存/裁剪断锚如实标 anchor_dangling。
+router.get('/policy-decisions/chain', async (ctx) => {
+  try {
+    ctx.body = { ok: true, ...verifyPolicyDecisionChain({ days: daysOf(ctx.query.days) }) }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// MCP/插件配置漂移（AGT 吸收轮 D，2026-10-21）：GET=与基线比对（只读）；
+// POST /mcp-drift/snapshot=显式落新基线（运维确认漂移合法后手动 rebase）。
+router.get('/mcp-drift', async (ctx) => {
+  try {
+    ctx.body = { ok: true, ...collectMcpDrift() }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+router.post('/mcp-drift/snapshot', async (ctx) => {
+  try {
+    ctx.body = snapshotMcpDrift()
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
