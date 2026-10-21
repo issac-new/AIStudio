@@ -114,4 +114,18 @@ describe('POST /reflow-from-trace', () => {
     expect(evidence.body.spanRef).toBe('tc-1')
     expect(evidence.body.toolCalls).toHaveLength(1)
   })
+
+  it('trace 不存在 / 目标集不存在 → 404（资源缺席不是请求格式错）', async () => {
+    const task = { problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a1', text: 't', expect: 'yes', kind: 'trajectory' }] }
+    const missingTrace = await post('/api/hermes/eval/reflow-from-trace', { sessionId: 'no-such-session', expectedTraceHash: '0'.repeat(64), task })
+    expect(missingTrace.status).toBe(404)
+    expect(missingTrace.body.code).toBe('trace_unavailable')
+
+    const preview = await post('/api/hermes/eval/sample-from-trace', { sessionId: 'prod-http' })
+    const missingTarget = await post('/api/hermes/eval/reflow-from-trace', {
+      sessionId: 'prod-http', expectedTraceHash: preview.body.meta.traceHash, task, targetSetId: 'eset-nope',
+    })
+    expect(missingTarget.status).toBe(404)
+    expect(missingTarget.body.code).toBe('target_not_found')
+  })
 })

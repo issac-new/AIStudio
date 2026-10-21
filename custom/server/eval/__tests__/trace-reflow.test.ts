@@ -160,4 +160,17 @@ describe('生产轨迹转回归样本', () => {
     const sealedDefault = reflowTraceToSet(input({ sessionId: 'prod-fail-1' }), { tracesDir: traceDir })
     expect(sealedDefault).toMatchObject({ ok: false, code: 'target_sealed' })
   })
+
+  it('同一来源转入第二个集成功，但响应提示已存在的其它集（跨集归因可见）', () => {
+    writeTrace('prod-fail-1', SESSION_TRACE)
+    const first = reflowTraceToSet(input(), { tracesDir: traceDir })
+    expect(first.ok).toBe(true)
+    if (!first.ok) return
+    const second = createSet({ name: '专项回归乙', track: 'e2e', tasks: [{ id: 'base', ...task() }] }, 'tester')
+    if (!second.ok) throw new Error('second set fixture failed')
+    const intoSecond = reflowTraceToSet(input({ targetSetId: second.set.id }), { tracesDir: traceDir })
+    expect(intoSecond).toMatchObject({ ok: true, created: true })
+    if (!intoSecond.ok) return
+    expect(intoSecond.alsoIn).toEqual([first.set.id])
+  })
 })

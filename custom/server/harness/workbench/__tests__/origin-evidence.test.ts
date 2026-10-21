@@ -82,4 +82,18 @@ describe('origin 回归证据边界', () => {
     const evidence = readRegressionEvidence('run-explicit')
     expect(evidence).toMatchObject({ total: 1, failed: 0, failedTaskIds: [] })
   })
+
+  it('运行钉住的 revision 快照缺失 → 拒绝（不回退当前集）', () => {
+    const set = regressionSet()
+    const run = { ...runOf(set, 'explicit'), setRevision: 99 }
+    appendRun(run)
+    expect(readRegressionEvidence('run-explicit')).toBeNull()
+  })
+
+  it('运行 setHash 与冻结快照指纹不符 → 拒绝（改版后冒充旧卷）', () => {
+    const set = regressionSet()
+    const run = { ...runOf(set, 'explicit'), setHash: 'b'.repeat(40) }
+    appendRun(run)
+    expect(readRegressionEvidence('run-explicit')).toBeNull()
+  })
 })
