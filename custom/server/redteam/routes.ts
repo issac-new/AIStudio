@@ -11,6 +11,10 @@ import { DETECTOR_INFO } from './detector'
 import { DEFAULT_REDTEAM_CONFIG, REDTEAM_LIMITS, runRedteam } from './engine'
 import { OPERATORS } from './mutate'
 import { appendRun, getRun, listRuns } from './store'
+import { runExecRedteam } from './exec-probe'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { RedteamConfig } from './types'
 
 function actorOf(ctx: Context): string | undefined {
@@ -53,6 +57,24 @@ export function mountRedteam(router: Router): void {
     const raw = typeof ctx.query.limit === 'string' ? Number(ctx.query.limit) : 20
     const limit = Number.isFinite(raw) ? Math.max(1, Math.min(Math.trunc(raw), 50)) : 20
     ctx.body = { ok: true, runs: listRuns(limit) }
+  })
+
+  // 沙箱攻防（2026-10-21 挂账清偿收）：执行型载荷在 OS 沙箱内真跑验活性，
+  // 对照规则层出四分类事实。每次真执行（spawn 级代价），无状态不落库。
+  router.post('/redteam/exec-runs', async (ctx) => {
+    const body = (ctx.request.body ?? {}) as { threshold?: number; timeoutMs?: number }
+    const scratch = mkdtempSync(join(tmpdir(), 'redteam-exec-api-'))
+    try {
+      const report = await runExecRedteam({
+        scratch,
+        ...(typeof body.threshold === 'number' && body.threshold >= 1 ? { threshold: body.threshold } : {}),
+        ...(typeof body.timeoutMs === 'number' && body.timeoutMs >= 1000 && body.timeoutMs <= 60_000 ? { timeoutMs: body.timeoutMs } : {}),
+      })
+      ctx.status = report.sandbox === 'available' ? 200 : 503
+      ctx.body = { ok: report.sandbox === 'available', run: report, actor: actorOf(ctx) }
+    } finally {
+      rmSync(scratch, { recursive: true, force: true })
+    }
   })
 
   router.get('/redteam/runs/:id', async (ctx) => {

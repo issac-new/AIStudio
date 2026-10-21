@@ -110,6 +110,23 @@ describe('红队 HTTP', () => {
     expect(res.status).toBe(400)
     expect(res.body.problems.join()).toContain('generations')
   })
+
+  it('沙箱攻防端点：沙箱禁用时 503 fail-closed（可用时 200 四分类）', async () => {
+    process.env.HERMES_EXEC_SANDBOX = 'off'
+    const off = await post('/api/hermes/eval/redteam/exec-runs', {})
+    expect(off.status).toBe(503)
+    expect(off.body.run.sandbox).toBe('unavailable')
+    expect(off.body.run.results).toEqual([])
+    delete process.env.HERMES_EXEC_SANDBOX
+
+    const { detectSandboxSupport } = await import('../../../qgate/src/executors/exec-sandbox')
+    if (!detectSandboxSupport().available) return
+    const on = await post('/api/hermes/eval/redteam/exec-runs', {})
+    expect(on.status).toBe(200)
+    expect(on.body.run.sandbox).toBe('available')
+    expect(on.body.run.results.length).toBeGreaterThan(0)
+    expect(['high-risk', 'held', 'none-executable']).toContain(on.body.run.verdict)
+  }, 60_000)
 })
 
 describe('评估器审计与证据 HTTP', () => {
