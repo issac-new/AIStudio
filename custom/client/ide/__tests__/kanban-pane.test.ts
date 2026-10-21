@@ -5,14 +5,33 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
-const tasksSeed = [
-  { id: 't1', title: '修复登录', assignee: 'alice', status: 'todo', priority: 0, started_at: 1000, completed_at: null, body: null, created_by: null, created_at: 0, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
-  { id: 't2', title: '编写文档', assignee: 'bob', status: 'doing', priority: 2, started_at: 2000, completed_at: null, body: null, created_by: null, created_at: 0, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
-]
-vi.mock('@/api/hermes/kanban', () => ({
-  listBoards: vi.fn(async () => [{ slug: 'main', archived: false }]),
-  listTasks: vi.fn(async () => ({ tasks: tasksSeed })),
+const { tasksSeed } = vi.hoisted(() => ({
+  tasksSeed: [
+    { id: 't1', title: '修复登录', assignee: 'alice', status: 'todo', priority: 0, started_at: 1000, completed_at: null, body: null, created_by: null, created_at: 0, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
+    { id: 't2', title: '编写文档', assignee: 'bob', status: 'doing', priority: 2, started_at: 2000, completed_at: null, body: null, created_by: null, created_at: 0, workspace_kind: 'git', workspace_path: null, tenant: null, project_id: null, result: null, skills: null },
+  ],
 }))
+vi.mock('../composables/useIdeKanbanOverview', async () => {
+  const { computed, ref } = await import('vue')
+  const entries = ref([
+    { board: 'fanfan-pm-plan', task: tasksSeed[0] },
+    { board: 'chen-pay-core', task: tasksSeed[1] },
+  ])
+  return {
+    useIdeKanbanOverview: () => ({
+      boards: ref([
+        { slug: 'fanfan-pm-plan', name: 'fanfan-pm-plan' },
+        { slug: 'chen-pay-core', name: 'chen-pay-core' },
+      ]),
+      entries,
+      activeEntries: computed(() => entries.value.filter(e => e.task.status !== 'done' && e.task.status !== 'archived')),
+      boardCounts: computed(() => new Map([['fanfan-pm-plan', 1], ['chen-pay-core', 1]])),
+      loading: ref(false),
+      error: ref(''),
+      refresh: vi.fn(async () => {}),
+    }),
+  }
+})
 
 import IdeKanbanPane from '../views/IdeKanbanPane.vue'
 
@@ -29,6 +48,19 @@ describe('IdeKanbanPane（四视图）', () => {
     expect(w.find('[data-testid="ide-kanban-task-t1"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-kanban-task-t1"]').classes()).toContain('is-p0')
     expect(w.text()).toContain('todo · 1')
+  })
+
+  it('看板筛选：默认全部板，单板 chip 只显示该板任务', async () => {
+    const w = mount(IdeKanbanPane)
+    await flushPromises()
+    expect(w.find('[data-testid="ide-kanban-board-chip-all"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-kanban-task-t1"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-kanban-task-t2"]').exists()).toBe(true)
+    await w.find('[data-testid="ide-kanban-board-chip-fanfan-pm-plan"]').trigger('click')
+    expect(w.find('[data-testid="ide-kanban-task-t1"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-kanban-task-t2"]').exists()).toBe(false)
+    await w.find('[data-testid="ide-kanban-board-chip-all"]').trigger('click')
+    expect(w.find('[data-testid="ide-kanban-task-t2"]').exists()).toBe(true)
   })
 
   it('切换 list/swimlane/gantt 视图各自渲染', async () => {

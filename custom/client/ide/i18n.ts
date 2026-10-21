@@ -16,6 +16,10 @@ export const IDE_LOCAL_TEXT = {
       storage: '资源管理器', mcp: 'MCP', hooks: 'Hooks', slash: '自定义命令',
       deliver: '交付物', genui: 'Gen UI', remote: '远程工作区', plugins: '插件目录',
     },
+    kanbanBoard: {
+      section: '看板任务', all: '全部板', filter: '按看板筛选', open: '打开看板',
+      empty: '当前实例暂无活跃看板任务', openTask: '在 IDE 打开任务', board: '看板',
+    },
     workflowStatus: {
       queued: '排队中', pending: '排队中', running: '运行中', completed: '已完成', errored: '失败', stopped: '已停止',
     },
@@ -138,6 +142,10 @@ export const IDE_LOCAL_TEXT = {
       kanban: 'Kanban', assistant: 'Ask', board: 'Whiteboard', browser: 'Browser',
       storage: 'Storage', mcp: 'MCP', hooks: 'Hooks', slash: 'Commands',
       deliver: 'Deliverables', genui: 'Gen UI', remote: 'Remote', plugins: 'Plugins',
+    },
+    kanbanBoard: {
+      section: 'Board tasks', all: 'All boards', filter: 'Filter by board', open: 'Open board',
+      empty: 'No active board tasks in this instance', openTask: 'Open task in IDE', board: 'Board',
     },
     workflowStatus: {
       queued: 'Queued', pending: 'Queued', running: 'Running', completed: 'Completed', errored: 'Failed', stopped: 'Stopped',
