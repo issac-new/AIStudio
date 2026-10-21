@@ -10,6 +10,7 @@ import { homedir } from 'os'
 import { join, resolve, isAbsolute, relative } from 'path'
 import * as pathWin32 from 'path/win32'
 import { constants } from 'fs'
+import { isOTelSpanRow, otelRowToLegacy } from '../../eval/trace-sampler'
 // HERMES_CUSTOM[SecTraceSandbox] BEGIN: 路径遍历防护
 // 内联 isPathWithin（含 Windows 兼容），避免通过符号链接路径解析 import upstream
 // 模块（esbuild/ts-node 用真实路径解析，符号链接 custom/ → server/src/custom 会导致
@@ -140,31 +141,9 @@ interface JSONLTrailer {
 
 type JSONLLine = JSONLHeader | JSONLChunk | JSONLTrailer
 
-// ── OTel span format (Phase 4) ──
-
-interface OTelSpan {
-  traceId: string
-  spanId: string
-  parentSpanId?: string | null
-  name: string
-  kind: string  // INTERNAL | CLIENT | SERVER
-  startTime: number  // microseconds
-  endTime?: number   // microseconds
-  durationMs?: number
-  attributes?: Record<string, unknown>
-  status?: { code: string; message?: string }
-  otelFormat?: true
-  isTrailer?: boolean
-}
-
-function isOTelSpan(obj: any): obj is OTelSpan {
-  return obj && obj.otelFormat === true && typeof obj.traceId === 'string' && typeof obj.spanId === 'string'
-}
-
-/** Convert microseconds → milliseconds */
-function usToMs(us: number): number {
-  return Math.floor(us / 1000)
-}
+// ── OTel span format ──
+// 单一事实源在 custom/server/eval/trace-sampler.ts（谓词+转换与评测域共用，
+// 防两处格式判定打架——2026-10-21 挂账清偿批次 B 收敛）。
 
 /**
  * Parse a JSONL file (auto-detects legacy vs OTel format).
@@ -180,10 +159,10 @@ function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[
     try {
       const obj = JSON.parse(line)
       // OTel format detection
-      if (isOTelSpan(obj)) {
+      if (isOTelSpanRow(obj)) {
         sawOtel = true
-        const converted = otelToLegacy(obj) as any
-        if (converted.isTrailer) {
+        const converted = otelRowToLegacy(obj) as any
+        if (converted.type === 'trailer') {
           trailer = converted as JSONLTrailer
         } else if (converted.type === 'header') {
           Object.assign(header, converted)
@@ -210,95 +189,6 @@ function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[
   return { header, chunks, trailer, format }
 }
 
-/** Convert an OTel span back to legacy JSONL format for buildTraceGraph */
-function otelToLegacy(span: OTelSpan): JSONLHeader | JSONLChunk | JSONLTrailer {
-  const attrs = span.attributes || {}
-  const sessionId = (attrs['gen_ai.conversation.id'] as string) || (attrs['agentscope.session.id'] as string) || span.traceId
-  const startedAtMs = usToMs(span.startTime)
-  const endedAtMs = span.endTime ? usToMs(span.endTime) : undefined
-  const opName = attrs['gen_ai.operation.name'] as string | undefined
-
-  if (span.isTrailer) {
-    return {
-      type: 'trailer',
-      session_id: sessionId,
-      ended_at: startedAtMs,
-      duration_ms: span.durationMs || 0,
-      outcome: attrs['agentscope.session.outcome'] as string,
-      error: span.status?.message,
-    }
-  }
-
-  if (opName === 'invoke_agent' && span.kind === 'SERVER' && !span.parentSpanId) {
-    // Root session span → header
-    return {
-      type: 'header',
-      version: '1.0.0',
-      session_id: sessionId,
-      task_id: attrs['agentscope.task.id'] as string,
-      started_at: startedAtMs,
-      model: attrs['gen_ai.request.model'] as string,
-      provider: attrs['gen_ai.provider.name'] as string,
-      source: 'hermes-agent',
-    }
-  }
-
-  if (opName === 'chat') {
-    // LLM span
-    const usage = attrs['gen_ai.usage.input_tokens'] !== undefined
-      ? { input_tokens: attrs['gen_ai.usage.input_tokens'] as number, output_tokens: attrs['gen_ai.usage.output_tokens'] as number }
-      : undefined
-    return {
-      type: 'chunk',
-      kind: 'llm_span',
-      phase: endedAtMs ? 'post' : 'pre',
-      session_id: sessionId,
-      api_request_id: span.spanId,
-      model: attrs['gen_ai.request.model'] as string,
-      provider: attrs['gen_ai.provider.name'] as string,
-      started_at: startedAtMs,
-      ended_at: endedAtMs,
-      duration_ms: span.durationMs,
-      finish_reason: (attrs['gen_ai.response.finish_reasons'] as string[])?.[0],
-      usage,
-    }
-  }
-
-  if (opName === 'execute_tool') {
-    // Tool span
-    return {
-      type: 'chunk',
-      kind: 'tool_span',
-      session_id: sessionId,
-      tool_call_id: (attrs['gen_ai.tool.call.id'] as string) || span.spanId,
-      tool_name: attrs['gen_ai.tool.name'] as string,
-      args: attrs['gen_ai.tool.call.arguments'],
-      result: attrs['gen_ai.tool.call.result'],
-      duration_ms: span.durationMs,
-      status: span.status?.code === 'ERROR' ? 'error' : (endedAtMs ? 'ok' : undefined),
-      error_message: span.status?.message,
-      ts: startedAtMs,
-    }
-  }
-
-  // Default: treat as subagent span
-  if (attrs['agentscope.subagent.label']) {
-    return {
-      type: 'chunk',
-      kind: 'subagent_span',
-      phase: endedAtMs ? 'stop' : 'start',
-      session_id: sessionId,
-      subagent_label: attrs['agentscope.subagent.label'] as string,
-      started_at: startedAtMs,
-      ended_at: endedAtMs,
-      duration_ms: span.durationMs,
-      status: span.status?.code === 'ERROR' ? 'error' : (endedAtMs ? 'ok' : undefined),
-    }
-  }
-
-  // Fallback: empty chunk
-  return { type: 'chunk', kind: 'tool_span', session_id: sessionId, tool_call_id: span.spanId, ts: startedAtMs }
-}
 
 /**
  * Build TraceNode[] + TraceEdge[] from JSONL data.

@@ -153,19 +153,25 @@ describe('IdeTrajectoryPane — 轨迹账本（dsh-TUI Trajectory Web 化）', (
     expect(wrapper.find('[data-testid="traj-reflow-span"]').exists()).toBe(false)
   })
 
-  it('OTel 轨迹保留浏览能力，但禁用转题入口', async () => {
+  it('OTel 轨迹（完整）可转题——批次 B 起 OTel 已可消费；仅 unknown 格式禁用', async () => {
     traceResp.body.meta = { ...traceResp.body.meta, format: 'otel', complete: true }
     const wrapper = mount(IdeTrajectoryPane)
     await flushPromises()
     const action = wrapper.find('[data-testid="traj-reflow-session"]')
     expect(action.exists()).toBe(true)
-    expect(action.attributes('disabled')).toBeDefined()
-    expect(wrapper.find('[data-testid="trace-case-composer-stub"]').exists()).toBe(false)
-    // 评审 Important#3：span 级按钮同样必须禁用（OTel 经转换后 tool 节点仍带 ref）
+    expect(action.attributes('disabled')).toBeUndefined()
+    await action.trigger('click')
+    expect(wrapper.find('[data-testid="trace-case-composer-stub"]').exists()).toBe(true)
     await wrapper.find('[data-testid="traj-row-t1"]').trigger('click')
     const spanAction = wrapper.find('[data-testid="traj-reflow-span"]')
     expect(spanAction.exists()).toBe(true)
-    expect(spanAction.attributes('disabled')).toBeDefined()
+    expect(spanAction.attributes('disabled')).toBeUndefined()
+
+    traceResp.body.meta = { ...traceResp.body.meta, format: 'unknown' }
+    const unknownPane = mount(IdeTrajectoryPane)
+    await flushPromises()
+    expect(unknownPane.find('[data-testid="traj-reflow-session"]').attributes('disabled')).toBeDefined()
+    expect(unknownPane.find('[data-testid="trace-case-composer-stub"]').exists()).toBe(false)
   })
 
   it('切换转题目标会重挂 Composer（预览/表单不得停留在旧目标）', async () => {

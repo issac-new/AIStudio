@@ -73,8 +73,8 @@ export function reflowTraceToSet(
 
   const inspected = inspectTrace(sessionId, opts)
   if (!inspected.ok) return { ok: false, code: 'trace_unavailable', problems: [inspected.reason ?? 'trace 不可用'] }
-  if (inspected.format !== 'legacy') {
-    return { ok: false, code: 'trace_format_unsupported', problems: ['OTel/未知格式暂不支持转回归题'] }
+  if (inspected.format === 'unknown') {
+    return { ok: false, code: 'trace_format_unsupported', problems: ['无法识别的 trace 格式，暂不支持转回归题'] }
   }
   if (!inspected.complete) {
     return { ok: false, code: 'trace_incomplete', problems: ['trace 缺少匹配 header/trailer，会话可能仍在写入'] }

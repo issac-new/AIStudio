@@ -88,12 +88,19 @@ describe('TraceCaseComposer', () => {
     expect(wrapper.emitted('created')).toBeUndefined()
   })
 
-  it('OTel/未完整证据不提供可提交动作', async () => {
+  it('未完整证据不提供可提交动作；完整 OTel 可提交（批次 B 起 OTel 可消费）', async () => {
     vi.mocked(evalApi.sampleFromTrace).mockResolvedValue(preview({ meta: { traceHash: 'b'.repeat(64), format: 'otel', complete: false, tokens: 0, toolCalls: 0 } }) as never)
     const wrapper = mount(TraceCaseComposer, { props: { sessionId: 'sess-otel' } })
     await flushPromises()
     expect(wrapper.find('[data-testid="trace-case-submit"]').attributes('disabled')).toBeDefined()
-    expect(wrapper.text()).toContain('暂不支持')
+    expect(wrapper.text()).toContain('完成后再转')
+
+    vi.mocked(evalApi.sampleFromTrace).mockResolvedValue(preview({ meta: { traceHash: 'b'.repeat(64), format: 'otel', complete: true, tokens: 5, toolCalls: 1 } }) as never)
+    const otelOk = mount(TraceCaseComposer, { props: { sessionId: 'sess-otel2' } })
+    await flushPromises()
+    expect(otelOk.find('[data-testid="trace-case-unsupported"]').exists()).toBe(false)
+    await fillValid(otelOk)
+    expect(otelOk.find('[data-testid="trace-case-submit"]').attributes('disabled')).toBeUndefined()
   })
 
   it('重复转题显示已存在，不把幂等误报成新建', async () => {

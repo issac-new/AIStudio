@@ -50,10 +50,11 @@ onMounted(async () => {
   }
 })
 
-/** 首版只接受完整 legacy 证据：OTel/缺 trailer 不提供可提交动作。 */
+/** 可提交=可识别格式（legacy/otel）且完整；unknown/缺收尾不提供可提交动作。 */
 const convertible = computed(() =>
   preview.value?.ok === true
-  && preview.value.meta?.format === 'legacy'
+  && preview.value.meta?.format !== undefined
+  && preview.value.meta.format !== 'unknown'
   && preview.value.meta?.complete === true
   && Boolean(preview.value.meta.traceHash))
 
@@ -114,7 +115,7 @@ function openSet(): void {
           <span v-if="preview.meta?.tokens">{{ preview.meta.tokens }} tokens</span>
         </div>
         <p v-if="!convertible" class="tcc__warn" data-testid="trace-case-unsupported">
-          {{ preview.meta?.format !== 'legacy' ? L.composer.unsupported : L.composer.incomplete }}
+          {{ preview.meta?.format === 'unknown' ? L.composer.unsupported : L.composer.incomplete }}
         </p>
 
         <details class="tcc__preview">
