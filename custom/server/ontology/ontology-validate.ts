@@ -35,6 +35,11 @@ const SPEC_CODES = {
   inheritWiden: 'spec:inherit-widen',
   axiomBadRef: 'spec:axiom-bad-ref',
   keyNotFound: 'spec:key-not-found',
+  dupAction: 'spec:dup-action',
+  actionTargetUnknown: 'spec:action-target-unknown',
+  actionPreconditionUnknown: 'spec:action-precondition-unknown',
+  actionNoAuthz: 'spec:action-no-authz',
+  actionUnidempotent: 'spec:action-unidempotent',
 } as const
 
 export function validateSpec(spec: OntologySpec): Violation[] {
@@ -143,6 +148,38 @@ export function validateSpec(spec: OntologySpec): Violation[] {
     }
     if (c.type === 'required-relation' && (!byId.has(c.onClass) || !propIds.has(c.property))) {
       v.push({ severity: 'error', code: SPEC_CODES.axiomBadRef, subject: a.id, detail: `required-relation 公理引用不存在的类型/属性：${c.onClass} / ${c.property}` })
+    }
+  }
+
+  // 可执行动作层（运营本体，2026-10-21）：id/IRI 唯一、目标类型存在、前置公理
+  // 存在；write/execute 必须有权限标签（无则 error——「Agent 改世界的通道必须
+  // 带权限约束」，无 authz 的写动作等于裸后门）；execute 建议声明幂等（无则
+  // warning——重复提交语义不明是执行治理的经典坑）。
+  const actionIds = new Set<string>()
+  for (const a of spec.actionTypes ?? []) {
+    if (actionIds.has(a.id)) {
+      v.push({ severity: 'error', code: SPEC_CODES.dupAction, subject: a.id, detail: `动作类型 id 重复：${a.id}` })
+    }
+    actionIds.add(a.id)
+    claimWithExplicit(a.iri, a.id, `actionType:${a.id}`)
+    if (!a.targetTypes.length) {
+      v.push({ severity: 'error', code: SPEC_CODES.actionTargetUnknown, subject: a.id, detail: `动作 ${a.id} 未声明 targetTypes（至少一个目标实体类型）` })
+    }
+    for (const ref of a.targetTypes) {
+      if (!byId.has(ref)) {
+        v.push({ severity: 'error', code: SPEC_CODES.actionTargetUnknown, subject: a.id, detail: `动作 ${a.id} 的 targetTypes 引用了不存在的类型：${ref}` })
+      }
+    }
+    for (const pre of a.preconditions ?? []) {
+      if (!axiomIds.has(pre)) {
+        v.push({ severity: 'error', code: SPEC_CODES.actionPreconditionUnknown, subject: a.id, detail: `动作 ${a.id} 的前置公理不存在：${pre}` })
+      }
+    }
+    if ((a.kind === 'write' || a.kind === 'execute') && !(a.permissionTags?.length)) {
+      v.push({ severity: 'error', code: SPEC_CODES.actionNoAuthz, subject: a.id, detail: `${a.kind} 动作 ${a.id} 未声明 permissionTags（写/执行面动作必须携带权限标签）` })
+    }
+    if (a.kind === 'execute' && a.idempotent !== true) {
+      v.push({ severity: 'warning', code: SPEC_CODES.actionUnidempotent, subject: a.id, detail: `execute 动作 ${a.id} 未声明幂等（重复提交语义不明，宜显式声明）` })
     }
   }
 
