@@ -34,6 +34,9 @@ export type SurfaceClass =
   | 'agents'               // Agent/子代理调度与影子进程
   | 'availability'         // 资源耗尽与可用性
   | 'human_review'         // 人工评审与治理流程
+  | 'repo_secrets'         // 代码仓密钥形态（批次 D：目标仓而非本机部署）
+  | 'repo_deps'            // 代码仓依赖声明面（漏洞判定指向在线门）
+  | 'repo_dangerous_api'   // 代码仓危险 API 形态（eval/exec 拼接/innerHTML）
 
 /** 审计面定义：人工面靠 agent/人工狩猎，自动面有只读采集器。 */
 export interface SurfaceDefinition {
