@@ -49,7 +49,7 @@ describe('secaudit REST（/api/governance/secaudit）', () => {
   it('目录与项目 CRUD', async () => {
     const catalog = await get('/catalog')
     expect(catalog.status).toBe(200)
-    expect((catalog.json.catalog as unknown[]).length).toBe(12)
+    expect((catalog.json.catalog as unknown[]).length).toBe(15)
 
     const bad = await post('/projects', { name: '', target: { kind: 'agent-deployment' } })
     expect(bad.status).toBe(400)
