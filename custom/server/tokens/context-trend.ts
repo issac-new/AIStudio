@@ -79,10 +79,11 @@ function toolCallsChars(raw: string | null | undefined): number {
 }
 
 /** 单条消息归桶 token（口径=前端 computeBreakdown：token_count 优先，chars/4 兜底；
- *  assistant 的 reasoning/tool_calls 计入 assistant/tool）。 */
+ *  assistant 的 reasoning/tool_calls 计入 assistant/tool）。返回是否走了估算。 */
 function messageBuckets(msg: TrendMessage, state: BucketState): boolean {
-  const known = typeof msg.token_count === 'number' && Number.isFinite(msg.token_count) && msg.token_count > 0
-  const base = known ? msg.token_count : estimateTokensOf(typeof msg.content === 'string' ? msg.content : '')
+  const raw = msg.token_count
+  const known = typeof raw === 'number' && Number.isFinite(raw) && raw > 0
+  const base = known && typeof raw === 'number' ? raw : estimateTokensOf(typeof msg.content === 'string' ? msg.content : '')
   const reasoning = typeof msg.reasoning === 'string' && msg.reasoning ? estimateTokensOf(msg.reasoning) : 0
   const calls = toolCallsChars(msg.tool_calls)
   switch (msg.role) {
