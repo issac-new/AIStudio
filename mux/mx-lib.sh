@@ -439,6 +439,13 @@ mx_create_room() { # <token> <name> [invite-csv] → room_id
     mx "$token" POST "rooms/$rid/invite" "$(jq -nc --arg u "$u" '{user_id:$u}')" >/dev/null 2>&1 || _miss=$((_miss+1))
   done
   (( _miss == 0 )) || echo "[mx_create_room] 补邀 $_miss 人失败（room=${rid}，真值核验将把关）" >&2
+  # 推演房间打标（2026-10-21 用户授权跨仓改动）：全成员可见的房间级状态事件
+  # com.swarmstudio.sim/run，产品端据此显示「推演」徽标并把观察房间分组。失败仅
+  # 告警不阻断建房（房间照常可用；客户端另有 run-state 房间集兜底识别）。
+  mx "$token" PUT "rooms/$rid/state/com.swarmstudio.sim/run" \
+    "$(jq -nc --arg run "${RUN_ID:-}" --arg rfd "${RFD_ID:-}" --arg ts "$(date +%s)" \
+      '{run:$run, rfd:$rfd, taggedAt:($ts|tonumber)}')" >/dev/null 2>&1 \
+    || echo "[mx_create_room] sim 打标失败（room=${rid}，不影响建房）" >&2
   echo "$rid"
 }
 mx_join() { mx "$1" POST "rooms/$2/join" '{}' >/dev/null 2>&1 || true; }
