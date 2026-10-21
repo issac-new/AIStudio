@@ -87,15 +87,31 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }))
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push }),
 }))
-// 时间线优先级桥接：kanban 任务经 session_id 关联（口径同 bucketPriority）
-const { listTasks } = vi.hoisted(() => ({
-  listTasks: vi.fn(async () => [
-    { id: 'k1', session_id: 's-active', priority: 3 },
-    { id: 'k2', session_id: 's-other', priority: 1 },
-    { id: 'k3', session_id: 's-extra1', priority: 0 },
-  ]),
-}))
-vi.mock('@/api/hermes/kanban', () => ({ listTasks }))
+// 时间线优先级桥接 + 侧栏看板任务段共用 overview 数据源（跨账号板）
+const { refreshKanban } = vi.hoisted(() => ({ refreshKanban: vi.fn(async () => {}) }))
+vi.mock('../composables/useIdeKanbanOverview', async () => {
+  const { computed, ref } = await import('vue')
+  const entries = ref([
+    { board: 'fanfan-pm-plan', task: { id: 'k1', title: '系分 pay-core', status: 'todo', priority: 3, session_id: 's-active', created_at: 1, assignee: 'fanfan' } },
+    { board: 'qi-test-pay', task: { id: 'k2', title: '测试 pay-core', status: 'doing', priority: 1, session_id: 's-other', created_at: 2, assignee: 'qi' } },
+    { board: 'wei-pay-core', task: { id: 'k3', title: '开发 pay-core', status: 'done', priority: 0, session_id: 's-extra1', created_at: 3, assignee: 'wei' } },
+  ])
+  return {
+    useIdeKanbanOverview: () => ({
+      boards: ref([
+        { slug: 'fanfan-pm-plan', name: 'fanfan-pm-plan' },
+        { slug: 'qi-test-pay', name: 'qi-test-pay' },
+        { slug: 'wei-pay-core', name: 'wei-pay-core' },
+      ]),
+      entries,
+      activeEntries: computed(() => entries.value.filter(e => e.task.status !== 'done' && e.task.status !== 'archived')),
+      boardCounts: computed(() => new Map([['fanfan-pm-plan', 1], ['qi-test-pay', 1], ['wei-pay-core', 1]])),
+      loading: ref(false),
+      error: ref(''),
+      refresh: refreshKanban,
+    }),
+  }
+})
 vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({
   bucketPriority: (p: number | null | undefined): string =>
     (p == null || p <= 0 ? 'P3' : p === 1 ? 'P2' : p === 2 ? 'P1' : 'P0'),
@@ -258,12 +274,24 @@ describe('IdeTaskSidebar', () => {
     expect(w.find('[data-testid="ide-task-pinned"]').exists()).toBe(true)
   })
 
+  it('看板任务段：跨板活跃卡可见，点击走 ?task= 深链', async () => {
+    const w = mountSidebar()
+    await flushPromises()
+    const section = w.find('[data-testid="ide-task-kanban"]')
+    expect(section.exists()).toBe(true)
+    expect(section.text()).toContain('fanfan-pm-plan')
+    expect(section.text()).toContain('系分 pay-core')
+    expect(section.find('[data-testid="ide-task-kanban-item-k3"]').exists()).toBe(false)
+    await w.find('[data-testid="ide-task-kanban-item-k1"] .ide-taskbar__item-main').trigger('click')
+    expect(push).toHaveBeenCalledWith({ path: '/ide', query: { task: 'k1' } })
+  })
+
   it('时间线=时间分层（今天/近7天/更早），段内更新时间逆序；关联会话显 P0-P3 徽标', async () => {
     // 2026-10-19 视图语义修正批：时间线组织从「优先级平铺」改为时间分层。
     const w = mountSidebarForOrganize()
     await flushPromises()
     await w.find('[data-testid="ide-task-organize-timeline"]').trigger('click')
-    expect(listTasks).toHaveBeenCalled()
+    expect(refreshKanban).toHaveBeenCalled()
     // active 视图下 extra1/2（updatedAt:1）超 24h 窗被滤；其余全部落「今天」段
     const today = w.find('[data-testid="ide-task-group-今天"]')
     expect(today.exists()).toBe(true)

@@ -28,9 +28,9 @@ import {
   exportSession,
   type SessionCategory,
 } from '@/api/studio/sessions'
-import { listTasks } from '@/api/hermes/kanban'
 import { bucketPriority } from '@/custom/cockpit/adapters/task-adapter'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { useIdeKanbanOverview } from '../composables/useIdeKanbanOverview'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
 import { fetchArchivedSessions, type ArchivedSessionItem } from '../api/archivedSessions'
 import { restoreAllArchived } from '../utils/archive-restore'
@@ -135,17 +135,33 @@ async function moveToGroup(sessionId: string, categoryId: number | null): Promis
 // 口径同 cockpit bucketPriority：数字越大优先级越高（3+→P0，1→P2，
 // null/<=0→P3）；未关联任务的会话排最后（仅按更新时间逆序）。
 const taskPriorityBySession = ref<Map<string, number>>(new Map())
+const kanban = useIdeKanbanOverview()
+const kanbanActiveEntries = kanban.activeEntries
+const kanbanText = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].kanbanBoard)
+const kanbanOpen = ref(true)
+const kanbanTasks = computed(() =>
+  [...kanban.activeEntries.value]
+    .sort((a, b) =>
+      (b.task.priority ?? 0) - (a.task.priority ?? 0)
+      || (b.task.created_at ?? 0) - (a.task.created_at ?? 0))
+    .slice(0, 8))
 async function loadTaskPriorities(): Promise<void> {
   try {
-    const tasks = await listTasks()
+    await kanban.refresh()
     const map = new Map<string, number>()
-    for (const task of tasks) {
+    for (const { task } of kanban.entries.value) {
       const sid = task.session_id
       if (!sid) continue
       map.set(sid, Math.max(map.get(sid) ?? 0, task.priority ?? 0))
     }
     taskPriorityBySession.value = map
   } catch { /* 看板不可达不阻塞会话列表 */ }
+}
+function openKanbanTask(id: string): void {
+  void router.push({ path: '/ide', query: { task: id } })
+}
+function openKanbanBoard(): void {
+  void router.push('/app/board')
 }
 function sessionPriority(s: Session): number | null {
   const map = taskPriorityBySession.value
@@ -646,6 +662,39 @@ onMounted(async () => {
       </div>
 
       <div class="ide-taskbar__scroll">
+        <section v-if="kanbanTasks.length" class="ide-taskbar__section" data-testid="ide-task-kanban">
+          <header class="ide-taskbar__section-head ide-taskbar__section-head--toggle" @click="kanbanOpen = !kanbanOpen">
+            <span class="ide-taskbar__section-caret" :class="{ 'is-collapsed': !kanbanOpen }">▾</span>
+            <span class="ide-taskbar__section-title">{{ kanbanText.section }}</span>
+            <span class="ide-taskbar__section-count">{{ kanbanActiveEntries.length }}</span>
+          </header>
+          <template v-if="kanbanOpen">
+            <ul class="ide-taskbar__list">
+              <li
+                v-for="entry in kanbanTasks"
+                :key="entry.task.id"
+                class="ide-taskbar__item"
+                :data-testid="`ide-task-kanban-item-${entry.task.id}`"
+              >
+                <button
+                  type="button"
+                  class="ide-taskbar__item-main"
+                  :title="`${entry.task.title} · ${entry.board}`"
+                  @click="openKanbanTask(entry.task.id)"
+                >
+                  <span class="ide-taskbar__kanban-row">
+                    <span class="ide-taskbar__kanban-title">{{ entry.task.title }}</span>
+                    <span class="ide-taskbar__kanban-meta">{{ entry.board }} · {{ entry.task.status }}</span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+            <button type="button" class="ide-taskbar__kanban-more" data-testid="ide-task-kanban-open-board" @click="openKanbanBoard">
+              {{ kanbanText.open }} →
+            </button>
+          </template>
+        </section>
+
         <section v-if="pinnedSessions.length" class="ide-taskbar__section" data-testid="ide-task-pinned">
           <header class="ide-taskbar__section-head">{{ t('ide.task.pinned') }}</header>
           <ul class="ide-taskbar__list">
@@ -1045,6 +1094,11 @@ onMounted(async () => {
   transition: transform 0.12s ease;
   &.is-collapsed { transform: rotate(-90deg); }
 }
+
+.ide-taskbar__kanban-row { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ide-taskbar__kanban-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ide-taskbar__kanban-meta { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ide-taskbar__kanban-more { display: block; width: 100%; border: 0; background: transparent; color: var(--accent-primary); font-size: 11px; text-align: left; padding: 3px 8px 5px; cursor: pointer; }
 
 .ide-taskbar__rename-input {
   flex: 1;

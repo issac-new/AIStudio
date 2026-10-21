@@ -1,21 +1,54 @@
 <script setup lang="ts">
 // IdeKanbanPane — IDE 内嵌看板（UI 融合 UI-10，multica 看板组织面四视图吸收落地）。
-// 数据=studio 原生 kanban API（listBoards/listTasks）；四视图（list/board/swimlane/
+// 数据=当前实例跨板聚合（/api/hermes/kanban/overview，与工作台看板同源）；四视图（list/board/swimlane/
 // gantt）=boardorg 域同语义客户端排布：同一数据四种组织（表/列桶/泳道/时序）。
 // 优先级五档映射 p0-p4；列=status 词表。只读视图（编辑走工作台看板）。
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { listTasks, type KanbanTask } from '@/api/hermes/kanban'
+import type { KanbanTask } from '@/api/hermes/kanban'
+import { useIdeKanbanOverview } from '../composables/useIdeKanbanOverview'
+import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 type BoardView = 'list' | 'board' | 'swimlane' | 'gantt'
+type IdeTask = KanbanTask & { board: string }
 
-const { t } = useI18n()
+const { locale } = useI18n()
+const boardText = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].kanbanBoard)
 const router = useRouter()
-const tasks = ref<KanbanTask[]>([])
+const overview = useIdeKanbanOverview()
+const boardFilter = ref('all')
 const loadError = ref('')
+const loadErrorDetail = ref('')
 const loading = ref(false)
 const view = ref<BoardView>('board')
+
+const visibleEntries = computed(() =>
+  overview.entries.value.filter(entry => entry.task.status !== 'archived'),
+)
+
+const tasks = computed<IdeTask[]>(() =>
+  visibleEntries.value
+    .filter(entry => boardFilter.value === 'all' || entry.board === boardFilter.value)
+    .map(entry => ({ ...entry.task, board: entry.board })),
+)
+
+const boardTaskCounts = computed(() => {
+  const counts = new Map<string, number>()
+  for (const entry of visibleEntries.value) {
+    counts.set(entry.board, (counts.get(entry.board) ?? 0) + 1)
+  }
+  return counts
+})
+
+const boardOptions = computed(() =>
+  overview.boards.value.filter(board =>
+    !board.archived && (boardTaskCounts.value.get(board.slug) ?? 0) > 0),
+)
+
+function boardCount(slug: string): number {
+  return boardTaskCounts.value.get(slug) ?? 0
+}
 
 // 卡片点击 → /ide?task=<id> 深链（关联轮发现路径）：直达链接一条链把任务维度
 // 绑定、简报展开、workspace 关联、任务会话切换全带起来（IdeShell watch 同源）。
@@ -31,30 +64,18 @@ const VIEWS: Array<{ key: BoardView; label: string }> = [
   { key: 'gantt', label: 'Gantt' },
 ]
 
-// 每次看板 REST 都 spawn hermes CLI（约 9s/次）——45s exec 队列超时在高并发排队时
-// 会撞线（实弹走查 2026-09-28 实录）。加载策略：①直取默认板（单次 CLI，跳过
-// listBoards 发现轮）；②队列超时自动重试一次（首次调用也预热了 CLI，重试显著变快）。
-async function fetchTasks(): Promise<void> {
-  const res = await listTasks()
-  // listTasks 返回数组（upstream 契约），历史代码误取 res.tasks → 永远空。
-  tasks.value = Array.isArray(res) ? res : (res.tasks ?? [])
-}
-
+// 数据源=当前 studio 实例的跨板聚合（与工作台看板同源）：推演任务在账号分板，
+// 旧实现只读 default 板会恒空。overview 走 sqlite 快道，一次请求覆盖全部板，
+// 不再逐板 spawn CLI。
 async function load(): Promise<void> {
   loading.value = true
   try {
-    try {
-      await fetchTasks()
-      loadError.value = ''
-    } catch (first) {
-      const msg = first instanceof Error ? first.message : String(first)
-      if (!/timeout|queue/i.test(msg)) throw first
-      await fetchTasks() // 队列超时重试一次（CLI 已被首次调用预热）
-      loadError.value = ''
-    }
+    await overview.refresh(true)
+    loadError.value = ''
+    loadErrorDetail.value = ''
   } catch (err) {
-    tasks.value = []
-    loadError.value = err instanceof Error ? err.message : String(err)
+    loadErrorDetail.value = err instanceof Error ? err.message : String(err)
+    loadError.value = '看板任务暂不可用；点刷新重试。'
   } finally {
     loading.value = false
   }
@@ -135,8 +156,28 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
       <span class="ide-kanban__count">{{ tasks.length }}</span>
     </header>
 
-    <p v-if="loadError" class="ide-kanban__error" data-testid="ide-kanban-error">{{ loadError }}</p>
-    <p v-else-if="!loading && !tasks.length" class="ui-empty-state ui-empty-state--compact" data-testid="ide-kanban-empty">{{ t('ide.kanban.empty') }}</p>
+    <div class="ide-kanban__boardbar" data-testid="ide-kanban-boardbar" :aria-label="boardText.filter">
+      <button
+        type="button"
+        class="ide-kanban__boardchip"
+        :class="{ 'is-active': boardFilter === 'all' }"
+        data-testid="ide-kanban-board-chip-all"
+        @click="boardFilter = 'all'"
+      >{{ boardText.all }}<span class="ide-kanban__boardn">{{ visibleEntries.length }}</span></button>
+      <button
+        v-for="board in boardOptions"
+        :key="board.slug"
+        type="button"
+        class="ide-kanban__boardchip"
+        :class="{ 'is-active': boardFilter === board.slug }"
+        :title="board.slug"
+        :data-testid="`ide-kanban-board-chip-${board.slug}`"
+        @click="boardFilter = board.slug"
+      >{{ board.name || board.slug }}<span class="ide-kanban__boardn">{{ boardCount(board.slug) }}</span></button>
+    </div>
+
+    <p v-if="loadError" class="ide-kanban__error" data-testid="ide-kanban-error" :title="loadErrorDetail">{{ loadError }}</p>
+    <p v-else-if="!loading && !tasks.length" class="ui-empty-state ui-empty-state--compact" data-testid="ide-kanban-empty">{{ boardText.empty }}</p>
 
     <!-- board：列桶 -->
     <div v-if="view === 'board' && tasks.length" class="ide-kanban__board" data-testid="ide-kanban-board">
@@ -150,24 +191,26 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
           :data-testid="`ide-kanban-task-${task.id}`"
           role="button"
           tabindex="0"
-          :title="t('ide.kanban.openTask', '在 Ycode 打开任务')"
+          :title="boardText.openTask"
           @click="openTask(task.id)"
           @keydown.enter="openTask(task.id)"
         >
           <span class="ide-kanban__prio">{{ prio(task.priority) }}</span>
           <span class="ide-kanban__title" :title="task.title">{{ task.title }}</span>
           <span class="ide-kanban__assignee">{{ task.assignee ?? '—' }}</span>
+          <span v-if="boardFilter === 'all'" class="ide-kanban__taskboard" :title="task.board">{{ task.board }}</span>
         </div>
       </div>
     </div>
 
     <!-- list：表 -->
     <table v-else-if="view === 'list' && tasks.length" class="ide-kanban__list" data-testid="ide-kanban-list">
-      <thead><tr><th>#</th><th>prio</th><th>title</th><th>status</th><th>assignee</th></tr></thead>
+      <thead><tr><th>#</th><th>prio</th><th>board</th><th>title</th><th>status</th><th>assignee</th></tr></thead>
       <tbody>
         <tr v-for="task in tasks" :key="task.id" :data-testid="`ide-kanban-task-${task.id}`" class="ide-kanban__row--clickable" @click="openTask(task.id)">
           <td>{{ task.id.slice(0, 6) }}</td>
           <td :class="`is-${prio(task.priority)}`">{{ prio(task.priority) }}</td>
+          <td class="ide-kanban__boardcell" :title="task.board">{{ task.board }}</td>
           <td class="is-title" :title="task.title">{{ task.title }}</td>
           <td>{{ task.status }}</td>
           <td>{{ task.assignee ?? '—' }}</td>
@@ -185,14 +228,14 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
           class="ide-kanban__card ide-kanban__card--clickable"
           :class="`is-${prio(task.priority)}`"
           @click="openTask(task.id)"
-        >{{ prio(task.priority) }} {{ task.title }}</span>
+        >{{ task.board }} · {{ prio(task.priority) }} {{ task.title }}</span>
       </div>
     </div>
 
     <!-- gantt：时序条 -->
     <div v-else-if="view === 'gantt' && ganttRows.length" class="ide-kanban__gantt" data-testid="ide-kanban-gantt">
       <div v-for="row in ganttRows" :key="row.task.id" class="ide-kanban__grow">
-        <span class="ide-kanban__glabel" :title="row.task.title">{{ row.task.title }}</span>
+        <span class="ide-kanban__glabel" :title="`${row.task.title} · ${row.task.board}`">{{ row.task.title }}</span>
         <span class="ide-kanban__gtrack">
           <span class="ide-kanban__gbar" :class="{ 'is-done': !!row.task.completed_at }" :style="barStyle(row)" />
         </span>
@@ -210,6 +253,12 @@ function barStyle(row: { start: number; end: number }): Record<string, string> {
 .ide-kanban__viewtab { border: 1px solid transparent; background: transparent; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 1px 8px; color: var(--text-muted); }
 .ide-kanban__viewtab.is-active { border-color: var(--primary-color); color: var(--primary-color); }
 .ide-kanban__count { margin-left: auto; color: var(--text-muted); }
+.ide-kanban__boardbar { flex: none; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-bottom: 1px solid var(--border-color); overflow-x: auto; }
+.ide-kanban__boardchip { flex: none; border: 1px solid transparent; background: transparent; border-radius: 10px; cursor: pointer; font-size: 10px; line-height: 16px; padding: 0 6px; color: var(--text-muted); white-space: nowrap; }
+.ide-kanban__boardchip.is-active { border-color: var(--primary-color); color: var(--primary-color); }
+.ide-kanban__boardn { margin-left: 4px; opacity: .7; }
+.ide-kanban__taskboard { flex: none; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; color: var(--text-muted); }
+.ide-kanban__boardcell { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
 .ide-kanban__error,.ide-kanban__board { flex: 1; display: flex; gap: 8px; overflow-x: auto; padding: 8px; }
 .ide-kanban__col { flex: 0 0 168px; background: var(--hover-color, rgba(0,0,0,.03)); border-radius: 6px; padding: 6px; }
 .ide-kanban__colhead { font-weight: 600; color: var(--text-muted); font-size: 11px; padding: 2px 4px 6px; }
