@@ -48,3 +48,18 @@ Phase 1（2026-10-21-zcode-usage-ledger.md，main f3b2ee9e）落地了本机 zco
 - 全量 `npm test`：5638 通过 / 2 失败。**两失败处置**：①raw-hex 幽灵变量=本轮引入（`--out-h` CSS 变量），已根治（改子元素内联高度）后复测绿；②unified-nav-guard v12.4 窗口管理=净树（stash 后）同样失败的既有失败（d458d6d8 带入，非本轮文件），如实声明不越域修。
 - 走一遍真实修正：ctx-toggle 初版 v-if 依赖未加载数据=死锁（点不开构成），测试抓出后改为账单展开即显示。
 - 浏览器复走查（2026-10-21 16:20，serve-main=025eacf0）：分组模式侧栏徽章 27 条+账单按钮齐（S1 生效；首探无徽=4.8G 库聚合数秒延迟，非缺陷）；账单展开金路径全绿——逐轮表真实 TTFT（2.6s/7.3s/9.5s）+成本 ≈$18.48+工具时间线 100 次；构成展开：趋势 120 柱（总 268 次请求）、构成合计 ≈1.2M（工具调用 402 段 ≈1.0M 占 83%——「上下文被谁吃掉」洞察成立）、top 消息预览 ≤120。视觉核验两瑕疵：①窄侧栏逐轮表 8 列被裁→尾修加 overflow-x 滚动（本提交）；②构成块在折叠下沿属滚动位置非缺陷。项目/时间线组织模式下 CLI 行由侧栏自渲染（ide-task-cli-*），不带徽章/账单——记为后续项（混排行接入需侧栏拉用量，本轮不做）。
+
+## 遗留项收编（2026-10-21 第三批：混排行接入）
+
+Phase 2 复走查记录的遗留项——侧栏「项目/时间线」组织模式的 CLI 混排行（`ide-task-cli-*`，侧栏自渲染）不带徽章/账单——本批收编：
+
+- **useZcodeCliUsage 单例 composable**：模块级缓存 + in-flight 去重，三个 surface（混排行/分组独立段/落地页）共享一次拉取；`__zcodeCliUsageTestHooks.resetUsageForTest` 供测试复位。
+- **IdeCliSessionBill 子组件**：账单体（逐轮表/趋势/构成/工具时间线）自 IdeCliSessions 抽出为单一事实源，两宿主复用；挂载自拉 rounds+tools，testid 全部保持不变。
+- **混排行接入**：行内用量徽（轮/tok）+「账」按钮 + 列化展开账单体（`ide-taskbar__item--bill-open`）；loadCli 并发触发共享 loadUsage。
+- 决策 D8：徽章文案与独立段逐字对齐（`· N 轮 · X tok`），两 surface 视觉一致。
+
+### 验证实录
+
+- 新测试 cli-mixed-usage.test.ts 3 项（徽章/账单展开/单例一次拉取）+ 既有 zcode-usage-ui 10 项（类名迁移 `.ide-cli-bill__*`）+ task-sidebar/devtools-ui 回归全绿（40/40）。
+- 全量 `npm test`：5677 通过 / 1 失败（unified-nav-guard=上轮已声明的既有失败，净树同红，非本轮文件）。
+- 浏览器验证：换装后进行（混排行徽章+账单展开金路径），结论回写。
