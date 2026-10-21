@@ -2269,6 +2269,13 @@ def _r18_msg_html(m):
 def _r18_frame_tags(frames, step, view=''):
     out = []
     for f in frames:
+        # dict 帧形态 {file, caption}（2026-10-22 run22 收尾链立法）：caption 覆盖
+        # 自动图注——补拍标注/V8.4③ 合规降级的机器可判载体（audit _cap_of 读报告
+        # figcaption）；字符串形态兼容不破。
+        _cap_override = ''
+        if isinstance(f, dict):
+            _cap_override = str(f.get('caption', '')).strip()
+            f = f.get('file', '')
         name = str(f)
         if not name.endswith('.png'):
             name += '.png'
@@ -2278,6 +2285,8 @@ def _r18_frame_tags(frames, step, view=''):
         _pos = {'before': '操作前', 'action': '操作动作', 'after': '系统响应'}.get(
             name.rsplit('-', 1)[-1][:-4] if '-' in name else '', '')
         cap = f'{view}·{_pos}' if (view and _pos) else (name[:-4] if not _pos else f'操作序列画面·{_pos}')
+        if _cap_override:
+            cap = _cap_override
         _stem = name[:-4] if name.endswith('.png') else name
         if _stem in _USED_FRAMES:
             continue  # V8.4② 单嵌：步条已嵌此帧（步条先渲染），挂接侧让位
