@@ -239,8 +239,8 @@ function originSampleOf(task: EvalTask): { sample?: ResolvedSample; problem?: st
   }
   const inspected = inspectTrace(origin.sessionId)
   if (!inspected.ok) return { problem: `任务 ${task.id} 的来源 trace 不可用：${inspected.reason ?? '未知原因'}` }
-  if (inspected.format !== 'legacy' || !inspected.complete) {
-    return { problem: `任务 ${task.id} 的来源 trace 不是完整 legacy 证据` }
+  if (inspected.format === 'unknown' || !inspected.complete) {
+    return { problem: `任务 ${task.id} 的来源 trace 格式不可识别或不完整` }
   }
   if (inspected.traceHash !== origin.traceHash) {
     return { problem: `任务 ${task.id} 的来源 trace 已变化，需重新转题确认` }
