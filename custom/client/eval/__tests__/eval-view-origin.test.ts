@@ -6,10 +6,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 const routeQuery = vi.hoisted(() => ({ value: {} as Record<string, string> }))
 const routerPush = vi.hoisted(() => vi.fn())
 vi.mock('vue-router', () => ({
-  // 真实 vue-router 只在 setup 同步期有效；setup 外调用返回 undefined（2026-10-21
-  // 走查实测：refresh() 内调用 useRoute 曾致整页加载失败）。首次返回 query、
-  // 之后返回 undefined，钉住「useRoute 必须在 setup 顶层调用」的约束。
-  useRoute: (() => { let called = false; return () => { if (called) return undefined; called = true; return { query: routeQuery.value } } })(),
+  useRoute: () => ({ query: routeQuery.value }),
   useRouter: () => ({ push: routerPush }),
 }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'zh' } }) }))
@@ -98,5 +95,13 @@ describe('EvalView origin 运行', () => {
     await wrapper.find('[data-testid="eval-launch-set"]').setValue('eset-sealed')
     expect(wrapper.find('[data-testid="eval-launch-use-origin"]').attributes('disabled')).toBeDefined()
     expect(wrapper.text()).toContain('密封集不能按来源自动展开')
+  })
+
+  it('useRoute 必须在 setup 顶层调用（refresh 内调用会在真实 router 下拿不到 query，2026-10-21 走查实测）', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const src = readFileSync(resolve(process.cwd(), 'custom/client/eval/views/EvalView.vue'), 'utf8')
+    expect(src).toMatch(/const route = useRoute\(\)/)
+    expect(src).not.toMatch(/function refresh[\s\S]*?useRoute\(\)/)
   })
 })
