@@ -16,9 +16,14 @@
  *   GET  /branches?run=         git for-each-ref+rev-parse 比对+新鲜度三态｜branch_fresh 唯一实现
  *   GET  /anchor?id=            四类锚反查（$/commit/t_/!）｜聚合
  *   GET  /trace?run=            冻结单 AC+测试报告+验收书判词四列｜聚合，缺席如实 null
- *   POST /evidence/mark         本族唯一写端点：evidence/message-marks.jsonl append｜强校验+穿越防护
+ *   POST /evidence/mark         证据标记写入：evidence/message-marks.jsonl append｜强校验+穿越防护
  *   GET  /issues?run=           issues.log（run 根或 evidence/ 两处）ISSUE/DISP 解析｜只读聚合
  *   GET  /quality?run=          mutation-score.json+dup-ratio.json 只读聚合｜E/F 件，缺席如实
+ *   GET  /uat-verdicts?run=     UAT 判定台账按 AC 聚合（最新+历史+阻断）｜状态机读模型
+ *   POST /uat-verdict           UAT 逐 AC 判定（conditional/reject 必填 note）｜append-only
+ *   GET  /release-gate?run=     G5 发布门状态机读模型（state/history/allowedActions/can）｜派生
+ *   GET  /release-gate/state    GET /release-gate 别名（显式 state 读面）
+ *   POST /release-gate          G5 状态迁移 submit/approve/reject/release｜409 非法迁移+幂等
  *
  * 配置（env，单一配置源）：OBS_SIM_ROOT（与 631 同一 env；缺席=503 fail-closed——
  * 生产不开 env 即关，不读任意磁盘路径）；SIM_TOPOLOGY_ENDPOINTS/SIM_DISPATCHER_HEALTH_CLI/
@@ -36,6 +41,15 @@ import { promisify } from 'node:util'
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import { gateKeys, ledgerSummary, parseStateEnv, stepKeys } from '../observability/observability-controller'
+import {
+  RELEASE_ACTIONS, RELEASE_ALLOWED, actionOfRecord, applyReleaseAction,
+  deriveReleaseState, releasePermissions, validateReleaseActionInput,
+  type ReleaseAction, type ReleaseGateDecision, type ReleaseGateRecord,
+} from './release-state'
+import {
+  UAT_VERDICT_LABEL, aggregateUatByAc, validateUatVerdictFields,
+  type UatVerdictKey, type UatVerdictRecord,
+} from './uat-state'
 
 const execFileP = promisify(execFile)
 const router = new Router({ prefix: '/api/hermes/sim' })
@@ -558,38 +572,21 @@ router.get('/trace', (ctx: Context) => {
   }
 })
 
-// ── 9b. UAT 判定台账：run 绑定的人工判定持久化（spec 2026-10-19-studio-p2 §2.1） ──
+// ── 9b. UAT 判定台账：run 绑定的人工判定持久化（spec 2026-10-21-g5-uat-state-machine §2） ──
+// 类型/标签/聚合纯函数正身在 uat-state.ts；此处保留历史导出面（TracePanel 等消费者不迁移）。
 
-export type UatVerdictKey = 'pass' | 'conditional' | 'reject'
-export const UAT_VERDICT_LABEL: Record<UatVerdictKey, string> = {
-  pass: '通过', conditional: '有条件通过', reject: '不通过',
-}
+export { UAT_VERDICT_LABEL }
+export type { UatVerdictKey, UatVerdictRecord }
 
-export interface UatVerdictRecord {
-  ts: string
-  actor: string
-  run: string
-  ac: string
-  verdict: UatVerdictKey
-  note?: string
-}
-
-/** UAT 判定入参强校验（纯函数）：ac 归一 AC-N（≤3 位）；verdict 三态键；note ≤200。 */
+/** UAT 判定入参强校验（纯函数）：run 校验 + uat-state 字段校验（conditional 需 note+ack；reject 需 note）。 */
 export function validateUatVerdict(body: unknown):
-  { ok: true; run: string; ac: string; verdict: UatVerdictKey; note?: string } | { ok: false; error: string } {
-  const b = body as { run?: unknown; ac?: unknown; verdict?: unknown; note?: unknown } | undefined
+  { ok: true; run: string; ac: string; verdict: UatVerdictKey; note?: string; acknowledged?: boolean } | { ok: false; error: string } {
+  const b = body as { run?: unknown } | undefined
   const run = typeof b?.run === 'string' ? b.run : ''
   if (!isValidRun(run)) return { ok: false, error: 'run 参数非法' }
-  const rawAc = typeof b?.ac === 'string' ? b.ac.trim() : ''
-  const m = /^(?:AC[-\s]?)?(\d{1,3})$/i.exec(rawAc)
-  if (!m) return { ok: false, error: 'ac 非法（形如 AC-1，编号 ≤3 位）' }
-  const verdict = b?.verdict
-  if (verdict !== 'pass' && verdict !== 'conditional' && verdict !== 'reject') {
-    return { ok: false, error: 'verdict 须为 pass|conditional|reject' }
-  }
-  const note = typeof b?.note === 'string' ? b.note.trim() : ''
-  if (note.length > 200) return { ok: false, error: 'note 超长（≤200 字符）' }
-  return { ok: true, run, ac: `AC-${m[1]}`, verdict, note: note || undefined }
+  const fields = validateUatVerdictFields(body)
+  if (!fields.ok) return fields
+  return { ok: true, run, ac: fields.ac, verdict: fields.verdict, ...(fields.note ? { note: fields.note } : {}), ...(fields.acknowledged ? { acknowledged: true } : {}) }
 }
 
 /** 台账落位（穿越防护同 evidence/mark）：runs/<run>/evidence/uat-verdicts.jsonl。 */
@@ -651,13 +648,33 @@ function actorOf(ctx: Context): string {
   return typeof user?.username === 'string' && user.username ? user.username : 'unknown'
 }
 
+/** 调用方身份（角色闸）：上游 requireUserJwt 写 ctx.state.user；未启用鉴权=undefined（单用户部署放行）。 */
+function callerOf(ctx: Context): { actor: string; role?: string; authenticated: boolean } {
+  const user = (ctx.state as { user?: { username?: string; role?: string } } | undefined)?.user
+  return {
+    actor: typeof user?.username === 'string' && user.username ? user.username : 'unknown',
+    role: typeof user?.role === 'string' ? user.role : undefined,
+    authenticated: Boolean(user),
+  }
+}
+
 router.get('/uat-verdicts', (ctx: Context) => {
   const root = simRootOrNull()
   if (!root) return gateClosed(ctx)
   const run = String(ctx.query.run ?? '')
   if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
   const ledger = readUatLedger(root, run)
-  ctx.body = { run, records: ledger?.records ?? [], source: ledger?.file ?? null }
+  const records = ledger?.records ?? []
+  const { byAc, summary } = aggregateUatByAc(records)
+  ctx.body = {
+    run,
+    records,
+    byAc,
+    summary,
+    blocked: summary.blocked > 0,
+    blockedAcs: byAc.filter(a => a.blocked).map(a => a.ac),
+    source: ledger?.file ?? null,
+  }
 })
 
 router.post('/uat-verdict', (ctx: Context) => {
@@ -670,24 +687,28 @@ router.post('/uat-verdict', (ctx: Context) => {
   const file = safeUatLedgerFile(root, v.run)
   if (!file) { ctx.status = 400; ctx.body = { error: '目标路径越界' }; return }
   mkdirSync(resolve(runDir, 'evidence'), { recursive: true })
-  const rec: UatVerdictRecord = { ts: new Date().toISOString(), actor: actorOf(ctx), run: v.run, ac: v.ac, verdict: v.verdict, ...(v.note ? { note: v.note } : {}) }
+  const rec: UatVerdictRecord = {
+    ts: new Date().toISOString(),
+    actor: actorOf(ctx),
+    run: v.run,
+    ac: v.ac,
+    verdict: v.verdict,
+    ...(v.note ? { note: v.note } : {}),
+    ...(v.acknowledged ? { acknowledged: true } : {}),
+  }
   appendFileSync(file, `${JSON.stringify(rec)}\n`, 'utf-8')
   ctx.body = { ok: true, record: rec, anchor: `evidence/uat-verdicts.jsonl#${v.ac}` }
 })
 
-// ── 9c. G5 发布准出台账：run 绑定的批准/打回留痕（spec §2.2；iv-08 人工批准半件） ──
+// ── 9c. G5 发布门状态机：append-only 事件流 + 派生状态（spec 2026-10-21-g5-uat-state-machine §1） ──
+// 类型/迁移矩阵/派生/权限正身在 release-state.ts；此处保留旧导出面与存储路径。
 
-export type ReleaseGateDecision = 'approve' | 'reject'
+export type { ReleaseAction, ReleaseGateDecision, ReleaseGateRecord }
 
-export interface ReleaseGateRecord {
-  ts: string
-  actor: string
-  run: string
-  decision: ReleaseGateDecision
-  note?: string
-}
-
-/** 发布门入参强校验（纯函数）：打回必须给理由（≤300 字）；批准 note 可选。 */
+/**
+ * 旧二态决策校验（纯函数，兼容旧调用方/测试）：打回必须给理由；批准 note 可选。
+ * @deprecated 新端点用 validateReleaseActionInput（批准需证据锚）。
+ */
 export function validateReleaseGate(body: unknown):
   { ok: true; run: string; decision: ReleaseGateDecision; note?: string } | { ok: false; error: string } {
   const b = body as { run?: unknown; decision?: unknown; note?: unknown } | undefined
@@ -710,6 +731,7 @@ export function safeReleaseGateFile(root: string, run: string): string | null {
   return file.startsWith(evidDir + sep) ? file : null
 }
 
+/** 读台账：旧记录（decision）与新记录（action）都收；未知动作坏行丢弃。 */
 export function readReleaseGate(root: string, run: string): { file: string; records: ReleaseGateRecord[] } | null {
   const file = safeReleaseGateFile(root, run)
   if (!file || !existsSync(file)) return null
@@ -718,50 +740,105 @@ export function readReleaseGate(root: string, run: string): { file: string; reco
     if (!ln.trim()) continue
     try {
       const r = JSON.parse(ln) as ReleaseGateRecord
-      if (r && (r.decision === 'approve' || r.decision === 'reject')) records.push(r)
+      if (r && actionOfRecord(r) !== null) records.push(r)
     } catch { /* 坏行丢弃 */ }
   }
   return { file, records }
 }
 
-/** 当前判定（纯函数）：最新一条记录胜出；无记录=未决 null。 */
+/** 当前判定（纯函数，旧读面兼容）：最新一条 approve/reject 记录；无则 null。 */
 export function latestReleaseDecision(records: ReleaseGateRecord[]): ReleaseGateRecord | null {
   let latest: ReleaseGateRecord | null = null
   for (const r of records) {
+    const action = actionOfRecord(r)
+    if (action !== 'approve' && action !== 'reject') continue
     if (!latest || Date.parse(r.ts) >= Date.parse(latest.ts)) latest = r
   }
   return latest
 }
 
-router.get('/release-gate', (ctx: Context) => {
+function releaseGateStateHandler(ctx: Context): void {
   const root = simRootOrNull()
-  if (!root) return gateClosed(ctx)
+  if (!root) { gateClosed(ctx); return }
   const run = String(ctx.query.run ?? '')
   if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
   const ledger = readReleaseGate(root, run)
-  const current = ledger ? latestReleaseDecision(ledger.records) : null
+  const records = ledger?.records ?? []
+  const derived = deriveReleaseState(records)
+  const caller = callerOf(ctx)
+  const can = releasePermissions(caller.role, caller.authenticated)
+  const decision = derived.latestDecision ? actionOfRecord(derived.latestDecision) : null
   ctx.body = {
     run,
-    decision: current?.decision ?? null,
-    current,
-    records: ledger?.records ?? [],
+    state: derived.state,
+    decision: decision === 'approve' || decision === 'reject' ? decision : null,
+    current: derived.latest,
+    records,
+    history: derived.history,
+    allowedActions: RELEASE_ALLOWED[derived.state].filter(action => can[action]),
+    stateAllowedActions: RELEASE_ALLOWED[derived.state],
+    can,
     source: ledger?.file ?? null,
   }
-})
+}
+
+router.get('/release-gate', releaseGateStateHandler)
+// 显式 state 读面别名：语义相同，便于客户端/外部脚本按状态机命名读取。
+router.get('/release-gate/state', releaseGateStateHandler)
 
 router.post('/release-gate', (ctx: Context) => {
   const root = simRootOrNull()
   if (!root) return gateClosed(ctx)
-  const v = validateReleaseGate(ctx.request.body)
+  const body = ctx.request.body as { run?: unknown } | undefined
+  const run = typeof body?.run === 'string' ? body.run : ''
+  if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
+  const v = validateReleaseActionInput(body)
   if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
-  const runDir = safeRunDir(root, v.run)
+  const action = v.value.action
+  const caller = callerOf(ctx)
+  const can = releasePermissions(caller.role, caller.authenticated)
+  if (!can[action]) {
+    ctx.status = 403
+    ctx.body = { ok: false, code: 'forbidden', error: '发布审批动作仅 super_admin 或 release 角色可执行' }
+    return
+  }
+  const runDir = safeRunDir(root, run)
   if (!runDir || !existsSync(runDir)) { ctx.status = 400; ctx.body = { error: 'run 参数非法或不存在' }; return }
-  const file = safeReleaseGateFile(root, v.run)
+  const file = safeReleaseGateFile(root, run)
   if (!file) { ctx.status = 400; ctx.body = { error: '目标路径越界' }; return }
+  const ledger = readReleaseGate(root, run)
+  const records = ledger?.records ?? []
+  const derived = deriveReleaseState(records)
+  const next = applyReleaseAction(derived.state, action)
+  if (next === null) {
+    ctx.status = 409
+    ctx.body = {
+      ok: false,
+      code: 'invalid_transition',
+      error: `当前状态 ${derived.state} 不允许动作 ${action}`,
+      state: derived.state,
+      action,
+    }
+    return
+  }
+  // 同态重复（重复提交/批准/驳回/发布）：不追加重复事件，回当前状态。
+  if (next === derived.state) {
+    ctx.body = { ok: true, idempotent: true, state: next, action, record: null, current: derived.latest }
+    return
+  }
   mkdirSync(resolve(runDir, 'evidence'), { recursive: true })
-  const rec: ReleaseGateRecord = { ts: new Date().toISOString(), actor: actorOf(ctx), run: v.run, decision: v.decision, ...(v.note ? { note: v.note } : {}) }
+  const rec: ReleaseGateRecord = {
+    ts: new Date().toISOString(),
+    actor: caller.actor,
+    run,
+    action,
+    ...(v.value.note ? { note: v.value.note } : {}),
+    ...(v.value.anchor ? { anchor: v.value.anchor } : {}),
+    ...(action === 'approve' || action === 'reject' ? { decision: action } : {}),
+  }
   appendFileSync(file, `${JSON.stringify(rec)}\n`, 'utf-8')
-  ctx.body = { ok: true, record: rec, anchor: 'evidence/release-gate.jsonl' }
+  const after = deriveReleaseState([...records, rec])
+  ctx.body = { ok: true, idempotent: false, state: after.state, action, record: rec, anchor: 'evidence/release-gate.jsonl' }
 })
 
 // ── 10. evidence/mark：本族唯一写端点（强校验+路径穿越防护） ──
