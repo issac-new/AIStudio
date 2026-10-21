@@ -24,6 +24,8 @@ import { browserVerdict } from '../browsersec/browser-security'
 import { modeDecision, type PermissionMode, type ToolCategory } from '../permmodes/permission-modes'
 import { sessionModeOf } from '../permmodes/session-mode-store'
 import { appendPolicyDecision } from './policy-decisions'
+import { evaluatePolicy, type PolicySnapshot, type PolicyToolCategory } from '../toolpolicy/tool-policy'
+import { loadPolicySnapshot } from '../toolpolicy/policy-store'
 
 /** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。 */
 interface PreExecuteVerdict { allow: false; error: string }
@@ -41,6 +43,12 @@ export type EnforceRule =
   | 'no-config'             // 无阶梯无全局模式（不执法）
   | 'identity-pass'         // 身份白名单放行（无阶梯/模式时的唯一执法层）
   | 'identity-tool-denied'  // 身份工具白名单未覆盖
+  | 'policy-allow'          // 声明式策略显式 allow 命中
+  | 'policy-pass'           // 声明式策略 permissive 未命中（继续既有链）
+  | 'policy-deny'           // 声明式策略 deny 命中
+  | 'policy-strict-default' // strict 模式未命中任何 allow（deny-by-default）
+  | 'policy-require-approval' // 声明式策略要求人工审批
+  | 'policy-error'          // 策略文件损坏/校验失败（fail-closed）
   | 'ladder-pass'           // 阶梯判定放行
   | 'mode-pass'             // 全局模式判定放行
   | 'ladder-insight-readonly' // insight 档遇非 read 工具
@@ -53,10 +61,16 @@ export type EnforceRule =
   | 'sandbox-network'        // 浏览器 URL 被网络策略拒绝（P2-5）
   | 'budget-exceeded'        // 当日预算耗尽且策略动作为 block（残余项⑤）
 
+/** 策略层透传元数据：决策账/审批单据此回答「当时生效的是哪条策略」。 */
+export interface EnforcePolicyMeta {
+  policyRuleId?: string
+  policyMode?: 'strict' | 'permissive'
+}
+
 export type EnforceVerdict =
-  | { enforcing: false; rule: Extract<EnforceRule, 'master-off' | 'no-config'> }
-  | { enforcing: true; allow: true; rule: Extract<EnforceRule, 'identity-pass' | 'ladder-pass' | 'mode-pass' | 'approval-passed'> }
-  | { enforcing: true; allow: false; rule: Exclude<EnforceRule, 'master-off' | 'no-config' | 'identity-pass' | 'ladder-pass' | 'mode-pass' | 'approval-passed'>; error: string }
+  | ({ enforcing: false; rule: Extract<EnforceRule, 'master-off' | 'no-config'> } & EnforcePolicyMeta)
+  | ({ enforcing: true; allow: true; rule: Extract<EnforceRule, 'identity-pass' | 'policy-allow' | 'policy-pass' | 'ladder-pass' | 'mode-pass' | 'approval-passed'> } & EnforcePolicyMeta)
+  | ({ enforcing: true; allow: false; rule: Exclude<EnforceRule, 'master-off' | 'no-config' | 'identity-pass' | 'policy-allow' | 'policy-pass' | 'ladder-pass' | 'mode-pass' | 'approval-passed'>; error: string } & EnforcePolicyMeta)
 
 // ---------- 工具类别映射（permmodes 四类口径） ----------
 
@@ -199,6 +213,8 @@ export interface EnforceEnv {
   identityOf?: (userId?: string) => IdentityLite | null
   /** 预算已耗尽且策略动作为 block（由钩子在 HERMES_BUDGET_ENFORCE=1 时预计算）。 */
   budgetBlocked?: boolean
+  /** 声明式策略快照注入（测试用；缺省读 policy-store，带 1s 缓存）。null=未配置。 */
+  policyOf?: () => PolicySnapshot | null
 }
 
 /** 工具白名单匹配：精确名或 `prefix*`。 */
@@ -318,6 +334,46 @@ export function evaluateEnforcement(
       error: '当日预算已耗尽（HERMES_BUDGET_ENFORCE=1 且策略动作 block）——请等待次日额度或调整预算策略',
     }
   }
+  // 策略链 0.5（2026-10-21 AGT 调研轮）：声明式工具策略。硬边界（身份/沙箱/预算）
+  // 之后、粗粒度默认档（阶梯/权限模式）之前——策略只收紧，不放宽既有边界；
+  // strict 的 deny-by-default 是额外一道门，allow 命中后仍继续走阶梯/模式。
+  const policySnap = (env.policyOf ?? (() => loadPolicySnapshot()))()
+  const policyActive = !!policySnap?.exists
+  let policyMeta: EnforcePolicyMeta = {}
+  if (policySnap && policySnap.exists) {
+    const pv = evaluatePolicy(policySnap, {
+      tool,
+      category: toolCategoryOf(tool) as PolicyToolCategory,
+      input,
+      userId: env.userId,
+      profileId,
+    })
+    if (pv.status === 'error') {
+      // 配置坏了 ≠ 没配置：fail-closed，并给出可修复的原因（不静默放行）。
+      return { enforcing: true, allow: false, rule: 'policy-error', error: pv.reason }
+    }
+    if (pv.status === 'deny') {
+      return {
+        enforcing: true, allow: false,
+        rule: pv.ruleId ? 'policy-deny' : 'policy-strict-default',
+        error: pv.reason,
+        ...(pv.ruleId ? { policyRuleId: pv.ruleId } : {}),
+        policyMode: pv.mode,
+      }
+    }
+    if (pv.status === 'require_approval') {
+      return {
+        enforcing: true, allow: false, rule: 'policy-require-approval',
+        error: `${pv.reason}——批准后重试即放行（一单一执行）`,
+        policyRuleId: pv.ruleId,
+        policyMode: pv.mode,
+      }
+    }
+    if (pv.status === 'allow') {
+      policyMeta = { ...(pv.ruleId ? { policyRuleId: pv.ruleId } : {}), policyMode: pv.mode }
+    }
+  }
+
   // 档位解析三级链（阶梯＞会话档＞全局档）：会话档 per-profile 更具体故恒胜全局档
   // （v4 通道轮）；全局档=env 注入位（测试用 globalMode / 运行用 HERMES_TOOL_ENFORCE_MODE）。
   const sessionMode = env.sessionModeOf !== undefined
@@ -330,7 +386,14 @@ export function evaluateEnforcement(
   const modeSource = sessionMode ? '会话档' : '全局档'
   const ladder = (env.ladderOf ?? ((p?: string) => ladderForProfile(p ?? '')))(profileId)
   if (!ladder && !modeRaw) {
-    // 身份白名单是唯一执法层时，放行也要如实标 enforcement=true（否则审计看不到裁决）。
+    // 身份白名单/策略是唯一执法层时，放行也要如实标 enforcement=true（否则审计看不到裁决）。
+    if (policyActive) {
+      return {
+        enforcing: true, allow: true,
+        rule: policyMeta.policyRuleId ? 'policy-allow' : 'policy-pass',
+        ...policyMeta,
+      }
+    }
     return identityEnforced
       ? { enforcing: true, allow: true, rule: 'identity-pass' }
       : { enforcing: false, rule: 'no-config' }
@@ -344,15 +407,17 @@ export function evaluateEnforcement(
         return {
           enforcing: true, allow: false, rule: 'ladder-insight-readonly',
           error: `自治阶梯 insight 档（只出洞察）：工具 ${tool} 属 ${category} 类，非只读——请人执行或调整阶梯配置`,
+          ...policyMeta,
         }
       }
-      return { enforcing: true, allow: true, rule: 'ladder-pass' }
+      return { enforcing: true, allow: true, rule: 'ladder-pass', ...policyMeta }
     }
     const risk = riskOfCall(tool, input)
     if (RISK_RANK[risk] > RISK_RANK[ladder.maxRiskTier]) {
       return {
         enforcing: true, allow: false, rule: 'ladder-risk-cap',
         error: `自治阶梯 ${ladder.level} 档风险上限 ${ladder.maxRiskTier}：本次调用判定 ${risk}——超出允许档位`,
+        ...policyMeta,
       }
     }
     if (ladder.level === 'assist') {
@@ -361,10 +426,11 @@ export function evaluateEnforcement(
         return {
           enforcing: true, allow: false, rule: 'ladder-approval-point',
           error: `自治阶梯 assist 档命中人工确认点「${hit}」——请人工确认后在审批流放行，或调整该 profile 的确认点配置`,
+          ...policyMeta,
         }
       }
     }
-    return { enforcing: true, allow: true, rule: 'ladder-pass' }
+    return { enforcing: true, allow: true, rule: 'ladder-pass', ...policyMeta }
   }
 
   // 策略链 2：全局权限模式（七档矩阵）
@@ -374,15 +440,17 @@ export function evaluateEnforcement(
     return {
       enforcing: true, allow: false, rule: 'mode-off',
       error: `权限模式 ${mode}（${modeSource}）不放行 ${toolCategoryOf(tool)} 类工具（${tool}）`,
+      ...policyMeta,
     }
   }
   if (decision.needsApproval) {
     return {
       enforcing: true, allow: false, rule: 'mode-needs-approval',
       error: `权限模式 ${mode}（${modeSource}）对 ${toolCategoryOf(tool)} 类工具要求人工审批（${tool}）——请走审批流后重试，或下调该 profile 会话档`,
+      ...policyMeta,
     }
   }
-  return { enforcing: true, allow: true, rule: 'mode-pass' }
+  return { enforcing: true, allow: true, rule: 'mode-pass', ...policyMeta }
 }
 
 // ---------- 钩子（挂进 ekkoToolExecuteHooks） ----------
@@ -391,14 +459,18 @@ export function evaluateEnforcement(
 // 只转"需人工确认"类拒绝（RA 档/阶梯确认点）；硬边界（OFF/风险上限/insight 只读）
 // 不经桥——批单不越权。approved=同 callHash 批单在案且未消费（consume-on-pass）；
 // ticket=挂单信息（deny 文案带单号指引批后重试）。
-export const APPROVAL_CLASS_RULES: ReadonlySet<string> = new Set(['mode-needs-approval', 'ladder-approval-point'])
+export const APPROVAL_CLASS_RULES: ReadonlySet<string> = new Set([
+  'mode-needs-approval',
+  'ladder-approval-point',
+  'policy-require-approval',
+])
 
 export function applyApprovalBridge(
   v: EnforceVerdict,
   bridge: { approved: boolean; ticket?: { id: string; status: 'pending' | 'approved' | 'rejected' } | null },
 ): EnforceVerdict {
   if (!(v.enforcing && v.allow === false) || !APPROVAL_CLASS_RULES.has(v.rule)) return v
-  if (bridge.approved) return { enforcing: true, allow: true, rule: 'approval-passed' }
+  if (bridge.approved) return { ...v, allow: true, rule: 'approval-passed' }
   if (bridge.ticket?.status === 'rejected') {
     return { ...v, error: `${v.error}——审批单 ${bridge.ticket.id} 已被否决，请调整方案或降档后重试` }
   }
@@ -413,6 +485,7 @@ async function approvalBridgeFacts(
   input: Record<string, unknown>,
   profileId: string | undefined,
   rule: string,
+  policyRuleId?: string,
 ): Promise<{ approved: boolean; callHash: string; ticket?: { id: string; status: 'pending' | 'approved' | 'rejected' } | null }> {
   try {
     const bridge = await import('./enforce-approvals')
@@ -424,6 +497,7 @@ async function approvalBridgeFacts(
       inputPreview: bridge.inputPreviewOf(input),
       profileId: profileId ?? '', rule,
       risk: risk === 'low' ? 'low' : risk === 'high' ? 'high' : 'medium',
+      ...(policyRuleId ? { policyRuleId } : {}),
     })
     return { approved: false, callHash: hash, ticket: { id: rec.id, status: rec.status } }
   } catch {
@@ -462,7 +536,7 @@ function emitDenyEvent(tool: string, profileId: string | undefined, v: Extract<E
         source: 'toolpipeline/enforce-gate',
         summary: `执法门拒绝 ${profileId ? `profile ${profileId} 的 ` : ''}工具调用 ${tool}：${v.error}`,
         refs: profileId ? { profileId } : {},
-        payload: { tool, rule: v.rule },
+        payload: { tool, rule: v.rule, ...(v.policyRuleId ? { policyRuleId: v.policyRuleId } : {}) },
       })
     })
     .catch(() => { /* fail-soft */ })
@@ -508,6 +582,7 @@ function logPolicyDecision(
     enforcing: true,
     allow: verdict.allow,
     rule: verdict.rule,
+    ...(verdict.policyRuleId ? { policyRuleId: verdict.policyRuleId } : {}),
     risk: riskOfCall(tool, input),
     reason: verdict.allow === false ? verdict.error.slice(0, 200) : undefined,
   })
@@ -537,7 +612,7 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
         })
         // 审批桥只对确认类裁决采事实（避免给硬边界/放行类挂单）
         if (verdict.enforcing && verdict.allow === false && APPROVAL_CLASS_RULES.has(verdict.rule)) {
-          bridgeFacts = await approvalBridgeFacts(name, input, context?.profileId, verdict.rule)
+          bridgeFacts = await approvalBridgeFacts(name, input, context?.profileId, verdict.rule, verdict.policyRuleId)
           verdict = applyApprovalBridge(verdict, bridgeFacts)
         }
       } catch {

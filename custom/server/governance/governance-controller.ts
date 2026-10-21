@@ -726,4 +726,65 @@ router.get('/board-status', (ctx) => {
   ctx.body = { ok: true, ...collectBoardStatus() }
 })
 
+// ── 声明式工具策略（2026-10-21 AGT 调研轮）：策略即代码 + 姿态 + lint ──
+import { loadPolicySnapshot, savePolicyDoc } from '../toolpolicy/policy-store'
+import { lintPolicyDoc, policyPosture, starterPolicyDoc, TOOL_POLICY_VERSION } from '../toolpolicy/tool-policy'
+import { queryPolicyDecisions } from '../toolpipeline/policy-decisions'
+
+function policyBodyWithVersion(body: unknown): unknown {
+  if (body && typeof body === 'object' && !Array.isArray(body) && (body as Record<string, unknown>).version === undefined) {
+    return { version: TOOL_POLICY_VERSION, ...(body as Record<string, unknown>) }
+  }
+  return body
+}
+
+router.get('/tool-policies', (ctx) => {
+  const snap = loadPolicySnapshot()
+  const masterOn = process.env.HERMES_TOOL_ENFORCE === '1'
+  const posture = policyPosture(snap, masterOn)
+  const recent = queryPolicyDecisions({ days: 7, limit: 5_000 })
+  ctx.body = {
+    ok: true,
+    exists: snap.exists,
+    doc: snap.doc,
+    problems: snap.problems,
+    warnings: snap.warnings,
+    posture,
+    enforcement: { masterOn },
+    recent: {
+      days: 7,
+      allow: recent.byOutcome.allow,
+      deny: recent.byOutcome.deny,
+      byRule: recent.byRule.filter((r) => r.rule.startsWith('policy-')),
+    },
+  }
+})
+
+router.get('/tool-policies/starter', (ctx) => {
+  ctx.body = { ok: true, doc: starterPolicyDoc() }
+})
+
+router.post('/tool-policies/lint', (ctx) => {
+  const lint = lintPolicyDoc(policyBodyWithVersion(ctx.request.body))
+  ctx.body = { ok: true, doc: lint.doc, problems: lint.problems, warnings: lint.warnings }
+})
+
+router.put('/tool-policies', (ctx) => {
+  // 写策略=安全边界写面，与 registry/matrix 写端点同闸。
+  if (superAdminDenied(ctx)) return
+  const res = savePolicyDoc(policyBodyWithVersion(ctx.request.body), govActorOf(ctx as never))
+  if (!res.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: res.problems, warnings: res.warnings }
+    return
+  }
+  const snap = loadPolicySnapshot()
+  ctx.body = {
+    ok: true,
+    doc: res.doc,
+    warnings: res.warnings,
+    posture: policyPosture(snap, process.env.HERMES_TOOL_ENFORCE === '1'),
+  }
+})
+
 export const governanceRoutes = router

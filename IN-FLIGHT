@@ -1,5 +1,5 @@
-session=cockpit-overhaul-1020
+session=tool-policy-engine
 status=complete
-created=2026-10-20T12:23:00+08:00
-closed=2026-10-20T20:58:00+08:00
-note=驾驶舱整治收口：fdca2a24+e8f9ed17 已合 main（与 zcode-cockpit-takeover 会话协同收编，用户 20:22 裁定接管）。matrix spec 回填为最后一件。
+created=2026-10-21T12:32:31+08:00
+closed=2026-10-21T14:10:00+08:00
+note=微软 AGT 调研轮：声明式工具策略引擎（strict/fail-closed/lint）+ 姿态横幅 + 台账与规则页面板。spec=docs/superpowers/specs/2026-10-21-tool-policy-engine.md；npm test 5572/5572；隔离上游走查通过。
