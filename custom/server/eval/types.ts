@@ -272,6 +272,8 @@ export interface Attempt {
   taskId: string
   sampleIdx: number
   sessionId?: string
+  /** span 级样本的稳定引用（api_request_id/tool_call_id）；整 session 缺省。 */
+  spanRef?: string
   verdicts: AttemptVerdict[]
   outcome?: { verifier: string; ok: boolean; detail?: string }
   efficiency?: AttemptEfficiency
@@ -290,6 +292,9 @@ export interface Attempt {
 }
 
 export type RunStatus = 'done' | 'failed'
+
+/** 证据来源模式：原事故复现只能诊断，修复关闭与晋级必须认 explicit。 */
+export type EvidenceMode = 'explicit' | 'origin' | 'mixed'
 
 export interface RunAggregates {
   taskCount: number
@@ -401,6 +406,8 @@ export interface EvalRun {
   status: RunStatus
   attempts: Attempt[]
   aggregates: RunAggregates
+  /** 证据来源；历史运行缺省按 explicit 兼容。 */
+  evidenceMode?: EvidenceMode
   /** 线上层证据（回填面；缺席=no_data 如实呈现）。 */
   liveEvidence?: LiveEvidence
   createdAt: number

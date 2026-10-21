@@ -1,7 +1,7 @@
 // overlay/custom/server/harness/workbench/evidence.ts
 // 探测证据适配器：从 Eval Studio 的真实运行拉取读数。
 // 纪律：找不到运行 / 没有聚合 → 返回 null，由服务层 400 拒绝；绝不接受手填指标。
-import { getRun, getSet } from '../../eval/store'
+import { getRun, getSet, getSetRevision } from '../../eval/store'
 import type { ProbeMetrics, RegressionEvidence } from './types'
 
 export function readEvalEvidence(runId: string): ProbeMetrics | null {
@@ -14,6 +14,7 @@ export function readEvalEvidence(runId: string): ProbeMetrics | null {
     evalRunId: run.id,
     setId: run.setId,
     setRevision: run.setRevision,
+    evidenceMode: run.evidenceMode ?? 'explicit',
     k: run.k,
     passAt1: a.passAt1,
     passAtK: a.passAtK,
@@ -39,8 +40,17 @@ export function readRegressionEvidence(runId: string): RegressionEvidence | null
   if (!id) return null
   const run = getRun(id)
   if (!run) return null
-  const set = getSet(run.setId)
-  if (!set) return null
+  // origin/mixed 是原事故复现或混合诊断，不能冒充候选的新鲜回归证据。
+  if ((run.evidenceMode ?? 'explicit') !== 'explicit') return null
+  const current = getSet(run.setId)
+  if (!current) return null
+  let set = current
+  if (run.setRevision !== undefined) {
+    const frozen = getSetRevision(run.setId, run.setRevision)
+    if (!frozen) return null
+    set = { ...current, revision: frozen.revision, contentHash: frozen.contentHash, tasks: frozen.tasks }
+  }
+  if (run.setHash && set.contentHash !== run.setHash) return null
   const failedTaskIds: string[] = []
   for (const task of set.tasks) {
     const first = run.attempts.find((att) => att.taskId === task.id && att.sampleIdx === 1)

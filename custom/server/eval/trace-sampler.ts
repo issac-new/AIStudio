@@ -60,6 +60,8 @@ export interface TraceSampleResult {
 }
 
 function tracesDir(): string {
+  const evalEnv = process.env.EVAL_TRACE_DIR?.trim()
+  if (evalEnv) return resolve(evalEnv.replace(/^~/, homedir()))
   const env = process.env.HERMES_TRACES_DIR?.trim()
   return env ? resolve(env.replace(/^~/, homedir())) : join(homedir(), '.hermes', 'traces')
 }
