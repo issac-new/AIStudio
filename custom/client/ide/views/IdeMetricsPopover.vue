@@ -15,7 +15,8 @@ import { buildUsageLedger } from '../utils/usage-ledger'
 import { roundsSummary } from '../utils/rounds-table'
 import { buildThreadUsage } from '../utils/thread-usage'
 import { computeBreakdown, type ContextSegment } from '../utils/contextBreakdown'
-import { estimateCostUsd, formatCostUsd } from '../utils/modelPricing'
+import { estimateCostUsd, formatCostUsd, isSubscriptionProvider } from '../utils/modelPricing'
+import { zcodeUsageApi, type ZcodeSummary } from '../api/zcodeUsage'
 import { formatTokens, isLowContext, type PressureLevel, type SpeedLevel } from '../utils/metrics'
 
 interface MetricsLike {
@@ -214,10 +215,89 @@ function heatTitle(cell: HeatCell): string {
   return cell.tokens > 0 ? `${cell.date} · ${formatTokens(cell.tokens)}` : cell.date
 }
 
+// ── 本机 zcode 全量账本（2026-10-21 dsh-context 数据面吸收轮）──
+// 数据=/api/ide/zcode-usage/summary（只读 ~/.zcode/cli/db 用量表；覆盖引擎/
+// CLI/子代理/workflow/标题生成/压缩等全部本机 zcode 调用，与上方 studio 域
+// 轮表/热力图互补——那两块只统计 studio 自己落账的会话回合）。
+const zcLedger = ref<ZcodeSummary | null>(null)
+const zcDays = ref<7 | 30 | 0>(30)
+const zcState = ref<'loading' | 'ok' | 'empty' | 'error'>('loading')
+
+async function loadZcodeLedger(days: 7 | 30 | 0 = zcDays.value): Promise<void> {
+  zcDays.value = days
+  zcState.value = 'loading'
+  try {
+    const s = await zcodeUsageApi.summary(days)
+    zcLedger.value = s
+    zcState.value = s.kpi.modelCalls > 0 ? 'ok' : 'empty'
+  } catch {
+    zcLedger.value = null
+    zcState.value = 'error'
+  }
+}
+
+/** 成本：按 byModel 估价求和；订阅 provider（account:*）不计价只打标。 */
+const zcCost = computed<{ total: number | null; hasSub: boolean }>(() => {
+  if (!zcLedger.value) return { total: null, hasSub: false }
+  let sum = 0
+  let any = false
+  let hasSub = false
+  for (const m of zcLedger.value.byModel) {
+    if (isSubscriptionProvider(m.provider)) { hasSub = true; continue }
+    const cost = estimateCostUsd(m.model, {
+      inputTokens: m.inputTokens,
+      outputTokens: m.outputTokens,
+      cacheReadTokens: m.cacheReadTokens,
+      cacheWriteTokens: m.cacheWriteTokens,
+    })
+    if (cost != null) { sum += cost; any = true }
+  }
+  return { total: any ? sum : null, hasSub }
+})
+
+/** 全链路构成来源的人话标签（model_usage.query_source）。 */
+const ZC_SOURCE_LABELS: Record<string, string> = {
+  main_turn: '主轮',
+  subagent: '子代理',
+  workflow_child: 'workflow 子任务',
+  session_title: '标题生成',
+  compact: '上下文压缩',
+  fork: '分叉',
+  goal_summary_title: '目标摘要',
+  target_completion_verification: '完成校验',
+}
+function zcSourceLabel(s: string): string {
+  return ZC_SOURCE_LABELS[s] ?? s
+}
+
+function zcPct(part: number, total: number): string {
+  return total > 0 ? `${((part / total) * 100).toFixed(0)}%` : '0%'
+}
+
+function zcActive(ms: number): string {
+  if (ms <= 0) return '—'
+  const min = ms / 60_000
+  if (min < 60) return `${min.toFixed(0)} 分钟`
+  return `${(min / 60).toFixed(1)} 小时`
+}
+
+/** 日条带高度（展示窗内最大值定标；0 值日不渲染）。 */
+function zcBarH(v: number, max: number): number {
+  if (v <= 0 || max <= 0) return 0
+  return Math.max(8, Math.round((v / max) * 100))
+}
+
+const zcBars = computed(() => {
+  const days = zcLedger.value?.byDay.slice(-30) ?? []
+  const max = Math.max(0, ...days.map(d => d.billedTokens))
+  return { days, max }
+})
+
 // ── 生命周期：打开即拉取；轮结束刷新轮表；Esc 关闭 ──
 onMounted(() => {
   void loadRounds()
   void loadHeatmap()
+  void loadZcodeLedger()
   window.addEventListener('keydown', onKeydown)
 })
 onBeforeUnmount(() => {
@@ -349,6 +429,80 @@ watch(
       </div>
     </section>
 
+    <!-- 本机 zcode 全量账本（CLI/引擎会话；~/.zcode/cli/db 只读聚合，2026-10-21） -->
+    <section class="ide-metrics-panel__section">
+      <div class="ide-metrics-panel__section-head">
+        本机 zcode 账本
+        <span class="ide-metrics-panel__zc-days" data-testid="ide-metrics-zc-days">
+          <button
+            v-for="d in ([7, 30, 0] as const)"
+            :key="d"
+            type="button"
+            class="ide-metrics-panel__zc-day"
+            :class="{ 'is-on': zcDays === d }"
+            :data-testid="`ide-metrics-zc-day-${d}`"
+            @click="loadZcodeLedger(d)"
+          >{{ d === 0 ? '全部' : `${d} 天` }}</button>
+        </span>
+      </div>
+      <div v-if="zcState === 'loading'" class="ide-metrics-panel__state">…</div>
+      <div v-else-if="zcState === 'error'" class="ide-metrics-panel__state">本机 zcode 用量库读取失败（IDE 会话统计不受影响）。</div>
+      <div v-else-if="zcState === 'empty'" class="ide-metrics-panel__state">本机没有 zcode 使用记录。</div>
+      <template v-else-if="zcLedger">
+        <div class="ide-metrics-panel__zc-kpis" data-testid="ide-metrics-zc-kpis">
+          <span title="时间窗内有过模型调用的会话数（含子代理会话）">会话 {{ zcLedger.kpi.sessions }}</span>
+          <span :title="`轮 ${zcLedger.kpi.turns}（出错 ${zcLedger.kpi.turnErrors}）`">轮 {{ zcLedger.kpi.turns }}</span>
+          <span :title="`模型调用 ${zcLedger.kpi.modelCalls}（出错 ${zcLedger.kpi.modelErrors}）`">模型 {{ zcLedger.kpi.modelCalls }}</span>
+          <span :title="`工具调用 ${zcLedger.kpi.toolCalls}（出错 ${zcLedger.kpi.toolErrors}）`">工具 {{ zcLedger.kpi.toolCalls }}</span>
+          <span title="计费 token = 输入 + 输出 + 缓存读写（与库内 computed_total 同口径）">计费 {{ formatTokens(zcLedger.kpi.billedTokens) }}</span>
+          <span title="提示词侧缓存命中率 = 缓存读 ÷（输入 + 缓存读写）">缓存 {{ zcLedger.kpi.cacheHitRate == null ? '—' : `${(zcLedger.kpi.cacheHitRate * 100).toFixed(0)}%` }}</span>
+          <span title="完成轮的活跃时长合计">活跃 {{ zcActive(zcLedger.kpi.activeMs) }}</span>
+          <span :title="zcCost.hasSub ? '按量 provider 价目估算（订阅计划不按 token 计费，未计入）' : '按模型价目估算（未收录模型不计）'">成本 ≈{{ zcCost.total == null ? '—' : formatCostUsd(zcCost.total) }}</span>
+        </div>
+        <div v-if="zcBars.days.length" class="ide-metrics-panel__zc-bars" data-testid="ide-metrics-zc-bars" title="按日计费 token（最近 30 个有记录的日）">
+          <span
+            v-for="d in zcBars.days"
+            v-show="d.billedTokens > 0"
+            :key="d.day"
+            class="ide-metrics-panel__zc-bar"
+            :style="{ height: `${zcBarH(d.billedTokens, zcBars.max)}%` }"
+            :title="`${d.day} · ${formatTokens(d.billedTokens)} · ${d.modelCalls} 次调用`"
+          />
+        </div>
+        <table v-if="zcLedger.byModel.length" class="ide-metrics-panel__rounds" data-testid="ide-metrics-zc-models">
+          <thead>
+            <tr>
+              <th>本机模型</th>
+              <th class="is-num">调用</th>
+              <th class="is-num">计费</th>
+              <th class="is-num">成本</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="m in zcLedger.byModel.slice(0, 8)" :key="`${m.provider}/${m.model}`">
+              <td class="is-model" :title="`${m.provider}/${m.model}（出错 ${m.errors}）`">
+                {{ m.model }}<em v-if="isSubscriptionProvider(m.provider)" class="ide-metrics-panel__zc-sub">订阅</em>
+              </td>
+              <td class="is-num">{{ m.calls }}</td>
+              <td class="is-num">{{ formatTokens(m.billedTokens) }}</td>
+              <td class="is-num">{{
+                isSubscriptionProvider(m.provider)
+                  ? '订阅'
+                  : (estimateCostUsd(m.model, { inputTokens: m.inputTokens, outputTokens: m.outputTokens, cacheReadTokens: m.cacheReadTokens, cacheWriteTokens: m.cacheWriteTokens }) == null
+                      ? '—'
+                      : formatCostUsd(estimateCostUsd(m.model, { inputTokens: m.inputTokens, outputTokens: m.outputTokens, cacheReadTokens: m.cacheReadTokens, cacheWriteTokens: m.cacheWriteTokens })!))
+              }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="zcLedger.bySource.length" class="ide-metrics-panel__zc-sources" data-testid="ide-metrics-zc-sources" title="全链路构成：计费 token 按调用来源拆分（含标题生成/压缩等隐藏调用）">
+          <span v-for="src in zcLedger.bySource.slice(0, 8)" :key="src.source" :title="`${src.source}：${src.calls} 次 · ${formatTokens(src.billedTokens)}`">
+            {{ zcSourceLabel(src.source) }} {{ zcPct(src.billedTokens, zcLedger.kpi.billedTokens) }}
+          </span>
+        </div>
+      </template>
+    </section>
+
     <!-- 成本分组（吸收第一批 B3，codex ThreadUsage）：模型×档位分组记账 -->
     <section v-if="threadUsage && threadUsage.groups.length" class="ide-metrics-panel__section">
       <div class="ide-metrics-panel__section-head">
@@ -419,6 +573,40 @@ watch(
 .ide-metrics-panel__cost {
   font-variant-numeric: tabular-nums;
   color: var(--ia-stale);
+}
+
+/* ── 本机 zcode 账本（2026-10-21）── */
+.ide-metrics-panel__zc-days {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+}
+.ide-metrics-panel__zc-day {
+  border: 1px solid var(--border-color); border-radius: 6px; background: transparent;
+  color: var(--text-muted); font-size: 10px; padding: 1px 6px; cursor: pointer;
+  &:hover { color: var(--text-primary); }
+  &.is-on { color: var(--accent-info); border-color: var(--accent-info); }
+}
+.ide-metrics-panel__zc-kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px 8px;
+  font-variant-numeric: tabular-nums; color: var(--text-secondary);
+  span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+.ide-metrics-panel__zc-bars {
+  display: flex; align-items: flex-end; gap: 2px;
+  height: 36px; margin-top: 6px;
+}
+.ide-metrics-panel__zc-bar {
+  flex: 1; min-width: 2px; border-radius: 1px 1px 0 0;
+  background: var(--accent-info, #3b82f6); opacity: .75;
+}
+.ide-metrics-panel__zc-sub {
+  font-style: normal; font-size: 9.5px; padding: 0 4px; margin-left: 4px;
+  border-radius: 6px; color: var(--text-muted); border: 1px solid var(--border-color);
+}
+.ide-metrics-panel__zc-sources {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px;
+  font-size: 10.5px; color: var(--text-muted); font-variant-numeric: tabular-nums;
 }
 
 .ide-metrics-panel__close {
