@@ -52,3 +52,4 @@
 
 - 批次 A（9f79897→main f6eae313）：五件全落；全量 5826/0。
 - 批次 B：`isOTelSpanRow`/`otelRowToLegacy`/`LegacyRow` 落 trace-sampler；`inspectTrace` 对 OTel 整体转 legacy 投影（hash 锚原始字节）；trace-reflow/runner 放行 `otel` 只拒 `unknown`；controllers/hermes/trace 删本地实现改 import 并修 `converted.isTrailer` 恒假死分支（OTel trailer 曾落 chunks 致 meta 缺 ended/duration）；客户端 OTel 完整即可转题，unknown/未收尾禁用；文案同步。新增 `otel-sampler.test.ts` 六例。全量 5832/0、typecheck 0 错。
+- 批次 C：exec-sandbox 落位修订——从 custom/server/sandbox 迁至 `custom/qgate/src/executors/exec-sandbox.ts`（qgate 插件经 CLI 子进程跑门，宿主注入不可行；qgate 是命令执行纪律域，server 侧未来红队经 overlay 树 import qgate 包）。能力=平台探测（darwin sandbox-exec/linux bwrap）+ HERMES_EXEC_SANDBOX=off 策略禁用 + seatbelt 写白名单（realpath 归一防符号链接绕过）+ env 净化 + 超时；不可用一律 fail-closed。ExecutorSpec 增 `sandbox?: boolean`，command executor 沙箱档 unavailable/竞态消失 → INCONCLUSIVE(-4) 不裸跑，provenance 标 `[sandbox]`。qgate 独立与根配置双跑 212/212、包 tsc 0 错。红队沙箱攻防接线仍挂账（需执行型载荷，另立项）。

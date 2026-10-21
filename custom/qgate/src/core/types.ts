@@ -53,6 +53,8 @@ export interface ExecutorSpec {
     | 'contract' | 'behavior' | 'semantic' | 'ops' | 'runtime-proof'
   /** command：argv 固定命令（无 shell 拼接，安全边界设计 §5.5）。 */
   command?: string[]
+  /** command：在 OS 级沙箱内执行（禁网/env 净化/只写 cwd；沙箱不可用→INCONCLUSIVE 不裸跑）。 */
+  sandbox?: boolean
   /** command：cwd 相对工作目录前缀（默认项目根）。 */
   cwd?: string
   /** command：预期退出码（默认 0）。 */
