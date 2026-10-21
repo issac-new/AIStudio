@@ -547,3 +547,101 @@ export async function downloadProvO(limit = 200): Promise<void> {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+// ---- AGT 吸收轮（2026-10-21）：治理姿态 / 审计链 / 紧急停止 ----
+
+export interface PostureProfile {
+  name: string
+  configExists: boolean
+  approvalsMode: 'manual' | 'smart' | 'off' | null
+  approvalsDeclared: boolean
+  expectedApprovalsMode?: 'manual' | 'smart' | 'off'
+  deviations: string[]
+  lamp: 'governed' | 'partial' | 'bare'
+  configError?: string
+}
+
+export interface GovernancePostureResp {
+  ok: boolean
+  at: number
+  hermesHome: string
+  global: {
+    enforceMasterOn: boolean
+    strictOn: boolean
+    enforceMode: string | null
+    sandboxRoots: number
+    browserAllow: number
+    browserDeny: number
+    toolBlacklist: number
+    budgetPolicies: number
+    identityAllowlists: number
+    ladderEntries: number
+    loadedRuleTotal: number
+  }
+  ledger: { exists: boolean; problems: string[] }
+  expectations: { file: string; exists: boolean; error?: string }
+  profiles: PostureProfile[]
+  summary: { total: number; governed: number; partial: number; bare: number; configMissing: number }
+  error?: string
+}
+
+export function fetchGovernancePosture(): Promise<GovernancePostureResp> {
+  return request<GovernancePostureResp>('/api/governance/posture')
+}
+
+export interface ChainVerifyResp {
+  ok: boolean
+  total: number
+  chained: number
+  unchained: number
+  intact: boolean
+  firstBroken: number | null
+  anomalies: Array<{ index: number; status: string; note?: string; ts?: number; tool?: string; id?: string }>
+  error?: string
+}
+
+export function fetchPolicyDecisionChain(days = 14): Promise<ChainVerifyResp> {
+  return request<ChainVerifyResp>(`/api/harness/policy-decisions/chain?days=${days}`)
+}
+
+export function fetchApprovalChain(): Promise<ChainVerifyResp> {
+  return request<ChainVerifyResp>('/api/approvals/history/chain')
+}
+
+export interface McpDriftResp {
+  ok: boolean
+  hasBaseline: boolean
+  baselineAt: number | null
+  drift: Array<{ face: 'mcp-server' | 'plugin'; key: string; change: 'added' | 'removed' | 'changed'; detail?: string }>
+  error?: string
+}
+
+export function fetchMcpDrift(): Promise<McpDriftResp> {
+  return request<McpDriftResp>('/api/harness/mcp-drift')
+}
+
+export function rebaseMcpDrift(): Promise<{ ok: boolean; at: number; entries: number; error?: string }> {
+  return request('/api/harness/mcp-drift/snapshot', { method: 'POST' })
+}
+
+export interface EmergencyStopResp {
+  ok: boolean
+  report?: {
+    at: number
+    reason: string
+    targets: number
+    results: Array<{ sessionId: string; profile: string; ok: boolean; error?: string }>
+    recheckAt: number
+    stillWorking: Array<{ sessionId: string; profile: string; isAborting: boolean }>
+    allStopped: boolean
+  }
+  error?: string
+}
+
+export function emergencyStop(reason: string, recheckMs?: number): Promise<EmergencyStopResp> {
+  return request<EmergencyStopResp>('/api/governance/emergency-stop', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ confirm: 'STOP-ALL', reason, ...(recheckMs ? { recheckMs } : {}) }),
+  })
+}

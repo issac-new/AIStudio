@@ -645,8 +645,85 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectZeroDelivery(snap, opts),
     // 会话饥饿（run20 复盘 D6）：空转×高上下文=换会话处方
     ...detectSessionStarvation(snap, opts),
+    // AGT 吸收轮 C/D（2026-10-21）：未注册 agent 进程 + MCP/插件配置漂移
+    ...detectUnregisteredAgents(snap),
+    ...detectMcpDrift(snap),
   ]
   return [...base, ...detectStorm(base, opts)]
+}
+
+/** Shadow agent 发现（AGT 吸收轮 C，2026-10-21）：本机 hermes 形态进程 vs 已知
+ *  profile 名册对账。-p 指向未注册 profile 的 agent 进程=未登记执行面（high）；
+ *  提取不出 profile 的 hermes 进程=无法归属（warn，如实报不猜）。 */
+export function detectUnregisteredAgents(snap: ClusterSnapshot): Anomaly[] {
+  const face = snap.processScan
+  if (!face || !face.ok || !face.scanned) return []
+  const out: Anomaly[] = []
+  const registered = new Set(face.registered)
+  for (const p of face.procs) {
+    if (p.kind !== 'agent') continue
+    if (p.profile === null) {
+      out.push({
+        detector: 'security.shadow-agent',
+        subject: `pid:${p.pid}`,
+        severity: 'warn',
+        summary: `发现无法归属的 hermes 进程（pid ${p.pid}，未带 -p 参数）——请人工确认归属并登记`,
+        detail: { pid: p.pid, ppid: p.ppid, command: p.command, registered: face.registered },
+      })
+      continue
+    }
+    if (!registered.has(p.profile)) {
+      out.push({
+        detector: 'security.shadow-agent',
+        subject: `profile:${p.profile}`,
+        severity: 'high',
+        summary: `发现未注册 agent：进程 ${p.pid} 以 profile「${p.profile}」在跑，但该 profile 不在名册（profiles/ 目录无此名）——请登记或停掉`,
+        detail: { pid: p.pid, ppid: p.ppid, profile: p.profile, command: p.command, registered: face.registered },
+      })
+    }
+  }
+  return out
+}
+
+/** MCP/插件配置漂移（AGT 吸收轮 D，2026-10-21）：与显式基线快照比对。added
+ *  （新增 server/插件=供应链风险面）high；changed（内容 hash 变）warn；removed
+ *  low 面 warn。无基线/面失败=合法空态静默。 */
+export function detectMcpDrift(snap: ClusterSnapshot): Anomaly[] {
+  const face = snap.mcpDrift
+  if (!face || !face.ok || !face.hasBaseline) return []
+  if (face.drift.length === 0) return []
+  const added = face.drift.filter((d) => d.change === 'added')
+  const changed = face.drift.filter((d) => d.change === 'changed')
+  const removed = face.drift.filter((d) => d.change === 'removed')
+  const out: Anomaly[] = []
+  if (added.length > 0) {
+    out.push({
+      detector: 'security.mcp-drift',
+      subject: 'mcp-config',
+      severity: 'high',
+      summary: `MCP/插件面新增 ${added.length} 项（未经基线确认的供应链风险面）：${added.map((d) => `${d.face === 'mcp-server' ? 'server' : '插件'} ${d.key}`).slice(0, 5).join('、')}${added.length > 5 ? ' 等' : ''}`,
+      detail: { added, changed: changed.length, removed: removed.length, baselineAt: face.baselineAt },
+    })
+  }
+  if (changed.length > 0) {
+    out.push({
+      detector: 'security.mcp-drift',
+      subject: 'mcp-config',
+      severity: 'warn',
+      summary: `MCP/插件配置变更 ${changed.length} 项（内容 hash 与基线不符）：${changed.map((d) => d.key).slice(0, 5).join('、')}${changed.length > 5 ? ' 等' : ''}`,
+      detail: { changed, baselineAt: face.baselineAt },
+    })
+  }
+  if (removed.length > 0) {
+    out.push({
+      detector: 'security.mcp-drift',
+      subject: 'mcp-config',
+      severity: 'warn',
+      summary: `MCP/插件移除 ${removed.length} 项：${removed.map((d) => d.key).slice(0, 5).join('、')}${removed.length > 5 ? ' 等' : ''}`,
+      detail: { removed, baselineAt: face.baselineAt },
+    })
+  }
+  return out
 }
 
 /** ── 交付锚验证（run19 推演层根治上移 A+B，用户 2026-10-13「全做」裁定）──

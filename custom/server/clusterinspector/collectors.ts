@@ -8,6 +8,8 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { compactThreshold } from '../compactthreshold/compact-threshold'
 import type { ProfileToolUsageFace } from './profile-tool-usage'
+import type { ProcessScanFace } from './process-scan'
+import type { McpDriftFace } from '../mcpcatalog/mcp-drift'
 
 export interface GatewayFace {
   ok: boolean
@@ -173,7 +175,16 @@ export interface ClusterSnapshot {
    *  覆盖范围：agent teams（Python 子进程）的工具调用；studio server ekko
    *  runtime 的调用在 toolpipeline 审计账，两面互补。 */
   toolUsage?: ProfileToolUsageFace
+  /** 本机进程扫描面（2026-10-21 AGT 吸收轮 C）：ps 扫 hermes 形态进程 + 已知
+   *  profile 名册——未接线/ps 失败=合法空态，检测器静默跳过。 */
+  processScan?: ProcessScanFace
+  /** MCP/插件配置漂移面（2026-10-21 AGT 吸收轮 D）：与显式基线快照比对——
+   *  无基线=合法空态（首次运行不算漂移）。 */
+  mcpDrift?: McpDriftFace
 }
+
+export type { ProcessScanFace, HermesProcessInfo } from './process-scan'
+export type { McpDriftFace, DriftItem } from '../mcpcatalog/mcp-drift'
 
 export type { ProfileToolUsageEntry, ProfileToolUsageFace } from './profile-tool-usage'
 export { collectProfileToolUsage } from './profile-tool-usage'
