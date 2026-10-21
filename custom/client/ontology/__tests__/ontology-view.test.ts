@@ -143,7 +143,7 @@ describe('OntologyView 冒烟', () => {
           repo: 'https://github.com/edmcouncil/fibo', release: 'master_2026Q3',
           releasedAt: '2026-10-20', retrievedAt: '2026-10-21', license: 'MIT', viewer: '', spec: '',
         },
-        counts: { concepts: 36, fibo: 32, commons: 2, localExtensions: 2, objectProperties: 21, axioms: 16 },
+        counts: { concepts: 37, fibo: 33, commons: 2, localExtensions: 2, objectProperties: 21, axioms: 16 },
         modules: [],
         concepts: [{
           id: 'Payment', label: 'payment', labelZh: '支付',
@@ -156,13 +156,13 @@ describe('OntologyView 冒烟', () => {
         }],
         objectProperties: [],
       },
-      applied: { concepts: 0, total: 36, applied: [] },
+      applied: { concepts: 0, total: 37, applied: [] },
     })
     apiMocks.importFibo.mockResolvedValue({
       ok: true,
-      added: { types: 36, objectProperties: 21, axioms: 16 },
+      added: { types: 37, objectProperties: 21, axioms: 16 },
       skipped: { types: 0, objectProperties: 0, axioms: 0 },
-      applied: { concepts: 36, total: 36, applied: [] },
+      applied: { concepts: 37, total: 37, applied: [] },
     })
     const w = mountView()
     await flushPromises()
@@ -174,6 +174,6 @@ describe('OntologyView 冒烟', () => {
     await w.find('[data-testid="ontology-fibo-import"]').trigger('click')
     await flushPromises()
     expect(apiMocks.importFibo).toHaveBeenCalled()
-    expect(w.find('[data-testid="ontology-fibo-result"]').text()).toContain('36')
+    expect(w.find('[data-testid="ontology-fibo-result"]').text()).toContain('37')
   })
 })

@@ -254,15 +254,16 @@ export type ZcodeUsageRoute =
   | { kind: 'sessions' }
   | { kind: 'rounds'; sessionId: string }
   | { kind: 'tools'; sessionId: string }
+  | { kind: 'context'; sessionId: string }
 
 /** 路由匹配（native-routes.ts 复用；纯函数供单测）：子路径提取会话 id（URL 解码）。 */
 export function matchZcodeUsageRoute(method: string, path: string): ZcodeUsageRoute | null {
   if (method.toUpperCase() !== 'GET') return null
   if (path === '/api/ide/zcode-usage/summary') return { kind: 'summary' }
   if (path === '/api/ide/zcode-usage/sessions') return { kind: 'sessions' }
-  const m = /^\/api\/ide\/zcode-usage\/sessions\/([^/]+)\/(rounds|tools)$/.exec(path)
+  const m = /^\/api\/ide\/zcode-usage\/sessions\/([^/]+)\/(rounds|tools|context)$/.exec(path)
   if (!m) return null
-  return { kind: m[2] as 'rounds' | 'tools', sessionId: decodeURIComponent(m[1]) }
+  return { kind: m[2] as 'rounds' | 'tools' | 'context', sessionId: decodeURIComponent(m[1]) }
 }
 
 interface AggRow extends RawNums {
@@ -516,5 +517,247 @@ export function handleUsageTools(ctx: Context, sessionId: string, deps: ZcodeUsa
       errorType: str(t.error_type),
     }))
     return { tools }
+  })
+}
+
+// ── GET /sessions/:id/context — 逐请求趋势（精确）+ 构成折叠（≈估算）+ 压缩事件 ──
+// Phase 2（2026-10-21 dsh-context 吸收）：requests 取 model_usage 真值
+// （prompt = input + cache_creation + cache_read，即每次请求实际入窗的提示词
+// token，精确）；构成按 message×part 折叠估算（D2：CJK≈1 token/字 + ASCII/4，
+// UI 必须带 ≈ 标注）；compaction part 即上下文事件。
+
+export interface ContextRequest {
+  at: number
+  turnId: string
+  model: string
+  provider: string
+  status: string
+  ttftMs: number | null
+  /** 精确：本次请求提示词 token（input+缓存写+缓存读） */
+  promptTokens: number
+  /** 精确：本次请求输出 token */
+  outputTokens: number
+}
+
+export interface ContextCategory { key: string; estTokens: number; count: number }
+
+export interface ContextLargestItem {
+  messageId: string
+  role: string
+  at: number
+  estTokens: number
+  /** 预览截断（D4：仅 top 列表携带，防大 payload） */
+  preview: string
+}
+
+export interface ContextCompaction {
+  at: number
+  trigger: string
+  reason: string
+  status: string
+}
+
+export interface UsageContext {
+  sessionId: string
+  requests: ContextRequest[]
+  /** 估算口径总量（≈）；requests 精确口径单独看 byRequestPromptPeak */
+  est: {
+    categories: ContextCategory[]
+    estTotalTokens: number
+    partsParsed: number
+    partsSkipped: number
+  }
+  largest: ContextLargestItem[]
+  compactions: ContextCompaction[]
+  note?: string
+}
+
+/** ≈ 估算器（D2）：CJK 字符≈1 token，其余≈4 字符/token。 */
+export function estimateTokensOf(text: string): number {
+  if (!text) return 0
+  let cjk = 0
+  let other = 0
+  for (const ch of text) {
+    const c = ch.codePointAt(0) ?? 0
+    if ((c >= 0x4e00 && c <= 0x9fff) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef)) cjk++
+    else other++
+  }
+  return Math.round(cjk + other / 4)
+}
+
+/** 单 part 估算（D5：tool 取整 JSON 长度=参数+结果近似）。返回 [tokens, 类别]。 */
+export function estimatePart(partData: unknown): { tokens: number; key: string } {
+  const d = partData as { type?: unknown; text?: unknown } | null
+  if (!d || typeof d !== 'object') return { tokens: 0, key: 'other' }
+  const type = str(d.type)
+  switch (type) {
+    case 'text':
+      return { tokens: estimateTokensOf(typeof d.text === 'string' ? d.text : ''), key: 'text' }
+    case 'reasoning':
+      return { tokens: estimateTokensOf(typeof d.text === 'string' ? d.text : ''), key: 'reasoning' }
+    case 'tool':
+      return { tokens: estimateTokensOf(JSON.stringify(d)), key: 'tool' }
+    case 'file':
+      return { tokens: 1000, key: 'file' } // 无逐图计量，≈固定 1k（图像体量主导，JSON 长度无意义）
+    default:
+      return { tokens: 0, key: 'other' } // step-start/finish、timeline、compaction 等=控制元数据不计
+  }
+}
+
+const CONTEXT_REQUEST_CAP = 500
+const PART_PARSE_CAP = 8000
+const LARGEST_TOP = 20
+const PREVIEW_LEN = 120
+
+interface PartRow { message_id: unknown; data: unknown; time_created: unknown }
+interface MsgRow { id: unknown; time_created: unknown; data: unknown }
+
+/** message×part 折叠（纯函数供单测）：六类估算+top 消息+压缩事件。 */
+export function foldContext(
+  msgs: MsgRow[],
+  parts: PartRow[],
+): { categories: ContextCategory[]; largest: ContextLargestItem[]; compactions: ContextCompaction[]; partsSkipped: number } {
+  const cat = new Map<string, ContextCategory>()
+  const bump = (key: string, tokens: number) => {
+    const c = cat.get(key) ?? { key, estTokens: 0, count: 0 }
+    c.estTokens += tokens
+    c.count += 1
+    cat.set(key, c)
+  }
+  const perMsg = new Map<string, { role: string; at: number; tokens: number; preview: string; isCompaction: boolean }>()
+  for (const m of msgs) {
+    let role = ''
+    let at = num(m.time_created)
+    try {
+      const md = JSON.parse(str(m.data)) as { role?: unknown }
+      role = str(md.role)
+    } catch { /* 脏 data 跳过 */ }
+    perMsg.set(str(m.id), { role, at, tokens: 0, preview: '', isCompaction: false })
+  }
+
+  const compactions: ContextCompaction[] = []
+  let partsSkipped = 0
+  for (const p of parts) {
+    let d: Record<string, unknown>
+    try {
+      d = JSON.parse(str(p.data)) as Record<string, unknown>
+    } catch {
+      partsSkipped++
+      continue
+    }
+    const mid = str(p.message_id)
+    const agg = perMsg.get(mid)
+    const type = str(d.type)
+    if (type === 'compaction') {
+      if (agg) agg.isCompaction = true
+      compactions.push({
+        at: num((d.time as { start?: unknown } | undefined)?.start ?? p.time_created ?? 0),
+        trigger: str(d.trigger),
+        reason: str(d.compactReason),
+        status: str((d as { timelineStatus?: unknown }).timelineStatus),
+      })
+      bump('compaction-event', 0)
+      continue
+    }
+    // 解析上限外的 part 只计数不展开（D3）
+    if (compactions.length + (cat.get('tool')?.count ?? 0) + (cat.get('text')?.count ?? 0) >= PART_PARSE_CAP) {
+      partsSkipped++
+      continue
+    }
+    const { tokens, key } = estimatePart(d)
+    bump(key, tokens)
+    if (agg) {
+      agg.tokens += tokens
+      if (!agg.preview && (key === 'text' || key === 'reasoning') && typeof d.text === 'string' && d.text) {
+        agg.preview = d.text.slice(0, PREVIEW_LEN)
+      }
+    }
+  }
+
+  // 文本 part 无角色字段——先按所属消息归角色，user/assistant 文本类据此汇总；
+  // 其余类别（推理/工具/文件/压缩事件）part 自带类型，直接类别累计。
+  const roleText = new Map<string, { tokens: number; count: number }>([
+    ['user', { tokens: 0, count: 0 }],
+    ['assistant', { tokens: 0, count: 0 }],
+  ])
+  for (const p of parts) {
+    let d: Record<string, unknown>
+    try {
+      d = JSON.parse(str(p.data)) as Record<string, unknown>
+    } catch {
+      continue
+    }
+    if (str(d.type) !== 'text') continue
+    const agg = perMsg.get(str(p.message_id))
+    if (!agg) continue
+    const r = roleText.get(agg.role)
+    if (r) {
+      r.tokens += estimateTokensOf(typeof d.text === 'string' ? d.text : '')
+      r.count += 1
+    }
+  }
+  const finalCats: ContextCategory[] = [
+    { key: 'user-text', estTokens: roleText.get('user')?.tokens ?? 0, count: roleText.get('user')?.count ?? 0 },
+    { key: 'assistant-text', estTokens: roleText.get('assistant')?.tokens ?? 0, count: roleText.get('assistant')?.count ?? 0 },
+    cat.get('reasoning') ?? { key: 'reasoning', estTokens: 0, count: 0 },
+    cat.get('tool') ?? { key: 'tool', estTokens: 0, count: 0 },
+    cat.get('file') ?? { key: 'file', estTokens: 0, count: 0 },
+  ]
+
+  const largest = [...perMsg.entries()]
+    .filter(([, agg]) => agg.tokens > 0)
+    .sort((a, b) => b[1].tokens - a[1].tokens)
+    .slice(0, LARGEST_TOP)
+    .map(([messageId, agg]) => ({
+      messageId, role: agg.role, at: agg.at, estTokens: agg.tokens, preview: agg.preview,
+    }))
+
+  return { categories: finalCats, largest, compactions, partsSkipped }
+}
+
+export function handleUsageContext(ctx: Context, sessionId: string, deps: ZcodeUsageDeps = {}): void {
+  withDb<{ sessions?: unknown } & UsageContext>(ctx, deps, () => ({
+    sessionId, requests: [], est: { categories: [], estTotalTokens: 0, partsParsed: 0, partsSkipped: 0 },
+    largest: [], compactions: [], note: '未找到 zcode CLI 会话库',
+  }), db => {
+    const reqRows = db.prepare(
+      `select started_at, turn_id, provider_id, model_id, status, time_to_first_token_ms,
+              input_tokens, cache_creation_input_tokens, cache_read_input_tokens, output_tokens
+       from model_usage where session_id = ? order by started_at asc limit ?`,
+    ).all(sessionId, CONTEXT_REQUEST_CAP) as Array<Record<string, unknown>>
+    const requests: ContextRequest[] = reqRows.map(r => ({
+      at: num(r.started_at),
+      turnId: str(r.turn_id),
+      model: str(r.model_id),
+      provider: str(r.provider_id),
+      status: str(r.status),
+      ttftMs: optNum(r.time_to_first_token_ms),
+      promptTokens: num(r.input_tokens) + num(r.cache_creation_input_tokens) + num(r.cache_read_input_tokens),
+      outputTokens: num(r.output_tokens),
+    }))
+
+    // 组成折叠：消息与 part 各取（part 只取会话内前 PART_PARSE_CAP*2 行，data 大文本在行内）
+    const msgs = db.prepare(
+      `select id, time_created, data from message where session_id = ? order by sequence asc`,
+    ).all(sessionId) as MsgRow[]
+    const parts = db.prepare(
+      `select message_id, time_created, data from part where session_id = ? order by message_id, sequence asc limit ?`,
+    ).all(sessionId, PART_PARSE_CAP * 2) as PartRow[]
+
+    const folded = foldContext(msgs, parts)
+    const estTotalTokens = folded.categories.reduce((s, c) => s + c.estTokens, 0)
+    const partsParsed = folded.categories.reduce((s, c) => s + c.count, 0)
+
+    const body: UsageContext = {
+      sessionId,
+      requests,
+      est: { categories: folded.categories, estTotalTokens, partsParsed, partsSkipped: folded.partsSkipped },
+      largest: folded.largest,
+      compactions: folded.compactions,
+    }
+    if (requests.length === 0 && folded.categories.every(c => c.count === 0)) {
+      body.note = '该会话没有模型调用与消息记录（或会话 ID 不存在）'
+    }
+    return body
   })
 }
