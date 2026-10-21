@@ -13,8 +13,16 @@ OVERLAY="${MX_OVERLAY_ROOT:-$(cd "$HERE/../overlay" 2>/dev/null && pwd)}"
 fails=0
 
 # ── ① 产品零反向依赖 ──
+# 受控豁免（2026-10-21）：custom/server/harness/sim-launch.ts 是产品侧「受控 harness
+# 启动器」（overlay 7dc600ad，方案=overlay docs/superpowers/specs/2026-10-20-ia-daily-
+# sim-separation-and-ux-cleanup.md）——SIM_HARNESS_LAUNCH=1 显式开关（fail-closed）
+# + super_admin + 固定脚本 aipay-scenario.sh + 单进程 + 驱动锁防双开。这是产品→harness
+# 的显式受控调用面，非无意识运行时依赖；与 ② 的 qgate 只读白名单同构：
+# 边界豁免必须带出处，续增须附决策记录（本仓 specs/2026-10-21-isolation-whitelist-
+# sim-launch.md）。
 bad=$(grep -rn "simharness\|scripts/aipay" "$OVERLAY/custom" "$OVERLAY/patches" 2>/dev/null \
-  | grep -vE '^\s*[^:]+:[0-9]+:\s*(\+?(//|/\*|\*|<!--|#))' | grep -vE '\.(md|test)\.' | head -5 || true)
+  | grep -vE '^\s*[^:]+:[0-9]+:\s*(\+?(//|/\*|\*|<!--|#))' | grep -vE '\.(md|test)\.' \
+  | grep -vE 'custom/server/harness/sim-launch\.ts' | head -5 || true)
 if [[ -n "$bad" ]]; then
   echo "FAIL ① 产品运行时代码反向引用 harness："; echo "$bad"; fails=1
 else

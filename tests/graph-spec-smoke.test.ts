@@ -14,7 +14,10 @@ describe('loop-graph 自驱动：26 步推演 GraphSpec 模板可编译可校验
     const spec = defaultSimulationGraph()
     expect(() => validateGraphSpec(spec, DOMAIN_REDUCERS)).not.toThrow()
     expect(spec.entryNode).toBe('g1-lock')
-    expect(spec.endCondition.path).toBe('g6_verdict')
+    // 终点钉新值（2026-10-21 对齐）：overlay 3939e804（产品内导演台轮）把模板线性化为
+    // 29 节点、终点由 g6_verdict 改为「G6 终闸批准」恢复标记——引擎校验器同步认可。
+    // 本行继续强钉具体值：模板终点再变时此处仍当场红，逼两侧对账。
+    expect(spec.endCondition.path).toBe('__resume:g6-final-gate.approved')
     expect(spec.nodes.length).toBeGreaterThan(10)
     expect(spec.edges.length).toBeGreaterThan(10)
   })
