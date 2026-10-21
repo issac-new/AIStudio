@@ -113,6 +113,63 @@ export type AxiomConstraint =
   | { type: 'unique-key'; onClass: string }
   | { type: 'required-relation'; onClass: string; property: string }
 
+/**
+ * 可执行动作类型（运营本体层，2026-10-21 三号调研落地）。
+ *
+ * 来源：《五条本体技术路线》路线⑤——「回答一个经营问题」与「完成一项经营
+ * 任务」隔着业务理解、决策计算、执行治理三环节，Action 是执行治理的入口；
+ * 《AIP 权限/ACL 系列》——Agent 改世界的唯一通道是 Action，且必须带权限与
+ * 审批约束。本层是声明式 T-Box：只登记动作契约（目标类型/读写级别/入出参
+ * Schema/前置公理/审批与权限要求），不执行——执行运行时属于后续运行面工作。
+ *
+ * kind 四级照 Ontology MCP 授权分级：read（只读）/ recommend（建议，不落库）/
+ * write（写对象）/ execute（触发外部副作用）。
+ */
+export type ActionKind = 'read' | 'recommend' | 'write' | 'execute'
+
+/** 审批要求三级：none=免审 / advisory=留痕建议审 / mandatory=强制人审后才生效。 */
+export type ActionApproval = 'none' | 'advisory' | 'mandatory'
+
+/**
+ * 入参/出参契约：JSON Schema 子集（type/required/enum/min/max/properties），
+ * 与 DataProperty 的字段级约束同一语法家族；省略=不声明（校验器不检查该面）。
+ */
+export interface ActionParamSchema {
+  type?: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean'
+  required?: string[]
+  enum?: string[]
+  properties?: Record<string, ActionParamSchema>
+  min?: number
+  max?: number
+}
+
+export interface ActionType {
+  id: string
+  label: string
+  /** 显式全局 IRI（缺省 = namespace + id）。 */
+  iri?: string
+  provenance?: TermProvenance
+  /** 动词作用的目标实体类型（domain 语义；至少一个，须已声明）。 */
+  targetTypes: string[]
+  kind: ActionKind
+  /** 入参契约（Agent 发起调用时的参数面）。 */
+  inputSchema?: ActionParamSchema
+  /** 出参契约（Action 产物的形状，审批面板/评测断言消费）。 */
+  outputSchema?: ActionParamSchema
+  /** 前置条件：引用的公理 id 列表（Submission Criteria，提交前须全部满足）。 */
+  preconditions?: string[]
+  /** 审批要求（write/execute 缺省 mandatory，read/recommend 缺省 none）。 */
+  approval?: ActionApproval
+  /** 权限标签（对接审批域 scope 与工具策略；写面至少一枚）。 */
+  permissionTags?: string[]
+  /** 幂等声明：同一目标+入参重复提交是否产生相同效果。 */
+  idempotent?: boolean
+  /** 审计要求说明（变更理由必填口径等，呈现给审批人）。 */
+  auditNote?: string
+  modality: Modality
+  description?: string
+}
+
 export interface Axiom {
   id: string
   kind: 'class' | 'property' | 'relation'
@@ -138,6 +195,8 @@ export interface OntologySpec {
   entityTypes: EntityType[]
   objectProperties: ObjectProperty[]
   axioms: Axiom[]
+  /** 可执行动作类型（运营本体层；旧 spec 无此数组=空，读取兼容）。 */
+  actionTypes?: ActionType[]
   updatedAt: number
 }
 
@@ -193,6 +252,18 @@ export function objectPropertyIri(spec: OntologySpec, propId: string): string {
   return p?.iri ?? entityIri(spec.namespace, propId)
 }
 
+/** 动作类型的最终 IRI：显式 IRI 优先，缺省 namespace + id。 */
+export function actionIri(spec: OntologySpec, actionId: string): string {
+  const a = spec.actionTypes?.find((x) => x.id === actionId)
+  return a?.iri ?? entityIri(spec.namespace, actionId)
+}
+
+/** 动作缺省审批级别：write/execute 未声明时按 mandatory（执行治理宁严勿宽）。 */
+export function effectiveApproval(a: ActionType): ActionApproval {
+  if (a.approval) return a.approval
+  return a.kind === 'write' || a.kind === 'execute' ? 'mandatory' : 'none'
+}
+
 /** 数据属性的最终 IRI：显式 IRI 优先，缺省 namespace + 类名.属性名。 */
 export function dataPropertyIri(spec: OntologySpec, typeId: string, propId: string): string {
   const t = spec.entityTypes.find((x) => x.id === typeId)
@@ -229,6 +300,7 @@ export interface OntologyStats {
   objPropCount: number
   axiomCount: number
   instanceCount: number
+  actionCount: number
 }
 
 export function specStats(spec: OntologySpec, instanceCount: number): OntologyStats {
@@ -238,5 +310,6 @@ export function specStats(spec: OntologySpec, instanceCount: number): OntologySt
     objPropCount: spec.objectProperties.length,
     axiomCount: spec.axioms.length,
     instanceCount,
+    actionCount: spec.actionTypes?.length ?? 0,
   }
 }

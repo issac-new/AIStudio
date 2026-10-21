@@ -14,7 +14,7 @@
  * owl:imports，术语出处写 dct:source + core:origin/fiboModule/versionIRI。
  */
 import {
-  dataPropertyIri, entityIri, objectPropertyIri, ontologyIri, typeIri,
+  actionIri, dataPropertyIri, effectiveApproval, entityIri, objectPropertyIri, ontologyIri, typeIri,
   type OntologyInstance, type OntologySpec, type TermProvenance,
 } from './ontology-types'
 
@@ -137,6 +137,28 @@ export function toJSONLD(spec: OntologySpec, instances: OntologyInstance[], now 
       'core:axiomKind': a.kind,
       'core:constraint': a.constraint,
       'core:modality': a.modality,
+    })
+  }
+  // 可执行动作（运营本体层：本工作台自定义 core:Action 类——OWL 无标准动作原语，
+  // 以 rdfs:subClassOf 声明族 + 契约谓词承载；审批/权限谓词是执行治理的交换面）
+  for (const a of spec.actionTypes ?? []) {
+    const iri = actionIri(spec, a.id)
+    graph.push({
+      '@id': iri,
+      '@type': 'core:Action',
+      'rdfs:label': a.label,
+      'rdfs:domain': a.targetTypes.map((t) => ({ '@id': typeIri(spec, t) })),
+      'core:actionKind': a.kind,
+      'core:approval': effectiveApproval(a),
+      ...(a.inputSchema ? { 'core:inputSchema': a.inputSchema } : {}),
+      ...(a.outputSchema ? { 'core:outputSchema': a.outputSchema } : {}),
+      ...(a.preconditions?.length ? { 'core:precondition': a.preconditions.map((p) => ({ '@id': entityIri(ns, p) })) } : {}),
+      ...(a.permissionTags?.length ? { 'core:permissionTag': a.permissionTags } : {}),
+      ...(a.idempotent !== undefined ? { 'core:idempotent': a.idempotent } : {}),
+      ...(a.auditNote ? { 'core:auditNote': a.auditNote } : {}),
+      'core:modality': a.modality,
+      ...(a.description ? { 'rdfs:comment': a.description } : {}),
+      ...provenanceAnnotations(iri, a.provenance),
     })
   }
   // 实例（A-Box）
@@ -324,6 +346,23 @@ export function toTurtle(spec: OntologySpec, instances: OntologyInstance[]): str
     lines.push(`# 公理 ${a.id}（${a.kind}/${a.modality}）：${esc(a.message)}`)
   }
   if (spec.axioms.length > 0) lines.push('')
+  // 可执行动作（运营本体层；审批/权限面是 Agent 执行治理的交换契约）
+  for (const a of spec.actionTypes ?? []) {
+    const iri = actionIri(spec, a.id)
+    const parts = [
+      'a core:Action', `rdfs:label "${esc(a.label)}"`,
+      `rdfs:domain ${a.targetTypes.length === 1 ? turtleRef(typeIri(spec, a.targetTypes[0]), spec.namespace) : `[ ${a.targetTypes.map((t) => `owl:unionOf ( ${turtleRef(typeIri(spec, t), spec.namespace)} )`).join(' , ')} ]`}`,
+      `core:actionKind "${a.kind}"`, `core:approval "${effectiveApproval(a)}"`,
+      `core:modality "${a.modality}"`,
+    ]
+    for (const t of a.permissionTags ?? []) parts.push(`core:permissionTag "${esc(t)}"`)
+    for (const p of a.preconditions ?? []) parts.push(`core:precondition ${turtleRef(entityIri(spec.namespace, p), spec.namespace)}`)
+    if (a.idempotent !== undefined) parts.push(`core:idempotent ${a.idempotent ? 'true' : 'false'}`)
+    if (a.auditNote) parts.push(`core:auditNote "${esc(a.auditNote)}"`)
+    if (a.inputSchema) parts.push(`core:inputSchema ${JSON.stringify(JSON.stringify(a.inputSchema))}`)
+    if (a.description) parts.push(`rdfs:comment "${esc(a.description)}"`)
+    lines.push(`${turtleRef(iri, spec.namespace)} ${parts.join(' ; ')} .`, '')
+  }
   for (const inst of instances) {
     const parts = [`a ${turtleRef(typeIri(spec, inst.type), spec.namespace)}`, `rdfs:label "${esc(inst.label)}"`]
     for (const [k, val] of Object.entries(inst.data ?? {})) {

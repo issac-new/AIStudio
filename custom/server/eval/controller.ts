@@ -23,8 +23,10 @@
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { aggregateRun, compareRuns } from './aggregate'
+import { blindTrimmedMean } from './blind-review'
 import { coverageOfSets } from './coverage'
 import { evaluatorAuditOf } from './evaluators'
+import { judgeHumanAgreement } from './human-agreement'
 import { buildRegistryView, summarizeConsumption } from './metric-registry'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
@@ -595,6 +597,76 @@ router.post('/runs/:id/verdicts', async (ctx) => {
     return
   }
   ctx.body = { ok: true, run: set.sealed ? runSummary(result.run) : result.run }
+})
+
+// ---------- 裁判×人工一致率校准（2026-10-21 三号调研：κ 而非裸一致率） ----------
+
+router.get('/runs/:id/agreement', async (ctx) => {
+  const run = getRun(ctx.params.id)
+  if (!run) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['运行不存在'] }
+    return
+  }
+  ctx.body = { ok: true, agreement: judgeHumanAgreement(run.attempts) }
+})
+
+// ---------- 指标退化禁发闸（候选 run vs 基线 run=最近稳定版） ----------
+
+router.get('/runs/:id/release-hold', async (ctx) => {
+  const run = getRun(ctx.params.id)
+  if (!run) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['运行不存在'] }
+    return
+  }
+  const baselineId = typeof ctx.query.baselineRunId === 'string' ? ctx.query.baselineRunId : null
+  const baselineRun = baselineId ? getRun(baselineId) : null
+  if (baselineId && !baselineRun) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: [`基线运行不存在：${baselineId}`] }
+    return
+  }
+  const candidate = run.aggregates.releaseGate ?? null
+  if (!candidate) {
+    ctx.body = { ok: false, problems: ['候选运行无 releaseGate 聚合（先完成判分聚合）'] }
+    return
+  }
+  ctx.body = {
+    ok: true,
+    hold: evaluateReleaseHold(candidate, baselineRun?.aggregates.releaseGate ?? null),
+  }
+})
+
+// ---------- 主观盲测面板（纯函数读数面；分数不回写判词） ----------
+
+router.post('/blind-reviews/trimmed-mean', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const scores = Array.isArray(body.scores)
+    ? (body.scores as Array<Record<string, unknown>>).map((s, i) => ({
+      reviewerId: typeof s.reviewerId === 'string' ? s.reviewerId : `r${i + 1}`,
+      score: Number(s.score),
+    }))
+    : []
+  const scaleMin = Number(body.scaleMin ?? 1)
+  const scaleMax = Number(body.scaleMax ?? 5)
+  if (!scores.length || !Number.isFinite(scaleMin) || !Number.isFinite(scaleMax) || scaleMax <= scaleMin) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['scores[{reviewerId,score}] 必填；scaleMin<scaleMax'] }
+    return
+  }
+  ctx.body = {
+    ok: true,
+    result: blindTrimmedMean({
+      reviewId: typeof body.reviewId === 'string' ? body.reviewId : 'adhoc',
+      targetRef: typeof body.targetRef === 'string' ? body.targetRef : 'unknown',
+      scaleMin,
+      scaleMax,
+      scores,
+      trim: body.trim === 'none' ? 'none' : 'minmax',
+      minReviewers: Number.isFinite(Number(body.minReviewers)) ? Number(body.minReviewers) : undefined,
+    }),
+  }
 })
 
 // ---------- 评估器三角互证审计（百度范式 §3） ----------
