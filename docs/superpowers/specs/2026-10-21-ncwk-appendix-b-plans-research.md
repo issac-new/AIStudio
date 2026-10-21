@@ -96,6 +96,7 @@
 | 2026-10-16-agent-security-check-report | 6 域 20 项 | 0 完全符合、4 不符合；三重症 | 整改 P0-P2、十项挂起 |
 | 2026-10-16-agent-security-checklist | 外部审查材料 | 20 项判据只认配置/代码/日志 | 检查报告骨架 |
 | windows-x64-setup | win-x64 排查 | 注入/构建已根治；须 Windows 打包 | junction、autocrlf、serve |
+| 2026-10-21-wx-3accounts-research | 三公众号全量精读 | 295 篇语料/126 借鉴项；五路线/三环节/FDE/DDD 六件套/四层评测/κ 校准；14 项挂账 | wx-research-absorption 六件 |
 
 ## B.3 主题聚类与关键结论
 
