@@ -22,7 +22,6 @@ import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 import ThemeSwitch from '@/components/layout/ThemeSwitch.vue'
 import { useAppStore } from '@/stores/hermes/app'
 import { useWorkspaceStore } from '../store/workspace'
-import { useFlowStore } from '../store/flow'
 import { taskLinkedSessionId } from '../adapters/flow'
 import { filterInboxByPrefs } from '../store/notify-prefs'
 import IaLocaleToggle from './IaLocaleToggle.vue'
@@ -52,7 +51,6 @@ function goJourney(): void {
 const store = useCockpitStore()
 const appStore = useAppStore()
 const workspace = useWorkspaceStore()
-const flow = useFlowStore()
 
 defineProps<{ userName?: string }>()
 
@@ -279,8 +277,8 @@ function onPanelJumpTask(taskId: string): void {
         @reject-run="rejectRun"
         @approve-fleet="approveFleet"
         @reject-fleet="rejectFleet"
-        @open-review="flow.openGov('review')"
-        @open-gov-people="flow.openGov('people')"
+        @open-review="router.push({ name: 'ia2.stage6', query: { tab: 'reviewGov' } })"
+        @open-gov-people="router.push({ name: 'ia2.stage1', query: { tab: 'org' } })"
       />
     </div>
     <div v-if="sitPanel" class="cockpit-top__mask" aria-hidden="true" @click="sitPanel = null" />

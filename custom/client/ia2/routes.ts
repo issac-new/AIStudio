@@ -16,7 +16,7 @@
 //
 // 纪律：本文件只产纯路由描述和区域元数据，可被 router.resolve 级测试直接消费，
 // 不触发任何懒组件加载。壳层 meta.fullscreen: true。
-import type { RouteLocationNormalized, RouteRecordRaw } from 'vue-router'
+import type { RouteLocationNormalized, RouteLocationRaw, RouteRecordRaw } from 'vue-router'
 import { features } from '../../../config/features'
 import { stageKeyForPath } from './stage-path'
 
@@ -154,6 +154,29 @@ export function simLegacyTabGuard(to: RouteLocationNormalized) {
   }
 }
 
+/** 上游 catch-all 的路径原值（vue-router 记录 path 不做参数归一）。
+ *  2026-10-21 诚实 404：未知路径先被上游 `/:pathMatch(.*)*` 静默送回 /app，
+ *  全局守卫据此识别「补的是兜底记录」而非「已知旧链接重定向」。 */
+export const UPSTREAM_CATCH_ALL_PATH = '/:pathMatch(.*)*'
+
+/**
+ * 诚实 404 守卫（需在 bootstrap/registerIa2 阶段挂到上游 router）：
+ * - 只认上游 catch-all 产生的重定向：to.redirectedFrom.matched 含兜底记录；
+ * - 已知 redirect（/hermes/kanban、/app/gov/*、/app/runs/* 等）的 matched 是
+ *   各自记录，不会误判；
+ * - 目标已是 notFound 时直接放行，避免二次改写形成环。
+ */
+export function ia2NotFoundGuard(
+  to: RouteLocationNormalized,
+): true | RouteLocationRaw {
+  if (to.name === 'ia2.notFound') return true
+  const from = to.redirectedFrom
+  if (!from) return true
+  const caughtByUpstream = from.matched.some(record => record.path === UPSTREAM_CATCH_ALL_PATH)
+  if (!caughtByUpstream) return true
+  return { name: 'ia2.notFound', query: { from: from.fullPath } }
+}
+
 /** 构造 /app 路由树（每次调用返回新对象，调用方负责 addRoute） */
 export function buildIaRoutes(): RouteRecordRaw[] {
   const workbench = () => import('./views/WorkbenchView.vue')
@@ -187,6 +210,13 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/journey/JourneyView.vue'),
         },
         { path: 'journey', redirect: () => ({ name: 'ia2.journey' }) },
+        {
+          // 诚实 404（2026-10-21 战线A）：未知路径不再被上游 catch-all 静默送回首页；
+          // 全局守卫 ia2NotFoundGuard 把兜底重定向改写到本页，保留原始 from 路径。
+          path: 'not-found',
+          name: 'ia2.notFound',
+          component: () => import('./views/NotFoundView.vue'),
+        },
         {
           // 全站检索（2026-10-18 左侧栏批）：会话/任务/运行/文档/人员五类对象，
           // 支持工作区/状态/负责人/时间过滤；顶栏快搜回车也落这里。
@@ -379,6 +409,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 'sim/evidence',
           name: 'ia2.simEvidence',
           component: simShell,
+        },
+        {
+          // 导演运行详情（2026-10-21 战线A 按 run 类型分流）：导演 run 走图运行时
+          // 详情（状态/节点步骤/人工闸/事件），不再静默改道 26 步面板。
+          // 独立子路由而非 query 态：深链可分享、返回键行为正确。
+          path: 'sim/director/:runId',
+          name: 'ia2.simDirectorRun',
+          component: () => import('./views/sim/DirectorRunDetail.vue'),
         },
         {
           path: 'sim/delivery',

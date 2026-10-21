@@ -11,7 +11,7 @@
 import { computed, onMounted, onUnmounted, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useIaStore } from '@/custom/ia2/store/ia'
-import { useFlowStore } from '@/custom/ia2/store/flow'
+import { useSharedArm } from '../composables/useSharedArm'
 import { useWorkspaceStore } from '../store/workspace'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IaGlobalTop from '../components/IaGlobalTop.vue'
@@ -19,8 +19,6 @@ import IaSideNav from '../components/IaSideNav.vue'
 import IaPopoutBar from '../components/IaPopoutBar.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
 import CockpitRunTraceModal from '@/custom/cockpit/components/CockpitRunTraceModal.vue'
-import GovOverlay from '../components/gov/GovOverlay.vue'
-import { useSharedArm } from '../composables/useSharedArm'
 import { retainBodyClass } from '../composables/useBodyClass'
 import { listenMergeBack } from '../wm/popout'
 import '@/custom/ia2/styles/ia2.scss'
@@ -31,7 +29,6 @@ defineProps<{ featureView?: Component }>()
 const route = useRoute()
 const router = useRouter()
 const store = useIaStore()
-const flow = useFlowStore()
 const workspace = useWorkspaceStore()
 const cockpit = useCockpitStore()
 
@@ -55,18 +52,10 @@ watch(() => route.fullPath, () => {
   }
 })
 
-function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
-    // 管理台覆盖层优先吃 Esc（v12：⚙ 是全局覆盖层，Esc 即收）
-    if (flow.govOpen) flow.closeGov()
-  }
-}
-
 onMounted(() => {
   // 工作台全程隐藏上游 StudioNavigationRail（否则与新 IaSideNav 双左栏）。
   // 引用计数：Workbench/SimCenter 等页内 retain 不互相摘除。
   releaseBodyClass = retainBodyClass('ia-center-full')
-  window.addEventListener('keydown', onKeydown)
   // 独立窗口「合并回工作台」：storage 事件跨窗口广播，仅主壳导航。
   // standalone 面板窗不得响应——否则别的面板合并回时本面板被导航劫持串台
   mergeBackOff = listenMergeBack(path => {
@@ -74,7 +63,6 @@ onMounted(() => {
   })
 })
 onUnmounted(() => {
-  window.removeEventListener('keydown', onKeydown)
   mergeBackOff?.()
   mergeBackOff = null
   releaseBodyClass?.()
@@ -113,8 +101,6 @@ onUnmounted(() => {
     <!-- v12 性能收敛：仅打开时挂载。曾无条件挂载，其内部 watch(needsSessionSelect,
          immediate) 会在冷启动即跨全 profile 扫会话（数十请求），即使弹窗从未打开。 -->
     <CockpitRunTraceModal v-if="cockpit.runTraceOpen" />
-    <!-- v12 ⚙管理台：全局覆盖层（Esc/⇠返回/backdrop 关闭） -->
-    <GovOverlay v-if="flow.govOpen" />
   </div>
 </template>
 

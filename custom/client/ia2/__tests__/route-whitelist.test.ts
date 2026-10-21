@@ -77,6 +77,7 @@ const EXPECTED_NAMES = [
   'ia2.journey',
   'ia2.loopCanvas',
   'ia2.modelProviders',
+  'ia2.notFound',
   'ia2.runDetail',
   'ia2.runs',
   'ia2.search',
@@ -86,6 +87,7 @@ const EXPECTED_NAMES = [
   // 保留在账（降为重定向记录，兼容期一个版本周期，A13 升格移除）
   'ia2.sim',
   'ia2.simDelivery',
+  'ia2.simDirectorRun',
   'ia2.simEvidence',
   'ia2.simOps',
   'ia2.simOrchestration',

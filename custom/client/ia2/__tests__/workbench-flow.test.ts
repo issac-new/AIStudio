@@ -418,15 +418,16 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(wrapper.find('[data-testid="run-canvas"]').exists()).toBe(false)
   })
 
-  it('＋新循环入口已退役（⑤ S5：/app/eng 重定向交付案例）；⚙管理 → flow.govOpen', async () => {
+  it('＋新循环入口已退役（⑤ S5：/app/eng 重定向交付案例）；⚙管理直达看板（2026-10-21 治理面收口）', async () => {
     const { wrapper, router } = await mountAt('/app')
     expect(wrapper.find('[data-testid="flow-new-loop"]').exists()).toBe(false)
     await router.push('/app/eng')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.deliveryCases')
-    const { wrapper: w2 } = await mountAt('/app')
+    const { wrapper: w2, router: r2 } = await mountAt('/app')
     await w2.find('[data-testid="flow-gov"]').trigger('click')
-    expect(useFlowStore().govOpen).toBe(true)
+    await flushPromises()
+    expect(r2.currentRoute.value.name).toBe('ia2.board')
   })
 
   // ── 深链房间可靠装载（2026-10-01 产品修复）──

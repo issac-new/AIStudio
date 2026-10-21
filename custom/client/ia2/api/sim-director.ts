@@ -37,7 +37,11 @@ export interface GraphEvent {
   interruptId?: string
   value?: unknown
   resumeValue?: unknown
+  /** 事件日志字段：epoch ms（实时 socket 词汇也可能是 ISO 字符串） */
   ts?: string | number
+  step?: number
+  /** 事件日志的 super-step（与 step 同义；回放事件用它标步骤） */
+  superStep?: number
   payload?: {
     interruptId?: string
     value?: unknown
@@ -52,6 +56,13 @@ export interface GraphRunState {
   instance: {
     status?: string
     updatedAt?: string
+    /** 图实例当前 super-step（外部 run 骨架可能缺席） */
+    currentStep?: number
+    graphDefId?: string | null
+    /** 外部源 run（无内存实例，仅事件日志骨架） */
+    external?: boolean
+    eventCount?: number
+    totalCost?: number
     [k: string]: unknown
   }
 }
