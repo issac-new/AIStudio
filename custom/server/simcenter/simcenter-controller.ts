@@ -24,6 +24,9 @@
  *   GET  /release-gate?run=     G5 发布门状态机读模型（state/history/allowedActions/can）｜派生
  *   GET  /release-gate/state    GET /release-gate 别名（显式 state 读面）
  *   POST /release-gate          G5 状态迁移 submit/approve/reject/release｜409 非法迁移+幂等
+ *   GET  /observer/overview     日常侧推演观察（2026-10-21 挂账实施轮）：当前 SIM run 的
+ *                               房间键 + 跨板任务只读聚合（复用 kanban-overview sqlite 快道，
+ *                               kanbanDir 指向 SIM hermes）｜fail-soft：SIM 根缺席=available:false
  *
  * 配置（env，单一配置源）：OBS_SIM_ROOT（与 631 同一 env；缺席=503 fail-closed——
  * 生产不开 env 即关，不读任意磁盘路径）；SIM_TOPOLOGY_ENDPOINTS/SIM_DISPATCHER_HEALTH_CLI/
@@ -38,7 +41,8 @@ import type { Context } from 'koa'
 import Router from '@koa/router'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { resolve, sep } from 'node:path'
 import { gateKeys, ledgerSummary, parseStateEnv, stepKeys } from '../observability/observability-controller'
 import {
@@ -50,6 +54,7 @@ import {
   UAT_VERDICT_LABEL, aggregateUatByAc, validateUatVerdictFields,
   type UatVerdictKey, type UatVerdictRecord,
 } from './uat-state'
+import { createKanbanOverview } from '../services/hermes/kanban-overview'
 
 const execFileP = promisify(execFile)
 const router = new Router({ prefix: '/api/hermes/sim' })
@@ -86,6 +91,121 @@ export function simRootOrNull(): string | null {
   const root = process.env.OBS_SIM_ROOT
   return root && existsSync(root) ? root : null
 }
+
+// ── 日常侧推演观察（2026-10-21 挂账实施轮）──────────────────────────────
+// 与 simRootOrNull 的 fail-closed 不同：观察面是 fail-soft——宿主日常未配
+// OBS_SIM_ROOT 时按固定候选位探测（env 显式优先，其后工作区约定位），全部缺席
+// 返回 available:false，不报错、不读任意路径。
+
+/** 观察面 SIM 根候选（纯函数，测试面）：显式 env 优先，其后按 overlay/upstream
+ *  两种进程 cwd 形态向上找同级 ncwk-sim-mux，最后家目录约定位。 */
+export function observerSimRootCandidates(env: NodeJS.ProcessEnv, cwd: string, home: string): string[] {
+  const explicit = [env.SIM_OBSERVER_ROOT, env.OBS_SIM_ROOT, env.SIM_ROOT, env.AIPAY_SIM_ROOT]
+    .map(v => (v ?? '').trim()).filter(Boolean) as string[]
+  const heuristic = [
+    resolve(cwd, '../ncwk-sim-mux'),
+    resolve(cwd, '../../ncwk-sim-mux'),
+    resolve(cwd, '../../../ncwk-sim-mux'),
+    resolve(home, 'ncwk-sim-mux'),
+  ]
+  return [...new Set([...explicit, ...heuristic])]
+}
+
+/** 观察面 SIM 根解析：候选中第一个存在的目录；全缺席返回 null（fail-soft）。 */
+export function observerSimRootOrNull(): string | null {
+  for (const p of observerSimRootCandidates(process.env, process.cwd(), homedir())) {
+    try { if (statSync(p).isDirectory()) return p } catch { /* 候选缺席继续 */ }
+  }
+  return null
+}
+
+/** state.env 中房间键提取（纯函数）：值形如 !local:server 的键值对。 */
+export function simRoomKeysOf(state: Record<string, string>): Array<{ key: string; roomId: string }> {
+  const out: Array<{ key: string; roomId: string }> = []
+  for (const [key, value] of Object.entries(state)) {
+    if (typeof value === 'string' && /^![^:\s]+:\S+$/.test(value.trim())) {
+      out.push({ key, roomId: value.trim() })
+    }
+  }
+  return out
+}
+
+/** 当前 run 解析（纯读）：优先 var/current-state.env 软链真身（runs/<id>/state.env），
+ *  缺席回落 runs/* 按 state.env mtime 最新。均缺席返回 runId:null。 */
+export function currentRunOf(root: string): { runId: string | null; stateFile: string | null } {
+  try {
+    const link = resolve(root, 'var', 'current-state.env')
+    if (existsSync(link)) {
+      const real = realpathSync(link)
+      const m = /runs[/\\]([^/\\]+)[/\\]state\.env$/.exec(real)
+      if (m) return { runId: m[1], stateFile: real }
+    }
+  } catch { /* 软链解析失败走回落 */ }
+  try {
+    const runsDir = resolve(root, 'runs')
+    if (!existsSync(runsDir)) return { runId: null, stateFile: null }
+    let best: { runId: string; stateFile: string; mtime: number } | null = null
+    for (const name of readdirSync(runsDir)) {
+      if (!isValidRun(name)) continue
+      const stateFile = resolve(runsDir, name, 'state.env')
+      try {
+        const mtime = statSync(stateFile).mtimeMs
+        if (!best || mtime > best.mtime) best = { runId: name, stateFile, mtime }
+      } catch { /* 单 run 缺 state.env 跳过 */ }
+    }
+    return best ? { runId: best.runId, stateFile: best.stateFile } : { runId: null, stateFile: null }
+  } catch {
+    return { runId: null, stateFile: null }
+  }
+}
+
+/** 觨演侧看板只读聚合实例：sqlite 快道直读 SIM hermes（不 spawn CLI、不装 watcher）。
+ *  回落 deps 全部空实现——快道读不了时如实空板，不碰宿主 CLI。 */
+let _simKanbanOverview: ReturnType<typeof createKanbanOverview> | null = null
+let _simKanbanRoot = ''
+function simKanbanOverview(root: string): ReturnType<typeof createKanbanOverview> {
+  if (!_simKanbanOverview || _simKanbanRoot !== root) {
+    _simKanbanRoot = root
+    _simKanbanOverview = createKanbanOverview({
+      listBoards: async () => [],
+      listTasks: async () => [],
+      watchEvents: (() => { throw new Error('sim observer 只读，不装看板 watcher') }) as never,
+      killWatch: () => {},
+      kanbanDir: () => resolve(root, 'hermes'),
+    })
+  }
+  return _simKanbanOverview
+}
+
+// ── 12. observer/overview：日常侧推演观察聚合 ──
+router.get('/observer/overview', async (ctx: Context) => {
+  const root = observerSimRootOrNull()
+  if (!root) {
+    ctx.body = { available: false, reason: '未找到推演根：SIM_OBSERVER_ROOT/OBS_SIM_ROOT 未配置且默认位置不存在' }
+    return
+  }
+  try {
+    const run = currentRunOf(root)
+    const state = run.stateFile && existsSync(run.stateFile)
+      ? parseStateEnv(readFileSync(run.stateFile, 'utf8'))
+      : {}
+    const rooms = simRoomKeysOf(state)
+    const startedAtRaw = Number(state.run_started_at ?? 0)
+    const overview = await simKanbanOverview(root).getOverview()
+    ctx.body = {
+      available: true,
+      runId: run.runId,
+      posture: state.posture || 'standard',
+      startedAt: startedAtRaw > 0 ? (startedAtRaw < 1e12 ? startedAtRaw * 1000 : startedAtRaw) : null,
+      rooms,
+      boards: overview.boards,
+      tasks: overview.tasks,
+      fetchedAt: Date.now(),
+    }
+  } catch (err) {
+    ctx.body = { available: false, reason: clip(err instanceof Error ? err.message : String(err), ERR_CLIP) }
+  }
+})
 
 /** 503 fail-closed 统一回包（631 同款断言面：响应体带提示）。 */
 function gateClosed(ctx: Context): void {

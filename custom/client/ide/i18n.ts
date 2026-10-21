@@ -15,6 +15,7 @@ export const IDE_LOCAL_TEXT = {
       kanban: '看板', assistant: '辅助对话', board: '白板', browser: '浏览器',
       storage: '资源管理器', mcp: 'MCP', hooks: 'Hooks', slash: '自定义命令',
       deliver: '交付物', genui: 'Gen UI', remote: '远程工作区', plugins: '插件目录',
+      matrix: '沟通',
     },
     kanbanBoard: {
       section: '看板任务', all: '全部板', filter: '按看板筛选', open: '打开看板',
@@ -142,6 +143,7 @@ export const IDE_LOCAL_TEXT = {
       kanban: 'Kanban', assistant: 'Ask', board: 'Whiteboard', browser: 'Browser',
       storage: 'Storage', mcp: 'MCP', hooks: 'Hooks', slash: 'Commands',
       deliver: 'Deliverables', genui: 'Gen UI', remote: 'Remote', plugins: 'Plugins',
+      matrix: 'Chat',
     },
     kanbanBoard: {
       section: 'Board tasks', all: 'All boards', filter: 'Filter by board', open: 'Open board',

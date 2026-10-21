@@ -94,3 +94,44 @@
 - 导演台 Matrix 发送（D5）。
 - IDE 内完整 Matrix 客户端（入口仍在工作台房间画布）。
 - `npm run build` 与登录态浏览器走查：本轮未做（共享 dist 与在途换装风险）；合并前建议补。
+
+## 六、补批（2026-10-21 下午 · 挂账实施轮，用户裁定推翻 D1/D5/D6）
+
+用户在方案问询中四项全选并指示「完成挂账内容的实施」：跨实例可见性取「并入日常工作台 + 推演标记」，房间识别取「改 simharness 打标」（显式授权跨仓）。
+
+### 6.1 口径修订（覆盖 §一 的三条边界）
+
+1. **任务并入（推翻 D1 的 kanban 隔离面）**：推演实例任务经观察面**直接并入**日常工作台/看板/右栏，统一带「推演」徽标 + runId；写口不并入（sim 卡在日常侧只读，点击走「在推演中查看」显式跨模式跳转）。日常阶段完成度仍排除 sim 卡（呈现并入、进度口径不变）。
+2. **导演台通知（修订 D5）**：导演台仍不代演聊天，但 run 启动/人工闸批准·打回会向配置的观察房间发**真实系统消息**（`SIM_DIRECTOR_NOTIFY_ROOM` + humansim 通道，未配置 fail-soft 跳过并在 UI 如实标注）。
+3. **房间标记（落地 D6）**：simharness `mx_create_room` 建房即发 `com.swarmstudio.sim/run` 状态事件（跨仓 `feat/sim-room-tag`@67e01df，spec=该仓 docs/specs/2026-10-21-sim-room-tag.md）；产品端双源识别（状态事件 + observer run-state 房间集），宿主日常房间列表显示「推演」徽标。
+4. **IDE 完整 Matrix**：右辅助栏新增「沟通」页签（房间列表 + 房间头 + 消息面板 + 右侧线程面板，复用 matrix-chat 全套 store/组件，读写同工作台画布）。
+
+### 6.2 实现
+
+| 件 | 落点 |
+|---|---|
+| 观察面端点 | `simcenter-controller.ts` `GET /api/hermes/sim/observer/overview`（SIM 根候选解析 + current-run + 房间键 + kanban-overview sqlite 快道只读聚合；fail-soft） |
+| store 双源合并 | `ia2/store/workspace.ts`：host/sim 双私有源 + applyAll 合成，sim 任务带 `source:'sim'/runId`；`simObserver/simRunId/simRoomIds/isSimTask` 导出 |
+| 看板并入 | `SwarmKanbanView`：板 chip「推演」徽标、sim 卡点击→推演模式、`?task=` 深链 sim 分流、`withBoard` 写口守卫；`KanbanTaskCard`「推演」徽标 |
+| 工作台右栏 | `LinkedTaskList` sim 徽标 + 唯一动作「在推演中查看」（`open-sim` 链路经 TaskDecisionPanel→WorkbenchView） |
+| 阶段进度 | `useDailyStageProgress` 过滤 `source==='sim'` |
+| 房间徽标 | `MatrixRoomList` 双源识别（状态事件 + simRoomIds），「推演」徽标 |
+| IDE Matrix | `IdeMatrixPane`（新）+ sidePane 第 22 页签 + 命令面板；matrix i18n 走 IDE_LOCAL_TEXT 本地字典 |
+| 导演台通知 | `director-notify.ts` + humansim `sendHumansimMessage` 导出重构 + graph-rest start/resume 挂钩 + DirectorPanel 回执文案 |
+| simharness | `feat/sim-room-tag`：建房打标（run/rfd/taggedAt），失败仅告警 |
+
+### 6.3 新增决策
+
+| # | 决策 | 理由 |
+|---|---|---|
+| D8 | 任务并入但**写口不并入**：sim 卡日常侧只读 + 显式跨模式跳转 | 并入满足可见性诉求；写口并入会把日常操作打到推演库（必然错板/404），也守住 2026-10-20「不共享写入口」的冻结面 |
+| D9 | 观察面读 SIM 根用固定候选（env 显式优先 → cwd/家目录约定位），fail-soft | 宿主日常不配 OBS_SIM_ROOT 也要可用；只读、不读任意路径、缺席如实 available:false |
+| D10 | 日常阶段完成度排除 sim 卡 | 阶段进度是日常任务口径；推演卡计入会让「日常做到哪」被推演轮虚增 |
+| D11 | 导演台通知走 humansim 通道（notice 类，带审计），未配置即关 | 真实通知而非代演聊天；与 PR-0 受控发送面同一执法/审计链 |
+
+### 6.4 验证账（补批）
+
+- 定向新增全绿：observer 5/5（tmpdir 真实 sqlite 板库 + 软链 current-state）、sim-observer-merge 4/4、sim-badge 2/2、director-notify 3/3。
+- 回归：IDE+kanban+matrix-chat 835 用例（side-pane 21→22 签同步）、ia2 全量 676、graph+cockpit 780、simharness 全量 196——除已知负载敏感项外全绿。
+- simharness 活体打标与产品端徽标联测：待下一轮建房步（本轮 run22 房间建于打标合入前，由 run-state 房间集兜底识别）。
+- 构建/浏览器走查：见验证账补录段。

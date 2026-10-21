@@ -7,6 +7,7 @@ const props = defineProps<{ autoOpenCreate?: boolean; statuses?: readonly string
 import { ref, computed, onMounted, watch } from 'vue'
 import { NSpin, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import type { KanbanTask, KanbanTaskStatus } from '@/api/hermes/kanban'
 import { getStoredUsername } from '@/api/client'
@@ -23,8 +24,23 @@ import KanbanAttentionStrip from '@/custom/kanban/components/KanbanAttentionStri
 
 const { t } = useI18n()
 const message = useMessage()
+const router = useRouter()
 const store = useKanbanStore()
 const workspace = useWorkspaceStore()
+
+// ── 推演并入（2026-10-21 用户裁定）：sim 卡只读呈现 ──
+// 点击/深链走「在推演中查看」（跨模式跳转显式化）；写操作（抽屉/拖拽/批量）前拦截。
+const simTaskIds = computed(() =>
+  new Set(workspace.rawTasks.filter(e => e.task?.source === 'sim').map(e => e.task.id)))
+function simRunOf(taskId: string): string | null {
+  const hit = workspace.rawTasks.find(e => e.task?.id === taskId)
+  return (hit?.task?.runId ?? workspace.simRunId) || null
+}
+function openInSim(taskId: string): void {
+  const run = simRunOf(taskId)
+  message.info(t('kanban.simTask.readonlyJump', '推演任务只读——已切到推演模式查看'))
+  void router.push({ name: 'ia2.sim', query: run ? { run } : {} })
+}
 
 const selectedTaskId = ref<string | null>(null)
 const showTaskDrawer = ref(false)
@@ -121,6 +137,12 @@ const selectedIds = computed(() => store.selectedIds)
 /** 写操作板定位：先把 store 切到任务所在板（抽屉/诊断/估算等 store 域调用
  *  全部随 selectedBoard 走板参数），再执行动作，最后刷新聚合面 */
 function withBoard<T>(taskId: string, fn: () => Promise<T>): Promise<T> {
+  // sim 卡写口拦截：抽屉编辑/拖拽换列/批量动作都会打到本实例 kanban API，
+  // 对推演实例任务必然 404/错板——只读守卫 + 指路推演模式。
+  if (simTaskIds.value.has(taskId)) {
+    message.warning(t('kanban.simTask.readonlyGuard', '推演任务请在推演实例处理——日常侧只读'))
+    return Promise.resolve()
+  }
   const board = boardOf(taskId)
   if (board && board !== store.selectedBoard) store.setBoard(board)
   return fn().finally(() => { void workspace.refreshAllBoards(true) })
@@ -167,6 +189,11 @@ watch(() => store.selectedBoard, () => {
 })
 
 function handleTaskClick(taskId: string, multiSelect: boolean, rangeSelect: boolean) {
+  // sim 卡在日常侧只读：不进多选/范围/抽屉（批量与拖拽写口对 sim 无效）
+  if (simTaskIds.value.has(taskId)) {
+    openInSim(taskId)
+    return
+  }
   if (multiSelect) {
     store.toggleSelection(taskId)
     return
@@ -326,6 +353,12 @@ watch(
     if (!taskId || taskId === externallyOpenedTask.value) return
     const entry = workspace.rawTasks.find(x => x.task.id === taskId)
     if (!entry) return
+    if (entry.task?.source === 'sim') {
+      // sim 卡深链不进抽屉（本实例 API 查不到详情）——显式跨模式查看
+      externallyOpenedTask.value = taskId
+      openInSim(taskId)
+      return
+    }
     if (entry.board && entry.board !== store.selectedBoard) store.setBoard(entry.board)
     selectedTaskId.value = taskId
     showTaskDrawer.value = true
@@ -560,7 +593,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
         :data-testid="`kanban-board-chip-${b.slug}`"
         :title="b.slug"
         @click="toggleBoard(b.slug)"
-      >{{ b.name }}<span class="kanban-boardbar__n">{{ b.total }}</span></button>
+      >{{ b.name }}<span v-if="b.source === 'sim'" class="kanban-boardbar__sim" data-testid="kanban-board-chip-sim-badge">推演</span><span class="kanban-boardbar__n">{{ b.total }}</span></button>
     </div>
 
     <KanbanToolbar
@@ -704,6 +737,13 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
 .kanban-boardbar__chip--all.is-on { background: transparent; color: var(--text-primary); border-color: var(--primary-color); }
 .kanban-boardbar__n {
   font-size: 11px; opacity: 0.75; font-variant-numeric: tabular-nums;
+}
+
+/* 推演板徽标（2026-10-21 推演并入轮）：sim 板与日常板同栏可辨 */
+.kanban-boardbar__sim {
+  margin-left: 4px; padding: 0 4px; border-radius: 8px;
+  font-size: 10px; line-height: 14px;
+  background: var(--ia-compensated, rgba(0, 0, 0, 0.08)); color: var(--text-secondary);
 }
 
 .board-container {

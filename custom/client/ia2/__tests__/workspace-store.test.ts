@@ -75,7 +75,7 @@ describe('workspace store：跨 board 任务聚合', () => {
     expect(ok).toBe(true)
     expect(store.tasks.map(t => t.id)).toEqual(['t1', 't2'])
     expect(store.tasks[0].boardSlug).toBe('swarm')
-    expect(store.boards).toEqual([{ slug: 'swarm', name: 'Swarm', total: 2 }])
+    expect(store.boards).toEqual([{ slug: 'swarm', name: 'Swarm', total: 2, source: 'daily' }])
     // 聚合端点成功 → 不走 N+1 回落
     expect(kanbanApi.listBoards).not.toHaveBeenCalled()
   })
@@ -96,7 +96,7 @@ describe('workspace store：跨 board 任务聚合', () => {
     const ok = await store.refreshAllBoards(true)
     expect(ok).toBe(true)
     expect(store.tasks.map(t => t.id)).toEqual(['t1'])
-    expect(store.boards).toEqual([{ slug: 'swarm', name: 'Swarm', total: 0 }])
+    expect(store.boards).toEqual([{ slug: 'swarm', name: 'Swarm', total: 0, source: 'daily' }])
   })
 
   it('2s 防抖：非 force 的连续刷新不重复拉取', async () => {

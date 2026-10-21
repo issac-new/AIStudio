@@ -58,26 +58,46 @@ function credsDir(): string | null {
   return d && existsSync(d) ? d : null
 }
 
+/** 受控代发（2026-10-21 导出供导演台事件通知复用）：以人类账号通道发一条
+ *  Matrix 消息并落审计。与 /send 路由同语义——路由只做校验，本函数是唯一执行体。 */
+export async function sendHumansimMessage(v: HumansimSendRequest): Promise<{ eventId: string; audit: string }> {
+  const dir = credsDir()
+  if (!dir) throw new Error('humansim 未配置（HUMANSIM_CREDS_DIR 缺席=fail-closed）')
+  const tokenFile = resolve(dir, `${v.as}.token`)
+  if (!existsSync(tokenFile)) throw new Error(`账号 ${v.as} 无 token 文件`)
+  const token = readFileSync(tokenFile, 'utf-8').trim().split('\n')[0]
+  const hs = process.env.HUMANSIM_HOMESERVER ?? 'http://127.0.0.1:8008'
+  const ac = new AbortController()
+  const timer = setTimeout(() => ac.abort(), 3000)
+  let res: Response
+  try {
+    res = await fetch(`${hs}/_matrix/client/v3/rooms/${encodeURIComponent(v.room)}/send/m.room.message?access_token=${encodeURIComponent(token)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ msgtype: 'm.text', body: `[${v.kind}] ${v.body}` }),
+      signal: ac.signal,
+    })
+  } finally {
+    clearTimeout(timer)
+  }
+  if (!res.ok) throw new Error(`homeserver ${res.status}`)
+  const out = (await res.json()) as { event_id?: string }
+  const eventId = out.event_id ?? ''
+  const auditFile = process.env.HUMANSIM_AUDIT ?? resolve(dir, 'humansim-audit.ndjson')
+  appendFileSync(auditFile, auditLine(v, eventId) + '\n', 'utf-8')
+  return { eventId, audit: auditFile }
+}
+
 router.post('/send', async (ctx: Context) => {
   const dir = credsDir()
   if (!dir) { ctx.status = 503; ctx.body = { error: 'humansim 未配置（HUMANSIM_CREDS_DIR 缺席=fail-closed）' }; return }
   const parsed = validateSend(ctx.request.body)
   if (!parsed.ok) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
-  const v = parsed.value
-  const tokenFile = resolve(dir, `${v.as}.token`)
-  if (!existsSync(tokenFile)) { ctx.status = 404; ctx.body = { error: `账号 ${v.as} 无 token 文件` }; return }
-  const token = readFileSync(tokenFile, 'utf-8').trim().split('\n')[0]
-  const hs = process.env.HUMANSIM_HOMESERVER ?? 'http://127.0.0.1:8008'
-  const res = await fetch(`${hs}/_matrix/client/v3/rooms/${encodeURIComponent(v.room)}/send/m.room.message?access_token=${encodeURIComponent(token)}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ msgtype: 'm.text', body: `[${v.kind}] ${v.body}` }),
-  })
-  if (!res.ok) { ctx.status = 502; ctx.body = { error: `homeserver ${res.status}` }; return }
-  const out = (await res.json()) as { event_id?: string }
-  const eventId = out.event_id ?? ''
-  const auditFile = process.env.HUMANSIM_AUDIT ?? resolve(dir, 'humansim-audit.ndjson')
-  appendFileSync(auditFile, auditLine(v, eventId) + '\n', 'utf-8')
-  ctx.body = { eventId, audit: auditFile }
+  try {
+    ctx.body = await sendHumansimMessage(parsed.value)
+  } catch (err) {
+    ctx.status = 502
+    ctx.body = { error: err instanceof Error ? err.message : String(err) }
+  }
 })
 
 router.get('/audit', (ctx: Context) => {

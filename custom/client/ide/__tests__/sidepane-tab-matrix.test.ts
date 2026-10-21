@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const src = readFileSync(resolve(__dirname, '../views/IdeSidePane.vue'), 'utf8')
-const TABS = ['files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'context', 'tools', 'trajectory', 'workflow', 'kanban', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash', 'deliver', 'genui', 'remote', 'plugins']
+const TABS = ['files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'context', 'tools', 'trajectory', 'workflow', 'kanban', 'matrix', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash', 'deliver', 'genui', 'remote', 'plugins']
 
 describe('IdeSidePane 页签矩阵', () => {
   it('22 个页签键全部注册', () => {
