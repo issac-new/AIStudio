@@ -1,11 +1,11 @@
 <!-- overlay/custom/client/ia2/views/sim/SimCenterView.vue
      全流程推演专区壳（2026-10-18 推演区批，原「仿真中心」改名）：
-     四签单层页签——运行总览 / 监督面板 / 运行监控 / 证据库；运行编排与
-     推演设置是专区级动作，放页头按钮。页面不再出现「签 N」「待实现」或
-     端点清单占位。日常阶段页只留一行「本轮运行」摘要，本专区才是整轮运行
-     的监控、证据与编排入口。 -->
+     四签单层页签——导演台 / 监督面板 / 运行监控 / 证据库；运行编排与推演
+     设置的唯一入口在左侧栏（2026-10-21 双入口收敛）。导演 run 与 26 步
+     harness run 分流：legacy 三签在导演 run 下显示显式内联态并给「导演
+     详情」入口，不再静默改道。 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSimTabsText } from './sim-tabs'
 import SupervisionPanel from './SupervisionPanel.vue'
@@ -70,28 +70,42 @@ function goTab(tab: SimTab): void {
   void router.push({ name: tab.name, query: contextQuery() })
 }
 
-/** 专区动作：运行编排/推演设置是独立页（各自唯一 URL），不占页签、不内嵌第二份内容 */
-function goAction(name: 'ia2.simOrchestration' | 'ia2.simSettings'): void {
-  void router.push({ name, query: contextQuery() })
+/** 两体系分流（2026-10-21 遗留清偿）：导演 run 与 26 步 run 详情各归其位——
+ *  导演 run 只在导演台/导演详情有效；legacy 三签显示显式内联态，不再静默改道。 */
+const { run: selectedSimRun } = useRunContext('sim')
+const directorRunId = computed(() => {
+  const name = selectedSimRun.value.trim()
+  return isDirectorRun(name) ? name : ''
+})
+
+function openDirectorDetail(): void {
+  if (!directorRunId.value) return
+  void router.push({ name: 'ia2.simDirectorRun', params: { runId: directorRunId.value } })
+}
+
+const RUNSPLIT_TEXT: Record<'supervision' | 'ops' | 'evidence', { zh: string; en: string }> = {
+  supervision: {
+    zh: '这是产品内导演运行（图运行时）。监督面板面向 26 步 harness 运行的观察窗，不适用。',
+    en: 'This is a director run (graph runtime). Supervision serves 26-step harness runs.',
+  },
+  ops: {
+    zh: '这是产品内导演运行（图运行时）。运行监控的环境拓扑/派发器面向 harness，不适用。',
+    en: 'This is a director run (graph runtime). Run monitoring serves harness runs.',
+  },
+  evidence: {
+    zh: '这是产品内导演运行（图运行时）。26 步证据库不适用，导演运行的证据是图事件流。',
+    en: 'This is a director run (graph runtime). Evidence for director runs is the graph event log.',
+  },
+}
+
+function runsplitText(key: 'supervision' | 'ops' | 'evidence'): string {
+  return navLocale.value === 'zh' ? RUNSPLIT_TEXT[key].zh : RUNSPLIT_TEXT[key].en
 }
 
 const INTRO_KEY: Record<string, string> = {
   overview: 'sim-overview', supervision: 'sim-supervision', ops: 'sim-ops', evidence: 'sim-evidence',
 }
 
-/** W3 两体系贯通（2026-10-20 挂账清零批 B）：选中导演 run 时自动改道「导演台」——
- *  旧体系三签（监督/监控/证据）读不到导演运行（API 层即时拒答零网络探测，
- *  见 utils/director-run.ts），与其满屏改道提示不如直接落到正确面板。 */
-const { run: selectedSimRun } = useRunContext('sim')
-watch(
-  () => selectedSimRun.value.trim(),
-  (name) => {
-    if (!isDirectorRun(name)) return
-    const legacyTabs: readonly TabKey[] = ['supervision', 'ops', 'evidence']
-    if (legacyTabs.includes(activeTab.value)) goTab(TABS[0])
-  },
-  { immediate: true },
-)
 </script>
 
 <template>
@@ -100,20 +114,6 @@ watch(
       <IaBreadcrumb />
       <h2 class="sim-center__title">{{ navLocale === 'zh' ? '全流程推演' : 'Full-run Simulation' }}</h2>
       <RunSelector />
-      <div class="sim-center__actions">
-        <button
-          type="button"
-          class="sim-center__act"
-          data-testid="ia-sim-action-orchestration"
-          @click="goAction('ia2.simOrchestration')"
-        >{{ navLocale === 'zh' ? '运行编排' : 'Orchestration' }}</button>
-        <button
-          type="button"
-          class="sim-center__act"
-          data-testid="ia-sim-action-settings"
-          @click="goAction('ia2.simSettings')"
-        >{{ navLocale === 'zh' ? '推演设置' : 'Settings' }}</button>
-      </div>
     </header>
 
     <p class="sim-center__lead">
@@ -146,15 +146,27 @@ watch(
       </section>
       <section v-show="activeTab === 'supervision'" class="sim-center__panel" data-testid="ia-sim-panel-supervision">
         <TabIntroBanner :tab="INTRO_KEY.supervision" />
-        <SupervisionPanel />
+        <div v-if="directorRunId" class="sim-center__runsplit" data-testid="ia-sim-runsplit-supervision">
+          <p>{{ runsplitText('supervision') }}</p>
+          <button type="button" data-testid="ia-sim-runsplit-open" @click="openDirectorDetail">{{ navLocale === 'zh' ? '打开导演详情 →' : 'Open director detail →' }}</button>
+        </div>
+        <SupervisionPanel v-else />
       </section>
       <section v-show="activeTab === 'ops'" class="sim-center__panel" data-testid="ia-sim-panel-ops">
         <TabIntroBanner :tab="INTRO_KEY.ops" />
-        <OpsPanel />
+        <div v-if="directorRunId" class="sim-center__runsplit" data-testid="ia-sim-runsplit-ops">
+          <p>{{ runsplitText('ops') }}</p>
+          <button type="button" data-testid="ia-sim-runsplit-open" @click="openDirectorDetail">{{ navLocale === 'zh' ? '打开导演详情 →' : 'Open director detail →' }}</button>
+        </div>
+        <OpsPanel v-else />
       </section>
       <section v-show="activeTab === 'evidence'" class="sim-center__panel" data-testid="ia-sim-panel-evidence">
         <TabIntroBanner :tab="INTRO_KEY.evidence" />
-        <EvidencePanel />
+        <div v-if="directorRunId" class="sim-center__runsplit" data-testid="ia-sim-runsplit-evidence">
+          <p>{{ runsplitText('evidence') }}</p>
+          <button type="button" data-testid="ia-sim-runsplit-open" @click="openDirectorDetail">{{ navLocale === 'zh' ? '打开导演详情 →' : 'Open director detail →' }}</button>
+        </div>
+        <EvidencePanel v-else />
       </section>
     </main>
   </div>
@@ -171,20 +183,19 @@ watch(
 }
 .sim-center__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sim-center__title { margin: 0; font-size: 16px; }
-.sim-center__actions { margin-left: auto; display: flex; gap: 6px; }
 .sim-center__spacer { flex: 1; }
-.sim-center__act {
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro);
-  background: transparent;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 3px 10px;
-  cursor: pointer;
+.sim-center__runsplit {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border: 1px dashed var(--border-color); border-radius: var(--radius-standard);
+  padding: 14px 16px; font-size: 12.5px; color: var(--text-muted);
 }
-.sim-center__act:hover { background: var(--bg-secondary); }
-.sim-center__act:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.sim-center__runsplit button {
+  margin-left: auto; border: 1px solid var(--accent-primary); border-radius: var(--radius-micro);
+  background: transparent; color: var(--accent-primary);
+  font-family: inherit; font-size: 12px; padding: 4px 12px; cursor: pointer; white-space: nowrap;
+}
+.sim-center__runsplit button:hover { background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
+.sim-center__runsplit button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 .sim-center__lead { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.55; }
 .sim-center__tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
 .sim-center__tab {

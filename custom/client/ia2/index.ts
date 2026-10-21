@@ -6,7 +6,10 @@
 // 路由家族整体退役删除——无守卫窗口内的冷深链由 catch-all 兜底承接。
 import type { App } from 'vue'
 import { registerRoute } from '../../../registries/client'
-import { buildIaRoutes } from './routes'
+import { buildIaRoutes, ia2NotFoundGuard } from './routes'
+// 诚实 404 守卫（2026-10-21）：上游 catch-all 改道 ia2.notFound（只读上游 router，
+// 注册一次；redirect 语义不动）。
+import router from '@/router'
 
 // cockpit 三栏/弹窗样式（CollabScene 与 IaShellHeader 的 cockpit-* 类唯一来源）——
 // 在本模块顶部同步导入（与 cockpit/index.ts 同款模式：bootstrap 动态 import 模块的
@@ -21,6 +24,7 @@ import '@/custom/ui/styles/ui.scss'
 import './styles/shell-overrides.scss'
 
 export async function registerIa2(_app?: App): Promise<void> {
+  router.beforeEach(ia2NotFoundGuard)
   for (const route of buildIaRoutes()) registerRoute(route)
   console.log('[Custom] ia2 (six-area IA) registered')
 }

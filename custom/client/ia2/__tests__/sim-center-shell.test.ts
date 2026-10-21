@@ -17,6 +17,13 @@ import { SIM_TABS_TEXT } from '../views/sim/sim-tabs'
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({
   useRunCenterStore: () => ({ sortedRuns: [] }),
 }))
+// 2026-10-21 两体系分流：SimCenterView 经 useRunContext('sim') 读当前运行；
+// 桩化为可控值（导演 run 前缀 run-sim-director-* 触发 legacy 三签内联态）。
+const simRunState = vi.hoisted(() => ({ value: 'p2-verify-20261019' }))
+vi.mock('../composables/useRunContext', async () => {
+  const { ref } = await import('vue')
+  return { useRunContext: () => ({ run: ref(simRunState.value) }) }
+})
 vi.mock('../store/workspace', () => ({ useWorkspaceStore: () => ({ rawTasks: [] }) }))
 vi.mock('../composables/useDecisionRows', async () => {
   const { ref } = await import('vue')
@@ -42,6 +49,7 @@ const SIM_PATHS: ReadonlyArray<{ path: string; name: string }> = [
 const SIM_ACTION_PATHS: ReadonlyArray<{ path: string; name: string }> = [
   { path: '/app/sim/orchestration', name: 'ia2.simOrchestration' },
   { path: '/app/sim/settings', name: 'ia2.simSettings' },
+  { path: '/app/sim/director/:runId', name: 'ia2.simDirectorRun' },
 ]
 
 function makeResolveRouter(): Router {
@@ -156,7 +164,7 @@ describe('全流程推演壳：渲染', () => {
     wrapper.unmount()
   })
 
-  it('默认签=导演台；专区动作按钮在位；不再渲染「签 N」徽标', async () => {
+  it('默认签=导演台；页头不再有编排/设置重复按钮（2026-10-21 双入口收敛）', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
@@ -165,10 +173,9 @@ describe('全流程推演壳：渲染', () => {
     for (const key of ['supervision', 'ops', 'evidence']) {
       expect(wrapper.find(`[data-testid="ia-sim-tab-${key}"]`).attributes('aria-selected')).toBe('false')
     }
-    expect(wrapper.find('[data-testid="ia-sim-action-orchestration"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-sim-action-settings"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-sim-tab-orchestration"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="ia-sim-tab-settings"]').exists()).toBe(false)
+    // 入口唯一=左侧栏：页头两个动作按钮已删
+    expect(wrapper.find('[data-testid="ia-sim-action-orchestration"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-sim-action-settings"]').exists()).toBe(false)
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
     expect(panel.find('[data-testid="director-panel"]').exists()).toBe(true)
@@ -216,21 +223,32 @@ describe('全流程推演壳：渲染', () => {
     wrapper.unmount()
   })
 
-  it('运行编排/推演设置=专区动作，跳独立页并保留 run/from', async () => {
+  it('两体系分流：导演 run 下 legacy 三签显式内联态，不再静默改道', async () => {
+    simRunState.value = 'run-sim-director-mvgar1sm-f7fv-1'
     const router = makeSimRouter()
-    await router.push('/app/sim?run=r1&from=3')
+    await router.push('/app/sim/supervision')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
-    await wrapper.find('[data-testid="ia-sim-action-orchestration"]').trigger('click')
+    // 不自动改道：仍停在监督签
+    expect(router.currentRoute.value.name).toBe('ia2.simSupervision')
+    expect(wrapper.find('[data-testid="ia-sim-runsplit-supervision"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('不适用')
+    // 点击「打开导演详情」→ ia2.simDirectorRun 且带 runId 参数（深链可分享）
+    await wrapper.find('[data-testid="ia-sim-runsplit-open"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.simOrchestration')
-    expect(router.currentRoute.value.query).toMatchObject({ run: 'r1', from: '3' })
-    await router.push('/app/sim?run=r2&from=2')
-    await flushPromises()
-    await wrapper.find('[data-testid="ia-sim-action-settings"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.simSettings')
-    expect(router.currentRoute.value.query).toMatchObject({ run: 'r2', from: '2' })
+    expect(router.currentRoute.value.name).toBe('ia2.simDirectorRun')
+    expect(router.currentRoute.value.params.runId).toBe('run-sim-director-mvgar1sm-f7fv-1')
+    wrapper.unmount()
+    simRunState.value = 'p2-verify-20261019'
+  })
+
+  it('非导演 run：legacy 三签照常渲染原面板（无内联态）', async () => {
+    const router = makeSimRouter()
+    await router.push('/app/sim/supervision')
+    await router.isReady()
+    const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
+    expect(wrapper.find('[data-testid="ia-sim-runsplit-supervision"]').exists()).toBe(false)
+    expect(router.currentRoute.value.name).toBe('ia2.simSupervision')
     wrapper.unmount()
   })
 
@@ -244,12 +262,15 @@ describe('全流程推演壳：渲染', () => {
     expect(router.currentRoute.value.query).toMatchObject({ run: 'r2' })
   })
 
-  it('回归守门：SimCenterView 不再内嵌任务协同图/设置页；路由守卫在位', () => {
+  it('回归守门：SimCenterView 不再内嵌任务协同图/设置页/页头动作按钮；路由守卫在位', () => {
     const src = readFileSync(resolve(__dirname, '../views/sim/SimCenterView.vue'), 'utf8')
     expect(src).not.toContain('views/orchestration/OrchestrationView')
     expect(src).not.toContain('SimSettingsView')
+    expect(src).not.toContain('ia-sim-action-')
     const routes = readFileSync(resolve(__dirname, '../routes.ts'), 'utf8')
     expect(routes).toContain('beforeEnter: simLegacyTabGuard')
+    expect(routes).toContain("name: 'ia2.notFound'")
+    expect(routes).toContain("name: 'ia2.simDirectorRun'")
   })
 
   it('深链直落各签：/app/sim/evidence 打开即证据库激活', async () => {
