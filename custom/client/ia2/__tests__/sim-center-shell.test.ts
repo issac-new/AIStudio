@@ -172,6 +172,7 @@ describe('全流程推演壳：渲染', () => {
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
     expect(panel.find('[data-testid="director-panel"]').exists()).toBe(true)
+    expect(panel.find('[data-testid="director-graph-boundary"]').text()).toContain('Matrix')
     expect(wrapper.text()).not.toContain('签 1')
     expect(wrapper.text()).not.toContain('待实现')
     wrapper.unmount()
