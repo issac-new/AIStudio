@@ -1,7 +1,7 @@
 # 附录 A：产品面全量 spec 索引（242 份）
 
 > 附件，非正本。供「NCWK 整体产品与设计正本」检索与审计；每条给主旨与结论要点。
-> 覆盖：`overlay/docs/superpowers/specs/*.md` 业务 spec 共 242 份（扫描时点；不含三域合一正本的 4 份附录附件，不含 archive/ 与 assets/）。核实日 2026-10-21。
+> 覆盖：`overlay/docs/superpowers/specs/*.md` 业务 spec 共 245 份（2026-10-21 复测；不含产品正本、设计正本、导航页与四份附录附件，不含 archive/ 与 assets/）。核实日 2026-10-21。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -245,11 +245,14 @@
 | 2026-10-21-sim-visibility-and-ide-task-surface | 推演可见性与 IDE 任务面 | 口径收口，IDE 只读任务段 |
 | 2026-10-21-swarmstudio-complete-design | SwarmStudio 完整设计 | 三模式终态、全域详设、历史复盘 |
 | 2026-10-21-tool-policy-engine | 工具策略引擎 | 附加约束层、strict、lint |
-| 2026-10-21-wx-research-absorption | 三号调研吸收 | 本体 Action 层/工具契约面/callgate/κ 校准/退化禁发/任务账本，D1-D10 |
+| 2026-10-21-wx-research-absorption | 三号调研吸收 | 本体 Action 层/工具契约面/callgate/κ 校准/退化禁发/任务账本，D1-D10；14 项挂账 |
 | 2026-10-21-ycode-environment-recovery | Ycode 环境恢复 | 补丁链、catalog 自适应 |
 | 2026-10-21-zcode-3161-baseline-upgrade | zcode 3.16.1 基线 | 源码 main 迁移，8 补丁 |
 | 2026-10-21-zcode-context-trend | zcode 上下文趋势 | 精确 token 加估算构成 |
 | 2026-10-21-zcode-usage-ledger | zcode 用量账本 | 三表只读，客户端估价 |
+| 2026-10-21-production-trace-eval-reflow | 生产轨迹转回归样本 | origin 复现 vs fresh 修复；混合证据不得关单 |
+| 2026-10-21-trace-reflow-debt-clearing | 挂账清偿五批 | 评审 Minor/OTel/OS 沙箱/代码仓审计/换装收尾 |
+| 2026-10-21-session-exhaustion-detector | 会话耗尽检测器 | 应答新鲜×真做停摆；warn/high＋换会话建议 |
 
 ## A.2 按域聚类（13 域）
 
