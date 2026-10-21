@@ -55,6 +55,11 @@ async function post(path: string, body: unknown): Promise<{ status: number; body
   return { status: response.status, body: await response.json() }
 }
 
+async function get(path: string): Promise<{ status: number; body: any }> {
+  const response = await fetch(`http://127.0.0.1:${port}${path}`)
+  return { status: response.status, body: await response.json() }
+}
+
 describe('POST /reflow-from-trace', () => {
   it('预览 hash 后创建回归题；重复提交幂等，漂移返回 409', async () => {
     const preview = await post('/api/hermes/eval/sample-from-trace', { sessionId: 'prod-http' })
@@ -82,5 +87,31 @@ describe('POST /reflow-from-trace', () => {
     const stale = await post('/api/hermes/eval/reflow-from-trace', { ...payload, expectedTraceHash: '0'.repeat(64) })
     expect(stale.status).toBe(409)
     expect(stale.body.code).toBe('trace_hash_mismatch')
+  })
+
+  it('span 转题 + origin 复判后，证据端点回 span 级引用', async () => {
+    const spanPreview = await post('/api/hermes/eval/sample-span-from-trace', { sessionId: 'prod-http', spanRef: 'tc-1' })
+    expect(spanPreview.status).toBe(200)
+    const created = await post('/api/hermes/eval/reflow-from-trace', {
+      sessionId: 'prod-http',
+      spanRef: 'tc-1',
+      expectedTraceHash: spanPreview.body.meta.traceHash,
+      task: {
+        problem: '失败工具调用',
+        expectedBehavior: '该工具调用应成功',
+        rubric: [{ id: 'a1', text: '工具调用成功', expect: 'yes', kind: 'trajectory' }],
+      },
+    })
+    expect(created.status).toBe(201)
+    const spanTaskId = created.body.taskId
+
+    const run = await post('/api/hermes/eval/runs', { setId: created.body.set.id, samples: {}, useOrigin: true })
+    expect(run.status).toBe(201)
+    expect(run.body.run.evidenceMode).toBe('origin')
+
+    const evidence = await get(`/api/hermes/eval/runs/${run.body.run.id}/evidence?taskId=${spanTaskId}&sampleIdx=1`)
+    expect(evidence.status).toBe(200)
+    expect(evidence.body.spanRef).toBe('tc-1')
+    expect(evidence.body.toolCalls).toHaveLength(1)
   })
 })
