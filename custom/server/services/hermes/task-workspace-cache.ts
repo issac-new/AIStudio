@@ -16,6 +16,8 @@ import { promisify } from 'util'
  *
  * 本模块收集所有 board 下任务的 workspace_path，作为「额外放行清单」：
  * 当 root 落在 hermes base 之外、但落在某个任务 workspace_path 之内时，放行。
+ * 同时放行 WebUI 自己管理的 coding-agent 工作区（IDE coding 会话默认根，
+ * 位于 <webuiHome>/coding-agent/workspace/，与她的 hermes base 不同源）。
  *
  * 为避免每次文件请求都 fork hermes CLI，采用 TTL 缓存 + 后台刷新：
  * 同步读接口 isWithinKnownTaskWorkspace() 永不阻塞，TTL 过期后返回旧值并
@@ -61,6 +63,25 @@ function isPathWithin(targetPath: string, basePath: string): boolean {
 // hermes base：default profile 时 ~/.hermes，其它 profile 时 ~/.hermes（detectHermesRootHome 等价）
 function getHermesBaseDir(): string {
   return resolve(homedir(), '.hermes')
+}
+
+// WebUI 状态根：与 custom/server 其他域同序（HERMES_WEB_UI_HOME → HERMES_WEBUI_STATE_DIR → ~/.hermes-web-ui）
+function getWebUiHome(): string {
+  return process.env.HERMES_WEB_UI_HOME?.trim()
+    || process.env.HERMES_WEBUI_STATE_DIR?.trim()
+    || resolve(homedir(), '.hermes-web-ui')
+}
+
+/**
+ * coding-agent 工作区放行：IDE coding 会话默认根在
+ * <webuiHome>/coding-agent/workspace/...，不在 hermes base（~/.hermes）内，
+ * 会被 SecFileRootSandbox 误拒。该目录由 WebUI 自己创建与管理，与任务
+ * workspace 同级放行；只接受 `/coding-agent/workspace/` 段边界内的路径，
+ * 不放行 webui home 下的其他目录。
+ */
+export function isWithinCodingAgentWorkspace(absPath: string): boolean {
+  const root = resolve(getWebUiHome(), 'coding-agent', 'workspace')
+  return isPathWithin(absPath, root)
 }
 
 interface KanbanBoard { slug: string }
@@ -139,6 +160,7 @@ function maybeRefresh(): void {
  * 永不阻塞：命中缓存用缓存，过期则返回旧值并触发后台刷新。
  */
 export function isWithinKnownTaskWorkspace(absPath: string): boolean {
+  if (isWithinCodingAgentWorkspace(absPath)) return true
   maybeRefresh()
   for (const root of allowedRoots) {
     if (isPathWithin(absPath, root)) return true
