@@ -2047,6 +2047,34 @@ if [ "$(posture)" = "strict" ]; then
     printf '%s' "$body" | grep -q '复核维持'
   }
 
+  # run22 复盘根治（G5 退回分派断环两实录：退回单只达组织者 fanfan，缺项 owner 未接活，
+  # 各空转 40-93 分钟，值班两次人工转派才复活）：从评审卡「翻绿路径」逐条抽 R-n= 行，
+  # 行内点名的研发/测试档案各收一条单步令（行内无任何档案名的归组织者），组织者退回令
+  # 照发不替代。幂等=state 键 g5_fanout_<R号>_<档案>，同缺项同档案只派一次；上限 6 条防刷。
+  g5_gap_fanout() { # <RGID>
+    local body line rn u rkey m sent=0 targets
+    body=$(kanban_list fanfan 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
+      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)
+    while IFS= read -r line; do
+      rn=$(printf '%s' "${line}" | grep -oE 'R-[0-9]+' | head -1)
+      [[ -z "${rn}" ]] && continue
+      targets=""
+      for u in hu xiao chen lin qi fei; do
+        printf '%s' "${line}" | grep -q "${u}" && targets="${targets} ${u}"
+      done
+      [[ -z "${targets// /}" ]] && targets=" fanfan"
+      for u in ${targets}; do
+        rkey="g5_fanout_${rn#R-}_${u}"
+        [[ -n "$(sget "${rkey}")" ]] && continue
+        m="@${u}-agent:matrix.test G5 退回自动分派（评审卡 ${RGID} 翻绿路径 ${rn}，只做这一件事）：${line}。完成后把产物推上 integration/${RFD_ID} 或更新评审卡对应节；与他人并行互不等待，勿扩权勿重复他人部分。"
+        dispatch_in_room "${u}" "${m}" "$(agent_mxid "${u}")" || true
+        sset "${rkey}" "$(date +%s)"
+        sent=$((sent+1))
+      done
+    done < <(printf '%s' "${body}" | grep -E 'R-[0-9]+ *=' | head -6)
+    note "[G5] 退回自动分派 ${sent} 条单步令（翻绿路径 owner 直派；组织者令不替代）"
+  }
+
   # 评审卡幂等（run8 优化 E）：卡 ID 落 state，重启复用不再重复建卡
   RGID="$(sget g5_rgid)"
   if [[ -z "$RGID" ]]; then
@@ -2100,6 +2128,7 @@ if [ "$(posture)" = "strict" ]; then
         fi
         G5_RETRY_TS=$(( $(date +%s) * 1000 ))
         dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 真实缺项（${_G5GAPS}）补齐后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行；卡面已补项勿重做——如认为缺项不成立请按卡面证据改判）。" "$(agent_mxid fanfan)"
+        g5_gap_fanout "${RGID}"   # run22 复盘根治：缺项 owner 直派（组织者令之外，防分派断环）
         if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
           # 补齐轮与复用/首轮同一收口（2026-10-07 本路径曾内联收口漏发
           # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，记单 delivery-g5-gate-event-missing）

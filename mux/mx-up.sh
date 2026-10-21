@@ -168,6 +168,14 @@ else
   fi
 fi
 
+# ── 网关看护常驻（2026-10-21 run22 立法：网关高负载形态下自看守退出/启动挂死两实录后，
+#    网关无论 launchd 或 nohup 形态都配 babysit 自愈层——10s 探测×3 连败自动按本 SIM
+#    环境重启；幂等：已在跑不重复拉起）──────────────────────
+if ! pgrep -f "mx-gateway-babysit.sh" >/dev/null 2>&1; then
+  HERMES_BIN="${SIM_ROOT}/bin/hermes-sim" nohup bash "$SCRIPT_DIR/mx-gateway-babysit.sh" >/dev/null 2>&1 &
+  log "网关看护已拉起（babysit pid $!——探测 :8801，3 连败自动重启）"
+fi
+
 # ── 单 studio（matrix-login 多账号 + ACL；agent 节点不跑 studio）────
 if [[ "$MX_ROLE" == "agent" ]]; then
   log "MX_ROLE=agent：studio 段跳过（studio 在导演机，本机只跑 gateway）"
