@@ -245,6 +245,7 @@
 | 2026-10-21-sim-visibility-and-ide-task-surface | 推演可见性与 IDE 任务面 | 口径收口，IDE 只读任务段 |
 | 2026-10-21-swarmstudio-complete-design | SwarmStudio 完整设计 | 三模式终态、全域详设、历史复盘 |
 | 2026-10-21-tool-policy-engine | 工具策略引擎 | 附加约束层、strict、lint |
+| 2026-10-21-wx-research-absorption | 三号调研吸收 | 本体 Action 层/工具契约面/callgate/κ 校准/退化禁发/任务账本，D1-D10 |
 | 2026-10-21-ycode-environment-recovery | Ycode 环境恢复 | 补丁链、catalog 自适应 |
 | 2026-10-21-zcode-3161-baseline-upgrade | zcode 3.16.1 基线 | 源码 main 迁移，8 补丁 |
 | 2026-10-21-zcode-context-trend | zcode 上下文趋势 | 精确 token 加估算构成 |
