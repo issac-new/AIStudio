@@ -33,12 +33,20 @@ const authFetch = vi.hoisted(() => vi.fn(async () => ({
 vi.mock('../utils/auth-fetch', () => ({ authFetch: authFetch }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k, locale: { value: 'zh' } }) }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
-vi.mock('@/custom/eval/components/TraceCaseComposer.vue', () => ({
-  default: {
-    props: ['sessionId', 'spanRef', 'spanKind'],
-    template: '<div data-testid="trace-case-composer-stub">{{ sessionId }} {{ spanRef ?? "session" }}</div>',
-  },
-}))
+// 实例计数桩：切换转题目标必须重挂 Composer（:key），否则预览/表单停留在旧目标。
+const composerMounts = vi.hoisted(() => ({ count: 0 }))
+vi.mock('@/custom/eval/components/TraceCaseComposer.vue', async () => {
+  const { h } = await import('vue')
+  return {
+    default: {
+      props: ['sessionId', 'spanRef', 'spanKind'],
+      setup(props: { sessionId: string; spanRef?: string }) {
+        composerMounts.count += 1
+        return () => h('div', { 'data-testid': 'trace-case-composer-stub' }, `${props.sessionId} ${props.spanRef ?? 'session'}`)
+      },
+    },
+  }
+})
 
 import IdeTrajectoryPane from '../components/IdeTrajectoryPane.vue'
 
@@ -153,6 +161,23 @@ describe('IdeTrajectoryPane — 轨迹账本（dsh-TUI Trajectory Web 化）', (
     expect(action.exists()).toBe(true)
     expect(action.attributes('disabled')).toBeDefined()
     expect(wrapper.find('[data-testid="trace-case-composer-stub"]').exists()).toBe(false)
+    // 评审 Important#3：span 级按钮同样必须禁用（OTel 经转换后 tool 节点仍带 ref）
+    await wrapper.find('[data-testid="traj-row-t1"]').trigger('click')
+    const spanAction = wrapper.find('[data-testid="traj-reflow-span"]')
+    expect(spanAction.exists()).toBe(true)
+    expect(spanAction.attributes('disabled')).toBeDefined()
+  })
+
+  it('切换转题目标会重挂 Composer（预览/表单不得停留在旧目标）', async () => {
+    composerMounts.count = 0
+    const wrapper = mount(IdeTrajectoryPane)
+    await flushPromises()
+    await wrapper.find('[data-testid="traj-reflow-session"]').trigger('click')
+    expect(composerMounts.count).toBe(1)
+    await wrapper.find('[data-testid="traj-row-t1"]').trigger('click')
+    await wrapper.find('[data-testid="traj-reflow-span"]').trigger('click')
+    expect(wrapper.find('[data-testid="trace-case-composer-stub"]').text()).toContain('tc-1')
+    expect(composerMounts.count).toBe(2)
   })
 
   it('无会话=诚实空态不发请求', async () => {

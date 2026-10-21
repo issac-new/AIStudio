@@ -344,7 +344,12 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
     const samples = resolvedSamples[task.id] ?? []
     for (let i = 0; i < samples.length; i += 1) {
       const sample = samples[i]
-      const evidence: Evidence = sample.evidence ?? (sample.sessionId ? await evidenceProvider(sample.sessionId) : {})
+      // 显式样本带 spanRef：按 span 取证（与证据端点/报告同一投影），不得偷读整会话——
+      // 否则整会话其他内容撑过断言却被呈现为「该 span 已验证」。
+      const evidence: Evidence = sample.evidence
+        ?? (sample.sessionId && sample.spanRef
+          ? (sampleSpanFromTrace(sample.sessionId, sample.spanRef).sample ?? {})
+          : sample.sessionId ? await evidenceProvider(sample.sessionId) : {})
       const judged = await judgeAttempt(task, evidence, deps.judge, {
         crossValidate: input.crossValidate,
         referenceLeakCheck: input.referenceLeakCheck,
