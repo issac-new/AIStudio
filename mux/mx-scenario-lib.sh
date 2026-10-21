@@ -29,7 +29,7 @@ unset _mx_led_self
 # mx_fetch（run16 实证根修）：git fetch 挂起护栏——20:1x 一次 fetch 网络黑洞挂起
 # 42 分钟冻死驱动等待环（无 FAIL 行无超时，监控靠子进程 mtime 交叉定位才破案）。
 # 全部 fetch 走本函数：60s 超时强断（timeout 缺席环境回落裸跑并打点），失败照常
-# 返回非零由调用方原有 || true/记单逻辑兜住——挂起不再可能，慢网退化为可观测失败。
+# 返回非零由调用方原有 || true/登记逻辑兜住——挂起不再可能，慢网退化为可观测失败。
 mx_fetch() {
   if command -v timeout >/dev/null 2>&1; then
     timeout 60 git "$@"
@@ -73,7 +73,7 @@ sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2
 # 闸键首过保护：G5 等闸键在重启循环中每圈重写，首过时刻被最后一次
 # 覆写（11:30:41 首过→仪表盘显示 11:37）。闸类状态键一律 sset_once——已有值不覆盖。
 sset_once() { grep -q "^$1=" "$STATE" 2>/dev/null && return 0; sset "$1" "$2"; }
-# 幂等记单：重启循环每圈重放记单点，qgate-evidence ×11/uat-precheck ×5
+# 幂等登记：重启循环每圈重放登记点，qgate-evidence ×11/uat-precheck ×5
 # 刷单污染台账。同类型+主体已有 ISSUE 行即跳过（处置语义：重复发生记次数无收益，事故账
 # 由 scenario.log 时间线承载）。冲突处理：必要时先显式删旧行再记新单。
 issue_once() { # issue_once <type> <subject> <desc>
@@ -237,7 +237,7 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → 
     --body "$body" --project aipaydev --json ${asg_args[@]+"${asg_args[@]}"} 2>/dev/null | jq -r '.id // empty')
   [[ -n "$id" && "$id" != "null" ]] || fail "[$u] kanban 建卡失败: ${title}（板 ${board}）"
   # 板归属校验（run2 REL-* 三卡实测落错板 audit-compliance，现行 CLI 路由已不可复现
-  # ——补创建后归属核验：错板记单留证，不再静默）
+  # ——补创建后归属核验：错板登记留证，不再静默）
   _landed="$(board_of_task "$u" "$id" 2>/dev/null || true)"
   if [[ -n "$_landed" && "$_landed" != "$board" ]]; then
     echo "ISSUE|kanban-board-misroute|$u|$id 创建要求板 $board 实落 ${_landed}（P-18 归属核验）" >> "$EVID_DIR/issues.log"
@@ -403,7 +403,7 @@ review_state_set() { echo "$1|$2|$3|$4|$(date +%s)" >> "$REVIEW_STATE"; } # <eid
 # 命中即回 Matrix 执行反应+线程批准/拒绝（与 auto 通道同语义），双通道台账一致。
 # 幂等边界：本侧以 APPROVED_LOG 为已决真值；产品侧以 approved.events+响应文件为
 # 已决真值（其 decide 分支对反应通道已批 409，本侧消费后亦落 approved.events）。
-# MX_INBOX_MIRROR=0 可显式关闭（保真偏离须记单，与 delivery 旗标同纪律）。
+# MX_INBOX_MIRROR=0 可显式关闭（保真偏离须登记，与 delivery 旗标同纪律）。
 MXQ_DIR="$HERMES_ROOT/approvals"
 MXQ_QUEUE="$MXQ_DIR/mx-requests.jsonl"
 MXQ_RESP_DIR="$MXQ_DIR/mx-responses"
@@ -549,7 +549,7 @@ auto_approve() { # 扫描房间 agent 审批请求，按 MX_APPROVE_MODE 分发�
   _AA_LAST_TS=$_aa_now
   local MODE="${MX_APPROVE_MODE:-auto}" room="$1"
   # 大小写归一+非法值 fail-closed（2026-10-02 审查批）：配置漂移（Manual/HYBRID 等）
-  # 不得静默落 auto"扫到即批"——未知的值按 manual 全挂起处理并记单。
+  # 不得静默落 auto"扫到即批"——未知的值按 manual 全挂起处理并登记。
   MODE="$(printf '%s' "$MODE" | tr 'A-Z' 'a-z')"
   mxq_consume   # ③b：先消费收件箱裁决（manual 模式同样收敛——裁决已发生须回 Matrix）
   case "$MODE" in
@@ -796,7 +796,7 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
   ct="$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/$br" 2>/dev/null)"
   # run20 18:38 崩溃环根治：分支存在但 tip 过期（⚠STALE）时原裸 && 链返回 rc=1，
   # 在 set -euE 下击杀驱动（监督器三次拉起三死于同一点）。改 if 保护态返回：
-  # STALE=假值语义（调用方按未交付等待/记单），不再触发 ERR trap 与 -e 退出。
+  # STALE=假值语义（调用方按未交付等待/登记），不再触发 ERR trap 与 -e 退出。
   # 瞬态旧 tip 容忍（run20 18:38 崩溃环的第二层根治）：agent 推送过程中先推
   # 带旧提交日期的底（rebase 保日期/prep 分支）再推新 tip，属本轮真实交付的
   # 中间态，非上轮残留。宽限窗 MX_BRANCH_FRESH_GRACE_S（缺省 48h）内的新分支
@@ -816,13 +816,13 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
 
 # ── 帧采集焊死进驱动（2026-10-07 run10 教训：13h 推演零实时帧=报告空壳）──
 # 每步末尾自动调用 r18-frames.mjs 拍当轮实时帧；不设任何跳过开关。
-# 采集失败不阻断流程（记单），但报告生成器有硬闸：帧数=0 拒出报告。
+# 采集失败不阻断流程（登记），但报告生成器有硬闸：帧数=0 拒出报告。
 capture_step() { # <step> <url> [action] [user]
   local step="$1" url="$2" action="${3:-}" user="${4:-fanfan}"
   local rc=0
   # 已降级步不重拍（run19 壳页复读根治）：frame-capture-failed|step-<键> 在案的步，
   # 断点续跑重放期重拍只会产出新的壳页帧回填帧池（采集链登录态漂移未根治前），
-  # 隔离区清完又被写回=结构性红线永不过闸。采集端修复后移除该记单即恢复拍摄。
+  # 隔离区清完又被写回=结构性红线永不过闸。采集端修复后移除该登记即恢复拍摄。
   if grep -q "frame-capture-failed|step-${step}|" "$EVID_DIR/issues.log" 2>/dev/null; then
     return 0
   fi
@@ -835,9 +835,9 @@ capture_step() { # <step> <url> [action] [user]
     # 花括号边界（2026-10-09 run12 实锤）：bash 3.2 在 UTF-8 locale 下把 $rc 后的
     # 全角标点首字节吸入变量名（rc\xEF: unbound variable）击杀 set -u 驱动——
     # 开跑 env 固定 LC_ALL=C 为主修复，此处花括号为纵深防御（任何 locale 免疫）。
-    note "[帧采集] 步 ${step} 采集失败（rc=${rc}，记单不阻断）"
+    note "[帧采集] 步 ${step} 采集失败（rc=${rc}，登记不阻断）"
     echo "ISSUE|frame-capture-failed|step-${step}|r18-frames 采集失败 rc=${rc}（url=${url}）" >> "$EVID_DIR/issues.log"
-    # 连续失败计数：单步抖动记单即可，≥3 连败=链路级故障
+    # 连续失败计数：单步抖动登记即可，≥3 连败=链路级故障
     # （run14 实锤 40 帧全补拍、实时帧=0），升级显著告警供监控侧即刻介入——
     # 开跑预检为何未拦同期复盘。
     _cfail=$(( $(sget capture_fail_streak 2>/dev/null || echo 0) + 1 ))
@@ -851,7 +851,7 @@ capture_step() { # <step> <url> [action] [user]
     # 采集链挂驱动（run20 复盘 C3 根治）：拍到的帧自动登记进 R18 载荷
     # （r18-steps.json op 条目）——此前 capture_step 只拍不登记，帧成「拍而未嵌」
     # 孤儿（run20 实锤 59 帧盘上、报告 imgs 空 53 帧无主、逐步「操作 0」）。
-    # 幂等：r18-collect op 帧级去重（重启重放零重复）；失败 fail-open 记单不阻断。
+    # 幂等：r18-collect op 帧级去重（重启重放零重复）；失败 fail-open 登记不阻断。
     local _f _frames=""
     for _f in "$EVID_DIR/screenshots/steps/${step}-op1-before.png" \
               "$EVID_DIR/screenshots/steps/${step}-op1-action.png" \
@@ -862,7 +862,7 @@ capture_step() { # <step> <url> [action] [user]
       if ! python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "$RUN_ID" op \
           --step-key "$step" --title "步 ${step} 操作前后帧（capture_step 自动登记）" \
           --entry "url=${url} user=${user}" --frames $_frames >/dev/null 2>&1; then
-        note "[帧采集] 步 ${step} R18 op 载荷登记失败（记单不阻断）"
+        note "[帧采集] 步 ${step} R18 op 载荷登记失败（登记不阻断）"
         echo "ISSUE|r18-op-register-failed|step-${step}|capture_step 拍摄成功但 r18-collect op 登记失败（帧在盘、载荷缺——收尾链按帧名补登记）" >> "$EVID_DIR/issues.log"
       fi
     fi
@@ -1058,7 +1058,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
 # 空转催办。锚过即记 ✓（不等全齐），空转催办对"全部未过锚的负责人"齐发。
 # 注意：谓词经 eval 在当前 shell 求值（可引用 branch_fresh 等 shell 函数）——
 # 勿改 bash -c（函数不跨子进程继承，子进程 127 恒假实锤见 raci_dispatch_seen 注释）。
-wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败退出时导出 MX_MULTI_FAILED_LEGS（未达锚 desc 逗号串，调用方回退记单用它防误记已过腿）
+wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败退出时导出 MX_MULTI_FAILED_LEGS（未达锚 desc 逗号串，调用方回退登记用它防误记已过腿）
   # anchor-spec = "desc@agent@predicate-expr"（@ 分隔三段；desc 不含 @）
   local idle="$1" agents="$2"; shift 2
   local t0=$(date +%s) hard="${MX_ALIVE_HARD_SEC:-$(( idle > 900 ? idle * 8 : 7200 ))}"   # 总时长硬窗（同 wait_alive_truth：下限 7200+长 idle 档×8 放大防链式腿误杀，env 绝对覆盖）
@@ -1651,7 +1651,7 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
 
 # 空转收场检测（2026-10-11 停摆误诊根治轮，run14 六会话六小时实录）：会话
 # Turn ended: text_response 正常收场但零交付（末轮 ~6 token 短句自了断）——驱动在
-# 产物/缺陷等待环调用本函数，责任人档案命中该形态即记单+按微任务策略重派（一次
+# 产物/缺陷等待环调用本函数，责任人档案命中该形态即登记+按微任务策略重派（一次
 # 1-2 个动作的短指令，与短回合存活形态对齐；禁整任务重派——长上下文会话同型复发）。
 _agent_last_work_ts() { # <agent.log> → epoch
   local line ts
@@ -1811,7 +1811,7 @@ mx_gate_breaker_check() { # <gate-key> <label>：≥2 轮未过则拒绝；复�
     sset "${key}_tripped_logged" 0
     return 0
   fi
-  # 幂等记单（方案纪律 8）：同闸熔断只记一次，重试不刷单（run12 214 条重复记单根治）
+  # 幂等登记（方案纪律 8）：同闸熔断只记一次，重试不刷单（run12 214 条重复登记根治）
   if [[ "$(sget "${key}_tripped_logged")" != "1" ]]; then
     sset "${key}_tripped_logged" 1
     echo "ISSUE|gate-breaker-tripped|director|${label} 熔断（${cur} 轮未过），本轮拒绝执行；复位条件=证据变化自动复位或人工复议（GATE_BREAKER_OVERRIDE=1 + GATE_BREAKER_REASON=<原因>）" >> "$EVID_DIR/issues.log"
@@ -2031,7 +2031,7 @@ audit_check() { # → 0 合规 / 1 有缺陷（输出审计发现）
   fi
   # 取证目录在位
   [[ -d "$EVID_DIR" ]] || { echo "取证目录缺失"; bad=1; }
-  # 交付物对账（run8 复盘根治：商户接入文档全程缺席但零记单，直到 8.6 矩阵才暴露
+  # 交付物对账（run8 复盘根治：商户接入文档全程缺席但零登记，直到 8.6 矩阵才暴露
   # ——REL-DELIVER 在册交付物缺件必须进台账；版本号与报告侧 ARTIFACT_VIEWS 同源硬编
   # v1.0.0-cashier，改版处两处同步）。release 已在册才查，防部分轮误报。
   if [[ -n "$(sget release_done)" && -n "${RFD_ID:-}" ]]; then
@@ -2080,7 +2080,7 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
   local out="$EVID_DIR/governance-report.md" total fixed observed deferred
   total=$({ grep -c "^ISSUE|" "$EVID_DIR/issues.log" 2>/dev/null || true; })
   # 首过率实算（09-26）：组外预计算，set -euo pipefail 安全（grep -q && v=1 || true）
-  # 口径=六闸全计（2026-10-06 差距审计 P5→R26：G3/G6 为落键型闸、无对应记单即首过；
+  # 口径=六闸全计（2026-10-06 差距审计 P5→R26：G3/G6 为落键型闸、无对应登记即首过；
   # 原 metrics 行按评审型四闸 4 分母，与 PART1「六闸全首过」口径分裂——run10 起统一六分母）
   # run13 复盘 C3 修订：打回只认判词 FAIL/显式打回语义行（fail/打回/拒收/熔断/退回），
   # 闸段其余问题单（如 testlog 缺件/重启循环事故）另列「闸段问题单 N 起」不计打回——
@@ -2105,12 +2105,12 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
   local _gate_detail="G1$(_gstate $_g1f $_g1s) G2$(_gstate $_g2f $_g2s) G3$(_gstate $_g3f $_g3s) G4$(_gstate $_g4f $_g4s) G5$(_gstate $_g5f $_g5s) G6$(_gstate $_g6f $_g6s)"
   [ "$_supp" -gt 0 ] && _gate_detail="${_gate_detail}（补过 ${_supp}，拆分/补交形态不计首过）" || true
   [ "$_gseg" -gt 0 ] && _gate_detail="${_gate_detail}（闸段问题单 ${_gseg} 起，不计打回）" || true
-  # 证据一次通过率：凭证族记单（回执/派发/系分文档/凭证缺件）与完成任务环节键对账
+  # 证据一次通过率：凭证族登记（回执/派发/系分文档/凭证缺件）与完成任务环节键对账
   local _done_keys _evmiss _evrate
   _done_keys=$({ grep -cE '^[a-z0-9_]+_done=' "$STATE" 2>/dev/null || true; })
   _evmiss=$({ grep -cE '^ISSUE\|(receipt-missing|raci-dispatch-missing|anexec-missing|evidence-missing|credential)' "$EVID_DIR/issues.log" 2>/dev/null || true; })
   if [ "$_done_keys" -gt 0 ] 2>/dev/null; then
-    _evrate="$((_done_keys-_evmiss))/${_done_keys}（凭证族记单 ${_evmiss} 起）"
+    _evrate="$((_done_keys-_evmiss))/${_done_keys}（凭证族登记 ${_evmiss} 起）"
   else
     _evrate="⬜（state.env 完成环节键=0，分母缺席如实留空）"
   fi
@@ -2145,9 +2145,9 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metri
   done
   _alertline="${_alert_n} 键（族内聚合）"
   _rejrate=$((6-_fp-_supp))
-  local METRICS_CSV="$(date +%F),${RFD_ID},G1-G6,首过率,${_fp}/6（${_gate_detail}）,$(date +%F)..$(date +%F),issues.log 实算,口径=六闸全计（G3/G6 落键型无记单即首过）；首过基准=任务书首次完整派发（方案 §2.6-5）：显式打回即非首过；PASS 前拆分/补交形态的采集信号 run15 接线后计「补过」
+  local METRICS_CSV="$(date +%F),${RFD_ID},G1-G6,首过率,${_fp}/6（${_gate_detail}）,$(date +%F)..$(date +%F),issues.log 实算,口径=六闸全计（G3/G6 落键型无登记即首过）；首过基准=任务书首次完整派发（方案 §2.6-5）：显式打回即非首过；PASS 前拆分/补交形态的采集信号 run15 接线后计「补过」
 $(date +%F),${RFD_ID},G1-G6,打回率,${_rejrate}/6（$(( _rejrate * 100 / 6 ))%）,$(date +%F)..$(date +%F),issues.log 实算,口径=打回数/6（三态：首过+补过+打回=6）；判词 FAIL/打回/拒收/熔断/退回语义行
-$(date +%F),${RFD_ID},全程,证据一次通过率,${_evrate},$(date +%F)..$(date +%F),issues.log+state.env 实算,口径=1-凭证缺件记单/完成环节键
+$(date +%F),${RFD_ID},全程,证据一次通过率,${_evrate},$(date +%F)..$(date +%F),issues.log+state.env 实算,口径=1-凭证缺件登记/完成环节键
 $(date +%F),${RFD_ID},全程,缺陷密度,${_dens},$(date +%F)..$(date +%F),quality-summary.env 实算,口径=测试报告缺陷清单/用例计数（双源，run14 复盘 A2）
 $(date +%F),${RFD_ID},全程,打回次数,${_reject},$(date +%F)..$(date +%F),issues.log 实算,打回/拒收/熔断行计数
 $(date +%F),${RFD_ID},全程,告警类问题单,${_alertline},$(date +%F)..$(date +%F),issues.log 实算,口径=基础设施/容量/网关族键按类型段聚合差分呈现（同族 N 键一行，新增键才单列——防告警刷屏淹没新信号）
@@ -2225,7 +2225,7 @@ $(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 
 gov_archive_commit() { # 治理归档落账原子化（P14→R26：metrics-log+ISSUES-LOG 同提交推送+回读验证）
   # 「产出了没落账」根治：治理报告的 metrics 行与 issues 唯一键在此一并写入中央仓
   # origin/main（docs/governance/metrics-log.csv + docs/issues/ISSUES-LOG.md 单提交），
-  # 推送后回读 origin/main 验证——写、提、推、验四环一体，失败记单返回 1 不击杀驱动。
+  # 推送后回读 origin/main 验证——写、提、推、验四环一体，失败登记返回 1 不击杀驱动。
   # 幂等：metrics 行按内容去重；ISSUES-LOG 的 ## <RUN>（ 段存在则替换不追加。
   local run="${RUN_ID:-default}" rfd="${RFD_ID:-RFD-001}"
   local _ilog="$EVID_DIR/issues.log"
@@ -2247,10 +2247,10 @@ gov_archive_commit() { # 治理归档落账原子化（P14→R26：metrics-log+I
   _human=$({ grep -cE '^DISP\|.*导演' "$_ilog" 2>/dev/null || true; })
   _today=$(date +%F)
   local _m1 _m3 _m4 _m5
-  _m1="${_today},${rfd},M1,$(awk "BEGIN{printf \"%.3f\", ${_fp}/6}"),${_fp}/6,${_today}..${_today},state.env 落键实算,六闸全计（G3/G6 落键型无记单即首过；gov_archive_commit 机制化落账）"
+  _m1="${_today},${rfd},M1,$(awk "BEGIN{printf \"%.3f\", ${_fp}/6}"),${_fp}/6,${_today}..${_today},state.env 落键实算,六闸全计（G3/G6 落键型无登记即首过；gov_archive_commit 机制化落账）"
   _m3=""
   if [ "$_done_keys" -gt 0 ] 2>/dev/null; then
-    _m3="${_today},${rfd},M3,$(awk "BEGIN{printf \"%.3f\", (${_done_keys}-${_evmiss})/${_done_keys}}"),$((_done_keys-_evmiss))/${_done_keys},${_today}..${_today},issues.log+state.env 实算,证据一次通过率=1-凭证缺件记单/完成环节键"
+    _m3="${_today},${rfd},M3,$(awk "BEGIN{printf \"%.3f\", (${_done_keys}-${_evmiss})/${_done_keys}}"),$((_done_keys-_evmiss))/${_done_keys},${_today}..${_today},issues.log+state.env 实算,证据一次通过率=1-凭证缺件登记/完成环节键"
   fi
   _m4="${_today},${rfd},M4,${_reject},${_reject},${_today}..${_today},issues.log 实算,打回次数=打回/拒收/熔断行计数"
   _m5="${_today},${rfd},M5,${_human},${_human},${_today}..${_today},issues.log 实算,人工介入=DISP 注明导演计数（AI 主理占比 ⬜ 待协议事件结构化）"
@@ -2312,7 +2312,7 @@ PYEOF
     git -C "$_wt" -c user.name="director (G6 archive)" -c user.email="director@aipaydev.local" \
       commit -qm "docs(governance): ${run} 治理归档落账——metrics-log+ISSUES-LOG 机制化回灌（P14/R26 原子化）" || _rc=1
     if [ "$_rc" = 0 ] && ! git -C "$_wt" push -q origin HEAD:main 2>/dev/null; then
-      # 非快进=main 已前移：fetch+rebase 重试一次，再败记单
+      # 非快进=main 已前移：fetch+rebase 重试一次，再败登记
       mx_fetch -C "$_wt" fetch -q origin 2>/dev/null || true
       git -C "$_wt" rebase -q origin/main 2>/dev/null || true
       git -C "$_wt" push -q origin HEAD:main 2>/dev/null || _rc=1
@@ -2327,7 +2327,7 @@ PYEOF
   rm -rf "$_wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true
   if [ "$_rc" != 0 ]; then
     echo "ISSUE|archive-commit-failed|director|治理归档落账原子化失败（${run}：提交/推送/回读三环其一未过，台账与 metrics 未上 origin/main）" >> "$_ilog"
-    echo "[gov_archive] 落账失败已记单（archive-commit-failed）" >&2
+    echo "[gov_archive] 落账失败已登记（archive-commit-failed）" >&2
     return 1
   fi
   echo "[gov_archive] 归档落账完成：metrics-log+ISSUES-LOG 已上 origin/main 并回读验证（${run}）"
