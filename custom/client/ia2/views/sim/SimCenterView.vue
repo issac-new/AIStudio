@@ -16,8 +16,6 @@ import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import SimFlowStrip from './SimFlowStrip.vue'
 import RunSelector from './RunSelector.vue'
-import OrchestrationView from '../orchestration/OrchestrationView.vue'
-import SimSettingsView from './SimSettingsView.vue'
 import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { useCenterNavLocale } from '../../nav-centers'
 import { retainBodyClass } from '../../composables/useBodyClass'
@@ -35,48 +33,46 @@ let releaseBodyClass: (() => void) | null = null
 onMounted(() => { releaseBodyClass = retainBodyClass('ia-center-full') })
 onUnmounted(() => { releaseBodyClass?.(); releaseBodyClass = null })
 
-type TabKey = 'overview' | 'supervision' | 'ops' | 'evidence' | 'orchestration' | 'settings'
-interface SimTab { key: TabKey; name?: string; zh?: string; en?: string }
+type TabKey = 'overview' | 'supervision' | 'ops' | 'evidence'
+interface SimTab { key: TabKey; name: string }
 
 const TABS: ReadonlyArray<SimTab> = [
   { key: 'overview', name: 'ia2.sim' },
   { key: 'supervision', name: 'ia2.simSupervision' },
   { key: 'ops', name: 'ia2.simOps' },
   { key: 'evidence', name: 'ia2.simEvidence' },
-  { key: 'orchestration', zh: '运行编排', en: 'Orchestration' },
-  { key: 'settings', zh: '推演设置', en: 'Settings' },
 ]
 type TabTextKey = 'tabOverview' | 'tabSupervision' | 'tabOps' | 'tabEvidence'
-const TAB_LABEL_KEY: Record<string, TabTextKey> = {
+const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   overview: 'tabOverview', supervision: 'tabSupervision', ops: 'tabOps', evidence: 'tabEvidence',
 }
 
-const localTab = computed<'orchestration' | 'settings' | ''>(() => {
-  const t = String(route.query.tab ?? '')
-  return t === 'orchestration' || t === 'settings' ? t : ''
-})
 const activeTab = computed<TabKey>(() =>
-  localTab.value || TABS.find(t => t.name === String(route.name))?.key || 'overview',
+  TABS.find(t => t.name === String(route.name))?.key || 'overview',
 )
 
 function labelOf(tab: SimTab): string {
-  if (tab.zh) return navLocale.value === 'zh' ? tab.zh : tab.en!
   return text.value[TAB_LABEL_KEY[tab.key]]
 }
 
-/** 页签点击：路由签走兄弟路由，编排/设置走本页 ?tab=；run/from 上下文随签保留 */
-function goTab(tab: SimTab): void {
-  if (tab.key === activeTab.value) return
+function contextQuery(): Record<string, string> | undefined {
   const query: Record<string, string> = {}
   for (const key of ['run', 'from'] as const) {
     const v = route.query[key]
     if (typeof v === 'string' && v) query[key] = v
   }
-  if (tab.name) {
-    void router.push({ name: tab.name, query: Object.keys(query).length ? query : undefined })
-  } else {
-    void router.push({ name: 'ia2.sim', query: { ...query, tab: tab.key } })
-  }
+  return Object.keys(query).length ? query : undefined
+}
+
+/** 页签点击：四签各走兄弟路由；run/from 上下文随签保留 */
+function goTab(tab: SimTab): void {
+  if (tab.key === activeTab.value) return
+  void router.push({ name: tab.name, query: contextQuery() })
+}
+
+/** 专区动作：运行编排/推演设置是独立页（各自唯一 URL），不占页签、不内嵌第二份内容 */
+function goAction(name: 'ia2.simOrchestration' | 'ia2.simSettings'): void {
+  void router.push({ name, query: contextQuery() })
 }
 
 const INTRO_KEY: Record<string, string> = {
@@ -104,6 +100,20 @@ watch(
       <IaBreadcrumb />
       <h2 class="sim-center__title">{{ navLocale === 'zh' ? '全流程推演' : 'Full-run Simulation' }}</h2>
       <RunSelector />
+      <div class="sim-center__actions">
+        <button
+          type="button"
+          class="sim-center__act"
+          data-testid="ia-sim-action-orchestration"
+          @click="goAction('ia2.simOrchestration')"
+        >{{ navLocale === 'zh' ? '运行编排' : 'Orchestration' }}</button>
+        <button
+          type="button"
+          class="sim-center__act"
+          data-testid="ia-sim-action-settings"
+          @click="goAction('ia2.simSettings')"
+        >{{ navLocale === 'zh' ? '推演设置' : 'Settings' }}</button>
+      </div>
     </header>
 
     <p class="sim-center__lead">
@@ -146,12 +156,6 @@ watch(
         <TabIntroBanner :tab="INTRO_KEY.evidence" />
         <EvidencePanel />
       </section>
-      <section v-if="activeTab === 'orchestration'" class="sim-center__panel" data-testid="ia-sim-panel-orchestration">
-        <OrchestrationView />
-      </section>
-      <section v-if="activeTab === 'settings'" class="sim-center__panel" data-testid="ia-sim-panel-settings">
-        <SimSettingsView embedded />
-      </section>
     </main>
   </div>
 </template>
@@ -167,6 +171,7 @@ watch(
 }
 .sim-center__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sim-center__title { margin: 0; font-size: 16px; }
+.sim-center__actions { margin-left: auto; display: flex; gap: 6px; }
 .sim-center__spacer { flex: 1; }
 .sim-center__act {
   border: 1px solid var(--border-color);
