@@ -6,8 +6,10 @@
 //   - Claude: platform.claude.com/docs/en/docs/about-claude/pricing
 //     （缓存命中 = 0.1×输入价，5m 缓存写入 = 1.25×输入价）
 //   - GPT: developers.openai.com/api/docs/pricing（cached input 列即缓存命中价）
-//   - DeepSeek / GLM：定价页抓取失败（超时 / JS 渲染无数字），未收录 → 不显示金额；
-//     后续补录时在 TABLE 增行并更新本注释来源。
+// 来源二（2026-10-21 补录，zcode 用量账本轮；抓取 models.dev/api.json 第一方条目
+//   zai/deepseek/minimax/xiaomi/stepfun，同 dsh-context 价表来源；GLM 缓存写入=0）：
+//   - GLM / DeepSeek / MiniMax / MiMo / Step 补录见 TABLE「2026-10-21 补录」段。
+//   - 其余仍未收录模型 → 不显示金额；后续补录时在 TABLE 增行并更新本注释来源。
 export interface ModelPrice {
   /** 每百万 token 输入价（USD） */
   input: number
@@ -45,6 +47,17 @@ const TABLE: Array<{ match: string; price: ModelPrice }> = [
   { match: 'gpt-4.1', price: { input: 2, output: 8, cacheRead: 0.5 } },
   { match: 'gpt-4o-mini', price: { input: 0.15, output: 0.6, cacheRead: 0.075 } },
   { match: 'gpt-4o', price: { input: 2.5, output: 10, cacheRead: 1.25 } },
+  // ── 2026-10-21 补录（models.dev 第一方条目，USD/1M；GLM 缓存写入免费=0）──
+  // 匹配序：具体型号在前（flash 先于 base；ultraspeed 先于 pro）
+  { match: 'glm-5.3-flash', price: { input: 0.15, output: 0.5, cacheRead: 0.03, cacheWrite: 0 } },
+  { match: 'glm-5.3', price: { input: 1.4, output: 4.4, cacheRead: 0.26, cacheWrite: 0 } },
+  { match: 'glm-5.2', price: { input: 1.4, output: 4.4, cacheRead: 0.26, cacheWrite: 0 } },
+  { match: 'deepseek-flash', price: { input: 0.15, output: 0.6, cacheRead: 0.003 } },
+  { match: 'minimax-m3.1-flash', price: { input: 0.15, output: 0.6, cacheRead: 0.015 } },
+  { match: 'minimax-m3', price: { input: 0.3, output: 1.2, cacheRead: 0.06 } },
+  { match: 'mimo-v2.6-pro-ultraspeed', price: { input: 4.35, output: 8.7, cacheRead: 0.036 } },
+  { match: 'mimo-v2.6-pro', price: { input: 0.435, output: 0.87, cacheRead: 0.0036 } },
+  { match: 'step-5', price: { input: 0.959, output: 2.741, cacheRead: 0.048 } },
 ]
 
 export function findModelPrice(model: string | null | undefined): ModelPrice | null {
@@ -54,6 +67,12 @@ export function findModelPrice(model: string | null | undefined): ModelPrice | n
     if (name.includes(row.match)) return row.price
   }
   return null
+}
+
+/** 订阅型 provider（account: 前缀=包月/点数计划）不按 token 计费：
+ *  调用方显示「订阅」徽而非金额，防套单价造出假账（zcode 用量账本轮）。 */
+export function isSubscriptionProvider(provider: string | null | undefined): boolean {
+  return !!provider && provider.startsWith('account:')
 }
 
 export interface CostUsage {

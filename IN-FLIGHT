@@ -1,5 +1,2 @@
-session=tool-policy-engine
-status=complete
-created=2026-10-21T12:32:31+08:00
-closed=2026-10-21T14:10:00+08:00
-note=微软 AGT 调研轮：声明式工具策略引擎（strict/fail-closed/lint）+ 姿态横幅 + 台账与规则页面板。spec=docs/superpowers/specs/2026-10-21-tool-policy-engine.md；npm test 5572/5572；隔离上游走查通过。
+session=zcode-usage-ledger-1021-op1
+created=2026-10-21T14:06:53+08:00

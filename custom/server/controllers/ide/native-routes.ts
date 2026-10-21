@@ -22,6 +22,9 @@ import { connectZCodeEngine } from '../../zcode/engine-bridge'
 // 编程工具启动 + zcode CLI 会话兼容展示（2026-10-19 用户需求批）：
 // 逻辑与纯函数全部在 devtools.ts（依赖可注入），此处只挂原生中间件分支。
 import { handleCliSessions, handleDevtoolsLaunch, handleDevtoolsList } from './devtools'
+// 本机 zcode 用量账本与全链路追踪（2026-10-21 dsh-context 数据面吸收轮）：
+// 只读消费 ~/.zcode/cli/db 三张用量表，逻辑全在 zcode-usage.ts，此处只挂分支。
+import { handleUsageRounds, handleUsageSessions, handleUsageSummary, handleUsageTools } from './zcode-usage'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -52,6 +55,24 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
     if (method === 'POST' && path === '/api/ide/devtools/launch') {
       await handleDevtoolsLaunch(ctx)
       return
+    }
+    // ── 本机 zcode 用量账本（只读 ~/.zcode/cli/db 用量表）──
+    if (method === 'GET' && path === '/api/ide/zcode-usage/summary') {
+      handleUsageSummary(ctx)
+      return
+    }
+    if (method === 'GET' && path === '/api/ide/zcode-usage/sessions') {
+      handleUsageSessions(ctx)
+      return
+    }
+    {
+      const m = method === 'GET' ? /^\/api\/ide\/zcode-usage\/sessions\/([^/]+)\/(rounds|tools)$/.exec(path) : null
+      if (m) {
+        const sid = decodeURIComponent(m[1])
+        if (m[2] === 'rounds') handleUsageRounds(ctx, sid)
+        else handleUsageTools(ctx, sid)
+        return
+      }
     }
     // ── R2：semantica 知识库状态（hermes agent 层配置，非 studio MCP 层）──
     if (method === 'GET' && path === '/api/ide/semantica-status') {
