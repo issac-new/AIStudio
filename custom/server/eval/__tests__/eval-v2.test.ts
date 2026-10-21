@@ -93,10 +93,12 @@ describe('evidenceFromTraceLines（工具调用序列折叠）', () => {
       { type: 'trailer', duration_ms: 900 },
     ])
     expect(evidence.toolCalls).toEqual([
-      { name: 'read_file', ok: true, durationMs: 120 },
-      { name: 'run_tests', ok: false },
-      { name: 'deploy', ok: false },
+      expect.objectContaining({ name: 'read_file', ok: true, durationMs: 120 }),
+      expect.objectContaining({ name: 'run_tests', ok: false }),
+      expect.objectContaining({ name: 'deploy', ok: false }),
     ])
+    // 参数指纹随工具调用留痕（死循环按同名同参判定；空参数对象仍产生指纹）
+    expect(evidence.toolCalls?.every((c) => typeof c.argsSig === 'string' && c.argsSig.length > 0)).toBe(true)
     expect(evidence.efficiency).toEqual({ steps: 3, durationMs: 900 })
   })
 

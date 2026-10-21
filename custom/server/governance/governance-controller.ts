@@ -823,4 +823,9 @@ router.put('/tool-policies', (ctx) => {
   }
 })
 
+// 安全审计流水线（2026-10-21 Cloudflare security-audit-skill 吸收）：项目/运行/候选/三态裁决/复核/报告。
+// 子路由挂载零新 patch（与 workbench/sim-launch 同款先例）。
+import { secAuditRoutes } from '../secaudit/controller'
+router.use('/secaudit', secAuditRoutes.routes(), secAuditRoutes.allowedMethods())
+
 export const governanceRoutes = router

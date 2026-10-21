@@ -292,7 +292,7 @@ export function addFinding(
   return { ok: true, case: next, finding, deduped: false }
 }
 
-/** 独立验证投票：同一投票人重投覆盖旧票。 */
+/** 独立验证投票：同一投票人重投覆盖旧票；发现者不得验证自己的发现（对抗性验证硬约束）。 */
 export function verifyFinding(
   c: ReviewCase,
   findingId: string,
@@ -305,6 +305,9 @@ export function verifyFinding(
   if (!finding) return { ok: false, error: 'finding_not_found', code: 'finding_not_found', detail: '发现项不存在' }
   if (finding.state === 'resolved' || finding.state === 'dismissed') {
     return { ok: false, error: 'finding_closed', code: 'finding_closed', detail: '发现项已关闭，不能再投票' }
+  }
+  if (finding.author !== undefined && finding.author === voter) {
+    return { ok: false, error: 'self_verification_forbidden', code: 'self_verification_forbidden', detail: '发现者不得验证自己的发现（对抗性验证核心设计）' }
   }
   const others = finding.verifications.filter((v) => v.voter !== voter)
   const nextFinding: ReviewFinding = {
