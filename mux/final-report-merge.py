@@ -541,7 +541,30 @@ PART1_RUN21 = '''
 <div class="card info"><b>怎么看这份报告：</b>每个结论带可反查锚（事件号/提交号/时间戳）；问题单与处置行成对（ISSUE→DISP）；正文只写结论与重点，机器细节在折叠区。</div>
 '''
 
+# run22 PART1（2026-10-21 开跑窗注册：定位卡实写；结局卡随轮补写——数字槽保持 {…} 原样）
+PART1_RUN22 = '''
+
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 ｜ {{window}}</span></h1>
+
+<div class="card info"><b>这场推演在验证什么：</b>V8.46 治理结果层首轮实跑——评审治理、观测告警、改进实验、评测处置、发布门与 UAT 逐条判定记录首次接进 26 步主链与报告（G6 完成键统一为复盘完成，六闸判据不变）；执行面首次跑在 hermes-studio 0.7.38 完整构建（product-dist 自 overlay main 2508efec 开跑当晨重建，构建链类型检查与产物门禁全过）。</div>
+
+<div class="card ok"><b>本轮的诚实结论：</b>26 步 {{steps_done}}/26 落盘（第 26 步随本报告产出）；六闸 {{gates_pass}}/6 过，首过 {{first_pass}}/6（首过实测自 issues.log 闸键登记）；问题单 {{n_issue}} 项（DISP：{{disp_sum}}）。【随轮补写：UAT 逐条判词汇总一句+最大的非粉饰事实一句】</div>
+
+<div class="card ok"><b>本轮产品成效：</b>单测 {{n_tests_pass}}；AC 覆盖 {{ac_cover}}；幂等验证 {{idem_verdict}}；UAT 判词 {{uat_sum}}（三件详见第 4 章；数字自 evidence/product-outcome/quality-summary.env 实测，未采集轮如实 ⬜）。【随轮补写：哪条交付能力被本轮证明可用】</div>
+
+<div class="card info"><b>评测子门（G4-E，V8.45）：</b>{{eval_gate}}；指标治理 {{eval_registry}}；维度覆盖 {{eval_coverage}}；评估器三角 {{eval_triangle}}；红队 {{eval_redteam}}；锚点漂移 {{eval_drift}}。【随轮补写：评测发现的下一步动作（不看分数看动作）】</div>
+
+<div class="card warn"><b>真实发生的缺口（全部登记在案）：</b>开跑窗两笔已根治入档——①模型通道探针把健康通道误报为不可达（profile 配置改间接引用格式后探针未跟上；simharness 08f5b41 两态兼容根治，开跑被拦 4 分钟后自愈续跑）；②把关对账（产品侧 10-20 落地的受控启动器与图模板终点，harness 把关检查未同步致预检红；simharness 2a7c255）。【随轮补写：运行期缺口 3-6 条，每条带问题单键】（类型分布实测：{{type_top}}）</div>
+
+<div class="card info"><b>怎么读这份报告：</b>PART 2 是 26 步逐步档案（{{n_frames}} 张实拍界面帧 {{uniq_note}}）；每步四段=本轮实录/交付物实际内容+模板核对/已知问题/处置与改进；全部计数自 issues.log 与 state.env 实测，取不到显式 ⬜。</div>
+
+<h2>研发全流程治理有效性（实测）</h2>
+{{ch0}}
+
+'''
+
 PART1_BY_RUN = {
+    '20261021-v8-run22': PART1_RUN22,
     '20261017-v8-run21': PART1_RUN21,
     '20261015-v8-run20': PART1_RUN20,
     '20261013-v8-run19': PART1_RUN19,
