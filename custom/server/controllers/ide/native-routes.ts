@@ -24,7 +24,7 @@ import { connectZCodeEngine } from '../../zcode/engine-bridge'
 import { handleCliSessions, handleDevtoolsLaunch, handleDevtoolsList } from './devtools'
 // 本机 zcode 用量账本与全链路追踪（2026-10-21 dsh-context 数据面吸收轮）：
 // 只读消费 ~/.zcode/cli/db 三张用量表，逻辑全在 zcode-usage.ts，此处只挂分支。
-import { handleUsageRounds, handleUsageSessions, handleUsageSummary, handleUsageTools } from './zcode-usage'
+import { handleUsageRounds, handleUsageSessions, handleUsageSummary, handleUsageTools, matchZcodeUsageRoute } from './zcode-usage'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -57,20 +57,13 @@ export function ideNativeRoutes(): (ctx: Context, next: Next) => Promise<void> {
       return
     }
     // ── 本机 zcode 用量账本（只读 ~/.zcode/cli/db 用量表）──
-    if (method === 'GET' && path === '/api/ide/zcode-usage/summary') {
-      handleUsageSummary(ctx)
-      return
-    }
-    if (method === 'GET' && path === '/api/ide/zcode-usage/sessions') {
-      handleUsageSessions(ctx)
-      return
-    }
     {
-      const m = method === 'GET' ? /^\/api\/ide\/zcode-usage\/sessions\/([^/]+)\/(rounds|tools)$/.exec(path) : null
-      if (m) {
-        const sid = decodeURIComponent(m[1])
-        if (m[2] === 'rounds') handleUsageRounds(ctx, sid)
-        else handleUsageTools(ctx, sid)
+      const route = matchZcodeUsageRoute(method, path)
+      if (route) {
+        if (route.kind === 'summary') handleUsageSummary(ctx)
+        else if (route.kind === 'sessions') handleUsageSessions(ctx)
+        else if (route.kind === 'rounds') handleUsageRounds(ctx, route.sessionId)
+        else handleUsageTools(ctx, route.sessionId)
         return
       }
     }

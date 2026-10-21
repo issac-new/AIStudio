@@ -249,6 +249,22 @@ function rangeWhere(days: number, now: number): { where: string; params: unknown
   return { where: 'where started_at >= ?', params: [now - days * DAY_MS] }
 }
 
+export type ZcodeUsageRoute =
+  | { kind: 'summary' }
+  | { kind: 'sessions' }
+  | { kind: 'rounds'; sessionId: string }
+  | { kind: 'tools'; sessionId: string }
+
+/** 路由匹配（native-routes.ts 复用；纯函数供单测）：子路径提取会话 id（URL 解码）。 */
+export function matchZcodeUsageRoute(method: string, path: string): ZcodeUsageRoute | null {
+  if (method.toUpperCase() !== 'GET') return null
+  if (path === '/api/ide/zcode-usage/summary') return { kind: 'summary' }
+  if (path === '/api/ide/zcode-usage/sessions') return { kind: 'sessions' }
+  const m = /^\/api\/ide\/zcode-usage\/sessions\/([^/]+)\/(rounds|tools)$/.exec(path)
+  if (!m) return null
+  return { kind: m[2] as 'rounds' | 'tools', sessionId: decodeURIComponent(m[1]) }
+}
+
 interface AggRow extends RawNums {
   n?: unknown
   errors?: unknown

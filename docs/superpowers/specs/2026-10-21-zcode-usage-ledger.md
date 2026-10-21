@@ -58,3 +58,10 @@
 - live 探针：`npx vitest run custom/server/controllers/ide/__tests__/zcode-usage.live.test.ts`（真库聚合非空、TTFT 有真值、缓存命中率 0-1 区间）。
 - 全量：合并前 `npm test`。
 - UI 走查：`npm run dev`（8649）浏览器验证账单展开与账本分区；若共享注入树被并行会话占用导致无法起独立后端，如实声明未走查项与原因。
+
+### 验证实录（2026-10-21 收口时）
+
+- 单测 14+8 全绿（含路由匹配纯函数：四端点命中/非 GET 不命中/会话 id URL 解码）；devtools-ui/usage-round1 回归 27 项全绿；tsc 对 zcode-usage.ts 零错（native-routes.ts 的 `ctx.request.body` 报错为 origin/main 既有，非本轮引入）。
+- live 探针 3 项全绿（真库 13.5 万模型调用/2936 会话聚合非空、TTFT 真值、readOnly 工具存在）。
+- 全量 `npm test`：5574 通过 / 0 失败 / 8 跳过。
+- **浏览器走查未做**，原因：共享注入树与 8647/8649 端口被 serve-main（钉 main 的共享部署）占用，私栈需 OVERLAY_UPSTREAM_ROOT 新建隔离上游树而磁盘水位 13GB 已低于 20GB 门禁线；替代面=组件 jsdom 挂载断言（账单展开/账本分区/时间窗切换/fail-soft）+ 真库 live 探针 + 路由匹配纯函数。合并重部署 serve-main 后建议人工走查一次账单展开金路径。
