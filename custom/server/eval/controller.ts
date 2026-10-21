@@ -45,6 +45,7 @@ import { loadEvalConfig } from './types'
 import type { EvalRun, EvalSet, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 import { buildRedteamVariants } from './redteam-variants'
+import { evaluateReleaseHold } from './release-hold'
 
 const router = new Router({ prefix: '/api/hermes/eval' })
 
