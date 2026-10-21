@@ -96,7 +96,7 @@ describe('P6 Ontology Provider', () => {
     expect(parseOntologyConfig({ mappings: 'nope' })).toBeNull()
   })
 
-  it('mock provider 可用；fibo 预处理索引可加载且含 12 概念与歧义对；off → null；未知 provider → null', async () => {
+  it('mock provider 可用；fibo 预处理索引可加载且含 18 概念、真实 IRI 锚与歧义对；off → null；未知 provider → null', async () => {
     const mock = new MockOntologyProvider()
     const idx = await mock.load()
     expect(idx?.concepts.length).toBe(3)
@@ -104,9 +104,28 @@ describe('P6 Ontology Provider', () => {
     const fibo = createProvider({ provider: 'fibo', mappings: [] }, join(here, '..', 'gate-packs'))
     expect(fibo).not.toBeNull()
     const fiboIdx = await fibo!.load()
-    expect(fiboIdx?.concepts.length).toBe(12)
+    expect(fiboIdx?.concepts.length).toBe(18)
     const capture = fiboIdx?.concepts.find((c) => c.id === 'fibo-capture')
     expect(capture?.distinctFrom).toContain('fibo-settlement')
+
+    // v1 实锚轮(2026-10-21):FIBO master_2026Q3 + OMG Commons 校准断言
+    const anchored = fiboIdx?.concepts.filter((c) => c.iri) ?? []
+    expect(anchored.length).toBe(16) // 18 − Authorization/Capture 两个工程近似
+    const payment = fiboIdx?.concepts.find((c) => c.id === 'fibo-payment')
+    expect(payment?.iri).toBe('https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/Payment')
+    expect(payment?.definition).toContain('fulfillment of an obligation')
+    const party = fiboIdx?.concepts.find((c) => c.id === 'fibo-party')
+    expect(party?.iri).toContain('omg.org/spec/Commons') // Party 真身在 OMG Commons
+    // 工程近似概念:无 iri + source 如实标注
+    for (const approx of ['fibo-authorization', 'fibo-capture']) {
+      const c = fiboIdx?.concepts.find((x) => x.id === approx)
+      expect(c?.iri).toBeUndefined()
+      expect(c?.source).toBe('engineering-approximation')
+    }
+    // 义务≠履行:PaymentObligation 与 Payment 互为 distinctFrom
+    const payObl = fiboIdx?.concepts.find((c) => c.id === 'fibo-payment-obligation')
+    expect(payObl?.distinctFrom).toContain('fibo-payment')
+    expect(payment?.distinctFrom).toContain('fibo-payment-obligation')
 
     expect(createProvider({ provider: 'off', mappings: [] }, '/x')).toBeNull()
     expect(createProvider({ provider: 'nope', mappings: [] }, '/x')).toBeNull()
