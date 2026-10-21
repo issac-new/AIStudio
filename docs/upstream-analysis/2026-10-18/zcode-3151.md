@@ -1,5 +1,9 @@
 # ZCode v3.15.1 功能面清点（源码实证）
 
+> **历史快照**：源码基线已于 2026-10-21 前移至 `origin/main` v3.16.1（`0a1fc56`），安装版 3.16.2；
+> 本文锚点只保证在 v3.15.1 tag 下成立。当前正本见
+> `docs/superpowers/specs/2026-10-21-zcode-3161-baseline-upgrade.md`。
+>
 > 仓库：`/Users/cuishi/lab/ncwk/upstream/zcode`
 > 基线：tag `v3.15.1`（`aac47556`）。本文所有 `path:line` 锚点均指 **v3.15.1 该 tag 下的文件内容**（用 `git show v3.15.1:<path>` 读取；工作区 HEAD 实际停在 v3.14.3，直接读本地文件会读到旧版）。
 > 方法：`git show` / `git grep` / `git diff --name-status` / `defaults read`。未运行构建、未启动应用；所有结论均来自源码与命令输出。

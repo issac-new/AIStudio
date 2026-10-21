@@ -1,5 +1,5 @@
 // ZCode 模式目录客户端镜像守门（2026-10-18 锚定校正轮）：
-// 上游锚=upstream/zcode v3.15.1 ZCODE_AGENT_MODE_OPTIONS（build/guarded/plan/yolo，
+// 上游锚=upstream/zcode v3.16.1 ZCODE_AGENT_MODE_OPTIONS（build/guarded/plan/yolo，
 // edit 隐藏历史值）+ V4ComposerModeControls（Plan 勾选与权限档正交）。
 // 断言面：目录形状 / 旧七档迁移 / 派生回写（服务端穿线词表兼容层）。
 // @vitest-environment jsdom

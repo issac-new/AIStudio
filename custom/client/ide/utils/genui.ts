@@ -1,5 +1,5 @@
 // overlay/custom/client/ide/utils/genui.ts
-// Gen UI 指令解析（对齐 zcode 3.15.1 packages/ui/src/gen-ui/domain/references.ts）：
+// Gen UI 指令解析（对齐 zcode 3.16.1 packages/ui/src/gen-ui/domain/references.ts；该文件自 3.15.1 零 diff）：
 //   ::visualize{path="/work/demo.html" title="..." mode="wide"}
 //   ::visualize{"path":"/work/demo.html","title":"..."}
 // 规则：代码块内的示例忽略；路径必须绝对、无 ..、非 URL；mode 只收 wide/fullscreen。
