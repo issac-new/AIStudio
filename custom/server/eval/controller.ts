@@ -656,9 +656,8 @@ router.get('/runs/:id/evidence', async (ctx) => {
     }
     return
   }
-  const sample = attempt.spanRef
-    ? sampleSpanFromTrace(attempt.sessionId, attempt.spanRef)
-    : sampleFromTrace(attempt.sessionId)
+  const spanSample = attempt.spanRef ? sampleSpanFromTrace(attempt.sessionId, attempt.spanRef) : null
+  const sample = spanSample ?? sampleFromTrace(attempt.sessionId)
   if (!sample.ok || !sample.sample) {
     ctx.body = {
       ok: false,
@@ -676,7 +675,7 @@ router.get('/runs/:id/evidence', async (ctx) => {
     taskId,
     sampleIdx,
     sessionId: attempt.sessionId,
-    ...(attempt.spanRef ? { spanRef: attempt.spanRef, spanKind: sample.spanKind } : {}),
+    ...(attempt.spanRef ? { spanRef: attempt.spanRef, spanKind: spanSample?.spanKind } : {}),
     transcript: transcript.slice(0, maxChars),
     truncated: transcript.length > maxChars,
     toolCalls: sample.sample.toolCalls ?? [],
