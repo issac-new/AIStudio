@@ -37,13 +37,13 @@ function newProject(): AuditProject {
 }
 
 describe('项目与运行', () => {
-  it('创建项目 + 开跑：覆盖账本初始化（12 面、自动面入账）', async () => {
+  it('创建项目 + 开跑：覆盖账本初始化（15 面=部署 12+代码仓 3，自动面入账）', async () => {
     const p = newProject()
     const run = await startRun(p.projectId)
     expect(run.ok).toBe(true)
     if (!run.ok) return
     expect(run.value.targetFingerprint).toBe(p.fingerprint)
-    expect(run.value.ledger?.summary.total).toBe(12)
+    expect(run.value.ledger?.summary.total).toBe(15)
     // 自动面（有采集器）应进入 full/partial，不该留在 unchecked
     const auto = run.value.ledger?.entries.filter((e) => e.autoFindingCount !== undefined) ?? []
     expect(auto.length).toBeGreaterThanOrEqual(4)
