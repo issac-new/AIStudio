@@ -24,7 +24,7 @@ import type { Context } from 'koa'
 // ── 白名单与纯函数层（测试锚点）──────────────────────────────────────────────
 
 export type ToolKey =
-  | 'zcode' | 'vscode' | 'iterm' | 'warp' | 'terminal' | 'idea'
+  | 'zcode' | 'deepseek-harness' | 'vscode' | 'iterm' | 'warp' | 'terminal' | 'idea'
   | 'powershell' | 'cmd' | 'terminal-zcode'
 
 export interface ToolDef {
@@ -40,6 +40,7 @@ export interface ToolDef {
 
 export const TOOL_DEFS: readonly ToolDef[] = [
   { key: 'zcode', app: 'ZCode', labelZh: 'zcode', labelEn: 'zcode', platforms: ['darwin', 'win32'] },
+  { key: 'deepseek-harness', app: 'DeepSeek Harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', platforms: ['darwin'] },
   { key: 'vscode', app: 'Visual Studio Code', labelZh: 'VS Code', labelEn: 'VS Code', platforms: ['darwin', 'win32'] },
   { key: 'iterm', app: 'iTerm', labelZh: 'iTerm', labelEn: 'iTerm', platforms: ['darwin'] },
   { key: 'warp', app: 'Warp', labelZh: 'Warp', labelEn: 'Warp', platforms: ['darwin'] },
@@ -62,6 +63,18 @@ export function applescriptEscape(s: string): string {
 
 export interface LaunchPlan { file: string; args: string[] }
 
+/** 受管 fork 源码树的 zcode CLI（npm run zcode:ensure 的构建产物）。
+ *  ZCode.app 内置的 Resources/glm/zcode.cjs 离开 app 的 Electron 进程无法解析
+ *  @zcode/tui（实测 Cannot find package），不能用于终端直启。 */
+export const ZCODE_CLI_DIST = resolve(
+  __dirname, '../../../..', '../upstream/zcode/apps/zcode-cli/packages/cli/dist/zcode.cjs',
+)
+
+/** 返回可执行的 zcode CLI 路径：fork 构建产物优先，缺席时回落 PATH 的 zcode。 */
+export function resolveZcodeCli(exists: (p: string) => boolean = existsSync): string | null {
+  return exists(ZCODE_CLI_DIST) ? ZCODE_CLI_DIST : null
+}
+
 /**
  * 组装启动命令（纯函数；cwd 由调用方先行校验）。
  * 返回 null = 平台不支持或工具不在白名单。
@@ -69,7 +82,12 @@ export interface LaunchPlan { file: string; args: string[] }
 /** 仅启动型伪工具（不出现在可用性列表，但可安全启动）。 */
 const LAUNCH_ONLY_TOOLS = new Set<ToolKey>(['terminal-zcode'])
 
-export function buildLaunchPlan(tool: ToolKey, cwd: string | null, platform: NodeJS.Platform): LaunchPlan | null {
+export function buildLaunchPlan(
+  tool: ToolKey,
+  cwd: string | null,
+  platform: NodeJS.Platform,
+  deps: { exists?: (p: string) => boolean } = {},
+): LaunchPlan | null {
   const def = TOOL_DEFS.find(d => d.key === tool)
   const known = !!def || LAUNCH_ONLY_TOOLS.has(tool)
   if (!known) return null
@@ -82,9 +100,11 @@ export function buildLaunchPlan(tool: ToolKey, cwd: string | null, platform: Nod
         // open -a "Visual Studio Code" [folder] —— 传目录即打开该工作区
         return { file: 'open', args: ['-a', 'Visual Studio Code', ...(cwd ? [cwd] : [])] }
       case 'terminal-zcode': {
-        // Terminal 里执行 cd <cwd> && zcode —— 依赖用户 shell PATH 中的 zcode
+        // Terminal 里执行 cd <cwd> && (node <fork CLI> | zcode)——不要求 PATH 安装
         const dir = cwd ?? homedir()
-        const script = `cd ${shellQuote(dir)} && zcode`
+        const cli = resolveZcodeCli(deps.exists ?? existsSync)
+        const command = cli ? `node ${shellQuote(cli)}` : 'zcode'
+        const script = `cd ${shellQuote(dir)} && ${command}`
         return { file: 'osascript', args: ['-e', `tell application "Terminal" to do script "${applescriptEscape(script)}"`] }
       }
       default: {
@@ -213,11 +233,12 @@ export function handleDevtoolsLaunch(ctx: Context, deps: DevtoolsDeps & { readBo
     const tool = String(body?.tool ?? '') as ToolKey
     const cwdRaw = typeof body?.cwd === 'string' && body.cwd.trim() ? body.cwd.trim() : null
     const platform = deps.platform ?? process.platform
+    const exists = deps.exists ?? existsSync
     const stat = deps.stat ?? ((p: string) => { try { const s = statSync(p); return { isDirectory: s.isDirectory() } } catch { return null } })
 
     if (!TOOL_DEFS.some(d => d.key === tool) && !LAUNCH_ONLY_TOOLS.has(tool)) { ctx.status = 400; ctx.body = { error: '未知工具（仅白名单）' }; return }
     if (!validateCwd(cwdRaw, { stat })) { ctx.status = 400; ctx.body = { error: 'cwd 不是有效目录' }; return }
-    const plan = buildLaunchPlan(tool, cwdRaw, platform)
+    const plan = buildLaunchPlan(tool, cwdRaw, platform, { exists })
     if (!plan) { ctx.status = 400; ctx.body = { error: '该工具在当前平台不可用' }; return }
 
     const exec = deps.exec ?? ((file: string, args: string[]) => {
