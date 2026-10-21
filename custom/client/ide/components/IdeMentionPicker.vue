@@ -28,6 +28,9 @@ const SOURCES: Array<{ kind: MentionKind; label: string; hint: string }> = [
   // wiki 第七源（2026-10-10 深化轮）：@wiki:页名 字面量约定式引用——
   // 代理按仓库 AGENTS.md 受管块处理（先读 docs/wiki/<页名>.md 再作答）
   { kind: 'wiki', label: 'Wiki', hint: '页名，如 auth 或 modules/auth' },
+  // FIBO 第九源（2026-10-21）：@fibo:Payment 字面量引用——代理经 agent 桥
+  // 取真实 IRI/定义/模块版本（/api/ontology/agent-bridge/fibo?q=Payment）
+  { kind: 'fibo', label: 'FIBO', hint: '术语名，如 Payment / SettlementEvent / Account' },
 ]
 
 /** wiki 源目标匹配预览：对 store 的 wikiPages 缓存做页名/路径模糊匹配 */
@@ -73,12 +76,12 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
       type="button"
       class="ide-mention__at ide-mention__at--collapsed"
       data-testid="ide-mention-open"
-      title="@ 引用（文件/会话/技能/插件/子代理/画板/Wiki）"
+      title="@ 引用（文件/会话/技能/插件/子代理/画板/Wiki/FIBO）"
       @click="expanded = true; open = true"
     >@ 引用</button>
     <template v-else>
     <div class="ide-mention__row">
-      <button type="button" class="ide-mention__at" data-testid="ide-mention-open" :title="'@ 六源引用（file/session/skill/plugin/subagent/whiteboard）'" @click="open = !open">@</button>
+      <button type="button" class="ide-mention__at" data-testid="ide-mention-open" :title="'@ 引用源（file/session/skill/plugin/subagent/whiteboard/wiki/ontology/fibo）'" @click="open = !open">@</button>
       <input
         v-model="draft"
         class="ide-mention__input"
@@ -113,6 +116,9 @@ const preview = computed(() => resolveMentions([...staged.value.map((s) => s.raw
         <template v-if="wikiMatch">已匹配：{{ wikiMatch.path }}</template>
         <template v-else-if="ide.wikiPages.length">当前 wiki 共 {{ ide.wikiPages.length }} 页（面板 Wiki 页签装载后可匹配）</template>
         <template v-else>本工作区尚无 wiki 页缓存（打开 Wiki 面板后可匹配）</template>
+      </div>
+      <div v-if="kind === 'fibo'" class="ide-mention__wiki-hint" data-testid="ide-mention-fibo-hint">
+        术语引用：{{ target || 'Payment' }}（代理经 agent 桥解析真实 IRI、定义与模块版本）
       </div>
     </div>
     <div v-if="preview.length" class="ide-mention__preview" data-testid="ide-mention-preview">
