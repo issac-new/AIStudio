@@ -29,6 +29,38 @@ export const ideUsageApi = {
   contextTrend(sessionId: string): Promise<ContextTrendResponse> {
     return request<ContextTrendResponse>(`/api/ide/context-trend/${encodeURIComponent(sessionId)}`)
   },
+  /** Fleet 编队子树聚合（P3；server 见 custom/server/tokens/fleet-tree.ts） */
+  fleet(sessionId: string): Promise<FleetResponse> {
+    return request<FleetResponse>(`/api/ide/fleet/${encodeURIComponent(sessionId)}`)
+  },
+}
+
+export interface FleetCard {
+  sessionId: string
+  role: 'root' | 'parent' | 'current' | 'child'
+  title: string
+  agent: string
+  model: string
+  messageCount: number
+  toolCallCount: number
+  billedTokens: number
+  costUsd: number
+  lastActive: number
+  isArchived: boolean
+  subtreeTokens: number | null
+  subtreeCostUsd: number | null
+}
+
+export interface FleetResponse {
+  ok: boolean
+  available?: boolean
+  reason?: string
+  rootId?: string
+  parent?: FleetCard | null
+  current?: FleetCard
+  children?: FleetCard[]
+  totals?: { sessions: number; billedTokens: number; costUsd: number }
+  childrenTruncated?: boolean
 }
 
 /** 与 server foldContextTrend 输出对齐（available=false 时其余字段缺席，fail-soft）。 */

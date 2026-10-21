@@ -10,6 +10,7 @@ import Router from '@koa/router'
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 import { foldContextTrend, type TrendMessage, type TrendUsageRow } from '../../tokens/context-trend'
+import { foldFleetTree, type FleetSessionRow } from '../../tokens/fleet-tree'
 
 
 /** studio db 多候选探测（symlink/物理 __dirname 双形态+cwd 兜底）。 */
@@ -108,6 +109,41 @@ router.get('/context-trend/:sessionId', (ctx) => {
       charsPerToken: 4,
       ...result,
     }
+  } catch (err) {
+    ctx.status = 503
+    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+  }
+})
+
+router.get('/fleet/:sessionId', (ctx) => {
+  const sessionId = String(ctx.params.sessionId ?? '')
+  if (!sessionId) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'sessionId 必填' }
+    return
+  }
+  const dbPath = resolveStudioDb()
+  if (!existsSync(dbPath)) {
+    ctx.body = { ok: true, available: false, reason: 'db-unavailable' }
+    return
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { DatabaseSync } = require('node:sqlite')
+    const db = new DatabaseSync(dbPath, { readOnly: true })
+    const rows = db.prepare(
+      `SELECT id, parent_session_id, title, agent, model, message_count, tool_call_count,
+              input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens,
+              estimated_cost_usd, actual_cost_usd, last_active, is_archived
+       FROM sessions`,
+    ).all() as FleetSessionRow[]
+    db.close()
+    const fleet = foldFleetTree(rows, sessionId)
+    if (!fleet) {
+      ctx.body = { ok: true, available: false, reason: 'session-not-found' }
+      return
+    }
+    ctx.body = { ok: true, available: true, sessionId, ...fleet }
   } catch (err) {
     ctx.status = 503
     ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
