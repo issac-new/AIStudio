@@ -179,6 +179,28 @@ describe('origin 自动复判', () => {
     expect(run.run.attempts[0].toolCalls).toHaveLength(1)
   })
 
+  it('显式样本带 spanRef 时按 span 取证判分，不得偷读整会话（评审 Important#2）', async () => {
+    const reflowed = reflow()
+    expect(reflowed.ok).toBe(true)
+    if (!reflowed.ok) return
+    // 整会话含 2 个工具调用；span tc-1 只含 1 个
+    writeTrace([
+      ...TRACE.slice(0, -1),
+      { type: 'chunk', kind: 'tool_span', tool_call_id: 'tc-2', api_request_id: 'req-1', tool_name: 'git_status', status: 'ok', duration_ms: 5 },
+      TRACE[TRACE.length - 1],
+    ])
+    const run = await runReplayEval({
+      setId: reflowed.set.id,
+      samples: { [reflowed.taskId]: [{ sessionId: 'prod-origin', spanRef: 'tc-1' }] },
+    }, deps())
+    expect(run.ok).toBe(true)
+    if (!run.ok) return
+    expect(run.run.evidenceMode).toBe('explicit')
+    expect(run.run.attempts[0]).toMatchObject({ sessionId: 'prod-origin', spanRef: 'tc-1' })
+    expect(run.run.attempts[0].toolCalls).toHaveLength(1)
+    expect(run.run.attempts[0].toolCalls?.[0].name).toBe('run_tests')
+  })
+
   it('密封集拒绝按 origin 自动展开', async () => {
     const reflowed = reflow()
     expect(reflowed.ok).toBe(true)

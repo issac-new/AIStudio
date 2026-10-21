@@ -273,15 +273,18 @@ function openEvalSet(setId: string): void {
       <button
         v-if="selected.ref?.spanRef"
         type="button" class="traj__reflow-span"
-        :title="tx.trajReflowHint"
+        :disabled="!convertSession"
+        :title="convertSession ? tx.trajReflowHint : tx.trajReflowUnsupported"
         data-testid="traj-reflow-span"
         @click="openSpanComposer(selected.ref)"
       >↺ {{ tx.trajReflowSpan }}</button>
     </div>
 
-    <!-- 生产失败转回归：任务定义与证据确认在 Composer（legacy 完整才可进入） -->
+    <!-- 生产失败转回归：任务定义与证据确认在 Composer（legacy 完整才可进入）。
+         :key 按目标重挂——切换 session/span 时预览与表单必须随之刷新，不得沿用旧目标。 -->
     <TraceCaseComposer
       v-if="composerTarget && convertSession"
+      :key="`${composerTarget.sessionId}|${composerTarget.spanRef ?? ''}`"
       :session-id="composerTarget.sessionId"
       :span-ref="composerTarget.spanRef"
       :span-kind="composerTarget.spanKind"
@@ -315,7 +318,8 @@ function openEvalSet(setId: string): void {
   margin-top: 6px; height: 22px; align-self: flex-start; padding: 0 10px;
   border: 1px solid var(--border-color); border-radius: 6px; background: transparent;
   color: var(--text-muted); font-size: 10px; cursor: pointer; font-family: inherit;
-  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+  &:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-secondary); }
 }
 
 .traj__kinds { display: flex; flex-wrap: wrap; gap: 4px; }
