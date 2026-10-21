@@ -15,7 +15,7 @@ import { judgeAttempt, type JudgeDeps } from './judge'
 import { sha1Of } from './clef'
 import { runOutcomeCheck, type OutcomeRunContext } from './outcome'
 import { appendRun, getSet, getSetRevision, sealedAttemptCount } from './store'
-import { inspectTrace, sampleFromTrace, sampleSpanFromTrace } from './trace-sampler'
+import { evidenceFromRows, inspectTrace, sampleSpanFromTrace, spanEvidenceFromRows } from './trace-sampler'
 import type { Attempt, Evidence, EvalConfig, EvalRun, EvalTask, ToolCallRecord } from './types'
 import { loadEvalConfig } from './types'
 
@@ -245,23 +245,25 @@ function originSampleOf(task: EvalTask): { sample?: ResolvedSample; problem?: st
   if (inspected.traceHash !== origin.traceHash) {
     return { problem: `任务 ${task.id} 的来源 trace 已变化，需重新转题确认` }
   }
+  // 复用 hash 校验同一次读取的 rows 构造证据：校验与判分不留二次读文件的漂移窗口。
   const sampled = origin.spanRef
-    ? sampleSpanFromTrace(origin.sessionId, origin.spanRef)
-    : sampleFromTrace(origin.sessionId)
-  if (!sampled.ok || !sampled.sample) {
-    return { problem: `任务 ${task.id} 的来源证据采样失败：${sampled.reason ?? '未知原因'}` }
+    ? spanEvidenceFromRows(inspected.rows ?? [], origin.spanRef)
+    : evidenceFromRows(inspected.rows ?? [])
+  if ('reason' in sampled) {
+    return { problem: `任务 ${task.id} 的来源证据采样失败：${sampled.reason}` }
   }
+  const evidence = sampled.sample
   const meaningful = Boolean(
-    sampled.sample.transcript?.trim()
-    || sampled.sample.toolCalls?.length
-    || (sampled.sample.efficiency?.tokens ?? 0) > 0,
+    evidence.transcript?.trim()
+    || evidence.toolCalls?.length
+    || (evidence.efficiency?.tokens ?? 0) > 0,
   )
   if (!meaningful) return { problem: `任务 ${task.id} 的来源 trace 没有可判分证据` }
   return {
     sample: {
       sessionId: origin.sessionId,
       ...(origin.spanRef ? { spanRef: origin.spanRef } : {}),
-      evidence: sampled.sample,
+      evidence,
       fromOrigin: true,
     },
   }

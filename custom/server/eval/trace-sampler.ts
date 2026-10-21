@@ -128,18 +128,15 @@ function argSummary(args: unknown): string {
   }
 }
 
-/** 从 trace 构造 Evidence；缺文件/坏行如实降级。 */
-export function sampleFromTrace(sessionId: string, opts: { tracesDir?: string } = {}): TraceSampleResult {
-  const inspected = inspectTrace(sessionId, opts)
-  if (!inspected.ok) return { ok: false, sessionId, reason: inspected.reason }
-
+/** rows → session 级 Evidence（纯函数；与 hash 校验共用同一次文件读取的调用方直接复用）。 */
+export function evidenceFromRows(rows: TraceLine[]): { sample: Evidence; tokens: number; startedAt: number | null; durationMs: number | null } {
   const toolCalls: ToolCallRecord[] = []
   const transcript: string[] = []
   let tokens = 0
   let startedAt: number | null = null
   let durationMs: number | null = null
 
-  for (const row of inspected.rows ?? []) {
+  for (const row of rows) {
     if (row.type === 'header' && typeof row.started_at === 'number') startedAt = row.started_at
     if (row.type === 'trailer') {
       if (typeof row.duration_ms === 'number') durationMs = row.duration_ms
@@ -165,19 +162,33 @@ export function sampleFromTrace(sessionId: string, opts: { tracesDir?: string } 
   }
 
   return {
-    ok: true,
-    sessionId,
     sample: {
       transcript: transcript.join('\n').slice(0, 20_000),
       toolCalls,
       efficiency: { tokens, steps: toolCalls.length, ...(durationMs != null ? { durationMs } : {}) },
     },
+    tokens,
+    startedAt,
+    durationMs,
+  }
+}
+
+/** 从 trace 构造 Evidence；缺文件/坏行如实降级。 */
+export function sampleFromTrace(sessionId: string, opts: { tracesDir?: string } = {}): TraceSampleResult {
+  const inspected = inspectTrace(sessionId, opts)
+  if (!inspected.ok) return { ok: false, sessionId, reason: inspected.reason }
+
+  const built = evidenceFromRows(inspected.rows ?? [])
+  return {
+    ok: true,
+    sessionId,
+    sample: built.sample,
     meta: {
       lines: inspected.rows?.length ?? 0,
-      toolCalls: toolCalls.length,
-      tokens,
-      durationMs,
-      startedAt,
+      toolCalls: built.sample.toolCalls?.length ?? 0,
+      tokens: built.tokens,
+      durationMs: built.durationMs,
+      startedAt: built.startedAt,
       traceHash: inspected.traceHash!,
       format: inspected.format!,
       complete: inspected.complete!,
@@ -244,13 +255,16 @@ function renderMessages(messages: unknown, maxChars: number): string {
   return parts.join('\n')
 }
 
-/** 从 trace 构造单 span 级 Evidence；span 不存在/文件缺席如实降级。 */
-export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { tracesDir?: string } = {}): SpanSampleResult {
-  if (!/^[A-Za-z0-9._:-]{1,200}$/.test(spanRef)) return { ok: false, sessionId, spanRef, reason: 'spanRef 含非法字符' }
-  const inspected = inspectTrace(sessionId, opts)
-  if (!inspected.ok) return { ok: false, sessionId, spanRef, reason: inspected.reason }
-  const rows = (inspected.rows ?? []) as SpanTraceLine[]
-  const chunks = rows.filter((r) => r.type === 'chunk')
+/**
+ * rows → span 级 Evidence（纯函数）。与 hash 校验共用同一次文件读取的调用方直接复用，
+ * 消除「校验后再读一次文件」的证据漂移窗口。
+ */
+export function spanEvidenceFromRows(
+  rows: TraceLine[],
+  spanRef: string,
+): { spanKind: 'llm_span' | 'tool_span'; sample: Evidence; tokens: number; durationMs: number | null; ttftMs: number | null; childToolCalls: number } | { reason: string } {
+  const typed = rows as SpanTraceLine[]
+  const chunks = typed.filter((r) => r.type === 'chunk')
 
   // 工具 span：tool_call_id 直匹
   const toolRow = chunks.find((r) => r.kind === 'tool_span' && r.tool_call_id === spanRef)
@@ -260,9 +274,6 @@ export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { 
       `tool: ${toolRow.tool_name ?? 'unknown'}(${argSummary(toolRow.args)}) -> ${ok ? 'ok' : `error: ${toolRow.error_message ?? 'unknown'}`}`,
     ].join('\n')
     return {
-      ok: true,
-      sessionId,
-      spanRef,
       spanKind: 'tool_span',
       sample: {
         transcript,
@@ -272,16 +283,10 @@ export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { 
           durationMs: typeof toolRow.duration_ms === 'number' ? toolRow.duration_ms : undefined,
         }],
       },
-      meta: {
-        spanRef,
-        tokens: 0,
-        durationMs: typeof toolRow.duration_ms === 'number' ? toolRow.duration_ms : null,
-        ttftMs: null,
-        childToolCalls: 0,
-        traceHash: inspected.traceHash!,
-        format: inspected.format!,
-        complete: inspected.complete!,
-      },
+      tokens: 0,
+      durationMs: typeof toolRow.duration_ms === 'number' ? toolRow.duration_ms : null,
+      ttftMs: null,
+      childToolCalls: 0,
     }
   }
 
@@ -289,7 +294,7 @@ export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { 
   const pre = chunks.find((r) => r.kind === 'llm_span' && r.phase === 'pre' && r.api_request_id === spanRef)
   const post = chunks.find((r) => r.kind === 'llm_span' && (r.phase === 'post' || r.phase === 'error') && r.api_request_id === spanRef)
   if (!pre && !post) {
-    return { ok: false, sessionId, spanRef, reason: 'span 不存在（api_request_id/tool_call_id 均未命中）' }
+    return { reason: 'span 不存在（api_request_id/tool_call_id 均未命中）' }
   }
   const children = chunks.filter((r) => r.kind === 'tool_span' && r.api_request_id === spanRef)
 
@@ -321,9 +326,6 @@ export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { 
   const ttftMs = typeof post?.first_token_ms === 'number' ? post.first_token_ms : (typeof post?.ttft_ms === 'number' ? post.ttft_ms : null)
 
   return {
-    ok: true,
-    sessionId,
-    spanRef,
     spanKind: 'llm_span',
     sample: {
       transcript: transcript.join('\n\n').slice(0, 20_000),
@@ -335,12 +337,32 @@ export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { 
         ...(ttftMs != null ? { ttftMs } : {}),
       },
     },
+    tokens,
+    durationMs,
+    ttftMs,
+    childToolCalls: children.length,
+  }
+}
+
+/** 从 trace 构造单 span 级 Evidence；span 不存在/文件缺席如实降级。 */
+export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { tracesDir?: string } = {}): SpanSampleResult {
+  if (!/^[A-Za-z0-9._:-]{1,200}$/.test(spanRef)) return { ok: false, sessionId, spanRef, reason: 'spanRef 含非法字符' }
+  const inspected = inspectTrace(sessionId, opts)
+  if (!inspected.ok) return { ok: false, sessionId, spanRef, reason: inspected.reason }
+  const built = spanEvidenceFromRows(inspected.rows ?? [], spanRef)
+  if ('reason' in built) return { ok: false, sessionId, spanRef, reason: built.reason }
+  return {
+    ok: true,
+    sessionId,
+    spanRef,
+    spanKind: built.spanKind,
+    sample: built.sample,
     meta: {
       spanRef,
-      tokens,
-      durationMs,
-      ttftMs,
-      childToolCalls: children.length,
+      tokens: built.tokens,
+      durationMs: built.durationMs,
+      ttftMs: built.ttftMs,
+      childToolCalls: built.childToolCalls,
       traceHash: inspected.traceHash!,
       format: inspected.format!,
       complete: inspected.complete!,
