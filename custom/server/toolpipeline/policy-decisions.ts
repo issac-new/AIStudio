@@ -22,6 +22,8 @@ export interface PolicyDecisionEntry {
   enforcing: boolean
   allow: boolean
   rule: string
+  /** 声明式策略规则 id（policy-* 裁决时写入；回答「当时生效的是哪条策略」）。 */
+  policyRuleId?: string
   risk?: 'low' | 'medium' | 'high'
   /** 拒绝原因摘要（≤200 字符）。 */
   reason?: string
