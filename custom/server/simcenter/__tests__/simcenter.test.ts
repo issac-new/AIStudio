@@ -31,6 +31,7 @@ let simRoot = ''
 const savedEnv: Record<string, string | undefined> = {}
 
 function seedRunFixture(): void {
+  mkdirSync(resolve(simRoot, 'runs', 'run-g5b'), { recursive: true })
   const run1 = resolve(simRoot, 'runs', 'run1')
   const evid = resolve(run1, 'evidence')
   mkdirSync(evid, { recursive: true })
@@ -463,7 +464,7 @@ describe('validateSimSettings — 四键受控校验（B8，E28）', () => {
 describe('UAT 判定台账（纯函数）', () => {
   it('validateUatVerdict：ac 归一 AC-N；三态键；note 界外拒', () => {
     expect(validateUatVerdict({ run: 'run1', ac: '3', verdict: 'pass' })).toEqual({ ok: true, run: 'run1', ac: 'AC-3', verdict: 'pass', note: undefined })
-    expect(validateUatVerdict({ run: 'run1', ac: 'AC-12', verdict: 'conditional', note: ' 保留窗口 ' })).toEqual({ ok: true, run: 'run1', ac: 'AC-12', verdict: 'conditional', note: '保留窗口' })
+    expect(validateUatVerdict({ run: 'run1', ac: 'AC-12', verdict: 'conditional', note: ' 保留窗口 ', acknowledged: true })).toEqual({ ok: true, run: 'run1', ac: 'AC-12', verdict: 'conditional', note: '保留窗口', acknowledged: true })
     expect(validateUatVerdict({ run: 'run1', ac: 'AC-9999', verdict: 'pass' }).ok).toBe(false)
     expect(validateUatVerdict({ run: 'run1', ac: 'AC-1', verdict: 'maybe' }).ok).toBe(false)
     expect(validateUatVerdict({ run: '../esc', ac: 'AC-1', verdict: 'pass' }).ok).toBe(false)
@@ -486,7 +487,7 @@ describe('UAT 判定台账（纯函数）', () => {
 
 describe('UAT 判定端点（真 koa + 临时 SIM_ROOT）', () => {
   it('POST 写台账（actor 回落 unknown）→ GET 读回 → trace 合并人工判定', async () => {
-    const w = await post('/api/hermes/sim/uat-verdict', { run: 'run1', ac: 'AC-1', verdict: 'conditional', note: '冒烟' })
+    const w = await post('/api/hermes/sim/uat-verdict', { run: 'run1', ac: 'AC-1', verdict: 'conditional', note: '冒烟', acknowledged: true })
     expect(w.status).toBe(200)
     expect(w.body.record.verdict).toBe('conditional')
     expect(w.body.record.actor).toBe('unknown')
@@ -524,16 +525,20 @@ describe('G5 发布准出台账（纯函数）', () => {
 })
 
 describe('G5 发布准出端点（真 koa）', () => {
-  it('未决→批准→改判打回（append-only 留痕）', async () => {
+  it('未决→批准（锚）→已批后打回=409（防回流改写历史，spec g5-uat-state-machine 决策2）；新 run 直接打回留痕', async () => {
     const before = await get('/api/hermes/sim/release-gate?run=run1')
     if (before.body.decision === null) {
-      const a = await post('/api/hermes/sim/release-gate', { run: 'run1', decision: 'approve' })
+      const a = await post('/api/hermes/sim/release-gate', { run: 'run1', decision: 'approve', anchor: 'evidence/uat-verdicts.jsonl#AC-1' })
       expect(a.status).toBe(200)
       expect((await get('/api/hermes/sim/release-gate?run=run1')).body.decision).toBe('approve')
     }
+    // 新状态机：approved 上 reject 为非法迁移（改判需新 run），旧「批准后直接打回」不再放行
     const r = await post('/api/hermes/sim/release-gate', { run: 'run1', decision: 'reject', note: '复检回流' })
-    expect(r.status).toBe(200)
-    const after = await get('/api/hermes/sim/release-gate?run=run1')
+    expect(r.status).toBe(409)
+    // 新 run 直接打回（draft→rejected 合法），append-only 留痕
+    const r2 = await post('/api/hermes/sim/release-gate', { run: 'run-g5b', decision: 'reject', note: '复检回流' })
+    expect(r2.status).toBe(200)
+    const after = await get('/api/hermes/sim/release-gate?run=run-g5b')
     expect(after.body.decision).toBe('reject')
     expect(after.body.records.filter((x: ReleaseGateRecord) => x.decision === 'reject' && x.note === '复检回流').length).toBeGreaterThanOrEqual(1)
   })
