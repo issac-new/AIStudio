@@ -84,12 +84,18 @@ export function planDirectorScenario(input: DirectorInput): Promise<DirectorPlan
   })
 }
 
+export interface DirectorNotifyStatus {
+  sent: boolean
+  reason?: string
+}
+
 export function startDirectorScenario(input: DirectorInput): Promise<{
   ok: boolean
   specId: string
   runId: string
   cast: string[]
   modules: string[]
+  notify?: DirectorNotifyStatus
 }> {
   return json('/api/graph/sim-director/start', {
     method: 'POST',
@@ -107,7 +113,7 @@ export async function fetchGraphEvents(runId: string): Promise<GraphEvent[]> {
   return r.events ?? []
 }
 
-export function resumeGraphGate(runId: string, interruptId: string, approved: boolean): Promise<unknown> {
+export function resumeGraphGate(runId: string, interruptId: string, approved: boolean): Promise<{ notify?: DirectorNotifyStatus } & Record<string, unknown>> {
   return json(`/api/graph/runs/${encodeURIComponent(runId)}/resume`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

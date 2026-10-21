@@ -12,6 +12,7 @@ import type { EventLogStore, GraphLogEvent } from './event-log-store'
 import type { RunSpawner } from './run-spawner'
 import { validateGraphSpec, type GraphSpec } from './graph-spec'
 import { appendContractsById } from './phase-nodes'
+import { notifyDirectorEvent } from './director-notify'
 import { compileRequirementToGraph, DEFAULT_SIMULATION_SCENARIO, type RequirementInput } from '../../graph/simulation-graph-template'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
@@ -230,7 +231,15 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
       const username = (ctx.state as { user?: { username?: string } }).user?.username
       const value = username !== undefined ? stampApproverIdentity(body.value, username) : body.value
       const instance = await deps.graphService.resumeRun(ctx.params.id, body.interruptId, value)
-      ctx.body = { runId: ctx.params.id, instance }
+      // 导演台事件通知（2026-10-21）：批准/打回真实落痕到观察房间；未配置跳过。
+      const decisionText = String((value as { decision?: string } | null)?.decision ?? body.value ?? '')
+      const kind = /reject|false|deny|打回/i.test(decisionText) ? 'gate-rejected' : 'gate-approved'
+      const notify = await notifyDirectorEvent(kind, {
+        runId: ctx.params.id,
+        title: body.interruptId,
+        actor: username,
+      }).catch(() => ({ sent: false, reason: 'notify error' }))
+      ctx.body = { runId: ctx.params.id, instance, notify }
     } catch (err) {
       ctx.status = 409
       ctx.body = { error: err instanceof Error ? err.message : String(err) }
@@ -550,7 +559,14 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
       const spec = compiledDirectorSpec(parsed.value, username)
       await deps.specStore.save(spec)
       const { runId, instance } = await runtime.startRun(spec.id)
-      ctx.body = { ok: true, specId: spec.id, runId, instance, cast: directorCast(spec), modules: parsed.value.modules ?? [] }
+      // 导演台事件通知（2026-10-21）：启动事件落观察房间；未配置跳过。
+      const notify = await notifyDirectorEvent('started', {
+        runId,
+        title: parsed.value.title,
+        detail: `模块 ${(parsed.value.modules ?? []).join('、') || '—'}`,
+        actor: username,
+      }).catch(() => ({ sent: false, reason: 'notify error' }))
+      ctx.body = { ok: true, specId: spec.id, runId, instance, cast: directorCast(spec), modules: parsed.value.modules ?? [], notify }
     } catch (err) {
       ctx.status = 400; ctx.body = { error: err instanceof Error ? err.message : String(err) }
     }
