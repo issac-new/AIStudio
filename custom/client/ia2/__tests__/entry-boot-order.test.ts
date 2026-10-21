@@ -59,3 +59,19 @@ describe('entry.mts 冷启动装载时序', () => {
     expect(mountLines[0]).toBeGreaterThan(isReadyLines[0])
   })
 })
+
+describe('entry.mts devAutoLogin 手动登出闸门（2026-10-21 修复）', () => {
+  // dev 桩自动登录若不检查 hermes_manual_logout：设置面板登出→清库→重载后 2s 内
+  // 即被本桩以 admin 复活（浏览器实锤：/src/main.ts 栈迹写入 hermes_api_key），登出
+  // 形同虚设。闸门契约与 LoginView C2 自动登录一致：手动登录成功即清标记。
+  const lines = readFileSync(ENTRY, 'utf8').split('\n')
+
+  it('devAutoLogin 在 fetch 登录前检查手动登出闸门', () => {
+    const fnStart = lines.findIndex(l => l.includes('async function devAutoLogin'))
+    expect(fnStart, 'devAutoLogin 函数须存在').toBeGreaterThan(-1)
+    const fetchLine = lines.findIndex((l, i) => i > fnStart && l.includes("fetch('/api/auth/login'"))
+    expect(fetchLine, 'devAutoLogin 内须有登录 fetch').toBeGreaterThan(fnStart)
+    const gateLine = lines.findIndex((l, i) => i > fnStart && i < fetchLine && l.includes("sessionStorage.getItem('hermes_manual_logout')"))
+    expect(gateLine, '闸门检查须在登录 fetch 之前（退出后不得自动拉回 admin）').toBeGreaterThan(fnStart)
+  })
+})
