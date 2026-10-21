@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-  TOOL_DEFS, applescriptEscape, buildLaunchPlan, shapeCliSessions,
+  TOOL_DEFS, ZCODE_CLI_DIST, applescriptEscape, buildLaunchPlan, resolveZcodeCli, shapeCliSessions,
   toolAvailableOnDarwin, validateCwd, type ToolKey,
 } from '../devtools'
 
@@ -24,11 +24,20 @@ describe('buildLaunchPlan — 白名单与平台分支（纯函数）', () => {
   })
 
   it('darwin：terminal-zcode 走 osascript，路径与内部引号被转义', () => {
-    const plan = buildLaunchPlan('terminal-zcode', '/tmp/my dir', 'darwin')!
+    const plan = buildLaunchPlan('terminal-zcode', '/tmp/my dir', 'darwin', { exists: () => false })!
     expect(plan.file).toBe('osascript')
     const script = plan.args[1]
     expect(script).toContain('cd')
     expect(script).toContain("do script \"cd '/tmp/my dir' && zcode\"")
+  })
+
+  it('darwin：terminal-zcode 优先受管 fork 源码树 CLI（不依赖 PATH 安装）', () => {
+    const exists = (p: string) => p === ZCODE_CLI_DIST
+    expect(resolveZcodeCli(exists)).toBe(ZCODE_CLI_DIST)
+    const plan = buildLaunchPlan('terminal-zcode', '/tmp/my dir', 'darwin', { exists })!
+    const script = plan.args[1]
+    expect(script).toContain(`node '${ZCODE_CLI_DIST}'`)
+    expect(script).toContain("cd '/tmp/my dir'")
   })
 
   it('darwin 不提供 powershell/cmd；win32 提供两者且命令服务端拼装', () => {
@@ -44,13 +53,17 @@ describe('buildLaunchPlan — 白名单与平台分支（纯函数）', () => {
 
 describe('可用性探测（darwin）', () => {
   it('应用按 /Applications/<app>.app 判定；Terminal 走系统目录', () => {
-    const exists = (p: string) => p === '/Applications/iTerm.app' || p === '/System/Applications/Utilities/Terminal.app'
+    const exists = (p: string) => p === '/Applications/iTerm.app'
+      || p === '/Applications/DeepSeek Harness.app'
+      || p === '/System/Applications/Utilities/Terminal.app'
     const iterm = TOOL_DEFS.find(d => d.key === 'iterm')!
     const warp = TOOL_DEFS.find(d => d.key === 'warp')!
     const terminal = TOOL_DEFS.find(d => d.key === 'terminal')!
+    const deepseek = TOOL_DEFS.find(d => d.key === 'deepseek-harness')!
     expect(toolAvailableOnDarwin(iterm, exists)).toBe(true)
     expect(toolAvailableOnDarwin(warp, exists)).toBe(false)
     expect(toolAvailableOnDarwin(terminal, exists)).toBe(true)
+    expect(toolAvailableOnDarwin(deepseek, exists)).toBe(true)
   })
 })
 

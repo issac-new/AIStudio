@@ -1,8 +1,11 @@
 <!-- overlay/custom/client/ide/components/IdeDevTools.vue -->
-<!-- 编程工具启动器（2026-10-19 用户需求批）：IDE 工作区状态栏常驻「工具」入口，
-     弹出白名单工具（zcode/VS Code/iTerm/Warp/终端/IDEA；Windows 增 PowerShell/
+<!-- 编程工具启动器（2026-10-19 用户需求批；2026-10-21 补 DeepSeek Harness +
+     zcode app-only 终端入口）：IDE 工作区状态栏常驻「工具」入口，弹出白名单工具
+     （zcode/DeepSeek Harness/VS Code/iTerm/Warp/终端/IDEA；Windows 增 PowerShell/
      cmd）——可用性来自服务端探测，未安装置灰；「在工作区打开终端并运行 zcode」
-     带当前工作区根目录。点击即启动本机应用（服务端 open -a 白名单，无任意命令）。 -->
+     带当前工作区根目录，zcode CLI 走受管 fork 源码树构建产物（无需 PATH 安装；
+     ZCode.app 内置 bundle 离开 app 进程跑不起来）。点击即启动本机应用（服务端
+     open -a 白名单，无任意命令）。 -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
@@ -66,7 +69,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
       class="ide-devtools__btn"
       :class="{ 'is-open': open }"
       data-testid="ide-devtools-toggle"
-      title="打开本机编程工具（zcode / VS Code / 终端等）"
+      title="打开本机编程工具（zcode / DeepSeek Harness / VS Code / 终端等）"
       @click="toggle"
     >🖥 工具 ▾</button>
 
@@ -113,7 +116,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
 }
 .ide-devtools__panel {
   position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 60;
-  width: 300px; padding: 8px 10px 10px;
+  width: 320px; padding: 8px 10px 10px;
   background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
@@ -137,7 +140,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
 .ide-devtools__tool {
   border: 1px solid var(--border-color); border-radius: 6px;
   background: transparent; color: var(--text-primary);
-  font-size: 11.5px; padding: 5px 4px; cursor: pointer;
+  font-size: 11.5px; line-height: 1.25; padding: 5px 4px; cursor: pointer;
   &:hover:not(:disabled) { border-color: var(--accent-info); }
   &.is-off, &:disabled { opacity: .38; cursor: not-allowed; }
 }
