@@ -1,7 +1,7 @@
 # NCWK 设计正本
 
 > 三域设计：SwarmStudio（产品面）× hermes agent teams（运行面）× swarm-yuan（能力层）
-> 版本：2026-10-21 R1｜核实日：2026-10-21
+> 版本：2026-10-21 R2｜核实日：2026-10-21
 > 本文只写**系统怎么搭、机制怎么运转、接口怎么接、为什么这样定、踩过什么坑**。产品是什么、怎么用，见《NCWK 产品正本》。
 
 ## 0、怎么读
@@ -16,7 +16,7 @@
 2. **未配置不等于已治理**：inactive／partial／unavailable 如实标注。
 3. **只迁不删、只补不覆盖**：能力在归属面有正身才退役；台账只增不改。
 
-五个数字：编制 15／账号 30／profile 42；产品面 146 条用户决策；能力层 50 条决策文本、56 门禁；推演 21 轮／V8.46；全量测试 5,574。
+五个数字：编制 15／账号 30／profile 42；产品面 146 条用户决策；能力层 50 条决策文本、56 门禁；推演 21 轮／V8.46；全量测试 5,868。
 
 ### 0.2 文档分工
 
@@ -176,7 +176,7 @@ G5 三腿并行取证（集成真值/缺陷闭环/安全条件），只取证不
 
 证据（双凭证/四锚/append-only）；门禁（qgate 六态，INCONCLUSIVE 不冒 PASS，证据三级，Profile 四档）；审批（14 介入点，凭证 scope/expiresAt，只认人类绑 head）；权限（super_admin/PL50/PL0）；观测（31 检测器、NUDGE 三级、告警落面板）。
 
-已落地的机制扩展：组织五流诊断、决策图谱四类落账＋先例检索＋确定性规则闸＋PROV-O、KG 演化（攒批/三档去重/单批>20% 熔断/版本回滚）、六类成本账＋L1-L5、无损换窗三件、工具瀑布（pre/post hooks、按需暴露、held-out 限次 3）。插件 24 缝为设计资产，未实施。
+已落地的机制扩展：组织五流诊断、决策图谱四类落账＋先例检索＋确定性规则闸＋PROV-O、KG 演化（攒批/三档去重/单批>20% 熔断/版本回滚）、六类成本账＋L1-L5、无损换窗三件、工具瀑布（pre/post hooks、按需暴露、held-out 限次 3）；三号调研吸收六件（2026-10-21，详见 docs/2026-10-21-wx-3accounts-research.md）：本体 Action 契约层（ActionType 四级读写/审批缺省 mandatory/权限标签写面必填）、工具契约 inputSchema/outputSchema/authRule、callgate 调用闸域（熔断三态×资源隔离＋滑窗限流＋五档降级阶梯＋重试×熔断互斥；执法接线挂账）、裁判×人工 Cohen's κ 校准＋盲测截尾均值、指标退化禁发闸（候选 vs 最近稳定版，无基线如实 no_baseline）、统一任务生命周期账本（五源映射七态，未登记不猜）。插件 24 缝为设计资产，未实施。
 
 ---
 
@@ -277,7 +277,7 @@ GRAPH_ENGINE 三态；事件日志单一源；六闸；retro_done@步24；发布
 
 ### 6.7 端点清单
 
-供给 `/api/skillgov/provision/*`；组织 `/api/governance/registry/org`；策略 `/api/governance/tool-policies`；审计 `/api/governance/secaudit/*`；任务 `/api/kanban/*`；审批 `/api/approvals/*`；推演 `/api/graph/*`、`/api/hermes/sim/{release-gate-state,uat-verdict}`；团队 Matrix `com.swarmstudio.registry`；进度 `/api/progress/machines`；用量 `/api/ide/zcode-usage/*`；Harness `/api/harness/*`。
+供给 `/api/skillgov/provision/*`；组织 `/api/governance/registry/org`；策略 `/api/governance/tool-policies`；审计 `/api/governance/secaudit/*`；任务 `/api/kanban/*`；审批 `/api/approvals/*`；推演 `/api/graph/*`、`/api/hermes/sim/{release-gate-state,uat-verdict}`；评测 `/api/hermes/eval/*`（runs/agreement/release-hold/blind-reviews）；团队 Matrix `com.swarmstudio.registry`；进度 `/api/progress/machines`；用量 `/api/ide/zcode-usage/*`；Harness `/api/harness/*`（含 taskledger 任务账本、callgate 调用闸观测）。
 
 ---
 
@@ -285,11 +285,11 @@ GRAPH_ENGINE 三态；事件日志单一源；六闸；retro_done@步24；发布
 
 ### 7.1 时间线
 
-06-18 overlay 架构→06-27 可观测性→07-11 Loop Engineering→07-23 循环工程统一→08-27 终端多工具→09-09 loop graph 重构→09-18 分布式交付/fleet→09-23 zcode 底座→10-01 吸收首轮→10-15 代偿治理/三中心→10-16 需求冻结/安全整改→10-17 旅程 IA→10-18 左栏阶段/Harness→10-19 评测/评审治理→10-20 三模式/0.7.38→10-21 FIBO/安全审计/策略引擎。
+06-18 overlay 架构→06-27 可观测性→07-11 Loop Engineering→07-23 循环工程统一→08-27 终端多工具→09-09 loop graph 重构→09-18 分布式交付/fleet→09-23 zcode 底座→10-01 吸收首轮→10-15 代偿治理/三中心→10-16 需求冻结/安全整改→10-17 旅程 IA→10-18 左栏阶段/Harness→10-19 评测/评审治理→10-20 三模式/0.7.38→10-21 FIBO/安全审计/策略引擎/三号调研吸收（本体 Action 层等六件）。
 
 ### 7.2 调研吸收
 
-27 轮；34 篇文章/报告、5 深读仓、8 工具仓、1 Anthropic 博客。落地率：四源文 12/12、org 10/10、九源 14/14（3 不做）、腾讯 7/7、阿里 6/6、三文 6/6、百度 6/6+5、SoL-Pi 4 落 3。测试 3,735→5,574。
+28 轮；34 篇文章/报告、5 深读仓、8 工具仓、1 Anthropic 博客、3 公众号全量 295 篇语料（壹号讲狮 259/AI变革见证 20/银翼AI评测室 16；合集 API 全量枚举＋搜狗 k/h 解析补合集外）。落地率：四源文 12/12、org 10/10、九源 14/14（3 不做）、腾讯 7/7、阿里 6/6、三文 6/6、百度 6/6+5、SoL-Pi 4 落 3、三公众号 126 借鉴项 6 落＋14 挂账（挂账编号清单见 docs/2026-10-21-wx-3accounts-research.md §5）。测试 3,735→5,868。
 
 明确否决：音视频/贴纸/身份发现/spaces/tower/Tauri/iOS/新一级页；mods/pets/esp32；主会话 append-only/进程沙箱/完整 Mods；Jev-Omni/SAT 学习/Hindsight 整体/容器沙箱/L4 融合。
 
@@ -329,7 +329,7 @@ GRAPH_ENGINE 三态；事件日志单一源；六闸；retro_done@步24；发布
 
 ### 8.2 当前验证账
 
-全量 5,574/0/8；0.7.38 净树重放 310/310、inject 382 applied；M3 65 页；FIBO 逐字节守门＋活体导入幂等；fleet 45/45；供给对账 18；策略 78/78+362/362；能力层 56 门禁闭合、R130 行为锁；run22 smoke 5/5、G4 过、G5 多轮。
+全量 5,868/0/8；三号调研吸收六件域测 401＋全量绿＋typecheck 0（overlay main 439be0d7）；0.7.38 净树重放 310/310、inject 382 applied；M3 65 页；FIBO 逐字节守门＋活体导入幂等；fleet 45/45；供给对账 18；策略 78/78+362/362；能力层 56 门禁闭合、R130 行为锁；run22 smoke 5/5、G4 过、G5 多轮。
 
 ### 8.3 未验与环境性失败
 
@@ -337,7 +337,7 @@ diagram-export×3；cua×5；tool-waterfall×1；IDE 超时；Matrix 分享房�
 
 ### 8.4 技术缺口
 
-产品面：3000 行死视图、首载 3.8s、分享房未验、录制位与 PNG、IDE 权限 localStorage、死词条、Harness² 六项。运行面：十项阻断、Python teams 执法缺口、委托前查目录、Matrix 目录房、技能 104/53 缺口、十要素 telemetry、27 无效工具集名。能力层：WP10/11/13-15、R126 63 项、enforce 5 项、证据双态 3 项、FACT 豁免 14、5 家 L1、口径债、manifest 同步。跨域：manifest 命名、两处接线、价目双源、团队数据面四处、ChatBridge Phase 2。
+产品面：3000 行死视图、首载 3.8s、分享房未验、录制位与 PNG、IDE 权限 localStorage、死词条、Harness² 六项、三号调研吸收挂账 14 项（Action 执行运行时/权限即上下文注入/独立 BadCase 库/租户隔离/callgate 执法接线等，编号清单见 docs/2026-10-21-wx-3accounts-research.md §5）。运行面：十项阻断、Python teams 执法缺口、委托前查目录、Matrix 目录房、技能 104/53 缺口、十要素 telemetry、27 无效工具集名。能力层：WP10/11/13-15、R126 63 项、enforce 5 项、证据双态 3 项、FACT 豁免 14、5 家 L1、口径债、manifest 同步。跨域：manifest 命名、两处接线、价目双源、团队数据面四处、ChatBridge Phase 2。
 
 ---
 
@@ -349,6 +349,7 @@ diagram-export×3；cua×5；tool-waterfall×1；IDE 超时；Matrix 分享房�
 4. 能力发现接委托、供给接推演管线。
 5. 死视图清理与首载优化。
 6. M3 立项（Python 侧执法钩子或边界声明）。
+7. 三号调研吸收挂账按需取用：优先级前三=Action 执行运行时（Proposal→审批→写回）、权限即上下文注入、独立 BadCase 库实体＋线上自动采集。
 
 ---
 
@@ -361,13 +362,14 @@ diagram-export×3；cua×5；tool-waterfall×1；IDE 超时；Matrix 分享房�
 | 域 | 项 | 数字 |
 |---|---|---|
 | 产品面 | 模式/页签/入口/岛 | 3/33/6/4 |
-| 产品面 | 路由/客户端目录/服务端域 | 89/19/~140 |
+| 产品面 | 路由/客户端目录/服务端域 | 89/19/145 |
 | 产品面 | 补丁 studio/zcode | 382/8 |
 | 产品面 | 用户决策/常设/纠正 | 146/30/27 |
-| 产品面 | 全量测试 | 5,574/0/8 |
+| 产品面 | 全量测试 | 5,868/0/8 |
 | 产品面 | 六闸/介入/检测器/prelaunch | 6/14/31/30 |
 | 产品面 | 净树重放 | 310/310；382 applied |
 | 产品面 | FIBO | 37/21/16 |
+| 产品面 | 三号调研吸收（第 28 轮） | 295 篇语料/126 借鉴项/6 落地/14 挂账 |
 | 产品面 | 推演/方案/纪律 | 21/V8.46/79 条 |
 | 运行面 | 编制/账号/profile/板 | 15/30/42/28 |
 | 运行面 | 宿主/sim profile | 49-50/45 |
@@ -386,7 +388,7 @@ diagram-export×3；cua×5；tool-waterfall×1；IDE 超时；Matrix 分享房�
 | 能力层 | 宿主/四层 | 8/4 |
 | 能力层 | 变量/预算 | 197/200 |
 | 能力层 | LOC | 8,694 |
-| 文档 | specs/plans/研究档 | 248/54/31 |
+| 文档 | specs/plans/研究档 | 251/54/32 |
 
 ## 附录 G：决策摘要
 
@@ -430,5 +432,6 @@ diagram-export×3；cua×5；tool-waterfall×1；IDE 超时；Matrix 分享房�
 | 日期 | 版本 | 变更 | 依据 |
 |---|---|---|---|
 | 2026-10-21 | R1 | 从混合正本拆出设计内容，形成独立设计正本；附录 A-D 归本文引用 | 用户指令「产品内容与设计内容分开」 |
+| 2026-10-21 | R2 | 记三号调研吸收轮（六件机制入 §3.5/端点入 §6.7/时间线与落地率入 §7/验证账与挂账入 §8/附录 F 数字）；附录 A 补 spec 索引行 | 维护规则「新增一轮更新 §7 史实、§8 验证与缺口、附录 F 数字」＋用户指令「更新设计文档」 |
 
 > 维护规则：设计事实变化写本文；产品行为变化写产品正本；同一细节只在一处写全。
