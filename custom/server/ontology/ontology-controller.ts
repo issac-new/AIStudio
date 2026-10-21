@@ -331,10 +331,10 @@ router.post('/fibo/ingest-demo', (ctx) => {
   const r = ingestFiboDemo()
   if (!r.ok) {
     ctx.status = 422
-    ctx.body = { ok: false, detail: r.detail ?? '支付样例未写入', ...r }
+    ctx.body = { ...r, ok: false, detail: r.detail ?? '支付样例未写入' }
     return
   }
-  ctx.body = { ok: true, ...r }
+  ctx.body = { ...r, ok: true }
 })
 
 export const ontologyRoutes = router
