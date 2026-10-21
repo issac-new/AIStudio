@@ -1302,7 +1302,7 @@ DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026
 ⏱ T+30：首个 WIP 提交必须已在分支上（哪怕只有骨架/部分实现）——「还在写」不算里程碑，push 了才算。
 ⏱ T+60 起：每新增一类文件/一个子步骤=一次 commit+push（增量提交纪律）。
 ⏱ 长任务（>1 人日）：每完成一个子任务立即回群一行 PROGRESS-<任务ID>-<子件>（只此一行，勿展开）。
-1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 `feat(<域>): <任务> <单子件描述>` 格式）
+1. git add + commit：本地 commit 必须存在（`git log -1 --format=%H` 输出非空 hash；提交信息含 「feat(<域>): <任务> <单子件描述>」 格式）
 2. git push origin feat/DEV-X：远程可达（`git ls-remote origin feat/DEV-X` 能查到该 commit hash；网络异常如实报 BLOCKED 不要 Turn ended 撒谎）
 3. 群内发一行 MICRO-DEV-X-COMPLETE + 提交短锚（前 7 位 hash）@你的域 lead（后端 wei/前端 mei）
 4. 等群内监督哨回执 「PUSH-CONFIRMED-〈任务ID〉」 后才停——未回执则继续等不要 Turn ended；超时 10 分钟未回执群内一行 PUSH-WAITING 请求
