@@ -9,11 +9,14 @@
 
 本文只做汇总、横向对照与差距裁决；单条功能的证据以四份原始报告为准。
 
-## 一、版本基线（2026-10-18 实核）
+> **2026-10-21 更新**：zcode 行已前移至源码 `origin/main` v3.16.1（`0a1fc56`）/ 安装版 3.16.2，
+> 见 `docs/superpowers/specs/2026-10-21-zcode-3161-baseline-upgrade.md`；其余工具行仍是 2026-10-18 快照。
+
+## 一、版本基线（2026-10-18 实核；zcode 行 2026-10-21 更新）
 
 | 工具 | 最新检出/外部版本 | 核验锚点 |
 |---|---|---|
-| zcode（源码底座） | **源码基线 = 公开最新 v3.15.1**（`aac47556`，origin/main；本地 HEAD 已同步到 v3.15.1）；安装版 3.15.3（源码未公开，增量核对见 `2026-10-18-zcode-3.15.3-delta.md`） | `git -C upstream/zcode log -1`；`git ls-remote --tags origin`；`PlistBuddy .../ZCode.app/Contents/Info.plist` |
+| zcode（源码底座） | **源码基线 = origin/main v3.16.1**（`0a1fc56`，2026-10-19 source-sync；公开 tag 仍停在 v3.15.1）；安装版 **3.16.2**（build 8769；词条快照 `notes/zcode-3162` 6985 键/101 ns）。升级正本见 `docs/superpowers/specs/2026-10-21-zcode-3161-baseline-upgrade.md` | `git -C upstream/zcode log -1`；`git tag -l`；`PlistBuddy .../ZCode.app/Contents/Info.plist`；`npm run catalog-check` |
 | Claude Code | `v2.1.300`（2026-10-14） | `upstream/claude-code` → `git describe --tags` |
 | Codex | `rust-v0.162.1`（2026-10-09） | `upstream/codex` → `git describe --tags` |
 | Kimi Code | `@moonshot-ai/kimi-code@2.1.1-6-ga940f2ff0` | `upstream/kimi-code` → `git describe --tags` |

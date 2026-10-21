@@ -1,8 +1,8 @@
 diff --git a/packages/services/src/zcode-agent/zcodeAgentService.ts b/packages/services/src/zcode-agent/zcodeAgentService.ts
-index 9b33c71..c3b5db7 100644
+index 92f4c14d..3f844b21 100644
 --- a/packages/services/src/zcode-agent/zcodeAgentService.ts
 +++ b/packages/services/src/zcode-agent/zcodeAgentService.ts
-@@ -123,6 +123,7 @@ import {
+@@ -176,6 +176,7 @@ import {
    mergeAutomationMutationToolDenylist,
    mergeOffPeakMutationToolDenylist,
  } from "#src/zcode-agent/automationToolPolicy.js";
@@ -10,7 +10,7 @@ index 9b33c71..c3b5db7 100644
  import { ZCODE_AGENT_RUNTIME_UNAVAILABLE_CODE } from "./zcodeAgent.js";
  import type {
    ZCodeProtocolRequestId,
-@@ -5301,6 +5302,54 @@ export function createZCodeAgentService(
+@@ -6382,6 +6383,54 @@ export function createZCodeAgentService(
        );
      },
  
@@ -66,10 +66,10 @@ index 9b33c71..c3b5db7 100644
      // 分页发生在存储层（JournalStorePort.listEvents 带 afterSequence/limit），这里不切片；
      // 在 RPC 层切等于每翻一页把整条 journal 读进内存。
 diff --git a/packages/shared/src/validation.ts b/packages/shared/src/validation.ts
-index 7d89774..774e139 100644
+index 822334e6..059e89ec 100644
 --- a/packages/shared/src/validation.ts
 +++ b/packages/shared/src/validation.ts
-@@ -548,7 +548,7 @@ export const hostLogResponseSchema = z.object({
+@@ -1086,7 +1086,7 @@ export const hostLogResponseSchema = z.object({
  
  export { zcodeProviderSchema };
  
@@ -79,10 +79,10 @@ index 7d89774..774e139 100644
  export const hostAgentProcessSpawnedResponseSchema = z.object({
    type: z.literal("agent-process-spawned"),
 diff --git a/packages/shared/src/zcode-protocol-v4/transport.ts b/packages/shared/src/zcode-protocol-v4/transport.ts
-index 4d1d53b..0b65c0e 100644
+index 3ea350ae..ff89e4bd 100644
 --- a/packages/shared/src/zcode-protocol-v4/transport.ts
 +++ b/packages/shared/src/zcode-protocol-v4/transport.ts
-@@ -346,6 +346,9 @@ export const V4_METHODS = {
+@@ -353,6 +353,9 @@ export const V4_METHODS = {
    conversationFileRewindPreview: "v4/conversation/fileRewindPreview",
    // workflow run 的事件日志分页（详情页审计面）：只读、无状态、超时重发安全。
    // 新方法天然偏斜安全——旧桌面根本不会调用它。
@@ -92,7 +92,7 @@ index 4d1d53b..0b65c0e 100644
    conversationWorkflowRunEvents: "v4/conversation/workflowRunEvents",
    conversationWorkflowRuns: "v4/conversation/workflowRuns",
    // workflow run 的用户面产物。三条同族：
-@@ -707,6 +710,33 @@ export type V4ConversationWorkflowRunsResult = z.infer<
+@@ -729,6 +732,33 @@ export type V4ConversationWorkflowRunsResult = z.infer<
    typeof v4ConversationWorkflowRunsResultSchema
  >;
  
