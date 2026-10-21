@@ -26,7 +26,8 @@ vi.mock('vue-router', () => ({
 }))
 const authState = vi.hoisted(() => ({ isSuperAdmin: true as boolean | null }))
 vi.mock('@/stores/hermes/auth', () => ({ useAuthStore: () => ({ get isSuperAdmin() { return authState.isSuperAdmin } }) }))
-vi.mock('@/api/client', () => ({ isStoredSuperAdmin: () => false }))
+vi.mock('@/api/client', () => ({ isStoredSuperAdmin: () => false, getStoredUserId: () => null }))
+vi.mock('@/api/studio/theme', () => ({ clearThemeBackgroundCache: vi.fn(async () => {}) }))
 
 import IaSettingsSidebar from '../components/IaSettingsSidebar.vue'
 
@@ -102,6 +103,23 @@ describe('IaSettingsSidebar — 设置页侧栏（功能面恢复）', () => {
     // hasRouteNames 含二者路由名——隐藏只能来自 features 门控而非 hasRoute
     expect(w.text()).not.toContain('sidebar.petdex')
     expect(w.text()).not.toContain('sidebar.agentManager')
+    w.unmount()
+  })
+
+  it('登出入口恒在（2026-10-21 修复）：点击设手动登出闸门+清本地凭据', async () => {
+    authState.isSuperAdmin = true
+    localStorage.setItem('hermes_api_key', 'fake-jwt')
+    const w = mountSidebar()
+    const btn = w.find('[data-testid="ia-settings-logout"]')
+    expect(btn.exists(), '登出按钮必须渲染（旧页脚挂载点退役后的唯一可达出口）').toBe(true)
+    expect(w.text()).toContain('sidebar.logout')
+    await btn.trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    // jsdom 的 location.reload 不可 spy（non-configurable）——重载副作用不在单测面，
+    // 语义核心=闸门置位+本地凭据清空（整页重载后 LoginView 据闸门停留手动表单）
+    expect(sessionStorage.getItem('hermes_manual_logout')).toBe('1')
+    expect(localStorage.getItem('hermes_api_key')).toBeNull()
+    sessionStorage.removeItem('hermes_manual_logout')
     w.unmount()
   })
 })

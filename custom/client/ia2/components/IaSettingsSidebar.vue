@@ -18,7 +18,8 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { isStoredSuperAdmin } from '@/api/client'
+import { isStoredSuperAdmin, getStoredUserId } from '@/api/client'
+import { clearThemeBackgroundCache } from '@/api/studio/theme'
 import { useAuthStore } from '@/stores/hermes/auth'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
 import { prefetchLegacyView } from '../views/legacy-view-loaders'
@@ -103,6 +104,17 @@ function visible(e: NavEntry): boolean {
 
 const groupVisible = computed(() =>
   GROUPS.map(g => ({ ...g, entries: g.entries.filter(visible) })))
+
+/** 登出（2026-10-21 修复：旧 SidebarAccountControls 的挂载页脚随早年补丁退役后
+ *  全 UI 无可达登出入口）。语义与原实现一致：清主题背景缓存→设手动登出闸门
+ *  （LoginView 据此跳过网关自动登录，避免退出即被拉回）→清本地凭据→整页重载回登录页。 */
+async function handleLogout(): Promise<void> {
+  const userId = getStoredUserId()
+  if (userId) await clearThemeBackgroundCache(userId)
+  sessionStorage.setItem('hermes_manual_logout', '1')
+  localStorage.clear()
+  window.location.reload()
+}
 </script>
 
 <template>
@@ -122,6 +134,12 @@ const groupVisible = computed(() =>
         <p v-if="g.entries.length === 0" class="ui-empty-state ui-empty-state--compact">—</p>
       </section>
     </div>
+    <div class="ia-setnav__footer">
+      <button type="button" class="ia-setnav__item ia-setnav__logout" data-testid="ia-settings-logout" @click="handleLogout">
+        <CockpitIcon name="grid" :size="14" />
+        <span>{{ t('sidebar.logout') }}</span>
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -133,6 +151,8 @@ const groupVisible = computed(() =>
   &:first-child { margin-top: 0; }
 }
 .ia-setnav__label { margin: 6px 6px 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+.ia-setnav__footer { flex-shrink: 0; padding: 8px 8px 10px; border-top: 1px solid var(--border-color); }
+.ia-setnav__logout { width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; font: inherit; }
 .ia-setnav__item { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: 6px; font-size: 12px; color: var(--text-secondary); text-decoration: none; white-space: nowrap; overflow: hidden;
   .cockpit-icon { color: var(--text-muted); }
   &:hover { background: var(--bg-secondary); color: var(--text-primary); text-decoration: none; }
