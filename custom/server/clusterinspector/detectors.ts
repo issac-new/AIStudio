@@ -52,6 +52,9 @@ export interface DetectOptions {
   /** active-no-artifact 活跃阈 ms（默认 1800000=30min；liveMs ≥2× 升 high。
    *  4ab303d2 双保留合并漏声明，server tsc 报 TS2339——2026-10-18 补型） */
   activeNoArtifactMs?: number
+  /** session-exhaustion 应答-真做落差阈 ms（默认 1800000=30min：应答行持续刷新
+   *  而真做行停摆超此值=warn，≥2× 升 high 建议轮转。run22 2026-10-21 立法） */
+  exhaustionGapMs?: number
   /** D10 空转连击告警阈（默认 4；runtime 侧轮换触发在 8，巡检先行预警） */
   emptyStreakLimit?: number
   /** 会话饥饿：空转连击阈（默认 3；run20 复盘 D6） */
@@ -572,6 +575,37 @@ export function detectPushStalled(snap: ClusterSnapshot, opts: DetectOptions = {
   return out
 }
 
+/** agent.session-exhaustion：会话耗尽检测（run22 2026-10-21 两实录产品化）。
+ *  形态：档案应答行持续刷新（收到指令后「回话」——API 调用发生、日志在长）但
+ *  真做行停摆——连续多回合零工具执行/零产物（实录一：hu 修复令后 93 分钟三次
+ *  应答全零工件；实录二：qi 复测令后单回合应答即躺平。两案均靠值班人工发
+ *  「换会话令」救活，新会话 3 分钟内即恢复产出）。判据=workTsMs 新鲜（仍在
+ *  应答）且 realWorkTsMs>0（曾真做过=长跑后衰竭而非新会话首回合）且
+ *  workTsMs-realWorkTsMs ≥ gap 阈 → warn；≥2× 阈 → high（建议轮转：
+ *  结束当前会话+新会话三条显式命令，run22 两战两捷配方）。fail-soft。 */
+export function detectSessionExhaustion(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const gapMs = opts.exhaustionGapMs ?? 1_800_000
+  const now = opts.nowMs ?? Date.now()
+  const out: Anomaly[] = []
+  const face = snap.profiles
+  if (!face || !face.ok) return out
+  for (const t of face.tails) {
+    if (!t.realWorkTsMs || !t.workTsMs) continue
+    const ansFresh = now - t.workTsMs <= gapMs
+    if (!ansFresh) continue
+    const gap = t.workTsMs - t.realWorkTsMs
+    if (gap < gapMs) continue
+    const high = gap >= gapMs * 2
+    out.push({
+      detector: 'agent.session-exhaustion', subject: `profile:${t.profile}`,
+      severity: high ? 'high' : 'warn',
+      summary: `会话耗尽迹象：${t.profile} 持续应答（应答行新鲜）但真做行已停 ${Math.round(gap / 60000)} 分钟——应答无执行形态（run22 两实录：越催越空转）。处置：不再重复催办，直接发换会话令（结束当前会话+新会话预置显式命令清单）`,
+      detail: { profile: t.profile, workTsMs: t.workTsMs, realWorkTsMs: t.realWorkTsMs, gapMs: gap, thresholdMs: gapMs },
+    })
+  }
+  return out
+}
+
 /** agent.active-no-artifact：活跃但零产物检测（run21 四复发同根产品化，2026-10-18）。
  *  一夜四形态（结论行 92min/PAYCORE 3h/P0 75min/G5 修订 80min）：档案日志持续
  *  活跃但交付物迟迟不落——「在写未提交/完成态错位」灰区，日志活跃≠进展。
@@ -615,6 +649,7 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectGateway(snap),
     ...detectPushStalled(snap, opts),
     ...detectActiveNoArtifact(snap, opts),
+    ...detectSessionExhaustion(snap, opts),
     ...detectSlotInflation(snap, opts),
     ...detectStaleWorkers(snap),
     ...detectSessionStall(snap, opts),
