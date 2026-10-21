@@ -28,9 +28,9 @@ describe('P2 支付样例实例摄取', () => {
     const first = ingestFiboDemo(0)
     expect(first.ok).toBe(true)
     expect(first.importedPack).toBe(true)
-    expect(first.typesAdded).toBe(36)
+    expect(first.typesAdded).toBe(37)
     expect(first.instances).toBe(20)
-    expect(first.applied.concepts).toBe(36)
+    expect(first.applied.concepts).toBe(37)
     expect(first.summary.error).toBe(0)
 
     const all = loadInstances()
@@ -108,23 +108,23 @@ describe('P3 SEC/DER/LOAN 域目录', () => {
 })
 
 describe('P4 运营快照', () => {
-  it('未导入时覆盖 0/36，但锁/映射/术语/域/门禁/权限计数齐全', () => {
+  it('未导入时覆盖 0/37，但锁/映射/术语/域/门禁/权限计数齐全', () => {
     const ops = fiboOpsSnapshot(seedSpec(0), seedInstances(0), 0)
     expect(ops.evidence.coverage.applied).toBe(0)
-    expect(ops.evidence.coverage.total).toBe(36)
-    expect(ops.glossary.terms).toBe(36)
-    expect(ops.mappings.total).toBe(36)
+    expect(ops.evidence.coverage.total).toBe(37)
+    expect(ops.glossary.terms).toBe(37)
+    expect(ops.mappings.total).toBe(37)
     expect(ops.domains).toEqual({ domains: 3, concepts: 18, ids: ['SEC', 'DER', 'LOAN'] })
     expect(ops.lock.ok).toBe(true)
-    expect(ops.gate.concepts).toBe(18)
+    expect(ops.gate.concepts).toBe(37)
     expect(ops.permissions).toEqual({ policies: 2, fields: ['Account.accountNumber', 'Payer.partyRef'] })
   })
 
-  it('导入后运营快照覆盖 36/36', () => {
+  it('导入后运营快照覆盖 37/37', () => {
     const merged = mergeFiboPack(seedSpec(0), 0)
     const ops = fiboOpsSnapshot(merged.spec!, seedInstances(0), 0)
-    expect(ops.evidence.coverage.applied).toBe(36)
-    expect(ops.evidence.coverage.ratio).toBe('36/36')
-    expect(ops.evidence.markdown).toContain('36/36')
+    expect(ops.evidence.coverage.applied).toBe(37)
+    expect(ops.evidence.coverage.ratio).toBe('37/37')
+    expect(ops.evidence.markdown).toContain('37/37')
   })
 })

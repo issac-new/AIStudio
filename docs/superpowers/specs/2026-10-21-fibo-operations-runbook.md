@@ -10,9 +10,9 @@
 每天看一次治理语义体检的 FIBO 运营条，确认四件事：
 
 1. 版本锁显示 OK，没有漂移。
-2. 覆盖度符合预期：导入后 36/36；未导入时显示 0/36 并提示可导入。
+2. 覆盖度符合预期：导入后 37/37；未导入时显示 0/37 并提示可导入。
 3. 数据源映射至少 20 条 mapped；新增未映射概念有原因。
-4. 语义门显示 18 概念，字段脱敏显示 2 条试点策略。
+4. 语义门显示 37 概念，字段脱敏显示 2 条试点策略。
 
 命令行巡检：
 
@@ -51,7 +51,7 @@ npx vitest run custom/server/ontology custom/client/ontology \
   custom/qgate/__tests__/qgate-p5-p9.test.ts
 ```
 
-必须全绿，且 `ontology-fibo-lock.test.ts`（在 `ontology-fibo-p1.test.ts` 内）零漂移。qgate 一致性测试若因 `TransactionEvent` 变化亮红，先更新例外表，再决定补包还是改 qgate。
+必须全绿，且 `ontology-fibo-lock.test.ts`（在 `ontology-fibo-p1.test.ts` 内）零漂移。qgate 一致性测试若因概念增删亮红，先跑 `npm run fibo:sync` 再生索引，再跑守门测试。
 
 ### 2.4 出证据并合并
 
@@ -67,7 +67,7 @@ curl -s http://127.0.0.1:8647/api/hermes/ontology/fibo/evidence | python3 -m jso
 
 - `GET /api/hermes/ontology/fibo/evidence` 返回发布版本、覆盖度、三档健康度、版本锁、门禁引用与 `markdown`。
 - 治理卡「复制报告证据」按钮复制同一段 markdown。
-- 未导入时写「未导入（可导入 36 个概念）」，不写 0/36。
+- 未导入时写「未导入（可导入 37 个概念）」，不写 0/37。
 - simharness 报告生成器的接入由其仓另开；本节只定义契约。
 
 ## 4. 字段级脱敏试点

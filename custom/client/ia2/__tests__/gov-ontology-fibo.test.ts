@@ -36,7 +36,7 @@ function fiboPack(): Record<string, unknown> {
       repo: 'https://github.com/edmcouncil/fibo', release: 'master_2026Q3',
       releasedAt: '2026-10-20', retrievedAt: '2026-10-21', license: 'MIT', viewer: '', spec: '',
     },
-    counts: { concepts: 36, fibo: 32, commons: 2, localExtensions: 2, objectProperties: 21, axioms: 16 },
+    counts: { concepts: 37, fibo: 33, commons: 2, localExtensions: 2, objectProperties: 21, axioms: 16 },
     modules: [],
     concepts: [],
     objectProperties: [],
@@ -49,17 +49,17 @@ function fiboOps(): Record<string, unknown> {
     evidence: {
       generatedAt: '2026-10-21T00:00:00Z',
       source: { repo: 'https://github.com/edmcouncil/fibo', release: 'master_2026Q3', releasedAt: '2026-10-20', retrievedAt: '2026-10-21', license: 'MIT', commit: '2d73435a4419b66b7c9f44cb9763e35fe8ac7890' },
-      coverage: { applied: 0, total: 36, ratio: '0/36', fibo: 32, commons: 2, localExtensions: 2, imported: false },
+      coverage: { applied: 0, total: 37, ratio: '0/37', fibo: 33, commons: 2, localExtensions: 2, imported: false },
       health: { error: 0, warning: 0, info: 0 },
-      lock: { ok: true, tag: 'master_2026Q3', commit: '2d73435a4419b66b7c9f44cb9763e35fe8ac7890', releasedAt: '2026-10-20T20:02:05Z', sourceMatches: true, moduleCount: 18, drift: [] },
-      gate: { index: 'custom/qgate/gate-packs/ontology/data/fibo-mini.json', concepts: 18, consistency: 'verified-by-test', test: 'ontology-fibo-gate-consistency.test.ts' },
-      markdown: '### FIBO 覆盖\n- 覆盖：未导入（可导入 36 个概念）',
+      lock: { ok: true, tag: 'master_2026Q3', commit: '2d73435a4419b66b7c9f44cb9763e35fe8ac7890', releasedAt: '2026-10-20T20:02:05Z', sourceMatches: true, moduleCount: 19, drift: [] },
+      gate: { index: 'custom/qgate/gate-packs/ontology/data/fibo-mini.json', concepts: 37, consistency: 'verified-by-test', test: 'ontology-fibo-gate-consistency.test.ts' },
+      markdown: '### FIBO 覆盖\n- 覆盖：未导入（可导入 37 个概念）',
     },
-    glossary: { terms: 36, aliased: 36, reportTerms: 5, mappedReportTerms: 2 },
-    mappings: { total: 36, mapped: 20, unmapped: 16 },
+    glossary: { terms: 37, aliased: 37, reportTerms: 5, mappedReportTerms: 2 },
+    mappings: { total: 37, mapped: 20, unmapped: 17 },
     domains: { domains: 3, concepts: 18, ids: ['SEC', 'DER', 'LOAN'] },
-    lock: { ok: true, tag: 'master_2026Q3', commit: '2d73435a4419b66b7c9f44cb9763e35fe8ac7890', releasedAt: '2026-10-20T20:02:05Z', sourceMatches: true, moduleCount: 18, drift: [] },
-    gate: { index: 'custom/qgate/gate-packs/ontology/data/fibo-mini.json', concepts: 18, consistency: 'verified-by-test', test: 'ontology-fibo-gate-consistency.test.ts' },
+    lock: { ok: true, tag: 'master_2026Q3', commit: '2d73435a4419b66b7c9f44cb9763e35fe8ac7890', releasedAt: '2026-10-20T20:02:05Z', sourceMatches: true, moduleCount: 19, drift: [] },
+    gate: { index: 'custom/qgate/gate-packs/ontology/data/fibo-mini.json', concepts: 37, consistency: 'verified-by-test', test: 'ontology-fibo-gate-consistency.test.ts' },
     permissions: { policies: 2, fields: ['Account.accountNumber', 'Payer.partyRef'] },
   }
 }
@@ -72,17 +72,17 @@ beforeEach(() => {
     health: { error: 0, warning: 0, info: 0 },
   })
   api.kanbanOverview.mockResolvedValue({ ok: true, sources: [{ slug: 'main', exists: true }] })
-  api.getFiboPack.mockResolvedValue({ ok: true, pack: fiboPack(), applied: { concepts: 0, total: 36, applied: [] } })
+  api.getFiboPack.mockResolvedValue({ ok: true, pack: fiboPack(), applied: { concepts: 0, total: 37, applied: [] } })
   api.getFiboOps.mockResolvedValue({ ok: true, ops: fiboOps() })
   api.importFibo.mockResolvedValue({
     ok: true,
-    added: { types: 36, objectProperties: 21, axioms: 16 },
+    added: { types: 37, objectProperties: 21, axioms: 16 },
     skipped: { types: 0, objectProperties: 0, axioms: 0 },
-    applied: { concepts: 36, total: 36, applied: [] },
+    applied: { concepts: 37, total: 37, applied: [] },
   })
   api.ingestFiboDemo.mockResolvedValue({
-    ok: true, importedPack: true, typesAdded: 36, instances: 20,
-    applied: { concepts: 36, total: 36, applied: [] },
+    ok: true, importedPack: true, typesAdded: 37, instances: 20,
+    applied: { concepts: 37, total: 37, applied: [] },
     violations: [], summary: { error: 0, warning: 0, info: 0 },
   })
   api.validate.mockResolvedValue({ ok: true, persisted: true, count: 2, violations: [], summary: { error: 0, warning: 0, info: 0 } })
@@ -95,8 +95,8 @@ describe('GovOntologySection FIBO 覆盖卡', () => {
     expect(w.find('[data-testid="gov-ontology-fibo"]').exists()).toBe(true)
     const stats = w.find('[data-testid="gov-ontology-fibo-stats"]').text()
     expect(stats).toContain('master_2026Q3')
-    expect(stats).toContain('0 / 36')
-    expect(stats).toContain('32')
+    expect(stats).toContain('0 / 37')
+    expect(stats).toContain('33')
     expect(stats).toContain('2')
   })
 
@@ -105,10 +105,10 @@ describe('GovOntologySection FIBO 覆盖卡', () => {
     await flushPromises()
     const ops = w.find('[data-testid="gov-ontology-fibo-ops"]').text()
     expect(ops).toContain('OK')
-    expect(ops).toContain('20 / 36')
-    expect(ops).toContain('36')
+    expect(ops).toContain('20 / 37')
+    expect(ops).toContain('37')
     expect(ops).toContain('3 / 18')
-    expect(ops).toContain('18')
+    expect(ops).toContain('37')
     expect(ops).toContain('2')
   })
 
@@ -118,7 +118,7 @@ describe('GovOntologySection FIBO 覆盖卡', () => {
     await w.find('[data-testid="gov-ontology-fibo-import"]').trigger('click')
     await flushPromises()
     expect(api.importFibo).toHaveBeenCalledTimes(1)
-    expect(w.find('[data-testid="gov-ontology-fibo-result"]').text()).toContain('36')
+    expect(w.find('[data-testid="gov-ontology-fibo-result"]').text()).toContain('37')
     expect(api.validate).toHaveBeenCalled()
   })
 

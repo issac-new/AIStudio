@@ -8,7 +8,7 @@ import { fiboMappings } from '../ontology-fibo-mapping'
 import { seedInstances, seedSpec } from '../ontology-seed'
 
 describe('P1 版本锁', () => {
-  it('锁与包同版本，18 个模块零漂移', () => {
+  it('锁与包同版本，19 个模块零漂移', () => {
     const r = fiboLockReport()
     expect(r.ok).toBe(true)
     expect(r.sourceMatches).toBe(true)
@@ -30,8 +30,8 @@ describe('P1 术语表', () => {
   const glossary = fiboGlossary()
   const pack = fiboPackSummary()
 
-  it('36 个概念逐条在册，IRI 与包同锚', () => {
-    expect(glossary.counts.terms).toBe(36)
+  it('37 个概念逐条在册，IRI 与包同锚', () => {
+    expect(glossary.counts.terms).toBe(37)
     const iris = new Set(pack.concepts.map((c) => c.iri))
     for (const e of glossary.entries) expect(iris.has(e.iri), `${e.id} → ${e.iri}`).toBe(true)
   })
@@ -66,8 +66,8 @@ describe('P1 数据源映射', () => {
   const mappings = fiboMappings()
   const pack = fiboPackSummary()
 
-  it('36 个概念每个都有登记行', () => {
-    expect(mappings.counts.total).toBe(36)
+  it('37 个概念每个都有登记行', () => {
+    expect(mappings.counts.total).toBe(37)
     const ids = new Set(mappings.rows.map((r) => r.conceptId))
     for (const c of pack.concepts) expect(ids.has(c.id), `缺映射行 ${c.id}`).toBe(true)
   })
@@ -81,7 +81,7 @@ describe('P1 数据源映射', () => {
       }
     }
     expect(mappings.counts.mapped).toBeGreaterThanOrEqual(15)
-    expect(mappings.counts.mapped + mappings.counts.unmapped).toBe(36)
+    expect(mappings.counts.mapped + mappings.counts.unmapped).toBe(37)
   })
 
   it('支付/账户/结算关键概念已接载体', () => {
@@ -93,25 +93,25 @@ describe('P1 数据源映射', () => {
 })
 
 describe('P1 报告证据', () => {
-  it('未导入时如实写「未导入」，不写 0/36', () => {
+  it('未导入时如实写「未导入」，不写 0/37', () => {
     const e = fiboEvidence(seedSpec(0), seedInstances(0), 0)
     expect(e.coverage.imported).toBe(false)
     expect(e.coverage.applied).toBe(0)
-    expect(e.coverage.total).toBe(36)
+    expect(e.coverage.total).toBe(37)
     expect(e.markdown).toContain('未导入')
-    expect(e.markdown).not.toContain('0/36')
+    expect(e.markdown).not.toContain('0/37')
     expect(e.lock.ok).toBe(true)
-    expect(e.gate.concepts).toBe(18)
+    expect(e.gate.concepts).toBe(37)
   })
 
-  it('导入后写 36/36 与三档健康度', () => {
+  it('导入后写 37/37 与三档健康度', () => {
     const merged = mergeFiboPack(seedSpec(0), 0)
     const spec = merged.spec!
     const e = fiboEvidence(spec, seedInstances(0), 0)
     expect(e.coverage.imported).toBe(true)
-    expect(e.coverage.ratio).toBe('36/36')
+    expect(e.coverage.ratio).toBe('37/37')
     expect(e.health).toEqual({ error: 0, warning: 0, info: 0 })
-    expect(e.markdown).toContain('36/36')
+    expect(e.markdown).toContain('37/37')
     expect(e.markdown).toContain('master_2026Q3')
     expect(e.source.commit).toBe(FIBO_LOCK.commit)
   })
