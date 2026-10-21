@@ -19,11 +19,21 @@
  */
 import type { Context, Next } from 'koa'
 import { fiboPackApplied, fiboPackSummary } from './ontology-fibo'
-import { loadSpec } from './ontology-store'
+import { fiboDomains } from './ontology-fibo-domains'
+import { fiboEvidence } from './ontology-fibo-evidence'
+import { fiboGlossary } from './ontology-fibo-glossary'
+import { fiboMappings } from './ontology-fibo-mapping'
+import { fiboOpsSnapshot } from './ontology-fibo-ops'
+import { loadInstances, loadSpec } from './ontology-store'
 import { ingestSingleTask } from './ontology-watch'
 
 export const ONTOLOGY_AGENT_BRIDGE_PATH = '/api/ontology/agent-bridge/validate-task'
 export const ONTOLOGY_AGENT_BRIDGE_FIBO_PATH = '/api/ontology/agent-bridge/fibo'
+export const ONTOLOGY_AGENT_BRIDGE_FIBO_EVIDENCE_PATH = `${ONTOLOGY_AGENT_BRIDGE_FIBO_PATH}/evidence`
+export const ONTOLOGY_AGENT_BRIDGE_FIBO_GLOSSARY_PATH = `${ONTOLOGY_AGENT_BRIDGE_FIBO_PATH}/glossary`
+export const ONTOLOGY_AGENT_BRIDGE_FIBO_MAPPINGS_PATH = `${ONTOLOGY_AGENT_BRIDGE_FIBO_PATH}/mappings`
+export const ONTOLOGY_AGENT_BRIDGE_FIBO_DOMAINS_PATH = `${ONTOLOGY_AGENT_BRIDGE_FIBO_PATH}/domains`
+export const ONTOLOGY_AGENT_BRIDGE_FIBO_OPS_PATH = `${ONTOLOGY_AGENT_BRIDGE_FIBO_PATH}/ops`
 
 function isLoopback(ip: string | undefined): boolean {
   return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === undefined
@@ -66,36 +76,61 @@ export function registerOntologyAgentBridgeRoutes(app: {
     }
   })
 
-  // FIBO 术语查询：只读，不写本体、不触看板。
+  // FIBO 只读面：术语查询、报告证据、术语表、数据源映射、域目录、运营快照。
   app.use(async (ctx, next) => {
-    if (ctx.method !== 'GET' || ctx.path !== ONTOLOGY_AGENT_BRIDGE_FIBO_PATH) return next()
+    if (ctx.method !== 'GET') return next()
+    if (ctx.path !== ONTOLOGY_AGENT_BRIDGE_FIBO_PATH && !ctx.path.startsWith(`${ONTOLOGY_AGENT_BRIDGE_FIBO_PATH}/`)) return next()
     if (!bridgeGuard(ctx, env)) return
-    const raw = ctx.query.q ?? ctx.query.term
-    const q = typeof raw === 'string' ? raw.trim() : ''
-    const pack = fiboPackSummary()
-    const applied = fiboPackApplied(loadSpec())
-    const appliedIds = new Set(applied.applied)
-    const hits = q
-      ? pack.concepts
-        .filter((c) => `${c.id} ${c.label} ${c.labelZh} ${c.iri}`.toLowerCase().includes(q.toLowerCase()))
-        .slice(0, 10)
-        .map((c) => ({ ...c, applied: appliedIds.has(c.id) }))
-      : []
-    ctx.body = {
-      ok: true,
-      source: pack.source,
-      coverage: {
-        concepts: pack.counts.concepts,
-        applied: applied.concepts,
-        total: applied.total,
-        fibo: pack.counts.fibo,
-        commons: pack.counts.commons,
-        localExtensions: pack.counts.localExtensions,
-        objectProperties: pack.counts.objectProperties,
-        axioms: pack.counts.axioms,
-      },
-      query: q || null,
-      hits,
+    const spec = loadSpec()
+    const instances = loadInstances()
+    switch (ctx.path) {
+      case ONTOLOGY_AGENT_BRIDGE_FIBO_PATH: {
+        const raw = ctx.query.q ?? ctx.query.term
+        const q = typeof raw === 'string' ? raw.trim() : ''
+        const pack = fiboPackSummary()
+        const applied = fiboPackApplied(spec)
+        const appliedIds = new Set(applied.applied)
+        const hits = q
+          ? pack.concepts
+            .filter((c) => `${c.id} ${c.label} ${c.labelZh} ${c.iri}`.toLowerCase().includes(q.toLowerCase()))
+            .slice(0, 10)
+            .map((c) => ({ ...c, applied: appliedIds.has(c.id) }))
+          : []
+        ctx.body = {
+          ok: true,
+          source: pack.source,
+          coverage: {
+            concepts: pack.counts.concepts,
+            applied: applied.concepts,
+            total: applied.total,
+            fibo: pack.counts.fibo,
+            commons: pack.counts.commons,
+            localExtensions: pack.counts.localExtensions,
+            objectProperties: pack.counts.objectProperties,
+            axioms: pack.counts.axioms,
+          },
+          query: q || null,
+          hits,
+        }
+        return
+      }
+      case ONTOLOGY_AGENT_BRIDGE_FIBO_EVIDENCE_PATH:
+        ctx.body = { ok: true, evidence: fiboEvidence(spec, instances) }
+        return
+      case ONTOLOGY_AGENT_BRIDGE_FIBO_GLOSSARY_PATH:
+        ctx.body = { ok: true, glossary: fiboGlossary() }
+        return
+      case ONTOLOGY_AGENT_BRIDGE_FIBO_MAPPINGS_PATH:
+        ctx.body = { ok: true, mappings: fiboMappings() }
+        return
+      case ONTOLOGY_AGENT_BRIDGE_FIBO_DOMAINS_PATH:
+        ctx.body = { ok: true, domains: fiboDomains() }
+        return
+      case ONTOLOGY_AGENT_BRIDGE_FIBO_OPS_PATH:
+        ctx.body = { ok: true, ops: fiboOpsSnapshot(spec, instances) }
+        return
+      default:
+        return next()
     }
   })
 }

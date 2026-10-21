@@ -194,3 +194,38 @@ describe('FIBO 对齐包', () => {
     expect(i2.json.added).toEqual({ types: 0, objectProperties: 0, axioms: 0 })
   })
 })
+
+describe('FIBO P1/P2/P4 产品面', () => {
+  it('GET /fibo/ops 返回锁/覆盖/映射/术语/域/门禁/权限计数', async () => {
+    const r = await call('GET', '/fibo/ops')
+    expect(r.status).toBe(200)
+    expect(r.json.ok).toBe(true)
+    expect(r.json.ops.evidence.coverage.total).toBe(36)
+    expect(r.json.ops.mappings.total).toBe(36)
+    expect(r.json.ops.glossary.terms).toBe(36)
+    expect(r.json.ops.domains.domains).toBe(3)
+    expect(r.json.ops.lock.ok).toBe(true)
+    expect(r.json.ops.gate.concepts).toBe(18)
+    expect(r.json.ops.permissions.policies).toBe(2)
+  })
+
+  it('POST /fibo/ingest-demo 自动导入包 + 20 实例 + 幂等', async () => {
+    const r1 = await call('POST', '/fibo/ingest-demo', {})
+    expect(r1.status).toBe(200)
+    expect(r1.json.ok).toBe(true)
+    expect(r1.json.importedPack).toBe(true)
+    expect(r1.json.typesAdded).toBe(36)
+    expect(r1.json.instances).toBe(20)
+    expect(r1.json.applied.concepts).toBe(36)
+    expect(r1.json.summary.error).toBe(0)
+
+    const accounts = await call('GET', '/instances?type=Account')
+    expect(accounts.json.instances).toHaveLength(1)
+    expect(accounts.json.instances[0].data.accountNumber).toBe('ACC-1')
+
+    const r2 = await call('POST', '/fibo/ingest-demo', {})
+    expect(r2.status).toBe(200)
+    expect(r2.json.importedPack).toBe(false)
+    expect(r2.json.instances).toBe(20)
+  })
+})
