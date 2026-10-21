@@ -35,7 +35,7 @@ export type TraceReflowErrorCode =
   | 'task_invalid'
 
 export type ReflowTraceResult =
-  | { ok: true; created: boolean; taskId: string; set: EvalSet }
+  | { ok: true; created: boolean; taskId: string; set: EvalSet; alsoIn?: string[] }
   | { ok: false; code: TraceReflowErrorCode; problems: string[] }
 
 function canonical(value: unknown): string {
@@ -121,7 +121,7 @@ export function reflowTraceToSet(
   const duplicate = existingTarget?.tasks.find((candidate) => candidate.origin && originKeyOf(candidate.origin) === originKeyOf(origin))
   if (duplicate) {
     if (taskDefinition(duplicate) === taskDefinition(incoming)) {
-      return { ok: true, created: false, taskId: duplicate.id, set: existingTarget! }
+      return { ok: true, created: false, taskId: duplicate.id, set: existingTarget!, alsoIn: alsoInSetIds(origin, existingTarget!.id) }
     }
     return { ok: false, code: 'origin_conflict', problems: ['同一生产证据已有不同任务定义，请修改原题或选择其他证据'] }
   }
@@ -139,7 +139,7 @@ export function reflowTraceToSet(
       const failure = created as { ok: false; problems: string[] }
       return { ok: false, code: 'task_invalid', problems: failure.problems }
     }
-    return { ok: true, created: true, taskId, set: created.set }
+    return { ok: true, created: true, taskId, set: created.set, alsoIn: alsoInSetIds(origin, created.set.id) }
   }
 
   const appended = appendTasksToSet(existingTarget.id, [incoming])
@@ -150,5 +150,17 @@ export function reflowTraceToSet(
   if (appended.appended !== 1) {
     return { ok: false, code: 'origin_conflict', problems: ['任务未追加，来源键可能已存在'] }
   }
-  return { ok: true, created: true, taskId, set: appended.set }
+  return { ok: true, created: true, taskId, set: appended.set, alsoIn: alsoInSetIds(origin, appended.set.id) }
+}
+
+/** 跨集归因提示：同来源键已存在的其它集（不阻断——按集运行语义自洽，只让归因方看见重复）。 */
+function alsoInSetIds(origin: ProductionTraceReflowOrigin, excludeSetId: string): string[] {
+  const key = originKeyOf(origin)
+  const alsoIn: string[] = []
+  for (const meta of listSets()) {
+    if (meta.id === excludeSetId) continue
+    const set = getSet(meta.id)
+    if (set?.tasks.some((candidate) => candidate.origin && originKeyOf(candidate.origin) === key)) alsoIn.push(meta.id)
+  }
+  return alsoIn
 }
