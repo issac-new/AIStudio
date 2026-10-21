@@ -133,3 +133,8 @@ mention-resolution.ts +ontology 第八源（@ontology:Task / @ontology 整册目
 - 不做 OWL DL 推理、SPARQL 端点、pyshacl 内嵌（导出的 SHACL 文件可被外部 pyshacl 消费，本产品不自建推理机）
 - 不硬拦 wiki 写入（本体校验是独立数据契约面；wiki 溯源缺失以 warning 呈现）
 - 不做实例自动摄取（kanban/board KG 已有摄取管线，属另一域；经 source.taskRef 可手工挂接）
+
+## 8. 后续修订（2026-10-21）
+
+FIBO 金融域映射层见《2026-10-21-fibo-ontology-studio-alignment.md》。该轮给三类术语增加显式 IRI 与出处字段，内置 36 个概念的 FIBO 包，并在工作台增加第八页签与增量导入。本文 §7 的边界不变：仍不做运行时 OWL 推理、SPARQL 端点与 pyshacl 内嵌。本文 §4 的六页签清单以新文档的八页签为准。
+

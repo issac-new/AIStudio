@@ -220,3 +220,20 @@ export async function respondFleetClarify(
     return { resolved: false, error: err instanceof Error ? err.message : String(err) }
   }
 }
+
+/** 就地中止一个会话（2026-10-21 AGT 吸收轮 E）：复用 ChatRunSocket.abortSession
+ *  （upstream chat-run.ts 公开方法——socket 'abort' 事件同款通道）。
+ *  语义如实：合作式中止（置 isAborting + 中断 bridge run），非进程强杀；
+ *  「停透了」的确认靠调用方复核 fleet 快照，本函数只报调用成功与否。 */
+export async function abortFleetSession(sessionId: string, reason = 'Run canceled'): Promise<{ ok: boolean; error?: string }> {
+  const instance = registeredInstance
+  if (!instance || typeof instance.abortSession !== 'function') {
+    return { ok: false, error: 'ChatRunSocket 未注册（无会话面）' }
+  }
+  try {
+    await instance.abortSession(sessionId, reason)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}

@@ -9,9 +9,13 @@
  *                    SHACL 核心无对应构件，以自定义注记如实标注（应用侧求值）
  *   toTurtle      —— 紧凑 Turtle 文本（人工核对/外部导入用）
  * 直出模式照抄 governance/prov-o.ts（TS 可审计、每字段映射有测试锚点）。
+ *
+ * 2026-10-21 FIBO 对齐层：显式 IRI 优先（FIBO/Commons 术语），外部词表写
+ * owl:imports，术语出处写 dct:source + core:origin/fiboModule/versionIRI。
  */
 import {
-  dataPropLocalName, entityIri, ontologyIri, type OntologyInstance, type OntologySpec,
+  dataPropertyIri, entityIri, objectPropertyIri, ontologyIri, typeIri,
+  type OntologyInstance, type OntologySpec, type TermProvenance,
 } from './ontology-types'
 
 const XSD: Record<string, string> = {
@@ -34,18 +38,42 @@ export interface ExportMeta {
   runtimeAxioms: Array<{ id: string; kind: string; note: string }>
 }
 
+/** 外部术语出处注记（dct:source 指回真实 IRI；本地术语不写）。 */
+function provenanceAnnotations(iri: string, p?: TermProvenance): Json {
+  if (!p) return {}
+  return {
+    'core:origin': p.origin,
+    ...(p.origin === 'fibo' || p.origin === 'commons' ? { 'dct:source': { '@id': iri } } : {}),
+    ...(p.module ? { 'core:fiboModule': p.module } : {}),
+    ...(p.versionIri ? { 'core:fiboVersionIri': p.versionIri } : {}),
+    ...(p.maturity ? { 'core:maturity': p.maturity } : {}),
+    ...(p.retrievedAt ? { 'core:retrievedAt': p.retrievedAt } : {}),
+    ...(p.definitionEn ? { 'core:definitionEn': p.definitionEn } : {}),
+    ...(p.note ? { 'core:provenanceNote': p.note } : {}),
+  }
+}
+
+function jsonLdContext(spec: OntologySpec, extra: Json = {}): Json {
+  const ctx: Json = {
+    core: spec.namespace,
+    rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
+    owl: 'http://www.w3.org/2002/07/owl#',
+    xsd: 'http://www.w3.org/2001/XMLSchema#',
+    dct: 'http://purl.org/dc/terms/',
+    ...extra,
+  }
+  for (const v of spec.vocabularies ?? []) {
+    if (!(v.prefix in ctx)) ctx[v.prefix] = v.iri
+  }
+  return ctx
+}
+
 // ---- JSON-LD（RDF 图） ----
 
 export function toJSONLD(spec: OntologySpec, instances: OntologyInstance[], now = Date.now()): Json & { _export: ExportMeta } {
   const ns = spec.namespace
-  const ctx: Json = {
-    core: ns,
-    rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
-    owl: 'http://www.w3.org/2002/07/owl#',
-    xsd: 'http://www.w3.org/2001/XMLSchema#',
-  }
   const graph: Json[] = []
-  // 本体头（owl:Ontology + 版本链）
+  // 本体头（owl:Ontology + 版本链 + 外部词表 import）
   graph.push({
     '@id': ontologyIri(ns),
     '@type': 'owl:Ontology',
@@ -53,45 +81,51 @@ export function toJSONLD(spec: OntologySpec, instances: OntologyInstance[], now 
     'owl:versionIRI': { '@id': spec.versionIri },
     ...(spec.priorVersion !== undefined ? { 'owl:priorVersion': { '@id': `${ontologyIri(ns)}/v${spec.priorVersion}` } } : {}),
     'owl:versionInfo': String(spec.version),
+    ...(spec.vocabularies?.length ? { 'owl:imports': spec.vocabularies.map((v) => ({ '@id': v.iri })) } : {}),
   })
   // 实体类型（owl:Class）
   for (const t of spec.entityTypes) {
+    const iri = typeIri(spec, t.id)
     graph.push({
-      '@id': entityIri(ns, t.id),
+      '@id': iri,
       '@type': 'owl:Class',
-      'rdfs:label': t.label,
-      ...(t.labelEn ? { 'rdfs:label': [t.label, { '@language': 'en', '@value': t.labelEn }] } : {}),
-      ...(t.parent ? { 'rdfs:subClassOf': { '@id': entityIri(ns, t.parent) } } : {}),
-      ...(t.disjointWith?.length ? { 'owl:disjointWith': t.disjointWith.map((d) => ({ '@id': entityIri(ns, d) })) } : {}),
+      'rdfs:label': t.labelEn ? [t.label, { '@language': 'en', '@value': t.labelEn }] : t.label,
+      ...(t.parent ? { 'rdfs:subClassOf': { '@id': typeIri(spec, t.parent) } } : {}),
+      ...(t.disjointWith?.length ? { 'owl:disjointWith': t.disjointWith.map((d) => ({ '@id': typeIri(spec, d) })) } : {}),
       ...(t.description ? { 'rdfs:comment': t.description } : {}),
       'core:modality': t.modality,
+      ...provenanceAnnotations(iri, t.provenance),
     })
   }
-  // 数据属性（全局 owl:DatatypeProperty，IRI=类名.属性名）
+  // 数据属性（全局 owl:DatatypeProperty）
   for (const t of spec.entityTypes) {
     for (const p of t.dataProperties) {
+      const iri = dataPropertyIri(spec, t.id, p.id)
       graph.push({
-        '@id': entityIri(ns, dataPropLocalName(t.id, p.id)),
+        '@id': iri,
         '@type': 'owl:DatatypeProperty',
         'rdfs:label': p.label,
-        'rdfs:domain': { '@id': entityIri(ns, t.id) },
+        'rdfs:domain': { '@id': typeIri(spec, t.id) },
         'rdfs:range': { '@id': XSD[p.datatype] },
         'core:modality': p.modality,
         ...(p.description ? { 'rdfs:comment': p.description } : {}),
+        ...provenanceAnnotations(iri, p.provenance),
       })
     }
   }
   // 对象属性（owl:ObjectProperty + rdfs:domain/range 显式声明）
   for (const p of spec.objectProperties) {
+    const iri = objectPropertyIri(spec, p.id)
     graph.push({
-      '@id': entityIri(ns, p.id),
+      '@id': iri,
       '@type': 'owl:ObjectProperty',
       'rdfs:label': p.label,
-      'rdfs:domain': p.domain.map((d) => ({ '@id': entityIri(ns, d) })),
-      'rdfs:range': p.range.map((r) => ({ '@id': entityIri(ns, r) })),
-      ...(p.inverseOf ? { 'owl:inverseOf': { '@id': entityIri(ns, p.inverseOf) } } : {}),
+      'rdfs:domain': p.domain.map((d) => ({ '@id': typeIri(spec, d) })),
+      'rdfs:range': p.range.map((r) => ({ '@id': typeIri(spec, r) })),
+      ...(p.inverseOf ? { 'owl:inverseOf': { '@id': objectPropertyIri(spec, p.inverseOf) } } : {}),
       'core:modality': p.modality,
       ...(p.description ? { 'rdfs:comment': p.description } : {}),
+      ...provenanceAnnotations(iri, p.provenance),
     })
   }
   // 公理（owl:Axiom 注记式——保留声明原貌供消费方实现）
@@ -109,17 +143,16 @@ export function toJSONLD(spec: OntologySpec, instances: OntologyInstance[], now 
   for (const inst of instances) {
     const node: Json = {
       '@id': inst.iri ?? entityIri(ns, `i/${inst.id}`),
-      '@type': entityIri(ns, inst.type),
+      '@type': typeIri(spec, inst.type),
       'rdfs:label': inst.label,
     }
-    const type = spec.entityTypes.find((t) => t.id === inst.type)
     for (const [k, val] of Object.entries(inst.data ?? {})) {
       if (val === undefined || val === null) continue
-      node[entityIri(ns, dataPropLocalName(type?.id ?? inst.type, k))] = val
+      node[dataPropertyIri(spec, inst.type, k)] = val
     }
     for (const rel of inst.relations ?? []) {
       const target = instances.find((x) => x.id === rel.target)
-      const key = entityIri(ns, rel.property)
+      const key = objectPropertyIri(spec, rel.property)
       const prev = node[key]
       const ref = { '@id': target?.iri ?? entityIri(ns, `i/${rel.target}`) }
       node[key] = Array.isArray(prev) ? [...prev, ref] : prev ? [prev, ref] : ref
@@ -127,7 +160,7 @@ export function toJSONLD(spec: OntologySpec, instances: OntologyInstance[], now 
     graph.push(node)
   }
   return {
-    '@context': ctx,
+    '@context': jsonLdContext(spec),
     '@graph': graph,
     _export: { generatedAt: new Date(now).toISOString(), specVersion: spec.version, runtimeAxioms: runtimeAxiomNotes(spec) },
   }
@@ -160,10 +193,11 @@ export function toShaclShapes(spec: OntologySpec, now = Date.now()): Json & { _e
     for (const tid of chain) {
       for (const p of byId.get(tid)?.dataProperties ?? []) {
         const shape: Json = {
-          'sh:path': { '@id': entityIri(ns, dataPropLocalName(tid, p.id)) },
+          'sh:path': { '@id': dataPropertyIri(spec, tid, p.id) },
           'sh:name': p.label,
           'sh:datatype': { '@id': XSD[p.datatype] },
           'core:modality': p.modality,
+          ...provenanceAnnotations(dataPropertyIri(spec, tid, p.id), p.provenance),
         }
         if (p.required) shape['sh:minCount'] = 1
         if (p.enum) shape['sh:in'] = { '@list': p.enum }
@@ -177,12 +211,13 @@ export function toShaclShapes(spec: OntologySpec, now = Date.now()): Json & { _e
     for (const p of spec.objectProperties) {
       if (!p.domain.includes(t.id)) continue
       const rel: Json = {
-        'sh:path': { '@id': entityIri(ns, p.id) },
+        'sh:path': { '@id': objectPropertyIri(spec, p.id) },
         'sh:name': p.label,
         'core:modality': p.modality,
+        ...provenanceAnnotations(objectPropertyIri(spec, p.id), p.provenance),
       }
-      if (p.range.length === 1) rel['sh:class'] = { '@id': entityIri(ns, p.range[0]) }
-      else if (p.range.length > 1) rel['sh:or'] = p.range.map((r) => ({ 'sh:class': { '@id': entityIri(ns, r) } }))
+      if (p.range.length === 1) rel['sh:class'] = { '@id': typeIri(spec, p.range[0]) }
+      else if (p.range.length > 1) rel['sh:or'] = p.range.map((r) => ({ 'sh:class': { '@id': typeIri(spec, r) } }))
       if (p.cardinality?.min !== undefined) rel['sh:minCount'] = p.cardinality.min
       if (p.cardinality?.max !== undefined) rel['sh:maxCount'] = p.cardinality.max
       props.push(rel)
@@ -190,7 +225,7 @@ export function toShaclShapes(spec: OntologySpec, now = Date.now()): Json & { _e
     const node: Json = {
       '@id': entityIri(ns, `${t.id}Shape`),
       '@type': 'sh:NodeShape',
-      'sh:targetClass': { '@id': entityIri(ns, t.id) },
+      'sh:targetClass': { '@id': typeIri(spec, t.id) },
       'rdfs:label': `${t.label} 形状`,
     }
     if (props.length > 0) node['sh:property'] = props
@@ -199,18 +234,23 @@ export function toShaclShapes(spec: OntologySpec, now = Date.now()): Json & { _e
       ...spec.axioms.flatMap((a) => (a.constraint.type === 'disjoint' && a.constraint.classes.includes(t.id)
         ? a.constraint.classes.filter((c) => c !== t.id) : []))])
     if (disjoint.size > 0) {
-      node['sh:not'] = [...disjoint].map((d) => ({ 'sh:class': { '@id': entityIri(ns, d) } }))
+      node['sh:not'] = [...disjoint].map((d) => ({ 'sh:class': { '@id': typeIri(spec, d) } }))
     }
     graph.push(node)
   }
   return {
-    '@context': { sh: 'http://www.w3.org/ns/shacl#', core: ns, rdfs: 'http://www.w3.org/2000/01/rdf-schema#', xsd: 'http://www.w3.org/2001/XMLSchema#' },
+    '@context': jsonLdContext(spec, { sh: 'http://www.w3.org/ns/shacl#' }),
     '@graph': graph,
     _export: { generatedAt: new Date(now).toISOString(), specVersion: spec.version, runtimeAxioms: runtimeAxiomNotes(spec) },
   }
 }
 
 // ---- Turtle（紧凑文本） ----
+
+/** 本工作台 IRI 用 core: 前缀，外部 IRI 用 <IRI>（可读且不失真）。 */
+function turtleRef(iri: string, ns: string): string {
+  return iri.startsWith(ns) ? `core:${iri.slice(ns.length)}` : `<${iri}>`
+}
 
 export function toTurtle(spec: OntologySpec, instances: OntologyInstance[]): string {
   const base = ontologyIri(spec.namespace)
@@ -221,46 +261,80 @@ export function toTurtle(spec: OntologySpec, instances: OntologyInstance[]): str
     '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .',
     '@prefix owl: <http://www.w3.org/2002/07/owl#> .',
     '@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .',
-    '',
-    `<${base}> a owl:Ontology ;`,
-    `  rdfs:label "${esc(spec.label)}" ;`,
-    `  owl:versionIRI <${spec.versionIri}> ;`,
-    `  owl:versionInfo "${spec.version}" .`,
+    '@prefix dct: <http://purl.org/dc/terms/> .',
+    ...(spec.vocabularies ?? []).map((v) => `@prefix ${v.prefix}: <${v.iri}> .`),
     '',
   ]
+  const header = [
+    'a owl:Ontology',
+    `rdfs:label "${esc(spec.label)}"`,
+    `owl:versionIRI <${spec.versionIri}>`,
+    `owl:versionInfo "${spec.version}"`,
+    ...(spec.vocabularies ?? []).map((v) => `owl:imports <${v.iri}>`),
+  ]
+  lines.push(`<${base}> ${header.join(' ;\n  ')} .`, '')
   for (const t of spec.entityTypes) {
-    const parts = [`a owl:Class`, `rdfs:label "${esc(t.label)}"`]
-    if (t.parent) parts.push(`rdfs:subClassOf core:${t.parent}`)
-    for (const d of t.disjointWith ?? []) parts.push(`owl:disjointWith core:${d}`)
+    const iri = typeIri(spec, t.id)
+    const parts = [`a owl:Class`, `rdfs:label "${esc(t.labelEn ?? t.label)}"`]
+    if (t.parent) parts.push(`rdfs:subClassOf ${turtleRef(typeIri(spec, t.parent), spec.namespace)}`)
+    for (const d of t.disjointWith ?? []) parts.push(`owl:disjointWith ${turtleRef(typeIri(spec, d), spec.namespace)}`)
     parts.push(`core:modality "${t.modality}"`)
-    lines.push(`core:${t.id} ${parts.join(' ; ')} .`, '')
+    if (t.provenance) {
+      parts.push(`core:origin "${t.provenance.origin}"`)
+      if (t.provenance.definitionEn) parts.push(`core:definitionEn "${esc(t.provenance.definitionEn)}"`)
+      if (t.provenance.module) parts.push(`core:fiboModule "${esc(t.provenance.module)}"`)
+      if (t.provenance.versionIri) parts.push(`core:fiboVersionIri <${t.provenance.versionIri}>`)
+      if (t.provenance.maturity) parts.push(`core:maturity "${esc(t.provenance.maturity)}"`)
+      if (t.provenance.origin === 'fibo' || t.provenance.origin === 'commons') parts.push(`dct:source <${iri}>`)
+    }
+    lines.push(`${turtleRef(iri, spec.namespace)} ${parts.join(' ; ')} .`, '')
     for (const p of t.dataProperties) {
-      const pp = [`a owl:DatatypeProperty`, `rdfs:label "${esc(p.label)}"`, `rdfs:domain core:${t.id}`, `rdfs:range ${XSD[p.datatype]}`, `core:modality "${p.modality}"`]
-      lines.push(`core:${dataPropLocalName(t.id, p.id)} ${pp.join(' ; ')} .`)
+      const pp = [
+        `a owl:DatatypeProperty`, `rdfs:label "${esc(p.label)}"`,
+        `rdfs:domain ${turtleRef(typeIri(spec, t.id), spec.namespace)}`,
+        `rdfs:range ${XSD[p.datatype]}`, `core:modality "${p.modality}"`,
+      ]
+      const pir = dataPropertyIri(spec, t.id, p.id)
+      if (p.provenance) {
+        pp.push(`core:origin "${p.provenance.origin}"`)
+        if (p.provenance.note) pp.push(`core:provenanceNote "${esc(p.provenance.note)}"`)
+      }
+      lines.push(`${turtleRef(pir, spec.namespace)} ${pp.join(' ; ')} .`)
     }
     if (t.dataProperties.length > 0) lines.push('')
   }
   for (const p of spec.objectProperties) {
+    const iri = objectPropertyIri(spec, p.id)
     const parts = [
       'a owl:ObjectProperty', `rdfs:label "${esc(p.label)}"`,
-      `rdfs:domain ${p.domain.length === 1 ? `core:${p.domain[0]}` : `[ ${p.domain.map((d) => `owl:unionOf ( core:${d} )`).join(' , ')} ]`}`,
-      `rdfs:range ${p.range.length === 1 ? `core:${p.range[0]}` : `[ ${p.range.map((r) => `owl:unionOf ( core:${r} )`).join(' , ')} ]`}`,
+      `rdfs:domain ${p.domain.length === 1 ? turtleRef(typeIri(spec, p.domain[0]), spec.namespace) : `[ ${p.domain.map((d) => `owl:unionOf ( ${turtleRef(typeIri(spec, d), spec.namespace)} )`).join(' , ')} ]`}`,
+      `rdfs:range ${p.range.length === 1 ? turtleRef(typeIri(spec, p.range[0]), spec.namespace) : `[ ${p.range.map((r) => `owl:unionOf ( ${turtleRef(typeIri(spec, r), spec.namespace)} )`).join(' , ')} ]`}`,
       `core:modality "${p.modality}"`,
     ]
-    lines.push(`core:${p.id} ${parts.join(' ; ')} .`, '')
+    if (p.provenance) {
+      parts.push(`core:origin "${p.provenance.origin}"`)
+      if (p.provenance.definitionEn) parts.push(`core:definitionEn "${esc(p.provenance.definitionEn)}"`)
+      if (p.provenance.module) parts.push(`core:fiboModule "${esc(p.provenance.module)}"`)
+      if (p.provenance.versionIri) parts.push(`core:fiboVersionIri <${p.provenance.versionIri}>`)
+      if (p.provenance.origin === 'fibo' || p.provenance.origin === 'commons') parts.push(`dct:source <${iri}>`)
+    }
+    lines.push(`${turtleRef(iri, spec.namespace)} ${parts.join(' ; ')} .`, '')
   }
   for (const a of spec.axioms) {
     lines.push(`# 公理 ${a.id}（${a.kind}/${a.modality}）：${esc(a.message)}`)
   }
   if (spec.axioms.length > 0) lines.push('')
   for (const inst of instances) {
-    const parts = [`a core:${inst.type}`, `rdfs:label "${esc(inst.label)}"`]
+    const parts = [`a ${turtleRef(typeIri(spec, inst.type), spec.namespace)}`, `rdfs:label "${esc(inst.label)}"`]
     for (const [k, val] of Object.entries(inst.data ?? {})) {
       if (val === undefined || val === null) continue
-      parts.push(typeof val === 'number' ? `core:${dataPropLocalName(inst.type, k)} ${val}` : `core:${dataPropLocalName(inst.type, k)} ${turtleValue(val)}`)
+      const key = turtleRef(dataPropertyIri(spec, inst.type, k), spec.namespace)
+      parts.push(typeof val === 'number' ? `${key} ${val}` : `${key} ${turtleValue(val)}`)
     }
-    for (const rel of inst.relations ?? []) parts.push(`core:${rel.property} core:i/${rel.target}`)
-    lines.push(`core:i/${inst.id} ${parts.join(' ; ')} .`)
+    for (const rel of inst.relations ?? []) {
+      parts.push(`${turtleRef(objectPropertyIri(spec, rel.property), spec.namespace)} ${turtleRef(entityIri(spec.namespace, `i/${rel.target}`), spec.namespace)}`)
+    }
+    lines.push(`${turtleRef(inst.iri ?? entityIri(spec.namespace, `i/${inst.id}`), spec.namespace)} ${parts.join(' ; ')} .`)
   }
   return lines.join('\n')
 }
