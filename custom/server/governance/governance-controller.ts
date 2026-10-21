@@ -26,6 +26,8 @@ import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
 import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts, loadStateModel } from './governance-ledger'
+import { collectGovernancePosture } from './posture'
+import { emergencyStopAll } from './emergency-stop'
 import { queryImpact } from './governance-impact'
 import { crossMachineDispatchStats } from './governance-crossdispatch'
 import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, createAccountInvite, backfillDefaultAvatars } from './registry-admin'
@@ -285,6 +287,40 @@ registerDomainAudit({
 })
 
 // ---- 4A 治理层只读投影（spec 2026-09-29 §3.4；单一事实源 runtime/governance/*.yaml）----
+
+// 治理姿态对账面（AGT 吸收轮 A，2026-10-21）：每 profile 实际生效值（审批模式/
+// 执法闸/已加载规则数）vs 期望值——「策略没生效时仪表盘照样显示 governed」的
+// 假信号问题在产品面常驻可见。全部只读。
+router.get('/posture', async (ctx) => {
+  try {
+    ctx.body = { ok: true, ...collectGovernancePosture() }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 全局紧急停止（AGT 吸收轮 E，2026-10-21）：跨 profile 合作式中止全部在跑/排队
+// 会话 + 停后活性复核。确认闸=body.confirm 必须字面 'STOP-ALL'（防误触）。
+router.post('/emergency-stop', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { confirm?: unknown; reason?: unknown; recheckMs?: unknown }
+  if (body.confirm !== 'STOP-ALL') {
+    ctx.status = 400
+    ctx.body = { ok: false, error: "确认闸：body.confirm 必须字面 'STOP-ALL'（防误触）" }
+    return
+  }
+  const recheckMs = Number(body.recheckMs)
+  try {
+    const report = await emergencyStopAll({
+      reason: typeof body.reason === 'string' && body.reason ? body.reason : undefined,
+      recheckMs: Number.isFinite(recheckMs) ? recheckMs : undefined,
+    })
+    ctx.body = { ok: true, report }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
 
 router.get('/ledger', async (ctx) => {
   const res = loadCapabilityLedger()

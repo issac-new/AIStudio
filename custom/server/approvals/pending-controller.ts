@@ -27,7 +27,7 @@ import { join } from 'path'
 import { buildFleetSnapshotFromTap, respondFleetApproval } from '../services/hermes/fleet-tap'
 import { loadReview, setVerdict, listReviews } from '../review/review-store'
 import { isReviewVerdict, type ReviewVerdict } from '../review/review-store'
-import { appendApprovalLog, queryApprovalLog } from './approval-log'
+import { appendApprovalLog, queryApprovalLog, verifyApprovalChain } from './approval-log'
 import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
 import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotchecks, listResolvedSpotchecks, resolveSpotcheck } from './autopass'
 import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
@@ -580,6 +580,17 @@ router.post('/:id/decide', async (ctx) => {
 router.get('/history', async (ctx) => {
   const limit = Number(ctx.query.limit ?? 50)
   ctx.body = { ok: true, entries: queryApprovalLog(Number.isFinite(limit) ? limit : 50) }
+})
+
+// 审批决策日志前向链校验（AGT 吸收轮 B，2026-10-21）：防篡改对账——改写历史/
+// 删除中插/伪造追加在断点现形；CAP 裁剪/前链时代记录如实标注，不算篡改。
+router.get('/history/chain', async (ctx) => {
+  try {
+    ctx.body = { ok: true, ...verifyApprovalChain() }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 })
 
 // ── 2026-10-04 影响面预览（Blast Radius）：任意命令的破坏性影响面解析 ──
