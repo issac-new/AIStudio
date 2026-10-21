@@ -1649,7 +1649,46 @@ STEPS_META_20261017_V8_RUN21 = {
              narrative='总报告收尾段 16:35-20:22：报告审计三连根因（生成器挂接先登记后查重恒让位/审计只认 r18-shot 类名/值班与驱动并发双写）根治+PART1 按轮注册后 20:22:12 report_done；监督器 30+ 连败退避重试至功成身退；全程 22.7h、四格式同步交付。', imgs=[]),
 }
 
-_NARR={'20261017-v8-run21':STEPS_META_20261017_V8_RUN21,'20261015-v8-run20':STEPS_META_20261015_V8_RUN20,'20261013-v8-run19':STEPS_META_20261013_V8_RUN19,'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
+# run22 叙事（2026-10-21 开跑窗注册：1-9 步实写，10-26 随轮改写——勿抄历史轮文案）
+STEPS_META_20261021_V8_RUN22 = {
+    1: dict(keys=['smoke_done'], ts_override='1',
+            narrative='开跑 2026-10-21 10:01（执行面首次跑 0.7.38 完整构建：product-dist 自 overlay main 2508efec 当晨重建）；冒烟四绿——playwright 采集链试拍 1 帧、30 账号 token 有效、单网关 8801+单 studio 8802、驾驶舱回归 connected_platforms=15。', imgs=[]),
+    2: dict(keys=['smoke_done'], ts_override='1',
+            narrative='双模式登录端点按契约应答；delivery 案例房 dlv-20261021-v8-run22-100252 开房（人类+bot 双身份邀入，事件落房可读回，10:03）。', imgs=[]),
+    3: dict(keys=['smoke_done'], ts_override='1',
+            narrative='14 账号 matrix-login+账号板可达（10:02:52）；profiles 清单与每板 team 围栏装载完成。', imgs=[]),
+    4: dict(keys=['smoke_done'], ts_override='1',
+            narrative='编制三方对账一致 roster=15×org=15×matrix=15（10:02:52）；步骤 1-5 全部完成（10:03:52）。', imgs=[]),
+    5: dict(keys=['appinit_done'], ts_override='1792548340',
+            narrative='应用资产登记完成：4 应用×负责人×板×SLA×门禁骨架，registry 经产品通道入仓（PUT /api/governance/registry/app-registry 保存即 git 提交，10:04:57）。', imgs=[]),
+    6: dict(keys=['people_done'], ts_override='1792548415',
+            narrative='组织对账一致 14 账号×profile×板×fleet-manifest（10:05:40）；组织与权限矩阵产品通道入仓（10:05:55）。', imgs=[]),
+    7: dict(keys=['g1_frozen'], ts_override='1792548473',
+            narrative='G1 需求冻结完成（g1_frozen 写入；发生于组织矩阵入仓与建房之间的 10:06-10:08 段）。', imgs=[]),
+    8: dict(keys=['room_analysis'], ts_override='!AzrYwNeCuuZVmbxbBf:matrix.test',
+            narrative='「支付收银台需求分析讨论群」建房（!AzrYwNeCuuZVmbxbBf，10:08:36）并全量预邀 fanfan-agent 与 8 位关联人及各自 agent。', imgs=[]),
+    9: dict(keys=['dispatch_marker'], ts_override='$KrIPQztR4nEUp1yRjF6iIBeDsDvP4B6nYbj6MUysF6U',
+            narrative='需求分析任务派发发出（事件 $KrIPQzt…，10:08:36）；测试左移任务 UC-RFD-001 同刻并行派给测试侧（$pyj4kJuj…，10:08:40，与系统分析互不等待）。', imgs=[]),
+    10: dict(keys=['register_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    11: dict(keys=['analysis_done', 'analysis_verified'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    12: dict(keys=['triage_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    13: dict(keys=['anexec_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    14: dict(keys=['review_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    15: dict(keys=['g2_arch_pass'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    16: dict(keys=['close_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    17: dict(keys=['plan_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    18: dict(keys=['devimpl_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    19: dict(keys=['defect_done', 'testpass_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    20: dict(keys=['ready_done', 'release_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    21: dict(keys=['uat_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    22: dict(keys=['workmgr_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    23: dict(keys=['audit_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    24: dict(keys=['retro_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    25: dict(keys=['ide_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+    26: dict(keys=['report_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+}
+
+_NARR={'20261021-v8-run22':STEPS_META_20261021_V8_RUN22,'20261017-v8-run21':STEPS_META_20261017_V8_RUN21,'20261015-v8-run20':STEPS_META_20261015_V8_RUN20,'20261013-v8-run19':STEPS_META_20261013_V8_RUN19,'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
 def _narrative_fallback_skeleton(run_id):
     """R17 骨架兜底（run16 起修订）：未注册轮按 state.env 已落步键渲染骨架——全部步
     出 ⬜ 骨架占位叙事（明示待收尾链补注册），不携带任何历史轮文案，防冒充语义保留。
