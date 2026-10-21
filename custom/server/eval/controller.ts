@@ -162,7 +162,9 @@ router.post('/reflow-from-trace', async (ctx) => {
   })
   if (result.ok === false) {
     const failure = result as { ok: false; code: string; problems: string[] }
-    ctx.status = failure.code === 'origin_conflict' || failure.code === 'trace_hash_mismatch' ? 409 : 400
+    ctx.status = failure.code === 'origin_conflict' || failure.code === 'trace_hash_mismatch'
+      ? 409
+      : failure.code === 'trace_unavailable' || failure.code === 'target_not_found' ? 404 : 400
     ctx.body = { ok: false, code: failure.code, problems: failure.problems }
     return
   }
@@ -172,6 +174,7 @@ router.post('/reflow-from-trace', async (ctx) => {
     created: result.created,
     taskId: result.taskId,
     set: { id: result.set.id, name: result.set.name, track: result.set.track, taskCount: result.set.tasks.length, revision: result.set.revision },
+    ...(result.alsoIn && result.alsoIn.length > 0 ? { alsoIn: result.alsoIn } : {}),
   }
 })
 
