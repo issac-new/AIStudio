@@ -24,19 +24,42 @@ function writeJsonl(name: string, lines: unknown[]): string {
 }
 
 describe('collectTraceRows', () => {
-  it('窗口内 legacy 行全量采集，OTel 行跳过并计数', () => {
+  it('窗口内 legacy 行全量采集；OTel 行经单一事实源转换后同样入聚（不再跳过）', () => {
     writeJsonl('s1.jsonl', [
       { type: 'header', session_id: 's1', started_at: NOW_S - 3600 },
       { type: 'chunk', kind: 'llm_span', phase: 'post', session_id: 's1', started_at: NOW_S - 3000, ended_at: NOW_S - 2990 },
     ])
+    // OTel 文件：根 span（→header）+ chat span（→llm_span post，带 usage）
     writeJsonl('s2.jsonl', [
-      { traceId: 's2', spanId: 'session-s2', otelFormat: true, startTime: (NOW_S - 3600) * 1e6 },
+      { traceId: 's2', spanId: 'session-s2', otelFormat: true, kind: 'SERVER', name: 'invoke_agent', startTime: (NOW_S - 3600) * 1e6,
+        attributes: { 'gen_ai.operation.name': 'invoke_agent', 'gen_ai.conversation.id': 's2', 'gen_ai.request.model': 'glm-5' } },
+      { traceId: 's2', spanId: 'req-1', otelFormat: true, kind: 'CLIENT', name: 'chat', parentSpanId: 'session-s2',
+        startTime: (NOW_S - 3000) * 1e6, endTime: (NOW_S - 2990) * 1e6, durationMs: 10_000,
+        attributes: { 'gen_ai.operation.name': 'chat', 'gen_ai.conversation.id': 's2', 'gen_ai.usage.input_tokens': 30, 'gen_ai.usage.output_tokens': 6 } },
     ])
     const r = collectTraceRows(7, { dir, now: NOW })
     expect(r.files).toBe(2)
-    expect(r.rows.length).toBe(2)
-    expect(r.skippedOtelFiles).toBe(1)
-    expect(r.notes.join(' ')).toContain('OTel')
+    expect(r.skippedOtelFiles).toBe(0)
+    // OTel 两行都进聚合：header 行 + 转换出的 llm_span post 行
+    const llmPost = r.rows.filter((x) => x.kind === 'llm_span' && (x.phase === 'post' || x.ended_at))
+    expect(llmPost.length).toBe(2)
+    const otelChat = r.rows.find((x) => (x.session_id ?? '') === 's2' && x.usage)
+    expect(otelChat?.usage).toMatchObject({ input_tokens: 30, output_tokens: 6 })
+  })
+
+  it('OTel 端到端聚合：转换后进 buildObsSignals 计数（llmCalls/tokens 不再是盲区）', () => {
+    writeJsonl('otel-only.jsonl', [
+      { traceId: 's9', spanId: 'session-s9', otelFormat: true, kind: 'SERVER', name: 'invoke_agent', startTime: (NOW_S - 3600) * 1e6,
+        attributes: { 'gen_ai.operation.name': 'invoke_agent', 'gen_ai.conversation.id': 's9' } },
+      { traceId: 's9', spanId: 'req-9', otelFormat: true, kind: 'CLIENT', name: 'chat', parentSpanId: 'session-s9',
+        startTime: (NOW_S - 3000) * 1e6, endTime: (NOW_S - 2995) * 1e6, durationMs: 5000,
+        attributes: { 'gen_ai.operation.name': 'chat', 'gen_ai.conversation.id': 's9', 'gen_ai.usage.input_tokens': 100, 'gen_ai.usage.output_tokens': 20 } },
+    ])
+    const r = collectObsSignals(7, { dir, now: NOW })
+    expect(r.report.available).toBe(true)
+    expect(r.report.totals.llmCalls).toBe(1)
+    expect(r.report.totals.tokens.input).toBe(100)
+    expect(r.skippedOtelFiles).toBe(0)
   })
 
   it('超窗行（时间戳老于 cutoff）被精滤；mtime 老的文件整跳', () => {

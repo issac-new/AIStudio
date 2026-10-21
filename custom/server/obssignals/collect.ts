@@ -1,11 +1,13 @@
-// overlay/obssignals 域：trace 目录采集（2026-10-19 观测层轮）。
+// overlay/obssignals 域：trace 目录采集（2026-10-19 观测层轮；2026-10-21 挂账清偿收 OTel）。
 //
 // 只读扫描 trace JSONL 目录，窗口=近 N 天（按文件 mtime 预筛 + 行时间戳精滤），
 // 全部 fail-soft：目录缺席/坏行/坏文件不炸聚合，如实记 notes。
-// OTel 格式文件（otelFormat 标记、无 type/kind 行）本轮不参与聚合，如实标注。
+// OTel 行经 trace-sampler 单一事实源（isOTelSpanRow/otelRowToLegacy）转 legacy 投影后
+// 同管道聚合——转换失败的单行跳过，整文件全跳才计 skippedOtelFiles。
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { isOTelSpanRow, otelRowToLegacy } from '../eval/trace-sampler'
 import { buildObsSignals, type ObsSignalsReport, type ObsSpanRow } from './signals'
 
 /** 采集上限：单文件行数与总行数双闸，超限采样口径如实标注。 */
@@ -83,14 +85,15 @@ export function collectTraceRows(days = 7, opts: { dir?: string; now?: number } 
           truncated = true
           break
         }
-        let row: ObsSpanRow
+        let parsed: unknown
         try {
-          row = JSON.parse(line) as ObsSpanRow
+          parsed = JSON.parse(line)
         } catch {
           continue
         }
         fileRows += 1
-        if ((row as { otelFormat?: boolean }).otelFormat === true) continue
+        // OTel 行 → legacy 投影（单一事实源与评测域共用；转换即窗口内时间戳口径统一）
+        const row = (isOTelSpanRow(parsed) ? otelRowToLegacy(parsed) : parsed) as ObsSpanRow
         const ts = row.ended_at ?? row.started_at ?? row.ts
         // header 用 started_at；无时间戳行（坏行）不进入窗口统计
         if (!Number.isFinite(ts) || Number(ts) < cutoffSec) continue
