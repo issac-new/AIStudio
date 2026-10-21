@@ -3,9 +3,10 @@
 // 固定评测集需要真实运行轨迹做样本；本模块把 L2 trace JSONL 转成 Eval Studio
 // 的 Evidence（transcript/toolCalls/efficiency），由调用方决定是否建集。
 // 安全：只取工具名/状态/耗时与参数摘要（不落原值）；sessionId 做路径字符校验。
-import { existsSync, readFileSync } from 'fs'
-import { homedir } from 'os'
-import { join, resolve } from 'path'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, resolve, sep } from 'node:path'
 import { summarizeArgs } from '../toolcontract/contract'
 import type { Evidence, ToolCallRecord } from './types'
 
@@ -26,13 +27,35 @@ interface TraceLine {
   durationMs?: number
   summary?: string
   outcome?: string
+  otelFormat?: boolean
+}
+
+export type TraceFormat = 'legacy' | 'otel' | 'unknown'
+
+export interface TraceInspection {
+  ok: boolean
+  sessionId: string
+  rows?: TraceLine[]
+  traceHash?: string
+  format?: TraceFormat
+  complete?: boolean
+  reason?: string
 }
 
 export interface TraceSampleResult {
   ok: boolean
   sessionId: string
   sample?: Evidence
-  meta?: { lines: number; toolCalls: number; tokens: number; durationMs: number | null; startedAt: number | null }
+  meta?: {
+    lines: number
+    toolCalls: number
+    tokens: number
+    durationMs: number | null
+    startedAt: number | null
+    traceHash: string
+    format: TraceFormat
+    complete: boolean
+  }
   reason?: string
 }
 
@@ -43,6 +66,55 @@ function tracesDir(): string {
 
 function safeSessionId(id: string): boolean {
   return /^[A-Za-z0-9._:-]{1,200}$/.test(id)
+}
+
+function parseRows(raw: string): TraceLine[] {
+  const rows: TraceLine[] = []
+  for (const line of raw.split('\n')) {
+    if (!line.trim()) continue
+    try {
+      rows.push(JSON.parse(line) as TraceLine)
+    } catch {
+      // 并发写入产生的半行不参与采样。
+    }
+  }
+  return rows
+}
+
+/**
+ * 读取并检查 trace 文件。转题与 origin 复判共用这一事实源：
+ * 路径不越界、hash 来自原始字节、legacy 完整性按 header/trailer 判定。
+ */
+export function inspectTrace(sessionId: string, opts: { tracesDir?: string } = {}): TraceInspection {
+  if (!safeSessionId(sessionId)) return { ok: false, sessionId, reason: 'sessionId 含非法字符' }
+  const dir = opts.tracesDir ?? tracesDir()
+  const file = join(dir, `${sessionId}.jsonl`)
+  if (!existsSync(file)) return { ok: false, sessionId, reason: 'trace 不存在' }
+
+  try {
+    const root = realpathSync(dir)
+    const target = realpathSync(file)
+    if (target !== root && !target.startsWith(`${root}${sep}`)) {
+      return { ok: false, sessionId, reason: 'trace 路径越界' }
+    }
+    const bytes = readFileSync(target)
+    const traceHash = createHash('sha256').update(bytes).digest('hex')
+    const rows = parseRows(bytes.toString('utf8'))
+    const hasLegacy = rows.some((row) => row.type === 'header' || row.type === 'chunk' || row.type === 'trailer')
+    const format: TraceFormat = rows.some((row) => row.otelFormat === true || (!row.type && ('traceId' in row || 'spanId' in row)))
+      ? 'otel'
+      : hasLegacy ? 'legacy' : 'unknown'
+    const header = rows.find((row) => row.type === 'header')
+    const trailer = [...rows].reverse().find((row) => row.type === 'trailer')
+    const complete = Boolean(
+      header?.session_id === sessionId
+      && trailer
+      && (trailer.session_id === undefined || trailer.session_id === sessionId),
+    )
+    return { ok: true, sessionId, rows, traceHash, format, complete }
+  } catch {
+    return { ok: false, sessionId, reason: 'trace 读取失败' }
+  }
 }
 
 function argSummary(args: unknown): string {
@@ -56,49 +128,38 @@ function argSummary(args: unknown): string {
 
 /** 从 trace 构造 Evidence；缺文件/坏行如实降级。 */
 export function sampleFromTrace(sessionId: string, opts: { tracesDir?: string } = {}): TraceSampleResult {
-  if (!safeSessionId(sessionId)) return { ok: false, sessionId, reason: 'sessionId 含非法字符' }
-  const dir = opts.tracesDir ?? tracesDir()
-  const file = join(dir, `${sessionId}.jsonl`)
-  if (!existsSync(file)) return { ok: false, sessionId, reason: 'trace 不存在' }
+  const inspected = inspectTrace(sessionId, opts)
+  if (!inspected.ok) return { ok: false, sessionId, reason: inspected.reason }
 
   const toolCalls: ToolCallRecord[] = []
   const transcript: string[] = []
   let tokens = 0
   let startedAt: number | null = null
   let durationMs: number | null = null
-  let lines = 0
 
-  try {
-    for (const line of readFileSync(file, 'utf8').split('\n')) {
-      if (!line) continue
-      let row: TraceLine
-      try { row = JSON.parse(line) as TraceLine } catch { continue }
-      lines += 1
-      if (row.type === 'header' && typeof row.started_at === 'number') startedAt = row.started_at
-      if (row.type === 'trailer') {
-        if (typeof row.duration_ms === 'number') durationMs = row.duration_ms
-        else if (typeof row.durationMs === 'number') durationMs = row.durationMs
-      }
-      if (row.type !== 'chunk') continue
-      if (row.kind === 'llm_span') {
-        const input = row.usage?.input_tokens ?? row.input_tokens ?? 0
-        const output = row.usage?.output_tokens ?? row.output_tokens ?? 0
-        if (Number.isFinite(input)) tokens += input
-        if (Number.isFinite(output)) tokens += output
-        continue
-      }
-      if (row.kind === 'tool_span' && row.tool_name) {
-        const ok = row.status !== 'error' && !row.error_message
-        toolCalls.push({
-          name: row.tool_name,
-          ok,
-          durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined,
-        })
-        transcript.push(`tool: ${row.tool_name}(${argSummary(row.args)}) -> ${ok ? 'ok' : 'error'}`)
-      }
+  for (const row of inspected.rows ?? []) {
+    if (row.type === 'header' && typeof row.started_at === 'number') startedAt = row.started_at
+    if (row.type === 'trailer') {
+      if (typeof row.duration_ms === 'number') durationMs = row.duration_ms
+      else if (typeof row.durationMs === 'number') durationMs = row.durationMs
     }
-  } catch {
-    return { ok: false, sessionId, reason: 'trace 读取失败' }
+    if (row.type !== 'chunk') continue
+    if (row.kind === 'llm_span') {
+      const input = row.usage?.input_tokens ?? row.input_tokens ?? 0
+      const output = row.usage?.output_tokens ?? row.output_tokens ?? 0
+      if (Number.isFinite(input)) tokens += input
+      if (Number.isFinite(output)) tokens += output
+      continue
+    }
+    if (row.kind === 'tool_span' && row.tool_name) {
+      const ok = row.status !== 'error' && !row.error_message
+      toolCalls.push({
+        name: row.tool_name,
+        ok,
+        durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined,
+      })
+      transcript.push(`tool: ${row.tool_name}(${argSummary(row.args)}) -> ${ok ? 'ok' : 'error'}`)
+    }
   }
 
   return {
@@ -109,7 +170,16 @@ export function sampleFromTrace(sessionId: string, opts: { tracesDir?: string } 
       toolCalls,
       efficiency: { tokens, steps: toolCalls.length, ...(durationMs != null ? { durationMs } : {}) },
     },
-    meta: { lines, toolCalls: toolCalls.length, tokens, durationMs, startedAt },
+    meta: {
+      lines: inspected.rows?.length ?? 0,
+      toolCalls: toolCalls.length,
+      tokens,
+      durationMs,
+      startedAt,
+      traceHash: inspected.traceHash!,
+      format: inspected.format!,
+      complete: inspected.complete!,
+    },
   }
 }
 
@@ -141,7 +211,16 @@ export interface SpanSampleResult {
   spanRef: string
   spanKind?: 'llm_span' | 'tool_span'
   sample?: Evidence
-  meta?: { spanRef: string; tokens: number; durationMs: number | null; ttftMs: number | null; childToolCalls: number }
+  meta?: {
+    spanRef: string
+    tokens: number
+    durationMs: number | null
+    ttftMs: number | null
+    childToolCalls: number
+    traceHash: string
+    format: TraceFormat
+    complete: boolean
+  }
   reason?: string
 }
 
@@ -165,25 +244,10 @@ function renderMessages(messages: unknown, maxChars: number): string {
 
 /** 从 trace 构造单 span 级 Evidence；span 不存在/文件缺席如实降级。 */
 export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { tracesDir?: string } = {}): SpanSampleResult {
-  if (!safeSessionId(sessionId)) return { ok: false, sessionId, spanRef, reason: 'sessionId 含非法字符' }
   if (!/^[A-Za-z0-9._:-]{1,200}$/.test(spanRef)) return { ok: false, sessionId, spanRef, reason: 'spanRef 含非法字符' }
-  const dir = opts.tracesDir ?? tracesDir()
-  const file = join(dir, `${sessionId}.jsonl`)
-  if (!existsSync(file)) return { ok: false, sessionId, spanRef, reason: 'trace 不存在' }
-
-  let rows: SpanTraceLine[] = []
-  try {
-    rows = readFileSync(file, 'utf8')
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => {
-        try { return JSON.parse(line) as SpanTraceLine } catch { return null }
-      })
-      .filter((r): r is SpanTraceLine => r !== null)
-  } catch {
-    return { ok: false, sessionId, spanRef, reason: 'trace 读取失败' }
-  }
-
+  const inspected = inspectTrace(sessionId, opts)
+  if (!inspected.ok) return { ok: false, sessionId, spanRef, reason: inspected.reason }
+  const rows = (inspected.rows ?? []) as SpanTraceLine[]
   const chunks = rows.filter((r) => r.type === 'chunk')
 
   // 工具 span：tool_call_id 直匹
@@ -212,6 +276,9 @@ export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { 
         durationMs: typeof toolRow.duration_ms === 'number' ? toolRow.duration_ms : null,
         ttftMs: null,
         childToolCalls: 0,
+        traceHash: inspected.traceHash!,
+        format: inspected.format!,
+        complete: inspected.complete!,
       },
     }
   }
@@ -266,6 +333,15 @@ export function sampleSpanFromTrace(sessionId: string, spanRef: string, opts: { 
         ...(ttftMs != null ? { ttftMs } : {}),
       },
     },
-    meta: { spanRef, tokens, durationMs, ttftMs, childToolCalls: children.length },
+    meta: {
+      spanRef,
+      tokens,
+      durationMs,
+      ttftMs,
+      childToolCalls: children.length,
+      traceHash: inspected.traceHash!,
+      format: inspected.format!,
+      complete: inspected.complete!,
+    },
   }
 }
