@@ -752,7 +752,7 @@ async function pickEffort(value: string): Promise<void> {
 // 原Teleport 进 ChatInput .input-top-bar 的宿主机制退役——行内直接渲染无需宿主解析。
 const composerSettingsOpen = ref(false)
 // 模式=ZCode 四档形态（2026-10-18 锚定校正轮）：Plan 勾选 + build/guarded/yolo 三单选
-// （目录/描述/色语义锚 upstream/zcode v3.15.1 ZCODE_AGENT_MODE_OPTIONS + 
+// （目录/描述/色语义锚 upstream/zcode v3.16.1 ZCODE_AGENT_MODE_OPTIONS + 
 // V4ComposerModeControls）；存储与派生经 utils/zcodeModes（派生七档写旧键，
 // 服务端 session-mode REST 零改动）。
 const PERM_MODE_EVENT = 'ide-perm-mode-changed'

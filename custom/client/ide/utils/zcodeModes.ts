@@ -1,7 +1,7 @@
 // overlay/custom/client/ide/utils/zcodeModes.ts
 // ZCode 模式目录（composer 面单一事实源的客户端镜像）——2026-10-18 用户指令
 // 「重新调研 zcode 源码校正，避免疏漏」：
-// 上游锚=upstream/zcode v3.15.1 packages/shared/src/zcode-agent-model-state.ts
+// 上游锚=upstream/zcode v3.16.1 packages/shared/src/zcode-agent-model-state.ts（3.15.1→3.16.1 零 diff）
 // ZCODE_AGENT_MODE_OPTIONS：build/guarded/plan/yolo（edit 为隐藏历史值仅回显）；
 // 形态锚=v4/composer/V4ComposerModeControls.tsx：Plan 独立勾选项（planEnabled
 // 布尔，与权限档正交）+ 权限三档单选；引擎协议 submissionModeSchema

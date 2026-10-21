@@ -1,6 +1,11 @@
 # zcode patch series (受管 fork,路由全部进 upstream/zcode)
 # 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
-001-server-cli-yazl-external.patch
+# 基线: origin/main @ 0a1fc56 (v3.16.1, 2026-10-19 chore: sync ZCode source)。
+#
+# 001 已退役（2026-10-21 v3.16.1 基线轮）：上游 tsup.config.ts 已原生把 yazl 列入
+# external（附带 ESM require("fs") 崩溃原因注释），补丁语义被上游吸收，继续应用会冲突。
+# 补丁文件留档，不再登记。
+# 001-server-cli-yazl-external.patch
 
 # 002（importSession RPC，P11 导入写入通道）：文件一直在但 series 漏登记——
 # 与 003/004 同一次旧侧 series 覆盖事故，恢复并集时漏了本条（2026-10-18 实测
@@ -33,19 +38,27 @@
 #      （按下→durationMs 默认 500/上限 10000→松开，finally 保底松键）+词表加名。
 005-zcode-cua-hold-key.patch
 
-# 006（computer-use 插件打包内置，2026-10-18）：上游 seed 定义表已有 computer-use
-#      条目但仓库缺载荷包——本补丁补 packages/zcode-cua-plugin/（skill+client 脚本+
-#      manifest+docs，逐字拷自官方缓存 0.6.4 MIT；不带 node_modules——skill 走宿主
-#      bridge，fork 003/004 运行时无 sharp/koffi/Helper 依赖）+ 定义表 defaultEnabled:true
-#      （Ycode 开箱即用；ZCODE_CUA_DISABLE=1 仍 fail-closed）+ shared/plugin-marketplaces
-#      与 services officialPluginCache 两份默认名单同步（bootstrap 机械对照测试）。
-#      生效=引擎 CLI 重建后 seed 进官方插件缓存（默认启用）。
+# 006（computer-use 默认启用，2026-10-21 v3.16.1 基线轮缩面）：3.16.1 上游已自带
+#      apps/zcode-cli/packages/zcode-cua-plugin 0.6.5 载荷（不再由本补丁补包，旧
+#      packages/zcode-cua-plugin 副本已删）；本补丁只保留 fork 产品决策——
+#      定义表 defaultEnabled:true（Ycode 开箱即用；ZCODE_CUA_DISABLE=1 仍 fail-closed）
+#      + shared/plugin-marketplaces 与 services officialPluginCache 两份默认名单同步
+#      （bootstrap 机械对照测试）。003/004 的进程内运行时无 Helper/sharp 依赖，
+#      上游「默认关」的成本依据在本 fork 不成立。
 006-zcode-cua-plugin-bundled.patch
 
 # 007（Cua 完整回路 2026-10-18，并位 006-bundled）：broker 协议对齐官方 node_repl
-#      host（3.15.x）——authenticate 两段式握手（IPC v3）+ id 回显 + input 别名 + 裸载荷
-#      回包（官方 SDK toText/unwrapEnvelope 契约）+ 官方词表 24 方法（list_applications/
+#      host（3.15.x；3.16.1 该 host 源码未变）——authenticate 两段式握手（IPC v3）+
+#      id 回显 + input 别名 + 裸载荷回包（官方 SDK toText/unwrapEnvelope 契约）+
+#      官方词表 24 方法（list_applications/
 #      broker_info/capture_app AX 状态文档+真图像/clipboard/指针别名/元素面诚实拒绝）+
 #      list_apps active 标记。旧客户端 legacy 标记回 raw。桌面 Helper peer-verify 拒第三方，
 #      本补丁使 SwarmStudio 自有 broker（broker-server.js Node 宿主）承接官方 host。
 007-zcode-cua-official-host-protocol.patch
+
+# 008（broker 连接失败错误码收口，2026-10-21 v3.16.1 基线轮）：3.16.1 上游新增
+#      placeholder 测试要求 callBrokerMethod 在 broker 不可达时抛 code=unavailable；
+#      本 fork 活体 broker 之前直接漏出 errno（ENOENT）。008 把连接失败统一包成
+#      BrokerError(code=unavailable)，details.cause 保留原始 errno，fail-closed
+#      语义与官方 SDK 消费面一致。
+008-broker-unavailable-error-code.patch

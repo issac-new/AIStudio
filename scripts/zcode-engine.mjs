@@ -63,20 +63,8 @@ async function ensure() {
   } else {
     log('ensure', '依赖与构建产物已就绪');
   }
-  // 006（2026-10-18 打包内置轮）：computer-use 插件载荷必须落到 CLI dist 的
-  // candidateBaseDirs 答辖区（entrypointDir + rootCandidate "packages/zcode-cua-plugin"），
-  // 否则 CLI filesystem seed 找不到载荷、空缓存机器不内置。dist 属构建产物会被清，
-  // 每次确保时幂等重放（差异拷贝：src 侧 mtime 较新才覆盖）。
-  const cliDist = resolve(zcodeRoot, 'apps/zcode-cli/packages/cli/dist');
-  const payloadSrc = resolve(zcodeRoot, 'packages/zcode-cua-plugin');
-  const payloadDest = resolve(cliDist, 'packages/zcode-cua-plugin');
-  if (existsSync(cliDist) && existsSync(resolve(payloadSrc, '.zcode-plugin/plugin.json'))) {
-    const marker = resolve(payloadDest, '.zcode-plugin/plugin.json');
-    if (!existsSync(marker)) {
-      run('cp', ['-R', payloadSrc, payloadDest]);
-      log('ensure', 'staged computer-use 插件载荷 → cli/dist/packages/');
-    }
-  }
+  // v3.16.1 起上游在 apps/zcode-cli/packages/zcode-cua-plugin 自带 CUA 载荷，
+  // seed 经 rootCandidate "../zcode-cua-plugin" 直接命中，无需再往 cli/dist staging。
 }
 
 async function serve() {
