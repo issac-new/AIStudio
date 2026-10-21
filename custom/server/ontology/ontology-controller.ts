@@ -27,6 +27,9 @@ import {
   deleteInstance, listSpecSnapshots, loadInstances, loadSpec, resetToSeed, rollbackSpec, saveSpec, upsertInstance,
 } from './ontology-store'
 import { fiboPackApplied, fiboPackSummary, mergeFiboPack } from './ontology-fibo'
+import { ingestFiboDemo } from './ontology-fibo-instances'
+import { fiboOpsSnapshot } from './ontology-fibo-ops'
+import { redactInstancesForRole } from './ontology-field-policy'
 import { ingestFromKanban, kanbanSourceOverview } from './ontology-ingest'
 import { ensureOntologyWatcher, ingestSingleTask, startOntologyWatchIfEnabled } from './ontology-watch'
 import { registerOntologyAgentBridgeRoutes } from './ontology-agent-bridge'
@@ -90,7 +93,17 @@ router.put('/spec', (ctx) => {
 router.get('/instances', (ctx) => {
   const type = typeof ctx.query.type === 'string' && ctx.query.type ? ctx.query.type : ''
   const all = loadInstances()
-  ctx.body = { ok: true, instances: type ? all.filter((i) => i.type === type) : all, total: all.length }
+  // P3-2 字段级脱敏试点：Account.accountNumber / Payer.partyRef 仅管理角色可见。
+  const role = (ctx.state as { user?: { role?: string } } | undefined)?.user?.role
+  const filtered = type ? all.filter((i) => i.type === type) : all
+  const { instances: visible, redacted, fields } = redactInstancesForRole(filtered, role)
+  ctx.body = {
+    ok: true,
+    instances: visible,
+    total: all.length,
+    redacted,
+    redactedFields: fields,
+  }
 })
 
 router.post('/instances', (ctx) => {
@@ -302,6 +315,26 @@ router.post('/fibo/import', (ctx) => {
     snapshot: r.snapshot,
     violations: r.violations.filter((v) => v.severity !== 'error'),
   }
+})
+
+/** 运营快照（只读）：报告证据、术语表/映射/域目录计数、版本锁、门禁与脱敏试点。 */
+router.get('/fibo/ops', (ctx) => {
+  ctx.body = { ok: true, ops: fiboOpsSnapshot(loadSpec(), loadInstances()) }
+})
+
+/**
+ * 支付样例实例摄取：未导入包则先增量导入；批次全量校验 error=0 才按 `fibo:`
+ * 前缀替换写入。重复执行幂等；error 整批不写（不写半套）。
+ */
+router.post('/fibo/ingest-demo', (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const r = ingestFiboDemo()
+  if (!r.ok) {
+    ctx.status = 422
+    ctx.body = { ok: false, detail: r.detail ?? '支付样例未写入', ...r }
+    return
+  }
+  ctx.body = { ok: true, ...r }
 })
 
 export const ontologyRoutes = router

@@ -47,9 +47,9 @@ describe('GET /api/ontology/agent-bridge/fibo', () => {
     const j1 = await r1.json() as any
     expect(j1.ok).toBe(true)
     expect(j1.source.release).toBe('master_2026Q3')
-    expect(j1.coverage.concepts).toBe(36)
+    expect(j1.coverage.concepts).toBe(37)
     expect(j1.coverage.applied).toBe(0)
-    expect(j1.coverage.fibo).toBe(32)
+    expect(j1.coverage.fibo).toBe(33)
     expect(j1.coverage.commons).toBe(2)
     expect(j1.coverage.localExtensions).toBe(2)
     expect(j1.hits).toEqual([])
@@ -74,7 +74,7 @@ describe('GET /api/ontology/agent-bridge/fibo', () => {
     await startBridge()
     const r = await fetch(`${base}/api/ontology/agent-bridge/fibo?q=Settlement`)
     const j = await r.json() as any
-    expect(j.coverage.applied).toBe(36)
+    expect(j.coverage.applied).toBe(37)
     const settlement = j.hits.find((h: any) => h.id === 'Settlement')
     expect(settlement).toBeTruthy()
     expect(settlement.applied).toBe(true)
@@ -88,5 +88,40 @@ describe('GET /api/ontology/agent-bridge/fibo', () => {
     expect(r1.status).toBe(401)
     const r2 = await fetch(`${base}/api/ontology/agent-bridge/fibo`, { headers: { 'x-ontology-bridge-token': 'secret' } })
     expect(r2.status).toBe(200)
+  })
+
+  it('P1/P3/P4 只读端点：证据/术语表/映射/域目录/运营快照', async () => {
+    await startBridge()
+    const get = async (p: string) => (await fetch(`${base}/api/ontology/agent-bridge/fibo/${p}`)).json() as Promise<any>
+
+    const ev = await get('evidence')
+    expect(ev.ok).toBe(true)
+    expect(ev.evidence.coverage.total).toBe(37)
+    expect(ev.evidence.markdown).toContain('FIBO 覆盖')
+    expect(ev.evidence.lock.ok).toBe(true)
+
+    const gl = await get('glossary')
+    expect(gl.glossary.counts.terms).toBe(37)
+    expect(gl.glossary.entries.find((e: any) => e.id === 'Capture')?.origin).toBe('local-extension')
+
+    const mp = await get('mappings')
+    expect(mp.mappings.counts.total).toBe(37)
+    expect(mp.mappings.counts.mapped).toBeGreaterThanOrEqual(15)
+
+    const dm = await get('domains')
+    expect(dm.domains).toHaveLength(3)
+    expect(dm.domains.map((d: any) => d.id)).toEqual(['SEC', 'DER', 'LOAN'])
+    expect(dm.domains.flatMap((d: any) => d.concepts)).toHaveLength(18)
+
+    const ops = await get('ops')
+    expect(ops.ops.domains.concepts).toBe(18)
+    expect(ops.ops.permissions.policies).toBe(2)
+    expect(ops.ops.gate.concepts).toBe(37)
+  })
+
+  it('令牌闸覆盖新增只读端点', async () => {
+    await startBridge({ ONTOLOGY_BRIDGE_TOKEN: 'secret' })
+    expect((await fetch(`${base}/api/ontology/agent-bridge/fibo/ops`)).status).toBe(401)
+    expect((await fetch(`${base}/api/ontology/agent-bridge/fibo/ops`, { headers: { 'x-ontology-bridge-token': 'secret' } })).status).toBe(200)
   })
 })
