@@ -150,6 +150,10 @@ vi.mock('../utils/toast', () => ({ showToast: vi.fn() }))
 
 import { estimateCostUsd, findModelPrice, isSubscriptionProvider } from '../utils/modelPricing'
 import IdeCliSessions from '../components/IdeCliSessions.vue'
+import { __zcodeCliUsageTestHooks } from '../composables/useZcodeCliUsage'
+
+// 用量单例是模块级状态——每用例复位，防跨用例泄漏（loaded 短路会让断言失真）
+beforeEach(() => { __zcodeCliUsageTestHooks.resetUsageForTest() })
 
 describe('价目补录（2026-10-21 models.dev 第一方锚）', () => {
   it('GLM-5.3 家族与 deepseek-flash 已收录；旧未收录回归锚不动', () => {
@@ -252,7 +256,7 @@ describe('IdeCliSessions — S1 注入模式徽章回归 + Phase2 趋势/构成'
     expect(zcContextMock).toHaveBeenCalledWith('sess_a1')
     const trend = w.find('[data-testid="ide-cli-trend-sess_a1"]')
     expect(trend.exists()).toBe(true)
-    expect(trend.findAll('.ide-cli-sessions__tbar').length).toBe(3)
+    expect(trend.findAll('.ide-cli-bill__tbar').length).toBe(3)
     const ctx = w.find('[data-testid="ide-cli-ctx-sess_a1"]')
     expect(ctx.text()).toContain('构成合计')
     expect(ctx.text()).toContain('用户消息')
