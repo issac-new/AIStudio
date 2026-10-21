@@ -11,10 +11,29 @@ import { verifyApprovalChain } from '../approvals/approval-log'
 import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
 import { collectGovernancePosture } from '../governance/posture'
 import { collectProcessScan } from '../clusterinspector/process-scan'
+import { scanRepoDangerousApi, scanRepoDeps, scanRepoSecrets } from './repo-scan'
+import { resolve } from 'node:path'
 import type { AutoEvidence } from './coverage'
 
-export async function collectAutoEvidence(): Promise<AutoEvidence> {
+export async function collectAutoEvidence(opts: { repoRoot?: string } = {}): Promise<AutoEvidence> {
   const out: AutoEvidence = {}
+  // 代码仓审计面（批次 D）：缺省审计本 overlay 仓；调用方可指任意目标仓。
+  const repoRoot = opts.repoRoot ?? resolve(import.meta.dirname, '../../../..')
+  try {
+    out.repo_secrets = scanRepoSecrets(repoRoot)
+  } catch (e) {
+    out.repo_secrets = { count: 0, summary: `仓库密钥扫描失败：${(e as Error).message.slice(0, 120)}` }
+  }
+  try {
+    out.repo_deps = scanRepoDeps(repoRoot)
+  } catch (e) {
+    out.repo_deps = { count: 0, summary: `仓库依赖面失败：${(e as Error).message.slice(0, 120)}` }
+  }
+  try {
+    out.repo_dangerous_api = scanRepoDangerousApi(repoRoot)
+  } catch (e) {
+    out.repo_dangerous_api = { count: 0, summary: `仓库危险 API 扫描失败：${(e as Error).message.slice(0, 120)}` }
+  }
   try {
     const r = mcpSecurityReport()
     out.mcp = {

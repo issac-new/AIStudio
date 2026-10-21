@@ -18,6 +18,11 @@ export const SURFACE_CATALOG: SurfaceDefinition[] = [
   { class: 'agents', name: 'Agent 与影子进程', focus: '未注册 profile、孤儿进程、越权 profile 复用', manual: false, collector: 'agents' },
   { class: 'availability', name: '资源与可用性', focus: '资源耗尽（token 预算/并发/磁盘）、看门狗失效、熔断缺口', manual: true },
   { class: 'human_review', name: '人工评审与治理', focus: '审批绑定提交、自证漏洞、熔断与回滚、夜间扫描覆盖', manual: false, collector: 'review' },
+  // 代码仓审计面（批次 D）：审计对象=目标仓 repoRoot（缺省本 overlay 仓）——
+  // 吸收 Cloudflare 的纪律而非工具：以确定性采集器打底，深度狩猎仍靠人工/agent。
+  { class: 'repo_secrets', name: '仓库密钥形态', focus: '源码/配置内嵌密钥（AKIA/sk-/ghp_/PEM 私钥/令牌字面量）', manual: false, collector: 'repo_secrets' },
+  { class: 'repo_deps', name: '仓库依赖声明', focus: '直接依赖/lockfile 存在性；漏洞判定走在线门 sast-audit', manual: false, collector: 'repo_deps' },
+  { class: 'repo_dangerous_api', name: '仓库危险 API', focus: 'eval/new Function/exec 模板拼接/innerHTML 赋值', manual: false, collector: 'repo_dangerous_api' },
 ]
 
 export function surfaceDefinition(cls: SurfaceClass): SurfaceDefinition | undefined {
