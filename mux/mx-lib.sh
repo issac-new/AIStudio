@@ -1387,6 +1387,20 @@ m = cfg.get("model") or {}
 url = (m.get("base_url") or "").rstrip("/")
 key = m.get("api_key") or ""
 name = m.get("default") or ""
+# provider 间接引用（2026-10-21 实锤修复）：宿主快照 0.22.x 新格式的 base_url/api_key
+# 不内联在 model: 下，而是 model.provider: custom:<名> → custom_providers[] 里解析；
+# 归一（mx-setup 4b）后 SIM 全量此形态。旧内联格式仍兼容（两态都认）。
+# api_key=PROXY_MANAGED：cc-switch 本地代理接管鉴权，探针照发即通。
+if not url:
+    prov = (m.get("provider") or "").strip()
+    if prov.startswith("custom:"):
+        pname = prov[len("custom:"):]
+        for p in (cfg.get("custom_providers") or []):
+            if isinstance(p, dict) and p.get("name") == pname:
+                url = (p.get("base_url") or "").rstrip("/")
+                key = key or (p.get("api_key") or "")
+                name = name or (p.get("model") or "")
+                break
 if not url or not name:
     print("unreachable"); raise SystemExit
 # 通道模式对齐（2026-10-01 run6 实锤）：sim agent 实际按 anthropic_messages 格式调
