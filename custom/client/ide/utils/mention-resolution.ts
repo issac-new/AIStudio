@@ -8,7 +8,9 @@
 // 约定式通道，代理按仓库 AGENTS.md 受管块处理（与 @file 字面量先例一致）。
 // 2026-10-10 本体轮：+ontology 第八源（@ontology:实体类型 / @ontology 本体总览）
 // ——代理按本体工作台（/app/ontology）的语义约束作答（Domain/Range/公理可查）。
-export type MentionKind = 'file' | 'session' | 'skill' | 'plugin' | 'subagent' | 'whiteboard' | 'agent' | 'squad' | 'wiki' | 'ontology'
+// 2026-10-21 FIBO 产品落地：+fibo 第九源（@fibo:Payment / @fibo:SettlementEvent）
+// ——代理经 /api/ontology/agent-bridge/fibo 取真实 IRI、英文原定义与模块版本。
+export type MentionKind = 'file' | 'session' | 'skill' | 'plugin' | 'subagent' | 'whiteboard' | 'agent' | 'squad' | 'wiki' | 'ontology' | 'fibo'
 
 export interface MentionRef {
   raw: string
@@ -18,7 +20,7 @@ export interface MentionRef {
   resolved: boolean
 }
 
-/** 前缀→kind 映射（zcode 六源 + 派单 + wiki 第七源）。 */
+/** 前缀→kind 映射（zcode 六源 + 派单 + wiki 第七源 + ontology 第八源 + fibo 第九源）。 */
 const PREFIX_KIND: Record<string, MentionKind> = {
   file: 'file', f: 'file',
   session: 'session', sess: 'session',
@@ -29,6 +31,7 @@ const PREFIX_KIND: Record<string, MentionKind> = {
   squad: 'squad',
   wiki: 'wiki',
   ontology: 'ontology',
+  fibo: 'fibo',
 }
 
 /** @ 引用统一解析（前缀形式 @kind:target 或 @kind/target；裸 @word=派单 agent）。 */

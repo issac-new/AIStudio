@@ -46,4 +46,15 @@ describe('@提及统一解析（六源+派单合并口径）', () => {
     expect(mentionSummary(refs).sixSource).toBe(2)
     expect(mentionSummary(refs).dispatch).toBe(0)
   })
+
+  // 2026-10-21 FIBO 产品落地：@fibo 第九源（代理经 agent 桥查真实 IRI/定义/模块版本）
+  it('@fibo 前缀解析为 fibo kind（术语名），计入引用源汇总', () => {
+    const refs = resolveMentions('@fibo:Payment @fibo/SettlementEvent')
+    expect(refs.map((r) => [r.kind, r.target])).toEqual([
+      ['fibo', 'Payment'], ['fibo', 'SettlementEvent'],
+    ])
+    expect(refs.every((r) => r.resolved)).toBe(true)
+    expect(mentionSummary(refs).sixSource).toBe(2)
+    expect(mentionSummary(refs).dispatch).toBe(0)
+  })
 })

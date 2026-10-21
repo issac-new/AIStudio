@@ -168,8 +168,8 @@ describe('FIBO 对齐包', () => {
   it('GET /fibo 返回真实 IRI 目录与已导入计数', async () => {
     const r = await call('GET', '/fibo')
     expect(r.status).toBe(200)
-    expect(r.json.pack.counts.concepts).toBe(36)
-    expect(r.json.pack.counts.fibo).toBe(32)
+    expect(r.json.pack.counts.concepts).toBe(37)
+    expect(r.json.pack.counts.fibo).toBe(33)
     expect(r.json.pack.counts.commons).toBe(2)
     expect(r.json.pack.counts.localExtensions).toBe(2)
     expect(r.json.pack.concepts.some((c: any) => c.iri.startsWith('https://spec.edmcouncil.org/fibo/ontology/'))).toBe(true)
@@ -181,8 +181,8 @@ describe('FIBO 对齐包', () => {
     const before = (await call('GET', '/spec')).json.spec
     const i1 = await call('POST', '/fibo/import', {})
     expect(i1.status).toBe(200)
-    expect(i1.json.added.types).toBe(36)
-    expect(i1.json.applied.concepts).toBe(36)
+    expect(i1.json.added.types).toBe(37)
+    expect(i1.json.applied.concepts).toBe(37)
     const after = (await call('GET', '/spec')).json.spec
     expect(after.version).toBe(before.version + 1)
     expect(after.entityTypes.some((t: any) => t.id === 'Payment'
@@ -192,5 +192,40 @@ describe('FIBO 对齐包', () => {
     const i2 = await call('POST', '/fibo/import', {})
     expect(i2.status).toBe(200)
     expect(i2.json.added).toEqual({ types: 0, objectProperties: 0, axioms: 0 })
+  })
+})
+
+describe('FIBO P1/P2/P4 产品面', () => {
+  it('GET /fibo/ops 返回锁/覆盖/映射/术语/域/门禁/权限计数', async () => {
+    const r = await call('GET', '/fibo/ops')
+    expect(r.status).toBe(200)
+    expect(r.json.ok).toBe(true)
+    expect(r.json.ops.evidence.coverage.total).toBe(37)
+    expect(r.json.ops.mappings.total).toBe(37)
+    expect(r.json.ops.glossary.terms).toBe(37)
+    expect(r.json.ops.domains.domains).toBe(3)
+    expect(r.json.ops.lock.ok).toBe(true)
+    expect(r.json.ops.gate.concepts).toBe(37)
+    expect(r.json.ops.permissions.policies).toBe(2)
+  })
+
+  it('POST /fibo/ingest-demo 自动导入包 + 20 实例 + 幂等', async () => {
+    const r1 = await call('POST', '/fibo/ingest-demo', {})
+    expect(r1.status).toBe(200)
+    expect(r1.json.ok).toBe(true)
+    expect(r1.json.importedPack).toBe(true)
+    expect(r1.json.typesAdded).toBe(37)
+    expect(r1.json.instances).toBe(20)
+    expect(r1.json.applied.concepts).toBe(37)
+    expect(r1.json.summary.error).toBe(0)
+
+    const accounts = await call('GET', '/instances?type=Account')
+    expect(accounts.json.instances).toHaveLength(1)
+    expect(accounts.json.instances[0].data.accountNumber).toBe('ACC-1')
+
+    const r2 = await call('POST', '/fibo/ingest-demo', {})
+    expect(r2.status).toBe(200)
+    expect(r2.json.importedPack).toBe(false)
+    expect(r2.json.instances).toBe(20)
   })
 })
