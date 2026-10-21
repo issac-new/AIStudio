@@ -7,8 +7,13 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'zh' } }) }))
+const { flowMount } = vi.hoisted(() => ({ flowMount: vi.fn() }))
 vi.mock('@vue-flow/core', () => ({
-  VueFlow: { name: 'VueFlow', props: ['nodes', 'edges', 'fitViewOnInit', 'zoomOnScroll', 'panOnScroll'], template: '<div class="vue-flow-stub" />' },
+  VueFlow: {
+    name: 'VueFlow', props: ['nodes', 'edges', 'defaultViewport', 'minZoom', 'zoomOnScroll', 'panOnScroll'],
+    mounted() { flowMount() },
+    template: '<div class="vue-flow-stub" />',
+  },
 }))
 vi.mock('@/custom/ontology/api', () => ({
   ontologyApi: {
@@ -175,5 +180,80 @@ describe('OntologyView 冒烟', () => {
     await flushPromises()
     expect(apiMocks.importFibo).toHaveBeenCalled()
     expect(w.find('[data-testid="ontology-fibo-result"]').text()).toContain('37')
+  })
+
+  it('FIBO 官方参照：域成熟度、场景切换、文字关系与固定源码链接', async () => {
+    apiMocks.getFiboPack.mockResolvedValue({
+      ok: true,
+      pack: {
+        id: 'fibo-finance', label: 'FIBO 金融域本体对齐包', namespace: 'https://swarm.studio/ns/fibo-alignment#',
+        source: {
+          repo: 'https://github.com/edmcouncil/fibo', release: 'master_2026Q3',
+          commit: '2d73435a4419b66b7c9f44cb9763e35fe8ac7890', releasedAt: '2026-10-20',
+          retrievedAt: '2026-10-21', license: 'MIT', viewer: '', spec: '',
+        },
+        counts: { concepts: 1, fibo: 1, commons: 0, localExtensions: 0, objectProperties: 0, axioms: 0 },
+        modules: [],
+        concepts: [{
+          id: 'Payment', label: 'payment', labelZh: '支付', definitionZh: '支付', definitionEn: 'payment',
+          iri: 'https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/Payment',
+          sourceUrl: 'https://github.com/edmcouncil/fibo/blob/master_2026Q3/FND/ProductsAndServices/PaymentsAndSchedules.rdf',
+          origin: 'fibo', module: 'FND/ProductsAndServices/PaymentsAndSchedules', maturity: 'Release', category: '支付与金额',
+        }],
+        objectProperties: [],
+        reference: {
+          domains: [{
+            code: 'MD', nameEn: 'Market Data', nameZh: '市场数据', summaryEn: 'Market data', summaryZh: '市场数据',
+            modules: ['DebtTemporal'], maturityNote: '仍为 Provisional', maturityNoteEn: 'Still Provisional',
+            sourceUrl: 'https://github.com/edmcouncil/fibo/blob/master_2026Q3/MD/MetadataMD.rdf#L34-L36',
+          }],
+          scenarios: [
+            {
+              id: 'apple-listed-share', titleEn: 'Apple', titleZh: 'Apple 股票', summaryEn: 'Apple', summaryZh: 'Apple 示例',
+              domains: ['SEC', 'EXMP'],
+              nodes: [
+                { id: 'AppleIncCommonStock', labelZh: 'Apple 股票', kind: 'individual', domain: 'EXMP', level: 0 },
+                { id: 'AppleIncEquityIssuer', labelZh: '发行角色', kind: 'individual', domain: 'EXMP', level: 1 },
+              ],
+              edges: [{
+                source: 'AppleIncCommonStock', target: 'AppleIncEquityIssuer', property: 'fnd-rel:isIssuedBy',
+                labelEn: 'is issued by', labelZh: '发行方',
+                sourceUrl: 'https://github.com/edmcouncil/fibo/blob/master_2026Q3/EXMP/Securities/EquitiesExamples.rdf#L191-L210',
+              }],
+              facts: [{ textEn: 'Fact', textZh: '事实', sourceUrl: 'https://github.com/edmcouncil/fibo/blob/master_2026Q3/EXMP/Securities/EquitiesExamples.rdf#L191-L210' }],
+            },
+            {
+              id: 'mortgage-security-agreement', titleEn: 'Mortgage', titleZh: 'Mortgage 区分', summaryEn: 'Mortgage', summaryZh: '担保协议',
+              domains: ['LOAN'],
+              nodes: [
+                { id: 'Mortgage', labelZh: 'Mortgage', kind: 'class', domain: 'LOAN', level: 0 },
+                { id: 'SecurityAgreement', labelZh: '担保协议', kind: 'class', domain: 'FBC', level: 1 },
+              ],
+              edges: [{
+                source: 'Mortgage', target: 'SecurityAgreement', property: 'rdfs:subClassOf', labelEn: 'subclass', labelZh: '子类',
+                sourceUrl: 'https://github.com/edmcouncil/fibo/blob/master_2026Q3/LOAN/RealEstateLoans/Mortgages.rdf#L126-L137',
+              }],
+              facts: [{ textEn: 'Schema', textZh: 'Schema', sourceUrl: 'https://github.com/edmcouncil/fibo/blob/master_2026Q3/LOAN/RealEstateLoans/Mortgages.rdf#L126-L137' }],
+            },
+          ],
+        },
+      },
+      applied: { concepts: 0, total: 1, applied: [] },
+    })
+    const w = mountView()
+    await flushPromises()
+    await w.find('[data-testid="onto-tab-fibo"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="ontology-fibo-domain-MD"]').text()).toContain('Provisional')
+    expect(w.find('[data-testid="ontology-fibo-concept-source-Payment"]').attributes('href')).toContain('/master_2026Q3/')
+    expect(w.find('[data-testid="ontology-fibo-relations"]').text()).toContain('fnd-rel:isIssuedBy')
+    expect(w.find('[data-testid="ontology-fibo-edge-source-0"]').attributes('href')).toContain('EquitiesExamples.rdf')
+    await w.find('[data-testid="ontology-fibo-scenario-mortgage-security-agreement"]').trigger('click')
+    expect(w.find('[data-testid="ontology-fibo-relations"]').text()).toContain('rdfs:subClassOf')
+    expect(w.find('[data-testid="ontology-fibo-relations"]').text()).not.toContain('fnd-rel:isIssuedBy')
+    expect(flowMount).toHaveBeenCalledTimes(2)
+    const flow = w.findComponent({ name: 'VueFlow' })
+    expect(flow.props('defaultViewport')).toEqual({ x: 10, y: 12, zoom: 0.65 })
+    expect(flow.props('minZoom')).toBe(0.15)
   })
 })

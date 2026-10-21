@@ -74,20 +74,38 @@ export interface ValidateResponse { ok: boolean; persisted: boolean; count: numb
 /** FIBO 对齐包（服务端 ontology-fibo.ts 的只读投影）。 */
 export interface FiboPackConceptRow {
   id: string; label: string; labelZh: string; definitionZh: string; definitionEn: string
-  iri: string; origin: OriginKind; module?: string; versionIri?: string; maturity?: string
+  iri: string; sourceUrl?: string; origin: OriginKind; module?: string; versionIri?: string; maturity?: string
   parent?: string; category: string; note?: string
 }
 export interface FiboPackPropertyRow {
   id: string; label: string; labelZh: string; iri: string; origin: OriginKind; module?: string
   domain: string[]; range: string[]; cardinality?: { min?: number; max?: number }
 }
+export interface FiboDomain {
+  code: string; nameEn: string; nameZh: string; summaryEn: string; summaryZh: string
+  modules: string[]; maturityNote?: string; maturityNoteEn?: string; sourceUrl: string
+}
+export interface FiboScenarioNode {
+  id: string; labelZh: string; kind: 'class' | 'individual'; domain: string; level: number; typeLabel?: string
+}
+export interface FiboScenarioEdge {
+  source: string; target: string; property: string; labelEn: string; labelZh: string; sourceUrl: string
+}
+export interface FiboScenarioFact { textEn: string; textZh: string; sourceUrl: string }
+export interface FiboScenario {
+  id: string; titleEn: string; titleZh: string; summaryEn: string; summaryZh: string; domains: string[]
+  nodes: FiboScenarioNode[]; edges: FiboScenarioEdge[]; facts: FiboScenarioFact[]
+  caveat?: string; caveatEn?: string
+}
+export interface FiboReference { domains: FiboDomain[]; scenarios: FiboScenario[] }
 export interface FiboPackSummary {
   id: string; label: string; namespace: string
-  source: { repo: string; release: string; releasedAt: string; retrievedAt: string; license: string; viewer: string; spec: string }
+  source: { repo: string; release: string; commit: string; releasedAt: string; retrievedAt: string; license: string; viewer: string; spec: string }
   counts: { concepts: number; fibo: number; commons: number; localExtensions: number; objectProperties: number; axioms: number }
   modules: Array<{ path: string; versionIri: string; maturity?: string }>
   concepts: FiboPackConceptRow[]
   objectProperties: FiboPackPropertyRow[]
+  reference: FiboReference
 }
 export interface FiboApplied { concepts: number; total: number; applied: string[] }
 export interface FiboPackResponse { ok: boolean; pack: FiboPackSummary; applied: FiboApplied }

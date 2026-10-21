@@ -179,11 +179,11 @@ describe('v12 统一视图单测（双视图）', () => {
     expect(ideShell).toContain('<IaColumnControls')
     expect(ideShell).toContain('testid="ide-col-sidebar"')
     expect(ideShell).toContain('testid="ide-col-chat"')
-    // standalone 精简壳 / Esc 收管理台 / 合并回流监听；
+    // standalone 精简壳 / 合并回流监听；治理面收口后 Esc 不再有壳级专属分支；
     // v12.3 页级 max=1 最大化与最小化 dock 通道退役（单测防回潮）
     expect(shell).toContain('IaPopoutBar v-if="isStandalone"')
     expect(shell).toContain('<IaGlobalTop v-else />')
-    expect(shell).toContain("event.key === 'Escape'")
+    expect(shell).not.toContain("event.key === 'Escape'")
     expect(shell).not.toContain('<IaMinimizedDock')
     expect(shell).not.toContain('isMaximized')
     expect(shell).not.toContain('ia-wm-restore-pill')
