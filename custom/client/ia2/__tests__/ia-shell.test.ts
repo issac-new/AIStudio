@@ -113,7 +113,6 @@ vi.mock('@/custom/ia2/components/AttentionStrip.vue', () => ({
 }))
 
 import IaShell from '../views/IaShell.vue'
-import { useFlowStore } from '../store/flow'
 import { __resetSharedArmForTest, __flushSharedArmDisposeForTest } from '../composables/useSharedArm'
 import { IA_AREAS } from '../routes'
 
@@ -277,14 +276,12 @@ describe('IaShell — 注意力条与⚙管理台（v12 Task 8）', () => {
     sitStubs.waitItems = []
   })
 
-  it('Esc 收管理台覆盖层（v12.3 max=1 退役：Esc 不再退页级最大化）', async () => {
+  it('治理面收口（2026-10-21）：壳不再挂 ⚙管理台覆盖层，Esc 不再有专属分支', async () => {
     const { wrapper } = await mountShell('/app')
-    const flow = useFlowStore()
-    flow.openGov()
+    expect(wrapper.find('[data-testid="gov-backdrop"]').exists()).toBe(false)
+    // Esc 按下不抛错、不改变壳
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     await flushPromises()
-    expect(flow.govOpen).toBe(false)
-    // 壳页头常驻（无页级最大化可退）
     expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(true)
   })
 })

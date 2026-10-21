@@ -34,14 +34,12 @@ describe('cockpit layout guards', () => {
     const attention = read('components/AttentionStrip.vue')
     const drawer = read('../kanban/components/KanbanTaskDrawer.vue')
     const tabs = read('views/stage/StageShell.vue')
-    const gov = read('components/gov/GovOverlay.vue')
     expect(attention).toContain('.ia-attn { position: relative;')
     expect(attention).toContain('right: 0; z-index: var(--ia-z-header-panel);')
     expect(drawer).toContain('position: sticky;')
     expect(drawer).not.toContain('width: 720px;')
     expect(tabs).toContain("data-testid=\"stage-tabs-scroll\"")
     expect(tabs).toContain('.stg__tabs--end::after { display: none; }')
-    expect(gov).toContain('@media (max-width: 900px)')
   })
 
   it('IDE 归档组有内滚上限，不再画穿侧栏', () => {

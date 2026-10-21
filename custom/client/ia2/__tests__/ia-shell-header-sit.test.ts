@@ -160,7 +160,6 @@ vi.mock('@/components/layout/ThemeSwitch.vue', () => ({ default: { name: 'ThemeS
 vi.mock('../components/IaLocaleToggle.vue', () => ({ default: { name: 'IaLocaleToggle', template: '<span class="locale-stub" />' } }))
 
 import IaShellHeader from '../components/IaShellHeader.vue'
-import { useFlowStore } from '../store/flow'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -194,16 +193,15 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () =
     w.unmount()
   })
 
-  it('v12.4 评审门进待决策区：tasks 面板含 gate 行，行内按钮进评审区（flow.openGov review）', async () => {
+  it('v12.4 评审门进待决策区：tasks 面板含 gate 行，行内按钮直达⑥评审治理（2026-10-21 治理面收口）', async () => {
     const w = await mountHeader()
     await w.find('[data-testid="sit-tasks"]').trigger('click')
     await flushPromises()
     const panel = w.find('[data-testid="sitp-decide"]')
     expect(panel.text()).toContain('CASE-7 · G2')
+    pushMock.mockClear()
     await w.find('[data-testid="sitp-decide-gate-open"]').trigger('click')
-    const flow = useFlowStore()
-    expect(flow.govOpen).toBe(true)
-    expect(flow.govSection).toBe('review')
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.stage6', query: { tab: 'reviewGov' } })
     w.unmount()
   })
 
@@ -292,11 +290,10 @@ describe('IaShellHeader — 态势 chips + 内联面板（v12.4 收窄）', () =
     await search.setValue('')
     await flushPromises()
     expect(w.find('[data-testid="sitp-board-b:swarm"]').exists()).toBe(true)
-    // 管理台开 people 区
+    // 管理台 people 区收口（2026-10-21）：直达①搭建·组织页签
+    pushMock.mockClear()
     await w.find('[data-testid="sitp-open-gov"]').trigger('click')
-    const flow = useFlowStore()
-    expect(flow.govOpen).toBe(true)
-    expect(flow.govSection).toBe('people')
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.stage1', query: { tab: 'org' } })
     w.unmount()
   })
 })

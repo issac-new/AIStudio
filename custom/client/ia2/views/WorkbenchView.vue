@@ -466,8 +466,8 @@ function onCanvasOpenTask(taskId: string): void {
 }
 
 function onCanvasInvite(): void {
-  const sel = activeSel.value
-  if (sel) flow.openGov('session', sel.kind === 'loop' ? undefined : sel.id)
+  // 治理面收口（2026-10-21）：会话详情唯一归属=历史会话页（⚙会话区退役）
+  void router.push({ name: 'ia2.collabHistory' })
 }
 
 // ── 中栏 · 循环观测落点（V5 补遗⑤ M6：画布并入运行详情）──
@@ -589,7 +589,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         :loop-activity="loopActivity"
         @select="onSelect"
         @create-room="onCreateRoom"
-        @open-gov="flow.openGov()"
+        @open-gov="router.push({ name: 'ia2.board' })"
         @open-task="onNavOpenTask"
         @jump-ide="onNavJumpIde"
         @new-chat="onNewChat"
