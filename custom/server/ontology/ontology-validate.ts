@@ -15,13 +15,14 @@
  */
 import {
   type Axiom, type EntityType, type OntologyInstance, type OntologySpec, type Violation,
-  dataPropLocalName, entityIri, isValidNamespace, severityFromModality,
+  dataPropLocalName, entityIri, isValidIri, isValidNamespace, severityFromModality,
 } from './ontology-types'
 
 // ---- 模式层自检 ----
 
 const SPEC_CODES = {
   badNamespace: 'spec:bad-namespace',
+  badIri: 'spec:bad-iri',
   dupIri: 'spec:dup-iri',
   dupType: 'spec:dup-type',
   dupProp: 'spec:dup-prop',
@@ -45,23 +46,30 @@ export function validateSpec(spec: OntologySpec): Violation[] {
     v.push({ severity: 'error', code: SPEC_CODES.badNamespace, subject: 'namespace', detail: `namespace 须为以 # 或 / 结尾的 http(s) IRI，当前：${spec.namespace}` })
   }
 
-  // IRI 全局唯一：类型 / 对象属性 / 公理 / 数据属性（类名.属性名 扁平化）
+  // IRI 全局唯一：类型 / 对象属性 / 公理 / 数据属性（类名.属性名 扁平化）。
+  // 显式 IRI 优先（FIBO/Commons 对齐术语），缺省回落本工作台 namespace。
   const iris = new Map<string, string>()
-  const claim = (local: string, subject: string): void => {
-    const iri = entityIri(spec.namespace, local)
+  const claim = (iri: string, subject: string): void => {
     if (iris.has(iri)) v.push({ severity: 'error', code: SPEC_CODES.dupIri, subject, detail: `IRI 重复 ${iri}（已由 ${iris.get(iri)} 占用）` })
     else iris.set(iri, subject)
+  }
+  const claimWithExplicit = (explicit: string | undefined, fallbackLocal: string, subject: string): void => {
+    if (explicit !== undefined && !isValidIri(explicit)) {
+      v.push({ severity: 'error', code: SPEC_CODES.badIri, subject, detail: `显式 IRI 非法（须为无空白的绝对 http(s) IRI）：${explicit}` })
+      return
+    }
+    claim(explicit ?? entityIri(spec.namespace, fallbackLocal), subject)
   }
 
   for (const t of spec.entityTypes) {
     if (typeIds.has(t.id)) v.push({ severity: 'error', code: SPEC_CODES.dupType, subject: t.id, detail: `实体类型 id 重复：${t.id}` })
     typeIds.add(t.id)
-    claim(t.id, `entityType:${t.id}`)
+    claimWithExplicit(t.iri, t.id, `entityType:${t.id}`)
     const propSeen = new Set<string>()
     for (const p of t.dataProperties) {
       if (propSeen.has(p.id)) v.push({ severity: 'error', code: SPEC_CODES.dupProp, subject: `${t.id}.${p.id}`, detail: `数据属性 id 在类型 ${t.id} 内重复：${p.id}` })
       propSeen.add(p.id)
-      claim(dataPropLocalName(t.id, p.id), `dataProperty:${t.id}.${p.id}`)
+      claimWithExplicit(p.iri, dataPropLocalName(t.id, p.id), `dataProperty:${t.id}.${p.id}`)
     }
     if (t.key && !propSeen.has(t.key)) {
       v.push({ severity: 'error', code: SPEC_CODES.keyNotFound, subject: t.id, detail: `key 属性 "${t.key}" 不在 ${t.id}.dataProperties 中` })
@@ -70,7 +78,7 @@ export function validateSpec(spec: OntologySpec): Violation[] {
   for (const p of spec.objectProperties) {
     if (propIds.has(p.id)) v.push({ severity: 'error', code: SPEC_CODES.dupProp, subject: p.id, detail: `对象属性 id 重复：${p.id}` })
     propIds.add(p.id)
-    claim(p.id, `objectProperty:${p.id}`)
+    claimWithExplicit(p.iri, p.id, `objectProperty:${p.id}`)
   }
   const axiomIds = new Set<string>()
   for (const a of spec.axioms) {
