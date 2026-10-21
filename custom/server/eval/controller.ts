@@ -314,6 +314,7 @@ router.post('/runs', async (ctx) => {
       samples: rawSamples,
       target,
       crossValidate: body.crossValidate === true,
+      referenceLeakCheck: body.referenceLeakCheck === true,
       ...(typeof body.note === 'string' ? { note: body.note } : {}),
       actor: actorOf(ctx) ?? 'anonymous',
     },

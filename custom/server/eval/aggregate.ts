@@ -9,7 +9,7 @@
 import type { Attempt, EvalConfig, EvalRun, EvalSet, EvalTask, RunAggregates } from './types'
 import { loadEvalConfig } from './types'
 import { calibrationReport } from './calibration'
-import { byExceptionOf, byLinkOf, processMetricsOf, sixDimensionsOf } from './metrics'
+import { byExceptionOf, byLinkOf, processMetricsOf, sixDimensionsOf, trajectoryDisciplineOf } from './metrics'
 import { actionLinksOf } from './actions'
 import { pyramidOf } from './pyramid'
 import { evaluateReleaseGate, loadReleaseGateConfig } from './releaseGate'
@@ -112,6 +112,20 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
   // #6：校准报告标注本次是否多裁判交叉（judgeModels>1）。默认单裁判时显式提示未交叉验证。
   const judgeCount = loadEvalConfig().judgeModels.length
 
+  // OpenAI Evals 吸收轮：轨迹纪律（无工具调用证据时缺省）+ 判分稳定性（未检验时缺省）
+  const trajectoryDiscipline = trajectoryDisciplineOf(run.attempts)
+  let stabilityChecked = 0
+  let stabilityFlips = 0
+  for (const attempt of run.attempts) {
+    const leak = attempt.judgeMeta?.referenceLeak
+    if (!leak) continue
+    stabilityChecked += leak.checked
+    stabilityFlips += leak.flips
+  }
+  const judgeStability = stabilityChecked > 0
+    ? { checked: stabilityChecked, flips: stabilityFlips, flipRate: stabilityFlips / stabilityChecked }
+    : undefined
+
   run.aggregates = {
     taskCount,
     passAt1: passAt1Denom === 0 ? null : passAt1 / passAt1Denom,
@@ -139,6 +153,9 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     byLink: byLinkOf(set, run),
     byException: byExceptionOf(set, run),
     processMetrics: processMetricsOf(set, run),
+    // OpenAI Evals 吸收轮：轨迹纪律（死循环/冗余步）与判分稳定性，无证据时缺省
+    ...(trajectoryDiscipline ? { trajectoryDiscipline } : {}),
+    ...(judgeStability ? { judgeStability } : {}),
   }
 
   // 发布门禁（六维分面的 performance 读数复用其 P99/均值比，先算门禁再建分面）；
