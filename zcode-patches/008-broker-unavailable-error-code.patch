@@ -1,0 +1,23 @@
+diff --git a/packages/zcode-cua/broker.js b/packages/zcode-cua/broker.js
+--- a/packages/zcode-cua/broker.js
++++ b/packages/zcode-cua/broker.js
+@@ -180,8 +180,18 @@
+   const method = String(args?.method ?? "");
+   const timeoutMs = Number(args?.timeoutMs) > 0 ? Number(args.timeoutMs) : 20_000;
+   if (!socketPath || !method) throw new Error("socketPath and method are required");
+-  const socket = await connectOnce(socketPath, Math.min(timeoutMs, 5_000));
++  let socket;
+   try {
++    socket = await connectOnce(socketPath, Math.min(timeoutMs, 5_000));
++  } catch (error) {
++    // overlay 008：连接失败统一收口为 fail-closed 的 unavailable（上游 3.16.1
++    // placeholder 测试钉的语义），保留原始 errno 便于诊断。
++    throw new BrokerError(`Computer Use broker is unavailable: ${error?.message ?? error}`, {
++      code: "unavailable",
++      details: { cause: error?.code ?? null },
++    });
++  }
++  try {
+     return await new Promise((resolveCall, rejectCall) => {
+       let buffer = "";
+       const timer = setTimeout(() => {

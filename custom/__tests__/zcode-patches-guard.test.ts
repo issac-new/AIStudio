@@ -56,7 +56,10 @@ describe('zcode-patches 受管机制（R2 守门）', () => {
   it('注入态：zcode 树已应用 series 全部 patch（appsidebar 同模式，clean 后跑则 fail 提示注入）', () => {
     const tsupPath = resolve(ZCODE_ROOT, 'packages/zcode-server-cli/tsup.config.ts')
     if (!existsSync(tsupPath)) return // zcode 树不存在时跳过（未克隆环境）
-    const tsup = readFileSync(tsupPath, 'utf8')
-    expect(tsup, 'yazl external 缺失——zcode patch 001 未注入？先 npm run inject').toMatch(/"yazl",/)
+    // 001 已在 v3.16.1 基线轮退役（yazl 由上游原生外置），改用 003 的运行时产物作注入标记。
+    expect(
+      existsSync(resolve(ZCODE_ROOT, 'packages/zcode-cua/node-backend.js')),
+      'CUA 运行时缺失——zcode 补丁未注入？先 npm run inject',
+    ).toBe(true)
   })
 })

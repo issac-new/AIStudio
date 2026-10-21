@@ -1,5 +1,5 @@
 // overlay/custom/client/ide/utils/interface-mode.ts
-// 编程/工作双界面模式——zcode 3.15.1 同款语义（office/coding），呈现层降噪，
+// 编程/工作双界面模式——zcode 3.16.1 同款语义（office/coding；interfaceMode.ts 自 3.15.1 零 diff），呈现层降噪，
 // 不改引擎、协议与权限（锚点：upstream/zcode/packages/ui/src/lib/interfaceMode.ts:1-8；
 // App.tsx:997-998 隐藏终端/审查；ToolCallBlocks/renderers/execute-group.tsx:55 工具卡折叠；
 // shortcutCommands.ts:98 默认 CmdOrCtrl+Shift+u）。

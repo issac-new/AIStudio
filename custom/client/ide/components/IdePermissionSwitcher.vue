@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // IdePermissionSwitcher — ZCode 模式控件（2026-10-18 锚定校正轮重写）。
-// 上游锚=upstream/zcode v3.15.1 v4/composer/V4ComposerModeControls.tsx：
+// 上游锚=upstream/zcode v3.16.1 v4/composer/V4ComposerModeControls.tsx（3.15.1→3.16.1 仅标签动画/import 整理，语义不变）：
 // Plan 独立勾选项（planEnabled 与权限档正交，开启时触发器旁显示计划标记可 ✕ 撤）
 // + 权限三档单选（build 改动前询问 / guarded 自主模式 / yolo 完全访问，yolo 警示
 // 色、guarded 蓝）。数据面=utils/zcodeModes（zcode 形态存储 + 派生七档写旧键，
