@@ -4,12 +4,14 @@
 <script setup lang="ts">
 import PostureSection from '@/custom/governance/components/PostureSection.vue'
 import EmergencyStopSection from '@/custom/governance/components/EmergencyStopSection.vue'
+import McpSecuritySection from '@/custom/governance/components/McpSecuritySection.vue'
 </script>
 
 <template>
   <div class="gp" data-testid="gov-posture-view">
     <PostureSection />
     <EmergencyStopSection />
+    <McpSecuritySection />
   </div>
 </template>
 

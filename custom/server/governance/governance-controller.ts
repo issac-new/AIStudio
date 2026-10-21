@@ -764,6 +764,7 @@ router.get('/board-status', (ctx) => {
 
 // ── 声明式工具策略（2026-10-21 AGT 调研轮）：策略即代码 + 姿态 + lint ──
 import { loadPolicySnapshot, savePolicyDoc } from '../toolpolicy/policy-store'
+import { mcpSecurityReport } from '../mcpcatalog/mcp-security-scan'
 import { lintPolicyDoc, policyPosture, starterPolicyDoc, TOOL_POLICY_VERSION } from '../toolpolicy/tool-policy'
 import { queryPolicyDecisions } from '../toolpipeline/policy-decisions'
 
@@ -821,6 +822,11 @@ router.put('/tool-policies', (ctx) => {
     warnings: res.warnings,
     posture: policyPosture(snap, process.env.HERMES_TOOL_ENFORCE === '1'),
   }
+})
+
+// ── MCP 注册面安全扫描（2026-10-21 AGT 调研轮三）：只读形态扫描，与 mcp-drift 互补 ──
+router.get('/mcp-security-scan', (ctx) => {
+  ctx.body = { ok: true, ...mcpSecurityReport() }
 })
 
 export const governanceRoutes = router
