@@ -26,6 +26,20 @@ describe('FIBO 包元数据', () => {
     expect(FIBO_SOURCE.license).toBe('MIT')
   })
 
+  it('固定 release commit，并使用官方 FIBO OWL 页面', () => {
+    expect(FIBO_SOURCE.commit).toBe('2d73435a4419b66b7c9f44cb9763e35fe8ac7890')
+    expect(FIBO_SOURCE.spec).toBe('https://spec.edmcouncil.org/fibo/page/owl')
+  })
+
+  it('FIBO 概念逐条带固定 tag 的源码文件链接', () => {
+    for (const c of fiboPackSummary().concepts.filter((x) => x.origin === 'fibo')) {
+      expect(c.sourceUrl).toBe(`https://github.com/edmcouncil/fibo/blob/master_2026Q3/${c.module}.rdf`)
+    }
+    for (const c of fiboPackSummary().concepts.filter((x) => x.origin !== 'fibo')) {
+      expect(c.sourceUrl).toBeUndefined()
+    }
+  })
+
   it('概念/属性/公理计数与分档', () => {
     const pack = fiboPackSummary()
     expect(pack.counts.concepts).toBe(37)
@@ -180,5 +194,58 @@ describe('增量合并', () => {
     expect(r.spec).toBeUndefined()
     expect(r.collisions.some((c) => c.kind === 'type' && c.id === 'Payment')).toBe(true)
     expect(r.added).toEqual({ types: 0, objectProperties: 0, axioms: 0 })
+  })
+})
+
+describe('FIBO 官方参照目录', () => {
+  it('显示 12 个域，八个核心域完整且 MD 明示 Provisional', () => {
+    const domains = fiboPackSummary().reference.domains
+    expect(domains).toHaveLength(12)
+    expect(domains.map((d) => d.code)).toEqual(expect.arrayContaining([
+      'FND', 'BE', 'FBC', 'LOAN', 'SEC', 'DER', 'IND', 'MD',
+    ]))
+    const md = domains.find((d) => d.code === 'MD')
+    expect(md?.maturityNote).toContain('Provisional')
+    expect(md?.maturityNoteEn).toContain('Provisional')
+  })
+
+  it('域与场景来源全部固定 tag，场景关系端点闭合', () => {
+    const reference = fiboPackSummary().reference
+    const sourceUrls = [
+      ...reference.domains.map((d) => d.sourceUrl),
+      ...reference.scenarios.flatMap((s) => [
+        ...s.edges.map((e) => e.sourceUrl),
+        ...s.facts.map((f) => f.sourceUrl),
+      ]),
+    ]
+    expect(sourceUrls.length).toBeGreaterThan(20)
+    for (const url of sourceUrls) expect(url).toContain('/master_2026Q3/')
+    for (const scenario of reference.scenarios) {
+      const nodeIds = new Set(scenario.nodes.map((n) => n.id))
+      expect(nodeIds.size).toBe(scenario.nodes.length)
+      for (const node of scenario.nodes) expect(Number.isInteger(node.level) && node.level >= 0).toBe(true)
+      for (const edge of scenario.edges) {
+        expect(nodeIds.has(edge.source), `${scenario.id} source ${edge.source}`).toBe(true)
+        expect(nodeIds.has(edge.target), `${scenario.id} target ${edge.target}`).toBe(true)
+      }
+    }
+  })
+
+  it('四条场景保留官方 EXMP 或 Schema 的关键事实', () => {
+    const scenarios = fiboPackSummary().reference.scenarios
+    expect(scenarios.map((s) => s.id)).toEqual([
+      'apple-listed-share', 'djia-equity-index', 'fixed-float-ir-swap', 'mortgage-security-agreement',
+    ])
+    const apple = scenarios[0]
+    expect(apple.edges.some((e) => e.property === 'fnd-rel:isIssuedBy'
+      && e.source === 'AppleIncCommonStock' && e.target === 'AppleIncEquityIssuer')).toBe(true)
+    expect(apple.edges.some((e) => e.property === 'sec-lst:hasHomeExchange'
+      && e.target === 'Facility-XNAS')).toBe(true)
+    const swap = scenarios[2]
+    expect(swap.facts.map((f) => f.textZh).join(' ')).toContain('1.0579')
+    expect(swap.facts.map((f) => f.textZh).join(' ')).toContain('0.309')
+    expect(swap.facts.map((f) => f.textZh).join(' ')).toContain('1286805')
+    expect(swap.caveat).toContain('sample')
+    expect(scenarios[3].nodes.every((n) => n.kind === 'class')).toBe(true)
   })
 })

@@ -29,6 +29,7 @@ import {
   type OriginKind,
   type TermProvenance,
 } from './ontology-types'
+import { fiboReference, type FiboReference } from './ontology-fibo-reference'
 
 export const FIBO_PACK_ID = 'fibo-finance'
 export const FIBO_PACK_NAMESPACE = 'https://swarm.studio/ns/fibo-alignment#'
@@ -36,11 +37,12 @@ export const FIBO_PACK_NAMESPACE = 'https://swarm.studio/ns/fibo-alignment#'
 export const FIBO_SOURCE = {
   repo: 'https://github.com/edmcouncil/fibo',
   release: 'master_2026Q3',
+  commit: '2d73435a4419b66b7c9f44cb9763e35fe8ac7890',
   releasedAt: '2026-10-20',
   retrievedAt: '2026-10-21',
   license: 'MIT',
   viewer: 'https://spec.edmcouncil.org/fibo/ontology',
-  spec: 'https://www.omg.org/spec/EDMC-FIBO/',
+  spec: 'https://spec.edmcouncil.org/fibo/page/owl',
 } as const
 
 interface ModuleDef {
@@ -191,6 +193,11 @@ function conceptIri(c: ConceptDef): string {
   if (c.origin === 'local-extension') return `${FIBO_PACK_NAMESPACE}${c.id}`
   if (!c.module) throw new Error(`FIBO 概念 ${c.id} 缺少 module`)
   return `${FIBO_MODULES[c.module].base}${c.localName ?? c.id}`
+}
+
+function conceptSourceUrl(c: ConceptDef): string | undefined {
+  if (c.origin !== 'fibo' || !c.module) return undefined
+  return `${FIBO_SOURCE.repo}/blob/${FIBO_SOURCE.release}/${FIBO_MODULES[c.module].path}.rdf`
 }
 
 function conceptProvenance(c: ConceptDef): TermProvenance {
@@ -889,6 +896,7 @@ export interface FiboPackConceptRow {
   definitionZh: string
   definitionEn: string
   iri: string
+  sourceUrl?: string
   origin: OriginKind
   module?: string
   versionIri?: string
@@ -926,6 +934,7 @@ export interface FiboPackSummary {
   modules: Array<{ path: string; versionIri: string; maturity?: string }>
   concepts: FiboPackConceptRow[]
   objectProperties: FiboPackPropertyRow[]
+  reference: FiboReference
 }
 
 export function fiboPackSummary(): FiboPackSummary {
@@ -945,6 +954,7 @@ export function fiboPackSummary(): FiboPackSummary {
     modules: [...new Set([...CONCEPTS.map((c) => c.module), ...OBJECT_PROPS.map((p) => p.module)]
       .filter((k): k is ModuleKey => Boolean(k)))]
       .map((k) => ({ path: FIBO_MODULES[k].path, versionIri: FIBO_MODULES[k].versionIri, maturity: FIBO_MODULES[k].maturity })),
+    reference: fiboReference(FIBO_SOURCE.release),
     concepts: CONCEPTS.map((c) => {
       const prov = conceptProvenance(c)
       return {
@@ -954,6 +964,7 @@ export function fiboPackSummary(): FiboPackSummary {
         definitionZh: c.defZh,
         definitionEn: c.defEn,
         iri: conceptIri(c),
+        sourceUrl: conceptSourceUrl(c),
         origin: c.origin,
         module: prov.module,
         versionIri: prov.versionIri,

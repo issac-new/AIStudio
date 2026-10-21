@@ -174,6 +174,10 @@ describe('FIBO 对齐包', () => {
     expect(r.json.pack.counts.localExtensions).toBe(2)
     expect(r.json.pack.concepts.some((c: any) => c.iri.startsWith('https://spec.edmcouncil.org/fibo/ontology/'))).toBe(true)
     expect(r.json.pack.concepts.some((c: any) => c.id === 'Payment' && c.iri.includes('PaymentsAndSchedules'))).toBe(true)
+    expect(r.json.pack.source.commit).toBe('2d73435a4419b66b7c9f44cb9763e35fe8ac7890')
+    expect(r.json.pack.reference.domains).toHaveLength(12)
+    expect(r.json.pack.reference.scenarios.map((s: any) => s.id)).toContain('fixed-float-ir-swap')
+    expect(r.json.pack.concepts.find((c: any) => c.id === 'Payment').sourceUrl).toContain('/master_2026Q3/')
     expect(r.json.applied.concepts).toBe(0)
   })
 

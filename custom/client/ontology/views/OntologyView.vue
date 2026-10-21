@@ -16,6 +16,7 @@ import {
 } from '@/custom/ontology/api'
 import { ontologyMessages } from '@/custom/ontology/i18n'
 import ConstraintsPanel from '@/custom/ontology/components/ConstraintsPanel.vue'
+import FiboReferencePanel from '@/custom/ontology/components/FiboReferencePanel.vue'
 
 const i18nCtx = useI18n()
 const L = computed(() => {
@@ -420,6 +421,7 @@ function fmtBytes(b: number): string {
         <dl class="onto__meta">
           <dt>{{ L.fibo.source }}</dt><dd><a :href="fiboPack.source.repo" target="_blank" rel="noreferrer">{{ fiboPack.source.repo }}</a></dd>
           <dt>{{ L.fibo.release }}</dt><dd>{{ fiboPack.source.release }}（{{ fiboPack.source.releasedAt }}）</dd>
+          <dt>{{ L.fibo.commit }}</dt><dd><a :href="`${fiboPack.source.repo}/commit/${fiboPack.source.commit}`" target="_blank" rel="noreferrer"><code>{{ fiboPack.source.commit }}</code></a></dd>
           <dt>{{ L.fibo.retrievedAt }}</dt><dd>{{ fiboPack.source.retrievedAt }}</dd>
           <dt>{{ L.fibo.license }}</dt><dd>{{ fiboPack.source.license }}</dd>
         </dl>
@@ -440,12 +442,13 @@ function fmtBytes(b: number): string {
         <p class="onto__hint">{{ L.fibo.importNote }}</p>
         <p class="onto__hint onto__hint--warn">{{ L.fibo.localNote }}</p>
       </div>
+      <FiboReferencePanel v-if="fiboPack?.reference" :reference="fiboPack.reference" />
       <table v-if="fiboPack" class="onto-table" data-testid="ontology-fibo-table">
         <thead><tr><th>{{ L.fibo.concepts }}</th><th>{{ L.fibo.iri }}</th><th>{{ L.fibo.origin }}</th><th>{{ L.fibo.maturity }}</th><th>{{ L.fibo.definition }}</th></tr></thead>
         <tbody>
           <tr v-for="c in fiboConceptsShown" :key="c.id">
             <td><strong>{{ c.labelZh }}</strong><br><span class="onto-chip">{{ c.label }}</span><br><span class="onto-type__iri">{{ c.id }}</span></td>
-            <td><code class="onto-type__iri">{{ c.iri }}</code></td>
+            <td><code class="onto-type__iri">{{ c.iri }}</code><br><a v-if="c.sourceUrl" :href="c.sourceUrl" target="_blank" rel="noreferrer" :data-testid="`ontology-fibo-concept-source-${c.id}`">{{ L.fibo.sourceRdf }}</a></td>
             <td><span class="onto-sev onto-sev--info">{{ c.origin }}</span><br><span class="onto-type__iri">{{ c.module ?? '—' }}</span></td>
             <td>{{ c.maturity ?? '—' }}</td>
             <td>{{ c.definitionZh }}<br><span class="onto-type__en">{{ c.definitionEn || '—' }}</span></td>
