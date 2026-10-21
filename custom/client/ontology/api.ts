@@ -96,6 +96,36 @@ export interface FiboImportResponse {
   ok: boolean; added: FiboMergeCounts; skipped: FiboMergeCounts
   applied: FiboApplied; snapshot?: string | null; violations?: Violation[]
 }
+
+/** P1-P4 运营面镜像（服务端 ontology-fibo-* 模块的只读投影）。 */
+export interface FiboEvidenceDto {
+  generatedAt: string
+  source: { repo: string; release: string; releasedAt: string; retrievedAt: string; license: string; commit: string }
+  coverage: { applied: number; total: number; ratio: string; fibo: number; commons: number; localExtensions: number; imported: boolean }
+  health: Health
+  lock: {
+    ok: boolean; tag: string; commit: string; releasedAt: string; sourceMatches: boolean; moduleCount: number
+    drift: Array<{ module: string; expected: string; actual: string; reason: string }>
+  }
+  gate: { index: string; concepts: number; consistency: string; test: string }
+  markdown: string
+}
+export interface FiboGlossaryCounts { terms: number; aliased: number; reportTerms: number; mappedReportTerms: number }
+export interface FiboMappingCounts { total: number; mapped: number; unmapped: number }
+export interface FiboOpsDto {
+  generatedAt: string
+  evidence: FiboEvidenceDto
+  glossary: FiboGlossaryCounts
+  mappings: FiboMappingCounts
+  domains: { domains: number; concepts: number; ids: string[] }
+  lock: FiboEvidenceDto['lock']
+  gate: FiboEvidenceDto['gate']
+  permissions: { policies: number; fields: string[] }
+}
+export interface FiboDemoIngestDto {
+  ok: boolean; importedPack: boolean; typesAdded: number; instances: number
+  applied: FiboApplied; violations: Violation[]; summary: Health; detail?: string
+}
 /** 摄取结果（服务端 ontology-ingest IngestResult 镜像）。 */
 export interface IngestResultDto {
   ok: boolean
@@ -154,6 +184,10 @@ export const ontologyApi = {
   getFiboPack: () => req<FiboPackResponse>('/api/hermes/ontology/fibo'),
   /** 增量导入 FIBO 包：只加缺失项；同 id 不同 IRI 服务端 409 整批不写。 */
   importFibo: () => req<FiboImportResponse>('/api/hermes/ontology/fibo/import', { method: 'POST', body: '{}' }),
+  /** 运营快照：报告证据、术语表/映射/域目录计数、版本锁、门禁与脱敏试点。 */
+  getFiboOps: () => req<{ ok: boolean; ops: FiboOpsDto }>('/api/hermes/ontology/fibo/ops'),
+  /** 支付样例实例摄取（自动导入包；error 整批不写；重复执行幂等）。 */
+  ingestFiboDemo: () => req<FiboDemoIngestDto>('/api/hermes/ontology/fibo/ingest-demo', { method: 'POST', body: '{}' }),
 }
 
 // ---------- 约束卡（/api/constraints/*，2026-10-14 阿里调研轮 D） ----------

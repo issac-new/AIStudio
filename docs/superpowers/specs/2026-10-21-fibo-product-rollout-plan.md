@@ -7,7 +7,7 @@
 
 ## 结论
 
-FIBO 的数据层已经够用。下一步的价值不在继续扩包，而在三个产品消费面。治理面看到覆盖度，IDE 与 agent 能查术语，门禁与报告使用同一套 IRI。本方案分四阶段推进。P0 已在本分支落地，P1 到 P3 给出交付物、验收标准与依赖。
+FIBO 的数据层已经够用。下一步的价值不在继续扩包，而在三个产品消费面。治理面看到覆盖度，IDE 与 agent 能查术语，门禁与报告使用同一套 IRI。本方案分四阶段推进。P0 到 P4 已在本分支落地。
 
 P0 四项：治理语义体检的 FIBO 覆盖卡、agent 术语查询端点、IDE `@fibo` 提及、qgate 索引与 36 概念包的一致性守门。四项都不改 FIBO 页签与 `ontology-fibo.ts`，避开并行会话正在做的官方参照内容。
 
@@ -20,12 +20,13 @@ P0 四项：治理语义体检的 FIBO 覆盖卡、agent 术语查询端点、ID
 | IDE 提及 | P0 第九源 `@fibo:Payment` | 前端候选项与术语联想 | P0 已落地 |
 | agent 桥 | P0 `GET /api/ontology/agent-bridge/fibo` | 批量查询与缓存 | P0 已落地 |
 | qgate 语义门 | 18 概念索引，15 个 FIBO/Commons 锚点 | 与 36 概念包的一致性守门 | P0 已落地 |
-| 报告证据 | simharness 已有本体证据面 `ontology_html` | 缺 FIBO 覆盖段与发布版本 | P1 |
-| 术语表 | 报告词表 59 条 | 未映射 FIBO 概念 ID 与 IRI | P1 |
-| 数据源映射 | 看板摄取四类实体 | 缺 FIBO 概念到物理载体的注册表 | P1 |
-| 实例摄取 | 仅 T-Box | 支付流水实例未进入本体 | P2 |
-| 证券、衍生品、贷款域 | 未收录 | 三个域的本体包与场景 | P3 |
-| 属性级权限 | 流程级权限强、数据级缺位 | 角色 × 属性 × 可见性 | P3 |
+| 报告证据 | `GET /fibo/evidence` + markdown 已落地 | simharness 报告生成器消费待其仓另开 | P1 已落地 |
+| 术语表 | 36 概念术语表 + 5 条报告金融词条（2 关联/3 未映射） | 全量词表映射需逐条裁定 | P1 已落地 |
+| 数据源映射 | 36 行注册表（20 mapped/16 unmapped） | 未映射概念随场景落地再补 | P1 已落地 |
+| 实例摄取 | 支付样例 20 实例，校验零 error，幂等 | 真实 AIPay 产物接入需场景适配 | P2 已落地 |
+| 证券、衍生品、贷款域 | 只读域目录 18 概念，锚点已核验 | 可导入包待依赖闭包核验 | P3 已落地试点 |
+| 属性级权限 | 两字段试点：Account.accountNumber / Payer.partyRef | 扩展到更多角色与字段 | P3 已落地试点 |
+| 运营化 | ops 快照、治理卡运营条、漂移脚本、导出 CLI、运营手册 | 季度执行靠值班 | P4 已落地 |
 
 ## P0：本分支已落地
 
@@ -59,7 +60,7 @@ IDE 提及面板新增第九源 FIBO。输入 `@fibo:Payment` 生成字面量引
 
 验收：测试 4 个用例通过。例外表写明原因与后续二选一（补入 TransactionEvent，或把 qgate 改为 MarketTransaction）。
 
-## P1：报告、术语与映射（建议下一批）
+## P1：报告、术语与映射（已落地）
 
 ### P1-1 报告证据面
 
@@ -79,7 +80,7 @@ IDE 提及面板新增第九源 FIBO。输入 `@fibo:Payment` 生成字面量引
 
 验收：每个已导入 FIBO 类型至少有 1 条映射或 1 条未映射登记。报告生成器可读取注册表。
 
-## P2：实例与门禁（建议 1 到 2 个月）
+## P2：实例与门禁（已落地）
 
 ### P2-1 支付流水实例摄取
 
@@ -99,11 +100,19 @@ FIBO 每季度发布。建立升级清单：固定 tag 与提交号、逐模块 
 
 验收：对下一季度 release 跑一次 dry-run，输出新增、删除、改义的术语清单，没有静默变更。
 
-## P3：域扩展与治理深化（季度级）
+## P3：域扩展与治理深化（本轮已落地试点）
 
-- P3-1 证券、衍生品、贷款三个域的本体包，沿用真实 IRI、模块版本、成熟度与本地扩展标注四条规则。
-- P3-2 属性级权限：角色 × 实体 × 属性 × 可见性，先选任务卡两个字段试点。
-- P3-3 外部消费：导出 SHACL 与 OWL 供 pyshacl、rdflib、Jena 消费。提供命令行导出，不内嵌推理机。
+- P3-1 证券、衍生品、贷款三个域的只读目录，共 18 个概念，带真实 IRI、英文原定义、模块 versionIRI 与成熟度。可导入包待依赖闭包核验后另开，不把未核验的类塞进工作台 T-Box。
+- P3-2 属性级权限：角色 × 实体 × 属性 × 可见性，先选两个字段试点（Account.accountNumber、Payer.partyRef），读时脱敏，不改存储。
+- P3-3 外部消费：提供 JSON-LD、SHACL、Turtle 三格式导出 CLI。OWL/XML 未做，不内嵌推理机。
+
+## P4：运营化（本轮已落地）
+
+- 运营快照 `GET /api/hermes/ontology/fibo/ops`：报告证据、术语表/映射/域目录计数、版本锁、门禁就绪、脱敏字段一次取齐。
+- 治理卡新增运营条与两个动作：复制报告证据、摄取支付样例。
+- 季度漂移比对脚本 `scripts/fibo/check-upstream.mjs`；导出 CLI `scripts/fibo/export.mjs`。
+- 运营手册《2026-10-21-fibo-operations-runbook.md》，覆盖升级、巡检、证据导出、回滚与部署。
+- 验收：ops 快照字段齐全；治理卡显示锁/映射/域/门禁/脱敏；两个脚本 `node --check` 通过。
 
 ## 验收与指标
 
@@ -112,14 +121,18 @@ FIBO 每季度发布。建立升级清单：固定 tag 与提交号、逐模块 
 - agent 查询：本机 200、真实 IRI、令牌闸生效。
 - IDE 提及：`@fibo` 解析与既有源不冲突。
 - 回归：本体域、治理、IA2 治理卡、IDE 提及、qgate 目标测试全绿。
-- 本轮实测：四组 P0 目标用例共 16 个通过，其中新增 11 个。所跑测试面 790/791 通过。唯一失败是 `unified-nav-guard.test.ts` 对 `IaShell.vue` 的 Escape 断言。该文件在 main、origin/main 与本分支都没有 Escape 处理。这是集成基线的既有红，不由本分支引入。
+- 本轮实测：所跑测试面 19 个测试文件、148 个用例全部通过，其中新增 32 个。
+- 类型校验：8 个新服务端模块 `tsc --noEmit` 零错误。两个脚本 `node --check` 通过。
+- P0 批次曾跑全仓 791 个用例，790 通过、1 个既有红（`unified-nav-guard.test.ts` 对 `IaShell.vue` 的 Escape 断言，与本批无关）。本轮未重跑全仓。
 
 ## 风险与对策
 
-- 并行会话：`feat/ontology-fibo-reference` 正在改 FIBO 页签、`ontology-fibo.ts` 与 `GET /fibo`。本分支不改这些文件，冲突面限定在 `ontology/i18n.ts` 的不同键段。合并顺序建议先参照会话、后本分支。
-- 双主线：本地 main 有 36 概念映射层，origin/main 有 qgate 18 概念索引，两条线尚未合一。本分支基线已合并两者。收口时要把这条集成线推回 main，避免再次分叉。
-- FIBO 季度变更：包固定 `master_2026Q3` 与各模块 versionIRI。升级必须重跑 IRI 实锚测试与 qgate 一致性测试。
+- 并行会话：`feat/ontology-fibo-reference` 在改 FIBO 页签、`ontology-fibo.ts` 与 `GET /fibo`；`feat/fibo-ssot` 在做单事实源，同样改 `ontology-fibo.ts` 与 `scripts/fibo/`。本分支不改这两个文件，合并时以其最新提交为准。
+- 双主线：本地 main 已合并 36 概念映射层与 qgate 18 概念索引。origin/main 尚无本批，发布需要 push，否则远端看不到 P0-P4。
+- FIBO 季度变更：包固定 `master_2026Q3` 与各模块 versionIRI。升级必须重跑 IRI 实锚测试、qgate 一致性测试与版本锁测试。
 - 包是子集：36 个概念覆盖支付、账户、结算，不代表全量 FIBO。未收录概念不声称存在。
+- 域目录边界：SEC/DER/LOAN 只做只读目录，不进入可导入包。依赖闭包未核验前不扩 T-Box。
+- 报告消费边界：simharness 未改。本轮交付证据端点与 markdown，报告生成器接入由其仓另开。
 - qgate 例外：`TransactionEvent` 不在包内。补包或改 qgate 二选一，改任一侧都要更新例外表。
 - 服务未部署：overlay 主工作树不在 main，服务进程也未换装。要用浏览器看治理卡，需把服务载体切到集成 main 后重启。
 - 既有红：`unified-nav-guard` 的 Escape 断言与 FIBO 无关，单独开一轮处理，不混入本方案。
@@ -137,6 +150,14 @@ FIBO 每季度发布。建立升级清单：固定 tag 与提交号、逐模块 
 9. **simharness 不做变更。** overlay 对 simharness 只读。本轮只提供端点契约，报告侧改动由 simharness 仓另开。
 10. **并行参照会话边界。** FIBO 页签、`ontology-fibo.ts`、`GET /fibo` 的参照内容由 `feat/ontology-fibo-reference` 负责。本分支不碰，避免同域撞车。
 11. **既有红不混入。** `unified-nav-guard` 的 Escape 断言与本方案无关，如实登记，单独处理。
+12. **证据以 markdown 字段输出。** 报告生成器直接嵌入返回值，不自算覆盖率，避免第二套口径。
+13. **术语表只收金融域报告词条。** 报告词表多为流程词，硬映射会制造假锚点。幂等与 int64 标 related，mock/回执/涉敏标 unmapped。
+14. **映射表 36 行全覆盖。** 有载体的标 mapped 并列出四类载体；无载体的显式 unmapped 并写原因，不默认有映射。
+15. **支付样例用 `fibo:` 前缀 + 整批校验。** error 级违规整批不写，不写半套；重复执行按前缀替换，幂等。
+16. **SEC/DER/LOAN 只做只读目录。** 18 个概念锚点已核验，但依赖闭包未做，不进入可导入包。
+17. **脱敏读时做，两字段试点。** 只对 Account.accountNumber 与 Payer.partyRef 生效，管理角色可见，其余角色读 `***`，不改存储。
+18. **版本锁独立文件。** `ontology-fibo-lock.ts` 记录 tag/commit/逐模块 versionIRI，季度脚本只读比对，不改包。
+19. **运营快照是产品读模型。** 治理卡与 agent 都消费 `fiboOpsSnapshot`，不各自拼计数。
 
 ## 本轮改动清单
 
