@@ -480,6 +480,10 @@ export function verifyRemediation(
   if (!rerun.setHash || rerun.setHash !== remediation.setHash) {
     return { ok: false, problems: ['复评考卷指纹与处置单不一致（集已改版，不能视为同卷复评）'] }
   }
+  const evidenceMode = rerun.evidenceMode ?? 'explicit'
+  if (evidenceMode !== 'explicit') {
+    return { ok: false, problems: [`${evidenceMode} 是诊断证据，不能关闭处置单；请提供修复后的新会话或内联证据`] }
+  }
   if (remediation.setRevision !== undefined && rerun.setRevision !== undefined
     && rerun.setRevision !== remediation.setRevision) {
     return { ok: false, problems: [`复评须同一考卷版本：r${remediation.setRevision} ≠ r${rerun.setRevision}`] }

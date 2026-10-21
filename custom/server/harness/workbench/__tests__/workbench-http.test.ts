@@ -32,6 +32,7 @@ beforeEach(async () => {
   if (!baseSet.ok) throw new Error(JSON.stringify(baseSet))
   store.appendRun(runOf('run-base', baseSet.set.id, 0.5))
   store.appendRun(runOf('run-probe', baseSet.set.id, 0.8))
+  store.appendRun({ ...runOf('run-origin-probe', baseSet.set.id, 0.9), evidenceMode: 'origin' as const })
 
   const regSet = store.createSet({
     name: '回归样本库',
@@ -202,6 +203,14 @@ describe('Harness² 工作台 HTTP', () => {
     const rec = await post(`/api/harness/workbench/proposals/${id}/probes/${probeId}/record`, { evalRunId: 'no-such-run' })
     expect(rec.status).toBe(400)
     expect(rec.body.error).toContain('评测运行不存在')
+  })
+
+  it('候选探测拒绝 origin 诊断运行，必须提供 fresh explicit 证据', async () => {
+    const composed = await createSubmittedApproved()
+    const probeId = composed.probes[1].id
+    const rec = await post(`/api/harness/workbench/proposals/${composed.id}/probes/${probeId}/record`, { evalRunId: 'run-origin-probe' })
+    expect(rec.status).toBe(400)
+    expect(rec.body.error).toContain('诊断证据')
   })
 
   it('请求写盘但环境未开 → 409 apply_env_disabled', async () => {
