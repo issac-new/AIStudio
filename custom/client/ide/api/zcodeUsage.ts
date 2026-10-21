@@ -86,6 +86,32 @@ export interface ZcodeUsageTool {
   errorType: string
 }
 
+/** 会话内上下文（Phase 2：趋势=精确 / 构成=≈估算） */
+export interface ZcodeContextRequest {
+  at: number
+  turnId: string
+  model: string
+  provider: string
+  status: string
+  ttftMs: number | null
+  promptTokens: number
+  outputTokens: number
+}
+
+export interface ZcodeContextData {
+  sessionId: string
+  requests: ZcodeContextRequest[]
+  est: {
+    categories: Array<{ key: string; estTokens: number; count: number }>
+    estTotalTokens: number
+    partsParsed: number
+    partsSkipped: number
+  }
+  largest: Array<{ messageId: string; role: string; at: number; estTokens: number; preview: string }>
+  compactions: Array<{ at: number; trigger: string; reason: string; status: string }>
+  note?: string
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const res = await authFetch(path)
   if (!res.ok) throw new Error(`zcode-usage → ${res.status}`)
@@ -104,5 +130,8 @@ export const zcodeUsageApi = {
   },
   tools(sessionId: string, limit = 100): Promise<{ tools: ZcodeUsageTool[] }> {
     return getJson(`/api/ide/zcode-usage/sessions/${encodeURIComponent(sessionId)}/tools?limit=${limit}`)
+  },
+  context(sessionId: string): Promise<ZcodeContextData> {
+    return getJson(`/api/ide/zcode-usage/sessions/${encodeURIComponent(sessionId)}/context`)
   },
 }

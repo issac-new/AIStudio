@@ -1,5 +1,2 @@
-session=sequence-guard
-status=complete
-created=2026-10-21T14:15:00+08:00
-closed=2026-10-21T15:00:00+08:00
-note=AGT 调研轮二：会话级数据流护栏（敏感读→外发链路拦截），tool-hooks 链尾独立钩子，HERMES_TOOL_SEQUENCE_GUARD=1 门控。spec=docs/superpowers/specs/2026-10-21-sequence-guard.md；pipeline 套件 81/81。合并 main(de715d3c) 时 IN-FLIGHT 冲突——main 侧为在途会话 zcode-docs-sync-1021（created=2026-10-21T14:33:55+08:00），其 worktree 标记以其树为准，此处保留本会话收口记录。
+session=zcode-usage-ledger-1021-op1
+created=2026-10-21T15:24:59+08:00
