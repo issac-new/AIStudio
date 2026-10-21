@@ -60,6 +60,33 @@ describe('代码仓审计面（批次 D）', () => {
     expect(r.summary).toContain('eval')
   })
 
+  it('repoRoot 未指定且无 SECAUDIT_REPO_ROOT → 三面如实跳过（不假检）', async () => {
+    const { collectAutoEvidence } = await import('../collectors')
+    const prev = process.env.SECAUDIT_REPO_ROOT
+    delete process.env.SECAUDIT_REPO_ROOT
+    try {
+      const out = await collectAutoEvidence()
+      expect(out.repo_secrets!.summary).toContain('repoRoot 未指定')
+      expect(out.repo_secrets!.count).toBe(0)
+    } finally {
+      if (prev !== undefined) process.env.SECAUDIT_REPO_ROOT = prev
+    }
+  })
+
+  it('SECAUDIT_REPO_ROOT 指定目标仓时生效', async () => {
+    const { collectAutoEvidence } = await import('../collectors')
+    writeFileSync(join(repo, 'a.js'), 'const k = "AKIAIOSFODNN7EXAMPLE";\n')
+    const prev = process.env.SECAUDIT_REPO_ROOT
+    process.env.SECAUDIT_REPO_ROOT = repo
+    try {
+      const out = await collectAutoEvidence()
+      expect(out.repo_secrets!.count).toBeGreaterThanOrEqual(1)
+    } finally {
+      if (prev !== undefined) process.env.SECAUDIT_REPO_ROOT = prev
+      else delete process.env.SECAUDIT_REPO_ROOT
+    }
+  })
+
   it('collectAutoEvidence 带 repoRoot 输出 repo 三键（fail-soft 不炸）', async () => {
     const { collectAutoEvidence } = await import('../collectors')
     const out = await collectAutoEvidence({ repoRoot: repo })
