@@ -40,3 +40,11 @@ Phase 1（2026-10-21-zcode-usage-ledger.md，main f3b2ee9e）落地了本机 zco
 - live 探针：真库 context 端点（requests 非空/压缩事件可空/categories 六类齐全）。
 - 全量：合并前 npm test。
 - UI 走查：serve-main 换装后浏览器验证侧栏徽章（S1 修复）+账单趋势/构成两块；走查结论回写本 spec。
+
+## 验证实录（2026-10-21 收口时）
+
+- 服务端单测 15/15（含估算器/foldContext 六类+角色拆分+脏 data skipped/HTTP 精确口径/空会话 note）；客户端 10/10（含 S1 注入模式徽章回归/趋势条带/构成≈标/压缩事件/raw-hex 闸过）。
+- live 探针 4/4：真库 context 端点 requests 精确值非空、构成类别齐全、largest 预览 ≤120、压缩事件形状稳定。
+- 全量 `npm test`：5638 通过 / 2 失败。**两失败处置**：①raw-hex 幽灵变量=本轮引入（`--out-h` CSS 变量），已根治（改子元素内联高度）后复测绿；②unified-nav-guard v12.4 窗口管理=净树（stash 后）同样失败的既有失败（d458d6d8 带入，非本轮文件），如实声明不越域修。
+- 走一遍真实修正：ctx-toggle 初版 v-if 依赖未加载数据=死锁（点不开构成），测试抓出后改为账单展开即显示。
+- 浏览器复走查：收口换装后进行（侧栏徽章+趋势/构成），结论回写此处。
