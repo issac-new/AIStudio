@@ -9,6 +9,11 @@
 // 推算桶 = contextUsed - Σ可见分段，涵盖系统提示词、技能、工具 schema、记忆等
 // 客户端不可见注入；消息无 token_count 时按 chars/4 估计（isEstimate=true 诚实标注）。
 // hermes-agent 侧产 span 后可升级精确版（R5+）。
+// 估算口径单一事实源（context-insights D3）：chars/4 与入口函数复用服务端
+// tokens/context-trend 导出（client→server 纯模块 import 先例=compactthreshold），
+// 服务端逐轮 fold 与本文件实时视图永不漂移。
+import { CHARS_PER_TOKEN, estimateTokensOf } from '../../../server/tokens/context-trend'
+
 export interface BreakdownMessage {
   role: string
   content: string
@@ -36,12 +41,6 @@ export interface ContextBreakdown {
   isEstimate: boolean
 }
 
-const CHARS_PER_TOKEN = 4
-
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / CHARS_PER_TOKEN)
-}
-
 function toolCallsChars(toolCalls: unknown): number {
   if (!toolCalls) return 0
   if (Array.isArray(toolCalls)) return toolCalls.reduce((sum, call) => sum + JSON.stringify(call ?? '').length, 0)
@@ -66,8 +65,8 @@ export function computeBreakdown(messages: BreakdownMessage[], contextUsed: numb
     const content = typeof msg.content === 'string' ? msg.content : ''
     const known = typeof msg.token_count === 'number' && Number.isFinite(msg.token_count) && msg.token_count > 0
     if (!known) isEstimate = true
-    const base = known ? msg.token_count : estimateTokens(content)
-    const reasoning = typeof msg.reasoning === 'string' && msg.reasoning ? estimateTokens(msg.reasoning) : 0
+    const base = known ? msg.token_count : estimateTokensOf(content)
+    const reasoning = typeof msg.reasoning === 'string' && msg.reasoning ? estimateTokensOf(msg.reasoning) : 0
     const calls = toolCallsChars(msg.tool_calls)
     if (calls > 0) isEstimate = true
 
