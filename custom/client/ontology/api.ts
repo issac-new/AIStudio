@@ -9,21 +9,36 @@ import { request, getApiKey, getBaseUrlValue } from '@/api/client'
 export type Modality = 'shall' | 'should' | 'may'
 export type Severity = 'error' | 'warning' | 'info'
 export type Datatype = 'string' | 'number' | 'integer' | 'boolean' | 'date' | 'datetime' | 'iri' | 'json'
+export type OriginKind = 'fibo' | 'commons' | 'local-extension' | 'internal'
+
+export interface TermProvenance {
+  origin: OriginKind
+  module?: string
+  versionIri?: string
+  maturity?: string
+  retrievedAt?: string
+  definitionEn?: string
+  note?: string
+}
+export interface ExternalVocabulary { prefix: string; iri: string; label?: string }
 
 export interface DataProperty {
   id: string; label: string; datatype: Datatype
   required?: boolean; pattern?: string; enum?: string[]; min?: number; max?: number
   modality: Modality; description?: string
+  iri?: string; provenance?: TermProvenance
 }
 export interface EntityType {
   id: string; label: string; labelEn?: string; description?: string
   parent?: string; category?: string; key?: string; disjointWith?: string[]
   modality: Modality; dataProperties: DataProperty[]
+  iri?: string; provenance?: TermProvenance
 }
 export interface ObjectProperty {
   id: string; label: string; domain: string[]; range: string[]
   cardinality?: { min?: number; max?: number }; inverseOf?: string
   modality: Modality; description?: string
+  iri?: string; provenance?: TermProvenance
 }
 export type AxiomConstraint =
   | { type: 'disjoint'; classes: [string, string] }
@@ -36,7 +51,8 @@ export interface Axiom {
 }
 export interface OntologySpec {
   id: string; namespace: string; version: number; versionIri: string; priorVersion?: number
-  label: string; entityTypes: EntityType[]; objectProperties: ObjectProperty[]; axioms: Axiom[]
+  label: string; vocabularies?: ExternalVocabulary[]
+  entityTypes: EntityType[]; objectProperties: ObjectProperty[]; axioms: Axiom[]
   updatedAt: number
 }
 export interface InstanceRelation { property: string; target: string }
@@ -54,6 +70,32 @@ export interface SpecResponse { ok: boolean; spec: OntologySpec; stats: Ontology
 export interface SaveSpecResponse { ok: boolean; spec?: OntologyInstance; detail?: string }
 export interface UpsertResponse { ok: boolean; saved?: OntologyInstance; violations?: Violation[] }
 export interface ValidateResponse { ok: boolean; persisted: boolean; count: number; violations: Violation[]; summary: Health }
+
+/** FIBO 对齐包（服务端 ontology-fibo.ts 的只读投影）。 */
+export interface FiboPackConceptRow {
+  id: string; label: string; labelZh: string; definitionZh: string; definitionEn: string
+  iri: string; origin: OriginKind; module?: string; versionIri?: string; maturity?: string
+  parent?: string; category: string; note?: string
+}
+export interface FiboPackPropertyRow {
+  id: string; label: string; labelZh: string; iri: string; origin: OriginKind; module?: string
+  domain: string[]; range: string[]; cardinality?: { min?: number; max?: number }
+}
+export interface FiboPackSummary {
+  id: string; label: string; namespace: string
+  source: { repo: string; release: string; releasedAt: string; retrievedAt: string; license: string; viewer: string; spec: string }
+  counts: { concepts: number; fibo: number; commons: number; localExtensions: number; objectProperties: number; axioms: number }
+  modules: Array<{ path: string; versionIri: string; maturity?: string }>
+  concepts: FiboPackConceptRow[]
+  objectProperties: FiboPackPropertyRow[]
+}
+export interface FiboApplied { concepts: number; total: number; applied: string[] }
+export interface FiboPackResponse { ok: boolean; pack: FiboPackSummary; applied: FiboApplied }
+export interface FiboMergeCounts { types: number; objectProperties: number; axioms: number }
+export interface FiboImportResponse {
+  ok: boolean; added: FiboMergeCounts; skipped: FiboMergeCounts
+  applied: FiboApplied; snapshot?: string | null; violations?: Violation[]
+}
 /** 摄取结果（服务端 ontology-ingest IngestResult 镜像）。 */
 export interface IngestResultDto {
   ok: boolean
@@ -108,6 +150,10 @@ export const ontologyApi = {
     req<{ ok: boolean; sources: Array<{ slug: string; path: string; exists: boolean }> }>('/api/hermes/ontology/kanban-overview'),
   ingest: (board?: string) =>
     req<{ ok: boolean; ingest: IngestResultDto }>('/api/hermes/ontology/ingest', { method: 'POST', body: JSON.stringify(board ? { board } : {}) }),
+  /** FIBO 对齐包目录（真实 IRI/定义/模块版本；只读）。 */
+  getFiboPack: () => req<FiboPackResponse>('/api/hermes/ontology/fibo'),
+  /** 增量导入 FIBO 包：只加缺失项；同 id 不同 IRI 服务端 409 整批不写。 */
+  importFibo: () => req<FiboImportResponse>('/api/hermes/ontology/fibo/import', { method: 'POST', body: '{}' }),
 }
 
 // ---------- 约束卡（/api/constraints/*，2026-10-14 阿里调研轮 D） ----------

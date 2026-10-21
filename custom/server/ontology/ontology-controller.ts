@@ -12,9 +12,12 @@
  * GET  /versions           spec 快照版本列表（ts 降序）
  * POST /rollback           回滚（body.ts；回滚前另存 pre-rollback 可再回）
  * POST /seed               重置为种子本体（super_admin 闸）
+ * GET  /fibo               FIBO 对齐包（真实 IRI/定义/模块版本）+ 当前已导入数
+ * POST /fibo/import        增量导入 FIBO 包（super_admin 闸；冲突整批不写）
  *
- * 写面（PUT spec / DELETE instance / rollback / seed）与 kg-evolution 管理维护
- * 端点同闸：super_admin 或无鉴权上下文（本地 dev）可操作，其余 403。
+ * 写面（PUT spec / DELETE instance / rollback / seed / fibo import）与
+ * kg-evolution 管理维护端点同闸：super_admin 或无鉴权上下文（本地 dev）可操作，
+ * 其余 403。
  * 挂载：patch 590 在 bootstrap/routes.ts（import + app.use 两 hunk，582 同款范式）。
  */
 import Router from '@koa/router'
@@ -23,6 +26,7 @@ import { violationSummary } from './ontology-validate'
 import {
   deleteInstance, listSpecSnapshots, loadInstances, loadSpec, resetToSeed, rollbackSpec, saveSpec, upsertInstance,
 } from './ontology-store'
+import { fiboPackApplied, fiboPackSummary, mergeFiboPack } from './ontology-fibo'
 import { ingestFromKanban, kanbanSourceOverview } from './ontology-ingest'
 import { ensureOntologyWatcher, ingestSingleTask, startOntologyWatchIfEnabled } from './ontology-watch'
 import { registerOntologyAgentBridgeRoutes } from './ontology-agent-bridge'
@@ -247,6 +251,57 @@ router.post('/watch/tick', async (ctx) => {
   if (superAdminDenied(ctx)) return
   const r = await ensureOntologyWatcher().runOnce()
   ctx.body = { ok: !r.error, tick: r }
+})
+
+// ---- FIBO 对齐包（2026-10-21 深调研；真实 IRI + 逐模块版本锚） ----
+
+/** 包目录（只读）：概念/属性/模块版本/成熟度 + 当前 spec 已导入数。 */
+router.get('/fibo', (ctx) => {
+  const spec = loadSpec()
+  ctx.body = { ok: true, pack: fiboPackSummary(), applied: fiboPackApplied(spec) }
+})
+
+/**
+ * 增量导入：只追加缺失项，已有同 id 同 IRI 幂等跳过；同 id 不同 IRI 整批 409。
+ * 落盘走 saveSpec（validateSpec error=0 才写、版本+1、pre-save 快照可回滚）。
+ * 实例不受影响——导入只扩 T-Box，不重写 A-Box。
+ */
+router.post('/fibo/import', (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const current = loadSpec()
+  const merged = mergeFiboPack(current)
+  if (!merged.ok || !merged.spec) {
+    ctx.status = 409
+    ctx.body = {
+      ok: false,
+      detail: 'FIBO 导入冲突：本地已有同 id 但 IRI 不同的术语，整批未写入（不做静默覆盖）',
+      collisions: merged.collisions,
+      added: merged.added,
+      skipped: merged.skipped,
+    }
+    return
+  }
+  const r = saveSpec(merged.spec, (ctx.state as { user?: { username?: string } } | undefined)?.user?.username)
+  if (!r.ok || !r.spec) {
+    ctx.status = 422
+    ctx.body = {
+      ok: false,
+      detail: 'FIBO 包合并后本体自检未通过（error 级违规拒写）',
+      violations: r.violations,
+      added: merged.added,
+      skipped: merged.skipped,
+    }
+    return
+  }
+  ctx.body = {
+    ok: true,
+    added: merged.added,
+    skipped: merged.skipped,
+    applied: fiboPackApplied(r.spec),
+    spec: r.spec,
+    snapshot: r.snapshot,
+    violations: r.violations.filter((v) => v.severity !== 'error'),
+  }
 })
 
 export const ontologyRoutes = router
