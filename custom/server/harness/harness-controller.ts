@@ -198,7 +198,8 @@ router.get('/policy-decisions/chain', async (ctx) => {
 // POST /mcp-drift/snapshot=显式落新基线（运维确认漂移合法后手动 rebase）。
 router.get('/mcp-drift', async (ctx) => {
   try {
-    ctx.body = { ok: true, ...collectMcpDrift() }
+    // collectMcpDrift 自带 ok/error 语义（内部 fail-soft），直接透传
+    ctx.body = collectMcpDrift()
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
