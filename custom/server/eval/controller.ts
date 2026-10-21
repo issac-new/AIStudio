@@ -29,6 +29,7 @@ import { buildRegistryView, summarizeConsumption } from './metric-registry'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
 import { sampleFromTrace, sampleSpanFromTrace } from './trace-sampler'
+import { reflowTraceToSet } from './trace-reflow'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
   appendIteration, appendOracleRun, appendTasksToSet, auditSnapshot, createOracleCase, createRemediation, createSet, exportSet,
@@ -145,6 +146,32 @@ router.post('/sample-span-from-trace', async (ctx) => {
     return
   }
   ctx.body = { ...result, actor: actorOf(ctx) }
+})
+
+// 生产失败轨迹 → 回归样本库（人工确认任务定义 + traceHash 防预览漂移）。
+router.post('/reflow-from-trace', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const result = reflowTraceToSet({
+    sessionId: typeof body.sessionId === 'string' ? body.sessionId.trim() : '',
+    ...(typeof body.spanRef === 'string' && body.spanRef.trim() ? { spanRef: body.spanRef.trim() } : {}),
+    expectedTraceHash: typeof body.expectedTraceHash === 'string' ? body.expectedTraceHash.trim() : '',
+    task: body.task as never,
+    ...(typeof body.targetSetId === 'string' && body.targetSetId.trim() ? { targetSetId: body.targetSetId.trim() } : {}),
+    actor: actorOf(ctx),
+  })
+  if (result.ok === false) {
+    const failure = result as { ok: false; code: string; problems: string[] }
+    ctx.status = failure.code === 'origin_conflict' || failure.code === 'trace_hash_mismatch' ? 409 : 400
+    ctx.body = { ok: false, code: failure.code, problems: failure.problems }
+    return
+  }
+  ctx.status = result.created ? 201 : 200
+  ctx.body = {
+    ok: true,
+    created: result.created,
+    taskId: result.taskId,
+    set: { id: result.set.id, name: result.set.name, track: result.set.track, taskCount: result.set.tasks.length, revision: result.set.revision },
+  }
 })
 
 router.get('/sets', async (ctx) => {

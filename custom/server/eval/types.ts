@@ -7,6 +7,8 @@
 //
 // 本域刻意不 import 上游模块（符号链接路径解析陷阱，见 controllers/hermes/trace.ts
 // 文件头注释）：证据经 EvidenceProvider 注入，判定经 AskFn 注入，全依赖可测。
+import type { ReflowOrigin } from './origin'
+export type { ReflowOrigin } from './origin'
 
 /** 评测集双轨：E2E=任务级（拉警报），Process=模块级（定位责任方）。 */
 export type Track = 'e2e' | 'process'
@@ -131,14 +133,6 @@ export interface RubricAssertion {
 export interface OutcomeCheckDecl {
   verifier: string
   params: Record<string, string>
-}
-
-/** 坏例回流来源（腾讯：线上坏例转回归样本防回潮；回流任务带溯源，不匿名混入）。 */
-export interface ReflowOrigin {
-  runId: string
-  taskId: string
-  sampleIdx?: number
-  at: number
 }
 
 export interface EvalTask {
