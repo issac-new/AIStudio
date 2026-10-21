@@ -42,6 +42,7 @@ const IdeHooksPane = asyncPane(() => import('./IdeHooksPane.vue'))
 const IdeSlashCommandsPane = asyncPane(() => import('./IdeSlashCommandsPane.vue'))
 const IdeTrajectoryPane = asyncPane(() => import('../components/IdeTrajectoryPane.vue'))
 const IdeContextArchivePane = asyncPane(() => import('../components/IdeContextArchivePane.vue'))
+const IdeContextPane = asyncPane(() => import('./IdeContextPane.vue'))
 const IdeDeliverPane = asyncPane(() => import('./IdeDeliverPane.vue'))
 const IdeGenUiPane = asyncPane(() => import('./IdeGenUiPane.vue'))
 const IdeRemotePane = asyncPane(() => import('./IdeRemotePane.vue'))
@@ -73,6 +74,7 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string; group: SidePaneGroup }> =
   { key: 'ctxarchive', icon: '▤', group: 'knowledge' },
   { key: 'tools', icon: '⚙', group: 'observe' },
   { key: 'trajectory', icon: '∿', group: 'observe' },
+  { key: 'context', icon: '◔', group: 'observe' },
   { key: 'workflow', icon: '⟐', group: 'observe' },
   { key: 'deliver', icon: '▣', group: 'observe' },
   { key: 'genui', icon: '◫', group: 'observe' },
@@ -99,6 +101,7 @@ const SHORT_LABELS: Record<string, { zh: string; en: string }> = {
   ctxarchive: { zh: '档案', en: 'Context' },
   tools: { zh: '工具', en: 'Tools' },
   trajectory: { zh: '轨迹', en: 'Trace' },
+  context: { zh: '透视', en: 'Context' },
   workflow: { zh: '流程', en: 'Flow' },
   deliver: { zh: '交付', en: 'Deliver' },
   genui: { zh: '工件', en: 'GenUI' },
@@ -154,7 +157,7 @@ watch(() => ide.sidePane.tab, (k) => {
     groupFilter.value = TABS.find(x => x.key === k)?.group ?? 'all'
   }
 })
-const LOCAL_PANES = new Set<IdeSidePaneTab>(['ctxarchive', 'deliver', 'genui', 'remote', 'plugins'])
+const LOCAL_PANES = new Set<IdeSidePaneTab>(['ctxarchive', 'context', 'deliver', 'genui', 'remote', 'plugins'])
 function tabTitle(key: IdeSidePaneTab): string {
   if (key === 'trajectory') return obsTx.value.trajTabTitle
   if (LOCAL_PANES.has(key)) return IDE_LOCAL_TEXT[paneLocale.value].panes[key]
@@ -327,6 +330,7 @@ function focusMainChat(): void {
       <IdeSlashCommandsPane v-else-if="ide.sidePane.tab === 'slash'" class="ide-sidepane__fill" data-testid="ide-sidepane-slash" />
       <IdeTrajectoryPane v-else-if="ide.sidePane.tab === 'trajectory'" class="ide-sidepane__fill" data-testid="ide-sidepane-trajectory" />
       <IdeContextArchivePane v-else-if="ide.sidePane.tab === 'ctxarchive'" class="ide-sidepane__fill" data-testid="ide-sidepane-ctxarchive" />
+      <IdeContextPane v-else-if="ide.sidePane.tab === 'context'" class="ide-sidepane__fill" data-testid="ide-sidepane-context" />
       <IdeDeliverPane v-else-if="ide.sidePane.tab === 'deliver'" class="ide-sidepane__fill" data-testid="ide-sidepane-deliver" />
       <IdeGenUiPane v-else-if="ide.sidePane.tab === 'genui'" class="ide-sidepane__fill" data-testid="ide-sidepane-genui" />
       <IdeRemotePane v-else-if="ide.sidePane.tab === 'remote'" class="ide-sidepane__fill" data-testid="ide-sidepane-remote" />
