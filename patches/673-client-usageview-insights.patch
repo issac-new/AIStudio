@@ -1,0 +1,19 @@
+diff --git a/packages/client/src/views/hermes/UsageView.vue b/packages/client/src/views/hermes/UsageView.vue
+--- a/packages/client/src/views/hermes/UsageView.vue
++++ b/packages/client/src/views/hermes/UsageView.vue
+@@ -15,6 +15,7 @@ import type { UsageStatsFilters } from '@/api/studio/sessions'
+ import DailyTrend from '@/components/hermes/usage/DailyTrend.vue'
+ import UsagePricing from '@/components/hermes/usage/UsagePricing.vue'
+ import AgentBreakdown from '@/components/hermes/usage/AgentBreakdown.vue'
++import UsageInsightsExtension from '@/custom/governance/components/UsageInsightsExtension.vue'
+
+ const { t } = useI18n()
+ const usageStore = useUsageStore()
+@@ -123,6 +124,7 @@
+         <DailyTrend />
+         <AgentBreakdown v-if="filters.origin !== 'external'" />
+         <UsageOverviewInsights />
++        <UsageInsightsExtension />
+       </div>
+
+       <div v-if="!usageStore.isLoading && !usageStore.loadError && !usageStore.hasData" class="usage-empty">
