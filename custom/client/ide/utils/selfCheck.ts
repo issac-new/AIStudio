@@ -72,14 +72,16 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
   const api = async (
     path: string,
     validate: (body: Record<string, unknown>) => CheckOutcome,
+    opts: { warnStatuses?: number[] } = {},
   ): Promise<CheckOutcome> => {
+    const warnStatuses = opts.warnStatuses ?? [503, 401]
     try {
       const res = await ctx.authFetch(path)
       const body = await res.json().catch(() => ({})) as Record<string, unknown>
       if (!res.ok) {
         const detail = `HTTP ${res.status}${body?.detail ? `: ${String(body.detail).slice(0, 120)}` : ''}`
-        // 503=依赖未启动；401=鉴权/引擎 token；均属环境告警而非产品硬缺陷
-        return { status: res.status === 503 || res.status === 401 ? 'warn' : 'fail', detail }
+        // 503=依赖未启动；401=鉴权/引擎 token；404=资源不存在/非仓库（由调用方声明）
+        return { status: warnStatuses.includes(res.status) ? 'warn' : 'fail', detail }
       }
       return validate(body)
     } catch (err) {
@@ -152,10 +154,14 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['git'],
       run: async () => {
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
-        return api(`/api/ide/git/status?${qs({ root: ctx.workspace })}`, (body) =>
+        const outcome = await api(`/api/ide/git/status?${qs({ root: ctx.workspace })}`, (body) =>
           body.repoRoot
             ? { status: 'pass', detail: `${String(body.branch ?? '?')} · ${(body.changes as unknown[] | undefined)?.length ?? 0} 变更` }
-            : { status: 'warn', detail: tx.detail.notRepo })
+            : { status: 'warn', detail: tx.detail.notRepo }, { warnStatuses: [503, 401, 404] })
+        // 404=工作区不是 Git 仓库（合法状态，不是产品缺陷）；用本地化文案替换原始 HTTP 串
+        return outcome.status === 'warn' && outcome.detail.startsWith('HTTP 404')
+          ? { status: 'warn', detail: tx.detail.notRepo }
+          : outcome
       },
     },
     {

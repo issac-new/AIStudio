@@ -63,6 +63,22 @@ describe('runSelfChecks', () => {
     expect(byId['i18n'].status).toBe('warn')
   })
 
+  it('Git 非仓库（404）记 warn 而非 fail（合法工作区状态）', async () => {
+    const c = ctx()
+    const base = c.authFetch
+    c.authFetch = vi.fn(async (path: string) => {
+      if (path.startsWith('/api/ide/git/status')) {
+        return { ok: false, status: 404, json: async () => ({ error: 'not_a_repo' }) } as Response
+      }
+      return base(path)
+    }) as never
+    const results = await runSelfChecks(c)
+    const git = results.find(r => r.id === 'git')
+    expect(git?.status).toBe('warn')
+    expect(git?.detail).toContain('非 Git 仓库')
+    expect(selfCheckSummary(results).fail).toBe(0)
+  })
+
   it('接口 503/401 记 warn（引擎/鉴权依赖），500 记 fail', async () => {
     const c = ctx()
     c.authFetch = makeFetch({

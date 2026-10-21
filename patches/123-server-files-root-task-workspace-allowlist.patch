@@ -12,13 +12,14 @@ index 8005dc30a..0a9f41c3c 100644
  // HERMES_CUSTOM[SecFileRootSandbox] END
  import { createAppImagePreview } from '../services/files/app-image-preview'
  
-@@ -84,6 +87,12 @@ export async function download(ctx: any) {
+@@ -84,6 +87,13 @@ export async function download(ctx: any) {
  
    try {
      const profile = requestedProfile(ctx)
 +    // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 仅越界路径需要放行清单——
-+    // 沙箱内路径不再被任务 workspace CLI 预热拖住（与 files.ts list 同修）
-+    if (root && !isPathWithin(resolve(root, filePath), getHermesBaseDir())) {
++    // 沙箱内路径不再被任务 workspace CLI 预热拖住（与 files.ts list 同修）；
++    // coding-agent 工作区由静态前缀放行，无需等待 CLI 缓存刷新
++    if (root && !isPathWithin(resolve(root, filePath), getHermesBaseDir()) && !isWithinKnownTaskWorkspace(resolve(root, filePath))) {
 +      await primeTaskWorkspaceCache()
 +    }
 +    // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
@@ -61,16 +62,17 @@ index 9b6635468..bb7cccdb5 100644
        throw Object.assign(new Error('Requested path is outside the hermes base sandbox'), { code: 'invalid_path' })
      }
      return candidate
-@@ -82,6 +87,14 @@ function handleError(ctx: any, err: any) {
+@@ -82,6 +87,15 @@ function handleError(ctx: any, err: any) {
  export async function list(ctx: any) {
    const relativePath = (ctx.query.path as string) || ''
    const root = requestedRoot(ctx)
 +  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 仅越界路径需要放行清单——
 +  // 沙箱内路径不再被任务 workspace CLI 预热拖住（冷刷新 ~9s 曾落在每个 TTL
-+  // 窗口的首个带 root 请求上，repo wiki 列表首开即 9s+）
++  // 窗口的首个带 root 请求上，repo wiki 列表首开即 9s+）；coding-agent 工作区
++  // 由静态前缀放行，无需等待 CLI 缓存刷新
 +  if (root) {
 +    const candidate = relativePath ? join(root, relativePath) : root
-+    if (!isPathWithin(candidate, getHermesBaseDir())) await primeTaskWorkspaceCache()
++    if (!isPathWithin(candidate, getHermesBaseDir()) && !isWithinKnownTaskWorkspace(candidate)) await primeTaskWorkspaceCache()
 +  }
 +  // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
    // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: 使用 root 时要求 super_admin
