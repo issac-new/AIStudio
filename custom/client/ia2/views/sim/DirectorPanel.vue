@@ -327,6 +327,9 @@ onBeforeUnmount(() => { stopPolling() })
           <p class="dir__sub">从需求生成模块图，创建真实看板任务，由代理执行；人工闸在这里放行。</p>
         </div>
       </header>
+      <p class="dir__hint" data-testid="director-graph-boundary">
+        只建真实看板任务与人工闸；Matrix 聊天由受控 harness 的模拟员工产生，这里不代发。
+      </p>
 
       <div class="dir__form">
         <label class="dir__field dir__field--wide">需求标题<input v-model="form.title" data-testid="director-form-title" /></label>
