@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { classifyExecPayload, runExecRedteam, EXEC_PAYLOADS } from '../exec-probe'
-import { detectSandboxSupport } from '../../../qgate/src/executors/exec-sandbox'
+import { detectSandboxSupport } from '../../sandbox/exec-sandbox'
 
 let scratch: string
 

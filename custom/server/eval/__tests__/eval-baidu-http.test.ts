@@ -119,7 +119,7 @@ describe('红队 HTTP', () => {
     expect(off.body.run.results).toEqual([])
     delete process.env.HERMES_EXEC_SANDBOX
 
-    const { detectSandboxSupport } = await import('../../../qgate/src/executors/exec-sandbox')
+    const { detectSandboxSupport } = await import('../../sandbox/exec-sandbox')
     if (!detectSandboxSupport().available) return
     const on = await post('/api/hermes/eval/redteam/exec-runs', {})
     expect(on.status).toBe(200)

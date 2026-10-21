@@ -6,7 +6,24 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import type { Evidence, ExecutorSpec } from '../core/types.js'
 import { parseRawOutput } from '../core/raw-evidence.js'
-import { detectSandboxSupport, runSandboxed } from './exec-sandbox.js'
+import { createRequire } from 'node:module'
+// exec-sandbox 单一事实源在 custom/server/sandbox/（overlay 树内；ts-node CJS 可载）。
+// qgate 独立部署（dist）无宿主树——createRequire 动态探测，缺席即 unavailable（fail-closed）。
+const requireFromQgate = createRequire(import.meta.url)
+// 手写最小接口（不经 import type——那会把包外文件拉进 rootDir 编译面）
+interface SandboxSupportLike { backend: string; available: boolean; detail: string }
+interface SandboxRunResultLike { status: 'ok' | 'unavailable' | 'error' | 'timeout'; exitCode?: number | null; stdout: string; stderr: string; detail?: string }
+interface ExecSandboxLike {
+  detectSandboxSupport(deps?: { probe?: (bin: string) => boolean }): SandboxSupportLike
+  runSandboxed(opts: { argv: string[]; cwd: string; writableRoots?: string[]; timeoutMs?: number; envAllowlist?: string[] }): Promise<SandboxRunResultLike>
+}
+function loadExecSandbox(): ExecSandboxLike | undefined {
+  try {
+    return requireFromQgate('../../../server/sandbox/exec-sandbox.js') as ExecSandboxLike
+  } catch {
+    return undefined
+  }
+}
 
 const DEFAULT_TIMEOUT_MS = 120_000
 
@@ -33,8 +50,9 @@ export async function runCommandExecutor(
   let sandboxed = false
   let execResult: { code: number | null; stdout: string; stderr: string; timedOut: boolean; spawnError?: string }
   if (executor.sandbox) {
-    const support = detectSandboxSupport()
-    if (!support.available) {
+    const sandboxMod = loadExecSandbox()
+    const support = sandboxMod ? sandboxMod.detectSandboxSupport() : undefined
+    if (!support || !support.available) {
       const outUnavailable: CommandOutcome = { evidence: {
         id: `ev-${randomUUID().slice(0, 12)}`,
         runId: input.runId,
@@ -43,13 +61,13 @@ export async function runCommandExecutor(
         producer: executor.id,
         result: 'error',
         execution: 'wired',
-        summary: `sandbox requested but unavailable: ${support.detail}（fail-closed，不裸跑）`,
+        summary: `sandbox requested but unavailable: ${support ? support.detail : 'qgate 独立部署无宿主树（exec-sandbox 在 overlay 树内）'}（fail-closed，不裸跑）`,
         provenance: { startedAt, endedAt: Date.now(), command: argv.join(' '), cwd, commit: input.commit, treeHash: input.treeHash, exitCode: -4 },
       } }
       return outUnavailable
     }
     sandboxed = true
-    const r = await runSandboxed({ argv, cwd, writableRoots: [cwd], timeoutMs })
+    const r = await sandboxMod!.runSandboxed({ argv, cwd, writableRoots: [cwd], timeoutMs })
     execResult = {
       code: r.status === 'ok' ? r.exitCode ?? -3 : null,
       stdout: r.stdout,
