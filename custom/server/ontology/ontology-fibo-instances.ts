@@ -104,7 +104,8 @@ export function ingestFiboDemo(now = Date.now()): FiboDemoIngestResult {
   let spec: OntologySpec = loadSpec()
   let importedPack = false
   let typesAdded = 0
-  if (fiboPackApplied(spec).concepts < 36) {
+  const appliedBefore = fiboPackApplied(spec)
+  if (appliedBefore.concepts < appliedBefore.total) {
     const merged = mergeFiboPack(spec, now)
     if (!merged.ok || !merged.spec) {
       return {

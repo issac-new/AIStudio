@@ -13,6 +13,7 @@ export const FIBO_LOCK = {
   releasedAt: '2026-10-20T20:02:05Z',
   modules: {
     payments: 'https://spec.edmcouncil.org/fibo/ontology/FND/20250701/ProductsAndServices/PaymentsAndSchedules/',
+    pas: 'https://spec.edmcouncil.org/fibo/ontology/FND/20251201/ProductsAndServices/ProductsAndServices/',
     currency: 'https://spec.edmcouncil.org/fibo/ontology/FND/20260701/Accounting/CurrencyAmount/',
     accounts: 'https://spec.edmcouncil.org/fibo/ontology/FBC/20261001/ProductsAndServices/ClientsAndAccounts/',
     settlement: 'https://spec.edmcouncil.org/fibo/ontology/FBC/20250301/FinancialInstruments/Settlement/',

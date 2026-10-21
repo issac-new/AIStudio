@@ -6,7 +6,7 @@
  * markdown 字段可直接嵌进报告「本体证据面」小节。
  */
 import {
-  FIBO_SOURCE, fiboPackApplied, fiboPackSummary,
+  FIBO_SOURCE, fiboPackApplied, fiboPackSummary, fiboQgateIndex,
 } from './ontology-fibo'
 import { fiboLockReport, type FiboLockReport } from './ontology-fibo-lock'
 import type { OntologyInstance, OntologySpec } from './ontology-types'
@@ -46,8 +46,9 @@ function buildMarkdown(input: {
   coverage: FiboEvidence['coverage']
   health: FiboEvidence['health']
   lock: FiboLockReport
+  gateConcepts: number
 }): string {
-  const { coverage, health, lock } = input
+  const { coverage, health, lock, gateConcepts } = input
   const lines = [
     '### FIBO 覆盖',
     `- 发布：${FIBO_SOURCE.release}（${FIBO_SOURCE.releasedAt}，commit ${lock.commit.slice(0, 8)}）`,
@@ -55,7 +56,7 @@ function buildMarkdown(input: {
       ? `- 覆盖：${coverage.applied}/${coverage.total}（FIBO ${coverage.fibo} / Commons ${coverage.commons} / 工程扩展 ${coverage.localExtensions}）`
       : `- 覆盖：未导入（可导入 ${coverage.total} 个概念）`,
     `- 校验：error ${health.error} / warning ${health.warning} / info ${health.info}`,
-    '- 门禁索引：18 概念，一致性由 ontology-fibo-gate-consistency.test.ts 守门',
+    `- 门禁索引：${gateConcepts} 概念，一致性由 ontology-fibo-ssot.test.ts 与 ontology-fibo-gate-consistency.test.ts 守门`,
     `- 版本锁：${lock.ok ? 'OK' : 'DRIFT'}（${lock.moduleCount} 模块）`,
   ]
   if (!lock.ok) {
@@ -73,6 +74,7 @@ export function fiboEvidence(
   const applied = fiboPackApplied(spec)
   const health = violationSummary(validateInstances(spec, instances))
   const lock = fiboLockReport()
+  const gateConcepts = fiboQgateIndex().concepts.length
   const coverage: FiboEvidence['coverage'] = {
     applied: applied.concepts,
     total: applied.total,
@@ -97,10 +99,10 @@ export function fiboEvidence(
     lock,
     gate: {
       index: 'custom/qgate/gate-packs/ontology/data/fibo-mini.json',
-      concepts: 18,
+      concepts: gateConcepts,
       consistency: 'verified-by-test',
-      test: 'ontology-fibo-gate-consistency.test.ts',
+      test: 'ontology-fibo-ssot.test.ts + ontology-fibo-gate-consistency.test.ts',
     },
-    markdown: buildMarkdown({ coverage, health, lock }),
+    markdown: buildMarkdown({ coverage, health, lock, gateConcepts }),
   }
 }
