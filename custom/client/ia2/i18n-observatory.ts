@@ -17,6 +17,11 @@ const OBSERVATORY_TEXT = {
     trajNoTrace: '本会话无轨迹文件（run-trace 插件未启用或非 agent 会话）',
     trajNoSession: '未选择会话',
     trajNoMatch: '无匹配节点',
+    // —— 生产失败回流轮：轨迹转回归入口 ——
+    trajReflowSession: '本会话转回归',
+    trajReflowSpan: '此节点转回归',
+    trajReflowHint: '把该会话的证据转成回归题（人工确认问题/期望/断言后入回归样本库）',
+    trajReflowUnsupported: '该轨迹格式暂不支持转回归（首版仅完整 legacy JSONL）',
     goalLoopTitle: '常驻意图',
     goalLoopGoal: '目标',
     goalLoopLoop: '循环',
@@ -38,6 +43,11 @@ const OBSERVATORY_TEXT = {
     trajNoTrace: 'No trace file for this session (run-trace plugin off or non-agent session)',
     trajNoSession: 'No session selected',
     trajNoMatch: 'No matching nodes',
+    // —— production trace reflow round: trajectory → regression entry ——
+    trajReflowSession: 'Turn session into regression case',
+    trajReflowSpan: 'Turn this span into regression case',
+    trajReflowHint: 'Turn this session’s evidence into a regression case (confirm problem/expectation/assertion, then add to the regression library)',
+    trajReflowUnsupported: 'This trace format is not supported yet (first release accepts complete legacy JSONL only)',
     goalLoopTitle: 'Standing intents',
     goalLoopGoal: 'Goal',
     goalLoopLoop: 'Loop',

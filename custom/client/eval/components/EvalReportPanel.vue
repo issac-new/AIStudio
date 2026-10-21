@@ -223,6 +223,12 @@ function durationText(ms: number | null): string {
       <span v-if="run.note" class="muted">{{ run.note }}</span>
       <span v-if="run.aggregates.statisticallyInsufficient" class="chip chip-warn">{{ L.runs.insufficient }}</span>
       <span v-if="!run.aggregates.judgeOnline" class="chip chip-warn">{{ L.runs.judgeOffline }}</span>
+      <span
+        v-if="run.evidenceMode && run.evidenceMode !== 'explicit'"
+        class="chip chip-warn"
+        :title="L.runs.originDiagnosticHint"
+        data-testid="eval-report-evidence-mode"
+      >{{ L.runs.originDiagnostic[run.evidenceMode] }}</span>
     </header>
     <p v-if="error" class="eval-report__error">{{ error }}</p>
 
@@ -423,6 +429,7 @@ function durationText(ms: number | null): string {
         <div class="attempt__head">
           <strong class="mono">{{ a.taskId }}#{{ a.sampleIdx }}</strong>
           <span v-if="a.sessionId" class="mono muted">{{ a.sessionId }}</span>
+          <span v-if="a.spanRef" class="mono muted" :title="L.runs.spanRefHint">↳ {{ a.spanRef }}</span>
           <span :class="a.passed ? 'v-pass' : 'v-fail'">{{ a.passed ? 'PASS' : 'FAIL' }}</span>
           <span v-if="a.outcome" :class="a.outcome.ok ? 'v-pass' : 'v-fail'" :title="a.outcome?.detail">
             {{ L.runs.outcome }}：{{ a.outcome?.ok ? L.runs.outcomeOk : L.runs.outcomeFail }}

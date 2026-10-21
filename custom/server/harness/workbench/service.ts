@@ -403,6 +403,9 @@ export interface RecordProbeInput {
 export async function recordProbe(id: string, probeId: string, input: RecordProbeInput): Promise<ProposalView> {
   const metrics = readEvalEvidence(input.evalRunId)
   if (!metrics) throw new ServiceError(400, `评测运行不存在或未聚合：${input.evalRunId}`)
+  if ((metrics.evidenceMode ?? 'explicit') !== 'explicit') {
+    throw new ServiceError(400, 'origin/mixed 是诊断证据，不能作为候选探测；请绑定 fresh explicit 评测运行')
+  }
   let regression = null
   if (input.regressionRunId) {
     regression = readRegressionEvidence(input.regressionRunId)
