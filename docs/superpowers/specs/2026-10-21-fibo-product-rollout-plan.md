@@ -112,7 +112,7 @@ FIBO 每季度发布。建立升级清单：固定 tag 与提交号、逐模块 
 - agent 查询：本机 200、真实 IRI、令牌闸生效。
 - IDE 提及：`@fibo` 解析与既有源不冲突。
 - 回归：本体域、治理、IA2 治理卡、IDE 提及、qgate 目标测试全绿。
-- 本轮实测：新增 16 个用例通过。所跑测试面 790/791 通过。唯一失败是 `unified-nav-guard.test.ts` 对 `IaShell.vue` 的 Escape 断言。该文件在 main、origin/main 与本分支都没有 Escape 处理。这是集成基线的既有红，不由本分支引入。
+- 本轮实测：四组 P0 目标用例共 16 个通过，其中新增 11 个。所跑测试面 790/791 通过。唯一失败是 `unified-nav-guard.test.ts` 对 `IaShell.vue` 的 Escape 断言。该文件在 main、origin/main 与本分支都没有 Escape 处理。这是集成基线的既有红，不由本分支引入。
 
 ## 风险与对策
 
@@ -164,7 +164,7 @@ npx vitest run custom/server/ontology custom/client/ontology \
   custom/qgate/__tests__/qgate-p5-p9.test.ts
 ```
 
-结果：108 个测试文件、791 个用例，790 通过、1 失败。失败项见上节「既有红」。新增 P0 用例 16 个全部通过。
+结果：108 个测试文件、791 个用例，790 通过、1 失败。失败项见上节「既有红」。四组 P0 目标用例共 16 个通过，其中新增 11 个。
 
 未做：浏览器走查。本分支的改动需要注入共享 upstream 树才能热更新。服务载体当前不在集成 main。治理卡与提及面板由 jsdom 挂载测试覆盖。agent 桥由真 Koa HTTP 测试覆盖。
 
