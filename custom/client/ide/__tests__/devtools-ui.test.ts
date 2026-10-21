@@ -11,6 +11,7 @@ import { ref } from 'vue'
 vi.mock('../api/devtools', () => ({
   fetchDevtools: vi.fn(async () => [
     { key: 'zcode', labelZh: 'zcode', labelEn: 'zcode', available: true },
+    { key: 'deepseek-harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', available: true },
     { key: 'vscode', labelZh: 'VS Code', labelEn: 'VS Code', available: true },
     { key: 'warp', labelZh: 'Warp', labelEn: 'Warp', available: false },
   ]),
@@ -41,7 +42,17 @@ describe('IdeDevTools — 工具启动器', () => {
     await flushPromises()
     expect(w.find('[data-testid="ide-devtools-panel"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-devtools-zcode"]').attributes('disabled')).toBeUndefined()
+    expect(w.find('[data-testid="ide-devtools-deepseek-harness"]').attributes('disabled')).toBeUndefined()
     expect(w.find('[data-testid="ide-devtools-warp"]').attributes('disabled')).toBeDefined()
+    w.unmount()
+  })
+
+  it('DeepSeek Harness 按钮直接打开本机 app（不带 cwd）', async () => {
+    const w = mount(IdeDevTools)
+    await w.find('[data-testid="ide-devtools-toggle"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="ide-devtools-deepseek-harness"]').trigger('click')
+    expect(mockedLaunch).toHaveBeenCalledWith('deepseek-harness', undefined)
     w.unmount()
   })
 
