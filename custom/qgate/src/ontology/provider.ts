@@ -9,6 +9,8 @@ export interface OntologyConcept {
   /** 语义近邻但不同义的概念（歧义检测用）：与这些词混用 = finding。 */
   distinctFrom?: string[]
   source?: string
+  /** 概念在标准本体(FIBO/OMG Commons)中的真实 IRI;工程近似概念无此字段。审计/展示用,executor 不消费。 */
+  iri?: string
 }
 
 export interface OntologyConstraint {
