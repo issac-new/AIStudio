@@ -29,19 +29,19 @@ vi.mock('../api/overview', () => ({
   fetchBranches: vi.fn().mockRejectedValue(new Error('no-run')),
 }))
 
-/** 六签文案（zh）：四路由签+两本页签 */
+/** 四签文案（zh）；运行编排/推演设置已归独立专区页（2026-10-21 IA 收口） */
 const FOUR_TAB_LABELS = ['导演台', '监督面板', '运行监控', '证据库'] as const
-const SIX_TAB_LABELS = [...FOUR_TAB_LABELS, '运行编排', '推演设置'] as const
-const stubs = {
-  OrchestrationView: { template: '<div data-testid="orchestration-stub" />' },
-  SimSettingsView: { template: '<div data-testid="settings-stub" />' },
-}
+const stubs = {}
 
 const SIM_PATHS: ReadonlyArray<{ path: string; name: string }> = [
   { path: '/app/sim', name: 'ia2.sim' },
   { path: '/app/sim/supervision', name: 'ia2.simSupervision' },
   { path: '/app/sim/ops', name: 'ia2.simOps' },
   { path: '/app/sim/evidence', name: 'ia2.simEvidence' },
+]
+const SIM_ACTION_PATHS: ReadonlyArray<{ path: string; name: string }> = [
+  { path: '/app/sim/orchestration', name: 'ia2.simOrchestration' },
+  { path: '/app/sim/settings', name: 'ia2.simSettings' },
 ]
 
 function makeResolveRouter(): Router {
@@ -61,11 +61,15 @@ function makeStubbedRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes: stub(buildIaRoutes()) })
 }
 
-/** 壳渲染用：只挂四签兄弟路由（真实组件直接作根挂载，不经 IaShell） */
+/** 壳渲染用：四签兄弟路由 + 两个专区动作路由（动作页用桩，壳直接作根挂载） */
 function makeSimRouter(): Router {
+  const ActionStub = { template: '<div />' }
   return createRouter({
     history: createMemoryHistory(),
-    routes: SIM_PATHS.map(({ path, name }) => ({ path, name, component: SimCenterView })),
+    routes: [
+      ...SIM_PATHS.map(({ path, name }) => ({ path, name, component: SimCenterView })),
+      ...SIM_ACTION_PATHS.map(({ path, name }) => ({ path, name, component: ActionStub })),
+    ],
   })
 }
 
@@ -140,27 +144,31 @@ describe('全流程推演壳：/app/runs 家族重定向', () => {
 })
 
 describe('全流程推演壳：渲染', () => {
-  it('六签单层页签文案=词表；无二级页签行', async () => {
+  it('四签单层页签文案=词表；无二级页签行', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
     const tabs = wrapper.findAll('.sim-center__tab')
-    expect(tabs).toHaveLength(6)
-    expect(wrapper.findAll('[role="tab"]').length).toBe(6)
-    expect(tabs.map(x => x.text())).toEqual([...SIX_TAB_LABELS])
+    expect(tabs).toHaveLength(4)
+    expect(wrapper.findAll('[role="tab"]').length).toBe(4)
+    expect(tabs.map(x => x.text())).toEqual([...FOUR_TAB_LABELS])
     wrapper.unmount()
   })
 
-  it('默认签=导演台；不再渲染「签 N」徽标', async () => {
+  it('默认签=导演台；专区动作按钮在位；不再渲染「签 N」徽标', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
     expect(wrapper.find('[data-testid="ia-sim-tab-overview"]').attributes('aria-selected')).toBe('true')
-    for (const key of ['supervision', 'ops', 'evidence', 'orchestration', 'settings']) {
+    for (const key of ['supervision', 'ops', 'evidence']) {
       expect(wrapper.find(`[data-testid="ia-sim-tab-${key}"]`).attributes('aria-selected')).toBe('false')
     }
+    expect(wrapper.find('[data-testid="ia-sim-action-orchestration"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-sim-action-settings"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-sim-tab-orchestration"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ia-sim-tab-settings"]').exists()).toBe(false)
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
     expect(panel.find('[data-testid="director-panel"]').exists()).toBe(true)
@@ -207,20 +215,40 @@ describe('全流程推演壳：渲染', () => {
     wrapper.unmount()
   })
 
-  it('运行编排/推演设置=本页页签，不跳整页', async () => {
+  it('运行编排/推演设置=专区动作，跳独立页并保留 run/from', async () => {
     const router = makeSimRouter()
-    await router.push('/app/sim')
+    await router.push('/app/sim?run=r1&from=3')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
-    await wrapper.find('[data-testid="ia-sim-tab-orchestration"]').trigger('click')
+    await wrapper.find('[data-testid="ia-sim-action-orchestration"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/sim?tab=orchestration')
-    expect(wrapper.find('[data-testid="orchestration-stub"]').exists()).toBe(true)
-    await wrapper.find('[data-testid="ia-sim-tab-settings"]').trigger('click')
+    expect(router.currentRoute.value.name).toBe('ia2.simOrchestration')
+    expect(router.currentRoute.value.query).toMatchObject({ run: 'r1', from: '3' })
+    await router.push('/app/sim?run=r2&from=2')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/app/sim?tab=settings')
-    expect(wrapper.find('[data-testid="settings-stub"]').exists()).toBe(true)
+    await wrapper.find('[data-testid="ia-sim-action-settings"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.simSettings')
+    expect(router.currentRoute.value.query).toMatchObject({ run: 'r2', from: '2' })
     wrapper.unmount()
+  })
+
+  it('旧 ?tab=orchestration|settings 深链在渲染前重定向到唯一 URL', async () => {
+    const router = makeStubbedRouter()
+    await router.push('/app/sim?tab=orchestration&run=r1&from=3')
+    expect(router.currentRoute.value.name).toBe('ia2.simOrchestration')
+    expect(router.currentRoute.value.query).toMatchObject({ run: 'r1', from: '3' })
+    await router.push('/app/sim?tab=settings&run=r2')
+    expect(router.currentRoute.value.name).toBe('ia2.simSettings')
+    expect(router.currentRoute.value.query).toMatchObject({ run: 'r2' })
+  })
+
+  it('回归守门：SimCenterView 不再内嵌任务协同图/设置页；路由守卫在位', () => {
+    const src = readFileSync(resolve(__dirname, '../views/sim/SimCenterView.vue'), 'utf8')
+    expect(src).not.toContain('views/orchestration/OrchestrationView')
+    expect(src).not.toContain('SimSettingsView')
+    const routes = readFileSync(resolve(__dirname, '../routes.ts'), 'utf8')
+    expect(routes).toContain('beforeEnter: simLegacyTabGuard')
   })
 
   it('深链直落各签：/app/sim/evidence 打开即证据库激活', async () => {

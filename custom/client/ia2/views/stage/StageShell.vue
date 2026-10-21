@@ -86,6 +86,11 @@ function runPrimary(): void {
   else if (primary.value.tab) openTab(primary.value.tab)
 }
 
+/** 阶段工具：跨页/跨域直达（STAGE_META.tools 的唯一消费面）；带 from 保留阶段语境 */
+function openTool(tool: { to: string }): void {
+  void router.push({ path: tool.to, query: { from: String(props.stage) } })
+}
+
 // B6：页签横滚可发现性——右缘渐隐只在还有未滚内容时显示（滚到底隐藏）。
 // 左缘渐隐由 sticky 伪元素自持（未滚动时落在自身占位槽内，不遮内容）。
 const tabsEl = ref<HTMLElement | null>(null)
@@ -210,6 +215,19 @@ const currentProps = computed(() => {
       </button>
     </header>
 
+    <nav v-if="meta.tools.length" class="stg__tools" :aria-label="zh ? '阶段工具' : 'Stage tools'" data-testid="stg-tools">
+      <span class="stg__tools-label">{{ zh ? '阶段工具' : 'Stage tools' }}</span>
+      <button
+        v-for="tool in meta.tools"
+        :key="tool.key"
+        type="button"
+        class="stg__tool"
+        :data-testid="`stg-tool-${tool.key}`"
+        :title="tool.desc"
+        @click="openTool(tool)"
+      >{{ tool.label }} →</button>
+    </nav>
+
     <nav ref="tabsEl" class="stg__tabs" :class="{ 'stg__tabs--end': tabsAtEnd }" role="tablist" :aria-label="meta.title" data-testid="stage-tabs-scroll" @scroll="syncTabsEnd">
       <button
         v-for="t in tabs"
@@ -284,6 +302,15 @@ const currentProps = computed(() => {
 }
 .stg__primary:hover { background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
 .stg__primary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.stg__tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+.stg__tools-label { font-size: 11px; color: var(--text-muted); }
+.stg__tool {
+  border: 1px solid var(--border-color); border-radius: 999px;
+  background: transparent; color: var(--text-secondary);
+  padding: 2px 10px; font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.stg__tool:hover { color: var(--text-primary); background: var(--bg-secondary); }
+.stg__tool:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 .stg__tabs { position: relative; display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .stg__tab {
   border: 0; border-bottom: 2px solid transparent; background: transparent;
