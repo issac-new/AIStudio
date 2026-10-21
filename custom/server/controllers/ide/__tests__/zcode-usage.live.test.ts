@@ -8,8 +8,8 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from 'koa'
 import {
-  handleUsageRounds, handleUsageSessions, handleUsageSummary, handleUsageTools,
-  type UsageRoundRow, type UsageSessionRow, type UsageSummary, type UsageToolRow,
+  handleUsageContext, handleUsageRounds, handleUsageSessions, handleUsageSummary, handleUsageTools,
+  type UsageContext, type UsageRoundRow, type UsageSessionRow, type UsageSummary, type UsageToolRow,
 } from '../zcode-usage'
 
 const dbPath = process.env.ZCODE_CLI_DB?.trim() || join(homedir(), '.zcode', 'cli', 'db', 'db.sqlite')
@@ -59,4 +59,27 @@ describe.skipIf(!existsSync(dbPath))('zcode-usage 真库探针', () => {
     expect(tools.length).toBeGreaterThan(0)
     expect(tools.some(t => t.readOnly)).toBe(true)
   }, 60_000)
+})
+
+describe.skipIf(!existsSync(dbPath))('zcode-context 真库探针（Phase 2）', () => {
+  it('context：requests 精确值非空/构成六类折叠/压缩事件可数', () => {
+    const cs = ctx()
+    handleUsageSessions(cs)
+    const first = (cs.body as { sessions: UsageSessionRow[] }).sessions[0]
+    const c = ctx()
+    handleUsageContext(c, first.id)
+    const body = c.body as UsageContext
+    expect(body.requests.length).toBeGreaterThan(0)
+    expect(body.requests[0].promptTokens).toBeGreaterThan(0)
+    const keys = body.est.categories.map(x => x.key)
+    expect(keys).toEqual(expect.arrayContaining(['user-text', 'assistant-text', 'reasoning', 'tool']))
+    expect(body.est.estTotalTokens).toBeGreaterThan(0)
+    expect(body.largest.length).toBeGreaterThan(0)
+    expect(body.largest[0].preview.length).toBeLessThanOrEqual(120)
+    // 压缩事件可为 0，但字段形状必须稳定
+    body.compactions.forEach(cp => {
+      expect(typeof cp.at).toBe('number')
+      expect(typeof cp.trigger).toBe('string')
+    })
+  }, 120_000)
 })
