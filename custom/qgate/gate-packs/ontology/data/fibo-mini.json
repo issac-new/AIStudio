@@ -1,96 +1,163 @@
 {
   "schemaVersion": 1,
   "provider": "fibo",
-  "description": "FIBO 派生预处理语义索引（v0 小集，v0.1 §42 九概念 + 歧义演示对）。来源标注 FIBO 术语；不做运行时 RDF/OWL 推理（OD-004）。",
+  "description": "FIBO 派生预处理语义索引(v1 实锚轮)。锚定 FIBO master_2026Q3(2026-10-20 发布)与 OMG Commons:每概念带真实 IRI,definition 含原文;FIBO 无对应类者 source=engineering-approximation、iri 留空。不做运行时 RDF/OWL 推理(OD-004)。锚点核实记录见 docs/superpowers/specs/2026-10-21-fibo-ontology-calibration.md。",
   "concepts": [
     {
       "id": "fibo-payment",
       "label": "Payment",
       "aliases": ["支付", "payment"],
-      "definition": "资金从付款方到收款方的转移行为（FIBO: Payment）",
-      "distinctFrom": ["fibo-settlement", "fibo-authorization"],
-      "source": "FIBO"
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/Payment",
+      "definition": "为履行义务而交付金钱,如清偿一项请求或债务(FIBO 原文:delivery of money in fulfillment of an obligation, such as to satisfy a claim or debt;父类 Occurrence)。注意:支付是履行,不是义务本身",
+      "distinctFrom": ["fibo-payment-obligation", "fibo-settlement", "fibo-authorization"],
+      "source": "FIBO FND/ProductsAndServices/PaymentsAndSchedules (Release)"
+    },
+    {
+      "id": "fibo-payer",
+      "label": "Payer",
+      "aliases": ["付款方", "付款人", "payer"],
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/Payer",
+      "definition": "支付账单或费用的一方,或为部分/全部履行义务而向收款方付款的一方(FIBO 原文:a party who pays a bill or fees, or who makes payments to a payee in partial or complete fulfillment of an obligation;父类 Obligor——是角色,不是主体)",
+      "distinctFrom": ["fibo-payee"],
+      "source": "FIBO FND/ProductsAndServices/PaymentsAndSchedules (Release)"
+    },
+    {
+      "id": "fibo-payee",
+      "label": "Payee",
+      "aliases": ["收款方", "收款人", "payee"],
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/Payee",
+      "definition": "应收债务的一方,或按其指示汇票/本票/支票可付,或将从付款方处收到付款的一方(FIBO 原文:a party to whom a debt should be paid, or to whose order a bill of exchange, note, or check is made payable...;父类 Obligee)",
+      "distinctFrom": ["fibo-payer"],
+      "source": "FIBO FND/ProductsAndServices/PaymentsAndSchedules (Release)"
+    },
+    {
+      "id": "fibo-payment-obligation",
+      "label": "PaymentObligation",
+      "aliases": ["支付义务", "付款义务", "payment obligation"],
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/PaymentObligation",
+      "definition": "按合同条款支付一笔款项的可依法强制执行义务(FIBO 原文:legally enforceable duty to pay a sum of money according to the terms stated in a contract;父类 Commitment+Duty)。与 Payment 的区别:义务是应然,支付是履行",
+      "distinctFrom": ["fibo-payment", "fibo-obligation"],
+      "source": "FIBO FND/ProductsAndServices/PaymentsAndSchedules (Release)"
+    },
+    {
+      "id": "fibo-payment-event",
+      "label": "PaymentEvent",
+      "aliases": ["支付事件", "payment event"],
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/PaymentEvent",
+      "definition": "涉及为履行义务而交付金钱的事件,恰好涉及一个 Payment 并适用于一个 PaymentObligation(FIBO 原文:an event that involves delivery of money in fulfillment of an obligation;父类 TransactionEvent)",
+      "distinctFrom": ["fibo-payment"],
+      "source": "FIBO FND/ProductsAndServices/PaymentsAndSchedules (Release)"
     },
     {
       "id": "fibo-account",
       "label": "Account",
       "aliases": ["账户", "account"],
-      "definition": "持有方与其余额关系的账务容器（FIBO: Account）",
-      "source": "FIBO"
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Account",
+      "definition": "与常规交易和服务的业务安排相关联的记录容器(FIBO 原文:container for records associated with a business arrangement for regular transactions and services;父类 FinancialRecord)。注意:FIBO 把账户建模为记录容器,不是资金容器",
+      "distinctFrom": ["fibo-balance"],
+      "source": "FIBO FBC/ProductsAndServices/ClientsAndAccounts (Release)"
+    },
+    {
+      "id": "fibo-balance",
+      "label": "Balance",
+      "aliases": ["余额", "balance"],
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance",
+      "definition": "可用或所欠的金额,计入借贷及费用后的净额(FIBO 原文:amount of money available or owed;父类 MonetaryAmount——余额是特定时点的净额,不是泛化金额)",
+      "distinctFrom": ["fibo-monetary-amount", "fibo-account"],
+      "source": "FIBO FBC/ProductsAndServices/ClientsAndAccounts (Release)"
     },
     {
       "id": "fibo-party",
       "label": "Party",
       "aliases": ["参与方", "party"],
-      "definition": "交易中的自然人/组织/组织单元（FIBO: Party）",
-      "source": "FIBO"
+      "iri": "https://www.omg.org/spec/Commons/PartiesAndSituations/Party",
+      "definition": "自然人或组织(OMG Commons 原文:person or organization;父类 Agent)。注:FIBO 已将 Party 迁至 OMG Commons(cmns-pts),FIBO 本体内仅保留 PartyRole 等补充",
+      "source": "OMG Commons PartiesAndSituations"
     },
     {
       "id": "fibo-transaction",
-      "label": "Transaction",
+      "label": "TransactionEvent",
       "aliases": ["交易", "transaction"],
-      "definition": "两个参与方之间的价值交换事件（FIBO: Transaction）",
-      "source": "FIBO"
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/ProductsAndServices/TransactionEvent",
+      "definition": "销售、转让、租约、许可、贷款、垫款、出资或其他对财产(有形/无形)或金钱权益的转移(FIBO 原文:any sale, assignment, lease, license, loan, advance, contribution, or other transfer of any interest...;父类 OccurrenceKind)。注:FIBO 无裸 Transaction 类,交易语义统一为 TransactionEvent",
+      "distinctFrom": ["fibo-payment", "fibo-settlement"],
+      "source": "FIBO FND/ProductsAndServices/ProductsAndServices"
     },
     {
       "id": "fibo-obligation",
       "label": "Obligation",
       "aliases": ["义务", "obligation"],
-      "definition": "一方须向另一方履行的责任（FIBO: Obligation）",
-      "source": "FIBO"
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Law/LegalCapacity/Duty",
+      "definition": "施加于某个体的、实际存在的义务(FIBO Duty 原文:some obligation which exists and is imposed on some individual)。注:FIBO 用双概念族表达义务——Duty(法律侧)+Commitment(承诺侧:a promise made by some party to act or refrain from acting);PaymentObligation 为二者交叉",
+      "distinctFrom": ["fibo-payment"],
+      "source": "FIBO FND/Law/LegalCapacity + FND/Agreements/Agreements"
+    },
+    {
+      "id": "fibo-contract",
+      "label": "Contract",
+      "aliases": ["合同", "合约", "contract"],
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+      "definition": "有行为能力各方自愿达成的、同意受法律约束并付出对价的协议(FIBO 原文:voluntary, deliberate agreement between competent parties to which the parties agree to be legally bound, and for which the parties provide valuable consideration;父类 Agreement)",
+      "distinctFrom": ["fibo-obligation"],
+      "source": "FIBO FND/Agreements/Contracts"
     },
     {
       "id": "fibo-identifier",
       "label": "Identifier",
       "aliases": ["标识", "identifier"],
-      "definition": "在其作用域内唯一指代某实体的序列（FIBO: Identifier）",
-      "source": "FIBO"
+      "iri": "https://www.omg.org/spec/Commons/Identifiers/Identifier",
+      "definition": "唯一标识其所关联之物的字符序列(OMG Commons 原文:sequence of characters uniquely identifying that with which it is associated;父类 Designation)。注:FIBO 已迁至 OMG Commons(cmns-id)",
+      "source": "OMG Commons Identifiers"
     },
     {
       "id": "fibo-monetary-amount",
       "label": "MonetaryAmount",
       "aliases": ["金额", "amount"],
-      "definition": "带币种的量化金额（FIBO: MonetaryAmount）。语义上必须区分 authorized/captured/settled 语境",
-      "distinctFrom": [],
-      "source": "FIBO"
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/MonetaryAmount",
+      "definition": "以货币单位表示的金钱量度的测度(FIBO 原文:measure that is an amount of money specified in monetary units;父类 ScalarQuantityValue)。语义上必须区分 authorized/captured/settled 语境——三者在 FIBO 中分别是授权保留(工程近似)、支付实例、交易终局化",
+      "distinctFrom": ["fibo-balance"],
+      "source": "FIBO FND/Accounting/CurrencyAmount"
     },
     {
       "id": "fibo-currency",
       "label": "Currency",
       "aliases": ["币种", "currency"],
-      "definition": "记账单位（FIBO: Currency）",
-      "source": "FIBO"
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/Currency",
+      "definition": "交换价值的媒介,以其负责的货币当局的地理位置为参照定义(FIBO 原文:medium of exchange value, defined by reference to the geographical location of the monetary authorities responsible for it;父类 MeasurementUnit)",
+      "source": "FIBO FND/Accounting/CurrencyAmount"
     },
     {
       "id": "fibo-status",
-      "label": "Status",
+      "label": "LifecycleStatus",
       "aliases": ["状态", "status"],
-      "definition": "实体在其生命周期中的处置情况（FIBO: Status）",
-      "source": "FIBO"
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Lifecycles/LifecycleStatus",
+      "definition": "指示某物在其生命周期特定时点位置或状态的分类器(FIBO 原文:classifier indicating the position or state of something at a particular point in its life-cycle)。注:FIBO 无裸 Status 类,状态语义挂靠生命周期",
+      "source": "FIBO FND/Arrangements/Lifecycles"
     },
     {
       "id": "fibo-authorization",
       "label": "Authorization",
       "aliases": ["授权", "authorized", "authorization", "预授权"],
-      "definition": "对资金在履约前实施的可撤回保留（FIBO: Authorization）。授权额度 ≠ 已扣款额度",
+      "definition": "对资金在履约前实施的可撤回保留(支付 API 语境)。注意:FIBO 无对应类(code search 实测,命中均为 Commons BusinessAuthorizations 的 import)——本概念是工程近似,近邻 OMG Commons BusinessAuthorizations(cmns-bauth,业务授权语义)与 FIBO Payment/Settlement。授权额度 ≠ 已扣款额度",
       "distinctFrom": ["fibo-capture", "fibo-settlement", "fibo-payment"],
-      "source": "FIBO"
+      "source": "engineering-approximation"
     },
     {
       "id": "fibo-capture",
       "label": "Capture",
       "aliases": ["扣款", "captured", "capture"],
-      "definition": "把已授权额度实际转为扣款的动作（FIBO 语境）",
+      "definition": "把已授权额度实际转为扣款的动作(支付 API 语境)。注意:FIBO 全仓无 Capture 类(实测 0 命中)——卡支付 PSP 流水线术语,FIBO 不建模;本概念是工程近似,近邻 FIBO Payment(资金交付)",
       "distinctFrom": ["fibo-authorization", "fibo-settlement"],
-      "source": "FIBO"
+      "source": "engineering-approximation"
     },
     {
       "id": "fibo-settlement",
       "label": "Settlement",
       "aliases": ["结算", "settled", "settlement"],
-      "definition": "债权债务最终清偿（FIBO: Settlement）。结算 ≠ 扣款完成",
-      "distinctFrom": ["fibo-capture", "fibo-authorization", "fibo-payment"],
-      "source": "FIBO"
+      "iri": "https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/Settlement/Settlement",
+      "definition": "使交易终局化的行为,包括但不限于完成记账、交换对价、依法登记单据(FIBO 原文:act of finalizing a transaction, including but not limited to finalizing accounting, exchanging consideration, and/or legally recording documents)。结算 ≠ 扣款完成",
+      "distinctFrom": ["fibo-capture", "fibo-authorization", "fibo-payment", "fibo-transaction"],
+      "source": "FIBO FBC/FinancialInstruments/Settlement"
     }
   ],
   "constraints": [
@@ -98,7 +165,7 @@
       "id": "amount-refund-bound",
       "expression": "refundAmount <= capturedAmount",
       "severity": "warning",
-      "description": "退款不得超出已扣款金额（候选不变量，P5+ 由 persistence 门执行侧落地）"
+      "description": "退款不得超出已扣款金额(候选不变量,P5+ 由 persistence 门执行侧落地)"
     },
     {
       "id": "amount-settle-bound",
@@ -110,7 +177,7 @@
       "id": "debit-credit-balance",
       "expression": "SUM(debit) == SUM(credit)",
       "severity": "warning",
-      "description": "分录借贷合计相等（复式记账不变量候选）"
+      "description": "分录借贷合计相等(复式记账不变量候选)"
     }
   ]
 }
