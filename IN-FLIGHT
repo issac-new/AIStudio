@@ -1,2 +1,5 @@
-session=zcode-usage-ledger-1021-op1
-created=2026-10-21T14:06:53+08:00
+session=sequence-guard
+status=complete
+created=2026-10-21T14:15:00+08:00
+closed=2026-10-21T15:00:00+08:00
+note=AGT 调研轮二：会话级数据流护栏（敏感读→外发链路拦截），tool-hooks 链尾独立钩子，HERMES_TOOL_SEQUENCE_GUARD=1 门控。spec=docs/superpowers/specs/2026-10-21-sequence-guard.md；pipeline 73/73。
