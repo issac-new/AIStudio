@@ -44,10 +44,22 @@ const trendResult = vi.hoisted(() => ({
   events: [{ kind: 'compaction' as const, throughMessageId: 3, foldedMessages: 2 }],
 }))
 
+const fleetResult = vi.hoisted(() => ({
+  ok: true,
+  available: true,
+  rootId: 'root-1',
+  parent: { sessionId: 'root-1', role: 'root' as const, title: '根会话', agent: 'main', model: 'm', messageCount: 5, toolCallCount: 2, billedTokens: 100, costUsd: 1, lastActive: 1, isArchived: false, subtreeTokens: 600, subtreeCostUsd: 6 },
+  current: { sessionId: 'sess-ctx-1', role: 'current' as const, title: '当前会话', agent: 'main', model: 'm', messageCount: 3, toolCallCount: 1, billedTokens: 200, costUsd: 2, lastActive: 2, isArchived: false, subtreeTokens: 500, subtreeCostUsd: 5 },
+  children: [{ sessionId: 'kid-1', role: 'child' as const, title: '子会话', agent: 'sub', model: 'm2', messageCount: 1, toolCallCount: 0, billedTokens: 300, costUsd: 3, lastActive: 3, isArchived: false, subtreeTokens: null, subtreeCostUsd: null }],
+  totals: { sessions: 3, billedTokens: 600, costUsd: 6 },
+  childrenTruncated: false,
+}))
+
 vi.mock('../api/usage', () => ({
   ideUsageApi: {
     rounds: vi.fn(async () => roundsResult),
     contextTrend: vi.fn(async () => trendResult),
+    fleet: vi.fn(async () => fleetResult),
   },
 }))
 
@@ -128,6 +140,28 @@ describe('IdeContextPane 金路径', () => {
     // 压点 throughMessageId=3 → 标记柱 seq=3
     expect(w.find('[data-testid="ide-ctxpane-trend-bar-3"]').classes()).toContain('is-marked')
     expect(w.find('[data-testid="ide-ctxpane-trend-bar-5"]').classes()).not.toContain('is-marked')
+  })
+
+  it('Fleet 分区渲染父/当前/子卡与子树合计', async () => {
+    const w = mountPane()
+    await flushPromises()
+    expect(w.find('[data-testid="ide-ctxpane-fleet-card-root-1"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxpane-fleet-card-sess-ctx-1"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxpane-fleet-card-kid-1"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxpane-fleet-totals"]').text()).toContain('600')
+  })
+
+  it('Fleet 独立会话：solo 态而非编造卡片', async () => {
+    const { ideUsageApi } = await import('../api/usage')
+    vi.mocked(ideUsageApi.fleet).mockResolvedValueOnce({
+      ok: true, available: true, rootId: 'solo-1', parent: null,
+      current: { sessionId: 'solo-1', role: 'current', title: '独立', agent: '', model: '', messageCount: 1, toolCallCount: 0, billedTokens: 10, costUsd: 0, lastActive: 1, isArchived: false, subtreeTokens: 10, subtreeCostUsd: 0 },
+      children: [], totals: { sessions: 1, billedTokens: 10, costUsd: 0 }, childrenTruncated: false,
+    })
+    const w = mountPane()
+    await flushPromises()
+    expect(w.find('[data-testid="ide-ctxpane-fleet-solo"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-ctxpane-fleet-card-root-1"]').exists()).toBe(false)
   })
 })
 

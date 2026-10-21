@@ -9,7 +9,7 @@ import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { useSessionMetrics } from '../composables/useSessionMetrics'
-import { ideUsageApi, type UsageRoundRow, type ContextTrendResponse, type ContextTrendStep } from '../api/usage'
+import { ideUsageApi, type UsageRoundRow, type ContextTrendResponse, type ContextTrendStep, type FleetResponse, type FleetCard } from '../api/usage'
 import { roundsSummary } from '../utils/rounds-table'
 import { computeBreakdown } from '../utils/contextBreakdown'
 import { fromFourSegments, type SixSourceEntry } from '../utils/context-six-source'
@@ -36,6 +36,9 @@ const TEXT = {
     trendTitle: '逐轮组成趋势', trendEmpty: '趋势数据未就绪',
     trendApprox: '旧会话无 run 标记，用量按时间序近似对齐', trendTruncated: '仅显示最近 200 轮',
     trendEstimate: '组成按 chars/4 估算',
+    fleetTitle: '编队（Fleet）', fleetSolo: '独立会话：无父会话与子 agent',
+    fleetParent: '父会话', fleetCurrent: '当前', fleetChild: '子 agent',
+    fleetTotals: '子树合计', fleetSessions: '会话', fleetTruncated: '子 agent 超限，仅列最近 40',
     colRound: '#', colModel: '模型', colIn: '输入', colOut: '输出', colHit: '命中', colDur: '耗时', colCost: '费用',
     uncatalogued: '未收录价目',
   },
@@ -51,6 +54,9 @@ const TEXT = {
     trendTitle: 'Composition trend', trendEmpty: 'Trend data not ready',
     trendApprox: 'Legacy session without run markers; usage aligned by time order (approximate)', trendTruncated: 'Showing last 200 rounds only',
     trendEstimate: 'Composition estimated at chars/4',
+    fleetTitle: 'Fleet', fleetSolo: 'Standalone session: no parent, no sub-agents',
+    fleetParent: 'Parent', fleetCurrent: 'Current', fleetChild: 'Sub-agent',
+    fleetTotals: 'Subtree total', fleetSessions: 'sessions', fleetTruncated: 'More than 40 sub-agents; showing latest 40',
     colRound: '#', colModel: 'Model', colIn: 'In', colOut: 'Out', colHit: 'Hit', colDur: 'Time', colCost: 'Cost',
     uncatalogued: 'no price entry',
   },
@@ -77,8 +83,8 @@ async function loadRounds(): Promise<void> {
     roundsState.value = 'error'
   }
 }
-onMounted(() => { void loadRounds(); void loadTrend() })
-watch(() => chatStore.activeSessionId, () => { void loadRounds(); void loadTrend() })
+onMounted(() => { void loadRounds(); void loadTrend(); void loadFleet() })
+watch(() => chatStore.activeSessionId, () => { void loadRounds(); void loadTrend(); void loadFleet() })
 
 const roundRows = computed(() => rounds.value.map((row, i) => ({
   roundIndex: i,
@@ -218,6 +224,44 @@ function stepTitle(s: ContextTrendStep): string {
   return `轮 ${s.turn}（至消息 #${s.seq}）：共 ${formatTokens(s.total)}——sys ${s.buckets.system} / user ${s.buckets.user} / asst ${s.buckets.assistant} / tool ${s.buckets.tool}${usageText}`
 }
 
+// ── Fleet 编队（P3；server fold 子树，卡片=父/当前/子）──
+const fleet = ref<FleetResponse | null>(null)
+const fleetState = ref<'loading' | 'ok' | 'solo' | 'error'>('loading')
+
+async function loadFleet(): Promise<void> {
+  const sid = chatStore.activeSessionId
+  if (!sid) {
+    fleet.value = null
+    fleetState.value = 'solo'
+    return
+  }
+  fleetState.value = 'loading'
+  try {
+    const res = await ideUsageApi.fleet(sid)
+    fleet.value = res
+    if (!res.available || !res.current) {
+      fleetState.value = 'error'
+    } else if (!res.parent && !(res.children?.length)) {
+      fleetState.value = 'solo'
+    } else {
+      fleetState.value = 'ok'
+    }
+  } catch {
+    fleetState.value = 'error'
+  }
+}
+
+const ROLE_LABEL: Record<FleetCard['role'], { zh: string; en: string }> = {
+  root: { zh: '根', en: 'root' }, parent: { zh: '父会话', en: 'Parent' },
+  current: { zh: '当前', en: 'Current' }, child: { zh: '子 agent', en: 'Sub-agent' },
+}
+
+function fleetCardTitle(c: FleetCard): string {
+  const role = ROLE_LABEL[c.role][ideLocaleOf(locale)] ?? c.role
+  const sub = c.subtreeTokens !== null ? `（子树 ${formatTokens(c.subtreeTokens)}）` : ''
+  return `${c.title} ${sub}——${formatTokens(c.billedTokens)} · $${c.costUsd.toFixed(3)} · ${c.messageCount} 条`
+}
+
 function openArchive(): void {
   ide.setSidePaneTab('ctxarchive')
 }
@@ -307,6 +351,41 @@ function openArchive(): void {
       </div>
     </section>
 
+    <!-- Fleet 编队（P3：父/当前/子 agent 卡 + 子树合计） -->
+    <section class="ide-ctxpane__card" data-testid="ide-ctxpane-fleet">
+      <h4>{{ tx.fleetTitle }}</h4>
+      <p v-if="fleetState === 'solo'" class="ide-ctxpane__hint" data-testid="ide-ctxpane-fleet-solo">{{ tx.fleetSolo }}</p>
+      <p v-else-if="fleetState === 'error'" class="ide-ctxpane__hint is-error" data-testid="ide-ctxpane-fleet-error">{{ tx.statsError }}</p>
+      <template v-else-if="fleetState === 'ok' && fleet?.current">
+        <div v-if="fleet.parent" class="ide-ctxpane__fcard is-parent" :data-testid="`ide-ctxpane-fleet-card-${fleet.parent.sessionId}`" :title="fleetCardTitle(fleet.parent)">
+          <span class="ide-ctxpane__frole">{{ tx.fleetParent }}</span>
+          <span class="ide-ctxpane__ftitle">{{ fleet.parent.title }}</span>
+          <span class="ide-ctxpane__fnum">{{ formatTokens(fleet.parent.billedTokens) }}</span>
+        </div>
+        <div class="ide-ctxpane__fcard is-current" :data-testid="`ide-ctxpane-fleet-card-${fleet.current.sessionId}`" :title="fleetCardTitle(fleet.current)">
+          <span class="ide-ctxpane__frole">{{ tx.fleetCurrent }}</span>
+          <span class="ide-ctxpane__ftitle">{{ fleet.current.title }}</span>
+          <span class="ide-ctxpane__fnum" v-if="fleet.current.subtreeTokens !== null">{{ formatTokens(fleet.current.subtreeTokens) }}</span>
+          <span class="ide-ctxpane__fnum" v-else>{{ formatTokens(fleet.current.billedTokens) }}</span>
+        </div>
+        <div
+          v-for="c in fleet.children ?? []"
+          :key="c.sessionId"
+          class="ide-ctxpane__fcard is-child"
+          :data-testid="`ide-ctxpane-fleet-card-${c.sessionId}`"
+          :title="fleetCardTitle(c)"
+        >
+          <span class="ide-ctxpane__frole">{{ tx.fleetChild }}</span>
+          <span class="ide-ctxpane__ftitle">{{ c.title }}</span>
+          <span class="ide-ctxpane__fnum">{{ formatTokens(c.billedTokens) }}</span>
+        </div>
+        <p v-if="fleet.childrenTruncated" class="ide-ctxpane__hint">{{ tx.fleetTruncated }}</p>
+        <p v-if="fleet.totals" class="ide-ctxpane__ftotals" data-testid="ide-ctxpane-fleet-totals">
+          {{ tx.fleetTotals }}：{{ fleet.totals.sessions }} {{ tx.fleetSessions }} · {{ formatTokens(fleet.totals.billedTokens) }} · ${{ fleet.totals.costUsd.toFixed(3) }}
+        </p>
+      </template>
+    </section>
+
     <!-- 每轮用量表（近 10 轮，倒序） -->
     <section class="ide-ctxpane__card" data-testid="ide-ctxpane-rounds">
       <h4>{{ tx.roundsTitle }}</h4>
@@ -372,6 +451,16 @@ function openArchive(): void {
   content: '▼'; position: absolute; bottom: calc(100% + 1px); left: 50%;
   transform: translateX(-50%); font-size: 8px; color: var(--warning-color); line-height: 1;
 }
+.ide-ctxpane__fcard {
+  display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 4px;
+  border: 1px solid var(--border-color); font-size: 11px; margin-bottom: 4px;
+}
+.ide-ctxpane__fcard.is-current { border-color: var(--primary-color); }
+.ide-ctxpane__fcard.is-child { margin-left: 12px; }
+.ide-ctxpane__frole { color: var(--text-muted); flex: 0 0 auto; }
+.ide-ctxpane__ftitle { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ide-ctxpane__fnum { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.ide-ctxpane__ftotals { margin: 4px 0 0; font-size: 11px; color: var(--text-muted); }
 .ide-ctxpane__table { width: 100%; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
 .ide-ctxpane__table th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 2px 4px; border-bottom: 1px solid var(--border-color); }
 .ide-ctxpane__table td { padding: 3px 4px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
