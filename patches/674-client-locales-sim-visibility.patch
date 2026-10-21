@@ -1,0 +1,42 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1708,6 +1708,7 @@
+       feedEmpty: '暂无动态',
+       flowTitle: '任务流转',
+       flowEmpty: '本群暂无任务流转',
++      openSim: '在推演中查看',
+       flow: {
+         dispatch: '派发',
+         receipt: '完成回执',
+@@ -3752,6 +3753,10 @@
+     listActions: '工作流列表操作'
+   },
+   kanban: {
++    simTask: {
++      readonlyJump: '推演任务只读——已切到推演模式查看',
++      readonlyGuard: '推演任务请在推演实例处理——日常侧只读'
++    },
+     title: '看板',
+     createTask: '新建任务',
+     noTasks: '暂无任务',
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1709,6 +1709,7 @@
+       feedEmpty: 'No activity',
+       flowTitle: 'Task flow',
+       flowEmpty: 'No task flow in this room',
++      openSim: 'View in simulation',
+       flow: {
+         dispatch: 'Dispatch',
+         receipt: 'Receipt',
+@@ -3753,6 +3754,10 @@
+     listActions: 'Workflow list actions'
+   },
+   kanban: {
++    simTask: {
++      readonlyJump: 'Simulation task is read-only — switched to simulation view',
++      readonlyGuard: 'Simulation tasks are handled in the simulation instance — read-only here'
++    },
+     title: 'Kanban Board',
+     createTask: 'New Task',
+     noTasks: 'No tasks',

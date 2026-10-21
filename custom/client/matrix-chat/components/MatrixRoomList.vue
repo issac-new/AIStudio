@@ -369,8 +369,8 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   flex-shrink: 0;
   font-size: 10px;
   line-height: 1;
-  border: 1px solid var(--color-info, var(--color-primary));
-  color: var(--color-info, var(--color-primary));
+  border: 1px solid var(--accent-info);
+  color: var(--accent-info);
   border-radius: 999px;
   padding: 2px 6px;
 }

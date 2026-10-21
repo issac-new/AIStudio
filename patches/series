@@ -899,3 +899,4 @@
 672-loginview-server-info-priority.patch
 # 673: UsageView 增强（context-insights P4）：挂 UsageInsightsExtension——活动热力图+缓存命中率 KPI+近期会话卡（对标 dsh-context 上下文洞察页三件套）。
 673-client-usageview-insights.patch
+674-client-locales-sim-visibility.patch
