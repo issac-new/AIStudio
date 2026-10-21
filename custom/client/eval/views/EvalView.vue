@@ -21,6 +21,7 @@ const L = computed(() => {
   const loc = String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh')
   return loc.startsWith('zh') ? evalMessages.zh.eval : evalMessages.en.eval
 })
+const route = useRoute()
 
 type Tab = 'sets' | 'runs' | 'metrics' | 'redteam' | 'oracle' | 'advice'
 const tab = ref<Tab>('sets')
@@ -57,7 +58,7 @@ async function refresh(): Promise<void> {
     runs.value = r.runs
     if (!launchSetId.value) {
       // 转题成功页带 ?set= 预选回归库；否则缺省第一个集
-      const fromQuery = String(useRoute().query.set ?? '')
+      const fromQuery = String(route.query.set ?? '')
       launchSetId.value = sets.value.some((x) => x.id === fromQuery) ? fromQuery : (sets.value[0]?.id ?? '')
     }
   } catch (e) {
