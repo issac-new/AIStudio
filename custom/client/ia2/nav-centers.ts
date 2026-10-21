@@ -9,8 +9,9 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { STAGE_META } from './stage-meta'
 import { hasStageAttribution, stageKeyOf, stageOwnersForRouteName } from './stage-attribution'
+import { stageKeyForPath, type StageKey } from './stage-path'
 
-export type CenterKey = 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'stage6'
+export type CenterKey = StageKey
 
 export interface CenterNavMeta {
   key: CenterKey
@@ -44,28 +45,12 @@ export const CENTER_NAVS: readonly CenterNavMeta[] = STAGE_META.map((s, i) => ({
 }))
 
 /**
- * 路径 → 当前中心 key（高亮判定纯函数）。/app 家族按前缀归阶段，
- * 但 /app/sim*、/app/gov* 更长前缀先判；非 /app 家族（IDE 侧 / 上游壳页）
- * 返回 null。段边界匹配：/app/simulation 不误判为全流程推演。
+ * 路径 → 当前阶段 key（高亮判定纯函数）。唯一规则在 stage-path.ts，
+ * 本函数只做 nav-centers 的类型适配；/app/sim* 返回 null（独立导航域），
+ * 非 /app 家族（IDE 侧 / 上游壳页）返回 null。
  */
 export function centerForPath(path: string): CenterKey | null {
-  // D13 时序六阶段判定：/stage/* 前缀映射阶段；既有 /app 家族归④开发
-  // （开发期的日常工具集：看板/沟通/IDE/审批待办）；D18：/app/teams 团队
-  // 管理归①搭建（搭台的第三步，设计正本 §5.3）
-  if (path === '/app/teams' || path.startsWith('/app/teams/')) return 'stage1'
-  if (path === '/app/agents' || path.startsWith('/app/agents/')) return 'stage1'
-  if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'stage1'
-  if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'stage2'
-  if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'stage3'
-  if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
-  if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
-  if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
-  // 全流程推演是独立导航域（D5）：即使 URL 带 from 也不高亮日常阶段。
-  if (path === '/app/sim' || path.startsWith('/app/sim/')) return null
-  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage6'
-  if (path === '/app' || path === '/app/') return 'stage1' // 裸路径=旅程页（默认入口，搭建区①高亮）
-  if (path.startsWith('/app/')) return 'stage4'
-  return null
+  return stageKeyForPath(path)
 }
 
 /**

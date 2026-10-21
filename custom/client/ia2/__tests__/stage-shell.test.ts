@@ -135,6 +135,21 @@ describe('StageShell — 单层页签', () => {
     w.unmount()
   })
 
+  it('②阶段工具行渲染三张工具卡（STAGE_META.tools 唯一消费面）', async () => {
+    const { w } = await mountStage(2)
+    expect(w.find('[data-testid="stg-tools"]').exists()).toBe(true)
+    const tools = w.findAll('[data-testid^="stg-tool-"]')
+    expect(tools).toHaveLength(3)
+    expect(tools.map(x => x.text())).toEqual(['运行总览 →', '运行编排 →', '文档评审 →'])
+    w.unmount()
+  })
+
+  it('①无阶段工具时不渲染空行', async () => {
+    const { w } = await mountStage(1)
+    expect(w.find('[data-testid="stg-tools"]').exists()).toBe(false)
+    w.unmount()
+  })
+
   it('①五步按钮切本页页签（写 query，不整页跳转）', async () => {
     const { w, router } = await mountStage(1)
     await w.find('[data-testid="stg-tab-org"]').trigger('click')

@@ -16,8 +16,9 @@
 //
 // 纪律：本文件只产纯路由描述和区域元数据，可被 router.resolve 级测试直接消费，
 // 不触发任何懒组件加载。壳层 meta.fullscreen: true。
-import type { RouteRecordRaw } from 'vue-router'
+import type { RouteLocationNormalized, RouteRecordRaw } from 'vue-router'
 import { features } from '../../../config/features'
+import { stageKeyForPath } from './stage-path'
 
 /** 视图 key（场景条与区域投影的词表）—— D20：键名与阶段对齐（stage1-6），终结三中心时代字面 */
 export type IaAreaKey = 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'stage5' | 'stage6'
@@ -48,21 +49,8 @@ export const IA_AREAS: IaAreaMeta[] = [
  * /app 家族按阶段投影（stage1-6）；非 /app 路径返回 null（IDE 侧）。
  */
 export function areaForPath(path: string): IaAreaKey | null {
-  if (path !== '/app' && !path.startsWith('/app/')) return null
-  // D13 时序六阶段（与 nav-centers.centerForPath 同步）；D20 键名对齐 stage1-6
-  if (path === '/app/stage/setup' || path.startsWith('/app/stage/setup/')) return 'stage1'
-  if (path === '/app/stage/reqs' || path.startsWith('/app/stage/reqs/')) return 'stage2'
-  if (path === '/app/stage/design' || path.startsWith('/app/stage/design/')) return 'stage3'
-  if (path === '/app/stage/build' || path.startsWith('/app/stage/build/')) return 'stage4'
-  if (path === '/app/stage/accept' || path.startsWith('/app/stage/accept/')) return 'stage5'
-  if (path === '/app/stage/govern' || path.startsWith('/app/stage/govern/')) return 'stage6'
-  // 全流程推演是独立导航域（2026-10-20 拆分裁定）：不参与六阶段高亮。
-  if (path === '/app/sim' || path.startsWith('/app/sim/')) return null
-  if (path === '/app/gov' || path.startsWith('/app/gov/')) return 'stage6'
-  if (path === '/app/agents' || path.startsWith('/app/agents/')) return 'stage1'
-  if (path === '/app/teams' || path.startsWith('/app/teams/')) return 'stage1'
-  if (path === '/app' || path === '/app/') return 'stage1' // 裸路径=旅程页（①高亮）
-  return 'stage4'
+  // 唯一实现=stage-path.ts；本函数只做类型适配，规则不得在此复制。
+  return stageKeyForPath(path)
 }
 
 /** 旧直达链接迁移表（v12 §4：路径重定向；无名称记录，退役名零残留） */
@@ -148,10 +136,28 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   annex('/hermes/version-preview', 'hermes.versionPreview', { superAdmin: true }),
 ]
 
+/** 旧推演深链归一（2026-10-21 IA 收口）：
+ *  /app/sim?tab=orchestration|settings 是六签时代的本页页签地址；
+ *  现为独立专区页，渲染前重定向到唯一 URL，保留 run/from 上下文。
+ *  其余 ?tab= 原样放行（四签不使用 tab query）。 */
+export function simLegacyTabGuard(to: RouteLocationNormalized) {
+  const raw = Array.isArray(to.query.tab) ? to.query.tab[0] : to.query.tab
+  if (raw !== 'orchestration' && raw !== 'settings') return true
+  const query: Record<string, string> = {}
+  for (const key of ['run', 'from'] as const) {
+    const v = to.query[key]
+    if (typeof v === 'string' && v) query[key] = v
+  }
+  return {
+    name: raw === 'orchestration' ? 'ia2.simOrchestration' : 'ia2.simSettings',
+    ...(Object.keys(query).length ? { query } : {}),
+  }
+}
+
 /** 构造 /app 路由树（每次调用返回新对象，调用方负责 addRoute） */
 export function buildIaRoutes(): RouteRecordRaw[] {
   const workbench = () => import('./views/WorkbenchView.vue')
-  // 全流程推演专区壳（B1）：六签兄弟路由共用同一懒组件
+  // 全流程推演专区壳（B1）：四签兄弟路由共用同一懒组件；编排/设置为独立页
   const simShell = () => import('./views/sim/SimCenterView.vue')
   // 含参目标转函数式重定向：vue-router 字符串重定向不透传源路径参数
   // （roomId 等含 !/: 特殊字符，经 path 直拼不经 params 序列化）
@@ -357,6 +363,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 'sim',
           name: 'ia2.sim',
           component: simShell,
+          beforeEnter: simLegacyTabGuard,
         },
         {
           path: 'sim/supervision',
