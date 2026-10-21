@@ -173,8 +173,8 @@ const KIND_TONE: Record<string, string> = {
 // ── 生产失败转回归（2026-10-21 回流轮）：只提供入口，任务定义在 Composer ──
 const composerTarget = ref<TraceNodeRef | null>(null)
 
-/** 首版只接受完整 legacy 证据；OTel/未收尾如实禁用，不产空证据任务。 */
-const convertSession = computed(() => meta.value?.format === 'legacy' && meta.value?.complete === true)
+/** 可消费=可识别格式（legacy/otel）且已收尾；unknown/未收尾如实禁用，不产空证据任务。 */
+const convertSession = computed(() => meta.value?.format !== undefined && meta.value.format !== 'unknown' && meta.value.complete === true)
 
 function openSessionComposer(): void {
   if (!sessionId.value || !convertSession.value) return
