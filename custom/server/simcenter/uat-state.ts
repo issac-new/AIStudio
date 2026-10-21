@@ -115,7 +115,7 @@ export function aggregateUatByAc(records: UatVerdictRecord[]): UatAggregate {
     }
     return {
       ac,
-      state: latest?.verdict ?? 'pending',
+      state: (latest?.verdict ?? 'pending') as UatAcState,
       latest,
       history,
       blocked: latest?.verdict === 'reject',
