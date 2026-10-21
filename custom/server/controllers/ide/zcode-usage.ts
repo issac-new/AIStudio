@@ -609,7 +609,7 @@ const PART_PARSE_CAP = 8000
 const LARGEST_TOP = 20
 const PREVIEW_LEN = 120
 
-interface PartRow { message_id: unknown; data: unknown }
+interface PartRow { message_id: unknown; data: unknown; time_created: unknown }
 interface MsgRow { id: unknown; time_created: unknown; data: unknown }
 
 /** message×part 折叠（纯函数供单测）：六类估算+top 消息+压缩事件。 */
@@ -741,7 +741,7 @@ export function handleUsageContext(ctx: Context, sessionId: string, deps: ZcodeU
       `select id, time_created, data from message where session_id = ? order by sequence asc`,
     ).all(sessionId) as MsgRow[]
     const parts = db.prepare(
-      `select message_id, data from part where session_id = ? order by message_id, sequence asc limit ?`,
+      `select message_id, time_created, data from part where session_id = ? order by message_id, sequence asc limit ?`,
     ).all(sessionId, PART_PARSE_CAP * 2) as PartRow[]
 
     const folded = foldContext(msgs, parts)
