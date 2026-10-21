@@ -30,6 +30,12 @@ export interface JudgeDeps {
 export interface JudgeAttemptOptions {
   /** S0 断言也送 S1 交叉验证（默认关：成本纪律；新集首轮可开）。 */
   crossValidate?: boolean
+  /**
+   * 参照答案锚定检验（默认关，成本翻倍）：移除 expected_behavior 再判一遍，
+   * 结论翻转的断言置 unknown 并标记 unstable——判据应是证据本身，而不是
+   * "和参考答案像不像"。对应文章的位置/冗长偏差治理里的 swap test 思路。
+   */
+  referenceLeakCheck?: boolean
 }
 
 // 模块级共享默认实例：不注入时跨 judgeAttempt 调用复用（缓存生效、熔断计数累积）。
@@ -45,7 +51,14 @@ export function _resetJudgeDefaultsForTests(): void {
 
 export interface JudgeAttemptResult {
   verdicts: AttemptVerdict[]
-  judgeMeta: { backend: string; latencyMs: number | null; cached: boolean; online: boolean }
+  judgeMeta: {
+    backend: string
+    latencyMs: number | null
+    cached: boolean
+    online: boolean
+    models?: string[]
+    referenceLeak?: { checked: number; flips: number; ids: string[] }
+  }
 }
 
 /** 截断到 maxStateChars：保头为主、尾留 1/4（关键结论常在文末交付段）。 */
@@ -76,15 +89,24 @@ export function buildJudgeState(task: EvalTask, evidence: Evidence, config: Eval
   return state
 }
 
-/** 构造 S1 问句集。只含断言文本（反偏置：无 expect）。 */
+/**
+ * 判分问句的公共约束（OpenAI Evals 教科书 §3.2 偏差治理）：
+ * 冗长偏好——写得更长不等于更对；锚点——给可观测判据而不是笼统表态。
+ */
+export const JUDGE_BIAS_GUARD = '证据篇幅长短、措辞气势不作为判断依据。'
+
+/** 构造 S1 问句集。只含断言文本与行为锚点（反偏置：无 expect、无期望答案）。 */
 export function buildQuestions(task: EvalTask, assertionIds: string[]): Record<string, { type: 'noul'; instructions: string }> {
   const questions: Record<string, { type: 'noul'; instructions: string }> = {}
   for (const id of assertionIds) {
     const assertion = task.rubric.find((a) => a.id === id)
     if (!assertion) continue
+    const anchor = assertion.anchor
+      ? `成立的标准：${assertion.anchor.yes}；不成立的标准：${assertion.anchor.no}。`
+      : ''
     questions[id] = {
       type: 'noul',
-      instructions: `根据证据判断以下断言是否成立（只依据给定证据，证据不足以判断时不猜测）：${assertion.text}`,
+      instructions: `根据证据判断以下断言是否成立（只依据给定证据，证据不足以判断时不猜测）：${assertion.text}${anchor}${JUDGE_BIAS_GUARD}`,
     }
   }
   return questions
@@ -143,6 +165,83 @@ function applySimilarityRule(
   }
 }
 
+// ---------- S0 轨迹规则（文章轨迹评估三维的确定性部分） ----------
+
+/** 动作签名：工具名 + 参数指纹（无参数指纹时退化为工具名）。 */
+export function actionSignature(call: { name: string; argsSig?: string }): string {
+  return call.argsSig ? `${call.name}|${call.argsSig}` : call.name
+}
+
+/** 连续相同签名的最大长度。 */
+function maxConsecutiveRun(signatures: string[]): number {
+  let max = 1
+  let run = 1
+  for (let i = 1; i < signatures.length; i += 1) {
+    run = signatures[i] === signatures[i - 1] ? run + 1 : 1
+    if (run > max) max = run
+  }
+  return signatures.length === 0 ? 0 : max
+}
+
+function applyRequiredToolsRule(rule: { tools: string[] }, evidence: Evidence): RuleOutcome {
+  if (!evidence.toolCalls) {
+    // 无工具调用证据 ≠ 没调用：无法判断，交 unknown（不为缺证据判失败）。
+    return { value: 'unknown', reason: 'S0 required_tools：工具调用证据缺席' }
+  }
+  const seen = new Set(evidence.toolCalls.map((c) => c.name))
+  const missing = rule.tools.filter((t) => !seen.has(t))
+  return {
+    value: missing.length === 0 ? 'yes' : 'no',
+    reason: missing.length === 0
+      ? `S0 required_tools 全部命中（${rule.tools.join(',')}）`
+      : `S0 required_tools 缺失：${missing.join(',')}`,
+  }
+}
+
+function applyNoLoopRule(rule: { allowedConsecutive?: number }, evidence: Evidence): RuleOutcome {
+  if (!evidence.toolCalls) return { value: 'unknown', reason: 'S0 no_loop：工具调用证据缺席' }
+  const allowed = rule.allowedConsecutive ?? 1
+  const sigs = evidence.toolCalls.map(actionSignature)
+  const longest = maxConsecutiveRun(sigs)
+  const looped = longest > allowed
+  return {
+    value: looped ? 'no' : 'yes',
+    reason: looped
+      ? `S0 no_loop 命中：连续相同动作 ${longest} 次（上限 ${allowed}）`
+      : `S0 no_loop 未命中（最长连续 ${longest}，上限 ${allowed}）`,
+  }
+}
+
+function applyRedundantRatioRule(rule: { max: number }, evidence: Evidence): RuleOutcome {
+  if (!evidence.toolCalls) return { value: 'unknown', reason: 'S0 redundant_ratio：工具调用证据缺席' }
+  const sigs = evidence.toolCalls.map(actionSignature)
+  if (sigs.length === 0) return { value: 'unknown', reason: 'S0 redundant_ratio：零工具调用，无可算冗余' }
+  const seen = new Set<string>()
+  let redundant = 0
+  for (const sig of sigs) {
+    if (seen.has(sig)) redundant += 1
+    else seen.add(sig)
+  }
+  const ratio = redundant / sigs.length
+  return {
+    value: ratio <= rule.max ? 'yes' : 'no',
+    reason: `S0 redundant_ratio 冗余 ${redundant}/${sigs.length}=${ratio.toFixed(2)}（上限 ${rule.max}）`,
+  }
+}
+
+/** S0 规则分派（正则/阈值/相似度/轨迹三规则）。 */
+function applyRule(task: EvalTask, s0: NonNullable<EvalTask['rubric'][number]['s0']>, evidence: Evidence): RuleOutcome {
+  switch (s0.kind) {
+    case 'regex': return applyRegexRule(s0, evidence)
+    case 'threshold': return applyThresholdRule(s0, evidence)
+    case 'similarity': return applySimilarityRule(task, s0, evidence)
+    case 'required_tools': return applyRequiredToolsRule(s0, evidence)
+    case 'no_loop': return applyNoLoopRule(s0, evidence)
+    case 'redundant_ratio': return applyRedundantRatioRule(s0, evidence)
+    default: return { value: 'unknown', reason: 'S0 未知规则' }
+  }
+}
+
 // ---------- 主入口 ----------
 
 /**
@@ -167,11 +266,7 @@ export async function judgeAttempt(
       s1Needed.push(assertion.id)
       continue
     }
-    const outcome = assertion.s0.kind === 'regex'
-      ? applyRegexRule(assertion.s0, evidence)
-      : assertion.s0.kind === 'similarity'
-        ? applySimilarityRule(task, assertion.s0, evidence)
-        : applyThresholdRule(assertion.s0, evidence)
+    const outcome = applyRule(task, assertion.s0, evidence)
     verdicts.push({ assertionId: assertion.id, value: outcome.value, source: 's0', reason: outcome.reason })
     if (options.crossValidate) s1Needed.push(assertion.id)
   }
@@ -185,6 +280,9 @@ export async function judgeAttempt(
   const s1Values = new Map<string, number>()
   /** 多数决已裁断言（value 定 yes/no；缺席=未过半 → unknown）。 */
   const s1Decided = new Map<string, 'yes' | 'no'>()
+  /** 参照答案锚定检验判为不稳定的断言（结论随 expected_behavior 移除而翻转）。 */
+  const unstableIds = new Set<string>()
+  let referenceLeak: { checked: number; flips: number; ids: string[] } | undefined
 
   if (s1Needed.length > 0) {
     const breaker = deps.breaker ?? (sharedBreaker ??= new Breaker(config.breakerThreshold, config.breakerCooldownMs))
@@ -193,16 +291,20 @@ export async function judgeAttempt(
     const questions = buildQuestions(task, s1Needed)
     const ask = deps.ask ?? ((req, cfg) => clefAsk(req, cfg, deps.fetchDeps))
     const models = config.judgeModels.length > 0 ? config.judgeModels : [config.judgeModel]
-    // 模型 → 断言 id → p（缺席=该模型未答该题）
-    const perModel = new Map<string, Map<string, number>>()
 
-    if (breaker.isOpen(now())) {
-      online = false
-    } else {
+    /** 跑一轮判定：模型 → 断言 id → p。熔断打开直接返回 offline。 */
+    const runPass = async (passState: Record<string, unknown>): Promise<{
+      perModel: Map<string, Map<string, number>>
+      anyCacheMiss: boolean
+      latency: number
+      online: boolean
+    }> => {
+      const perModel = new Map<string, Map<string, number>>()
+      if (breaker.isOpen(now())) return { perModel, anyCacheMiss: false, latency: 0, online: false }
       const started = now()
       let anyCacheMiss = false
       for (const model of models) {
-        const cacheKey = sha1Of(JSON.stringify({ state, questions, model }))
+        const cacheKey = sha1Of(JSON.stringify({ state: passState, questions, model }))
         const collected = new Map<string, number>()
         const cachedAnswers = cache.get(cacheKey, now())
         if (cachedAnswers !== undefined) {
@@ -213,7 +315,7 @@ export async function judgeAttempt(
         } else {
           anyCacheMiss = true
           try {
-            const answers = await ask({ model, state, questions }, config)
+            const answers = await ask({ model, state: passState, questions }, config)
             breaker.recordSuccess()
             cache.set(cacheKey, answers, now())
             for (const id of s1Needed) {
@@ -227,12 +329,13 @@ export async function judgeAttempt(
         }
         if (collected.size > 0) perModel.set(model, collected)
       }
-      latencyMs = now() - started
-      cached = !anyCacheMiss
-      online = perModel.size > 0
+      return { perModel, anyCacheMiss, latency: now() - started, online: perModel.size > 0 }
+    }
 
-      // 多数决：各模型 p 按 τ 三段映射计票，严格过半才裁决（平票/灰区多数 → unknown）；
-      // 合并 p=已答模型均值（留痕供校准）。单模型退化为既有 τ 三段语义。
+    /** 多数决：各模型 p 按 τ 三段映射计票，严格过半才裁决（平票/灰区 → unknown）。 */
+    const decideFrom = (perModel: Map<string, Map<string, number>>) => {
+      const decided = new Map<string, 'yes' | 'no'>()
+      const means = new Map<string, number>()
       const majority = perModel.size / 2
       for (const id of s1Needed) {
         const ps: number[] = []
@@ -246,11 +349,39 @@ export async function judgeAttempt(
           else if (p <= config.tauNo) no += 1
         }
         if (ps.length === 0) continue
-        const mean = ps.reduce((a, b) => a + b, 0) / ps.length
-        s1Values.set(id, mean)
-        if (yes > majority) s1Decided.set(id, 'yes')
-        else if (no > majority) s1Decided.set(id, 'no')
+        means.set(id, ps.reduce((a, b) => a + b, 0) / ps.length)
+        if (yes > majority) decided.set(id, 'yes')
+        else if (no > majority) decided.set(id, 'no')
       }
+      return { decided, means }
+    }
+
+    const first = await runPass(state)
+    latencyMs = first.latency
+    cached = !first.anyCacheMiss
+    online = first.online
+    const firstResult = decideFrom(first.perModel)
+    for (const [id, p] of firstResult.means) s1Values.set(id, p)
+    for (const [id, value] of firstResult.decided) s1Decided.set(id, value)
+
+    // 参照答案锚定检验：去掉 expected_behavior 再判一遍，翻转即不可靠。
+    if (options.referenceLeakCheck && first.online) {
+      const stateNoRef = { ...state }
+      delete stateNoRef.expected_behavior
+      const second = await runPass(stateNoRef)
+      const secondResult = decideFrom(second.perModel)
+      const flipped: string[] = []
+      let checked = 0
+      for (const [id, value] of firstResult.decided) {
+        const again = secondResult.decided.get(id)
+        if (again === undefined) continue
+        checked += 1
+        if (again !== value) {
+          unstableIds.add(id)
+          flipped.push(id)
+        }
+      }
+      if (checked > 0) referenceLeak = { checked, flips: flipped.length, ids: flipped }
     }
   }
 
@@ -265,6 +396,19 @@ export async function judgeAttempt(
     const s0Verdict = s0ById.get(assertion.id)
     const p = s1Values.get(assertion.id)
     if (s1Set.has(assertion.id)) {
+      // 偏差检验优先：结论不稳的断言不做通过/不通过结论，保守置 unknown 进人工。
+      if (unstableIds.has(assertion.id)) {
+        finalVerdicts.push({
+          assertionId: assertion.id,
+          value: 'unknown',
+          source: s0Verdict ? 's0+s1' : 's1',
+          unstable: true,
+          instability: 'reference_leak',
+          reason: `S1 结论随参照答案移除而翻转 → unknown（判据锚在参考答案而非证据）${p !== undefined ? ` p=${p.toFixed(2)}` : ''}`,
+          ...(p !== undefined ? { p } : {}),
+        })
+        continue
+      }
       let s1Value: 'yes' | 'no' | 'unknown' = 'unknown'
       const decided = s1Decided.get(assertion.id)
       if (decided) {
@@ -330,6 +474,7 @@ export async function judgeAttempt(
       cached,
       online,
       ...(config.judgeModels.length > 1 ? { models: config.judgeModels } : {}),
+      ...(referenceLeak ? { referenceLeak } : {}),
     },
   }
 }

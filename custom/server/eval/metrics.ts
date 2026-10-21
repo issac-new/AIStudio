@@ -8,7 +8,7 @@
 //   六维度量分面（信通院《云上 Agent 基准度量模型》）：未采集维 value=null 立账不造数。
 //
 // 全部为纯函数（输入 set/run，输出聚合面），不落库不判定——与 aggregate.ts 四层同层。
-import type { Attempt, EvalLink, EvalRun, EvalSet, ExceptionType, RunAggregates } from './types'
+import type { Attempt, EvalLink, EvalRun, EvalSet, ExceptionType, RunAggregates, ToolCallRecord, TrajectoryDiscipline } from './types'
 
 /** 序列最长公共子序列长度（工具名序列比对，DP O(n·m)；工具序列长度实践 <100）。 */
 export function lcsLength(a: string[], b: string[]): number {
@@ -157,8 +157,66 @@ export function processMetricsOf(set: EvalSet, run: EvalRun): RunAggregates['pro
   }
 }
 
-/** 最近邻秩 P99（n<2 无统计意义 → null）。 */
-export function p99Of(values: number[]): number | null {
+/** 动作签名：工具名 + 参数指纹（无参数指纹时退化为工具名）。 */
+export function toolCallSignature(call: ToolCallRecord): string {
+  return call.argsSig ? `${call.name}|${call.argsSig}` : call.name
+}
+
+/**
+ * 轨迹纪律（文章轨迹评估维度的确定性读数）：
+ *   - 死循环：连续相同动作签名（同名同参）超过 1 次；
+ *   - 冗余率：重复出现过的签名步数 / 总步数；
+ *   - 最长连续重复：全 run 扫描，给"差一点就循环"的早期信号。
+ * 只统计有工具调用记录的 attempt：无记录=未测，不造 0 分。
+ */
+export function trajectoryDisciplineOf(attempts: Attempt[]): TrajectoryDiscipline | undefined {
+  const analyzed = attempts.filter((a) => (a.toolCalls?.length ?? 0) > 0)
+  if (analyzed.length === 0) return undefined
+  let loopAttempts = 0
+  let loopCallCount = 0
+  let redundant = 0
+  let totalCalls = 0
+  let maxConsecutiveRepeat = 1
+  for (const attempt of analyzed) {
+    const calls = attempt.toolCalls ?? []
+    const sigs = calls.map(toolCallSignature)
+    totalCalls += sigs.length
+    const seen = new Set<string>()
+    for (const sig of sigs) {
+      if (seen.has(sig)) redundant += 1
+      else seen.add(sig)
+    }
+    let run = 1
+    let attemptLooped = false
+    for (let i = 1; i < sigs.length; i += 1) {
+      run = sigs[i] === sigs[i - 1] ? run + 1 : 1
+      if (run > maxConsecutiveRepeat) maxConsecutiveRepeat = run
+      if (run > 1) attemptLooped = true
+    }
+    if (attemptLooped) {
+      loopAttempts += 1
+      // 多余调用数：每个连续段长度-1 之和（允许出现一次）。
+      let seg = 1
+      for (let i = 1; i <= sigs.length; i += 1) {
+        if (i < sigs.length && sigs[i] === sigs[i - 1]) {
+          seg += 1
+        } else {
+          if (seg > 1) loopCallCount += seg - 1
+          seg = 1
+        }
+      }
+    }
+  }
+  return {
+    attemptsAnalyzed: analyzed.length,
+    loopAttempts,
+    loopCallCount,
+    redundantRatio: totalCalls === 0 ? null : redundant / totalCalls,
+    maxConsecutiveRepeat,
+  }
+}
+
+/** 最近邻秩 P99（n<2 无统计意义 → null）。 */export function p99Of(values: number[]): number | null {
   if (values.length < 2) return null
   const sorted = [...values].sort((a, b) => a - b)
   const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil(0.99 * sorted.length) - 1))
