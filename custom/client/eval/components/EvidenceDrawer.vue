@@ -55,6 +55,7 @@ function close(): void {
         <template v-else>
           <div class="drawer__meta">
             <span v-if="data.sessionId">{{ L.evidence.session }}：<code>{{ data.sessionId }}</code></span>
+            <span v-if="data.spanRef" class="mono">↳ {{ data.spanRef }}<template v-if="data.spanKind"> · {{ data.spanKind }}</template></span>
             <span v-if="data.meta">{{ data.meta.toolCalls }} tools · {{ data.meta.tokens }} tokens</span>
             <span v-if="data.efficiency?.durationMs !== undefined">{{ data.efficiency.durationMs }}ms</span>
           </div>

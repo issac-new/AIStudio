@@ -296,19 +296,19 @@ onMounted(refresh)
 .secaudit__title { margin: 0; font-size: 14px; font-weight: 600; }
 .secaudit__sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted); }
 .secaudit__row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.secaudit__card { border: 1px solid var(--border-subtle, rgba(255,255,255,.08)); border-radius: 8px; padding: 10px 12px; }
+.secaudit__card { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; }
 .secaudit__card h4 { margin: 0 0 8px; font-size: 12.5px; }
 .secaudit__form { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .secaudit__form--col { flex-direction: column; align-items: stretch; }
 .secaudit__form input, .secaudit__form select, .secaudit__form textarea {
-  font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-subtle, rgba(255,255,255,.12));
+  font: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color);
   background: var(--bg-input, transparent); color: inherit;
 }
 .secaudit__btn, .secaudit__form button {
-  font: inherit; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border-subtle, rgba(255,255,255,.16));
+  font: inherit; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border-color);
   background: var(--bg-hover, rgba(255,255,255,.06)); color: inherit; cursor: pointer;
 }
-.secaudit__link { background: none; border: none; color: var(--accent, #6cf); cursor: pointer; font: inherit; padding: 0; text-align: left; }
+.secaudit__link { background: none; border: none; color: var(--accent-primary); cursor: pointer; font: inherit; padding: 0; text-align: left; }
 .secaudit__link.is-active { font-weight: 700; text-decoration: underline; }
 .secaudit__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .secaudit__list--tight { gap: 3px; font-size: 12px; }
@@ -318,13 +318,13 @@ onMounted(refresh)
 .secaudit__tag.st-confirmed { background: rgba(255, 80, 80, .18); }
 .secaudit__tag.st-rejected { background: rgba(120, 220, 120, .18); }
 .secaudit__meta { font-size: 11px; color: var(--text-muted); }
-.secaudit__warn { font-size: 11px; color: var(--warn, #fc6); }
+.secaudit__warn { font-size: 11px; color: var(--warning); }
 .secaudit__error { color: var(--error, #f66); font-size: 12px; }
 .secaudit__critic { margin-top: 6px; font-size: 11.5px; }
-.secaudit__critic summary { cursor: pointer; color: var(--warn, #fc6); }
+.secaudit__critic summary { cursor: pointer; color: var(--warning); }
 .secaudit__check { display: flex; gap: 6px; align-items: center; font-size: 12px; }
 .secaudit__report { white-space: pre-wrap; font-size: 11.5px; margin: 0; }
 .secaudit__actions { display: inline-flex; gap: 8px; }
 .cov-unchecked { color: var(--error, #f66); }
-.cov-partial { color: var(--warn, #fc6); }
+.cov-partial { color: var(--warning); }
 </style>

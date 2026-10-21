@@ -29,6 +29,7 @@ import { buildRegistryView, summarizeConsumption } from './metric-registry'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
 import { sampleFromTrace, sampleSpanFromTrace } from './trace-sampler'
+import { reflowTraceToSet } from './trace-reflow'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
   appendIteration, appendOracleRun, appendTasksToSet, auditSnapshot, createOracleCase, createRemediation, createSet, exportSet,
@@ -72,6 +73,7 @@ function runSummary(run: EvalRun) {
     target: run.target,
     k: run.k,
     status: run.status,
+    ...(run.evidenceMode ? { evidenceMode: run.evidenceMode } : {}),
     createdAt: run.createdAt,
     createdBy: run.createdBy,
     note: run.note,
@@ -145,6 +147,32 @@ router.post('/sample-span-from-trace', async (ctx) => {
     return
   }
   ctx.body = { ...result, actor: actorOf(ctx) }
+})
+
+// 生产失败轨迹 → 回归样本库（人工确认任务定义 + traceHash 防预览漂移）。
+router.post('/reflow-from-trace', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const result = reflowTraceToSet({
+    sessionId: typeof body.sessionId === 'string' ? body.sessionId.trim() : '',
+    ...(typeof body.spanRef === 'string' && body.spanRef.trim() ? { spanRef: body.spanRef.trim() } : {}),
+    expectedTraceHash: typeof body.expectedTraceHash === 'string' ? body.expectedTraceHash.trim() : '',
+    task: body.task as never,
+    ...(typeof body.targetSetId === 'string' && body.targetSetId.trim() ? { targetSetId: body.targetSetId.trim() } : {}),
+    actor: actorOf(ctx),
+  })
+  if (result.ok === false) {
+    const failure = result as { ok: false; code: string; problems: string[] }
+    ctx.status = failure.code === 'origin_conflict' || failure.code === 'trace_hash_mismatch' ? 409 : 400
+    ctx.body = { ok: false, code: failure.code, problems: failure.problems }
+    return
+  }
+  ctx.status = result.created ? 201 : 200
+  ctx.body = {
+    ok: true,
+    created: result.created,
+    taskId: result.taskId,
+    set: { id: result.set.id, name: result.set.name, track: result.set.track, taskCount: result.set.tasks.length, revision: result.set.revision },
+  }
 })
 
 router.get('/sets', async (ctx) => {
@@ -315,6 +343,7 @@ router.post('/runs', async (ctx) => {
       target,
       crossValidate: body.crossValidate === true,
       referenceLeakCheck: body.referenceLeakCheck === true,
+      useOrigin: body.useOrigin === true,
       ...(typeof body.note === 'string' ? { note: body.note } : {}),
       actor: actorOf(ctx) ?? 'anonymous',
     },
@@ -365,6 +394,7 @@ router.post('/runs/:id/rerun', async (ctx) => {
       samples: rawSamples,
       target: (body.target ?? base.target) as EvalRun['target'],
       crossValidate: body.crossValidate === true,
+      useOrigin: body.useOrigin === true,
       note: typeof body.note === 'string' && body.note.trim() ? body.note.trim() : `同卷复评：${base.id}`,
       actor: actorOf(ctx) ?? 'anonymous',
       ...(base.setRevision !== undefined ? { setRevision: base.setRevision } : {}),
@@ -626,7 +656,8 @@ router.get('/runs/:id/evidence', async (ctx) => {
     }
     return
   }
-  const sample = sampleFromTrace(attempt.sessionId)
+  const spanSample = attempt.spanRef ? sampleSpanFromTrace(attempt.sessionId, attempt.spanRef) : null
+  const sample = spanSample ?? sampleFromTrace(attempt.sessionId)
   if (!sample.ok || !sample.sample) {
     ctx.body = {
       ok: false,
@@ -644,6 +675,7 @@ router.get('/runs/:id/evidence', async (ctx) => {
     taskId,
     sampleIdx,
     sessionId: attempt.sessionId,
+    ...(attempt.spanRef ? { spanRef: attempt.spanRef, spanKind: spanSample?.spanKind } : {}),
     transcript: transcript.slice(0, maxChars),
     truncated: transcript.length > maxChars,
     toolCalls: sample.sample.toolCalls ?? [],

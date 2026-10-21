@@ -11,6 +11,7 @@
 //   - 判定端 mock 纪律：单测不得依赖真端点存活（toolresultguard 当晚教训）；
 //   - Efficiency 同源取数（trace/run_usage 口径），禁止另起炉灶。
 export * from './types'
+export * from './origin'
 export * from './store'
 export * from './clef'
 export * from './judge'
@@ -22,5 +23,6 @@ export * from './releaseGate'
 export * from './aggregate'
 export * from './outcome'
 export * from './runner'
+export * from './trace-reflow'
 export * from './uioracle'
 export { evalRoutes } from './controller'

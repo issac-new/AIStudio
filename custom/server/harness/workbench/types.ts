@@ -8,6 +8,7 @@
 //   - compose = 依据行为差异选出/合并候选
 //   - champion = 某个面的当前被采纳版本（跨任务 Improvement Harness 的最小落点）
 // 纪律：所有"改好了"的判定必须带真实评测运行；证据不足一律 unknown，不猜。
+import type { EvidenceMode } from '../../eval/types'
 
 export type SurfaceKey =
   | 'system_prompt'
@@ -107,6 +108,8 @@ export interface ProbeMetrics {
   evalRunId: string
   setId: string
   setRevision?: number
+  /** 历史运行缺省按 explicit 兼容；origin/mixed 只能诊断。 */
+  evidenceMode?: EvidenceMode
   k: number
   passAt1: number | null
   passAtK: number | null

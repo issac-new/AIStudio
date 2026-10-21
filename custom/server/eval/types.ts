@@ -7,6 +7,8 @@
 //
 // 本域刻意不 import 上游模块（符号链接路径解析陷阱，见 controllers/hermes/trace.ts
 // 文件头注释）：证据经 EvidenceProvider 注入，判定经 AskFn 注入，全依赖可测。
+import type { ReflowOrigin } from './origin'
+export type { ReflowOrigin } from './origin'
 
 /** 评测集双轨：E2E=任务级（拉警报），Process=模块级（定位责任方）。 */
 export type Track = 'e2e' | 'process'
@@ -131,14 +133,6 @@ export interface RubricAssertion {
 export interface OutcomeCheckDecl {
   verifier: string
   params: Record<string, string>
-}
-
-/** 坏例回流来源（腾讯：线上坏例转回归样本防回潮；回流任务带溯源，不匿名混入）。 */
-export interface ReflowOrigin {
-  runId: string
-  taskId: string
-  sampleIdx?: number
-  at: number
 }
 
 export interface EvalTask {
@@ -278,6 +272,8 @@ export interface Attempt {
   taskId: string
   sampleIdx: number
   sessionId?: string
+  /** span 级样本的稳定引用（api_request_id/tool_call_id）；整 session 缺省。 */
+  spanRef?: string
   verdicts: AttemptVerdict[]
   outcome?: { verifier: string; ok: boolean; detail?: string }
   efficiency?: AttemptEfficiency
@@ -296,6 +292,9 @@ export interface Attempt {
 }
 
 export type RunStatus = 'done' | 'failed'
+
+/** 证据来源模式：原事故复现只能诊断，修复关闭与晋级必须认 explicit。 */
+export type EvidenceMode = 'explicit' | 'origin' | 'mixed'
 
 export interface RunAggregates {
   taskCount: number
@@ -407,6 +406,8 @@ export interface EvalRun {
   status: RunStatus
   attempts: Attempt[]
   aggregates: RunAggregates
+  /** 证据来源；历史运行缺省按 explicit 兼容。 */
+  evidenceMode?: EvidenceMode
   /** 线上层证据（回填面；缺席=no_data 如实呈现）。 */
   liveEvidence?: LiveEvidence
   createdAt: number

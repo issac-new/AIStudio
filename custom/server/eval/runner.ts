@@ -15,7 +15,8 @@ import { judgeAttempt, type JudgeDeps } from './judge'
 import { sha1Of } from './clef'
 import { runOutcomeCheck, type OutcomeRunContext } from './outcome'
 import { appendRun, getSet, getSetRevision, sealedAttemptCount } from './store'
-import type { Attempt, Evidence, EvalConfig, EvalRun, ToolCallRecord } from './types'
+import { inspectTrace, sampleFromTrace, sampleSpanFromTrace } from './trace-sampler'
+import type { Attempt, Evidence, EvalConfig, EvalRun, EvalTask, ToolCallRecord } from './types'
 import { loadEvalConfig } from './types'
 
 // ---------- L2 trace 证据提供者 ----------
@@ -188,6 +189,8 @@ export async function traceEvidenceProvider(sessionId: string): Promise<Evidence
 
 export interface SampleInput {
   sessionId?: string
+  /** span 级样本引用；与 sessionId 搭配，缺省表示整会话。 */
+  spanRef?: string
   /** 内联证据（优先于 sessionId；测试与导入场景）。 */
   evidence?: Evidence
 }
@@ -196,6 +199,8 @@ export interface ReplayRunInput {
   setId: string
   /** taskId → 样本列表（每项一个 sample；k=列表长度）。 */
   samples: Record<string, SampleInput[]>
+  /** 显式开启后，缺失样本才从任务 origin 展开；显式样本始终优先。 */
+  useOrigin?: boolean
   target?: EvalRun['target']
   crossValidate?: boolean
   /** 参照答案锚定检验（成本翻倍；争议题/新集首轮建议开）。 */
@@ -221,6 +226,46 @@ export interface RunnerDeps {
 export type ReplayRunResult =
   | { ok: true; run: EvalRun }
   | { ok: false; problems: string[] }
+
+interface ResolvedSample extends SampleInput {
+  fromOrigin?: boolean
+}
+
+function originSampleOf(task: EvalTask): { sample?: ResolvedSample; problem?: string } {
+  const origin = task.origin
+  if (!origin) return { problem: `任务 ${task.id} 缺少显式样本，也没有可自动绑定的 origin` }
+  if (origin.source !== 'production_trace' || !origin.traceHash) {
+    return { problem: `任务 ${task.id} 的 origin 不是带指纹的生产 trace，不能自动展开` }
+  }
+  const inspected = inspectTrace(origin.sessionId)
+  if (!inspected.ok) return { problem: `任务 ${task.id} 的来源 trace 不可用：${inspected.reason ?? '未知原因'}` }
+  if (inspected.format !== 'legacy' || !inspected.complete) {
+    return { problem: `任务 ${task.id} 的来源 trace 不是完整 legacy 证据` }
+  }
+  if (inspected.traceHash !== origin.traceHash) {
+    return { problem: `任务 ${task.id} 的来源 trace 已变化，需重新转题确认` }
+  }
+  const sampled = origin.spanRef
+    ? sampleSpanFromTrace(origin.sessionId, origin.spanRef)
+    : sampleFromTrace(origin.sessionId)
+  if (!sampled.ok || !sampled.sample) {
+    return { problem: `任务 ${task.id} 的来源证据采样失败：${sampled.reason ?? '未知原因'}` }
+  }
+  const meaningful = Boolean(
+    sampled.sample.transcript?.trim()
+    || sampled.sample.toolCalls?.length
+    || (sampled.sample.efficiency?.tokens ?? 0) > 0,
+  )
+  if (!meaningful) return { problem: `任务 ${task.id} 的来源 trace 没有可判分证据` }
+  return {
+    sample: {
+      sessionId: origin.sessionId,
+      ...(origin.spanRef ? { spanRef: origin.spanRef } : {}),
+      evidence: sampled.sample,
+      fromOrigin: true,
+    },
+  }
+}
 
 /**
  * 执行回放判分运行：逐 task 逐 sample 组装证据 → 判分管线 → outcome 校验 →
@@ -250,26 +295,61 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
   }
 
   if (set.sealed) {
+    if (input.useOrigin) return { ok: false, problems: ['密封集不支持按 origin 自动展开（防止借来源引用探测题库）'] }
     const used = sealedAttemptCount(set.id, input.actor ?? 'anonymous')
     if (used >= config.sealedMaxAttempts) {
       return { ok: false, problems: [`密封集尝试上限（每调用方 ${config.sealedMaxAttempts} 次，防探测；已用 ${used}）`] }
     }
   }
-  const sampleKeys = Object.keys(input.samples ?? {})
-  if (sampleKeys.length === 0) return { ok: false, problems: ['samples 至少覆盖 1 个任务'] }
+  const rawSamples = input.samples ?? {}
+  const sampleKeys = Object.keys(rawSamples)
+  if (!input.useOrigin && sampleKeys.length === 0) return { ok: false, problems: ['samples 至少覆盖 1 个任务'] }
 
   const unknownTasks = sampleKeys.filter((taskId) => !set.tasks.some((t) => t.id === taskId))
   if (unknownTasks.length) return { ok: false, problems: [`samples 引用了不存在的任务：${unknownTasks.join(',')}`] }
+
+  const resolvedSamples: Record<string, ResolvedSample[]> = {}
+  const sourceProblems: string[] = []
+  let hasExplicit = false
+  let hasOrigin = false
+  for (const task of set.tasks) {
+    const explicit = rawSamples[task.id] ?? []
+    if (explicit.length > 0) {
+      resolvedSamples[task.id] = explicit
+      hasExplicit = true
+      continue
+    }
+    if (!input.useOrigin) {
+      resolvedSamples[task.id] = []
+      continue
+    }
+    const resolved = originSampleOf(task)
+    if (resolved.problem) {
+      sourceProblems.push(resolved.problem)
+      continue
+    }
+    resolvedSamples[task.id] = resolved.sample ? [resolved.sample] : []
+    hasOrigin = true
+  }
+  if (sourceProblems.length) return { ok: false, problems: sourceProblems }
+  if (input.useOrigin && !Object.values(resolvedSamples).some((samples) => samples.length > 0)) {
+    return { ok: false, problems: ['没有可判分的显式样本或 origin 来源'] }
+  }
 
   const runStartedAt = now()
   const evidenceProvider = deps.evidenceProvider ?? traceEvidenceProvider
   const attempts: Attempt[] = []
 
   for (const task of set.tasks) {
-    const samples = input.samples[task.id] ?? []
+    const samples = resolvedSamples[task.id] ?? []
     for (let i = 0; i < samples.length; i += 1) {
       const sample = samples[i]
-      const evidence: Evidence = sample.evidence ?? (sample.sessionId ? await evidenceProvider(sample.sessionId) : {})
+      // 显式样本带 spanRef：按 span 取证（与证据端点/报告同一投影），不得偷读整会话——
+      // 否则整会话其他内容撑过断言却被呈现为「该 span 已验证」。
+      const evidence: Evidence = sample.evidence
+        ?? (sample.sessionId && sample.spanRef
+          ? (sampleSpanFromTrace(sample.sessionId, sample.spanRef).sample ?? {})
+          : sample.sessionId ? await evidenceProvider(sample.sessionId) : {})
       const judged = await judgeAttempt(task, evidence, deps.judge, {
         crossValidate: input.crossValidate,
         referenceLeakCheck: input.referenceLeakCheck,
@@ -278,6 +358,7 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
         taskId: task.id,
         sampleIdx: i + 1,
         ...(sample.sessionId ? { sessionId: sample.sessionId } : {}),
+        ...(sample.spanRef ? { spanRef: sample.spanRef } : {}),
         verdicts: judged.verdicts,
         judgeMeta: judged.judgeMeta,
         ...(evidence.efficiency ? { efficiency: evidence.efficiency } : {}),
@@ -295,7 +376,8 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
     }
   }
 
-  const maxK = Math.max(0, ...set.tasks.map((t) => input.samples[t.id]?.length ?? 0))
+  const maxK = Math.max(0, ...set.tasks.map((t) => resolvedSamples[t.id]?.length ?? 0))
+  const evidenceMode = hasOrigin ? (hasExplicit ? 'mixed' as const : 'origin' as const) : 'explicit' as const
   const run: EvalRun = {
     id: `erun-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     setId: set.id,
@@ -305,6 +387,7 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
     target: input.target ?? {},
     k: maxK,
     status: 'done',
+    evidenceMode,
     attempts,
     aggregates: {} as EvalRun['aggregates'],
     createdAt: now(),
