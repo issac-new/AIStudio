@@ -23,6 +23,8 @@ vi.mock('@/custom/ontology/api', () => ({
     resetSeed: vi.fn(),
     saveSpec: vi.fn(),
     exportText: vi.fn(),
+    getFiboPack: vi.fn(),
+    importFibo: vi.fn(),
   },
   constraintsApi: {
     list: vi.fn(),
@@ -127,5 +129,51 @@ describe('OntologyView 冒烟', () => {
     expect(w.find('[data-testid="ontology-ctr-row-ctr-001"]').exists()).toBe(true)
     expect(w.text()).toContain('不新增并列 API')
     expect(ctrMocks.list).toHaveBeenCalled()
+  })
+
+  it('FIBO 页签：真实 IRI 目录渲染 + 导入调用（2026-10-21 深调研）', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    apiMocks.getFiboPack.mockResolvedValue({
+      ok: true,
+      pack: {
+        id: 'fibo-finance',
+        label: 'FIBO 金融域本体对齐包',
+        namespace: 'https://swarm.studio/ns/fibo-alignment#',
+        source: {
+          repo: 'https://github.com/edmcouncil/fibo', release: 'master_2026Q3',
+          releasedAt: '2026-10-20', retrievedAt: '2026-10-21', license: 'MIT', viewer: '', spec: '',
+        },
+        counts: { concepts: 36, fibo: 32, commons: 2, localExtensions: 2, objectProperties: 21, axioms: 16 },
+        modules: [],
+        concepts: [{
+          id: 'Payment', label: 'payment', labelZh: '支付',
+          definitionZh: '为履行义务而交付货币的行为',
+          definitionEn: 'delivery of money in fulfillment of an obligation',
+          iri: 'https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/Payment',
+          origin: 'fibo', module: 'FND/ProductsAndServices/PaymentsAndSchedules',
+          versionIri: 'https://spec.edmcouncil.org/fibo/ontology/FND/20250701/ProductsAndServices/PaymentsAndSchedules/',
+          maturity: 'Release', category: '支付与金额',
+        }],
+        objectProperties: [],
+      },
+      applied: { concepts: 0, total: 36, applied: [] },
+    })
+    apiMocks.importFibo.mockResolvedValue({
+      ok: true,
+      added: { types: 36, objectProperties: 21, axioms: 16 },
+      skipped: { types: 0, objectProperties: 0, axioms: 0 },
+      applied: { concepts: 36, total: 36, applied: [] },
+    })
+    const w = mountView()
+    await flushPromises()
+    await w.find('[data-testid="onto-tab-fibo"]').trigger('click')
+    await flushPromises()
+    const table = w.find('[data-testid="ontology-fibo-table"]').text()
+    expect(table).toContain('PaymentsAndSchedules')
+    expect(table).toContain('Release')
+    await w.find('[data-testid="ontology-fibo-import"]').trigger('click')
+    await flushPromises()
+    expect(apiMocks.importFibo).toHaveBeenCalled()
+    expect(w.find('[data-testid="ontology-fibo-result"]').text()).toContain('36')
   })
 })
