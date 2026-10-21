@@ -90,6 +90,10 @@ const DEV_BOOTSTRAP_PASSWORD = 'dev-bootstrap'
 async function devAutoLogin(): Promise<void> {
   if (!import.meta.env.DEV) return
   if (localStorage.getItem('hermes_api_key')) return
+  // 手动登出闸门（2026-10-21 与 LoginView/设置面板登出同契约）：本标签页刚退出
+  // 登录时不再自动拉回 admin 会话，回落手动登录页；手动登录成功后闸门即清（新开
+  // 标签页不受影响）。不加此闸时退出→重载 2s 内即被本桩以 admin 复活，登出形同虚设。
+  if (sessionStorage.getItem('hermes_manual_logout') === '1') return
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
