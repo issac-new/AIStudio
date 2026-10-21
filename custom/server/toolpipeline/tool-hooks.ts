@@ -17,6 +17,7 @@ import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { ekkoGuardHook } from '../toolresultguard'
 import { ekkoEnforceGateHook } from './enforce-gate'
+import { sequenceGuardHook } from './sequence-guard'
 import { skillGuardHook } from '../skillgov/skill-guard-hook'
 import { reportLostSuspensionsOnBoot } from './enforce-approvals'
 import {
@@ -305,7 +306,10 @@ const auditHook = {
 // Skill 三段治理（2026-10-13 挂账清偿轮）：skillGuardHook 排泛型围栏后、执法门前——
 // skill_view/skill_manage 按注册扫描 verdict 拦 + 装载内容内联 shell 警示
 // （SKILLGOV_ENFORCE=1 才执法；观测审计恒开 fail-open）。
-export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), skillGuardHook(), ekkoEnforceGateHook()]
+// 数据流护栏（2026-10-21 AGT 调研轮二）：sequenceGuardHook 排链尾（执法门后、
+// 真实执行前）——瀑布首个 {allow:false} 短路，故只有真会执行的调用才记会话污点；
+// 敏感触碰后窗口内外发面被拒（HERMES_TOOL_SEQUENCE_GUARD=1 才生效）。
+export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), skillGuardHook(), ekkoEnforceGateHook(), sequenceGuardHook()]
 
 // H3 中间态（进程面边界缓解）：钩子装配=server 启动面，扫一遍重启遗留挂起单
 // （waitingAt 标记在案→govbus 提醒+清标记；幂等、fail-soft、fire-and-forget）。
