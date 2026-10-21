@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/ontology/views/OntologyView.vue -->
-<!-- 本体工作台主视图（GB/T 48000.3 方法论产品化）：七页签——概览/模式/图谱/
-     实例/校验/版本/导出。文案单一事实源=custom/client/ontology/i18n.ts。
+<!-- 本体工作台主视图（GB/T 48000.3 方法论产品化）：八页签——概览/模式/图谱/
+     实例/校验/版本/导出/FIBO 金融域。文案单一事实源=custom/client/ontology/i18n.ts。
      路由：/app/ontology（ia2.ontology），features.ontology 门控（默认开）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
@@ -12,7 +12,7 @@ import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import {
   ontologyApi, type EntityType, type Health, type OntologyInstance, type OntologySpec,
-  type SpecSnapshotMeta, type OntologyStats, type Violation,
+  type SpecSnapshotMeta, type OntologyStats, type Violation, type FiboPackSummary,
 } from '@/custom/ontology/api'
 import { ontologyMessages } from '@/custom/ontology/i18n'
 import ConstraintsPanel from '@/custom/ontology/components/ConstraintsPanel.vue'
@@ -23,12 +23,12 @@ const L = computed(() => {
   return loc.startsWith('zh') ? ontologyMessages.zh.onto : ontologyMessages.en.onto
 })
 
-const ONTO_TABS = ['overview', 'schema', 'graph', 'instances', 'validate', 'versions', 'export', 'constraints'] as const
+const ONTO_TABS = ['overview', 'schema', 'graph', 'instances', 'validate', 'versions', 'export', 'fibo', 'constraints'] as const
 type Tab = typeof ONTO_TABS[number]
 const tab = useTabQuery('tab', ONTO_TABS, 'overview')
 const typeQuery = ref('')
 const instQuery = ref('')
-const filtersActive = computed(() => tab.value === 'schema' || tab.value === 'instances')
+const filtersActive = computed(() => tab.value === 'schema' || tab.value === 'instances' || tab.value === 'fibo')
 // 模板表达式禁 TS 语法（as 断言）——页签选择经此函数（模板只传 string）
 function selectTab(key: string): void {
   tab.value = key as Tab
@@ -55,6 +55,60 @@ async function refresh(): Promise<void> {
   }
 }
 onMounted(() => void refresh())
+
+// —— FIBO 金融域页（2026-10-21 深调研；真实 IRI + 模块版本锚） ——
+const fiboPack = ref<FiboPackSummary | null>(null)
+const fiboApplied = ref(0)
+const fiboQuery = ref('')
+const fiboLoading = ref(false)
+const fiboImporting = ref(false)
+const fiboError = ref('')
+const fiboResult = ref('')
+
+const fiboConceptsShown = computed(() => {
+  const q = fiboQuery.value.trim().toLowerCase()
+  const list = fiboPack.value?.concepts ?? []
+  if (!q) return list
+  return list.filter((c) => c.id.toLowerCase().includes(q)
+    || c.label.toLowerCase().includes(q)
+    || c.labelZh.toLowerCase().includes(q)
+    || c.iri.toLowerCase().includes(q)
+    || (c.module ?? '').toLowerCase().includes(q))
+})
+
+async function refreshFibo(): Promise<void> {
+  fiboLoading.value = true
+  fiboError.value = ''
+  try {
+    const r = await ontologyApi.getFiboPack()
+    fiboPack.value = r.pack
+    fiboApplied.value = r.applied.concepts
+  } catch (e) {
+    fiboError.value = (e as Error).message
+  } finally {
+    fiboLoading.value = false
+  }
+}
+
+async function doImportFibo(): Promise<void> {
+  if (!window.confirm(L.value.fibo.importConfirm)) return
+  fiboImporting.value = true
+  fiboResult.value = ''
+  try {
+    const r = await ontologyApi.importFibo()
+    fiboResult.value = L.value.fibo.imported
+      .replace('{types}', String(r.added.types))
+      .replace('{props}', String(r.added.objectProperties))
+      .replace('{axioms}', String(r.added.axioms))
+    fiboApplied.value = r.applied.concepts
+    await refresh()
+    await refreshFibo()
+  } catch (e) {
+    fiboResult.value = (e as Error).message
+  } finally {
+    fiboImporting.value = false
+  }
+}
 
 // —— 模式页 ——
 // 注意：SFC 编译链里 computed<泛型> 会被拆成比较表达式（本机实锤：groupedTypes
@@ -145,7 +199,14 @@ const instPageCount = computed(() => Math.max(1, Math.ceil(instancesShown.value.
 const instancesPaged = computed(() =>
   instancesShown.value.slice((instPage.value - 1) * INST_PAGE_SIZE, instPage.value * INST_PAGE_SIZE))
 watch([instQuery, instFilter], () => { instPage.value = 1 })
-watch(() => tab.value, (t) => { if (t === 'instances' || t === 'versions' || t === 'export') void (t === 'instances' ? refreshInstances() : t === 'versions' ? refreshVersions() : loadExport()) }, { immediate: true })
+watch(() => tab.value, (t) => {
+  if (t === 'instances' || t === 'versions' || t === 'export' || t === 'fibo') {
+    void (t === 'instances' ? refreshInstances()
+      : t === 'versions' ? refreshVersions()
+        : t === 'export' ? loadExport()
+          : refreshFibo())
+  }
+}, { immediate: true })
 
 const showEditor = ref(false)
 const editing = ref<OntologyInstance | null>(null)
@@ -307,6 +368,10 @@ function fmtBytes(b: number): string {
           <input v-model="typeQuery" class="onto-rail__input" :placeholder="L.schema.typesTitle" data-testid="ontology-type-search" />
           <p class="muted onto-rail__hint">{{ L.schema.typesTitle }} / {{ L.schema.propsTitle }}</p>
         </template>
+        <template v-else-if="tab === 'fibo'">
+          <input v-model="fiboQuery" class="onto-rail__input" :placeholder="L.fibo.searchPlaceholder" data-testid="ontology-fibo-search" />
+          <p class="muted onto-rail__hint">{{ L.fibo.applied }} {{ fiboApplied }} / {{ fiboPack?.counts.concepts ?? '—' }}</p>
+        </template>
         <template v-else>
           <select v-model="instFilter" class="onto-rail__input" data-testid="ontology-inst-filter" @change="refreshInstances()">
             <option value="">{{ L.instances.filterAll }}</option>
@@ -346,6 +411,50 @@ function fmtBytes(b: number): string {
       </div>
     </section>
 
+    <!-- FIBO 金融域对齐包 -->
+    <section v-else-if="tab === 'fibo'" class="onto__section">
+      <p v-if="fiboError" class="onto__error" data-testid="ontology-fibo-error">{{ L.fibo.loadError }}：{{ fiboError }}</p>
+      <div v-if="fiboPack" class="onto__block" data-testid="ontology-fibo-panel">
+        <h2>{{ L.fibo.title }}</h2>
+        <p class="onto__hint">{{ L.fibo.intro }}</p>
+        <dl class="onto__meta">
+          <dt>{{ L.fibo.source }}</dt><dd><a :href="fiboPack.source.repo" target="_blank" rel="noreferrer">{{ fiboPack.source.repo }}</a></dd>
+          <dt>{{ L.fibo.release }}</dt><dd>{{ fiboPack.source.release }}（{{ fiboPack.source.releasedAt }}）</dd>
+          <dt>{{ L.fibo.retrievedAt }}</dt><dd>{{ fiboPack.source.retrievedAt }}</dd>
+          <dt>{{ L.fibo.license }}</dt><dd>{{ fiboPack.source.license }}</dd>
+        </dl>
+        <div class="onto__cards">
+          <div class="onto-card"><div class="onto-card__num">{{ fiboPack.counts.concepts }}</div><div class="onto-card__label">{{ L.fibo.concepts }}</div></div>
+          <div class="onto-card"><div class="onto-card__num">{{ fiboPack.counts.fibo }}</div><div class="onto-card__label">{{ L.fibo.fiboTerms }}</div></div>
+          <div class="onto-card"><div class="onto-card__num">{{ fiboPack.counts.commons }}</div><div class="onto-card__label">{{ L.fibo.commonsTerms }}</div></div>
+          <div class="onto-card"><div class="onto-card__num">{{ fiboPack.counts.localExtensions }}</div><div class="onto-card__label">{{ L.fibo.localExtensions }}</div></div>
+          <div class="onto-card"><div class="onto-card__num">{{ fiboPack.counts.objectProperties }}</div><div class="onto-card__label">{{ L.fibo.objectProps }}</div></div>
+          <div class="onto-card"><div class="onto-card__num">{{ fiboPack.counts.axioms }}</div><div class="onto-card__label">{{ L.fibo.axioms }}</div></div>
+        </div>
+        <div class="onto__toolbar">
+          <button type="button" class="onto__btn onto__btn--primary" data-testid="ontology-fibo-import" :disabled="fiboImporting || fiboLoading" @click="doImportFibo()">{{ fiboImporting ? L.fibo.importing : L.fibo.importBtn }}</button>
+          <span class="onto__hint">{{ L.fibo.applied }} {{ fiboApplied }} / {{ fiboPack.counts.concepts }}</span>
+          <button type="button" class="onto__btn" :disabled="fiboLoading" @click="refreshFibo()">{{ L.fibo.reload }}</button>
+          <span v-if="fiboResult" class="onto-sev onto-sev--info" data-testid="ontology-fibo-result">{{ fiboResult }}</span>
+        </div>
+        <p class="onto__hint">{{ L.fibo.importNote }}</p>
+        <p class="onto__hint onto__hint--warn">{{ L.fibo.localNote }}</p>
+      </div>
+      <table v-if="fiboPack" class="onto-table" data-testid="ontology-fibo-table">
+        <thead><tr><th>{{ L.fibo.concepts }}</th><th>{{ L.fibo.iri }}</th><th>{{ L.fibo.origin }}</th><th>{{ L.fibo.maturity }}</th><th>{{ L.fibo.definition }}</th></tr></thead>
+        <tbody>
+          <tr v-for="c in fiboConceptsShown" :key="c.id">
+            <td><strong>{{ c.labelZh }}</strong><br><span class="onto-chip">{{ c.label }}</span><br><span class="onto-type__iri">{{ c.id }}</span></td>
+            <td><code class="onto-type__iri">{{ c.iri }}</code></td>
+            <td><span class="onto-sev onto-sev--info">{{ c.origin }}</span><br><span class="onto-type__iri">{{ c.module ?? '—' }}</span></td>
+            <td>{{ c.maturity ?? '—' }}</td>
+            <td>{{ c.definitionZh }}<br><span class="onto-type__en">{{ c.definitionEn || '—' }}</span></td>
+          </tr>
+          <tr v-if="fiboConceptsShown.length === 0"><td colspan="5" class="onto-table__empty">{{ L.fibo.empty }}</td></tr>
+        </tbody>
+      </table>
+    </section>
+
     <!-- 模式 -->
     <section v-else-if="tab === 'schema'" class="onto__section">
       <div class="onto__block">
@@ -359,6 +468,12 @@ function fmtBytes(b: number): string {
                 <span class="onto-sev onto-sev--info">{{ t.modality }}</span>
                 <span v-if="t.parent" class="onto-type__parent">⊑ {{ t.parent }}</span>
               </div>
+              <div v-if="t.provenance" class="onto-type__prov">
+                <span class="onto-sev onto-sev--info">{{ t.provenance.origin }}</span>
+                <span>{{ t.provenance.module }}</span>
+                <span v-if="t.provenance.maturity">· {{ t.provenance.maturity }}</span>
+              </div>
+              <div v-if="t.iri" class="onto-type__iri">{{ t.iri }}</div>
               <div v-if="t.disjointWith?.length" class="onto-type__row">⊥ {{ t.disjointWith.join(' ⊥ ') }}</div>
               <div v-for="p in t.dataProperties" :key="p.id" class="onto-type__prop">
                 <code>{{ p.id }}</code>:{{ p.datatype }}
@@ -598,6 +713,7 @@ function fmtBytes(b: number): string {
   }
   &__select, &__input { border: 1px solid var(--onto-border); border-radius: 8px; padding: 6px 10px; font-size: 13px; min-width: 140px; background: var(--bg-secondary); color: inherit; }
   &__hint { font-size: 12px; opacity: 0.7; margin: 0; }
+  &__hint--warn { color: var(--ia-stale); opacity: 1; margin-top: 6px; }
   &__pre {
     border: 1px solid var(--onto-border); border-radius: 12px; padding: 12px;
     font-size: 11.5px; line-height: 1.5; max-height: 520px; overflow: auto; margin: 0;
@@ -625,6 +741,9 @@ function fmtBytes(b: number): string {
   border: 1px solid var(--onto-border); border-radius: 10px; padding: 8px 10px; font-size: 12px;
   &__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; code { font-size: 11px; opacity: 0.7; } }
   &__parent { font-size: 11px; opacity: 0.7; }
+  &__prov { margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; font-size: 10.5px; opacity: 0.85; }
+  &__iri { font-size: 10.5px; opacity: 0.6; word-break: break-all; font-family: ui-monospace, monospace; }
+  &__en { font-size: 10.5px; opacity: 0.65; }
   &__row { font-size: 11px; color: var(--error); margin-top: 2px; }
   &__prop { margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   &__enum { font-size: 10.5px; opacity: 0.65; }
