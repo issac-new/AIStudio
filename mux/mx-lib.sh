@@ -143,14 +143,14 @@ log()  { echo "[mux $(date +%H:%M:%S)] $*"; }
 fail() { echo "[mux FAIL $(date +%H:%M:%S)] $*" >&2; exit 1; }
 
 # V8.28 修根因（run20 G2 闸 deadlock 实锤，22:24 触发）：原 fail 退出让 supervisor 30s
-# 续跑回到 archgate 重发同闸——驱动死循环引擎。改：fail_to_continue 走"记单 + 派修 +
+# 续跑回到 archgate 重发同闸——驱动死循环引擎。改：fail_to_continue 走"登记 + 派修 +
 # 跳下一段"路径，绝不退出；同时记 issue_to_run 串到 G6 复盘段做总复盘。
 # 14 项 fail 调用点将逐步切换。fail() 保留为强错误出口（preflight 类硬错必须退）。
 issue_to_run() { # <type> <subject> <description> → 写 issues.log
   echo "ISSUE|$1|$2|$3" >> "${EVID_DIR:-/Users/cuishi/lab/ncwk-sim-mux/runs/_in_progress}/issues.log" 2>/dev/null || echo "ISSUE|$1|$2|$3" >> /tmp/issue-$$.log
   echo "[mux FAIL-CONT $(date +%H:%M:%S)] $1/$2 已记 issue，run 继续推进（不退出，G6 复盘处理）"
 }
-fail_to_continue() { # <type> <subject> <description> → 记单 + log + 不退出
+fail_to_continue() { # <type> <subject> <description> → 登记 + log + 不退出
   issue_to_run "$1" "$2" "$3"
   return 0  # 不退出，driver 继续推进
 }
@@ -367,7 +367,7 @@ backfill_nudge() { # <token> <roomId> <text> <mention-csv> <issue-key> <issue-bo
   if [ "$(posture)" = "strict" ]; then
     echo "ISSUE|${_key}|director|${_body}（strict 姿态不回灌代催——缺口如实呈现，等组织侧自主处置）" \
       >> "${EVID_DIR:-${SIM_ROOT:-/tmp}/evidence}/issues.log" 2>/dev/null || true
-    log "[姿态] strict：${_key} 不回灌——记单呈现缺口"
+    log "[姿态] strict：${_key} 不回灌——登记呈现缺口"
     printf 'STRICT-SKIPPED'
     return 0
   fi
