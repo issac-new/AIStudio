@@ -26,7 +26,7 @@ SwarmStudio 用**模式隔离 + 机制约束**解决三类问题：人找不到�
 | 一切「完成」都要有证据 | 双凭证（提交号＋卡号）、四类锚点、append-only 台账、hash 链证据 | §5.2 |
 | 判断权不交给执行者 | 六道质量门、FAIL 唯一出口、人工介入留痕、执行层 fail-closed | §5.3 / §5.4 / §5.9 |
 
-**当前规模**：3 个工作模式；日常 6 阶段 33 个单层页签；推演 6 个入口；4 个专题岛屿；89 条路由（10-21 遗留清偿批 +not-found/sim-director）；客户端 19 个一级目录、服务端约 140 个域目录；382 条 studio 注入补丁（另 8 条 zcode）；M3 全量走查 65 个页面态；历史卷：25 个吸收轮、21 轮推演（run22 在途）、138 条用户决策（§7-§8、§11-15）。
+**当前规模**：3 个工作模式；日常 6 阶段 33 个单层页签；推演 6 个入口；4 个专题岛屿；89 条路由（10-21 遗留清偿批 +not-found/sim-director）；客户端 19 个一级目录、服务端约 140 个域目录；382 条 studio 注入补丁（另 8 条 zcode）；M3 全量走查 65 个页面态；历史卷：27 个吸收轮、21 轮推演（run22 在途）、140 条用户决策（§7-§8、§11-15）。三域合一视图见 `2026-10-21-ncwk-unified-product-design.md`。
 
 ### 0.2 三条阅读路径
 
@@ -434,7 +434,7 @@ SwarmStudio 的核心＝**以本体论组织和管理，以 harness 约束，以
 | 岛屿 | 路由 | 职责 | 关键能力 |
 |---|---|---|---|
 | **流程架构 BPA** | `/app/bpa` | 业务流程建模与执行 | 流程定义、节点、执行视图 |
-| **本体** | `/app/ontology` | 五要素建模（实体/关系/动作/规则/视图）、JSON-LD/SHACL、实例管理 | 深链直达、分页 50 行/页、glossary |
+| **本体** | `/app/ontology` | 五要素建模（实体/关系/动作/规则/视图）、JSON-LD/SHACL、实例管理 | 深链直达、分页 50 行/页、glossary；FIBO 单一事实源 37 概念/21 属性/16 公理，12 官方域导航+4 个 EXMP 场景，活体导入幂等、`/fibo/ops` 运营页 |
 | **评测** | `/app/eval` | 评测集、运行、红队、校准、处置链 | 多裁判、processCoverage、失败样本回归回流 |
 | **技能治理** | `/app/skillgov` | 技能目录、供给、能力发现、使用读数 | 首屏 80 行 + 加载更多、`/api/harness/tool-audit` |
 
@@ -771,6 +771,8 @@ Electron 桌面壳（可选）
 | 10-21 | 工具策略引擎轮 | 微软 Agent Governance Toolkit 拆解（Wester 安全札记 2026-09-28） | 2026-10-21-tool-policy-engine.md |
 | 10-21 | zcode 用量账本轮 | upstream/dsh-context v0.73.3＋本机 zcode 三张用量表实测 | 2026-10-21-zcode-usage-ledger.md |
 | 10-21 | AGT 吸收轮（续） | 微软 AGT 拆解同源续轮：姿态对账/审计链/shadow agent/MCP 漂移/急停/strict | 2026-10-21-agent-governance-toolkit-research.md |
+| 10-21 | FIBO 官方参照轮 | FIBO master_2026Q3 官方域与 EXMP 场景（逐条 RDF 来源） | 2026-10-21-fibo-official-reference-enhancement.md |
+| 10-21 | 安全审计+评测判分轮 | Cloudflare 安全审计 Skill／OpenAI Evals 两文 | 2026-10-21-secaudit-pipeline-and-eval-judging-discipline.md |
 ### 7.4 首轮 27 项与二轮 22 项对账
 
 **首轮 27 项终态**（2026-10-01-upstream-absorption-analysis.md 附录对账表）：核实历代已落 6 件（线程/操作栏/审批三档/审批中心跨 profile/steer+排队/状态行槽位），零重复造轮。本轮新落 8 件：Spotlight 混合搜索、跳未读条、未读线程聚合、轨迹账本、goal+loop 常驻意图、History 浏览器、用量排行、列证据契约。补件与根治 3 件（trace 路由 404 双路径注册等）。记档待环境 3 件：凭证池、蓝图、Hosted Rooms，执行「不做摆设件」纪律；其中蓝图经四轮 api_server 通道实证解封，落地为 runs 页签 16 卡画廊。远期记档 7 件。实施验证：新增 7 测试文件 38 例全绿、既有回归 60/60、三份走查脚本入库（5/5、6/6）；实施批次合 main ee37b56b/bc61f6b0。
@@ -798,6 +800,8 @@ Electron 桌面壳（可选）
 | 文2 校准即门控（ECE） | 判定后端选型 flash-4bit 主力 | overlay/runtime/clef/ | 已落地（ECE 校准集待建） | 同上 §0（:12,48） |
 | 文1 四路检索/文3 SAT 声明裁决 | 记忆混合检索 P4/结构化协作 preset P5 | — | 未落地（待做） | 同上 §3 执行表 |
 | AGT「策略即代码/strict fail-closed/防篡改审计/按身份裁决」 | 声明式工具策略引擎（确定性求值+lint+姿态横幅+决策账/批单带 policyRuleId） | custom/server/toolpolicy/ | 已落地；同日 AGT 吸收轮（3e496140）续落紧急停止/MCP 漂移/审计链防篡改/strict 姿态，余 outcome 校验列后续 | 2026-10-21-tool-policy-engine.md；2026-10-21-agent-governance-toolkit-research.md |
+| Cloudflare 六阶段安全审计（覆盖账本/对抗验证/发现者≠验证者） | `custom/server/secaudit/` 六阶段流水线＋12 类审计面＋三态 findings＋独立记录复核 | ⑥治理「安全审计」页签 | 已落地（自证拒绝 409、confirmed 需来源链、needs_validation 不得评严重性） | 2026-10-21-secaudit-pipeline-and-eval-judging-discipline.md |
+| OpenAI Evals Rubric 四要素/轨迹三维/偏差治理 | 评测判分纪律：S0 轨迹规则（required_tools/no_loop/redundant_ratio）＋argsSig 参数指纹 | custom/server/eval/ | 已落地（死循环按同名同参判定） | 同上 |
 | arXiv 2609.24515 事故报告 17 要素 | incident 域（汇编器+hash 链+gapClass 二分+虚拟损益表+治理事件总线） | patch 577-579/581 | 已落地（新增 89 用例） | six-article §二-三（:4,13,22） |
 | SoL-Pi 四机制（动作融合/观察打包/证据保全/计划步压缩） | 运行时效能域+efficiency 账本与面板 | 补丁 611-614 | 已落地（效率实测不做假数字） | sol-pi §二 |
 | 腾讯六环节/双指标/门禁阈值 | Eval Studio 七面 | e31b9b8 | 已落地（90/90 绿） | eval-tencent §2 |
@@ -882,12 +886,12 @@ Electron 桌面壳（可选）
 
 ## 8、决策台账（用户指令与裁决总账）
 
-> 本章是「用户发送的决策记录和指令」的总账。分三部分：138 条一次性决策（§8.2）、30 条常设原则（§8.3）、27 次对 AI 做法的纠正（§8.4）；129 为原档案件表行实数，另 9 条补录（5 条自原正本 22 行时间线，锚 git c28e8dd5；2026-10-21 补录 4 条：可见性口径 1 条、R3 晚批 3 条）。此前文档口径 108 条系研究代理的合并计数，以表行为准。引号内文字均为源文件原话照抄，无润色；无原话的标「转述」。
+> 本章是「用户发送的决策记录和指令」的总账。分三部分：140 条一次性决策（§8.2）、30 条常设原则（§8.3）、27 次对 AI 做法的纠正（§8.4）；129 为原档案件表行实数，另 11 条补录（5 条自原正本 22 行时间线，锚 git c28e8dd5；2026-10-21 补录 6 条：可见性口径 1 条、R3 晚批 3 条、R4 FIBO 2 条）。此前文档口径 108 条系研究代理的合并计数，以表行为准。引号内文字均为源文件原话照抄，无润色；无原话的标「转述」。
 
 ### 8.1 决策记录的记载体系（四级）
 
 ①spec 的「## 决策记录」节（84 份 spec 含该节，表格式与编号列表式两种形态；越晚的 spec 越倾向同时给出否决的备选方案——决策=选择+反选择都留痕）；②方案正本的纪律条款（每条带「V8.xx，日期 用户裁定」版本锚，只增不改）；③AI 持久记忆（feedback-* 类文件存原话、情境、Why/How，网状互引）；④规则文件（AGENTS.md/CLAUDE.md 立法条目带事故日期注）。冲突时以需求冻结件与正本为准。spec-first 门禁要求决策记录节随分支提交（L2 pre-commit），--no-verify 被列为否选项，逃生门使用须如实落痕。
-### 8.2 用户决策总表（138 条，按日期升序）
+### 8.2 用户决策总表（140 条，按日期升序）
 
 列：日期｜决策（原话加引号，余为转述）｜类型｜推翻了什么／落地去向｜锚点。
 
@@ -1033,6 +1037,8 @@ Electron 桌面壳（可选）
 | 10-21 | 报障：「IDE工作台」的工具要可打开 zcode、deepseek-harness（本机均已安装） | 产品 | terminal-zcode 改受管 fork CLI 同源；DSH 走 app 按钮 | ide-devtools:5；决策 1-5 |
 | 10-21 | 全 UI 无可达登出入口——「是缺陷，立刻修复」 | 产品 | 设置侧栏恒显登出；devAutoLogin 补手动登出闸门（D5 活体追加） | logout-entry-fix:3-6 |
 | 10-21 | §9.3 五项遗留「全部都做」+五裁决：留侧栏删页头双按钮／做诚实 404／⑥运营+设置配置、GovOverlay 退役／导演详情按 run 分流不静默跳转／G5-UAT 建真状态机 | IA/治理 | 双入口收敛+NotFoundView+三面收敛两面+release-state 纯状态机+UAT 判定表单 | backlog-closure:〇、D1-D6；governance-surface:一 |
+| 10-21 | FIBO「做全链收编，合成单一事实源」 | 架构 | 37 概念正本 `ontology-fibo.ts`＋qgate 索引降为派生＋逐字节守门；活体导入幂等+换装探活 | fibo-ssot-merge:5 |
+| 10-21 | FIBO「根据调研结果制定全面落地方案，并完善到 SwarmStudio 产品」 | 产品 | P0-P4 四阶段：覆盖卡/术语查询/@fibo 提及/一致性守门→报告证据/术语表/映射/样例/域目录/脱敏/运营化 | fibo-product-rollout-plan:6 |
 ### 8.3 常设指令与原则（30 条长期有效）
 
 | # | 原则 | 首立情境 | 现行载体 |
@@ -1107,7 +1113,7 @@ Electron 桌面壳（可选）
 **工作方式线**：四个反复强化的主题。一是说人话：四次反馈后升为全局规则，形成汇报、巡检、决策清单的分层沟通体系。二是闭环实证：三档验收锚，配测试未绿禁提交与机械门禁。三是协作纪律：worktree 立法、禁自动 push、撞车分工，均由多会话并行事故倒逼。四是文档纪律：终稿化、一事实一源、多格式一致、对账总表。用户介入方式从早期单点裁定，演进为后期「原则立法+机械门禁」。
 ### 8.6 统计
 
-138 条按月分布：6 月 4 条、9 月 20 条、10 月 114 条（含合并轮自原正本 22 行表补录 5 条、2026-10-21 补录 4 条）。10-15（治理收口日）15 条为全程最高峰；10-16/17/18 各 11-12 条。按类型：IA/界面约 30、产品方向约 26、推演纪律约 16、工作方式约 14、工程规则约 14、治理原则约 8。被推翻的既有决策/做法 27 处，其中方法论级推翻（拆闸/任务归因/程序越界/边裁边补/设计定稿/撞车抢树）6 处。84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21 当日 R3 实测含决策记录节（含「## 二、决策记录」等编号节形态）的 spec 共 10 份（不计本档）：ycode-environment-recovery、ia-projection、zcode-3161、sim-visibility、logout-entry-fix、ide-devtools-zcode-dsh、tool-policy-engine、zcode-usage-ledger、backlog-closure、governance-surface-closure。
+140 条按月分布：6 月 4 条、9 月 20 条、10 月 116 条（含合并轮自原正本 22 行表补录 5 条、2026-10-21 补录 6 条）。10-15（治理收口日）15 条为全程最高峰；10-16/17/18 各 11-12 条。按类型：IA/界面约 30、产品方向约 27、推演纪律约 16、工作方式约 14、工程规则约 14、治理原则约 8。被推翻的既有决策/做法 27 处，其中方法论级推翻（拆闸/任务归因/程序越界/边裁边补/设计定稿/撞车抢树）6 处。84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21 当日实测含决策记录节（含「## 二、决策记录」等编号节形态）的业务 spec 共 20 份（不计本档与三域合一正本）：agent-governance-toolkit-research、backlog-closure、context-insights、fibo-official-reference-enhancement、fibo-ontology-calibration、fibo-ontology-studio-alignment、fibo-product-rollout-plan、fibo-ssot-merge、governance-surface-closure、ia-projection、ide-devtools-zcode-dsh、logout-entry-fix、secaudit-pipeline-and-eval-judging-discipline、sequence-guard、sim-visibility、tool-policy-engine、ycode-environment-recovery、zcode-3161-baseline-upgrade、zcode-context-trend、zcode-usage-ledger。84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21 当日 R3 实测含决策记录节（含「## 二、决策记录」等编号节形态）的 spec 共 10 份（不计本档）：ycode-environment-recovery、ia-projection、zcode-3161、sim-visibility、logout-entry-fix、ide-devtools-zcode-dsh、tool-policy-engine、zcode-usage-ledger、backlog-closure、governance-surface-closure。
 
 ---
 ### 8.7 贯穿性裁决
@@ -1150,6 +1156,10 @@ Electron 桌面壳（可选）
 | 工具策略引擎 | 已交付（声明式策略+strict/fail-closed+姿态横幅；全量 5572/0/8） |
 | 本机 zcode 用量账本 | 已交付（三表只读四端点+账单/账本分区+价目补录；全量 5574/0/8+live 探针 3 项） |
 | 遗留清偿批（导航/404/导演详情/治理面/G5-UAT） | 已交付（GovOverlay 退役三面收敛两面；定向 24 文件 247 用例全绿） |
+| FIBO 单一事实源与产品化 | 已交付（37 概念/21 属性/16 公理；12 官方域+4 EXMP；活体导入幂等 37+21+16；`/fibo/ops`） |
+| 安全审计六阶段流水线 | 已交付（12 类审计面/覆盖账本/三态 findings/独立记录复核；自证拒绝 409） |
+| 评测判分纪律 | 已交付（S0 轨迹规则+argsSig 参数指纹） |
+| zcode 会话上下文趋势 | 已交付（逐请求精确 token/六类构成估算/压缩事件 289 条） |
 
 ### 9.2 验证账（截至 2026-10-20/21）
 
@@ -1161,6 +1171,7 @@ Electron 桌面壳（可选）
 - **V8.46**：prelaunch 30/0；gates rc=0；`v846-governance-closure` 7/7；`harness-gate-integrity` 128/128；run22 未启动。
 - **0.7.38**：净树全序列重放 310 studio 补丁全过；官方 inject rc=0 / 382 applied；服务端隔离启动 `/api/health` 401（鉴权门正常）。
 - **10-21 晚批（R3 收录）**：登出 ia-settings-sidebar 6/6+entry-boot-order 时序守门；ide-devtools 19/19+Terminal 拉起端到端实测；策略引擎轮全量 5572/0/8（隔离 worktree）；用量账本轮全量 5574/0/8+live 探针 3 项（真库 13.5 万模型调用聚合）；遗留清偿批定向 24 文件 247 用例全绿+构建 rc=0；run22 smoke 5/5（在途）。
+- **10-21 R4 晚批**：FIBO 逐字节守门+活体导入幂等（37+21+16，跨重启持久 53 类型）+官方域导航走查；安全审计六阶段域与评测纪律随分支测试落地；上下文趋势 Ph2 测试 25+live 4。
 
 ### 9.3 未闭环缺口（如实挂账）
 
@@ -1478,7 +1489,7 @@ run1-run7 成绩单不入表（V8 前判词语义旧制），失败样本全在�
 
 ### 14.1 演进时间线
 
-09-23 qgate v0.2 立项（D1-D5 用户拍板）→09-28 fleet 审批缺口修复（patch 490）→10-01 qgate v0.3 移植上游 v1.24（D6/D7 用户拍板）→10-04 后台任务感知三件套→10-07 Eval Studio 立项（用户裁决 A 档全量）→10-08~10 并行能力三波→10-11 跨机进度联邦当日落地→10-13 腾讯指标七面→10-15 delivery.pushed 检测器（用户裁定）→10-16 安全检查 20 项+整改 v2「先预警不阻断」（用户裁定）+zero-delivery→10-17 hermes 数据面供给→10-18 Harness 三连轮+巡检官+技能供给+能力目录+并行派发产品化→10-19 百度评测双分支+评审治理+Harness²+观测信号→10-21 工具策略引擎（微软 AGT 调研轮：策略即代码+strict/fail-closed+姿态横幅）。
+09-23 qgate v0.2 立项（D1-D5 用户拍板）→09-28 fleet 审批缺口修复（patch 490）→10-01 qgate v0.3 移植上游 v1.24（D6/D7 用户拍板）→10-04 后台任务感知三件套→10-07 Eval Studio 立项（用户裁决 A 档全量）→10-08~10 并行能力三波→10-11 跨机进度联邦当日落地→10-13 腾讯指标七面→10-15 delivery.pushed 检测器（用户裁定）→10-16 安全检查 20 项+整改 v2「先预警不阻断」（用户裁定）+zero-delivery→10-17 hermes 数据面供给→10-18 Harness 三连轮+巡检官+技能供给+能力目录+并行派发产品化→10-19 百度评测双分支+评审治理+Harness²+观测信号→10-21 工具策略引擎（微软 AGT 调研轮：策略即代码+strict/fail-closed+姿态横幅）+AGT 续轮六件+安全审计六阶段流水线与评测判分纪律（Cloudflare/OpenAI 两文）。
 
 ### 14.2 评测体系（四轮外部方法论吸收+收口）
 
@@ -1503,6 +1514,8 @@ run1-run7 成绩单不入表（V8 前判词语义旧制），失败样本全在�
 - **残余轮**：委托双清单（只能收窄不能扩大）；恢复三档；过程质量指标；轨迹采样（不自动写评测集防污染密封集）；预算默认只观测；沙箱租约+patch 662 OS 级限额（macOS 无 ulimit -v 如实注明）。
 - **Harness² 改进实验台**（10-19，google-research/harness2 源码调研）：八个可编辑面 c1-c8 只读登记；提案-探测-组合-晋级状态机；探测强制绑真实 Eval run（不内置执行器，「不替用户跑模型」）；晋级十类硬阻塞码+防泄漏拒绝（判词写进 harness=把答案喂给后续任务）；冠军回滚双闸（仅 system_prompt/skills 可写，HARNESS2_APPLY=1+人工批准，写前快照）。第三批按用户裁定「做到批准后自动发起探测为止」落一键自动探测（隔离 HERMES_HOME 物化+预算硬停+可执行件禁跑）。
 - **工具策略引擎**（10-21，微软 AGT 调研轮）：既有执法链（身份/沙箱/预算）之上加声明式策略层。三层优先级 identity/sandbox/budget → policy → ladder/mode，硬边界永远先赢；未配置=inactive 不改行为，已配置但加载/校验失败=deny（fail-closed 只影响策略层）；规则多条件 AND、priority 降序取首条保确定性；写前 lint 拒未知字段；裁决与批单带 policyRuleId 可追溯；策略页显式姿态横幅（「未配置≠已治理」「总闸未开=只保存不拦截」）。验证 78/78+362/362+全量 5572/0/8。同日 AGT 吸收轮（3e496140）续落六件：姿态对账/审计链防篡改/shadow agent 进程扫描发现/MCP 漂移检测/紧急停止（kill switch 语义）/strict 姿态（spec=`2026-10-21-agent-governance-toolkit-research.md`）。
+- **安全审计六阶段**（10-21，Cloudflare 安全审计 Skill 吸收）：统一目标与覆盖账本，回答「哪些面根本没看」，而非各扫描器各报 severity。六阶段=侦察地图→覆盖账本→覆盖引导狩猎→对抗性候选验证（发现者≠验证者）→结构化 findings（confirmed/needs_validation/rejected 三态）→独立记录复核→目标中立报告；12 类审计面；自证拒绝 409，confirmed 需来源链+有界观察，needs_validation 不得评严重性，rejected 必须写证伪理由；复核记录哈希绑定、内容改动即失效。
+- **评测判分纪律**（10-21，OpenAI Evals 吸收）：S0 轨迹规则补 `required_tools`／`no_loop`／`redundant_ratio`；`ToolCallRecord` 增 `argsSig` 参数指纹，死循环按「同名同参」而非仅工具名判定；裁判判词要求行为锚点，偏差治理（位置偏差 swap test、冗长偏好）列后续。
 
 ### 14.6 巡检官与检测器体系
 
@@ -1603,6 +1616,7 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 
 **需求与总设计**：
 
+- `2026-10-21-ncwk-unified-product-design.md`（三域合一整体正本：产品面/运行面/能力层＋跨域接口＋合并台账）
 - `2026-10-16-swarmstudio-requirements-analysis.md`（需求冻结正本）
 - `2026-10-16-swarmstudio-final-design.md`（总设计定稿，历史）
 - `2026-10-15-swarmstudio-product-replan.md`（产品功能重规划）
@@ -1663,6 +1677,11 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 - `2026-10-21-zcode-3161-baseline-upgrade.md`（zcode 基线 3.16.1/3.16.2）
 - `2026-10-21-ide-devtools-zcode-dsh.md`（IDE 工具面板可打开）
 - `2026-10-21-zcode-usage-ledger.md`（本机用量账本，dsh-context 数据面吸收）
+- `2026-10-21-zcode-context-trend.md`（会话上下文趋势与构成，Ph2）
+- `2026-10-21-secaudit-pipeline-and-eval-judging-discipline.md`（安全审计六阶段+评测判分）
+- `2026-10-21-fibo-ssot-merge.md`（FIBO 单一事实源）
+- `2026-10-21-fibo-product-rollout-plan.md`（FIBO 产品化 P0-P4）
+- `2026-10-21-fibo-official-reference-enhancement.md`（FIBO 官方域参照）
 
 **演进史与总账来源（§8/§11-15、附录 D-E）**：
 
@@ -1680,7 +1699,7 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 
 | 域 | 数字 | 口径与锚点 |
 |---|---|---|
-| 文档体量 | 230 specs+54 plans+35 研究档+13 竞品测绘 | 目录实测（2026-10-21 R3 复测） |
+| 文档体量 | 242 specs+54 plans+35 研究档+13 竞品测绘（含三域合一正本） | 目录实测（2026-10-21 R4 复测） |
 | 补丁 | studio 382 条 applied（0.7.38 净树重放 310 全过）；zcode 8 条（2026-10-21 基线升级后）；agent 72 条 | upgrade specs；zcode-patches 实测 |
 | 测试 | 全量 vitest 5,574 通过/0 失败/8 跳过（10-21 用量账本轮；0.7.38 轮 5,514 为史上首次清零）；simharness 守门 51→181 | 升级终态记录；zcode-usage-ledger 验证实录 |
 | 推演 | run1-run21 共 21 轮；V1.0→V8.46 约 43 版本；纪律编号至 80（79 条正文）；prelaunch 13→30 项；run22 2026-10-21 起跑在途 | §13.1-13.2 |
@@ -1690,7 +1709,7 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 | 巡检 | 检测器 31 个（实测）；NUDGE 三级链 | §14.6 |
 | 技能 | 中位 296 技能（8-563）；50 profile；多机轮缺口 274 | §5.7 |
 | IA | 3 模式；六阶段 33 单层页签；87 路由；M3 走查 65 页面态 | 本档 §3 |
-| 决策 | 用户决策 135 条；常设原则 30；纠正 27；84 份 spec 含决策记录节（另本轮 1 份） | §8 |
+| 决策 | 用户决策 140 条；常设原则 30；纠正 27；84 份 spec 含决策记录节（另 10-21 业务 spec 20 份） | §8 |
 | 吸收 | 约 34 篇外部文章+5 深读仓库+22 轮；首轮 27 项+二轮 22 项；落地率见 §7.10 | §7 |
 
 ---
@@ -1720,6 +1739,7 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 | D4 | 档案件内部 4 处章节引用笔误（§6.2/6.3/6.5/6.7 本档）随合并修正为 §14.x | 原意指治理域章，误标 IDE 章 | 照抄（否决：已知笔误不带入） | 是 |
 | D5 | 版本基线随合并刷新：zcode 补丁 7→8 条、源码基线 3.15.1→3.16.1、安装版 3.16.2；决策总账计数改用表行实数 134 条 | 并行会话 2026-10-21 基线升级已合 main（b52ebc65）；原「108 条」为研究代理合并计数，与表行不符 | 沿用旧数（否决：合并稿核实日即今日） | 是 |
 | D6 | R3 增量吸收不改写既有行：已闭环缺口保留原编号并标注闭环态；计数随表行刷新（135→138）；无用户原话的调研驱动轮（策略引擎/用量账本）入 §7/§14-15 演进史、不入 §8.2 用户决策表 | 历史可追溯；§8.2 语义=用户决策，无锚点不造行 | 重写 §9.3 全表（否决：丢历史）；调研轮硬塞用户表（否决：无原话即编造） | 是 |
+| D7 | R4 只补不重写：FIBO/安全审计/上下文趋势三条线的用户原话进 §8.2（138→140），文章吸收轮进 §7/§14；三域合一正本独立成篇并在 §0.1/附录 C 挂链接 | 合一正本跨三域，塞进本档会让产品正本变杂物间（U1）；本档仍是产品面细则正本 | 把合一正本并入本档（否决：跨域污染）；不挂链接（否决：读者找不到总纲） | 是 |
 
 ---
 
@@ -1730,5 +1750,6 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 | 2026-10-21 | 汇编 R1 | 首次汇编：定位/需求/IA/功能/机制/技术/吸收/决策/现状/验证十章 + 三附录 | 用户指令「全面复盘历史调研吸收台账及 spec、设计文档、决策记录和指令，汇编完整设计文稿」 |
 | 2026-10-21 | 合并 R2 | 整合合并轮：并入《设计复盘档案件》全卷（§7 吸收全卷/§8 决策总账 134 条/§11-15 演进史/附录 D-E）；落地交叉审读勘误 5 处；决策计数改表行实数；刷新 zcode 基线（8 补丁/3.16.1/3.16.2）；档案件独立文件删除（git 留档 3e26b6c2） | 用户指令「整合合并两份设计文档」 |
 | 2026-10-21 | 同步 R3 | 吸收合并后五轮：登出修复／ide-devtools 可打开／工具策略引擎／zcode 用量账本／遗留清偿批。§8.2 +3 行至 138 条；§9.1-9.4 状态刷新（治理面/404/导演分流/G5-UAT 四缺口闭环、run22 改在途）；§7/§14/§15 追加两调研轮与晚批史实（收口时并入同日 AGT 吸收轮索引，3e496140）；附录 B +2 路由、附录 C +10 spec、附录 D 数字复测（specs 230/全量 5574） | 用户指令「更新台账、决策记录、设计文档等」 |
+| 2026-10-21 | 同步 R4 | 吸收 R4 晚批：FIBO 单一事实源+产品化+官方参照、安全审计六阶段、评测判分纪律、上下文趋势 Ph2。§8.2 +2 行至 140 条；§4.9 本体岛/FIBO、§9.1 交付表+5 行、§9.2 验证账 R4 段；§7.3 +2 轮、§7.7 +2 行；§14.5 +2 机制段；附录 C +6 spec 与三域合一正本、附录 D 数字复测（specs 241） | 用户指令「再次更新，并整合 swarm studio、swarm yuan skill、hermes agent teams 等台账/决策/设计，形成一份整体文档」 |
 
 > **维护规则**：本档是全景汇编，不替代专题 spec。新增专题 spec 时，若改变产品形态/IA/机制结论，同步更新本档对应章与 §8 决策台账（新史实追加 §11-15 与附录 D）；纯实现细节不回写本档。
