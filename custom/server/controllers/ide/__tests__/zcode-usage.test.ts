@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Context } from 'koa'
 import {
   billedOf, cacheHitRateOf, clampDays, clampLimit, clampOffset, handleUsageRounds, handleUsageSessions,
-  handleUsageSummary, handleUsageTools, shapeTokenSums, type SqliteDb, type ZcodeUsageDeps,
+  handleUsageSummary, handleUsageTools, matchZcodeUsageRoute, shapeTokenSums, type SqliteDb, type ZcodeUsageDeps,
   type UsageSessionRow, type UsageSummary, type UsageRoundRow, type UsageToolRow,
 } from '../zcode-usage'
 
@@ -105,6 +105,17 @@ describe('纯函数：钳制与口径', () => {
     expect(clampLimit('-3', 30, 100)).toBe(1)
     expect(clampOffset('-5')).toBe(0)
     expect(clampOffset('20')).toBe(20)
+  })
+
+  it('路由匹配：GET 四端点命中；非 GET/未知路径/越界子路径不命中；会话 id URL 解码', () => {
+    expect(matchZcodeUsageRoute('GET', '/api/ide/zcode-usage/summary')).toEqual({ kind: 'summary' })
+    expect(matchZcodeUsageRoute('get', '/api/ide/zcode-usage/sessions')).toEqual({ kind: 'sessions' })
+    expect(matchZcodeUsageRoute('GET', '/api/ide/zcode-usage/sessions/s1/rounds')).toEqual({ kind: 'rounds', sessionId: 's1' })
+    expect(matchZcodeUsageRoute('GET', '/api/ide/zcode-usage/sessions/sess%20x/tools')).toEqual({ kind: 'tools', sessionId: 'sess x' })
+    expect(matchZcodeUsageRoute('POST', '/api/ide/zcode-usage/summary')).toBeNull()
+    expect(matchZcodeUsageRoute('GET', '/api/ide/zcode-usage/sessions/s1/nope')).toBeNull()
+    expect(matchZcodeUsageRoute('GET', '/api/ide/zcode-usage/other')).toBeNull()
+    expect(matchZcodeUsageRoute('GET', '/api/ide/zcode-usage/sessions/s1/rounds/extra')).toBeNull()
   })
 
   it('token 整形：reasoning 封顶到 output（防脏数据虚高）；计费=四项和', () => {
