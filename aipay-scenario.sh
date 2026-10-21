@@ -41,12 +41,12 @@ source "$SCRIPT_DIR/mux/mx-eval-lib.sh"
 # BASH_SUBSHELL>0 一律静默；真杀死驱动的失败在主壳层（含赋值语句级）另行触发。
 trap 'rc=$?; if [ "${BASH_SUBSHELL:-0}" -eq 0 ]; then _em="[mux $(date +%H:%M:%S)] [ERR] 驱动异常退出 rc=${rc}（${BASH_SOURCE[0]##*/}:${LINENO}：${BASH_COMMAND:0:160}）"; printf "%s\n" "$_em" >&2 || true; if [ -n "${EVID_DIR:-}" ] && [ -d "$EVID_DIR" ]; then printf "%s\n" "$_em" >> "$EVID_DIR/scenario.log" 2>/dev/null || true; fi; fi' ERR
 # M3 事件化：delivery.* 协议事件层（R29 拍板：缺省启用=产品真实形态、全程开启——
-# Delivery Cases 面板由协议事件真实喂数；MX_DELIVERY=0 显式关闭自动记单
+# Delivery Cases 面板由协议事件真实喂数；MX_DELIVERY=0 显式关闭自动登记
 # product-surface-degraded 降级（§5.6 采集纪律⑩，禁静默关旗标跑全程）；映射与断言见
 # docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 实测记录）
 source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
 if ! dlv_enabled; then
-  echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：§5.6 采集纪律⑩ 降级口径记单，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
+  echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：§5.6 采集纪律⑩ 降级口径登记，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
 fi
 
 # backlog① 观察员接线：harness 建房（mx-lib mx_create_room）与产品派发
@@ -176,7 +176,7 @@ if step_reached smoke; then
   done
   note "[真值] profiles 清单 + 每板 team 围栏装载 ✓（步骤 5）"
   # R28 编制三方对账（gap-audit P11 防复发）：roster.md × org.md × matrix 实际人类账号
-  # 计数一致才算"账号与人员编制表一一对应"（方案步 1 合格线）；不一致记单不炸——
+  # 计数一致才算"账号与人员编制表一一对应"（方案步 1 合格线）；不一致登记不炸——
   # roster 停首签 12 人版横跨六轮无人拦，根因=无对账断言。
   _roster_n=$(grep -cE '^\| @[a-z]+:matrix\.test \|' "$DIRECTOR_CLONE/docs/admin/roster.md" 2>/dev/null); _roster_n=${_roster_n:-0}
   _org_n=$(grep -E '^\| [a-z]' "$DIRECTOR_CLONE/docs/admin/org.md" 2>/dev/null | grep -Evc '^\| 账号' || true); _org_n=${_org_n:-0}
@@ -186,7 +186,7 @@ if step_reached smoke; then
     note "[R28] 编制三方对账一致：roster=${_roster_n} × org=${_org_n} × matrix=${_mx_n} ✓"
   else
     echo "ISSUE|roster-org-matrix-mismatch|director|编制三方对账不一致：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}（R28 断言；防 run9 roster 停旧版六轮无人拦复发）" >> "$EVID_DIR/issues.log"
-    note "[R28] 编制三方对账不一致（已记单，继续）：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}"
+    note "[R28] 编制三方对账不一致（已登记，继续）：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}"
   fi
   # R29 delivery 协议面小冒烟（P15 拍板：禁静默关旗标——MX_DELIVERY=1 时冒烟段即验
   # 事件落房+读回；产品门禁灯帧按§5.6 必采矩阵 矩阵步 23 在报告链采集）
@@ -223,12 +223,12 @@ if step_reached appinit && [[ -z "$(sget appinit_done)" ]]; then
   app_registry_gen > "$REG"
   # P13 改回（用户裁决「界面上线是必须要求」）：注册表经产品同源通道落档
   # ——界面「保存（提交 git）」所走端点 PUT /api/governance/registry/app-registry
-  # （gov_registry_put：admin matrix 交换 super_admin）；失败按§5.6 采集纪律⑩ 记单降级回直写，禁静默。
+  # （gov_registry_put：admin matrix 交换 super_admin）；失败按§5.6 采集纪律⑩ 登记降级回直写，禁静默。
   if gov_registry_put app-registry "$REG" "docs(admin): 应用资产登记表（app-registry，M1 应用初始化）"; then
     note "[M1] registry 经产品通道落档（PUT /api/governance/registry/app-registry 保存即 git 提交——界面同源承载）"
   else
-    echo "ISSUE|product-channel-degraded|studio|M1 registry 产品通道 PUT 失败，按§5.6 采集纪律⑩ 记单降级直写" >> "$EVID_DIR/issues.log"
-    note "[M1] 产品通道失败（记单降级，直写保底）"
+    echo "ISSUE|product-channel-degraded|studio|M1 registry 产品通道 PUT 失败，按§5.6 采集纪律⑩ 登记降级直写" >> "$EVID_DIR/issues.log"
+    note "[M1] 产品通道失败（登记降级，直写保底）"
   fi
   # 落 main 走 repo_commit_main（P4/Z1）：HEAD 停在 integration 后旧写法（当前分支 commit
   # + pull --rebase + push origin main）提交落错分支、push 空推/非快进暴毙；失败记问题单
@@ -261,8 +261,8 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
   if gov_registry_put org "$ORG" "docs(admin): 研发组织与权限矩阵（org，M2 人员管理，含七角色治理线）"; then
     note "[M2] org 经产品通道落档（PUT /api/governance/registry/org 保存即 git 提交——界面同源承载）"
   else
-    echo "ISSUE|product-channel-degraded|studio|M2 org 产品通道 PUT 失败，按§5.6 采集纪律⑩ 记单降级直写" >> "$EVID_DIR/issues.log"
-    note "[M2] 产品通道失败（记单降级，直写保底）"
+    echo "ISSUE|product-channel-degraded|studio|M2 org 产品通道 PUT 失败，按§5.6 采集纪律⑩ 登记降级直写" >> "$EVID_DIR/issues.log"
+    note "[M2] 产品通道失败（登记降级，直写保底）"
   fi
   # 落 main 走 repo_commit_main（P4/Z1）：同 appinit——HEAD 在 integration 时旧写法提交
   # 落错分支、push 空推/非快进暴毙；失败记问题单不中止。
@@ -277,7 +277,7 @@ if step_reached people && [[ -z "$(sget people_done)" ]]; then
 
   # A7 身份面供给（2026-10-17）：15 员工身份注册到 studio 身份册（agent-identity）——
   # 事故报告 17 要素中身份/信任边界/委托链等 6 项的判据源；此前 SIM 树无推演身份册
-  # （宿主册仅 2 宿主身份，匹配恒 0）。幂等：同名已存在即跳过；失败记单不中止
+  # （宿主册仅 2 宿主身份，匹配恒 0）。幂等：同名已存在即跳过；失败登记不中止
   # （§5.6 采集纪律⑩ 降级——身份面缺席=要素 absent 如实呈现，不造假）。
   if [[ -z "$(sget identity_registered)" ]]; then
     _id_ok=0 _id_skip=0 _id_fail=0
@@ -422,7 +422,7 @@ if step_reached room; then
     # 必采操作帧（步 8 原无拍摄位——沟通区会话列表为该步可拍面）
     capture_step "room_done" "/app/s/chat"
     # 入房一律检错重试（mx_join 静默吞错实锤：限流 burst 尾部账号掉队无人知，
-    # run9 ops/ Bella-agent 缺员即此族）；缺员记单不静默。
+    # run9 ops/ Bella-agent 缺员即此族）；缺员登记不静默。
     _room_missing=""
     mx_join_retry "$(load_token fanfan-agent)" "$RID" || _room_missing="$_room_missing $(agent_mxid fanfan)"
     for m in $ASSOCIATES; do
@@ -431,7 +431,7 @@ if step_reached room; then
     done
     if [[ -n "$_room_missing" ]]; then
       echo "ISSUE|room-join-missing|director|需求群建群预邀缺员（退避重试后仍未入）：${_room_missing}（join 静默失败族根治前的同类缺口）" >> "$EVID_DIR/issues.log"
-      note "[问题] 需求群预邀缺员记单：${_room_missing}"
+      note "[问题] 需求群预邀缺员登记：${_room_missing}"
     fi
     note "[fanfan] 已建「支付收银台需求分析讨论群」 $RID 并全量预邀（fanfan-agent + 8 关联人及各自 agent，方案 §8）"
   fi
@@ -550,13 +550,13 @@ if step_reached analysis; then
       || { note "[观察] @$1/@$2 派发消息未见（先记数，末尾统一回灌）"; RACI_MISS_PAIRS="${RACI_MISS_PAIRS:-} $1/$2"; }
   done
   # 双 @ 派发消息回灌闭环（run8 遗留⑤：run7 四组全未见只记观察——agent 执行率缺口，
-  # 记单前先回灌要求补发，重查一轮仍缺才落单）：消息洪窗口外不是借口，群通知是
+  # 登记前先回灌要求补发，重查一轮仍缺才落单）：消息洪窗口外不是借口，群通知是
   # 接收方知晓任务的唯一正道（派发词明文要求），静默=任务失联风险。
   if [[ -n "${RACI_MISS_PAIRS:-}" ]]; then
     backfill_nudge "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】以下 RACI 派发消息在群内未见：${RACI_MISS_PAIRS}。请立即在群内逐条补发（@责任人-agent @团队负责人-agent 附任务明细，用 m.mentions 提及）——群通知是接收方知晓任务的唯一正道，缺发记执行缺口。补发后无需重报结论行。" "$(agent_mxid fanfan)" raci-dispatch-missing "RACI 派发消息群内未见（回灌要求组织侧补发）：${RACI_MISS_PAIRS}"
     # 左移件 c（真值锚优先级）：RACI 群通知=副作用证据，真值=主卡 raci 列（下段结构
     # 化核验在查）。run11 双轮回灌等待窗（60s+4×240s ×2 轮≈40min）全烧在关键路径，
-    # 降级 fire-and-forget：补发要求已发即记单放行，验证归审计段/巡检。
+    # 降级 fire-and-forget：补发要求已发即登记放行，验证归审计段/巡检。
     note "[回灌] RACI 双 @ 派发缺 ${RACI_MISS_PAIRS}——补发要求已发（fire-and-forget，左移件 c 不占关键路径）"
     for pair in ${RACI_MISS_PAIRS}; do
       set -- $(echo "$pair" | tr '/' ' ')
@@ -564,16 +564,16 @@ if step_reached analysis; then
     done
   fi
   # 结构化 raci 观察项（B1 链）：主卡应带 raci 列（agent 未填则记问题单，不阻断）
-  # run8 遗留②：记单前先回灌补填（kanban 更新卡或重建主卡带 --raci），重查一轮。
+  # run8 遗留②：登记前先回灌补填（kanban 更新卡或重建主卡带 --raci），重查一轮。
   RACI_JSON="$(kanban_raci_of fanfan "${RFD_ID}")"
   if [[ -n "$RACI_JSON" ]]; then
     note "[真值] ${RFD_ID} 主卡带结构化 raci ✓（$(printf '%s' "$RACI_JSON" | cut -c1-80)...）"
   else
     backfill_nudge "$(load_token fanfan)" "$RID" "@fanfan-agent:matrix.test 【回灌】${RFD_ID} 主卡未带结构化 raci 字段（--raci 四元组 responsible/approver/consulted/informed）。请用协作看板补填该字段（卡更新或重建主卡均可），补完无需重报结论行。" "$(agent_mxid fanfan)" raci-not-structured "${RFD_ID} 主卡未带结构化 raci 字段（回灌要求组织侧补填）"
     # 提速③ 免等窗（2026-10-09 提速决议）：结构化 raci 缺失属程序性（正文 raci 承载
-    # 已可审计），回灌保留补填信号但不再 sleep 60 + 等 240s，即刻记单放行。
-    echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（免等窗即刻记单；回灌补填要求已发，仍靠正文承载）" >> "$EVID_DIR/issues.log"
-    note "[观察] 主卡缺结构化 raci（免等窗：回灌已发+记单放行）"
+    # 已可审计），回灌保留补填信号但不再 sleep 60 + 等 240s，即刻登记放行。
+    echo "ISSUE|raci-not-structured|fanfan-agent|${RFD_ID} 主卡未填结构化 raci 字段（免等窗即刻登记；回灌补填要求已发，仍靠正文承载）" >> "$EVID_DIR/issues.log"
+    note "[观察] 主卡缺结构化 raci（免等窗：回灌已发+登记放行）"
   fi
   sset raci_sidework_done 1   # 一次性守卫收口（上方 else 分支配对）
   fi
@@ -697,9 +697,9 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
     fi
   fi
 
-  # 四路并发等待（V8.16 饱和并行：原逐稿 for 串行——慢稿挡快稿的催办与记单时机，
+  # 四路并发等待（V8.16 饱和并行：原逐稿 for 串行——慢稿挡快稿的催办与登记时机，
   # 且单稿 3600s 窗在最慢路上叠加；multi 同刻观测四锚，先完成先 ✓，滞后锚催办按
-  # owner 点名+陈旧分支诊断（c1e507d 件），失败退出导出失败稿清单精确记单）
+  # owner 点名+陈旧分支诊断（c1e507d 件），失败退出导出失败稿清单精确登记）
   wait_alive_truth_multi 1800 "chen,xiao,hu,lin" \
     "仓库出现 docs/analysis/AN-PAYCORE-analysis.md@chen@repo_has docs/analysis/AN-PAYCORE-analysis.md" \
     "仓库出现 docs/analysis/AN-MP-analysis.md@xiao@repo_has docs/analysis/AN-MP-analysis.md" \
@@ -722,9 +722,9 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
     else
       backfill_nudge "$(load_token fanfan)" "$SCAN_ROOM" "@${owner}-agent:matrix.test 【回执回灌】任务 $t 的完成回执在群内未见（双兜底：@团队负责人-agent 与 @fanfan-agent）。请在群内补发一行：AN-DONE-$t commit=<已推送 commitId>——入库真值已在案，此为回执补账，无需重做任务。不许谎报。" "$(agent_mxid "$owner")" receipt-missing "任务 $t 完成回执群内未见（回灌要求组织侧补发）"
       # 提速③ 免等窗（2026-10-09 提速决议）：入库真值已核验在案，回执属程序性补账——
-      # 回灌保留训练信号但不再等 300s 重查（run12 四笔回执重查烧约 40min 实测），即刻记单放行。
-      echo "ISSUE|receipt-missing|$t|完成回执未见（免等窗即刻记单；回灌补发要求已发，入库真值在案）" >> "$EVID_DIR/issues.log"
-      note "[观察] $t 回执未见（免等窗：回灌已发+记单放行）"
+      # 回灌保留训练信号但不再等 300s 重查（run12 四笔回执重查烧约 40min 实测），即刻登记放行。
+      echo "ISSUE|receipt-missing|$t|完成回执未见（免等窗即刻登记；回灌补发要求已发，入库真值在案）" >> "$EVID_DIR/issues.log"
+      note "[观察] $t 回执未见（免等窗：回灌已发+登记放行）"
     fi
   done
   gate_review chen "系分执行-AN-PAYCORE"
@@ -768,7 +768,7 @@ if step_reached review && [[ -z "$(sget review_done)" ]]; then
     # 记录，不代表评审通过。
     if [ "$(posture)" = "strict" ]; then
       echo "ISSUE|review-card-missing-strict|fanfan|评审卡缺失，strict 姿态不代建（等评审人自登；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
-      note "[姿态] strict：评审卡缺失不代建——记单等待评审人自登"
+      note "[姿态] strict：评审卡缺失不代建——登记等待评审人自登"
       RID=""
     else
     RID=$(kanban_create_as fanfan review_rfd "${RFD_ID}-评审（虚拟架构小组）" "补登记（回灌自登后仍未登记，独立审计意见 R-A4）：评审记录待评审人补记后方可置 done。关联概设 docs/design/${RFD_ID}-architecture-design.md" fanfan-review fanfan-researcher)
@@ -852,7 +852,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
         if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 安全评审")" == "PASS" ]]; then
 if [ "$(posture)" = "strict" ]; then
             echo "ISSUE|walk-done-strict|secops|安全评审卡 ${SGID} strict 姿态不代走 done（待收紧面：等 secops 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
-            note "[姿态] strict：secops 卡 ${SGID} 不代走 done——记单（security_review_done 仍置：判词真值在房，卡面归组织）"
+            note "[姿态] strict：secops 卡 ${SGID} 不代走 done——登记（security_review_done 仍置：判词真值在房，卡面归组织）"
             sset security_review_done 1
           else
             kanban_walk_done secops "$SGID"; sset security_review_done 1
@@ -860,9 +860,9 @@ if [ "$(posture)" = "strict" ]; then
           fi
         else
           # FAIL→复审改判等待环（run15 根治）：原实现 FAIL 即 fail 退出，靠监督器 40min
-          # 一轮的重启循环等复审——改判词到达前驱动空转。改：FAIL 记单后原地等待末判词
+          # 一轮的重启循环等复审——改判词到达前驱动空转。改：FAIL 登记后原地等待末判词
           # 翻 PASS（派修/复审由组织面推进，run15 04:11 实证自组织已派研发工程师修复）；
-          # 复审窗口仍满未翻正才 fail。重放进入本分支零重复记单（security_fail_logged 幂等键）。
+          # 复审窗口仍满未翻正才 fail。重放进入本分支零重复登记（security_fail_logged 幂等键）。
           if [[ "$(sget security_fail_logged)" != "1" ]]; then
             echo "ISSUE|security-review-fail|secops-agent|${RFD_ID} 涉敏安全评审 FAIL（缺项见评审卡），进入复审改判等待环（组织面派修→复审 PASS 即放行）" >> "$EVID_DIR/issues.log"
             sset security_fail_logged 1
@@ -904,7 +904,7 @@ if [ "$(posture)" = "strict" ]; then
               # ②上游侧耐心：14 项级设计修订要小时级，等待钟（40min，实际循环约
               #   100min）太急——上游催办最小间隔 1800s（实测修订工时约 17min；2h 版参照系
 #   错把含断棒的 4h 墙钟当工时——用户 23:2x 点名修正）；
-              # ③第三声后升级不沉默：high 记单 + 房间点名主管A 介入（球在哪侧点名
+              # ③第三声后升级不沉默：high 登记 + 房间点名主管A 介入（球在哪侧点名
               #   哪侧负责人）。
               local _rr_result; _rr_result="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board secops-audit-trail show "$SGID" 2>/dev/null | awk '/^Result:/{flag=1;next}/^Comments/{flag=0}flag' | head -1 || echo "")"
               local _now; _now=$(date +%s)
@@ -920,7 +920,7 @@ if [ "$(posture)" = "strict" ]; then
                   dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（第 $((_up_n + 1))/3 次）：head ${_rr_head} 的复审结论=FAIL（卡 ${SGID} result：${_rr_result}）。请按卡面未过项组织下一轮修订并推 origin/main；合入后驱动将自动派复审（闸依赖闭环）。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
                   note "[安全] 复审 FAIL 球在上游——催产品经理A 组织修订（第 $((_up_n + 1))/3 次，30min 间隔）"
                   if [[ "$_up_n" -eq 2 ]]; then
-                    echo "ISSUE|security-upstream-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审 FAIL 后催产品经理A 3 次（30min 间隔）仍无修订入仓——high 记单点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
+                    echo "ISSUE|security-upstream-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审 FAIL 后催产品经理A 3 次（30min 间隔）仍无修订入仓——high 登记点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
                     dispatch_in_room admin "@admin-agent:matrix.test 升级介入（闸依赖闭环③）：G2 安全复审 FAIL 后对产品经理A 催办 3 次无修订入仓（head 仍 ${_rr_head}）。请核实修订侧是否停摆并处置；复审 PASS 前 G2 不放行。" "$(agent_mxid admin)" || true
                   fi
                 fi
@@ -932,7 +932,7 @@ if [ "$(posture)" = "strict" ]; then
                   dispatch_in_room secops "@secops-agent:matrix.test 复审催办（第 $((_rev_n + 1))/3 次）：修订 $(sget security_rereview_for_head) 的复审仍未回结论行 SECURITY-GATE。请继续复审卡 ${SGID} 并回结论；复审 PASS 前 G2 不放行。" "$(agent_mxid secops)" || true
                   note "[安全] 复审催办第 $((_rev_n + 1))/3 次（head ${_rr_head}）"
                   if [[ "$_rev_n" -eq 2 ]]; then
-                    echo "ISSUE|security-review-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审派单后催安全工程师AI 3 次仍无结论——high 记单点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
+                    echo "ISSUE|security-review-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审派单后催安全工程师AI 3 次仍无结论——high 登记点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
                     dispatch_in_room admin "@admin-agent:matrix.test 升级介入（闸依赖闭环③）：修订 $(sget security_rereview_for_head) 复审派单后催安全工程师AI 3 次无结论。请核实评审侧是否停摆并处置；复审 PASS 前 G2 不放行。" "$(agent_mxid admin)" || true
                   fi
                 fi
@@ -944,7 +944,7 @@ if [ "$(posture)" = "strict" ]; then
       else
         echo "ISSUE|security-review-missing|secops-agent|涉敏安全评审结论 ${MX_G2_WAIT:-600}s 未达——G2 不放行（补齐后复核）" >> "$EVID_DIR/issues.log"
         # V8.28 修根因（用户 21:02 裁定改向）：原 fail exit 让 supervisor 30s 续跑回到 archgate
-        # 重发 G2——死循环引擎。但闸不得拆：超时只记单+派修提醒，闸键不放行，
+        # 重发 G2——死循环引擎。但闸不得拆：超时只登记+派修提醒，闸键不放行，
         # 修订入 origin/main、secops 复审 PASS 才放行（复审环由 wait_truth 下一轮续等）。
         if [[ "$(sget security_dispatched)" != "1" ]]; then
           sset security_dispatched 1
@@ -1051,7 +1051,7 @@ for a in last.get("anomalies", []):
     fi
   fi
   # G2 安全前置硬校验（2026-10-19 闸门收口 #1）：涉敏轮安全评审必须是 G2 的组成判据。
-  # 原实现安全评审在独立 if 块（:822 起）、超时只记单不终止，而 gate_blocked 全调用点
+  # 原实现安全评审在独立 if 块（:822 起）、超时只登记不终止，而 gate_blocked 全调用点
   # 均不查 security_review_done——arch 先 PASS 时 g2_arch_pass 会静默绕过安全评审落键。
   # 此处 fail-closed：arch PASS 但安全评审未闭环（涉敏轮）即 fail 中止本轮，闸不放行。
   if ! printf '%s' "$_sens" | grep -qE '涉敏[：:]\s*(无|否|false|N/A)' && [[ -z "$(sget security_review_done)" ]]; then
@@ -1068,7 +1068,7 @@ for a in last.get("anomalies", []):
     if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_TS" arch "${RFD_ID} 架构治理评审")" == "PASS" ]]; then
 if [ "$(posture)" = "strict" ]; then
         echo "ISSUE|walk-done-strict|arch|评审卡 ${AGID} strict 姿态不代走 done（待收紧面：等 arch 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
-        note "[姿态] strict：arch 卡 ${AGID} 不代走 done——记单（闸键仍置：判词真值在房）"
+        note "[姿态] strict：arch 卡 ${AGID} 不代走 done——登记（闸键仍置：判词真值在房）"
         sset_once g2_arch_pass "$(date +%s)"
       else
         kanban_walk_done arch "$AGID"
@@ -1091,8 +1091,8 @@ if [ "$(posture)" = "strict" ]; then
         fi
       else
         mx_gate_breaker_trip g2 "G2 架构治理评审" 1
-        # V8.28 用户 21:02 裁定：两轮未过闸不放行不授控。记单留痕，闸键不落——
-        # 上游修订+复评 PASS 才进 close（supervisor 续跑重入本段，幂等不重复记单）。
+        # V8.28 用户 21:02 裁定：两轮未过闸不放行不授控。登记留痕，闸键不落——
+        # 上游修订+复评 PASS 才进 close（supervisor 续跑重入本段，幂等不重复登记）。
         if [[ "$(sget g2_arch_fail_logged)" != "1" ]]; then
           echo "ISSUE|g2-arch-fail-hold|arch-agent|V8.28：G2 arch 两轮未过——闸不放行，修订+复评 PASS 前不进 close（禁止拆闸式解锁）。锚：aipay-scenario.sh:874-880" >> "$EVID_DIR/issues.log"
           sset g2_arch_fail_logged 1
@@ -1180,7 +1180,7 @@ if step_reached devimpl && [[ -z "$(sget devimpl_done)" ]]; then
   ACP_NOTE=""
   if [[ "${MX_ACP_BACKEND:-0}" == "1" ]]; then
     ACP_NOTE="
-【编码后端=delegate】实现须经 coding-delegate 技能委托外部编码引擎执行（在 workspace 调用其 CLI，见技能卡流程四步）：你负责契约拆解/diff 评审/集成与 testlog，引擎负责实现；委托日志 tee 到 materials/delegate-log.txt 且必须随分支提交——缺日志=未走后端，G3 承载面记单。引擎不可用（CLI 缺失/超时 2 次）如实报 BLOCKED，禁止静默回退手写冒充委托。"
+【编码后端=delegate】实现须经 coding-delegate 技能委托外部编码引擎执行（在 workspace 调用其 CLI，见技能卡流程四步）：你负责契约拆解/diff 评审/集成与 testlog，引擎负责实现；委托日志 tee 到 materials/delegate-log.txt 且必须随分支提交——缺日志=未走后端，G3 承载面登记。引擎不可用（CLI 缺失/超时 2 次）如实报 BLOCKED，禁止静默回退手写冒充委托。"
   fi
 
   # 派发幂等 marker（run8 优化 C）：重启防整批重派（同 anexec_d1）。d1=独立双路（chen/xiao，
@@ -1326,7 +1326,7 @@ ${task}（${app}，2 人日）。任务纪律（先拆分再编码，2026-10-01 
     "渠道批：origin 出现 feat/DEV-CHALI 分支（本轮新鲜）@lin@branch_fresh feat/DEV-CHALI" \
     "origin 出现 feat/DEV-MP 分支（本轮新鲜）@xiao@branch_fresh feat/DEV-MP" \
     || { _fl="${MX_MULTI_FAILED_LEGS:-}"; [ -z "$_fl" ] && _fl="DEV-CHWX DEV-CHALI DEV-MP";
-         # [run15 根治] 只记真实未达腿（multi 导出失败锚清单）——run15 实锤已过的 C/N 腿被 blanket 记单
+         # [run15 根治] 只记真实未达腿（multi 导出失败锚清单）——run15 实锤已过的 C/N 腿被 blanket 登记
          for b in $(printf '%s' "$_fl" | grep -oE 'DEV-[A-Z-]+' | sort -u); do
            note "[观察] $b 分支未达（记问题单）"; echo "ISSUE|dev-branch-missing|$b|分支未推送" >> "$EVID_DIR/issues.log"; done; }
   wait_alive_truth_multi 1800 "chen" \
@@ -1378,20 +1378,20 @@ DEVSPECS
   done
   unset MX_PROGRESS_FN
   # 干预点 A 机械巡检（纪律 31 落地）：>1 人日腿拆分交付证据=分支 ≥2 commit（子件逐件提交）；
-  # 单 commit=拆分证据缺失记单不阻断——机械验收替代自觉，下轮派发词据此回灌收紧。
+  # 单 commit=拆分证据缺失登记不阻断——机械验收替代自觉，下轮派发词据此回灌收紧。
   for b in DEV-MP DEV-CHWX DEV-CHALI; do
     _sc=$(git -C "$DIRECTOR_CLONE" rev-list --count "origin/feat/$b" ^origin/main 2>/dev/null || echo 0)
     if (( _sc < 2 )); then
       echo "ISSUE|split-evidence-missing|$b|分支仅 ${_sc} commit（>1 人日腿按纪律 31 应逐子件提交，拆分证据缺失）" >> "$EVID_DIR/issues.log"
-      note "[观察] $b 拆分证据缺失（分支 ${_sc} commit，纪律 31 巡检记单）"
+      note "[观察] $b 拆分证据缺失（分支 ${_sc} commit，纪律 31 巡检登记）"
     fi
   done
   # G3 本地门禁证据真查：每条分支须含测试运行输出（docs/evidence/<任务>-testlog.txt）；
-  # ACP 后端启用时加查委托日志（materials/delegate-log.txt）——后端指纹缺失记单。
-  # run18 复盘 F4 根治（闸键-证据耦合）：缺证不再「记单即落键」——全量轮先派补证单
+  # ACP 后端启用时加查委托日志（materials/delegate-log.txt）——后端指纹缺失登记。
+  # run18 复盘 F4 根治（闸键-证据耦合）：缺证不再「登记即落键」——全量轮先派补证单
   # 并等待（固定窗，补 testlog 是轻量操作），超时仍缺则 sset g3_evidence_gap 显形
   # （治理报告计「缺证过闸」，报告红色呈现，首过率不虚高）；lite 轮夹具形态沿用
-  # 记单口径（源轮真值=夹具语义，repo_branch_has 对 lite 分支查不到属采集面缺口）。
+  # 登记口径（源轮真值=夹具语义，repo_branch_has 对 lite 分支查不到属采集面缺口）。
   _g3_miss=""
   for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
     if ! repo_branch_has "feat/$b" "docs/evidence/$b-testlog.txt"; then
@@ -1464,16 +1464,16 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   note "── defect：集成合并+测试执行+缺陷闭环段起（devimpl 段收尾分界锚）"
   # ── V8.30 职责归位（2026-10-15 用户裁定）：评审+合并＝域 lead 职权（wei 后端域、
   # mei 前端域），PM 不合并不评审代码（run12「fanfan 合并高速路」边界重申）；导演只做
-  # 真值验收（git 祖先链反查，lead 自报不算数）与超时补棒兜底（代偿记单进 issues.log）。
+  # 真值验收（git 祖先链反查，lead 自报不算数）与超时补棒兜底（代偿登记进 issues.log）。
   # 正本 §2.4 16b 操作者行/待收紧面 19 同步收账（演进目标「合并回归组织侧」落地件）。
   # V8.29 姿态治理补则：补棒兜底=代偿（driver-merge 型，落台账 PR-6 对照）；strict
-  # 姿态停用兜底（识别不干预，记单等组织侧重试）。
+  # 姿态停用兜底（识别不干预，登记等组织侧重试）。
   # 分支状态机约定不变：本步起 HEAD 常驻 integration/${RFD_ID}（后续步骤用显式 ref 或
   # 临时 worktree 访问仓）；凡要进 origin/main 的提交一律走 repo_commit_main()。
   repo_pull
   _be_branches="DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI"
   _fe_branches="DEV-MP"
-  _integration_truth() { # <branch...>：origin/integration 在且包含各在场 feat tip（缺席分支=记单放行语义不阻真值）
+  _integration_truth() { # <branch...>：origin/integration 在且包含各在场 feat tip（缺席分支=登记放行语义不阻真值）
     git -C "$DIRECTOR_CLONE" fetch -q origin >/dev/null 2>&1 || true
     git -C "$DIRECTOR_CLONE" rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null 2>&1 || return 1
     local _itb
@@ -1488,33 +1488,33 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     dispatch_in_room wei "@wei-agent:matrix.test 集成合并任务 INT-MERGE-BE-${RFD_ID}（后端域 lead 职权：评审+合并一条责任链；非 PM、非导演代做；合并提交信息必须含 [LEAD-MERGE] 标记——守门凭据，缺标记判越权合并）：
 1) 工作区 $(workspace wei) 拉取后：基线=origin/integration/${RFD_ID}（无则 origin/main），checkout -B integration/${RFD_ID}
 1b) 【单分支单步节奏+评审时机（V8.32-b，run20 实测 wei 会话饥饿与"等全齐"瀑布形态根治）】每支分支=一个独立回合：评审→merge→push origin→群内回执 INTEGRATED-<分支ID> 四件事全做完才开下一支；回执即续做下一支（连续集成，不等六条全齐，也不做完六条才回话）。任一 feat 分支出现在 origin 后 30 分钟内先发 REVIEW-STARTED-<分支ID>（开始评审声明），超 1 小时未合并由监督哨发 REVIEW-NUDGE-<分支ID> 提醒催单。
-2) 逐分支评审后合并 origin/feat/DEV-PAYCORE-C、DEV-PAYCORE-S、DEV-PAYCORE-N、DEV-CHWX、DEV-CHALI（顺序即到达序；push 缺席的分支记单跳过，不中止）：每支 merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本（checkout --ours + add + commit 收口），其余冲突 abort 该支并记单不中止
-3) 旧基线头须仍是 HEAD 祖先（丢线=记单）；禁强推；push -u origin integration/${RFD_ID}
+2) 逐分支评审后合并 origin/feat/DEV-PAYCORE-C、DEV-PAYCORE-S、DEV-PAYCORE-N、DEV-CHWX、DEV-CHALI（顺序即到达序；push 缺席的分支登记跳过，不中止）：每支 merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本（checkout --ours + add + commit 收口），其余冲突 abort 该支并登记不中止
+3) 旧基线头须仍是 HEAD 祖先（丢线=登记）；禁强推；push -u origin integration/${RFD_ID}
 结论行 INT-MERGE-BE-DONE-${RFD_ID}（行首，附已合分支与缺席分支清单）。不许谎报。" "$(agent_mxid wei)" && sset lead_merge_be_dispatched 1
   fi
   MX_ALIVE_HARD_SEC=2700 wait_alive_truth "lead 后端域集成合并（wei，真值=祖先链反查）" 900 wei _integration_truth $_be_branches || {
-    note "[集成] lead 后端域合并超时/未达真值——导演补棒代行（代偿记单）"
+    note "[集成] lead 后端域合并超时/未达真值——导演补棒代行（代偿登记）"
     echo "ISSUE|lead-merge-fallback|wei|lead 后端域集成超时或真值未达，导演代行合并（V8.30 职责归位兜底路径）" >> "$EVID_DIR/issues.log"
     sset lead_merge_fallback 1
   }
   if [[ -z "$(sget lead_merge_fallback)" && -z "$(sget lead_merge_fe_dispatched)" ]]; then
     dispatch_in_room mei "@mei-agent:matrix.test 集成合并任务 INT-MERGE-FE-${RFD_ID}（前端域 lead 职权：评审+合并；串行在后端域之后防同分支推挤；合并提交信息必须含 [LEAD-MERGE] 标记——守门凭据）：
 1) 工作区 $(workspace mei) 拉取后：基线=origin/integration/${RFD_ID}，checkout -B integration/${RFD_ID}
-2) 评审后合并 origin/feat/DEV-MP（push 缺席则记单跳过）：merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本，其余 abort 记单
+2) 评审后合并 origin/feat/DEV-MP（push 缺席则登记跳过）：merge --no-ff；冲突仅限 docs/evidence/*-testlog.txt 时取 integration 正本，其余 abort 登记
 3) 禁强推；push -u origin integration/${RFD_ID}
 结论行 INT-MERGE-FE-DONE-${RFD_ID}（行首）。不许谎报。" "$(agent_mxid mei)" && sset lead_merge_fe_dispatched 1
   fi
   if [[ -z "$(sget lead_merge_fallback)" ]]; then
     MX_ALIVE_HARD_SEC=2700 wait_alive_truth "lead 前端域集成合并（mei，真值=祖先链反查）" 900 mei _integration_truth $_be_branches $_fe_branches || {
-      note "[集成] lead 前端域合并超时/未达真值——导演补棒代行（代偿记单）"
+      note "[集成] lead 前端域合并超时/未达真值——导演补棒代行（代偿登记）"
       echo "ISSUE|lead-merge-fallback|mei|lead 前端域集成超时或真值未达，导演代行合并（V8.30 兜底）" >> "$EVID_DIR/issues.log"
       sset lead_merge_fallback 1
     }
   fi
   if [[ -n "$(sget lead_merge_fallback)" ]]; then
-    # 兜底路径＝原导演合并块原样保留（V8.30 起仅作 lead 超时的补棒通道，代偿已记单）
+    # 兜底路径＝原导演合并块原样保留（V8.30 起仅作 lead 超时的补棒通道，代偿已登记）
     if [ "$(posture)" = "strict" ]; then
-      note "[姿态] strict：lead 合并超时不补棒（PR-6 流水线面待根治）——记单，等组织侧重试"
+      note "[姿态] strict：lead 合并超时不补棒（PR-6 流水线面待根治）——登记，等组织侧重试"
       echo "ISSUE|strict-merge-fallback-skipped|driver|lead 合并超时，strict 姿态不代行（V8.30 兜底通道停用）" >> "$EVID_DIR/issues.log"
     else
     compensate driver-merge "lead 合并超时，导演补棒代行（V8.30 兜底通道）" 2>/dev/null || true
@@ -1555,7 +1555,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     # （DEF-BE-001 修正线、FE 修复线 78ee897/65bb44f、verify-guard-onpay.js、
     # pay-button-guard.test.ts、G3/G4 testlog 全数从基线消失，双缺陷回归进发布
     # 基线）。改增量 merge 续建：旧集成头是 HEAD 祖先=历史保留，修复线恒在；
-    # 推送禁强推（强推即再丢线成因），被拒记单不中止。
+    # 推送禁强推（强推即再丢线成因），被拒登记不中止。
     git fetch -q origin
     BASE="origin/main"
     git rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null 2>&1 \
@@ -1570,7 +1570,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
           printf '%s\n' "$CONFLICTS" | while read -r cf; do git checkout --ours -- "$cf" 2>/dev/null; git add -- "$cf" 2>/dev/null; done
           git commit -q --no-edit 2>/dev/null || true
           note "[观察] $2 合并冲突仅限 testlog 污染副本，已取 integration 正本自动收口"
-          echo "ISSUE|merge-conflict-autoresolved|$2|testlog 副本冲突已取 integration 正本收口（仍记单追踪提交纪律）" >> "$EVID_DIR/issues.log"
+          echo "ISSUE|merge-conflict-autoresolved|$2|testlog 副本冲突已取 integration 正本收口（仍登记追踪提交纪律）" >> "$EVID_DIR/issues.log"
         else
           git merge --abort 2>/dev/null || true; echo "ISSUE|merge-conflict|$2|integration 合并冲突" >> "$EVID_DIR/issues.log"
         fi
@@ -1579,11 +1579,11 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     merge_keep_history origin/main "origin-main"   # 主线同步（首建时 BASE=origin/main，空合幂等）
     for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
       # 分支缺席前置检查（2026-10-04 hu/xiao 停摆未推分支，devimpl 按回灌语义
-      # 记单放行后，此处对不存在 ref 的 merge 走 not-something-we-can-merge → abort 128 崩溃环）。
-      # 缺席=跳过合并+如实记单，集成以已交付分支继续。
+      # 登记放行后，此处对不存在 ref 的 merge 走 not-something-we-can-merge → abort 128 崩溃环）。
+      # 缺席=跳过合并+如实登记，集成以已交付分支继续。
       if ! git rev-parse -q --verify "refs/remotes/origin/feat/$b" >/dev/null 2>&1; then
         echo "ISSUE|integration-branch-missing|$b|feat/$b 未在 origin（开发交付缺席，integration 跳过该分支）" >> "$EVID_DIR/issues.log"
-        note "[观察] feat/$b 缺席 origin——跳过合并并记单（已交付分支继续集成）"
+        note "[观察] feat/$b 缺席 origin——跳过合并并登记（已交付分支继续集成）"
         continue
       fi
       merge_keep_history "origin/feat/$b" "$b"
@@ -1592,14 +1592,14 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
     if [[ -n "$OLD_TIP" ]] && ! git merge-base --is-ancestor "$OLD_TIP" HEAD 2>/dev/null; then
       echo "ISSUE|baseline-history-lost|${RFD_ID}|integration/${RFD_ID} 集成后旧基线 ${OLD_TIP:0:7} 非祖先（丢线，基线不可用）" >> "$EVID_DIR/issues.log"
     fi
-    # 推送只走常规（R-A4 防再丢机制：禁强推）；被拒记单不中止，后续步骤用显式
+    # 推送只走常规（R-A4 防再丢机制：禁强推）；被拒登记不中止，后续步骤用显式
     # origin/integration 引用，不看 HEAD。
     git push -q -u origin "integration/${RFD_ID}" 2>/dev/null \
       || echo "ISSUE|integration-push|${RFD_ID}|integration/${RFD_ID} 推送被拒（已禁强推，变更受控）" >> "$EVID_DIR/issues.log" )
     fi
-  # 措辞与事实解耦（run7 实录误读源）：结果按实际路径分述——成功=已推送；被拒=已记单
+  # 措辞与事实解耦（run7 实录误读源）：结果按实际路径分述——成功=已推送；被拒=已登记
   # F7（run15 复盘）：判定前先 fetch——重放轮曾以陈旧本地 origin 引用误报「推送未达」
-  # （09:30 实录：origin 已达 0b9b769 但本地引用落后，竞态记单）
+  # （09:30 实录：origin 已达 0b9b769 但本地引用落后，竞态登记）
   git -C "$DIRECTOR_CLONE" fetch -q origin "integration/${RFD_ID}" 2>/dev/null || true
   if git rev-parse -q --verify "refs/remotes/origin/integration/${RFD_ID}" >/dev/null 2>&1; then
     note "[集成] integration/${RFD_ID} 四开发分支已合并并推送 ✓（origin 可反查）"
@@ -1621,7 +1621,7 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
       note "[契约] 契约面 breaking=${_cbreak} 项（evidence/qgate-contract-observation.json——影子模式如实呈现，run15 转正后进 G4 强制线）"
     fi
   else
-    echo "ISSUE|contract-observe|defect|契约观察器执行失败（contract-observe.mjs）——影子模式记单不阻断" >> "$EVID_DIR/issues.log"
+    echo "ISSUE|contract-observe|defect|契约观察器执行失败（contract-observe.mjs）——影子模式登记不阻断" >> "$EVID_DIR/issues.log"
   fi
 
   if [[ -z "$(sget defect_dispatched)" ]]; then
@@ -1701,7 +1701,7 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
   while (( $(date +%s) < DEFECT_WINDOW_END )); do
     auto_approve "$SCAN_ROOM" || true
     # V8.8 纪律 34⑤：缺陷卡建卡真伪校验（每 ~5 分钟一轮；占位/不在编制的 assignee
-    # 记单+群内催办重填——run14 实证三卡烂待办一小时根因）。输出重定向防 set -e。
+    # 登记+群内催办重填——run14 实证三卡烂待办一小时根因）。输出重定向防 set -e。
     if (( $(date +%s) - _last_nudge_ts >= 300 )); then
       _assignee_bad=""
       for _b in qi-test-pay fei-test-fe; do
@@ -1778,18 +1778,18 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
       if [[ -n "$_fxd" ]] && ! git -C "$DIRECTOR_CLONE" cat-file -e "${_fxd}^{commit}" >/dev/null 2>&1; then
         echo "ISSUE|defect-fixed-anchor-missing|drivers|FIX-DONE 锚点抽验未过：最近一条修复回执 commit=${_fxd} 在中央仓不可反查（未推送或伪锚），按纪律 34② 打回重报" >> "$EVID_DIR/issues.log"
         mx_send "$(load_token fanfan)" "$SCAN_ROOM" "@qi-agent @fei-agent 锚点抽验未过：最近 FIX-DONE 的 commit=${_fxd} 在中央仓查无（本地未推送=未完成）。请推送后重发一行带新 commit 的 FIX-DONE。禁静默。" "$(agent_mxid qi),$(agent_mxid fei)" >/dev/null 2>&1 || true
-        note "[真值] FIX-DONE 锚点抽验未过（commit=${_fxd} 不可反查，已记单回灌重报）"
+        note "[真值] FIX-DONE 锚点抽验未过（commit=${_fxd} 不可反查，已登记回灌重报）"
       else
         note "[真值] FIX-DONE 锚点抽验过（commit=${_fxd:-本轮回执无 commit 锚，免抽}）"
       fi
       # ③字段流转核验（纪律 34③ 驱动侧）：DEF 卡复测段 assignee 应翻转为测试档案
-      # （qi/fei/mei）——未翻转=字段流转缺口，记单不阻塞（run15 首验）。
+      # （qi/fei/mei）——未翻转=字段流转缺口，登记不阻塞（run15 首验）。
       _flip_bad=$(kanban_list qi 2>/dev/null | jq -r '[.. | objects | select(has("title")) | select((.title // "") | test("DEF-")) | select(.status == "done" or .status == "review") | select((.assignee // "") | test("^(qi|fei|mei)$") | not)] | length' 2>/dev/null || echo 0)
       _flip_bad2=$(kanban_list fei 2>/dev/null | jq -r '[.. | objects | select(has("title")) | select((.title // "") | test("DEF-")) | select(.status == "done" or .status == "review") | select((.assignee // "") | test("^(qi|fei|mei)$") | not)] | length' 2>/dev/null || echo 0)
       _flip_bad=$((_flip_bad + _flip_bad2))
       if (( _flip_bad > 0 )); then
         echo "ISSUE|defect-assignee-not-flipped|testers|DEF 卡复测段 assignee 未翻转为测试档案 ${_flip_bad} 张（纪律 34③ 字段流转缺口——复测归属应回测试线）" >> "$EVID_DIR/issues.log"
-        note "[核验] 字段流转缺口：${_flip_bad} 张 DEF 卡 assignee 未回测试线（记单）"
+        note "[核验] 字段流转缺口：${_flip_bad} 张 DEF 卡 assignee 未回测试线（登记）"
       else
         note "[核验] DEF 卡字段流转核验过（复测段 assignee 均在测试线）"
       fi
@@ -1799,7 +1799,7 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
       note "[真值] 零缺陷轮：双测试结论已出（BE ${BOTH_DONE}/${_be_n} 片+FE ${FE_DONE}/${_fe_n} 片），缺陷流未触发（如实记录）"; break
     fi
     # V8.8 纪律 34④：环内禁静默——缺陷在途（DEFECTS>FIXED）且 15 分钟无新 FIX-DONE
-    # 即群内重发提醒；再 15 分钟仍无进展报 LOOP-BLOCKED（记单不中止，窗口到期兜底）。
+    # 即群内重发提醒；再 15 分钟仍无进展报 LOOP-BLOCKED（登记不中止，窗口到期兜底）。
     if (( DEFECTS > FIXED )); then
       if (( FIXED > _last_fixed_count )); then
         _last_fixed_count=$FIXED; _stall_rounds=0
@@ -1810,7 +1810,7 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
           note "[催办] 缺陷环静默 15 分钟，已重发提醒（纪律 34④）"
         elif (( _stall_rounds == 60 )); then
           echo "ISSUE|defect-loop-blocked|testers|缺陷修复环连续 30 分钟无新 FIX-DONE（在途 ${DEFECTS}/已修 ${FIXED}）——按纪律 34④ 如实报 LOOP-BLOCKED，等待窗口到期或人工介入" >> "$EVID_DIR/issues.log"
-          note "[问题] 缺陷环 LOOP-BLOCKED 记单（纪律 34④）"
+          note "[问题] 缺陷环 LOOP-BLOCKED 登记（纪律 34④）"
         fi
       fi
     else
@@ -1851,34 +1851,34 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   # 导出面=观察面，缺方法/多方法=breaking。转正判据（与影子模式同一产物文件，
   # 不另造轮子）：breaking=0 才准入 g4_pass；>0 记问题单+置 g4_contract_gap 显形
   # （缺证据过闸语义与 g3/g4_evidence_gap 同族，治理报告如实计，禁静默放行）；
-  # 观察器执行失败=INCONCLUSIVE 同径记单（fail-closed，不冒充通过）。
+  # 观察器执行失败=INCONCLUSIVE 同径登记（fail-closed，不冒充通过）。
   _cb_file="$EVID_DIR/qgate-contract-observation.json"
   if [[ -f "$_cb_file" ]]; then
     _cb_n=$(python3 -c "import json;print(len(json.load(open('$_cb_file')).get('breaking',[])))" 2>/dev/null || echo '?')
     if [ "$_cb_n" = "0" ]; then
       note "[契约] G4 强制线：ChannelAdapter 契约面成立（breaking=0，质量 C 转正件）"
     elif [ "$_cb_n" = "?" ]; then
-      echo "ISSUE|g4-contract-inconclusive|${RFD_ID}|契约观察产物解析失败（qgate-contract-observation.json）——fail-closed 记单显形" >> "$EVID_DIR/issues.log"
+      echo "ISSUE|g4-contract-inconclusive|${RFD_ID}|契约观察产物解析失败（qgate-contract-observation.json）——fail-closed 登记显形" >> "$EVID_DIR/issues.log"
       sset g4_contract_gap 1
-      note "[契约] G4 强制线：观察产物不可解析——INCONCLUSIVE 记单（fail-closed）"
+      note "[契约] G4 强制线：观察产物不可解析——INCONCLUSIVE 登记（fail-closed）"
     else
       echo "ISSUE|g4-contract-breaking|${RFD_ID}|契约面 breaking=${_cb_n} 项（期望 ChannelAdapter 4 方法×双渠道实现，缺/多方法均列 evidence/qgate-contract-observation.json）——G4 强制线未过，缺证据过闸显形" >> "$EVID_DIR/issues.log"
       sset g4_contract_gap 1
       note "[契约] G4 强制线：breaking=${_cb_n}——g4_contract_gap=1 显形（禁静默放行）"
     fi
   else
-    echo "ISSUE|g4-contract-missing|${RFD_ID}|契约观察产物缺席（defect 段 contract-observe.mjs 未跑或失败）——G4 强制线 fail-closed 记单" >> "$EVID_DIR/issues.log"
+    echo "ISSUE|g4-contract-missing|${RFD_ID}|契约观察产物缺席（defect 段 contract-observe.mjs 未跑或失败）——G4 强制线 fail-closed 登记" >> "$EVID_DIR/issues.log"
     sset g4_contract_gap 1
-    note "[契约] G4 强制线：观察产物缺席——fail-closed 记单"
+    note "[契约] G4 强制线：观察产物缺席——fail-closed 登记"
   fi
   # ── V8.45 G4 评测子门：评测运行 + 红队 + 三角 + 覆盖 + 锚点（方案 §5.3 G4-E）──
-  # FAIL 阻断 g4_pass（G5 的 gate_blocked 会拒入）；GAP 记单放行（缺口如实呈现，
+  # FAIL 阻断 g4_pass（G5 的 gate_blocked 会拒入）；GAP 登记放行（缺口如实呈现，
   # 不拿基础设施缺席冒充通过）；PASS 置 g4_eval_pass。
   _eval_rc=0
   eval_flow || _eval_rc=$?
   case "$_eval_rc" in
     0) note "[G4] 评测子门 PASS（评测/红队/三角/覆盖/锚点）" ;;
-    2) note "[G4] 评测子门 GAP（缺口已记单，放行并如实呈现）" ;;
+    2) note "[G4] 评测子门 GAP（缺口已登记，放行并如实呈现）" ;;
     *) note "[G4] 评测子门 FAIL（g4_pass 不置位，G5 不得进入）" ;;
   esac
   capture_step "testpass_done" "/app/stage/build?tab=board"
@@ -1935,7 +1935,7 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     fi
 if [ "$(posture)" = "strict" ]; then
       echo "ISSUE|walk-done-strict|fanfan|G5 评审卡 ${RGID} strict 姿态不代走 done（待收紧面：等 fanfan 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
-      note "[姿态] strict：fanfan G5 卡 ${RGID} 不代走 done——记单（闸键仍置：判词真值在房）"
+      note "[姿态] strict：fanfan G5 卡 ${RGID} 不代走 done——登记（闸键仍置：判词真值在房）"
       sset_once g5_ready "$(date +%s)"
     else
       kanban_walk_done fanfan "$RGID"
@@ -1947,7 +1947,7 @@ if [ "$(posture)" = "strict" ]; then
     note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准，事件入 approved.events）"
     # V8.46 发布门台账（append-only）：产品端点 POST /api/hermes/sim/release-gate。
     # 与 approved.events 并行留痕——前者可被产品 UI/报告按 run 直读，后者是驱动侧文本账。
-    # 写失败只记单不阻断（台账是证据增强，不改 G5 判据；报告证据九如实呈现缺席）。
+    # 写失败只登记不阻断（台账是证据增强，不改 G5 判据；报告证据九如实呈现缺席）。
     _rel_tok=$(studio_login 2>/dev/null || true)
     if [[ -n "$_rel_tok" ]] && studio POST /api/hermes/sim/release-gate "$_rel_tok" \
          "$(jq -n --arg r "$RUN_ID" --arg n "G5 发布准出七项过（评审卡 ${RGID}；HumanGate=导演批准）" '{run:$r,decision:"approve",note:$n}')" >/dev/null 2>&1; then
@@ -1977,8 +1977,8 @@ if [ "$(posture)" = "strict" ]; then
     ( cd "$DIRECTOR_CLONE" && node "$OVERLAY_ROOT/custom/qgate/dist/cli.js" release-report ) >/dev/null 2>&1 || true
     # run18 复盘根治：QGate 证据新鲜度校验——旧件透传实锤（产物正文 generated=
     # 开跑前 5 天，9 门全 INCONCLUSIVE 的旧件整包进报告）。产物 generated 时间戳
-    # 须 ≥ 证据基线（lite=夹具源轮基线，evidence_baseline 同源）；不新鲜即记单
-    # 不收编，并清中央仓旧产物防重启循环再收编；解析失败=记单不收编不删（人工核）。
+    # 须 ≥ 证据基线（lite=夹具源轮基线，evidence_baseline 同源）；不新鲜即登记
+    # 不收编，并清中央仓旧产物防重启循环再收编；解析失败=登记不收编不删（人工核）。
     local _qg_ok=0 _qg_gen _qg_ts _qg_base _qg_parse=0
     if [[ -f "$DIRECTOR_CLONE/.qgate/release-report.md" ]]; then
       _qg_gen=$(sed -n 's/^- generated: //p' "$DIRECTOR_CLONE/.qgate/release-report.md" | head -1 | tr -d '\r')
@@ -1990,7 +1990,7 @@ if [ "$(posture)" = "strict" ]; then
       elif (( _qg_parse )); then
         # 解析失败（非 ISO 格式漂移/含引号击穿 python -c）≠ 旧件：归 0 会落进
         # stale 分支误删中央仓产物+误记「旧件透传」单，与注释承诺「不删（人工核）」相反。
-        issue_once qgate-parse step20 "QGate release-report generated 时间戳解析失败（${_qg_gen}）——记单不收编不删（人工核对 central/.qgate/）"
+        issue_once qgate-parse step20 "QGate release-report generated 时间戳解析失败（${_qg_gen}）——登记不收编不删（人工核对 central/.qgate/）"
       elif [[ -n "$_qg_base" && "$_qg_ts" -lt "$_qg_base" ]]; then
         rm -f "$DIRECTOR_CLONE/.qgate/release-report.md"
         issue_once qgate-stale step20 "QGate release-report 旧件透传（generated=${_qg_gen} 早于证据基线 ${_qg_base}）——禁收编，中央仓旧产物已清（run18 复盘：曾透传 5 天前旧件）"
@@ -2001,7 +2001,7 @@ if [ "$(posture)" = "strict" ]; then
     if (( _qg_ok )); then
       note "[G5] QGate release-report 已落盘（evidence/qgate-release-report.txt，来源分布随行；unresolved 门=无信号桶如实呈现；新鲜度校验过）"
     else
-      issue_once qgate-evidence step20 "QGate release-report 未落盘（不新鲜/CLI 失败/格式漂移，见同键前单）——门禁证据缺席记单"
+      issue_once qgate-evidence step20 "QGate release-report 未落盘（不新鲜/CLI 失败/格式漂移，见同键前单）——门禁证据缺席登记"
       note "[G5] QGate release-report 未落盘（记问题单）"
     fi
     # M3 事件化：G5 pass（HumanGate=PM 人类 sender；P5 done 在 UAT 收口后发）
@@ -2121,7 +2121,7 @@ if [ "$(posture)" = "strict" ]; then
         _G5GAPS="$(g5_real_gaps)"
         if g5_verdict_settled; then
           # 评审结论稳定（卡面含复核维持）：不重派评审（重派=同判词空转 40min/轮），
-          # 直接熔断等待修复证据变化复位；真实缺项随记单留痕供修复链对齐。
+          # 直接熔断等待修复证据变化复位；真实缺项随登记留痕供修复链对齐。
           echo "ISSUE|g5-fail-settled|fanfan-agent|G5 FAIL 判词稳定（评审卡含复核维持，真实缺项=${_G5GAPS}）——跳过重派评审空转，熔断等待修复证据（run19 复盘根治）" >> "$EVID_DIR/issues.log"
           note "[G5] 判词稳定 FAIL（缺项=${_G5GAPS}）——不重派评审，熔断等修复证据"
           fail "G5 评审结论稳定（FAIL·缺项 ${_G5GAPS}），等待修复链证据变化后复位（V3 硬闸+run19 复盘根治）"
@@ -2131,7 +2131,7 @@ if [ "$(posture)" = "strict" ]; then
         g5_gap_fanout "${RGID}"   # run22 复盘根治：缺项 owner 直派（组织者令之外，防分派断环）
         if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
           # 补齐轮与复用/首轮同一收口（2026-10-07 本路径曾内联收口漏发
-          # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，记单 delivery-g5-gate-event-missing）
+          # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，登记 delivery-g5-gate-event-missing）
           if ! g5_pass_finalize; then
             if wait_truth "补齐轮评审卡 review-record 落卡（body 非空）" 900 kanban_card_body_nonempty fanfan "${RFD_ID} 发布准出"; then
               g5_pass_finalize
@@ -2232,7 +2232,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
   AC_LIST=$(sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -oE "AC-[0-9]+" | sort -u | tr '\n' ' ')
   [[ -n "$AC_LIST" ]] || { echo "ISSUE|uat-no-ac|director|需求书未提取到 AC 清单" >> "$EVID_DIR/issues.log"; fail "UAT 无 AC 清单可验（G1 冻结缺陷）"; }
   # fail-fast 前置（run8 优化 A）：本地廉价校验（git 引用级，秒级）前移到派单之前——
-  # 缺件直接 fail+记单，不再让 agent 生成完整证据后才发现核对永败（run7 口径矛盾期
+  # 缺件直接 fail+登记，不再让 agent 生成完整证据后才发现核对永败（run7 口径矛盾期
   # 每代白派一次 UAT 证据生成，18 代实录）。口径=origin/integration（与 testpass 派发词
   # 一致，3bb5b88a 修的是口径本身，此处把校验次序从"等证据后"前移到"派单前"）。
   UAT_PRE=""
@@ -2295,7 +2295,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       UAT_VERDICTS="${UAT_VERDICTS}${ac}=${v} "
       [[ "$v" == "通过" ]] || UAT_ALL_PASS=0
       # V8.46 UAT 判定台账（append-only）：产品端点 POST /api/hermes/sim/uat-verdict。
-      # 三态映射=通过→pass／有条件通过→conditional／不通过|未见→reject；写失败记单不阻断。
+      # 三态映射=通过→pass／有条件通过→conditional／不通过|未见→reject；写失败登记不阻断。
       if [[ -n "$_uat_tok" ]]; then
         case "$v" in
           通过) _uv=pass ;;
@@ -2386,7 +2386,7 @@ if step_reached workmgr && [[ -z "$(sget workmgr_done)" ]]; then
   fi
   # 台账落档（run8 复盘根治：方案 §8.6 步 22 准出=work-report.md 落档，此前只写
   # evidence 致 8.6 矩阵"文件域无独立工件"）——repo_commit_main 口径进 origin/main，
-  # 失败记单不中止（与验收书/意见书同族收尾语义）。
+  # 失败登记不中止（与验收书/意见书同族收尾语义）。
   cp "$EVID_DIR/work-report.md" "$DIRECTOR_CLONE/work-report.md"
   if repo_commit_main "work-report.md" "fanfan (workmgr)" "fanfan@aipaydev.local" "docs(work): ${RFD_ID} 工作台账落档（M3，RUN=${RUN_ID:-}）"; then
     note "[M3] 工作台账已落档 origin/main（work-report.md）"
@@ -2409,21 +2409,21 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   # ── 六域体检当轮跑（run15 前置 P3-6，B6 根治：run14 第 7 章是静态拼装非体检输出）──
   # 产品端点 POST /api/governance/domains/run?run=<RUN_ID>：六域逐域实查+台账 jsonl 落
   # 中央仓（GOVERNANCE_REPO 默认=本 SIM 中央仓）；驱动调完留 evidence 副本（离线重出
-  # 报告可读）。失败记单降级（报告回落按轮注册表，不编造当轮体检）。
+  # 报告可读）。失败登记降级（报告回落按轮注册表，不编造当轮体检）。
   if DOMAIN_JSON=$(curl -sf -m 30 -X POST -H "Authorization: Bearer ${GOV_TOK:-$(studio_login)}" \
        "http://127.0.0.1:${STUDIO_PORT}/api/governance/domains/run?run=${RUN_ID}" 2>/dev/null) \
      && printf '%s\n' "$DOMAIN_JSON" | python3 -c 'import json,sys; json.load(sys.stdin)["results"]' >/dev/null 2>&1; then
     printf '%s\n' "$DOMAIN_JSON" > "$EVID_DIR/domain-audit-run.json"
     note "[audit] 六域体检当轮已跑（evidence/domain-audit-run.json，六域判定+台账入中央仓 jsonl）"
   else
-    echo "ISSUE|domain-audit-run|step23|六域体检端点调用失败（/api/governance/domains/run）——报告第 7 章回落按轮注册表，记单降级" >> "$EVID_DIR/issues.log"
-    note "[audit] 六域体检当轮跑失败（记单降级——报告回落静态注册）"
+    echo "ISSUE|domain-audit-run|step23|六域体检端点调用失败（/api/governance/domains/run）——报告第 7 章回落按轮注册表，登记降级" >> "$EVID_DIR/issues.log"
+    note "[audit] 六域体检当轮跑失败（登记降级——报告回落静态注册）"
   fi
   # §4.4-9 治理证据①（六文调研轮 A+B）：事故报告汇编导出（sessionId=本轮 RUN_ID，
   # 产品面 /api/incident/sessions/:id/report.md，17 要素+自治度对账 B 面）。
   # run18 复盘根治：带 run 窗口参数（since=run_started_at/until=now）——产品侧按
   # profiles/*/state.db 聚合窗口内真实会话（agent 会话不落 webui 主库的形态对齐）。
-  # 数据源未接 SIM 环境时 elements 空集如实透传（报告结构在、不编造数据），缺口记单。
+  # 数据源未接 SIM 环境时 elements 空集如实透传（报告结构在、不编造数据），缺口登记。
   GOV_TOK=$(studio_login)
   # A7（2026-10-16）：state_env 显式传入——控制器据此以锚定轮 run_started_at→now
   # 推跨天真窗（RUN_ID 日期窗会切掉跨天轮次首尾，run20 42.5h 轮次 17 要素 15 absent）。
@@ -2442,22 +2442,22 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
     note "[audit] 门禁留痕/台账格式/取证目录 审计通过 ✓"
   fi
 
-  # 免等窗终态复核（提速③质量补强 2026-10-09）：免等窗记单时点≠终态——agent 事后
-  # 补账成功的问题单在审计段以当前真值复核，追加 DISP 闭环行（原单保留=记单时点真值，
+  # 免等窗终态复核（提速③质量补强 2026-10-09）：免等窗登记时点≠终态——agent 事后
+  # 补账成功的问题单在审计段以当前真值复核，追加 DISP 闭环行（原单保留=登记时点真值，
   # 终态行=审计时点真值，两时点如实并存，不删不改）。
   for spec in "AN-PAYCORE chen" "AN-MP xiao" "AN-CHWX hu" "AN-CHALI lin"; do
     set -- $spec; _ct="$1"; _co="$2"
     if grep -qF "ISSUE|receipt-missing|${_ct}|" "$EVID_DIR/issues.log" 2>/dev/null; then
       if mx_messages "$(load_token fanfan)" "$(sget room_analysis)" 200 | jq -e --arg t "${_ct}" \
         '[.[] | select(.sender == "'"$(agent_mxid "${_co}")"'") | select((.content.body // "") | (contains("完成回执") and contains($t)) or test("^\\s*AN-DONE-" + $t))] | length > 0' >/dev/null 2>&1; then
-        echo "DISP|receipt-missing|${_ct}|已修 终态闭环：审计段复核回执已在房间可见（免等窗记单后补账成功；锚：evidence/scenario.log 审计段复核行）——原单保留记时点真值" >> "$EVID_DIR/issues.log"
-        note "[audit] ${_ct} 回执终态闭环（记单后补账成功）"
+        echo "DISP|receipt-missing|${_ct}|已修 终态闭环：审计段复核回执已在房间可见（免等窗登记后补账成功；锚：evidence/scenario.log 审计段复核行）——原单保留记时点真值" >> "$EVID_DIR/issues.log"
+        note "[audit] ${_ct} 回执终态闭环（登记后补账成功）"
       fi
     fi
   done
   if grep -qF "ISSUE|raci-not-structured|" "$EVID_DIR/issues.log" 2>/dev/null && [[ -n "$(kanban_raci_of fanfan "${RFD_ID}")" ]]; then
-    echo "DISP|raci-not-structured|fanfan-agent|已修 终态闭环：审计段复核主卡已带结构化 raci（免等窗记单后补填成功；锚：evidence/scenario.log 审计段复核行）——原单保留记时点真值" >> "$EVID_DIR/issues.log"
-    note "[audit] 主卡结构化 raci 终态闭环（记单后补填成功）"
+    echo "DISP|raci-not-structured|fanfan-agent|已修 终态闭环：审计段复核主卡已带结构化 raci（免等窗登记后补填成功；锚：evidence/scenario.log 审计段复核行）——原单保留记时点真值" >> "$EVID_DIR/issues.log"
+    note "[audit] 主卡结构化 raci 终态闭环（登记后补填成功）"
   fi
   if [[ -z "$(sget audit_dispatched)" ]]; then
     # 总分总并行（2026-10-18 用户指令：所有报告类根治）：意见书拆两片并行
@@ -2528,7 +2528,7 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   capture_step "audit_done" "/app/stage/govern?tab=audit"
 
   # V8.42 Harness 运行面审计快照：与基线同源，报告第 9 章「证据七」直接引用
-  # evidence/harness/harness-summary.json；缺席如实记单，不阻断收尾。
+  # evidence/harness/harness-summary.json；缺席如实登记，不阻断收尾。
   bash "$SCRIPT_DIR/mux/mx-harness-snapshot.sh" --out "$EVID_DIR/harness/harness-summary.json"     --token "$(jwt_of fanfan 2>/dev/null || true)" --require >/dev/null 2>&1     || echo "ISSUE|harness-snapshot-audit|step23|Harness 运行面审计快照部分端点不可用（见 evidence/harness/harness-summary.json）" >> "$EVID_DIR/issues.log"
 
   sset audit_done "$(date +%s)"
@@ -2561,7 +2561,7 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
   #  收益面无数据源时产品侧如实声明不编造——透传即合规）
   GOV_TOK=$(studio_login)
   # V8.46 治理闭环快照（评审治理/观测告警/改进实验/发布门与 UAT 台账）：
-  # 一次落 evidence/governance-closure/summary.json + 各端点原文；失败只记单，
+  # 一次落 evidence/governance-closure/summary.json + 各端点原文；失败只登记，
   # 报告证据九按缺席如实呈现（不把端点没起伪装成闭环通过）。
   bash "$SCRIPT_DIR/mux/mx-closure-snapshot.sh" --run "$RUN_ID" \
     --out "$EVID_DIR/governance-closure" --token "${GOV_TOK:-}" \
@@ -2729,11 +2729,11 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     echo "ISSUE|retro-memory-probe|director|hindsight 探针失败（bank=${fam_bank}）" >> "$EVID_DIR/issues.log"
   fi
   # 归档落账原子化（P14/R26）：metrics-log+ISSUES-LOG 同提交上 origin/main 并回读验证——
-  # 「产出了没落账」自此有机制通道；失败记单 archive-commit-failed 不击杀驱动（纪律 18）
+  # 「产出了没落账」自此有机制通道；失败登记 archive-commit-failed 不击杀驱动（纪律 18）
   if gov_archive_commit; then
     note "[G6] 治理归档落账完成（metrics-log+ISSUES-LOG @ origin/main，回读验证过）"
   else
-    note "[观察] 治理归档落账未过（已记单 archive-commit-failed，挂收官回灌清单）"
+    note "[观察] 治理归档落账未过（已登记 archive-commit-failed，挂收官回灌清单）"
   fi
   capture_step "retro_done" "/app/stage/govern?tab=metrics"
 
@@ -2786,7 +2786,7 @@ if step_reached report && [[ -z "$(sget report_done)" ]]; then
     || note "[观察] 台账净化件异常（非阻断）：$_san_out"
   # F2（run15 复盘）：载荷缺口清扫（重放补采）——9 步载荷全缺直到报告才暴露的根治位。
   # 对已登记锚的对话步重放 r18-collect（脚本内幂等拒重护住已采锚）；补采成功即入载荷，
-  # 仍缺的由 F2 记单面（r18-collect-failed）如实呈现。锚与房间全部取自 state（跨重放稳定）。
+  # 仍缺的由 F2 登记面（r18-collect-failed）如实呈现。锚与房间全部取自 state（跨重放稳定）。
   # run16 实锤修订（fix/run16-report-truth）：锚必须经 marker_eventid 解析——此前裸传
   # marker 键名字面（"m17_marker"）必 404，20 轮重启循环刷 103 单；m17/m19/m21 marker
   # 值为整行 note 形态，同样需提取纯 event_id。
@@ -2810,7 +2810,7 @@ PAYSPECS
   # --run 必带（H7）：缺省时生成器回落 SIM 全局 state/evidence，拿旧轮 state
   # 出"状态真实"的假报告，且落盘路径与下方 note 不符（run2 2026-09-29 05:15 实锤）。
   # §5.4 产品成效三件——报告生成前落
-  # evidence/product-outcome/（quality-summary.env 实算+幂等执行输出件；UI 帧缺席记单降级）
+  # evidence/product-outcome/（quality-summary.env 实算+幂等执行输出件；UI 帧缺席登记降级）
   repo_pull
   python3 "$SCRIPT_DIR/mux/product-outcome-summary.py" --run "${RUN_ID}" --rfd "${RFD_ID}" >/dev/null 2>&1 \
     || issue_once product-outcome-missing step26 "产品成效 quality-summary 落盘失败（实算脚本异常）"
@@ -2860,7 +2860,7 @@ PAYSPECS
   # report_done、报告不得持久化交付（15 项 FAIL 下报告曾被产出交付，判据②
   # 当时未接线执行；已有 ISSUE+DISP 的缺口按 §5.6 采集纪律⑩ 降级不计 FAIL）。
   python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"} \
-    || fail "报告审计 FAIL（§5.7 收官判据②——缺口记单+DISP 降级后重试）"
+    || fail "报告审计 FAIL（§5.7 收官判据②——缺口登记+DISP 降级后重试）"
   # 双正本制（§5.4）：final-report.html（人读正本）缺一即违例——run10 收官时未产出实锤；
   # PART1 未注册时合并器会给出注册指引（按轮人工正本，禁旧轮顶包）。
   python3 "$SCRIPT_DIR/mux/final-report-merge.py" ${RUN_ID:+--run "$RUN_ID"} \
