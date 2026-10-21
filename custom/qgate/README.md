@@ -90,7 +90,7 @@ ontology:
 
 确定性三查（无 LLM）：字段级术语歧义（映射到 Capture 的字段名内嵌 settled）、同文件混用 distinctFrom 概念（captured/settled 同文档）、概念错配。finding 一律 warning 级 → CONDITIONAL 带解除条件（v0.1 §63）。Provider 不可用 → INCONCLUSIVE 不 crash。
 
-内置 FIBO 索引 `gate-packs/ontology/data/fibo-mini.json`（v1 实锚轮）：18 概念锚定 **FIBO master_2026Q3**（2026-10-20 发布）与 **OMG Commons**——每概念带真实 `iri` 与定义原文；注意 Party/Identifier 真身在 OMG Commons（`cmns-pts`/`cmns-id`，FIBO 已迁移），Authorization/Capture 在 FIBO 无对应类、如实标 `source: engineering-approximation`（卡支付 PSP 术语，FIBO 不建模授权-扣款-结算流水线）。锚点核实记录见 `docs/superpowers/specs/2026-10-21-fibo-ontology-calibration.md`。
+内置 FIBO 索引 `gate-packs/ontology/data/fibo-mini.json`（**SSOT 派生产物**）：37 概念，正本在 `custom/server/ontology/ontology-fibo.ts` 的 `fiboQgateIndex()`——改正本后须跑 `npm run fibo:sync` 再生成，一致性守门测试 `custom/server/ontology/__tests__/ontology-fibo-ssot.test.ts`（两侧漂移即红）。概念锚定 **FIBO master_2026Q3**（2026-10-20 发布）与 **OMG Commons**（Party/Identifier 真身在 `cmns-pts`/`cmns-id`）；Authorization/Capture 为工程近似（FIBO 无对应类，`source: engineering-approximation`，无 IRI 不冒充）。锚点核实记录见 `docs/superpowers/specs/2026-10-21-fibo-ontology-calibration.md` 与 `2026-10-21-fibo-ssot-merge.md`。
 
 ## L0 域门族（v0.1 §6.1，范围与需求完整性）
 
@@ -160,7 +160,7 @@ zcode Stop 钩子续跑上限 3 次（`MAX_STOP_HOOK_CONTINUATIONS`）。QGate �
 | P3 Profile+Impact | 改 README 不触发；改 src 触发；Profile 裁剪生效 | PASS（四项 CLI 实证） |
 | P4 Persistence | 单测全绿 + 持久化门 FAIL（植入缺陷）；证据六件套落盘 | PASS（field-diff 10000≠100 + invariant 跨表 10000≠100） |
 | P5 Claim/Risk/Exception | INCONCLUSIVE 不误判 PASS；Exception 可过期可复验可拒 | PASS（WAIVED 实机保留原判定事实；allowWaiver=false 拒绝） |
-| P6 Ontology Provider | 接口/索引/可关/可换/不可用不 crash | PASS（FIBO 18 概念实锚索引 + mock，单测 4 例） |
+| P6 Ontology Provider | 接口/索引/可关/可换/不可用不 crash | PASS（FIBO 37 概念 SSOT 派生索引 + mock，单测 4 例） |
 | P7 语义门 v0 | 术语歧义/概念错配，warning 级 | PASS（字段级+内容级歧义单测 5 例，CONDITIONAL 带解除条件） |
 | P8 MCP | Agent 主动询问门禁 | PASS（七工具；插件 mcp 面实机可见；子进程协议测试） |
 | P9 扩展门包 | security/architecture/delivery + release 档 | PASS（files executor present 级诚实语义单测） |

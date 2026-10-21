@@ -28,7 +28,7 @@ describe('FIBO 包元数据', () => {
 
   it('概念/属性/公理计数与分档', () => {
     const pack = fiboPackSummary()
-    expect(pack.counts.concepts).toBe(36)
+    expect(pack.counts.concepts).toBe(37)
     expect(pack.counts.fibo + pack.counts.commons + pack.counts.localExtensions).toBe(pack.counts.concepts)
     expect(pack.counts.fibo).toBe(32)
     expect(pack.counts.commons).toBe(2)
@@ -150,13 +150,13 @@ describe('增量合并', () => {
     const merged = mergeFiboPack(before, 0)
     expect(merged.ok).toBe(true)
     expect(merged.collisions).toEqual([])
-    expect(merged.added.types).toBe(36)
+    expect(merged.added.types).toBe(37)
     expect(merged.added.objectProperties).toBe(21)
     expect(merged.added.axioms).toBe(16)
     const spec = merged.spec as OntologySpec
     expect(validateSpec(spec)).toEqual([])
     expect(validateInstances(spec, seedInstances(0))).toEqual([])
-    expect(fiboPackApplied(spec)).toMatchObject({ concepts: 36, total: 36 })
+    expect(fiboPackApplied(spec)).toMatchObject({ concepts: 37, total: 37 })
   })
 
   it('二次合并幂等：新增 0、跳过全量', () => {
@@ -164,7 +164,7 @@ describe('增量合并', () => {
     const second = mergeFiboPack(first, 1)
     expect(second.ok).toBe(true)
     expect(second.added).toEqual({ types: 0, objectProperties: 0, axioms: 0 })
-    expect(second.skipped.types).toBe(36)
+    expect(second.skipped.types).toBe(37)
     expect(second.skipped.objectProperties).toBe(21)
     expect(second.skipped.axioms).toBe(16)
   })

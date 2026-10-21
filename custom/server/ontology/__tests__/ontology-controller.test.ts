@@ -168,7 +168,7 @@ describe('FIBO 对齐包', () => {
   it('GET /fibo 返回真实 IRI 目录与已导入计数', async () => {
     const r = await call('GET', '/fibo')
     expect(r.status).toBe(200)
-    expect(r.json.pack.counts.concepts).toBe(36)
+    expect(r.json.pack.counts.concepts).toBe(37)
     expect(r.json.pack.counts.fibo).toBe(32)
     expect(r.json.pack.counts.commons).toBe(2)
     expect(r.json.pack.counts.localExtensions).toBe(2)
