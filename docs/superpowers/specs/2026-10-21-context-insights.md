@@ -41,5 +41,13 @@
 ## 实施记录（2026-10-21）
 
 - P1-P4 全部落地于 `feat/context-insights` worktree（overlay/.claude/worktrees/context-insights）
-- 分支提交：P1+P2 / P3 / P4 三笔；测试：ide pane 10 用例、server fold/控制器 25 用例、governance 5 用例、守门更新（21→22 签 ×3 处）
-- 实施中修复：fold run 边界收口时序 bug（当前消息先入桶再收口导致柱含下轮首条）；fleet BFS 环死循环（visited 集合）——均有测试锚定
+- 分支提交：P1+P2 / P3 / P4 / 收尾 四笔；测试：ide pane 10 用例、server fold/控制器 25+ 用例、governance 5 用例、守门更新（21→22 签 ×3 处）
+- 实施中修复：fold run 边界收口时序 bug（当前消息先入桶再收口导致柱含下轮首条）；fleet BFS 环死循环（visited 集合）；ts-node 严格编译的可空收窄（typecheck:harness 宽松档未拦，运行档拦下）——均有测试或实测锚定
+
+## 验证结果（2026-10-21，如实记录）
+
+- `npm test` 全量：5585 通过 / **2 失败（flaky）**——`engine-round5.test.ts`（steer UI）与 `raci-visibility.test.ts`（kanban RACI），均不触及本分支文件，单跑复测 14/14 绿，判定为并行负载 flaky 非本分支回归
+- 私有上游隔离验证（OVERLAY_UPSTREAM_ROOT + inject，不触碰共享 upstream 树）：后端 8648 启动通过（ts-node 修复后）、vite 8650 前端构建与登录页渲染通过
+- **真实 DB 驱动验证**（~/.hermes-web-ui/hermes-web-ui.db，4 会话）：`mu3qq82n7p`（27 条 run_marker 消息）→ run 对齐 1 柱 total 16995；`mqff7yxs4a`（无 marker、8 assistant）→ order-approx 8 柱单调增长 54→23577，四桶分布合理（tool 主导）。run_id 为空的 session_usage 行按既有 rounds 口径跳过（柱上无用量，诚实显示）
+- **受限项（未验证）**：登录态 UI 走查——本机 dev 凭据与 2026-10-16 安全报告记录的出厂口令（admin/123456）已失效，未做凭据猜测；context 页签/UsageView 增强的浏览器金路径以组件测试（mock 数据面）+ 真实 DB 驱动（数据面）分治覆盖，合并前建议人工用真实账号走查一遍
+- patch 673 `git apply --check` 干净；全 series 经私有上游 inject 实测应用成功
