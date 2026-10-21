@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
 import { evalApi, type EvalSetMetaDto, type RunSummaryDto, type RunCompareDto } from '@/custom/eval/api'
 import { evalMessages } from '@/custom/eval/i18n'
@@ -41,6 +42,8 @@ const launchSetId = ref('')
 const launchSamplesJson = ref('')
 const launchNote = ref('')
 const launchCross = ref(false)
+/** 按来源证据复现（生产失败回流轮）：显式选择才自动绑定原会话；仅诊断用途。 */
+const launchUseOrigin = ref(false)
 const launchError = ref('')
 
 const selectedRunId = ref('')
@@ -52,7 +55,11 @@ async function refresh(): Promise<void> {
     const [s, r] = await Promise.all([evalApi.listSets(), evalApi.listRuns()])
     sets.value = s.sets
     runs.value = r.runs
-    if (!launchSetId.value && sets.value.length > 0) launchSetId.value = sets.value[0].id
+    if (!launchSetId.value) {
+      // 转题成功页带 ?set= 预选回归库；否则缺省第一个集
+      const fromQuery = String(useRoute().query.set ?? '')
+      launchSetId.value = sets.value.some((x) => x.id === fromQuery) ? fromQuery : (sets.value[0]?.id ?? '')
+    }
   } catch (e) {
     loadError.value = (e as Error).message
   } finally {
@@ -151,17 +158,24 @@ function actionCount(r: RunSummaryDto): number {
 
 async function launch(): Promise<void> {
   launchError.value = ''
+  const useOrigin = launchUseOrigin.value && !selectedSetSealed.value
   let samples: Record<string, Array<{ sessionId?: string; evidence?: { transcript?: string } }>>
-  try {
-    samples = JSON.parse(launchSamplesJson.value)
-  } catch {
-    launchError.value = 'samples JSON 解析失败'
-    return
+  if (useOrigin && !launchSamplesJson.value.trim()) {
+    // 按来源复现：缺省样本从任务 origin 自动展开（服务端 fail-closed 校验指纹）
+    samples = {}
+  } else {
+    try {
+      samples = JSON.parse(launchSamplesJson.value)
+    } catch {
+      launchError.value = 'samples JSON 解析失败'
+      return
+    }
   }
   try {
     const { run } = await evalApi.launchRun({
       setId: launchSetId.value,
       samples,
+      ...(useOrigin ? { useOrigin: true } : {}),
       ...(launchNote.value.trim() ? { note: launchNote.value.trim() } : {}),
       ...(launchCross.value ? { crossValidate: true } : {}),
     })
@@ -174,6 +188,9 @@ async function launch(): Promise<void> {
     launchError.value = (e as Error).message
   }
 }
+
+/** 当前选中集是否密封（密封集禁用 origin 自动展开——防借来源引用探测题库）。 */
+const selectedSetSealed = computed(() => sets.value.find((s) => s.id === launchSetId.value)?.sealed ?? false)
 
 function pct(v: number | null): string {
   return v === null ? '—' : `${Math.round(v * 100)}%`
@@ -346,8 +363,19 @@ function deltaText(v: number | null | undefined): string {
         </label>
         <label class="wide">
           {{ L.runs.launchSamplesLabel }}
-          <textarea v-model="launchSamplesJson" :placeholder="L.runs.launchSamplesPh" rows="5" data-testid="eval-launch-samples" required />
+          <textarea v-model="launchSamplesJson" :placeholder="L.runs.launchSamplesPh" rows="5" data-testid="eval-launch-samples" :required="!launchUseOrigin || selectedSetSealed" />
         </label>
+        <label class="check">
+          <input
+            v-model="launchUseOrigin"
+            type="checkbox"
+            data-testid="eval-launch-use-origin"
+            :disabled="selectedSetSealed"
+            :title="L.runs.launchUseOriginHint"
+          />
+          {{ L.runs.launchUseOrigin }}
+        </label>
+        <p v-if="selectedSetSealed" class="eval-view__error">{{ L.runs.originSealedHint }}</p>
         <label>
           {{ L.runs.launchNote }}
           <input v-model="launchNote" data-testid="eval-launch-note" />

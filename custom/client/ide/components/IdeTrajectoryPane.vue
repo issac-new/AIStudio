@@ -8,14 +8,23 @@
      账本只持节点引用，轻量首载）。会话源=chatStore.activeSessionId。 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useChatStore } from '@/stores/hermes/chat'
 import { authFetch } from '../utils/auth-fetch'
 import { useRunSurfaceText } from '@/custom/ia2/i18n-observatory'
+import TraceCaseComposer from '@/custom/eval/components/TraceCaseComposer.vue'
 
 const chatStore = useChatStore()
 import { useI18n } from 'vue-i18n'
 const tx = useRunSurfaceText()
 const { locale } = useI18n()
+const router = useRouter()
+
+interface TraceNodeRef {
+  sessionId: string
+  spanRef?: string
+  spanKind?: 'llm_span' | 'tool_span'
+}
 
 interface TraceNode {
   id: string
@@ -27,6 +36,8 @@ interface TraceNode {
   endedAt: number | null
   durationMs: number | null
   evidence?: string
+  /** 结构化证据引用（服务端 buildTraceGraph 提供）：转回归不解析展示 ID 猜 span。 */
+  ref?: TraceNodeRef
 }
 interface TraceMeta {
   started_at?: number
@@ -34,6 +45,8 @@ interface TraceMeta {
   duration_ms?: number
   model?: string | null
   outcome?: string | null
+  format?: 'legacy' | 'otel' | 'unknown'
+  complete?: boolean
   usage?: { input_tokens?: number; output_tokens?: number; api_calls?: number }
 }
 interface TraceResp {
@@ -156,6 +169,25 @@ const KIND_TONE: Record<string, string> = {
   tool: 't-kind--tool', memory: 't-kind--mem', service: 't-kind--svc',
   peer: 't-kind--peer', approval: 't-kind--appr', ingress: 't-kind--ing',
 }
+
+// ── 生产失败转回归（2026-10-21 回流轮）：只提供入口，任务定义在 Composer ──
+const composerTarget = ref<TraceNodeRef | null>(null)
+
+/** 首版只接受完整 legacy 证据；OTel/未收尾如实禁用，不产空证据任务。 */
+const convertSession = computed(() => meta.value?.format === 'legacy' && meta.value?.complete === true)
+
+function openSessionComposer(): void {
+  if (!sessionId.value || !convertSession.value) return
+  composerTarget.value = { sessionId: sessionId.value }
+}
+
+function openSpanComposer(nodeRef: TraceNodeRef): void {
+  composerTarget.value = nodeRef
+}
+
+function openEvalSet(setId: string): void {
+  void router.push({ path: '/app/eval', query: { set: setId } })
+}
 </script>
 
 <template>
@@ -169,6 +201,14 @@ const KIND_TONE: Record<string, string> = {
         ↑{{ meta?.usage?.input_tokens ?? 0 }} ↓{{ meta?.usage?.output_tokens ?? 0 }}
       </span>
       <span class="traj__spacer" />
+      <button
+        v-if="sessionId"
+        type="button" class="traj__sortbtn"
+        :disabled="!convertSession"
+        :title="convertSession ? tx.trajReflowHint : tx.trajReflowUnsupported"
+        data-testid="traj-reflow-session"
+        @click="openSessionComposer"
+      >↺ {{ tx.trajReflowSession }}</button>
       <button
         type="button" class="traj__sortbtn" :class="{ 'is-on': sortMode === 'hotspot' }"
         :title="tx.trajHotspotHint" data-testid="traj-sort-toggle"
@@ -230,7 +270,24 @@ const KIND_TONE: Record<string, string> = {
         <span>evidence</span><b>{{ selected.evidence ?? '—' }}</b>
       </div>
       <pre v-if="selected.detail" class="traj__insp-detail">{{ selected.detail }}</pre>
+      <button
+        v-if="selected.ref?.spanRef"
+        type="button" class="traj__reflow-span"
+        :title="tx.trajReflowHint"
+        data-testid="traj-reflow-span"
+        @click="openSpanComposer(selected.ref)"
+      >↺ {{ tx.trajReflowSpan }}</button>
     </div>
+
+    <!-- 生产失败转回归：任务定义与证据确认在 Composer（legacy 完整才可进入） -->
+    <TraceCaseComposer
+      v-if="composerTarget && convertSession"
+      :session-id="composerTarget.sessionId"
+      :span-ref="composerTarget.spanRef"
+      :span-kind="composerTarget.spanKind"
+      @close="composerTarget = null"
+      @open-set="openEvalSet"
+    />
   </div>
 </template>
 
@@ -251,7 +308,14 @@ const KIND_TONE: Record<string, string> = {
 .traj__sortbtn {
   height: 20px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 9px;
   background: transparent; color: var(--text-muted); font-size: 10px; cursor: pointer; font-family: inherit;
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
   &.is-on { color: var(--text-primary); border-color: var(--text-muted); background: var(--bg-secondary); }
+}
+.traj__reflow-span {
+  margin-top: 6px; height: 22px; align-self: flex-start; padding: 0 10px;
+  border: 1px solid var(--border-color); border-radius: 6px; background: transparent;
+  color: var(--text-muted); font-size: 10px; cursor: pointer; font-family: inherit;
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
 }
 
 .traj__kinds { display: flex; flex-wrap: wrap; gap: 4px; }
