@@ -7,9 +7,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Context } from 'koa'
 import {
-  billedOf, cacheHitRateOf, clampDays, clampLimit, clampOffset, handleUsageRounds, handleUsageSessions,
+  billedOf, cacheHitRateOf, clampDays, clampLimit, clampOffset, estimateTokensOf, foldContext,
+  handleUsageContext, handleUsageRounds, handleUsageSessions,
   handleUsageSummary, handleUsageTools, matchZcodeUsageRoute, shapeTokenSums, type SqliteDb, type ZcodeUsageDeps,
-  type UsageSessionRow, type UsageSummary, type UsageRoundRow, type UsageToolRow,
+  type UsageContext, type UsageSessionRow, type UsageSummary, type UsageRoundRow, type UsageToolRow,
 } from '../zcode-usage'
 
 // 固定时基：2026-10-21T12:00:00Z（正午 UTC，日期桶对 ±11 时区稳定）
@@ -34,11 +35,13 @@ function makeFixture(): SqliteDb {
       error_type text, error_code text, primary key(session_id, turn_id));
     create table model_usage (id integer primary key, turn_id text, session_id text,
       agent text, query_source text, provider_id text, model_id text, status text,
-      started_at integer, input_tokens integer, output_tokens integer, reasoning_tokens integer,
+      started_at integer, time_to_first_token_ms integer, input_tokens integer, output_tokens integer, reasoning_tokens integer,
       cache_creation_input_tokens integer, cache_read_input_tokens integer);
     create table tool_usage (id integer primary key, session_id text, turn_id text, tool_name text,
       status text, started_at integer, completed_at integer, duration_ms integer,
       read_only integer, destructive integer, approval_status text, output_bytes integer, error_type text);
+    create table message (id text primary key, session_id text, time_created integer, time_updated integer, data text, sequence integer);
+    create table part (id text primary key, message_id text, session_id text, time_created integer, time_updated integer, data text, sequence integer);
   `)
   const ins = (sql: string, ...p: unknown[]) => raw.prepare(sql).run(...p)
   ins('insert into session values (?,?,?,?,?,?,?)', 's1', null, '/w/a', '主线任务', 'interactive', T_RECENT - 3600_000, T_RECENT)
@@ -55,18 +58,18 @@ function makeFixture(): SqliteDb {
     's_old', 't4', 'completed', T_OLD, null, T_OLD + 1000, 1000, 100, 1, 0, 0, 100, 10, 0, 0, 0, null, null)
   // 模型调用：t1 三次（GLM×2 + deepseek×1，全 main_turn）；t2 一次 error（deepseek）；
   // 子代理一次（订阅 provider）；旧会话一次
-  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-    1, 't1', 's1', 'zcode-agent', 'main_turn', 'bigmodel-api', 'GLM-5.3', 'completed', T_RECENT - 4800, 1000, 100, 40, 0, 3000)
-  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-    2, 't1', 's1', 'zcode-agent', 'main_turn', 'bigmodel-api', 'GLM-5.3', 'completed', T_RECENT - 4700, 1000, 100, 0, 0, 3000)
-  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-    3, 't1', 's1', 'zcode-agent', 'main_turn', 'deepseek', 'deepseek-flash', 'completed', T_RECENT - 4600, 1000, 100, 0, 0, 0)
-  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-    4, 't2', 's1', 'zcode-agent', 'main_turn', 'deepseek', 'deepseek-flash', 'error', T_RECENT - 450, 0, 0, 0, 0, 0)
-  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-    5, 't3', 'sess_subagent_x', 'zcode-general-purpose', 'subagent', 'account:bigmodel-individual-coding-plan', 'GLM-5.3', 'completed', T_RECENT - 2900, 500, 50, 10, 0, 100)
-  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-    6, 't4', 's_old', 'zcode-agent', 'main_turn', 'bigmodel-api', 'GLM-5.3', 'completed', T_OLD, 100, 10, 0, 0, 0)
+  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    1, 't1', 's1', 'zcode-agent', 'main_turn', 'bigmodel-api', 'GLM-5.3', 'completed', T_RECENT - 4800, 200, 1000, 100, 40, 0, 3000)
+  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    2, 't1', 's1', 'zcode-agent', 'main_turn', 'bigmodel-api', 'GLM-5.3', 'completed', T_RECENT - 4700, null, 1000, 100, 0, 0, 3000)
+  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    3, 't1', 's1', 'zcode-agent', 'main_turn', 'deepseek', 'deepseek-flash', 'completed', T_RECENT - 4600, null, 1000, 100, 0, 0, 0)
+  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    4, 't2', 's1', 'zcode-agent', 'main_turn', 'deepseek', 'deepseek-flash', 'error', T_RECENT - 450, null, 0, 0, 0, 0, 0)
+  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    5, 't3', 'sess_subagent_x', 'zcode-general-purpose', 'subagent', 'account:bigmodel-individual-coding-plan', 'GLM-5.3', 'completed', T_RECENT - 2900, null, 500, 50, 10, 0, 100)
+  ins('insert into model_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    6, 't4', 's_old', 'zcode-agent', 'main_turn', 'bigmodel-api', 'GLM-5.3', 'completed', T_OLD, null, 100, 10, 0, 0, 0)
   // 工具：s1 三次（Bash/Edit/错误各一）；旧会话一次
   ins('insert into tool_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?)',
     1, 's1', 't1', 'Bash', 'completed', T_RECENT - 4700, T_RECENT - 4600, 100, 0, 0, 'allowed', 1024, null)
@@ -76,6 +79,17 @@ function makeFixture(): SqliteDb {
     3, 's1', 't2', 'WebSearch', 'error', T_RECENT - 440, T_RECENT - 430, 10, 1, 0, 'allowed', 0, 'timeout')
   ins('insert into tool_usage values (?,?,?,?,?,?,?,?,?,?,?,?,?)',
     4, 's_old', 't4', 'Read', 'completed', T_OLD, T_OLD + 100, 100, 1, 0, 'allowed', 64, null)
+  // 上下文构成夹具（Phase 2）：用户消息（中文 8 字≈8 token）+ 助手消息
+  // （英文 40 字符≈10 token）+ 工具/推理/文件 part + 一条压缩事件
+  ins('insert into message values (?,?,?,?,?,?)', 'm_u', 's1', T_RECENT - 5000, T_RECENT - 5000, '{"role":"user"}', 0)
+  ins('insert into message values (?,?,?,?,?,?)', 'm_a', 's1', T_RECENT - 4000, T_RECENT - 4000, '{"role":"assistant"}', 1)
+  ins('insert into part values (?,?,?,?,?,?,?)', 'p1', 'm_u', 's1', T_RECENT - 5000, T_RECENT - 5000, '{"type":"text","text":"帮我画个架构图"}', 0)
+  ins('insert into part values (?,?,?,?,?,?,?)', 'p2', 'm_a', 's1', T_RECENT - 4000, T_RECENT - 4000, '{"type":"text","text":"aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj"}', 0)
+  ins('insert into part values (?,?,?,?,?,?,?)', 'p3', 'm_a', 's1', T_RECENT - 3900, T_RECENT - 3900, '{"type":"reasoning","text":"thinking 40 chars aaaaaaaaaa bbbbbbbbbb cccccccccc dddddd"}', 1)
+  ins('insert into part values (?,?,?,?,?,?,?)', 'p4', 'm_a', 's1', T_RECENT - 3800, T_RECENT - 3800, '{"type":"tool","tool":"Write","state":{"status":"completed","input":{"content":"0123456789"}}}', 2)
+  ins('insert into part values (?,?,?,?,?,?,?)', 'p5', 'm_a', 's1', T_RECENT - 3700, T_RECENT - 3700, '{"type":"file","mime":"image/png"}', 3)
+  ins('insert into part values (?,?,?,?,?,?,?)', 'p6', 'm_u', 's1', T_RECENT - 3600, T_RECENT - 3600, '{"type":"compaction","trigger":"manual","compactReason":"user_requested","timelineStatus":"failed","time":{"start":' + (T_RECENT - 3600) + '}}', 1)
+  ins('insert into part values (?,?,?,?,?,?,?)', 'p7', 'm_a', 's1', T_RECENT - 3500, T_RECENT - 3500, 'not-json', 4)
   return db
 }
 
@@ -244,5 +258,70 @@ describe('GET /sessions/:id/tools — 工具时间线', () => {
     expect(tools[1].readOnly).toBe(true)
     expect(tools[2].readOnly).toBe(false)
     expect(tools[2].outputBytes).toBe(1024)
+  })
+})
+
+describe('GET /sessions/:id/context — 趋势（精确）+ 构成（≈估算）+ 压缩事件', () => {
+  it('估算器：中文≈1 token/字，ASCII≈4 字符/token', () => {
+    expect(estimateTokensOf('帮')).toBe(1)
+    expect(estimateTokensOf('帮我画个架构图')).toBe(7)
+    expect(estimateTokensOf('abcdefgh')).toBe(2)
+    expect(estimateTokensOf('')).toBe(0)
+  })
+
+  it('foldContext：六类折叠+角色拆分+脏 data 计 skipped+压缩事件', () => {
+    const msgs = [
+      { id: 'm_u', time_created: 1, data: '{"role":"user"}' },
+      { id: 'm_a', time_created: 2, data: '{"role":"assistant"}' },
+    ]
+    const parts = [
+      { message_id: 'm_u', data: '{"type":"text","text":"帮我画个架构图"}' },
+      { message_id: 'm_a', data: '{"type":"text","text":"abcdefgh"}' },
+      { message_id: 'm_a', data: '{"type":"reasoning","text":"abcd"}' },
+      { message_id: 'm_a', data: '{"type":"tool","tool":"Bash","state":{"x":1}}' },
+      { message_id: 'm_a', data: '{"type":"file","mime":"image/png"}' },
+      { message_id: 'm_u', data: 'broken' },
+      { message_id: 'm_u', data: '{"type":"compaction","trigger":"auto","compactReason":"pressure","timelineStatus":"ok","time":{"start":9}}' },
+    ]
+    const f = foldContext(msgs, parts)
+    const by = Object.fromEntries(f.categories.map(c => [c.key, c]))
+    expect(by['user-text']).toEqual({ key: 'user-text', estTokens: 7, count: 1 })
+    expect(by['assistant-text']).toEqual({ key: 'assistant-text', estTokens: 2, count: 1 })
+    expect(by.reasoning.count).toBe(1)
+    expect(by.tool.count).toBe(1)
+    expect(by.tool.estTokens).toBeGreaterThan(0)
+    expect(by.file).toEqual({ key: 'file', estTokens: 1000, count: 1 })
+    expect(f.partsSkipped).toBe(1)
+    expect(f.compactions).toEqual([{ at: 9, trigger: 'auto', reason: 'pressure', status: 'ok' }])
+    expect(f.largest.length).toBeGreaterThan(0)
+  })
+
+  it('HTTP 面：requests=精确口径（prompt=in+cc+cr）；构成含全部类别；压缩事件透传', () => {
+    const ctx = makeCtx({})
+    handleUsageContext(ctx, 's1', makeDeps(db))
+    const body = ctx.body as UsageContext
+    expect(body.requests?.length ?? 0).toBe(4)               // s1 的 4 次 model_usage
+    const r1 = body.requests[0]
+    expect(r1.promptTokens).toBe(4000)                  // 1000 in + 0 cc + 3000 cr
+    expect(r1.outputTokens).toBe(100)
+    expect(r1.turnId).toBe('t1')
+    const by = Object.fromEntries(body.est.categories.map(c => [c.key, c]))
+    expect(by['user-text'].count).toBe(1)
+    expect(by['assistant-text'].count).toBe(1)
+    expect(by.tool.count).toBe(1)
+    expect(by.file.count).toBe(1)
+    expect(body.compactions.length).toBe(1)
+    expect(body.compactions[0].trigger).toBe('manual')
+    expect(body.est.partsSkipped).toBe(1)
+    expect(body.largest.length).toBeGreaterThan(0)
+    expect(body.largest[0].preview.length).toBeLessThanOrEqual(120)
+  })
+
+  it('空会话：note 提示不报错', () => {
+    const ctx = makeCtx({})
+    handleUsageContext(ctx, 'nope', makeDeps(db))
+    const body = ctx.body as UsageContext
+    expect(body.requests).toEqual([])
+    expect(body.note).toContain('没有')
   })
 })
