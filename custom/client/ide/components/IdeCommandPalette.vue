@@ -53,6 +53,7 @@ const activeIndex = ref(0)
 const PANE_TARGETS: IdeSidePaneTab[] = [
   'files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'tools', 'trajectory', 'workflow',
   'kanban', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash',
+  'matrix',
   'deliver', 'genui', 'remote', 'plugins',
 ]
 function paneLabel(key: IdeSidePaneTab): string {

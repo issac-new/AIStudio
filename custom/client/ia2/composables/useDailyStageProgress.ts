@@ -35,7 +35,9 @@ export function dailyStageState(tasks: readonly DailyTaskLike[], stage: number):
 
 export function useDailyStageProgress() {
   const workspace = useWorkspaceStore()
-  const tasks = computed(() => workspace.tasks ?? [])
+  // 推演并入轮（2026-10-21）：观察面 sim 任务不参与日常阶段完成度——
+  // 阶段进度仍是日常任务口径，sim 卡只做呈现（看板/工作台徽标）。
+  const tasks = computed(() => (workspace.tasks ?? []).filter(t => t.source !== 'sim'))
 
   onMounted(() => { void workspace.refreshAllBoards() })
 

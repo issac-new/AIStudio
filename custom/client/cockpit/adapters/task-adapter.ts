@@ -19,6 +19,10 @@ export interface CockpitTask {
   createdAt: number         // 创建时间戳（日期筛选用）
   /** R7-A 归属链：挂接会话（kanban session_id 桥）；无则 null */
   sessionId?: string | null
+  /** 数据源（2026-10-21 推演并入轮）：daily=本实例看板；sim=推演实例只读聚合 */
+  source?: 'daily' | 'sim'
+  /** source=sim 时的来源轮次（observer runId；无当前 run 为 null） */
+  runId?: string | null
 }
 
 export function bucketPriority(p: number | null | undefined): CockpitPriority {

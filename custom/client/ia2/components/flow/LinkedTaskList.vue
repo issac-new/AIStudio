@@ -11,6 +11,8 @@ const emit = defineEmits<{
   (e: 'reassign', taskId: string): void
   (e: 'open-ide', taskId: string): void
   (e: 'handle-task', taskId: string): void
+  /** 推演并入轮（2026-10-21）：sim 卡只读——显式跨模式查看（携带 runId） */
+  (e: 'open-sim', payload: { taskId: string; runId: string | null }): void
 }>()
 
 const { t } = useI18n()
@@ -35,6 +37,7 @@ const TONE: Record<string, string> = {
       <span class="ltl__body">
         <span class="ltl__title">
           <span class="ltl__id">#{{ task.id.slice(0, 8) }}</span> {{ task.title }}
+          <span v-if="task.source === 'sim'" class="ltl__sim" data-testid="tdp-task-sim-badge" title="推演实例任务（日常侧只读）">推演</span>
         </span>
         <span class="ltl__sub">
           {{ t(`ia2.tdp.status.${task.status}`) }} · {{ task.assignee }}
@@ -47,18 +50,27 @@ const TONE: Record<string, string> = {
       </span>
       <span class="ltl__avatar" :title="task.assignee">{{ (task.assignee || '?').slice(0, 1).toUpperCase() }}</span>
       <span class="ltl__acts">
+        <!-- sim 卡动作面收一：改派/⌨/去处理都落本实例写口（对推演任务必败），
+             唯一动作=显式跳推演模式查看（跨模式跳转标注口径 D-4） -->
         <button
-          type="button" class="ltl__btn" :data-testid="`tdp-reassign-${task.id}`"
-          :title="t('ia2.tdp.reassign')" @click="emit('reassign', task.id)"
-        >{{ t('ia2.tdp.reassign') }}</button>
-        <button
-          type="button" class="ltl__btn" :data-testid="`tdp-ide-${task.id}`"
-          :title="t('ia2.tdp.openIde')" @click="emit('open-ide', task.id)"
-        >⌨</button>
-        <button
-          type="button" class="ltl__btn" :data-testid="`tdp-handle-${task.id}`"
-          @click="emit('handle-task', task.id)"
-        >{{ t('ia2.tdp.handle') }}</button>
+          v-if="task.source === 'sim'"
+          type="button" class="ltl__btn ltl__btn--sim" :data-testid="`tdp-open-sim-${task.id}`"
+          @click="emit('open-sim', { taskId: task.id, runId: task.runId ?? null })"
+        >{{ t('ia2.tdp.openSim', '在推演中查看') }}</button>
+        <template v-else>
+          <button
+            type="button" class="ltl__btn" :data-testid="`tdp-reassign-${task.id}`"
+            :title="t('ia2.tdp.reassign')" @click="emit('reassign', task.id)"
+          >{{ t('ia2.tdp.reassign') }}</button>
+          <button
+            type="button" class="ltl__btn" :data-testid="`tdp-ide-${task.id}`"
+            :title="t('ia2.tdp.openIde')" @click="emit('open-ide', task.id)"
+          >⌨</button>
+          <button
+            type="button" class="ltl__btn" :data-testid="`tdp-handle-${task.id}`"
+            @click="emit('handle-task', task.id)"
+          >{{ t('ia2.tdp.handle') }}</button>
+        </template>
       </span>
     </div>
   </div>
@@ -83,6 +95,12 @@ const TONE: Record<string, string> = {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .ltl__id { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ltl__sim {
+  margin-left: 4px; padding: 0 4px; border-radius: 8px;
+  font-size: 9px; line-height: 14px;
+  background: var(--ia-compensated, rgba(0, 0, 0, 0.08)); color: var(--text-secondary);
+}
+.ltl__btn--sim { color: var(--accent-primary); }
 .ltl__sub { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* R7-A 归属链区（会话 + workdir） */

@@ -420,6 +420,8 @@ graph TB
 - 四道关卡横切主链，凭证核验、问题台账、退回重报、治理报告贯穿全程。
 
 > **2026-10-21 可见性补批（正本=`2026-10-21-sim-visibility-and-ide-task-surface.md`）**：上条「看板互相看不见」是 agent/账号 API 的认领围栏（单板 `filterTasksByVisibleProfiles`），不等于 studio 工作台看板。推演实例 `:8802` 的日常工作台/看板走 `/api/hermes/kanban/overview` 聚合该实例全部账号板；宿主 `:8647` 与 SIM 实例按 `HERMES_HOME` 隔离。IDE 看板/侧栏任务段用同一聚合数据源；导演台只建卡与人工闸，不发 Matrix。宿主日常若以同一 `@admin` 登录，会看到 harness 观察员房间——严格隔离需独立观察员账号/独立 homeserver 或房间标记（跨仓后续）。`mux/capture-plan.env` 的「每人只看本账号板」注释为旧口径，待 simharness 下次变更时同步（本仓只读消费 simharness）。
+>
+> **同日下午挂账实施轮修订**：用户裁定推翻当日三条挂账——①推演任务经宿主观察面（`/api/hermes/sim/observer/overview`）**直接并入**日常工作台/看板/IDE（「推演」徽标 + runId，日常侧只读、点击走「在推演中查看」）；②IDE 右辅助栏新增「沟通」完整 Matrix 页签；③simharness 建房即打 `com.swarmstudio.sim` 房间标（跨仓 `feat/sim-room-tag`，用户授权），产品端双源识别显示「推演」徽标；④导演台启动/人工闸事件向 `SIM_DIRECTOR_NOTIFY_ROOM` 发真实通知。写入口仍隔离；日常阶段完成度不计推演卡。
 
 ### 2.4 26 步主链
 > **事实源分层（本节与 §2.5-2.9 的分工，每条事实只在一处说全）**：

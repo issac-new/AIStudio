@@ -111,11 +111,11 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     let tabs = w.findAll('[data-testid^="ide-sidepane-tab-"]')
     expect(tabs).toHaveLength(3)
     expect(tabs[0].attributes('data-testid')).toBe('ide-sidepane-tab-files')
-    // 全部组：22 签齐备（tab 本体与 testid 不因分组丢失；2026-10-21 context 页签入列）
+    // 全部组：23 签齐备（tab 本体与 testid 不因分组丢失；context 与 matrix 均入列）
     await w.find('[data-testid="ide-sidepane-group-all"]').trigger('click')
     tabs = w.findAll('[data-testid^="ide-sidepane-tab-"]')
-    expect(tabs).toHaveLength(22)
-    for (const tab of ['files', 'review', 'browser', 'wiki', 'assistant', 'storage', 'memory', 'terminal']) {
+    expect(tabs).toHaveLength(23)
+    for (const tab of ['files', 'review', 'browser', 'wiki', 'assistant', 'storage', 'memory', 'terminal', 'context', 'matrix']) {
       expect(w.find(`[data-testid="ide-sidepane-tab-${tab}"]`).exists()).toBe(true)
     }
     await w.find('.ide-sidepane__tab--close').trigger('click')

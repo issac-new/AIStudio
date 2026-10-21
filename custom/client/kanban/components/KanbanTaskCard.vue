@@ -53,6 +53,10 @@ const raciBadgeList = computed(() => raciBadges(raciOf.value))
 const myRole = computed<RaciRole | null>(() => myRaciRole(raciOf.value, getStoredUsername()))
 const raciRoleTitles: Record<RaciRole, string> = { R: 'R', A: 'A', C: 'C', I: 'I' }
 
+// 推演并入轮（2026-10-21）：观察面任务带 source='sim'（store 注入）——卡面
+// 徽标只做呈现区分；写口守卫在 SwarmKanbanView（点击/拖拽/批量统一拦截）。
+const isSimTask = computed(() => (props.task as { source?: string }).source === 'sim')
+
 const needsAssignee = computed(() =>
   props.task.status === 'ready' && !props.task.assignee
 )
@@ -187,6 +191,7 @@ function handleDragEnd(e: DragEvent) {
         @click.stop
       />
       <span class="task-id" :title="`Task id: ${task.id}.`">#{{ task.id }}</span>
+      <span v-if="isSimTask" class="sim-source-badge" data-testid="kanban-card-sim-badge" title="推演实例任务（日常侧只读）">推演</span>
       <span v-if="warningGlyph" class="warning-badge" :class="warningClass">{{ warningGlyph }}</span>
       <span v-if="task.priority > 0" class="priority-badge" :title="`Priority ${task.priority}.`">
         P{{ task.priority }}
@@ -360,6 +365,15 @@ function handleDragEnd(e: DragEvent) {
   background: transparent;
   color: $text-secondary;
   border: 1px solid $border-color;
+}
+
+/* 推演并入轮（2026-10-21）：观察面任务徽标——与日常卡同栏可辨 */
+.sim-source-badge {
+  font-size: 0.6rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: var(--ia-compensated, rgba(0, 0, 0, 0.08));
+  color: $text-secondary;
   white-space: nowrap;
 }
 
