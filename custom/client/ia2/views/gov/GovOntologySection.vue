@@ -3,13 +3,16 @@
      上=本体统计卡 + 数据契约健康度；中=看板摄取（源概览+一键摄取+最近结果，
      替换语义幂等）；下=全量违规表（error/warning/info 三档，violation code 稳定
      可编程消费）。深链跳本体工作台（/app/ontology）编辑字典/导出。
+     2026-10-21 FIBO 产品落地：新增 FIBO 映射包覆盖卡（已导入/总数/来源分档/
+     版本锚）与增量导入入口——治理面直接看到语义资产覆盖度，不必先进工作台。
      文案=ontology/i18n.ts gov 节（模块内事实源）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import {
-  ontologyApi, type Health, type IngestResultDto, type OntologyStats, type Violation,
+  ontologyApi, type FiboOpsDto, type FiboPackSummary, type Health, type IngestResultDto,
+  type OntologyStats, type Violation,
 } from '@/custom/ontology/api'
 import { ontologyMessages } from '@/custom/ontology/i18n'
 
@@ -29,18 +32,33 @@ const lastIngest = ref<IngestResultDto | null>(null)
 const ingestError = ref('')
 const violations = ref<Violation[]>([])
 const validating = ref(false)
+const fiboPack = ref<FiboPackSummary | null>(null)
+const fiboApplied = ref(0)
+const fiboImporting = ref(false)
+const fiboResult = ref('')
+const fiboOps = ref<FiboOpsDto | null>(null)
+const fiboDemoing = ref(false)
+const fiboDemoMsg = ref('')
+const fiboEvidenceMsg = ref('')
 
 async function refresh(): Promise<void> {
   busy.value = true
   loadError.value = ''
   try {
-    const [spec, ov] = await Promise.all([
+    const [spec, ov, fibo, ops] = await Promise.all([
       ontologyApi.getSpec(),
       ontologyApi.kanbanOverview().catch(() => ({ ok: false, sources: [] as Array<{ slug: string; exists: boolean }> })),
+      ontologyApi.getFiboPack().catch(() => null),
+      ontologyApi.getFiboOps().catch(() => null),
     ])
     stats.value = spec.stats
     health.value = spec.health
     sources.value = ov.sources
+    if (fibo) {
+      fiboPack.value = fibo.pack
+      fiboApplied.value = fibo.applied.concepts
+    }
+    if (ops) fiboOps.value = ops.ops
   } catch (e) {
     loadError.value = (e as Error).message
   } finally {
@@ -76,6 +94,60 @@ async function runValidate(): Promise<void> {
   }
 }
 
+/** FIBO 增量导入：只加缺失项，服务端版本+1 并写快照；成功后刷新统计与健康度。 */
+async function runImportFibo(): Promise<void> {
+  fiboImporting.value = true
+  fiboResult.value = ''
+  try {
+    const r = await ontologyApi.importFibo()
+    fiboResult.value = L.value.fiboAdded
+      .replace('{types}', String(r.added.types))
+      .replace('{props}', String(r.added.objectProperties))
+      .replace('{axioms}', String(r.added.axioms))
+    fiboApplied.value = r.applied.concepts
+    await refresh()
+    await runValidate()
+  } catch (e) {
+    fiboResult.value = (e as Error).message
+  } finally {
+    fiboImporting.value = false
+  }
+}
+
+function openFibo(): void {
+  void router.push({ name: 'ia2.ontology', query: { tab: 'fibo' } })
+}
+
+/** 复制报告证据：直接取运营快照里的 markdown，报告侧不自算覆盖率。 */
+async function copyEvidence(): Promise<void> {
+  fiboEvidenceMsg.value = ''
+  const md = fiboOps.value?.evidence.markdown
+  if (!md) return
+  try {
+    await navigator.clipboard.writeText(md)
+    fiboEvidenceMsg.value = L.value.evidenceCopied
+  } catch (e) {
+    fiboEvidenceMsg.value = (e as Error).message
+  }
+}
+
+/** 摄取支付样例：服务端自动导入包、全量校验后按 fibo: 前缀幂等写入。 */
+async function runDemo(): Promise<void> {
+  fiboDemoing.value = true
+  fiboDemoMsg.value = ''
+  try {
+    const r = await ontologyApi.ingestFiboDemo()
+    fiboDemoMsg.value = L.value.demoDone.replace('{n}', String(r.instances))
+    fiboApplied.value = r.applied.concepts
+    await refresh()
+    await runValidate()
+  } catch (e) {
+    fiboDemoMsg.value = `${L.value.demoFailed}：${(e as Error).message}`
+  } finally {
+    fiboDemoing.value = false
+  }
+}
+
 function sevClass(s: string): string {
   return s === 'error' ? 'ogov-sev ogov-sev--error' : s === 'warning' ? 'ogov-sev ogov-sev--warning' : 'ogov-sev ogov-sev--info'
 }
@@ -105,6 +177,37 @@ const violationTop = computed(() => violations.value.slice(0, 50))
       <div class="ogov-card"><div class="ogov-card__num">{{ health?.warning ?? '—' }}</div><div class="ogov-card__label">{{ L.warnings }}</div></div>
       <div class="ogov-card"><div class="ogov-card__num">{{ sources.length }}</div><div class="ogov-card__label">{{ L.sources }}</div></div>
     </div>
+
+    <section class="ogov__block" data-testid="gov-ontology-fibo">
+      <h2>{{ L.fiboTitle }}</h2>
+      <p class="ogov__hint">{{ L.fiboHint }}</p>
+      <div v-if="fiboPack" class="ogov__fibo" data-testid="gov-ontology-fibo-stats">
+        <span class="ogov-sev ogov-sev--info">{{ fiboPack.source.release }}</span>
+        <span>{{ L.fiboApplied }} {{ fiboApplied }} / {{ fiboPack.counts.concepts }}</span>
+        <span>{{ L.fiboTerms }} {{ fiboPack.counts.fibo }}</span>
+        <span>{{ L.fiboCommons }} {{ fiboPack.counts.commons }}</span>
+        <span>{{ L.fiboLocal }} {{ fiboPack.counts.localExtensions }}</span>
+      </div>
+      <p v-else class="ogov__hint" data-testid="gov-ontology-fibo-unavailable">{{ L.fiboUnavailable }}</p>
+      <div v-if="fiboOps" class="ogov__fibo" data-testid="gov-ontology-fibo-ops">
+        <span>{{ L.opsLock }} {{ fiboOps.lock.ok ? L.opsOk : `${L.opsDrift} ${fiboOps.lock.drift.length}` }}</span>
+        <span>{{ L.opsMappings }} {{ fiboOps.mappings.mapped }} / {{ fiboOps.mappings.total }}</span>
+        <span>{{ L.opsGlossary }} {{ fiboOps.glossary.terms }}</span>
+        <span>{{ L.opsDomains }} {{ fiboOps.domains.domains }} / {{ fiboOps.domains.concepts }}</span>
+        <span>{{ L.opsGate }} {{ fiboOps.gate.concepts }}</span>
+        <span>{{ L.opsPermissions }} {{ fiboOps.permissions.policies }}</span>
+      </div>
+      <p v-else class="ogov__hint" data-testid="gov-ontology-fibo-ops-unavailable">{{ L.opsUnavailable }}</p>
+      <div class="ogov__ops">
+        <button type="button" class="ogov__btn ogov__btn--primary" data-testid="gov-ontology-fibo-import" :disabled="fiboImporting || !fiboPack" @click="runImportFibo()">{{ fiboImporting ? L.fiboImporting : L.fiboImportBtn }}</button>
+        <button type="button" class="ogov__btn" data-testid="gov-ontology-fibo-open" @click="openFibo()">{{ L.fiboOpen }}</button>
+        <button type="button" class="ogov__btn" data-testid="gov-ontology-fibo-evidence" :disabled="!fiboOps" @click="copyEvidence()">{{ L.evidenceBtn }}</button>
+        <button type="button" class="ogov__btn" data-testid="gov-ontology-fibo-demo" :disabled="fiboDemoing" @click="runDemo()">{{ fiboDemoing ? L.demoRunning : L.demoBtn }}</button>
+        <span v-if="fiboResult" class="ogov__result" data-testid="gov-ontology-fibo-result">{{ fiboResult }}</span>
+        <span v-if="fiboEvidenceMsg" class="ogov__result" data-testid="gov-ontology-fibo-evidence-msg">{{ fiboEvidenceMsg }}</span>
+        <span v-if="fiboDemoMsg" class="ogov__result" data-testid="gov-ontology-fibo-demo-msg">{{ fiboDemoMsg }}</span>
+      </div>
+    </section>
 
     <section class="ogov__block">
       <h2>{{ L.ingestTitle }}</h2>
@@ -160,6 +263,7 @@ const violationTop = computed(() => violations.value.slice(0, 50))
   &__block { border: 1px solid var(--ogov-border); border-radius: 12px; padding: 12px 14px; h2 { margin: 0 0 8px; font-size: 14.5px; } }
   &__hint { font-size: 12px; opacity: 0.7; margin: 0 0 6px; }
   &__srcs { font-size: 12px; opacity: 0.85; margin: 0 0 8px; word-break: break-all; }
+  &__fibo { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 12.5px; margin-bottom: 8px; }
   &__result { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; }
   &__skip { font-size: 12px; margin-top: 4px; opacity: 0.85; }
   &__clean { color: var(--success); font-size: 13px; margin: 0; }

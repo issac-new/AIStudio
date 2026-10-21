@@ -11,7 +11,7 @@ export const IDE_LOCAL_TEXT = {
     },
     panes: {
       files: '查看文件', review: '代码审查', terminal: '终端', wiki: 'Wiki', memory: '记忆',
-      ctxarchive: '上下文档案', tools: '工具时间线', trajectory: '轨迹', workflow: '工作流',
+      ctxarchive: '上下文档案', context: '上下文透视', tools: '工具时间线', trajectory: '轨迹', workflow: '工作流',
       kanban: '看板', assistant: '辅助对话', board: '白板', browser: '浏览器',
       storage: '资源管理器', mcp: 'MCP', hooks: 'Hooks', slash: '自定义命令',
       deliver: '交付物', genui: 'Gen UI', remote: '远程工作区', plugins: '插件目录',
@@ -138,7 +138,7 @@ export const IDE_LOCAL_TEXT = {
     },
     panes: {
       files: 'Files', review: 'Review', terminal: 'Terminal', wiki: 'Wiki', memory: 'Memory',
-      ctxarchive: 'Context Archive', tools: 'Tool Timeline', trajectory: 'Trajectory', workflow: 'Workflow',
+      ctxarchive: 'Context Archive', context: 'Context Insights', tools: 'Tool Timeline', trajectory: 'Trajectory', workflow: 'Workflow',
       kanban: 'Kanban', assistant: 'Ask', board: 'Whiteboard', browser: 'Browser',
       storage: 'Storage', mcp: 'MCP', hooks: 'Hooks', slash: 'Commands',
       deliver: 'Deliverables', genui: 'Gen UI', remote: 'Remote', plugins: 'Plugins',

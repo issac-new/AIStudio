@@ -147,3 +147,7 @@ npx vitest run custom/server/ontology custom/client/ontology custom/server/gover
 ## 后续
 
 FIBO 每季度发布。下一次升级按同一路径做。先下载目标模块，校验 versionIRI 与成熟度。再更新 `FIBO_MODULES` 与概念定义，跑 `ontology-fibo.test.ts` 的 IRI 实锚断言。若要把语义门的轻量索引与工作台完整包合并为单一事实源，需要另起一轮。先解决两个消费方的字段裁剪规则。
+
+## 9. 产品化后续（2026-10-21）
+
+治理语义体检覆盖卡、agent 术语查询、IDE `@fibo` 提及、qgate 一致性守门已见《2026-10-21-fibo-product-rollout-plan.md》。该方案 P0 已落地，P1 到 P3 分阶段推进。本文的 T-Box 与导入语义不变。
