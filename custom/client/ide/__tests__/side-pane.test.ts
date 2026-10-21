@@ -96,7 +96,7 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     expect(w.find('[data-testid="ide-sidepane-tab-terminal"]').exists()).toBe(true)
   })
 
-  it('分组整合（2026-10-04 用户裁定）：默认编码组 3 签、全部组 21 签齐备、外部深链自动切组、关闭收起', async () => {
+  it('分组整合（2026-10-04 用户裁定）：默认编码组 3 签、全部组 22 签齐备、外部深链自动切组、关闭收起', async () => {
     const ide = useIdeStore()
     ide.sidePane.open = true
     ide.sidePane.tab = 'wiki'
@@ -111,10 +111,10 @@ describe('IdeSidePane（清单批：切换面板）', () => {
     let tabs = w.findAll('[data-testid^="ide-sidepane-tab-"]')
     expect(tabs).toHaveLength(3)
     expect(tabs[0].attributes('data-testid')).toBe('ide-sidepane-tab-files')
-    // 全部组：21 签齐备（tab 本体与 testid 不因分组丢失）
+    // 全部组：22 签齐备（tab 本体与 testid 不因分组丢失；2026-10-21 context 页签入列）
     await w.find('[data-testid="ide-sidepane-group-all"]').trigger('click')
     tabs = w.findAll('[data-testid^="ide-sidepane-tab-"]')
-    expect(tabs).toHaveLength(21)
+    expect(tabs).toHaveLength(22)
     for (const tab of ['files', 'review', 'browser', 'wiki', 'assistant', 'storage', 'memory', 'terminal']) {
       expect(w.find(`[data-testid="ide-sidepane-tab-${tab}"]`).exists()).toBe(true)
     }
@@ -161,7 +161,7 @@ describe('IdeSidePane 样式契约（UX-1）+ IdeShell 冗余类绑定（UX-3）
   const sidePaneSrc = readFileSync(resolve(__dirname, '../views/IdeSidePane.vue'), 'utf8')
   const shellSrc = readFileSync(resolve(__dirname, '../views/IdeShell.vue'), 'utf8')
 
-  it('UX-1：页签行 flex-wrap + 页签钮不可收缩（21 签不再挤瘪 max/close）', () => {
+  it('UX-1：页签行 flex-wrap + 页签钮不可收缩（22 签不再挤瘪 max/close）', () => {
     const tabsBlock = sidePaneSrc.match(/\.ide-sidepane__tabs\s*\{[^}]*\}/)?.[0] ?? ''
     expect(tabsBlock, 'tabs 行须 flex-wrap: wrap').toContain('flex-wrap: wrap')
     const tabBlock = sidePaneSrc.match(/\.ide-sidepane__tab\s*\{[^}]*\}/)?.[0] ?? ''

@@ -25,4 +25,30 @@ export const ideUsageApi = {
       `/api/studio/sessions/${encodeURIComponent(sessionId)}/usage/rounds?limit=${limit}`,
     )
   },
+  /** 逐轮组成趋势（context-insights P2；server 见 custom/server/tokens/context-trend.ts） */
+  contextTrend(sessionId: string): Promise<ContextTrendResponse> {
+    return request<ContextTrendResponse>(`/api/ide/context-trend/${encodeURIComponent(sessionId)}`)
+  },
+}
+
+/** 与 server foldContextTrend 输出对齐（available=false 时其余字段缺席，fail-soft）。 */
+export interface ContextTrendStep {
+  seq: number
+  turn: number
+  runId: string | null
+  buckets: { system: number; user: number; assistant: number; tool: number }
+  total: number
+  usage: { input: number; output: number; cacheRead: number; cacheWrite: number; model: string | null } | null
+}
+
+export interface ContextTrendResponse {
+  ok: boolean
+  available?: boolean
+  reason?: string
+  steps?: ContextTrendStep[]
+  events?: Array<{ kind: 'compaction'; throughMessageId: number; foldedMessages: number }>
+  usageAligned?: 'run' | 'order-approx'
+  isEstimate?: boolean
+  truncated?: boolean
+  charsPerToken?: number
 }
