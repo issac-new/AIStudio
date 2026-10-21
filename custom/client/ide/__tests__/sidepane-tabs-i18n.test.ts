@@ -29,7 +29,9 @@ describe('IdeSidePane 页签 i18n 守门（无裸键）', () => {
   // 字典分支 + 面板内自备 zh/en 词条（IdeContextArchivePane CTX_TEXT）。
   // deliver/genui/remote/plugins（2026-10-18 待办清零批）同款：IDE_LOCAL_TEXT.panes
   // + 面板自备 IDE_LOCAL_TEXT.<pane> 词条，不进上游 locale。
-  const LOCAL_DICT_EXEMPT = new Set(['trajectory', 'ctxarchive', 'deliver', 'genui', 'remote', 'plugins'])
+  // matrix（2026-10-21 挂账实施轮）：IDE 完整 Matrix 客户端页签，SHORT_LABELS +
+  // IDE_LOCAL_TEXT.panes 本地字典，不进上游 locale。
+  const LOCAL_DICT_EXEMPT = new Set(['trajectory', 'ctxarchive', 'deliver', 'genui', 'remote', 'plugins', 'matrix'])
 
   it('TABS 解析非空（组件重构时同步本守门）', () => {
     expect(keys.length).toBeGreaterThan(5)

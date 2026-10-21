@@ -36,6 +36,7 @@ const IdeMemoryPane = asyncPane(() => import('./IdeMemoryPane.vue'))
 const IdeMcpPane = asyncPane(() => import('./IdeMcpPane.vue'))
 const IdeWhiteboardPane = asyncPane(() => import('./IdeWhiteboardPane.vue'))
 const IdeKanbanPane = asyncPane(() => import('./IdeKanbanPane.vue'))
+const IdeMatrixPane = asyncPane(() => import('./IdeMatrixPane.vue'))
 const IdeToolsPane = asyncPane(() => import('./IdeToolsPane.vue'))
 const IdeWorkflowPane = asyncPane(() => import('./IdeWorkflowPane.vue'))
 const IdeHooksPane = asyncPane(() => import('./IdeHooksPane.vue'))
@@ -77,6 +78,7 @@ const TABS: Array<{ key: IdeSidePaneTab; icon: string; group: SidePaneGroup }> =
   { key: 'deliver', icon: '▣', group: 'observe' },
   { key: 'genui', icon: '◫', group: 'observe' },
   { key: 'kanban', icon: '▦', group: 'collab' },
+  { key: 'matrix', icon: '#', group: 'collab' },
   { key: 'assistant', icon: '✦', group: 'collab' },
   { key: 'board', icon: '✎', group: 'collab' },
   { key: 'browser', icon: '◍', group: 'config' },
@@ -105,6 +107,7 @@ const SHORT_LABELS: Record<string, { zh: string; en: string }> = {
   remote: { zh: '远程', en: 'Remote' },
   plugins: { zh: '插件', en: 'Plugins' },
   kanban: { zh: '看板', en: 'Board' },
+  matrix: { zh: '沟通', en: 'Chat' },
   assistant: { zh: '辅助', en: 'Ask' },
   board: { zh: '画板', en: 'Draw' },
   browser: { zh: '浏览器', en: 'Browser' },
@@ -274,6 +277,7 @@ function focusMainChat(): void {
       <IdeMemoryPane v-else-if="ide.sidePane.tab === 'memory'" class="ide-sidepane__fill" />
       <IdeWhiteboardPane v-else-if="ide.sidePane.tab === 'board'" class="ide-sidepane__fill" />
       <IdeKanbanPane v-else-if="ide.sidePane.tab === 'kanban'" class="ide-sidepane__fill" data-testid="ide-sidepane-kanban" />
+      <IdeMatrixPane v-else-if="ide.sidePane.tab === 'matrix'" class="ide-sidepane__fill" data-testid="ide-sidepane-matrix" />
       <IdeToolsPane v-else-if="ide.sidePane.tab === 'tools'" class="ide-sidepane__fill" data-testid="ide-sidepane-tools" />
       <IdeWorkflowPane v-else-if="ide.sidePane.tab === 'workflow'" class="ide-sidepane__fill" data-testid="ide-sidepane-workflow" />
       <IdeMcpPane v-else-if="ide.sidePane.tab === 'mcp'" class="ide-sidepane__fill" data-testid="ide-sidepane-mcp" />

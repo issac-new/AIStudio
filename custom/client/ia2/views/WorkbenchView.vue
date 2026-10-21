@@ -345,6 +345,11 @@ function onOpenIde(taskId: string): void {
   jumpIde(taskId)
 }
 
+/** 推演并入轮（2026-10-21）：sim 卡在右栏的唯一动作——显式跨模式查看 */
+function onOpenSim(payload: { taskId: string; runId: string | null }): void {
+  void router.push({ name: 'ia2.sim', query: payload.runId ? { run: payload.runId } : {} })
+}
+
 function onHandleTask(taskId: string): void {
   // 就地开任务抽屉（不跳看板）
   drawerTaskId.value = taskId
@@ -691,6 +696,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         @reassign="onReassign"
         @open-ide="onOpenIde"
         @handle-task="onHandleTask"
+        @open-sim="onOpenSim"
         @open-task="onHandleTask"
         @new-task="onNewTask"
         @all-timeline="onAllTimeline"

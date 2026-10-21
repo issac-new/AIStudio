@@ -42,6 +42,7 @@ const emit = defineEmits<{
   (e: 'reassign', taskId: string): void
   (e: 'open-ide', taskId: string): void
   (e: 'handle-task', taskId: string): void
+  (e: 'open-sim', payload: { taskId: string; runId: string | null }): void
   (e: 'new-task'): void
   (e: 'all-timeline'): void
   (e: 'open-attention', row: AttentionRow): void
@@ -141,6 +142,7 @@ const tabCount = computed<Record<TdpTab, number>>(() => ({
           @reassign="id => emit('reassign', id)"
           @open-ide="id => emit('open-ide', id)"
           @handle-task="id => emit('handle-task', id)"
+          @open-sim="p => emit('open-sim', p)"
         />
         <!-- P4③ 当前群任务流转时间线（仅选中群且有任务型消息时渲染） -->
         <div v-if="flowEvents?.length" class="tdp__sub" data-testid="tdp-flow-sec">

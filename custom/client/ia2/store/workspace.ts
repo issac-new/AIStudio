@@ -26,6 +26,7 @@ import * as taskAdapter from '@/custom/cockpit/adapters/task-adapter'
 import type { CockpitTask, CockpitPriority } from '@/custom/cockpit/adapters/task-adapter'
 import * as fleetAdapter from '@/custom/cockpit/adapters/fleet-adapter'
 import * as teamsApi from '@/custom/cockpit/adapters/teams-adapter'
+import { fetchSimObserverOverview, type SimObserverRoom } from '../api/sim-observer'
 
 /** 日程事件（任务/待办两源；kind=timeline 随 cockpit 历史面板退役不再产出） */
 export interface ScheduleEvent {
@@ -50,12 +51,27 @@ const hhmm = (ts: number) => {
 }
 
 export const useWorkspaceStore = defineStore('ia2-workspace', () => {
-  // ── ① 跨 board 任务聚合 ──
+  // ── ① 跨 board 任务聚合（双源：本实例日常 + 推演实例只读观察）──
+  // 2026-10-21 推演并入轮（用户裁定）：观察面任务直接并入日常任务面并带
+  // source='sim'/runId 标记；写入口不并入（看板侧对 sim 卡只读守卫）。
   const tasks = ref<CockpitTask[]>([])
-  const boards = ref<{ slug: string; name: string; total: number }[]>([])
+  const boards = ref<Array<{ slug: string; name: string; total: number; source?: 'daily' | 'sim' }>>([])
   /** 原始跨板任务（v12.5）：{board, 原始 KanbanTask} 对——聚合看板渲染与任务
    *  跳转需要 session_id/workspace_path/priority 数值等映射层丢掉的字段 */
   const rawTasks = ref<Array<{ board: string; task: any }>>([])
+
+  // 双源私有态（applyAll 合成公开 refs）
+  const _hostTasks = ref<CockpitTask[]>([])
+  const _hostBoards = ref<Array<{ slug: string; name: string; total: number; source?: 'daily' | 'sim' }>>([])
+  const _hostRaw = ref<Array<{ board: string; task: any }>>([])
+  const _simTasks = ref<CockpitTask[]>([])
+  const _simBoards = ref<Array<{ slug: string; name: string; total: number; source?: 'daily' | 'sim' }>>([])
+  const _simRaw = ref<Array<{ board: string; task: any }>>([])
+
+  /** 推演观察摘要（房间徽标/推演跳转消费；available:false=观察面关闭，不影响日常） */
+  const simObserver = ref<{ available: boolean; runId: string | null; posture: string | null; startedAt: number | null; rooms: SimObserverRoom[] }>({
+    available: false, runId: null, posture: null, startedAt: null, rooms: [],
+  })
 
   let _lastRefreshTs = 0
   // 任务指纹守卫（v12 性能收敛 2026-09-21）：刷新响应总是新数组新身份，直接赋值会令
@@ -65,55 +81,114 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   function taskFingerprint(rows: Array<CockpitTask>): string {
     const parts: string[] = []
     for (const t of rows) {
-      parts.push([t.id, t.status, t.title, t.assignee, t.priority, t.tenant, t.boardSlug, t.createdAt, t.workspace].join('|'))
+      parts.push([t.id, t.status, t.title, t.assignee, t.priority, t.tenant, t.boardSlug, t.createdAt, t.workspace, t.source ?? '', t.runId ?? ''].join('|'))
     }
     return parts.join(';')
   }
-  function applyAggregateTasks(next: CockpitTask[], raw: Array<{ board: string; task: any }>): void {
-    const fp = taskFingerprint(next)
+  function applyAll(): void {
+    const nextTasks = [..._hostTasks.value, ..._simTasks.value]
+    const nextRaw = [..._hostRaw.value, ..._simRaw.value]
+    const nextBoards = [
+      ..._hostBoards.value.map(b => ({ ...b, source: 'daily' as const })),
+      ..._simBoards.value.map(b => ({ ...b, source: 'sim' as const })),
+    ]
+    boards.value = nextBoards
+    const fp = taskFingerprint(nextTasks)
     if (fp === _tasksFp) return
     _tasksFp = fp
-    tasks.value = next
-    rawTasks.value = raw
+    tasks.value = nextTasks
+    rawTasks.value = nextRaw
+  }
+  function setHostAggregate(next: CockpitTask[], raw: Array<{ board: string; task: any }>, boardList: Array<{ slug: string; name: string; total: number }>): void {
+    _hostTasks.value = Array.isArray(next) ? next : []
+    _hostRaw.value = Array.isArray(raw) ? raw : []
+    _hostBoards.value = Array.isArray(boardList) ? boardList : []
+    applyAll()
+  }
+  function clearSim(): void {
+    _simTasks.value = []
+    _simRaw.value = []
+    _simBoards.value = []
+    simObserver.value = { available: false, runId: null, posture: null, startedAt: null, rooms: [] }
+    applyAll()
+  }
+  /** 观察面装载（fail-soft）：SIM 根缺席/端点失败一律清空 sim 源，日常面不受影响。 */
+  async function loadSimObserver(): Promise<void> {
+    try {
+      const obs = await fetchSimObserverOverview()
+      if (!obs || obs.available !== true) { clearSim(); return }
+      const runId = obs.runId ?? null
+      simObserver.value = {
+        available: true,
+        runId,
+        posture: obs.posture ?? null,
+        startedAt: obs.startedAt ?? null,
+        rooms: obs.rooms ?? [],
+      }
+      _simBoards.value = (obs.boards ?? [])
+        .filter(b => b?.slug && !b.archived)
+        .map(b => ({ slug: b.slug, name: b.name || b.slug, total: Number(b.total ?? 0) }))
+      const raw = (obs.tasks ?? [])
+        .filter(e => e?.task?.id)
+        .map(e => ({ board: e.board || 'default', task: Object.assign({}, e.task, { source: 'sim', runId }) }))
+      _simRaw.value = raw
+      _simTasks.value = raw.map(e => {
+        const mapped = taskAdapter.toCockpitTask(e.task, e.board)
+        mapped.source = 'sim'
+        mapped.runId = runId
+        return mapped
+      })
+      applyAll()
+    } catch {
+      clearSim()
+    }
   }
 
   async function refreshAllBoards(force = false): Promise<boolean> {
     const now = Date.now()
     if (!force && now - _lastRefreshTs < 2000) return true // 2s 防抖，视为成功（不重复刷新）
     _lastRefreshTs = now
+    let ok = true
     try {
       // 优先走服务端聚合端点（一次请求全 board；失败回落 N+1 旧路径）
       try {
         const overview = await teamsApi.fetchKanbanOverview()
-        boards.value = overview.boards.length ? overview.boards : [{ slug: 'default', name: 'default', total: 0 }]
-        applyAggregateTasks(overview.tasks, overview.rawTasks)
-        return true
+        const boardList = overview.boards.length ? overview.boards : [{ slug: 'default', name: 'default', total: 0 }]
+        setHostAggregate(overview.tasks, overview.rawTasks, boardList)
       } catch { /* 聚合端点不可用 → 回落 */ }
-      const boardList = await kanbanApi.listBoards({ includeArchived: false })
-      const active = (boardList || []).filter((b: any) => !b.archived)
-      boards.value = active.map((b: any) => ({ slug: b.slug, name: b.name, total: (b as any).total ?? 0 }))
-      const results = await Promise.allSettled(
-        active.map((b: any) =>
-          kanbanApi.listTasks({ board: b.slug, includeArchived: true }).then(
-            list => list.map((t: any) => ({ board: b.slug, raw: t, mapped: taskAdapter.toCockpitTask(t, b.slug) })),
+      if (!_hostBoards.value.length) {
+        const boardList = await kanbanApi.listBoards({ includeArchived: false })
+        const active = (boardList || []).filter((b: any) => !b.archived)
+        const results = await Promise.allSettled(
+          active.map((b: any) =>
+            kanbanApi.listTasks({ board: b.slug, includeArchived: true }).then(
+              list => list.map((t: any) => ({ board: b.slug, raw: t, mapped: taskAdapter.toCockpitTask(t, b.slug) })),
+            ),
           ),
-        ),
-      )
-      const all: CockpitTask[] = []
-      const raw: Array<{ board: string; task: any }> = []
-      for (const r of results) {
-        if (r.status === 'fulfilled') {
-          for (const item of r.value) {
-            all.push(item.mapped)
-            raw.push({ board: item.board, task: item.raw })
+        )
+        const all: CockpitTask[] = []
+        const raw: Array<{ board: string; task: any }> = []
+        for (const r of results) {
+          if (r.status === 'fulfilled') {
+            for (const item of r.value) {
+              all.push(item.mapped)
+              raw.push({ board: item.board, task: item.raw })
+            }
           }
         }
+        setHostAggregate(all, raw, active.map((b: any) => ({ slug: b.slug, name: b.name, total: (b as any).total ?? 0 })))
       }
-      applyAggregateTasks(all, raw)
-      return true
     } catch {
-      return false
+      ok = false
     }
+    await loadSimObserver()
+    return ok
+  }
+
+  const simRunId = computed(() => simObserver.value.runId)
+  const simRoomIds = computed(() => new Set(simObserver.value.rooms.map(r => r.roomId)))
+  function isSimTask(taskId: string): boolean {
+    return rawTasks.value.some(e => e.task.id === taskId && e.task.source === 'sim')
   }
 
   // ── ② 用户待办 + 闹钟调度 ──
@@ -353,8 +428,9 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   }
 
   return {
-    // ① 聚合
+    // ① 聚合（双源：日常 + 推演观察）
     tasks, boards, rawTasks, refreshAllBoards,
+    simObserver, simRunId, simRoomIds, isSimTask,
     // ② 待办/提醒
     userTodos, loadTodos, addUserTodo, removeUserTodo,
     startReminderScheduler, stopReminderScheduler,

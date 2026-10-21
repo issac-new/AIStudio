@@ -6,11 +6,27 @@ import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { onDutyRoomIds } from '@/custom/matrix-teams/adapters/accounts'
 import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
+import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
 
 const roomStore = useMatrixRoomStore()
 const clientStore = useMatrixClientStore()
 const teamRegistry = useTeamRegistryStore()
+const workspace = useWorkspaceStore()
 const { t } = useI18n()
+
+// 推演并入轮（2026-10-21）：推演房间双源识别——
+// ① 观察面 run-state 房间集（当前轮房间，历史轮亦命中）；
+// ② 房间级状态事件 com.swarmstudio.sim/run（simharness feat/sim-room-tag 起建房即打）。
+const observerRoomIds = computed(() => workspace.simRoomIds)
+function hasSimStateTag(room: any): boolean {
+  try {
+    const state = room?.getLiveTimeline?.()?.getState?.('forward') ?? room?.currentState
+    return Boolean(state?.getStateEvents?.('com.swarmstudio.sim', 'run')?.length)
+  } catch { /* 状态事件不可读时仅走房间集兜底 */ return false }
+}
+function isSimRoom(room: { roomId: string } & Record<string, unknown>): boolean {
+  return observerRoomIds.value.has(room.roomId) || hasSimStateTag(room)
+}
 
 const searchQuery = ref('')
 
@@ -129,6 +145,7 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
             >#{{ shortRoomId(room.roomId) }}</span>
             <span v-if="onDuty.has(room.roomId)" class="room-duty-badge" data-testid="room-duty-badge">
               {{ t('teams.duty.mine') }}</span>
+            <span v-if="isSimRoom(room)" class="room-sim-badge" data-testid="room-sim-badge" title="推演实例房间（观察位）">推演</span>
             <span v-if="getRoomUnreadCount(room) > 0" class="mx_RoomTile_badge">
               {{ getRoomUnreadCount(room) }}
             </span>
@@ -343,6 +360,17 @@ function getRoomNotificationLevel(room: any): 'highlight' | 'total' | 'none' {
   line-height: 1;
   border: 1px solid var(--color-warning);
   color: var(--color-warning);
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+
+/* 推演并入轮（2026-10-21）：观察位房间徽标——与日常房间同栏可辨 */
+.room-sim-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+  border: 1px solid var(--color-info, var(--color-primary));
+  color: var(--color-info, var(--color-primary));
   border-radius: 999px;
   padding: 2px 6px;
 }

@@ -16,8 +16,16 @@ import {
   fetchSimLaunchStatus, startSimLaunch, stopSimLaunch,
   pendingGatesOf, recentEventRows,
   type DirectorScenario, type DirectorInput, type DirectorPlan,
-  type GraphEvent, type GraphRunState, type SimLaunchStatus,
+  type GraphEvent, type GraphRunState, type SimLaunchStatus, type DirectorNotifyStatus,
 } from '../../api/sim-director'
+
+/** 事件通知回执文案（2026-10-21）：已发=房间留痕；未发=如实给原因，不装成功 */
+function notifySuffix(notify?: DirectorNotifyStatus): string {
+  if (!notify) return ''
+  return notify.sent
+    ? '（Matrix 通知已发）'
+    : `（Matrix 通知未发：${notify.reason ?? '未知原因'}）`
+}
 
 const router = useRouter()
 const { run, remember } = useRunContext('sim')
@@ -125,7 +133,7 @@ async function start(): Promise<void> {
     graphRunId.value = r.runId
     simCast.value = r.cast
     try { localStorage.setItem(GRAPH_RUN_KEY, r.runId) } catch { /* 隐私模式忽略 */ }
-    graphMsg.value = `已起跑：${r.runId}（${r.cast.length} 位模拟员工）。`
+    graphMsg.value = `已起跑：${r.runId}（${r.cast.length} 位模拟员工）。${notifySuffix(r.notify)}`
     await refreshGraph()
     startPolling()
   } catch (e) {
@@ -168,8 +176,8 @@ async function approveGate(interruptId: string, approved: boolean): Promise<void
   graphMsg.value = ''
   graphError.value = ''
   try {
-    await resumeGraphGate(graphRunId.value, interruptId, approved)
-    graphMsg.value = approved ? '已批准，继续执行。' : '已打回；该分支不会继续。'
+    const r = await resumeGraphGate(graphRunId.value, interruptId, approved)
+    graphMsg.value = `${approved ? '已批准，继续执行。' : '已打回；该分支不会继续。'}${notifySuffix((r as { notify?: DirectorNotifyStatus }).notify)}`
     await refreshGraph()
   } catch (e) {
     graphError.value = e instanceof Error ? e.message : String(e)

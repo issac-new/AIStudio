@@ -1,5 +1,3 @@
-session=cockpit-overhaul-1020
-status=complete
-created=2026-10-20T12:23:00+08:00
-closed=2026-10-20T20:58:00+08:00
-note=驾驶舱整治收口：fdca2a24+e8f9ed17 已合 main（与 zcode-cockpit-takeover 会话协同收编，用户 20:22 裁定接管）。matrix spec 回填为最后一件。
+session=production-trace-reflow-takeover-1022
+created=2026-10-22T00:55:11+08:00
+note=接管自 sim-visible-ide-1021 会话（其 status=complete）；2369 复验后收口
