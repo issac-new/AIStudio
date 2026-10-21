@@ -1512,6 +1512,7 @@ run1-run7 成绩单不入表（V8 前判词语义旧制），失败样本全在�
 - **百度 reward 轮**（10-19）：评测集内容指纹+修订号（改题后读数显式不可比）、S0 补 ROUGE-L、四层指标金字塔、动作驱动清单、红队种子库 4 向量×6=24 题。
 - **百度范式轮**（10-19，与 reward 轮为两会话同文独立落地，合并冲突三处按保留双方语义解决，合并后 166/166 绿）：指标注册表（每条指标声明 drives 动作，report_only 单独出现即判装饰指标并告警）、三角互证只增审计不改口径（「unknown 计为不通过」正式判分不动，新增反事实保守口径并列展示）、红队引擎（12 确定性变异算子+LCG 种子进化；首跑抓到真实缺陷：JS `\b` 不认中文边界致 toolresultguard 中文分支永不命中）、能力维度七值+真实覆盖度、证据抽屉按 sessionId 重读 trace。
 - **followup+收口轮**（10-19，用户裁定全做）：红队 24 种子经规则改写器扩至 138 题（选规则改写不选 LLM 生成：S0 哲学，确定零成本可复现）；线上证据回填；考卷版本快照（EvalSetRevision 冻结，A/B 两侧 setHash 不等即拒绝）；同卷复评（复评取冻结题目，不符返回可读错误不静默换卷）；处置单（复评通过且同集同版本才自动 closed，无手工旁路）；密封写响应；S0 空证据改判 unknown（此前 transcript 缺席返回 no，会把无证据误读为安全）。
+- **生产失败回流轮**（10-21，Cloudflare 安全审计 Skill + OpenAI Evals 两文吸收，spec `2026-10-21-production-trace-eval-reflow.md`）：补「生产 session/span → 人工确认题 → 回归库 → origin 复现 → fresh 证据修复关闭」最后一公里。转题端点 `POST /reflow-from-trace` 要求预览 `traceHash`（原始字节 SHA-256）一致、legacy 完整（header/trailer）、OTel/空证据显式拒绝；`ReflowOrigin` 扩为联合类型（旧 EvalRun 回流无 source 字段兼容），生产来源只存引用+指纹不存原文，taskId=`re-<sha256(originKey)[:20]>` 同源同定义幂等、异定义 409、session 与 span 分键；运行器 `useOrigin` 显式开关（显式样本优先、缺样本才按 origin 展开、hash 漂移时裁判零调用不落 run、密封集拒绝）；`EvalRun.evidenceMode` 三态——origin/mixed 不得关闭处置单（store 层拒）、不得作 Harness² 候选/回归证据（workbench 层拒，历史 run 读冻结考卷）；入口落 IDE 轨迹页（结构化 `ref` 不解析展示 ID）+ 评测岛复现开关，不新增中心页签。隔离私有上游真服走查全链通过；独立评审 3 Important 当轮修清（Composer 切换目标重挂、显式 spanRef 样本按 span 取证、OTel 会话 span 按钮禁用）。**显式非目标仍挂账**：OTel 轨迹转题/消费（采样器只认 legacy）、OS 级沙箱执行（红队沙箱攻防前置）、通用代码仓安全审计引擎。
 
 ### 14.3 评审治理（Anthropic 博客吸收）
 
