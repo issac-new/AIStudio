@@ -11,7 +11,6 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
-import { useFlowStore } from '../store/flow'
 import { useNotifyReadStore } from '../store/notify-read'
 import { useReviewCenterStore } from '@/custom/matrix-teams/stores/review-center'
 import { useDecisionActions } from '../composables/useDecisionActions'
@@ -24,7 +23,6 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 const { t } = useI18n()
 const router = useRouter()
 const cockpit = useCockpitStore()
-const flow = useFlowStore()
 const matrixRoom = useMatrixRoomStore()
 const read = useNotifyReadStore()
 const reviewCenter = useReviewCenterStore()
@@ -55,11 +53,11 @@ function timeAgo(ts: number): string {
   return t('cockpit.daysAgo', { n: Math.floor(hrs / 24) })
 }
 
-/** 决策行点击：跳对应对象（任务→看板预选；运行→运行详情；fleet/gate→工作台/评审区） */
+/** 决策行点击：跳对应对象（任务→看板预选；运行→运行详情；fleet→工作台；gate→⑥评审治理） */
 function onDecisionOpen(row: DecisionRow): void {
   if (row.taskId) void router.push({ name: 'ia2.board', query: { task: row.taskId } })
   else if (row.runId) void router.push({ name: 'ia2.runDetail', params: { runId: row.runId } })
-  else if (row.kind === 'gate-review') flow.openGov('review')
+  else if (row.kind === 'gate-review') void router.push({ name: 'ia2.stage6', query: { tab: 'reviewGov' } })
   else void router.push({ path: '/app' })
   read.markRead(row.id)
   emit('close')
