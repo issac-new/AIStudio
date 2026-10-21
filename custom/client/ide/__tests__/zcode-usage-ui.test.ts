@@ -103,12 +103,36 @@ const zcToolsMock = vi.fn(async () => ({
   ],
 }))
 
+const zcContextMock = vi.fn(async () => ({
+  sessionId: 'sess_a1',
+  requests: [
+    { at: Date.now() - 600_000, turnId: 't1', model: 'GLM-5.3', provider: 'bigmodel-api', status: 'completed', ttftMs: 1293, promptTokens: 1_100_000, outputTokens: 10_000 },
+    { at: Date.now() - 300_000, turnId: 't1', model: 'GLM-5.3', provider: 'bigmodel-api', status: 'completed', ttftMs: null, promptTokens: 1_200_000, outputTokens: 12_000 },
+    { at: Date.now() - 60_000, turnId: 't2', model: 'GLM-5.3', provider: 'bigmodel-api', status: 'completed', ttftMs: 900, promptTokens: 900_000, outputTokens: 8_000 },
+  ],
+  est: {
+    categories: [
+      { key: 'user-text', estTokens: 4200, count: 3 },
+      { key: 'assistant-text', estTokens: 18000, count: 12 },
+      { key: 'reasoning', estTokens: 9500, count: 9 },
+      { key: 'tool', estTokens: 220_000, count: 70 },
+      { key: 'file', estTokens: 1000, count: 1 },
+    ],
+    estTotalTokens: 252_700, partsParsed: 95, partsSkipped: 0,
+  },
+  largest: [
+    { messageId: 'm1', role: 'assistant', at: Date.now() - 60_000, estTokens: 61_000, preview: '读取会话账本失败重试……（截断预览）' },
+  ],
+  compactions: [{ at: Date.now() - 300_000, trigger: 'manual', reason: 'user_requested', status: 'ok' }],
+}))
+
 vi.mock('../api/zcodeUsage', () => ({
   zcodeUsageApi: {
     summary: (days: number) => summaryMock(days),
     sessions: () => zcSessionsMock(),
     rounds: (id: string) => zcRoundsMock(id),
     tools: (id: string) => zcToolsMock(id),
+    context: (id: string) => zcContextMock(id),
   },
 }))
 
@@ -194,6 +218,47 @@ describe('IdeCliSessions — 用量徽与账单展开', () => {
     await flushPromises()
     expect(w.text()).toContain('修复构建')
     expect(w.find('[data-testid="ide-cli-bill-sess_a1"]').exists()).toBe(false)
+    w.unmount()
+  })
+})
+
+describe('IdeCliSessions — S1 注入模式徽章回归 + Phase2 趋势/构成', () => {
+  beforeEach(() => { vi.clearAllMocks(); setActivePinia(createPinia()) })
+
+  it('外部注入 sessions 时用量徽仍拉取（S1：侧栏主 surface 不缺席）', async () => {
+    const w = mount(IdeCliSessions, {
+      props: {
+        sessions: [
+          { id: 'sess_a1', title: '修复构建', directory: '/Users/x/lab/proj', timeUpdated: Date.now() - 3_600_000, timeCreated: 0 },
+        ],
+      },
+    })
+    await flushPromises()
+    expect(zcSessionsMock).toHaveBeenCalled()
+    const row = w.find('[data-testid="ide-cli-session-sess_a1"]')
+    expect(row.text()).toContain('12 轮')
+    expect(w.find('[data-testid="ide-cli-bill-sess_a1"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('账单展开后点「构成」：趋势条带渲染 + 构成类别（≈标）+ 压缩事件', async () => {
+    const w = mount(IdeCliSessions)
+    await flushPromises()
+    await w.find('[data-testid="ide-cli-bill-sess_a1"]').trigger('click')
+    await flushPromises()
+    // 趋势在构成拉取后才显示（toggle 首点即拉）
+    await w.find('[data-testid="ide-cli-ctx-toggle"]').trigger('click')
+    await flushPromises()
+    expect(zcContextMock).toHaveBeenCalledWith('sess_a1')
+    const trend = w.find('[data-testid="ide-cli-trend-sess_a1"]')
+    expect(trend.exists()).toBe(true)
+    expect(trend.findAll('.ide-cli-sessions__tbar').length).toBe(3)
+    const ctx = w.find('[data-testid="ide-cli-ctx-sess_a1"]')
+    expect(ctx.text()).toContain('构成合计')
+    expect(ctx.text()).toContain('用户消息')
+    expect(ctx.text()).toContain('工具调用')
+    expect(ctx.text()).toContain('≈')
+    expect(ctx.text()).toContain('压缩事件 1 次')
     w.unmount()
   })
 })
