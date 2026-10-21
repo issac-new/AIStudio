@@ -42,6 +42,9 @@ import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 // zcode CLI 会话兼容展示（2026-10-19 用户需求批）：与 IDE 会话同栏可折叠分组，
 // 数据/动作自持（IdeCliSessions），不进 chatStore（避免伪会话 ID 打断打开链）。
 import IdeCliSessions from '../components/IdeCliSessions.vue'
+// 遗留项收编（2026-10-21）：混排行复用账单子组件 + 用量共享单例
+import IdeCliSessionBill from '../components/IdeCliSessionBill.vue'
+import { useZcodeCliUsage } from '../composables/useZcodeCliUsage'
 // 项目归类（2026-10-19 组织模式修正）：内部工作区/空 → 未绑项目；真实路径 → 目录名
 import { sessionProjectOf, cliProjectOf, filterCliSessions } from '../utils/sessionProjects'
 import { fetchCliSessions, launchDevtool, type CliSession } from '../api/devtools'
@@ -215,8 +218,21 @@ const collapsedGroups = ref<Set<string>>(new Set())
 const cliAll = ref<CliSession[]>([])
 const cliFiltered = computed(() => filterCliSessions(cliAll.value, ide.sidebar.sessionView, activeQuery.value, Date.now()))
 const cliCount = computed(() => cliFiltered.value.length)
+// 用量徽（共享单例：与 IdeCliSessions/落地页同源同一次拉取）+ 混排行账单展开
+const { usageOf: cliUsageOf, loadUsage: loadCliUsage } = useZcodeCliUsage()
+const cliBillId = ref('')
+function toggleCliBill(c: CliSession): void {
+  cliBillId.value = cliBillId.value === c.id ? '' : c.id
+}
+function fmtCliTokens(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}k`
+  return String(n)
+}
 async function loadCli(): Promise<void> {
   try { cliAll.value = (await fetchCliSessions(30)).sessions } catch { cliAll.value = [] }
+  void loadCliUsage()
 }
 onMounted(() => { void loadCli() })
 async function resumeCli(c: CliSession): Promise<void> {
@@ -793,14 +809,32 @@ onMounted(async () => {
               v-for="c in g.cli ?? []"
               :key="`cli-${c.id}`"
               class="ide-taskbar__item ide-taskbar__item--cli"
+              :class="{ 'ide-taskbar__item--bill-open': cliBillId === c.id }"
               :data-testid="`ide-task-cli-${c.id}`"
             >
-              <button type="button" class="ide-taskbar__item-main" :title="`${c.title} · ${c.directory}`" @click="resumeCli(c)">
-                <span class="ide-taskbar__mode-badge is-cli" title="zcode CLI 会话（终端）">zcode</span>
-                <span class="ide-taskbar__item-title">{{ c.title }}</span>
-                <span class="ide-taskbar__item-time">{{ c.directory ? cliDirShort(c.directory) : '' }}</span>
-              </button>
-              <button type="button" class="ide-taskbar__group-btn" :title="`复制会话 ID：${c.id}`" @click="copyCliId(c)">⧉</button>
+              <div class="ide-taskbar__clirow">
+                <button type="button" class="ide-taskbar__item-main" :title="`${c.title} · ${c.directory}`" @click="resumeCli(c)">
+                  <span class="ide-taskbar__mode-badge is-cli" title="zcode CLI 会话（终端）">zcode</span>
+                  <span class="ide-taskbar__item-title">{{ c.title }}</span>
+                  <span class="ide-taskbar__item-time">{{ c.directory ? cliDirShort(c.directory) : '' }}</span>
+                  <span
+                    v-if="cliUsageOf(c.id)"
+                    class="ide-taskbar__cli-usage"
+                    :title="`轮 ${cliUsageOf(c.id)!.turns}（错 ${cliUsageOf(c.id)!.turnErrors}）· 模型调用 ${cliUsageOf(c.id)!.modelCalls} · 工具 ${cliUsageOf(c.id)!.toolCalls} · 计费 ${fmtCliTokens(cliUsageOf(c.id)!.billedTokens)} token`"
+                  >· {{ cliUsageOf(c.id)!.turns }} 轮 · {{ fmtCliTokens(cliUsageOf(c.id)!.billedTokens) }} tok</span>
+                </button>
+                <button
+                  v-if="cliUsageOf(c.id)"
+                  type="button"
+                  class="ide-taskbar__group-btn"
+                  :class="{ 'is-on': cliBillId === c.id }"
+                  :data-testid="`ide-cli-bill-${c.id}`"
+                  title="展开逐轮用量、上下文趋势/构成与工具时间线（本机 zcode 用量库）"
+                  @click.stop="toggleCliBill(c)"
+                >账</button>
+                <button type="button" class="ide-taskbar__group-btn" :title="`复制会话 ID：${c.id}`" @click="copyCliId(c)">⧉</button>
+              </div>
+              <IdeCliSessionBill v-if="cliBillId === c.id" :session-id="c.id" />
             </li>
           </ul>
         </section>
@@ -1240,6 +1274,15 @@ onMounted(async () => {
   color: var(--accent-info, #3b82f6); border: 1px solid var(--accent-info, #3b82f6); border-radius: 6px;
   font-size: 9px; padding: 0 4px; flex-shrink: 0;
 }
+/* 账单展开时行变列容器（行内容包 .ide-taskbar__clirow，账单体占满宽） */
+.ide-taskbar__item--cli { display: flex; }
+.ide-taskbar__item--bill-open { flex-direction: column; align-items: stretch; }
+.ide-taskbar__clirow { display: flex; align-items: center; min-width: 0; }
+.ide-taskbar__cli-usage {
+  font-size: 9.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums;
+  flex-shrink: 0; margin-left: 2px;
+}
+.ide-taskbar__group-btn.is-on { color: var(--accent-info, #3b82f6); border-color: var(--accent-info, #3b82f6); }
 /* zcode CLI 分组体：内滚上限——侧栏无滚动容器（overflow visible），12 行全展
    会画穿侧栏底、被状态栏背景遮住（2026-10-19 左下角遮罩走查实锚：
    cliSec.bottom=1204 vs sidebar.bottom=871）。上限 ≈7 行，其余组内滚动。 */
