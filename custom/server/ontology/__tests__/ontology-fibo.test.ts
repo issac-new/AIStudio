@@ -30,7 +30,7 @@ describe('FIBO 包元数据', () => {
     const pack = fiboPackSummary()
     expect(pack.counts.concepts).toBe(37)
     expect(pack.counts.fibo + pack.counts.commons + pack.counts.localExtensions).toBe(pack.counts.concepts)
-    expect(pack.counts.fibo).toBe(32)
+    expect(pack.counts.fibo).toBe(33)
     expect(pack.counts.commons).toBe(2)
     expect(pack.counts.localExtensions).toBe(2)
     expect(pack.counts.objectProperties).toBe(21)

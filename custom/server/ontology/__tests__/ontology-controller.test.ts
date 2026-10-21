@@ -169,7 +169,7 @@ describe('FIBO 对齐包', () => {
     const r = await call('GET', '/fibo')
     expect(r.status).toBe(200)
     expect(r.json.pack.counts.concepts).toBe(37)
-    expect(r.json.pack.counts.fibo).toBe(32)
+    expect(r.json.pack.counts.fibo).toBe(33)
     expect(r.json.pack.counts.commons).toBe(2)
     expect(r.json.pack.counts.localExtensions).toBe(2)
     expect(r.json.pack.concepts.some((c: any) => c.iri.startsWith('https://spec.edmcouncil.org/fibo/ontology/'))).toBe(true)
@@ -181,8 +181,8 @@ describe('FIBO 对齐包', () => {
     const before = (await call('GET', '/spec')).json.spec
     const i1 = await call('POST', '/fibo/import', {})
     expect(i1.status).toBe(200)
-    expect(i1.json.added.types).toBe(36)
-    expect(i1.json.applied.concepts).toBe(36)
+    expect(i1.json.added.types).toBe(37)
+    expect(i1.json.applied.concepts).toBe(37)
     const after = (await call('GET', '/spec')).json.spec
     expect(after.version).toBe(before.version + 1)
     expect(after.entityTypes.some((t: any) => t.id === 'Payment'
