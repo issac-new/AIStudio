@@ -421,6 +421,10 @@ diagram-export×3；cua×5；tool-waterfall×1；IDE 超时；Matrix 分享房�
 
 五批全清（spec 正本 `2026-10-21-trace-reflow-debt-clearing.md`）：A 评审 Minor；B OTel 可消费+探测器单一事实源（controllers/hermes/trace 反向复用并修 trailer 死分支）；C exec-sandbox（darwin sandbox-exec/linux bwrap、HERMES_EXEC_SANDBOX=off 策略、写白名单 realpath 归一）+ qgate `sandbox:true` 档 fail-closed；D secaudit 12→15 面（repo 密钥/依赖声明/危险 API 只读采集器，漏洞判定指向在线门不造数）；E 8647 换装至 72a7ee4d（ts-node 全量编译即换装证据；两次抓出 main 坏提交：import.meta TS1343、release-hold 漏 import）。仍挂账：红队沙箱攻防接线（需执行型载荷）、obssignels 聚合消费 OTel（观测域）。
 
+## 变更快照（2026-10-21 挂账清偿收）
+
+最后两条挂账清零（spec `2026-10-21-debt-final-round.md`）：F=obssignels 行级消费 OTel（trace-sampler 单一事实源转换入聚，OTel 会话 token/TTFT 不再是观测盲区）；G=红队沙箱攻防（`redteam/exec-probe.ts` 四载荷族在 exec-sandbox 真跑验活性 ×规则层对照四分类，口径=任一规则命中而非 threshold 送审线；`POST /api/hermes/eval/redteam/exec-runs` fail-closed）。位置修正：exec-sandbox 单一事实源挪回 `custom/server/sandbox/`——qgate 包 `type:module` 使跨包 CJS require 即 ESM 拒载（custom/server/package.json 无 type 字段是 server 域可被 ts-node require 的原因）；qgate 侧 createRequire 动态探测，独立部署如实 unavailable。全量 5906/0；8647 已换装 8c33da5c。红队挂账自此清零；后续演进（S1 裁判接线、载荷变异引擎）按需另立。
+
 ## 决策记录
 
 | # | 决策 | 理由 | 否决的备选 | 可逆 |
