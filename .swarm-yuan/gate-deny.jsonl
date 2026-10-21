@@ -19,3 +19,4 @@
 {"ts":"2026-10-21T08:16:28Z","tool":"git-commit","target":"custom/client/ide/components/IdeCliSessions.vue","gates":"spec-required"}
 {"ts":"2026-10-21T13:00:44Z","tool":"git-commit","target":"custom/server/eval/__tests__/trace-reflow-http.test.ts","gates":"spec-required"}
 {"ts":"2026-10-21T13:24:05Z","tool":"git-commit","target":"custom/client/eval/__tests__/trace-case-composer.test.ts","gates":"spec-required"}
+{"ts":"2026-10-21T14:06:55Z","tool":"git-commit","target":"custom/server/clusterinspector/__tests__/session-exhaustion.test.ts","gates":"spec-required"}

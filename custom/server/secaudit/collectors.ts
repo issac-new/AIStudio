@@ -4,7 +4,7 @@
 // 一句。采集器全部只读、fail-soft：挂了返回 count=0 + 失败摘要，不阻断账本构建。
 // 复用既有只读能力（skillgov/mcp-drift/审批链/工具审计/姿态/进程扫描/密钥形态），
 // 不新写扫描规则（除了从另一在途 worktree 移植的 mcp-scan）。
-import { mcpSecurityReport } from './mcp-scan'
+import { mcpSecurityReport } from '../mcpcatalog/mcp-security-scan'
 import { collectMcpDrift } from '../mcpcatalog/mcp-drift'
 import { runSkillScan } from '../skillgov/skill-scan'
 import { verifyApprovalChain } from '../approvals/approval-log'
