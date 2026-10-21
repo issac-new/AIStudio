@@ -163,3 +163,34 @@ describe('versions / rollback / seed', () => {
     expect(s.json.instanceCount).toBe(2)
   })
 })
+
+describe('FIBO 对齐包', () => {
+  it('GET /fibo 返回真实 IRI 目录与已导入计数', async () => {
+    const r = await call('GET', '/fibo')
+    expect(r.status).toBe(200)
+    expect(r.json.pack.counts.concepts).toBe(36)
+    expect(r.json.pack.counts.fibo).toBe(32)
+    expect(r.json.pack.counts.commons).toBe(2)
+    expect(r.json.pack.counts.localExtensions).toBe(2)
+    expect(r.json.pack.concepts.some((c: any) => c.iri.startsWith('https://spec.edmcouncil.org/fibo/ontology/'))).toBe(true)
+    expect(r.json.pack.concepts.some((c: any) => c.id === 'Payment' && c.iri.includes('PaymentsAndSchedules'))).toBe(true)
+    expect(r.json.applied.concepts).toBe(0)
+  })
+
+  it('POST /fibo/import 增量导入、版本+1、二次幂等、实例不变', async () => {
+    const before = (await call('GET', '/spec')).json.spec
+    const i1 = await call('POST', '/fibo/import', {})
+    expect(i1.status).toBe(200)
+    expect(i1.json.added.types).toBe(36)
+    expect(i1.json.applied.concepts).toBe(36)
+    const after = (await call('GET', '/spec')).json.spec
+    expect(after.version).toBe(before.version + 1)
+    expect(after.entityTypes.some((t: any) => t.id === 'Payment'
+      && t.iri === 'https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/PaymentsAndSchedules/Payment')).toBe(true)
+    // 实例不因 T-Box 导入被重写
+    expect((await call('GET', '/instances')).json.total).toBe(2)
+    const i2 = await call('POST', '/fibo/import', {})
+    expect(i2.status).toBe(200)
+    expect(i2.json.added).toEqual({ types: 0, objectProperties: 0, axioms: 0 })
+  })
+})
