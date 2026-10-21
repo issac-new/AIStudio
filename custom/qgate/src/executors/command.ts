@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import type { Evidence, ExecutorSpec } from '../core/types.js'
 import { parseRawOutput } from '../core/raw-evidence.js'
+import { detectSandboxSupport, runSandboxed } from './exec-sandbox.js'
 
 const DEFAULT_TIMEOUT_MS = 120_000
 
@@ -27,26 +28,72 @@ export async function runCommandExecutor(
     : input.workspace
   const startedAt = Date.now()
 
-  const execResult = await new Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean; spawnError?: string }>((resolveP) => {
-    let child
-    try {
-      child = spawn(argv[0], argv.slice(1), { cwd, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] })
-    } catch (e) {
-      resolveP({ code: null, stdout: '', stderr: '', timedOut: false, spawnError: (e as Error).message })
-      return
+  // 沙箱档（批次 C）：OS 级沙箱内执行；不可用/被策略禁用 → INCONCLUSIVE，
+  // 绝不降级裸跑（Cloudflare 安全审计 Skill 的硬要求：目标控制的执行必须隔离）。
+  let sandboxed = false
+  let execResult: { code: number | null; stdout: string; stderr: string; timedOut: boolean; spawnError?: string }
+  if (executor.sandbox) {
+    const support = detectSandboxSupport()
+    if (!support.available) {
+      const outUnavailable: CommandOutcome = { evidence: {
+        id: `ev-${randomUUID().slice(0, 12)}`,
+        runId: input.runId,
+        gateId: input.gateId,
+        type: executor.evidenceType,
+        producer: executor.id,
+        result: 'error',
+        execution: 'wired',
+        summary: `sandbox requested but unavailable: ${support.detail}（fail-closed，不裸跑）`,
+        provenance: { startedAt, endedAt: Date.now(), command: argv.join(' '), cwd, commit: input.commit, treeHash: input.treeHash, exitCode: -4 },
+      } }
+      return outUnavailable
     }
-    let stdout = ''
-    let stderr = ''
-    let timedOut = false
-    const timer = setTimeout(() => {
-      timedOut = true
-      child.kill('SIGKILL')
-    }, timeoutMs)
-    child.stdout?.on('data', (c) => { if (stdout.length < 64_000) stdout += String(c) })
-    child.stderr?.on('data', (c) => { if (stderr.length < 64_000) stderr += String(c) })
-    child.on('error', (e) => { clearTimeout(timer); resolveP({ code: null, stdout, stderr, timedOut, spawnError: e.message }) })
-    child.on('close', (code) => { clearTimeout(timer); resolveP({ code, stdout, stderr, timedOut }) })
-  })
+    sandboxed = true
+    const r = await runSandboxed({ argv, cwd, writableRoots: [cwd], timeoutMs })
+    execResult = {
+      code: r.status === 'ok' ? r.exitCode ?? -3 : null,
+      stdout: r.stdout,
+      stderr: r.stderr,
+      timedOut: r.status === 'timeout',
+      spawnError: r.status === 'error' ? r.detail ?? 'sandbox execution error' : undefined,
+    }
+    if (r.status === 'unavailable') {
+      // 探测竞态：执行瞬间沙箱消失——同 fail-closed。
+      const outRace: CommandOutcome = { evidence: {
+        id: `ev-${randomUUID().slice(0, 12)}`,
+        runId: input.runId,
+        gateId: input.gateId,
+        type: executor.evidenceType,
+        producer: executor.id,
+        result: 'error',
+        execution: 'wired',
+        summary: `sandbox unavailable at exec time: ${r.detail ?? 'unknown'}`,
+        provenance: { startedAt, endedAt: Date.now(), command: argv.join(' '), cwd, commit: input.commit, treeHash: input.treeHash, exitCode: -4 },
+      } }
+      return outRace
+    }
+  } else {
+    execResult = await new Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean; spawnError?: string }>((resolveP) => {
+      let child
+      try {
+        child = spawn(argv[0], argv.slice(1), { cwd, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] })
+      } catch (e) {
+        resolveP({ code: null, stdout: '', stderr: '', timedOut: false, spawnError: (e as Error).message })
+        return
+      }
+      let stdout = ''
+      let stderr = ''
+      let timedOut = false
+      const timer = setTimeout(() => {
+        timedOut = true
+        child.kill('SIGKILL')
+      }, timeoutMs)
+      child.stdout?.on('data', (c) => { if (stdout.length < 64_000) stdout += String(c) })
+      child.stderr?.on('data', (c) => { if (stderr.length < 64_000) stderr += String(c) })
+      child.on('error', (e) => { clearTimeout(timer); resolveP({ code: null, stdout, stderr, timedOut, spawnError: e.message }) })
+      child.on('close', (code) => { clearTimeout(timer); resolveP({ code, stdout, stderr, timedOut }) })
+    })
+  }
 
   const endedAt = Date.now()
   const id = `ev-${randomUUID().slice(0, 12)}`
@@ -60,7 +107,7 @@ export async function runCommandExecutor(
     execution: 'wired',
     provenance: {
       startedAt, endedAt,
-      command: argv.join(' '),
+      command: sandboxed ? `[sandbox] ${argv.join(' ')}` : argv.join(' '),
       cwd,
       commit: input.commit,
       treeHash: input.treeHash,
