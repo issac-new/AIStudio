@@ -58,6 +58,12 @@ export const FIBO_MODULES: Record<string, ModuleDef> = {
     versionIri: 'https://spec.edmcouncil.org/fibo/ontology/FND/20250701/ProductsAndServices/PaymentsAndSchedules/',
     maturity: 'Release',
   },
+  pas: {
+    path: 'FND/ProductsAndServices/ProductsAndServices',
+    base: 'https://spec.edmcouncil.org/fibo/ontology/FND/ProductsAndServices/ProductsAndServices/',
+    versionIri: 'https://spec.edmcouncil.org/fibo/ontology/FND/20251201/ProductsAndServices/ProductsAndServices/',
+    maturity: 'Release',
+  },
   currency: {
     path: 'FND/Accounting/CurrencyAmount',
     base: 'https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/',
@@ -175,6 +181,10 @@ interface ConceptDef {
   key?: string
   note?: string
   props?: DataProperty[]
+  /** qgate 语义门额外别名（投影时与 labelZh/label 合并去重）。 */
+  aliases?: string[]
+  /** 语义近邻但不同义的概念（qgate 术语歧义检测用）：概念 id 列表。 */
+  distinctFrom?: string[]
 }
 
 function conceptIri(c: ConceptDef): string {
@@ -245,6 +255,7 @@ const CONCEPTS: ConceptDef[] = [
     defEn: 'voluntary, deliberate agreement between competent parties to which the parties agree to be legally bound, and for which the parties provide valuable consideration',
     defZh: '有行为能力的各方自愿、审慎达成的协议，各方同意受法律约束并提供对价',
     category: '参与方与协议',
+    distinctFrom: ['Duty'],
     props: [localProp('contractRef', '合同编号', 'string')],
   },
   {
@@ -270,6 +281,8 @@ const CONCEPTS: ConceptDef[] = [
     defEn: 'some obligation which exists and is imposed on some individual',
     defZh: '施加于某个主体的义务',
     category: '参与方与协议',
+    distinctFrom: ['Payment'],
+    aliases: ['obligation', '义务'],
   },
   {
     id: 'PaymentObligation', label: 'payment obligation', labelZh: '支付义务', origin: 'fibo', module: 'payments', parent: 'Commitment',
@@ -277,6 +290,7 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '按合同条款支付一定金额的可依法强制执行的义务',
     category: '参与方与协议',
     note: 'FIBO 多重父类：Commitment + Duty；本包取 Commitment 作单继承父类（模型限制，已如实登记）。',
+    distinctFrom: ['Payment', 'Duty'],
     props: [
       localProp('obligationRef', '义务编号', 'string'),
       localProp('dueOn', '到期日', 'date'),
@@ -289,6 +303,7 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '支付账单/费用，或向收款方付款以部分/全部履行义务的一方',
     category: '参与方与协议',
     note: 'FIBO 父类 Obligor（未纳入本包）。',
+    distinctFrom: ['Payee'],
     props: [localProp('partyRef', '参与方编号', 'string')],
   },
   {
@@ -297,6 +312,7 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '应收款的一方，或收款方付款的受领人（部分/全部履行义务）',
     category: '参与方与协议',
     note: 'FIBO 父类 Obligee（未纳入本包）。',
+    distinctFrom: ['Payer'],
     props: [localProp('partyRef', '参与方编号', 'string')],
   },
   {
@@ -313,6 +329,7 @@ const CONCEPTS: ConceptDef[] = [
     defEn: 'delivery of money in fulfillment of an obligation, such as to satisfy a claim or debt',
     defZh: '为履行义务（如清偿索赔或债务）而交付货币的行为',
     category: '支付与金额',
+    distinctFrom: ['PaymentObligation', 'Settlement', 'Authorization'],
     props: [
       localProp('paymentRef', '支付编号', 'string', { required: true, modality: 'shall' }),
       localProp('paymentDate', '支付日期', 'date'),
@@ -325,7 +342,17 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '涉及为履行义务而交付货币的事件',
     category: '支付与金额',
     note: 'FIBO 父类 TransactionEvent；FIBO 区分事件类目（OccurrenceKind）与事件实例（Occurrence）。',
+    distinctFrom: ['Payment'],
     props: [localProp('eventAt', '事件时间', 'datetime')],
+  },
+  {
+    id: 'TransactionEvent', label: 'transaction event', labelZh: '交易事件', origin: 'fibo', module: 'pas',
+    defEn: 'any sale, assignment, lease, license, loan, advance, contribution, or other transfer of any interest in or right to use any property (tangible or intangible) or money, however that transaction is effected, and regardless of whether the terms of the transaction are formally documented',
+    defZh: '销售、转让、租约、许可、贷款、垫款、出资或其他对财产（有形或无形）或货币权益的转移，无论交易以何种方式达成、条款是否成文',
+    category: '支付与金额',
+    note: 'FIBO 无裸 Transaction 类，交易语义的 FND 泛化锚即本类（OccurrenceKind 子类）；账户流水级单笔事件见 IndividualTransaction，证券市场语境见 MarketTransaction。',
+    aliases: ['transaction', '交易'],
+    distinctFrom: ['Payment', 'Settlement'],
   },
   {
     id: 'PaymentSchedule', label: 'payment schedule', labelZh: '支付计划', origin: 'fibo', module: 'payments',
@@ -340,6 +367,7 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '以货币单位表示的一定金额的度量',
     category: '支付与金额',
     note: 'FIBO 父类 ScalarQuantityValue；金额与币种是两个独立关系（hasAmount / hasCurrency）。',
+    distinctFrom: ['Balance'],
     props: [
       localProp('amountValue', '金额数值', 'number', { required: true, modality: 'shall', min: 0 }),
     ],
@@ -375,6 +403,8 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '完成交易的行为，包括但不限于完成会计处理、交换对价和/或依法登记文件（视情况而定）',
     category: '结算',
     note: 'FIBO 的 Settlement 是合同生命周期事件类目，不是「金额状态」；扣款完成 ≠ 结算。',
+    aliases: ['settled'],
+    distinctFrom: ['Capture', 'Authorization', 'Payment', 'TransactionEvent'],
     props: [localProp('settlementDate', '结算日期', 'date')],
   },
   {
@@ -399,6 +429,7 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '与定期交易和服务的商业安排相关联的记录容器（注意：是记录容器，不是资金容器）',
     category: '账户与流水',
     note: 'FIBO 父类 FinancialRecord；账户是记录容器，余额/持有人/提供方都是独立关系。',
+    distinctFrom: ['Balance'],
     props: [
       localProp('accountNumber', '账户编号', 'string', { required: true, modality: 'shall' }),
       localProp('openedOn', '开户日期', 'date'),
@@ -452,6 +483,7 @@ const CONCEPTS: ConceptDef[] = [
     defEn: 'amount of money available or owed',
     defZh: '可用或应付的金额',
     category: '账户与流水',
+    distinctFrom: ['MonetaryAmount', 'Account'],
     props: [localProp('balanceValue', '余额数值', 'number', { required: true, modality: 'shall', min: 0 })],
   },
   {
@@ -501,6 +533,8 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '卡支付流水线中的可撤回资金保留：授权额度 ≠ 已扣款额度（FIBO 全仓无对应类；属 ISO 8583 / PSP 领域概念）',
     category: '工程扩展（非 FIBO）',
     note: 'FIBO 无 Authorization 类（全仓 code search 0 命中）。保留本概念是为了和 Capture/Settlement 做语义区分；不得标注为 FIBO。',
+    aliases: ['authorized', '预授权'],
+    distinctFrom: ['Capture', 'Settlement', 'Payment'],
     props: [
       localProp('authorizedAmount', '授权金额', 'number', { required: true, modality: 'shall', min: 0 }),
       localProp('status', '授权状态', 'string', { required: true, modality: 'shall', enum: ['authorized', 'voided', 'expired'] }),
@@ -513,6 +547,8 @@ const CONCEPTS: ConceptDef[] = [
     defZh: '把已授权额度转为实际扣款的动作：扣款 ≠ 结算（FIBO 全仓无对应类；属卡支付 API 术语）',
     category: '工程扩展（非 FIBO）',
     note: 'FIBO 无 Capture 类（全仓 code search 0 命中）。语义门用它区分 capturedAmount / settledAmount；不得标注为 FIBO。',
+    aliases: ['captured'],
+    distinctFrom: ['Authorization', 'Settlement'],
     props: [
       localProp('capturedAmount', '扣款金额', 'number', { required: true, modality: 'shall', min: 0 }),
       localProp('capturedAt', '扣款时间', 'datetime'),
@@ -1036,4 +1072,102 @@ export function fiboPackApplied(spec: OntologySpec): { concepts: number; total: 
   const ids = new Set(spec.entityTypes.map((t) => t.id))
   const applied = CONCEPTS.filter((c) => ids.has(c.id)).map((c) => c.id)
   return { concepts: applied.length, total: CONCEPTS.length, applied }
+}
+
+// ---- qgate 语义门投影（单一事实源派生面，2026-10-21 SSOT 合并轮） ----
+// fibo-mini.json 的正本在本文件：`npm run fibo:sync` 把 fiboQgateIndex() 的输出写入
+// custom/qgate/gate-packs/ontology/data/fibo-mini.json；一致性守门测试在
+// custom/server/ontology/__tests__/ontology-fibo-ssot.test.ts（两侧漂移即红）。
+// 两个消费方的字段裁剪规则：
+//   - id：'fibo-' + kebab(概念 id)（PaymentObligation → fibo-payment-obligation）
+//   - label：概念 id（PascalCase 本地名）
+//   - aliases：[labelZh, label, ...aliases] 去重
+//   - iri：fibo/commons 源带真实 IRI；local-extension 省略（无锚不冒充有锚）
+//   - source：fibo → 'FIBO <模块路径> (<成熟度>)'；commons → 'OMG Commons <模块路径>'；
+//     local-extension → 'engineering-approximation'
+//   - definition：defZh +（原文：defEn）+ note；local-extension 无 defEn，只带 defZh 与注意事项
+
+export interface FiboQgateConcept {
+  id: string
+  label: string
+  aliases: string[]
+  iri?: string
+  definition: string
+  distinctFrom?: string[]
+  source: string
+}
+
+export interface FiboQgateConstraint {
+  id: string
+  expression: string
+  severity: 'error' | 'warning'
+  description: string
+}
+
+export interface FiboQgateIndex {
+  schemaVersion: 1
+  provider: 'fibo'
+  description: string
+  concepts: FiboQgateConcept[]
+  constraints: FiboQgateConstraint[]
+}
+
+const kebabCase = (id: string): string => id.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+
+/** qgate 语义门的不变量（工程侧候选，由 persistence 门执行侧落地，非 FIBO 断言）。 */
+const QGATE_CONSTRAINTS: FiboQgateConstraint[] = [
+  {
+    id: 'amount-refund-bound',
+    expression: 'refundAmount <= capturedAmount',
+    severity: 'warning',
+    description: '退款不得超出已扣款金额（候选不变量，P5+ 由 persistence 门执行侧落地）',
+  },
+  {
+    id: 'amount-settle-bound',
+    expression: 'settledAmount <= capturedAmount',
+    severity: 'warning',
+    description: '结算金额不得超出已扣款金额',
+  },
+  {
+    id: 'debit-credit-balance',
+    expression: 'SUM(debit) == SUM(credit)',
+    severity: 'warning',
+    description: '分录借贷合计相等（复式记账不变量候选）',
+  },
+]
+
+export function fiboQgateIndex(): FiboQgateIndex {
+  const concepts: FiboQgateConcept[] = CONCEPTS.map((c) => {
+    const anchored = c.origin !== 'local-extension'
+    const m = anchored ? FIBO_MODULES[c.module!] : undefined
+    const definition = anchored
+      ? `${c.defZh}（原文：${c.defEn}）${c.note ? '；' + c.note : ''}`
+      : `${c.defZh}。注意：${c.note ?? '非 FIBO 概念，工程近似'}`
+    return {
+      id: `fibo-${kebabCase(c.id)}`,
+      label: c.id,
+      aliases: [...new Set([c.labelZh, c.label, ...(c.aliases ?? [])])],
+      ...(anchored ? { iri: conceptIri(c) } : {}),
+      definition,
+      ...(c.distinctFrom?.length
+        ? { distinctFrom: c.distinctFrom.map((d) => `fibo-${kebabCase(d)}`) }
+        : {}),
+      source: !anchored
+        ? 'engineering-approximation'
+        : c.origin === 'commons'
+          ? `OMG Commons ${m!.path}`
+          : `FIBO ${m!.path} (${m!.maturity})`,
+    }
+  })
+  return {
+    schemaVersion: 1,
+    provider: 'fibo',
+    description:
+      'FIBO 派生预处理语义索引（SSOT 派生产物）。正本=custom/server/ontology/ontology-fibo.ts 的 fiboQgateIndex()，' +
+      '由 scripts/fibo/sync-qgate-index.ts 再生成本文件；一致性守门=custom/server/ontology/__tests__/ontology-fibo-ssot.test.ts（漂移即红）。' +
+      '锚定 FIBO master_2026Q3（2026-10-20 发布）与 OMG Commons；Authorization/Capture 为工程近似（无 IRI，不冒充 FIBO）；' +
+      '不做运行时 RDF/OWL 推理（OD-004）。',
+    concepts,
+    constraints: QGATE_CONSTRAINTS,
+  }
 }
