@@ -16,13 +16,13 @@ const traceResp = vi.hoisted(() => ({
   body: {
     session_id: 'sess-traj-1',
     nodes: [
-      { id: 'wf', kind: 'workflow', label: 'aim', detail: null, status: 'ok', startedAt: 100, endedAt: 500, durationMs: 400 },
-      { id: 't1', kind: 'tool', label: 'terminal', detail: 'npm test', status: 'error', startedAt: 110, endedAt: 4110, durationMs: 4000 },
+      { id: 'wf', kind: 'workflow', label: 'aim', detail: null, status: 'ok', startedAt: 100, endedAt: 500, durationMs: 400, ref: { sessionId: 'sess-traj-1' } },
+      { id: 't1', kind: 'tool', label: 'terminal', detail: 'npm test', status: 'error', startedAt: 110, endedAt: 4110, durationMs: 4000, ref: { sessionId: 'sess-traj-1', spanRef: 'tc-1', spanKind: 'tool_span' } },
       { id: 't2', kind: 'tool', label: 'read_file', detail: 'a.ts', status: 'ok', startedAt: 120, endedAt: 220, durationMs: 100 },
       { id: 'ag', kind: 'agent', label: 'coder', detail: null, status: 'ok', startedAt: 130, endedAt: 130, durationMs: null },
     ],
     edges: [],
-    meta: { started_at: 100, duration_ms: 4000, usage: { input_tokens: 10, output_tokens: 20 } },
+    meta: { started_at: 100, duration_ms: 4000, usage: { input_tokens: 10, output_tokens: 20 }, format: 'legacy', complete: true },
   },
 }))
 const authFetch = vi.hoisted(() => vi.fn(async () => ({
@@ -32,6 +32,13 @@ const authFetch = vi.hoisted(() => vi.fn(async () => ({
 })))
 vi.mock('../utils/auth-fetch', () => ({ authFetch: authFetch }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k, locale: { value: 'zh' } }) }))
+vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('@/custom/eval/components/TraceCaseComposer.vue', () => ({
+  default: {
+    props: ['sessionId', 'spanRef', 'spanKind'],
+    template: '<div data-testid="trace-case-composer-stub">{{ sessionId }} {{ spanRef ?? "session" }}</div>',
+  },
+}))
 
 import IdeTrajectoryPane from '../components/IdeTrajectoryPane.vue'
 
@@ -40,6 +47,7 @@ describe('IdeTrajectoryPane — 轨迹账本（dsh-TUI Trajectory Web 化）', (
     vi.clearAllMocks()
     activeSessionId.value = 'sess-traj-1'
     traceResp.status = 200
+    traceResp.body.meta = { started_at: 100, duration_ms: 4000, usage: { input_tokens: 10, output_tokens: 20 }, format: 'legacy', complete: true }
     setActivePinia(createPinia())
   })
 
@@ -111,6 +119,40 @@ describe('IdeTrajectoryPane — 轨迹账本（dsh-TUI Trajectory Web 化）', (
     expect(insp.text()).toContain('error')
     await wrapper.find('[data-testid="traj-row-t1"]').trigger('click')
     expect(wrapper.find('[data-testid="traj-inspector"]').exists()).toBe(false)
+  })
+
+  it('完整 legacy trace 提供本会话转回归入口', async () => {
+    const wrapper = mount(IdeTrajectoryPane)
+    await flushPromises()
+    const action = wrapper.find('[data-testid="traj-reflow-session"]')
+    expect(action.exists()).toBe(true)
+    expect(action.attributes('disabled')).toBeUndefined()
+    await action.trigger('click')
+    expect(wrapper.find('[data-testid="trace-case-composer-stub"]').text()).toContain('sess-traj-1')
+    expect(wrapper.find('[data-testid="trace-case-composer-stub"]').text()).toContain('session')
+  })
+
+  it('带稳定 ref 的节点可转 span；无 ref 节点不显示该入口', async () => {
+    const wrapper = mount(IdeTrajectoryPane)
+    await flushPromises()
+    await wrapper.find('[data-testid="traj-row-t1"]').trigger('click')
+    const spanAction = wrapper.find('[data-testid="traj-reflow-span"]')
+    expect(spanAction.exists()).toBe(true)
+    await spanAction.trigger('click')
+    expect(wrapper.find('[data-testid="trace-case-composer-stub"]').text()).toContain('tc-1')
+
+    await wrapper.find('[data-testid="traj-row-t2"]').trigger('click')
+    expect(wrapper.find('[data-testid="traj-reflow-span"]').exists()).toBe(false)
+  })
+
+  it('OTel 轨迹保留浏览能力，但禁用转题入口', async () => {
+    traceResp.body.meta = { ...traceResp.body.meta, format: 'otel', complete: true }
+    const wrapper = mount(IdeTrajectoryPane)
+    await flushPromises()
+    const action = wrapper.find('[data-testid="traj-reflow-session"]')
+    expect(action.exists()).toBe(true)
+    expect(action.attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="trace-case-composer-stub"]').exists()).toBe(false)
   })
 
   it('无会话=诚实空态不发请求', async () => {

@@ -98,6 +98,20 @@ describe('处置单面板', () => {
     expect(rerunOrder).toBeLessThan(verifyOrder)
   })
 
+  it('origin 诊断运行显示证据模式标记与 span 引用；explicit 运行不显示', async () => {
+    const originRun = { ...failingRun(), evidenceMode: 'origin' as const, attempts: [{ ...failingRun().attempts[0], sessionId: 'prod-1', spanRef: 'tc-9' }] }
+    vi.mocked(evalApi.getRun).mockResolvedValue({ run: originRun } as never)
+    const w = mount(EvalReportPanel, { props: { runId: 'erun-closure-01' } })
+    await flushPromises()
+    expect(w.find('[data-testid="eval-report-evidence-mode"]').text()).toContain('原证据复现')
+    expect(w.find('[data-testid="eval-attempt-t1-1"]').text()).toContain('tc-9')
+
+    vi.mocked(evalApi.getRun).mockResolvedValue({ run: failingRun() } as never)
+    const plain = mount(EvalReportPanel, { props: { runId: 'erun-closure-01' } })
+    await flushPromises()
+    expect(plain.find('[data-testid="eval-report-evidence-mode"]').exists()).toBe(false)
+  })
+
   it('样本 JSON 非法：不发请求并给出可读提示', async () => {
     vi.mocked(evalApi.listRemediations).mockResolvedValue({ remediations: [remediation()] } as never)
     const w = mount(EvalReportPanel, { props: { runId: 'erun-closure-01' } })

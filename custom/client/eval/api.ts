@@ -35,7 +35,7 @@ export interface EvalTaskDto {
   expectedToolCalls?: string[]
   /** 能力维度七值（可选；覆盖度只认显式标注）。 */
   dimension?: string
-  origin?: { runId: string; taskId: string; sampleIdx?: number; at: number }
+  origin?: { source?: 'eval_run' | 'production_trace'; runId?: string; taskId?: string; sampleIdx?: number; sessionId?: string; spanRef?: string; traceHash?: string; at: number }
 }
 
 export interface EvalSetDto {
@@ -116,6 +116,7 @@ export interface AttemptDto {
   taskId: string
   sampleIdx: number
   sessionId?: string
+  spanRef?: string
   verdicts: Array<{ assertionId: string; value: 'yes' | 'no' | 'unknown'; source: string; conflict?: boolean; p?: number; reason?: string; previousValue?: string }>
   outcome?: { verifier: string; ok: boolean; detail?: string }
   efficiency?: { tokens?: number; costUsd?: number; steps?: number; durationMs?: number; ttftMs?: number }
@@ -135,6 +136,7 @@ export interface RunSummaryDto {
   status: string
   createdAt: number
   createdBy?: string
+  evidenceMode?: 'explicit' | 'origin' | 'mixed'
   note?: string
   aggregates: AggregatesDto
 }
@@ -191,6 +193,34 @@ export interface RunCompareDto {
   }
 }
 
+export interface TraceSampleDto {
+  ok: boolean
+  sessionId: string
+  spanRef?: string
+  spanKind?: 'llm_span' | 'tool_span'
+  sample?: {
+    transcript?: string
+    toolCalls?: Array<{ name: string; ok: boolean; durationMs?: number }>
+    efficiency?: { tokens?: number; costUsd?: number; steps?: number; durationMs?: number; ttftMs?: number }
+  }
+  meta?: {
+    traceHash: string
+    format: 'legacy' | 'otel' | 'unknown'
+    complete: boolean
+    tokens: number
+    toolCalls?: number
+    childToolCalls?: number
+  }
+  reason?: string
+}
+
+export interface ReflowTraceDto {
+  ok: true
+  created: boolean
+  taskId: string
+  set: { id: string; name: string; track: 'e2e' | 'process'; taskCount: number; revision: number }
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const body = await request<{ ok?: boolean; problems?: string[] } & T>(path, {
     credentials: 'same-origin',
@@ -216,8 +246,21 @@ export const evalApi = {
     }),
   listRuns: (setId?: string) =>
     req<{ runs: RunSummaryDto[] }>(setId ? `/api/hermes/eval/runs?setId=${encodeURIComponent(setId)}` : '/api/hermes/eval/runs'),
+  // —— 生产轨迹转回归（2026-10-21 生产失败回流轮）：预览只采样不落库 ——
+  sampleFromTrace: (sessionId: string) =>
+    req<TraceSampleDto>('/api/hermes/eval/sample-from-trace', { method: 'POST', body: JSON.stringify({ sessionId }) }),
+  sampleSpanFromTrace: (sessionId: string, spanRef: string) =>
+    req<TraceSampleDto>('/api/hermes/eval/sample-span-from-trace', { method: 'POST', body: JSON.stringify({ sessionId, spanRef }) }),
+  reflowTrace: (body: {
+    sessionId: string
+    spanRef?: string
+    expectedTraceHash: string
+    task: { problem: string; expectedBehavior: string; rubric: EvalAssertionDto[] }
+    targetSetId?: string
+  }) =>
+    req<ReflowTraceDto>('/api/hermes/eval/reflow-from-trace', { method: 'POST', body: JSON.stringify(body) }),
   getRun: (id: string) => req<{ run: EvalRunDto }>(`/api/hermes/eval/runs/${encodeURIComponent(id)}`),
-  launchRun: (body: { setId: string; samples: Record<string, Array<{ sessionId?: string; evidence?: { transcript?: string } }>>; target?: Record<string, string>; crossValidate?: boolean; note?: string }) =>
+  launchRun: (body: { setId: string; samples: Record<string, Array<{ sessionId?: string; spanRef?: string; evidence?: { transcript?: string } }>>; target?: Record<string, string>; crossValidate?: boolean; useOrigin?: boolean; note?: string }) =>
     req<{ run: EvalRunDto }>('/api/hermes/eval/runs', { method: 'POST', body: JSON.stringify(body) }),
   humanVerdict: (runId: string, body: { taskId: string; sampleIdx: number; assertionId: string; value: 'yes' | 'no' }) =>
     req<{ run: EvalRunDto }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/verdicts`, { method: 'POST', body: JSON.stringify(body) }),
@@ -366,6 +409,8 @@ export interface EvidenceDto {
   taskId?: string
   sampleIdx?: number
   sessionId?: string
+  spanRef?: string
+  spanKind?: 'llm_span' | 'tool_span'
   transcript?: string
   truncated?: boolean
   toolCalls?: Array<{ name: string; ok: boolean; durationMs?: number }>

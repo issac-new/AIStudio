@@ -36,4 +36,15 @@ describe('buildTraceGraph usage 汇总（T2：usage anchor 跨运行累计）', 
     expect(usage).toEqual({ input_tokens: 0, output_tokens: 0, api_calls: 0 })
     expect(nodes.some(n => n.kind === 'workflow')).toBe(true)
   })
+
+  it('节点携带结构化 ref，客户端不需要解析展示 ID 猜 span', () => {
+    const chunks = [
+      llmPre('api-1'), llmPost('api-1', { input_tokens: 1, output_tokens: 1 }),
+      { type: 'chunk', kind: 'tool_span', phase: 'post', session_id: 's1', api_request_id: 'api-1', tool_call_id: 'tool-1', tool_name: 'run_tests' } as Chunk,
+    ]
+    const { nodes } = buildTraceGraph(header, chunks)
+    expect(nodes.find((n) => n.kind === 'workflow')?.ref).toEqual({ sessionId: 's1' })
+    expect(nodes.find((n) => n.id.includes('api-1'))?.ref).toEqual({ sessionId: 's1', spanRef: 'api-1', spanKind: 'llm_span' })
+    expect(nodes.find((n) => n.id.includes('tool-1'))?.ref).toEqual({ sessionId: 's1', spanRef: 'tool-1', spanKind: 'tool_span' })
+  })
 })

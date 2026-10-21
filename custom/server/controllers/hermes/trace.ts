@@ -62,6 +62,8 @@ interface TraceNode {
   endedAt?: number
   durationMs?: number
   evidence: EvidenceTier
+  /** 结构化证据引用：客户端不得解析展示 ID 猜 session/span。 */
+  ref?: { sessionId: string; spanRef?: string; spanKind?: 'llm_span' | 'tool_span' }
   children?: TraceTimelineItem[]
 }
 
@@ -167,10 +169,11 @@ function usToMs(us: number): number {
 /**
  * Parse a JSONL file (auto-detects legacy vs OTel format).
  */
-function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[]; trailer?: JSONLTrailer } {
+function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[]; trailer?: JSONLTrailer; format: 'legacy' | 'otel' | 'unknown' } {
   const header: JSONLHeader = { type: 'header', version: '1', session_id: '', started_at: 0 }
   const chunks: JSONLChunk[] = []
   let trailer: JSONLTrailer | undefined
+  let sawOtel = false
 
   for (const line of lines) {
     if (!line.trim()) continue
@@ -178,6 +181,7 @@ function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[
       const obj = JSON.parse(line)
       // OTel format detection
       if (isOTelSpan(obj)) {
+        sawOtel = true
         const converted = otelToLegacy(obj) as any
         if (converted.isTrailer) {
           trailer = converted as JSONLTrailer
@@ -202,7 +206,8 @@ function parseJSONL(lines: string[]): { header: JSONLHeader; chunks: JSONLChunk[
     }
   }
 
-  return { header, chunks, trailer }
+  const format = sawOtel ? 'otel' : (header.session_id || chunks.length > 0 || trailer ? 'legacy' : 'unknown')
+  return { header, chunks, trailer, format }
 }
 
 /** Convert an OTel span back to legacy JSONL format for buildTraceGraph */
@@ -331,6 +336,7 @@ export function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trail
       endedAt: trailer?.ended_at,
       durationMs: trailer?.duration_ms,
       evidence: 'L2',
+      ref: { sessionId: header.session_id },
     })
     seenIds.add(workflowId)
   }
@@ -371,6 +377,7 @@ export function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trail
         endedAt,
         durationMs,
         evidence: 'L2',
+        ref: { sessionId: header.session_id, spanRef: apiRequestId, spanKind: 'llm_span' },
       })
       seenIds.add(nodeId)
 
@@ -400,6 +407,7 @@ export function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trail
           endedAt: chunk.ts && chunk.duration_ms ? chunk.ts + chunk.duration_ms / 1000 : undefined,
           durationMs: chunk.duration_ms,
           evidence: 'L2',
+          ref: { sessionId: header.session_id, spanRef: chunk.tool_call_id, spanKind: 'tool_span' },
           children: [{
             id: `tool-item:${chunk.tool_call_id}`,
             kind: 'tool',
@@ -520,7 +528,7 @@ async function handleSessionTrace(ctx: any) {
   try {
     const content = await readFile(filePath, 'utf-8')
     const lines = content.split('\n')
-    const { header, chunks, trailer } = parseJSONL(lines)
+    const { header, chunks, trailer, format } = parseJSONL(lines)
 
     if (!header.session_id) {
       ctx.status = 500
@@ -543,6 +551,8 @@ async function handleSessionTrace(ctx: any) {
         provider: header.provider,
         outcome: trailer?.outcome,
         usage,
+        format,
+        complete: Boolean(trailer && header.session_id === sessionId),
       },
     }
   } catch {
