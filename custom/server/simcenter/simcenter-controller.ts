@@ -48,7 +48,7 @@ import { gateKeys, ledgerSummary, parseStateEnv, stepKeys } from '../observabili
 import {
   RELEASE_ACTIONS, RELEASE_ALLOWED, actionOfRecord, applyReleaseAction,
   deriveReleaseState, releasePermissions, validateReleaseActionInput,
-  type ReleaseAction, type ReleaseGateDecision, type ReleaseGateRecord,
+  type ReleaseAction, type ReleaseDecision, type ReleaseGateRecord,
 } from './release-state'
 import {
   UAT_VERDICT_LABEL, aggregateUatByAc, validateUatVerdictFields,
@@ -823,14 +823,14 @@ router.post('/uat-verdict', (ctx: Context) => {
 // ── 9c. G5 发布门状态机：append-only 事件流 + 派生状态（spec 2026-10-21-g5-uat-state-machine §1） ──
 // 类型/迁移矩阵/派生/权限正身在 release-state.ts；此处保留旧导出面与存储路径。
 
-export type { ReleaseAction, ReleaseGateDecision, ReleaseGateRecord }
+export type { ReleaseAction, ReleaseDecision, ReleaseGateRecord }
 
 /**
  * 旧二态决策校验（纯函数，兼容旧调用方/测试）：打回必须给理由；批准 note 可选。
  * @deprecated 新端点用 validateReleaseActionInput（批准需证据锚）。
  */
 export function validateReleaseGate(body: unknown):
-  { ok: true; run: string; decision: ReleaseGateDecision; note?: string } | { ok: false; error: string } {
+  { ok: true; run: string; decision: ReleaseDecision; note?: string } | { ok: false; error: string } {
   const b = body as { run?: unknown; decision?: unknown; note?: unknown } | undefined
   const run = typeof b?.run === 'string' ? b.run : ''
   if (!isValidRun(run)) return { ok: false, error: 'run 参数非法' }
