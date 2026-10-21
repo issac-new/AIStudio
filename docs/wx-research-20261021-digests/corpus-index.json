@@ -1,0 +1,1218 @@
+{
+  "generatedAt": "2026-10-21T13:29:44.516Z",
+  "accounts": [
+    {
+      "key": "A",
+      "name": "壹号讲狮",
+      "biz": "MzI1ODEyNzM2Nw==",
+      "count": 262,
+      "albums": {
+        "2652713187552952323": {
+          "title": "palantir",
+          "count": 258
+        }
+      },
+      "sogouFound": 16,
+      "articles": [
+        {
+          "date": "2026-10-20",
+          "title": "Palantir、Databricks、Snowflake背后的五条本体技术路线"
+        },
+        {
+          "date": "2026-10-17",
+          "title": "一场比数据锁定更深的AI竞争正在展开"
+        },
+        {
+          "date": "2026-10-17",
+          "title": "《解剖 Palantir FDE 16》从战场到工厂：Palantir FDE最值得研究的几个真实案例"
+        },
+        {
+          "date": "2026-10-16",
+          "title": "《解剖Palantir FDE 15》Palantir FDE绩效考核办法"
+        },
+        {
+          "date": "2026-10-15",
+          "title": "《解剖 Palantir FDE 14》Palantir怎样培养一个FDE？从新人到可以独立面对客户"
+        },
+        {
+          "date": "2026-10-14",
+          "title": "《解剖Palantir FDE 13》Palantir怎样招聘FDE？"
+        },
+        {
+          "date": "2026-10-13",
+          "title": "《解剖Palantir FDE 12》代码写完以后才是开始：Palantir FDE的产品回流机制"
+        },
+        {
+          "date": "2026-10-13",
+          "title": "本体智能简报 - 第13期/20261013"
+        },
+        {
+          "date": "2026-10-12",
+          "title": "《解剖 Palantir FDE 11》Palantir FDE 怎样做到既定制、又不沦为外包？"
+        },
+        {
+          "date": "2026-10-11",
+          "title": "《解剖Palantir FDE 10》AIP Bootcamp：Palantir如何把几个月的AI项目压缩到几天"
+        },
+        {
+          "date": "2026-10-10",
+          "title": "《解剖 Palantir FDE 09》从 Problem 到 Ontology：Palantir FDE 是怎样理解一家企业的？"
+        },
+        {
+          "date": "2026-10-09",
+          "title": "《解剖Palantir FDE 08》Palantir为什么不相信传统需求文档？FDE如何发现真正的问题"
+        },
+        {
+          "date": "2026-10-09",
+          "title": "本体智能简报 - 第9期/20261009"
+        },
+        {
+          "date": "2026-10-08",
+          "title": "《解剖Palantir FDE 07》Palantir FDE到客户现场的第一周，到底在干什么？"
+        },
+        {
+          "date": "2026-10-08",
+          "title": "本体智能简报 - 第8期/20261008"
+        },
+        {
+          "date": "2026-10-07",
+          "title": "《解剖决策智能标的 01》从BI到决策智能，观远差什么？"
+        },
+        {
+          "date": "2026-10-07",
+          "title": "《解剖Palantir FDE 06》一个Palantir项目是怎样启动的？从业务问题到第一个可运行系统"
+        },
+        {
+          "date": "2026-10-07",
+          "title": "本体智能简报 - 第7期/20261007"
+        },
+        {
+          "date": "2026-10-06",
+          "title": "《解剖Palantir FDE 05》为什么Palantir的FDE不属于传统研发部门？组织结构决定了什么？"
+        },
+        {
+          "date": "2026-10-06",
+          "title": "本体智能简报 - 第6期/20261006"
+        },
+        {
+          "date": "2026-10-05",
+          "title": "《解剖Palantir FDE 04》Echo、Delta、Dev：拆开 Palantir一线作战团队的真实角色分工"
+        },
+        {
+          "date": "2026-10-05",
+          "title": "本体智能简报 - 第5期/20261005"
+        },
+        {
+          "date": "2026-10-04",
+          "title": "《解剖Palantir FDE 03》Human Backpropagation：Palantir FDE最核心的思想到底是什么？"
+        },
+        {
+          "date": "2026-10-04",
+          "title": "本体智能简报 - 第4期/20261004"
+        },
+        {
+          "date": "2026-10-03",
+          "title": "《解剖Palantir FDE 02》FDE到底是什么？Palantir为什么非要把工程师派到客户最前线？"
+        },
+        {
+          "date": "2026-10-03",
+          "title": "本体智能简报 - 第3期/20261003"
+        },
+        {
+          "date": "2026-10-02",
+          "title": "《解剖Palantir FDE 01》Ontology 是明线，FDE是暗线"
+        },
+        {
+          "date": "2026-10-02",
+          "title": "本体智能简报 - 第2期/20261002"
+        },
+        {
+          "date": "2026-10-01",
+          "title": "电信运营商适合什么样的FDE 模式？"
+        },
+        {
+          "date": "2026-10-01",
+          "title": "本体智能简报 - 第1期/20261001"
+        },
+        {
+          "date": "2026-09-30",
+          "title": "顶级FDE画像：与高管谈价值，与一线谈细节"
+        },
+        {
+          "date": "2026-09-29",
+          "title": "从 FDE 1.0 到 FDE 4.0：AI 时代，软件交付正在被重新发明"
+        },
+        {
+          "date": "2026-09-28",
+          "title": "全球FDE竞赛：OpenAI、Palantir、Anthropic、微软、Databricks、IBM正在重新发明企业AI交付"
+        },
+        {
+          "date": "2026-09-27",
+          "title": "Palantir的最新技术演进方向"
+        },
+        {
+          "date": "2026-09-26",
+          "title": "从本体技术演进的八个阶段看企业 AI 的未来"
+        },
+        {
+          "date": "2026-09-25",
+          "title": "Gartner的本体论"
+        },
+        {
+          "date": "2026-09-21",
+          "title": "Palantir Vulcan：Ontology正在穿过屏幕，进入真实的物理世界"
+        },
+        {
+          "date": "2026-09-15",
+          "title": "Palantir的野心：Ontology、AI FDE与Agent开始合流"
+        },
+        {
+          "date": "2026-09-14",
+          "title": "Palantir AIP Evolve：让AI开始改造AI"
+        },
+        {
+          "date": "2026-09-13",
+          "title": "全世界刚学会FDE，Palantir已经开始让Agent接管FDE、推出FDA"
+        },
+        {
+          "date": "2026-09-09",
+          "title": "工业AI与本体智能平台实践交流分享"
+        },
+        {
+          "date": "2026-09-08",
+          "title": "本体是十年前已经淘汰的老技术吗？"
+        },
+        {
+          "date": "2026-09-07",
+          "title": "Databricks的六层本体建设方法论：怎样真正建设 Genie Ontology？"
+        },
+        {
+          "date": "2026-09-06",
+          "title": "Palantir Alex Karp：Ontology正在成为企业抵御前沿模型殖民的保护层"
+        },
+        {
+          "date": "2026-09-05",
+          "title": "Agent时代真正的操作系统：Palantir正在证明Ontology与Harness最终会合流"
+        },
+        {
+          "date": "2026-09-03",
+          "title": "GPT-6越强，Ontology + Harness的战略价值越大"
+        },
+        {
+          "date": "2026-09-02",
+          "title": "从 MVP 到 MVO：企业AI最大的错误，是一开始就想建完所有本体"
+        },
+        {
+          "date": "2026-08-30",
+          "title": "Palantir和微软的本体对决：从Palantir Ontology到Fabric IQ Ontology"
+        },
+        {
+          "date": "2026-08-29",
+          "title": "Palantir和Databricks的本体决战：从Palantir Ontology到Genie Ontology"
+        },
+        {
+          "date": "2026-08-28",
+          "title": "数据引力（Data Gravity）：Snowflake、Databricks、Palantir的共同护城河"
+        },
+        {
+          "date": "2026-08-26",
+          "title": "进入本体时代：企业AI Agent的蓝图"
+        },
+        {
+          "date": "2026-08-25",
+          "title": "Palantir、Databricks、Snowflake激烈争夺企业AI的控制权"
+        },
+        {
+          "date": "2026-08-24",
+          "title": "AI FDE成为Palantir的智能开发与运维中枢"
+        },
+        {
+          "date": "2026-08-23",
+          "title": "Databricks 正在逼近 Palantir 的核心区"
+        },
+        {
+          "date": "2026-08-22",
+          "title": "Agent越来越薄，Ontology越来越厚：企业AI的下一场架构迁移"
+        },
+        {
+          "date": "2026-07-20",
+          "title": "WAIC 2026，本体大爆发：14家厂商谁最接近Palantir？"
+        },
+        {
+          "date": "2026-07-10",
+          "title": "关于本体建设和治理的四点思考"
+        },
+        {
+          "date": "2026-06-13",
+          "title": "企业AI的下一场战争：Palantir 两面受敌，一个万亿市场正在重新洗牌"
+        },
+        {
+          "date": "2026-05-28",
+          "title": "数据库正在反向吞噬SaaS，Databricks收购PostgreSQL 厂商"
+        },
+        {
+          "date": "2026-05-19",
+          "title": "AI 产业的主战场，已经开始从模型层转向工作流层"
+        },
+        {
+          "date": "2026-05-15",
+          "title": "Palantir AIP本体的三个作用：链接、增强、封装"
+        },
+        {
+          "date": "2026-05-09",
+          "title": "AI正在改变组织权力结构"
+        },
+        {
+          "date": "2026-05-08",
+          "title": "OpenAI 与 Anthropic 正在复制 Palantir"
+        },
+        {
+          "date": "2026-04-29",
+          "title": "Palantir AIP的神来之笔：Agent as Function"
+        },
+        {
+          "date": "2026-04-29",
+          "title": "Palantir AIP 的三块基石：对象、变量、函数"
+        },
+        {
+          "date": "2026-04-28",
+          "title": "Palantir AIP Analyst剖析：复杂分析、业务解释、决策执行"
+        },
+        {
+          "date": "2026-04-27",
+          "title": "自然语言驱动执行：一张图提炼AIP Agent的五个关键技术"
+        },
+        {
+          "date": "2026-04-10",
+          "title": "Palantir  AIP构建企业业务孪生、驱动企业智能决策"
+        },
+        {
+          "date": "2026-04-03",
+          "title": "分析Palantir AIP中的规则"
+        },
+        {
+          "date": "2026-03-13",
+          "title": "从OpenClaw和AIP看软件开发范式的颠覆性变化"
+        },
+        {
+          "date": "2026-03-05",
+          "title": "Palantir区别于RAG应用的本质"
+        },
+        {
+          "date": "2026-03-05",
+          "title": "微软的本体产品：Microsoft Fabric IQ"
+        },
+        {
+          "date": "2026-03-03",
+          "title": "Palantir AIP Terminal：自然语言操作终端背后的实现逻辑"
+        },
+        {
+          "date": "2026-03-02",
+          "title": "Palantir AIP就是企业版OpenClaw"
+        },
+        {
+          "date": "2026-02-28",
+          "title": "AI时代两大基础设施：硬件GPU与软件Ontology"
+        },
+        {
+          "date": "2026-02-24",
+          "title": "《AI领域正在发生一件大事》"
+        },
+        {
+          "date": "2026-02-20",
+          "title": "从数据存取到认知世界：从IT时代的数据库走向AI时代的本体库"
+        },
+        {
+          "date": "2026-02-14",
+          "title": "用15个大模型回答同一个问题：Palantir AIP的函数有几种？"
+        },
+        {
+          "date": "2026-02-11",
+          "title": "Palantir AIP是如何解决Agent长期记忆和短期记忆的？"
+        },
+        {
+          "date": "2026-02-09",
+          "title": "几分钟手搓一个合同审核Skill技能包"
+        },
+        {
+          "date": "2026-02-08",
+          "title": "Palantir给中国AI软件公司出海及本土化的三条核心启示"
+        },
+        {
+          "date": "2026-02-07",
+          "title": "Palantir AIP演示录：5场经典AIP演示背后的产品设计艺术"
+        },
+        {
+          "date": "2026-02-05",
+          "title": "Palantir AIP案例：J.P. Morgan (摩根大通)"
+        },
+        {
+          "date": "2026-02-04",
+          "title": "Palantir业绩炸裂，CEO致股东信"
+        },
+        {
+          "date": "2026-02-04",
+          "title": "AI盈利收割机：Palantir最新财报解读"
+        },
+        {
+          "date": "2026-02-03",
+          "title": "Palantir AIP案例：英国石油（BP）"
+        },
+        {
+          "date": "2026-02-02",
+          "title": "从爆火的Moltbook看Agent的七个演进阶段"
+        },
+        {
+          "date": "2026-02-02",
+          "title": "Palantir AIP实现多智能体协作的五种模式"
+        },
+        {
+          "date": "2026-02-01",
+          "title": "Palantir AIP案例：花旗财富（Citi Wealth）"
+        },
+        {
+          "date": "2026-01-31",
+          "title": "Palantir AIP案例剖析：诺华制药(data42&AIP Transformation)"
+        },
+        {
+          "date": "2026-01-31",
+          "title": "诺华制药data42与AIP：唤醒沉睡的研发数据"
+        },
+        {
+          "date": "2026-01-30",
+          "title": "Palantir AIP产品的营销套路"
+        },
+        {
+          "date": "2026-01-30",
+          "title": "【PPT讲稿】Palantir AIP产品的营销套路"
+        },
+        {
+          "date": "2026-01-29",
+          "title": "Palantir为什么要逃离硅谷，搬去丹佛？"
+        },
+        {
+          "date": "2026-01-29",
+          "title": "【PPT讲稿】押注于真实世界"
+        },
+        {
+          "date": "2026-01-28",
+          "title": "Palantir AIP启示：为什么未来企业的IT架构将不再以应用为中心？"
+        },
+        {
+          "date": "2026-01-28",
+          "title": "【PPT讲稿】Agentic Enterprise的技术架构新范式"
+        },
+        {
+          "date": "2026-01-27",
+          "title": "Palantir AIP本体是个十八面体、多数人只看到一两个面"
+        },
+        {
+          "date": "2026-01-27",
+          "title": "【PPT讲稿】十八面体的数字孪生矩阵"
+        },
+        {
+          "date": "2026-01-26",
+          "title": "Palantir AIP是如何设计权限的？"
+        },
+        {
+          "date": "2026-01-26",
+          "title": "【PPT讲稿】Palantir AIP权限设计机制详解"
+        },
+        {
+          "date": "2026-01-25",
+          "title": "拆解Palantir AIP Terminal的自然语言编程范式"
+        },
+        {
+          "date": "2026-01-25",
+          "title": "【PPT讲稿】Palantir AIP Terminal：决策智能的底层逻辑"
+        },
+        {
+          "date": "2026-01-24",
+          "title": "从Foundry到AIP：一家20年的大数据公司，如何用3个月完成了AI转型？"
+        },
+        {
+          "date": "2026-01-24",
+          "title": "【PPT讲稿】Palantir AIP架构技术复盘"
+        },
+        {
+          "date": "2026-01-24",
+          "title": "Palantir CEO和贝莱德CEO达沃斯对谈"
+        },
+        {
+          "date": "2026-01-23",
+          "title": "越过权限谈AI都是灾难：Palantir ACL安全上下文注入技术栈剖析"
+        },
+        {
+          "date": "2026-01-23",
+          "title": "【PPT讲稿】Palantir AIP信任的架构：权限即上下文"
+        },
+        {
+          "date": "2026-01-22",
+          "title": "深度分析Palantir AIP如何利用本体层扼杀AI幻觉"
+        },
+        {
+          "date": "2026-01-22",
+          "title": "【PPT讲稿】告别RAG裸奔，拥抱Ontology"
+        },
+        {
+          "date": "2026-01-21",
+          "title": "Palantir AIP架构核心推演：Data-to-Action的实现路径"
+        },
+        {
+          "date": "2026-01-21",
+          "title": "a16z撰文：万物皆可Palantir化"
+        },
+        {
+          "date": "2026-01-20",
+          "title": "彼得·蒂尔的影子：从《从0到1》看Palantir的创办初衷与垄断意志"
+        },
+        {
+          "date": "2026-01-19",
+          "title": "C3.ai为什么掉队了？对中国AI创业者的警示：复盘两家Enterprise AI公司的不同命运"
+        },
+        {
+          "date": "2026-01-18",
+          "title": "不是Databricks，不是Snowflake：Palantir的真正对手是ServiceNow+Bain+McKinsey"
+        },
+        {
+          "date": "2026-01-17",
+          "title": "对标Palantir AIP：中国决策智能公司的本体缺失困境与三条技术路线"
+        },
+        {
+          "date": "2026-01-16",
+          "title": "从Foundry到AIP：Palantir三次架构跃迁的底层逻辑"
+        },
+        {
+          "date": "2026-01-15",
+          "title": "AI Agent的终局：从Copilot（副驾驶）到Autopilot（自动驾驶），Palantir走到哪一步了？"
+        },
+        {
+          "date": "2026-01-13",
+          "title": "从对话到执行：Palantir AIP的Agentic AI实践"
+        },
+        {
+          "date": "2026-01-10",
+          "title": "白菜被猪拱了：评Manus卖身Meta背后的战略误判"
+        },
+        {
+          "date": "2026-01-09",
+          "title": "Palantir AIP带来的启示：语境为王（Context is the King）"
+        },
+        {
+          "date": "2026-01-08",
+          "title": "【深度拆解】Palantir AIP智能体六件套：为何它是企业级Agent的终极形态？"
+        },
+        {
+          "date": "2026-01-08",
+          "title": "Palantir AIP的Function和Action需要双重描述"
+        },
+        {
+          "date": "2026-01-07",
+          "title": "Palantir AIP是如何从Generative AI向Agentic AI进化的？"
+        },
+        {
+          "date": "2026-01-06",
+          "title": "解读微软CEO的2026AI展望"
+        },
+        {
+          "date": "2026-01-05",
+          "title": "Palantir AIP vs. Microsoft Fabric：决战企业AI操作系统的未来"
+        },
+        {
+          "date": "2026-01-04",
+          "title": "Ring Attention会替掉RAG吗？"
+        },
+        {
+          "date": "2025-12-28",
+          "title": "用一个关键词总结Palantir AIP：本体"
+        },
+        {
+          "date": "2025-12-27",
+          "title": "用一个关键词总结Palantir AIP：行动"
+        },
+        {
+          "date": "2025-12-27",
+          "title": "一种强烈的预感，未来Tokens消耗会大到无法想象"
+        },
+        {
+          "date": "2025-12-26",
+          "title": "我为什么坚定看多Palantir会到万亿美金市值！"
+        },
+        {
+          "date": "2025-12-26",
+          "title": "Palantir AIP的核心能力清单：如何设计一个真正可落地的企业级Agent？"
+        },
+        {
+          "date": "2025-12-24",
+          "title": "全球范围内，谁在真正意义上对标Palantir？美洲、欧洲、中国对比分析"
+        },
+        {
+          "date": "2025-12-24",
+          "title": "Palantir vs OpenAI/Anthropic：企业级Agent的两条完全不同路线。"
+        },
+        {
+          "date": "2025-12-23",
+          "title": "国内类Palantir产品常见的5个致命误区：为什么它们永远只能卖项目"
+        },
+        {
+          "date": "2025-12-22",
+          "title": "拆解Palantir最新AIP客户案例：哪些行业最先被Agent化？"
+        },
+        {
+          "date": "2025-12-21",
+          "title": "当所有公司都在讲Agent，为何只有Palantir敢做结果定价？"
+        },
+        {
+          "date": "2025-12-21",
+          "title": "详解Palantir AIP Logic2.0功能升级"
+        },
+        {
+          "date": "2025-12-20",
+          "title": "详解Palantir AIP的Action和Function的本质关系"
+        },
+        {
+          "date": "2025-12-20",
+          "title": "案例：使用Palantir AIP实现项目管理Agent超级助手"
+        },
+        {
+          "date": "2025-12-19",
+          "title": "从Demo到Production：Palantir AIP如何解决Agent最大的三个落地幻觉"
+        },
+        {
+          "date": "2025-12-19",
+          "title": "案例：使用Palantir AIP实现问卷调查填报Agent"
+        },
+        {
+          "date": "2025-12-18",
+          "title": "告别PoC炼狱、Palantir AIP Bootcamps的降维打击"
+        },
+        {
+          "date": "2025-12-17",
+          "title": "Alex Karp到底在坚持什么？从Palantir管理层视角看AI的真正战场"
+        },
+        {
+          "date": "2025-12-17",
+          "title": "案例：使用Palantir AIP创建文本结构化入库AI应用"
+        },
+        {
+          "date": "2025-12-16",
+          "title": "那些想成为中国版Palantir的公司：哪些能学，哪些绝对学不会？"
+        },
+        {
+          "date": "2025-12-15",
+          "title": "Palantir vs Snowflake vs Databricks：为什么在AI Agent时代，数据平台干不过决策平台？"
+        },
+        {
+          "date": "2025-12-15",
+          "title": "案例：使用Palantir AIP实现患者临床试验自动化决策AI应用"
+        },
+        {
+          "date": "2025-12-14",
+          "title": "案例：使用Palantir AIP创建故障报告Agent助手"
+        },
+        {
+          "date": "2025-12-14",
+          "title": "Palantir AIP给Agent配备的三大工具利器"
+        },
+        {
+          "date": "2025-12-13",
+          "title": "从管理资源到自动决策：企业软件的终局之战"
+        },
+        {
+          "date": "2025-12-13",
+          "title": "决策智能：Palantir vs BigBear.ai"
+        },
+        {
+          "date": "2025-12-12",
+          "title": "详解Palantir的OSv2存储技术"
+        },
+        {
+          "date": "2025-12-11",
+          "title": "案例：Palantir AIP如何教Agent学会记忆"
+        },
+        {
+          "date": "2025-12-11",
+          "title": "Palantir赢得美国海军核潜艇舰队合同31亿元建ShipOS"
+        },
+        {
+          "date": "2025-12-10",
+          "title": "详解Palantir AIP2025年新增功能"
+        },
+        {
+          "date": "2025-12-08",
+          "title": "Palantir和SAP的本质区别"
+        },
+        {
+          "date": "2025-12-07",
+          "title": "Palantir AIP如何打造AI原生企业？"
+        },
+        {
+          "date": "2025-12-07",
+          "title": "企业软件发展70年五个演进阶段"
+        },
+        {
+          "date": "2025-12-05",
+          "title": "Palantir发布新产品Chain Reaction：面向美国人工智能基础设施的操作系统"
+        },
+        {
+          "date": "2025-12-05",
+          "title": "Palantir最近一年的五大战略主线"
+        },
+        {
+          "date": "2025-12-04",
+          "title": "Enterprise AI的三层架构"
+        },
+        {
+          "date": "2025-12-04",
+          "title": "详解Palantir中组件、变量、本体之间的铁三角关系"
+        },
+        {
+          "date": "2025-12-03",
+          "title": "详解Palantir AIP大模型调用工具：Query Objects"
+        },
+        {
+          "date": "2025-12-01",
+          "title": "详解Palantir AIP的两个利器：LLM和Tool"
+        },
+        {
+          "date": "2025-12-01",
+          "title": "详解Palantir AIP中开发Agent应用的精髓"
+        },
+        {
+          "date": "2025-11-30",
+          "title": "一文读懂Palantir AIP最核心的10个概念"
+        },
+        {
+          "date": "2025-11-30",
+          "title": "用一个关键词总结Palantir AIP：泛化"
+        },
+        {
+          "date": "2025-11-29",
+          "title": "用一个关键词总结Palantir AIP：Enterprise AI"
+        },
+        {
+          "date": "2025-11-28",
+          "title": "详解用Palantir AIP几分钟搭建一个文档智能搜索应用"
+        },
+        {
+          "date": "2025-11-28",
+          "title": "用一个关键词总结Palantir AIP：面向对象编程"
+        },
+        {
+          "date": "2025-11-26",
+          "title": "详解Palantir数据编排的120种算子"
+        },
+        {
+          "date": "2025-11-25",
+          "title": "详解Palantir AIP是如何使用AI的"
+        },
+        {
+          "date": "2025-11-25",
+          "title": "详解Palantir AIP的三个Flow：Dataflow、AI flow、Workflow"
+        },
+        {
+          "date": "2025-11-23",
+          "title": "详解Palantir本体中的地理位置数据"
+        },
+        {
+          "date": "2025-11-23",
+          "title": "详解Palantir本体中的文档数据"
+        },
+        {
+          "date": "2025-11-22",
+          "title": "详解Palantir本体中的向量数据"
+        },
+        {
+          "date": "2025-11-21",
+          "title": "详解Palantir本体中的时序数据"
+        },
+        {
+          "date": "2025-11-19",
+          "title": "Palantir产品的存储架构技术分析"
+        },
+        {
+          "date": "2025-11-19",
+          "title": "一张图说清楚Palantir AIP是个啥"
+        },
+        {
+          "date": "2025-11-18",
+          "title": "Palantir 的七种核心逻辑块"
+        },
+        {
+          "date": "2025-11-18",
+          "title": "Palantir的决策对象、决策逻辑、决策执行和决策界面"
+        },
+        {
+          "date": "2025-11-17",
+          "title": "如何从0到1搭建一个基于Palantir AIP的「供应链控制塔」项目"
+        },
+        {
+          "date": "2025-11-16",
+          "title": "Palantir AIP产品蓝图"
+        },
+        {
+          "date": "2025-11-15",
+          "title": "Palantir是如何把AI大模型深度整合到产品中的？"
+        },
+        {
+          "date": "2025-11-14",
+          "title": "Palantir产品中的三个强大AI组件"
+        },
+        {
+          "date": "2025-11-09",
+          "title": "从全球四家知名公司看数据智能的未来"
+        },
+        {
+          "date": "2025-11-08",
+          "title": "Palantir产品演示案例：基于本体向量字段搭建AI应用"
+        },
+        {
+          "date": "2025-11-07",
+          "title": "如何理解数据（Data）？"
+        },
+        {
+          "date": "2025-11-07",
+          "title": "如何理解决策（Decision）？"
+        },
+        {
+          "date": "2025-11-06",
+          "title": "Oracle vs Palantir：数据世界的两次思想商品化历程"
+        },
+        {
+          "date": "2025-11-05",
+          "title": "Palantir产品演示案例：利用PipelineBuilder完成PDF文档结构化"
+        },
+        {
+          "date": "2025-11-04",
+          "title": "Palantir产品演示案例：基于动态嵌入计算的动态知识语料库构建"
+        },
+        {
+          "date": "2025-11-01",
+          "title": "Palantir首席技术官访谈全文"
+        },
+        {
+          "date": "2025-11-01",
+          "title": "Palantir山寨公司Percepta AI"
+        },
+        {
+          "date": "2025-10-22",
+          "title": "21个Palantir产品功能演示例子"
+        },
+        {
+          "date": "2025-09-27",
+          "title": "对AI未来十年的 5 个基本判断"
+        },
+        {
+          "date": "2025-09-18",
+          "title": "特朗普访英， Palantir投资15 亿英镑加码英国"
+        },
+        {
+          "date": "2025-09-15",
+          "title": "全球首个数据智能体(Data Agents)基准发布"
+        },
+        {
+          "date": "2025-09-14",
+          "title": "Palantir股票是否处于泡沫之中？历史给出了明确答案"
+        },
+        {
+          "date": "2025-09-14",
+          "title": "Palantir过去六年的财报中隐藏的一个秘密"
+        },
+        {
+          "date": "2025-09-13",
+          "title": "中国版Palantir产品在路上"
+        },
+        {
+          "date": "2025-09-11",
+          "title": "Palantir的Workflow Builder"
+        },
+        {
+          "date": "2025-09-11",
+          "title": "Palantir AIPCon8特色客户演讲和用例（1）"
+        },
+        {
+          "date": "2025-09-10",
+          "title": "Palantir为英国军方部署AI仿真工具"
+        },
+        {
+          "date": "2025-09-10",
+          "title": "Databricks为AI智能体重塑数据库"
+        },
+        {
+          "date": "2025-09-09",
+          "title": "Palantir中的Quiver和Contour有什么区别？"
+        },
+        {
+          "date": "2025-09-09",
+          "title": "Palantir产品中哪些地方用到了LLM大模型？"
+        },
+        {
+          "date": "2025-09-07",
+          "title": "Palantir CEO反驳“AI导致制造业失业”论调"
+        },
+        {
+          "date": "2025-09-07",
+          "title": "做空Palantir的知名空头香橼看多Databricks"
+        },
+        {
+          "date": "2025-09-06",
+          "title": "Palantir的软件将在Lear全球制造业务中得到更广泛应用"
+        },
+        {
+          "date": "2025-09-06",
+          "title": "从EidosMedia、到Meltwater、到Palantir 的三重进阶"
+        },
+        {
+          "date": "2025-09-04",
+          "title": "下一个Palantir，Anduril估值飙升至300亿美金"
+        },
+        {
+          "date": "2025-09-04",
+          "title": "Palantir中Data Connection数据接入"
+        },
+        {
+          "date": "2025-09-04",
+          "title": "Palantir CEO表示：我们不过节假日，我一直在工作"
+        },
+        {
+          "date": "2025-09-04",
+          "title": "Palantir携70余家商业客户举办第八届AIPCon"
+        },
+        {
+          "date": "2025-09-02",
+          "title": "Palantir的学徒：Distyl.ai"
+        },
+        {
+          "date": "2025-08-31",
+          "title": "Palantir如何绘制全国数据地图 ？"
+        },
+        {
+          "date": "2025-08-31",
+          "title": "Palantir中Pipeline数据编排详解"
+        },
+        {
+          "date": "2025-08-30",
+          "title": "寒武纪心虚了"
+        },
+        {
+          "date": "2025-08-30",
+          "title": "Databricks精准踩中AI时代的两大风口，跃升为全球第四大AI独角兽"
+        },
+        {
+          "date": "2025-08-29",
+          "title": "特朗普正利用Palantir锁定政敌"
+        },
+        {
+          "date": "2025-08-29",
+          "title": "Palantir的上涨动能来自英伟达"
+        },
+        {
+          "date": "2025-08-28",
+          "title": "电话会议纪要：CEO表示Snowflake是最佳 AI 数据平台，强劲季报超预期"
+        },
+        {
+          "date": "2025-08-28",
+          "title": "Palantir中的模型详解（1）：模型的架构"
+        },
+        {
+          "date": "2025-08-28",
+          "title": "Palantir在德国市场攻城略地"
+        },
+        {
+          "date": "2025-08-27",
+          "title": "特朗普为何想持有Palantir股份？"
+        },
+        {
+          "date": "2025-08-26",
+          "title": "为什么分析师预测Palantir将暴跌75%？"
+        },
+        {
+          "date": "2025-08-26",
+          "title": "Palantir产品体系架构详解"
+        },
+        {
+          "date": "2025-08-25",
+          "title": "资本市场AI六波红利的演变次序"
+        },
+        {
+          "date": "2025-08-25",
+          "title": "Databricks估值飙升至1000亿美元，在AI时代，数据基础设施就是一切"
+        },
+        {
+          "date": "2025-08-23",
+          "title": "Palantir Foundry Ontology的三层能力"
+        },
+        {
+          "date": "2025-08-23",
+          "title": "Palantir会成为下一个微软吗？"
+        },
+        {
+          "date": "2025-08-23",
+          "title": "Palantir对手Databricks估值已冲至1000 亿美元，战略卡位 Agentic AI"
+        },
+        {
+          "date": "2025-08-22",
+          "title": "Palantir首席架构师演讲：摸索人类、AI 与传统计算之间的最佳配比"
+        },
+        {
+          "date": "2025-08-21",
+          "title": "Palantir首席架构师是如何定义AI Infrastructure的？"
+        },
+        {
+          "date": "2025-08-21",
+          "title": "知名空头香橼研究痛击Palantir估值：股价仅值40美元"
+        },
+        {
+          "date": "2025-08-20",
+          "title": "Palantir出海：授权富士通在日本市场推广AIP人工智能产品"
+        },
+        {
+          "date": "2025-08-19",
+          "title": "Palantir并不是因为AI才牛掰的，没有AI也是神一般的存在"
+        },
+        {
+          "date": "2025-08-18",
+          "title": "Palantir现已成为美国第19大上市公司，泡沫会破灭吗？"
+        },
+        {
+          "date": "2025-08-13",
+          "title": "Palantir计划公司收入翻十倍、同时员工总数砍掉10%"
+        },
+        {
+          "date": "2025-08-12",
+          "title": "Palantir到底是干什么的？"
+        },
+        {
+          "date": "2025-08-12",
+          "title": "Palantir在日本市场攻城略地"
+        },
+        {
+          "date": "2025-08-11",
+          "title": "华尔街顶尖科技分析师认为Palantir市值会到1万亿美元"
+        },
+        {
+          "date": "2025-08-10",
+          "title": "从 Palantir 与 Oracle 看“Data + AI”赛道的两条演进路线"
+        },
+        {
+          "date": "2025-08-07",
+          "title": "Palantir CEO：给股东的一封信（2025年8月4日）"
+        },
+        {
+          "date": "2025-07-30",
+          "title": "把数据“洗干净、存得稳”＝600亿美金，把数据“用起来、变决策”＝3600亿美金"
+        },
+        {
+          "date": "2025-06-08",
+          "title": "比较：C3.AI vs Palantir"
+        },
+        {
+          "date": "2025-06-07",
+          "title": "Palantir产品解析：Dataset和Ontology的本质区别是什么？"
+        },
+        {
+          "date": "2025-04-26",
+          "title": "Databricks和数据的未来"
+        },
+        {
+          "date": "2025-03-15",
+          "title": "Palantir产品解析（2）：从Datasets到Object"
+        },
+        {
+          "date": "2025-03-14",
+          "title": "Palantir产品解析（1）：本体继承"
+        },
+        {
+          "date": "2025-02-21",
+          "title": "35个模块2700亿美金市值(Palantir)"
+        },
+        {
+          "date": "2025-01-18",
+          "title": "从Data到AI的八道工序"
+        },
+        {
+          "date": "2024-12-28",
+          "title": "Databricks凭啥值620亿美金？（产品功能详解）"
+        },
+        {
+          "date": "2024-11-05",
+          "title": "2024年Q3季报：PalantirCEO给股东的一封信"
+        },
+        {
+          "date": "2024-09-18",
+          "title": "讲义：AI驱动决策 - Palantir AIP"
+        },
+        {
+          "date": "2024-09-03",
+          "title": "从AIP1.0到AIP3.0、中间差了一个Palantir"
+        },
+        {
+          "date": "2024-08-29",
+          "title": "Palantir有了AIP，670亿美金市值只是起点"
+        },
+        {
+          "date": "2024-08-27",
+          "title": "Palantir CEO致股东的一封信"
+        },
+        {
+          "date": "2023-01-04",
+          "title": "数据智能操作系统-Palantir Foundry"
+        },
+        {
+          "date": "2022-11-06",
+          "title": "学Palantir前先读懂彼得蒂尔"
+        }
+      ]
+    },
+    {
+      "key": "B",
+      "name": "AI变革见证",
+      "biz": "MzcwMDQ2MDEwNQ==",
+      "count": 20,
+      "albums": {
+        "4744108079557050369": {
+          "title": "Agent工程实战",
+          "count": 19
+        }
+      },
+      "sogouFound": 1,
+      "articles": [
+        {
+          "date": "2026-10-21",
+          "title": "Agent 架构设计 16：Agent 限流、熔断、降级、排队调度，搞定 LLM 与 MCP 工具的流量稳定性"
+        },
+        {
+          "date": "2026-10-21",
+          "title": "Agent架构设计15：Agent 权限模型设计，工具权限、指令权限、租户隔离、MCP 工具的调用鉴权落地。"
+        },
+        {
+          "date": "2026-10-21",
+          "title": "Agent 架构设计 14：基于 DDD 领域模型，实现 Agent Checkpoint 断点快照与任务恢复服务"
+        },
+        {
+          "date": "2026-10-21",
+          "title": "Agent 架构设计 13：用 DDD 思想拆解 Agent 领域，实体、指令、工具、会话、状态模型设计"
+        },
+        {
+          "date": "2026-10-20",
+          "title": "多 Agent 协作实战 12：A2A+MCP 端到端全链路实战"
+        },
+        {
+          "date": "2026-10-20",
+          "title": "多 Agent 协作实战 11：A2A 生态组件大盘点，不用从零手写协议"
+        },
+        {
+          "date": "2026-10-20",
+          "title": "多 Agent 协作实战 10：A2A 最小可运行 Demo，从零实现任务委派"
+        },
+        {
+          "date": "2026-10-20",
+          "title": "多 Agent 协作实战 9：Agent 之间怎么通信？消息总线、状态同步与消息可靠传递"
+        },
+        {
+          "date": "2026-10-20",
+          "title": "多 Agent 协作实战 8：从单 Agent 到多 Agent，架构升级的第一步"
+        },
+        {
+          "date": "2026-10-20",
+          "title": "最小 Agent 实战 7：Agent 自动化评测体系，构建评测数据集、评估指标、批量回归测试"
+        },
+        {
+          "date": "2026-10-20",
+          "title": "最小 Agent 实战 6：Agent 可观测体系，日志、指标、链路追踪、告警与成本监控"
+        },
+        {
+          "date": "2026-10-19",
+          "title": "最小 Agent 实战 5：异步任务、人工校验、异常重试与降级策略，构建 Agent 容错体系"
+        },
+        {
+          "date": "2026-10-19",
+          "title": "最小 Agent 实战 4：状态持久化与断点续传，把 Demo 变成可运行的业务系统"
+        },
+        {
+          "date": "2026-10-19",
+          "title": "最小 Agent 实战 3：思考与规划，ReAct、Plan&Solve，手把手实现 Agent 自主推理循环"
+        },
+        {
+          "date": "2026-10-19",
+          "title": "最小 Agent 实战 2：记忆系统详解，短期上下文、长期向量记忆、会话记忆的代码实现"
+        },
+        {
+          "date": "2026-10-19",
+          "title": "最小 Agent 实战 1：从零手写第一个工具调用 Agent，拆解 LLM+Tool 调用完整链路"
+        },
+        {
+          "date": "2026-10-19",
+          "title": "开发环境搭建：一键启动 Agent 本地开发环境，Docker Compose 快速搭建全套调试栈"
+        },
+        {
+          "date": "2026-10-19",
+          "title": "LangGraph、Spring AI Alibaba、Dify、LlamaIndex 怎么选？Agent 技术栈选型决策指南"
+        },
+        {
+          "date": "2026-10-19",
+          "title": "别再被 Agent 概念忽悠！一文看懂 AI Agent 到底是什么，以及普通人该怎么上手实战"
+        },
+        {
+          "date": "2026-10-16",
+          "title": "8 个州联手起诉 OpenAI!ChatGPT 被指控误导家长、生成有害内容伤害青少年"
+        }
+      ]
+    },
+    {
+      "key": "C",
+      "name": "银翼AI评测室",
+      "biz": "MzU5NTc4MzA1Ng==",
+      "count": 10,
+      "albums": {
+        "4716855927210246152": {
+          "title": "AI评测方法论连载",
+          "count": 8
+        }
+      },
+      "sogouFound": 2,
+      "articles": [
+        {
+          "date": "2026-10-21",
+          "title": "OpenAI Evals技术拆解：Agent评测的入门教科书"
+        },
+        {
+          "date": "2026-10-15",
+          "title": "腾讯 WorkBuddy Agent 安全防线拆解和评测策略"
+        },
+        {
+          "date": "2026-10-14",
+          "title": "电商 Agent 评测技术拆解：淘宝落地实践"
+        },
+        {
+          "date": "2026-10-08",
+          "title": "字节扣子罗盘技术拆解:从离线打分到在线回归的评测闭环"
+        },
+        {
+          "date": "2026-10-06",
+          "title": "LLM当裁判，到底靠不靠谱？"
+        },
+        {
+          "date": "2026-10-05",
+          "title": "特斯拉跑了 240 亿公里，为什么还不敢完全自动驾驶？"
+        },
+        {
+          "date": "2026-10-03",
+          "title": "文档都上传了，AI 为什么还在胡说八道？"
+        },
+        {
+          "date": "2026-10-02",
+          "title": "把 AI Agent 比作一个人，终于把智能体架构讲明白了"
+        },
+        {
+          "date": "2026-10-01",
+          "title": "AIGC 智能体怎么测？一套四层全链路评测体系"
+        },
+        {
+          "date": "2026-09-29",
+          "title": "你的 Agent 评测，通过率 100% 却不可信？"
+        }
+      ]
+    }
+  ]
+}
