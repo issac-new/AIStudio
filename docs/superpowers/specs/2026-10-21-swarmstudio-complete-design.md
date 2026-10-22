@@ -26,7 +26,7 @@ SwarmStudio 用**模式隔离 + 机制约束**解决三类问题：人找不到�
 | 一切「完成」都要有证据 | 双凭证（提交号＋卡号）、四类锚点、append-only 台账、hash 链证据 | §5.2 |
 | 判断权不交给执行者 | 六道质量门、FAIL 唯一出口、人工介入留痕、执行层 fail-closed | §5.3 / §5.4 / §5.9 |
 
-**当前规模**：3 个工作模式；日常 6 阶段 33 个单层页签；推演 6 个入口；4 个专题岛屿；89 条路由（10-21 遗留清偿批 +not-found/sim-director）；客户端 19 个一级目录、服务端约 145 个域目录；382 条 studio 注入补丁（另 8 条 zcode）；M3 全量走查 65 个页面态；历史卷：29 个吸收轮、22 轮推演（run22 已收官）、148 条用户决策（§7-§8、§11-15）。三域视图见产品正本 `2026-10-21-ncwk-product-spec.md` 与设计正本 `2026-10-21-ncwk-design-spec.md`。
+**当前规模**：3 个工作模式；日常 6 阶段 33 个单层页签；推演 6 个入口；4 个专题岛屿；89 条路由（10-21 遗留清偿批 +not-found/sim-director）；客户端 19 个一级目录、服务端约 145 个域目录；382 条 studio 注入补丁（另 8 条 zcode）；M3 全量走查 65 个页面态；历史卷：30 个吸收轮、22 轮推演（run22 已收官）、148 条用户决策（§7-§8、§11-15）。三域视图见产品正本 `2026-10-21-ncwk-product-spec.md` 与设计正本 `2026-10-21-ncwk-design-spec.md`。
 
 ### 0.2 三条阅读路径
 
@@ -773,6 +773,7 @@ Electron 桌面壳（可选）
 | 10-21 | AGT 吸收轮（续） | 微软 AGT 拆解同源续轮：姿态对账/审计链/shadow agent/MCP 漂移/急停/strict | 2026-10-21-agent-governance-toolkit-research.md |
 | 10-21 | 三号调研吸收轮（第 28 轮） | 三公众号 295 篇语料：本体 Action 层/工具契约 Schema/调用闸/裁判 κ/退化禁发/任务账本 | 2026-10-21-wx-research-absorption.md；docs/2026-10-21-wx-3accounts-research.md |
 | 10-21 | 生产失败回流轮（第 29 轮） | 生产轨迹转回归样本（origin 复现 vs fresh 修复；混合证据不得关单） | 2026-10-21-production-trace-eval-reflow.md |
+| 10-22 | 长程可信吸收轮（第 30 轮） | FreeBuf 长程任务文四机制：主张三态审计/双准入/CSWI 栅栏/原子断点 | 2026-10-22-long-horizon-trust-layer.md |
 | 10-21 | FIBO 官方参照轮 | FIBO master_2026Q3 官方域与 EXMP 场景（逐条 RDF 来源） | 2026-10-21-fibo-official-reference-enhancement.md |
 | 10-21 | 安全审计+评测判分轮 | Cloudflare 安全审计 Skill／OpenAI Evals 两文 | 2026-10-21-secaudit-pipeline-and-eval-judging-discipline.md |
 ### 7.4 首轮 27 项与二轮 22 项对账
@@ -1127,7 +1128,7 @@ Electron 桌面壳（可选）
 
 **来源覆盖声明（2026-10-21 R5 补录）**：06-25 至 09-08 一段曾在本表显示为空。查实原因：当时只认 spec 里的「用户原话/裁定」字样，而该段多数裁决发生在会话中、未落文档。本轮按一手证据补回 6 条：07-01 渗透测试保留项（提交 4806e3c6）、07-11 Loop Engineering 立项与三层范围（issue #1 + spec:28,124）、08-27 终端多工具优先顺序（spec:11）、09-09 loop graph 三个方向决策（spec §0.1）。该段仍可能有未落文档的裁决。本表只收可反查条目，不把「无记录」写成「无决策」。要完整补录需要会话记录，当前仓库内不可得。
 
-84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21/22 实测含决策记录节（含「## 二、决策记录」等编号节形态）的业务 spec 共 29 份（不计本档、产品正本、设计正本与四份附录附件）：agent-governance-toolkit-research、backlog-closure、context-insights、fibo 五份（calibration/studio-alignment/ssot-merge/product-rollout/official-reference）、governance-surface-closure、ia-projection、ide-devtools-zcode-dsh、logout-entry-fix、secaudit、sequence-guard、sim-visibility、tool-policy-engine、wx-research-absorption、production-trace-eval-reflow、trace-reflow-debt-clearing、session-exhaustion-detector、debt-final-round、mcp-security-scan、g5-uat-state-machine、jargon-allow-director-console、ycode-environment-recovery、zcode-3161、zcode-context-trend、zcode-usage-ledger。
+84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21/22 实测含决策记录节（含「## 二、决策记录」等编号节形态）的业务 spec 共 30 份（不计本档、产品正本、设计正本与四份附录附件）：agent-governance-toolkit-research、backlog-closure、context-insights、fibo 五份（calibration/studio-alignment/ssot-merge/product-rollout/official-reference）、governance-surface-closure、ia-projection、ide-devtools-zcode-dsh、logout-entry-fix、secaudit、sequence-guard、sim-visibility、tool-policy-engine、wx-research-absorption、production-trace-eval-reflow、trace-reflow-debt-clearing、session-exhaustion-detector、debt-final-round、mcp-security-scan、g5-uat-state-machine、jargon-allow-director-console、long-horizon-trust-layer、ycode-environment-recovery、zcode-3161、zcode-context-trend、zcode-usage-ledger。
 
 ---
 ### 8.7 贯穿性裁决
@@ -1180,6 +1181,7 @@ Electron 桌面壳（可选）
 | MCP 注册面安全扫描 | 已交付（高危命令形态/env 内嵌密钥/远程外联/仿名四类；10/10＋受影响 52/52；姿态页面板） |
 | G5 发布门+UAT 状态机 | 已交付（纯函数矩阵/append-only 台账/409 防回流/权限矩阵；守门 11 例；接管补正本） |
 | 推演可见性补批 | 已交付（推演徽标+只读深链并入日常/看板/IDE；IDE 沟通页签=完整 Matrix 客户端，页签 21→23；导演台真实通知 fail-soft；observer 双源房间识别） |
+| 长程可信执行层 | 已交付（主张三态审计/完成态双准入/CSWI 完整性栅栏/原子断点核对；trust 域 20/20＋客户端 5/5；⑥治理「长程可信」页签含键盘可达） |
 | 评测判分纪律 | 已交付（S0 轨迹规则+argsSig 参数指纹） |
 | zcode 会话上下文趋势 | 已交付（逐请求精确 token/六类构成估算/压缩事件 289 条） |
 
@@ -1728,7 +1730,7 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 
 | 域 | 数字 | 口径与锚点 |
 |---|---|---|
-| 文档体量 | 256 specs+54 plans+32 研究档+13 竞品测绘（含三域正本与附录附件） | 目录实测（2026-10-22 R8 复测） |
+| 文档体量 | 257 specs+54 plans+32 研究档+13 竞品测绘（含三域正本与附录附件） | 目录实测（2026-10-22 R9 复测） |
 | 补丁 | studio 382 条 applied（0.7.38 净树重放 310 全过）；zcode 8 条（2026-10-21 基线升级后）；agent 72 条 | upgrade specs；zcode-patches 实测 |
 | 测试 | 全量 vitest 5,574 通过/0 失败/8 跳过（10-21 用量账本轮；0.7.38 轮 5,514 为史上首次清零）；simharness 守门 51→181 | 升级终态记录；zcode-usage-ledger 验证实录 |
 | 推演 | run1-run22 共 22 轮（run22 六闸全过，19.5h）；V1.0→V8.46 约 43 版本；纪律编号至 80（79 条正文）；prelaunch 13→30 项 | §13.1-13.2 |
@@ -1738,7 +1740,7 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 | 巡检 | 检测器 31 个（实测）；NUDGE 三级链 | §14.6 |
 | 技能 | 中位 296 技能（8-563）；50 profile；多机轮缺口 274 | §5.7 |
 | IA | 3 模式；六阶段 33 单层页签；87 路由；M3 走查 65 页面态 | 本档 §3 |
-| 决策 | 用户决策 148 条；常设原则 30；纠正 27；84 份 spec 含决策记录节（另 10-21/22 业务 spec 29 份） | §8 |
+| 决策 | 用户决策 148 条；常设原则 30；纠正 27；84 份 spec 含决策记录节（另 10-21/22 业务 spec 30 份） | §8 |
 | 吸收 | 约 34 篇外部文章+5 深读仓库+22 轮；首轮 27 项+二轮 22 项；落地率见 §7.10 | §7 |
 
 ---
@@ -1785,5 +1787,6 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 | 2026-10-21 | 对齐 R6 | 与三域合一正本 R3（整合终态版）对齐：规模行 140→146；§0 与 §9.2/§13.2 三处 run22「未启动」改「起跑在途」并补 run22 复盘行 | 合一正本升级为整合终态；run22 实况 |
 | 2026-10-21 | 同步 R7 | 收编 10-21 后三笔与两条用户指令：§8.2 +2 至 148（三号调研指令/「完成所有待办挂账」）；§7.3 +2 轮至 29（三号调研/生产失败回流）；§9.1 +3 交付（三号六件/生产回流/挂账清偿五批/会话耗尽检测器）；§0 规模（145 域/29 轮/148 决策）；§8.6 统计与业务 spec 25 份；附录 D 数字（252 specs/32 研究档） | 用户指令「再次根据最新内容更新台账、决策记录、设计文档等」；并行轮已合 main（439be0d7…9cab4d88） |
 | 2026-10-22 | 同步 R8 | 收编 c38766d5 后新进：§9.1 +4 交付（挂账清偿收/MCP 扫描/G5-UAT 状态机/推演可见性补批）；**run22 收官**（§13.2 终态行、§9.3 #9、§9.2 验证账 R8 段）；§15.1 IDE 页签 21→23；数字 22 轮/specs 256/全量 5,906；附录 D 推演行 | 用户指令「再次根据最新内容更新台账、决策记录、设计文档等」；并行轮已合 main（9e1b4335…556a03da） |
+| 2026-10-22 | 同步 R9 | 收编长程可信执行层（FreeBuf 文吸收，第 30 轮）：§9.1 交付行（trust 20/20＋客户端 5/5）、§7.3 吸收轮、§8.6 业务 spec 30 份；数字 30 轮/specs 257 | 用户指令「再次根据最新内容更新台账、决策记录、设计文档等」；并行轮已合 main（e5a0588b…a0403e90） |
 
 > **维护规则**：本档是全景汇编，不替代专题 spec。新增专题 spec 时，若改变产品形态/IA/机制结论，同步更新本档对应章与 §8 决策台账（新史实追加 §11-15 与附录 D）；纯实现细节不回写本档。
