@@ -59,6 +59,8 @@ export const STAGE_TABS: Readonly<Record<StageNo, readonly StageTabMeta[]>> = {
     // 2026-10-21 Cloudflare security-audit-skill 吸收轮：覆盖账本/三态裁决/独立复核
     { key: 'secAudit', zh: '安全审计', en: 'Security audit', component: 'secAudit' },
     { key: 'audit', zh: '审计与变更', en: 'Audit & changes', component: 'audit' },
+    // 2026-10-22 长程任务可信批：主张三态审计、双准入、完整性栅栏、断点核对
+    { key: 'trust', zh: '长程可信', en: 'Long-horizon trust', component: 'trust' },
     // 2026-10-19 评审治理批：风险分档/收敛规则/度量熔断（Anthropic Code Review 文章吸收）
     { key: 'reviewGov', zh: '评审治理', en: 'Review governance', component: 'reviewGov' },
     // 2026-10-19 Harness² 调研轮：提案-探测-组合-晋级-回滚的改进闭环
