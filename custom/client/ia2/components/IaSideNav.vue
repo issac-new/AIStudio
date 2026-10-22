@@ -14,7 +14,7 @@ import { STAGE_META } from '../stage-meta'
 import { useDailyStageProgress } from '../composables/useDailyStageProgress'
 import { useRunContext } from '../composables/useRunContext'
 import { runShortLabel } from '../run-display'
-import { useDecisionRows } from '../composables/useDecisionRows'
+import { useSideNavBadges } from '../composables/useSideNavBadges'
 import { readSetting, writeSetting } from '@/custom/settings-layers'
 import IaSideNavItem from './IaSideNavItem.vue'
 
@@ -23,7 +23,29 @@ const router = useRouter()
 const navLocale = useCenterNavLocale()
 const progress = useDailyStageProgress()
 const { run: simRun } = useRunContext('sim')
-const { decisionRows } = useDecisionRows()
+const { badges: navBadges } = useSideNavBadges()
+
+/** 待办徽标：0=不渲染（''），>0 传数字；key 见 useSideNavBadges 口径表 */
+function navBadge(key: string): number | '' {
+  const n = navBadges.value[key] ?? 0
+  return n > 0 ? n : ''
+}
+
+/** 徽标项的悬停说明（有数才挂 title，说明数字口径；无徽标保持无 title 现状） */
+const BADGE_TITLES: Record<string, { zh: string; en: string }> = {
+  journey: { zh: '待办合计：需关注 + 待决策', en: 'Total pending: attention + decisions' },
+  workbench: { zh: '需关注：阻塞任务 / 阻塞循环 / 等我 / 失败会话', en: 'Needs attention: blocked tasks/loops, waiting, failed sessions' },
+  board: { zh: '受阻任务数（与注意力条同口径）', en: 'Blocked tasks (same scope as attention bar)' },
+  inbox: { zh: '待决策：等我三源 + 评审门', en: 'Pending decisions: waiting + gate reviews' },
+  stage3: { zh: '本阶段在办：待分类 / 待办 / 已排期 / 可开工', en: 'In this stage: triage / todo / scheduled / ready' },
+  stage4: { zh: '本阶段在办：进行中 / 阻塞 / 待验收', en: 'In this stage: running / blocked / review' },
+}
+function badgeTitle(key: string): string | undefined {
+  const n = navBadges.value[key] ?? 0
+  if (n <= 0) return undefined
+  const t = BADGE_TITLES[key]
+  return t ? (zh.value ? t.zh : t.en) : undefined
+}
 
 const zh = computed(() => navLocale.value === 'zh')
 const routeName = computed(() => String(route?.name ?? ''))
@@ -94,6 +116,8 @@ const stageItems = computed(() => STAGE_META.map((meta) => {
     label: zh.value ? meta.navLabel : meta.navLabelEn,
     active: activeStagePage.value === nav.name,
     status: progress.stageState(meta.no),
+    badge: navBadge(`stage${meta.no}`),
+    title: badgeTitle(`stage${meta.no}`),
   }
 }))
 
@@ -210,7 +234,8 @@ function go(name: string): void {
             :lead="item.lead"
             :label="zh ? item.zh : item.en"
             :active="item.match()"
-            :badge="item.key === 'inbox' && decisionRows.length ? decisionRows.length : ''"
+            :badge="navBadge(item.key)"
+            :title="badgeTitle(item.key)"
             :testid="item.testid"
             @select="go(item.name)"
           />
@@ -226,6 +251,8 @@ function go(name: string): void {
             :label="item.label"
             :status="item.status"
             :status-label="stageStatusLabel(item.status)"
+            :badge="item.badge"
+            :title="item.title"
             :active="item.active"
             :testid="`ia-side-nav-${item.key}`"
             @select="go(item.name)"
