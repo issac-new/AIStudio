@@ -7,12 +7,15 @@ import { computed, onMounted, ref } from 'vue'
 import {
   fetchInterventionsPending,
   fetchClearanceLedger,
+  fetchHumanGateRequests,
+  decideHumanGate,
   resolveClearance,
   waiveClearance,
   groupClearanceTargets,
   buildClosingOrder,
   type InterventionsView,
   type ClearanceLedgerView,
+  type HumanGateRequestView,
 } from '../../api/gatekeeper'
 import { SimInterventionCard } from '../sim/index'
 import { compensationLabel } from '../../compensation-labels'
@@ -61,6 +64,20 @@ const clearanceError = ref('')
 const rawClearanceError = ref('')
 const actionError = ref('')
 const busy = ref(false)
+// HumanGate 前置批准队列（2026-10-22 P0 接线批；与介入队列/台账三路隔离取数）
+const humanGate = ref<HumanGateRequestView[]>([])
+const humanGateError = ref('')
+const humanGatePending = computed(() => humanGate.value.filter(r => r.status === 'pending'))
+
+/** 补偿目标代号 → 人话（2026-10-22 信息降噪批）：主文案说人话供决策，
+ *  原代号进 title 供排查反查。未知代号原样显示不猜。 */
+const CLEARANCE_TARGET_LABEL: Record<string, string> = {
+  'PR-1': '锁文件', 'PR-2': '自动批准', 'PR-3': '催办', 'PR-4': '卡片补录/代办',
+  'PR-5': '环形依赖', 'PR-6': '挂账先例', 'PR-7': '预设派发',
+}
+function targetLabel(target: string): string {
+  return CLEARANCE_TARGET_LABEL[target] ?? target
+}
 
 /** 台账技术错误人话化：正文给人能懂的原因与下一步，原始错误进 title 供排查。 */
 function humanizeLedgerError(message: string): string {
@@ -91,7 +108,7 @@ async function refresh(): Promise<void> {
   clearanceError.value = ''
   rawClearanceError.value = ''
   actionError.value = ''
-  const [iv, cl] = await Promise.allSettled([fetchInterventionsPending(), fetchClearanceLedger()])
+  const [iv, cl, hg] = await Promise.allSettled([fetchInterventionsPending(), fetchClearanceLedger(), fetchHumanGateRequests()])
   if (iv.status === 'fulfilled') interventions.value = iv.value
   else { interventions.value = null; interventionsError.value = (iv.reason as Error).message }
   if (cl.status === 'fulfilled') clearance.value = cl.value
@@ -100,7 +117,24 @@ async function refresh(): Promise<void> {
     rawClearanceError.value = (cl.reason as Error).message
     clearanceError.value = humanizeLedgerError(rawClearanceError.value)
   }
+  if (hg.status === 'fulfilled') { humanGate.value = hg.value; humanGateError.value = '' }
+  else { humanGate.value = []; humanGateError.value = (hg.reason as Error).message }
   busy.value = false
+}
+
+/** HumanGate 前置批准裁决（2026-10-22 P0 接线批）：批准/驳回直调服务端，
+ *  裁决落库留痕（decidedBy/decidedAt），失败就地报错供重试。 */
+async function decideGate(id: string, decision: 'approve' | 'reject'): Promise<void> {
+  busy.value = true
+  actionError.value = ''
+  try {
+    await decideHumanGate(id, decision)
+    await refresh()
+  } catch (e) {
+    actionError.value = `前置批准${decision === 'approve' ? '批准' : '驳回'}失败：${(e as Error).message}`
+  } finally {
+    busy.value = false
+  }
 }
 
 async function doResolve(target: string): Promise<void> {
@@ -189,6 +223,36 @@ onMounted(() => { void refresh() })
       </details>
     </div>
 
+    <!-- HumanGate 前置批准（2026-10-22 P0 接线批）：发布前须人拍板的批准单，
+         裁决直调服务端落库留痕（区别于上方介入卡的导流语义）。 -->
+    <div class="gk__queue">
+      <h4 class="gk__queue-title">前置批准（HumanGate，待批 {{ humanGatePending.length }}）</h4>
+      <p v-if="humanGateError" class="gk__error" data-testid="gk-hgate-error">{{ humanGateError }}</p>
+      <p v-else-if="humanGatePending.length === 0" class="gk__hint" data-testid="gk-hgate-empty">
+        无待批的前置批准单。
+      </p>
+      <ul v-else class="gk__cards">
+        <li v-for="r in humanGatePending" :key="r.id" class="gk__card" :data-testid="`gk-hgate-${r.id}`">
+          <div class="gk__hgate">
+            <div class="gk__hgate-main">
+              <div class="gk__hgate-title">{{ r.title }}</div>
+              <div class="gk__hgate-meta">
+                由 {{ r.requestedBy }} 提出 · 运行 {{ r.runId }} · 卡 {{ r.cardId }}
+                <template v-if="r.detail">· {{ r.detail }}</template>
+              </div>
+            </div>
+            <div class="gk__hgate-actions">
+              <button class="gk__btn gk__btn--approve" type="button" :disabled="busy"
+                data-testid="gk-hgate-approve" @click="decideGate(r.id, 'approve')">批准</button>
+              <button class="gk__btn gk__btn--reject" type="button" :disabled="busy"
+                data-testid="gk-hgate-reject" @click="decideGate(r.id, 'reject')">驳回</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+      <p v-if="actionError" class="gk__error" data-testid="gk-action-error">{{ actionError }}</p>
+    </div>
+
     <div id="clearance" class="gk__queue">
       <h4 class="gk__queue-title">
         遗留事项清算（未清 {{ clearance?.open ?? '—' }}<template v-if="clearance">{{ clearance.pass ? '，放行' : '，拒绝启动新运行' }}</template>）
@@ -197,7 +261,7 @@ onMounted(() => { void refresh() })
       <p v-else-if="clearanceTargets.length === 0" class="gk__hint" data-testid="gk-clear-empty">台账无未清项。</p>
       <div v-for="g in clearanceTargets" :key="g.target" class="gk__cl" :data-testid="`gk-cl-${g.target}`">
         <div class="gk__cl-head">
-          <span class="gk__cl-target">{{ g.target }}</span>
+          <span class="gk__cl-target" :title="g.target">{{ targetLabel(g.target) }}</span>
           <span class="gk__cl-meta">{{ g.openCount }} 项未清（{{ g.types.map(compensationLabel).join('、') }}）</span>
         </div>
         <div class="gk__cl-actions">
@@ -359,4 +423,28 @@ onMounted(() => { void refresh() })
   border-radius: 6px;
   padding: 8px 10px;
 }
+.gk__hgate {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.06);
+}
+.gk__hgate-main { flex: 1; min-width: 0; }
+.gk__hgate-title { font-size: 13px; font-weight: 600; }
+.gk__hgate-meta { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+.gk__hgate-actions { display: flex; gap: 6px; flex: none; }
+.gk__btn {
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 6px;
+  background: transparent;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.gk__btn:disabled { opacity: 0.5; cursor: default; }
+.gk__btn--approve { border-color: rgba(46, 125, 50, 0.5); color: #2e7d32; }
+.gk__btn--reject { border-color: rgba(183, 28, 28, 0.5); color: #b71c1c; }
 </style>

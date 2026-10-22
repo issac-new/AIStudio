@@ -902,3 +902,5 @@
 674-client-locales-sim-visibility.patch
 # 675: 标签页品牌收尾——Ekko Studio→SwarmStudio（title/apple-title/manifest）＋内联 SVG 图标（data-URI，免二进制资产补丁）。
 675-client-tab-brand-swarm.patch
+# 676: 催办 owner 动态路由挂载（run21/22 复盘①产品化收尾）——registerKanbanRoutes 根挂载＋卡源=command-post 看板聚合（异步 provider）。
+676-server-kanban-nudge-mount.patch
