@@ -26,7 +26,7 @@ SwarmStudio 用**模式隔离 + 机制约束**解决三类问题：人找不到�
 | 一切「完成」都要有证据 | 双凭证（提交号＋卡号）、四类锚点、append-only 台账、hash 链证据 | §5.2 |
 | 判断权不交给执行者 | 六道质量门、FAIL 唯一出口、人工介入留痕、执行层 fail-closed | §5.3 / §5.4 / §5.9 |
 
-**当前规模**：3 个工作模式；日常 6 阶段 33 个单层页签；推演 6 个入口；4 个专题岛屿；89 条路由（10-21 遗留清偿批 +not-found/sim-director）；客户端 19 个一级目录、服务端约 145 个域目录；382 条 studio 注入补丁（另 8 条 zcode）；M3 全量走查 65 个页面态；历史卷：29 个吸收轮、21 轮推演（run22 在途）、148 条用户决策（§7-§8、§11-15）。三域视图见产品正本 `2026-10-21-ncwk-product-spec.md` 与设计正本 `2026-10-21-ncwk-design-spec.md`。
+**当前规模**：3 个工作模式；日常 6 阶段 33 个单层页签；推演 6 个入口；4 个专题岛屿；89 条路由（10-21 遗留清偿批 +not-found/sim-director）；客户端 19 个一级目录、服务端约 145 个域目录；382 条 studio 注入补丁（另 8 条 zcode）；M3 全量走查 65 个页面态；历史卷：29 个吸收轮、22 轮推演（run22 已收官）、148 条用户决策（§7-§8、§11-15）。三域视图见产品正本 `2026-10-21-ncwk-product-spec.md` 与设计正本 `2026-10-21-ncwk-design-spec.md`。
 
 ### 0.2 三条阅读路径
 
@@ -1127,7 +1127,7 @@ Electron 桌面壳（可选）
 
 **来源覆盖声明（2026-10-21 R5 补录）**：06-25 至 09-08 一段曾在本表显示为空。查实原因：当时只认 spec 里的「用户原话/裁定」字样，而该段多数裁决发生在会话中、未落文档。本轮按一手证据补回 6 条：07-01 渗透测试保留项（提交 4806e3c6）、07-11 Loop Engineering 立项与三层范围（issue #1 + spec:28,124）、08-27 终端多工具优先顺序（spec:11）、09-09 loop graph 三个方向决策（spec §0.1）。该段仍可能有未落文档的裁决。本表只收可反查条目，不把「无记录」写成「无决策」。要完整补录需要会话记录，当前仓库内不可得。
 
-84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21 当日实测含决策记录节（含「## 二、决策记录」等编号节形态）的业务 spec 共 25 份（不计本档、产品正本、设计正本与四份附录附件）：agent-governance-toolkit-research、backlog-closure、context-insights、fibo 五份（calibration/studio-alignment/ssot-merge/product-rollout/official-reference）、governance-surface-closure、ia-projection、ide-devtools-zcode-dsh、logout-entry-fix、secaudit、sequence-guard、sim-visibility、tool-policy-engine、wx-research-absorption、production-trace-eval-reflow、trace-reflow-debt-clearing、session-exhaustion-detector、ycode-environment-recovery、zcode-3161、zcode-context-trend、zcode-usage-ledger。
+84 份含「## 决策记录」节的 spec 清单（按日期）：06-22×1、10-16×10、10-17×23、10-18×31、10-19×19、10-20×1（另含 3 个补批节）。2026-10-21/22 实测含决策记录节（含「## 二、决策记录」等编号节形态）的业务 spec 共 29 份（不计本档、产品正本、设计正本与四份附录附件）：agent-governance-toolkit-research、backlog-closure、context-insights、fibo 五份（calibration/studio-alignment/ssot-merge/product-rollout/official-reference）、governance-surface-closure、ia-projection、ide-devtools-zcode-dsh、logout-entry-fix、secaudit、sequence-guard、sim-visibility、tool-policy-engine、wx-research-absorption、production-trace-eval-reflow、trace-reflow-debt-clearing、session-exhaustion-detector、debt-final-round、mcp-security-scan、g5-uat-state-machine、jargon-allow-director-console、ycode-environment-recovery、zcode-3161、zcode-context-trend、zcode-usage-ledger。
 
 ---
 ### 8.7 贯穿性裁决
@@ -1176,6 +1176,10 @@ Electron 桌面壳（可选）
 | 生产失败回流 | 已交付（生产轨迹/span 转回归样本；origin 复现 vs fresh 修复；混合证据不得关单） |
 | 挂账清偿五批 | 已交付（评审 Minor 5/OTel 采样转题复判/OS 级沙箱执行面/代码仓审计三采集器/换装收尾） |
 | 会话耗尽检测器 | 已交付（应答行新鲜×真做行停摆；warn/high 两档＋换会话令建议；run22 两实录产品化；6/6） |
+| 挂账清偿收（两条清零） | 已交付（obssignels OTel 行级聚合 11/11＋红队沙箱攻防接线 6/6；exec-sandbox 单一事实源挪回 server 树修 ESM 边界；全量 5,906/0） |
+| MCP 注册面安全扫描 | 已交付（高危命令形态/env 内嵌密钥/远程外联/仿名四类；10/10＋受影响 52/52；姿态页面板） |
+| G5 发布门+UAT 状态机 | 已交付（纯函数矩阵/append-only 台账/409 防回流/权限矩阵；守门 11 例；接管补正本） |
+| 推演可见性补批 | 已交付（推演徽标+只读深链并入日常/看板/IDE；IDE 沟通页签=完整 Matrix 客户端，页签 21→23；导演台真实通知 fail-soft；observer 双源房间识别） |
 | 评测判分纪律 | 已交付（S0 轨迹规则+argsSig 参数指纹） |
 | zcode 会话上下文趋势 | 已交付（逐请求精确 token/六类构成估算/压缩事件 289 条） |
 
@@ -1190,6 +1194,7 @@ Electron 桌面壳（可选）
 - **0.7.38**：净树全序列重放 310 studio 补丁全过；官方 inject rc=0 / 382 applied；服务端隔离启动 `/api/health` 401（鉴权门正常）。
 - **10-21 晚批（R3 收录）**：登出 ia-settings-sidebar 6/6+entry-boot-order 时序守门；ide-devtools 19/19+Terminal 拉起端到端实测；策略引擎轮全量 5572/0/8（隔离 worktree）；用量账本轮全量 5574/0/8+live 探针 3 项（真库 13.5 万模型调用聚合）；遗留清偿批定向 24 文件 247 用例全绿+构建 rc=0；run22 smoke 5/5（在途）。
 - **10-21 R4 晚批**：FIBO 逐字节守门+活体导入幂等（37+21+16，跨重启持久 53 类型）+官方域导航走查；安全审计六阶段域与评测纪律随分支测试落地；上下文趋势 Ph2 测试 25+live 4。
+- **10-22 R8 收录**：挂账清偿收（OTel 11/11＋红队攻防 6/6，全量 5,906/0）；MCP 注册面安全扫描 10/10＋52/52；G5/UAT 状态机守门 11 例；IDE 页签矩阵 23/懒加载 19；**run22 收官**：六闸全过（G5 真实打回补齐），165 问题单/58 DISP，零交付遥测 35 张（state.env+governance-report.md 实锚）。
 
 ### 9.3 未闭环缺口（如实挂账）
 
@@ -1201,7 +1206,7 @@ Electron 桌面壳（可选）
 6. **G5/UAT——已闭环（2026-10-21）**：G5 发布状态机（release-state 纯函数：submit/approve/reject/release+append-only 事件+approve 需证据锚）；UAT 判定表单（conditional/reject 必填 note；AC 编号手输，冻结单自动解析挂账）。
 7. **工作台数据面**：仅加 Suspense 骨架，未治 3.8s 首载。
 8. **Matrix 分享房活体未验**（本环境无凭据）；gateway-env 模拟回落仍 localhost。
-9. **run22 在途**（2026-10-21 10:01 起跑，smoke 5/5，0.7.38 首轮）；step13 skill 过程帧无拍摄位；报告 PNG 未接；文档「31 签」与现码 33 签漂移已修正。
+9. **run22 已收官**（10-21 10:01→10-22 05:32，约 19.5h，六闸全过；G5 真实打回后补齐；165 问题单/58 DISP）。剩余：step13 skill 过程帧无拍摄位；报告 PNG 未接。
 10. **Harness² 部分未做**：八面登记、探测绑定真实 Eval run 与晋级门已落（§14.5）；未做的是 LLM Proposer、匿名选择器、R=4k/P=3k 账本、统计显著性检验、沙箱化探测、重启续跑。
 11. **IDE 权限模式仍 localStorage**；附件/截图未完全对标。
 12. **smoke G2 admin 假阳性**（测试设计缺陷，非产品围栏失效）；provider 告警。
@@ -1474,7 +1479,7 @@ run1-run7 成绩单不入表（V8 前判词语义旧制），失败样本全在�
 | run19 | 10-13/14·22.7h | 全过 | G4 把写 FAIL 的报告当过闸/换装后 46% 同帧 | 判词语义+采集登录态 | V8.28 纪律 52-56 | v828-revision §一 |
 | run20 | 10-14→16·净 42.5h | 6/6（四类失真） | 往轮产物冒充 4 件/死锚 13 件/代偿 open 179 笔/supervisor 死 5h | 「存在即可反查」取代产物归属 | V8.36+report_truth.py+四大件 | run20-retrospective |
 | run21 | 10-17→18·22.7h | 6/6（G5 四轮真打回） | 根因六族：重启环境差异/派发词标点 17 连崩/全角字符 | bash 3.2 兼容+监督器重生环境 | 当晚全根治；纪律 76-78 | simharness run21-retro §三 |
-| run22 | 10-21 10:01 起跑（在途） | G4 已过（缺报告显形）；G5 多轮 | G5 两轮熔断（阈值 2）；P0 缺陷 DEF-BE-S1-01 台架漂移 | 修缺陷后重报结论行，收官回填 | SIM `runs/20261021-v8-run22/evidence/scenario.log`（18:36） |
+| run22 | 10-21 10:01→10-22 05:32（19.5h） | **六闸全过**（g1/g2/g3/g4/g5/uat/retro/report 全落键） | G5 真实打回多轮（16 轮 fail 回灌+熔断 9 次）后补齐；P0 缺陷 DEF-BE-S1-01 修复闭环；165 问题单/58 DISP；零交付遥测 35 张 | G5 退回自动 owner 直派＋会话耗尽检测器（两实录产品化） | SIM `runs/20261021-v8-run22/state.env`＋`evidence/governance-report.md` |
 
 ### 13.3 反复出现的问题形态与根治机制（12 类）
 
@@ -1558,7 +1563,7 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 
 ### 15.1 演进时间线
 
-09-16 /ide 主页面立项（用户裁决「IDE 成为操作主页面」）→09-18 zcode 3.12.3 对齐 M0-M4+用户裁定 A 案富侧栏→09-23 zcode 源码底座（B 案）+三项基建设计→09-25 Ycode 红线→09-26 前缀复用→09-29 importSession RPC 草稿（后落 zcode-patch 002）→10-09 ACP 三档设计→10-15 agent 0.22.1 干跑（65 补丁 19 件断裂清单）→10-16 v0.7.36+agent 0.22.2 升级→10-18 爆发日（回归 13 缺陷修复+深度重构+五挂账清零+双模式+composer+CUA 回路+任务关联+页签 17→21+工具矩阵）→10-19 三连修正+群聊徽标+v0.7.37→10-20 v0.7.38 净树三段式→10-21 工具面板可打开（zcode 走受管 fork CLI 同源、DSH app 按钮）+本机 zcode 用量账本（dsh-context 数据面吸收）+基线升 3.16.1/3.16.2。
+09-16 /ide 主页面立项（用户裁决「IDE 成为操作主页面」）→09-18 zcode 3.12.3 对齐 M0-M4+用户裁定 A 案富侧栏→09-23 zcode 源码底座（B 案）+三项基建设计→09-25 Ycode 红线→09-26 前缀复用→09-29 importSession RPC 草稿（后落 zcode-patch 002）→10-09 ACP 三档设计→10-15 agent 0.22.1 干跑（65 补丁 19 件断裂清单）→10-16 v0.7.36+agent 0.22.2 升级→10-18 爆发日（回归 13 缺陷修复+深度重构+五挂账清零+双模式+composer+CUA 回路+任务关联+页签 17→21+工具矩阵）→10-19 三连修正+群聊徽标+v0.7.37→10-20 v0.7.38 净树三段式→10-21 工具面板可打开（zcode 走受管 fork CLI 同源、DSH app 按钮）+本机 zcode 用量账本（dsh-context 数据面吸收）+基线升 3.16.1/3.16.2→10-22 推演可见性补批（IDE 沟通页签=完整 Matrix 客户端，页签 21→23、懒加载 18→19）。
 
 ### 15.2 Ycode 架构要点
 
@@ -1723,17 +1728,17 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 
 | 域 | 数字 | 口径与锚点 |
 |---|---|---|
-| 文档体量 | 252 specs+54 plans+32 研究档+13 竞品测绘（含三域正本与附录附件） | 目录实测（2026-10-21 R7 复测） |
+| 文档体量 | 256 specs+54 plans+32 研究档+13 竞品测绘（含三域正本与附录附件） | 目录实测（2026-10-22 R8 复测） |
 | 补丁 | studio 382 条 applied（0.7.38 净树重放 310 全过）；zcode 8 条（2026-10-21 基线升级后）；agent 72 条 | upgrade specs；zcode-patches 实测 |
 | 测试 | 全量 vitest 5,574 通过/0 失败/8 跳过（10-21 用量账本轮；0.7.38 轮 5,514 为史上首次清零）；simharness 守门 51→181 | 升级终态记录；zcode-usage-ledger 验证实录 |
-| 推演 | run1-run21 共 21 轮；V1.0→V8.46 约 43 版本；纪律编号至 80（79 条正文）；prelaunch 13→30 项；run22 2026-10-21 起跑在途 | §13.1-13.2 |
+| 推演 | run1-run22 共 22 轮（run22 六闸全过，19.5h）；V1.0→V8.46 约 43 版本；纪律编号至 80（79 条正文）；prelaunch 13→30 项 | §13.1-13.2 |
 | 编制 | 15 人/30 账号/42 profile；并发上限 30（峰值 13 路） | V8 正本 L217-219,1505 |
 | 评测 | 红队 12 算子、138 题；指标 23 条（15 接线）；qgate 44 门四档 7/9/17/17 | §14.2、§14.7 |
 | 安全 | 20 项检查=4 不符合+15 部分+1 不适用；阻断十项挂起；观察期 ≥4 周 | §14.4 |
 | 巡检 | 检测器 31 个（实测）；NUDGE 三级链 | §14.6 |
 | 技能 | 中位 296 技能（8-563）；50 profile；多机轮缺口 274 | §5.7 |
 | IA | 3 模式；六阶段 33 单层页签；87 路由；M3 走查 65 页面态 | 本档 §3 |
-| 决策 | 用户决策 148 条；常设原则 30；纠正 27；84 份 spec 含决策记录节（另 10-21 业务 spec 25 份） | §8 |
+| 决策 | 用户决策 148 条；常设原则 30；纠正 27；84 份 spec 含决策记录节（另 10-21/22 业务 spec 29 份） | §8 |
 | 吸收 | 约 34 篇外部文章+5 深读仓库+22 轮；首轮 27 项+二轮 22 项；落地率见 §7.10 | §7 |
 
 ---
@@ -1779,5 +1784,6 @@ qgate v0.2：verdict 六态（INCONCLUSIVE 绝不冒 PASS）、证据三级默�
 | 2026-10-21 | 补录 R5 | 用户指出 06-24 至 09-10 决策断档不实：按一手证据补 6 条（07-01 保留 super_admin、07-11 Loop Engineering 立项、08-27 终端多工具、09-09 三方向决策），表行 140→146；§8.6 增来源覆盖声明（区分「无记录」与「无决策」）；§11.1 补 07-12/07-23/08-27/08-28 四个事件；清理 §8.6 重复段 | 用户实报「6.24-9.10 之间的决策记录怎么是空的 这个不对」 |
 | 2026-10-21 | 对齐 R6 | 与三域合一正本 R3（整合终态版）对齐：规模行 140→146；§0 与 §9.2/§13.2 三处 run22「未启动」改「起跑在途」并补 run22 复盘行 | 合一正本升级为整合终态；run22 实况 |
 | 2026-10-21 | 同步 R7 | 收编 10-21 后三笔与两条用户指令：§8.2 +2 至 148（三号调研指令/「完成所有待办挂账」）；§7.3 +2 轮至 29（三号调研/生产失败回流）；§9.1 +3 交付（三号六件/生产回流/挂账清偿五批/会话耗尽检测器）；§0 规模（145 域/29 轮/148 决策）；§8.6 统计与业务 spec 25 份；附录 D 数字（252 specs/32 研究档） | 用户指令「再次根据最新内容更新台账、决策记录、设计文档等」；并行轮已合 main（439be0d7…9cab4d88） |
+| 2026-10-22 | 同步 R8 | 收编 c38766d5 后新进：§9.1 +4 交付（挂账清偿收/MCP 扫描/G5-UAT 状态机/推演可见性补批）；**run22 收官**（§13.2 终态行、§9.3 #9、§9.2 验证账 R8 段）；§15.1 IDE 页签 21→23；数字 22 轮/specs 256/全量 5,906；附录 D 推演行 | 用户指令「再次根据最新内容更新台账、决策记录、设计文档等」；并行轮已合 main（9e1b4335…556a03da） |
 
 > **维护规则**：本档是全景汇编，不替代专题 spec。新增专题 spec 时，若改变产品形态/IA/机制结论，同步更新本档对应章与 §8 决策台账（新史实追加 §11-15 与附录 D）；纯实现细节不回写本档。
