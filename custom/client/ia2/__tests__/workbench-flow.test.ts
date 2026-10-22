@@ -490,18 +490,25 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(wrapper.find('[data-testid="group-view-stub"]').exists()).toBe(true)
   })
 
-  it('v14 新建动线：agent 单聊 → /app/s/chat 新会话态；群聊 ✕ → store.deleteRoom', async () => {
+  it('v14 新建动线：agent 单聊 → /app/s/chat 新会话态；群聊 ✕ 确认后 → store.deleteRoom', async () => {
     const { wrapper, router } = await mountAt('/app')
     await wrapper.find('[data-testid="flow-new-session"]').trigger('click')
     await wrapper.find('[data-testid="flow-new-chat-agent"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.collabChat')
-    // 删除群聊（非当前选中）：只调 store，不动路由
+    // 删除群聊（非当前选中）：先过不可逆确认（D6，2026-10-22 走查批）；
+    // 确认取消 → 零调用；确认放行 → 只调 store，不动路由
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const { wrapper: w2, router: r2 } = await mountAt('/app')
+    await w2.find('[data-testid="flow-del-group-gr-1"]').trigger('click')
+    await flushPromises()
+    expect(groupStubs.state.deleteRoom).not.toHaveBeenCalled()
+    confirmSpy.mockReturnValue(true)
     await w2.find('[data-testid="flow-del-group-gr-1"]').trigger('click')
     await flushPromises()
     expect(groupStubs.state.deleteRoom).toHaveBeenCalledWith('gr-1')
     expect(r2.currentRoute.value.name).toBe('ia2.collab')
+    confirmSpy.mockRestore()
   })
 
   it('R4a 动线⑤：左栏任务簇 chip → 就地开抽屉；行双击 → ide.shell?task=（useIdeJump）', async () => {
