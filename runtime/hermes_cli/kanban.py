@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import math
 import os
 import shlex
 import sys
@@ -32,7 +33,7 @@ from hermes_cli.kanban_boards import _dispatch_boards
 from hermes_cli.kanban_ops import (
     _cmd_daemon, _kanban_config, _cmd_dispatch, _cmd_gc, _cmd_repair, _cmd_tail, _cmd_watch,
 )
-from hermes_cli.kanban_parser import build_parser  # noqa: F401  (re-exported: hermes_cli.main, run_slash)
+from hermes_cli.kanban_parser import build_parser
 
 
 # --- Flag parsing helpers ---
@@ -266,14 +267,18 @@ def _require_ids(args: argparse.Namespace) -> tuple[list[str], int]:
 
 def _parse_duration(val) -> Optional[int]:
     """``30s`` / ``5m`` / ``2h`` / ``1d`` or a raw integer → seconds; None for empty input;
-    ValueError on malformed input."""
+    ValueError on malformed input (negative or out-of-range like ``1e999d`` included)."""
     if val is None or val == "":
         return None
     s = str(val).strip().lower()
     try:
-        return int(s)  # bare integer → seconds
+        seconds = int(s)  # bare integer → seconds
     except ValueError:
         pass
+    else:
+        if seconds < 0:
+            raise ValueError(f"malformed duration {val!r} (negative durations are not allowed)")
+        return seconds
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     if not (s and s[-1] in units):
         raise ValueError(f"malformed duration {val!r} (expected 30s, 5m, 2h, 1d, or a number)")
@@ -281,7 +286,14 @@ def _parse_duration(val) -> Optional[int]:
         n = float(s[:-1])
     except ValueError as exc:
         raise ValueError(f"malformed duration {val!r}") from exc
-    return int(n * units[s[-1]])
+    # ``float`` happily yields inf/nan ("infd", "1e999d"), and even a finite
+    # mantissa can overflow to inf mid-multiply ("1e308d" * 86400); ``int()``
+    # then raises OverflowError, which no caller catches. Refuse anything
+    # non-finite or negative before the conversion.
+    seconds = n * units[s[-1]]
+    if not math.isfinite(seconds) or seconds < 0:
+        raise ValueError(f"malformed duration {val!r}")
+    return int(seconds)
 
 
 def _cmd_init(args: argparse.Namespace) -> int:
@@ -357,6 +369,16 @@ def _cmd_create(args: argparse.Namespace) -> int:
         max_runtime = _parse_duration(getattr(args, "max_runtime", None))
     except ValueError as exc:
         return _err(f"kanban: --max-runtime: {exc}", 2)
+    raci_raw = getattr(args, "raci", None)
+    raci = None
+    if raci_raw:
+        try:
+            parsed_raci = json.loads(raci_raw)
+            raci = parsed_raci if isinstance(parsed_raci, dict) else None
+        except (ValueError, TypeError):
+            return _err("kanban: --raci must be a JSON object", 2)
+        if raci is None:
+            return _err("kanban: --raci must be a JSON object", 2)
     max_retries = getattr(args, "max_retries", None)
     if max_retries is not None and max_retries < 1:
         return _err(f"kanban: --max-retries must be >= 1 (got {max_retries}); "
@@ -376,6 +398,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
             goal_mode=bool(getattr(args, "goal_mode", False)),
             goal_max_turns=getattr(args, "goal_max_turns", None),
             completion_contract=getattr(args, "completion_contract", None),
+            raci=raci,
             initial_status=getattr(args, "initial_status", "running"),
             creator_task_id=(os.environ.get("HERMES_KANBAN_TASK")
                              if is_dispatcher_owned_worker_context() else None),
@@ -757,6 +780,42 @@ def _rows_by_task(conn, table: str, ids: list[str]) -> dict[str, list]:
     for row in conn.execute(f"SELECT * FROM {table} WHERE task_id IN ({placeholders}) ORDER BY id", tuple(ids)):
         by.setdefault(row["task_id"], []).append(row)
     return by
+
+
+def _cmd_sleeping_workers(args: argparse.Namespace) -> int:
+    """PR-3（V8.29 治理轮）：休眠工作者探针——running 卡 assignee 真做静默超阈清单。
+    只读不唤醒（唤醒走 gateway.wake 既有通道与所有权检查）。"""
+    import contextlib
+    import json as _json
+    from hermes_cli.kanban_sleeping import sleeping_workers
+    conn = None
+    try:
+        from hermes_cli import kanban_db_connect as _kdc
+        conn = _kdc.connect()
+        running = conn.execute(
+            "SELECT id, assignee FROM tasks WHERE status='running'").fetchall()
+        rows = sleeping_workers(
+            [{"id": r[0], "assignee": r[1]} for r in running],
+            idle_sec=getattr(args, "idle_sec", 1800) or 1800)
+        print(_json.dumps({"idle_sec": getattr(args, "idle_sec", 1800), "sleeping": rows},
+                          ensure_ascii=False, indent=1))
+        return 0
+    except Exception as exc:
+        print(_json.dumps({"error": str(exc)}))
+        return 1
+    finally:
+        if conn is not None:
+            with contextlib.suppress(Exception):
+                conn.close()
+
+
+def _cmd_selfcheck(args: argparse.Namespace) -> int:
+    """PR-4（V8.29 治理轮）：看板写路径启动自检——UDF 注册/守卫触发器/裸连接拒绝
+    三面探测，任一失败非零退出（供启动 fail-fast 与 prelaunch 消费）。"""
+    from hermes_cli.kanban_db import write_path_selfcheck
+    report = write_path_selfcheck(board=getattr(args, "board", None))
+    _print_json(report)
+    return 0 if report.get("ok") else 1
 
 
 def _cmd_diagnostics(args: argparse.Namespace) -> int:

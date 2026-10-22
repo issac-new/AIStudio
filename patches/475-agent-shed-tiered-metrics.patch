@@ -1,8 +1,8 @@
 diff --git a/agent/context_compressor.py b/agent/context_compressor.py
-index 12459f06ad..02124f66e7 100644
+index 9e60c36326..975e82e867 100644
 --- a/agent/context_compressor.py
 +++ b/agent/context_compressor.py
-@@ -840,6 +840,9 @@ def _is_summary_stub(content: str) -> bool:
+@@ -841,6 +841,9 @@ def _is_summary_stub(content: str) -> bool:
  # user answer is never re-summarized away on a later prune pass.
  _PRUNE_MIN_CHARS = 200
  
@@ -13,7 +13,7 @@ index 12459f06ad..02124f66e7 100644
  # checks must use the same string so they cannot drift.
  # Ghost-skill defense (#32106): when compaction reduces an old ``skill_view`` result to a 1-line metadata
 @@ -2160,7 +2163,10 @@ class ContextCompressor(
-     SummaryDispatchMixin, PreLlmSkipMixin, CompressionTelemetryMixin, MicroCompactionMixin, ContextEngine,
+     ProactivePruneMixin, ContextEngine,
  ):
      """Default context engine: prune tool results, protect head/tail, summarize the middle
 -    with an LLM, and iteratively update the previous summary on later compactions."""

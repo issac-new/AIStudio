@@ -202,6 +202,26 @@
       "source": "agent/tool_executor.py",
       "dest": "agent/tool_executor.py",
       "note": "614: 精简器接线观察提交点（maybe_persist 之前）"
+    },
+    {
+      "source": "hermes_cli/kanban_db_boards.py",
+      "dest": "hermes_cli/kanban_db_boards.py",
+      "note": "0.22.4 起被 kanban_db_connect/_kb 引用（board metadata 源模块）；417 运行时加固改它——升级轮补入，防宿主用未补丁版"
+    },
+    {
+      "source": "hermes_cli/kanban_boards.py",
+      "dest": "hermes_cli/kanban_boards.py",
+      "note": "看板 boards 子命令面（series 补丁改动）——与 kanban 家族同步部署"
+    },
+    {
+      "source": "gateway/kanban_watchers_dispatcher.py",
+      "dest": "gateway/kanban_watchers_dispatcher.py",
+      "note": "看板 watcher 派发器（series 补丁改动）——宿主网关消费面，升级轮补入"
+    },
+    {
+      "source": "plugins/kanban/dashboard/plugin_api.py",
+      "dest": "plugins/kanban/dashboard/plugin_api.py",
+      "note": "看板 dashboard 插件 API（series 补丁改动）——升级轮补入"
     }
   ],
   "notes": [

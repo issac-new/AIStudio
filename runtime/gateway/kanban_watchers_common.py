@@ -63,7 +63,7 @@ def _positive_int_setting(kanban_cfg: dict, key: str) -> Optional[int]:
     return value
 
 
-def _resolve_auto_decompose_settings(load_config: Callable[[], Any]) -> "tuple[bool, int]":
+def _resolve_auto_decompose_settings(load_config: Callable[[], Any]) -> tuple[bool, int]:
     """Live (enabled, per_tick) auto-decompose settings, re-read every dispatcher tick.
 
     Fails safe: a config read error returns ``(False, 3)`` rather than
@@ -107,45 +107,10 @@ def _kanban_dispatch_allowed() -> bool:
         from agent.estop import check_paused
     except ImportError:
         return True
-    if check_paused("kanban", logger):
-        return False
-    return _kanban_gate_guard_allowed()
+    return not check_paused("kanban", logger)
 
 
-def _kanban_gate_guard_allowed() -> bool:
-    """Sim-run gate-guard (patch 569; run9 P9 prework-bypass prevention).
-
-    When the harness declares ``KANBAN_GATE_GUARD_FILE`` (a state.env-style
-    ``KEY=value`` file) and ``KANBAN_GATE_GUARD_KEYS`` (comma-separated required
-    keys), spawning stays paused until every listed key is present in the file —
-    run9 lesson: five agents self-started on card registration and pushed eight
-    branches ahead of the G2 architecture review, caught only after the fact by
-    G2/G3 screening. Production is unchanged: with either env unset the guard is
-    inert and this returns True without touching the filesystem.
-    """
-    import os
-
-    guard_file = (os.environ.get("KANBAN_GATE_GUARD_FILE") or "").strip()
-    guard_keys = (os.environ.get("KANBAN_GATE_GUARD_KEYS") or "").strip()
-    if not guard_file or not guard_keys:
-        return True
-    required = [k.strip() for k in guard_keys.split(",") if k.strip()]
-    if not required:
-        return True
-    try:
-        with open(guard_file, "r", encoding="utf-8") as fh:
-            present = {line.split("=", 1)[0].strip() for line in fh if "=" in line}
-    except OSError:
-        present = set()
-    missing = [k for k in required if k not in present]
-    if missing:
-        logger.info("kanban gate-guard: spawn paused, awaiting gate keys %s in %s",
-                    ",".join(missing), guard_file)
-        return False
-    return True
-
-
-def _acquire_singleton_lock(lock_path) -> "tuple[Optional[object], str]":
+def _acquire_singleton_lock(lock_path) -> tuple[Optional[object], str]:
     """Take the exclusive, non-blocking advisory lock for the sole dispatcher.
 
     Only one gateway machine-wide may run the embedded dispatcher: concurrent
@@ -164,7 +129,7 @@ def _acquire_singleton_lock(lock_path) -> "tuple[Optional[object], str]":
         return None, "unavailable"
     try:
         Path(lock_path).parent.mkdir(parents=True, exist_ok=True)
-        handle = open(str(lock_path), "a+", encoding="utf-8")
+        handle = open(str(lock_path), "a+", encoding="utf-8")  # windows-footgun: ok (append-mode lock handle, write not read)
     except OSError:
         return None, "unavailable"
     if not _try_acquire_file_lock(handle):

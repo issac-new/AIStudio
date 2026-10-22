@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from hermes_cli.kanban_workflow import ARCHIVED, DEFAULT_WORKFLOW
+
 _DESC_TASK_ID_DEFAULT = (
     "Task id. If omitted, defaults to HERMES_KANBAN_TASK from the env — the "
     "task the dispatcher spawned you to work on. That default only exists for "
@@ -76,10 +78,7 @@ KANBAN_LIST_SCHEMA = _schema(
         "assignee": _prop("string", "Optional assignee/profile filter."),
         "status": {
             "type": "string",
-            "enum": [
-                "triage", "todo", "ready", "running",
-                "blocked", "done", "archived",
-            ],
+            "enum": [*DEFAULT_WORKFLOW.keys(), ARCHIVED],
             "description": "Optional task status filter.",
         },
         "tenant": _prop("string", "Optional tenant/project namespace filter."),
@@ -503,6 +502,11 @@ KANBAN_CREATE_SCHEMA = _schema(
                 "open-ended cards where one shot rarely finishes the "
                 "work. Defaults to false (classic single-shot worker)."
         )),
+        "raci": {
+            "type": "object",
+            "description": "Structured RACI assignment: keys responsible/approver/consulted/informed, values arrays of account names. Takes precedence over body-text RACI.",
+            "additionalProperties": { "type": "array", "items": { "type": "string" } },
+        },
         "completion_contract": _prop("string", (
             "Declare at creation: local-only (default), OWNER/REPO for PR publication, or an exact GitHub PR URL. "
             "PR tasks cannot complete until repository-required exact-head CI passes. On publication pass metadata.published_pr."

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import os
 import random
 import re
 import secrets
@@ -79,6 +78,11 @@ def _sqlite_connect(path: Path) -> sqlite3.Connection:
         with contextlib.suppress(Exception):
             conn.close()
         raise
+    # 看板写闸接线（607 收编补全）：凡经本助手的连接一律注册 sanctioned-writer UDF——
+    # 旧板上残留的 kanban_guard_* 触发器在 WHEN 子句引用该函数，未注册的连接首个写
+    # 即 "no such function: kanban_write_sanctioned"（2026-10-22 升级轮 aiteam/[已移除] 等
+    # 四板 500 实锤）。委托子进程上下文由 guard_fn 判 0 拒写，fail-closed 语义不变。
+    _kb.register_write_sanction_udf(conn)
     return conn
 
 
@@ -89,7 +93,7 @@ def _try_lock_nb(handle) -> bool:
         import msvcrt
 
         handle.seek(0)
-        getattr(msvcrt, "locking")(handle.fileno(), getattr(msvcrt, "LK_NBLCK"), 1)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
     else:
         import fcntl
 
@@ -106,7 +110,7 @@ def _unlock(handle) -> None:
         import msvcrt
 
         handle.seek(0)
-        getattr(msvcrt, "locking")(handle.fileno(), getattr(msvcrt, "LK_UNLCK"), 1)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
     else:
         import fcntl
 
@@ -631,26 +635,6 @@ def _schema_is_present(conn: sqlite3.Connection) -> bool:
     return row is not None
 
 
-# >>> swarm:kanban-guardrail-rearm >>> (t_933e48fe F2: absorbed the former
-# swarm:kanban-guardrail-attestation every-open UDF shim into THIS patch as
-# the single re-arm chain — the standalone block edited the same region as
-# the _open_configured hunk below, so the two patches kept reversing each
-# other's anchor and the rearm patch stopped applying to the live tree.
-# Logic verbatim from the attestation workstream; single marker = single
-# reclaim chain. The globals() guard keeps it a no-op shim if upstream ever
-# lands a native attestation.)
-if "register_write_sanction_udf" not in globals():  # bare tree: local attestation shim
-    GUARDRAIL_UDF_NAME = "kanban_write_sanctioned"
-
-    def register_write_sanction_udf(conn) -> None:
-        """Attest this connection as a sanctioned writer (see trigger docs)."""
-        def guard_fn() -> int:
-            from agent.delegation_context import is_delegated_child_process_context
-            return 0 if is_delegated_child_process_context() else 1
-        conn.create_function(GUARDRAIL_UDF_NAME, 0, guard_fn)
-# <<< swarm:kanban-guardrail-rearm <<<
-
-
 def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
     """Open ``path`` with the kanban PRAGMA set, then run ``under_lock(conn)``.
     WAL activation and ``under_lock`` share the ``_INIT_LOCK`` critical section:
@@ -659,13 +643,6 @@ def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
     ``_INITIALIZED_PATHS`` is populated. Closed if anything raises."""
     conn = _sqlite_connect(path)
     try:
-        # >>> swarm:kanban-guardrail-rearm >>> (t_62b2af6b): sanctioned-writer
-        # attestation must run on EVERY open, not just init — the UDF is
-        # connection-scoped, and once a board carries guard triggers, any
-        # attestation-less connection (including our own) would fail its next
-        # write with "no such function".
-        _kb.register_write_sanction_udf(conn)
-        # <<< swarm:kanban-guardrail-rearm <<<
         conn.row_factory = sqlite3.Row
         conn.text_factory = _kb._lossy_text
         with _INIT_LOCK:
@@ -693,6 +670,54 @@ def _open_configured(path: Path, under_lock) -> tuple[sqlite3.Connection, Any]:
     return conn, out
 
 
+def _refuse_dead_board_resurrection(path: Path, board: Optional[str]) -> None:
+    """Refuse to create a fresh DB for a board that is not live.
+
+    ``board=None`` (or ``default``) is unaffected — except that a None board
+    can still *resolve* through the current-board context (``--board`` scope,
+    ``HERMES_KANBAN_BOARD``, the ``current`` file) to a named board dir; an
+    ``archived`` tombstone in that dir gets the same refusal. For any other
+    slug whose DB file does not exist yet, opening it would mkdir the board
+    directory and leave an empty DB-only stub — exactly how archived boards
+    (moved to ``_archived/`` with an ``archived`` tombstone ``board.json``) and
+    hard-deleted boards (no directory left at all) used to reappear as empty
+    active boards via stale dashboard/gateway read paths (#43243). Creation
+    is the job of :func:`kanban_db.create_board` (which writes the metadata
+    first); read paths get an actionable error instead of a resurrected board.
+    """
+    if path.exists():
+        return  # existing DB: a plain open, never a resurrection
+    if board is None:
+        # Default-DB and env-pinned paths never sit under a board dir, so a
+        # board.json here means the current-board context resolved to that
+        # board's dir; refuse only the archived case (a fresh home has no
+        # board.json next to its kanban.db, so creation still self-heals).
+        tombstone = path.parent / "board.json"
+        if tombstone.exists():
+            import json
+            try:
+                raw = json.loads(tombstone.read_text(encoding="utf-8-sig"))
+            except (OSError, ValueError):
+                return
+            if isinstance(raw, dict) and raw.get("archived"):
+                raise ValueError(
+                    f"kanban board {path.parent.name!r} is archived; "
+                    "refusing to recreate its database"
+                )
+        return
+    try:
+        slug = _kb._normalize_board_slug(board)
+    except ValueError:
+        return  # malformed slug: let the later open surface the error
+    if not slug or slug == _kb.DEFAULT_BOARD:
+        return
+    meta = _kb.read_board_metadata(slug)
+    if meta.get("archived"):
+        raise ValueError(f"kanban board {slug!r} is archived; refusing to recreate its database")
+    if not _kb.board_metadata_path(slug).exists():
+        raise ValueError(f"kanban board {slug!r} does not exist; create it with `hermes kanban boards create {slug}`")
+
+
 def connect(db_path: Optional[Path] = None, *, board: Optional[str] = None) -> sqlite3.Connection:
     """Open (and initialize if needed) the kanban DB. WAL is (re)enabled on
     every connection so a re-created file stays robust; the first connection
@@ -706,13 +731,13 @@ def connect(db_path: Optional[Path] = None, *, board: Optional[str] = None) -> s
         # Reads must not enter schema/backfill write transactions. Never create a
         # missing board or migrate on a descendant's behalf; the owner initializes it.
         conn = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
-        register_write_sanction_udf(conn)  # 围栏读连接同样作证（触发器评估安全）
         conn.row_factory = sqlite3.Row
         conn.text_factory = _kb._lossy_text
         if not _schema_is_present(conn):
             conn.close()
             raise PermissionError("Kanban descendants require an initialized board; ask its owner to initialize it")
         return conn
+    _refuse_dead_board_resurrection(path, board)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     # Fast path: once THIS process has initialized this path, skip the
@@ -757,15 +782,6 @@ def connect(db_path: Optional[Path] = None, *, board: Optional[str] = None) -> s
             # threads can't race the ALTER TABLE pass with stale PRAGMA snapshots.
             if resolved not in _INITIALIZED_PATHS:
                 conn.executescript(_kb.SCHEMA_SQL)
-                # >>> swarm:kanban-guardrail-rearm >>> (t_62b2af6b, default-ON
-                # reversal of the 09-04 opt-in): install the 21 kanban_guard_*
-                # ABORT triggers on every fresh DB init. The UDF attestation in
-                # _open_configured (above) keeps first-party writers passing.
-                # Opt-OUT for one deployment cycle via HERMES_KANBAN_WRITE_GUARDRAIL=0
-                # (rollback: DROP TRIGGER kanban_guard_<table>_<op> x21).
-                if os.environ.get("HERMES_KANBAN_WRITE_GUARDRAIL", "1") != "0":
-                    _kb.install_guardrail_triggers(conn)
-                # <<< swarm:kanban-guardrail-rearm <<<
                 _migrate_add_optional_columns(conn)
                 _INITIALIZED_PATHS.add(resolved)
 
@@ -796,6 +812,7 @@ def init_db(db_path: Optional[Path] = None, *, board: Optional[str] = None) -> P
     migration pass — callers that know the on-disk schema may have drifted
     (tests writing legacy event kinds, external upgrades) use it to force it."""
     path = db_path if db_path is not None else _kb.kanban_db_path(board=board)
+    _refuse_dead_board_resurrection(path, board)
     path.parent.mkdir(parents=True, exist_ok=True)
     # Clear the cache entry so connect() re-runs schema + migrations.
     with _INIT_LOCK:
@@ -819,7 +836,7 @@ _BASE_TASK_COLUMNS = (
     ("created_by", "created_by TEXT"),
     ("started_at", "started_at INTEGER"),
     ("completed_at", "completed_at INTEGER"),
-    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'scratch'"),
+    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'dir'"),
     ("workspace_path", "workspace_path TEXT"),
     ("claim_lock", "claim_lock TEXT"),
     ("claim_expires", "claim_expires INTEGER"),
@@ -877,10 +894,6 @@ _LATER_TASK_COLUMNS = (
     ("block_recurrences", "block_recurrences INTEGER NOT NULL DEFAULT 0"),
     # Spawn-time start fingerprint of worker_pid (PID-reuse guard; NULL = legacy row).
     ("worker_started_at", "worker_started_at INTEGER"),
-    # HERMES_CUSTOM[estimate] workload columns (team-parallel phase two):
-    # person-days (REAL) + estimation metadata JSON (TEXT). NULL days = unestimated.
-    ("estimate_days", "estimate_days REAL"),
-    ("estimate_meta", "estimate_meta TEXT"),
 )
 
 _NOTIFY_SUB_COLUMNS = (
@@ -1288,4 +1301,4 @@ def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False):
 
 # Late-bound origin namespace (see module docstring); imported LAST so this
 # module is fully populated before ``kanban_db`` imports from it.
-from hermes_cli import kanban_db as _kb  # noqa: E402
+from hermes_cli import kanban_db as _kb

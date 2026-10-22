@@ -1,8 +1,8 @@
 diff --git a/agent/tool_executor.py b/agent/tool_executor.py
-index 8d55ce65ec..198f1cc2e1 100644
+index aace940c16..07fc498446 100644
 --- a/agent/tool_executor.py
 +++ b/agent/tool_executor.py
-@@ -73,6 +73,22 @@ logger = logging.getLogger(__name__)
+@@ -75,6 +75,22 @@ logger = logging.getLogger(__name__)
  _pairing_tool_call_id = coalesce_tool_call_id  # canonical id used by the persisted assistant message
  
  
@@ -25,7 +25,7 @@ index 8d55ce65ec..198f1cc2e1 100644
  def _tc_name(tool_call: Any) -> str:
      return getattr(getattr(tool_call, "function", None), "name", "") or "tool"
  
-@@ -1149,6 +1165,7 @@ def _commit_tool_result(
+@@ -1156,6 +1172,7 @@ def _commit_tool_result(
              function_result = agent._append_guardrail_observation(
                  function_name, function_args, function_result, failed=is_error, tool_call_id=tool_call_id,
              )
@@ -33,11 +33,11 @@ index 8d55ce65ec..198f1cc2e1 100644
          if is_error:
              logger.warning("Tool %s returned error (%.2fs): %s", function_name, tool_duration, error_preview(function_result))
          elif success_log_chars is not None:
-@@ -1434,6 +1451,7 @@ class _ConcurrentBatch:
+@@ -1446,6 +1463,7 @@ class _ConcurrentBatch:
              logger.info(
                  "tool %s completed (%.2fs, %d chars)", ref.name, duration, result_chars
              )
 +        _tool_audit_append(ref.name, is_error, duration)
-         return _ToolOutcome(ref, result, duration, is_error, blocked)
+         return _ToolOutcome(ref, result, duration, is_error, blocked, data_use)
  
      def run_worker(self, index: int, start_order: int) -> None:

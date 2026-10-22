@@ -24,7 +24,21 @@ function mirrorDbDefines(name: string): boolean {
     new RegExp(`^${name}\\s*=`, 'm'),
     new RegExp(`^${name}\\s*:\\s`, 'm'),
   ]
-  return patterns.some(re => re.test(dbSrc))
+  if (patterns.some(re => re.test(dbSrc))) return true
+  // 模块级 import 再导出同样把名字绑进 kanban_db 命名空间（_kb.<name> 经模块
+  // 属性解析成立）：0.22.4 起 kanban_db.py 在文件尾 late-import
+  // kanban_db_boards 的 board_metadata_path/read_board_metadata 等，宿主树自带
+  // 该上游模块，镜像对只须 kanban_db.py 绑定名字（2026-10-22 升级轮守门红实锤，
+  // 单认 def/赋值把合法再导出误判缺失）。单行 from X import a, b 与多行括号块
+  // 两种形态都收；import ... as alias 以别名绑定。
+  const bound = (item: string) => item.trim().replace(/#[^\n]*$/, '').split(/\s+as\s+/).pop()!.trim()
+  for (const m of dbSrc.matchAll(/^from\s+\S+\s+import\s+\(([^)]*)\)/gm)) {
+    if (m[1]!.split(',').some(item => bound(item) === name)) return true
+  }
+  for (const m of dbSrc.matchAll(/^from\s+\S+\s+import\s+(?!\()(.+)$/gm)) {
+    if (m[1]!.split(',').some(item => bound(item) === name)) return true
+  }
+  return false
 }
 
 describe('runtime 镜像符号契约（607 守门：deploy 源自洽性）', () => {

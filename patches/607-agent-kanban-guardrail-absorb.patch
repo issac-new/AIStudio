@@ -1,5 +1,5 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index b1af14be3d..1454b592d1 100644
+index f6eaa24ef7..353ad14e7e 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
 @@ -150,6 +150,101 @@ def _assert_not_delegated_child_mutation(path: str | Path | None = None) -> None
@@ -104,6 +104,22 @@ index b1af14be3d..1454b592d1 100644
  def _fire_kanban_lifecycle_hook(event: str, task_id: str, **fields: Any) -> None:
      """Best-effort lifecycle hook. Call AFTER the write txn commits (plugins never
      run under the SQLite write lock, always see durable state); failures are
+diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
+index df71de837c..3f8755bc21 100644
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -78,6 +78,11 @@ def _sqlite_connect(path: Path) -> sqlite3.Connection:
+         with contextlib.suppress(Exception):
+             conn.close()
+         raise
++    # 看板写闸接线（607 收编补全）：凡经本助手的连接一律注册 sanctioned-writer UDF——
++    # 旧板上残留的 kanban_guard_* 触发器在 WHEN 子句引用该函数，未注册的连接首个写
++    # 即 "no such function: kanban_write_sanctioned"（2026-10-22 升级轮 aiteam/[已移除] 等
++    # 四板 500 实锤）。委托子进程上下文由 guard_fn 判 0 拒写，fail-closed 语义不变。
++    _kb.register_write_sanction_udf(conn)
+     return conn
+ 
+ 
 diff --git a/tests/hermes_cli/test_kanban_guardrail_contract.py b/tests/hermes_cli/test_kanban_guardrail_contract.py
 new file mode 100644
 index 0000000000..65c83bfa5c
