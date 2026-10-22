@@ -301,7 +301,11 @@ onMounted(loadAll)
             v-for="c in cases" :key="c.id"
             :class="{ 'is-selected': c.id === selectedId }"
             data-testid="trust-case-row"
+            tabindex="0"
+            :aria-label="`查看案件 ${c.title}`"
             @click="select(c.id)"
+            @keydown.enter.prevent="select(c.id)"
+            @keydown.space.prevent="select(c.id)"
           >
             <td>
               <div>{{ c.title }}</div>
@@ -590,6 +594,10 @@ onMounted(loadAll)
 .trust__table tbody tr:hover,
 .trust__table tbody tr.is-selected {
   background: var(--bg-secondary);
+}
+.trust__table tbody tr:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
 }
 .trust__pill {
   display: inline-block;
