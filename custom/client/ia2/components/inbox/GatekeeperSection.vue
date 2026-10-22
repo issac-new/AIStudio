@@ -16,6 +16,41 @@ import {
 } from '../../api/gatekeeper'
 import { SimInterventionCard } from '../sim/index'
 import { compensationLabel } from '../../compensation-labels'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+/**
+ * 介入点 → 真实裁决面派发表（2026-10-22 走查批：批准/打回原绑空函数=假按钮）。
+ * 单一事实源在各源系统（关卡判词/UAT 台账/清偿门/编制表），驾驶舱只做导流，
+ * 不在本地另造第二份决策真相——按钮语义=「去对应面执行批准或打回」。
+ */
+const DECIDE_ROUTES: Record<string, string> = {
+  'g1_frozen': '/app/stage/reqs?tab=g1',
+  'g2_arch_pass': '/app/stage/design?tab=g2',
+  'g5_human': '/app/stage/accept?tab=g5',
+  'uat-verdict': '/app/stage/accept?tab=uat',
+  'clearance-waive': '#clearance',
+  'admin-roster': '/app/stage/setup?tab=accounts',
+  'req-scope': '/app/stage/reqs?tab=reqs',
+  'dispatch': '/app/stage/design?tab=tasks',
+  'triage': '/app/board',
+  'defect-verdict': '/app/stage/accept?tab=uat',
+  'audit-sign': '/app/stage/govern?tab=audit',
+  'retro-decide': '/app/stage/govern?tab=clearance',
+  'breaker-override': '/app/sim/supervision',
+  'posture-approve': '/app/stage/govern?tab=posture',
+}
+
+function goDecide(sourceKey?: string): void {
+  const target = sourceKey ? DECIDE_ROUTES[sourceKey] : undefined
+  if (!target) { actionError.value = '该介入点未登记裁决面——请在对应系统处理'; return }
+  if (target.startsWith('#')) {
+    document.getElementById(target.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+  void router.push(target)
+}
 
 const interventions = ref<InterventionsView | null>(null)
 const clearance = ref<ClearanceLedgerView | null>(null)
@@ -140,9 +175,12 @@ onMounted(() => { void refresh() })
       </p>
       <ul class="gk__cards">
         <li v-for="p in pendingPoints" :key="p.id" class="gk__card">
-          <SimInterventionCard :point="p" @approve="() => {}" @reject="() => {}" />
+          <SimInterventionCard :point="p" @approve="goDecide(p.sourceKey)" @reject="goDecide(p.sourceKey)" />
         </li>
       </ul>
+      <p v-if="interventions && pendingPoints.length > 0" class="gk__hint">
+        点「批准 / 打回」跳到该介入点的真实裁决面执行——裁决记录落在源系统，这里不另立台账。
+      </p>
       <details v-if="unknownPoints.length > 0" class="gk__unknown" data-testid="gk-unknown">
         <summary>源缺席·状态未知 {{ unknownPoints.length }} 项</summary>
         <ul>
@@ -151,7 +189,7 @@ onMounted(() => { void refresh() })
       </details>
     </div>
 
-    <div class="gk__queue">
+    <div id="clearance" class="gk__queue">
       <h4 class="gk__queue-title">
         遗留事项清算（未清 {{ clearance?.open ?? '—' }}<template v-if="clearance">{{ clearance.pass ? '，放行' : '，拒绝启动新运行' }}</template>）
       </h4>

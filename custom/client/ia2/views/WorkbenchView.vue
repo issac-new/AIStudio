@@ -522,9 +522,11 @@ async function onCreateRoom(name: string): Promise<void> {
     await matrixRoom.createRoom({ name })
     const hits = ((matrixRoom.sortedRooms ?? []) as Array<{ roomId: string; name?: string }>)
       .filter(r => r.name === name)
+    roomActionError.value = ''
     if (hits.length === 1) void router.push({ name: 'ia2.commsRoom', params: { roomId: hits[0].roomId } })
-  } catch {
-    // store 侧已置 error（矩阵连接未就绪等）；此处静默——列表/态势呈现状态
+  } catch (e) {
+    // 2026-10-22 走查批：原静默（承诺的 store error 呈现面不存在）——左栏就地报错
+    roomActionError.value = `建房失败：${e instanceof Error ? e.message : String(e)}`
   }
 }
 
@@ -537,6 +539,8 @@ function onNewChat(): void {
 
 /** agent 群聊建房型抽屉开合 */
 const groupCreateOpen = ref(false)
+/** 左栏建房/删房动作错误（2026-10-22 走查批：原静默失败） */
+const roomActionError = ref('')
 function onCreateGroup(): void {
   groupCreateOpen.value = true
 }
@@ -551,19 +555,24 @@ async function onCreateGroupSubmit(
     groupChatStore.setUserInfo(userName, description)
     const res = await groupChatStore.createNewRoom(name, inviteCode, agents, summary, workspace, { name: userName, description })
     groupCreateOpen.value = false
+    roomActionError.value = ''
     if (res?.room?.id) void router.push({ name: 'ia2.groupRoom', params: { roomId: res.room.id } })
-  } catch {
-    // store 侧已置 error（连接未就绪等）；抽屉保持打开供修正重试
+  } catch (e) {
+    // 2026-10-22 走查批：原静默（承诺的 store error 呈现面不存在）——左栏就地报错供修正重试
+    roomActionError.value = `建房失败：${e instanceof Error ? e.message : String(e)}`
   }
 }
 
-/** 群聊删除（行 hover ✕）：删的是当前房间时兜底回工作台首页（auto-select 重选） */
+/** 群聊删除（行 hover ✕）：删的是当前房间时兜底回工作台首页（auto-select 重选）。
+ *  2026-10-22 走查批：删房不可逆，原一步直删无确认——先确认再执行；失败就地报错。 */
 async function onDeleteGroup(roomId: string): Promise<void> {
+  if (!window.confirm('删除该群聊房间？成员与消息历史将不可再访问，此操作不可逆。')) return
   try {
     await groupChatStore.deleteRoom(roomId)
+    roomActionError.value = ''
     if (route.name === 'ia2.groupRoom' && route.params.roomId === roomId) void router.replace('/app')
-  } catch {
-    // store 侧已置 error；静默
+  } catch (e) {
+    roomActionError.value = `删除失败：${e instanceof Error ? e.message : String(e)}`
   }
 }
 </script>
@@ -585,6 +594,8 @@ async function onDeleteGroup(roomId: string): Promise<void> {
       </div>
       <!-- R6 补充：左栏右缘拖拽分割条 -->
       <div class="wb__split wb__split--l" data-testid="wb-split-l" @mousedown="startDrag('left', $event)" />
+      <p v-if="roomActionError" style="color: var(--error, #d33); font-size: 12px; margin: 2px 0 0 8px;"
+        data-testid="wb-room-action-error">{{ roomActionError }}</p>
       <FlowNavPanel
         :sessions="sessionRows"
         :loops="loopRows"
