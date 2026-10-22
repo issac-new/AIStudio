@@ -644,5 +644,6 @@ export function _resetAutopassScanThrottleForTests(): void {
 
 // HumanGate 前置批准路由子挂载（run22 复盘②）：与收件箱同一 /api/approvals 前缀，
 // 免改上游挂载 patch——human-gate 创建/列表/裁决三端点随 approvalsRoutes 一体上线。
-router.use(humanGateRouter.routes())
+// 2026-10-22 走查批：改 '/human-gate' 路径挂载＋子路由无前缀（原绝对前缀嵌套=双前缀 404）。
+router.use('/human-gate', humanGateRouter.routes(), humanGateRouter.allowedMethods())
 export const approvalsRoutes = router
