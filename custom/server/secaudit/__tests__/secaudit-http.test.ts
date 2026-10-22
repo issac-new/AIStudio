@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { secAuditRoutes } from '../controller'
 import { _useSecAuditStoreForTests } from '../store'
+import Router from '@koa/router'
 
 let app: Koa
 let base: string
@@ -17,8 +18,11 @@ beforeAll(async () => {
   _useSecAuditStoreForTests(join(storeDir, 'store.json'))
   app = new Koa()
   app.use(bodyParser())
-  app.use(secAuditRoutes.routes())
-  app.use(secAuditRoutes.allowedMethods())
+  // 生产同款拓扑（2026-10-22 走查批）：governance 父路由嵌套挂载，防直挂盲区
+  const parent = new Router({ prefix: '/api/governance' })
+  parent.use('/secaudit', secAuditRoutes.routes(), secAuditRoutes.allowedMethods())
+  app.use(parent.routes())
+  app.use(parent.allowedMethods())
   const server = await new Promise<ReturnType<Koa['listen']>>((resolve) => {
     const s = app.listen(0, () => resolve(s))
   })
