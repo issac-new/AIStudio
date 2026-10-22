@@ -8,7 +8,6 @@ import {
   fetchClearanceLedger, resolveClearance, waiveClearance, groupClearanceTargets,
   type ClearanceLedgerView,
 } from '../../api/gatekeeper'
-import { compensationLabel } from '../../compensation-labels'
 import { humanDateTime } from '../../format'
 
 const ledger = ref<ClearanceLedgerView | null>(null)
@@ -57,7 +56,7 @@ async function act(kind: 'resolve' | 'waive', target: string): Promise<void> {
       ledger.value = await waiveClearance(target, (waiveInput.value[target] ?? '').trim())
       delete waiveInput.value[target]
     }
-    actionMsg.value = `已${kind === 'resolve' ? '登记根治' : '豁免'} ${target}（留痕在 orgloop 处置记录）`
+    actionMsg.value = `已${kind === 'resolve' ? '登记根治' : '豁免'} ${targetLabel(target)}（留痕在 orgloop 处置记录）`
   } catch (e) {
     rawError.value = (e as Error).message
     loadError.value = humanizeLedgerError(rawError.value)
@@ -69,6 +68,44 @@ async function act(kind: 'resolve' | 'waive', target: string): Promise<void> {
 const STATE_LABEL: Record<string, string> = { open: '未清', waived: '豁免', resolved: '已清' }
 
 onMounted(() => { void refresh() })
+</script>
+
+<script lang="ts">
+// 信息降噪（2026-10-22）：主文案说人话供人类员工决策，内部代号只进 title 供排查反查。
+// 导出为守门测试锚点。
+/** 清算目标（缺陷 PR 编号）的人话名。 */
+export const TARGET_LABEL: Record<string, string> = {
+  'PR-1': '锁文件',
+  'PR-2': '自动批准',
+  'PR-3': '催办',
+  'PR-4': '卡片补录/代办',
+  'PR-5': '环形依赖',
+  'PR-6': '挂账先例',
+  'PR-7': '预设派发',
+}
+
+/** 台账类型码的人话名；未登记的码原样透出，不假装认识。 */
+export const KIND_LABEL: Record<string, string> = {
+  'dispatch-preset': '预设派发',
+  'auto-approve': '自动批准',
+  nudge: '催办',
+  'card-walk-done': '卡片代办',
+  dispatch: '派发',
+}
+
+/** 目标显示名：已知 PR 给缺陷名；未知 PR-N 标「补偿记录」；非 PR 目标（defect 缺席回落 type）按类型码映射。 */
+export function targetLabel(target: string): string {
+  const key = String(target ?? '').trim()
+  if (TARGET_LABEL[key]) return TARGET_LABEL[key]
+  if (/^PR-\d+$/.test(key)) return `补偿记录 ${key}`
+  return KIND_LABEL[key] ?? key
+}
+
+/** 类型显示名：命中映射给人话，未命中原样返回。 */
+export function kindLabel(kind: string): string {
+  const key = String(kind ?? '').trim()
+  return KIND_LABEL[key] ?? key
+}
 </script>
 
 <template>
@@ -94,8 +131,8 @@ onMounted(() => { void refresh() })
         <p v-if="targets.length === 0" class="clr__hint" data-testid="clr-targets-empty">台账无未清项。</p>
         <div v-for="g in targets" :key="g.target" class="clr__target" :data-testid="`clr-target-${g.target}`">
           <div class="clr__target-head">
-            <span class="clr__target-name">{{ g.target }}</span>
-            <span class="clr__target-meta">{{ g.openCount }} 项未清（{{ g.types.map(compensationLabel).join('、') }}）</span>
+            <span class="clr__target-name" :title="g.target">{{ targetLabel(g.target) }}</span>
+            <span class="clr__target-meta" :title="g.types.join('、')">{{ g.openCount }} 项未清（{{ g.types.map(kindLabel).join('、') }}）</span>
           </div>
           <div class="clr__target-actions">
             <input v-model="resolveInput[g.target]" class="clr__input" :data-testid="`clr-resolve-pr-${g.target}`" placeholder="根治 PR 锚（必填）">
@@ -112,7 +149,7 @@ onMounted(() => { void refresh() })
           <thead><tr><th>类型</th><th>缺陷</th><th>时刻</th><th>状态</th></tr></thead>
           <tbody>
             <tr v-for="r in rows" :key="r.id">
-              <td>{{ r.type }}</td>
+              <td :title="r.type">{{ kindLabel(r.type) }}</td>
               <td>{{ r.defect || '—' }}</td>
               <td class="clr__mono">{{ humanDateTime((r as { ts?: string }).ts) }}</td>
               <td><span class="clr__state" :class="`clr__state--${r.state}`">{{ STATE_LABEL[r.state] }}</span></td>
