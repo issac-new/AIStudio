@@ -324,3 +324,165 @@ export async function offboardAccount(inp: OffboardInput): Promise<{
   const auditCommit = await currentCommit()
   return { handoverCommit, deactivated, auditCommit }
 }
+
+// ── org 编制 admin 行双人会签守卫（2026-10-22「治理者由谁治理」缺口补）────
+// spec: docs/superpowers/specs/2026-10-22-org-admin-cosign-guard.md
+// 守卫语义：org.md 编制表的 admin 行（账号=admin 或角色含「治理裁决」）增删改
+// 一律拦截——409 需双人会签落盘，或 break-glass 紧急通道单人落盘+强制审计留痕。
+// 豁免：此前无任何 admin 行（空表/首次建编）放行直写。
+
+/** 编制表数据行提取（第一个 markdown 表，跳过表头与 |---| 分隔行）。 */
+export function orgTableRows(markdown: string): string[][] {
+  const rows: string[][] = []
+  let inTable = false
+  for (const line of markdown.split('\n')) {
+    const t = line.trim()
+    const isRow = t.startsWith('|') && t.endsWith('|') && t.length > 2
+    if (!isRow) { if (inTable) break; continue }
+    if (!inTable) { inTable = true; continue } // 表头
+    const inner = t.slice(1, -1)
+    if (/^[-:\s|]+$/.test(inner) && inner.includes('-')) continue // | --- | 分隔行
+    rows.push(inner.split('|').map(c => c.trim()))
+  }
+  return rows
+}
+
+/** admin 行判定：账号列=admin，或角色列含「治理裁决」。 */
+export function isAdminRow(cells: string[]): boolean {
+  const account = (cells[0] || '').replace(/^@/, '').toLowerCase()
+  return account === 'admin' || (cells[1] || '').includes('治理裁决')
+}
+
+/** 检测 admin 行变更（整行规范化比对）。初始建编豁免：before 无 admin 行放行。 */
+export function detectAdminRowChange(before: string, after: string): { changed: boolean; detail: string[] } {
+  const norm = (md: string) => orgTableRows(md).filter(isAdminRow).map(r => r.join(' | '))
+  const b = norm(before); const a = norm(after)
+  if (b.length === 0 && a.length > 0) return { changed: false, detail: [] }
+  const detail: string[] = []
+  for (const row of a) if (!b.includes(row)) detail.push(`新增/变更后：| ${row} |`)
+  for (const row of b) if (!a.includes(row)) detail.push(`删除/变更前：| ${row} |`)
+  return { changed: detail.length > 0, detail }
+}
+
+/** 会签资格：编制在册且为治理岗（admin 行或角色含「审计」）。批准时另校验 ≠ 发起人。 */
+export function cosignEligible(orgMarkdown: string, approver: string): boolean {
+  const name = approver.trim().replace(/^@/, '').split(':')[0].toLowerCase()
+  if (!name) return false
+  return orgTableRows(orgMarkdown).some(r => {
+    const acct = (r[0] || '').replace(/^@/, '').toLowerCase()
+    return acct === name && (isAdminRow(r) || (r[1] || '').includes('审计'))
+  })
+}
+
+const COSIGN_PATH = 'docs/admin/org-cosign.md'
+const AUDIT_TRAIL = 'docs/admin/audit-trail.md'
+
+export interface OrgCosignPending {
+  status: 'pending'; initiator: string; created: string
+  message: string; detail: string[]; markdown: string
+}
+
+/** 审计留痕行（append-only，与离职③同模式；break-glass 与会签决议共用）。 */
+async function appendAuditRow(cells: string[]): Promise<void> {
+  const trailAbs = path.join(repoRoot(), AUDIT_TRAIL)
+  const line = `| ${cells.join(' | ')} |\n`
+  try {
+    await appendFile(trailAbs, line, 'utf-8')
+  } catch {
+    await mkdir(path.dirname(trailAbs), { recursive: true })
+    await writeFile(trailAbs, '# 账号审计留痕（append-only）\n\n' + line, 'utf-8')
+  }
+  await git(['add', AUDIT_TRAIL])
+  await git(['commit', '-m', `审计留痕：${cells[1]}（${cells[5]}）`])
+}
+
+/** 读待会签单（无 pending/无台账文件 → null）。 */
+export async function readOrgCosign(): Promise<OrgCosignPending | null> {
+  let md: string
+  try { md = await readFile(path.join(repoRoot(), COSIGN_PATH), 'utf-8') } catch { return null }
+  const st = /^status: (.+)$/m.exec(md)
+  if (!st || st[1].trim() !== 'pending') return null
+  const field = (key: string) => new RegExp(`^${key}: (.*)$`, 'm').exec(md)?.[1]?.trim() ?? ''
+  const detail = [...md.matchAll(/^- (.+)$/gm)].map(x => x[1].trim())
+  const fenced = /<<<MD\n([\s\S]*?)\nMD>>>/.exec(md)
+  return {
+    status: 'pending', initiator: field('initiator'), created: field('created'),
+    message: field('message'), detail, markdown: fenced ? fenced[1] : '',
+  }
+}
+
+/** 发起会签：暂存单落台账（单槽——已有 pending 即拒）。 */
+export async function openOrgCosign(p: {
+  initiator: string; message: string; detail: string[]; markdown: string
+}): Promise<{ commit: string }> {
+  if (await readOrgCosign()) throw new Error('已有待会签变更——先批准或驳回再发起新单')
+  const doc = [
+    '# org 编制会签单（admin 行变更专用；status: pending/approved/rejected）', '',
+    'status: pending',
+    `initiator: ${p.initiator}`,
+    `created: ${new Date().toISOString()}`,
+    `message: ${p.message.replace(/\n/g, ' ')}`,
+    'detail:',
+    ...p.detail.map(d => `- ${d}`),
+    '', '## 待落盘 org.md 全文', '', '<<<MD', p.markdown, 'MD>>>', '',
+  ].join('\n')
+  const abs = path.join(repoRoot(), COSIGN_PATH)
+  await mkdir(path.dirname(abs), { recursive: true })
+  await writeFile(abs, doc, 'utf-8')
+  await git(['add', COSIGN_PATH])
+  await git(['commit', '-m', `组织会签：发起（${p.initiator}）——admin 行变更暂存待签`])
+  return { commit: await currentCommit() }
+}
+
+/** 会签决议：approve=落盘 org.md+台账闭单+审计留痕；reject=闭单+留痕。
+ *  资格：approver 编制在册治理岗且 ≠ 发起人（同人自签=守卫要防的正主）。 */
+export async function resolveOrgCosign(inp: {
+  action: 'approve' | 'reject'; approver: string; reason?: string
+}): Promise<{ orgCommit?: string; commit: string }> {
+  const p = await readOrgCosign()
+  if (!p) throw new Error('无待会签变更')
+  const approver = inp.approver.trim()
+  const { markdown: orgNow } = await readRegistry('org')
+  if (approver.toLowerCase() === p.initiator.toLowerCase()) throw new Error('发起人不得自签（双人会签的正主约束）')
+  if (!cosignEligible(orgNow, approver)) throw new Error(`${approver} 无会签资格——须编制在册治理岗（admin 或 审计）`)
+  const reason = (inp.reason || '').trim()
+  if (inp.action === 'reject' && !reason) throw new Error('驳回必须填理由')
+  const iso = new Date().toISOString()
+  let orgCommit: string | undefined
+  if (inp.action === 'approve') {
+    const det = detectAdminRowChange(orgNow, p.markdown)
+    if (!det.changed) throw new Error('待签单内容已不再触及 admin 行（编制可能已被他人改过）——请驳回重发')
+    const w = await writeRegistry('org', p.markdown,
+      `组织会签落盘：${p.message}（${p.initiator} 发起，${approver} 批准）`, approver)
+    orgCommit = w.commit
+  }
+  const doc = [
+    '# org 编制会签单（admin 行变更专用；status: pending/approved/rejected）', '',
+    `status: ${inp.action === 'approve' ? 'approved' : 'rejected'}`,
+    `initiator: ${p.initiator}`,
+    `created: ${p.created}`,
+    `resolved: ${iso}`,
+    `resolver: ${approver}`,
+    `reason: ${reason || '—'}`,
+    `message: ${p.message.replace(/\n/g, ' ')}`,
+    '', '（已决单：暂存全文见 git 历史，本单仅存决议）', '',
+  ].join('\n')
+  await writeFile(path.join(repoRoot(), COSIGN_PATH), doc, 'utf-8')
+  await git(['add', COSIGN_PATH])
+  await git(['commit', '-m', `组织会签：${inp.action === 'approve' ? '批准' : '驳回'}（${approver}）`])
+  await appendAuditRow([iso, `org-cosign-${inp.action}`, `${p.initiator}→${approver}`,
+    inp.action === 'approve' ? `admin 行变更落盘@${orgCommit ?? ''}` : 'admin 行变更被驳回',
+    reason || '—', approver])
+  return { orgCommit, commit: await currentCommit() }
+}
+
+/** break-glass 紧急落盘：单人放行 + 强制审计留痕（理由必填，commit 带 [BREAK-GLASS]）。 */
+export async function writeOrgBreakGlass(inp: {
+  markdown: string; message: string; actor: string; reason: string
+}): Promise<{ commit: string }> {
+  const r = await writeRegistry('org', inp.markdown,
+    `[BREAK-GLASS] ${inp.message}（紧急理由：${inp.reason}）`, inp.actor)
+  await appendAuditRow([new Date().toISOString(), 'org-break-glass', inp.actor,
+    'admin 行变更紧急落盘（单人）', inp.reason, inp.actor])
+  return r
+}

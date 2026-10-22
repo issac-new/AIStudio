@@ -30,7 +30,7 @@ import { collectGovernancePosture } from './posture'
 import { emergencyStopAll } from './emergency-stop'
 import { queryImpact } from './governance-impact'
 import { crossMachineDispatchStats } from './governance-crossdispatch'
-import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, createAccountInvite, backfillDefaultAvatars } from './registry-admin'
+import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, createAccountInvite, backfillDefaultAvatars, detectAdminRowChange, readOrgCosign, openOrgCosign, resolveOrgCosign, writeOrgBreakGlass } from './registry-admin'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns, collectQgateVerdicts } from './governance-analytics'
 import { capacityOverview } from './capacity-analytics'
 import { auditLog } from './governance-audit'
@@ -577,10 +577,73 @@ router.get('/registry/:kind', async (ctx) => {
 router.put('/registry/:kind', async (ctx) => {
   if (superAdminDenied(ctx)) return
   if (!isRegistryKind(ctx.params.kind)) { ctx.status = 404; ctx.body = { error: 'unknown registry' }; return }
-  const { markdown, message, actor } = ctx.request.body as { markdown?: string; message?: string; actor?: string }
-  if (typeof markdown !== 'string' || !markdown.trim()) { ctx.status = 400; ctx.body = { error: 'markdown 必填' }; return }
-  ctx.body = await writeRegistry(ctx.params.kind, markdown, message || `更新 ${ctx.params.kind}`, actor || 'studio-ui')
+  const b = ctx.request.body as { markdown?: string; message?: string; actor?: string; breakGlass?: boolean; breakGlassReason?: string }
+  if (typeof b.markdown !== 'string' || !b.markdown.trim()) { ctx.status = 400; ctx.body = { error: 'markdown 必填' }; return }
+  // 治理者守卫（2026-10-22 缺口补）：org 编制表 admin 行（账号=admin/角色含
+  // 「治理裁决」）增删改默认 409 拦截——双人会签落盘，或 breakGlass+理由紧急
+  // 落盘（强制审计留痕）。此前无 admin 行（空表建编）豁免直写。
+  if (ctx.params.kind === 'org') {
+    let before = ''
+    try { ({ markdown: before } = await readRegistry('org')) } catch { /* org.md 不存在=初始建编 */ }
+    const det = detectAdminRowChange(before, b.markdown)
+    if (det.changed) {
+      if (b.breakGlass) {
+        if (!b.breakGlassReason?.trim()) { ctx.status = 400; ctx.body = { error: '紧急通道必须填理由（事后强制审计留痕）' }; return }
+        const r = await writeOrgBreakGlass({
+          markdown: b.markdown, message: b.message || '更新 org',
+          actor: b.actor || 'studio-ui', reason: b.breakGlassReason.trim(),
+        })
+        ctx.body = { ...r, breakGlass: true }
+        return
+      }
+      ctx.status = 409
+      ctx.body = {
+        ok: false, code: 'org_needs_cosign', needsCoSign: true,
+        error: `编制 admin 行变更需双人会签或紧急通道。${det.detail.join('；')}`,
+        detail: det.detail,
+      }
+      return
+    }
+  }
+  ctx.body = await writeRegistry(ctx.params.kind, b.markdown, b.message || `更新 ${ctx.params.kind}`, b.actor || 'studio-ui')
 })
+
+// ---- org admin 行会签流（发起→资格异人批准落盘/驳回；台账 docs/admin/org-cosign.md）----
+router.get('/registry/org/cosign', async (ctx) => {
+  ctx.body = { pending: await readOrgCosign() }
+})
+
+router.post('/registry/org/cosign', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const b = ctx.request.body as { markdown?: string; message?: string; actor?: string }
+  if (typeof b.markdown !== 'string' || !b.markdown.trim()) { ctx.status = 400; ctx.body = { error: 'markdown 必填' }; return }
+  let before = ''
+  try { ({ markdown: before } = await readRegistry('org')) } catch { /* 初始建编场景 */ }
+  const det = detectAdminRowChange(before, b.markdown)
+  if (!det.changed) { ctx.status = 400; ctx.body = { error: '本次变更未触及 admin 行——普通保存即可，无需会签' }; return }
+  try {
+    ctx.body = await openOrgCosign({ initiator: b.actor || 'studio-ui', message: b.message || 'org 变更', detail: det.detail, markdown: b.markdown })
+  } catch (e) {
+    ctx.status = 409; ctx.body = { error: String(e instanceof Error ? e.message : e) }
+  }
+})
+
+// 会签决议共用 handler（approve/reject 两个显式路由——@koa/router 新版不支持
+// 参数内联正则 :action(approve|reject)）。
+async function resolveCosignHandler(ctx: any, action: 'approve' | 'reject') {
+  if (superAdminDenied(ctx)) return
+  const b = ctx.request.body as { approver?: string; reason?: string }
+  if (!b.approver?.trim()) { ctx.status = 400; ctx.body = { error: '缺 approver（会签人账号）' }; return }
+  try {
+    ctx.body = await resolveOrgCosign({ action, approver: b.approver, reason: b.reason })
+  } catch (e) {
+    const msg = String(e instanceof Error ? e.message : e)
+    ctx.status = /无待会签/.test(msg) ? 404 : /资格|自签|理由|不再触及/.test(msg) ? 403 : 500
+    ctx.body = { error: msg }
+  }
+}
+router.post('/registry/org/cosign/approve', (ctx) => resolveCosignHandler(ctx, 'approve'))
+router.post('/registry/org/cosign/reject', (ctx) => resolveCosignHandler(ctx, 'reject'))
 
 router.post('/matrix-users', async (ctx) => {
   if (superAdminDenied(ctx)) return
