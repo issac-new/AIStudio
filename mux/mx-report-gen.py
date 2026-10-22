@@ -2448,10 +2448,33 @@ def r18_block(n: int) -> str:
                      + '</div>' + ''.join(_r18_msg_html(m) for m in (d.get('messages') or []))
                      + '</div>')
     for op in ops:
+        _fr = op.get('frames') or []
+        _tags = _r18_frame_tags(_fr, n, view=str(op.get('title') or ''))
+        # 孤儿帧自动补挂（run22 复盘根治⑤）：op 注册帧渲染为空（注册缺席/帧键错位）但盘上
+        # 存在步键前缀帧（r18 采集链真产物）——按步键扫盘补挂，诚实标注来源；步块 imgs 侧的
+        # 孤儿挂接（run20 C3）同构，本件补 r18 ops 面（run22 实测 8 步帧在盘未挂、
+        # 逐个降级登记收场的结构性缺口）。
+        if not _tags.strip():
+            _keys = next((m.get('keys') or [] for _n, _t, _g, m in STEPS if _n == n), [])
+            _found = []
+            if _keys:
+                import glob as _g
+                _seen = set()
+                for _k in _keys:
+                    for _f in sorted(_g.glob(str(STEPS_DIR / f'{_k}-op*.png'))):
+                        _stem = Path(_f).name
+                        if _stem in _seen:
+                            continue
+                        _seen.add(_stem)
+                        _found.append({'file': _stem, 'caption': f'自动补挂·{_stem}（op 注册缺席，按步键匹配盘上帧——r18 采集链产物）'})
+            if _found:
+                _tags = ('<p class="st-autoattach">op 注册帧缺席，按步键自动补挂盘上 '
+                         f'{len(_found)} 帧（来源如实标注）。</p>'
+                         + _r18_frame_tags(_found, n, view=str(op.get('title') or '')))
         parts.append('<div class="r18-sec r18-op"><div class="r18-sec-hd">'
                      f'<b>{H.escape(str(op.get("title", "操作")))}</b></div>'
                      + (f'<div class="r18-entry">操作入口：{H.escape(str(op.get("entry", "")))}</div>' if op.get('entry') else '')
-                     + '<div class="st-shots r18-frames">' + _r18_frame_tags(op.get('frames') or [], n, view=str(op.get('title') or '')) + '</div>'
+                     + '<div class="st-shots r18-frames">' + _tags + '</div>'
                      + (f'<div class="r18-note">{md_bold(str(op.get("note", "")))}</div>' if op.get('note') else '')
                      + '</div>')
     if effect:
