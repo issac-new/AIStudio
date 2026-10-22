@@ -15,8 +15,8 @@ const props = withDefaults(defineProps<{
   trail?: string
   /** 右侧数字徽标（如审批待办数） */
   badge?: number | string
-  /** 右侧状态点（流程组）：红黄绿交通灯（2026-10-22 用户裁定）——
-   *  绿✓=已完成、黄●=进行中、红●=有阻塞、灰○=未开始 */
+  /** 右侧状态点（流程组）：红黄绿交通灯（2026-10-22 用户裁定，二轮去棕改灯胆）——
+   *  绿✓=已完成、黄灯胆=进行中、红灯胆=有阻塞、灰○=未开始 */
   status?: 'done' | 'current' | 'pending' | 'blocked'
   /** 状态点的可访问说明（随语言） */
   statusLabel?: string
@@ -45,8 +45,9 @@ const badgeText = computed(() => {
 
 const statusGlyph = computed(() => {
   if (props.status === 'done') return '✓'
-  if (props.status === 'current' || props.status === 'blocked') return '●'
-  return '○'
+  if (props.status === 'pending') return '○'
+  // current/blocked＝实心灯胆：视觉由 CSS 提供（文字型黄色在浅底无合格对比度）
+  return ''
 })
 const statusTone = computed(() =>
   props.status === 'done' ? 'done'
@@ -168,10 +169,18 @@ const statusTone = computed(() =>
   font-size: 11px;
   line-height: 1;
 }
-/* 交通灯三色（2026-10-22 用户裁定红黄绿）：绿=完成（fresh）、黄=进行中（warn）、
-   红=阻塞（fail）；黄用新增语义 token --ia-warn（ia2.scss 双主题），不挪用 stale。 */
+/* 交通灯（2026-10-22 用户两轮裁定：红黄绿＋「不要棕色」）：绿✓=完成（文本色，
+   合格对比度）；黄/红＝实心圆灯胆（灯胆 token 单一源 ia2.scss，不随主题反转——
+   自发光图形；内描环保证浅底可见）。黄色作文本色在浅底无 ≥4.5:1 合格值，
+   实心灯胆是交通灯的正确形态。 */
 .isn-item__status--done { color: var(--ia-fresh); }
-.isn-item__status--current { color: var(--ia-warn); }
-.isn-item__status--blocked { color: var(--ia-fail); }
+.isn-item__status--current,
+.isn-item__status--blocked {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.isn-item__status--current { background: var(--ia-warn-lamp); box-shadow: inset 0 0 0 1px rgba(66, 44, 0, 0.35); }
+.isn-item__status--blocked { background: var(--ia-fail-lamp); box-shadow: inset 0 0 0 1px rgba(82, 0, 0, 0.28); }
 .isn-item__status--pending { color: var(--text-muted); }
 </style>

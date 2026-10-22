@@ -43,17 +43,19 @@ describe('dailyStageState 交通灯判定', () => {
 describe('交通灯呈现单一源（源码锚定）', () => {
   const read = (rel: string) => readFileSync(resolve(__dirname, rel), 'utf-8')
 
-  it('状态点颜色映射：done=fresh/current=warn/blocked=fail', () => {
+  it('状态点呈现：done=绿文本、current/blocked=实心灯胆（二轮去棕）', () => {
     const src = read('../components/IaSideNavItem.vue')
     expect(src).toContain('.isn-item__status--done { color: var(--ia-fresh); }')
-    expect(src).toContain('.isn-item__status--current { color: var(--ia-warn); }')
-    expect(src).toContain('.isn-item__status--blocked { color: var(--ia-fail); }')
+    expect(src).toContain('.isn-item__status--current { background: var(--ia-warn-lamp);')
+    expect(src).toContain('.isn-item__status--blocked { background: var(--ia-fail-lamp);')
+    expect(src).toContain('border-radius: 50%;')
   })
 
   it('--ia-warn token 双主题齐备', () => {
     const scss = read('../styles/ia2.scss')
-    expect(scss).toContain('--ia-warn: #a16207;')
-    expect(scss).toContain('--ia-warn: #eab308;')
+    expect(scss).toContain('--ia-warn-lamp: #eab308;')
+    expect(scss).toContain('--ia-fail-lamp: #e03131;')
+    expect(scss).not.toContain('--ia-warn:') // 二轮去棕：文本型黄 token 已退役
   })
 
   it('可访问说明含阻塞态（中文「有阻塞」）', () => {
