@@ -47,11 +47,6 @@ const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
 process.env.TS_NODE_PROJECT = 'packages/server/tsconfig.json';
 process.env.TS_NODE_FILES = '1';
 process.env.PORT = port;
-// D20 治理台账仓落点（org/roster/invites 等 registry 的 git 仓）：缺省 ncwk/governance
-//（工作区内、overlay 代码仓外）；显式设置 GOVERNANCE_REPO 时尊重不动。
-if (!process.env.GOVERNANCE_REPO?.trim()) {
-  process.env.GOVERNANCE_REPO = ncwkRoot ? resolve(ncwkRoot, 'governance') : resolve(overlayRoot, '..', 'governance');
-}
 // 推演执行面根（SIM_ROOT）：仿真中心族（run-state/topology/issues/quality/delivery…
 // 的 fail-closed 门）。缺省工作区同级目录 lab/ncwk-sim-mux（存在才设；显式 env
 // 尊重不动）——否则 npm run serve 起服务后整族 503「OBS_SIM_ROOT 缺席」，页面
@@ -70,6 +65,22 @@ if (process.env.OBS_SIM_ROOT) {
   if (existsSync(central)) {
     if (!process.env.SIM_BRANCHES_REPO?.trim()) process.env.SIM_BRANCHES_REPO = central;
     if (!process.env.SIM_ANCHOR_REPO?.trim()) process.env.SIM_ANCHOR_REPO = central;
+  }
+}
+// D20 治理台账仓落点（org/roster/invites 等 registry 的 git 仓）。缺省链（2026-10-22
+// 用户裁定「开发测试统一指推演仓」）：显式 GOVERNANCE_REPO 尊重不动（生产部署指
+// 生产仓）；否则推演中央仓存在时缺省指它——开发测试机的组织台账唯一有数据的
+// 来源在推演仓（run22 十五人编制），此前缺省指空生产仓致驾驶舱组织/账号页空表
+//（2026-10-22 事故）；两者皆缺回落工作区生产仓 ncwk/governance（空表占位，真实
+// 编制投产时启用；remote=github.com/issac-new/governance）。
+if (!process.env.GOVERNANCE_REPO?.trim()) {
+  const centralGov = process.env.OBS_SIM_ROOT
+    ? resolve(process.env.OBS_SIM_ROOT, 'central', 'aipaydev')
+    : '';
+  if (centralGov && existsSync(centralGov)) {
+    process.env.GOVERNANCE_REPO = centralGov;
+  } else {
+    process.env.GOVERNANCE_REPO = ncwkRoot ? resolve(ncwkRoot, 'governance') : resolve(overlayRoot, '..', 'governance');
   }
 }
 
