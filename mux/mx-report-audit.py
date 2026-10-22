@@ -495,8 +495,12 @@ if RUN_ID >= '20261010-v8-run13':
         for _lm in re.finditer(r'<img src="screenshots/steps/([^"]+)"[^>]*>.*?<figcaption>(.*?)</figcaption>', rep, re.S):
             _cap_map[_lm.group(1)] = html.unescape(re.sub(r'<[^>]+>', '', _lm.group(2)))
         _cap_of = lambda r: _cap_map.get(r if r.endswith('.png') else r + '.png', _cap_map.get(f'{r}.png', ''))
-        _t0, _t1 = int(_run_start), int((_steps_dir_v3.parent.parent / 'simulation-report.html').stat().st_mtime
-                    if (_steps_dir_v3.parent.parent / 'simulation-report.html').exists() else _time.time())
+        # run22 复盘根治③：窗口终点=审计时刻（原=报告 mtime+60s 隐式窗）。检查目的是拦
+        # 「run 开始前的陈旧帧冒充实时」（run 区间外=早于 t0 或晚于本审计执行时刻）——报告生成
+        # 与审计之间任何后触帧（采集重试/归档/备份都合法触盘）在原口径下恒红（run22 帧集合
+        # 每轮轮转实录：两次手工审计间隔 3 秒集合已变）。t0 前的陈旧帧拦截不放松，补拍标注
+        # 豁免通道不变。
+        _t0, _t1 = int(_run_start), int(_time.time())
         _out_win, _late, _retro_ok = [], [], []
         for _r in _refs_v3:
             _fp = _steps_dir_v3 / f'{_r}.png'
