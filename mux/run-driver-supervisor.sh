@@ -55,8 +55,13 @@ monitor_events() {
 
 note() { echo "[supervisor $(date '+%F %H:%M:%S')] $*"; }
 
-# 熔断证据指纹（纪律 8 复位判据的监督器侧投影）：integration tip + G5 评审卡 body 哈希。
-# 任一变化=「新提交/新判词/卡 body 更新」成立，熔断复位放行新尝试。
+# 熔断证据指纹（纪律 8 复位判据的监督器侧投影）：integration tip + G5 评审卡 body 哈希
+# + 分析群最新判词结论行哈希。任一变化=「新提交/新判词/卡 body 更新/房间结论行重发」成立，
+# 熔断复位放行新尝试。
+# run22 复盘根治③：房间判词行入指纹——run22 实锤评审员改判只动卡面、房间行后补的
+# 中间态：卡冻结后指纹不变=驱动永不被拉起，房间行重发也没人消费（收敛循环 9h 的
+# 放大器）。指纹补第三源（房间 READY-GATE 结论行·取最新一条原文哈希）后，评审员
+# 任一载体更新都能触发复位——等待锚与判定锚对齐。
 _g5_evidence_fp() {
   local fp="" repo rgid db
   repo="$SIM_ROOT/central/${MX_CENTRAL_NAME:-aipaydev}"
@@ -68,6 +73,27 @@ _g5_evidence_fp() {
     # run20 02:2x 死锁根治：判词常写 result 列（G5 终判 PASS 实录）而 body 不动——
     # 单 body 哈希永不变化=复位永不触发。扩为 body||result 拼接哈希（判词落任一列即指纹变）。
     fp="$fp card:$(sqlite3 "$db" "SELECT body || char(10) || coalesce(result,'') FROM tasks WHERE id='$rgid';" 2>/dev/null | shasum | cut -c1-12)"
+  fi
+  # run22 根治③：房间判词行入指纹（第三源）——分析群最新 READY-GATE 结论行原文哈希。
+  # 评审员任一载体（卡/房间行）更新都可触发复位；消息翻页 50 条覆盖催办-改判窗足够
+  # （更深历史由卡面源兜底）。fail-soft：取不到房间/令牌/网络=该源缺席，指纹退化为双源。
+  local _room _tok _vline
+  _room=$(sed -n 's/^room_analysis=//p' "$STATE" 2>/dev/null | head -1)
+  _tok=$(head -1 "$SIM_ROOT/creds/${MX_ANCHOR_USER:-fanfan}.token" 2>/dev/null)
+  if [[ -n "$_room" && -n "${_tok:-}" ]]; then
+    # 判词行形态过滤（非任意提及）：行首 token 或「结论（行）：X」锚定——催办/转述
+    # 消息里的 READY-GATE 字样不计（run22 实测催办文本会命中朴素 contains）。
+    _vline=$(curl -s -m 10 "http://${MX_HS_HOST:-127.0.0.1}:${MX_HS_PORT:-8008}/_matrix/client/v3/rooms/$_room/messages?access_token=$_tok&dir=b&limit=200" 2>/dev/null \
+      | python3 -c 'import json,sys,re
+try: chunk=json.load(sys.stdin).get("chunk",[])
+except Exception: sys.exit(0)
+pat=re.compile(r"^\s*READY-GATE-(PASS|FAIL)|结论(行)?[（(]?[^）)]*[）)]?[:：]\s*READY-GATE-(PASS|FAIL)")
+last=""
+for m in reversed(chunk):
+    b=((m.get("content") or {}).get("body") or "")
+    if pat.search(b): last=b
+print(last)' 2>/dev/null)
+    [[ -n "${_vline:-}" ]] && fp="$fp room:$(printf '%s' "$_vline" | shasum | cut -c1-12)"
   fi
   printf '%s' "$fp"
 }

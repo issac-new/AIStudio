@@ -134,6 +134,25 @@ for blk in blocks:
         else:
             (done_no_img if done else pending_no_img).append(n)
 
+
+# 读态见证（run22 复盘根治①：驱动轮审计与手工审计「双态振荡」实录——同参数同路径
+# 读数矛盾且数字冻结数小时）。每次审计把实读 issues.log 的指纹（sha256 前 12 + 行数 +
+# 文件 mtime）落 EVID/audit-read-state.log：出争议时一行对账（审计读的哪版文件 vs 盘上
+# 哪版），读态问题当场定诊，不再靠推断。fail-soft：写失败不阻断审计。
+def _attest_read():
+    try:
+        import hashlib as _h, time as _t
+        f = EVID / 'issues.log'
+        if not f.exists():
+            return
+        b = f.read_bytes()
+        with open(EVID / 'audit-read-state.log', 'a', encoding='utf-8') as w:
+            w.write(f"{_t.strftime('%F %T')} sha256:{_h.sha256(b).hexdigest()[:12]} "
+                    f"lines:{len(b.splitlines())} mtime:{int(f.stat().st_mtime)}\n")
+    except Exception:
+        pass
+_attest_read()
+
 # issues.log 预解析（查3 降级配对用；与 A3/A5d 段同源解析）
 _ilog = EVID / 'issues.log'
 _fc_pre = set(); _r18_pre = False
@@ -495,8 +514,12 @@ if RUN_ID >= '20261010-v8-run13':
         for _lm in re.finditer(r'<img src="screenshots/steps/([^"]+)"[^>]*>.*?<figcaption>(.*?)</figcaption>', rep, re.S):
             _cap_map[_lm.group(1)] = html.unescape(re.sub(r'<[^>]+>', '', _lm.group(2)))
         _cap_of = lambda r: _cap_map.get(r if r.endswith('.png') else r + '.png', _cap_map.get(f'{r}.png', ''))
-        _t0, _t1 = int(_run_start), int((_steps_dir_v3.parent.parent / 'simulation-report.html').stat().st_mtime
-                    if (_steps_dir_v3.parent.parent / 'simulation-report.html').exists() else _time.time())
+        # run22 复盘根治③：窗口终点=审计时刻（原=报告 mtime+60s 隐式窗）。检查目的是拦
+        # 「run 开始前的陈旧帧冒充实时」（run 区间外=早于 t0 或晚于本审计执行时刻）——报告生成
+        # 与审计之间任何后触帧（采集重试/归档/备份都合法触盘）在原口径下恒红（run22 帧集合
+        # 每轮轮转实录：两次手工审计间隔 3 秒集合已变）。t0 前的陈旧帧拦截不放松，补拍标注
+        # 豁免通道不变。
+        _t0, _t1 = int(_run_start), int(_time.time())
         _out_win, _late, _retro_ok = [], [], []
         for _r in _refs_v3:
             _fp = _steps_dir_v3 / f'{_r}.png'
@@ -948,7 +971,7 @@ if STATE.exists():
             _state[_k.strip()] = _v.strip().strip('"').strip("'")
 _evals_f = EVID / 'evals' / 'eval-summary.json'
 if not _evals_f.exists():
-    (_fails if _v846 else warns).append(
+    (fails if _v846 else warns).append(
         '查15 评测摘要缺席（evidence/evals/eval-summary.json）——G4-E 未接线或未运行；'
         'run22 起为接线缺口，不得以「G4 已过」代替评测子门证据'
     )
@@ -983,7 +1006,7 @@ else:
 # 快照缺席=run22 起接线缺口（FAIL）；端点失败=如实缺口（WARN）；报告必须带「证据九」。
 _closure_sum = EVID / 'governance-closure' / 'summary.json'
 if not _closure_sum.exists():
-    (_fails if _v846 else warns).append(
+    (fails if _v846 else warns).append(
         '查16 治理结果快照缺席（evidence/governance-closure/summary.json）——'
         '评审治理/观测告警/改进实验/发布门与 UAT 台账未采集；run22 起为接线缺口'
     )

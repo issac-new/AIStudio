@@ -1684,10 +1684,11 @@ STEPS_META_20261021_V8_RUN22 = {
     16: dict(keys=['close_done'], ts_override='',
             narrative='需求收尾完成：评审通过后 fanfan 收尾 RFD-001 主任务，账号板主卡 12:00:47 done。', imgs=[]),
     17: dict(keys=['plan_done'], ts_override='',
-            narrative='排期计划完成：fanfan 12:13-12:19 段产出，六路开发任务 12:19:36 同刻齐发（DEV-PAYCORE-C/S/N、DEV-MP、DEV-CHWX、DEV-CHALI）。', imgs=[]),
+            narrative='排期计划完成：fanfan 12:13-12:19 段产出，六路开发任务 12:19:36 同刻发出（DEV-PAYCORE-C/S/N、DEV-MP、DEV-CHWX、DEV-CHALI）。', imgs=[]),
     18: dict(keys=['devimpl_done'], ts_override='',
-            narrative='开发实现 26 分钟完成（12:19:36 齐发→12:45:21 分段界）：chen 三单独立成三条消息（一人一单纪律）；六分支全部推上 origin——渠道批 12:33:41/12:33:54、支付核心三支 12:33:58-12:34:06，驱动逐一验「本轮新鲜」；G3 缺证分支补齐 testlog（12:44:21）；g3_code_pass 12:45:21 写入。对照 run21 同段 4.3h（含供应商断供 2.5h 与捆绑串行 3h），一人一单+测试左移+增量取证三杠杆叠加是提速主因；测试预备轮与 INT-RFD-001 集成案例已在途先行。', imgs=[]),
-    19: dict(keys=['defect_done', 'testpass_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
+            narrative='开发实现 26 分钟完成（12:19:36 同刻发出→12:45:21 分段界）：chen 三单独立成三条消息（一人一单纪律）；六分支全部推上 origin——渠道批 12:33:41/12:33:54、支付核心三支 12:33:58-12:34:06，驱动逐一验「本轮新鲜」；G3 缺证分支补齐 testlog（12:44:21）；g3_code_pass 12:45:21 写入。对照 run21 同段 4.3h（含供应商断供 2.5h 与捆绑串行 3h），一人一单+测试左移+增量取证三杠杆叠加是提速主因；测试预备轮与 INT-RFD-001 集成案例已在途先行。', imgs=[]),
+    19: dict(keys=['defect_done', 'testpass_done'], ts_override='',
+            narrative='缺陷与测试段：lead 双域集成合并（wei 12:59:25/mei 13:01:23，祖先链反查，主持方零 git 代做）；测试五片并行（13:01）+QUALITY 56 门禁单；14:29-14:51 网关事件中断（负载 575 下托管形态启动挂死，改直起形态恢复，agent 断档 27 分钟）；结论两分——前端 TEST-FE-S1 32/32 全绿×3 轮、后端 TEST-BE-S1 阻塞（DEF-BE-S1-01 P0 台架模块漂移 7 spec 0 跑）；测试报告先缺（1800s 空转）后补（精确指令 17:09→17:1x 落库 docs/reports/TEST-RFD-001.md）；G4 按缺报告显形语义过闸（g4_evidence_gap=1 如实呈现），defect_done+testpass_done 双键完成。', imgs=[]),
     20: dict(keys=['ready_done', 'release_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
     21: dict(keys=['uat_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
     22: dict(keys=['workmgr_done'], ts_override='', narrative='TODO（随轮实写：判断句+时间/卡号锚）', imgs=[]),
@@ -2268,6 +2269,13 @@ def _r18_msg_html(m):
 def _r18_frame_tags(frames, step, view=''):
     out = []
     for f in frames:
+        # dict 帧形态 {file, caption}（2026-10-22 run22 收尾链立法）：caption 覆盖
+        # 自动图注——补拍标注/V8.4③ 合规降级的机器可判载体（audit _cap_of 读报告
+        # figcaption）；字符串形态兼容不破。
+        _cap_override = ''
+        if isinstance(f, dict):
+            _cap_override = str(f.get('caption', '')).strip()
+            f = f.get('file', '')
         name = str(f)
         if not name.endswith('.png'):
             name += '.png'
@@ -2277,6 +2285,8 @@ def _r18_frame_tags(frames, step, view=''):
         _pos = {'before': '操作前', 'action': '操作动作', 'after': '系统响应'}.get(
             name.rsplit('-', 1)[-1][:-4] if '-' in name else '', '')
         cap = f'{view}·{_pos}' if (view and _pos) else (name[:-4] if not _pos else f'操作序列画面·{_pos}')
+        if _cap_override:
+            cap = _cap_override
         _stem = name[:-4] if name.endswith('.png') else name
         if _stem in _USED_FRAMES:
             continue  # V8.4② 单嵌：步条已嵌此帧（步条先渲染），挂接侧让位
@@ -2438,10 +2448,33 @@ def r18_block(n: int) -> str:
                      + '</div>' + ''.join(_r18_msg_html(m) for m in (d.get('messages') or []))
                      + '</div>')
     for op in ops:
+        _fr = op.get('frames') or []
+        _tags = _r18_frame_tags(_fr, n, view=str(op.get('title') or ''))
+        # 孤儿帧自动补挂（run22 复盘根治⑤）：op 注册帧渲染为空（注册缺席/帧键错位）但盘上
+        # 存在步键前缀帧（r18 采集链真产物）——按步键扫盘补挂，诚实标注来源；步块 imgs 侧的
+        # 孤儿挂接（run20 C3）同构，本件补 r18 ops 面（run22 实测 8 步帧在盘未挂、
+        # 逐个降级登记收场的结构性缺口）。
+        if not _tags.strip():
+            _keys = next((m.get('keys') or [] for _n, _t, _g, m in STEPS if _n == n), [])
+            _found = []
+            if _keys:
+                import glob as _g
+                _seen = set()
+                for _k in _keys:
+                    for _f in sorted(_g.glob(str(STEPS_DIR / f'{_k}-op*.png'))):
+                        _stem = Path(_f).name
+                        if _stem in _seen:
+                            continue
+                        _seen.add(_stem)
+                        _found.append({'file': _stem, 'caption': f'自动补挂·{_stem}（op 注册缺席，按步键匹配盘上帧——r18 采集链产物）'})
+            if _found:
+                _tags = ('<p class="st-autoattach">op 注册帧缺席，按步键自动补挂盘上 '
+                         f'{len(_found)} 帧（来源如实标注）。</p>'
+                         + _r18_frame_tags(_found, n, view=str(op.get('title') or '')))
         parts.append('<div class="r18-sec r18-op"><div class="r18-sec-hd">'
                      f'<b>{H.escape(str(op.get("title", "操作")))}</b></div>'
                      + (f'<div class="r18-entry">操作入口：{H.escape(str(op.get("entry", "")))}</div>' if op.get('entry') else '')
-                     + '<div class="st-shots r18-frames">' + _r18_frame_tags(op.get('frames') or [], n, view=str(op.get('title') or '')) + '</div>'
+                     + '<div class="st-shots r18-frames">' + _tags + '</div>'
                      + (f'<div class="r18-note">{md_bold(str(op.get("note", "")))}</div>' if op.get('note') else '')
                      + '</div>')
     if effect:
