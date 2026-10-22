@@ -147,13 +147,15 @@ describe('IaSideNav — 左侧常驻导航', () => {
     for (const id of ['search', 'stage1', 'stage2', 'stage5', 'stage6']) {
       expect(w.find(`[data-testid="ia-side-nav-${id}"] .isn-item__badge`).exists(), id).toBe(false)
     }
-    // 阶段③（done ✓）与④（current ●）徽标与状态点同显，互不挤占
+    // 阶段③（done ✓）与④（current 灯胆）徽标与状态点同显，互不挤占；
+    // 二轮去棕后 current/blocked 无文本字形，视觉由 CSS 灯胆类提供
     const s3 = w.find('[data-testid="ia-side-nav-stage3"]')
     expect(s3.find('.isn-item__badge').text()).toBe('11')
     expect(s3.find('.isn-item__status').text()).toBe('✓')
     const s4 = w.find('[data-testid="ia-side-nav-stage4"]')
     expect(s4.find('.isn-item__badge').text()).toBe('17')
-    expect(s4.find('.isn-item__status').text()).toBe('●')
+    expect(s4.find('.isn-item__status').text()).toBe('')
+    expect(s4.find('.isn-item__status').classes()).toContain('isn-item__status--current')
     // 徽标项挂口径说明 title，无徽标项保持无 title
     expect(w.find('[data-testid="ia-side-nav-board"]').attributes('title')).toContain('受阻')
     expect(w.find('[data-testid="ia-side-nav-search"]').attributes('title')).toBeUndefined()
@@ -166,7 +168,8 @@ describe('IaSideNav — 左侧常驻导航', () => {
     expect(stage4.classes()).toContain('isn-item--active')
     expect(stage4.attributes('aria-current')).toBe('page')
     expect(w.find('[data-testid="ia-side-nav-stage5"]').classes()).not.toContain('isn-item--active')
-    expect(stage4.find('.isn-item__status').text()).toBe('●')
+    expect(stage4.find('.isn-item__status').text()).toBe('')
+    expect(stage4.find('.isn-item__status').classes()).toContain('isn-item__status--current')
     expect(w.find('[data-testid="ia-side-nav-stage1"] .isn-item__status').text()).toBe('✓')
     w.unmount()
   })
