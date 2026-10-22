@@ -36,6 +36,12 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ (e: 'select'): void }>()
 
+/** 徽标展示文本：>99 封顶「99+」，防三位数撑爆 18px 行槽（2026-10-22 待办徽标轮） */
+const badgeText = computed(() => {
+  const n = typeof props.badge === 'number' ? props.badge : Number(props.badge)
+  return Number.isFinite(n) && n > 99 ? '99+' : String(props.badge)
+})
+
 const statusGlyph = computed(() => {
   if (props.status === 'done') return '✓'
   if (props.status === 'current') return '●'
@@ -57,11 +63,13 @@ const statusTone = computed(() => props.status === 'done' ? 'done' : props.statu
     <span class="isn-item__lead" :class="{ 'isn-item__lead--number': leadKind === 'number' }">{{ lead }}</span>
     <span class="isn-item__label">{{ label }}</span>
     <span class="isn-item__trail">
-      <span v-if="badge !== ''" class="isn-item__badge">{{ badge }}</span>
-      <span v-else-if="status" class="isn-item__status" :class="`isn-item__status--${statusTone}`" :aria-label="statusLabel || undefined">
+      <!-- 2026-10-22 待办徽标轮：徽标与状态点共存（阶段③④既显示在办数也保留
+           当前阶段状态点），元信息槽只在两者都缺席时显示 -->
+      <span v-if="badge !== ''" class="isn-item__badge">{{ badgeText }}</span>
+      <span v-if="status" class="isn-item__status" :class="`isn-item__status--${statusTone}`" :aria-label="statusLabel || undefined">
         {{ statusGlyph }}
       </span>
-      <span v-else class="isn-item__meta" :title="trail">{{ trail }}</span>
+      <span v-if="badge === '' && !status" class="isn-item__meta" :title="trail">{{ trail }}</span>
     </span>
   </button>
 </template>
