@@ -820,6 +820,17 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
 capture_step() { # <step> <url> [action] [user]
   local step="$1" url="$2" action="${3:-}" user="${4:-fanfan}"
   local rc=0
+  # 重放幂等（run22 复盘根治③）：本 run 已拍且帧文件在盘即跳过——run22 实锤
+  # smoke/register/analysis/triage 段重放每轮无条件重拍（smoke 段无 done 键守卫，
+  # register/analysis 段 wait 快通后照样 capture），帧 mtime 持续晚于报告 =
+  # V8.4③「帧时刻窗外」集合每轮轮转红（两次手工审计间隔 3 秒集合已变）。
+  # 刻意补拍路径不受影响：删帧文件后重跑（文件缺席检查放行）或清 capture_ok_<step> 键。
+  if [[ -n "$(sget "capture_ok_${step}")" ]] \
+     && { [[ -f "$EVID_DIR/screenshots/steps/${step}-op1-after.png" ]] \
+          || [[ -f "$EVID_DIR/screenshots/steps/${step}-op1-before.png" ]] \
+          || [[ -f "$EVID_DIR/screenshots/steps/${step}-op2-after.png" ]]; }; then
+    return 0
+  fi
   # 已降级步不重拍（run19 壳页复读根治）：frame-capture-failed|step-<键> 在案的步，
   # 断点续跑重放期重拍只会产出新的壳页帧回填帧池（采集链登录态漂移未根治前），
   # 隔离区清完又被写回=结构性红线永不过闸。采集端修复后移除该记录即恢复拍摄。
@@ -848,6 +859,7 @@ capture_step() { # <step> <url> [action] [user]
     fi
   else
     sset capture_fail_streak 0
+    sset "capture_ok_${step}" 1   # 重放幂等键（本函数头部守卫配套；run22 复盘③）
     # 采集链挂驱动（run20 复盘 C3 根治）：拍到的帧自动记录进 R18 载荷
     # （r18-steps.json op 条目）——此前 capture_step 只拍不记录，帧成「拍而未嵌」
     # 孤儿（run20 实锤 59 帧盘上、报告 imgs 空 53 帧无主、逐步「操作 0」）。
