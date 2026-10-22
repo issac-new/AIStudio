@@ -15,8 +15,9 @@ const props = withDefaults(defineProps<{
   trail?: string
   /** 右侧数字徽标（如审批待办数） */
   badge?: number | string
-  /** 右侧状态点（流程组） */
-  status?: 'done' | 'current' | 'pending'
+  /** 右侧状态点（流程组）：红黄绿交通灯（2026-10-22 用户裁定）——
+   *  绿✓=已完成、黄●=进行中、红●=有阻塞、灰○=未开始 */
+  status?: 'done' | 'current' | 'pending' | 'blocked'
   /** 状态点的可访问说明（随语言） */
   statusLabel?: string
   active?: boolean
@@ -44,10 +45,13 @@ const badgeText = computed(() => {
 
 const statusGlyph = computed(() => {
   if (props.status === 'done') return '✓'
-  if (props.status === 'current') return '●'
+  if (props.status === 'current' || props.status === 'blocked') return '●'
   return '○'
 })
-const statusTone = computed(() => props.status === 'done' ? 'done' : props.status === 'current' ? 'current' : 'pending')
+const statusTone = computed(() =>
+  props.status === 'done' ? 'done'
+    : props.status === 'current' ? 'current'
+      : props.status === 'blocked' ? 'blocked' : 'pending')
 </script>
 
 <template>
@@ -164,7 +168,10 @@ const statusTone = computed(() => props.status === 'done' ? 'done' : props.statu
   font-size: 11px;
   line-height: 1;
 }
+/* 交通灯三色（2026-10-22 用户裁定红黄绿）：绿=完成（fresh）、黄=进行中（warn）、
+   红=阻塞（fail）；黄用新增语义 token --ia-warn（ia2.scss 双主题），不挪用 stale。 */
 .isn-item__status--done { color: var(--ia-fresh); }
-.isn-item__status--current { color: var(--ia-stale); }
+.isn-item__status--current { color: var(--ia-warn); }
+.isn-item__status--blocked { color: var(--ia-fail); }
 .isn-item__status--pending { color: var(--text-muted); }
 </style>

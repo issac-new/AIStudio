@@ -121,10 +121,11 @@ const stageItems = computed(() => STAGE_META.map((meta) => {
   }
 }))
 
-const stageStatusLabel = (status: 'done' | 'current' | 'pending'): string =>
+const stageStatusLabel = (status: 'done' | 'current' | 'pending' | 'blocked'): string =>
   status === 'done' ? (zh.value ? '已完成' : 'Done')
     : status === 'current' ? (zh.value ? '当前阶段' : 'Current')
-      : (zh.value ? '未开始' : 'Not started')
+      : status === 'blocked' ? (zh.value ? '有阻塞' : 'Blocked')
+        : (zh.value ? '未开始' : 'Not started')
 
 /** 左侧栏只放可读日期（10/17 运行），不暴露运行目录名/轮次号；
  *  完整目录名留在顶栏运行 chip 的 title 里供排查反查（2026-10-19 走查批） */
