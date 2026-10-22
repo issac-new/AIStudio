@@ -1,7 +1,7 @@
 # 附录 A：产品面全量 spec 索引（242 份）
 
 > 附件，非正本。供「NCWK 整体产品与设计正本」检索与审计；每条给主旨与结论要点。
-> 覆盖：`overlay/docs/superpowers/specs/*.md` 业务 spec 共 245 份（2026-10-21 复测；不含产品正本、设计正本、导航页与四份附录附件，不含 archive/ 与 assets/）。核实日 2026-10-21。
+> 覆盖：`overlay/docs/superpowers/specs/*.md` 业务 spec 共 249 份（2026-10-22 复测；不含产品正本、设计正本、导航页与四份附录附件，不含 archive/ 与 assets/）。核实日 2026-10-22。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -253,6 +253,10 @@
 | 2026-10-21-production-trace-eval-reflow | 生产轨迹转回归样本 | origin 复现 vs fresh 修复；混合证据不得关单 |
 | 2026-10-21-trace-reflow-debt-clearing | 挂账清偿五批 | 评审 Minor/OTel/OS 沙箱/代码仓审计/换装收尾 |
 | 2026-10-21-session-exhaustion-detector | 会话耗尽检测器 | 应答新鲜×真做停摆；warn/high＋换会话建议 |
+| 2026-10-21-debt-final-round | 挂账清偿收 | OTel 聚合 11/11＋红队攻防 6/6；exec-sandbox ESM 边界教训 |
+| 2026-10-21-mcp-security-scan | MCP 注册面安全扫描 | 四类形态（高危命令/密钥/外联/仿名）；姿态面板 |
+| 2026-10-21-g5-uat-state-machine | G5 发布门+UAT 状态机 | 纯函数矩阵/append-only/409 防回流；接管补正本 |
+| 2026-10-22-jargon-allow-director-console | jargon 词表补「导演台」 | 产品功能名专名豁免非行话放行 |
 
 ## A.2 按域聚类（13 域）
 
@@ -260,7 +264,7 @@
 |---|---:|---|---|---|
 | D1 工作台与看板 | 59 | 三栏 mock → 接真数据 → 通知/筛选/日程/工作项 → 终端多工具 → 六阶段工作台+唯一看板 | `/app` 六阶段、`/app/board` 唯一看板、看板卡唯一写入口 | patch 028 重写、纯 mock、旧横向看板页、三栏六区菜单 |
 | D2 IA 与治理面 | 16 | Loop 单页 → 壳+四场景 → 三中心 → 旅程页 → 六阶段左栏 → 日常/推演拆分 → GovOverlay 退役 | 左栏常用+六阶段+四岛+设置；阶段页 33 单层签；三模式 | 六区域窄栏、顶栏六阶段条、三中心一级导航、角色专属路由、治理独立七签 |
-| D3 推演引擎与中心 | 29 | 五阶段 Loop → loop graph（图中心/事件日志）→ P0-P3 → 三模式 → V8.46 + G5/UAT | GraphService 三态、26 步六闸、导演详情分流、run22 在途 | LoopEngine.tick、三 State Store、多需求并行、六区菜单、假启动 |
+| D3 推演引擎与中心 | 29 | 五阶段 Loop → loop graph（图中心/事件日志）→ P0-P3 → 三模式 → V8.46 + G5/UAT 状态机 | GraphService 三态、26 步六闸、导演详情分流；run22 已收官（六闸全过） | LoopEngine.tick、三 State Store、多需求并行、六区菜单、假启动 |
 | D4 方案/报告/文档治理 | 11 | V3 26 步 → V7 混编被指 → V8 五部分 → V8.28/8.37/8.44/8.45/8.46 | 方案唯一正本+机器解析源；验收=第五部分 | V7 五层混编、报告五块拼凑、V4.1 独立方案、旧生成器 |
 | D5 评测/观测/Harness | 17 | RunTrace L1 → Eval Studio 四层 → 腾讯/百度 → Harness 可靠 → Harness² | 四层判定、指标 drives、红队 S0、九层体检、31 检测器 | 只打分评测、report_only 装饰、重型观测、冠军自动选择 |
 | D6 IDE/Ycode | 27 | codex 默认 → zcode 受管 fork → Ycode 红线 → 深度重构/双模式/CUA → 用量账本/上下文 | 21 页签、双模式、CUA fail-closed、账本只读三表 | codex 底座、聚合器路线、第二套运行时、假 CUA、WSL 假支持 |
