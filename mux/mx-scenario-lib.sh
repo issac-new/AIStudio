@@ -1369,17 +1369,23 @@ test_report_on_integration() { # <rfd>：测试报告在 origin/integration/<rfd
   # run19 复盘根治（G4 结论语义）：存在+新鲜度之外还须结论 PASS——run19 实锤 TEST-FAIL
   # 实文（结论行 TEST-FAIL-RFD-001）被存在性判定当过闸落键，评审侧以「G4 实质未过」
   # 拦截（缺项 R-1）。FAIL 报告走派单等待链（qi 复测覆盖旧文），不再静默过闸。
+  # run22 复盘根治（路径契约双兼容）：run22 实锤 agent 把权威报告落
+  # docs/reports/TEST-<rfd>-001.md（汇总命名）而谓词只认 docs/test/<rfd>-test-report.md
+  # （run4-19 沿革）——派发词从未显式给契约路径，UAT fail-fast 永假靠人工归位令解。
+  # 双路径任一满足即真：优先契约路径，回落汇总路径；两路径判据（结论 PASS+新鲜度）逐项同款。
   mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
-  local _body
-  _body="$(git -C "$DIRECTOR_CLONE" show "origin/integration/$1:docs/test/$1-test-report.md" 2>/dev/null)" || return 1
-  [ -n "$_body" ] || return 1
-  printf '%s' "$_body" | grep -qE 'TEST-PASS|结论[^，。]*通过' || return 1
-  local _rs _ct
-  _rs="$(evidence_baseline)"
-  [ -z "$_rs" ] && return 0
-  _ct="$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/integration/$1" -- "docs/test/$1-test-report.md" 2>/dev/null)"
-  [ -n "$_ct" ] || return 1
-  (( _ct >= _rs ))
+  local _body _path _rs _ct
+  for _path in "docs/test/$1-test-report.md" "docs/reports/TEST-$1.md"; do
+    _body="$(git -C "$DIRECTOR_CLONE" show "origin/integration/$1:$_path" 2>/dev/null)" || continue
+    [ -n "$_body" ] || continue
+    printf '%s' "$_body" | grep -qE 'TEST-PASS|结论[^，。]*通过' || continue
+    _rs="$(evidence_baseline)"
+    [ -z "$_rs" ] && return 0
+    _ct="$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/integration/$1" -- "$_path" 2>/dev/null)"
+    [ -n "$_ct" ] || continue
+    (( _ct >= _rs )) && return 0
+  done
+  return 1
 }
 
 uat_evidence_body() { # 本轮（run_started_at 起）产品经理A 发的最新一条 UAT-EVIDENCE 结论行 body；
@@ -1471,6 +1477,15 @@ mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=
       # 全角冒号归一（run20 G5 实锤：中文 agent 判词行天然写「结论行：X」，全角
       # 「：」不在分隔符类，锚点紧邻判词被拒）——gsub 多字节字面量实测可用。
       gsub(/：/, ":", line)
+      # round 注记剥离（run22 复盘根治②：G5 卡终态 9h 死锁根因）——agent 复审轮判词行
+      # 天然写「结论（roundN，改判…）：X」，锚点后的括号注记不在分隔符类=整行被拒，
+      # body 历史 FAIL 行成末判词=PASS 终态永读成 FAIL。白名单式：只剥「（roundN…）」
+      # 精确形态（半/全角括号×纯轮号/加改判族词），任意括注不放宽——「结论行（…）写 X」
+      # 类指令回显剥注记后仍被锚点动词白名单（仅 为/是）拦截，防 run2 转述污染复发。
+      gsub(/[(（]round[0-9]+，改判重报[)）]:?/, "", line)
+      gsub(/[(（]round[0-9]+，改判[)）]:?/, "", line)
+      gsub(/[(（]round[0-9]+，维持[)）]:?/, "", line)
+      gsub(/[(（]round[0-9]+[)）]:?/, "", line)
       P = (index(line, g "-PASS") > 0); F = (index(line, g "-FAIL") > 0)
       if (P && F) {
         if (line ~ /或|二选一/) next
