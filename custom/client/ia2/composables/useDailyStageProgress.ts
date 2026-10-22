@@ -25,6 +25,10 @@ export function dailyStageCount(tasks: readonly DailyTaskLike[], stage: number):
 
 export function dailyStageState(tasks: readonly DailyTaskLike[], stage: number): StageState {
   if (tasks.length === 0) return stage === 1 ? 'current' : 'pending'
+  // 交通灯红（2026-10-22 用户裁定红黄绿）：阶段桶内有阻塞任务 → 红优先于黄；
+  // blocked 只出现在④桶（running/blocked），①组织配置不由此推导。
+  const statuses = DAILY_STAGE_STATUSES[stage as 2 | 3 | 4 | 5 | 6] ?? []
+  if (statuses.includes('blocked') && tasks.some((t: DailyTaskLike) => t.status === 'blocked')) return 'blocked'
   if (dailyStageCount(tasks, stage) > 0) return 'current'
   // 后续阶段已有工作 = 本阶段不再当前，按日常视图记 done；这只是导航状态，不写回任务。
   for (let no = stage + 1; no <= 6; no += 1) {
