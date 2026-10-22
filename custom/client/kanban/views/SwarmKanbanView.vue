@@ -12,6 +12,7 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import type { KanbanTask, KanbanTaskStatus } from '@/api/hermes/kanban'
 import { getStoredUsername } from '@/api/client'
 import { needsMyAction } from '../utils/raci'
+import { nudgeRoute } from '../../ia2/api/gatekeeper'
 import { taskMatchesQuery } from '../utils/task-search'
 import { filterTasksByStatuses } from '../utils/task-status-filter'
 import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
@@ -418,6 +419,26 @@ async function handleBulkUnblock() {
   }
 }
 
+/** 催办 owner 动态路由（2026-10-22 P0 接线批）：对选中卡逐张解析催办对象——
+ *  assignee 优先、板 team 回落、双空显式无人态（run21/22 错侧催办产品化①）。 */
+async function handleNudge() {
+  const ids = Array.from(selectedIds.value)
+  if (!ids.length) return
+  let routed = 0
+  let unassigned = 0
+  for (const cardId of ids) {
+    try {
+      const d = await nudgeRoute(cardId)
+      if (d.route === 'unassigned') unassigned += 1
+      else { routed += 1; message.info(`催办已路由 → ${d.target}${d.route === 'board-team' ? '（板归属）' : ''}：${d.title ?? cardId}`) }
+    } catch (err) {
+      message.error(`催办失败 ${cardId}：${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+  if (unassigned > 0) message.warning(`${unassigned} 张卡无负责人且无板归属——先派人再催办`)
+  if (routed === 0 && unassigned === 0) message.error('未解析出任何催办对象')
+}
+
 async function handleBulkArchive() {
   try {
     await runBulk(ids => store.bulkArchive(ids), Array.from(selectedIds.value))
@@ -645,6 +666,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
       @complete="handleBulkComplete"
       @block="handleBulkBlock"
       @unblock="handleBulkUnblock"
+      @nudge="handleNudge"
       @archive="handleBulkArchive"
       @delete="handleBulkDelete"
       @set-priority="handleBulkSetPriority"
