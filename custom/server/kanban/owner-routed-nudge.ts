@@ -39,16 +39,19 @@ export function resolveNudgeTarget(cards: NudgeCardLike[], cardId: string): Nudg
 
 export const nudgeRouter = new Router({ prefix: '/api/kanban/nudge' })
 
-/** 卡源注入（控制器装配点可换 DB 直读；缺省无源=503 显式不可用，不猜）。 */
-let cardProvider: (() => NudgeCardLike[] | null) | null = null
-export function setNudgeCardProvider(fn: (() => NudgeCardLike[] | null) | null) {
+/** 卡源注入（控制器装配点可换 DB 直读；缺省无源=503 显式不可用，不猜）。
+ *  2026-10-22 P0 接线批：允许返回 Promise——装配点（bootstrap patch 676）经
+ *  command-post 看板聚合异步取卡；同步注入方不受影响。 */
+type NudgeCardProvider = () => NudgeCardLike[] | Promise<NudgeCardLike[] | null> | null
+let cardProvider: NudgeCardProvider | null = null
+export function setNudgeCardProvider(fn: NudgeCardProvider | null) {
   cardProvider = fn
 }
 
 nudgeRouter.post('/route', async ctx => {
   const cardId = String(((ctx.request.body ?? {}) as Record<string, unknown>).cardId ?? '').trim()
   if (!cardId) { ctx.status = 400; ctx.body = { ok: false, detail: 'cardId 必填' }; return }
-  const cards = cardProvider ? cardProvider() : null
+  const cards = cardProvider ? await cardProvider() : null
   if (!cards) { ctx.status = 503; ctx.body = { ok: false, detail: '卡源未接线（setNudgeCardProvider）' }; return }
   const decision = resolveNudgeTarget(cards, cardId)
   if (!decision.found) { ctx.status = 404; ctx.body = { ok: false, detail: '卡不存在', cardId }; return }

@@ -16,6 +16,8 @@ const emit = defineEmits<{
   complete: []
   block: []
   unblock: []
+  /** 催办 owner 动态路由（2026-10-22 P0 接线批）：对选中卡解析催办对象 */
+  nudge: []
   archive: []
   assign: [profile: string, reclaimFirst: boolean]
   delete: []
@@ -57,6 +59,10 @@ function handleBlock() {
 
 function handleUnblock() {
   emit('unblock')
+}
+
+function handleNudge() {
+  emit('nudge')
 }
 
 function handleArchive() {
@@ -126,6 +132,12 @@ function handleApplyAssign() {
       </template>
       {{ t('kanban.bulk.unblockConfirm', { count: selectedCount }) }}
     </NPopconfirm>
+
+    <!-- 催办 owner 动态路由（run21/22 复盘①；只解析路由不改卡，无需确认） -->
+    <NButton size="small" :title="t('kanban.action.nudgeHint', '按卡的负责人/板归属解析催办对象')"
+      @click="handleNudge">
+      {{ t('kanban.action.nudge', '催办') }}
+    </NButton>
 
     <NPopconfirm @positive-click="handleComplete">
       <template #trigger>

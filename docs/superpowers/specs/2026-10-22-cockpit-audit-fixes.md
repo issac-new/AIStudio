@@ -42,6 +42,30 @@
 - 附带发现挂账（未修，见重构设计文档）：kanban nudge 路由从未挂载（催办 owner
   路由带病上线）；human-gate 服务端修活后前端仍零调用（UI 未接线）。
 
+## 批 3（本提交）：P0 接线落地（用户三项裁定）
+
+- **D8｜HumanGate 前置批准接入审批收件箱**：GatekeeperSection 新增「前置批准」
+  队列（pending 批准单＋批准/驳回直调 POST /api/approvals/human-gate/:id/decide，
+  裁决落库留痕）；api 层 fetchHumanGateRequests/decideHumanGate。run22 复盘②自此
+  端到端通。
+- **D9｜催办 owner 动态路由挂载＋接消费方**：patch 676（bootstrap 根挂载
+  registerKanbanRoutes ＋卡源=command-post 看板聚合异步 provider，未就绪显式
+  503 不猜）；owner-routed-nudge 卡源签名放宽支持 Promise；看板批量条新增「催办」
+  按钮（选中卡逐张解析 assignee→板 team→无人态，结果 toast 呈现）。run21/22
+  复盘①产品化收尾。series 登记 676 号。
+- **D10｜信息降噪先行件**：GatekeeperSection 清算目标 PR-N→人话（主文案人话、
+  代号进 title）；其余降噪件（ClearancePanel/DirectorPanel/SearchView）并行批
+  另册提交。
+- 守门=humangate-nudge-wiring.test.ts（双功能全链源码锚定）。
+
+## 决策记录（批 3 追加）
+
+| # | 决策 | 理由 | 否决的备选 | 可逆 |
+|---|---|---|---|---|
+| 8 | HumanGate 裁决直调服务端（区别于介入卡导流） | HumanGate 的裁决真身本就在 approvals 域（服务端 store+persist），收件箱是它的属地面——不是复制真相而是消费正身 | 仿介入卡导流到别处（否决：该域无独立裁决面） | 是 |
+| 9 | nudge 卡源=command-post 看板聚合异步 provider | 单一事实源复用既有聚合（sqlite 快道+缓存）；未就绪 503 显式不猜（原设计语义保留） | 直读 sqlite/CLI 新开第二读路径（否决：双源漂移） | 是 |
+| 10 | 催办按钮放批量操作条 | 选中即催、逐卡路由结果 toast——动线最短且不触碰 511 行拖拽敏感的任务卡组件 | 任务卡右键/悬浮菜单（否决：改动面大风险高） | 是 |
+
 ## 决策记录
 
 | # | 决策 | 理由 | 否决的备选 | 可逆 |

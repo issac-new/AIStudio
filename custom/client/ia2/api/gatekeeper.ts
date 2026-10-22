@@ -129,3 +129,59 @@ export async function waiveClearance(target: string, reason: string): Promise<Cl
   if (!res.ok) throw new Error(`waive → ${res.status}`)
   return res.json() as Promise<ClearanceLedgerView>
 }
+
+// ── HumanGate 前置批准（2026-10-22 P0 接线批：run22 复盘② 服务端复活后的收件箱消费）──
+
+export interface HumanGateRequestView {
+  id: string
+  runId: string
+  cardId: string
+  title: string
+  detail?: string
+  requestedBy: string
+  createdAt: number
+  status: 'pending' | 'approved' | 'rejected'
+  decidedBy?: string
+  decidedAt?: number
+}
+
+export async function fetchHumanGateRequests(): Promise<HumanGateRequestView[]> {
+  const res = await authFetch('/api/approvals/human-gate')
+  if (!res.ok) throw new Error(`human-gate → ${res.status}`)
+  const body = await res.json() as { requests?: HumanGateRequestView[] }
+  return body.requests ?? []
+}
+
+export async function decideHumanGate(id: string, decision: 'approve' | 'reject'): Promise<HumanGateRequestView> {
+  const res = await authFetch(`/api/approvals/human-gate/${encodeURIComponent(id)}/decide`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision }),
+  })
+  if (!res.ok) throw new Error(`human-gate decide → ${res.status}`)
+  const body = await res.json() as { request: HumanGateRequestView }
+  return body.request
+}
+
+// ── 催办 owner 动态路由（run21/22 复盘①；2026-10-22 P0 接线批：看板批量催办消费）──
+
+export interface NudgeDecision {
+  found: boolean
+  reason?: string
+  route?: 'assignee' | 'board-team' | 'unassigned'
+  target?: string
+  cardId?: string
+  title?: string
+  note?: string
+}
+
+export async function nudgeRoute(cardId: string): Promise<NudgeDecision> {
+  const res = await authFetch('/api/kanban/nudge/route', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cardId }),
+  })
+  if (!res.ok) throw new Error(`nudge/route → ${res.status}`)
+  const body = await res.json() as { decision: NudgeDecision }
+  return body.decision
+}
