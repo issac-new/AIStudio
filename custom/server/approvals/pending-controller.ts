@@ -32,6 +32,7 @@ import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
 import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotchecks, listResolvedSpotchecks, resolveSpotcheck } from './autopass'
 import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
 import { decideEnforceApproval, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
+import { listHumanGatePending, humanGateRouter } from './human-gate'
 
 const router = new Router({ prefix: '/api/approvals' })
 
@@ -262,6 +263,10 @@ function collectPendingItems(): PendingItem[] {
   const items: PendingItem[] = []
   // 文件队列源（patch 490 unattended 传输；读失败不阻断其余聚合）
   try { items.push(...readPendingFileQueue()) } catch { /* 队列不可读忽略 */ }
+
+  // HumanGate 前置批准源（run22 复盘②）：发布评审前置发起的人工批准请求——
+  // 批准与评判决词解耦，环形依赖（评审等批准/批准等评审）产品面断根。
+  try { items.push(...listHumanGatePending()) } catch { /* hgate 源缺席忽略 */ }
 
   // mx 通道源（backlog ③：Matrix/harness 审批事件翻成 PendingItem，eid 幂等防双通道重批）
   try { items.push(...readMxApprovalChannel()) } catch { /* mx 通道不可读忽略 */ }
@@ -637,4 +642,7 @@ export function _resetAutopassScanThrottleForTests(): void {
   lastAutopassScan = 0
 }
 
+// HumanGate 前置批准路由子挂载（run22 复盘②）：与收件箱同一 /api/approvals 前缀，
+// 免改上游挂载 patch——human-gate 创建/列表/裁决三端点随 approvalsRoutes 一体上线。
+router.use(humanGateRouter.routes())
 export const approvalsRoutes = router
