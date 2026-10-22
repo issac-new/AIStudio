@@ -900,3 +900,5 @@
 # 673: UsageView 增强（context-insights P4）：挂 UsageInsightsExtension——活动热力图+缓存命中率 KPI+近期会话卡（对标 dsh-context 上下文洞察页三件套）。
 673-client-usageview-insights.patch
 674-client-locales-sim-visibility.patch
+# 675: 标签页品牌收尾——Ekko Studio→SwarmStudio（title/apple-title/manifest）＋内联 SVG 图标（data-URI，免二进制资产补丁）。
+675-client-tab-brand-swarm.patch
