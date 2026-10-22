@@ -134,6 +134,25 @@ for blk in blocks:
         else:
             (done_no_img if done else pending_no_img).append(n)
 
+
+# 读态见证（run22 复盘根治①：驱动轮审计与手工审计「双态振荡」实录——同参数同路径
+# 读数矛盾且数字冻结数小时）。每次审计把实读 issues.log 的指纹（sha256 前 12 + 行数 +
+# 文件 mtime）落 EVID/audit-read-state.log：出争议时一行对账（审计读的哪版文件 vs 盘上
+# 哪版），读态问题当场定诊，不再靠推断。fail-soft：写失败不阻断审计。
+def _attest_read():
+    try:
+        import hashlib as _h, time as _t
+        f = EVID / 'issues.log'
+        if not f.exists():
+            return
+        b = f.read_bytes()
+        with open(EVID / 'audit-read-state.log', 'a', encoding='utf-8') as w:
+            w.write(f"{_t.strftime('%F %T')} sha256:{_h.sha256(b).hexdigest()[:12]} "
+                    f"lines:{len(b.splitlines())} mtime:{int(f.stat().st_mtime)}\n")
+    except Exception:
+        pass
+_attest_read()
+
 # issues.log 预解析（查3 降级配对用；与 A3/A5d 段同源解析）
 _ilog = EVID / 'issues.log'
 _fc_pre = set(); _r18_pre = False
