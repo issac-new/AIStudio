@@ -42,6 +42,14 @@ vi.mock('../composables/useDecisionRows', async () => {
   }
 })
 
+// 待办徽标（2026-10-22 轮）：固定数便于断言渲染面——哪些项出数、哪些不出，
+// 徽标与阶段状态点共存。口径本身由 side-nav-badges.test.ts 守门，这里只测接线。
+const NAV_BADGES: Record<string, number> = { journey: 15, workbench: 15, board: 14, inbox: 2, stage3: 11, stage4: 17 }
+vi.mock('../composables/useSideNavBadges', async () => {
+  const { ref } = await import('vue')
+  return { useSideNavBadges: () => ({ badges: ref(NAV_BADGES) }) }
+})
+
 import IaSideNav from '../components/IaSideNav.vue'
 
 function makeRouter(initial: string): Router {
@@ -125,6 +133,30 @@ describe('IaSideNav — 左侧常驻导航', () => {
       expect(row.find('.isn-item__label').exists()).toBe(true)
       expect(row.find('.isn-item__trail').exists()).toBe(true)
     }
+    w.unmount()
+  })
+
+  it('待办徽标：常用四项与阶段③④出数，检索/①②⑤⑥不出；③④徽标与状态点共存', async () => {
+    const { w } = await mountAt('/app/stage/build')
+    const badgeOf = (sel: string) => w.find(`${sel} .isn-item__badge`).text()
+    expect(badgeOf('[data-testid="ia-side-nav-journey"]')).toBe('15')
+    expect(badgeOf('[data-testid="ia-side-nav-workbench"]')).toBe('15')
+    expect(badgeOf('[data-testid="ia-side-nav-board"]')).toBe('14')
+    expect(badgeOf('[data-testid="ia-side-nav-inbox"]')).toBe('2')
+    // 检索与无看板态映射的阶段①②⑤⑥不造数字
+    for (const id of ['search', 'stage1', 'stage2', 'stage5', 'stage6']) {
+      expect(w.find(`[data-testid="ia-side-nav-${id}"] .isn-item__badge`).exists(), id).toBe(false)
+    }
+    // 阶段③（done ✓）与④（current ●）徽标与状态点同显，互不挤占
+    const s3 = w.find('[data-testid="ia-side-nav-stage3"]')
+    expect(s3.find('.isn-item__badge').text()).toBe('11')
+    expect(s3.find('.isn-item__status').text()).toBe('✓')
+    const s4 = w.find('[data-testid="ia-side-nav-stage4"]')
+    expect(s4.find('.isn-item__badge').text()).toBe('17')
+    expect(s4.find('.isn-item__status').text()).toBe('●')
+    // 徽标项挂口径说明 title，无徽标项保持无 title
+    expect(w.find('[data-testid="ia-side-nav-board"]').attributes('title')).toContain('受阻')
+    expect(w.find('[data-testid="ia-side-nav-search"]').attributes('title')).toBeUndefined()
     w.unmount()
   })
 
