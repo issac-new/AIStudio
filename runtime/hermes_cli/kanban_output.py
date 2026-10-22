@@ -19,6 +19,7 @@ _TASK_DICT_FIELDS = (
     "created_by", "created_at", "started_at", "completed_at", "result",
     "skills", "max_runtime_seconds", "max_retries", "model_override", "provider_override",
     "reasoning_effort",  # HERMES_CUSTOM[v020]
+    "raci",  # HERMES_CUSTOM[raci]
     "session_id", "workflow_template_id", "current_step_key", "completion_contract", "last_failure_error",
 )
 _SHOW_RUN_FIELDS = (

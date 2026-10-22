@@ -376,10 +376,10 @@ index 0000000000..cccbe48563
 +registry.register(name="obs_recall", toolset="file", schema=OBS_RECALL_SCHEMA,
 +                  handler=_handle_obs_recall, emoji="🗃️", max_result_size_chars=100_000)
 diff --git a/tools/tool_result_storage.py b/tools/tool_result_storage.py
-index 33c50e827d..c093dd5319 100644
+index 8ccf4dd73c..02d79cf9f4 100644
 --- a/tools/tool_result_storage.py
 +++ b/tools/tool_result_storage.py
-@@ -20,6 +20,9 @@ from tools.budget_config import DEFAULT_PREVIEW_SIZE_CHARS, BudgetConfig, DEFAUL
+@@ -22,6 +22,9 @@ from tools.budget_config import DEFAULT_PREVIEW_SIZE_CHARS, BudgetConfig, DEFAUL
  logger = logging.getLogger(__name__)
  PERSISTED_OUTPUT_TAG = "<persisted-output>"
  PERSISTED_OUTPUT_CLOSING_TAG = "</persisted-output>"
@@ -388,8 +388,8 @@ index 33c50e827d..c093dd5319 100644
 +DEFAULT_TAIL_EXCERPT_CHARS = 512
  STORAGE_DIR = os.path.join(tempfile.gettempdir(), "hermes-results")
  SPILLOVER_SUBDIR = "cache/spillover"
- SPILLOVER_MAX_AGE_HOURS = 24
-@@ -179,6 +182,19 @@ def generate_preview(content: str, max_chars: int = DEFAULT_PREVIEW_SIZE_CHARS)
+ # Fallback spillover age only (unreadable config); the real default is the session
+@@ -281,6 +284,19 @@ def generate_preview(content: str, max_chars: int = DEFAULT_PREVIEW_SIZE_CHARS)
      return content[:last_nl + 1 if last_nl > max_chars // 2 else max_chars], True
  
  
@@ -409,7 +409,7 @@ index 33c50e827d..c093dd5319 100644
  def _pageable_text(content: str) -> str:
      """Rewrite an MCP handler result envelope into the text it wraps, else return *content*.
  
-@@ -262,20 +278,29 @@ def _write_to_sandbox(content: str, remote_path: str, env) -> bool:
+@@ -364,22 +380,31 @@ def _write_to_sandbox(content: str, remote_path: str, env) -> bool:
  
  
  def _build_persisted_message(preview: str, has_more: bool, original_size: int,
@@ -437,14 +437,16 @@ index 33c50e827d..c093dd5319 100644
 +        f"{ref_line}"
 +        "Recall: obs_recall with the result id (paged, line-numbered) or read_file with "
 +        "offset/limit on the saved path — do NOT re-request the same data from the "
-         "remote API; the full result is already on disk.\n\n"
+         "remote API; the archive is kept while this session's transcript references "
+         "it. If it is missing, inspect the current state before retrying — the call "
+         "that produced it may already have taken effect.\n\n"
          f"Preview (first {len(preview)} chars):\n"
          + preview + ("\n..." if has_more else "")
 +        + tail_block
          + f"\n{PERSISTED_OUTPUT_CLOSING_TAG}")
  
  
-@@ -305,11 +330,19 @@ def maybe_persist_tool_result(content: str, tool_name: str, tool_use_id: str, en
+@@ -409,11 +434,19 @@ def maybe_persist_tool_result(content: str, tool_name: str, tool_use_id: str, en
      persisted_content = _pageable_text(content)
      filename = _safe_result_filename(tool_use_id)
      preview, has_more = generate_preview(persisted_content, max_chars=config.preview_size)

@@ -11,7 +11,7 @@
 //   声明(如 proper-lockfile.d.ts)不拾取(TS7016);v0.7.22 起 custom/server
 //   新增 loop/store/local-store.ts 首次把该缺项暴露为启动失败。
 import { spawn } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, lstatSync } from 'fs';
 import { resolve } from 'path';
 
 const args = process.argv.slice(2);
@@ -27,6 +27,18 @@ for (let i = 0; i < args.length; i++) {
 }
 
 const overlayRoot = resolve(import.meta.dirname, '..');
+// ncwk 根（Z5 同款修法，与 deploy-agent-runtime.mjs 对齐）：worktree 检出
+// （.claude/worktrees/<x>，如 serve-main）与主检出（ncwk/overlay）层级不同，
+// 固定层数回溯（overlayRoot/../../）在 serve-main 位起服时差一层——OBS_SIM_ROOT/
+// GOVERNANCE_REPO 解析落空，仿真中心/治理台账整族 fail-closed（2026-10-22 升级轮
+// serve-main 重启实锤，当时靠显式 env 兜底拉起）。向上锚定首个含**真实** upstream/
+// 目录的祖先（lstat 不随软链，跳过 worktree 内的 upstream 软链）；锚不到回落旧行为。
+const ncwkRoot = (() => {
+  for (let d = resolve(overlayRoot); ; d = resolve(d, '..')) {
+    try { if (lstatSync(resolve(d, 'upstream')).isDirectory()) return d; } catch { /* 不是，继续向上 */ }
+    if (resolve(d, '..') === d) return null;
+  }
+})();
 // OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs 同一基建；语义=upstream 根）
 const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
@@ -38,15 +50,16 @@ process.env.PORT = port;
 // D20 治理台账仓落点（org/roster/invites 等 registry 的 git 仓）：缺省 ncwk/governance
 //（工作区内、overlay 代码仓外）；显式设置 GOVERNANCE_REPO 时尊重不动。
 if (!process.env.GOVERNANCE_REPO?.trim()) {
-  process.env.GOVERNANCE_REPO = resolve(overlayRoot, '..', 'governance');
+  process.env.GOVERNANCE_REPO = ncwkRoot ? resolve(ncwkRoot, 'governance') : resolve(overlayRoot, '..', 'governance');
 }
 // 推演执行面根（SIM_ROOT）：仿真中心族（run-state/topology/issues/quality/delivery…
 // 的 fail-closed 门）。缺省工作区同级目录 lab/ncwk-sim-mux（存在才设；显式 env
 // 尊重不动）——否则 npm run serve 起服务后整族 503「OBS_SIM_ROOT 缺席」，页面
 // 功能全不可用。
 if (!process.env.OBS_SIM_ROOT?.trim()) {
-  // SIM_ROOT 是 ncwk 工作区的兄弟目录（lab/ncwk-sim-mux），不是 ncwk 内子目录。
-  const simRoot = resolve(overlayRoot, '..', '..', 'ncwk-sim-mux');
+  // SIM_ROOT 是 ncwk 工作区的兄弟目录（lab/ncwk-sim-mux），不是 ncwk 内子目录；
+  // 从 ncwk 根向上一级取兄弟（serve-main 等 worktree 位同样成立）。
+  const simRoot = ncwkRoot ? resolve(ncwkRoot, '..', 'ncwk-sim-mux') : resolve(overlayRoot, '..', '..', 'ncwk-sim-mux');
   if (existsSync(simRoot)) process.env.OBS_SIM_ROOT = simRoot;
 }
 // 仿真中心专用门配套缺省（回归轮残留 R1）：中央仓 = SIM_ROOT/central/aipaydev

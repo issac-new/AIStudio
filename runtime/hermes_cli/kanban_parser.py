@@ -215,6 +215,8 @@ _SPECS = [
              help="Pin the worker's thinking depth for this task "
                   "(minimal/low/medium/high/xhigh/max/ultra, or 'none' for thinking "
                   "off). Omit to use the assignee profile's agent.reasoning_effort."),
+        _arg("--raci", metavar="JSON",
+             help='Structured RACI as JSON object, e.g. {"responsible":["chen"],"approver":["wei"]}'),
         _arg("--completion-contract", metavar="CONTRACT",
              help="local-only (default), OWNER/REPO for publication, or exact GitHub PR URL; required CI gates done."),
         _arg("--goal", action="store_true", dest="goal_mode",
@@ -289,6 +291,12 @@ _SPECS = [
              help="Release any active claim before reassigning (required if task is running)"),
         _RECLAIM_REASON,
     ], help="Reassign a task to a different profile, optionally reclaiming first"),
+    _cmd("sleeping-workers", [
+        _arg("--idle-sec", type=int, default=1800,
+             help="Idle threshold in seconds (default 1800 = 30min)"),
+    ], help="List running-card assignees with no real work beyond threshold (PR-3 probe; read-only)"),
+    _cmd("selfcheck", [
+    ], help="Write-path self-check: sanctioned UDF + guard triggers + fail-closed bare-conn probe (PR-4)"),
     _cmd("diagnostics", [
         _arg("--severity", choices=["warning", "error", "critical"],
              help="Only show diagnostics at or above this severity"),
