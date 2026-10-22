@@ -7,7 +7,11 @@ import {
 } from './engine'
 import { surfaceCatalogForApi } from './exposed'
 
-export const secAuditRoutes = new Router({ prefix: '/api/governance/secaudit' })
+// 挂载契约（2026-10-22 走查批修正）：子路由**不带前缀**，由 governance-controller
+// router.use('/secaudit') 嵌套挂载（sim-launch 同款先例）——@koa/router 嵌套下
+// 绝对前缀子路由无论 use 带不带路径都会拼错前缀整族 404（上线即死实锚），
+// 测试面（secaudit-http.test.ts）已改为生产同款嵌套拓扑守护。
+export const secAuditRoutes = new Router()
 
 function problemsBody(problems: Array<{ code: string; detail: string }>) {
   return { ok: false, problems }
