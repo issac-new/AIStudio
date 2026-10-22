@@ -106,10 +106,15 @@ async function sealSet(id: string): Promise<void> {
   }
 }
 
+// 导出成功反馈（2 秒自动消失；失败仍走 loadError 红字）
+const exportNote = ref('')
+
 async function exportSet(id: string): Promise<void> {
   try {
     const { set } = await evalApi.exportSet(id)
     await navigator.clipboard.writeText(JSON.stringify(set, null, 2))
+    exportNote.value = '已复制到剪贴板'
+    setTimeout(() => { exportNote.value = '' }, 2000)
   } catch (e) {
     loadError.value = (e as Error).message || '导出失败（密封集不可导出）'
   }
@@ -255,6 +260,7 @@ function deltaText(v: number | null | undefined): string {
     </template>
 
     <p v-if="loadError" class="eval-view__error" data-testid="eval-load-error">{{ L.loadedFail }}：{{ loadError }}</p>
+    <p v-if="exportNote" class="eval-view__error" style="color: var(--success, green);" data-testid="eval-export-note">{{ exportNote }}</p>
 
     <!-- ── 评测集页签 ── -->
     <div v-if="tab === 'sets'" class="eval-sets">

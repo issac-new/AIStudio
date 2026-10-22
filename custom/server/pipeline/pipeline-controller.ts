@@ -6,8 +6,11 @@
 import Router from '@koa/router'
 import { PipelineEngine } from './pipeline-engine'
 
+// 前缀契约（2026-10-22 走查批修正）：本子路由**不带前缀**，由巡检官父路由
+// router.use('/pipeline') 组合出 /api/hermes/cluster-inspector/pipeline/*——
+// @koa/router 15.x 嵌套下绝对前缀子路由会拼双前缀整族 404（上线即死实锚）。
 export function createPipelineRouter(engine: PipelineEngine): Router {
-  const router = new Router({ prefix: '/api/hermes/cluster-inspector/pipeline' })
+  const router = new Router()
   router.get('/status', (ctx) => { ctx.body = engine.status() })
   router.post('/run', async (ctx) => { ctx.body = await engine.runOnce() })
 

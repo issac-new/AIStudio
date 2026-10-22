@@ -2,7 +2,7 @@
 <!-- P8 组织关系 UI（补遗④）：账号↔角色↔汇报线(lead)↔板↔matrix 可维护；保存即提交 org.md。
      离职三步向导：①任务移交 ②停用双账号 ③审计留痕（服务端原子序，逐步 commit 可回溯）。 -->
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { fetchRegistry, saveRegistry, offboardAccount, fetchOrgCosign, openOrgCosign, resolveOrgCosign, type OrgCosignPending } from '@/custom/governance/api/adminRegistry'
 import { parseFirstTable, setCellAlign } from '@/custom/governance/utils/registry-md'
 import { fetchMatrixServerInfo } from '../../matrix-server-info'
@@ -13,6 +13,8 @@ const preamble = ref<string[]>([]); const after = ref<string[]>([])
 const commit = ref(''); const msg = ref(''); const busy = ref(false)
 const homeserverUrl = ref('')
 const wizard = ref<null | { step: number; name: string; handoverTo: string; taskIds: string; reason: string; adminToken: string; result: string }>(null)
+// 向导失败时第三步标题改「执行结果」（result 以「失败」前缀判定）
+const wizardFailed = computed(() => !!wizard.value?.result?.startsWith('失败'))
 // 治理者守卫（2026-10-22）：admin 行变更 409 后的会签/紧急通道对话框 + 待会签块
 const guard = ref<null | { detail: string; markdown: string; message: string; reason: string }>(null)
 const pending = ref<OrgCosignPending | null>(null)
@@ -160,10 +162,10 @@ async function runWizard() {
         <p>② 停用账号——输入 synapse 管理员 access token（操作以此鉴权）：</p>
         <input v-model="wizard.adminToken" type="password" placeholder="synapse admin access token" data-testid="wiz-token" />
         <button data-testid="wiz-back1" @click="wizard.step = 1">上一步</button>
-        <button data-testid="wiz-run" :disabled="!wizard.adminToken || busy" @click="runWizard">执行：移交→停用→留痕</button>
+        <button data-testid="wiz-run" :disabled="!wizard.adminToken || busy || !homeserverUrl" :title="!homeserverUrl ? 'matrix 服务地址未就绪（刷新页面重试）' : undefined" @click="runWizard">执行：移交→停用→留痕</button>
       </template>
       <template v-else>
-        <p>③ 完成：<span data-testid="wiz-result">{{ wizard.result }}</span></p>
+        <p>{{ wizardFailed ? '③ 执行结果：' : '③ 完成：' }}<span data-testid="wiz-result">{{ wizard.result }}</span></p>
         <button @click="wizard = null">关闭</button>
       </template>
     </div>

@@ -40,6 +40,8 @@ const stats = ref<OntologyStats | null>(null)
 const health = ref<Health | null>(null)
 const loadError = ref('')
 const busy = ref(false)
+// 异步操作失败统一提示：各操作 catch 写入，tabs 导航下方错误条呈现
+const opError = ref('')
 
 async function refresh(): Promise<void> {
   busy.value = true
@@ -188,9 +190,14 @@ const instancesShown = computed(() => {
     || (i.label ?? '').toLowerCase().includes(q))
 })
 async function refreshInstances(): Promise<void> {
-  const r = await ontologyApi.listInstances(instFilter.value || undefined)
-  instances.value = r.instances
-  instPage.value = 1
+  opError.value = ''
+  try {
+    const r = await ontologyApi.listInstances(instFilter.value || undefined)
+    instances.value = r.instances
+    instPage.value = 1
+  } catch (e) {
+    opError.value = '操作失败：' + (e as Error).message
+  }
 }
 
 /** 实例大列表分页（2026-10-20）：1045 行一次性平铺会压满 DOM；每页 50。 */
@@ -267,9 +274,14 @@ async function saveInstance(): Promise<void> {
 }
 async function removeInstance(id: string): Promise<void> {
   if (!window.confirm(L.value.instances.delConfirm)) return
-  await ontologyApi.deleteInstance(id)
-  await refreshInstances()
-  await refresh()
+  opError.value = ''
+  try {
+    await ontologyApi.deleteInstance(id)
+    await refreshInstances()
+    await refresh()
+  } catch (e) {
+    opError.value = '操作失败：' + (e as Error).message
+  }
 }
 function propInputType(dt: string): string {
   return dt === 'number' || dt === 'integer' ? 'number' : dt === 'date' ? 'date' : 'text'
@@ -280,10 +292,13 @@ const violations = ref<Violation[]>([])
 const validating = ref(false)
 async function runValidate(): Promise<void> {
   validating.value = true
+  opError.value = ''
   try {
     const r = await ontologyApi.validate()
     violations.value = r.violations
     health.value = r.summary
+  } catch (e) {
+    opError.value = '操作失败：' + (e as Error).message
   } finally {
     validating.value = false
   }
@@ -293,20 +308,35 @@ function sevClass(s: string): string { return s === 'error' ? 'onto-sev onto-sev
 // —— 版本页 ——
 const versions = ref<SpecSnapshotMeta[]>([])
 async function refreshVersions(): Promise<void> {
-  const r = await ontologyApi.listVersions()
-  versions.value = r.versions
+  opError.value = ''
+  try {
+    const r = await ontologyApi.listVersions()
+    versions.value = r.versions
+  } catch (e) {
+    opError.value = '操作失败：' + (e as Error).message
+  }
 }
 async function doRollback(ts: number): Promise<void> {
   if (!window.confirm(L.value.versions.rollbackConfirm)) return
-  await ontologyApi.rollback(ts)
-  await refreshVersions()
-  await refresh()
+  opError.value = ''
+  try {
+    await ontologyApi.rollback(ts)
+    await refreshVersions()
+    await refresh()
+  } catch (e) {
+    opError.value = '操作失败：' + (e as Error).message
+  }
 }
 async function doResetSeed(): Promise<void> {
   if (!window.confirm(L.value.versions.seedConfirm)) return
-  await ontologyApi.resetSeed()
-  await refreshVersions()
-  await refresh()
+  opError.value = ''
+  try {
+    await ontologyApi.resetSeed()
+    await refreshVersions()
+    await refresh()
+  } catch (e) {
+    opError.value = '操作失败：' + (e as Error).message
+  }
 }
 
 // —— 导出页 ——
@@ -322,9 +352,15 @@ async function loadExport(): Promise<void> {
 }
 watch(exportFormat, () => void loadExport())
 async function copyExport(): Promise<void> {
-  await navigator.clipboard.writeText(exportText.value)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 1500)
+  opError.value = ''
+  try {
+    await navigator.clipboard.writeText(exportText.value)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 1500)
+  } catch {
+    // 非安全上下文/权限拒绝时剪贴板 API 抛错——固定文案引导手动复制
+    opError.value = '剪贴板不可用——请手动复制'
+  }
 }
 function downloadExport(): void {
   const ext = exportFormat.value === 'turtle' ? 'ttl' : 'jsonld'
@@ -362,6 +398,8 @@ function fmtBytes(b: number): string {
         class="onto__tab" :class="{ 'onto__tab--on': tab === key }" :data-testid="`onto-tab-${key}`"
         @click="selectTab(key)">{{ label }}</button>
     </nav>
+    <!-- 操作失败统一错误条（opError 由各异步操作 catch 写入） -->
+    <p v-if="opError" style="color: var(--error); margin: 4px 0 0; font-size: 12px;" data-testid="onto-op-error">{{ opError }}</p>
     </template>
     <template #filters>
       <div class="onto-rail" data-testid="ontology-filters">
