@@ -211,7 +211,7 @@ const peopleRowsResult = computed<ResultRow[]>(() => (workspaceFilter.value ? []
     meta: [a.userId, a.isLeader ? (zh.value ? '团队领导' : 'Team lead') : (zh.value ? '成员' : 'Member')].join(' · '),
     icon: '◉',
     action: zh.value ? '账号' : 'Account',
-    open: () => void router.push({ name: 'ia2.stage1', query: { tab: 'accounts' } }),
+    open: () => void router.push({ name: 'ia2.stage1', query: { tab: 'accounts', user: a.userId } }),
   }))))
 
 const GROUPS: ReadonlyArray<{ key: GroupKey; label: string; rows: () => ResultRow[] }> = [

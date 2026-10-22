@@ -2,7 +2,8 @@
 <!-- P6 账户管理（补遗④第 2 项）：matrix 系统管理员在此创建/分配账号（synapse 管理端 API），
      本机账号↔matrix 双账号绑定维护（roster），保存/建号即入仓提交（R13）。 -->
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { fetchRegistry, saveRegistry, provisionAccount, createInvite, type InviteResult } from '@/custom/governance/api/adminRegistry'
 import { parseFirstTable, setCellAlign } from '@/custom/governance/utils/registry-md'
 import { fetchMatrixServerInfo } from '../matrix-server-info'
@@ -39,7 +40,31 @@ async function load() {
   commit.value = doc.commit
   const { table, preamble: p, after: a } = parseFirstTable(doc.markdown)
   rows.value = setCellAlign(table.rows, COLS.length); preamble.value = p; after.value = a
+  locateQueryUser()
 }
+
+// ── 检索页人员行直达（2026-10-22）：?user=<账号名> 在表中预选/滚动定位 ──
+// 无 router 的挂载环境（单测）useRoute() 返回 undefined，全链路可选链兜底。
+const route = useRoute() as ReturnType<typeof useRoute> | undefined
+const hlIndex = ref(-1)
+const rowEls: Array<HTMLElement | null> = []
+function setRowRef(el: unknown, i: number): void {
+  rowEls[i] = (el as HTMLElement | null) ?? null
+}
+/** 归一账号名：剥 matrix 前缀 @ 与 homeserver 后缀，全小写比对（@alice:matrix ≡ alice）。 */
+function normalizeUser(v: unknown): string {
+  return String(v ?? '').trim().toLowerCase().replace(/^@/, '').split(':')[0] ?? ''
+}
+function locateQueryUser(): void {
+  const want = normalizeUser(route?.query?.user)
+  hlIndex.value = -1
+  if (!want) return
+  const idx = rows.value.findIndex(r => normalizeUser(r[0]) === want || normalizeUser(r[1]) === want)
+  if (idx < 0) return // 找不到该用户就忽略，不报错
+  hlIndex.value = idx
+  void nextTick(() => { rowEls[idx]?.scrollIntoView?.({ block: 'center' }) })
+}
+watch(() => route?.query?.user, () => { locateQueryUser() })
 onMounted(() => {
   void load().catch(e => { msg.value = String(e) })
   // 不写死部署地址：服务端 server-info 提供本部署默认值；读取失败保留空值。
@@ -116,7 +141,7 @@ function delRow(i: number) { rows.value.splice(i, 1) }
       <table>
         <thead><tr><th v-for="c in COLS" :key="c">{{ c }}</th><th /></tr></thead>
         <tbody>
-          <tr v-for="(r, i) in rows" :key="i">
+          <tr v-for="(r, i) in rows" :key="i" :ref="(el) => setRowRef(el, i)" :class="{ 'aac__row--hl': i === hlIndex }" :data-testid="`aac-row-${i}`">
             <td v-for="(_, j) in COLS" :key="j"><input v-model="r[j]" :data-testid="`aac-cell-${i}-${j}`" /></td>
             <td><button :data-testid="`aac-del-${i}`" @click="delRow(i)">✕</button></td>
           </tr>
@@ -141,6 +166,7 @@ table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border
 .aac__tbl td:last-child, .aac__tbl th:last-child { width: 40px; text-align: center; }
 .aac__tbl td button { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 12px; opacity: .4; padding: 2px 6px; border-radius: 4px; }
 .aac__tbl tr:hover td button { opacity: 1; }
+.aac__row--hl td { background: color-mix(in srgb, var(--primary-color) 10%, transparent); }
 .aac__tbl td button:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 .aac__msg { font-size: 12px; color: var(--text-muted); }
 .aac__invres { margin-top: 10px; border: 1px dashed var(--primary-color); border-radius: 8px; padding: 8px 12px; p { margin: 4px 0; font-size: 12px; } }
