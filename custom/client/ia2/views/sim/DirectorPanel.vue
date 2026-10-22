@@ -40,6 +40,8 @@ const FALLBACK_SCENARIO: DirectorScenario = {
 }
 
 const scenarios = ref<DirectorScenario[]>([])
+// 场景列表拉取失败/为空时静默回退内置默认场景——不装作成功，给一行提示（2026-10-22 信息降噪批）。
+const scenarioFallback = ref(false)
 const form = ref({ title: '', description: '', modules: '', cast: '' })
 const plan = ref<DirectorPlan | null>(null)
 const planning = ref(false)
@@ -94,13 +96,16 @@ function buildInput(): DirectorInput {
 }
 
 async function loadScenarios(): Promise<void> {
+  scenarioFallback.value = false
   try {
     const list = await fetchDirectorScenarios()
     scenarios.value = list
     applyScenario(list[0] ?? FALLBACK_SCENARIO)
+    if (!list.length) scenarioFallback.value = true
   } catch {
     scenarios.value = []
     applyScenario(FALLBACK_SCENARIO)
+    scenarioFallback.value = true
   }
 }
 
@@ -345,6 +350,7 @@ onBeforeUnmount(() => { stopPolling() })
         <label class="dir__field">模块（逗号分隔）<input v-model="form.modules" data-testid="director-form-modules" /></label>
         <label class="dir__field">模拟员工（按模块顺序）<input v-model="form.cast" data-testid="director-form-cast" /></label>
       </div>
+      <p v-if="scenarioFallback" class="dir__hint" data-testid="director-scenario-fallback">场景列表不可用——当前为内置默认场景</p>
       <div class="dir__actions">
         <button type="button" class="dir__btn" :disabled="planning" data-testid="director-plan" @click="preview">
           {{ planning ? '生成中…' : '预览场景' }}
