@@ -888,7 +888,9 @@ router.put('/tool-policies', (ctx) => {
 })
 
 // 安全审计流水线（2026-10-21 Cloudflare security-audit-skill 吸收）：项目/运行/候选/三态裁决/复核/报告。
-// 子路由挂载零新 patch（与 workbench/sim-launch 同款先例）。
+// 挂载修正（2026-10-22 走查批）：子路由改无前缀 + 本行 '/secaudit' 路径挂载（sim-launch
+// 同款）。原绝对前缀写法在 @koa/router 嵌套下拼出双前缀 → 整族 404 上线即死；
+// secaudit-http.test.ts 已改生产同款嵌套拓扑，此形态受运行时守门。
 import { secAuditRoutes } from '../secaudit/controller'
 router.use('/secaudit', secAuditRoutes.routes(), secAuditRoutes.allowedMethods())
 
