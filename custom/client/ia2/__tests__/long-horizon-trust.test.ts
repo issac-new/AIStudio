@@ -108,6 +108,17 @@ describe('长程可信面板', () => {
     expect(wrapper.find('[data-testid="trust-decision"]').text()).toContain('已准入')
   })
 
+  it('案件行可用键盘打开（Enter），不只依赖鼠标', async () => {
+    const wrapper = mount(LongHorizonTrustPanel)
+    await flushPromises()
+    const row = wrapper.find('[data-testid="trust-case-row"]')
+    expect(row.attributes('tabindex')).toBe('0')
+    await row.trigger('keydown.enter')
+    await flushPromises()
+    expect(mock.fetchTrustCase).toHaveBeenCalledWith('trust-1')
+    expect(wrapper.find('[data-testid="trust-detail"]').exists()).toBe(true)
+  })
+
   it('空态如实显示，不伪造案件', async () => {
     mock.fetchTrustOverview.mockResolvedValue({ ...overview, cases: 0, admitted: 0, ledgerEntries: 0 })
     mock.fetchTrustCases.mockResolvedValue({ ok: true, cases: [] })

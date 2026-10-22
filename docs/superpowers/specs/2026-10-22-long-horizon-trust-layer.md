@@ -29,6 +29,7 @@
 - **D6 已知边界**：本批不做三件事，明确不声称已具备：① 不新建独立进程、容器或操作系统用户来隔离三个角色（当前是同一进程内的逻辑隔离与工具面校验）；② 不把准入接到上游 `/api/hermes/kanban/complete`（需要新增上游补丁，接入点是 `upstream/hermes-studio/packages/server/src/modules/hermes/controllers/kanban.ts` 的 `complete` 处理器，留给后续批次）；③ 不自动恢复 Agent 会话，只核对断点与工作区是否仍然一致。
 - **D7 存储与安全**：默认目录 `~/.hermes-web-ui/trust`，`HERMES_TRUST_DIR` 可覆盖；每案一份 JSON，写入用临时文件+原子替换。工作区根目录默认限制在家目录与系统临时目录内，`HERMES_TRUST_ROOTS`（冒号分隔）可覆盖；解析后做真实路径前缀校验，越界返回 403。接口只返回相对路径、大小与摘要，不返回文件内容。
 - **D8 页面位置**：放在⑥治理阶段页签，而不是新开专题页。页签由 `STAGE_TABS` 单一事实源驱动，导航、面包屑、深链自动生效，不需要新路由、新功能开关或上游语言包补丁。
+- **D9 键盘可达**：案件行的详情入口不能只支持鼠标。行元素加 `tabindex="0"`、`aria-label` 与 Enter/Space 处理，并配 `:focus-visible` 焦点样式；客户端用例断言键盘可打开详情。该问题由本轮浏览器走查发现，随批修正。
 
 ## 验证
 
@@ -47,7 +48,7 @@ npm run typecheck:harness
 npx vitest run custom/client/ia2/__tests__/long-horizon-trust.test.ts
 ```
 
-覆盖点：⑥治理注册 `trust` 页签且组件映射存在、面板在空态/错误态/正常态下的锚点渲染。
+覆盖点：⑥治理注册 `trust` 页签且组件映射存在、面板在空态/错误态/正常态下的锚点渲染、案件行可用键盘（Enter）打开详情。
 
 整体：
 
