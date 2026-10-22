@@ -18,7 +18,7 @@ export interface RunStateLike {
   ledger?: { open: number }
 }
 
-export type StageState = 'done' | 'current' | 'pending'
+export type StageState = 'done' | 'current' | 'pending' | 'blocked'
 export type SetupStepState = 'done' | 'current' | 'pending' | 'untracked'
 
 const cache = new Map<string, RunStateLike>()
