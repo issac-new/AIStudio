@@ -50,6 +50,7 @@ const currentTab = computed(() => tabMeta(props.stage, activeTab.value) ?? tabs.
 const STATE_LABEL = {
   done: { zh: '本阶段完成', en: 'Stage complete' },
   current: { zh: '当前阶段', en: 'Current stage' },
+  blocked: { zh: '有阻塞', en: 'Blocked' },
   pending: { zh: '未开始', en: 'Not started' },
 } as const
 const stageState = computed(() => progress.stageState(props.stage))
