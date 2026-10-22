@@ -3,7 +3,7 @@
      离职三步向导：①任务移交 ②停用双账号 ③审计留痕（服务端原子序，逐步 commit 可回溯）。 -->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { fetchRegistry, saveRegistry, offboardAccount } from '@/custom/governance/api/adminRegistry'
+import { fetchRegistry, saveRegistry, offboardAccount, fetchOrgCosign, openOrgCosign, resolveOrgCosign, type OrgCosignPending } from '@/custom/governance/api/adminRegistry'
 import { parseFirstTable, setCellAlign } from '@/custom/governance/utils/registry-md'
 import { fetchMatrixServerInfo } from '../../matrix-server-info'
 
@@ -13,6 +13,14 @@ const preamble = ref<string[]>([]); const after = ref<string[]>([])
 const commit = ref(''); const msg = ref(''); const busy = ref(false)
 const homeserverUrl = ref('')
 const wizard = ref<null | { step: number; name: string; handoverTo: string; taskIds: string; reason: string; adminToken: string; result: string }>(null)
+// 治理者守卫（2026-10-22）：admin 行变更 409 后的会签/紧急通道对话框 + 待会签块
+const guard = ref<null | { detail: string; markdown: string; message: string; reason: string }>(null)
+const pending = ref<OrgCosignPending | null>(null)
+const cosigner = ref(''); const cosignReason = ref('')
+
+async function loadCosign() {
+  try { pending.value = (await fetchOrgCosign()).pending } catch { pending.value = null }
+}
 
 async function load() {
   const doc = await fetchRegistry('org')
@@ -23,21 +31,55 @@ async function load() {
 }
 onMounted(() => {
   void load().catch(e => { msg.value = String(e) })
+  void loadCosign()
   void fetchMatrixServerInfo().then(info => { homeserverUrl.value = info.homeserverUrl }).catch(() => {})
 })
 
 function addRow() { rows.value.push(['', '', '', '', '']) }
 function delRow(i: number) { rows.value.splice(i, 1) }
 
-async function save() {
+async function save(breakGlass?: { reason: string }) {
   busy.value = true; msg.value = ''
+  const md = [...preamble.value,
+    `| ${COLS.join(' | ')} |`, `| ${COLS.map(() => '---').join(' | ')} |`,
+    ...rows.value.map(r => `| ${r.join(' | ')} |`), ...after.value].join('\n')
+  const message = `组织关系更新（${rows.value.length} 人）`
   try {
-    const md = [...preamble.value,
-      `| ${COLS.join(' | ')} |`, `| ${COLS.map(() => '---').join(' | ')} |`,
-      ...rows.value.map(r => `| ${r.join(' | ')} |`), ...after.value].join('\n')
-    const r = await saveRegistry('org', md, `组织关系更新（${rows.value.length} 人）`)
-    msg.value = `已保存提交 ${r.commit}`; commit.value = r.commit
-  } catch (e) { msg.value = `保存失败：${String(e)}` } finally { busy.value = false }
+    const r = await saveRegistry('org', md, message, undefined,
+      breakGlass ? { breakGlass: true, breakGlassReason: breakGlass.reason } : undefined)
+    msg.value = `已保存提交 ${r.commit}${r.breakGlass ? '（紧急通道，已审计留痕）' : ''}`
+    commit.value = r.commit; guard.value = null
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string }
+    if (err?.code === 'org_needs_cosign') {
+      guard.value = { detail: err.message || 'admin 行变更需双人确认', markdown: md, message, reason: '' }
+      msg.value = '守卫拦截：admin 行（治理者）变更需双人会签或紧急通道'
+    } else {
+      msg.value = `保存失败：${String(e)}`
+    }
+  } finally { busy.value = false }
+}
+
+async function startCosign() {
+  const g = guard.value; if (!g) return
+  busy.value = true
+  try {
+    const r = await openOrgCosign({ markdown: g.markdown, message: g.message })
+    msg.value = `会签单已发起（提交 ${r.commit}）——待另一位治理岗（admin/审计）在下方待会签块批准`
+    guard.value = null; await loadCosign()
+  } catch (e) { msg.value = `发起会签失败：${String(e)}` } finally { busy.value = false }
+}
+
+async function resolveCosign(action: 'approve' | 'reject') {
+  busy.value = true
+  try {
+    const r = await resolveOrgCosign(action, cosigner.value, cosignReason.value)
+    msg.value = action === 'approve'
+      ? `会签落盘完成：org@${r.orgCommit ?? ''} 决议@${r.commit}（已审计留痕）`
+      : `已驳回（决议@${r.commit}）`
+    cosigner.value = ''; cosignReason.value = ''
+    await load(); await loadCosign()
+  } catch (e) { msg.value = `${action === 'approve' ? '批准' : '驳回'}失败：${String(e)}` } finally { busy.value = false }
 }
 
 function openWizard(name: string) { wizard.value = { step: 1, name, handoverTo: '', taskIds: '', reason: '', adminToken: '', result: '' } }
@@ -80,6 +122,30 @@ async function runWizard() {
       </tbody>
     </table>
 
+    <div v-if="guard" class="oed__wiz" data-testid="org-guard">
+      <div class="oed__wiz-hd">治理者守卫：admin 行变更需双人确认
+        <button class="oed__wiz-x" @click="guard = null">✕</button></div>
+      <p class="oed__guard-detail" data-testid="org-guard-detail">{{ guard.detail }}</p>
+      <p>① 双人会签：暂存本次变更，由另一位治理岗（编制内 admin 或 审计）批准后落盘。</p>
+      <button data-testid="org-guard-cosign" :disabled="busy" @click="startCosign">发起会签</button>
+      <p>② 紧急通道（break-glass）：单人立即落盘，理由强制写入审计留痕（事后可查）。</p>
+      <input v-model="guard.reason" placeholder="紧急理由（必填，入审计留痕）" data-testid="org-guard-reason" />
+      <button data-testid="org-guard-breakglass" :disabled="!guard.reason.trim() || busy"
+        @click="save({ reason: guard.reason.trim() })">紧急落盘</button>
+    </div>
+
+    <div v-if="pending" class="oed__wiz" data-testid="org-cosign">
+      <div class="oed__wiz-hd">待会签变更（{{ pending.initiator }} 发起 @{{ pending.created }}）</div>
+      <p class="oed__guard-detail" v-for="d in pending.detail" :key="d">{{ d }}</p>
+      <p>批准人须编制在册治理岗（admin 或 审计）且不等于发起人 {{ pending.initiator }}。</p>
+      <input v-model="cosigner" placeholder="会签人账号（如 audit）" data-testid="org-cosign-approver" />
+      <input v-model="cosignReason" placeholder="意见（批准可空，驳回必填）" data-testid="org-cosign-reason" />
+      <button data-testid="org-cosign-approve" :disabled="!cosigner.trim() || busy"
+        @click="resolveCosign('approve')">批准落盘</button>
+      <button data-testid="org-cosign-reject" :disabled="!cosigner.trim() || !cosignReason.trim() || busy"
+        @click="resolveCosign('reject')">驳回</button>
+    </div>
+
     <div v-if="wizard" class="oed__wiz" data-testid="offboard-wizard">
       <div class="oed__wiz-hd">离职三步向导：{{ wizard.name }}
         <button class="oed__wiz-x" @click="wizard = null">✕</button></div>
@@ -111,6 +177,8 @@ async function runWizard() {
 .oed__msg { font-size: 12px; color: var(--text-muted); margin: 4px 0; }
 .oed__table { width: 100%; border-collapse: collapse; font-size: 12px; th, td { border: 1px solid var(--border-color); padding: 3px 5px; text-align: left; } input { width: 100%; border: none; background: transparent; font: inherit; } }
 .oed__rowacts { white-space: nowrap; button { margin-right: 4px; cursor: pointer; border: 1px solid var(--border-color); border-radius: 5px; background: transparent; font-size: 11px; } }
-.oed__wiz { margin-top: 10px; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; input { display: block; width: 100%; margin: 4px 0; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 6px; } button { margin-top: 6px; margin-right: 6px; font-size: 12px; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; } }
+.oed__wiz { margin-top: 10px; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; input { display: block; width: 100%; margin: 4px 0; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 6px; } button { margin-top: 6px; margin-right: 6px; font-size: 12px; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; } p { font-size: 12px; margin: 4px 0; } }
+.oed__wiz-x { margin-left: auto; }
+.oed__guard-detail { white-space: pre-wrap; color: var(--text-muted); background: var(--bg-secondary); border-radius: 6px; padding: 6px 8px; }
 .oed__wiz-hd { font-weight: 600; font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
 </style>
