@@ -105,7 +105,7 @@ async function runWizard() {
       <h3>研发组织与权限 <span class="oed__meta">@{{ commit || '…' }}</span></h3>
       <div class="oed__acts">
         <button data-testid="oed-add" @click="addRow">＋ 新增成员</button>
-        <button data-testid="oed-save" :disabled="busy" @click="save">保存（提交 git）</button>
+        <button data-testid="oed-save" :disabled="busy" @click="save()">保存（提交 git）</button>
       </div>
     </div>
     <p v-if="msg" class="oed__msg">{{ msg }}</p>
