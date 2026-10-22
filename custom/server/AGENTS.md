@@ -22,6 +22,7 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 | `eval/` | 评测集、回放判定、发布门 |
 | `govbus/` | 治理事件总线（append-only JSONL） |
 | `evidence/` | 任务证据台账（hash 链防篡改） |
+| `trust/` | 长程任务可信执行（主张三态审计/完成态双准入/工作区完整性栅栏/原子断点，fail-closed） |
 
 ## 测试约定
 

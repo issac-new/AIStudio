@@ -149,6 +149,7 @@ const AsyncReviewGov = lazyTab(() => import('../gov/ReviewGovPanel.vue'))
 const AsyncImprove = lazyTab(() => import('../gov/HarnessImprovePanel.vue'))
 const AsyncPosture = lazyTab(() => import('../gov/GovPostureView.vue'))
 const AsyncSecAudit = lazyTab(() => import('../gov/SecAuditPanel.vue'))
+const AsyncTrust = lazyTab(() => import('../gov/LongHorizonTrustPanel.vue'))
 const AsyncCases = lazyTab(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue'))
 
 const TAB_COMPONENTS: Record<string, Component> = {
@@ -180,6 +181,7 @@ const TAB_COMPONENTS: Record<string, Component> = {
   posture: AsyncPosture,
   secAudit: AsyncSecAudit,
   audit: AsyncAudit,
+  trust: AsyncTrust,
   reviewGov: AsyncReviewGov,
   improve: AsyncImprove,
   metrics: StageMetricsPanel,
