@@ -217,6 +217,10 @@ kanban SQLite（task_links DAG、CAS 认领）；approvals＋pending-summary；M
 
 Matrix 只做传输与身份；本地 GroupChatServer 保留编排器（流式/审批/队列）；ChatBridge 双挂。Phase 1 UI 统一已落，Phase 2 未实施。
 
+### 4.8 长程可信执行面
+
+接口 `/api/harness/trust/*`：主张三态审计（verified/unverified/refuted，审计者≠主张人，file+sha256 双向比对）；完成态双准入（审计全 verified 且工作区清单 clean，否则 untrusted 并累加 forgeAttempts）；CSWI 完整性栅栏（小文件 sha256、大文件大小+修改时间、自报 clean 被框架观察覆盖）；原子断点（案件摘要+工作区摘要，恢复核对 consistent/diverged）；角色工具面 0<10<17 单调链。存储 `~/.hermes-web-ui/trust`，事件账为前向哈希链；⑥治理页签「长程可信」；本地 CLI 供推演脚本调用。
+
 ---
 
 ## 5、能力层设计
