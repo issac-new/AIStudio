@@ -119,7 +119,12 @@ LOCK_DIR="$SIM_ROOT/gateway-locks"        # 隔离锁目录：与真机 orchestr
 CREDS_DIR="$SIM_ROOT/creds"
 PIDS_DIR="$SIM_ROOT/pids"
 LOGS_DIR="$SIM_ROOT/logs"
-EVID_DIR="${MX_EVID_DIR:-$SIM_ROOT/evidence}"
+# EVID_DIR 不在此定义（run22 复盘④：双定义歧义根治）——单一事实源在「推演轮次隔离」
+# 段（RUN_DIR 解析后）：EVID_DIR="${MX_EVID_DIR:-$RUN_DIR/evidence}"。此前此处另有
+# 一处 "$SIM_ROOT/evidence" 缺省定义：RUN_ID 缺席的 mx-lib 消费方（早期驱动实例/
+# 子进程）静默读写 SIM 根 evidence/ 孪生目录——run22 收官夜「审计双态振荡」（驱动侧
+# 读数冻结 47 键 vs 活文件 52 键）的最强嫌疑载体：孪生在 03:43 人工同步后驱动侧审计
+# 立即收敛（03:48 起仅剩 1-2 项）。issue_once 等 source 期使用点自带缺省兜底不受影响。
 WEBUI_HOME="$SIM_ROOT/webui"
 
 HS="${MX_HS:-http://127.0.0.1:8008}"
