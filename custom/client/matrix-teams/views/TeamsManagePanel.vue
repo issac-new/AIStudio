@@ -111,6 +111,9 @@ watch(() => matrixClientStore.syncState, (state) => {
         :placeholder="t('teams.registry.inviteIds')" />
       <button type="button" class="tmp__primary" data-testid="teams-create-submit"
         @click="submitCreate">{{ t('teams.registry.create') }}</button>
+      <!-- 2026-10-22 走查批：建房/保存失败原先只进 store.lastError 无任何呈现（点击无反应）——就地显示 -->
+      <div v-if="registry.lastError" class="tmp__hint" style="color: var(--error, #d33);"
+        data-testid="teams-last-error">{{ registry.lastError }}</div>
 
       <div v-if="registry.registryCandidateRooms().length" class="tmp__cands">
         <div class="tmp__hint">{{ t('teams.registry.candidates') }}</div>

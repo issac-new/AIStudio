@@ -137,10 +137,11 @@ function blockedCardsProvider(): (() => Promise<Array<Record<string, unknown>>>)
 
 export function createClusterInspectorRouter(deps: InspectorDeps = {}): Router {
   const router = new Router({ prefix: '/api/hermes/cluster-inspector' })
-  // 持续流水线 v1（V8.33 四持续产品化）：子路由挂巡检官前缀下，零 upstream patch
+  // 持续流水线 v1（V8.33 四持续产品化）：子路由挂巡检官前缀下，零 upstream patch。
+  // 2026-10-22 走查批：改 '/pipeline' 路径挂载＋子路由无前缀（原绝对前缀嵌套=双前缀 404）。
   const { pipelineEngine } = require('../pipeline/pipeline-engine') as typeof import('../pipeline/pipeline-engine')
   const { createPipelineRouter, startPipelineIfEnabled } = require('../pipeline/pipeline-controller') as typeof import('../pipeline/pipeline-controller')
-  router.use(createPipelineRouter(pipelineEngine).routes())
+  router.use('/pipeline', createPipelineRouter(pipelineEngine).routes())
   // 联邦注册表快照（D8 跨机静默观测面）：读进度联邦注册表（有界内存快照，零 IO）。
 function federationSnapshotProvider(): (() => { ok: boolean; nowMs: number; machines: Array<{ machineId: string; lastSeenMs: number; activeTasks: number; activeAgents?: number }> }) | undefined {
   try {

@@ -110,7 +110,10 @@ export function listHumanGatePending(): PendingItem[] {
     }))
 }
 
-export const humanGateRouter = new Router({ prefix: '/api/approvals/human-gate' })
+// 前缀契约（2026-10-22 走查批修正）：本子路由**不带前缀**，由 approvals 父路由
+// router.use('/human-gate') 组合出 /api/approvals/human-gate/*（koa-router 嵌套
+// 绝对前缀=双前缀 404，上线即死实锚）。
+export const humanGateRouter = new Router()
 
 humanGateRouter.post('/', async ctx => {
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
