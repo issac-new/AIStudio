@@ -8,10 +8,29 @@ export function fetchRegistry(kind: 'roster' | 'app-registry' | 'org'): Promise<
   return request(`/api/governance/registry/${kind}`)
 }
 
-export function saveRegistry(kind: 'roster' | 'app-registry' | 'org', markdown: string, message: string, actor?: string): Promise<{ commit: string }> {
+export function saveRegistry(kind: 'roster' | 'app-registry' | 'org', markdown: string, message: string, actor?: string, breakGlass?: { breakGlass: true; breakGlassReason: string }): Promise<{ commit: string; breakGlass?: boolean }> {
   return request(`/api/governance/registry/${kind}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ markdown, message, actor }),
+    body: JSON.stringify({ markdown, message, actor, ...breakGlass }),
+  })
+}
+
+/** org admin 行会签（2026-10-22 治理者守卫）：发起暂存 → 资格异人批准落盘/驳回。 */
+export interface OrgCosignPending {
+  status: 'pending'; initiator: string; created: string
+  message: string; detail: string[]; markdown: string
+}
+export function fetchOrgCosign(): Promise<{ pending: OrgCosignPending | null }> {
+  return request('/api/governance/registry/org/cosign')
+}
+export function openOrgCosign(inp: { markdown: string; message: string; actor?: string }): Promise<{ commit: string }> {
+  return request('/api/governance/registry/org/cosign', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(inp),
+  })
+}
+export function resolveOrgCosign(action: 'approve' | 'reject', approver: string, reason?: string): Promise<{ orgCommit?: string; commit: string }> {
+  return request(`/api/governance/registry/org/cosign/${action}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ approver, reason }),
   })
 }
 
