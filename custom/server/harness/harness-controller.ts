@@ -42,6 +42,9 @@ import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 import { workbenchRoutes } from './workbench/controller'
 import { simLaunchRoutes } from './sim-launch'
+// 长程任务可信执行层（2026-10-22）：逐条主张审计、完成态双准入、完整性栅栏、原子断点。
+// 子路由自带写面权限校验（super_admin），不新增 bootstrap 补丁。
+import trustRoutes from '../trust/controller'
 
 const router = new Router({ prefix: '/api/harness' })
 
@@ -53,6 +56,8 @@ const callgateRegistry = new CallgateRegistry()
 router.use('/workbench', workbenchRoutes.routes(), workbenchRoutes.allowedMethods())
 // 受控 harness 推演启动（SIM_HARNESS_LAUNCH=1 + super_admin；固定脚本，不接受任意命令）
 router.use('/sim-launch', simLaunchRoutes.routes(), simLaunchRoutes.allowedMethods())
+// 长程任务可信执行（2026-10-22）：主张审计 / 双准入 / 完整性栅栏 / 断点核对
+router.use('/trust', trustRoutes.routes(), trustRoutes.allowedMethods())
 
 function daysOf(v: unknown): number {
   const n = Number(v)
