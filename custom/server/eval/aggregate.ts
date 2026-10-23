@@ -9,7 +9,7 @@
 import type { Attempt, EvalConfig, EvalRun, EvalSet, EvalTask, RunAggregates } from './types'
 import { loadEvalConfig } from './types'
 import { calibrationReport } from './calibration'
-import { byExceptionOf, byLinkOf, processMetricsOf, sixDimensionsOf, trajectoryDisciplineOf } from './metrics'
+import { byDifficultyOf, byExceptionOf, byLinkOf, byRoleOf, processMetricsOf, sixDimensionsOf, trajectoryDisciplineOf } from './metrics'
 import { actionLinksOf } from './actions'
 import { pyramidOf } from './pyramid'
 import { evaluateReleaseGate, loadReleaseGateConfig } from './releaseGate'
@@ -126,6 +126,22 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     ? { checked: stabilityChecked, flips: stabilityFlips, flipRate: stabilityFlips / stabilityChecked }
     : undefined
 
+  // 输出稳定性（京东「稳定性也是指标」）：汇总各 attempt 的同输入重复判定读数；
+  // rounds 取参与 attempt 的最大轮数（同一 run 内 retest 配置一致）。
+  let outputChecked = 0
+  let outputFlips = 0
+  let outputRounds = 0
+  for (const attempt of run.attempts) {
+    const retest = attempt.judgeMeta?.outputStability
+    if (!retest) continue
+    outputChecked += retest.checked
+    outputFlips += retest.flips
+    if (retest.rounds > outputRounds) outputRounds = retest.rounds
+  }
+  const outputStability = outputChecked > 0
+    ? { rounds: outputRounds, checked: outputChecked, flips: outputFlips, flipRate: outputFlips / outputChecked }
+    : undefined
+
   run.aggregates = {
     taskCount,
     passAt1: passAt1Denom === 0 ? null : passAt1 / passAt1Denom,
@@ -153,9 +169,13 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     byLink: byLinkOf(set, run),
     byException: byExceptionOf(set, run),
     processMetrics: processMetricsOf(set, run),
+    // 京东评测体系吸收轮（2026-10-23）：难度分桶 / 责任角色分桶（未标注缺省不产噪）
+    byDifficulty: byDifficultyOf(set, run),
+    byRole: byRoleOf(set, run),
     // OpenAI Evals 吸收轮：轨迹纪律（死循环/冗余步）与判分稳定性，无证据时缺省
     ...(trajectoryDiscipline ? { trajectoryDiscipline } : {}),
     ...(judgeStability ? { judgeStability } : {}),
+    ...(outputStability ? { outputStability } : {}),
   }
 
   // 发布门禁（六维分面的 performance 读数复用其 P99/均值比，先算门禁再建分面）；

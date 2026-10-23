@@ -12,6 +12,7 @@ import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
 import { collectGovernancePosture } from '../governance/posture'
 import { collectProcessScan } from '../clusterinspector/process-scan'
 import { scanRepoDangerousApi, scanRepoDeps, scanRepoSecrets } from './repo-scan'
+import { scanDeploySecrets } from './deploy-scan'
 import type { AutoEvidence } from './coverage'
 
 export async function collectAutoEvidence(opts: { repoRoot?: string } = {}): Promise<AutoEvidence> {
@@ -108,6 +109,12 @@ export async function collectAutoEvidence(opts: { repoRoot?: string } = {}): Pro
     }
   } catch (e) {
     out.agents = { count: 0, summary: `进程扫描失败：${(e as Error).message.slice(0, 120)}` }
+  }
+  // secrets 面（部署侧补缺 2026-10-23）：扫描部署根的配置/日志密钥形态。
+  try {
+    out.secrets = scanDeploySecrets()
+  } catch (e) {
+    out.secrets = { count: 0, summary: `部署面密钥扫描失败：${(e as Error).message.slice(0, 120)}` }
   }
   return out
 }
