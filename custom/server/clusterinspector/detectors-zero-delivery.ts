@@ -52,6 +52,7 @@ export function detectZeroDelivery(snap: ClusterSnapshot, _opts: DetectOptions =
     detector: 'completion.zero-delivery',
     subject: 'board:zero-delivery-candidates',
     severity: 'warn',
+    failureMode: 'premature-victory',
     summary: `零交付 ${suspects.length} 张：done 卡既无交付分支引用、body 又无 commit= 锚`
       + `（${suspects.slice(0, 3).map((c) => c.id).join('、')}${suspects.length > 3 ? ' 等' : ''}）`
       + '——研发交付类卡零凭证（分类判据：标题规则，治理/台账类已静默剔除）；请补 commit 锚/分支引用或改状态',
