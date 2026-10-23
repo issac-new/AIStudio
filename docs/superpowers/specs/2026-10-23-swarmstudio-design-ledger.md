@@ -29,11 +29,11 @@
 | 能力层 | references/research/reviews | 57/99/1 |
 | 能力层 | 随发文件 | 92（lite 46） |
 | 能力层 | 变量/预算 | 197/200 |
-| 文档 | specs/plans/研究档 | 267/55/32 |
+| 文档 | specs/plans/研究档 | 289/55/32 |
 
 ## 来源覆盖（2026-10-23 复测）
 
-全量覆盖：267 specs、55 plans、31 研究档、21 运行面 spec、V8 正本 2,646 行、simharness 7 份、能力层 57 方法论＋2,837 行决策史＋99 research、45 份 feedback。未逐字：1.7M 旧汇编、hermes-agent 源码细部、产品面部分历史正文。
+全量覆盖：289 specs（2026-10-23 晚复测：吸收轮+挂账清偿轮等当日 22 份入库）、55 plans、31 研究档、21 运行面 spec、V8 正本 2,646 行、simharness 7 份、能力层 57 方法论＋2,837 行决策史＋99 research、45 份 feedback。未逐字：1.7M 旧汇编、hermes-agent 源码细部、产品面部分历史正文。
 
 ## 维护规则
 
