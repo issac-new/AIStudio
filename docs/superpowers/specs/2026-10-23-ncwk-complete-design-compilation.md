@@ -2,7 +2,7 @@
 
 > **⚠️ 本册已退役**：2026-10-23 的六部分拼接版汇编册是「拼凑」而非「整合」，已由唯一整合正本取代。
 >
-> **请读 → [`2026-10-23-ncwk-integrated-design.md`](2026-10-23-ncwk-integrated-design.md)（NCWK 完整设计文档·整合 R1）**
+> **请读 → [`2026-10-23-swarmstudio-integrated-design.md`](2026-10-23-swarmstudio-integrated-design.md)（SwarmStudio 完整设计文档·整合 R2）**
 >
 > 拼接版全文留档于 git 提交 404ae40f；整合版按理念→架构→产品→运行→能力→治理与历史→验证→路线八章去重重写，非拼接。
 
