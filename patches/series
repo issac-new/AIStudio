@@ -920,3 +920,5 @@
 683-server-precedent-mount.patch
 # 684: 模型选择器 403 降级根治（五轮 C 用户报修「你没有权限访问该资源」）——Matrix 登录账号无活跃 profile 授权时 available-models 403 回落无 profile 查询（服务端合并可见 profiles）+ 该端点入 client 静默降级名单（run13 先例）。
 684-client-models-403-fallback.patch
+# 685: 工作流引擎挂载（五轮 H「循环→zcode workflow」）——/api/ia2/workflow/runs：声明式步骤调度本机分布式 hermes agent（peer dm）与 matrix 集群房间（网关凭据直发），串/并行，run 落盘 runtime/workflow-runs.json。
+685-server-workflow-route.patch

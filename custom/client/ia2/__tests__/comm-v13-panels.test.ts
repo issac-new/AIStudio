@@ -69,18 +69,9 @@ describe('FlowNavPanel — v13 循环行运行脉冲', () => {
     { kind: 'loop', id: 'lp-2', name: 'watch', stageIndex: 0, stageTotal: 5, stageTone: 'todo', progressPct: 0, statusKey: 'idle', awaitingYou: false, blocked: false, updatedAt: NOW },
   ]
 
-  it('loopActivity.running>0 → ●N 脉冲（title 提示运行数）；无活动行不渲染', () => {
-    const w = mount(FlowNavPanel, {
-      props: {
-        sessions, loops, selection: null,
-        loopActivity: { 'lp-1': { running: 2, awaiting: 0, failed: 0 } },
-      },
-    })
-    const pulse = w.find('[data-testid="flow-pulse-lp-1"]')
-    expect(pulse.exists()).toBe(true)
-    expect(pulse.text()).toBe('●2')
-    expect(pulse.attributes('title')).toBe('ia2.act.running:{"n":2}')
-    expect(w.find('[data-testid="flow-pulse-lp-2"]').exists()).toBe(false)
+  it('v13 循环行运行脉冲已随「循环→工作流」换面退役（五轮 H）：pulse 不再渲染', () => {
+    const w = mount(FlowNavPanel, { props: { sessions, loops, selection: null, loopActivity: { 'lp-1': { running: 2 } } as never } })
+    expect(w.find('[data-testid="flow-pulse-lp-1"]').exists()).toBe(false)
   })
 
   it('缺省 loopActivity（向后兼容）→ 无脉冲渲染', () => {

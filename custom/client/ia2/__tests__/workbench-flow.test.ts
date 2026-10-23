@@ -11,6 +11,15 @@ import { resolve } from 'path'
 import { setActivePinia, createPinia } from 'pinia'
 import { createRouter, createMemoryHistory, type Router } from 'vue-router'
 
+vi.mock('@/custom/ia2/workflow', () => ({
+  fetchWorkflowRuns: vi.fn(async () => [
+    { id: 'wf-x1', name: 'wf-test-run', mode: 'parallel', status: 'done', createdAt: 1,
+      steps: [
+        { targetKind: 'identity', ref: 'worker-coder', instructions: 'i', status: 'ok', reply: 'r' },
+        { targetKind: 'identity', ref: 'data-arch', instructions: 'i', status: 'ok', reply: 'r' },
+      ] },
+  ]),
+}))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
 // ── store 桩 ──
@@ -216,23 +225,18 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     })
   }
 
-  it('分组渲染会话行（未读红点/📋挂接徽章/团队标签）与循环卡（进度%/阶段分段/状态）', () => {
+  it('分组渲染会话行（未读红点/📋挂接徽章/团队标签）与工作流行（五轮 H 换面）', async () => {
     const w = mountPanel()
     const room = w.find('[data-testid="flow-session-!r1"]')
     expect(room.text()).toContain('应急指挥中心')
     expect(room.find('.flow-nav__unr').text()).toBe('2')
     expect(room.text()).toContain('📋1')
     expect(room.text()).toContain('[已移除]')
-    const loop = w.find('[data-testid="flow-loop-lp-1"]')
-    expect(loop.text()).toContain('release-pipeline')
-    expect(loop.text()).toContain('70%')
-    expect(loop.text()).toContain('ia2.loop.status.awaitingYou')
-    // 阶段分段：3 done + 1 run + 1 todo
-    const segs = loop.findAll('.flow-nav__seg')
-    expect(segs).toHaveLength(5)
-    expect(segs[0].classes()).toContain('flow-nav__seg--done')
-    expect(segs[3].classes()).toContain('flow-nav__seg--run')
-    expect(segs[4].classes()).toContain('flow-nav__seg--todo')
+    // 五轮 H：循环卡已换面工作流行（数据自取 /api/ia2/workflow/runs，mock 见文件头）
+    await new Promise(r => setTimeout(r, 30))
+    const wfRow = w.find('[data-testid^="wf-row-"]')
+    expect(wfRow.exists()).toBe(true)
+    expect(wfRow.text()).toContain('wf-test-run')
   })
 
   it('分类聚类：按工作区分组（会话经挂接任务反查；无挂接落未关联组）', async () => {
@@ -255,9 +259,10 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     const w = mountPanel()
     await w.find('[data-testid="flow-filter-loop"]').trigger('click')
     expect(w.find('[data-testid="flow-session-!r1"]').exists()).toBe(false)
-    expect(w.find('[data-testid="flow-loop-lp-1"]').exists()).toBe(true)
+    await new Promise(r => setTimeout(r, 20))
+    expect(w.find('[data-testid^="wf-row-"]').exists()).toBe(true)
     await w.find('[data-testid="flow-filter-session"]').trigger('click')
-    expect(w.find('[data-testid="flow-loop-lp-1"]').exists()).toBe(false)
+    expect(w.find('[data-testid^="wf-row-"]').exists()).toBe(false)
     await w.find('[data-testid="flow-filter-all"]').trigger('click')
     await w.find('[data-testid="flow-search"]').setValue('t-402')
     expect(w.find('[data-testid="flow-session-!r1"]').exists()).toBe(true)
@@ -268,8 +273,11 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     const w = mountPanel()
     await w.find('[data-testid="flow-session-!r1"]').trigger('click')
     expect(w.emitted('select')![0][0]).toEqual({ kind: 'room', id: '!r1' })
-    await w.find('[data-testid="flow-loop-lp-1"]').trigger('click')
-    expect(w.emitted('select')![1][0]).toEqual({ kind: 'loop', id: 'lp-1' })
+    await new Promise(r => setTimeout(r, 20))
+    const wfRow = w.find('[data-testid^="wf-row-"]')
+    await wfRow.trigger('click')
+    const sel = w.emitted('select')![1][0] as { kind: string; id: string }
+    expect(sel.kind).toBe('loop')
     const empty = mountPanel({ sessions: [], loops: [] })
     expect(empty.find('[data-testid="flow-empty"]').exists()).toBe(true)
   })
@@ -398,12 +406,12 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     await flushPromises()
     expect(router.currentRoute.value.name).toBe('ia2.collabSession')
     expect(router.currentRoute.value.params.sessionId).toBe('sess-1')
-    // 循环行 → 该循环最新 run（run-9：graphId loop-lp-1）的运行详情
-    await wrapper.find('[data-testid="flow-loop-lp-1"]').trigger('click')
+    // 五轮 H：循环行已换工作流行（wf-x1 来自 mock）→ 直达工作流详情 ?wf=
     await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.runDetail')
-    expect(router.currentRoute.value.params.runId).toBe('run-9')
-    expect(wrapper.find('[data-testid="run-canvas"]').exists()).toBe(false)
+    await wrapper.find('[data-testid="wf-row-wf-x1"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.collab')
+    expect(router.currentRoute.value.query.wf).toBe('wf-x1')
   })
 
   it('＋新循环入口已退役（⑤ S5：/app/eng 重定向交付案例）；⚙管理直达看板（2026-10-21 治理面收口）', async () => {
@@ -595,11 +603,7 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
     // 默认选择 !r1 → t-402（tenant 六段式挂接）；t-415 不在
     expect(wrapper.find('[data-testid="tdp-task-t-402"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="tdp-task-t-415"]').exists()).toBe(false)
-    // 循环行点击 → 最新 run 运行详情（契约挂接任务在详情页画布内呈现）
-    await wrapper.find('[data-testid="flow-loop-lp-1"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.runDetail')
-    expect(router.currentRoute.value.params.runId).toBe('run-9')
+    // 五轮 H：循环行点击已改道工作流详情（旧 runDetail 迁移断言退役）
     // 改派 → 抽屉开（task-id 透传）
     await wrapper.find('[data-testid="tdp-reassign-t-402"]').trigger('click')
     expect(wrapper.find('.drawer-stub').attributes('data-taskid')).toBe('t-402')

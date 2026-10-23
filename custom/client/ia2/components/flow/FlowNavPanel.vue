@@ -14,7 +14,7 @@
      画布内侧栏管理入口）；栏底「＋新聊天」三分型菜单（agent 单聊/agent 群聊/
      matrix 房间），matrix 房间沿用内联输入。正本 docs/comm-collab-v14-unified-chat.md §4。 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import {computed, ref, watch, onMounted, onUnmounted} from 'vue'
 import { useI18n } from 'vue-i18n'
 import { filterStreams, LOOP_STAGE_ORDER, sortFlowRows, type FlowFilter, type FlowLoopRow, type FlowSessionRow, type FlowSortMode, type StreamSelection } from '../../adapters/flow'
 import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
@@ -22,6 +22,7 @@ import { useMsgSurfaceText } from '../../i18n-msg-surface'
 import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
+import { fetchWorkflowRuns, type WorkflowRun } from '../../workflow'
 const props = defineProps<{
   sessions: FlowSessionRow[]
   loops: FlowLoopRow[]
@@ -58,6 +59,17 @@ function sortTitle(m: FlowSortMode): string {
   return m === 'recent' ? tx.value.sortRecent : m === 'unread' ? tx.value.sortUnread : tx.value.sortAlpha
 }
 const filterKind = ref<FlowFilter['kind']>('all')
+
+// ── 工作流（2026-10-23 五轮 H：「循环」换面）：自取 runs，30s/4s 轮询 ──
+const wfRuns = ref<WorkflowRun[]>([])
+let wfTimer: ReturnType<typeof setInterval> | null = null
+async function refreshWf(): Promise<void> { try { wfRuns.value = await fetchWorkflowRuns() } catch { /* 忽略 */ } }
+function scheduleWf(): void {
+  if (wfTimer) clearInterval(wfTimer)
+  wfTimer = setInterval(() => { void refreshWf() }, wfRuns.value.some(r => r.status === 'running') ? 4_000 : 30_000)
+}
+onMounted(() => { void refreshWf(); scheduleWf() })
+onUnmounted(() => { if (wfTimer) clearInterval(wfTimer) })
 const query = ref('')
 /** 栏底内联新建房间（Electron renderer 无 window.prompt，就地输入） */
 /** v14「＋新聊天」三分型菜单开合 */
@@ -262,49 +274,18 @@ const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
         </div>
       </template>
 
-      <div v-if="shownLoops.length" class="flow-nav__sec">
-        <div class="flow-nav__sec-head" data-testid="flow-group-loops">
-          {{ t('ia2.flow.groupLoops') }}<span class="flow-nav__sec-n">{{ shownLoops.length }}</span>
+            <div v-if="filterKind === 'all' || filterKind === 'loop'" class="flow-nav__sec">
+        <div class="flow-nav__sec-head" data-testid="flow-group-workflows">
+          {{ t('ia2.flow.groupLoops') }}<span class="flow-nav__sec-n">{{ wfRuns.length }}</span>
         </div>
         <button
-          v-for="l in shownLoops"
-          :key="l.id"
-          type="button"
-          class="flow-nav__loop"
-          :class="{
-            'flow-nav__row--on': selection?.kind === 'loop' && selection.id === l.id,
-            'flow-nav__loop--err': l.stageTone === 'err',
-          }"
-          :data-testid="`flow-loop-${l.id}`"
-          @click="emit('select', { kind: 'loop', id: l.id })"
-          @dblclick="emit('jump-ide', null)"
+          v-for="r in wfRuns" :key="r.id" type="button" class="flow-nav__row"
+          :data-testid="`wf-row-${r.id}`"
+          @click="emit('select', { kind: 'loop', id: r.id })"
         >
-          <div class="flow-nav__loop-top">
-            <span class="flow-nav__name">{{ l.name }}</span>
-            <span
-              v-if="activityOf(l)?.running"
-              class="flow-nav__pulse" :data-testid="`flow-pulse-${l.id}`"
-              :title="t('ia2.act.running', { n: activityOf(l)!.running })"
-            >●{{ activityOf(l)!.running }}</span>
-            <span class="flow-nav__pct">{{ l.progressPct }}%</span>
-          </div>
-          <div class="flow-nav__stagebar">
-            <i
-              v-for="(tone, i) in stageTones(l)"
-              :key="i"
-              class="flow-nav__seg"
-              :class="`flow-nav__seg--${tone}`"
-            />
-          </div>
-          <div class="flow-nav__loop-meta">
-            <span class="flow-nav__stage-idx">{{ CIRCLED[l.stageIndex] ?? l.stageIndex + 1 }}</span>
-            <span class="flow-nav__stage-name">{{ t(`ia2.loop.stage.${LOOP_STAGE_ORDER[l.stageIndex]}`) }}</span>
-            <span class="flow-nav__dot">·</span>
-            <span
-              class="flow-nav__status"
-              :class="{ 'flow-nav__status--warn': l.awaitingYou, 'flow-nav__status--err': l.blocked }"
-            >{{ t(`ia2.loop.status.${l.statusKey}`) }}</span>
-          </div>
+          <span class="flow-nav__kind" :title="r.status">▶</span>
+          <span class="flow-nav__name">{{ r.name }}</span>
+          <span class="flow-nav__wf-meta">{{ r.mode === 'parallel' ? '并行' : '串行' }} · {{ r.steps.filter(x => x.status === 'ok' || x.status === 'queued').length }}/{{ r.steps.length }}</span>
         </button>
       </div>
 
@@ -512,6 +493,7 @@ const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 /* v14 单一聊天列表：kind 图标 + 群聊行 hover 删除 */
+.flow-nav__wf-meta { font-size: 10px; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
 .flow-nav__kind {
   flex-shrink: 0; width: 14px; text-align: center;
   font-size: 10px; color: var(--text-muted);
