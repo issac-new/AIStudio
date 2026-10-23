@@ -20,6 +20,9 @@ export interface EvidenceEntry {
 /** 概念词停用表：结构性词不进画像（避免「任务/测试」这类词淹没有效概念） */
 const STOP_TERMS = new Set([
   '任务', '测试', '需求', '进行', '完成', '处理', '相关', '以及', '一个', '这个',
+  // 派发词模板后缀话术（「（预写派发词代演人类派单）」的二元组切分残留——2026-10-23
+  // 卫生批 D15：先剥括注再兜底停用）
+  '人类', '代演', '写派', '发任', '件事', '一件', '预写', '派单', '派发', '话务',
   '分析', '评审', '上线', '更新', '优化', '支持', '确认', '问题', '接口', '补登',
   'task', 'test', 'run', 'the', 'and', 'for', 'with',
   // 台账结构词/话迹噪音（2026-10-23 活体走查实录：open=status 列残留、matrix=群域名、
@@ -74,7 +77,9 @@ export function evidenceFromLedger(rows: Array<{ id: string; ts: string; type: s
     if (row.type !== 'dispatch-preset') continue
     const from = /^from=(\S+)/.exec(row.detail)?.[1]
     if (!from) continue
-    const text = / text=(.*)$/s.exec(row.detail)?.[1] ?? row.detail
+    let text = / text=(.*)$/s.exec(row.detail)?.[1] ?? row.detail
+    // D15：剥派发词统一模板括注（「（预写派发词代演人类派单）」等）——结构话术非业务概念
+    text = text.replace(/（[^（）]*(?:代演|预写|派单)[^（）]*）/g, '').replace(/（用户/g, '')
     for (const { term } of extractTerms(text, 4)) {
       out.push({
         person: from,
