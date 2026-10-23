@@ -906,3 +906,7 @@
 676-server-kanban-nudge-mount.patch
 # 677: kanban i18n 欠账清偿——676 催办挂载批漏了 action.nudge/nudgeHint 双语词条（kanban-i18n-coverage 守门红）；GatekeeperSection 两处裸 hex 换语义 token（raw-hex 预算闸红）。
 677-client-kanban-i18n-nudge.patch
+# 678: 交付效能域挂载（天猫数字员工两文吸收轮）——/api/hermes/delivery/{digest,matrix,interventions}：跨板日报/C×L 效能画像/介入归因账本（fail-soft）。
+678-server-delivery-mount.patch
+# 679: 协作画像「谁懂什么」挂载（天猫数字员工两文吸收轮）——/api/hermes/expertise/{wall,search}：人×概念×证据画像墙与检索。
+679-server-expertise-mount.patch

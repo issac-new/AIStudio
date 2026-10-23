@@ -24,11 +24,13 @@ const TASKS_TABS_TEXT = {
     tabBoard: '看板',
     tabOrchestra: '任务协同',
     tabGovOrg: '协作与知识',
+    tabEffectiveness: '交付效能',
   },
   en: {
     tabBoard: 'Board',
     tabOrchestra: 'Orchestration',
     tabGovOrg: 'Team & Knowledge',
+    tabEffectiveness: 'Delivery',
   },
 } as const
 

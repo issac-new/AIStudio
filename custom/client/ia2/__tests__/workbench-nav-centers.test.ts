@@ -111,20 +111,21 @@ describe('legacyTabRedirect 旧签重定向（A0：迁出 10 键深链不死链�
     }
   })
 
-  it('board 3 键 / gov 别名 / 未知值 / 空串 / 驼峰误写 → null（本地页内处理）', () => {
-    for (const k of ['board', 'orchestra', 'gov-org', 'gov', 'weird', '', 'tabTrace', 'TabGovDocs']) {
+  it('board 4 键 / gov 别名 / 未知值 / 空串 / 驼峰误写 → null（本地页内处理）', () => {
+    for (const k of ['board', 'orchestra', 'gov-org', 'effectiveness', 'gov', 'weird', '', 'tabTrace', 'TabGovDocs']) {
       expect(legacyTabRedirect(k), k).toBe(null)
     }
   })
 })
 
 describe('13 键拆分注册表（三中心模块内事实源）', () => {
-  it('i18n-tasks-tabs 收敛为工作台 3 键，zh/en 键成对、文案随说人话轮原值', () => {
-    expect(Object.keys(TASKS_TABS_TEXT.zh)).toEqual(['tabBoard', 'tabOrchestra', 'tabGovOrg'])
+  it('i18n-tasks-tabs 收敛为工作台 4 键，zh/en 键成对（2026-10-23 天猫吸收轮 +交付效能）', () => {
+    expect(Object.keys(TASKS_TABS_TEXT.zh)).toEqual(['tabBoard', 'tabOrchestra', 'tabGovOrg', 'tabEffectiveness'])
     expect(Object.keys(TASKS_TABS_TEXT.zh)).toEqual(Object.keys(TASKS_TABS_TEXT.en))
     expect(TASKS_TABS_TEXT.zh.tabBoard).toBe('看板')
     expect(TASKS_TABS_TEXT.zh.tabOrchestra).toBe('任务协同')
     expect(TASKS_TABS_TEXT.zh.tabGovOrg).toBe('协作与知识')
+    expect(TASKS_TABS_TEXT.zh.tabEffectiveness).toBe('交付效能')
     expect(TASKS_TABS_TEXT.en.tabBoard).toBe('Board')
   })
 
@@ -140,7 +141,7 @@ describe('13 键拆分注册表（三中心模块内事实源）', () => {
     expect(GOV_TABS_TEXT.zh).not.toHaveProperty('tabGovSessionHealth')
   })
 
-  it('拆分守恒：工作台 3 + 治理 5 + 推演承接 1（sim-tabs tabOps）= 9', async () => {
+  it('拆分守恒：工作台 4 + 治理 5 + 推演承接 1（sim-tabs tabOps）= 10', async () => {
     const { SIM_TABS_TEXT } = await import('../views/sim/sim-tabs')
     for (const k of ['tabOps'] as const) {
       expect(SIM_TABS_TEXT.zh, k).toHaveProperty(k)
@@ -149,7 +150,7 @@ describe('13 键拆分注册表（三中心模块内事实源）', () => {
       Object.keys(TASKS_TABS_TEXT.zh).length
       + Object.keys(GOV_TABS_TEXT.zh).length
       + 1,
-    ).toBe(9)
+    ).toBe(10)
   })
 })
 })
