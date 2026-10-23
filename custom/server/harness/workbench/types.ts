@@ -214,11 +214,27 @@ export interface RollbackRecord {
   fileRestored: boolean
 }
 
+/**
+ * 噪声标定（RRSI S2：δ 来自未改动基线的重复实测，不提供调参入口）。
+ * method 固定 'half-range'：passAt1 半极差 (max-min)/2，保守且不需要分布假设。
+ */
+export interface NoiseCalibration {
+  runIds: string[]
+  setId: string
+  delta: number
+  method: 'half-range'
+  /** 参与计算的 passAt1 样本（与 runIds 同序；null 样本如实保留）。 */
+  samples: Array<number | null>
+  computedAt: string
+}
+
 export interface Proposal {
   id: string
   title: string
   hypothesis: string
   surfaceKey: SurfaceKey
+  /** 噪声标定（RRSI 接受地板的 δ）；未标定为 null/缺席。 */
+  noise?: NoiseCalibration | null
   /** 多文件候选的根（相对 HERMES_HOME）；缺省=单文件模式。 */
   treeRoot?: string | null
   /** managed 面的相对 HERMES_HOME 目标文件；advisory 面只作锚点展示。 */
@@ -305,4 +321,77 @@ export interface PromotionGateReport {
   ok: boolean
   blockers: GateBlocker[]
   warnings: GateBlocker[]
+}
+
+// ---------- RRSI 正则化派生（2026-10-23 吸收轮） ----------
+
+/** 提案级正则化读数：提案端预算/历史证据/噪声带的一次性快照（不落盘，视图现算）。 */
+export interface RegularizationDerived {
+  /** 论文 t：该面已采纳轮次（未回滚冠军数）。 */
+  round: number
+  /** 论文 T：退火视界（env HARNESS2_RSI_T，缺省 20）。 */
+  horizon: number
+  /** 论文 b_t：本轮允许的最大捆绑改动数（余弦退火）。 */
+  editBudget: number
+  /** 候选中最大捆绑改动文件数（单文件候选=1；树候选=files+deletions）。 */
+  maxEditCount: number | null
+  editBudgetExceeded: boolean
+  /** 噪声带 δ；未标定 null。 */
+  noiseDelta: number | null
+  noiseRuns: number
+  /** 该面连续 stallWindow 个提案无采纳（论文 σ_t）。 */
+  stalled: boolean
+  stallWindow: number
+  /** 该面在本提案之前从未有提案（论文结构性探索 ν：带内增益的唯一豁免）。 */
+  firstOnSurface: boolean
+  /** 同面历史失败假设的相似警示（论文「失败假设不复提」）。 */
+  hypothesisRetry: Array<{ proposalId: string; title: string; status: ProposalStatus; similarity: number }>
+}
+
+/** 进化时间线一轮（论文图 6 的一个点：一次被采纳的候选及其证据）。 */
+export interface EvolutionRound {
+  round: number
+  proposalId: string
+  variantLabel: string
+  promotedAt: string
+  rolledBack: boolean
+  passAt1: number | null
+  tokens: number | null
+  costUsd: number | null
+  /** 该提案的噪声带 δ（未标定 null）。 */
+  noiseDelta: number | null
+  /** 相对该提案基线的通过率增量（选中候选对比）。 */
+  passAt1Delta: number | null
+}
+
+export interface EvolutionSurface {
+  surfaceKey: SurfaceKey
+  /** 已采纳轮次（未回滚）。 */
+  rounds: number
+  proposalsTotal: number
+  promoted: number
+  rejected: number
+  rolledBack: number
+  open: number
+  failedProbes: number
+  stalled: boolean
+  /** 论文 S4：近 pruneN 个提案的全部已记录探测最大增量 ≤0 → 建议做减法提案。 */
+  pruneSuggested: boolean
+  timeline: EvolutionRound[]
+}
+
+export interface EvolutionReport {
+  config: {
+    horizon: number
+    bMin: number
+    bMax: number
+    stallWindow: number
+    pruneN: number
+    beta0: number
+    beta1PerPoint: number
+    requireNoise: boolean
+  }
+  surfaces: EvolutionSurface[]
+  /** 从未有提案的面（论文 U_t：探索槽位应留给它们）。 */
+  unexercised: SurfaceKey[]
 }

@@ -9,6 +9,7 @@ import { improveMessages } from '@/custom/governance/improve-i18n'
 import {
   addWorkbenchExperience,
   attachWorkbenchBaseline,
+  calibrateWorkbenchNoise,
   composeWorkbenchProposal,
   createWorkbenchProbes,
   createWorkbenchProposal,
@@ -56,6 +57,7 @@ interface ProposalForm {
   autoSetId: string
   autoRegressionSetId: string
   autoMaxTasks: number
+  noiseRunIds: string
 }
 const forms = reactive<Record<string, ProposalForm>>({})
 const probeInputs = reactive<Record<string, { evalRunId: string; regressionRunId: string }>>({})
@@ -102,7 +104,7 @@ function formFor(id: string): ProposalForm {
     forms[id] = {
       baselineRunId: '', selectedVariant: '', rationale: '', rollbackReason: '', actor: '', note: '',
       apply: false, cue: '', lesson: '', evidence: '', confidence: 'medium',
-      autoSetId: '', autoRegressionSetId: '', autoMaxTasks: 5,
+      autoSetId: '', autoRegressionSetId: '', autoMaxTasks: 5, noiseRunIds: '',
     }
   }
   return forms[id]
@@ -379,6 +381,79 @@ async function setExperienceStatus(exp: ExperienceDto, status: ExperienceDto['st
   await act(() => setWorkbenchExperienceStatus(exp.id, status))
 }
 
+// ---------- RRSI 进化与正则化（2026-10-23 吸收轮） ----------
+
+async function calibrateNoise(p: ProposalDto): Promise<void> {
+  const f = formFor(p.id)
+  const runIds = f.noiseRunIds.split(/[,，\n\s]+/).map((s) => s.trim()).filter(Boolean)
+  await act(() => calibrateWorkbenchNoise(p.id, runIds))
+}
+
+const evoSurfaceKey = ref('')
+
+const evoSurfacesWithTimeline = computed(() => (data.value?.evolution?.surfaces ?? []).filter((s) => s.timeline.length > 0))
+
+const selectedEvoKey = computed<string>(() => {
+  const list = evoSurfacesWithTimeline.value
+  if (list.length === 0) return ''
+  return evoSurfaceKey.value && list.some((s) => s.surfaceKey === evoSurfaceKey.value)
+    ? evoSurfaceKey.value
+    : list[0].surfaceKey
+})
+
+const selectedEvo = computed(() => evoSurfacesWithTimeline.value.find((s) => s.surfaceKey === selectedEvoKey.value) ?? null)
+
+const CURVE_W = 320
+const CURVE_H = 120
+const CURVE_PAD = 10
+
+/** SVG 进化曲线几何：纵轴=通过率（含噪声带端点定界），横轴=轮次；噪声带画 ±δ 竖带。 */
+const curve = computed<{ points: Array<{ x: number; y: number; bandTop: number | null; bandBottom: number | null; rolledBack: boolean; round: number }>; yMin: number; yMax: number } | null>(() => {
+  const evo = selectedEvo.value
+  if (!evo) return null
+  const rounds = evo.timeline.filter((r) => r.passAt1 != null)
+  if (rounds.length === 0) return null
+  const vals: number[] = []
+  for (const r of rounds) {
+    const v = r.passAt1 as number
+    vals.push(v)
+    if (r.noiseDelta != null) vals.push(v + r.noiseDelta, v - r.noiseDelta)
+  }
+  let yMin = Math.min(...vals)
+  let yMax = Math.max(...vals)
+  if (yMax - yMin < 0.02) { yMin -= 0.02; yMax += 0.02 }
+  const span = yMax - yMin
+  yMin -= span * 0.08
+  yMax += span * 0.08
+  const n = rounds.length
+  const yOf = (v: number): number => CURVE_H - CURVE_PAD - ((v - yMin) / (yMax - yMin)) * (CURVE_H - 2 * CURVE_PAD)
+  const xOf = (i: number): number => CURVE_PAD + (n === 1 ? (CURVE_W - 2 * CURVE_PAD) / 2 : (i / (n - 1)) * (CURVE_W - 2 * CURVE_PAD))
+  const points = rounds.map((r, i) => {
+    const v = r.passAt1 as number
+    const x = xOf(i)
+    return {
+      x,
+      y: yOf(v),
+      bandTop: r.noiseDelta != null ? yOf(v + r.noiseDelta) : null,
+      bandBottom: r.noiseDelta != null ? yOf(v - r.noiseDelta) : null,
+      rolledBack: r.rolledBack,
+      round: r.round,
+    }
+  })
+  return { points, yMin, yMax }
+})
+
+const curvePath = computed(() => {
+  if (!curve.value) return ''
+  return curve.value.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+})
+
+/** overview 的提案按 updatedAt 倒序，取该面最新一条读「本轮最大捆绑」。 */
+function latestProposalOfSurface(key: SurfaceKey): ProposalDto | null {
+  const list = (data.value?.proposals ?? []).filter((p) => p.surfaceKey === key)
+  return list.length > 0 ? list[0] : null
+}
+
 onMounted(() => void refresh())
 </script>
 
@@ -585,6 +660,27 @@ onMounted(() => void refresh())
             </ul>
           </div>
 
+          <div v-if="p.derived.regularization" class="hi__reg" :data-testid="`hi-reg-${p.id}`">
+            <span class="hi__chip hi__chip--muted">{{ L.regRound }} {{ p.derived.regularization.round }}/{{ p.derived.regularization.horizon }}</span>
+            <span class="hi__chip" :class="p.derived.regularization.editBudgetExceeded ? 'hi__chip--risk-high' : 'hi__chip--muted'">
+              {{ L.regEditBudget }} {{ p.derived.regularization.editBudget }} · {{ L.regEditCount }} {{ p.derived.regularization.maxEditCount ?? '—' }}
+            </span>
+            <span class="hi__chip" :class="p.derived.regularization.noiseDelta != null ? 'hi__chip--ok' : 'hi__chip--muted'">
+              {{ L.regNoise }}
+              {{ p.derived.regularization.noiseDelta != null ? fmtDelta(p.derived.regularization.noiseDelta) : L.regNoiseNone }}
+            </span>
+            <span v-if="p.derived.regularization.stalled" class="hi__chip hi__chip--risk-medium">{{ L.regStalled }}</span>
+            <span v-if="p.derived.regularization.firstOnSurface" class="hi__chip hi__chip--risk-medium">{{ L.regFirstSurface }}</span>
+            <ul v-if="p.derived.regularization.hypothesisRetry.length" class="hi__warn" :data-testid="`hi-hypothesis-retry-${p.id}`">
+              <li>
+                {{ L.hypothesisRetry }}：
+                <span v-for="h in p.derived.regularization.hypothesisRetry" :key="h.proposalId">
+                  <code>{{ h.proposalId }}</code>（{{ (h.similarity * 100).toFixed(0) }}%）
+                </span>
+              </li>
+            </ul>
+          </div>
+
           <details class="hi__details" :data-testid="`hi-actions-${p.id}`">
             <summary>{{ L.submit }} / {{ L.approve }} / {{ L.probes }} / {{ L.compose }} / {{ L.promote }}</summary>
             <div class="hi__actions">
@@ -592,6 +688,16 @@ onMounted(() => void refresh())
                 <input v-model="formFor(p.id).baselineRunId" :placeholder="L.baselineRunId" />
                 <button type="button" class="hi__btn" @click="attachBaseline(p)">{{ L.attachBaseline }}</button>
                 <span class="hi__meta">{{ L.baselineHint }}</span>
+              </div>
+
+              <div v-if="['draft', 'submitted', 'approved', 'probing'].includes(p.status)" class="hi__row" :data-testid="`hi-noise-${p.id}`">
+                <b>{{ L.noiseTitle }}</b>
+                <textarea v-model="formFor(p.id).noiseRunIds" rows="1" style="min-width: 240px" :placeholder="L.noiseRunIds" />
+                <button type="button" class="hi__btn" @click="calibrateNoise(p)">{{ L.noiseCalibrate }}</button>
+                <span class="hi__meta">
+                  <template v-if="p.noise">{{ L.noiseCalibrated }} δ={{ fmtDelta(p.noise.delta) }}（{{ p.noise.runIds.length }} {{ L.probes }}）</template>
+                  <template v-else>{{ L.noiseHint }}</template>
+                </span>
               </div>
 
               <div v-if="p.status === 'draft'" class="hi__row">
@@ -680,6 +786,96 @@ onMounted(() => void refresh())
             </div>
           </details>
         </article>
+      </section>
+
+      <section v-if="data.evolution" class="hi__section" data-testid="hi-evolution">
+        <div class="hi__sectionHead">
+          <h3>{{ L.evoTitle }}</h3>
+          <p>{{ L.evoSub }}</p>
+        </div>
+
+        <div v-if="evoSurfacesWithTimeline.length === 0" class="hi__empty">{{ L.evoNoData }}</div>
+        <template v-else>
+          <div class="hi__row">
+            <label class="hi__meta">{{ L.evoCurveTitle }}
+              <select v-model="evoSurfaceKey" data-testid="hi-evo-surface">
+                <option v-for="s in evoSurfacesWithTimeline" :key="s.surfaceKey" :value="s.surfaceKey">
+                  {{ surfaceName(s.surfaceKey) }}（{{ s.rounds }}）
+                </option>
+              </select>
+            </label>
+          </div>
+          <svg
+            v-if="curve" :viewBox="`0 0 ${CURVE_W} ${CURVE_H}`" class="hi__curve"
+            :data-testid="`hi-evo-curve-${selectedEvoKey}`" role="img"
+            :aria-label="`${L.evoCurveTitle} ${selectedEvoKey}`"
+          >
+            <rect
+              v-for="(pt, i) in curve.points" :key="`band-${i}`"
+              v-show="pt.bandTop != null && pt.bandBottom != null"
+              :x="pt.x - 3" :y="pt.bandTop ?? pt.y" width="6"
+              :height="Math.max(0, (pt.bandBottom ?? pt.y) - (pt.bandTop ?? pt.y))"
+              class="hi__curveBand"
+            />
+            <path :d="curvePath" class="hi__curveLine" />
+            <circle
+              v-for="(pt, i) in curve.points" :key="`dot-${i}`"
+              :cx="pt.x" :cy="pt.y" r="3" class="hi__curveDot"
+              :class="{ 'hi__curveDot--rolledBack': pt.rolledBack }"
+            >
+              <title>{{ L.evoRoundLabel }} {{ pt.round }}{{ pt.rolledBack ? ` · ${L.evoRollbackMark}` : '' }}</title>
+            </circle>
+            <text :x="CURVE_PAD" :y="CURVE_PAD - 2" class="hi__curveLabel">{{ fmtPct(curve.yMax) }}</text>
+            <text :x="CURVE_PAD" :y="CURVE_H - 1" class="hi__curveLabel">{{ fmtPct(curve.yMin) }}</text>
+          </svg>
+          <p class="hi__meta">
+            {{ L.evoNoiseBand }}：
+            {{ selectedEvo?.timeline.some((r) => r.noiseDelta != null) ? selectedEvo?.timeline.filter((r) => r.noiseDelta != null).map((r) => fmtDelta(r.noiseDelta)).join(' / ') : L.regNoiseNone }}
+          </p>
+          <div class="hi__row" v-if="selectedEvo" :data-testid="`hi-evo-outcome-${selectedEvoKey}`">
+            <span class="hi__chip hi__chip--ok">{{ L.evoAccepted }} {{ selectedEvo.promoted }}</span>
+            <span class="hi__chip hi__chip--risk-high">{{ L.evoRejectedLabel }} {{ selectedEvo.rejected }}</span>
+            <span class="hi__chip hi__chip--risk-medium">{{ L.evoRolledBackLabel }} {{ selectedEvo.rolledBack }}</span>
+            <span class="hi__chip hi__chip--muted">{{ L.evoOpenLabel }} {{ selectedEvo.open }}</span>
+            <span class="hi__chip hi__chip--risk-medium">{{ L.evoFailedProbes }} {{ selectedEvo.failedProbes }}</span>
+          </div>
+        </template>
+
+        <div class="hi__sectionHead">
+          <h4>{{ L.regTitle }}</h4>
+          <p>{{ L.regSub }}</p>
+        </div>
+        <table class="hi__table" data-testid="hi-reg-table" v-if="data.evolution.surfaces.length">
+          <thead>
+            <tr>
+              <th>{{ L.formSurface }}</th><th>{{ L.regRound }}</th><th>{{ L.regEditBudget }}</th>
+              <th>{{ L.regEditCount }}</th><th>{{ L.regStalled }}</th><th>{{ L.regPrune }}</th><th>{{ L.evoOutcome }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in data.evolution.surfaces" :key="s.surfaceKey" :data-testid="`hi-reg-row-${s.surfaceKey}`">
+              <td>{{ surfaceName(s.surfaceKey) }}</td>
+              <td>{{ s.rounds }}</td>
+              <td>≈{{ data.evolution?.config.bMax }} → {{ data.evolution?.config.bMin }}</td>
+              <td>
+                {{ latestProposalOfSurface(s.surfaceKey)?.derived.regularization.maxEditCount ?? '—' }}
+                <small v-if="latestProposalOfSurface(s.surfaceKey)?.derived.regularization.editBudgetExceeded" class="hi__del">↑</small>
+              </td>
+              <td>
+                <span class="hi__chip" :class="s.stalled ? 'hi__chip--risk-medium' : 'hi__chip--muted'">{{ s.stalled ? L.regYes : L.regNo }}</span>
+              </td>
+              <td>
+                <span class="hi__chip" :class="s.pruneSuggested ? 'hi__chip--risk-medium' : 'hi__chip--muted'">{{ s.pruneSuggested ? L.regYes : L.regNo }}</span>
+              </td>
+              <td class="hi__meta">
+                {{ L.evoAccepted }} {{ s.promoted }} · {{ L.evoRejectedLabel }} {{ s.rejected }} · {{ L.evoRolledBackLabel }} {{ s.rolledBack }} · {{ L.evoOpenLabel }} {{ s.open }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="data.evolution.unexercised.length" class="hi__meta" data-testid="hi-evo-unexercised">
+          {{ L.evoUnexercised }}：<code v-for="k in data.evolution.unexercised" :key="k">{{ surfaceName(k) }}</code>
+        </p>
       </section>
 
       <section class="hi__section" data-testid="hi-experiences">
@@ -838,4 +1034,12 @@ onMounted(() => void refresh())
 .hi__exp { border: 1px solid var(--border-color); border-radius: 7px; padding: 6px 8px; display: flex; flex-direction: column; gap: 3px; }
 .hi__expMain { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
 .hi__boundary { margin: 0; font-size: 11px; color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.45); border-radius: 7px; padding: 6px 9px; }
+.hi__reg { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.hi__reg ul { margin: 0; padding-left: 16px; flex-basis: 100%; }
+.hi__curve { width: 100%; max-width: 420px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); }
+.hi__curveBand { fill: var(--accent); opacity: 0.14; }
+.hi__curveLine { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.hi__curveDot { fill: var(--success); }
+.hi__curveDot--rolledBack { fill: var(--danger); }
+.hi__curveLabel { font-size: 8px; fill: var(--text-muted); }
 </style>

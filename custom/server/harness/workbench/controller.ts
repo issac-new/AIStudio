@@ -4,9 +4,10 @@
 import Router from '@koa/router'
 import { collectSurfaces } from './surface-registry'
 import {
-  ServiceError, addExperience, attachBaseline, autoProbeRunning, composeProposal, createProbes, createProposal,
-  decideProposal, importExperiences, listExperiences, listProposals, overview,
-  promoteProposal, recordProbe, rollbackProposal, setExperienceStatus, startAutoProbe, submitProposal,
+  ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
+  createProbes, createProposal, decideProposal, importExperiences, listExperiences, listProposals,
+  overview, promoteProposal, recordProbe, rollbackProposal, setExperienceStatus, startAutoProbe,
+  submitProposal,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
 
@@ -120,6 +121,18 @@ router.post('/proposals/:id/baseline', async (ctx) => {
   const b = bodyOf(ctx)
   try {
     ctx.body = { ok: true, proposal: await attachBaseline(ctx.params.id, String(b.evalRunId ?? '')) }
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// 噪声标定（RRSI S2）：≥2 条同集基线真实运行 → δ=passAt1 半极差。
+router.post('/proposals/:id/noise', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = bodyOf(ctx)
+  const runIds = Array.isArray(b.runIds) ? b.runIds.map(String) : []
+  try {
+    ctx.body = { ok: true, proposal: await calibrateNoise(ctx.params.id, runIds) }
   } catch (e) {
     fail(ctx, e)
   }

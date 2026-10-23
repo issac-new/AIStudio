@@ -8,9 +8,11 @@ import type { ExpCandidate } from '../../expcandidates/exp-types'
 import { applyEnabled, applyProposalFile, fileDigest, rollbackProposalFile } from './apply'
 import { attachRegression, readEvalEvidence, readRegressionEvidence } from './evidence'
 import {
-  DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, behaviorContrast, candidateDiversity, composedVariant,
-  diffSummary, diffSummaryTree, evaluatePromotion, findGraderMarkers, findGraderMarkersInPath,
-  probeCost, sha256, submitReadiness, treeDigest, validateTree, variantContent, variantSetDigest,
+  DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, annealedEditBudget, behaviorContrast, candidateDiversity,
+  composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
+  findBenchmarkLeakage, findGraderMarkers, findGraderMarkersInPath, hypothesisRetries,
+  leakageBlockers, maxEditCount, probeCost, rsiConfig, sha256, stallDetection, submitReadiness,
+  surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
 import { getSet } from '../../eval/store'
 import { runReplayEval } from '../../eval/runner'
@@ -21,8 +23,9 @@ import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type
 import { nextId, mutateStore, readStore } from './store'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
 import type {
-  BehaviorContrast, Champion, EditableSurface, Experience, ExperienceStatus, Probe,
-  ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport, SurfaceKey, Variant,
+  BehaviorContrast, Champion, EditableSurface, EvolutionReport, Experience, ExperienceStatus,
+  GateBlocker, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
+  RegularizationDerived, SurfaceKey, Variant,
 } from './types'
 
 export class ServiceError extends Error {
@@ -43,6 +46,8 @@ export interface ProposalDerived {
   selectedVariantId: string | null
   selectedContrast: BehaviorContrast | null
   diversity: { n: number; nDistinct: number; meanLineJaccard: number }
+  /** RRSI 正则化读数（2026-10-23 吸收轮；视图现算不落盘）。 */
+  regularization: RegularizationDerived
 }
 
 export type ProposalView = Proposal & { derived: ProposalDerived }
@@ -63,12 +68,19 @@ function requireProposal(store: { proposals: Proposal[] }, id: string): Proposal
   return p
 }
 
-function derive(proposal: Proposal, champion: Champion | null): ProposalDerived {
+function derive(
+  proposal: Proposal,
+  champion: Champion | null,
+  regularization: RegularizationDerived | null = null,
+  leakage: GateBlocker[] = [],
+): ProposalDerived {
   const gate = evaluatePromotion({
     proposal,
     currentChampion: champion,
     applyRequested: false,
     applyEnvEnabled: applyEnabled(),
+    regularization,
+    leakage,
   })
   const cost = probeCost(proposal)
   const selected = composedVariant(proposal)
@@ -81,11 +93,94 @@ function derive(proposal: Proposal, champion: Champion | null): ProposalDerived 
     selectedVariantId: selected?.id ?? null,
     selectedContrast: selectedProbe?.contrast ?? null,
     diversity: candidateDiversity(proposal.variants),
+    regularization: regularization ?? emptyRegularization(proposal),
   }
 }
 
-function view(store: { champions: Champion[] }, proposal: Proposal): ProposalView {
-  return { ...proposal, derived: derive(proposal, currentChampionOf(store.champions, proposal.surfaceKey)) }
+function emptyRegularization(proposal: Proposal): RegularizationDerived {
+  const cfg = rsiConfig()
+  const mec = maxEditCount(proposal.variants)
+  const budget = annealedEditBudget(0, cfg)
+  return {
+    round: 0,
+    horizon: cfg.horizon,
+    editBudget: budget,
+    maxEditCount: mec,
+    editBudgetExceeded: mec != null && mec > budget,
+    noiseDelta: proposal.noise?.delta ?? null,
+    noiseRuns: proposal.noise?.runIds.length ?? 0,
+    stalled: false,
+    stallWindow: cfg.stallWindow,
+    firstOnSurface: true,
+    hypothesisRetry: [],
+  }
+}
+
+/** RRSI 提案端读数：轮次/预算/噪声/停滞/失败假设复提（service 层从全store 现算）。 */
+function regularizationOf(store: { proposals: Proposal[]; champions: Champion[] }, p: Proposal): RegularizationDerived {
+  const cfg = rsiConfig()
+  const round = surfaceRound(store.champions, p.surfaceKey)
+  const editBudget = annealedEditBudget(round, cfg)
+  const mec = maxEditCount(p.variants)
+  const surfaceProposals = store.proposals.filter((x) => x.surfaceKey === p.surfaceKey)
+  return {
+    round,
+    horizon: cfg.horizon,
+    editBudget,
+    maxEditCount: mec,
+    editBudgetExceeded: mec != null && mec > editBudget,
+    noiseDelta: p.noise?.delta ?? null,
+    noiseRuns: p.noise?.runIds.length ?? 0,
+    stalled: stallDetection(surfaceProposals, cfg.stallWindow),
+    stallWindow: cfg.stallWindow,
+    firstOnSurface: surfaceProposals.filter((x) => x.id !== p.id).length === 0,
+    hypothesisRetry: hypothesisRetries(store.proposals, p.surfaceKey, p.id, p.hypothesis),
+  }
+}
+
+/**
+ * 泄漏批评者（S1）：按探测证据集（缺席按基线集）做确定性扫描。
+ * 评测前（未组合）扫全部候选——这是论文「critic 在评测前读 diff」的本仓落点，省探测预算；
+ * 组合后只扫选中候选。密封集内容不出 API 面——扫描照做，但 blocker 文案不携带内容摘录。
+ */
+function leakageForProposal(p: Proposal): GateBlocker[] {
+  const selected = composedVariant(p)
+  const targets: Variant[] = selected ? [selected] : p.variants
+  if (targets.length === 0) return []
+  const probe = selected ? p.probes.find((x) => x.variantId === selected.id && x.status === 'recorded') : null
+  const setId = probe?.evidence?.setId ?? p.baseline?.setId ?? null
+  if (!setId) return []
+  const set = getSet(setId)
+  if (!set) return []
+  const parts: Array<{ where: string; content: string }> = targets.flatMap((v) => [
+    { where: v.label, content: v.label },
+    { where: v.label, content: v.content },
+    ...(v.files ?? []).flatMap((f) => [
+      { where: `${v.label} :: ${f.path}`, content: f.content },
+      { where: `${v.label} :: 路径`, content: f.path },
+    ]),
+    ...(v.deletions ?? []).map((d) => ({ where: `${v.label} :: 删除 ${d}`, content: d })),
+  ])
+  const findings = findBenchmarkLeakage(parts, { id: set.id, tasks: set.tasks })
+  if (set.sealed) {
+    return findings.map((f) => ({
+      code: 'benchmark_leakage',
+      message: `候选携带评测集内容（${f.where}，类型 ${f.kind}；密封集不展示原文）——benchmark 特化而非通用改进（RRSI 泄漏批评者）`,
+    }))
+  }
+  return leakageBlockers(findings)
+}
+
+function view(store: { proposals: Proposal[]; champions: Champion[] }, proposal: Proposal): ProposalView {
+  return {
+    ...proposal,
+    derived: derive(
+      proposal,
+      currentChampionOf(store.champions, proposal.surfaceKey),
+      regularizationOf(store, proposal),
+      leakageForProposal(proposal),
+    ),
+  }
 }
 
 export function listProposals(): ProposalView[] {
@@ -103,6 +198,7 @@ export function overview(): {
   proposals: ProposalView[]
   champions: Champion[]
   experiences: Experience[]
+  evolution: EvolutionReport
   meta: { note: string; source: string; boundary: string }
 } {
   const store = readStore()
@@ -127,6 +223,7 @@ export function overview(): {
     proposals: proposals.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)).slice(0, 50),
     champions: store.champions,
     experiences: store.experiences.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 50),
+    evolution: evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions),
     meta: {
       note: '候选、探测、组合、冠军四段闭环；探测证据只来自 Eval Studio 真实运行。',
       source: 'HERMES_HOME 八面产物 + ~/.hermes-web-ui/harness-workbench/workbench.json + Eval Studio 运行。',
@@ -306,11 +403,64 @@ export async function attachBaseline(id: string, evalRunId: string): Promise<Pro
   })
 }
 
+/**
+ * 噪声标定（RRSI S2）：用 ≥2 条「未改动基线」的同集真实运行算 passAt1 半极差 = δ。
+ * δ 刻意不提供 env 调参（论文纪律：调低 δ 只会买到噪声分）。
+ */
+export async function calibrateNoise(id: string, runIds: string[]): Promise<ProposalView> {
+  const ids = [...new Set((runIds ?? []).map(String).map((s) => s.trim()).filter(Boolean))]
+  if (ids.length < 2) throw new ServiceError(400, '噪声标定至少需要 2 条同评测集的基线真实运行（重复跑未改动的 harness）')
+  const metricsList = ids.map((rid) => {
+    const m = readEvalEvidence(rid)
+    if (!m) throw new ServiceError(400, `评测运行不存在或未聚合：${rid}`)
+    if ((m.evidenceMode ?? 'explicit') !== 'explicit') {
+      throw new ServiceError(400, `origin/mixed 是诊断证据，不可用于噪声标定：${rid}`)
+    }
+    return m
+  })
+  const setIds = new Set(metricsList.map((m) => m.setId))
+  if (setIds.size > 1) {
+    throw new ServiceError(400, `噪声标定的运行必须来自同一评测集（收到 ${[...setIds].join(', ')}）`)
+  }
+  const samples = metricsList.map((m) => m.passAt1)
+  const valid = samples.filter((x): x is number => x != null)
+  if (valid.length < 2) throw new ServiceError(400, '至少需要 2 条带 passAt1 读数的运行才能算离散度')
+  const delta = (Math.max(...valid) - Math.min(...valid)) / 2
+  return mutateStore((store) => {
+    const p = requireProposal(store, id)
+    if (!['draft', 'submitted', 'approved', 'probing'].includes(p.status)) {
+      throw new ServiceError(409, `当前状态 ${p.status} 不可标定噪声（组合/晋级后重开提案再标）`)
+    }
+    if (p.baseline && p.baseline.setId !== metricsList[0].setId) {
+      throw new ServiceError(400, `标定运行所属集 ${metricsList[0].setId} 与基线集 ${p.baseline.setId} 不一致`)
+    }
+    p.noise = {
+      runIds: ids,
+      setId: metricsList[0].setId,
+      delta,
+      method: 'half-range',
+      samples,
+      computedAt: nowIso(),
+    }
+    p.updatedAt = nowIso()
+    return view(store, p)
+  })
+}
+
 export async function submitProposal(id: string): Promise<ProposalView> {
   return mutateStore((store) => {
     const p = requireProposal(store, id)
     if (p.status !== 'draft') throw new ServiceError(409, `当前状态 ${p.status} 不可提交`)
     const blockers = submitReadiness(p)
+    // RRSI 提案端双闸（评测前拦，省探测预算）：退火编辑预算 + 泄漏批评者（按基线集）
+    const reg = regularizationOf(store, p)
+    if (reg.editBudgetExceeded && reg.maxEditCount != null) {
+      blockers.push({
+        code: 'edit_budget_exceeded',
+        message: `第 ${reg.round} 轮编辑预算 ${reg.editBudget} 个文件（余弦退火），候选最大捆绑 ${reg.maxEditCount} 个——拆成多轮单变量提案`,
+      })
+    }
+    blockers.push(...leakageForProposal(p))
     if (blockers.length > 0) throw new ServiceError(400, '提案条件不满足', blockers)
     p.status = 'submitted'
     p.updatedAt = nowIso()
@@ -509,6 +659,8 @@ export async function promoteProposal(
     applyEnvEnabled: applyEnabled(),
     targetDigestNow,
     targetExists,
+    regularization: regularizationOf(store, p0),
+    leakage: leakageForProposal(p0),
   })
   if (!gate.ok) throw new ServiceError(409, '晋级门禁未通过', gate.blockers)
 
