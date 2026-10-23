@@ -7,8 +7,9 @@ import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import type {
-  BehaviorContrast, Champion, GateBlocker, ProbeMetrics, PromotionGateReport,
-  Proposal, QualityVerdict, Variant,
+  BehaviorContrast, Champion, EvolutionReport, EvolutionRound, EvolutionSurface, GateBlocker,
+  ProbeMetrics, PromotionGateReport, Proposal, ProposalStatus, QualityVerdict, RegularizationDerived,
+  SurfaceKey, Variant,
 } from './types'
 
 export const MAX_VARIANTS = 8
@@ -404,6 +405,10 @@ export interface PromotionGateInput {
   applyEnvEnabled: boolean
   targetDigestNow?: string | null
   targetExists?: boolean
+  /** RRSI 正则化读数（service 层现算；缺席时相关门禁跳过）。 */
+  regularization?: RegularizationDerived | null
+  /** 泄漏批评者（S1）发现，service 层按证据集扫描后注入；晋级硬拦。 */
+  leakage?: GateBlocker[]
 }
 
 /** 晋级门禁：缺证据不放行（源文「回归」与「--max-usd」的硬约束）。 */
@@ -449,6 +454,44 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
       if (probe.evidence.statisticallyInsufficient) {
         warnings.push({ code: 'statistical_insufficient', message: '评测采样 k<2，统计上不足' })
       }
+
+      // ---- RRSI 选择端正则化（2026-10-23 吸收轮）：噪声地板 + 成本规则 ----
+      if (contrast) {
+        const cfg = rsiConfig()
+        const reg = input.regularization ?? null
+        const noiseDelta = reg?.noiseDelta ?? null
+        const gain = contrast.passAt1Delta
+        if (noiseDelta == null) {
+          const msg = '未标定噪声带 δ：涨的分可能只是评测噪声（RRSI S2）。用 ≥2 条同集基线真实运行做噪声标定'
+          if (cfg.requireNoise) blockers.push({ code: 'noise_missing', message: msg })
+          else warnings.push({ code: 'noise_uncalibrated', message: msg })
+        } else if (gain != null) {
+          if (gain <= noiseDelta) {
+            if (reg?.firstOnSurface) {
+              warnings.push({
+                code: 'exploratory_within_noise',
+                message: `增益 ${(gain * 100).toFixed(1)} 分未超噪声带 δ=${(noiseDelta * 100).toFixed(1)} 分，但这是该面首个提案（结构性探索），交人工裁决`,
+              })
+            } else {
+              blockers.push({
+                code: 'gain_within_noise',
+                message: `增益 ${(gain * 100).toFixed(1)} 分落在噪声带 δ=${(noiseDelta * 100).toFixed(1)} 分以内——没有足够可信的证据成为下一代（RRSI 噪声调整接受地板）`,
+              })
+            }
+          } else {
+            const costPct = contrast.costDeltaPct ?? contrast.tokenDeltaPct
+            if (costPct != null) {
+              const allowance = cfg.beta0 + cfg.beta1PerPoint * (gain * 100)
+              if (costPct > allowance) {
+                blockers.push({
+                  code: 'cost_unjustified',
+                  message: `增益 ${(gain * 100).toFixed(1)} 分只允许 token 增长 ${(allowance * 100).toFixed(0)}%，实测 ${(costPct * 100).toFixed(0)}%——额外的 test-time compute 必须被收益覆盖（RRSI 成本规则）`,
+                })
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -476,6 +519,24 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
   const champion = input.currentChampion
   if (champion && champion.proposalId !== proposal.id && champion.promotedAt > proposal.createdAt) {
     blockers.push({ code: 'champion_drift', message: '该面已有更新的冠军，请基于新基线重开提案' })
+  }
+
+  // ---- RRSI 提案端正则化：泄漏批评者硬拦 + 退火编辑预算 + 停滞提示 ----
+  for (const finding of input.leakage ?? []) {
+    blockers.push({ code: 'benchmark_leakage', message: finding.message })
+  }
+  const reg = input.regularization
+  if (reg && reg.editBudgetExceeded && reg.maxEditCount != null) {
+    blockers.push({
+      code: 'edit_budget_exceeded',
+      message: `第 ${reg.round} 轮编辑预算 ${reg.editBudget} 个文件（余弦退火：后期强制少捆绑，让每次变化可归因），候选最大捆绑 ${reg.maxEditCount} 个`,
+    })
+  }
+  if (reg?.stalled) {
+    warnings.push({
+      code: 'surface_stalled',
+      message: `该面连续 ${reg.stallWindow} 个提案无采纳，搜索停滞——可考虑转向未探索面（RRSI 结构性探索）`,
+    })
   }
 
   const diversity = candidateDiversity(proposal.variants)
@@ -519,4 +580,304 @@ export function submitReadiness(proposal: Proposal): GateBlocker[] {
   if (proposal.evidenceRefs.length === 0) blockers.push({ code: 'evidence_missing', message: '至少需要一条证据引用（任务/审计/评测运行）' })
   if (!proposal.baseline) blockers.push({ code: 'baseline_missing', message: '缺少基线评测运行' })
   return blockers
+}
+
+// =====================================================================================
+// RRSI 正则化纯函数层（2026-10-23 吸收轮）
+// 论文 arXiv 2609.24972：Regularize the search, not the harness。
+// 七机制映射见 specs/2026-10-23-rrsi-regularized-workbench.md；全部无副作用，单测覆盖。
+// =====================================================================================
+
+export interface RsiConfig {
+  /** 论文 T：退火视界（轮）。 */
+  horizon: number
+  bMin: number
+  bMax: number
+  stallWindow: number
+  pruneN: number
+  /** 成本规则 β₀：无增益时仍允许的 token 增长（相对量）。 */
+  beta0: number
+  /** 成本规则 β₁：每 1 个百分点通过率增益允许的 token 增长（相对量）。论文口径=每增 1 pass 允许 25%。 */
+  beta1PerPoint: number
+  /** true=未标定噪声带直接拦（缺省 false，warning 交人工裁决）。 */
+  requireNoise: boolean
+}
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name]
+  if (!raw) return fallback
+  const n = Math.trunc(Number(raw))
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+
+function envFloat(name: string, fallback: number): number {
+  const raw = process.env[name]
+  if (!raw) return fallback
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 ? n : fallback
+}
+
+/**
+ * 超参照论文 Table 5 取 coding 档缺省（T=20、b 1/4、w=3、n_prune=4、β₀=0.10、
+ * β₁≈25%/pass）。除 δ 外全部 env 可调；δ 刻意不设调参入口（论文纪律：调低 δ 只会买到噪声分）。
+ */
+export function rsiConfig(): RsiConfig {
+  return {
+    horizon: envInt('HARNESS2_RSI_T', 20),
+    bMin: envInt('HARNESS2_RSI_B_MIN', 1),
+    bMax: envInt('HARNESS2_RSI_B_MAX', 4),
+    stallWindow: envInt('HARNESS2_RSI_STALL_W', 3),
+    pruneN: envInt('HARNESS2_RSI_PRUNE_N', 4),
+    beta0: envFloat('HARNESS2_RSI_BETA0', 0.1),
+    beta1PerPoint: envFloat('HARNESS2_RSI_BETA1', 0.25),
+    requireNoise: process.env.HARNESS2_RSI_REQUIRE_NOISE === '1',
+  }
+}
+
+/** 论文退火编辑预算：b_t = ⌈b_min + (b_max−b_min)·½(1+cos(πt/T))⌉；t≥T 后恒为 b_min。 */
+export function annealedEditBudget(t: number, cfg: RsiConfig = rsiConfig()): number {
+  const round = Math.max(0, Math.trunc(t))
+  if (round >= cfg.horizon) return cfg.bMin
+  const value = cfg.bMin + (cfg.bMax - cfg.bMin) * 0.5 * (1 + Math.cos((Math.PI * round) / cfg.horizon))
+  return Math.max(cfg.bMin, Math.min(cfg.bMax, Math.ceil(value)))
+}
+
+/** 一个候选的捆绑改动数：单文件=1；树候选=新增/修改文件数+删除数。 */
+export function editCountOfVariant(v: Variant): number {
+  if (v.files && v.files.length > 0) return v.files.length + (v.deletions?.length ?? 0)
+  return 1
+}
+
+export function maxEditCount(variants: Variant[]): number | null {
+  if (variants.length === 0) return null
+  return Math.max(...variants.map(editCountOfVariant))
+}
+
+/** 论文轮次 t：该面已被采纳的轮数（未回滚冠军数；回滚=这轮没发生）。 */
+export function surfaceRound(champions: Champion[], surfaceKey: SurfaceKey): number {
+  return champions.filter((c) => c.surfaceKey === surfaceKey && !c.rolledBack).length
+}
+
+// ---- 泄漏批评者（S1）：评测前读 diff，拒绝携带评测集特化内容 ----
+
+export interface LeakageSetLike {
+  id: string
+  tasks: Array<{ id: string; problem?: string; expectedBehavior?: string; rubric?: Array<{ text?: string }> }>
+}
+
+export type LeakageKind = 'task_id' | 'assertion_text' | 'reference' | 'problem'
+
+export interface LeakageFinding {
+  kind: LeakageKind
+  /** 命中的评测集内容（长文本截断呈现）。 */
+  needle: string
+  /** 命中位置（候选标签/文件路径）。 */
+  where: string
+}
+
+const LEAK_MIN_TASK_ID_LEN = 6
+/** 文本针最小信息量：拉丁字符计 1、CJK 字符计 1.5（中文信息密度高，12 字已足够特化）。 */
+const LEAK_MIN_TEXT_WEIGHT = 16
+const LEAK_MAX_FINDINGS = 20
+
+function textWeight(text: string): number {
+  let w = 0
+  for (const ch of text) w += /[\u4e00-\u9fff\u3400-\u4dbf]/.test(ch) ? 1.5 : 1
+  return w
+}
+
+function clip(text: string, max = 48): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text
+}
+
+/**
+ * 确定性泄漏扫描（论文 critic 是 LLM 读 diff；本仓映射为可解释的子串扫描）：
+ * 候选内容/路径中出现评测集任务 id、断言文本、参照答案、题干 → 泄漏。
+ * 泛化性提示词/工具改进不会命中；转述式泄漏检测不到（如实标注为局限）。
+ */
+export function findBenchmarkLeakage(
+  parts: Array<{ where: string; content: string }>,
+  set: LeakageSetLike | null | undefined,
+): LeakageFinding[] {
+  if (!set) return []
+  const needles: Array<{ needle: string; kind: LeakageKind }> = []
+  for (const task of set.tasks ?? []) {
+    if (task.id && task.id.trim().length >= LEAK_MIN_TASK_ID_LEN) needles.push({ needle: task.id.trim(), kind: 'task_id' })
+    const addText = (raw: string | undefined, kind: LeakageKind): void => {
+      const text = (raw ?? '').trim()
+      if (text && textWeight(text) >= LEAK_MIN_TEXT_WEIGHT) needles.push({ needle: text, kind })
+    }
+    addText(task.problem, 'problem')
+    addText(task.expectedBehavior, 'reference')
+    for (const a of task.rubric ?? []) addText(a.text, 'assertion_text')
+  }
+  const findings: LeakageFinding[] = []
+  for (const part of parts ?? []) {
+    const body = String(part.content ?? '')
+    if (!body) continue
+    for (const { needle, kind } of needles) {
+      if (body.includes(needle)) {
+        findings.push({ kind, needle: clip(needle), where: part.where })
+        if (findings.length >= LEAK_MAX_FINDINGS) return findings
+      }
+    }
+  }
+  return findings
+}
+
+export function leakageBlockers(findings: LeakageFinding[]): GateBlocker[] {
+  const zh: Record<LeakageKind, string> = {
+    task_id: '评测任务 ID',
+    assertion_text: '评测断言原文',
+    reference: '评测参照答案',
+    problem: '评测题干原文',
+  }
+  return findings.map((f) => ({
+    code: 'benchmark_leakage',
+    message: `候选携带${zh[f.kind]}（${f.where}：「${f.needle}」）——这是 benchmark 特化而非通用改进（RRSI 泄漏批评者）`,
+  }))
+}
+
+// ---- 历史证据表（P2）：失败假设不复提 ----
+
+/** 词面相似度：拉丁词（≥2 字符）+ CJK 字符 bigram 的 Jaccard。 */
+export function hypothesisSimilarity(a: string, b: string): number {
+  const ta = hypothesisTokens(a)
+  const tb = hypothesisTokens(b)
+  if (ta.size === 0 || tb.size === 0) return 0
+  let inter = 0
+  for (const t of ta) if (tb.has(t)) inter += 1
+  const union = new Set([...ta, ...tb]).size
+  return union === 0 ? 0 : inter / union
+}
+
+function hypothesisTokens(s: string): Set<string> {
+  const norm = String(s ?? '').toLowerCase()
+  const tokens = new Set<string>()
+  for (const w of norm.split(/[^a-z0-9\u4e00-\u9fff]+/)) {
+    if (/[a-z0-9]/.test(w) && w.length >= 2) tokens.add(w)
+  }
+  const cjkSegments = norm.match(/[\u4e00-\u9fff]+/g) ?? []
+  for (const seg of cjkSegments) {
+    for (let i = 0; i + 1 < seg.length; i += 1) tokens.add(seg.slice(i, i + 2))
+  }
+  return tokens
+}
+
+export const HYPOTHESIS_RETRY_THRESHOLD = 0.6
+
+/** 同面历史失败假设（rejected/rolled_back）中与当前假设词面高度相似者。 */
+export function hypothesisRetries(
+  proposals: Proposal[],
+  surfaceKey: SurfaceKey,
+  currentProposalId: string,
+  hypothesis: string,
+  threshold: number = HYPOTHESIS_RETRY_THRESHOLD,
+): RegularizationDerived['hypothesisRetry'] {
+  return proposals
+    .filter((p) => p.surfaceKey === surfaceKey && p.id !== currentProposalId
+      && (p.status === 'rejected' || p.status === 'rolled_back'))
+    .map((p) => ({ p, similarity: hypothesisSimilarity(hypothesis, p.hypothesis) }))
+    .filter((x) => x.similarity >= threshold)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, 5)
+    .map((x) => ({ proposalId: x.p.id, title: x.p.title, status: x.p.status, similarity: Number(x.similarity.toFixed(2)) }))
+}
+
+// ---- 停滞探测（P3）与剪枝信号（S4） ----
+
+/** 最近 stallWindow 个提案均未被采纳（promoted 且未回滚才算采纳）→ 停滞。 */
+export function stallDetection(surfaceProposals: Proposal[], stallWindow: number): boolean {
+  const sorted = surfaceProposals.slice().sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+  if (sorted.length < stallWindow) return false
+  const recent = sorted.slice(-stallWindow)
+  return recent.every((p) => p.status !== 'promoted')
+}
+
+/** 最近 pruneN 个提案的全部已记录探测中，最大通过率增量 ≤0 → 该面建议做减法提案。 */
+export function pruneSignal(surfaceProposals: Proposal[], pruneN: number): boolean {
+  const sorted = surfaceProposals.slice().sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+  const recent = sorted.slice(-pruneN)
+  const deltas: number[] = []
+  for (const p of recent) {
+    for (const probe of p.probes) {
+      if (probe.status === 'recorded' && probe.contrast?.passAt1Delta != null) {
+        deltas.push(probe.contrast.passAt1Delta)
+      }
+    }
+  }
+  return deltas.length > 0 && Math.max(...deltas) <= 0
+}
+
+// ---- 进化报告（overview 的 evolution 段；论文图 6 曲线与去向计数的本仓形态） ----
+
+function selectedEvidenceOf(p: Proposal): { evidence: ProbeMetrics; contrast: BehaviorContrast } | null {
+  const selected = composedVariant(p)
+  if (!selected) return null
+  const probe = p.probes.find((x) => x.variantId === selected.id && x.status === 'recorded')
+  if (!probe?.evidence) return null
+  return { evidence: probe.evidence, contrast: probe.contrast ?? null }
+}
+
+export function evolutionSurfaceReport(
+  surfaceKey: SurfaceKey,
+  proposals: Proposal[],
+  champions: Champion[],
+  cfg: RsiConfig,
+): EvolutionSurface {
+  const mine = proposals.filter((p) => p.surfaceKey === surfaceKey)
+  const champChain = champions
+    .filter((c) => c.surfaceKey === surfaceKey)
+    .sort((a, b) => (a.promotedAt < b.promotedAt ? -1 : 1))
+  const byId = new Map(mine.map((p) => [p.id, p]))
+  const timeline: EvolutionRound[] = champChain.map((c, idx) => {
+    const p = byId.get(c.proposalId)
+    const ev = p ? selectedEvidenceOf(p) : null
+    return {
+      round: idx + 1,
+      proposalId: c.proposalId,
+      variantLabel: c.label,
+      promotedAt: c.promotedAt,
+      rolledBack: c.rolledBack === true,
+      passAt1: ev?.evidence.passAt1 ?? null,
+      tokens: ev?.evidence.tokens ?? null,
+      costUsd: ev?.evidence.costUsd ?? null,
+      noiseDelta: p?.noise?.delta ?? null,
+      passAt1Delta: ev?.contrast?.passAt1Delta ?? null,
+    }
+  })
+  const openStatuses: ProposalStatus[] = ['draft', 'submitted', 'approved', 'probing', 'composed']
+  return {
+    surfaceKey,
+    rounds: champions.filter((c) => c.surfaceKey === surfaceKey && !c.rolledBack).length,
+    proposalsTotal: mine.length,
+    promoted: mine.filter((p) => p.status === 'promoted').length,
+    rejected: mine.filter((p) => p.status === 'rejected').length,
+    rolledBack: mine.filter((p) => p.status === 'rolled_back').length,
+    open: mine.filter((p) => openStatuses.includes(p.status)).length,
+    failedProbes: mine.reduce((n, p) => n + p.probes.filter((x) => x.status === 'failed').length, 0),
+    stalled: stallDetection(mine, cfg.stallWindow),
+    pruneSuggested: pruneSignal(mine, cfg.pruneN),
+    timeline,
+  }
+}
+
+export function evolutionReport(
+  surfaceKeys: SurfaceKey[],
+  proposals: Proposal[],
+  champions: Champion[],
+  cfg: RsiConfig = rsiConfig(),
+): EvolutionReport {
+  const surfaces = surfaceKeys
+    .map((key) => evolutionSurfaceReport(key, proposals, champions, cfg))
+    .filter((s) => s.proposalsTotal > 0 || s.rounds > 0)
+  const exercised = new Set(proposals.map((p) => p.surfaceKey))
+  return {
+    config: {
+      horizon: cfg.horizon, bMin: cfg.bMin, bMax: cfg.bMax, stallWindow: cfg.stallWindow,
+      pruneN: cfg.pruneN, beta0: cfg.beta0, beta1PerPoint: cfg.beta1PerPoint, requireNoise: cfg.requireNoise,
+    },
+    surfaces,
+    unexercised: surfaceKeys.filter((key) => !exercised.has(key)),
+  }
 }

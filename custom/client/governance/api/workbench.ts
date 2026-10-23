@@ -151,6 +151,73 @@ export interface CompositionDto {
 
 export interface GateBlockerDto { code: string; message: string }
 
+/** RRSI 噪声标定（S2）：≥2 条同集基线运行的 passAt1 半极差 = δ。 */
+export interface NoiseCalibrationDto {
+  runIds: string[]
+  setId: string
+  delta: number
+  method: 'half-range'
+  samples: Array<number | null>
+  computedAt: string
+}
+
+/** RRSI 提案端正则化读数（视图现算，不落盘）。 */
+export interface RegularizationDto {
+  round: number
+  horizon: number
+  editBudget: number
+  maxEditCount: number | null
+  editBudgetExceeded: boolean
+  noiseDelta: number | null
+  noiseRuns: number
+  stalled: boolean
+  stallWindow: number
+  firstOnSurface: boolean
+  hypothesisRetry: Array<{ proposalId: string; title: string; status: ProposalStatus; similarity: number }>
+}
+
+export interface EvolutionRoundDto {
+  round: number
+  proposalId: string
+  variantLabel: string
+  promotedAt: string
+  rolledBack: boolean
+  passAt1: number | null
+  tokens: number | null
+  costUsd: number | null
+  noiseDelta: number | null
+  passAt1Delta: number | null
+}
+
+export interface EvolutionSurfaceDto {
+  surfaceKey: SurfaceKey
+  rounds: number
+  proposalsTotal: number
+  promoted: number
+  rejected: number
+  rolledBack: number
+  open: number
+  failedProbes: number
+  stalled: boolean
+  pruneSuggested: boolean
+  timeline: EvolutionRoundDto[]
+}
+
+export interface EvolutionDto {
+  config: {
+    horizon: number
+    bMin: number
+    bMax: number
+    stallWindow: number
+    pruneN: number
+    beta0: number
+    beta1PerPoint: number
+    requireNoise: boolean
+  }
+  surfaces: EvolutionSurfaceDto[]
+  unexercised: SurfaceKey[]
+}
+
 export interface ProposalDto {
   id: string
   title: string
@@ -168,6 +235,7 @@ export interface ProposalDto {
   baselineRunId: string | null
   baseline: ProbeMetricsDto | null
   base: { content: string; digest: string; revision: string | null; exists: boolean } | null
+  noise?: NoiseCalibrationDto | null
   variants: VariantDto[]
   probes: ProbeDto[]
   approval: ApprovalDto | null
@@ -185,6 +253,7 @@ export interface ProposalDto {
     selectedVariantId: string | null
     selectedContrast: BehaviorContrastDto | null
     diversity: { n: number; nDistinct: number; meanLineJaccard: number }
+    regularization: RegularizationDto
   }
 }
 
@@ -230,6 +299,7 @@ export interface WorkbenchOverviewDto {
   proposals: ProposalDto[]
   champions: ChampionDto[]
   experiences: ExperienceDto[]
+  evolution?: EvolutionDto
   meta: { note: string; source: string; boundary: string }
 }
 
@@ -258,6 +328,13 @@ export function createWorkbenchProposal(input: CreateProposalInput): Promise<{ o
 export function attachWorkbenchBaseline(id: string, evalRunId: string): Promise<{ ok: boolean; proposal: ProposalDto }> {
   return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/baseline`, {
     method: 'POST', body: JSON.stringify({ evalRunId }),
+  })
+}
+
+/** 噪声标定（RRSI S2）：≥2 条同集基线真实运行 → δ=passAt1 半极差。 */
+export function calibrateWorkbenchNoise(id: string, runIds: string[]): Promise<{ ok: boolean; proposal: ProposalDto }> {
+  return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/noise`, {
+    method: 'POST', body: JSON.stringify({ runIds }),
   })
 }
 
