@@ -581,8 +581,8 @@ onUnmounted(() => {
           <!-- R6 补充：栏控迁独立控制条行（不占内容区，根治绝对定位遮罩） -->
           <div class="ide-shell__colhead" data-testid="ide-colhead-sidebar">
             <IaColumnControls
-              testid="ide-col-sidebar" fold="left" show-max :maximized="ide.layout.sidebar.maximized"
-              @fold="ide.toggleFold('sidebar')" @max="ide.toggleMax('sidebar')"
+              testid="ide-col-sidebar" show-min show-max :maximized="ide.layout.sidebar.maximized"
+              @min="ide.toggleFold('sidebar')" @max="ide.toggleMax('sidebar')"
             />
           </div>
           <!-- R6 补充：左栏右缘拖拽分割条（调整左栏宽度） -->
@@ -597,8 +597,8 @@ onUnmounted(() => {
         <div v-else class="ide-shell__col ide-shell__col--chat">
           <div class="ide-shell__colhead" data-testid="ide-colhead-chat">
             <IaColumnControls
-              testid="ide-col-chat" fold="left" show-max :maximized="ide.layout.chat.maximized" show-popout
-              @fold="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
+              testid="ide-col-chat" show-min show-max :maximized="ide.layout.chat.maximized" show-popout
+              @min="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
             />
           </div>
           <IdeLandingHero v-if="showLandingHero" class="ide-shell__colbody" :tasks="landingTasks" @pick="landingPickTask" @enter="landingEnterWorkspace" @board="landingGoBoard" />

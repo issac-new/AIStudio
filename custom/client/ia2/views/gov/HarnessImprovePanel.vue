@@ -5,7 +5,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { improveMessages } from '@/custom/governance/improve-i18n'
 import {
   addWorkbenchExperience,
@@ -385,7 +384,6 @@ onMounted(() => void refresh())
 
 <template>
   <div class="hi" data-testid="harness-improve">
-    <TabIntroBanner tab="gov-improve" />
     <header class="hi__bar">
       <div>
         <h2 class="hi__title">{{ L.title }}</h2>

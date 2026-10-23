@@ -4,7 +4,6 @@
      右上角关闭钮回到沟通协作工作台（与看板页一致动线）。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../components/TabIntroBanner.vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
@@ -28,7 +27,6 @@ function closeInbox(): void {
 <template>
   <div class="ia-area ia-inbox">
   <IaBreadcrumb />
-  <TabIntroBanner tab="inbox" />
     <div class="ia-inbox__bar">
       <h2 class="ia-inbox__title">{{ t('approvals.pageTitle') }}</h2>
       <button

@@ -4,7 +4,6 @@
      （400 原文如实呈现）；保存成功显示回传有效值。顶栏返回全流程推演。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchSimSettings, putSimSettings, SETTING_FIELDS, type SimSettings } from '../../api/sim-settings'
@@ -64,7 +63,6 @@ onMounted(() => { void load() })
 <template>
   <div class="sst" data-testid="sst-page">
     <IaBreadcrumb />
-    <TabIntroBanner tab="sim-settings" />
     <header class="sst__head">
       <h2 class="sst__title">推演设置</h2>
       <button class="sst__back" type="button" data-testid="sst-back" @click="void router.push({ name: 'ia2.sim', query: backQuery })">返回全流程推演</button>

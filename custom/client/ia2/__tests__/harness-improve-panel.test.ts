@@ -102,7 +102,7 @@ beforeEach(() => {
 
 describe('HarnessImprovePanel', () => {
   it('渲染八面、提案候选、门禁阻塞与经验库', async () => {
-    const w = mount(HarnessImprovePanel, { global: { stubs: { TabIntroBanner: true } } })
+    const w = mount(HarnessImprovePanel, )
     await flushPromises()
     expect(w.find('[data-testid="hi-summary"]').exists()).toBe(true)
     expect(w.find('[data-testid="hi-surface-system_prompt"]').text()).toContain('系统提示词')
@@ -118,7 +118,7 @@ describe('HarnessImprovePanel', () => {
 
   it('加载失败如实显示错误，不渲染空数据卡片', async () => {
     api.fetchWorkbenchOverview.mockRejectedValueOnce(new Error('boom'))
-    const w = mount(HarnessImprovePanel, { global: { stubs: { TabIntroBanner: true } } })
+    const w = mount(HarnessImprovePanel, )
     await flushPromises()
     expect(w.find('[data-testid="hi-error"]').text()).toContain('boom')
     expect(w.find('[data-testid="hi-summary"]').exists()).toBe(false)
@@ -126,7 +126,7 @@ describe('HarnessImprovePanel', () => {
   })
 
   it('导入经验候选会调用端点并刷新', async () => {
-    const w = mount(HarnessImprovePanel, { global: { stubs: { TabIntroBanner: true } } })
+    const w = mount(HarnessImprovePanel, )
     await flushPromises()
     await w.find('[data-testid="hi-exp-import"]').trigger('click')
     await flushPromises()
@@ -136,7 +136,7 @@ describe('HarnessImprovePanel', () => {
   })
 
   it('新建入口展开表单', async () => {
-    const w = mount(HarnessImprovePanel, { global: { stubs: { TabIntroBanner: true } } })
+    const w = mount(HarnessImprovePanel, )
     await flushPromises()
     expect(w.find('[data-testid="hi-create"]').exists()).toBe(false)
     await w.find('[data-testid="hi-create-toggle"]').trigger('click')
@@ -145,7 +145,7 @@ describe('HarnessImprovePanel', () => {
   })
 
   it('一键自动探测：按钮触发端点并展示任务态', async () => {
-    const w = mount(HarnessImprovePanel, { global: { stubs: { TabIntroBanner: true } } })
+    const w = mount(HarnessImprovePanel, )
     await flushPromises()
     expect(w.find('[data-testid="hi-auto-hw-001"]').exists()).toBe(true)
     expect(w.find('[data-testid="hi-auto-state-pr-1"]').text()).toContain('完成')
@@ -159,7 +159,7 @@ describe('HarnessImprovePanel', () => {
   })
 
   it('树候选开关：展开文件清单并可加文件行', async () => {
-    const w = mount(HarnessImprovePanel, { global: { stubs: { TabIntroBanner: true } } })
+    const w = mount(HarnessImprovePanel, )
     await flushPromises()
     await w.find('[data-testid="hi-create-toggle"]').trigger('click')
     expect(w.find('[data-testid="hi-create-treeform-0"]').exists()).toBe(false)

@@ -106,17 +106,18 @@ describe('IdeShell 布局守门', () => {
     const w = mountShell()
     const ide = useIdeStore()
     await w.vm.$nextTick()
-    // v12.4：栏控迁各栏顶部控制条右上角（旧竖排 pane-tools testid 退役）
-    expect(w.find('[data-testid="ide-col-sidebar-fold"]').exists()).toBe(true)
+    // v12.4：栏控迁各栏顶部控制条右上角（旧竖排 pane-tools testid 退役）；
+    // 2026-10-23 统一轮：fold 钮统一为最小化语义（-min testid，图标 –）
+    expect(w.find('[data-testid="ide-col-sidebar-min"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-col-sidebar-max"]').exists()).toBe(true)
-    expect(w.find('[data-testid="ide-col-chat-fold"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-col-chat-min"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-col-chat-max"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-col-chat-popout"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-fold-sidebar-btn"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-max-sidebar-btn"]').exists()).toBe(false)
     expect(w.find('.ide-shell__pane-tools').exists()).toBe(false)
-    // 控制条折叠/最大化动作直通 ide store
-    await w.find('[data-testid="ide-col-chat-fold"]').trigger('click')
+    // 控制条最小化/最大化动作直通 ide store
+    await w.find('[data-testid="ide-col-chat-min"]').trigger('click')
     await w.vm.$nextTick()
     expect(w.find('.ide-shell__chat').classes()).toContain('is-folded')
     ide.toggleFold('chat')
