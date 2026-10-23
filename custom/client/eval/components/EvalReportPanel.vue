@@ -771,6 +771,6 @@ h4 { font-size: 13px; margin: 4px 0 0; }
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--ia-border, rgba(127, 127, 127, 0.25));
+  border-bottom: 1px solid var(--border-color);
 }
 </style>
