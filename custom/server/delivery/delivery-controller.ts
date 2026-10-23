@@ -23,6 +23,7 @@ import {
   type InterventionEntry,
   type UatVerdictLite,
 } from './interventions'
+import { MATURITY_LEVELS, assessMaturity } from './maturity'
 
 const router = new Router({ prefix: '/api/hermes/delivery' })
 
@@ -193,6 +194,36 @@ router.get('/interventions', ctx => {
     riskSignals: riskSignals(entries),
     meta: { autoApprove: autoApproveTotal, perRun },
     sources: [...sources],
+  }
+})
+
+// ── GET /maturity（D17 协作成熟度三级读数；scope 同 interventions） ──
+router.get('/maturity', ctx => {
+  const simRoot = observerSimRootOrNull()
+  if (!simRoot) {
+    ctx.status = 200
+    ctx.body = { available: false, reason: 'SIM 根缺席（OBS_SIM_ROOT 未配置且候选位全空）' }
+    return
+  }
+  const runParam = typeof ctx.query.run === 'string' ? ctx.query.run.trim() : ''
+  if (runParam && !isValidRun(runParam)) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: '非法 run 标识' }
+    return
+  }
+  const runs = runParam ? [runParam] : listRunDirs(simRoot)
+  const entries: InterventionEntry[] = []
+  let autoApprove = 0
+  for (const run of runs) {
+    const r = interventionsOfRun(simRoot, run)
+    entries.push(...r.entries)
+    autoApprove += r.autoApprove
+  }
+  ctx.body = {
+    available: true,
+    levels: MATURITY_LEVELS,
+    assessment: assessMaturity(entries, autoApprove),
+    scope: runParam || 'all',
   }
 })
 

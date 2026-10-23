@@ -102,3 +102,24 @@ export function fetchInterventions(run?: string): Promise<InterventionsResponse>
   const q = run ? `?run=${encodeURIComponent(run)}` : ''
   return getJson(`/api/hermes/delivery/interventions${q}`)
 }
+
+// ── D17 协作成熟度（挂账批 2026-10-23） ──
+export interface MaturityLevel { key: string; name: string; thesis: string; nextTrigger: string }
+export interface MaturityAssessment {
+  level: MaturityLevel
+  reading: { collabSharePct: number; autoApproveSharePct: number | null; nudges: number; reworks: number; total: number }
+  gapNote: string
+  note: string
+}
+export interface MaturityResponse {
+  available: boolean
+  reason?: string
+  levels?: MaturityLevel[]
+  assessment?: MaturityAssessment
+  scope?: string
+}
+
+export function fetchMaturity(run?: string): Promise<MaturityResponse> {
+  const q = run ? `?run=${encodeURIComponent(run)}` : ''
+  return getJson(`/api/hermes/delivery/maturity${q}`)
+}

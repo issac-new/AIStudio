@@ -216,3 +216,46 @@ export function searchExpertise(evidence: EvidenceEntry[], query: string, nowMs 
   }
   return out.sort((a, b) => b.score - a.score || a.person.localeCompare(b.person))
 }
+
+// ── D19 概念口径冲突检测（2026-10-23 挂账批）──
+// 文章「传歪」摩擦（cursor/nextToken 同物异名）的机械可检代理：同一概念挂在
+// ≥2 个不同业务域（板 slug 域段）名下 → 跨域概念·口径待对齐。提示非结论。
+
+export interface TermConflict {
+  term: string
+  /** 涉及业务域（板 slug 去人前缀的域段，去重） */
+  domains: string[]
+  /** 涉及人 */
+  persons: string[]
+  /** 每域一个证据锚点（可回查） */
+  anchors: Array<{ domain: string; anchor: string }>
+}
+
+/** 证据集 → 跨域概念清单（纯函数；term 在 ≥2 域出现即报） */
+export function detectTermConflicts(evidence: EvidenceEntry[]): TermConflict[] {
+  // 域归属：kanban-board/task 源的 anchor=slug（域段可取）；台账源的人话迹按 from 人归并，
+  // 无域信息不计入域冲突面（只统计有域锚的证据）
+  const byTerm = new Map<string, Map<string, { persons: Set<string>; anchors: Array<{ domain: string; anchor: string }> }>>()
+  for (const e of evidence) {
+    if (e.source === 'compensation-ledger') continue
+    const domain = /^([a-z]{2,10})-(.+)$/.exec(e.anchor)?.[2]
+    if (!domain) continue
+    const domains = byTerm.get(e.term) ?? new Map()
+    const d = domains.get(domain) ?? { persons: new Set<string>(), anchors: [] }
+    d.persons.add(e.person)
+    if (d.anchors.length < 2) d.anchors.push({ domain, anchor: e.anchor })
+    domains.set(domain, d)
+    byTerm.set(e.term, domains)
+  }
+  const out: TermConflict[] = []
+  for (const [term, domains] of byTerm) {
+    if (domains.size < 2) continue
+    out.push({
+      term,
+      domains: [...domains.keys()],
+      persons: [...new Set([...domains.values()].flatMap(d => [...d.persons]))],
+      anchors: [...domains.values()].flatMap(d => d.anchors).slice(0, 4),
+    })
+  }
+  return out.sort((a, b) => b.domains.length - a.domains.length || a.term.localeCompare(b.term)).slice(0, 20)
+}

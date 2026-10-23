@@ -916,3 +916,5 @@
 681-server-identity-chat-route.patch
 # 682: 建板 switchCurrent 假开关根治（驾驶舱 P1 残项轮；原 680 与并行会话 Provider 提示修复撞号改 682）——store.createBoard 尊重表单「创建后切换」勾选（默认开；取消勾选不再强切 selectedBoard）。
 682-client-store-kanban-switchcurrent.patch
+# 683: 判例库检索挂载（天猫挂账批 D18）——/api/hermes/precedent/search：run 判例单元，活跃 runs+归档 tar 按需抽（不全量解压）；原 680 与并行会话 Provider 修复撞号改 683。
+683-server-precedent-mount.patch
