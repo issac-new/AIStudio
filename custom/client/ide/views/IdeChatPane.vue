@@ -120,7 +120,6 @@ const { t, locale } = useI18n()
 const message = useMessage()
 // composer 工具条/模型面板文案（IDE 本地字典，ZCode 对齐批）
 const tx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].composer)
-<<<<<<< Updated upstream
 
 // 编程/工作双模式：新建任务模式决定模型取源（编程=Ycode 目录，工作=Hermes 目录）；
 // 工作空态只看当前会话是否真是工作任务；界面模式（ide.interfaceMode）决定呈现降噪。
@@ -145,8 +144,6 @@ watch(() => chatStore.activeSessionId, () => {
   const explicit = explicitTaskMode(chatStore.activeSession)
   if (explicit) ide.setTaskMode(explicit)
 })
-=======
->>>>>>> Stashed changes
 
 // R2 会话钩子：runaway-guard 失控检测 + 子代理结果反注入 + 恢复 recap
 const { recap, dismissRecap, flaggedSubagents } = useIdeSessionHooks()
@@ -664,7 +661,6 @@ function onManageSaved(): void {
   void loadCatalog()
 }
 
-<<<<<<< Updated upstream
 // ── 电脑操作（ZCode composer CUA 入口对应物）──
 // Cua 完整回路（2026-10-18）：开关写服务端会话闸门（/api/ide/cua/session/:id，
 // fail-closed 默认，patch 664 在 spawn 前注入 ZCODE_CUA_DISABLE），并保留一条
@@ -709,24 +705,6 @@ onMounted(() => {
     .then((s) => { cuaUnavailable.value = !s.available })
     .catch(() => { cuaUnavailable.value = false })
 })
-=======
-// ── 电脑操作（ZCode composer CUA 入口对应物；声明式，spec D-2）──
-// ZCode CUA=宿主插件深集成（权限代理/Helper），IDE 引擎桥无该通道；与 websearch
-// 档同一既有模式：开/关各向当前会话发一条声明，实际能力以会话工具面为准。
-const CU_KEY = 'ide-computer-use:'
-function cuStorageKey(): string { return CU_KEY + (chatStore.activeSessionId ?? 'default') }
-const computerUseOn = ref(localStorage.getItem(CU_KEY + 'default') === 'on')
-watch(() => chatStore.activeSessionId, (sid, prev) => {
-  if (sid !== prev) computerUseOn.value = localStorage.getItem(cuStorageKey()) === 'on'
-})
-async function toggleComputerUse(): Promise<void> {
-  computerUseOn.value = !computerUseOn.value
-  localStorage.setItem(cuStorageKey(), computerUseOn.value ? 'on' : 'off')
-  await chatStore.sendMessage(
-    `[computer-use-policy] enabled=${computerUseOn.value} —— 声明式：允许使用电脑操作/浏览器控制工具；实际能力以会话工具面为准。`,
-  )
-}
->>>>>>> Stashed changes
 
 
 // ── Ycode 思考档（2026-10-18 用户指令：档位与 ZCode 一致，不用 Hermes 配置）──
@@ -1078,7 +1056,6 @@ watch(() => chatStore.activeSessionId, syncPermMode)
           persist-draft
           @model-click="onModelClick"
         />
-<<<<<<< Updated upstream
         <!-- ZCode 输入框对齐批（2026-10-18）：输入区下方一排五控件+⚙设置，顺序=ZCode
              composer（模式/电脑操作/上下文容量/模型选择/思考强度/设置）。ChatInput 内置
              模型按钮 :deep 隐藏（单一入口防双触发器）；思考档同因弃 Hermes 配置。
@@ -1091,13 +1068,6 @@ watch(() => chatStore.activeSessionId, syncPermMode)
           <!-- 电脑操作（Cua 完整回路）：会话级闸门（/api/ide/cua/session/:id，
                fail-closed 默认，patch 664 spawn env 注入）；引擎级全局启停见
                /api/ide/computer-use（并行接通轮端点，本按钮不占用）。 -->
-=======
-        <!-- ZCode 输入框对齐批（2026-10-18）：输入区下方一排五控件，顺序=ZCode
-             composer（模式/电脑操作/上下文容量/模型选择/思考强度）。ChatInput 内置
-             模型按钮 :deep 隐藏（单一入口防双触发器）；思考档同因弃 Hermes 配置。 -->
-        <div class="ide-chat__composerbar" data-testid="ide-composer-bar">
-          <IdePermissionSwitcher />
->>>>>>> Stashed changes
           <button
             type="button"
             class="ide-chat__cb-btn"
@@ -1146,7 +1116,6 @@ watch(() => chatStore.activeSessionId, syncPermMode)
                 @click="pickEffort(lv)"
               >{{ effortLevelLabel(lv) }}</button>
             </div>
-<<<<<<< Updated upstream
           </div>
           <!-- composer 设置菜单（zcode 对照：模式/模型就地可调；bee7c5e4）——收进
                composer 工具条行（原 Teleport 宿主/is-floating 回落随并位退役）。 -->
@@ -1215,8 +1184,6 @@ watch(() => chatStore.activeSessionId, syncPermMode)
                 >{{ toolTraceVisible ? '✓ ' : '' }}{{ labels.toolTrace }}</button>
               </div>
             </div>
-=======
->>>>>>> Stashed changes
           </div>
         </div>
         <div v-if="modelPickerOpen" class="ide-chat__model-picker" data-testid="ide-input-model-picker">
@@ -1578,23 +1545,15 @@ watch(() => chatStore.activeSessionId, syncPermMode)
   // ide-chat__effort（档位=ZCode manifest）。设置菜单同因：上游菜单无模式/模型
   // （zcode 有，用户实报），隐藏原按钮，用 ide-chat__csettings。
   :deep(.reasoning-effort-button) { display: none; }
-<<<<<<< Updated upstream
   // 上游 ChatInput 内置设置按钮隐藏（bee7c5e4：⚙迁 IDE 自有位）；内置模型按钮
   // 隐藏（本批：模型选择迁 composer 工具条行，单一入口防双触发器）。
   :deep(.input-settings-button) { display: none; }
-=======
-  // ZCode 对齐批（2026-10-18）：模型选择迁 composer 工具条行（ide-composer-model-btn），
-  // ChatInput 内置模型按钮隐藏防双触发器（props 接线保留，测试与降级面不动）。
->>>>>>> Stashed changes
   :deep(.input-model-button) { display: none; }
 }
 
 // ZCode composer 工具条（2026-10-18 对齐批）：输入区下方一排——模式/电脑操作/
 // 上下文容量/模型选择/思考强度（顺序=ZCode）。窄列溢出自动换行不裁控件。
-<<<<<<< Updated upstream
 // 思考档随行内排布，取代 9c0ae4b1 的 Teleport 进底栏方案（五控件同排需要，spec D-8）。
-=======
->>>>>>> Stashed changes
 .ide-chat__composerbar {
   display: flex;
   align-items: center;
@@ -1631,12 +1590,9 @@ watch(() => chatStore.activeSessionId, syncPermMode)
   flex-shrink: 0;
 }
 .ide-chat__cb-btn.is-on .ide-chat__cb-dot { background: var(--accent-primary); }
-<<<<<<< Updated upstream
 // 电脑操作错误态（引擎不可达/插件缺失）：红点提示，点击无动作（title 给详情）。
 .ide-chat__cb-btn.is-error { color: var(--ia-stale); border-color: color-mix(in srgb, var(--ia-stale) 45%, transparent); }
 .ide-chat__cb-btn.is-error .ide-chat__cb-dot { background: var(--ia-stale); }
-=======
->>>>>>> Stashed changes
 .ide-chat__cb-model {
   max-width: 260px;
 }
