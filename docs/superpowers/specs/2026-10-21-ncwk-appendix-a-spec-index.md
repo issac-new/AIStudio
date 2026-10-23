@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（242 份）
+# 附录 A：产品面全量 spec 索引（260 份业务 spec）
 
 > 附件，非正本。供「NCWK 产品正本与设计正本」检索与审计；每条给主旨与结论要点。
-> 覆盖：`overlay/docs/superpowers/specs/*.md` 业务 spec 共 250 份（2026-10-22 复测；不含产品正本、设计正本、导航页与四份附录附件，不含 archive/ 与 assets/）。核实日 2026-10-22。
+> 覆盖：`overlay/docs/superpowers/specs/*.md` 业务 spec 共 260 份（2026-10-23 复测；不含产品正本、设计正本、导航页与四份附录附件，不含 archive/ 与 assets/）。核实日 2026-10-23。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -256,8 +256,18 @@
 | 2026-10-21-debt-final-round | 挂账清偿收 | OTel 聚合 11/11＋红队攻防 6/6；exec-sandbox ESM 边界教训 |
 | 2026-10-21-mcp-security-scan | MCP 注册面安全扫描 | 四类形态（高危命令/密钥/外联/仿名）；姿态面板 |
 | 2026-10-21-g5-uat-state-machine | G5 发布门+UAT 状态机 | 纯函数矩阵/append-only/409 防回流；接管补正本 |
+| 2026-10-22-cockpit-audit-fixes | 驾驶舱全量走查修复 D1-D7 | ④阶段崩溃/三簇 koa-router 嵌套死路由/介入卡假按钮/静默失败呈现；nested-mount-guard 守门 |
+| 2026-10-22-cockpit-refactor-design | 驾驶舱重构设计 | 四原则＋P0-P2 挂账清单＋死端点守门机制（正本立卷） |
+| 2026-10-22-governance-repo-default-sim | 治理仓缺省链三态化 | 显式 env＞SIM 中央仓＞生产仓；重启不依赖带 env |
 | 2026-10-22-jargon-allow-director-console | jargon 词表补「导演台」 | 产品功能名专名豁免非行话放行 |
 | 2026-10-22-long-horizon-trust-layer | 长程任务可信执行层 | 主张三态审计/双准入/CSWI 栅栏/原子断点；键盘可达随批修正 |
+| 2026-10-22-org-admin-cosign-guard | 治理者守卫 | org admin 行 409 拦＋双人会签（单槽/资格异人）＋[BREAK-GLASS] 留痕 |
+| 2026-10-22-owner-nudge-and-humangate | 催办 owner 动态路由＋HumanGate 前置批准 | run21/22 两轮错侧催办与 R-5 产品化；8/8＋22/22 |
+| 2026-10-22-runtime-mirror-569-reapply | 0.22.4 镜像回套补丁 569 | kanban_watchers_common 丢 _inspect 修复回套 |
+| 2026-10-22-sidenav-todo-badges | 侧边栏待办徽标 | useSideNavBadges 单一装配＋badge-count 纯核＋徽标状态点共存 |
+| 2026-10-22-stage-status-traffic-light | 阶段状态点交通灯化 | 红=阻塞/黄=进行中/绿=完成；--ia-warn 新 token |
+| 2026-10-22-tab-brand-swarm | 标签品牌收尾 | Ekko Studio→SwarmStudio＋data-URI SVG 图标（patch 675 免二进制补丁） |
+| 2026-10-22-upgrade-agent-0224 | hermes-agent v0.22.4 升级轮 | 72 agent 补丁 12 个手工移植全绿；镜像 40→44；607 写闸接线；宿主网关换血 |
 
 ## A.2 按域聚类（13 域）
 
@@ -277,6 +287,8 @@
 | D12 UI/UX/无障碍/术语 | 13 | Pure Ink → V1-V3 → token 收敛 → WCAG → 步显示名 | ia2.scss 单一 token；三壳同步；name/displayName 分层 | UI 框架、双主题、全量 WCAG 重校、三套抽屉合一 |
 | D13 正本/需求/验收 | 6 | 需求冻结 → 三中心定稿 → 完整设计 → 三域合一 | 三层结构；冲突裁决顺序；146 决策 | 三份并行事实源、旧决策计数、独立档案件、角色镜头波次 |
 
+> 2026-10-23 新增 10 份业务 spec 已入 A.1 逐份索引；本节域聚合计数（D1-D13 份数）待下次专题修订重算。
+
 ## A.3 跨域单一事实源清单（节选）
 
 阶段定义=`stage-meta.ts`；设计 token=`ia2.scss`；技能期望源=`skill-provisioning.json`；Agent 能力=组织注册表；FIBO 正本=`ontology-fibo.ts`；工具契约=`toolcontract`；并行安全=`DISPATCH_SAFETY`；报告真值=`report_truth.py`；Matrix 地址=`server-info.ts`；评测指标=`METRIC_DEFS`；图事件日志=SQLite；验收标准=方案第五部分；术语=`glossary.txt`。
@@ -285,4 +297,4 @@
 
 否决：音视频/贴纸特效/身份发现/spaces/tower/Tauri/iOS/新一级页；mods/pets/esp32；主会话 append-only/进程沙箱/完整 Mods；Jev-Omni 本地/SAT 策略学习/Hindsight 整体/容器沙箱/L4 决策融合；OWL DL/SPARQL/实例自动摄取/BPMN/运行时 RDF；MCP 投毒扫描/跨会话策略/outcome 校验/kill switch 进程终止；ClickHouse/S3 观测；冠军自动选择；处置单自动分配。
 
-未验证：diagram-export×3、cua×5、tool-waterfall×1、IDE 超时、Matrix 分享房、swarm-yuan 5 家 L1、zcode CUA Windows/Linux 路径、技能供给宿主半写文件、Harness² 四项未移植、FIBO 证券/衍生品/贷款仅只读目录、agent 0.22.1 补丁 19 件待重定位。
+未验证：diagram-export×3、cua×5、tool-waterfall×1、IDE 超时、Matrix 分享房、swarm-yuan 5 家 L1、zcode CUA Windows/Linux 路径、技能供给宿主半写文件、Harness² 四项未移植、FIBO 证券/衍生品/贷款仅只读目录。（agent 0.22.1 补丁 19 件未验项已由 0.22.4 升级轮消化：12 补丁手工移植全绿、镜像 44 文件、宿主网关换血）

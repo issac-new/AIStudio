@@ -1,9 +1,9 @@
 # 附录 C：能力层全库索引（swarm-yuan）
 
-> 附件，非正本。覆盖生成器 51 份方法论、50 条决策文本、98 份 research 与关键数字。
-> 根目录：`~/lab/Swarm-yuan`。核实日 2026-10-21。
+> 附件，非正本。覆盖生成器 57 份方法论、50 条决策文本、99 份 research 与关键数字。
+> 根目录：`~/lab/Swarm-yuan`。核实日 2026-10-23。
 
-## C.1 51 份方法论清单
+## C.1 57 份方法论清单
 
 | 文件 | 主题域 | 核心结论 | 消费方 |
 |---|---|---|---|
@@ -58,6 +58,14 @@
 | task-methodology-router | 任务路由 | 任务→节点/门禁/方法论三维 | 任务路由 |
 | template-spec | 六段填充 | 六段式+17 特征卡+11 要素 | Step 7 |
 | togaf-metamodel-methodology | 架构元模型 | BDAT 四层+读图 SOP | spec §24 |
+| business-ontology-methodology | 业务本体 | FIBO 实践：五步流程/术语纪律/七语义模式/十四校验 | 本体域 |
+| bugfix-runbook | 存量排障 | 研发环境日志/数据库/远程断点取证六步 | ⑤/fix |
+| compliance-checkpoints | 合规检查 | 执法检查方法论/罚则库/智能体安全/采购 AI | compliance 档 |
+| fibo-financial-ontology | 领域参考 | FIBO master_2026Q3 术语与 IRI（源码级） | 本体岛 FIBO |
+| regulatory-checkpoint-table | 合规主表 | 173 条执法检查主表 | 迎检台账工具 |
+| remote-debug-jvm | 远程调试 | JDWP 堡垒机隧道：前置三件/安全边界/断点纪律 | 排障底座 |
+
+> 2026-10-23 补 6 行（本体轮＋运维排障底座轮＋合规检查能力轮；facts.conf REFERENCES 51→57 实测）。C.2 十族份数待下次修订重算。
 
 ## C.2 方法论十族
 
