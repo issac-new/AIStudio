@@ -156,7 +156,7 @@ describe('已配置注册房间', () => {
     expect(w.find('[data-testid="teams-account-@alice:sv"]').exists()).toBe(true)
     expect(w.find('[data-testid="teams-account-@bob:sv"]').exists()).toBe(true)
     expect(w.find('[data-testid="teams-account-@bob:sv"] [data-testid="teams-leader-badge"]').exists()).toBe(true)
-    expect(w.text()).toContain('@alice:sv/dev')
+    expect(w.text()).toContain('@alice/dev')
   })
   it('当前登录账号显示编辑器；保存调 writeSelfAccount', async () => {
     registryState.writeSelfAccount.mockClear()

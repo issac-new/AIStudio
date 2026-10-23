@@ -2,6 +2,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
+import { shortMxName, stripHomeserver } from '@/custom/ui/mxid-display'
 
 interface InviteTarget {
   userId: string
@@ -216,7 +217,7 @@ onUnmounted(() => {
               <img v-if="getUserAvatar(target)" :src="getUserAvatar(target)!" alt="" class="pill-avatar-img" />
               <div v-else class="pill-avatar-placeholder">{{ getInitial(target.displayName, target.userId) }}</div>
             </div>
-            <span class="invite-pill-name">{{ target.displayName || target.userId }}</span>
+            <span class="invite-pill-name">{{ target.displayName || shortMxName(target.userId) }}</span>
             <button class="invite-pill-remove" :disabled="isInviting" @click="removeTarget(target)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
@@ -266,8 +267,8 @@ onUnmounted(() => {
                 <div v-else class="user-avatar-placeholder">{{ getInitial(user.displayName, user.userId) }}</div>
               </div>
               <div class="invite-user-info">
-                <span class="invite-user-name">{{ user.displayName || user.userId }}</span>
-                <span class="invite-user-id">{{ user.userId }}</span>
+                <span class="invite-user-name">{{ user.displayName || shortMxName(user.userId) }}</span>
+                <span class="invite-user-id" :title="user.userId">{{ stripHomeserver(user.userId) }}</span>
               </div>
               <div class="invite-user-check">
                 <svg v-if="selectedTargets.some(t => t.userId === user.userId)" width="18" height="18" viewBox="0 0 24 24" fill="var(--accent-primary)" stroke="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -290,8 +291,8 @@ onUnmounted(() => {
                 <div v-else class="user-avatar-placeholder">{{ getInitial(user.displayName, user.userId) }}</div>
               </div>
               <div class="invite-user-info">
-                <span class="invite-user-name">{{ user.displayName || user.userId }}</span>
-                <span class="invite-user-id">{{ user.userId }}</span>
+                <span class="invite-user-name">{{ user.displayName || shortMxName(user.userId) }}</span>
+                <span class="invite-user-id" :title="user.userId">{{ stripHomeserver(user.userId) }}</span>
               </div>
               <div class="invite-user-check">
                 <svg v-if="selectedTargets.some(t => t.userId === user.userId)" width="18" height="18" viewBox="0 0 24 24" fill="var(--accent-primary)" stroke="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>

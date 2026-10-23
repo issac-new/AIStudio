@@ -56,11 +56,14 @@ export function linkifyPlainText(text: string, currentUsername: string | null | 
   })
 
   html = html.replace(MENTION_RE, (m, user: string, host: string | undefined) => {
+    // 显示短形（@user，去 :host 后缀——2026-10-23 账号显示去统一后缀轮）；
+    // 判定仍按完整匹配（含 host）归一后比对。
+    const shown = host ? `@${user}` : m
     if (me && normUser(user) === me) {
       mentionsMe = true
-      return `<span class="mx-mention-me">${ESC(m)}</span>`
+      return `<span class="mx-mention-me">${ESC(shown)}</span>`
     }
-    return `<span class="mx-mention">${ESC(m)}</span>`
+    return `<span class="mx-mention">${ESC(shown)}</span>`
   })
 
   return { html, cardIds, mentionsMe }

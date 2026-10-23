@@ -5,6 +5,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import MatrixInviteDialog from './MatrixInviteDialog.vue'
 import MatrixUserKindBadge from './MatrixUserKindBadge.vue'
+import { shortMxName } from '@/custom/ui/mxid-display'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
@@ -124,11 +125,11 @@ const hasAnyMembers = computed(() =>
         >
           <div class="member-avatar">
             <img v-if="getMemberAvatarUrl(member)" :src="getMemberAvatarUrl(member)!" alt="" class="member-avatar-img" />
-            <div v-else class="member-avatar-placeholder">{{ getInitial(member.name ?? member.userId) }}</div>
+            <div v-else class="member-avatar-placeholder">{{ getInitial(member.name ?? shortMxName(member.userId)) }}</div>
             <span :class="['presence-dot', getPresenceDotClass(member)]" />
           </div>
           <div class="member-info">
-            <span class="member-name">{{ member.name ?? member.userId }}</span>
+            <span class="member-name">{{ member.name ?? shortMxName(member.userId) }}</span>
             <MatrixUserKindBadge :user-id="member.userId" />
             <span :class="['role-label', getRoleClass(member.powerLevel ?? 0)]">{{ getRoleLabel(member.powerLevel ?? 0) }}</span>
           </div>
@@ -146,11 +147,11 @@ const hasAnyMembers = computed(() =>
         >
           <div class="member-avatar">
             <img v-if="getMemberAvatarUrl(member)" :src="getMemberAvatarUrl(member)!" alt="" class="member-avatar-img" />
-            <div v-else class="member-avatar-placeholder">{{ getInitial(member.name ?? member.userId) }}</div>
+            <div v-else class="member-avatar-placeholder">{{ getInitial(member.name ?? shortMxName(member.userId)) }}</div>
             <span :class="['presence-dot', getPresenceDotClass(member)]" />
           </div>
           <div class="member-info">
-            <span class="member-name">{{ member.name ?? member.userId }}</span>
+            <span class="member-name">{{ member.name ?? shortMxName(member.userId) }}</span>
             <MatrixUserKindBadge :user-id="member.userId" />
             <span :class="['role-label', getRoleClass(member.powerLevel ?? 0)]">{{ getRoleLabel(member.powerLevel ?? 0) }}</span>
           </div>
@@ -168,11 +169,11 @@ const hasAnyMembers = computed(() =>
         >
           <div class="member-avatar">
             <img v-if="getMemberAvatarUrl(member)" :src="getMemberAvatarUrl(member)!" alt="" class="member-avatar-img" />
-            <div v-else class="member-avatar-placeholder">{{ getInitial(member.name ?? member.userId) }}</div>
+            <div v-else class="member-avatar-placeholder">{{ getInitial(member.name ?? shortMxName(member.userId)) }}</div>
             <span :class="['presence-dot', getPresenceDotClass(member)]" />
           </div>
           <div class="member-info">
-            <span class="member-name">{{ member.name ?? member.userId }}</span>
+            <span class="member-name">{{ member.name ?? shortMxName(member.userId) }}</span>
             <MatrixUserKindBadge :user-id="member.userId" />
           </div>
         </div>
@@ -188,10 +189,10 @@ const hasAnyMembers = computed(() =>
           @click="handleMemberClick(member)"
         >
           <div class="member-avatar">
-            <div class="member-avatar-placeholder">{{ getInitial(member.name ?? member.userId) }}</div>
+            <div class="member-avatar-placeholder">{{ getInitial(member.name ?? shortMxName(member.userId)) }}</div>
           </div>
           <div class="member-info">
-            <span class="member-name">{{ member.name ?? member.userId }}</span>
+            <span class="member-name">{{ member.name ?? shortMxName(member.userId) }}</span>
             <MatrixUserKindBadge :user-id="member.userId" />
             <span class="role-label role-label--invited">{{ t('matrixChat.memberInvited') }}</span>
           </div>

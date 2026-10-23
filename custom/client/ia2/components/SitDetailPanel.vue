@@ -13,6 +13,7 @@ import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DecisionRow } from '../composables/useDecisionRows'
 import { useSitCounts } from '../composables/useSitCounts'
+import { stripHomeserver } from '@/custom/ui/mxid-display'
 
 export type SitSegment = 'tasks' | 'online'
 
@@ -230,11 +231,11 @@ function toggleBoard(key: string): void {
 /** 有检索词时自动全展开（可检索优先于手动展开态） */
 const autoExpand = computed(() => onlineQuery.value.trim() !== '')
 
-// R6 补充：matrix userId 短显（@alice:matrix.test → @alice；三级关系第一级身份面）
+// R6 补充：matrix userId 短显（@alice:matrix.test → @alice；三级关系第一级身份面）；
+// 实现委托 ui/mxid-display（2026-10-23 收编）。非 @ 前缀（agent:/machine: 内部键）原样。
 function matrixShort(userId: string): string {
   if (!userId) return ''
-  const m = userId.match(/^@([^:]+)/)
-  return m ? `@${m[1]}` : userId
+  return userId.startsWith('@') ? stripHomeserver(userId) : userId
 }
 
 function accountOpen(userId: string): boolean {
@@ -384,7 +385,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           >
             <span class="sitp__caret">{{ accountOpen(row.account.userId) ? '▾' : '▸' }}</span>
             <span class="sitp__dot sitp__dot--ok" />
-            <span class="sitp__acct-name"><template v-if="row.account.isLeader">★ </template>{{ row.account.displayName }}</span>
+            <span class="sitp__acct-name"><template v-if="row.account.isLeader">★ </template>{{ row.account.displayName || matrixShort(row.account.userId) }}</span>
             <!-- R6 补充：matrix 账号显性化（三级关系第一级 = matrix 身份） -->
             <span class="sitp__acct-matrix" :title="row.account.userId">{{ matrixShort(row.account.userId) }}</span>
             <span class="sitp__acct-sub">{{ row.machines.length }}{{ t('ia2.sit.panelMachines') }} · {{ row.boards.length }}{{ t('ia2.sit.panelBoards') }} · {{ row.account.profiles.length }} profile</span>

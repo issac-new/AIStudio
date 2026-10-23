@@ -141,7 +141,9 @@ describe('DutyAssignPanel 组件', () => {
     expect(w.find('[data-testid="duty-panel"]').exists()).toBe(true)
     const list = w.find('[data-testid="duty-list"]')
     expect(list.text()).toContain('!room1:sv')
-    expect(list.text()).toContain('@bob:sv')
+    // 值守人显示短形（@bob，不带 :sv 后缀——2026-10-23 账号短显轮）；title 悬停见全形
+    expect(list.text()).toContain('@bob')
+    expect(list.text()).not.toContain('@bob:sv')
     expect(w.find('[data-testid="duty-assign"]').exists()).toBe(true)
     mockClient.userIdRef.value = '@mallory:sv'
     await flushPromises()
