@@ -606,6 +606,23 @@ function readCapped(file: string | null): string | null {
   return size > 1_048_576 ? `${fd.slice(0, 1_048_576)}\n…(file truncated at 1MB)` : fd
 }
 
+/** 2026-10-24 用户裁定「恢复」（方案 F32）：推演 HTML 报告正文透传——
+ *  步 26 验收看「报告可读」，此前仅帧图廊无报告本体入口。runId 走同族
+ *  isValidRun+safeRunDir 防路径越界；文件缺席 404 如实（不编造空报告）。 */
+router.get('/report/:runId', (ctx: Context) => {
+  const root = simRootOrNull()
+  if (!root) return gateClosed(ctx)
+  const run = String(ctx.params.runId ?? '')
+  if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'runId 参数非法' }; return }
+  const runDir = safeRunDir(root, run)
+  if (!runDir) { ctx.status = 400; ctx.body = { error: 'runId 参数非法（路径越界）' }; return }
+  const file = resolve(runDir, 'evidence', 'final-report.html')
+  if (!existsSync(file)) { ctx.status = 404; ctx.body = { error: '该 run 无 final-report.html（报告由步 26 生成，未跑完的 run 如实 404）' }; return }
+  ctx.type = 'html'
+  ctx.set('Cache-Control', 'no-store')
+  ctx.body = readFileSync(file, { encoding: 'utf-8' })
+})
+
 router.get('/trace', (ctx: Context) => {
   const root = simRootOrNull()
   if (!root) return gateClosed(ctx)

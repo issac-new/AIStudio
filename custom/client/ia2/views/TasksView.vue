@@ -45,6 +45,7 @@ import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import GovOrgKnowledgeView from './gov/GovOrgKnowledgeView.vue'
 import OrchestrationView from './orchestration/OrchestrationView.vue'
 import DeliveryEffectivenessView from './effectiveness/DeliveryEffectivenessView.vue'
+import ManagementAccountsPanel from '@/custom/kanban/components/ManagementAccountsPanel.vue'
 import { useTasksTabsText } from '../i18n-tasks-tabs'
 
 const { t } = useI18n()
@@ -100,6 +101,16 @@ const autoOpenCreate = computed(() => route.query.new === '1' || route.query.new
 /** 任务直达：?task=<id> 直接打开任务抽屉（注意力条/通知/工作台共用落点）。
  *  旧行为只把 ID 写进搜索框，任务若在屏外列（阻塞/进行中）用户会以为链接失效。 */
 const openTaskId = ref<string | null>(null)
+/** 三账面板动作接线（2026-10-24 挂回批）：开卡走本视图看板签 openTaskId 机制，
+ *  过滤走路由 query（与 ?task= 同通道） */
+function onAccountsOpenTask(id: string): void {
+  tab.value = 'board'
+  openTaskId.value = id
+}
+function onAccountsFilter(assignee: string): void {
+  tab.value = 'board'
+  void router.push({ query: { ...route.query, assignee } })
+}
 
 /** route query → 看板预选（tab 切换 + status 过滤器 + task 抽屉）。
  *  A0 旧签重定向：迁出 10 键整页跳目标中心（router.replace）；非法 status 忽略。 */
@@ -183,6 +194,14 @@ watch(tab, (key) => {
     </div>
     <!-- 交付效能（2026-10-23 天猫数字员工两文吸收轮）：日报/C×L 矩阵/介入归因 -->
     <div v-else-if="tab === 'effectiveness'" class="ia-area ia-tasks__observatory" data-testid="ia-tasks-panel-effectiveness">
+      <!-- 2026-10-24 用户裁定「挂回」：管理三账（进度偏差/风险分布/资源结构）自看板聚合
+           自取数，与交付效能同域；三 emits 接看板宿主既有动作（open-task=本视图卡片、
+           filter-assignee=看板过滤、go-inbox=审批收件箱），不做死按钮 -->
+      <ManagementAccountsPanel
+        @open-task="onAccountsOpenTask"
+        @filter-assignee="onAccountsFilter"
+        @go-inbox="router.push({ name: 'ia2.inbox' })"
+      />
       <DeliveryEffectivenessView />
     </div>
   </div>

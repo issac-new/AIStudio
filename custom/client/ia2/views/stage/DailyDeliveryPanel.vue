@@ -1,12 +1,16 @@
 <!-- ⑤验收·交付健康（日常源）：从任务卡读分支、工作区与结果，缺项直指任务；
      不读推演 evidence 目录。 -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../store/workspace'
 import { isRecentTask, taskPathLabel, taskResultLabel, taskStatusLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
 import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'
+import DeliveryPanel from '../sim/DeliveryPanel.vue'
+
+/** 懒渲染（同 DailyTracePanel）：收起不挂载、展开才拉推演参照 */
+const simRefOpen = ref(false)
 import CapacitySection from '@/custom/kanban/components/CapacitySection.vue'
 
 const emit = defineEmits<{ (e: 'open-task', id: string): void }>()
@@ -56,6 +60,11 @@ const missingResult = computed(() => rows.value.filter(r => !String(r.task.resul
       </table>
     </div>
     <DailySimReference what="交付物与证据链" />
+    <!-- 2026-10-24 用户裁定「恢复」：分支新鲜度与 14 件交付链并置⑤验收（只读参照） -->
+    <details class="ddp__simref" data-testid="daily-delivery-simref" @toggle="simRefOpen = ($event.target as HTMLDetailsElement).open">
+      <summary>推演交付健康（分支新鲜度 / 交付物链，只读参照）</summary>
+      <DeliveryPanel v-if="simRefOpen" />
+    </details>
   <CapacitySection />
   </section>
 </template>

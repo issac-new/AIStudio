@@ -6,6 +6,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchSimRuns, fetchSimSpecs, type SimRunSummary, type SimSpecSummary } from '../../api/sim-orchestration'
 import { humanDateTime, humanEnum } from '../../format'
+import SpecEditorView from '@/custom/loop/orchestrator/views/SpecEditorView.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,6 +22,19 @@ const backQuery = computed<Record<string, string> | undefined>(() => {
   }
   return Object.keys(q).length ? q : undefined
 })
+
+/** 2026-10-24 用户裁定「挂回」：可视化编排器（SpecEditorView，vue-flow 画布
+ *  编辑=改图改方案）回归——/hermes/loop 路由家族退役后失去唯一入口。query
+ *  view=editor 切换；保存后回只读清单并刷新。 */
+const editorMode = computed(() => route.query.view === 'editor')
+function openEditor(): void { void router.push({ query: { ...route.query, view: 'editor' } }) }
+function closeEditor(): void {
+  const q = { ...route.query }
+  delete (q as Record<string, unknown>).view
+  void router.push({ query: q })
+  void refresh()
+}
+async function onEditorSaved(): Promise<void> { closeEditor() }
 
 const specRows = computed(() => specs.value.slice(0, 50))
 const runRows = computed(() => runs.value.slice(0, 50))
@@ -49,13 +63,18 @@ onMounted(() => { void refresh() })
       <h2 class="sro__title">运行编排（只读）</h2>
       <div class="sro__actions">
         <button type="button" class="sro__button" data-testid="orc-refresh" :disabled="loading" @click="refresh">{{ loading ? '读取中…' : '刷新' }}</button>
+        <button type="button" class="sro__button" data-testid="orc-editor" @click="openEditor">打开画布编辑器</button>
         <button type="button" class="sro__button" data-testid="orc-back" @click="void router.push({ name: 'ia2.sim', query: backQuery })">返回全流程推演</button>
       </div>
     </header>
     <p class="sro__note">这里只列出推演图规格与图运行；启动、续跑和人工闸在导演台处理。日常任务协同图请回到日常工作台的看板。</p>
-    <p v-if="loadError" class="sro__error" data-testid="orc-error" :title="loadError">运行编排数据暂不可用。</p>
+    <p v-if="loadError && !editorMode" class="sro__error" data-testid="orc-error" :title="loadError">运行编排数据暂不可用。</p>
 
-    <div class="sro__body">
+    <div v-if="editorMode" class="sro__editor" data-testid="orc-editor-mode">
+      <SpecEditorView :existing-specs="specs.map(sp => ({ id: sp.id, version: sp.version }))" @back="closeEditor" @saved="onEditorSaved" />
+    </div>
+
+    <div v-else class="sro__body">
     <section class="sro__panel">
       <h3 class="sro__h">图运行（{{ runRows.length }}）</h3>
       <p v-if="!runRows.length && !loading" class="sro__empty">还没有图运行记录。</p>
@@ -97,6 +116,7 @@ onMounted(() => { void refresh() })
 .sro__note { margin: 0; font-size: 12px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 6px; padding: 6px 10px; flex-shrink: 0; }
 .sro__error { margin: 0; color: var(--ia-fail); font-size: 12px; }
 .sro__body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.sro__editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .sro__panel { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; margin: 0; }
 .sro__h { margin: 0 0 8px; font-size: 12.5px; }
 .sro__empty { margin: 0; color: var(--text-muted); font-size: 12px; }

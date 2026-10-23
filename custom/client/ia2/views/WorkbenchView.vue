@@ -40,6 +40,7 @@ import { loopRunActivity, type AttentionRow, type LoopActivity } from '../adapte
 import { useAttentionRows } from '../composables/useAttentionRows'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
+import LoopCreateWizard from '@/custom/loop/components/LoopCreateWizard.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import IdentityChatCanvas from '../components/IdentityChatCanvas.vue'
@@ -571,6 +572,14 @@ async function onCreateRoom(name: string): Promise<void> {
 
 /** agent 群聊建房型抽屉开合 */
 const groupCreateOpen = ref(false)
+/** 2026-10-24 用户裁定「挂回」：场景化创建向导（LoopCreateWizard，两步
+ *  scenario→config 自调 createLoop）回归——/hermes/loop 退役后失去唯一入口；
+ *  入口放左栏循环区上方，创建成功深链进新循环。 */
+const loopWizardOpen = ref(false)
+function onLoopCreated(loopId: string): void {
+  loopWizardOpen.value = false
+  if (loopId) void router.push(`/app/l/${encodeURIComponent(loopId)}`)
+}
 /** 左栏建房/删房动作错误（2026-10-22 走查批：原静默失败） */
 const roomActionError = ref('')
 function onCreateGroup(): void {
@@ -630,6 +639,9 @@ async function onDeleteGroup(roomId: string): Promise<void> {
       </div>
       <!-- R6 补充：左栏右缘拖拽分割条 -->
       <div class="wb__split wb__split--l" data-testid="wb-split-l" @mousedown="startDrag('left', $event)" />
+      <div class="wb__loop-entry" data-testid="wb-loop-wizard-entry">
+        <button type="button" class="wb__loop-btn" @click="loopWizardOpen = true">＋ 新建循环（场景向导）</button>
+      </div>
       <p v-if="roomActionError" style="color: var(--error, #d33); font-size: 12px; margin: 2px 0 0 8px;"
         data-testid="wb-room-action-error">{{ roomActionError }}</p>
       <FlowNavPanel
@@ -777,6 +789,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
     <!-- 五轮 F：房间参与方「＋邀请」→ Matrix 邀请对话框（自取 activeRoomId） -->
     <MatrixInviteDialog v-if="inviteOpen" @close="inviteOpen = false" />
     <!-- v14 统一聊天：agent 群聊建房型（上游 CreateRoomForm 同款抽屉） -->
+    <LoopCreateWizard v-if="loopWizardOpen" @close="loopWizardOpen = false" @created="onLoopCreated" />
     <NDrawer v-model:show="groupCreateOpen" placement="right" :width="520">
       <NDrawerContent :title="t('ia2.flow.newGroupChat')" closable>
         <CreateRoomForm @submit="onCreateGroupSubmit" @cancel="groupCreateOpen = false" />
@@ -835,6 +848,13 @@ async function onDeleteGroup(roomId: string): Promise<void> {
 .wb__center :deep(.msmb) { padding-right: 82px; }
 
 /* R6 补充：栏宽拖拽分割条（左栏右缘/右栏左缘，hover 加粗可见） */
+.wb__loop-entry { padding: 0 8px 4px; }
+.wb__loop-btn {
+  width: 100%; border: 1px dashed var(--border-color); border-radius: 6px;
+  background: transparent; color: var(--text-secondary); font: inherit; font-size: 12px;
+  padding: 5px 8px; cursor: pointer;
+  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
+}
 .wb__split {
   position: absolute; top: 0; bottom: 0; width: 5px; z-index: 90;
   cursor: col-resize; background: transparent;
