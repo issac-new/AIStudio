@@ -129,11 +129,17 @@ onUnmounted(() => { narrowMq?.removeEventListener?.('change', onNarrowChange) })
 
 const wbGridStyle = computed(() => {
   if (isNarrow.value) return { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' }
+  // 2026-10-23 栏控统一轮：独占态（恰一栏展开）该栏轨道改 1fr 占满——固定
+  // 像素轨道会把独占栏钉在拖拽宽度上，右侧留大片空白（视觉判定实测缺陷）。
+  const l = flow.layout
+  const leftTrack = l.leftFolded ? '18px' : (l.centerFolded && l.rightFolded ? 'minmax(280px, 1fr)' : `${leftWidth.value}px`)
+  const centerTrack = l.centerFolded ? '18px' : 'minmax(320px, 1fr)'
+  const rightTrack = l.rightFolded ? '18px' : (l.leftFolded && l.centerFolded ? 'minmax(320px, 1fr)' : `${rightWidth.value}px`)
   return {
     // 2026-10-19 全页走查：全局同名 .wb 规则把 display 改成 flex，三栏竖排；
     // 内联声明压过全局规则，保证「永不换列不堆叠」铁律。
     display: 'grid',
-    gridTemplateColumns: `${flow.layout.leftFolded ? '18px' : `${leftWidth.value}px`} ${flow.layout.centerFolded ? '18px' : 'minmax(320px, 1fr)'} ${flow.layout.rightFolded ? '18px' : `${rightWidth.value}px`}`,
+    gridTemplateColumns: `${leftTrack} ${centerTrack} ${rightTrack}`,
   }
 })
 
@@ -757,8 +763,9 @@ async function onDeleteGroup(roomId: string): Promise<void> {
 .wb--lf { grid-template-columns: 18px minmax(320px, 1fr) 480px; }
 .wb--cf { grid-template-columns: 280px 18px 480px; }
 .wb--rf { grid-template-columns: 280px minmax(320px, 1fr) 18px; }
-.wb--lf.wb--cf { grid-template-columns: 18px 18px 480px; }
-.wb--cf.wb--rf { grid-template-columns: 280px 18px 18px; }
+/* 独占态（恰一栏展开）：展开栏 1fr 占满（内联 wbGridStyle 驱动，此处挂载前兜底同规则） */
+.wb--lf.wb--cf { grid-template-columns: 18px 18px minmax(320px, 1fr); }
+.wb--cf.wb--rf { grid-template-columns: minmax(280px, 1fr) 18px 18px; }
 .wb--lf.wb--rf { grid-template-columns: 18px minmax(320px, 1fr) 18px; }
 .wb--lf.wb--cf.wb--rf { grid-template-columns: 18px 18px 18px; }
 .wb__left, .wb__right, .wb__center {
