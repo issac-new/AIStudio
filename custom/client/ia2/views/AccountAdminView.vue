@@ -7,6 +7,7 @@ import { useRoute } from 'vue-router'
 import { fetchRegistry, saveRegistry, provisionAccount, createInvite, type InviteResult } from '@/custom/governance/api/adminRegistry'
 import { parseFirstTable, setCellAlign } from '@/custom/governance/utils/registry-md'
 import { fetchMatrixServerInfo } from '../matrix-server-info'
+import { stripHomeserver } from '@/custom/ui/mxid-display'
 
 const COLS = ['账号', 'AI 助理账号', '角色']
 const rows = ref<string[][]>([]); const preamble = ref<string[]>([]); const after = ref<string[]>([])
@@ -80,7 +81,7 @@ async function create() {
   busy.value = true; msg.value = ''
   try {
     const r = await provisionAccount({ ...f, withAgent: String(f.withAgent) })
-    msg.value = `已创建 ${r.created.join('、')}；roster 提交 ${r.rosterCommit}`
+    msg.value = `已创建 ${r.created.map(stripHomeserver).join('、')}；roster 提交 ${r.rosterCommit}`
     form.value = { ...form.value, localName: '', role: '', password: '' }
     await load()
   } catch (e) { msg.value = `创建失败：${String(e)}` } finally { busy.value = false }
@@ -128,8 +129,8 @@ function delRow(i: number) { rows.value.splice(i, 1) }
       </div>
       <button data-testid="aac-inv-btn" :disabled="busy" @click="invite">生成邀请</button>
       <div v-if="inviteResult" class="aac__invres" data-testid="aac-inv-result">
-        <p>已创建 <b>{{ inviteResult.created.join('、') }}</b>（台账提交 {{ inviteResult.invitesCommit.slice(0, 7) }}；{{ new Date(inviteResult.expires).toLocaleString() }} 过期）</p>
-        <p class="aac__invcred">Matrix 账号：<code>{{ inviteResult.userId }}</code>　初始口令（一次性）：<code data-testid="aac-inv-pass">{{ inviteResult.initialPassword }}</code></p>
+        <p>已创建 <b>{{ inviteResult.created.map(stripHomeserver).join('、') }}</b>（台账提交 {{ inviteResult.invitesCommit.slice(0, 7) }}；{{ new Date(inviteResult.expires).toLocaleString() }} 过期）</p>
+        <p class="aac__invcred">Matrix 账号：<code :title="inviteResult.userId">{{ stripHomeserver(inviteResult.userId) }}</code>　初始口令（一次性）：<code data-testid="aac-inv-pass">{{ inviteResult.initialPassword }}</code></p>
         <p class="aac__invhint">交付方式：复制下方邀请文本经安全渠道发送；被邀人在登录页 Matrix 页签首登后到设置改密。</p>
         <button data-testid="aac-inv-copy" @click="copyInvite">{{ invCopied ? '已复制 ✓' : '复制邀请文本' }}</button>
       </div>

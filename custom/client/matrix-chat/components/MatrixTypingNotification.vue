@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
+import { shortMxName } from '@/custom/ui/mxid-display'
 
 const roomStore = useMatrixRoomStore()
 const { t } = useI18n()
@@ -13,10 +14,10 @@ const typingText = computed(() => {
   const users = typingUsers.value
   if (users.length === 0) return ''
   if (users.length === 1) {
-    return t('matrixChat.typingOne', { user: users[0] })
+    return t('matrixChat.typingOne', { user: shortMxName(users[0]) })
   }
   if (users.length === 2) {
-    return t('matrixChat.typingTwo', { user1: users[0], user2: users[1] })
+    return t('matrixChat.typingTwo', { user1: shortMxName(users[0]), user2: shortMxName(users[1]) })
   }
   return t('matrixChat.typingMany', { count: users.length })
 })

@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { useTeamRegistryStore } from '../stores/team-registry'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { agentTeamGlobalId } from '../protocol'
+import { stripHomeserver } from '@/custom/ui/mxid-display'
 
 const { t } = useI18n()
 const registry = useTeamRegistryStore()
@@ -68,8 +69,8 @@ onMounted(() => { void registry.detectRegistry() })
     <div class="dap__list" data-testid="duty-list">
       <div v-for="row in dutyRows" :key="row.roomId" class="dap__row">
         <span class="dap__room">{{ row.roomName ?? row.roomId }}</span>
-        <span class="dap__assignee">{{ row.assigneeId }}</span>
-        <span class="dap__by">{{ row.updatedBy }}</span>
+        <span class="dap__assignee" :title="row.assigneeId">{{ stripHomeserver(row.assigneeId) }}</span>
+        <span class="dap__by" :title="row.updatedBy">{{ stripHomeserver(row.updatedBy) }}</span>
         <button v-if="registry.isLeader" type="button" class="dap__clear" data-testid="duty-clear"
           @click="registry.clearDuty(row.roomId)">{{ t('teams.duty.clear') }}</button>
       </div>

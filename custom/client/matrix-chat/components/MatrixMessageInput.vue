@@ -5,6 +5,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
 import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
 import MatrixReactionPicker from './MatrixReactionPicker.vue'
+import { shortMxName, stripHomeserver } from '@/custom/ui/mxid-display'
 
 interface Props {
   /** 紧凑模式(thread 详情 composer 用):减小 padding/字号 */
@@ -323,8 +324,8 @@ function getMemberInitial(member: any): string {
           <div v-else class="mention-avatar-placeholder">{{ getMemberInitial(member) }}</div>
         </div>
         <div class="mention-info">
-          <span class="mention-name">{{ member.name ?? member.userId }}</span>
-          <span class="mention-userid">{{ member.userId }}</span>
+          <span class="mention-name">{{ member.name ?? shortMxName(member.userId) }}</span>
+          <span class="mention-userid" :title="member.userId">{{ stripHomeserver(member.userId) }}</span>
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ import { VueFlow, MarkerType, useVueFlow, type Node, type Edge } from '@vue-flow
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import { useWorkspaceStore } from '../../store/workspace'
+import { shortMxName } from '@/custom/ui/mxid-display'
 import {
   type OrchTaskRaw, type AutonomyEntry, type EscalationRecord, type StoredSpecSummary,
   classifyExecutor, controlPointReasons, deriveMissionRoots, buildMissionTree,
@@ -196,7 +197,7 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
         <section class="orch__q">
           <h4>1. 业务结果与负责人</h4>
           <p class="orch__q-line"><strong>{{ fiveQ.outcome.title }}</strong></p>
-          <p class="orch__q-line">负责人：{{ fiveQ.outcome.owner }}<template v-if="fiveQ.outcome.approver"> · 审批人：{{ fiveQ.outcome.approver }}</template></p>
+          <p class="orch__q-line">负责人：{{ fiveQ.outcome.owner }}<template v-if="fiveQ.outcome.approver"> · 审批人：{{ shortMxName(fiveQ.outcome.approver) }}</template></p>
           <p class="orch__q-line">状态：{{ fiveQ.outcome.status }} · 任务链 {{ fiveQ.outcome.taskCount }} 张卡</p>
         </section>
 
