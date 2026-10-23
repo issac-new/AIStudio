@@ -904,3 +904,5 @@
 675-client-tab-brand-swarm.patch
 # 676: 催办 owner 动态路由挂载（run21/22 复盘①产品化收尾）——registerKanbanRoutes 根挂载＋卡源=command-post 看板聚合（异步 provider）。
 676-server-kanban-nudge-mount.patch
+# 677: kanban i18n 欠账清偿——676 催办挂载批漏了 action.nudge/nudgeHint 双语词条（kanban-i18n-coverage 守门红）；GatekeeperSection 两处裸 hex 换语义 token（raw-hex 预算闸红）。
+677-client-kanban-i18n-nudge.patch
