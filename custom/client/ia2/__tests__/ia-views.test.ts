@@ -94,11 +94,11 @@ describe('视图壳内嵌接线', () => {
     await router.push('/app/board')
     await router.isReady()
     const wrapper = mount(TasksView, { global: { plugins: [router] } })
-    // 单层纪律（A0 后）：恰 3 个平级页签（看板/任务协同/协作与知识），无二级页签行
+    // 单层纪律（A0 后）：恰 4 个平级页签（看板/任务协同/协作与知识/交付效能），无二级页签行
     const tabs = wrapper.findAll('.ia-tasks__tab')
-    expect(tabs).toHaveLength(3)
-    expect(wrapper.findAll('[role="tab"]').length).toBe(3)
-    expect(tabs.map(x => x.text())).toEqual(['看板', '任务协同', '协作与知识'])
+    expect(tabs).toHaveLength(4)
+    expect(wrapper.findAll('[role="tab"]').length).toBe(4)
+    expect(tabs.map(x => x.text())).toEqual(['看板', '任务协同', '协作与知识', '交付效能'])
     // 工作台治理签：点击=页内切换（URL 不变 + 内嵌渲染 + 页签仍在）
     const govOrgTab = wrapper.find('[data-testid="ia-tasks-tab-gov-org"]')
     expect(govOrgTab.exists()).toBe(true)

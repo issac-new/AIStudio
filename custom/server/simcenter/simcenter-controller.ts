@@ -69,55 +69,24 @@ function clip(text: string, max: number): string {
   return t.length <= max ? t : `${t.slice(0, max)}…`
 }
 
-// ── 通用门与守卫（导出纯函数，测试面） ──
-
-/** run 参数字符集校验（纯函数）：631 同款 /^[A-Za-z0-9_.-]{1,64}$/。 */
-export function isValidRun(run: string): boolean {
-  return /^[A-Za-z0-9_.-]{1,64}$/.test(run)
-}
-
-/** 路径穿越二道闸（纯函数）：字符集放行的 '..'/'.' 在 resolve 后逃出 runs/ 基座
- * 即拒（startsWith(base+sep) 且不等于基座）。返回安全 run 目录或 null。 */
-export function safeRunDir(root: string, run: string): string | null {
-  if (!isValidRun(run)) return null
-  const base = resolve(root, 'runs')
-  const dir = resolve(base, run)
-  if (dir === base || !dir.startsWith(base + sep)) return null
-  return dir
-}
-
-/** SIM 根（fail-closed 门）：OBS_SIM_ROOT 缺席或不存在→null（调用方回 503）。 */
-export function simRootOrNull(): string | null {
-  const root = process.env.OBS_SIM_ROOT
-  return root && existsSync(root) ? root : null
-}
+// ── 通用门与守卫（正身已抽至 ./observer-root.ts——2026-10-23 天猫吸收轮：delivery/
+//    expertise 等消费域只需纯函数，直接 import controller 会把整个 controller 拖进
+//    编译图；此处再导出保持既有 import 路径不破） ──
+export {
+  isValidRun,
+  safeRunDir,
+  simRootOrNull,
+  observerSimRootCandidates,
+  observerSimRootOrNull,
+  currentRunOf,
+} from './observer-root'
+import { isValidRun, safeRunDir, simRootOrNull, observerSimRootOrNull, currentRunOf } from './observer-root'
 
 // ── 日常侧推演观察（2026-10-21 挂账实施轮）──────────────────────────────
 // 与 simRootOrNull 的 fail-closed 不同：观察面是 fail-soft——宿主日常未配
 // OBS_SIM_ROOT 时按固定候选位探测（env 显式优先，其后工作区约定位），全部缺席
 // 返回 available:false，不报错、不读任意路径。
-
-/** 观察面 SIM 根候选（纯函数，测试面）：显式 env 优先，其后按 overlay/upstream
- *  两种进程 cwd 形态向上找同级 ncwk-sim-mux，最后家目录约定位。 */
-export function observerSimRootCandidates(env: NodeJS.ProcessEnv, cwd: string, home: string): string[] {
-  const explicit = [env.SIM_OBSERVER_ROOT, env.OBS_SIM_ROOT, env.SIM_ROOT, env.AIPAY_SIM_ROOT]
-    .map(v => (v ?? '').trim()).filter(Boolean) as string[]
-  const heuristic = [
-    resolve(cwd, '../ncwk-sim-mux'),
-    resolve(cwd, '../../ncwk-sim-mux'),
-    resolve(cwd, '../../../ncwk-sim-mux'),
-    resolve(home, 'ncwk-sim-mux'),
-  ]
-  return [...new Set([...explicit, ...heuristic])]
-}
-
-/** 观察面 SIM 根解析：候选中第一个存在的目录；全缺席返回 null（fail-soft）。 */
-export function observerSimRootOrNull(): string | null {
-  for (const p of observerSimRootCandidates(process.env, process.cwd(), homedir())) {
-    try { if (statSync(p).isDirectory()) return p } catch { /* 候选缺席继续 */ }
-  }
-  return null
-}
+// （候选/解析正身亦在 ./observer-root.ts，见文件头注。）
 
 /** state.env 中房间键提取（纯函数）：值形如 !local:server 的键值对。 */
 export function simRoomKeysOf(state: Record<string, string>): Array<{ key: string; roomId: string }> {
@@ -130,34 +99,7 @@ export function simRoomKeysOf(state: Record<string, string>): Array<{ key: strin
   return out
 }
 
-/** 当前 run 解析（纯读）：优先 var/current-state.env 软链真身（runs/<id>/state.env），
- *  缺席回落 runs/* 按 state.env mtime 最新。均缺席返回 runId:null。 */
-export function currentRunOf(root: string): { runId: string | null; stateFile: string | null } {
-  try {
-    const link = resolve(root, 'var', 'current-state.env')
-    if (existsSync(link)) {
-      const real = realpathSync(link)
-      const m = /runs[/\\]([^/\\]+)[/\\]state\.env$/.exec(real)
-      if (m) return { runId: m[1], stateFile: real }
-    }
-  } catch { /* 软链解析失败走回落 */ }
-  try {
-    const runsDir = resolve(root, 'runs')
-    if (!existsSync(runsDir)) return { runId: null, stateFile: null }
-    let best: { runId: string; stateFile: string; mtime: number } | null = null
-    for (const name of readdirSync(runsDir)) {
-      if (!isValidRun(name)) continue
-      const stateFile = resolve(runsDir, name, 'state.env')
-      try {
-        const mtime = statSync(stateFile).mtimeMs
-        if (!best || mtime > best.mtime) best = { runId: name, stateFile, mtime }
-      } catch { /* 单 run 缺 state.env 跳过 */ }
-    }
-    return best ? { runId: best.runId, stateFile: best.stateFile } : { runId: null, stateFile: null }
-  } catch {
-    return { runId: null, stateFile: null }
-  }
-}
+/** 当前 run 解析（纯读）正身在 ./observer-root.ts（2026-10-23 抽出）。 */
 
 /** 觨演侧看板只读聚合实例：sqlite 快道直读 SIM hermes（不 spawn CLI、不装 watcher）。
  *  回落 deps 全部空实现——快道读不了时如实空板，不碰宿主 CLI。 */
