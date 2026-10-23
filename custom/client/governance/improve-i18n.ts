@@ -195,6 +195,14 @@ export interface ImproveCopy {
   noiseRunIds: string
   noiseCalibrate: string
   noiseCalibrated: string
+  suggestTitle: string
+  suggestRun: string
+  suggestProfile: string
+  suggestHint: string
+  evoVsHeldout: string
+  evolveLabel: string
+  heldoutLabel: string
+  evolveDelta: string
 }
 
 export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
@@ -391,6 +399,14 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     noiseRunIds: '基线运行 ID（≥2 条，逗号或换行分隔）',
     noiseCalibrate: '标定噪声带',
     noiseCalibrated: '已标定',
+    suggestTitle: 'AI 起草',
+    suggestRun: '起草一个提案',
+    suggestProfile: '起草用档案',
+    suggestHint: '只起草不审批：产出草稿后仍须绑基线、标定噪声带、探测、人工批准才能晋级。',
+    evoVsHeldout: '进化集 vs held-out 对照',
+    evolveLabel: '进化集通过率',
+    heldoutLabel: '回归集（held-out）通过率',
+    evolveDelta: '进化集增量',
   },
   en: {
     title: 'Improvement experiments',
@@ -585,5 +601,13 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     noiseRunIds: 'Baseline run IDs (≥2, comma or newline separated)',
     noiseCalibrate: 'Calibrate noise band',
     noiseCalibrated: 'Calibrated',
+    suggestTitle: 'AI draft',
+    suggestRun: 'Draft a proposal',
+    suggestProfile: 'Profile for drafting',
+    suggestHint: 'Drafts only, never approves: the draft still needs baseline, noise calibration, probes and human approval before promotion.',
+    evoVsHeldout: 'Evolve vs held-out',
+    evolveLabel: 'Evolve-set pass rate',
+    heldoutLabel: 'Regression (held-out) pass rate',
+    evolveDelta: 'Evolve delta',
   },
 }

@@ -57,6 +57,8 @@ export interface RegressionDto {
   total: number
   failed: number
   failedTaskIds: string[]
+  /** 回归集通过率（RRSI held-out 侧读数）。 */
+  passAt1?: number | null
 }
 
 export interface ProbeMetricsDto {
@@ -336,6 +338,13 @@ export function calibrateWorkbenchNoise(id: string, runIds: string[]): Promise<{
   return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/noise`, {
     method: 'POST', body: JSON.stringify({ runIds }),
   })
+}
+
+/** AI 起草器（RRSI proposer 受治理形态）：按面起草一个 draft 提案。 */
+export function suggestWorkbenchProposal(input: {
+  surfaceKey: SurfaceKey; targetPath?: string; profile?: string; domain?: string; actor?: string
+}): Promise<{ ok: boolean; proposal: ProposalDto }> {
+  return request('/api/harness/workbench/proposals/suggest', { method: 'POST', body: JSON.stringify(input) })
 }
 
 export function submitWorkbenchProposal(id: string): Promise<{ ok: boolean; proposal: ProposalDto }> {

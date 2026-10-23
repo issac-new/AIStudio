@@ -24,6 +24,7 @@ const api = vi.hoisted(() => ({
   addWorkbenchExperience: vi.fn(),
   setWorkbenchExperienceStatus: vi.fn(),
   calibrateWorkbenchNoise: vi.fn(),
+  suggestWorkbenchProposal: vi.fn(),
 }))
 
 vi.mock('@/custom/governance/api/workbench', () => api)
@@ -74,7 +75,7 @@ const overview = {
       {
         id: 'pr-1', variantId: 'v1', status: 'recorded',
         autoRun: { status: 'done', setId: '探测集', tasksTotal: 5, tasksDone: 5, costUsd: 1.2, estimatedTasks: 1, startedAt: 'now', finishedAt: 'now' },
-        evidence: { evalRunId: 'run-p', setId: 's', k: 2, passAt1: 0.8, passAtK: 0.8, resultPassRate: 0.8, trajectoryPassRate: 0.7, unknownRatio: 0, riskVeto: false, judgeOnline: true, statisticallyInsufficient: false, tokens: 1200, costUsd: 1, steps: 10, latencyMs: 900, regression: { runId: 'r', suiteName: '回归样本库', total: 2, failed: 0, failedTaskIds: [] } }, contrast: { quality: 'improved', reasons: [], passAt1Delta: 0.3, passAtKDelta: 0.3, resultPassRateDelta: 0.3, trajectoryPassRateDelta: 0.1, unknownRatioDelta: 0, tokenDeltaPct: 0.2, costDeltaPct: 0, stepDeltaPct: 0, latencyDeltaPct: -0.1, regressionFailed: 0 } },
+        evidence: { evalRunId: 'run-p', setId: 's', k: 2, passAt1: 0.8, passAtK: 0.8, resultPassRate: 0.8, trajectoryPassRate: 0.7, unknownRatio: 0, riskVeto: false, judgeOnline: true, statisticallyInsufficient: false, tokens: 1200, costUsd: 1, steps: 10, latencyMs: 900, regression: { runId: 'r', suiteName: '回归样本库', total: 2, failed: 0, failedTaskIds: [], passAt1: 1 } }, contrast: { quality: 'improved', reasons: [], passAt1Delta: 0.3, passAtKDelta: 0.3, resultPassRateDelta: 0.3, trajectoryPassRateDelta: 0.1, unknownRatioDelta: 0, tokenDeltaPct: 0.2, costDeltaPct: 0, stepDeltaPct: 0, latencyDeltaPct: -0.1, regressionFailed: 0 } },
       { id: 'pr-2', variantId: 'v2', status: 'planned' },
     ],
     approval: { decision: 'approved', actor: 'reviewer', note: '', variantSetDigest: 'x', at: 'now', approvalLogId: 'al-1' },
@@ -217,6 +218,42 @@ describe('HarnessImprovePanel', () => {
     expect(w.find('[data-testid="hi-evolution"]').exists()).toBe(false)
     expect(w.find('[data-testid="hi-reg-hw-001"]').exists()).toBe(false)
     expect(w.find('[data-testid="hi-proposal-hw-001"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('AI 起草行渲染并触发端点（面+目标文件透传）', async () => {
+    api.suggestWorkbenchProposal.mockResolvedValue({ ok: true, proposal: overview.proposals[0] })
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const row = w.find('[data-testid="hi-suggest"]')
+    expect(row.exists()).toBe(true)
+    await w.find('[data-testid="hi-suggest-target"]').setValue('profiles/orchestrator/SOUL.md')
+    await w.find('[data-testid="hi-suggest-run"]').trigger('click')
+    await flushPromises()
+    expect(api.suggestWorkbenchProposal).toHaveBeenCalledWith(expect.objectContaining({
+      surfaceKey: 'system_prompt', targetPath: 'profiles/orchestrator/SOUL.md',
+    }))
+    w.unmount()
+  })
+
+  it('选中候选带回归证据时显示 evolve vs held-out 并排读数', async () => {
+    const now = 'now'
+    const withSelection = {
+      ...overview,
+      proposals: [{
+        ...overview.proposals[0],
+        composition: { variantId: 'v1', digest: 'a', rationale: 'r', actor: 'x', at: now },
+        derived: { ...overview.proposals[0].derived, selectedVariantId: 'v1' },
+      }],
+    }
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(withSelection)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const row = w.find('[data-testid="hi-heldout-compare"]')
+    expect(row.exists()).toBe(true)
+    expect(row.text()).toContain('进化集通过率')
+    expect(row.text()).toContain('回归集')
+    expect(row.text()).toContain('80.0%')
     w.unmount()
   })
 

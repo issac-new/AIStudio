@@ -7,7 +7,7 @@ import {
   ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
   createProbes, createProposal, decideProposal, importExperiences, listExperiences, listProposals,
   overview, promoteProposal, recordProbe, rollbackProposal, setExperienceStatus, startAutoProbe,
-  submitProposal,
+  submitProposal, suggestProposal,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
 
@@ -109,6 +109,24 @@ router.post('/proposals', async (ctx) => {
       variants,
       profile: typeof b.profile === 'string' ? b.profile : null,
       createdBy: actorOf(ctx, b),
+    })
+    ctx.body = { ok: true, proposal }
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// AI 起草器（RRSI proposer 受治理形态）：按面起草 draft 提案，只起草不审批。
+router.post('/proposals/suggest', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = bodyOf(ctx)
+  try {
+    const proposal = await suggestProposal({
+      surfaceKey: String(b.surfaceKey ?? '') as SurfaceKey,
+      targetPath: typeof b.targetPath === 'string' ? b.targetPath : null,
+      profile: typeof b.profile === 'string' ? b.profile : null,
+      domain: typeof b.domain === 'string' ? b.domain : null,
+      actor: actorOf(ctx, b),
     })
     ctx.body = { ok: true, proposal }
   } catch (e) {
