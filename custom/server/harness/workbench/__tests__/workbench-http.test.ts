@@ -410,3 +410,67 @@ describe('RRSI 正则化 HTTP', () => {
     expect(prom.body.blockers.map((b: any) => b.code)).toContain('gain_within_noise')
   })
 })
+
+// ---------- RRSI 跟进批（2026-10-23）：AI 起草器 + held-out 读数 ----------
+
+import type { SuggestCli } from '../service'
+
+describe('RRSI 跟进批 HTTP', () => {
+  it('AI 起草器：合法 JSON → draft 提案入库（走 createProposal 全部校验）', async () => {
+    const fakeCli: SuggestCli = async () => ({
+      ok: true,
+      stdout: '前置废话\n{"title":"收紧输出格式","hypothesis":"要求纯文本输出可减少返工","content":"# Orchestrator\\n\\n要求：最终回答只给结论本身。\\n"}\n后置废话',
+    })
+    // 测试机上有真 hermes：把 CLI 指到不存在的二进制，让生产路径快速失败（如实 502）
+    const prevBin = process.env.HERMES_PROBE_HERMES_BIN
+    process.env.HERMES_PROBE_HERMES_BIN = '/nonexistent/hermes-test-bin'
+    try {
+      const res = await post('/api/harness/workbench/proposals/suggest', {
+        surfaceKey: 'system_prompt', targetPath: 'profiles/p1/SOUL.md', actor: 'tester',
+      })
+      expect(res.status).toBe(502)
+      expect(String(res.body.error)).toContain('起草器执行失败')
+    } finally {
+      if (prevBin === undefined) delete process.env.HERMES_PROBE_HERMES_BIN
+      else process.env.HERMES_PROBE_HERMES_BIN = prevBin
+    }
+    const { suggestProposal } = await import('../service')
+    const view = await suggestProposal({
+      surfaceKey: 'system_prompt', targetPath: 'profiles/p1/SOUL.md', actor: 'tester', cli: fakeCli,
+    })
+    expect(view.status).toBe('draft')
+    expect(view.title).toBe('收紧输出格式')
+    expect(view.variants).toHaveLength(1)
+    expect(view.variants[0].content).toContain('最终回答只给结论本身')
+    expect(view.createdBy).toBe('tester')
+    expect(view.derived.regularization.firstOnSurface).toBe(true)
+  })
+
+  it('AI 起草器：输出无 JSON → 502 如实报错', async () => {
+    const { suggestProposal } = await import('../service')
+    await expect(suggestProposal({
+      surfaceKey: 'system_prompt', targetPath: 'profiles/p1/SOUL.md',
+      cli: async () => ({ ok: true, stdout: '我不会输出 JSON' }),
+    })).rejects.toThrow('未包含合法 JSON')
+  })
+
+  it('AI 起草器：起草内容带评测判词标记 → createProposal 拒绝（400）', async () => {
+    const { suggestProposal, ServiceError } = await import('../service')
+    await expect(suggestProposal({
+      surfaceKey: 'system_prompt', targetPath: 'profiles/p1/SOUL.md',
+      cli: async () => ({ ok: true, stdout: '{"title":"x","hypothesis":"y","content":"包含 deterministic_eval_summary 标记"}' }),
+    })).rejects.toMatchObject({ status: 400 })
+    void ServiceError
+  })
+
+  it('record probe 后回归证据带 passAt1（held-out 读数）', async () => {
+    const composed = await createSubmittedApproved()
+    const sel = composed.derived.selectedVariantId
+    const probe = composed.probes.find((x: any) => x.variantId === sel)
+    expect(probe.evidence.regression.passAt1).toBeCloseTo(1)
+    const overview = await get('/api/harness/workbench/overview')
+    const view = overview.body.proposals.find((x: any) => x.id === composed.id)
+    const selProbe = view.probes.find((x: any) => x.variantId === sel)
+    expect(selProbe.evidence.regression.passAt1).toBeCloseTo(1)
+  })
+})

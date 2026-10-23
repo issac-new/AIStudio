@@ -101,6 +101,8 @@ export interface RegressionEvidence {
   total: number
   failed: number
   failedTaskIds: string[]
+  /** 回归运行通过率（RRSI held-out 侧读数；缺聚合为 null）。 */
+  passAt1?: number | null
 }
 
 /** 探测证据：全部字段来自 Eval Studio 的真实运行，缺数据为 null。 */
