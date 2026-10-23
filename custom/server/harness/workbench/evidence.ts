@@ -62,6 +62,7 @@ export function readRegressionEvidence(runId: string): RegressionEvidence | null
     total: set.tasks.length,
     failed: failedTaskIds.length,
     failedTaskIds: failedTaskIds.slice(0, 50),
+    passAt1: run.aggregates?.passAt1 ?? null,
   }
 }
 

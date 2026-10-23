@@ -1,6 +1,7 @@
 // overlay/custom/server/harness/workbench/service.ts
 // 改进实验台服务层：状态机 + 证据绑定 + 门禁 + 写盘/回滚。
 // 所有对外的写操作都走 mutateStore 串行化；错误抛 ServiceError（带 HTTP 状态）。
+import { execFile } from 'child_process'
 import { readFileSync } from 'fs'
 import { appendApprovalLog } from '../../approvals/approval-log'
 import { listCandidates } from '../../expcandidates/exp-store'
@@ -11,7 +12,7 @@ import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, annealedEditBudget, behaviorContrast, candidateDiversity,
   composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
   findBenchmarkLeakage, findGraderMarkers, findGraderMarkersInPath, hypothesisRetries,
-  leakageBlockers, maxEditCount, probeCost, rsiConfig, sha256, stallDetection, submitReadiness,
+  leakageBlockers, maxEditCount, probeCost, pruneSignal, rsiConfig, sha256, stallDetection, submitReadiness,
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
 import { getSet } from '../../eval/store'
@@ -444,6 +445,144 @@ export async function calibrateNoise(id: string, runIds: string[]): Promise<Prop
     }
     p.updatedAt = nowIso()
     return view(store, p)
+  })
+}
+
+// ---------- AI 起草器（RRSI proposer 的受治理形态：只起草，不审批、不探测） ----------
+
+/** 与探测同通道的 CLI 调用形态；测试注入假实现。 */
+export type SuggestCli = (args: string[], prompt: string, timeoutMs: number) => Promise<{ ok: boolean; stdout: string; error?: string }>
+
+function hermesCliBin(): string {
+  return process.env.HERMES_PROBE_HERMES_BIN?.trim() || 'hermes'
+}
+
+const defaultSuggestCli: SuggestCli = (args, prompt, timeoutMs) =>
+  new Promise((resolve) => {
+    execFile(hermesCliBin(), [...args, prompt], { timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
+      if (error) resolve({ ok: false, stdout: String(stdout ?? ''), error: String(error.message ?? error).slice(0, 300) })
+      else resolve({ ok: true, stdout: String(stdout ?? '') })
+    })
+  })
+
+export interface SuggestProposalInput {
+  surfaceKey: SurfaceKey
+  targetPath?: string | null
+  profile?: string | null
+  domain?: string | null
+  actor?: string
+  /** 测试注入：不真起 CLI。 */
+  cli?: SuggestCli
+  timeoutMs?: number
+}
+
+interface SuggestDraft {
+  title: string
+  hypothesis: string
+  content: string
+}
+
+function extractJsonObject(text: string): SuggestDraft | null {
+  const match = text.match(/\{[\s\S]*?\}/)
+  if (!match) return null
+  // 逐步扩展到平衡的花括号（起草器输出常带 markdown 围栏）
+  let depth = 0
+  let start = -1
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === '{') {
+      if (depth === 0) start = i
+      depth += 1
+    } else if (text[i] === '}') {
+      depth -= 1
+      if (depth === 0 && start >= 0) {
+        try {
+          const doc = JSON.parse(text.slice(start, i + 1)) as Partial<SuggestDraft>
+          if (typeof doc.title === 'string' && typeof doc.hypothesis === 'string' && typeof doc.content === 'string') {
+            return { title: doc.title, hypothesis: doc.hypothesis, content: doc.content }
+          }
+          return null
+        } catch {
+          start = -1
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * 按面起草一个 draft 提案（走既有 createProposal 全部校验）。
+ * 提示词按 RRSI 论文 proposer 的证据面组装：基线内容＋进化状态＋已采纳经验＋失败假设清单。
+ */
+export async function suggestProposal(input: SuggestProposalInput): Promise<ProposalView> {
+  const def = surfaceDef(input.surfaceKey)
+  if (!def) throw new ServiceError(400, `未知可编辑面：${input.surfaceKey}`)
+  const store = readStore()
+  const mine = store.proposals.filter((p) => p.surfaceKey === input.surfaceKey)
+  const cfg = rsiConfig()
+  const round = surfaceRound(store.champions, input.surfaceKey)
+  const editBudget = annealedEditBudget(round, cfg)
+  const stalled = stallDetection(mine, cfg.stallWindow)
+  const prune = pruneSignal(mine, cfg.pruneN)
+  const failedHypotheses = mine
+    .filter((p) => p.status === 'rejected' || p.status === 'rolled_back')
+    .slice(-8)
+    .map((p) => `- [${p.status}] ${p.hypothesis.slice(0, 160)}`)
+  const adoptedExperiences = store.experiences
+    .filter((e) => e.status === 'adopted' && (e.surfaceKey === null || e.surfaceKey === input.surfaceKey))
+    .slice(0, 3)
+    .map((e) => `- ${e.statement.slice(0, 200)}`)
+
+  let basePreview = '（未提供目标文件，按从零起草）'
+  if (input.targetPath) {
+    const content = readHomeFileSafe(String(input.targetPath))
+    if (content != null) basePreview = content.length > 6000 ? `${content.slice(0, 6000)}\n…（截断）` : content
+  }
+
+  const prompt = [
+    '你是 Agent Harness 改进提案起草器。只输出一个 JSON 对象，不要任何解释或 markdown 围栏。',
+    'JSON 字段：title（≤30 字）、hypothesis（一句话：改什么、预期改善什么）、content（完整的新文件全文）。',
+    '',
+    `可编辑面：${def.nameZh}（${input.surfaceKey}，${def.applyMode === 'managed' ? '可写盘' : '只建议'}，风险 ${def.risk}）`,
+    input.targetPath ? `目标文件：${input.targetPath}` : '目标文件：无（自由起草）',
+    '',
+    '当前基线文件内容：',
+    basePreview,
+    '',
+    `该面进化状态：已采纳 ${round} 轮（编辑预算 b_t=${editBudget}，本轮起草改动文件数必须 ≤ ${editBudget}）；${stalled ? '搜索停滞（连续提案无采纳，考虑换思路）；' : ''}${prune ? '近期探测无正增益，优先考虑做减法（删无贡献的机制）；' : ''}该面提案总数 ${mine.length}。`,
+    adoptedExperiences.length ? `\n已采纳经验（可参考）：\n${adoptedExperiences.join('\n')}` : '',
+    failedHypotheses.length ? `\n同面已失败假设（禁止换皮重提）：\n${failedHypotheses.join('\n')}` : '',
+    '',
+    '起草纪律：',
+    '1. 通用改进——对一类任务普遍有效，禁止引用任何具体评测任务、题目内容或答案（泄漏批评者会拦）。',
+    '2. 保持基线结构，最小必要改动；不要堆砌指令（成本规则会拦 token 增长过大的改动）。',
+    '3. content 是替换目标文件的完整新全文，不是 diff。',
+  ].filter(Boolean).join('\n')
+
+  const cli = input.cli ?? defaultSuggestCli
+  const profile = input.profile?.trim() || 'orchestrator'
+  const res = await cli(
+    ['-p', profile, '--cli', '--accept-hooks', 'chat', '-q'],
+    prompt,
+    input.timeoutMs ?? 180_000,
+  )
+  if (!res.ok) throw new ServiceError(502, `起草器执行失败：${res.error ?? 'unknown'}`)
+  const draft = extractJsonObject(res.stdout)
+  if (!draft) {
+    throw new ServiceError(502, `起草器输出未包含合法 JSON（title/hypothesis/content），输出前 200 字：${res.stdout.slice(0, 200)}`)
+  }
+  return createProposal({
+    title: draft.title.slice(0, 80),
+    hypothesis: draft.hypothesis.slice(0, 500),
+    surfaceKey: input.surfaceKey,
+    targetPath: input.targetPath ?? null,
+    mode: 'sequential',
+    domain: input.domain ?? 'general',
+    budgetCapUsd: DEFAULT_BUDGET_CAP_USD,
+    evidenceRefs: [`draft:rrsi-suggester:${input.actor ?? 'operator'}`],
+    variants: [{ label: 'AI 起草 A', content: draft.content }],
+    profile: input.profile ?? null,
+    createdBy: input.actor?.trim() || 'rrsi-suggester',
   })
 }
 
