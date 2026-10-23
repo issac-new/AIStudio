@@ -36,7 +36,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', sel: StreamSelection): void
-  (e: 'create-room', name: string): void
   (e: 'new-loop'): void
   (e: 'open-gov'): void
   /** 任务簇 chip 点击 → 看板预选（R4a） */
@@ -44,10 +43,8 @@ const emit = defineEmits<{
   /** 行/任务 chip 双击 → IDE 工作台（taskId 空则裸进，R4a 动线⑤） */
   (e: 'jump-ide', taskId: string | null): void
   /** v14：「＋新聊天」→ agent 单聊（/app/s/chat 新会话态） */
-  (e: 'new-chat'): void
   (e: 'open-identity-chat'): void
   /** v14：「＋新聊天」→ agent 群聊（WorkbenchView 开 CreateRoomForm 抽屉） */
-  (e: 'create-group'): void
   /** v14：群聊行 hover ✕ → store.deleteGroup（补偿被隐藏侧栏的删除入口） */
   (e: 'delete-group', roomId: string): void
 }>()
@@ -63,10 +60,7 @@ function sortTitle(m: FlowSortMode): string {
 const filterKind = ref<FlowFilter['kind']>('all')
 const query = ref('')
 /** 栏底内联新建房间（Electron renderer 无 window.prompt，就地输入） */
-const createOpen = ref(false)
-const createName = ref('')
 /** v14「＋新聊天」三分型菜单开合 */
-const newMenuOpen = ref(false)
 /** 任务簇展开态（会话行键 → 展开；徽章点击切换，不触发行选中） */
 const openCluster = ref<string | null>(null)
 
@@ -160,13 +154,6 @@ function stageTones(l: FlowLoopRow): string[] {
 
 const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
 
-function submitCreateRoom(): void {
-  const name = createName.value.trim()
-  if (!name) return
-  emit('create-room', name)
-  createName.value = ''
-  createOpen.value = false
-}
 </script>
 
 <template>
@@ -183,6 +170,7 @@ function submitCreateRoom(): void {
         class="flow-nav__chip"
         :class="{ 'flow-nav__chip--on': filterKind === fk }"
         :data-testid="`flow-filter-${fk}`"
+        :title="fk === 'loop' ? '只看看板自动化循环任务（loop）的观测行——非聊天' : fk === 'session' ? '只看聊天会话与房间' : '全部协作流（聊天+循环）'"
         @click="filterKind = fk"
       >{{ t(`ia2.flow.filter.${fk}`) }}</button>
     </div>
@@ -204,7 +192,7 @@ function submitCreateRoom(): void {
         :data-testid="`flow-sort-${sm}`"
         :title="sortTitle(sm)"
         @click="sortMode = sm"
-      >{{ sm === 'recent' ? '🕐' : sm === 'unread' ? '🔴' : '🔤' }}</button>
+      >{{ sm === 'recent' ? '活跃' : sm === 'unread' ? '未读' : '名称' }}</button>
     </div>
     <label class="flow-nav__groupby">
       <span>{{ zh ? '分组' : 'Group' }}</span>
@@ -344,41 +332,12 @@ function submitCreateRoom(): void {
       </div>
     </div>
 
-    <div v-if="createOpen" class="flow-nav__create">
-      <input
-        v-model="createName"
-        type="text"
-        class="flow-nav__create-input"
-        data-testid="flow-create-input"
-        :placeholder="t('ia2.flow.createPlaceholder')"
-        @keyup.enter="submitCreateRoom"
-      >
-      <button type="button" class="flow-nav__chip flow-nav__chip--on" data-testid="flow-create-ok" @click="submitCreateRoom">
-        {{ t('ia2.flow.createOk') }}
-      </button>
-    </div>
-
     <div class="flow-nav__foot">
-      <!-- 2026-10-23 五轮 E（用户裁定「新建聊天也不用去选身份，聊天已统一」）：
-           主按钮直达统一聊天窗口（@谁就是谁，无预选步骤）；特殊形态收进 ▾
-           小菜单（agent 单聊/群聊/matrix 房间），「身份对话…」冗余项退役。 -->
-      <div v-if="newMenuOpen && !createOpen" class="flow-nav__newmenu" data-testid="flow-new-menu">
-        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-agent" :title="t('ia2.flow.newAgentChatHint')" @click="newMenuOpen = false; emit('new-chat')">
-          💬 {{ t('ia2.flow.newAgentChat') }}
-        </button>
-        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-group" :title="t('ia2.flow.newGroupChatHint')" @click="newMenuOpen = false; emit('create-group')">
-          👥 {{ t('ia2.flow.newGroupChat') }}
-        </button>
-        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-room" :title="t('ia2.flow.newMatrixRoomHint')" @click="newMenuOpen = false; createOpen = true">
-          # {{ t('ia2.flow.newMatrixRoom') }}
-        </button>
-      </div>
-      <span v-if="!createOpen" class="flow-nav__newchat">
-        <button type="button" class="flow-nav__chip flow-nav__chip--primary" data-testid="flow-new-session" title="直接开始聊天——在消息里 @任意身份 即可与之对话（无需先选）" @click="emit('open-identity-chat')">
-          ＋ {{ t('ia2.flow.newChat', zh ? '新建聊天' : 'New chat') }}
-        </button>
-        <button type="button" class="flow-nav__newchat-more" data-testid="flow-new-session-more" :title="zh ? '更多形态：单聊会话 / 群聊 / Matrix 房间' : 'More: session / group / Matrix room'" :aria-label="zh ? '更多新建形态' : 'More new-chat forms'" @click="newMenuOpen = !newMenuOpen">▾</button>
-      </span>
+      <!-- 2026-10-23 五轮 G：聊天统一后 ▾ 特殊形态菜单与建房输入退役（用户裁定），
+           主按钮单一直达统一聊天窗口。 -->
+      <button type="button" class="flow-nav__chip flow-nav__chip--primary" data-testid="flow-new-session" title="直接开始聊天——在消息里 @任意身份 即可与之对话（无需先选）" @click="emit('open-identity-chat')">
+        ＋ {{ t('ia2.flow.newChat', zh ? '新建聊天' : 'New chat') }}
+      </button>
       <!-- S5（补遗⑤）：/app/eng 编排页退役——＋新循环入口随之摘除（守门 workbench-flow
            断言 flow-new-loop 不存在；循环创建走脚本/运行中心，恢复路由即回生）。 -->
 
