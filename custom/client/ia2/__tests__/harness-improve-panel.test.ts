@@ -23,6 +23,7 @@ const api = vi.hoisted(() => ({
   importWorkbenchExperiences: vi.fn(),
   addWorkbenchExperience: vi.fn(),
   setWorkbenchExperienceStatus: vi.fn(),
+  calibrateWorkbenchNoise: vi.fn(),
 }))
 
 vi.mock('@/custom/governance/api/workbench', () => api)
@@ -83,8 +84,25 @@ const overview = {
       cost: { total: 2, complete: false, missing: ['pr-2'] },
       recordedProbes: 1, totalProbes: 2, selectedVariantId: null, selectedContrast: null,
       diversity: { n: 2, nDistinct: 2, meanLineJaccard: 0.25 },
+      regularization: {
+        round: 1, horizon: 20, editBudget: 4, maxEditCount: 3, editBudgetExceeded: false,
+        noiseDelta: null, noiseRuns: 0, stalled: true, stallWindow: 3, firstOnSurface: false,
+        hypothesisRetry: [{ proposalId: 'hw-000', title: '旧提案', status: 'rejected', similarity: 0.72 }],
+      },
     },
   }],
+  evolution: {
+    config: { horizon: 20, bMin: 1, bMax: 4, stallWindow: 3, pruneN: 4, beta0: 0.1, beta1PerPoint: 0.25, requireNoise: false },
+    surfaces: [{
+      surfaceKey: 'system_prompt', rounds: 2, proposalsTotal: 4, promoted: 2, rejected: 1, rolledBack: 0, open: 1,
+      failedProbes: 0, stalled: true, pruneSuggested: false,
+      timeline: [
+        { round: 1, proposalId: 'hw-000', variantLabel: 'A', promotedAt: '2026-10-01T00:00:00Z', rolledBack: false, passAt1: 0.6, tokens: 1000, costUsd: 1, noiseDelta: 0.02, passAt1Delta: 0.1 },
+        { round: 2, proposalId: 'hw-001', variantLabel: 'B', promotedAt: '2026-10-02T00:00:00Z', rolledBack: false, passAt1: 0.7, tokens: 1100, costUsd: 1.1, noiseDelta: 0.02, passAt1Delta: 0.1 },
+      ],
+    }],
+    unexercised: ['memory', 'plugins'],
+  },
   champions: [],
   experiences: [{
     id: 'exp-001', surfaceKey: null, statement: '先复现再改代码', evidenceRefs: ['exp-1', 'task:t1'],
@@ -155,6 +173,50 @@ describe('HarnessImprovePanel', () => {
     await w.find('[data-testid="hi-auto-run-hw-001"]').trigger('click')
     await flushPromises()
     expect(api.startAutoProbe).toHaveBeenCalledWith('hw-001', expect.objectContaining({ setId: '探测集', maxTasks: 5 }))
+    w.unmount()
+  })
+
+  it('RRSI 进化与正则化区：曲线/去向/正则化表/未探索面；提案卡带正则化读数与失败假设警示', async () => {
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const evo = w.find('[data-testid="hi-evolution"]')
+    expect(evo.exists()).toBe(true)
+    expect(w.find('[data-testid="hi-evo-curve-system_prompt"]').exists()).toBe(true)
+    expect(w.findAll('[data-testid="hi-evo-curve-system_prompt"] circle').length).toBe(2)
+    expect(w.find('[data-testid="hi-evo-curve-system_prompt"] path').attributes('d')).toMatch(/^M/)
+    expect(w.find('[data-testid="hi-evo-outcome-system_prompt"]').text()).toContain('被采纳 2')
+    expect(w.find('[data-testid="hi-reg-row-system_prompt"]').text()).toContain('系统提示词')
+    expect(w.find('[data-testid="hi-evo-unexercised"]').text()).toContain('记忆')
+    expect(w.find('[data-testid="hi-evo-unexercised"]').text()).toContain('插件')
+    const strip = w.find('[data-testid="hi-reg-hw-001"]')
+    expect(strip.text()).toContain('1/20')
+    expect(strip.text()).toContain('未标定')
+    expect(strip.text()).toContain('搜索停滞')
+    expect(w.find('[data-testid="hi-hypothesis-retry-hw-001"]').text()).toContain('hw-000')
+    w.unmount()
+  })
+
+  it('噪声标定：输入运行 ID 并点击触发端点（逗号/换行分隔）', async () => {
+    api.calibrateWorkbenchNoise.mockResolvedValue({ ok: true, proposal: overview.proposals[0] })
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const row = w.find('[data-testid="hi-noise-hw-001"]')
+    expect(row.exists()).toBe(true)
+    await row.find('textarea').setValue('run-a, run-b\nrun-c')
+    await row.find('button').trigger('click')
+    await flushPromises()
+    expect(api.calibrateWorkbenchNoise).toHaveBeenCalledWith('hw-001', ['run-a', 'run-b', 'run-c'])
+    w.unmount()
+  })
+
+  it('旧载荷（无 evolution/regularization）不渲染新区块也不报错', async () => {
+    const legacy = { ...overview, evolution: undefined, proposals: [{ ...overview.proposals[0], derived: { ...overview.proposals[0].derived, regularization: undefined } }] }
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(legacy)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    expect(w.find('[data-testid="hi-evolution"]').exists()).toBe(false)
+    expect(w.find('[data-testid="hi-reg-hw-001"]').exists()).toBe(false)
+    expect(w.find('[data-testid="hi-proposal-hw-001"]').exists()).toBe(true)
     w.unmount()
   })
 

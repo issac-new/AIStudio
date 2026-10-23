@@ -162,6 +162,39 @@ export interface ImproveCopy {
   autoProgress: string
   autoEstimated: string
   autoBudgetStop: string
+  evoTitle: string
+  evoSub: string
+  evoCurveTitle: string
+  evoRoundLabel: string
+  evoPassLabel: string
+  evoNoiseBand: string
+  evoOutcome: string
+  evoAccepted: string
+  evoRejectedLabel: string
+  evoRolledBackLabel: string
+  evoOpenLabel: string
+  evoFailedProbes: string
+  evoUnexercised: string
+  evoNoData: string
+  evoRollbackMark: string
+  regTitle: string
+  regSub: string
+  regRound: string
+  regEditBudget: string
+  regEditCount: string
+  regStalled: string
+  regYes: string
+  regNo: string
+  regPrune: string
+  regNoise: string
+  regNoiseNone: string
+  regFirstSurface: string
+  hypothesisRetry: string
+  noiseTitle: string
+  noiseHint: string
+  noiseRunIds: string
+  noiseCalibrate: string
+  noiseCalibrated: string
 }
 
 export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
@@ -325,6 +358,39 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     autoProgress: '进度',
     autoEstimated: '估值记账',
     autoBudgetStop: '预算硬停',
+    evoTitle: '进化与正则化',
+    evoSub: 'RSI 也会过拟合：evolve 集上的分不代表迁移。此处按 RRSI（arXiv 2609.24972）把七项正则化装进闭环——退火编辑预算、泄漏批评者、噪声带接受地板、成本规则、停滞转向、剪枝建议、失败假设不复提。',
+    evoCurveTitle: '进化曲线（通过率 × 轮次）',
+    evoRoundLabel: '轮次',
+    evoPassLabel: '通过率',
+    evoNoiseBand: '噪声带 δ',
+    evoOutcome: '提案去向',
+    evoAccepted: '被采纳',
+    evoRejectedLabel: '被驳回',
+    evoRolledBackLabel: '采纳后回滚',
+    evoOpenLabel: '在途',
+    evoFailedProbes: '探测失败',
+    evoUnexercised: '从未探索的面（探索槽位应留给它们）',
+    evoNoData: '暂无进化数据：先在同一面上走完 提案→探测→晋级 的循环。',
+    evoRollbackMark: '已回滚',
+    regTitle: '正则化读数（按面）',
+    regSub: 't=该面已采纳轮次；编辑预算随轮次余弦退火（后期强制少捆绑，让每次变化可归因）。',
+    regRound: '轮次 t',
+    regEditBudget: '编辑预算 b_t',
+    regEditCount: '本轮最大捆绑',
+    regStalled: '搜索停滞',
+    regYes: '是',
+    regNo: '否',
+    regPrune: '建议做减法',
+    regNoise: '噪声带 δ',
+    regNoiseNone: '未标定',
+    regFirstSurface: '该面首个提案（结构性探索）',
+    hypothesisRetry: '似曾相识：该面有过高度相似的失败假设',
+    noiseTitle: '噪声标定',
+    noiseHint: '用 ≥2 条「未改动基线」的同评测集真实运行算 passAt1 半极差 = δ。δ 不提供调参入口——调低 δ 只会买到噪声分。',
+    noiseRunIds: '基线运行 ID（≥2 条，逗号或换行分隔）',
+    noiseCalibrate: '标定噪声带',
+    noiseCalibrated: '已标定',
   },
   en: {
     title: 'Improvement experiments',
@@ -486,5 +552,38 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     autoProgress: 'Progress',
     autoEstimated: 'estimated',
     autoBudgetStop: 'Budget stop',
+    evoTitle: 'Evolution & Regularization',
+    evoSub: 'RSI overfits: evolve-set score is not transfer. Seven RRSI regularizers (arXiv 2609.24972) are wired into the loop — annealed edit budget, leakage critic, noise-adjusted acceptance floor, cost rule, stall-driven exploration, prune suggestions, no retrying falsified hypotheses.',
+    evoCurveTitle: 'Evolution curve (pass rate × round)',
+    evoRoundLabel: 'Round',
+    evoPassLabel: 'Pass rate',
+    evoNoiseBand: 'Noise band δ',
+    evoOutcome: 'Proposal outcomes',
+    evoAccepted: 'Accepted',
+    evoRejectedLabel: 'Rejected',
+    evoRolledBackLabel: 'Rolled back',
+    evoOpenLabel: 'Open',
+    evoFailedProbes: 'Failed probes',
+    evoUnexercised: 'Never-exercised surfaces (exploration slots belong to them)',
+    evoNoData: 'No evolution data yet: finish a proposal→probe→promote cycle on one surface first.',
+    evoRollbackMark: 'rolled back',
+    regTitle: 'Regularization by surface',
+    regSub: 't = accepted rounds on the surface; the edit budget anneals with t (fewer bundled edits later, so each change stays attributable).',
+    regRound: 'Round t',
+    regEditBudget: 'Edit budget b_t',
+    regEditCount: 'Max bundled edits',
+    regStalled: 'Search stalled',
+    regYes: 'Yes',
+    regNo: 'No',
+    regPrune: 'Prune suggested',
+    regNoise: 'Noise band δ',
+    regNoiseNone: 'Uncalibrated',
+    regFirstSurface: 'First proposal on this surface (structural exploration)',
+    hypothesisRetry: 'Déjà vu: a highly similar failed hypothesis exists on this surface',
+    noiseTitle: 'Noise calibration',
+    noiseHint: 'Compute δ = half-range of passAt1 from ≥2 real runs of the unchanged baseline on one eval set. δ is deliberately not tunable — lowering it only buys noise.',
+    noiseRunIds: 'Baseline run IDs (≥2, comma or newline separated)',
+    noiseCalibrate: 'Calibrate noise band',
+    noiseCalibrated: 'Calibrated',
   },
 }

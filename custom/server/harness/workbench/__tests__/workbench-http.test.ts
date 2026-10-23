@@ -8,6 +8,7 @@ import { join } from 'node:path'
 let dir: string
 let server: import('node:http').Server
 let port: number
+let baseSetId = ''
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'harness2-http-'))
@@ -30,6 +31,7 @@ beforeEach(async () => {
     tasks: [{ id: 't1', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a1', text: 'ok', expect: 'yes', kind: 'result' }] }],
   })
   if (!baseSet.ok) throw new Error(JSON.stringify(baseSet))
+  baseSetId = baseSet.set.id
   store.appendRun(runOf('run-base', baseSet.set.id, 0.5))
   store.appendRun(runOf('run-probe', baseSet.set.id, 0.8))
   store.appendRun({ ...runOf('run-origin-probe', baseSet.set.id, 0.9), evidenceMode: 'origin' as const })
@@ -287,5 +289,124 @@ describe('Harness² 工作台 HTTP', () => {
     expect(readFileSync(join(process.env.HERMES_HOME!, 'profiles/p1/SOUL.md'), 'utf8')).toBe('old persona')
     expect(existsSync(join(process.env.HERMES_HOME!, 'skills/new_skill/SKILL.md'))).toBe(false)
     delete process.env.HARNESS2_APPLY
+  })
+})
+
+// ---------- RRSI 正则化（2026-10-23 吸收轮） ----------
+
+describe('RRSI 正则化 HTTP', () => {
+  it('噪声标定：<2 条拒；诊断证据拒；跨集拒；成功后 δ=passAt1 半极差且派生可见', async () => {
+    const created = await post('/api/harness/workbench/proposals', {
+      title: '标定', hypothesis: '先测噪声', surfaceKey: 'system_prompt',
+      targetPath: 'profiles/p1/SOUL.md', budgetCapUsd: 5, evidenceRefs: ['task:t1'],
+      variants: [{ label: '候选 A', content: 'persona A' }],
+    })
+    const id = created.body.proposal.id
+    expect((await post(`/api/harness/workbench/proposals/${id}/baseline`, { evalRunId: 'run-base' })).status).toBe(200)
+
+    expect((await post(`/api/harness/workbench/proposals/${id}/noise`, { runIds: ['run-base'] })).status).toBe(400)
+    expect((await post(`/api/harness/workbench/proposals/${id}/noise`, { runIds: ['run-base', 'run-origin-probe'] })).status).toBe(400)
+    expect((await post(`/api/harness/workbench/proposals/${id}/noise`, { runIds: ['run-base', 'run-reg'] })).status).toBe(400)
+
+    const ok = await post(`/api/harness/workbench/proposals/${id}/noise`, { runIds: ['run-base', 'run-probe'] })
+    expect(ok.status).toBe(200)
+    expect(ok.body.proposal.noise.delta).toBeCloseTo(0.15)
+    expect(ok.body.proposal.noise.method).toBe('half-range')
+    expect(ok.body.proposal.derived.regularization.noiseDelta).toBeCloseTo(0.15)
+    expect(ok.body.proposal.derived.regularization.noiseRuns).toBe(2)
+  })
+
+  it('overview 含 evolution 段：超参/时间线/未探索面；提案派生带 regularization', async () => {
+    const composed = await createSubmittedApproved()
+    const prom = await post(`/api/harness/workbench/proposals/${composed.id}/promote`, { apply: false })
+    expect(prom.status).toBe(200)
+
+    const { body } = await get('/api/harness/workbench/overview')
+    expect(body.evolution.config.horizon).toBeGreaterThan(0)
+    expect(body.evolution.config.bMin).toBeGreaterThanOrEqual(1)
+    const sys = body.evolution.surfaces.find((s: any) => s.surfaceKey === 'system_prompt')
+    expect(sys.rounds).toBe(1)
+    expect(sys.timeline).toHaveLength(1)
+    expect(sys.timeline[0].passAt1).toBeCloseTo(0.8)
+    expect(sys.timeline[0].passAt1Delta).toBeCloseTo(0.3)
+    expect(body.evolution.unexercised.length).toBeGreaterThan(0)
+    const view = body.proposals.find((x: any) => x.id === composed.id)
+    expect(view.derived.regularization.round).toBe(1)
+    expect(view.derived.regularization.editBudgetExceeded).toBe(false)
+  })
+
+  it('提交期泄漏批评者：候选携带基线集任务 ID → 400 benchmark_leakage', async () => {
+    const store = await import('../../../eval/store')
+    const leakSet = store.createSet({
+      name: '泄漏哨兵集',
+      track: 'e2e',
+      tasks: [{ id: 'task-secret-001', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a1', text: 'ok', expect: 'yes', kind: 'result' }] }],
+    })
+    if (!leakSet.ok) throw new Error(JSON.stringify(leakSet))
+    store.appendRun(runOf('run-leak-base', leakSet.set.id, 0.5))
+
+    const created = await post('/api/harness/workbench/proposals', {
+      title: '带题', hypothesis: '记住这道题', surfaceKey: 'system_prompt',
+      targetPath: 'profiles/p1/SOUL.md', budgetCapUsd: 5, evidenceRefs: ['task:t1'],
+      variants: [{ label: '候选 A', content: 'persona A，特别注意 task-secret-001 要按题面特判处理' }],
+    })
+    const id = created.body.proposal.id
+    expect((await post(`/api/harness/workbench/proposals/${id}/baseline`, { evalRunId: 'run-leak-base' })).status).toBe(200)
+    const submit = await post(`/api/harness/workbench/proposals/${id}/submit`, {})
+    expect(submit.status).toBe(400)
+    expect(submit.body.blockers.map((b: any) => b.code)).toContain('benchmark_leakage')
+  })
+
+  it('提交期退火预算：树候选 5 文件 > 首轮预算 4 → 400 edit_budget_exceeded', async () => {
+    const created = await post('/api/harness/workbench/proposals', {
+      title: '大捆绑', hypothesis: '一次改五个机制', surfaceKey: 'memory',
+      budgetCapUsd: 5, evidenceRefs: ['task:t1'],
+      variants: [{
+        label: '候选 A',
+        files: [1, 2, 3, 4, 5].map((n) => ({ path: `memory/note-${n}.md`, content: `note ${n}` })),
+      }],
+    })
+    const id = created.body.proposal.id
+    expect((await post(`/api/harness/workbench/proposals/${id}/baseline`, { evalRunId: 'run-base' })).status).toBe(200)
+    const submit = await post(`/api/harness/workbench/proposals/${id}/submit`, {})
+    expect(submit.status).toBe(400)
+    expect(submit.body.blockers.map((b: any) => b.code)).toContain('edit_budget_exceeded')
+  })
+
+  it('晋级期噪声地板：标定 δ=0.25 后 0.05 增益落带内 → 409 gain_within_noise（非首个提案，无探索豁免）', async () => {
+    const store = await import('../../../eval/store')
+    store.appendRun(runOf('run-noise-lo', baseSetId, 0.5))
+    store.appendRun(runOf('run-noise-hi', baseSetId, 1.0))
+    store.appendRun(runOf('run-low-probe', baseSetId, 0.55))
+
+    // 先造一个同面前序提案：该面不再是「首个提案」，带内增益不享受结构性探索豁免
+    const prior = await post('/api/harness/workbench/proposals', {
+      title: '前序', hypothesis: '占位', surfaceKey: 'system_prompt',
+      targetPath: 'profiles/p1/SOUL.md', budgetCapUsd: 5, evidenceRefs: ['task:t1'],
+      variants: [{ label: '候选 Z', content: 'persona Z' }],
+    })
+    expect(prior.status).toBe(200)
+
+    const created = await post('/api/harness/workbench/proposals', {
+      title: '小增益', hypothesis: '微调措辞', surfaceKey: 'system_prompt',
+      targetPath: 'profiles/p1/SOUL.md', budgetCapUsd: 5, evidenceRefs: ['task:t1'],
+      variants: [{ label: '候选 A', content: 'persona A' }],
+    })
+    const id = created.body.proposal.id
+    expect((await post(`/api/harness/workbench/proposals/${id}/baseline`, { evalRunId: 'run-base' })).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id}/noise`, { runIds: ['run-noise-lo', 'run-noise-hi'] })).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id}/submit`, {})).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id}/decide`, { decision: 'approve', actor: 'r', note: '' })).status).toBe(200)
+    const probed = await post(`/api/harness/workbench/proposals/${id}/probes`, {})
+    for (const probe of probed.body.proposal.probes) {
+      const rec = await post(`/api/harness/workbench/proposals/${id}/probes/${probe.id}/record`, {
+        evalRunId: 'run-low-probe', regressionRunId: 'run-reg',
+      })
+      expect(rec.status).toBe(200)
+    }
+    expect((await post(`/api/harness/workbench/proposals/${id}/compose`, { variantId: 'v1', rationale: '微调' })).status).toBe(200)
+    const prom = await post(`/api/harness/workbench/proposals/${id}/promote`, { apply: false })
+    expect(prom.status).toBe(409)
+    expect(prom.body.blockers.map((b: any) => b.code)).toContain('gain_within_noise')
   })
 })
