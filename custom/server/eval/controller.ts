@@ -992,8 +992,8 @@ router.get('/outcome-verifiers', async (ctx) => {
 router.get('/behavior-signals', async (ctx) => {
   const days = Math.min(30, Math.max(1, Number(ctx.query.days) || 7))
   const collected = collectObsSignals(days)
-  if (!collected.available) {
-    ctx.body = { ok: true, available: false, days, reason: collected.reason ?? '观测数据不可用', signals: null }
+  if (!collected.report.available) {
+    ctx.body = { ok: true, available: false, days, reason: collected.report.notes.join('；') || '观测数据不可用', signals: null }
     return
   }
   ctx.body = { ok: true, available: true, signals: buildBehaviorSignals(collected.report.totals, days) }
