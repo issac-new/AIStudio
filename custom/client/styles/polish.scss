@@ -1,0 +1,35 @@
+// overlay/custom/client/styles/polish.scss
+// 全页面质感基座（2026-10-23 全页面优化批 D22）——所有页面共享的视觉细节一次拉升：
+//   ① 细滚动条（系统默认粗滚动条是「工具感」最大来源；主题变量取色，深浅色自适应）
+//   ② 文本选中色（默认浏览器蓝太突兀，换主题色淡混）
+//   ③ 键盘焦点环（可达性：focus-visible 描边，鼠标点击不出现）
+// 克制纪律：只做全局无损细节，不动任何布局/间距/字号（布局属各页自辖）。
+// 注入点=registries/client/entry.mts（global.scss 之后）；零补丁。
+
+/* ── ① 细滚动条（Firefox + WebKit 双轨） ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, currentColor 28%, transparent) transparent;
+}
+*::-webkit-scrollbar { width: 7px; height: 7px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, currentColor 50%, transparent);
+}
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* ── ② 文本选中色 ── */
+::selection {
+  background: color-mix(in srgb, var(--accent-primary, var(--color-primary, #2f6fed)) 28%, transparent);
+}
+
+/* ── ③ 键盘焦点环（仅键盘导航出现） ── */
+:focus-visible {
+  outline: 2px solid var(--accent-primary, var(--color-primary, #2f6fed));
+  outline-offset: 1px;
+  border-radius: 3px;
+}

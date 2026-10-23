@@ -16,6 +16,7 @@ import { i18nReady } from '@/i18n'
 import App from '@/App.vue'
 import { hashDeeplinkTarget } from './deeplink'
 import '@/styles/global.scss'
+import '@/custom/styles/polish.scss' // overlay[D22]: 全页面质感基座（细滚动条/选中色/焦点环）
 import 'katex/dist/katex.min.css'
 
 // overlay[aipaydev]: 全页面默认 dark + 中文（用户 2026-10-13 裁定）。
