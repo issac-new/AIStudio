@@ -27,6 +27,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { parseTaskFlow, type TaskFlowEvent } from '@/custom/matrix-chat/utils/task-flow'
 import MatrixServerMovedBanner from '@/custom/matrix-chat/components/MatrixServerMovedBanner.vue'
+import MatrixInviteDialog from '@/custom/matrix-chat/components/MatrixInviteDialog.vue'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useChatStore } from '@/stores/hermes/chat'
 import { usePlatformsStore } from '../store/platforms'
@@ -498,8 +499,12 @@ function onCanvasOpenTask(taskId: string): void {
   drawerOpen.value = true
 }
 
+const inviteOpen = ref(false)
 function onCanvasInvite(): void {
-  // 治理面收口（2026-10-21）：会话详情唯一归属=历史会话页（⚙会话区退役）
+  // 2026-10-23 五轮 F（房间页全面排查）：room 类型「＋邀请」直接弹 Matrix 邀请
+  // 对话框——原实现一律跳历史会话页（2026-10-21 收口权宜），在房间语境是假按钮
+  // （用户实报）。chat/group 维持跳历史页（会话详情归属不变）。
+  if (activeSel.value?.kind === 'room') { inviteOpen.value = true; return }
   void router.push({ name: 'ia2.collabHistory' })
 }
 
@@ -767,6 +772,8 @@ async function onDeleteGroup(roomId: string): Promise<void> {
     </div>
     <!-- 改派/详情：复用看板任务抽屉（含指派编辑） -->
     <KanbanTaskDrawer v-model:show="drawerOpen" :task-id="drawerTaskId" />
+    <!-- 五轮 F：房间参与方「＋邀请」→ Matrix 邀请对话框（自取 activeRoomId） -->
+    <MatrixInviteDialog v-if="inviteOpen" @close="inviteOpen = false" />
     <!-- v14 统一聊天：agent 群聊建房型（上游 CreateRoomForm 同款抽屉） -->
     <NDrawer v-model:show="groupCreateOpen" placement="right" :width="520">
       <NDrawerContent :title="t('ia2.flow.newGroupChat')" closable>
