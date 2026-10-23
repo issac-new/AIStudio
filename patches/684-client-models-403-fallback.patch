@@ -1,27 +1,17 @@
 --- a/packages/client/src/api/client.ts
 +++ b/packages/client/src/api/client.ts
-@@ -252,12 +252,15 @@
-     const text = await res.text().catch(() => '')
+@@ -293,7 +293,10 @@
      if (res.status === 403 && isLocalBff) {
        if (text.includes('User is disabled or does not exist')) {
--        clearAuthSessionState()
--        emitAuthNotice('expired')
--        if (router.currentRoute.value.name !== 'login') {
--          router.replace({ name: 'login' })
--        }
--      } else {
-+        triggerAuthRecheck()
+         triggerAuthRecheck()
+-      } else if (!path.startsWith('/api/agents/status') && !path.startsWith('/api/agents/availability')) {
 +      } else if (!path.startsWith('/api/agents/status') && !path.startsWith('/api/agents/availability')
 +        // overlay[models-403-fallback]: profile 授权缺失的模型目录查询 403=降级
 +        // 信号（stores/hermes/models.ts 已回落无 profile 查询），不弹全局 toast。
 +        && !path.startsWith('/api/hermes/available-models')) {
-+        // overlay[run13]: status/availability 为状态轮询端点，403 属降级信号而非异常
-+        // （matrix 登录账号无本地 agent 安装可见性，消费方均已 allSettled/try-catch
-+        // 降级）——静默降级，不弹全局「无权限」toast。run13 步18 帧采集实锤：
-+        // 群聊房视图冷载即弹「你没有权限访问该资源」。
-         emitAuthNotice('forbidden')
-       }
-     }
+         // overlay[run13]: status/availability 为状态轮询端点，403 属降级信号而非异常
+         // （matrix 登录账号无本地 agent 安装可见性，消费方均已 allSettled/try-catch
+         // 降级）——静默降级，不弹全局「无权限」toast。run13 步18 帧采集实锤：
 
 --- a/packages/client/src/stores/hermes/models.ts
 +++ b/packages/client/src/stores/hermes/models.ts
@@ -44,3 +34,4 @@
        if (profile !== (getModelsPageProfile() || useProfilesStore().activeProfileName || 'default')) return
        // MoA is a virtual Hermes runtime provider used by chat model pickers,
        // not a credential-backed provider that belongs in model settings or
+
