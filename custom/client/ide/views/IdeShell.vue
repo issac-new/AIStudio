@@ -578,11 +578,11 @@ onUnmounted(() => {
           <span class="ide-shell__fold-label">›</span>
         </div>
         <div v-else class="ide-shell__col ide-shell__col--sidebar">
-          <!-- R6 补充：栏控迁独立控制条行（不占内容区，根治绝对定位遮罩） -->
+          <!-- 2026-10-23 四轮：栏控叠放首行右上角（与日常工作台统一，不占行）+单一切换钮 -->
           <div class="ide-shell__colhead" data-testid="ide-colhead-sidebar">
             <IaColumnControls
-              testid="ide-col-sidebar" show-min show-max :maximized="ide.layout.sidebar.maximized"
-              @min="ide.toggleFold('sidebar')" @max="ide.toggleMax('sidebar')"
+              testid="ide-col-sidebar" :maximized="ide.layout.sidebar.maximized"
+              @max="ide.toggleMax('sidebar')"
             />
           </div>
           <!-- R6 补充：左栏右缘拖拽分割条（调整左栏宽度） -->
@@ -595,10 +595,11 @@ onUnmounted(() => {
           <span class="ide-shell__fold-label">›</span>
         </div>
         <div v-else class="ide-shell__col ide-shell__col--chat">
+          <!-- 2026-10-23 四轮：叠放首行右上角（统一）+单一切换钮+独立窗口 -->
           <div class="ide-shell__colhead" data-testid="ide-colhead-chat">
             <IaColumnControls
-              testid="ide-col-chat" show-min show-max :maximized="ide.layout.chat.maximized" show-popout
-              @min="ide.toggleFold('chat')" @max="ide.toggleMax('chat')" @popout="onChatPopout"
+              testid="ide-col-chat" :maximized="ide.layout.chat.maximized" show-popout
+              @max="ide.toggleMax('chat')" @popout="onChatPopout"
             />
           </div>
           <IdeLandingHero v-if="showLandingHero" class="ide-shell__colbody" :tasks="landingTasks" @pick="landingPickTask" @enter="landingEnterWorkspace" @board="landingGoBoard" />
@@ -758,15 +759,20 @@ onUnmounted(() => {
 
 .ide-shell__fold-label { font-size: 11px; user-select: none; }
 
-/* v12.6 栏控迁独立控制条行（不占内容区，根治绝对定位遮罩，R6 补充） */
+/* 2026-10-23 四轮：栏控叠放各栏首行右上角（与日常工作台统一，不占行）；
+ * colhead 绝对定位，首行让位防遮罩（R6 教训用让位补齐）。 */
 .ide-shell__col { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
 .ide-shell__colhead {
-  flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center;
-  height: 26px; padding: 0 6px; border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary); border-radius: 6px 6px 0 0;
+  position: absolute; top: 5px; right: 6px; z-index: 95;
+  display: flex; justify-content: flex-end; align-items: center;
+  padding: 0 2px;
 }
 .ide-shell__colctl { display: none; }
-/* 旧绝对定位让位规则已退役（栏控迁 colhead 不占内容区） */
+/* 首行右侧让位：任务侧栏模式行（单钮 ~34px）、会话栏头部（切换+独立窗口 ~58px）；
+ * 着陆页标题行同让位（会话栏两态首行都不被压） */
+.ide-shell__col--sidebar :deep(.ide-taskbar__modes) { padding-right: 34px; }
+.ide-shell__col--chat :deep(.ide-chat__head),
+.ide-shell__col--chat :deep(.ide-landing__title) { padding-right: 58px; }
 .ide-shell__colbody { flex: 1; min-height: 0; }
 .ide-shell__pane-rail {
   flex-shrink: 0; width: 18px; display: flex; align-items: flex-start; justify-content: center;
