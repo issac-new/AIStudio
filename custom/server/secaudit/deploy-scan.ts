@@ -19,7 +19,7 @@ const MAX_FILES = 300
 const MAX_FILE_BYTES = 512 * 1024
 const MAX_DEPTH = 3
 
-function deployRoot(): string | undefined {
+function deployRoot(): string {
   const env = process.env.SECAUDIT_DEPLOY_ROOT?.trim()
   if (env) return env
   return join(homedir(), '.hermes')
