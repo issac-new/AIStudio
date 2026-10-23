@@ -614,8 +614,8 @@ async function onDeleteGroup(roomId: string): Promise<void> {
            首行右上角，三栏统一 top 对齐；首行内容右侧让位防遮罩（R6 教训补齐） -->
       <div class="wb__colhead" data-testid="wb-colhead-left">
         <IaColumnControls
-          testid="ia-col-left" show-min show-max :maximized="flow.maximized === 'left'"
-          @min="flow.toggleFold('left')" @max="flow.toggleMax('left')"
+          testid="ia-col-left" :maximized="flow.maximized === 'left'"
+          @max="flow.toggleMax('left')"
         />
       </div>
       <!-- R6 补充：左栏右缘拖拽分割条 -->
@@ -650,8 +650,8 @@ async function onDeleteGroup(roomId: string): Promise<void> {
       <!-- R6 补充：中栏栏控（2026-10-23 二轮：叠放首行右上角，不占行） -->
       <div class="wb__colhead wb__colhead--center" data-testid="wb-colhead-center">
         <IaColumnControls
-          testid="ia-col-center" show-min show-max :maximized="flow.maximized === 'center'" show-popout
-          @min="flow.toggleFold('center')" @max="flow.toggleMax('center')" @popout="onPopout"
+          testid="ia-col-center" :maximized="flow.maximized === 'center'" show-popout
+          @max="flow.toggleMax('center')" @popout="onPopout"
         />
       </div>
       <!-- P5 工作台概览：#/app/overview 显式路由（左栏「🏠 概览」入口）——
@@ -721,8 +721,8 @@ async function onDeleteGroup(roomId: string): Promise<void> {
       <div class="wb__split wb__split--r" data-testid="wb-split-r" @mousedown="startDrag('right', $event)" />
       <div class="wb__colhead" data-testid="wb-colhead-right">
         <IaColumnControls
-          testid="ia-col-right" show-min show-max :maximized="flow.maximized === 'right'"
-          @min="flow.toggleFold('right')" @max="flow.toggleMax('right')"
+          testid="ia-col-right" :maximized="flow.maximized === 'right'"
+          @max="flow.toggleMax('right')"
         />
       </div>
       <TaskDecisionPanel
