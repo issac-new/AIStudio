@@ -479,7 +479,10 @@ export interface SuggestProposalInput {
 interface SuggestDraft {
   title: string
   hypothesis: string
-  content: string
+  /** 追加段形态（有目标文件时）：只起草一个待追加小节，服务端组装全文。 */
+  section?: string
+  /** 全文形态（无目标文件）：直接产出完整候选内容。 */
+  content?: string
 }
 
 function extractJsonObject(text: string): SuggestDraft | null {
@@ -497,8 +500,14 @@ function extractJsonObject(text: string): SuggestDraft | null {
       if (depth === 0 && start >= 0) {
         try {
           const doc = JSON.parse(text.slice(start, i + 1)) as Partial<SuggestDraft>
-          if (typeof doc.title === 'string' && typeof doc.hypothesis === 'string' && typeof doc.content === 'string') {
-            return { title: doc.title, hypothesis: doc.hypothesis, content: doc.content }
+          if (typeof doc.title === 'string' && typeof doc.hypothesis === 'string'
+            && (typeof doc.content === 'string' || typeof doc.section === 'string')) {
+            return {
+              title: doc.title,
+              hypothesis: doc.hypothesis,
+              ...(typeof doc.section === 'string' ? { section: doc.section } : {}),
+              ...(typeof doc.content === 'string' ? { content: doc.content } : {}),
+            }
           }
           return null
         } catch {
@@ -533,15 +542,18 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     .slice(0, 3)
     .map((e) => `- ${e.statement.slice(0, 200)}`)
 
+  const baseContent = input.targetPath ? readHomeFileSafe(String(input.targetPath)) : null
+  const sectionMode = baseContent != null
   let basePreview = '（未提供目标文件，按从零起草）'
-  if (input.targetPath) {
-    const content = readHomeFileSafe(String(input.targetPath))
-    if (content != null) basePreview = content.length > 6000 ? `${content.slice(0, 6000)}\n…（截断）` : content
+  if (baseContent != null) {
+    basePreview = baseContent.length > 6000 ? `${baseContent.slice(0, 6000)}\n…（截断）` : baseContent
   }
 
   const prompt = [
     '你是 Agent Harness 改进提案起草器。只输出一个 JSON 对象，不要任何解释或 markdown 围栏。',
-    'JSON 字段：title（≤30 字）、hypothesis（一句话：改什么、预期改善什么）、content（完整的新文件全文）。',
+    sectionMode
+      ? 'JSON 字段：title（≤30 字）、hypothesis（一句话：改什么、预期改善什么）、section（一个待追加到目标文件末尾的 markdown 小节，≤2000 字，以「## 」标题开头）。'
+      : 'JSON 字段：title（≤30 字）、hypothesis（一句话：改什么、预期改善什么）、content（完整的新文件全文）。',
     '',
     `可编辑面：${def.nameZh}（${input.surfaceKey}，${def.applyMode === 'managed' ? '可写盘' : '只建议'}，风险 ${def.risk}）`,
     input.targetPath ? `目标文件：${input.targetPath}` : '目标文件：无（自由起草）',
@@ -569,8 +581,18 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
   if (!res.ok) throw new ServiceError(502, `起草器执行失败：${res.error ?? 'unknown'}`)
   const draft = extractJsonObject(res.stdout)
   if (!draft) {
-    throw new ServiceError(502, `起草器输出未包含合法 JSON（title/hypothesis/content），输出前 200 字：${res.stdout.slice(0, 200)}`)
+    throw new ServiceError(502, `起草器输出未包含合法 JSON（title/hypothesis/${sectionMode ? 'section' : 'content'}），输出前 200 字：${res.stdout.slice(0, 200)}`)
   }
+  if (sectionMode && draft.section == null) {
+    throw new ServiceError(502, `起草器输出缺少 section（追加段形态），输出前 200 字：${res.stdout.slice(0, 200)}`)
+  }
+  if (!sectionMode && draft.content == null) {
+    throw new ServiceError(502, `起草器输出缺少 content（全文形态），输出前 200 字：${res.stdout.slice(0, 200)}`)
+  }
+  // 追加段形态：候选全文 = 基线原样 + 小节（最小改动纪律；不重写基线）
+  const assembled = sectionMode
+    ? `${baseContent as string}\n\n${(draft.section as string).trim()}\n`
+    : (draft.content as string)
   return createProposal({
     title: draft.title.slice(0, 80),
     hypothesis: draft.hypothesis.slice(0, 500),
@@ -580,9 +602,21 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     domain: input.domain ?? 'general',
     budgetCapUsd: DEFAULT_BUDGET_CAP_USD,
     evidenceRefs: [`draft:rrsi-suggester:${input.actor ?? 'operator'}`],
-    variants: [{ label: 'AI 起草 A', content: draft.content }],
+    variants: [{ label: 'AI 起草 A', content: assembled }],
     profile: input.profile ?? null,
     createdBy: input.actor?.trim() || 'rrsi-suggester',
+  })
+}
+
+/** 删除纯占位提案：仅 draft 且无探测、无裁决（有任何审计线索不可删）。 */
+export async function deleteProposal(id: string): Promise<{ id: string }> {
+  return mutateStore((store) => {
+    const p = requireProposal(store, id)
+    if (p.status !== 'draft') throw new ServiceError(409, `当前状态 ${p.status} 不可删除（仅纯草稿占位可删）`)
+    if (p.probes.length > 0) throw new ServiceError(409, '已有探测记录，不可删除（审计线索）')
+    if (p.approval) throw new ServiceError(409, '已有裁决记录，不可删除（审计线索）')
+    store.proposals = store.proposals.filter((x) => x.id !== id)
+    return { id }
   })
 }
 

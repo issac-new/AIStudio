@@ -347,6 +347,11 @@ export function suggestWorkbenchProposal(input: {
   return request('/api/harness/workbench/proposals/suggest', { method: 'POST', body: JSON.stringify(input) })
 }
 
+/** 删除纯占位提案（仅 draft 且无探测/裁决）。 */
+export function deleteWorkbenchProposal(id: string): Promise<{ ok: boolean; id: string }> {
+  return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
 export function submitWorkbenchProposal(id: string): Promise<{ ok: boolean; proposal: ProposalDto }> {
   return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/submit`, { method: 'POST', body: '{}' })
 }

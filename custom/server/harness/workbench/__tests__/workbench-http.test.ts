@@ -416,10 +416,10 @@ describe('RRSI 正则化 HTTP', () => {
 import type { SuggestCli } from '../service'
 
 describe('RRSI 跟进批 HTTP', () => {
-  it('AI 起草器：合法 JSON → draft 提案入库（走 createProposal 全部校验）', async () => {
+  it('AI 起草器：追加段形态——section 组装为 基线+小节（走 createProposal 全部校验）', async () => {
     const fakeCli: SuggestCli = async () => ({
       ok: true,
-      stdout: '前置废话\n{"title":"收紧输出格式","hypothesis":"要求纯文本输出可减少返工","content":"# Orchestrator\\n\\n要求：最终回答只给结论本身。\\n"}\n后置废话',
+      stdout: '前置废话\n{"title":"收紧输出格式","hypothesis":"要求纯文本输出可减少返工","section":"## 输出纪律\\n\\n最终回答只给结论本身。"}\n后置废话',
     })
     // 测试机上有真 hermes：把 CLI 指到不存在的二进制，让生产路径快速失败（如实 502）
     const prevBin = process.env.HERMES_PROBE_HERMES_BIN
@@ -441,6 +441,8 @@ describe('RRSI 跟进批 HTTP', () => {
     expect(view.status).toBe('draft')
     expect(view.title).toBe('收紧输出格式')
     expect(view.variants).toHaveLength(1)
+    expect(view.variants[0].content).toContain('old persona')
+    expect(view.variants[0].content).toContain('## 输出纪律')
     expect(view.variants[0].content).toContain('最终回答只给结论本身')
     expect(view.createdBy).toBe('tester')
     expect(view.derived.regularization.firstOnSurface).toBe(true)
@@ -456,9 +458,11 @@ describe('RRSI 跟进批 HTTP', () => {
 
   it('AI 起草器：起草内容带评测判词标记 → createProposal 拒绝（400）', async () => {
     const { suggestProposal, ServiceError } = await import('../service')
+    const badSection = ['## 小节', '', '包含 deterministic_eval_summary 标记'].join('\\n')
+    const fakeStdout = `{"title":"x","hypothesis":"y","section":${JSON.stringify(badSection)}}`
     await expect(suggestProposal({
       surfaceKey: 'system_prompt', targetPath: 'profiles/p1/SOUL.md',
-      cli: async () => ({ ok: true, stdout: '{"title":"x","hypothesis":"y","content":"包含 deterministic_eval_summary 标记"}' }),
+      cli: async () => ({ ok: true, stdout: fakeStdout }),
     })).rejects.toMatchObject({ status: 400 })
     void ServiceError
   })
@@ -472,5 +476,50 @@ describe('RRSI 跟进批 HTTP', () => {
     const view = overview.body.proposals.find((x: any) => x.id === composed.id)
     const selProbe = view.probes.find((x: any) => x.variantId === sel)
     expect(selProbe.evidence.regression.passAt1).toBeCloseTo(1)
+  })
+})
+
+describe('RRSI 挂账清偿批 HTTP', () => {
+  it('AI 起草器：全文形态（无 targetPath）仍直接产 content', async () => {
+    const { suggestProposal } = await import('../service')
+    const view = await suggestProposal({
+      surfaceKey: 'memory',
+      cli: async () => ({ ok: true, stdout: '{"title":"记忆卫生","hypothesis":"定期清沉睡记忆","content":"# 记忆卫生：每周清一次。"}' }),
+    })
+    expect(view.variants[0].content).toContain('# 记忆卫生：每周清一次。')
+  })
+
+  it('AI 起草器：有目标文件但输出缺 section → 报错如实（502 语义）', async () => {
+    const { suggestProposal } = await import('../service')
+    await expect(suggestProposal({
+      surfaceKey: 'system_prompt', targetPath: 'profiles/p1/SOUL.md',
+      cli: async () => ({ ok: true, stdout: '{"title":"x","hypothesis":"y","content":"全文"}' }),
+    })).rejects.toThrow('缺少 section')
+  })
+
+  it('删除占位提案：纯 draft 可删；有探测/有裁决拒绝', async () => {
+    const created = await post('/api/harness/workbench/proposals', {
+      title: '占位', hypothesis: 'x', surfaceKey: 'system_prompt',
+      targetPath: 'profiles/p1/SOUL.md', budgetCapUsd: 5, evidenceRefs: ['task:t1'],
+      variants: [{ label: 'A', content: 'a' }],
+    })
+    const id = created.body.proposal.id
+    const del = async (pid: string) => fetch(`http://127.0.0.1:${port}/api/harness/workbench/proposals/${pid}`, { method: 'DELETE' })
+    expect((await del(id)).status).toBe(200)
+    expect((await get('/api/harness/workbench/proposals')).body.proposals.find((x: any) => x.id === id)).toBeUndefined()
+
+    const promoted = await createSubmittedApproved() // probing + recorded probes
+    expect((await del(promoted.id)).status).toBe(409)
+
+    const created3 = await post('/api/harness/workbench/proposals', {
+      title: '占位3', hypothesis: 'x', surfaceKey: 'system_prompt',
+      targetPath: 'profiles/p1/SOUL.md', budgetCapUsd: 5, evidenceRefs: ['task:t1'],
+      variants: [{ label: 'A', content: 'a' }],
+    })
+    const id3 = created3.body.proposal.id
+    expect((await post(`/api/harness/workbench/proposals/${id3}/baseline`, { evalRunId: 'run-base' })).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id3}/submit`, {})).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id3}/decide`, { decision: 'approve', actor: 'r', note: '' })).status).toBe(200)
+    expect((await del(id3)).status).toBe(409)
   })
 })
