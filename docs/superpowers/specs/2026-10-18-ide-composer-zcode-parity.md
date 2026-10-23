@@ -38,7 +38,10 @@
 - D-5：模式选择加 REST 穿线但不动 chat 发送链。理由=session-mode REST 与 mention-dispatch 穿线已在线（session-mode-controller.ts 头注），接入是纯增益；chat 发送链接引擎 mode 是独立轮（组件头注既有挂账），本轮不扩。
 - D-6：思考档/上下文条/模式面板统一向上开。理由=工具条贴屏底，向下开必然被裁（ZCode 同位组件同样 `side: "top"`，display.tsx:313）。
 - D-7：既有测试锚点全保（ide-perm-*、ide-effort-*、ide-input-model-*、ide-context-bar）；`model-switcher-source.test.ts` 的双源守门断言迁入 `input-model-button.test.ts` 后删原文件。理由=测试跟着被守门的行为走，行为没丢测试不丢。
+<<<<<<< Updated upstream
 - D-8（变基补记）：main 并行进 9c0ae4b1（思考档 Teleport 进 ChatInput 底栏左簇），与本批同域。本批五控件同排的目标下，思考档落 composer 行、Teleport 方案并位退役（宿主解析/回落浮层代码随删）；其「空会话补默认模型」（adoptDefaultModelIfEmpty）与本批无冲突，原样保留。理由=两方案不能并存（双触发器/双位置），用户本批指令的粒度（五控件一排）是裁决依据。
+=======
+>>>>>>> Stashed changes
 
 ## 验收
 
