@@ -13,6 +13,7 @@ import {
 } from '@/custom/skillgov/api'
 import { skillgovMessages } from '@/custom/skillgov/i18n'
 import TopicPageLayout from '@/custom/ia2/components/TopicPageLayout.vue'
+import SkillgovSection from '@/custom/kanban/components/SkillgovSection.vue'
 import { useTabQuery } from '@/custom/ia2/composables/useTabQuery'
 import { filterScanRows, type ScanVerdictFilter } from '@/custom/skillgov/utils/filter'
 
@@ -21,10 +22,11 @@ const L = computed(() => {
   const loc = String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh')
   return loc.startsWith('zh') ? skillgovMessages.zh.skillgov : skillgovMessages.en.skillgov
 })
+const zh = computed(() => String((i18nCtx as { locale?: { value?: string } })?.locale?.value ?? 'zh').startsWith('zh'))
 
 type ScanRow = SkillScanSummaryDto['results'][number]
 
-const SKILLGOV_TABS = ['scan', 'provision'] as const
+const SKILLGOV_TABS = ['scan', 'provision', 'governance'] as const
 const tab = useTabQuery('tab', SKILLGOV_TABS, 'scan')
 const scanQuery = ref('')
 const scanVerdict = ref<ScanVerdictFilter>('all')
@@ -240,6 +242,9 @@ onUnmounted(() => window.removeEventListener('keydown', onDrawerKey))
       <button type="button" :class="{ active: tab === 'provision' }" data-testid="skillgov-tab-provision" @click="openProvision">
         {{ L.provision.tabProvision }}
       </button>
+      <button type="button" :class="{ active: tab === 'governance' }" data-testid="skillgov-tab-governance" @click="tab = 'governance'">
+        {{ zh ? '生成与教训' : 'Generate & Lessons' }}
+      </button>
     </nav>
     </template>
     <template #filters>
@@ -303,6 +308,12 @@ onUnmounted(() => window.removeEventListener('keydown', onDrawerKey))
       <p v-else class="muted">{{ L.never }}</p>
 
       <p class="muted sgov-view__hint">{{ L.enforceHint }}</p>
+    </template>
+
+    <template v-else-if="tab === 'governance'">
+      <!-- 2026-10-24 用户裁定「并入」：SkillgovSection（生成器/角色映射/教训库，
+           /api/skillgov/* 端点在营）从孤儿归位为技能治理第三签 -->
+      <SkillgovSection />
     </template>
 
     <template v-else>

@@ -191,6 +191,17 @@ onMounted(() => {
 
 <template>
   <div class="ev" data-testid="ev-panel">
+    <!-- 2026-10-24 用户裁定「恢复」（方案 F32）：步 26 报告产品内查看入口
+         （此前只有帧图廊；报告本体经服务端 /api/hermes/sim/report 透传，新窗打开） -->
+    <a
+      v-if="run"
+      class="ev__report-link"
+      data-testid="ev-report-link"
+      :href="`/api/hermes/sim/report/${encodeURIComponent(run.id)}`"
+      target="_blank"
+      rel="noopener"
+    >📄 打开完整推演报告（final-report.html，新窗）</a>
+
     <details class="ev__box ev__advanced" data-testid="ev-advanced">
       <summary class="ev__h">高级检索：按事件号 / commit 反查原文</summary>
       <div class="ev__row">
@@ -290,6 +301,12 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+.ev__report-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-bottom: 8px; font-size: 12px; color: var(--accent-primary);
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
 .ev { display: flex; flex-direction: column; gap: 12px; }
 .ev__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
 .ev__advanced > summary { cursor: pointer; margin: 0; }

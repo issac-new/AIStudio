@@ -271,7 +271,9 @@ async function stopLaunch(): Promise<void> {
 const loading = ref(false)
 const loadError = ref('')
 const state = ref<RunStateResponse | null>(null)
-const showTechnical = ref(false)
+// 2026-10-24 用户裁定「恢复」：26 步执行表/交付物/六道质量门明细默认可见
+// （方案 F4/F7/F27：运行总览是推演专区首签与冒烟必检项，不该藏在开关后）
+const showTechnical = ref(true)
 
 async function load(): Promise<void> {
   const name = run.value.trim()

@@ -9,7 +9,7 @@ import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
 
 const store = useLoopStore()
 const { t } = useI18n()
-const emit = defineEmits<{ (e: 'close'): void; (e: 'created'): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'created', loopId: string): void }>()
 
 const step = ref<'scenario' | 'config'>('scenario')
 const selectedPattern = ref<LoopPattern | null>(null)
@@ -57,8 +57,9 @@ const canCreate = computed(() => form.value.name.trim().length > 0)
 
 async function create() {
   if (!selectedPattern.value) return
+  const loopId = `loop-${form.value.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-')}-${Date.now()}`
   await store.createLoop({
-    id: `loop-${form.value.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-')}-${Date.now()}`,
+    id: loopId,
     name: form.value.name,
     goal: form.value.goal,
     stopCondition: form.value.stopCondition,
@@ -72,7 +73,7 @@ async function create() {
       warningThreshold: 0.8,
     },
   } as any)
-  emit('created')
+  emit('created', loopId)
 }
 
 function back() {

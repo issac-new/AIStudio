@@ -1,12 +1,16 @@
 <!-- ⑤验收·需求追溯（日常源）：看板任务、执行结果与人工判定入口同屏对账；
      不读取推演证据目录。推演参照在全流程推演·证据库查看。 -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../store/workspace'
 import { isRecentTask, taskPathLabel, taskResultLabel, taskStatusLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
 import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'
+import TracePanel from '../sim/TracePanel.vue'
+
+/** 懒渲染：details 收起时不挂载推演面板——日常面板语义不被推演空态污染，也不发多余请求 */
+const simRefOpen = ref(false)
 
 const emit = defineEmits<{ (e: 'open-task', id: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
@@ -41,6 +45,11 @@ const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
       </button>
     </div>
     <DailySimReference what="验收判定链（冻结单×测试报告×UAT）" />
+    <!-- 2026-10-24 用户裁定「恢复」：AC 判定链不再只藏证据库折叠区，⑤验收就地并置只读推演参照 -->
+    <details class="dtp__simref" data-testid="daily-trace-simref" @toggle="simRefOpen = ($event.target as HTMLDetailsElement).open">
+      <summary>推演 AC 判定链（只读参照）</summary>
+      <TracePanel v-if="simRefOpen" />
+    </details>
   </section>
 </template>
 
