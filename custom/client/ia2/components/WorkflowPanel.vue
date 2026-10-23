@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { fetchIdentities, type IdentityInfo } from '../identity-chat'
+import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { fetchWorkflowRun, fetchWorkflowRuns, startWorkflow, type WorkflowRun } from '../workflow'
 
 const props = defineProps<{ runId?: string | null }>()
@@ -12,6 +13,12 @@ const props = defineProps<{ runId?: string | null }>()
 const runs = ref<WorkflowRun[]>([])
 const detail = ref<WorkflowRun | null>(null)
 const identities = ref<IdentityInfo[]>([])
+
+// matrix 集群房间下拉（批 2 ①）：与左栏聊天列表同一数据源（matrix-room store），
+// 不再手填 roomId——实测手填易错且无从发现房间。
+const matrixRoom = useMatrixRoomStore()
+const roomOptions = computed(() =>
+  (matrixRoom.sortedRooms ?? []).map(r => ({ roomId: r.roomId, name: r.name || r.roomId })))
 const composerOpen = ref(false)
 const busy = ref(false)
 const errMsg = ref('')
@@ -132,7 +139,10 @@ async function run(): Promise<void> {
               <option value="" disabled>选择身份…</option>
               <option v-for="idn in identities" :key="idn.id" :value="idn.id">{{ idn.id }}{{ idn.online ? ' ·在线' : '' }}</option>
             </select>
-            <input v-else v-model="s.ref" class="wfp__input wfp__select--ref" placeholder="!roomId:matrix.test" :data-testid="`wf-step-ref-${i}`">
+            <select v-else v-model="s.ref" class="wfp__select wfp__select--ref" :data-testid="`wf-step-ref-${i}`">
+              <option value="" disabled>选择集群房间…</option>
+              <option v-for="rm in roomOptions" :key="rm.roomId" :value="rm.roomId">{{ rm.name }}（{{ rm.roomId.slice(0, 10) }}…）</option>
+            </select>
             <button v-if="form.steps.length > 1" type="button" class="wfp__rm" :data-testid="`wf-step-rm-${i}`" @click="removeStep(i)">✕</button>
           </div>
           <textarea v-model="s.instructions" class="wfp__ta" rows="2" placeholder="指令（这一步要它做什么）" :data-testid="`wf-step-ins-${i}`" />

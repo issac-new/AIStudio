@@ -33,7 +33,14 @@
 - 守门 `workflow.test.ts` 4/4（并行双身份回执/矩阵投递 eventId/校验 400/放行）；
 - ia2 双目录 756/756；浏览器端到端（见提交后走查记录）。
 
-## 残留与移交（批 2）
+## 批 2 ① 补录（2026-10-24，分支 feat/wf-matrix-dropdown）
 
-- matrix 步目标选择器当前手填 roomId（弹窗 matrix 档）——批 2 接房间下拉（matrix-room sortedRooms）；
+- matrix 步目标选择器接房间下拉：matrix-room store sortedRooms（与左栏聊天列表同一数据源），选项=房间名（roomId 前 10 位…）；手填 roomId 退役（实测易错且无从发现房间）。
+
+| # | 决策 | 理由 | 否决的备选 | 可逆 |
+|---|---|---|---|---|
+| 6 | 房间源=matrix-room store（复用左栏同源） | 已同步已连接的房间全集；单一事实源 | 独立 API 拉取（否决：重复面） | 是 |
+
+## 残留与移交（批 2 余项）
+
 - 类型化结果（Node<T> 校验）/report() 产物面板、SSE 进度流、按 run 的中止/重跑。
