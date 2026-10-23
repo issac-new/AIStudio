@@ -36,3 +36,18 @@
   - `POST launch {vscode, cwd=ncwk}` 真实拉起 VS Code（`System Events` 确认 Code 进程）；非法工具 400；
   - `GET zcode-cli/sessions` 返回本机真实会话（含当前会话「肤浅」，subagent 已滤）；
   - 浏览器：左栏「zcode CLI 会话」分组 12 行 + 终端继续/复制 ID；状态栏工具面板可用。
+
+## 补批（2026-10-19 左下角遮罩走查）
+
+- 现象：左栏「zcode CLI 会话」12 行全展（分组高 748px，bottom=1204），侧栏无滚动容器（overflow visible），行画穿侧栏底被状态栏背景遮住——左下角出现内容遮罩。
+- 修复：`.ide-taskbar__cli-body` 加 `max-height: 208px; overflow-y: auto`（≈7 行内滚），分组体收进侧栏流。
+
+### 补批决策
+
+7. **内滚上限而非砍行数**：12 条最近会话都有价值；上限+滚动保信息量不破布局。头部计数仍显示全量。
+8. **不动侧栏滚动模型**：侧栏 overflow visible 是上游既有设计（内容以不超出为前提），本批只约束自己新增的分组体，不扩大改动面。
+
+### 补批验证
+
+- 实测（1440×900）：cliBody bottom 688 ≤ 侧栏 bottom 871；归档区 bottom 718 回到可视区；12 行在滚动容器内。
+- 新增源码守门用例：cli-body 必须含 max-height + overflow-y auto（devtools-ui.test.ts 第 4 例）。
