@@ -15,7 +15,7 @@ import { hasStageAttribution, stageCircles, stageOwnersForRouteName } from '../s
 interface Crumb { label: string; to?: { name: string; query?: Record<string, string> }; title?: string }
 
 // 无路由/无 i18n 上下文（嵌板测试态）兜底：两者都可能返回无 locale/route 的
-// 对象（TabIntroBanner 同款守卫先例）；跳转用 button+router.push 而非
+// 对象（tab-intro 退役前同款守卫先例）；跳转用 button+router.push 而非
 // router-link——最小测试路由器缺 ia2.journey 时 link 的 resolve 会直接抛。
 const route = useRoute() as ReturnType<typeof useRoute> | undefined
 const router = useRouter() as ReturnType<typeof useRouter> | undefined

@@ -672,24 +672,26 @@ describe('WorkbenchView — v12.3 态势迁页头 + 三栏折叠（栏控）', (
     expect(wrapper.find('[data-testid="wb-root"]').classes()).not.toContain('wb--lf')
   })
 
-  it('v12.4 三栏栏控迁各栏顶部控制条：折叠钮+18px 导轨展开；中栏最大化/独立窗口', async () => {
+  it('栏控统一（2026-10-23）：三栏各挂 最小化+最大化，中栏另有独立窗口；最小化+导轨展开；任意栏可独占', async () => {
     const { wrapper } = await mountWb('/app/s/chat/s1')
-    // 三栏各自控制条在位（左=折叠/中=最大化+独立/右=折叠）
-    expect(wrapper.find('[data-testid="ia-col-left-fold"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-col-left-max"]').exists()).toBe(false)
+    // 三栏各自控制条在位（统一窗口语义：– 最小化 / ⤢ 最大化；中栏多 ⧉ 独立窗口）
+    expect(wrapper.find('[data-testid="ia-col-left-min"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-col-left-max"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-col-center-min"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ia-col-center-max"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ia-col-center-popout"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ia-col-right-fold"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-col-right-min"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ia-col-right-max"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ia-col-right-popout"]').exists()).toBe(false)
-    // 左折 → 导轨出现，导轨 ▶ 展开恢复
-    await wrapper.find('[data-testid="ia-col-left-fold"]').trigger('click')
+    // 左最小化 → 导轨出现，导轨 ▶ 展开恢复
+    await wrapper.find('[data-testid="ia-col-left-min"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="wb-rail-left"]').exists()).toBe(true)
     await wrapper.find('[data-testid="wb-unfold-left"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(true)
-    // 中栏最大化 = 两侧齐折；右导轨 ◀ 展开恢复右栏（左仍折）
+    // 中栏最大化 = 两侧齐折（独占）；右导轨 ◀ 展开恢复右栏（左仍折）
     await wrapper.find('[data-testid="ia-col-center-max"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(false)
@@ -698,6 +700,19 @@ describe('WorkbenchView — v12.3 态势迁页头 + 三栏折叠（栏控）', (
     await flushPromises()
     expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="wb-left"]').exists()).toBe(false)
+    // 右栏独占（2026-10-23 新能力）：右最大化 → 左中齐折，中栏导轨出现
+    const flow = useFlowStore()
+    flow.toggleMax('right')
+    await flushPromises()
+    expect(flow.maximized).toBe('right')
+    expect(wrapper.find('[data-testid="wb-center"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="wb-rail-center"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wb-right"]').exists()).toBe(true)
+    // 中栏导轨展开 → 脱离独占回到多栏
+    await wrapper.find('[data-testid="wb-unfold-center"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="wb-center"]').exists()).toBe(true)
+    expect(flow.maximized).toBe('none')
     // 中栏独立窗口：弹当前对象路由
     await wrapper.find('[data-testid="ia-col-center-popout"]').trigger('click')
     expect(popoutStubs.openPanelWindow).toHaveBeenCalledWith({ path: '/app/s/chat/s1' })
