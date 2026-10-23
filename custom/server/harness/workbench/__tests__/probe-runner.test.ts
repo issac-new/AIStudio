@@ -137,7 +137,7 @@ describe('runProbeTasks', () => {
       budgetRemainingUsd: 10, spawnRun: fakeTraceSpawn({ prompt: 1, completion: 1 }, { writeTrace: false }),
     })
     expect(noTrace.ok).toBe(false)
-    expect(noTrace.error).toContain('未产生 trace')
+    expect(noTrace.error).toContain('未产生证据')
   })
 
   it('readNewestTrace 只取 sinceMs 之后的文件', () => {
@@ -190,5 +190,52 @@ describe('spawn 韧性（瞬态故障重试一次）', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toContain('已重试一次')
     expect(result.error).toContain('quota exceeded')
+  })
+})
+
+// ---------- 挂账清偿批续：stream-json 证据通道（当前 CLI 不落 jsonl trace 的根治） ----------
+
+describe('stream-json 证据通道', () => {
+  it('result 事件 → 证据（transcript＋tokens/duration；无 trace 文件也成样）', async () => {
+    const { evidenceFromStreamJson, runProbeTasks } = await import('../probe-runner')
+    const stdout = [
+      JSON.stringify({ type: 'system', subtype: 'init' }),
+      JSON.stringify({ type: 'text', text: '43' }),
+      JSON.stringify({ type: 'result', session_id: 'local-abc', exit_code: 0, text: '43\n置信度:高', tokens: { input: 100, output: 5, total: 105 }, duration_ms: 8000 }),
+    ].join('\n')
+    const parsed = evidenceFromStreamJson(stdout)
+    expect(parsed?.sessionId).toBe('local-abc')
+    expect(parsed?.evidence.transcript).toBe('43\n置信度:高')
+    expect(parsed?.evidence.efficiency?.tokens).toBe(105)
+    expect(parsed?.evidence.efficiency?.durationMs).toBe(8000)
+
+    const result = await runProbeTasks({
+      prompts: [{ taskId: 't1', prompt: 'p' }],
+      baseHome: '/tmp', profile: 'x', variantTree: {}, budgetRemainingUsd: 5, retryDelayMs: 0,
+      spawnRun: async () => ({ ok: true, stdout }),
+    })
+    expect(result.ok).toBe(true)
+    expect(result.samples.t1[0].sessionId).toBe('local-abc')
+    expect(result.samples.t1[0].evidence?.transcript).toContain('置信度:高')
+  })
+
+  it('stdout 无 result 事件 → 回退 trace 通道；两通道全空 → 如实报错', async () => {
+    const { runProbeTasks } = await import('../probe-runner')
+    // 无 stdout（旧形态）→ 走 trace：fakeTraceSpawn 会写 trace 文件
+    const withTrace = await runProbeTasks({
+      prompts: [{ taskId: 't1', prompt: 'p' }],
+      baseHome: '/tmp', profile: 'x', variantTree: {}, budgetRemainingUsd: 5, retryDelayMs: 0,
+      spawnRun: fakeTraceSpawn({ prompt: 10, completion: 5 }),
+    })
+    expect(withTrace.ok).toBe(true)
+
+    // stdout 有垃圾但无 result、也不写 trace → 双通道缺席
+    const none = await runProbeTasks({
+      prompts: [{ taskId: 't1', prompt: 'p' }],
+      baseHome: '/tmp', profile: 'x', variantTree: {}, budgetRemainingUsd: 5, retryDelayMs: 0,
+      spawnRun: async () => ({ ok: true, stdout: 'not json at all' }),
+    })
+    expect(none.ok).toBe(false)
+    expect(none.error).toContain('未产生证据')
   })
 })
