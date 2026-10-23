@@ -28,7 +28,9 @@ export function shouldStop(mode: AutonomyMode, facts: GoalStopFacts): GoalStopDe
     return { stop: true, reason: '目标不可达（goal impossible）——三档同停' }
   }
   if (facts.budgetExhausted) {
-    return { stop: true, reason: '预算触顶（goal-budget exhausted）——三档同停' }
+    // HarnessPro 轮 HP-3（2026-10-23）：触顶停的交卷语义对齐阶段阶梯 finalize 档
+    // （goalbudget/stage-ladder.ts escalationMessage）——保留现场、基于现有证据收口。
+    return { stop: true, reason: '预算触顶（goal-budget exhausted）——三档同停：保留当前进度现场，基于现有证据交卷（阶段阶梯 finalize 档语义）' }
   }
   if (mode === 'assistive') {
     return { stop: true, reason: 'assistive 档：只建议不执行，每步停' }

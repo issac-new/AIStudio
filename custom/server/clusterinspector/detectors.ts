@@ -7,6 +7,14 @@ import { detectZeroDelivery } from './detectors-zero-delivery'
 
 export type AnomalySeverity = 'info' | 'warn' | 'high'
 
+/**
+ * 三种致命失败模式分类轴（2026-10-23 Harness 十一坑吸收轮 HP-5，腾讯文引
+ * OpenAI/Anthropic 实验）：过早宣布胜利（判定来自自我感觉而非机器可验证事实）/
+ * 上下文焦虑（长任务上下文将满开始赶进度）/越权操作（调用被禁止的面）。
+ * 打标不改变既有检测语义，供巡检按失败模式聚合。
+ */
+export type FailureMode = 'premature-victory' | 'context-anxiety' | 'unauthorized-action'
+
 export interface Anomaly {
   detector: string
   /** 异常主体（网关/平台/profile/task）——冷却去重的配对键之一 */
@@ -14,6 +22,8 @@ export interface Anomaly {
   severity: AnomalySeverity
   summary: string
   detail?: Record<string, unknown>
+  /** HP-5 失败模式分类轴（可选：与本轴相关的检测器携带，其余缺席）。 */
+  failureMode?: FailureMode
 }
 
 export interface DetectOptions {
@@ -65,6 +75,14 @@ export interface DetectOptions {
   starveWatermarkPct?: number
   /** 工具调用频次阈（次/分钟，默认 100；E2 判据一，安全轮 M7） */
   toolRatePerMin?: number
+  /** HP-5 上下文焦虑：水位阈 %（默认 80；与 D9 的 85 分层——焦虑看行为签名，D9 看绝对水位） */
+  anxietyWatermarkPct?: number
+  /** HP-5 上下文焦虑：空转连击阈（默认 2；赶进度签名之一） */
+  anxietyEmptyStreak?: number
+  /** HP-5 上下文焦虑：压缩轮换次数阈（默认 2；赶进度签名之二） */
+  anxietyRotations?: number
+  /** HP-5 敏感路径告警阈：近 24h 参数含敏感路径前缀的发起量（默认 5；≥3× 升 high） */
+  sensitivePathMin?: number
   /** 非工作时段高危操作条数升 high 的阈（默认 10；E2 判据二，安全轮 M7） */
   offhoursHighRiskMin?: number
   /** 黑名单工具集（默认 DEFAULT_TOOL_BLACKLIST；E2 判据三，安全轮 M7）。
@@ -516,6 +534,7 @@ export function detectCardBodyEmpty(snap: ClusterSnapshot, _opts: DetectOptions 
     out.push({
       detector: 'card.body-empty', subject: `card:${c.id}`,
       severity: 'warn',
+      failureMode: 'premature-victory',
       summary: `在办卡正文为空：卡 ${c.title ?? c.id}（${c.status ?? 'running'}）已派 ${c.assignee ?? '?'} 但 body 无内容——研发 AI 拿到没正文的空壳卡，产出无从对题。请补写正文或回退派单`,
       detail: { cardId: c.id, title: c.title, status: c.status, assignee: c.assignee },
     })
@@ -644,6 +663,66 @@ export function detectActiveNoArtifact(snap: ClusterSnapshot, opts: DetectOption
   return out
 }
 
+/** ── HP-5 上下文焦虑（2026-10-23 Harness 十一坑吸收轮）──
+ *  `session.context-anxiety`：上下文将满（水位≥阈 或 compaction=now）∧ 赶进度行为
+ *  签名（空转连击 ≥阈 或 压缩轮换 ≥阈）双条件——区别于 D9 纯水位告警（水位本身
+ *  已有检测），这里报的是「长任务 70%+ 开始赶进度」的行为形态（腾讯文三致命
+ *  失败模式之二）。双条件缺一不报（纯水位已由 D9 报，重复报=狼来了）。
+ *  severity：单签名 warn；双签名（空转∧轮换）high。 */
+export function detectContextAnxiety(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const watermarkAt = opts.anxietyWatermarkPct ?? 80
+  const emptyAt = opts.anxietyEmptyStreak ?? 2
+  const rotationsAt = opts.anxietyRotations ?? 2
+  const te = snap.sessionTelemetry
+  if (!te?.ok) return []
+  const out: Anomaly[] = []
+  for (const e of te.entries) {
+    const pressure = (typeof e.watermarkPct === 'number' && e.watermarkPct >= watermarkAt)
+      || e.compaction?.level === 'now'
+    if (!pressure) continue
+    const emptySig = (e.emptyStreak ?? 0) >= emptyAt
+    const rotationSig = (e.rotations ?? 0) >= rotationsAt
+    if (!emptySig && !rotationSig) continue
+    const both = emptySig && rotationSig
+    out.push({
+      detector: 'session.context-anxiety', subject: `session:${e.sessionKey}`,
+      severity: both ? 'high' : 'warn',
+      failureMode: 'context-anxiety',
+      summary: `上下文焦虑形态：${e.sessionKey} 水位 ${e.watermarkPct ?? '?'}%${e.compaction?.level === 'now' ? '（压缩已达 now 档）' : ''}，累计 ${e.cumApiCalls ?? 0} 次迭代${e.rotations ? `已轮换 ${e.rotations} 次` : ''}${emptySig ? `、空转连击 ${e.emptyStreak} 回合` : ''}——长任务临窗赶进度形态（指令遵循与收尾质量衰减），建议按交接检查点轮换或收窄任务`,
+      detail: {
+        watermarkPct: e.watermarkPct ?? null, compaction: e.compaction?.level ?? null,
+        emptyStreak: e.emptyStreak ?? 0, rotations: e.rotations ?? 0,
+        cumApiCalls: e.cumApiCalls ?? null, signatures: { empty: emptySig, rotation: rotationSig },
+      },
+    })
+  }
+  return out
+}
+
+/** ── HP-5 敏感路径越权观测（2026-10-23 Harness 十一坑吸收轮）──
+ *  `security.sensitive-path`：`sensitivePath24h`（M6b 采集面：/etc/、~/.ssh/、
+ *  其他用户 home 等敏感前缀参数）已采集但从未告警的观测真空。腾讯文三致命失败
+ *  模式之三（越权操作）的预警先行版：只报不拦（与 tool-rate 同语义），
+ *  ≥sensitivePathMin 报 warn，≥3× 升 high。未接线=合法空态。 */
+export function detectSensitivePath(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
+  const min = opts.sensitivePathMin ?? 5
+  const usage = snap.toolUsage
+  if (!usage || usage.entries.length === 0) return []
+  const out: Anomaly[] = []
+  for (const e of usage.entries) {
+    if (e.error || e.sensitivePath24h < min) continue
+    const high = e.sensitivePath24h >= min * 3
+    out.push({
+      detector: 'security.sensitive-path', subject: `profile:${e.profile}`,
+      severity: high ? 'high' : 'warn',
+      failureMode: 'unauthorized-action',
+      summary: `敏感路径访问 ${e.sensitivePath24h} 次/24h：${e.profile} 的工具参数命中敏感前缀（/etc、.ssh、其他用户 home 等）——越权操作观测面（预警先行版只报不拦），请核对该档案的在办卡是否要求此类访问`,
+      detail: { sensitivePath24h: e.sensitivePath24h, min, topTools: e.perTool24h.slice(0, 5) },
+    })
+  }
+  return out
+}
+
 export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anomaly[] {
   const base = [
     ...detectGateway(snap),
@@ -683,6 +762,9 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     // AGT 吸收轮 C/D（2026-10-21）：未注册 agent 进程 + MCP/插件配置漂移
     ...detectUnregisteredAgents(snap),
     ...detectMcpDrift(snap),
+    // HP-5 三失败模式（2026-10-23 Harness 十一坑吸收轮）：上下文焦虑 + 敏感路径越权观测
+    ...detectContextAnxiety(snap, opts),
+    ...detectSensitivePath(snap, opts),
   ]
   return [...base, ...detectStorm(base, opts)]
 }
@@ -863,6 +945,7 @@ export function detectFakeCompletion(snap: ClusterSnapshot, opts: DetectOptions 
       out.push({
         detector: 'completion.no-realwork', subject: `card:${c.id}`,
         severity: 'warn',
+        failureMode: 'premature-victory',
         summary: `假完成嫌疑（零真做）：卡 ${c.id}（${c.title ?? ''}）已置 done，但负责人 ${a} 全程无真做行（无工具轮/多轮调用）——「嘴炮完成」形态，请复核交付实际产出人或重开卡`,
         detail: { card: c.id, assignee: a },
       })

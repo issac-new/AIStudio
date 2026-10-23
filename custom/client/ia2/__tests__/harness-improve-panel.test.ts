@@ -121,6 +121,48 @@ beforeEach(() => {
 })
 
 describe('HarnessImprovePanel', () => {
+  it('帕累托三档列与经验保鲜 chip 渲染（HarnessPro 轮）', async () => {
+    const withPareto = {
+      ...overview,
+      proposals: [{
+        ...overview.proposals[0],
+        derived: {
+          ...overview.proposals[0].derived,
+          pareto: {
+            eligible: 2,
+            excluded: [],
+            note: '帕累托双目标=passAt1×costUsd',
+            entries: [
+              { variantId: 'v1', label: '候选 A', passAt1: 0.8, costUsd: 1, onFrontier: true, dominatedBy: [], tier: 'heavy' },
+              { variantId: 'v2', label: '候选 B', passAt1: 0.5, costUsd: 2, onFrontier: false, dominatedBy: ['v1'], tier: null },
+            ],
+          },
+        },
+      }],
+      experiences: [{
+        ...overview.experiences[0],
+        lastValidatedAt: 'now',
+        freshness: { confidenceScore: 0.88, ageDays: 3, band: 'fresh', anchor: 'lastValidatedAt', anchoredAt: 'now' },
+      }],
+    }
+    api.fetchWorkbenchOverview.mockResolvedValue(withPareto)
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    expect(w.find('[data-testid="hi-pareto-hw-001-v1"]').text()).toContain('heavy')
+    expect(w.find('[data-testid="hi-pareto-hw-001-v2"]').text()).toContain('帕累托劣势')
+    expect(w.find('[data-testid="hi-pareto-note-hw-001"]').text()).toContain('参与判定 2')
+    expect(w.find('[data-testid="hi-exp-fresh-exp-001"]').text()).toContain('新鲜')
+  })
+
+  it('旧载荷（无 pareto/freshness）不渲染新元素也不报错', async () => {
+    const legacy = JSON.parse(JSON.stringify(overview))
+    legacy.proposals[0].derived.pareto = undefined
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    expect(w.find('[data-testid="hi-pareto-note-hw-001"]').exists()).toBe(false)
+    expect(w.find('[data-testid="hi-exp-fresh-exp-001"]').exists()).toBe(false)
+  })
+
   it('渲染八面、提案候选、门禁阻塞与经验库', async () => {
     const w = mount(HarnessImprovePanel, )
     await flushPromises()

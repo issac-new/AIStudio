@@ -11,6 +11,7 @@ import type {
   AttemptVerdict, EvalConfig, EvalTask, Evidence,
 } from './types'
 import { similarityVerdict } from './similarity'
+import { foldRepeats } from '../toolresultguard/fold'
 import {
   Breaker, TtlCache, clefAsk, sha1Of,
   type ClefJudgeDeps, type EvalJudgeAnswers, type EvalJudgeRequest,
@@ -70,12 +71,18 @@ export interface JudgeAttemptResult {
   }
 }
 
-/** 截断到 maxStateChars：保头为主、尾留 1/4（关键结论常在文末交付段）。 */
+/**
+ * 截断到 maxStateChars：保头为主、尾留 1/4（关键结论常在文末交付段）。
+ * HarnessPro 轮 HP-4（2026-10-23）：截断前先折叠连续重复行（工具输出复读机噪音，
+ * hook.py `_compact_text` 同款两级压缩）——折叠只去掉逐字重复的行并留「重复 N 次」
+ * 标记，判分语义不变；短文直通（≤maxChars 也折叠重复行，重复行不携带新信息）。
+ */
 export function truncateForState(content: string, maxChars: number): string {
-  if (content.length <= maxChars) return content
+  const folded = foldRepeats(content)
+  if (folded.length <= maxChars) return folded
   const tail = Math.floor(maxChars / 4)
   const head = maxChars - tail - 1
-  return `${content.slice(0, head)}\n…[eval 截断 ${content.length - maxChars} 字符]…\n${content.slice(-tail)}`
+  return `${folded.slice(0, head)}\n…[eval 截断 ${folded.length - maxChars} 字符（重复行已折叠）]…\n${folded.slice(-tail)}`
 }
 
 /** 构造判定 state（证据上下文）。导出供测试与缓存键一致性校验。 */
@@ -474,6 +481,8 @@ export async function judgeAttempt(
           value: 'unknown',
           source: 's0+s1',
           conflict: true,
+          // HP-6（2026-10-23）：结构化冲突方向——s0_no_s1_yes=裁判漏判失败（盲目乐观方向）
+          conflictDirection: s0Verdict.value === 'no' ? 's0_no_s1_yes' : 's0_yes_s1_no',
           reason: `S0 ${s0Verdict.value} / S1 ${s1Value} 相反 → unknown（进人工仲裁）`,
           ...(p !== undefined ? { p } : {}),
         })

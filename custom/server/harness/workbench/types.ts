@@ -287,6 +287,8 @@ export interface Experience {
   snapshot?: { variantId: string; digest: string; targetPath: string | null; content: string }
   createdAt: string
   updatedAt: string
+  /** 最近一次被采纳提案再验证的时刻（HarnessPro 轮保鲜 HP-7；缺席=以 createdAt 记龄）。 */
+  lastValidatedAt?: string
 }
 
 export interface Champion {
@@ -396,4 +398,36 @@ export interface EvolutionReport {
   surfaces: EvolutionSurface[]
   /** 从未有提案的面（论文 U_t：探索槽位应留给它们）。 */
   unexercised: SurfaceKey[]
+}
+
+// ---------- HarnessPro 帕累托三档选拔（2026-10-23 吸收轮） ----------
+
+/** 部署预算档位（论文：Lite 省钱 / Medium 均衡 / Heavy 高性能三代表）。 */
+export type ParetoTier = 'lite' | 'medium' | 'heavy'
+
+/** 帕累托判定点：候选的一次已记录探测读数（双指标全非 null 才参与判定）。 */
+export interface ParetoPoint {
+  variantId: string
+  label: string
+  passAt1: number | null
+  costUsd: number | null
+}
+
+export interface ParetoEntry extends ParetoPoint {
+  /** 是否在帕累托前沿（无其他候选支配）。 */
+  onFrontier: boolean
+  /** 支配本候选的候选 id（非前沿候选必有 ≥1；前沿为空数组）。 */
+  dominatedBy: string[]
+  /** 三档代表归属（仅前沿候选可中选；多档可同归一候选；未中选 null）。 */
+  tier: ParetoTier | null
+}
+
+export interface ParetoReport {
+  /** 双指标齐全、参与判定的候选数。 */
+  eligible: number
+  /** 缺读数被排除的候选（如实列出，不猜）。 */
+  excluded: Array<{ variantId: string; label: string; reason: string }>
+  entries: ParetoEntry[]
+  /** 权重实例化说明（论文未公开公式，本仓口径）。 */
+  note: string
 }
