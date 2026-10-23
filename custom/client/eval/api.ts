@@ -232,6 +232,30 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T
 }
 
+
+// —— 京东吸收轮·立项批 DTO ——
+export interface BehaviorSignalRowDto {
+  key: string
+  value: number | null
+  basis: string
+  samples: number
+  sufficient: boolean
+  onDrift: string
+}
+export interface BehaviorSignalsResponseDto {
+  ok: boolean
+  available: boolean
+  days?: number
+  reason?: string
+  signals?: { days: number; hasUsage: boolean; rows: BehaviorSignalRowDto[]; boundary: string } | null
+}
+export interface BusinessSummaryDto {
+  verdict: 'releasable' | 'blocked' | 'insufficient'
+  verdictKey: string
+  facts: Array<{ key: string; params: Record<string, string | number> }>
+  boundary: string
+}
+
 export const evalApi = {
   listSets: () => req<{ sets: EvalSetMetaDto[] }>('/api/hermes/eval/sets'),
   getSet: (id: string) => req<{ set: EvalSetDto; sealed?: boolean }>(`/api/hermes/eval/sets/${encodeURIComponent(id)}`),
@@ -323,6 +347,11 @@ export const evalApi = {
   // —— 百度评测范式轮：指标治理 / 评估器审计 / 证据回溯 ——
   metricRegistry: () =>
     req<{ registry: MetricRegistryDto; coverage: CoverageDto }>('/api/hermes/eval/metric-registry'),
+  // —— 京东吸收轮·立项批：行为信号（真实使用当评测信号）/ 经营语言摘要 ——
+  behaviorSignals: (days = 7) =>
+    req<BehaviorSignalsResponseDto>(`/api/hermes/eval/behavior-signals?days=${days}`),
+  businessSummary: (runId: string) =>
+    req<{ ok: boolean; summary: BusinessSummaryDto }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/business-summary`),
   evaluatorAudit: (runId: string) =>
     req<{ audit: EvaluatorAuditDto }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/evaluators`),
   evidence: (runId: string, taskId: string, sampleIdx: number) =>
