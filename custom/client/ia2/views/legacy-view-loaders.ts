@@ -21,8 +21,6 @@ export const VIEW_LOADERS: Record<string, () => Promise<unknown>> = {
   'hermes.memory': () => import('@/views/hermes/MemoryView.vue'),
   'hermes.channels': () => import('@/views/hermes/ChannelsView.vue'),
   'hermes.jobs': () => import('@/views/hermes/JobsView.vue'),
-  'hermes.kanban': () => import('@/views/hermes/KanbanView.vue'),
-  'hermes.journey': () => import('@/views/hermes/JourneyView.vue'),
   'hermes.logs': () => import('@/views/hermes/LogsView.vue'),
   'hermes.usage': () => import('@/views/hermes/UsageView.vue'),
   'hermes.performance': () => import('@/views/hermes/PerformanceView.vue'),

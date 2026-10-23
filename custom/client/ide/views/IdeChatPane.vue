@@ -89,7 +89,6 @@ import IdeTodoBar from '../components/IdeTodoBar.vue'
 import IdeEngineModelsDialog from '../components/IdeEngineModelsDialog.vue'
 import { autoRoute, type CostTier } from '../../../server/modelroute/model-routing'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
-import IdeShareEntry from './IdeShareEntry.vue'
 import IdeActivityInbox from './IdeActivityInbox.vue'
 import IdeWorktreeBadge from './IdeWorktreeBadge.vue'
 import IdeGoalBudgetFloat from './IdeGoalBudgetFloat.vue'
@@ -802,7 +801,6 @@ watch(() => chatStore.activeSessionId, syncPermMode)
           :title="t('ide.chatRecovery')"
           @click="recoveryOpen = true"
         >⏎</button>
-        <IdeShareEntry :session-id="chatStore.activeSessionId ?? ''" />
         <button
           type="button"
           class="ide-chat__action"

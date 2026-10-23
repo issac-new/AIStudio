@@ -7,6 +7,7 @@ import { useWorkspaceStore } from '../../store/workspace'
 import { isRecentTask, taskPathLabel, taskResultLabel, taskStatusLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
 import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'
+import CapacitySection from '@/custom/kanban/components/CapacitySection.vue'
 
 const emit = defineEmits<{ (e: 'open-task', id: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
@@ -55,6 +56,7 @@ const missingResult = computed(() => rows.value.filter(r => !String(r.task.resul
       </table>
     </div>
     <DailySimReference what="交付物与证据链" />
+  <CapacitySection />
   </section>
 </template>
 

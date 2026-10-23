@@ -57,7 +57,7 @@ export const IDE_LOCAL_TEXT = {
       rejected: '已退回', approved: '已通过（本地标记）', localOnly: '本地标记，不代表服务端评审',
       rangeStart: '起始序号', rangeEnd: '结束序号', exportMd: '导出 Markdown', exportJson: '导出 JSON',
       copyLink: '复制会话深链', linkCopied: '深链已复制',
-      shareStub: '云分享链接为本地占位（服务端 prompt 通道未接线）；选段导出是本地文件，真实可用。',
+      shareStub: '选段导出是本地文件，真实可用；云分享入口已下线，待服务端 prompt 通道接线后再恢复。',
       status: { done: '通过', error: '失败', running: '运行中', unknown: '未知' },
     },
     genui: {
@@ -184,7 +184,7 @@ export const IDE_LOCAL_TEXT = {
       rejected: 'Rejected', approved: 'Approved (local mark)', localOnly: 'Local mark only; not a server-side review',
       rangeStart: 'Start index', rangeEnd: 'End index', exportMd: 'Export Markdown', exportJson: 'Export JSON',
       copyLink: 'Copy session link', linkCopied: 'Link copied',
-      shareStub: 'Cloud share links are local placeholders (server prompt channel not wired); range export is a real local file.',
+      shareStub: 'Range export is a real local file; cloud sharing is offline until the server prompt channel is wired.',
       status: { done: 'passed', error: 'failed', running: 'running', unknown: 'unknown' },
     },
     genui: {

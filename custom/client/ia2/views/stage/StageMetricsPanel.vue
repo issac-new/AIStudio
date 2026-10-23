@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import CapacityLampBanner from '../gov/CapacityLampBanner.vue'
 import GovAiQualitySection from '../gov/GovAiQualitySection.vue'
+import GovHealthSection from '../gov/GovHealthSection.vue'
 import EvalOpsSection from '../gov/EvalOpsSection.vue'
 import GovHarnessView from '../gov/GovHarnessView.vue'
 </script>
@@ -9,6 +10,7 @@ import GovHarnessView from '../gov/GovHarnessView.vue'
 <template>
   <div class="smp">
     <CapacityLampBanner />
+    <GovHealthSection />
     <GovAiQualitySection />
     <EvalOpsSection />
     <GovHarnessView />

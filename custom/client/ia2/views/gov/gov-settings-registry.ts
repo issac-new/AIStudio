@@ -50,7 +50,6 @@ export const GOV_SETTINGS_DOMAINS: GovSettingsDomain[] = [
   {
     key: 'process', title: '流程', note: '看板、工作流与定时任务——过程如何流转。',
     entries: [
-      { name: 'hermes.kanban', label: '看板配置', source: 'legacy' },
       { name: 'hermes.workflow', label: '工作流配置', source: 'legacy' },
       { name: 'hermes.jobs', label: '定时任务', source: 'legacy' },
     ],

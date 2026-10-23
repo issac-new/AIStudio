@@ -160,7 +160,7 @@ async function run(): Promise<void> {
 .wfp__meta { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
 .wfp__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
   &--ok { background: var(--color-success, #2f9e44); } &--run { background: var(--accent-primary); animation: wfpPulse 1.2s infinite; }
-  &--warn { background: #e8a13c; } &--err { background: var(--color-danger, #d33); } }
+  &--warn { background: var(--warning); } &--err { background: var(--color-danger, #d33); } }
 @keyframes wfpPulse { 50% { opacity: .4; } }
 .wfp__detail { display: flex; flex-direction: column; gap: 8px; }
 .wfp__dhead { display: flex; align-items: center; gap: 8px; }
@@ -170,7 +170,7 @@ async function run(): Promise<void> {
 .wfp__step-top { display: flex; align-items: center; gap: 8px; }
 .wfp__step-badge { font-size: 10px; border-radius: 3px; padding: 0 4px; border: 1px solid var(--border-color); color: var(--text-muted);
   &--ok { color: var(--color-success, #2f9e44); border-color: currentColor; } &--running { color: var(--accent-primary); border-color: currentColor; }
-  &--error { color: var(--color-danger, #d33); border-color: currentColor; } &--queued { color: #e8a13c; border-color: currentColor; } }
+  &--error { color: var(--color-danger, #d33); border-color: currentColor; } &--queued { color: var(--warning); border-color: currentColor; } }
 .wfp__step-target { font-size: 11px; font-weight: 600; color: var(--text-primary); }
 .wfp__step-ins { margin: 0; font-size: 11px; color: var(--text-muted); white-space: pre-wrap; }
 .wfp__step-reply { margin: 0; font-size: 12px; color: var(--text-primary); white-space: pre-wrap; background: var(--bg-secondary); border-radius: 6px; padding: 6px 8px; }
