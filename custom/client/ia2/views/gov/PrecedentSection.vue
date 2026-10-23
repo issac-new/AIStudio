@@ -53,6 +53,13 @@ function toggle(run: string): void {
 onMounted(() => { void loadIndex() })
 
 const shown = computed<PrecedentHit[]>(() => result.value?.hits ?? index.value?.hits ?? [])
+
+/** 来源值 → 人话：active=还在跑的；archive/<批名>=收进压缩包的老档案 */
+function originZh(origin: string): string {
+  if (origin === 'active') return zh.value ? '进行中的' : 'active'
+  if (origin.startsWith('archive/')) return zh.value ? `老档案（${origin.slice('archive/'.length)}）` : origin
+  return origin
+}
 </script>
 
 <template>
@@ -71,11 +78,11 @@ const shown = computed<PrecedentHit[]>(() => result.value?.hits ?? index.value?.
     <p v-if="error" class="prec__error" data-testid="precedent-error">{{ zh ? '数据源缺席' : 'Source unavailable' }}：{{ error }}</p>
 
     <div v-if="shown.length" class="prec__list" data-testid="precedent-list">
-      <p class="prec__meta">{{ result ? `「${query}」查到 ${shown.length} 轮` : `${zh ? '判例索引' : 'Index'}：${shown.length} run` }}</p>
+      <p class="prec__meta">{{ result ? `「${query}」查到 ${shown.length} 轮` : `案例清单：${shown.length} 轮${zh ? '推演' : ''}` }}</p>
       <div v-for="h in shown" :key="h.run + h.origin" class="prec__card" :data-testid="`precedent-${h.run}`">
         <button type="button" class="prec__card-head" @click="toggle(h.run)">
           <span class="prec__run">{{ h.run }}</span>
-          <span class="prec__origin">{{ h.origin }}</span>
+          <span class="prec__origin">{{ originZh(h.origin) }}</span>
           <span class="prec__counts">派活 {{ h.dispatches }} · 问题 {{ h.issues }} · 处理 {{ h.disposals }}</span>
           <span v-if="h.matches.length" class="prec__hits">{{ h.matches.length }} {{ zh ? '命中' : 'hits' }}</span>
           <span class="prec__toggle">{{ expanded.has(h.run) ? '▾' : '▸' }}</span>
