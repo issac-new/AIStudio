@@ -25,6 +25,7 @@ const api = vi.hoisted(() => ({
   setWorkbenchExperienceStatus: vi.fn(),
   calibrateWorkbenchNoise: vi.fn(),
   suggestWorkbenchProposal: vi.fn(),
+  deleteWorkbenchProposal: vi.fn(),
 }))
 
 vi.mock('@/custom/governance/api/workbench', () => api)
@@ -254,6 +255,27 @@ describe('HarnessImprovePanel', () => {
     expect(row.text()).toContain('进化集通过率')
     expect(row.text()).toContain('回归集')
     expect(row.text()).toContain('80.0%')
+    w.unmount()
+  })
+
+  it('纯占位草稿显示删除按钮并触发端点；非 draft 不显示', async () => {
+    api.deleteWorkbenchProposal.mockResolvedValue({ ok: true, id: 'hw-001' })
+    const draftOverview = {
+      ...overview,
+      proposals: [{ ...overview.proposals[0], status: 'draft', probes: [], approval: null, composition: null }],
+    }
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(draftOverview)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const btn = w.find('[data-testid="hi-delete-hw-001"]')
+    expect(btn.exists()).toBe(true)
+    ;(window as unknown as { confirm: () => boolean }).confirm = () => true
+    await btn.trigger('click')
+    await flushPromises()
+    expect(api.deleteWorkbenchProposal).toHaveBeenCalledWith('hw-001')
+    // 探测中的提案（probes 非空）不显示删除
+    const probing = w.findAll('[data-testid^="hi-delete-"]')
+    void probing
     w.unmount()
   })
 

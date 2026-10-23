@@ -203,6 +203,8 @@ export interface ImproveCopy {
   evolveLabel: string
   heldoutLabel: string
   evolveDelta: string
+  deleteProposal: string
+  confirmDeleteProposal: string
 }
 
 export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
@@ -407,6 +409,8 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     evolveLabel: '进化集通过率',
     heldoutLabel: '回归集（held-out）通过率',
     evolveDelta: '进化集增量',
+    deleteProposal: '删除占位草稿',
+    confirmDeleteProposal: '删除这个纯占位草稿？（无探测、无裁决，无审计价值）',
   },
   en: {
     title: 'Improvement experiments',
@@ -609,5 +613,7 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     evolveLabel: 'Evolve-set pass rate',
     heldoutLabel: 'Regression (held-out) pass rate',
     evolveDelta: 'Evolve delta',
+    deleteProposal: 'Delete placeholder draft',
+    confirmDeleteProposal: 'Delete this placeholder draft? (no probes, no decision, no audit value)',
   },
 }

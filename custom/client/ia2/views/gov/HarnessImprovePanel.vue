@@ -11,6 +11,7 @@ import {
   attachWorkbenchBaseline,
   calibrateWorkbenchNoise,
   composeWorkbenchProposal,
+  deleteWorkbenchProposal,
   createWorkbenchProbes,
   createWorkbenchProposal,
   decideWorkbenchProposal,
@@ -95,6 +96,16 @@ const suggestForm = reactive({
   targetPath: 'profiles/orchestrator/SOUL.md',
   profile: 'orchestrator',
 })
+
+/** 纯占位草稿可删（draft＋无探测＋无裁决）；有审计线索的不可删（服务端同规则把关）。 */
+function deletable(p: ProposalDto): boolean {
+  return p.status === 'draft' && p.probes.length === 0 && !p.approval
+}
+
+async function removeProposal(p: ProposalDto): Promise<void> {
+  if (!window.confirm(L.value.confirmDeleteProposal)) return
+  await act(() => deleteWorkbenchProposal(p.id))
+}
 
 async function suggest(): Promise<void> {
   await act(() => suggestWorkbenchProposal({
@@ -740,6 +751,10 @@ onMounted(() => void refresh())
 
               <div v-if="p.status === 'draft'" class="hi__row">
                 <button type="button" class="hi__btn hi__btn--primary" @click="submit(p)">{{ L.submit }}</button>
+                <button
+                  v-if="deletable(p)" type="button" class="hi__btn"
+                  :data-testid="`hi-delete-${p.id}`" @click="removeProposal(p)"
+                >{{ L.deleteProposal }}</button>
                 <span v-if="!p.baseline" class="hi__meta">{{ L.baselineMissing }}</span>
               </div>
 
