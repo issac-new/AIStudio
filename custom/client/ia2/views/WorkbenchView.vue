@@ -86,6 +86,23 @@ import { readColWidths, updateColWidth, onColWidthsChange } from '../utils/colWi
 const shared = readColWidths()
 const leftWidth = ref<number>(shared.left)
 const rightWidth = ref<number>(shared.right)
+
+/** 视口钳制（2026-10-23 栏控叠放轮）：历史拖拽宽度在窄视口下会令三栏总宽
+ *  超出（侧栏 216 + 左 + 中栏硬底 320 + 右 > 视口），右栏连栏控按钮一起出界
+ *  不可点。挂载与变更时把两栏宽压回可用预算（中栏硬底 320 + 余量 24）。 */
+function clampWidths(): void {
+  if (typeof window === 'undefined') return
+  const budget = window.innerWidth - 216 - 320 - 24
+  if (budget <= 0) return
+  const total = leftWidth.value + rightWidth.value
+  if (total <= budget) return
+  const scale = budget / total
+  leftWidth.value = Math.round(leftWidth.value * scale)
+  rightWidth.value = Math.round(rightWidth.value * scale)
+  updateColWidth('left', leftWidth.value)
+  updateColWidth('right', rightWidth.value)
+}
+clampWidths()
 const unsubscribeCols = onColWidthsChange((w) => {
   leftWidth.value = w.left
   rightWidth.value = w.right
@@ -790,8 +807,8 @@ async function onDeleteGroup(roomId: string): Promise<void> {
 
 /* 首行右侧让位：左栏协作流头/右栏任务决策头（两钮 ~50px）、中栏对象头行
  * （三钮 ~74px，右缘留更多）——按钮叠放区不压内容 */
-.wb__left > :deep(.flow-nav__head),
-.wb__right > :deep(.tdp__head) { padding-right: 58px; }
+.wb__left :deep(.flow-nav__head),
+.wb__right :deep(.tdp__head) { padding-right: 58px; }
 .wb__center :deep(.swp__block--obj) { padding-right: 82px; }
 /* 中栏迁移横幅偶发渲染时同样让位 */
 .wb__center :deep(.msmb) { padding-right: 82px; }
