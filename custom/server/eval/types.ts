@@ -221,6 +221,12 @@ export interface AttemptVerdict {
   /** S0 与 S1/人工结论相反：进仲裁（人工裁决 + Rubric Loop），value 保守取 unknown。 */
   conflict?: boolean
   /**
+   * 冲突方向（HarnessPro 轮 HP-6，2026-10-23，仅 conflict 判词携带）：
+   * s0_no_s1_yes=裁判把确定性判负判成通过（LLM 裁判盲目乐观/漏判失败，论文 41.7% 召回病灶）；
+   * s0_yes_s1_no=误杀方向。旧判词无此字段，由 evaluators 按 reason 串回退解析。
+   */
+  conflictDirection?: 's0_no_s1_yes' | 's0_yes_s1_no'
+  /**
    * 偏差检验判为不稳定：参照答案移除后同题结论翻转 → 保守取 unknown。
    * 与 conflict 分开记——一个是双源矛盾，一个是单源内部不稳。
    */

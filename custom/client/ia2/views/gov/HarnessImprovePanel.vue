@@ -25,6 +25,7 @@ import {
   startAutoProbe,
   submitWorkbenchProposal,
   type ExperienceDto,
+  type ParetoReportDto,
   type ProbeDto,
   type ProposalDto,
   type ProposalStatus,
@@ -202,6 +203,15 @@ function fmtUsd(v: number | null | undefined): string {
 
 function short(s: string | null | undefined): string {
   return s ? s.slice(0, 12) : '—'
+}
+
+function paretoEntryOf(p: ProposalDto, variantId: string): ParetoReportDto['entries'][number] | undefined {
+  return p.derived.pareto?.entries.find((e) => e.variantId === variantId)
+}
+
+function freshnessLabel(f: NonNullable<ExperienceDto['freshness']>): string {
+  const band = f.band === 'fresh' ? L.value.freshnessFresh : f.band === 'aging' ? L.value.freshnessAging : L.value.freshnessStale
+  return `${band} ${f.confidenceScore.toFixed(2)}（${Math.round(f.ageDays)}d）`
 }
 
 function probeOf(p: ProposalDto, variantId: string): ProbeDto | undefined {
@@ -658,7 +668,7 @@ onMounted(() => void refresh())
               <thead>
                 <tr>
                   <th>{{ L.formVariant }}</th><th>{{ L.diff }}</th><th>{{ L.probes }}</th><th>{{ L.quality }}</th>
-                  <th>{{ L.passAt1 }}</th><th>{{ L.trajectory }}</th><th>{{ L.tokens }}</th><th>{{ L.cost }}</th><th>{{ L.regression }}</th>
+                  <th>{{ L.passAt1 }}</th><th>{{ L.trajectory }}</th><th>{{ L.tokens }}</th><th>{{ L.cost }}</th><th>{{ L.paretoTier }}</th><th>{{ L.regression }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -688,6 +698,13 @@ onMounted(() => void refresh())
                   <td>{{ fmtPct(probeOf(p, v.id)?.evidence?.trajectoryPassRate) }} <small class="hi__meta">{{ fmtDelta(probeOf(p, v.id)?.contrast?.trajectoryPassRateDelta) }}</small></td>
                   <td>{{ fmtNum(probeOf(p, v.id)?.evidence?.tokens) }} <small class="hi__meta">{{ fmtRatio(probeOf(p, v.id)?.contrast?.tokenDeltaPct) }}</small></td>
                   <td>{{ fmtUsd(probeOf(p, v.id)?.evidence?.costUsd) }} <small class="hi__meta">{{ fmtRatio(probeOf(p, v.id)?.contrast?.costDeltaPct) }}</small></td>
+                  <td :data-testid="`hi-pareto-${p.id}-${v.id}`">
+                    <span v-if="paretoEntryOf(p, v.id)?.tier" class="hi__chip hi__chip--ok">{{ paretoEntryOf(p, v.id)?.tier }}</span>
+                    <span v-else-if="paretoEntryOf(p, v.id) && !paretoEntryOf(p, v.id)!.onFrontier" class="hi__chip hi__chip--muted" :title="paretoEntryOf(p, v.id)!.dominatedBy.join(', ')">
+                      {{ L.paretoDominated }}
+                    </span>
+                    <span v-else>—</span>
+                  </td>
                   <td>
                     <span v-if="probeOf(p, v.id)?.evidence?.regression">
                       {{ probeOf(p, v.id)?.evidence?.regression?.failed }} / {{ probeOf(p, v.id)?.evidence?.regression?.total }}
@@ -697,6 +714,10 @@ onMounted(() => void refresh())
                 </tr>
               </tbody>
             </table>
+            <p v-if="p.derived.pareto?.eligible > 0" class="hi__meta" :data-testid="`hi-pareto-note-${p.id}`">
+              {{ L.paretoNote }}：{{ L.paretoEligible }} {{ p.derived.pareto.eligible }}
+              <span v-if="p.derived.pareto.excluded.length">· {{ L.paretoExcluded }} {{ p.derived.pareto.excluded.length }}</span>
+            </p>
           </details>
 
           <div class="hi__gate" :class="p.derived.gate.ok ? 'hi__gate--ok' : 'hi__gate--blocked'" :data-testid="`hi-gate-${p.id}`">
@@ -961,6 +982,9 @@ onMounted(() => void refresh())
                 {{ exp.domain || L.general }} ·
                 {{ exp.confidence === 'high' ? L.confidenceHigh : exp.confidence === 'low' ? L.confidenceLow : L.confidenceMedium }} ·
                 {{ expStatusLabel(exp.status) }}
+                <span v-if="exp.freshness" class="hi__chip" :class="exp.freshness.band === 'fresh' ? 'hi__chip--ok' : exp.freshness.band === 'stale' ? 'hi__chip--muted' : ''" :data-testid="`hi-exp-fresh-${exp.id}`">
+                  {{ freshnessLabel(exp.freshness) }}
+                </span>
               </span>
               <span v-if="exp.cue" class="hi__meta">cue: {{ exp.cue }}</span>
               <span v-if="exp.lesson" class="hi__meta">lesson: {{ exp.lesson }}</span>
