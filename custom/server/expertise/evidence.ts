@@ -22,7 +22,18 @@ const STOP_TERMS = new Set([
   '任务', '测试', '需求', '进行', '完成', '处理', '相关', '以及', '一个', '这个',
   '分析', '评审', '上线', '更新', '优化', '支持', '确认', '问题', '接口', '补登',
   'task', 'test', 'run', 'the', 'and', 'for', 'with',
+  // 台账结构词/话迹噪音（2026-10-23 活体走查实录：open=status 列残留、matrix=群域名、
+  // agent 后缀词=自指；run 形态词不再拼入抽取文本，此表兜底历史形态）
+  'open', 'status', 'resolution', 'backfill', 'matrix', 'agent', 'agents', 'desc',
 ])
+
+/** 结构词形过滤：*-agent 自指词、run id 形态（20261021-v8-run22）、纯数字词不进概念表 */
+function isStructuralTerm(term: string): boolean {
+  if (/^(\d{6,})/.test(term)) return true
+  if (/^[a-z]+-agent$/.test(term)) return true
+  if (/^v\d/.test(term)) return true
+  return false
+}
 
 /** 文本 → 概念词候选：拉丁词（≥2 字符小写）+ CJK 二元组；去停用词、按频次取 topK */
 export function extractTerms(text: string, topK = 8): Array<{ term: string; count: number }> {
@@ -30,7 +41,7 @@ export function extractTerms(text: string, topK = 8): Array<{ term: string; coun
   const latin = text.match(/[A-Za-z][A-Za-z0-9_-]{1,31}/g) ?? []
   for (const w of latin) {
     const t = w.toLowerCase()
-    if (STOP_TERMS.has(t)) continue
+    if (STOP_TERMS.has(t) || isStructuralTerm(t)) continue
     counts.set(t, (counts.get(t) ?? 0) + 1)
   }
   const cjkRuns = text.match(/[\u4e00-\u9fff]{2,}/g) ?? []
@@ -64,7 +75,7 @@ export function evidenceFromLedger(rows: Array<{ id: string; ts: string; type: s
     const from = /^from=(\S+)/.exec(row.detail)?.[1]
     if (!from) continue
     const text = / text=(.*)$/s.exec(row.detail)?.[1] ?? row.detail
-    for (const { term } of extractTerms(`${text} ${run}`, 4)) {
+    for (const { term } of extractTerms(text, 4)) {
       out.push({
         person: from,
         term,

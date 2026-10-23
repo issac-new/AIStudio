@@ -61,7 +61,8 @@ export function parseLedgerTsv(text: string): LedgerLiteRow[] {
     if (!t || t.startsWith('id\t') || !t.includes('\t')) continue
     const cols = t.split('\t')
     if (cols.length < 5) continue
-    out.push({ id: cols[0], ts: cols[1], type: cols[2], defect: cols[3], detail: cols.slice(4).join('\t') })
+    // detail=第 5 列止（status/resolution 是台账元数据，不进概念/摘要面）
+    out.push({ id: cols[0], ts: cols[1], type: cols[2], defect: cols[3], detail: cols[4] })
   }
   return out
 }
