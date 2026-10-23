@@ -950,6 +950,22 @@ onMounted(() => void refresh())
         <p v-if="data.evolution.unexercised.length" class="hi__meta" data-testid="hi-evo-unexercised">
           {{ L.evoUnexercised }}：<code v-for="k in data.evolution.unexercised" :key="k">{{ surfaceName(k) }}</code>
         </p>
+        <div
+          v-if="(data.evolution.retirementCandidates ?? []).length"
+          class="hi__gate hi__gate--blocked"
+          data-testid="hi-evo-retirement"
+        >
+          <b>{{ L.retireTitle }}（{{ data.evolution.retirementCandidates.length }}）</b>
+          <ul>
+            <li v-for="r in data.evolution.retirementCandidates" :key="`${r.surfaceKey}-${r.round}`">
+              {{ surfaceName(r.surfaceKey) }} · {{ L.retireRound }} {{ r.round }}（{{ r.variantLabel }}）：
+              {{ L.retireGain }} {{ fmtDelta(r.passAt1Delta) }}
+              <span v-if="r.costDeltaPct != null">· {{ L.retireCost }} +{{ (r.costDeltaPct * 100).toFixed(0) }}%</span>
+              · {{ L.retireSince }} {{ r.roundsSince }}
+            </li>
+          </ul>
+          <p class="hi__meta">{{ L.retireNote }}</p>
+        </div>
       </section>
 
       <section class="hi__section" data-testid="hi-experiences">

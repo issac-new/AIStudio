@@ -121,6 +121,30 @@ beforeEach(() => {
 })
 
 describe('HarnessImprovePanel', () => {
+  it('退役候选提示行渲染（挂账清偿 G4）与缺省不渲染', async () => {
+    const withRetire = {
+      ...overview,
+      evolution: {
+        ...overview.evolution,
+        retirementCandidates: [{
+          surfaceKey: 'system_prompt', round: 1, proposalId: 'hw-000', variantLabel: 'A',
+          passAt1Delta: -0.02, costDeltaPct: 0.5, tokenDeltaPct: 0.4, roundsSince: 2,
+        }],
+      },
+    }
+    api.fetchWorkbenchOverview.mockResolvedValue(withRetire)
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    expect(w.find('[data-testid="hi-evo-retirement"]').exists()).toBe(true)
+    expect(w.find('[data-testid="hi-evo-retirement"]').text()).toContain('冠军退役候选')
+    expect(w.find('[data-testid="hi-evo-retirement"]').text()).toContain('advisory')
+
+    api.fetchWorkbenchOverview.mockResolvedValue(overview)
+    const w2 = mount(HarnessImprovePanel, )
+    await flushPromises()
+    expect(w2.find('[data-testid="hi-evo-retirement"]').exists()).toBe(false)
+  })
+
   it('帕累托三档列与经验保鲜 chip 渲染（HarnessPro 轮）', async () => {
     const withPareto = {
       ...overview,
