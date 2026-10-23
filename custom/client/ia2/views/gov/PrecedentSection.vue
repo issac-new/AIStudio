@@ -59,24 +59,24 @@ const shown = computed<PrecedentHit[]>(() => result.value?.hits ?? index.value?.
   <section class="prec" data-testid="precedent-section">
     <div class="prec__bar">
       <div>
-        <h3 class="prec__title">{{ zh ? '判例库 · 类似需求怎么做的' : 'Precedents · how similar work was done' }}</h3>
-        <p class="prec__sub">{{ zh ? 'run 即判例单元：派发词/问题单/处置计数；归档 tar 按需抽，不全量解压' : 'Each run is one precedent; archive tars read on demand' }}</p>
+        <h3 class="prec__title">{{ zh ? '过往案例 · 类似的活以前怎么干的' : 'Past cases · how similar work was done' }}</h3>
+        <p class="prec__sub">{{ zh ? '每轮推演算一个案例：派过什么活、出过什么问题、怎么收场的；老案例存在压缩包里，查到哪个读哪个' : 'Each sim round is one case: what was dispatched, what went wrong, how it ended' }}</p>
       </div>
       <form class="prec__search" @submit.prevent="runSearch">
-        <input v-model="query" class="prec__input" type="search" :placeholder="zh ? '检索判例：如 渠道/回调/审计' : 'Search precedents'" data-testid="precedent-search-input">
-        <button type="submit" class="prec__submit" data-testid="precedent-search-submit" :disabled="searching">{{ zh ? '查判例' : 'Search' }}</button>
+        <input v-model="query" class="prec__input" type="search" :placeholder="zh ? '查过往案例：如 回调/审计/测试' : 'Search past cases'" data-testid="precedent-search-input">
+        <button type="submit" class="prec__submit" data-testid="precedent-search-submit" :disabled="searching">{{ zh ? '查案例' : 'Search' }}</button>
       </form>
     </div>
 
     <p v-if="error" class="prec__error" data-testid="precedent-error">{{ zh ? '数据源缺席' : 'Source unavailable' }}：{{ error }}</p>
 
     <div v-if="shown.length" class="prec__list" data-testid="precedent-list">
-      <p class="prec__meta">{{ result ? `「${query}」命中 ${shown.length} run` : `${zh ? '判例索引' : 'Index'}：${shown.length} run` }}</p>
+      <p class="prec__meta">{{ result ? `「${query}」查到 ${shown.length} 轮` : `${zh ? '判例索引' : 'Index'}：${shown.length} run` }}</p>
       <div v-for="h in shown" :key="h.run + h.origin" class="prec__card" :data-testid="`precedent-${h.run}`">
         <button type="button" class="prec__card-head" @click="toggle(h.run)">
           <span class="prec__run">{{ h.run }}</span>
           <span class="prec__origin">{{ h.origin }}</span>
-          <span class="prec__counts">派发 {{ h.dispatches }} · 问题 {{ h.issues }} · 处置 {{ h.disposals }}</span>
+          <span class="prec__counts">派活 {{ h.dispatches }} · 问题 {{ h.issues }} · 处理 {{ h.disposals }}</span>
           <span v-if="h.matches.length" class="prec__hits">{{ h.matches.length }} {{ zh ? '命中' : 'hits' }}</span>
           <span class="prec__toggle">{{ expanded.has(h.run) ? '▾' : '▸' }}</span>
         </button>
@@ -85,7 +85,7 @@ const shown = computed<PrecedentHit[]>(() => result.value?.hits ?? index.value?.
         </ul>
       </div>
     </div>
-    <p v-else-if="!error" class="prec__empty">{{ zh ? '（无判例）' : '(no precedents)' }}</p>
+    <p v-else-if="!error" class="prec__empty">{{ zh ? '（没查到案例）' : '(no cases found)' }}</p>
   </section>
 </template>
 

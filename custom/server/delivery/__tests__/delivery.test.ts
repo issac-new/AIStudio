@@ -151,7 +151,7 @@ describe('C×L 矩阵 matrix（纯函数）', () => {
     expect(cell?.count).toBe(2)
     expect(cell?.avgInterventions).toBe(2)
     expect(m.totals).toMatchObject({ tasks: 3, evaluatedC: 2, avgInterventions: 1.3 }) // (3+1+0)/3 一位小数
-    expect(m.note).toContain('代用口径')
+    expect(m.note).toContain('预估工时')
   })
 })
 

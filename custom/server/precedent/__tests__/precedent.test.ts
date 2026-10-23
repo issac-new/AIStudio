@@ -43,16 +43,16 @@ describe('D17 协作成熟度（纯函数）', () => {
     const collabHeavy = [...Array.from({ length: 8 }, () => entry({ layer: 'collab' })), entry({ layer: 'delivery', type: 'confirm' })]
     const a1 = assessMaturity(collabHeavy, 0)
     expect(a1.level.key).toBe('L1')
-    expect(a1.gapNote).toContain('协作层介入占')
+    expect(a1.gapNote).toContain('排活沟通')
 
     const selfDriven = [...Array.from({ length: 3 }, () => entry({ layer: 'collab' })), ...Array.from({ length: 7 }, () => entry({ layer: 'delivery', type: 'confirm' }))]
     const a2 = assessMaturity(selfDriven, 10)
     expect(a2.level.key).toBe('L2')
     // 有返工 → 理解偏差最短板；零返工 → 资产厚度
-    expect(a2.gapNote).toContain('资产厚度')
+    expect(a2.gapNote).toContain('家底')
     const withRework = [...selfDriven, entry({ layer: 'delivery', type: 'rework' })]
-    expect(assessMaturity(withRework, 10).gapNote).toContain('理解偏差')
-    expect(a2.note).toContain('启发式')
+    expect(assessMaturity(withRework, 10).gapNote).toContain('干错重来')
+    expect(a2.note).toContain('按数据猜')
   })
 })
 

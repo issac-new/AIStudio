@@ -27,20 +27,21 @@ export interface TaskLite {
 export type CTier = 0 | 1 | 2 | 3 | 4
 export type LTier = 0 | 1 | 2 | 3 | 4
 
+// 文案=2026-10-23 说人话批（D20）：代码前缀保留供对账，描述用生活语言
 export const C_LABELS: Record<CTier, string> = {
-  0: 'C0 未评估',
+  0: 'C0 难度未知',
   1: 'C1 简单',
   2: 'C2 中等',
-  3: 'C3 较复杂',
-  4: 'C4 复杂',
+  3: 'C3 较难',
+  4: 'C4 很难',
 }
 
 export const L_LABELS: Record<LTier, string> = {
-  0: 'L0 未启动',
-  1: 'L1 已认领',
-  2: 'L2 执行中',
-  3: 'L3 评审/无产物',
-  4: 'L4 完成有产物',
+  0: 'L0 还没动',
+  1: 'L1 有人领了',
+  2: 'L2 正在干',
+  3: 'L3 在评审或没留成果',
+  4: 'L4 干完有成果',
 }
 
 /** estimate_days → C 档（≤1=C1/≤3=C2/≤5=C3/>5=C4；null=无信号 0） */
@@ -132,6 +133,6 @@ export function matrixOf(tasks: TaskLite[]): DeliveryMatrix {
       evaluatedC: tasks.filter(t => cTierOf(t) > 0).length,
       avgInterventions: tasks.length ? Math.round((totalComments / tasks.length) * 10) / 10 : null,
     },
-    note: 'C=工作量与子任务数取高的代用口径（信号缺席=C0 未评估）；L=看板生命周期；介入=任务评论事件均值',
+    note: '难度按预估工时定档（没标=难度未知）；进度看板走到哪列；「被插话」按任务上的评论次数算',
   }
 }
