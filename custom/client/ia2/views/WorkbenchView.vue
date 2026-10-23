@@ -41,6 +41,7 @@ import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
+import IdentityChatCanvas from '../components/IdentityChatCanvas.vue'
 import CockpitOverview from '../components/flow/CockpitOverview.vue'
 import { fetchPendingApprovals, dedupePending, fetchApprovalHistory, type PendingApprovalItem, type ApprovalHistoryEntry } from '@/custom/cockpit/api/approvals'
 import { getStoredUsername } from '@/api/client'
@@ -116,6 +117,11 @@ const overviewHistory = ref<ApprovalHistoryEntry[]>([])
 const overviewUsername = getStoredUsername() ?? ''
 /** P5：#/app/overview 显式概览路由（不占对象选择轴） */
 const isOverviewRoute = computed(() => route.name === 'ia2.dash')
+
+// 统一身份聊天（2026-10-23 五轮）：#/app/collab?idc=<profile> 挂 IdentityChatCanvas；
+// 不进对象选择轴（与 overview 同法），preset=URL 预选身份。
+const isIdentityChat = computed(() => route.name === 'ia2.collab' && typeof route.query.idc === 'string')
+const identityPreset = computed(() => (typeof route.query.idc === 'string' ? route.query.idc : ''))
 let overviewTimer: ReturnType<typeof setInterval> | null = null
 async function refreshOverview(): Promise<void> {
   try {
@@ -635,6 +641,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         @open-task="onNavOpenTask"
         @jump-ide="onNavJumpIde"
         @new-chat="onNewChat"
+        @open-identity-chat="router.push({ name: 'ia2.collab', query: { idc: '' } })"
         @create-group="onCreateGroup"
         @delete-group="onDeleteGroup"
       />
@@ -665,6 +672,11 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         @open-inbox="router.push({ name: 'ia2.inbox' })"
         @open-board="router.push({ name: 'ia2.board' })"
         @open-task="onHandleTask"
+      />
+      <IdentityChatCanvas
+        v-else-if="isIdentityChat"
+        :key="`idc:${identityPreset}`"
+        :preset-profile="identityPreset || null"
       />
       <SessionCanvas
         v-else-if="activeSel && activeSel.kind !== 'loop' && selectedSessionRow"

@@ -10,7 +10,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { boardDbPaths, readBoard } from '../delivery/boards-reader'
 import { ledgerTsToMs, parseLedgerTsv } from '../delivery/interventions'
-import { buildWall, evidenceFromBoard, evidenceFromLedger, searchExpertise, type EvidenceEntry } from './evidence'
+import { buildWall, detectTermConflicts, evidenceFromBoard, evidenceFromLedger, searchExpertise, type EvidenceEntry } from './evidence'
 
 const router = new Router({ prefix: '/api/hermes/expertise' })
 
@@ -72,6 +72,7 @@ router.get('/wall', ctx => {
     available: true,
     persons: wall.persons.slice(0, 60),
     evidenceCount: wall.evidenceCount,
+    conflicts: detectTermConflicts(collected.evidence),
     note: '证据=台账派发原话(from=人)+看板归属域+任务标题概念；聊天库无人类/AI 判别位不入源（D8）',
     sources: collected.sources,
   }

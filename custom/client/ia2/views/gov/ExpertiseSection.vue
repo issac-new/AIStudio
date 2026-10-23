@@ -6,7 +6,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { fetchExpertiseWall, searchExpertise, type PersonProfile, type SearchCandidate } from '../../api/expertise'
+import { fetchExpertiseWall, searchExpertise, type PersonProfile, type SearchCandidate, type TermConflict } from '../../api/expertise'
 
 // 防御式 locale 读取（同 i18n-tasks-tabs 先例）：部分测试/挂载环境 i18n 为 legacy
 // 形态，useI18n() 解构 locale 为 undefined——回退 zh，不炸渲染。
@@ -16,6 +16,8 @@ const zh = computed(() => String((i18nCtx as unknown as { locale?: { value?: str
 const wall = ref<PersonProfile[]>([])
 const wallError = ref<string | null>(null)
 const evidenceCount = ref(0)
+const conflicts = ref<TermConflict[]>([])
+const conflictTerms = computed(() => new Set(conflicts.value.map(c => c.term)))
 const noteZh = '证据=台账派发原话(from=人)+看板归属域+任务标题概念；聊天库无人类/AI 判别位不入源'
 const noteEn = 'Evidence = ledger dispatch text + board domains + task titles; chat store excluded (no human/AI flag)'
 
@@ -36,6 +38,7 @@ async function loadWall(): Promise<void> {
     }
     wall.value = res.persons ?? []
     evidenceCount.value = res.evidenceCount ?? 0
+    conflicts.value = res.conflicts ?? []
   } catch (e) {
     wall.value = []
     wallError.value = String(e)
@@ -136,11 +139,23 @@ function fmtTime(ms: number): string {
               v-for="c in p.concepts.slice(0, 8)"
               :key="c.term"
               class="expertise__concept"
-              :title="`${c.count} 条证据 · 最近 ${fmtTime(c.lastTsMs)}`"
+              :class="{ 'expertise__concept--conflict': conflictTerms.has(c.term) }"
+              :title="conflictTerms.has(c.term) ? `跨域概念·口径待对齐（D19）· ${c.count} 条证据` : `${c.count} 条证据 · 最近 ${fmtTime(c.lastTsMs)}`"
             >{{ c.term }} <em>{{ c.count }}</em></span>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 跨域概念·口径待对齐（D19：文章「传歪」摩擦的机械可检代理） -->
+    <div v-if="conflicts.length" class="expertise__conflicts" data-testid="expertise-conflicts">
+      <h4 class="expertise__list-title">{{ zh ? `跨域概念 · 口径待对齐（${conflicts.length}）` : `Cross-domain terms (${conflicts.length})` }}</h4>
+      <div v-for="c in conflicts" :key="c.term" class="expertise__conflict" :data-testid="`expertise-conflict-${c.term}`">
+        <span class="expertise__conflict-term">{{ c.term }}</span>
+        <span class="expertise__conflict-domains">{{ c.domains.join(' ↔ ') }}</span>
+        <span class="expertise__conflict-persons">{{ c.persons.join(' / ') }}</span>
+      </div>
+      <p class="expertise__formula">{{ zh ? '同一概念挂在不同业务域名下——机械面只能标出「可能传歪」，裁定留给人' : 'Same term across domains; human adjudication required' }}</p>
     </div>
   </section>
 </template>
@@ -190,5 +205,11 @@ function fmtTime(ms: number): string {
   font-size: 11px; padding: 1px 7px; border-radius: 9px;
   border: 1px solid var(--border-color); color: inherit;
   em { font-style: normal; color: var(--text-muted); font-size: 10px; margin-left: 2px; }
+  &--conflict { border-color: var(--warning-color); font-weight: 600; }
 }
+.expertise__conflicts { display: flex; flex-direction: column; gap: 4px; }
+.expertise__conflict { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 11.5px; }
+.expertise__conflict-term { font-weight: 600; }
+.expertise__conflict-domains { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--warning-color); }
+.expertise__conflict-persons { font-size: 11px; color: var(--text-muted); }
 </style>
