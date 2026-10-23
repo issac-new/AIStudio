@@ -77,12 +77,19 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
   white-space: nowrap;
 }
 .inbox-entry__badge {
+  /* 2026-10-23 走查批：几何对齐左栏统一行 IaSideNavItem 徽标（16px 高胶囊、
+     radius 8px、10px 字号），消除侧栏两套徽标形态并存 */
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   background: var(--error);
   color: var(--text-on-accent);
-  border-radius: 9px;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 600;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 </style>

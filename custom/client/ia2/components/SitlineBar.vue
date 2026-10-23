@@ -47,21 +47,35 @@ const onlineDetail = computed(() => {
  *  不进任务口径（openTasks 已过滤），防御性排除 */
 const STATUS_ORDER = ['triage', 'todo', 'scheduled', 'ready', 'running', 'blocked', 'review'] as const
 
-/** 任务按钮副注：9 态全量分类汇总，零计数跳过；
- *  词条与 SitDetailPanel/tdp 共用 ia2.tdp.status.*（状态词单一事实源） */
-const taskStatusSummary = computed(() =>
+/** 任务按钮副注全量串联：零计数跳过；仅用于 title 悬浮（明细面板之外的第二
+ *  全量通道）。词条与 SitDetailPanel/tdp 共用 ia2.tdp.status.*（状态词单一事实源） */
+const taskStatusFull = computed(() =>
   STATUS_ORDER
     .filter(s => (props.taskByStatus[s] ?? 0) > 0)
     .map(s => `${t(`ia2.tdp.status.${s}`)} ${props.taskByStatus[s]}`)
     .join(' · '),
 )
+
+/** 主显副注收敛（2026-10-23 走查批）：全页走查反馈七态全量串联在宽视口把
+ *  chip 拉到 400px+，顶栏信噪比低。主显只留「受阻 N」（需立即介入的信号）；
+ *  其余态经 title 悬浮与点击展开的 SitDetailPanel 全量可达，信息无损失。 */
+const taskStatusSummary = computed(() => {
+  const blocked = props.taskByStatus['blocked'] ?? 0
+  return blocked > 0 ? `${t('ia2.tdp.status.blocked')} ${blocked}` : ''
+})
+
+/** 任务 chip 悬浮提示：原 chipTasksHint + 全量状态串联（收敛后唯一悬浮明细） */
+const tasksTitle = computed(() => {
+  const hint = t('ia2.sit.chipTasksHint')
+  return taskStatusFull.value ? `${hint}\n${taskStatusFull.value}` : hint
+})
 </script>
 
 <template>
   <div class="ia-status-capsule sit" data-testid="sitline">
     <!-- R6 补充：「等我」与「任务」合并为单「任务」chip（待决策数作为角标副注；
          面板顶部仍有待决策区，决策动作在面板内） -->
-    <button type="button" class="sit__item ia-status-capsule__item" :class="{ 'sit__item--on': active === 'tasks' }" data-testid="sit-tasks" :title="t('ia2.sit.chipTasksHint')" :aria-expanded="active === 'tasks'" @click="emit('select', 'tasks')">
+    <button type="button" class="sit__item ia-status-capsule__item" :class="{ 'sit__item--on': active === 'tasks' }" data-testid="sit-tasks" :title="tasksTitle" :aria-expanded="active === 'tasks'" @click="emit('select', 'tasks')">
       📋 {{ t('ia2.sit.tasks') }} {{ taskTotal }}
       <span v-if="waitingCount" class="sit__sm sit__sm--warn" data-testid="sit-tasks-decide">{{ t('ia2.sit.decideCount', { n: waitingCount }) }}</span>
       <span v-if="taskStatusSummary" class="sit__sm" data-testid="sit-tasks-summary">{{ taskStatusSummary }}</span>

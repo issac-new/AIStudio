@@ -12,6 +12,7 @@ import { useWorkspaceStore } from '../store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { fetchGovernanceOverview, type GovernanceDocMeta } from '@/custom/governance/api/governance'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
+import UiEmptyState from '@/custom/ui/UiEmptyState.vue'
 import { shortMxName, stripHomeserver } from '@/custom/ui/mxid-display'
 
 type SearchType = 'all' | 'sessions' | 'tasks' | 'runs' | 'docs' | 'people'
@@ -339,10 +340,9 @@ function reset(): void {
       </section>
 
       <p v-if="docsError && (type === 'all' || type === 'docs')" class="srch__err">{{ docsError }}</p>
-      <div v-if="total === 0" class="srch__empty" data-testid="search-empty">
-        <p>{{ zh ? '没有匹配结果。' : 'No results.' }}</p>
-        <p class="srch__empty-sub">{{ zh ? '换个关键词，或放宽工作区 / 状态 / 时间过滤。' : 'Try another keyword or relax the workspace / status / time filters.' }}</p>
-      </div>
+      <UiEmptyState v-if="total === 0" data-testid="search-empty" icon="🔍" boxed
+        :title="zh ? '没有匹配结果' : 'No results'"
+        :hint="zh ? '换个关键词，或放宽工作区 / 状态 / 时间过滤。' : 'Try another keyword or relax the workspace / status / time filters.'" />
     </div>
 
     <KanbanTaskDrawer v-if="drawerOpen" v-model:show="drawerOpen" :task-id="drawerTaskId" />
@@ -384,7 +384,4 @@ function reset(): void {
 .srch__go { font-size: 11px; color: var(--accent-primary); white-space: nowrap; }
 .srch__more { margin: 0; padding: 6px 12px; font-size: 10.5px; color: var(--text-muted); }
 .srch__err { margin: 0; font-size: 11.5px; color: var(--ia-stale); }
-.srch__empty { padding: 28px 16px; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px; }
-.srch__empty p { margin: 0; font-size: 13px; }
-.srch__empty-sub { margin-top: 4px !important; font-size: 11.5px !important; color: var(--text-muted); }
 </style>
