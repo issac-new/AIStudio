@@ -591,9 +591,10 @@ async function onDeleteGroup(roomId: string): Promise<void> {
   >
     <!-- A0 三中心导航已升壳级（IaGlobalTop 顶部行，IaCentersNav 组件）——
          2026-10-16 走查修正：原挂本画布时 sim/gov 路由看不到导航，跨中心切换断链。 -->
-    <!-- 左栏：折叠态 18px 导轨（▶ 展开）；栏控叠放栏内右上角（v12.6 不占行） -->
+    <!-- 左栏：折叠态 18px 导轨（▶ 展开）；栏控叠放首行右上角（2026-10-23 二轮） -->
     <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left">
-      <!-- R6 补充：栏控迁独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） -->
+      <!-- 2026-10-23 二轮（用户裁定）：栏控不单独占行——colhead 绝对定位叠各栏
+           首行右上角，三栏统一 top 对齐；首行内容右侧让位防遮罩（R6 教训补齐） -->
       <div class="wb__colhead" data-testid="wb-colhead-left">
         <IaColumnControls
           testid="ia-col-left" show-min show-max :maximized="flow.maximized === 'left'"
@@ -629,7 +630,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
     <section v-if="!flow.layout.centerFolded" class="wb__center" data-testid="wb-center">
       <!-- 存量 homeserver 迁移横幅（server-info 单源对账命中时渲染；房间列不可用时先看这里） -->
       <MatrixServerMovedBanner />
-      <!-- R6 补充：中栏栏控迁独立控制条行（2026-10-23 统一轮：最小化+最大化+独立窗口） -->
+      <!-- R6 补充：中栏栏控（2026-10-23 二轮：叠放首行右上角，不占行） -->
       <div class="wb__colhead wb__colhead--center" data-testid="wb-colhead-center">
         <IaColumnControls
           testid="ia-col-center" show-min show-max :maximized="flow.maximized === 'center'" show-popout
@@ -772,22 +773,32 @@ async function onDeleteGroup(roomId: string): Promise<void> {
   min-height: 0; position: relative;
   display: flex; flex-direction: column;
 }
-/* 栏头 26px 占列高：子面板用 flex 吃剩余高度，height:100% 会顶穿底栏（2026-10-20 走查） */
+/* 栏控叠放后子面板从栏顶吃满高度（colhead 已绝对定位不占列高） */
 .wb__left > .flow-nav, .wb__right > .tdp { flex: 1 1 auto; height: auto; min-height: 0; }
 .wb__center { overflow: hidden; }
 .wb__center > .sc { flex: 1 1 auto; height: auto; min-height: 0; }
 
-/* R6 补充：栏控独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） */
+/* 栏控叠放（2026-10-23 二轮用户裁定：不单独占行）：colhead 绝对定位叠各栏
+ * 首行右上角，三栏统一 top 对齐；R6 遮罩教训用首行让位补齐（下方 :deep 规则）。
+ * z-index 95 高于内容低于分割条交互层。 */
 .wb__colhead {
-  flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center;
-  height: 26px; padding: 0 6px; border-bottom: 1px solid var(--border-color);
-  background: var(--bg-card); border-radius: 6px 6px 0 0;
+  position: absolute; top: 5px; right: 6px; z-index: 95;
+  display: flex; justify-content: flex-end; align-items: center;
+  padding: 0 2px;
 }
-.wb__colhead--center { border-bottom-color: transparent; }
+.wb__colhead--center { right: 10px; }
+
+/* 首行右侧让位：左栏协作流头/右栏任务决策头（两钮 ~50px）、中栏对象头行
+ * （三钮 ~74px，右缘留更多）——按钮叠放区不压内容 */
+.wb__left > :deep(.flow-nav__head),
+.wb__right > :deep(.tdp__head) { padding-right: 58px; }
+.wb__center :deep(.swp__block--obj) { padding-right: 82px; }
+/* 中栏迁移横幅偶发渲染时同样让位 */
+.wb__center :deep(.msmb) { padding-right: 82px; }
 
 /* R6 补充：栏宽拖拽分割条（左栏右缘/右栏左缘，hover 加粗可见） */
 .wb__split {
-  position: absolute; top: 26px; bottom: 0; width: 5px; z-index: 90;
+  position: absolute; top: 0; bottom: 0; width: 5px; z-index: 90;
   cursor: col-resize; background: transparent;
   /* 命中域加宽：视觉 6px 不变，两侧各外延 5px（6px 真实鼠标打不中；z-index
      须压过栏内高层级内容——ide chat-input-area 是 z-80，曾盖住分割条右半） */
