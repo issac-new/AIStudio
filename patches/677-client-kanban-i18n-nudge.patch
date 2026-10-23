@@ -1,0 +1,26 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -3898,7 +3898,9 @@
+       moveToReady: '→ 待就绪',
+       priority: '设置优先级',
+       archive: '归档',
+-      nudgeDispatcher: '催一下调度器'
++      nudgeDispatcher: '催一下调度器',
++      nudge: '催办',
++      nudgeHint: '按卡的负责人/板归属解析催办对象',
+     },
+     message: {
+       taskCreated: '任务已创建',
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -3899,7 +3899,9 @@
+       moveToReady: '→ ready',
+       priority: 'Set priority',
+       archive: 'Archive',
+-      nudgeDispatcher: 'Nudge dispatcher'
++      nudgeDispatcher: 'Nudge dispatcher',
++      nudge: 'Nudge',
++      nudgeHint: 'Resolve nudge targets from assignee/board ownership',
+     },
+     message: {
+       taskCreated: 'Task created',
