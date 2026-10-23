@@ -324,32 +324,13 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     expect(w.find('[data-testid="flow-cluster-tasks-!r1"]').exists()).toBe(false)
   })
 
-  it('栏底动作：主按钮直达统一聊天（open-identity-chat，无预选）；▾ 菜单收特殊形态（单聊/群聊/房间）', async () => {
+  it('栏底动作（五轮 G）：主按钮直达统一聊天且为唯一入口——▾ 菜单/特殊形态/建房输入全退役', async () => {
     const w = mountPanel()
-    // 主按钮（2026-10-23 五轮 E）：不再弹菜单，直达统一聊天窗口
     await w.find('[data-testid="flow-new-session"]').trigger('click')
-    expect(w.find('[data-testid="flow-new-menu"]').exists()).toBe(false)
     expect(w.emitted('open-identity-chat')).toHaveLength(1)
-    // 身份对话冗余项退役
-    // 特殊形态走 ▾
-    await w.find('[data-testid="flow-new-session-more"]').trigger('click')
-    expect(w.find('[data-testid="flow-new-menu"]').exists()).toBe(true)
-    expect(w.find('[data-testid="flow-new-chat-identity"]').exists()).toBe(false)
-    await w.find('[data-testid="flow-new-chat-agent"]').trigger('click')
-    expect(w.emitted('new-chat')).toHaveLength(1)
-    // 选择后菜单收起
     expect(w.find('[data-testid="flow-new-menu"]').exists()).toBe(false)
-    await w.find('[data-testid="flow-new-session-more"]').trigger('click')
-    await w.find('[data-testid="flow-new-chat-group"]').trigger('click')
-    expect(w.emitted('create-group')).toHaveLength(1)
-    // matrix 房间：转内联输入 → 输入+确认 emit create-room
-    await w.find('[data-testid="flow-new-session-more"]').trigger('click')
-    await w.find('[data-testid="flow-new-chat-room"]').trigger('click')
-    expect(w.find('[data-testid="flow-create-input"]').exists()).toBe(true)
-    await w.find('[data-testid="flow-create-input"]').setValue('新房间')
-    await w.find('[data-testid="flow-create-ok"]').trigger('click')
-    expect(w.emitted('create-room')![0][0]).toBe('新房间')
-    // V5 补遗⑤ S5：＋新循环入口退役（编排不走 UI）——按钮不存在
+    expect(w.find('[data-testid="flow-new-session-more"]').exists()).toBe(false)
+    expect(w.find('[data-testid="flow-create-input"]').exists()).toBe(false)
     expect(w.find('[data-testid="flow-new-loop"]').exists()).toBe(false)
     await w.find('[data-testid="flow-gov"]').trigger('click')
     expect(w.emitted('open-gov')).toHaveLength(1)
@@ -507,12 +488,11 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(router.currentRoute.value.name).toBe('ia2.commsRoom')
   })
 
-  it('v14 新建动线：▾ 菜单 agent 单聊 → /app/s/chat 新会话态（主按钮已直达统一聊天，五轮 E）；群聊 ✕ 确认后 → store.deleteRoom', async () => {
-    const { wrapper, router } = await mountAt('/app')
-    await wrapper.find('[data-testid="flow-new-session-more"]').trigger('click')
-    await wrapper.find('[data-testid="flow-new-chat-agent"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('ia2.collabChat')
+  it('五轮 G：agent 单聊/群聊/建房旧入口退役（统一聊天窗口为唯一新聊天路径）；群聊 ✕ 确认后 → store.deleteRoom', async () => {
+    const { wrapper } = await mountAt('/app')
+    expect(wrapper.find('[data-testid="flow-new-chat-agent"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="flow-new-chat-group"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="flow-new-session-more"]').exists()).toBe(false)
     // 删除群聊（非当前选中）：先过不可逆确认（D6，2026-10-22 走查批）；
     // 确认取消 → 零调用；确认放行 → 只调 store，不动路由
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)

@@ -641,13 +641,10 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         :workspace-by-session="workspaceBySession"
         :loop-activity="loopActivity"
         @select="onSelect"
-        @create-room="onCreateRoom"
         @open-gov="router.push({ name: 'ia2.board' })"
         @open-task="onNavOpenTask"
         @jump-ide="onNavJumpIde"
-        @new-chat="onNewChat"
         @open-identity-chat="router.push({ name: 'ia2.collab', query: { idc: '' } })"
-        @create-group="onCreateGroup"
         @delete-group="onDeleteGroup"
       />
     </aside>
