@@ -256,7 +256,25 @@ export interface ProposalDto {
     selectedContrast: BehaviorContrastDto | null
     diversity: { n: number; nDistinct: number; meanLineJaccard: number }
     regularization: RegularizationDto
+    /** HarnessPro 轮（2026-10-23）：帕累托三档报告（视图现算）。 */
+    pareto: ParetoReportDto
   }
+}
+
+/** HarnessPro 轮（2026-10-23）：帕累托三档选拔报告。 */
+export interface ParetoReportDto {
+  eligible: number
+  excluded: Array<{ variantId: string; label: string; reason: string }>
+  entries: Array<{
+    variantId: string
+    label: string
+    passAt1: number | null
+    costUsd: number | null
+    onFrontier: boolean
+    dominatedBy: string[]
+    tier: 'lite' | 'medium' | 'heavy' | null
+  }>
+  note: string
 }
 
 export interface ExperienceDto {
@@ -275,6 +293,15 @@ export interface ExperienceDto {
   snapshot?: { variantId: string; digest: string; targetPath: string | null; content: string }
   createdAt: string
   updatedAt: string
+  lastValidatedAt?: string
+  /** HarnessPro 轮 HP-7：保鲜派生（服务端现算）。 */
+  freshness?: {
+    confidenceScore: number
+    ageDays: number
+    band: 'fresh' | 'aging' | 'stale'
+    anchor: 'lastValidatedAt' | 'createdAt'
+    anchoredAt: string
+  }
 }
 
 export interface ChampionDto {

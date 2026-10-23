@@ -84,7 +84,13 @@ describe('validateTree', () => {
     expect(validateTree(unknown).issues.map((i) => i.code)).toContain('hooks_unknown_event')
     const badType = treeOf({ '.codex/hooks.json': JSON.stringify({ hooks: { PreToolUse: [{ hooks: [{ type: 'prompt', command: 'x' }] }] } }) })
     expect(validateTree(badType).issues.map((i) => i.code)).toContain('hooks_schema')
-    const good = treeOf({ '.codex/hooks.json': JSON.stringify({ hooks: { PreToolUse: [{ hooks: [{ type: 'command', command: 'python scripts/check.py' }] }] } }) })
+    // HP-3（2026-10-23）：声明工具环 hook 的树必须同时声明递增阶段阈值（runtime/policy.json）
+    const goodNoPolicy = treeOf({ '.codex/hooks.json': JSON.stringify({ hooks: { PreToolUse: [{ hooks: [{ type: 'command', command: 'python scripts/check.py' }] }] } }) })
+    expect(validateTree(goodNoPolicy).issues.map((i) => i.code)).toContain('hook_stage_thresholds_missing')
+    const good = treeOf({
+      '.codex/hooks.json': JSON.stringify({ hooks: { PreToolUse: [{ hooks: [{ type: 'command', command: 'python scripts/check.py' }] }] } }),
+      'runtime/policy.json': JSON.stringify({ economy_after_tools: 14, strict_after_tools: 26, finalize_after_tools: 44 }),
+    })
     expect(validateTree(good).ok).toBe(true)
   })
 

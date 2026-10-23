@@ -12,7 +12,8 @@ import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, annealedEditBudget, behaviorContrast, candidateDiversity,
   composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
   findBenchmarkLeakage, findGraderMarkers, findGraderMarkersInPath, hypothesisRetries,
-  leakageBlockers, maxEditCount, probeCost, pruneSignal, rsiConfig, sha256, stallDetection, submitReadiness,
+  leakageBlockers, maxEditCount, paretoReportOf, probeCost, pruneSignal, rsiConfig, sha256,
+  stallDetection, submitReadiness,
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
 import { getSet } from '../../eval/store'
@@ -23,9 +24,10 @@ import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
 import { nextId, mutateStore, readStore } from './store'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
+import { experienceFreshness, type ExperienceFreshness } from './experience-freshness'
 import type {
   BehaviorContrast, Champion, EditableSurface, EvolutionReport, Experience, ExperienceStatus,
-  GateBlocker, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
+  GateBlocker, ParetoReport, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
   RegularizationDerived, SurfaceKey, Variant,
 } from './types'
 
@@ -49,6 +51,8 @@ export interface ProposalDerived {
   diversity: { n: number; nDistinct: number; meanLineJaccard: number }
   /** RRSI 正则化读数（2026-10-23 吸收轮；视图现算不落盘）。 */
   regularization: RegularizationDerived
+  /** HarnessPro 帕累托三档报告（2026-10-23 吸收轮；视图现算不落盘）。 */
+  pareto: ParetoReport
 }
 
 export type ProposalView = Proposal & { derived: ProposalDerived }
@@ -95,6 +99,7 @@ function derive(
     selectedContrast: selectedProbe?.contrast ?? null,
     diversity: candidateDiversity(proposal.variants),
     regularization: regularization ?? emptyRegularization(proposal),
+    pareto: paretoReportOf(proposal),
   }
 }
 
@@ -198,7 +203,7 @@ export function overview(): {
   budget: { observedUsd: number; capUsd: number; proposalsWithBudget: number }
   proposals: ProposalView[]
   champions: Champion[]
-  experiences: Experience[]
+  experiences: Array<Experience & { freshness: ExperienceFreshness }>
   evolution: EvolutionReport
   meta: { note: string; source: string; boundary: string }
 } {
@@ -208,6 +213,20 @@ export function overview(): {
   const openStatuses: ProposalStatus[] = ['draft', 'submitted', 'approved', 'probing', 'composed']
   const observedUsd = store.proposals.reduce((sum, p) => sum + probeCost(p).total, 0)
   const capUsd = store.proposals.reduce((sum, p) => sum + p.budgetCapUsd, 0)
+  // HP-7 保鲜排序（2026-10-23）：采纳优先于候选/退役，同状态按数值置信降序——
+  // 过期未再验证的旧教训沉底（腾讯文误区三：检索应回当前主张，不是原始事实堆砌）。
+  const statusRank: Record<ExperienceStatus, number> = { adopted: 0, candidate: 1, retired: 2 }
+  const experiences = store.experiences
+    .map((e) => ({ ...e, freshness: experienceFreshness(e) }))
+    .sort((a, b) => {
+      const byStatus = statusRank[a.status] - statusRank[b.status]
+      if (byStatus !== 0) return byStatus
+      if (a.freshness.confidenceScore !== b.freshness.confidenceScore) {
+        return b.freshness.confidenceScore - a.freshness.confidenceScore
+      }
+      return a.createdAt < b.createdAt ? 1 : -1
+    })
+    .slice(0, 50)
   return {
     surfaces,
     counts: {
@@ -223,7 +242,7 @@ export function overview(): {
     budget: { observedUsd, capUsd, proposalsWithBudget: store.proposals.length },
     proposals: proposals.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)).slice(0, 50),
     champions: store.champions,
-    experiences: store.experiences.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 50),
+    experiences,
     evolution: evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions),
     meta: {
       note: '候选、探测、组合、冠军四段闭环；探测证据只来自 Eval Studio 真实运行。',
@@ -878,6 +897,15 @@ export async function promoteProposal(
     p.status = 'promoted'
     p.updatedAt = now
 
+    // HarnessPro 轮 HP-7 保鲜（2026-10-23）：采纳=对引用经验的一次再验证（腾讯文
+    // 误区三「三个月前的决策被当成今天的真理」——再验证刷新保鲜时钟）。
+    for (const exp of store2.experiences) {
+      if (p.experienceIds.includes(exp.id)) {
+        exp.lastValidatedAt = now
+        exp.updatedAt = now
+      }
+    }
+
     // 源文 selection.reflect_adoption/_distil：采纳后沉淀 cue/lesson/evidence/confidence，
     // 并把被采纳的 harness 整份存进域内经验库（不是只存一句摘要）。
     let experience: Experience | undefined
@@ -900,6 +928,7 @@ export async function promoteProposal(
         snapshot: { variantId: selected.id, digest: selected.digest, targetPath: p.targetPath, content: variantContent(selected) },
         createdAt: now,
         updatedAt: now,
+        lastValidatedAt: now,
       }
       store2.experiences.push(experience)
     }
@@ -935,6 +964,16 @@ export async function rollbackProposal(
       if (exp.sourceProposalId === p.id && exp.status === 'adopted') {
         exp.status = 'retired'
         exp.updatedAt = nowIso()
+      }
+    }
+    // HP-7：回滚撤销该次再验证——只清除由本次晋级写入的时间戳（精确匹配，不误伤后续验证）。
+    const promotedAt = p.promotion?.at
+    if (promotedAt) {
+      for (const exp of store.experiences) {
+        if (p.experienceIds.includes(exp.id) && exp.lastValidatedAt === promotedAt) {
+          delete exp.lastValidatedAt
+          exp.updatedAt = nowIso()
+        }
       }
     }
     p.status = 'rolled_back'

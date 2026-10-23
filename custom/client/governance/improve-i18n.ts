@@ -137,6 +137,14 @@ export interface ImproveCopy {
   confidenceLow: string
   confidenceMedium: string
   confidenceHigh: string
+  paretoTier: string
+  paretoDominated: string
+  paretoNote: string
+  paretoEligible: string
+  paretoExcluded: string
+  freshnessFresh: string
+  freshnessAging: string
+  freshnessStale: string
   adopt: string
   retire: string
   expCandidate: string
@@ -343,6 +351,14 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     confidenceLow: '低',
     confidenceMedium: '中',
     confidenceHigh: '高',
+    paretoTier: '档位',
+    paretoDominated: '帕累托劣势',
+    paretoNote: '帕累托三档（Lite 省钱/Medium 均衡/Heavy 高性能；劣势候选不进下一代）',
+    paretoEligible: '参与判定',
+    paretoExcluded: '缺读数排除',
+    freshnessFresh: '新鲜',
+    freshnessAging: '老化中',
+    freshnessStale: '过期',
     adopt: '采纳',
     retire: '退役',
     expCandidate: '候选',
@@ -547,6 +563,14 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     confidenceLow: 'Low',
     confidenceMedium: 'Medium',
     confidenceHigh: 'High',
+    paretoTier: 'Tier',
+    paretoDominated: 'Dominated',
+    paretoNote: 'Pareto tiers (Lite cost / Medium balanced / Heavy perf; dominated candidates stay out)',
+    paretoEligible: 'eligible',
+    paretoExcluded: 'excluded',
+    freshnessFresh: 'fresh',
+    freshnessAging: 'aging',
+    freshnessStale: 'stale',
     adopt: 'Adopt',
     retire: 'Retire',
     expCandidate: 'Candidate',
