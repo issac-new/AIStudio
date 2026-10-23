@@ -359,13 +359,10 @@ function submitCreateRoom(): void {
     </div>
 
     <div class="flow-nav__foot">
-      <!-- v14「＋新聊天」三分型：agent 单聊 / agent 群聊 / matrix 房间（内联输入）。
-           A-H 复盘轮 D：三项 + 菜单钮补 title 说明（命名区分度不足的补偿通道）。 -->
+      <!-- 2026-10-23 五轮 E（用户裁定「新建聊天也不用去选身份，聊天已统一」）：
+           主按钮直达统一聊天窗口（@谁就是谁，无预选步骤）；特殊形态收进 ▾
+           小菜单（agent 单聊/群聊/matrix 房间），「身份对话…」冗余项退役。 -->
       <div v-if="newMenuOpen && !createOpen" class="flow-nav__newmenu" data-testid="flow-new-menu">
-        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-identity" title="与网关任一身份（profile）直接对话（Bot Chat）——统一身份聊天" @click="newMenuOpen = false; emit('open-identity-chat')">
-          <span class="flow-nav__newmenu-ico">◉</span>
-          <span>{{ zh ? '身份对话…' : 'Identity chat…' }}</span>
-        </button>
         <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-agent" :title="t('ia2.flow.newAgentChatHint')" @click="newMenuOpen = false; emit('new-chat')">
           💬 {{ t('ia2.flow.newAgentChat') }}
         </button>
@@ -376,9 +373,12 @@ function submitCreateRoom(): void {
           # {{ t('ia2.flow.newMatrixRoom') }}
         </button>
       </div>
-      <button v-if="!createOpen" type="button" class="flow-nav__chip" data-testid="flow-new-session" :title="t('ia2.flow.newChatHint')" @click="newMenuOpen = !newMenuOpen">
-        ＋ {{ t('ia2.flow.newChat', zh ? '新建聊天' : 'New chat') }}
-      </button>
+      <span v-if="!createOpen" class="flow-nav__newchat">
+        <button type="button" class="flow-nav__chip flow-nav__chip--primary" data-testid="flow-new-session" title="直接开始聊天——在消息里 @任意身份 即可与之对话（无需先选）" @click="emit('open-identity-chat')">
+          ＋ {{ t('ia2.flow.newChat', zh ? '新建聊天' : 'New chat') }}
+        </button>
+        <button type="button" class="flow-nav__newchat-more" data-testid="flow-new-session-more" :title="zh ? '更多形态：单聊会话 / 群聊 / Matrix 房间' : 'More: session / group / Matrix room'" :aria-label="zh ? '更多新建形态' : 'More new-chat forms'" @click="newMenuOpen = !newMenuOpen">▾</button>
+      </span>
       <!-- S5（补遗⑤）：/app/eng 编排页退役——＋新循环入口随之摘除（守门 workbench-flow
            断言 flow-new-loop 不存在；循环创建走脚本/运行中心，恢复路由即回生）。 -->
 
@@ -397,6 +397,18 @@ function submitCreateRoom(): void {
 }
 .flow-nav__head { padding: 10px 12px 6px; font-weight: 700; font-size: 12px; color: var(--text-primary); }
 .flow-nav__filters { display: flex; gap: 4px; padding: 0 12px 6px; }
+.flow-nav__newchat { display: inline-flex; align-items: stretch; }
+.flow-nav__newchat-more {
+  border: 1px solid var(--border-color); border-left: none; border-radius: 0 999px 999px 0;
+  background: transparent; color: var(--text-muted); cursor: pointer;
+  padding: 0 6px; font-size: 10px;
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
+}
+.flow-nav__chip--primary {
+  border-color: var(--accent-primary); color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent); font-weight: 600;
+  border-radius: 999px 0 0 999px;
+}
 .flow-nav__chip {
   height: 22px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 11px;
   background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer;
