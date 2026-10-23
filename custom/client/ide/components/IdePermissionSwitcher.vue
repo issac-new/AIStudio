@@ -1,4 +1,5 @@
 <script setup lang="ts">
+<<<<<<< Updated upstream
 // IdePermissionSwitcher — ZCode 模式控件（2026-10-18 锚定校正轮重写）。
 // 上游锚=upstream/zcode v3.16.1 v4/composer/V4ComposerModeControls.tsx（3.15.1→3.16.1 仅标签动画/import 整理，语义不变）：
 // Plan 独立勾选项（planEnabled 与权限档正交，开启时触发器旁显示计划标记可 ✕ 撤）
@@ -16,6 +17,22 @@ import {
   readZcodeMode, writeZcodeMode, toLegacyMode, zcodeModeLabel,
   ZCODE_PERMISSION_MODES, ZCODE_PLAN, type ZcodeModeState,
 } from '../utils/zcodeModes'
+=======
+// IdePermissionSwitcher — 权限模式七档循环切换器（复刻 claude-code Shift+Tab 七档
+// +minimax Alt+M 六档形态；UI 复刻 R2）。数据面=permmodes（七档语义+toEngineTaskMode
+// 引擎任务档映射）；当前会话档存 localStorage。
+// A2 诚实化（2026-09-29）：面板底部常显生效面说明——档位当前随任务派发/自动化消费，
+// 会话内即时切换需引擎通道。通道锚点已查实：zcode v4 sendText payload 支持
+// mode: submissionModeSchema（build/edit/plan/yolo，command.ts:99），接线列独立轮
+// （需 /ide 发送链从 hermes 通道切/并到 engine sendText）。
+// 2026-10-18 ZCode 对齐批：控件迁输入区 composer 工具条（面板改向上开）；
+// 选档除 localStorage 外穿线服务端会话档 REST（/api/hermes/permmodes/session-mode，
+// session-mode-controller.ts——落盘后随任务派发 createSession.config.mode 生效）。
+import { computed, ref, watch } from 'vue'
+import { useChatStore } from '@/stores/hermes/chat'
+import { useIdeStore } from '../store/ide'
+import { authFetch } from '../utils/auth-fetch'
+>>>>>>> Stashed changes
 
 const chatStore = useChatStore()
 const ide = useIdeStore()
@@ -40,6 +57,7 @@ if (typeof window !== 'undefined') {
   })
 }
 
+<<<<<<< Updated upstream
 // 服务端会话档穿线（七档词表）；失败 fail-soft（本地档仍随派发面消费）。
 async function pushServerMode(legacy: string): Promise<void> {
   const agentId = (ide as { agentId?: string }).agentId
@@ -61,6 +79,32 @@ function commit(next: ZcodeModeState): void {
 
 function pick(mode: ZcodeModeState['mode']): void {
   commit({ ...state.value, mode })
+=======
+const selected = ref(current())
+// 会话切换跟随本会话档（localStorage 为 UI 即时态；服务端档经 REST 同步）。
+watch(() => chatStore.activeSessionId, (sid, prev) => {
+  if (sid !== prev) selected.value = current()
+})
+const selectedLabel = computed(() => MODES.find((m) => m.key === selected.value)?.label ?? selected.value)
+
+// 服务端会话档穿线（2026-10-18）：profile=ide.agentId；失败 fail-soft（本地档仍
+// 随派发面消费，面板注如实说明双面）。agentId 缺席（测试桩/未就绪）跳过不发。
+async function pushServerMode(key: string): Promise<void> {
+  const agentId = (ide as { agentId?: string }).agentId
+  if (!agentId) return
+  try {
+    await authFetch(`/api/hermes/permmodes/session-mode/${encodeURIComponent(agentId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ mode: key }),
+    })
+  } catch { /* fail-soft：服务端不可达时保留本地档（派发面退本地） */ }
+}
+
+function pick(key: string): void {
+  selected.value = key
+  localStorage.setItem(storageKey(), key)
+  void pushServerMode(key)
+>>>>>>> Stashed changes
   open.value = false
 }
 function togglePlan(): void {
@@ -130,6 +174,7 @@ defineExpose({ cycle })
         role="menuitemradio"
         :aria-checked="m.key === state.mode"
         @click="pick(m.key)"
+<<<<<<< Updated upstream
       >
         <span class="ide-perm__radio">{{ m.key === state.mode ? '●' : '' }}</span>
         <span class="ide-perm__mode-text">
@@ -138,6 +183,10 @@ defineExpose({ cycle })
         </span>
       </button>
       <div class="ide-perm__note" data-testid="ide-perm-note">生效面：任务派发/自动化（选档已穿线服务端会话档，随下次派发生效）。会话内即时切换待引擎接线。</div>
+=======
+      >{{ m.label }}<small>{{ m.hint }}</small></button>
+      <div class="ide-perm__note" data-testid="ide-perm-note">生效面：任务派发/自动化（选档已穿线服务端会话档，随下次派发生效）。会话内即时切换待引擎接线（v4 sendText mode 已查实，见组件头注）。</div>
+>>>>>>> Stashed changes
     </div>
   </span>
 </template>
@@ -161,8 +210,14 @@ defineExpose({ cycle })
   &:hover { color: var(--primary-color); background: var(--hover-color, rgba(0,0,0,0.06)); }
 }
 .ide-perm__panel {
+<<<<<<< Updated upstream
   // 面板向上开（ZCode SelectContent side:"top" 语义）。
   position: absolute; bottom: calc(100% + 4px); top: auto; left: 0; z-index: 40; min-width: 240px;
+=======
+  // 2026-10-18 迁 composer 工具条：控件贴屏底，面板改向上开（ZCode 同位
+  // SelectContent side:"top" 语义）。
+  position: absolute; bottom: calc(100% + 4px); top: auto; left: 0; z-index: 40; min-width: 220px;
+>>>>>>> Stashed changes
   background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); padding: 4px;
 }
