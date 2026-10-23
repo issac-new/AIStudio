@@ -323,6 +323,19 @@ function handleInlineCreateCancel() {
   min-height: 0;
 }
 
+/* D22 全页面优化：重列（实测 done 列 1158 卡、12.7 万 px）屏外渲染跳过。
+ * 先例纪律（matrix-chat TimelinePanel 踩坑）：content-visibility 只加在滚动容器的
+ * 直接子元素上（lane / 无 lane 时的卡），容器自身加会破 flex 布局；contain-intrinsic-size
+ * 的 auto 前缀保留浏览器已量尺寸，滚动条稳定。 */
+.column-body > .kanban-lane {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 400px;
+}
+.column-body > .kanban-task-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+}
+
 .column-loading {
   padding: 20px;
   display: flex;
