@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
+import { fetchIdentities, sendToIdentity } from '@/custom/ia2/identity-chat'
 import { useMatrixThreadStore } from '@/custom/matrix-chat/stores/matrix-thread'
 import MatrixReactionPicker from './MatrixReactionPicker.vue'
 import { shortMxName, stripHomeserver } from '@/custom/ui/mxid-display'
@@ -30,6 +31,35 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const roomStore = useMatrixRoomStore()
+
+// ── @身份统一聊天（2026-10-23 五轮 D）：本机网关身份进 @ 补全；消息中 @<身份>
+// 在投房后 relay 到该身份（peer dm 协议），回复以 [身份] 前缀回房。bot/matrix
+// 成员/远程网关（矩阵成员）走原生 mention，不在此 relay。 ──
+const identityList = ref<Array<{ id: string; online: boolean }>>([])
+onMounted(() => {
+  void fetchIdentities().then(list => { identityList.value = list.map(i => ({ id: i.id, online: i.online })) }).catch(() => {})
+})
+function mentionedIdentities(text: string): string[] {
+  const ids = new Set(identityList.value.map(i => i.id))
+  const out: string[] = []
+  for (const m of text.matchAll(/@([A-Za-z0-9_.-]+)/g)) {
+    if (ids.has(m[1]) && !out.includes(m[1])) out.push(m[1])
+  }
+  return out.slice(0, 3)
+}
+function relayToIdentities(text: string): void {
+  for (const id of mentionedIdentities(text)) {
+    void sendToIdentity(id, text).then(r => {
+      if (r.queued) {
+        void composerStore.sendMessage(`[${id}] 回复生成中——将在其身份会话（Bot Chat）里完成`)
+      } else if (r.reply) {
+        void composerStore.sendMessage(`[${id}] ${r.reply}`)
+      }
+    }).catch(err => {
+      void composerStore.sendMessage(`[${id}] 未能回复：${(err as Error).message.slice(0, 120)}`)
+    })
+  }
+}
 const composerStore = useMatrixComposerStore()
 const threadStore = useMatrixThreadStore()
 const { t } = useI18n()
@@ -94,10 +124,14 @@ const roomMembers = computed(() => {
   return [...groups.admins, ...groups.mods, ...groups.defaults]
 })
 
+const identityEntries = computed(() => identityList.value.map(i => ({
+  userId: `@${i.id}`, name: i.id, isIdentity: true, online: i.online,
+})))
 const filteredMentionMembers = computed(() => {
   const q = mentionQuery.value.toLowerCase()
-  if (!q) return roomMembers.value.slice(0, 8)
-  return roomMembers.value.filter((m: any) => {
+  const members = [...roomMembers.value, ...identityEntries.value]
+  if (!q) return members.slice(0, 8)
+  return members.filter((m: any) => {
     const name = (m.name ?? '').toLowerCase()
     const uid = (m.userId ?? '').toLowerCase()
     return name.includes(q) || uid.includes(q)
@@ -281,6 +315,8 @@ async function handleSend() {
       )
     } else {
       await composerStore.sendMessage(text)
+      // @身份统一聊天：本机身份的回复以 [身份] 前缀回房（发送失败在 relay 内自报）
+      relayToIdentities(text)
     }
     inputText.value = ''
     if (textareaRef.value) textareaRef.value.style.height = 'auto'
@@ -325,6 +361,7 @@ function getMemberInitial(member: any): string {
         </div>
         <div class="mention-info">
           <span class="mention-name">{{ member.name ?? shortMxName(member.userId) }}</span>
+          <span v-if="member.isIdentity" class="mention-identity-tag">身份</span>
           <span class="mention-userid" :title="member.userId">{{ stripHomeserver(member.userId) }}</span>
         </div>
       </div>
@@ -623,6 +660,10 @@ $text-on-accent: var(--bg-primary);
   gap: 1px;
 }
 
+.mention-identity-tag {
+  font-size: 9px; color: var(--accent-primary); border: 1px solid var(--accent-primary);
+  border-radius: 3px; padding: 0 3px; margin-left: 5px; flex-shrink: 0;
+}
 .mention-name {
   font-size: 13px;
   font-weight: 500;

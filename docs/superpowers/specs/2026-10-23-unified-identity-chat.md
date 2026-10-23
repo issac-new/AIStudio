@@ -1,7 +1,7 @@
 # 统一身份聊天窗口（五轮 B）
 
 - 日期：2026-10-23
-- 版本：v1（批 1：本机网关全身份；分支 feat/unified-identity-chat）
+- 版本：v1.1（五轮 C/D：403 降级根治 patch 684 + @身份扇出与 Matrix 群聊 relay，分支 feat/at-identity-unified-chat；v1=批 1 本机身份）
 - 需求：用户五轮裁定原话「1、需要新增，通过 matrix 发送消息给对应 gateway 去获取（和"在线"同理）；2、目前同一台机器上多账号是模拟不同机器的集群（复用的同一个网关），不用做聚合；3、加上（来源标签）；4、我想要的是在一个聊天窗口中统一，可以和所有身份进行聊天会话」。
 
 ## 交付（批 1）
@@ -28,6 +28,19 @@
 - 服务端守门 `identity-chat.test.ts` 4/4：目录全集+在线投影（fail-soft）、非匹配放行、chat ensure→转发→回执投影（profile 前缀断言）。
 - 活体：8647 三端点全通（identities n=49/在线 2；chat roundtrip 回复正确）。
 - 受影响回归：workbench-flow / flow-adapter（FlowNavPanel 加菜单项）等 ia2 目录全量绿后合入。
+
+## 五轮 C/D 补录（同日）
+
+- **C·403 修复（用户报修「你没有权限访问该资源」）**：根因=Matrix 登录账号（非 super_admin）打开会话页时模型选择器按活跃 profile（orchestrator）查 `/api/hermes/available-models`，`resolveUserProfile` 判无 profile 授权 403 → client 全局 toast。修复（patch 684）：models store 403 回落无 profile 查询（服务端合并该用户可见 profiles）+ 该端点入 client 静默降级名单（run13 先例）。
+- **D·@身份统一聊天（用户裁定「聊天窗口内@对应身份，扩展 matrix 群聊支持 bot/matrix/单个或多个本机及远程 agent」）**：
+  - IdentityChatCanvas：消息内 `@<身份>` 命中身份清单即扇出（≤5，无 @ 发当前选中）；回复行带身份发言人标签（from）。
+  - Matrix 群聊（MatrixMessageInput）：本机身份进 @ 补全（「身份」标签区分）；发送后 relay——消息内 @本机身份 经 peer dm 转发，回复以 `[身份] 回复` 形式回房；queued 发「生成中」提示。bot/matrix 成员/远程网关（矩阵成员）走原生 mention（远程 gateway 的响应由其网关矩阵平台原生处理——用户第 0 点映射：每 Matrix 成员=一个真实网关）。
+
+| # | 决策 | 理由 | 否决的备选 | 可逆 |
+|---|---|---|---|---|
+| 7 | 403 回落而非放开服务端权限 | resolveUserProfile 的 profile 隔离是既定权限模型；目录查询降级无敏感面（合并可见 profiles 已是该用户可见数据） | 服务端放行任意 profile（否决：击穿 profile 授权面） | 是 |
+| 8 | 群聊 relay=客户端发送侧（composer 后置转发），非服务端桥 | 会话发送链已在客户端（matrix-js-sdk），零新增服务面；回复即时回房 | 服务端房间监听桥（否决：需网关侧矩阵凭据与监听常驻，批 2 再议） | 是 |
+| 9 | 远程身份（矩阵成员=远程网关）走原生 mention 不 relay | 用户第 0 点：每 matrix 成员对应真实网关——其网关矩阵平台原生响应房间消息；客户端 relay 反而双跑 | 远程也走 dm 封装（否决：与网关矩阵平台职责重复） | 是 |
 
 ## 残留与移交（批 2）
 
