@@ -72,7 +72,7 @@ export function assessMaturity(entries: InterventionEntry[], autoApprove: number
   if (!isL2Shape) {
     gapNote = `插手有 ${reading.collabSharePct}% 发生在排活沟通——先把背景给足、词统一叫法，人就能少插话`
   } else if (reading.reworks > 0) {
-    gapNote = `活大多自动在跑（该人拍板的节点 ${reading.autoApproveSharePct ?? 0}% 由机器自动过），但仍有 ${reading.reworks} 次干错重来——没领会意图是眼下最该修的`
+    gapNote = `活大多自动在跑（该人拍板的节点 ${reading.autoApproveSharePct ?? 0}% 由机器自动过），但仍有 ${reading.reworks} 次干错重来——说明它没领会意图`
   } else {
     gapNote = `活自动在跑、没见干错重来——再往上拼的是家底：判例、词条、画像够不够好查`
   }

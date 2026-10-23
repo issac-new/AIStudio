@@ -153,7 +153,7 @@ GovOrgKnowledgeView 增 `ExpertiseSection`（搜索框+画像墙卡片），消�
   模板括注，CJK 二元组会切出 人类/代演/写派 类高频假概念——抽取前正则剥括注（治本）
   +模板词入停用表（兜底）。
 - 2026-10-23 说人话批（用户在交付效能页签指令「说人话」）：D20 上表全文案替换（服务器 C/L 标签与
-  matrix.note、maturity gapNote/note、检索 formula 一并改；英文键不动；测试断言随改）。
+  matrix.note、maturity gapNote/note、检索 formula 一并改；英文键不动；测试断言随改；走查抓出句尾与标签前缀重复语一并修正）。
 - 2026-10-23 挂账批（用户指令「完成挂账及剩余待办」）：D16 C 档补数（81 任务估时分档走 hermes CLI
   sanctioned 通道批量写入）；D17 协作成熟度三级读数；D18 判例库检索（活跃 runs+归档 tar 按需抽）；
   D19 概念跨域冲突提示。首响 P90 维持不做（hermes-agent 运行时，overlay 不可达）。
