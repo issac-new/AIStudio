@@ -20,6 +20,7 @@ import {
   recordWorkbenchProbe,
   rollbackWorkbenchProposal,
   setWorkbenchExperienceStatus,
+  suggestWorkbenchProposal,
   startAutoProbe,
   submitWorkbenchProposal,
   type ExperienceDto,
@@ -87,6 +88,21 @@ const expForm = reactive({
 
 // #5 经验库合流：按经验域筛选（消「导入全 general 后无法分域检索」的盲区）。
 const expDomainFilter = ref('')
+
+// RRSI AI 起草器（受治理 proposer）：按面起草 draft，后续仍走人工门禁。
+const suggestForm = reactive({
+  surfaceKey: 'system_prompt' as SurfaceKey,
+  targetPath: 'profiles/orchestrator/SOUL.md',
+  profile: 'orchestrator',
+})
+
+async function suggest(): Promise<void> {
+  await act(() => suggestWorkbenchProposal({
+    surfaceKey: suggestForm.surfaceKey,
+    targetPath: suggestForm.targetPath.trim() || undefined,
+    profile: suggestForm.profile.trim() || undefined,
+  }))
+}
 
 const experienceDomains = computed<string[]>(() => {
   const all = (data.value?.experiences ?? []).map((e) => e.domain || 'general')
@@ -522,6 +538,16 @@ onMounted(() => void refresh())
             {{ showCreate ? L.cancel : L.newProposal }}
           </button>
         </div>
+        <div class="hi__row" data-testid="hi-suggest">
+          <b>{{ L.suggestTitle }}</b>
+          <select v-model="suggestForm.surfaceKey" data-testid="hi-suggest-surface">
+            <option v-for="sf in data.surfaces" :key="sf.key" :value="sf.key">{{ sf.nameZh }}</option>
+          </select>
+          <input v-model="suggestForm.targetPath" :placeholder="L.formTarget" data-testid="hi-suggest-target" style="min-width: 220px" />
+          <input v-model="suggestForm.profile" :placeholder="L.suggestProfile" style="width: 130px" />
+          <button type="button" class="hi__btn" :disabled="busy" data-testid="hi-suggest-run" @click="suggest">{{ L.suggestRun }}</button>
+          <span class="hi__meta">{{ L.suggestHint }}</span>
+        </div>
 
         <form v-if="showCreate" class="hi__form" data-testid="hi-create" @submit.prevent="create()">
           <label>{{ L.formTitle }}<input v-model="createForm.title" data-testid="hi-create-title" required /></label>
@@ -597,6 +623,18 @@ onMounted(() => void refresh())
             · {{ L.approvalApproved }}：{{ p.approval ? `${p.approval.actor}（${p.approval.decision === 'approved' ? L.approvalApproved : L.approvalRejected}）` : L.approvalNone }}
             · {{ L.probes }}：{{ p.derived.recordedProbes }}/{{ p.derived.totalProbes }}
             · {{ L.cost }}：{{ fmtUsd(p.derived.cost.total) }} / {{ fmtUsd(p.budgetCapUsd) }}
+          </div>
+
+          <div
+            v-if="probeOf(p, p.derived.selectedVariantId ?? '')?.evidence?.regression?.passAt1 != null"
+            class="hi__meta" data-testid="hi-heldout-compare"
+          >
+            {{ L.evoVsHeldout }}：
+            {{ L.evolveLabel }} {{ fmtPct(probeOf(p, p.derived.selectedVariantId ?? '')?.evidence?.passAt1) }}
+            · {{ L.heldoutLabel }} {{ fmtPct(probeOf(p, p.derived.selectedVariantId ?? '')?.evidence?.regression?.passAt1) }}
+            <small v-if="probeOf(p, p.derived.selectedVariantId ?? '')?.contrast?.passAt1Delta != null">
+              （{{ L.evolveDelta }} {{ fmtDelta(probeOf(p, p.derived.selectedVariantId ?? '')?.contrast?.passAt1Delta) }}）
+            </small>
           </div>
 
           <details class="hi__details" open>
