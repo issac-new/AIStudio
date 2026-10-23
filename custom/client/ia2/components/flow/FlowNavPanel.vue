@@ -45,6 +45,7 @@ const emit = defineEmits<{
   (e: 'jump-ide', taskId: string | null): void
   /** v14：「＋新聊天」→ agent 单聊（/app/s/chat 新会话态） */
   (e: 'new-chat'): void
+  (e: 'open-identity-chat'): void
   /** v14：「＋新聊天」→ agent 群聊（WorkbenchView 开 CreateRoomForm 抽屉） */
   (e: 'create-group'): void
   /** v14：群聊行 hover ✕ → store.deleteGroup（补偿被隐藏侧栏的删除入口） */
@@ -361,6 +362,10 @@ function submitCreateRoom(): void {
       <!-- v14「＋新聊天」三分型：agent 单聊 / agent 群聊 / matrix 房间（内联输入）。
            A-H 复盘轮 D：三项 + 菜单钮补 title 说明（命名区分度不足的补偿通道）。 -->
       <div v-if="newMenuOpen && !createOpen" class="flow-nav__newmenu" data-testid="flow-new-menu">
+        <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-identity" title="与网关任一身份（profile）直接对话（Bot Chat）——统一身份聊天" @click="newMenuOpen = false; emit('open-identity-chat')">
+          <span class="flow-nav__newmenu-ico">◉</span>
+          <span>{{ zh ? '身份对话…' : 'Identity chat…' }}</span>
+        </button>
         <button type="button" class="flow-nav__newmenu-item" data-testid="flow-new-chat-agent" :title="t('ia2.flow.newAgentChatHint')" @click="newMenuOpen = false; emit('new-chat')">
           💬 {{ t('ia2.flow.newAgentChat') }}
         </button>
