@@ -7,7 +7,6 @@
 import OrgDiagnosisSection from '@/custom/governance/components/OrgDiagnosisSection.vue'
 import KnowledgeGraphSection from '@/custom/governance/components/KnowledgeGraphSection.vue'
 import DecisionGraphSection from '@/custom/governance/components/DecisionGraphSection.vue'
-import HandoffSection from '../../components/kanban/HandoffSection.vue'
 import ExpertiseSection from './ExpertiseSection.vue'
 import PrecedentSection from './PrecedentSection.vue'
 import { useTasksTabsText } from '../../i18n-tasks-tabs'
@@ -24,7 +23,6 @@ const tabText = useTasksTabsText()
       </div>
     </header>
     <div class="gov-view__body">
-      <HandoffSection />
       <OrgDiagnosisSection />
       <KnowledgeGraphSection />
       <DecisionGraphSection />

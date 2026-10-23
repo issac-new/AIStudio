@@ -4262,7 +4262,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    download: {
      downloading: 'Downloading...',
      downloadFailed: 'Download failed',
-@@ -3953,4 +6205,814 @@ export default {
+@@ -3953,4 +6205,815 @@
      new_0_7_36_8: 'Added release-triggered builds and validation for TOS 7 x86_64 test packages (#3397)',
      new_0_7_36_9: 'Improved GIF, animated WebP and APNG wallpapers up to 30 MB, preserving animation through saving, caching and theme import/export',
    },
@@ -4794,6 +4794,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    bold: 'Bold',
 +    cancel: 'Cancel',
 +    changeAvatar: 'Change Avatar',
++    avatarUploadFailed: 'Failed to upload avatar',
 +    code: 'Code',
 +    codeBlock: 'Code Block',
 +    comingSoon: 'Coming Soon',
@@ -9384,7 +9385,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    download: {
      downloading: '正在下载...',
      downloadFailed: '下载失败',
-@@ -4001,4 +6203,814 @@ export default {
+@@ -4001,4 +6203,815 @@
      new_0_7_36_8: '新增随版本发布自动构建和校验 TOS 7 x86_64 测试安装包的流程 (#3397)',
      new_0_7_36_9: '完善 GIF、动态 WebP 和 APNG 背景支持，上限提升至 30 MB，保存、缓存及主题导入导出均保留动画',
    },
@@ -9727,6 +9728,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    bold: '粗体',
 +    cancel: '取消',
 +    changeAvatar: '更换头像',
++    avatarUploadFailed: '头像上传失败',
 +    code: '代码',
 +    codeBlock: '代码块',
 +    comingSoon: '即将推出',

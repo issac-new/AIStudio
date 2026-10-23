@@ -569,11 +569,6 @@ async function onCreateRoom(name: string): Promise<void> {
 
 // ── v14 统一聊天：新建三型 + 群聊管理（补偿被隐藏画布侧栏的入口）──
 
-/** agent 单聊：/app/s/chat 新会话态（ChatView 无 sessionId 分支） */
-function onNewChat(): void {
-  void router.push({ name: 'ia2.collabChat' })
-}
-
 /** agent 群聊建房型抽屉开合 */
 const groupCreateOpen = ref(false)
 /** 左栏建房/删房动作错误（2026-10-22 走查批：原静默失败） */

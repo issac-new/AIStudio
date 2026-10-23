@@ -36,6 +36,40 @@ const avatarUrl = computed(() => {
   void roomStore.roomVersion
   return roomStore.getRoomAvatarUrl(room.value, 60)
 })
+// ─── Avatar upload（2026-10-24 功能排查批：原「更换头像」为无处理器假按钮——
+//     真实现走 matrix 媒体上传 + m.room.avatar state 事件，权限沿用 state 事件权）
+const avatarInputEl = ref<HTMLInputElement | null>(null)
+const avatarSaving = ref(false)
+const avatarError = ref<string | null>(null)
+
+function pickAvatar() {
+  if (!canEditName.value || avatarSaving.value) return
+  avatarError.value = null
+  avatarInputEl.value?.click()
+}
+
+async function onAvatarPicked(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file || !room.value || !clientStore.client) return
+  avatarSaving.value = true
+  avatarError.value = null
+  try {
+    // matrix-js-sdk uploadContent 新版返回 string、旧版返回 { content_uri }
+    const uploaded = await (clientStore.client as unknown as {
+      uploadContent: (f: File, o?: { type?: string; name?: string }) => Promise<string | { content_uri?: string }>
+    }).uploadContent(file, { type: file.type, name: file.name })
+    const mxc = typeof uploaded === 'string' ? uploaded : uploaded?.content_uri
+    if (!mxc) throw new Error('upload returned no content_uri')
+    await clientStore.client.sendStateEvent(room.value.roomId, 'm.room.avatar', { url: mxc }, '')
+    roomStore.bumpRoomVersion()
+  } catch (err: unknown) {
+    avatarError.value = (err as { message?: string })?.message || t('matrixChat.avatarUploadFailed')
+  } finally {
+    avatarSaving.value = false
+    input.value = ''
+  }
+}
 const roomName = computed(() => {
   void roomStore.roomVersion
   return room.value?.name ?? ''
@@ -194,7 +228,11 @@ async function handleLeaveRoom() {
           <img v-if="avatarUrl" :src="avatarUrl" alt="" class="rs-avatar-img" />
           <div v-else class="rs-avatar-placeholder">{{ roomName.charAt(0).toUpperCase() }}</div>
         </div>
-        <button class="rs-avatar-change-btn">{{ t('matrixChat.changeAvatar') }}</button>
+        <button class="rs-avatar-change-btn" :disabled="!canEditName || avatarSaving" @click="pickAvatar">
+          {{ avatarSaving ? t('matrixChat.saving') : t('matrixChat.changeAvatar') }}
+        </button>
+        <input ref="avatarInputEl" type="file" accept="image/*" class="rs-avatar-file" data-testid="rs-avatar-input" @change="onAvatarPicked" />
+        <p v-if="avatarError" class="rs-avatar-error" data-testid="rs-avatar-error">{{ avatarError }}</p>
       </div>
 
       <!-- Room Name -->
@@ -408,6 +446,8 @@ async function handleLeaveRoom() {
   font-weight: 600;
 }
 
+.rs-avatar-file { display: none; }
+.rs-avatar-error { margin: 4px 0 0; font-size: 11px; color: var(--error); }
 .rs-avatar-change-btn {
   font-size: 12px;
   color: $accent-primary;
