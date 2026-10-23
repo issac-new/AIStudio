@@ -143,6 +143,12 @@ export interface ImproveCopy {
   paretoEligible: string
   paretoExcluded: string
   freshnessFresh: string
+  retireTitle: string
+  retireRound: string
+  retireGain: string
+  retireCost: string
+  retireSince: string
+  retireNote: string
   freshnessAging: string
   freshnessStale: string
   adopt: string
@@ -357,6 +363,12 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     paretoEligible: '参与判定',
     paretoExcluded: '缺读数排除',
     freshnessFresh: '新鲜',
+    retireTitle: '冠军退役候选',
+    retireRound: '轮',
+    retireGain: '采纳增益',
+    retireCost: '成本',
+    retireSince: '其后已采纳轮数',
+    retireNote: 'advisory：零增益可能是守卫在起作用——只列证据供人工复核是否拆除，不自动回滚（腾讯文误区九「拆墙」）。',
     freshnessAging: '老化中',
     freshnessStale: '过期',
     adopt: '采纳',
@@ -569,6 +581,12 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     paretoEligible: 'eligible',
     paretoExcluded: 'excluded',
     freshnessFresh: 'fresh',
+    retireTitle: 'Champion retirement candidates',
+    retireRound: 'round',
+    retireGain: 'adoption delta',
+    retireCost: 'cost',
+    retireSince: 'adopted rounds since',
+    retireNote: 'Advisory: zero gain may mean the guard is working — evidence for human review only, no auto rollback.',
     freshnessAging: 'aging',
     freshnessStale: 'stale',
     adopt: 'Adopt',

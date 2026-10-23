@@ -218,6 +218,17 @@ export interface EvolutionDto {
   }
   surfaces: EvolutionSurfaceDto[]
   unexercised: SurfaceKey[]
+  /** 冠军退役候选（2026-10-23 挂账清偿 G4，advisory）。 */
+  retirementCandidates?: Array<{
+    surfaceKey: SurfaceKey
+    round: number
+    proposalId: string
+    variantLabel: string
+    passAt1Delta: number | null
+    costDeltaPct: number | null
+    tokenDeltaPct: number | null
+    roundsSince: number
+  }>
 }
 
 export interface ProposalDto {

@@ -42,6 +42,8 @@ import {
 import { countRuns as countRedteamRuns } from '../redteam/store'
 import { mountRedteam } from '../redteam/routes'
 import { loadEvalConfig } from './types'
+import { synthesizeProbesForTask } from './synthesize'
+import { ENTERPRISE_AXES, ENTERPRISE_SET_NAME, axesCoverage, buildEnterpriseSeedTasks } from './enterprise-seed'
 import type { EvalRun, EvalSet, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 import { buildRedteamVariants } from './redteam-variants'
@@ -240,6 +242,27 @@ router.post('/sets/redteam-variants', async (ctx) => {
   ctx.body = { ok: true, appended: result.appended, set: { id: result.set.id, name: result.set.name, taskCount: result.set.tasks.length, revision: result.set.revision } }
 })
 
+// 企业级约束种子库（2026-10-23 挂账清偿 G3）：三轴（权限边界/长周期/合规）×3 任务，
+// 幂等建集（红队种子同款）；响应附三轴覆盖读数（按显式映射表，缺轴如实列 gap）。
+router.post('/sets/enterprise-seed', async (ctx) => {
+  const existing = listSets().find((s) => s.name === ENTERPRISE_SET_NAME)
+  if (existing) {
+    ctx.body = { ok: true, existed: true, set: setSummary(existing), axes: ENTERPRISE_AXES, coverage: axesCoverage(existing.tasks) }
+    return
+  }
+  const result = createSet(
+    { name: ENTERPRISE_SET_NAME, track: 'e2e', tasks: buildEnterpriseSeedTasks() },
+    actorOf(ctx) ?? 'enterprise-seed',
+  )
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.status = 201
+  ctx.body = { ok: true, existed: false, set: setSummary(result.set), axes: ENTERPRISE_AXES, coverage: axesCoverage(result.set.tasks) }
+})
+
 router.get('/sets/:id', async (ctx) => {
   const set = getSet(ctx.params.id)
   if (!set) {
@@ -286,6 +309,31 @@ router.post('/sets/:id/tasks/:taskId/rubric', async (ctx) => {
     return
   }
   ctx.body = { ok: true, set: result.set.sealed ? setSummary(result.set) : result.set }
+})
+
+// 合成探针提案（2026-10-23 HarnessPro 挂账清偿 G1）：判定端为指定任务提案 S0 规则
+// 草稿（六种白名单 kind，结构化校验）；不自动改卷——人工经上方 rubric 修订端点采纳。
+// fail-open：判定端离线 → ok:false 如实返回。密封集拒绝（内容不出面）。
+router.post('/sets/:id/tasks/:taskId/synthesize', async (ctx) => {
+  const set = getSet(ctx.params.id)
+  if (!set) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['评测集不存在'] }
+    return
+  }
+  if (set.sealed) {
+    ctx.status = 403
+    ctx.body = { ok: false, problems: ['密封集不可合成（内容不出 API 面，防探测）'] }
+    return
+  }
+  const task = set.tasks.find((t) => t.id === ctx.params.taskId)
+  if (!task) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['任务不存在'] }
+    return
+  }
+  const result = await synthesizeProbesForTask(task, { config: loadEvalConfig() })
+  ctx.body = { ...result, setId: set.id, taskId: task.id, actor: actorOf(ctx) }
 })
 
 // ---------- 考卷版本快照（收口轮） ----------
