@@ -59,6 +59,23 @@ const attentionExpanded = ref(false)
 
 const excludedBoards = ref<Set<string>>(new Set())
 
+/** 板 chip 墙折叠（2026-10-23 走查挂账批）：45 板全量横排换行占 2-3 行是
+ *  全页最重视觉块。默认只显示前 12 个，其余收进「+N 板 ▾」入口；板数 ≤12
+ *  或用户展开后全显；折叠态下被排除的板（筛选动作对象）仍提到前排，防
+ *  「刚点掉的板不见了无法点回」，多选排除集语义不变。 */
+const BOARD_INLINE_MAX = 12
+const boardExpanded = ref(false)
+const visibleBoards = computed(() => {
+  const list = boardList.value
+  if (boardExpanded.value || list.length <= BOARD_INLINE_MAX) return list
+  const head = list.slice(0, BOARD_INLINE_MAX)
+  // 折叠区里处于筛选视野的板（被排除的）提到前排，保证筛选动作可回退
+  const tail = list.slice(BOARD_INLINE_MAX).filter(b => !boardChecked(b.slug))
+  return tail.length ? [...head, ...tail] : head
+})
+const hiddenBoardCount = computed(() =>
+  boardExpanded.value ? 0 : Math.max(0, boardList.value.length - visibleBoards.value.length))
+
 /** 板清单（聚合端点口径；名称+slug+总数） */
 const boardList = computed(() => {
   const list = workspace.boards.length
@@ -607,7 +624,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
         @click="checkAllBoards"
       >{{ t('kanban.board.filterAll') }}</button>
       <button
-        v-for="b in boardList" :key="b.slug"
+        v-for="b in visibleBoards" :key="b.slug"
         type="button"
         class="kanban-boardbar__chip"
         :class="{ 'is-on': boardChecked(b.slug) }"
@@ -615,6 +632,14 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
         :title="b.slug"
         @click="toggleBoard(b.slug)"
       >{{ b.name }}<span v-if="b.source === 'sim'" class="kanban-boardbar__sim" data-testid="kanban-board-chip-sim-badge">推演</span><span class="kanban-boardbar__n">{{ b.total }}</span></button>
+      <button
+        v-if="hiddenBoardCount > 0 || boardExpanded"
+        type="button"
+        class="kanban-boardbar__chip kanban-boardbar__more"
+        data-testid="kanban-board-chip-toggle"
+        :aria-expanded="boardExpanded"
+        @click="boardExpanded = !boardExpanded"
+      >{{ boardExpanded ? '收起 ∧' : `+${hiddenBoardCount} 板 ▾` }}</button>
     </div>
 
     <KanbanToolbar
@@ -725,6 +750,14 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
   flex-shrink: 0;
 }
 .kanban-boardbar__label { font-size: 11px; color: var(--text-muted); flex-shrink: 0; margin-right: 2px; }
+
+/* 折叠入口（2026-10-23 挂账批）：弱化形态——虚线描边无底色，语义是「还有更多」
+ * 而非筛选项，与板 chip 实线形成区分 */
+.kanban-boardbar__more {
+  border-style: dashed;
+  color: var(--text-muted);
+  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
+}
 
 /* R6 补充：「全部」按钮区分于板 chip（徽标样式，重置全选语义显性化；
  *  用户反馈「只能单选无全部」= All 按钮被当成普通板 chip 不可辨） */
