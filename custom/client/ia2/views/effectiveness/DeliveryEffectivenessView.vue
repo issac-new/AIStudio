@@ -86,6 +86,12 @@ const typeMax = computed(() => {
   return Math.max(1, ...typeKeys.map(k => byType[k] ?? 0))
 })
 
+/** 看板状态键 → 人话（D20；键本身保留在 title 里供对账） */
+const STATUS_ZH: Record<string, string> = {
+  done: '完成', archived: '已归档', blocked: '卡住', review: '评审中',
+  ready: '待开工', todo: '待办', scheduled: '已排期', triage: '待分诊', running: '正在干',
+}
+
 function fmtDwell(sec: number | null): string {
   if (sec == null) return '—'
   if (sec < 3600) return `${Math.round(sec / 60)}m`
@@ -164,7 +170,7 @@ function cellClass(count: number): string {
           <div class="eff-digest__trend">
             <span>{{ text.trendCompleted }} {{ digest.trend.completed24h }}（{{ text.prevWindow }} {{ digest.trend.completedPrev24h }}）</span>
             <span>{{ text.trendCreated }} {{ digest.trend.created24h }}（{{ text.prevWindow }} {{ digest.trend.createdPrev24h }}）</span>
-            <span v-for="s in digest.statuses" :key="s.status" class="eff-digest__chip">{{ s.status }} {{ s.count }}</span>
+            <span v-for="s in digest.statuses" :key="s.status" class="eff-digest__chip" :title="s.status">{{ STATUS_ZH[s.status] ?? s.status }} {{ s.count }}</span>
           </div>
           <div v-for="sec in digestLists" :key="sec.key" class="eff-digest__list">
             <h4 class="eff-digest__list-title">{{ sec.title }}（{{ sec.items.length }}）</h4>
@@ -255,7 +261,7 @@ function cellClass(count: number): string {
           <div class="eff-int__entries">
             <table class="eff-int__table">
               <thead>
-                <tr><th>{{ text.generatedAt }}</th><th>{{ text.layerCollab }}/{{ text.layerDelivery }}</th><th>{{ typeLabel.raise }}</th><th>run</th><th>{{ text.anchor }}</th></tr>
+                <tr><th>时间</th><th>{{ text.layerCollab }}/{{ text.layerDelivery }}</th><th>怎么插的手</th><th>哪轮推演</th><th>{{ text.anchor }}</th></tr>
               </thead>
               <tbody>
                 <tr v-for="(e, ei) in (interventions.entries ?? []).slice(0, 50)" :key="`${e.anchor}-${ei}`">
@@ -288,13 +294,13 @@ function cellClass(count: number): string {
           </div>
         </div>
         <div class="eff-mat__readings">
-          <span>协作层介入 {{ maturity.assessment.reading.collabSharePct }}%</span>
-          <span>系统代行 {{ maturity.assessment.reading.autoApproveSharePct ?? '—' }}%</span>
-          <span>催进度 {{ maturity.assessment.reading.nudges }}</span>
-          <span>纠错返工 {{ maturity.assessment.reading.reworks }}</span>
-          <span>介入总量 {{ maturity.assessment.reading.total }}</span>
+          <span>插手有 {{ maturity.assessment.reading.collabSharePct }}% 在排活沟通</span>
+          <span>该人拍板的节点 {{ maturity.assessment.reading.autoApproveSharePct ?? '—' }}% 机器自动过</span>
+          <span>催进度 {{ maturity.assessment.reading.nudges }} 次</span>
+          <span>干错重来 {{ maturity.assessment.reading.reworks }} 次</span>
+          <span>插手共 {{ maturity.assessment.reading.total }} 次</span>
         </div>
-        <p class="eff-mat__gap">最短板：{{ maturity.assessment.gapNote }}</p>
+        <p class="eff-mat__gap">眼下最该修的：{{ maturity.assessment.gapNote }}</p>
         <p class="eff-card__note">{{ maturity.assessment.note }}</p>
       </section>
     </div>
