@@ -6,7 +6,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { evalApi, type EvalRunDto, type EvalSetDto, type IterationDto, type RemediationDto } from '@/custom/eval/api'
+import { evalApi, type EvalRunDto, type EvalSetDto, type IterationDto, type RemediationDto, type BusinessSummaryDto } from '@/custom/eval/api'
 import { evalMessages } from '@/custom/eval/i18n'
 import EvaluatorTriangle from '@/custom/eval/components/EvaluatorTriangle.vue'
 import EvidenceDrawer from '@/custom/eval/components/EvidenceDrawer.vue'
@@ -22,6 +22,8 @@ const L = computed(() => {
 
 const run = ref<EvalRunDto | null>(null)
 const setDto = ref<EvalSetDto | null>(null)
+/** 经营语言摘要（京东吸收轮·立项批）：fail-soft，缺席不阻断报告主体。 */
+const biz = ref<BusinessSummaryDto | null>(null)
 const iterations = ref<IterationDto[]>([])
 const error = ref('')
 const note = ref('')
@@ -56,6 +58,11 @@ async function load(): Promise<void> {
     } catch {
       setDto.value = null
     }
+    try {
+      biz.value = (await evalApi.businessSummary(props.runId)).summary
+    } catch {
+      biz.value = null
+    }
   } catch (e) {
     error.value = (e as Error).message
   }
@@ -63,6 +70,14 @@ async function load(): Promise<void> {
 
 onMounted(() => void load())
 watch(() => props.runId, () => void load())
+
+/** 事实行 → 人话句子（词条插值；缺词条的键如实显示键名）。 */
+function bizFactLine(fact: { key: string; params: Record<string, string | number> }): string {
+  const templates = L.value.metrics.biz.facts as Record<string, string>
+  const tpl = templates[fact.key]
+  if (!tpl) return fact.key
+  return tpl.replace(/\{(\w+)\}/g, (_, k) => String(fact.params[k] ?? '—'))
+}
 
 async function arbitrate(taskId: string, sampleIdx: number, assertionId: string, value: 'yes' | 'no'): Promise<void> {
   try {
@@ -230,6 +245,21 @@ function durationText(ms: number | null): string {
         data-testid="eval-report-evidence-mode"
       >{{ L.runs.originDiagnostic[run.evidenceMode] }}</span>
     </header>
+
+    <!-- 经营语言摘要（京东吸收轮·立项批）：决策者三句话——能不能发布、质量成本几何、修什么最值 -->
+    <div v-if="biz" class="eval-report__biz" data-testid="eval-report-biz">
+      <span class="seg__title">{{ L.metrics.biz.title }}</span>
+      <span
+        class="chip"
+        :class="biz.verdict === 'blocked' ? 'chip-warn' : biz.verdict === 'releasable' ? 'v-pass' : ''"
+        :data-testid="`eval-biz-verdict-${biz.verdict}`"
+      >
+        {{ L.metrics.biz.verdicts[biz.verdict] }}（{{ L.metrics.biz.verdictReasons[biz.verdictKey] }}）
+      </span>
+      <span v-for="(fact, i) in biz.facts" :key="fact.key" class="seg__chip" :data-testid="`eval-biz-fact-${fact.key}-${i}`">
+        {{ bizFactLine(fact) }}
+      </span>
+    </div>
     <p v-if="error" class="eval-report__error">{{ error }}</p>
 
     <!-- 四层卡 -->
@@ -734,4 +764,13 @@ function durationText(ms: number | null): string {
 .muted { opacity: 0.65; }
 .mono { font-family: var(--font-mono); }
 h4 { font-size: 13px; margin: 4px 0 0; }
+
+.eval-report__biz {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ia-border, rgba(127, 127, 127, 0.25));
+}
 </style>
