@@ -1,8 +1,8 @@
-# 附录 B：实施计划与研究/复盘档索引（54＋31）
+# 附录 B：实施计划与研究/复盘档索引（55＋31）
 
-> 附件，非正本。覆盖 `overlay/docs/superpowers/plans/` 54 份与 `overlay/docs/` 顶层 31 份研究/复盘档。核实日 2026-10-21。
+> 附件，非正本。覆盖 `overlay/docs/superpowers/plans/` 55 份与 `overlay/docs/` 顶层 31 份研究/复盘档。核实日 2026-10-23。
 
-## B.1 实施计划 54 份
+## B.1 实施计划 55 份
 
 | 文件名 | 主旨 | 落地状态 |
 |---|---|---|
@@ -60,6 +60,7 @@
 | 2026-10-16-three-centers-implementation-plan | 三中心 36 工单 | 部分实施 |
 | 2026-10-18-ide-workspace-deep-improvement | 13 缺陷四类结构债 | 部分实施 |
 | 2026-10-19-eval-closure-and-baseline-repair | 处置单+冻结复评+机械关闭 | 已实施 |
+| 2026-10-21-production-trace-eval-reflow | 生产轨迹转回归样本实施计划 | 已实施（两态证据） |
 
 ## B.2 研究/复盘档 31 份
 
