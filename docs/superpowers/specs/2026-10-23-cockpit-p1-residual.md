@@ -2,13 +2,14 @@
 
 > 批次：fix/cockpit-p1-residual-20261023｜日期：2026-10-23｜依据：用户指令「按建议推进」（建议顺序=驾驶舱 P1 剩 2 项→首载复测→P7 委托能力摘要）
 
-## 一、P1-1「建板成功无反馈」定性（重要反转）
+## 一、P1-1「建板成功无反馈」定性（终版：真缺陷，收窄到聚合板源）
 
-走查实录（2026-10-22-cockpit-refactor-design.md P1：「建板成功后停在原页…API 建成、UI 无感」）本轮活体三轮复现取证后**定性为服务载体态漂移，非产品正身缺陷**：
+走查实录（2026-10-22-cockpit-refactor-design.md P1：「建板成功后停在原页…API 建成、UI 无感」）本轮经**载体刷新后仍复现**＋服务端对账，定性修正为：**真缺陷，且正是走查所述「API 建成、UI 无感」**。取证全程（含一次中间误判的更正）：
 
-- 取证链：无头浏览器三轮提交建板→fetch/XHR 双 hook+resource timing 证实**POST /api/hermes/kanban/boards 从未发出**且零 JS 错误；Vue vnode 检查证实 onCreateBoard handler 运行态已注册；最终定位 8649 vite serve 的 SwarmKanbanView 编译产物为**旧版**（serve-main worktree 的 vite 模块缓存未随磁盘换装刷新，旧版组件无建板 handler——正好构成「emit 发生（modal 关）→无 handler→零请求零报错」的完整静默特征）。
-- 产品正身链路健全证据：handleCreateBoard（SwarmKanbanView.vue:547）有 message.success('看板已创建'，zh locale 3772 行在册）＋workspace.refreshAllBoards(true) 列表刷新；聚合模式（v12.5 排除集语义）下新板自动并入 chips（空集=全选），「hash 未变/无跳转」在聚合页无单板 hash 语义，不是缺陷。
-- 处置：产品代码不为此项改动；载体侧属运维事实（8649 换装后需确认模块缓存刷新，已记入决策）。
+- **创建链路全通**：每轮 UI 提交（含 hook 抓不到请求的三轮）服务端都真实建板——最终 `listBoards` 对账 6 个 e2e 板全部在册（本轮已全部归档清理）。此前「POST 从未发出」是 hook 覆盖面不足（应用自有 request 通道）造成的误判；toast 大概率正常（message 3 秒生命期与取样竞态，未定论）。
+- **用户可见缺陷＝chips 板条不反映真实板清单**：服务端 21 板（aiteam/pay/platform/[已移除]…）而板条常驻只显示 `default`。workspace.refreshAllBoards 优先走聚合端点 `/api/hermes/kanban/overview`，其 boards 为空时前端回落值恰为 `[{default}]`——与实测症状完全吻合。嫌疑落点：服务端 kanban-overview 的 boards 快道（`<home>/kanban/boards/` 文件布局直读）在 8647 载体的 HERMES home 布局下返回空。8647 为并行会话载体（env/布局不可控、不宜重启），根因坐实需要鉴权态下对真实载体打 overview 端点＋核 kanbanDir 布局，归**下一专项批**。
+- **已排除项**：双实例疑云（vnode uid 40/41）系 keep-alive 缓存实例的正常并存，非断链；switchCurrent 假开关已根治（§二）。
+- 处置：本批不改聚合链路；专项批验收线=建板/归档后 chips 即时反映（含 WS 事件驱动路径），并对「overview boards 空」出根因结论。
 
 ## 二、真缺陷根治：建板「创建后切换」假开关（patch 682）
 
@@ -27,7 +28,7 @@ OrgEditor 是 org registry markdown 正身编辑器（表格直接编辑 org.md 
 
 | # | 决策 | 理由 | 否决的备选 | 可逆 |
 |---|---|---|---|---|
-| 1 | P1-1 定性为载体态漂移不改正身代码 | 三轮活体取证：旧版编译产物无 handler＝完整静默特征；正身链路（handler+locale+刷新+chips 并入）逐环实测在册 | 硬给 handleCreateBoard 加冗余反馈（否决：重复反馈无信息增量） | 是 |
+| 1 | P1-1 定性为真缺陷（聚合板源空导致 chips 常驻只显 default），本批不改、立专项批 | 服务端 6 个 e2e 板全部建成＝创建链全通；chips 不反映 21 板真实清单与 overview boards 空回落值吻合；初判「载体漂移」系 hook 覆盖不足误判，已更正 | 按「正身无缺陷」结案（否决：与走查症状和服务端对账矛盾） | 是 |
 | 2 | switchCurrent 假开关经 patch 682 根治（!== false 语义） | 表单选项必须有效（验收「点得通」）；默认开=存量行为零变化 | 一律不切/一律切（否决：破坏默认体验） | 是 |
 | 3 | P1-2 用格式说明条而非显示名替换 | OrgEditor=markdown 正身编辑器，所编即所存；替换显示会写坏 registry | slug→板名映射渲染（否决：编辑器不能展示非提交内容） | 是 |
 
