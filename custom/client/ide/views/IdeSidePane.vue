@@ -12,6 +12,7 @@ import { useMessage } from 'naive-ui'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 import { useIdeStore, type IdeSidePaneTab } from '../store/ide'
+import IaColumnControls from '@/custom/ia2/components/IaColumnControls.vue'
 import IdeFilesPane from './IdeFilesPane.vue'
 import IdeGitPane from './IdeGitPane.vue'
 import IdeTerminalDock from './IdeTerminalDock.vue'
@@ -254,14 +255,11 @@ function focusMainChat(): void {
         <span class="ide-sidepane__tab-label">{{ tabShortLabel(tab.key) }}</span>
       </button>
       <span class="ide-sidepane__spacer" />
-      <button
-        type="button"
-        class="ide-sidepane__tab"
-        data-testid="ide-sidepane-max"
-        :title="t('ide.pane.maximize')"
-        :aria-label="t('ide.pane.maximize')"
-        @click="ide.toggleMax('sidepane')"
-      >{{ ide.layout.sidepane.maximized ? '⤡' : '⤢' }}</button>
+      <!-- 2026-10-23 五轮：旧 ⤢/⤡ 字符钮退役，统一单一切换钮（方框图标按状态换样式） -->
+      <IaColumnControls
+        testid="ide-sidepane" :maximized="ide.layout.sidepane.maximized"
+        @max="ide.toggleMax('sidepane')"
+      />
       <button
         type="button"
         class="ide-sidepane__tab ide-sidepane__tab--close"

@@ -107,12 +107,13 @@ describe('IdeShell 布局守门', () => {
     const ide = useIdeStore()
     await w.vm.$nextTick()
     // v12.4：栏控迁各栏顶部控制条右上角（旧竖排 pane-tools testid 退役）；
-    // 2026-10-23 四轮：单一切换钮（max，min 并入）；栏控叠放首行右上角不占行
+    // 2026-10-23 四轮：单一切换钮（max，min 并入）；栏控叠放首行右上角不占行；
+    // 五轮：中栏独立窗口钮退役（用户裁定删掉）
     expect(w.find('[data-testid="ide-col-sidebar-max"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-col-sidebar-min"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-col-chat-max"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-col-chat-min"]').exists()).toBe(false)
-    expect(w.find('[data-testid="ide-col-chat-popout"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-col-chat-popout"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-fold-sidebar-btn"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-max-sidebar-btn"]').exists()).toBe(false)
     expect(w.find('.ide-shell__pane-tools').exists()).toBe(false)
