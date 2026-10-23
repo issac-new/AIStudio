@@ -73,7 +73,7 @@ router.get('/wall', ctx => {
     persons: wall.persons.slice(0, 60),
     evidenceCount: wall.evidenceCount,
     conflicts: detectTermConflicts(collected.evidence),
-    note: '证据=台账派发原话(from=人)+看板归属域+任务标题概念；聊天库无人类/AI 判别位不入源（D8）',
+    note: '依据三类真实记录：谁派过什么活、谁负责哪块看板、干过什么活；聊天记录分不清是人还是 AI，不用它',
     sources: collected.sources,
   }
 })
@@ -94,7 +94,7 @@ router.get('/search', ctx => {
     available: true,
     query,
     candidates: candidates.slice(0, 10),
-    formula: '评分=匹配概念证据数×2 + 新近度（30 天半衰）——排序用，非精确度量',
+    formula: '排序规则：证据多的靠前、近期的加分——只是排序参考，不是精确分数',
     sources: collected.sources,
   }
 })

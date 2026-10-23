@@ -169,7 +169,7 @@ router.get('/search', ctx => {
     query: q || null,
     runs: hits.length,
     hits: hits.slice(0, 30),
-    note: '判例=run 单元（派发词/问题单/处置计数）；归档 tar 按需抽单文件不全量解压',
+    note: '每轮推演算一个案例：派过什么活、出过什么问题、怎么收场的；老案例存在压缩包里，查到哪个读哪个',
     sources,
   }
 })

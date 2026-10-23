@@ -18,7 +18,7 @@ const wallError = ref<string | null>(null)
 const evidenceCount = ref(0)
 const conflicts = ref<TermConflict[]>([])
 const conflictTerms = computed(() => new Set(conflicts.value.map(c => c.term)))
-const noteZh = '证据=台账派发原话(from=人)+看板归属域+任务标题概念；聊天库无人类/AI 判别位不入源'
+const noteZh = '依据三类真实记录：谁派过什么活、谁负责哪块看板、干过什么活；聊天记录分不清是人还是 AI，不用它'
 const noteEn = 'Evidence = ledger dispatch text + board domains + task titles; chat store excluded (no human/AI flag)'
 
 const query = ref('')
@@ -91,7 +91,7 @@ function fmtTime(ms: number): string {
           v-model="query"
           class="expertise__input"
           type="search"
-          :placeholder="zh ? '问一句：X 口径找谁？' : 'Ask: who to ask about X?'"
+          :placeholder="zh ? '输入关键词，找懂的人（如：支付、回调、审计）' : 'Enter a keyword to find who knows it'"
           data-testid="expertise-search-input"
         >
         <button type="submit" class="expertise__submit" data-testid="expertise-search-submit" :disabled="searching">
@@ -106,7 +106,7 @@ function fmtTime(ms: number): string {
 
     <!-- 检索结果：候选人按证据强度排序，每条挂可回查证据 -->
     <div v-if="candidates" class="expertise__results" data-testid="expertise-search-results">
-      <h4 class="expertise__list-title">{{ zh ? `「${query}」候选人（按证据强度排序）` : `Candidates for "${query}"` }}</h4>
+      <h4 class="expertise__list-title">{{ zh ? `懂「${query}」的人（证据多的靠前）` : `People who know "${query}"` }}</h4>
       <p v-if="!candidates.length" class="expertise__empty">{{ zh ? '（无匹配证据）' : '(no match)' }}</p>
       <div v-for="c in candidates" :key="c.person" class="expertise__candidate">
         <div class="expertise__candidate-head">
@@ -149,13 +149,13 @@ function fmtTime(ms: number): string {
 
     <!-- 跨域概念·口径待对齐（D19：文章「传歪」摩擦的机械可检代理） -->
     <div v-if="conflicts.length" class="expertise__conflicts" data-testid="expertise-conflicts">
-      <h4 class="expertise__list-title">{{ zh ? `跨域概念 · 口径待对齐（${conflicts.length}）` : `Cross-domain terms (${conflicts.length})` }}</h4>
+      <h4 class="expertise__list-title">{{ zh ? `同一个词，两边各说各的（${conflicts.length} 个）` : `Same word, different meanings (${conflicts.length})` }}</h4>
       <div v-for="c in conflicts" :key="c.term" class="expertise__conflict" :data-testid="`expertise-conflict-${c.term}`">
         <span class="expertise__conflict-term">{{ c.term }}</span>
         <span class="expertise__conflict-domains">{{ c.domains.join(' ↔ ') }}</span>
         <span class="expertise__conflict-persons">{{ c.persons.join(' / ') }}</span>
       </div>
-      <p class="expertise__formula">{{ zh ? '同一概念挂在不同业务域名下——机械面只能标出「可能传歪」，裁定留给人' : 'Same term across domains; human adjudication required' }}</p>
+      <p class="expertise__formula">{{ zh ? '同一个词挂在不同看板名下——机器只能提醒「可能说的不是一回事」，到底是不是，人来定' : 'Same word under different boards; humans decide' }}</p>
     </div>
   </section>
 </template>

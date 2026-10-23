@@ -70,16 +70,16 @@ export function assessMaturity(entries: InterventionEntry[], autoApprove: number
   const level = MATURITY_LEVELS[isL2Shape ? 1 : 0]
   let gapNote: string
   if (!isL2Shape) {
-    gapNote = `协作层介入占 ${reading.collabSharePct}%（大头在派发与澄清）——先压传递/获取摩擦：术语词条化、判例复用`
+    gapNote = `插手有 ${reading.collabSharePct}% 发生在排活沟通——先把背景给足、词统一叫法，人就能少插话`
   } else if (reading.reworks > 0) {
-    gapNote = `执行链已自走（系统代行 ${reading.autoApproveSharePct ?? 0}%），但纠错返工 ${reading.reworks} 次仍在——理解偏差是下一级最短板`
+    gapNote = `活大多自动在跑（该人拍板的节点 ${reading.autoApproveSharePct ?? 0}% 由机器自动过），但仍有 ${reading.reworks} 次干错重来——没领会意图是眼下最该修的`
   } else {
-    gapNote = `执行链自走且零返工读数——下一级差的是资产厚度：判例/词条/画像的检索命中率`
+    gapNote = `活自动在跑、没见干错重来——再往上拼的是家底：判例、词条、画像够不够好查`
   }
   return {
     level,
     reading,
     gapNote,
-    note: '档位为数据形态读数（启发式），非组织成熟度判定；三级定义与扳机见协作篇 §6',
+    note: '这是按数据猜的位置，不是定论；三级的完整含义见文章《协作篇》第 6 章',
   }
 }
