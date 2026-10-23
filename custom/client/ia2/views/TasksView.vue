@@ -44,6 +44,7 @@ import { useKanbanStore } from '@/stores/hermes/kanban'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
 import GovOrgKnowledgeView from './gov/GovOrgKnowledgeView.vue'
 import OrchestrationView from './orchestration/OrchestrationView.vue'
+import DeliveryEffectivenessView from './effectiveness/DeliveryEffectivenessView.vue'
 import { useTasksTabsText } from '../i18n-tasks-tabs'
 
 const { t } = useI18n()
@@ -51,8 +52,9 @@ const route = useRoute()
 const router = useRouter()
 const kanban = useKanbanStore()
 
-/** 工作台页签全集（A0 三中心拆分）：文案单一事实源=i18n-tasks-tabs 模块字典 */
-type TabKey = 'board' | 'orchestra' | 'gov-org'
+/** 工作台页签全集（A0 三中心拆分 + 2026-10-23 天猫吸收轮第 4 键「交付效能」）：
+ *  文案单一事实源=i18n-tasks-tabs 模块字典 */
+type TabKey = 'board' | 'orchestra' | 'gov-org' | 'effectiveness'
 const tab = ref<TabKey>('board')
 const tabText = useTasksTabsText()
 
@@ -60,12 +62,14 @@ const TABS: ReadonlyArray<{ key: TabKey; testid: string }> = [
   { key: 'board', testid: 'ia-tasks-tab-board' },
   { key: 'orchestra', testid: 'ia-tasks-tab-orchestra' },
   { key: 'gov-org', testid: 'ia-tasks-tab-gov-org' },
+  { key: 'effectiveness', testid: 'ia-tasks-tab-effectiveness' },
 ]
-type TabTextKey = 'tabBoard' | 'tabOrchestra' | 'tabGovOrg'
+type TabTextKey = 'tabBoard' | 'tabOrchestra' | 'tabGovOrg' | 'tabEffectiveness'
 const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   board: 'tabBoard',
   orchestra: 'tabOrchestra',
   'gov-org': 'tabGovOrg',
+  effectiveness: 'tabEffectiveness',
 }
 const TAB_KEYS: ReadonlySet<string> = new Set(TABS.map(x => x.key))
 /** 旧直达链接兼容：治理中心单页签时代的 ?tab=gov → 工作台治理签（协作与知识） */
@@ -176,6 +180,10 @@ watch(tab, (key) => {
     <!-- 协作与知识（A0 三中心拆分后工作台治理签；交接并入属 A1 工单） -->
     <div v-else-if="tab === 'gov-org'" class="ia-area" data-testid="ia-tasks-panel-gov-org">
       <GovOrgKnowledgeView />
+    </div>
+    <!-- 交付效能（2026-10-23 天猫数字员工两文吸收轮）：日报/C×L 矩阵/介入归因 -->
+    <div v-else-if="tab === 'effectiveness'" class="ia-area ia-tasks__observatory" data-testid="ia-tasks-panel-effectiveness">
+      <DeliveryEffectivenessView />
     </div>
   </div>
 </template>
