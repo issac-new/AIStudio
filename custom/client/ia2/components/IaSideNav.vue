@@ -8,7 +8,7 @@
      最近轨迹批迁入）；「最近」（2026-10-23）记录 fullPath 级访问轨迹供回溯。
      状态数据走 useDailyStageProgress 共享缓存；无运行/读取失败按未开始呈现，不假装完成。 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { features } from '../../../../config/features'
 import { CENTER_NAVS, COMMON_NAVS, ISLAND_NAVS, SIM_NAVS, WORKBENCH_ROUTE_NAMES, useCenterNavLocale } from '../nav-centers'
@@ -173,6 +173,11 @@ function go(name: string): void {
 // ── 最近轨迹（2026-10-23「常用 · 最近」）：记录页面访问轨迹，便于回溯 ──
 const recentOpen = ref(false)
 const recentAnchor = ref<HTMLElement | null>(null)
+const recentPanelEl = ref<HTMLElement | null>(null)
+// 面板定位（2026-10-23 修复）：Teleport 到 body + fixed——面板原挂 .isn__scroll
+// （overflow-y:auto，另一轴被计算为 auto）内，left 溢出侧栏即被容器裁剪，
+// 视觉与命中双重不可达（用户实测「不可用」）。fixed 坐标打开时按锚点实测一次。
+const recentPanelPos = ref<{ left: string; top: string } | null>(null)
 const { entries: recentEntries, record: recordRecent, clear: clearRecentTrail } = useRecentTrail()
 // 相对时间随共享 30s tick 重算（「3 分钟前」不僵死）
 const nowTick = useNowTick()
@@ -184,16 +189,26 @@ watch(() => route.fullPath, () => {
 
 function toggleRecent(): void {
   recentOpen.value = !recentOpen.value
+  if (recentOpen.value) {
+    void nextTick(() => {
+      const a = recentAnchor.value
+      if (!a) return
+      const r = a.getBoundingClientRect()
+      recentPanelPos.value = { left: `${Math.round(r.right + 8)}px`, top: `${Math.round(r.top)}px` }
+    })
+  }
 }
 
 function closeRecent(): void {
   recentOpen.value = false
 }
 
-/** 点击面板外关闭；锚点内（含「最近」开关键自身）不关——开关语义交给 toggle */
+/** 点击面板外关闭；锚点内（含「最近」开关键自身）与 Teleport 后的面板自身不关 */
 function onDocMouseDown(e: MouseEvent): void {
   if (!recentOpen.value) return
-  if (recentAnchor.value?.contains(e.target as Node)) return
+  const t = e.target as Node
+  if (recentAnchor.value?.contains(t)) return
+  if (recentPanelEl.value?.contains(t)) return
   closeRecent()
 }
 
@@ -262,8 +277,9 @@ function recentTimeLabel(ts: number): string {
             :testid="item.testid"
             @select="go(item.name)"
           />
-          <!-- 最近（2026-10-23）：轨迹回溯面板开关，非路由项；面板绝对定位弹在
-               侧栏右侧，折叠态锚点收窄但面板照常可用 -->
+          <!-- 最近（2026-10-23）：轨迹回溯面板开关，非路由项。面板 Teleport 到
+               body + fixed（2026-10-23 修复）：原绝对定位在 .isn__scroll
+               （overflow-y:auto）内，右向溢出被容器裁剪——视觉与命中双不可达。 -->
           <div ref="recentAnchor" class="isn__recent-anchor">
             <IaSideNavItem
               lead="⏱"
@@ -273,7 +289,15 @@ function recentTimeLabel(ts: number): string {
               testid="ia-side-nav-recent"
               @select="toggleRecent"
             />
-            <div v-if="recentOpen" class="isn__recent-panel" data-testid="recent-panel" :aria-label="zh ? '最近访问' : 'Recent pages'">
+            <Teleport to="body">
+              <div
+                v-if="recentOpen"
+                ref="recentPanelEl"
+                class="isn__recent-panel"
+                data-testid="recent-panel"
+                :style="recentPanelPos ?? undefined"
+                :aria-label="zh ? '最近访问' : 'Recent pages'"
+              >
               <div class="isn__recent-head">{{ zh ? '最近访问' : 'Recent pages' }}</div>
               <p v-if="!recentEntries.length" class="isn__recent-empty" data-testid="recent-empty">
                 {{ zh ? '还没有访问记录' : 'No history yet' }}
@@ -307,6 +331,7 @@ function recentTimeLabel(ts: number): string {
                 </button>
               </div>
             </div>
+            </Teleport>
           </div>
         </section>
 
@@ -458,13 +483,12 @@ function recentTimeLabel(ts: number): string {
 }
 .isn--collapsed .isn__foot { padding: 8px 6px; }
 
-/* 最近轨迹面板（2026-10-23）：锚点=「最近」开关行，面板绝对定位弹在侧栏右侧；
-   折叠态锚点收窄为图标列，left:100% 仍把面板顶到侧栏右缘之外，照常可用。 */
+/* 最近轨迹面板（2026-10-23）：Teleport 到 body + fixed（同日修复：原 absolute
+   在 .isn__scroll overflow 容器内被裁剪）；坐标由脚本按锚点实测写入 inline
+   style（left/top），层级用 modal 档压过页面主内容浮层。锚点行仅保留占位。 */
 .isn__recent-anchor { position: relative; }
 .isn__recent-panel {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 8px);
+  position: fixed;
   width: 264px;
   display: flex;
   flex-direction: column;
@@ -473,7 +497,7 @@ function recentTimeLabel(ts: number): string {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-  z-index: var(--ia-z-header-panel);
+  z-index: var(--ia-z-modal);
   overflow: hidden;
 }
 .isn__recent-head {
