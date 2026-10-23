@@ -5,6 +5,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import type { MatrixEvent } from 'matrix-js-sdk'
+import { shortMxName } from '@/custom/ui/mxid-display'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
@@ -116,9 +117,9 @@ function handleBack() {
 }
 
 function getSenderName(senderId: string): string {
-  if (!room.value) return senderId
+  if (!room.value) return shortMxName(senderId)
   const member = room.value.getMember(senderId)
-  return member?.name ?? senderId
+  return member?.name ?? shortMxName(senderId)
 }
 
 function getTimeString(ts: number): string {

@@ -240,8 +240,11 @@ export class RACIDispatchService {
     } catch { return {} }
   }
 
-  /** 派发摘要文本（真实/模拟共用） */
+  /** 派发摘要文本（真实/模拟共用）。成员显示去 homeserver 统一后缀
+   *  （2026-10-23 账号短显轮：正文给人看，@alice 不带 :matrix.test；
+   *  邀请路由另走 raciInviteeIds 全形，互不影响）。 */
   private static buildDispatchText(task: RaciDispatchTask, raci: RACITuple): string {
+    const shortMembers = (ms: string[]): string => ms.map((m) => m.replace(/^(@[\w.-]+):[a-z0-9.-]+/i, '$1')).join(', ')
     const lines = [
       `📋 **RACI 派发通知**`,
       ``,
@@ -250,10 +253,10 @@ export class RACIDispatchService {
       task.body ? `**描述**：${task.body.slice(0, 200)}` : '',
       ``,
       `**RACI 分配**：`,
-      `• 负责执行：${raci.responsible.join(', ') || '未分配'} @room`,
-      `• 审批方：${raci.approver.join(', ') || '未分配'}`,
-      `• 协商方：${raci.consulted.join(', ') || '未分配'}`,
-      `• 知悉方：${raci.informed.join(', ') || '未分配'}`,
+      `• 负责执行：${shortMembers(raci.responsible) || '未分配'} @room`,
+      `• 审批方：${shortMembers(raci.approver) || '未分配'}`,
+      `• 协商方：${shortMembers(raci.consulted) || '未分配'}`,
+      `• 知悉方：${shortMembers(raci.informed) || '未分配'}`,
       ``,
       `**Kanban 任务链接**：查看看板详情`,
     ].filter((l) => l !== '')

@@ -1,6 +1,7 @@
 // custom/client/ide/components/briefing-types.ts
 // 任务简报面板（TaskBriefingPanel）的入参类型。<script setup> 不可 export，
 // 类型集中在此供面板 / IdeShell / 测试共享。
+import { shortMxName } from '@/custom/ui/mxid-display'
 /** P3.2 上下文文件（2026-09-28 §四）：任务简报的关键文档（需求/概设/排期等） */
 export interface BriefingContextFile {
   /** workspace 相对路径 */
@@ -123,8 +124,8 @@ export function parseRaciFromTask(task: BriefingTask | null | undefined): Briefi
     // （RFD 主卡 responsible:"fanfan"）——直接展开会把字符串逐字拆成
     // ['f','a','n',…]，简报 R 行渲染成 "f, a, n…"。此处统一收数为数组。
     const toMembers = (v: unknown): string[] =>
-      typeof v === 'string' ? [v.trim()].filter(Boolean)
-        : Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean)
+      typeof v === 'string' ? [shortMxName(v.trim())].filter(Boolean)
+        : Array.isArray(v) ? v.map(String).map((s) => shortMxName(s.trim())).filter(Boolean)
           : []
     const out = {
       responsible: toMembers(r.responsible),

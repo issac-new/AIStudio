@@ -12,6 +12,7 @@ import { useDeliveryCasesStore, type DeliveryCaseView, type GateLight } from '..
 import { useQGateBridgeStore } from '../stores/qgate-bridge'
 import { fetchQgateVerdicts } from '@/custom/governance/api/governance'
 import { humanDateTime, humanEnum } from '@/custom/ia2/format'
+import { stripHomeserver } from '@/custom/ui/mxid-display'
 
 // v1.31.1 吸收轮：每案例"同步 QGate 判定"动作——governance qgate-verdicts →
 // qgate-bridge 逐门 delivery.gate 事件（机器执法判定流闭环，此前桥无生产调用方）。
@@ -85,11 +86,11 @@ function gateColor(gate: string, c: DeliveryCaseView): string {
   return hit.verdict === 'pass' ? 'var(--success)' : hit.verdict === 'conditional' ? 'var(--ia-stale)' : 'var(--error)'
 }
 function fmtAt(at: number): string { return humanDateTime(at) }
-/** U8 降噪（推演审计二轮）：matrix 全形 ID（!room:host / @user:host）→ 短形展示，悬停见全形。 */
+/** U8 降噪（推演审计二轮）：matrix 全形 ID（!room:host / @user:host）→ 短形展示，悬停见全形。
+ *  域名剥除委托 ui/mxid-display（2026-10-23 收编）。 */
 function shortMatrixId(id: string | null | undefined): string {
   if (!id) return ''
-  if (id.startsWith('@')) return '@' + id.slice(1).split(':')[0]
-  return id.replace(/^!/, '').split(':')[0].slice(0, 10)
+  return stripHomeserver(id).replace(/^!/, '').slice(0, 10)
 }
 function openRoom(roomId: string) {
   void router.push({ name: 'ia2.commsRoom', params: { roomId } })

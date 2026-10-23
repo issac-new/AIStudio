@@ -28,7 +28,8 @@ describe('linkify 纯文本安全增强', () => {
     const mine = linkifyPlainText('@fanfan 请确认，@wei:matrix.test 同步知悉', 'fanfan')
     expect(mine.mentionsMe).toBe(true)
     expect(mine.html).toContain('<span class="mx-mention-me">@fanfan</span>')
-    expect(mine.html).toContain('<span class="mx-mention">@wei:matrix.test</span>')
+    // mention 显示短形（@wei，不带 :matrix.test 后缀）
+    expect(mine.html).toContain('<span class="mx-mention">@wei</span>')
     expect(mine.html).not.toContain('mx-mention-me">@wei')
 
     const byHost = linkifyPlainText('任务交给 @Fanfan:matrix.test', 'fanfan')

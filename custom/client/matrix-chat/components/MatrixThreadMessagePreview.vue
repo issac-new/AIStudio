@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { MatrixEvent } from 'matrix-js-sdk'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
+import { shortMxName } from '@/custom/ui/mxid-display'
 
 interface Props {
   lastReply: MatrixEvent | null
@@ -16,9 +17,9 @@ const sender = computed(() => props.lastReply?.getSender() ?? '')
 const senderName = computed(() => {
   void roomStore.roomVersion
   const room = roomStore.activeRoom
-  if (!room || !sender.value) return sender.value
+  if (!room || !sender.value) return shortMxName(sender.value)
   const member = room.getMember(sender.value)
-  return member?.name || sender.value
+  return member?.name || shortMxName(sender.value)
 })
 const avatarUrl = computed(() => {
   void roomStore.roomVersion

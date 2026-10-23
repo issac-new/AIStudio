@@ -7,6 +7,7 @@ import type { MatrixEvent } from 'matrix-js-sdk'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { formatStateEvent } from '@/custom/matrix-chat/utils/formatStateEvent'
+import { shortMxName } from '@/custom/ui/mxid-display'
 
 const props = defineProps<{
   event: MatrixEvent
@@ -20,7 +21,7 @@ const roomStore = useMatrixRoomStore()
 function getDisplayName(userId: string): string {
   const room = roomStore.activeRoom as any
   const member = room?.getMember?.(userId)
-  return member?.name || member?.rawDisplayName || userId
+  return member?.name || member?.rawDisplayName || shortMxName(userId)
 }
 
 const text = computed(() => {

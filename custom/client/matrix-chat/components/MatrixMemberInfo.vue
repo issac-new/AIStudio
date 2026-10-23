@@ -5,6 +5,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { isAiUserId, type UserKind } from '../identity/user-kind'
+import { shortMxName, stripHomeserver } from '@/custom/ui/mxid-display'
 import MatrixUserKindBadge from './MatrixUserKindBadge.vue'
 
 const roomStore = useMatrixRoomStore()
@@ -21,7 +22,7 @@ const member = computed(() => {
   return room.value.getMember(memberUserId.value)
 })
 
-const memberName = computed(() => member.value?.name ?? member.value?.rawDisplayName ?? memberUserId.value ?? '')
+const memberName = computed(() => member.value?.name ?? member.value?.rawDisplayName ?? shortMxName(memberUserId.value ?? ''))
 
 // 身份归类（-agent 命名约定镜像，spec D-1）：成员详情身份行两态都显（强制 kind）
 const memberKind = computed<UserKind>(() =>
@@ -237,9 +238,9 @@ async function copyMxid() {
         <span v-if="lastActiveText && !presence.currentlyActive" class="mi-last-active"> · {{ lastActiveText }}</span>
       </div>
 
-      <!-- Copyable MXID -->
-      <button class="mi-mxid" @click="copyMxid" :title="t('matrixChat.copyText')">
-        {{ memberUserId }}
+      <!-- Copyable MXID：显示短形（去 :域名），复制仍得全形 -->
+      <button class="mi-mxid" @click="copyMxid" :title="`${t('matrixChat.copyText')} · ${memberUserId}`">
+        {{ stripHomeserver(memberUserId ?? '') }}
       </button>
     </div>
 
