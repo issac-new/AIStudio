@@ -235,4 +235,4 @@ export function identityChatNativeRoutes(): (ctx: Ctx, next: Next) => Promise<vo
 }
 
 export default identityChatNativeRoutes
-export { ensureBotChat }
+export { ensureBotChat, gatewayJson, profileBase }
