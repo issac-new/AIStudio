@@ -113,3 +113,6 @@ GovOrgKnowledgeView 增 `ExpertiseSection`（搜索框+画像墙卡片），消�
   结构词形过滤（纯数字开头、*-agent 后缀、v* 开头 run 形态）；extractTerms 不再把 run id 拼入抽取
   文本（v8-run22 类噪音源头）。切词粒度不深修（拉丁连字符二元切出 an-paycore 类片段属可容忍噪音，
   排序正确性不受影响——search?q=pay 实测 chen>wei>lin>qi>fanfan 与看板归属一致）。
+  D15 派发词模板话术剥离：台账 dispatch-preset 尾部统一带「（预写派发词代演人类派单）」
+  模板括注，CJK 二元组会切出 人类/代演/写派 类高频假概念——抽取前正则剥括注（治本）
+  +模板词入停用表（兜底）。
