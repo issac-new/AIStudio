@@ -1423,11 +1423,11 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      filter: {
 +        all: 'All',
 +        session: 'Sessions',
-+        loop: 'Loops'
++        loop: 'Workflows'
 +      },
 +      searchPlaceholder: 'Filter name / task id…',
 +      groupSessions: 'Sessions',
-+      groupLoops: 'Loops',
++      groupLoops: 'Workflows',
 +      empty: 'No sessions or loops yet',
 +      newSession: 'New session',
 +      newLoop: 'New loop',
@@ -6503,11 +6503,11 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      filter: {
 +        all: '全部',
 +        session: '会话',
-+        loop: '循环'
++        loop: '工作流'
 +      },
 +      searchPlaceholder: '过滤 名称 / 任务号…',
 +      groupSessions: '会话',
-+      groupLoops: '循环',
++      groupLoops: '工作流',
 +      empty: '暂无会话与循环',
 +      newSession: '新会话',
 +      newLoop: '新循环',

@@ -43,6 +43,7 @@ import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import IdentityChatCanvas from '../components/IdentityChatCanvas.vue'
+import WorkflowPanel from '../components/WorkflowPanel.vue'
 import CockpitOverview from '../components/flow/CockpitOverview.vue'
 import { fetchPendingApprovals, dedupePending, fetchApprovalHistory, type PendingApprovalItem, type ApprovalHistoryEntry } from '@/custom/cockpit/api/approvals'
 import { getStoredUsername } from '@/api/client'
@@ -122,6 +123,9 @@ const isOverviewRoute = computed(() => route.name === 'ia2.dash')
 // 统一身份聊天（2026-10-23 五轮）：#/app/collab?idc=<profile> 挂 IdentityChatCanvas；
 // 不进对象选择轴（与 overview 同法），preset=URL 预选身份。
 const isIdentityChat = computed(() => route.name === 'ia2.collab' && typeof route.query.idc === 'string')
+
+// 工作流详情（五轮 H）：#/app/collab?wf=<runId> 挂 WorkflowPanel 详情层
+const wfRunId = computed(() => (route.name === 'ia2.collab' && typeof route.query.wf === 'string' ? route.query.wf : null))
 const identityPreset = computed(() => (typeof route.query.idc === 'string' ? route.query.idc : ''))
 let overviewTimer: ReturnType<typeof setInterval> | null = null
 async function refreshOverview(): Promise<void> {
@@ -339,8 +343,8 @@ function onOpenAttention(row: AttentionRow): void {
     return
   }
   if (row.kind === 'loop') {
-    const latest = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${base.slice(5)}`)
-    void router.push(latest ? { name: 'ia2.runDetail', params: { runId: latest.runId } } : { name: 'ia2.runs' })
+    // 五轮 H：左栏「循环」已换面「工作流」——行 id 即 workflow run id，直达详情
+    void router.push({ name: 'ia2.collab', query: { wf: row.id } })
     return
   }
   if (row.taskId) {
@@ -534,7 +538,7 @@ function onSelect(sel: StreamSelection): void {
   }
   else if (sel.kind === 'group') void router.push({ name: 'ia2.groupRoom', params: { roomId: sel.id } })
   else if (sel.kind === 'chat') void router.push({ name: 'ia2.collabSession', params: { sessionId: sel.id } })
-  else openLoopLatestRun(sel.id)
+  else if (sel.kind === 'loop') void router.push({ name: 'ia2.collab', query: { wf: sel.id } })
 }
 
 /** 任务簇 chip → 就地开任务抽屉（R4a；不跳看板） */
@@ -674,6 +678,12 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         @open-inbox="router.push({ name: 'ia2.inbox' })"
         @open-board="router.push({ name: 'ia2.board' })"
         @open-task="onHandleTask"
+      />
+      <WorkflowPanel
+        v-else-if="wfRunId"
+        :key="`wf:${wfRunId}`"
+        :run-id="wfRunId"
+        @open-run="(id: string) => router.push({ name: 'ia2.collab', query: { wf: id } })"
       />
       <IdentityChatCanvas
         v-else-if="isIdentityChat"
