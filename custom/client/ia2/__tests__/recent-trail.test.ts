@@ -226,6 +226,13 @@ async function openRecent(w: ReturnType<typeof mountAt>['w']): Promise<void> {
   await flushPromises()
 }
 
+// 面板 2026-10-23 修复起 Teleport 到 body（绕开侧栏滚动容器裁剪）——
+// 面板相关断言走 document 查询；侧栏内元素（开关按钮）仍走 wrapper。
+const q = (sel: string): Element | null => document.querySelector(sel)
+const qa = (sel: string): Element[] => [...document.querySelectorAll(sel)]
+const elText = (el: Element | null): string => (el ? el.textContent ?? '' : '')
+const clickEl = (el: Element | null): void => { (el as HTMLElement | null)?.click() }
+
 beforeEach(() => {
   localStorage.clear()
   progressState.stage = { 1: 'done', 2: 'done', 3: 'done', 4: 'current', 5: 'pending', 6: 'pending' }
@@ -248,28 +255,28 @@ describe('IaSideNav 最近轨迹接线', () => {
   it('点击开关面板：再点关闭；点击面板外（文档级 mousedown）关闭', async () => {
     const { w } = await mountAt('/app/stage/build')
     await openRecent(w)
-    expect(w.find('[data-testid="recent-panel"]').exists()).toBe(true)
+    expect(!!q('[data-testid="recent-panel"]')).toBe(true)
     // 再点开关 → 关
     await w.find('[data-testid="ia-side-nav-recent"]').trigger('click')
-    expect(w.find('[data-testid="recent-panel"]').exists()).toBe(false)
+    expect(!!q('[data-testid="recent-panel"]')).toBe(false)
     // 重开后面板外 mousedown → 关
     await openRecent(w)
     document.dispatchEvent(new MouseEvent('mousedown'))
     await nextTick()
-    expect(w.find('[data-testid="recent-panel"]').exists()).toBe(false)
-    // 面板内 mousedown 不关
+    expect(!!q('[data-testid="recent-panel"]')).toBe(false)
+    // 面板内 mousedown 不关（Teleport 后面板在 body 下，判定含面板自身）
     await openRecent(w)
-    ;(w.find('[data-testid="recent-empty"]').element as HTMLElement).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    ;(q('[data-testid="recent-empty"]') as HTMLElement | null)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
     await nextTick()
-    expect(w.find('[data-testid="recent-panel"]').exists()).toBe(true)
+    expect(!!q('[data-testid="recent-panel"]')).toBe(true)
     w.unmount()
   })
 
   it('空态：初始落地页不记录，「还没有访问记录」可达；清空按钮禁用', async () => {
     const { w } = await mountAt('/app/stage/build')
     await openRecent(w)
-    expect(w.find('[data-testid="recent-empty"]').text()).toContain('还没有访问记录')
-    expect(w.find('[data-testid="recent-clear"]').attributes('disabled')).toBeDefined()
+    expect(elText(q('[data-testid="recent-empty"]'))).toContain('还没有访问记录')
+    expect(q('[data-testid="recent-clear"]')?.hasAttribute('disabled')).toBe(true)
     w.unmount()
   })
 
@@ -280,16 +287,16 @@ describe('IaSideNav 最近轨迹接线', () => {
     await router.push('/app/stage/design?tab=g2')
     await flushPromises()
     await openRecent(w)
-    expect(w.findAll('[data-testid^="recent-item-"]').length).toBe(2)
-    const row0 = w.find('[data-testid="recent-item-0"]')
-    expect(row0.text()).toContain('分析设计 · 质量门 G2')
-    expect(row0.text()).toContain('/app/stage/design?tab=g2')
-    expect(w.find('[data-testid="recent-item-1"]').text()).toContain('分析设计 · 任务分解')
+    expect(qa('[data-testid^="recent-item-"]').length).toBe(2)
+    const row0 = elText(q('[data-testid="recent-item-0"]'))
+    expect(row0).toContain('分析设计 · 质量门 G2')
+    expect(row0).toContain('/app/stage/design?tab=g2')
+    expect(elText(q('[data-testid="recent-item-1"]'))).toContain('分析设计 · 任务分解')
     // 回访最早条目 → 移到栈顶，不重复入栈
     await router.push('/app/stage/design?tab=tasks')
     await flushPromises()
-    expect(w.findAll('[data-testid^="recent-item-"]').length).toBe(2)
-    expect(w.find('[data-testid="recent-item-0"]').text()).toContain('分析设计 · 任务分解')
+    expect(qa('[data-testid^="recent-item-"]').length).toBe(2)
+    expect(elText(q('[data-testid="recent-item-0"]'))).toContain('分析设计 · 任务分解')
     w.unmount()
   })
 
@@ -300,18 +307,18 @@ describe('IaSideNav 最近轨迹接线', () => {
     await router.push('/app/stage/build')
     await flushPromises()
     await openRecent(w)
-    expect(w.findAll('[data-testid^="recent-item-"]').length).toBe(2)
+    expect(qa('[data-testid^="recent-item-"]').length).toBe(2)
     // 栈顶=当前页（/app/stage/build）：点击只关面板不导航
-    await w.find('[data-testid="recent-item-0"]').trigger('click')
+    clickEl(q('[data-testid="recent-item-0"]'))
     await flushPromises()
-    expect(w.find('[data-testid="recent-panel"]').exists()).toBe(false)
+    expect(!!q('[data-testid="recent-panel"]')).toBe(false)
     expect(router.currentRoute.value.fullPath).toBe('/app/stage/build')
     // 重开点第 2 行（/app/board）：导航并关面板
     await openRecent(w)
-    await w.find('[data-testid="recent-item-1"]').trigger('click')
+    clickEl(q('[data-testid="recent-item-1"]'))
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/app/board')
-    expect(w.find('[data-testid="recent-panel"]').exists()).toBe(false)
+    expect(!!q('[data-testid="recent-panel"]')).toBe(false)
     w.unmount()
   })
 
@@ -321,9 +328,9 @@ describe('IaSideNav 最近轨迹接线', () => {
     await flushPromises()
     await openRecent(w)
     expect(localStorage.getItem(RECENT_TRAIL_STORAGE_KEY)).toContain('/app/board')
-    await w.find('[data-testid="recent-clear"]').trigger('click')
+    clickEl(q('[data-testid="recent-clear"]'))
     await flushPromises()
-    expect(w.find('[data-testid="recent-empty"]').text()).toContain('还没有访问记录')
+    expect(elText(q('[data-testid="recent-empty"]'))).toContain('还没有访问记录')
     expect(localStorage.getItem(RECENT_TRAIL_STORAGE_KEY)).toBeNull()
     w.unmount()
   })
@@ -338,10 +345,10 @@ describe('IaSideNav 最近轨迹接线', () => {
     await second.router.push('/app/inbox')
     await flushPromises()
     await openRecent(second.w)
-    const rows = second.w.findAll('[data-testid^="recent-item-"]')
+    const rows = qa('[data-testid^="recent-item-"]')
     expect(rows.length).toBe(2)
-    expect(rows[0].text()).toContain('审批收件箱')
-    expect(rows[1].text()).toContain('看板')
+    expect(elText(rows[0])).toContain('审批收件箱')
+    expect(elText(rows[1])).toContain('看板')
     second.w.unmount()
 
     // 脏数据：解析失败按空轨迹起步，首个导航重建合法持久化串
@@ -350,7 +357,7 @@ describe('IaSideNav 最近轨迹接线', () => {
     await third.router.push('/app/search')
     await flushPromises()
     await openRecent(third.w)
-    expect(third.w.findAll('[data-testid^="recent-item-"]').length).toBe(1)
+    expect(qa('[data-testid^="recent-item-"]').length).toBe(1)
     expect(JSON.parse(localStorage.getItem(RECENT_TRAIL_STORAGE_KEY) ?? '[]').length).toBe(1)
     third.w.unmount()
   })
@@ -364,7 +371,7 @@ describe('IaSideNav 最近轨迹接线', () => {
       await router.push('/app/board')
       await flushPromises()
       await openRecent(w)
-      expect(w.findAll('[data-testid^="recent-item-"]').length).toBe(1)
+      expect(qa('[data-testid^="recent-item-"]').length).toBe(1)
       w.unmount()
     } finally {
       spy.mockRestore()
