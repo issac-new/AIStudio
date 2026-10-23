@@ -2,7 +2,6 @@
      日常看板协同图保留在 /app/board，两个导航域不互相改写。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchSimRuns, fetchSimSpecs, type SimRunSummary, type SimSpecSummary } from '../../api/sim-orchestration'
@@ -46,7 +45,6 @@ onMounted(() => { void refresh() })
 <template>
   <div class="sro" data-testid="orc-page">
     <IaBreadcrumb />
-    <TabIntroBanner tab="orchestration" />
     <header class="sro__head">
       <h2 class="sro__title">运行编排（只读）</h2>
       <div class="sro__actions">

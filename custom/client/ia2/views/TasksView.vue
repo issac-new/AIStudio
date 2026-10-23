@@ -42,7 +42,6 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import SwarmKanbanView from '@/custom/kanban/views/SwarmKanbanView.vue'
-import TabIntroBanner from '../components/TabIntroBanner.vue'
 import GovOrgKnowledgeView from './gov/GovOrgKnowledgeView.vue'
 import OrchestrationView from './orchestration/OrchestrationView.vue'
 import { useTasksTabsText } from '../i18n-tasks-tabs'
@@ -165,8 +164,6 @@ watch(tab, (key) => {
         @click="closeBoard"
       >×</button>
     </div>
-
-    <TabIntroBanner :tab="tab" />
 
     <div v-if="tab === 'board'" class="ia-tasks__board">
       <SwarmKanbanView :auto-open-create="autoOpenCreate" :open-task-id="openTaskId" />

@@ -15,7 +15,6 @@
      运行画布耗时徽章与语义块回放（RunCanvas 内消费）；调研正本
      docs/comm-collab-v13-research.md。 -->
 <script setup lang="ts">
-import TabIntroBanner from '../components/TabIntroBanner.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -134,7 +133,7 @@ const wbGridStyle = computed(() => {
     // 2026-10-19 全页走查：全局同名 .wb 规则把 display 改成 flex，三栏竖排；
     // 内联声明压过全局规则，保证「永不换列不堆叠」铁律。
     display: 'grid',
-    gridTemplateColumns: `${flow.layout.leftFolded ? '18px' : `${leftWidth.value}px`} minmax(320px, 1fr) ${flow.layout.rightFolded ? '18px' : `${rightWidth.value}px`}`,
+    gridTemplateColumns: `${flow.layout.leftFolded ? '18px' : `${leftWidth.value}px`} ${flow.layout.centerFolded ? '18px' : 'minmax(320px, 1fr)'} ${flow.layout.rightFolded ? '18px' : `${rightWidth.value}px`}`,
   }
 })
 
@@ -580,7 +579,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
 <template>
   <div
     class="wb"
-    :class="{ 'wb--lf': flow.layout.leftFolded, 'wb--rf': flow.layout.rightFolded }"
+    :class="{ 'wb--lf': flow.layout.leftFolded, 'wb--cf': flow.layout.centerFolded, 'wb--rf': flow.layout.rightFolded }"
     :style="wbGridStyle"
     data-testid="wb-root"
   >
@@ -590,7 +589,10 @@ async function onDeleteGroup(roomId: string): Promise<void> {
     <aside v-if="!flow.layout.leftFolded" class="wb__left" data-testid="wb-left">
       <!-- R6 补充：栏控迁独立控制条行（不占内容区，根治绝对定位遮罩栏位顶部） -->
       <div class="wb__colhead" data-testid="wb-colhead-left">
-        <IaColumnControls testid="ia-col-left" fold="left" @fold="flow.toggleFold('left')" />
+        <IaColumnControls
+          testid="ia-col-left" show-min show-max :maximized="flow.maximized === 'left'"
+          @min="flow.toggleFold('left')" @max="flow.toggleMax('left')"
+        />
       </div>
       <!-- R6 补充：左栏右缘拖拽分割条 -->
       <div class="wb__split wb__split--l" data-testid="wb-split-l" @mousedown="startDrag('left', $event)" />
@@ -618,15 +620,14 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         :title="t('ia2.wm.unfoldLeft')" @click="flow.toggleFold('left')"
       >▶</button>
     </div>
-    <section class="wb__center" data-testid="wb-center">
-      <TabIntroBanner tab="collab" />
+    <section v-if="!flow.layout.centerFolded" class="wb__center" data-testid="wb-center">
       <!-- 存量 homeserver 迁移横幅（server-info 单源对账命中时渲染；房间列不可用时先看这里） -->
       <MatrixServerMovedBanner />
-      <!-- R6 补充：中栏栏控迁独立控制条行 -->
+      <!-- R6 补充：中栏栏控迁独立控制条行（2026-10-23 统一轮：最小化+最大化+独立窗口） -->
       <div class="wb__colhead wb__colhead--center" data-testid="wb-colhead-center">
         <IaColumnControls
-          testid="ia-col-center" show-max :maximized="flow.centerMaximized" show-popout
-          @max="flow.toggleCenterMax()" @popout="onPopout"
+          testid="ia-col-center" show-min show-max :maximized="flow.maximized === 'center'" show-popout
+          @min="flow.toggleFold('center')" @max="flow.toggleMax('center')" @popout="onPopout"
         />
       </div>
       <!-- P5 工作台概览：#/app/overview 显式路由（左栏「🏠 概览」入口）——
@@ -684,12 +685,21 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         </div>
       </div>
     </section>
+    <!-- 中栏折叠导轨（2026-10-23 统一轮：中栏也可最小化） -->
+    <div v-if="flow.layout.centerFolded" class="wb__rail wb__rail--center" data-testid="wb-rail-center">
+      <button type="button" class="wb__rail-btn" data-testid="wb-unfold-center"
+        :title="t('ia2.wm.unfoldCenter')" @click="flow.toggleFold('center')"
+      >❭</button>
+    </div>
     <!-- 右栏：折叠态 18px 导轨（◀ 展开）；栏控迁独立控制条行 -->
     <aside v-if="!flow.layout.rightFolded" class="wb__right" data-testid="wb-right">
       <!-- R6 补充：右栏左缘拖拽分割条 -->
       <div class="wb__split wb__split--r" data-testid="wb-split-r" @mousedown="startDrag('right', $event)" />
       <div class="wb__colhead" data-testid="wb-colhead-right">
-        <IaColumnControls testid="ia-col-right" fold="right" @fold="flow.toggleFold('right')" />
+        <IaColumnControls
+          testid="ia-col-right" show-min show-max :maximized="flow.maximized === 'right'"
+          @min="flow.toggleFold('right')" @max="flow.toggleMax('right')"
+        />
       </div>
       <TaskDecisionPanel
         :wait-items="waitItems"
@@ -745,8 +755,12 @@ async function onDeleteGroup(roomId: string): Promise<void> {
   gap: 10px;
 }
 .wb--lf { grid-template-columns: 18px minmax(320px, 1fr) 480px; }
+.wb--cf { grid-template-columns: 280px 18px 480px; }
 .wb--rf { grid-template-columns: 280px minmax(320px, 1fr) 18px; }
+.wb--lf.wb--cf { grid-template-columns: 18px 18px 480px; }
+.wb--cf.wb--rf { grid-template-columns: 280px 18px 18px; }
 .wb--lf.wb--rf { grid-template-columns: 18px minmax(320px, 1fr) 18px; }
+.wb--lf.wb--cf.wb--rf { grid-template-columns: 18px 18px 18px; }
 .wb__left, .wb__right, .wb__center {
   min-height: 0; position: relative;
   display: flex; flex-direction: column;

@@ -16,7 +16,6 @@ import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import SimFlowStrip from './SimFlowStrip.vue'
 import RunSelector from './RunSelector.vue'
-import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { useCenterNavLocale } from '../../nav-centers'
 import { retainBodyClass } from '../../composables/useBodyClass'
 import { useRunContext } from '../../composables/useRunContext'
@@ -141,11 +140,9 @@ const INTRO_KEY: Record<string, string> = {
 
     <main class="sim-center__body">
       <section v-show="activeTab === 'overview'" class="sim-center__panel" data-testid="ia-sim-panel-overview">
-        <TabIntroBanner :tab="INTRO_KEY.overview" />
         <DirectorPanel />
       </section>
       <section v-show="activeTab === 'supervision'" class="sim-center__panel" data-testid="ia-sim-panel-supervision">
-        <TabIntroBanner :tab="INTRO_KEY.supervision" />
         <div v-if="directorRunId" class="sim-center__runsplit" data-testid="ia-sim-runsplit-supervision">
           <p>{{ runsplitText('supervision') }}</p>
           <button type="button" data-testid="ia-sim-runsplit-open" @click="openDirectorDetail">{{ navLocale === 'zh' ? '打开导演详情 →' : 'Open director detail →' }}</button>
@@ -153,7 +150,6 @@ const INTRO_KEY: Record<string, string> = {
         <SupervisionPanel v-else />
       </section>
       <section v-show="activeTab === 'ops'" class="sim-center__panel" data-testid="ia-sim-panel-ops">
-        <TabIntroBanner :tab="INTRO_KEY.ops" />
         <div v-if="directorRunId" class="sim-center__runsplit" data-testid="ia-sim-runsplit-ops">
           <p>{{ runsplitText('ops') }}</p>
           <button type="button" data-testid="ia-sim-runsplit-open" @click="openDirectorDetail">{{ navLocale === 'zh' ? '打开导演详情 →' : 'Open director detail →' }}</button>
@@ -161,7 +157,6 @@ const INTRO_KEY: Record<string, string> = {
         <OpsPanel v-else />
       </section>
       <section v-show="activeTab === 'evidence'" class="sim-center__panel" data-testid="ia-sim-panel-evidence">
-        <TabIntroBanner :tab="INTRO_KEY.evidence" />
         <div v-if="directorRunId" class="sim-center__runsplit" data-testid="ia-sim-runsplit-evidence">
           <p>{{ runsplitText('evidence') }}</p>
           <button type="button" data-testid="ia-sim-runsplit-open" @click="openDirectorDetail">{{ navLocale === 'zh' ? '打开导演详情 →' : 'Open director detail →' }}</button>

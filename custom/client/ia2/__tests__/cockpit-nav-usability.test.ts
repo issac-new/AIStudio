@@ -14,7 +14,6 @@ vi.mock('vue-i18n', () => ({
 }))
 
 import IaBreadcrumb from '../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../components/TabIntroBanner.vue'
 import { useRunContext, LAST_RUN_KEY } from '../composables/useRunContext'
 
 function makeRouter(initial: string): Router {
@@ -158,29 +157,3 @@ describe('useRunContext — run 跨签贯通（往返动线痛点）', () => {
   })
 })
 
-describe('TabIntroBanner — 导语首访展开（末端页看不懂痛点）', () => {
-  beforeEach(() => { localStorage.clear() })
-
-  it('首访自动展开并记忆；再次进入维持收起', async () => {
-    const first = mount(TabIntroBanner, { props: { tab: 'inbox' } })
-    await flushPromises()
-    const details = first.find('details')
-    expect(details.exists()).toBe(true)
-    expect((details.element as HTMLDetailsElement).open).toBe(true)
-    expect(localStorage.getItem('ia2.tabIntroSeen:inbox')).toBe('1')
-    first.unmount()
-
-    const second = mount(TabIntroBanner, { props: { tab: 'inbox' } })
-    await flushPromises()
-    expect((second.find('details').element as HTMLDetailsElement).open).toBe(false)
-    second.unmount()
-  })
-
-  it('无词条的签不渲染也不写记忆', async () => {
-    const w = mount(TabIntroBanner, { props: { tab: 'no-such-tab' } })
-    await flushPromises()
-    expect(w.find('details').exists()).toBe(false)
-    expect(localStorage.getItem('ia2.tabIntroSeen:no-such-tab')).toBeNull()
-    w.unmount()
-  })
-})
