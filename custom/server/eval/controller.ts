@@ -332,6 +332,16 @@ router.get('/sets/:id/revisions/:revision', async (ctx) => {
 
 // ---------- 运行 ----------
 
+// POST /runs 可选参数 stabilityRetest（2-10）：同输入重复判定轮数，读数进
+// aggregates.outputStability（京东「稳定性也是指标」）。成本随轮数线性放大——
+// 2-3 轮够出翻转率，超出拒绝（防误把整批预算烧在复测上）。
+function parseStabilityRetest(raw: unknown): number | undefined {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return undefined
+  const n = Math.floor(raw)
+  if (n < 2 || n > 10) return undefined
+  return n
+}
+
 router.post('/runs', async (ctx) => {
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
   const setId = typeof body.setId === 'string' ? body.setId : ''
@@ -342,6 +352,12 @@ router.post('/runs', async (ctx) => {
     return
   }
   const target = (body.target ?? {}) as EvalRun['target']
+  const stabilityRetest = parseStabilityRetest(body.stabilityRetest)
+  if (body.stabilityRetest !== undefined && stabilityRetest === undefined) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['stabilityRetest 须为 2-10 的整数（轮数；成本随轮数线性放大）'] }
+    return
+  }
   const result = await runReplayEval(
     {
       setId,
@@ -349,6 +365,7 @@ router.post('/runs', async (ctx) => {
       target,
       crossValidate: body.crossValidate === true,
       referenceLeakCheck: body.referenceLeakCheck === true,
+      stabilityRetest,
       useOrigin: body.useOrigin === true,
       ...(typeof body.note === 'string' ? { note: body.note } : {}),
       actor: actorOf(ctx) ?? 'anonymous',

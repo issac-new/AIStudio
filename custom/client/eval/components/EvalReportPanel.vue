@@ -419,6 +419,65 @@ function durationText(ms: number | null): string {
       </table>
     </div>
 
+    <!-- 难度分桶（京东吸收轮：宁缺毋滥——未标注不硬标） -->
+    <div v-if="run.aggregates.byDifficulty?.length" class="eval-report__exc" data-testid="eval-report-bydifficulty">
+      <span class="seg__title">{{ L.runs.diffTitle }}</span>
+      <table class="verdicts">
+        <thead>
+          <tr>
+            <th>{{ L.runs.diffCols.tier }}</th>
+            <th>{{ L.runs.diffCols.taskCount }}</th>
+            <th>{{ L.runs.diffCols.passAtK }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="b in run.aggregates.byDifficulty" :key="b.tier" :data-testid="`eval-diff-${b.tier}`">
+            <td>{{ L.runs.diffTierNames[b.tier as keyof typeof L.runs.diffTierNames] ?? b.tier }}</td>
+            <td>{{ b.taskCount }}</td>
+            <td :class="{ ok: b.passAtK !== null && b.passAtK >= 0.8, danger: b.passAtK !== null && b.passAtK < 0.5 }">{{ pct(b.passAtK) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 责任角色分桶（京东吸收轮：失败直达责任方） -->
+    <div v-if="run.aggregates.byRole?.length" class="eval-report__exc" data-testid="eval-report-byrole">
+      <span class="seg__title">{{ L.runs.roleTitle }}</span>
+      <table class="verdicts">
+        <thead>
+          <tr>
+            <th>{{ L.runs.roleCols.role }}</th>
+            <th>{{ L.runs.roleCols.taskCount }}</th>
+            <th>{{ L.runs.roleCols.passed }}</th>
+            <th>{{ L.runs.roleCols.passAtK }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="b in run.aggregates.byRole" :key="b.role" :data-testid="`eval-role-${b.role}`">
+            <td class="mono">{{ b.role }}</td>
+            <td>{{ b.taskCount }}</td>
+            <td>{{ b.passed }}</td>
+            <td :class="{ ok: b.passAtK !== null && b.passAtK >= 0.8, danger: b.passAtK !== null && b.passAtK < 0.5 }">{{ pct(b.passAtK) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 稳定性读数（京东吸收轮：同输入重复判定 + 参照答案锚定检验） -->
+    <div v-if="run.aggregates.outputStability || run.aggregates.judgeStability" class="eval-report__seg" data-testid="eval-report-stability">
+      <span class="seg__title">{{ L.runs.stabTitle }}</span>
+      <span v-if="run.aggregates.outputStability" class="seg__chip" :data-testid="eval-stab-output">
+        {{ L.runs.stabOutput }}：
+        {{ L.runs.stabFlipRate }} {{ pct(run.aggregates.outputStability.flipRate) }}
+        <em class="muted">({{ run.aggregates.outputStability.flips }}/{{ run.aggregates.outputStability.checked }}，{{ L.runs.stabRounds }} {{ run.aggregates.outputStability.rounds }})</em>
+      </span>
+      <span v-if="run.aggregates.judgeStability" class="seg__chip" :data-testid="eval-stab-refleak">
+        {{ L.runs.stabRefLeak }}：
+        {{ L.runs.stabFlipRate }} {{ pct(run.aggregates.judgeStability.flipRate) }}
+        <em class="muted">({{ run.aggregates.judgeStability.flips }}/{{ run.aggregates.judgeStability.checked }})</em>
+      </span>
+    </div>
+
     <!-- 评估器三角互证（百度评测范式轮 §3） -->
     <EvaluatorTriangle :run-id="run.id" />
 

@@ -8,7 +8,7 @@
 //   六维度量分面（信通院《云上 Agent 基准度量模型》）：未采集维 value=null 立账不造数。
 //
 // 全部为纯函数（输入 set/run，输出聚合面），不落库不判定——与 aggregate.ts 四层同层。
-import type { Attempt, EvalLink, EvalRun, EvalSet, ExceptionType, RunAggregates, ToolCallRecord, TrajectoryDiscipline } from './types'
+import type { Attempt, DifficultyTier, EvalLink, EvalRun, EvalSet, ExceptionType, RunAggregates, ToolCallRecord, TrajectoryDiscipline } from './types'
 
 /** 序列最长公共子序列长度（工具名序列比对，DP O(n·m)；工具序列长度实践 <100）。 */
 export function lcsLength(a: string[], b: string[]): number {
@@ -101,8 +101,7 @@ export function byLinkOf(set: EvalSet, run: EvalRun): RunAggregates['byLink'] {
 }
 
 /** 异常场景分桶：按任务 exceptionType 分桶出任务数与桶内 pass@k；全 'none' 时缺省不产噪。 */
-export function byExceptionOf(set: EvalSet, run: EvalRun): RunAggregates['byException'] {
-  const hasException = set.tasks.some((t) => (t.exceptionType ?? 'none') !== 'none')
+export function byExceptionOf(set: EvalSet, run: EvalRun): RunAggregates['byException'] {  const hasException = set.tasks.some((t) => (t.exceptionType ?? 'none') !== 'none')
   if (!hasException) return undefined
   const buckets = new Map<ExceptionType, { taskCount: number; passed: number }>()
   for (const task of set.tasks) {
@@ -118,6 +117,48 @@ export function byExceptionOf(set: EvalSet, run: EvalRun): RunAggregates['byExce
     taskCount: b.taskCount,
     passAtK: b.taskCount === 0 ? null : b.passed / b.taskCount,
   }))
+}
+
+/**
+ * 难度分桶（京东「诚实的难度分级」：宁缺毋滥——共识不稳定不硬标）：
+ * 按 P0→P3→untagged 固定序输出任务数与桶内 pass@k。全未标注 → undefined
+ * 不产噪；部分标注时 untagged 桶如实呈现（标注是承诺，不是装饰）。
+ */
+export const DIFFICULTY_TIERS: DifficultyTier[] = ['P0', 'P1', 'P2', 'P3']
+
+export function byDifficultyOf(set: EvalSet, run: EvalRun): RunAggregates['byDifficulty'] {
+  const hasDifficulty = set.tasks.some((t) => t.difficulty)
+  if (!hasDifficulty) return undefined
+  const rows: NonNullable<RunAggregates['byDifficulty']> = []
+  for (const tier of [...DIFFICULTY_TIERS, 'untagged'] as const) {
+    const tasks = set.tasks.filter((t) => (t.difficulty ?? 'untagged') === tier)
+    if (tasks.length === 0) continue
+    const passed = tasks.filter((t) => run.attempts.some((a) => a.taskId === t.id && a.passed)).length
+    rows.push({ tier, taskCount: tasks.length, passAtK: passed / tasks.length })
+  }
+  return rows
+}
+
+/**
+ * 责任角色分桶（京东「归因按角色切」：多智能体分工边界即归因边界）：
+ * 按任务 role 标注分桶，失败任务经桶直达责任方——归因进运营动线而非事后报告。
+ * 全未标注 → undefined；不回任务 id 清单（密封集报告只回聚合的契约不变）。
+ */
+export function byRoleOf(set: EvalSet, run: EvalRun): RunAggregates['byRole'] {
+  const hasRole = set.tasks.some((t) => t.role?.trim())
+  if (!hasRole) return undefined
+  const buckets = new Map<string, { taskCount: number; passed: number }>()
+  for (const task of set.tasks) {
+    const role = task.role?.trim()
+    if (!role) continue
+    const bucket = buckets.get(role) ?? { taskCount: 0, passed: 0 }
+    bucket.taskCount += 1
+    if (run.attempts.some((a) => a.taskId === task.id && a.passed)) bucket.passed += 1
+    buckets.set(role, bucket)
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => b[1].taskCount - a[1].taskCount)
+    .map(([role, b]) => ({ role, taskCount: b.taskCount, passed: b.passed, passAtK: b.taskCount === 0 ? null : b.passed / b.taskCount }))
 }
 
 /**
