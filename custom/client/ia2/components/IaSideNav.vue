@@ -1,20 +1,25 @@
 <!-- overlay/custom/client/ia2/components/IaSideNav.vue
      工作台左侧常驻导航（2026-10-20 日常/推演拆分）：
-     日常模式 = 常用（流程总览/工作台/看板/审批收件箱/检索）+ 流程六阶段
-     + 专题 + 系统设置；全流程推演改为顶栏独立模式，不再作为日常侧栏「整轮」组。
-     推演模式 = 推演专区六签 + 返回日常工作台，侧栏不出现日常阶段与专题。
-     三组子项共用 IaSideNavItem 一套行式（18px 前导槽 + 标签 + 右侧槽）。
+     日常模式 = 常用（流程总览/工作台/看板/审批收件箱/检索 + 最近轨迹面板开关）
+     + 流程六阶段 + 专题 + 系统设置；全流程推演改为顶栏独立模式，不再作为日常
+     侧栏「整轮」组。推演模式 = 推演专区六签 + 返回日常工作台，侧栏不出现日常
+     阶段与专题。三组子项共用 IaSideNavItem 一套行式（18px 前导槽 + 标签 + 右侧槽）。
+     常用/推演两组静态定义自 nav-centers（COMMON_NAVS/SIM_NAVS，2026-10-23
+     最近轨迹批迁入）；「最近」（2026-10-23）记录 fullPath 级访问轨迹供回溯。
      状态数据走 useDailyStageProgress 共享缓存；无运行/读取失败按未开始呈现，不假装完成。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { features } from '../../../../config/features'
-import { CENTER_NAVS, ISLAND_NAVS, useCenterNavLocale } from '../nav-centers'
+import { CENTER_NAVS, COMMON_NAVS, ISLAND_NAVS, SIM_NAVS, WORKBENCH_ROUTE_NAMES, useCenterNavLocale } from '../nav-centers'
 import { STAGE_META } from '../stage-meta'
 import { useDailyStageProgress } from '../composables/useDailyStageProgress'
 import { useRunContext } from '../composables/useRunContext'
+import { useNowTick } from '../composables/useNowTick'
 import { runShortLabel } from '../run-display'
 import { useSideNavBadges } from '../composables/useSideNavBadges'
+import { useRecentTrail } from '../composables/useRecentTrail'
+import { formatRecentTime, type RecentEntry } from '../recent-trail'
 import { readSetting, writeSetting } from '@/custom/settings-layers'
 import IaSideNavItem from './IaSideNavItem.vue'
 
@@ -52,23 +57,13 @@ const routeName = computed(() => String(route?.name ?? ''))
 const routePath = computed(() => String(route?.path ?? ''))
 const isSimMode = computed(() => routePath.value === '/app/sim' || routePath.value.startsWith('/app/sim/'))
 
-/** 推演模式侧栏（与 SimCenterView 六签同序；日常模式不再出现本组） */
-const simItems = computed(() => [
-  { key: 'sim-overview', lead: '◎', zh: '导演台', en: 'Director', name: 'ia2.sim', testid: 'ia-side-nav-sim' },
-  { key: 'sim-supervision', lead: '◉', zh: '监督面板', en: 'Supervision', name: 'ia2.simSupervision', testid: 'ia-side-nav-sim-supervision' },
-  { key: 'sim-ops', lead: '◈', zh: '运行监控', en: 'Run monitoring', name: 'ia2.simOps', testid: 'ia-side-nav-sim-ops' },
-  { key: 'sim-evidence', lead: '▤', zh: '证据库', en: 'Evidence', name: 'ia2.simEvidence', testid: 'ia-side-nav-sim-evidence' },
-  { key: 'sim-orchestration', lead: '⟐', zh: '运行编排', en: 'Orchestration', name: 'ia2.simOrchestration', testid: 'ia-side-nav-sim-orchestration' },
-  { key: 'sim-settings', lead: '⚙', zh: '推演设置', en: 'Simulation settings', name: 'ia2.simSettings', testid: 'ia-side-nav-sim-settings' },
-])
+/** 推演模式侧栏（与 SimCenterView 六签同序；文案自 nav-centers SIM_NAVS
+ *  单一源——与最近轨迹标题解析共用，2026-10-23 迁入） */
+const simItems = SIM_NAVS
 
-/** 常用组：日常高频入口。match 覆盖同一功能的兄弟路由（会话/房间/群聊都算工作台） */
-const WORKBENCH_ROUTES = new Set([
-  'ia2.collab', 'ia2.collabChat', 'ia2.collabSession', 'ia2.commsRoom', 'ia2.groupRoom',
-  'ia2.dash', 'ia2.collabHistory', 'ia2.collabHistorySession',
-  'ia2.collabGlobalAgent', 'ia2.collabGlobalAgentSession',
-])
-
+/** 常用组：日常高频入口。静态定义自 nav-centers COMMON_NAVS（单一源），
+ *  match 覆盖同一功能的兄弟路由（会话/房间/群聊都算工作台）留在组件内
+ *  （依赖响应式路由名）。 */
 interface CommonItem {
   key: string
   lead: string
@@ -79,28 +74,15 @@ interface CommonItem {
   match: () => boolean
 }
 
-const commonItems: CommonItem[] = [
-  {
-    key: 'journey', lead: '◫', zh: '流程总览', en: 'Overview', name: 'ia2.journey',
-    testid: 'ia-side-nav-journey', match: () => routeName.value === 'ia2.journey',
-  },
-  {
-    key: 'workbench', lead: '▤', zh: '工作台', en: 'Workbench', name: 'ia2.collab',
-    testid: 'ia-side-nav-workbench', match: () => WORKBENCH_ROUTES.has(routeName.value),
-  },
-  {
-    key: 'board', lead: '▦', zh: '看板', en: 'Board', name: 'ia2.board',
-    testid: 'ia-side-nav-board', match: () => routeName.value === 'ia2.board',
-  },
-  {
-    key: 'inbox', lead: '◷', zh: '审批收件箱', en: 'Approvals Inbox', name: 'ia2.inbox',
-    testid: 'ia-side-nav-inbox', match: () => routeName.value === 'ia2.inbox',
-  },
-  {
-    key: 'search', lead: '⌕', zh: '检索', en: 'Search', name: 'ia2.search',
-    testid: 'ia-side-nav-search', match: () => routeName.value === 'ia2.search',
-  },
-]
+const COMMON_MATCH: Record<string, () => boolean> = {
+  journey: () => routeName.value === 'ia2.journey',
+  workbench: () => WORKBENCH_ROUTE_NAMES.has(routeName.value),
+  board: () => routeName.value === 'ia2.board',
+  inbox: () => routeName.value === 'ia2.inbox',
+  search: () => routeName.value === 'ia2.search',
+}
+
+const commonItems: CommonItem[] = COMMON_NAVS.map(c => ({ ...c, match: COMMON_MATCH[c.key] }))
 
 /** 六阶段：标签取 STAGE_META（单一事实源）。只有站在某个阶段页本身时，
  *  该阶段行才用底色高亮；其余页面（工作台/看板/工具页）只靠右侧状态点
@@ -163,6 +145,7 @@ let mqNarrow: MediaQueryList | null = null
 function onMqChange(e: MediaQueryListEvent): void { autoCompact.value = e.matches }
 function onNarrowChange(e: MediaQueryListEvent): void { hardCompact.value = e.matches }
 onMounted(() => {
+  if (typeof document !== 'undefined') document.addEventListener('mousedown', onDocMouseDown)
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
   mq = window.matchMedia('(max-width: 1180px)')
   autoCompact.value = mq.matches
@@ -172,6 +155,7 @@ onMounted(() => {
   mqNarrow.addEventListener?.('change', onNarrowChange)
 })
 onUnmounted(() => {
+  if (typeof document !== 'undefined') document.removeEventListener('mousedown', onDocMouseDown)
   mq?.removeEventListener?.('change', onMqChange)
   mqNarrow?.removeEventListener?.('change', onNarrowChange)
 })
@@ -184,6 +168,44 @@ function toggleCollapsed(): void {
 function go(name: string): void {
   if (routeName.value === name) return
   void router.push({ name })
+}
+
+// ── 最近轨迹（2026-10-23「常用 · 最近」）：记录页面访问轨迹，便于回溯 ──
+const recentOpen = ref(false)
+const recentAnchor = ref<HTMLElement | null>(null)
+const { entries: recentEntries, record: recordRecent, clear: clearRecentTrail } = useRecentTrail()
+// 相对时间随共享 30s tick 重算（「3 分钟前」不僵死）
+const nowTick = useNowTick()
+// 记录粒度=fullPath（含 query：阶段页 ?tab= 切换也是一次操作）；初始落地页
+// 不记——「还没有访问记录」空态保持可达，首个导航事件起记。
+watch(() => route.fullPath, () => {
+  recordRecent(route, navLocale.value)
+})
+
+function toggleRecent(): void {
+  recentOpen.value = !recentOpen.value
+}
+
+function closeRecent(): void {
+  recentOpen.value = false
+}
+
+/** 点击面板外关闭；锚点内（含「最近」开关键自身）不关——开关语义交给 toggle */
+function onDocMouseDown(e: MouseEvent): void {
+  if (!recentOpen.value) return
+  if (recentAnchor.value?.contains(e.target as Node)) return
+  closeRecent()
+}
+
+/** 行点击：回跳该 fullPath（含 query）并关面板；已在当前页只关面板 */
+function goRecent(entry: RecentEntry): void {
+  closeRecent()
+  if (route.fullPath === entry.fullPath) return
+  void router.push(entry.fullPath)
+}
+
+function recentTimeLabel(ts: number): string {
+  return formatRecentTime(ts, nowTick.value, zh.value ? 'zh' : 'en')
 }
 </script>
 
@@ -240,6 +262,52 @@ function go(name: string): void {
             :testid="item.testid"
             @select="go(item.name)"
           />
+          <!-- 最近（2026-10-23）：轨迹回溯面板开关，非路由项；面板绝对定位弹在
+               侧栏右侧，折叠态锚点收窄但面板照常可用 -->
+          <div ref="recentAnchor" class="isn__recent-anchor">
+            <IaSideNavItem
+              lead="⏱"
+              :label="zh ? '最近' : 'Recent'"
+              :active="recentOpen"
+              :title="zh ? '最近访问的页面' : 'Recently visited pages'"
+              testid="ia-side-nav-recent"
+              @select="toggleRecent"
+            />
+            <div v-if="recentOpen" class="isn__recent-panel" data-testid="recent-panel" :aria-label="zh ? '最近访问' : 'Recent pages'">
+              <div class="isn__recent-head">{{ zh ? '最近访问' : 'Recent pages' }}</div>
+              <p v-if="!recentEntries.length" class="isn__recent-empty" data-testid="recent-empty">
+                {{ zh ? '还没有访问记录' : 'No history yet' }}
+              </p>
+              <ul v-else class="isn__recent-list">
+                <li v-for="(e, i) in recentEntries" :key="e.fullPath">
+                  <button
+                    type="button"
+                    class="isn__recent-item"
+                    :data-testid="`recent-item-${i}`"
+                    :title="e.fullPath"
+                    @click="goRecent(e)"
+                  >
+                    <span class="isn__recent-item-main">
+                      <span class="isn__recent-item-label">{{ e.title }}</span>
+                      <span class="isn__recent-item-time">{{ recentTimeLabel(e.ts) }}</span>
+                    </span>
+                    <span class="isn__recent-item-path">{{ e.fullPath }}</span>
+                  </button>
+                </li>
+              </ul>
+              <div class="isn__recent-foot">
+                <button
+                  type="button"
+                  class="isn__recent-clear"
+                  data-testid="recent-clear"
+                  :disabled="!recentEntries.length"
+                  @click="clearRecentTrail"
+                >
+                  {{ zh ? '清空' : 'Clear' }}
+                </button>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="isn__group">
@@ -389,4 +457,102 @@ function go(name: string): void {
   border-top: 1px solid var(--border-color);
 }
 .isn--collapsed .isn__foot { padding: 8px 6px; }
+
+/* 最近轨迹面板（2026-10-23）：锚点=「最近」开关行，面板绝对定位弹在侧栏右侧；
+   折叠态锚点收窄为图标列，left:100% 仍把面板顶到侧栏右缘之外，照常可用。 */
+.isn__recent-anchor { position: relative; }
+.isn__recent-panel {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  width: 264px;
+  display: flex;
+  flex-direction: column;
+  max-height: min(420px, 70vh);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  z-index: var(--ia-z-header-panel);
+  overflow: hidden;
+}
+.isn__recent-head {
+  padding: 8px 10px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+.isn__recent-empty {
+  margin: 0;
+  padding: 14px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.isn__recent-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+}
+.isn__recent-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.isn__recent-item:hover { background: var(--bg-secondary); }
+.isn__recent-item:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+.isn__recent-item-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.isn__recent-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.isn__recent-item-time { flex-shrink: 0; color: var(--text-muted); font-size: 11px; }
+.isn__recent-item-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.isn__recent-foot {
+  padding: 6px;
+  border-top: 1px solid var(--border-color);
+  text-align: right;
+}
+.isn__recent-clear {
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.isn__recent-clear:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-secondary); }
+.isn__recent-clear:disabled { opacity: 0.55; cursor: default; }
 </style>
