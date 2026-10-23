@@ -8,6 +8,7 @@ vi.mock('@/api/client', () => ({ request: vi.fn(), getApiKey: () => '', getBaseU
 vi.mock('@/custom/eval/api', () => ({
   evalApi: {
     metricRegistry: vi.fn(),
+    behaviorSignals: vi.fn(),
     redteamCorpus: vi.fn(),
     listRedteamRuns: vi.fn(),
     runRedteam: vi.fn(),
@@ -111,6 +112,7 @@ const audit = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(evalApi.behaviorSignals).mockResolvedValue({ ok: true, available: false, reason: '测试桩：观测不可用' } as never)
   vi.mocked(evalApi.metricRegistry).mockResolvedValue({ registry, coverage } as never)
   vi.mocked(evalApi.redteamCorpus).mockResolvedValue({
     ok: true,

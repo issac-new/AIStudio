@@ -46,6 +46,9 @@ import type { EvalRun, EvalSet, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 import { buildRedteamVariants } from './redteam-variants'
 import { evaluateReleaseHold } from './release-hold'
+import { buildBehaviorSignals } from './behavior-signals'
+import { businessSummaryOf } from './business-summary'
+import { collectObsSignals } from '../obssignals/collect'
 
 const router = new Router({ prefix: '/api/hermes/eval' })
 
@@ -981,6 +984,31 @@ router.get('/metric-registry', async (ctx) => {
 
 router.get('/outcome-verifiers', async (ctx) => {
   ctx.body = { ok: true, verifiers: listOutcomeVerifiers() }
+})
+
+// ---------- 行为信号面（京东吸收轮·立项批：真实使用行为当评测信号） ----------
+
+// 观测窗口合计 → 供评测消费的行为信号行；采集链路故障 fail-soft（available=false 如实缺席）。
+router.get('/behavior-signals', async (ctx) => {
+  const days = Math.min(30, Math.max(1, Number(ctx.query.days) || 7))
+  const collected = collectObsSignals(days)
+  if (!collected.available) {
+    ctx.body = { ok: true, available: false, days, reason: collected.reason ?? '观测数据不可用', signals: null }
+    return
+  }
+  ctx.body = { ok: true, available: true, signals: buildBehaviorSignals(collected.report.totals, days) }
+})
+
+// ---------- 经营语言摘要（京东吸收轮·立项批：评测结论翻译成决策者三句话） ----------
+
+router.get('/runs/:id/business-summary', async (ctx) => {
+  const run = getRun(ctx.params.id)
+  if (!run) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: ['运行不存在'] }
+    return
+  }
+  ctx.body = { ok: true, summary: businessSummaryOf(run) }
 })
 
 // 红队路由挂在同一前缀下（/api/hermes/eval/redteam/*），零新增 patch。

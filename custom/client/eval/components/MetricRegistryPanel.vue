@@ -4,7 +4,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { evalApi, type CoverageDto, type MetricRegistryDto, type MetricDefDto } from '@/custom/eval/api'
+import { evalApi, type CoverageDto, type MetricRegistryDto, type MetricDefDto, type BehaviorSignalRowDto } from '@/custom/eval/api'
 import { evalMessages } from '@/custom/eval/i18n'
 
 const i18nCtx = useI18n()
@@ -16,6 +16,8 @@ const zh = computed(() => String((i18nCtx as { locale?: { value?: string } })?.l
 
 const registry = ref<MetricRegistryDto | null>(null)
 const coverage = ref<CoverageDto | null>(null)
+// 行为信号（京东吸收轮·立项批）：真实使用遥测，fail-soft（观测不可用如实呈现不阻断本页）
+const behavior = ref<{ available: boolean; days?: number; reason?: string; signals?: { days: number; hasUsage: boolean; rows: BehaviorSignalRowDto[]; boundary: string } | null } | null>(null)
 const loading = ref(false)
 const error = ref('')
 
@@ -37,6 +39,7 @@ async function load(): Promise<void> {
     const res = await evalApi.metricRegistry()
     registry.value = res.registry
     coverage.value = res.coverage
+    behavior.value = await evalApi.behaviorSignals(7).catch(() => null)
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -44,6 +47,11 @@ async function load(): Promise<void> {
   }
 }
 onMounted(load)
+
+function signalName(key: string): string {
+  const names = L.value.metrics.behavior.signalNames as Record<string, string>
+  return names[key] ?? key
+}
 
 function actionLabel(key: string): string {
   const action = registry.value?.actions.find((a) => a.key === key)
@@ -98,6 +106,40 @@ const maxCoverageTasks = computed(() => Math.max(1, ...(coverage.value?.dimensio
     <p v-if="error" class="mr__error">{{ error }}</p>
     <p v-else-if="loading" class="muted">{{ L.loading }}</p>
     <template v-else-if="registry">
+      <!-- 行为信号（京东吸收轮·立项批）：真实使用当评测信号 -->
+      <div class="mr__behavior" data-testid="eval-behavior-signals">
+        <h3>{{ L.metrics.behavior.title }}</h3>
+        <p class="muted">{{ L.metrics.behavior.sub }}</p>
+        <p v-if="!behavior || !behavior.available" class="muted" data-testid="eval-behavior-unavailable">
+          {{ L.metrics.behavior.unavailable }}
+        </p>
+        <template v-else-if="behavior.signals">
+          <p v-if="!behavior.signals.hasUsage" class="muted" data-testid="eval-behavior-nousage">
+            {{ L.metrics.behavior.noUsage }}
+          </p>
+          <table v-else class="verdicts" data-testid="eval-behavior-table">
+            <thead>
+              <tr>
+                <th>{{ L.metrics.behavior.signalCol }}</th>
+                <th>{{ L.metrics.behavior.samples }}</th>
+                <th>{{ L.metrics.behavior.driftCol }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in behavior.signals.rows" :key="row.key" :data-testid="`eval-behavior-${row.key}`">
+                <td>
+                  {{ signalName(row.key) }}
+                  <strong>{{ row.value === null ? '—' : row.value }}</strong>
+                  <em v-if="!row.sufficient" class="muted">（{{ L.metrics.behavior.insufficient }}）</em>
+                </td>
+                <td class="muted" :title="row.basis">{{ row.samples }}</td>
+                <td class="muted">{{ row.onDrift }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="muted">{{ behavior.signals.boundary }}</p>
+        </template>
+      </div>
       <div class="mr__summary" data-testid="eval-metric-summary">
         <div class="stat"><span class="muted">{{ L.metrics.total }}</span><strong>{{ registry.consumption.summary.total }}</strong></div>
         <div class="stat"><span class="muted">{{ L.metrics.wired }}</span><strong class="ok">{{ registry.consumption.summary.wired }}</strong></div>
