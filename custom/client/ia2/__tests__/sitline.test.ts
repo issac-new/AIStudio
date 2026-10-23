@@ -40,28 +40,34 @@ describe('SitlineBar — 态势条（v12.7 三项）', () => {
     expect(w.find('[data-testid="sit-online"]').text()).toContain('"p":5')
   })
 
-  it('任务按钮副注=9 态词表全量分类汇总，按词表序，零计数跳过', () => {
+  it('任务按钮副注主显收敛=仅「受阻 N」；全量状态串联进 title 悬浮（2026-10-23 走查批）', () => {
     const w = mountSit()
     const summary = w.find('[data-testid="sit-tasks-summary"]')
     expect(summary.exists()).toBe(true)
     const txt = summary.text()
-    // 每个非零状态都须出现（词表词+计数）
-    expect(txt).toContain('ia2.tdp.status.triage 3')
-    expect(txt).toContain('ia2.tdp.status.todo 2')
-    expect(txt).toContain('ia2.tdp.status.ready 1')
-    expect(txt).toContain('ia2.tdp.status.running 4')
+    // 主显只留受阻（需立即介入的信号），其余态不再横排
     expect(txt).toContain('ia2.tdp.status.blocked 2')
-    expect(txt).toContain('ia2.tdp.status.review 2')
-    // 零计数状态（scheduled 未传=0）不得出现
-    expect(txt).not.toContain('scheduled')
-    // 词表序：triage 先于 todo 先于 running
-    expect(txt.indexOf('triage')).toBeLessThan(txt.indexOf('todo'))
-    expect(txt.indexOf('todo')).toBeLessThan(txt.indexOf('running'))
+    expect(txt).not.toContain('triage')
+    expect(txt).not.toContain('running')
+    // 全量明细无损失：title 悬浮保留九态词表序全量串联
+    const title = w.find('[data-testid="sit-tasks"]').attributes('title') ?? ''
+    expect(title).toContain('ia2.tdp.status.triage 3')
+    expect(title).toContain('ia2.tdp.status.running 4')
+    expect(title).toContain('ia2.tdp.status.blocked 2')
+    expect(title).not.toContain('scheduled')
+    expect(title.indexOf('triage')).toBeLessThan(title.indexOf('todo'))
+    expect(title.indexOf('todo')).toBeLessThan(title.indexOf('running'))
   })
 
-  it('全零状态时副注不渲染（v12.7 空态不落 "进行 0 · 待审 0" 旧式）', () => {
+  it('受阻为零时副注不渲染；其余态全量仍进 title（收敛后空态行为）', () => {
+    // 全零：副注不渲染（v12.7 空态不落 "进行 0 · 待审 0" 旧式）
     const w = mountSit({ taskByStatus: {} })
     expect(w.find('[data-testid="sit-tasks-summary"]').exists()).toBe(false)
+    // 有其他态但无受阻：主显副注不渲染，全量仍在 title
+    const w2 = mountSit({ taskByStatus: { triage: 3, running: 4 } })
+    expect(w2.find('[data-testid="sit-tasks-summary"]').exists()).toBe(false)
+    const title = w2.find('[data-testid="sit-tasks"]').attributes('title') ?? ''
+    expect(title).toContain('ia2.tdp.status.triage 3')
   })
 
   it('v12.4 退役断言：会话/循环 chips 与 ⚙管理入口不再渲染', () => {

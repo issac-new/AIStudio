@@ -222,7 +222,7 @@
   // 标题经 .ia-attn__text 的 ellipsis 截断，完整标题保留在 title 悬浮提示。
   // 2026-10-10 UI 审计补下限：无 min-width 时极端窄容器内可被压成 ~55px 竖排字。
   min-width: 96px;
-  max-width: 160px;
+  max-width: 200px;
   display: flex;
   align-items: center;
   gap: 8px;
