@@ -40,6 +40,7 @@ import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, 
 import { listLeases, registerLease, startSandboxJanitorIfEnabled, sweepExpiredLeases } from '../sandbox/sandbox-lease'
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
+import { PROFILE_PRESETS, presetsValid, routeTaskProfile, type TaskFacts } from '../goalbudget/task-router'
 import { workbenchRoutes } from './workbench/controller'
 import { simLaunchRoutes } from './sim-launch'
 // 长程任务可信执行层（2026-10-22）：逐条主张审计、完成态双准入、完整性栅栏、原子断点。
@@ -296,6 +297,27 @@ router.get('/obs-alerts', async (ctx) => {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
+})
+
+// 任务五档路由（2026-10-23 HarnessPro 挂账清偿 G2）：结构化任务事实 →
+// compact/lean/standard/deep/research 档位 + 阶梯策略（rubric 门序纯函数，
+// 不解析自然语言；事实由调用方从任务描述归纳）。GET 出预设表供前端/分发侧引用。
+router.get('/task-router', (ctx) => {
+  ctx.body = { ok: true, presets: PROFILE_PRESETS, presetsValid: presetsValid() }
+})
+
+router.post('/task-router', (ctx) => {
+  const facts = (ctx.request.body ?? {}) as Partial<TaskFacts>
+  const missing = (['boundedDeterministic', 'uncertaintyCount', 'directLocalCheck',
+    'evidenceResolvableHypotheses', 'strongLocalOracle', 'multiSourceReconstruction',
+    'inaccessibleDecisiveSources', 'visualHiddenState', 'costlyEvaluations'] as const)
+    .filter((k) => facts[k] === undefined)
+  if (missing.length > 0) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: [`缺少任务事实字段：${missing.join(', ')}`] }
+    return
+  }
+  ctx.body = { ok: true, decision: routeTaskProfile(facts as TaskFacts) }
 })
 
 // 统一任务生命周期账本（2026-10-21 三号调研）：五源（kanban/a2a/pipeline/

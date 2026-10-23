@@ -10,7 +10,7 @@ import { parseHookPolicy } from '../../goalbudget/stage-ladder'
 import type {
   BehaviorContrast, Champion, EvolutionReport, EvolutionRound, EvolutionSurface, GateBlocker,
   ParetoPoint, ParetoReport, ParetoTier, ProbeMetrics, PromotionGateReport, Proposal,
-  ProposalStatus, QualityVerdict, RegularizationDerived, SurfaceKey, Variant,
+  ProposalStatus, QualityVerdict, RegularizationDerived, RetirementCandidate, SurfaceKey, Variant,
 } from './types'
 
 export const MAX_VARIANTS = 8
@@ -926,7 +926,49 @@ export function evolutionReport(
     },
     surfaces,
     unexercised: surfaceKeys.filter((key) => !exercised.has(key)),
+    retirementCandidates: retirementCandidates(surfaces),
   }
+}
+
+// ---- 冠军退役候选（2026-10-23 挂账清偿 G4，腾讯文误区九「拆墙」侧）----
+// 语义：时间线上「采纳时增益 ≤0 且相对前一轮变贵」的冠军轮，且其后 ≥minRoundsSince
+// 个已采纳轮未被回滚纠正——当年加的控制如今只在花线，值得人复核是否拆除。
+// advisory：零增益可能是守卫在起作用，不自动回滚不硬拦；缺读数如实 null。
+
+export const RETIREMENT_MIN_ROUNDS_SINCE = 2
+
+export function retirementCandidates(
+  surfaces: EvolutionSurface[],
+  minRoundsSince: number = RETIREMENT_MIN_ROUNDS_SINCE,
+): RetirementCandidate[] {
+  const out: RetirementCandidate[] = []
+  for (const s of surfaces) {
+    const live = s.timeline.filter((r) => !r.rolledBack)
+    for (let i = 0; i < live.length; i += 1) {
+      const r = live[i]
+      if (r.passAt1Delta == null || r.passAt1Delta > 0) continue
+      const prev = i > 0 ? live[i - 1] : null
+      const pct = (a: number | null, b: number | null): number | null =>
+        a == null || b == null || a === 0 ? null : (b - a) / a
+      const costDeltaPct = prev ? pct(prev.costUsd, r.costUsd) : null
+      const tokenDeltaPct = prev ? pct(prev.tokens, r.tokens) : null
+      const pricier = (costDeltaPct ?? 0) > 0 || (costDeltaPct == null && (tokenDeltaPct ?? 0) > 0)
+      if (!pricier) continue
+      const roundsSince = live.length - (i + 1)
+      if (roundsSince < minRoundsSince) continue
+      out.push({
+        surfaceKey: s.surfaceKey,
+        round: r.round,
+        proposalId: r.proposalId,
+        variantLabel: r.variantLabel,
+        passAt1Delta: r.passAt1Delta,
+        costDeltaPct: costDeltaPct == null ? null : Number(costDeltaPct.toFixed(3)),
+        tokenDeltaPct: tokenDeltaPct == null ? null : Number(tokenDeltaPct.toFixed(3)),
+        roundsSince,
+      })
+    }
+  }
+  return out
 }
 
 // =====================================================================================

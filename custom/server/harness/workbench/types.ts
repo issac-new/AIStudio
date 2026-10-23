@@ -398,6 +398,26 @@ export interface EvolutionReport {
   surfaces: EvolutionSurface[]
   /** 从未有提案的面（论文 U_t：探索槽位应留给它们）。 */
   unexercised: SurfaceKey[]
+  /** 冠军退役候选（2026-10-23 挂账清偿 G4，advisory）：采纳时无增益且成本上涨、
+   *  其后 ≥2 个已采纳轮未被纠正的冠军——「拆墙」侧复核清单，人裁决。 */
+  retirementCandidates: RetirementCandidate[]
+}
+
+/** 退役候选（腾讯文误区九：随模型迭代，当年加的控制组件该被果断拆除）。 */
+export interface RetirementCandidate {
+  surfaceKey: SurfaceKey
+  /** 进化时间线上的轮次号。 */
+  round: number
+  proposalId: string
+  variantLabel: string
+  /** 采纳时通过率增量（≤0 触发考察）。 */
+  passAt1Delta: number | null
+  /** 相对前一轮的成本变化（>0=变贵；null=任一侧缺读数）。 */
+  costDeltaPct: number | null
+  /** 相对前一轮的 token 变化（成本缺读数时的次口径）。 */
+  tokenDeltaPct: number | null
+  /** 该冠军之后的已采纳轮数（含回滚排除后的现存轮）。 */
+  roundsSince: number
 }
 
 // ---------- HarnessPro 帕累托三档选拔（2026-10-23 吸收轮） ----------
