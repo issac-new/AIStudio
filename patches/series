@@ -910,3 +910,11 @@
 678-server-delivery-mount.patch
 # 679: 协作画像「谁懂什么」挂载（天猫数字员工两文吸收轮）——/api/hermes/expertise/{wall,search}：人×概念×证据画像墙与检索。
 679-server-expertise-mount.patch
+# 680: Provider 配置提示误报修复——检测对象从 UI 活跃 profile（常为闲置 default）改为网关实际使用的 orchestrator_profile 解析链（GET /kanban/orchestration resolved_orchestrator_profile；fail-soft 回落原行为）。
+680-client-gateway-profile-provider-prompt.patch
+# 681: 统一身份聊天挂载（五轮用户裁定「一个聊天窗口与所有身份会话」）——/api/ia2/identities 身份清单（网关 profile 目录全集+在线态）+ /api/ia2/identity-chat/{chat,messages}（peer dm 协议代理）。
+681-server-identity-chat-route.patch
+# 682: 建板 switchCurrent 假开关根治（驾驶舱 P1 残项轮；原 680 与并行会话 Provider 提示修复撞号改 682）——store.createBoard 尊重表单「创建后切换」勾选（默认开；取消勾选不再强切 selectedBoard）。
+682-client-store-kanban-switchcurrent.patch
+# 683: 判例库检索挂载（天猫挂账批 D18）——/api/hermes/precedent/search：run 判例单元，活跃 runs+归档 tar 按需抽（不全量解压）；原 680 与并行会话 Provider 修复撞号改 683。
+683-server-precedent-mount.patch

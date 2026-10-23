@@ -11,11 +11,19 @@ export interface PersonProfile {
   sources: string[]
 }
 
+export interface TermConflict {
+  term: string
+  domains: string[]
+  persons: string[]
+  anchors: Array<{ domain: string; anchor: string }>
+}
+
 export interface WallResponse {
   available: boolean
   reason?: string
   persons?: PersonProfile[]
   evidenceCount?: number
+  conflicts?: TermConflict[]
   note?: string
   sources?: string[]
 }
@@ -47,4 +55,32 @@ export function fetchExpertiseWall(): Promise<WallResponse> {
 
 export function searchExpertise(q: string): Promise<SearchResponse> {
   return getJson(`/api/hermes/expertise/search?q=${encodeURIComponent(q)}`)
+}
+
+// ── D18 判例库（挂账批 2026-10-23） ──
+export interface PrecedentHit {
+  run: string
+  origin: string
+  dispatches: number
+  issues: number
+  disposals: number
+  matches: Array<{ text: string; anchor: string }>
+}
+export interface PrecedentResponse {
+  available: boolean
+  reason?: string
+  query?: string | null
+  runs?: number
+  hits?: PrecedentHit[]
+  note?: string
+  sources?: string[]
+}
+
+export function searchPrecedent(q: string): Promise<PrecedentResponse> {
+  return getJson(`/api/hermes/precedent/search?q=${encodeURIComponent(q)}`)
+}
+
+/** 无 q=run 索引清单 */
+export function listPrecedents(): Promise<PrecedentResponse> {
+  return getJson('/api/hermes/precedent/search')
 }

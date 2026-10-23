@@ -7,8 +7,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-  fetchDigest, fetchInterventions, fetchMatrix,
-  type DailyDigest, type DeliveryMatrix, type DigestItem, type InterventionsResponse,
+  fetchDigest, fetchInterventions, fetchMatrix, fetchMaturity,
+  type DailyDigest, type DeliveryMatrix, type DigestItem, type InterventionsResponse, type MaturityResponse,
 } from '../../api/effectiveness'
 import { useEffectivenessText } from './i18n'
 
@@ -21,6 +21,7 @@ const matrix = ref<DeliveryMatrix | null>(null)
 const matrixError = ref<string | null>(null)
 const interventions = ref<InterventionsResponse | null>(null)
 const interventionsError = ref<string | null>(null)
+const maturity = ref<MaturityResponse | null>(null)
 const runScope = ref('') // '' = 全部 run
 const expanded = ref<Set<string>>(new Set())
 
@@ -36,7 +37,7 @@ async function loadAll(): Promise<void> {
   digestError.value = null
   matrixError.value = null
   interventionsError.value = null
-  const [d, m, i] = await Promise.allSettled([fetchDigest(), fetchMatrix(), fetchInterventions(runScope.value || undefined)])
+  const [d, m, i, mat] = await Promise.allSettled([fetchDigest(), fetchMatrix(), fetchInterventions(runScope.value || undefined), fetchMaturity(runScope.value || undefined)])
   if (d.status === 'fulfilled') {
     digest.value = d.value.digest ?? null
     if (!d.value.available) digestError.value = d.value.reason ?? 'unavailable'
@@ -49,6 +50,7 @@ async function loadAll(): Promise<void> {
     interventions.value = i.value
     if (!i.value.available) interventionsError.value = i.value.reason ?? 'unavailable'
   } else interventionsError.value = String(i.reason)
+  maturity.value = mat.status === 'fulfilled' ? mat.value : null
   digestLoading.value = false
 }
 
@@ -268,6 +270,33 @@ function cellClass(count: number): string {
           </div>
         </template>
       </section>
+      <!-- ④ 协作成熟度（挂账批 D17：文章三级演进的实数据读数） -->
+      <section v-if="maturity?.available && maturity.assessment" class="eff-card" data-testid="eff-maturity-card">
+        <h3 class="eff-card__title">协作成熟度
+          <span class="eff-card__meta">{{ maturity.assessment.level.name }} · {{ text.runsScanned }} {{ maturity.scope === 'all' ? text.scopeAll : maturity.scope }}</span>
+        </h3>
+        <div class="eff-mat__levels">
+          <div
+            v-for="lv in maturity.levels ?? []"
+            :key="lv.key"
+            class="eff-mat__level"
+            :class="{ 'eff-mat__level--active': lv.key === maturity.assessment.level.key }"
+          >
+            <span class="eff-mat__lv-name">{{ lv.name }}</span>
+            <span class="eff-mat__lv-thesis">{{ lv.thesis }}</span>
+            <span v-if="lv.key === maturity.assessment.level.key" class="eff-mat__lv-now">当前读数</span>
+          </div>
+        </div>
+        <div class="eff-mat__readings">
+          <span>协作层介入 {{ maturity.assessment.reading.collabSharePct }}%</span>
+          <span>系统代行 {{ maturity.assessment.reading.autoApproveSharePct ?? '—' }}%</span>
+          <span>催进度 {{ maturity.assessment.reading.nudges }}</span>
+          <span>纠错返工 {{ maturity.assessment.reading.reworks }}</span>
+          <span>介入总量 {{ maturity.assessment.reading.total }}</span>
+        </div>
+        <p class="eff-mat__gap">最短板：{{ maturity.assessment.gapNote }}</p>
+        <p class="eff-card__note">{{ maturity.assessment.note }}</p>
+      </section>
     </div>
   </div>
 </template>
@@ -372,4 +401,19 @@ function cellClass(count: number): string {
   display: inline-block; margin-right: 5px; padding: 0 6px; border-radius: 8px;
   border: 1px solid var(--border-color); font-size: 10.5px; color: var(--text-muted);
 }
+.eff-mat__levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
+.eff-mat__level {
+  border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 8px;
+  display: flex; flex-direction: column; gap: 3px; position: relative;
+  &--active { border-color: var(--accent-primary, var(--color-primary)); background: rgba(46, 160, 67, 0.06); }
+}
+.eff-mat__lv-name { font-size: 12px; font-weight: 600; }
+.eff-mat__lv-thesis { font-size: 10.5px; color: var(--text-muted); }
+.eff-mat__lv-now {
+  position: absolute; top: 5px; right: 6px; font-size: 9.5px; padding: 0 5px;
+  border-radius: 7px; border: 1px solid var(--accent-primary, var(--color-primary));
+  color: var(--accent-primary, var(--color-primary));
+}
+.eff-mat__readings { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; }
+.eff-mat__gap { margin: 0; font-size: 12px; }
 </style>

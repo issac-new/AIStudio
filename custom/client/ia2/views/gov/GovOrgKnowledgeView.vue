@@ -9,6 +9,7 @@ import KnowledgeGraphSection from '@/custom/governance/components/KnowledgeGraph
 import DecisionGraphSection from '@/custom/governance/components/DecisionGraphSection.vue'
 import HandoffSection from '../../components/kanban/HandoffSection.vue'
 import ExpertiseSection from './ExpertiseSection.vue'
+import PrecedentSection from './PrecedentSection.vue'
 import { useTasksTabsText } from '../../i18n-tasks-tabs'
 
 const tabText = useTasksTabsText()
@@ -19,7 +20,7 @@ const tabText = useTasksTabsText()
     <header class="gov-view__bar">
       <div>
         <h2 class="gov-view__title">{{ tabText.tabGovOrg }}</h2>
-        <p class="gov-view__sub">五流断点诊断 · 板级知识图谱 · 决策图谱 · 协作画像</p>
+        <p class="gov-view__sub">五流断点诊断 · 板级知识图谱 · 决策图谱 · 协作画像 · 判例库</p>
       </div>
     </header>
     <div class="gov-view__body">
@@ -29,6 +30,8 @@ const tabText = useTasksTabsText()
       <DecisionGraphSection />
       <!-- 协作画像「谁懂什么」（2026-10-23 天猫数字员工两文吸收轮） -->
       <ExpertiseSection />
+      <!-- 判例库检索（2026-10-23 挂账批 D18） -->
+      <PrecedentSection />
     </div>
   </div>
 </template>
