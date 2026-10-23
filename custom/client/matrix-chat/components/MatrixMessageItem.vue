@@ -249,7 +249,7 @@ function handleReplyInThread() {
     :class="tileState.classList"
     :data-layout="layout"
     :data-self="isOwnMessage"
-    :data-event-id="tileState.eventId"
+    :data-event-id="eventId"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
     @contextmenu="onContextMenu"

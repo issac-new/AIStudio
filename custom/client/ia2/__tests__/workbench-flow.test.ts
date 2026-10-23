@@ -497,6 +497,16 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     expect(wrapper.find('[data-testid="group-view-stub"]').exists()).toBe(true)
   })
 
+  it('房间页邀请分流（五轮 F）：room 类型弹 Matrix 邀请对话框不跳路由；非 room 维持跳历史页', async () => {
+    const { wrapper, router } = await mountAt('/app/s/room/!r1:host')
+    await flushPromises()
+    // room 语境：点「＋邀请」→ 对话框出现、路由不动
+    await wrapper.find('[data-testid="participants-invite"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'MatrixInviteDialog' }).exists()).toBe(true)
+    expect(router.currentRoute.value.name).toBe('ia2.commsRoom')
+  })
+
   it('v14 新建动线：▾ 菜单 agent 单聊 → /app/s/chat 新会话态（主按钮已直达统一聊天，五轮 E）；群聊 ✕ 确认后 → store.deleteRoom', async () => {
     const { wrapper, router } = await mountAt('/app')
     await wrapper.find('[data-testid="flow-new-session-more"]').trigger('click')
