@@ -23,7 +23,6 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { readColWidths, updateColWidth, onColWidthsChange } from '@/custom/ia2/utils/colWidths'
 import IaGlobalTop from '@/custom/ia2/components/IaGlobalTop.vue'
 import IaColumnControls from '@/custom/ia2/components/IaColumnControls.vue'
-import { openPanelWindow } from '@/custom/ia2/wm/popout'
 import IdeTaskSidebar from './IdeTaskSidebar.vue'
 import IdeChatPane from './IdeChatPane.vue'
 import IdeSidePane from './IdeSidePane.vue'
@@ -299,12 +298,9 @@ function endIdeDrag(): void {
   ideDragCol = null
 }
 
-/** 会话栏独立窗口：弹出当前 /ide 路由（standalone=1；合入在独立窗内） */
-function onChatPopout(): void {
-  void openPanelWindow({ path: route.fullPath })
-}
-
 // ── aipaydev 缺口 5：任务简报抽屉（六区块，activeTask 驱动）──
+// （2026-10-23 五轮：会话栏独立窗口钮退役——用户裁定中栏删掉；IDE 本身已是
+//  独立路由页，standalone 弹窗入口移除，openPanelWindow 引用随删。）
 type BriefingTaskView = {
   id: string
   title: string
@@ -598,8 +594,8 @@ onUnmounted(() => {
           <!-- 2026-10-23 四轮：叠放首行右上角（统一）+单一切换钮+独立窗口 -->
           <div class="ide-shell__colhead" data-testid="ide-colhead-chat">
             <IaColumnControls
-              testid="ide-col-chat" :maximized="ide.layout.chat.maximized" show-popout
-              @max="ide.toggleMax('chat')" @popout="onChatPopout"
+              testid="ide-col-chat" :maximized="ide.layout.chat.maximized"
+              @max="ide.toggleMax('chat')"
             />
           </div>
           <IdeLandingHero v-if="showLandingHero" class="ide-shell__colbody" :tasks="landingTasks" @pick="landingPickTask" @enter="landingEnterWorkspace" @board="landingGoBoard" />
