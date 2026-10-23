@@ -13,7 +13,8 @@ const identities = ref<IdentityInfo[]>([])
 const loadErr = ref('')
 const filter = ref('')
 const selected = ref<string>('')
-const messages = ref<IdentityMessage[]>([])
+/** from=回复身份 id（@ 扇出多身份时区分发言人；user 消息无 from） */
+const messages = ref<Array<IdentityMessage & { from?: string }>>([])
 const sessionId = ref('')
 const draft = ref('')
 const busy = ref(false)
@@ -71,23 +72,42 @@ async function reload(): Promise<void> {
   }
 }
 
+/** 消息内 @<身份> 可指定一个或多个目标（须命中身份清单）；无 @ 时发当前选中身份。 */
+function targetsOf(text: string): string[] {
+  const ids = new Set(identities.value.map(i => i.id))
+  const out: string[] = []
+  for (const m of text.matchAll(/@([A-Za-z0-9_.-]+)/g)) {
+    if (ids.has(m[1]) && !out.includes(m[1])) out.push(m[1])
+  }
+  return out.length > 0 ? out.slice(0, 5) : (selected.value ? [selected.value] : [])
+}
+
 async function send(): Promise<void> {
   const text = draft.value.trim()
-  if (!text || sending.value || !selected.value) return
+  const targets = targetsOf(text)
+  if (!text || sending.value || targets.length === 0) return
   sending.value = true
   turnNote.value = ''
   messages.value.push({ role: 'user', content: text, at: Math.floor(Date.now() / 1000) })
   draft.value = ''
   try {
-    const r = await sendToIdentity(selected.value, text, sessionId.value || undefined)
-    sessionId.value = r.sessionId
-    if (r.queued) {
-      turnNote.value = r.note ?? '回复仍在生成，稍后自动拉取'
-    } else if (r.reply) {
-      messages.value.push({ role: 'assistant', content: r.reply, at: null })
+    // 多目标扇出（2026-10-23 五轮 D：@多身份统一聊天）；每身份独立 Bot Chat 会话
+    const results = await Promise.all(targets.map(id =>
+      sendToIdentity(id, text).then(r => ({ id, r })).catch(e => ({ id, err: e })),
+    ))
+    for (const item of results) {
+      if ('err' in item) {
+        messages.value.push({ role: 'assistant', from: item.id, content: `发送失败：${(item.err as Error).message.slice(0, 120)}`, at: null })
+        continue
+      }
+      const { id, r } = item
+      if (id === selected.value) sessionId.value = r.sessionId
+      if (r.queued) {
+        turnNote.value = r.note ?? '回复仍在生成，稍后自动拉取'
+      } else if (r.reply) {
+        messages.value.push({ role: 'assistant', from: id, content: r.reply, at: null })
+      }
     }
-  } catch (e) {
-    turnNote.value = `发送失败：${(e as Error).message.slice(0, 140)}`
   } finally {
     sending.value = false
   }
@@ -139,11 +159,11 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 
     <div class="icc__log" data-testid="icc-log">
       <p v-if="messages.length === 0 && !loadErr" class="icc__empty">
-        {{ current ? `向 ${current.id} 发送第一条消息——每身份一个持续会话（Bot Chat）。` : '' }}
+        {{ current ? `发消息给 ${current.id}；消息里 @其他身份 可一次发给多个（@a @b …）。` : '' }}
       </p>
       <div v-for="(m, i) in messages" :key="i" class="icc__msg" :class="`icc__msg--${m.role}`"
         :data-testid="`icc-msg-${i}`">
-        <span class="icc__msg-role">{{ m.role === 'user' ? '我' : current?.id ?? '身份' }}</span>
+        <span class="icc__msg-role">{{ m.role === 'user' ? '我' : (m.from ?? current?.id ?? '身份') }}</span>
         <span class="icc__msg-body">{{ m.content }}</span>
       </div>
       <p v-if="turnNote" class="icc__note" data-testid="icc-turn-note">{{ turnNote }}</p>

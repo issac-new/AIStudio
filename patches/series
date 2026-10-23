@@ -918,3 +918,5 @@
 682-client-store-kanban-switchcurrent.patch
 # 683: 判例库检索挂载（天猫挂账批 D18）——/api/hermes/precedent/search：run 判例单元，活跃 runs+归档 tar 按需抽（不全量解压）；原 680 与并行会话 Provider 修复撞号改 683。
 683-server-precedent-mount.patch
+# 684: 模型选择器 403 降级根治（五轮 C 用户报修「你没有权限访问该资源」）——Matrix 登录账号无活跃 profile 授权时 available-models 403 回落无 profile 查询（服务端合并可见 profiles）+ 该端点入 client 静默降级名单（run13 先例）。
+684-client-models-403-fallback.patch
