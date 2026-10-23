@@ -330,7 +330,14 @@ function cellClass(count: number): string {
   &:hover:not(:disabled) { background: var(--bg-secondary, rgba(128, 128, 128, 0.12)); }
   &:disabled { opacity: 0.5; cursor: default; }
 }
-.eff-view__body { display: flex; flex-direction: column; gap: 12px; }
+.eff-view__body {
+  /* D21 布局批：单列→两列网格（矮卡顶对齐；矩阵卡 min-content 宽可降级） */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+  gap: 12px;
+  align-items: start;
+  grid-auto-flow: row dense;
+}
 .eff-card {
   border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px;
   display: flex; flex-direction: column; gap: 8px;

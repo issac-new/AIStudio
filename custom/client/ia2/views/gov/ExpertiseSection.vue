@@ -196,7 +196,10 @@ function fmtTime(ms: number): string {
 }
 .expertise__ev-anchor { font-family: var(--font-mono, monospace); font-size: 10px; margin-left: 5px; }
 .expertise__formula { margin: 2px 0 0; font-size: 10.5px; color: var(--text-muted); }
-.expertise__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.expertise__cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px;
+  max-height: 480px; overflow-y: auto;  /* D21：墙限高内滚，不再整页铺 */
+}
 .expertise__card { border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 8px; }
 .expertise__card-head { display: flex; align-items: baseline; gap: 6px; }
 .expertise__card-meta { margin-left: auto; font-size: 10.5px; color: var(--text-muted); }
