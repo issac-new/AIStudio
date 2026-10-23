@@ -3,8 +3,6 @@
 // IDE 编程工具启动器 + zcode CLI 会话兼容展示（2026-10-19 用户需求批）守门：
 // 工具面板渲染/未安装置灰/点击调 launch；CLI 会话行渲染与「终端继续」动线。
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 
@@ -86,6 +84,7 @@ describe('IdeCliSessions — zcode CLI 会话兼容展示', () => {
     w.unmount()
   })
 })
+<<<<<<< Updated upstream
 
 describe('IdeCliSessions 侧栏内嵌 — 遮罩回归守门（2026-10-19 左下角遮罩批）', () => {
   it('cli-body 有内滚上限：侧栏无滚动容器，不设上限会画穿侧栏底被状态栏遮住', () => {
@@ -148,3 +147,5 @@ describe('侧栏视图语义守门（已完成→更早）', () => {
     expect(src).toContain('workspace: all.length')
   })
 })
+=======
+>>>>>>> Stashed changes

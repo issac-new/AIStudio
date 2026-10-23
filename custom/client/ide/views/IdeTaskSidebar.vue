@@ -1268,6 +1268,7 @@ onMounted(async () => {
 
 .ide-taskbar__confirm-actions { display: flex; gap: 6px; }
 
+<<<<<<< Updated upstream
 .ide-taskbar__archived-body { padding-bottom: 4px; max-height: 320px; overflow-y: auto; }
 .ide-taskbar__group-hint { margin: 2px 4px 6px; font-size: 10.5px; color: var(--text-muted); }
 .ide-taskbar__item--cli .ide-taskbar__mode-badge.is-cli {
@@ -1291,6 +1292,10 @@ onMounted(async () => {
   max-height: 208px;
   overflow-y: auto;
 }
+=======
+.ide-taskbar__archived-body { padding-bottom: 4px; }
+.ide-taskbar__cli-body { padding: 0 4px 6px; }
+>>>>>>> Stashed changes
 
 .ide-taskbar__hint { margin: 4px 12px; font-size: 12px; color: var(--text-muted); }
 
