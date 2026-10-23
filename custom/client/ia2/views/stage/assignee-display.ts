@@ -5,10 +5,12 @@
 // 也不猜测称呼。四个⑤验收日常面板共用，避免各自维护映射。
 import { computed } from 'vue'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
+import { shortMxName } from '@/custom/ui/mxid-display'
 
-/** @user:domain → localpart（去 @ 前缀与 homeserver 域，两侧归一到同一形态再比对） */
+/** @user:domain → localpart（去 @ 前缀与 homeserver 域，两侧归一到同一形态再比对）；
+ *  实现委托 ui/mxid-display 单一事实源（2026-10-23 账号短显收编轮）。 */
 export function accountLocalpart(userId: string): string {
-  return userId.replace(/^@/, '').split(':')[0] ?? userId
+  return shortMxName(userId)
 }
 
 export type AssigneeLabel = (assignee: string | null | undefined) => string

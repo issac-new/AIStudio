@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
+import { shortMxName } from '@/custom/ui/mxid-display'
 
 const roomStore = useMatrixRoomStore()
 const clientStore = useMatrixClientStore()
@@ -26,9 +27,9 @@ function handleCancel() {
 }
 
 function getSenderName(senderId: string): string {
-  if (!room.value) return senderId
+  if (!room.value) return shortMxName(senderId)
   const member = room.value.getMember(senderId)
-  return member?.name ?? senderId
+  return member?.name ?? shortMxName(senderId)
 }
 
 function getSenderAvatar(senderId: string): string | null {

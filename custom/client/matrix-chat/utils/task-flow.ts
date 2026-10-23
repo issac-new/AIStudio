@@ -8,6 +8,8 @@
 //   评审/测试结论：G2 PASS/FAIL、TEST-PASS-xxx / TEST-FAIL-xxx 结论行
 // 纯函数无 IO；非任务型消息一律跳过（不虚构事件）。
 
+import { shortMxName } from '@/custom/ui/mxid-display'
+
 export interface TaskFlowMessage {
   sender: string
   body: string
@@ -36,7 +38,7 @@ const RE_VERDICT = /\b(G[1-6]\s*(PASS|FAIL)|TEST-(PASS|FAIL)-[A-Z0-9-]+)\b/
 const RE_MENTION = /@([a-z0-9_.-]+?)(?::[a-z0-9.-]+)?(?![a-z0-9_.@-])/gi
 
 export function shortName(mxid: string): string {
-  return (mxid || '').trim().replace(/^@/, '').split(':')[0]
+  return shortMxName((mxid || '').trim())
 }
 
 function extractMentions(body: string): string[] {

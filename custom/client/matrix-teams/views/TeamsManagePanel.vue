@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 import { useTeamRegistryStore } from '../stores/team-registry'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { agentTeamGlobalId, type AgentTeam, type AdmissionAnswers } from '../protocol'
+import { stripHomeserver } from '@/custom/ui/mxid-display'
 import { admissionMessages } from '../i18n-admission'
 import AgentTeamEditor from '../components/AgentTeamEditor.vue'
 import DutyAssignPanel from '../components/DutyAssignPanel.vue'
@@ -138,20 +139,20 @@ watch(() => matrixClientStore.syncState, (state) => {
             :data-testid="`teams-account-${a.userId}`">
             <div class="tmp__account-line1">
               <span class="tmp__account-name">{{ a.displayName }}</span>
-              <span class="tmp__account-id">{{ a.userId }}</span>
+              <span class="tmp__account-id" :title="a.userId">{{ stripHomeserver(a.userId) }}</span>
               <span v-if="a.isLeader" class="tmp__leader" data-testid="teams-leader-badge">
                 {{ t('teams.leader.badge') }}</span>
               <span v-if="a.admissionOk" class="tmp__admit is-ok" :data-testid="`teams-admission-ok-${a.userId}`">{{ A.passed }}</span>
               <span v-else class="tmp__admit is-missing" :title="A.missingHint" :data-testid="`teams-admission-missing-${a.userId}`">{{ A.missing }}</span>
             </div>
             <div v-for="tm in a.agentTeams" :key="tm.slug" class="tmp__team">
-              <span class="tmp__team-id">{{ agentTeamGlobalId(a.userId, tm.slug) }}</span>
+              <span class="tmp__team-id" :title="agentTeamGlobalId(a.userId, tm.slug)">{{ stripHomeserver(agentTeamGlobalId(a.userId, tm.slug)) }}</span>
               <span class="tmp__team-name">{{ tm.name }}</span>
               <span class="tmp__team-profiles">{{ tm.profiles.join(', ') }}</span>
             </div>
           </div>
           <div v-for="u in registry.undeclared" :key="u" class="tmp__undeclared"
-            :data-testid="`teams-undeclared-${u}`">{{ u }}</div>
+            :data-testid="`teams-undeclared-${u}`" :title="u">{{ stripHomeserver(u) }}</div>
         </section>
 
         <aside class="tmp__side">
@@ -179,8 +180,8 @@ watch(() => matrixClientStore.syncState, (state) => {
                 @click="submitInvite">{{ t('teams.invite.button') }}</button>
             </div>
             <div class="tmp__leaders">
-              <span v-for="l in registry.leaders" :key="l" class="tmp__leader-chip">
-                {{ l }}
+              <span v-for="l in registry.leaders" :key="l" class="tmp__leader-chip" :title="l">
+                {{ stripHomeserver(l) }}
                 <button v-if="registry.leaders.length > 1" type="button" class="tmp__leader-x"
                   :data-testid="`teams-leader-remove-${l}`" @click="removeLeader(l)">✕</button>
               </span>

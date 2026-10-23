@@ -360,11 +360,13 @@ export async function collectRegistryRecords(): Promise<{ records: RawCapability
         const id = cells[0] ?? ''
         if (!id) continue
         const last = cells[cells.length - 1] ?? ''
+        // name 给 UI 显示：全形 mxid 短化去统一后缀（id 保持全形机读，2026-10-23 短显轮）
+        const fallbackName = id.replace(/^(@[\w.-]+):[a-z0-9.-]+/i, '$1')
         out.push({
           source: 'registry-admin',
           kind: `registry:${kind}`,
           id,
-          name: cells[1] && !cells[1].startsWith('@') ? cells[1] : id,
+          name: cells[1] && !cells[1].startsWith('@') ? cells[1] : fallbackName,
           version: null,
           registeredAt,
           auditTrail: commit ? `git:${commit}@${rel}` : null,

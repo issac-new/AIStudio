@@ -12,6 +12,7 @@ import { useWorkspaceStore } from '../store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { fetchGovernanceOverview, type GovernanceDocMeta } from '@/custom/governance/api/governance'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
+import { shortMxName, stripHomeserver } from '@/custom/ui/mxid-display'
 
 type SearchType = 'all' | 'sessions' | 'tasks' | 'runs' | 'docs' | 'people'
 type GroupKey = Exclude<SearchType, 'all'>
@@ -207,8 +208,8 @@ const peopleRowsResult = computed<ResultRow[]>(() => (workspaceFilter.value ? []
   .filter((a) => !q.value.trim() || hay(a.displayName, a.userId).includes(q.value.trim().toLowerCase()))
   .map((a) => ({
     key: `p:${a.userId}`,
-    title: a.displayName || a.userId,
-    meta: [a.userId, a.isLeader ? (zh.value ? '团队领导' : 'Team lead') : (zh.value ? '成员' : 'Member')].join(' · '),
+    title: a.displayName || shortMxName(a.userId),
+    meta: [stripHomeserver(a.userId), a.isLeader ? (zh.value ? '团队领导' : 'Team lead') : (zh.value ? '成员' : 'Member')].join(' · '),
     icon: '◉',
     action: zh.value ? '账号' : 'Account',
     open: () => void router.push({ name: 'ia2.stage1', query: { tab: 'accounts', user: a.userId } }),

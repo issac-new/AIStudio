@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { MatrixEvent } from 'matrix-js-sdk'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
+import { shortMxName } from '@/custom/ui/mxid-display'
 
 interface Props {
   event: MatrixEvent
@@ -20,9 +21,9 @@ const replyEvent = computed(() => composerStore.getReplyEvent(props.event))
 const replySender = computed(() => replyEvent.value?.getSender() ?? '')
 const replyDisplayName = computed(() => {
   void roomStore.roomVersion
-  if (!replyEvent.value || !roomStore.activeRoom) return replySender.value
+  if (!replyEvent.value || !roomStore.activeRoom) return shortMxName(replySender.value)
   const member = roomStore.activeRoom.getMember(replySender.value)
-  return member?.name || replySender.value
+  return member?.name || shortMxName(replySender.value)
 })
 const replyContent = computed(() => {
   if (!replyEvent.value) return ''

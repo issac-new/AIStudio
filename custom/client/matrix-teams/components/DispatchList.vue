@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { useTaskDispatchStore } from '../stores/task-dispatch'
 import { useTeamRegistryStore } from '../stores/team-registry'
 import { admissionMessages } from '../i18n-admission'
+import { stripHomeserver } from '@/custom/ui/mxid-display'
 
 const i18n = useI18n()
 const { t } = i18n
@@ -59,7 +60,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       <select v-model="targetAccount" class="dl__select" data-testid="dispatch-target-select"
         :aria-label="t('teams.dispatch.target')">
         <option value="">{{ t('teams.dispatch.target') }}</option>
-        <option v-for="a in accounts" :key="a.userId" :value="a.userId">{{ a.label }}（{{ a.userId }}）{{ a.admissionOk ? '' : ' ⚠' }}</option>
+        <option v-for="a in accounts" :key="a.userId" :value="a.userId">{{ a.label }}（{{ stripHomeserver(a.userId) }}）{{ a.admissionOk ? '' : ' ⚠' }}</option>
       </select>
       <div v-if="targetNotAdmitted" class="dl__admit-warn" data-testid="dispatch-admission-warn">{{ A.dispatchWarn }}</div>
       <select v-model="targetProfile" class="dl__select" data-testid="dispatch-profile-select"
@@ -76,8 +77,8 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     <div v-for="d in dispatch.dispatches" :key="d.assign.taskId"
       class="dl__row" :data-testid="`dispatch-item-${d.assign.taskId.slice(0, 6)}`">
       <span class="dl__task-title">{{ d.assign.title }}</span>
-      <span class="dl__target">{{ d.assign.target.account }}</span>
-      <span class="dl__issuer">{{ t('teams.dispatch.issuedBy') }}: {{ d.assign.issuedBy }}</span>
+      <span class="dl__target" :title="d.assign.target.account">{{ stripHomeserver(d.assign.target.account) }}</span>
+      <span class="dl__issuer">{{ t('teams.dispatch.issuedBy') }}: {{ stripHomeserver(d.assign.issuedBy) }}</span>
       <span class="dl__status" :class="`dl__status--${d.receipt?.status ?? 'pending'}`"
         data-testid="dispatch-status">{{ t(`teams.dispatch.status.${d.receipt?.status ?? 'pending'}`) }}</span>
     </div>

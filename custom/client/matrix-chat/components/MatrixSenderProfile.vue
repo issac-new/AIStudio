@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { colorFromUserId } from '@/custom/matrix-chat/utils/usernameColor'
+import { shortMxName, stripHomeserver } from '@/custom/ui/mxid-display'
 import MatrixUserKindBadge from './MatrixUserKindBadge.vue'
 
 interface Props {
@@ -20,12 +21,13 @@ const rightPanelStore = useMatrixRightPanelStore()
 const displayName = computed(() => {
   void roomStore.roomVersion
   const room = roomStore.activeRoom
-  if (!room) return props.userId
+  if (!room) return shortMxName(props.userId)
   const member = room.getMember(props.userId)
-  return member?.name || props.userId
+  return member?.name || shortMxName(props.userId)
 })
 
-const mxid = computed(() => props.userId)
+// id 槽位短显（去 :域名，保 @）；悬停见全形
+const mxid = computed(() => stripHomeserver(props.userId))
 
 // Per-user greyscale color (element-web username-color behavior, Pure Ink palette)
 const senderColor = computed(() => colorFromUserId(props.userId))
@@ -36,7 +38,7 @@ const senderColor = computed(() => colorFromUserId(props.userId))
     <span class="mx_DisambiguatedProfile_displayName">{{ displayName }}</span>
     <!-- AI 员工徽标（-agent 命名约定自动归类，人类不显——spec D-1） -->
     <MatrixUserKindBadge :user-id="userId" />
-    <span v-if="showMxid && displayName !== mxid" class="mx_DisambiguatedProfile_mxid">{{ mxid }}</span>
+    <span v-if="showMxid && displayName !== mxid" class="mx_DisambiguatedProfile_mxid" :title="userId">{{ mxid }}</span>
   </span>
 </template>
 

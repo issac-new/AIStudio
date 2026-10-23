@@ -12,6 +12,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
+import { stripHomeserver } from '@/custom/ui/mxid-display'
 import { useKanbanStore } from '@/stores/hermes/kanban'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { buildWaiting, formatWaitAge } from '../adapters/waiting'
@@ -157,7 +158,8 @@ export function useSitCounts() {
         machines: Math.max(fleet.length, gw ? 1 : 0),
         // 身份清单与计数同源（SitDetailPanel 在线树消费；计数与列表零割裂）
         identities: {
-          people: accounts.value.map(a => a.displayName || a.userId),
+          // displayName 空时兜底短显（@user:matrix.test → @user；agent:/machine: 内部键原样）
+          people: accounts.value.map(a => a.displayName || (String(a.userId ?? '').startsWith('@') ? stripHomeserver(a.userId) : String(a.userId ?? ''))),
           agents: accounts.value.flatMap(a => (a.agentTeams ?? []).flatMap(at => at.profiles.map(String))),
           machines: fleet.map(s => ({ id: s.id, label: s.title || s.profile || s.id, profile: s.profile || 'default', status: s.status })),
         },
