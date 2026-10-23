@@ -136,3 +136,24 @@ describe('KnowledgeGraphSection KG 演化治理扩展', () => {
     expect(api.rollbackKg).toHaveBeenCalledWith('demo', TS)
   })
 })
+
+describe('D21 布局批：冲突墙分页限流', () => {
+  it('120 条待裁定时默认只渲 50 条+「再显示」按钮；点按扩 100', async () => {
+    const many = Array.from({ length: 120 }, (_, i) => ({
+      inboxId: `ci-${i}`, ts: 1, board: 'demo', entityId: `e:${i}`, field: 'name',
+      existing: 'a', incoming: `b${i}`, resolved: false, kind: 'merge-review', similarity: 0.5,
+    }))
+    vi.mocked(api.fetchConflictInbox).mockResolvedValueOnce({ ok: true, inbox: many } as never)
+    const w = await mountSection()
+    await flushPromises()
+    // 全量计数徽标 + 限流渲染
+    expect(w.find('[data-testid="kg-pending-count"]').text()).toBe('120')
+    expect(w.findAll('.kg__conflict')).toHaveLength(50)
+    const more = w.find('[data-testid="kg-conflicts-more"]')
+    expect(more.text()).toContain('70')
+    await more.trigger('click')
+    expect(w.findAll('.kg__conflict')).toHaveLength(120)
+    expect(w.find('[data-testid="kg-conflicts-more"]').exists()).toBe(false)
+    w.unmount()
+  })
+})

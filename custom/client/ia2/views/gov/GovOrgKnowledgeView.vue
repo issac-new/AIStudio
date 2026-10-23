@@ -41,5 +41,12 @@ const tabText = useTasksTabsText()
 .gov-view__bar { display: flex; align-items: flex-start; gap: 10px; flex-shrink: 0; }
 .gov-view__title { margin: 0; font-size: 15px; font-weight: 600; }
 .gov-view__sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted); }
-.gov-view__body { display: flex; flex-direction: column; gap: 14px; }
+.gov-view__body {
+  /* D21 布局批：单列长卷→响应式两列（矮块顶对齐不拉伸，dense 回填；窄屏回落单列） */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+  gap: 14px;
+  align-items: start;
+  grid-auto-flow: row dense;
+}
 </style>

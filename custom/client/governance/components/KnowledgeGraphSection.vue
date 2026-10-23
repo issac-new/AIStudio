@@ -127,6 +127,14 @@ async function doArm(on: boolean): Promise<void> {
 }
 
 const pendingConflicts = computed(() => inbox.value.filter((e) => !e.resolved))
+// D21 布局批：冲突墙分页限流——实测待裁定可达两千余条，全量渲染把页面拖成数万
+// 像素长卷。默认渲染 50 条，「再显示 100」按需扩；全量计数在标题行始终可见。
+const CONFLICT_PAGE_SIZE = 50
+const conflictVisible = ref(CONFLICT_PAGE_SIZE)
+const visibleConflicts = computed(() => pendingConflicts.value.slice(0, conflictVisible.value))
+function showMoreConflicts(): void {
+  conflictVisible.value += 100
+}
 const kgUnavailable = computed(() => syncResults.value?.some((r) => !r.kgAvailable) ?? false)
 const fmtTime = (ts: number): string => humanDateTime(ts)
 
@@ -208,9 +216,10 @@ onMounted(() => {
     </div>
 
     <div class="kg__panel" data-testid="kg-conflicts">
-      <h4 class="kg__panel-title">{{ L?.conflictsTitle }}</h4>
+      <h4 class="kg__panel-title">{{ L?.conflictsTitle }}<span v-if="pendingConflicts.length" class="kg__pending-count" data-testid="kg-pending-count">{{ pendingConflicts.length }}</span></h4>
       <div v-if="!pendingConflicts.length" class="ui-empty-state">{{ L?.conflictsEmpty }}</div>
-      <div v-for="c in pendingConflicts" :key="c.inboxId" class="kg__conflict" :data-testid="`kg-conflict-${c.inboxId}`">
+      <div class="kg__conflict-scroll">
+        <div v-for="c in visibleConflicts" :key="c.inboxId" class="kg__conflict" :data-testid="`kg-conflict-${c.inboxId}`">
         <div class="kg__conflict-main">
           <span v-if="c.kind === 'merge-review'" class="kg__kind-tag" data-testid="kg-merge-review-tag">{{ L?.mergeReviewTag }}<template v-if="typeof c.similarity === 'number'"> {{ c.similarity.toFixed(2) }}</template></span>
           <span v-else-if="c.kind === 'ontology'" class="kg__kind-tag kg__kind-tag--onto" data-testid="kg-ontology-tag">{{ L?.ontologyTag ?? '语义契约' }}</span>
@@ -221,6 +230,12 @@ onMounted(() => {
           <button type="button" data-testid="kg-keep" @click="decide(c, 'keep-existing')">{{ L?.keepExisting }}</button>
           <button type="button" data-testid="kg-take" @click="decide(c, 'take-incoming')">{{ L?.takeIncoming }}</button>
         </div>
+      </div>
+      </div>
+      <div v-if="pendingConflicts.length > visibleConflicts.length" class="kg__more">
+        <button type="button" data-testid="kg-conflicts-more" @click="showMoreConflicts()">
+          还有 {{ pendingConflicts.length - visibleConflicts.length }} 条待裁定，再显示 100 条
+        </button>
       </div>
       <div v-if="inbox.length && !pendingConflicts.length" class="kg__resolved">
         {{ L?.resolved }} × {{ inbox.length }}
@@ -239,6 +254,17 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.kg__pending-count {
+  display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 9px;
+  border: 1px solid var(--warning-color); color: var(--warning-color);
+  font-size: 11px; font-weight: 600;
+}
+.kg__conflict-scroll { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.kg__more button {
+  font-size: 12px; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 6px;
+  background: transparent; color: var(--text-secondary); cursor: pointer; width: 100%;
+  &:hover { color: var(--text-primary); border-color: var(--text-muted); }
 }
 .kg__bar { display: flex; align-items: center; gap: 8px; }
 .kg__title { margin: 0; font-size: 14px; }
