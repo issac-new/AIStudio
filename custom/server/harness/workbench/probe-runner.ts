@@ -130,7 +130,7 @@ function materializeDir(
 
 // ---------- 任务驱动 ----------
 
-export interface SpawnRunResult { ok: boolean; error?: string }
+export interface SpawnRunResult { ok: boolean; error?: string; /** stream-json stdout（新 CLI 机器可读通道；缺席则回退 trace 通道。 */ stdout?: string }
 
 export type SpawnRun = (prompt: string, env: Record<string, string>, timeoutMs: number) => Promise<SpawnRunResult>
 
@@ -157,19 +157,55 @@ export const defaultSpawnRun: SpawnRun = (prompt, env, timeoutMs) =>
   new Promise((resolvePromise) => {
     execFile(
       hermesBin(),
-      ['-p', env.HERMES_PROBE_PROFILE ?? 'orchestrator', '--cli', '--accept-hooks', 'chat', '-q', prompt],
-      { env: { ...process.env, ...env }, timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 },
-      (error, _stdout, stderr) => {
+      ['-p', env.HERMES_PROBE_PROFILE ?? 'orchestrator', '--cli', '--accept-hooks', 'chat',
+        '--format', 'stream-json', '-q', prompt],
+      { env: { ...process.env, ...env }, timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 },
+      (error, stdout, stderr) => {
         if (error) {
           const tail = String(stderr ?? '').trim().slice(-400)
           const head = String(error.message ?? error).slice(0, 300)
           resolvePromise({ ok: false, error: tail ? `${head} | stderr 尾部：${tail}` : head })
         } else {
-          resolvePromise({ ok: true })
+          resolvePromise({ ok: true, stdout: String(stdout ?? '') })
         }
       },
     )
   })
+
+/**
+ * stream-json result 事件 → 证据（新 CLI 的机器可读通道；走查实证当前 CLI 不落
+ * jsonl trace，readNewestTrace 的 trace 通道降级为后备）。
+ */
+interface StreamJsonResult {
+  session_id?: string
+  exit_code?: number
+  text?: string
+  tokens?: { total?: number }
+  duration_ms?: number
+}
+
+export function evidenceFromStreamJson(stdout: string): { sessionId: string; evidence: Evidence } | null {
+  let last: StreamJsonResult | null = null
+  for (const line of String(stdout ?? '').split('\n')) {
+    const t = line.trim()
+    if (!t) continue
+    try {
+      const doc = JSON.parse(t) as { type?: string } & StreamJsonResult
+      if (doc.type === 'result') last = doc
+    } catch { /* 非 JSON 行跳过 */ }
+  }
+  if (!last || typeof last.text !== 'string') return null
+  const tokens = typeof last.tokens?.total === 'number' ? last.tokens.total : undefined
+  return {
+    sessionId: typeof last.session_id === 'string' ? last.session_id : '',
+    evidence: {
+      transcript: last.text,
+      ...(tokens != null || typeof last.duration_ms === 'number'
+        ? { efficiency: { ...(tokens != null ? { tokens } : {}), ...(typeof last.duration_ms === 'number' ? { durationMs: last.duration_ms } : {}) } }
+        : {}),
+    },
+  }
+}
 
 /** 读取隔离 traces 目录中 sinceMs 之后产生的最新一份 trace。 */
 export function readNewestTrace(tracesDir: string, sinceMs: number): TraceRead | null {
@@ -253,16 +289,20 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
     if (!spawned.ok) {
       return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 运行失败（已重试一次）：${spawned.error}`, homeDir }
     }
-    const trace = readNewestTrace(tracesDir, startedAt - 1000)
-    if (!trace) {
-      return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 未产生 trace（运行器未落轨迹）`, homeDir }
+    // 证据双通道：stream-json stdout（新 CLI）优先，jsonl trace（旧通道）后备
+    const stream = spawned.stdout ? evidenceFromStreamJson(spawned.stdout) : null
+    const trace = stream ? null : readNewestTrace(tracesDir, startedAt - 1000)
+    const picked = stream ?? trace
+    if (!picked) {
+      return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 未产生证据（stream-json 与 trace 通道均缺席）`, homeDir }
     }
-    samples[task.taskId] = [{ sessionId: trace.sessionId, evidence: trace.evidence }]
-    if (trace.costUsd == null) {
+    samples[task.taskId] = [{ sessionId: picked.sessionId, evidence: picked.evidence }]
+    const costUsdOfPicked = picked.evidence.efficiency?.costUsd ?? null
+    if (costUsdOfPicked == null) {
       costUsd += estimate
       estimatedTasks += 1
     } else {
-      costUsd += trace.costUsd
+      costUsd += costUsdOfPicked
     }
     done += 1
     opts.onProgress?.(done, costUsd, estimatedTasks)
