@@ -5,9 +5,9 @@ import Router from '@koa/router'
 import { collectSurfaces } from './surface-registry'
 import {
   ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
-  createProbes, createProposal, decideProposal, importExperiences, listExperiences, listProposals,
-  overview, promoteProposal, recordProbe, rollbackProposal, setExperienceStatus, startAutoProbe,
-  submitProposal, suggestProposal,
+  createProbes, createProposal, decideProposal, deleteProposal, importExperiences, listExperiences,
+  listProposals, overview, promoteProposal, recordProbe, rollbackProposal, setExperienceStatus,
+  startAutoProbe, submitProposal, suggestProposal,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
 
@@ -129,6 +129,16 @@ router.post('/proposals/suggest', async (ctx) => {
       actor: actorOf(ctx, b),
     })
     ctx.body = { ok: true, proposal }
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// 删除纯占位提案：仅 draft 且无探测、无裁决（审计线索优先于整洁）。
+router.delete('/proposals/:id', async (ctx) => {
+  if (writeDenied(ctx)) return
+  try {
+    ctx.body = { ok: true, ...(await deleteProposal(ctx.params.id)) }
   } catch (e) {
     fail(ctx, e)
   }

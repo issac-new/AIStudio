@@ -151,3 +151,44 @@ describe('runProbeTasks', () => {
     expect(['old', 'new']).toContain(r!.sessionId) // mtime 可能同毫秒；只验证能读到且字段齐
   })
 })
+
+// ---------- 挂账清偿批：spawn 韧性（stderr 透传＋单次重试） ----------
+
+describe('spawn 韧性（瞬态故障重试一次）', () => {
+  it('首次 spawn 失败、重试成功 → 任务照常完成', async () => {
+    const { runProbeTasks } = await import('../probe-runner')
+    let calls = 0
+    const result = await runProbeTasks({
+      prompts: [{ taskId: 't1', prompt: 'p' }],
+      baseHome: '/tmp',
+      profile: 'x',
+      variantTree: {},
+      budgetRemainingUsd: 5,
+      retryDelayMs: 0,
+      spawnRun: async (prompt, env, timeoutMs) => {
+        calls += 1
+        if (calls === 1) return { ok: false, error: 'Command failed: boom | stderr 尾部：rate limited' }
+        return fakeTraceSpawn({ prompt: 100, completion: 50 })(prompt, env, timeoutMs)
+      },
+    })
+    expect(calls).toBe(2)
+    expect(result.ok).toBe(true)
+    expect(result.tasksDone).toBe(1)
+  })
+
+  it('两次都失败 → 定性失败且错误信息含 stderr 尾部', async () => {
+    const { runProbeTasks } = await import('../probe-runner')
+    const result = await runProbeTasks({
+      prompts: [{ taskId: 't1', prompt: 'p' }],
+      baseHome: '/tmp',
+      profile: 'x',
+      variantTree: {},
+      budgetRemainingUsd: 5,
+      retryDelayMs: 0,
+      spawnRun: async () => ({ ok: false, error: 'Command failed: boom | stderr 尾部：quota exceeded' }),
+    })
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('已重试一次')
+    expect(result.error).toContain('quota exceeded')
+  })
+})

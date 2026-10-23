@@ -148,16 +148,22 @@ function hermesBin(): string {
   return process.env.HERMES_PROBE_HERMES_BIN?.trim() || 'hermes'
 }
 
-/** 默认驱动：kanban 派发先例的子进程形态（-p profile + --cli + accept-hooks）。 */
+/**
+ * 默认驱动：kanban 派发先例的子进程形态（-p profile + --cli + accept-hooks）。
+ * 失败时附 stderr 尾部——走查实录：只回 "Command failed" 吞掉现场，无法定位
+ * （曾因此把模型 API 瞬态故障误判为隔离环境缺陷）。
+ */
 export const defaultSpawnRun: SpawnRun = (prompt, env, timeoutMs) =>
   new Promise((resolvePromise) => {
     execFile(
       hermesBin(),
       ['-p', env.HERMES_PROBE_PROFILE ?? 'orchestrator', '--cli', '--accept-hooks', 'chat', '-q', prompt],
       { env: { ...process.env, ...env }, timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 },
-      (error) => {
+      (error, _stdout, stderr) => {
         if (error) {
-          resolvePromise({ ok: false, error: String(error.message ?? error).slice(0, 300) })
+          const tail = String(stderr ?? '').trim().slice(-400)
+          const head = String(error.message ?? error).slice(0, 300)
+          resolvePromise({ ok: false, error: tail ? `${head} | stderr 尾部：${tail}` : head })
         } else {
           resolvePromise({ ok: true })
         }
@@ -199,6 +205,8 @@ export interface ProbeTaskRunOptions {
   timeoutPerTaskMs?: number
   spawnRun?: SpawnRun
   onProgress?: (done: number, costUsd: number, estimatedTasks: number) => void
+  /** spawn 失败重试前的等待（缺省 5s；测试传 0）。 */
+  retryDelayMs?: number
 }
 
 export interface ProbeTaskRunResult {
@@ -228,6 +236,7 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
   let costUsd = 0
   let estimatedTasks = 0
   let done = 0
+  const retryDelay = opts.retryDelayMs ?? 5_000
   for (const task of opts.prompts) {
     const startedAt = Date.now()
     const env = {
@@ -235,9 +244,14 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
       HERMES_RUN_TRACE_DIR: tracesDir,
       HERMES_PROBE_PROFILE: opts.profile,
     }
-    const spawned = await spawn(task.prompt, env, timeout)
+    // 瞬态故障（模型 API 抖动）重试一次；两败才定性失败（走查实录：单次抖动曾报废整场探测）
+    let spawned = await spawn(task.prompt, env, timeout)
     if (!spawned.ok) {
-      return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 运行失败：${spawned.error}`, homeDir }
+      if (retryDelay > 0) await new Promise((r) => setTimeout(r, retryDelay))
+      spawned = await spawn(task.prompt, env, timeout)
+    }
+    if (!spawned.ok) {
+      return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 运行失败（已重试一次）：${spawned.error}`, homeDir }
     }
     const trace = readNewestTrace(tracesDir, startedAt - 1000)
     if (!trace) {
