@@ -249,7 +249,7 @@ router.post('/sets/enterprise-seed', async (ctx) => {
   if (existing) {
     // listSets 返回摘要（EvalSetMeta 无 tasks）——取全集算覆盖
     const full = getSet(existing.id)
-    ctx.body = { ok: true, existed: true, set: setSummary(existing), axes: ENTERPRISE_AXES, coverage: full ? axesCoverage(full.tasks) : null }
+    ctx.body = { ok: true, existed: true, set: existing, axes: ENTERPRISE_AXES, coverage: full ? axesCoverage(full.tasks) : null }
     return
   }
   const result = createSet(
