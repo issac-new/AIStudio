@@ -2,6 +2,8 @@
 // 一级导航（D13 六阶段 → D18 旅程式重构，2026-10-17 设计正本 §5.0）：
 // 标签单一事实源=stage-meta.ts 的 STAGE_META（六阶段定义），本模块只做
 // 导航键/路径映射与高亮判定，不各自定义文案——终结三处各自定义的双轨形态。
+// 2026-10-23 最近轨迹批：常用组/推演组静态定义自 IaSideNav 迁入（见下
+// COMMON_NAVS/SIM_NAVS），供侧栏渲染与轨迹标题解析共用同一文案源。
 // 需求锚 R8（导航按关注面归位）修订为旅程式归位（设计正本 §二 J2）。
 // 路由纪律：全部消费既有路由记录（ia2.stage1-6 与岛屿各名），本模块不注册
 // 不改动路由。
@@ -114,6 +116,55 @@ export const ISLAND_NAVS: readonly IslandNavMeta[] = [
   { testid: 'ia-nav-island-ontology', name: 'ia2.ontology', featureKey: 'ontology', labelZh: '本体', labelEn: 'Ontology' },
   { testid: 'ia-nav-island-eval', name: 'ia2.eval', featureKey: 'eval', labelZh: '评测', labelEn: 'Eval' },
   { testid: 'ia-nav-island-skillgov', name: 'ia2.skillgov', featureKey: 'skillgov', labelZh: '技能治理', labelEn: 'Skill Gov' },
+]
+
+// ── 常用组与推演组注册表（2026-10-23 最近轨迹批迁入）────────────────────────
+// 此前两组定义内联在 IaSideNav.vue；「最近」轨迹的页面名解析需要同一份文案，
+// 与其复制字符串造成双轨，不如把静态定义迁入本注册表（单一事实源），组件侧
+// 只留依赖响应式路由的 match 高亮判定。行为不变（键/路由名/文案原样搬移）。
+
+/** 常用组入口（日常高频；match 高亮判定在组件内按 key 关联） */
+export interface CommonNavMeta {
+  key: string
+  lead: string
+  zh: string
+  en: string
+  name: string
+  testid: string
+}
+
+export const COMMON_NAVS: readonly CommonNavMeta[] = [
+  { key: 'journey', lead: '◫', zh: '流程总览', en: 'Overview', name: 'ia2.journey', testid: 'ia-side-nav-journey' },
+  { key: 'workbench', lead: '▤', zh: '工作台', en: 'Workbench', name: 'ia2.collab', testid: 'ia-side-nav-workbench' },
+  { key: 'board', lead: '▦', zh: '看板', en: 'Board', name: 'ia2.board', testid: 'ia-side-nav-board' },
+  { key: 'inbox', lead: '◷', zh: '审批收件箱', en: 'Approvals Inbox', name: 'ia2.inbox', testid: 'ia-side-nav-inbox' },
+  { key: 'search', lead: '⌕', zh: '检索', en: 'Search', name: 'ia2.search', testid: 'ia-side-nav-search' },
+]
+
+/** 工作台兄弟路由（会话/房间/群聊都算工作台；侧栏高亮与轨迹标题共用同一集合） */
+export const WORKBENCH_ROUTE_NAMES: ReadonlySet<string> = new Set([
+  'ia2.collab', 'ia2.collabChat', 'ia2.collabSession', 'ia2.commsRoom', 'ia2.groupRoom',
+  'ia2.dash', 'ia2.collabHistory', 'ia2.collabHistorySession',
+  'ia2.collabGlobalAgent', 'ia2.collabGlobalAgentSession',
+])
+
+/** 推演专区六签（与 SimCenterView 六签同序；文案原样自 IaSideNav 迁入） */
+export interface SimNavMeta {
+  key: string
+  lead: string
+  zh: string
+  en: string
+  name: string
+  testid: string
+}
+
+export const SIM_NAVS: readonly SimNavMeta[] = [
+  { key: 'sim-overview', lead: '◎', zh: '导演台', en: 'Director', name: 'ia2.sim', testid: 'ia-side-nav-sim' },
+  { key: 'sim-supervision', lead: '◉', zh: '监督面板', en: 'Supervision', name: 'ia2.simSupervision', testid: 'ia-side-nav-sim-supervision' },
+  { key: 'sim-ops', lead: '◈', zh: '运行监控', en: 'Run monitoring', name: 'ia2.simOps', testid: 'ia-side-nav-sim-ops' },
+  { key: 'sim-evidence', lead: '▤', zh: '证据库', en: 'Evidence', name: 'ia2.simEvidence', testid: 'ia-side-nav-sim-evidence' },
+  { key: 'sim-orchestration', lead: '⟐', zh: '运行编排', en: 'Orchestration', name: 'ia2.simOrchestration', testid: 'ia-side-nav-sim-orchestration' },
+  { key: 'sim-settings', lead: '⚙', zh: '推演设置', en: 'Simulation settings', name: 'ia2.simSettings', testid: 'ia-side-nav-sim-settings' },
 ]
 
 /** 顶栏词条 locale（响应式跟随；同 i18n-tasks-tabs 小字典先例，不读 473 树） */
