@@ -205,6 +205,8 @@ export interface ReplayRunInput {
   crossValidate?: boolean
   /** 参照答案锚定检验（成本翻倍；争议题/新集首轮建议开）。 */
   referenceLeakCheck?: boolean
+  /** 输出稳定性复测轮数（≥2 开启；判定成本随轮数线性放大，默认关）。 */
+  stabilityRetest?: number
   note?: string
   actor?: string
   /** 同卷复评：按该版本快照判分（缺省=当前集）。 */
@@ -355,6 +357,7 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
       const judged = await judgeAttempt(task, evidence, deps.judge, {
         crossValidate: input.crossValidate,
         referenceLeakCheck: input.referenceLeakCheck,
+        stabilityRetest: input.stabilityRetest,
       })
       const attempt: Attempt = {
         taskId: task.id,

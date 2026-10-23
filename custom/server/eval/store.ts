@@ -205,6 +205,13 @@ function validateTask(t: unknown, i: number, problems: string[]): void {
   if (it?.dimension !== undefined && !isEvalDimension(it.dimension)) {
     problems.push(`任务 #${i} dimension 须为七维之一：task_completion/tool_params/failure_recovery/long_task_state/privilege_injection/cost_loop/human_escalation`)
   }
+  if (it?.difficulty !== undefined && !['P0', 'P1', 'P2', 'P3'].includes(String(it.difficulty))) {
+    problems.push(`任务 #${i} difficulty 须为 P0/P1/P2/P3（宁缺毋滥：共识不稳定不硬标，可不填）`)
+  }
+  if (it?.role !== undefined
+    && (typeof it.role !== 'string' || !it.role.trim() || it.role.trim().length > 32)) {
+    problems.push(`任务 #${i} role 须为 1-32 字符的责任角色域（如 planner/implementer/reviewer/tester/sre/audit/ops）`)
+  }
 }
 
 export interface CreateSetInput {

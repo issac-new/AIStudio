@@ -64,6 +64,9 @@ const SECRET_RULES: SecretRule[] = [
   { rule: 'assigned-password', pattern: /(password|passwd|secret)\s*[:=]\s*["'][^"'\s]{8,}["']/i },
 ]
 
+export { SECRET_RULES }
+export type { SecretRule }
+
 /** 密钥形态扫描（保守确定性规则族；命中≠已泄露——人工复核后入三态裁决）。 */
 export function scanRepoSecrets(repoRoot: string): RepoEvidence {
   try {
