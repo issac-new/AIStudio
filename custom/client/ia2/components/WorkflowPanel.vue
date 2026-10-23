@@ -36,7 +36,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 async function loadDetail(id: string): Promise<void> {
   try { detail.value = await fetchWorkflowRun(id) } catch { /* 保持旧态 */ }
 }
-watch(() => props.runId, id => { detail.value = null; if (id) void loadDetail(id) }, { immediate: true })
+watch(() => props.runId, id => { detail.value = null; composerOpen.value = id === 'new'; if (id && id !== 'new') void loadDetail(id) }, { immediate: true })
 
 const shown = computed(() => (props.runId ? [] : runs.value))
 const stepBadge = (s: WorkflowRun['steps'][number]): string =>

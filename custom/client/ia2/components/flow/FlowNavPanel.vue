@@ -277,6 +277,7 @@ const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
             <div v-if="filterKind === 'all' || filterKind === 'loop'" class="flow-nav__sec">
         <div class="flow-nav__sec-head" data-testid="flow-group-workflows">
           {{ t('ia2.flow.groupLoops') }}<span class="flow-nav__sec-n">{{ wfRuns.length }}</span>
+          <button type="button" class="flow-nav__wf-add" data-testid="wf-add" title="新建工作流：向分布式 hermes agent / matrix 集群下发多步任务" @click="emit('select', { kind: 'loop', id: 'new' })">＋</button>
         </div>
         <button
           v-for="r in wfRuns" :key="r.id" type="button" class="flow-nav__row"
@@ -493,6 +494,7 @@ const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 /* v14 单一聊天列表：kind 图标 + 群聊行 hover 删除 */
+.flow-nav__wf-add { margin-left: auto; border: 1px solid var(--accent-primary); border-radius: 50%; width: 16px; height: 16px; line-height: 1; font-size: 11px; color: var(--accent-primary); background: transparent; cursor: pointer; padding: 0; flex-shrink: 0; }
 .flow-nav__wf-meta { font-size: 10px; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
 .flow-nav__kind {
   flex-shrink: 0; width: 14px; text-align: center;
