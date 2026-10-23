@@ -38,6 +38,20 @@ export type ExceptionType =
 export type VerdictSource = 's0' | 's1' | 'human' | 's0+s1'
 
 /**
+ * 难度四档（京东评测体系拆解轮 2026-10-23）：宁缺毋滥——只给能达成稳定专家
+ * 共识的任务标注，共识不稳定的任务不硬标（未标注如实计入 untagged，不自动推断）。
+ */
+export type DifficultyTier = 'P0' | 'P1' | 'P2' | 'P3'
+
+/**
+ * 责任角色域（京东「归因按角色切」：多智能体分工边界即归因边界）。
+ * 与 link（链路环节）正交：link=行为发生在哪一环，role=这一环的责任主体是谁。
+ * 建议值（对齐 SIM 15 角色编制的责任域子集）：planner/implementer/reviewer/
+ * tester/sre/audit/ops——自由字符串，聚合按标注值分桶。
+ */
+export type EvalRole = string
+
+/**
  * 能力维度七值（百度评测范式轮：数据集当资产管——维度是显式标注，不从断言猜）。
  * 未标注计入 untagged，覆盖度只统计显式标注，避免「看着像覆盖了」的假读数。
  */
@@ -147,6 +161,10 @@ export interface EvalTask {
   expectedToolCalls?: string[]
   /** 能力维度（可选，七值；显式标注才计入覆盖度，未标注如实计入 untagged）。 */
   dimension?: EvalDimension
+  /** 难度档（可选，P0-P3；宁缺毋滥——只标有稳定专家共识的任务，未标注计入 untagged）。 */
+  difficulty?: DifficultyTier
+  /** 责任角色域（可选；标注后聚合按角色分桶失败，归因直达责任方）。 */
+  role?: EvalRole
   /** 回流溯源（由坏例回流端点写入；手工建集不填）。 */
   origin?: ReflowOrigin
 }
@@ -268,6 +286,22 @@ export interface JudgeStability {
   flipRate: number | null
 }
 
+/**
+ * 输出稳定性读数（京东「稳定性也是指标」：同一批样本多次调用，评估输出稳定性；
+ * 准确之外，抖动本身是被测对象）。与 JudgeStability 分开记——一个是判据锚错
+ * 对象（改输入结论翻转），一个是同输入重复判定的结论漂移（模型温度抖动）。
+ */
+export interface OutputStability {
+  /** 总判定轮数（首轮 + retest 轮）。 */
+  rounds: number
+  /** 参与检验的断言判词数（首轮已决且各 retest 轮均有结论）。 */
+  checked: number
+  /** 任一 retest 轮结论与首轮不一致的断言数。 */
+  flips: number
+  /** 翻转率；checked=0 时 null。 */
+  flipRate: number | null
+}
+
 export interface Attempt {
   taskId: string
   sampleIdx: number
@@ -286,6 +320,8 @@ export interface Attempt {
     models?: string[]
     /** 参照答案锚定检验读数（仅显式开启时记录）。 */
     referenceLeak?: { checked: number; flips: number; ids: string[] }
+    /** 同输入重复判定读数（仅 stabilityRetest ≥2 时记录；观测读数不改判词）。 */
+    outputStability?: { rounds: number; checked: number; flips: number }
   }
   passed?: boolean
   judgedAt?: number
@@ -343,6 +379,12 @@ export interface RunAggregates {
   trajectoryDiscipline?: TrajectoryDiscipline
   /** 判分稳定性（参照答案锚定检验）：未开启检验时缺省。 */
   judgeStability?: JudgeStability
+  /** 输出稳定性（同输入重复判定，京东「稳定性也是指标」）：未开启 retest 时缺省。 */
+  outputStability?: OutputStability
+  /** 难度分桶（京东「诚实的难度分级」）：显式标注 P0-P3 才分桶，全未标注缺省不产噪。 */
+  byDifficulty?: Array<{ tier: DifficultyTier | 'untagged'; taskCount: number; passAtK: number | null }>
+  /** 责任角色分桶（京东「归因按角色切」）：失败按标注角色归因直达责任方；全未标注缺省。 */
+  byRole?: Array<{ role: string; taskCount: number; passed: number; passAtK: number | null }>
   /** 发布门禁（腾讯启示⑦：上线就绪从主观判断转成可机械执行的 gate）；证据缺口项如实 no_data。 */
   releaseGate?: import('./releaseGate').ReleaseGateSummary
   /**

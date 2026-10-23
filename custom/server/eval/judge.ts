@@ -36,6 +36,14 @@ export interface JudgeAttemptOptions {
    * "和参考答案像不像"。对应文章的位置/冗长偏差治理里的 swap test 思路。
    */
   referenceLeakCheck?: boolean
+  /**
+   * 输出稳定性复测（默认关，判定成本随轮数线性放大）：同输入再判 N-1 轮
+   * （缓存键加盐绕开 TTL 缓存，测的是模型真实抖动而非缓存回放），任一轮
+   * 结论与首轮不一致即 flip。京东「稳定性也是指标」：准确之外，抖动本身是
+   * 被测对象。纯观测读数——flip 不改判词（温度抖动是模型属性，报告呈现
+   * flipRate 供选型/门禁消费，不污染 pass 率口径）。
+   */
+  stabilityRetest?: number
 }
 
 // 模块级共享默认实例：不注入时跨 judgeAttempt 调用复用（缓存生效、熔断计数累积）。
@@ -58,6 +66,7 @@ export interface JudgeAttemptResult {
     online: boolean
     models?: string[]
     referenceLeak?: { checked: number; flips: number; ids: string[] }
+    outputStability?: { rounds: number; checked: number; flips: number }
   }
 }
 
@@ -280,9 +289,11 @@ export async function judgeAttempt(
   const s1Values = new Map<string, number>()
   /** 多数决已裁断言（value 定 yes/no；缺席=未过半 → unknown）。 */
   const s1Decided = new Map<string, 'yes' | 'no'>()
-  /** 参照答案锚定检验判为不稳定的断言（结论随 expected_behavior 移除而翻转）。 */
-  const unstableIds = new Set<string>()
-  let referenceLeak: { checked: number; flips: number; ids: string[] } | undefined
+    /** 参照答案锚定检验判为不稳定的断言（结论随 expected_behavior 移除而翻转）。 */
+    const unstableIds = new Set<string>()
+    let referenceLeak: { checked: number; flips: number; ids: string[] } | undefined
+    /** 同输入重复判定读数（stabilityRetest ≥2 且首轮在线时记录）。 */
+    let outputStability: { rounds: number; checked: number; flips: number } | undefined
 
   if (s1Needed.length > 0) {
     const breaker = deps.breaker ?? (sharedBreaker ??= new Breaker(config.breakerThreshold, config.breakerCooldownMs))
@@ -292,8 +303,9 @@ export async function judgeAttempt(
     const ask = deps.ask ?? ((req, cfg) => clefAsk(req, cfg, deps.fetchDeps))
     const models = config.judgeModels.length > 0 ? config.judgeModels : [config.judgeModel]
 
-    /** 跑一轮判定：模型 → 断言 id → p。熔断打开直接返回 offline。 */
-    const runPass = async (passState: Record<string, unknown>): Promise<{
+    /** 跑一轮判定：模型 → 断言 id → p。熔断打开直接返回 offline。salt 仅参与
+     * 缓存键（stabilityRetest 轮绕开 TTL 缓存真实调用，请求载荷不变）。 */
+    const runPass = async (passState: Record<string, unknown>, salt?: string): Promise<{
       perModel: Map<string, Map<string, number>>
       anyCacheMiss: boolean
       latency: number
@@ -304,7 +316,7 @@ export async function judgeAttempt(
       const started = now()
       let anyCacheMiss = false
       for (const model of models) {
-        const cacheKey = sha1Of(JSON.stringify({ state: passState, questions, model }))
+        const cacheKey = sha1Of(JSON.stringify({ state: passState, questions, model, salt: salt ?? null }))
         const collected = new Map<string, number>()
         const cachedAnswers = cache.get(cacheKey, now())
         if (cachedAnswers !== undefined) {
@@ -382,6 +394,32 @@ export async function judgeAttempt(
         }
       }
       if (checked > 0) referenceLeak = { checked, flips: flipped.length, ids: flipped }
+    }
+
+    // 输出稳定性复测：同输入再判 N-1 轮，缓存键加盐绕开 TTL 缓存（否则同输入
+    // 永远命中缓存，抖动被缓存钉死——结构性测不出）。checked=参与断言基数
+    // （首轮已决且首个 retest 轮有结论）；flips=任一轮与首轮结论不一致的断言数
+    // （按断言去重，不按轮次累计）。后续轮该断言无结论则本轮不计，不倒扣 checked。
+    const retestRounds = Math.max(0, Math.floor(options.stabilityRetest ?? 1) - 1)
+    if (retestRounds > 0 && first.online) {
+      const flipIds = new Set<string>()
+      let checkedIds: string[] | null = null
+      let roundsDone = 1
+      for (let r = 0; r < retestRounds; r += 1) {
+        const again = await runPass(state, `retest-${r}`)
+        if (!again.online) break
+        roundsDone += 1
+        const againResult = decideFrom(again.perModel)
+        if (checkedIds === null) {
+          checkedIds = [...firstResult.decided.keys()].filter((id) => againResult.decided.has(id))
+        }
+        for (const id of checkedIds) {
+          if (againResult.decided.get(id) !== firstResult.decided.get(id)) flipIds.add(id)
+        }
+      }
+      if (checkedIds !== null) {
+        outputStability = { rounds: roundsDone, checked: checkedIds.length, flips: flipIds.size }
+      }
     }
   }
 
@@ -475,6 +513,7 @@ export async function judgeAttempt(
       online,
       ...(config.judgeModels.length > 1 ? { models: config.judgeModels } : {}),
       ...(referenceLeak ? { referenceLeak } : {}),
+      ...(outputStability ? { outputStability } : {}),
     },
   }
 }
