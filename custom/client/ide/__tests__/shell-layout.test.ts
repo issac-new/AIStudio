@@ -107,21 +107,16 @@ describe('IdeShell 布局守门', () => {
     const ide = useIdeStore()
     await w.vm.$nextTick()
     // v12.4：栏控迁各栏顶部控制条右上角（旧竖排 pane-tools testid 退役）；
-    // 2026-10-23 统一轮：fold 钮统一为最小化语义（-min testid，图标 –）
-    expect(w.find('[data-testid="ide-col-sidebar-min"]').exists()).toBe(true)
+    // 2026-10-23 四轮：单一切换钮（max，min 并入）；栏控叠放首行右上角不占行
     expect(w.find('[data-testid="ide-col-sidebar-max"]').exists()).toBe(true)
-    expect(w.find('[data-testid="ide-col-chat-min"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-col-sidebar-min"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-col-chat-max"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-col-chat-min"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-col-chat-popout"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-fold-sidebar-btn"]').exists()).toBe(false)
     expect(w.find('[data-testid="ide-max-sidebar-btn"]').exists()).toBe(false)
     expect(w.find('.ide-shell__pane-tools').exists()).toBe(false)
-    // 控制条最小化/最大化动作直通 ide store
-    await w.find('[data-testid="ide-col-chat-min"]').trigger('click')
-    await w.vm.$nextTick()
-    expect(w.find('.ide-shell__chat').classes()).toContain('is-folded')
-    ide.toggleFold('chat')
-    await w.vm.$nextTick()
+    // 切换钮动作直通 ide store（独占）；折叠走既有竖把手（ide-fold-chat）
     await w.find('[data-testid="ide-col-chat-max"]').trigger('click')
     await w.vm.$nextTick()
     expect(ide.layout.chat.maximized).toBe(true)
