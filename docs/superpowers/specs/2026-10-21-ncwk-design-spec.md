@@ -1,6 +1,6 @@
 # NCWK 设计正本
 
-> **⚠️ 已于 2026-10-23 整合归档**：本文内容已并入唯一整合正本 [`2026-10-23-ncwk-integrated-design.md`](2026-10-23-ncwk-integrated-design.md)（整合 R1）。本档保留为历史档案（R6 终态），不再维护；新读请走整合正本。
+> **⚠️ 已于 2026-10-23 整合归档**：本文内容已并入唯一整合正本 [`2026-10-23-swarmstudio-integrated-design.md`](2026-10-23-swarmstudio-integrated-design.md)（整合 R2）。本档保留为历史档案（R6 终态），不再维护；新读请走整合正本。
 
 > 三域设计：SwarmStudio（产品面）× hermes agent teams（运行面）× swarm-yuan（能力层）
 > 版本：2026-10-23 R6｜核实日：2026-10-23
