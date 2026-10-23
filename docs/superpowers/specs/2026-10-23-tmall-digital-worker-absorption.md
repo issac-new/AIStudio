@@ -106,3 +106,10 @@ GovOrgKnowledgeView 增 `ExpertiseSection`（搜索框+画像墙卡片），消�
   弃三级演进视图等四项（D12 同段「不做」），口径 D1-D11 全部以实测数据约束为准（gc_messages 空表、
   无 column_transition、estimate_days 全空三项实测直接改变了设计）。
 - 遵循吸收轮先例（京东轮/RRSI 轮/diagram 轮）：调研→对账→纯函数域+端点+页签→测试+走查→合 main。
+- 2026-10-23 卫生批（活体走查实录驱动，D13-D14）：
+  D13 台账 TSV 解析 detail 只取第 5 列止——此前 cols.slice(4).join 把 status 列（open）吞入摘要与
+  概念抽取（「open」成为画像墙高频噪音词的实测根因）。
+  D14 概念词卫生：停用词增补（open/status/resolution/backfill/matrix/agent/desc——群域名与自指词）；
+  结构词形过滤（纯数字开头、*-agent 后缀、v* 开头 run 形态）；extractTerms 不再把 run id 拼入抽取
+  文本（v8-run22 类噪音源头）。切词粒度不深修（拉丁连字符二元切出 an-paycore 类片段属可容忍噪音，
+  排序正确性不受影响——search?q=pay 实测 chen>wei>lin>qi>fanfan 与看板归属一致）。
