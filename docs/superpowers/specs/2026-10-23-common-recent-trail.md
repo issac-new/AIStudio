@@ -1,7 +1,7 @@
 # 侧栏「常用 · 最近」访问轨迹面板
 
 - 日期：2026-10-23
-- 版本：v1（2026-10-23 首版，分支 feat/common-recent-trail）
+- 版本：v1.1（2026-10-23 修复轮，分支 fix/recent-panel-clipped：面板 Teleport 到 body 根治滚动容器裁剪，决策 8/测试证据同步更新；v1 首版见 feat/common-recent-trail）
 - 需求：用户原话「增加一个"最近"功能（放在"常用"里）保留用户页面操作事项的轨迹，便于回溯」
 - 交付面：overlay custom client（IaSideNav + 新 recent-trail.ts 纯逻辑核 + 新 composables/useRecentTrail.ts + nav-centers 注册表扩充），验证走 vitest（纯逻辑全覆盖 + 组件接线面）。
 
@@ -13,7 +13,8 @@
 4. **localStorage 持久化**：key `swarm.recentTrail.v1`，值 JSON 数组。读写全程 try/catch：读遇脏 JSON/非数组整体丢弃（轨迹可由后续导航重建，不值得半量抢救）、字段类型不全的元素剔除；写失败（隐私模式/配额）静默降级为仅内存，不因持久化炸导航；无 localStorage 环境（node）仅内存。每次 `useRecentTrail()` 调用自 localStorage 重建（侧栏同屏只挂一份，无共享必要，跨挂载一致性由持久化保证）。
 5. **页面名解析引用单一事实源，不复制字符串**。为此把常用组五项（COMMON_NAVS）、工作台兄弟路由集合（WORKBENCH_ROUTE_NAMES）、推演六签（SIM_NAVS）的静态定义自 IaSideNav.vue 迁入 nav-centers.ts，组件侧只留依赖响应式路由的 match 高亮判定——行为不变（键/路由名/文案原样搬移），侧栏渲染与轨迹标题从此共用同一份文案。解析链：推演六签 → 常用五入口（兄弟路由归「工作台」）→ 六阶段页（`?tab=` 命中 stage-tabs.ts STAGE_TABS 时拼「阶段 · 页签」，未知/缺失不拼；页签元数据的实际单一事实源是 stage-tabs.ts，stage-meta.ts 只持阶段级定义）→ 专题岛屿（ISLAND_NAVS）；全部未命中回落路由名，再回落 fullPath。标题在记录时按当时 locale 固化，切语言后旧条目不重译（重访即刷新）——尽力而为，不猜页面名。
 6. **相对时间分段**：<1 分钟（含时钟偏移的未来值）「刚刚」；<1 小时「N 分钟前」；<24 小时「N 小时前」；超过 24 小时用绝对时间——落在昨天（日历日）「昨天 HH:MM」，更早「M/D HH:MM」，跨年带年份。时间显示随 useNowTick 共享 30s tick 重算，不僵死。
-7. **清空交互**：面板底部「清空」按钮（`recent-clear`）清数组 + `removeItem` 清 localStorage；空态时按钮禁用。行点击 `router.push(fullPath)` 并关面板；点当前页行只关面板不导航。面板 z 层用 `--ia-z-header-panel`（与 z-layers.ts 账本成对，低于 modal 的裁定不被破坏）。
+7. **清空交互**：面板底部「清空」按钮（`recent-clear`）清数组 + `removeItem` 清 localStorage；空态时按钮禁用。行点击 `router.push(fullPath)` 并关面板；点当前页行只关面板不导航。
+8. **（v1.1 修复）面板 Teleport 到 body + fixed 定位，不再用锚点内 absolute**。v1 的 `left: calc(100% + 8px)` 面板挂在 `.isn__scroll`（`overflow-y: auto`）内——按 CSS 规范一轴非 visible 时另一轴被计算为 auto，面板向右溢出侧栏滚动容器即被**裁剪：视觉不渲染且 hit-test 不可达**（用户实测「不可用」；DOM 存在、rect 正常、z-index 800 全部正常，极具迷惑性）。修复：面板 `<Teleport to="body">` + `position: fixed`，坐标在打开时按锚点行 `getBoundingClientRect()` 实测一次写入 inline style（锚点右缘 +8px、顶对齐；折叠态锚点收窄天然适配）；层级升 `--ia-z-modal`（决策 7 原 `--ia-z-header-panel` 随 Teleport 同步升档，modal 打开时仍在其上由 modal 框架自身保证）。已知取舍：打开期间窗口 resize/侧栏自身滚动面板不追随（面板是短命开关件，任何点击外/导航即关，不为低频场景加 resize 监听）。
 
 ## 验证证据
 
@@ -24,7 +25,8 @@
 
 ## 残留与移交
 
+- **（v1.1 已收）** v1 残留「浏览器人工走查未执行」在 2026-10-23 当天被用户实测击中：面板被滚动容器裁剪不可用（决策 8 根治）。教训入册：**弹层类 UI 的验收必须含视觉确认**（截图+人/视觉判定），合成事件（`el.click()`）与 DOM 存在性检查都绕过了渲染与 hit-test，双绿≠可用。
 - 「最近」开关键复用 IaSideNavItem 的 active 态表达「面板已开」，连带 `aria-current="page"`——对非路由项语义不严格准确；IaSideNavItem 尚无 aria-expanded 支持，如需严格语义应给行组件加展开态属性（改动面扩大，本轮不做）。
 - 面板无键盘 Esc 关闭与焦点圈禁（规格只约定点击外关闭，未做键盘路径）。
 - 标题 locale 固化见决策 5：切语言后旧条目维持原语言，重访刷新；如需全量重译可在渲染时按 routeName+fullPath 重解析（需存 query，暂不为小众场景扩 schema）。
-- 浏览器 web 版（8649/临时实例）人工走查未在本轮执行——本批为纯前端交互，自动化已覆盖接线面；合入后走查时重点看折叠态面板弹出位置与窄屏（≤720px 硬紧凑）下的可用性。
+- 打开期间窗口 resize/侧栏滚动面板不追随（决策 8 取舍，低频场景不加监听）。
