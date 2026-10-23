@@ -247,7 +247,9 @@ router.post('/sets/redteam-variants', async (ctx) => {
 router.post('/sets/enterprise-seed', async (ctx) => {
   const existing = listSets().find((s) => s.name === ENTERPRISE_SET_NAME)
   if (existing) {
-    ctx.body = { ok: true, existed: true, set: setSummary(existing), axes: ENTERPRISE_AXES, coverage: axesCoverage(existing.tasks) }
+    // listSets 返回摘要（EvalSetMeta 无 tasks）——取全集算覆盖
+    const full = getSet(existing.id)
+    ctx.body = { ok: true, existed: true, set: setSummary(existing), axes: ENTERPRISE_AXES, coverage: full ? axesCoverage(full.tasks) : null }
     return
   }
   const result = createSet(
