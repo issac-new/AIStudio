@@ -445,6 +445,6 @@ onMounted(() => { void refresh() })
   cursor: pointer;
 }
 .gk__btn:disabled { opacity: 0.5; cursor: default; }
-.gk__btn--approve { border-color: rgba(46, 125, 50, 0.5); color: #2e7d32; }
-.gk__btn--reject { border-color: rgba(183, 28, 28, 0.5); color: #b71c1c; }
+.gk__btn--approve { border-color: rgba(var(--success-rgb), 0.5); color: var(--success); }
+.gk__btn--reject { border-color: rgba(var(--error-rgb), 0.5); color: var(--error); }
 </style>
