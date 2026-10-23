@@ -811,7 +811,7 @@ export function pruneSignal(surfaceProposals: Proposal[], pruneN: number): boole
 
 // ---- 进化报告（overview 的 evolution 段；论文图 6 曲线与去向计数的本仓形态） ----
 
-function selectedEvidenceOf(p: Proposal): { evidence: ProbeMetrics; contrast: BehaviorContrast } | null {
+function selectedEvidenceOf(p: Proposal): { evidence: ProbeMetrics; contrast: BehaviorContrast | null } | null {
   const selected = composedVariant(p)
   if (!selected) return null
   const probe = p.probes.find((x) => x.variantId === selected.id && x.status === 'recorded')
