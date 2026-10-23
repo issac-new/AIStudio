@@ -914,3 +914,5 @@
 680-client-gateway-profile-provider-prompt.patch
 # 681: 统一身份聊天挂载（五轮用户裁定「一个聊天窗口与所有身份会话」）——/api/ia2/identities 身份清单（网关 profile 目录全集+在线态）+ /api/ia2/identity-chat/{chat,messages}（peer dm 协议代理）。
 681-server-identity-chat-route.patch
+# 682: 建板 switchCurrent 假开关根治（驾驶舱 P1 残项轮；原 680 与并行会话 Provider 提示修复撞号改 682）——store.createBoard 尊重表单「创建后切换」勾选（默认开；取消勾选不再强切 selectedBoard）。
+682-client-store-kanban-switchcurrent.patch
