@@ -1783,11 +1783,11 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      minimized: 'Minimized',
 +      dismiss: 'Dismiss',
 +      dockClear: 'Clear',
-+      foldLeft: 'Fold left pane',
-+      foldRight: 'Fold right pane',
-+      restoreCenter: 'Restore center',
-+      maxCenter: 'Maximize center',
++      minPane: 'Minimize this pane',
++      maxPane: 'Maximize this pane',
++      restorePane: 'Restore panes',
 +      unfoldLeft: 'Unfold left pane',
++      unfoldCenter: 'Unfold center pane',
 +      unfoldRight: 'Unfold right pane'
 +    },
 +    overview: {
@@ -6863,11 +6863,11 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      minimized: '已最小化',
 +      dismiss: '移除',
 +      dockClear: '清空',
-+      foldLeft: '折叠左栏',
-+      foldRight: '折叠右栏',
-+      restoreCenter: '还原中栏',
-+      maxCenter: '最大化中栏',
++      minPane: '最小化此栏',
++      maxPane: '最大化此栏',
++      restorePane: '还原全部栏位',
 +      unfoldLeft: '展开左栏',
++      unfoldCenter: '展开中栏',
 +      unfoldRight: '展开右栏'
 +    },
 +    overview: {

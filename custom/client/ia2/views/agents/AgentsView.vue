@@ -6,7 +6,6 @@
      设计正本=docs/superpowers/specs/2026-10-17-d20-backlog-clearance.md §一.3/4 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { onMounted, ref } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import {

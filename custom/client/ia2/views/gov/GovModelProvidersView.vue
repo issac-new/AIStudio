@@ -3,14 +3,12 @@
      GovModelProvidersSection（表单与 IDE 引擎目录同源同端点）。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import GovModelProvidersSection from '../../components/gov/GovModelProvidersSection.vue'
 </script>
 
 <template>
   <div class="gmpv" data-testid="gmpv-page">
   <IaBreadcrumb />
-  <TabIntroBanner tab="model-providers" />
     <header class="gmpv__head">
       <h2 class="gmpv__title">设置 · 模型服务商</h2>
     </header>

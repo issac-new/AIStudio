@@ -4,7 +4,6 @@
      表单本体在各设置页不复制。分区说明常驻；superAdmin 条目对非管理员不可见。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
-import TabIntroBanner from '../../components/TabIntroBanner.vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { GOV_SETTINGS_DOMAINS, entryVisible, currentSuperAdmin } from './gov-settings-registry'
@@ -28,7 +27,6 @@ function go(name: string): void {
 <template>
   <div class="gs" data-testid="gs-page">
   <IaBreadcrumb />
-  <TabIntroBanner tab="gov-settings" />
     <header class="gs__head">
       <h2 class="gs__title">系统设置</h2>
       <span class="gs__sub">按治理域分区（{{ domains.length }} 区）——同域同区合并呈现；点入各设置页编辑。</span>
