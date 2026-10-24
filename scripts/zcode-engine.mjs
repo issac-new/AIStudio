@@ -17,7 +17,13 @@ import { createConnection } from 'net';
 import { resolve } from 'path';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
-const zcodeRoot = resolve(overlayRoot, '..', 'upstream', 'zcode');
+// AIStudio 单仓整合轮（2026-10-24）：zcode 根解析 env ＞ 仓内 vendor/zcode ＞
+// 旧布局 ../upstream/zcode。vendor 树 node_modules/dist 由 ensure 幂等补齐。
+const zcodeRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'zcode')
+  : existsSync(resolve(overlayRoot, 'vendor', 'zcode'))
+    ? resolve(overlayRoot, 'vendor', 'zcode')
+    : resolve(overlayRoot, '..', 'upstream', 'zcode');
 const serverEntry = resolve(zcodeRoot, 'packages/server/dist/entry-http.js');
 const ENGINE_PORT = 3030;
 

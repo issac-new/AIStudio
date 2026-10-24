@@ -12,7 +12,7 @@
 // 与 config/bootstrap.ts 保持一致(如需改路径,两处同步)。
 import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, realpathSync } from 'fs';
 import { execSync } from 'child_process';
-import { resolve } from 'path';
+import { resolve, relative } from 'path';
 import { pathToFileURL } from 'url';
 
 // realpathSync：worktree 场景（.claude/worktrees/<feat>/ 经符号链接指回
@@ -25,11 +25,17 @@ const realpathOrSelf = (p) => {
 };
 const overlayRoot = realpathOrSelf(resolve(import.meta.dirname, '..'));
 const ncwkRoot = resolve(overlayRoot, '..');
-// OVERLAY_UPSTREAM_ROOT：私有上游隔离（design-review 轮记档基建恢复）——
-// inject 目标指向独立副本，不触碰 ncwk 共享 upstream。缺省行为不变。
+// 上游根解析（AIStudio 单仓整合轮,2026-10-24）:优先仓内 vendor/ 钉版基线
+// (见 vendor/VENDOR.md);无 vendor/ 的旧布局回落 ncwk/upstream 共享树;
+// env 显式指定永远最高(私有上游隔离语义不变)。vendor 树无自身 .git——
+// 其 git 操作经外仓以 --directory 前缀执行(见 treeGitCtx),语义与
+// 自持 .git 的 upstream 树一致。
+const vendorRoot = resolve(overlayRoot, 'vendor');
 const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? realpathOrSelf(resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim()))
-  : realpathOrSelf(resolve(ncwkRoot, 'upstream'));
+  : existsSync(resolve(vendorRoot, 'hermes-studio'))
+    ? vendorRoot
+    : realpathOrSelf(resolve(ncwkRoot, 'upstream'));
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const zcodeRoot = resolve(upstreamRoot, 'zcode');
@@ -75,6 +81,43 @@ if (mode === 'clean' && liveStudioServerListening()) {
 
 function git(args, cwd) {
   return execSync(`git ${args}`, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
+}
+
+// ── vendor 模式 git 适配（AIStudio 单仓整合轮;ensure-injected.mjs 复用）──
+// vendor/<tree> 是外仓（overlayRoot 所在 git 仓/worktree）跟踪的普通目录,不能带
+// 自身 .git（嵌套 .git 会让外仓记成 gitlink,文件不可跟踪）。因此 apply/status/
+// checkout 经外仓执行:--directory=<rel> 把补丁的树内相对路径落到 vendor/<tree>/
+// 下;status 行剥掉 <rel>/ 前缀后与补丁路径同构,dirty-check/豁免逻辑零改动兼容。
+// 自持 .git 的树（外置 upstream/,env 指定态）保持原行为,双模并存。
+export function treeGitCtx(treeRoot) {
+  if (existsSync(resolve(treeRoot, '.git'))) {
+    return { gitCwd: treeRoot, dirFlag: '', relPrefix: '' };
+  }
+  const rel = relative(overlayRoot, treeRoot);
+  if (!rel || rel.startsWith('..')) {
+    // 树不在本仓内（env 指到裸目录）:git apply 仓外可用,status 不可用（调用方容错）。
+    return { gitCwd: treeRoot, dirFlag: '', relPrefix: '' };
+  }
+  return { gitCwd: overlayRoot, dirFlag: ` --directory=${rel}`, relPrefix: `${rel}/` };
+}
+
+/** 在目标树上 git apply 补丁（repo/vendor 双模）。extra 透传（如 ' --reverse'）。 */
+export function applyPatchAtRoot(patchPath, treeRoot, extra = '') {
+  const c = treeGitCtx(treeRoot);
+  git(`apply --whitespace=nowarn${win32WsFlag()}${c.dirFlag}${extra} "${patchPath}"`, c.gitCwd);
+}
+
+/** 目标树 status --porcelain（树内相对路径行）;vendor 模式经外仓 pathspec+剥前缀。失败返回 ''。 */
+export function treeStatus(treeRoot) {
+  const c = treeGitCtx(treeRoot);
+  try {
+    const raw = c.relPrefix
+      ? git(`status --porcelain -- "${c.relPrefix}"`, c.gitCwd)
+      : git('status --porcelain', treeRoot);
+    return raw.split('\n').map((l) => l.replace(c.relPrefix, '')).join('\n');
+  } catch {
+    return '';
+  }
 }
 
 // 生成的 TS config 里嵌入路径的字符串字面量:JSON.stringify 保证 Windows 反斜杠
@@ -172,7 +215,7 @@ function applyPatches() {
 	    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
 
     try {
-      git(`apply --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, targetRoot);
+      applyPatchAtRoot(patchPath, targetRoot);
       console.log(`[inject] applied patch: ${p} (to ${targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio'})`);
     } catch (e) {
       // hermes-agent 的 patch 失败时容错跳过（与桌面应用构建无关，不影响 hermes-studio）
@@ -205,7 +248,7 @@ function reversePatches(patches) {  for (const p of [...patches].reverse()) {
       targetRoot = resolvePatchTargetRoot(patchText);
     } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
     try {
-      git(`apply --reverse --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, targetRoot);
+      applyPatchAtRoot(patchPath, targetRoot, ' --reverse');
       console.log(`[clean] reversed patch: ${p} (from ${targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio'})`);
     } catch {
       // hermes-agent patch 反向失败时容错跳过
@@ -251,7 +294,7 @@ function applyZcodePatches() {
       process.exit(1);
     }
     try {
-      git(`apply --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, zcodeRoot);
+      applyPatchAtRoot(patchPath, zcodeRoot);
       console.log(`[inject] applied zcode patch: ${p} (to zcode)`);
     } catch (e) {
       // zcode 与 hermes-studio 构建无关,失败容错跳过(同 hermes-agent 语义)
@@ -272,7 +315,7 @@ function reverseZcodePatches(patches) {
       continue;
     }
     try {
-      git(`apply --reverse --whitespace=nowarn${win32WsFlag()} "${patchPath}"`, zcodeRoot);
+      applyPatchAtRoot(patchPath, zcodeRoot, ' --reverse');
       console.log(`[clean] reversed zcode patch: ${p} (from zcode)`);
     } catch {
       console.warn(`[clean] WARN: zcode patch 反向失败,跳过: ${p}`);
@@ -447,11 +490,37 @@ export default mergeConfig(
   console.log('[inject] generated vite.config.overlay.ts (@/@custom/@registries alias + entry input)');
 }
 
+// vendor 模式下 worktree 检出的 vendor/hermes-studio/node_modules 不存在(产物
+// 不入库,worktree 也不该各装一份 1.9G)——定位主检出(git-common-dir 之父)的
+// vendor node_modules 作共享目标;全新克隆连主检出也没有,保持告警(README:npm ci)。
+function mainCheckoutVendorNodeModules() {
+  try {
+    const commonDir = execSync('git rev-parse --path-format=absolute --git-common-dir', {
+      cwd: overlayRoot, stdio: ['ignore', 'pipe', 'ignore'],
+    }).toString().trim();
+    const cand = resolve(commonDir, '..', 'vendor', 'hermes-studio', 'node_modules');
+    return existsSync(cand) ? cand : null;
+  } catch {
+    return null;
+  }
+}
+
 function ensureNodeModulesSymlink() {
   // overlay 自身无依赖;构建/开发需解析到上游 node_modules(vite/vue/matrix-js-sdk 等)。
-  // 建符号链接 overlay/node_modules → upstream/hermes-studio/node_modules。
-  if (!existsSync(upstreamNodeModules)) {
-    console.warn('[inject] WARN: 上游 node_modules 不存在,先在上游跑 npm ci/install');
+  // 建符号链接 overlay/node_modules → 上游(或 vendor)hermes-studio/node_modules。
+  let nmTarget = upstreamNodeModules;
+  if (!existsSync(nmTarget)) {
+    const shared = mainCheckoutVendorNodeModules();
+    if (shared) {
+      try {
+        symlinkSync(shared, upstreamNodeModules, 'junction');
+        console.log('[inject] linked vendor/hermes-studio/node_modules → 主检出共享实例(worktree 检出)');
+        nmTarget = upstreamNodeModules;
+      } catch { /* 链接失败回落告警 */ }
+    }
+  }
+  if (!existsSync(nmTarget)) {
+    console.warn('[inject] WARN: 上游 node_modules 不存在,先在 vendor/hermes-studio 跑 npm ci(或上游 npm install)');
     return;
   }
   let need = true;
@@ -547,12 +616,14 @@ function patchFileSets() {
 function restoreNonPatchArtifacts(label) {
   // 还原所有"非 patch 目标"的 build 产物(如 docs/openapi.json)到 HEAD。
   // 这些不是我们的 patch,留着会挡住 inject 的 dirty-check。
+  // vendor 模式:status/checkout 经外仓执行(路径加 relPrefix 前缀),语义同。
   const { patchTargets } = patchFileSets();
+  const c = treeGitCtx(hermesStudioRoot);
   // 注意:不能用 .trim() 再 split——porcelain 未暂存行前缀是 " M"(首空格),
   // 整体 trim 会吃掉第一行的前导空格,导致 startsWith(' M') 失配、
   // 首个脏文件(如 build 产物 docs/openapi.json)漏还原,inject 随后被自己的
   // dirty-check 挡住。只按行拆分并去掉行尾换行,保留行首状态位。
-  git('status --porcelain', hermesStudioRoot)
+  treeStatus(hermesStudioRoot)
     .split('\n')
     .map((l) => l.replace(/\r$/, ''))
     .filter(Boolean)
@@ -560,7 +631,7 @@ function restoreNonPatchArtifacts(label) {
       const f = line.slice(3).trim();
       if (!patchTargets.has(f) && line.startsWith(' M')) {
         try {
-          execSync(`git checkout -- "${f}"`, { cwd: hermesStudioRoot, stdio: 'ignore' });
+          execSync(`git checkout -- "${c.relPrefix}${f}"`, { cwd: c.gitCwd, stdio: 'ignore' });
           console.log(`[${label}] restored build artifact (non-patch): ${f}`);
         } catch { /* 可能是 untracked 或已删,跳过 */ }
       }
@@ -581,7 +652,7 @@ function main() {
     const selfCustomResidual = (() => {
       try { return lstatSync(upstreamServerCustom).isSymbolicLink(); } catch { return false; }
     })();
-    const precheckRaw = git('status --porcelain', hermesStudioRoot).trim();
+    const precheckRaw = treeStatus(hermesStudioRoot).trim();
     const patches = readSeries();
     // 非 patch 产物(openapi.json 等)若有脏行:放行但显式预告回滚——"拒绝时零删除"
     // 对这类文件不成立,至少让用户在回滚发生前看见(2026-09-12 审查)。
