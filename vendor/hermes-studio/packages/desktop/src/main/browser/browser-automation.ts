@@ -1,0 +1,472 @@
+import { randomUUID } from 'node:crypto'
+import type { WebContents } from 'electron'
+import type {
+  BrowserBatchAction,
+  BrowserInteractAction,
+  BrowserReadTextOptions,
+  BrowserReadTextResult,
+  BrowserScreenshot,
+  BrowserSnapshot,
+  BrowserSnapshotNode,
+  BrowserSnapshotOptions,
+} from './browser-types'
+import { MAX_BROWSER_TEXT_READ_LIMIT } from './browser-types'
+import { filterSnapshotNodes, snapshotOptions, DEFAULT_SNAPSHOT_LIMIT } from './browser-snapshot'
+import { publicBrowserUrl, redactBrowserContent, redactBrowserText } from './browser-url'
+import type { BrowserObservedState, BrowserObservedTarget } from './browser-observation'
+
+interface AxNode {
+  nodeId?: string
+  backendDOMNodeId?: number
+  ignored?: boolean
+  role?: { value?: string }
+  name?: { value?: string }
+  value?: { value?: string }
+  description?: { value?: string }
+  properties?: Array<{ name?: string; value?: { value?: unknown } }>
+}
+
+interface StoredSnapshot {
+  id: string
+  refs: Map<string, { backendDOMNodeId: number; role: string; name: string }>
+  nodes: BrowserSnapshotNode[]
+  allNodes: BrowserSnapshotNode[]
+  totalNodes: number
+  url: string
+  title: string
+  options: BrowserSnapshotOptions
+}
+
+interface PreparedBatchAction {
+  action: BrowserBatchAction
+  backendDOMNodeId?: number
+  snapshotOptions?: BrowserSnapshotOptions
+}
+
+const MAX_SNAPSHOT_TEXT = 24_000
+const MAX_SCREENSHOT_BYTES = 12 * 1024 * 1024
+const CLICKABLE_ANCESTOR_SELECTOR = [
+  'button',
+  'a[href]',
+  'input:not([type="hidden"])',
+  'select',
+  'textarea',
+  'summary',
+  'label',
+  '[role="button"]',
+  '[role="link"]',
+  '[role="tab"]',
+  '[role="menuitem"]',
+  '[role="menuitemcheckbox"]',
+  '[role="menuitemradio"]',
+  '[onclick]',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
+const CLICK_TARGET = `
+  const node = this;
+  const element = node && node.nodeType === 3 ? node.parentElement : node;
+  if (!element || typeof element.getBoundingClientRect !== 'function') throw new Error('Browser node has no clickable element');
+  const target = typeof element.closest === 'function'
+    ? element.closest(${JSON.stringify(CLICKABLE_ANCESTOR_SELECTOR)}) || element : element;
+`
+
+function clickFailure(response: { exceptionDetails?: { exception?: { description?: string }; text?: string } }): Error {
+  const detail = response.exceptionDetails?.exception?.description || response.exceptionDetails?.text || ''
+  return new Error(`Unable to click browser element${detail ? `: ${redactBrowserText(detail.split('\n')[0], 200)}` : ''}`)
+}
+
+function textValue(value: unknown, limit = 500): string {
+  return redactBrowserText(value, limit)
+}
+
+function property(node: AxNode, name: string): unknown {
+  return node.properties?.find(item => item.name === name)?.value?.value
+}
+
+function keyDescriptor(key: string): { key: string; code: string; keyCode: number } {
+  const named: Record<string, [string, number]> = {
+    Enter: ['Enter', 13], Tab: ['Tab', 9], Escape: ['Escape', 27], Backspace: ['Backspace', 8], Delete: ['Delete', 46],
+    ArrowUp: ['ArrowUp', 38], ArrowDown: ['ArrowDown', 40], ArrowLeft: ['ArrowLeft', 37], ArrowRight: ['ArrowRight', 39],
+    Home: ['Home', 36], End: ['End', 35], PageUp: ['PageUp', 33], PageDown: ['PageDown', 34], Space: ['Space', 32],
+  }
+  const match = named[key]
+  if (match) return { key: key === 'Space' ? ' ' : key, code: match[0], keyCode: match[1] }
+  const value = key.length === 1 ? key : key.slice(0, 64)
+  const upper = value.toUpperCase()
+  return { key: value, code: /^[A-Z]$/.test(upper) ? `Key${upper}` : value, keyCode: upper.charCodeAt(0) || 0 }
+}
+
+export class BrowserAutomation {
+  private readonly snapshots = new Map<string, StoredSnapshot>()
+
+  invalidate(tabId: string): void {
+    this.snapshots.delete(tabId)
+  }
+
+  detach(tabId: string, contents?: WebContents): void {
+    this.invalidate(tabId)
+    if (!contents || contents.isDestroyed()) return
+    const debuggerApi = contents.debugger
+    if (debuggerApi.isAttached()) {
+      try { debuggerApi.detach() } catch { /* already detached */ }
+    }
+  }
+
+  snapshotSelection(tabId: string): BrowserSnapshotOptions {
+    return { ...this.snapshots.get(tabId)?.options, snapshotId: undefined }
+  }
+
+  observedState(tabId: string): BrowserObservedState | undefined {
+    const current = this.snapshots.get(tabId)
+    if (!current) return undefined
+    return { url: current.url, nodes: new Map(current.allNodes.map(node => [current.refs.get(node.ref)!.backendDOMNodeId, node])) }
+  }
+
+  observedTargets(tabId: string, snapshotId: unknown, actions: BrowserBatchAction[]): BrowserObservedTarget[] {
+    return actions.flatMap((action, actionIndex) => action.action === 'click' || action.action === 'type'
+      ? [{ nodeId: this.resolveRef(tabId, String(snapshotId), action.ref).backendDOMNodeId, actionIndex,
+        ...(action.action === 'type' ? { text: action.text } : {}) }] : [])
+  }
+
+  async snapshot(tabId: string, contents: WebContents, input: BrowserSnapshotOptions = {}): Promise<BrowserSnapshot> {
+    const options = snapshotOptions(input)
+    if (options.snapshotId) {
+      const current = this.snapshots.get(tabId)
+      if (!current || current.id !== options.snapshotId) throw new Error('Browser snapshot is stale; take a new snapshot')
+      current.options = { ...current.options, offset: options.offset, limit: options.limit }
+      return this.snapshotPage(tabId, current)
+    }
+    await this.ensureAttached(contents)
+    await contents.debugger.sendCommand('Accessibility.enable')
+    const response = await contents.debugger.sendCommand('Accessibility.getFullAXTree') as { nodes?: AxNode[] }
+    let scope: Set<number> | undefined
+    if (options.selector) {
+      const document = await contents.debugger.sendCommand('DOM.getDocument')
+      const selected = await contents.debugger.sendCommand('DOM.querySelector', { nodeId: document.root.nodeId, selector: options.selector })
+      if (!selected.nodeId) throw new Error('Snapshot selector did not match an element; choose another selector or omit it for the whole document')
+      const subtree = await contents.debugger.sendCommand('DOM.describeNode', { nodeId: selected.nodeId, depth: -1, pierce: true })
+      scope = new Set<number>()
+      const pending = [subtree.node]
+      while (pending.length) {
+        const node = pending.pop()
+        if (!node) continue
+        if (node.backendNodeId) scope.add(node.backendNodeId)
+        pending.push(...(node.children || []), ...(node.shadowRoots || []), node.contentDocument)
+      }
+    }
+    const refs = new Map<string, { backendDOMNodeId: number; role: string; name: string }>()
+    const nodes: BrowserSnapshotNode[] = []
+    const inScope = new Set<string>()
+    for (const node of response.nodes || []) {
+      if (node.ignored || !node.backendDOMNodeId) continue
+      const role = textValue(node.role?.value, 80)
+      const name = textValue(node.name?.value)
+      const protectedValue = property(node, 'protected') === true
+      // Input whitespace is significant for local value comparisons.
+      const value = protectedValue ? '' : redactBrowserContent(node.value?.value, 500)
+      if (!role || role === 'none' || role === 'generic' && !name && !value) continue
+      const ref = `@e${nodes.length + 1}`
+      refs.set(ref, { backendDOMNodeId: node.backendDOMNodeId, role, name })
+      if (!scope || scope.has(node.backendDOMNodeId)) inScope.add(ref)
+      const checked = property(node, 'checked')
+      const selected = property(node, 'selected')
+      const expanded = property(node, 'expanded')
+      const pressed = property(node, 'pressed')
+      nodes.push({
+        ref, role, name,
+        ...(!protectedValue && node.value?.value !== undefined ? { value } : {}),
+        ...(node.description?.value ? { description: textValue(node.description.value) } : {}),
+        ...(property(node, 'disabled') === true ? { disabled: true } : {}),
+        ...(property(node, 'focused') === true ? { focused: true } : {}),
+        ...(checked === 'mixed' ? { checked } : checked === true || checked === 'true' ? { checked: true }
+          : checked === false || checked === 'false' ? { checked: false } : {}),
+        ...(typeof selected === 'boolean' ? { selected } : {}),
+        ...(typeof expanded === 'boolean' ? { expanded } : {}),
+        ...(pressed === 'mixed' ? { pressed } : pressed === true || pressed === 'true' ? { pressed: true }
+          : pressed === false || pressed === 'false' ? { pressed: false } : {}),
+      })
+    }
+    const current: StoredSnapshot = { id: randomUUID(), refs, allNodes: nodes, totalNodes: nodes.length,
+      nodes: filterSnapshotNodes(nodes.filter(node => inScope.has(node.ref)), options), options,
+      url: publicBrowserUrl(contents.getURL()), title: redactBrowserText(contents.getTitle()) }
+    this.snapshots.set(tabId, current)
+    return this.snapshotPage(tabId, current)
+  }
+
+  private snapshotPage(tabId: string, current: StoredSnapshot): BrowserSnapshot {
+    const { selector, query, interactiveOnly, offset = 0, limit = DEFAULT_SNAPSHOT_LIMIT } = current.options
+    const nodes = current.nodes.slice(offset, offset + limit)
+    const hasMore = offset + nodes.length < current.nodes.length
+    const lines = nodes.map(node => {
+      const details = [node.name && `name=${JSON.stringify(node.name)}`, node.value && `value=${JSON.stringify(node.value)}`].filter(Boolean)
+      return `${node.ref} ${node.role}${details.length ? ` ${details.join(' ')}` : ''}`
+    })
+    return {
+      tabId, snapshotId: current.id, url: current.url, title: current.title,
+      nodes, text: lines.join('\n').slice(0, MAX_SNAPSHOT_TEXT),
+      totalNodes: current.totalNodes, matchedNodes: current.nodes.length, offset, limit, hasMore,
+      truncated: nodes.length < current.nodes.length,
+      ...(hasMore ? { nextOffset: offset + nodes.length } : {}),
+      scope: { ...(selector ? { selector } : {}), ...(query ? { query } : {}), ...(interactiveOnly ? { interactiveOnly } : {}) },
+      ...(offset > 0 && !nodes.length ? { hint: `Offset ${offset} is outside the ${current.nodes.length} matched nodes. Offsets refer to the filtered results, not @e ref numbers or the full document. Restart at offset=0 with this snapshot_id, or omit snapshot_id to change filters.` }
+        : hasMore ? { hint: 'Continue with this snapshot_id and offset=nextOffset. Offsets are relative to filtered results, not @e ref numbers. For focused results start a new snapshot with selector, query or interactive_only. Scrolling alone does not page this tree. These options work without JEV.' } : {}),
+    }
+  }
+
+  async readText(tabId: string, contents: WebContents, options: BrowserReadTextOptions): Promise<BrowserReadTextResult> {
+    await this.ensureAttached(contents)
+    const target = this.resolveRef(tabId, options.snapshotId, options.ref)
+    const offset = Math.max(0, Math.floor(options.offset))
+    const limit = Math.max(1, Math.min(MAX_BROWSER_TEXT_READ_LIMIT, Math.floor(options.limit)))
+    const objectId = await this.resolveObject(contents, target.backendDOMNodeId)
+    try {
+      const response = await contents.debugger.sendCommand('Runtime.callFunctionOn', {
+        objectId,
+        returnByValue: true,
+        arguments: [
+          { value: options.mode },
+          { value: offset },
+          { value: limit },
+        ],
+        functionDeclaration: `function (mode, offset, limit) {
+          const node = this;
+          const element = node && node.nodeType === 3 ? node.parentElement : node;
+          let source = '';
+          if (mode === 'innerText' && element && typeof element.innerText === 'string') {
+            source = element.innerText;
+          } else if (node && typeof node.textContent === 'string') {
+            source = node.textContent;
+          } else if (element && typeof element.textContent === 'string') {
+            source = element.textContent;
+          }
+          const start = Math.min(offset, source.length);
+          const end = Math.min(source.length, start + limit);
+          return {
+            text: source.slice(start, end),
+            totalLength: source.length,
+            offset: start,
+            returnedLength: end - start,
+          };
+        }`,
+      }) as {
+        result?: { value?: { text?: unknown; totalLength?: unknown; offset?: unknown; returnedLength?: unknown } }
+        exceptionDetails?: unknown
+      }
+      const value = response.result?.value
+      if (
+        response.exceptionDetails
+        || !value
+        || typeof value.text !== 'string'
+        || typeof value.totalLength !== 'number'
+        || typeof value.offset !== 'number'
+        || typeof value.returnedLength !== 'number'
+      ) {
+        throw new Error('Unable to read browser element text')
+      }
+      const totalLength = Math.max(0, Math.floor(value.totalLength))
+      const resultOffset = Math.max(0, Math.min(totalLength, Math.floor(value.offset)))
+      const returnedLength = Math.max(0, Math.min(limit, Math.floor(value.returnedLength)))
+      const hasMore = resultOffset + returnedLength < totalLength
+      return {
+        tabId,
+        snapshotId: options.snapshotId,
+        ref: options.ref,
+        mode: options.mode,
+        offset: resultOffset,
+        limit,
+        text: redactBrowserContent(value.text, limit),
+        totalLength,
+        returnedLength,
+        hasMore,
+        ...(hasMore ? { nextOffset: resultOffset + returnedLength } : {}),
+      }
+    } finally {
+      await contents.debugger.sendCommand('Runtime.releaseObject', { objectId }).catch(() => undefined)
+    }
+  }
+
+  prepareBatch(tabId: string, snapshotId: unknown, actions: BrowserBatchAction[]): PreparedBatchAction[] {
+    return actions.map(action => {
+      if (action.action !== 'click' && action.action !== 'type') return { action }
+      if (typeof snapshotId !== 'string') throw new Error('snapshot_id is required for batch click/type actions')
+      const target = this.resolveRef(tabId, snapshotId, action.ref)
+      return { action, backendDOMNodeId: target.backendDOMNodeId, snapshotOptions: this.snapshotSelection(tabId) }
+    })
+  }
+
+  async resolveBatchAction(tabId: string, contents: WebContents, prepared: PreparedBatchAction): Promise<BrowserInteractAction> {
+    const { action } = prepared
+    if (action.action !== 'click' && action.action !== 'type') return action
+    const snapshot = await this.snapshot(tabId, contents, prepared.snapshotOptions)
+    // Ref numbers can shift after each interaction; preserve the original DOM identity.
+    const current = this.snapshots.get(tabId)
+    const match = [...(current?.refs || [])].find(([, target]) => target.backendDOMNodeId === prepared.backendDOMNodeId)
+    if (!match) throw new Error(`Browser batch target ${action.ref} is no longer available; take a new snapshot`)
+    return { ...action, ref: match[0], snapshot_id: snapshot.snapshotId }
+  }
+
+  async interact(tabId: string, contents: WebContents, action: BrowserInteractAction, assertActive: () => void = () => {}): Promise<void> {
+    if (!action || !['click', 'type', 'press', 'scroll'].includes(action.action)) throw new Error('Invalid browser interaction action')
+    await this.ensureAttached(contents)
+    assertActive()
+    if (action.action === 'click' || action.action === 'type') {
+      if (typeof action.snapshot_id !== 'string' || typeof action.ref !== 'string') throw new Error('snapshot_id and ref are required')
+      if (action.action === 'type' && typeof action.text !== 'string') throw new Error('text is required for browser typing')
+      const backendNodeId = this.resolveRef(tabId, action.snapshot_id, action.ref).backendDOMNodeId
+      const objectId = await this.resolveObject(contents, backendNodeId)
+      try {
+        assertActive()
+        if (action.action === 'click') {
+          // Only readiness is polled. Once dispatch starts, a click is never retried.
+          const deadline = Date.now() + 1500
+          while (true) {
+            assertActive()
+            const ready = await contents.debugger.sendCommand('Runtime.callFunctionOn', {
+              objectId, returnByValue: true,
+              functionDeclaration: `function () { ${CLICK_TARGET}
+                if (!target.isConnected) throw new Error('Browser element was removed');
+                if (target.disabled || target.getAttribute('aria-disabled') === 'true') return 'disabled';
+                target.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+                const rect = target.getBoundingClientRect();
+                if (rect.width <= 0 || rect.height <= 0 || getComputedStyle(target).visibility === 'hidden') return 'not visible';
+                if (rect.bottom <= 0 || rect.right <= 0 || rect.top >= innerHeight || rect.left >= innerWidth) return 'outside the viewport';
+                return true;
+              }`,
+            }) as { result?: { value?: unknown }; exceptionDetails?: { exception?: { description?: string }; text?: string } }
+            if (ready.exceptionDetails) throw clickFailure(ready)
+            if (ready.result?.value === true) break
+            if (Date.now() >= deadline) throw new Error(`Browser element did not become clickable: ${String(ready.result?.value || 'unavailable')}`)
+            await new Promise(resolve => setTimeout(resolve, 50))
+          }
+          assertActive()
+          const response = await contents.debugger.sendCommand('Runtime.callFunctionOn', {
+            objectId,
+            returnByValue: true,
+            functionDeclaration: `function () { ${CLICK_TARGET}
+              if (!target.isConnected || target.disabled || target.getAttribute('aria-disabled') === 'true') throw new Error('Browser element is unavailable or disabled');
+              const rect = target.getBoundingClientRect();
+              if (!rect || rect.width <= 0 || rect.height <= 0) throw new Error('Element is not visible');
+              target.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+              const next = target.getBoundingClientRect();
+              if (next.bottom <= 0 || next.right <= 0 || next.top >= innerHeight || next.left >= innerWidth) throw new Error('Element is outside the viewport');
+              if (typeof target.click === 'function') target.click();
+              else target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+              return true;
+            }`,
+          }) as { result?: { value?: unknown }; exceptionDetails?: { exception?: { description?: string }; text?: string } }
+          if (response.exceptionDetails || response.result?.value !== true) throw clickFailure(response)
+        } else {
+          const response = await contents.debugger.sendCommand('Runtime.callFunctionOn', {
+            objectId,
+            returnByValue: true,
+            functionDeclaration: `function () {
+              if (!this.isConnected || this.disabled || this.readOnly || this.getAttribute?.('aria-disabled') === 'true') throw new Error('Browser input is unavailable or disabled');
+              this.scrollIntoView({ block: 'center', inline: 'center' });
+              this.focus();
+              if ('value' in this) {
+                const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), 'value')?.set;
+                if (setter) setter.call(this, ''); else this.value = '';
+                this.dispatchEvent(new Event('input', { bubbles: true }));
+              } else if (this.isContentEditable) {
+                this.textContent = '';
+              }
+              return true;
+            }`,
+          }) as { result?: { value?: unknown }; exceptionDetails?: unknown }
+          if (response.exceptionDetails || response.result?.value !== true) throw new Error('Unable to focus browser input')
+          assertActive()
+          await contents.debugger.sendCommand('Input.insertText', { text: String(action.text).slice(0, 100_000) })
+        }
+      } finally {
+        await contents.debugger.sendCommand('Runtime.releaseObject', { objectId }).catch(() => undefined)
+      }
+      this.invalidate(tabId)
+      return
+    }
+
+    if (action.action === 'scroll') {
+      if (!['up', 'down', 'left', 'right'].includes(action.direction)) throw new Error('Invalid browser scroll direction')
+      const pixels = Math.max(1, Math.min(10_000, Math.round(action.pixels || 650)))
+      const deltaX = action.direction === 'left' ? -pixels : action.direction === 'right' ? pixels : 0
+      const deltaY = action.direction === 'up' ? -pixels : action.direction === 'down' ? pixels : 0
+      await contents.debugger.sendCommand('Runtime.evaluate', {
+        expression: `window.scrollBy(${JSON.stringify(deltaX)}, ${JSON.stringify(deltaY)})`,
+        returnByValue: true,
+      })
+      this.invalidate(tabId)
+      return
+    }
+
+    if (typeof action.key !== 'string' || !action.key.trim()) throw new Error('key is required for browser key presses')
+    const parts = action.key.split('+').map(value => value.trim()).filter(Boolean)
+    const key = parts.pop() || 'Enter'
+    const modifiers = parts.reduce((mask, item) => mask | ({ alt: 1, control: 2, ctrl: 2, meta: 4, command: 4, shift: 8 }[item.toLowerCase()] || 0), 0)
+    const descriptor = keyDescriptor(key)
+    await contents.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyDown', modifiers, ...descriptor, windowsVirtualKeyCode: descriptor.keyCode })
+    await contents.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', modifiers, ...descriptor, windowsVirtualKeyCode: descriptor.keyCode })
+    this.invalidate(tabId)
+  }
+
+  async screenshot(tabId: string, contents: WebContents, fullPage = false): Promise<BrowserScreenshot> {
+    await this.ensureAttached(contents)
+    const metrics = await contents.debugger.sendCommand('Page.getLayoutMetrics') as {
+      cssVisualViewport?: { clientWidth?: number; clientHeight?: number }
+      cssContentSize?: { width?: number; height?: number }
+    }
+    const source = fullPage
+      ? { width: metrics.cssContentSize?.width, height: metrics.cssContentSize?.height }
+      : { width: metrics.cssVisualViewport?.clientWidth, height: metrics.cssVisualViewport?.clientHeight }
+    let width = Math.max(1, Math.min(8192, Math.ceil(source.width || 1)))
+    let height = Math.max(1, Math.min(8192, Math.ceil(source.height || 1)))
+    const maxPixels = 32_000_000
+    if (width * height > maxPixels) height = Math.max(1, Math.floor(maxPixels / width))
+    let response: { data?: string }
+    let screenshotTimer: NodeJS.Timeout | undefined
+    try {
+      response = await Promise.race([
+        contents.debugger.sendCommand('Page.captureScreenshot', {
+          format: 'png',
+          fromSurface: true,
+          captureBeyondViewport: fullPage,
+          ...(fullPage ? { clip: { x: 0, y: 0, width, height, scale: 1 } } : {}),
+        }) as Promise<{ data?: string }>,
+        new Promise<never>((_resolve, reject) => {
+          screenshotTimer = setTimeout(() => reject(new Error('Browser screenshot timed out')), 15_000)
+          screenshotTimer.unref?.()
+        }),
+      ])
+    } catch (error) {
+      this.detach(tabId, contents)
+      throw error
+    } finally {
+      if (screenshotTimer) clearTimeout(screenshotTimer)
+    }
+    const data = response.data || ''
+    if (!data) throw new Error('Browser screenshot was empty')
+    if (Buffer.byteLength(data, 'base64') > MAX_SCREENSHOT_BYTES) throw new Error('Browser screenshot exceeds the 12 MB safety limit')
+    return { tabId, url: publicBrowserUrl(contents.getURL()), title: redactBrowserText(contents.getTitle()), mediaType: 'image/png', data, width, height }
+  }
+
+  private async ensureAttached(contents: WebContents): Promise<void> {
+    if (contents.isDestroyed()) throw new Error('Browser tab is closed')
+    if (!contents.debugger.isAttached()) contents.debugger.attach('1.3')
+    await contents.debugger.sendCommand('Page.enable')
+    await contents.debugger.sendCommand('DOM.enable')
+  }
+
+  private resolveRef(tabId: string, snapshotId: string, ref: string): { backendDOMNodeId: number; role: string; name: string } {
+    const stored = this.snapshots.get(tabId)
+    if (!stored || stored.id !== snapshotId) throw new Error('Browser snapshot is stale; take a new snapshot before interacting')
+    const target = stored.refs.get(ref)
+    if (!target) throw new Error(`Unknown browser element reference: ${ref}`)
+    return target
+  }
+
+  private async resolveObject(contents: WebContents, backendNodeId: number): Promise<string> {
+    const response = await contents.debugger.sendCommand('DOM.resolveNode', { backendNodeId }) as { object?: { objectId?: string } }
+    if (!response.object?.objectId) throw new Error('Browser element is no longer available')
+    return response.object.objectId
+  }
+
+}

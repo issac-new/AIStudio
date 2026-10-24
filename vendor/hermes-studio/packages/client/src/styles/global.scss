@@ -1,0 +1,337 @@
+@use 'variables' as *;
+@use 'code-block';
+@use 'theme-surfaces';
+
+@font-face {
+  font-family: 'Comic Neue';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ComicNeue-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'ZCOOL KuaiLe';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ZCOOLKuaiLe-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ZenMaruGothic-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/ZenMaruGothic-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Gaegu';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Gaegu-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Gaegu';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Gaegu-Bold.ttf') format('truetype');
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+:root {
+  --vh: 1vh;
+}
+
+// Fix mobile viewport height (address bar)
+@supports (height: 100dvh) {
+  :root {
+    --vh: 1dvh;
+  }
+}
+
+// Theme transition (applied programmatically on toggle, not on load)
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease,
+              box-shadow 0.3s ease, fill 0.3s ease, stroke 0.3s ease !important;
+}
+
+html, body {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+// Vueuc positions teleported followers with an absolute child whose horizontal
+// coordinates are measured from the viewport's left edge. In an RTL containing
+// block that child gets a right-edge static position first, shifting overlays by
+// one full viewport width. Keep only the positioning container LTR; Naive UI's
+// component-level RTL classes still control the menu/dialog contents.
+html[dir='rtl'] .v-binder-follower-container {
+  direction: ltr;
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: $font-ui;
+  background-color: $bg-primary;
+  color: $text-primary;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height, 1.6);
+  letter-spacing: var(--letter-spacing, normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Chat input route CSS is code-split; keep the footer color stable before the
+// component-scoped chunk arrives so entering chat does not flash the page bg.
+.chat-input-area,
+.chat-input-area .input-wrapper {
+  background-color: var(--theme-content-bg, $bg-main-surface);
+}
+
+.settings-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  color: transparent;
+  font-size: calc(var(--font-size-base, 14px) * 13 / 14);
+  line-height: var(--line-height, calc(var(--font-size-base, 14px) * 16 / 14));
+}
+
+.settings-check.active {
+  color: $accent-primary;
+}
+
+.n-drawer-header__close:focus-visible {
+  outline: 2px solid $accent-primary;
+  outline-offset: 2px;
+}
+
+.hermes-desktop-pet-window,
+.hermes-desktop-pet-window body,
+.hermes-desktop-pet-window #app {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.hermes-desktop-windows,
+.hermes-desktop-windows body,
+.hermes-desktop-windows #app {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+// Teleported overlays must remain clickable above Electron drag regions.
+.hermes-desktop-shell {
+  .n-drawer,
+  .n-drawer *,
+  .n-modal,
+  .n-modal *,
+  .n-dialog,
+  .n-dialog *,
+  .n-popover,
+  .n-popover *,
+  .n-dropdown,
+  .n-dropdown *,
+  .n-select-menu,
+  .n-select-menu *,
+  .n-base-select-menu,
+  .n-base-select-menu *,
+  .n-message-container,
+  .n-message-container *,
+  .n-notification-container,
+  .n-notification-container *,
+  .drawer-overlay,
+  .drawer-panel,
+  .drawer-panel * {
+    -webkit-app-region: no-drag;
+  }
+}
+
+
+
+code, pre, .mono {
+  font-family: var(--font-code, $font-code);
+}
+
+a {
+  color: $accent-primary;
+  text-decoration: none;
+
+  &:hover {
+    color: $accent-hover;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-track-piece {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $border-color;
+  border-radius: var(--radius-component, 3px);
+
+  &:hover {
+    background: $text-muted;
+  }
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: $border-color transparent;
+}
+
+::selection {
+  background: rgba(var(--accent-primary-rgb), 0.3);
+}
+
+// Shared page header
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(12px * var(--spacing-scale, 1));
+  min-height: 64px;
+  padding: calc(14px * var(--spacing-scale, 1)) calc(20px * var(--spacing-scale, 1));
+  border-bottom: var(--border-width, 1px) solid $border-color;
+  flex-shrink: 0;
+}
+
+.header-title {
+  margin: 0;
+  font-size: calc(var(--font-size-base, 14px) * 16 / 14);
+  font-weight: 600;
+  line-height: var(--line-height, 1.4);
+  color: $text-primary;
+}
+
+.page-header > .header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(8px * var(--spacing-scale, 1));
+}
+
+// Responsive utility classes for inline width replacement
+.input-sm { width: 90px; }
+.input-md { width: 200px; }
+.input-lg { width: 300px; }
+
+// Mobile drawer backdrop
+.mobile-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+}
+
+// Hamburger button (mobile only)
+.hamburger-btn {
+  display: none;
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  left: 12px;
+  z-index: 99;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--theme-card-bg, $bg-card);
+  border-radius: $radius-sm;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+// Mobile responsive
+@media (max-width: $breakpoint-mobile) {
+  .mobile-backdrop {
+    display: block;
+  }
+
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .page-header {
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 12px 16px 52px !important;
+    flex-wrap: wrap;
+  }
+
+  .page-header > .header-actions {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .input-sm,
+  .input-md,
+  .input-lg {
+    width: 100%;
+  }
+}
+
+// Prevent iOS Safari auto-zoom on input focus by ensuring font-size is at least 16px
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select,
+  .n-input,
+  .n-input__input-element,
+  .n-input__textarea-el,
+  .n-input__textarea-element {
+    font-size: calc(var(--font-size-base, 14px) * 16 / 14) !important;
+  }
+}

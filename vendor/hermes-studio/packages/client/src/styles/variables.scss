@@ -1,0 +1,243 @@
+// 黑白水墨 — Pure Ink
+// 纯黑白灰，无彩色
+// 支持 light / dark / comic 三主题
+
+// ─── CSS Custom Properties ─────────────────────────────────────
+
+:root {
+  --font-size-base: 14px;
+  --studio-drawer-width: min(520px, 100vw);
+  --studio-workspace-picker-width: min(520px, calc(100vw - 32px));
+
+  // Backgrounds
+  --bg-primary: #fafafa;
+  --bg-primary-rgb: 250, 250, 250;
+  --bg-secondary: #f0f0f0;
+  --bg-sidebar: #f5f5f5;
+  --bg-card: #ffffff;
+  --bg-card-rgb: 255, 255, 255;
+  --bg-card-hover: #fafafa;
+  --bg-input: #ffffff;
+  --bg-sidebar-surface: var(--bg-card);
+  --bg-sidebar-surface-rgb: var(--bg-card-rgb);
+  --bg-main-surface: var(--bg-card);
+  --bg-main-surface-rgb: var(--bg-card-rgb);
+
+  // Custom backgrounds: frame, contextual sidebar, then the foreground page.
+  --glass-chrome-bg: rgba(var(--bg-primary-rgb), 0.6);
+  --glass-sidebar-bg: rgba(var(--bg-sidebar-surface-rgb), 0.78);
+  --glass-content-bg: rgba(var(--bg-main-surface-rgb), 0.86);
+  --glass-divider-color: rgba(var(--text-primary-rgb), 0.1);
+
+  // Borders
+  --border-color: #e0e0e0;
+  --border-light: #ebebeb;
+
+  // Accent
+  --accent-primary: #333333;
+  --accent-hover: #1a1a1a;
+  --accent-muted: #888888;
+
+  // Text
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --input-placeholder-color: var(--text-muted);
+  --input-border-color: rgba(var(--accent-primary-rgb), 0.18);
+  --input-border-hover-color: rgba(var(--accent-primary-rgb), 0.32);
+  --input-border-focus-color: var(--accent-primary);
+
+  // Status
+  --success: #2e7d32;
+  --error: #c62828;
+  --warning: #f57f17;
+
+  // Git explorer decorations (VS Code default light theme)
+  --git-decoration-added: #587c0c;
+  --git-decoration-modified: #895503;
+  --git-decoration-deleted: #ad0707;
+  --git-decoration-renamed: #007100;
+  --git-decoration-untracked: #007100;
+  --git-decoration-conflicting: #ad0707;
+
+  // Message bubbles
+  --msg-user-bg: #f5f5f5;
+  --msg-assistant-bg: #f5f5f5;
+  --msg-system-border: #bdbdbd;
+
+  // Code
+  --code-bg: #f4f4f4;
+
+  // Utility
+  --text-on-accent: #ffffff;
+  --text-on-overlay: #ffffff;
+  --accent-info: #4a90d9;
+
+  // RGB components (for rgba() usage)
+  --accent-primary-rgb: 51, 51, 51;
+  --accent-hover-rgb: 26, 26, 26;
+  --text-primary-rgb: 26, 26, 26;
+  --text-secondary-rgb: 102, 102, 102;
+  --text-muted-rgb: 153, 153, 153;
+  --success-rgb: 46, 125, 50;
+  --error-rgb: 198, 40, 40;
+  --warning-rgb: 245, 127, 23;
+  --accent-info-rgb: 74, 144, 217;
+}
+
+.dark {
+  // Backgrounds
+  --bg-primary: #1a1a1a;
+  --bg-primary-rgb: 26, 26, 26;
+  --bg-secondary: #252525;
+  --bg-sidebar: #202020;
+  --bg-card: #2a2a2a;
+  --bg-card-rgb: 42, 42, 42;
+  --bg-card-hover: #333333;
+  --bg-input: #2a2a2a;
+  --bg-sidebar-surface: var(--bg-primary);
+  --bg-sidebar-surface-rgb: var(--bg-primary-rgb);
+  --bg-main-surface: var(--bg-primary);
+  --bg-main-surface-rgb: var(--bg-primary-rgb);
+
+  --glass-chrome-bg: rgba(var(--bg-primary-rgb), 0.9);
+  --glass-content-bg: rgba(var(--bg-card-rgb), 0.82);
+
+  // Borders
+  --border-color: #3a3a3a;
+  --border-light: #333333;
+
+  // Accent
+  --accent-primary: #e0e0e0;
+  --accent-hover: #f5f5f5;
+  --accent-muted: #888888;
+
+  // Text
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #888888;
+
+  // Status
+  --success: #66bb6a;
+  --error: #ef5350;
+  --warning: #ffb74d;
+
+  // Git explorer decorations (VS Code default dark theme)
+  --git-decoration-added: #81b88b;
+  --git-decoration-modified: #e2c08d;
+  --git-decoration-deleted: #c74e39;
+  --git-decoration-renamed: #73c991;
+  --git-decoration-untracked: #73c991;
+  --git-decoration-conflicting: #e4676b;
+
+  // Message bubbles
+  --msg-user-bg: #292929;
+  --msg-assistant-bg: #292929;
+  --msg-system-border: #555555;
+
+  // Code
+  --code-bg: #1e1e1e;
+
+  // Utility
+  --text-on-accent: #1a1a1a;
+  --text-on-overlay: #ffffff;
+  --accent-info: #6ba3d6;
+
+  // RGB components
+  --accent-primary-rgb: 224, 224, 224;
+  --accent-hover-rgb: 245, 245, 245;
+  --text-primary-rgb: 224, 224, 224;
+  --text-secondary-rgb: 160, 160, 160;
+  --text-muted-rgb: 136, 136, 136;
+  --success-rgb: 102, 187, 106;
+  --error-rgb: 239, 83, 80;
+  --warning-rgb: 255, 183, 77;
+  --accent-info-rgb: 107, 163, 214;
+}
+
+.comic {
+  // Borders — bold comic outlines
+  --border-color: #1a1a1a;
+  --border-light: #555555;
+  --msg-system-border: #1a1a1a;
+
+  // Comic-specific
+  --font-ui: 'Comic Neue', 'ZCOOL KuaiLe', 'Zen Maru Gothic', 'Gaegu', cursive, sans-serif;
+  --comic-border-width: 2.5px;
+  --comic-shadow: 3px 3px 0px rgba(0, 0, 0, 0.15);
+}
+
+.dark.comic {
+  // Borders — brighter outlines on dark
+  --border-color: #666666;
+  --border-light: #555555;
+  --msg-system-border: #888888;
+
+  --comic-shadow: 3px 3px 0px rgba(255, 255, 255, 0.08);
+}
+
+// ─── SCSS Variables (delegate to CSS custom properties) ────────
+
+// Backgrounds
+$bg-primary: var(--bg-primary);
+$bg-secondary: var(--bg-secondary);
+$bg-sidebar: var(--bg-sidebar);
+$bg-card: var(--bg-card);
+$bg-card-hover: var(--bg-card-hover);
+$bg-input: var(--bg-input);
+$bg-sidebar-surface: var(--bg-sidebar-surface);
+$bg-main-surface: var(--bg-main-surface);
+
+// Borders
+$border-color: var(--border-color);
+$border-light: var(--border-light);
+
+// Accent
+$accent-primary: var(--accent-primary);
+$accent-hover: var(--accent-hover);
+$accent-muted: var(--accent-muted);
+
+// Text
+$text-primary: var(--text-primary);
+$text-secondary: var(--text-secondary);
+$text-muted: var(--text-muted);
+
+// Status
+$success: var(--success);
+$error: var(--error);
+$warning: var(--warning);
+$info: $accent-primary;
+
+// Message bubbles
+$msg-user-bg: var(--msg-user-bg);
+$msg-assistant-bg: var(--msg-assistant-bg);
+$msg-system-border: var(--msg-system-border);
+
+// Code
+$code-bg: var(--code-bg);
+
+// Typography
+$font-ui: var(--font-ui, 'Inter', system-ui, -apple-system, sans-serif);
+$font-code: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+// Layout
+$navigation-rail-width: 64px;
+$sidebar-width: var(--studio-sidebar-width, 240px);
+$sidebar-collapsed-width: 64px;
+$header-height: 60px;
+$breakpoint-mobile: 768px;
+
+// Radius
+$radius-sm: var(--radius-sm, 6px);
+$radius-md: var(--radius-md, 8px);
+$radius-lg: var(--radius-lg, 8px);
+
+// Transition
+$transition-fast: 0.15s ease;
+$transition-normal: 0.25s ease;
+
+@media (max-width: $breakpoint-mobile) {
+  :root {
+    --studio-drawer-width: 100vw;
+  }
+}

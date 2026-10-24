@@ -1,0 +1,18 @@
+{
+  "name": "Ekko Studio",
+  "short_name": "Ekko Studio",
+  "description": "Ekko Studio is a local-first AI workspace for multi-agent chat, coding, and visual workflows, available on desktop and the web.",
+  "start_url": "/#/hermes/chat",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f4",
+  "theme_color": "#f7f7f4",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

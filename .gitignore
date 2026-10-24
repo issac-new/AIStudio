@@ -4,9 +4,11 @@ vite.config.overlay.ts
 *.log
 node_modules
 node_modules/
-# inject 在 overlay 目录内生成的上游派生文件/目录
-packages/
-tests/
+# inject 在仓库根生成的上游派生文件/目录（根锚定：不得误伤 vendor/ 基线同名目录——
+# 2026-10-24 单仓整合轮实录：全局 packages//tests/ 规则曾把 vendor/hermes-studio/packages
+# 等 24,772 个基线文件挡在 git add 之外）
+/packages/
+/tests/
 # macOS 系统文件
 .DS_Store
 # 基础运行时:远端 vendor 模式的上游检出缓存(脚本生成,不入库)
@@ -21,3 +23,8 @@ vite.config.overlay.wt.ts
 # worktree 环境的上游符号链（主 checkout 中 upstream/ 是仓外真实目录，不入库）
 /upstream
 .patch-migrate.json
+
+# vendor/ 基线整树入库（含上游跟踪的 plugins/*/dashboard/dist 等资产），只挡本地
+# 构建垃圾；vendor 变更走 VENDOR_SYNC=1 显式通道（pre-commit 钩子挡护）
+vendor/**/.turbo/
+vendor/**/*.tsbuildinfo
