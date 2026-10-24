@@ -83,14 +83,14 @@ describe('B6 appendTasksToSet（幂等追加 + 资产面）', () => {
     expect(first.ok).toBe(true)
     if (!first.ok) return
     expect(first.appended).toBe(114)
-    expect(first.set.tasks).toHaveLength(138)
+    expect(first.set.tasks).toHaveLength(150)  // 36 种子（2026-10-24 社会病理批）+114 变体
     expect(first.set.revision).toBe(2)
     expect(first.set.contentHash).not.toBe(hashBefore)
     const again = appendTasksToSet(created.set.id, buildRedteamVariants())
     expect(again.ok).toBe(true)
     if (!again.ok) return
     expect(again.appended).toBe(0)
-    expect(again.set.tasks).toHaveLength(138)
+    expect(again.set.tasks).toHaveLength(150)
     expect(again.set.revision).toBe(2)
   })
 
@@ -103,7 +103,7 @@ describe('B6 appendTasksToSet（幂等追加 + 资产面）', () => {
     expect(refused.ok).toBe(false)
     if (!refused.ok) expect(refused.problems[0]).toContain('密封')
     const meta = listSets().find((s) => s.name === '密封扩产')
-    expect(meta?.taskCount).toBe(24)
+    expect(meta?.taskCount).toBe(36)
   })
 })
 

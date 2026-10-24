@@ -1,0 +1,216 @@
+// overlay[delivery]: 群体协作四维度读数测试面（2026-10-24 群体协作评测基准吸收轮）。
+// 纯函数正反例（run22 真实行样本做夹具）+ tmpdir SIM 根起 koa 端到端。
+// 纪律：断言写真实读数（计数/比例/前沿标记），缺席输入如实 null 不造数。
+
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import Koa from 'koa'
+import { createServer } from 'node:http'
+
+import {
+  parseScenarioDispatches,
+  parseIssuesLog,
+  completedTaskIds,
+  markParetoFrontier,
+  swarmCollabOf,
+} from '../swarm-collab'
+import { parseLedgerTsv } from '../interventions'
+import { deliveryRouter } from '../delivery-controller'
+
+// ── run22 真实行样本（20261021-v8-run22 evidence；逐字取自行内锚点） ──
+const RUN22_SCENARIO = [
+  '[mux 10:08:40] [qi] 派发 ($pyj4kJujYaB96jVjDoZqacE8vDAIFUg_IcqRhjAjCug): @qi-agent:matrix.test 测试左移任务 UC-RFD-001（用户案例设计，与系统分析并行推进，不等分析稿）：',
+  '[mux 10:38:44] [chen] 派发 ($FVc_DvtBuCSqEuWhmZjyAq408Y9oIo4Rf67qZ01gccU): @chen-agent:matrix.test 执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）。',
+  '[mux 10:38:48] [xiao] 派发 ($0BO0nLQXBQ_PoTdNyX-Tdl0-73B2afV14lLZGwm8KsM): @xiao-agent:matrix.test 执行任务 AN-MP（csw-cashier-mp 小程序收银台前端系分）。',
+  '[mux 10:38:52] [hu] 派发 ($mQH1Y5FxCKYurdpVE_3_QzBRKXLM-X7dBehiwTu1s0k): @hu-agent:matrix.test 执行任务 AN-CHWX（csw-channel-wechat 财付通渠道系分）。',
+  '[mux 11:30:46] [真值] 仓库出现 docs/analysis/AN-MP-analysis.md ✓',
+  '[mux 11:31:10] [真值] 仓库出现 docs/analysis/AN-PAYCORE-analysis.md ✓',
+  '[mux 10:36:47] [真值] 房间出现 @chen-agent 与 @wei-agent 的 RACI 派发 ✗（60s 超时）',
+  '[mux 12:00:00] [观察] AN-MP 回执未见（免等窗：回灌已发+记录放行）',
+].join('\n')
+
+const RUN22_ISSUES = [
+  'ISSUE|receipt-missing|AN-MP|完成回执未见（免等窗即刻记录；回灌补发要求已发，入库真值在案）',
+  'ISSUE|raci-dispatch-missing|fanfan-agent|@chen/@wei RACI 双 @ 群通知未见（补发要求已发；真值=主卡 raci 列，验证归审计段）',
+  'ISSUE|g5-ready-fail|driver|G5 准备失败',
+].join('\n')
+
+const RUN22_LEDGER = [
+  'id\tts\ttype\tdefect\tdetail\tstatus\tresolution',
+  'c1792550207-345784\t2026-10-21 10:36:47\tdispatch-preset\tPR-7\tbackfill raci-dispatch-missing（补登/核验回灌代催）\topen\t',
+  'c1792550207-445784\t2026-10-21 10:36:47\tdispatch-preset\tPR-7\tbackfill raci-not-structured（补登/核验回灌代催）\topen\t',
+  'c1792565330-4517705\t2026-10-21 14:48:50\tnudge\tPR-3\tagents=qi desc=测试报告入库（空转过半轻推）\topen\t',
+].join('\n')
+
+const RUN22_UAT = [
+  JSON.stringify({ ts: '2026-10-21T16:38:22.113Z', actor: 'admin', ac: 'AC-1', verdict: 'pass' }),
+  JSON.stringify({ ts: '2026-10-21T16:38:22.170Z', actor: 'admin', ac: 'AC-2', verdict: 'pass' }),
+  JSON.stringify({ ts: '2026-10-21T16:38:22.224Z', actor: 'admin', ac: 'AC-3', verdict: 'reject' }),
+].join('\n')
+
+const RUN22_GATE = [
+  JSON.stringify({ ts: '2026-10-21T15:00:00Z', actor: 'admin', action: 'reject' }),
+  JSON.stringify({ ts: '2026-10-21T16:26:33Z', actor: 'admin', action: 'approve' }),
+].join('\n')
+
+function readoutFixture() {
+  return swarmCollabOf({
+    run: '20261021-fx',
+    scenarioLog: RUN22_SCENARIO,
+    ledgerRows: parseLedgerTsv(RUN22_LEDGER),
+    issuesLog: RUN22_ISSUES,
+    uatVerdicts: [
+      { ac: 'AC-1', verdict: 'pass' },
+      { ac: 'AC-2', verdict: 'pass' },
+      { ac: 'AC-3', verdict: 'reject' },
+    ],
+    gateDecisions: [{ decision: 'reject' }, { decision: 'approve' }],
+  })
+}
+
+describe('群体协作读数 · 解析器（run22 真实行）', () => {
+  it('派发行解析：sender/target/任务 ID/模块锚', () => {
+    const ds = parseScenarioDispatches(RUN22_SCENARIO)
+    expect(ds).toHaveLength(4)
+    const paycore = ds.find(d => d.taskId === 'AN-PAYCORE')
+    expect(paycore?.sender).toBe('chen')
+    expect(paycore?.target).toBe('chen-agent')
+    expect(paycore?.moduleSlug).toBe('csw-pay-core')
+    expect(ds.find(d => d.taskId === 'UC-RFD-001')?.moduleSlug).toBeNull()
+  })
+
+  it('真值✓行 → 完成锚（✗ 行不计）', () => {
+    const done = completedTaskIds(RUN22_SCENARIO)
+    expect([...done].sort()).toEqual(['AN-MP', 'AN-PAYCORE'])
+  })
+
+  it('issues.log 解析：key/owner', () => {
+    const issues = parseIssuesLog(RUN22_ISSUES)
+    expect(issues).toHaveLength(3)
+    expect(issues[0]).toMatchObject({ key: 'receipt-missing', owner: 'AN-MP' })
+  })
+})
+
+describe('群体协作读数 · 四维度换算', () => {
+  it('维度一（通信拓扑）：MOR 字符口径 + 锚点保真 + 等待信号', () => {
+    const r = readoutFixture()
+    const c = r.communication
+    expect(c.dispatchCount).toBe(4)
+    expect(c.taskIds.sort()).toEqual(['AN-CHWX', 'AN-MP', 'AN-PAYCORE', 'UC-RFD-001'])
+    expect(c.morCharsPerTask).toBeGreaterThan(0)
+    // AN-* 三任务派发行都带模块锚 → preserved；UC-RFD-001 无模块锚不计保真
+    expect(c.intentFidelity.anchoredTasks).toBe(4)
+    expect(c.intentFidelity.preserved).toBe(3)
+    expect(c.intentFidelity.rate).toBeCloseTo(3 / 4)
+    expect(c.deadlockSignals.backfillCount).toBe(2)
+    expect(c.deadlockSignals.backfillRatio).toBeCloseTo(2 / 3)
+    expect(c.deadlockSignals.receiptMissing).toBe(1)
+    expect(c.deadlockSignals.raciMissing).toBe(1)
+    expect(c.deadlockSignals.nudgeCount).toBe(1)
+  })
+
+  it('维度三（信用）：per-agent 分解与观察口径 criticality', () => {
+    const r = readoutFixture()
+    const chen = r.credit.agents.find(a => a.agent === 'chen')
+    expect(chen?.assignedDispatches).toBe(1)
+    expect(chen?.completedAnchors).toBe(1) // AN-PAYCORE 真值✓
+    // 任务事实：PAYCORE(chen,✓) MP(xiao,✓) CHWX(hu,✗) UC-RFD-001(qi,✗)
+    // chen 参与侧 1/1 − 缺席侧 1/3（缺席侧里 MP 也完成）= +2/3
+    expect(chen?.criticalityObserved).toBeCloseTo(1 - 1 / 3)
+    const xiao = r.credit.agents.find(a => a.agent === 'xiao')
+    expect(xiao?.criticalityObserved).toBeCloseTo(1 - 1 / 3)
+    // qi 参与侧 UC 未完成（0/1）− 缺席侧 2/3 = 负贡献读数
+    expect(r.credit.agents.find(a => a.agent === 'qi')?.criticalityObserved).toBeCloseTo(0 - 2 / 3)
+    expect(r.credit.taskCompletion).toEqual({ done: 2, total: 4 })
+  })
+
+  it('维度三（帕累托）：非支配前沿标记正确', () => {
+    const pts = markParetoFrontier([
+      { agent: 'a', cost: 10, benefit: 2 },
+      { agent: 'b', cost: 20, benefit: 2 }, // 被 a 支配（同收益成本更高）
+      { agent: 'c', cost: 30, benefit: 5 },
+    ])
+    expect(pts.map(p => [p.agent, p.onFrontier])).toEqual([['a', true], ['b', false], ['c', true]])
+    const r = readoutFixture()
+    expect(r.pareto.frontierSize).toBeGreaterThan(0)
+    expect(r.pareto.points.every(p => typeof p.cost === 'number')).toBe(true)
+  })
+
+  it('维度四（社会动力学）：UAT 通过率 + G5 打回 + 拜占庭如实 no_data', () => {
+    const r = readoutFixture()
+    expect(r.social.uat).toEqual({ total: 3, pass: 2, conditional: 0, reject: 1 })
+    expect(r.social.unconditionalPassRate).toBeCloseTo(2 / 3)
+    expect(r.social.gateRejects).toBe(1)
+    expect(r.social.gateFailIssues).toBe(1) // fixture 的 g5-ready-fail 行
+    expect(r.social.issuesCaught).toBe(3)
+    expect(r.social.byzantine.status).toBe('no_data')
+  })
+
+  it('输入缺席 → 如实 null/0 不造数', () => {
+    const r = swarmCollabOf({ run: 'x', scenarioLog: null, ledgerRows: [], issuesLog: null, uatVerdicts: [], gateDecisions: [] })
+    expect(r.communication.dispatchCount).toBe(0)
+    expect(r.communication.morCharsPerTask).toBeNull()
+    expect(r.communication.intentFidelity.rate).toBeNull()
+    expect(r.credit.agents).toEqual([])
+    expect(r.social.unconditionalPassRate).toBeNull()
+  })
+})
+
+describe('群体协作读数 · 端点（夹具端到端）', () => {
+  let dir: string
+  let server: ReturnType<typeof createServer>
+  let base = ''
+
+  beforeAll(async () => {
+    dir = mkdtempSync(join(tmpdir(), 'swarm-collab-'))
+    const evidenceDir = join(dir, 'runs', '20261021-fx', 'evidence')
+    mkdirSync(evidenceDir, { recursive: true })
+    writeFileSync(join(evidenceDir, 'scenario.log'), RUN22_SCENARIO)
+    writeFileSync(join(evidenceDir, 'issues.log'), RUN22_ISSUES)
+    writeFileSync(join(evidenceDir, 'compensation-ledger.tsv'), RUN22_LEDGER)
+    writeFileSync(join(evidenceDir, 'uat-verdicts.jsonl'), RUN22_UAT)
+    writeFileSync(join(evidenceDir, 'release-gate.jsonl'), RUN22_GATE)
+    process.env.SIM_OBSERVER_ROOT = dir
+    const app = new Koa()
+    app.use(deliveryRouter.routes())
+    server = createServer(app.callback())
+    await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
+    const addr = server.address()
+    base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`
+  })
+
+  afterAll(() => {
+    server?.close()
+    delete process.env.SIM_OBSERVER_ROOT
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('GET /swarm-collab?run=：四维度读数 + sources 溯源', async () => {
+    const res = await fetch(`${base}/api/hermes/delivery/swarm-collab?run=20261021-fx`)
+    expect(res.status).toBe(200)
+    const body = await res.json() as {
+      available: boolean; run: string; readout: {
+        communication: { dispatchCount: number; intentFidelity: { preserved: number } }
+        social: { gateRejects: number; byzantine: { status: string } }
+        sources: string[]
+      }
+    }
+    expect(body.available).toBe(true)
+    expect(body.run).toBe('20261021-fx')
+    expect(body.readout.communication.dispatchCount).toBe(4)
+    expect(body.readout.communication.intentFidelity.preserved).toBe(3)
+    expect(body.readout.social.gateRejects).toBe(1)
+    expect(body.readout.social.byzantine.status).toBe('no_data')
+    expect(body.readout.sources.some((s: string) => s.includes('scenario.log'))).toBe(true)
+  })
+
+  it('缺 run 参数 → 取最新 run；非法 run → 400', async () => {
+    const res = await fetch(`${base}/api/hermes/delivery/swarm-collab`)
+    expect(res.status).toBe(200)
+    expect(((await res.json()) as { run: string }).run).toBe('20261021-fx')
+    const bad = await fetch(`${base}/api/hermes/delivery/swarm-collab?run=../escape`)
+    expect(bad.status).toBe(400)
+  })
+})
