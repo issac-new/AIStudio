@@ -7,7 +7,7 @@
 #      挂账：本改动须回移 generate-skill.sh 装配模板（模板↔产物双向同步）。
 #   2) 追加仓内 vendor/** 挡护：inject 后 vendor 呈预期注入脏态，普通提交自动
 #      撤出暂存区；基线替换走 VENDOR_SYNC=1 显式通道（vendor/VENDOR.md）。
-SF="/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev/scripts/spec-first-pre-commit.sh"
+SF="/Users/cuishi/lab/AIStudio/.claude/skills/ncwk-dev/scripts/spec-first-pre-commit.sh"
 if [ -f "$SF" ]; then
   bash "$SF" "$@" || exit $?
 else
