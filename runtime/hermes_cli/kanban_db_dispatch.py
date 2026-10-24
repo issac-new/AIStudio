@@ -20,6 +20,7 @@ from dataclasses import field
 from pathlib import Path
 from typing import Any
 from typing import Callable
+from typing import Optional
 from typing import Iterable
 from typing import Iterator
 from typing import Mapping
@@ -2414,12 +2415,64 @@ def _tick_spawn_budget(
 
 
 def _lane_rows(conn: sqlite3.Connection, status: str) -> list[sqlite3.Row]:
-    """Unclaimed rows of one lane in dispatch order."""
+    """Unclaimed rows of one lane in dispatch order (``priority`` rides along
+    for the ready-lane workload reorder's tier grouping)."""
     return conn.execute(
-        "SELECT id, assignee FROM tasks "
+        "SELECT id, assignee, priority FROM tasks "
         f"WHERE status = '{status}' AND claim_lock IS NULL "
         "ORDER BY priority DESC, created_at ASC"
     ).fetchall()
+
+
+# HERMES_CUSTOM[estimate]: 未评估 running 卡的保守在途负载（人日）。
+_UNESTIMATED_WORKLOAD_DAYS = 1.0
+
+
+def _reorder_ready_by_workload(
+    conn: sqlite3.Connection, rows: list[sqlite3.Row],
+) -> tuple[list[sqlite3.Row], bool]:
+    """HERMES_CUSTOM[estimate]（团队并行二期）：ready 同优先级层内轻载先行。
+
+    在途负载 = assignee 全部 running 卡的 ``estimate_days`` 之和（未评估保守
+    计 1 人日）；unassigned 层内垫底；等负载保持 created_at 到达序。层间
+    ``priority DESC`` 语义不变——重排永不打穿优先级层。返回 (新序, 是否换序)。"""
+    if not rows:
+        return list(rows), False
+    loads: dict[str, float] = {}
+    for r in conn.execute(
+        "SELECT assignee, estimate_days FROM tasks WHERE status = 'running'"
+    ):
+        key = r["assignee"] or ""
+        days = r["estimate_days"]
+        loads[key] = loads.get(key, 0.0) + (
+            float(days) if days is not None else _UNESTIMATED_WORKLOAD_DAYS
+        )
+
+    def tier_key(row: sqlite3.Row) -> tuple[int, float]:
+        # unassigned 垫底（负载位失效）；assigned 按在途负载升序。
+        if row["assignee"] is None:
+            return (1, 0.0)
+        return (0, loads.get(row["assignee"], 0.0))
+
+    reordered: list[sqlite3.Row] = []
+    tier: list[sqlite3.Row] = []
+
+    def _flush_tier() -> None:
+        nonlocal tier
+        if tier:
+            # sorted 稳定：等负载保持 SQL 序（created_at ASC）。
+            reordered.extend(sorted(tier, key=tier_key))
+            tier = []
+
+    prev_priority: Optional[int] = None
+    for row in rows:  # 输入已按 priority DESC, created_at ASC
+        if prev_priority is not None and row["priority"] != prev_priority:
+            _flush_tier()
+        prev_priority = row["priority"]
+        tier.append(row)
+    _flush_tier()
+    changed = [r["id"] for r in reordered] != [r["id"] for r in rows]
+    return reordered, changed
 
 
 def _any_spawnable_review(
@@ -2530,6 +2583,9 @@ def _dispatch_once_locked(
         return result
 
     ready_rows = _lane_rows(conn, "ready")
+    # HERMES_CUSTOM[estimate] 二期：同优先级层内按在途工作量轻载先行
+    # （语义详见 _reorder_ready_by_workload docstring）。
+    ready_rows, _workload_reordered = _reorder_ready_by_workload(conn, ready_rows)
     # Review rows are enumerated up front so the budget split can see whether
     # review work exists at all.
     review_rows = _lane_rows(conn, "review") if review_dispatch_enabled() else []

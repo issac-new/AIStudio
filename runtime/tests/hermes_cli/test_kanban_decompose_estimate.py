@@ -92,10 +92,6 @@ class TestPersistEstimates:
         kb._INITIALIZED_PATHS.clear()
         return kbc.connect()
 
-    # 半成品特性挂账：kanban_db.set_estimate / Task.estimate_days / estimate_set 事件
-    # 均未实现（全域 grep 实证，见 spec 2026-10-24-repo-integration-cleanup 决策记录）。
-    # strict=False：实现落地后自动转 XPASS 提示摘牌。
-    @pytest.mark.xfail(reason="set_estimate 待实现（半成品特性挂账）", strict=False)
     def test_over_cap_clamped_and_estimate_set_event(self, monkeypatch):
         import tempfile
         with tempfile.TemporaryDirectory() as td:
@@ -116,7 +112,6 @@ class TestPersistEstimates:
             ).fetchall()
             assert events, "estimate persist must emit estimate_set audit event"
 
-    @pytest.mark.xfail(reason="set_estimate 待实现（半成品特性挂账）", strict=False)
     def test_in_cap_children_persist_verbatim(self, monkeypatch):
         import tempfile
         with tempfile.TemporaryDirectory() as td:
