@@ -1,5 +1,5 @@
-total=2995
-ext_dist=ext[.ts]=1323 ext[.patch]=422 ext[.md]=384 ext[.vue]=298 ext[.json]=130 ext[.mjs]=111 ext[.yaml]=98 ext[.py]=51 ext[.png]=39 ext[.diff]=36 ext[.gitignore]=24 ext[.txt]=20 ext[(none)]=10 ext[.sh]=8 ext[.log]=6 ext[.html]=5 ext[.tag]=4 ext[.scss]=4 ext[.jsonl]=4 ext[.gitkeep]=3 
-skel_cksum=1007554400
-dir_cksums=dir_cksum[_root]=2508665032 dir_cksum[assets]=377643953 dir_cksum[config]=955913400 dir_cksum[custom]=3603278850 dir_cksum[docs]=1797715049 dir_cksum[evidence]=2497758522 dir_cksum[packages]=905342194 dir_cksum[patches]=2723683951 dir_cksum[registries]=454810070 dir_cksum[runtime]=4181870647 dir_cksum[scripts]=1755494143 dir_cksum[spec]=2779859895 dir_cksum[zcode-patches]=2704063923 
-ts=2026-10-16T00:24:37Z
+total=108205
+ext_dist=ext[.ts]=31445 ext[.py]=23448 ext[.md]=15806 ext[.tsx]=6255 ext[.svg]=4813 ext[.txt]=3649 ext[.com]=3356 ext[.json]=3253 ext[.yaml]=2334 ext[.mjs]=1660 ext[(none)]=1582 ext[.png]=1455 ext[.sh]=1421 ext[.html]=861 ext[.vue]=827 ext[.conf]=679 ext[.patch]=525 ext[.js]=491 ext[.pcss]=378 ext[.snap]=311 
+skel_cksum=274671756
+dir_cksums=dir_cksum[_root]=3300531135 dir_cksum[archive]=370080743 dir_cksum[assets]=3633492000 dir_cksum[config]=955913400 dir_cksum[custom]=1517773798 dir_cksum[docs]=456003610 dir_cksum[evidence]=2310431112 dir_cksum[governance]=1555411490 dir_cksum[patches]=2882724354 dir_cksum[registries]=454810070 dir_cksum[runtime]=2412944871 dir_cksum[scripts]=1514973244 dir_cksum[sim-mux]=4071041597 dir_cksum[simharness]=2900420924 dir_cksum[skills]=2798080504 dir_cksum[team]=2353251409 dir_cksum[upstream]=2277098485 dir_cksum[vendor]=1605958009 dir_cksum[zcode-patches]=1524905991 
+ts=2026-10-24T17:05:18Z

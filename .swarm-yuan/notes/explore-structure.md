@@ -1,72 +1,138 @@
-# overlay 仓「结构与构建」探查报告（路A · 2026-10-16 全量重生成轮）
+# AIStudio 单仓结构探查报告（2026-10-24 全量重生成轮 · 结构路）
 
-> ⚠️ 快照过期：2026-10-24 起 overlay 已整合为 AIStudio 单仓（上游基线入 `vendor/`，仓库主名 AIStudio）。本文路径与计数均为整合前快照，以仓内现状为准，待技能指纹感知重生成。
+> 分母口径：`git ls-files | wc -l` = **53248**。顶层分桶求和精确等于 53248（Python Counter 全量对账），根层覆盖率 100%。探查面=worktree 干净跟踪态（feat/aistudio-dev-regen @ e5ae1a928）。
 
-仓库：/Users/cuishi/lab/ncwk/overlay，git main @ b38044db（2026-10-16）。overlay-fork：最终应用 = 只读上游 ../upstream/hermes-studio（检出 v0.7.35）+ patches 注入 + custom/ 自有代码。
+## 1. 根层目录地图
 
-## 1. 顶层目录
+| 目录/文件 | 文件数 | 作用 |
+|---|---|---|
+| `vendor/` | 41752 | 钉版上游基线（仅概览）：`hermes-agent` 20676（v0.22.4 @4d04303818）、`zcode` 18266（v3.16.1 系列 @3c5b2276）、`hermes-studio` 2809（v0.7.38 @04e5d9aa7）+ `VENDOR.md` 台账。台账机制：git 跟踪 pristine 基线，`inject` 在工作树打补丁（脏态=预期注入态），基线变更只走 `npm run vendor:sync` 显式通道，`VENDOR_SYNC=1` 才允许提交 vendor/**（vendor/VENDOR.md:1-15、.swarm-yuan/hooks/pre-commit:8-10） |
+| `team/` | 4412 | 运行面 hermes agent 团队：`skills/` 2937（cybersecurity-defense 789 / detection 715 / devops 356 / forensics 307 等 46 族）+ `profiles/` 1427（42 个智能体 profile：pay-orchestrator 331、orchestrator 179、worker-* 等）+ `patches/` 23（acp-client/tui/kanban 等运行时源码补丁 apply 脚本）+ `shared/` 9 + 安装/说明文档 |
+| `skills/` | 2804 | 全部为 `skills/swarm-yuan/`（元技能生成器源码，§6 详） |
+| `custom/` | 2345 | 二次开发层（§2/§3 详）：client 1046 + server 1028 + qgate 256 + 其他 15 |
+| `docs/` | 515 | 设计正本与调研：`superpowers/specs` 352 + `superpowers/plans` 62 + 调研源材料目录（nine-sources、wx-research、4articles、upstream-analysis）+ 散篇报告/手册 |
+| `patches/` | 461 | hermes-studio 注入补丁族（§5 详） |
+| `simharness/` | 332 | 推演 harness（§4 详） |
+| `assets/` | 292 | `assets/skills/` 290（内置技能资源）+ logo.png |
+| `runtime/` | 132 | 基础运行时受管镜像（§6 详） |
+| `scripts/` | 113 | 构建/注入/回归/走查脚本（§6 详） |
+| `evidence/` | 35 | 走查与能力证据快照（ide-walkthrough 21、flat-tabs 8、swarm-capability 5 等） |
+| `.swarm-yuan/` | 12 | 生成器落仓工件：`hooks/pre-commit`（spec-first L2 + vendor 挡护）、`project-fingerprint`、`project-knowledge.md`、trace/decisions/gate-deny 台账、`notes/` |
+| `zcode-patches/` | 9 | zcode 底座受管 fork 补丁（§6 详） |
+| `.archived-patches/` | 7 | 退役补丁留档（018/019/021/025/028/060/061；028 与 patches/ 顶层双份留存，字节同 30197） |
+| `registries/` | 7 | A 类入口注册 shim（§6 详） |
+| `.qgate/` | 4 | 项目级 qgate 覆盖配置：qgate.yaml + gates/engineering.basic-check.yaml + gates/symbol-grounding.yaml |
+| `config/` | 3 | overlay 配置：bootstrap.ts、features.ts（VITE_* 开关）、loop-config.ts |
+| `.github/` | 1 | `workflows/qgate.yml`（唯一 CI 工作流） |
+| 根文件 | 12 | package.json（aistudio@1.0.0-overlay）、package-lock.json、tsconfig.json、vitest.config.ts、vite.config.iso.ts、runtime-manifest.json、docker-compose.yml、README.md、RELEASE-NOTES.md、AGENTS.md、.npmrc、.gitignore |
 
-| 条目 | 用途 |
-|---|---|
-| patches/ | B 类补丁主库（studio+agent 双目标路由），series 770 行（有效 359），_skip/ 与 _skip-0735/ 归档 |
-| zcode-patches/ | 第三上游 upstream/zcode 补丁（5 文件 series 有效 4） |
-| custom/ | A 类纯新增：client（16 域）/server（90+ 域实测 127 模块）/desktop/qgate/hermes-agent-plugins/upstream-compat/__tests__ |
-| registries/ | client entry shim：registries/client/entry.mts 被重定向为 /src/main.ts 入口（复制上游启动序列+A 类注册） |
-| scripts/ | 56 项工具脚本：inject/serve/build/verify/regression/walkthrough 族、githooks/pre-commit、runtime/ 子目录 |
-| runtime/ | 受管外部运行时镜像（semantica v0.7.0 MCP、pua @e6e6cd2 12 技能、pricing/roster），runtime-manifest.json 同步 ~/.hermes/hermes-agent；模板必须入库（D3 事故实锤） |
-| config/ | bootstrap.ts / features.ts / loop-config.ts（路径与特性配置单一事实源） |
-| vite.config.overlay.ts | inject 生成、已 gitignore、勿手改（改 inject.mjs） |
-| vitest.config.ts | overlay 测试权威配置（手写入库） |
-| tsconfig.json | 极简 ESNext/bundler/strict:false/noEmit（仅类型工具用，实编译走上游 tsconfig） |
-| packages/、tests/ | inject 生成的上游派生件（gitignore 声明） |
-| node_modules | 符号链 → ../upstream/hermes-studio/node_modules（依赖借用单一事实源） |
-| RELEASE-NOTES.md（148KB）+ release-notes-1.1~2.2.md | 发布说明族 |
-| docs/（30 项）、spec/、evidence/、assets/ | 文档/规格/证据 |
-| docker-compose.yml | 沙箱编排占位（注释明示未经验证不得宣称可 up） |
-| .overlay-injected.json | inject 状态 manifest（生成物；实录 appliedPatches 359 / appliedZcodePatches 4 / generatedAt 2026-10-15T07:21:14Z） |
-| .github/workflows/qgate.yml | 唯一 CI |
-| .archived-patches/、.qgate/、.swarm-yuan/、patches-v0.7.35-fixes/（空）、docs-cockpit-*.md | 归档/门禁/生成轮工作区/设计稿 |
+## 2. custom/server/ 域清单（1028 文件，149 个域目录）
 
-## 2. package.json
+构成面：controller 类文件 110、store 52、service 24、routes 9、`__tests__/` 内文件 461（分散在 176 个域），另有 `controllers/` 聚合目录（ide 31 / hermes 6 / sim 4 / ia2 4 / system 2）。
 
-name=hermes-overlay；version=0.7.30-overlay-2.38（package-lock 滞后一版 0.7.29-overlay-2.37）；private；type=module；engines node>=23.0.0；**dependencies/devDependencies 均为空**（//deps-borrow 注释：依赖单一事实源=上游 package.json devDependencies，symbol-grounding.yaml 机器核验）。借用基线：vite ^8.0.4 / vitest ^3.2.4 / vue ^3.5.32 / pinia ^3.0.4 / vue-router ^4.6.4 / typescript ~6.0.2 / vue-tsc ^3.2.8 / ts-node ^10.9.2 / @vitejs/plugin-vue ^6.0.5 / naive-ui ^2.44.1 / vue-i18n ^11.3.2 / jsdom ^27.0.1 / esbuild ^0.27.0 / @playwright/test ^1.63.0 / monaco-editor ^0.55.1 / @xterm/xterm ^6.0.0。
+Top 域：
 
-scripts 全表：inject（inject.mjs 补丁注入+派生 vite config+链接 custom/server）/ clean（--clean 反向还原；8647 在听拒执行，OVERLAY_ALLOW_LIVE_CLEAN=1 豁免）/ serve（serve-server.mjs ts-node 拉上游后端 PORT=8647）/ verify（verify-clean.mjs 上游纯净态）/ sync（sync-upstream.sh）/ ensure-injected（幂等差量补套）/ build（vite build 纯 client）/ prebuild+predev（先 ensure-injected）/ dev（HERMES_WEB_UI_BACKEND_PORT=8647 vite --port 8649 --strictPort）/ dev:lan（+--host，devAutoLogin admin/123456 仅限可信局域网）/ test（vitest run）/ test:eval（eval 回归单文件）/ bench:expert / build:full（build.mjs 全链）/ build:dmg|:mac|:win|:linux（electron-builder）/ catalog-check+zcode:ensure+zcode:serve（zcode 引擎面）/ runtime:doctor|:vendor-pua|:register / postbuild（verify-dist.mjs 产物完整性门禁）。
+| 域 | 文件数 | 构成要点 |
+|---|---|---|
+| `loop/` | 120 | graph 65 + engine 35 + store 7 + connectors 3 + gateway 2 + controllers 2 + __tests__ 2（图执行器/检查点/重试/停滞检测） |
+| `eval/` | 58 | 26 __tests__ + 31 平铺（runner/store/judge/release-hold/redteam-variants/synthesize 等） |
+| `controllers/` | 47 | 聚合挂载层：ide 31 + hermes 6 + sim 4 + ia2 4 + system 2 |
+| `harness/` | 43 | workbench 20 + __tests__ 11 + 12 平铺（nine-layers/capability-catalog/cost-accounts/rsi-maturity/gov-metrics） |
+| `governance/` | 39 | __tests__ 19 + 20 平铺（posture/governance-ledger/prov-o/registry-admin/org-diagnosis） |
+| `ontology/` | 36 | __tests__ 16 + 20 平铺（ingest/validate/store/watch/seed） |
+| `zcode/` | 31 | vendor 11 + __tests__ 7 + 13 平铺（session-projection/projection-socket/squad-protocol） |
+| `clusterinspector/` | 28 | __tests__ 18 + 10（detectors/convergence/process-scan） |
+| `matrix/` | 24 | __tests__ 12 + 12（task-protocol/raci-matrix/session-store/simulation） |
+| `__tests__/` | 24 | 域根级跨域测试 |
+| `secaudit/` | 17 | 15 平铺（engine/scan/report/coverage）+ __tests__ |
+| `bpa/` `toolpipeline/` `services/` `reviewgov/` | 15/15/15/14 | toolpipeline = 审计→围栏→治理→执法门瀑布 |
+| `toolresultguard/` `knowledge/` `kanban/` `approvals/` `incident/` | 14/14/14/14/13 | approvals = 风险分级/人闸/审批台账 |
+| 其余 ~128 个域 | 各 2-12 | 长尾小域：contextarchive、tokens、skillprovision、delivery、redteam、evidence、trust（8 文件）、govbus、expcandidates、diagram、graph 等 |
 
-## 3. 构建系统
+**与 custom/server/AGENTS.md 对账**：域索引列 10 域全部存在（`loop/graph/` 为 loop 子目录 65 文件）；索引自述为「关键域」子集（10/149），无失效条目但覆盖面极小；`controllers/` 聚合挂载层与 `services/` 未入索引。
 
-- 配置三件：vite.config.overlay.ts（生成物）、vitest.config.ts（手写）、tsconfig.json（极简）。无独立 rollup/electron-builder 配置（后者在上游 packages/desktop）。
-- vite.config.overlay.ts：mergeConfig 上游 vite.config 后覆盖——root/outDir 钉绝对路径（outDir=upstream/hermes-studio/dist/client，desktop 构建读此目录）；alias 数组顺序敏感：pinia/vue/@vue/runtime-core/vue-router 裸包名钉上游单实例（双实例白屏根治）→ /src/main.ts→overlay/registries/client/entry.mts → @/custom|@custom→custom/client → @ 兜底上游 src；inlineDynamicImports:true（单 chunk，规避 rolldown+echarts 跨 chunk 漏 import）；server.fs.allow 双根；server.proxy：/api /v1 /health /upload /socket.io 补 xfwd:true →8647，/agent-health→127.0.0.1:8650（rewrite+从 ~/.hermes/.env 读 API_SERVER_KEY 注 Bearer）；vite:vue 注入 node:fs 适配器（typescript 7.x 预览版 compiler-sfc ts.sys 探测失效适配）。
-- build:full 顺序：上游 generate-openapi.mjs → vite(overlay config) → tsc --noEmit -p packages/server/tsconfig.json → 上游 build-server.mjs → 拷 runtime/{pricing,roster} → dist/server/runtime/ → 拷 semantica-bridge.py → verify-dist.mjs 门禁（index.html 缺失/<200B/assets 无 JS 即硬失败）。
+## 3. custom/client/ 域清单（1046 文件）
 
-## 4. patch 注入体系
+| 域 | 文件数 | .vue | 构成 |
+|---|---|---|---|
+| `ia2/` | 307 | 113 | __tests__ 104 + views 75 + components 46 + api 19 + composables 18 + adapters 7 + store 6 + utils 5 + 平铺 i18n/route/nav ~28 |
+| `ide/` | 287 | 80 | __tests__ 120 + utils 57 + components 50 + views 31 + api 15 + composables 8 + store 3 + routes/i18n |
+| `matrix-chat/` | 88 | 53 | components 52 + __tests__ 15 + stores 7 + utils 7 + composables 2 + views 1 + identity |
+| `cockpit/` | 88 | 15 | 早期工作台聚合（trace/协作/审批组件复用源）+ store 2 |
+| `loop/` | 59 | 5 | runcenter/store + 画布/循环面板 |
+| `matrix-teams/` | 48 | 7 | stores 10 + components + dispatch/qgate-bridge/review-center |
+| `governance/` | 48 | 29 | components 29 + api 8 + __tests__ 8 + i18n 2 |
+| `kanban/` | 39 | 17 | 看板域 |
+| `eval/` | 20 | 10 | 评测面 |
+| `__tests__/` | 14 | — | 域根级（i18n 编译门等） |
+| `bpa/`(12) `skillgov/`(7) `ontology/`(7) `ui/`(6) `chat/`(5) `zcode/`(3) `settings-layers/`(2) `branding/`(1) `test/`(1) `styles/`(1) | 44 | 3 | 长尾域 |
 
-- patches/ 409 .patch 文件；series 有效 359；manifest 对齐（appliedPatches 359/appliedZcodePatches 4）。
-- 命名：NNN-域-描述.patch 三位零填充（000 起，当前最大 620+）；域段 client-/server-/test-/cockpit-/desktop-rebrand- 等。
-- inject.mjs 机制：①按 series 顺序 git apply --whitespace=nowarn（win32 加 --ignore-whitespace）②目标路由：解析 patch 首个 ---/+++ 目标路径，命中 HERMES_AGENT_PATCH_PREFIXES（hermes_cli/ plugins/ agent/ apps/ assets/ gateway/ tools/ model_tools.py toolsets.py 等）路由到 upstream/hermes-agent，否则 hermes-studio；agent/zcode 目标失败容错跳过，studio 失败 exit 1 ③符号链 custom/server→上游 packages/server/src/custom ④生成 vite.config.overlay.ts（路径 JSON.stringify 转义防 Windows 反斜杠）⑤写 manifest；--clean 反序 git apply --reverse+untracked 清理，不触上游 .git ⑥OVERLAY_UPSTREAM_ROOT 支持隔离注入副本；clean 前探测 8647 拒绝带服清理。
-- ensure-injected.mjs：manifest 在而 series 领先时自动补套差量。
+计数：**.vue 组件 343**（=git ls-files 'custom/client/*.vue'，100%；全仓 585 = custom 343 + vendor 231 + skills 11）。**Pinia store：store/stores 目录文件 30，实际含 defineStore 的 20**（另 10 为 kv/helper/持久化辅助）。ts 694、scss 7。
 
-## 5. 测试体系
+**与 custom/client/AGENTS.md 对账**：正文六域均存在；**遗漏未列**：matrix-teams(48)/loop(59)/eval(20)/bpa(12)/skillgov(7)/ontology(7)/zcode(3)/chat(5)/settings-layers/branding/根级 features.ts——matrix-teams 与 loop 已进前六，建议补索引。
 
-vitest ^3.2.4（借上游）；vitest.config.ts：include ['custom/**/*.test.ts']（只跑 overlay）；setupFiles custom/client/test/setup.ts（stub ResizeObserver/localStorage）；environment 按文件 // @vitest-environment jsdom；alias 与构建 config 手工同步；define __APP_VERSION__='test'；OVERLAY_UPSTREAM_ROOT 隔离树。
-测试文件 628：client 292 / server 307 / qgate 19 / __tests__ 5 / desktop 4 / upstream-compat 1。运行 npm run test；历史基线 534 文件 3847 过/1 skip（2026-10-13 记档）。另有 scripts/regression/ 16 个 ux/api/pixel 探针 + custom/qgate 独立包（自带 tsconfig+vitest，CI 单独跑）。
+## 4. simharness/ 结构（332 文件）
 
-## 6. 端口（实证）
+- **`mux/`（136）**：**mx-* 脚本 44 个**（100% 枚举）：
+  - 拓扑/生命周期：`mx-up.sh`（单 gateway 多路复用 + 单 studio，PIPELINE_TRIGGER/PARALLEL_REVIEW 提速开关）、`mx-down.sh`（pid+端口清残留）、`mx-setup.sh`（一次性幂等准备）、`mx-lib.sh`（公共库：1 gateway multiplex 全 profile + 1 studio 多 matrix 账号）、`mx-smoke.sh`（G1-G5 验收门禁）、`mx-clean.sh`、`mx-node.sh`（三机节点切片）、`mx-node-heartbeat.sh`/`mx-hb.sh`、`mx-platform.sh`、`mx-relay.sh`
+  - 推演驱动/门禁：`mx-prelaunch-check.sh`（开跑前 30 项核验）、`mx-scenario-lib.sh`（20 步场景原语）、`mx-delivery-lib.sh`/`mx-delivery-smoke.sh`、`mx-state-query.sh`、`mx-compensation-ledger.sh`、`mx-closure-snapshot.sh`、`mx-harness-snapshot.sh`
+  - 守护：`mx-gateway-babysit.sh`/`mx-gateway-nanny.sh`、`mx-night-watchdog.sh`、`mx-night-sentinel.sh`、`mx-sim-gateway-service.sh`（launchd 托管）、`mx-sim-mautrix-ensure.sh`、`mx-retro-sink.sh`
+  - 报告/评测/质量：`mx-report-gen.py`、`mx-report-audit.py`、`mx-narrative-skeleton.py`、`mx-eval-lib.sh`/`mx-eval-summary.py`、`mx-dup-ratio.mjs`（重复率 ≤3%）、`mx-mutation-score.mjs`、`mx-load-probe.py`、`mx-interventions.py`、`mx-mixed-motive.py`
+  - 审批/插件/供给：`mx-approval-proxy.sh`（run16 审批饿死事故固化）、`mx-board-supply-check.sh`、`mx-enable-file-approval.sh`/`mx-enable-run-trace.sh`、`mx-grant-profiles.mjs`、`mx-hermes-shim.py`、`mx-lite-seed.sh`、`mx-log-sanitize.py`
+  - 子结构：tests/ 16（.test.sh 守门）、qgate-overrides/gates/ 10（L0.* 推演侧门）、templates-pending/ 14、cashier-preview/ 3、git-hooks/ 2
+- **`skills/`（122）**：aipaydev-dev/ 116 + 6 单文件技能（testing-shift-left、requirements-analyst、pm-planning、inbox-dedup、defect-loop、capability-report）
+- **`tests/`（28）**：.test.sh 15（contract-gate、integration-retention、isolation-boundary、multi-owner-stall、night-sentinel、posture-ledger、qgate-executors、report-truth-anchor、secret-scan-gate、mx-interventions）+ .test.ts 9（eval-fullflow-integration、swarm-bench/collab-integration、v846-governance-closure、unified-report-layer、mutation-dup-tools）+ run-gates.sh 汇入口 + fixtures/whitelist
+- **`docs/`（25）**：run 前奏/复盘编年 + specs/ 7 + superpowers/ 6
+- **`scenarios/`（5）**：_template/、example-minimal/、mixed-motive-bidding/
+- **`materials/`（5）**：RFD-001 收银台 / RFD-002 分账退款 / RFD-003 OCR
+- **`var-templates/`（3）**：chain-watch / endgame-watch / run-watch-v3
+- 根 4 脚本：`aipay-scenario.sh`（V3 全流程 0-1 推演 26 步单文件版）、`aipay-ocr-verify.sh`、`aipay-agent-sync.sh` + README；package.json（sim-harness@1.1.0 自持守门依赖，无 scripts 段）+ vitest.config.ts
 
-前端 dev 8649（--strictPort）；后端 8647（serve-server.mjs，TS_NODE_PROJECT=packages/server/tsconfig.json TS_NODE_FILES=1）；代理 8649→/api /v1 /health /upload /socket.io→8647（xfwd）+/agent-health→8650；上游 start 8648；desktop webui livez 8748；dev:lan 全网卡 8649。
+## 5. patches/ 体系
 
-## 7. 产物与发布
+**series 格式**（930 行）：纯补丁文件名行 + `#` 注释行（451 行）+ 空行（82）；非注释登记行 **397**。000 号按依赖位次插入在 043/055 之间（非文件名序）。
 
-- web 产物：upstream/hermes-studio/dist/client + dist/server。
-- 桌面产物：upstream/hermes-studio/packages/desktop/release/。流程：inject --clean→硬还原→inject→build:full→desktop npm ci+build:main(tsc)→根 node_modules npm prune --omit=dev（防 14GB 巨包）→electron-builder（mac --mac --publish never -c.mac.identity=null ad-hoc 无签名，本机证书已吊销；win --win --x64；linux --linux）。
-- 产物类型：mac arm64 DMG + win x64 zip 双 canonical（命名 SwarmStudio-<上游版本>-mac-arm64.dmg / -win-x64.zip，附 sha256），GitHub Release+ModelScope 双通道；nsis -86 bad CPU type 为在案惯例非交付物。
-- RELEASE-NOTES 态：最新已发 2.37（hermes-studio v0.7.29+agent v0.21.5，dmg 384.0MB/zip 412.3MB，2026-10-04）；2.38 进行中；上游检出实为 v0.7.35（0.7.35 升级轮已启动）；desktop 捆绑 hermes runtime pin 0.21.5。
-- 同版本号覆盖缓存陷阱：发版须递增版本号并删 ~/.hermes-web-ui/webui/<version>/（README:631-637）。
+- **补丁号最大 687；.patch 总数 460**（= 顶层 450 + `_skip-0735/` 1 + `_skip-0736/` 7 + `_skip-0737/` 2，_skip 目录为上游升级轮移存留档）
+- **对账**：series 登记 397 条全在顶层（series-only=0）；顶层 53 个未登记（多被 473 全链终态再生吸收：i18n-locale-* 8 个、历史 i18n 对 076-105、rebrand/agent-health 历史轮、近期 client 侧 481-537、agent 侧 569-680）
+- **Top 补丁族**（450 顶层）：server-kanban 24 / client-api 10 / server-routes 9 / agent-kanban 9 / i18n-locale 8 / client-store 7 / client-i18n 7 / test-matrix 6 / server-ide 6 / test-kanban 5 / server-zcode 5 / client-router 5 / server-sessions 4 / server-controllers 4 / client-kanban 4
 
-## 8. CI/CD
+## 6. 其余开发面目录
 
-唯一 .github/workflows/qgate.yml：触发 push/PR 且路径限 custom/qgate/**；ubuntu-latest+node 24；working-directory custom/qgate 内 npm install && npx tsc && npx vitest run。注释明示：overlay 全量依赖本地注入态 upstream 树 CI 不可复现，故只跑 qgate。无发布自动化（发版本机手工）。
+- **`runtime/`（132）**：上游运行时受管镜像（README 自述「不是 fork」）：pua/ 46、roster/ 17、hermes_cli/ 15、gateway/ 10、plugins/ 8、tools/ 7、governance/ 7、tests/ 6、agent/ 5、clef/ 3、semantica/（manifest.yaml 经 patch 375 进 hermes-agent optional-mcps）。**`runtime-manifest.json`（根）**：B1 双树漂移根治清单——source=runtime/ → dest=~/.hermes/hermes-agent，inject 出口 deploy-agent-runtime 自动同步
+- **`scripts/`（113）**：入口链 inject.mjs（注入/`--clean` 撤销）、ensure-injected.mjs、serve-server.mjs、build.mjs/build-dmg.mjs、verify-clean.mjs/verify-dist.mjs、sync-upstream.sh/vendor-sync.sh、zcode-engine.mjs；维护 migrate-patches.mjs、regen-473.mjs、drift-audit.mjs、check-bundle-budget.mjs；regression/ 40、*-walkthrough.mjs 20+、runtime/ 3、fibo/ 3、plan-html/ 10、githooks/
+- **`registries/`（7）**：A 类入口 shim——client/entry.mts 复制上游 main.ts 启动序列、在 app.use(router) 与 app.mount 之间插入增量注册（上游 main.ts 零改动）
+- **`zcode-patches/`（9）**：series（基线 origin/main @ 0a1fc56 v3.16.1）+ 8 补丁：002 importSession RPC、003-005 zcode-cua 活体化、006 cua-plugin bundled、007 official host protocol、008 broker-unavailable error-code
+- **`skills/swarm-yuan/`（2804）**：SKILL.md + tests/ 1589 + runtime/ 373（diagram-design 290 + mattpocock-skills 83）+ vendor-knowledge/ 305 + assets/ 218（framework-gates 81 + gates 57）+ references/ 140（frameworks 82）+ docs/ 116 + scripts/ 53 + ci/ 3 + 安装器
 
-## 9. 环境要求
+## 7. 测试面盘点
 
-node>=23（CI 24；无 .nvmrc）；desktop 捆绑 python pin 3.12.13（fetch-python.mjs:33 PBS_PY）；runtime/ 面依赖 HERMES_BIN 指向 python；布局硬约定 ../upstream/{hermes-studio,hermes-agent,zcode} 三兄弟目录；OVERLAY_UPSTREAM_ROOT 可重定向。
+| 类型 | 数量 | 分布 |
+|---|---|---|
+| vitest `*.test.*` | 7461 | vendor 6562 / custom 876 / simharness 13 / skills 8 / scripts 2 |
+| vitest `*.spec.*` | 173 | vendor（zcode/hermes 自带） |
+| `__tests__/` 目录文件 | 1075 | custom 879 / vendor 195 / scripts 1 |
+| pytest `test_*.py` | 4 | 全在 vendor/hermes-agent；team 树无 pytest 命名测试；**runtime/tests/ 为 gateway/hermes_cli 两族**（规范路实测） |
+| shell 守门 `.test.sh` | ~31 | simharness/tests 15 + simharness/mux/tests 16（推演侧守门主力） |
+
+- vitest 配置 20 个：根 vitest.config.ts（开发面）+ simharness/ + custom/qgate/ + vendor 17
+- 根目录无 `tests/`；守门职责由 simharness/tests/ + 仓级 custom/__tests__/patches-series-guard.test.ts、zcode-patches-guard.test.ts、zcode-engine-chain.test.ts 承载
+
+## 8. package.json scripts（根仓 33 条）
+
+- 注入/同步：`inject`、`clean`、`ensure-injected`、`sync`、`vendor:sync`
+- 构建：`build`、`prebuild`→ensure-injected、`build:full`、`build:dmg`/{mac,win,linux}、`postbuild`→verify-dist
+- serve/dev：`serve`、`dev`/`dev:lan`（:8649 前端 / 8647 后端；dev:lan 免密面仅限可信局域网）、`predev`→ensure-injected
+- 测试/质量：`test`、`test:ide-smoke`、`test:ide-selfcheck`、`test:eval`、`typecheck:harness`（tsc 点名 custom/server ~130 文件 noEmit）、`check:bundle`
+- 引擎/运行时：`zcode:ensure`/`zcode:serve`、`catalog-check`、`runtime:doctor`/`runtime:vendor-pua`/`runtime:register`、`bench:expert`、`fibo:sync`
+
+构建/注入/serve 链：`npm run inject` → scripts/inject.mjs（重放 patches/series 460 + zcode-patches + registries/config/custom 挂接）→ deploy-agent-runtime 按 runtime-manifest.json 同步 agent 运行时；`npm run dev`/`serve` 起 overlay 前后端。
+
+## 9. 全仓文件类型计数（跟踪面）
+
+.ts 15699 / .py 11223 / .md 8491 / .tsx 2443 / .svg 2378 / .txt 1835 / .com 1678 / .json 1549 / .yaml 1278 / .mjs 868 / (无扩展) 808 / .sh 722 / .vue 585 / .html 536 / .patch 504 / .png 364 / .conf 347 / .js 234 / .yml 131 / .java 112 / .css 80 / .local 75 / .gitignore 68 / .bat 24 / .nix 22 / .mts 20 / .jpg 20 / .sql 26 / .jsonl 24 / .webp 27 / .mmd 28 / .xml 33 / .cjs 41 / .toml 44 / .ps1 49 / .mdx 60 / .rs 17 / .scss 16（.patch 504 = patches 460 + team 19 + zcode-patches 8 + archived 7 + vendor 10；覆盖率 53248/53248）
+
+## 结构性发现
+
+1. series 与补丁文件 53 条差额全部是留档未登记补丁（非丢失）；028 双份冗余。
+2. AGENTS.md 索引滞后：client 侧 matrix-teams/loop/eval 大域未入速查；server 索引仅 10/149。
+3. 测试双轨：开发面 vitest（custom 876）+ 推演面 shell 门（31 个 .test.sh）；vendor 占全仓 .test. 88%，根 vitest.config include 隔离在 overlay 面。

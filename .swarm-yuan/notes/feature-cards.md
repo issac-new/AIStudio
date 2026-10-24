@@ -1,167 +1,157 @@
-# 项目特征卡：hermes-overlay（SwarmStudio 二开仓）— 2026-10-16 全量重生成轮
+# 项目特征卡：AIStudio（SwarmStudio 体系单仓）— 2026-10-24 全量重生成轮
 
-> ⚠️ 快照过期：2026-10-24 起 overlay 已整合为 AIStudio 单仓（上游基线入 `vendor/`，仓库主名 AIStudio）。本文路径（lab/ncwk/overlay）与计数（v0.7.35、359 补丁等）均为整合前快照，以仓内现状为准，待技能指纹感知重生成。
-
-> 数据来源：三路并行子代理探查（结构/规范/代码组织）+ mine-habits 3353 提交统计 + detect-frameworks.sh + framework-evidence.sh 台账（notes/framework-evidence.tsv 65 行）。上游参照树只读：/Users/cuishi/lab/ncwk/upstream/hermes-studio。
-> 形态判定（§D.0）：**[前端UI, 后端API, 桌面IPC(patch 侧)]**；无异步 MQ 维度、无库导出维度。定时信号轻量（clusterinspector 巡检环 timer + loop cron bridge），不立独立维度。
-> 框架激活（§D.0.5）：**ACTIVE_FRAMEWORKS = vue, naiveui, vite, koa, jest-vitest**（detect-frameworks 报 12 个，AI 剔除 7 个：react/express/webpack/tailwind/fastapi/pytest 在 custom/ 零引用 grep 实证，命中来自 runtime/ 镜像与 qgate fixtures 的 package.json；opentelemetry 仅 run-trace 插件的数据格式非框架使用——与 9-16 轮裁决一致）。
-> 视觉成熟度（§D.0 尾注）：9-16 轮实测 31 个 CSS 自定义属性 + 6 个 scss（BEM）+ 无 DESIGN.md → 场景①（有实现无 DESIGN.md，引用 frontend-design-methodology 的 document 模式）；本轮未复验，Step 7 填充时抽验。
+> 数据来源：三路并行子代理探查（notes/explore-{structure,conventions,codeorg}.md）+ mine-habits 5204 提交统计 + detect-frameworks.sh + framework-evidence.sh 台账（notes/framework-evidence.tsv 76 行）+ 机械提取（notes/inventory/）。探查面=worktree 干净跟踪态 @ e5ae1a928。
+> 形态判定（§D.0）：**[前端UI, 后端API, 桌面IPC(vendor 壳层), 脚本/推演面(bash+python)]**；无异步 MQ 维度（实时走 socket.io 命名空间与轮询）、无库导出维度。
+> 框架激活（§D.0.5）：**ACTIVE_FRAMEWORKS = vue, naiveui, vite, koa, jest-vitest, pytest**。detect-frameworks 全树扫描报 24 个（spring-boot/django/harmonyos 等系 vendor/ 上游树污染，Monorepo+钉版基线场景误报）——AI 按开发面证据收敛六框架：vue 343 .vue / naiveui 48 文件引用 / vite 15 配置 / koa 103 路由文件 / jest-vitest 875 .test.ts / pytest simharness+runtime python 面（python3.14 -m pytest 22 passed 实测，2026-10-24 spec 记档）。pytest 为本轮新增（整合后 simharness/runtime 入库成开发面）。
+> 视觉成熟度（§D.0 尾注）：沿用 10-16 轮判定——31+ CSS 自定义属性、scss BEM、无 DESIGN.md → 场景①（frontend-design-methodology 的 document 模式）。
 
 ## 1. 项目类型（P0）
 
-overlay-fork 二次开发仓（非 monorepo）。最终应用 = 只读上游 `upstream/hermes-studio`（当前检出 v0.7.35，稳定发布线 v0.7.32）+ `patches/` 359 条有效补丁（`npm run inject` 构建期 git apply，双目标路由 studio/agent）+ `custom/` 自有代码（client 16 前端模块 / server 127 服务端模块 / qgate 独立包 / hermes-agent-plugins Python 件 / desktop / upstream-compat）。第三上游 `upstream/zcode`（zcode-patches/ 4 条）。产物 = Electron 桌面应用 SwarmStudio + web。版本线 0.7.30-overlay-2.38（已发 2.37，2.38 进行中）。
+AIStudio 单仓（原 ncwk 多仓 2026-10-24 整合）= SwarmStudio 桌面应用（Electron+Koa+Vue3）二次开发层 + `vendor/` 钉版上游基线三树（hermes-studio v0.7.38 @04e5d9aa7 / hermes-agent v0.22.4 @4d04303818 / zcode v3.16.1 @3c5b2276，台账 vendor/VENDOR.md）+ `simharness/` 全流程推演 harness + `skills/swarm-yuan/` 技能源码 + `team/` 运行面部署包。所有改动经 `patches/`（460 .patch，series 登记 397）与 `custom/`（2345 文件：server 149 域 1028 文件 / client 23 域 1046 文件 / qgate 256）构建期注入 vendor/（npm run inject）。git 跟踪 53248 文件；产物=Electron 桌面应用+web。
 
 ## 2. 可改范围（P1）
 
-- 可改：`overlay/` 全部（custom/、patches/、scripts/、docs/、config/、runtime/ 模板、registries/、zcode-patches/）
-- 只读：`upstream/hermes-studio`、`upstream/hermes-agent`、`upstream/zcode`（仅 `git pull`）；`simharness/`（overlay 只读消费）
-- 只读区修改机制：upstream 变更一律经 `patches/NNN-域-描述.patch` + `patches/series` 登记 + `npm run inject` 注入（工作区 AGENTS.md:5-11）
-- git 位置：git 只在 overlay/；工作区根非 git 仓
+- 可改：本仓全部（git 域）；spec-first 门禁面（WRITABLE_DIRS）=custom registries config scripts patches zcode-patches runtime docs 八面须 spec 先行；simharness/ skills/ team/ assets/ 不触发 spec-required 但同受仓规约束
+- 只读：`vendor/**` 钉版基线——inject 注入脏态是预期工作态、不入提交（pre-commit 自动撤出）；基线替换只走 `npm run vendor:sync` + `VENDOR_SYNC=1` 显式通道；vendor/ 内禁建 .git
+- 只读区修改机制：一律经 patches/NNN-域-描述.patch + series 登记 + npm run inject；上游锁文件禁手改（新依赖走补丁，687 先例）
 
 ## 3. 改造分类（P1）
 
-- **A 类（纯新增）**：新组件/store/服务放 `custom/`，经 alias `@/custom` + `registries/client/entry.mts` 入口 shim + bootstrap.ts 注册器（registerRoute/registerNavEntry/registerComponent，features 开关）接入，零侵入上游（README:229-238, 317-339）
-- **B 类（骨架修改）**：schema/config/vite/路由挂载等约 7 类运行前置条件走 patch：upstream 临时改 → `git diff > patches/NNN-描述.patch` → 还原上游 → series 登记 → `npm run inject` 验证（README:573-596）
-- 服务端新模块范式：custom/server/<mod>/ 导出带 prefix 的 koa-router + patch 在上游 `bootstrap/routes.ts` 加 import+`app.use(xxxRoutes.routes())` 两行（范本 patch 036/582/636）
-- 旁路挂载：native-routes.ts 原生中间件直判（7 个 IDE 端点，绕 koa-router 404 根治件）
+- **A 类（纯新增零侵入）**：客户端=组件/store/api 放 custom/client/<域>/，经 vite alias `@/custom` + registries/client/entry.mts 入口 shim + bootstrap.ts 按features开关动态注册；服务端=域目录+*-controller.ts 带 prefix koa-router，经 inject 符号链接 packages/server/src/custom → custom/server 挂入
+- **B 类（骨架修改走 patch）**：vendor 注入态临时改 → git diff 存 patches/NNN → 还原 → series 登记 → npm run inject 重放验证；三树路由=diff 头前缀判定（hermes_cli/plugins/agent/gateway 等→hermes-agent；zcode-patches/ 目录→zcode；其余→hermes-studio）
+- 服务端新路由唯一挂载通道=patch 在 vendor/.../bootstrap/routes.ts 加 import+app.use 两行（80+ 枚挂载补丁族；范本 591/582/543）；**改 B 类后后端重启前 npm run clean && npm run inject**
 
 ## 4. 技术栈摘要（P0）
 
-TypeScript 全栈（Node ≥23，desktop pin python 3.12.13）：Vue 3 + Pinia + vue-router + naive-ui 前端，koa-router 后端（49 prefix router ~337 端点），vite 8 派生构建（单 chunk inlineDynamicImports），vitest 3.2.4 测试（628 文件）。
+TypeScript 全栈（Node ≥23；推演/运行时 python3.14）+ bash harness。Vue 3 + Pinia + vue-router + naive-ui 前端（343 .vue / 21 store）；koa-router 后端（75 路由文件 534 端点，55 显式 prefix）；vite 8 派生构建（vite.config.overlay.ts 生成物勿手改，单 chunk inlineDynamicImports）；vitest（custom+scripts 875 .test.ts）；simharness bash+python（44 mx-* 脚本 + pytest）。
 
-> 版本基线表（--deps 对比基线；**依赖单一事实源=上游 hermes-studio/package.json**——overlay package.json deps 为空、node_modules 为符号链借用、`.qgate/gates/symbol-grounding.yaml` 机器核验）：
+> 版本基线表（--deps 对比基线；**依赖单一事实源=vendor/hermes-studio/package.json**，.qgate/gates/symbol-grounding.yaml depsFile 机器核验）：
 >
 > | 依赖 | 版本 | 类型 |
 > |---|---|---|
-> | vite | ^8.0.4 | 核心(构建) |
+> | vite | ^8.x（以 vendor manifest 声明值为准） | 核心(构建) |
 > | vitest | ^3.2.4 | 核心(测试) |
-> | vue | ^3.5.32 | 核心(框架) |
-> | pinia | ^3.0.4 | 基础 |
-> | vue-router | ^4.6.4 | 基础 |
-> | typescript | ~6.0.2 | 核心 |
-> | vue-tsc | ^3.2.8 | 开发 |
+> | vue | ^3.5.x | 核心(框架) |
+> | pinia / vue-router | ^3.x / ^4.x | 基础 |
+> | naive-ui | ^2.44.x | 基础(UI) |
+> | typescript | ~6.0.x | 核心 |
 > | ts-node | ^10.9.2 | 开发(serve 链) |
-> | @vitejs/plugin-vue | ^6.0.5 | 核心(构建) |
-> | naive-ui | ^2.44.1 | 基础(UI) |
-> | vue-i18n | ^11.3.2 | 基础 |
-> | jsdom | ^27.0.1 | 开发(测试) |
-> | esbuild | ^0.27.0 | 开发 |
-> | @playwright/test | ^1.63.0 | 开发(回归探针) |
-> | monaco-editor | ^0.55.1 | 基础(IDE) |
-> | @xterm/xterm | ^6.0.0 | 基础(终端) |
+> | monaco-editor / @xterm/xterm | IDE 基础 | 基础 |
+> （Step 7 填充时以 `vendor/hermes-studio/package.json` 实测值替换上表 range 列）
 
 ## 5. 构建发布命令（P0）
 
 | 用途 | 命令 | 说明 |
 |---|---|---|
-| dev | `npm run dev` | vite 8649 --strictPort；predev 自动 ensure-injected；后端 8647 代理（/api /v1 /health /upload /socket.io→8647，/agent-health→8650 带 Bearer） |
-| 后端 | `npm run serve` | serve-server.mjs，ts-node 拉上游 server，PORT=8647；改后端/patch 后 `lsof -ti:8647 \| xargs kill -9` 再 re-serve |
-| inject/clean | `npm run inject` / `npm run clean` | 补丁注入 / 反向还原（clean 时 8647 在听拒执行，OVERLAY_ALLOW_LIVE_CLEAN=1 豁免） |
-| verify/sync | `npm run verify` / `npm run sync` | 上游纯净态校验 / 上游同步（clean→fetch/reset→re-inject） |
-| build | `npm run build` | 纯 client（vite --config vite.config.overlay.ts，生成物配置勿手改） |
-| build:full | `npm run build:full` | openapi→vite→tsc→build-server→runtime 资源→verify-dist 门禁五步链 |
-| 打包 | `npm run build:dmg`（mac 默认）/ `:win` | electron-builder；产物落 upstream/hermes-studio/packages/desktop/release/；发版须递增版本号并删 ~/.hermes-web-ui/webui/<version>/ |
-| test | `npm run test` | vitest run（include custom/**/*.test.ts） |
-| test:eval | `npm run test:eval` | eval 回归单文件（含红线负例） |
+| dev | `npm run dev` | vite :8649 --strictPort；predev 自动 ensure-injected；后端 :8647 代理；dev:lan 免密面仅限可信局域网 |
+| 后端 | `npm run serve` | serve-server.mjs，ts-node 拉上游 server，PORT=8647；改后端/patch 后 kill :8647 再 re-serve |
+| inject/clean | `npm run inject` / `npm run clean` | 补丁注入（出口顺带 deploy-agent-runtime --apply）/ 反向还原（8647 在听拒执行，OVERLAY_ALLOW_LIVE_CLEAN=1 豁免） |
+| 基线同步 | `npm run vendor:sync` | upstream/<tree> → git archive 整树替换 vendor/ → re-inject → VENDOR_SYNC=1 提交（唯一显式通道） |
+| build | `npm run build` / `build:full` | 纯 client / 五步链（openapi→vite→tsc→build-server→verify-dist） |
+| test | `npm test` | vitest run（include custom/**+scripts/**）；合并前全量 |
+| typecheck | `npm run typecheck:harness` | tsc 点名 ~130 个 custom/server 模块 noEmit；新模块须手动并入 |
+| 推演 | simharness/mux/mx-up.sh 等 44 脚本 | SIM_ROOT 隔离（默认 /Users/cuishi/lab/ncwk-sim-mux，env AIPAY_SIM_ROOT） |
 
-端口约定：8649 前端 dev / 8647 后端 / 8650 agent gateway / 8648 上游 start / 8748 desktop livez。
+端口：8649 前端 dev / 8647 后端 / 8650 真机 agent gateway / 8648 上游 start / 8748 desktop livez / **推演面 8801 GW + 8802 studio**。
 
 ## 6. 分支规范（P1）
 
-- 命名 `feat/<描述>` `fix/<描述>` `refactor/<描述>`，验证通过合回 main（工作区 AGENTS.md:13-31）；用户级更强：提交型任务走 worktree（.claude/worktrees/，≤3 并行，--no-ff 收口，不跨 worktree cherry-pick）
-- 推送：按用户指令，不自动推；CI 仅 qgate.yml
-- pre-commit 门禁：scripts/githooks/pre-commit（jargon 词表 HARD>0 拒提交；启用 git config core.hooksPath scripts/githooks）
-- 提交实证：Conventional Commits 中文 subject，`type(scope): 中文主题——细节`（b38044db 等）；测试未绿禁提交（测试与 commit 分两轮工具调用）
+- 命名 `feat|fix|refactor/<slug>`（docs/<slug> 为文档轮实际扩展形态），从 origin/main 起；验证过 `--no-ff` 合回；merge 模板 `merge: <slug> 并入——<中文摘要>`
+- 用户级更强：提交型任务一律 worktree（.claude/worktrees/，≤3 并行，IN-FLIGHT 标记，git 通道清理禁 rm -rf）
+- pre-commit 双职责：spec-first L2（委托技能目录脚本）+ vendor/** 挡护（VENDOR_SYNC=1 逃生）
+- 提交实证：Conventional Commits 中文 subject（feat 1491/fix 1344/docs 670/merge 1225，5204 提交口径）；测试未绿禁提交
 
 ## 7. 安全规则（P1）
 
-- 构建物：只出 mac arm64 dmg + win x64 zip 两种，dmg 免签（CSC_IDENTITY_AUTO_DISCOVERY=false + identity=null；用户 2026-10-13 全局指令）
-- 密钥：全走 env（203 唯一变量；MATRIX_ACCESS_TOKEN/ZCODE_SERVER_AUTH_TOKEN/QGATE_LLM_API_KEY 等），无密钥文件；Matrix 凭据统一 readGatewayMatrixEnv
-- 认证：上游 studio JWT（patch 016 扩 matrix_user_id）+ synapse adminToken whoami 校验（whoami 失败拒落盘）+ loopback 四闸（socket.remoteAddress/XFF/Origin/Host）+ ws 升级 rejectUpgradeOrigin
-- 脱敏：toolresultguard 审计 sha1 脱敏；shared/ 补件泄漏事故教训（collect 认任何 .env*，密钥轮换待办在案）
-- 上传：--publish never 常量，不自动上传产物
+- 密钥全走 env（296 唯一变量；MATRIX_ACCESS_TOKEN/ZCODE_SERVER_AUTH_TOKEN/QGATE_LLM_API_KEY 等），无密钥文件；审计不落敏感原值（custom/server/AGENTS.md 成文）
+- 认证：上游 studio JWT（requireUserJwt + resolveUserProfile，custom 全部 REST 默认受保护）；写面加码 controller 自查（super_admin）；loopback 四闸；matrix 会话换 JWT（patch 012）
+- 脱敏：toolresultguard 审计 sha1 脱敏；simharness secrets 采集器部署面
+- 上传：--publish never，不自动上传产物
 
 ## 8. 文档约定（P1）
 
-- spec/plan：`docs/superpowers/{specs,plans}`，命名 `YYYY-MM-DD-<topic>.md`（specs 多 -design 后缀）；specs 112 条目 / plans 52 文件
-- 设计正本：specs/2026-10-05-mux-v8-fullflow-plan.md（推演全流程唯一正本）；档案件=mux-history-and-engineering-archive.md；归档约定 specs/archive/README.md（唯一副本+git 历史保全）
-- RELEASE-NOTES.md 每轮必含：上游版本/patch 计数/门禁终态（inject N/N+tsc 0+vitest 数字+i18n+build EXIT=0）/产物 sha256 与体积/装机三验
-- 正式文档三规则：多格式一致（md/docx/pdf 同步重出）/终稿态/说人话+jargon 门禁（方法论正本=skill gongwen-bifa）
+- spec/plan：docs/superpowers/{specs,plans}，命名 YYYY-MM-DD-<slug>.md（specs 334 / plans 62）；spec 必含「变更/决策记录/验证」三段，决策事实源
+- 设计正本族：2026-10-23-swarmstudio-integrated-design.md（八章整合正本）+ swarmstudio-design-ledger.md（数字总账）+ 2026-10-05-mux-v8-fullflow-plan.md（推演唯一正本）
+- RELEASE-NOTES.md 最新轮置顶，每轮含验证数字+边界披露
+- 台账：.swarm-yuan/{decisions,trace,gate-deny}.jsonl 有意入库
 
 ## 9. 测试体系（P1）
 
-- vitest 3.2.4；vitest.config.ts 手写入库：include `custom/**/*.test.ts`、setupFiles custom/client/test/setup.ts（stub ResizeObserver/localStorage）、environment 按需 `// @vitest-environment jsdom`、OVERLAY_UPSTREAM_ROOT 隔离树支持
-- 628 测试文件：client 292 / server 307 / qgate 19 / __tests__ 5 / desktop 4 / upstream-compat 1；__tests__ 目录 170 个
-- 回归探针 scripts/regression/ 16 个（ux/api/pixel）；CI 仅 qgate.yml（注入态不可 CI 复现）
-- 历史基线：534 文件 3847 过 / 1 skip（2026-10-13 记档）
+- 根 vitest：include custom/**/*.test.ts + scripts/**/*.test.ts（875 文件），setupFiles=custom/client/test/setup.ts，testTimeout 20000，jsdom 按文件头注释；alias 上游根 env OVERLAY_UPSTREAM_ROOT > vendor/ > ../upstream；全量口径 6260 用例 0 失败（2026-10-24 b3756a051 实测记档）
+- simharness 独立面：自带 vitest（143 测）+ 31 个 .test.sh 守门（合同门/隔离边界/夜间哨兵等），入口 tests/run-gates.sh；node_modules 本仓自持优先
+- pytest（runtime/）：拼合树前提=vendor v0.22.4 基线+runtime 覆盖层（runtime-manifest.json 部署到 ~/.hermes/hermes-agent）；python3.14 -m pytest 22 passed 实测
+- qgate 子项目（custom/qgate/）独立 vitest+CI；.qgate/gates/engineering.basic-check junit minTotal:100 防缩水
+- CI 仅 .github/workflows/qgate.yml（只跑 qgate 自身——overlay 全量依赖本地注入态不可 CI 复现）
 
 ## 10. 环境与外部资源（P1）
 
-- node ≥23（CI 24）/ python 3.12.13（desktop pin）；无 .nvmrc
-- 布局硬约定：../upstream/{hermes-studio,hermes-agent,zcode} 三兄弟目录；OVERLAY_UPSTREAM_ROOT 可重定向隔离副本
-- node_modules 符号链 → 上游 hermes-studio（依赖借用单一事实源，symbol-grounding 核验）
-- 外部资源：Matrix/Synapse（MATRIX_HOMESERVER 等 env；CS API v3 + Admin API v2；联邦房 MX_FEDERATION_ROOM）；sqlite×3 文件 9 表 + pg（LOOP_PG_URL）；zcode 引擎 8650（Bearer API_SERVER_KEY）
-- MCP/受管运行时：runtime/（semantica v0.7.0 MCP、pua 12 技能、pricing/roster），runtime-manifest.json 同步 ~/.hermes/hermes-agent；runtime:doctor/register 对账命令
+- node ≥23（CI 24）/ python3.14（pytest 实测链）；desktop pin python 3.12.13
+- 布局：vendor/ 三树内置（不再依赖 ../upstream 兄弟目录；upstream/ 为本地升级缓存不入库）；node_modules 符号链 → vendor/hermes-studio/node_modules
+- 推演隔离：SIM_ROOT（env AIPAY_SIM_ROOT，默认 /Users/cuishi/lab/ncwk-sim-mux NVMe）派生 HERMES_ROOT/AGENT_SRC/PRODUCT_DIST，与宿主 ~/.hermes 完全隔离；isolation-boundary.test.sh 三断言看守
+- 外部资源：Matrix/Synapse（CS v3+Admin v2）；sqlite 文件态+pg（LOOP_PG_URL）；zcode 引擎 8650（Bearer）
+- 运行时部署：runtime-manifest.json（45 文件清单）驱动 deploy-agent-runtime.mjs（默认 dry-run，--apply 才拷贝，目标差异先备份 .bak 只留 3 份）
 
 ## 11. 可复用稳定单元清单（P0）
 
-> 全量计数见第 16 项核验表；详细签名表落 reference-manual §4/§6/§9（Step 7 从路 C 报告全量搬运，禁止样本化）。
+> 全量计数见第 16 项核验表；详细签名表落 reference-manual §4/§6/§9（Step 7 从三路报告+机械提取全量搬运，禁止样本化）。
 
-- **11a 可复用 API**：49 prefix router ~337 端点全量（路 C §3.2 逐文件端点表）。高频面：/api/hermes/cluster-inspector/*（snapshot/run/pipeline）、/api/governance/*（44 端点）、/api/loop/* + /api/graph/*、/api/ide/*、/api/hermes/eval/*（24 端点）、/api/zcode-engine/*（20 端点）
-- **11b 可复用组件**：285 .vue 全量（ide 71/ia2 69/matrix-chat 52/governance 21/kanban 18/cockpit 16/loop 16/bpa 7/matrix-teams 7/eval 4/ontology 2/chat 1/skillgov 1）；容器视图入口：IdeShell/IaShell/SwarmKanbanView/MatrixChatView/CockpitView/RunCenterView/WorkbenchView
-- **11c 可复用函数/composable**：26 use* 文件（useRunTrace/useTaskLifecycle/useFitSlice/useAgentActivity 等）；服务端纯函数层 clusterinspector/detectors.ts（28 检测器纯函数无 IO）、prdelivery/validatePr、convergence.ts 记账
-- **11d 可复用 Store**：22 Pinia store（cockpit 1/ia2 5/ide 1/loop 2/matrix-chat 5/matrix-teams 6 + 注入上游的 auth 薄片），store id 全量在路 C §2.2
-- **11e 可复用类型**：export interface 1359 + export type 404，分布 485 文件
-- **11f 稳定性标注**：稳定层=custom/ 模块导出面（组件/store/composable/REST 面）+ registries 注册器 + config/ 单一事实源；不稳定层=模块内部实现与长尾单文件模块；**禁止改层=upstream 三仓 + node_modules 符号链 + inject 生成物（vite.config.overlay.ts、packages/、tests/）**
-- **11g 下游影响域（1 跳）**：上游 bootstrap/routes.ts 挂载点（改它=全部 custom 路由面回归）；vite alias 数组（@/custom 先于 @，改序=白屏）；registries/client/entry.mts（全部 A 类前端注册经它）；patches/series 顺序（依赖序，改序=注入失败）
+- **11a 可复用 API**：75 路由文件 534 端点（55 显式 prefix；机械提取 notes/inventory/endpoints.tsv）。高频面：/api/harness/*（12+ 只读聚合）、/api/progress/*、/api/loop/* + /api/graph/*、/api/ide/*、/api/hermes/eval/*、治理读模型族
+- **11b 可复用组件**：343 .vue（ia2 113/ide 80/matrix-chat 53/governance 29/kanban 17/cockpit 15/eval 10/loop 5/matrix-teams 7/长尾）；容器视图入口：IdeShell/IaShell/SwarmKanbanView/MatrixChatView/WorkbenchView/RunCenterView
+- **11c 可复用函数/composable**：38 use* 文件（useTaskProgress 单例+引用计数范式等）；服务端纯函数层（clusterinspector/detectors、progress/analytics、loop/engine）；mx-lib.sh 函数族（synapse 账号/Matrix API 薄封装/studio REST）
+- **11d 可复用 Store**：21 defineStore（ia2/ide/matrix-chat/matrix-teams/loop/cockpit 分布；另 10 个 kv/helper 辅助文件）
+- **11e 可复用类型**：export interface 2132 + export type 576
+- **11f 稳定性标注**：稳定层=custom/ 模块导出面+registries 注册器+config/ 单一事实源+mx-lib/mx-scenario-lib 公共库；不稳定层=模块内部实现与长尾单文件域；**禁止改层=vendor/ 三树基线+node_modules 符号链+inject 生成物（vite.config.overlay.ts/.overlay-injected.json/符号链接）**
+- **11g 下游影响域（1 跳）**：vendor/.../bootstrap/routes.ts 挂载点（改它=全部 custom 路由面回归）；vite alias 数组顺序（@/custom 先于 @，改序=白屏）；registries/client/entry.mts（全部 A 类前端注册经它）；patches/series 顺序（依赖序，改序=注入失败）；runtime-manifest.json（改清单=部署面漂移）
 
 ## 12. 数据规范（P1）
 
-- sqlite 9 表 3 文件：saas-store.ts（loops/loop_contracts/loop_events/loop_verifications）、event-log-store.ts（graph_events/graph_specs/graph_checkpoints）、change-governance-store.ts（change_requests/freeze_windows）
-- 其余=JSON/JSONL 文件态（pipeline-state.json/parallel-review-state.json/cluster-inspector-convergence.json 落 <home>/runtime/）；clusterinspector 直读上游 kanban.db tasks 表（node:sqlite，cluster-inspector-controller.ts L91-109）
+- sqlite 文件态：saas-store/event-log-store/change-governance-store 等（62 处 CREATE TABLE 语句，Step 7 按文件归组核实表清单）；clusterinspector 直读上游 kanban.db tasks 表（node:sqlite）
+- JSONL append-only 台账族：dispatch-ledger（commandId 去重）/tool-exec-audit（按日落盘 0700）/evidence hash 链/govbus 环形（CAP 2000）
+- 原子写纪律：JSON/JSONL tmp→rename（custom/server/AGENTS.md 成文）
 - 入口 env：RUN_UNDO_DB/HERMES_INCIDENT_DB/CHANGE_GOV_DB/HARNESS_STUDIO_DB/DATABASE_URL/LOOP_PG_URL
 
 ## 13. 五层认知基底（P1）
 
-- 13a 认知映射：①概念=127 server 模块+16 client 模块 ②结构=A/B 类改造+挂载范式 ③空间=custom/{client,server,desktop,qgate,hermes-agent-plugins,upstream-compat} ④映射=glossary（mux-v8 方案本体论六要素+词表）⑤规律=本卡 §15 ⑥处理=precheck+qgate+githooks+junit
-- 13b 六维基线：速度=小提交(<100 行)占 43%（1437/3353）；聚散=16 前端/127 服务端模块；趋势=patches/series 420 次改动最热；强度=337 端点+ws 面；能耗=285 .vue/22 store；累积量=359 有效补丁+347 行 series 修复记档
+- 13a 认知映射：①概念=149 server 域+23 client 域+44 mx-* ②结构=A/B 类双轨+挂载补丁族范式 ③空间=custom/{client,server,qgate}+patches/+simharness/+runtime/ ④映射=正本文档族+AGENTS 链 ⑤规律=本卡 §15 ⑥处理=precheck+qgate+githooks+junit
+- 13b 六维基线：速度=小提交(<100 行)占 45%（2353/5204）；聚散=server 149 域/client 23 域；趋势=patches/series 461 次改动最热；强度=534 端点+socket 命名空间；能耗=343 .vue/21 store；累积量=460 .patch（397 登记）+334 specs
 - 13c：第一层已建立（本卡）；二三层由 spec/workflow 模板承载；四五层随使用建立
 
 ## 14. 领域知识识别（P1）
 
-- 14a 技术：Vue3 SPA+Electron 桌面；Node koa 后端；Matrix 协议（CS v3/Admin v2）；OTel 数据格式；SQLite/pg/JSON 文件态混合
-- 14b 业务：AI 协作编排平台（agent 集群运维/循环编排/看板治理/评审闸/推演 harness 对接）；核心实体=Loop/Task/Card/Run/Session/Detector/Verdict/Evidence/Approval/Blueprint
-- 14c 客观规律（每条代码证据，Step 7 展开）：巡检防自风暴（冷却去重 inspector.ts）；destructive 处置永远人工门（inspector.ts 头注）；fail-closed 约定（缺 env 即 503：humansim/observability/orgloop/OBS_SIM_ROOT）；series 顺序=依赖序（git apply 顺序敏感）；双实例白屏（alias 单实例钉扎根治）
+- 14a 技术：Vue3 SPA+Electron 桌面壳；Node koa 后端；Matrix 协议；socket.io 命名空间实时；SQLite/pg/JSONL 混合；bash+python 推演 harness；hermes agent 网关生态
+- 14b 业务：SwarmStudio=AI 协作编排平台（agent 集群运维/循环编排/看板治理/评审闸/评测/推演）；核心实体=Loop/Task/Card/Run/Session/Detector/Verdict/Evidence/Approval/Gate(G1-G6)/Profile
+- 14c 客观规律（代码证据见 codeorg 报告）：fail-soft 读模型 vs fail-closed 执法链不可混用；审计唯一出口=toolpipeline/tool-hooks.ts；推演只消费产品不改产品（隔离边界三断言）；series 顺序=依赖序；双实例白屏（alias 单实例钉扎根治）；网关自更新会擦补丁（mx-up 每次自愈重放）
 
 ## 15. 编排调用关系及约束（P0）
 
-- **15a 导入方向**：custom client → 上游经 `@` 兜底 alias；上游不得 import custom（唯一例外=bootstrap/routes.ts 挂载两行 + entry.mts shim）；前端模块间跨引用允许（ia2→ide 组件在案），store 跨模块消费须显式 import
-- **15b 注册/装配顺序**：vite alias 数组顺序敏感——裸包名单实例钉扎（pinia/vue/@vue/runtime-core/vue-router）→ /src/main.ts→entry.mts 重定向 → @/custom → @ 兜底（反序=双实例白屏）；服务端新路由唯一挂载通道=bootstrap/routes.ts 的 import+app.use 两行（patch 落）
-- **15c 路由挂载**：客户端 patch 240 系列（component: () => import('@/custom/...)）+ 登录落点 /ide（patch 276）；服务端 49 router 各带 prefix；7 个 IDE 端点原生中间件直判（native-routes.ts）
-- **15d 改造落位**：A 类→custom/<mod>/；B 类→patches/NNN-域-描述.patch + series 登记；改 B 类后必须 `npm run clean && npm run inject` 再重启后端（README:498）
-- **15e 状态所有权**：前端=22 Pinia store 分模块所有；服务端=JSON/sqlite 文件态；clusterinspector 管道=采集(collectors 四采集器 fail-soft)→检测(detectors 纯函数 28 检测器)→定级→处置（InspectorDeps 注入 9 provider；notify 必发 govbus；safe-act 默认关）
-- **15f 测试边界**：vitest include 仅 custom/**；upstream 不直接单测；qgate 子包 CI 独立跑
-- 证据锚：路 C 报告 §2.4/§3.1/§4/§6；vite.config.overlay.ts alias 段；README:229-238/317-339/498/573-596
+- **15a 导入方向**：custom client → vendor 经 @ 兜底 alias；vendor 不得 import custom（唯一例外=bootstrap/routes.ts 挂载两行+entry.mts shim）；前端域间跨引用允许（ia2→governance 42 次最多），server 域间显式 import（governance 被引 30 次居首=底座域）
+- **15b 注册/装配顺序**：vite alias 数组顺序敏感（裸包单实例钉扎→/src/main.ts→entry.mts 重定向→@/custom→@ 兜底，反序=双实例白屏）；客户端 app.use(router) 推迟到全部 addRoute 之后（entry.mts:151-166，防 catch-all 环）；服务端挂载=protected 序列尾部追加两行
+- **15c 路由挂载**：客户端=域 routes.ts 纯描述+bootstrap.ts:82-84 统一 addRoute（零上游 router 锚点纪律）；服务端=55 显式 prefix router+子路由 router.use('/workbench' 等)；ia2 主路由树（IA_AREAS 六阶段+旧链迁移表+ANNEXED_LEGACY）
+- **15d 改造落位**：A 类→custom/<域>/；B 类→patches/NNN-域-描述.patch+series 登记；改 B 类后 clean+inject 再重启后端；新依赖补丁须同步锁（687 先例）
+- **15e 状态所有权**：前端=21 Pinia store 分域所有（组合式 defineStore）；服务端=JSON/sqlite/JSONL 文件态分域所有；审计通道三件=tool-hooks（唯一出口）/govbus（事件总线，REST 只读不开写入口）/dispatch-ledger
+- **15f 测试边界**：根 vitest include 仅 custom+scripts（vendor 不直接单测）；simharness 自持；qgate 独立 CI；pytest 拼合树运行态
+- 证据锚：codeorg 报告 §1/§2.2/§3.2/§7；vitest.config.ts:23-35,70；inject.mjs:340-491,551-589
 
 ## 16. 详尽组件库清单（P0·计数核验表）
 
 | 维度 | 枚举计数 | 清单去向 | 来源命令 |
 |---|---|---|---|
-| 前端 .vue | 285（views 56+components 229） | reference-manual §4 | find custom/client -name '*.vue' \| wc -l |
-| Pinia store | 22 文件/22 store id | §4 | grep -rl defineStore custom --include='*.ts' |
-| composables | 26 use* 文件 | §4 | find custom/client -name 'use*.ts' |
-| server 模块 | 127（+__tests__） | §4 | ls -d custom/server/*/ \| wc -l |
-| prefix router | 49 | §6 | grep -rn "Router({ prefix" custom/server |
-| REST 端点 | ~337（291 router.+39 变量名+7 原生） | §6 逐端点 | grep -rn "router\.(get\|post\|put\|delete\|patch)" |
-| *-store.ts | 26 | §4 | find custom/server -name '*-store.ts' |
-| sqlite 表 | 9（3 文件） | §9 | grep -rn "CREATE TABLE" custom/ |
-| 有效补丁 | 359（series）；409 .patch 文件在盘 | codebase | grep -vc '^\s*#\|^\s*$' patches/series |
-| 测试文件 | 628 | codebase | find custom -name '*.test.ts' \| wc -l |
-| 类型导出 | interface 1359 + type 404（485 文件） | §9 | grep -rlE "^export (interface\|type)" |
-| env 变量 | 203 唯一 | codebase | grep -rhoE "process\.env\.[A-Z_0-9]+" \| sort -u \| wc -l |
+| 前端 .vue | 343 | reference-manual §4 | git ls-files 'custom/client/*.vue' |
+| Pinia store | 21 defineStore | §4/§9 | grep defineStore custom/client |
+| composables | 38 use* 文件 | §4 | git ls-files 'custom/client/**/use*.ts' |
+| server 域 | 149（+__tests__ 461 文件） | §4 | git ls-files custom/server 三级目录 |
+| prefix router | 55 显式（路由文件 75） | §6 | grep "new Router({ prefix" custom/server |
+| REST 端点 | 534（机械提取） | §6 逐端点 | notes/inventory/endpoints.tsv |
+| *-store.ts | 29 | §4 | git ls-files 'custom/server/**/*-store.ts' |
+| mx-* 脚本 | 44 | codebase/recipes | git ls-files 'simharness/mux/mx-*' |
+| .patch 文件 | 460（series 登记 397，最大号 687） | codebase | git ls-files patches + series |
+| vitest 测试 | 875（custom+scripts） | codebase | git ls-files '*.test.ts' 过滤 |
+| shell 守门 | 31 .test.sh（simharness） | codebase | git ls-files simharness |
+| 类型导出 | interface 2132 + type 576 | §9 | grep export |
+| env 变量 | 296 唯一 | codebase | grep process.env |
 
-> Step 13 由 inventory-verify.sh 机器复核。
+> Step 13 由 inventory-verify.sh 机器复核（清单计数 ≥ 枚举×0.95）。
 
 ## 17. 合规与质量特性基线（P1）
 
-无强监管合规要求（默认约定，可调整）。质量特性实践基线：jargon 门禁（githooks HARD=0）、qgate engineering.basic-check（junit 落盘 minTotal 100；退出码 0 但报告含失败=INCONCLUSIVE 不给假绿）、symbol-grounding（依赖借用契约：上游砍依赖即亮红）、verify-dist 产物门禁（index.html 缺失/<200B/assets 无 JS 硬失败）、eval 密封集防探测契约。数据分级：shared/ 补件事故后全置换占位+scrub VACUUM（教训在案，密钥轮换为用户硬待办）。
+无强监管合规要求（默认约定，可调整）。质量特性实践基线：spec-first 四层拦截（L1 宿主 hook deny/L2 pre-commit/L3 门禁/L4 状态机）；qgate engineering.basic-check（junit minTotal 100；INCONCLUSIVE 不给假绿）；symbol-grounding（depsFile 锚 vendor manifest，砍依赖即红）；jargon 门禁；verify-dist 产物门禁；eval 密封集防探测契约；审计台账三件（decisions/trace/gate-deny 入库）。数据分级：shared/ 补件事故教训在案（密钥轮换用户硬待办）。
