@@ -51,38 +51,49 @@ function closeInbox(): void {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  padding: 18px 24px 20px;
+  gap: 12px;
 }
 .ia-inbox__bar {
   display: flex;
   align-items: center;
-  padding: 8px 12px 0;
+  padding: 0 0 10px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 .ia-inbox__title {
-  margin: 0 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 .ia-inbox__close {
   margin-left: auto;
-  margin-bottom: 2px;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border: none;
-  border-radius: 5px;
+  border: 1px solid transparent;
+  border-radius: 7px;
   background: transparent;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
-  &:hover { color: var(--text-primary); background: var(--bg-secondary); }
+  &:hover { color: var(--text-primary); background: var(--bg-secondary); border-color: var(--border-color); }
 }
 .ia-inbox__body {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+@media (max-width: 720px) {
+  .ia-inbox { padding: 14px; }
+  .ia-inbox__title { font-size: 18px; }
 }
 </style>

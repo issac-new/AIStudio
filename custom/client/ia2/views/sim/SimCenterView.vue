@@ -111,7 +111,10 @@ const INTRO_KEY: Record<string, string> = {
   <div class="sim-center">
     <header class="sim-center__head">
       <IaBreadcrumb />
-      <h2 class="sim-center__title">{{ navLocale === 'zh' ? '全流程推演' : 'Full-run Simulation' }}</h2>
+      <h2 class="sim-center__title">
+        <span class="sim-center__kicker">{{ navLocale === 'zh' ? '全流程推演' : 'Full-run Simulation' }}</span>
+        {{ labelOf(activeTab) }}
+      </h2>
       <RunSelector />
     </header>
 
@@ -172,52 +175,64 @@ const INTRO_KEY: Record<string, string> = {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 14px 16px 16px;
+  padding: 18px 24px 20px;
   overflow: hidden;
-  gap: 10px;
+  gap: 14px;
 }
-.sim-center__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.sim-center__title { margin: 0; font-size: 16px; }
+.sim-center__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sim-center__title {
+  margin: 0; display: flex; align-items: baseline; gap: 10px;
+  font-size: 20px; line-height: 1.3; font-weight: 650; letter-spacing: -0.01em;
+}
+.sim-center__kicker {
+  font-size: 12px; font-weight: 500; letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
 .sim-center__spacer { flex: 1; }
 .sim-center__runsplit {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  border: 1px dashed var(--border-color); border-radius: var(--radius-standard);
-  padding: 14px 16px; font-size: 12.5px; color: var(--text-muted);
+  border: 1px dashed var(--border-color); border-radius: 10px;
+  padding: 14px 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;
 }
 .sim-center__runsplit button {
-  margin-left: auto; border: 1px solid var(--accent-primary); border-radius: var(--radius-micro);
+  margin-left: auto; border: 1px solid var(--accent-primary); border-radius: 8px;
   background: transparent; color: var(--accent-primary);
-  font-family: inherit; font-size: 12px; padding: 4px 12px; cursor: pointer; white-space: nowrap;
+  font-family: inherit; font-size: 12.5px; padding: 5px 14px; cursor: pointer; white-space: nowrap;
 }
 .sim-center__runsplit button:hover { background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
 .sim-center__runsplit button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
-.sim-center__lead { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.55; }
-.sim-center__tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
+.sim-center__lead { margin: 0; max-width: 940px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.sim-center__tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); }
 .sim-center__tab {
-  padding: 4px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-micro);
+  padding: 9px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
   background: transparent;
-  color: inherit;
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-family: inherit;
+  transition: color 0.12s, border-color 0.12s;
 }
-.sim-center__tab:hover { color: var(--text-primary); background: var(--bg-secondary); }
-.sim-center__tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.sim-center__tab:hover { color: var(--text-primary); }
+.sim-center__tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
 .sim-center__tab--active {
-  border-color: var(--accent-primary);
-  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
   color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
   font-weight: 600;
 }
 .sim-center__body { flex: 1; min-height: 0; overflow-y: auto; }
 .sim-center__panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 16px 18px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-standard);
+  border-radius: 10px;
+}
+
+@media (max-width: 720px) {
+  .sim-center { padding: 14px 14px 16px; gap: 12px; }
+  .sim-center__title { font-size: 18px; }
 }
 </style>
