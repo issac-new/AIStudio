@@ -99,3 +99,5 @@ inject 后 vendor/** 在外仓呈脏态（与今日 upstream 注入态同构）�
 | 7 | 工作区目录改名（ncwk→AIStudio）放最后阶段，须等在途会话收口、停 8647/8649 后执行 | 2026-10-17 双删事故立法 + 运行中服务实测 |
 | 8 | SwarmTeam 多 profile 部署包（本机 ~/.hermes/profiles 的脱敏分发源）并入 `team/`，旧仓 issac-new/SwarmTeam 归档 | 用户 2026-10-24 指示（「本机 hermes agent 的 profile 等也合并入当前项目」） |
 | 9 | AIStudio 仓转 **private**：整合 push 落地后短暂公开暴露了原私有 simharness 内容（窗口约数分钟，唯一 fork 为 9 月旧 SwarmStudio 快照不含该内容，高置信密钥模式扫描零命中），转私有止损；是否恢复公开由用户裁定（恢复前须完成 simharness 脱敏审查） | 2026-10-24 泄露止损（转私有可逆/泄露不可逆） |
+
+| 10 | 恢复**公开**（用户裁定 simharness 无敏感信息）。扫描结论：私钥/token 前缀/JWT/键值式/内网 IP/手机号 两梯队扫描——simharness 工作树与**全部 git 历史**高危模式零命中；全部候选命中均为占位符、检测规则文档、公开支付规范（EMVCo/PBOC/网联）内容与仓库自带的 secret-scan-gate 夹具白名单（仅假 token）。2026-10-24 执行转公开，匿名 ls-remote 验证通过 | 用户 2026-10-24 裁定 + 扫描实证 |
