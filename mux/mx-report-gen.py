@@ -2637,9 +2637,27 @@ def eval_summary_html():
     stab = run.get('outputStability') or {}
     beh = d.get('behaviorSignals') or {}
     biz = d.get('businessSummary') or {}
+    # 群体协作四维度读数（2026-10-24 吸收轮）：通信拓扑/信用分配/帕累托/社会动力学
+    swarm = d.get('swarmCollab') or {}
     diff_txt = ' · '.join(f"{b.get('tier')}={pct(b.get('passAtK'))}({b.get('taskCount')})" for b in by_diff if isinstance(b, dict)) or '未标注'
     role_txt = ' · '.join(f"{b.get('role')}={pct(b.get('passAtK'))}({b.get('passed')}/{b.get('taskCount')})" for b in by_role if isinstance(b, dict)) or '未标注'
     stab_txt = f"翻转 {pct(stab.get('flipRate'))}（{stab.get('flips')}/{stab.get('checked')}，{stab.get('rounds')} 轮）" if stab else '未开启'
+    comm_sw = swarm.get('communication') or {}
+    cred_sw = swarm.get('credit') or {}
+    par_sw = swarm.get('pareto') or {}
+    soc_sw = swarm.get('social') or {}
+    fi_sw = comm_sw.get('intentFidelity') or {}
+    dl_sw = comm_sw.get('deadlockSignals') or {}
+    if swarm:
+        swarm_txt = (f"MOR {esc(round(comm_sw.get('morCharsPerTask') or 0))} 字符/任务（字符口径）"
+                     f" · 锚点保真 {pct(fi_sw.get('rate'))}（{fi_sw.get('preserved')}/{fi_sw.get('anchoredTasks')}）"
+                     f" · 回灌代偿 {esc(dl_sw.get('backfillCount'))} · 回执缺席 {esc(dl_sw.get('receiptMissing'))}"
+                     f" · 任务完成 {esc((cred_sw.get('taskCompletion') or {}).get('done'))}/{esc((cred_sw.get('taskCompletion') or {}).get('total'))}"
+                     f" · 帕累托前沿 {esc(par_sw.get('frontierSize'))}/{esc(len(par_sw.get('points') or []))}"
+                     f" · UAT 无条件通过 {pct(soc_sw.get('unconditionalPassRate'))} · G5 打回 {esc(soc_sw.get('gateRejects'))}＋打回类问题单 {esc(soc_sw.get('gateFailIssues'))}（批判性证据）"
+                     f" · 拜占庭注入 no_data（挂账）")
+    else:
+        swarm_txt = '未采集'
     beh_rows = beh.get('rows') or []
     beh_txt = (f"{len(beh_rows)} 信号 · 可判读 {sum(1 for r in beh_rows if isinstance(r, dict) and r.get('sufficient'))}"
                if beh else '未采集')
@@ -2671,6 +2689,7 @@ def eval_summary_html():
       <tr><td>线上证据</td><td>{'已回填' if run.get('liveEvidence') else '未回填（QPS/分档 no_data）'}</td><td>只有回填后才是真判</td></tr>
       <tr><td>难度/角色分桶</td><td>难度：{esc(diff_txt)}；角色：{esc(role_txt)}</td><td>V8.48；宁缺毋滥——未标注不计，失败直达责任方</td></tr>
       <tr><td>稳定性/行为信号/经营摘要</td><td>重复判定 {esc(stab_txt)} · 行为信号 {esc(beh_txt)} · 经营摘要 {esc(biz_txt)}</td><td>V8.48；观测读数不改判（同 V8.46 纪律）</td></tr>
+      <tr><td>群体协作读数</td><td>{esc(swarm_txt)}</td><td>四维度（通信拓扑/信用分配/帕累托/社会动力学）；字符口径+观察性归因，只观测不进判据（2026-10-24 吸收轮 D2-D8）</td></tr>
       <tr><td>动作驱动</td><td>{len(actions)} 条 · 高优 {len(high)} 条</td><td>每条失败/缺口应指向下一步动作</td></tr>
     </table>
   </div>
