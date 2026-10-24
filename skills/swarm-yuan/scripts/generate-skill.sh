@@ -127,14 +127,14 @@ UNIVERSAL_FILES=(
   "scripts/ops-readonly-guard.sh|gen|standard"
   "scripts/tunnel.sh|gen|standard"
   "scripts/tunnel.conf|assets|standard"
-  "references/subagent-orchestration.md|ref|standard"
+  "references/subagent-orchestration.md|refd|standard"
   "references/governance-agents.md|ref|compliance"
   "references/task-methodology-router.md|ref|standard"
   "references/canary-monitoring.md|ref|standard"
-  "references/review-methodology.md|ref|standard"
-  "references/code-graph-tools.md|ref|standard"
+  "references/review-methodology.md|refd|standard"
+  "references/code-graph-tools.md|refd|standard"
   "references/gsd-patterns.md|ref|standard"
-  "references/memory-persistence.md|ref|standard"
+  "references/memory-persistence.md|refd|standard"
   "references/security-spec.md|ref|lite"
   "references/cognition-framework.md|ref|standard"
   "references/logic-razor.md|ref|standard"
@@ -232,7 +232,7 @@ _relocate_project_root() {  # $1=skill_dir
     | sed 's/^PROJECT_DIR=//;s/[[:space:]]*$//;s/^"//;s/"$//' || true)
   [[ -n "$old" && "$old" != "$new" ]] || return 0
   case "$sd/" in "$new"/*) ;; *)
-    echo "⚠ 技能目录不在新项目根内，保留旧 PROJECT_DIR（迁移项目请把技能放进项目或用 SKILLS_PATH_REWRITE）: $old"
+    echo "⚠ 技能目录不在新项目根内，保留旧 PROJECT_DIR（迁移项目请把技能放进项目或用 SKILLS_PATH_REWRITE）: ${old}"
     return 0 ;;
   esac
   for f in "scripts/precheck.conf" "scripts/precheck.patch.conf" "SKILL.md" \
@@ -243,7 +243,7 @@ _relocate_project_root() {  # $1=skill_dir
       n=$((n+1))
     fi
   done
-  echo "⚠ 项目根已迁移: $old → $new（已刷新 ${n} 个操作档；历史 specs/reviews 保留原路径作为证据）"
+  echo "⚠ 项目根已迁移: ${old} → ${new}（已刷新 ${n} 个操作档；历史 specs/reviews 保留原路径作为证据）"
 }
 
 merge_precheck_conf() {

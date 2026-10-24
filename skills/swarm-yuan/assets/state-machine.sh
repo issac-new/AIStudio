@@ -66,7 +66,12 @@ if [[ -z "${PROJECT_DIR:-}" ]]; then
 fi
 # R126：export 给子进程——transition/auto 调 trace-log.sh 落决策时不传 --project-dir，
 # 未 export 时 trace-log 退回 $(pwd)/.swarm-yuan，cwd≠项目根则阶段流转决策写错树
-# （与 R118「状态写错树」同族）。conf 未配 PROJECT_DIR 时两侧一致退回 cwd，语义不变。
+# （与 R118「状态写错树」同族）。conf 未配 PROJECT_DIR 时两侧一致退回 cwd；
+# R141 D1：cwd 在技能目录内（<project>/.<host>/skills/<skill>/...）则上溯项目根，
+# 与 trace-log.sh _tl_resolve_project_dir 同条带（两侧一致，账本正本恒在项目侧）。
+if [[ -z "${PROJECT_DIR:-}" ]]; then
+  PROJECT_DIR="$(printf '%s' "$(pwd)" | sed -E 's|/\.[^/]+/skills/[^/]+(/.*)?$||')"
+fi
 [[ -n "${PROJECT_DIR:-}" ]] && export PROJECT_DIR
 
 # ===== 按项目定制 =====

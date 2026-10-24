@@ -2,7 +2,7 @@
 
 > **何时读我**：需要为 spec/设计文档/审查报告/发布说明产出可发布图表时；或需要判断“这张图该不该画、画哪种、画完怎么机械验收”时。
 > **定位**：生成器侧方法论档（【生成器侧】，随生成器技能分发，不进目标技能产物）。回答三个问题：什么时候值得画图、画哪种图、画完怎么机械验收。
-> **上游**：cathrynlavery/diagram-design（MIT，Cathryn Lavery），物化基线 main `7a12007`（2026-10-21，plugin 2.6.119），运行时全文在 `runtime/diagram-design/`，来源与刷新方法见该目录 `MANIFEST.md`。
+> **上游**：cathrynlavery/diagram-design（MIT，Cathryn Lavery），物化基线 main `0b9b10cab`（2026-10-24，plugin 2.6.120），运行时全文在 `runtime/diagram-design/`，来源与刷新方法见该目录 `MANIFEST.md`。
 > **消费方式**：本档负责“选型与流程”，上游原文负责“布局语法与模板”。动手前必须读 `runtime/diagram-design/skills/diagram-design/SKILL.md` 与所选类型的 `references/type-*.md`，不得凭本档摘要直接画。
 
 ---

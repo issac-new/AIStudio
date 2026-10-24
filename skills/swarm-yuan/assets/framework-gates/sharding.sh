@@ -270,7 +270,12 @@ _fw_sharding_check() {
   us_case=$(grep -rniE 'case[[:space:]]+when[^!]*select' "${xmlarr[@]}" 2>/dev/null || true)
   [[ -n "$us_case" ]] && us_hits="${us_hits}${us_case}
 "
-  _fw_report warn fw_sharding_unsupported_sql "${us_hits}" "检出官方 limitation 不支持/受限 SQL（LOAD DATA|XML 到分片表不支持；CASE WHEN 含子查询不支持；另须人工核对 Oracle rownum+BETWEEN 分页、SQLServer WITH 分页、DISTINCT 混用聚合、; 多语句）" "未检出 LOAD DATA/CASE WHEN 子查询等不支持 SQL"
+  # 聚合函数外包表达式阻断归并（R141 实栈：COALESCE(SUM(...)) 只返回部分分片结果）
+  local us_agg
+  us_agg=$(grep -rniE '(coalesce|ifnull|nvl)[[:space:]]*\([[:space:]]*(sum|count|avg|max|min)[[:space:]]*\(|case[[:space:]]+when[[:space:]]+(sum|count|avg|max|min)[[:space:]]*\(' "${xmlarr[@]}" 2>/dev/null || true)
+  [[ -n "$us_agg" ]] && us_hits="${us_hits}${us_agg}
+"
+  _fw_report warn fw_sharding_unsupported_sql "${us_hits}" "检出官方 limitation 不支持/受限 SQL（LOAD DATA|XML 到分片表不支持；CASE WHEN 含子查询不支持；聚合函数外包 COALESCE/IFNULL/NVL 会阻断归并导致静默少算，空值归一改应用层；另须人工核对 Oracle rownum+BETWEEN 分页、SQLServer WITH 分页、DISTINCT 混用聚合、; 多语句）" "未检出 LOAD DATA/CASE WHEN 子查询/聚合外包等不支持 SQL"
 
   # ====================================================================
   # fw_sharding_hint(warn)：HintManager 未 close/未 try-with-resources → ThreadLocal 泄漏
