@@ -65,6 +65,27 @@ inject 后 vendor/** 在外仓呈脏态（与今日 upstream 注入态同构）�
 2. /tmp 全新克隆：inject → vendor npm ci → serve（8647 探活）→ dev（8649 走查）→ smoke 子集，零新增回归。
 3. 合并后主检出 vendor npm ci + serve-main 换装 + 双端活体绿。
 
+## 验证结果（2026-10-24 实测）
+
+| 门 | 结果 |
+|---|---|
+| ① vendor 重放 | 403 applied（396 studio/agent + 7 zcode）、0 FAILED；--clean 反向后 vendor 状态 0 行（pristine 复原）。字节对拍 vs 活 upstream 注入树：agent/zcode 零真实差异；studio 仅 2 文件差异且方向=活树滞后（serve-main 钉旧 commit，patch 686 新内容在 vendor 正身侧） |
+| ② /tmp 全新克隆 | 克隆→inject 403/0（完整性硬门过）→ npm install 35s/942 包 → serve :8669 /health 200（agent_bridge ready）→ vite :8659 200（title=SwarmStudio）+ 经代理 /health 200 → 守门测试 18/18 |
+| ③ GitHub | merge f7cd7bb64 → main；issac-new/SwarmStudio rename → AIStudio（origin 已更新，redirect 保留）；simharness/Swarm-yuan 两旧仓 archived（isArchived=true） |
+
+整合过程修复的三件缺陷（均有独立提交）：
+
+1. `.gitignore` 全局 `packages/`、`tests/` 规则误伤 vendor 基线——根锚定后补收 24,772 文件（f0e2ac5）。
+2. 全新克隆 README 顺序（inject 先于 npm install）下 node_modules 软链无人补链致 serve 崩（koa TS2307）——ensure-injected 幂等补链。
+3. 守门测试解析序：aipay-agent-sync.sh 改仓内 simharness 优先（dee0022）；ensure-injected 导入序适配锚定字面量。
+
+挂账（不阻塞本整合）：
+
+- Ycode 引擎在 vendor/zcode 的 pnpm install+build（`npm run zcode:ensure`，首次较重）；当前引擎位仍可回落外置树。
+- `.swarm-yuan/hooks/pre-commit` 自包含化改动须回移 generate-skill.sh 装配模板。
+- skillgov 生成器路径（~/.cc-switch/skills/swarm-yuan）可择优切仓内 `skills/swarm-yuan`（SKILLGEN_PATH 已支持覆盖）。
+- 辅助脚本（build-dmg/drift-audit/sync-upstream/migrate-patches 等）仍按旧布局路径解析，用 env 覆盖可用，随后续轮逐个吸收。
+
 ## 决策记录
 
 | # | 决策 | 来源 |
