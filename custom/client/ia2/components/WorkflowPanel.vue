@@ -6,7 +6,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { fetchIdentities, type IdentityInfo } from '../identity-chat'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
-import { fetchWorkflowRun, fetchWorkflowRuns, startWorkflow, type WorkflowRun } from '../workflow'
+import { deleteWorkflowRun, fetchWorkflowRun, fetchWorkflowRuns, startWorkflow, type WorkflowRun } from '../workflow'
 
 const props = defineProps<{ runId?: string | null }>()
 
@@ -40,6 +40,16 @@ onMounted(() => { void refreshRuns(); schedule(); void fetchIdentities().then(l 
 onUnmounted(() => { if (timer) clearInterval(timer) })
 
 // ── 详情 ──
+async function removeRun(): Promise<void> {
+  if (!detail.value || detail.value.status === 'running') return
+  try {
+    await deleteWorkflowRun(detail.value.id)
+    detail.value = null
+    await refreshRuns()
+    if (typeof location !== 'undefined' && location.hash.includes('wf=')) location.hash = '#/app/collab'
+  } catch (e) { errMsg.value = (e as Error).message.slice(0, 160) }
+}
+
 async function loadDetail(id: string): Promise<void> {
   try { detail.value = await fetchWorkflowRun(id) } catch { /* 保持旧态 */ }
 }
@@ -105,6 +115,7 @@ async function run(): Promise<void> {
           <span class="wfp__dot" :class="`wfp__dot--${statusTone(detail.status)}`" />
           <span class="wfp__dname">{{ detail.name }}</span>
           <span class="wfp__dmode">{{ detail.mode === 'parallel' ? '并行' : '串行' }}</span>
+          <button type="button" class="wfp__del" data-testid="wf-del" :disabled="detail.status === 'running'" :title="detail.status === 'running' ? '运行中不可删除' : '删除该运行记录'" @click="removeRun">删除记录</button>
         </header>
         <div v-for="(s, i) in detail.steps" :key="i" class="wfp__step" :data-testid="`wf-step-${i}`">
           <div class="wfp__step-top">
@@ -175,6 +186,9 @@ async function run(): Promise<void> {
 .wfp__detail { display: flex; flex-direction: column; gap: 8px; }
 .wfp__dhead { display: flex; align-items: center; gap: 8px; }
 .wfp__dname { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.wfp__del { margin-left: auto; font-size: 11px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--color-danger, #d33); color: var(--color-danger, #d33); background: transparent; cursor: pointer; }
+.wfp__del:hover:not(:disabled) { background: color-mix(in srgb, var(--color-danger, #d33) 8%, transparent); }
+.wfp__del:disabled { opacity: .4; cursor: default; }
 .wfp__dmode { font-size: 10px; color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 3px; padding: 0 4px; }
 .wfp__step { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
 .wfp__step-top { display: flex; align-items: center; gap: 8px; }

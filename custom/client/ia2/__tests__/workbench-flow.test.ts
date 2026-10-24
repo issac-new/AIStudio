@@ -282,6 +282,18 @@ describe('FlowNavPanel — 左栏工作流导航（纯交互）', () => {
     expect(empty.find('[data-testid="flow-empty"]').exists()).toBe(true)
   })
 
+  it('通道行可点击展开状态详情（五轮 I：死功能激活）——再点收起', async () => {
+    const w = mount(FlowNavPanel, { props: { sessions: [], loops: [], selection: null, agents: [
+      { name: 'zcode', busyState: 'idle' as const, sessionCount: 1, source: 'platform' as const },
+      { name: 'feishu', busyState: 'offline' as const, sessionCount: 0, source: 'platform' as const },
+    ] } })
+    await w.find('[data-testid="flow-agent-zcode"]').trigger('click')
+    expect(w.find('[data-testid="flow-channel-zcode"]').exists()).toBe(true)
+    expect(w.find('[data-testid="flow-channel-zcode"]').text()).toContain('来源')
+    await w.find('[data-testid="flow-agent-zcode"]').trigger('click')
+    expect(w.find('[data-testid="flow-channel-zcode"]').exists()).toBe(false)
+  })
+
   it('v14 单一聊天列表：三类混排按最近活动降序、kind 图标行首、旧三小节退役', () => {
     const w = mountPanel()
     expect(w.find('[data-testid="flow-cluster-chat-all"]').exists()).toBe(true)

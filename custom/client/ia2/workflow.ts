@@ -59,3 +59,7 @@ export async function startWorkflow(input: {
   const data = (await req('/api/ia2/workflow/runs', { method: 'POST', body: JSON.stringify(input) })) as { run: WorkflowRun }
   return data.run
 }
+
+export async function deleteWorkflowRun(id: string): Promise<void> {
+  await req(`/api/ia2/workflow/runs/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
