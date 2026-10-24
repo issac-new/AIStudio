@@ -1,0 +1,256 @@
+#!/bin/bash
+# mx-setup.sh — 单 gateway 多路复用拓扑一次性幂等准备（方案 V2.0 §4 P0-4）
+#
+# 产出（SIM_ROOT=/Users/cuishi/lab/ncwk-sim-mux）：
+#   24 matrix 账号 + 单 hermes root + 12 Orchestrator profile + 22 研发专职 agent profile
+#   + 每账号 2 块独立 kanban（board.json 挂 team 围栏）+ fleet-manifest + 技能同构副本
+# 幂等：账号/板按存在性跳过；配置/manifest 每次重生成（模板同步，漂移自动收敛）。
+set -uo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/mx-lib.sh"
+
+log "=== mx-setup：多路复用拓扑准备（SIM_ROOT=${SIM_ROOT}；节点=$(node_mode_desc)）==="
+
+# ── 0. 前置检查 ─────────────────────────────────────────
+# matrix 接入三模式（2026-10-12 双模式轮）：
+#   MX_SYNAPSE_MODE=docker（默认，mac 单机现状）：docker exec 本机容器建 admin
+#   MX_SYNAPSE_MODE=api     ：远端 synapse，用 MX_REG_SECRET 走注册 API 建 admin
+#   MX_SYNAPSE_MODE=manual  ：远端 synapse 且不开放注册 API——admin 人工预建，
+#                             此处只验登录可用（密码走 user_pass 约定式）
+MX_SYNAPSE_MODE="${MX_SYNAPSE_MODE:-docker}"
+case "$MX_SYNAPSE_MODE" in
+  docker)
+    command -v docker >/dev/null || fail "docker 不可用"
+    docker exec "$SYNAPSE_CONTAINER" true 2>/dev/null || fail "synapse 容器 $SYNAPSE_CONTAINER 未运行"
+    ;;
+  api)
+    [[ -n "${MX_REG_SECRET:-}" ]] || fail "MX_SYNAPSE_MODE=api 需要 MX_REG_SECRET（synapse registration_shared_secret）"
+    curl -sf -m 5 "$HS/_matrix/client/versions" >/dev/null || fail "远端 homeserver 不可达：$HS"
+    ;;
+  manual)
+    curl -sf -m 5 "$HS/_matrix/client/versions" >/dev/null || fail "远端 homeserver 不可达：$HS"
+    ;;
+  *) fail "未知 MX_SYNAPSE_MODE=${MX_SYNAPSE_MODE}（docker|api|manual）" ;;
+esac
+[[ -x "$HERMES_BIN" ]] || fail "HERMES_BIN 不可执行：$HERMES_BIN"
+[[ -f "$HOME/.hermes/config.yaml" ]] || fail "宿主 config.yaml 不存在（模型配置来源）"
+[[ -f "$STUDIO_DIST/server/index.js" ]] || fail "studio 构建产物缺失：$STUDIO_DIST/server/index.js（先 npm run build:full）"
+curl -sf -m 3 "${MX_HINDSIGHT_API:-http://localhost:8888}/health" >/dev/null \
+  || fail "hindsight 记忆服务（${MX_HINDSIGHT_API:-http://localhost:8888}）不可用——家族共享记忆依赖它（用户裁决 2026-09-25），请先拉起 hindsight-api 再跑"
+
+# -- 0a. decision backend probe (F-7; fail-open, same discipline as 5.6-10)
+# JEV gates & toolresultguard both degrade fail-open: offline = issue log, not blocking.
+# Probe also snapshots version triple (mlx / mlx-vlm / model dir) into evidence.
+MX_DECISION_API="${MX_DECISION_API:-http://127.0.0.1:8000}"
+mkdir -p "$SIM_ROOT/evidence"
+if curl -sf -m 3 "$MX_DECISION_API/health" >/dev/null 2>&1; then
+  {
+    echo "# decision-backend snapshot (F-7, $(date '+%F %T'))"
+    echo "- endpoint: $MX_DECISION_API/health OK"
+    "$HOME/lab/clef-runtime/venv/bin/python" -c 'import mlx.core as m, mlx_vlm; print(f"- mlx: {m.__version__}"); print(f"- mlx-vlm: {mlx_vlm.__version__}")' 2>/dev/null \
+      || echo "- mlx/mlx-vlm probe failed (venv missing, honest note)"
+    ls -1 ~/.cache/huggingface/hub 2>/dev/null | grep -i clef | sed 's/^/- model-snapshot: /' | head -2 \
+      || echo "- model snapshot dir not found (honest note)"
+  } > "$SIM_ROOT/evidence/decision-backend-snapshot.txt"
+  log "decision backend online ($MX_DECISION_API), snapshot -> evidence/decision-backend-snapshot.txt"
+else
+  echo "ISSUE|decision-backend-degraded|product|decision backend ($MX_DECISION_API/health) probe failed - JEV gates & toolresultguard degrade fail-open (F-7, not blocking; start via ~/lab/clef-runtime/start-clef.sh)" >> "$SIM_ROOT/evidence/issues.log"
+  log "WARN decision backend offline (fail-open, issue logged, not blocking)"
+fi
+
+
+# ── 0b. SIM 执行面快照供给（隔离轮 2026-10-03）：先快照后打补丁——
+#     agent 源码快照就位后，390/391/533/534 与 runtime manifest 全部落 SIM 自有树，
+#     宿主 ~/.hermes/hermes-agent 不再被推演写入。dist 快照使 studio 与活注入树解耦。
+mx_provision_agent_src
+mx_provision_product_dist
+
+# ── 1. 运行时 patch（390/391 → SIM 源码快照树）───────────
+mx_apply_agent_patches
+
+# ── 1b. overlay/runtime 部署（B1 结构化 raci 等 7 文件；与 inject 出口同源，
+#        mx 流程不经 inject 故显式幂等同步，失败只告警不阻断）─────────────
+if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
+  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" ) \
+    || log "runtime 部署告警（结构化 raci 等能力依赖它，需人工复核 deploy-agent-runtime）"
+fi
+
+# ── 2. matrix 账号（产品通道供给，R31 2026-10-06 用户裁决直接落地）────
+# 界面上线是必须要求：除系统引导账号 @admin（产品端点无法自举第一个 admin，
+# docker exec 幂等保底）外，全部账号经邀请流 POST /api/governance/invites 供给（D21 切换）
+# ——#/app/accounts「邀请账号」同源（D21），建号即 roster+invites 双台账提交（probe 锚
+# rosterCommit=edc6ed2）。studio 先于 gateway 拉（/health/ready 只看自身
+# bootstrap，不探 gateway）；账号在位即跳过（appendTableRow 不去重，重复
+# 调会加重复 roster 行）；synapse 直建仅剩 admin 一处=系统引导语义。
+# admin 建号按模式分叉：docker=容器内 CLI（现状）；api=注册 shared-secret 三步握手；
+# manual=人工已建，验登录即可。其余 24 账号仍走产品通道（governance API，天然远端）。
+# 节点分工（2026-10-12 三机轮）：账号供给与 roster 登记只在导演机做一次（studio 在
+# 导演机，governance 单写者）；agent 节点跳过本段，只验本节点档案 token 已同步到位。
+if [[ "$MX_ROLE" == "agent" ]]; then
+  log "MX_ROLE=agent：跳过账号供给段（导演机已建）——校验本节点 creds"
+  for u in $(node_users); do
+    for n in "$u" "$u-agent"; do
+      [[ -s "$CREDS_DIR/$n.token" ]] || fail "creds/$n.token 缺位——先在导演机跑账号供给，再同步 creds/<档案>*.token 到本节点"
+    done
+  done
+  log "本节点 creds 校验通过（$(node_users | wc -l | tr -d ' ') 档案 ×2 token）"
+else
+case "$MX_SYNAPSE_MODE" in
+  docker) synapse_register "admin" "$(user_pass admin)" ;;
+  api)    synapse_register_api "admin" "$(user_pass admin)" ;;
+  manual)
+    tok=$(mx_login "admin" "$(user_pass admin)" 2>/dev/null | tr -d '\n')
+    [[ -n "$tok" && "$tok" != "null" ]] || fail "manual 模式：admin 登录失败——请在远端 homeserver 人工创建 admin（密码按 user_pass 约定式）后重跑"
+    log "manual 模式：admin 已在位（登录验证通过）"
+    ;;
+esac
+ensure_studio_up || fail "studio 提前拉起失败（R31 产品通道前置；查 $LOGS_DIR/studio.log）"
+log "studio 就绪（:${STUDIO_PORT}，产品通道前置）"
+for u in "${USERS[@]}"; do
+  [[ "$u" == "admin" ]] && continue
+  gov_provision_user "$u" || fail "产品通道供给失败：${u}（端点/鉴权链查 studio.log；禁回退 synapse 直建——排查后重试）"
+  log "账号供给（产品通道）：$u + $u-agent（建号即 roster 提交）"
+done
+for n in "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done); do
+  localpart="${n%-agent}"; suffix=""
+  [[ "$n" == *-agent ]] && suffix="-agent"
+  tok=$(mx_login "$n" "$(user_pass "$localpart$suffix")" | tr -d '\n')
+  [[ -n "$tok" && "$tok" != "null" ]] || fail "matrix 登录失败：$n"
+  save_token "$n" "$tok"
+done
+log "$(( ${#USERS[@]} * 2 )) 账号就绪"
+# 称谓纪律·显示名（2026-10-14 用户指令）：token 就绪即 PUT displayname 职能称呼——
+# 下轮 mx-clean 重建后不回落裸账号名；studio users 表随 matrix-login 的
+# syncMatrixMetadata（server controllers/auth.ts:711/727）自动回填，无需另写。
+mx_apply_displaynames "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done)
+# 账号清单入档 roster（去 token；token 留 creds/*.token 600，密码按约定式不落明文）
+{
+  echo "# matrix 账号清单 roster（$(date '+%F %T')；编制 ${#USERS[@]} 人 ×2 账号）"
+  echo
+  echo "| 账号 | mxid | 用途 |"
+  echo "|---|---|---|"
+  for u in "${USERS[@]}"; do
+    echo "| $u | $(human_mxid "$u") | 人类（登录密码按 Aipay_<账号>_2026 约定） |"
+    echo "| $u-agent | $(agent_mxid "$u") | AI 助理（token 见 creds/$u-agent.token） |"
+  done
+} > "$CREDS_DIR/roster.md"
+chmod 600 "$CREDS_DIR/roster.md"
+fi   # MX_ROLE=agent 跳段结束（导演机路径）
+
+# ── 3. 单 root 配置 ─────────────────────────────────────
+write_root_config
+
+# ── 4. profiles：Orchestrator + 研发专职 agent（按节点切片；solo=全编制）──
+for u in $(node_users); do
+  write_user_profile "$u"
+  install_skills "$HERMES_ROOT/profiles/$u"
+  write_user_manifest "$u"
+  for a in $(agents_of "$u"); do
+    write_agent_profile "$u" "$a"
+    install_skills "$HERMES_ROOT/profiles/$(agent_profile "$u" "$a")"
+  done
+done
+profile_count=$(find "$HERMES_ROOT/profiles" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+log "profiles 就绪：${profile_count} 个（${#INSTANCED_USERS[@]} Orchestrator + agent，admin 不起实例）"
+
+# ── 4b. provider 归一（宿主快照 vs SIM 0.22.2 命名差，2026-10-19）：write_root_config/
+#        write_*_profile 从宿主 ~/.hermes/config.yaml 快照派生，宿主新式 builtin
+#        provider（ZCode 3.15 命名空间）SIM 快照不识别 → 每回合 "Primary provider
+#        auth failed" WARNING + fallback。归一到快照在册的 custom:cc-switch/
+#        glm-5.3-flash。宿主再换 provider 时此步须同步（判据=网关日志零
+#        Primary provider auth failed）。
+_norm_cnt=0
+for _cfg in "$HERMES_ROOT/config.yaml" "$HERMES_ROOT"/profiles/*/config.yaml; do
+  [ -f "$_cfg" ] || continue
+  if grep -q 'provider: builtin:bigmodel-coding-plan' "$_cfg" 2>/dev/null; then
+    python3 - "$_cfg" <<'PYN'
+import sys, re, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text(encoding='utf-8')
+s = s.replace('provider: builtin:bigmodel-coding-plan', 'provider: custom:cc-switch')
+s = re.sub(r'^(\s*)default: GLM-5\.3\s*$', lambda m: m.group(1) + 'default: glm-5.3-flash', s, count=1, flags=re.M)
+p.write_text(s, encoding='utf-8')
+PYN
+    _norm_cnt=$((_norm_cnt+1))
+  fi
+done
+[ "$_norm_cnt" -gt 0 ] && log "provider 归一：${_norm_cnt} 份 config（builtin:bigmodel-coding-plan → custom:cc-switch/glm-5.3-flash）"
+
+# ── 5. 每账号 2 块独立 kanban + team 围栏（按节点切片）───
+for u in $(node_users); do
+  for b in $(boards_of "$u"); do
+    slug="${b%%:*}"; agent="${b##*:}"
+    if [[ ! -d "$HERMES_ROOT/kanban/boards/$slug" ]]; then
+      HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban boards create "$slug" --name "$slug" >/dev/null \
+        || fail "建板失败：$slug"
+      log "已建板 $slug"
+    fi
+    set_board_team "$slug" "$(agent_profile "$u" "$agent")"
+  done
+done
+# default 板 = 串板哨兵（G2 门禁要求全程零任务）
+log "default 板保留为串板哨兵"
+
+# ── 5a. studio user_profiles 重播（0→1 ACL 真值；mx-clean 2b2 清空后由此重建）──
+#       每账号 = 本账号 profile（default）+ 两块板的 team agent profile；admin 是
+#       super_admin 走角色旁路不映射。studio 用户行由 matrix-login 建号产生，
+#       缺席即跳过（账号首次登录后重跑本脚本收敛）。幂等：先清后播。
+WEBUI_DB="$WEBUI_HOME/hermes-web-ui.db"
+if [ -f "$WEBUI_DB" ]; then
+  mxp_sqlite "$WEBUI_DB" "delete from user_profiles;" || true
+  _seeded=0
+  for u in $(node_users); do
+    _uid=$(mxp_sqlite "$WEBUI_DB" "select id from users where username='$u' limit 1;")
+    [ -n "${_uid:-}" ] || continue
+    mxp_sqlite "$WEBUI_DB" "insert or replace into user_profiles(user_id,profile_name,is_default,created_at) values(${_uid},'${u}',1,strftime('%s','now')*1000);" || true
+    for a in $(agents_of "$u"); do
+      if mxp_sqlite "$WEBUI_DB" "insert or replace into user_profiles(user_id,profile_name,is_default,created_at) values(${_uid},'$(agent_profile "$u" "$a")',0,strftime('%s','now')*1000);" ; then
+        _seeded=$((_seeded+1))
+      fi
+    done
+  done
+  log "user_profiles 重播完成（agent 映射 ${_seeded} 条；studio 用户行缺席的账号登录后重跑收敛）"
+fi
+
+# ── 5b. 中央仓克隆（导演真值反查）+ 每账号工作区 ──────────
+# 克隆后立即剥掉 remote URL 里的 token：git clone <带token URL> 会把它永久写进每个
+# clone 的 remote.origin.url——随后 runs.tar/workspaces.tar 归档与 push 失败时的
+# stderr（进 relay/scenario 日志=证据链）都会带着凭据扩散
+gh_clone_sanitize() { # <cloneDir>：token 只用于拉取，落盘 remote 一律还原无凭据形态
+  git -C "$1" remote set-url origin "https://github.com/${GH_REPO}.git" 2>/dev/null || true
+}
+if [[ ! -d "$DIRECTOR_CLONE/.git" ]]; then
+  mkdir -p "$(dirname "$DIRECTOR_CLONE")"
+  git clone -q "$(gh_clone_url)" "$DIRECTOR_CLONE" || fail "中央仓克隆失败（github token 见 gh_token 链）"
+  gh_clone_sanitize "$DIRECTOR_CLONE"
+  log "中央仓已克隆：${DIRECTOR_CLONE}（remote URL 已剥 token）"
+fi
+# 治理基线接线（2026-10-04 台账与规则页 404 实锤）：studio 的 resolveRosterFile 从服务目录
+# 向上探测 <dir>/runtime/governance；SIM 根软链到中央仓 runtime/governance（单一事实源、
+# agent 侧继续 git 版本化），三数据源（能力台账/决策规则/状态本体）随装即在。
+# 24h 审查：原先嵌在首装守卫内——存量 SIM_ROOT（mx-clean 不删中央仓克隆）永不重放，
+# 404 只在全新装机被修；两条命令自身幂等，移出守卫每轮供给。
+mkdir -p "$SIM_ROOT/runtime"
+mxp_link_dir "$SIM_ROOT/central/$MX_CENTRAL_NAME/runtime/governance" "$SIM_ROOT/runtime/governance"
+for u in $(node_users); do
+  WS=$(workspace "$u")
+  if [[ ! -d "$WS/.git" ]]; then
+    mkdir -p "$(dirname "$WS")"
+    git clone -q "$(gh_clone_url)" "$WS" || fail "账号工作区克隆失败：$u"
+    # [LEAD-MERGE] 客户端守门（2026-10-18 立法 run21 三文件冲突实录）：工作区本地
+    # pre-push 钩子——直推 integration/* 须含 [LEAD-MERGE] 标记，fixer 推 fix/DEF-X
+    # 分支不受限。中央仓本地化前的可执行层（服务端 pre-receive 已备 git-hooks/）。
+    cp "$HARNESS_ROOT/mux/git-hooks/pre-push-client" "$WS/.git/hooks/pre-push" 2>/dev/null \
+      && chmod +x "$WS/.git/hooks/pre-push" || true
+    gh_clone_sanitize "$WS"
+    git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.name "$u"
+    git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.email "$u@aipaydev.local"
+    log "账号工作区就绪：${WS}（remote URL 已剥 token）"
+  fi
+done
+
+# ── 6. fleet-manifest ───────────────────────────────────
+write_fleet_manifest
+log "fleet-manifest.json 就绪"
+
+log "=== mx-setup 完成 ==="
+log "下一步：mx-up.sh 拉起单 gateway（${GW_PORT}）+ 单 studio（${STUDIO_PORT}），mx-smoke.sh 走门禁"

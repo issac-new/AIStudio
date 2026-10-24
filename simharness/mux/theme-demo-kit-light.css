@@ -1,0 +1,30 @@
+/* mux/theme-demo-kit-light.css —— 演示素材页的明色主题层（2026-10-14）
+ *
+ * demo-kit.html 天生就是暗色设计（深蓝底 + 浅字，见 demo-kit-gen.py 的内联样式），
+ * 所以它要的是**明色**那一套：翻成白底深字。方向和其余页面相反，别照抄别处的层。
+ */
+
+html[data-theme="light"] body { background:#f6f8fb !important; color:#1e293b !important; }
+html[data-theme="light"] h1,
+html[data-theme="light"] h2,
+html[data-theme="light"] h3 { color:#0f172a !important; }
+html[data-theme="light"] .tl-gate { background:#dbeafe; color:#1d4ed8; }
+html[data-theme="light"] .ic-card,
+html[data-theme="light"] .qt-card,
+html[data-theme="light"] .stat { background:#ffffff !important; border:1px solid #e2e8f0; color:#1e293b !important; }
+html[data-theme="light"] table,
+html[data-theme="light"] th,
+html[data-theme="light"] td { border-color:#e2e8f0 !important; }
+html[data-theme="light"] th { background:#f1f5f9 !important; color:#0f172a !important; }
+html[data-theme="light"] a { color:#2563eb; }
+/* .stat 原本是「白字压深底」的数字块，翻明色时底变白、字不变 → 白底白字 1.0:1 */
+html[data-theme="light"] .stat { background:#f1f5f9 !important; color:#0f172a !important; border:1px solid #e2e8f0; }
+html[data-theme="light"] .stat span { color:#1e293b !important; }
+
+/* 时间轴行号一类中灰（#6b7f99）翻到浅底只有 3.4~3.9:1 */
+html[data-theme="light"] .tl-row,
+html[data-theme="light"] .tl-gate { color:#334155 !important; }
+html[data-theme="light"] .ap-row { color:#475569 !important; }
+html[data-theme="light"] .qt-card,
+html[data-theme="light"] .ic-card { color:#1e293b !important; }
+html[data-theme="light"] .stat b { color:#0f172a !important; }

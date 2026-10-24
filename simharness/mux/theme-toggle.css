@@ -1,0 +1,37 @@
+/* theme-toggle.css —— 主题切换控件样式（方案页与报告页通用）
+ *
+ * 控件本体靠两页共有的 token 取色，明暗下都清晰；不引入任何硬编码色。
+ * 主题作用域约定（全套页面统一）：
+ *   :root                     = 明色 token（默认）
+ *   html[data-theme="dark"]   = 暗色 token
+ */
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="dark"]  { color-scheme: dark; }
+
+.theme-toggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 99999;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface, #fff);
+  color: var(--ink, #1e293b);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .18);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.theme-toggle:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(15, 23, 42, .28); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent, #2563eb); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle { transition: none; }
+}
