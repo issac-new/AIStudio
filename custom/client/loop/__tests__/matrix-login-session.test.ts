@@ -2,7 +2,7 @@
 //
 // 位置说明：放 custom/client/loop/__tests__（与 store-factory.test.ts 测 server 模块同款
 // 安置）——custom/server 树会被注入后的上游 server tsc 经 src/custom 符号链接纳入
-// type-check，本测试的物理相对 import（../../../../../upstream/...）在链接视角不可解析
+// type-check，本测试的物理相对 import（../../../../vendor/...）在链接视角不可解析
 //（TS2307），故置于不被 server tsc 覆盖的 custom/client 侧。
 //
 // ⚠️ 本测试挂载 patch 012 注入后的上游控制器（clean 树下无 matrixLogin 的落盘行为，
@@ -33,11 +33,13 @@ vi.mock('../../../server/matrix/admin-service', () => ({
   deleteMatrixUser: vi.fn(),
 }))
 
-// 控制器（upstream 注入态）经 src/custom 符号链接导入同两个模块：符号链接
+// 控制器（vendor 注入态）经 src/custom 符号链接导入同两个模块：符号链接
 // 路径与真实路径在 vitest 模块图里可能是两个模块 ID，两侧 specifier 都要
 // mock（0.7.24 刷新后单侧 mock 失配→真实 validateMatrixToken 打到本地
 // synapse 上→401，三用例连锁挂）。
-const UPSTREAM_CUSTOM = vi.hoisted(() => '../../../../../upstream/hermes-studio/packages/server/src/custom')
+// 路径基点=overlayRoot/vendor（2026-10-24 单仓整合起 inject 目标=vendor 基线，
+// 相对层级 4 级回 checkout 根；主树/worktree 通吃）。
+const UPSTREAM_CUSTOM = vi.hoisted(() => '../../../../vendor/hermes-studio/packages/server/src/custom')
 vi.mock(`${UPSTREAM_CUSTOM}/matrix/session-store`, () => ({ saveMatrixSession: mocks.saveMatrixSession }))
 vi.mock(`${UPSTREAM_CUSTOM}/matrix/admin-service`, () => ({
   validateMatrixToken: mocks.validateMatrixToken,
@@ -49,9 +51,10 @@ vi.mock(`${UPSTREAM_CUSTOM}/matrix/admin-service`, () => ({
   deleteMatrixUser: vi.fn(),
 }))
 
-// 上游模块：路径自本文件起 5 级到 ncwk 根，再进 upstream/hermes-studio。
-// vi.mock 会提升到文件顶部，路径常量必须用 vi.hoisted 同步提升。
-const UPSTREAM = vi.hoisted(() => '../../../../../upstream/hermes-studio/packages/server/src/modules/studio')
+// 上游模块：路径自本文件起 4 级到 checkout 根，再进 vendor/hermes-studio
+//（inject 目标，见 UPSTREAM_CUSTOM 注释）。vi.mock 会提升到文件顶部，
+// 路径常量必须用 vi.hoisted 同步提升。
+const UPSTREAM = vi.hoisted(() => '../../../../vendor/hermes-studio/packages/server/src/modules/studio')
 vi.mock(`${UPSTREAM}/public/users`, () => ({
   DEFAULT_USERNAME: 'admin',
   DEFAULT_PASSWORD: '123456',
@@ -85,7 +88,7 @@ vi.mock(`${UPSTREAM}/public/profile-config`, () => ({
   listProfileNamesFromDisk: vi.fn(() => ['default']),
 }))
 
-import { matrixLogin } from '../../../../../upstream/hermes-studio/packages/server/src/modules/studio/controllers/auth'
+import { matrixLogin } from '../../../../vendor/hermes-studio/packages/server/src/modules/studio/controllers/auth'
 
 const USER = {
   id: 7, username: 'swarm', role: 'super_admin', status: 'active',
