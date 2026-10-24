@@ -1,4 +1,4 @@
-# 基础运行时层(overlay/runtime)
+# 基础运行时层(runtime/)
 
 SwarmStudio 的「基础运行时」:两个经源码级调研后选定、按固定版本 pin 下来的外部
 运行时,分别承载《AI-Native 研发范式实践手册》(2026-09-19)企业级基础设施框架中的
@@ -57,7 +57,7 @@ npm run runtime:doctor   -- --hermes-home ~/.hermes   # 软检查注册/安装�
   消费它 —— 一条 manifest 获得全链路(发现/安装/探测/工具清单/回滚)而零 agent 侧
   改动。安装走 git pinned tag + 独立 venv,与 agent 运行环境隔离。
 - **pua 走 `skills.external_dirs` 而非复制进 `~/.hermes/skills/`**:外部目录语义是
-  只读共享、本地优先 —— 升级只更新 overlay 一处,全部 profile 生效;不存在多 profile
+  只读共享、本地优先 —— 升级只更新本仓 runtime 一处,全部 profile 生效;不存在多 profile
   逐份复制漂移的问题。
 - **两侧都 pin 不可变 ref**(tag / 40 位 commit),doctor 硬检查拒绝 `main`/`HEAD`
   浮动 ref:运行时可复现是《手册》"可复现环境"原则在本层的落法。

@@ -19,13 +19,13 @@ Clef 决策模型 MLX 4bit 家族本地 SystemOne 服务。本目录 = 机器本
 ## 使用
 
 ```bash
-# 启动主力 flash（默认；自检分片是否下完）
-bash overlay/runtime/clef/start-clef.sh
+# 启动主力 flash（默认；自检分片是否下完）——自仓根执行
+bash runtime/clef/start-clef.sh
 # 启动 27B 备件（异步低频场景才用）
-CLEF_MODEL=27b bash overlay/runtime/clef/start-clef.sh
+CLEF_MODEL=27b bash runtime/clef/start-clef.sh
 
 # 验证（健康检查 + 上游 jev.md 同款三原语样例 + 延迟实测）
-bash overlay/runtime/clef/verify-clef.sh
+bash runtime/clef/verify-clef.sh
 ```
 
 ## 与 SwarmStudio 的接线

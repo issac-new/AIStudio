@@ -1,5 +1,7 @@
 # 项目特征卡：hermes-overlay（SwarmStudio 二开仓）— 2026-10-16 全量重生成轮
 
+> ⚠️ 快照过期：2026-10-24 起 overlay 已整合为 AIStudio 单仓（上游基线入 `vendor/`，仓库主名 AIStudio）。本文路径（lab/ncwk/overlay）与计数（v0.7.35、359 补丁等）均为整合前快照，以仓内现状为准，待技能指纹感知重生成。
+
 > 数据来源：三路并行子代理探查（结构/规范/代码组织）+ mine-habits 3353 提交统计 + detect-frameworks.sh + framework-evidence.sh 台账（notes/framework-evidence.tsv 65 行）。上游参照树只读：/Users/cuishi/lab/ncwk/upstream/hermes-studio。
 > 形态判定（§D.0）：**[前端UI, 后端API, 桌面IPC(patch 侧)]**；无异步 MQ 维度、无库导出维度。定时信号轻量（clusterinspector 巡检环 timer + loop cron bridge），不立独立维度。
 > 框架激活（§D.0.5）：**ACTIVE_FRAMEWORKS = vue, naiveui, vite, koa, jest-vitest**（detect-frameworks 报 12 个，AI 剔除 7 个：react/express/webpack/tailwind/fastapi/pytest 在 custom/ 零引用 grep 实证，命中来自 runtime/ 镜像与 qgate fixtures 的 package.json；opentelemetry 仅 run-trace 插件的数据格式非框架使用——与 9-16 轮裁决一致）。

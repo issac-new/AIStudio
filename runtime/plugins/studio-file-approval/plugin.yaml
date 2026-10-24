@@ -6,4 +6,4 @@ description: >
   approvals/responses/<request_id>.json; SwarmStudio's /api/approvals inbox
   reads the queue and writes the correlated decision. Fail-closed: a missing
   or malformed response is a denial.
-author: SwarmStudio overlay
+author: AIStudio

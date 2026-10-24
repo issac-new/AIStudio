@@ -9,7 +9,7 @@ SwarmStudio 的日常验证与使用走浏览器 web 版，不需要安装桌面
 ### 1.1 前置条件
 
 - Node.js 不低于 23.0.0。
-- 三个上游仓按原目录名 clone 到本仓的 `../upstream/`：hermes-studio、hermes-agent、element-web。
+- 基线源码已收录本仓 `vendor/`（hermes-studio、hermes-agent、zcode 钉版快照，台账见 [vendor/VENDOR.md](../vendor/VENDOR.md)），无需 clone 上游仓。
 - Windows x64 环境见 [windows-x64-setup.md](windows-x64-setup.md)，并确认 `git config core.autocrlf false`。
 
 ### 1.2 首次启动
@@ -17,23 +17,23 @@ SwarmStudio 的日常验证与使用走浏览器 web 版，不需要安装桌面
 按顺序执行四步。
 
 ```bash
-cd overlay
+cd <本仓根目录>
 npm run inject
 ```
 
-进入上游目录安装依赖（overlay 经符号链接复用）。
+进入基线目录安装依赖（node_modules 不入库，克隆后装一次）。
 
 ```bash
-cd ../upstream/hermes-studio
+cd vendor/hermes-studio
 npm install --no-audit --no-fund --ignore-scripts
 mkdir -p dist
 ```
 
-回到 overlay 启动后端（监听 8647 端口，前台进程；Windows 用跨平台版 `npm run serve`）。
+回到仓根启动后端（监听 8647 端口）。
 
 ```bash
-cd ../../overlay
-bash scripts/serve-server.sh &
+cd ../..
+npm run serve &
 ```
 
 启动前端开发服务器（监听 8649 端口，改动即时热更新）。
@@ -87,8 +87,8 @@ npm run dev
 ```bash
 # 重启后端（监听 :8647）
 lsof -ti:8647 | xargs kill -9 2>/dev/null
-cd <overlay 路径>
-bash scripts/serve-server.sh &
+cd <本仓根目录>
+npm run serve &
 
 # 重启前端（监听 :8649）
 lsof -ti:8649 | xargs kill -9 2>/dev/null
@@ -117,7 +117,7 @@ npm run build:dmg:mac   # macOS arm64：DMG + zip
 npm run build:dmg:win   # Windows x64：zip + NSIS 安装器（必须在 Windows 主机构建）
 ```
 
-产物在 `upstream/hermes-studio/packages/desktop/release/`。
+产物在 `vendor/hermes-studio/packages/desktop/release/`。
 
 ## 6、延伸阅读
 
