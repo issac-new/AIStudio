@@ -1,14 +1,18 @@
 <!-- overlay/custom/client/ia2/views/effectiveness/DeliveryEffectivenessView.vue -->
-<!-- 交付效能页签（2026-10-23 天猫数字员工两文吸收轮）：看板域第 4 键，三区布局——
+<!-- 交付效能页签（2026-10-23 天猫数字员工两文吸收轮）：看板域第 4 键，五区布局——
      ① 交付日报（状态盘点/趋势/卡点负责人+停留时长/评审老化/停滞候选/建议，条目可展开）
      ② C×L 效能画像矩阵（CSS 格阵，同 eval 金字塔不引 echarts 先例）
      ③ 介入归因账本（run 下钻/六类分布/两层分账/风险信号）
+     ④ 协作成熟度（三级演进读数）
+     ⑤ 群体协作四维度读数（2026-10-24 群体协作评测基准吸收轮：通信拓扑/信用分配/帕累托/社会动力学，
+        字符口径代理+观察性归因，只观测不进判据）
      全部只读消费 /api/hermes/delivery/*；fail-soft：源缺席如实呈现原因。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-  fetchDigest, fetchInterventions, fetchMatrix, fetchMaturity,
+  fetchDigest, fetchInterventions, fetchMatrix, fetchMaturity, fetchSwarmCollab,
   type DailyDigest, type DeliveryMatrix, type DigestItem, type InterventionsResponse, type MaturityResponse,
+  type SwarmCollabResponse,
 } from '../../api/effectiveness'
 import { useEffectivenessText } from './i18n'
 
@@ -22,6 +26,8 @@ const matrixError = ref<string | null>(null)
 const interventions = ref<InterventionsResponse | null>(null)
 const interventionsError = ref<string | null>(null)
 const maturity = ref<MaturityResponse | null>(null)
+const swarm = ref<SwarmCollabResponse | null>(null)
+const swarmError = ref<string | null>(null)
 const runScope = ref('') // '' = 全部 run
 const expanded = ref<Set<string>>(new Set())
 
@@ -37,7 +43,8 @@ async function loadAll(): Promise<void> {
   digestError.value = null
   matrixError.value = null
   interventionsError.value = null
-  const [d, m, i, mat] = await Promise.allSettled([fetchDigest(), fetchMatrix(), fetchInterventions(runScope.value || undefined), fetchMaturity(runScope.value || undefined)])
+  swarmError.value = null
+  const [d, m, i, mat, sw] = await Promise.allSettled([fetchDigest(), fetchMatrix(), fetchInterventions(runScope.value || undefined), fetchMaturity(runScope.value || undefined), fetchSwarmCollab(runScope.value || undefined)])
   if (d.status === 'fulfilled') {
     digest.value = d.value.digest ?? null
     if (!d.value.available) digestError.value = d.value.reason ?? 'unavailable'
@@ -51,17 +58,31 @@ async function loadAll(): Promise<void> {
     if (!i.value.available) interventionsError.value = i.value.reason ?? 'unavailable'
   } else interventionsError.value = String(i.reason)
   maturity.value = mat.status === 'fulfilled' ? mat.value : null
+  if (sw.status === 'fulfilled') {
+    swarm.value = sw.value
+    if (!sw.value.available) swarmError.value = sw.value.reason ?? 'unavailable'
+  } else swarmError.value = String(sw.reason)
   digestLoading.value = false
 }
 
 async function switchRun(run: string): Promise<void> {
   runScope.value = run
   interventionsError.value = null
-  try {
-    interventions.value = await fetchInterventions(run || undefined)
-  } catch (e) {
+  swarmError.value = null
+  const [i, sw] = await Promise.allSettled([fetchInterventions(run || undefined), fetchSwarmCollab(run || undefined)])
+  if (i.status === 'fulfilled') {
+    interventions.value = i.value
+    if (!i.value.available) interventionsError.value = i.value.reason ?? 'unavailable'
+  } else {
     interventions.value = null
-    interventionsError.value = String(e)
+    interventionsError.value = String(i.reason)
+  }
+  if (sw.status === 'fulfilled') {
+    swarm.value = sw.value
+    if (!sw.value.available) swarmError.value = sw.value.reason ?? 'unavailable'
+  } else {
+    swarm.value = null
+    swarmError.value = String(sw.reason)
   }
 }
 
@@ -104,6 +125,27 @@ function fmtTime(ms: number): string {
   const d = new Date(ms)
   return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
+
+/** ⑤ 群体协作区：比例格式（null → '—'，保持与读数口径一致不造数） */
+function fmtPct(v: number | null | undefined): string {
+  return v == null ? '—' : `${Math.round(v * 100)}%`
+}
+
+function fmtSigned(v: number | null | undefined): string {
+  return v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}`
+}
+
+/** 信用表行=信用分解与帕累托点合一（同一 per-agent 视图，免两张表） */
+const swarmAgentRows = computed(() => {
+  const s = swarm.value?.readout
+  if (!s) return []
+  const costOf = new Map(s.pareto.points.map(p => [p.agent, p]))
+  return s.credit.agents.map(a => ({
+    ...a,
+    cost: costOf.get(a.agent)?.cost ?? 0,
+    onFrontier: costOf.get(a.agent)?.onFrontier ?? false,
+  }))
+})
 
 interface ListSection { key: string; title: string; items: DigestItem[] }
 const digestLists = computed<ListSection[]>(() => {
@@ -303,6 +345,53 @@ function cellClass(count: number): string {
         <p class="eff-mat__gap">眼下最该修的：{{ maturity.assessment.gapNote }}</p>
         <p class="eff-card__note">{{ maturity.assessment.note }}</p>
       </section>
+      <!-- ⑤ 群体协作四维度读数（2026-10-24 吸收轮：通信拓扑/信用分配/帕累托/社会动力学） -->
+      <section v-if="swarm?.readout || swarmError" class="eff-card" data-testid="eff-swarm-card">
+        <h3 class="eff-card__title">群体协作读数
+          <span v-if="swarm?.readout" class="eff-card__meta">{{ swarm.readout.run }} · 派发 {{ swarm.readout.communication.dispatchCount }} 条 · {{ swarm.readout.communication.distinctSenders }} 发 → {{ swarm.readout.communication.distinctTargets }} 收</span>
+        </h3>
+        <p v-if="swarmError" class="eff-card__error" data-testid="eff-swarm-error">{{ text.unavailable }}：{{ swarmError }}</p>
+        <template v-else-if="swarm?.readout">
+          <div class="eff-swarm__dims">
+            <div class="eff-swarm__dim" data-testid="eff-swarm-comm">
+              <span class="eff-swarm__dim-name">通信拓扑</span>
+              <span>每任务协作 {{ swarm.readout.communication.morCharsPerTask != null ? Math.round(swarm.readout.communication.morCharsPerTask) : '—' }} 字符（开销比·字符口径）</span>
+              <span>锚点保真 {{ fmtPct(swarm.readout.communication.intentFidelity.rate) }}（{{ swarm.readout.communication.intentFidelity.preserved }}/{{ swarm.readout.communication.intentFidelity.anchoredTasks }}，任务 ID+模块跨跳保持）</span>
+              <span>等待信号：回灌代偿 {{ swarm.readout.communication.deadlockSignals.backfillCount }} · 回执缺席 {{ swarm.readout.communication.deadlockSignals.receiptMissing }} · RACI 缺发 {{ swarm.readout.communication.deadlockSignals.raciMissing }} · 催办 {{ swarm.readout.communication.deadlockSignals.nudgeCount }}</span>
+            </div>
+            <div class="eff-swarm__dim" data-testid="eff-swarm-social">
+              <span class="eff-swarm__dim-name">社会动力学</span>
+              <span>UAT 无条件通过 {{ swarm.readout.social.uat.pass }}/{{ swarm.readout.social.uat.total }}（{{ fmtPct(swarm.readout.social.unconditionalPassRate) }}）· 打回 {{ swarm.readout.social.uat.reject }}</span>
+              <span>G5 发布门打回 {{ swarm.readout.social.gateRejects }} 次 · 打回类问题单 {{ swarm.readout.social.gateFailIssues }} 张（打回=批判性在线的证据）</span>
+              <span>流程拦截面：问题单 {{ swarm.readout.social.issuesCaught }} 张 · 拜占庭注入 {{ swarm.readout.social.byzantine.status === 'no_data' ? '未做（挂账）' : swarm.readout.social.byzantine.status }}</span>
+            </div>
+          </div>
+          <div class="eff-int__entries">
+            <table class="eff-int__table" data-testid="eff-swarm-agents">
+              <thead>
+                <tr><th>成员</th><th>发出派发</th><th>被派任务</th><th>问题单</th><th>完成锚</th><th>消息字符（成本）</th><th>前沿</th><th>关键支撑度*</th><th>联盟边际*</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="a in swarmAgentRows" :key="a.agent">
+                  <td>{{ a.agent }}</td>
+                  <td>{{ a.sentDispatches }}</td>
+                  <td>{{ a.assignedDispatches }}</td>
+                  <td>{{ a.issuesOwned }}</td>
+                  <td>{{ a.completedAnchors }}</td>
+                  <td>{{ a.cost }}</td>
+                  <td>{{ a.onFrontier ? '●' : '' }}</td>
+                  <td>{{ fmtSigned(a.criticalityObserved) }}</td>
+                  <td>{{ fmtSigned(a.shapleyProxy) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="eff-card__note">
+            任务完成 {{ swarm.readout.credit.taskCompletion.done }}/{{ swarm.readout.credit.taskCompletion.total }} · 观察联盟 {{ swarm.readout.credit.coalitionsCovered }} 组 · 帕累托前沿 {{ swarm.readout.pareto.frontierSize }}/{{ swarm.readout.pareto.points.length }}。
+            口径：成本=消息字符代理（token 依赖 span 采集，挂账）；*关键支撑度/联盟边际=观察性归因（非实验性消融）；只观测不进判据。
+          </p>
+        </template>
+      </section>
     </div>
   </div>
 </template>
@@ -429,4 +518,10 @@ function cellClass(count: number): string {
 }
 .eff-mat__readings { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; }
 .eff-mat__gap { margin: 0; font-size: 12px; }
+.eff-swarm__dims { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 6px; }
+.eff-swarm__dim {
+  border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 9px;
+  display: flex; flex-direction: column; gap: 3px; font-size: 11.5px;
+}
+.eff-swarm__dim-name { font-weight: 600; font-size: 12px; }
 </style>
