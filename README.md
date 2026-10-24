@@ -1,657 +1,157 @@
 # SwarmStudio
-本项目基于作者想法，由AI 100%完成，不包含任何人类代码。使用Apache 2.0 协议发布，对于参考的的上游项目，如需运行时部署，请遵守其授权约定，或自行参考迁移功能完成本地化实现。
 
-Hard times create human code, humen code create ai times, ai times create weak men, and weak men create hard times。
+本项目基于作者想法，由 AI 100% 完成，不包含任何人类代码。使用 Apache 2.0 协议发布。对于参考的上游项目，如需运行时部署，请遵守其授权约定，或自行参考迁移功能完成本地化实现。
 
-> 基于 [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) 二次开发的 **AI 协作中心**桌面应用。本仓是 overlay（二次开发层），通过构建期注入将自定义功能叠加到上游，上游源码始终保持纯净、可独立升级。
+Hard times create human code, human code create AI times, AI times create weak men, and weak men create hard times.
 
-SwarmStudio 把「人类协作伙伴 + 本地 Agent 集群 + 人机协作」三类工作统一在一个驾驶舱（Cockpit）里统筹：既有突出重点的全貌概览，又可针对具体任务接入，进行补充 / 评估 / 决策 / 审批。同时提供协作看板、Matrix 即时通讯、运行全过程可观测性等能力。满足AI协同的组织发展需要。
+SwarmStudio 是一套让「人指挥 AI 团队交付软件」的工作系统：分布式需求分析、研发协作、实施交付、测试验证在同一个驾驶舱完成。它基于 [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) 二次开发，本仓是 overlay（二次开发层），通过构建期注入把自定义功能叠加到上游，上游源码保持纯净、可独立升级。
 
----
+## 理念：四个阶段的问题与解法
 
-## 为什么需要 SwarmStudio
+AI 协作从「单机单 Agent」走向「多人 + 多 Agent 并行」后，交付的四个阶段各暴露一类结构性问题。SwarmStudio 的功能逐条对着这四类问题来。
 
-当 AI 协作从「单机单 Agent」走向「多人 + 多 Agent 并行」，原有的工具形态开始失灵。SwarmStudio 针对三类结构性困境给出答案：
+| 阶段 | 问题 | 解法 |
+|---|---|---|
+| 需求 | 跨地域、跨团队协作割裂：群聊、看板、终端、文档各说各话 | Studio 驾驶舱统一视图，Kanban 唯一看板，Matrix 做通信基座（消息即凭证） |
+| 设计 | 设计一致性与架构延续性难保 | 全部 Agent 服务端运行：单网关多路复用 42 个智能体 profile，产品面只读运行面、可换皮不动运行面 |
+| 编码 | 长程任务跑不稳，完成声明不可信 | 长程可信执行层（主张三态审计、完成态双准入、原子断点），改进实验台为浅层 RSI 打底（观测、正则化、A/B 对比；不做自主自我改进） |
+| 测试 | 质量门禁来得太晚 | 门禁左移：从 G1 需求冻结起设六道质量门（G1-G6），spec-first 钩子在写代码之前就拦截无设计改动 |
 
-- **三类工作割裂**：人类协作伙伴（Matrix / Slack / 微信）、本地 Agent 集群（Claude Code 终端、模型 API）、人机 1:1 协作（聊天框审批）散落在不同界面，无法统筹，切换成本极高。SwarmStudio 用 Cockpit 把三者收进同一个驾驶舱。
-- **线性聊天流无法呈现多 Agent 协作**：多 agent 并行 / 派生（主 agent 拉起 subagent）/ 收敛（多 agent 结果汇总）在线性消息流里交错丢失。SwarmStudio 用 Evidence Graph（证据图）重构运行全过程，让并行 / 派生 / 收敛一目了然。
-- **AI 运行过程缺乏可观测性与可追溯性**：推理链黑盒、工具调用无耗时、subagent 层级扁平、跨机协作无 trace。SwarmStudio 的 RunTraceView 让每一步推理可追溯、可回放、可导出，满足合规审计场景（金融 / 医疗 / 法律）。
-- **上游二次开发易陷「分叉泥潭」**：fork 后大改导致上游无法升级。SwarmStudio 用 overlay 注入架构（A 类纯新增 + B 类 patch）让三个上游仓 `.git` 永不污染，可独立 `git pull` 升级。
+三个断言贯穿全部设计：证据先于声明（说「做完了」必须给提交号加任务卡号）；未配置不等于已治理（inactive、partial 如实标注，不装绿）；只增不改（能力在归属面有正身才退役）。
 
-> 工具的形态，决定了协作的效率。SwarmStudio 的答案：不要更多聊天框，要一个驾驶舱；不要更多终端，要一张证据图；不要更多切换，要一个多视角工作区。完整价值叙述见 `../docs/SwarmStudio-公众号宣传稿-深度版.md`。
+## 体系：五件套构成完整交付系统
 
----
+SwarmStudio 不是单一应用，而是五个组件构成的分布式交付体系：
 
-## 运行效果图
+```
+产品面  SwarmStudio（本仓）
+        驾驶舱：看板 / 审批 / 沟通 / 推演 / IDE / 治理 —— 只读消费运行面
+          │
+通信基座  Matrix
+        跨地域消息；房间即协调通道；协议事件（com.swarmstudio.*）即凭证
+          │
+运行面    hermes agent
+        服务端单网关多路复用，42 个智能体有编制、有权限、有审计
+          │
+编码引擎  Ycode（zcode 分叉，内置 computer-use 插件）
+        IDE 工作区的本机编码执行底座
+          │
+能力层    swarm-yuan
+        对任意代码仓库生成项目专属开发技能（组件清单、配方、门禁）
+```
 
-> 以下截图为 P3 前的 Cockpit 界面（2.17 及之前）。P3 起主界面切换为信息架构 2.0 六区域（见功能特色首节），截图待更新。
+四条主线贯穿五件套：分布式需求分析（需求冻结、G1 验收标准上锁）、研发协作（看板派活、催办、并行、RACI）、实施交付（IDE 编码、长程可信执行、多机舰队）、测试验证（G4 独立测试、评测岛、G5 发布准出）。
 
-### 沟通区：
-<img width="1914" height="928" alt="d5515cbc-58fa-48d4-b66b-2edefd345b65" src="https://github.com/user-attachments/assets/786c5b94-1d63-4179-82c3-8f9946ffa420" />
+## 产品：三种工作模式
+
+| 模式 | 入口 | 用来做什么 |
+|---|---|---|
+| 日常工作台 | `/app` | 六阶段（搭台、需求、设计、开发、验收、治理）33 个页签：看板、审批收件箱、沟通、阶段页、全站检索 |
+| IDE 工作区 | `/app/ide` | 任务导向编码：23 个页签（任务、会话、文件、终端、审查、完整 Matrix 客户端），编程与工作双模式 |
+| 全流程推演 | `/app/sim` | 26 步完整交付演练、六道质量门、导演台、监督器、证据库 |
+
+另有专题四岛：流程架构 BPA、本体（含 FIBO 金融本体 37 概念全链）、评测（评测集、红队、校准、处置链）、技能治理。组织关键行改动需双人会签；14 个人工介入点全部进审批收件箱，程序不替人做决定。
+
+<details>
+<summary>运行效果图（2.17 旧版界面，当前为六阶段工作台形态，截图待更新）</summary>
+
+### 沟通区
+<img width="1914" height="928" alt="沟通区截图" src="https://github.com/user-attachments/assets/786c5b94-1d63-4179-82c3-8f9946ffa420" />
 
 ### 编码区
-<img width="1916" height="917" alt="d71cdaa7-eb9b-45ed-b435-1bc2ee2031f4" src="https://github.com/user-attachments/assets/85f568fe-57f4-4a49-83a9-48496b5aefa6" />
-
-### 工作区
-<img width="1920" height="923" alt="67876615-bab7-4880-b919-8c7f4caa1165" src="https://github.com/user-attachments/assets/71136468-70f8-4cb2-b7bb-c25978fdfb0a" />
-
-### 日程区
-<img width="1920" height="933" alt="d0c3941b21d78a93b6c90f67e9faea87" src="https://github.com/user-attachments/assets/4827c359-09bb-4052-9eb1-2696061c3e2d" />
+<img width="1916" height="917" alt="编码区截图" src="https://github.com/user-attachments/assets/85f568fe-57f4-4a49-83a9-48496b5aefa6" />
 
 ### 看板区
-<img width="1920" height="930" alt="ea0b09bd5c3e608883e6a661e6fc658b" src="https://github.com/user-attachments/assets/bf5293b0-374a-4a7a-92a1-645d87775cbe" />
+<img width="1920" height="930" alt="看板区截图" src="https://github.com/user-attachments/assets/bf5293b0-374a-4a7a-92a1-645d87775cbe" />
 
 ### 观测区
-<img width="1920" height="984" alt="27db8eb043e80742a8d77e9eee2b3b7a" src="https://github.com/user-attachments/assets/621e63d7-8e94-4e3e-ade2-f647e863020c" />
+<img width="1920" height="984" alt="观测区截图" src="https://github.com/user-attachments/assets/621e63d7-8e94-4e3a-ade2-f647e863020c" />
 
+</details>
 
-
-## 功能特色
-
-### 🧭 信息架构 2.0 — 六区域新 IA（P3，登录默认落点 `/app`）
-
-P3 起 SwarmStudio 客户端主界面从 Cockpit 三栏驾驶舱切换为六区域信息架构（侧栏一级导航），登录直落总览。全程 Pure Ink 主题零新色板（节点状态只用 error / warning / success 三色 + 灰阶）、深浅色跟随系统、文案中文优先（新 UI i18n zh/en 全键对称）、键盘可达（运行中心 j/k 移动 / Enter 打开 / r 回放 / a 审批）。R4 体验验收逐条走查：`docs/superpowers/specs/2026-09-10-loop-graph-p3-r4-checklist.md`。
-
-**六区域导览（文字版）**：
-
-| 区域 | 路由 | 内容 |
-|------|------|------|
-| **总览** | `/app` | 注意力条（blocked / review / triage 三梯队，点击跳工作项区带筛选）+ **交付网络读数条**（在途案例/阶段分布/待审人工门/已完成 chip 流，零在途零待审隐藏，点击深链 `/app/cases`）→ 四卡片（活跃运行 / 等你决策 / 今日日程 / 关键指标）→ 工作项状态分布 → 今日计划（到期 loop + 今日待办）；零数据时出现三步引导（选模板 → 设节奏 → 跑起来），任一 run 存在即消失。关键指标标注近似口径：平均耗时显示"基于 N 个样本"（近 7 天窗口内最近 20 个终态 run 的回放采样），loop 事件采集降级时熔断计数标"部分数据" |
-| **编排** | `/app/orchestrate` | 模板库（五阶段模板只读列表）+ GraphSpec 可视化（与运行详情同源的画布投影）+ 一键实例化（cron 节奏 / 时区 / 租户，粗校交服务端 cron-parser） |
-| **工程** | `/app/eng` | 编排 tab + Teams 管理 tab + **交付案例 tab**（Delivery Cases 面板，深链 `/app/cases`——见功能特色专节） |
-| **运行中心** | `/app/runs` | P2 运行中心整体迁入（阶段 × 状态双轴、`awaiting-input` 恒置顶、执行图画布 + 时间轴回放、三级分辨率、节点检查器、介入收件箱——详见下文「Loop Engineering」） |
-| **介入中心** | `/app/inbox` | 五源聚合（awaiting 审批 / Triage 分诊队列 / 到期闹钟等）+ 就地审批 + 自动归档 |
-| **工作项** | `/app/tasks` | SwarmKanban 协作看板整体承接 + 任务↔run 双向关联 + 追溯矩阵 |
-| **沟通** | `/app/comms` | Matrix 聊天升一级（房间列表 + `/app/comms/room/:roomId` 房间路由） |
-
-**追溯矩阵（工作项区）**：run 产物落库事件携带 `taskId`（persisted 契约台账），矩阵按任务聚合「来源 run ↔ 产物 ↔ 验证轮次」双向可溯；无 taskId 的存量 run 归入「未归属」桶并显式标注（旧数据形态非缺陷）。
-
-**图引擎策略卡（设置页）**：`GRAPH_ENGINE` 三态模式与熔断 / 中断超时阈值的只读展示，策略当前为构建期默认值（可编辑策略文件随 P4）。
-
-**兼容与双入口（P4 修订）**：`VITE_IA_RETRO=1` 回退开关仅放行旧 loop 落点。**P4（2026-09-11 用户裁决）：原有 AI 协作中心（cockpit）恢复功能，与新 `/app` 六区域 IA 平行共存**——侧栏双入口并列，`/hermes/cockpit` 及其子路由（chat/history/matrix-chat/swarm-kanban）直达旧驾驶舱；登录默认落点仍为 `/app` 总览；守卫不再改写 cockpit 家族落点，旧 loop 深链仍重定向运行中心（携带 `?loop=` 上下文）。
-
-### 🚀 Cockpit — AI 协作中心（**已退役**，P3）
-
-2.13–2.16 期间的主操作界面：三段联动式布局（全貌 → 聚焦 → 处理），含顶栏（品牌 · 日程 · 时钟 · 搜索 · 通知）、注意力条、左栏 Kanban 统筹、中栏协作图 + 时序事件流、右栏 A2UI 表单 + 文件资源管理器 + 终端、⚡💬⌘ 模式切换。P3 信息架构 2.0 上线后整体退役：
-
-- **能力去向**：日程弹窗（`CockpitScheduleModal` 原样复用于总览）、待办 + 闹钟（workspace store，kv 单一事实源）、注意力梯队模型（总览注意力条收编）、Kanban（工作项区承接）、Matrix 聊天（沟通区升一级）、指挥中心舰队聚合（审批 UI 暂无落点，P4 重建）
-- **RETRO 语义（P4 修订）**：`VITE_IA_RETRO=1` 仅放行旧 loop 落点；P4 起 cockpit 视图本体已恢复（平行共存，patch 240/241），旧驾驶舱经侧栏「AI协作中心」入口直达，不再依赖 RETRO 开关
-- **目录遗留**：`custom/client/cockpit/` 保留 adapters / store / kv 与 2 个复用组件（新 IA 与运行中心仍在消费），视图与三栏布局已删除
-
-### 🔭 RunTraceView — 运行全过程可观测性
-
-把线性聊天消息流重构成 **Evidence Graph（证据图）**，呈现多 agent 协作的并行 / 派生 / 收敛：
-
-- **证据分层**（不可伪造原则）：`L1` 前端事件流可靠可见（实线）/ `L2` 运行时 hook 后补齐（虚线 + 推断标签）/ `L3` 分布式 trace propagation 后补齐（点线 + future 标签）
-- **TraceNode 类型**：ingress / workflow / agent / skill / tool …，skill 可下钻展开内部「思维链 + 工具」交错编排
-- **时间轴 + 检查器 + 时间游标**：回放 live / replay 两种模式
-- 对齐 **OpenTelemetry GenAI 语义约定**的 JSONL 导出 + 证据档案（Evidence Dossier）导出
-- 第 1 层零运行时改动，纯前端消费已有 Socket.IO 事件流（`run/tool/subagent/usage/reasoning`）
-
-### 📋 SwarmKanban — 协作看板
-
-自定义组件（原 cockpit 子路由 `swarm-kanban`，P3 起由新 IA 工作项区 `/app/tasks` 承接，旧路径经兼容守卫重定向），与上游原生 KanbanView 并存：
-
-- 看板列 / 任务卡 / 任务抽屉 / 任务表单 / 内联创建
-- 批量操作栏、注意力条、编排面板、诊断区
-- Markdown 渲染、附件管理、租户解析（多租户隔离）
-- 工作区文件列表、时间线、附件同步 API
-
-### 🛡️ 评审治理 — 按改动风险分配人工审批（2026-10-19）
-
-吸收 Anthropic 工程博客《How the Claude Code team does code review》（2026-10-15）。在 ⑥治理阶段页新增「评审治理」页签（`/app/stage/govern?tab=reviewGov`），把「AI 写代码、人看不过来」拆成可执行的治理闭环：
-
-- **风险分档**：受保护路径（CI、发布脚本、计费、自动更新、鉴权、依赖清单）永远 2 人；敏感路径与常规产品逻辑 1 人；纯文档 / 内部工具 / 特性开关后，受信任作者 0 人。按改动内容分档，不按作者是人是 Agent。
-- **审批语义**：只有绑定当前 head commit、未被新提交或解冲突失效的人类 approve 计数；Agent 审批只记录、不占名额；人类 request_changes 阻塞合并。
-- **互审收敛**：最多 3 轮；第 3 轮起只看新增 diff；同文件同 bug 类去重；每轮 nit 上限；存量问题转延后队列（对应夜间扫描）。
-- **发现项质量**：important 必须附证据（终端输出 / 截图引用）；Agent 发现需独立验证多数确认才阻塞合并。
-- **度量与熔断**：一轮通过率 / 平均轮次 / 5+ 轮占比 / 人工审批中位 / 人工等待中位 / 噪声率 / 回滚率 / 评测召回；回滚或事故抬头时自动升一档，并收紧存量未结束案例、作废旧审批。
-- **夜间存量扫描**：延后队列按「文件 + bug 类」归并成报告，手动 `POST /nightly/run` 或 `HERMES_REVIEW_NIGHTLY=on` 定时跑；只出账本，不自动改代码。
-- **错题本与评测打分**：发现项可提升为回归评测案例；导入一次评审 Agent 的预测（`file:line`）即算召回率/精确率、漏网与误报。
-- **回滚登记与 PR 导入**：回滚只登记事实与 revert 信号（不自动 revert 代码）；GitHub/GitLab/通用 PR 可按归一化载荷导入，同仓库同编号幂等。
-- **旧评审闸门**：`/api/review` 开评审时带 `caseId`，`approve` 会先查该案例的合并就绪度，未就绪直接 409。
-
-数据面：`/api/review/gov/*`（复用 `/api/review` 挂载，无新增 B 类 patch）；策略/收敛/度量/夜间扫描/评测打分/控制器/真实 Koa 挂载/客户端视图均有守门测试。设计文档：`docs/superpowers/specs/2026-10-19-review-governance.md`。
-
-### 💬 Matrix Chat — 完整 Matrix 客户端
-
-50 个组件构成的完整即时通讯客户端，路由动态注册（P3 起挂新 IA 沟通区 `/app/comms`）：
-
-- 房间列表 / 消息流 / 消息输入 / 上下文菜单 / 消息操作栏
-- 文件面板 / 成员列表 / 成员信息 / 邀请 / 转发 / 导出 / 加入 / 离开 / 创建房间
-- 群聊未读追踪、自动 join、日期分隔符、清空消息
-- 基于 `matrix-js-sdk`，经 Matrix homeserver 认证
-
-### 📦 Delivery Cases — 交付案例面板（M2，2026-09-26/28）
-
-分布式交付六阶段（P1 需求 → P6 复盘）的协议事件投影面板——跨机协作的唯一事实源是 Matrix 房间里的 `com.swarmstudio.delivery.*` 协议事件（v2 schema），本面板把这些事件实时投影为人可读的案例卡。挂工程场景（`/app/eng`）第三 tab「Delivery cases」，深链 `/app/cases`；i18n zh/en（patch 473/474）。
-
-- **数据面（delivery-cases store）**：发现机制（`delivery.index` account-data → 案例房清单）→ 案例头（case state：title/tier/stage/owner/frozenAcceptance）→ 门禁（gate 事件，同 gate 取最新 verdict）→ 阶段（stage done 计数）。协议常量唯一源=客户端 `delivery-protocol.ts`，服务端镜像 `task-protocol.ts` 双侧对账守门（漂移即 fail）。
-- **案例卡**：阶段条 P1-P6（完成绿/current 黑/未达灰）+ 门禁灯 G1-G6（pass 绿 / conditional 黄 / reject 红，点击开证据抽屉：evidence 摘要 / decidedBy / 时间 / 打回 reason）+ 完成态分色（`completed = P6 + G6 pass`：绿边+透明+徽标——run14 马拉松终局形态与六轮中断案例一眼可辨）+ 房间 ID 深链（跳沟通区房间）。
-- **网络读数条**：在途案例数（completed 不计）· 阶段分布 · 待审人工门（G1/G5 缺 pass 计数）· 已完成。P1 起同款读数条上浮全局顶区（IaGlobalTop chip 流，零在途零待审整条隐藏=零噪音，点击深链 `/app/cases`）。
-- **实时性**：store 挂 `Room.timeline` 事件监听（matrix-teams 同款模式），delivery.* 协议事件落房 500ms 去抖自动重投影；60s 兜底轮询防边缘态。
-- **发起向导（New case）**：标题 / 中央仓地址 / 档位（lite/standard/compliance）→ 建案例房 + case state + index 登记三发（镜像 harness 语义）；端到端浏览器实证（第 8 案例房服务端 case state 在案）。
-- **验证标准**：三层验法——构建产物 grep + HTTP 200 + 真浏览器登录走查（截屏入档）；26 步全流程马拉松（run14）六 stage/六 gate/终态 P6 断言全过，案例房地面真值（case×6+gate×6+stage×6）核验。
-
-设计文档：`docs/superpowers/specs/2026-09-18-distributed-delivery-network-design.md`（分布式交付网络）+ `2026-09-25-capability-boundaries-design.md`（三系统能力边界 §8）。
-
-### 🔐 Matrix 账号集成
-
-- **登录**：Homeserver URL + MXID + 密码，Remember Me 持久化 + 本地降级
-- **管理**：账号设置、用户管理（admin-service）
-- 服务端：Matrix 认证路由、数据库 schema 扩展（Matrix 列 + SQLite UNIQUE 约束）
-
-### 🔁 Loop Engineering — 循环工程
-
-递归目标自动循环：定义目标后，引擎按 discovery → handoff → validation → persistence → scheduling 五阶段自动推进，直至满足可验证的停止条件。
-
-- 状态存储适配器自动探测：`LOOP_STATE_ADAPTER` 覆盖 → PostgreSQL（SaaSStore）→ Matrix 凭据（MatrixStore）→ 本地兜底（LocalStore）
-- 连接器（GitHub / Webhook / 本地 Git）+ 预算守卫 / 卡死检测 / 团队审批 / verifier
-- 服务端 REST 路由 + Socket.IO namespace（patch 134/135）+ pg 依赖（patch 138）
-- 状态迁移：`scripts/loop-migrate.mjs`（Local → Matrix）、`loop-migrate-saas.mjs`（Matrix → PostgreSQL）
-
-**图引擎接管（P1 patch 202，P2 收口）**：LoopInstance 经编译器变为 GraphSpec（六节点：五阶段 + gate 质量门禁 + 守卫 repair 回边），由图内核执行——事件日志（`node:sqlite`，零新依赖）为唯一事实源，真 checkpoint/resume/fork、HITL interrupt 审批闭环、R2 workspace 上下文注入（GRAPH-CONTEXT.md）。`GRAPH_ENGINE` 环境变量三态切换：`legacy`（默认，旧引擎原样）/ `shadow`（双跑：新引擎 dryRun 对比事件序列，不写副作用）/ `on`（新引擎接管调度，详见下方 caveat）。`on` 模式额外装配两件守护：interrupt 超时扫描器（审批无人应答按 `escalate`/`auto-approve-with-log`/`fail` 三策略处置，缺省 72h + 节流水印落事件日志）与每日 Brief 任务（见下）。新 REST 面：`/api/graph/runs`（CRUD/resume/fork/replay）与 `/api/graph/specs`（specs 表化，随事件日志同库持久）；socket `/graph` namespace 按 run 订阅。旧数据迁移：`node scripts/graph-migrate.mjs`（dry-run 默认，`--apply` 落库幂等）。设计文档：`docs/superpowers/specs/2026-09-09-loop-graph-aihub-redesign-design.md`。
-
-**运行中心（P2）**：入口 `/app/runs`（列表），详情 `/app/runs/:runId`（P3 起新 IA 路由；旧落点 `/hermes/loop/runs`、`/hermes/loop/runs/:id` 经兼容守卫重定向并携带 loop 上下文）。
-
-- **运行列表**：阶段 × 状态双轴、状态驱动的合法操作集（不存在任意跳转）、`awaiting-input`（待我处理）恒置顶排序、状态筛选 + 搜索 + 分页、行内 peek 展开与内联审批
-- **介入收件箱**：汇集等待人工决策的 run，两态归档（本地打标，不改服务端 run 状态）
-- **运行详情**：左图右流——执行图画布（vue-flow 只读）+ 时间轴回放（游标 = 重放至第 N 事件，图与事件流共用前缀投影）；**三级分辨率**时间轴（`summary` 只看节点级结果 / `normal` 增加路由与耗时 / `verbose` 全量原始负载，逐级放开）
-- **节点检查器**：选中节点查看类型 / 状态 / 迭代 / 耗时与最近一次 update 的 channel 键值（attach 档）；唯一介入动作是 failed 节点的「重跑整个 run」（fork → startRun 显式起跑）——审批不在检查器，位于列表行 peek 展开与介入收件箱的审批面板
-- 数据面：`GET /api/graph/runs/:id` + `/replay`，socket `/graph` 实时推送
-
-**调度单写者桥接（T3b，patch 472，默认关闭）**：`LOOP_SCHEDULER=cron` 时 RunSpawner 不启内部 30s 轮询，hermes cron no-agent 脚本（每分钟回调公开段 `POST /api/loop/cron-bridge/tick`）成为唯一 timer——token fail-closed + loopback 限源 + 幂等注册；四层验证（单测/集成/真 CLI 冒烟/活火 72.6s→204）。规格：`docs/superpowers/specs/2026-09-25-loop-cron-bridge-design.md`。
-
-**R1 每日 Brief（P2，投递已于 P3 接线）**：`on` 模式下每日定时（`LOOP_BRIEF_CRON`，缺省 `0 9 * * *` 本地时区）聚合过去 24h 的图引擎事实，渲染三段式结构化简报——进展（完成 / 失败 / 熔断升级告警）、等你决策（awaiting-input 及等待时长）、今日计划（到期未触发的 loop）。零 LLM 依赖，纯持久数据源（事件日志 + loop 台账），重启自然恢复；brief 自身作为 `graphId='daily-brief'` 审计 run 落事件日志，可回放可审计。**Matrix 投递身份（用户拍板：使用本机配置的登录身份）**，凭据三级回落（每次投递重读，token 轮换即时生效）：应用内最近一次 Matrix 登录（`POST /api/auth/matrix-login`，patch 012）落盘的 `~/.hermes-web-ui/matrix-session.json`（0600）→ `LOOP_MATRIX_HOMESERVER` / `LOOP_MATRIX_TOKEN` / `LOOP_MATRIX_USER` env → gateway（hermes-agent）dotenv `~/.hermes/profiles/<profile>/.env` 的 `MATRIX_HOMESERVER` / `MATRIX_ACCESS_TOKEN` / `MATRIX_USER_ID`（profile 取 `LOOP_MATRIX_PROFILE` → `active_profile` 文件 → `orchestrator`）。**房间**：`LOOP_BRIEF_ROOM` → 回落 gateway `MATRIX_HOME_ROOM`（网关主房间）→ 均无则只落事件日志（审计 run 记 `delivered:false`）；房间值支持 `!room:server` 直发与 `#alias:server` 经 homeserver 解析（失败上抛走审计），发送失败同样经审计可见。投递身份取创建装配时的判定：进程启动后才完成首次 Matrix 登录的，需重启服务接通投递。
-
-**信息架构与编排（P3/P4）**：六区域新 IA（见功能特色首节）+ 编排区（模板库 / Spec 可视化 / 实例化）+ 介入中心五源聚合 + 追溯矩阵 + 图引擎策略卡；**P4 编排器**：可视化画布编辑器（节点面板 8 类 / 配置面板 / 编辑守卫实时校验 / JSON 导入导出 / 一键试跑）、plan 节点三出口审批、Best-of-N fan-out 收敛、loop 容器、死图检测四铁律、自建 spec 起跑（`POST /api/graph/specs/:id/runs`）；cockpit 恢复为与新 IA 平行共存（双入口，见上）。事件面配套：`loop.persisted` 产物事件带 `taskId`/`runId`（追溯锚点），`graph-runtime` 对 `loop.*` 事件整体透传负载（回放可反查产物）。
-
-**P1 图引擎 caveat（终审修复波后仍成立的交付边界）**：
-- `on` 模式接管调度，但失败语义与 legacy 有偏移：run 失败时 loop 重写为 `idle` 并按 `computeNextTick` 重排（连续失败达 10 次熔断转 `paused`）；legacy 的 tick 异常会把 loop 置 `status='failed'`。前端按 `paused/idle` 展示 on 模式失败态。
-- `on` 模式产物落库为真实 kanban 写入（P2 Task 4 替换 P1 stub）：`KanbanPersistenceAdapter` 按 `loop.tenant` 六段格式解析 board（群聊名 slug 化——残段无字母或不足 3 字符时回落 roomId，解析不出跳过 + warn）、任务 title `[loop.name] contract.id` 按契约查重幂等（重复 persist 跳过）、kanban CLI 失败发 `loop.persist-failed` 事件并经 persistence→handoff 守卫回边重试（失败不炸 run）；重试达 `maxAttempts` 封顶则契约标 `escalated` + `tasksBlocked` 计数，含 escalated 契约的 run 不判收敛（loop 不会被假标 completed）。注意：`tenant` 由创建请求显式携带（`POST /api/loop/loops` 的 `body.tenant`，不传则解析不出 board、写入跳过）；新群聊首写可能命中尚不存在的 board——写入失败会进 repair 重试直至封顶 escalated。`shadow` 双跑 dryRun 语义不变（零写入）。
-- judge 验证仍未接线真实模型调用方（P2 已备好 pending 结构：VerificationRecord 记 `judge:{status:'pending', reason}` 且不阻断 overall，judge 未配置时装配 warn 一次显式声明降级）：契约带 judge intent 时 judge 项按 pending 记录，程序化 + 人工门禁照常生效；刻意不注入恒失败假 judge（会让 judge 意图契约 repair 循环烧穿 escalated）。
-- connector 发现与 legacy 生产同源（仅 webhook；GitHub/本地 Git 连接器待配置面引入后接入）。
-
-### 🎓 专家基线考卷 — benchmarkforge（2026-10-14，阿里调研轮 C）
-
-从真实代码库的人类专家 Commit 反生成需求题（含验收条件），导入 Eval 用例集作固定考卷：调优有固定题可检验，改技能/配置后必跑该集对照（`GET /runs/compare` A/B）。带测试的提交优先入选；问题文本不含提交哈希（防泄漏），出处只进 origin 元数据。考性边界如实声明：同仓历史对被测 agent 可见时考卷失效，导入后建议 `sealSet` 密封。
-
-```bash
-npm run bench:expert -- --repo <仓库路径> --set-name 专家基线集 [--since 3.months.ago] [--limit 20]
-```
-
-同轮落地（调研正本 `docs/superpowers/specs/2026-10-14-ali-15agent-squad-research.md` A-F 提案）：
-
-- **D 约束卡**（`/app/ontology` →「约束卡」页签）：架构级约束登记，派单简报按列/角色命中注入（封顶 5 条，fail-soft）。
-- **A+F 优化建议**（`/app/eval` →「优化建议」页签）：烧钱会话/瓶颈阶段/关卡拦截三张 Top-N + 交付周期瀑布——聚合既有面不新增采集，源缺席如实标出。
-- **E 失败路由显式表**（`/api/faileroute`）：五类失败 → 三档回退（原地修/带证据回上游/人闸），出路由决定与卡标注文本，不自动改派。
-- **B1 经验候选**（`/api/expcandidates`）：看板轨迹提取反模式/较优路径/流程签名三类候选，指纹幂等入库，只出候选不改行为。
-
-### 🧱 基础运行时层 — semantica 知识基础设施 + pua 行为技能（2026-09-23）
-
-外部运行时按不可变 pin 受管接入,零 agent 内核改动:
-- **semantica** v0.7.0(MCP stdio,14 工具):Context Graph/知识图谱/混合检索/RETE·Datalog
-  推理/PROV-O 决策溯源 —— 落《AI-Native 研发范式实践手册》的"企业知识库"能力位。
-  经 patch 375 进 hermes-agent MCP 目录,`hermes mcp install semantica` 或 studio
-  MCP 浏览器一键安装(git pinned tag + 独立 venv)。
-- **pua** @e6e6cd2(12 个 SKILL.md 技能):调试方法论五步法/抗借口/主动性强制/L0-L4
-  压力分级 —— 落"Skill 体系"能力位。`skills.external_dirs` 只读挂载,升级只改
-  overlay 一处。管理命令:`npm run runtime:doctor | runtime:vendor-pua | runtime:register`。
-
-详见 [runtime/README.md](runtime/README.md) 与
-[设计文档](../docs/superpowers/specs/2026-09-23-base-runtimes-design.md)(含手册七
-能力位差距分析与后续路线)。
-
-### 🎨 品牌与网关通知
-
-- 桌面端 rebrand 为 SwarmStudio（config + package）
-- 品牌样式变量注入
-- Gateway 通知横幅：Chat / Group Chat 关停公告，经内容检测识别（非 systemType）
-
-### 🌐 国际化
-
-扩展 i18n 翻译键（看板、历史筛选、Matrix 聊天等），直接经 patch 注入上游 locale 文件，无需运行时 merge。
-
----
-
-## 架构
-
-### 技术架构说明
-<img width="2960" height="4000" alt="image" src="https://github.com/user-attachments/assets/3e41bc6e-7afc-4c2b-b437-404e1f33c629" />
-
-### hermes agent kanban 任务状态转移图
-<img width="6220" height="4960" alt="mermaid-1782269745463" src="https://github.com/user-attachments/assets/f5283991-2a8a-4679-bdf2-a6787f2cec11" />
-
-### 工作区三层布局
+## 设计：三层结构与五条契约
 
 ```
-ncwk/
-├── upstream/                 # 上游原始项目（只读，禁止直接修改）
-│   ├── hermes-studio/        #   SwarmStudio 桌面应用主体（v0.7.18）
-│   ├── element-web/          #   Element Web Matrix 客户端参考实现
-│   └── hermes-agent/         #   Hermes AI Agent 运行时
-├── overlay/                  # ← 本仓：二次开发代码（唯一被提交的地方）
-│   ├── custom/               #     A 类：纯新增代码（组件/store/服务）
-│   ├── patches/              #     B 类：上游骨架修改（git apply 可逆）
-│   ├── registries/           #     运行时注册中枢（路由/导航/组件）
-│   ├── config/               #     功能开关
-│   ├── scripts/              #     inject / build / sync 工具链
-│   └── tests/                #     单测
-└── docs/superpowers/         # 设计文档（specs + plans）
+产品面（人看与操作，Vue + Koa，注入 hermes-studio）
+   │ 只读：看板 / 审批 / 团队 / 运行态 / 证据
+   ▼
+运行面（hermes agent 进程 + Matrix + kanban）
+   │ 消费：项目技能（约束、配方、门禁）
+   ▼
+能力层（swarm-yuan 生成的目标技能）
 ```
 
-**核心原则**：三个上游仓始终保持上游原状，`.git` 永不污染，可独立 `git pull` 升级；所有二次开发代码集中在 overlay 仓。
+三层之间只有五条跨域契约：技能供给链、能力发现与委托、任务与证据、治理与审批、推演验证；任何跨域功能必须落在其中一条上。三条边界判据：写入口唯一（任务真值只在 kanban）、读模型不复制（不存影子数据）、不反向依赖（能力层不知道产品面）。
 
-### 混合注入策略（A 类 + B 类）
+设计事实的单一正本是[《SwarmStudio 完整设计文档》](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)，按理念、产品、设计、实施、使用分层组织。
 
-二次开发改动按「是否能纯新增」分两类，分别用不同机制接入上游：
+## 实施：overlay 注入
 
-| 类别 | 改动性质 | 存放 | 接入机制 | 可逆性 |
-|------|---------|------|---------|--------|
-| **A 类** | 纯新增文件（组件/store/服务） | `custom/` | 构建期 alias 重定向 + entry shim + 运行时 registry | 零侵入上游源码 |
-| **B 类** | 修改上游骨架（schema/config/vite/路由） | `patches/` | `git apply`（构建期注入） | `git apply --reverse` 完全还原 |
+上游三个仓保持只读，所有二次开发住在本仓，构建期注入：
 
-> 为什么不全用 A 类？对修改文件做分类后发现，~7 类改的是上游骨架（schemas 加列、config 加字段、vite 预打包等），属运行前置条件，无法运行时注册，必须转 patch。
+- A 类接入：`custom/` 纯新增组件，构建期 alias 重定向加运行时注册。
+- B 类 patch：`patches/` 按编号序列 `git apply`（series 当前登记 studio 补丁 684 个、zcode 补丁 8 个），幂等可反向还原。
+- 上游升级走净树重放：0.7.37 到 0.7.38 升级时 310 个补丁全量通过，二次开发不陷分叉泥潭。
 
-### overlay 仓库目录结构
+| 上游项目 | 用途 | 对齐版本 |
+|---|---|---|
+| [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) | 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），注入目标 | v0.7.38 |
+| [hermes-agent](https://github.com/NousResearch/hermes-agent) | Agent 运行时（Python，单网关多路复用） | v0.22.4 |
+| [element-web](https://github.com/element-hq/element-web) | Matrix 客户端参考实现 | v1.12.32 |
 
-```
-overlay/
-├── custom/
-│   ├── client/                    # 前端 A 类代码
-│   │   ├── ia2/                   #   信息架构 2.0（六区域：22 组件/视图 + store + adapters + 守卫）
-│   │   ├── cockpit/               #   驾驶舱遗留（adapters/store/kv + 2 复用组件；视图已退役）
-│   │   ├── matrix-chat/           #   Matrix 聊天（50 组件 + views）
-│   │   ├── kanban/                #   协作看板（14 组件 + utils + views）
-│   │   ├── loop/                  #   Loop 工程化（25 组件：引擎视图 + 运行中心 + 执行图 + store）
-│   │   ├── chat/                  #   网关通知横幅
-│   │   ├── branding/              #   品牌注入
-│   │   └── test/                  #   测试桩
-│   ├── desktop/                   # 桌面端 A 类（node-pty prebuild 剪枝测试）
-│   ├── hermes-agent-plugins/      # hermes-agent Python 插件（run-trace OTel formatter）
-│   └── server/                    # 服务端 A 类代码
-│       ├── kanban/                #   看板服务
-│       ├── matrix/                #   Matrix 认证路由 + admin-service
-│       ├── loop/                  #   Loop 引擎（engine / connectors / store / controllers / graph 图引擎）
-│       ├── controllers/           #   Hermes 扩展控制器（trace / 终端工具探测）
-│       ├── services/              #   Hermes 扩展服务（task workspace 缓存）
-│       └── security/              #   URL 守卫（SSRF 防护）
-├── patches/                       # B 类 patch（178 个 active + 归档）
-│   └── series                     #   patch 应用顺序清单
-├── runtime/                       # 基础运行时层（受管 pin 镜像,单一事实源）
-│   ├── semantica/manifest.yaml    #   知识基础设施 MCP 目录清单（patch 375 注入 hermes-agent）
-│   └── pua/                       #   行为技能集镜像（12 技能 + PIN + ATTRIBUTION,脚本生成）
-├── registries/
-│   ├── client/                    # 客户端注册中枢 + entry shim + bootstrap
-│   └── server/                    # 服务端 bootstrap（预留）
-├── config/
-│   ├── features.ts                # 功能开关（VITE_* 环境变量控制）
-│   ├── loop-config.ts             # Loop 工程化配置（状态适配器探测）
-│   └── bootstrap.ts
-├── scripts/
-│   ├── inject.mjs                 # 注入工具（应用 patch + 生成派生 config + 建符号链接）
-│   ├── runtime/                   # 基础运行时管理（vendor 同步 / profile 注册 / 健康门禁）
-│   │   ├── vendor-pua.mjs         #   pua 技能按 pin 从上游同步进 runtime/pua
-│   │   ├── register-runtime.mjs   #   把运行时注册进 HERMES_HOME（external_dirs 幂等写入）
-│   │   └── runtime-doctor.mjs     #   硬检查（schema/PIN 对账/patch 一致性）+ 软检查
-│   ├── ensure-injected.mjs        # dev/build 前置钩子（幂等确保已注入）
-│   ├── build.mjs                  # 完整构建编排
-│   ├── build-dmg.mjs              # 桌面端 dmg 打包
-│   ├── verify-clean.mjs           # 校验上游工作树干净
-│   ├── sync-upstream.sh           # 上游升级流程
-│   ├── serve-server.sh            # 开发期后端启动
-│   ├── loop-migrate.mjs           # Loop 状态迁移（LocalStore → MatrixStore）
-│   ├── loop-migrate-saas.mjs      # Loop 状态迁移（MatrixStore → PostgreSQL）
-│   ├── add-i18n-keys.mjs          # locale 文件补齐缺失 i18n key
-│   └── add-matrixchat-i18n.mjs    # Matrix Chat i18n key 注入
-└── tests/                         # 单测源（matrix-chat 测试，经 patch 055-060 注入上游 tests/ 运行）
-```
+| 层 | 技术 |
+|---|---|
+| 前端 | Vue 3 + Pinia + Vue Router + Vite + TypeScript |
+| UI | Naive UI + Pure Ink 主题（黑白灰）+ ECharts |
+| 通讯 | Matrix（matrix-js-sdk）+ Socket.IO |
+| 后端 | Koa + SQLite |
+| 桌面 | Electron（可选，日常验证走浏览器 web 版） |
+| 测试 | Vitest，custom 下 872 个测试文件 |
 
----
+## 使用：五分钟跑起来
 
-## 运行原理
-
-### 1. 注入流程（`npm run inject`）
-
-`scripts/inject.mjs` 是核心，幂等执行，将 overlay 叠加到上游工作树：
-
-```
-inject.mjs
-  │
-  ├─ 0. 清理自残留（旧 server/src/custom 符号链接 + 非 patch 的 build 产物）
-  ├─ 1. 校验上游工作树干净（脏则报错，提示先 clean）
-  ├─ 2. 应用 B 类 patch ──── 按 patches/series 顺序 git apply 到 hermes-studio / hermes-agent（按 patch 目标自动路由）
-  ├─ 3. 建符号链接
-  │     ├─ overlay/node_modules → upstream/hermes-studio/node_modules（复用上游依赖）
-  │     └─ upstream/.../server/src/custom → overlay/custom/server（server 用相对路径 import）
-  ├─ 4. 生成派生 vite.config.overlay.ts（alias 重定向 + entry 重定向，见下）
-  └─ 5. 写清单 .overlay-injected.json（记录已应用 patch，供 clean 反向还原）
-```
-
-**`npm run clean`** 反向执行：按清单逆序 `git apply --reverse` 还原 patch + 移除符号链接 + 还原 build 产物，让上游完全回到 HEAD。
-
-### 2. A 类接入：构建期 alias 重定向 + 运行时注册
-
-A 类代码不改动上游源码，靠两个机制接入：
-
-**(a) 派生 vite config 的 alias 重定向**
-
-`inject` 生成的 `vite.config.overlay.ts` 在上游 vite config 基础上 `mergeConfig` 注入 alias（数组形式保证匹配顺序，更具体的前缀先匹配）：
-
-| alias | 指向 | 作用 |
-|-------|------|------|
-| `/src/main.ts` | `overlay/registries/client/entry.mts` | 把 index.html 入口重定向到 overlay shim |
-| `@/custom` / `@custom` | `overlay/custom/client` | 自定义组件解析到 overlay |
-| `@registries` | `overlay/registries` | 注册中枢解析到 overlay |
-| `@`（兜底） | `upstream/.../client/src` | `@/api`、`@/views` 等仍解析到上游 |
-
-**(b) entry shim + 运行时 registry**
-
-`registries/client/entry.mts` 忠实复制上游 `main.ts` 的启动序列（createApp → use pinia/i18n/router → FOUC/token 处理），唯一差别是在 `app.use(router)` 与 `app.mount()` 之间插入 A 类注册：
-
-```
-entry.mts
-  ├─ 复制上游 main.ts 启动序列（createApp / use pinia / use i18n / use router）
-  ├─ import('./bootstrap').then(bootstrapClient(app))   ← A 类注册插入点
-  │     │
-  │     ├─ 按 features 开关动态 import 各 custom 模块
-  │     │   ├─ registerMatrixChat(app)
-  │     │   ├─ registerKanbanEnhancements(app)
-  │     │   ├─ registerBranding(app)
-  │     │   └─ registerCockpit(app)
-  │     │
-  │     └─ 把 registry 收集到的路由 router.addRoute()（必须在 mount 前）
-  │           └─ 动态子路由（如 matrix-chat 作为 cockpit 子路由）也在此注册
-  │
-  ├─ router.isReady() + 重导航（让动态路由对初始导航生效）
-  └─ app.mount('#app')
-```
-
-`registries/client/index.ts` 是注册中枢，提供 `registerRoute` / `registerNavEntry` / `registerComponent`，各 custom 模块调用它们收集扩展，bootstrap 在 mount 前统一挂载。
-
-> **为何不用顶层 await**：es2020 target 不支持，用 `.then` 链式保证 bootstrap 在 mount 前完成。
-
-### 3. 功能开关
-
-`config/features.ts` 用 `import.meta.env.VITE_*` 读取环境变量（必须带 `VITE_` 前缀，否则 Vite 不注入客户端 bundle）。默认全开（向后兼容），可经环境变量关闭：
-
-| 开关 | 环境变量 | 默认 |
-|------|---------|------|
-| matrixChat | `VITE_CUSTOM_MATRIX_CHAT=false` | 开 |
-| matrixAuth | `VITE_CUSTOM_MATRIX_AUTH=true` | 关 |
-| matrixAdmin | `VITE_CUSTOM_MATRIX_ADMIN=true` | 关 |
-| kanbanEnhancements | `VITE_CUSTOM_KANBAN_ENHANCEMENTS=false` | 开 |
-| branding | `VITE_CUSTOM_BRANDING=false` | 开 |
-| extendedI18n | `VITE_CUSTOM_EXTENDED_I18N=false` | 开 |
-| loopEngineering | `VITE_CUSTOM_LOOP=false` | 开 |
-
-> 注：P4 起 `cockpit`（`VITE_CUSTOM_COCKPIT`，默认开）恢复——`/hermes/cockpit` 旧驾驶舱与新 IA `/app` 平行共存（侧栏双入口）；关闭开关仅隐藏旧入口，不影响新 IA。`VITE_IA_RETRO=1` 仅保留旧 `/hermes/loop*` 深链不强制迁移的回退语义。
-
-### 4. 完整构建流水线（`npm run build:full`）
-
-`scripts/build.mjs` 编排四步，产物落到上游 `dist/`（desktop 构建读取该目录）：
-
-```
-1. openapi:generate     → dist/server/openapi.json（上游脚本）
-2. vite build           → dist/client/（用 overlay config：@/custom alias + entry shim）
-3. tsc --noEmit         → server 类型检查
-4. build-server         → dist/server/（上游打包脚本）
-```
-
-桌面端打包：`npm run build:dmg:mac|win|linux`（`scripts/build-dmg.mjs`）。
-
-### 5. 数据流（运行时）
-
-```
-浏览器 (Vue3 + Pinia + Vue Router)
-  │  index.html → entry shim (alias 重定向)
-  │  ├─ @/custom/*   → overlay custom 组件
-  │  └─ @/*          → 上游 client src
-  │
-  │  Socket.IO 事件流 (run/tool/subagent/usage/reasoning)
-  │  ├─ chat.ts handleEvent        → 线性 Message[]（上游，不改）
-  │  └─ RunTraceView 并行消费者     → Evidence Graph（overlay，零侵入）
-  │
-Koa Server (上游 packages/server + custom/server 经符号链接)
-  ├─ Matrix 认证路由 (custom/server/matrix/routes.ts)
-  ├─ Kanban 服务 (custom/server/kanban)
-  └─ element-web 中间件 (patch 008)
-  │
-hermes-agent (运行时；本地安装优先，否则首次启动下载捆绑 runtime)
-```
-
----
-
-## 快速开始
-
-### 环境要求
-
-- Node.js ≥ 23.0.0
-- 上游仓已 clone 到 `../upstream/`（hermes-studio / element-web / hermes-agent）
-- **Windows x64**：支持（2026-09-22 兼容轮起）。开发/构建/打包全链可在 Windows 原生跑，详细步骤见 [docs/windows-x64-setup.md](docs/windows-x64-setup.md)；注意 `git config core.autocrlf false`，win 安装包必须在 Windows 主机构建（sharp 平台二进制）。
-
-### 上游依赖
-
-SwarmStudio 基于以下三个上游开源项目二次开发：
-
-| 上游项目 | GitHub 仓库 | 用途 |
-|---------|-----------|------|
-| **hermes-studio** | https://github.com/EKKOLearnAI/hermes-studio | SwarmStudio 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），本 overlay 的注入目标（v1.0.2） |
-| **hermes-agent** | https://github.com/NousResearch/hermes-agent | Hermes AI Agent 运行时（Python，源码跟踪 v0.21.1 / v2026.9.7，4 个 CLI patch 注入；桌面捆绑 runtime pin hermes-0.21.0-runtime，首次启动下载） |
-| **element-web** | https://github.com/element-hq/element-web | Element Web Matrix 客户端参考实现（v1.12.27） |
-
-**独立安装运行（不依赖 overlay 二次开发）**
-
-若只想运行上游原版，可直接用官方命令安装：
-
-```bash
-# 1. 安装 hermes-agent 运行时（Python）
-pip install hermes-agent[all]
-
-# 2. 安装 hermes-web-ui（SwarmStudio 桌面应用）
-npm install -g hermes-web-ui
-
-# 3. 启动 web UI 服务
-hermes-web-ui start
-
-# 4. 启动 agent（终端 TUI 交互模式）
-hermes --tui
-
-# 5. 启动 agent dashboard（桌面 GUI 后端）
-hermes dashboard --tui
-```
-
-> 注：上述是上游官方用法。本 overlay 仓的二次开发版需经 `npm run inject` 注入后从源码构建（见下文「开发启动」），不走全局安装路径。
-
-### 开发启动（首次）
+前置：Node.js 不低于 23.0.0；三个上游仓按原目录名 clone 到本仓的 `../upstream/`（hermes-studio、hermes-agent、element-web）。Windows x64 支持见 [docs/windows-x64-setup.md](docs/windows-x64-setup.md)。
 
 ```bash
 cd overlay
-npm run inject                                       # 1. 注入 patches + 生成派生 config + 建符号链接
+npm run inject                                    # 1. 注入 patch、生成派生 config、建符号链接
 
 cd ../upstream/hermes-studio
-npm install --no-audit --no-fund --ignore-scripts    # 2. 安装上游依赖（overlay 经符号链接复用）
+npm install --no-audit --no-fund --ignore-scripts # 2. 安装上游依赖（overlay 经符号链接复用）
 mkdir -p dist
 
 cd ../../overlay
-bash scripts/serve-server.sh &                       # 3. 后端 :8647（ts-node 直跑上游 src/index.ts）
-                                                        #    Windows 用跨平台版：npm run serve（serve-server.mjs）
-npm run dev                                          # 4. 前端 :8649（vite，host + strictPort）
+bash scripts/serve-server.sh &                    # 3. 后端 :8647
+npm run dev                                       # 4. 前端 :8649（vite，改代码即时热更新）
 ```
 
-开发期 vite dev server 代理 `/agent-health` → `http://127.0.0.1:8650/health`。
+浏览器打开 `http://localhost:8649`。首次空库引导需后端显式设 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`（出厂默认口令已删除）。已有账号直接登录。
 
-### 前后端服务重启
+改了 B 类 patch 后须 `npm run clean && npm run inject` 再重启后端。完整走法（三种模式的典型流程、角色旅程、服务重启、排障）见[《使用指南》](docs/USAGE.md)。
 
-开发期后端用 `serve-server.sh`（前台进程，`node -r ts-node/register` 直跑 TS 源码，无热重载）；前端用 vite dev server（HMR 自动热更新）。两者各自独立，重启互不影响。
+## 现状与验证
 
-**重启后端**（改了 server 代码 / patch / `custom/server/` 后需重启）：
+数字以[《设计数字总账》](docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)为准（核实日 2026-10-23）：
 
-```bash
-# 1. 找到并杀掉旧后端进程（监听 :8647）
-lsof -ti:8647 | xargs kill -9 2>/dev/null
+- 全流程推演 22 轮；run22 收官：19.6 小时、26 步、六道质量门全部通过。
+- 全量测试 6,149 通过、0 失败；custom 下 872 个测试文件、343 个 Vue 组件。
+- AI 团队编制 15 人、30 账号、42 个智能体；产品面 33 个页签、65 页走查通过。
+- 上游 0.7.38 升级净树重放全过；桌面安装包已出 mac arm64 与 win x64。
 
-# 2. 重新启动（后台）
-cd overlay
-bash scripts/serve-server.sh &                        # 默认 :8647
-# 或指定端口：bash scripts/serve-server.sh --port 8647
+## 文档
 
-# 若改了 B 类 patch，重启前需先重注入：
-# npm run clean && npm run inject
-```
+- [使用指南](docs/USAGE.md)：启动、三种工作模式走法、角色旅程、重启与排障。
+- [SwarmStudio 完整设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施、使用五层正本。
+- [全流程推演方案](docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步六闸推演唯一正本（V8.52）。
+- [设计数字总账](docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)：全域数字唯一事实源。
+- [公众号宣传稿（深度版）](docs/SwarmStudio-公众号宣传稿-深度版.md)：完整价值叙述。
+- 历史 spec 索引见[附录 A](docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)。
 
-**重启前端**（改了 `custom/client/` 后通常无需重启——vite HMR 自动热更新；仅当改了 `vite.config.overlay.ts` / alias / entry shim 时需重启）：
+## 已知注意点
 
-```bash
-# 1. 杀掉旧 vite 进程（监听 :8649）
-lsof -ti:8649 | xargs kill -9 2>/dev/null
+- 桌面端同版本号覆盖更新有缓存陷阱：`webuiDir()` 优先用 `~/.hermes-web-ui/webui/<version>/` 副本，每次发版须递增版本号并删除旧副本。
+- hermes-agent 运行时不在本仓，首次启动自动下载。
 
-# 2. 重新启动
-cd overlay
-npm run dev                                           # 前台跑，Ctrl+C 停止；或加 & 后台
-```
+## 许可证
 
-> **若改了 B 类 patch**：后端重启前必须 `npm run clean && npm run inject` 重新注入，否则上游工作树仍是旧 patch 状态。
-
-### 完整构建 + 桌面端打包（两个版本构建物）
-
-SwarmStudio 桌面端当前版本 **0.7.18**，构建产物分 **macOS** 与 **Windows** 两个版本。
-
-**方式 A — overlay 一键脚本（推荐，自动 inject + build:full + electron-builder）**
-
-```bash
-cd overlay
-
-# macOS 版（arm64 DMG + zip）
-npm run build:dmg:mac
-# 产物：upstream/hermes-studio/packages/desktop/release/
-#       ├── SwarmStudio-0.7.18-arm64.dmg
-#       └── SwarmStudio-0.7.18-arm64.zip
-
-# Windows 版（x64 zip + NSIS exe 安装器）
-npm run build:dmg:win
-# 产物：upstream/hermes-studio/packages/desktop/release/
-#       ├── SwarmStudio-0.7.18-x64.zip
-#       └── SwarmStudio-0.7.18-x64.exe
-```
-
-`build-dmg.mjs` 编排 5 步（自动完成，无需手动分步）：
-1. `inject` — 应用 patch + 生成派生 config + 建符号链接
-2. `build:full` — 用 overlay vite config 构建 web UI → `dist/client` + `dist/server`
-3. `desktop:install` — `npm ci --prefix packages/desktop`
-4. `build:main` — `tsc` 编译桌面主进程
-5. `electron-builder --<platform> --publish never` — 打包
-
-**方式 B — 手动分步（更细粒度控制）**
-
-```bash
-cd overlay
-npm run inject                  # 1. 注入 patch
-npm run build:full              # 2. 构建 dist/(openapi + client + server)
-
-cd ../upstream/hermes-studio
-npm ci --prefix packages/desktop --no-audit --no-fund   # 3. 桌面端依赖
-npm --prefix packages/desktop run build:main            # 4. tsc 编译主进程
-
-# 5. 打包（--mac / --win / --linux，可组合）
-npm --prefix packages/desktop run dist -- --mac --win --publish never
-# 产物同样落到 packages/desktop/release/
-```
-
-> **关键**：必须用 overlay 的 `build:full`（`scripts/build.mjs`，用 overlay vite config），而非上游的 `npm run build`——后者会覆盖 `dist/` 且不带 `@/custom` alias + entry shim，产物不含自定义组件。`build-dmg.mjs` 已默认绕开上游 `npm run dist`（避免其内部 `npm run build` 覆盖 dist）。
-
-**仅构建 web UI（不打桌面端）**
-
-```bash
-cd overlay
-npm run inject          # 应用 177 patch
-npm run build:full      # 构建 dist/(openapi + client + server)，落到上游 dist/
-```
-
-### 常用命令
-
-| 命令 | 作用 |
-|------|------|
-| `npm run inject` | 应用 B 类 patch + 生成派生 config + 建符号链接 |
-| `npm run clean` | 反向还原上游工作树（逆序 reverse patch + 移除链接） |
-| `npm run verify` | 校验上游工作树状态干净 |
-| `npm run sync` | 上游升级（clean → fetch/reset → re-inject） |
-| `npm run dev` | 前端开发服务器 :8649 |
-| `npm run build` | 仅构建 client bundle |
-| `npm run build:full` | 完整构建 web UI（openapi + client + server）→ 上游 dist/ |
-| `npm run build:dmg:mac` | macOS 版构建物（arm64 DMG + zip，一键 inject+build+打包） |
-| `npm run build:dmg:win` | Windows 版构建物（x64 zip + exe 安装器，一键 inject+build+打包） |
-| `npm run build:dmg:linux` | Linux 版构建物（一键 inject+build+打包） |
-| `npm test` | 运行单测（vitest） |
-
----
-
-## 开发工作流
-
-### 修改上游骨架（B 类）
-
-1. 在 `upstream/hermes-studio` 直接改（临时）
-2. `git diff > overlay/patches/NNN-描述.patch` 生成 patch
-3. 还原上游工作树（`git checkout -- .`）
-4. 把 patch 文件名加入 `overlay/patches/series`
-5. `npm run inject` 验证可应用
-
-### 新增功能（A 类）
-
-1. 在 `overlay/custom/client/<feature>/` 写组件 / store
-2. 在 `overlay/registries/client/bootstrap.ts` 调度注册（按 features 开关动态 import）
-3. 用 `registerRoute` / `registerNavEntry` / `registerComponent` 收集扩展
-4. `npm run dev` 即可热加载验证
-
-### 上游升级
-
-```bash
-npm run sync   # = clean → git fetch/reset upstream → re-inject
-```
-
-patch 冲突时用 `git apply --reject` 手动排查，修复后重跑 inject。详见 `docs/superpowers/specs/2026-06-21-overlay-architecture-design.md`。
-
----
-
-## 技术栈
-
-| 层 | 技术 |
-|----|------|
-| 前端 | Vue 3 + Pinia + Vue Router + Vite + TypeScript |
-| UI | Naive UI + Pure Ink 自定义主题（黑白灰）+ ECharts |
-| 通讯 | Matrix（matrix-js-sdk）+ Socket.IO |
-| 后端 | Koa + SQLite（Loop 工程化可选 PostgreSQL） |
-| 桌面 | Electron（hermes-studio packages/desktop） |
-| 测试 | Vitest（106 个测试文件，custom/**） |
-| Agent | hermes-agent（运行时下载，OpenTelemetry GenAI 语义对齐） |
-
----
-
-## 规模
-
-- **177** 个 active B 类 patch（100% inject 通过率）
-- **113** 个自定义 Vue 组件（Matrix Chat 50 / IA2 21 / Loop 25 / Kanban 14 / Cockpit 复用 2 / 其他 1）
-- **106** 个单测文件（vitest，custom/**）
-- 上游基础：hermes-studio v0.7.18 / hermes-agent v0.21.0 / element-web v1.12.27
-
-## 设计文档
-
-完整设计文档位于 `../docs/superpowers/`（specs + plans），覆盖 Cockpit、RunTraceView、Kanban、Matrix 集成、overlay 架构等。核心总览：
-
-- **《三系统能力边界设计》**（`specs/2026-09-25-capability-boundaries-design.md`）——hermes agent teams / SwarmStudio / swarm-yuan / overlay 四干系人的能力域归属终表、双写治理台账 E1-E9、八层根因链、T1-T8 工单与 P0/P1 完善批（§8）、UI 三层验法收账标准
-- **《多机多用户分布式交付网络设计》**（`specs/2026-09-18-distributed-delivery-network-design.md`）——"Matrix 传协调、git 传制品、本机管执行"三层事实源、delivery 协议 v2、M0-M4 里程碑（M3 已收官：26 步+事件马拉松 run14 exit 0）、入网 runbook
-- **《调度负载唯一登记台账》**（`specs/2026-09-25-scheduled-loads-registry.md`）——13 项定时负载全量盘点（一负载一登记处）
-- **《loop 调度 cron 桥接设计》**（`specs/2026-09-25-loop-cron-bridge-design.md`）——`LOOP_SCHEDULER=cron` 时 hermes cron 为唯一 timer（四层验证含活火）
-- **《V3 全流程推演计划》**（`specs/2026-09-25-mux-v3-lifecycle-plan.md`）——26 步全流程 + M3 事件化 wiring + run14 终局实测
-
-## ⚠️ 同版本号覆盖更新的缓存陷阱
-
-桌面端 `webuiDir()` 优先用 `~/.hermes-web-ui/webui/<version>/` 的副本。每次发版需递增版本号，重装后删除旧副本：
-
-```bash
-rm -rf ~/.hermes-web-ui/webui/<version>/
-```
-
-## 不包含
-
-- hermes-agent（运行时首次启动自动下载，不在本仓）
+Apache 2.0。本项目由 AI 100% 完成；上游项目各自的授权约定在运行时部署时适用。
