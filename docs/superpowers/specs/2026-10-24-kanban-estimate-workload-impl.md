@@ -29,6 +29,7 @@
 
 1. **`vitest.config.ts` 的 `@` 兜底别名仍回落 `../upstream`**——单仓整合起 inject 目标已切 `vendor/`（inject.mjs 的 vendor 优先级），测试却读整合前旧外部 upstream 树（内部 custom 符号链还指着已消亡的 ncwk 路径）。修法：兜底优先级镜像 inject.mjs——显式 `OVERLAY_UPSTREAM_ROOT` ＞ `vendor/` ＞ `../upstream`（远端 vendor 模式回退保留）。
 2. **`run-trace-profile.test.ts` 的 python 装配缺 `sys.modules` 注册**——`module_from_spec` 裸 `exec_module` 下，3.14 的 dataclasses 类型解析经 `sys.modules[cls.__module__].__dict__` 查命名空间直接 NoneType 崩（3.15 恰不走此路径侥幸通过）；补标准注册行，双解释器均绿（3.14 实测过、3.15 语义不变）。
+3. **两测试的路径期望未跟进 vendor 模式**——`base-runtimes.test.ts` 期望根仍按 `overlayRoot/../upstream` 解析（改为镜像 inject.mjs 优先级：env ＞ vendor ＞ ../upstream，24 测全过）；`matrix-login-session.test.ts` 物理相对导入 `../../../../../upstream/...` 指向整合前旧外部树（改为 4 级回 checkout 根进 `vendor/`，主树/worktree 通吃，注入态下 5 测全过）。
 
 ## 验证
 
@@ -40,4 +41,5 @@
 
 - python 片段 3.14 直跑：`{"explicit": "explicit-prof"}` 正常输出。
 - 修复前对照实验：同测试文件 PATH 前置 3.15 → 3 passed；默认 3.14 → 2 failed（AttributeError NoneType __dict__）——失败可完全归因装配缺陷，非插件行为回归。
+- base-runtimes（注入态 worktree 单跑）：24 passed；matrix-login-session（注入态 worktree 单跑）：5 passed。
 - 全量复跑结果见本轮交付汇报。
