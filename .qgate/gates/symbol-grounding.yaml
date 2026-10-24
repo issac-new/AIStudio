@@ -1,16 +1,17 @@
-# 项目覆盖内置门：符号接地的 overlay 借用契约（2026-10-02 根治轮）。
-# 架构事实：overlay/node_modules 是指向 upstream/hermes-studio/node_modules 的符号链——
-# 依赖声明的单一事实源在上游 package.json（vue/pinia/vitest/typescript/cross-env 均由其声明）。
+# 项目覆盖内置门：符号接地的 overlay 借用契约（2026-10-02 根治轮；2026-10-24 供应链治理轮锚点回仓）。
+# 架构事实：overlay 根 node_modules 由 inject 指向 vendor/hermes-studio/node_modules（共享主检出实例）——
+# 依赖声明的单一事实源在 vendor/hermes-studio/package.json 注入态（框架/测试依赖及 overlay 运行时依赖
+# 均由其声明；overlay 侧新增依赖走 patches/ 补丁入册，先例 017/687）。
 # 借用三要素显式化：
-#   depsFile         —— 接地核验读上游清单（上游砍依赖时本门立即亮红，借用漂移可机检）
+#   depsFile         —— 接地核验读 vendor 注入态清单（在版本控制内可复现；砍依赖时本门立即亮红，借用漂移可机检）
 #   aliases          —— @/custom、@custom 映射到本仓 custom/client（与 vitest.config.ts 同步）
-#   ignoredSpecifiers —— '@/'' 前缀豁免：@ 兜底指向上游 client src（仓外文件，接地属上游职责）
+#   ignoredSpecifiers —— '@/'' 前缀豁免：@ 兜底指向上游 client src（vendor 基线文件，接地属上游职责）
 apiVersion: qgate/v1alpha1
 kind: Gate
 metadata:
   id: L1.symbol-grounding
   version: 0.1.0-overlay
-  description: overlay 符号接地（借用契约版）：依赖核验指上游清单+本仓 alias 映射+上游源码引用豁免。
+  description: overlay 符号接地（借用契约版）：依赖核验指 vendor 注入态清单+本仓 alias 映射+上游源码引用豁免。
 spec:
   domain: L1
   claims:
@@ -23,7 +24,7 @@ spec:
     - id: l1.symbols
       type: ops
       mode: symbols
-      depsFile: "../upstream/hermes-studio/package.json"
+      depsFile: "vendor/hermes-studio/package.json"
       aliases:
         "@/custom/": "./custom/client/"
         "@custom/": "./custom/client/"

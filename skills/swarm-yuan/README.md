@@ -3,7 +3,7 @@
 > 对任意代码仓库跑一次，生成一个项目专属的开发技能。此后 AI 在这个项目里写代码，先查组件、依赖和规矩，再动手。
 
 [![Release](https://img.shields.io/badge/release-v2.95.0-blue)](https://github.com/issac-new/Swarm-yuan/releases/tag/v2.95.0)
-[![License](https://img.shields.io/badge/license-MIT-lightgrey)]()
+[![License](https://img.shields.io/badge/license-Apache--2.0-lightgrey)]()
 
 ---
 
@@ -406,4 +406,4 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 
 ## License
 
-MIT — see [LICENSE](../LICENSE)
+Apache-2.0 — see [LICENSE](LICENSE)（实体文件 2026-10-24 供应链治理轮入库，取自旧独立仓归档正本；历史正文标 MIT 与实体不符，以实体文件为准）

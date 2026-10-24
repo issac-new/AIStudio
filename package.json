@@ -39,7 +39,7 @@
     "postbuild": "node scripts/verify-dist.mjs",
     "fibo:sync": "npx -y tsx scripts/fibo/sync-qgate-index.ts"
   },
-  "//deps-borrow": "node_modules 为指向 upstream/hermes-studio/node_modules 的符号链——依赖声明单一事实源在上游 package.json（devDependencies），本仓不重复声明框架/测试依赖（双源制造版本分叉）。借用契约由 .qgate/gates/symbol-grounding.yaml 机器核验（depsFile 指上游清单，上游砍依赖即亮红）。",
+  "//deps-borrow": "node_modules 由 inject 指向 vendor/hermes-studio/node_modules（共享主检出实例）——依赖声明单一事实源在 vendor/hermes-studio/package.json 注入态（devDependencies），本仓不重复声明框架/测试依赖（双源制造版本分叉）；overlay 侧新增依赖走 patches/ 补丁入册。借用契约由 .qgate/gates/symbol-grounding.yaml 机器核验（depsFile 指 vendor 注入态清单，砍依赖即亮红）。",
   "engines": {
     "node": ">=23.0.0"
   }

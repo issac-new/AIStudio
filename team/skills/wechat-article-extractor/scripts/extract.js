@@ -1,6 +1,17 @@
 const qs = require('qs');
 const dayjs = require('dayjs');
-const request = require('request-promise');
+// request-promise 已停更弃用（2026-10-24 供应链治理轮移除）：改用 Node ≥18 内建 fetch 等价替换。
+// 本文件唯一调用形态＝GET + headers 返回响应体文本；非 2xx 抛错，由调用方映射错误码 1002。
+const request = async ({ uri, method = 'GET', headers = {} }) => {
+  const res = await fetch(uri, { method, headers, redirect: 'follow' });
+  const body = await res.text();
+  if (!res.ok) {
+    const err = new Error(`Request failed with status code ${res.status}`);
+    err.statusCode = res.status;
+    throw err;
+  }
+  return body;
+};
 const cheerio = require('cheerio');
 const unescape = require('lodash.unescape');
 const errors = require('./errors');
