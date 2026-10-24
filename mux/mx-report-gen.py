@@ -2736,7 +2736,8 @@ def closure_evidence_html():
          '/api/review/gov/metrics；审批绑定 head commit，Agent 审批不计名额'),
         ('改进实验', f"面 {g(counts, 'surfaces')} · 提案 {g(counts, 'proposals')}（进行中 {g(counts, 'openProposals')}）· "
                     f"冠军 {g(counts, 'champions')} · 经验 {g(counts, 'experiences')}（已采纳 {g(counts, 'adoptedExperiences')}）· "
-                    f"探测成本 ${g(wb, 'budget', 'observedUsd')}/${g(wb, 'budget', 'capUsd')}",
+                    f"探测成本 ${g(wb, 'budget', 'observedUsd')}/${g(wb, 'budget', 'capUsd')}"
+                    + _evolution_reading(wb),
          '/api/harness/workbench/overview；探测证据只来自 Eval Studio 真实运行'),
         ('发布门台账', f"当前判定 {g(rg, 'decision')} · 记录 {len(rg_recs)} 条（append-only）",
          'evidence/release-gate.jsonl + /api/hermes/sim/release-gate'),
@@ -2765,6 +2766,18 @@ def closure_evidence_html():
   </div>
   <p class="stat-note">评审治理、观测告警、改进实验三项为本轮治理能力读数，不改变 G1-G6 判据；发布门与 UAT 台账是 G5/UAT 的 append-only 证据，报告与产品 UI 同源。</p>
 """
+
+
+def _evolution_reading(wb):
+    """RRSI 正则化读数（V8.48）：进化面/采纳轮次/停滞/未探索——evolution 段缺席返回空串。"""
+    evo = wb.get('evolution') or {}
+    surfaces = evo.get('surfaces') or []
+    if not surfaces and not evo.get('unexercised'):
+        return ''
+    rounds = sum(int(s.get('rounds') or 0) for s in surfaces)
+    stalled = sum(1 for s in surfaces if s.get('stalled'))
+    return (f" · 进化面 {len(surfaces)}（采纳 {rounds} 轮 · 停滞 {stalled} · "
+            f"未探索 {len(evo.get('unexercised') or [])}）——涨分落在噪声带内不晋级（RRSI 正则化）")
 
 
 def harness_runtime_html():
