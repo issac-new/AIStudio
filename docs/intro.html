@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SwarmStudio · 让一个人指挥一支 AI 团队交付软件</title>
+<meta name="description" content="SwarmStudio 交互式介绍：五件套体系、42 智能体编制、六道质量门、22 轮全流程推演。">
+<style>
+  :root {
+    --ink-0: #0b0c0e;
+    --ink-1: #121316;
+    --ink-2: #1a1c20;
+    --line: #26282e;
+    --fg: #f2f3f5;
+    --fg-mid: #a8abb3;
+    --fg-low: #6b6f78;
+    --green: #18a058;
+    --green-dim: rgba(24, 160, 88, 0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--ink-0);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--green-dim); color: var(--fg); }
+
+  /* 顶部滚动进度 */
+  #progress {
+    position: fixed; top: 0; left: 0; height: 2px; width: 0;
+    background: var(--green); z-index: 10; transition: width 80ms linear;
+  }
+  /* 右侧幕导航 */
+  #nav {
+    position: fixed; right: 18px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 12px; z-index: 10;
+  }
+  #nav a {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--fg-low); opacity: 0.45;
+    display: block; position: relative; transition: all 250ms;
+  }
+  #nav a:hover, #nav a.on { background: var(--fg); opacity: 1; transform: scale(1.3); }
+  #nav a span {
+    position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+    font-size: 12px; color: var(--fg-mid); white-space: nowrap;
+    opacity: 0; transition: opacity 200ms; pointer-events: none;
+  }
+  #nav a:hover span { opacity: 1; }
+
+  section {
+    min-height: 100vh; max-width: 980px; margin: 0 auto;
+    padding: 18vh 28px 12vh; display: flex; flex-direction: column; justify-content: center;
+    position: relative;
+  }
+  .kicker {
+    font-size: 13px; letter-spacing: 0.32em; color: var(--fg-low);
+    text-transform: uppercase; margin-bottom: 26px;
+  }
+  .kicker::before {
+    content: ""; display: inline-block; width: 26px; height: 1px;
+    background: var(--fg-low); vertical-align: middle; margin-right: 12px;
+  }
+  h1 {
+    font-size: clamp(34px, 6.2vw, 66px); font-weight: 600;
+    line-height: 1.28; letter-spacing: 0.01em;
+  }
+  h2 {
+    font-size: clamp(26px, 4.4vw, 46px); font-weight: 600;
+    line-height: 1.35; margin-bottom: 14px; max-width: 21em;
+  }
+  .lead { font-size: clamp(15px, 1.6vw, 18px); color: var(--fg-mid); max-width: 34em; margin-top: 26px; }
+  .em { color: var(--fg); border-bottom: 1px solid var(--line); padding-bottom: 2px; }
+
+  /* 进场动画 */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity 700ms ease, transform 700ms ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+  .d1 { transition-delay: 120ms; } .d2 { transition-delay: 240ms; }
+  .d3 { transition-delay: 360ms; } .d4 { transition-delay: 480ms; }
+
+  /* 幕 0 Hero */
+  #hero { align-items: flex-start; }
+  #hero .halo {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 62% 46% at 72% 34%, rgba(24,160,88,0.07), transparent 68%),
+      radial-gradient(circle at 18% 78%, rgba(255,255,255,0.03), transparent 55%);
+  }
+  #hero .grid-bg {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0.55;
+    background-image: radial-gradient(circle, #212329 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(ellipse 78% 66% at 50% 44%, #000 30%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 78% 66% at 50% 44%, #000 30%, transparent 78%);
+  }
+  #hero .tags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 44px; }
+  .tag {
+    font-size: 13px; color: var(--fg-mid); border: 1px solid var(--line);
+    border-radius: 3px; padding: 5px 14px; background: rgba(255,255,255,0.015);
+  }
+  #scroll-hint {
+    position: absolute; bottom: 40px; left: 28px; font-size: 12.5px;
+    color: var(--fg-low); letter-spacing: 0.2em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  #scroll-hint::after {
+    content: ""; width: 1px; height: 34px; background: linear-gradient(var(--fg-low), transparent);
+    animation: drop 1.8s ease-in-out infinite; margin-left: 4px;
+  }
+  @keyframes drop { 0%,100% { transform: scaleY(0.4); transform-origin: top; } 50% { transform: scaleY(1); transform-origin: top; } }
+
+  /* 幕 1 四阶段问题 */
+  .quad { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 44px; }
+  .cell {
+    border: 1px solid var(--line); border-radius: 6px; padding: 24px 24px 20px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.018), transparent);
+  }
+  .cell .stage { font-size: 13px; color: var(--green); letter-spacing: 0.18em; margin-bottom: 8px; }
+  .cell h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .cell p { font-size: 14px; color: var(--fg-mid); line-height: 1.8; }
+
+  /* 幕 2 五件套 */
+  .stack { display: flex; flex-direction: column; gap: 10px; margin-top: 44px; }
+  .layer {
+    display: grid; grid-template-columns: 132px 1fr; gap: 18px; align-items: baseline;
+    border: 1px solid var(--line); border-left: 2px solid var(--fg-low);
+    border-radius: 5px; padding: 18px 22px; background: var(--ink-1);
+    transition: border-color 400ms, background 400ms;
+  }
+  .layer.visible { border-left-color: var(--green); }
+  .layer .name { font-size: 15px; font-weight: 600; }
+  .layer .name small { display: block; font-weight: 400; font-size: 12px; color: var(--fg-low); margin-top: 3px; letter-spacing: 0.06em; }
+  .layer p { font-size: 14px; color: var(--fg-mid); }
+
+  /* 幕 3 编制点阵 */
+  .dots { display: grid; grid-template-columns: repeat(14, 1fr); gap: 9px; max-width: 560px; margin: 40px 0 8px; }
+  .dots i {
+    aspect-ratio: 1; border-radius: 50%; background: #22242a;
+    opacity: 0; transform: scale(0.3); display: block;
+    transition: opacity 500ms ease, transform 500ms ease, background 500ms ease;
+  }
+  .dots.on i { opacity: 1; transform: scale(1); }
+  .dots.on i:nth-child(7n+3) { background: var(--green); box-shadow: 0 0 10px rgba(24,160,88,0.45); }
+  .figures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 34px; max-width: 720px; }
+  .fig { border-top: 1px solid var(--line); padding-top: 16px; }
+  .fig b { font-size: clamp(28px, 3.6vw, 42px); font-weight: 600; font-variant-numeric: tabular-nums; display: block; line-height: 1.15; }
+  .fig span { font-size: 13px; color: var(--fg-low); }
+
+  /* 幕 4 凭证 */
+  #proof .quote {
+    font-size: clamp(20px, 2.6vw, 28px); color: var(--fg); line-height: 1.7;
+    border-left: 2px solid var(--green); padding-left: 24px; margin: 36px 0 10px; max-width: 26em;
+  }
+  #proof .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 40px; color: var(--fg-mid); font-size: 14px; }
+  #proof .chain b { color: var(--fg); font-weight: 500; }
+  #proof .chain .sep { color: var(--fg-low); }
+
+  /* 幕 5 六道质量门 */
+  .gates { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 52px; }
+  .gate { text-align: left; position: relative; padding-top: 20px; }
+  .gate::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--line); transition: background 500ms;
+  }
+  .gate::after {
+    content: ""; position: absolute; top: -3.5px; left: 0; width: 9px; height: 9px;
+    border-radius: 50%; background: var(--ink-0); border: 2px solid var(--fg-low);
+    transition: all 500ms;
+  }
+  .gate.on::before { background: var(--green); }
+  .gate.on::after { border-color: var(--green); background: var(--green); box-shadow: 0 0 12px rgba(24,160,88,0.5); }
+  .gate b { display: block; font-size: 13px; color: var(--fg-low); letter-spacing: 0.1em; margin-bottom: 6px; transition: color 500ms; }
+  .gate.on b { color: var(--green); }
+  .gate span { font-size: 14px; color: var(--fg-mid); display: block; }
+  .gate span em { font-style: normal; color: var(--fg); }
+
+  /* 幕 6 推演证明 */
+  #sim .figures b .unit { font-size: 0.5em; color: var(--fg-mid); font-weight: 400; margin-left: 3px; }
+  .verdict {
+    margin-top: 46px; display: inline-flex; align-items: center; gap: 12px;
+    border: 1px solid var(--line); border-radius: 5px; padding: 14px 22px;
+    background: var(--ink-1); font-size: 14.5px; color: var(--fg-mid); max-width: fit-content;
+  }
+  .verdict .pip { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px rgba(24,160,88,0.5); }
+
+  /* 幕 7 收口 */
+  #creed { text-align: left; }
+  .creed-line {
+    font-size: clamp(26px, 4.6vw, 52px); font-weight: 600; line-height: 1.5;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 800ms ease, transform 800ms ease;
+  }
+  .creed-line.visible { opacity: 1; transform: none; }
+  .creed-line small { display: block; font-size: 14px; font-weight: 400; color: var(--fg-low); margin-top: 8px; letter-spacing: 0.04em; }
+  #creed .creed-line:nth-child(3) { margin-top: 40px; }
+  footer {
+    margin-top: 76px; padding-top: 26px; border-top: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; gap: 10px 28px; font-size: 13.5px; color: var(--fg-low);
+  }
+  footer a { color: var(--fg-mid); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 1px; }
+  footer a:hover { color: var(--fg); border-color: var(--fg-mid); }
+
+  @media (max-width: 720px) {
+    section { padding: 14vh 20px 10vh; }
+    .quad { grid-template-columns: 1fr; }
+    .figures { grid-template-columns: repeat(2, 1fr); }
+    .gates { grid-template-columns: 1fr; gap: 18px; }
+    .gate { padding-top: 0; padding-left: 20px; }
+    .gate::before { top: 3px; bottom: 3px; left: 0; right: auto; width: 2px; height: auto; }
+    .gate.on::before { background: linear-gradient(var(--green), transparent); }
+    .gate::after { top: 5px; left: -3.5px; }
+    .layer { grid-template-columns: 1fr; gap: 6px; }
+    #nav { display: none; }
+    .dots { grid-template-columns: repeat(10, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal, .creed-line, .dots i, .gate::before, .gate::after { transition: none !important; }
+    #scroll-hint::after { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div id="progress" role="presentation"></div>
+<nav id="nav" aria-label="章节导航">
+  <a href="#hero" class="on"><span>开篇</span></a>
+  <a href="#problems"><span>四类问题</span></a>
+  <a href="#system"><span>五件套</span></a>
+  <a href="#team"><span>编制</span></a>
+  <a href="#proof"><span>证据</span></a>
+  <a href="#gates"><span>六道门</span></a>
+  <a href="#sim"><span>推演</span></a>
+  <a href="#creed"><span>三断言</span></a>
+</nav>
+
+<!-- 幕 0 开篇 -->
+<section id="hero">
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="halo" aria-hidden="true"></div>
+  <p class="kicker reveal">SwarmStudio · AIStudio 单仓</p>
+  <h1 class="reveal d1">让一个人，<br>指挥一支 AI 团队交付软件。</h1>
+  <p class="lead reveal d2">SwarmStudio 是一套工作系统：分布式需求分析、研发协作、实施交付、测试验证，在同一个驾驶舱完成。AI 做事，人拿证据。</p>
+  <div class="tags reveal d3">
+    <span class="tag">驾驶舱</span><span class="tag">42 个智能体</span><span class="tag">六道质量门</span><span class="tag">全流程推演</span>
+  </div>
+  <div id="scroll-hint" aria-hidden="true">向下滚动</div>
+</section>
+
+<!-- 幕 1 四类问题 -->
+<section id="problems">
+  <p class="kicker reveal">为什么需要它</p>
+  <h2 class="reveal d1">AI 一多，交付的四个阶段各暴露一类结构病。</h2>
+  <div class="quad">
+    <div class="cell reveal d1"><div class="stage">需求</div><h3>协作割裂</h3><p>群聊、看板、终端、文档各说各话，没有一个真值源。</p></div>
+    <div class="cell reveal d2"><div class="stage">设计</div><h3>架构漂移</h3><p>设计一致性与架构延续性难保，换会话就换思路。</p></div>
+    <div class="cell reveal d3"><div class="stage">编码</div><h3>完成不可信</h3><p>长程任务跑不稳，说「做完了」却查无实据。</p></div>
+    <div class="cell reveal d4"><div class="stage">测试</div><h3>门禁太晚</h3><p>质量检查到发布前才来，问题在最贵的时刻炸出来。</p></div>
+  </div>
+</section>
+
+<!-- 幕 2 五件套 -->
+<section id="system">
+  <p class="kicker reveal">体系</p>
+  <h2 class="reveal d1">五件套构成一个交付体系，各守一层。</h2>
+  <div class="stack">
+    <div class="layer reveal d1"><div class="name">产品面<small>SwarmStudio</small></div><p>驾驶舱：看板、审批、沟通、推演、IDE、治理，只读消费运行面。</p></div>
+    <div class="layer reveal d1"><div class="name">通信基座<small>Matrix</small></div><p>跨地域消息，房间即协调通道，协议事件即凭证。</p></div>
+    <div class="layer reveal d2"><div class="name">运行面<small>hermes agent</small></div><p>全部智能体服务端运行，单网关多路复用，有编制、有权限、有审计。</p></div>
+    <div class="layer reveal d3"><div class="name">编码引擎<small>Ycode</small></div><p>IDE 工作区的本机编码执行底座。</p></div>
+    <div class="layer reveal d4"><div class="name">能力层<small>swarm-yuan</small></div><p>为任意代码仓库生成项目专属开发技能：组件清单、配方、门禁。</p></div>
+  </div>
+</section>
+
+<!-- 幕 3 编制 -->
+<section id="team">
+  <p class="kicker reveal">编制</p>
+  <h2 class="reveal d1">AI 团队有编制、有权限、有审计。</h2>
+  <div class="dots reveal d2" id="dots" aria-label="42 个智能体点阵" role="img"></div>
+  <div class="figures">
+    <div class="fig reveal d2"><b data-count="42">0</b><span>个智能体</span></div>
+    <div class="fig reveal d2"><b data-count="15">0</b><span>人团队编制</span></div>
+    <div class="fig reveal d3"><b data-count="30">0</b><span>个账号</span></div>
+    <div class="fig reveal d3"><b data-count="33">0</b><span>个产品页签</span></div>
+  </div>
+  <p class="lead reveal d4">人只读消费运行态：产品面可换皮，运行面不动。</p>
+</section>
+
+<!-- 幕 4 证据 -->
+<section id="proof">
+  <p class="kicker reveal">证据</p>
+  <h2 class="reveal d1">说做完了，必须交证据。</h2>
+  <p class="quote reveal d2">「做完了」三个字不值钱，提交号加任务卡号才值钱。</p>
+  <div class="chain reveal d3">
+    <span><b>任务卡</b> 派活与验收</span><span class="sep">→</span>
+    <span><b>Matrix 消息</b> 即凭证</span><span class="sep">→</span>
+    <span><b>提交号</b> 可反查</span><span class="sep">→</span>
+    <span><b>审计链</b> 全程留痕</span>
+  </div>
+</section>
+
+<!-- 幕 5 六道质量门 -->
+<section id="gates">
+  <p class="kicker reveal">质量门</p>
+  <h2 class="reveal d1">门禁从需求冻结开始，六道逐门验收。</h2>
+  <p class="lead reveal d2">spec-first 钩子在写代码之前就拦截无设计改动，等测试发现问题已经太晚。</p>
+  <div class="gates" id="gatebar">
+    <div class="gate"><b>G1</b><span>需求<em>冻结</em></span></div>
+    <div class="gate"><b>G2</b><span>架构<em>评审</em></span></div>
+    <div class="gate"><b>G3</b><span>编码<em>门禁</em></span></div>
+    <div class="gate"><b>G4</b><span>独立<em>测试</em></span></div>
+    <div class="gate"><b>G5</b><span>发布<em>准出</em></span></div>
+    <div class="gate"><b>G6</b><span><em>复盘</em></span></div>
+  </div>
+</section>
+
+<!-- 幕 6 推演 -->
+<section id="sim">
+  <p class="kicker reveal">证明</p>
+  <h2 class="reveal d1">推演 22 轮，先跑给自己看。</h2>
+  <p class="lead reveal d2">全流程推演把一次完整交付真实走一遍：人在导演台建任务、批闸口，监督器盯断环与停滞，每轮产出可审计报告与证据库。</p>
+  <div class="figures">
+    <div class="fig reveal d2"><b><span data-count="19.6" data-decimal="1">0</span><span class="unit">小时</span></b><span>run22 全程</span></div>
+    <div class="fig reveal d2"><b data-count="26">0</b><span>步完整交付</span></div>
+    <div class="fig reveal d3"><b data-count="6">0</b><span>道门全部通过</span></div>
+    <div class="fig reveal d3"><b data-count="6149">0</b><span>全量测试通过</span></div>
+  </div>
+  <div class="verdict reveal d4"><span class="pip"></span>run22 收官：六闸全过，零失败</div>
+</section>
+
+<!-- 幕 7 三断言 -->
+<section id="creed">
+  <p class="kicker reveal">三个断言</p>
+  <div class="creed-line" data-creed>证据先于声明<small>说做完了必须给提交号加任务卡号</small></div>
+  <div class="creed-line" data-creed>未配置不等于已治理<small>inactive、partial 如实标注，不装绿</small></div>
+  <div class="creed-line" data-creed>只增不改<small>能力在归属面有正身才退役</small></div>
+  <footer>
+    <span>SwarmStudio · 由 AI 100% 完成 · Apache 2.0</span>
+    <a href="https://github.com/issac-new/AIStudio">GitHub 仓库</a>
+    <a href="../README.md">项目 README</a>
+    <a href="./USAGE.md">使用指南</a>
+  </footer>
+</section>
+
+<script>
+(function () {
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* 42 智能体点阵 */
+  var dots = document.getElementById("dots");
+  for (var i = 0; i < 42; i++) {
+    var d = document.createElement("i");
+    d.style.transitionDelay = (i * 28) + "ms";
+    dots.appendChild(d);
+  }
+
+  /* 数字滚动 */
+  function countUp(el) {
+    var target = parseFloat(el.getAttribute("data-count"));
+    var dec = parseInt(el.getAttribute("data-decimal") || "0", 10);
+    if (reduced) { el.textContent = target.toFixed(dec); return; }
+    var t0 = null, dur = 1300;
+    /* rAF 不可用（headless dump、极端降帧）时由定时器保证终值 */
+    setTimeout(function () { el.textContent = fmt(target, dec); }, dur + 200);
+    function fmt(v, d) { return v.toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+    function tick(t) {
+      if (!t0) t0 = t;
+      var p = Math.min((t - t0) / dur, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(target * e, dec);
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = fmt(target, dec);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  /* 进场观察 */
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var el = en.target;
+      el.classList.add("visible");
+      el.querySelectorAll("[data-count]").forEach(function (n) {
+        if (!n.dataset.done) { n.dataset.done = "1"; countUp(n); }
+      });
+      if (el.id === "dots") el.classList.add("on");
+      io.unobserve(el);
+    });
+  }, { threshold: 0.3 });
+  document.querySelectorAll(".reveal, .dots, .creed-line").forEach(function (el) { io.observe(el); });
+
+  /* 兜底：IntersectionObserver 不触发（headless 快照、旧内核）时页面不停在不可见态 */
+  function forceVisible(el) {
+    el.classList.add("visible");
+    el.querySelectorAll("[data-count]").forEach(function (n) {
+      if (!n.dataset.done) { n.dataset.done = "1"; countUp(n); }
+    });
+  }
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      document.querySelectorAll(".reveal, .creed-line").forEach(function (el) {
+        if (el.classList.contains("visible")) return;
+        var r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) forceVisible(el);
+      });
+    }, 600);
+    setTimeout(function () {
+      document.querySelectorAll(".reveal, .creed-line").forEach(forceVisible);
+      var dotsEl = document.getElementById("dots");
+      if (dotsEl) dotsEl.classList.add("on");
+      gates.forEach(function (g) { g.classList.add("on"); });
+    }, 2600);
+  });
+
+  /* 六道门逐个点亮 */
+  var gatebar = document.getElementById("gatebar");
+  var gates = gatebar.querySelectorAll(".gate");
+  var gio = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      gates.forEach(function (g, i) {
+        setTimeout(function () { g.classList.add("on"); }, reduced ? 0 : i * 240);
+      });
+      gio.unobserve(en.target);
+    });
+  }, { threshold: 0.5 });
+  gio.observe(gatebar);
+
+  /* 滚动进度 + 幕导航高亮 */
+  var bar = document.getElementById("progress");
+  var navLinks = document.querySelectorAll("#nav a");
+  var sections = Array.prototype.slice.call(document.querySelectorAll("section"));
+  var rio = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var id = en.target.id;
+      navLinks.forEach(function (a) {
+        a.classList.toggle("on", a.getAttribute("href") === "#" + id);
+      });
+    });
+  }, { threshold: 0.5 });
+  sections.forEach(function (s) { rio.observe(s); });
+  window.addEventListener("scroll", function () {
+    var h = document.documentElement;
+    var p = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    bar.style.width = (p * 100).toFixed(2) + "%";
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>
