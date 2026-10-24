@@ -1,0 +1,389 @@
+<script setup lang="ts">
+import PageLoading from '@/components/common/PageLoading.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { NButton, NSelect, NTabPane, NTabs, useMessage } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
+import AuxiliaryModelsPanel from '@/components/hermes/models/AuxiliaryModelsPanel.vue'
+import CombinationModelsPanel from '@/components/hermes/models/CombinationModelsPanel.vue'
+import JevSettingsPanel from '@/components/hermes/models/JevSettingsPanel.vue'
+import ModelApiPanel from '@/components/hermes/models/ModelApiPanel.vue'
+import ProvidersPanel from '@/components/hermes/models/ProvidersPanel.vue'
+import ProviderFormModal from '@/components/hermes/models/ProviderFormModal.vue'
+import ProviderImportModal from '@/components/hermes/models/ProviderImportModal.vue'
+import { pendingProviderImport, type ProviderImport } from '@/utils/provider-import'
+import ProviderVisibilityModal from '@/components/hermes/models/ProviderVisibilityModal.vue'
+import ModelCatalogNotice from '@/components/hermes/models/ModelCatalogNotice.vue'
+import VoiceSettings from '@/components/hermes/settings/VoiceSettings.vue'
+import { useModelsStore } from '@/stores/hermes/models'
+import { useAppStore } from '@/stores/hermes/app'
+import { useProfilesStore } from '@/stores/hermes/profiles'
+import { fetchProfiles, type HermesProfile } from '@/api/hermes/profiles'
+import { checkCopilotToken } from '@/api/hermes/copilot-auth'
+import { provideModelCatalogNotice } from '@/composables/useModelCatalogNotice'
+
+const { t } = useI18n()
+const modelsStore = useModelsStore()
+const appStore = useAppStore()
+const profilesStore = useProfilesStore()
+const message = useMessage()
+const route = useRoute()
+const router = useRouter()
+const showModal = ref(false)
+const importDraft = ref<ProviderImport | null>(null)
+const importRevision = ref(0)
+watch(pendingProviderImport, pending => {
+  if (!pending) return
+  pendingProviderImport.value = null
+  if (pending.invalid) message.error(t('models.importInvalid'))
+  else if (pending.draft) {
+    importRevision.value++
+    importDraft.value = pending.draft
+  }
+}, { immediate: true })
+
+async function handleImportSaved(profile: string) {
+  importDraft.value = null
+  await router.replace({ query: { ...route.query, modelProfile: profile } })
+  await modelsStore.fetchProviders()
+  await appStore.reloadModels({ preserveSelection: true })
+}
+const showLargeCatalogNotice = ref(false)
+const visibilityProviderId = ref('')
+const largeCatalogProviders = computed(() => modelsStore.providers.filter(provider => provider.models.length > 100))
+const visibilityProvider = computed(() => {
+  const providerId = visibilityProviderId.value
+  return modelsStore.providers.find(provider => provider.provider === providerId)
+})
+const profiles = ref<HermesProfile[]>([])
+const selectedProfile = ref(typeof route.query.modelProfile === 'string' ? route.query.modelProfile : profilesStore.activeProfileName || 'default')
+const profileOptions = computed(() => profiles.value.map(profile => ({ label: profile.name, value: profile.name })))
+const profileLoading = ref(true)
+let profilesReady = false
+let loadId = 0
+let catalogLoaded = false
+const catalogBusy = provideModelCatalogNotice(checkLargeCatalog)
+
+function checkLargeCatalog() {
+  if (catalogLoaded) showLargeCatalogNotice.value = largeCatalogProviders.value.length > 0
+}
+
+watch(() => modelsStore.providers, () => {
+  if (!profileLoading.value) {
+    catalogLoaded = true
+    checkLargeCatalog()
+  }
+})
+watch(() => [modelsStore.defaultModel, modelsStore.defaultProvider], checkLargeCatalog)
+
+function handleProfileUpdate(profile: string) {
+  if (profileLoading.value || !profiles.value.some(item => item.name === profile)) return
+  void router.replace({ query: { ...route.query, modelProfile: profile } })
+}
+
+watch(() => route.query.modelProfile, profile => {
+  if (!profilesReady || typeof profile !== 'string' || profile === selectedProfile.value) return
+  if (!profiles.value.some(item => item.name === profile)) return
+  selectedProfile.value = profile
+  showModal.value = false
+  void loadProvidersForProfile()
+})
+type ModelsTab = 'general' | 'auxiliary' | 'combination' | 'stt' | 'tts' | 'jev' | 'api'
+
+const MODELS_TABS = new Set<ModelsTab>(['general', 'auxiliary', 'combination', 'stt', 'tts', 'jev', 'api'])
+const activeTab = ref<ModelsTab>('general')
+
+function normalizeTab(value: unknown): ModelsTab {
+  const tab = typeof value === 'string' ? value : ''
+  if (tab === 'fallback') return 'auxiliary'
+  return MODELS_TABS.has(tab as ModelsTab) ? tab as ModelsTab : 'general'
+}
+
+function handleTabUpdate(tab: ModelsTab) {
+  activeTab.value = normalizeTab(tab)
+  void router.replace({
+    query: {
+      ...route.query,
+      tab: activeTab.value === 'general' ? undefined : activeTab.value,
+    },
+  })
+}
+
+async function loadProvidersForProfile() {
+  const currentLoad = ++loadId
+  profileLoading.value = true
+  catalogLoaded = false
+  showLargeCatalogNotice.value = false
+  visibilityProviderId.value = ''
+  try {
+    try { await checkCopilotToken() } catch { /* ignore */ }
+    if (currentLoad !== loadId) return
+    const previousProviders = modelsStore.providers
+    await modelsStore.fetchProviders()
+    // Do not warn using another Profile's stale catalog after a failed load.
+    if (currentLoad === loadId && modelsStore.providers !== previousProviders) {
+      catalogLoaded = true
+      checkLargeCatalog()
+    }
+  } finally {
+    if (currentLoad === loadId) profileLoading.value = false
+  }
+}
+
+function manageLargeCatalog(provider: string) {
+  showLargeCatalogNotice.value = false
+  visibilityProviderId.value = provider
+}
+
+onMounted(async () => {
+  try {
+    profiles.value = await fetchProfiles()
+    selectedProfile.value = profiles.value.find(profile => profile.name === selectedProfile.value)?.name || profiles.value[0]?.name || ''
+    if (!selectedProfile.value) return
+    await router.replace({ query: { ...route.query, modelProfile: selectedProfile.value } })
+    profilesReady = true
+    await loadProvidersForProfile()
+  } catch (err: any) {
+    message.error(err.message)
+  } finally {
+    profileLoading.value = false
+  }
+})
+
+onUnmounted(() => { loadId++ })
+
+function openCreateModal() {
+  showModal.value = true
+}
+
+watch(() => route.query.addProvider, (addProvider) => {
+  if (addProvider !== '1') return
+  activeTab.value = 'general'
+  showModal.value = true
+  const query = { ...route.query }
+  delete query.addProvider
+  delete query.tab
+  void router.replace({ query })
+}, { immediate: true })
+
+watch(() => route.query.tab, (tab) => {
+  if (route.query.addProvider === '1') return
+  activeTab.value = normalizeTab(tab)
+  if (tab === 'fallback') {
+    void router.replace({
+      query: { ...route.query, tab: 'auxiliary' },
+    })
+  }
+}, { immediate: true })
+
+function handleModalClose() {
+  showModal.value = false
+}
+
+async function handleSaved(globalModelsAlreadyRefreshed = false) {
+  if (!globalModelsAlreadyRefreshed) {
+    await Promise.all([
+      modelsStore.fetchProviders(),
+      appStore.reloadModels({ preserveSelection: true }),
+    ])
+  }
+  handleModalClose()
+}
+
+async function handleRefreshModelCache() {
+  try {
+    await modelsStore.refreshModelCache()
+    message.success(t('models.refreshModelCacheSuccess'))
+  } catch (e: any) {
+    message.error(e?.message || t('models.refreshModelCacheFailed'))
+  }
+}
+</script>
+
+<template>
+  <PageLoading :show="profileLoading || modelsStore.refreshingModelCache || (modelsStore.loading && modelsStore.providers.length === 0)" class="models-view">
+    <PageHeader>
+    <header class="page-header">
+      <div class="models-header-left">
+        <h2 class="header-title">{{ t('models.title') }}</h2>
+      </div>
+      <div class="header-actions">
+        <NSelect
+          v-if="activeTab !== 'api'"
+          class="models-profile-select"
+          data-testid="models-profile-select"
+          :value="selectedProfile"
+          :options="profileOptions"
+          :disabled="profileLoading || modelsStore.refreshingModelCache"
+          :loading="profileLoading"
+          :aria-label="t('workflow.profile')"
+          size="small"
+          filterable
+          @update:value="handleProfileUpdate"
+        />
+        <NButton
+          v-if="activeTab === 'general'"
+          size="small"
+          :loading="modelsStore.refreshingModelCache"
+          :disabled="modelsStore.loading || profileLoading"
+          :aria-label="t('models.refreshModelCache')"
+          :title="t('models.refreshModelCache')"
+          @click="handleRefreshModelCache"
+        >
+          <template #icon>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9 9.7 9.7 0 0 1-6.7-2.7"/><path d="M3 12a9 9 0 0 1 9-9 9.7 9.7 0 0 1 6.7 2.7"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/></svg>
+          </template>
+          <span class="header-action-label">{{ t('models.refreshModelCache') }}</span>
+        </NButton>
+        <NButton
+          v-if="activeTab === 'general'"
+          :disabled="profileLoading || !selectedProfile"
+          type="primary"
+          size="small"
+          :aria-label="t('models.addProvider')"
+          :title="t('models.addProvider')"
+          @click="openCreateModal"
+        >
+          <template #icon>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </template>
+          <span class="header-action-label">{{ t('models.addProvider') }}</span>
+        </NButton>
+      </div>
+    </header>
+    </PageHeader>
+
+    <div class="models-content">
+      <div v-if="profileLoading" class="models-profile-loading" role="status" aria-live="polite">
+
+      </div>
+      <NTabs v-else-if="selectedProfile || activeTab === 'api'" :key="activeTab === 'api' ? 'api' : selectedProfile" v-model:value="activeTab" type="line" animated @update:value="handleTabUpdate">
+        <NTabPane name="general" :tab="t('models.generalTitle')">
+          <div>
+            <ProvidersPanel />
+          </div>
+        </NTabPane>
+        <NTabPane name="api" :tab="t('modelApi.title')">
+          <ModelApiPanel />
+        </NTabPane>
+        <NTabPane name="auxiliary" :tab="t('models.auxiliaryTitle')">
+          <AuxiliaryModelsPanel />
+        </NTabPane>
+        <NTabPane name="combination" :tab="t('models.combinationTitle')">
+          <CombinationModelsPanel />
+        </NTabPane>
+        <NTabPane name="jev" tab="JEV">
+          <JevSettingsPanel :profile="selectedProfile" />
+        </NTabPane>
+        <NTabPane name="stt" :tab="t('settings.voice.sttProvidersTitle')">
+          <VoiceSettings :key="`stt-${selectedProfile}`" kind="stt" />
+        </NTabPane>
+        <NTabPane name="tts" :tab="t('settings.voice.ttsProvidersTitle')">
+          <VoiceSettings :key="`tts-${selectedProfile}`" kind="tts" />
+        </NTabPane>
+      </NTabs>
+    </div>
+
+    <ProviderFormModal
+      v-if="showModal && !profileLoading"
+      @close="handleModalClose"
+      @saved="handleSaved"
+    />
+    <ProviderImportModal v-if="importDraft && !profileLoading && selectedProfile"
+      :key="importRevision"
+      :draft="importDraft" :profile="selectedProfile" :profiles="profiles"
+      @close="importDraft = null" @saved="handleImportSaved" />
+    <ModelCatalogNotice
+      v-if="activeTab !== 'api' && largeCatalogProviders.length > 0 && !profileLoading && !modelsStore.loading && !modelsStore.refreshingModelCache && !showModal && !visibilityProvider && !catalogBusy"
+      v-model:show="showLargeCatalogNotice"
+      :providers="largeCatalogProviders"
+      @manage="manageLargeCatalog"
+    />
+    <ProviderVisibilityModal
+      v-if="visibilityProvider && !profileLoading"
+      :key="`${selectedProfile}:${visibilityProvider.provider}`"
+      :provider="visibilityProvider"
+      @close="visibilityProviderId = ''"
+    />
+  </PageLoading>
+</template>
+
+<style scoped lang="scss">
+@use '@/styles/variables' as *;
+
+.models-view {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.models-header-left {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--spacing-scale, 1));
+}
+
+.models-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: calc(20px * var(--spacing-scale, 1));
+}
+
+.models-profile-loading {
+  flex: 1;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.models-profile-select {
+  width: 160px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--spacing-scale, 1));
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .models-profile-select {
+    width: 120px;
+  }
+
+  .header-actions {
+    flex-wrap: nowrap;
+  }
+
+  .header-action-label {
+    display: none;
+  }
+
+  .header-actions :deep(.n-button) {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+
+  .header-actions :deep(.n-button__content),
+  .header-actions :deep(.n-button__icon),
+  .header-actions :deep(.n-icon-slot) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header-actions :deep(.n-button__icon) {
+    margin: 0;
+  }
+}
+</style>

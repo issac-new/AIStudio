@@ -1,0 +1,126 @@
+appId: com.hermeswebui.studio
+productName: Ekko Studio
+copyright: Copyright © 2026
+
+protocols:
+  - name: Ekko Studio provider import
+    schemes:
+      - ekko-studio
+
+directories:
+  output: release
+  buildResources: build
+
+publish:
+  provider: generic
+  url: https://download.ekkolearnai.com
+
+# Don't auto-prune our root node_modules; we curate `files` and `extraResources` ourselves.
+buildDependenciesFromSource: false
+nodeGypRebuild: false
+npmRebuild: false
+afterPack: "./scripts/verify-packaged-webui.mjs"
+
+files:
+  - "dist/**/*"
+  - "package.json"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme,LICENSE,LICENSE.txt,license,*.d.ts}"
+  - "!**/node_modules/.bin"
+  - "!**/{.DS_Store,.git,.gitignore,.eslintrc*,.prettierrc*,*.map,tsconfig.json}"
+
+# Web UI source (built dist) lives outside the asar. Python/Node/Git runtime
+# assets are downloaded into the user's Web UI home on first launch.
+# This package lives at packages/desktop, so ../.. is the hermes-web-ui repo root.
+extraResources:
+  - from: "build"
+    to: "build"
+    filter:
+      - "icon.png"
+      - "iconLinux.png"
+      - "icon.ico"
+      - "trayMac.png"
+      - "trayMac@2x.png"
+      - "trayWindows.png"
+      - "trayLinux.png"
+      - "runtime-release.json"
+  - from: "../.."
+    to: "webui"
+    filter:
+      - "package.json"
+      - "bin/**"
+      - "dist/**"
+      - "!packages/desktop/**"
+      # Exclude repository-root development files without dropping nested
+      # runtime assets such as dist/ekko-skills/*/scripts/**.
+      - "!.git/**"
+      - "!.github/**"
+      - "!docs/**"
+      - "!tests/**"
+      - "!scripts/**"
+      - "!playwright.config.ts"
+      - "!README*"
+      - "!**/*.map"
+  # electron-builder 26 deliberately skips a root-level node_modules directory
+  # when it is nested inside a broader matcher. Use node_modules itself as the
+  # source so the pruned production dependencies are copied into the Web UI.
+  - from: "../../node_modules"
+    to: "webui/node_modules"
+    filter:
+      - "**/*"
+      # Drop other-platform node-pty prebuilds (saves ~45MB)
+      - "!node-pty/prebuilds/!(${platform}-${arch})/**"
+      # Linux has no bundled prebuild and loads the native module compiled by
+      # `npm rebuild node-pty` from build/Release.
+      - "!node-pty/build/**"
+      - "node-pty/build/Release/pty.node"
+      - "!**/*.md"
+
+asarUnpack:
+  - "**/*.node"
+
+mac:
+  # Xcode 26 compiles this Icon Composer source into Assets.car and also
+  # generates the legacy ICNS fallback for pre-Tahoe macOS releases.
+  icon: build/icon.icon
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  notarize: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  extendInfo:
+    NSMicrophoneUsageDescription: "Ekko Studio uses the microphone for voice conversations and speech transcription."
+  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
+
+linux:
+  syncDesktopName: true
+  icon: build/icons
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64]   # fpm has no arm64 binary; deb only on x64
+  category: Development
+  artifactName: "Ekko.Studio-${version}-${arch}.${ext}"
+
+deb:
+  afterInstall: build/linux-after-install.tpl
+  afterRemove: build/linux-after-remove.tpl
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  include: build/installer.nsh
