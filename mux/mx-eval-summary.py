@@ -49,6 +49,9 @@ def main():
     # 只透传不判据——新读数先观察（与 V8.46 处置链同款「不改判据」纪律）。
     behavior = load(a.dir, "behavior-signals.json") or {}
     biz = load(a.dir, "business-summary.json") or {}
+    # 群体协作四维度读数（2026-10-24 吸收轮）：通信拓扑/信用分配/帕累托/社会
+    # 动力学。同上只透传不进判据（spec 2026-10-24-swarm-eval-benchmark-absorption.md D2）。
+    swarm = load(a.dir, "swarm-collab.json") or {}
 
     reg = registry.get("registry") or {}
     cons = reg.get("consumption") or {}
@@ -184,6 +187,8 @@ def main():
         "behaviorSignals": behavior.get("signals"),
         # V8.48：经营语言摘要（verdict 三态+事实行；机械合成的决策者三句话）
         "businessSummary": biz.get("summary"),
+        # 群体协作四维度读数（2026-10-24 吸收轮；端点缺席如实缺席）
+        "swarmCollab": swarm.get("readout"),
         "triangle": {
             "bySource": by_source,
             "conflicts": triangle.get("conflicts"),

@@ -161,6 +161,11 @@ eval_collect() { # <runId> [redteamRunId]：落证据文件（缺项跳过，不
   # 不记问题单（先观察不改判，与 V8.46 处置链同款纪律）。
   eval_json_get "/api/hermes/eval/behavior-signals?days=7" "$d/behavior-signals.json" || true
   eval_json_get "/api/hermes/eval/runs/${run_id}/business-summary" "$d/business-summary.json" || true
+  # 群体协作四维度读数（2026-10-24 多 Agent 群体协作评测基准吸收轮）：通信拓扑/
+  # 信用分配/帕累托/社会动力学。fail-soft 静默——读数缺席只不呈现，不记问题单
+  # （spec D2：只透传不进判据，同 V8.48 观察纪律）。单一事实源=产品端
+  # delivery/swarm-collab.ts（本仓只调端点落证据，不复制度量逻辑，D1）。
+  eval_json_get "/api/hermes/delivery/swarm-collab?run=${RUN_ID:-}" "$d/swarm-collab.json" || true
   return 0
 }
 
