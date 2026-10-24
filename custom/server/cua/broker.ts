@@ -1,6 +1,6 @@
-// overlay/custom/server/cua/broker.ts
-// SwarmStudio 自有 CUA broker 宿主：用 overlay 补丁源码（upstream/zcode
-// packages/zcode-cua/broker-server.js，patch 003 活体）在服务进程内起
+// custom/server/cua/broker.ts（AIStudio 仓）
+// SwarmStudio 自有 CUA broker 宿主：用 zcode 补丁源码（vendor/zcode
+// packages/zcode-cua/broker-server.js，zcode-patches/003 活体）在服务进程内起
 // createProductCuaHelperHost 单例——Node 后端（mac=JXA+screencapture），无
 // 桌面 Helper 的 peer-verification（那是 dev.zcode.app 专属，第三方宿主
 // 按设计被拒，2026-10-18 实测 "peer verification failed"）。
