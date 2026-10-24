@@ -145,6 +145,17 @@ export function workflowNativeRoutes(): (ctx: Ctx, next: Next) => Promise<void> 
       return
     }
     const mOne = path.match(/^\/api\/ia2\/workflow\/runs\/([^/]+)$/)
+    if (method === 'DELETE' && mOne) {
+      // 批 2：删除运行记录（失败/历史清理；running 态拒删防孤儿执行）
+      const id = decodeURIComponent(mOne[1])
+      const run = runs.find(r => r.id === id)
+      if (!run) { ctx.status = 404; ctx.body = { ok: false, error: 'run 不存在' }; return }
+      if (run.status === 'running') { ctx.status = 409; ctx.body = { ok: false, error: '运行中不可删除（等终态后再清）' }; return }
+      runs = runs.filter(r => r.id !== id)
+      saveRuns(runs)
+      ctx.body = { ok: true }
+      return
+    }
     if (method === 'GET' && mOne) {
       ctx.set('Cache-Control', 'no-store')
       const run = runs.find(r => r.id === decodeURIComponent(mOne[1]))

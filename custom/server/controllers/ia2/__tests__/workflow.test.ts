@@ -83,6 +83,21 @@ describe('工作流引擎（/api/ia2/workflow/runs）', () => {
     expect(detail.steps[0].eventId).toContain('evt')
   })
 
+  it('DELETE：删终态 run 成功；running 拒删 409；不存在 404', async () => {
+    const mw = mod.workflowNativeRoutes()
+    const { c } = await fire(mw, ctx('POST', '/api/ia2/workflow/runs', {
+      name: '待删', mode: 'parallel',
+      steps: [{ targetKind: 'identity', ref: 'worker-coder', instructions: 'x' }],
+    }))
+    const id = (c.body as { run: { id: string } }).run.id
+    await new Promise(r => setTimeout(r, 50))
+    const { c: d1 } = await fire(mw, ctx('DELETE', `/api/ia2/workflow/runs/${id}`))
+    expect(d1.status).toBe(0)
+    expect(d1.body).toEqual({ ok: true })
+    const { c: d2 } = await fire(mw, ctx('DELETE', `/api/ia2/workflow/runs/${id}`))
+    expect(d2.status).toBe(404)
+  })
+
   it('校验：空步骤/缺字段 400', async () => {
     const mw = mod.workflowNativeRoutes()
     const { c: c1 } = await fire(mw, ctx('POST', '/api/ia2/workflow/runs', { steps: [] }))

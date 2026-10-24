@@ -23,6 +23,7 @@ import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings
 import type { LoopActivity } from '../../adapters/activity'
 import type { AgentRosterRow } from '../../adapters/agents'
 import { fetchWorkflowRuns, type WorkflowRun } from '../../workflow'
+import { usePlatformsStore } from '../../store/platforms'
 const props = defineProps<{
   sessions: FlowSessionRow[]
   loops: FlowLoopRow[]
@@ -61,6 +62,20 @@ function sortTitle(m: FlowSortMode): string {
 const filterKind = ref<FlowFilter['kind']>('all')
 
 // ── 工作流（2026-10-23 五轮 H：「循环」换面）：自取 runs，30s/4s 轮询 ──
+const openChannels = ref<Set<string>>(new Set())
+function toggleChannel(name: string): void {
+  const next = new Set(openChannels.value)
+  if (next.has(name)) next.delete(name)
+  else next.add(name)
+  openChannels.value = next
+}
+/** 平台通道状态（/agent-health/detailed 投影；与页头「在线」同源） */
+const platformsStore = usePlatformsStore()
+const platformInfoOf = (name: string) => {
+  void platformsStore.rawData
+  return platformsStore.platforms.find(p => p.name === name && (!p.profile || p.profile === 'default')) ?? platformsStore.platforms.find(p => p.name === name)
+}
+
 const wfRuns = ref<WorkflowRun[]>([])
 let wfTimer: ReturnType<typeof setInterval> | null = null
 async function refreshWf(): Promise<void> { try { wfRuns.value = await fetchWorkflowRuns() } catch { /* 忽略 */ } }
@@ -295,18 +310,23 @@ const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
         <div class="flow-nav__sec-head" data-testid="flow-group-agents">
           {{ t('ia2.flow.groupAgents') }}<span class="flow-nav__sec-n">{{ props.agents.length }}</span>
         </div>
-        <div
-          v-for="a in props.agents"
-          :key="a.name"
-          class="flow-nav__agent"
-          :class="`flow-nav__agent--${a.busyState}`"
-          :data-testid="`flow-agent-${a.name}`"
-        >
-          <span class="flow-nav__agent-dot" :class="`is-${a.busyState}`" />
-          <span class="flow-nav__agent-name">{{ a.name }}</span>
-          <span v-if="a.activeTask" class="flow-nav__agent-task" :title="a.activeTask">{{ a.activeTask }}</span>
-          <span v-else-if="a.sessionCount" class="flow-nav__agent-sess" :title="t('ia2.agents.sessions', { n: a.sessionCount })">◉{{ a.sessionCount }}</span>
-        </div>
+        <template v-for="a in props.agents" :key="a.name">
+          <button type="button" class="flow-nav__agent" :class="[`flow-nav__agent--${a.busyState}`, { 'is-open': openChannels.has(a.name) }]"
+            :data-testid="`flow-agent-${a.name}`" :title="`查看通道状态：${a.name}`" @click="toggleChannel(a.name)">
+            <span class="flow-nav__agent-dot" :class="`is-${a.busyState}`" />
+            <span class="flow-nav__agent-name">{{ a.name }}</span>
+            <span v-if="a.activeTask" class="flow-nav__agent-task" :title="a.activeTask">{{ a.activeTask }}</span>
+            <span v-else-if="a.sessionCount" class="flow-nav__agent-sess" :title="t('ia2.agents.sessions', { n: a.sessionCount })">◉{{ a.sessionCount }}</span>
+            <span class="flow-nav__agent-caret">{{ openChannels.has(a.name) ? '▴' : '▾' }}</span>
+          </button>
+          <div v-if="openChannels.has(a.name)" class="flow-nav__channel-detail" :data-testid="`flow-channel-${a.name}`">
+            <p class="flow-nav__cd-row"><span class="flow-nav__cd-k">状态</span><span>{{ { online: '在线可跑', busy: '在跑', idle: '在线无活', offline: '离线' }[a.busyState] }}</span></p>
+            <p class="flow-nav__cd-row"><span class="flow-nav__cd-k">来源</span><span>{{ a.source === 'platform' ? '网关平台通道' : '任务执行者' }}</span></p>
+            <p v-if="platformInfoOf(a.name)" class="flow-nav__cd-row"><span class="flow-nav__cd-k">网关态</span><span>{{ platformInfoOf(a.name)!.state }} · {{ platformInfoOf(a.name)!.profile || 'default' }}</span></p>
+            <p v-if="a.activeTask" class="flow-nav__cd-row"><span class="flow-nav__cd-k">在跑</span><span>{{ a.activeTask }}</span></p>
+            <p class="flow-nav__cd-hint">通道由网关（launchd 常驻）承载；{{ a.source === 'platform' ? '连接状态随网关平台自动维护' : '按任务执行情况归并' }}。</p>
+          </div>
+        </template>
       </div>
 
       <div v-if="!shownSessions.length && !shownLoops.length" class="ui-empty-state ui-empty-state--compact" data-testid="flow-empty">
@@ -494,6 +514,11 @@ const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
   &:hover { background: var(--bg-secondary); color: var(--text-primary); }
 }
 /* v14 单一聊天列表：kind 图标 + 群聊行 hover 删除 */
+.flow-nav__agent-caret { margin-left: auto; flex-shrink: 0; font-size: 9px; color: var(--text-muted); }
+.flow-nav__channel-detail { border: 1px dashed var(--border-color); border-radius: 6px; margin: 2px 0 4px; padding: 6px 8px; display: flex; flex-direction: column; gap: 3px; }
+.flow-nav__cd-row { margin: 0; font-size: 11px; color: var(--text-primary); display: flex; gap: 8px; }
+.flow-nav__cd-k { color: var(--text-muted); flex-shrink: 0; min-width: 34px; }
+.flow-nav__cd-hint { margin: 2px 0 0; font-size: 10px; color: var(--text-muted); line-height: 1.5; }
 .flow-nav__wf-add { margin-left: auto; border: 1px solid var(--accent-primary); border-radius: 50%; width: 16px; height: 16px; line-height: 1; font-size: 11px; color: var(--accent-primary); background: transparent; cursor: pointer; padding: 0; flex-shrink: 0; }
 .flow-nav__wf-meta { font-size: 10px; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
 .flow-nav__kind {
