@@ -1,0 +1,13 @@
+{
+  "name": "cluster-kanban",
+  "label": "Cluster Kanban",
+  "description": "Distributed Hermes cluster Kanban board — manage nodes, tasks, leases, cluster health, and node-to-node chat",
+  "icon": "Network",
+  "version": "1.0.0",
+  "tab": {
+    "path": "/cluster-kanban",
+    "position": "after:kanban"
+  },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}

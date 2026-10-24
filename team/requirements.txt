@@ -1,0 +1,7 @@
+# SwarmTeam — Python dependencies
+# Install on offline Windows: pip install -r requirements.txt
+#
+# This installs the Hermes Agent framework + all Python dependencies.
+# The framework provides: CLI chat, gateway, kanban dispatcher, skills system.
+
+hermes-agent[all]>=0.20.0

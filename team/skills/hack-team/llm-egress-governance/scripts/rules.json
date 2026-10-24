@@ -1,0 +1,15 @@
+{
+  "whitelist": [
+    "api.openai.com",
+    "api.anthropic.com",
+    "api.deepseek.com",
+    "api.moonshot.cn",
+    "api.moonshot.ai",
+    "api.mistral.ai",
+    "generativelanguage.googleapis.com",
+    "openai.app.msh.team",
+    "localhost",
+    "127.0.0.1",
+    "::1"
+  ]
+}

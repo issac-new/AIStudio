@@ -1,0 +1,7 @@
+{
+  "catalog_name": "homeassistant",
+  "repo": "https://github.com/NousResearch/hermes-homeassistant",
+  "sha": "ba30cb0cf86c52bdb5cde98974bc062e97966529",
+  "tier": "official",
+  "installed_at": "2026-10-04T14:24:44Z"
+}

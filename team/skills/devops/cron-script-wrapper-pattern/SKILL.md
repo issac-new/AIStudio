@@ -1,0 +1,114 @@
+---
+name: cron-script-wrapper-pattern
+version: 1.0.0
+description: "Fix cron 'Script not found' when passing args to scripts."
+triggers:
+  - "cron script not found"
+  - "Script not found"
+  - "cron job fails with script path containing space"
+  - "no_agent cron job fails"
+  - "Blocked: script path resolves outside the scripts directory"
+  - "cron script symlink 被拦截"
+  - "ccswitch peak toggle"
+  - "scheduled script with arguments"
+---
+
+# Cron Script Wrapper Pattern
+
+## 🔴 Pitfall：symlink 修法无效（2026-09-04 实锤）
+
+no_agent job 报 `Script not found` 时，**用 symlink 把外部脚本链进 scripts 目录是无效修法**：
+scheduler 有路径逃逸防护，script 经 realpath 解析后必须落在 `HERMES_HOME/scripts/` **之内**，
+报错形如 `Blocked: script path resolves outside the scripts directory: 'oel_aggregate.py'`。
+
+**正确修法 = 本体迁移**（参照 2026-08-28 worldmonitor-sentinel 判例）：
+
+```bash
+mv ~/.hermes/bin/<script>.py ~/.hermes/profiles/orchestrator/scripts/<script>.py
+ln -sfn ~/.hermes/profiles/orchestrator/scripts/<script>.py ~/.hermes/bin/<script>.py  # 反向链接保持人用入口
+```
+
+迁移后注意 wrapper 内部若引用旧绝对路径需同步改；直跑验证 exit=0 后再用 cronjob(action='run') 过
+scheduler 链路闭环。
+
+另注意两层告警语义区分：wrapper 约定 exit 0=静默健康、exit 1=有意报警（如 ontology CQ 有 GAP 时
+last_status 持续为 error 是设计行为），排查时先看 error 内容是「基础设施坏」还是「业务告警数据」。
+
+## When to Use
+
+- A `no_agent=True` cron job fails with `Script not found: /path/to/scripts/<name> <arg>`.
+- You need to schedule a script that takes command-line arguments (e.g. `ccswitch-peak-toggle.sh disable`).
+- You are debugging why a cron job that works manually fails when run by the scheduler.
+
+## Root Cause
+
+Hermes cron's `script` field is resolved as a **single file path** under `HERMES_HOME/scripts/`.
+The scheduler does NOT split on spaces or pass arguments. If you write:
+
+```json
+"script": "ccswitch-peak-toggle.sh disable"
+```
+
+the scheduler looks for a file literally named `ccswitch-peak-toggle.sh disable` in the scripts
+directory, which does not exist, and returns `Script not found`.
+
+## Fix: Wrapper Scripts
+
+Create a thin wrapper script for each argument combination, then point the cron job at the wrapper.
+
+### 1. Create wrappers
+
+```bash
+# ~/.hermes/profiles/<profile>/scripts/ccswitch-peak-disable.sh
+#!/usr/bin/env bash
+exec "$(dirname "$0")/ccswitch-peak-toggle.sh" disable
+
+# ~/.hermes/profiles/<profile>/scripts/ccswitch-peak-restore.sh
+#!/usr/bin/env bash
+exec "$(dirname "$0")/ccswitch-peak-toggle.sh" restore
+```
+
+Make them executable:
+
+```bash
+chmod +x ~/.hermes/profiles/<profile>/scripts/ccswitch-peak-{disable,restore}.sh
+```
+
+### 2. Update the cron job
+
+Edit `~/.hermes/profiles/<profile>/cron/jobs.json` and change the `script` field from
+`"ccswitch-peak-toggle.sh disable"` to `"ccswitch-peak-disable.sh"` (and similarly for restore).
+
+Or recreate the job with `hermes cron create` using the wrapper name.
+
+### 3. Verify
+
+```bash
+# Manual test
+~/.hermes/profiles/<profile>/scripts/ccswitch-peak-disable.sh
+~/.hermes/profiles/<profile>/scripts/ccswitch-peak-restore.sh
+
+# Check cron job definition
+grep -A 5 '"id": "<job_id>"' ~/.hermes/profiles/<profile>/cron/jobs.json | grep script
+```
+
+### 死占位 job 与终态 guard（2026-10-10 实测）
+1. `schedule: "?"`、`next_run_at: null`、`last_run_at: null` 三联 = 从未接线的死占位 job（排程表达式坏 + script null）。修复它别走 edit/resume——completed 终态 job 会拒绝 update_job/edit/裸 resume（提示用 `cron resume --run-now/--at`），最省事是 `cronjob_manage remove` 后 `create` 重建（自执行工作先建留痕卡防重复派工）。
+2. cronjob_manage 的 script 参数强制相对路径（拒绝绝对/home 相对），脚本必须放 orchestrator `scripts/` 内。正本在 `~/.hermes/bin/` 保单一事实源的，在 scripts/ 放薄 wrapper `exec /Users/YOURNAME/.hermes/bin/<正本>.sh "$@"` 委托。
+3. 重建后必跑 `action='run'` 端到端验证（cron 引擎→wrapper→正本→静默退出全链），成功判据 = state 回 `scheduled` + next_run_at 有值 + 正本脚本手动跑 exit 0。
+
+## Pitfalls
+
+- **Do not try to quote the argument** in the `script` field — the scheduler still treats the
+  whole string as one path.
+- **Do not rely on `$1` in the main script** when called from cron via a wrapper; the wrapper
+  hardcodes the argument.
+- **Wrapper scripts must be executable** (`chmod +x`) or the scheduler will fail with a
+  permission error (not `Script not found`).
+- **The wrapper pattern also protects the cron definition** from future edits to the main
+  script's argument list.
+
+## Related Skills
+
+- **time-based-model-downgrade** — for scheduling model/provider switches across profiles.
+- **ccswitch-provider-troubleshooting** — for cc-switch specific issues.

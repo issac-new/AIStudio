@@ -1,0 +1,240 @@
+{
+ "0": {
+  "title": "我的百万年薪，“能力模型”",
+  "url": "https://chentianyuzhou.com/detail/i_66d2838fe4b023c06c873476/1",
+  "status": "FAIL",
+  "err": "Keyless Keenable extract failed: {\"error\":\"Unprocessable entity\",\"message\":\"The page was reached but content could not be extracted\"}. Set KEENABLE_API_KEY (https://keenable.ai) for reliable service.",
+  "len": 0
+ },
+ "1": {
+  "title": "百万年薪，我做对了这8件事，1.6万字唠明白",
+  "url": "https://chentianyuzhou.com/detail/i_66d28436e4b023c06117dc86/1",
+  "status": "FAIL",
+  "err": "Keyless Keenable extract failed: {\"error\":\"Unprocessable entity\",\"message\":\"The page was reached but content could not be extracted\"}. Set KEENABLE_API_KEY (https://keenable.ai) for reliable service.",
+  "len": 0
+ },
+ "2": {
+  "title": "支付人，3大底层能力",
+  "url": "https://chentianyuzhou.com/detail/i_66d283e1e4b023c06117dc5b/1",
+  "status": "FAIL",
+  "err": "Keyless Keenable extract failed: {\"error\":\"Unprocessable entity\",\"message\":\"The page was reached but content could not be extracted\"}. Set KEENABLE_API_KEY (https://keenable.ai) for reliable service.",
+  "len": 0
+ },
+ "3": {
+  "title": "1.5万字：详解“电子发票”系统建设，15大开票场景实操",
+  "url": "https://chentianyuzhou.com/detail/i_66d27ea0e4b023c06117d88b/1",
+  "status": "FAIL",
+  "err": "Keyless Keenable extract failed: {\"error\":\"Unprocessable entity\",\"message\":\"The page was reached but content could not be extracted\"}. Set KEENABLE_API_KEY (https://keenable.ai) for reliable service.",
+  "len": 0
+ },
+ "4": {
+  "title": "万字：“清算、结算、清结算”的区别",
+  "url": "https://chentianyuzhou.com/detail/i_66d27d87e4b023c06117d784/1",
+  "status": "FAIL",
+  "err": "Keyless Exa extract failed: Error fetching URL(s): https://chentianyuzhou.com/detail/i_66d27d87e4b023c06117d784/1: CRAWL_UNKNOWN_ERROR. Set EXA_API_KEY (https://exa.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "5": {
+  "title": "[课程] 2天线下支付专家班，支付全栈知识体系构建（赠送Pay·X）",
+  "url": "https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2hU6muNT8xE9x59BtZtGbd0v9sz",
+  "status": "FAIL",
+  "err": "Keyless Exa extract failed: Error fetching URL(s): https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2hU6muNT8xE9x59BtZtGbd0v9sz: CRAWL_LIVECRAWL_TIMEOUT. Set EXA_API_KEY (https://exa.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "6": {
+  "title": "[课程] L3陈天宇宙支付专家训练营：基础、、架构、方法论、原型，项目案例、图文全打通",
+  "url": "https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2JUQ0Zd2m3Xm44rrO70BJgUCC7o",
+  "status": "FAIL",
+  "err": "Keyless Exa extract failed: Error fetching URL(s): https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2JUQ0Zd2m3Xm44rrO70BJgUCC7o: CRAWL_EMPTY_CONTENT. Set EXA_API_KEY (https://exa.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "7": {
+  "title": "[课程] 7天支付产品训练营【第1期】-已结营",
+  "url": "https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2p4GpsxOpp72GywyjemlThvGtxQ",
+  "status": "FAIL",
+  "err": "Keyless Exa extract failed: Error fetching URL(s): https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2p4GpsxOpp72GywyjemlThvGtxQ: CRAWL_LIVECRAWL_TIMEOUT. Set EXA_API_KEY (https://exa.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "8": {
+  "title": "[课程] L1思维营，快速建立全局性支付架构思维",
+  "url": "https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2ZFLpcZW91YwjvvpRS42ANlMFZm",
+  "status": "FAIL",
+  "err": "Keyless Parallel extract failed: request failed: HTTPSConnectionPool(host='search.parallel.ai', port=443): Read timed out. (read timeout=30). Set PARALLEL_API_KEY (https://parallel.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "9": {
+  "title": "[课程] L2全能营，全链路支付系统设计理论视频课",
+  "url": "https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2TNJLYUl9RR2P8E6KYS2nMDumED",
+  "status": "FAIL",
+  "err": "Keyless Parallel extract failed: request failed: HTTPSConnectionPool(host='search.parallel.ai', port=443): Read timed out. (read timeout=30). Set PARALLEL_API_KEY (https://parallel.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "10": {
+  "title": "[课程] L12·业财一体化实战全能营",
+  "url": "https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2lKsxWktm4C4PnkugPmNRDjyKCw",
+  "status": "FAIL",
+  "err": "Keyless Parallel extract failed: request failed: HTTPSConnectionPool(host='search.parallel.ai', port=443): Read timed out. (read timeout=30). Set PARALLEL_API_KEY (https://parallel.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "11": {
+  "title": "[课程] 陈天宇宙4天线下·支付大师班（3合1送5）",
+  "url": "https://chentianyuzhou.com/p/t_pc/course_pc_detail/camp_pro/course_2X0LdNQuQl9vapZEMH28InW7Bhn",
+  "status": "FAIL",
+  "err": "Keyless Parallel extract failed: request failed: HTTPSConnectionPool(host='search.parallel.ai', port=443): Read timed out. (read timeout=30). Set PARALLEL_API_KEY (https://parallel.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "24": {
+  "title": "万字：清结算体系，全局方案深度解析",
+  "url": "https://www.woshipm.com/pd/6063150.html",
+  "status": "OK",
+  "len": 20554,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/24_wp_万字：清结算体系_全局方案深度解析.md"
+ },
+ "25": {
+  "title": "1.9万字：支付清算生态",
+  "url": "https://www.woshipm.com/share/6124608.html",
+  "status": "OK",
+  "len": 37481,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/25_wp_1.9万字：支付清算生态.md"
+ },
+ "26": {
+  "title": "搞懂清结算，只需要记住123457",
+  "url": "https://www.woshipm.com/share/6054340.html",
+  "status": "OK",
+  "len": 8001,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/26_wp_搞懂清结算_只需要记住123457.md"
+ },
+ "27": {
+  "title": "1张超级支付清算架构图",
+  "url": "https://www.woshipm.com/share/6095640.html",
+  "status": "OK",
+  "len": 9889,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/27_wp_1张超级支付清算架构图.md"
+ },
+ "28": {
+  "title": "1点3线把握支付架构",
+  "url": "https://www.woshipm.com/pd/5234903.html",
+  "status": "OK",
+  "len": 2205,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/28_wp_1点3线把握支付架构.md"
+ },
+ "29": {
+  "title": "十看支付：开启支付之门",
+  "url": "https://www.woshipm.com/pd/5269894.html",
+  "status": "OK",
+  "len": 41931,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/29_wp_十看支付：开启支付之门.md"
+ },
+ "30": {
+  "title": "0基础开启支付之门",
+  "url": "https://www.woshipm.com/pd/5581119.html",
+  "status": "OK",
+  "len": 20774,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/30_wp_0基础开启支付之门.md"
+ },
+ "31": {
+  "title": "收银台设计方法论",
+  "url": "https://www.woshipm.com/pd/5819487.html",
+  "status": "OK",
+  "len": 7644,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/31_wp_收银台设计方法论.md"
+ },
+ "32": {
+  "title": "详解支付收银台前端设计",
+  "url": "https://www.woshipm.com/pd/4422465.html",
+  "status": "FAIL",
+  "err": "Keyless Exa extract failed: Unrecognized MCP response shape. Set EXA_API_KEY (https://exa.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "33": {
+  "title": "5个收银台设计案例",
+  "url": "https://www.woshipm.com/pd/5821858.html",
+  "status": "FAIL",
+  "err": "Keyless Exa extract failed: Unrecognized MCP response shape. Set EXA_API_KEY (https://exa.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "34": {
+  "title": "支付通道接入和管理",
+  "url": "https://www.woshipm.com/pd/5791683.html",
+  "status": "FAIL",
+  "err": "Keyless Exa extract failed: Unrecognized MCP response shape. Set EXA_API_KEY (https://exa.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "35": {
+  "title": "万字解析通道系统设计",
+  "url": "https://www.woshipm.com/pd/5930974.html",
+  "status": "FAIL",
+  "err": "Keyless Exa extract failed: Unrecognized MCP response shape. Set EXA_API_KEY (https://exa.ai) or another web backend via `hermes tools` for reliable service.",
+  "len": 0
+ },
+ "36": {
+  "title": "前置路由，让收银台丰富多样",
+  "url": "https://www.woshipm.com/pd/5965947.html",
+  "status": "OK",
+  "len": 3997,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/36_wp_前置路由_让收银台丰富多样.md"
+ },
+ "38": {
+  "title": "从上帝视角看支付——支付总架构解析",
+  "url": "https://www.woshipm.com/pd/5881028.html",
+  "status": "OK",
+  "len": 7810,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/38_wp_从上帝视角看支付——支付总架构解析.md"
+ },
+ "37": {
+  "title": "支付核心产品架构解析",
+  "url": "https://www.woshipm.com/pd/5968807.html",
+  "status": "OK",
+  "len": 5277,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/37_wp_支付核心产品架构解析.md"
+ },
+ "39": {
+  "title": "三方支付的产品体系",
+  "url": "https://www.woshipm.com/pd/5871105.html",
+  "status": "OK",
+  "len": 5207,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/39_wp_三方支付的产品体系.md"
+ },
+ "40": {
+  "title": "15张图详解三方支付：总架构、5大核心业务处理流程、备付金管理",
+  "url": "https://www.woshipm.com/share/6229266.html",
+  "status": "OK",
+  "len": 9618,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/40_wp_15张图详解三方支付：总架构_5大核心业务处理流程_备付金管理.md"
+ },
+ "41": {
+  "title": "二清详解：支付产品必须知道的清结算规矩",
+  "url": "https://www.woshipm.com/pd/4425081.html",
+  "status": "OK",
+  "len": 16928,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/41_wp_二清详解：支付产品必须知道的清结算规矩.md"
+ },
+ "42": {
+  "title": "二清改造，总架构解析",
+  "url": "https://www.woshipm.com/share/5987055.html",
+  "status": "OK",
+  "len": 9052,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/42_wp_二清改造_总架构解析.md"
+ },
+ "43": {
+  "title": "初识会计引擎原理",
+  "url": "https://www.woshipm.com/pd/5805013.html",
+  "status": "OK",
+  "len": 7610,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/43_wp_初识会计引擎原理.md"
+ },
+ "44": {
+  "title": "支付清结算体系的设计方法",
+  "url": "https://www.woshipm.com/pd/5650155.html",
+  "status": "OK",
+  "len": 13578,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/44_wp_支付清结算体系的设计方法.md"
+ },
+ "45": {
+  "title": "从方法论的角度，谈谈支付体系",
+  "url": "https://www.woshipm.com/pd/5649662.html",
+  "status": "OK",
+  "len": 17923,
+  "file": "/Users/YOURNAME/.hermes/profiles/pay-orchestrator/references/fulltext/45_wp_从方法论的角度_谈谈支付体系.md"
+ }
+}

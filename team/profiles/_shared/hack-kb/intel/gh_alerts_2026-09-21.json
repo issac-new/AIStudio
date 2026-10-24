@@ -1,0 +1,72 @@
+{
+ "run_at": "2026-09-21T01:44:17.851403+00:00",
+ "keywords": [
+  "CVE-2026",
+  "exploit",
+  "0day",
+  "nuclei-template"
+ ],
+ "total_new_alerts": 5,
+ "alerts": [
+  {
+   "route": "tools",
+   "repo_full_name": "nimaarek/CVE-2026-8932-PoC",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/nimaarek/CVE-2026-8932-PoC",
+   "description": "CVE-2026-8932 PoC",
+   "stars": 0,
+   "created_at": "2026-09-21T01:35:10Z",
+   "pushed_at": "2026-09-21T01:35:11Z",
+   "author": "nimaarek",
+   "fingerprint": "779ff70592aec5b5"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "alinurettin/NextGen-EntropySentinel-Prober",
+   "matched_keyword": "exploit+secret",
+   "html_url": "https://github.com/alinurettin/NextGen-EntropySentinel-Prober",
+   "description": "Autonomous cybersecurity engine implementing nextgen streaming shannon entropy anomaly & secret leak prober, evaluating runtime vectors against zero-day exploit",
+   "stars": 0,
+   "created_at": "2026-09-20T19:57:57Z",
+   "pushed_at": "2026-09-20T19:58:02Z",
+   "author": "alinurettin",
+   "fingerprint": "b4b6aba35bd76ba6"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "wxwreak/memchk",
+   "matched_keyword": "exploit+secret",
+   "html_url": "https://github.com/wxwreak/memchk",
+   "description": "A lightweight, blazingly fast post-exploitation and security auditing utility written in Go. It is designed to hunt for secrets, API keys, tokens, and credentia",
+   "stars": 0,
+   "created_at": "2026-09-20T14:52:25Z",
+   "pushed_at": "2026-09-20T14:58:02Z",
+   "author": "wxwreak",
+   "fingerprint": "93afaae51cf4bdbd"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "sydneyspider/Funnel-Recon",
+   "matched_keyword": "exploit+credential",
+   "html_url": "https://github.com/sydneyspider/Funnel-Recon",
+   "description": "authorized URL reconnaissance by 'SydneySpider'.  A bounded, rate-limited Go CLI that enumerates subdomains, probes live hosts, crawls pages, looks up historica",
+   "stars": 1,
+   "created_at": "2026-09-20T19:57:39Z",
+   "pushed_at": "2026-09-20T20:08:17Z",
+   "author": "sydneyspider",
+   "fingerprint": "1d82e1c656e077e6"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "wxwreak/memchk",
+   "matched_keyword": "exploit+token",
+   "html_url": "https://github.com/wxwreak/memchk",
+   "description": "A lightweight, blazingly fast post-exploitation and security auditing utility written in Go. It is designed to hunt for secrets, API keys, tokens, and credentia",
+   "stars": 0,
+   "created_at": "2026-09-20T14:52:25Z",
+   "pushed_at": "2026-09-20T14:58:02Z",
+   "author": "wxwreak",
+   "fingerprint": "65dc07ebbb3b18d1"
+  }
+ ]
+}
