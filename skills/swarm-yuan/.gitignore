@@ -1,0 +1,4 @@
+# swarm-yuan 生成器本地状态
+.swarm-yuan/
+# WP-B: e2e 样本项目构建产物（precheck.sh --all 跑 BUILD_CMD 产生）
+tests/e2e/java-demo/target/

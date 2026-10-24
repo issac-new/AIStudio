@@ -1,16 +1,17 @@
-# SwarmStudio overlay — AI 工作入口
+# AIStudio（SwarmStudio 体系单仓）— AI 工作入口
 
-一句话：SwarmStudio 桌面应用（Electron + Koa + Vue 3）的二次开发仓；上游 `upstream/hermes-studio` 只读，所有改动经 `patches/` 与 `custom/` 在构建时注入（`npm run inject`）。
+一句话：AIStudio 是 SwarmStudio 体系的单一完整项目仓（原 ncwk 多仓于 2026-10-24 整合）：SwarmStudio 桌面应用（Electron + Koa + Vue 3）的二次开发层 + `vendor/` 钉版上游基线 + `simharness/` 推演 harness + `skills/swarm-yuan/` 技能本体。所有改动经 `patches/` 与 `custom/` 在构建期注入 `vendor/` 基线（`npm run inject`）。
 
 ## 工作规则
 
-1. 只改本仓；上游目录只允许 `git pull`。
+1. 只改本仓；`vendor/**` 是钉版基线（台账 `vendor/VENDOR.md`），注入后的脏态是预期工作态、不入提交（pre-commit 自动撤出）；基线替换只走 `npm run vendor:sync` + `VENDOR_SYNC=1` 显式通道。`vendor/**` 内禁建 `.git`。
 2. 代码改动先写 `docs/superpowers/specs/YYYY-MM-DD-<slug>.md`，至少含「变更 / 决策记录 / 验证」三段；spec 是决策事实源，不是事后补记。
 3. 分支 `feat|fix|refactor/<slug>`，从 `origin/main` 起；并行会话用 worktree；清理只走 `git worktree remove/prune`，禁止 `rm -rf`。
 4. 提交前跑目标测试 `npx vitest run <path>`；合并前 `npm test`；新增服务端模块跑 `npm run typecheck:harness`。
 5. 失败不隐瞒：测试红、步骤跳过、未验证项必须写进交付说明。
 6. 安全纪律：审计不落敏感原值；密钥只存 env 名；不削弱既有安全边界。
 7. 注释用中文，标识符用英文；注释只写约束与来源，不复述代码。
+8. 本仓只存源码/脚本/文档/依赖清单；中间产物（node_modules、dist、runs、截图、离线包、evidence 二进制）不入库（.gitignore 立法，2026-10-24 用户指示）。
 
 ## 目录导航
 
@@ -20,8 +21,11 @@
 | `custom/client/` | Vue 客户端扩展；组件约定见 `custom/client/AGENTS.md` |
 | `custom/qgate/` | 质量门禁框架（L0-L5 gate packs） |
 | `patches/` | 上游注入补丁（编号 series）；改上游行为必须走这里 |
-| `runtime/` | agent 运行时扩展（Python/TS 工具与检查器） |
-| `scripts/` | inject / build / serve / verify 脚本 |
+| `vendor/` | 上游钉版基线（hermes-studio v0.7.38 / hermes-agent v0.22.4 / zcode）；只读，台账见 `vendor/VENDOR.md` |
+| `simharness/` | 全流程推演 harness（mx-* 脚本/场景/守门测试；SIM_ROOT 等运行态在仓外） |
+| `skills/swarm-yuan/` | swarm-yuan 技能本体源码（六段目录；dist 离线包不入库） |
+| `runtime/` | agent 运行时扩展（Python/TS 工具与检查器；部署到 ~/.hermes/hermes-agent） |
+| `scripts/` | inject / build / serve / verify / vendor-sync 脚本 |
 | `docs/superpowers/specs/` | 设计规格与决策记录（单一事实源） |
 | `registries/` | 客户端/服务端路由与功能注册表 |
 

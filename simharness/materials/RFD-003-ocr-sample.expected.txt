@@ -1,0 +1,5 @@
+RFD-003 对账字段需求
+T+1 automatic reconciliation
+outTradeNo transactionId
+amount 10050 = 100.50 CNY int64
+timeout 15 min auto-close

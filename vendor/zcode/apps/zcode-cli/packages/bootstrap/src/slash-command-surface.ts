@@ -1,0 +1,31 @@
+import { BUILTIN_ZCODE_SLASH_COMMAND_HELP_ENTRIES } from "@zcode/shared";
+
+/**
+ * App `/` 面板与加号菜单按本顺序展示（UI 不维护排序白名单）。`workflow` 紧随 `goal`：两者都是
+ * 「开启一段工作」的入口（docs/ui/chat-composer-action-menu.md「工作流入口」）；它受灰度门约束，
+ * 由 zcode-protocol/slash-commands.ts 在装配时剔除。
+ */
+export const APP_PROTOCOL_VISIBLE_BUILTIN_SLASH_COMMAND_NAMES = [
+  "goal",
+  "workflow",
+  "compact",
+  "init",
+] as const;
+
+// Plan 由 Composer 本地操作提供，保留名称以防自定义命令接管该入口。
+const EXTRA_RESERVED_SLASH_COMMAND_NAMES = ["compress", "plan"] as const;
+
+const RESERVED_SLASH_COMMAND_NAMES = new Set(
+  BUILTIN_ZCODE_SLASH_COMMAND_HELP_ENTRIES.flatMap((entry) => [
+    entry.name,
+    ...(entry.aliases ?? []),
+  ]).concat([...EXTRA_RESERVED_SLASH_COMMAND_NAMES]),
+);
+
+export function normalizeZCodeSlashCommandName(name: string): string {
+  return name.trim().replace(/^\/+/, "").toLowerCase();
+}
+
+export function isReservedZCodeSlashCommandName(name: string): boolean {
+  return RESERVED_SLASH_COMMAND_NAMES.has(normalizeZCodeSlashCommandName(name));
+}

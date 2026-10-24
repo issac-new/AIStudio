@@ -1,10 +1,10 @@
-# SwarmStudio
+# AIStudio
 
 本项目基于作者想法，由 AI 100% 完成，不包含任何人类代码。使用 Apache 2.0 协议发布。对于参考的上游项目，如需运行时部署，请遵守其授权约定，或自行参考迁移功能完成本地化实现。
 
 Hard times create human code, human code create AI times, AI times create weak men, and weak men create hard times.
 
-SwarmStudio 是一套让「人指挥 AI 团队交付软件」的工作系统：分布式需求分析、研发协作、实施交付、测试验证在同一个驾驶舱完成。它基于 [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) 二次开发，本仓是 overlay（二次开发层），通过构建期注入把自定义功能叠加到上游，上游源码保持纯净、可独立升级。
+AIStudio 是 SwarmStudio 体系的单一完整项目仓（原 ncwk 工作区多仓整合，2026-10-24 起）：产品应用 SwarmStudio、通信基座 Matrix、运行面 hermes agent（teams）、编码引擎 Ycode、能力层 swarm-yuan 技能与全流程推演 harness（simharness）的全部源码与依赖清单都在这一个仓里，克隆即构建。SwarmStudio 是一套让「人指挥 AI 团队交付软件」的工作系统：分布式需求分析、研发协作、实施交付、测试验证在同一个驾驶舱完成。它基于 [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) 二次开发：上游基线以钉版快照收录在 `vendor/`（台账见 [vendor/VENDOR.md](vendor/VENDOR.md)），二次开发住在本仓 `patches/` 与 `custom/`，构建期注入叠加，基线保持纯净、可独立升级。
 
 ## 理念：四个阶段的问题与解法
 
@@ -85,19 +85,21 @@ SwarmStudio 不是单一应用，而是五个组件构成的分布式交付体�
 
 设计事实的单一正本是[《SwarmStudio 完整设计文档》](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)，按理念、产品、设计、实施、使用分层组织。
 
-## 实施：overlay 注入
+## 实施：vendor 基线 + 注入
 
-上游三个仓保持只读，所有二次开发住在本仓，构建期注入：
+上游基线钉版快照收录在 `vendor/`（git 跟踪 pristine 基线，台账见 [vendor/VENDOR.md](vendor/VENDOR.md)），所有二次开发住在本仓，构建期注入：
 
 - A 类接入：`custom/` 纯新增组件，构建期 alias 重定向加运行时注册。
-- B 类 patch：`patches/` 按编号序列 `git apply`（series 当前登记 studio 补丁 684 个、zcode 补丁 8 个），幂等可反向还原。
-- 上游升级走净树重放：0.7.37 到 0.7.38 升级时 310 个补丁全量通过，二次开发不陷分叉泥潭。
+- B 类 patch：`patches/` 按编号序列 `git apply`（series 当前登记 studio 补丁 684 个、zcode 补丁 8 个），幂等可反向还原；vendor 树注入后的脏态是预期工作态，提交被 pre-commit 钩子挡护。
+- 上游升级走净树重放：外置升级源树 `git pull` → `vendor/` 整树替换 → `npm run inject` 重放。0.7.37 到 0.7.38 升级时 310 个补丁全量通过，二次开发不陷分叉泥潭。
+- 仓内其余组件：`simharness/`（全流程推演 harness，subtree 并入）、`skills/swarm-yuan/`（技能本体源码）、`docs/superpowers/`（设计正本）。
 
-| 上游项目 | 用途 | 对齐版本 |
+| 基线 | 用途 | 对齐版本 |
 |---|---|---|
 | [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) | 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），注入目标 | v0.7.38 |
 | [hermes-agent](https://github.com/NousResearch/hermes-agent) | Agent 运行时（Python，单网关多路复用） | v0.22.4 |
-| [element-web](https://github.com/element-hq/element-web) | Matrix 客户端参考实现 | v1.12.32 |
+| zcode（Ycode 引擎底座） | IDE 编码引擎，`zcode-patches/` 注入 | v3.16.1 系列 |
+| [element-web](https://github.com/element-hq/element-web) | Matrix 客户端参考实现（无构建依赖，不入仓） | v1.12.32 |
 
 | 层 | 技术 |
 |---|---|
@@ -110,18 +112,17 @@ SwarmStudio 不是单一应用，而是五个组件构成的分布式交付体�
 
 ## 使用：五分钟跑起来
 
-前置：Node.js 不低于 23.0.0；三个上游仓按原目录名 clone 到本仓的 `../upstream/`（hermes-studio、hermes-agent、element-web）。Windows x64 支持见 [docs/windows-x64-setup.md](docs/windows-x64-setup.md)。
+前置：Node.js 不低于 23.0.0。基线源码已收录 `vendor/`，无需 clone 上游仓。Windows x64 支持见 [docs/windows-x64-setup.md](docs/windows-x64-setup.md)。
 
 ```bash
-cd overlay
 npm run inject                                    # 1. 注入 patch、生成派生 config、建符号链接
 
-cd ../upstream/hermes-studio
-npm install --no-audit --no-fund --ignore-scripts # 2. 安装上游依赖（overlay 经符号链接复用）
+cd vendor/hermes-studio
+npm install --no-audit --no-fund --ignore-scripts # 2. 安装依赖（node_modules 不入库，克隆后装一次）
 mkdir -p dist
 
-cd ../../overlay
-bash scripts/serve-server.sh &                    # 3. 后端 :8647
+cd ../..
+npm run serve &                                   # 3. 后端 :8647
 npm run dev                                       # 4. 前端 :8649（vite，改代码即时热更新）
 ```
 

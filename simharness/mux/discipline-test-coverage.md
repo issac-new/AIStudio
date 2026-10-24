@@ -1,0 +1,87 @@
+# 纪律↔守门测试覆盖对照表（2026-10-11 认知加固轮产出）
+
+> 用途：显式化 §4.3 各纪律条款的守门测试状态，防"立法即遗忘"（测试数只增不减防删测试，防不了新纪律无测试）。
+> 判定语料=simharness tests/ 与 mux/tests/ 全部 14 件 + overlay custom/**/__tests__ 586 件，按条款特征词 grep 判定。
+> 维护纪律：新纪律入列正本时，在本表同批登记测试状态（有测试锚/待首验配套）；run15 前置=裸奔五条补测试。
+
+## 一、有测试锚（26 条）
+
+| 纪律 | 测试锚（特征词命中处） |
+|---|---|
+| 1 重载任务时长 | harness-gate-integrity 活性/判活组 |
+| 2 活性判定口径 | 同上（判活真化） |
+| 4 派发丢失兜底 | 兜底/重发组 |
+| 8 判词与熔断 | ②硬闸打回熔断+⑥熔断复位语义（跨调用持久/OVERRIDE 留痕/证据变化复位） |
+| 10/11/28 台账口径 | DISP 三态/补账/jargon-source-gate、steps-meta-complete |
+| 12 入仓权威 | repo-has-freshness.test.sh |
+| 13 基线守卫 | merge-base/丢线守卫组 |
+| 14 工件新鲜度 | repo-has-freshness（branch_fresh/artifact_fresh） |
+| 19 静态扫描 | ⑩驱动静态自检（bash 语法+jq 编译） |
+| 21/25a 采集内置 | r18-capability+v84-frame-gates（帧四断言） |
+| 22/25b 骨架预写 | steps-meta-complete+骨架生成器 |
+| 23 检错退避 | mx_join_retry 缺员记单组 |
+| 24 端点核销 | overlay admin-service.test.ts（v2 PUT 绊线） |
+| 25c 独立回归 | isolation-boundary+mx-clean 语义 |
+| 32 交付边界 | task-boundaries.test.ts |
+| 35 里程碑 | overlay 进度面 milestone 组 |
+
+## 二、原裸奔清单（5 条，2026-10-11 认知加固轮已补 mux/tests/discipline-v88-810-gates.test.sh）
+
+| 纪律 | 条款 | 测试状态（2026-10-11 起） |
+|---|---|---|
+| 29 | 并发多锚等待 wait_alive_truth_multi | ✅ 函数定义+驱动调用断言 |
+| 33 | 测试左移四段并行 | ✅ UC/INT/QUALITY 三结论行识别断言 |
+| 34 | 缺陷回流纪律 | ✅ 建卡真伪+锚点抽验（defect-fixed-anchor-missing，commit 可反查核验）+静默环断言；分摊并行形态（wt-verify 多测试员分摊）属 run15 特性首验，当前驱动形态=单汇集+锚点抽验 |
+| 38 | 涉敏安全评审卡前置 | ✅ SECURITY-GATE 判词+security_review_done 豁免键断言 |
+| 39 | 契约执行观察影子 | ✅ node 语法+驱动调用断言 |
+
+守门形态说明：本组断言=驱动源码锚点存在性+关键语义行（防实现被无声删除）；行为级验证（判词识别正确性/抽验真实咬合）属 run15 整轮首验范围。
+
+## 三、流程型条款（11 条，无机械断言面，靠执行留痕与审计覆盖）
+
+3（共因提示）/5（重发任务书）/6（预邀）/7（回执要素）/9（通过时间记录）/15（评审卡登记人）/16（分层审计）/17（审计判回滚）/18（错误隔离）/20（grep 派发行）/25（运行中禁改）/26（等待封顶）/27（流水线重叠）/30（可达性校验）/36（监控代行）/37（预检 fail-closed）
+——其中 30/36/37 属"驱动行为+问题单留痕"形态，如需机械化可在 run15 后评估补断言。
+
+## 统计
+
+43 条（含 25a/b/c，2026-10-11 截图十条自 §5.6 迁入为纪律 40）：有锚 32（纪律 40 守门锚=帧四断言+门禁⑰）、流程型 11。首过三态信号（§2.6-5）与 FIX-DONE 锚点抽验同批入守门。
+
+## 四、V8.21 新增（run16 复盘，2026-10-13）
+
+| 纪律 | 条款 | 测试状态（2026-10-13 起） |
+|---|---|---|
+| 43 增补①②③ | 采集记单幂等/marker_eventid 锚单一事实源/锚形态预检 | ✅ r18-collect.py _issue 幂等（同指纹拒重）+fetch_dialog 锚预检+清扫循环 marker_eventid 调用——源码锚在 aipay-scenario.sh:1941+/r18-collect.py:70+（59a444f）；行为级首验=run17 清扫补采位 |
+| 44 | 报告链收尾稳定性（净化/容错/风暴护栏） | ✅ mx-log-sanitize.py 接线在 aipay-scenario.sh 报告段+监督器 _storm 计数/记单/退避三元（run-driver-supervisor.sh）；vitest ⑬ 复绿同批（160/160）——行为级首验=run17 |
+| 45 | 叙事注册与步骤状态一致性 | ✅ 生成器 _STEP33_DEFAULT_KEYS 兜底+审计器 state↔report 一致性 FAIL 断言与壳页 md5 结构性红线（mx-report-gen.py:1467+/mx-report-audit.py:614+）；run16 报告重出实证（25 ⬜→26 ✅）——首验已完成（复盘轮重出即验证） |
+
+统计更新：45 条（43 增补计原条），有锚 35、流程型 11。
+
+## 五、V8.23 新增（run18 复盘，2026-10-13；漏登补记）
+
+| 纪律 | 条款 | 测试状态（2026-10-13 深夜补登） |
+|---|---|---|
+| 46 | 闸键-证据耦合（evidence_baseline 基线/G3 缺证显形/G4 存在性×新鲜度双查/G5 评审卡时间窗+finalize 非空 body） | ✅ 有测试锚：repo-has-freshness.test.sh 六例（旧稿拒/本轮稿过/无起点键放行/main 无文件拒/lite 夹具源基线回落/夹具源不可读回落本轮）；源码锚=mx-scenario-lib.sh evidence_baseline 函数+1314-1323 G5 评审卡 created_at 时间窗+1370 finalize 前置 review-record 校验。行为级首验=run18-lite 已按新口径出报告，全量轮首验=run19 在跑 |
+| 47 | 报告引用产物新鲜度与计数实测（QGate 证据包 generated 校验/全景矩阵 fetch+窗口/复盘自指单重取计数） | ⚠️ 有代码锚无机械测试锚（待首验配套，防立法即遗忘）：aipay-scenario.sh:1444-1460（qgate-stale 拒收+清中央仓旧件+新鲜度过才落盘）、mx-report-gen.py:2881-2908（_art_refreshed 先 fetch origin+窗口校验+「在仓·旧版」降级）、aipay-scenario.sh:1927-1928（自指单追加后重取计数）。补断言建议：qgate-stale 件沿 repo-has-freshness 脚手架加时间窗两例 |
+| 70 | 交付物轮次一致性（V8.36，run20 复盘） | ✅ tests/report-truth-anchor.test.sh①（stale 判定 7 用例：run16/run14 稿判陈旧、run20 稿不判、无声明位不判、上轮前缀/头部窗口外不误报）+④（repo_branch_runtag 陈旧/新鲜两态）；报告面=审计器查 14a（侧柜数据源） |
+| 71 | 交付物锚点保留（V8.36） | ✅ tests/report-truth-anchor.test.sh②（分支在=活/无=死/空名=不判/查询异常 fail-open，本地裸仓+clone fixture）；报告面=审计器查 14b |
+| 72 | 逐步问题单注册守门（V8.36） | ✅ 审计器查 14c（侧柜 step_issue_rows×step_registered_keys 对账，零渲染=FAIL）+生成器 stderr 未注册键清单；守门侧=preflight 于 run21 首跑全量验证 |
+| 73 | 净额闸判机械判据（V8.36） | ⚠️ 待首验配套（防立法即遗忘）：判据=approved.events 该闸裁决 actor 非 proxy；补断言建议=mx-report-audit 增查 15（gate 事件 actor 扫描），run21 接线 |
+| 74 | 采集降级上限（V8.36） | ⚠️ 待首验配套：判据=降级步数>必采清单 1/3 → 报告整轮红徽章；补断言建议=审计器对 issues.log frame-capture-failed 族计数与报告徽章对账，run21 接线 |
+
+统计更新（2026-10-13 深夜，V8.24 可读性批同步）：正本现 51 条（编号 1-48 含 25a/b/c）。撞号修复：截图采集十条保持 40（代码注释「纪律 40⑥/⑩」皆指它），全阶段饱和并行顺延为 48（原 V8.16 增列时占用 40）。
+
+## 六、V8.25 新增（2026-10-14 阿里调研轮 B2）
+
+| 纪律 | 条款 | 测试状态（同批声明） |
+|---|---|---|
+| 49 | 经验受控注入（默认关 EXPERIENCE_INJECT=1；三前提=审核+版本化出处+留痕；凭据形态改写；注入通道单一=派单简报行封顶 3） | ✅ 有测试锚：overlay custom/server/expcandidates/__tests__/exp-inject.test.ts（默认关/approved 过滤封顶 3/凭据形态改写/留痕幂等/坏存储 fail-soft）+ custom/server/kanban/__tests__/column-dispatch-brief.test.ts（简报集成：默认关不出现/开启出现）。推演实跑首验待下轮开启 EXPERIENCE_INJECT 的专项轮 |
+
+统计更新（2026-10-14）：正本现 52 条（编号 1-49 含 25a/b/c）。
+
+## 七、V8.26 新增（2026-10-14 收敛性追踪轮）
+
+| 纪律 | 条款 | 测试状态（同批声明） |
+|---|---|---|
+| 51 | 同类风险收敛性判定（复发间隔走势=多轮有效性口径：放宽≥1.5x=收敛中；≥3 次不放宽/≥8 次持久=熵增；熵增三联动=升 high/熔断自动处置/负责人降级；产品执法面=集群巡检官 convergence 面；复盘义务=§2.7 复盘行同类风险收敛性对账） | ✅ 有测试锚：overlay custom/server/clusterinspector/__tests__/convergence.test.ts（13 用例：趋势分类/账本持久化/生命周期重置/巡检环三联动/降级面/旁路开关）+ mux/tests/retro-convergence-gate.test.sh（模板↔生成器↔对照表三方同步门）。推演实跑首验待下轮复盘对账节（上轮复发列回填+巡检官收敛账引用） |
+
+统计更新（2026-10-14 收敛性追踪轮）：正本现 54 条（编号 1-51 含 25a/b/c）。

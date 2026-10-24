@@ -1,0 +1,24 @@
+#!/bin/bash
+# integration 分支保护（2026-10-18 立法，run21 三文件冲突实录）：
+# integration/* 只收域 lead 合并提交（提交信息含 [LEAD-MERGE] 标记）——
+# fixer 直推（无标记）一律拒收，强制走 fix/DEF-X 分支+lead 守门通道。
+# 身份无关设计：本地 file:// 推送无可靠 pusher 身份，以合并标记为守门凭据。
+set -u
+zero=0000000000000000000000000000000000000000
+while read -r old new ref; do
+  case "$ref" in
+    refs/heads/integration/*) ;;
+    *) continue ;;
+  esac
+  [ "$new" = "$zero" ] && continue
+  range="${old}:${new}"
+  [ "$old" = "$zero" ] && range="$new" || range="${old}..${new}"
+  if ! git rev-list "$range" 2>/dev/null | while read -r c; do
+       git log -1 --format=%B "$c" 2>/dev/null
+     done | grep -q '\[LEAD-MERGE\]'; then
+    echo "REJECTED: integration/* 仅收含 [LEAD-MERGE] 标记的域负责人合并提交。" >&2
+    echo "修复请 push fix/DEF-X 分支并在群里 @你的域 lead 合并（守门纪律，run21-1018 立法）。" >&2
+    exit 1
+  fi
+done
+exit 0
