@@ -123,3 +123,65 @@ export function fetchMaturity(run?: string): Promise<MaturityResponse> {
   const q = run ? `?run=${encodeURIComponent(run)}` : ''
   return getJson(`/api/hermes/delivery/maturity${q}`)
 }
+
+// ── 群体协作四维度读数（2026-10-24 多 Agent 群体协作评测基准吸收轮） ──
+export interface SwarmCollabCommunication {
+  dispatchCount: number
+  dispatchChars: number
+  distinctSenders: number
+  distinctTargets: number
+  taskIds: string[]
+  morCharsPerTask: number | null
+  morBasis: string
+  intentFidelity: { anchoredTasks: number; preserved: number; rate: number | null; basis: string }
+  deadlockSignals: { backfillCount: number; backfillRatio: number | null; receiptMissing: number; raciMissing: number; nudgeCount: number }
+}
+export interface SwarmCollabCredit {
+  agents: Array<{
+    agent: string
+    sentDispatches: number
+    assignedDispatches: number
+    issuesOwned: number
+    completedAnchors: number
+    criticalityObserved: number | null
+    shapleyProxy: number | null
+  }>
+  criticalityBasis: string
+  shapleyBasis: string
+  coalitionsCovered: number
+  taskCompletion: { done: number; total: number }
+}
+export interface SwarmCollabPareto {
+  basis: string
+  points: Array<{ agent: string; cost: number; benefit: number; onFrontier: boolean }>
+  frontierSize: number
+}
+export interface SwarmCollabSocial {
+  uat: { total: number; pass: number; conditional: number; reject: number }
+  unconditionalPassRate: number | null
+  gateRejects: number
+  gateFailIssues: number
+  issuesCaught: number
+  byzantine: { status: string; note: string }
+}
+export interface SwarmCollabReadout {
+  run: string
+  generatedAt: string
+  sources: string[]
+  communication: SwarmCollabCommunication
+  credit: SwarmCollabCredit
+  pareto: SwarmCollabPareto
+  social: SwarmCollabSocial
+}
+export interface SwarmCollabResponse {
+  available: boolean
+  reason?: string
+  run?: string
+  note?: string
+  readout?: SwarmCollabReadout
+}
+
+export function fetchSwarmCollab(run?: string): Promise<SwarmCollabResponse> {
+  const q = run ? `?run=${encodeURIComponent(run)}` : ''
+  return getJson(`/api/hermes/delivery/swarm-collab${q}`)
+}
