@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_nest_validation_whitelist
+fw_nest_circular_deps
+fw_nest_typeorm_sync

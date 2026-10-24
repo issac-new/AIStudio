@@ -1,0 +1,2 @@
+# 修复判别：旧代码找不到 spec 会 SKIPPED 后仍打 pass——本 fixture 须无 SKIPPED 才算真找到 spec
+SKIPPED（未配置）

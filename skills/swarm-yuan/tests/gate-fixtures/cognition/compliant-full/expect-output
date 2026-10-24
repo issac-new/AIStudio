@@ -1,0 +1,4 @@
+=== 认知体检（check_cognition——AI 判断引导模式）===
+机械计分已退役：本门禁不再用 awk 数表行数给理解打分。
+→ AI 按认知框架逐维自查（对照 reference-manual.md §1-§9），每维一句判断：
+认知自查留痕缺失（.swarm-yuan/notes/cognition.md 不存在）

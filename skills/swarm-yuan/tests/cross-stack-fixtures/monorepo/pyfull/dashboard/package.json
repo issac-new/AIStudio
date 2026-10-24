@@ -1,0 +1,1 @@
+{ "name": "dashboard", "dependencies": { "react": "18.3.0", "antd": "5.12.0" } }

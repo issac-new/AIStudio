@@ -28,6 +28,10 @@
 | `scripts/` | inject / build / serve / verify / vendor-sync 脚本 |
 | `docs/superpowers/specs/` | 设计规格与决策记录（单一事实源） |
 | `registries/` | 客户端/服务端路由与功能注册表 |
+| `team/` | SwarmTeam 多 profile 部署包（脱敏正本；安装指南见目录内 README） |
+| `zcode-patches/` | Ycode（zcode 分叉）编辑器补丁 series |
+| `evidence/` | 验证证据留档（文本类；二进制中间产物不入库） |
+| `assets/` | 静态资产与技能品牌配置 |
 
 ## 三条不变量
 

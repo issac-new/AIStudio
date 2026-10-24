@@ -1,0 +1,11 @@
+{
+  "name": "jest-vitest-fixture-compliant",
+  "private": true,
+  "scripts": {
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "@vitest/coverage-v8": "^2.1.0"
+  }
+}

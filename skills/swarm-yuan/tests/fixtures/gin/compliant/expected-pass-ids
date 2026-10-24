@@ -1,0 +1,5 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_gin_context_copy
+fw_gin_recovery_middleware
+fw_gin_cors
+fw_gin_auth_middleware

@@ -1,0 +1,5 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_opengauss_hardcoded_password
+fw_opengauss_sql_concat
+fw_opengauss_ssl_disabled
+fw_opengauss_pg_hba_trust

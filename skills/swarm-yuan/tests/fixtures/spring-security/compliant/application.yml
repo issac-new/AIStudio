@@ -1,0 +1,10 @@
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            redirect-uri: '{baseUrl}/login/oauth2/code/{registrationId}'

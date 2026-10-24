@@ -1,0 +1,10 @@
+# Spring Boot 嵌套形态：registry.address 不在同一行，且 N/A 是显式的「无注册中心直连」声明
+dubbo:
+  application:
+    name: order-provider
+    qos-enable: false
+  registry:
+    address: N/A
+  provider:
+    timeout: 3000
+    retries: 0

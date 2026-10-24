@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_sharding_key_in_dml
+fw_sharding_broadcast_write
+fw_sharding_unsupported_sql

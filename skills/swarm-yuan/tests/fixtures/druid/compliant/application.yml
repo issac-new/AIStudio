@@ -1,0 +1,12 @@
+# druid fixture compliant (properties 格式): StatViewServlet 有鉴权 + wall + 连接池齐 + slow-sql 配套
+druid.stat-view-servlet.enabled=true
+druid.stat-view-servlet.url-pattern=/druid/*
+druid.stat-view-servlet.login-username=admin
+druid.stat-view-servlet.login-password=securePass123
+druid.filters=stat,wall
+druid.filter.stat.slow-sql-millis=1000
+druid.filter.stat.log-slow-sql=true
+druid.initial-size=5
+druid.max-active=20
+druid.min-idle=5
+druid.keep-alive=true

@@ -1,0 +1,4 @@
+# 现行行为固定：以下三条均为 warn 披露行（退出码 0），非 fail id
+巨型 store 会导致改一个字段全组件重渲染
+深度 prop drilling 会使中间组件被迫接收无关 props
+useState 内做派生计算

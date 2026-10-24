@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- R44-D6 变异锁：nullable 启用走 csproj 项目级（SDK 现代项目主流形态）而非 .cs 文件级
+       #nullable 指令——修复前门禁的 csproj 分支是死代码（.cs$ continue 守卫在前），本 fixture
+       在 compliant 侧会恒告警（expected-pass-ids 负向断言抓）。 -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>

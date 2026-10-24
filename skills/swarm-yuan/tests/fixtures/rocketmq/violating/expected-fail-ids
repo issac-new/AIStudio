@@ -1,0 +1,4 @@
+# rocketmq 全量 fail id（3/3，P1 实跑登记）
+fw_rocketmq_idempotent_consumer
+fw_rocketmq_orderly_listener
+fw_rocketmq_tx_checkback

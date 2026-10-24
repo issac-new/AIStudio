@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- violating fixture:
+     - Carte 出厂默认 cluster/cluster 弱口令 → fw_kettle_carte_default_auth(fail) 主触发
+     期望：violating 退出码 != 0（FAIL） -->
+<slave_config>
+  <report_to_masters>N</report_to_masters>
+  <slaveserver>
+    <name>slave1</name>
+    <hostname>localhost</hostname>
+    <port>8181</port>
+    <username>cluster</username>
+    <password>cluster</password>
+  </slaveserver>
+</slave_config>

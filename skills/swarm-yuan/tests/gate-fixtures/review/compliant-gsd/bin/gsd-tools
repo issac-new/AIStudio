@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# gsd-tools fixture double (compliant-gsd)：模拟 gsd-tools validate health 输出 status:healthy
+# 触发 check_review 的 gsd 守卫 pass 分支「gsd-tools validate health: 项目一致性健康度通过」
+if [[ "$1" == "validate" && "$2" == "health" ]]; then
+  cat <<JSON
+{
+  "status": "healthy",
+  "errors": [],
+  "warnings": [],
+  "info": [],
+  "repairable_count": 0
+}
+JSON
+fi

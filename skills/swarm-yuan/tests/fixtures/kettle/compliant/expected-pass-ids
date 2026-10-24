@@ -1,0 +1,3 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_kettle_carte_default_auth
+fw_kettle_password_encr

@@ -1,0 +1,2 @@
+# 硬 fail：项目知识文件存在但 SKILL.md 零引用
+但生成的 SKILL.md 未引用

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <!-- violating: 旧版驱动 DmJdbcDriver17（JDK8 工程应 DmJdbcDriver18） -->
+  <dependencies>
+    <dependency>
+      <groupId>com.dameng</groupId>
+      <artifactId>DmJdbcDriver17</artifactId>
+      <version>8.1.1.49</version>
+    </dependency>
+  </dependencies>
+</project>

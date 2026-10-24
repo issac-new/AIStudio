@@ -1,0 +1,10 @@
+# druid fixture violating (properties 格式): StatViewServlet 无鉴权 + 缺 wall + 缺 max-active + slow-sql 未配套 log-slow-sql
+# 注:用 properties 格式因 druid.sh 检测正则针对 properties;yml 嵌套解析待加强(已知局限,记入 R9)
+druid.stat-view-servlet.enabled=true
+druid.stat-view-servlet.url-pattern=/druid/*
+# 故意缺 login-username/login-password → fw_druid_statview_expose fail
+druid.filters=stat
+# 故意缺 wall → fw_druid_wall_filter warn
+druid.filter.stat.slow-sql-millis=1000
+# 故意缺 log-slow-sql → fw_druid_slow_sql warn
+# 故意缺 max-active/initial-size/min-idle/keep-alive → fw_druid_datasource_pool warn

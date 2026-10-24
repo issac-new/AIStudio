@@ -1,0 +1,6 @@
+# violating: PG 数据源但无任何连接池配置（每请求新建连接）
+spring:
+  datasource:
+    url: jdbc:postgresql://db.internal:5432/shop
+    username: shop
+    password: ${DB_PASSWORD}

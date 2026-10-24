@@ -1,0 +1,5 @@
+# violating 侧必中 fail id 清单
+fw_gin_context_copy
+fw_gin_recovery_middleware
+fw_gin_cors
+fw_gin_auth_middleware

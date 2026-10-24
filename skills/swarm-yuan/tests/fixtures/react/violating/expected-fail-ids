@@ -1,0 +1,5 @@
+# violating 侧必中 fail id 清单（run-framework-fixture.sh 逐行字面断言输出命中）
+# 2026-07-20 P1 实跑登记（框架工程师_B4）
+fw_react_hooks_top_level
+fw_react_effect_deps
+fw_react_immutable_state

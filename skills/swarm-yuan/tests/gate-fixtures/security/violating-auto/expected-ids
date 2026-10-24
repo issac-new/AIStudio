@@ -1,0 +1,2 @@
+疑似 SQL 注入（字符串拼接 SQL）
+不安全动态代码执行（eval / new Function）

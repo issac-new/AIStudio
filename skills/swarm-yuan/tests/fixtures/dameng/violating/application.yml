@@ -1,0 +1,7 @@
+# violating: jdbc:dm:// 配 com.mysql 驱动 + 未显式模式参数与隔离级别
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:dm://127.0.0.1:5236/DAMENG
+    username: SYSDBA
+    password: SYSDBA

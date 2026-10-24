@@ -1,0 +1,5 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_mybatis_dollar
+fw_mybatis_binding
+fw_mybatis_select_dup_result
+fw_mybatis_field_sync

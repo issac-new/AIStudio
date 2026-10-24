@@ -1,0 +1,12 @@
+spring:
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 50
+        concurrency: 2
+        max-concurrency: 8

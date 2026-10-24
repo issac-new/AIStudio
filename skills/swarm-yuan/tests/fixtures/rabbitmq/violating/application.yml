@@ -1,0 +1,7 @@
+spring:
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    listener:
+      simple:
+        acknowledge-mode: none

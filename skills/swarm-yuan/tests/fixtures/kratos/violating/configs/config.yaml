@@ -1,0 +1,19 @@
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 1s
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 1s
+data:
+  database:
+    driver: mysql
+    # 违规：DSN 内嵌明文 user:pass@ → fw_kratos_plaintext_secret(fail)
+    dsn: "root:S3cretPwd@tcp(127.0.0.1:3306)/kratos_fixture"
+  redis:
+    addr: 127.0.0.1:6379
+    # 违规：明文密码 → fw_kratos_plaintext_secret(fail)
+    password: "redis-pass-2026"
+auth:
+  # 违规：明文 token → fw_kratos_plaintext_secret(fail)
+  jwt_token: "eyJhbGciOiJIUzI1NiJ9.fixture-token"

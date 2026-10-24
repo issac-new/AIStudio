@@ -1,0 +1,8 @@
+{
+  "name": "prisma-fixture-violating",
+  "version": "1.0.0",
+  "dependencies": {
+    "@prisma/client": "^6.2.1",
+    "prisma": "^6.2.1"
+  }
+}

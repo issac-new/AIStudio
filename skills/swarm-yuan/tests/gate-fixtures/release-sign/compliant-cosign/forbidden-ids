@@ -1,0 +1,3 @@
+# cosign 验签通过时不得出现任何 fail id，也不得出现降级提示
+gate_release_
+降级为签名文件存在性检查

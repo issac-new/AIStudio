@@ -1,0 +1,4 @@
+# cargo violating 必中 fail id 清单（3/3 fail 主触发）
+fw_cargo_git_deps
+fw_cargo_allow_warnings
+fw_cargo_unsafe

@@ -1,0 +1,5 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_kubernetes_latest_image
+fw_kubernetes_privileged
+fw_kubernetes_run_as_root
+fw_kubernetes_hardcoded_secret

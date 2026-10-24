@@ -1,0 +1,3 @@
+# 签名齐备不得报 missing；存在性路径不得报验签失败
+gate_release_sign_missing
+gate_release_sign_verify_failed

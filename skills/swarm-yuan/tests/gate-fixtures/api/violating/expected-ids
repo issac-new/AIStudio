@@ -1,0 +1,2 @@
+# 硬 fail：API 定义文件不含 version/edition/## vN 任一版本标记
+API 定义缺 version

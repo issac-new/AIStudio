@@ -1,0 +1,5 @@
+# violating 侧必中 fail id 清单（run-framework-fixture.sh 逐行字面断言输出命中）
+fw_langchain_legacy_imports
+fw_langchain_legacy_chain
+fw_langchain_hardcoded_key
+fw_langchain_dangerous_tool

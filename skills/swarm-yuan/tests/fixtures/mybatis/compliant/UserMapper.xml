@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 正向路径：resultMap property 与 User.java 字段全同步（field_sync pass）；含 <id>（resultmap_id pass） -->
+<mapper namespace="com.example.UserMapper">
+  <resultMap id="userMap" type="com.example.User">
+    <id column="id" property="id"/>
+    <result column="user_name" property="userName"/>
+    <result column="order_state" property="orderState"/>
+  </resultMap>
+  <select id="list" resultMap="userMap">
+    SELECT id, user_name, order_state FROM t_user ORDER BY #{col}
+  </select>
+</mapper>
