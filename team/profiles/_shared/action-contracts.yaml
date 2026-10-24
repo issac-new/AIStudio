@@ -1,0 +1,273 @@
+version: '1.4'
+source: ~/.hermes/profiles/_shared/02-org-orchestration/ontology.md §二 Action Types
+default_policy:
+  reversible: false
+  level: shared_state
+gated_levels:
+- high_risk
+- shared_state
+actions:
+  read_file:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+  search_files:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+  write_file:
+    side_effects: fs_write
+    reversible: true
+    level: local_reversible
+  patch:
+    side_effects: fs_write
+    reversible: true
+    level: local_reversible
+  terminal:
+    side_effects: shell_exec
+    reversible: false
+    level: command_dependent
+  web_search:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+  web_extract:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+  kanban_create:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+  kanban_complete:
+    side_effects: db_write
+    reversible: false
+    level: shared_state
+  kanban_block:
+    side_effects: db_write
+    reversible: true
+    level: shared_state
+  kanban_comment:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+  kanban_heartbeat:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+  acp_send:
+    side_effects: external_call
+    reversible: false
+    level: high_risk
+  delegate_task:
+    side_effects: spawn_process
+    reversible: false
+    level: shared_state
+  memory:
+    side_effects: persistent_store
+    reversible: false
+    level: shared_state
+  skill_view:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+  skill_manage:
+    side_effects: fs_write
+    reversible: true
+    level: shared_state
+  cronjob:
+    side_effects: schedule_task
+    reversible: false
+    level: high_risk
+  computer_use:
+    side_effects: os_input
+    reversible: false
+    level: high_risk
+  vision_analyze:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+  text_to_speech:
+    side_effects: audio_file
+    reversible: true
+    level: local_reversible
+  browser_navigate:
+    side_effects: browser_action
+    reversible: false
+    level: shared_state
+  browser_click:
+    side_effects: browser_action
+    reversible: false
+    level: shared_state
+  browser_type:
+    side_effects: browser_action
+    reversible: false
+    level: shared_state
+  kanban_show:
+    level: local_reversible
+    reversible: NA
+    note: 只读任务详情
+  kanban_list:
+    level: local_reversible
+    reversible: NA
+    note: 只读列表
+  kanban_attachments:
+    level: local_reversible
+    reversible: NA
+    note: 只读附件清单
+  skills_list:
+    level: local_reversible
+    reversible: NA
+    note: 只读技能清单
+  tool_search:
+    level: local_reversible
+    reversible: NA
+    note: 只读工具检索
+  tool_describe:
+    level: local_reversible
+    reversible: NA
+    note: 只读schema
+  hindsight_recall:
+    level: local_reversible
+    reversible: NA
+    note: 只读记忆检索
+  hindsight_reflect:
+    level: local_reversible
+    reversible: NA
+    note: 只读记忆综合
+  session_search:
+    level: local_reversible
+    reversible: NA
+    note: 只读会话检索
+  acp_agents:
+    level: local_reversible
+    reversible: NA
+    note: 只读agent目录
+  acp_sessions:
+    level: local_reversible
+    reversible: NA
+    note: 只读会话列表
+  process_manage:
+    level: local_reversible
+    reversible: NA
+    note: poll/wait只读; kill另有terminal高危面
+  todo_list:
+    level: local_reversible
+    reversible: NA
+    note: 只读待办
+  matrix_room_list:
+    level: local_reversible
+    reversible: NA
+    note: 只读房间列表
+  browser_vault_list:
+    level: local_reversible
+    reversible: NA
+    note: 只读vault句柄,不含密文
+  clarify:
+    level: local_reversible
+    reversible: NA
+    note: 向用户提问
+  kanban_unblock:
+    level: shared_state
+    reversible: true
+    note: 可再block回来
+  kanban_link:
+    level: shared_state
+    reversible: true
+    note: 可unlink
+  kanban_attach:
+    level: shared_state
+    reversible: true
+    note: 附件可删
+  hindsight_retain:
+    level: shared_state
+    reversible: true
+    note: 记忆可删(遗忘阶梯)
+  execute_code:
+    level: high_risk
+    reversible: false
+    note: 任意代码执行,等效terminal,与terminal同级高危
+  kanban_request_review:
+    level: shared_state
+    reversible: true
+    note: 流转可逆
+  kanban_request_changes:
+    level: shared_state
+    reversible: true
+    note: 打回可重审
+tool_mapping:
+  browser_navigate:
+  - browser_exec
+  - computer_use
+  - cua_browser_navigate
+  browser_click:
+  - browser_exec
+  - computer_use
+  - cua_browser_click
+  browser_type:
+  - browser_exec
+  - computer_use
+  - cua_browser_type
+  cronjob:
+  - cronjob_manage
+  todo_list:
+  - todo
+  process_manage:
+  - process
+  gui_tour:
+  - tour
+  show_tip:
+  - tip
+arg_contracts:
+  cronjob:
+    when_action: create
+    required_args:
+    - schedule
+    - prompt
+  computer_use:
+    enum_args:
+      action:
+      - capture
+      - click
+      - double_click
+      - right_click
+      - middle_click
+      - drag
+      - scroll
+      - type
+      - key
+      - set_value
+      - wait
+      - list_apps
+      - list_windows
+      - focus_app
+      - cua_browser_state
+      - cua_browser_prepare
+      - cua_browser_navigate
+      - cua_browser_click
+      - cua_browser_type
+      - cua_browser_pointer
+      - cua_browser_dialog
+      - cua_browser_set_input_files
+      - cua_browser_download
+  execute_code:
+    required_args:
+    - code
+  delegate_task:
+    required_args:
+    - goal
+  acp_send:
+    required_args:
+    - prompt
+  memory:
+    required_args:
+    - target
+terminal_blacklist:
+- \brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(-[a-zA-Z]*r[a-zA-Z]*\s+)*/(\s|$|;|&)
+- \brm\s+-[a-zA-Z]*\s*/\s*\*
+- \bmkfs(\.[a-z0-9]+)?\s
+- \bdd\s+.*\bif=\S+\s+.*\bof=/dev/
+- ':\(\)\s*\{\s*:\|:\s*&\s*\}\s*;?:'
+- \bgit\s+push\s+.*--force.*\b(main|master|release|protected)\b
+- \bgit\s+push\s+(-f|--force)\b
+- \b(shutdown|reboot|halt|poweroff)\b

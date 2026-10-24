@@ -1,0 +1,156 @@
+{
+ "run_at": "2026-09-08T04:41:55.648159+00:00",
+ "keywords": [
+  "CVE-2026",
+  "exploit",
+  "0day",
+  "nuclei-template"
+ ],
+ "total_new_alerts": 12,
+ "alerts": [
+  {
+   "route": "cve",
+   "repo_full_name": "Aayushbankar/bad_epoll_ab_tier2",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/Aayushbankar/bad_epoll_ab_tier2",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-08-08T05:54:50Z",
+   "pushed_at": "2026-09-08T04:36:44Z",
+   "author": "Aayushbankar",
+   "fingerprint": "d508faac5dadf141"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "zekker6/devsandbox",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/zekker6/devsandbox",
+   "description": "Run AI coding agents in a per-project sandbox that keeps your real dev environment. Your shell, mise-managed tools and editor configs come with you; SSH keys, c",
+   "stars": 10,
+   "created_at": "2026-02-01T05:21:57Z",
+   "pushed_at": "2026-09-08T04:38:39Z",
+   "author": "zekker6",
+   "fingerprint": "a89805d57a88328b"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "soldoutbudokan/beating-the-opener",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/soldoutbudokan/beating-the-opener",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-07-25T18:02:19Z",
+   "pushed_at": "2026-09-08T04:38:14Z",
+   "author": "soldoutbudokan",
+   "fingerprint": "3e753423d69e2b89"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "christran85-cyber/enterprise-security-operations-lab",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/christran85-cyber/enterprise-security-operations-lab",
+   "description": "Enterprise security operations lab integrating Active Directory, SIEM, IDS/IPS, vulnerability management, SQL security analytics, and Python automation in Virtu",
+   "stars": 0,
+   "created_at": "2026-08-25T01:55:28Z",
+   "pushed_at": "2026-09-08T04:38:07Z",
+   "author": "christran85-cyber",
+   "fingerprint": "04e599afa4423217"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "vyprai/vyql",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/vyprai/vyql",
+   "description": "Multi-language taint and graph security scanner. Follows tainted data through your code and shows why each finding is a finding.",
+   "stars": 8,
+   "created_at": "2026-08-04T14:35:40Z",
+   "pushed_at": "2026-09-08T04:38:05Z",
+   "author": "vyprai",
+   "fingerprint": "d6f0427408ab0bd9"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "AnEntrypoint/awesome-github",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/AnEntrypoint/awesome-github",
+   "description": "awesome projects on github",
+   "stars": 18,
+   "created_at": "2026-08-03T08:38:44Z",
+   "pushed_at": "2026-09-08T04:38:01Z",
+   "author": "AnEntrypoint",
+   "fingerprint": "c6fc52bd33d36c5a"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "s-papy/superchain-multisig-overlap",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/s-papy/superchain-multisig-overlap",
+   "description": "Independent, on-chain verified research: does the same Gnosis Safe signer set control a DeFi protocol's admin multisig on multiple Optimism Superchain chains at",
+   "stars": 0,
+   "created_at": "2026-09-07T03:01:32Z",
+   "pushed_at": "2026-09-08T04:37:52Z",
+   "author": "s-papy",
+   "fingerprint": "c5827f36adbcba8b"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "mistakeknot/interlens",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/mistakeknot/interlens",
+   "description": "",
+   "stars": 0,
+   "created_at": "2025-11-20T16:46:02Z",
+   "pushed_at": "2026-09-08T04:37:49Z",
+   "author": "mistakeknot",
+   "fingerprint": "382511d33cd98ff6"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "zc6600/research-agent-kuairand",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/zc6600/research-agent-kuairand",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-09-01T01:55:22Z",
+   "pushed_at": "2026-09-08T04:37:39Z",
+   "author": "zc6600",
+   "fingerprint": "14a41520521f9715"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "6krj7hd2ct-dotcom/akro-du-foot",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/6krj7hd2ct-dotcom/akro-du-foot",
+   "description": "World cup et Champions league",
+   "stars": 0,
+   "created_at": "2026-05-20T09:44:45Z",
+   "pushed_at": "2026-09-08T04:37:30Z",
+   "author": "6krj7hd2ct-dotcom",
+   "fingerprint": "c51b532a0b4d709c"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "richfrem/agent-plugins-skills",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/richfrem/agent-plugins-skills",
+   "description": "repo for reusable plugins and skills",
+   "stars": 6,
+   "created_at": "2026-02-21T17:09:13Z",
+   "pushed_at": "2026-09-08T04:37:26Z",
+   "author": "richfrem",
+   "fingerprint": "c254c7951fed53ec"
+  },
+  {
+   "route": "cve",
+   "repo_full_name": "AnEntrypoint/awesome-github",
+   "matched_keyword": "nuclei-template",
+   "html_url": "https://github.com/AnEntrypoint/awesome-github",
+   "description": "awesome projects on github",
+   "stars": 18,
+   "created_at": "2026-08-03T08:38:44Z",
+   "pushed_at": "2026-09-08T04:38:01Z",
+   "author": "AnEntrypoint",
+   "fingerprint": "a183b5849807e8c5"
+  }
+ ]
+}

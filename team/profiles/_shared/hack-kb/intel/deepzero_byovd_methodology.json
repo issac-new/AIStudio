@@ -1,0 +1,30 @@
+{
+  "ts": "2026-09-24T00:30:00",
+  "source": "416rehman/DeepZero (MIT)",
+  "topic": "BYOVD Windows kernel driver vuln hunting / LLM-assisted assessment template",
+  "verdict": "ADOPT(限定范围)",
+  "gap": "gap-20260916-hack-eeb31f",
+  "kanban": "t_9cf68245",
+  "evidence": [
+    "https://www.freebuf.com/articles/system/501081.html",
+    "https://github.com/416rehman/DeepZero",
+    "https://helpnetsecurity.com/2026/09/16/vulnerable-windows-drivers-deepzero-open-source"
+  ],
+  "adopted_artifacts": [
+    "pipelines/loldrivers/assessment.j2 (LLM可利用性评估提示词模板: 4门判定 + 误报黑名单 + 结构化PoC JSON)",
+    "pipelines/loldrivers/rules/*.yaml (Semgrep内核驱动规则4件: arbitrary_rw/buffer_overflow/method_neither/msr_access)",
+    "decompile.device_on_load_path (验证维度: IoCreateDevice调用路径决定是否需要物理硬件)"
+  ],
+  "methodology_equivalent": {
+    "4_gate_exploitability": "device可打开(\\\\DosDevices\\Name无条件存在) + 具体IOCTL定位 + 危险操作值源自IOCTL输入缓冲 + 无硬件/PnP前置 => 对应 hack-team finding确认协议",
+    "false_positive_blacklist": "内部驱动缓冲写/HID报告缓冲/硬件门控路径/PnP依赖设备/Ghidra反编译伪影/推测初始状态 => 对应 fp-check 误报消除",
+    "structured_poc_json": "device/ioctl/method/input_fields/primitive/confirms_if => 对应 verification_path 供 hack-exploit 直接使用"
+  },
+  "semgrep_rule_cwes": ["CWE-119", "CWE-120", "CWE-121", "CWE-200", "CWE-284", "CWE-822"],
+  "deploy_gating": "完整引擎需 Ghidra(analyzeHeadless)+JDK+Vertex AI凭据+驱动语料, 本机openjdk仅11(需≥17), Python3.14; 落地拆后续卡, 本卡只收方法论文档资产",
+  "markings": "TLP:AMBER",
+  "next_steps": [
+    "hack-exploit/worker-coder: 将 assessment.j2 提炼为 llm-redteam / godmode-hunter 的 LLM可利用性评估提示词复用模板",
+    "hack-auditor: 若需全量驱动狩猎, 后续卡做 Ghidra(需JDK≥17) + Vertex AI 凭据 + Snappy Driver Installer 语料 部署"
+  ]
+}

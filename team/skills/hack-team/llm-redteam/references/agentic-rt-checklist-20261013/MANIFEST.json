@@ -1,0 +1,32 @@
+{
+  "source": "https://infosecravi.com/blog/agentic-ai-red-team-checklist/",
+  "fetched": "2026-10-13",
+  "license": "清单本体可自由使用(free)；ARC PI 部分归 Jason Haddix/Arcanum CC BY 4.0",
+  "files": {
+    "Agentic-AI-Red-Team-Checklist.xlsx": {
+      "sha256": "37483ddf09bb88a42f25a66999fccfb0517a49cd48a6d7831b26459aa466d463",
+      "bytes": 105797,
+      "desc": "一手表格原件（377 测试/25 类别，2026-10-13 抓取）"
+    },
+    "checklist-full.json": {
+      "sha256": "d35dfb7bf793d1a4b7c24afd6fe59f249fafda4693715b45d235646eaa319de0",
+      "bytes": 375160,
+      "desc": "全量 377 条结构化提取（15 字段/条）"
+    },
+    "how-to-use.txt": {
+      "sha256": "9385422a8f3bc8290ce52a4e7e8149ad3628c1a77a02c3cdef6efca4610dbe2c",
+      "bytes": 2320,
+      "desc": "作者使用说明 sheet 全文（Severity legend/置信度规则/归属）"
+    },
+    "infosecravi-blog.txt": {
+      "sha256": "e5d497bd524dfcab829df66a94cb86e8be21b6ff61e8b274408fcdb21cba51a4",
+      "bytes": 9566,
+      "desc": "作者一手博客全文"
+    },
+    "PRIMARY-ARCHIVE.json": {
+      "sha256": "48688f7dc9115c2517a5df0bf3a85a088c5973cf66f3b2cc9fc75f4377471d66",
+      "bytes": 246,
+      "desc": "抓取元数据"
+    }
+  }
+}

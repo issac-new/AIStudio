@@ -1,0 +1,52 @@
+{
+  "ts": "2026-10-04T00:40:00+08:00",
+  "source": "FreeBuf 译文 (https://www.freebuf.com/news/503357.html, ~2026-09-23) <- CISA 'CISA Adds Four Known Exploited Vulnerabilities to Catalog' (2026-09-22, Alert); 一手仲裁: CISA KEV JSON (dateReleased 2026-10-02) + FIRST EPSS API (2026-10-03) + Check Point advisory sk1000117/sk1000171 + Check Point blog 2026-09-22",
+  "topic": "Check Point 双 CVE 在野利用索引 (CVE-2026-85102 网关 VPN 证书校验 RCE + CVE-2026-93616 管理面 pre-auth 路径穿越 RCE) + 同批 KEV 上下文 (Arista VeloCloud CVE-2026-93952, F5 BIG-IP APM CVE-2026-94127)",
+  "verdict": "ADOPT(限定范围)",
+  "gap": "gap-20260926-001",
+  "kanban": "t_e4f24f79",
+  "evidence": [
+    "https://www.cisa.gov/news-events/alerts/2026/09/22/cisa-adds-four-known-exploited-vulnerabilities-catalog",
+    "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+    "https://api.first.org/data/v1/epss?cve=CVE-2026-93616",
+    "https://api.first.org/data/v1/epss?cve=CVE-2026-85102",
+    "https://blog.checkpoint.com/security/security-advisory-action-required-active-exploitation-of-cve-2026-85102-and-a-management-pre-authentication-vulnerability-cve-2026-93616/",
+    "https://support.checkpoint.com/results/sk/sk1000117",
+    "https://support.checkpoint.com/results/sk/sk1000171",
+    "https://labs.beazley.security/advisories/BSL-A1212",
+    "https://threatfrontier.com/articles/check-point-cve-2026-93616-cve-2026-85102-exploited",
+    "https://threatprotect.qualys.com/2026/09/23/cisa-warns-of-check-point-vulnerabilities-exploited-in-attacks-cve-2026-85102-cve-2026-93616/"
+  ],
+  "scope_note": "威胁情报索引资产, 非 PoC 实证。两条 Check Point CVE 经 CISA KEV 官方 JSON 一手仲裁确认 (dateAdded 2026-09-22, dueDate 2026-09-25, forensicTriage=Yes) + FIRST EPSS 一手仲裁 + vendor advisory 三角验证; Bishop Fox 2026-10-01 利用链为白盒复盘转述, 本机无 Check Point 设备未复现。FreeBuf 原文(503357)抓取失败(Keyless Keenable/Firecrawl 403), 内容经 4 个独立第三方全文源交叉覆盖",
+  "relevance_to_fleet": {
+    "host": "Apple M1 Pro (MacBookPro18,3, arm64) — 本机无 Check Point 产品, 无直接暴露",
+    "directly_relevant": [],
+    "org_relevant": [
+      {"cve": "CVE-2026-93616", "why": "管理面 root RCE = 整个防火墙 estate 控制面沦陷; Bishop Fox 2026-10-01 公开补丁 diff 复盘四步利用链 (TCP/19009 /cpmws/ -> loginNew@LoginSvcRemote 伪造 READ_WRITE 会话 -> 路径穿越上传 -> root), 武器化门槛公开化, 任何暴露 19009 的 Check Point 管理面均为高危资产"},
+      {"cve": "CVE-2026-85102", "why": "pre-auth VPN RCE, 攻击波面向 Spark 客户全球性扫描; IOC 明确 (伪造证书 Subject CN=vpn/CN=vpn-user/CN=vpnuser)"}
+    ],
+    "same_kev_batch_watchlist": ["CVE-2026-93952 Arista VeloCloud Orchestrator CVSS 10.0 (6.1.x/7.0.x 修复截止 2026-09-22 仍 pending; IOC: 142.93.149.77, 104.248.126.159, .vcnode.js dropper, vc-sysmond, x-vc-opt header)", "CVE-2026-94127 F5 BIG-IP APM OAuth heap overflow (非默认配置: APM 作 OAuth AS + /f5-oauth2/v1/userinfo 超长 Authorization header -> tmm.finish crash-handler 劫持)"]
+  },
+  "mitigation_quickref": {
+    "cve_2026_85102": "SK1000117: Jumbo R82.10 Take 44+ / R82 Take 126+ / R81.20 Take 166+ / R81.10 Take 190+; Spark R82.00.10 B2325+ / R81.10.17 B4968+; LivePatch Take 26+; 无法立即补丁: 仅 PSK VPN 不受影响, 收敛证书认证 VPN 暴露面",
+    "cve_2026_93616": "SK1000171: R82.20 Security Hotfix; Jumbo R82.10 Take 45+ / R82 Take 127+ / R81.20 Take 170+ / R81.10 Take 192+; 注意 LivePatch Take 28/29 不覆盖本洞; 临时收敛: 19009 端口限 trusted IP + SmartConsole Trusted Clients 白名单",
+    "hunt_gateway": "Mobile Access 日志 2026-09-12 起证书登录 Subject (CN=vpn|CN=vpn-user|CN=vpnuser + OU=users + O=global) 猎杀 + 后续行为关联",
+    "hunt_management": "cpm.elg 中 >1000 字符用户名; ReflectionUtils 报错含 '../'; FWM/MDS 并发 core dump; 19009 非管理网段连接; 按 CISA BOD 26-04 forensic triage=Yes 要求做入侵取证而非仅打补丁"
+  },
+  "index": {
+    "cve": ["CVE-2026-85102", "CVE-2026-93616"],
+    "cwe": {"CVE-2026-85102": "CWE-295", "CVE-2026-93616": "CWE-22"},
+    "cvss_v31": {"CVE-2026-85102": 9.8, "CVE-2026-93616": 9.8},
+    "epss_first": {"CVE-2026-85102": {"epss": 0.0755, "percentile": 0.9434, "date": "2026-10-03"}, "CVE-2026-93616": {"epss": 0.1965, "percentile": 0.9732, "date": "2026-10-03"}},
+    "kev_date_added": "2026-09-22",
+    "kev_due": "2026-09-25",
+    "exploitation_timeline": {
+      "CVE-2026-93616": "2026-07-23 首次在野 pinpointed 攻击 (未披露零日窗口 2 个月) -> 2026-09-20 公开披露 -> 2026-09-22 KEV+修复 -> 2026-10-01 Bishop Fox 完整利用链公开",
+      "CVE-2026-85102": "2026-09-09 披露+修复 (当时无利用) -> 2026-09-12 起攻击波 -> 2026-09-22 KEV"
+    }
+  },
+  "detection_assets_for_hack_team": {
+    "note": "本卡定位为 intel 索引; 检测规则/工具化属增量, 如后续需要可拆卡内化 (对齐 adcs-detection-baseline 先例)",
+    "candidates": ["Mobile Access 证书 Subject 猎杀规则 (CN=vpn* 模板族)", "cpm.elg 超长用户名/路径穿越 ReflectionUtils 检测", "19009 端口暴露面基线"]
+  }
+}

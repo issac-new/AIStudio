@@ -1,0 +1,121 @@
+diff --git a/tools/skills_sync.py b/tools/skills_sync.py
+index 0a8106d66..2c222238f 100644
+--- a/tools/skills_sync.py
++++ b/tools/skills_sync.py
+@@ -76,6 +76,81 @@ def _get_bundled_dir() -> Path:
+     return get_bundled_skills_dir(Path(__file__).parent.parent / "skills")
+ 
+ 
++def _is_named_profile_home() -> bool:
++    """True when HERMES_HOME is a named profile under ~/.hermes/profiles/<name>.
++
++    The default install (HERMES_HOME == ~/.hermes) keeps copytree semantics;
++    named profiles switch to symlink installs so update-time seeding cannot
++    materialise per-profile directory copies of shared skills.
++
++    Uses SKILLS_DIR (not HERMES_HOME) so tests that patch SKILLS_DIR to a
++    temp dir are treated as non-named (copytree path preserved).
++    """
++    try:
++        skills = SKILLS_DIR.resolve()
++    except OSError:
++        return False
++    profiles_root = (Path.home() / ".hermes" / "profiles").resolve()
++    expected = profiles_root / "skills"
++    return str(skills).startswith(str(profiles_root) + "/") and str(skills) != str(expected)
++
++
++def _shared_layer_target(rel: Path) -> Path:
++    """Return the shared-layer path for a skill's relative path under skills/.
++
++    rel is an ABSOLUTE dest path (SKILLS_DIR / relative). Rebase it onto the
++    shared layer: ~/.hermes/skills/<rel relative to SKILLS_DIR>.
++    e.g. ~/.hermes/profiles/[已移除]/skills/productivity/xlsx
++         -> ~/.hermes/skills/productivity/xlsx
++    """
++    try:
++        rel_part = rel.relative_to(SKILLS_DIR)
++    except ValueError:
++        rel_part = Path(rel.name)
++    return Path.home() / ".hermes" / "skills" / rel_part
++
++
++def _install_skill_dest(skill_src: Path, rel: Path, quiet: bool = False,
++                        raise_on_error: bool = False) -> bool:
++    """Install one skill category into this profile's skills dir.
++
++    Named profiles: symlink to the shared layer (~/.hermes/skills/<rel>) when
++    the shared target exists; fall back to copytree only when it doesn't
++    (custom-only categories). Returns True when something was installed.
++
++    raise_on_error: when True, propagate OSError/IOError to the caller
++    (update branch relies on it to restore the previous copy on failure).
++    """
++    dest = SKILLS_DIR / rel
++    dest.parent.mkdir(parents=True, exist_ok=True)
++    if _is_named_profile_home():
++        shared_target = _shared_layer_target(rel)
++        if shared_target.exists():
++            try:
++                dest.symlink_to(shared_target, target_is_directory=True)
++                if not quiet:
++                    print(f"  + {rel} (symlink -> shared)")
++                return True
++            except (OSError, IOError) as e:
++                if raise_on_error:
++                    raise
++                if not quiet:
++                    print(f"  ! Failed to link {rel}: {e}")
++                return False
++        # shared target missing — fall through to copy (custom category)
++    try:
++        shutil.copytree(skill_src, dest)
++        if not quiet:
++            print(f"  + {rel}")
++        return True
++    except (OSError, IOError) as e:
++        if raise_on_error:
++            raise
++        if not quiet:
++            print(f"  ! Failed to copy {rel}: {e}")
++        return False
++
++
+ def _get_optional_dir() -> Path:
+     """Locate the official optional-skills/ directory."""
+     return get_optional_skills_dir(Path(__file__).parent.parent / "optional-skills")
+@@ -822,12 +897,10 @@ def sync_skills(quiet: bool = False) -> dict:
+                             f"to replace it with the bundled version."
+                         )
+                 else:
+-                    dest.parent.mkdir(parents=True, exist_ok=True)
+-                    shutil.copytree(skill_src, dest)
+-                    copied.append(skill_name)
+-                    manifest[skill_name] = bundled_hash
+-                    if not quiet:
+-                        print(f"  + {skill_name}")
++                    _rel = _compute_relative_dest(skill_src, bundled_dir)
++                    if _install_skill_dest(skill_src, _rel, quiet=quiet):
++                        copied.append(skill_name)
++                        manifest[skill_name] = bundled_hash
+             except (OSError, IOError) as e:
+                 if not quiet:
+                     print(f"  ! Failed to copy {skill_name}: {e}")
+@@ -879,11 +952,12 @@ def sync_skills(quiet: bool = False) -> dict:
+                         _rmtree_writable(backup)
+                     shutil.move(str(dest), str(backup))
+                     try:
+-                        shutil.copytree(skill_src, dest)
+-                        manifest[skill_name] = bundled_hash
+-                        updated.append(skill_name)
+-                        if not quiet:
+-                            print(f"  ↑ {skill_name} (updated)")
++                        _rel = _compute_relative_dest(skill_src, bundled_dir)
++                        if _install_skill_dest(skill_src, _rel, quiet=quiet, raise_on_error=True):
++                            manifest[skill_name] = bundled_hash
++                            updated.append(skill_name)
++                            if not quiet:
++                                print(f"  ↑ {skill_name} (updated)")
+                         # Remove backup after successful copy
+                         try:
+                             _rmtree_writable(backup)

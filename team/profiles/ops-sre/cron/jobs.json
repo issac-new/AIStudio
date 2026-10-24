@@ -1,0 +1,113 @@
+{
+  "jobs": [
+    {
+      "id": "c8a13baddc1e",
+      "name": "egress-audit-watchdog: 出口写入审计日检+unknown超阈值告警",
+      "prompt": "",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": null,
+      "model_snapshot": null,
+      "base_url": null,
+      "script": "egress-audit-watchdog.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 6 * * *",
+        "display": "30 6 * * *"
+      },
+      "schedule_display": "30 6 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 28
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-18T03:22:41.315430+08:00",
+      "next_run_at": "2026-10-15T06:30:00+08:00",
+      "last_run_at": "2026-10-14T06:32:00.238981+08:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "failure_streak": 0,
+      "deliver": "weixin",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-14T06:30:00+08:00",
+        "dispatched_at": "2026-10-14T06:30:04.261537+08:00",
+        "lateness_seconds": 4.3,
+        "kind": "on_time"
+      },
+      "last_failure": {
+        "at": "2026-10-13T07:30:08.926715+08:00",
+        "detail": "Script timed out after 3600s: /Users/YOURNAME/.hermes/profiles/ops-sre/scripts/egress-audit-watchdog.sh"
+      }
+    },
+    {
+      "id": "a794cec53f0d",
+      "name": "STALE_BACKUP告警消费方",
+      "prompt": "",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "stale_backup_alert_consumer.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 */6 * * *",
+        "display": "0 */6 * * *"
+      },
+      "schedule_display": "0 */6 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 51
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-03T12:22:52.970838+08:00",
+      "next_run_at": "2026-10-14T12:00:00+08:00",
+      "last_run_at": "2026-10-14T06:00:04.738044+08:00",
+      "last_status": "error",
+      "last_error": "Script exited with code 2\nstderr:\nTraceback (most recent call last):\n  File \"<stdin>\", line 12, in <module>\nKeyError: 'EMAIL_SMTP_HOST'\nstdout:\n🔔 STALE_BACKUP 备份失效告警：检出 2 条未消费标记行（2026-10-14 06:00:04）\n----------\n🚨 [tupang-auto-push.log] 2026-10-14 02:06:24 STALE_BACKUP ALERT: push 连续失败 8 次（>4h），数据仅存本地！\n🚨 [tupang-auto-push.log] 2026-10-14 02:47:26 STALE_BACKUP ALERT: push 连续失败 9 次（>4h），数据仅存本地！\n----------\n含义：备份 push/演练链路报失效。runbook：查 tupang-auto-push.log 尾部与 dr-drill 最新报告（workspace life-workbench/gap_workspaces/）。",
+      "last_delivery_error": "no delivery target resolved for deliver=weixin",
+      "last_delivery_unverified": null,
+      "failure_streak": 1,
+      "deliver": "weixin",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null,
+      "last_dispatch": {
+        "scheduled_at": "2026-10-14T06:00:00+08:00",
+        "dispatched_at": "2026-10-14T06:00:04.337645+08:00",
+        "lateness_seconds": 4.3,
+        "kind": "on_time"
+      },
+      "last_failure": {
+        "at": "2026-10-14T06:00:04.738044+08:00",
+        "detail": "Script exited with code 2\nstderr:\nTraceback (most recent call last):\n  File \"<stdin>\", line 12, in <module>\nKeyError: 'EMAIL_SMTP_HOST'\nstdout:\n🔔 STALE_BACKUP 备份失效告警：检出 2 条未消费标记行（2026-10-14 06:00:04）\n----------\n🚨 [tupang-auto-push.log] 2026-10-14 02:06:24 STALE_BACKUP ALERT: push 连续失败 8 次（>4h），数据仅存本地！\n🚨 [tupang-auto-push.log] 2026-10-14 02:47:26 STALE_BACKUP ALERT: push 连续失败 9 次（>4h），数据仅存本地！\n----------\n含义：备份 push/演练链路报失效。runbook：查 tupang-auto-push.log 尾部与 dr-drill 最新报告（workspace life-workbench/gap_workspaces/）。"
+      }
+    }
+  ],
+  "updated_at": "2026-10-14T06:32:00.239687+08:00"
+}

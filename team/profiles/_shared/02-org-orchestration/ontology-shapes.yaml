@@ -1,0 +1,72 @@
+# ontology-shapes.yaml — 本体形状声明（GB/T 48000.3-2026 方法论移植）
+#
+# 来源：GB/T 48000.3-2026《标准数字化 第3部分：本体建模要求》2026-08-01 实施
+# 融合报告：~/.hermes/profiles/orchestrator/research/gbt48000-fusion-20261010/FUSION-REPORT.md
+# 契约母本：同目录 ontology.md §一-bis-2 Link Types + §7.3 演进原则第 6 条
+#
+# 结构对应国标「约束三层」：
+#   实体类型规则 → node_shapes（对象 schema 完整性）
+#   属性规则     → 属性形状（嵌入 node_shapes.properties）
+#   关系规则     → property_shapes（权威六关系的 domain/range 声明）
+#
+# 对应 SHACL 语义：min_count=闭世界必填 / pattern=取值约束 / closed=封闭类型
+# 校验器：~/.hermes/bin/ontology_shape_validator.py
+# 显式不吸收：W3C 形式化语法（RDF/SPARQL/PySHACL）——单机集群无机器消费方，见融合报告 §2#5/#6
+
+version: 1.0
+fused_from: GB/T 48000.3-2026 (方法论骨架, 非合规声明)
+
+# ============================================================
+# 一、实体类型规则（node shapes）—— 对象 schema 完整性
+# ============================================================
+node_shapes:
+  Artifact:
+    required: [type, path]
+    # created_by/markings 是 ontology_objects 物理列，不在 JSON 属性包，不在 shapes 声明范围
+    properties:
+      type:
+        enum: [code, report, config, data, script, binary, diagram]
+  Finding:
+    required: [category, severity]
+    properties:
+      severity:
+        enum: [CRITICAL, HIGH, MEDIUM, LOW, INFO]
+      category:
+        enum: [security, bug, risk, insight]
+  Decision:
+    required: [topic, choice]
+    properties: {}
+
+# ============================================================
+# 二、属性规则 —— 嵌在上面 properties 节（enum=值域约束）
+# ============================================================
+
+# ============================================================
+# 三、关系规则（property shapes）—— 权威六关系的 Domain/Range
+#     国标红线：扩展不得放宽——link 两端类型只能收紧不能放宽
+# ============================================================
+property_shapes:
+  depends_on:
+    domain: [Task]
+    range: [Task]
+    note: "两端必须是 Task；物理载体 task_links(parent→child)"
+  derived_from:
+    domain: [Artifact, Finding, Decision]
+    range: [Artifact, Finding, Decision]
+    note: "A 的内容派生自 B；markings 传播触发器（合取 AND）。Task/Path 端点不合规格——Task 关系走 found_in/fixed_by 语境变体，文件引用应入库为 Artifact 对象"
+  based_on:
+    domain: [Artifact, Finding, Decision]
+    range: [Artifact, Finding, Decision]
+    note: "决策基于哪些证据对象；至少 1 个，引用前必须 ls 验证存在。存量 142 条 based_on→Quote 端点不合规格（摘句未入库）"
+  mined_from:
+    domain: [Knowledge]
+    range: [Task]
+    note: "platform-skill-miner 周报产生"
+  claims:
+    domain: [Finding]
+    range: [Artifact, Finding]
+    note: "evidence 链真实存在（蓝军门 4）"
+  supersedes:
+    domain: [Artifact, Decision]
+    range: [Artifact, Decision]
+    note: "禁止成环；旧版保留可追溯"

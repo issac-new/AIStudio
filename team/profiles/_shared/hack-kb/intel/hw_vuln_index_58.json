@@ -1,0 +1,105 @@
+{
+  "ts": "2026-10-03T01:10:00+08:00",
+  "source": "FreeBuf 译文 (https://www.freebuf.com/articles/system/503158.html, 2026-09-24) <- CSO Online '58 hardware vulnerabilities: A guide to the threats' (持续更新指南, 前身 2024-07 '39' 版)",
+  "topic": "CPU/DRAM/GPU 硬件漏洞威胁索引: 58 entries (42 CPU side-channel + 16 DRAM/GPU memory)",
+  "verdict": "ADOPT(限定范围)",
+  "gap": "gap-20260925-002",
+  "kanban": "t_5ccd2396",
+  "evidence": [
+    "https://www.freebuf.com/articles/system/503158.html",
+    "https://loongleakattack.com/",
+    "https://ddropattack.eu/",
+    "https://www.usenix.org/system/files/usenixsecurity26-hetterich-lorenz-loongleak.pdf"
+  ],
+  "scope_note": "文献综述索引资产, 非 PoC 实证。2026 新增条目 LoongLeak/DDRop/GPUThor 已三角验证, 其余条目沿袭 CSO 原文未逐条二次核实",
+  "relevance_to_fleet": {
+    "host": "Apple M1 Pro (MacBookPro18,3, arm64)",
+    "directly_relevant": [
+      {"name": "GoFetch", "why": "Apple M 系列 DMP 预取器侧信道, 可从恒定时间 OpenSSL DH / Go RSA / Kyber / Dilithium 提取密钥; M1/M2 需隐藏配置位禁用 DMP, M3 有 DIT 位"},
+      {"name": "SysBumps", "why": "Apple M 系列 macOS 上首个打破 KASLR 的类 Spectre 攻击 (CVE-2024-54531)"}
+    ],
+    "cloud_tenant_relevant": ["VMScape (KVM/QEMU 宿主密钥提取)", "Phoenix (DDR5 TRR 绕过, 109s root)", "GPUThor (共享 GPU 集群 root)", "BadRAM/DDRop (TEE 机密计算完整性)"],
+    "not_applicable_local": ["nvidia-smi ECC 遥测 (本机无独立 Nvidia GPU)", "LoongLeak (非龙芯平台)"]
+  },
+  "mitigation_quickref": {
+    "apple_silicon": "M1/M2: 隐藏配置位禁用 DMP; M3: DIT 位 (data-independent timing)",
+    "gpu_cluster": "SYS-ECC + IOMMU/DMA 隔离 + ECC 遥测监控 (nvidia-smi --query-gpu=ecc.errors.corrected.volatile.total,ecc.errors.uncorrected.volatile.total); 拒绝多租户共享 GPU 跑未审计 CUDA",
+    "confidential_compute": "DDR5 无 freshness 是家族性缺口 (BadRAM/BatteringRam/DDRop); Intel/AMD 均判物理攻击在威胁模型外, 依赖远程证明的部署需重新评估",
+    "general_cpu": "微码+OS 双通道补丁; 老硬件 (2018 前) 无硬件缓解的按最高风险处置"
+  },
+  "index": {
+    "cpu_side_channel_42": [
+      {"n": 1, "name": "Spectre variant 1", "alias": "bounds check bypass", "cve": ["CVE-2017-5753"], "affects": "Intel/IBM/部分ARM", "fix": "OS"},
+      {"n": 2, "name": "Spectre variant 2", "alias": "branch target injection", "cve": ["CVE-2017-5715"], "affects": "广泛", "fix": "微码+OS"},
+      {"n": 3, "name": "Meltdown variant 3", "alias": "RDCL", "cve": ["CVE-2017-5754"], "affects": "Intel", "fix": "OS (KPTI)"},
+      {"n": 4, "name": "Meltdown-GP", "alias": "variant 3a / RSRE", "cve": ["CVE-2018-3640"], "affects": "Intel", "fix": "微码"},
+      {"n": 5, "name": "Meltdown-NM", "alias": "LazyFP", "cve": ["CVE-2018-3665"], "affects": "Intel", "fix": "OS (FPU eager)"},
+      {"n": 6, "name": "Spectre-NG", "alias": "Spectre v4 / SSB", "cve": ["CVE-2018-3639"], "affects": "广泛", "fix": "微码+OS"},
+      {"n": 7, "name": "Spectre-PHT", "alias": "Spectre 1.1", "cve": ["CVE-2018-3693"], "affects": "广泛", "fix": "OS"},
+      {"n": 8, "name": "Meltdown-RW", "alias": "Spectre 1.2", "cve": [], "affects": "广泛", "fix": "OS"},
+      {"n": 9, "name": "Foreshadow-OS", "alias": "L1TF", "cve": ["CVE-2018-3620"], "affects": "Intel", "fix": "微码+OS"},
+      {"n": 10, "name": "Foreshadow-VMM", "alias": "L1TF-VMM", "cve": ["CVE-2018-3646"], "affects": "Intel 虚拟化", "fix": "微码+OS"},
+      {"n": 11, "name": "Foreshadow-SGX", "alias": "SGX飞地读取", "cve": ["CVE-2018-3615"], "affects": "Intel SGX", "fix": "微码"},
+      {"n": 12, "name": "Meltdown-PK + Meltdown-BND", "alias": "保护密钥绕过+边界检查绕过", "cve": [], "affects": "Intel (+BND: AMD)", "fix": "微码+OS"},
+      {"n": 13, "name": "Spectre-PHT-CA-OP/-CA-IP/-SA-OP", "alias": "PHT变体三件套", "cve": [], "affects": "广泛", "fix": "微码+OS"},
+      {"n": 14, "name": "Spectre-BTB-SA-IP/-SA-OP", "alias": "BTB变体两件套", "cve": [], "affects": "广泛", "fix": "微码+OS"},
+      {"n": 15, "name": "Fallout", "alias": "MSBDS (MDS)", "cve": ["CVE-2018-12126"], "affects": "Intel", "fix": "微码"},
+      {"n": 16, "name": "RIDL", "alias": "MLPDS+MFBDS (MDS)", "cve": ["CVE-2018-12127", "CVE-2018-12130"], "affects": "Intel", "fix": "微码"},
+      {"n": 17, "name": "Zombieload", "alias": "MDSUM (MDS)", "cve": ["CVE-2019-11091"], "affects": "Intel", "fix": "微码"},
+      {"n": 18, "name": "Starbleed", "alias": "Xilinx FPGA 比特流加密缺陷", "cve": [], "affects": "Xilinx 7系/Virtex-6", "fix": "不可修(硅片级)"},
+      {"n": 19, "name": "PLATYPUS", "alias": "RAPL 接口滥用", "cve": ["CVE-2020-8694", "CVE-2020-8695"], "affects": "Intel 2011+", "fix": "内核限RAPL+微码"},
+      {"n": 20, "name": "SRBDS", "alias": "CrossTalk 特殊寄存器缓冲区采样", "cve": ["CVE-2020-0543"], "affects": "Intel", "fix": "微码"},
+      {"n": 21, "name": "Spectre-BHI", "alias": "分支历史注入", "cve": ["CVE-2022-0001", "CVE-2022-0002", "CVE-2022-23960"], "affects": "Intel/ARM", "fix": "微码+OS"},
+      {"n": 22, "name": "Retbleed", "alias": "RSBU / BTC", "cve": ["CVE-2022-29901", "CVE-2022-29900"], "affects": "Intel/AMD", "fix": "eIBRS/微码"},
+      {"n": 23, "name": "Hertzbleed", "alias": "动态频率侧信道", "cve": ["CVE-2022-23823", "CVE-2022-24436"], "affects": "Intel/AMD(可能ARM)", "fix": "软对策/禁Turbo"},
+      {"n": 24, "name": "SQUIP", "alias": "调度器队列争用", "cve": ["CVE-2021-46778"], "affects": "AMD SMT", "fix": "微码"},
+      {"n": 25, "name": "Zenbleed", "alias": "SIMD Zeroupper 推测执行UAF", "cve": ["CVE-2023-20593"], "affects": "AMD Zen2", "fix": "微码"},
+      {"n": 26, "name": "Downfall", "alias": "GDS 收集数据采样", "cve": ["CVE-2022-40982"], "affects": "Intel 多代", "fix": "微码"},
+      {"n": 27, "name": "Reptar", "alias": "FSRM 前缀解析异常", "cve": ["CVE-2023-23583"], "affects": "Intel", "fix": "微码"},
+      {"n": 28, "name": "Inception", "alias": "返回指令瞬态控制流劫持", "cve": ["CVE-2023-20569"], "affects": "AMD", "fix": "微码"},
+      {"n": 29, "name": "SLAM", "alias": "LAM/UAI/TBI 线性地址掩码 Spectre", "cve": [], "affects": "未来Intel/AMD/ARM", "fix": "设计期"},
+      {"n": 30, "name": "GhostRace", "alias": "推测路径竞态绕过同步原语", "cve": ["CVE-2024-2193"], "affects": "广泛", "fix": "OS对策"},
+      {"n": 31, "name": "TikTag", "alias": "MTE 绕过", "cve": [], "affects": "ARM MTE", "fix": "研究期"},
+      {"n": 32, "name": "Indirector", "alias": "IBP+BTB 精准注入", "cve": [], "affects": "Intel Raptor/Alder Lake", "fix": "微码"},
+      {"n": 33, "name": "Register File Data Sampling", "alias": "RFDS", "cve": ["CVE-2023-28746"], "affects": "Intel Atom", "fix": "微码"},
+      {"n": 34, "name": "SinkClose", "alias": "SMM 植入 ring -2", "cve": ["CVE-2023-31315"], "affects": "AMD EPYC/Ryzen/Threadripper", "fix": "微码(依赖主板UEFI)"},
+      {"n": 35, "name": "Native BHI", "alias": "无eBPF原生BHI利用 3.5KB/s", "cve": ["CVE-2024-2201"], "affects": "Intel", "fix": "BHI_DIS_S+软件"},
+      {"n": 36, "name": "GoFetch", "alias": "Apple M系列 DMP 预取器侧信道", "cve": [], "affects": "Apple M1/M2/M3", "fix": "M3 DIT位; M1/M2禁DMP"},
+      {"n": 37, "name": "EntrySign", "alias": "AMD 微码签名伪造", "cve": ["CVE-2024-36347", "CVE-2024-56161"], "affects": "AMD Zen1-5", "fix": "微码+内核"},
+      {"n": 38, "name": "Transient Scheduler Attacks", "alias": "TSA 时序侧信道", "cve": ["CVE-2024-36348", "CVE-2024-36349", "CVE-2024-36350", "CVE-2024-36357"], "affects": "AMD Zen3/4", "fix": "固件+OS"},
+      {"n": 39, "name": "Branch Privilege Injection", "alias": "BPI eIBRS竞态", "cve": ["CVE-2024-45332"], "affects": "Intel 2018+ (CFL-R~RPL)", "fix": "微码"},
+      {"n": 40, "name": "VMScape", "alias": "客户机->宿主 BTI", "cve": ["CVE-2025-40300"], "affects": "AMD/Intel KVM", "fix": "VM-exit加IBPB"},
+      {"n": 41, "name": "SysBumps", "alias": "macOS KASLR 破解", "cve": ["CVE-2024-54531"], "affects": "Apple M系列 macOS", "fix": "OS"},
+      {"n": 42, "name": "LoongLeak", "alias": "LoongArch 架构级泄露 (退役指令流)", "cve": [], "affects": "龙芯3A5000/3A6000", "fix": "内核模拟浮点(10-21x开销)"}
+    ],
+    "dram_gpu_memory_16": [
+      {"n": 43, "name": "Rowhammer", "alias": "行敲击比特翻转", "cve": [], "affects": "DDR3/DDR4", "fix": "TRR"},
+      {"n": 44, "name": "Rowhammer.js", "alias": "浏览器远程 Rowhammer", "cve": [], "affects": "浏览器", "fix": "浏览器缓解"},
+      {"n": 45, "name": "Drammer", "alias": "Android Rowhammer", "cve": ["CVE-2016-6728"], "affects": "Android", "fix": "OS"},
+      {"n": 46, "name": "Flip Feng Shui", "alias": "VM 跨租户 Rowhammer", "cve": [], "affects": "虚拟化", "fix": "内存隔离"},
+      {"n": 47, "name": "ECCploit", "alias": "ECC 内存 Rowhammer", "cve": [], "affects": "服务器 ECC DRAM", "fix": "改进ECC"},
+      {"n": 48, "name": "Throwhammer", "alias": "RDMA 远程 Rowhammer", "cve": [], "affects": "高速网卡服务器", "fix": "网络限速"},
+      {"n": 49, "name": "RAMBleed", "alias": "Rowhammer 窃取(非仅篡改)", "cve": [], "affects": "DDR4", "fix": "TRR"},
+      {"n": 50, "name": "ZenHammer", "alias": "AMD+DDR5 首个 Rowhammer", "cve": [], "affects": "AMD Zen + DDR5", "fix": "厂商缓解"},
+      {"n": 51, "name": "Phoenix", "alias": "DDR5 TRR 绕过 109s root", "cve": ["CVE-2025-6202"], "affects": "AMD平台 DDR5", "fix": "pTRR(Intel已有)"},
+      {"n": 52, "name": "LeftoverLocals", "alias": "GPU 残留内存泄露", "cve": ["CVE-2023-4969"], "affects": "Apple/AMD/高通 GPU", "fix": "驱动/固件"},
+      {"n": 53, "name": "GPUHammer", "alias": "首个 GPU GDDR6 Rowhammer", "cve": [], "affects": "Nvidia RTX A6000 GDDR6", "fix": "ECC(已可被GPUThor绕过)"},
+      {"n": 54, "name": "GPUBreach", "alias": "GPU 页表破坏提权", "cve": [], "affects": "Nvidia GDDR6", "fix": "ECC+IOMMU"},
+      {"n": 55, "name": "GPUThor", "alias": "非均匀敲击绕 ECC 1.1min root", "cve": [], "affects": "Nvidia Ampere GDDR6 (A4000-A6000,A100)", "fix": "强ECC+遥测监控, 完整修复待硬件"},
+      {"n": 56, "name": "BadRAM", "alias": "SPD 篡改虚报容量", "cve": ["CVE-2024-21944"], "affects": "AMD SEV-SNP", "fix": "固件启动校验"},
+      {"n": 57, "name": "Battering Ram", "alias": "DDR4 运行时别名攻击 $50", "cve": [], "affects": "Intel SGX/AMD SEV", "fix": "厂商不修(物理威胁模型外)"},
+      {"n": 58, "name": "DDRop", "alias": "DDR5 写丢弃破坏 TEE 完整性 <$200", "cve": [], "affects": "Intel TDX/Scalable SGX/AMD SEV-SNP", "fix": "需硬件级 freshness, 厂商判威胁模型外"}
+    ]
+  },
+  "verification": {
+    "triangulated_2026_entries": ["LoongLeak (CISPA/USENIX Sec 2026 官网+论文)", "DDRop (KU Leuven/ETH/Google CCS 2026 官网+论文)", "GPUThor (多伦多大学 2026-08, 多信源)"],
+    "gate": "evidence_gate 5/5 passed (e001-e003, 2026-10-03)",
+    "not_done": "其余 55 条目未逐条二次核实, 沿袭 CSO 原文可信度"
+  },
+  "markings": "TLP:AMBER",
+  "next_steps": [
+    "hack-auditor 后续审计客户硬件/云环境时, 从本索引按 vendor+技术代际筛选适用条目",
+    "若部署 GPU 共享推理集群: 采纳 GPUThor 遥测监控清单 (nvidia-smi ECC counters)",
+    "Apple Silicon 跑密码学工作负载: 参考 GoFetch 条目评估 DMP 禁用"
+  ]
+}
