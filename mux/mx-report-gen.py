@@ -2611,6 +2611,14 @@ def eval_summary_html():
         return '—' if v is None else f'{float(v) * 100:.1f}%'
     def esc(v):
         return H.escape('—' if v is None else str(v))
+    def dur(v):
+        if v is None:
+            return '—'
+        try:
+            sec = float(v)
+        except (TypeError, ValueError):
+            return '—'
+        return f'{round(sec / 60)}m' if sec < 3600 else f'{sec / 3600:.1f}h'
 
     reg = d.get('registry') or {}
     cov = d.get('coverage') or {}
@@ -2639,6 +2647,7 @@ def eval_summary_html():
     biz = d.get('businessSummary') or {}
     # 群体协作四维度读数（2026-10-24 吸收轮）：通信拓扑/信用分配/帕累托/社会动力学
     swarm = d.get('swarmCollab') or {}
+    bench = d.get('swarmBench') or {}
     diff_txt = ' · '.join(f"{b.get('tier')}={pct(b.get('passAtK'))}({b.get('taskCount')})" for b in by_diff if isinstance(b, dict)) or '未标注'
     role_txt = ' · '.join(f"{b.get('role')}={pct(b.get('passAtK'))}({b.get('passed')}/{b.get('taskCount')})" for b in by_role if isinstance(b, dict)) or '未标注'
     stab_txt = f"翻转 {pct(stab.get('flipRate'))}（{stab.get('flips')}/{stab.get('checked')}，{stab.get('rounds')} 轮）" if stab else '未开启'
@@ -2658,6 +2667,18 @@ def eval_summary_html():
                      f" · 拜占庭注入 no_data（挂账）")
     else:
         swarm_txt = '未采集'
+    bench_entries = bench.get('entries') or []
+    if bench and bench_entries:
+        lead = bench_entries[0] or {}
+        lead_vals = lead.get('values') or {}
+        lead_rank = lead.get('overallRank')
+        rank_txt = '—' if lead_rank is None else f'{float(lead_rank):.1f}'
+        bench_txt = (f"{esc(bench.get('runsScanned'))} 轮入榜 · 首位 {esc(lead.get('run'))}"
+                     f"（均位 {rank_txt} · 完成 {pct(lead_vals.get('completionRate'))}"
+                     f" · 锚点时延 {dur(lead_vals.get('taskLatencyMedianSeconds'))}）"
+                     f" · 帕累托前沿 {esc(bench.get('frontierSize'))}")
+    else:
+        bench_txt = '未采集'
     beh_rows = beh.get('rows') or []
     beh_txt = (f"{len(beh_rows)} 信号 · 可判读 {sum(1 for r in beh_rows if isinstance(r, dict) and r.get('sufficient'))}"
                if beh else '未采集')
@@ -2690,6 +2711,7 @@ def eval_summary_html():
       <tr><td>难度/角色分桶</td><td>难度：{esc(diff_txt)}；角色：{esc(role_txt)}</td><td>V8.48；宁缺毋滥——未标注不计，失败直达责任方</td></tr>
       <tr><td>稳定性/行为信号/经营摘要</td><td>重复判定 {esc(stab_txt)} · 行为信号 {esc(beh_txt)} · 经营摘要 {esc(biz_txt)}</td><td>V8.48；观测读数不改判（同 V8.46 纪律）</td></tr>
       <tr><td>群体协作读数</td><td>{esc(swarm_txt)}</td><td>四维度（通信拓扑/信用分配/帕累托/社会动力学）；字符口径+观察性归因，只观测不进判据（2026-10-24 吸收轮 D2-D8）</td></tr>
+      <tr><td>群体协作评测榜</td><td>{esc(bench_txt)}</td><td>跨轮聚合（2026-10-24 聚合层）：均位=可用指标平均名次；只观测不进判据</td></tr>
       <tr><td>动作驱动</td><td>{len(actions)} 条 · 高优 {len(high)} 条</td><td>每条失败/缺口应指向下一步动作</td></tr>
     </table>
   </div>
