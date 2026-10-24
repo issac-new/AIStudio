@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- violating fixture:
+     - 数据库连接密码明文 <password>dw-plain-123</password> → fw_kettle_password_encr(fail) 主触发
+     - server 硬编码 IP + Rowlevel 日志 + SortRows + 双 TableOutput 开 unique_connections + 无 error_handling → 多条 warn
+     期望：bash run-framework-fixture.sh kettle → violating 退出码 != 0（FAIL） -->
+<transformation>
+  <info>
+    <name>dw_load</name>
+    <transversion>9.3.0.0-428</transversion>
+    <loglevel>Rowlevel</loglevel>
+  </info>
+  <connection>
+    <name>mysql_dw</name>
+    <server>192.168.1.10</server>
+    <type>MYSQL</type>
+    <access>Native</access>
+    <database>dw</database>
+    <port>3306</port>
+    <username>etl</username>
+    <password>dw-plain-123</password>
+  </connection>
+  <attributes>
+    <unique_connections>Y</unique_connections>
+  </attributes>
+  <order>
+    <hop><from>read_src</from><to>sort_rows</to><enabled>Y</enabled></hop>
+    <hop><from>sort_rows</from><to>load_fact</to><enabled>Y</enabled></hop>
+    <hop><from>sort_rows</from><to>load_audit</to><enabled>Y</enabled></hop>
+  </order>
+  <step>
+    <name>read_src</name>
+    <type>TableInput</type>
+    <connection>mysql_dw</connection>
+    <sql>SELECT * FROM ods_order</sql>
+  </step>
+  <step>
+    <name>sort_rows</name>
+    <type>SortRows</type>
+    <sort_size>1000000</sort_size>
+  </step>
+  <step>
+    <name>load_fact</name>
+    <type>TableOutput</type>
+    <connection>mysql_dw</connection>
+    <table>dwd_fact_order</table>
+  </step>
+  <step>
+    <name>load_audit</name>
+    <type>TableOutput</type>
+    <connection>mysql_dw</connection>
+    <table>dwd_audit_log</table>
+  </step>
+</transformation>

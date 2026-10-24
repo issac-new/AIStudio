@@ -1,0 +1,3 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_pytest_assert_truthy_only
+fw_pytest_session_scope_mutable

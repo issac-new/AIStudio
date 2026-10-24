@@ -1,0 +1,3 @@
+=== check_link_depth（AI 自觉判断模式，GATE_AI_JUDGMENT=1）===
+→ AI 自查（不机械跑）：挑 3 个核心用例，沿调用链逐层读代码
+check_link_depth 已转 AI 自觉判断（advisory，不计 fail）

@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_react_hooks_top_level
+fw_react_effect_deps
+fw_react_immutable_state

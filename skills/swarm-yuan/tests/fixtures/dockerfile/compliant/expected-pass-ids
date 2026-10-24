@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_dockerfile_latest_base
+fw_dockerfile_root_user
+fw_dockerfile_hardcoded_secret

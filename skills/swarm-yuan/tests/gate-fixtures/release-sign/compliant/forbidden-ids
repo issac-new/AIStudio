@@ -1,0 +1,2 @@
+# 签名齐备且未启用 provenance 强制时不得出现任何 release-sign fail id
+gate_release_

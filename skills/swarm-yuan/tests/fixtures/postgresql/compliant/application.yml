@@ -1,0 +1,9 @@
+# compliant: HikariCP 连接池收敛
+spring:
+  datasource:
+    url: jdbc:postgresql://db.internal:5432/shop
+    username: shop
+    password: ${DB_PASSWORD}
+    hikari:
+      maximumPoolSize: 20
+      maxLifetime: 1700000

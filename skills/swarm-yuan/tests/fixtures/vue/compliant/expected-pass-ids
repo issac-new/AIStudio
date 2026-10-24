@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_vue_script_setup
+fw_vue_no_options_api
+fw_vue_vhtml_sanitize

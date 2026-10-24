@@ -1,0 +1,4 @@
+rocketmq:
+  name-server: rocketmq-namesrv:9876
+  producer:
+    group: order-producer-group

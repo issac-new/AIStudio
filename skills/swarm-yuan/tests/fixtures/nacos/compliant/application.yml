@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: order-service
+  profiles:
+    active: ${DEPLOY_ENV:dev}
+  cloud:
+    nacos:
+      config:
+        server-addr: nacos1.internal:8848,nacos2.internal:8848,nacos3.internal:8848
+        namespace: ${NACOS_NAMESPACE_ID}
+        file-extension: yml
+      discovery:
+        server-addr: nacos1.internal:8848,nacos2.internal:8848,nacos3.internal:8848
+        namespace: ${NACOS_NAMESPACE_ID}
+        metadata:
+          version: v1
+          region: hz-1
+  datasource:
+    url: jdbc:mysql://mysql.internal:3306/orders
+    username: order_app
+    password: ${DB_PASSWORD}

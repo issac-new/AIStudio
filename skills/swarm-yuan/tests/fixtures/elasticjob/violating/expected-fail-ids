@@ -1,0 +1,3 @@
+# violating 侧必中 fail id 清单（run-framework-fixture.sh 逐行字面断言输出命中）
+# 2026-07-20 P1 实跑登记（框架工程师_B3）
+fw_elasticjob_failover

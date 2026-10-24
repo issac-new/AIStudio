@@ -1,0 +1,13 @@
+# 订单服务 OpenAPI 定义（合规：info.version 显式版本化）
+openapi: 3.0.3
+info:
+  title: Order API
+  description: 订单创建与查询
+  version: "1.0.0"
+paths:
+  /orders:
+    post:
+      summary: 创建订单
+      responses:
+        '200':
+          description: 创建成功

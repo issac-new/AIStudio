@@ -1,0 +1,4 @@
+# sqlserver 全量 fail id（3/3，P1 实跑登记）
+fw_mssql_sql_injection
+fw_mssql_sp_grant_public
+fw_mssql_dml_nowhere

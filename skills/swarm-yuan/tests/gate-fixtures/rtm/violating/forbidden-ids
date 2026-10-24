@@ -1,0 +1,4 @@
+# REQ-001（测试目录追溯）与 REQ-002（矩阵追溯）不得误报未追溯；矩阵齐备不得报缺失
+gate_rtm_untraced:REQ-001
+gate_rtm_untraced:REQ-002
+gate_rtm_matrix_missing

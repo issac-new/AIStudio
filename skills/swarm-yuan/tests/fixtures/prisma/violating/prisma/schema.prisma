@@ -1,0 +1,28 @@
+// violating fixture：schema 反模式集
+//  - Int autoincrement 主键可枚举 → fw_prisma_id_strategy(warn)
+//  - @relation 无 onDelete → fw_prisma_relation_cascade(warn)
+//  - 关系标量无 @@index → fw_prisma_relation_index(warn)
+//  - 无 createdAt/updatedAt → fw_prisma_audit_fields(warn)
+//  - generator 无 output → fw_prisma_generator_output(warn)
+//  - 未规划 connection_limit → fw_prisma_connection_limit(warn)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    Int    @id @default(autoincrement())
+  name  String
+  posts Post[]
+}
+
+model Post {
+  id       Int  @id @default(autoincrement())
+  title    String
+  author   User @relation(fields: [authorId], references: [id])
+  authorId Int
+}

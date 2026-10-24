@@ -1,0 +1,2 @@
+# 期望：warn 档语义（决策 35）——篡改被检出打 advisory 行，rc=0 不阻断；检出来源=reference-manual §4 标注反推（STABLE_GLOBS 未配置）
+稳定单元被篡改但未在 spec MODIFIED 段声明：src/core/legacy.js

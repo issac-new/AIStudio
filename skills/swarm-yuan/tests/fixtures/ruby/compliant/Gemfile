@@ -1,0 +1,5 @@
+# fixture compliant: Gemfile 与 Gemfile.lock 依赖一致
+source "https://rubygems.org"
+
+gem "sinatra"
+gem "puma"

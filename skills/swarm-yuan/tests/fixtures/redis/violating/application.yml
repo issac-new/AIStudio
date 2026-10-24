@@ -1,0 +1,6 @@
+spring:
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      # 无 lettuce.pool.* 连接池配置（fw_redis_pool warn）

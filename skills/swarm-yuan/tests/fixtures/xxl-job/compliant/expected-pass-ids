@@ -1,0 +1,3 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_xxljob_access_token
+fw_xxljob_glue_injection

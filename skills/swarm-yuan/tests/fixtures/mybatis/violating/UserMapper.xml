@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.UserMapper">
+  <select id="list" resultType="map">
+    SELECT * FROM t_user ORDER BY ${col}
+  </select>
+  <!-- P1 扩充：resultType 与 resultMap 并存 → fw_mybatis_select_dup_result(fail) -->
+  <select id="listDup" resultType="map" resultMap="userMap">
+    SELECT id, name FROM t_user WHERE name = #{name,jdbcType=VARCHAR}
+  </select>
+</mapper>

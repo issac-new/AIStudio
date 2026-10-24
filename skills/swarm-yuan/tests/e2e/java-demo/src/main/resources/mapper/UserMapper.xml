@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.demo.UserMapper">
+  <!-- resultMap property 与 User.java 字段同步（field_sync 正路径；data-mapping 边提取目标） -->
+  <resultMap id="userMap" type="com.demo.User">
+    <id column="id" property="id"/>
+    <result column="orders" property="orders"/>
+  </resultMap>
+  <!-- mybatis 违例：${col} 未白名单 + sharding 违例：update t_order 缺 user_id 分片键 -->
+  <select id="list" resultType="map">
+    SELECT * FROM t_user ORDER BY ${col}
+  </select>
+  <update id="updateStatus">
+    update t_order set status=#{s} where id=#{id}
+  </update>
+</mapper>

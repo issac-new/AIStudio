@@ -1,0 +1,2 @@
+# 修复判别：旧代码找不到 spec 会 fail——本 fixture 须无 fail 行（pass 且无未找到）
+未找到 spec 文档

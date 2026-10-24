@@ -1,0 +1,9 @@
+{
+  "name": "prisma-fixture-compliant",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@prisma/client": "^7.8.0",
+    "prisma": "^7.8.0"
+  }
+}

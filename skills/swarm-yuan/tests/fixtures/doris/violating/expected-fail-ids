@@ -1,0 +1,10 @@
+fw_doris_replication
+fw_doris_bucket
+fw_doris_rollup
+fw_doris_colocate
+fw_doris_mv_refresh
+fw_doris_varchar_width
+fw_doris_index
+fw_doris_dynamic_partition
+fw_doris_stream_load
+fw_doris_resource_group

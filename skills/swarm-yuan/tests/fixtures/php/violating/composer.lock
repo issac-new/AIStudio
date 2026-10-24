@@ -1,0 +1,17 @@
+{
+    "_readme": ["fixture violating: guzzlehttp/guzzle 缺失于本 lock —— composer.json 变更后 lock 未更新"],
+    "content-hash": "fixture-violating-not-a-real-hash",
+    "packages": [
+        {
+            "name": "monolog/monolog",
+            "version": "3.5.0"
+        }
+    ],
+    "packages-dev": [
+        {
+            "name": "phpunit/phpunit",
+            "version": "10.5.0"
+        }
+    ],
+    "plugin-api-version": "2.6.0"
+}

@@ -1,0 +1,45 @@
+# violating fixture deployment.yaml:
+#  - image: nginx:latest → fw_kubernetes_latest_image(fail)
+#  - privileged: true → fw_kubernetes_privileged(fail)
+#  - 无 runAsNonRoot → fw_kubernetes_run_as_root(fail)
+#  - Secret 明文 stringData → fw_kubernetes_hardcoded_secret(fail)
+#  - 无 resources.limits → fw_kubernetes_no_resource_limits(warn)
+#  - 无 probes → fw_kubernetes_no_probes(warn)
+#  - namespace: default → fw_kubernetes_default_namespace(warn)
+#  - 无 NetworkPolicy → fw_kubernetes_no_network_policy(warn)
+#  - 无 PodDisruptionBudget → fw_kubernetes_no_pdb(warn)
+#  - 无 imagePullPolicy → fw_kubernetes_image_pull_policy(warn)
+#
+# 期望：kubernetes fixture violating → 退出码 != 0（FAIL，因 latest_image/privileged/run_as_root/hardcoded_secret 4 fail 主触发）
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest
+          securityContext:
+            privileged: true
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-creds
+  namespace: default
+stringData:
+  password: Sup3rSecret!
+  api_key: sk-1234567890abcdef

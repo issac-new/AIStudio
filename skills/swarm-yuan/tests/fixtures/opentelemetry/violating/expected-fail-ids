@@ -1,0 +1,2 @@
+# opentelemetry violating 必中 fail id 清单（deprecated_exporter fail 主触发）
+fw_opentelemetry_deprecated_exporter

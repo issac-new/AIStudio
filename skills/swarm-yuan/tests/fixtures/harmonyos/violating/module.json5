@@ -1,0 +1,12 @@
+{
+  "module": {
+    "name": "entry",
+    "srcEntrance": "./ets/Application/MyAbilityStage.ts",
+    "abilities": [
+      {
+        "name": "MainAbility",
+        "srcEntrance": "./ets/MainAbility/MainAbility.ts"
+      }
+    ]
+  }
+}

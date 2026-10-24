@@ -1,0 +1,11 @@
+spring:
+  kafka:
+    bootstrap-servers: kafka-broker:9092
+    consumer:
+      group-id: order-group
+      enable-auto-commit: true
+      auto-offset-reset: earliest
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      acks: 0
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer

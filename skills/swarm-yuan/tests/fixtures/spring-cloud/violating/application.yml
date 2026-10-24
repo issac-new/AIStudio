@@ -1,0 +1,6 @@
+spring:
+  cloud:
+    config:
+      uri: http://config-server:8888
+  datasource:
+    password: plaintext-secret-123

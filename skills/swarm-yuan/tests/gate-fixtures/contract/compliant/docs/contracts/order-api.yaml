@@ -1,0 +1,9 @@
+# 订单接口契约（含 version 字段）
+version: 1.2.0
+api: order
+base: /orders
+endpoints:
+  - name: create
+    method: POST
+  - name: detail
+    method: GET

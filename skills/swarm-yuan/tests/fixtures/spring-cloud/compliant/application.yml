@@ -1,0 +1,13 @@
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 2000
+        read-timeout: 5000
+spring:
+  cloud:
+    config:
+      uri: http://config-server:8888
+      fail-fast: true
+  datasource:
+    password: '{cipher}AQA...encrypted...'

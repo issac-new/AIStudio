@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- compliant fixture: 作业失败 hop 挂 MAIL entry → fw_kettle_failure_mail pass -->
+<job>
+  <name>daily_job</name>
+  <job_version>11.0.0.1-259</job_version>
+  <entries>
+    <entry>
+      <name>START</name>
+      <type>SPECIAL</type>
+    </entry>
+    <entry>
+      <name>dw_load</name>
+      <type>TRANS</type>
+      <filename>dw_load.ktr</filename>
+    </entry>
+    <entry>
+      <name>success</name>
+      <type>SUCCESS</type>
+    </entry>
+    <entry>
+      <name>alert_on_failure</name>
+      <type>MAIL</type>
+      <server>${SMTP_HOST}</server>
+      <destination>dw-oncall@example.com</destination>
+      <subject>daily_job FAILED</subject>
+    </entry>
+  </entries>
+  <hops>
+    <hop><from>START</from><to>dw_load</to><evaluation>Y</evaluation><unconditional>N</unconditional></hop>
+    <hop><from>dw_load</from><to>success</to><evaluation>Y</evaluation><unconditional>N</unconditional></hop>
+    <hop><from>dw_load</from><to>alert_on_failure</to><evaluation>N</evaluation><unconditional>N</unconditional></hop>
+  </hops>
+</job>
