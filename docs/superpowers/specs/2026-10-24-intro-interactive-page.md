@@ -26,3 +26,13 @@
 - 零外部请求核验（无 http(s) 资源引用）。
 - README 改动跑 `python3 ~/.zcode/skills/gongwen-bifa/scripts/gongwen-lint.py README.md`。
 - 纯静态文档改动，无测试面；不涉及 vitest。
+
+## 变更记录
+
+### 2026-10-24 二批：主名切 AIStudio + gh about 重写（用户指示）
+
+用户指出「正文中的 SwarmStudio 没有改过来，项目的 about 也重新调整下」。核实：门面文档（README/USAGE/宣传稿/介绍页）无 "Swarm Studio" 带空格写法；问题是介绍页 4 处以 SwarmStudio 当项目主名（title/meta/kicker/lead/footer），与仓库现名 AIStudio 的层级（AIStudio 仓 ⊃ SwarmStudio 体系/产品面，gh about 亦标「原 SwarmStudio 仓」）不符。
+
+- intro.html 主名 5 处切 AIStudio：title、meta description、kicker（AIStudio · SwarmStudio 体系单仓）、lead（单仓收齐体系全部源码）、footer。五件套第一层「产品面 SwarmStudio」为组件名，保留。
+- README 不动：标题与首段层级已正确（# AIStudio / SwarmStudio 体系），正文以 SwarmStudio 叙述产品行为是上轮定稿设计。
+- gh about 重写（原 122 字组件堆砌+实现细节收尾）：价值先行、去掉「vendor 钉版基线+补丁注入二开」实现细节。
