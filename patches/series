@@ -925,3 +925,6 @@
 
 # 686: 全页面走查挂账清偿（D23 后续；原 685 与并行工作流引擎撞号改 686）——用量页统计卡字号收敛（hero clamp(36,4vw,48)→clamp(28,3vw,36)、副卡 30→26，视觉模型与用户走查双反馈主次失衡）+ 技能列表描述文字对比度 $text-muted→$text-secondary（走查复核：首轮「紫菱形占位」系误读，真实短板=描述灰度过高）。
 686-client-usage-skills-polish.patch
+
+# 687: 供应链治理轮锁收口——manifest 补丁（017/080/103/136/137/138/573）从未同步进 vendor 锁致 npm ci 必炸；以注入态 manifest 重生成锁：六依赖入树+@playwright/test 对齐 1.63.0，resolved 全锚 registry.npmjs.org（本机 npm 缓存曾带出 npmmirror 域名，已统一重写；integrity 不变）。
+687-package-lock-overlay-deps.patch

@@ -5,9 +5,9 @@
   "dependencies": {
     "@nanostores/react": "1.1.0",
     "ink-text-input": "6.0.0",
-    "nanostores": "1.4.0",
+    "nanostores": "1.4.2",
     "react": "19.2.7",
-    "undici": "6.27.0",
+    "undici": "6.29.0",
     "unicode-animations": "1.0.3"
   }
 }
