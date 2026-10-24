@@ -505,7 +505,8 @@ function mainCheckoutVendorNodeModules() {
   }
 }
 
-function ensureNodeModulesSymlink() {
+/** 确保仓根 node_modules 软链到位（ensure-injected 复用：全新克隆 npm install 后补链）。 */
+export function ensureNodeModulesSymlink() {
   // overlay 自身无依赖;构建/开发需解析到上游 node_modules(vite/vue/matrix-js-sdk 等)。
   // 建符号链接 overlay/node_modules → 上游(或 vendor)hermes-studio/node_modules。
   let nmTarget = upstreamNodeModules;
