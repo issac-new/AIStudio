@@ -45,3 +45,11 @@
 - Step 10：目标技能 `scripts/precheck.sh --all` 全绿（fail 修复重跑，不绕过）。
 - Step 13：`generate-skill.sh --verify-completeness --strict` 无占位符残留；`inventory-verify.sh` 计数核验各维度 ≥0.95；`--mark-active` 路径验真后激活。
 - 收口验证：worktree 合并 `--no-ff` 进 main 后 `git worktree list` 只剩 main + serve-main；主树 `.claude/skills/aistudio-dev` 就位且旧技能已归档；下一会话 SessionStart 指纹 diff 无假阳性新增目录。
+
+### 验证结果（终值实测）
+
+- `precheck.sh --all` 终判：branch/scope/spec-first/build/consistency/reuse/deps/security 全绿；唯一红=check_test 66 失败（D11 预存整合债：27 个守门测试 stale `../upstream/hermes-studio` 路径，两树对拍实证非本轮引入；本轮零源码改动）。
+- `inventory-verify`（技能侧裁剪口径）：前端 UI 343/343、store 21/21、controller 534 清单（capped）、端点 534 清单（capped）PASS；TYPEDEF/ORM_SCHEMA（Java 生态维度，本仓无 ORM 层）FAIL 为 P1 告警不阻断（mark-active fail-open 语义）；mark-active ②③ HALLUCINATION=0（修复 1 处端点路径误判后）。
+- `verify-completeness --strict`：占位符清零；`--mark-active` 三关全过，status: active。
+- 独立审查：WARN（有条件通过）→ 9 项问题全部修复（修复回执见技能 references/review-record.md）→ 升 PASS。
+- 指纹基线：主树域重采集（total=108205，含本地不入库目录——SessionStart 同域对账），落 `.swarm-yuan/project-fingerprint`。
