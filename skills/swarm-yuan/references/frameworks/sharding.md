@@ -232,8 +232,21 @@ cmd:
 expect: always
 ```
 
+### 规律：聚合函数外包表达式阻断归并（COALESCE/IFNULL/NVL 包 SUM 等）
+- **适用版本**: shardingsphere 5.5.x（归并引擎按聚合函数识别结果集合并策略）
+- **规律**: 无分片键的聚合查询中，聚合函数一旦被外层表达式包裹（`COALESCE(SUM(amount),0)`、`IFNULL(SUM(x),0)`、`NVL(...)`、`CASE WHEN SUM(...)`），归并器不再把它识别为可合并聚合，只返回部分分片的中间结果。R141 实栈实测：3 行分落两表（金额 10.25/20.50/30.75），`COALESCE(SUM(amount),0)` 返回 41.00（漏 20.50），原生 `SUM(amount)` 返回 61.50。空表 NULL 应在应用层归一（如 `BigDecimal.ZERO`），不要用 SQL 包裹。
+- **违反后果**: 汇总金额/数量静默少算，且因 SQL 合法、单测若未覆盖跨表数据几乎不可见——是最隐蔽的一类分片数据错误。
+- **验证方法**: mapper XML 中检索 `(coalesce|ifnull|nvl|case)\s*\(\s*(sum|count|avg|max|min)\s*\(` → warn；聚合空值归一改到 Service 层并补跨表聚合用例。
+- **对应门禁**: fw_sharding_unsupported_sql(warn)
+
+```verify
+id: sharding-r15
+cmd: 
+expect: always
+```
+
 <!--
-共 14 条规律（≥12 门槛）。每条规律均挂门禁 id 或人工检查，无游离规律。
+共 15 条规律（≥12 门槛）。每条规律均挂门禁 id 或人工检查，无游离规律。
 verify-framework-ruleset.sh 会扫描每个"### 规律"小节体内"对应门禁/人工检查"关键字，缺失则 NOGATE 报错。
 -->
 
@@ -248,7 +261,7 @@ verify-framework-ruleset.sh 会扫描每个"### 规律"小节体内"对应门禁
 | fw_sharding_order_merge | warn | 引用分片表且含 ORDER BY/LIMIT 的 select 块无分片键 → warn 归并/深分页 | SHARDED_TABLES SHARDING_KEY_COLUMNS MYBATIS_MAPPER_DIRS | —（归并放大） |
 | fw_sharding_keygen | warn | `useGeneratedKeys` + insert 目标为分片表 → warn 改用 SNOWFLAKE/UUID keyGenerator | SHARDED_TABLES MYBATIS_MAPPER_DIRS | —（主键重复风险） |
 | fw_sharding_xa | warn | 同 Java 文件含 `@Transactional` 与 ≥2 个分片表名 → warn 显式 XA/Seata | SHARDED_TABLES | —（分布式一致性） |
-| fw_sharding_unsupported_sql | warn | 检出 `LOAD DATA`/`LOAD XML`/`CASE WHEN…SELECT` → warn 核对 limitation 清单 | MYBATIS_MAPPER_DIRS | —（limitation 契约） |
+| fw_sharding_unsupported_sql | warn | 检出 `LOAD DATA`/`LOAD XML`/`CASE WHEN…SELECT`/聚合函数外包表达式（`COALESCE(SUM(...))`）→ warn 核对 limitation 清单 | MYBATIS_MAPPER_DIRS | —（limitation 契约/归并静默少算） |
 | fw_sharding_hint | warn | Java 含 `HintManager` 但无 `close()` 且无 try-with-resources → warn ThreadLocal 泄漏 | （扫描 PROJECT_DIR 下 *.java） | CWE-772（ThreadLocal 未释放，资源生命周期） |
 
 <!--
