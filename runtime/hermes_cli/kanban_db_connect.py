@@ -894,6 +894,10 @@ _LATER_TASK_COLUMNS = (
     ("block_recurrences", "block_recurrences INTEGER NOT NULL DEFAULT 0"),
     # Spawn-time start fingerprint of worker_pid (PID-reuse guard; NULL = legacy row).
     ("worker_started_at", "worker_started_at INTEGER"),
+    # HERMES_CUSTOM[estimate]（团队并行二期）：人日估算 + 来源 JSON；
+    # NULL days = 未评估（派发重排保守计 1 人日）。
+    ("estimate_days", "estimate_days REAL"),
+    ("estimate_meta", "estimate_meta TEXT"),
 )
 
 _NOTIFY_SUB_COLUMNS = (
