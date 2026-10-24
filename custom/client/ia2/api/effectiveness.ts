@@ -149,6 +149,14 @@ export interface SwarmCollabCommunication {
     medianGapSeconds: number | null
     dispatchesPerMinute: number | null
   }
+  taskLatency: {
+    basis: string
+    samples: number
+    medianSeconds: number | null
+    p95Seconds: number | null
+    maxSeconds: number | null
+    perTask: Array<{ taskId: string; dispatchTs: string; truthTs: string; seconds: number }>
+  }
   intentFidelity: { anchoredTasks: number; preserved: number; rate: number | null; basis: string; textSimilarity: number | null; textDispatchCount: number }
   deadlockSignals: { backfillCount: number; backfillRatio: number | null; receiptMissing: number; raciMissing: number; nudgeCount: number }
 }
@@ -226,6 +234,7 @@ export type SwarmBenchMetricKey =
   | 'backfillRatio'
   | 'echoPassRate'
   | 'byzantineBcr'
+  | 'taskLatencyMedianSeconds'
 
 export interface SwarmBenchMetric {
   key: SwarmBenchMetricKey

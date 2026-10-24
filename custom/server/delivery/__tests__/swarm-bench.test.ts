@@ -22,13 +22,14 @@ interface ReadoutOpts {
   backfill?: number | null
   echo?: number | null
   bcr?: number | null
+  latency?: number | null
   sources?: string[]
 }
 
 function mkReadout(opts: ReadoutOpts = {}): SwarmCollabReadout {
   const {
     run = 'r', done = 0, total = 0, chars = 0, tasks = 0,
-    fidelity = null, backfill = null, echo = null, bcr = null, sources = [],
+    fidelity = null, backfill = null, echo = null, bcr = null, latency = null, sources = [],
   } = opts
   return {
     run,
@@ -57,6 +58,14 @@ function mkReadout(opts: ReadoutOpts = {}): SwarmCollabReadout {
         spanSeconds: null,
         medianGapSeconds: null,
         dispatchesPerMinute: null,
+      },
+      taskLatency: {
+        basis: 'dispatch-to-first-truth',
+        samples: latency == null ? 0 : 1,
+        medianSeconds: latency,
+        p95Seconds: latency,
+        maxSeconds: latency,
+        perTask: [],
       },
       intentFidelity: {
         anchoredTasks: 0,
@@ -101,7 +110,7 @@ function entryOf(run: string, opts: Omit<ReadoutOpts, 'run'>): { run: string; re
 
 describe('评测榜 · 指标与名次（纯函数）', () => {
   it('指标换算：完成率/每完成锚成本；无完成锚 → null', () => {
-    const v = benchValuesOf(mkReadout({ done: 5, total: 10, chars: 1000, tasks: 10, fidelity: 0.8, backfill: 0.2, echo: 0.5, bcr: 0.75 }))
+    const v = benchValuesOf(mkReadout({ done: 5, total: 10, chars: 1000, tasks: 10, fidelity: 0.8, backfill: 0.2, echo: 0.5, bcr: 0.75, latency: 900 }))
     expect(v.completionRate).toBeCloseTo(0.5)
     expect(v.morCharsPerTask).toBeCloseTo(100)
     expect(v.charsPerCompletedTask).toBeCloseTo(200)
@@ -109,7 +118,19 @@ describe('评测榜 · 指标与名次（纯函数）', () => {
     expect(v.backfillRatio).toBeCloseTo(0.2)
     expect(v.echoPassRate).toBeCloseTo(0.5)
     expect(v.byzantineBcr).toBeCloseTo(0.75)
+    expect(v.taskLatencyMedianSeconds).toBe(900)
     expect(benchValuesOf(mkReadout({ done: 0, total: 3, chars: 900, tasks: 3 })).charsPerCompletedTask).toBeNull()
+  })
+
+  it('锚点时延越低越好；缺席不参与名次', () => {
+    const report = buildSwarmBench([
+      entryOf('fast', { done: 1, total: 1, chars: 100, tasks: 1, latency: 600 }),
+      entryOf('slow', { done: 1, total: 1, chars: 100, tasks: 1, latency: 1200 }),
+    ])
+    const byRun = new Map(report.entries.map(e => [e.run, e]))
+    expect(byRun.get('fast')?.ranks.taskLatencyMedianSeconds).toBe(1)
+    expect(byRun.get('slow')?.ranks.taskLatencyMedianSeconds).toBe(2)
+    expect(report.metrics.find(m => m.key === 'taskLatencyMedianSeconds')?.direction).toBe('lower')
   })
 
   it('逐指标名次（并列同名次）＋综合名次=可用指标平均名次', () => {
@@ -233,6 +254,7 @@ describe('评测榜 · 端点（夹具端到端）', () => {
     expect(body.pareto.frontierSize).toBeGreaterThanOrEqual(1)
     const a = body.entries.find(e => e.run === RUN_A)
     expect(a?.values.completionRate).toBeCloseTo(2 / 4) // 4 任务 2 完成
+    expect(a?.values.taskLatencyMedianSeconds).toBe(3600) // 两条派发→真值各 1h
   })
 
   it('?runs= 显式单轮 → 只入该轮；非法 run → 400', async () => {

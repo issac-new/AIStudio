@@ -18,6 +18,8 @@ export interface DispatchLine {
   chars: number
   taskId: string | null
   moduleSlug: string | null
+  /** 源文件行号（用于判定真值行是否发生在派发之后） */
+  lineIndex: number
 }
 
 /** issues.log 轻量行（`ISSUE|key|owner|desc`） */
@@ -77,6 +79,23 @@ export interface DispatchCadence {
   dispatchesPerMinute: number | null
 }
 
+/** 任务锚点时延（D22：派发→首个 ✓ 真值，不含后续评审/回执） */
+export interface TaskLatencySample {
+  taskId: string
+  dispatchTs: string
+  truthTs: string
+  seconds: number
+}
+
+export interface TaskLatencyReadout {
+  basis: 'dispatch-to-first-truth'
+  samples: number
+  medianSeconds: number | null
+  p95Seconds: number | null
+  maxSeconds: number | null
+  perTask: TaskLatencySample[]
+}
+
 export interface SwarmCollabReadout {
   run: string
   generatedAt: string
@@ -94,6 +113,8 @@ export interface SwarmCollabReadout {
     topology: TopologyReadout
     /** 派发节拍（日志只有时分秒；非端到端任务时延，D16） */
     cadence: DispatchCadence
+    /** 任务锚点时延（D22：派发→首个 ✓ 真值；无样本如实 null） */
+    taskLatency: TaskLatencyReadout
     intentFidelity: IntentFidelity
     deadlockSignals: {
       /** 回灌类代偿条数（互相等待未闭环的补登） */
@@ -177,8 +198,9 @@ const DISPATCH_RE = /^\[mux (\d{2}:\d{2}:\d{2})\] \[([\w.-]+)\] 派发 \(\$(\S+)
 /** scenario.log → 派发行（坏行跳过；正文截 2000 字符防单行爆内存） */
 export function parseScenarioDispatches(text: string): DispatchLine[] {
   const out: DispatchLine[] = []
-  for (const raw of text.split('\n')) {
-    const line = raw.trimEnd()
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trimEnd()
     const m = DISPATCH_RE.exec(line)
     if (!m) continue
     const body = m[5].slice(0, 2000)
@@ -187,6 +209,7 @@ export function parseScenarioDispatches(text: string): DispatchLine[] {
       chars: line.length,
       taskId: TASK_ID_RE.exec(body)?.[0] ?? null,
       moduleSlug: MODULE_SLUG_RE.exec(body)?.[0] ?? null,
+      lineIndex: i,
     })
   }
   return out
@@ -290,6 +313,79 @@ export function cadenceOf(dispatches: DispatchLine[]): DispatchCadence {
   }
 }
 
+const TRUTH_RE = /^\[mux (\d{2}:\d{2}:\d{2})\] \[真值\]\s*(.*)$/
+
+export interface TruthAnchor {
+  ts: string
+  taskIds: string[]
+  lineIndex: number
+}
+
+/** scenario.log → 带时间戳的 ✓ 真值行（✗ 超时行不计，D23） */
+export function parseTruthAnchors(text: string): TruthAnchor[] {
+  const out: TruthAnchor[] = []
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trimEnd()
+    const m = TRUTH_RE.exec(line)
+    if (!m || line.includes('✗') || !line.includes('✓')) continue
+    const taskIds = [...new Set(m[2].match(new RegExp(TASK_ID_RE.source, 'g')) ?? [])]
+    if (taskIds.length) out.push({ ts: m[1], taskIds, lineIndex: i })
+  }
+  return out
+}
+
+function secondsOfDay(ts: string): number | null {
+  const m = /^(\d{2}):(\d{2}):(\d{2})$/.exec(ts)
+  return m ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : null
+}
+
+/** 任务锚点时延：派发→之后首个 ✓ 真值（跨零点 +24h；无样本如实空） */
+export function taskLatencyOf(dispatches: DispatchLine[], anchors: TruthAnchor[]): TaskLatencyReadout {
+  const firstDispatch = new Map<string, { ts: string; seconds: number; lineIndex: number }>()
+  for (const d of dispatches) {
+    if (!d.taskId || firstDispatch.has(d.taskId)) continue
+    const seconds = secondsOfDay(d.ts)
+    if (seconds != null) firstDispatch.set(d.taskId, { ts: d.ts, seconds, lineIndex: d.lineIndex })
+  }
+  const firstTruth = new Map<string, { ts: string; seconds: number; lineIndex: number }>()
+  for (const t of anchors) {
+    const seconds = secondsOfDay(t.ts)
+    if (seconds == null) continue
+    for (const id of t.taskIds) {
+      const start = firstDispatch.get(id)
+      if (!start || t.lineIndex <= start.lineIndex || firstTruth.has(id)) continue
+      firstTruth.set(id, { ts: t.ts, seconds, lineIndex: t.lineIndex })
+    }
+  }
+  const perTask: TaskLatencySample[] = []
+  for (const [taskId, start] of firstDispatch) {
+    const truth = firstTruth.get(taskId)
+    if (!truth) continue
+    const delta = truth.seconds - start.seconds
+    perTask.push({
+      taskId,
+      dispatchTs: start.ts,
+      truthTs: truth.ts,
+      seconds: delta < 0 ? delta + 86400 : delta,
+    })
+  }
+  perTask.sort((a, b) => b.seconds - a.seconds || a.taskId.localeCompare(b.taskId))
+  const secs = perTask.map(p => p.seconds).sort((a, b) => a - b)
+  if (!secs.length) {
+    return { basis: 'dispatch-to-first-truth', samples: 0, medianSeconds: null, p95Seconds: null, maxSeconds: null, perTask: [] }
+  }
+  const p95Index = Math.min(secs.length - 1, Math.ceil(secs.length * 0.95) - 1)
+  return {
+    basis: 'dispatch-to-first-truth',
+    samples: secs.length,
+    medianSeconds: median(secs),
+    p95Seconds: secs[p95Index],
+    maxSeconds: secs[secs.length - 1],
+    perTask: perTask.slice(0, 50),
+  }
+}
+
 /** 字符 bigram Dice 相似度（D13：无模型依赖、可回放；CJK 友好；短文本(<2 字符)按全等判） */
 export function textSimilarityOf(a: string, b: string): number {
   const norm = (s: string) => s.replace(/\s+/g, '').slice(0, 4000)
@@ -370,6 +466,7 @@ export interface SwarmCollabInput {
 /** 四维度读数总装（纯函数；输入缺席组如实 null/0，不编造） */
 export function swarmCollabOf(input: SwarmCollabInput): SwarmCollabReadout {
   const dispatches = input.scenarioLog != null ? parseScenarioDispatches(input.scenarioLog) : []
+  const truthAnchors = input.scenarioLog != null ? parseTruthAnchors(input.scenarioLog) : []
   const issues = input.issuesLog != null ? parseIssuesLog(input.issuesLog) : []
   const done = input.scenarioLog != null ? completedTaskIds(input.scenarioLog) : new Set<string>()
 
@@ -496,6 +593,7 @@ export function swarmCollabOf(input: SwarmCollabInput): SwarmCollabReadout {
       morBasis: 'chars',
       topology: topologyOf(dispatches, [...allAgents].sort()),
       cadence: cadenceOf(dispatches),
+      taskLatency: taskLatencyOf(dispatches, truthAnchors),
       intentFidelity,
       deadlockSignals: {
         backfillCount: backfills.length,
