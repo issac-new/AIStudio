@@ -52,6 +52,8 @@ def main():
     # 群体协作四维度读数（2026-10-24 吸收轮）：通信拓扑/信用分配/帕累托/社会
     # 动力学。同上只透传不进判据（spec 2026-10-24-swarm-eval-benchmark-absorption.md D2）。
     swarm = load(a.dir, "swarm-collab.json") or {}
+    # 跨轮评测榜（2026-10-24 聚合层）：同样只透传不进判据。
+    bench = load(a.dir, "swarm-bench.json") or {}
 
     reg = registry.get("registry") or {}
     cons = reg.get("consumption") or {}
@@ -189,6 +191,13 @@ def main():
         "businessSummary": biz.get("summary"),
         # 群体协作四维度读数（2026-10-24 吸收轮；端点缺席如实缺席）
         "swarmCollab": swarm.get("readout"),
+        # 跨轮评测榜（2026-10-24 聚合层；端点缺席/不可用如实 null）
+        "swarmBench": ({
+            "runsScanned": bench.get("runsScanned"),
+            "entries": bench.get("entries") or [],
+            "frontierSize": (bench.get("pareto") or {}).get("frontierSize"),
+            "note": bench.get("note"),
+        } if bench.get("available") else None),
         "triangle": {
             "bySource": by_source,
             "conflicts": triangle.get("conflicts"),
