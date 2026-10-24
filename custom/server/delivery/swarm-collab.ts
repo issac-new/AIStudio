@@ -66,14 +66,7 @@ export interface SwarmCollabReadout {
     /** 通信开销比字符口径：每任务协作消息字符（MOR 代理；token 口径挂账） */
     morCharsPerTask: number | null
     morBasis: 'chars'
-    intentFidelity: {
-      /** 有派发行为的任务数（可判锚点） */
-      anchoredTasks: number
-      /** 派发行同时保住任务 ID+模块锚的任务数 */
-      preserved: number
-      rate: number | null
-      basis: 'anchor'
-    }
+    intentFidelity: IntentFidelity
     deadlockSignals: {
       /** 回灌类代偿条数（互相等待未闭环的补登） */
       backfillCount: number
@@ -108,8 +101,44 @@ export interface SwarmCollabReadout {
     gateFailIssues: number
     /** 流程拦截面：问题单发现总数（发现=被拦截，非漏网） */
     issuesCaught: number
-    byzantine: { status: 'no_data'; note: string }
+    byzantine: ByzantineReadout
   }
+}
+
+/** 意图保真度（D13 双口径）：dialog-text=任务书↔派发明细字符双线相似度；anchor=锚点回退 */
+export interface IntentFidelity {
+  anchoredTasks: number
+  /** anchor 口径：保住任务 ID+模块锚的任务数；dialog-text 口径下仍给出（对照面） */
+  preserved: number
+  rate: number | null
+  basis: 'anchor' | 'dialog-text'
+  /** dialog-text 口径：各派发明细与任务书的相似度均值（字符 bigram Dice；缺席=null） */
+  textSimilarity: number | null
+  /** dialog-text 口径参与比对的派发明细条数 */
+  textDispatchCount: number
+}
+
+/** 拜占庭容错读数（D11）：注入标记实测三态；无注入=no_data 如实 */
+export interface ByzantineReadout {
+  status: 'no_data' | 'injected'
+  note: string
+  injections?: Array<{ target: string; mode: string; at: string }>
+  /** 每个被注入目标的拦截证据（事后口径：其名下问题单数） */
+  catchEvidence?: Array<{ target: string; issuesOwned: number }>
+  /** BCR 雏形：存在拦截证据的注入占比（分母=注入数；无注入=null） */
+  bcr?: number | null
+  /** 每个注入点之后的派发数（暴露窗；轮级时间戳不可得，如实以派发计数降档） */
+  exposureDispatches?: number[]
+}
+
+/** 消融对比（D10 实验性 LOO）：基线 run 与消融 run 的任务完成率差分=被消融角色 criticality */
+export interface AblationCompare {
+  roles: string[]
+  base: { run: string; done: number; total: number; rate: number | null }
+  ablated: { run: string; done: number; total: number; rate: number | null }
+  /** 实验性 criticality：基线完成率 − 消融完成率（负=移除后更好） */
+  criticality: number | null
+  basis: 'experimental-leave-one-out'
 }
 
 /** 任务 ID：AN-XXX 单段与 UC-RFD-001 多段两种形态（实测 run22 派发行） */
@@ -162,6 +191,62 @@ function rate(numer: number, denom: number): number | null {
   return denom > 0 ? numer / denom : null
 }
 
+/** 字符 bigram Dice 相似度（D13：无模型依赖、可回放；CJK 友好；短文本(<2 字符)按全等判） */
+export function textSimilarityOf(a: string, b: string): number {
+  const norm = (s: string) => s.replace(/\s+/g, '').slice(0, 4000)
+  const x = norm(a), y = norm(b)
+  if (!x.length || !y.length) return 0
+  if (x === y) return 1
+  const grams = (s: string) => {
+    const m = new Map<string, number>()
+    for (let i = 0; i < s.length - 1; i++) {
+      const g = s.slice(i, i + 2)
+      m.set(g, (m.get(g) ?? 0) + 1)
+    }
+    return m
+  }
+  const gx = grams(x), gy = grams(y)
+  let overlap = 0, total = 0
+  for (const v of gx.values()) total += v
+  for (const v of gy.values()) total += v
+  for (const [g, n] of gx) {
+    const m = gy.get(g)
+    if (m) overlap += Math.min(n, m)
+  }
+  return total > 0 ? (2 * overlap) / total : 0
+}
+
+const BYZ_MARKER_RE = /\[BYZANTINE-INJECT mode=(\w+) target=([\w.-]+) ts=([^\]]+)\]/
+
+/** scenario.log → 拜占庭注入标记（D11：dispatch_in_room 注入期写入，可回查） */
+export function parseByzantineInjections(text: string | null): Array<{ target: string; mode: string; at: string; lineIndex: number }> {
+  if (text == null) return []
+  const out: Array<{ target: string; mode: string; at: string; lineIndex: number }> = []
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const m = BYZ_MARKER_RE.exec(lines[i])
+    if (m) out.push({ mode: m[1], target: m[2], at: m[3], lineIndex: i })
+  }
+  return out
+}
+
+/** 消融对比纯函数（D10）：基线/消融两 run 的任务完成率差分 */
+export function ablationCompareOf(
+  base: { run: string; taskCompletion: { done: number; total: number } },
+  ablated: { run: string; taskCompletion: { done: number; total: number } },
+  roles: string[],
+): AblationCompare {
+  const r1 = rate(base.taskCompletion.done, base.taskCompletion.total)
+  const r2 = rate(ablated.taskCompletion.done, ablated.taskCompletion.total)
+  return {
+    roles,
+    base: { run: base.run, done: base.taskCompletion.done, total: base.taskCompletion.total, rate: r1 },
+    ablated: { run: ablated.run, done: ablated.taskCompletion.done, total: ablated.taskCompletion.total, rate: r2 },
+    criticality: r1 != null && r2 != null ? r1 - r2 : null,
+    basis: 'experimental-leave-one-out',
+  }
+}
+
 /** 非支配前沿标记（成本越小、收益越好；被任何点支配=离前沿） */
 export function markParetoFrontier(points: Array<Omit<ParetoPoint, 'onFrontier'>>): ParetoPoint[] {
   return points.map(p => ({
@@ -178,6 +263,9 @@ export interface SwarmCollabInput {
   issuesLog: string | null
   uatVerdicts: Array<{ ac: string; verdict: string }>
   gateDecisions: Array<{ decision: string }>
+  /** r18 dialog 全文（2026-10-24 清账批 D13）：任务书原文与各任务派发明细原文。
+   *  缺席（未启用 dialog 采集的 run）时意图保真度回退锚点口径。 */
+  intentDialogs?: { taskBook: string; dispatches: string[] } | null
 }
 
 /** 四维度读数总装（纯函数；输入缺席组如实 null/0，不编造） */
@@ -195,6 +283,21 @@ export function swarmCollabOf(input: SwarmCollabInput): SwarmCollabReadout {
   const preserved = anchoredTasks.filter(id =>
     dispatches.some(d => d.taskId === id && d.moduleSlug != null && d.text.includes(id)),
   )
+  // D13 双口径：dialog 全文在场=字符 bigram 相似度；缺席回退锚点口径
+  const dlg = input.intentDialogs
+  const useDialogText = Boolean(dlg && dlg.taskBook.trim() && dlg.dispatches.some(t => t.trim()))
+  const dialogTexts = useDialogText ? dlg!.dispatches.filter(t => t.trim()) : []
+  const textSim = useDialogText && dialogTexts.length
+    ? dialogTexts.reduce((s, t) => s + textSimilarityOf(dlg!.taskBook, t), 0) / dialogTexts.length
+    : null
+  const intentFidelity: IntentFidelity = {
+    anchoredTasks: anchoredTasks.length,
+    preserved: preserved.length,
+    rate: useDialogText ? textSim : rate(preserved.length, anchoredTasks.length),
+    basis: useDialogText ? 'dialog-text' : 'anchor',
+    textSimilarity: textSim,
+    textDispatchCount: dialogTexts.length,
+  }
   const backfills = input.ledgerRows.filter(r => r.type === 'dispatch-preset' && r.detail.trim().startsWith('backfill'))
   const nudges = input.ledgerRows.filter(r => r.type === 'nudge')
 
@@ -247,6 +350,34 @@ export function swarmCollabOf(input: SwarmCollabInput): SwarmCollabReadout {
   const points = markParetoFrontier(rawPoints)
 
   // ── 维度四：社会动力学 ──
+  // D11 拜占庭读数：注入标记（scenario.log）→ 实测三态；拦截证据=被注入目标名下问题单
+  const byzInjections = parseByzantineInjections(input.scenarioLog)
+  const scenarioLines = input.scenarioLog != null ? input.scenarioLog.split('\n') : []
+  const dispatchLineIdx = new Set(
+    scenarioLines.map((l, i) => (DISPATCH_RE.test(l.trimEnd()) ? i : -1)).filter(i => i >= 0),
+  )
+  const byzReadout: ByzantineReadout = byzInjections.length
+    ? {
+        status: 'injected',
+        note: '注入标记实测（[BYZANTINE-INJECT]）；拦截证据=目标名下问题单（事后口径，非实时隔离）',
+        injections: byzInjections.map(b => ({ target: b.target, mode: b.mode, at: b.at })),
+        catchEvidence: [...new Set(byzInjections.map(b => b.target))].map(target => ({
+          target,
+          issuesOwned: issues.filter(i => i.owner === target || i.owner === target.replace(/-agent$/, '')).length,
+        })),
+        bcr: rate(
+          new Set(
+            byzInjections
+              .map(b => b.target)
+              .filter(t => issues.some(i => i.owner === t || i.owner === t.replace(/-agent$/, ''))),
+          ).size,
+          new Set(byzInjections.map(b => b.target)).size,
+        ),
+        exposureDispatches: byzInjections.map(
+          b => [...dispatchLineIdx].filter(i => i > b.lineIndex).length,
+        ),
+      }
+    : { status: 'no_data', note: '本轮无拜占庭注入标记（MX_BYZANTINE_SPEC 未启用）；不造数' }
   const uat = input.uatVerdicts
   const pass = uat.filter(v => v.verdict === 'pass').length
   const conditional = uat.filter(v => v.verdict === 'conditional').length
@@ -264,12 +395,7 @@ export function swarmCollabOf(input: SwarmCollabInput): SwarmCollabReadout {
       taskIds,
       morCharsPerTask: rate(dispatchChars, taskIds.length),
       morBasis: 'chars',
-      intentFidelity: {
-        anchoredTasks: anchoredTasks.length,
-        preserved: preserved.length,
-        rate: rate(preserved.length, anchoredTasks.length),
-        basis: 'anchor',
-      },
+      intentFidelity,
       deadlockSignals: {
         backfillCount: backfills.length,
         backfillRatio: rate(backfills.length, input.ledgerRows.length),
@@ -292,7 +418,7 @@ export function swarmCollabOf(input: SwarmCollabInput): SwarmCollabReadout {
       gateRejects: input.gateDecisions.filter(g => g.decision === 'reject').length,
       gateFailIssues: issues.filter(i => i.key === 'g5-ready-fail' || i.key === 'g5-fail-settled').length,
       issuesCaught: issues.length,
-      byzantine: { status: 'no_data', note: '行为级拜占庭注入需专门 run（spec D7 挂账）；本读数不造数' },
+      byzantine: byzReadout,
     },
   }
 }

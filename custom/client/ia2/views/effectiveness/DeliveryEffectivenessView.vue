@@ -356,14 +356,16 @@ function cellClass(count: number): string {
             <div class="eff-swarm__dim" data-testid="eff-swarm-comm">
               <span class="eff-swarm__dim-name">通信拓扑</span>
               <span>每任务协作 {{ swarm.readout.communication.morCharsPerTask != null ? Math.round(swarm.readout.communication.morCharsPerTask) : '—' }} 字符（开销比·字符口径）</span>
-              <span>锚点保真 {{ fmtPct(swarm.readout.communication.intentFidelity.rate) }}（{{ swarm.readout.communication.intentFidelity.preserved }}/{{ swarm.readout.communication.intentFidelity.anchoredTasks }}，任务 ID+模块跨跳保持）</span>
+              <span>意图保真 {{ fmtPct(swarm.readout.communication.intentFidelity.rate) }}（口径={{ swarm.readout.communication.intentFidelity.basis === 'dialog-text' ? '消息全文相似度' : '任务 ID+模块锚点' }}{{ swarm.readout.communication.intentFidelity.basis === 'dialog-text' ? `，${swarm.readout.communication.intentFidelity.textDispatchCount} 条派发明细` : `，${swarm.readout.communication.intentFidelity.preserved}/${swarm.readout.communication.intentFidelity.anchoredTasks}` }}）</span>
               <span>等待信号：回灌代偿 {{ swarm.readout.communication.deadlockSignals.backfillCount }} · 回执缺席 {{ swarm.readout.communication.deadlockSignals.receiptMissing }} · RACI 缺发 {{ swarm.readout.communication.deadlockSignals.raciMissing }} · 催办 {{ swarm.readout.communication.deadlockSignals.nudgeCount }}</span>
             </div>
             <div class="eff-swarm__dim" data-testid="eff-swarm-social">
               <span class="eff-swarm__dim-name">社会动力学</span>
               <span>UAT 无条件通过 {{ swarm.readout.social.uat.pass }}/{{ swarm.readout.social.uat.total }}（{{ fmtPct(swarm.readout.social.unconditionalPassRate) }}）· 打回 {{ swarm.readout.social.uat.reject }}</span>
               <span>G5 发布门打回 {{ swarm.readout.social.gateRejects }} 次 · 打回类问题单 {{ swarm.readout.social.gateFailIssues }} 张（打回=批判性在线的证据）</span>
-              <span>流程拦截面：问题单 {{ swarm.readout.social.issuesCaught }} 张 · 拜占庭注入 {{ swarm.readout.social.byzantine.status === 'no_data' ? '未做（挂账）' : swarm.readout.social.byzantine.status }}</span>
+              <span>流程拦截面：问题单 {{ swarm.readout.social.issuesCaught }} 张 · 拜占庭注入 {{ swarm.readout.social.byzantine.status === 'injected'
+            ? `已注入 ${(swarm.readout.social.byzantine.injections ?? []).length} 次（模式：${[...new Set((swarm.readout.social.byzantine.injections ?? []).map(i => i.mode))].join('/')}）· 拦截率 BCR ${fmtPct(swarm.readout.social.byzantine.bcr)} · 暴露派发 ${((swarm.readout.social.byzantine.exposureDispatches ?? [])).join('/')} 条`
+            : '未做（注入机制已就绪，MX_BYZANTINE_SPEC 启用后实测）' }}</span>
             </div>
           </div>
           <div class="eff-int__entries">

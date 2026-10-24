@@ -133,7 +133,7 @@ export interface SwarmCollabCommunication {
   taskIds: string[]
   morCharsPerTask: number | null
   morBasis: string
-  intentFidelity: { anchoredTasks: number; preserved: number; rate: number | null; basis: string }
+  intentFidelity: { anchoredTasks: number; preserved: number; rate: number | null; basis: string; textSimilarity: number | null; textDispatchCount: number }
   deadlockSignals: { backfillCount: number; backfillRatio: number | null; receiptMissing: number; raciMissing: number; nudgeCount: number }
 }
 export interface SwarmCollabCredit {
@@ -162,7 +162,14 @@ export interface SwarmCollabSocial {
   gateRejects: number
   gateFailIssues: number
   issuesCaught: number
-  byzantine: { status: string; note: string }
+  byzantine: {
+    status: string
+    note: string
+    injections?: Array<{ target: string; mode: string; at: string }>
+    catchEvidence?: Array<{ target: string; issuesOwned: number }>
+    bcr?: number | null
+    exposureDispatches?: number[]
+  }
 }
 export interface SwarmCollabReadout {
   run: string
@@ -173,12 +180,20 @@ export interface SwarmCollabReadout {
   pareto: SwarmCollabPareto
   social: SwarmCollabSocial
 }
+export interface SwarmCollabAblation {
+  roles: string[]
+  base: { run: string; done: number; total: number; rate: number | null }
+  ablated: { run: string; done: number; total: number; rate: number | null }
+  criticality: number | null
+  basis: string
+}
 export interface SwarmCollabResponse {
   available: boolean
   reason?: string
   run?: string
   note?: string
   readout?: SwarmCollabReadout
+  ablation?: SwarmCollabAblation
 }
 
 export function fetchSwarmCollab(run?: string): Promise<SwarmCollabResponse> {

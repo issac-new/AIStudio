@@ -118,3 +118,36 @@ describe('summarizeWindow', () => {
     expect(w.totalTokens).toBe(0)
   })
 })
+
+
+// ── 2026-10-24 清账批 D14：byProfile token 分桶 ──
+describe('obs-signals byProfile 分桶（清账批 D14）', () => {
+  const base = (over: Record<string, unknown>) => ({
+    type: 'chunk', kind: 'llm_span', phase: 'post', model: 'm1',
+    usage: { input_tokens: 10, output_tokens: 5 }, ...over,
+  })
+
+  it('带 profile 的行归桶、无 profile 行不归桶（存量 span 如实排除）', () => {
+    const rows = [
+      base({ profile: 'bella-agent', usage: { input_tokens: 10, output_tokens: 5 } }),
+      base({ profile: 'bella-agent', usage: { input_tokens: 20, output_tokens: 5 } }),
+      base({ profile: 'qi-agent', usage: { input_tokens: 7, output_tokens: 3 } }),
+      base({}), // 无 profile（存量形态）
+    ]
+    const r = buildObsSignals(rows as any, { days: 7 })
+    expect(r.byProfile).toHaveLength(2)
+    const bella = r.byProfile.find(x => x.profile === 'bella-agent')
+    expect(bella?.llmCalls).toBe(2)
+    expect(bella?.tokens.input).toBe(30)
+    const qi = r.byProfile.find(x => x.profile === 'qi-agent')
+    expect(qi?.tokens.input).toBe(7)
+    // 总量不受分桶影响（4 次全计）
+    expect(r.totals.llmCalls).toBe(4)
+  })
+
+  it('全无 profile → byProfile 空数组（不造数）', () => {
+    const r = buildObsSignals([base({})] as any, { days: 7 })
+    expect(r.byProfile).toEqual([])
+    expect(r.totals.llmCalls).toBe(1)
+  })
+})
