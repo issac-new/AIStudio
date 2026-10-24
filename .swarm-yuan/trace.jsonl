@@ -133,3 +133,13 @@
 {"ts":"2026-10-16T00:24:27Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":"/Users/cuishi/lab/ncwk/.claude/skills/ncwk-dev"}
 {"ts":"2026-10-16T00:31:19Z","node":"⑨终检","actor":"主AI","tool":"verify-completeness --strict + mark-active","status":"done","note":"ncwk-dev 全量重生成已激活；SQL 白名单 16 式/security·sensitive·deps 三修三绿；check_test 3 失败属并行会话在途态（review-record F-3）"}
 {"ts":"2026-10-16T00:31:19Z","node":"⑨终检","actor":"主AI","tool":"mark-active","status":"done","note":"simharness-dev 已激活（同轮）"}
+{"ts":"2026-10-24T15:26:29Z","node":"Step1 自检","actor":"主AI","tool":"self-check.sh --check-only","status":"done","note":"11 运行时全装；文档一致全绿；2 条生成器侧告警挂账（FACT_键零消费×15、make-offline-bundle 注释引用）"}
+{"ts":"2026-10-24T15:28:43Z","node":"Step3 探查","actor":"subagent/explore-structure","tool":"并行探查子代理","status":"started","note":"三路并行：结构/规范/代码组织（worktree 干净跟踪态）"}
+{"ts":"2026-10-24T15:28:43Z","node":"Step3 探查","actor":"subagent/explore-conventions","tool":"并行探查子代理","status":"started","note":"三路并行：结构/规范/代码组织（worktree 干净跟踪态）"}
+{"ts":"2026-10-24T15:28:43Z","node":"Step3 探查","actor":"subagent/explore-codeorg","tool":"并行探查子代理","status":"started","note":"三路并行：结构/规范/代码组织（worktree 干净跟踪态）"}
+{"ts":"2026-10-24T15:37:26Z","node":"Step3 探查","actor":"subagent/explore-structure","tool":"结构路探查","status":"done","note":"根层 29 条目 100% 对账（53248）；149 server 域/23 client 域/343 vue/44 mx 脚本/460 patch/332 simharness 文件全量在册"}
+{"ts":"2026-10-24T15:37:26Z","node":"Step3 探查","actor":"subagent/explore-conventions","tool":"规范路探查","status":"done","note":"AGENTS 链条/spec-first L2 判定链/补丁纪律/qgate 体系全提取；发现 pre-commit 垫片引用 ncwk-dev 绝对路径+gate-deny.jsonl 冲突标记残留"}
+{"ts":"2026-10-24T15:42:06Z","node":"Step3 探查","actor":"subagent/explore-codeorg","tool":"代码组织路探查","status":"done","note":"inject 双轨机制/挂载补丁族 80+ 枚/端到端调用链 9 步/依赖边 Top10 双侧全锚"}
+{"ts":"2026-10-24T15:47:00Z","node":"Step6 骨架","actor":"generate-skill.sh","tool":"创建 aistudio-dev 骨架（compliance 档）","status":"started","note":""}
+{"ts":"2026-10-24T16:42:28Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":".claude/skills/aistudio-dev"}
+{"ts":"2026-10-24T16:52:08Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":".claude/skills/aistudio-dev"}
