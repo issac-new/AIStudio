@@ -3,6 +3,7 @@
 //   GET /api/hermes/delivery/digest         —— 跨板交付日报（状态/趋势/卡点/评审老化/停滞候选/建议）
 //   GET /api/hermes/delivery/matrix         —— C×L 效能画像矩阵（每格 需求数+平均介入次数）
 //   GET /api/hermes/delivery/interventions?run=<id> —— 介入归因账本（六类+两层分账+风险信号；缺 run=全 run 聚合）
+//   GET /api/hermes/delivery/swarm-collab?run=<id> —— 群体协作四维度读数（2026-10-24 吸收轮；缺 run=最新 run）
 // 数据源：看板 sqlite（lean 只读器 boards-reader）+ 推演 run 台账/判词（simcenter 同源）。
 // 归档 tar（NVMe）不在扫描面——sources 里如实注明。
 
@@ -14,6 +15,7 @@ import { readAllBoards } from './boards-reader'
 import { buildDigest, type DailyDigest } from './digest'
 import { matrixOf, type DeliveryMatrix } from './matrix'
 import {
+  gateDecisionOf,
   interventionsFromLedger,
   interventionsFromReleaseGate,
   interventionsFromUatVerdicts,
@@ -24,6 +26,7 @@ import {
   type UatVerdictLite,
 } from './interventions'
 import { MATURITY_LEVELS, assessMaturity } from './maturity'
+import { swarmCollabOf, type SwarmCollabReadout } from './swarm-collab'
 
 const router = new Router({ prefix: '/api/hermes/delivery' })
 
@@ -224,6 +227,56 @@ router.get('/maturity', ctx => {
     levels: MATURITY_LEVELS,
     assessment: assessMaturity(entries, autoApprove),
     scope: runParam || 'all',
+  }
+})
+
+// ── GET /swarm-collab?run=<id>（2026-10-24 吸收轮：四维度读数，只观测不进判据） ──
+router.get('/swarm-collab', ctx => {
+  const simRoot = observerSimRootOrNull()
+  if (!simRoot) {
+    ctx.status = 200
+    ctx.body = { available: false, reason: 'SIM 根缺席（OBS_SIM_ROOT 未配置且候选位全空）' }
+    return
+  }
+  const runParam = typeof ctx.query.run === 'string' ? ctx.query.run.trim() : ''
+  if (runParam && !isValidRun(runParam)) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: '非法 run 标识' }
+    return
+  }
+  const run = runParam || listRunDirs(simRoot).sort().pop() || ''
+  const dir = run ? safeRunDir(simRoot, run) : null
+  if (!dir) {
+    ctx.status = 200
+    ctx.body = { available: false, reason: 'run 目录缺席', run }
+    return
+  }
+  const scenarioLog = readTextIfExist(resolve(dir, 'evidence', 'scenario.log'))
+  const issuesLog = readTextIfExist(resolve(dir, 'evidence', 'issues.log'))
+  const ledgerText = readTextIfExist(resolve(dir, 'evidence', 'compensation-ledger.tsv'))
+  const ledgerRows = ledgerText != null ? parseLedgerTsv(ledgerText) : []
+  const uatText = readTextIfExist(resolve(dir, 'evidence', 'uat-verdicts.jsonl'))
+  const gateText = readTextIfExist(resolve(dir, 'evidence', 'release-gate.jsonl'))
+  const readout: SwarmCollabReadout = swarmCollabOf({
+    run,
+    scenarioLog,
+    ledgerRows,
+    issuesLog,
+    uatVerdicts: uatText != null ? uatVerdictsOf(uatText.split('\n')) : [],
+    gateDecisions: gateText != null ? gateText.split('\n').map(l => gateDecisionOf(l)).filter((g): g is { decision: string; actor: string; ts: number } => g != null) : [],
+  })
+  readout.sources = [
+    ...(scenarioLog != null ? [`runs/${run}/evidence/scenario.log`] : []),
+    ...(ledgerText != null ? [`runs/${run}/evidence/compensation-ledger.tsv`] : []),
+    ...(issuesLog != null ? [`runs/${run}/evidence/issues.log`] : []),
+    ...(uatText != null ? [`runs/${run}/evidence/uat-verdicts.jsonl`] : []),
+    ...(gateText != null ? [`runs/${run}/evidence/release-gate.jsonl`] : []),
+  ]
+  ctx.body = {
+    available: true,
+    run,
+    note: '四维度读数（通信拓扑/信用分配/帕累托/社会动力学）：口径=消息字符代理+锚点保真+观察性归因（spec 2026-10-24-swarm-eval-benchmark-absorption.md D3-D8）；只观测不进判据',
+    readout,
   }
 })
 

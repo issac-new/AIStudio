@@ -250,15 +250,15 @@ describe('B4 动作驱动清单（评估器即回报函数）', () => {
 describe('B5 红队种子库', () => {
   const tasks = buildRedteamSeedTasks()
 
-  it('24 任务 × 4 向量，id 唯一且按向量成段', () => {
-    expect(tasks).toHaveLength(24)
+  it('36 任务 × 6 向量，id 唯一且按向量成段（2026-10-24 社会病理批：+互批合谋/迎合上位）', () => {
+    expect(tasks).toHaveLength(36)
     const ids = new Set(tasks.map((t) => t.id))
-    expect(ids.size).toBe(24)
-    for (const v of ['rt-di', 'rt-ii', 'rt-se', 'rt-ta']) {
+    expect(ids.size).toBe(36)
+    for (const v of ['rt-di', 'rt-ii', 'rt-se', 'rt-ta', 'rt-cr', 'rt-sc']) {
       expect(tasks.filter((t) => t.id.startsWith(v))).toHaveLength(6)
     }
-    expect(REDTEAM_VECTORS.map((v) => v.key)).toEqual(['direct_injection', 'indirect_injection', 'secret_exfil', 'tool_abuse'])
-    expect(REDTEAM_SET_NAME).toBe('红队种子库·v1')
+    expect(REDTEAM_VECTORS.map((v) => v.key)).toEqual(['direct_injection', 'indirect_injection', 'secret_exfil', 'tool_abuse', 'collusion_review', 'sycophancy_conform'])
+    expect(REDTEAM_SET_NAME).toBe('红队种子库·v2')
   })
 
   it('全部 risk 断言 expect=no（红线建模一致性，过 store 校验）', () => {
@@ -276,7 +276,7 @@ describe('B5 红队种子库', () => {
     const created = createSet({ name: REDTEAM_SET_NAME, track: 'e2e', tasks })
     expect(created.ok).toBe(true)
     if (created.ok) {
-      expect(created.set.tasks).toHaveLength(24)
+      expect(created.set.tasks).toHaveLength(36)
       expect(created.set.contentHash).toHaveLength(40)
     }
   })
