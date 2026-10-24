@@ -19,6 +19,8 @@ import {
   parseByzantineInjections,
   ablationCompareOf,
   cadenceOf,
+  parseTruthAnchors,
+  taskLatencyOf,
 } from '../swarm-collab'
 import { parseLedgerTsv } from '../interventions'
 import { deliveryRouter } from '../delivery-controller'
@@ -202,6 +204,57 @@ describe('聚合层 · 拓扑与派发节拍（2026-10-24）', () => {
     expect(r.communication.topology.topHub).toBeNull()
     expect(r.communication.cadence.spanSeconds).toBeNull()
     expect(r.communication.cadence.dispatchesPerMinute).toBeNull()
+  })
+})
+
+describe('任务锚点时延（D22/D23）', () => {
+  const log = [
+    '[mux 10:00:00] [a] 派发 ($1): @a-agent:matrix.test 执行任务 AN-A（csw-a 模块）',
+    '[mux 10:05:00] [a] 派发 ($2): @b-agent:matrix.test 执行任务 AN-B（csw-b 模块）',
+    '[mux 10:10:00] [真值] AN-B 产出入仓 ✗（60s 超时）',
+    '[mux 10:30:00] [真值] 仓库出现 AN-A.md ✓',
+    '[mux 11:05:00] [真值] 仓库出现 AN-B.md ✓',
+  ].join('\n')
+
+  it('派发→之后首个✓真值；✗ 不计；中位/P95/最大', () => {
+    const anchors = parseTruthAnchors(log)
+    expect(anchors).toHaveLength(2) // ✗ 行被剔除
+    const l = taskLatencyOf(parseScenarioDispatches(log), anchors)
+    expect(l.samples).toBe(2)
+    expect(l.medianSeconds).toBe(2700) // (1800+3600)/2
+    expect(l.p95Seconds).toBe(3600)
+    expect(l.maxSeconds).toBe(3600)
+    expect(l.perTask.find(p => p.taskId === 'AN-A')?.seconds).toBe(1800)
+    expect(l.perTask.find(p => p.taskId === 'AN-B')?.seconds).toBe(3600)
+    expect(l.basis).toBe('dispatch-to-first-truth')
+  })
+
+  it('跨零点按 +24h 修正', () => {
+    const cross = [
+      '[mux 23:50:00] [a] 派发 ($1): @a-agent:matrix.test 执行任务 AN-X（csw-x 模块）',
+      '[mux 00:10:00] [真值] 仓库出现 AN-X.md ✓',
+    ].join('\n')
+    const l = taskLatencyOf(parseScenarioDispatches(cross), parseTruthAnchors(cross))
+    expect(l.samples).toBe(1)
+    expect(l.medianSeconds).toBe(1200)
+  })
+
+  it('早于派发的旧真值（上一轮/重做）不计', () => {
+    const stale = [
+      '[mux 09:00:00] [真值] 仓库出现 AN-Y.md ✓',
+      '[mux 10:00:00] [a] 派发 ($1): @a-agent:matrix.test 执行任务 AN-Y（csw-y 模块）',
+    ].join('\n')
+    const l = taskLatencyOf(parseScenarioDispatches(stale), parseTruthAnchors(stale))
+    expect(l.samples).toBe(0)
+    expect(l.medianSeconds).toBeNull()
+    expect(l.perTask).toEqual([])
+  })
+
+  it('run22 真实样本：2 个任务有 ✓ 真值', () => {
+    const l = readoutFixture().communication.taskLatency
+    expect(l.samples).toBe(2)
+    expect(l.medianSeconds).not.toBeNull()
+    expect(l.perTask.map(p => p.taskId).sort()).toEqual(['AN-MP', 'AN-PAYCORE'])
   })
 })
 

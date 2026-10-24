@@ -14,6 +14,7 @@ export type BenchMetricKey =
   | 'backfillRatio'
   | 'echoPassRate'
   | 'byzantineBcr'
+  | 'taskLatencyMedianSeconds'
 
 export interface BenchMetricDef {
   key: BenchMetricKey
@@ -31,6 +32,7 @@ export const BENCH_METRICS: BenchMetricDef[] = [
   { key: 'backfillRatio', label: '回灌占比', direction: 'lower', basis: '回灌代偿/台账总条数' },
   { key: 'echoPassRate', label: '回音壁倾向', direction: 'lower', basis: 'UAT 无条件通过率' },
   { key: 'byzantineBcr', label: '拜占庭拦截率', direction: 'higher', basis: '注入轮才有值（BCR）' },
+  { key: 'taskLatencyMedianSeconds', label: '任务锚点时延', direction: 'lower', basis: '派发→首个 ✓ 真值中位（秒）' },
 ]
 
 export interface SwarmBenchInput {
@@ -69,6 +71,7 @@ export function benchValuesOf(readout: SwarmCollabReadout): Record<BenchMetricKe
     backfillRatio: readout.communication.deadlockSignals.backfillRatio,
     echoPassRate: readout.social.unconditionalPassRate,
     byzantineBcr: readout.social.byzantine.bcr ?? null,
+    taskLatencyMedianSeconds: readout.communication.taskLatency.medianSeconds,
   }
 }
 
