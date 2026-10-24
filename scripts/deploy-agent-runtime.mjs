@@ -25,10 +25,15 @@ const findUp = (from, hit) => {
   }
 };
 const overlayRoot = findUp(import.meta.dirname, (d) => {
-  try { return JSON.parse(readFileSync(resolve(d, 'package.json'), 'utf8')).name === 'hermes-overlay'; } catch { return false; }
+  try {
+    // AIStudio 单仓整合轮（2026-10-24）：仓名 hermes-overlay → aistudio，双名兼容
+    //（升级过渡期旧检出仍是 hermes-overlay）。
+    const name = JSON.parse(readFileSync(resolve(d, 'package.json'), 'utf8')).name;
+    return name === 'aistudio' || name === 'hermes-overlay';
+  } catch { return false; }
 });
 if (!overlayRoot) {
-  console.error(`[deploy-agent-runtime] fail-fast：从 ${import.meta.dirname} 向上找不到 name=hermes-overlay 的 package.json，无法定 overlay 根`);
+  console.error(`[deploy-agent-runtime] fail-fast：从 ${import.meta.dirname} 向上找不到 name=aistudio|hermes-overlay 的 package.json，无法定 overlay 根`);
   process.exit(1);
 }
 const ncwkRoot = findUp(overlayRoot, (d) => {
