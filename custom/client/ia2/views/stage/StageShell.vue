@@ -278,60 +278,84 @@ const currentProps = computed(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 18px 16px;
+  gap: 14px;
+  padding: 18px 24px 20px;
   overflow: hidden;
 }
-.stg__head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.stg__head { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
 .stg__no {
-  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-color);
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border-color);
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: var(--text-muted); flex-shrink: 0;
+  font-size: 15px; font-weight: 700; color: var(--text-muted); flex-shrink: 0;
+  background: var(--bg-card);
 }
-.stg__no--done { color: var(--ia-fresh); border-color: color-mix(in srgb, var(--ia-fresh) 45%, var(--border-color)); }
-.stg__no--current { color: var(--ia-stale); border-color: color-mix(in srgb, var(--ia-stale) 45%, var(--border-color)); }
-.stg__heading { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.stg__titleline { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.stg__title { margin: 0; font-size: 16px; }
-.stg__state { font-size: 11px; color: var(--text-muted); }
-.stg__no--done ~ .stg__heading .stg__state { color: var(--ia-fresh); }
-.stg__what { margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.stg__no--done {
+  color: var(--ia-fresh);
+  border-color: color-mix(in srgb, var(--ia-fresh) 40%, var(--border-color));
+  background: color-mix(in srgb, var(--ia-fresh) 9%, transparent);
+}
+.stg__no--current {
+  color: var(--ia-stale);
+  border-color: color-mix(in srgb, var(--ia-stale) 40%, var(--border-color));
+  background: color-mix(in srgb, var(--ia-stale) 10%, transparent);
+}
+.stg__heading { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.stg__titleline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stg__title { margin: 0; font-size: 20px; line-height: 1.3; font-weight: 650; letter-spacing: -0.01em; }
+.stg__state {
+  padding: 2px 9px; border-radius: 999px;
+  background: var(--bg-secondary); color: var(--text-muted);
+  font-size: 11px; font-weight: 500; white-space: nowrap;
+}
+.stg__no--done ~ .stg__heading .stg__state {
+  color: var(--ia-fresh); background: color-mix(in srgb, var(--ia-fresh) 12%, transparent);
+}
+.stg__no--current ~ .stg__heading .stg__state {
+  color: var(--ia-stale); background: color-mix(in srgb, var(--ia-stale) 12%, transparent);
+}
+.stg__what { margin: 0; max-width: 940px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
 .stg__runhint {
   flex-shrink: 0; align-self: center;
   font-size: 11px; color: var(--text-muted);
   border: 1px dashed var(--border-color); border-radius: 999px; padding: 2px 10px;
 }
 .stg__primary {
-  border: 1px solid var(--accent-primary); border-radius: 6px;
-  background: transparent; color: var(--accent-primary);
-  font-family: inherit; font-size: 12px; padding: 5px 14px; cursor: pointer;
+  border: 1px solid var(--accent-primary); border-radius: 8px;
+  background: var(--accent-primary); color: var(--text-on-accent);
+  font-family: inherit; font-size: 13px; font-weight: 500; padding: 7px 16px; cursor: pointer;
   white-space: nowrap; flex-shrink: 0;
+  transition: filter 0.12s;
 }
-.stg__primary:hover { background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
+.stg__primary:hover { filter: brightness(1.06); }
 .stg__primary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
-.stg__tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
-.stg__tools-label { font-size: 11px; color: var(--text-muted); }
+.stg__tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.stg__tools-label { font-size: 12px; color: var(--text-muted); }
 .stg__tool {
   border: 1px solid var(--border-color); border-radius: 999px;
-  background: transparent; color: var(--text-secondary);
-  padding: 2px 10px; font: inherit; font-size: 11.5px; cursor: pointer;
+  background: var(--bg-card); color: var(--text-secondary);
+  padding: 3px 12px; font: inherit; font-size: 12px; cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
 }
-.stg__tool:hover { color: var(--text-primary); background: var(--bg-secondary); }
+.stg__tool:hover {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-primary) 40%, var(--border-color));
+}
 .stg__tool:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 .stg__tabs { position: relative; display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .stg__tab {
   border: 0; border-bottom: 2px solid transparent; background: transparent;
-  padding: 7px 11px; font-family: inherit; font-size: 12.5px;
+  padding: 9px 14px; font-family: inherit; font-size: 13px;
   color: var(--text-muted); cursor: pointer; white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s;
 }
 .stg__tab:hover { color: var(--text-primary); }
 .stg__tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
 .stg__tab--on { color: var(--accent-primary); border-bottom-color: var(--accent-primary); font-weight: 600; }
-.stg__body { flex: 1; min-height: 0; overflow: auto; padding-top: 2px; }
+.stg__body { flex: 1; min-height: 0; overflow: auto; padding-top: 6px; }
 .stg__same-src {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  margin: 0 0 8px; padding: 6px 10px; border: 1px dashed var(--border-color); border-radius: 6px;
-  font-size: 11.5px; color: var(--text-muted);
+  margin: 0 0 10px; padding: 8px 12px; border: 1px dashed var(--border-color); border-radius: 8px;
+  font-size: 12.5px; color: var(--text-muted);
 }
 .stg__same-src button {
   border: none; background: none; color: var(--accent-info); font-size: 11.5px; cursor: pointer; white-space: nowrap;
@@ -360,4 +384,10 @@ const currentProps = computed(() => {
 .stg__tabs::after { right: 0; background: linear-gradient(to left, var(--bg-primary), transparent); }
 /* B6：滚到底（或本就无溢出）时收起右缘渐隐，露出最后一个页签的右缘 */
 .stg__tabs--end::after { display: none; }
+
+@media (max-width: 720px) {
+  .stg { padding: 14px 14px 16px; gap: 12px; }
+  .stg__title { font-size: 18px; }
+  .stg__no { width: 32px; height: 32px; font-size: 14px; }
+}
 </style>
