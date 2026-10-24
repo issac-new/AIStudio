@@ -1,8 +1,8 @@
 framework	rule_id	rule_title	hits	evidence	SUGGEST
 vue	vue-r1	SFC 须用 `<script setup>` 而非 Options API + `<script>`	-	-	manual
-vue	vue-r2	禁止混用 Options API（data/methods/computed 选项式）	0		likely-na
+vue	vue-r2	禁止混用 Options API（data/methods/computed 选项式）	1	skills/swarm-yuan/tests/fixtures/vue/violating/Legacy.vue:8:export default { data() { return { count: 0 }; }, methods: { inc() { this.count++; } } };	applicable
 vue	vue-r3	v-html 须配套 sanitize，禁止渲染未净化 HTML	-	-	manual
-vue	vue-r4	v-for 须用稳定唯一 key，禁止用数组 index 作 key	47	.claude/worktrees/fix/upstream-sb/hermes-studio/packages/client/src/components/hermes/models/CombinationModelsPanel.vue:367:            <div v-for="(slot, index) in formPreset.reference_models" :key="index" class="slot-editor-row">;custom/client/bpa/components/BpaLinkPanel.vue:165:          <tr v-for="(p, i) in report.paths.slice(0, 12)" :key="i">;custom/client/bpa/components/BpaTreePanel.vue:195:        <div v-for="(k, i) in form.kpis" :key="i" class="kpi-row">	applicable
+vue	vue-r4	v-for 须用稳定唯一 key，禁止用数组 index 作 key	70	custom/client/bpa/components/BpaLinkPanel.vue:186:          <tr v-for="(p, i) in report.paths.slice(0, 12)" :key="i">;custom/client/bpa/components/BpaTreePanel.vue:195:        <div v-for="(k, i) in form.kpis" :key="i" class="kpi-row">;custom/client/cockpit/components/RunTraceNodeDetail.vue:79:          <div v-for="(c, i) in node.children" :key="i" class="node-detail__child">	applicable
 vue	vue-r5	reactive 对象用量须收敛，优先 ref/computed	-	-	manual
 vue	vue-r6	reactive 对象禁止直接解构，须用 toRefs/toRef 保持响应式	-	-	manual
 vue	vue-r7	大对象状态须用 shallowRef/shallowReactive 避免深层代理开销	-	-	manual
@@ -26,7 +26,7 @@ naiveui	naiveui-r7	n-form 须用 rules 校验，禁手动 if 校验	-	-	manual
 naiveui	naiveui-r8	n-select filterable 大数据须远程搜索	-	-	manual
 naiveui	naiveui-r9	n-upload 须配文件大小限制	-	-	manual
 naiveui	naiveui-r10	n-modal 优先 preset="card" 统一布局	-	-	manual
-vite	vite-r1	alias 须数组形式，@/custom 须在 @ 之前	-	-	manual
+vite	vite-r1	alias 配置须可解析；数组形式保证顺序，@/custom 须在 @ 之前	-	-	manual
 vite	vite-r2	inject 脚本须支持 --clean 回滚	-	-	manual
 vite	vite-r3	环境变量须 VITE_ 前缀，防敏感配置泄漏客户端	-	-	manual
 vite	vite-r4	构建须配 manualChunks 分包	-	-	manual
@@ -63,3 +63,14 @@ jest-vitest	jest-vitest-r10	性能敏感模块须配 benchmark 基准	-	-	manual
 jest-vitest	jest-vitest-r11	类型测试须启用 typecheck	-	-	manual
 jest-vitest	jest-vitest-r12	vitest.config include 须明确 custom 测试入口	0		likely-na
 jest-vitest	jest-vitest-r13	禁在只读 upstream 目录新增测试文件	0		likely-na
+pytest	pytest-r1	fixture 作用域须匹配生命周期	-	-	manual
+pytest	pytest-r2	断言须含具体期望值	-	-	manual
+pytest	pytest-r3	parametrize 须覆盖边界值	-	-	manual
+pytest	pytest-r4	conftest.py 须分层级	-	-	manual
+pytest	pytest-r5	xdist 并行须保证隔离	-	-	manual
+pytest	pytest-r6	asyncio 须显式配置模式	-	-	manual
+pytest	pytest-r7	mock 须清理	-	-	manual
+pytest	pytest-r8	skip/xfail 须注明原因	-	-	manual
+pytest	pytest-r9	测试命名须规范	-	-	manual
+pytest	pytest-r10	测试不可依赖执行顺序	-	-	manual
+pytest	pytest-r11	覆盖率须设目标	-	-	manual

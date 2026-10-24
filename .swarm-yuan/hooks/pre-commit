@@ -1,21 +1,4 @@
 #!/usr/bin/env bash
-# swarm-yuan spec-first L2 提交时强拦垫片（由 generate-skill.sh 装配；
+# swarm-yuan spec-first L2 提交时强拦垫片（由 generate-skill.sh 装配，勿手改；
 # 卸载: git config --unset core.hooksPath && rm -rf .swarm-yuan/hooks）
-# AIStudio 单仓整合轮（2026-10-24）自包含化：
-#   1) 工作区私有 spec-first 脚本缺席（全新克隆/其他机器）时 fail-open 降级提示，
-#      不再因绝对路径缺失把全部提交打死（L1 宿主钩子与状态机 L3 门禁仍在）。
-#      挂账：本改动须回移 generate-skill.sh 装配模板（模板↔产物双向同步）。
-#   2) 追加仓内 vendor/** 挡护：inject 后 vendor 呈预期注入脏态，普通提交自动
-#      撤出暂存区；基线替换走 VENDOR_SYNC=1 显式通道（vendor/VENDOR.md）。
-SF="/Users/cuishi/lab/AIStudio/.claude/skills/ncwk-dev/scripts/spec-first-pre-commit.sh"
-if [ -f "$SF" ]; then
-  bash "$SF" "$@" || exit $?
-else
-  echo "[pre-commit] spec-first 工作区脚本缺席（全新克隆形态），L2 降级跳过；L1/L3 门禁不变。"
-fi
-
-if [ "${VENDOR_SYNC:-0}" != "1" ] && git diff --cached --name-only -- vendor/ 2>/dev/null | grep -q .; then
-  git reset -q HEAD -- vendor/
-  echo "[pre-commit] vendor/** 为钉版基线：inject 注入态不入提交（已自动撤出暂存区）；基线替换走 VENDOR_SYNC=1 + scripts/vendor-sync.sh。"
-fi
-exit 0
+exec bash "/Users/cuishi/lab/AIStudio/.claude/skills/aistudio-dev/scripts/spec-first-pre-commit.sh" "$@"
