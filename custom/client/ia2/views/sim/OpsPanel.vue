@@ -4,7 +4,7 @@
      ＋空闲工作者卡（635）＋运行活性行（驱动/监督器/哨兵——端点未接挂账态）。
      一键并发三端点；任一失败单独呈现，不拖垮整卡。 -->
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { fetchRunState } from '../../api/overview'
 import { useRunContext } from '../../composables/useRunContext'
 import {
@@ -32,6 +32,32 @@ function humanizeOpsError(message: string): string {
   if (/OBS_SIM_ROOT/.test(message)) return '推演数据目录未配置；请在系统设置·平台连接中完成环境配置'
   return message
 }
+
+const SERVICE_LABEL: Record<string, string> = {
+  gateway: '网关', studio: '工作台', synapse: '消息服务', hindsight: '记忆服务',
+}
+function serviceLabel(name: string): string { return SERVICE_LABEL[name] ?? name }
+
+/** 探测结果一句话（主视图只给人话；原始错误留在「技术详情」里）。 */
+function serviceStatus(ok: boolean, detail: string, latency: number): string {
+  if (ok) return `正常 · ${latency} ms`
+  if (/fetch failed|ECONNREFUSED|ENOTFOUND|refused|connect/i.test(detail)) return '未连接'
+  if (/timeout|timed out/i.test(detail)) return '响应超时'
+  return '不可用'
+}
+
+const checkedAtLabel = computed(() => {
+  if (!checkedAt.value) return ''
+  const d = new Date(checkedAt.value)
+  return Number.isNaN(d.getTime()) ? checkedAt.value : d.toLocaleString('zh-CN', { hour12: false })
+})
+
+/** 「技术详情」折叠内容：原始探测值，供排障时复制。 */
+const technicalRows = computed(() => (services.value ?? []).map(s => ({
+  name: s.name,
+  label: serviceLabel(s.name),
+  detail: s.detail,
+})))
 
 async function load(): Promise<void> {
   loading.value = true
@@ -89,7 +115,7 @@ onMounted(() => {
   <div class="ops" data-testid="ops-panel">
     <div class="ops__bar">
       <button class="ops__btn" type="button" data-testid="ops-load" :disabled="loading" @click="load(); loadLiveness()">刷新</button>
-      <span v-if="checkedAt" class="ops__ts" data-testid="ops-checked-at">探测时刻：{{ checkedAt }}</span>
+      <span v-if="checkedAtLabel" class="ops__ts" data-testid="ops-checked-at">最近探测：{{ checkedAtLabel }}</span>
     </div>
     <p v-if="loadError" class="ops__error" data-testid="ops-error">{{ loadError }}</p>
 
@@ -97,12 +123,19 @@ onMounted(() => {
       <h4 class="ops__h">环境拓扑（四服务）</h4>
       <p v-if="!services" class="ops__hint">正在读取服务状态……（网关 / 工作台 / 消息服务 / 记忆服务）</p>
       <ul v-else class="ops__svc-list">
-        <li v-for="s in services" :key="s.name" class="ops__svc" :data-testid="`ops-svc-${s.name}`">
-          <span class="ops__dot" :class="s.ok ? 'ops__dot--ok' : 'ops__dot--fail'" data-testid="ops-dot">{{ s.ok ? '●' : '●' }}</span>
-          <span class="ops__svc-name">{{ s.name }}</span>
-          <span class="ops__svc-detail" :class="{ 'ops__svc-detail--fail': !s.ok }">{{ s.detail }}</span>
+        <li v-for="s in services" :key="s.name" class="ops__svc" :data-testid="`ops-svc-${s.name}`" :title="`${s.name} · ${s.detail}`">
+          <span class="ops__dot" :class="s.ok ? 'ops__dot--ok' : 'ops__dot--fail'" data-testid="ops-dot" aria-hidden="true">●</span>
+          <span class="ops__svc-name">{{ serviceLabel(s.name) }}</span>
+          <span class="ops__svc-detail" :class="{ 'ops__svc-detail--fail': !s.ok }" data-testid="ops-svc-status">{{ serviceStatus(s.ok, s.detail, s.latency_ms) }}</span>
         </li>
       </ul>
+      <details v-if="services?.length" class="ops__tech">
+        <summary>技术详情</summary>
+        <ul>
+          <li v-if="checkedAt"><span>探测时刻（原始）</span><code>{{ checkedAt }}</code></li>
+          <li v-for="r in technicalRows" :key="r.name"><span>{{ r.label }}（{{ r.name }}）</span><code>{{ r.detail }}</code></li>
+        </ul>
+      </details>
     </section>
 
     <section v-if="dispatcher || !dispatcherNote" class="ops__box" data-testid="ops-dispatcher">
@@ -143,36 +176,47 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
-.ops { display: flex; flex-direction: column; gap: 12px; }
-.ops__bar { display: flex; gap: 10px; align-items: center; }
+.ops { display: flex; flex-direction: column; gap: 14px; }
+.ops__bar { display: flex; gap: 12px; align-items: center; }
 .ops__btn {
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: transparent;
+  border-radius: 8px;
+  background: var(--bg-card);
   color: inherit;
-  font-size: 12px;
-  padding: 3px 12px;
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 5px 14px;
   cursor: pointer;
+  &:hover:not(:disabled) { background: var(--bg-secondary); }
   &:disabled { opacity: 0.4; }
 }
-.ops__ts { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
-.ops__error { color: var(--ia-fail); font-size: 12px; margin: 0; word-break: break-all; }
-.ops__hint { color: var(--text-muted); font-size: 12px; margin: 0; }
-.ops__box { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
-.ops__h { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
-.ops__svc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.ops__svc { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
-.ops__dot { font-size: 10px; }
+.ops__ts { font-size: 12px; color: var(--text-muted); }
+.ops__error { color: var(--ia-fail); font-size: 13px; margin: 0; word-break: break-word; }
+.ops__hint { color: var(--text-muted); font-size: 13px; margin: 0; }
+.ops__box { border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px; background: var(--bg-card); }
+.ops__h { margin: 0 0 10px; font-size: 13px; font-weight: 650; }
+.ops__svc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ops__svc {
+  display: flex; gap: 10px; align-items: center;
+  padding: 8px 10px; border-radius: 8px; background: var(--bg-secondary);
+  font-size: 13px;
+}
+.ops__dot { font-size: 10px; line-height: 1; }
 .ops__dot--ok { color: var(--ia-fresh); }
 .ops__dot--fail { color: var(--ia-fail); }
-.ops__svc-name { font-family: var(--font-mono); min-width: 80px; }
-.ops__svc-detail { color: var(--text-muted); }
-.ops__svc-detail--fail { color: var(--ia-fail); }
-.ops__kv { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
-.ops__kv { font-size: 12px; }
+.ops__svc-name { min-width: 76px; font-weight: 500; }
+.ops__svc-detail { margin-left: auto; font-size: 12px; color: var(--text-secondary); }
+.ops__svc-detail--fail { color: var(--ia-fail); font-weight: 600; }
+.ops__tech { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+.ops__tech summary { cursor: pointer; user-select: none; }
+.ops__tech ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ops__tech li { display: flex; gap: 8px; justify-content: space-between; }
+.ops__tech code { font-family: var(--font-mono); word-break: break-all; color: var(--text-secondary); }
+.ops__kv { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ops__kv { font-size: 13px; }
 .ops__kv-k { display: inline-block; min-width: 140px; color: var(--text-muted); }
 .ops__kv-v { word-break: break-all; }
 .ops__kv--fail .ops__kv-v { color: var(--ia-fail); }
-.ops__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.ops__table th, .ops__table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--border-color); }
+.ops__table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ops__table th, .ops__table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border-color); }
 </style>

@@ -33,3 +33,20 @@
   outline-offset: 1px;
   border-radius: 3px;
 }
+
+/* ── ④ 标题断行与按钮反馈（2026-10-24 全页视觉批）──
+ * text-wrap: balance 让长标题尽量两行等长，避免末行孤字；按钮补齐 hover/active
+ * 过渡，让所有壳层内的手写按钮有一致反馈（不改布局与配色）。 */
+h1, h2, h3 { text-wrap: balance; }
+button:not(:disabled) { transition: background-color 0.12s, border-color 0.12s, color 0.12s, filter 0.12s; }
+button:not(:disabled):active { filter: brightness(0.97); }
+
+/* ── ⑤ 减弱动效偏好：系统开启「减少动态效果」时停掉装饰性动画 ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
