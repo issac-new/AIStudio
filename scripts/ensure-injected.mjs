@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
-import { isHermesAgentPatchPath, applyPatchAtRoot, treeStatus, treeGitCtx } from './inject.mjs';
+import { isHermesAgentPatchPath, applyPatchAtRoot, treeStatus, treeGitCtx, ensureNodeModulesSymlink } from './inject.mjs';
 import { addedFilesFromPatch, missingFiles } from './lib/zcode-patch-manifest.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
@@ -193,6 +193,11 @@ function healZcodePatches() {
 // zcode 补丁漂移自愈先于主 inject 判定：zcode 是独立树，与 hermes-studio
 // 的 inject 标志无关；早退路径同样需要它（2026-10-19：脏树缺文件被早退跳过）。
 healZcodePatches();
+// node_modules 软链幂等补链（AIStudio 单仓轮）：全新克隆按 README 顺序先 inject 后
+// npm install——inject 时 node_modules 尚不存在、软链跳过，装完没人补链则 serve/
+// dev 从 custom/server 解析 koa 全崩（/tmp 干净克隆 2026-10-24 实证）。predev/prebuild
+// 都过本钩子，此处无条件补链治愈两类时序。
+ensureNodeModulesSymlink();
 
 if (manifestApplied === null && !existsSync(manifestPath) && !cockpitRouteInjected()) {
   // 未 inject → 检查 upstream 是否干净
