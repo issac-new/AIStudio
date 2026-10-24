@@ -1,0 +1,24 @@
+# runtimes.tsv — authoritative registry (22 rows). Current state only; history in docs/research/upstream-changelog.md.
+# id	repo	license	channel	pkg_name	tag_regex	baseline	wiring	claim	status
+graphify	Graphify-Labs/graphify	Apache-2.0	pypi	graphifyy	^v?0\.[0-9]+\.[0-9]+$	v0.9.95	deep	M1	synced
+GitNexus	abhigyanpatwari/GitNexus	PolyForm Noncommercial 1.0.0	npm	gitnexus	^v?1\.[0-9]+\.[0-9]+$	npm 1.6.12	deep	M1	license-risk
+claude-mem	thedotmack/claude-mem	Apache-2.0	npm	claude-mem	^v?[0-9]+\.[0-9]+\.[0-9]+$	v15.0.2	deep	M1	watch
+ocr	alibaba/open-code-review	Apache-2.0	npm	@alibaba-group/open-code-review	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.13.3	deep	M1	synced
+openspec	Fission-AI/OpenSpec	MIT	npm	@fission-ai/openspec	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.15.0	cli	M1	synced
+comet	rpamis/comet	MIT	npm	@rpamis/comet	^v?[0-9]+\.[0-9]+\.[0-9]+$	0.5.0	cli	M1	synced
+gsd-core	open-gsd/gsd-core	MIT	npm	@opengsd/gsd-core	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.18.0	cli	M1	synced
+codex-security	openai/codex-security	Apache-2.0	npm	@openai/codex-security	^npm-v?[0-9]+\.[0-9]+\.[0-9]+$	npm-v0.6.0	cli	M1	synced
+mattpocock-skills	mattpocock/skills	MIT	materialized	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.3.1	cli	M1	synced
+diagram-design	cathrynlavery/diagram-design	MIT	materialized	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v2.6.120	cli	M1	synced
+superpowers	obra/superpowers	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v7.0.1	method	M1	synced
+gstack	garrytan/gstack	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.87.5.0 tip 6f7488a70	method	M1	synced
+ruflo	ruvnet/ruflo	MIT	npm	ruflo	^v?[0-9]+\.[0-9]+\.[0-9]+$	v3.61.1	method	M1	synced
+ECC	affaan-m/ECC	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v2.2.3	method	M1	synced
+impeccable	pbakaus/impeccable	Apache-2.0	npm	impeccable	^cli-v?[0-9]+\.[0-9]+\.[0-9]+$	cli-v4.7.0	method	M1	synced
+dsh	deepseek-ai/deepseek-harness	MIT	git	-	^dsh-v?[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$	dsh-v0.2.1-rc.3	source	M0	synced
+pua	tanweai/pua	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v3.5.1	source	M0	synced
+semantica	semantica-agi/semantica	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	main 22109ee0	source	M0	synced
+pi	earendil-works/pi	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.4.0	source	M0	synced
+codegraph	colbymchenry/codegraph	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	未定	none	M0	watch
+claude-code	anthropics/claude-code	专有（Anthropic Commercial Terms）	npm	@anthropic-ai/claude-code	^v?[0-9]+\.[0-9]+\.[0-9]+$	v2.1.310	host	M3	synced
+codex-cli	openai/codex	Apache-2.0	npm	@openai/codex	^rust-v?[0-9]+\.[0-9]+\.[0-9]+$	rust-v0.164.0	host	M3	synced
