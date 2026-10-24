@@ -1,5 +1,7 @@
 # overlay 仓「开发规范+项目知识」探查报告（路B · 2026-10-16 全量重生成轮）
 
+> ⚠️ 快照过期：2026-10-24 起 overlay 已整合为 AIStudio 单仓（上游基线入 `vendor/`，仓库主名 AIStudio）。本文路径与计数均为整合前快照，以仓内现状为准，待技能指纹感知重生成。
+
 ## 1. 可改范围（硬约束）
 
 - 仅可改 overlay/（工作区 AGENTS.md:5）；upstream/ 严格只读仅 git pull（:7-9）；upstream 变更必须经 patches/ + npm run inject（:11）

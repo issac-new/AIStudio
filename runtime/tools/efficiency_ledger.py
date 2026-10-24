@@ -3,7 +3,7 @@
 Every ObservationPack archive / ``obs_recall`` page / Action-Fusion ``then_run`` /
 Evidence-Preserving-Reducer decision appends one JSON line here. Two consumers:
 
-* the SwarmStudio efficiency panel (overlay server reads ``<home>/efficiency/ledger.jsonl``);
+* the SwarmStudio efficiency panel (custom server reads ``<home>/efficiency/ledger.jsonl``);
 * post-hoc auditing — SoL-Pi keeps its ledger OUTSIDE the model's context so token
   savings never cost audit fidelity (the paper's "full-fidelity audit trail outside
   model input" governance rule).

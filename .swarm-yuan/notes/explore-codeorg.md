@@ -1,5 +1,7 @@
 # overlay 仓「代码组织与外部资源」探查报告（路C · 2026-10-16 全量重生成轮）
 
+> ⚠️ 快照过期：2026-10-24 起 overlay 已整合为 AIStudio 单仓（上游基线入 `vendor/`，仓库主名 AIStudio）。本文路径与计数均为整合前快照，以仓内现状为准，待技能指纹感知重生成。
+
 范围：`/Users/cuishi/lab/ncwk/overlay` 内的 `custom/` 与 `patches/`（不含 upstream 树本体）。关键计数均附来源命令。
 
 ## 1. 模块级清单

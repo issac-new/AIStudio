@@ -42,9 +42,14 @@
 4. **plugin.yaml author 字段核实无补丁耦合**（grep patches/ 无嵌入）后才改；`swarmstudio.style-charter` 命名空间保留（协议标识，非品牌叙述）。
 5. **simharness/package.json「独立仓」表述改为历史说明**：隔离边界语义（本目录只消费产品、不改产品）保留，由 `tests/isolation-boundary.test.sh` 三断言继续看守，隔离主体从「仓对仓」变为「目录对产品树」。
 
-## 验证
+## 验证（2026-10-24 实测）
 
-- `python3 ~/.zcode/skills/gongwen-bifa/scripts/gongwen-lint.py` 跑改动正式文档（README.md、docs/USAGE.md、simharness/README.md）。
-- `npx vitest run custom/server/cua/__tests__`（broker.ts 注释改动的最小回归面）。
-- simharness 隔离边界与 README 无断言耦合（grep 核过）；plugin.yaml/efficiency_ledger.py 无测试引用 author/注释字面量。
-- 死链核验：删除的 README 宣传稿行、simharness 改后链接逐条 `test -f` 实存检查。
+- `gongwen-lint`：README.md 23 处/硬 11（与改动前持平，存量）；docs/USAGE.md 12 处/硬 6（改动前 13/6，净改善）；simharness/README.md 7 处/硬 5（与改动前持平；初版引入的句长/破折号已拆句消除）。
+- `vitest run custom/server/cua/__tests__`：10 通过、2 跳过（gate.test.ts 平台门控）、0 失败。
+- `python3 -m py_compile runtime/tools/efficiency_ledger.py` 通过；`simharness/package.json` JSON 解析通过。
+- 链接实存核验全过：vendor/VENDOR.md、2026-10-05-mux-v8-fullflow-plan.md、2026-10-05-mux-history-and-engineering-archive.md、2026-10-18-fullflow-v844-workbench-refactor.md、docs/intro.html；README 宣传稿死链行已删除（grep 0 命中）。
+
+## 未做 / 交接项
+
+- `skills/swarm-yuan/docs/usage-manual.md` 落地示例已就地修正（该文件当前是未跟踪的整合在途内容，不在 origin/main，无法随本分支提交；随整合批入库）。
+- `docs/windows-x64-setup.md` 正文保留多仓时期实测记录，仅加头注声明；单仓布局下的 Windows 流程未实测，不虚构。
