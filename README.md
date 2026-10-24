@@ -141,6 +141,7 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 
 ## 文档
 
+- [交互式介绍页](docs/intro.html)：一页看懂 SwarmStudio，分屏滚动叙事，离线单文件。
 - [使用指南](docs/USAGE.md)：启动、三种工作模式走法、角色旅程、重启与排障。
 - [SwarmStudio 完整设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施、使用五层正本。
 - [全流程推演方案](docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步六闸推演唯一正本（V8.52）。
