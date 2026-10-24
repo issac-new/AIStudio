@@ -1,0 +1,160 @@
+/* mux/report-light-override.css —— 报告页明色主题修补层（2026-10-14）
+ *
+ * 与 report-dark-override.css 对称的一份：全部规则挂在 html[data-theme="light"] 下。
+ * 存在的理由：报告的语义色（--ok 绿 / --warn 橙 / --pc 青）与「骨架占位」灰字是按
+ * 暗色底挑的，落到白底上只有 1.4~3.8:1，达不到 WCAG AA（正文 4.5 / 大字 3）。
+ * 同一组颜色在两个主题下必须分别定值——这是主题化的固有成本，不是 bug。
+ *
+ * 只调色，不改布局与字号；行内色用属性选择器覆盖（行内样式优先级高于选择器）。
+ */
+html[data-theme="light"]{--ok:#047857;--warn:#b45309;--danger:#b91c1c;--muted:#64748b}
+
+/* 行内主色 --pc：白底需比暗底再沉一档才够 4.5:1 */
+html[data-theme="light"] [style*="--pc:#059669"],
+html[data-theme="light"] .nav-pname{color:#047857 !important}
+html[data-theme="light"] [style*="--pc:#d97706"]{color:#b45309 !important}
+html[data-theme="light"] [style*="--pc:#0891b2"]{color:#0e7490 !important}
+html[data-theme="light"] [style*="--pc:#2563eb"]{color:#1d4ed8 !important}
+html[data-theme="light"] [style*="--pc:#7c3aed"]{color:#6d28d9 !important}
+html[data-theme="light"] [style*="--pc:#dc2626"]{color:#b91c1c !important}
+html[data-theme="light"] [style*="--pc:#c7d4e6"] .st-num{color:#1e293b !important}
+html[data-theme="light"] .nav-step{color:#475569 !important}
+html[data-theme="light"] .nav-step .no{color:#475569 !important}
+html[data-theme="light"] .art-verdict.ok,
+html[data-theme="light"] .gate-card.gpass{color:#047857 !important}
+
+/* 骨架占位与「未取到」灰字：暗底用的浅灰不能在白底用 */
+html[data-theme="light"] [style*="color:#c7d4e6"]{color:#64748b !important}
+html[data-theme="light"] .nv-miss,
+html[data-theme="light"] .nv-ic-arrow,
+html[data-theme="light"] .nv-ic-chip--miss b,
+html[data-theme="light"] .nv-ic-chip--miss span{color:#64748b !important}
+html[data-theme="light"] .art-chk-row .art-chk-val{color:#475569 !important}
+
+/* 语义块：与暗色层对称，白底用浅底 + 深字 */
+html[data-theme="light"] .gov-metrics-line{color:#475569 !important;background:#f4f7fa !important;border:1px solid #e2e8f0 !important}
+html[data-theme="light"] .gov-metrics-line b{color:#1f3a5f !important}
+html[data-theme="light"] .gmark{color:#92400e !important;background:#fef3c7 !important}
+html[data-theme="light"] .step.gate-step{background:linear-gradient(135deg,#fffbeb 0%,var(--surface) 30%) !important}
+html[data-theme="light"] .step.gate-step .gate-body{color:#78350f !important}
+html[data-theme="light"] .step.gate-step .st-num{background:#f59e0b !important;color:#1e293b !important}
+html[data-theme="light"] .st-open{background:#fef2f2 !important;color:#991b1b !important}
+html[data-theme="light"] .st-entry{background:#ecfeff !important;color:#155e75 !important}
+html[data-theme="light"] .st-note{background:#fffbeb !important;color:#92400e !important}
+html[data-theme="light"] .nv-note{color:#1e3a8a !important;background:var(--accent-soft) !important}
+html[data-theme="light"] .nv-loop-back{background:#fffbeb !important;color:#92400e !important}
+html[data-theme="light"] .ck-node-z{color:#ffffff !important}
+
+
+
+/* ── 自动生成：章节样式里「按暗底挑选」的硬编码色 → 明底对应值 ──
+   （源：mux/report_narrative.py 章节 CSS；改该文件配色后须重跑 mux/tools/gen-light-override.py）*/
+html[data-theme="light"] .nv-case-body{color:#334155 !important}
+html[data-theme="light"] .nv-case-mech{color:#0f766e !important}
+html[data-theme="light"] .nv-dim-body{color:#334155 !important}
+html[data-theme="light"] .nv-hl-body{color:#334155 !important}
+html[data-theme="light"] .nv-hl-title{color:#1d4ed8 !important}
+html[data-theme="light"] .nv-ic-ac b{color:#1d4ed8 !important}
+html[data-theme="light"] .nv-ic-arrow{color:#64748b !important}
+html[data-theme="light"] .nv-ic-chip--miss b, html[data-theme="light"] .nv-ic-chip--miss span{color:#64748b !important}
+html[data-theme="light"] .nv-lead{color:#475569 !important}
+html[data-theme="light"] .nv-loop-caption{color:#475569 !important}
+html[data-theme="light"] .nv-metric b{color:#0369a1 !important}
+html[data-theme="light"] .nv-miss{color:#64748b !important}
+
+/* ── 兜底：暗底专色 #c7d4e6 / 暗底绿 #059669 在明底上不可读（1.4:1）──
+   这两个值由生成器的章节 CSS 以继承方式落到正文节点（.st-sec / .art-item 等
+   自身不设 color），按选择器逐个点名会漏，故在容器层统一钉死明底值；
+   子元素若自带语义色仍以自己的规则为准（继承只兜底没人管的那部分）。 */
+html[data-theme="light"] .step,
+html[data-theme="light"] .st-body,
+html[data-theme="light"] .st-sec,
+html[data-theme="light"] .st-artifact,
+html[data-theme="light"] .art-body,
+html[data-theme="light"] .art-item,
+html[data-theme="light"] .st-story{color:#1e293b !important}
+html[data-theme="light"] .nv-loop,
+html[data-theme="light"] .nv-dim{color:#1e293b !important}
+
+/* 联动图/外环的强调色由行内 --accent 带进来，暗底挑的绿/青在白底只有 3.7:1 */
+html[data-theme="light"] [style*="--accent:#059669"]{--accent:#047857 !important}
+html[data-theme="light"] [style*="--accent:#0891b2"]{--accent:#0e7490 !important}
+html[data-theme="light"] [style*="--accent:#d97706"]{--accent:#b45309 !important}
+
+/* 工件清单的 <ul> 自身带暗底色（章节 CSS 遗留），<li> 继承它 → 白底浅字 1.4:1 */
+html[data-theme="light"] .art-body ul,
+html[data-theme="light"] .st-artifact ul,
+html[data-theme="light"] .st-body ul,
+html[data-theme="light"] .st-sec ul,
+html[data-theme="light"] .step ul{color:#1e293b !important}
+html[data-theme="light"] .nv-dims .nv-dim,
+html[data-theme="light"] .nv-dims .nv-dim *{color:#1e293b !important}
+
+/* ── 复扫补遗 ── */
+/* hero 底在两个主题下都是深蓝渐变（--grad-hero 是深色 token，不随主题变），
+   所以 hero 内部文字在明色主题下同样要用浅色，不能跟着 muted 走。 */
+html[data-theme="light"] .hero-terms{color:#c7d4e6 !important}
+html[data-theme="light"] .hero .sub{color:#c7d4e6 !important}
+html[data-theme="light"] .hstat span{color:#a8b8cc !important}
+html[data-theme="light"] .pb-label{color:#a8b8cc !important}
+html[data-theme="light"] [style*="color:#94a3b8"]{color:#64748b !important}
+/* 步号徽标：亮色底配深字 */
+html[data-theme="light"] [style*="--pc:#d97706"] .st-num,
+html[data-theme="light"] [style*="--pc:#0891b2"] .st-num,
+html[data-theme="light"] [style*="--pc:#c7d4e6"] .st-num{color:#1e293b !important}
+/* 工件区正文节点自带暗底色，父级兜底够不着它们 */
+html[data-theme="light"] .art-item p,
+html[data-theme="light"] .art-item b,
+html[data-theme="light"] .art-item code,
+html[data-theme="light"] .art-item li,
+html[data-theme="light"] .art-item td,
+html[data-theme="light"] .st-sec p,
+html[data-theme="light"] .st-sec b,
+html[data-theme="light"] .domains td,
+html[data-theme="light"] .domains th{color:#1e293b !important}
+
+/* 绿底用白字（深绿上白字 8:1，深字只有 2.6:1——按底色明暗分派，别一刀切） */
+html[data-theme="light"] [style*="--pc:#059669"] .st-num{color:#f8fafc !important}
+
+
+
+/* 步骤头徽标：背景写在行内，且只在 .st-hd 内分派字色——
+   限定作用域是关键：不限定的话 [style*="#色值"] 会连整个 step 容器（行内带 --pc）一起改，
+   侧栏/联动图的白字会被拉成深字（实测引入 16 条新问题）。 */
+html[data-theme="light"] .st-hd [style*="background:#059669"],
+html[data-theme="light"] .st-hd [style*="background-color:#059669"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background:#0891b2"],
+html[data-theme="light"] .st-hd [style*="background-color:#0891b2"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background:#d97706"],
+html[data-theme="light"] .st-hd [style*="background-color:#d97706"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background:#f59e0b"],
+html[data-theme="light"] .st-hd [style*="background-color:#f59e0b"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background:#dc2626"],
+html[data-theme="light"] .st-hd [style*="background-color:#dc2626"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background:#2563eb"],
+html[data-theme="light"] .st-hd [style*="background-color:#2563eb"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background:#7c3aed"],
+html[data-theme="light"] .st-hd [style*="background-color:#7c3aed"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background:#c7d4e6"],
+html[data-theme="light"] .st-hd [style*="background-color:#c7d4e6"]{color:#0b1220 !important}
+
+/* 行内样式里 background 与冒号之间带空格的写法（本轮漏网的最后两条就栽在这） */
+html[data-theme="light"] .st-hd [style*="background: #059669"],
+html[data-theme="light"] .st-hd [style*="background-color: #059669"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background: #0891b2"],
+html[data-theme="light"] .st-hd [style*="background-color: #0891b2"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background: #d97706"],
+html[data-theme="light"] .st-hd [style*="background-color: #d97706"]{color:#0b1220 !important}
+html[data-theme="light"] .st-hd [style*="background: #dc2626"],
+html[data-theme="light"] .st-hd [style*="background-color: #dc2626"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background: #2563eb"],
+html[data-theme="light"] .st-hd [style*="background-color: #2563eb"]{color:#f8fafc !important}
+html[data-theme="light"] .st-hd [style*="background: #7c3aed"],
+html[data-theme="light"] .st-hd [style*="background-color: #7c3aed"]{color:#f8fafc !important}
+
+/* 导读层（第0章/PART1）在明底上的边缘色：3.9~4.4，差一口气到 4.5 */
+html[data-theme="light"] .idx th,
+html[data-theme="light"] .stat-note,
+html[data-theme="light"] summary,
+html[data-theme="light"] .part1-hd span{color:#334155 !important}
+html[data-theme="light"] .meta{color:#475569 !important}

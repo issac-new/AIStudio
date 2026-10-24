@@ -59,9 +59,14 @@ describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）'
     // 任一侧增删即红。分树轮（2026-10-03）aipay-agent-sync.sh 移居 simharness 独立仓
     // （ncwk 根下与 overlay 平级；MX_SIMHARNESS_ROOT 可覆盖）。
     const m2hRoot = process.env.MX_SIMHARNESS_ROOT
-      ?? Array.from({ length: 9 }, (_, i) => i + 4)
-        .map((up) => resolve(__dirname, '../'.repeat(up), 'simharness'))
-        .find((d) => existsSync(d))
+      ?? [
+        // AIStudio 单仓整合轮（2026-10-24）：simharness 并入本仓，仓内优先；旧布局
+        // （ncwk 根下与 overlay 平级）向上逐级探测回落——全新克隆仓外无兄弟目录
+        // 会 ENOENT（/tmp 实证）。
+        resolve(__dirname, '../../../simharness'),
+        ...Array.from({ length: 9 }, (_, i) => i + 4)
+          .map((up) => resolve(__dirname, '../'.repeat(up), 'simharness')),
+      ].find((d) => existsSync(d))
     // 主检出向上 4 级=ncwk 根；worktree（.claude/worktrees/<b>）需 8 级——逐级探测兜底，
     // 仍找不到（脱离仓库运行）时给原 env 提示路径保持报错可读。
     const syncSrc = readFileSync(

@@ -1,0 +1,47 @@
+{
+  "name": "hermes-studio",
+  "desktopName": "com.hermeswebui.studio.desktop",
+  "version": "0.7.38",
+  "description": "Ekko Studio desktop app for multi-agent chat, coding, and visual workflows, with bundled local runtimes.",
+  "homepage": "https://ekkostudio.xyz",
+  "author": {
+    "name": "Ekko Studio Contributors",
+    "email": "noreply@hermes-studio.local"
+  },
+  "license": "BSL-1.1",
+  "private": true,
+  "main": "dist/main/entry.js",
+  "scripts": {
+    "build:main": "tsc -p tsconfig.json",
+    "build": "npm run build:main",
+    "test:updater": "npm run build && node --test tests/*.test.cjs",
+    "fetch:node": "node scripts/fetch-node.mjs",
+    "fetch:git": "node scripts/fetch-git.mjs",
+    "fetch:python": "node scripts/fetch-python.mjs",
+    "fetch:hermes": "node scripts/fetch-hermes.mjs",
+    "install:hermes": "node scripts/install-hermes.mjs",
+    "write:runtime-release": "node scripts/write-runtime-release.mjs",
+    "prepare:runtime": "npm run fetch:node && npm run fetch:git && npm run fetch:python && npm run fetch:hermes && npm run install:hermes && npm run prune:python",
+    "prepare:python": "npm run prepare:runtime",
+    "package:runtime": "node scripts/package-runtime.mjs",
+    "runtime:asset-name": "node scripts/runtime-asset-name.mjs",
+    "prune:python": "node scripts/prune-python.mjs",
+    "dev": "npm run build:main && electron .",
+    "dist": "npm run build && node scripts/electron-builder.mjs",
+    "dist:update-test": "npm run build && node scripts/build-update-test.mjs",
+    "dist:mac": "npm run build && node scripts/electron-builder.mjs --mac",
+    "dist:win": "npm run build && node scripts/electron-builder.mjs --win",
+    "dist:linux": "npm run build && node scripts/electron-builder.mjs --linux"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "electron": "^42.3.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "dbus-next": "0.10.2",
+    "electron-updater": "^6.3.9",
+    "tar": "^7.5.16"
+  }
+}

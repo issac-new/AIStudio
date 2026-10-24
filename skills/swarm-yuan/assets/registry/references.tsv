@@ -1,0 +1,59 @@
+# references.tsv — authoritative registry (57 rows; 56 map rows + capability-map itself).
+# id	family	source	evidence	consumer_node	distributed	claim	overlap_group	trigger
+exploration-guide	generation	内生 + semantica/graphify（A）	A	生成流程 Step 2/Step 4 探查（含 §D.0.6/矛盾裁决）	gen_only	M1	generation	执行任何探查
+generation-flow	generation	内生	B	生成流程 Step 1-13 详解	gen_only	M1	generation	生成流程逐步执行
+template-spec	generation	内生 + agent-skills 联动（A）	A	生成流程 Step 7 填充六文件	gen_only	M1	generation	填 spec/六文件
+agent-skills-methodology	generation	addyosmani/agent-skills（B）	B	生成流程 Step 7 + 开发工作流 ⑤	standard	M1	generation	反借口/假设前置/Prove-It
+context-engineering-layering	generation	Vibe编码文章 + Anthropic 文档（B/C）	B/C	生成器自身配置分层	gen_only	M1	generation	决定规则放哪层
+task-methodology-router	generation	tanweai/pua 改写（A）	A	开发工作流 任务类型路由	standard	M1	generation	任务类型判定
+cost-estimation-methodology	generation	人行科技司培训 + GB/T 42588（B）	B	spec §25 填充	standard	M1	generation	规模/工作量估算
+domain-knowledge	generation	内生速查（A）	A	生成流程 Step 4 + --domain 门禁	standard	M1	generation	领域规律推导
+business-ontology-methodology	generation	FIBO ONTOLOGY_GUIDE + 2026Q3 源码树（B，MIT）	B	生成流程 Step 4/5 探查建模 + 开发工作流 ③ spec 领域段	standard	M1	generation	业务领域建模、术语表、跨系统语义对齐
+code-graph-tools	generation	GitNexus/graphify/codegraph 调研（A）	A	生成流程 Step 3 图谱优先	standard	M1	generation	图谱工具选型
+togaf-metamodel-methodology	generation	TOGAF BDAT（B）	B	§D.0.6 四层视角	standard	M1	generation	架构类变更探查
+frontend-design-methodology	generation	pbakaus/impeccable（B）	B	生成流程 Step 7 + 开发工作流 ⑤ 前端	standard	M1	generation	前端设计任务
+diagram-production-methodology	generation	cathrynlavery/diagram-design v2.6.115（A，MIT；版本真值=runtime/diagram-design/MANIFEST.md，facts.conf FACT_DIAGRAM_DESIGN_VERSION 对账）	B	生成流程 Step 7 + 开发工作流 ③ spec/⑦ 审查/⑨ 发布	gen_only	M1	generation	需要可发布架构/流程/时序/状态/ER/依赖/部署图
+lazy-generation-methodology	assembly	ponytail 蒸馏 + 行者明灵文章（B）	B	开发工作流 ⑤ 编码七层下探	standard	M1	assembly	写新代码前找零件
+mattpocock-skills-methodology	assembly	mattpocock/skills v1.2.3（A）	A	开发工作流 ①②③ + fix 任务路由	standard	M1	assembly	模糊需求访谈/spec 测试缝/任务纵切/诊断回路
+cordis-composability-methodology	assembly	DeepSeek Harness（B）	B	机制设计参考	standard	M1	assembly	设计可组合机制
+knowledge-lifecycle-methodology	assembly	京东海博文章 + OKF 核验（B）	B	开发工作流 ② 读法 + 反馈回路三态	standard	M1	assembly	知识读取/更新处置
+memory-persistence	assembly	claude-mem/ruflo/ECC 工具族（A）	A	Step 12 记忆写回 + 溯源标记	standard	M1	assembly	跨会话记忆/蒸馏
+cognition-framework	assembly	内生五层认知（A）	A	生成流程 Step 3 认知六阶链	standard	M1	assembly	探查建模
+cognitive-bias	assembly	内生 + Kahneman 框架（B）	B	spec §16 自检	standard	M1	assembly	方案偏差自检
+logic-razor	assembly	内生（A）	A	方案删冗余假设	standard	M1	assembly	思维语言推演
+four-theories-methodology	assembly	工程控制论等四源（B）	B	生成器自身设计决策	gen_only	M1	assembly	划边界/评估门禁/上下文预算
+mea-loop-methodology	assembly	AMAP LongHorizon-Harness（B）	B	长任务规划 + 审计引用	standard	M1	assembly	长任务拆解
+governance-agents	orchestration	pua 四权分离 + §Z 五协议（A）	A	hooks/loop 治理拓扑	compliance	M1	orchestration	治理架构/交付纪律
+subagent-orchestration	orchestration	superpowers/comet（A/B）	A/B	开发工作流 ⑤ 复杂变更扇出	standard	M1	orchestration	subagent 编排
+gsd-patterns	orchestration	gsd-core（A）	A	计划验证/状态戳	standard	M1	orchestration	计划/状态管理
+decision-governance	orchestration	gsd-core + gstack（A/B）	A/B	UserChallenge 决策留痕	standard	M1	orchestration	用户决策点
+dsh-engineering-methodology	orchestration	DeepSeek Harness rc.8（B）	B	审计/状态韧性设计	gen_only	M1	orchestration	机制设计参考
+codex-methodology	orchestration	openai/codex（B）	B	执行纪律（缓存/截断）	standard	M1	orchestration	省 token/执行纪律
+claude-code-capabilities	orchestration	claude-code releases 全量（B）	B	宿主能力选型	standard	M1	orchestration	查宿主原生能力
+mcp-governance	orchestration	内生（A）	A	.mcp.json 配置审计	standard	M1	orchestration	MCP 服务接入
+codex-security-methodology	orchestration	openai/codex-security（A）	A	安全扫描门禁整合	standard	M1	orchestration	威胁建模/安全扫描
+controlled-language-methodology	orchestration	ASD-STE100 规范思想 + 公文笔法 skill 调研档案（A，含改写保真基线测试）	B	人面输出（回复/汇报/回归轮报告/审查意见）全程	lite	M1	orchestration	任何面向人的文字落笔前
+review-methodology	verification	gstack review + cso（A）	A	⑦ 独立审查 rubric	standard	M1	verification	代码审查执行
+canary-monitoring	verification	check_canary 降档保留（A）	A	⑨ 发布后监控（setup-loop --verify）	standard	M1	verification	发布后基线对比
+ai-process-records	verification	GB/T 8566 扩展（B）	B	trace/decisions 留痕口径	standard	M1	verification	审计/复盘/交接
+quality-management-standards	verification	ISO 9001/CMMI 映射（B）	B	认证过程资产引用	gen_only	M1	verification	组织级标准对齐
+rsi-evidence-methodology	verification	清华 RSI 综述 + D2I-ai + 字节三论文（B）	B	生成侧吸收轮收口验收 + 目标技能自成长链证据纪律（⑤⑦）	standard	M1	verification	改进/自进化系统的验收证据分层、升级已有技能
+bugfix-runbook	verification	内生（A）	A	开发工作流 ②-⑥ fix 任务排障流水线（研发环境日志/数据库/远程断点取证）	standard	M1	verification	fix 任务连研发环境取证、只读写操作升级裁决
+remote-debug-jvm	verification	内生（A）	A	bugfix-runbook 第③步展开（JDWP 经堡垒机隧道 + IDE attach + 断点纪律）	standard	M1	verification	fix 任务需断点级取证
+security-spec	security	OWASP/STRIDE/CWE 综合（B）	B	--security 门禁依据	lite	M1	security	应用安全规范
+crypto-spec	security	GB/T 39786 等国标（B）	B	check_crypto 判定依据	compliance	M1	security	密码学选型/密评
+cwe-database	security	CWE 视图 799（B）	B	cwe_audit 门禁	compliance	M1	security	弱点分级查询
+security-certification-profiles	security	等保/PCI-DSS 等（B）	B	cert_audit 门禁	compliance	M1	security	认证合规映射
+standards-compliance	security	GB/T 25000 系列映射（B）	B	compliance 档核验	compliance	M1	security	标准合规矩阵
+industry-profile-finance	security	金融法规调研（B）	B	--industry 真实加载	gen_only	M1	security	金融项目立法
+industry-profile-gov	security	政务法规调研（B）	B	--industry 真实加载	gen_only	M1	security	政务项目立法
+industry-profile-medical	security	医疗法规调研（B）	B	--industry 真实加载	gen_only	M1	security	医疗项目立法
+industry-profile-telecom	security	电信法规调研（B）	B	--industry 真实加载	gen_only	M1	security	电信项目立法
+industry-profile-automotive	security	汽车法规调研（B）	B	--industry 真实加载	gen_only	M1	security	汽车项目立法
+industry-profile-energy	security	能源法规调研（B）	B	--industry 真实加载	gen_only	M1	security	能源项目立法
+industry-profile-industrial	security	工控法规调研（B）	B	--industry 真实加载	gen_only	M1	security	工控项目立法
+industry-profile-payment	security	支付法规 + hermes pay-team（B/A）	B/A	--industry 真实加载	gen_only	M1	security	支付项目立法
+fibo-financial-ontology	security	EDM Council FIBO master_2026Q3（B，MIT；提交 2d73435）	B	③ spec 领域段 + ⑤ 编码命名/标识符校验	standard	M1	security	金融业务系统建模、术语消歧、LEI/ISIN 等标识符
+compliance-checkpoints	security	执法检查底稿调研（B，法规引用核至条文号，26 轮核实成果）	B	开发工作流 ⑦ 审查 + 迎检自查任务路由 + spec §22 合规矩阵	compliance	M1	security	强监管交付/迎检准备/敏感数据与权限密钥变更
+regulatory-checkpoint-table	security	执法检查底稿调研（B，主表 173 条经原文核实）	B	inspection-ledger.sh checklist/ledger 数据正本	compliance	M1	security	需要执法检查条目级底稿
+capability-map	meta	内生（A）	A	SKILL.md 路由表 + self-check G25	none	M1	meta	路由与对账

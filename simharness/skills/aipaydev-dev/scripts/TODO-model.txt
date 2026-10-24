@@ -1,0 +1,4 @@
+# ===== # TODO:model 清单（须模型补实值）=====
+# LAYER_DEFS / WRITABLE_DIRS / READONLY_DIRS / SCAN_DIRS / CONSISTENCY_DIRS
+# （STORE_DIR / COMPONENT_DIR 为单目录标量，保留模板 "" 形态不列入数组 TODO 清单）
+# （标注 deprecated 的变量不列本清单——恢复时手工解开 arch.conf 对应注释行）

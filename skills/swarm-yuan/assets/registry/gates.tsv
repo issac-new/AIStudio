@@ -1,0 +1,58 @@
+# gates.tsv — authoritative registry (56 rows). Generated mechanically from precheck --list-gates + gate fixtures.
+# id	flag	fn	domain	tier	enforce	conf_vars	fixture	claim	notes
+branch	--branch	check_branch	process	core	strict	BRANCH_REGEX,PROTECTED_BRANCHES	tests/gate-fixtures/branch	M2	-
+scope	--scope	check_scope	process	core	warn	PROJECT_DIR,READONLY_DIRS	tests/gate-fixtures/scope	M2	-
+spec-first	--spec-first	check_spec_first	process	core	warn	BASE_BRANCH,PROJECT_DIR,SPEC_GLOB,SPEC_REQUIRED,WRITABLE_DIRS	-	M1	-
+build	--build	check_build	quality	core	warn	BUILD_CMD	tests/gate-fixtures/build	M2	-
+test	--test	check_test	quality	core	strict	PROJECT_DIR,TEST_CMD,TEST_QUALITY_STRICT	tests/gate-fixtures/test	M2	-
+sensitive	--sensitive	check_sensitive	security	core	warn	SCAN_DIRS,SENSITIVE_EXCLUDE_GLOBS,SENSITIVE_TOOL	tests/gate-fixtures/sensitive	M2	R126 #1 static mismatch pending
+consistency	--consistency	check_consistency	quality	core	advisory	CONSISTENCY_DIRS,GATE_AI_JUDGMENT	tests/gate-fixtures/consistency	M2	-
+review	--review	check_review	quality	core	strict	PROJECT_DIR,REVIEW_RECORD_DIR,REVIEW_RECORD_REQUIRED,WRITABLE_DIRS	tests/gate-fixtures/review	M2	-
+reuse	--reuse	check_reuse	process	core	strict	SPEC_GLOB	tests/gate-fixtures/reuse	M2	R126 #1 static mismatch pending
+deps	--deps	check_deps	process	core	warn	CODEBASE_REF,PROJECT_DIR,SPEC_FILE,SPEC_GLOB	tests/gate-fixtures/deps	M2	-
+security	--security	check_security	security	core	strict	EVAL_WHITELIST,SCAN_DIRS,SECURITY_TOOL,SQL_INJECTION_WHITELIST,WRITABLE_DIRS	tests/gate-fixtures/security	M2	-
+layer	--layer	check_layer	architecture	arch	strict	AGGREGATE_DIR,BUILD_DEEP_RUNTIMES,DOMAIN_FORBIDDEN_IMPORTS,DOMAIN_LAYER,LAYER_DEFS,LAYER_ORDER,PROJECT_DIR	tests/gate-fixtures/layer	M2	-
+stable-diff	--stable-diff	check_stable_diff	architecture	arch	advisory	PROJECT_DIR,SCAN_DIRS,STABLE_GLOBS,STABLE_PROPAGATE,STABLE_PROPAGATE_HOPS,WRITABLE_DIRS	tests/gate-fixtures/stable-diff	M2	override: advisory
+link-depth	--link-depth	check_link_depth	architecture	arch	advisory	GATE_AI_JUDGMENT	tests/gate-fixtures/link-depth	M2	-
+adr	--adr	check_adr	architecture	arch	warn	ADR_DIR,TECH_DEBT_FILE,WRITABLE_DIRS	tests/gate-fixtures/adr	M2	-
+contract	--contract	check_contract	architecture	arch	warn	ACL_DIR,CONTEXT_DIRS,CONTRACT_DIR	tests/gate-fixtures/contract	M2	-
+consistency-cross	--consistency-cross	check_consistency_cross	architecture	arch	advisory	GLOSSARY_FILE,SOR_FILE,WRITABLE_DIRS	tests/gate-fixtures/consistency-cross	M2	-
+impact	--impact	check_impact	architecture	arch	warn	IMPACT_SPEC_FILE,SPEC_FILE,SPEC_GLOB,WRITABLE_DIRS	tests/gate-fixtures/impact	M2	-
+service	--service	check_service	architecture	arch	warn	API_GATEWAY,DB_CONFIG_FILES,MAX_SYNC_CHAIN,SERVICE_DIRS,SHARED_LIBS_DIR	tests/gate-fixtures/service	M2	-
+api	--api	check_api	architecture	arch	warn	API_SPEC_DIR,SERVICE_DIRS,WRITE_HANDLER_DIRS	tests/gate-fixtures/api	M2	-
+state	--state	check_state	architecture	arch	advisory	COMPONENT_DIR,MAX_STORE_LINES,STORE_DIR	tests/gate-fixtures/state	M2	-
+frontend	--frontend	check_frontend	architecture	arch	warn	BUNDLE_REPORT,COMPONENT_DIR,MAX_COMPONENT_DEPTH,MAX_PROPS_COUNT,STYLE_DIR	tests/gate-fixtures/frontend	M2	-
+cognition	--cognition	check_cognition	architecture	arch	advisory	GATE_AI_JUDGMENT,PROJECT_DIR	tests/gate-fixtures/cognition	M2	-
+domain	--domain	check_domain	architecture	arch	warn	SPEC_FILE,WRITABLE_DIRS	tests/gate-fixtures/domain	M2	-
+knowledge	--knowledge	check_knowledge	architecture	arch	advisory	PROJECT_DIR	tests/gate-fixtures/knowledge	M2	override: advisory
+diagram	--diagram	check_diagram	architecture	arch	warn	PROJECT_DIR	tests/gate-fixtures/diagram	M2	-
+shift-left	--shift-left	check_shift_left	architecture	arch	strict	BREAKING_DDL_PATTERNS,CHANGE_IMPACT_FILE,HEALTH_CHECK_TIMEOUT,HEALTH_CHECK_URLS,LOG_CODE_PATTERNS,METRIC_CODE_PATTERNS,MIGRATION_DIRS,OBSERVABILITY_FILE,ROLLBACK_KEYWORDS,SPEC_FILE,SPEC_GLOB,TEST_DESIGN_FILE,TRACE_CODE_PATTERNS,WRITABLE_DIRS	tests/gate-fixtures/shift-left	M2	-
+framework	--framework	check_framework	architecture	arch	warn	ACTIVE_FRAMEWORKS,PROJECT_DIR	-	M1	-
+compliance	--compliance	check_compliance	compliance	compliance	strict	COMPLIANCE_MATRIX_FILE,COMPLIANCE_REQUIRED_SECTIONS,PROJECT_DIR,SPEC_FILE,STANDARDS_MAP_FILE	tests/gate-fixtures/compliance	M2	-
+docs-pack	--docs-pack	check_docs_pack	compliance	compliance	warn	DOCS_PACK_ALLOW_TBD,DOCS_PACK_DIR,DOCS_PACK_PROFILE,DOCS_PACK_REQUIRED	tests/gate-fixtures/docs-pack	M2	-
+sbom	--sbom	check_sbom	security	compliance	strict	PROJECT_DIR,SBOM_LICENSE_BLOCKLIST,SBOM_LICENSE_EXEMPTIONS,SBOM_OUTPUT_DIR,SBOM_REQUIRED,SBOM_TOOL	tests/gate-fixtures/sbom	M2	-
+privacy	--privacy	check_privacy	security	compliance	strict	PRIVACY_EXEMPTIONS,PRIVACY_EXTRA_PATTERNS,PRIVACY_SCAN_DIRS,PRIVACY_SENSITIVE_KEYWORDS	tests/gate-fixtures/privacy	M2	-
+authz	--authz	check_authz	security	compliance	strict	AUTHZ_EXTRA_PATTERNS,AUTHZ_SCAN_DIRS	tests/gate-fixtures/authz	M2	R126 #1 static mismatch pending
+requirements	--requirements	check_requirements	compliance	compliance	warn	PROJECT_DIR,REQUIREMENTS_ID_REQUIRED,REQUIREMENTS_STRICT,SPEC_FILE	tests/gate-fixtures/requirements	M2	R126 #1 static mismatch pending
+crypto	--crypto	check_crypto	security	compliance	strict	CRYPTO_PROFILE,CRYPTO_SCAN_DIRS	tests/gate-fixtures/crypto	M2	R126 #1 static mismatch pending
+rtm	--rtm	check_rtm	compliance	compliance	warn	API_SPEC_DIR,API_TEST_DIRS,API_TEST_MIN_RATIO,API_TEST_REQUIRE_STATUS,API_TEST_STRICT,COVERAGE_MIN,COVERAGE_REPORT,GATE_AI_JUDGMENT,MUTATION_CMD,MUTATION_MIN_SCORE,MYBATIS_MAPPER_DIRS,PROJECT_DIR,RTM_MATRIX_FILE,RTM_MATRIX_REQUIRED,RTM_REQUIRED,SCAN_DIRS,SENSITIVE_EXCLUDE_GLOBS,SERVICE_DIRS,SPEC_FILE,TEST_ASSERT_EXTRA_PATTERN,TEST_CMD,TEST_DIR_PATTERNS,TEST_MIN_ASSERTIONS_PER_CASE,TEST_MIN_NEGATIVE_RATIO,TEST_QUALITY_STRICT,WRITABLE_DIRS,WRITE_HANDLER_DIRS	tests/gate-fixtures/rtm	M2	-
+dengbao	--dengbao	check_dengbao	compliance	compliance	strict	CRYPTO_PROFILE,DENGBAO_EXEMPT_FILE,DENGBAO_LEVEL,DENGBAO_SCAN_DIRS,PRIVACY_SCAN_DIRS,SPEC_FILE	tests/gate-fixtures/dengbao	M2	-
+pia	--pia	check_pia	compliance	compliance	strict	PIA_DOCS_DIR,PIA_EXEMPTIONS,PIA_REQUIRED,PRIVACY_SCAN_DIRS	tests/gate-fixtures/pia	M2	-
+sast-deep	--sast-deep	check_sast_deep	security	compliance	strict	SAST_DEEP_EXEMPTIONS,SAST_DEEP_SEVERITY,SAST_DEEP_TOOL	tests/gate-fixtures/sast-deep	M2	-
+oss-eval	--oss-eval	check_oss_eval	security	compliance	strict	OSS_EVAL_REQUIRED,SBOM_LICENSE_BLOCKLIST,SBOM_LICENSE_EXEMPTIONS,SBOM_OUTPUT_DIR	tests/gate-fixtures/oss-eval	M2	-
+quality-model	--quality-model	check_quality_model	compliance	compliance	strict	QUALITY_MODEL_REQUIRED,SPEC_FILE	tests/gate-fixtures/quality-model	M2	-
+test-evidence	--test-evidence	check_test_evidence	compliance	compliance	strict	SPEC_FILE,TEST_EVIDENCE_DIR,TEST_EVIDENCE_REQUIRED	tests/gate-fixtures/test-evidence	M2	-
+review-record	--review-record	check_review_record	quality	compliance	strict	AI_DISCLOSURE_REQUIRED,REVIEW_RECORD_DIR,REVIEW_RECORD_REQUIRED,SPEC_FILE	tests/gate-fixtures/review-record	M2	-
+metrics	--metrics	check_metrics	compliance	compliance	advisory	GATE_RUNS_DIR,METRICS_TREND_WINDOW	tests/gate-fixtures/metrics	M2	override: advisory
+method-size	--method-size	check_method_size	architecture	arch	advisory	PROJECT_DIR,WRITABLE_DIRS	tests/gate-fixtures/method-size	M2	-
+release-sign	--release-sign	check_release_sign	compliance	compliance	strict	RELEASE_ARTIFACTS_GLOB,RELEASE_PROVENANCE_FILE,RELEASE_PROVENANCE_REQUIRED,RELEASE_SIGN_REQUIRED,RELEASE_SIGN_TOOL	tests/gate-fixtures/release-sign	M2	-
+operate	--operate	check_operate	process	explicit	advisory	HEALTH_CHECK_URLS,SPEC_FILE	tests/gate-fixtures/operate	M2	-
+decision-audit	--decision-audit	check_decision_audit	process	full_tail	advisory	PROJECT_DIR	tests/gate-fixtures/decision-audit	M2	-
+loop-oracle	--loop-oracle	check_loop_oracle	process	explicit	strict	API_SPEC_DIR,API_TEST_DIRS,API_TEST_MIN_RATIO,API_TEST_REQUIRE_STATUS,API_TEST_STRICT,COVERAGE_MIN,COVERAGE_REPORT,GATE_AI_JUDGMENT,MUTATION_CMD,MUTATION_MIN_SCORE,MYBATIS_MAPPER_DIRS,PROJECT_DIR,SCAN_DIRS,SENSITIVE_EXCLUDE_GLOBS,SERVICE_DIRS,TEST_ASSERT_EXTRA_PATTERN,TEST_CMD,TEST_MIN_ASSERTIONS_PER_CASE,TEST_MIN_NEGATIVE_RATIO,TEST_QUALITY_STRICT,WRITABLE_DIRS,WRITE_HANDLER_DIRS	tests/gate-fixtures/loop-oracle	M2	-
+cwe-audit	--cwe-audit	check_cwe_audit	security	compliance	advisory	PROJECT_DIR	tests/gate-fixtures/cwe-audit	M2	-
+cert-audit	--cert-audit	check_cert_audit	compliance	compliance	advisory	CRYPTO_PROFILE,DENGBAO_LEVEL,SPEC_FILE	tests/gate-fixtures/cert-audit	M2	-
+pr-quality	--pr-quality	check_pr_quality	quality	explicit	advisory	GATE_AI_JUDGMENT	tests/gate-fixtures/pr-quality	M1	-
+skill-supply-chain	--skill-supply-chain	check_skill_supply_chain	security	explicit	advisory	PROJECT_DIR	tests/gate-fixtures/skill-supply-chain	M2	-
+state-phase	--state-phase	check_state_phase	process	full_tail	advisory	PROJECT_DIR	tests/gate-fixtures/state-phase	M2	-
+upstream-baseline	--upstream-baseline	check_upstream_baseline	process	explicit	advisory	PROJECT_DIR	tests/gate-fixtures/upstream-baseline	M2	-
+learnings	--learnings	check_learnings	process	explicit	advisory	PROJECT_DIR	tests/gate-fixtures/learnings	M2	-

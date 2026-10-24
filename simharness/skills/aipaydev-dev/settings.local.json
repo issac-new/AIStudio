@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash scripts/precheck.sh:*)",
+      "Bash(bash scripts/state-machine.sh:*)",
+      "Bash(bash scripts/self-check.sh:*)",
+      "Bash(bash scripts/trace-log.sh:*)",
+      "Bash(bash scripts/generate-skill.sh:*)",
+      "Bash(bash scripts/failure-detector.sh:*)",
+      "Bash(bash scripts/integrity-guard.sh:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(sudo:*)",
+      "Bash(curl:* | sh)",
+      "Bash(curl:* | bash)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/id_rsa)",
+      "Read(**/id_ed25519)",
+      "Read(**/*.pem)"
+    ]
+  }
+}

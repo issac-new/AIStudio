@@ -1,0 +1,42 @@
+{
+  "name": "@zcode/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Main CLI application for zcode",
+  "bin": {
+    "zcode": "./dist/zcode.cjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/zcode.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:desktop-agent": "node scripts/build.mjs --desktop-agent",
+    "build:sea": "pnpm --dir ../../../.. exec turbo --skip-infer --cwd apps/zcode-cli run build --filter=!@zcode/cli --force && pnpm build && node scripts/build-sea.mjs --all",
+    "sea": "node scripts/build-sea.mjs",
+    "upload:sea": "node scripts/upload-sea-smb.mjs",
+    "clean": "node ../../scripts/clean-dist.mjs",
+    "dev": "tsx src/main.ts",
+    "test": "node --disable-warning=DEP0205 --import tsx --test tests/cli.unit.test.ts tests/argument-parsing/contract.test.ts tests/tui-console.test.ts tests/tui-login-polling.test.ts tests/tui-mode-switch.test.ts tests/tui-model-selection.test.ts tests/tui-signals.test.ts tests/tui-startup.test.ts tests/tui-subagent-observation.test.ts tests/tui-subagents.test.ts tests/clipboard-text.test.ts tests/clipboard-image.test.ts tests/cwd-option.test.ts tests/dwf-command.test.ts tests/dwf-child-command.test.ts tests/tui-session-event-relay.test.ts tests/headless-workflow.test.ts tests/workflow-mode-option.test.ts tests/headless-workflow-option.test.ts tests/output-format-stream-json.test.ts tests/skills-command.test.ts tests/hooks-trust-command.test.ts tests/internal-search.node-test.ts tests/zcode-cua-plugin-host-authority.node-test.ts tests/provider-runtime-env.test.ts tests/sea-runtime-tools.test.ts tests/process-errors.test.ts tests/memory-bench.test.ts tests/plugins-command.test.ts tests/plugin-host-entry.test.mjs tests/build.test.mjs tests/build-sea.test.mjs tests/upload-sea-smb.test.mjs tests/process-name.test.mjs",
+    "coverage": "c8 --reporter=text --reporter=html tsx --disable-warning=DEP0205 --test tests/cli.unit.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --write src"
+  },
+  "dependencies": {
+    "@zcode/adapters": "workspace:*",
+    "@zcode/bootstrap": "workspace:*",
+    "@zcode/contracts": "workspace:*",
+    "@zcode/core": "workspace:*",
+    "@zcode/dynamic-workflow-runtime": "workspace:*",
+    "@zcode/i18n": "workspace:*",
+    "@zcode/provider-node": "workspace:*",
+    "@zcode/shared": "workspace:*",
+    "@zcode/shared-types": "workspace:*",
+    "@zcode/tui": "workspace:*",
+    "dotenv": "^17.4.2",
+    "playwright-core": "1.59.1"
+  }
+}

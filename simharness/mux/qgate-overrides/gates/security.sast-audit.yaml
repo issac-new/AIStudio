@@ -1,0 +1,29 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: security.sast-audit
+  version: 0.2.0
+  description: >
+    每件 testlog 含 npm audit 证据段（输出/漏洞计数/不可达声明三态——质量 B② 口径）。run20 复盘 C4 覆盖件：替换模板占位命令为 scripts/qgate-checks/qgate-check.mjs
+    真实执行器（simharness mux/qgate-overrides/ 供给，驱动 G5 前注入本仓）。
+    证据解析序：工作树 → origin/integration/RFD-001（集成分支按纪律 71 保留至报告持久化后）。
+spec:
+  domain: L4
+  claims:
+    - security.sast-audit-evidence
+  triggers:
+    - release
+  executors:
+    - id: qgate-check
+      type: command
+      command: ["node", "scripts/qgate-checks/qgate-check.mjs", "sast-audit"]
+      evidenceType: sast-audit-result
+      timeoutMs: 60000
+  evidence:
+    required:
+      - sast-audit-result
+  policy:
+    failure: block
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
