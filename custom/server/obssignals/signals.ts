@@ -10,6 +10,8 @@ export interface ObsSpanRow {
   kind?: string
   phase?: string
   session_id?: string
+  /** profile 身份（run-trace 清账批 D14；存量 span 无此字段如实不归桶） */
+  profile?: string | null
   model?: string | null
   provider?: string | null
   started_at?: number | null
@@ -78,6 +80,8 @@ export interface ObsSignalsReport {
   totals: ObsSignalsTotals
   /** 请求量按 model 分组（unknown 单列）。 */
   byModel: Array<{ model: string; llmCalls: number; tokens: TokenSplit }>
+  /** token 按 profile 分桶（清账批 D14；仅 span 带 profile 字段的行归桶——存量 span 不计入） */
+  byProfile: Array<{ profile: string; llmCalls: number; tokens: TokenSplit }>
   notes: string[]
 }
 
@@ -163,6 +167,7 @@ function finalizeDay(day: string, acc: DayAcc): ObsDayAgg {
 /** 纯组装：trace 行 → 按日指标 + 合计。行缺字段如实跳过，不猜数。 */export function buildObsSignals(rows: ObsSpanRow[], opts: { days: number }): ObsSignalsReport {
   const byDayAcc = new Map<string, DayAcc>()
   const byModelAcc = new Map<string, { llmCalls: number; tokens: TokenSplit }>()
+  const byProfileAcc = new Map<string, { llmCalls: number; tokens: TokenSplit }>()
   const total = newDayAcc()
 
   const dayAcc = (epochSeconds: number | null | undefined): DayAcc | null => {
@@ -196,6 +201,13 @@ function finalizeDay(day: string, acc: DayAcc): ObsDayAgg {
       modelAcc.llmCalls += 1
       addTokens(modelAcc.tokens, row.usage)
       byModelAcc.set(model, modelAcc)
+      const profile = row.profile?.trim()
+      if (profile) {
+        const profAcc = byProfileAcc.get(profile) ?? { llmCalls: 0, tokens: emptyTokens() }
+        profAcc.llmCalls += 1
+        addTokens(profAcc.tokens, row.usage)
+        byProfileAcc.set(profile, profAcc)
+      }
 
       for (const target of [acc, total] as const) {
         if (!target) continue
@@ -252,10 +264,14 @@ function finalizeDay(day: string, acc: DayAcc): ObsDayAgg {
     byModel: [...byModelAcc.entries()]
       .map(([model, v]) => ({ model, llmCalls: v.llmCalls, tokens: v.tokens }))
       .sort((a, b) => b.llmCalls - a.llmCalls),
+    byProfile: [...byProfileAcc.entries()]
+      .map(([profile, v]) => ({ profile, llmCalls: v.llmCalls, tokens: v.tokens }))
+      .sort((a, b) => b.llmCalls - a.llmCalls),
     notes: [
       '429 率仅覆盖 api_request_error 钩子接入（run-trace v1.1）后的新 trace；历史 trace 无错误 span。',
       'TTFT 非流式请求不打点（上游 first_chunk_at=None），samples 如实标注。',
       '缓存命中率口径=cacheRead/(input+cacheRead+cacheWrite)，来自上游 usage 拆分。',
+      'byProfile 只归档带 profile 字段的 span（run-trace 2026-10-24 清账批起）；存量 span 不计入该桶。',
     ],
   }
 }

@@ -15,6 +15,9 @@ import {
   completedTaskIds,
   markParetoFrontier,
   swarmCollabOf,
+  textSimilarityOf,
+  parseByzantineInjections,
+  ablationCompareOf,
 } from '../swarm-collab'
 import { parseLedgerTsv } from '../interventions'
 import { deliveryRouter } from '../delivery-controller'
@@ -55,8 +58,8 @@ const RUN22_GATE = [
   JSON.stringify({ ts: '2026-10-21T16:26:33Z', actor: 'admin', action: 'approve' }),
 ].join('\n')
 
-function readoutFixture() {
-  return swarmCollabOf({
+function readoutFixtureArgs() {
+  return {
     run: '20261021-fx',
     scenarioLog: RUN22_SCENARIO,
     ledgerRows: parseLedgerTsv(RUN22_LEDGER),
@@ -67,7 +70,11 @@ function readoutFixture() {
       { ac: 'AC-3', verdict: 'reject' },
     ],
     gateDecisions: [{ decision: 'reject' }, { decision: 'approve' }],
-  })
+  }
+}
+
+function readoutFixture() {
+  return swarmCollabOf(readoutFixtureArgs())
 }
 
 describe('群体协作读数 · 解析器（run22 真实行）', () => {
@@ -212,5 +219,77 @@ describe('群体协作读数 · 端点（夹具端到端）', () => {
     expect(((await res.json()) as { run: string }).run).toBe('20261021-fx')
     const bad = await fetch(`${base}/api/hermes/delivery/swarm-collab?run=../escape`)
     expect(bad.status).toBe(400)
+  })
+})
+
+
+// ── 2026-10-24 清账批：全文保真度 / 拜占庭 / 消融对比 ──
+describe('清账批 D13 · 全文意图保真度（dialog-text 口径）', () => {
+  it('字符 bigram Dice：恒等=1、全异=0、部分重叠居中', () => {
+    expect(textSimilarityOf('支付收银台需求文档', '支付收银台需求文档')).toBe(1)
+    expect(textSimilarityOf('完全不同的内容', '毫无交集的文本')).toBeLessThan(0.15)
+    const mid = textSimilarityOf('执行任务 AN-PAYCORE 支付核心系分', '执行任务 AN-MP 收银台前端系分')
+    expect(mid).toBeGreaterThan(0.2)
+    expect(mid).toBeLessThan(1)
+  })
+
+  it('dialogs 在场 → basis=dialog-text；缺席 → anchor 回退', () => {
+    const withDlg = swarmCollabOf({
+      ...readoutFixtureArgs(), intentDialogs: {
+        taskBook: '支付收银台：支持微信与支付宝双渠道收单，商户多端接入',
+        dispatches: ['执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）：支持微信与支付宝双渠道收单', '执行任务 AN-MP（csw-cashier-mp 小程序收银台前端）：商户多端接入'],
+      },
+    })
+    expect(withDlg.communication.intentFidelity.basis).toBe('dialog-text')
+    expect(withDlg.communication.intentFidelity.textDispatchCount).toBe(2)
+    expect(withDlg.communication.intentFidelity.textSimilarity).not.toBeNull()
+    expect(withDlg.communication.intentFidelity.rate).toBe(withDlg.communication.intentFidelity.textSimilarity)
+    const noDlg = swarmCollabOf({ ...readoutFixtureArgs(), intentDialogs: null })
+    expect(noDlg.communication.intentFidelity.basis).toBe('anchor')
+    expect(noDlg.communication.intentFidelity.rate).toBeCloseTo(3 / 4)
+  })
+})
+
+describe('清账批 D11 · 拜占庭读数（标记实测三态）', () => {
+  const BYZ_LOG = [
+    '[mux 10:38:44] [chen] 派发 ($F1): @chen-agent:matrix.test 执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）。',
+    '[mux 10:40:01] [BYZANTINE-INJECT mode=corruption target=chen-agent ts=2026-10-21T10:40:01+08:00] 污染指令已附加（评估注入）',
+    '[mux 10:41:00] [xiao] 派发 ($F2): @xiao-agent:matrix.test 执行任务 AN-MP（csw-cashier-mp 小程序收银台前端系分）。',
+    '[mux 10:42:00] [hu] 派发 ($F3): @hu-agent:matrix.test 执行任务 AN-CHWX（csw-channel-wechat 财付通渠道系分）。',
+  ].join('\n')
+
+  it('标记解析：mode/target/ts', () => {
+    const inj = parseByzantineInjections(BYZ_LOG)
+    expect(inj).toHaveLength(1)
+    expect(inj[0]).toMatchObject({ mode: 'corruption', target: 'chen-agent' })
+  })
+
+  it('注入在场 → status=injected + BCR + 暴露派发数；无标记 → no_data', () => {
+    const injected = swarmCollabOf({ ...readoutFixtureArgs(), scenarioLog: BYZ_LOG + '\n' + RUN22_SCENARIO })
+    expect(injected.social.byzantine.status).toBe('injected')
+    expect(injected.social.byzantine.injections).toHaveLength(1)
+    // chen 名下有 receipt-missing？fixture 无 → BCR 由 issuesOwned 判：chen 无问题单 → 拦截证据缺席
+    // 但 RUN22_SCENARIO 部分行也在（含 AN-MP 真值）——只断言字段形态与暴露窗>0
+    expect((injected.social.byzantine.exposureDispatches ?? [0])[0]).toBeGreaterThan(0)
+    expect(injected.social.byzantine.bcr).not.toBeNull()
+    const clean = readoutFixture()
+    expect(clean.social.byzantine.status).toBe('no_data')
+  })
+})
+
+describe('清账批 D10 · 消融对比（实验性 LOO）', () => {
+  it('基线/消融完成率差分=criticality；空样本=null', () => {
+    const r = ablationCompareOf(
+      { run: 'base', taskCompletion: { done: 5, total: 6 } },
+      { run: 'abl', taskCompletion: { done: 2, total: 6 } },
+      ['chen'],
+    )
+    expect(r.roles).toEqual(['chen'])
+    expect(r.base.rate).toBeCloseTo(5 / 6)
+    expect(r.ablated.rate).toBeCloseTo(2 / 6)
+    expect(r.criticality).toBeCloseTo(3 / 6)
+    expect(r.basis).toBe('experimental-leave-one-out')
+    const empty = ablationCompareOf({ run: 'b', taskCompletion: { done: 0, total: 0 } }, { run: 'a', taskCompletion: { done: 1, total: 2 } }, [])
+    expect(empty.criticality).toBeNull()
   })
 })
