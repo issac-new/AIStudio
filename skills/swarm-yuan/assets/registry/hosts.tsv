@@ -1,0 +1,13 @@
+# hosts.tsv — authoritative host registry (11 rows: 8 with native-rule adapters + 3 skills-dir targets).
+# id	detect	install_path	hooks_schema	adapter	support	evidence_state	claim	notes
+claude-code	command:claude	~/.claude	hooks.json	assets/tool-adapters/claude.sh	deep	proven	M3	L1 write-time live-proven
+codex	command:codex	~/.codex	`.codex/hooks.json` exit 2	assets/tool-adapters/codex.sh	cli	proven	M3	L1 write-time live-proven
+zcode	command:zcode	~/.zcode	zcode-plugin nested hooks.json	assets/tool-adapters/zcode.sh	cli	proven	M3	L1 write-time live-proven
+cursor	command:cursor	~/.cursor	hooks.json version:1	assets/tool-adapters/cursor.sh	cli	rendered	M1	config rendered, not live-proven
+gemini	command:gemini	~/.gemini	settings.json hooks nested	assets/tool-adapters/gemini.sh	cli	rendered	M1	config rendered, not live-proven
+windsurf	command:windsurf	~/.codeium/windsurf	hooks.v1.json bare	assets/tool-adapters/windsurf.sh	cli	rendered	M1	Devin CLI; config rendered
+opencode	command:opencode	~/.config/opencode	.opencode/plugins	assets/tool-adapters/opencode.sh	cli	rendered	M1	plugin config rendered
+kimi	command:kimi	~/.kimi-code	config.toml [[hooks]]	assets/tool-adapters/kimi.sh	cli	rendered	M1	config rendered
+hermes	dir:~/.hermes	~/.hermes/skills	none	assets/tool-adapters/skills-dir.sh	skills-dir	proven	M0	skills dir install; no native rule render
+dsh	dir:~/.dsh	~/.dsh/skills	none	assets/tool-adapters/skills-dir.sh	skills-dir	proven	M0	skills dir install; no native rule render
+ccswitch	dir:~/.cc-switch	~/.cc-switch/skills	none	assets/tool-adapters/skills-dir.sh	unified-lib	proven	M0	unified skill library; other hosts may symlink

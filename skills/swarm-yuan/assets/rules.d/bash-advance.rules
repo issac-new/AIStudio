@@ -1,0 +1,21 @@
+# bash-advance.rules — 推进态命令三值规则（GATE_ENFORCE_DENY_BASH 的数据化形态）
+# 格式：<pattern(glob)> → <allow|prompt|forbid> # <justification（forbid 须含"替代："）>
+# 求值：gate-rules.sh（多规则命中取最严 forbid > prompt > allow；R126 起匹配侧含
+# 小写化二次判定——大小写不敏感文件系统上 RM/RM -RF 形态同样命中本表全小写规则）。
+
+git push *        → prompt  # 推进态命令；先跑 bash scripts/precheck.sh --all 修复至通过
+git commit *      → prompt  # 提交前确认门禁绿；draft 期禁止
+git merge *       → prompt  # 合并属推进态；确认冲突已在 worktree 侧解决
+npm publish *     → forbid  # 发布动作不经门禁直接执行；替代：走 release 流程（门禁全绿 + tag + notes）
+rm -rf *          → forbid  # 不可逆批量删除；替代：git clean -n 预览后逐项删除，或用 git restore
+# R126：rm -rf 拼写变体同罪同罚（旧版只挡字面 rm -rf，rm -fr/-fR/--recursive 等全放行）。
+# 旗标聚合/换位形态是真实事故高频面；新增变体须保持 forbid+替代方案。
+rm -fr *          → forbid  # rm -rf 换位变体；替代：同上（git clean -n 预览后逐项删除）
+rm -fR *          → forbid  # rm -rf 大写 R 变体；替代：同上
+rm -Rf *          → forbid  # rm -rf 大写换位变体；替代：同上
+rm -r -f *        → forbid  # rm -rf 拆写变体；替代：同上
+rm -f -r *        → forbid  # rm -rf 拆写换位变体；替代：同上
+rm --recursive *  → forbid  # rm -rf 长选项变体；替代：同上
+rm -r --force *   → forbid  # rm -rf 长选项拆写变体；替代：同上
+git reset --hard * → forbid # 破坏工作区未提交改动；替代：git stash 后再操作，或 git restore -- <path> 精确恢复
+sudo *            → forbid  # 提权命令超出技能边界；替代：列出需要的具体操作交用户执行
