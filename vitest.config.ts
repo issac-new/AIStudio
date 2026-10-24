@@ -8,13 +8,23 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import { existsSync } from 'node:fs'
 
 // overlay 根（本文件所在目录）。
 const overlayRoot = __dirname
 // 上游 client src：@ 兜底 alias 的目标（@/api、@/views 等解析到上游）。
-// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/serve-server.mjs 同一基建）——
-// worktree（.claude/worktrees、/tmp）中测试时指向隔离注入副本，缺省回落共享 upstream。
-const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim() || resolve(overlayRoot, '..', 'upstream')
+// 优先级与 inject.mjs 一致（2026-10-24 单仓整合起 inject 目标=vendor/，测试兜底
+// 必须跟随，否则读到整合前旧 upstream 树——146 文件级解析失败实录）：显式
+// OVERLAY_UPSTREAM_ROOT（私有上游隔离）＞ vendor 基线 ＞ 共享 ../upstream（远端
+// vendor 模式回退）。vendor 路径缺 hermes-studio 时说明检出异常，走旧回退。
+const envUpstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
+const vendorUpstream = resolve(overlayRoot, 'vendor')
+const fallbackUpstream = envUpstream
+  ? resolve(envUpstream)
+  : existsSync(resolve(vendorUpstream, 'hermes-studio'))
+    ? vendorUpstream
+    : resolve(overlayRoot, '..', 'upstream')
+const upstreamRoot = fallbackUpstream
 const upstreamClientSrc = resolve(upstreamRoot, 'hermes-studio/packages/client/src')
 
 export default defineConfig({

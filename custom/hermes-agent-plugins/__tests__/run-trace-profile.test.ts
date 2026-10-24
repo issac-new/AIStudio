@@ -22,6 +22,9 @@ describe('run-trace profile 字段（清账批 D14）', () => {
 import importlib.util, sys, json
 spec = importlib.util.spec_from_file_location('rt', ${JSON.stringify(join(pluginDir, '__init__.py'))})
 m = importlib.util.module_from_spec(spec)
+# dataclass 字段类型解析经 sys.modules[cls.__module__] 查命名空间（3.14 实测崩
+# NoneType.__dict__，3.15 侥幸不查）；先注册再 exec 是 importlib 标准姿势。
+sys.modules['rt'] = m
 spec.loader.exec_module(m)
 import os
 os.environ['HERMES_RUN_TRACE_PROFILE'] = 'explicit-prof'
@@ -41,9 +44,10 @@ print(json.dumps({'root': m._detect_profile()}))
 
   it('行为门：_write_jsonl_line 给行补 profile 且不覆盖显式字段', () => {
     const py = `
-import importlib.util, json, io
+import importlib.util, json, io, sys
 spec = importlib.util.spec_from_file_location('rt', ${JSON.stringify(join(pluginDir, '__init__.py'))})
 m = importlib.util.module_from_spec(spec)
+sys.modules['rt'] = m  # 同上：dataclass 类型解析需模块已注册（3.14）
 spec.loader.exec_module(m)
 m._PROFILE = 'qi-agent'
 buf = io.StringIO()
