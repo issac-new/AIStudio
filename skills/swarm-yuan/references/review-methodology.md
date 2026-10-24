@@ -622,7 +622,9 @@ ocr 新增 LLM provider 支持：
 - **flaky pass 在尾声与台账保留失败断言**（#3331）：侥幸通过不冲掉失败证据——flaky-green 族第三实证（与 v1.91.163 flaky-green 显式化互补：一个标名通过态，一个保失败证据）。
 - **工作流任一步骤裸跑 gh 无 token 即 fail**（#3336）+ 逐工作流步骤扫描测试执法——门禁自身依赖的凭证前置检查进测试面；**evals local-hook detector 承认手工配置**（#3332，语义等价类延续）。
 
-### v1.91.183-185 增量（R141）
+## 运行时版本增量（生成器侧）
+
+### v1.91.183-185 增量
 
 > 来源：gstack main tip 6f7488a70（细节 `docs/research/R141-runtime-refresh.md`）。
 
@@ -634,6 +636,6 @@ ocr 新增 LLM provider 支持：
 
 > 来源：openspec v1.15.0（细节 `docs/research/R141-runtime-refresh.md`）。
 
-- **`update --dry-run` 变更预演**：报告将 add/change/delete 的文件、不写入，`--json` 机读三态——**升级动作先预演后执行**：变更面可见才可裁决（R141 物化为 generate-skill `--upgrade --dry-run`）。与 comet 0.5.0 升级门互补：一个管「现在能不能升」（时机面），一个管「升了会动什么」（内容面）。
+- **`update --dry-run` 变更预演**：报告将 add/change/delete 的文件、不写入，`--json` 机读三态——**升级动作先预演后执行**：变更面可见才可裁决（已物化为 generate-skill `--upgrade --dry-run`）。与 comet 0.5.0 升级门互补：一个管「现在能不能升」（时机面），一个管「升了会动什么」（内容面）。
 - **REMOVED 需求按精确名匹配 baseline**：相似名替换不再被误判为删除——**基准对照须精确键匹配**：对照键的模糊匹配会造出「既删又增」的幻影变更（review 对账同理：先精确锚、后语义等价类，不跳步）。
-- **standalone 二进制安装+SHA256SUMS 随发**：发布物完整性清单随发布物同行——与本仓离线包 SHA256SUMS 同构（既有实践获上游对齐确认）。
+- **standalone 二进制安装+SHA256SUMS 与发布物同行**：发布物完整性清单同发布——与本仓离线包 SHA256SUMS 同构（既有实践获上游对齐确认）。
