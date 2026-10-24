@@ -2631,6 +2631,20 @@ def eval_summary_html():
     reasons = list(d.get('fails') or []) + list(d.get('gaps') or [])
     actions = run.get('actions') or []
     high = [a for a in actions if isinstance(a, dict) and a.get('priority') == 'high']
+    # V8.48 新读数（京东评测体系吸收轮）：难度/角色分桶、输出稳定性、行为信号、经营摘要
+    by_diff = run.get('byDifficulty') or []
+    by_role = run.get('byRole') or []
+    stab = run.get('outputStability') or {}
+    beh = d.get('behaviorSignals') or {}
+    biz = d.get('businessSummary') or {}
+    diff_txt = ' · '.join(f"{b.get('tier')}={pct(b.get('passAtK'))}({b.get('taskCount')})" for b in by_diff if isinstance(b, dict)) or '未标注'
+    role_txt = ' · '.join(f"{b.get('role')}={pct(b.get('passAtK'))}({b.get('passed')}/{b.get('taskCount')})" for b in by_role if isinstance(b, dict)) or '未标注'
+    stab_txt = f"翻转 {pct(stab.get('flipRate'))}（{stab.get('flips')}/{stab.get('checked')}，{stab.get('rounds')} 轮）" if stab else '未开启'
+    beh_rows = beh.get('rows') or []
+    beh_txt = (f"{len(beh_rows)} 信号 · 可判读 {sum(1 for r in beh_rows if isinstance(r, dict) and r.get('sufficient'))}"
+               if beh else '未采集')
+    biz_facts = biz.get('facts') or []
+    biz_txt = f"{esc(biz.get('verdict'))}（{len(biz_facts)} 事实行）" if biz else '未采集'
     pyramid = run.get('pyramid') or []
     if isinstance(pyramid, dict):
         pyramid = pyramid.get('layers') or []
@@ -2655,6 +2669,8 @@ def eval_summary_html():
       <tr><td>四层指标金字塔</td><td>{esc(pyr_txt)}</td><td>模型/应用/Agent/线上；no_data 如实</td></tr>
       <tr><td>安全红队</td><td>逃逸 {pct(rt_tot.get('evasionRate'))} · 拦截 {esc(rt_tot.get('detected'))}/{esc(rt_tot.get('evaluated'))} · 良性误报 {pct(rt_ben.get('falsePositiveRate'))} · S1 接线 {'是' if rt.get('s1Wired') else '否'}</td><td>v1 只接 S0 规则层；逃逸率只代表规则层</td></tr>
       <tr><td>线上证据</td><td>{'已回填' if run.get('liveEvidence') else '未回填（QPS/分档 no_data）'}</td><td>只有回填后才是真判</td></tr>
+      <tr><td>难度/角色分桶</td><td>难度：{esc(diff_txt)}；角色：{esc(role_txt)}</td><td>V8.48；宁缺毋滥——未标注不计，失败直达责任方</td></tr>
+      <tr><td>稳定性/行为信号/经营摘要</td><td>重复判定 {esc(stab_txt)} · 行为信号 {esc(beh_txt)} · 经营摘要 {esc(biz_txt)}</td><td>V8.48；观测读数不改判（同 V8.46 纪律）</td></tr>
       <tr><td>动作驱动</td><td>{len(actions)} 条 · 高优 {len(high)} 条</td><td>每条失败/缺口应指向下一步动作</td></tr>
     </table>
   </div>
