@@ -32,6 +32,20 @@
 | `zcode-patches/` | Ycode（zcode 分叉）编辑器补丁 series |
 | `evidence/` | 验证证据留档（文本类；二进制中间产物不入库） |
 | `assets/` | 静态资产与技能品牌配置 |
+| `config/` | 特性开关与回路配置（bootstrap/features/loop-config；features.cockpit 等门控在此） |
+
+### 隐藏目录（入库但易漏）
+
+| 路径 | 作用 |
+|---|---|
+| `.swarm-yuan/` | 本仓自身的 swarm-yuan 项目状态：`hooks/pre-commit`（`core.hooksPath` 指向的 L2 钩子）+ decisions/trace 台账——**有意入库**，fresh clone 即得钩子与留痕 |
+| `.qgate/` | qgate 门禁运行面（`gates/` 项目覆盖门 + `cache/` 运行证据） |
+| `.archived-patches/` | 退役补丁族档案（旧 matrix 系列 018-061 等） |
+| `.github/` | CI（`workflows/qgate.yml`） |
+
+### 本地基建（不入库；.gitignore / info/exclude / 自忽略兜底）
+
+`upstream/`（升级源缓存，pristine 规则见 `vendor/VENDOR.md`）、`archive/`（旧仓归档+bundle）、`sim-mux/`（SIM 运行数据）、`governance/`（治理生产仓，嵌套 git）、`.claude/`（worktrees）、`.zcode/`、`.gstack/`、`.superpowers/`、`node_modules`（符号链 → `vendor/hermes-studio/node_modules` 借用）。新增本地目录须同步加忽略规则（通用产物进 `.gitignore`、机器特定进 `info/exclude`），禁裸放污染 git status。
 
 ## 三条不变量
 
