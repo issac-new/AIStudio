@@ -1,0 +1,15 @@
+/* mux/theme-demo-kit-dark.css —— 演示素材页的暗色修正层（2026-10-14）
+ *
+ * demo-kit.html 本来就是暗色设计，但它的次级文字（时间轴行号、统计标签、审批记录、
+ * 字幕卡）用的是 #6b7f99 一类中灰，在深蓝底上只有 2.8~4.3:1。本层把这些灰提到
+ * 可读区间，同时保住 .tl-gate 的蓝色语义。
+ */
+
+html[data-theme="dark"] .tl-row { color:#a8b8cc !important; }
+html[data-theme="dark"] .tl-gate.tl-row { color:#9dc3ff !important; }
+html[data-theme="dark"] .tl-gate { color:#9dc3ff !important; }
+html[data-theme="dark"] .stat,
+html[data-theme="dark"] .stat span { color:#c7d4e6 !important; }
+html[data-theme="dark"] .ap-row { color:#a8b8cc !important; }
+html[data-theme="dark"] .qt-card,
+html[data-theme="dark"] .ic-card { color:#dbe4f0 !important; }

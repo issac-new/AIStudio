@@ -1,0 +1,5 @@
+{
+  "_comment": "MCP server 接入模板（由 swarm-yuan 生成）。默认无激活 server——AI 按项目已装运行时激活对应 server。激活示例：把 mcpServers 对象内对应 server 的注释去掉（改为有效 JSON 键值）。常用 server：gitnexus（代码图谱，PolyForm 非商用）/ claude-mem（跨会话记忆；CLI 侧经 scripts/memory-backends.sh 适配层接入，可替换后端）/ graphify（MIT 代码图谱，默认推荐）。",
+  "mcpServers": {
+  }
+}

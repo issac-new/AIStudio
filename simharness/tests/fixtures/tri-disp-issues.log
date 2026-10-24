@@ -1,0 +1,9 @@
+ISSUE|receipt-missing|AN-PAYCORE|完成回执未见（免等窗即刻记单；回灌补发要求已发，入库真值在案）
+DISP|receipt-missing|AN-PAYCORE|终态闭环：审计段复核回执已在房间可见（免等窗记单后补账成功）——原单保留记时点真值
+ISSUE|wake-order-analysis|xiao|空转收场唤醒令（anexec 系分产物 AN-MP 未以新提交入仓）
+DISP|wake-order-analysis|xiao|空转收场唤醒令（anexec 系分产物 AN-MP 未以新提交入仓；驱动 wait_truth 串行硬窗在途）。回执见群消息。监控代行（纪律36 唤醒令类）
+ISSUE|security-review-fail|secops-agent|RFD-001 涉敏安全评审 FAIL（缺项见评审卡），G2 不放行
+DISP|security-gate-unlock-chain|chen,secops|安全闸 FAIL 解锁链：缺项=概设§9挂账#2(T01)/#5(T05) 均归 chen——修复令+复审令已发。监控代行
+ISSUE|dev-branch-missing|DEV-PAYCORE-C|分支未推送
+ISSUE|frame-capture-failed|step-appinit|壳页同帧摘除（24 张 hash 冷启动壳页）
+DISP|frame-capture-failed|director|已修 同帧合法化处理后摘除（审计语义两步收紧件）

@@ -1,0 +1,29 @@
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: L0.registers
+  version: 0.2.0
+  description: >
+    roster/app-registry/org 三件管理注册表在案。run20 复盘 C4 覆盖件：替换模板占位命令为 scripts/qgate-checks/qgate-check.mjs
+    真实执行器（simharness mux/qgate-overrides/ 供给，驱动 G5 前注入本仓）。
+    证据解析序：工作树 → origin/integration/RFD-001（集成分支按纪律 71 保留至报告持久化后）。
+spec:
+  domain: L0
+  claims:
+    - l0.registers-present
+  triggers:
+    - release
+  executors:
+    - id: qgate-check
+      type: command
+      command: ["node", "scripts/qgate-checks/qgate-check.mjs", "registers"]
+      evidenceType: registers-result
+      timeoutMs: 60000
+  evidence:
+    required:
+      - registers-result
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24
