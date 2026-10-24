@@ -114,7 +114,10 @@ def _ensure_trace_dir() -> Optional[Path]:
 
 
 def _write_jsonl_line(file_handle: Any, data: dict) -> None:
-    """Write a single JSONL line."""
+    """Write a single JSONL line. 每行统一补 profile 身份（2026-10-24 清账批 D14，
+    byProfile token 分桶的数据面；显式已带字段不覆盖）。"""
+    if _PROFILE:
+        data.setdefault("profile", _PROFILE)
     try:
         line = json.dumps(data, ensure_ascii=False) + "\n"
         file_handle.write(line)
@@ -194,7 +197,26 @@ def _correlation_fields() -> Dict[str, Optional[str]]:
         "user_id": _env("HERMES_RUN_TRACE_USER_ID") or None,
         "prompt_template": _env("HERMES_RUN_TRACE_PROMPT_TEMPLATE") or None,
         "prompt_version": _env("HERMES_RUN_TRACE_PROMPT_VERSION") or None,
+        "profile": _detect_profile(),
     }
+
+
+def _detect_profile() -> Optional[str]:
+    """profile 身份（2026-10-24 清账批 D14）：显式 env 优先；否则 HERMES_HOME 基名
+    （插件按 profile home 部署是既有事实——mx-enable-run-trace.sh）；根 home 归
+    'root'。推不出=None（存量进程无 home 语境时如实缺省，不猜）。"""
+    explicit = _env("HERMES_RUN_TRACE_PROFILE")
+    if explicit:
+        return explicit
+    home = _env("HERMES_HOME")
+    if home:
+        base = home.rstrip("/").rsplit("/", 1)[-1]
+        if base:
+            return "root" if base in (".hermes", "hermes") else base
+    return None
+
+
+_PROFILE = _detect_profile()
 
 
 def _split_reasoning(text: str) -> tuple:

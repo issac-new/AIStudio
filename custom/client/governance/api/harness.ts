@@ -393,6 +393,8 @@ export interface ObsSignalsDto {
     cacheHitRate: number | null
   }
   byModel: Array<{ model: string; llmCalls: number; tokens: TokenSplitDto }>
+  /** token 按 profile 分桶（2026-10-24 清账批；仅带 profile 字段的 span 归桶，可缺席） */
+  byProfile?: Array<{ profile: string; llmCalls: number; tokens: TokenSplitDto }>
   notes: string[]
   sources: { traceFiles: number; traceRows: number }
 }
