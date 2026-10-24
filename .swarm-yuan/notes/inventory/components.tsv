@@ -1,0 +1,344 @@
+path	desc
+custom/client/bpa/components/BpaGovernancePanel.vue	overlay/custom/client/bpa/components/BpaGovernancePanel.vue
+custom/client/bpa/components/BpaLinkPanel.vue	overlay/custom/client/bpa/components/BpaLinkPanel.vue
+custom/client/bpa/components/BpaMapPanel.vue	overlay/custom/client/bpa/components/BpaMapPanel.vue
+custom/client/bpa/components/BpaMaturityPanel.vue	overlay/custom/client/bpa/components/BpaMaturityPanel.vue
+custom/client/bpa/components/BpaPcfPanel.vue	overlay/custom/client/bpa/components/BpaPcfPanel.vue
+custom/client/bpa/components/BpaTreePanel.vue	overlay/custom/client/bpa/components/BpaTreePanel.vue
+custom/client/bpa/views/BpaView.vue	overlay/custom/client/bpa/views/BpaView.vue
+custom/client/chat/components/GatewayNoticeBanner.vue	
+custom/client/cockpit/components/ApprovalPanel.vue	overlay/custom/client/cockpit/components/ApprovalPanel.vue
+custom/client/cockpit/components/CockpitFilePanel.vue	
+custom/client/cockpit/components/CockpitIcon.vue	overlay/custom/client/cockpit/components/CockpitIcon.vue
+custom/client/cockpit/components/CockpitRunTraceModal.vue	
+custom/client/cockpit/components/CockpitScheduleModal.vue	
+custom/client/cockpit/components/CockpitTerminalPane.vue	
+custom/client/cockpit/components/RunTraceGraph.vue	
+custom/client/cockpit/components/RunTraceInspector.vue	
+custom/client/cockpit/components/RunTraceNodeDetail.vue	
+custom/client/cockpit/components/RunTraceOverview.vue	
+custom/client/cockpit/components/RunTraceScrubber.vue	
+custom/client/cockpit/components/RunTraceSkillDrilldown.vue	
+custom/client/cockpit/components/RunTraceTimeBand.vue	
+custom/client/cockpit/components/RunTraceTimelinePanel.vue	
+custom/client/cockpit/components/RunTraceTopology.vue	
+custom/client/eval/components/EvalAdvicePanel.vue	overlay/custom/client/eval/components/EvalAdvicePanel.vue
+custom/client/eval/components/EvalOraclePanel.vue	overlay/custom/client/eval/components/EvalOraclePanel.vue
+custom/client/eval/components/EvalReportPanel.vue	overlay/custom/client/eval/components/EvalReportPanel.vue
+custom/client/eval/components/EvaluatorTriangle.vue	
+custom/client/eval/components/EvidenceDrawer.vue	
+custom/client/eval/components/HeldOutPanel.vue	
+custom/client/eval/components/MetricRegistryPanel.vue	
+custom/client/eval/components/RedteamPanel.vue	
+custom/client/eval/components/TraceCaseComposer.vue	
+custom/client/eval/views/EvalView.vue	overlay/custom/client/eval/views/EvalView.vue
+custom/client/governance/components/AgentIdentitySection.vue	overlay/custom/client/governance/components/AgentIdentitySection.vue
+custom/client/governance/components/AuditSection.vue	overlay/custom/client/governance/components/AuditSection.vue
+custom/client/governance/components/AutonomyLadderSection.vue	overlay/custom/client/governance/components/AutonomyLadderSection.vue
+custom/client/governance/components/CapabilityCatalogSection.vue	overlay/custom/client/governance/components/CapabilityCatalogSection.v
+custom/client/governance/components/ChangeGovernanceSection.vue	overlay/custom/client/governance/components/ChangeGovernanceSection.vu
+custom/client/governance/components/CostAccountsSection.vue	overlay/custom/client/governance/components/CostAccountsSection.vue
+custom/client/governance/components/DecisionGraphSection.vue	overlay/custom/client/governance/components/DecisionGraphSection.vue
+custom/client/governance/components/DecisionRulesSection.vue	overlay/custom/client/governance/components/DecisionRulesSection.vue
+custom/client/governance/components/EfficiencyRuntimeSection.vue	overlay/custom/governance/components/EfficiencyRuntimeSection.vue
+custom/client/governance/components/EmergencyStopSection.vue	overlay/custom/client/governance/components/EmergencyStopSection.vue
+custom/client/governance/components/EvalLayersSection.vue	overlay/custom/client/governance/components/EvalLayersSection.vue
+custom/client/governance/components/GovEventStreamSection.vue	overlay/custom/client/governance/components/GovEventStreamSection.vue
+custom/client/governance/components/HarnessRunOpsSection.vue	overlay/custom/client/governance/components/HarnessRunOpsSection.vue
+custom/client/governance/components/IncidentReportSection.vue	overlay/custom/client/governance/components/IncidentReportSection.vue
+custom/client/governance/components/KnowledgeGraphSection.vue	overlay/custom/client/governance/components/KnowledgeGraphSection.vue
+custom/client/governance/components/LedgerSection.vue	overlay/custom/client/governance/components/LedgerSection.vue
+custom/client/governance/components/MaturitySection.vue	overlay/custom/client/governance/components/MaturitySection.vue
+custom/client/governance/components/McpSecuritySection.vue	overlay/custom/client/governance/components/McpSecuritySection.vue
+custom/client/governance/components/NineLayersSection.vue	overlay/custom/client/governance/components/NineLayersSection.vue
+custom/client/governance/components/ObsSignalsSection.vue	overlay/custom/client/governance/components/ObsSignalsSection.vue
+custom/client/governance/components/OrgDiagnosisSection.vue	overlay/custom/client/governance/components/OrgDiagnosisSection.vue
+custom/client/governance/components/PostureSection.vue	overlay/custom/client/governance/components/PostureSection.vue
+custom/client/governance/components/PrimitivesSection.vue	overlay/custom/client/governance/components/PrimitivesSection.vue
+custom/client/governance/components/RsiMaturitySection.vue	overlay/custom/client/governance/components/RsiMaturitySection.vue
+custom/client/governance/components/RuntimeSection.vue	overlay/custom/client/governance/components/RuntimeSection.vue
+custom/client/governance/components/StateModelSection.vue	overlay/custom/client/governance/components/StateModelSection.vue
+custom/client/governance/components/ToolPolicySection.vue	overlay/custom/client/governance/components/ToolPolicySection.vue
+custom/client/governance/components/UsageInsightsExtension.vue	
+custom/client/governance/components/VirtualPnlSection.vue	overlay/custom/client/governance/components/VirtualPnlSection.vue
+custom/client/ia2/components/AttentionStrip.vue	overlay/custom/client/ia2/components/AttentionStrip.vue
+custom/client/ia2/components/GraphEnginePolicyCard.vue	overlay/custom/client/ia2/components/GraphEnginePolicyCard.vue
+custom/client/ia2/components/IaBreadcrumb.vue	overlay/custom/client/ia2/components/IaBreadcrumb.vue
+custom/client/ia2/components/IaColumnControls.vue	overlay/custom/client/ia2/components/IaColumnControls.vue
+custom/client/ia2/components/IaGlobalTop.vue	overlay/custom/client/ia2/components/IaGlobalTop.vue
+custom/client/ia2/components/IaLocaleToggle.vue	overlay/custom/client/ia2/components/IaLocaleToggle.vue
+custom/client/ia2/components/IaPopoutBar.vue	overlay/custom/client/ia2/components/IaPopoutBar.vue
+custom/client/ia2/components/IaRunContextChip.vue	
+custom/client/ia2/components/IaSettingsSidebar.vue	overlay/custom/client/ia2/components/IaSettingsSidebar.vue
+custom/client/ia2/components/IaShellHeader.vue	overlay/custom/client/ia2/components/IaShellHeader.vue
+custom/client/ia2/components/IaSideNav.vue	
+custom/client/ia2/components/IaSideNavItem.vue	
+custom/client/ia2/components/IaWorkspaceSwitch.vue	
+custom/client/ia2/components/IdentityChatCanvas.vue	overlay/custom/client/ia2/components/IdentityChatCanvas.vue
+custom/client/ia2/components/NotifyDropdownPanel.vue	overlay/custom/client/ia2/components/NotifyDropdownPanel.vue
+custom/client/ia2/components/RunLinks.vue	overlay/custom/client/ia2/components/RunLinks.vue
+custom/client/ia2/components/SitDetailPanel.vue	overlay/custom/client/ia2/components/SitDetailPanel.vue
+custom/client/ia2/components/SitlineBar.vue	overlay/custom/client/ia2/components/SitlineBar.vue
+custom/client/ia2/components/SpotlightPanel.vue	overlay/custom/client/ia2/components/SpotlightPanel.vue
+custom/client/ia2/components/TopicPageLayout.vue	
+custom/client/ia2/components/WorkflowPanel.vue	overlay/custom/client/ia2/components/WorkflowPanel.vue
+custom/client/ia2/components/flow/AttentionList.vue	overlay/custom/client/ia2/components/flow/AttentionList.vue
+custom/client/ia2/components/flow/ChainBar.vue	overlay/custom/client/ia2/components/flow/ChainBar.vue
+custom/client/ia2/components/flow/CockpitOverview.vue	overlay/custom/client/ia2/components/flow/CockpitOverview.vue
+custom/client/ia2/components/flow/FlowNavPanel.vue	overlay/custom/client/ia2/components/flow/FlowNavPanel.vue
+custom/client/ia2/components/flow/LinkedTaskList.vue	overlay/custom/client/ia2/components/flow/LinkedTaskList.vue
+custom/client/ia2/components/flow/SessionCanvas.vue	overlay/custom/client/ia2/components/flow/SessionCanvas.vue
+custom/client/ia2/components/flow/SessionWorkbenchPanel.vue	overlay/custom/client/ia2/components/flow/SessionWorkbenchPanel.vue
+custom/client/ia2/components/flow/TaskDecisionPanel.vue	overlay/custom/client/ia2/components/flow/TaskDecisionPanel.vue
+custom/client/ia2/components/flow/TaskFeed.vue	overlay/custom/client/ia2/components/flow/TaskFeed.vue
+custom/client/ia2/components/flow/TaskFlowTimeline.vue	overlay/custom/client/ia2/components/flow/TaskFlowTimeline.vue
+custom/client/ia2/components/flow/WaitQueue.vue	overlay/custom/client/ia2/components/flow/WaitQueue.vue
+custom/client/ia2/components/gov/AppRegistryEditor.vue	overlay/custom/client/ia2/components/gov/AppRegistryEditor.vue
+custom/client/ia2/components/gov/GovModelProvidersSection.vue	overlay/custom/client/ia2/components/gov/GovModelProvidersSection.vue
+custom/client/ia2/components/gov/OrgEditor.vue	overlay/custom/client/ia2/components/gov/OrgEditor.vue
+custom/client/ia2/components/inbox/GatekeeperSection.vue	overlay/custom/client/ia2/components/inbox/GatekeeperSection.vue
+custom/client/ia2/components/sim/SimAnchorDrawer.vue	
+custom/client/ia2/components/sim/SimCompensatedTag.vue	
+custom/client/ia2/components/sim/SimDisciplineNote.vue	
+custom/client/ia2/components/sim/SimDualCredential.vue	
+custom/client/ia2/components/sim/SimGateBadge.vue	
+custom/client/ia2/components/sim/SimInterventionCard.vue	
+custom/client/ia2/components/sim/SimRaciBadge.vue	
+custom/client/ia2/components/sim/SimStepBadge.vue	
+custom/client/ia2/components/sim/SimVerdictField.vue	
+custom/client/ia2/views/AccountAdminView.vue	overlay/custom/client/ia2/views/AccountAdminView.vue
+custom/client/ia2/views/FeatureDisabledView.vue	
+custom/client/ia2/views/IaFeatureShell.vue	
+custom/client/ia2/views/IaLegacyShell.vue	overlay/custom/client/ia2/views/IaLegacyShell.vue
+custom/client/ia2/views/IaShell.vue	overlay/custom/client/ia2/views/IaShell.vue
+custom/client/ia2/views/InboxView.vue	overlay/custom/client/ia2/views/InboxView.vue
+custom/client/ia2/views/NotFoundView.vue	overlay/custom/client/ia2/views/NotFoundView.vue
+custom/client/ia2/views/SearchView.vue	
+custom/client/ia2/views/TasksView.vue	overlay/custom/client/ia2/views/TasksView.vue
+custom/client/ia2/views/TeamsView.vue	overlay/custom/client/ia2/views/TeamsView.vue
+custom/client/ia2/views/WorkbenchView.vue	overlay/custom/client/ia2/views/WorkbenchView.vue
+custom/client/ia2/views/agents/AgentsView.vue	overlay/custom/client/ia2/views/agents/AgentsView.vue
+custom/client/ia2/views/effectiveness/DeliveryEffectivenessView.vue	overlay/custom/client/ia2/views/effectiveness/DeliveryEffectivenessVie
+custom/client/ia2/views/gov/CapacityLampBanner.vue	overlay/custom/client/ia2/views/gov/CapacityLampBanner.vue
+custom/client/ia2/views/gov/ClearancePanel.vue	overlay/custom/client/ia2/views/gov/ClearancePanel.vue
+custom/client/ia2/views/gov/EvalOpsSection.vue	
+custom/client/ia2/views/gov/ExpertiseSection.vue	overlay/custom/client/ia2/views/gov/ExpertiseSection.vue
+custom/client/ia2/views/gov/GateRepairsPanel.vue	overlay/custom/client/ia2/views/gov/GateRepairsPanel.vue
+custom/client/ia2/views/gov/GovAiQualitySection.vue	overlay/custom/client/ia2/views/gov/GovAiQualitySection.vue
+custom/client/ia2/views/gov/GovAuditChangeView.vue	overlay/custom/client/ia2/views/gov/GovAuditChangeView.vue
+custom/client/ia2/views/gov/GovDocsReviewView.vue	overlay/custom/client/ia2/views/gov/GovDocsReviewView.vue
+custom/client/ia2/views/gov/GovHarnessView.vue	overlay/custom/client/ia2/views/gov/GovHarnessView.vue
+custom/client/ia2/views/gov/GovHealthSection.vue	overlay/custom/client/ia2/views/gov/GovHealthSection.vue
+custom/client/ia2/views/gov/GovIssuesPanel.vue	overlay/custom/client/ia2/views/gov/GovIssuesPanel.vue
+custom/client/ia2/views/gov/GovModelProvidersView.vue	overlay/custom/client/ia2/views/gov/GovModelProvidersView.vue
+custom/client/ia2/views/gov/GovOrgKnowledgeView.vue	overlay/custom/client/ia2/views/gov/GovOrgKnowledgeView.vue
+custom/client/ia2/views/gov/GovPostureView.vue	overlay/custom/client/ia2/views/gov/GovPostureView.vue
+custom/client/ia2/views/gov/GovRegistryRulesView.vue	overlay/custom/client/ia2/views/gov/GovRegistryRulesView.vue
+custom/client/ia2/views/gov/GovSettingsView.vue	overlay/custom/client/ia2/views/gov/GovSettingsView.vue
+custom/client/ia2/views/gov/HarnessImprovePanel.vue	
+custom/client/ia2/views/gov/KeyLedgerSection.vue	overlay/custom/client/ia2/views/gov/KeyLedgerSection.vue
+custom/client/ia2/views/gov/LongHorizonTrustPanel.vue	overlay/custom/client/ia2/views/gov/LongHorizonTrustPanel.vue
+custom/client/ia2/views/gov/PrecedentSection.vue	overlay/custom/client/ia2/views/gov/PrecedentSection.vue
+custom/client/ia2/views/gov/ReviewGovPanel.vue	overlay/custom/client/ia2/views/gov/ReviewGovPanel.vue
+custom/client/ia2/views/gov/SecAuditPanel.vue	
+custom/client/ia2/views/journey/JourneyView.vue	overlay/custom/client/ia2/views/journey/JourneyView.vue
+custom/client/ia2/views/orchestration/OrchestrationView.vue	overlay/custom/client/ia2/views/orchestration/OrchestrationView.vue
+custom/client/ia2/views/sim/CockpitPanel.vue	overlay/custom/client/ia2/views/sim/CockpitPanel.vue
+custom/client/ia2/views/sim/DeliveryPanel.vue	overlay/custom/client/ia2/views/sim/DeliveryPanel.vue
+custom/client/ia2/views/sim/DirectorPanel.vue	
+custom/client/ia2/views/sim/DirectorRunDetail.vue	overlay/custom/client/ia2/views/sim/DirectorRunDetail.vue
+custom/client/ia2/views/sim/EvidencePanel.vue	overlay/custom/client/ia2/views/sim/EvidencePanel.vue
+custom/client/ia2/views/sim/OpsPanel.vue	overlay/custom/client/ia2/views/sim/OpsPanel.vue
+custom/client/ia2/views/sim/OverviewPanel.vue	overlay/custom/client/ia2/views/sim/OverviewPanel.vue
+custom/client/ia2/views/sim/RunSelector.vue	
+custom/client/ia2/views/sim/SimCenterView.vue	
+custom/client/ia2/views/sim/SimFlowStrip.vue	overlay/custom/client/ia2/views/sim/SimFlowStrip.vue
+custom/client/ia2/views/sim/SimOrchestrationView.vue	
+custom/client/ia2/views/sim/SimSettingsView.vue	overlay/custom/client/ia2/views/sim/SimSettingsView.vue
+custom/client/ia2/views/sim/SupervisionPanel.vue	overlay/custom/client/ia2/views/sim/SupervisionPanel.vue
+custom/client/ia2/views/sim/TracePanel.vue	overlay/custom/client/ia2/views/sim/TracePanel.vue
+custom/client/ia2/views/stage/DailyDeliveryPanel.vue	
+custom/client/ia2/views/stage/DailyG5Panel.vue	
+custom/client/ia2/views/stage/DailySimReference.vue	
+custom/client/ia2/views/stage/DailyTracePanel.vue	
+custom/client/ia2/views/stage/DailyUatPanel.vue	
+custom/client/ia2/views/stage/StageAcceptanceOverview.vue	
+custom/client/ia2/views/stage/StageAssetsPanel.vue	
+custom/client/ia2/views/stage/StageDevApprovals.vue	
+custom/client/ia2/views/stage/StageDevToday.vue	
+custom/client/ia2/views/stage/StageGatePanel.vue	阶段页·质量门页签薄壳：按 gates 过滤修复单；空数组=全部。
+custom/client/ia2/views/stage/StageMetricsPanel.vue	⑥治理·度量检查页签：容量灯 + AI 产出质量 + 评测运营 + 研发效能，一屏内按序排列。
+custom/client/ia2/views/stage/StagePreflight.vue	
+custom/client/ia2/views/stage/StageRequirementsOverview.vue	
+custom/client/ia2/views/stage/StageRiskPanel.vue	④开发·风险与交接页签：容量水位 + 交接类型说明（既有两件合一屏）。
+custom/client/ia2/views/stage/StageSchedulePanel.vue	
+custom/client/ia2/views/stage/StageSetupSteps.vue	
+custom/client/ia2/views/stage/StageShell.vue	
+custom/client/ide/components/IdeAgentsView.vue	
+custom/client/ide/components/IdeAskCard.vue	
+custom/client/ide/components/IdeBgTasksPanel.vue	
+custom/client/ide/components/IdeBtwPanel.vue	
+custom/client/ide/components/IdeCliSessionBill.vue	overlay/custom/client/ide/components/IdeCliSessionBill.vue
+custom/client/ide/components/IdeCliSessions.vue	overlay/custom/client/ide/components/IdeCliSessions.vue
+custom/client/ide/components/IdeCommandPalette.vue	
+custom/client/ide/components/IdeCompactionCard.vue	
+custom/client/ide/components/IdeContextArchivePane.vue	overlay/custom/client/ide/components/IdeContextArchivePane.vue
+custom/client/ide/components/IdeContextBar.vue	
+custom/client/ide/components/IdeCuaFloat.vue	
+custom/client/ide/components/IdeDevTools.vue	overlay/custom/client/ide/components/IdeDevTools.vue
+custom/client/ide/components/IdeEngineModelsDialog.vue	
+custom/client/ide/components/IdeFindInSession.vue	
+custom/client/ide/components/IdeFloatPanel.vue	
+custom/client/ide/components/IdeHandoffCard.vue	
+custom/client/ide/components/IdeHistoryBrowser.vue	overlay/custom/client/ide/components/IdeHistoryBrowser.vue
+custom/client/ide/components/IdeImportHistory.vue	
+custom/client/ide/components/IdeInlineDiff.vue	
+custom/client/ide/components/IdeKeymapCard.vue	
+custom/client/ide/components/IdeKnowledgeBar.vue	
+custom/client/ide/components/IdeLandingHero.vue	
+custom/client/ide/components/IdeMentionChip.vue	
+custom/client/ide/components/IdeMentionPicker.vue	
+custom/client/ide/components/IdeModBand.vue	overlay/custom/client/ide/components/IdeModBand.vue
+custom/client/ide/components/IdePermissionSwitcher.vue	
+custom/client/ide/components/IdePlanFloat.vue	
+custom/client/ide/components/IdeQueuePanel.vue	
+custom/client/ide/components/IdeRecapCard.vue	
+custom/client/ide/components/IdeRecoveryDialog.vue	
+custom/client/ide/components/IdeReplayTheater.vue	overlay/custom/client/ide/components/IdeReplayTheater.vue
+custom/client/ide/components/IdeResumeAdvisor.vue	
+custom/client/ide/components/IdeReviewPanel.vue	
+custom/client/ide/components/IdeRosterTree.vue	
+custom/client/ide/components/IdeRunLogPanel.vue	
+custom/client/ide/components/IdeSecurityBoostBar.vue	
+custom/client/ide/components/IdeSelfCheckDialog.vue	
+custom/client/ide/components/IdeSideSessionPane.vue	
+custom/client/ide/components/IdeSubagentsFloat.vue	
+custom/client/ide/components/IdeTaskContextBar.vue	overlay/custom/client/ide/components/IdeTaskContextBar.vue
+custom/client/ide/components/IdeTaskGroupsPanel.vue	
+custom/client/ide/components/IdeTeamSummaryBar.vue	
+custom/client/ide/components/IdeTodoBar.vue	
+custom/client/ide/components/IdeTrajectoryPane.vue	overlay/custom/client/ide/components/IdeTrajectoryPane.vue
+custom/client/ide/components/IdeTurnRail.vue	
+custom/client/ide/components/IdeVideoFramesDialog.vue	
+custom/client/ide/components/IdeWorkflowRunLines.vue	
+custom/client/ide/components/TaskBriefingPanel.vue	overlay/custom/client/ide/components/TaskBriefingPanel.vue
+custom/client/ide/components/WorkflowObservationPanel.vue	
+custom/client/ide/views/IdeActivityInbox.vue	
+custom/client/ide/views/IdeChatPane.vue	
+custom/client/ide/views/IdeContextPane.vue	
+custom/client/ide/views/IdeDeliverPane.vue	
+custom/client/ide/views/IdeFilesPane.vue	
+custom/client/ide/views/IdeGenUiPane.vue	
+custom/client/ide/views/IdeGitLog.vue	
+custom/client/ide/views/IdeGitPane.vue	
+custom/client/ide/views/IdeGoalBudgetFloat.vue	
+custom/client/ide/views/IdeHooksPane.vue	
+custom/client/ide/views/IdeKanbanPane.vue	
+custom/client/ide/views/IdeMatrixPane.vue	overlay/custom/client/ide/views/IdeMatrixPane.vue
+custom/client/ide/views/IdeMcpPane.vue	
+custom/client/ide/views/IdeMemoryPane.vue	
+custom/client/ide/views/IdeMetricsPopover.vue	
+custom/client/ide/views/IdePluginsPane.vue	
+custom/client/ide/views/IdeRemotePane.vue	
+custom/client/ide/views/IdeRunResultCard.vue	
+custom/client/ide/views/IdeShell.vue	
+custom/client/ide/views/IdeSidePane.vue	
+custom/client/ide/views/IdeSlashCommandsPane.vue	
+custom/client/ide/views/IdeStatusBar.vue	
+custom/client/ide/views/IdeStoragePane.vue	
+custom/client/ide/views/IdeTaskSidebar.vue	
+custom/client/ide/views/IdeTerminalDock.vue	
+custom/client/ide/views/IdeTerminalPanel.vue	
+custom/client/ide/views/IdeToolsPane.vue	
+custom/client/ide/views/IdeWhiteboardPane.vue	
+custom/client/ide/views/IdeWikiPane.vue	
+custom/client/ide/views/IdeWorkflowPane.vue	
+custom/client/ide/views/IdeWorktreeBadge.vue	
+custom/client/kanban/components/CapacitySection.vue	overlay/custom/client/kanban/components/CapacitySection.vue
+custom/client/kanban/components/KanbanAttachments.vue	
+custom/client/kanban/components/KanbanAttentionStrip.vue	
+custom/client/kanban/components/KanbanBoard.vue	
+custom/client/kanban/components/KanbanBulkBar.vue	
+custom/client/kanban/components/KanbanColumn.vue	
+custom/client/kanban/components/KanbanDiagnosticsSection.vue	
+custom/client/kanban/components/KanbanHandoffSection.vue	
+custom/client/kanban/components/KanbanInlineCreate.vue	
+custom/client/kanban/components/KanbanMarkdown.vue	
+custom/client/kanban/components/KanbanOrchestrationPanel.vue	
+custom/client/kanban/components/KanbanTaskCard.vue	
+custom/client/kanban/components/KanbanTaskDrawer.vue	HERMES_CUSTOM[Kanban] BEGIN: Enhanced Kanban task drawer with recovery
+custom/client/kanban/components/KanbanToolbar.vue	
+custom/client/kanban/components/ManagementAccountsPanel.vue	overlay/custom/client/kanban/components/ManagementAccountsPanel.vue
+custom/client/kanban/components/SkillgovSection.vue	overlay/custom/client/kanban/components/SkillgovSection.vue
+custom/client/kanban/views/SwarmKanbanView.vue	
+custom/client/loop/components/LoopCreateWizard.vue	overlay/custom/client/loop/components/LoopCreateWizard.vue
+custom/client/loop/orchestrator/components/EditorCanvas.vue	overlay/custom/client/loop/orchestrator/components/EditorCanvas.vue
+custom/client/loop/orchestrator/components/NodeConfigPanel.vue	overlay/custom/client/loop/orchestrator/components/NodeConfigPanel.vue
+custom/client/loop/orchestrator/views/SpecEditorView.vue	overlay/custom/client/loop/orchestrator/views/SpecEditorView.vue
+custom/client/loop/runcenter/components/ApprovalPanel.vue	overlay/custom/loop/runcenter/components/ApprovalPanel.vue
+custom/client/matrix-chat/components/MatrixChatPanel.vue	
+custom/client/matrix-chat/components/MatrixClearMessagesDialog.vue	
+custom/client/matrix-chat/components/MatrixContextMenu.vue	
+custom/client/matrix-chat/components/MatrixCreateRoomDialog.vue	
+custom/client/matrix-chat/components/MatrixDateSeparator.vue	
+custom/client/matrix-chat/components/MatrixEventTileFooter.vue	
+custom/client/matrix-chat/components/MatrixExportDialog.vue	
+custom/client/matrix-chat/components/MatrixExtensionsCard.vue	
+custom/client/matrix-chat/components/MatrixFilePanel.vue	
+custom/client/matrix-chat/components/MatrixForwardDialog.vue	
+custom/client/matrix-chat/components/MatrixInviteDialog.vue	
+custom/client/matrix-chat/components/MatrixJoinRoomDialog.vue	
+custom/client/matrix-chat/components/MatrixLeaveRoomDialog.vue	
+custom/client/matrix-chat/components/MatrixMemberInfo.vue	
+custom/client/matrix-chat/components/MatrixMemberList.vue	
+custom/client/matrix-chat/components/MatrixMessageActionBar.vue	
+custom/client/matrix-chat/components/MatrixMessageBody.vue	
+custom/client/matrix-chat/components/MatrixMessageContextMenu.vue	
+custom/client/matrix-chat/components/MatrixMessageInput.vue	
+custom/client/matrix-chat/components/MatrixMessageItem.vue	
+custom/client/matrix-chat/components/MatrixMessagePanel.vue	
+custom/client/matrix-chat/components/MatrixMessageTimestamp.vue	
+custom/client/matrix-chat/components/MatrixPinnedMessagesCard.vue	
+custom/client/matrix-chat/components/MatrixPollHistoryPanel.vue	
+custom/client/matrix-chat/components/MatrixReactionPicker.vue	
+custom/client/matrix-chat/components/MatrixReactionsRow.vue	
+custom/client/matrix-chat/components/MatrixReadMarker.vue	
+custom/client/matrix-chat/components/MatrixReadReceiptGroup.vue	
+custom/client/matrix-chat/components/MatrixRedactDialog.vue	
+custom/client/matrix-chat/components/MatrixReplyChain.vue	
+custom/client/matrix-chat/components/MatrixReportDialog.vue	
+custom/client/matrix-chat/components/MatrixRightPanel.vue	
+custom/client/matrix-chat/components/MatrixRoomCanvas.vue	overlay/custom/client/matrix-chat/components/MatrixRoomCanvas.vue
+custom/client/matrix-chat/components/MatrixRoomHeader.vue	
+custom/client/matrix-chat/components/MatrixRoomList.vue	
+custom/client/matrix-chat/components/MatrixRoomSearchView.vue	
+custom/client/matrix-chat/components/MatrixRoomSettingsPanel.vue	
+custom/client/matrix-chat/components/MatrixRoomSummaryCard.vue	
+custom/client/matrix-chat/components/MatrixRoomView.vue	
+custom/client/matrix-chat/components/MatrixSenderProfile.vue	
+custom/client/matrix-chat/components/MatrixServerMovedBanner.vue	overlay/custom/client/matrix-chat/components/MatrixServerMovedBanner.v
+custom/client/matrix-chat/components/MatrixShareDialog.vue	
+custom/client/matrix-chat/components/MatrixSpinner.vue	
+custom/client/matrix-chat/components/MatrixStateEvent.vue	
+custom/client/matrix-chat/components/MatrixThreadMessagePreview.vue	
+custom/client/matrix-chat/components/MatrixThreadPanel.vue	
+custom/client/matrix-chat/components/MatrixThreadSummary.vue	
+custom/client/matrix-chat/components/MatrixThreadView.vue	
+custom/client/matrix-chat/components/MatrixTimelinePanel.vue	
+custom/client/matrix-chat/components/MatrixTopUnreadBar.vue	overlay/custom/client/matrix-chat/components/MatrixTopUnreadBar.vue
+custom/client/matrix-chat/components/MatrixTypingNotification.vue	
+custom/client/matrix-chat/components/MatrixUserKindBadge.vue	
+custom/client/matrix-chat/views/MatrixChatView.vue	
+custom/client/matrix-teams/components/AgentTeamEditor.vue	overlay/custom/client/matrix-teams/components/AgentTeamEditor.vue
+custom/client/matrix-teams/components/DispatchList.vue	overlay/custom/client/matrix-teams/components/DispatchList.vue
+custom/client/matrix-teams/components/DutyAssignPanel.vue	overlay/custom/client/matrix-teams/components/DutyAssignPanel.vue
+custom/client/matrix-teams/components/GateReviewCard.vue	overlay/custom/client/matrix-teams/components/GateReviewCard.vue
+custom/client/matrix-teams/components/TaskCard.vue	overlay/custom/client/matrix-teams/components/TaskCard.vue
+custom/client/matrix-teams/views/DeliveryCasesView.vue	
+custom/client/matrix-teams/views/TeamsManagePanel.vue	overlay/custom/client/matrix-teams/views/TeamsManagePanel.vue
+custom/client/ontology/components/ConstraintsPanel.vue	
+custom/client/ontology/components/FiboReferencePanel.vue	FIBO 官方只读参照：域导航与 EXMP/Schema 场景；不写入可导入 T-Box。
+custom/client/ontology/views/OntologyView.vue	overlay/custom/client/ontology/views/OntologyView.vue
+custom/client/skillgov/views/SkillgovView.vue	overlay/custom/client/skillgov/views/SkillgovView.vue
+custom/client/ui/UiEmptyState.vue	
+custom/client/ui/UiStatusPill.vue	

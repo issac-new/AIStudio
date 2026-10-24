@@ -1,81 +1,81 @@
 # 开发者行为挖掘初稿（mine-habits.sh 机械生成——AI 审读采纳，不直接当规范用）
 
-> 窗口：--since '180 days ago'，共 3353 次提交（共变对按最近 500 次计）。生成时间 2026-10-16T01:25:55+0800。
+> 窗口：--since '180 days ago'，共 5204 次提交（共变对按最近 500 次计）。生成时间 2026-10-24T23:28:05+0800。
 > 三去向（exploration-guide「项目知识读取」节 行为观察）：提交/分支习惯→SKILL.md 铁律段（引用来源）；工作偏好→dev-guide「开发偏好」节；隐式耦合/热点→reference-manual 说明列 + recipes 配方提取（§D.7 源②）。
 
 ## 提交前缀分布（Top 10）
 
 | 前缀 | 次数 |
 |------|------|
-| feat | 966 |
-| merge | 787 |
-| fix | 753 |
-| docs | 508 |
-| (other) | 147 |
-| chore | 68 |
-| test | 45 |
-| refactor | 37 |
-| style | 21 |
-| perf | 12 |
+| feat | 1491 |
+| fix | 1344 |
+| merge | 1225 |
+| docs | 670 |
+| (other) | 188 |
+| chore | 98 |
+| test | 82 |
+| refactor | 49 |
+| style | 23 |
+| perf | 19 |
 
 ## 分支命名分布（近 30 条活跃分支按首段）
 
 | 首段 | 分支数 |
 |------|--------|
-| feat | 5 |
+| feat | 1 |
 | (单段名) | 1 |
 
 ## 提交规模分桶（±行数合计）
 
 | 桶 | 提交数 |
 |----|--------|
-| 小(<100行) | 1437 |
-| 中(100-500行) | 690 |
-| 大(>500行) | 309 |
+| 小(<100行) | 2353 |
+| 中(100-500行) | 979 |
+| 大(>500行) | 477 |
 
 ## 共变文件 Top 对（同提交共现 ≥2 次——隐性耦合/拼装单元信号）
 
 | 共现次数 | 文件对 |
 |----------|--------|
-| 16 | docs/superpowers/specs/2026-10-05-mux-history-and-engineering-archive.md ⇄ docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md |
-| 15 | custom/server/clusterinspector/detectors.ts ⇄ custom/server/clusterinspector/inspector.ts |
-| 14 | custom/server/clusterinspector/collectors.ts ⇄ custom/server/clusterinspector/inspector.ts |
-| 12 | custom/server/clusterinspector/collectors.ts ⇄ custom/server/clusterinspector/detectors.ts |
-| 11 | custom/server/clusterinspector/__tests__/cluster-inspector.test.ts ⇄ custom/server/clusterinspector/inspector.ts |
-| 11 | custom/server/clusterinspector/__tests__/cluster-inspector.test.ts ⇄ custom/server/clusterinspector/detectors.ts |
-| 10 | custom/server/clusterinspector/cluster-inspector-controller.ts ⇄ custom/server/clusterinspector/inspector.ts |
-| 9 | custom/server/clusterinspector/cluster-inspector-controller.ts ⇄ custom/server/clusterinspector/collectors.ts |
-| 9 | custom/server/clusterinspector/__tests__/cluster-inspector.test.ts ⇄ custom/server/clusterinspector/collectors.ts |
-| 8 | docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md ⇄ scripts/plan-html/render.sh |
-| 7 | custom/server/clusterinspector/cluster-inspector-controller.ts ⇄ custom/server/clusterinspector/detectors.ts |
-| 6 | custom/server/clusterinspector/__tests__/cluster-inspector.test.ts ⇄ custom/server/clusterinspector/cluster-inspector-controller.ts |
-| 4 | patches/series ⇄ scripts/inject.mjs |
-| 4 | custom/server/progress/task-progress-controller.ts ⇄ custom/server/progress/task-progress-store.ts |
-| 4 | custom/server/progress/__tests__/task-progress.test.ts ⇄ custom/server/progress/task-progress-store.ts |
+| 8 | docs/superpowers/specs/2026-10-21-ncwk-design-spec.md ⇄ docs/superpowers/specs/2026-10-21-ncwk-product-spec.md |
+| 7 | docs/superpowers/specs/2026-10-21-ncwk-product-spec.md ⇄ docs/superpowers/specs/2026-10-21-swarmstudio-complete-design.md |
+| 7 | docs/superpowers/specs/2026-10-21-ncwk-design-spec.md ⇄ docs/superpowers/specs/2026-10-21-swarmstudio-complete-design.md |
+| 7 | custom/server/harness/workbench/__tests__/workbench-http.test.ts ⇄ custom/server/harness/workbench/service.ts |
+| 7 | custom/client/governance/improve-i18n.ts ⇄ custom/client/ia2/views/gov/HarnessImprovePanel.vue |
+| 6 | docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md ⇄ docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md |
+| 6 | docs/superpowers/specs/2026-10-21-ncwk-unified-product-design.md ⇄ docs/superpowers/specs/2026-10-21-swarmstudio-complete-design.md |
+| 6 | docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md ⇄ docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md |
+| 6 | custom/client/ia2/__tests__/harness-improve-panel.test.ts ⇄ custom/client/ia2/views/gov/HarnessImprovePanel.vue |
+| 6 | custom/client/governance/improve-i18n.ts ⇄ custom/client/ia2/__tests__/harness-improve-panel.test.ts |
+| 6 | custom/client/governance/api/workbench.ts ⇄ custom/client/ia2/views/gov/HarnessImprovePanel.vue |
+| 6 | custom/client/governance/api/workbench.ts ⇄ custom/client/ia2/__tests__/harness-improve-panel.test.ts |
+| 6 | custom/client/governance/api/workbench.ts ⇄ custom/client/governance/improve-i18n.ts |
+| 5 | mux/mx-eval-lib.sh ⇄ mux/mx-report-gen.py |
+| 5 | docs/superpowers/specs/2026-10-21-ncwk-appendix-a-spec-index.md ⇄ docs/superpowers/specs/2026-10-21-ncwk-design-spec.md |
 
 ## 热点文件 Top 15（窗口内被改次数）
 
 | 次数 | 文件 |
 |------|------|
-| 420 | patches/series |
-| 178 | docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md |
+| 461 | patches/series |
+| 250 | mux/mx-report-gen.py |
+| 213 | docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md |
+| 191 | aipay-scenario.sh |
+| 136 | mux/mx-scenario-lib.sh |
 | 127 | docs/superpowers/specs/2026-09-25-ycode-absorption-matrix.md |
-| 73 | RELEASE-NOTES.md |
-| 69 | custom/client/cockpit/store/cockpit.ts |
+| 98 | mux/mx-lib.sh |
+| 90 | package.json |
+| 78 | RELEASE-NOTES.md |
+| 73 | custom/client/ia2/views/WorkbenchView.vue |
+| 72 | custom/client/ide/views/IdeShell.vue |
+| 70 | custom/client/cockpit/store/cockpit.ts |
+| 69 | tests/harness-gate-integrity.test.ts |
+| 68 | custom/client/ide/views/IdeChatPane.vue |
 | 63 | scripts/aipay/aipay-scenario.sh |
-| 56 | scripts/aipay/mux/mx-report-gen.py |
-| 56 | package.json |
-| 54 | custom/client/ide/views/IdeShell.vue |
-| 53 | scripts/inject.mjs |
-| 52 | custom/client/cockpit/views/CockpitView.vue |
-| 49 | scripts/aipay/mux/mx-scenario-lib.sh |
-| 49 | patches/042-desktop-rebrand-swarmstudio-pkg.patch |
-| 45 | custom/client/ia2/views/WorkbenchView.vue |
-| 43 | custom/client/ide/views/IdeChatPane.vue |
 
 ## 测试文件提交占比
 
-- 58% 的提交触及测试文件（test/spec/__tests__ 路径）。
+- 55% 的提交触及测试文件（test/spec/__tests__ 路径）。
 
 ## AI 审读指引（机械/AI 边界）
 
