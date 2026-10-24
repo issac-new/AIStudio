@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_vite_alias_array_form
+fw_vite_alias_order
+fw_vite_inject_clean

@@ -1,0 +1,5 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_langchain_legacy_imports
+fw_langchain_legacy_chain
+fw_langchain_hardcoded_key
+fw_langchain_dangerous_tool

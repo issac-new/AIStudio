@@ -1,0 +1,7 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_spark_collect
+fw_spark_data_skew
+fw_spark_broadcast
+fw_spark_persist
+fw_spark_checkpoint
+fw_spark_streaming_watermark

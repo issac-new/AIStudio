@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_dubbo_qos_exposure
+fw_dubbo_mock_degrade
+fw_dubbo_direct_url

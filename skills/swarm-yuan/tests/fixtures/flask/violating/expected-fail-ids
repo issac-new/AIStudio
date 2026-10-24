@@ -1,0 +1,4 @@
+# violating 侧必中 fail id 清单（run-framework-fixture.sh 逐行字面断言输出命中）
+fw_flask_db_credentials
+fw_flask_debug
+fw_flask_secret_key

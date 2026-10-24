@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_cargo_git_deps
+fw_cargo_allow_warnings
+fw_cargo_unsafe

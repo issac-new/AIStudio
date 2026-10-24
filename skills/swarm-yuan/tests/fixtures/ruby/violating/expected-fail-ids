@@ -1,0 +1,6 @@
+# violating 侧必中 id 清单（run-framework-fixture.sh 逐行字面断言输出命中）
+# 4 门禁全主触发：硬编码密钥 / Gemfile.lock 内容漂移 / ENV 键漂移 / 视图 @ivar 漂移
+fw_ruby_hardcoded_secret
+fw_ruby_gemfile_lock
+fw_ruby_env_key_drift
+fw_ruby_view_var

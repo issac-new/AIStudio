@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# claude-mem fixture double（compliant-mem-double）：search 输出非空记忆命中 → mem_claude_mem_search rc=0。
+# 约束：输出不得触发 fail 文案（无 "fail"/"error" 字样，行内容为中性记忆条目）。
+if [[ "${1:-}" == "search" ]]; then
+  echo "[fixture memory] project rules: use feat/ prefix branches (hit 1)"
+  echo "[fixture memory] conventions: conventional commits style (hit 2)"
+  exit 0
+fi
+exit 0

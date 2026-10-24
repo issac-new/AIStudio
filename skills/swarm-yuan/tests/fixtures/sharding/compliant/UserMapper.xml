@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.UserMapper">
+  <!-- compliant: update t_order 含 user_id 分片键 → 单路由 -->
+  <update id="updateStatus">
+    update t_order set status=#{s} where id=#{id} and user_id=#{uid}
+  </update>
+  <!-- compliant: 排序查询带分片键条件，归并限定在目标分片 -->
+  <select id="listByUser" resultType="map">
+    select * from t_order where user_id=#{uid} order by id
+  </select>
+  <!-- compliant: 绑定表 JOIN 以分片键关联（o.user_id 路由对齐同数据节点） -->
+  <select id="joinItems" resultType="map">
+    select o.*, i.* from t_order o join t_order_item i on o.order_id = i.order_id where o.user_id=#{uid}
+  </select>
+  <!-- compliant: 原生 SUM 聚合（空值归一在应用层；不外包 COALESCE） -->
+  <select id="sumAmount" resultType="map">
+    select sum(amount) as total from t_order
+  </select>
+  <!-- compliant: 广播表 t_dict 仅只读查询 -->
+  <select id="dict" resultType="map">
+    select code, name from t_dict where code=#{code}
+  </select>
+</mapper>

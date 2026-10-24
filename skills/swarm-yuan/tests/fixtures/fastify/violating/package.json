@@ -1,0 +1,8 @@
+{
+  "name": "fastify-fixture-violating",
+  "version": "1.0.0",
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^10.0.1"
+  }
+}

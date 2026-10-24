@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_rocketmq_idempotent_consumer
+fw_rocketmq_orderly_listener
+fw_rocketmq_tx_checkback

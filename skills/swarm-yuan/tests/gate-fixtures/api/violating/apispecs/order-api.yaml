@@ -1,0 +1,12 @@
+# 订单服务 OpenAPI 定义（违例：info 下无 version 字段，消费方无法感知契约演进）
+openapi: 3.0.3
+info:
+  title: Order API
+  description: 订单创建与查询
+paths:
+  /orders:
+    post:
+      summary: 创建订单
+      responses:
+        '200':
+          description: 创建成功

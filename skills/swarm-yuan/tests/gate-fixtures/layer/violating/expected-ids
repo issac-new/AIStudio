@@ -1,0 +1,3 @@
+层依赖违规：src/domain/order.ts (domain)
+src/app/main.ts (app)
+领域层污染：src/domain/order.ts import 了框架/ORM/IO 模块 'express'

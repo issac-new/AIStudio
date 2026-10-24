@@ -1,0 +1,4 @@
+# sharding 全量 fail id（2/2，P1 实跑登记）
+fw_sharding_key_in_dml
+fw_sharding_broadcast_write
+fw_sharding_unsupported_sql

@@ -1,0 +1,9 @@
+# compliant: DmDriver + schema= 显式 + 隔离级别显式
+spring:
+  datasource:
+    driver-class-name: dm.jdbc.driver.DmDriver
+    url: jdbc:dm://127.0.0.1:5236/DAMENG?schema=APP
+    username: APP
+    password: APP
+    hikari:
+      transactionIsolation: TRANSACTION_READ_COMMITTED

@@ -1,0 +1,1 @@
+{ "name": "frontend", "scripts": { "build": "vite build", "test": "vitest run" }, "dependencies": { "vue": "2.7.16", "element-ui": "2.15.14" } }

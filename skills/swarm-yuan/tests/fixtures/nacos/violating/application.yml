@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: order-service
+  cloud:
+    nacos:
+      config:
+        server-addr: 127.0.0.1:8848
+        file-extension: yml
+      discovery:
+        server-addr: 127.0.0.1:8848
+  datasource:
+    url: jdbc:mysql://mysql.internal:3306/orders
+    username: order_app
+    password: plaintext-prod-pass-123

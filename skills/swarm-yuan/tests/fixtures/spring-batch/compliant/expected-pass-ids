@@ -1,0 +1,2 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_batch_step_scope

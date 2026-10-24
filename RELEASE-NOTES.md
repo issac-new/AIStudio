@@ -285,7 +285,7 @@ SwarmStudio **2.13**（基于 hermes-studio v0.7.16 + hermes-agent v0.21.0 源�
 
 **已知边界（记录在案，后续版本）**
 - 舰队快照的"尾部预览"来自内存消息尾，历史会话只有 idle 状态 + lastActive；非 running 会话不回放事件流。
-- Loop 引擎真执行（E6）、终端指挥面扩容（E7）、cockpit 用户态全量服务端化（E10）未在本轮范围，见 `docs-cockpit-command-post-2.13.md` 非目标节。
+- Loop 引擎真执行（E6）、终端指挥面扩容（E7）、cockpit 用户态全量服务端化（E10）未在本轮范围（原设计稿 docs-cockpit-command-post-2.13.md 已随 2026-10-24 终态清理轮移出仓库，历史版本可经 git 追溯）。
 
 ---
 

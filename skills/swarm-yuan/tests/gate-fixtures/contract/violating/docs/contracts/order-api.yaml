@@ -1,0 +1,8 @@
+# 订单接口契约（违规样本：缺 version 字段，TOGAF 要求契约可追溯版本）
+api: order
+base: /orders
+endpoints:
+  - name: create
+    method: POST
+  - name: detail
+    method: GET

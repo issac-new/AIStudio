@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- compliant fixture: Carte 改默认口令（变量化）→ fw_kettle_carte_default_auth pass -->
+<slave_config>
+  <report_to_masters>N</report_to_masters>
+  <slaveserver>
+    <name>slave1</name>
+    <hostname>${CARTE_HOST}</hostname>
+    <port>8181</port>
+    <username>carte_admin</username>
+    <password>${CARTE_PASSWORD}</password>
+  </slaveserver>
+</slave_config>

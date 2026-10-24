@@ -1,0 +1,3 @@
+=== check_consistency（AI 自觉判断模式，GATE_AI_JUDGMENT=1）===
+→ AI 自查（不机械跑）：逐文件读业务规则，对照数据勾稽核对
+check_consistency 已转 AI 自觉判断（advisory，不计 fail）

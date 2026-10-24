@@ -1,0 +1,9 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_hive_acid
+fw_hive_dynamic_partition
+fw_hive_execution_engine
+fw_hive_orc
+fw_hive_vectorization
+fw_hive_partition
+fw_hive_bucket
+fw_hive_external_location

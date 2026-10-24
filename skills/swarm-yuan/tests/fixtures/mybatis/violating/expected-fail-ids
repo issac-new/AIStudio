@@ -1,0 +1,5 @@
+# mybatis 全量 fail id（4/4，field_sync 补核：漏改字段防线）
+fw_mybatis_dollar
+fw_mybatis_binding
+fw_mybatis_select_dup_result
+fw_mybatis_field_sync

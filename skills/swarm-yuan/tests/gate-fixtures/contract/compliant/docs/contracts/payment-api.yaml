@@ -1,0 +1,7 @@
+# 支付接口契约（含 version 字段）
+version: 1.0.0
+api: payment
+base: /payments
+endpoints:
+  - name: pay
+    method: POST

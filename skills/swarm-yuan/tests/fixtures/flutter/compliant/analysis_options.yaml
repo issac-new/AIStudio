@@ -1,0 +1,2 @@
+# compliant fixture：接入官方 lint 集（fw_flutter_lints pass）
+include: package:flutter_lints/flutter.yaml

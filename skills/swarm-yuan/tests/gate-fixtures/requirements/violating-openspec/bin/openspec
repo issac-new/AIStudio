@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# openspec fixture double (violating)：模拟 openspec validate --all --strict 输出含 "1 failed"
+# 触发 check_requirements 的 openspec 守卫 fail 分支 gate_requirements_openspec_invalid
+echo "✗ change/test-change"
+echo "Totals: 0 passed, 1 failed (1 items)"
+echo "Details: openspec validate test-change --type change"

@@ -1,0 +1,2 @@
+# 矩阵缺失 fail 后立即返回，不得级联报 REQ 未追溯
+gate_rtm_untraced

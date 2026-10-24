@@ -1,0 +1,17 @@
+elasticjob:
+  reg-center:
+    server-lists: zk1:2181,zk2:2181,zk3:2181
+    namespace: order-job
+    session-timeout-milliseconds: 60000
+  tracing:
+    type: RDB
+  jobs:
+    orderShardingJob:
+      elastic-job-class: com.example.job.OrderShardingJob
+      cron: 0/30 * * * * ?
+      time-zone: Asia/Shanghai
+      sharding-total-count: 3
+      failover: true
+      misfire: false
+      job-error-handler:
+        type: LOG

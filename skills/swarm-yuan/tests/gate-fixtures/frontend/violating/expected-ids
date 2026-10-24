@@ -1,0 +1,2 @@
+# 硬 fail：madge 分支检出循环依赖（输出契约经 conf mock 供给，fail 行为与输出行即门禁既有实现）
+检测到组件循环依赖（madge）

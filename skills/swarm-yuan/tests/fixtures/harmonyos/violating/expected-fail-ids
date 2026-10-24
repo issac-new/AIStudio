@@ -1,0 +1,9 @@
+fw_harmonyos_napi_bridge
+fw_harmonyos_native_mem
+fw_harmonyos_permission
+fw_harmonyos_ability_lifecycle
+fw_harmonyos_arkts_strict
+fw_harmonyos_main_thread
+fw_harmonyos_cross_ref
+fw_harmonyos_state_decorator
+fw_harmonyos_concurrency_err

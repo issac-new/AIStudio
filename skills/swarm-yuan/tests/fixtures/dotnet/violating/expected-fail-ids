@@ -1,0 +1,8 @@
+# violating 必中 fail/告警 id 清单（R44-D6 补 nullable：本 fixture 无任何 nullable 启用面）
+fw_dotnet_sql_injection
+fw_dotnet_password_hash
+fw_dotnet_nullable
+fw_dotnet_logging
+fw_dotnet_auth
+fw_dotnet_https
+fw_dotnet_di

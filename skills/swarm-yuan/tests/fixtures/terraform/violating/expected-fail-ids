@@ -1,0 +1,6 @@
+# terraform 全量 fail id（5/5，P1/P2 实跑登记）
+fw_terraform_state_in_git
+fw_terraform_hardcoded_secret
+fw_terraform_sg_open_world
+fw_terraform_s3_public
+fw_terraform_rds_public

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# ocr fixture double（compliant）：模拟 ocr review 文本输出，零发现 → check_review 不置 fail。
+# 约束：输出不得含 high/critical/严重（grep -i 按子串命中，连 highlight 之类也会误判）与 "Error"。
+echo "Code Review Report (fixture double)"
+echo "- no findings; review passed"

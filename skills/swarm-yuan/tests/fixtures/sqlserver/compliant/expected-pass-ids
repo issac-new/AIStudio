@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_mssql_sql_injection
+fw_mssql_sp_grant_public
+fw_mssql_dml_nowhere

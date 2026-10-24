@@ -1,0 +1,5 @@
+# compliant 侧不得告警的门禁 id（负向断言：advisory 门禁 rc 恒 0，须负向断言锁死分支回归）
+fw_ruby_hardcoded_secret
+fw_ruby_gemfile_lock
+fw_ruby_env_key_drift
+fw_ruby_view_var

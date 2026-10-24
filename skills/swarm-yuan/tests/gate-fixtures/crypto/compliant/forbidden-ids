@@ -1,0 +1,2 @@
+# 未检出弱算法时不得出现 fail id
+gate_crypto_weak_algorithm

@@ -1,0 +1,5 @@
+# kubernetes violating 必中 fail id 清单（4/4 fail 主触发）
+fw_kubernetes_latest_image
+fw_kubernetes_privileged
+fw_kubernetes_run_as_root
+fw_kubernetes_hardcoded_secret
