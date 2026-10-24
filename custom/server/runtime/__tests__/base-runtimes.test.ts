@@ -17,11 +17,17 @@ import { validateSkillsShape, buildPinYaml, syncFromSource, readPin, readPinSkil
 import { applyPuaRegistration, semanticaMcpStatus } from '../../../../scripts/runtime/register-runtime.mjs';
 import { extractNewFileContent, validateSemanticaManifest, validatePin, seriesListsPatch } from '../../../../scripts/runtime/runtime-doctor.mjs';
 
-// 上游根与 inject.mjs 同源解析（OVERLAY_UPSTREAM_ROOT 私有树覆盖优先生效）；
-// env 缺席时与原逻辑一致（overlayRoot/../upstream）。
-const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT
-  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT)
-  : resolve(overlayRoot, '..', 'upstream');
+// 上游根与 inject.mjs 同源解析（2026-10-24 单仓整合起 inject 目标=vendor 基线，
+// 优先级镜像 inject.mjs：显式 OVERLAY_UPSTREAM_ROOT ＞ vendor/hermes-studio ＞
+// overlayRoot/../upstream 远端 vendor 模式回退），断言语义仍是「与 inject
+// 实际路由路径等值」。
+const envUpstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim();
+const vendorRoot = resolve(overlayRoot, 'vendor');
+const upstreamRoot = envUpstreamRoot
+  ? resolve(envUpstreamRoot)
+  : existsSync(resolve(vendorRoot, 'hermes-studio'))
+    ? vendorRoot
+    : resolve(overlayRoot, '..', 'upstream');
 const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
 const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
 
