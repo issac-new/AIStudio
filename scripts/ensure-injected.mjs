@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
-import { isHermesAgentPatchPath } from './inject.mjs';
+import { isHermesAgentPatchPath, applyPatchAtRoot, treeStatus, treeGitCtx } from './inject.mjs';
 import { addedFilesFromPatch, missingFiles } from './lib/zcode-patch-manifest.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
@@ -22,19 +22,19 @@ const patchDir = resolve(overlayRoot, 'patches');
 // OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/serve-server.mjs 同一基建）。
 // hermes-agent 与 hermes-studio 同根解析——此前仅 studio 尊重该 env，agent 补丁
 // 仍会打进共享 upstream 树，隔离不完整（inject.mjs:34 对照）。
+// AIStudio 单仓整合轮（2026-10-24）：仓内 vendor/ 基线优先，旧布局回落。
 const upstreamRootBase = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim())
-  : resolve(overlayRoot, '..', 'upstream');
+  : existsSync(resolve(overlayRoot, 'vendor', 'hermes-studio'))
+    ? resolve(overlayRoot, 'vendor')
+    : resolve(overlayRoot, '..', 'upstream');
 const upstream = resolve(upstreamRootBase, 'hermes-studio');
 const hermesAgentRoot = resolve(upstreamRootBase, 'hermes-agent');
+const zcodeRoot = resolve(upstreamRootBase, 'zcode');
 const routerPath = resolve(upstream, 'packages/client/src/router/index.ts');
 
 function gitStatus() {
-  try {
-    return execSync('git status --porcelain', { cwd: upstream, encoding: 'utf8' }).trim();
-  } catch {
-    return '';
-  }
+  return treeStatus(upstream).trim();
 }
 
 function readSeries() {
@@ -81,9 +81,8 @@ function applyDelta(delta) {
     const targetRoot = patchTargetRoot(p);
     const label = targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio';
     try {
-      // win32 容差同 inject.mjs:autocrlf=true 的 CRLF 检出 vs patch LF 上下文。
-      const wsFlag = process.platform === 'win32' ? ' --ignore-whitespace' : '';
-      execSync(`git apply --whitespace=nowarn${wsFlag} "${patchPath}"`, { cwd: targetRoot, stdio: 'pipe' });
+      // repo/vendor 双模 apply（win32 容差同 inject.mjs）。
+      applyPatchAtRoot(patchPath, targetRoot);
       console.log(`[ensure-injected] applied series-ahead patch: ${p} (to ${label})`);
     } catch (e) {
       console.error(`[ensure-injected] FAILED to apply series-ahead patch: ${p} (to ${label})`);
@@ -106,7 +105,6 @@ function cockpitRouteInjected() {
 }
 
 const manifestApplied = readManifestApplied();
-const zcodeRoot = resolve(upstreamRootBase, 'zcode');
 const zcodeSeriesFile = resolve(overlayRoot, 'zcode-patches', 'series');
 
 // 脏树=已注入只是整体判断；补丁新增的文件可能被外部删除而树仍是脏的。
@@ -128,9 +126,8 @@ function healMissingZcodeFiles(series) {
     console.warn(`[ensure-injected] zcode 补丁 ${p} 声明的 ${missing.length} 个新增文件缺失，按文件补放：`);
     for (const rel of missing) {
       console.warn(`  ${rel}`);
-      const wsFlag = process.platform === 'win32' ? ' --ignore-whitespace' : '';
       try {
-        execSync(`git apply --whitespace=nowarn${wsFlag} --include="${rel}" "${patchPath}"`, { cwd: zcodeRoot, stdio: 'pipe' });
+        applyPatchAtRoot(patchPath, zcodeRoot, ` --include="${rel}"`);
         console.log(`[ensure-injected] restored ${rel}`);
       } catch (e) {
         console.error(`[ensure-injected] FAILED: 补放 ${rel} 失败（${p}）`);
@@ -162,12 +159,12 @@ function healZcodePatches() {
   }
   if (series.length === 0) return;
   let status;
-  try {
-    status = execSync('git status --porcelain', { cwd: zcodeRoot, encoding: 'utf8' }).trim();
-  } catch {
-    console.warn('[ensure-injected] zcode 树不可读(非 git 仓?),跳过 zcode 补丁自愈。');
+  const zcCtx = treeGitCtx(zcodeRoot);
+  if (!zcCtx.relPrefix && !existsSync(resolve(zcodeRoot, '.git'))) {
+    console.warn('[ensure-injected] zcode 树不可读(非 git 仓且不在仓内 vendor/),跳过 zcode 补丁自愈。');
     return;
   }
+  status = treeStatus(zcodeRoot).trim();
   if (status) {
     // 脏树=已注入态；仍核对新增文件是否齐全（外部删除不会让树变干净）
     healMissingZcodeFiles(series);
@@ -183,7 +180,7 @@ function healZcodePatches() {
     }
     const wsFlag = process.platform === 'win32' ? ' --ignore-whitespace' : '';
     try {
-      execSync(`git apply --whitespace=nowarn${wsFlag} "${patchPath}"`, { cwd: zcodeRoot, stdio: 'pipe' });
+      applyPatchAtRoot(patchPath, zcodeRoot, wsFlag);
       console.log(`[ensure-injected] applied zcode patch: ${p}`);
     } catch (e) {
       console.error(`[ensure-injected] FAILED: zcode patch 补套失败: ${p}`);

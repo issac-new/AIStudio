@@ -33,16 +33,25 @@ const overlayRoot = resolve(import.meta.dirname, '..');
 // GOVERNANCE_REPO 解析落空，仿真中心/治理台账整族 fail-closed（2026-10-22 升级轮
 // serve-main 重启实锤，当时靠显式 env 兜底拉起）。向上锚定首个含**真实** upstream/
 // 目录的祖先（lstat 不随软链，跳过 worktree 内的 upstream 软链）；锚不到回落旧行为。
+// AIStudio 单仓整合轮（2026-10-24）：无 upstream/ 的检出（全新克隆）以仓内
+// vendor/hermes-studio 为次选锚——但含真实 upstream/ 的祖先优先（SIM_ROOT 等
+// 兄弟目录派生只对工作区根成立，worktree 内的 vendor 命中不能提前截断）。
 const ncwkRoot = (() => {
+  let vendorHit = null;
   for (let d = resolve(overlayRoot); ; d = resolve(d, '..')) {
     try { if (lstatSync(resolve(d, 'upstream')).isDirectory()) return d; } catch { /* 不是，继续向上 */ }
-    if (resolve(d, '..') === d) return null;
+    if (!vendorHit) {
+      try { if (lstatSync(resolve(d, 'vendor', 'hermes-studio')).isDirectory()) vendorHit = d; } catch { /* 不是 */ }
+    }
+    if (resolve(d, '..') === d) return vendorHit;
   }
 })();
-// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs 同一基建；语义=upstream 根）
+// 上游根（AIStudio 单仓整合轮）：env ＞ 仓内 vendor/（存在即用）＞ 旧布局 ../upstream/。
 const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
-  : resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
+  : existsSync(resolve(overlayRoot, 'vendor', 'hermes-studio'))
+    ? resolve(overlayRoot, 'vendor', 'hermes-studio')
+    : resolve(overlayRoot, '..', 'upstream', 'hermes-studio');
 
 process.env.TS_NODE_PROJECT = 'packages/server/tsconfig.json';
 process.env.TS_NODE_FILES = '1';
