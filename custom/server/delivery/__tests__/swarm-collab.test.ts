@@ -179,6 +179,16 @@ describe('群体协作读数 · 端点（夹具端到端）', () => {
     writeFileSync(join(evidenceDir, 'compensation-ledger.tsv'), RUN22_LEDGER)
     writeFileSync(join(evidenceDir, 'uat-verdicts.jsonl'), RUN22_UAT)
     writeFileSync(join(evidenceDir, 'release-gate.jsonl'), RUN22_GATE)
+    writeFileSync(join(evidenceDir, 'r18-steps.json'), JSON.stringify({
+      _schema: 1,
+      steps: {
+        '9': { ops: [{ title: '步 9 需求派发任务书全文（fanfan→fanfan-agent）', dialogs: [{ sender: 'fanfan', body: '支付收银台：支持微信与支付宝双渠道收单，商户多端接入，任务拆分与 RACI 如下' }] }] },
+        '11': { ops: [{ title: '步 11 系分拆分与 RACI 派发对话（fanfan-agent）', dialogs: [
+          { sender: 'fanfan-agent', body: '执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）：支持微信与支付宝双渠道收单' },
+          { sender: 'fanfan-agent', body: '执行任务 AN-MP（csw-cashier-mp 小程序收银台前端）：商户多端接入' },
+        ] }] },
+      },
+    }))
     process.env.SIM_OBSERVER_ROOT = dir
     const app = new Koa()
     app.use(deliveryRouter.routes())
@@ -211,6 +221,11 @@ describe('群体协作读数 · 端点（夹具端到端）', () => {
     expect(body.readout.social.gateRejects).toBe(1)
     expect(body.readout.social.byzantine.status).toBe('no_data')
     expect(body.readout.sources.some((s: string) => s.includes('scenario.log'))).toBe(true)
+    // 清账批 D13：r18 dialogs 在场 → 意图保真走全文相似度口径
+    expect(body.readout.communication.intentFidelity.basis).toBe('dialog-text')
+    expect(body.readout.communication.intentFidelity.textDispatchCount).toBe(2)
+    expect(body.readout.communication.intentFidelity.textSimilarity).toBeGreaterThan(0)
+    expect(body.readout.sources.some((s: string) => s.includes('r18-steps.json'))).toBe(true)
   })
 
   it('缺 run 参数 → 取最新 run；非法 run → 400', async () => {
