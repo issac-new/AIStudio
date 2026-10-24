@@ -45,6 +45,10 @@ def main():
     rt_body = load(a.dir, "redteam-run.json") or {}
     rt_list = load(a.dir, "redteam-runs.json") or {}
     nine = load(a.dir, "nine-layers.json") or {}
+    # V8.48 新读数面（京东评测体系吸收轮）：行为信号 + 经营语言摘要。
+    # 只透传不判据——新读数先观察（与 V8.46 处置链同款「不改判据」纪律）。
+    behavior = load(a.dir, "behavior-signals.json") or {}
+    biz = load(a.dir, "business-summary.json") or {}
 
     reg = registry.get("registry") or {}
     cons = reg.get("consumption") or {}
@@ -171,7 +175,15 @@ def main():
             "pyramid": agg.get("pyramid"),
             "actions": agg.get("actions") or [],
             "liveEvidence": live,
+            # V8.48：难度/角色分桶与输出稳定性（京东吸收轮；无标注/未开启如实缺席）
+            "byDifficulty": agg.get("byDifficulty"),
+            "byRole": agg.get("byRole"),
+            "outputStability": agg.get("outputStability"),
         },
+        # V8.48：行为信号（真实使用遥测供评测消费；零使用/不可用如实呈现）
+        "behaviorSignals": behavior.get("signals"),
+        # V8.48：经营语言摘要（verdict 三态+事实行；机械合成的决策者三句话）
+        "businessSummary": biz.get("summary"),
         "triangle": {
             "bySource": by_source,
             "conflicts": triangle.get("conflicts"),

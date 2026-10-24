@@ -51,6 +51,22 @@ describe('V8.45 评测接线结构', () => {
     expect(narrative).toContain('{{{{eval_gate}}}}')
   })
 
+  it('V8.48 新读数接线：任务难度/角色标注 + 行为信号/经营摘要采集与透传', () => {
+    const lib = read('mux/mx-eval-lib.sh')
+    expect(lib).toContain('全流程评测-${RFD_ID}-v2')
+    expect(lib).toContain('"difficulty":"P1","role":"implementer"')
+    expect(lib).toContain('"difficulty":"P0","role":"reviewer"')
+    expect(lib).toContain('behavior-signals?days=7')
+    expect(lib).toContain('business-summary')
+    const py = read('mux/mx-eval-summary.py')
+    expect(py).toContain('"byDifficulty": agg.get("byDifficulty")')
+    expect(py).toContain('"behaviorSignals": behavior.get("signals")')
+    expect(py).toContain('"businessSummary": biz.get("summary")')
+    const gen = read('mux/mx-report-gen.py')
+    expect(gen).toContain('难度/角色分桶')
+    expect(gen).toContain('稳定性/行为信号/经营摘要')
+  })
+
   it('采集位与脚本可执行', () => {
     expect(read('mux/capture-plan.env')).toContain('eval_done|/app/eval')
     expect(read('mux/r18-collect.py')).toContain("'eval_done': 19")
@@ -158,6 +174,37 @@ describe('V8.45 评测子门判据', () => {
       r = runSummary(dir)
       expect(r.status).toBe(1)
       expect(r.out.fails.join()).toContain('集已改版')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('V8.48：新读数透传且不改判（带新读数 PASS；全缺席也 PASS）', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mx-eval-v848-'))
+    try {
+      writeFixture(dir, (f) => {
+        f.run.run.aggregates.byDifficulty = [{ tier: 'P1', taskCount: 2, passAtK: 1 }, { tier: 'P0', taskCount: 1, passAtK: 1 }]
+        f.run.run.aggregates.byRole = [{ role: 'implementer', taskCount: 2, passed: 2, passAtK: 1 }, { role: 'reviewer', taskCount: 1, passed: 1, passAtK: 1 }]
+        f.run.run.aggregates.outputStability = { rounds: 3, checked: 6, flips: 0, flipRate: 0 }
+      })
+      writeFileSync(join(dir, 'behavior-signals.json'), JSON.stringify({ ok: true, available: true, signals: { days: 7, hasUsage: true, rows: [{ key: 'llm_error_rate', value: 0.01, samples: 200, sufficient: true }] } }), 'utf8')
+      writeFileSync(join(dir, 'business-summary.json'), JSON.stringify({ ok: true, summary: { verdict: 'releasable', verdictKey: 'all_gates_pass', facts: [{ key: 'quality', params: { pass: 100, tasks: 3, unknownPct: 0 } }] } }), 'utf8')
+      let r = runSummary(dir)
+      expect(r.status).toBe(0)
+      expect(r.out.run.byDifficulty).toHaveLength(2)
+      expect(r.out.run.byRole[0].role).toBe('implementer')
+      expect(r.out.run.outputStability.rounds).toBe(3)
+      expect(r.out.behaviorSignals.rows[0].key).toBe('llm_error_rate')
+      expect(r.out.businessSummary.verdict).toBe('releasable')
+
+      // 全缺席（旧证据目录形态）：读数字段为 null 且判据不受影响
+      rmSync(join(dir, 'behavior-signals.json'), { force: true })
+      rmSync(join(dir, 'business-summary.json'), { force: true })
+      writeFixture(dir, (f) => { delete (f.run.run.aggregates as any).byDifficulty })
+      r = runSummary(dir)
+      expect(r.status).toBe(0)
+      expect(r.out.run.byDifficulty).toBeNull()
+      expect(r.out.behaviorSignals).toBeNull()
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
