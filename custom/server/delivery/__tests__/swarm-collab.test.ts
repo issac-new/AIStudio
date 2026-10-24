@@ -18,6 +18,7 @@ import {
   textSimilarityOf,
   parseByzantineInjections,
   ablationCompareOf,
+  cadenceOf,
 } from '../swarm-collab'
 import { parseLedgerTsv } from '../interventions'
 import { deliveryRouter } from '../delivery-controller'
@@ -165,6 +166,45 @@ describe('群体协作读数 · 四维度换算', () => {
   })
 })
 
+describe('聚合层 · 拓扑与派发节拍（2026-10-24）', () => {
+  it('派发行带 HH:MM:SS 时间戳', () => {
+    const ds = parseScenarioDispatches(RUN22_SCENARIO)
+    expect(ds[0].ts).toBe('10:08:40')
+  })
+
+  it('派发图：节点/边/自环/出入度中心化（run22 四人各一条）', () => {
+    const t = readoutFixture().communication.topology
+    expect(t.nodes).toBe(4)
+    expect(t.edges).toBe(4)
+    expect(t.selfLoopShare).toBe(1) // 四人各自派发给自己的 agent
+    expect(t.outCentralization).toBeCloseTo(0) // 出度完全均分
+    expect(t.inCentralization).toBeCloseTo(0)
+    expect(t.topHubShare).toBeCloseTo(1 / 4)
+    expect(t.topHub).toBe('chen') // 均分并列时按节点名排序取首个
+  })
+
+  it('派发节拍：排序后跨度/中位间隔/每分钟（日志乱序不影响）', () => {
+    const log = [
+      '[mux 10:03:00] [b] 派发 ($3): @c-agent:matrix.test 任务 AN-C',
+      '[mux 10:00:00] [a] 派发 ($1): @a-agent:matrix.test 任务 AN-A',
+      '[mux 10:01:00] [a] 派发 ($2): @b-agent:matrix.test 任务 AN-B',
+    ].join('\n')
+    const c = cadenceOf(parseScenarioDispatches(log))
+    expect(c.spanSeconds).toBe(180)
+    expect(c.medianGapSeconds).toBe(90)
+    expect(c.dispatchesPerMinute).toBeCloseTo(1)
+  })
+
+  it('无派发 → 拓扑/节拍如实 null', () => {
+    const r = swarmCollabOf({ run: 'x', scenarioLog: null, ledgerRows: [], issuesLog: null, uatVerdicts: [], gateDecisions: [] })
+    expect(r.communication.topology.nodes).toBe(0)
+    expect(r.communication.topology.outCentralization).toBeNull()
+    expect(r.communication.topology.topHub).toBeNull()
+    expect(r.communication.cadence.spanSeconds).toBeNull()
+    expect(r.communication.cadence.dispatchesPerMinute).toBeNull()
+  })
+})
+
 describe('群体协作读数 · 端点（夹具端到端）', () => {
   let dir: string
   let server: ReturnType<typeof createServer>
@@ -209,7 +249,10 @@ describe('群体协作读数 · 端点（夹具端到端）', () => {
     expect(res.status).toBe(200)
     const body = await res.json() as {
       available: boolean; run: string; readout: {
-        communication: { dispatchCount: number; intentFidelity: { preserved: number } }
+        communication: {
+          dispatchCount: number
+          intentFidelity: { preserved: number; basis: string; textDispatchCount: number; textSimilarity: number | null }
+        }
         social: { gateRejects: number; byzantine: { status: string } }
         sources: string[]
       }

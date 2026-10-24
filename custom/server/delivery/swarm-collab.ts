@@ -53,6 +53,30 @@ export interface ParetoPoint {
   onFrontier: boolean
 }
 
+/** 派发图结构（D16：中心化度是结构描述，不是质量分） */
+export interface TopologyReadout {
+  basis: 'dispatch-graph'
+  nodes: number
+  edges: number
+  /** 自环边占比（人给自己 agent 派发；无派发=null） */
+  selfLoopShare: number | null
+  /** 出度归一化赫芬达尔中心化度（0=均分，1=单点全包；无派发=null） */
+  outCentralization: number | null
+  /** 入度归一化中心化度 */
+  inCentralization: number | null
+  /** 最大出度枢纽占全部派发的比例 */
+  topHubShare: number | null
+  topHub: string | null
+}
+
+/** 派发节拍（D16：日志仅有 HH:MM:SS，跨度上限 24h，非端到端任务时延） */
+export interface DispatchCadence {
+  basis: 'dispatch-time-of-day'
+  spanSeconds: number | null
+  medianGapSeconds: number | null
+  dispatchesPerMinute: number | null
+}
+
 export interface SwarmCollabReadout {
   run: string
   generatedAt: string
@@ -66,6 +90,10 @@ export interface SwarmCollabReadout {
     /** 通信开销比字符口径：每任务协作消息字符（MOR 代理；token 口径挂账） */
     morCharsPerTask: number | null
     morBasis: 'chars'
+    /** 派发图结构（描述性读数，无好坏方向；不进评测榜名次，D16） */
+    topology: TopologyReadout
+    /** 派发节拍（日志只有时分秒；非端到端任务时延，D16） */
+    cadence: DispatchCadence
     intentFidelity: IntentFidelity
     deadlockSignals: {
       /** 回灌类代偿条数（互相等待未闭环的补登） */
@@ -144,7 +172,7 @@ export interface AblationCompare {
 /** 任务 ID：AN-XXX 单段与 UC-RFD-001 多段两种形态（实测 run22 派发行） */
 const TASK_ID_RE = /\b(?:AN|UC|RFD)-[A-Z0-9]+(?:-[A-Z0-9]+)*\b/
 const MODULE_SLUG_RE = /\b(?:csw)-[a-z0-9-]+\b/
-const DISPATCH_RE = /^\[mux \d{2}:\d{2}:\d{2}\] \[([\w.-]+)\] 派发 \(\$(\S+)\): @([\w.-]+):matrix\.test\s+(.*)$/
+const DISPATCH_RE = /^\[mux (\d{2}:\d{2}:\d{2})\] \[([\w.-]+)\] 派发 \(\$(\S+)\): @([\w.-]+):matrix\.test\s+(.*)$/
 
 /** scenario.log → 派发行（坏行跳过；正文截 2000 字符防单行爆内存） */
 export function parseScenarioDispatches(text: string): DispatchLine[] {
@@ -153,9 +181,9 @@ export function parseScenarioDispatches(text: string): DispatchLine[] {
     const line = raw.trimEnd()
     const m = DISPATCH_RE.exec(line)
     if (!m) continue
-    const body = m[4].slice(0, 2000)
+    const body = m[5].slice(0, 2000)
     out.push({
-      ts: '', sender: m[1], eventId: m[2], target: m[3], text: body,
+      ts: m[1], sender: m[2], eventId: m[3], target: m[4], text: body,
       chars: line.length,
       taskId: TASK_ID_RE.exec(body)?.[0] ?? null,
       moduleSlug: MODULE_SLUG_RE.exec(body)?.[0] ?? null,
@@ -189,6 +217,77 @@ export function completedTaskIds(text: string): Set<string> {
 
 function rate(numer: number, denom: number): number | null {
   return denom > 0 ? numer / denom : null
+}
+
+function median(values: number[]): number {
+  const s = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(s.length / 2)
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
+}
+
+/** 归一化赫芬达尔指数：0=完全均分，1=单点独占；无流量=null，单节点=1（D16） */
+function normalizedHhi(counts: number[]): number | null {
+  const total = counts.reduce((s, c) => s + c, 0)
+  if (total <= 0) return null
+  if (counts.length <= 1) return 1
+  const hhi = counts.reduce((s, c) => s + (c / total) ** 2, 0)
+  return Math.max(0, Math.min(1, (hhi - 1 / counts.length) / (1 - 1 / counts.length)))
+}
+
+/** 派发图结构：人↔自身 agent 的派发按同一节点归一（与 credit 口径一致） */
+export function topologyOf(dispatches: DispatchLine[], agents: string[]): TopologyReadout {
+  const norm = (s: string) => s.replace(/-agent$/, '')
+  const nodes = [...new Set(agents)]
+  const edges = new Set(dispatches.map(d => `${norm(d.sender)}→${norm(d.target)}`))
+  const selfLoops = [...edges].filter(e => {
+    const [from, to] = e.split('→')
+    return from === to
+  }).length
+  const outCounts = new Map<string, number>(nodes.map(n => [n, 0]))
+  const inCounts = new Map<string, number>(nodes.map(n => [n, 0]))
+  for (const d of dispatches) {
+    const from = norm(d.sender)
+    const to = norm(d.target)
+    outCounts.set(from, (outCounts.get(from) ?? 0) + 1)
+    inCounts.set(to, (inCounts.get(to) ?? 0) + 1)
+  }
+  let topHub: string | null = null
+  let topCount = 0
+  for (const n of nodes) {
+    const c = outCounts.get(n) ?? 0
+    if (c > topCount) { topCount = c; topHub = n }
+  }
+  const totalOut = dispatches.length
+  return {
+    basis: 'dispatch-graph',
+    nodes: nodes.length,
+    edges: edges.size,
+    selfLoopShare: rate(selfLoops, edges.size),
+    outCentralization: normalizedHhi(nodes.map(n => outCounts.get(n) ?? 0)),
+    inCentralization: normalizedHhi(nodes.map(n => inCounts.get(n) ?? 0)),
+    topHubShare: totalOut > 0 ? topCount / totalOut : null,
+    topHub: totalOut > 0 ? topHub : null,
+  }
+}
+
+/** 派发节拍：按时间点排序算跨度与中位间隔（跨日按 24h 上限降档） */
+export function cadenceOf(dispatches: DispatchLine[]): DispatchCadence {
+  const secs = dispatches
+    .map(d => /^(\d{2}):(\d{2}):(\d{2})$/.exec(d.ts))
+    .filter((m): m is RegExpExecArray => m != null)
+    .map(m => Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]))
+    .sort((a, b) => a - b)
+  if (!secs.length) {
+    return { basis: 'dispatch-time-of-day', spanSeconds: null, medianGapSeconds: null, dispatchesPerMinute: null }
+  }
+  const span = secs[secs.length - 1] - secs[0]
+  const gaps = secs.slice(1).map((s, i) => s - secs[i])
+  return {
+    basis: 'dispatch-time-of-day',
+    spanSeconds: span,
+    medianGapSeconds: gaps.length ? median(gaps) : null,
+    dispatchesPerMinute: span > 0 ? secs.length / (span / 60) : null,
+  }
 }
 
 /** 字符 bigram Dice 相似度（D13：无模型依赖、可回放；CJK 友好；短文本(<2 字符)按全等判） */
@@ -395,6 +494,8 @@ export function swarmCollabOf(input: SwarmCollabInput): SwarmCollabReadout {
       taskIds,
       morCharsPerTask: rate(dispatchChars, taskIds.length),
       morBasis: 'chars',
+      topology: topologyOf(dispatches, [...allAgents].sort()),
+      cadence: cadenceOf(dispatches),
       intentFidelity,
       deadlockSignals: {
         backfillCount: backfills.length,
