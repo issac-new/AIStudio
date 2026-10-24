@@ -23,9 +23,21 @@
 3. **清除（None）也发 `estimate_set` 事件**：审计链完整记录估算生命周期；测试未约束，选更完整的语义。
 4. **部署同步走 manifest 通道**：改动文件均已在 `runtime-manifest.json` 登记清单内（kanban_db.py / kanban_db_dispatch.py / kanban_db_connect.py 既有条目），部署树经 `deploy-agent-runtime` 随 inject 出口同步。
 
+## 追加批（同日）：vitest 全量首跑暴露的两处测试基建缺陷
+
+全量首跑（serve-main 换装后）146 文件级失败，根因不在业务码而在两处基建：
+
+1. **`vitest.config.ts` 的 `@` 兜底别名仍回落 `../upstream`**——单仓整合起 inject 目标已切 `vendor/`（inject.mjs 的 vendor 优先级），测试却读整合前旧外部 upstream 树（内部 custom 符号链还指着已消亡的 ncwk 路径）。修法：兜底优先级镜像 inject.mjs——显式 `OVERLAY_UPSTREAM_ROOT` ＞ `vendor/` ＞ `../upstream`（远端 vendor 模式回退保留）。
+2. **`run-trace-profile.test.ts` 的 python 装配缺 `sys.modules` 注册**——`module_from_spec` 裸 `exec_module` 下，3.14 的 dataclasses 类型解析经 `sys.modules[cls.__module__].__dict__` 查命名空间直接 NoneType 崩（3.15 恰不走此路径侥幸通过）；补标准注册行，双解释器均绿（3.14 实测过、3.15 语义不变）。
+
 ## 验证
 
 - 拼合树（vendor v0.22.4 基线 + 本轮 runtime 覆盖层）`python3.14 -m pytest`：**22 passed**，覆盖三份测试全量——板级围栏 5、分解估算 9（含原 xfail 两用例转正常通过）、估算落库+负载重排 8（原 import 断链红测转全绿）。
 - 语法检查：三模块 `ast.parse` 通过。
 - 用例语义对拍：同层轻载先行 / 未评估保守 1 人日 / unassigned 垫底 / 等负载保持到达序 / 优先级层不被打穿，五断言全过（TestWorkloadReorder 四用例）。
-- vitest 全量与 serve-main 换装另见本轮收口报告（服务端 Python 层改动不触 JS 面）。
+
+## 验证（追加批）
+
+- python 片段 3.14 直跑：`{"explicit": "explicit-prof"}` 正常输出。
+- 修复前对照实验：同测试文件 PATH 前置 3.15 → 3 passed；默认 3.14 → 2 failed（AttributeError NoneType __dict__）——失败可完全归因装配缺陷，非插件行为回归。
+- 全量复跑结果见本轮交付汇报。
