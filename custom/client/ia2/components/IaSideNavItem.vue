@@ -86,14 +86,14 @@ const statusTone = computed(() =>
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 30px;
+  min-height: 32px;
   padding: 0 8px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   text-align: left;
   cursor: pointer;
 }
@@ -150,15 +150,18 @@ const statusTone = computed(() =>
   color: var(--text-muted);
   font-size: 11px;
 }
+/* 徽标走「淡底+语义字色」而非实心红：整列三项实心红会把导航压成告警墙，
+   计数仍可读但不抢标题层级（2026-10-24 全页视觉走查）。 */
 .isn-item__badge {
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--error);
-  color: var(--text-on-accent);
-  font-size: 10px;
-  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--error) 14%, transparent);
+  color: var(--error);
+  font-size: 10.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
   display: inline-flex;
   align-items: center;
   justify-content: center;

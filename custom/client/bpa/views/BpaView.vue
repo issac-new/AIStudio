@@ -67,7 +67,7 @@ onMounted(() => void load())
       <div class="bpa-view__meta" v-if="dto">
         <span class="muted">{{ L.nodes }}：{{ dto.nodes.length }}</span>
         <span class="muted">{{ L.l3Count }}：{{ dto.report.l3Count }}</span>
-        <span class="muted mono">{{ L.storeAt }}：{{ dto.store }}</span>
+        <span class="muted" :title="dto.store" data-testid="bpa-store">{{ L.storeAt }}：本机</span>
       </div>
     </header>
 

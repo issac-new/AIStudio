@@ -393,21 +393,28 @@ onMounted(() => { void refresh() })
   flex-wrap: wrap;
 }
 .gk__input {
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 12px;
+  border: 1px solid var(--ia-border-control, var(--border-color));
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12.5px;
   width: 180px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: inherit;
+  &::placeholder { color: var(--text-muted); }
+  &:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
   &--reason { flex: 1; min-width: 200px; }
 }
 .gk__btn {
   border: 1px solid var(--border-color);
-  background: transparent;
+  background: var(--bg-card);
   color: inherit;
-  border-radius: 4px;
-  padding: 3px 12px;
-  font-size: 12px;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-family: inherit;
+  font-size: 12.5px;
   cursor: pointer;
+  &:hover:not(:disabled) { background: var(--bg-secondary); }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .gk__tpl-row {
