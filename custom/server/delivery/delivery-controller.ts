@@ -4,6 +4,7 @@
 //   GET /api/hermes/delivery/matrix         —— C×L 效能画像矩阵（每格 需求数+平均介入次数）
 //   GET /api/hermes/delivery/interventions?run=<id> —— 介入归因账本（六类+两层分账+风险信号；缺 run=全 run 聚合）
 //   GET /api/hermes/delivery/swarm-collab?run=<id> —— 群体协作四维度读数（2026-10-24 吸收轮；缺 run=最新 run）
+//   GET /api/hermes/delivery/swarm-bench[?runs=a,b] —— 跨轮评测榜（2026-10-24 聚合层；默认最近 20 轮）
 // 数据源：看板 sqlite（lean 只读器 boards-reader）+ 推演 run 台账/判词（simcenter 同源）。
 // 归档 tar（NVMe）不在扫描面——sources 里如实注明。
 
@@ -27,6 +28,7 @@ import {
 } from './interventions'
 import { MATURITY_LEVELS, assessMaturity } from './maturity'
 import { ablationCompareOf, swarmCollabOf, type SwarmCollabReadout } from './swarm-collab'
+import { buildSwarmBench } from './swarm-bench'
 
 const router = new Router({ prefix: '/api/hermes/delivery' })
 
@@ -346,6 +348,51 @@ router.get('/swarm-collab', ctx => {
     note: '四维度读数（通信拓扑/信用分配/帕累托/社会动力学）：口径=消息字符代理+意图保真双口径（dialog 全文优先/锚点回退）+观察性归因（spec 吸收轮 D3-D8+清账批 D10-D14）；只观测不进判据',
     readout: base.readout,
     ...(ablation ? { ablation } : {}),
+  }
+})
+
+// ── GET /swarm-bench[?runs=a,b]（2026-10-24 聚合层：评测榜+帕累托；只观测不进判据） ──
+// 扫描面=SIM_ROOT/runs（归档 tar 不在扫描面）；默认按 run id 倒序取最近 20 轮，缺证据的 run 不占榜。
+const MAX_BENCH_RUNS = 20
+
+router.get('/swarm-bench', ctx => {
+  const simRoot = observerSimRootOrNull()
+  if (!simRoot) {
+    ctx.status = 200
+    ctx.body = { available: false, reason: 'SIM 根缺席（OBS_SIM_ROOT 未配置且候选位全空）' }
+    return
+  }
+  const runsParam = typeof ctx.query.runs === 'string' ? ctx.query.runs.trim() : ''
+  const requested = runsParam
+    ? [...new Set(runsParam.split(',').map(s => s.trim()).filter(Boolean))]
+    : []
+  for (const run of requested) {
+    if (!isValidRun(run)) {
+      ctx.status = 400
+      ctx.body = { ok: false, error: '非法 run 标识' }
+      return
+    }
+  }
+  const recent = listRunDirs(simRoot).sort().reverse()
+  const candidates = (requested.length ? requested : recent).slice(0, MAX_BENCH_RUNS)
+  const inputs = candidates.flatMap(run => {
+    const base = swarmCollabReadoutOfRun(simRoot, run)
+    return base && base.readout.sources.length ? [{ run, readout: base.readout }] : []
+  })
+  if (!inputs.length) {
+    ctx.status = 200
+    ctx.body = {
+      available: false,
+      reason: '无可用证据 run',
+      runsRequested: candidates.length,
+    }
+    return
+  }
+  ctx.body = {
+    available: true,
+    scope: requested.length ? 'explicit' : 'latest',
+    runsRequested: candidates.length,
+    ...buildSwarmBench(inputs),
   }
 })
 

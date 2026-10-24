@@ -133,6 +133,22 @@ export interface SwarmCollabCommunication {
   taskIds: string[]
   morCharsPerTask: number | null
   morBasis: string
+  topology: {
+    basis: string
+    nodes: number
+    edges: number
+    selfLoopShare: number | null
+    outCentralization: number | null
+    inCentralization: number | null
+    topHubShare: number | null
+    topHub: string | null
+  }
+  cadence: {
+    basis: string
+    spanSeconds: number | null
+    medianGapSeconds: number | null
+    dispatchesPerMinute: number | null
+  }
   intentFidelity: { anchoredTasks: number; preserved: number; rate: number | null; basis: string; textSimilarity: number | null; textDispatchCount: number }
   deadlockSignals: { backfillCount: number; backfillRatio: number | null; receiptMissing: number; raciMissing: number; nudgeCount: number }
 }
@@ -199,4 +215,47 @@ export interface SwarmCollabResponse {
 export function fetchSwarmCollab(run?: string): Promise<SwarmCollabResponse> {
   const q = run ? `?run=${encodeURIComponent(run)}` : ''
   return getJson(`/api/hermes/delivery/swarm-collab${q}`)
+}
+
+// ── 跨轮群体协作评测榜（2026-10-24 聚合层） ──
+export type SwarmBenchMetricKey =
+  | 'completionRate'
+  | 'morCharsPerTask'
+  | 'intentFidelityRate'
+  | 'charsPerCompletedTask'
+  | 'backfillRatio'
+  | 'echoPassRate'
+  | 'byzantineBcr'
+
+export interface SwarmBenchMetric {
+  key: SwarmBenchMetricKey
+  label: string
+  direction: 'higher' | 'lower'
+  basis: string
+}
+
+export interface SwarmBenchEntry {
+  run: string
+  values: Record<SwarmBenchMetricKey, number | null>
+  ranks: Record<SwarmBenchMetricKey, number | null>
+  overallRank: number | null
+  onFrontier: boolean | null
+  sources: string[]
+}
+
+export interface SwarmBenchResponse {
+  available: boolean
+  reason?: string
+  scope?: string
+  runsRequested?: number
+  runsScanned?: number
+  entries?: SwarmBenchEntry[]
+  metrics?: SwarmBenchMetric[]
+  pareto?: { costKey: SwarmBenchMetricKey; benefitKey: SwarmBenchMetricKey; frontierSize: number }
+  note?: string
+}
+
+export function fetchSwarmBench(runs?: string[]): Promise<SwarmBenchResponse> {
+  const q = runs?.length ? `?runs=${encodeURIComponent(runs.join(','))}` : ''
+  return getJson(`/api/hermes/delivery/swarm-bench${q}`)
 }

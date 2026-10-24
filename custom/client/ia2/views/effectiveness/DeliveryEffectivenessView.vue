@@ -6,13 +6,14 @@
      ④ 协作成熟度（三级演进读数）
      ⑤ 群体协作四维度读数（2026-10-24 群体协作评测基准吸收轮：通信拓扑/信用分配/帕累托/社会动力学，
         字符口径代理+观察性归因，只观测不进判据）
+     ⑥ 群体协作评测榜（2026-10-24 聚合层：跨轮指标名次+帕累托散点，只观测不进判据）
      全部只读消费 /api/hermes/delivery/*；fail-soft：源缺席如实呈现原因。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-  fetchDigest, fetchInterventions, fetchMatrix, fetchMaturity, fetchSwarmCollab,
+  fetchDigest, fetchInterventions, fetchMatrix, fetchMaturity, fetchSwarmBench, fetchSwarmCollab,
   type DailyDigest, type DeliveryMatrix, type DigestItem, type InterventionsResponse, type MaturityResponse,
-  type SwarmCollabResponse,
+  type SwarmBenchResponse, type SwarmCollabResponse,
 } from '../../api/effectiveness'
 import { useEffectivenessText } from './i18n'
 
@@ -28,6 +29,8 @@ const interventionsError = ref<string | null>(null)
 const maturity = ref<MaturityResponse | null>(null)
 const swarm = ref<SwarmCollabResponse | null>(null)
 const swarmError = ref<string | null>(null)
+const bench = ref<SwarmBenchResponse | null>(null)
+const benchError = ref<string | null>(null)
 const runScope = ref('') // '' = 全部 run
 const expanded = ref<Set<string>>(new Set())
 
@@ -44,7 +47,8 @@ async function loadAll(): Promise<void> {
   matrixError.value = null
   interventionsError.value = null
   swarmError.value = null
-  const [d, m, i, mat, sw] = await Promise.allSettled([fetchDigest(), fetchMatrix(), fetchInterventions(runScope.value || undefined), fetchMaturity(runScope.value || undefined), fetchSwarmCollab(runScope.value || undefined)])
+  benchError.value = null
+  const [d, m, i, mat, sw, sb] = await Promise.allSettled([fetchDigest(), fetchMatrix(), fetchInterventions(runScope.value || undefined), fetchMaturity(runScope.value || undefined), fetchSwarmCollab(runScope.value || undefined), fetchSwarmBench()])
   if (d.status === 'fulfilled') {
     digest.value = d.value.digest ?? null
     if (!d.value.available) digestError.value = d.value.reason ?? 'unavailable'
@@ -62,6 +66,10 @@ async function loadAll(): Promise<void> {
     swarm.value = sw.value
     if (!sw.value.available) swarmError.value = sw.value.reason ?? 'unavailable'
   } else swarmError.value = String(sw.reason)
+  if (sb.status === 'fulfilled') {
+    bench.value = sb.value
+    if (!sb.value.available) benchError.value = sb.value.reason ?? 'unavailable'
+  } else benchError.value = String(sb.reason)
   digestLoading.value = false
 }
 
@@ -134,6 +142,48 @@ function fmtPct(v: number | null | undefined): string {
 function fmtSigned(v: number | null | undefined): string {
   return v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}`
 }
+
+function fmtSeconds(v: number | null | undefined): string {
+  if (v == null) return '—'
+  if (v < 60) return `${Math.round(v)}s`
+  if (v < 3600) return `${Math.round(v / 60)}m`
+  return `${(v / 3600).toFixed(1)}h`
+}
+
+function fmtRank(v: number | null | undefined): string {
+  if (v == null) return '—'
+  return Number.isInteger(v) ? String(v) : v.toFixed(1)
+}
+
+function fmtChars(v: number | null | undefined): string {
+  return v == null ? '—' : String(Math.round(v))
+}
+
+/** ⑥ 评测榜：成本-收益帕累托散点（内联 SVG，不引图表库；<2 点不成图） */
+const benchEntries = computed(() => bench.value?.entries ?? [])
+
+const paretoChart = computed(() => {
+  const entries = bench.value?.entries ?? []
+  const pts = entries.flatMap(e => {
+    const cost = e.values.charsPerCompletedTask
+    const benefit = e.values.completionRate
+    return cost == null || benefit == null ? [] : [{ run: e.run, cost, benefit, onFrontier: e.onFrontier === true }]
+  })
+  if (pts.length < 2) return null
+  const w = 260, h = 130, pad = 22
+  const costs = pts.map(p => p.cost)
+  const minC = Math.min(...costs)
+  const maxC = Math.max(...costs)
+  const spanC = maxC - minC || Math.max(1, maxC * 0.1)
+  return {
+    w, h,
+    points: pts.map(p => ({
+      ...p,
+      cx: Math.round(pad + ((p.cost - minC) / spanC) * (w - pad * 2)),
+      cy: Math.round(h - pad - Math.max(0, Math.min(1, p.benefit)) * (h - pad * 2)),
+    })),
+  }
+})
 
 /** 信用表行=信用分解与帕累托点合一（同一 per-agent 视图，免两张表） */
 const swarmAgentRows = computed(() => {
@@ -356,6 +406,8 @@ function cellClass(count: number): string {
             <div class="eff-swarm__dim" data-testid="eff-swarm-comm">
               <span class="eff-swarm__dim-name">通信拓扑</span>
               <span>每任务协作 {{ swarm.readout.communication.morCharsPerTask != null ? Math.round(swarm.readout.communication.morCharsPerTask) : '—' }} 字符（开销比·字符口径）</span>
+              <span>派发图：{{ swarm.readout.communication.topology.nodes }} 人 / {{ swarm.readout.communication.topology.edges }} 条边 · 出度中心化 {{ fmtPct(swarm.readout.communication.topology.outCentralization) }} · 枢纽 {{ swarm.readout.communication.topology.topHub ?? '—' }} 占 {{ fmtPct(swarm.readout.communication.topology.topHubShare) }}</span>
+              <span>派发节拍：{{ fmtSeconds(swarm.readout.communication.cadence.spanSeconds) }} 内 {{ swarm.readout.communication.dispatchCount }} 次 · 中位间隔 {{ fmtSeconds(swarm.readout.communication.cadence.medianGapSeconds) }} · {{ swarm.readout.communication.cadence.dispatchesPerMinute != null ? swarm.readout.communication.cadence.dispatchesPerMinute.toFixed(1) : '—' }} 次/分（非端到端时延）</span>
               <span>意图保真 {{ fmtPct(swarm.readout.communication.intentFidelity.rate) }}（口径={{ swarm.readout.communication.intentFidelity.basis === 'dialog-text' ? '消息全文相似度' : '任务 ID+模块锚点' }}{{ swarm.readout.communication.intentFidelity.basis === 'dialog-text' ? `，${swarm.readout.communication.intentFidelity.textDispatchCount} 条派发明细` : `，${swarm.readout.communication.intentFidelity.preserved}/${swarm.readout.communication.intentFidelity.anchoredTasks}` }}）</span>
               <span>等待信号：回灌代偿 {{ swarm.readout.communication.deadlockSignals.backfillCount }} · 回执缺席 {{ swarm.readout.communication.deadlockSignals.receiptMissing }} · RACI 缺发 {{ swarm.readout.communication.deadlockSignals.raciMissing }} · 催办 {{ swarm.readout.communication.deadlockSignals.nudgeCount }}</span>
             </div>
@@ -392,6 +444,58 @@ function cellClass(count: number): string {
             任务完成 {{ swarm.readout.credit.taskCompletion.done }}/{{ swarm.readout.credit.taskCompletion.total }} · 观察联盟 {{ swarm.readout.credit.coalitionsCovered }} 组 · 帕累托前沿 {{ swarm.readout.pareto.frontierSize }}/{{ swarm.readout.pareto.points.length }}。
             口径：成本=消息字符代理（token 依赖 span 采集，挂账）；*关键支撑度/联盟边际=观察性归因（非实验性消融）；只观测不进判据。
           </p>
+        </template>
+      </section>
+      <!-- ⑥ 跨轮评测榜（2026-10-24 聚合层：名次+帕累托；只观测不进判据） -->
+      <section v-if="bench?.available || benchError" class="eff-card" data-testid="eff-swarm-bench">
+        <h3 class="eff-card__title">群体协作评测榜
+          <span v-if="bench?.available" class="eff-card__meta">{{ bench.runsScanned ?? 0 }} 轮入榜 · 帕累托前沿 {{ bench.pareto?.frontierSize ?? 0 }} 轮</span>
+        </h3>
+        <p v-if="benchError" class="eff-card__error" data-testid="eff-swarm-bench-error">{{ text.unavailable }}：{{ benchError }}</p>
+        <template v-else>
+          <p v-if="!benchEntries.length" class="eff-card__note">暂无可比轮次（需至少一轮带证据的推演）。</p>
+          <template v-else>
+            <div class="eff-bench__scroll">
+              <table class="eff-bench__table" data-testid="eff-swarm-bench-table">
+                <thead>
+                  <tr><th title="可用指标平均名次，越小越好">均位</th><th>轮次</th><th title="越高越好">任务完成</th><th title="越低越好（协作开销）">每任务字符</th><th title="越高越好">意图保真</th><th title="越低越好（等待/回灌代偿）">回灌占比</th><th title="越低越好（越有批判性）">回音壁倾向</th><th title="越高越好（仅注入轮有值）">BCR</th><th title="越低越好">字符/完成锚</th><th title="成本越低、完成率越高越好">前沿</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="e in benchEntries" :key="e.run">
+                    <td>{{ fmtRank(e.overallRank) }}</td>
+                    <td class="eff-bench__run">{{ e.run }}</td>
+                    <td>{{ fmtPct(e.values.completionRate) }}</td>
+                    <td>{{ fmtChars(e.values.morCharsPerTask) }}</td>
+                    <td>{{ fmtPct(e.values.intentFidelityRate) }}</td>
+                    <td>{{ fmtPct(e.values.backfillRatio) }}</td>
+                    <td>{{ fmtPct(e.values.echoPassRate) }}</td>
+                    <td>{{ fmtPct(e.values.byzantineBcr) }}</td>
+                    <td>{{ fmtChars(e.values.charsPerCompletedTask) }}</td>
+                    <td>{{ e.onFrontier === true ? '●' : e.onFrontier === false ? '' : '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-if="paretoChart" class="eff-bench__pareto">
+              <svg :viewBox="`0 0 ${paretoChart.w} ${paretoChart.h}`" role="img" aria-label="成本-收益帕累托散点">
+                <line :x1="10" :y1="paretoChart.h - 10" :x2="paretoChart.w - 8" :y2="paretoChart.h - 10" class="eff-bench__axis" />
+                <line :x1="10" :y1="10" :x2="10" :y2="paretoChart.h - 10" class="eff-bench__axis" />
+                <circle
+                  v-for="p in paretoChart.points"
+                  :key="p.run"
+                  :cx="p.cx"
+                  :cy="p.cy"
+                  :r="p.onFrontier ? 4.5 : 3"
+                  :class="p.onFrontier ? 'eff-bench__dot eff-bench__dot--front' : 'eff-bench__dot'"
+                >
+                  <title>{{ p.run }}：完成率 {{ fmtPct(p.benefit) }} · 每完成锚 {{ Math.round(p.cost) }} 字符{{ p.onFrontier ? ' · 帕累托前沿' : '' }}</title>
+                </circle>
+                <text :x="paretoChart.w - 8" :y="paretoChart.h - 2" text-anchor="end" class="eff-bench__axis-label">成本 →</text>
+                <text x="12" y="12" class="eff-bench__axis-label">完成率 ↑</text>
+              </svg>
+            </div>
+            <p class="eff-card__note">{{ bench?.note }}</p>
+          </template>
         </template>
       </section>
     </div>
@@ -526,4 +630,19 @@ function cellClass(count: number): string {
   display: flex; flex-direction: column; gap: 3px; font-size: 11.5px;
 }
 .eff-swarm__dim-name { font-weight: 600; font-size: 12px; }
+.eff-bench__scroll { overflow-x: auto; }
+.eff-bench__table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.eff-bench__table th,
+.eff-bench__table td { padding: 3px 6px; border-bottom: 1px solid var(--border-color); text-align: right; white-space: nowrap; }
+.eff-bench__table th:nth-child(1),
+.eff-bench__table td:nth-child(1),
+.eff-bench__table th:nth-child(2),
+.eff-bench__table td:nth-child(2) { text-align: left; }
+.eff-bench__run { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.eff-bench__pareto { align-self: flex-start; max-width: 320px; width: 100%; }
+.eff-bench__pareto svg { width: 100%; height: auto; }
+.eff-bench__axis { stroke: var(--border-color); stroke-width: 1; }
+.eff-bench__axis-label { fill: var(--text-muted); font-size: 8px; }
+.eff-bench__dot { fill: var(--text-muted); opacity: 0.55; }
+.eff-bench__dot--front { fill: var(--accent-primary, var(--color-primary)); opacity: 1; }
 </style>
