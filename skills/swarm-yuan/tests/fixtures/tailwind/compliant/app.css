@@ -1,0 +1,4 @@
+/* compliant fixture: @apply 复用 + 无手写 @media */
+.btn {
+  @apply tw-flex tw-items-center tw-justify-between tw-p-3;
+}

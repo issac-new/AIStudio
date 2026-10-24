@@ -1,0 +1,7 @@
+# violating 侧必中 id 清单（run-framework-fixture.sh 逐行字面断言输出命中）
+# 5 门禁全主触发：硬编码密钥 / composer.lock 内容漂移 / env() 键漂移 / 路由 name 漂移 / 视图变量漂移
+fw_php_hardcoded_secret
+fw_php_composer_lock
+fw_php_env_key_drift
+fw_php_route_name
+fw_php_view_var

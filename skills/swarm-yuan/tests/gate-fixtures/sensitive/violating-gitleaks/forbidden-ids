@@ -1,0 +1,2 @@
+# 工具路径直行，不得出现降级内置的 warn（证明 SENSITIVE_TOOL=auto 确实走了 gitleaks 路径）
+降级内置

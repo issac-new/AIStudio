@@ -1,0 +1,15 @@
+{
+    "name": "acme/shop-api",
+    "description": "php fixture violating: composer.json 有 guzzlehttp/guzzle 但 composer.lock 未同步",
+    "require": {
+        "php": "^8.2",
+        "monolog/monolog": "^3.5",
+        "guzzlehttp/guzzle": "^7.8"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}

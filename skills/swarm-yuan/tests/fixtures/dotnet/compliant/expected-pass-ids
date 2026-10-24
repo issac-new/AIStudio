@@ -1,0 +1,11 @@
+# compliant 侧不得告警的门禁 id（负向断言：advisory 门禁 rc 恒 0，须负向断言锁死分支回归）
+fw_dotnet_nullable
+fw_dotnet_sql_injection
+fw_dotnet_password_hash
+fw_dotnet_cors
+fw_dotnet_https
+fw_dotnet_async
+fw_dotnet_di
+fw_dotnet_logging
+fw_dotnet_auth
+fw_dotnet_ef_migration

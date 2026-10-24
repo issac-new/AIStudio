@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- compliant fixture:
+     - 密码 Encrypted 密文 + server 变量化 ${DB_HOST} + JNDI access + Basic 日志
+     - 单 TableOutput + error_handling 错误行路由 + unique_connections=N
+     期望：bash run-framework-fixture.sh kettle → compliant 退出码 0（PASS） -->
+<transformation>
+  <info>
+    <name>dw_load</name>
+    <transversion>11.0.0.1-259</transversion>
+    <loglevel>Basic</loglevel>
+  </info>
+  <connection>
+    <name>dw_jndi</name>
+    <server>${DB_HOST}</server>
+    <type>MYSQL</type>
+    <access>JNDI</access>
+    <database>dw</database>
+    <username>etl</username>
+    <password>Encrypted 2be98afc86aa7f2e4cb18bd63c99dbdde</password>
+  </connection>
+  <attributes>
+    <unique_connections>N</unique_connections>
+  </attributes>
+  <order>
+    <hop><from>read_src</from><to>load_fact</to><enabled>Y</enabled></hop>
+    <hop><from>load_fact</from><to>error_rows</to><enabled>Y</enabled><error>Y</error></hop>
+  </order>
+  <step>
+    <name>read_src</name>
+    <type>TableInput</type>
+    <connection>dw_jndi</connection>
+    <sql>SELECT * FROM ods_order WHERE dt = '${DT}'</sql>
+  </step>
+  <step>
+    <name>load_fact</name>
+    <type>TableOutput</type>
+    <connection>dw_jndi</connection>
+    <table>dwd_fact_order</table>
+    <error_handling>
+      <error>error_rows</error>
+    </error_handling>
+  </step>
+  <step>
+    <name>error_rows</name>
+    <type>TableOutput</type>
+    <connection>dw_jndi</connection>
+    <table>err_dwd_fact_order</table>
+  </step>
+</transformation>

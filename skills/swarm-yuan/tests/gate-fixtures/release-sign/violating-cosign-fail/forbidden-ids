@@ -1,0 +1,3 @@
+# cosign 路径不得出现降级提示；签名文件齐备不得报 missing
+降级为签名文件存在性检查
+gate_release_sign_missing

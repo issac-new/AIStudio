@@ -1,0 +1,3 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_react_native_webview_no_whitelist
+fw_react_native_asyncstorage_secret

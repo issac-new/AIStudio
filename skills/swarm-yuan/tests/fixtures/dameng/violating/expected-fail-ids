@@ -1,0 +1,9 @@
+# dameng 全量 fail id（8/8，I1 实跑登记）
+fw_dameng_case_sensitive
+fw_dameng_reserved_word
+fw_dameng_mysql_syntax
+fw_dameng_rownum
+fw_dameng_group_concat
+fw_dameng_unsupported_type
+fw_dameng_identity_insert
+fw_dameng_driver

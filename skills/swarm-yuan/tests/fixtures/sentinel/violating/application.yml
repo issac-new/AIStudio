@@ -1,0 +1,11 @@
+spring:
+  cloud:
+    sentinel:
+      eager: true
+      transport:
+        dashboard: 127.0.0.1:8080
+      # Dashboard 默认口令 sentinel/sentinel —— fw_sentinel_dashboard_auth(fail) 触发（P1-1 唤醒）
+      dashboard:
+        auth:
+          username: sentinel
+          password: sentinel

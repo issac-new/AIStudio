@@ -1,0 +1,7 @@
+# violating 侧必中 fail id 清单（run-framework-fixture.sh 逐行字面断言输出命中）
+# 2026-07-20 P1 实跑登记（框架工程师_B4）
+fw_nextjs_use_client
+fw_nextjs_server_action_auth
+fw_nextjs_middleware_matcher
+fw_nextjs_headers_server_only
+fw_nextjs_router_conflict

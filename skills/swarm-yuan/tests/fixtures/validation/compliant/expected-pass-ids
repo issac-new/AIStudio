@@ -1,0 +1,3 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_validation_validator_threadsafe
+fw_validation_notnull_notblank

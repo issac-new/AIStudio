@@ -1,0 +1,3 @@
+# postgresql 全量 fail id（2/2，P1 实跑登记）
+fw_pgsql_pk_identity
+fw_pgsql_dml_where

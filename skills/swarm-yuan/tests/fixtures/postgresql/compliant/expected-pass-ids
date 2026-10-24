@@ -1,0 +1,3 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_pgsql_pk_identity
+fw_pgsql_dml_where

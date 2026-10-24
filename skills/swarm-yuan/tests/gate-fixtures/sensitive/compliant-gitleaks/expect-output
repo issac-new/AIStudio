@@ -1,0 +1,2 @@
+# 工具路径 pass 文案带（gitleaks）后缀，证明走的是 gitleaks 而非内置正则路径
+未发现明显敏感信息（gitleaks）

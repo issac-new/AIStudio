@@ -1,0 +1,6 @@
+# violating 侧必中 fail id 清单
+fw_kratos_recovery_middleware
+fw_kratos_wire_provider
+fw_kratos_generated_code_edit
+fw_kratos_plaintext_secret
+fw_kratos_layer_dependency

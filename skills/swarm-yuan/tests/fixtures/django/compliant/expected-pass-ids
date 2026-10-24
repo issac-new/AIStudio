@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_django_debug
+fw_django_raw_sql
+fw_django_secret_key

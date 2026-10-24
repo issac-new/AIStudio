@@ -1,0 +1,15 @@
+{
+  "name": "express-fixture-compliant",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cross-env NODE_ENV=production node app.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^8.0.1",
+    "express-validator": "^7.2.1"
+  }
+}

@@ -1,0 +1,10 @@
+fw_tdengine_super_table
+fw_tdengine_ts_primary
+fw_tdengine_subtable_tags
+fw_tdengine_tag_design
+fw_tdengine_keep
+fw_tdengine_write_read_split
+fw_tdengine_block_size
+fw_tdengine_conn_protocol
+fw_tdengine_batch_write
+fw_tdengine_index_design

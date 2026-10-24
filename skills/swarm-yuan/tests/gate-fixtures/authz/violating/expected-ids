@@ -1,0 +1,3 @@
+gate_authz_missing_check:src/main/java/com/demo/controller/UserController.java
+gate_authz_idor:src/main/java/com/demo/service/OrderService.java
+gate_authz_permissive:src/main/java/com/demo/config/WebCorsConfig.java

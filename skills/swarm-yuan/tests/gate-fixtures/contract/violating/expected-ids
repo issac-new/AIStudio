@@ -1,0 +1,2 @@
+接口契约缺 version 字段：docs/contracts/order-api.yaml
+上下文间直接引用（绕过 ACL）：contexts/order/service.ts (contexts/order) 直接 import 了 contexts/payment

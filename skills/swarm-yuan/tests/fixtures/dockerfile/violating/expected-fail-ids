@@ -1,0 +1,4 @@
+# dockerfile violating 必中 fail id 清单（3/3 fail 主触发）
+fw_dockerfile_latest_base
+fw_dockerfile_root_user
+fw_dockerfile_hardcoded_secret

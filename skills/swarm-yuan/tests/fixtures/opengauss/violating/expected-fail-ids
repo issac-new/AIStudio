@@ -1,0 +1,5 @@
+# violating 侧必中 fail id 清单（run-framework-fixture.sh 逐行字面断言输出命中）
+fw_opengauss_hardcoded_password
+fw_opengauss_sql_concat
+fw_opengauss_ssl_disabled
+fw_opengauss_pg_hba_trust

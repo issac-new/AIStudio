@@ -1,0 +1,3 @@
+# TOOL=none 存在性路径：不得走验签、不得误报 provenance（未启用）
+gate_release_sign_verify_failed
+gate_release_provenance_missing

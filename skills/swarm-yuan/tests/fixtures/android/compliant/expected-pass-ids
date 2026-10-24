@@ -1,0 +1,4 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_android_webview_js_enabled
+fw_android_sharedprefs_secret
+fw_android_cleartext_traffic

@@ -1,0 +1,4 @@
+# violating 侧必中 fail id 清单
+fw_nest_validation_whitelist
+fw_nest_circular_deps
+fw_nest_typeorm_sync

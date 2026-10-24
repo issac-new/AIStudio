@@ -1,0 +1,29 @@
+# compliant fixture Cargo.toml:
+#  - 无 git 依赖（全 crates.io 版本） → fw_cargo_git_deps pass
+#  - [profile.release] opt-level + lto + panic = "abort" → release_profile / panic_abort pass
+#  - [lints] 配 clippy → fw_cargo_lints_config pass
+#  - dev-dependencies 含 cargo-audit → fw_cargo_audit pass
+#  - deny.toml 存在（见同目录） → fw_cargo_license_check pass
+[package]
+name = "compliant-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+rand = "0.8"
+
+[dev-dependencies]
+cargo-audit = "0.18"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+panic = "abort"
+codegen-units = 1
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "warn"

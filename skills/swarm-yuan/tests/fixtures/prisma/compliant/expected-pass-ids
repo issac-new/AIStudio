@@ -1,0 +1,3 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_prisma_migrate_deploy
+fw_prisma_queryraw_injection

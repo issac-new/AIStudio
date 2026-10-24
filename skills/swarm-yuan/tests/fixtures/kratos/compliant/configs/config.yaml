@@ -1,0 +1,17 @@
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 1s
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 1s
+data:
+  database:
+    driver: mysql
+    # 合规：敏感字段一律 ${ENV} 占位，由环境变量/配置中心注入
+    dsn: "root:${DB_PASSWORD}@tcp(127.0.0.1:3306)/kratos_fixture"
+  redis:
+    addr: 127.0.0.1:6379
+    password: "${REDIS_PASSWORD}"
+auth:
+  jwt_token: "${JWT_TOKEN}"

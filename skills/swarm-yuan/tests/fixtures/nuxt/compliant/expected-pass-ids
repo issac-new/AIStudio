@@ -1,0 +1,7 @@
+# compliant 侧不得告警的 id（源自 violating/expected-fail-ids；WP8）
+fw_nuxt_fetch_key
+fw_nuxt_hydration
+fw_nuxt_usestate_key
+fw_nuxt_autoimport_conflict
+fw_nuxt_server_boundary
+fw_nuxt_runtime_config_secret

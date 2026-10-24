@@ -29,6 +29,11 @@
       "note": "C3: --json 输出含 raci"
     },
     {
+      "source": "hermes_cli/kanban_workflow.py",
+      "dest": "hermes_cli/kanban_workflow.py",
+      "note": "kanban_db.py 的 import 依赖（VALID_STATUSES 真源）——2026-10-24 整合轮实抓：runtime 树缺它致 tests/hermes_cli 三测全数 import 失败；vendor/部署树副本逐字节一致，补齐根治 manifest 漂移"
+    },
+    {
       "source": "hermes_cli/kanban_parser.py",
       "dest": "hermes_cli/kanban_parser.py",
       "note": "C3: create 加 --raci JSON"

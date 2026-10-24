@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- violating fixture: 作业仅有成功路径，无 MAIL entry → fw_kettle_failure_mail(warn) -->
+<job>
+  <name>daily_job</name>
+  <job_version>9.3.0.0-428</job_version>
+  <entries>
+    <entry>
+      <name>START</name>
+      <type>SPECIAL</type>
+    </entry>
+    <entry>
+      <name>dw_load</name>
+      <type>TRANS</type>
+      <filename>dw_load.ktr</filename>
+    </entry>
+    <entry>
+      <name>success</name>
+      <type>SUCCESS</type>
+    </entry>
+  </entries>
+</job>

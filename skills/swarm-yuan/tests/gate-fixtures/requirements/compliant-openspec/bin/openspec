@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# openspec fixture double (compliant)：模拟 openspec validate --all --strict 全部通过
+echo "✓ change/test-change"
+echo "Totals: 1 passed, 0 failed (1 items)"

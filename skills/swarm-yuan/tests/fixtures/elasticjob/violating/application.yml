@@ -1,0 +1,13 @@
+elasticjob:
+  reg-center:
+    server-lists: localhost:2181
+    namespace: order-job
+  jobs:
+    orderShardingJob:
+      elastic-job-class: com.example.job.OrderShardingJob
+      cron: 0/30 * * * * ?
+      sharding-total-count: 3
+      # 无 failover（fw_elasticjob_failover fail 主触发）
+      # 无 misfire（fw_elasticjob_misfire warn）
+      # 无 time-zone（fw_elasticjob_timezone warn）
+  # 无 tracing（fw_elasticjob_tracing warn）

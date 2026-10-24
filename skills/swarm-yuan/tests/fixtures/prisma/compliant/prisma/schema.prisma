@@ -1,0 +1,32 @@
+// compliant fixture：schema 正模式集
+//  - uuid 主键；@relation 显式 onDelete；关系标量 @@index
+//  - createdAt/updatedAt 审计字段；generator 显式 output（v7 必填）
+//  - 连接池 connection_limit 经 DATABASE_URL 查询参数规划（实例数×10 ≤ max_connections）
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // 形如 postgresql://u:p@host:5432/db?connection_limit=10
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  title     String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([authorId])
+}

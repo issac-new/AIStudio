@@ -1,0 +1,7 @@
+# 支付接口契约（合规对照：含 version 字段，不触发 fail）
+version: 1.0.0
+api: payment
+base: /payments
+endpoints:
+  - name: pay
+    method: POST

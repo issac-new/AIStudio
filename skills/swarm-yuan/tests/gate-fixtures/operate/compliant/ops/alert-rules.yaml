@@ -1,0 +1,5 @@
+# 告警阈值（fixture 样本）
+alerts:
+  - name: high_error_rate
+    expr: error_rate > 0.01
+    severity: page

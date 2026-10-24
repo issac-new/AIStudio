@@ -1,0 +1,16 @@
+# violating fixture Cargo.toml:
+#  - git 依赖 → fw_cargo_git_deps(fail)
+#  - 无 [profile.release] → fw_cargo_release_profile(warn) + fw_cargo_panic_abort(warn)
+#  - 无 [lints] → fw_cargo_lints_config(warn)
+#  - 无 cargo-deny / cargo-audit → fw_cargo_license_check(warn) + fw_cargo_audit(warn)
+[package]
+name = "violating-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1.0"
+# 违规：git 依赖（不可复现、可被篡改，CWE-1357 供应链风险）
+my-private-crate = { git = "https://github.com/example/my-private-crate.git" }
+# 违规：无版本约束
+rand = "*"

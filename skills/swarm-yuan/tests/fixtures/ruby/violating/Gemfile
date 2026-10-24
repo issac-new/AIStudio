@@ -1,0 +1,6 @@
+# fixture violating: Gemfile 声明 rack 但 Gemfile.lock DEPENDENCIES 未登记（lock 未同步）
+source "https://rubygems.org"
+
+gem "sinatra"
+gem "puma"
+gem "rack"

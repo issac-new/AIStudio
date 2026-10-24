@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# ocr fixture double（violating）：模拟 ocr review 文本输出，含 High 级发现，
+# 触发 check_review 的 fail 分支「ocr review 检测到 High/Critical 级问题（须修复）」。
+# 约束：输出非空且不得含 "Error"（含 Error 门禁会走 ocr scan 降级分支，fail 路径沉睡）。
+echo "Code Review Report (fixture double)"
+echo "- [High] SQL injection risk at src/app.js:1"
+echo "- [Low] naming style at src/app.js:2"

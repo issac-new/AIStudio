@@ -1,0 +1,6 @@
+seata:
+  application-id: order-service
+  tx-service-group: order_tx_group
+  service:
+    vgroup-mapping:
+      order_tx_group: default

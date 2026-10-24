@@ -26,6 +26,9 @@ vite.config.overlay.wt.ts
 # 工作区本地产物（与 info/exclude 对齐，保证全新克隆 git status 干净）
 /.claude/
 /IN-FLIGHT
+# ZCode 宿主会话产物与工作区搜索配置（本机生成，不入库）
+/.zcode/
+/.zcodeignore
 # 单仓工作区随 repo 根落位的本地基建目录（升级源/运行数据/工作区备忘，不入库）
 /archive
 /sim-mux

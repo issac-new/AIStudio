@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package helloworld.v1;
+
+import "google/api/annotations.proto";
+import "validate/validate.proto";
+
+option go_package = "example.com/kratos-fixture/api/helloworld/v1;v1";
+
+// Greeter 合规：google.api.http 注解与代码侧 RegisterGreeterHTTPServer 成对
+service Greeter {
+  rpc SayHello (HelloRequest) returns (HelloReply) {
+    option (google.api.http) = {
+      get: "/helloworld/{name}"
+    };
+  }
+}
+
+message HelloRequest {
+  // 合规：validate.rules 与代码侧 validate.Validate() 中间件成对
+  string name = 1 [(validate.rules).string = {min_len: 1, max_len: 64}];
+}
+
+message HelloReply {
+  string message = 1;
+}

@@ -1,0 +1,14 @@
+{
+  "name": "fastify-fixture-compliant",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cross-env NODE_ENV=production node server.js"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "fastify-plugin": "^5.0.1",
+    "@fastify/cors": "^10.0.1",
+    "@fastify/rate-limit": "^10.2.2",
+    "@fastify/swagger": "^9.4.2"
+  }
+}
