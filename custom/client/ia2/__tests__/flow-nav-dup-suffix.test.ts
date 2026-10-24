@@ -2,6 +2,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { mount, config } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+
+// FlowNavPanel setup 顶层 usePlatformsStore（五轮 I 通道详情）——需激活 pinia
+setActivePinia(createPinia())
 import { createI18n } from 'vue-i18n'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
 
