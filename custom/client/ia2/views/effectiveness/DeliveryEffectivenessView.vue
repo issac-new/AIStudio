@@ -408,6 +408,7 @@ function cellClass(count: number): string {
               <span>每任务协作 {{ swarm.readout.communication.morCharsPerTask != null ? Math.round(swarm.readout.communication.morCharsPerTask) : '—' }} 字符（开销比·字符口径）</span>
               <span>派发图：{{ swarm.readout.communication.topology.nodes }} 人 / {{ swarm.readout.communication.topology.edges }} 条边 · 出度中心化 {{ fmtPct(swarm.readout.communication.topology.outCentralization) }} · 枢纽 {{ swarm.readout.communication.topology.topHub ?? '—' }} 占 {{ fmtPct(swarm.readout.communication.topology.topHubShare) }}</span>
               <span>派发节拍：{{ fmtSeconds(swarm.readout.communication.cadence.spanSeconds) }} 内 {{ swarm.readout.communication.dispatchCount }} 次 · 中位间隔 {{ fmtSeconds(swarm.readout.communication.cadence.medianGapSeconds) }} · {{ swarm.readout.communication.cadence.dispatchesPerMinute != null ? swarm.readout.communication.cadence.dispatchesPerMinute.toFixed(1) : '—' }} 次/分（非端到端时延）</span>
+              <span>锚点时延：中位 {{ fmtSeconds(swarm.readout.communication.taskLatency.medianSeconds) }} · P95 {{ fmtSeconds(swarm.readout.communication.taskLatency.p95Seconds) }}（{{ swarm.readout.communication.taskLatency.samples }} 个任务；派发→首个 ✓ 真值）</span>
               <span>意图保真 {{ fmtPct(swarm.readout.communication.intentFidelity.rate) }}（口径={{ swarm.readout.communication.intentFidelity.basis === 'dialog-text' ? '消息全文相似度' : '任务 ID+模块锚点' }}{{ swarm.readout.communication.intentFidelity.basis === 'dialog-text' ? `，${swarm.readout.communication.intentFidelity.textDispatchCount} 条派发明细` : `，${swarm.readout.communication.intentFidelity.preserved}/${swarm.readout.communication.intentFidelity.anchoredTasks}` }}）</span>
               <span>等待信号：回灌代偿 {{ swarm.readout.communication.deadlockSignals.backfillCount }} · 回执缺席 {{ swarm.readout.communication.deadlockSignals.receiptMissing }} · RACI 缺发 {{ swarm.readout.communication.deadlockSignals.raciMissing }} · 催办 {{ swarm.readout.communication.deadlockSignals.nudgeCount }}</span>
             </div>
@@ -458,7 +459,7 @@ function cellClass(count: number): string {
             <div class="eff-bench__scroll">
               <table class="eff-bench__table" data-testid="eff-swarm-bench-table">
                 <thead>
-                  <tr><th title="可用指标平均名次，越小越好">均位</th><th>轮次</th><th title="越高越好">任务完成</th><th title="越低越好（协作开销）">每任务字符</th><th title="越高越好">意图保真</th><th title="越低越好（等待/回灌代偿）">回灌占比</th><th title="越低越好（越有批判性）">回音壁倾向</th><th title="越高越好（仅注入轮有值）">BCR</th><th title="越低越好">字符/完成锚</th><th title="成本越低、完成率越高越好">前沿</th></tr>
+                  <tr><th title="可用指标平均名次，越小越好">均位</th><th>轮次</th><th title="越高越好">任务完成</th><th title="越低越好（协作开销）">每任务字符</th><th title="越高越好">意图保真</th><th title="越低越好（等待/回灌代偿）">回灌占比</th><th title="越低越好（越有批判性）">回音壁倾向</th><th title="越高越好（仅注入轮有值）">BCR</th><th title="越低越好（派发→首个 ✓ 真值）">锚点时延</th><th title="越低越好">字符/完成锚</th><th title="成本越低、完成率越高越好">前沿</th></tr>
                 </thead>
                 <tbody>
                   <tr v-for="e in benchEntries" :key="e.run">
@@ -470,6 +471,7 @@ function cellClass(count: number): string {
                     <td>{{ fmtPct(e.values.backfillRatio) }}</td>
                     <td>{{ fmtPct(e.values.echoPassRate) }}</td>
                     <td>{{ fmtPct(e.values.byzantineBcr) }}</td>
+                    <td>{{ fmtSeconds(e.values.taskLatencyMedianSeconds) }}</td>
                     <td>{{ fmtChars(e.values.charsPerCompletedTask) }}</td>
                     <td>{{ e.onFrontier === true ? '●' : e.onFrontier === false ? '' : '—' }}</td>
                   </tr>
