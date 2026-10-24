@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import math
 import os
 import re
 import secrets
@@ -799,6 +800,8 @@ class Task:
     block_recurrences: int = 0               # unblock-loop counter, see BLOCK_RECURRENCE_LIMIT
     completion_contract: Optional[str] = None
     raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
+    estimate_days: Optional[float] = None    # HERMES_CUSTOM[estimate] person-days; None = unestimated
+    estimate_meta: Optional[dict] = None     # estimate provenance JSON (complexity/tokens/source/...)
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Task:
@@ -807,6 +810,10 @@ class Task:
         skills_value = [str(s) for s in parsed if s] if isinstance(parsed, list) else None
         raci_parsed = _json_or(g("raci"))
         raci_value = raci_parsed if isinstance(raci_parsed, dict) else None
+        est_days_raw = g("estimate_days")
+        est_days_value = float(est_days_raw) if est_days_raw not in (None, "") else None
+        est_meta_parsed = _json_or(g("estimate_meta"))
+        est_meta_value = est_meta_parsed if isinstance(est_meta_parsed, dict) else None
         return cls(
             **{col: _lossy_text(row[col]) for col in _TASK_REQUIRED_COLUMNS},
             **{col: _to_epoch(g(col)) for col in _TASK_EPOCH_COLUMNS},  # outside writers may store text: epoch or None
@@ -818,6 +825,8 @@ class Task:
             last_failure_error=g("last_failure_error", g("last_spawn_error")),
             skills=skills_value,
             raci=raci_value,
+            estimate_days=est_days_value,
+            estimate_meta=est_meta_value,
             goal_mode=bool(g("goal_mode")),
             block_recurrences=int(g("block_recurrences") or 0),
         )
@@ -1040,7 +1049,12 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- ``blocked`` so a cron can't spin it forever. Reset to 0 only on a
     -- successful completion — NOT on unblock (resetting on unblock is exactly
     -- the amnesia that let the loop run unbounded).
-    block_recurrences    INTEGER NOT NULL DEFAULT 0
+    block_recurrences    INTEGER NOT NULL DEFAULT 0,
+    -- HERMES_CUSTOM[estimate]（团队并行二期）：人日估算。NULL = 未评估（派发
+    -- 重排保守计 1 人日）；decompose 落库前已把超帽子卡钳到 1 天帽值。
+    estimate_days        REAL,
+    -- 估算来源 JSON（complexity/est_tokens/source 等），estimate_set 事件同源。
+    estimate_meta        TEXT
 );
 
 CREATE TABLE IF NOT EXISTS task_links (
@@ -1703,6 +1717,41 @@ def set_reasoning_effort(conn: sqlite3.Connection, task_id: str, effort: Optiona
         "reasoning_effort_set", {"reasoning_effort": effort},
         ("reasoning_effort",), archived_msg="cannot set reasoning effort",
     )
+
+
+def set_estimate(
+    conn: sqlite3.Connection,
+    task_id: str,
+    days: Optional[float],
+    meta: Optional[dict] = None,
+) -> bool:
+    """HERMES_CUSTOM[estimate]: persist a person-day estimate (``None`` clears).
+
+    Every write lands an ``estimate_set`` event in ``task_events`` — the audit
+    chain the ready-lane workload reorder reads as truth (decompose clamps
+    over-cap children to the 1-day cap before calling in). Archived tasks are
+    refused like the other per-task setters; non-numeric/non-positive values
+    raise ``ValueError``. ``meta`` is stored verbatim as the ``estimate_meta``
+    JSON column."""
+    if days is not None:
+        if isinstance(days, bool) or not isinstance(days, (int, float)):
+            raise ValueError(f"estimate days must be a number or None, got {days!r}")
+        if not math.isfinite(float(days)) or float(days) <= 0:
+            raise ValueError(f"estimate days must be a positive finite number, got {days!r}")
+    meta_value = meta if isinstance(meta, dict) else None
+    with write_txn(conn):
+        status = _task_status(conn, task_id)
+        if status is None:
+            return False
+        if status == "archived":
+            raise RuntimeError(f"cannot set estimate on archived task {task_id}")
+        conn.execute(
+            "UPDATE tasks SET estimate_days = ?, estimate_meta = ? WHERE id = ?",
+            (days, _json_or_null(meta_value), task_id),
+        )
+        _append_event(conn, task_id, "estimate_set", {"estimate_days": days, **(meta_value or {})})
+    notify_task_updated(conn, task_id, ("estimate_days", "estimate_meta"))
+    return True
 
 
 # --- Links ---
