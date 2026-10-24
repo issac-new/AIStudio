@@ -97,3 +97,5 @@ inject 后 vendor/** 在外仓呈脏态（与今日 upstream 注入态同构）�
 | 5 | element-web 不入仓（无构建依赖实证） | 探查结论 + 决策 4 |
 | 6 | swarm-yuan 仅入技能本体，dist 离线包排除 | 决策 4 推论 |
 | 7 | 工作区目录改名（ncwk→AIStudio）放最后阶段，须等在途会话收口、停 8647/8649 后执行 | 2026-10-17 双删事故立法 + 运行中服务实测 |
+| 8 | SwarmTeam 多 profile 部署包（本机 ~/.hermes/profiles 的脱敏分发源）并入 `team/`，旧仓 issac-new/SwarmTeam 归档 | 用户 2026-10-24 指示（「本机 hermes agent 的 profile 等也合并入当前项目」） |
+| 9 | AIStudio 仓转 **private**：整合 push 落地后短暂公开暴露了原私有 simharness 内容（窗口约数分钟，唯一 fork 为 9 月旧 SwarmStudio 快照不含该内容，高置信密钥模式扫描零命中），转私有止损；是否恢复公开由用户裁定（恢复前须完成 simharness 脱敏审查） | 2026-10-24 泄露止损（转私有可逆/泄露不可逆） |
