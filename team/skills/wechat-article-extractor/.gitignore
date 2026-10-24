@@ -3,7 +3,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
+# package-lock.json 不忽略（2026-10-24 供应链治理轮：与 wechat-article-search 口径统一，锁入库可复现）
 yarn.lock
 
 # Runtime data

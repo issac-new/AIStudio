@@ -1,9 +1,20 @@
 # SwarmTeam — Third-party Python tools referenced by skills/SOULs
 # Install: pip install -r requirements-tools.txt
 # NOTE: Some tools may need system dependencies (ffmpeg, poppler, etc.)
+#
+# 治理口径（2026-10-24 供应链治理轮）：
+#   - 钉版区＝宿主基线 venv（~/.hermes/hermes-agent，v0.22.4）实测已安装的工具，== 钉版；
+#   - 参考区＝未随基线安装的按需工具（GPU/专用栈等），装前先 `pip index versions <name>`
+#     确认版本并回填 == 后移入钉版区——禁止新增裸名行。
 
+# ── 钉版区（宿主 venv 实测，2026-10-24）──
+aiohttp==3.14.5
+cryptography==50.0.1
+httpx==0.28.1
+requests==2.33.0
+
+# ── 参考区（未随基线安装，按需自装后回填 ==）──
 SciencePlots
-aiohttp
 arxiv
 auto-gptq
 autoawq
@@ -15,7 +26,6 @@ commitizen
 cookiecutter
 copier
 coverage
-cryptography
 csvkit
 debugpy
 defusedxml
@@ -23,7 +33,6 @@ faster-whisper
 flash-attn
 frida-tools
 habanero
-httpx
 impacket
 krippendorff
 llama-cpp-python
@@ -52,7 +61,6 @@ pytest
 python-docx
 qpdf
 remote-pdb
-requests
 robusta-sdk
 semanticscholar
 shodan
