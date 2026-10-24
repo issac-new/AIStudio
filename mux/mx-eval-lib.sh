@@ -166,6 +166,9 @@ eval_collect() { # <runId> [redteamRunId]：落证据文件（缺项跳过，不
   # （spec D2：只透传不进判据，同 V8.48 观察纪律）。单一事实源=产品端
   # delivery/swarm-collab.ts（本仓只调端点落证据，不复制度量逻辑，D1）。
   eval_json_get "/api/hermes/delivery/swarm-collab?run=${RUN_ID:-}" "$d/swarm-collab.json" || true
+  # 跨轮评测榜（2026-10-24 聚合层）：端点聚合最近多轮读数（均位/帕累托）。
+  # fail-soft 静默；只透传不进判据（spec 2026-10-24-swarm-bench-leaderboard.md D21）。
+  eval_json_get "/api/hermes/delivery/swarm-bench" "$d/swarm-bench.json" || true
   return 0
 }
 
