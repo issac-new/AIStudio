@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
-import { isHermesAgentPatchPath, applyPatchAtRoot, treeStatus, treeGitCtx, ensureNodeModulesSymlink } from './inject.mjs';
+import { applyPatchAtRoot, treeStatus, treeGitCtx, ensureNodeModulesSymlink, isHermesAgentPatchPath } from './inject.mjs';
 import { addedFilesFromPatch, missingFiles } from './lib/zcode-patch-manifest.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
