@@ -642,14 +642,16 @@ swarm-yuan 的 `state-machine.sh` 采用 `sanitize_input` 白名单字符集过�
 - **锁活性分级 recent≠live**：持锁进程已死但锁龄低于阈值，不再永判他人在写——锁占用判定看进程存活性，不看锁龄。
 - **恢复公开命令先查捆绑消费方**（pair 命令）——公开面改动先对仓内消费方核账。来源：`docs/research/R140-runtime-refresh.md`。
 
+## 运行时版本增量（生成器侧）
+
 ### 只解析不执行与虚假成功清剿（ruflo v3.60.0–3.61.1）
 
-> 2 minor+2 patch。主题=安全分析边界三件套 + 虚假成功族续案。
+> 2 minor+2 patch。主题=安全分析边界三项 + 虚假成功族续案。
 
-- **ruRE 静态逆向六工具的安全分析边界三件套**（asar/JS 应用/特征查找/ELF-PE-Mach-O/.NET 元数据/EVM 字节码解析）：① **只解析不执行**——分析不可信输入的默认姿态，解析器不运行被分析物；② **取出的字符串全过 AIDefence 门、扫描器不可用如实 `screened: false`**——防护缺席要披露，不装作筛过；③ **能力扩围走权限升级面**——外部目录 rureFolders 显式白名单（`name=/absolute/folder`）、样本绝对路径/`..` 拒绝、目录及以下每一部分不得是链接、改配置=install 级写总是先问。控制台样本拒符号链接、结果去终端转义。
+- **ruRE 静态逆向六工具的安全分析边界三项**（asar/JS 应用/特征查找/ELF-PE-Mach-O/.NET 元数据/EVM 字节码解析）：① **只解析不执行**——分析不可信输入的默认姿态，解析器不运行被分析物；② **取出的字符串全过 AIDefence 门、扫描器不可用如实 `screened: false`**——防护缺席要披露，不装作筛过；③ **能力扩围走权限升级面**——外部目录 rureFolders 显式白名单（`name=/absolute/folder`）、样本绝对路径/`..` 拒绝、目录及以下每一部分不得是链接、改配置=install 级写总是先问。控制台样本拒符号链接、结果去终端转义。
 - **虚假成功族再四例（声明-消费对账族第八至十一例）**：neural_compress `prune` 删光全部存储还报成功（usage 从不记录→以为无引用）、gh 失败/无匹配的 PR/issue 操作仍报成功且忽略 owner/repo、`performanceScore: 0` 与缺省值记 0.8 成功（零分与缺省是两种事实，都不得折算成好成绩）、**`update all` 忽略 `--dry-run`**——接受旗标不消费；干跑必须真干跑。
 - **agentbbs room id `..` 路径逃逸**（CWE-22 族）+ **MCP session id 改 crypto.randomUUID()**（原为计数器+时间戳+Math.random 六字符，可猜测）——会话标识不得可预测。
-- **CI：插件随发文件变更 plugin.json 版本必须升否则红**（#4447）——版本锁机器门禁，与本仓 facts.conf+test-doc-numbers 机器锚同构：**版本号是契约不是装饰，文件变了版本不变=CI 红**。
+- **CI：插件分发文件变更 plugin.json 版本必须升否则红**（#4447）——版本锁机器门禁，与本仓 facts.conf+test-doc-numbers 机器锚同构：**版本号是契约不是装饰，文件变了版本不变=CI 红**。
 - 其余：桥接搜索窗口 1000→10000 可配（静默截断面收窄要显式）、cost-tracker Stop hook 写错项目修复（写盘点锚定调用方项目，不落会话项目）、`transport use slim` 等未配置 SDK 功能改报「not configured」不在调用点崩、`update all` 补 `--dry-run`、TypeScript 7 native compiler。来源：`docs/research/R141-runtime-refresh.md`。
 
 ### comet 0.5.0 增量（升级门/恢复先决/eval 产物）

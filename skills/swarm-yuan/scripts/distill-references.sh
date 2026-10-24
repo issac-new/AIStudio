@@ -29,6 +29,10 @@ DISTILL_BOUNDS=(
   "claude-code-capabilities.md|## 版本基线"
   "codex-methodology.md|## 版本基线"
   "codex-security-methodology.md|## 十二、版本与来源"
+  "memory-persistence.md|## 运行时版本增量（生成器侧）"
+  "review-methodology.md|## 运行时版本增量（生成器侧）"
+  "code-graph-tools.md|## 运行时版本增量（生成器侧）"
+  "subagent-orchestration.md|## 运行时版本增量（生成器侧）"
 )
 
 _usage() {

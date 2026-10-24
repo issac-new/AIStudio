@@ -119,8 +119,32 @@ done
 #   ② previous_checksum 链（行删除后继失配可检出）
 #   ③ seq 连续（重编号/跳号可检出）
 # 旧格式行（无链字段，链功能引入前落盘）跳过不计——链从首个带链字段的行起算（诚实披露边界）。
+
+# R141 D1（trade-forge 实证）：独立调用时 PROJECT_DIR 未定且 CWD 在技能目录内
+# （<project>/.claude/skills/<skill>/...），STATE_DIR 逐字落 pwd 使决策/trace 账本写进
+# 技能侧 .swarm-yuan 碎片（正本在项目侧，D-140-01 三条决策曾因此写错侧）。
+# 解析顺序：--project-dir 显式 > 环境变量 > 同目录 precheck.conf 的 PROJECT_DIR >
+# CWD 在技能目录内则上溯项目根 > 逐字 pwd（历史行为兜底）。state-machine.sh 同条带。
+_tl_resolve_project_dir() {
+  local d p
+  if [[ -n "${PROJECT_DIR_ARG:-}" ]]; then printf '%s' "$PROJECT_DIR_ARG"; return 0; fi
+  if [[ -n "${PROJECT_DIR:-}" ]]; then printf '%s' "$PROJECT_DIR"; return 0; fi
+  d="$(cd "$(dirname "$0")" && pwd)"
+  p=""
+  if [[ -f "$d/precheck.conf" ]]; then
+    p="$(grep -m1 '^PROJECT_DIR=' "$d/precheck.conf" 2>/dev/null | sed 's/^PROJECT_DIR=//; s/^"//; s/"$//; s/[[:space:]]*$//' | tr -d '\r')"
+    case "$p" in "<"*">"|"") p="" ;; esac
+  fi
+  if [[ -z "$p" ]]; then
+    p="$(pwd)"
+    p="$(printf '%s' "$p" | sed -E 's|/\.[^/]+/skills/[^/]+(/.*)?$||')"
+  fi
+  printf '%s' "$p"
+}
+TL_PROJECT_DIR="$(_tl_resolve_project_dir)"
+
 if [[ "$VERIFY_CHAIN_MODE" -eq 1 ]]; then
-  STATE_DIR="${PROJECT_DIR_ARG:-${PROJECT_DIR:-$(pwd)}}/.swarm-yuan"
+  STATE_DIR="${TL_PROJECT_DIR}/.swarm-yuan"
   DEC_FILE="$STATE_DIR/decisions.jsonl"
   if [[ ! -f "$DEC_FILE" ]]; then
     echo "verify-chain: $DEC_FILE 不存在——无决策留痕可校验（vacuously intact）"
@@ -192,7 +216,7 @@ if [[ "$KEY_NODE_MODE" -eq 1 ]]; then
     echo "⚠ --key-node 缺节点名，降级记录（exit 0 不阻塞）" >&2
     exit 0
   fi
-  STATE_DIR="${PROJECT_DIR_ARG:-${PROJECT_DIR:-$(pwd)}}/.swarm-yuan"
+  STATE_DIR="${TL_PROJECT_DIR}/.swarm-yuan"
   if mkdir -p "$STATE_DIR" 2>/dev/null; then
     ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     _kn_line=$(printf '{"ts":"%s","key_node":"%s","actor":"%s","status":"%s","note":"%s"}' \
@@ -249,7 +273,7 @@ _line="${_line}${TOOL}"
 
 # --decision 模式：落盘 decisions.jsonl（G1 决策治理，永不 fail 阻塞主流程）
 if [[ "$DECISION_MODE" -eq 1 ]]; then
-  STATE_DIR="${PROJECT_DIR_ARG:-${PROJECT_DIR:-$(pwd)}}/.swarm-yuan"
+  STATE_DIR="${TL_PROJECT_DIR}/.swarm-yuan"
   if mkdir -p "$STATE_DIR" 2>/dev/null; then
     ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     # goal_id + closure（来源：better-harness）：审计单元以"目标闭环"为单位（而非"运行/会话"）
@@ -299,7 +323,7 @@ if [[ "$DECISION_MODE" -eq 1 ]]; then
 fi
 
 # 2) 落盘 trace.jsonl（失败仅 warn，不阻塞主流程）
-STATE_DIR="${PROJECT_DIR_ARG:-${PROJECT_DIR:-$(pwd)}}/.swarm-yuan"
+STATE_DIR="${TL_PROJECT_DIR}/.swarm-yuan"
 if mkdir -p "$STATE_DIR" 2>/dev/null; then
   ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   if ! printf '{"ts":"%s","node":"%s","actor":"%s","tool":"%s","status":"%s","note":"%s"}\n' \
