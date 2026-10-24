@@ -1,0 +1,7 @@
+.git
+.gitignore
+node_modules
+dist
+hermes_data
+*.log
+.DS_Store

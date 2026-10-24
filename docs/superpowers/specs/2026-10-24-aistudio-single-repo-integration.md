@@ -1,0 +1,78 @@
+# AIStudio 单仓整合（ncwk 五组件合一 + GitHub 更名）
+
+- 日期：2026-10-24
+- 状态：已裁定，实施中
+- 分支：feat/integrate-aistudio
+- 关联：`docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md`（SIM 根目录约定）、`vendor/VENDOR.md`（基线台账）
+
+## 背景与目标
+
+ncwk 工作区当前为多仓散落形态：overlay（SwarmStudio 补丁仓，origin=issac-new/SwarmStudio）、upstream/（三棵真实基树 hermes-studio/hermes-agent/zcode + 参照软链）、simharness（独立仓 issac-new/simharness）、Swarm-yuan（技能仓，本体外置 ~/lab/Swarm-yuan）、docs/superpowers（工作区层散档）。用户裁定（2026-10-24）：
+
+1. 整合为**一个完整项目 AIStudio**：单 zcode 工作区 = 单 git 仓根；GitHub 仓库 issac-new/SwarmStudio 更名 **AIStudio**（旧 URL 重定向）。
+2. 整合方式＝**基线入库 + 补丁机制内化**（449 补丁/series 846 条的 inject 管线全保留，目标树从外置 upstream/ 切到仓内 vendor/ 钉版基线）。
+3. simharness 源码 subtree 并入；swarm-yuan **技能本体**源码并入（排除 dist 离线包）；element-web 不入仓（无构建依赖，仅参照，见 build.mjs/inject.mjs 全文无引用、patch 008/667 仅为静态挂载钩子）。
+4. GitHub 仅存源码/脚本/文档/依赖清单；中间产物（node_modules、dist、runs、截图、离线包、evidence 二进制）不入库。
+5. 合并后 simharness 与 Swarm-yuan 两旧仓 archive。
+
+## 目标目录（终态）
+
+```
+AIStudio/（= 原 ncwk/overlay 仓根，zcode 工作区根）
+├── README.md / AGENTS.md / CLAUDE.md   # AIStudio 品牌 + 单仓工作区规则
+├── patches/ custom/ scripts/ zcode-patches/ …   # 原 overlay 全部原位，零路径重排
+├── vendor/{hermes-studio,hermes-agent,zcode}/  # 上游基线钉版快照（无 .git，外仓跟踪）
+├── simharness/                          # subtree 并入（历史保留）
+├── skills/swarm-yuan/                   # 技能本体（排除 dist）
+├── docs/                                # overlay/docs + 工作区层散档归一
+└── （gitignored 本地基建）upstream/ archive/ sim-mux/ governance/ …
+```
+
+## 技术要点
+
+### vendor 模式 git 适配（inject.mjs 导出，四脚本共用）
+
+vendor/<tree> 是外仓跟踪的普通目录（不能带自身 .git——嵌套 .git 会让外仓记成 gitlink 无法跟踪文件）。因此：
+
+- **apply/reverse**：`git apply --directory=vendor/<tree> <patch>`，cwd=仓根（worktree 检出即 worktree 根，自包含）。
+- **status/dirty-check**：`git status --porcelain -- vendor/<tree>` + 剥前缀，输出与树内相对路径同构，现有 precheck/豁免逻辑零改动兼容。
+- **产物还原**：`git checkout -- vendor/<tree>/<file>`。
+- 有 `.git` 的树（外置 upstream/，env `OVERLAY_UPSTREAM_ROOT` 指定时）保持今日行为，双模并存。
+
+### 默认根解析顺序（inject/serve/build/ensure/zcode-engine 统一）
+
+`OVERLAY_UPSTREAM_ROOT` env ＞ 仓内 `vendor/`（存在即用）＞ 旧布局 `../upstream/`。合并前主检出无 vendor/，行为不变、活服务零影响；合并后默认切 vendor/。
+
+### node_modules 共享（worktree 语义）
+
+vendor/hermes-studio/node_modules 不入库（产物）。worktree 检出缺依赖时，inject 自动软链到主检出（`git rev-parse --git-common-dir` 定位）的 vendor node_modules，保持单实例；全新克隆需 `npm ci`（README 上手步骤）。
+
+### 基线钉版（2026-10-24 实测）
+
+| 树 | commit | 版本 | 说明 |
+|---|---|---|---|
+| hermes-studio | 04e5d9aa7 | v0.7.38 | 干净 HEAD 快照（工作树注入态不入库） |
+| hermes-agent | 4d04303818 | v0.22.4 | 同上 |
+| zcode | 3c5b2276 | series 基线 0a1fc56+1 | series 头声明 0a1fc56(v3.16.1)；实际树 HEAD 为其后一个 sync 提交，补丁在 3c5b2276 上重放实测通过（见 VENDOR.md），台账记录差一提交事实 |
+
+### vendor 防误提交
+
+inject 后 vendor/** 在外仓呈脏态（与今日 upstream 注入态同构）。防 `git add -A` 误收：pre-commit 钩子自动把 vendor/** 路径撤出暂存区（告警不阻断），基线替换走显式 `npm run vendor:sync` 通道。
+
+## 验证门
+
+1. vendor 树上 846-series 补丁全量重放：studio 零 FAILED（硬门）、agent/zcode 容错语义与今日一致；随后 --clean 反向还原回 pristine。
+2. /tmp 全新克隆：inject → vendor npm ci → serve（8647 探活）→ dev（8649 走查）→ smoke 子集，零新增回归。
+3. 合并后主检出 vendor npm ci + serve-main 换装 + 双端活体绿。
+
+## 决策记录
+
+| # | 决策 | 来源 |
+|---|---|---|
+| 1 | 单仓整合，ncwk/GitHub 仓均更名 AIStudio | 用户 2026-10-24 指示 |
+| 2 | 基线入库+补丁内化（否决源码固化——上游升级本周两次，固化后升级成本不可接受） | 用户勾选（AskUserQuestion） |
+| 3 | simharness/Swarm-yuan 旧仓 archive | 用户勾选（AskUserQuestion） |
+| 4 | GitHub 仅存源码脚本，中间产物不入库 | 用户 2026-10-24 指示 |
+| 5 | element-web 不入仓（无构建依赖实证） | 探查结论 + 决策 4 |
+| 6 | swarm-yuan 仅入技能本体，dist 离线包排除 | 决策 4 推论 |
+| 7 | 工作区目录改名（ncwk→AIStudio）放最后阶段，须等在途会话收口、停 8647/8649 后执行 | 2026-10-17 双删事故立法 + 运行中服务实测 |
