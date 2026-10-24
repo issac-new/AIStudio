@@ -2,3 +2,6 @@
 .swarm-yuan/
 # WP-B: e2e 样本项目构建产物（precheck.sh --all 跑 BUILD_CMD 产生）
 tests/e2e/java-demo/target/
+# 离线包产物（make-offline-bundle.sh 输出，不入库——2026-10-24 供应链治理轮补法，
+# 旧独立仓的 ignore 规则未随迁移带入）
+dist/

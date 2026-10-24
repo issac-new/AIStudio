@@ -3,5 +3,7 @@
 #
 # This installs the Hermes Agent framework + all Python dependencies.
 # The framework provides: CLI chat, gateway, kanban dispatcher, skills system.
+# 版本口径（2026-10-24 供应链治理轮）：与仓内钉版基线 vendor/hermes-agent v0.22.4 对齐
+#（台账见 vendor/VENDOR.md），上界锁 minor 防 0.23 行为漂移无声进入团队部署。
 
-hermes-agent[all]>=0.20.0
+hermes-agent[all]>=0.22.4,<0.23

@@ -35,6 +35,9 @@ vite.config.overlay.wt.ts
 /governance
 /CLAUDE.md
 
+# swarm-yuan 离线包产物（make-offline-bundle.sh 默认输出仓根 dist/，2026-10-24 供应链治理轮补法）
+/dist/
+
 # vendor/ 基线整树入库（含上游跟踪的 plugins/*/dashboard/dist 等资产），只挡本地
 # 构建垃圾；vendor 变更走 VENDOR_SYNC=1 显式通道（pre-commit 钩子挡护）
 vendor/**/.turbo/
