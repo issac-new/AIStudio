@@ -36,6 +36,7 @@ export interface HermesSessionRow {
   cost_status: string
   preview: string
   last_active: number
+  parent_session_id?: string | null
 }
 
 export interface HermesSessionSearchRow extends HermesSessionRow {
@@ -420,9 +421,11 @@ function compareSessionSummariesNewestFirst(a: HermesSessionRow, b: HermesSessio
 function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSessionInternalRow[]): HermesSessionRow {
   const latest = latestSessionInChain(chain)
   const firstPreview = chain.map(session => session.preview).find(Boolean) || root.preview
+  const parentSessionId = root.parent_session_id ?? null
   const { parent_session_id: _parentSessionId, ...rootRow } = root
   return {
     ...rootRow,
+    parent_session_id: parentSessionId,
     id: latest.id,
     model: latest.model || root.model,
     title: latest.title || root.title || titleFromPreview(firstPreview),
@@ -441,7 +444,7 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
     cost_status: latest.cost_status,
     preview: latest.preview || root.preview || firstPreview || '',
     last_active: latest.last_active || root.last_active,
-  }
+  } as HermesSessionRow
 }
 
 // --- In-memory session index for chain traversal ---
@@ -1626,7 +1629,7 @@ export async function getUsageStatsFromDb(
   }
 }
 
-export async function listSessionSummaries(source?: string, limit = 2000, profile?: string): Promise<HermesSessionRow[]> {
+export async function listSessionSummaries(source?: string, limit = 2000, profile?: string, includeChildren = false): Promise<HermesSessionRow[]> {
   if (!SQLITE_AVAILABLE) {
     throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
   }
@@ -1640,6 +1643,7 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
     return [...idx.byId.values()]
       .filter(session => !source || session.source === source)
       .filter(session => !isCompressionContinuationChild(session, idx))
+      .filter(session => includeChildren || !session.parent_session_id)
       .map(session => projectSessionSummary(session, collectSessionChain(session, idx)))
       .sort(compareSessionSummariesNewestFirst)
       .slice(0, limit)

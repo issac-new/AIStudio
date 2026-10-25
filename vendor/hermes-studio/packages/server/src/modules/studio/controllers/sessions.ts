@@ -637,6 +637,7 @@ export async function listHermesSessions(ctx: any) {
   const normalizedOffset = Number.isFinite(offset) && offset > 0 ? offset : 0
   const paginated = Boolean(source) || normalizedOffset > 0
   const candidateLimit = paginated ? normalizedOffset + effectiveLimit + 1 : effectiveLimit
+  const includeChildren = ctx.query.include_children === '1' || ctx.query.include_children === 'true'
   // Opt in so released clients that group by the raw source keep their contract.
   const agentGroups = ctx.query.agent_groups === '1'
   const allowedProfiles = allowedProfileSet(ctx)
@@ -648,7 +649,7 @@ export async function listHermesSessions(ctx: any) {
       })
     : localListSessions(profile, source, candidateLimit)
   const allSessions = isHermesAgentAvailable() && !(agentGroups && source === 'builtin_agent')
-    ? await listHermesSessionSummaries(source, candidateLimit, profile)
+    ? await listHermesSessionSummaries(source, candidateLimit, profile, includeChildren)
     : []
   if (agentGroups && allSessions.length) {
     localSessions.push(...localListSessions(profile, undefined, allSessions.length, {
