@@ -121,6 +121,27 @@ export function saveCompressionSnapshot(
     sessionId,
     cursor?.expectedHistoryRevision ?? historyRevision,
   )
+  // HERMES_CUSTOM[ctx-archive-history] BEGIN (patch 546, 遗留④ 2026-10-03): 追加式压缩边界史——
+  // 主表 UPSERT 覆盖旧边界，overlay custom/server/contextarchive 的按次切窗依赖此表
+  // 还原每一次窗口边界。失败不影响压缩主链路（史缺=档案侧退回当前边界单窗语义）。
+  if (result.changes > 0 && cursor?.compressedThroughMessageId != null) {
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS chat_compression_boundary_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        boundary_message_id INTEGER NOT NULL,
+        protected_head_through_message_id INTEGER,
+        history_revision INTEGER,
+        recorded_at INTEGER NOT NULL
+      )`)
+      db.prepare(
+        `INSERT INTO chat_compression_boundary_history
+           (session_id, boundary_message_id, protected_head_through_message_id, history_revision, recorded_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).run(sessionId, cursor.compressedThroughMessageId, cursor.protectedHeadThroughMessageId ?? null, historyRevision, Date.now())
+    } catch { /* 史追加失败=档案侧退回单窗语义，不阻塞压缩主链路 */ }
+  }
+  // HERMES_CUSTOM[ctx-archive-history] END
   return result.changes > 0
 }
 
