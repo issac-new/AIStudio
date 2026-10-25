@@ -1739,6 +1739,7 @@ export default {
       feedEmpty: '暂无动态',
       flowTitle: '任务流转',
       flowEmpty: '本群暂无任务流转',
+      openSim: '在推演中查看',
       flow: {
         dispatch: '派发',
         receipt: '完成回执',
@@ -3783,6 +3784,10 @@ export default {
     listActions: '工作流列表操作'
   },
   kanban: {
+    simTask: {
+      readonlyJump: '推演任务只读——已切到推演模式查看',
+      readonlyGuard: '推演任务请在推演实例处理——日常侧只读'
+    },
     title: '看板',
     createTask: '新建任务',
     noTasks: '暂无任务',

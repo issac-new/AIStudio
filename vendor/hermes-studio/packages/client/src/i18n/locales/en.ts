@@ -1740,6 +1740,7 @@ export default {
       feedEmpty: 'No activity',
       flowTitle: 'Task flow',
       flowEmpty: 'No task flow in this room',
+      openSim: 'View in simulation',
       flow: {
         dispatch: 'Dispatch',
         receipt: 'Receipt',
@@ -3784,6 +3785,10 @@ export default {
     listActions: 'Workflow list actions'
   },
   kanban: {
+    simTask: {
+      readonlyJump: 'Simulation task is read-only — switched to simulation view',
+      readonlyGuard: 'Simulation tasks are handled in the simulation instance — read-only here'
+    },
     title: 'Kanban Board',
     createTask: 'New Task',
     noTasks: 'No tasks',
