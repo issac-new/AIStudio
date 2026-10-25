@@ -319,7 +319,7 @@ export const useKanbanStore = defineStore('kanban', () => {
   async function createBoard(data: { slug: string; name?: string; description?: string; icon?: string; color?: string; switchCurrent?: boolean; project?: string; defaultWorkdir?: string }) {
     const board = await kanbanApi.createBoard(data)
     await fetchBoards()
-    setSelectedBoard(board.slug)
+    if (data.switchCurrent !== false) setSelectedBoard(board.slug)  // overlay[#680]: 尊重表单「创建后切换」开关（默认开；取消勾选不再强切）
     await refreshAll()
     return board
   }
