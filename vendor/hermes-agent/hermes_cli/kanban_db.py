@@ -419,10 +419,28 @@ def current_board_path() -> Path:
     return kanban_home() / "kanban" / "current"
 
 
+def _home_default_board() -> str:
+    """HERMES_CUSTOM[home-default-board]: per-home ``kanban.default_board`` read from
+    the scoped home's user config (a multiplex profile pins its own default board in
+    its ``config.yaml``). Absent key or unreadable config falls through to the legacy
+    resolution chain — this must never raise."""
+    try:
+        from hermes_cli.config_effective import load_user_config_effective
+        kanban = (load_user_config_effective(fail_closed=True) or {}).get("kanban", {})
+    except Exception:
+        return ""
+    if isinstance(kanban, dict):
+        raw = kanban.get("default_board")
+        if isinstance(raw, str):
+            return raw.strip()
+    return ""
+
+
 def get_current_board() -> str:
-    """Active slug: context override -> ``HERMES_KANBAN_BOARD`` -> ``<root>/kanban/current``
-    (only while that board exists) -> ``DEFAULT_BOARD``. A malformed/stale slug
-    falls through — the dispatcher must never crash on a hand-edited file."""
+    """Active slug: context override -> ``HERMES_KANBAN_BOARD`` -> per-home
+    ``kanban.default_board`` -> ``<root>/kanban/current`` (only while that board
+    exists) -> ``DEFAULT_BOARD``. A malformed/stale slug falls through — the
+    dispatcher must never crash on a hand-edited file."""
     def _existing(candidate: str) -> Optional[str]:
         if not candidate:
             return None
@@ -442,6 +460,7 @@ def get_current_board() -> str:
     for candidate in (
         (_CURRENT_BOARD_OVERRIDE.get() or "").strip(),
         os.environ.get("HERMES_KANBAN_BOARD", "").strip(),
+        _home_default_board(),
     ):
         found = _existing(candidate)
         if found:
