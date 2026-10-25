@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as profilesApi from '@/api/hermes/profiles'
 import type { HermesProfile, HermesProfileDetail } from '@/api/hermes/profiles'
-import { fetchAgentStatusSnapshot } from '@/api/agent-status'
+import { fetchAgentAvailabilitySnapshot } from '@/api/agent-status'
 import { useAppStore } from './app'
 
 const ACTIVE_PROFILE_STORAGE_KEY = 'hermes_active_profile_name'
@@ -65,19 +65,16 @@ export const useProfilesStore = defineStore('profiles', () => {
   async function fetchHermesProfiles() {
     loading.value = true
     try {
-      const [profilesResult, statusResult] = await Promise.allSettled([
+      // G2（2026-10-10）：改吃无超管闸的 availability 端点（hermesReady 服务端算好，
+      // 不泄漏 path）——普通账号不再触发 /api/agents/status 403 全局权限 toast。
+      const [profilesResult, availResult] = await Promise.allSettled([
         profilesApi.fetchProfiles(),
-        fetchAgentStatusSnapshot(),
+        fetchAgentAvailabilitySnapshot(),
       ])
       if (profilesResult.status === 'rejected') throw profilesResult.reason
       profiles.value = profilesResult.value
-      const hermes = statusResult.status === 'fulfilled'
-        ? statusResult.value.agents.find(agent => agent.id === 'hermes')
-        : undefined
       hermesAvailable.value = Boolean(
-        hermes?.installed
-        && hermes.source !== 'not-installed'
-        && hermes.path,
+        availResult.status === 'fulfilled' && availResult.value.hermesReady,
       )
       activeProfile.value = profiles.value.find(profile => profile.active) ?? null
       clearAllSessionCaches()

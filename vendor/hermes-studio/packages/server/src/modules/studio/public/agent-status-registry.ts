@@ -44,6 +44,9 @@ export interface AgentAvailabilitySnapshot {
   revision: number
   updatedAt: string
   agents: AgentAvailabilityRecord[]
+  /** hermes 本体就绪（installed+source 就绪+path 在位）——普通账号可用性判定用，
+   *  不泄漏 path 本身（G2 2026-10-10：/api/agents/status 仅超管，群聊/档案面改吃本端点） */
+  hermesReady?: boolean
 }
 
 const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode']
@@ -236,7 +239,9 @@ export function getAgentStatusSnapshot(): AgentStatusSnapshot {
 }
 
 export function getAgentAvailabilitySnapshot(): AgentAvailabilitySnapshot {
+  const hermes = records.get('hermes')
   return {
+    hermesReady: Boolean(hermes?.installed && hermes.source !== 'not-installed' && hermes.path),
     revision,
     updatedAt,
     agents: AGENT_ORDER.map(id => {

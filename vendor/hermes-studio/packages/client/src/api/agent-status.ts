@@ -28,6 +28,7 @@ export interface AgentAvailabilitySnapshot {
   revision: number
   updatedAt: string
   agents: AgentAvailabilityRecord[]
+  hermesReady?: boolean
 }
 
 export type AgentInstallationState = 'installed' | 'not-installed' | 'unknown'
@@ -59,14 +60,16 @@ export function resolveAgentStatusId(agent: string): AgentStatusId | null {
 }
 
 export function isAgentStatusAvailable(
-  snapshot: AgentStatusSnapshot | null | undefined,
+  snapshot: AgentStatusSnapshot | AgentAvailabilitySnapshot | null | undefined,
   agent: string,
 ): boolean {
   const id = resolveAgentStatusId(agent)
   if (!id) return false
   const status = snapshot?.agents.find(item => item.id === id)
   if (!status?.installed || status.source === 'not-installed') return false
-  return id !== 'hermes' || Boolean(status.path)
+  if (id !== 'hermes') return true
+  // G2（2026-10-10）：status 快照有 path 用 path；availability 快照（普通账号）用服务端算好的 hermesReady
+  return 'path' in status && status.path ? true : Boolean((snapshot as AgentAvailabilitySnapshot).hermesReady)
 }
 
 export function agentInstallationState(
