@@ -12,6 +12,9 @@
  * GET  /api/hermes/eval/runs/:id                   运行报告（密封集只回聚合——防探测：逐条对错可被重试探测）
  * GET  /api/hermes/eval/runs/compare?base=&head=   A/B 对比（同集两 run 逐任务翻转表+读数 delta；密封集拒绝）
  * POST /api/hermes/eval/runs/:id/reflow            坏例回流（失败任务一键转回归样本库，带溯源；幂等）
+ * POST /api/hermes/eval/badcase/distill            失败样本五要素提炼入回归库（根因/禁忌动作/步数红线；dryRun 可预览）
+ * POST /api/hermes/eval/badcase/variants           坏例蓝本五维反事实变体扩产（默认 10 条，幂等；变体不可再当蓝本）
+ * GET  /api/hermes/eval/flywheel                   数据飞轮读数（转化漏斗/根因聚类/坏例通过率退化门）
  * POST /api/hermes/eval/runs/:id/verdicts          人工仲裁（冲突/unknown 断言的最终裁决）
  * POST /api/hermes/eval/runs/:id/attributions      归因双 Loop（finding=judge_wrong/rubric_ambiguous → Rubric Loop；
  *                                                   route=agent → 指回 review 域既有流程）
@@ -37,7 +40,7 @@ import {
   appendIteration, appendOracleRun, appendTasksToSet, auditSnapshot, createOracleCase, createRemediation, createSet, exportSet,
   getOracleCase, getRemediation, getRun, getSet, getSetRevision, listIterations, listOracleCases, listOracleRuns,
   listRemediations, listRuns, listSetRevisions, listSets, recordHumanVerdict, recordLiveEvidence,
-  reflowTaskToSet, reviseRubric, sealSet, verifyRemediation,
+  reflowTaskToSet, REGRESSION_SET_NAME, reviseRubric, sealSet, verifyRemediation,
 } from './store'
 import { countRuns as countRedteamRuns } from '../redteam/store'
 import { mountRedteam } from '../redteam/routes'
@@ -47,6 +50,9 @@ import { ENTERPRISE_AXES, ENTERPRISE_SET_NAME, axesCoverage, buildEnterpriseSeed
 import type { EvalRun, EvalSet, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 import { buildRedteamVariants } from './redteam-variants'
+import { distillBadCase, ROOT_CAUSE_LABELS } from './badcase-distill'
+import { buildBadCaseVariants, CF_DIMENSIONS } from './badcase-variants'
+import { flywheelReadoutOf, latestRunOfSet, listLedger, passRateGateOf, recordDistill, recordVariantBatch } from './flywheel'
 import { evaluateReleaseHold } from './release-hold'
 import { buildBehaviorSignals } from './behavior-signals'
 import { businessSummaryOf } from './business-summary'
@@ -628,6 +634,205 @@ router.post('/runs/:id/reflow', async (ctx) => {
   }
   ctx.status = result.created ? 201 : 200
   ctx.body = { ok: true, created: result.created, taskId: result.taskId, set: { id: result.set.id, name: result.set.name, taskCount: result.set.tasks.length } }
+})
+
+// ---------- 数据飞轮（2026-10-25 吸收轮：坏例→资产→通过率门） ----------
+
+/**
+ * POST /badcase/distill {runId, taskId, sampleIdx, targetSetId?, dryRun?}
+ * 失败样本 → 五要素提炼（根因/禁忌动作/步数红线）→ 回归任务入回归库（幂等）。
+ * dryRun=true 只回提案不落库（入库前抽样质检卡点的人工预览通道）。
+ */
+router.post('/badcase/distill', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const runId = typeof body.runId === 'string' ? body.runId.trim() : ''
+  const taskId = typeof body.taskId === 'string' ? body.taskId.trim() : ''
+  const sampleIdx = Number(body.sampleIdx)
+  if (!runId || !taskId || !Number.isInteger(sampleIdx) || sampleIdx < 1) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['runId/taskId/sampleIdx(≥1) 必填（targetSetId/dryRun 可选）'] }
+    return
+  }
+  const run = getRun(runId)
+  const source = run ? getSet(run.setId) : undefined
+  if (!run || !source) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: [`运行不存在：${runId}`] }
+    return
+  }
+  // 密封源集题目内容不出库（与 reflow 同纪律）——提炼是内容出库路径
+  if (source.sealed) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['密封集题目内容不出库，不可提炼'] }
+    return
+  }
+  const distilled = distillBadCase(source, run, taskId, sampleIdx)
+  if (!distilled.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, code: distilled.code, problems: distilled.problems }
+    return
+  }
+  const { task, rootCause, tabooActions, failedSteps, stepRedline } = distilled.distilled
+  const proposal = {
+    taskId: task.id,
+    rootCause,
+    rootCauseLabel: ROOT_CAUSE_LABELS[rootCause],
+    tabooActions,
+    failedSteps,
+    stepRedline,
+  }
+  if (body.dryRun === true) {
+    ctx.body = { ok: true, dryRun: true, proposal, task }
+    return
+  }
+  const targetMeta = typeof body.targetSetId === 'string' && body.targetSetId.trim()
+    ? listSets().find((s) => s.id === body.targetSetId.trim())
+    : listSets().find((s) => s.name === REGRESSION_SET_NAME && !s.sealed)
+  if (typeof body.targetSetId === 'string' && body.targetSetId.trim() && !targetMeta) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: [`目标评测集不存在：${body.targetSetId}`] }
+    return
+  }
+  if (targetMeta?.sealed) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['目标评测集已密封，不可追加提炼任务'] }
+    return
+  }
+  let appended: number
+  let setSummaryLine: { id: string; name: string; taskCount: number; revision: number }
+  if (!targetMeta) {
+    const created = createSet({ name: REGRESSION_SET_NAME, track: source.track, tasks: [task] }, actorOf(ctx) ?? 'badcase-distill')
+    if (!created.ok) {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: created.problems }
+      return
+    }
+    appended = 1
+    setSummaryLine = { id: created.set.id, name: created.set.name, taskCount: created.set.tasks.length, revision: created.set.revision }
+  } else {
+    const result = appendTasksToSet(targetMeta.id, [task])
+    if (!result.ok) {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: result.problems }
+      return
+    }
+    appended = result.appended
+    setSummaryLine = { id: result.set.id, name: result.set.name, taskCount: result.set.tasks.length, revision: result.set.revision }
+  }
+  const ledger = recordDistill({
+    taskId: task.id,
+    sourceRunId: runId,
+    sourceTaskId: taskId,
+    sampleIdx,
+    rootCause,
+    tabooActions,
+    failedSteps,
+    stepRedline,
+    targetSetId: setSummaryLine.id,
+    ...(actorOf(ctx) ? { actor: actorOf(ctx) } : {}),
+  })
+  ctx.status = appended > 0 ? 201 : 200
+  ctx.body = {
+    ok: true,
+    appended,
+    duplicate: appended === 0,
+    ledgerDuplicate: ledger.duplicate,
+    proposal,
+    set: setSummaryLine,
+  }
+})
+
+/**
+ * POST /badcase/variants {taskId?, allFromRegression?, dims?, targetSetId?}
+ * 坏例蓝本 → 五维反事实变体（默认 10 条）幂等追加。变体不可再当蓝本（防指数膨胀）。
+ */
+router.post('/badcase/variants', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const dims = Array.isArray(body.dims)
+    ? body.dims.filter((d): d is string => typeof d === 'string' && CF_DIMENSIONS.some((dim) => dim.key === d))
+    : undefined
+  if (dims && dims.length === 0) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: [`dims 须为五维子集：${CF_DIMENSIONS.map((d) => d.key).join('/')}`] }
+    return
+  }
+  // 蓝本定位：taskId 精确找（非密封集），或回归库全部 origin 任务
+  const nonSealedSets = listSets().filter((s) => !s.sealed).map((s) => getSet(s.id)).filter((s): s is EvalSet => s !== undefined)
+  let blueprints: EvalTask[]
+  if (typeof body.taskId === 'string' && body.taskId.trim()) {
+    const found = nonSealedSets.flatMap((s) => s.tasks).find((t) => t.id === body.taskId!.trim())
+    if (!found) {
+      ctx.status = 404
+      ctx.body = { ok: false, problems: [`任务不存在（或所在集已密封）：${body.taskId}`] }
+      return
+    }
+    blueprints = [found]
+  } else if (body.allFromRegression === true) {
+    const regression = nonSealedSets.find((s) => s.name === REGRESSION_SET_NAME)
+    blueprints = (regression?.tasks ?? []).filter((t) => t.origin)
+  } else {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['taskId 或 allFromRegression=true 二选一必填'] }
+    return
+  }
+  // 变体不可再当蓝本（防变体套变体指数膨胀；维度缩配重跑走幂等跳过）
+  const variantBlueprints = blueprints.filter((t) => t.id.includes('-cf'))
+  blueprints = blueprints.filter((t) => !t.id.includes('-cf'))
+  if (blueprints.length === 0) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['无可扩产蓝本（变体任务不可再当蓝本；回归库无带溯源任务）'] }
+    return
+  }
+
+  const results: Array<{ taskId: string; appended: number; variantIds: string[]; setId: string }> = []
+  for (const blueprint of blueprints) {
+    const variants = buildBadCaseVariants(blueprint, dims)
+    // 目标集：显式 targetSetId > 蓝本所在集
+    const ownerSet = nonSealedSets.find((s) => s.tasks.some((t) => t.id === blueprint.id))
+    const targetId = typeof body.targetSetId === 'string' && body.targetSetId.trim()
+      ? body.targetSetId.trim()
+      : ownerSet?.id
+    if (!targetId) {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: [`蓝本 ${blueprint.id} 所在集不可定位，须显式传 targetSetId`] }
+      return
+    }
+    const appended = appendTasksToSet(targetId, variants)
+    if (!appended.ok) {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: appended.problems }
+      return
+    }
+    recordVariantBatch({
+      blueprintTaskId: blueprint.id,
+      variantIds: variants.map((v) => v.id),
+      dimensions: (dims ?? CF_DIMENSIONS.map((d) => d.key)),
+      targetSetId: targetId,
+      ...(actorOf(ctx) ? { actor: actorOf(ctx) } : {}),
+    })
+    results.push({ taskId: blueprint.id, appended: appended.appended, variantIds: variants.map((v) => v.id), setId: targetId })
+  }
+  const totalAppended = results.reduce((sum, r) => sum + r.appended, 0)
+  ctx.status = totalAppended > 0 ? 201 : 200
+  ctx.body = {
+    ok: true,
+    appended: totalAppended,
+    blueprints: results,
+    ...(variantBlueprints.length > 0 ? { skippedVariantBlueprints: variantBlueprints.map((t) => t.id) } : {}),
+  }
+})
+
+/**
+ * GET /flywheel —— 飞轮读数：转化漏斗（错误转化率）+ 根因聚类 + 坏例通过率退化门。
+ * 全派生 fail-soft：无数据 null/no_data，不造数。
+ */
+router.get('/flywheel', async (ctx) => {
+  const sets = listSets().map((meta) => getSet(meta.id)).filter((s): s is EvalSet => s !== undefined)
+  const runs = listRuns()
+  const readout = flywheelReadoutOf(sets, runs, listRemediations({}), listLedger())
+  const regression = sets.find((s) => s.name === REGRESSION_SET_NAME)
+  const latest = regression ? latestRunOfSet(runs, regression.id) : undefined
+  ctx.body = { ok: true, ...readout, gate: passRateGateOf(latest) }
 })
 
 router.get('/runs/:id', async (ctx) => {
