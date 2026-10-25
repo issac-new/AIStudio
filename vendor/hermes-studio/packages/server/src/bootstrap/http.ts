@@ -20,6 +20,10 @@ import { dshPluginUi } from '../modules/coding-agents/services'
 import './chat-agent-runtime-adapter'
 import './skill-files-adapter'
 import { setGroupChatServer } from '../modules/studio/routes/group-chat'
+// overlay[command-post]: 2.13 指挥中心 —— 舰队 WS + 看板聚合 WS
+import { setupCommandPostWebSockets } from '../custom/services/hermes/command-post'
+import { authenticateUserToken as authenticateUserTokenForCommandPost, isAuthEnabled as isAuthEnabledForCommandPost } from '../modules/studio/public/auth'
+import { userCanAccessProfile as userCanAccessProfileForCommandPost } from '../modules/studio/public/users'
 // overlay[loop-socket]: Loop Engineering Socket.IO namespace
 import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
 import { setChatRunServer } from '../modules/studio/public/chat-run'
@@ -672,6 +676,19 @@ export async function bootstrap() {
     name: 'Kanban event WebSocket and watchers',
     close: () => kanbanEventsWebSocket.close(),
     forceClose: () => kanbanEventsWebSocket.forceClose(),
+  })
+  // overlay[command-post]: 舰队 WS（跨 profile 会话快照推送）+ 看板聚合 WS
+  // （共享 watcher 扇出）。fleet tap 在 ChatRunSocket.init 后生效，此前快照
+  // 仅含 DB 会话，属预期降级。
+  const commandPostSockets = setupCommandPostWebSockets(servers, {
+    isAuthEnabled: isAuthEnabledForCommandPost,
+    authenticateUserToken: authenticateUserTokenForCommandPost,
+    userCanAccessProfile: userCanAccessProfileForCommandPost,
+  })
+  additionalShutdownSteps.push({
+    name: 'Command post WebSockets (fleet + kanban overview)',
+    close: () => commandPostSockets.close(),
+    forceClose: () => commandPostSockets.forceClose(),
   })
   console.log('[bootstrap] terminal + kanban websocket setup')
 
