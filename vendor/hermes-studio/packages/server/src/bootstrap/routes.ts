@@ -136,6 +136,9 @@ import { autonomyLadderRoutes } from '../custom/autonomyladder/autonomy-ladder-c
 // overlay[report]（报告链落地轮）：报告链能力正本=产品侧——PART1 骨架出稿+报告验收断言
 // （六闸工件/承载率/QGate 纪律）。/api/hermes/report/*；simharness 为兼容消费壳。
 import { reportRoutes } from '../custom/report/report-controller'
+// overlay[diagram]（diagram-design 吸收轮 项3）：图产物机械验收——语义唯一事实源=
+// vendored self_check.py（安全/a11y/几何/动画预算 fail-closed）。/api/hermes/diagram/check
+import { diagramRoutes } from '../custom/diagram/diagram-controller'
 // overlay[session-mode]（permmodes v4 通道轮）：会话权限档查/切/清——引擎
 // createSession.config.mode 建会话生效+switchCollaborationMode 会话内切（可切子集）；
 // 执法=enforce-gate 阶梯>会话档>全局档。/api/hermes/permmodes/session-mode/*
@@ -487,6 +490,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(govBusRoutes.routes())                  // 治理事件总线：查询面 + compact（六文调研轮 F）
   app.use(autonomyLadderRoutes.routes())          // 自治阶梯：配置面 CRUD + govbus 审计（六文调研轮 H2）
   app.use(reportRoutes.routes())                  // 报告链：PART1 骨架出稿 + 验收断言（报告链落地轮）
+  app.use(diagramRoutes.routes())                 // 图产物门禁：self_check 机械验收（diagram-design 吸收轮）
   app.use(sessionModeRoutes.routes())             // 会话权限档：查/切/清 + 引擎 v4 切档（permmodes v4 通道轮）
   startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
   app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
