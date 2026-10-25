@@ -505,6 +505,17 @@ def _warn_pending_fleet_restart(*, startup: bool = False) -> None:
 
 def _warn_pending_fleet_restart_on_startup() -> None:
     """Cheap CLI-startup hint. Never restarts; never raises."""
+    import sys
+
+    # overlay[perf]（2026-09-30 根治批）：非交互（管道 stdio，如 studio 服务端
+    # exec / --json 消费方）不再跑舰队重启义务判定——其内部 git 身份解析实测
+    # 2.0s/exec，且横幅直写 stdout 会污染 --json 输出；人类终端（TTY）保持提示。
+    try:
+        if not sys.stderr.isatty():
+            return
+    except Exception:
+        pass
+
     from hermes_cli.update_receipt import read_latest_receipt
     from hermes_cli.update_serve_obligations import retain_receipt_manual_serves, warn_pending_manual_serves
 
