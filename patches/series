@@ -928,3 +928,6 @@
 
 # 687: 供应链治理轮锁收口——manifest 补丁（017/080/103/136/137/138/573）从未同步进 vendor 锁致 npm ci 必炸；以注入态 manifest 重生成锁：六依赖入树+@playwright/test 对齐 1.63.0，resolved 全锚 registry.npmjs.org（本机 npm 缓存曾带出 npmmirror 域名，已统一重写；integrity 不变）。
 687-package-lock-overlay-deps.patch
+
+# 688: 容量泵内省 sidecar 补丁化（2ce5333a0 纯运行时热修在 0.22.4 镜像刷新被抹，pytest 守门复红；补丁通道保证刷新不可再抹）——run_busy 四路径写 <HERMES_HOME>/runtime/capacity_retry.json（限频 2s），cluster-inspector 免改 api_server 可观测容量泵。
+688-agent-capacity-sidecar.patch

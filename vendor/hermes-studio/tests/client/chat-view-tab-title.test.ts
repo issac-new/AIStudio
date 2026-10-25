@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
+vi.mock('naive-ui', () => ({ useMessage: () => ({ warning: vi.fn() }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 import ChatView from '@/views/hermes/ChatView.vue'
 import { useAppStore } from '@/stores/hermes/app'
 import { useChatStore, type Session } from '@/stores/hermes/chat'

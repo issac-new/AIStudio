@@ -30,6 +30,28 @@ const writeApprovalMessages = {
 }
 
 export default {
+  sessionTasks: {
+      "title": "Görevler",
+      "task": "Görev",
+      "source": "Kaynak sohbet",
+      "status": "Durum",
+      "updated": "Güncellendi",
+      "search": "Görev veya sohbet ara",
+      "filterStatus": "Duruma göre filtrele",
+      "all": "Tüm durumlar",
+      "open": "Tamamlanmadı",
+      "completed": "Tamamlandı",
+      "openChat": "Sohbeti aç",
+      "openTask": "Sohbette görüntüle: {title}",
+      "loading": "Görevler yükleniyor",
+      "loadFailed": "Görevler yüklenemedi",
+      "retry": "Yeniden dene",
+      "noResults": "Eşleşen görev yok",
+      "empty": "Sohbetlerinizde kaydedilen görevler burada görünür",
+      "untitled": "Başlıksız sohbet",
+      "jumpUnavailable": "Bağlantılı mesaj kullanılamıyor. Sohbet açıldı."
+  },
+
   remoteDevices: remoteDeviceMessages["tr"],
   modelApi: {
     "localRoute": "Yerel adres",
@@ -136,6 +158,18 @@ export default {
     computerUseTimeoutMs: 'Masaüstü işlemi zaman aşımı (ms)',
   },
   changelog: {
+    new_0_7_39_1: "Ajanların kullanıcı hedeflerini konuşma turları boyunca takip edebilmesi ve tamamlanma kanıtlarını kaydedebilmesi için kalıcı oturum görevleri eklendi (#3499)",
+    new_0_7_39_2: "İlgili konuşma turlarına geçiş sağlayan oturum görevi paneli eklendi; mobil listeler, görev ayrıntıları ve oturum adları iyileştirildi, önemsiz görev kayıtları azaltıldı (#3501, #3509, #3510)",
+    new_0_7_39_3: "Uzak Studio ajanları, masaüstünde açıkça izin verildikten sonra yerel yerleşik tarayıcıyı kullanabilir; paylaşım istendiği zaman durdurulabilir (#3478)",
+    new_0_7_39_4: "Hesap tema kısayoluna sistemi takip et modu eklendi; panellerin üst boşluğu, tema arka planları ve düz köşeleri standartlaştırıldı (#3496, #3475)",
+    new_0_7_39_5: "Grup sohbetinin boş görünümü tüm ajanları gösterir ve pencere genişliğine uyum sağlar (#3471)",
+    new_0_7_39_6: "Ekko akıl yürütme düzeyinin varsayılanı yok olarak değiştirildi; sohbet, grup sohbeti ve iş akışlarındaki ajan etiketleri birleştirildi (#3488)",
+    new_0_7_39_7: "Durdurma sonrasında düşünme göstergesinin kalması ve araç sonuçları kısaltılırken Çince karakterlerin veya emojilerin bozulup istekleri başarısız kılması düzeltildi (#3473, #3457, #3460)",
+    new_0_7_39_8: "Sağlayıcı içe aktarma bağlantıları otomatik API modunu destekler; JEV sürüm içeren ve tam uç nokta URL’lerini kabul eder, eksik uç noktaları model hatalarından ayırır (#3494, #3493, #3491)",
+    new_0_7_39_9: "Ekran kaydı izni eksikken masaüstü ekran görüntüleri, engelleyici iletişim kutusu olmadan doğrudan sistem ayarlarını açabilir (#3492)",
+    new_0_7_39_10: "Yerel Windows ARM64 Hermes çalışma ortamı oluşturulurken yaşanan bağımlılık ve terminal uyumluluğu sorunları düzeltildi (#3429)",
+    new_0_7_39_11: "TerraMaster TOS için özel paketler ve otomatik derlemeler sonlandırıldı (#3503)",
+    new_0_7_39_12: "Oturum görevi oluşturma ve tamamlama için ayrı Webhook abonelikleri eklendi; başlıkların, özetlerin ve tamamlanma kanıtlarının gönderimi içerik ayarına bağlıdır (#3512)",
     new_0_7_38_1: "Bilinen bağlantı ve modeller için otomatik API modu eklendi; sağlayıcı önekli model adları desteklenir ve yeni bağlantılarda varsayılan hâlâ Chat Completions’tır (#3469)",
     new_0_7_38_2: "Masaüstüne yerel ve uzak cihazlar arasında geçiş ve cihaz yönetimi eklendi; eski LAN eşleştirme girişi değiştirildi (#3464)",
     new_0_7_38_3: "Model API’ye bulut erişimi, anahtar başına model kısıtlamaları ve toplam USD bütçeleri eklendi; Agent bazında kullanım dökümü geri getirildi ve panel genişliği düzeltildi (#3440, #3450)",
@@ -157,15 +191,6 @@ export default {
     new_0_7_37_9: "Claude OAuth oturumu kapatılırken tüm profillerin yönettiği kimlik bilgileri kaldırılarak eski oturum durumunun kalması önlendi (#3442)",
     new_0_7_37_10: "Windows ARM64 masaüstü kurulum paketi derleme desteği eklendi (#3428)",
     new_0_7_37_11: "TOS 7 temiz kurulumu, portal yolları ve hizmet yeniden başlatma ilkeleri düzeltildi; ana makine ortamına ve önceden oluşturulan kullanıcılara bağımlılık azaltıldı (#3413, #3431)",
-    new_0_7_36_1: 'Arayüz bölgelerine göre arka plan, opaklık, bulanıklık, köşe, kenarlık ve gölgeler için canlı tema özelleştirmesi eklendi (#3394)',
-    new_0_7_36_2: 'Oluşturma, çoğaltma, değiştirme, içe aktarma, dışa aktarma ve hesap başına kaydetme destekli adlandırılmış temalar eklendi (#3394)',
-    new_0_7_36_3: 'Model görünürlük ayarları artık model seçicilere tutarlı biçimde uygulanıyor; büyük kataloglar için performans uyarıları eklendi (#3392)',
-    new_0_7_36_4: 'Görünür model yönetimine arama eklendi (#3393)',
-    new_0_7_36_5: 'Yeni sohbet kategorisi seçimi yazma alanının araç çubuğuna taşındı (#3389)',
-    new_0_7_36_6: 'Küçük ekranlarda iş akışı çalıştırma kayıtları panelinin tam genişliği doldurmaması ve arka planının saydam olması düzeltildi (#3398)',
-    new_0_7_36_7: 'Grup sohbetlerinde AI mesaj teması eşitlemesi ve mesaj balonları ile tablolarda yinelenen arka plan ve bulanıklık düzeltildi (#3398)',
-    new_0_7_36_8: 'Sürüm yayımlandığında TOS 7 x86_64 test paketlerinin otomatik derlenmesi ve doğrulanması eklendi (#3397)',
-    new_0_7_36_9: '30 MB boyutuna kadar GIF, hareketli WebP ve APNG arka plan desteği iyileştirildi; kaydetme, önbelleğe alma ve tema içe ve dışa aktarmada animasyon korundu',
   },
 
   profiles: {
@@ -287,6 +312,7 @@ export default {
       auth_failed: 'TypeSafe kimlik doğrulaması başarısız oldu. API anahtarını ve izinlerini denetleyin.',
       rate_limited: 'TypeSafe istek sınırına ulaşıldı. Daha sonra yeniden deneyin.',
       provider_error: 'TypeSafe isteği işleyemedi. Modeli denetleyip yeniden deneyin.',
+      "endpoint_not_found": "JEV uç noktası bulunamadı (HTTP 404). API temel URL’sini ve ağ geçidi yol önekini kontrol edin.",
       request_failed: 'JEV\'e bağlanılamadı. API URL\'sini ve ağ bağlantısını denetleyin.',
       settings_failed: 'JEV ayarları okunamadı veya kaydedilemedi. Studio veri dizinini denetleyin.',
       forbidden: 'Bu Profile erişiminiz yok.',
@@ -309,6 +335,14 @@ export default {
   agentAutoUpdate: { label: 'Otomatik güncellemeler' },
 
   browser: {
+    remoteOwnerActive: 'Current control device',
+    remoteOwnerStandby: 'Standby — another device is active',
+    remoteOwnerBusy: 'Standby — browser operation in progress',
+    remoteOwnerConnecting: 'Connecting',
+
+    remoteControl: 'Allow remote control',
+    remoteControlStop: 'Stop remote control',
+
     title: 'Tarayıcı',
     settings: 'Tarayıcı ayarları',
     desktopOnly: 'Yerleşik tarayıcı yalnızca Ekko Studio Desktop sürümünde kullanılabilir.',
@@ -917,6 +951,8 @@ export default {
         actions: 'İşlemler', receivedAt: 'Alınma zamanı', event: 'Olay', eventId: 'Olay kimliği', deliveryId: 'Gönderim kimliği',
       },
       events: {
+        taskCreated: "Oturum görevi oluşturuldu",
+        taskCompleted: "Oturum görevi tamamlandı",
         runUpdated: 'Çalıştırma durumu güncellendi',
         planUpdated: 'Görev kartı ilerlemesi güncellendi',
         groupMessageCreated: 'Grup mesajı oluşturuldu',
@@ -949,8 +985,8 @@ export default {
         profiles: 'Profiller',
         profilesPlaceholder: 'Tüm profilleri almak için boş bırakın',
         maxRetries: 'İlk hatadan sonraki yeniden deneme sayısı (0–10)',
-        includeContent: 'Son asistan yanıtını ekle',
-        includeContentHint: 'Son yanıt metni hassas bilgiler içerebilir. Akıl yürütme, sistem istemleri ve araç parametreleri hiçbir zaman eklenmez.',
+        includeContent: "Yanıt ve görev metnini dahil et",
+        includeContentHint: "Yanıt ve görev metni; görev başlıkları, özetler ve tamamlanma kanıtları dahil hassas bilgiler içerebilir. Akıl yürütme, sistem istemleri ve araç bağımsız değişkenleri asla dahil edilmez.",
         includeUserContent: 'Kullanıcı mesajı metnini ekle',
         includeUserContentHint: 'Kullanıcı mesajları hassas bilgiler içerebilir. Varsayılan olarak kapalıdır; sistem istemlerini, akıl yürütmeyi, araç parametrelerini veya araç sonuçlarını içermez.',
         allowPrivateNetwork: 'Özel veya yerel ağ adreslerine izin ver',

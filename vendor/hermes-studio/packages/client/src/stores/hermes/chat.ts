@@ -1800,7 +1800,7 @@ export const useChatStore = defineStore('chat', () => {
     return mapped
   }
 
-  async function loadSessions(profile?: string | null, preferredSessionId?: string | null) {
+  async function loadSessions(profile?: string | null, preferredSessionId?: string | null, preferredFocusId?: string | null) {
     const requestSequence = ++loadSessionsRequestSequence
     const selectionSequence = activeSelectionSequence
     isLoadingSessions.value = true
@@ -1869,7 +1869,8 @@ export const useChatStore = defineStore('chat', () => {
             ? storedId
             : sessions.value[0]?.id
       if (targetId) {
-        await switchSession(targetId, targetId === currentId ? focusMessageId.value : null)
+        await switchSession(targetId, targetId === preferredSessionId && preferredFocusId
+          ? preferredFocusId : targetId === currentId ? focusMessageId.value : null)
       } else {
         clearActiveSession()
       }

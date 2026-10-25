@@ -173,6 +173,9 @@ describe('handleCodingAgentRun', () => {
     expect(calls[1][1]).toContain('context_id="second-turn"')
     expect(calls[1][1]).not.toContain('first-turn')
     for (const args of calls) {
+      expect(args[1]).toContain('<studio_session_tasks_context>')
+      expect(args[1]).toContain('ekko_studio_list_session_tasks')
+      expect(args[1]).toContain('Keep one goal per user outcome')
       expect(args[1]).toContain('ekko_studio_clarify')
       expect(args[1]).toContain('<studio_interaction_context>')
       expect(args[2]).not.toContain('context_id=')

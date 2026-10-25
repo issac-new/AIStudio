@@ -4,6 +4,28 @@ import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesEn } from '../social-messages'
 
 export default {
+  sessionTasks: {
+      "title": "Tasks",
+      "task": "Task",
+      "source": "Source conversation",
+      "status": "Status",
+      "updated": "Updated",
+      "search": "Search tasks or conversations",
+      "filterStatus": "Filter task status",
+      "all": "All statuses",
+      "open": "Incomplete",
+      "completed": "Completed",
+      "openChat": "Open conversation",
+      "openTask": "View in conversation: {title}",
+      "loading": "Loading tasks",
+      "loadFailed": "Could not load tasks",
+      "retry": "Retry",
+      "noResults": "No matching tasks",
+      "empty": "Tasks recorded in your conversations will appear here",
+      "untitled": "Untitled conversation",
+      "jumpUnavailable": "The linked message is unavailable. The conversation has been opened."
+  },
+
   remoteDevices: remoteDeviceMessages["en"],
   modelApi: {
     "localRoute": "Local address",
@@ -213,6 +235,7 @@ export default {
       "auth_failed": "TypeSafe authentication failed. Check the API key and its permissions.",
       "rate_limited": "TypeSafe rate limit reached. Try again later.",
       "provider_error": "TypeSafe could not process the request. Check the model and try again.",
+      "endpoint_not_found": "JEV endpoint not found (HTTP 404). Check the API base URL and include any gateway path prefix.",
       "request_failed": "Unable to connect to JEV. Check the API URL and network connection.",
       "settings_failed": "Unable to read or save JEV settings. Check the Studio data directory.",
       "forbidden": "You do not have access to this Profile.",
@@ -386,6 +409,14 @@ export default {
   },
   socialMessages: socialMessagesEn,
   browser: {
+    remoteOwnerActive: 'Current control device',
+    remoteOwnerStandby: 'Standby — another device is active',
+    remoteOwnerBusy: 'Standby — browser operation in progress',
+    remoteOwnerConnecting: 'Connecting',
+
+    remoteControl: 'Allow remote control',
+    remoteControlStop: 'Stop remote control',
+
     title: 'Browser', settings: 'Browser Settings', desktopOnly: 'The embedded browser is available only in Ekko Studio Desktop.', newTab: 'New Tab',
     back: 'Back', forward: 'Forward', reload: 'Reload', stop: 'Stop', addressPlaceholder: 'Search or enter an address',
     undoAnnotation: 'Undo last', deleteAnnotation: 'Delete annotation {index}',
@@ -2645,6 +2676,8 @@ export default {
         deliveryId: 'Delivery ID',
       },
       events: {
+        taskCreated: "Session task created",
+        taskCompleted: "Session task completed",
         runUpdated: 'Run state updated', planUpdated: 'Task card progress updated', groupMessageCreated: 'Group message created', messageCreated: 'User message created',
         runQueued: 'Run queued',
         runStarted: 'Run started',
@@ -2693,8 +2726,8 @@ export default {
         profiles: 'Profiles',
         profilesPlaceholder: 'Leave empty to receive all profiles',
         maxRetries: 'Retry attempts after the first failure (0–10)',
-        includeContent: 'Include final assistant text',
-        includeContentHint: 'Final reply text may contain sensitive information. Reasoning, system prompts, and tool arguments are never included.',
+        includeContent: "Include reply and task text",
+        includeContentHint: "Reply and task text may contain sensitive information, including task titles, summaries and completion evidence. Reasoning, system prompts and tool arguments are never included.",
         includeUserContent: 'Include user message text',
         includeUserContentHint: 'User messages may contain sensitive information. This is disabled by default and does not include system prompts, reasoning, tool arguments, or tool results.',
         allowPrivateNetwork: 'Allow private or local network addresses',
@@ -3922,6 +3955,18 @@ export default {
 
   // Changelog
   changelog: {
+    new_0_7_39_1: "Added persistent session tasks so agents can follow user goals across turns and record evidence of completion (#3499)",
+    new_0_7_39_2: "Added a session task drawer with links to related chat turns; improved mobile lists, task details and session names, and reduced trivial task records (#3501, #3509, #3510)",
+    new_0_7_39_3: "Remote Studio agents can use the local built-in browser after explicit desktop authorization, with sharing that can be stopped at any time (#3478)",
+    new_0_7_39_4: "Added follow-system mode to the account theme shortcut; standardized drawer header spacing, themed backgrounds and square corners (#3496, #3475)",
+    new_0_7_39_5: "The group chat empty state now shows all agents and adapts to different window widths (#3471)",
+    new_0_7_39_6: "Ekko reasoning effort now defaults to none, with consistent agent labels across chats, group chats and workflows (#3488)",
+    new_0_7_39_7: "Fixed the thinking indicator remaining after stopping and tool-result truncation corrupting Chinese text or emoji and causing request failures (#3473, #3457, #3460)",
+    new_0_7_39_8: "Provider import links now support automatic API mode; JEV accepts versioned and complete endpoint URLs and distinguishes missing endpoints from model errors (#3494, #3493, #3491)",
+    new_0_7_39_9: "Desktop screenshots can open system settings directly when screen recording permission is missing, avoiding a blocking dialog (#3492)",
+    new_0_7_39_10: "Fixed dependency and terminal compatibility issues when building the native Windows ARM64 Hermes runtime (#3429)",
+    new_0_7_39_11: "Discontinued dedicated TerraMaster TOS packages and automated builds (#3503)",
+    new_0_7_39_12: "Added separate Webhook subscriptions for session task creation and completion; task titles, summaries and completion evidence follow the content switch (#3512)",
     new_0_7_38_1: "Added automatic API mode matching for known connections and models, including provider-prefixed model names; new connections still default to Chat Completions (#3469)",
     new_0_7_38_2: "Added desktop switching between local and remote devices and device management, replacing the old LAN pairing entry (#3464)",
     new_0_7_38_3: "Added cloud Model API access, per-key model restrictions and lifetime USD budgets; restored Agent usage breakdowns and fixed panel width (#3440, #3450)",
@@ -3943,14 +3988,5 @@ export default {
     new_0_7_37_9: "Clearing Claude OAuth login now removes all profile-managed credentials to prevent stale login state (#3442)",
     new_0_7_37_10: "Added Windows ARM64 desktop installer build support (#3428)",
     new_0_7_37_11: "Fixed TOS 7 clean installation, portal paths and service restart policies, reducing reliance on the host environment and pre-created users (#3413, #3431)",
-    new_0_7_36_1: 'Added live theme customization for backgrounds, opacity, blur, corners, borders, and shadows across interface regions (#3394)',
-    new_0_7_36_2: 'Added named theme presets with creation, duplication, switching, import, export, and per-account persistence (#3394)',
-    new_0_7_36_3: 'Model visibility settings now apply consistently to model selectors, with performance notices for large catalogs (#3392)',
-    new_0_7_36_4: 'Added search to visible model management (#3393)',
-    new_0_7_36_5: 'Moved new-chat category selection into the composer toolbar (#3389)',
-    new_0_7_36_6: 'Fixed workflow run drawers not filling their width or showing a background on small screens (#3398)',
-    new_0_7_36_7: 'Fixed group-chat AI message theme synchronization and duplicate backgrounds and blur in message bubbles and tables (#3398)',
-    new_0_7_36_8: 'Added release-triggered builds and validation for TOS 7 x86_64 test packages (#3397)',
-    new_0_7_36_9: 'Improved GIF, animated WebP and APNG wallpapers up to 30 MB, preserving animation through saving, caching and theme import/export',
   },
 }

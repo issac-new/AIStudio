@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { modelReasoningEfforts } from '@/utils/model-reasoning-effort'
+import { agentReasoningEffortOptions as reasoningOptions, agentReasoningEffortValue as reasoningValue, modelReasoningEfforts } from '@/utils/model-reasoning-effort'
 import NativeCodingAgentModelFields from '@/components/hermes/models/NativeCodingAgentModelFields.vue'
 import ScopedModelSelector from '@/components/hermes/models/ScopedModelSelector.vue'
 import type { CodingAgentId } from '@/api/coding-agents'
@@ -381,14 +381,18 @@ const pendingAgentPreset = computed(() =>
     agentPresets.value.find(preset => preset.id === pendingAgentPresetId.value) || null
 )
 
-const agentReasoningEffortOptions = computed(() => [
-    { label: t('chat.reasoningEffort.options.default'), value: '' },
+const agentReasoningEffortOptions = computed(() => reasoningOptions([
+    { label: t(selectedAgentType.value === 'hermes' ? 'chat.reasoningEffort.options.default' : 'chat.reasoningEffort.options.none'), value: '' },
     ...modelReasoningEfforts(
       getAgentModelGroups(selectedProfile.value || ''),
       selectedAgentProvider.value,
       selectedAgentModel.value,
     ).map(value => ({ label: t(`chat.reasoningEffort.options.${value}`), value })),
-])
+], selectedAgentType.value === 'hermes'))
+const agentReasoningEffortValue = computed({
+  get: () => reasoningValue(selectedAgentReasoningEffort.value, agentReasoningEffortOptions.value),
+  set: (value: string) => { selectedAgentReasoningEffort.value = value },
+})
 
 watch([agentReasoningEffortOptions, selectedAgentReasoningEffort], ([options, effort]) => {
   if (!usesGlobalAgentMode.value && effort && !options.some(option => option.value === effort)) {
@@ -2921,7 +2925,7 @@ function handleClarifyKeydown(event: KeyboardEvent) {
                             :disabled="isLoadingAgentForm || isSavingAgent" @change="handleNativeAgentSelection" />
                         <NSelect
                             v-else
-                            v-model:value="selectedAgentReasoningEffort"
+                            v-model:value="agentReasoningEffortValue"
                             :options="agentReasoningEffortOptions"
                             :aria-label="t('chat.reasoningEffort.tooltip')"
                             :placeholder="t('chat.reasoningEffort.tooltip')"

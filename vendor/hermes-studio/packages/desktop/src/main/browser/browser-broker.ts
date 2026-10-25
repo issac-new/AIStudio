@@ -150,6 +150,13 @@ export class BrowserBroker {
     if (this.manager.state().tabs.some(tab => tab.id === tabId)) this.manager.cancelAgentOperation(tabId)
   }
 
+  revokeClient(clientId: string): void {
+    for (const [tabId, lease] of this.leases) {
+      if (lease.clientId === clientId) this.revokeTab(tabId)
+    }
+    this.clients.delete(clientId)
+  }
+
   revokeAll(): void {
     const tabIds = new Set([...this.leases.keys(), ...this.queues.keys()])
     for (const tabId of tabIds) this.revokeTab(tabId)
@@ -202,6 +209,7 @@ export class BrowserBroker {
 
   private async execute(clientId: string, method: string, params: Record<string, unknown>, operationId: string, tabGeneration: number): Promise<unknown> {
     this.cleanupExpiredLeases()
+    if (!this.clients.has(clientId)) throw new Error('Browser client permission was revoked')
     const tabId = typeof params.tab_id === 'string' ? params.tab_id.trim() : ''
     if (tabId && (this.tabGenerations.get(tabId) || 0) !== tabGeneration) {
       throw new Error('Browser operation was cancelled by user takeover')

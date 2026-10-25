@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { browserIntent, matchBrowserSnapshot, verifyBrowserResult } from './browser/jev.mjs'
 import { validateBrowserArguments } from './browser/arguments.mjs'
 import { browserOutput } from './browser/output.mjs'
@@ -244,7 +245,8 @@ async function requestEnvelope(path, options = {}) {
     : defaultProfile()
   // Explicit run bindings take precedence. Shared Hermes MCP connections can
   // select a restricted group-plan credential without changing process state.
-  const contextId = path === '/api/studio/task-plans/update' ? String(options.body?.context_id || '') : undefined
+  const contextId = ['/api/studio/task-plans/update', '/api/studio/session-tasks/list', '/api/studio/session-tasks/update'].includes(path)
+    ? String(options.body?.context_id || '') : undefined
   const runCredential = readRunCredential(profile, contextId)
   const token = runCredential?.token || readToken(options.token, options.allowTokenFile !== false, profile)
   const method = options.method || 'GET'
@@ -629,6 +631,7 @@ function withAuthArgs(args, options = {}) {
   }
 }
 
+const browserCallContext = new AsyncLocalStorage()
 const BROWSER_CLIENT_ID = `${SERVER_NAME}:${process.pid}:${randomUUID()}`
 let cachedBrowserSession = null
 
@@ -682,7 +685,13 @@ async function browserSession(descriptor, signal) {
 }
 
 async function browserRequest(method, params = {}, signal) {
-  const descriptor = browserDescriptor()
+  let descriptor
+  try { descriptor = browserDescriptor() } catch {
+    return request('/api/studio/desktop-browser/request', {
+      method: 'POST', body: { method, params, client_id: BROWSER_CLIENT_ID }, signal,
+      ...(browserCallContext.getStore() || {}),
+    })
+  }
   const session = await browserSession(descriptor, signal)
   signal?.throwIfAborted()
   const operationId = randomUUID()
@@ -694,7 +703,7 @@ async function browserRequest(method, params = {}, signal) {
       'X-Hermes-Browser-Client': session.clientId,
     },
     body: JSON.stringify({ method, params, operation_id: operationId }),
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(45_000)]) : AbortSignal.timeout(45_000),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(300_000)]) : AbortSignal.timeout(300_000),
   })
   const payload = await response.json().catch(() => null)
   if (!response.ok) throw new Error(payload?.error || `Browser Broker HTTP ${response.status}`)
@@ -1101,6 +1110,32 @@ const tools = [
         },
       },
     }, ['context_id', 'plan']),
+  },
+  {
+    name: 'ekko_studio_list_session_tasks',
+    toolset: 'plan',
+    description: 'At the beginning of every turn, read the current session user goals and open/completed states and review past delivery. Record only independent deliverables, ongoing follow-up or user-requested tracking; skip simple questions, one-off lookups and trivial edits without lasting tracking value. Reuse one goal per user outcome. Reading does not require a write. Goals span turns; ekko_studio_update_plan manages execution steps for one run. Use only the latest context_id; the server binds the session. Unavailable to group chat, workflows, global agents, delegated and background tasks.',
+    inputSchema: inputSchema({
+      context_id: { type: 'string', description: 'Current turn context supplied by Studio.' },
+    }, ['context_id']),
+  },
+  {
+    name: 'ekko_studio_update_session_tasks',
+    toolset: 'plan',
+    description: 'Persist changed/new goals worth tracking: independent deliverables, ongoing follow-up or explicit user-requested tracking. Skip simple questions, one-off lookups and trivial edits without lasting tracking value. Keep one goal per user outcome: reuse its id for follow-ups, refinements, corrections, constraints and reopening. Create distinct goals before execution; save changed progress and verified completion before the final response. Use concise outcome titles and one or two short summary sentences about results and remaining blockers; keep implementation and test logs in the conversation, verification in completion_evidence. Omitted goals remain; unchanged ledgers need no write. Use the latest revision; reread on conflict. open includes blocked/interrupted work. Turn end or finished plan steps never proves goal completion. Independent of ekko_studio_update_plan; no page card. The server binds the session through the latest context_id.',
+    inputSchema: inputSchema({
+      context_id: { type: 'string', description: 'Current turn context supplied by Studio.' },
+      revision: { type: 'integer', minimum: 0 },
+      changes: { type: 'array', minItems: 1, maxItems: 30, items: {
+        type: 'object', additionalProperties: false, required: ['title', 'summary', 'status'], properties: {
+          id: { type: 'string', minLength: 1, maxLength: 100 },
+          title: { type: 'string', minLength: 1, maxLength: 200, description: 'Concise user outcome; reuse the existing goal for refinements and corrections.' },
+          summary: { type: 'string', minLength: 1, maxLength: 1000, description: 'One or two short sentences about results and remaining blockers. Keep implementation and test logs in the conversation.' },
+          status: { type: 'string', enum: ['open', 'completed'] },
+          completion_evidence: { type: 'string', maxLength: 1000, description: 'Required when newly completing a goal: concise evidence of verified delivery.' },
+        },
+      } },
+    }, ['context_id', 'revision', 'changes']),
   },
   {
     name: 'ekko_studio_use_chat_run',
@@ -1744,6 +1779,7 @@ function categoryToolByName(name) {
 function serverInstructions() {
   if (ACTIVE_TOOLSET === 'plan') return SHARED_TASK_PLAN_ENABLED
     ? 'Use ekko_studio_update_plan from ekko-studio-interaction to maintain the current Studio task card. Use only the context_id supplied with the latest input; expired contexts cannot update another turn.'
+      + ' At the beginning of each turn, use ekko_studio_list_session_tasks to review past user goals. Record only independent deliverables, ongoing follow-up or explicit user-requested tracking; skip simple questions, one-off lookups and trivial edits without lasting tracking value. Keep one goal per user outcome and reuse its id for refinements, corrections and constraints. Use ekko_studio_update_session_tasks only for changed/new goals, creating eligible goals before execution and saving results before the final response. Reading an unchanged ledger does not require a write. Keep summaries to one or two short sentences about results and remaining blockers; put implementation and test logs in the conversation. Session goals span turns and are distinct from per-turn plan steps; no page card is created. Completed goals require concise completion_evidence of verified delivery.'
       + (USER_CLARIFICATION_ENABLED ? ' Use ekko_studio_clarify from this same MCP server to ask a necessary question and wait for the user in Studio/App, using the latest interaction context_id. Never treat timeout, dismissal, or cancellation as approval.' : '')
     : ''
   if (ACTIVE_TOOLSET === 'api') {
@@ -1754,13 +1790,6 @@ function serverInstructions() {
 }
 
 function visibleTools() {
-  if (ACTIVE_TOOLSET === 'browser') {
-    try {
-      browserDescriptor()
-    } catch {
-      return []
-    }
-  }
   const categoryToolset = categoryToolsetDefinition(ACTIVE_TOOLSET)
   if (categoryToolset) return [categoryToolset]
   const visible = activeToolsetTools()
@@ -1805,6 +1834,10 @@ async function callCategoryToolset(args = {}, signal) {
 }
 
 async function callTool(name, args = {}, signal) {
+  return browserCallContext.run({ ...(browserCallContext.getStore() || {}), ...(args.profile ? { profile: args.profile } : {}), ...(args.token ? { token: args.token } : {}) }, () => callToolInner(name, args, signal))
+}
+
+async function callToolInner(name, args = {}, signal) {
   if (!isToolCallable(name)) {
     return errorText(`Tool is not available in the active '${ACTIVE_TOOLSET}' MCP toolset: ${name}`)
   }
@@ -1905,6 +1938,14 @@ async function callTool(name, args = {}, signal) {
     case 'ekko_studio_update_plan':
       return jsonText(await request('/api/studio/task-plans/update', withAuthArgs(args, {
         method: 'POST', body: pickDefined(args, ['context_id', 'explanation', 'plan']),
+      })))
+    case 'ekko_studio_list_session_tasks':
+      return jsonText(await request('/api/studio/session-tasks/list', withAuthArgs(args, {
+        method: 'POST', body: pickDefined(args, ['context_id']),
+      })))
+    case 'ekko_studio_update_session_tasks':
+      return jsonText(await request('/api/studio/session-tasks/update', withAuthArgs(args, {
+        method: 'POST', body: pickDefined(args, ['context_id', 'revision', 'changes']),
       })))
     case 'ekko_studio_use_chat_run':
       return jsonText(await request('/api/studio/chat-run/runs', withAuthArgs(args, {

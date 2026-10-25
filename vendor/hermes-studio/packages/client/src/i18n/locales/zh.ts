@@ -4,6 +4,28 @@ import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesZh } from '../social-messages'
 
 export default {
+  sessionTasks: {
+      "title": "任务",
+      "task": "任务",
+      "source": "来源会话",
+      "status": "状态",
+      "updated": "更新于",
+      "search": "搜索任务或会话",
+      "filterStatus": "筛选任务状态",
+      "all": "全部状态",
+      "open": "未完成",
+      "completed": "已完成",
+      "openChat": "打开会话",
+      "openTask": "在会话中查看：{title}",
+      "loading": "加载任务中",
+      "loadFailed": "任务加载失败",
+      "retry": "重试",
+      "noResults": "没有符合条件的任务",
+      "empty": "会话中记录的任务会显示在这里",
+      "untitled": "未命名会话",
+      "jumpUnavailable": "关联消息已不可用，已打开所属会话"
+  },
+
   remoteDevices: remoteDeviceMessages["zh"],
   modelApi: {
     "localRoute": "本地地址",
@@ -213,6 +235,7 @@ export default {
       "auth_failed": "TypeSafe 身份验证失败，请检查 API 密钥及其权限。",
       "rate_limited": "已达到 TypeSafe 请求频率限制，请稍后重试。",
       "provider_error": "TypeSafe 无法处理请求，请检查模型后重试。",
+      "endpoint_not_found": "JEV 接口不存在（HTTP 404），请检查接口地址是否包含网关所需的路径前缀。",
       "request_failed": "无法连接 JEV，请检查接口地址和网络连接。",
       "settings_failed": "无法读取或保存 JEV 配置，请检查 Studio 数据目录。",
       "forbidden": "你没有访问此配置档案的权限。",
@@ -386,6 +409,14 @@ export default {
   },
   socialMessages: socialMessagesZh,
   browser: {
+    remoteOwnerActive: '当前控制设备',
+    remoteOwnerStandby: '待命：另一设备正在使用，闲置10分钟后可接管',
+    remoteOwnerBusy: '待命：浏览器操作正在执行',
+    remoteOwnerConnecting: '正在连接',
+
+    remoteControl: '允许远程控制',
+    remoteControlStop: '停止远程控制',
+
     title: '浏览器', settings: '浏览器设置', desktopOnly: '内置浏览器仅在 Ekko Studio 桌面端可用。', newTab: '新标签页',
     back: '后退', forward: '前进', reload: '刷新', stop: '停止', addressPlaceholder: '搜索或输入网址',
     undoAnnotation: '撤销上一个', deleteAnnotation: '删除标注 {index}',
@@ -2683,6 +2714,8 @@ export default {
         deliveryId: 'Delivery ID',
       },
       events: {
+        taskCreated: "会话任务已创建",
+        taskCompleted: "会话任务已完成",
         runUpdated: '运行状态更新', planUpdated: '任务卡片进度更新', groupMessageCreated: '群聊消息已创建', messageCreated: '用户消息已创建',
         runQueued: '运行已排队',
         runStarted: '运行已开始',
@@ -2731,8 +2764,8 @@ export default {
         profiles: 'Profile',
         profilesPlaceholder: '留空接收所有 Profile',
         maxRetries: '首次失败后的重试次数（0–10）',
-        includeContent: '包含助手最终文本',
-        includeContentHint: '最终回复可能包含敏感信息。推理过程、系统提示词和工具参数永远不会发送。',
+        includeContent: "包含回复与任务内容",
+        includeContentHint: "回复和任务内容可能包含敏感信息，包括任务标题、摘要与完成依据。不会包含思考过程、系统提示词或工具参数。",
         includeUserContent: '包含用户消息文本',
         includeUserContentHint: '用户消息可能包含敏感信息，默认关闭。系统提示词、推理过程、工具参数和工具结果不会随此开关发送。',
         allowPrivateNetwork: '允许私网或本机地址',
@@ -3970,6 +4003,18 @@ export default {
 
   // 更新日志
   changelog: {
+    new_0_7_39_1: "新增跨轮次会话任务记录，Agent 可持续跟进用户目标并保存完成依据 (#3499)",
+    new_0_7_39_2: "新增会话任务抽屉，可跳转到关联对话；完善移动端列表、任务详情与会话名称，减少琐碎任务记录 (#3501、#3509、#3510)",
+    new_0_7_39_3: "远程 Studio 的 Agent 可在桌面端明确授权后使用本机内置浏览器，支持随时停止共享 (#3478)",
+    new_0_7_39_4: "账号主题快捷切换新增跟随系统模式；统一抽屉的顶部间距、主题背景与直角样式 (#3496、#3475)",
+    new_0_7_39_5: "群聊空状态展示全部 Agent，并适配不同窗口宽度 (#3471)",
+    new_0_7_39_6: "Ekko 默认推理强度调整为无，统一单聊、群聊和工作流中的 Agent 标签 (#3488)",
+    new_0_7_39_7: "修复停止后思考指示器不消失，以及工具结果截断时中文或表情损坏、请求失败的问题 (#3473、#3457、#3460)",
+    new_0_7_39_8: "服务商导入链接支持自动 API 模式；JEV 兼容带版本前缀及完整接口地址，并区分接口缺失与模型错误 (#3494、#3493、#3491)",
+    new_0_7_39_9: "桌面截图缺少录屏权限时可直接前往系统设置授权，避免阻塞式弹窗 (#3492)",
+    new_0_7_39_10: "修复 Windows ARM64 原生 Hermes 运行时构建中的依赖与终端兼容问题 (#3429)",
+    new_0_7_39_11: "停止提供 TerraMaster TOS 专用安装包与自动构建支持 (#3503)",
+    new_0_7_39_12: "会话任务新增创建与完成 Webhook 事件，支持分别订阅，并按内容开关控制任务标题、摘要和完成依据的发送 (#3512)",
     new_0_7_38_1: "新增自动 API 模式，可按已知连接和模型匹配协议，兼容带服务商前缀的模型名称；新建连接仍默认 Chat Completions (#3469)",
     new_0_7_38_2: "桌面端新增本机与远程设备切换和设备管理，替换旧的局域网配对入口 (#3464)",
     new_0_7_38_3: "模型 API 新增云端访问、密钥可用模型限制和累计美元预算，恢复 Agent 用量细分，并修复面板宽度 (#3440、#3450)",
@@ -3991,14 +4036,5 @@ export default {
     new_0_7_37_9: "清除 Claude OAuth 登录时同步移除各 Profile 管理的凭据，避免残留登录状态 (#3442)",
     new_0_7_37_10: "新增 Windows ARM64 桌面安装包构建支持 (#3428)",
     new_0_7_37_11: "修复 TOS 7 全新安装、入口路径和服务重启策略，减少对主机环境及预建用户的依赖 (#3413、#3431)",
-    new_0_7_36_1: '新增主题实时自定义，可按界面区域设置背景、透明度、模糊、圆角、边框和阴影 (#3394)',
-    new_0_7_36_2: '新增命名主题预设，支持创建、复制、切换、导入和导出，并按账号保存 (#3394)',
-    new_0_7_36_3: '统一模型可见性设置在模型选择器中的生效范围，并为大型模型目录增加性能提示 (#3392)',
-    new_0_7_36_4: '可见模型管理新增搜索功能 (#3393)',
-    new_0_7_36_5: '将新建聊天的分类选择移至输入框工具栏 (#3389)',
-    new_0_7_36_6: '修复小屏下工作流执行记录抽屉内容宽度不足和背景透明的问题 (#3398)',
-    new_0_7_36_7: '修复群聊 AI 消息主题同步，并消除消息气泡及表格中的重复背景和模糊 (#3398)',
-    new_0_7_36_8: '新增随版本发布自动构建和校验 TOS 7 x86_64 测试安装包的流程 (#3397)',
-    new_0_7_36_9: '完善 GIF、动态 WebP 和 APNG 背景支持，上限提升至 30 MB，保存、缓存及主题导入导出均保留动画',
   },
 }

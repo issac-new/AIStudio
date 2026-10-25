@@ -1502,14 +1502,15 @@ export class CodingAgentRunManager {
 
   private addUserMessage(run: ManagedCodingAgentRun, content: string) {
     const timestamp = nowSeconds()
-    run.state.messages.push({
+    const message = {
       id: run.state.messages.length + 1,
       session_id: run.launch.sessionId,
       runMarker: run.runMarker,
       role: 'user',
       content,
       timestamp,
-    })
+    }
+    run.state.messages.push(message)
     const id = addMessage({
       session_id: run.launch.sessionId,
       role: 'user',
@@ -1517,6 +1518,8 @@ export class CodingAgentRunManager {
       run_marker: run.runMarker ?? null,
       timestamp,
     })
+    // Task/search links use database IDs, including while this run stays live.
+    if (id != null) message.id = id
     logger.debug({ runId: run.id, sessionId: run.launch.sessionId, messageId: id }, '[coding-agent-run] recorded user message')
     return id
   }

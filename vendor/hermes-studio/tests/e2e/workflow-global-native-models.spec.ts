@@ -99,7 +99,7 @@ test('loading an old Global workflow discards ignored Model settings before savi
   await page.goto('/#/hermes/workflow')
   const node = page.locator('.vue-flow__node[data-id="agent"]')
   await expect(node.locator('.native-model-trigger')).toHaveText('Agent default model')
-  await expect(node.locator('.native-reasoning-effort')).toContainText('Default')
+  await expect(node.locator('.native-reasoning-effort')).toContainText('None')
   await page.locator('.header-actions').getByRole('button', { name: 'Save', exact: true }).click()
   const saves = () => api.requests.filter(request => request.method === 'PATCH' && request.pathname === '/api/studio/workflows/wf-legacy-global')
   await expect.poll(() => saves().length).toBe(1)
