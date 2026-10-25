@@ -17,6 +17,13 @@ function shellName(shell: string): string { return shell.split('/').pop() || 'sh
 
 // ─── Session types ──────────────────────────────────────────────
 
+// Hard cap on concurrently live PTY sessions across ALL connections.
+// macOS grants ~511 ptys system-wide; an unbounded server lets a buggy
+// client exhaust the pool for the whole OS (2026-08-28 incident: 252 leaked
+// PTYs starved posix_spawnp for every process on the machine).
+const MAX_CONCURRENT_SESSIONS = 100;
+const liveSessions = new Set<PtySession>();
+
 interface PtySession {
   id: string
   pty: { pid: number; onData: (cb: (data: string) => void) => void; onExit: (cb: (e: { exitCode: number }) => void) => void; write: (data: string) => void; kill: (signal?: string) => void; resize: (cols: number, rows: number) => void }
@@ -38,6 +45,11 @@ function generateId(): string {
 }
 
 function createSession(shell: string): PtySession {
+  if (liveSessions.size >= MAX_CONCURRENT_SESSIONS) {
+    throw new Error(
+      `Terminal session limit reached (${liveSessions.size}/${MAX_CONCURRENT_SESSIONS}). Close unused terminal tabs or restart the app.`,
+    )
+  }
   const id = generateId()
   let ptyProcess: PtySession['pty']
   try {
@@ -58,6 +70,7 @@ function createSession(shell: string): PtySession {
     pid: ptyProcess.pid,
     createdAt: Date.now(),
   }
+  liveSessions.add(session)
 
   return session
 }
@@ -66,6 +79,7 @@ function killPtySession(session: PtySession): void {
   try {
     killOwnedProcessTree(session.pid, () => session.pty.kill())
   } catch { }
+  liveSessions.delete(session)
 }
 
 // ─── WebSocket server setup ─────────────────────────────────────
@@ -149,6 +163,7 @@ export function setupTerminalWebSocket(httpServers: HttpServer | HttpServer[]) {
 
       session.pty.onExit(({ exitCode }: { exitCode: number }) => {
         conn.outputBuffers.delete(session.id)
+        liveSessions.delete(session)
         if (ws.readyState === ws.OPEN) {
           ws.send(JSON.stringify({ type: 'exited', id: session.id, exitCode }))
         }
