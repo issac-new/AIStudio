@@ -78,6 +78,7 @@ import ideStorageRoutes from '../custom/controllers/system/storage'
 import ideWorktreeRouter from '../custom/controllers/ide/worktree'
 import ideRetryCountRoutes from '../custom/controllers/ide/retry-counts'
 import ideSessionShareRouter from '../custom/controllers/ide/session-share'
+import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
 // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
 import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
 // overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
@@ -294,6 +295,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(ideWorktreeRouter.routes())               // IDE worktree 编排（R5 任务级隔离：create/remove/list + 会话绑定）
   app.use(ideRetryCountRoutes.routes())              // IDE 简报打回计数（aipaydev 缺口 3 可视化；与 patch 363 计数链同源）
   app.use(ideSessionShareRouter.routes())            // IDE 共享会话（R6：invite token 四档模式 + prompt 审批，multica 人机共驾）
+  app.use(zcodeEngineRoutes.routes())             // zcode 引擎健康面（R4-P1）
   app.use(loopRouter.routes())
   app.use(graphRouter.routes())
   // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），
