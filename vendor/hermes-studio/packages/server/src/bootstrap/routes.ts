@@ -73,6 +73,8 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
 import { petdexPublicRoutes, petdexRoutes } from '../modules/studio/routes/petdex'
 import { petRoutes } from '../modules/studio/routes/pets'
 import traceRoutes from '../custom/controllers/hermes/trace'
+// overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
+import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
 // overlay[loop-routes]: Loop Engineering REST API
 import { createLoopRouter } from '../custom/loop/controllers/loop'
 import { createGraphRouter } from '../custom/loop/controllers/graph'
@@ -210,6 +212,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(petdexRoutes.routes())
   app.use(petRoutes.routes())
   app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
+  app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
   app.use(loopRouter.routes())
   app.use(graphRouter.routes())
   initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
