@@ -252,6 +252,7 @@ defineExpose({ scrollToBottom })
 
 <template>
     <div class="group-message-list-shell">
+      <GatewayNoticeBanner :session-id="store.currentRoomId" :messages="store.sortedMessages" />
         <NDropdown trigger="manual" placement="bottom-start" :show="selectionMenu.show"
             :x="selectionMenu.x" :y="selectionMenu.y" :options="selectionMenuOptions"
             @select="selectFromMenu" @clickoutside="selectionMenu.show = false" @update:show="selectionMenu.show = $event" />
