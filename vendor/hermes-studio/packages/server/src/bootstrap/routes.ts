@@ -110,6 +110,8 @@ import { startKgAutoSync } from '../custom/kgtrigger/auto-sync'
 // overlay[harness]: 驾驭工程治理面（能力目录/六类成本账/成熟度自检/八原语对账）
 import { harnessRoutes } from '../custom/harness/harness-controller'
 import simRunRouter from '../custom/controllers/sim/run-progress'
+// overlay[eval]: Eval Studio 评测域（/api/hermes/eval/*：评测集/运行/人工仲裁/归因双 Loop）
+import { evalRoutes } from '../custom/eval/controller'
 // overlay[evidence]: 任务证据台账（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）
 import { evidenceRoutes } from '../custom/evidence/evidence-controller'
 // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
@@ -380,6 +382,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(kgEvolutionRoutes.routes())             // KG 演化治理：status/tick/arm/disarm/versions/rollback（A1/A4）
   app.use(harnessRoutes.routes())                // 驾驭工程：capability-catalog/cost-accounts/maturity/primitives
   app.use(simRunRouter.routes())                   // 推演运行态（后台感知③）：run-progress.json 只读
+  app.use(evalRoutes.routes())                     // Eval Studio：评测集/回放判分/pass@k 报告/归因双 Loop（spec 2026-10-07）
   app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
   app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
   app.use(columnAutomationRoutes.routes())        // 列编排：配置+COLUMN_TRANSITION 匹配（P0 §3.6）
