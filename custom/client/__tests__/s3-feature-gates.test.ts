@@ -14,7 +14,7 @@ function readOverlay(rel: string): string {
   return readFileSync(resolve(OVERLAY_ROOT, rel), 'utf8')
 }
 
-const UPSTREAM_CLIENT = resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/client/src')
+const UPSTREAM_CLIENT = resolve(OVERLAY_ROOT, 'vendor/hermes-studio/packages/client/src')
 
 describe('S3 功能开关默认关（B 档：构建可再开，组件与 API 全保留）', () => {
   it('六个 S3 开关默认全关 + ekko 默认开（2026-10-02 用户裁定开门：评估体系启用，VITE_CUSTOM_EKKO=false 可关）', () => {

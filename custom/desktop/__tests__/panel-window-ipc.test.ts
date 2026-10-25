@@ -7,9 +7,9 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
 // 自本文件 2 级到 overlay 根，ncwk 根再进 upstream/hermes-studio
-const DESKTOP_MAIN = '../../../../upstream/hermes-studio/packages/desktop/src/main/index.ts'
-const DESKTOP_PRELOAD = '../../../../upstream/hermes-studio/packages/desktop/src/preload/index.ts'
-const CLIENT_BRIDGE = '../../../../upstream/hermes-studio/packages/client/src/utils/desktop-bridge.ts'
+const DESKTOP_MAIN = '../../../vendor/hermes-studio/packages/desktop/src/main/index.ts'
+const DESKTOP_PRELOAD = '../../../vendor/hermes-studio/packages/desktop/src/preload/index.ts'
+const CLIENT_BRIDGE = '../../../vendor/hermes-studio/packages/client/src/utils/desktop-bridge.ts'
 
 function readUpstream(rel: string): string {
   return readFileSync(resolve(__dirname, rel), 'utf8')

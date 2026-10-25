@@ -80,7 +80,7 @@ describe('接线守门（patch 403）', () => {
     expect(src).toContain("router.post('/zcode'")
     const series = readFileSync(join(OVERLAY_ROOT, 'patches/series'), 'utf8')
     expect(series).toMatch(/^403-server-token-meter-routes\.patch$/m)
-    const routesPath = join(OVERLAY_ROOT, '../upstream/hermes-studio/packages/server/src/bootstrap/routes.ts')
+    const routesPath = join(OVERLAY_ROOT, '../../../../vendor/hermes-studio/packages/server/src/bootstrap/routes.ts')
     if (existsSync(routesPath)) {
       expect(readFileSync(routesPath, 'utf8')).toContain("import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'")
     }

@@ -10,7 +10,7 @@ import { execSync } from 'node:child_process'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 const PATCH_DIR = resolve(OVERLAY_ROOT, 'patches')
-const UPSTREAM = resolve(OVERLAY_ROOT, '../upstream/hermes-studio')
+const UPSTREAM = resolve(OVERLAY_ROOT, 'vendor/hermes-studio')
 
 const KEY_RE = /^\s*([A-Za-z0-9_$]+)\s*:/
 

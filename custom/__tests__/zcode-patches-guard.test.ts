@@ -8,7 +8,7 @@ import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 const OVERLAY_ROOT = resolve(__dirname, '../..')
-const ZCODE_ROOT = resolve(OVERLAY_ROOT, '..', 'upstream', 'zcode')
+const ZCODE_ROOT = resolve(OVERLAY_ROOT, 'vendor', 'zcode')
 
 function readOverlay(rel: string): string {
   return readFileSync(resolve(OVERLAY_ROOT, rel), 'utf8')

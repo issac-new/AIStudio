@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { AgentToolRegistry } from '../../../../../upstream/hermes-studio/packages/ekko-agent/src/tools/registry'
+import { AgentToolRegistry } from '../../../../vendor/hermes-studio/packages/ekko-agent/src/tools/registry'
 import { upsertLadder, _useLadderDirForTests, _resetLadderDirForTests } from '../../autonomyladder/autonomy-ladder'
 import { ekkoEnforceGateHook } from '../enforce-gate'
 

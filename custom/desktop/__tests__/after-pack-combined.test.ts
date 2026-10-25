@@ -16,10 +16,10 @@ import { createRequire } from 'module'
 
 const overlayRoot = resolve(__dirname, '..', '..', '..')
 const hookPath = resolve(
-  overlayRoot, '..', 'upstream', 'hermes-studio', 'packages', 'desktop', 'scripts', 'after-pack-combined.cjs',
+  overlayRoot, 'vendor', 'hermes-studio', 'packages', 'desktop', 'scripts', 'after-pack-combined.cjs',
 )
 const prebuildsDir = resolve(
-  overlayRoot, '..', 'upstream', 'hermes-studio', 'node_modules', 'node-pty', 'prebuilds',
+  overlayRoot, 'vendor', 'hermes-studio', 'node_modules', 'node-pty', 'prebuilds',
 )
 
 const requireHook = () => {

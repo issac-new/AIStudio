@@ -11,7 +11,7 @@ import { shouldMigratePathToHash, hashDeeplinkTarget } from '../../../registries
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 const UPSTREAM_MAIN = join(
   OVERLAY_ROOT,
-  '../upstream/hermes-studio/packages/client/src/main.ts',
+  'vendor/hermes-studio/packages/client/src/main.ts',
 )
 const PATCH_FILE = join(OVERLAY_ROOT, 'patches/368-client-path-deeplink-to-hash.patch')
 const SERIES = join(OVERLAY_ROOT, 'patches/series')

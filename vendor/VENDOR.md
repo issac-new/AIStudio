@@ -4,13 +4,20 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 
 | 树 | commit | 版本 | upstream remote | 提取方式 |
 |---|---|---|---|---|
-| hermes-studio | `04e5d9aa7` | v0.7.38 | https://github.com/EKKOLearnAI/hermes-studio.git | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
-| hermes-agent | `4d04303818` | v0.22.4 | https://github.com/NousResearch/hermes-agent.git | 同上 |
-| zcode | `3c5b2276` | v3.16.1 系列（见下） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
+| hermes-studio | `8f215f59d3a` | v0.7.39 | https://github.com/EKKOLearnAI/hermes-studio.git | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
+| hermes-agent | `bf0203a794a` | v0.22.5 | https://github.com/NousResearch/hermes-agent.git | 同上 |
+| zcode | `3c5b2276` | v3.16.1 系列（见下） | https://github.com/zai-org/zcode.git | 同上；按 origin/main 变更对账（不按 tag） |
+
+## 2026-10-25 升级轮
+
+- hermes-studio v0.7.38 → **v0.7.39**（24 提交 / 212 文件）；hermes-agent v0.22.4 → **v0.22.5**（261 提交 / 804 文件）。
+- zcode 按用户口径以 **origin/main** 对账：当前 main = `3c5b2276`，与基线零移动。
+- 补丁重放：397 个 studio/agent 补丁 + 7 个 zcode 补丁全量可贴，17 个冲突补丁已语义重定基（详见 `docs/superpowers/specs/2026-10-25-upgrade-studio-0739-agent-0225.md`）。
+- research 组件随 agent 基线升级：`skills/research`、`optional-skills/research` 在 v0.22.4→v0.22.5 零 diff；`team/skills/research` 部署副本保持一致（grounded-citations 本地补丁与 worldmonitor-intel 本地件保留）。
 
 ## zcode 基线差一提交说明（2026-10-24 实测记录）
 
-`zcode-patches/series` 头声明基线 `origin/main @ 0a1fc56 (v3.16.1, 2026-10-19)`；实际外置树 HEAD 为 `3c5b2276`（0a1fc56 之后又一个 `chore: sync ZCode source` 提交）。vendor 落库取 `3c5b2276`，依据：**7 条活跃补丁在 3c5b2276 pristine 快照上全量重放实测通过**（见 specs/2026-10-24-aistudio-single-repo-integration.md 验证门①）。series 头注释与台账此处的差一提交事实并存，后续升级轮统一对齐。
+`zcode-patches/series` 头声明基线 `origin/main @ 0a1fc56 (v3.16.1, 2026-10-19)`；实际外置树 HEAD 为 `3c5b2276`（0a1fc56 之后又一个 `chore: sync ZCode source` 提交）。2026-10-25 用户裁定：**zcode 以 origin/main 变更对账，不按版本 tag**；当前 origin/main = `3c5b2276`，与 vendor 基线一致，7 条活跃补丁在该 pristine 快照上全量重放通过。series 头注释保留历史声明，升级轮以 main 对账为准。
 
 ## 升级流程（vendor:sync）
 

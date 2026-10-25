@@ -10,8 +10,8 @@ import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 const OVERLAY_ROOT = resolve(__dirname, '../..')
-const UPSTREAM_SERVER = resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/server/src')
-const UPSTREAM_CLIENT = resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/client/src')
+const UPSTREAM_SERVER = resolve(OVERLAY_ROOT, 'vendor/hermes-studio/packages/server/src')
+const UPSTREAM_CLIENT = resolve(OVERLAY_ROOT, 'vendor/hermes-studio/packages/client/src')
 
 function readOverlay(rel: string): string {
   return readFileSync(resolve(OVERLAY_ROOT, rel), 'utf8')

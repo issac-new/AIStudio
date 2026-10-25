@@ -13,11 +13,15 @@
 import { existsSync, statSync, readdirSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
-// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/build.mjs 同一基建）——
-// worktree/沙箱布局下兄弟 upstream 不存在，显式指向隔离注入副本。
+// 上游根解析（AIStudio 单仓整合轮）：env ＞ 仓内 vendor/（存在即用）＞ 旧布局 ../upstream/。
+// 2026-10-25 升级轮实抓：仍固定回退 lab/upstream，单仓构建产物在 vendor/hermes-studio/dist
+// 却被判缺失，postbuild 假红。
+const overlayRoot = resolve(import.meta.dirname, '..');
 const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim())
-  : resolve(import.meta.dirname, '..', '..', 'upstream');
+  : existsSync(resolve(overlayRoot, 'vendor', 'hermes-studio'))
+    ? resolve(overlayRoot, 'vendor')
+    : resolve(overlayRoot, '..', 'upstream');
 const distClient = resolve(upstreamRoot, 'hermes-studio', 'dist', 'client');
 
 const fail = (msg) => {

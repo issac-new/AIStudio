@@ -5,7 +5,7 @@
 // GUI 前探测并带 --no-sandbox 重启一次。此处只测决策表,probe 的 /proc 读取
 // 在 macOS 测试机上仅验证"不抛异常"。
 import { describe, it, expect, afterEach } from 'vitest'
-import { shouldRelaunchWithoutSandbox, probeLinuxSandbox } from '../../../../upstream/hermes-studio/packages/desktop/src/main/linux-sandbox'
+import { shouldRelaunchWithoutSandbox, probeLinuxSandbox } from '../../../vendor/hermes-studio/packages/desktop/src/main/linux-sandbox'
 
 const originalPlatform = process.platform
 function stubPlatform(platform: NodeJS.Platform) {

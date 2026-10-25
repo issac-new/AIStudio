@@ -12,9 +12,9 @@ import { readdirSync, readFileSync, existsSync } from 'fs'
 import { join, resolve } from 'path'
 
 const CLIENT_ROOT = resolve(__dirname, '..')
-const NCWK_ROOT = resolve(__dirname, '../../../..')
+const NCWK_ROOT = resolve(__dirname, '../../..')
 const UPSTREAM_VARS = [
-  join(NCWK_ROOT, 'upstream/hermes-studio/packages/client/src/styles/variables.scss'),
+  join(NCWK_ROOT, 'vendor/hermes-studio/packages/client/src/styles/variables.scss'),
 ]
 
 /** 批 C 终态（2026-10-17 实测）。剩余项全部为「与 UI 主题解耦的固定常量」：

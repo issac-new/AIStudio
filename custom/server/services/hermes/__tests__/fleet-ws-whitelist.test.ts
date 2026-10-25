@@ -17,7 +17,7 @@ import { resolve } from 'path'
 // 再进 upstream/hermes-studio。
 const HTTP_TS = resolve(
   __dirname,
-  '../../../../../../upstream/hermes-studio/packages/server/src/bootstrap/http.ts',
+  '../../../../../vendor/hermes-studio/packages/server/src/bootstrap/http.ts',
 )
 
 describe('fleet/kanban-overview WS catch-all 白名单（patch 251 守门）', () => {

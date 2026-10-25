@@ -2,13 +2,16 @@
 // overlay/scripts/check-bundle-budget.mjs
 // 打包预算：生产构建（inlineDynamicImports 单 chunk）总 JS 体积不得超过阈值。
 // 用法：npm run build:full && npm run check:bundle
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const overlayRoot = resolve(here, '..')
-const dist = resolve(overlayRoot, '..', 'upstream/hermes-studio/dist/client')
+// AIStudio 单仓：构建产物在仓内 vendor/；旧布局 ../upstream/ 保留兼容。
+const dist = existsSync(resolve(overlayRoot, 'vendor/hermes-studio/dist/client'))
+  ? resolve(overlayRoot, 'vendor/hermes-studio/dist/client')
+  : resolve(overlayRoot, '..', 'upstream/hermes-studio/dist/client')
 const budgetMb = Number(process.env.IDE_BUNDLE_BUDGET_MB || 25)
 
 try {

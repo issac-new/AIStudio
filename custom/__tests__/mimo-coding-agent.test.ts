@@ -12,7 +12,7 @@ const series = read('patches/series')
 const patch393 = read('patches/393-server-mimo-coding-agent.patch')
 // 394 客户端联合已并入注入态(ChatPanel 选项/api 联合/头像/svg),
 // 2026-09-28 P0 收敛:patch 文件保留 server 侧,客户端断言改读注入态树。
-const UPSTREAM_CLIENT = resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/client/src')
+const UPSTREAM_CLIENT = resolve(OVERLAY_ROOT, 'vendor/hermes-studio/packages/client/src')
 
 describe('MiMo-Code 编码 Agent 接入（patch 393/394）', () => {
   it('series 尾部依序登记 393/394（原 381/382，撞号重编）', () => {

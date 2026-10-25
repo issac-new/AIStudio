@@ -10,11 +10,10 @@ import {
   parseCaseContent, parseGateContent, parseIndexContent, parseStageContent,
 } from '../../../client/matrix-teams/delivery-protocol'
 
-// 构造器随分树轮（2026-10-03）移居 simharness 独立仓（ncwk 根下与 overlay 平级；
-// MX_SIMHARNESS_ROOT 可覆盖，与 simharness tests/run-gates.sh 的 MX_OVERLAY_ROOT 对称）。
-// 可移植 simharness 根解析：向上找 overlay 仓库根（patches/series 标记），再定位
-// 其真实上级（worktree 的 .git 文件指向主仓 .git——worktree 根的兄弟目录不是
-// simharness，须回到主仓根再取兄弟）；env 显式指定优先。
+// 构造器位于仓内 simharness/（AIStudio 单仓整合轮起与 overlay 同根）。
+// MX_SIMHARNESS_ROOT 可覆盖，与 simharness tests/run-gates.sh 的 MX_OVERLAY_ROOT 对称。
+// 可移植解析：向上找仓根（patches/series 标记），仓内直接取 simharness/；
+// worktree 检出经 .git 文件回到主仓根再取 simharness/；env 显式指定优先。
 function resolveSimharnessRoot(startDir: string): string {
   let cur = startDir
   for (let i = 0; i < 12; i++) {
@@ -24,18 +23,18 @@ function resolveSimharnessRoot(startDir: string): string {
         const m = /gitdir:\s*(.+)/.exec(readFileSync(gitFile, 'utf8').trim())
         if (m) {
           const mainRoot = dirname(dirname(resolve(m[1].trim())))
-          const viaMain = join(mainRoot, '..', 'simharness')
+          const viaMain = join(mainRoot, 'simharness')
           if (existsSync(viaMain)) return viaMain
         }
       }
-      const sibling = join(cur, '..', 'simharness')
-      if (existsSync(sibling)) return sibling
+      const inRepo = join(cur, 'simharness')
+      if (existsSync(inRepo)) return inRepo
     }
     const parent = dirname(cur)
     if (parent === cur) break
     cur = parent
   }
-  return join(startDir, '..', '..', '..', '..', '..', 'simharness')
+  return join(startDir, '..', '..', '..', '..', 'simharness')
 }
 const BUILDER = join(
   process.env.MX_SIMHARNESS_ROOT || resolveSimharnessRoot(__dirname),

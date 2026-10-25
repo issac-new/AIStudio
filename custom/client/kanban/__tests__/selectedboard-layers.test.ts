@@ -7,7 +7,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../../..')
-const UP = resolve(OVERLAY_ROOT, '../upstream/hermes-studio')
+const UP = resolve(OVERLAY_ROOT, 'vendor/hermes-studio')
 
 describe('patch 540：看板选板迁分层', () => {
   it('series 登记 + 纯净签名（6+/2-，零其它补丁行混入）', () => {

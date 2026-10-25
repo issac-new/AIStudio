@@ -8,7 +8,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../../..')
-const UP = resolve(OVERLAY_ROOT, '../upstream/hermes-studio')
+const UP = resolve(OVERLAY_ROOT, 'vendor/hermes-studio')
 function read(rel: string): string {
   return readFileSync(resolve(UP, rel), 'utf8')
 }

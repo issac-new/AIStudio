@@ -17,7 +17,7 @@ const { setSessionCua, setBrokerTransport } = await import('../policy')
 // 标记）按「旧引擎」跳过，不误报。
 const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? await import('node:path').then(m => m.resolve(process.env.OVERLAY_UPSTREAM_ROOT!.trim(), 'hermes-studio'))
-  : (await import('node:path')).resolve(import.meta.dirname, '../../../../../upstream/hermes-studio')
+  : (await import('node:path')).resolve(import.meta.dirname, '../../../../vendor/hermes-studio')
 let startZcodeChatTurn: ((d: { name: string }, run: any, input: string, sys: string, host: any, images?: any[]) => void) | null = null
 let patched = false
 try {

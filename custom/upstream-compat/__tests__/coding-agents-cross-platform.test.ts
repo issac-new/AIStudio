@@ -12,9 +12,9 @@ import { EventEmitter } from 'node:events'
 // 本文件放在 custom/upstream-compat(而非 custom/server):custom/server 会被
 // inject 符号链接进上游 server/src/custom,相对 import 在 tsc 的符号链接视角下
 // 解析错位;此目录只由 overlay vitest 加载,走真实路径。
-import { isolatedCodingAgentChildEnv } from '../../../../upstream/hermes-studio/packages/server/src/modules/coding-agents/services/runtime/child-env'
-import { pathEntries, scanPathForCommand } from '../../../../upstream/hermes-studio/packages/server/src/modules/coding-agents/services/runtime/command-path-scan'
-import { DshAcpTurn } from '../../../../upstream/hermes-studio/packages/server/src/modules/coding-agents/services/dsh/acp-turn'
+import { isolatedCodingAgentChildEnv } from '../../../vendor/hermes-studio/packages/server/src/modules/coding-agents/services/runtime/child-env'
+import { pathEntries, scanPathForCommand } from '../../../vendor/hermes-studio/packages/server/src/modules/coding-agents/services/runtime/command-path-scan'
+import { DshAcpTurn } from '../../../vendor/hermes-studio/packages/server/src/modules/coding-agents/services/dsh/acp-turn'
 
 const originalPlatform = process.platform
 function stubPlatform(platform: NodeJS.Platform) {

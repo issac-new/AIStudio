@@ -10,7 +10,7 @@ import { resolve } from 'path'
 
 const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'zcode')
-  : resolve(__dirname, '../../../../../upstream/zcode')
+  : resolve(__dirname, '../../../../vendor/zcode')
 const backendUrl = pathToFileURL(resolve(upstreamRoot, 'packages/zcode-cua/node-backend.js')).href
 
 async function loadBackend() {

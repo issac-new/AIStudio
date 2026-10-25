@@ -192,7 +192,7 @@ describe('P2 接线守门（runtime/controller/patch）', () => {
   it('patch 398 登记且注入态 http.ts 含注册（/zcode 命名空间与 loop-socket 同款锚）', () => {
     const series = readFileSync(resolve(OVERLAY_ROOT, 'patches/series'), 'utf8')
     expect(series).toMatch(/^398-server-zcode-projection-socket\.patch$/m)
-    const httpPath = resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/server/src/bootstrap/http.ts')
+    const httpPath = resolve(OVERLAY_ROOT, 'vendor/hermes-studio/packages/server/src/bootstrap/http.ts')
     if (existsSync(httpPath)) {
       const http = readFileSync(httpPath, 'utf8')
       expect(http).toContain("import { setupZcodeProjectionSocket } from '../custom/zcode/projection-socket'")

@@ -13,7 +13,7 @@ import { join, resolve } from 'node:path'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 const CLIENT_ROOTS = [
-  resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/client/src'),
+  resolve(OVERLAY_ROOT, 'vendor/hermes-studio/packages/client/src'),
   resolve(OVERLAY_ROOT, 'custom/client'),
 ]
 

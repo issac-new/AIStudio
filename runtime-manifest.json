@@ -1,5 +1,5 @@
 {
-  "_comment": "B1 双树漂移根治：agent 运行时文件清单。source=upstream/hermes-agent（工作树镜像），dest=~/.hermes/hermes-agent（运行时安装树）。inject 出口经 deploy-agent-runtime 自动同步，杜绝'修复只在工作树、不达运行时'（room-invite-gap 真根因）。",
+  "_comment": "B1 双树漂移根治：agent 运行时文件清单。source=runtime/（overlay 镜像，2026-10-25 起按 vendor/hermes-agent 注入态三方合并刷新），dest=~/.hermes/hermes-agent（运行时安装树）。inject 出口经 deploy-agent-runtime 自动同步，杜绝'修复只在工作树、不达运行时'（room-invite-gap 真根因）。",
   "root": "overlay/runtime",
   "target": "~/.hermes/hermes-agent",
   "files": [

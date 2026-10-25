@@ -9,7 +9,7 @@ import { resolve } from 'path'
 import { SPECIALIST_PRESETS, getPreset } from '../specialist-presets'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../../..')
-const ROUTA = resolve(OVERLAY_ROOT, '../upstream/routa/resources/specialists')
+const ROUTA = resolve(OVERLAY_ROOT, 'upstream/routa/resources/specialists')
 
 describe('specialist 预置库（routa 九件套+review 三层）', () => {
   it('12 件全量（看板 9 + 评审 3），id 唯一', () => {

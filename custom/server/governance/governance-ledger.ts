@@ -141,6 +141,8 @@ export interface ContractsDoc {
 export function findUpstreamRoot(fromDir: string): string | null {
   let dir = resolve(fromDir)
   for (let i = 0; i <= 6; i++) {
+    // AIStudio 单仓：钉版基线在 vendor/；旧布局 ../upstream/ 保留兼容。
+    if (existsSync(resolve(dir, 'vendor', 'hermes-agent'))) return resolve(dir, 'vendor')
     if (existsSync(resolve(dir, 'upstream', 'hermes-agent'))) return resolve(dir, 'upstream')
     const parent = resolve(dir, '..')
     if (parent === dir) break
