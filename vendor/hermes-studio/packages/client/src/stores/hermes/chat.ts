@@ -49,6 +49,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
   if (agent === 'opencode') return 'opencode'
   if (agent === 'antigravity') return 'antigravity'
   if (agent === 'cursor') return 'cursor'
+  if (agent === 'zcode') return 'zcode'
   if (agent === 'claude') return 'claude-code'
   if (['ekko', 'ekko_agent', 'ekko-agent'].includes(agent || '')) return 'ekko-agent'
   return undefined
@@ -64,6 +65,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
   if (id === 'antigravity') return 'antigravity'
   if (id === 'cursor') return 'cursor'
   if (id === 'claude-code') return 'claude'
+  if (id === 'zcode') return 'zcode'
   if (id === 'ekko-agent') return 'ekko-agent'
   return undefined
 }
@@ -1409,6 +1411,11 @@ export const useChatStore = defineStore('chat', () => {
   const pendingForkCommands = ref<Set<string>>(new Set())
   /** Sessions that completed while the user was viewing another session. */
   const completedUnreadSessions = ref<Set<string>>(new Set())
+  // HERMES_CUSTOM[ChatUnread] BEGIN: real unread message tracking with count +
+  // preview/role/timestamp. Seeded by socket events for non-active sessions (requires the
+  // server-side auto-join of all user sessions — patch 088).
+  const unreadMessages = ref<Map<string, { count: number; lastPreview: string; lastRole: string; lastTs: number }>>(new Map())
+  // HERMES_CUSTOM[ChatUnread] END
   /** UI-only live streams for Hermes background subagents. Never sent into parent context. */
   const subagentStreams = ref<Map<string, SubagentStream>>(new Map())
   const storedSessionProfileFilter = getItemBestEffort(SESSION_PROFILE_FILTER_STORAGE_KEY)?.trim()
@@ -1567,6 +1574,8 @@ export const useChatStore = defineStore('chat', () => {
     sessions.value = []
     pendingRunUsage.clear()
     completedUnreadSessions.value = new Set()
+    // HERMES_CUSTOM[ChatUnread]
+    unreadMessages.value = new Map()
     queueLengths.value = new Map()
     queuedUserMessages.value = new Map()
     queueInsertionStates.value = new Map()
@@ -1673,7 +1682,49 @@ export const useChatStore = defineStore('chat', () => {
   function pruneCompletedUnreadSessions(existingIds: Set<string>) {
     const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
     if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
+    // HERMES_CUSTOM[ChatUnread] BEGIN: prune unread map in lockstep
+    const unreadNext = new Map<string, { count: number; lastPreview: string; lastRole: string; lastTs: number }>()
+    for (const [id, info] of unreadMessages.value) {
+      if (existingIds.has(id)) unreadNext.set(id, info)
+    }
+    if (unreadNext.size !== unreadMessages.value.size) unreadMessages.value = unreadNext
+    // HERMES_CUSTOM[ChatUnread] END
   }
+
+  // HERMES_CUSTOM[ChatUnread] BEGIN: accumulate / query / clear real unread messages
+  function accumulateUnread(sessionId: string, preview: string, role: string, ts?: number) {
+    if (activeSessionId.value === sessionId) return
+    const trimmed = typeof preview === 'string' ? preview.replace(/\s+/g, ' ').trim().slice(0, 120) : ''
+    const existing = unreadMessages.value.get(sessionId)
+    const next = new Map(unreadMessages.value)
+    next.set(sessionId, {
+      count: (existing?.count ?? 0) + 1,
+      lastPreview: trimmed || existing?.lastPreview || '',
+      lastRole: role || existing?.lastRole || '',
+      lastTs: typeof ts === 'number' && Number.isFinite(ts) ? (ts < 1e12 ? ts * 1000 : ts) : Date.now(),
+    })
+    unreadMessages.value = next
+  }
+
+  function isSessionUnread(sessionId: string): boolean {
+    return unreadMessages.value.has(sessionId)
+  }
+
+  function getSessionUnreadCount(sessionId: string): number {
+    return unreadMessages.value.get(sessionId)?.count ?? 0
+  }
+
+  function getSessionUnreadInfo(sessionId: string): { count: number; lastPreview: string; lastRole: string; lastTs: number } | null {
+    return unreadMessages.value.get(sessionId) ?? null
+  }
+
+  function clearSessionUnread(sessionId: string) {
+    if (!unreadMessages.value.has(sessionId)) return
+    const next = new Map(unreadMessages.value)
+    next.delete(sessionId)
+    unreadMessages.value = next
+  }
+  // HERMES_CUSTOM[ChatUnread] END
 
   function clearActiveSession() {
     activeSelectionSequence++
@@ -2130,6 +2181,8 @@ export const useChatStore = defineStore('chat', () => {
     if (legacyActiveKey) removeItem(legacyActiveKey)
     activeSession.value = sessions.value.find(s => s.id === sessionId) || null
     clearSessionCompletedUnread(sessionId)
+    // HERMES_CUSTOM[ChatUnread]
+    clearSessionUnread(sessionId)
 
     if (!activeSession.value) return false
 
@@ -3233,6 +3286,7 @@ export const useChatStore = defineStore('chat', () => {
       runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
       queueId,
       runtime: raw.runtime === 'ekko'
+        || raw.runtime === 'zcode'
         || raw.runtime === 'claude-code'
         || raw.runtime === 'codex'
         || raw.runtime === 'pi'
@@ -3655,6 +3709,9 @@ export const useChatStore = defineStore('chat', () => {
     const codingAgentId = session.codingAgentId || agentToCodingAgentId(session.agent)
     if (codingAgentId === 'codex') {
       return { icon: '/coding-agents/codex-openai.png' }
+    }
+    if (codingAgentId === 'zcode') {
+      return { icon: '/coding-agents/zcode.svg' }
     }
     if (codingAgentId === 'claude-code') {
       return { icon: '/coding-agents/claude-code.svg' }
@@ -4306,6 +4363,8 @@ export const useChatStore = defineStore('chat', () => {
                   isStreaming: true,
                 })
                 activeAssistantMessageId = newId
+                // HERMES_CUSTOM[ChatUnread]: count each new agent reply (mirrors group-chat message counting)
+                accumulateUnread(sid, nextContent, 'assistant', Date.now())
               }
 
               break
@@ -4967,6 +5026,8 @@ export const useChatStore = defineStore('chat', () => {
               isStreaming: true,
             })
             activeAssistantMessageId = newId
+            // HERMES_CUSTOM[ChatUnread]: count each new agent reply (mirrors group-chat message counting)
+            accumulateUnread(sid, nextContent, 'assistant', Date.now())
           }
 
           break
@@ -5322,6 +5383,8 @@ export const useChatStore = defineStore('chat', () => {
 
   function handlePeerUserMessage(evt: RunEvent) {
     const sid = evt.session_id
+    // Note: peer user messages are NOT counted as unread — only agent (assistant)
+    // replies generate notifications (see accumulateUnread calls at run completion).
     if (evt.event === 'approval.requested') return setPendingApproval(evt)
     if (evt.event === 'approval.resolved') return clearPendingApproval(evt)
     if (evt.event === 'clarify.requested') return setPendingClarify(evt)
@@ -5675,6 +5738,13 @@ export const useChatStore = defineStore('chat', () => {
     runStartedAt,
     isSessionCompletedUnread,
     clearSessionCompletedUnread,
+    // HERMES_CUSTOM[ChatUnread]
+    unreadMessages,
+    accumulateUnread,
+    isSessionUnread,
+    getSessionUnreadCount,
+    getSessionUnreadInfo,
+    clearSessionUnread,
     sessionProfileFilter,
     setSessionProfileFilter,
     validateSessionProfileFilter,
