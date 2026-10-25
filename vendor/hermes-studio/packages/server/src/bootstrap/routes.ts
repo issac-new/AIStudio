@@ -96,6 +96,15 @@ import { HookManager } from '../custom/loop/engine/hooks'
 import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
 import { emitLoopEvent } from '../custom/loop/services/loop-socket'
 import { getGroupChatServer } from '../modules/studio/controllers/group-chat'
+// overlay[loop-graph-assembly]: P1 graph engine (GRAPH_ENGINE=legacy|shadow|on, 默认 legacy)
+import { createGraphAssembly } from '../custom/loop/graph/graph-assembly'
+import { createProductionVerifierDeps } from '../custom/loop/graph/verifier-bridge'
+import { makeInjectWorkspaceContext } from '../custom/loop/graph/workspace-context'
+// overlay[loop-graph-p2]: persistence 真实 kanban 写入（Task 4，替换 P1 stub adapter）
+import { KanbanPersistenceAdapter, defaultKanbanBoardResolver } from '../custom/loop/graph/kanban-persistence'
+import * as kanbanCli from '../modules/hermes/services/kanban/kanban-service'
+// overlay[loop-graph-r1]: 每日 Brief Matrix 投递传输——身份=本机最近一次应用内 Matrix 登录
+import { createMatrixBriefDelivery } from '../custom/loop/graph/brief-matrix-delivery'
 import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
 
 let loopStore: any = null
@@ -124,7 +133,51 @@ const loopEngine = new LoopEngine({
   },
 })
 const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
-const loopRouter = createLoopRouter(lazyStore, loopScheduler, loopWebhookConnector)
+const graphAssembly = createGraphAssembly({
+  io: () => {
+    try { const gcs = getGroupChatServer() as any; return gcs?.getIO?.() ?? null } catch { return null }
+  },
+  engineDeps: {
+    store: lazyStore,
+    dryRun: false,
+    // I8（终审）: 与 patch 134 同源 connector 装配——WebhookConnector 单例（webhook REST
+    // 入队 payload 经 discover 排空为契约）。GitHub/本地 Git 连接器需 repo/token 配置面，
+    // P1 未引入配置源，与 legacy 生产一致（仅 webhook 发现）。
+    connectors: [loopWebhookConnector],
+    worktreeManager: new WorktreeManager(),
+    dispatcher: new SubagentDispatcher(),
+    // I5（终审）: 人工审批门禁闭环——requestHumanApproval 返回 'pending'，validation
+    // 节点转 approval:<contractId>@<n> interrupt（run → awaiting-input），真人经
+    // POST /api/loop/contracts/:id/approve（下方 resumeApproval 桥）或
+    // POST /api/graph/runs/:id/resume 应答。judge 在 P1 无模型调用方，不注入（桥内 warn 一次）。
+    verifier: new Verifier(createProductionVerifierDeps()),
+    // P2 Task 4：产物落库为真实 kanban 写入（替换 P1 stub `artifact:<id>`）——按 loop.tenant
+    // 六段解析 board、title `[loop.name] contract.id` 查重幂等、CLI 失败收敛为
+    // loop.persist-failed 事件 + repair 队列守卫回边（失败不炸 run）。dryRun（shadow 双跑）
+    // 语义不变。kanbanCli 经 DI 注入（graph 模块自身零上游 import）。
+    persistence: new KanbanPersistenceAdapter({ kanban: kanbanCli, boardResolver: defaultKanbanBoardResolver }),
+    // I6（终审）: R2 workspace 上下文注入——handoff 派发前物化 GRAPH-CONTEXT.md 进
+    // worktree（并给 CLAUDE.md/AGENTS.md 追加引用行）；失败不阻断派发（handoff 节点兜底）
+    injectWorkspaceContext: makeInjectWorkspaceContext({ store: lazyStore }),
+    log: (m: string) => { console.log(`[graph] ${m}`) },
+  },
+  // R1 每日 Brief Matrix 投递接线：身份=本机最近一次应用内 Matrix 登录
+  //（~/.hermes-web-ui/matrix-session.json，patch 012 matrixLogin 成功路径落盘），
+  // 未登录过回退 LOOP_MATRIX_HOMESERVER/TOKEN/USER env；无凭据返回 undefined，
+  // 装配层 warn 一次并保持 event-log-only（delivered:false 审计）。房间仍由 LOOP_BRIEF_ROOM 配置。
+  briefDelivery: createMatrixBriefDelivery(),
+})
+// GRAPH_ENGINE=on：loop REST tick/webhook/schedule 分流到 RunSpawner；legacy/shadow 保持 patch 134 装配
+const loopRouter = createLoopRouter(
+  lazyStore,
+  graphAssembly.mode === 'on'
+    ? graphAssembly.loopTickTarget as unknown as typeof loopScheduler
+    : loopScheduler,
+  loopWebhookConnector,
+  { resumeApproval: (id, d, approver) => graphAssembly.resumeApproval(id, d, approver) },
+  // P4 T5：模板语义随实例化——createLoop payload.template(specId)经 specStore 取 meta
+  { getTemplate: async id => graphAssembly.specStore.get(id) ?? null },
+)
 const graphRouter = createGraphRouter(lazyStore)
 // overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
 // WS 挂载由 bootstrap/http.ts 的 setupCommandPostWebSockets 完成（此处先建
@@ -233,5 +286,12 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
   app.use(loopRouter.routes())
   app.use(graphRouter.routes())
+  // C1（终审）: 图引擎一等 REST（/api/graph/runs CRUD/resume/fork/replay + /api/graph/specs），
+  // 此前只建未挂载 → 生产 404
+  app.use(graphAssembly.router.routes())
+  // C2（终审）: 启动 spawner/shadow 轮询 + 崩溃恢复重建（幂等）。bootstrap 无外部可注册的
+  // 优雅停机步骤（http.ts additionalShutdownSteps 模块私有），进程退出即停（interval 不跨
+  // 进程）；graphAssembly.stop() 预留给后续停机钩子接线。
+  graphAssembly.start().catch(e => console.error('[graph] assembly start failed:', e))
   initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
 }
