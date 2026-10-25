@@ -100,6 +100,7 @@
     "eventsource": "^4.1.0",
     "js-tiktoken": "^1.0.21",
     "katex": "^0.17.0",
+    "matrix-js-sdk": "^41.8.0-rc.0",
     "node-edge-tts": "^1.2.11",
     "node-pty": "^1.1.0",
     "sharp": "^0.35.3",
