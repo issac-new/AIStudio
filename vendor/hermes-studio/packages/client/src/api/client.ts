@@ -293,7 +293,10 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     if (res.status === 403 && isLocalBff) {
       if (text.includes('User is disabled or does not exist')) {
         triggerAuthRecheck()
-      } else if (!path.startsWith('/api/agents/status') && !path.startsWith('/api/agents/availability')) {
+      } else if (!path.startsWith('/api/agents/status') && !path.startsWith('/api/agents/availability')
+        // overlay[models-403-fallback]: profile 授权缺失的模型目录查询 403=降级
+        // 信号（stores/hermes/models.ts 已回落无 profile 查询），不弹全局 toast。
+        && !path.startsWith('/api/hermes/available-models')) {
         // overlay[run13]: status/availability 为状态轮询端点，403 属降级信号而非异常
         // （matrix 登录账号无本地 agent 安装可见性，消费方均已 allSettled/try-catch
         // 降级）——静默降级，不弹全局「无权限」toast。run13 步18 帧采集实锤：

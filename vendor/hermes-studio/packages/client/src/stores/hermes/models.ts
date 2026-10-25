@@ -39,7 +39,17 @@ export const useModelsStore = defineStore('models', () => {
     if (!options.background) loading.value = true
     try {
       const profile = getModelsPageProfile() || useProfilesStore().activeProfileName || 'default'
-      const res = await systemApi.fetchAvailableModelsForProfile(profile)
+      let res
+      try {
+        res = await systemApi.fetchAvailableModelsForProfile(profile)
+      } catch (err) {
+        // overlay[models-403-fallback]（2026-10-23 五轮 C）: Matrix 登录账号常无
+        // 活跃 profile（如 orchestrator）的授权——resolveUserProfile 403 是「该
+        // 用户不可见此 profile」的降级信号而非异常：回落无 profile 查询（服务端
+        // 合并该用户可见 profiles），选择器不再全局弹「无权限」toast。
+        if ((err as { status?: number }).status !== 403) throw err
+        res = await systemApi.fetchAvailableModels()
+      }
       if (profile !== (getModelsPageProfile() || useProfilesStore().activeProfileName || 'default')) return
       // MoA is a virtual Hermes runtime provider used by chat model pickers,
       // not a credential-backed provider that belongs in model settings or
