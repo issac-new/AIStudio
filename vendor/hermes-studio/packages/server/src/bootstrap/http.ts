@@ -790,6 +790,9 @@ export async function bootstrap() {
       if (!dshPluginUi.handlesUpgrade(req) &&
         url.pathname !== '/api/hermes/terminal' &&
         url.pathname !== '/api/hermes/kanban/events' &&
+        // overlay[command-post]: 舰队/看板聚合 WS 须过 catch-all 白名单（上游仅列 terminal/kanban-events）
+        url.pathname !== '/api/hermes/fleet/events' &&
+        url.pathname !== '/api/hermes/kanban/overview/events' &&
         !url.pathname.startsWith('/socket.io/')) {
         socket.destroy()
       }
