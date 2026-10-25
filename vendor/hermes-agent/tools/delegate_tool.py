@@ -720,6 +720,8 @@ _DESCRIPTION_HEAD = (
     "succeeded.\n"
     "- Children cannot close tracked work: a child asked to close it returns findings instead; "
     "the parent applies the transition.\n"
+    "- The subagent's final summary is the entire handoff: nothing else from the child reaches you. It should "
+    "carry done (with file:line anchors), left (concrete next steps), and blocked (kimi coder 交接话术语义)."
 )
 _DESCRIPTION_TAIL = (
     "- Children inherit the parent model unless pinned via delegation.provider / delegation.model in config.yaml."
