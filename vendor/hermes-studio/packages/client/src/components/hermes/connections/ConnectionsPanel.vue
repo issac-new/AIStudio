@@ -7,6 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppConnectionsPanel from '@/components/hermes/connections/AppConnectionsPanel.vue'
 import McuDevicesPanel from '@/components/hermes/connections/McuDevicesPanel.vue'
 import RemoteDevicesPanel from '@/components/hermes/connections/RemoteDevicesPanel.vue'
+import { isStoredSuperAdmin } from '@/api/client'
 import { desktopBridge } from '@/utils/desktop-bridge'
 // overlay[s3]：App/MCU 两 tab 由 features.connectionsExtras 门控（模板引用须在此导入——缺失即整页渲染崩，2026-10-03 回归实锤）
 import { features } from '@/custom/features'
@@ -17,6 +18,7 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const hasRemoteDevices = desktopBridge()?.isDesktop === true && !!desktopBridge()?.remoteDevices
+const isSuperAdmin = isStoredSuperAdmin()
 
 function normalizeTab(value: unknown): ConnectionTab {
   if (value === 'remote' && hasRemoteDevices) return value
@@ -56,6 +58,7 @@ function updateTab(value: string | number) {
     </PageHeader>
 
     <NTabs
+      v-if="features.connectionsExtras || isSuperAdmin"
       :value="activeTab"
       class="connections-tabs"
       type="line"
@@ -73,6 +76,9 @@ function updateTab(value: string | number) {
         <RemoteDevicesPanel />
       </NTabPane>
     </NTabs>
+    <div v-else class="connections-empty">
+      <span>{{ t('common.noData') }}</span>
+    </div>
   </div>
 </template>
 
@@ -85,6 +91,15 @@ function updateTab(value: string | number) {
   display: flex;
   flex-direction: column;
   background: var(--theme-content-bg, $bg-main-surface);
+}
+
+.connections-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .connections-header-left {
