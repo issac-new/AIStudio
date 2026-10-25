@@ -33,9 +33,9 @@ import {
   type RemoteGroupAgentDescriptor,
 } from '@/api/studio/group-chat-agent-link'
 import {
-  fetchAgentStatusSnapshot,
+  fetchAgentAvailabilitySnapshot,
   isAgentStatusAvailable,
-  type AgentStatusSnapshot,
+  type AgentAvailabilitySnapshot,
 } from '@/api/agent-status'
 
 const { t } = useI18n()
@@ -44,7 +44,7 @@ const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const profileAgents = ref<RemoteGroupAgentDescriptor[]>([])
 const connections = ref<LocalGroupAgentConnection[]>([])
-const agentStatusSnapshot = ref<AgentStatusSnapshot | null>(null)
+const agentStatusSnapshot = ref<AgentAvailabilitySnapshot | null>(null)
 type GroupAgentType = RemoteGroupAgentDescriptor['agent']
 const selectedAgentType = ref<GroupAgentType>('hermes')
 const selectedProfile = ref('')
@@ -592,7 +592,7 @@ onMounted(async () => {
       listLocalGroupAgentConnections(),
       profilesStore.fetchProfiles(),
       appStore.loadModels(),
-      fetchAgentStatusSnapshot(),
+      fetchAgentAvailabilitySnapshot(),
     ])
     profileAgents.value = localAgents.agents
     connections.value = localConnections.connections

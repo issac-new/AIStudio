@@ -134,9 +134,9 @@ import type {
 } from '@/components/hermes/workflow/types'
 import type { AvailableModelGroup } from '@/api/hermes/system'
 import {
-  fetchAgentStatusSnapshot,
+  fetchAgentAvailabilitySnapshot,
   isAgentStatusAvailable,
-  type AgentStatusSnapshot,
+  type AgentAvailabilitySnapshot,
 } from '@/api/agent-status'
 
 import '@vue-flow/core/dist/style.css'
@@ -168,7 +168,7 @@ const workflowImportConfirmVisible = ref(false)
 const workflowImportPreview = ref<Awaited<ReturnType<typeof previewWorkflowImport>> | null>(null)
 const workflowImportProfile = ref('default')
 const workflowImportConfirming = ref(false)
-const agentStatusSnapshot = ref<AgentStatusSnapshot | null>(null)
+const agentStatusSnapshot = ref<AgentAvailabilitySnapshot | null>(null)
 const WORKFLOW_CHAT_PANEL_MIN_WIDTH = 360
 const WORKFLOW_CHAT_PANEL_DEFAULT_WIDTH = 560
 const WORKFLOW_CANVAS_MIN_WIDTH = 360
@@ -455,7 +455,7 @@ function workflowAgentDisplayName(agent: string): string {
 
 async function refreshAgentAvailability() {
   try {
-    agentStatusSnapshot.value = await fetchAgentStatusSnapshot()
+    agentStatusSnapshot.value = await fetchAgentAvailabilitySnapshot()
   } catch {
     agentStatusSnapshot.value = null
   }
