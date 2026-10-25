@@ -17,6 +17,13 @@ vi.mock('../../packages/server/src/modules/studio/controllers/auth', () => ({
   createManagedUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
   updateManagedUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
   deleteManagedUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+  matrixLogin: vi.fn(async (ctx: any) => { ctx.body = { token: 'x' } }),
+  listMatrixUsers: vi.fn(async (ctx: any) => { ctx.body = { users: [] } }),
+  createMatrixUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+  updateMatrixUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+  deleteMatrixUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+  deactivateMatrixUser: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
+  resetMatrixUserPassword: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
   listLockedIps: vi.fn(async (ctx: any) => { ctx.body = { locks: [] } }),
   unlockIpHandler: vi.fn(async (ctx: any) => { ctx.body = { ok: true } }),
 }))
