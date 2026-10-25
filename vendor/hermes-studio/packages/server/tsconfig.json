@@ -8,5 +8,6 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/custom/**/__tests__/**", "src/custom/**/*.test.ts"]
 }
