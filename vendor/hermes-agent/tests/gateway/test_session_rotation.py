@@ -148,3 +148,19 @@ def test_wiring_run_turn_calls_rotation():
     import gateway.run_turn as rt
     source = Path(rt.__file__).read_text(encoding="utf-8")
     assert "from gateway.session_rotation import maybe_rotate_session" in source
+
+
+def test_iter_cap_exit_triggers_rotation():
+    """611（run16 实证）：迭代上限出口=第四触发——回合在 max_iterations 耗尽处
+    结束（遥测记 turn_hit_iter_cap）即建议轮换；冷却窗照常适用。run16 21:18
+    fanfan G5 修订会话死于 60/60 上限、60 分钟无人接管的机制化根治。"""
+    import gateway.session_rotation as sr
+    d = sr.should_rotate({"turn_hit_iter_cap": True}, sr.DEFAULTS, {})
+    assert d.rotate is True and d.reason == "iteration-cap-exit"
+    # 三老判据不动：无标记+低水位+低调用数=不轮换
+    assert sr.should_rotate({"cum_api_calls": 10}, sr.DEFAULTS, {}).rotate is False
+    # 冷却窗内不重复触发
+    d2 = sr.should_rotate({"turn_hit_iter_cap": True}, sr.DEFAULTS,
+                          {"last_rotation_turn": 1})
+    # turns 缺省 0-1<=5 → 冷却内不轮换
+    assert d2.rotate is False
