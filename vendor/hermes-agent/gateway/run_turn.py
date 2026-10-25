@@ -320,6 +320,10 @@ class GatewayTurnMixin(GatewayTurnPrepareMixin, GatewayTurnHygieneMixin, Gateway
             )
             if agent_failed_early and not is_context_overflow_failure:
                 response = self._hmwa_add_failed_turn_notice(response, self._hmwa_failed_turn_notice(agent_result))
+            # Session telemetry sidecar (602): post-turn health snapshot for the studio
+            # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.
+            from gateway.session_telemetry import record_turn_telemetry
+            record_turn_telemetry(self, session_entry, agent_result, source)
             response, session_entry = await self._hmwa_compression_exhaustion_reset(
                 agent_result, response, session_entry, session_key, source,
             )
