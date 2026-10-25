@@ -232,7 +232,7 @@ function normalizeTitleLikeQuery(query: string): string {
 function shouldUseLiteralContentSearch(query: string): boolean {
   const trimmed = query.trim()
   if (!trimmed) return false
-  if (/[^\p{L}\p{N}\s"*.-]/u.test(trimmed)) return true
+  if (new RegExp('[^\\p{L}\\p{N}\\s"*.-]', 'u').test(trimmed)) return true
 
   const tokens = trimmed.match(/"[^"]*"\*?|\S+/g)
   if (!tokens) return true
@@ -246,17 +246,17 @@ function shouldUseLiteralContentSearch(query: string): boolean {
     if (raw.startsWith('"') && raw.endsWith('"')) {
       const inner = raw.slice(1, -1)
       if (!inner.trim()) return true
-      if (!/^[\p{L}\p{N}\s.-]+$/u.test(inner)) return true
-      if ((inner.includes('.') || inner.includes('-')) && !/^[\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)*(?:\s+[\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)*)*$/u.test(inner)) return true
+      if (!new RegExp('^[\\p{L}\\p{N}\\s.-]+$', 'u').test(inner)) return true
+      if ((inner.includes('.') || inner.includes('-')) && !new RegExp('^[\\p{L}\\p{N}]+(?:[.-][\\p{L}\\p{N}]+)*(?:\\s+[\\p{L}\\p{N}]+(?:[.-][\\p{L}\\p{N}]+)*)*$', 'u').test(inner)) return true
       continue
     }
 
     if (raw.includes('.') || raw.includes('-')) {
-      if (!/^[\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)*$/u.test(raw)) return true
+      if (!new RegExp('^[\\p{L}\\p{N}]+(?:[.-][\\p{L}\\p{N}]+)*$', 'u').test(raw)) return true
       continue
     }
 
-    if (!/^[\p{L}\p{N}]+$/u.test(raw)) return true
+    if (!new RegExp('^[\\p{L}\\p{N}]+$', 'u').test(raw)) return true
   }
 
   return false
@@ -312,6 +312,7 @@ function sanitizeFtsQuery(query: string): string {
   sanitized = sanitized.replace(/(^|\s)\*/g, '$1')
   sanitized = sanitized.trim().replace(/^(AND|OR|NOT)\b\s*/i, '')
   sanitized = sanitized.trim().replace(/\s+(AND|OR|NOT)\s*$/i, '')
+  // HERMES_CUSTOM[SecFtsRegex] 修正：原 new RegExp('\b...') 中 \b 是退格符非词边界（VULN-12 ReDoS/语义错误），改回字面量正则
   sanitized = sanitized.replace(/\b([\p{L}\p{N}]+(?:[.-][\p{L}\p{N}]+)+)\b/gu, '"$1"')
 
   for (let i = 0; i < quotedParts.length; i += 1) {
