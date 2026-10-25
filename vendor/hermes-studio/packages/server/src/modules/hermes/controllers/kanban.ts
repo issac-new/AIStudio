@@ -1,9 +1,10 @@
 import type { Context } from 'koa'
-import { readFile } from 'fs/promises'
+import { readFile, stat, copyFile } from 'fs/promises'
 import { join, resolve } from 'path'
 import * as kanbanCli from '../services/kanban/kanban-service'
 import { detectHermesRootHome, isRealPathWithin } from '../services/runtime/path'
-import { listProfileNamesFromDisk } from '../services/profiles/profile'
+import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../services/profiles/profile'
+import { safeFileStore } from '../../studio/public/safe-file-store'
 import {
   searchSessionSummariesWithProfile,
   getSessionDetailFromDbWithProfile,
@@ -459,6 +460,7 @@ export async function create(ctx: Context) {
   const assignee = optionalString(payload.assignee, 'assignee')
   const priority = optionalInteger(payload.priority, 'priority')
   const tenant = optionalString(payload.tenant, 'tenant')
+  const project = optionalString(payload.project, 'project')
   const workspace = optionalString(payload.workspace, 'workspace')
   const branch = optionalString(payload.branch, 'branch')
   const triage = optionalBoolean(payload.triage, 'triage')
@@ -467,7 +469,7 @@ export async function create(ctx: Context) {
   const maxRetries = optionalPositiveInteger(payload.maxRetries, 'maxRetries', 100)
   const goalMode = optionalBoolean(payload.goalMode, 'goalMode')
   const goalMaxTurns = optionalPositiveInteger(payload.goalMaxTurns, 'goalMaxTurns', 100)
-  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || workspace.error || branch.error || triage.error || skills.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error)) return
+  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || project.error || workspace.error || branch.error || triage.error || skills.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error)) return
   const targetAssignee = assignee.value || requestedProfile(ctx) || undefined
   if (targetAssignee && denyProfileAccess(ctx, targetAssignee)) return
   const board = requestBoard(ctx)
@@ -479,6 +481,7 @@ export async function create(ctx: Context) {
       assignee: targetAssignee,
       priority: priority.value,
       tenant: tenant.value,
+      project: project.value,
       workspace: workspace.value,
       branch: branch.value,
       triage: triage.value,
@@ -992,6 +995,327 @@ export async function searchSessions(ctx: Context) {
     const searchQuery = q || task_id
     const results = await searchSessionSummariesWithProfile(searchQuery, profile, undefined, 10)
     ctx.body = { results }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+// ─── Task lifecycle（overlay 补充：delete/patch/decompose）─────────
+
+export async function deleteTask(ctx: Context) {
+  try {
+    const taskId = ctx.params.id
+    const board = ctx.query.board as string | undefined
+    await kanbanCli.deleteTask(taskId, { board })
+    ctx.body = { ok: true }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function patchTask(ctx: Context) {
+  try {
+    const taskId = ctx.params.id
+    const board = ctx.query.board as string | undefined
+    const body = ctx.request.body as any
+    const task = await kanbanCli.patchTask(taskId, { ...body, board })
+    ctx.body = { task }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function decomposeTask(ctx: Context) {
+  try {
+    const taskId = ctx.params.id
+    const board = ctx.query.board as string | undefined
+    const body = (ctx.request.body as any) || {}
+    const result = await kanbanCli.decomposeTask(taskId, { board, author: body.author })
+    ctx.body = { result }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+// ─── Orchestration ──────────────────────────────────────────────
+
+import { readConfigYaml, writeConfigYaml } from '../services/profiles/config'
+
+export async function getOrchestration(ctx: Context) {
+  try {
+    const config = await readConfigYaml()
+    const kanban = config.kanban || {}
+    const explicitOrch = kanban.orchestrator_profile || null
+    const explicitDefault = kanban.default_assignee || null
+    const autoDecompose = kanban.auto_decompose !== false // default true
+    const autoPromoteChildren = kanban.auto_promote_children === true // default false
+
+    // Resolve fallbacks
+    const profiles = listProfileNamesFromDisk()
+    const activeProfile = config.profile?.default || 'default'
+    const resolvedOrch = explicitOrch || activeProfile
+    const resolvedDefault = explicitDefault || activeProfile
+
+    ctx.body = {
+      orchestrator_profile: explicitOrch,
+      default_assignee: explicitDefault,
+      auto_decompose: autoDecompose,
+      auto_promote_children: autoPromoteChildren,
+      resolved_orchestrator_profile: resolvedOrch,
+      resolved_default_assignee: resolvedDefault,
+      active_profile: activeProfile,
+      profiles,
+    }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function setOrchestration(ctx: Context) {
+  const bodyResult = requestBody(ctx)
+  if (rejectBadRequest(ctx, bodyResult.error)) return
+  const body = bodyResult.body
+  try {
+    const config = await readConfigYaml()
+    if (!config.kanban) config.kanban = {}
+    if ('orchestrator_profile' in body) config.kanban.orchestrator_profile = body.orchestrator_profile || null
+    if ('default_assignee' in body) config.kanban.default_assignee = body.default_assignee || null
+    if ('auto_decompose' in body) config.kanban.auto_decompose = !!body.auto_decompose
+    if ('auto_promote_children' in body) config.kanban.auto_promote_children = !!body.auto_promote_children
+    await writeConfigYaml(config)
+    await getOrchestration(ctx)
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+// ─── Attachments（CLI 模型：hermes kanban attach / attach-rm）────────
+//
+// v0.6.35 上游已把 listAttachments/readAttachment 切到 service 层 CLI 模型
+// （kanban.db 单一事实源）。此段补全 upload/remove 两个缺口：
+//   upload → multipart 文件落临时盘 → hermes kanban attach
+//   remove → hermes kanban attach-rm
+// 不再维护 .attachments.json 旁路 meta store。
+
+import { mkdir, writeFile, unlink } from 'fs/promises'
+import { join as pathJoin, basename } from 'path'
+import { tmpdir } from 'os'
+import { randomUUID } from 'crypto'
+import { execHermes } from '../services/runtime/process'
+
+const execOpts = { windowsHide: true }
+const BOARD_SLUG_RE_ATTACH = /^[a-z0-9][a-z0-9_-]{0,63}$/
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024 // 25 MB（对齐 agent KANBAN_ATTACHMENT_MAX_BYTES）
+
+function boardArgsFor(board?: string | null): string[] {
+  const trimmed = (board ?? 'default').trim().toLowerCase() || 'default'
+  if (!BOARD_SLUG_RE_ATTACH.test(trimmed)) throw new Error('Invalid kanban board slug')
+  return ['kanban', '--board', trimmed]
+}
+
+function safeAttachmentName(filename: string): string {
+  const name = basename(filename).trim()
+  if (!name || name.startsWith('.')) return 'unnamed'
+  // Windows 非法文件字符(: * ? " < > |)一并替换:NTFS 上 ":" 会变 ADS、
+  // 其余直接 EINVAL/EPERM,writeFile 500(2026-09-22 win-x64 排查 S10)。
+  return name.replace(/[\x00-\x1f\\/:*?"<>|]/g, '_').slice(0, 255)
+}
+
+interface AttachmentMeta {
+  id: number
+  filename: string
+  content_type: string | null
+  size: number
+  uploaded_by: string | null
+  stored_path: string
+  created_at: number
+}
+
+async function runKanbanAttach(
+  taskId: string,
+  filePath: string,
+  opts: { board?: string; name?: string; contentType?: string; author?: string },
+): Promise<void> {
+  const args = [...boardArgsFor(opts.board), 'attach', taskId, filePath]
+  if (opts.name) args.push('--name', opts.name)
+  if (opts.contentType) args.push('--content-type', opts.contentType)
+  if (opts.author) args.push('--author', opts.author)
+  await execHermes(args, { maxBuffer: 10 * 1024 * 1024, ...execOpts })
+}
+
+async function runKanbanAttachRm(attachmentId: number, board?: string): Promise<void> {
+  const args = [...boardArgsFor(board), 'attach-rm', String(attachmentId)]
+  await execHermes(args, { maxBuffer: 10 * 1024 * 1024, ...execOpts })
+}
+
+async function findAttachmentById(taskId: string, attachmentId: number, board?: string): Promise<AttachmentMeta | null> {
+  const list = await kanbanCli.listAttachments(taskId, { board })
+  return (list as any[]).find(a => Number(a?.id) === attachmentId) ?? null
+}
+
+export async function uploadAttachment(ctx: Context) {
+  const taskId = ctx.params.id
+  const board = ctx.query.board as string | undefined
+
+  try {
+    const contentType = ctx.get('content-type') || ''
+    if (!contentType.startsWith('multipart/form-data')) {
+      ctx.status = 400
+      ctx.body = { error: 'Expected multipart/form-data' }
+      return
+    }
+
+    const { parseMultipartBoundary, parseMultipartFilename, splitMultipart } = await import('../../studio/public/multipart')
+    const boundaryBuf = parseMultipartBoundary(contentType)
+    if (!boundaryBuf) {
+      ctx.status = 400
+      ctx.body = { error: 'Missing boundary' }
+      return
+    }
+
+    const chunks: Buffer[] = []
+    let totalSize = 0
+    for await (const chunk of (ctx as any).req) {
+      totalSize += chunk.length
+      if (totalSize > MAX_ATTACHMENT_BYTES) {
+        ctx.status = 413
+        ctx.body = { error: `Attachment too large (max ${MAX_ATTACHMENT_BYTES} bytes)` }
+        return
+      }
+      chunks.push(chunk)
+    }
+    const raw = Buffer.concat(chunks)
+    const parts = splitMultipart(raw, boundaryBuf)
+
+    let uploadedFile: { filename: string; data: Buffer; size: number } | null = null
+    for (const part of parts) {
+      const headerEnd = part.indexOf(Buffer.from('\r\n\r\n'))
+      if (headerEnd === -1) continue
+      const headerBuf = part.subarray(0, headerEnd)
+      const header = headerBuf.toString('utf-8')
+      const data = part.subarray(headerEnd + 4, part.length - 2)
+      const filename = parseMultipartFilename(header)
+      if (!filename) continue
+      uploadedFile = { filename, data, size: data.length }
+      break
+    }
+
+    if (!uploadedFile) {
+      ctx.status = 400
+      ctx.body = { error: 'No file uploaded' }
+      return
+    }
+
+    const safeName = safeAttachmentName(uploadedFile.filename)
+    const tmpPath = pathJoin(tmpdir(), `hermes-kanban-attach-${randomUUID()}-${safeName}`)
+    await writeFile(tmpPath, uploadedFile.data)
+    try {
+      await runKanbanAttach(taskId, tmpPath, {
+        board,
+        name: safeName,
+        author: ctx.state.user?.username || 'dashboard',
+      })
+    } finally {
+      await unlink(tmpPath).catch(() => {})
+    }
+
+    // CLI attach 不写 HTTP 返回；回读附件列表取最新一条返回（按 id 最大）
+    const list = await kanbanCli.listAttachments(taskId, { board })
+    const record = (list as AttachmentMeta[]).reduce<AttachmentMeta | null>((a, b) => (a && a.id > b.id ? a : b), null)
+    ctx.body = { attachment: record ?? { id: 0, filename: safeName, content_type: null, size: uploadedFile.size, uploaded_by: ctx.state.user?.username || 'dashboard', stored_path: '', created_at: Math.floor(Date.now() / 1000) } }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function removeAttachment(ctx: Context) {
+  const attachmentId = Number(ctx.params.id)
+  const board = ctx.query.board as string | undefined
+  try {
+    await runKanbanAttachRm(attachmentId, board)
+    ctx.body = { ok: true }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+// ─── Home channel notification subscriptions ──────────────────────
+
+export async function homeChannels(ctx: Context) {
+  try {
+    const taskId = (ctx.query.task as string) || null
+    const board = ctx.query.board as string | undefined
+    const channels = await kanbanCli.getHomeChannels(taskId, { board })
+    ctx.body = { home_channels: channels }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function debugHomeChannels(ctx: Context) {
+  try {
+    const board = ctx.query.board as string | undefined
+    const channels = await kanbanCli.getHomeChannels(null, { board })
+    ctx.body = {
+      home_channels: channels,
+      active_profile: getActiveProfileName(),
+      profile_dir: getProfileDir(getActiveProfileName()),
+    }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function subscribeHome(ctx: Context) {
+  try {
+    const taskId = ctx.params.id
+    const platform = ctx.params.platform
+    const board = ctx.query.board as string | undefined
+    const channels = await kanbanCli.getHomeChannels(taskId, { board })
+    const home = channels.find(c => c.platform === platform)
+    if (!home) {
+      ctx.status = 404
+      ctx.body = { error: `No home channel for platform: ${platform}` }
+      return
+    }
+    await kanbanCli.subscribeHomeChannel(taskId, platform, home.chat_id, {
+      board,
+      threadId: home.thread_id || undefined,
+    })
+    ctx.body = { ok: true, task_id: taskId }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function unsubscribeHome(ctx: Context) {
+  try {
+    const taskId = ctx.params.id
+    const platform = ctx.params.platform
+    const board = ctx.query.board as string | undefined
+    const channels = await kanbanCli.getHomeChannels(taskId, { board })
+    const home = channels.find(c => c.platform === platform)
+    if (!home) {
+      ctx.status = 404
+      ctx.body = { error: `No home channel for platform: ${platform}` }
+      return
+    }
+    await kanbanCli.unsubscribeHomeChannel(taskId, platform, home.chat_id, {
+      board,
+      threadId: home.thread_id || undefined,
+    })
+    ctx.body = { ok: true, task_id: taskId }
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }
