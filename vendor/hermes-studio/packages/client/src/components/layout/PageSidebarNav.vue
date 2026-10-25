@@ -35,7 +35,7 @@ function openChat() {
 
 function openHistory() {
   if (props.active === 'history') return
-  void router.push({ name: 'hermes.history' })
+  void router.push('/app/history')
 }
 
 function openConnections() {
