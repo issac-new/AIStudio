@@ -18,8 +18,10 @@ export interface KanbanTask {
   workspace_kind: string
   workspace_path: string | null
   tenant: string | null
+  project_id: string | null
   result: string | null
   skills: string[] | null
+  latest_summary?: string | null
   goal_mode?: boolean
 }
 
@@ -149,13 +151,54 @@ export interface KanbanCapabilities {
   capabilities?: KanbanCapabilityStatus[]
 }
 
-export interface KanbanTaskLog {
+// KanbanAttachment 复用 v0.6.35 上游内置定义（id/filename/content_type/size/uploaded_by/created_at）
+
+export interface KanbanDiagnosticAction {
+  kind: string
+  label: string
+  suggested?: boolean
+  payload?: Record<string, unknown>
+}
+
+export interface KanbanDiagnosticItem {
+  kind: string
+  title: string
+  detail: string
+  severity: 'warning' | 'error' | 'critical'
+  count: number
+  last_seen_at: number
+  data: Record<string, unknown>
+  actions: KanbanDiagnosticAction[]
+}
+
+export interface KanbanDiagnostic {
   task_id: string
-  path: string | null
-  exists: boolean
-  size_bytes: number
-  content: string
-  truncated: boolean
+  task_title: string
+  task_status: string
+  task_assignee: string | null
+  diagnostics: KanbanDiagnosticItem[]
+}
+
+export interface KanbanOrchestrationProfile {
+  name: string
+  description: string
+}
+
+export interface KanbanOrchestration {
+  orchestrator_profile?: string
+  default_assignee?: string
+  auto_decompose: boolean
+  profiles: KanbanOrchestrationProfile[]
+}
+
+export interface KanbanOrchestrationPatch {
+  orchestrator_profile?: string
+  default_assignee?: string
+  auto_decompose?: boolean
+}
+
+export interface KanbanProfileDescriptionPatch {
+  description: string
 }
 
 export interface KanbanCreateRequest {
@@ -164,6 +207,7 @@ export interface KanbanCreateRequest {
   assignee?: string
   priority?: number
   tenant?: string
+  project?: string
   workspace?: string
   branch?: string
   triage?: boolean
@@ -192,6 +236,14 @@ export interface KanbanCommentCreateRequest {
 
 export interface KanbanTaskLogOptions extends KanbanBoardOptions {
   tail?: number
+}
+
+export interface KanbanTaskLog {
+  exists: boolean
+  content: string
+  size_bytes: number
+  truncated: boolean
+  path: string
 }
 
 export interface KanbanDiagnosticsOptions extends KanbanBoardOptions {
@@ -424,14 +476,6 @@ export async function getTaskLog(taskId: string, opts?: KanbanTaskLogOptions): P
   return request<KanbanTaskLog>(appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/log`, params))
 }
 
-export async function getDiagnostics(opts?: KanbanDiagnosticsOptions): Promise<unknown[]> {
-  const params = boardParams(opts?.board)
-  if (opts?.task) params.set('task', opts.task)
-  if (opts?.severity) params.set('severity', opts.severity)
-  const res = await request<{ diagnostics: unknown[] }>(appendQuery('/api/hermes/kanban/diagnostics', params))
-  return res.diagnostics
-}
-
 export async function reclaimTask(taskId: string, opts?: KanbanReclaimOptions): Promise<{ ok: boolean; output?: string }> {
   return request<{ ok: boolean; output?: string }>(appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/reclaim`, boardParams(opts?.board)), {
     method: 'POST',
@@ -471,4 +515,176 @@ export async function getStats(opts?: KanbanBoardOptions): Promise<KanbanStats> 
 export async function getAssignees(opts?: KanbanBoardOptions): Promise<KanbanAssignee[]> {
   const res = await request<{ assignees: KanbanAssignee[] }>(appendQuery('/api/hermes/kanban/assignees', boardParams(opts?.board)))
   return res.assignees
+}
+
+export async function deleteTask(taskId: string, opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}`, boardParams(opts?.board)), {
+    method: 'DELETE',
+  })
+}
+
+export interface KanbanTaskPatch {
+  status?: KanbanTaskStatus
+  assignee?: string | null
+  priority?: number
+  title?: string
+  body?: string
+  result?: string
+  block_reason?: string
+  summary?: string
+}
+
+export async function patchTask(taskId: string, patch: KanbanTaskPatch, opts?: KanbanBoardOptions): Promise<KanbanTask> {
+  const res = await request<{ task: KanbanTask }>(appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}`, boardParams(opts?.board)), {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  })
+  return res.task
+}
+
+export async function decomposeTask(taskId: string, opts?: KanbanBoardOptions & { author?: string }): Promise<unknown> {
+  const res = await request<{ result: unknown }>(appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/decompose`, boardParams(opts?.board)), {
+    method: 'POST',
+    body: JSON.stringify({ author: opts?.author }),
+  })
+  return res.result
+}
+
+// ─── Attachments ───────────────────────────────────────────────
+
+export async function uploadAttachment(
+  taskId: string,
+  file: File,
+  opts?: KanbanBoardOptions & { uploadedBy?: string },
+): Promise<KanbanAttachment> {
+  const params = boardParams(opts?.board)
+  if (opts?.uploadedBy) params.set('uploaded_by', opts.uploadedBy)
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await request<{ attachment: KanbanAttachment }>(
+    appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/attachments`, params),
+    {
+      method: 'POST',
+      body: formData,
+    },
+  )
+  return res.attachment
+}
+
+export async function downloadAttachment(attachmentId: number, opts?: KanbanBoardOptions): Promise<Blob> {
+  const base = getBaseUrlValue()
+  const params = boardParams(opts?.board)
+  const url = `${base}${appendQuery(`/api/hermes/kanban/attachments/${attachmentId}`, params)}`
+  const headers: Record<string, string> = {}
+  const apiKey = getApiKey()
+  if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
+  const res = await fetch(url, { headers })
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`)
+  return res.blob()
+}
+
+export async function deleteAttachment(attachmentId: number, opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(
+    appendQuery(`/api/hermes/kanban/attachments/${attachmentId}`, boardParams(opts?.board)),
+    {
+      method: 'DELETE',
+    },
+  )
+}
+
+// ─── Diagnostics ───────────────────────────────────────────────
+
+export async function getDiagnostics(opts?: KanbanDiagnosticsOptions): Promise<KanbanDiagnostic[]> {
+  const params = boardParams(opts?.board)
+  if (opts?.task) params.set('task', opts.task)
+  if (opts?.severity) params.set('severity', opts.severity)
+  const res = await request<{ diagnostics: KanbanDiagnostic[]; count: number }>(
+    appendQuery('/api/hermes/kanban/diagnostics', params),
+  )
+  return res.diagnostics
+}
+
+// ─── Orchestration ─────────────────────────────────────────────
+
+export async function getOrchestration(opts?: KanbanBoardOptions): Promise<KanbanOrchestration> {
+  return request<KanbanOrchestration>(appendQuery('/api/hermes/kanban/orchestration', boardParams(opts?.board)))
+}
+
+export async function saveOrchestration(
+  patch: KanbanOrchestrationPatch,
+  opts?: KanbanBoardOptions,
+): Promise<KanbanOrchestration> {
+  return request<KanbanOrchestration>(appendQuery('/api/hermes/kanban/orchestration', boardParams(opts?.board)), {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  })
+}
+
+export async function saveProfileDescription(
+  name: string,
+  patch: KanbanProfileDescriptionPatch,
+  opts?: KanbanBoardOptions,
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(
+    appendQuery(`/api/hermes/kanban/profiles/${encodeURIComponent(name)}`, boardParams(opts?.board)),
+    {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    },
+  )
+}
+
+export async function autoGenerateProfileDescription(
+  name: string,
+  opts?: KanbanBoardOptions & { overwrite?: boolean },
+): Promise<{ ok: boolean; description?: string }> {
+  const params = boardParams(opts?.board)
+  if (opts?.overwrite) params.set('overwrite', 'true')
+  return request<{ ok: boolean; description?: string }>(
+    appendQuery(`/api/hermes/kanban/profiles/${encodeURIComponent(name)}/describe-auto`, params),
+    {
+      method: 'POST',
+    },
+  )
+}
+
+// ─── Home channel notification subscriptions ──────────────────────
+
+export interface HomeChannel {
+  platform: string
+  chat_id: string
+  thread_id: string
+  name: string
+  subscribed: boolean
+}
+
+export async function getHomeChannels(taskId: string | null, opts?: KanbanBoardOptions): Promise<HomeChannel[]> {
+  const params = boardParams(opts?.board)
+  if (taskId) params.set('task', taskId)
+  const res = await request<{ home_channels: HomeChannel[] }>(
+    appendQuery('/api/hermes/kanban/home-channels', params),
+  )
+  return res.home_channels
+}
+
+export async function subscribeHomeChannel(
+  taskId: string,
+  platform: string,
+  opts?: KanbanBoardOptions,
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(
+    appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/home-subscribe/${encodeURIComponent(platform)}`, boardParams(opts?.board)),
+    { method: 'POST' },
+  )
+}
+
+export async function unsubscribeHomeChannel(
+  taskId: string,
+  platform: string,
+  opts?: KanbanBoardOptions,
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(
+    appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/home-subscribe/${encodeURIComponent(platform)}`, boardParams(opts?.board)),
+    { method: 'DELETE' },
+  )
 }
