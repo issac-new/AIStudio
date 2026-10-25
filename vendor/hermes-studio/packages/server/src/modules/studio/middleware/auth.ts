@@ -25,7 +25,7 @@ export interface AuthenticatedUser {
   username: string
   role: UserRole
   profiles?: string[]
-  matrix_user_id?: string
+  matrix_user_id?: string | null
 }
 
 export interface RequestProfile {
