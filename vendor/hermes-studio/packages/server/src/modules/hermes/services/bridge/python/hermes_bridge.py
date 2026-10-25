@@ -264,7 +264,11 @@ class BridgeBroker(_broker.BridgeBroker):
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Hermes AIAgent in-process bridge")
     parser.add_argument("--endpoint", default=os.environ.get("HERMES_AGENT_BRIDGE_ENDPOINT", DEFAULT_ENDPOINT))
-    parser.add_argument("--agent-root", default=os.environ.get("HERMES_AGENT_ROOT", DEFAULT_AGENT_ROOT))
+    # overlay[bridge-agent-root-optional]: default to None when HERMES_AGENT_ROOT
+    # is unset, so the package-only fallback (import run_agent from site-packages)
+    # remains reachable. Previously DEFAULT_AGENT_ROOT was always used, causing
+    # _discover_agent_root() to fail before the import fallback could run.
+    parser.add_argument("--agent-root", default=os.environ.get("HERMES_AGENT_ROOT"))
     parser.add_argument("--hermes-home", default=os.environ.get("HERMES_HOME", DEFAULT_HERMES_HOME))
     parser.add_argument("--worker-profile", default=os.environ.get("HERMES_AGENT_BRIDGE_WORKER_PROFILE"))
     args = parser.parse_args(argv)
