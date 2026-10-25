@@ -231,6 +231,44 @@ function getContentFileUrl(file: DisplayContentFile): string {
 const toolExpanded = ref(false);
 const expandedWorkspaceChangeIds = ref(new Set<string>());
 const previewUrl = ref<string | null>(null);
+// 图片查看器图集态（zcode markdownImage 对齐）：本条消息的图片集合 + 点击位索引
+const previewImages = ref<string[]>([]);
+const previewStartIndex = ref(0);
+const previewName = ref("");
+// PDF 消息内预览（zcode chat.previewCards.pdf 对齐）
+const pdfPreviewUrl = ref<string | null>(null);
+const pdfPreviewName = ref("");
+
+function isPdf(name: string): boolean {
+  return /\.pdf$/i.test(name);
+}
+
+function openUserAttachmentGallery(att: { url?: string | null; name: string }) {
+  const images = (props.message.attachments || [])
+    .filter(item => isImage(item.type) && item.url)
+    .map(item => item.url as string);
+  const idx = images.indexOf(att.url || "");
+  previewImages.value = images;
+  previewStartIndex.value = images.length > 1 ? Math.max(0, idx) : 0;
+  previewUrl.value = att.url || null;
+  previewName.value = att.name || "";
+}
+
+function openContentImageGallery(file: DisplayContentFile) {
+  const all = contentFiles.value || [];
+  const images = all.filter(item => item.type === 'image').map(item => getContentFileUrl(item)).filter(Boolean);
+  const idx = images.indexOf(getContentFileUrl(file));
+  previewImages.value = images;
+  previewStartIndex.value = images.length > 1 ? Math.max(0, idx) : 0;
+  previewUrl.value = getContentFileUrl(file) || null;
+  previewName.value = file.name || "";
+}
+
+function openPdfPreview(url: string | null | undefined, name: string) {
+  if (!url) return;
+  pdfPreviewUrl.value = url;
+  pdfPreviewName.value = name;
+}
 const selectedToolChangeFileId = ref<number | null>(null);
 
 const chatStore = useChatStore();
@@ -1069,7 +1107,7 @@ onBeforeUnmount(() => {
                     :src="att.url"
                     :alt="att.name"
                     class="msg-attachment-thumb"
-                    @click="previewUrl = att.url"
+                    @click="openUserAttachmentGallery(att)"
                   />
                 </template>
                 <template v-else-if="message.role === 'user' && isVideo(att.type, att.name) && att.url">
@@ -1086,7 +1124,7 @@ onBeforeUnmount(() => {
                   </div>
                 </template>
                 <template v-else>
-                  <div class="msg-attachment-file" @click="handleAttachmentDownload(att)" style="cursor: pointer;" :title="t('download.downloadFile')">
+                  <div class="msg-attachment-file" @click="isPdf(att.name) && att.url ? openPdfPreview(att.url, att.name) : handleAttachmentDownload(att)" style="cursor: pointer;" :title="isPdf(att.name) && att.url ? t('chat.previewPdf') : t('download.downloadFile')">
                     <svg
                       width="16"
                       height="16"
@@ -1178,7 +1216,7 @@ onBeforeUnmount(() => {
                         :src="getContentFileUrl(file)"
                         :alt="file.name"
                         class="msg-attachment-thumb"
-                        @click="previewUrl = getContentFileUrl(file)"
+                        @click="openContentImageGallery(file)"
                       />
                     </template>
                     <template v-else-if="file.type === 'video'">
@@ -1196,9 +1234,9 @@ onBeforeUnmount(() => {
                     <template v-else>
                       <div
                         class="msg-attachment-file"
-                        @click="file.path && downloadFile(file.path, file.name).catch(err => toast.error(err.message || t('download.downloadFailed')))"
+                        @click="isPdf(file.name) ? openPdfPreview(getContentFileUrl(file), file.name) : (file.path && downloadFile(file.path, file.name).catch(err => toast.error(err.message || t('download.downloadFailed'))))"
                         style="cursor: pointer;"
-                        :title="t('download.downloadFile')"
+                        :title="isPdf(file.name) ? t('chat.previewPdf') : t('download.downloadFile')"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -1333,9 +1371,30 @@ onBeforeUnmount(() => {
   <ImagePreviewOverlay
     v-if="previewUrl"
     :src="previewUrl"
-    alt=""
+    :alt="previewName"
+    :download-name="previewName || undefined"
+    :images="previewImages.length ? previewImages : undefined"
+    :start-index="previewStartIndex"
     @close="previewUrl = null"
   />
+  <Teleport to="body">
+    <div
+      v-if="pdfPreviewUrl"
+      class="pdf-preview-overlay"
+      role="dialog"
+      aria-modal="true"
+      @click.self="pdfPreviewUrl = null"
+    >
+      <div class="pdf-preview-panel">
+        <div class="pdf-preview-head">
+          <span class="pdf-preview-name" :title="pdfPreviewName">{{ pdfPreviewName }}</span>
+          <a class="pdf-preview-open" :href="pdfPreviewUrl" target="_blank" rel="noopener">{{ t('chat.pdfOpenTab') }}</a>
+          <button type="button" class="pdf-preview-close" :aria-label="t('common.close')" @click="pdfPreviewUrl = null">✕</button>
+        </div>
+        <iframe class="pdf-preview-frame" :src="pdfPreviewUrl" :title="pdfPreviewName" />
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped lang="scss">
