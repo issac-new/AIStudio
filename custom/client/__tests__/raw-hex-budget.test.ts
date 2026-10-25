@@ -13,7 +13,13 @@ import { join, resolve } from 'path'
 
 const CLIENT_ROOT = resolve(__dirname, '..')
 const NCWK_ROOT = resolve(__dirname, '../../../..')
+// 定义源 vendor 注入态优先（2026-10-25 升级轮挂账修复）：--success/--bg-secondary 等
+// token 由补丁在 vendor 注入态 variables.scss 定义，pristine 研究缓存没有——读缓存会
+// 把补丁 token 误判幽灵（与 governance findUpstreamRoot 同款环境耦合，解析序对齐
+// vitest.config.ts：vendor > ../upstream）。
+const VENDOR_VARS = join(NCWK_ROOT, 'vendor/hermes-studio/packages/client/src/styles/variables.scss')
 const UPSTREAM_VARS = [
+  ...(existsSync(VENDOR_VARS) ? [VENDOR_VARS] : []),
   join(NCWK_ROOT, 'upstream/hermes-studio/packages/client/src/styles/variables.scss'),
 ]
 

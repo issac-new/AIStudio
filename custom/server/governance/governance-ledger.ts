@@ -137,10 +137,14 @@ export interface ContractsDoc {
   contracts: ActionContract[]
 }
 
-/** upstream 根向上寻（overlay 仓内/主树/worktree 三形态兼容；最多 6 层）。 */
+/** upstream 根向上寻（overlay 仓内/主树/worktree 三形态兼容；最多 6 层）。
+ * vendor 注入态优先（2026-10-25 升级轮挂账修复）：锚点验证对象=实际装载树
+ * （pristine upstream 缺 overlay 属主文件如 kanban_gates.py 曾致假红）；
+ * 与 vitest.config.ts / inject.mjs 解析序一致（env > vendor > ../upstream）。 */
 export function findUpstreamRoot(fromDir: string): string | null {
   let dir = resolve(fromDir)
   for (let i = 0; i <= 6; i++) {
+    if (existsSync(resolve(dir, 'vendor', 'hermes-agent'))) return resolve(dir, 'vendor')
     if (existsSync(resolve(dir, 'upstream', 'hermes-agent'))) return resolve(dir, 'upstream')
     const parent = resolve(dir, '..')
     if (parent === dir) break

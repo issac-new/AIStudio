@@ -227,6 +227,21 @@
       "source": "plugins/kanban/dashboard/plugin_api.py",
       "dest": "plugins/kanban/dashboard/plugin_api.py",
       "note": "看板 dashboard 插件 API（series 补丁改动）——升级轮补入"
+    },
+    {
+      "source": "hermes_cli/kanban_decompose.py",
+      "dest": "hermes_cli/kanban_decompose.py",
+      "note": "看板分解估算（估算负载轮）：runtime 覆盖层为权威版（含 _normalize_estimate 族），manifest 曾缺席致部署树缺特性"
+    },
+    {
+      "source": "plugins/studio-file-approval/__init__.py",
+      "dest": "plugins/studio-file-approval/__init__.py",
+      "note": "studio 文件审批插件主体，manifest 曾缺席"
+    },
+    {
+      "source": "hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py",
+      "dest": "hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py",
+      "note": "coding-delegate zcode ACP 脚本，manifest 曾缺席（部署侧目录需存在）"
     }
   ],
   "notes": [
