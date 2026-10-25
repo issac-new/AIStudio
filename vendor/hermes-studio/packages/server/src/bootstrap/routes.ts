@@ -92,6 +92,7 @@ import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
 import { approvalRoutes } from '../custom/approval/approval-controller'
 // overlay[approvals]: P1 人工审批收件箱——待审聚合/就地裁决/决策历史（2026-09-28 产品 UI 缺陷修复 §二）
 import { approvalsRoutes } from '../custom/approvals/pending-controller'
+import { changeGovRoutes } from '../custom/governance/change-governance-controller'
 import { governanceRoutes } from '../custom/governance/governance-controller'
 // overlay[tokens]: token-meter 三投影互校（第一批吸收 #9）
 import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'
@@ -339,6 +340,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(zcodeEngineRoutes.routes())             // zcode 引擎健康面（R4-P1）
   app.use(approvalRoutes.routes())                // 审批域：candidates/evaluate/decide/rules（R5 #4）
   app.use(approvalsRoutes.routes())               // 审批收件箱：pending 聚合/decide 就地裁决/history 决策历史（P1 §二）
+  app.use(changeGovRoutes.routes())               // 变更治理：L1-L4 分级评审/决策时效/五维影响/冻结窗口/管控基准（调研落地 2026-09-29）
   app.use(governanceRoutes.routes())              // 治理中心：六闸工件 overview + doc markdown（补功能主清单 2026-09-28）
   app.use(tokenMeterRoutes.routes())              // token-meter：project 三投影/zcode 互校（R5 #9）
   app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
