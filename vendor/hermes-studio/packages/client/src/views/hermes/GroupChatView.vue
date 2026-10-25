@@ -44,7 +44,11 @@ async function syncRouteRoom() {
     if (!roomId) {
         if (!store.currentRoomId && store.rooms.length > 0) {
             const firstRoomId = store.rooms[0].id
-            await router.replace({ name: 'hermes.groupChatRoom', params: { roomId: firstRoomId } })
+            // overlay[665]: 工作台嵌入态只 join，不改父路由——否则 /app/collab 被
+            // hermes.groupChatRoom 覆盖，整页跳出 IaShell（2026-10-19 全页走查实证）。
+            if (!isStandaloneEmbed.value) {
+                await router.replace({ name: 'hermes.groupChatRoom', params: { roomId: firstRoomId } })
+            }
             if (!disposed && routeRoomId.value === firstRoomId && store.currentRoomId !== firstRoomId) await store.joinRoom(firstRoomId)
         }
         return
