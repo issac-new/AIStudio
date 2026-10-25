@@ -75,6 +75,12 @@ import { petRoutes } from '../modules/studio/routes/pets'
 import traceRoutes from '../custom/controllers/hermes/trace'
 // overlay[terminal-tools]: Cockpit 终端编码工具可用性探测
 import terminalToolsRoutes from '../custom/controllers/hermes/terminal-tools'
+// overlay[command-post]: 2.13 指挥中心 —— 舰队/看板聚合/团队 REST
+import { initCommandPost } from '../custom/services/hermes/command-post'
+import { getSession as getSessionRowForCommandPost } from '../modules/studio/repositories/session-store'
+import { userCanAccessProfile as userCanAccessProfileForCommandPost } from '../modules/studio/repositories/users-store'
+import * as kanbanCliForCommandPost from '../modules/hermes/services/kanban/kanban-service'
+import { killOwnedProcessTree as killOwnedProcessTreeForCommandPost } from '../modules/studio/public/process-tree'
 // overlay[loop-routes]: Loop Engineering REST API
 import { createLoopRouter } from '../custom/loop/controllers/loop'
 import { createGraphRouter } from '../custom/loop/controllers/graph'
@@ -120,6 +126,17 @@ const loopEngine = new LoopEngine({
 const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
 const loopRouter = createLoopRouter(lazyStore, loopScheduler, loopWebhookConnector)
 const graphRouter = createGraphRouter(lazyStore)
+// overlay[command-post]: 指挥中心单例（舰队 REST + 看板聚合 + 团队注册表）。
+// WS 挂载由 bootstrap/http.ts 的 setupCommandPostWebSockets 完成（此处先建
+// 单例，保证 http.ts 取得到）。
+const commandPost = initCommandPost({
+  listBoards: kanbanCliForCommandPost.listBoards,
+  listTasks: kanbanCliForCommandPost.listTasks,
+  watchEvents: kanbanCliForCommandPost.watchEvents,
+  killWatch: (pid, fallbackKill) => killOwnedProcessTreeForCommandPost(pid, fallbackKill),
+  getSession: getSessionRowForCommandPost,
+  userCanAccessProfile: userCanAccessProfileForCommandPost,
+})
 async function initLoopSubsystem(): Promise<void> {
   if (loopStore) return
   const { store, adapterType, detectedFrom } = await createStateStore()
@@ -196,6 +213,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(jobRoutes.routes())
   app.use(cronHistoryRoutes.routes())
   app.use(kanbanDashboardUrlRoutes.routes())
+  app.use(commandPost.fleetRouter.routes())      // overlay[command-post]: 舰队/看板聚合/团队（须先于 kanbanRoutes 挂载：/api/hermes/kanban/overview 否则被上游 /api/hermes/kanban/:id 抢答 404，聚合端点失效触发客户端 N+1 风暴）
   app.use(kanbanRoutes.routes())
   app.use(workflowRoutes.routes())
   app.use(ttsProtectedRoutes.routes())
