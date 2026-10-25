@@ -123,6 +123,11 @@ class DispatchResult:
     on multi-lane setups, NOT operator-actionable; tracked apart so health
     telemetry can tell "stuck" from "correctly idle"."""
     skipped_per_profile_capped: list[tuple[str, str, int]] = field(default_factory=list)
+    skipped_board_capped: list[tuple[str, int, int]] = field(default_factory=list)
+    """``(task_id, current_board_running, board_cap)`` deferred because the
+    board is at ``kanban.board_concurrency`` (routa KanbanSessionQueue 语义：
+    每 board 会话并发闸默认 1，超限排队等下轮 tick/生命周期 drain——
+    矩阵 §3.5 routa 行 P1)。"""
     """``(task_id, assignee, current_running_count)`` deferred because the
     assignee is at ``kanban.max_in_progress_per_profile``. Picked up on a later
     tick; separate bucket so dashboards show "profile busy" vs "stuck"."""
@@ -2144,6 +2149,8 @@ def _dispatch_lane_task(
     spawn_fn,
     per_profile_cap: Optional[int],
     per_profile_running: dict[str, int],
+    board_cap: Optional[int] = None,
+    board_running: dict[str, int] | None = None,
 ) -> bool:
     """Guard, claim, resolve the workspace and spawn one ready/review row.
     Returns True when a spawn slot was consumed (real or ``dry_run``); every
@@ -2177,6 +2184,13 @@ def _dispatch_lane_task(
         current = per_profile_running.get(assignee, 0)
         if current >= per_profile_cap:
             result.skipped_per_profile_capped.append((task_id, assignee, current))
+            return False
+    # Board-level cap (routa KanbanSessionQueue 语义，默认 1）：每 board 会话
+    # 并发闸——同板 fan-out 不吞满全部 worker 槽，超限排队下轮 tick drain。
+    if board_cap is not None and board_running is not None:
+        bcurrent = board_running.get(board, 0)  # board=None=默认板，同样有闸（routa 每 board 语义）
+        if bcurrent >= board_cap:
+            result.skipped_board_capped.append((task_id, bcurrent, board_cap))
             return False
     guard_reason = check_respawn_guard(conn, task_id, lane=lane)
     if guard_reason is not None:
@@ -2221,6 +2235,8 @@ def _dispatch_lane_task(
         # ticks re-query from the DB.
         if per_profile_cap is not None and name:
             per_profile_running[name] = per_profile_running.get(name, 0) + 1
+        if board_cap is not None and board_running is not None:
+            board_running[board] = board_running.get(board, 0) + 1
 
     if dry_run:
         result.spawned.append((task_id, assignee, ""))
@@ -2439,6 +2455,24 @@ def _any_spawnable_review(
     return False
 
 
+def _resolve_board_concurrency(board: Optional[str]) -> Optional[int]:
+    """``kanban.board_concurrency``（routa KanbanSessionQueue 默认 1）；未配=默认 1；
+    显式 0/负数=不设闸（None）。整数解析失败回默认 1（fail-safe 排队语义）。"""
+    try:
+        from hermes_cli.config_effective import load_user_config_effective
+        kanban = (load_user_config_effective(fail_closed=True) or {}).get("kanban", {})
+        v = kanban.get("board_concurrency")
+    except Exception:
+        return 1
+    if v is None:
+        return 1
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return 1
+    return None if n <= 0 else n
+
+
 def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[str] = None) -> Optional[str]:
     """``kanban.default_assignee`` when it names a real profile this home may
     claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
@@ -2530,10 +2564,20 @@ def _dispatch_once_locked(
         board=board,
     ):
         ready_budget = max(spawn_budget - 1, 0)
+    # Board-level running count（routa 每 board 并发闸）：本 tick 按板计数；
+    # cap 读 kanban.board_concurrency（默认 1，routa 语义），None=不设闸。
+    board_cap = _resolve_board_concurrency(board)
+    board_running: dict[str, int] = {}
+    if board_cap is not None:
+        rowc = conn.execute(
+            "SELECT COUNT(*) AS n FROM tasks WHERE status = 'running' AND board IS ?", (board,),
+        ).fetchone()
+        board_running[board] = int(rowc["n"]) if rowc else 0
     lane_kwargs: dict[str, Any] = dict(
         dry_run=dry_run, ttl_seconds=ttl_seconds, board=board,
         failure_limit=failure_limit, spawn_fn=spawn_fn,
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
+        board_cap=board_cap, board_running=board_running,
     )
     default_assignee = _resolve_default_assignee(default_assignee, board)
     spawned = 0

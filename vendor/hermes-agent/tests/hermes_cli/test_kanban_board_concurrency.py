@@ -1,0 +1,101 @@
+"""每 board 并发闸守门（routa KanbanSessionQueue 语义，矩阵 §3.5 routa 行 P1）。"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+_WORKTREE = Path(__file__).resolve().parents[2]
+if str(_WORKTREE) not in sys.path:
+    sys.path.insert(0, str(_WORKTREE))
+
+from hermes_cli import kanban_db as kb
+from hermes_cli.kanban_db_connect import connect
+from hermes_cli import kanban_db_dispatch as kbd
+
+
+@pytest.fixture()
+def fresh_home(tmp_path, monkeypatch):
+    home = tmp_path / "hermes-home"
+    home.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("HERMES_KANBAN_HOME", str(home))
+    try:
+        import hermes_constants
+        hermes_constants._cached_default_hermes_root = None  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    kb._INITIALIZED_PATHS.clear()
+    return home
+
+
+class TestBoardConcurrency:
+    # fresh_home 无真实 hermes profile，board-team-fence 的 profile_exists 会先拦
+    # 测试 assignee（skipped_nonspawnable）——测试侧禁用 fence 探测，专注 board 闸。
+    @pytest.fixture(autouse=True)
+    def _no_profile_fence(self, monkeypatch):
+        monkeypatch.setattr(kbd, "_profile_exists_fn", lambda board: None)
+
+    def test_board_cap_default_one_defers_second(self, fresh_home):
+        # routa 默认 1：同板 running=1 时第二张 ready 被拦（skipped_board_capped）。
+        conn = connect()
+        t1 = kb.create_task(conn, title="r1", body="b", assignee="sage")
+        t2 = kb.create_task(conn, title="r2", body="b", assignee="alex")
+        conn.execute("UPDATE tasks SET status = 'running', claim_lock = 'l' WHERE id = ?", (t1,))
+        conn.commit()
+        board_running = {None: 1}
+        result = kbd.DispatchResult()
+        rows = kbd._lane_rows(conn, "ready")
+        row2 = next(r for r in rows if r["id"] == t2)
+        consumed = kbd._dispatch_lane_task(
+            conn, row2, "alex", result, lane="ready", dry_run=True, ttl_seconds=60,
+            board=None, failure_limit=5, spawn_fn=lambda *a, **k: None,
+            per_profile_cap=None, per_profile_running={},
+            board_cap=1, board_running=board_running,
+        )
+        assert consumed is False
+        assert result.skipped_board_capped == [(t2, 1, 1)]
+        assert result.spawned == []
+
+    def test_board_cap_zero_disables_gate(self, fresh_home):
+        conn = connect()
+        t1 = kb.create_task(conn, title="a", body="b", assignee="sage")
+        conn.execute("UPDATE tasks SET status = 'running', claim_lock = 'l' WHERE id = ?", (t1,))
+        conn.commit()
+        t2 = kb.create_task(conn, title="c", body="b", assignee="alex")
+        result = kbd.DispatchResult()
+        row2 = next(r for r in kbd._lane_rows(conn, "ready") if r["id"] == t2)
+        consumed = kbd._dispatch_lane_task(
+            conn, row2, "alex", result, lane="ready", dry_run=True, ttl_seconds=60,
+            board=None, failure_limit=5, spawn_fn=lambda *a, **k: None,
+            per_profile_cap=None, per_profile_running={},
+            board_cap=None, board_running={},
+        )
+        assert consumed is True  # 不设闸直接过
+        assert result.skipped_board_capped == []
+
+    def test_spawn_count_sync(self, fresh_home):
+        # _count_spawn 同步 board 计数：同 tick 内第二张按计数被拦。
+        conn = connect()
+        t1 = kb.create_task(conn, title="x", body="b", assignee="sage")
+        t2 = kb.create_task(conn, title="y", body="b", assignee="alex")
+        board_running: dict = {}
+        def run_one(tid):
+            result = kbd.DispatchResult()
+            row = next(r for r in kbd._lane_rows(conn, "ready") if r["id"] == tid)
+            return kbd._dispatch_lane_task(
+                conn, row, row["assignee"], result, lane="ready", dry_run=True, ttl_seconds=60,
+                board=None, failure_limit=5, spawn_fn=lambda *a, **k: None,
+                per_profile_cap=None, per_profile_running={},
+                board_cap=1, board_running=board_running,
+            ), result
+        ok1, r1 = run_one(t1)
+        assert ok1 is True and board_running.get(None) == 1
+        ok2, r2 = run_one(t2)
+        assert ok2 is False and r2.skipped_board_capped  # 同 tick 计数生效
+
+    def test_resolve_board_concurrency_default(self, fresh_home):
+        # 未配置 → 默认 1（routa 语义）。
+        assert kbd._resolve_board_concurrency(None) == 1
