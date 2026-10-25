@@ -1982,6 +1982,14 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
             display_index=i,
             tool_start_time=tool_start_time,
         )
+        # runaway-guard 步进观测（吸收 minimax 六信号，第一批 #6）：sequential/segmented
+        # 默认路径全覆盖；并发批为只读并行面，窗口跨轮在 sequential 轮仍可捕获。守卫
+        # 自身故障零影响执行链。
+        try:
+            from agent.runaway_guard import observe_tool_step
+            observe_tool_step(agent, ref.name, managed.args, managed.result)
+        except Exception:  # noqa: BLE001
+            pass
         if not _publish_sequential_result(agent, messages, ref, managed, tool_duration=tool_duration, index=i,
                                           budget=_tool_budget, transform_applied=dispatch.transform_applied):
             return
