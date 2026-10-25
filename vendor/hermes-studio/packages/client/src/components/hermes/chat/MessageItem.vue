@@ -63,6 +63,7 @@ const toast = useMessage();
 
 const isSystem = computed(() => props.message.role === "system");
 const isAgentError = computed(() => props.message.role === "assistant" && props.message.systemType === "error");
+const isGatewayNotice = computed(() => props.message.systemType === "gateway");
 
 const effectiveHeadingIdPrefix = computed(() => props.headingIdPrefix || `msg-${props.message.id}`);
 const isCommandMessage = computed(() => props.message.role === "command" || props.message.systemType === "command");
@@ -1046,6 +1047,7 @@ onBeforeUnmount(() => {
             :class="{
               system: isSystem,
               'agent-error': isAgentError,
+              gateway: isGatewayNotice,
               command: isCommandMessage,
               'command-error': isCommandError,
               'speech-playing': isPlayingThisMessage && !isPausedThisMessage,
