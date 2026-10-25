@@ -3556,6 +3556,9 @@ class BasePlatformAdapter(ABC):
         text, eph_ttl = self._unwrap_ephemeral(response)
         if not text:
             return
+        text = self._apply_outbound_notice_throttle(event, text)
+        if not text:
+            return
         if log_cmd is not None:
             logger.info("[%s] Sending command '/%s' response (%d chars) to %s", self.name, log_cmd,
                         len(text), event.source.chat_id)
@@ -3564,6 +3567,32 @@ class BasePlatformAdapter(ABC):
             metadata=_mark_notify_metadata(thread_meta))
         if eph_ttl > 0 and result.success and result.message_id:
             self._schedule_ephemeral_delete(event.source.chat_id, result.message_id, eph_ttl)
+
+    def _apply_outbound_notice_throttle(self, event: MessageEvent, text: str) -> Optional[str]:
+        """Throttle a gateway-authored notice at the reply sink; returns the text to send
+        (the original, or the cooldown epoch's single digest line) or ``None`` when
+        suppressed. Identical-text dedup plus a per-chat budget (see
+        ``gateway/outbound_notice_guard.py``) so an echoed refusal can never re-trigger a
+        dispatch storm in multi-agent rooms. Fail-open: any internal error sends the text."""
+        guard = getattr(self, "_outbound_notice_guard", None)
+        if guard is None:
+            from gateway.outbound_notice_guard import OutboundNoticeGuard
+            guard = self._outbound_notice_guard = OutboundNoticeGuard()
+        try:
+            send, digest, state = guard.decide((self.name, event.source.chat_id), text)
+        except Exception:
+            logger.debug("[%s] Outbound notice throttle failed; sending unthrottled",
+                         self.name, exc_info=True)
+            return text
+        if send:
+            return text
+        if digest is not None:
+            logger.info("[%s] Outbound notice budget tripped for %s; cooling down",
+                        self.name, event.source.chat_id)
+            return digest
+        logger.debug("[%s] Suppressing repeated gateway notice for %s (state=%s)",
+                     self.name, event.source.chat_id, state)
+        return None
 
     def _media_delivery_scope(self, source: Optional[SessionSource]):
         """Routed home + terminal policy for post-handler text, media and error delivery;
@@ -4597,9 +4626,14 @@ class BasePlatformAdapter(ABC):
                         or _tts_paths or _tts_caption_delivered:
                     self.pause_typing_for_chat(event.source.chat_id)
                 if text_content and not _tts_caption_delivered:
-                    await self._send_final_text(
-                        event, session_key, text_content, _final_thread_metadata,
-                        is_ephemeral_response, _ephemeral_ttl, _record_delivery)
+                    # Sink-level storm backstop: a repeated gateway notice (refusal echoes,
+                    # command replies) is deduped/throttled before it lands in the chat,
+                    # where it would re-trigger every agent's dispatch all over again.
+                    _notice = self._apply_outbound_notice_throttle(event, text_content)
+                    if _notice is not None:
+                        await self._send_final_text(
+                            event, session_key, _notice, _final_thread_metadata,
+                            is_ephemeral_response, _ephemeral_ttl, _record_delivery)
                 await self._deliver_attachments(
                     event, extracted, _final_thread_metadata,
                     anything_sent=delivery_attempted or _tts_caption_delivered,
