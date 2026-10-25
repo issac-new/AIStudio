@@ -225,6 +225,8 @@ const desktopTitleBarLeft = computed(() => {
   return appStore.pageSidebarExpanded ? sidebarLayoutWidth.value : 10;
 });
 const isDesktopPetRoute = computed(() => route.name === "desktop.pet");
+// overlay[p10] V5 补遗⑤ S3：宠物浮面默认关（B 档开关；组件与能力保留）
+const petsEnabled = import.meta.env.VITE_CUSTOM_PETS === "true";
 const showWebPet = computed(
   () =>
     !isLoginPage.value &&
@@ -403,7 +405,7 @@ useKeyboard();
               </div>
             </div>
           </div>
-          <WebPet v-if="showWebPet" />
+          <WebPet v-if="showWebPet && petsEnabled" />
           <SessionSearchModal
             v-if="
               !isDesktopPetRoute && !isStandaloneChatPage && sessionSearchOpen
