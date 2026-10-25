@@ -465,6 +465,8 @@ describe('bridge run final context usage', () => {
         const context = String(message).match(/context_id="([^"]+)"/)![1]
         expect(context).toBe(contexts.at(-1))
         expect(message).toContain('ekko-studio-interaction')
+        expect(message).toContain('<studio_session_tasks_context>')
+        expect(message).toContain('ekko_studio_list_session_tasks')
         expect(options.storage_message).toBe('Show the task card')
         const result = await call(context)
         expect(result.isError).not.toBe(true)

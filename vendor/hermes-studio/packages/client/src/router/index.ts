@@ -8,6 +8,14 @@ const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     {
+      path: '/hermes/tasks',
+      name: 'hermes.tasks',
+      redirect: to => ({ name: 'hermes.chat', query: {
+        tasks: '1', taskSearch: to.query.search, taskStatus: to.query.status,
+        taskOrder: to.query.order, taskPage: to.query.page,
+      } }),
+    },
+    {
       path: '/desktop-pet',
       name: 'desktop.pet',
       component: () => import('@/views/hermes/DesktopPetView.vue'),

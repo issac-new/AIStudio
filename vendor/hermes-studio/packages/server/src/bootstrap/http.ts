@@ -1,3 +1,4 @@
+import { registerDesktopBrowserRelay } from '../modules/studio/sockets/desktop-browser'
 import { setupMobileTerminal } from '../modules/hermes/sockets/mobile-terminal'
 import { getSessionMetadata as getTerminalSessionMetadata } from '../modules/studio/public/sessions'
 import Koa from 'koa'
@@ -620,6 +621,7 @@ export async function bootstrap() {
 
   petStateSocketServer = new PetStateSocketServer(activeGroupChatServer.getIO())
   petStateSocketServer.init()
+  registerDesktopBrowserRelay(activeGroupChatServer.getIO())
 
   startGlobalAgentServer(activeGroupChatServer.getIO(), { localBaseUrl: loopbackBaseUrl })
   console.log('[bootstrap] global agent server ready')

@@ -2,7 +2,8 @@ import { expect, test } from '@playwright/test'
 import { authenticate, mockChatSocket, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
 
 const cases = [
-  { name: 'Ekko default effort', agent: 'ekko-agent', mode: 'scoped', model: 'ekko-runtime-model', effort: '', label: 'ekko-runtime-model' },
+  { name: 'Ekko unset effort', agent: 'ekko-agent', mode: 'scoped', model: 'ekko-runtime-model', effort: '', label: 'ekko-runtime-model' },
+  { name: 'Hermes default effort', agent: 'hermes', mode: 'scoped', model: 'hermes-runtime-model', effort: '', label: 'hermes-runtime-model' },
   { name: 'Hermes', agent: 'hermes', mode: 'scoped', model: 'hermes-runtime-model', effort: 'high', label: 'hermes-runtime-model' },
   { name: 'scoped Codex', agent: 'codex', mode: 'scoped', model: 'codex-scoped-runtime-model', effort: 'high', label: 'codex-scoped-runtime-model' },
   { name: 'global Codex', agent: 'codex', mode: 'global', model: 'codex-native-runtime-model', effort: 'high', label: 'codex-native-runtime-model' },
@@ -76,7 +77,8 @@ for (const target of cases) {
     if (!mobile) await expect(model).toHaveAttribute('title', target.label)
     await expect(model).toBeDisabled()
     const effort = panel.locator('.reasoning-effort-button')
-    await expect(effort).toContainText(target.effort === 'enabled' ? 'On' : target.effort ? 'High' : 'Default')
+    const effortLabel = target.effort === 'enabled' ? 'On' : target.effort ? 'High' : target.agent === 'hermes' ? 'Default (config.yaml)' : 'None'
+    await expect(effort).toHaveText(effortLabel)
     await expect(effort).toBeDisabled()
     await effort.click({ force: true })
     await expect(page.locator('.reasoning-effort-slider-popover:visible')).toHaveCount(0)

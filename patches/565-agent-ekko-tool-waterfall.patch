@@ -1,7 +1,8 @@
 diff --git a/packages/ekko-agent/src/runtime/runtime.ts b/packages/ekko-agent/src/runtime/runtime.ts
+index 7439dc261..b55d075e8 100644
 --- a/packages/ekko-agent/src/runtime/runtime.ts
 +++ b/packages/ekko-agent/src/runtime/runtime.ts
-@@ -20,7 +20,7 @@
+@@ -20,7 +20,7 @@ import type { AgentSkill } from '../skills/types'
  import { RunTaskPlan } from '../tools/plan'
  import { AgentToolRegistry, createDefaultToolRegistry } from '../tools/registry'
  import { sanitizeAgentToolResult } from '../tools/tool-result-sanitizer'
@@ -10,22 +11,22 @@ diff --git a/packages/ekko-agent/src/runtime/runtime.ts b/packages/ekko-agent/sr
  import {
    inspectLocalSkillValidationIssues,
    resolveSkillRouting,
-@@ -209,6 +209,10 @@
-       : new AgentToolRegistry()
+@@ -210,6 +210,10 @@ export class AgentRuntime {
      if (this.toolsEnabled && options.tools && options.toolAuthorizer) {
        this.tools.setAuthorizer(options.toolAuthorizer)
-+    }
+     }
 +    // HERMES_CUSTOM[tool-waterfall] P1：瀑布钩子挂载（自建与外部传入 registry 双路径）
 +    if (this.toolsEnabled) {
 +      this.tools.setExecuteHooks(options.toolExecuteHooks ?? [])
-     }
++    }
      this.skillsEnabled = options.skillsEnabled !== false
      this.skillsAvailable = options.skillsAvailable
-
+     this.skills = this.skillsEnabled ? options.skills ?? [] : []
 diff --git a/packages/ekko-agent/src/runtime/types.ts b/packages/ekko-agent/src/runtime/types.ts
+index 5d2bc35f8..a78098d16 100644
 --- a/packages/ekko-agent/src/runtime/types.ts
 +++ b/packages/ekko-agent/src/runtime/types.ts
-@@ -2,7 +2,8 @@
+@@ -2,7 +2,8 @@ import type { AgentMessage, ModelClient, ModelRequest } from '../model/types'
  import type { AgentMessageInput, AgentOutputMessage } from '../model/messages'
  import type { AgentSkill } from '../skills/types'
  import type { AgentToolRegistry } from '../tools/registry'
@@ -35,7 +36,7 @@ diff --git a/packages/ekko-agent/src/runtime/types.ts b/packages/ekko-agent/src/
  import type { AgentRuntimeEvent } from './events'
  import type { MemoryContext, MemoryEvidenceMessageInput, MemoryOrigin, MemoryScope, MemoryWritePolicy } from '../memory/types'
  import type { MemoryService } from '../memory/service'
-@@ -45,6 +46,9 @@
+@@ -45,6 +46,9 @@ export interface AgentRuntimeRecoveryDirective {
  }
  
  export interface AgentRuntimeOptions {
@@ -45,19 +46,19 @@ diff --git a/packages/ekko-agent/src/runtime/types.ts b/packages/ekko-agent/src/
    /** JEV configuration values only; the runtime creates its own client and never persists overrides. */
    jev?: EkkoJevOverrides
    /** Fixed profile identity for tool and memory operations. Per-run input cannot override it. */
-
 diff --git a/packages/ekko-agent/src/tools/registry.ts b/packages/ekko-agent/src/tools/registry.ts
+index 913ac8597..b3b8f2dd5 100644
 --- a/packages/ekko-agent/src/tools/registry.ts
 +++ b/packages/ekko-agent/src/tools/registry.ts
-@@ -4,6 +4,7 @@
+@@ -4,6 +4,7 @@ import type {
    AgentToolContext,
    AgentToolProvider,
    AgentToolResult,
 +  ToolExecuteHook,
  } from './types'
  import { UpdatePlanTool } from './plan'
- import { createBrowserTools } from './browser'
-@@ -24,9 +25,15 @@
+ import { createSessionTasksToolProvider } from './session-tasks'
+@@ -25,9 +26,15 @@ export class AgentToolRegistry {
    private readonly tools = new Map<string, AgentTool>()
    private readonly providers = new Map<string, AgentToolProvider>()
    private readonly providerTools = new Map<string, Set<string>>()
@@ -73,7 +74,7 @@ diff --git a/packages/ekko-agent/src/tools/registry.ts b/packages/ekko-agent/src
    setAuthorizer(authorizer?: AgentToolAuthorizer): void {
      this.authorizer = authorizer
    }
-@@ -100,7 +107,26 @@
+@@ -101,7 +108,26 @@ export class AgentToolRegistry {
          },
        }
      }
@@ -101,7 +102,7 @@ diff --git a/packages/ekko-agent/src/tools/registry.ts b/packages/ekko-agent/src
  
      let result: AgentToolResult
      try {
-@@ -110,6 +136,11 @@
+@@ -111,6 +137,11 @@ export class AgentToolRegistry {
        const message = error instanceof Error ? error.message : String(error)
        result = { ok: false, content: message, error: message }
      }
@@ -113,11 +114,11 @@ diff --git a/packages/ekko-agent/src/tools/registry.ts b/packages/ekko-agent/src
      // Approval events reach the UI, not the model. Carry the actual decision in
      // the persisted tool content too, even when execution after approval fails.
      const status = { approved: true, scope: authorization.scope, key: authorization.key }
-
 diff --git a/packages/ekko-agent/src/tools/types.ts b/packages/ekko-agent/src/tools/types.ts
+index 85a3a4327..a0d77fb2c 100644
 --- a/packages/ekko-agent/src/tools/types.ts
 +++ b/packages/ekko-agent/src/tools/types.ts
-@@ -124,3 +124,23 @@
+@@ -128,3 +128,23 @@ export class AgentToolError extends Error {
      this.name = 'AgentToolError'
    }
  }

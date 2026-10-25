@@ -4,13 +4,13 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 
 | 树 | commit | 版本 | upstream remote | 提取方式 |
 |---|---|---|---|---|
-| hermes-studio | `04e5d9aa7` | v0.7.38 | https://github.com/EKKOLearnAI/hermes-studio.git | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
-| hermes-agent | `4d04303818` | v0.22.4 | https://github.com/NousResearch/hermes-agent.git | 同上 |
-| zcode | `3c5b2276` | v3.16.1 系列（见下） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
+| hermes-studio | `8f215f59d` | v0.7.39 | https://github.com/EKKOLearnAI/hermes-studio.git | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
+| hermes-agent | `bf0203a794` | v0.22.5 | https://github.com/NousResearch/hermes-agent.git | 同上 |
+| zcode | `3c5b2276` | v3.16.1 系列（见下；**同步口径=上游 main 变更，不看版本 tag**，2026-10-25 用户裁定） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
 
 ## zcode 基线差一提交说明（2026-10-24 实测记录）
 
-`zcode-patches/series` 头声明基线 `origin/main @ 0a1fc56 (v3.16.1, 2026-10-19)`；实际外置树 HEAD 为 `3c5b2276`（0a1fc56 之后又一个 `chore: sync ZCode source` 提交）。vendor 落库取 `3c5b2276`，依据：**7 条活跃补丁在 3c5b2276 pristine 快照上全量重放实测通过**（见 specs/2026-10-24-aistudio-single-repo-integration.md 验证门①）。series 头注释与台账此处的差一提交事实并存，后续升级轮统一对齐。
+`zcode-patches/series` 头已于 2026-10-25 升级轮对齐为 `3c5b2276`（7 条活跃补丁在该 pristine 快照上全量重放实测通过，依据 specs/2026-10-24-aistudio-single-repo-integration.md 验证门①；差一提交的历史事实见 git 历史）。
 
 ## 升级流程（vendor:sync）
 

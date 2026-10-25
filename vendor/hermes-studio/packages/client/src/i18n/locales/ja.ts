@@ -4,6 +4,28 @@ import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesJa } from '../social-messages-locales'
 
 export default {
+  sessionTasks: {
+      "title": "タスク",
+      "task": "タスク",
+      "source": "元の会話",
+      "status": "状態",
+      "updated": "更新日時",
+      "search": "タスクや会話を検索",
+      "filterStatus": "状態で絞り込み",
+      "all": "すべての状態",
+      "open": "未完了",
+      "completed": "完了",
+      "openChat": "会話を開く",
+      "openTask": "会話で表示：{title}",
+      "loading": "タスクを読み込み中",
+      "loadFailed": "タスクを読み込めませんでした",
+      "retry": "再試行",
+      "noResults": "該当するタスクはありません",
+      "empty": "会話で記録されたタスクがここに表示されます",
+      "untitled": "無題の会話",
+      "jumpUnavailable": "リンク先のメッセージは利用できません。会話を開きました。"
+  },
+
   remoteDevices: remoteDeviceMessages["ja"],
   modelApi: {
     "localRoute": "ローカルアドレス",
@@ -213,6 +235,7 @@ export default {
       "auth_failed": "TypeSafe の認証に失敗しました。API キーと権限を確認してください。",
       "rate_limited": "TypeSafe のリクエスト制限に達しました。しばらくしてから再試行してください。",
       "provider_error": "TypeSafe がリクエストを処理できませんでした。モデルを確認して再試行してください。",
+      "endpoint_not_found": "JEV エンドポイントが見つかりません（HTTP 404）。API ベース URL にゲートウェイのパス接頭辞が含まれているか確認してください。",
       "request_failed": "JEV に接続できません。API URL とネットワークを確認してください。",
       "settings_failed": "JEV 設定を読み込みまたは保存できません。Studio のデータディレクトリを確認してください。",
       "forbidden": "このプロファイルへのアクセス権がありません。",
@@ -386,6 +409,14 @@ export default {
   },
   socialMessages: socialMessagesJa,
   browser: {
+    remoteOwnerActive: 'Current control device',
+    remoteOwnerStandby: 'Standby — another device is active',
+    remoteOwnerBusy: 'Standby — browser operation in progress',
+    remoteOwnerConnecting: 'Connecting',
+
+    remoteControl: 'Allow remote control',
+    remoteControlStop: 'Stop remote control',
+
     title: 'ブラウザー', settings: 'ブラウザー設定', desktopOnly: '内蔵ブラウザーは Ekko Studio Desktop でのみ利用できます。', newTab: '新しいタブ',
     back: '戻る', forward: '進む', reload: '再読み込み', stop: '停止', addressPlaceholder: '検索またはアドレスを入力',
     undoAnnotation: '直前の注釈を取り消す', deleteAnnotation: '注釈 {index} を削除',
@@ -2177,7 +2208,10 @@ export default {
       localInboxPayloadTitle: '受信した Webhook ペイロード',
       clearInboxConfirm: 'ローカルテスト受信箱のすべてのイベントを消去しますか？',
       columns: { name: '名前', url: 'URL', events: 'イベント', profiles: 'プロファイル', status: '状態', actions: '操作', receivedAt: '受信日時', event: 'イベント', eventId: 'イベント ID', deliveryId: '配信 ID' },
-      events: { runUpdated: '実行状態を更新', planUpdated: 'タスクカードの進捗更新', groupMessageCreated: 'グループメッセージ作成', messageCreated: 'ユーザーメッセージ作成', runQueued: '実行をキューに追加', runStarted: '実行開始', toolStarted: 'ツール開始', toolCompleted: 'ツール完了', toolFailed: 'ツール失敗', approvalRequested: '承認要求', approvalResolved: '承認処理済み', clarificationRequested: '確認要求', clarificationResolved: '確認処理済み', completed: '実行完了', failed: '実行失敗' },
+      events: {
+        taskCreated: "セッションタスクを作成",
+        taskCompleted: "セッションタスクを完了",
+        runUpdated: '実行状態を更新', planUpdated: 'タスクカードの進捗更新', groupMessageCreated: 'グループメッセージ作成', messageCreated: 'ユーザーメッセージ作成', runQueued: '実行をキューに追加', runStarted: '実行開始', toolStarted: 'ツール開始', toolCompleted: 'ツール完了', toolFailed: 'ツール失敗', approvalRequested: '承認要求', approvalResolved: '承認処理済み', clarificationRequested: '確認要求', clarificationResolved: '確認処理済み', completed: '実行完了', failed: '実行失敗' },
       status: { enabled: '有効', disabled: '無効' },
       runtime: { idle: '待機中', delivering: '配信中', retrying: '再試行待ち', success: '配信済み', failed: '失敗', dropped: '破棄済み' },
       actions: { add: 'Webhook を追加', localTest: 'ローカルテスト受信先を使用', test: 'テスト', enable: '有効化', disable: '無効化', refresh: '更新', clear: '消去', view: '表示' },
@@ -2194,8 +2228,8 @@ export default {
         profiles: 'プロファイル',
         profilesPlaceholder: '空欄の場合はすべてのプロファイルを受信',
         maxRetries: '初回失敗後の再試行回数（0～10）',
-        includeContent: 'アシスタントの最終テキストを含める',
-        includeContentHint: '最終回答には機密情報が含まれる場合があります。推論、システムプロンプト、ツール引数は送信されません。',
+        includeContent: "返信とタスクの本文を含める",
+        includeContentHint: "返信やタスクの本文には、タスク名、要約、完了の根拠などの機密情報が含まれる場合があります。推論、システムプロンプト、ツール引数は含まれません。",
         includeUserContent: 'ユーザーメッセージ本文を含める',
         includeUserContentHint: 'ユーザーメッセージには機密情報が含まれる場合があります。既定では無効で、システムプロンプト、推論、ツール引数、ツール結果は含まれません。',
         allowPrivateNetwork: 'プライベートまたはローカルネットワークのアドレスを許可',
@@ -3503,6 +3537,18 @@ export default {
   },
 
   changelog: {
+    new_0_7_39_1: "会話をまたいで保持されるセッションタスクを追加。Agent がユーザーの目標を継続して追跡し、完了の根拠を記録できます (#3499)",
+    new_0_7_39_2: "関連する会話へ移動できるセッションタスクドロワーを追加。モバイルの一覧、タスク詳細、セッション名を改善し、些細なタスクの記録を減らしました (#3501, #3509, #3510)",
+    new_0_7_39_3: "デスクトップで明示的に許可すると、リモート Studio の Agent がローカルの内蔵ブラウザーを使用できます。共有はいつでも停止できます (#3478)",
+    new_0_7_39_4: "アカウントのテーマ切り替えにシステム設定に従うモードを追加。ドロワー上部の余白、テーマ背景、角の形を統一しました (#3496, #3475)",
+    new_0_7_39_5: "グループチャットの空の画面にすべての Agent を表示し、ウィンドウ幅に合わせて配置するようにしました (#3471)",
+    new_0_7_39_6: "Ekko の推論強度の既定値を「なし」に変更し、チャット、グループチャット、ワークフローの Agent 表記を統一しました (#3488)",
+    new_0_7_39_7: "停止後に思考インジケーターが残る問題と、ツール結果の切り詰めで中国語や絵文字が壊れてリクエストが失敗する問題を修正しました (#3473, #3457, #3460)",
+    new_0_7_39_8: "プロバイダーのインポートリンクが自動 API モードに対応。JEV はバージョン付き URL と完全なエンドポイント URL に対応し、エンドポイントの欠落とモデルエラーを区別します (#3494, #3493, #3491)",
+    new_0_7_39_9: "デスクトップのスクリーンショットで画面収録権限がない場合、操作を妨げるダイアログなしでシステム設定を直接開けるようにしました (#3492)",
+    new_0_7_39_10: "Windows ARM64 ネイティブ Hermes ランタイムのビルドで発生する依存関係とターミナルの互換性問題を修正しました (#3429)",
+    new_0_7_39_11: "TerraMaster TOS 専用パッケージと自動ビルドの提供を終了しました (#3503)",
+    new_0_7_39_12: "セッションタスクの作成と完了を個別に購読できる Webhook イベントを追加。タスク名、要約、完了の根拠の送信は本文の設定に従います (#3512)",
     new_0_7_38_1: "既知の接続とモデルに対応する自動 API モードを追加。プロバイダー接頭辞付きのモデル名にも対応し、新規接続の既定値は引き続き Chat Completions です (#3469)",
     new_0_7_38_2: "デスクトップ版にローカル・リモート端末の切り替えと端末管理を追加し、従来の LAN ペアリング入口を置き換えました (#3464)",
     new_0_7_38_3: "モデル API にクラウドアクセス、キーごとのモデル制限、累積米ドル予算を追加。Agent 別の使用量内訳を復元し、パネル幅を修正しました (#3440, #3450)",
@@ -3524,14 +3570,5 @@ export default {
     new_0_7_37_9: "Claude OAuth のログイン解除時に各 Profile が管理する認証情報をすべて削除し、ログイン状態が残る問題を修正しました (#3442)",
     new_0_7_37_10: "Windows ARM64 向けデスクトップインストーラーのビルドに対応しました (#3428)",
     new_0_7_37_11: "TOS 7 の新規インストール、ポータルのパス、サービスの再起動設定を修正し、ホスト環境や事前作成ユーザーへの依存を減らしました (#3413, #3431)",
-    new_0_7_36_1: '画面領域ごとに背景、不透明度、ぼかし、角丸、枠線、影をリアルタイムで調整できるテーマ設定を追加 (#3394)',
-    new_0_7_36_2: '名前付きテーマの作成、複製、切り替え、インポート、エクスポートと、アカウントごとの保存に対応 (#3394)',
-    new_0_7_36_3: 'モデルの表示設定を各モデル選択画面に一貫して適用し、大規模なモデル一覧には性能に関する注意を表示 (#3392)',
-    new_0_7_36_4: '表示モデルの管理画面に検索機能を追加 (#3393)',
-    new_0_7_36_5: '新規チャットのカテゴリ選択を入力欄のツールバーに移動 (#3389)',
-    new_0_7_36_6: '小さい画面でワークフロー実行履歴のドロワーが横幅いっぱいに表示されず、背景が透明になる問題を修正 (#3398)',
-    new_0_7_36_7: 'グループチャットの AI メッセージへのテーマ適用と、メッセージの吹き出しや表で背景とぼかしが重なる問題を修正 (#3398)',
-    new_0_7_36_8: 'リリース公開時に TOS 7 x86_64 テスト用パッケージを自動ビルド・検証する処理を追加 (#3397)',
-    new_0_7_36_9: 'GIF、アニメーション WebP、APNG 背景の上限を 30 MB に拡大し、保存、キャッシュ、テーマのインポート・エクスポートでアニメーションを保持',
   },
 }

@@ -1,6 +1,6 @@
 // Native and teleported surfaces share the same regional tokens. Classes are
 // enabled only for explicitly configured properties, preserving preset defaults.
-$overlay-surfaces: '.n-modal, .n-dialog, .n-drawer-content, .n-popover:not(.n-tooltip), .n-dropdown-menu, .n-base-select-menu, .n-cascader-menu, .n-notification, .slash-command-dropdown, .mention-dropdown, .annotation-popover, .workflow-runs-panel--overlay';
+$overlay-surfaces: '.n-modal, .n-dialog, .n-drawer, .n-popover:not(.n-tooltip), .n-dropdown-menu, .n-base-select-menu, .n-cascader-menu, .n-notification, .slash-command-dropdown, .mention-dropdown, .annotation-popover, .workflow-runs-panel--overlay';
 // Native tables share their containing card; Naive tables own one wrapper fill.
 // Message tables share the bubble's background, filter and border tokens.
 $markdown-card-tables: '.markdown-body table:not(:where(.message-bubble, .msg-content, .group-run-bubble) table)';
@@ -67,7 +67,8 @@ html:is(.theme-overlay-bg, .theme-has-custom-background) .n-popover:not(.n-toolt
     -webkit-backdrop-filter: var(--theme-#{$region}-filter);
     backdrop-filter: var(--theme-#{$region}-filter);
   }
-  html.theme-customized.theme-#{$region}-radius :is(#{$selectors}) {
+  // Drawers keep square outer corners even when other overlays use a radius.
+  html.theme-customized.theme-#{$region}-radius :is(#{$selectors}):where(:not(.n-drawer)) {
     --radius-component: var(--theme-#{$region}-radius);
     border-radius: var(--theme-#{$region}-radius);
   }

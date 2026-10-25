@@ -9,6 +9,12 @@ vi.mock('../../packages/server/src/modules/studio/services/session-shares/socket
 }))
 
 const saveTaskPlanMock = vi.hoisted(() => vi.fn())
+const updateSessionTasksMock = vi.hoisted(() => vi.fn((sessionId: string) => ({ session_id: sessionId, revision: 1, updated_at: 1, tasks: [] })))
+vi.mock('../../packages/server/src/modules/studio/services/session-tasks', async importOriginal => ({
+  ...await importOriginal<typeof import('../../packages/server/src/modules/studio/services/session-tasks')>(),
+  getSessionTasks: (sessionId: string) => ({ session_id: sessionId, revision: 0, updated_at: 0, tasks: [] }),
+  updateSessionTasks: updateSessionTasksMock,
+}))
 vi.mock('../../packages/server/src/modules/studio/repositories/task-plan-store', () => ({
   saveTaskPlan: saveTaskPlanMock, listTaskPlansForPage: vi.fn(() => []),
 }))
@@ -159,6 +165,25 @@ function makeServerHarness() {
 }
 
 describe('ChatRunSocket global pending interactions', () => {
+  it('binds session goals to the active primary turn without publishing a plan card', async () => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { io, emitted } = makeServerHarness()
+    const server = new ChatRunSocket(io as any)
+    ;(server as any).sessionMap.set('goal-session', { isWorking: true, activeRunMarker: 'turn-1', source: 'cli' })
+    const contextId = (server as any).beginTaskPlanRun('goal-session', 'default')
+    expect(server.listSessionTasks(contextId, 'default')).toMatchObject({ session_id: 'goal-session' })
+    const input = { context_id: contextId, revision: 0, changes: [{ title: 'Export', summary: 'Requested', status: 'open' }] }
+    server.updateSessionTasks(contextId, 'default', input)
+    expect(updateSessionTasksMock).toHaveBeenCalledWith('goal-session', 'default', input)
+    expect(saveTaskPlanMock).not.toHaveBeenCalled()
+    expect(emitted.some(entry => entry.event === 'plan.updated')).toBe(false)
+    expect(() => server.listSessionTasks(contextId, 'other')).toThrow('expired')
+    ;(server as any).finishTaskPlanRun('goal-session', 'run.completed', undefined, contextId)
+    expect(() => server.updateSessionTasks(contextId, 'default', input)).toThrow('expired')
+    const background = (server as any).beginTaskPlanRun('goal-session', 'default', false)
+    expect(() => server.listSessionTasks(background, 'default')).toThrow('unavailable')
+  })
+
   it('publishes a running snapshot and lightweight completion activity for the profile', async () => {
     const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
     const { emitted, io, socket } = makeServerHarness()

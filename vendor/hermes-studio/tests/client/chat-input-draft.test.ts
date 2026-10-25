@@ -495,15 +495,15 @@ describe('ChatInput draft persistence', () => {
     expect(wrapper.find('.n-popover-stub').exists()).toBe(true)
     expect(wrapper.find('.n-slider-stub').exists()).toBe(true)
     expect(wrapper.get('.n-slider-stub').attributes('min')).toBe('0')
-    expect(wrapper.get('.n-slider-stub').attributes('max')).toBe('7')
+    expect(wrapper.get('.n-slider-stub').attributes('max')).toBe('6')
     expect(wrapper.get('.reasoning-effort-button').attributes('disabled')).toBeUndefined()
-    await wrapper.get('.n-slider-stub').setValue('5')
+    await wrapper.get('.n-slider-stub').setValue('4')
     expect(useChatStore().setSessionReasoningEffort).toHaveBeenCalledWith('session-codex', 'high')
     expect(useChatStore().activeSession?.reasoningEffort).toBe('high')
   })
 
   it.each([
-    ['', 'chat.reasoningEffort.defaultLabel'],
+    ['', 'chat.reasoningEffort.options.none'],
     ['high', 'chat.reasoningEffort.options.high'],
     ['unlisted-effort', 'unlisted-effort'],
   ])('keeps Ekko run-detail effort %s read-only without rewriting the saved value', async (effort, label) => {

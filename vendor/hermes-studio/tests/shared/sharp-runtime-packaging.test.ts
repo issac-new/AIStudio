@@ -17,7 +17,6 @@ describe('Sharp runtime packaging guardrails', () => {
     '.github/workflows/desktop-release.yml',
     '.github/workflows/desktop-manual-build.yml',
     '.github/workflows/webui-release.yml',
-    '.github/workflows/tos-package-test.yml',
     'Dockerfile',
   ])('runs the smoke test while building %s', (path) => {
     const source = read(path)

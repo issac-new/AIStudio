@@ -66,6 +66,18 @@ describe('desktop Computer Use permissions', () => {
     await expect(requestComputerUsePermission('screenRecording')).rejects.toThrow('settings unavailable')
   })
 
+  it('opens the exact screen-recording pane without waiting for native consent', async () => {
+    native.sources.mockReturnValue(new Promise(() => {}))
+    await requestComputerUsePermission('screenRecording')
+    expect(native.open).toHaveBeenCalledWith('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
+  })
+
+  it('still opens screen-recording settings after a synchronous registration error', async () => {
+    native.sources.mockImplementation(() => { throw new Error('native registration failed') })
+    await requestComputerUsePermission('screenRecording')
+    expect(native.open).toHaveBeenCalledWith('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
+  })
+
   it.each(['granted', 'restricted'])('does not probe screen capture when %s', async status => {
     native.media.mockReturnValue(status)
     await requestComputerUsePermission('screenRecording')

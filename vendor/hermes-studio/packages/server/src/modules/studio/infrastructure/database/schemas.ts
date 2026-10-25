@@ -90,6 +90,20 @@ export const USAGE_PRICING_SCHEMA = {
 // ============================================================================
 
 export const TASK_PLANS_TABLE = 'task_plans'
+export const SESSION_TASKS_TABLE = 'session_tasks'
+export const SESSION_TASKS_SCHEMA: Record<string, string> = {
+  id: 'TEXT PRIMARY KEY',
+  session_id: 'TEXT NOT NULL',
+  title: 'TEXT NOT NULL',
+  summary: "TEXT NOT NULL DEFAULT ''",
+  status: "TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'completed'))",
+  source_message_id: 'INTEGER NOT NULL',
+  evidence_message_id: 'INTEGER',
+  completion_evidence: "TEXT NOT NULL DEFAULT ''",
+  created_at: 'INTEGER NOT NULL',
+  updated_at: 'INTEGER NOT NULL',
+  completed_at: 'INTEGER',
+}
 export const TASK_PLANS_SCHEMA: Record<string, string> = {
   session_id: 'TEXT NOT NULL',
   plan_id: 'TEXT NOT NULL',
@@ -214,6 +228,8 @@ export const SESSIONS_SCHEMA: Record<string, string> = {
   workspace: 'TEXT',
   category_id: 'INTEGER',
   history_revision: 'INTEGER NOT NULL DEFAULT 0',
+  task_summary_revision: 'INTEGER NOT NULL DEFAULT 0',
+  task_summary_updated_at: 'INTEGER NOT NULL DEFAULT 0',
   /** Milliseconds of the last history clear; provider usage before it describes deleted history. */
   history_cleared_at: 'INTEGER NOT NULL DEFAULT 0',
   /** Context estimate after a history edit, separate from cumulative billed usage. */
@@ -1689,6 +1705,9 @@ export function initAllHermesTables(): void {
         idx_task_plans_run: 'CREATE INDEX IF NOT EXISTS idx_task_plans_run ON task_plans(session_id, run_id)',
         idx_task_plans_latest: 'CREATE INDEX IF NOT EXISTS idx_task_plans_latest ON task_plans(session_id, created_at DESC)',
       },
+    })
+    syncTable(SESSION_TASKS_TABLE, SESSION_TASKS_SCHEMA, {
+      indexes: { idx_session_tasks_session: 'CREATE INDEX IF NOT EXISTS idx_session_tasks_session ON session_tasks(session_id, created_at, id)' },
     })
     syncTable(SESSIONS_TABLE, SESSIONS_SCHEMA, {
       indexes: SESSIONS_INDEXES,

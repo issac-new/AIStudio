@@ -49,12 +49,17 @@ for (const mobile of [false, true]) test(`new chat remembers the configured form
   await workspace.getByRole('button', { name: 'OK', exact: true }).click()
   await draft.getByTestId('dsh-session-preset').getByRole('button').click()
   await page.locator('.n-dropdown-option:visible').filter({ hasText: /^Minimal mode/ }).click()
-  await draft.locator('.reasoning-effort-button').click()
-  await page.getByRole('slider').focus()
-  await page.keyboard.press('Home')
-  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight')
+  const effort = draft.locator('.reasoning-effort-button')
+  await effort.click()
+  const slider = page.getByRole('slider')
+  await slider.press('Home')
+  const max = Number(await slider.getAttribute('aria-valuemax'))
+  for (let step = 0; step < max; step++) {
+    if (await effort.getAttribute('aria-label') === 'Reasoning effort: High') break
+    await slider.press('ArrowRight')
+  }
   await page.keyboard.press('Escape')
-  await expect(draft.locator('.reasoning-effort-button')).toHaveAttribute('aria-label', /High/)
+  await expect(effort).toHaveAttribute('aria-label', 'Reasoning effort: High')
   await expect.poll(() => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), storageKey)).toMatchObject({
     agent: 'dsh', mode: 'scoped', profile: 'default', provider: 'other', model: 'other-model', categoryId: 9,
     workspace: '/workspace/MyProject', apiMode: 'anthropic_messages', agentPreset: 'minimal', reasoningEffort: 'high',

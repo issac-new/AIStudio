@@ -202,6 +202,8 @@ function normalize(input: unknown, current = defaults): StoredSettings {
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
     throw new JevError('JEV base URL must use HTTP(S) without credentials, query or fragment')
   }
+  // The SDK appends /v1/systemone; accept versioned bases and complete endpoints too.
+  url.pathname = url.pathname.replace(/\/+$/, '').replace(/\/v1(?:\/systemone)?$/, '') || '/'
   next.baseUrl = url.toString().replace(/\/+$/, '')
   if (/[\r\n]/.test(next.apiKey)) throw new JevError('Invalid JEV API key')
   return next

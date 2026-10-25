@@ -61,7 +61,10 @@ vi.mock('child_process', () => ({
 vi.mock('../../packages/server/src/modules/studio/repositories/session-store', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../packages/server/src/modules/studio/repositories/session-store')>(),
   updateSessionStats: vi.fn(),
+  addMessage: vi.fn(),
 }))
+
+import { addMessage } from '../../packages/server/src/modules/studio/repositories/session-store'
 
 import {
   CodingAgentRunManager,
@@ -86,6 +89,15 @@ afterEach(() => {
 })
 
 describe('coding agent Windows process launch', () => {
+  it('keeps persisted user message IDs in the live resume so task links can locate them', () => {
+    const manager = new CodingAgentRunManager()
+    const run: any = { id: 'task-run', runMarker: 'turn', launch: { sessionId: 'task-session' }, state: { messages: [{ id: 31 }] } }
+    vi.mocked(addMessage).mockReturnValueOnce(185866)
+    const id = (manager as any).addUserMessage(run, 'task request')
+    expect(id).toBe(185866)
+    expect(run.state.messages[1]).toMatchObject({ id, role: 'user', content: 'task request', runMarker: 'turn' })
+    manager.shutdown()
+  })
   it('gives every submitted turn its own usage identity when the CLI process is reused', () => {
     const clock = vi.spyOn(performance, 'now').mockReturnValue(1000)
     const manager = new CodingAgentRunManager()
