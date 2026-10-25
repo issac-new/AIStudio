@@ -329,6 +329,15 @@ const workspaceModalVisible = ref(false)
 const workspacePickerTarget = ref<'active' | 'create'>('active')
 const activeWorkflowId = ref('')
 const { expanded: showWorkflowSidebar, isMobile } = usePageSidebarState()
+
+// overlay[ia2]: 收编壳嵌入态（route.meta.standaloneEmbed）默认收起工作流列表
+// 侧栏（2026-09-30 用户裁定：驾驶舱侧栏为唯一导航面；头部既有开关可随时展开）。
+// 0.7.26 侧栏状态收编进 usePageSidebarState——等价实现：嵌入态恒强制收起
+// （immediate 覆盖挂载初值；isMobile 变化不把嵌入态顶回，对齐原 patch 语义）。
+const isEmbeddedSidebar = computed(() => route.meta?.standaloneEmbed === true)
+watch([isEmbeddedSidebar, isMobile], ([embed]) => {
+  if (embed) showWorkflowSidebar.value = false
+}, { immediate: true })
 watch(
   showWorkflowSidebar,
   expanded => appStore.setPageSidebarExpanded(expanded),
