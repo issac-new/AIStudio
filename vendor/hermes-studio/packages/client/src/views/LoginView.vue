@@ -79,9 +79,16 @@ function clearSavedCredentials(form: 'matrix' | 'local'): void {
   localStorage.removeItem(keys.pass);
 }
 
-onMounted(() => {
+onMounted(async () => {
   const savedHs = localStorage.getItem('matrix_homeserver_url');
   if (savedHs) homeserverUrl.value = savedHs;
+  // C2 自动登录：本机 gateway 已配 Matrix access_token 时免密直入，失败回落手动登录。
+  try {
+    if (await authStore.autoLoginFromGateway()) {
+      router.push(resolveLoginRedirect(route.query.redirect));
+      return;
+    }
+  } catch { /* 回落手动登录 */ }
   loadSavedCredentials('matrix');
   loadSavedCredentials('local');
 });

@@ -61,6 +61,29 @@ export const useAuthStore = defineStore('hermes-auth', () => {
     }
   }
 
+  // C2 自动登录：读本机 gateway 的 Matrix access_token 免密建立会话（matrix-login 本就收
+  // access_token 而非密码）。无 gateway 凭据或失败返回 false，登录页回落手动登录。
+  async function autoLoginFromGateway(): Promise<boolean> {
+    error.value = null
+    try {
+      const res = await fetch('/api/matrix/gateway-credentials')
+      if (!res.ok) return false
+      const g = await res.json() as { configured?: boolean; homeserverUrl?: string; accessToken?: string; userId?: string }
+      if (!g?.configured || !g.accessToken || !g.userId || !g.homeserverUrl) return false
+      isLoading.value = true
+      matrixToken.value = g.accessToken
+      const hermesRes = await hermesMatrixLogin(g.accessToken, g.userId, '', g.homeserverUrl)
+      hermesToken.value = hermesRes.token
+      setApiKey(hermesRes.token)
+      storeMatrixCredentials({ homeserverUrl: g.homeserverUrl, accessToken: g.accessToken, userId: g.userId, deviceId: '' })
+      user.value = buildUnifiedUser(hermesRes.user)
+      return true
+    } catch {
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
   async function localLogin(username: string, password: string) {
     isLoading.value = true
     error.value = null
@@ -131,6 +154,7 @@ export const useAuthStore = defineStore('hermes-auth', () => {
     isMatrixLoggedIn,
     isSuperAdmin,
     matrixLogin,
+    autoLoginFromGateway,
     localLogin,
     fetchUser,
     logout,
