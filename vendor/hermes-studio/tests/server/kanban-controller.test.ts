@@ -38,6 +38,7 @@ vi.mock('fs/promises', async importOriginal => ({
 
 vi.mock('os', () => ({
   homedir: () => '/Users/tester',
+  tmpdir: () => '/tmp',
 }))
 
 vi.mock('../../packages/server/src/modules/hermes/services/runtime/path', () => ({
