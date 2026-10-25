@@ -784,7 +784,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at           INTEGER NOT NULL,
     started_at           INTEGER,
     completed_at         INTEGER,
-    workspace_kind       TEXT NOT NULL DEFAULT 'scratch',
+    workspace_kind       TEXT NOT NULL DEFAULT 'dir',
     workspace_path       TEXT,
     branch_name          TEXT,
     -- Optional link to a first-class Project (hermes_cli/projects_db). When set,
@@ -1204,7 +1204,10 @@ def create_task(
         except Exception:
             pass
     if workspace_kind is None:
-        workspace_kind = "scratch"
+        # overlay: default to dir workspace on plain boards; project-scoped
+        # boards keep the upstream flow (scratch -> project worktree upgrade
+        # in _resolve_project_link, #106342).
+        workspace_kind = "scratch" if project_id is not None else "dir"
     if workspace_kind not in VALID_WORKSPACE_KINDS:
         raise ValueError(
             f"workspace_kind must be one of {sorted(VALID_WORKSPACE_KINDS)}, "
@@ -1244,6 +1247,11 @@ def create_task(
     # Retry once on the extremely unlikely id collision.
     for attempt in range(2):
         task_id = _new_task_id()
+        # Overlay: a default ``dir`` task created without an explicit path lands on
+        # the managed per-task workspace dir (absolute, path-stable, cleanup-guard
+        # safe). Upstream v0.21.3 raises at resolve time on dir-without-path.
+        if workspace_kind == "dir" and not workspace_path:
+            workspace_path = str(workspaces_root(board=board) / task_id)
         try:
             # allow_nested: graph builders compose create_task under one outer
             # commit so the dispatcher never sees a half-built graph.
