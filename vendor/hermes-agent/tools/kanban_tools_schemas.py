@@ -502,6 +502,11 @@ KANBAN_CREATE_SCHEMA = _schema(
                 "open-ended cards where one shot rarely finishes the "
                 "work. Defaults to false (classic single-shot worker)."
         )),
+        "raci": {
+            "type": "object",
+            "description": "Structured RACI assignment: keys responsible/approver/consulted/informed, values arrays of account names. Takes precedence over body-text RACI.",
+            "additionalProperties": { "type": "array", "items": { "type": "string" } },
+        },
         "completion_contract": _prop("string", (
             "Declare at creation: local-only (default), OWNER/REPO for PR publication, or an exact GitHub PR URL. "
             "PR tasks cannot complete until repository-required exact-head CI passes. On publication pass metadata.published_pr."

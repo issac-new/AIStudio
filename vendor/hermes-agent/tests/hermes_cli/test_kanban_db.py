@@ -2082,3 +2082,96 @@ def test_archive_non_running_task_does_not_attempt_termination(kanban_home):
             (t,),
         ).fetchone()
         assert row is None
+
+
+# ---------------------------------------------------------------------------
+# Runtime hardening gates: path-safe task ids, atomic writes, staged-copy
+# cleanup, source-vanish race (patch 410 R2/R3/R4/V1 + staging guard)
+# ---------------------------------------------------------------------------
+
+
+def test_task_attachments_dir_rejects_path_escape(kanban_home):
+    """R2: tool-supplied ids reach the filesystem through this join; traversal,
+    separators, absolute paths and the empty id must raise instead of escaping
+    the attachments root."""
+    for bad in ("..", ".", "../x", "a/b", "a\\b", "", "/etc/passwd"):
+        with pytest.raises(ValueError):
+            kb.task_attachments_dir(bad)
+    ok = kb.task_attachments_dir("t_abc123")
+    assert ok.name == "t_abc123"
+
+
+def test_atomic_write_text_is_replace_based(tmp_path):
+    """R4: a failed replace leaves the old content byte-intact and no temp file
+    behind; the pre-fix in-place ``write_text`` truncated the target."""
+    target = tmp_path / "board.json"
+    target.write_text("old\n", encoding="utf-8")
+
+    def _boom(src, dst):
+        raise OSError("replace failed")
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(os, "replace", _boom)
+        with pytest.raises(OSError):
+            kb._atomic_write_text(target, "new\n")
+    assert target.read_text(encoding="utf-8") == "old\n"
+    assert not list(tmp_path.glob(".board.json.*.tmp")), "temp file must not leak"
+
+    kb._atomic_write_text(target, "new\n")
+    assert target.read_text(encoding="utf-8") == "new\n"
+
+
+def test_stage_completion_artifacts_discards_copies_when_row_insert_fails(kanban_home, monkeypatch):
+    """V1: the caller's rollback cleanup only learns the copies on a normal
+    return, so a row-insert failure must discard them right here or the retry
+    stages ``chart_1.png`` next to an orphan."""
+    with kbc.connect() as conn:
+        t = kb.create_task(conn, title="staged", workspace_kind="scratch")
+        ws = kbw.resolve_workspace(kb.get_task(conn, t))
+        kbw.set_workspace_path(conn, t, ws)
+        artifact = ws / "chart.png"
+        artifact.write_bytes(b"png-bytes")
+
+        def _boom(*_a, **_k):
+            raise RuntimeError("attachment row insert failed")
+
+        monkeypatch.setattr(kb, "_insert_completion_attachment", _boom)
+        with pytest.raises(RuntimeError):
+            kb.complete_task(conn, t, result="ok", metadata={"artifacts": [str(artifact)]})
+        attachment_dir = kb.task_attachments_dir(t)
+    assert not attachment_dir.exists() or not any(attachment_dir.iterdir())
+
+
+def test_source_vanishing_during_staging_raises_preservation_error(kanban_home):
+    """TOCTOU: the artifact can vanish between ``is_file`` and ``stat``. That
+    must take the unavailable branch (ArtifactPreservationError, staged copies
+    discarded, transition rolled back) — the pre-guard bare OSError skipped the
+    cleanup entirely."""
+    with kbc.connect() as conn:
+        t = kb.create_task(conn, title="vanish", workspace_kind="scratch")
+        ws = kbw.resolve_workspace(kb.get_task(conn, t))
+        kbw.set_workspace_path(conn, t, ws)
+        artifact = ws / "evidence.json"
+        artifact.write_bytes(b"{}")
+        kb.claim_task(conn, t)
+        run_id = kb.get_task(conn, t).current_run_id
+        real_stat, real_is_file = Path.stat, Path.is_file
+
+        def _racing_is_file(self):
+            return True if self.name == "evidence.json" else real_is_file(self)
+
+        def _racing_stat(self, *a, **kw):
+            if self.name == "evidence.json":
+                raise FileNotFoundError(2, "No such file or directory", str(self))
+            return real_stat(self, *a, **kw)
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(Path, "is_file", _racing_is_file)
+            mp.setattr(Path, "stat", _racing_stat)
+            with pytest.raises(kb.ArtifactPreservationError):
+                kb.request_review(
+                    conn, t, summary="ready",
+                    metadata={"artifacts": [str(artifact)]}, expected_run_id=run_id)
+        attachment_dir = kb.task_attachments_dir(t)
+        assert kb.get_task(conn, t).status == "running"
+        assert not attachment_dir.exists() or not any(attachment_dir.iterdir())

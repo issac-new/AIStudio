@@ -293,3 +293,27 @@ def test_run_slash_reclaim_running_task(kanban_home):
 # ---------------------------------------------------------------------------
 
 
+
+
+# ---------------------------------------------------------------------------
+# _parse_duration overflow / negative refusal (runtime hardening R1)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_duration_rejects_overflow_nan_and_negative():
+    """``float`` yields inf/nan for inputs like ``1e999d``, and a finite
+    mantissa can overflow to inf in the seconds multiply; ``int()`` then raised
+    an OverflowError no caller caught. Negative durations were accepted. All of
+    it must surface as a clean ValueError."""
+    for bad in ("1e999d", "1e308d", "infd", "nans", "-5", "-1h"):
+        with pytest.raises(ValueError):
+            kc._parse_duration(bad)
+
+
+def test_parse_duration_still_accepts_valid_forms():
+    assert kc._parse_duration(None) is None
+    assert kc._parse_duration("") is None
+    assert kc._parse_duration("30s") == 30
+    assert kc._parse_duration("2h") == 2 * 3600
+    assert kc._parse_duration("1d") == 86400
+    assert kc._parse_duration("45") == 45

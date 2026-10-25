@@ -482,6 +482,28 @@ def get_current_board() -> str:
     return DEFAULT_BOARD
 
 
+def _atomic_write_bytes(path: Path, data: bytes) -> None:
+    """Write ``data`` to ``path`` via a same-dir temp file + ``os.replace``, so a
+    crash mid-write can never leave a truncated file behind (board.json, the
+    current-board pointer, attachment blobs)."""
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp")
+    try:
+        with tmp.open("wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            tmp.unlink(missing_ok=True)
+        raise
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """``_atomic_write_bytes`` for text (UTF-8): a crash-safe ``write_text``."""
+    _atomic_write_bytes(path, text.encode("utf-8"))
+
+
 def set_current_board(slug: str) -> Path:
     """Persist ``slug`` as the active board; returns the file written. Does NOT
     check the board exists — callers do (so ``boards switch <typo>`` errors)."""
@@ -489,7 +511,7 @@ def set_current_board(slug: str) -> Path:
     normed = _require_slug(slug)
     path = current_board_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(normed + "\n", encoding="utf-8")
+    _atomic_write_text(path, normed + "\n")
     return path
 
 
@@ -597,8 +619,33 @@ def attachments_root(board: Optional[str] = None) -> Path:
 
 
 def task_attachments_dir(task_id: str, board: Optional[str] = None) -> Path:
-    """Return the per-task attachment directory ``<root>/<task_id>/``."""
-    return attachments_root(board=board) / task_id
+    """Return the per-task attachment directory ``<root>/<task_id>/``.
+
+    ``task_id`` must be a single safe path segment (:func:`_require_task_id_segment`):
+    tool-supplied ids reach :func:`store_attachment_bytes` through here, and an
+    unchecked ``/etc/x`` or ``../../..`` would escape the attachments root and
+    create/write arbitrary locations."""
+    return attachments_root(board=board) / _require_task_id_segment(task_id)
+
+
+# ``t_<hex>`` ids are letters/digits/underscore only, but imported or
+# hand-written ids may carry dots or dashes; the point is one path segment.
+_TASK_ID_SEGMENT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _require_task_id_segment(task_id: str) -> str:
+    """Validate ``task_id`` as one safe path segment; ``ValueError`` naming the
+    reason for anything with a separator (``/``, ``\\``), traversal (``..``),
+    an absolute path, or an empty id. This is the trust boundary for
+    caller-supplied task ids used in filesystem paths."""
+    tid = task_id if isinstance(task_id, str) else ""
+    if (not tid or tid in (".", "..") or not _TASK_ID_SEGMENT_RE.match(tid)
+            or Path(tid).name != tid):
+        raise ValueError(
+            f"invalid task_id {task_id!r}: must be a single path-safe segment "
+            "(no '/', '\\\\', '..', or empty)"
+        )
+    return tid
 
 
 def worker_logs_dir(board: Optional[str] = None) -> Path:
@@ -656,12 +703,15 @@ class Task:
     block_kind: Optional[str] = None
     block_recurrences: int = 0               # unblock-loop counter, see BLOCK_RECURRENCE_LIMIT
     completion_contract: Optional[str] = None
+    raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Task:
         g = lambda col, default=None: _lossy_text(_row_get(row, col, default))
         parsed = _json_or(g("skills"))
         skills_value = [str(s) for s in parsed if s] if isinstance(parsed, list) else None
+        raci_parsed = _json_or(g("raci"))
+        raci_value = raci_parsed if isinstance(raci_parsed, dict) else None
         return cls(
             **{col: _lossy_text(row[col]) for col in _TASK_REQUIRED_COLUMNS},
             **{col: _to_epoch(g(col)) for col in _TASK_EPOCH_COLUMNS},  # outside writers may store text: epoch or None
@@ -672,6 +722,7 @@ class Task:
             consecutive_failures=g("consecutive_failures", g("spawn_failures", 0)),
             last_failure_error=g("last_failure_error", g("last_spawn_error")),
             skills=skills_value,
+            raci=raci_value,
             goal_mode=bool(g("goal_mode")),
             block_recurrences=int(g("block_recurrences") or 0),
         )
@@ -843,6 +894,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- Force-loaded skills for the worker on this task, stored as JSON.
     -- Passed to the worker via `--skills`. NULL or empty array = no extras.
     skills               TEXT,
+    -- HERMES_CUSTOM[raci] Structured RACI (JSON {responsible,approver,consulted,informed}).
+    raci                 TEXT,
     -- Per-task model override. When set, the dispatcher passes -m <model>
     -- to the worker, overriding the profile's default model. NULL = use
     -- the profile default.
@@ -1186,6 +1239,7 @@ def create_task(
     project_source_task_id: Optional[str] = None,
     creator_task_id: Optional[str] = None,
     completion_contract: Optional[str] = None,
+    raci: Optional[dict] = None,
 ) -> str:
     """Create a task (optionally under ``parents``); returns its id.
 
@@ -1293,8 +1347,8 @@ def create_task(
                         max_runtime_seconds,
                         skills, max_retries, model_override, provider_override,
                         reasoning_effort,
-                        goal_mode, goal_max_turns, session_id, completion_contract
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        goal_mode, goal_max_turns, session_id, completion_contract, raci
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         task_id, title.strip(), body, assignee, task_status, priority,
@@ -1304,6 +1358,7 @@ def create_task(
                         json.dumps(skills_list) if skills_list is not None else None,
                         _opt_int(max_retries), model_override, provider_override, reasoning_effort,
                         1 if goal_mode else 0, _opt_int(goal_max_turns), session_id, completion_contract,
+                        json.dumps(raci) if isinstance(raci, dict) else None,
                     ),
                 )
                 for pid in parents:
@@ -1786,7 +1841,7 @@ def store_attachment_bytes(
     dest_dir = task_attachments_dir(task_id, board=board)
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_path = _collision_free_path(dest_dir, safe_name)
-    dest_path.write_bytes(data)
+    _atomic_write_bytes(dest_path, data)
     try:
         return add_attachment(
             conn, task_id, filename=dest_path.name, stored_path=str(dest_path.resolve()),
@@ -2705,68 +2760,77 @@ def complete_task(
     acceptance = prepare_acceptance(conn, task_id, expected_run_id, metadata)
     if acceptance is False:
         return False
-    with write_txn(conn):
-        # Hard invariant even for human review approval: a parent may have
-        # reopened while this task waited.
-        if not _parents_satisfied(conn, task_id):
-            return False
-        if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
-            return False
-        trow = conn.execute(
-            "SELECT status, claim_lock, worker_pid, worker_started_at FROM tasks WHERE id = ?",
-            (task_id,),
-        ).fetchone()
-        prior_status = trow["status"] if trow else None
-        # Refuse to close a LIVE worker's run without proof of ownership
-        # (expected_run_id) or an explicit human override (force=True); see
-        # _claim_is_live for what "live" means.
-        if expected_run_id is None and not force and trow and _claim_is_live(trow):
-            raise LiveClaimError(task_id)
-        sql = """
-                UPDATE tasks
-                   SET status       = 'done',
-                       result       = ?,
-                       completed_at = ?,
-                       claim_lock   = NULL,
-                       claim_expires= NULL,
-                       worker_pid   = NULL,
-                       block_kind   = NULL,
-                       block_recurrences = 0
-                 WHERE id = ?
-                   AND status IN ('running', 'ready', 'blocked', 'review')
-                """
-        params: tuple = (result, now, task_id)
-        if expected_run_id is not None:
-            sql += " AND current_run_id = ?"
-            params = (*params, int(expected_run_id))
-        if conn.execute(sql, params).rowcount != 1:
-            return False
-        if isinstance(metadata, dict):
-            _stage_completion_artifacts(conn, task_id, metadata, now)
-        run_id = _end_run(
-            conn, task_id, outcome="completed", status="done", summary=handoff_summary,
-            metadata=metadata,
-        )
-        # Never-claimed task: synthesize a run so the handoff fields survive.
-        if run_id is None and (summary or metadata or result or prior_status == "review"):
-            synth_summary, synth_metadata = handoff_summary, metadata
-            if prior_status == "review" and not synth_summary and not synth_metadata:
-                synth_summary = _REVIEW_APPROVED_NOTE
-                synth_metadata = {"source_status": "review", "approval": "manual"}
-            run_id = _synthesize_ended_run(
-                conn, task_id, outcome="completed", summary=synth_summary, metadata=synth_metadata,
+    # Staged copies live outside the txn: a rollback after staging must not
+    # leave orphans that make the retry stage ``name_1.ext`` beside them
+    # (same fence as ``request_review``).
+    staged_copies: list[Path] = []
+    try:
+        with write_txn(conn):
+            # Hard invariant even for human review approval: a parent may have
+            # reopened while this task waited.
+            if not _parents_satisfied(conn, task_id):
+                return False
+            if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
+                return False
+            trow = conn.execute(
+                "SELECT status, claim_lock, worker_pid, worker_started_at FROM tasks WHERE id = ?",
+                (task_id,),
+            ).fetchone()
+            prior_status = trow["status"] if trow else None
+            # Refuse to close a LIVE worker's run without proof of ownership
+            # (expected_run_id) or an explicit human override (force=True); see
+            # _claim_is_live for what "live" means.
+            if expected_run_id is None and not force and trow and _claim_is_live(trow):
+                raise LiveClaimError(task_id)
+            sql = """
+                    UPDATE tasks
+                       SET status       = 'done',
+                           result       = ?,
+                           completed_at = ?,
+                           claim_lock   = NULL,
+                           claim_expires= NULL,
+                           worker_pid   = NULL,
+                           block_kind   = NULL,
+                           block_recurrences = 0
+                     WHERE id = ?
+                       AND status IN ('running', 'ready', 'blocked', 'review')
+                    """
+            params: tuple = (result, now, task_id)
+            if expected_run_id is not None:
+                sql += " AND current_run_id = ?"
+                params = (*params, int(expected_run_id))
+            if conn.execute(sql, params).rowcount != 1:
+                return False
+            if isinstance(metadata, dict):
+                staged_copies = _stage_completion_artifacts(conn, task_id, metadata, now)
+            run_id = _end_run(
+                conn, task_id, outcome="completed", status="done", summary=handoff_summary,
+                metadata=metadata,
             )
-        event_summary = handoff_summary
-        if prior_status == "review" and not event_summary:
-            event_summary = _REVIEW_APPROVED_NOTE
-        _append_event(
-            conn, task_id, "completed",
-            _completed_event_payload(result, event_summary, verified_cards, metadata),
-            run_id=run_id,
-        )
-        if gate_payload:
-            # 通过事件与状态 UPDATE 同一提交：流转不成（提前 return/回滚）就不落。
-            _append_event(conn, task_id, "column_transition", gate_payload)
+            # Never-claimed task: synthesize a run so the handoff fields survive.
+            if run_id is None and (summary or metadata or result or prior_status == "review"):
+                synth_summary, synth_metadata = handoff_summary, metadata
+                if prior_status == "review" and not synth_summary and not synth_metadata:
+                    synth_summary = _REVIEW_APPROVED_NOTE
+                    synth_metadata = {"source_status": "review", "approval": "manual"}
+                run_id = _synthesize_ended_run(
+                    conn, task_id, outcome="completed", summary=synth_summary, metadata=synth_metadata,
+                )
+            event_summary = handoff_summary
+            if prior_status == "review" and not event_summary:
+                event_summary = _REVIEW_APPROVED_NOTE
+            _append_event(
+                conn, task_id, "completed",
+                _completed_event_payload(result, event_summary, verified_cards, metadata),
+                run_id=run_id,
+            )
+            if gate_payload:
+                # 通过事件与状态 UPDATE 同一提交：流转不成（提前 return/回滚）就不落。
+                _append_event(conn, task_id, "column_transition", gate_payload)
+    except Exception:
+        if staged_copies:
+            _discard_staged_copies(staged_copies, staged_copies[0].parent)
+        raise
     _flag_phantom_prose_refs(conn, task_id, run_id, summary, result, verified_cards)
     # Success wipes the breaker counter (history stays on the event log).
     _clear_failure_counter(conn, task_id)
@@ -2848,14 +2912,24 @@ def _stage_completion_artifacts(
 ) -> list[Path]:
     """Copy scratch artifacts to the attachments dir and record each as an
     attachment row; returns the copies so the caller can discard them if its
-    transaction rolls back."""
+    transaction rolls back. A failure while recording the rows discards the
+    copies here first (the caller only learns them on a normal return) and
+    re-raises."""
     _persist_scratch_completion_artifacts(conn, task_id, metadata)
     staged = [Path(stored_path) for stored_path in metadata.pop("_staged_artifacts", [])]
-    for path in staged:
-        _insert_completion_attachment(
-            conn, task_id, filename=path.name, stored_path=str(path),
-            size=path.stat().st_size, created_at=now, uploaded_by=uploaded_by,
-        )
+    try:
+        for path in staged:
+            _insert_completion_attachment(
+                conn, task_id, filename=path.name, stored_path=str(path),
+                size=path.stat().st_size, created_at=now, uploaded_by=uploaded_by,
+            )
+    except Exception:
+        # The caller's rollback cleanup cannot see these: its ``staged_copies``
+        # is only assigned on a normal return. Deleting here is idempotent with
+        # that cleanup (unlink missing_ok, rmdir suppressed).
+        if staged:
+            _discard_staged_copies(staged, staged[0].parent)
+        raise
     return staged
 
 
@@ -2995,11 +3069,25 @@ def _persist_scratch_completion_artifacts(
         problem = None
         if not src.is_file():
             problem = f"declared scratch artifact is unavailable or not a regular file: {artifact}"
-        elif resolved_src.stat().st_size > KANBAN_ATTACHMENT_MAX_BYTES:
-            problem = (
-                f"declared scratch artifact exceeds the "
-                f"{KANBAN_ATTACHMENT_MAX_BYTES}-byte limit: {artifact}"
-            )
+        else:
+            try:
+                artifact_size = resolved_src.stat().st_size
+            except OSError:
+                # TOCTOU: the source can vanish between ``is_file`` and ``stat``;
+                # a bare OSError here would skip the staged-copy cleanup below.
+                # Same fate as the unavailable branch above: discard the copies
+                # and raise ArtifactPreservationError, matching request_review's
+                # "a declared artifact that cannot be preserved raises" promise.
+                problem = (
+                    "declared scratch artifact is unavailable or not a regular "
+                    f"file: {artifact} (disappeared while staging)"
+                )
+            else:
+                if artifact_size > KANBAN_ATTACHMENT_MAX_BYTES:
+                    problem = (
+                        f"declared scratch artifact exceeds the "
+                        f"{KANBAN_ATTACHMENT_MAX_BYTES}-byte limit: {artifact}"
+                    )
         if problem:
             _discard_copies()
             raise ArtifactPreservationError(problem)

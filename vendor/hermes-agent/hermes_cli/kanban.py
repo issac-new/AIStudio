@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import math
 import os
 import shlex
 import sys
@@ -266,14 +267,18 @@ def _require_ids(args: argparse.Namespace) -> tuple[list[str], int]:
 
 def _parse_duration(val) -> Optional[int]:
     """``30s`` / ``5m`` / ``2h`` / ``1d`` or a raw integer → seconds; None for empty input;
-    ValueError on malformed input."""
+    ValueError on malformed input (negative or out-of-range like ``1e999d`` included)."""
     if val is None or val == "":
         return None
     s = str(val).strip().lower()
     try:
-        return int(s)  # bare integer → seconds
+        seconds = int(s)  # bare integer → seconds
     except ValueError:
         pass
+    else:
+        if seconds < 0:
+            raise ValueError(f"malformed duration {val!r} (negative durations are not allowed)")
+        return seconds
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     if not (s and s[-1] in units):
         raise ValueError(f"malformed duration {val!r} (expected 30s, 5m, 2h, 1d, or a number)")
@@ -281,7 +286,14 @@ def _parse_duration(val) -> Optional[int]:
         n = float(s[:-1])
     except ValueError as exc:
         raise ValueError(f"malformed duration {val!r}") from exc
-    return int(n * units[s[-1]])
+    # ``float`` happily yields inf/nan ("infd", "1e999d"), and even a finite
+    # mantissa can overflow to inf mid-multiply ("1e308d" * 86400); ``int()``
+    # then raises OverflowError, which no caller catches. Refuse anything
+    # non-finite or negative before the conversion.
+    seconds = n * units[s[-1]]
+    if not math.isfinite(seconds) or seconds < 0:
+        raise ValueError(f"malformed duration {val!r}")
+    return int(seconds)
 
 
 def _cmd_init(args: argparse.Namespace) -> int:
@@ -357,6 +369,16 @@ def _cmd_create(args: argparse.Namespace) -> int:
         max_runtime = _parse_duration(getattr(args, "max_runtime", None))
     except ValueError as exc:
         return _err(f"kanban: --max-runtime: {exc}", 2)
+    raci_raw = getattr(args, "raci", None)
+    raci = None
+    if raci_raw:
+        try:
+            parsed_raci = json.loads(raci_raw)
+            raci = parsed_raci if isinstance(parsed_raci, dict) else None
+        except (ValueError, TypeError):
+            return _err("kanban: --raci must be a JSON object", 2)
+        if raci is None:
+            return _err("kanban: --raci must be a JSON object", 2)
     max_retries = getattr(args, "max_retries", None)
     if max_retries is not None and max_retries < 1:
         return _err(f"kanban: --max-retries must be >= 1 (got {max_retries}); "
@@ -376,6 +398,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
             goal_mode=bool(getattr(args, "goal_mode", False)),
             goal_max_turns=getattr(args, "goal_max_turns", None),
             completion_contract=getattr(args, "completion_contract", None),
+            raci=raci,
             initial_status=getattr(args, "initial_status", "running"),
             creator_task_id=(os.environ.get("HERMES_KANBAN_TASK")
                              if is_dispatcher_owned_worker_context() else None),
