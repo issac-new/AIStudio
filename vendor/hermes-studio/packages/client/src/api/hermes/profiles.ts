@@ -61,7 +61,7 @@ export interface ProfileRuntimeStatusesResponse {
 
 export async function fetchProfiles(): Promise<HermesProfile[]> {
   const res = await request<{ profiles: HermesProfile[] }>('/api/hermes/profiles')
-  return res.profiles
+  return res?.profiles ?? []
 }
 
 export async function fetchProfileDetail(name: string): Promise<HermesProfileDetail> {
