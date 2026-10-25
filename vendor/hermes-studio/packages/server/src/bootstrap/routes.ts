@@ -76,6 +76,7 @@ import traceRoutes from '../custom/controllers/hermes/trace'
 import ideGitRoutes from '../custom/controllers/ide/git'
 import ideStorageRoutes from '../custom/controllers/system/storage'
 import ideWorktreeRouter from '../custom/controllers/ide/worktree'
+import { registerMatrixRoutes } from '../custom/matrix'
 import ideRetryCountRoutes from '../custom/controllers/ide/retry-counts'
 import ideSessionShareRouter from '../custom/controllers/ide/session-share'
 import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
@@ -223,6 +224,8 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(groupChatPublicRoutes.routes())
   app.use(sessionSharePublicRoutes.routes())
   app.use(chatWebhookPublicRoutes.routes())
+  // HERMES_CUSTOM[c2-gateway-credentials]: matrix 网关凭据端点须公开（自动登录在认证前调用）。
+  registerMatrixRoutes(app)
 
   // --- Auth middleware: all routes below require authentication ---
   authMiddleware.forEach((middleware) => app.use(middleware))
