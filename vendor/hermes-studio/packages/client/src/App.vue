@@ -161,7 +161,6 @@ provide(pageHeaderTargetKey, computed(() => showNavigationRail.value ? pageHeade
 function handleWideViewportChange(event: MediaQueryListEvent) {
   isWideViewport.value = event.matches;
 }
-const usesPageSidebar = computed(() => false);
 const isFullscreen = computed(() => route.meta?.fullscreen === true);
 const usesHermesConfigSidebar = computed(
   () => route.meta?.hermesConfig === true,

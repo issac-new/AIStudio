@@ -11,24 +11,6 @@ export const DEFAULT_KANBAN_BOARD = 'default'
 
 const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
 
-function safeStorageGet(key: string): string | null {
-  if (typeof window === 'undefined') return null
-  try {
-    return window.localStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-
-function safeStorageSet(key: string, value: string) {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(key, value)
-  } catch {
-    // Ignore storage failures; selectedBoard still remains explicit in-memory.
-  }
-}
-
 export function normalizeBoardSlug(board?: string | null): string {
   const trimmed = board?.trim().toLowerCase()
   if (!trimmed) return DEFAULT_KANBAN_BOARD
@@ -54,7 +36,7 @@ export const useKanbanStore = defineStore('kanban', () => {
   const attachments = ref<Record<string, KanbanAttachment[]>>({})
 
   adoptLegacySetting('kanban.selectedBoard', KANBAN_SELECTED_BOARD_STORAGE_KEY)
-  const _boardPref = readSetting<string>('kanban.selectedBoard', '')
+  const _boardPref = readSetting('kanban.selectedBoard', '')
   const selectedBoard = ref(normalizeBoardSlug(_boardPref.value || null))
 
   const filterStatus = ref<string | null>(null)
