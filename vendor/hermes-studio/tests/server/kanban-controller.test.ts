@@ -676,6 +676,31 @@ describe('kanban controller', () => {
     expect(exactSearchCtx.body.results[0]).toMatchObject({ id: 'session-2', title: 'Matched session' })
   })
 
+  it('allows completing a review-state task (验收动线) and bulk done from review', async () => {
+    mockGetTask.mockResolvedValue({
+      task: { id: 'task-1', assignee: null, status: 'review' },
+      comments: [],
+      events: [],
+      runs: [],
+    })
+
+    const completeCtx = ctx({
+      query: { board: 'project-a' },
+      request: { body: { task_ids: ['task-1'], summary: 'accepted' } },
+    })
+    await ctrl.complete(completeCtx)
+    expect(completeCtx.status).not.toBe(409)
+    expect(mockCompleteTasks).toHaveBeenCalledWith(['task-1'], 'accepted', { board: 'project-a', operatorOverride: true })
+
+    const bulkCtx = ctx({
+      query: { board: 'project-a' },
+      request: { body: { ids: ['task-1'], status: 'done' } },
+    })
+    await ctrl.bulkUpdateTasks(bulkCtx)
+    expect(bulkCtx.status).not.toBe(409)
+    expect(mockBulkUpdateTasks).toHaveBeenCalledWith(expect.objectContaining({ ids: ['task-1'], status: 'done' }))
+  })
+
   it('rejects invalid transitions before invoking mutating CLI commands', async () => {
     mockGetTask.mockResolvedValue({
       task: { id: 'task-1', assignee: null, status: 'todo' },

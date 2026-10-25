@@ -537,7 +537,7 @@ export async function complete(ctx: Context) {
       ctx,
       board,
       taskIds.value!,
-      new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready', 'blocked']),
+      new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready', 'blocked', 'review']),
       'complete',
     )) return
     await kanbanCli.completeTasks(taskIds.value!, summary.value, { board, operatorOverride: true })
@@ -693,7 +693,7 @@ export async function bulkUpdateTasks(ctx: Context) {
   if (!board) return
   try {
     const allowedStatuses = status.value === 'done'
-      ? new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready', 'blocked'])
+      ? new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready', 'blocked', 'review'])
       : status.value === 'blocked'
         ? new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready'])
         : status.value === 'ready'
