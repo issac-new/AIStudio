@@ -399,13 +399,19 @@ function writeWindowsShimPair(
   return 'unchanged'
 }
 
-function shellProfilePaths(homeDir: string, platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string[] {
+export function shellProfilePaths(homeDir: string, platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string[] {
   if (platform === 'win32') return []
 
   const shell = env.SHELL?.trim() || ''
   const name = shell.split('/').pop() || ''
   if (name === 'fish') return [join(homeDir, '.config', 'fish', 'conf.d', 'ekko-studio.fish')]
-  if (name === 'bash') return [join(homeDir, '.bash_profile'), join(homeDir, '.bashrc')]
+  // Linux desktop launches (Kylin/UKUI included) often start Electron without
+  // SHELL set; bash is the default there. .bashrc first: interactive non-login
+  // bash (GUI terminals) never reads .bash_profile, and CREATING .bash_profile
+  // would shadow an existing ~/.profile for bash login shells.
+  if (name === 'bash' || (!name && platform === 'linux')) {
+    return [join(homeDir, '.bashrc'), join(homeDir, '.bash_profile')]
+  }
   if (name === 'zsh' || platform === 'darwin') return [join(homeDir, '.zprofile'), join(homeDir, '.zshrc')]
   return [join(homeDir, '.profile')]
 }
