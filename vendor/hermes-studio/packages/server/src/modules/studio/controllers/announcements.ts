@@ -3,10 +3,34 @@ import { fetchStudioAnnouncements } from '../services/notifications/announcement
 import { getHermesWebUiVersion } from '../public/system-info'
 import { filterStaleAnnouncementPayload } from '../../../custom/studio/announcement-filter'
 
+// overlay[perf]（2026-09-30 根治批）：远端公告拉取服务端 TTL 缓存——实测
+// 2.6s/次（外网往返），客户端每次冷启动都请求，页面武装被它拖慢；公告变更
+// 频率低，按 locale 缓存 5 分钟，失败不缓存（保持 502 语义）。
+const ANNOUNCEMENT_TTL_MS = 300_000
+const ANNOUNCEMENT_CACHE_MAX = 8
+const announcementCache = new Map<string, { payload: unknown; ts: number }>()
+
+async function fetchAnnouncementsCached(localeInput: unknown): Promise<unknown> {
+  // 缓存键必须与 fetchStudioAnnouncements 的归一化同域（zh*/en 两档）：用原始
+  // query 串做键时任意 locale 各占一条且存的是同一份归一化 payload——已认证
+  // 调用可无界撑 Map + 并发放大回源（24h 审查 P2）
+  const key = typeof localeInput === 'string' && /^zh(?:[-_]|$)/i.test(localeInput) ? 'zh-CN' : 'en'
+  const hit = announcementCache.get(key)
+  if (hit && Date.now() - hit.ts < ANNOUNCEMENT_TTL_MS) return hit.payload
+  const payload = await fetchStudioAnnouncements(localeInput)
+  if (announcementCache.size >= ANNOUNCEMENT_CACHE_MAX) {
+    // 淘汰最早入缓存项（Map 保插入序，首键最旧）——TTL 只判新鲜度不清条目
+    const oldest = announcementCache.keys().next().value
+    if (oldest !== undefined) announcementCache.delete(oldest)
+  }
+  announcementCache.set(key, { payload, ts: Date.now() })
+  return payload
+}
+
 export async function getAnnouncements(ctx: Context): Promise<void> {
   ctx.set('Cache-Control', 'no-store')
   try {
-    const payload = await fetchStudioAnnouncements(ctx.query.locale)
+    const payload = await fetchAnnouncementsCached(ctx.query.locale)
     // 版本感知过滤：公告引用的全部 x.y.z ≤ 本机版本 → 过期不再下发
     // （0.7.23 机器被弹「请更新至0.7.20」实锤；无版本号公告不过滤不误杀）
     ctx.body = filterStaleAnnouncementPayload(payload, getHermesWebUiVersion())
