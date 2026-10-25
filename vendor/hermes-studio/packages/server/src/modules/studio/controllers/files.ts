@@ -1,16 +1,38 @@
+import { join } from 'path'
 import {
   createFileProvider,
   resolveProfileFilePath,
   isSensitivePath,
   MAX_EDIT_SIZE,
 } from '../services/files/file-provider'
+import { isPathWithin, relativePathFromBase } from '../../hermes/services/runtime/path'
+import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
 import { MultipartParseError, parseMultipartBoundary, parseMultipartFilename, splitMultipart } from '../public/multipart'
 
 function requestedProfile(ctx: any): string | undefined {
   return ctx.state?.profile?.name
 }
 
+function requestedRoot(ctx: any): string | undefined {
+  const root = ctx.query.root as string | undefined
+  return root?.trim() || undefined
+}
+
 function resolveRequestPath(ctx: any, relativePath: string): string {
+  // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 分支必须落在 hermes base 沙箱内
+  // 用 hermes base (~/.hermes) 而非 profile home 作为沙箱基底——任务 workspace
+  // 在 ~/.hermes/kanban/boards/.../workspaces/ 下，是 profile home 的兄弟目录，
+  // 用 profile home 会误拒。root 已要求 super_admin，基底放宽到 hermes base 仍安全。
+  const root = requestedRoot(ctx)
+  if (root) {
+    const hermesBase = getHermesBaseDir()
+    const candidate = relativePath ? join(root, relativePath) : root
+    if (!isPathWithin(candidate, hermesBase)) {
+      throw Object.assign(new Error('Requested path is outside the hermes base sandbox'), { code: 'invalid_path' })
+    }
+    return candidate
+  }
+  // HERMES_CUSTOM[SecFileRootSandbox] END
   return resolveProfileFilePath(relativePath, requestedProfile(ctx))
 }
 
@@ -18,7 +40,21 @@ async function createRequestFileProvider(ctx: any) {
   return createFileProvider(requestedProfile(ctx))
 }
 
+// When a `root` is in effect, the FileProvider still computes entry.path relative
+// to the profile home (or falls back to a bare filename for paths outside home).
+// The `?root=` client model assumes entry.path is relative to `root`, so that
+// navigation like fetchEntries(entry.path) resolves correctly via join(root, path).
+// Re-base each entry's path against `root` when present; keep the provider's value otherwise.
+function rebaseEntryPath<T extends { name: string; path: string }>(entry: T, dirAbsPath: string, root: string | undefined): T {
+  if (!root) return entry
+  const absEntry = join(dirAbsPath, entry.name)
+  const rel = relativePathFromBase(absEntry, root)
+  return { ...entry, path: rel ?? entry.name }
+}
+
 function withAbsolutePath<T extends { path: string }>(ctx: any, entry: T): T & { absolutePath: string } {
+  const root = requestedRoot(ctx)
+  if (root) return { ...entry, absolutePath: join(root, entry.path) }
   return { ...entry, absolutePath: resolveRequestPath(ctx, entry.path) }
 }
 
@@ -45,6 +81,14 @@ function handleError(ctx: any, err: any) {
 // GET /api/studio/files/list?path=
 export async function list(ctx: any) {
   const relativePath = (ctx.query.path as string) || ''
+  const root = requestedRoot(ctx)
+  // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: 使用 root 时要求 super_admin
+  if (root && ctx.state.user?.role !== 'super_admin') {
+    ctx.status = 403
+    ctx.body = { error: 'root parameter requires super administrator privileges', code: 'forbidden' }
+    return
+  }
+  // HERMES_CUSTOM[SecFileRootSandbox] END
   try {
     const absPath = resolveRequestPath(ctx, relativePath)
     const provider = await createRequestFileProvider(ctx)
@@ -53,7 +97,8 @@ export async function list(ctx: any) {
       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
       return a.name.localeCompare(b.name)
     })
-    ctx.body = { entries: entries.map(entry => withAbsolutePath(ctx, entry)), path: relativePath, absolutePath: absPath }
+    const rebased = root ? entries.map(entry => rebaseEntryPath(entry, absPath, root)) : entries
+    ctx.body = { entries: rebased.map(entry => withAbsolutePath(ctx, entry)), path: relativePath, absolutePath: absPath }
   } catch (err: any) {
     handleError(ctx, err)
   }
@@ -67,6 +112,13 @@ export async function stat(ctx: any) {
     ctx.body = { error: 'Missing path parameter', code: 'missing_path' }
     return
   }
+  // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: 使用 root 时要求 super_admin
+  if (requestedRoot(ctx) && ctx.state.user?.role !== 'super_admin') {
+    ctx.status = 403
+    ctx.body = { error: 'root parameter requires super administrator privileges', code: 'forbidden' }
+    return
+  }
+  // HERMES_CUSTOM[SecFileRootSandbox] END
   try {
     const absPath = resolveRequestPath(ctx, relativePath)
     const provider = await createRequestFileProvider(ctx)

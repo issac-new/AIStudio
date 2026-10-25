@@ -1,5 +1,5 @@
 import { authorizeShareDownload } from '../services/session-shares/access'
-import { basename, extname, isAbsolute } from 'path'
+import { basename, extname, isAbsolute, resolve } from 'path'
 import {
   createFileProvider,
   localProvider,
@@ -8,6 +8,10 @@ import {
   resolveProfileFilePath,
 } from '../services/files/file-provider'
 import { getActiveProfileName } from '../public/profile-config'
+// HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 参数沙箱校验
+import { isPathWithin } from '../../hermes/services/runtime/path'
+import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
+// HERMES_CUSTOM[SecFileRootSandbox] END
 import { createAppImagePreview } from '../services/files/app-image-preview'
 
 // MIME type mapping for common extensions
@@ -70,6 +74,7 @@ export async function download(ctx: any) {
   const filePath = ctx.query.path as string | undefined
   const fileName = ctx.query.name as string | undefined
   const variant = ctx.query.variant as string | undefined
+  const root = (ctx.query.root as string | undefined)?.trim() || undefined
 
   if (!filePath) {
     ctx.status = 400
@@ -81,9 +86,32 @@ export async function download(ctx: any) {
     const profile = requestedProfile(ctx)
     // Validate the path first
     // Support both absolute and relative paths
-    const validPath = ctx.state?.sessionShare
-      ? await authorizeShareDownload(ctx.state.sessionShare, filePath)
-      : isAbsolute(filePath) ? validatePath(filePath) : resolveProfileFilePath(filePath, profile)
+    // Support both absolute and relative paths; when a root is provided,
+    // resolve the relative path against it (same semantics as files/list).
+    // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 必须落在 hermes base 沙箱内，且要求 super_admin
+    let validPath: string
+    if (ctx.state?.sessionShare) {
+      validPath = await authorizeShareDownload(ctx.state.sessionShare, filePath)
+    } else if (isAbsolute(filePath)) {
+      validPath = validatePath(filePath)
+    } else if (root) {
+      if (ctx.state.user?.role !== 'super_admin') {
+        ctx.status = 403
+        ctx.body = { error: 'root parameter requires super administrator privileges', code: 'forbidden' }
+        return
+      }
+      const hermesBase = getHermesBaseDir()
+      const candidate = resolve(root, filePath)
+      if (!isPathWithin(candidate, hermesBase)) {
+        ctx.status = 403
+        ctx.body = { error: 'Requested path is outside the hermes base sandbox', code: 'invalid_path' }
+        return
+      }
+      validPath = validatePath(candidate)
+    } else {
+      validPath = resolveProfileFilePath(filePath, profile)
+    }
+    // HERMES_CUSTOM[SecFileRootSandbox] END
 
     // Choose provider: always use local for upload directory files
     let data: Buffer
