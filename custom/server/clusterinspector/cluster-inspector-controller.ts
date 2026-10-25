@@ -86,7 +86,9 @@ function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknow
     const { readdirSync } = await import('node:fs')
     const { join } = await import('node:path')
     let boards: string[] = []
-    try { boards = readdirSync(join(home(), 'kanban', 'boards'), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) } catch { return [] }
+    // `_` 前缀目录（_archive/_archived）是带时间戳副本的归档容器，无 tasks 表——
+    // 扫它们=每轮巡检两枚「no such table: tasks」噪音（2026-10-26 走查轮实锤）。
+    try { boards = readdirSync(join(home(), 'kanban', 'boards'), { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith('_')).map((d) => d.name) } catch { return [] }
     if (boards.length === 0) return []
     let DatabaseSync: typeof import('node:sqlite').DatabaseSync
     try { ({ DatabaseSync } = await import('node:sqlite')) } catch { return [] }
