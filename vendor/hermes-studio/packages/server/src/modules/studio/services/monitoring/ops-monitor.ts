@@ -357,8 +357,24 @@ function sampleWindowsProcessCpuPercent(pid: number, cpuSeconds: number): number
   return clampPercent((cpuDelta / elapsedSeconds / safeCpuCount()) * 100)
 }
 
+// overlay[fix-wmi-polling]: TTL cache for collectWindowsProcessMetrics.
+// The PerformanceView auto-refreshes every 15s and the app health-poller hits
+// /health every 30s; without caching each call spawned a fresh powershell.exe
+// running `Get-CimInstance Win32_Process` (full system process table). High-
+// frequency WMI enumeration is what antivirus products flag as suspicious
+// process-monitoring behaviour. Cache the result for 10s so concurrent callers
+// within one refresh tick share a single powershell invocation.
+const WINDOWS_PROCESS_METRICS_CACHE_TTL_MS = 10_000
+let cachedWindowsProcessMetrics: { key: string; at: number; value: Map<number, Partial<ProcessUsage>> } | null = null
+
 function collectWindowsProcessMetrics(pids: number[]): Map<number, Partial<ProcessUsage>> {
   if (!pids.length) return new Map()
+  // overlay[fix-wmi-polling]: serve from cache when the same PID set was queried recently.
+  const cacheKey = pids.slice().sort((a, b) => a - b).join(',')
+  const now = Date.now()
+  if (cachedWindowsProcessMetrics && cachedWindowsProcessMetrics.key === cacheKey && now - cachedWindowsProcessMetrics.at < WINDOWS_PROCESS_METRICS_CACHE_TTL_MS) {
+    return cachedWindowsProcessMetrics.value
+  }
   const idList = pids.join(',')
   try {
     const script = [
@@ -394,6 +410,8 @@ function collectWindowsProcessMetrics(pids: number[]): Map<number, Partial<Proce
         command: typeof item?.command === 'string' ? item.command : undefined,
       })
     }
+    // overlay[fix-wmi-polling]: populate cache on the primary (successful) path.
+    cachedWindowsProcessMetrics = { key: cacheKey, at: Date.now(), value: metrics }
     return metrics
   } catch {}
 

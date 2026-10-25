@@ -71,7 +71,10 @@ function setAutoRefresh(enabled: boolean) {
     timer = undefined
   }
   if (enabled) {
-    timer = setInterval(() => loadRuntime(false), 5000)
+    // overlay[fix-wmi-polling]: 15s instead of 5s. Each refresh spawns a
+    // powershell WMI query on Windows; 5s was frequent enough that antivirus
+    // products flagged the repeated process-table enumeration.
+    timer = setInterval(() => loadRuntime(false), 15000)
   }
 }
 
