@@ -76,6 +76,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
   notifyCompletion: (payload: { title: string; body?: string; icon?: string; tag?: string; clickUrl?: string }): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:notify-completion', payload),
   openExternalUrl: (url: string): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:open-external-url', url),
   openChatWindow: (sessionId: string, profile?: string): Promise<void> => ipcRenderer.invoke('hermes-desktop:open-chat-window', sessionId, profile),
+  // overlay[wm]: 驾驶舱操作页弹出独立窗口（routePath 含 standalone=1 query）
+  openPanelWindow: (routePath: string, size?: { width?: number; height?: number }): Promise<void> => ipcRenderer.invoke('hermes-desktop:open-panel-window', routePath, size),
   ensureAuth: async (): Promise<boolean> => {
     if (!REMOTE_SERVER_MODE) {
       const token = await ipcRenderer.invoke('hermes-desktop:get-token')
