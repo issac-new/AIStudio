@@ -20,6 +20,8 @@ import { dshPluginUi } from '../modules/coding-agents/services'
 import './chat-agent-runtime-adapter'
 import './skill-files-adapter'
 import { setGroupChatServer } from '../modules/studio/routes/group-chat'
+// overlay[loop-socket]: Loop Engineering Socket.IO namespace
+import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
 import { setChatRunServer } from '../modules/studio/public/chat-run'
 import { GroupChatServer } from '../modules/studio/public/group-chat'
 import {
@@ -719,6 +721,9 @@ export async function bootstrap() {
   petStateSocketServer = new PetStateSocketServer(activeGroupChatServer.getIO())
   petStateSocketServer.init()
   registerDesktopBrowserRelay(activeGroupChatServer.getIO())
+
+  // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.
+  setupLoopSocketNamespace(activeGroupChatServer.getIO())
 
   startGlobalAgentServer(activeGroupChatServer.getIO(), { localBaseUrl: loopbackBaseUrl })
   console.log('[bootstrap] global agent server ready')
