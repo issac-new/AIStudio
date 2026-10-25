@@ -11,5 +11,7 @@ export function nativeCodingAgentSupportsScoped(value: unknown): value is Exclud
 }
 
 export function isGlobalOnlyCodingAgent(value: unknown): boolean {
-  return value === 'cursor' || value === 'qoder'
+  // overlay[zcode] 490:zcode scoped 与其自身凭据体系冲突(~/.zcode/v2 自管模型切换,
+  // 忽略 hermes 侧密钥注入),参照 cursor/qoder 先例强制 global。
+  return value === 'cursor' || value === 'qoder' || value === 'zcode'
 }
