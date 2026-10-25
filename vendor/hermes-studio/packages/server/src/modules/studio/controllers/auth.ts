@@ -703,7 +703,8 @@ export async function matrixLogin(ctx: Context) {
 
   if (!user) {
     const localpart = matrixUserId.replace(/^@/, '').split(':')[0]
-    const role = 'super_admin'
+    // HERMES_CUSTOM[MuxScopedGrant]: 自动建号不再授予 super_admin（多用户收敛为 admin）
+    const role = 'admin'
     user = createFromMatrix({
       matrixUserId,
       username: localpart,
@@ -713,9 +714,11 @@ export async function matrixLogin(ctx: Context) {
       role,
     })
     if (user) {
-      // Ensure matrix user has access to all profiles (same permission as local admin)
+      // HERMES_CUSTOM[MuxScopedGrant]: 授权收敛——只授本账号同名 profile（找不到则
+      // default）。多路复用多用户下每个 matrix 账号只见自己的档案，不再全量授权。
       const allProfiles = listProfileNamesFromDisk()
-      replaceUserProfiles(user.id, allProfiles, allProfiles[0] || 'default')
+      const own = allProfiles.includes(localpart) ? localpart : 'default'
+      replaceUserProfiles(user.id, [own], own)
       user = findByMatrixUserId(matrixUserId)
     }
   } else {
@@ -725,9 +728,14 @@ export async function matrixLogin(ctx: Context) {
       avatarUrl: matrixInfo?.avatarUrl || undefined,
       lastLoginAt: now,
     })
-    // Ensure matrix user has access to all profiles (same permission as local admin)
+    // HERMES_CUSTOM[MuxScopedGrant]: 已存在用户不覆写既有授权——运维授予的多
+    // profile 不被下次登录静默裁到 own；仅当授权为空时补 own（最小授权收敛）。
+    const localpart = matrixUserId.replace(/^@/, '').split(':')[0]
     const allProfiles = listProfileNamesFromDisk()
-    replaceUserProfiles(user.id, allProfiles, allProfiles[0] || 'default')
+    const own = allProfiles.includes(localpart) ? localpart : 'default'
+    if (listUserProfiles(user.id).length === 0) {
+      replaceUserProfiles(user.id, [own], own)
+    }
     user = findByMatrixUserId(matrixUserId)
   }
 
