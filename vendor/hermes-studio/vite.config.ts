@@ -5,7 +5,7 @@ import { resolve } from 'path'
 import pkg from './package.json'
 
 const FRONTEND_PORT = Number(process.env.HERMES_WEB_UI_FRONTEND_PORT || 8649)
-const BACKEND_PORT = process.env.HERMES_WEB_UI_BACKEND_PORT || '8648'
+const BACKEND_PORT = process.env.HERMES_WEB_UI_BACKEND_PORT || '8647'
 const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`
 
 function createProxyConfig(): ProxyOptions {
@@ -74,6 +74,9 @@ export default defineConfig({
       'vue-router',
       'pinia',
       'naive-ui',
+      // HERMES_CUSTOM[MatrixChat] BEGIN: pre-bundle matrix-js-sdk
+      'matrix-js-sdk',
+      // HERMES_CUSTOM[MatrixChat] END
     ],
   },
   server: {
