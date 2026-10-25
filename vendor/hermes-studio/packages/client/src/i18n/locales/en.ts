@@ -3930,7 +3930,9 @@ export default {
       moveToReady: '→ ready',
       priority: 'Set priority',
       archive: 'Archive',
-      nudgeDispatcher: 'Nudge dispatcher'
+      nudgeDispatcher: 'Nudge dispatcher',
+      nudge: 'Nudge',
+      nudgeHint: 'Resolve nudge targets from assignee/board ownership',
     },
     message: {
       taskCreated: 'Task created',

@@ -3929,7 +3929,9 @@ export default {
       moveToReady: '→ 待就绪',
       priority: '设置优先级',
       archive: '归档',
-      nudgeDispatcher: '催一下调度器'
+      nudgeDispatcher: '催一下调度器',
+      nudge: '催办',
+      nudgeHint: '按卡的负责人/板归属解析催办对象',
     },
     message: {
       taskCreated: '任务已创建',
