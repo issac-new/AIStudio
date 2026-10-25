@@ -13,8 +13,10 @@ const authStore = useAuthStore();
 const activeTab = ref<'matrix' | 'local'>('matrix');
 
 const homeserverUrl = ref("http://localhost:8008");
-const matrixUsername = ref("@swarm:matrix.test");
-const matrixPassword = ref("TestPass123!");
+// overlay[security]: 登录页不预填任何账号/口令（025 引入的推演测试凭据默认值移除——
+// run10 推演报告代码核验 D2：预填真实可用测试凭据属生产安全缺陷；占位提示走 i18n placeholder）。
+const matrixUsername = ref("");
+const matrixPassword = ref("");
 
 const localUsername = ref("");
 const localPassword = ref("");
