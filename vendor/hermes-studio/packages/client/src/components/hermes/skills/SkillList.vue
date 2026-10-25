@@ -532,7 +532,7 @@ function confirmDelete(category: string, skillName: string) {
 
 .skill-desc {
     font-size: calc(var(--font-size-base, 14px) * 11 / 14);
-    color: $text-muted;
+    color: $text-secondary;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

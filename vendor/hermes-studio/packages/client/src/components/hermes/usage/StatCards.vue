@@ -74,7 +74,7 @@ function formatTokens(value: number) { return formatUsageTokens(value, locale?.v
 }
 
 .stat-value {
-  font-size: calc(var(--font-size-base, 14px) * 30 / 14);
+  font-size: calc(var(--font-size-base, 14px) * 26 / 14);
   font-weight: 550;
   color: $text-primary;
   line-height: var(--line-height, 1.2);
@@ -85,7 +85,7 @@ function formatTokens(value: number) { return formatUsageTokens(value, locale?.v
 
 .stat-main { display: flex; align-items: baseline; gap: calc(6px * var(--spacing-scale, 1)); flex-wrap: nowrap; }
 .stat-unit { font-size: calc(var(--font-size-base, 14px) * 12 / 14); color: $text-secondary; white-space: nowrap; }
-.stat-hero .stat-value { font-size: clamp(36px, 4vw, 48px); letter-spacing: -2px; margin-bottom: 12px; }
+.stat-hero .stat-value { font-size: clamp(28px, 3vw, 36px); letter-spacing: -1px; margin-bottom: 12px; }
 .stat-text-value { font-size: calc(var(--font-size-base, 14px) * 20 / 14); letter-spacing: 0; }
 .token-split { display: flex; flex-wrap: wrap; gap: 0 calc(4px * var(--spacing-scale, 1)); span { white-space: nowrap; } }
 
