@@ -1100,6 +1100,10 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions): 
     await execKanbanMutation(args, 'Hermes CLI: kanban set-model failed', 'Failed to set model override')
   }
   if (patch.clear_reasoning_effort || patch.reasoning_effort !== undefined) {
+    // HERMES_CUSTOM[aipaydev]: stock hermes has no set-reasoning verb — degrade loudly.
+    if (!(await kanbanCliSupportsV020())) {
+      throw new Error('reasoning pin requires the SwarmStudio-custom hermes CLI (stock runtime has no set-reasoning verb)')
+    }
     const effort = patch.clear_reasoning_effort ? 'clear' : (patch.reasoning_effort || 'clear')
     await execKanbanMutation(
       [...boardArgs(board), 'set-reasoning', taskId, effort],
@@ -1300,6 +1304,23 @@ function parseDotEnv(raw: string): Record<string, string> {
 
 // ─── HERMES_CUSTOM[v020] BEGIN: estimate / projects / board project ────────
 
+// HERMES_CUSTOM[aipaydev] BEGIN: CLI capability probe — the stock hermes
+// runtime (0.21.4) lacks the v020 custom verbs; degrade per-call instead of
+// surfacing raw CLI errors. Probed once, cached for the process lifetime.
+type KanbanCliCapability = 'custom' | 'stock'
+let kanbanCliCapability: KanbanCliCapability | null = null
+async function kanbanCliSupportsV020(): Promise<boolean> {
+  if (kanbanCliCapability) return kanbanCliCapability === 'custom'
+  try {
+    await execKanbanCli(['estimate', '--help'], { timeout: 20000, ...execOpts })
+    kanbanCliCapability = 'custom'
+  } catch {
+    kanbanCliCapability = 'stock'
+  }
+  return kanbanCliCapability === 'custom'
+}
+// HERMES_CUSTOM[aipaydev] END
+
 export interface KanbanEstimateResult {
   ok: boolean
   est_tokens?: number
@@ -1315,6 +1336,10 @@ export interface KanbanEstimateResult {
  * exists yet (`hermes kanban estimate --title ... --json`).
  */
 export async function estimateText(title: string, body?: string, opts?: KanbanBoardOptions): Promise<KanbanEstimateResult> {
+  // HERMES_CUSTOM[aipaydev]: stock runtime has no estimate verb — honest degrade.
+  if (!(await kanbanCliSupportsV020())) {
+    return { ok: false, reason: 'estimate needs the SwarmStudio-custom hermes CLI (stock runtime has no kanban estimate verb)' }
+  }
   const args = [...boardArgs(opts?.board), 'estimate', '--title', title, '--json']
   pushOptional(args, '--body', body)
   try {
@@ -1342,8 +1367,41 @@ export interface KanbanProject {
   archived: boolean
 }
 
+// HERMES_CUSTOM[aipaydev]: stock `hermes project list` prints a fixed-format
+// table (`* slug<24 name (archived)?  [N folder(s)]`, projects_cmd.py _cmd_list)
+// — parse it when the custom --json verb is absent. id falls back to slug
+// (bind-board accepts id or slug).
+export function parseProjectListTable(stdout: string): KanbanProject[] {
+  const out: KanbanProject[] = []
+  for (const line of stdout.split('\n')) {
+    const m = line.match(/^([* ])\s+(\S+)\s+(.*?)(?:\s+\(archived\))?\s+\[\d+ folder\(s\)\]\s*$/)
+    if (!m) continue
+    const slug = m[2] as string
+    const name = (m[3] as string).trim()
+    out.push({
+      id: slug, slug, name,
+      description: null, icon: null, color: null,
+      board_slug: null, primary_path: null,
+      archived: line.includes('(archived)'),
+    })
+  }
+  return out
+}
+
+async function listProjectsStock(): Promise<KanbanProject[]> {
+  const { stdout } = await execKanbanCli(['project', 'list'], {
+    maxBuffer: 5 * 1024 * 1024,
+    timeout: 30000,
+    ...execOpts,
+  })
+  return parseProjectListTable(stdout.trim())
+}
+
 /** List first-class Hermes projects for board scoping (`hermes project list --json`, patch 179). */
 export async function listProjects(): Promise<KanbanProject[]> {
+  if (!(await kanbanCliSupportsV020())) {
+    return listProjectsStock()
+  }
   try {
     const { stdout } = await execKanbanCli(['project', 'list', '--json'], {
       maxBuffer: 5 * 1024 * 1024,
@@ -1361,6 +1419,21 @@ export async function listProjects(): Promise<KanbanProject[]> {
 /** Scope a board to a project (or clear with null) via `kanban boards set-project` (patch 178). */
 export async function setBoardProject(slugInput: string, projectRef: string | null): Promise<void> {
   const slug = normalizeBoardSlug(slugInput)
+  // HERMES_CUSTOM[aipaydev]: stock runtime equivalent is `hermes project
+  // bind-board <project> <board>`; clearing is unsupported there (the stock
+  // project table does not expose board bindings).
+  if (!(await kanbanCliSupportsV020())) {
+    const ref = projectRef?.trim()
+    if (!ref) {
+      throw new Error('clearing a board project requires the SwarmStudio-custom hermes CLI (stock runtime cannot resolve board bindings)')
+    }
+    await execKanbanCli(['project', 'bind-board', ref, slug], {
+      maxBuffer: 1024 * 1024,
+      timeout: 30000,
+      ...execOpts,
+    })
+    return
+  }
   const args = ['kanban', 'boards', 'set-project', slug]
   args.push(projectRef?.trim() ? projectRef.trim() : 'none')
   try {
