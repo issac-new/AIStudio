@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
+import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 import { computed, ref } from 'vue'
 import * as kanbanApi from '@/api/hermes/kanban'
 import { probeAuthViaRest } from '@/api/client'
 import type { KanbanTask, KanbanTaskStatus, KanbanStats, KanbanAssignee, KanbanBoard, KanbanProject, KanbanCapabilities, KanbanDiagnosticsOptions, KanbanDispatchOptions, KanbanBulkUpdateRequest, KanbanCreateRequest, KanbanDiagnostic, KanbanOrchestration, KanbanAttachment } from '@/api/hermes/kanban'
 
 export const KANBAN_SELECTED_BOARD_STORAGE_KEY = 'hermes.kanban.selectedBoard'
+// overlay[#539-batch4/patch 540]: 选板偏好走 settings-layers user 层（遗留裸键一次性收养）
 export const DEFAULT_KANBAN_BOARD = 'default'
 
 const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -51,7 +53,9 @@ export const useKanbanStore = defineStore('kanban', () => {
   const orchestration = ref<KanbanOrchestration | null>(null)
   const attachments = ref<Record<string, KanbanAttachment[]>>({})
 
-  const selectedBoard = ref(normalizeBoardSlug(safeStorageGet(KANBAN_SELECTED_BOARD_STORAGE_KEY)))
+  adoptLegacySetting('kanban.selectedBoard', KANBAN_SELECTED_BOARD_STORAGE_KEY)
+  const _boardPref = readSetting<string>('kanban.selectedBoard', '')
+  const selectedBoard = ref(normalizeBoardSlug(_boardPref.value || null))
 
   const filterStatus = ref<string | null>(null)
   const filterAssignee = ref<string | null>(null)
@@ -270,7 +274,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     const resolved = resolveAvailableBoard(board)
     const changed = selectedBoard.value !== resolved
     selectedBoard.value = resolved
-    safeStorageSet(KANBAN_SELECTED_BOARD_STORAGE_KEY, resolved)
+    writeSetting('user', 'kanban.selectedBoard', resolved)
     boardWarning.value = null
     if (changed) {
       clearBoardScopedState()
