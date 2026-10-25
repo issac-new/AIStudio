@@ -2117,7 +2117,13 @@ work, describe the reverse signal accurately and DO NOT carry forward the
 cancelled task.
 Example: "User asked to stop the prior task — earlier work is cancelled."
 If no outstanding task exists, write "None."]""",
-        "goal": "[What the user is trying to accomplish overall]",
+        "goal": (
+            "[What the user is actually trying to accomplish. Distinguish TRUE INTENT from the "
+            "literal ask: when the underlying goal differs from the surface request (the user asks "
+            "to delete a file but the real goal is safely freeing disk space), record both — the "
+            "literal ask, then 'actual intent: ...'. The successor context acts on the intent, not "
+            "just the words.]"
+        ),
         "constraints": (
             "[User preferences, coding style, constraints, important decisions. Any security or safety constraint "
             "the user stated (files/data to avoid, operations that must not be performed, credential-handling rules) "
@@ -3557,6 +3563,12 @@ None recoverable from deterministic fallback.
 ## Resolved Questions
 None recoverable from deterministic fallback.
 
+## Open Questions & Unknowns
+None recoverable from deterministic fallback — verify current state before assuming.
+
+## Forward Plan
+Unknown from deterministic fallback. Derive next steps from the latest user message and current repository/session state.
+
 ## Relevant Files
 {_bullets(anchors["relevant_files"], limit=12)}
 
@@ -3967,7 +3979,10 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
             + _language_and_provenance_rule +
             "NEVER include API keys, tokens, passwords, secrets, credentials, or connection strings in the "
             "summary — replace any that appear with [REDACTED]. Note that credentials were present, but do "
-            "not preserve their values."
+            "not preserve their values. "
+            "Honesty marking: any claim that was never actually verified during the compacted turns "
+            "(assumed, inferred, or hoped-for) must be tagged [UNVERIFIED] inline at first mention; never "
+            "present an assumption as an observed fact. "
         )
         # Lean mode folds the session log into this SAME single request (one aux call).
         _session_log_section = _LEAN_SESSION_LOG_SECTION if getattr(self, "tail_mode", "lean") == "lean" else ""
@@ -3985,7 +4000,7 @@ PREVIOUS SUMMARY:
 NEW TURNS TO INCORPORATE:
 {content_to_summarize}{_memory_section}
 
-Update the summary using this exact structure. PRESERVE all existing information that is still relevant. ADD new completed actions to the numbered list (continue numbering). Move items from "In Progress" to "Completed Actions" when done. Move answered questions to "Resolved Questions". Update "Active State" to reflect current state. Remove information only if it is clearly obsolete. CRITICAL: Update "{HISTORICAL_TASK_HEADING}" to reflect the user's most recent unfulfilled input — this includes any question, decision request, or discussion turn that the assistant has not yet answered. Only write "None" if the last exchange was fully resolved.
+Update the summary using this exact structure. PRESERVE all existing information that is still relevant. ADD new completed actions to the numbered list (continue numbering). Move items from "In Progress" to "Completed Actions" when done. Move answered questions to "Resolved Questions". Move unknowns that got established out of "Open Questions & Unknowns"; add newly surfaced ones. Rewrite "Forward Plan" to the current intended next steps — do not carry a stale plan forward. Update "Active State" to reflect current state. Remove information only if it is clearly obsolete. CRITICAL: Update "{HISTORICAL_TASK_HEADING}" to reflect the user's most recent unfulfilled input — this includes any question, decision request, or discussion turn that the assistant has not yet answered. Only write "None" if the last exchange was fully resolved.
 
 {_template_sections}"""
         else:
@@ -4067,6 +4082,19 @@ the user's correction and record what changed as a result.]
 
 ## Resolved Questions
 {_section["resolved_questions"]}
+
+## Open Questions & Unknowns
+[Known unknowns as of the end of the compacted region — things the work depends on that
+were never established: unverified assumptions, unconfirmed hypotheses, environment facts
+never checked, third-party behavior never observed. Distinguish from "Blocked" (known
+failures): this section is for what was never tested. Write "None" only if everything
+material was actually verified.]
+
+## Forward Plan
+[The intended next steps in order — what the successor context should do first, second,
+third, plus any deliberately deferred work. Short ordered list, imperative voice. This is
+a handoff plan, not a promise: the latest user message after the summary always overrides
+it. If the compacted region ended mid-task, the current step comes first.]
 
 ## Relevant Files
 [Files read, modified, or created — with brief note on each]
