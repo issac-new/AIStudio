@@ -3317,7 +3317,8 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
       if (tool.id === 'zcode' && (model || reasoningEffort)) {
         const selection = await prepareZcodeGlobalModel(rootDir, model, { ...await commandEnv(), ...execution.env }, reasoningEffort)
         execution.env = { ...execution.env, ...selection.env }
-        nativeFiles.push(selection.file)
+        // An empty selection (no model and no native default) launches ZCode as-is.
+        if (selection.file) nativeFiles.push(selection.file)
       }
       return { agentId: tool.id, mode, profile: scope.profile, provider: 'global', model, reasoningEffort, rootDir, workspaceDir,
         command: execution.command, args: execution.args, env: execution.env, files: nativeFiles, nativeSystemPrompt: systemPrompt, nativeMcpServers,

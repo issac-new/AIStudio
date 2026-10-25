@@ -2,6 +2,8 @@ import { readFile, stat } from 'node:fs/promises'
 import { ModelDiscoveryError, record, text, type ModelDiscoveryAdapter } from '../models/types'
 import { readZcodePersonalConfig, zcodeReasoningEfforts } from './model-options'
 
+const ruleList = (value: unknown): any[] => Array.isArray(value) ? value : []
+
 export const zcodeModels: ModelDiscoveryAdapter = {
   source: 'config', scope: 'builtin',
   async discover(context) {
@@ -16,7 +18,13 @@ export const zcodeModels: ModelDiscoveryAdapter = {
     const selected = personal.config?.defaultModelSelection
     const rules = record(record(config.config).modelConfigRules).builtinProviderModelRules
     if (!Array.isArray(rules)) throw new ModelDiscoveryError('unsupported')
-    return { models: rules.flatMap((raw: unknown) => {
+    // The personal layer owns the user's custom providers; list its models after
+    // the builtin directory so Global mode can select them like account models.
+    const personalRules = [
+      ...ruleList(personal.config?.modelConfigRules?.providerModelRules),
+      ...ruleList(personal.config?.modelConfigRules?.manualProviderModelRules),
+    ]
+    return { models: [...rules, ...personalRules].flatMap((raw: unknown) => {
       const rule = record(raw), id = text(rule.modelId), provider = text(rule.providerId)
       const reasoningEfforts = id && provider ? zcodeReasoningEfforts(config, personal, provider, id) : undefined
       return id ? [{ id, name: id, ...(provider ? { provider } : {}), hidden: rule.config?.enabled === false,

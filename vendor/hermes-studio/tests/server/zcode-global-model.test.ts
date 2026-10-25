@@ -109,4 +109,69 @@ describe('ZCode global model selection', () => {
     expect(JSON.parse(await readFile(prepared.file.absolutePath, 'utf8')).schemaVersion).toBe(1)
     await expect(prepareZcodeGlobalModel(root, 'unknown-model', env)).rejects.toThrow('Unknown ZCode builtin model')
   })
+
+  it('accepts a model declared by the personal provider layer', async () => {
+    const { root, personal, env } = await fixture()
+    const source = JSON.stringify({ schemaVersion: 1, config: {
+      providerConfigRules: { providerRules: [{ providerId: 'custom-provider', config: { access: { apiKey: 'personal-credential' } } }] },
+      modelConfigRules: { providerModelRules: [{ providerId: 'custom-provider', modelId: 'custom-model' }] },
+    } })
+    await writeFile(personal, source)
+    const prepared = await prepareZcodeGlobalModel(root, 'custom-model', env)
+    const overlay = JSON.parse(await readFile(prepared.file.absolutePath, 'utf8'))
+    expect(overlay.config.defaultModelSelection).toEqual({ providerId: 'custom-provider', modelId: 'custom-model', options: {} })
+    expect(overlay.config.providerConfigRules.providerRules[0].config.access.apiKey).toBe('personal-credential')
+    expect(await readFile(personal, 'utf8')).toBe(source)
+  })
+
+  it('prefers the builtin directory route when both layers ship the model', async () => {
+    const { root, personal, env } = await fixture()
+    await writeFile(personal, JSON.stringify({ config: { modelConfigRules: {
+      providerModelRules: [{ providerId: 'custom-provider', modelId: 'native-model' }],
+    } } }))
+    const prepared = await prepareZcodeGlobalModel(root, 'native-model', env)
+    expect(JSON.parse(await readFile(prepared.file.absolutePath, 'utf8')).config.defaultModelSelection.providerId).toBe('native-account')
+  })
+
+  it('keeps the previous personal provider when it also ships the model', async () => {
+    const { root, personal, env } = await fixture()
+    await writeFile(env.ZCODE_BUILTIN_PROVIDER_CONFIG_FILE, JSON.stringify({ config: { modelConfigRules: {
+      builtinProviderModelRules: [{ providerId: 'native-account', modelId: 'native-model' }],
+    } } }))
+    await writeFile(personal, JSON.stringify({ config: {
+      defaultModelSelection: { providerId: 'custom-provider', modelId: 'older-model' },
+      modelConfigRules: { providerModelRules: [{ providerId: 'custom-provider', modelId: 'native-model' }] },
+    } }))
+    const prepared = await prepareZcodeGlobalModel(root, 'native-model', env)
+    expect(JSON.parse(await readFile(prepared.file.absolutePath, 'utf8')).config.defaultModelSelection)
+      .toEqual({ providerId: 'custom-provider', modelId: 'native-model', options: {} })
+  })
+
+  it('rejects a personal declaration that is disabled', async () => {
+    const { root, personal, env } = await fixture()
+    await writeFile(personal, JSON.stringify({ config: { modelConfigRules: {
+      providerModelRules: [{ providerId: 'custom-provider', modelId: 'custom-model', config: { enabled: false } }],
+    } } }))
+    await expect(prepareZcodeGlobalModel(root, 'custom-model', env)).rejects.toThrow('Unknown ZCode builtin model')
+  })
+
+  it('skips the overlay when neither a model nor a native default is selected', async () => {
+    const { root, env } = await fixture()
+    const prepared = await prepareZcodeGlobalModel(root, '', env, 'high')
+    expect(prepared.env).toEqual({})
+    expect(prepared.file).toBeUndefined()
+    await expect(readFile(join(root, 'native-provider-config.json'))).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it('applies an effort to the previous personal-layer default selection', async () => {
+    const { root, personal, env } = await fixture()
+    await writeFile(personal, JSON.stringify({ config: {
+      defaultModelSelection: { providerId: 'custom-provider', modelId: 'custom-model', options: { reasoningLevel: 'low' } },
+      modelConfigRules: { providerModelRules: [{ providerId: 'custom-provider', modelId: 'custom-model',
+        config: { optionSpecs: { reasoningLevel: { values: ['low', 'high'] } } } }] },
+    } }))
+    const prepared = await prepareZcodeGlobalModel(root, '', env, 'high')
+    expect(JSON.parse(await readFile(prepared.file.absolutePath, 'utf8')).config.defaultModelSelection)
+      .toEqual({ providerId: 'custom-provider', modelId: 'custom-model', options: { reasoningLevel: 'high' } })
+  })
 })

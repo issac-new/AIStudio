@@ -3,6 +3,8 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { createScopedRuntimeConfig, type ScopedRuntimeInput, type ScopedRuntimeConfig } from '../runtime/scoped-config'
 import { readZcodePersonalConfig, zcodeReasoningEfforts } from './model-options'
 
+const ruleList = (value: unknown): any[] => Array.isArray(value) ? value : []
+
 /** Select a builtin model in a private overlay, preserving native provider credentials. */
 export async function prepareZcodeGlobalModel(rootDir: string, model: string, env: NodeJS.ProcessEnv, reasoningEffort?: string) {
   const builtinPath = env.ZCODE_BUILTIN_PROVIDER_CONFIG_FILE
@@ -12,10 +14,21 @@ export async function prepareZcodeGlobalModel(rootDir: string, model: string, en
   const path = join(rootDir, 'native-provider-config.json')
   const previous = personal.config?.defaultModelSelection
   model ||= previous?.modelId || ''
-  const candidates = builtin.config?.modelConfigRules?.builtinProviderModelRules?.filter((entry: any) => entry.modelId === model && entry.config?.enabled !== false) || []
+  // The builtin directory ships account models; the personal layer declares the
+  // user's own providers. Directory routes win, personal rules keep custom ids.
+  const candidates = [
+    ...ruleList(builtin.config?.modelConfigRules?.builtinProviderModelRules),
+    ...ruleList(personal.config?.modelConfigRules?.providerModelRules),
+    ...ruleList(personal.config?.modelConfigRules?.manualProviderModelRules),
+  ].filter((entry: any) => entry.modelId === model && entry.config?.enabled !== false)
   // A model can be shipped by multiple providers; keep the user's native route.
   const rule = candidates.find((entry: any) => entry.providerId === previous?.providerId) || candidates[0]
-  if (!rule?.providerId) throw new Error('Unknown ZCode builtin model')
+  if (!rule?.providerId) {
+    // Without a requested or native default model, ZCode launches on its own
+    // default selection; no overlay exists to carry an effort either.
+    if (!model) return { env: {} as Record<string, string>, file: undefined }
+    throw new Error('Unknown ZCode builtin model')
+  }
   const options = previous?.modelId === model && previous?.providerId === rule.providerId ? { ...previous.options } : {}
   if (reasoningEffort) {
     const efforts = zcodeReasoningEfforts(builtin, personal, rule.providerId, model)

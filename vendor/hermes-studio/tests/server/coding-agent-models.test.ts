@@ -295,6 +295,26 @@ describe('native model directory adapters', () => {
     expect(JSON.stringify(result)).not.toContain('secret')
   })
 
+  it('lists personal-layer ZCode models after the builtin directory', async () => {
+    const root = await home(), builtin = join(root, 'builtin.json'), personal = join(root, 'personal.json')
+    await writeFile(builtin, JSON.stringify({ config: { modelConfigRules: {
+      builtinProviderModelRules: [{ providerId: 'builtin', modelId: 'GLM-5.3' }],
+    } } }))
+    await writeFile(personal, JSON.stringify({ config: {
+      modelConfigRules: {
+        providerModelRules: [{ providerId: 'custom', modelId: 'k3' }],
+        manualProviderModelRules: [{ providerId: 'manual', modelId: 'step-5-preview', config: { enabled: false } }],
+      },
+    } }))
+    const ctx = context(); ctx.env = { ZCODE_BUILTIN_PROVIDER_CONFIG_FILE: builtin, ZCODE_PERSONAL_PROVIDER_CONFIG_FILE: personal }
+    const result = await zcodeModels.discover(ctx)
+    expect(result.models.map((model: any) => [model.id, model.provider, model.hidden])).toEqual([
+      ['GLM-5.3', 'builtin', false],
+      ['k3', 'custom', false],
+      ['step-5-preview', 'manual', true],
+    ])
+  })
+
   it('deduplicates by provider and model and allowlists public metadata', () => {
     expect(normalizeModels([
       { id: 'same', name: 'Name', provider: 'a', contextWindow: NaN, apiKey: 'secret' } as any,
