@@ -7,6 +7,18 @@ import './styles/global.scss'
 import { desktopBridge } from '@/utils/desktop-bridge'
 import { useTheme } from '@/composables/useTheme'
 
+// overlay[aipaydev]: hash 路由吞掉路径形态深链（ide-deeplink-loses-task；run13 步18 实锤：/app/ide 裸路径
+// 冷启动落登录链→#/app→被带进最近群聊房）。router 初始化前把 pathname+search 迁
+// 为 hash 形态；判定单一事实源=overlay registries/client/deeplink.ts（内联副本，
+// 2026-10-10 放宽：由「仅带 query」扩为「全部非根路径」；hash==='#/' 须视为「未导航」）。
+{
+  const { origin, pathname, search, hash } = window.location
+  const notNavigated = hash === '' || hash === '#' || hash === '#/'
+  if (notNavigated && pathname !== '/index.html' && ((pathname !== '/' && pathname !== '') || search.length > 1)) {
+    window.location.replace(`${origin}/#${pathname}${search}`)
+  }
+}
+
 // Apply theme classes before mount to prevent FOUC (Flash of Unstyled Content)
 function storedPreference(key: string, fallback: string): string {
   try {
