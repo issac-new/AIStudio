@@ -1,4 +1,6 @@
 import type { Context } from 'koa'
+// overlay[matrix-server-info]: homeserver 口径=server-info 单一事实源（原六处写死 localhost:8008）
+import { getMatrixServerInfo } from '../../../custom/matrix/server-info'
 import { checkPassword, recordPasswordFailure, recordPasswordSuccess, extractIp, getLockedIps, unlockIp, unlockAll } from '../services/auth/login-limiter'
 import {
   createSuperAdmin,
@@ -798,7 +800,7 @@ export async function matrixLogin(ctx: Context) {
  */
 export async function listMatrixUsers(ctx: Context) {
   const adminToken = getMatrixAdminToken(ctx)
-  const homeserverUrl = 'http://localhost:8008' // TODO: Get from config or user
+  const homeserverUrl = getMatrixServerInfo().homeserverUrl // overlay[matrix-server-info]: 原 TODO 写死，改单一事实源
 
   if (!adminToken) {
     // Fallback: return only Hermes users with matrix_user_id
@@ -870,7 +872,7 @@ export async function createMatrixUser(ctx: Context) {
   }
 
   const adminToken = getMatrixAdminToken(ctx)
-  const homeserverUrl = 'http://localhost:8008' // TODO: Config
+  const homeserverUrl = getMatrixServerInfo().homeserverUrl // overlay[matrix-server-info]: 原 TODO 写死，改单一事实源
 
   if (!adminToken) {
     ctx.status = 503
@@ -940,7 +942,7 @@ export async function updateMatrixUser(ctx: Context) {
   // Update Matrix display name if provided
   if (body.displayName) {
     const adminToken = getMatrixAdminToken(ctx)
-    const homeserverUrl = hermesUser.matrix_homeserver_url || 'http://localhost:8008'
+    const homeserverUrl = hermesUser.matrix_homeserver_url || getMatrixServerInfo().homeserverUrl
     if (adminToken) {
       await fetch(`${homeserverUrl}/_matrix/client/v3/profile/${encodeURIComponent(matrixUserId)}/displayname`, {
         method: 'PUT',
@@ -983,7 +985,7 @@ export async function deleteMatrixUser(ctx: Context) {
   }
 
   const adminToken = getMatrixAdminToken(ctx)
-  const homeserverUrl = hermesUser.matrix_homeserver_url || 'http://localhost:8008'
+  const homeserverUrl = hermesUser.matrix_homeserver_url || getMatrixServerInfo().homeserverUrl
 
   if (adminToken) {
     await deleteMatrixUserOnServer(matrixUserId, adminToken, homeserverUrl)
@@ -1021,7 +1023,7 @@ export async function deactivateMatrixUser(ctx: Context) {
   }
 
   const adminToken = getMatrixAdminToken(ctx)
-  const homeserverUrl = hermesUser.matrix_homeserver_url || 'http://localhost:8008'
+  const homeserverUrl = hermesUser.matrix_homeserver_url || getMatrixServerInfo().homeserverUrl
 
   if (adminToken) {
     await setMatrixUserActive(matrixUserId, active, adminToken, homeserverUrl)
@@ -1053,7 +1055,7 @@ export async function resetMatrixUserPassword(ctx: Context) {
   }
 
   const adminToken = getMatrixAdminToken(ctx)
-  const homeserverUrl = hermesUser.matrix_homeserver_url || 'http://localhost:8008'
+  const homeserverUrl = hermesUser.matrix_homeserver_url || getMatrixServerInfo().homeserverUrl
 
   if (!adminToken) {
     ctx.status = 503
