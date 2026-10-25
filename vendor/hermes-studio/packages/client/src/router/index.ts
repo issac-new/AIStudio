@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { features } from '@/custom/features'
 import { hasApiKey, isStoredSuperAdmin } from '@/api/client'
 import { hasDesktopBrowserBridge } from '@/utils/desktop-bridge'
 import { resolveLoginRedirect } from '@/utils/login-redirect'
@@ -320,6 +321,10 @@ function isDesktopShell(): boolean {
 }
 
 router.beforeEach(async (to, _from, next) => {
+  // overlay[s3]（补遗⑤）：ekko 配置页与外链分享页默认关（VITE_CUSTOM_EKKO /
+  // VITE_CUSTOM_EXTERNAL_LINKS 再开；与 bootstrap externalLinks 摘除同键——router 守卫为第二层防线）
+  if (to.meta.ekkoConfig && !features.ekko) { next("/app"); return }
+  if ((to.name === "share.groupChat" || to.name === "groupChat.link") && !features.externalLinks) { next("/app"); return }
   if (to.path === '/hermes/models' && Object.prototype.hasOwnProperty.call(to.query, 'importProvider')) {
     captureProviderImport(to.query.importProvider)
     const query = { ...to.query }

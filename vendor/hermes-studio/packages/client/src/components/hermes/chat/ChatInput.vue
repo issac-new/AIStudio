@@ -18,6 +18,8 @@ import { useI18n } from 'vue-i18n'
 import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
 import { extractClipboardFiles } from '@/utils/clipboard-files'
 import VoiceDialogueControls from './VoiceDialogueControls.vue'
+// overlay[s3]（补遗⑤）：语音对话默认关（VITE_CUSTOM_VOICE=true 再开）
+import { features } from '@/custom/features'
 import BundleCreateModal from './BundleCreateModal.vue'
 import { BRIDGE_SESSION_COMMAND_DEFINITIONS } from '@/utils/hermes/bridge-session-commands'
 import { clampChatInputHeight, isMobileChatInputViewport } from '@/utils/chat-input-height'
@@ -507,7 +509,8 @@ function startResize(e: MouseEvent) {
 }
 
 const inputSettingsOptions = computed<DropdownOption[]>(() => [
-  {
+  // overlay[s3]：语音模式入口随 features.voice 摘除（关时不留死菜单项）
+  ...(features.voice ? [{
     label: t('realtimeVoice.mode'),
     key: 'voiceMode',
     disabled: props.draft,
@@ -515,7 +518,7 @@ const inputSettingsOptions = computed<DropdownOption[]>(() => [
       class: 'settings-voice-mode-icon',
       'aria-hidden': 'true',
     }, '◉'),
-  },
+  }] : []),
   {
     label: t('chat.showToolCalls'),
     key: 'toolTrace',
@@ -1459,6 +1462,7 @@ function openAttachmentPreview(attachment: Attachment) {
         </div>
         <div class="input-actions">
           <VoiceDialogueControls
+            v-if="features.voice"
             :status="voiceInput.dialogue.status.value"
             :transcript="voiceInput.transcript.value"
             :error="voiceInput.error.value"
