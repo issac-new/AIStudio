@@ -25,6 +25,15 @@ async function checkCurrentProfile() {
 
   if (!getApiKey() || route.name === 'login' || route.name === 'hermes.models') {
     show.value = false
+    // Cold-start race: the auth token may be restored from localStorage right
+    // after this early return (fetchProviders no-ops without it, leaving
+    // providers empty). Without a re-check the stale-empty result keeps the
+    // "profile has no model" prompt shown forever on this route. Retry until
+    // the token appears, then re-run the check once.
+    if (!getApiKey() && route.name !== 'login' && route.name !== 'hermes.models') {
+      setTimeout(() => { if (getApiKey()) void checkCurrentProfile() }, 500)
+      setTimeout(() => { if (getApiKey()) void checkCurrentProfile() }, 2000)
+    }
     return
   }
 
