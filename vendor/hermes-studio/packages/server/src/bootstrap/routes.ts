@@ -102,6 +102,7 @@ import ideRunUndoRouter from '../custom/controllers/ide/run-undo'
 import ideCompactionTraceRouter from '../custom/controllers/ide/compaction-trace'
 import ideVideoFramesRouter from '../custom/controllers/ide/video-frames'
 import { identityChatNativeRoutes } from '../custom/controllers/ia2/identity-chat'
+import { workflowNativeRoutes } from '../custom/controllers/ia2/workflow'
 import { ideNativeRoutes } from '../custom/controllers/ide/native-routes'
 import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
 // overlay[approval]: 审批宽度候选五档+决策八态+规则三列表（第一批吸收 #4）
@@ -485,6 +486,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(ideVideoFramesRouter.routes())                // IDE 视频抽帧（层 2 独立文件模式）
   // 404 缺陷修复：新增非 GET koa-router 路由真进程不生效——原生中间件直挂两端点
   app.use(identityChatNativeRoutes()) // 统一身份聊天（2026-10-23 五轮：peer dm 协议代理，原生中间件防 koa-router 404 缺陷）
+  app.use(workflowNativeRoutes()) // 工作流引擎（2026-10-23 五轮 H：调度分布式 hermes agent+matrix 集群）
   // （PUT /api/ide/engine-models 与 POST /api/ide/video-frames，koa 洋葱层绕开 router）。
   app.use(ideNativeRoutes())
   app.use(zcodeEngineRoutes.routes())             // zcode 引擎健康面（R4-P1）
