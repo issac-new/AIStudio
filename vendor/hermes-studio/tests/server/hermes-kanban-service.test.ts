@@ -48,7 +48,7 @@ describe('hermes kanban service', () => {
     await expect(service.getCapabilities()).resolves.toMatchObject({
       source: 'hermes-cli',
       supports: { boardsList: true, boardCreate: true, commentsWrite: true, dispatch: true, links: true },
-      missing: expect.arrayContaining(['cliCurrentSwitch', 'bulk', 'homeSubscriptions']),
+      missing: expect.arrayContaining(['cliCurrentSwitch', 'bulk', 'events']),
       capabilities: expect.arrayContaining([
         expect.objectContaining({ key: 'commentsWrite', status: 'supported', canonicalCommand: 'comment', requiresBoard: true }),
         expect.objectContaining({ key: 'attachments', status: 'supported', canonicalCommand: 'attachments --json', requiresBoard: true }),
