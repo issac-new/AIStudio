@@ -75,6 +75,22 @@ logger = logging.getLogger(__name__)
 _pairing_tool_call_id = coalesce_tool_call_id  # canonical id used by the persisted assistant message
 
 
+def _tool_audit_append(tool_name: str, is_error: bool, duration: float) -> None:
+    """Append-only tool call audit ledger: one JSON line per call to
+    <HERMES_HOME>/state/tool-audit.jsonl (ts/tool/ok/dur_ms only — never args,
+    args may carry secrets). Fail-soft: auditing must never break execution."""
+    try:
+        from hermes_constants import get_hermes_home
+
+        f = Path(get_hermes_home()) / "state" / "tool-audit.jsonl"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        with f.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"ts": int(time.time() * 1000), "tool": tool_name,
+                                 "ok": (not is_error), "dur_ms": int(duration * 1000)}) + "\n")
+    except Exception:
+        pass
+
+
 def _tc_name(tool_call: Any) -> str:
     return getattr(getattr(tool_call, "function", None), "name", "") or "tool"
 
@@ -1156,6 +1172,7 @@ def _commit_tool_result(
             function_result = agent._append_guardrail_observation(
                 function_name, function_args, function_result, failed=is_error, tool_call_id=tool_call_id,
             )
+        _tool_audit_append(function_name, is_error, tool_duration)
         if is_error:
             logger.warning("Tool %s returned error (%.2fs): %s", function_name, tool_duration, error_preview(function_result))
         elif success_log_chars is not None:
@@ -1446,6 +1463,7 @@ class _ConcurrentBatch:
             logger.info(
                 "tool %s completed (%.2fs, %d chars)", ref.name, duration, result_chars
             )
+        _tool_audit_append(ref.name, is_error, duration)
         return _ToolOutcome(ref, result, duration, is_error, blocked, data_use)
 
     def run_worker(self, index: int, start_order: int) -> None:
