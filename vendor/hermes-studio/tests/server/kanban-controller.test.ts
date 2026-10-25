@@ -168,11 +168,12 @@ describe('kanban controller', () => {
     const state = { user: { id: 7, role: 'admin' }, profile: { name: 'research' } }
     const listCtx = ctx({ state, query: { board: 'default', includeArchived: 'true' } })
     await ctrl.list(listCtx)
-    expect(listCtx.body).toEqual({ tasks: [tasks[0]] })
+    // 0.7.32 对齐：未指派任务（assignee=null）对所有 bound profile 可见
+    expect(listCtx.body).toEqual({ tasks: [tasks[0], tasks[2]] })
 
     const statsCtx = ctx({ state, query: { board: 'default' } })
     await ctrl.stats(statsCtx)
-    expect(statsCtx.body).toEqual({ stats: { by_status: { todo: 1 }, by_assignee: { research: 1 }, total: 1 } })
+    expect(statsCtx.body).toEqual({ stats: { by_status: { todo: 1, blocked: 1 }, by_assignee: { research: 1, default: 1 }, total: 2 } })
 
     const assigneesCtx = ctx({ state, query: { board: 'default' } })
     await ctrl.assignees(assigneesCtx)
