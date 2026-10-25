@@ -19,6 +19,7 @@ const AGENT_AVATARS = {
   pi: { label: 'Pi', src: deploymentUrl('/coding-agents/pi.svg') },
   grok: { label: 'Grok', src: deploymentUrl('/coding-agents/grok.svg') },
   opencode: { label: 'OpenCode', src: deploymentUrl('/coding-agents/opencode.png') },
+  mimo: { label: 'MiMo Code', src: deploymentUrl('/coding-agents/mimo.svg') },
   dsh: { label: 'DeepSeek Harness', src: deploymentUrl('/coding-agents/deepseek.svg') },
   cursor: { label: 'Cursor', src: deploymentUrl('/coding-agents/cursor-logo.png') },
   qwen: { label: 'Qwen Code', src: deploymentUrl('/coding-agents/qwen-logo.svg') },

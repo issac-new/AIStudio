@@ -133,15 +133,16 @@ const hermesRuntimeStatus = ref<RuntimeVersionStatus | null>(null)
 const aiHelpDrawerVisible = ref(false)
 const aiHelpPrompt = ref('')
 const legacyDataMigrationChecked = ref(false)
-const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
-const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
-const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
+const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
+const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
+const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, mimo: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
 const updateInfo = ref<Record<CodingAgentId, CodingAgentUpdateResult | null>>({
   'claude-code': null,
   codex: null,
   pi: null,
   grok: null,
   opencode: null,
+  mimo: null,
   dsh: null,
   cursor: null,
   antigravity: null,

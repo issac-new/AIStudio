@@ -5,6 +5,7 @@ export const AGENT_OPTIONS = [
   { label: 'Claude', value: 'claude-code' },
   { label: 'Codex', value: 'codex' },
   { label: 'Pi', value: 'pi' },
+  { label: 'MiMo Code', value: 'mimo' },
   { label: 'Grok', value: 'grok' },
   { label: 'OpenCode', value: 'opencode' },
   { label: 'DeepSeek Harness', value: 'dsh' },

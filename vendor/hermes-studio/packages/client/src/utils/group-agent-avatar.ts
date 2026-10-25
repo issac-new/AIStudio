@@ -9,6 +9,7 @@ const DEFAULT_AGENT_ICONS: Record<RoomAgent['agent'], string> = {
     pi: '/coding-agents/pi.svg',
     grok: '/coding-agents/grok.svg',
     opencode: '/coding-agents/opencode.png',
+    mimo: '/coding-agents/mimo.svg',
     dsh: '/coding-agents/deepseek.svg',
     cursor: '/coding-agents/cursor-logo.png',
     qwen: '/coding-agents/qwen-logo.svg',

@@ -1,6 +1,6 @@
 import { request } from './client'
 
-export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
+export type AgentStatusId = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
 export type AgentStatusSource = 'managed-runtime' | 'user-cli' | 'built-in' | 'not-installed'
 
 export interface AgentStatusRecord {
@@ -42,6 +42,7 @@ const AGENT_STATUS_ALIASES: Record<string, AgentStatusId> = {
   pi: 'pi',
   grok: 'grok',
   opencode: 'opencode',
+  mimo: 'mimo',
   dsh: 'dsh',
   cursor: 'cursor',
   antigravity: 'antigravity',
