@@ -45,7 +45,7 @@ const router = createRouter({
     {
       path: '/hermes/cockpit',
       name: 'hermes.cockpit',
-      component: () => import('@/custom/cockpit/views/CockpitView.vue'),
+      component: () => import('@/custom/ia2/views/scenes/CollabScene.vue'),
       meta: { fullscreen: true },
       children: [
         {
