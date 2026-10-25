@@ -28,12 +28,12 @@
 
 零移动 5 仓：kimi-code（main 7ccac2b45 持平，npm 2.3.1）/fibo（master==master_2026Q3，无 Q4 tag，qgate FIBO 索引无需重同步）/claude-code（v2.1.310=最新 tag，main +2 未发版）/element-web（v1.12.32=最新 tag）/zcode（main 3c5b2276 持平——**同步口径改为依上游 main 变更判移动、不看版本 tag，2026-10-25 用户裁定**）。
 
-## 四、异常记档（需用户裁决/知悉，不盲动）
+## 四、异常记档（2026-10-25 用户裁决「待裁决都需要同步上游」后已两清）
 
-| 项 | 事实 | 处置 |
+| 项 | 事实 | 处置（终态） |
 |---|---|---|
-| routa | 本地分叉线：本地 main 领先上游 4083 提交、缓存 HEAD 钉本地 tag v0.19.0（2026-06-22），上游仅 +4 提交（3 项 10-14） | **不盲升**——checkout origin/main 会切丢本地线；真同步须走 merge/rebase 迁移决策，待用户裁决 |
-| codex 缓存本地提交 | HEAD 带 1 个来路不明本地提交（6aaac69480「## New Features」2026-10-22，仅改 codex-rs/Cargo.toml 版本号 1 行），领先 origin/main 1 提交 | 保持未动待定性；不影响基线判定（npm 通道 stable=0.164.0 为准） |
+| routa | 仓内双线并存：本地 `main` 分支=上游跟踪分支（落后 4）；HEAD 钉本地 tag v0.19.0=4083 提交本地分叉线（2026-06-22）。初判「本地 main 领先 4083」系把 detached HEAD 的分叉线误当 main | **已同步**（用户裁决）：`main` 快进至 origin/main tip `9dc7b7be`（docs(api) workspaceId 契约 #595），HEAD 随迁至 main；分叉线以本地 tag v0.19.0 保留可达、零丢失。教训：detached HEAD 与分支线的领先数要分开核 |
+| codex 缓存「来路不明本地提交」 | **误报更正**：6aaac69480「## New Features」（celia@openai.com）即上游 rust-v0.164.0 发版提交本身——本地与远端 tag 对象一致（fe3b2945），剥壳后正指向该提交；领先 origin/main 1 提交是发版分支先于 main 合并的正常时序 | **零动作**——缓存本就精确钉在上游稳定 tag；初判只对了「非 main 祖先」没核作者与 tag 落点，误报入册以为鉴 |
 
 ## 五、验证与本轮修复的整合债
 
