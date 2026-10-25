@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      '@/custom': resolve(__dirname, '../../overlay/custom/client'),
+      '@custom': resolve(__dirname, '../../overlay/custom/client'),
       '@': resolve(__dirname, 'packages/client/src'),
       electron: resolve(__dirname, 'tests/mocks/electron.ts'),
       'dbus-next': resolve(__dirname, 'tests/mocks/dbus-next.ts'),
