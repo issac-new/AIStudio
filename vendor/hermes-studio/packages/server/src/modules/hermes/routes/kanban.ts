@@ -34,6 +34,7 @@ kanbanRoutes.post('/api/hermes/kanban/:id/home-subscribe/:platform', ctrl.subscr
 kanbanRoutes.delete('/api/hermes/kanban/:id/home-subscribe/:platform', ctrl.unsubscribeHome)
 kanbanRoutes.post('/api/hermes/kanban/:id/attachments', ctrl.uploadAttachment)
 kanbanRoutes.delete('/api/hermes/kanban/attachments/:id', ctrl.removeAttachment)
+kanbanRoutes.post('/api/hermes/kanban/:id/attachments/url', ctrl.uploadAttachmentFromUrl)
 kanbanRoutes.get('/api/hermes/kanban', ctrl.list)
 kanbanRoutes.get('/api/hermes/kanban/:id/attachments', ctrl.listAttachments)
 kanbanRoutes.get('/api/hermes/kanban/:id/attachments/:attachmentId', ctrl.readAttachment)
