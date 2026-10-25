@@ -35,7 +35,9 @@ const routeMessageId = computed(() => {
   return typeof value === 'string' && /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? value : null
 })
 
-const isStandaloneChat = computed(() => route.meta?.standaloneChat === true)
+// overlay[v14]: standaloneEmbed — ia2 工作台嵌入态（隐藏会话侧栏）。不复用
+// standaloneChat：App.vue 以它门控六个全局弹层（GlobalPendingActions 等），挂上会连带砍掉。
+const isStandaloneChat = computed(() => route.meta?.standaloneChat === true || route.meta?.standaloneEmbed === true)
 type ChatContentMode = 'chat' | 'connections' | 'agents' | 'models'
 
 const contentMode = computed<ChatContentMode>(() => {
@@ -83,7 +85,8 @@ async function loadRouteSession() {
     }
   }
   if (!disposed && sessionId && routeSessionId.value === sessionId && chatStore.activeSessionId !== sessionId) {
-    await router.replace({ name: 'hermes.chat' })
+    // overlay[v14]: 嵌入态深链失效回工作台首页，不跳出 /app 壳
+    await router.replace(route.meta?.standaloneEmbed === true ? '/app' : { name: 'hermes.chat' })
   } else if (!disposed && focusId && routeMessageId.value === focusId && chatStore.focusMessageId !== focusId) {
     message.warning(t('sessionTasks.jumpUnavailable'))
   }
