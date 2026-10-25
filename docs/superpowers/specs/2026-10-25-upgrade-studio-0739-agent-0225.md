@@ -37,6 +37,10 @@
 | ④ 活体 | 8647 health 200 且 webui_version=0.7.39；8649 页面 200；驾驶舱/技能页走查 | 见收口批回填（换装 serve-main 后执行） |
 | ⑤ 元数据 | VENDOR.md/runtime/zcode series 同步 | ✅ 本批齐（基线表/zcode 口径/series 头/run_busy） |
 
-## 收口批回填（合并后）
+## 收口批回填（合并后实测，2026-10-25 午）
 
-（换装与规范位全量结果落此段：8647 health 版本号、8649 走查、vitest 对照）
+- **门④活体**：✅ serve-main 换装 1fa0c4857（首次 inject 两跳为中止 clean 残渣，git clean -fd 后零失败零跳过）；8647 `/health` 200 且 **webui_version=0.7.39 / agent 0.22.5 / gateway running**；8649 `/`、`/cockpit`、`/skills`、`/ide` 全 200；后端日志滤已知 fail-soft 噪声后零 error；未带 JWT 请求 401=鉴权边界正常。
+- **门③规范位全量（主检出本体@1fa0c4857）**：880 文件，最终 **870 文件/6205 用例过，残 5 败**——路径为同场地同条件（旧基线同位 0 败）对照跑出。环境前提复原：`lab/upstream`（挂 vendor 注入态三树+研究缓存，测试族的「拼合树存在」前提）与 `lab/simharness` 软链重建后 42→5。
+- **残 5 败定性**（全部测试面/门禁面，产品面零缺陷实证）：① simharness 旧绝路径族 6 例——`lab/simharness` 软链已复原自愈（整合搬迁债 D11 族）；② governance 锚点 3 例——up-search 抢中 pristine `AIStudio/upstream` 验 overlay 属主文件锚（环境耦合债，测试侧待修）；③ raw-hex 预算 2 例——**上游 0.7.39 新增客户端代码撞我方 style 门**（eval 域 4 裸 hex+`--border`/`--muted` 幽灵变量），处置=下轮补丁收敛或预算表立项（ratchet 只降不升原则不破）。
+- pytest 拼合树 44/44（vendor 补丁版+runtime 覆盖+run_busy 权威版）；typecheck rc=0。
+- 本轮连带发现入账：runtime 部分覆盖层存在落后 vendor 补丁版的文件（run_busy 实锤已同步，全量对拍待后续轮）；runtime-manifest 清单缺口（kanban_decompose/run_busy 不在 45 清单内）。
