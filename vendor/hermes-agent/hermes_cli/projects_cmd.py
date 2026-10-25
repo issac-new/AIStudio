@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import json  # HERMES_CUSTOM[v020]
 import sys
 
 from hermes_cli import projects_db as pdb
@@ -33,6 +34,9 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
     p_create.add_argument("--use", action="store_true", help="Set as the active project")
     p_list = sub.add_parser("list", aliases=["ls"], help="List projects")
     p_list.add_argument("--all", action="store_true", dest="include_archived", help="Include archived projects")
+    # HERMES_CUSTOM[v020] BEGIN: machine-readable output for TS service
+    p_list.add_argument("--json", action="store_true", help="Emit JSON instead of the human table")
+    # HERMES_CUSTOM[v020] END
 
     def project_sub(name: str, help: str) -> argparse.ArgumentParser:
         sp = sub.add_parser(name, help=help)
@@ -151,6 +155,14 @@ def _cmd_create(args, conn) -> int:
 def _cmd_list(args, conn):
     active = pdb.get_active_id(conn)
     projs = pdb.list_projects(conn, include_archived=getattr(args, "include_archived", False))
+    # HERMES_CUSTOM[v020] BEGIN: --json output
+    if getattr(args, "json", False):
+        print(json.dumps(
+            [p.to_dict() for p in projs],
+            indent=2, ensure_ascii=False,
+        ))
+        return 0
+    # HERMES_CUSTOM[v020] END
     if not projs:
         return "No projects yet. Create one with `hermes project create <name>`."
     for p in projs:
