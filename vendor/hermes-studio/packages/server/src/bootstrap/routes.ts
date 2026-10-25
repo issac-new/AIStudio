@@ -30,6 +30,12 @@ import { sessionRoutes } from '../modules/studio/routes/sessions'
 import { modelApiRoutes } from '../modules/studio/routes/model-api'
 import { sessionSharePublicRoutes, sessionShareRoutes } from '../modules/studio/routes/session-shares'
 import { profileRoutes } from '../modules/hermes/routes/profiles'
+// overlay[perf]（2026-09-30 性能批）：CLI 读端点缓存中间件（GET 白名单 TTL +
+// 非 GET 失效；挂载位置见下方 profileRoutes / fleetRouter 之前）
+import { profileReadCache, kanbanReadCache } from '../custom/middleware/kanban-read-cache'
+// overlay[perf]（2026-09-30 性能批二轮）：快道库根解析用（见 initCommandPost）
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { skillRoutes } from '../modules/hermes/routes/skills'
 import { skillBundleRoutes } from '../modules/hermes/routes/skill-bundles'
 import { pluginRoutes } from '../modules/hermes/routes/plugins'
@@ -227,6 +233,10 @@ const commandPost = initCommandPost({
   killWatch: (pid, fallbackKill) => killOwnedProcessTreeForCommandPost(pid, fallbackKill),
   getSession: getSessionRowForCommandPost,
   userCanAccessProfile: userCanAccessProfileForCommandPost,
+  // overlay[perf]（2026-09-30 二轮；2026-10-14 回归轮 D2 修正）：快道库根=CLI
+  // 同源根——agent CLI 的 kanban_home() 优先 HERMES_KANBAN_HOME（kanban_db.py:523），
+  // 快道须同序，否则两根分叉时 boards 计数走 CLI、任务快道读错根，泳道静默清空。
+  resolveKanbanDir: () => process.env.HERMES_KANBAN_HOME || process.env.HERMES_HOME || join(homedir(), '.hermes'),
 })
 async function initLoopSubsystem(): Promise<void> {
   if (loopStore) return
@@ -280,6 +290,11 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(sessionRoutes.routes())
   app.use(modelApiRoutes.routes())
   app.use(sessionShareRoutes.routes())
+  // overlay[perf]（2026-09-30 性能批）：profiles 读缓存——GET /api/hermes/profiles
+  // 实测 8.7s（CLI 子进程），且 profileRoutes 挂载先于 fleetRouter，须在此直挂；
+  // 任一非 GET /api/hermes/profiles* 落定即全量失效（见 custom/server/middleware/
+  // kanban-read-cache.ts profileReadCache）。
+  app.use(profileReadCache)
   app.use(profileRoutes.routes())
   app.use(ekkoMemoryRoutes.routes())
   app.use(ekkoSkillRoutes.routes())
@@ -308,6 +323,11 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(jobRoutes.routes())
   app.use(cronHistoryRoutes.routes())
   app.use(kanbanDashboardUrlRoutes.routes())
+  // overlay[perf]（2026-09-30 性能批）：看板读端点缓存——顶层直挂（router.use
+  // 仅在同 router 有匹配路由时才执行，fleetRouter 无 boards 等路由故拦不住，
+  // 最小复现实证）；须在 fleetRouter/kanbanRoutes 之前、鉴权之后（键含用户）。
+  // boards/stats/assignees 实测 4.4-5.6s/个（CLI 子进程），页面一次并发 4-5 个。
+  app.use(kanbanReadCache)
   app.use(commandPost.fleetRouter.routes())      // overlay[command-post]: 舰队/看板聚合/团队（须先于 kanbanRoutes 挂载：/api/hermes/kanban/overview 否则被上游 /api/hermes/kanban/:id 抢答 404，聚合端点失效触发客户端 N+1 风暴）
   app.use(kanbanRoutes.routes())
   app.use(workflowRoutes.routes())
