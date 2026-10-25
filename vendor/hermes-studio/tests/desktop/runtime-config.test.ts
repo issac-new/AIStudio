@@ -9,9 +9,9 @@ import {
 
 describe('desktop Hermes source configuration', () => {
   it('pins an immutable upstream release by default', () => {
-    expect(DEFAULT_HERMES_VERSION).toBe('0.20.6')
-    expect(DEFAULT_HERMES_SOURCE_REF).toBe('v2026.8.27')
-    expect(DEFAULT_HERMES_SOURCE_COMMIT).toBe('5fc308a70719a83cccdbba4c0e39c23f5a8239d5')
+    expect(DEFAULT_HERMES_VERSION).toBe('0.21.5')
+    expect(DEFAULT_HERMES_SOURCE_REF).toBe('v2026.9.24')
+    expect(DEFAULT_HERMES_SOURCE_COMMIT).toBe('f97608f178d1ffeca59860195ab7da295f7c8e5f')
     expect(hermesSource({})).toEqual({
       version: DEFAULT_HERMES_VERSION,
       repository: DEFAULT_HERMES_SOURCE_REPOSITORY,
