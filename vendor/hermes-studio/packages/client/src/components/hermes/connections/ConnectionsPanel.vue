@@ -8,6 +8,8 @@ import AppConnectionsPanel from '@/components/hermes/connections/AppConnectionsP
 import McuDevicesPanel from '@/components/hermes/connections/McuDevicesPanel.vue'
 import RemoteDevicesPanel from '@/components/hermes/connections/RemoteDevicesPanel.vue'
 import { desktopBridge } from '@/utils/desktop-bridge'
+// overlay[s3]：App/MCU 两 tab 由 features.connectionsExtras 门控（模板引用须在此导入——缺失即整页渲染崩，2026-10-03 回归实锤）
+import { features } from '@/custom/features'
 
 type ConnectionTab = 'app' | 'mcu' | 'remote'
 
@@ -61,10 +63,10 @@ function updateTab(value: string | number) {
       pane-class="connections-tab-pane"
       @update:value="updateTab"
     >
-      <NTabPane name="app" :tab="t('connections.tabs.app')" display-directive="if">
+      <NTabPane v-if="features.connectionsExtras" name="app" :tab="t('connections.tabs.app')" display-directive="if">
         <AppConnectionsPanel />
       </NTabPane>
-      <NTabPane name="mcu" :tab="t('connections.tabs.mcu')" display-directive="if">
+      <NTabPane v-if="features.connectionsExtras" name="mcu" :tab="t('connections.tabs.mcu')" display-directive="if">
         <McuDevicesPanel />
       </NTabPane>
       <NTabPane v-if="hasRemoteDevices" name="remote" :tab="t('remoteDevices.title')" display-directive="if">

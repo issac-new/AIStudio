@@ -57,6 +57,8 @@ import ChatInput from "./ChatInput.vue";
 import NewChatAgentCards from "./NewChatAgentCards.vue";
 import { prepareAgentDeployment, type AgentDeploymentController } from "./agentDeployment.mjs";
 import RealtimeVoiceStage from "./RealtimeVoiceStage.vue";
+// overlay[s3]（补遗⑤）：语音对话默认关（VITE_CUSTOM_VOICE=true 再开）
+import { features } from "@/custom/features";
 import ConversationMonitorPane from "./ConversationMonitorPane.vue";
 import MessageList from "./MessageList.vue";
 import SessionListItem from "./SessionListItem.vue";
@@ -3409,7 +3411,7 @@ function handleSessionModelSelect(selection: { model: string; provider: string }
     </div>
     <Teleport to="body">
       <RealtimeVoiceStage
-        v-if="showRealtimeVoice"
+        v-if="showRealtimeVoice && features.voice"
         @close="closeRealtimeVoice"
       />
     </Teleport>

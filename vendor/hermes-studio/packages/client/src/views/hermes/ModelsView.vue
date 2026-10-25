@@ -4,6 +4,8 @@ import PageHeader from '@/components/layout/PageHeader.vue'
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NButton, NSelect, NTabPane, NTabs, useMessage } from 'naive-ui'
+// overlay[s3]（补遗⑤）：语音设置/图像生成辅助默认关（VITE_CUSTOM_VOICE/IMAGE_ASSIST 再开）
+import { features } from '@/custom/features'
 import { useI18n } from 'vue-i18n'
 import AuxiliaryModelsPanel from '@/components/hermes/models/AuxiliaryModelsPanel.vue'
 import CombinationModelsPanel from '@/components/hermes/models/CombinationModelsPanel.vue'
@@ -267,7 +269,7 @@ async function handleRefreshModelCache() {
         <NTabPane name="api" :tab="t('modelApi.title')">
           <ModelApiPanel />
         </NTabPane>
-        <NTabPane name="auxiliary" :tab="t('models.auxiliaryTitle')">
+        <NTabPane v-if="features.imageAssist" name="auxiliary" :tab="t('models.auxiliaryTitle')">
           <AuxiliaryModelsPanel />
         </NTabPane>
         <NTabPane name="combination" :tab="t('models.combinationTitle')">
@@ -276,10 +278,10 @@ async function handleRefreshModelCache() {
         <NTabPane name="jev" tab="JEV">
           <JevSettingsPanel :profile="selectedProfile" />
         </NTabPane>
-        <NTabPane name="stt" :tab="t('settings.voice.sttProvidersTitle')">
+        <NTabPane v-if="features.voice" name="stt" :tab="t('settings.voice.sttProvidersTitle')">
           <VoiceSettings :key="`stt-${selectedProfile}`" kind="stt" />
         </NTabPane>
-        <NTabPane name="tts" :tab="t('settings.voice.ttsProvidersTitle')">
+        <NTabPane v-if="features.voice" name="tts" :tab="t('settings.voice.ttsProvidersTitle')">
           <VoiceSettings :key="`tts-${selectedProfile}`" kind="tts" />
         </NTabPane>
       </NTabs>
