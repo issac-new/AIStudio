@@ -423,7 +423,11 @@ export async function listConversations(ctx: any) {
   const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
 
   const profile = explicitProfileFilter(ctx)
+  // overlay/ncwk patch 307：archived=1 时仅返回归档会话（/ide 侧栏归档区）。
+  // 默认行为不变（该端点历史上不过滤归档），规避既有消费者回归。
+  const archivedOnly = ctx.query.archived === '1' || ctx.query.archived === 'true'
   const sessions = localListSessions(profile, source, limit && limit > 0 ? limit : 200)
+    .filter(s => isArchivedSession(s) === archivedOnly)
   const summaries: ConversationSummary[] = sessions.map(s => ({
     id: s.id,
     profile: s.profile || null,
