@@ -291,6 +291,10 @@ _SPECS = [
              help="Release any active claim before reassigning (required if task is running)"),
         _RECLAIM_REASON,
     ], help="Reassign a task to a different profile, optionally reclaiming first"),
+    _cmd("sleeping-workers", [
+        _arg("--idle-sec", type=int, default=1800,
+             help="Idle threshold in seconds (default 1800 = 30min)"),
+    ], help="List running-card assignees with no real work beyond threshold (PR-3 probe; read-only)"),
     _cmd("selfcheck", [
     ], help="Write-path self-check: sanctioned UDF + guard triggers + fail-closed bare-conn probe (PR-4)"),
     _cmd("diagnostics", [

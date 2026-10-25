@@ -782,6 +782,33 @@ def _rows_by_task(conn, table: str, ids: list[str]) -> dict[str, list]:
     return by
 
 
+def _cmd_sleeping_workers(args: argparse.Namespace) -> int:
+    """PR-3（V8.29 治理轮）：休眠工作者探针——running 卡 assignee 真做静默超阈清单。
+    只读不唤醒（唤醒走 gateway.wake 既有通道与所有权检查）。"""
+    import contextlib
+    import json as _json
+    from hermes_cli.kanban_sleeping import sleeping_workers
+    conn = None
+    try:
+        from hermes_cli import kanban_db_connect as _kdc
+        conn = _kdc.connect()
+        running = conn.execute(
+            "SELECT id, assignee FROM tasks WHERE status='running'").fetchall()
+        rows = sleeping_workers(
+            [{"id": r[0], "assignee": r[1]} for r in running],
+            idle_sec=getattr(args, "idle_sec", 1800) or 1800)
+        print(_json.dumps({"idle_sec": getattr(args, "idle_sec", 1800), "sleeping": rows},
+                          ensure_ascii=False, indent=1))
+        return 0
+    except Exception as exc:
+        print(_json.dumps({"error": str(exc)}))
+        return 1
+    finally:
+        if conn is not None:
+            with contextlib.suppress(Exception):
+                conn.close()
+
+
 def _cmd_selfcheck(args: argparse.Namespace) -> int:
     """PR-4（V8.29 治理轮）：看板写路径启动自检——UDF 注册/守卫触发器/裸连接拒绝
     三面探测，任一失败非零退出（供启动 fail-fast 与 prelaunch 消费）。"""
