@@ -85,6 +85,7 @@ import PageSidebarFooter from '@/components/layout/PageSidebarFooter.vue'
 import { useAppStore } from '@/stores/hermes/app'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useProfilesStore } from '@/stores/hermes/profiles'
+import { useAuthStore } from '@/stores/hermes/auth'
 import { uploadRuntimeFiles } from '@/api/studio/files'
 import {
   approveWorkflowNode,
@@ -148,6 +149,7 @@ const route = useRoute()
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const profilesStore = useProfilesStore()
+const authStore = useAuthStore()
 const message = useMessage()
 const {
   screenToFlowCoordinate, getViewport, setViewport, setNodes, setEdges, updateNodeInternals,
@@ -3381,7 +3383,16 @@ function nodeColor(node: { data: WorkflowAgentNodeData }) {
           </NPopconfirm>
         </button>
       </div>
-      <PageSidebarFooter v-if="showWorkflowSidebar" />
+      <div v-if="showWorkflowSidebar" class="page-sidebar-bottom">
+        <button class="page-sidebar-menu-btn" type="button" @click="authStore.logout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          <span>{{ t('sidebar.logout') }}</span>
+        </button>
+      </div>
     </aside>
     </PageSidebar>
 
@@ -5415,6 +5426,47 @@ html:is(.theme-card-bg, .theme-has-custom-background) .workflow-view {
 
   .workflow-chat-resize-handle {
     display: none;
+  }
+}
+.page-sidebar-bottom {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-sidebar-menu-btn {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 36px;
+  border: none;
+  border-radius: -sm;
+  background: transparent;
+  color: -secondary;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition:
+    background-color -fast,
+    color -fast;
+
+  &:hover {
+    background: rgba(var(--accent-primary-rgb), 0.06);
+    color: -primary;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    line-height: 18px;
   }
 }
 </style>
