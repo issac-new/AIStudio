@@ -320,6 +320,25 @@ function isDesktopShell(): boolean {
   }).hermesDesktop?.isDesktop === true
 }
 
+// HERMES_CUSTOM[LazyChunkReload] BEGIN: 懒加载 chunk 拉取失败兜底（2026-10-17 回归轮 D5）。
+// vite dev 下深模块图的动态 import 偶发失败一次（网络/transform 竞态），浏览器 ESM
+// 模块映射会把失败按 URL 永久缓存——此后每次导航到同路由立即 reject，页面无限
+// 「加载中」（实测模型页 ~50% 概率）。处置：识别该类失败做一次整页重载（清失败
+// 缓存，重载时 vite 已完成 transform 预热）；sessionStorage 一次性标记防重载风暴。
+// 测试态兜底：mock 最小路由器无 onError（模块装载期直炸四测试文件）——能力探测后再挂
+if (typeof router.onError === 'function') router.onError((error, to) => {
+  const msg = String((error as Error)?.message || '')
+  if (!/Failed to fetch dynamically imported module|Importing a module script failed/i.test(msg)) return
+  const key = 'hermes_lazy_reload'
+  try {
+    if (sessionStorage.getItem(key)) { sessionStorage.removeItem(key); return }
+    sessionStorage.setItem(key, '1')
+  } catch { /* 隐私模式降级：仍重载一次 */ }
+  const target = to?.fullPath || '/'
+  window.location.replace(window.location.origin + '/#' + target)
+})
+// HERMES_CUSTOM[LazyChunkReload] END
+
 router.beforeEach(async (to, _from, next) => {
   // overlay[s3]（补遗⑤）：ekko 配置页与外链分享页默认关（VITE_CUSTOM_EKKO /
   // VITE_CUSTOM_EXTERNAL_LINKS 再开；与 bootstrap externalLinks 摘除同键——router 守卫为第二层防线）
