@@ -45,6 +45,15 @@ export function createDshHost(host: DshHostCommands) {
     const env = await host.commandEnv()
     const command = await host.resolveCommandForExecution('dsh', env)
     const execution = host.commandExecution(command, args)
+
+    // cmd.exe/PowerShell localize "command not found" ("'pnpm' 不是内部或外部命令",
+    // "pnpm: The term 'pnpm' is not recognized", "无法将“pnpm”项识别为 cmdlet"), so a
+    // plain /pnpm not found/ match misclassifies missing pnpm as a plugin failure.
+    // ERR_PNPM_* (e.g. FETCH_404 "Not Found") means pnpm itself ran — never a
+    // missing-pnpm case, so exclude it before the wording match.
+    const pnpmMissing = (stderr: string) => /ENOENT/.test(stderr)
+      || (!/ERR_PNPM_/.test(stderr) && /pnpm/i.test(stderr) && /not found|is not recognized|不是内部或外部命令|无法将|could not be found/i.test(stderr))
+
     await new Promise<void>((resolve, reject) => {
       const child = spawn(execution.command, execution.args, {
         cwd: home, detached: process.platform !== 'win32', windowsHide: true,
@@ -68,7 +77,7 @@ export function createDshHost(host: DshHostCommands) {
         if (signal.aborted) reject(new DshPluginError(503, 'DSH_OPERATION_INTERRUPTED', 'Plugin operation interrupted'))
         else if (timedOut) reject(new DshPluginError(503, 'DSH_OPERATION_TIMEOUT', 'Plugin operation timed out'))
         else if (code === 0) resolve()
-        else if (/pnpm not found|ENOENT/.test(stderr)) reject(new DshPluginError(503, 'DSH_DEPENDENCY_UNAVAILABLE', 'Install DSH and pnpm before managing plugins'))
+        else if (pnpmMissing(stderr)) reject(new DshPluginError(503, 'DSH_DEPENDENCY_UNAVAILABLE', 'Install DSH and pnpm before managing plugins'))
         else reject(new DshPluginError(422, 'DSH_PLUGIN_OPERATION_FAILED', 'Web plugin operation failed; reload the list to inspect its current state'))
       })
     })

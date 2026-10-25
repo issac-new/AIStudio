@@ -10,6 +10,19 @@ const CODING_AGENT_CHILD_ENV_KEYS = new Set([
   'NODE_PATH', 'NODE_EXTRA_CA_CERTS',
 ])
 
+const CODING_AGENT_CHILD_ENV_KEYS_WIN32 = new Set(
+  [...CODING_AGENT_CHILD_ENV_KEYS].map(key => key.toLowerCase()),
+)
+
+function isAllowedChildEnvKey(key: string): boolean {
+  // Windows env vars are case-insensitive but Object.entries preserves the
+  // registered casing (commonly `Path`, `windir`), which an exact-match
+  // allowlist silently drops. Compare case-insensitively there only; POSIX
+  // keys stay case-sensitive.
+  if (process.platform === 'win32') return CODING_AGENT_CHILD_ENV_KEYS_WIN32.has(key.toLowerCase())
+  return CODING_AGENT_CHILD_ENV_KEYS.has(key)
+}
+
 export function isolatedCodingAgentChildEnv(
   launchEnv: NodeJS.ProcessEnv = {},
   sourceEnv: NodeJS.ProcessEnv = process.env,
@@ -17,7 +30,7 @@ export function isolatedCodingAgentChildEnv(
   const env: Record<string, string> = {}
   for (const [key, value] of Object.entries(sourceEnv)) {
     if (value === undefined) continue
-    if (CODING_AGENT_CHILD_ENV_KEYS.has(key) || key.startsWith('LC_')) env[key] = value
+    if (isAllowedChildEnvKey(key) || key.startsWith('LC_')) env[key] = value
   }
   for (const [key, value] of Object.entries(launchEnv)) {
     if (value !== undefined) env[key] = value
