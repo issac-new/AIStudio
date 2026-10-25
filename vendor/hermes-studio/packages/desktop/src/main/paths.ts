@@ -340,6 +340,26 @@ export function runtimeStorageRoot(): string {
   return configured ? resolve(configured) : join(webUiHome(), 'desktop-runtime')
 }
 
+// overlay[runtime-local-priority]: 本地 hermes agent 安装优先。
+// 本地安装在 ~/.hermes/hermes-agent/（git 源码仓 + venv/bin/hermes，系统 Python，无捆绑 node/git）。
+// 检测到 venv/bin/hermes 存在时，hermes/python 走本地 venv；node 走系统 PATH（process.execPath 所在目录）。
+// 仅 dev（非打包）态生效；打包产物仍用捆绑 runtime 树。本地不存在则回退到既有 desktopRuntimeDir()。
+// 可用 HERMES_LOCAL_AGENT_DIR 覆盖本地安装目录；HERMES_DESKTOP_USE_LOCAL_HERMES=0 显式禁用。
+export function localHermesInstallDir(): string | undefined {
+  if (isPackaged()) return undefined
+  const enabled = process.env.HERMES_DESKTOP_USE_LOCAL_HERMES?.trim().toLowerCase()
+  if (enabled === '0' || enabled === 'false' || enabled === 'no' || enabled === 'off') return undefined
+  const candidate = process.env.HERMES_LOCAL_AGENT_DIR?.trim() || resolve(homedir(), '.hermes', 'hermes-agent')
+  const venvHermes = isWin
+    ? join(candidate, 'venv', 'Scripts', 'hermes.cmd')
+    : join(candidate, 'venv', 'bin', 'hermes')
+  return existsSync(venvHermes) ? resolve(candidate) : undefined
+}
+
+export function usingLocalHermesInstall(): boolean {
+  return !!localHermesInstallDir()
+}
+
 export function desktopRuntimeDir(): string {
   const override = process.env.HERMES_DESKTOP_RUNTIME_DIR?.trim()
   if (override) return resolve(override)
@@ -425,11 +445,19 @@ export function nodeDir(): string {
 }
 
 export function nodeBinDir(): string {
+  // overlay[runtime-local-priority]: 本地优先时用系统 node 目录（process.execPath 所在目录）。
+  if (usingLocalHermesInstall()) {
+    return dirname(process.execPath)
+  }
   const dir = nodeDir()
   return isWin ? dir : join(dir, 'bin')
 }
 
 export function bundledNode(): string {
+  // overlay[runtime-local-priority]: 本地优先时返回系统 node。
+  if (usingLocalHermesInstall()) {
+    return isWin ? join(nodeBinDir(), 'node.exe') : join(nodeBinDir(), 'node')
+  }
   return isWin ? join(nodeDir(), 'node.exe') : join(nodeBinDir(), 'node')
 }
 
@@ -500,11 +528,23 @@ export function pythonBinDir(): string {
 }
 
 export function bundledPython(): string {
+  // overlay[runtime-local-priority]: 本地优先时返回本地 venv 的 python。
+  if (usingLocalHermesInstall()) {
+    const localVenv = join(localHermesInstallDir()!, 'venv')
+    return runtimePythonExecutable(localVenv)
+  }
   const dir = pythonEnvironmentDir()
   return runtimePythonExecutable(dir)
 }
 
 export function hermesBin(): string {
+  // overlay[runtime-local-priority]: 本地优先时直接返回本地 venv/bin/hermes。
+  if (usingLocalHermesInstall()) {
+    const local = localHermesInstallDir()!
+    return isWin
+      ? join(local, 'venv', 'Scripts', 'hermes.cmd')
+      : join(local, 'venv', 'bin', 'hermes')
+  }
   return isWin ? windowsHermesLauncher(pythonEnvironmentDir()) : join(pythonBinDir(), 'hermes')
 }
 

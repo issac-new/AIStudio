@@ -26,9 +26,11 @@ import { app } from 'electron'
 import {
   desktopRuntimeDir,
   desktopRuntimeVersion,
+  hermesBin,
   runtimePlatformKey,
   runtimeStorageRoot,
   targetDesktopRuntimeDir,
+  usingLocalHermesInstall,
   webUiHome,
   webuiDir,
 } from './paths'
@@ -239,6 +241,12 @@ function runtimeReady(): boolean {
 }
 
 function rootRuntimeReady(root: string): boolean {
+  // overlay[runtime-local-priority]: 本地 hermes 安装在场时直接视为 ready，
+  // 使启动流程 isDesktopRuntimeReady() 为 true → 跳过捆绑 runtime 下载。
+  // （hermesBin 已校验 venv/bin/hermes 存在。）
+  if (usingLocalHermesInstall() && existsSync(hermesBin())) {
+    return true
+  }
   const pythonRoot = runtimePythonEnvironmentRoot(root)
   const gitPath = process.platform === 'win32' ? join(root, 'git', 'cmd', 'git.exe') : null
   const hermesPath = process.platform === 'win32'
