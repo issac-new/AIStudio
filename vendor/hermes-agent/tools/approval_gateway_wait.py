@@ -237,6 +237,21 @@ def _await_gateway_decision(session_key: str, notify_cb, approval_data: dict, *,
 
         state = _poll_event(entry.event, session_key,
                             interrupt_log="Approval wait interrupted — returning deny for session %s")
+        # PR-2（V8.29 治理轮）：escalate 模式下超时不再直接失效——重发待批卡（升级
+        # 提醒）再等一轮，至多 approvals.escalate_rounds 轮；轮满仍无应答才走原
+        # expire 语义。notify 失败降级回 expire（不阻断 agent 线程）。
+        if _ctx._get_approval_timeout_action() == "escalate":
+            for _esc_round in range(_ctx._get_approval_escalate_rounds()):
+                if state != "timeout":
+                    break
+                try:
+                    _ctx._fire_approval_hook("approval_escalated", **payload)
+                    notify_cb(dict(entry.data))
+                except Exception:
+                    logger.warning("Approval escalation re-notify failed; falling back to expire")
+                    break
+                state = _poll_event(entry.event, session_key,
+                                    interrupt_log="Approval escalated wait interrupted — returning deny for session %s")
         cancelled = _cancel_cause(state, entry)
         if state == "interrupted":
             # Coalesced followers wake with the cause instead of a deny nobody issued.
