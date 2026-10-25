@@ -40,7 +40,10 @@ async function checkDefaultCredentials() {
   try {
     const user = await fetchCurrentUser();
     promptedUserId.value = user.id;
-    const dismissed = sessionStorage.getItem(dismissalKey(user.id)) === "1";
+    // A-H 复盘轮 H：dev 下 devAutoLogin 每次新会话都触发全屏口令提醒（mask 不可
+    // 点关），「稍后提醒」改记 localStorage 跨会话生效；生产仍按会话提醒。
+    const reminderStorage = import.meta.env.DEV ? localStorage : sessionStorage;
+    const dismissed = reminderStorage.getItem(dismissalKey(user.id)) === "1";
     show.value = !!user.requiresCredentialChange && !dismissed;
   } catch {
     show.value = false;
@@ -51,7 +54,7 @@ async function checkDefaultCredentials() {
 
 function remindLater() {
   if (promptedUserId.value != null) {
-    sessionStorage.setItem(dismissalKey(promptedUserId.value), "1");
+    (import.meta.env.DEV ? localStorage : sessionStorage).setItem(dismissalKey(promptedUserId.value), "1");
   }
   show.value = false;
 }

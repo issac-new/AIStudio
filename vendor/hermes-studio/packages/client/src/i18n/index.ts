@@ -3,7 +3,24 @@ import { loadLocaleMessages, mergeMessagesWithFallback, supportedLocales } from 
 import type { SupportedLocale } from './messages'
 import { applyDocumentDirection } from './direction'
 
-const saved = localStorage.getItem('hermes_locale')
+// A-H 复盘轮 G：语言偏好按账户分键——共享键在多账号切换时中英跳变（实测）。
+// 无 token（登录页）回落共享键；缺账户键时回落旧共享键作初值（迁移友好）。
+function localeStorageKey(): string {
+  const token = localStorage.getItem('hermes_api_key') || ''
+  const m = /^[^.]+\.[^.]+\.([A-Za-z0-9_-]+)$/.exec(token)
+  if (m) {
+    try {
+      const payload = JSON.parse(atob(m[1].replace(/-/g, '+').replace(/_/g, '/')))
+      const username = typeof payload.username === 'string' && payload.username
+        ? payload.username
+        : (typeof payload.sub === 'string' ? payload.sub : '')
+      if (username) return `hermes_locale:${username}`
+    } catch { /* malformed token falls back to the shared key */ }
+  }
+  return 'hermes_locale'
+}
+
+const saved = localStorage.getItem(localeStorageKey()) ?? localStorage.getItem('hermes_locale')
 
 function resolveLocale(saved: string | null): SupportedLocale {
   if (saved && (supportedLocales as readonly string[]).includes(saved)) {
@@ -116,5 +133,5 @@ export async function switchLocale(newLocale: string): Promise<void> {
   if (sequence !== localeSwitchSequence) return
   globalI18n.locale.value = nextLocale
   setHtmlLang(nextLocale)
-  localStorage.setItem('hermes_locale', nextLocale)
+  localStorage.setItem(localeStorageKey(), nextLocale)
 }
