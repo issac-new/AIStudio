@@ -26,6 +26,8 @@ import { authenticateUserToken as authenticateUserTokenForCommandPost, isAuthEna
 import { userCanAccessProfile as userCanAccessProfileForCommandPost } from '../modules/studio/public/users'
 // overlay[loop-socket]: Loop Engineering Socket.IO namespace
 import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
+// overlay[zcode-projection]: zcode 会话投影 Socket.IO namespace（R4-P2）
+import { setupZcodeProjectionSocket } from '../custom/zcode/projection-socket'
 import { setChatRunServer } from '../modules/studio/public/chat-run'
 import { GroupChatServer } from '../modules/studio/public/group-chat'
 import {
@@ -764,6 +766,8 @@ export async function bootstrap() {
 
   // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.
   setupLoopSocketNamespace(activeGroupChatServer.getIO())
+  // overlay[zcode-projection]: register /zcode Socket.IO namespace on the shared IO.
+  setupZcodeProjectionSocket(activeGroupChatServer.getIO())
 
   startGlobalAgentServer(activeGroupChatServer.getIO(), { localBaseUrl: loopbackBaseUrl })
   console.log('[bootstrap] global agent server ready')
