@@ -440,7 +440,11 @@ function shellPathSnippet(platform: NodeJS.Platform, profilePath: string): strin
 }
 
 function powershellArgs(command: string): string[] {
-  return ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command]
+  // overlay[powershell-encoded]: use -EncodedCommand to avoid $ variable
+  // mangling by Node's child_process on Windows. Base64-encode the UTF-16LE
+  // script as PowerShell -EncodedCommand requires.
+  const encoded = Buffer.from(command, 'utf16le').toString('base64')
+  return ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded]
 }
 
 async function readWindowsUserPath(): Promise<string> {
@@ -450,7 +454,7 @@ async function readWindowsUserPath(): Promise<string> {
   ].join('; ')
   const { stdout } = await execFileAsync('powershell.exe', powershellArgs(command), {
     encoding: 'utf-8',
-    timeout: 3000,
+    timeout: 10_000,
     windowsHide: true,
   })
   const encoded = stdout.trim()
@@ -469,7 +473,7 @@ async function writeWindowsUserPath(pathValue: string): Promise<void> {
       ...process.env,
       [WINDOWS_USER_PATH_ENV_B64]: Buffer.from(pathValue, 'utf-8').toString('base64'),
     },
-    timeout: 3000,
+    timeout: 10_000,
     windowsHide: true,
   })
 }
