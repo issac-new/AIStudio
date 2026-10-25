@@ -73,7 +73,57 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
 import { petdexPublicRoutes, petdexRoutes } from '../modules/studio/routes/petdex'
 import { petRoutes } from '../modules/studio/routes/pets'
 import traceRoutes from '../custom/controllers/hermes/trace'
+// overlay[loop-routes]: Loop Engineering REST API
+import { createLoopRouter } from '../custom/loop/controllers/loop'
+import { createGraphRouter } from '../custom/loop/controllers/graph'
+import { createStateStore } from '../custom/loop/store/store-factory'
+import { Scheduler } from '../custom/loop/engine/scheduler'
+import { LoopEngine } from '../custom/loop/engine/loop-engine'
+import { Verifier } from '../custom/loop/engine/verifier'
+import { SubagentDispatcher } from '../custom/loop/engine/subagent-dispatcher'
+import { WorktreeManager } from '../custom/loop/engine/worktree-manager'
+import { BudgetGuard } from '../custom/loop/engine/budget-guard'
+import { StuckDetector } from '../custom/loop/engine/stuck-detector'
+import { HookManager } from '../custom/loop/engine/hooks'
+import { WebhookConnector } from '../custom/loop/connectors/webhook-connector'
+import { emitLoopEvent } from '../custom/loop/services/loop-socket'
+import { getGroupChatServer } from '../modules/studio/controllers/group-chat'
 import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
+
+let loopStore: any = null
+const lazyStore = new Proxy({} as any, {
+  get(_, prop) {
+    if (!loopStore) throw new Error('Loop subsystem not yet initialized')
+    const val = loopStore[prop]
+    return typeof val === 'function' ? val.bind(loopStore) : val
+  }
+})
+const loopWebhookConnector = new WebhookConnector()
+const loopEngine = new LoopEngine({
+  store: lazyStore,
+  verifier: new Verifier(),
+  dispatcher: new SubagentDispatcher(),
+  worktreeManager: new WorktreeManager(),
+  budgetGuard: new BudgetGuard(() => {}),
+  stuckDetector: new StuckDetector(lazyStore),
+  hookManager: new HookManager(),
+  emitEvent: async (event: any) => {
+    if (loopStore) {
+      await loopStore.appendEvent(event)
+      const gcs = getGroupChatServer()
+      if (gcs) emitLoopEvent(gcs.getIO(), event as any)
+    }
+  },
+})
+const loopScheduler = new Scheduler(lazyStore, loopEngine, loopWebhookConnector)
+const loopRouter = createLoopRouter(lazyStore, loopScheduler, loopWebhookConnector)
+const graphRouter = createGraphRouter(lazyStore)
+async function initLoopSubsystem(): Promise<void> {
+  if (loopStore) return
+  const { store, adapterType, detectedFrom } = await createStateStore()
+  loopStore = store
+  console.log('[loop] state adapter: ' + adapterType + ' (' + detectedFrom + ')')
+}
 
 /**
  * Register all routes on the Koa app.
@@ -160,4 +210,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(petdexRoutes.routes())
   app.use(petRoutes.routes())
   app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
+  app.use(loopRouter.routes())
+  app.use(graphRouter.routes())
+  initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
 }
