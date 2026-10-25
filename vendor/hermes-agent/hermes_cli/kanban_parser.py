@@ -291,6 +291,8 @@ _SPECS = [
              help="Release any active claim before reassigning (required if task is running)"),
         _RECLAIM_REASON,
     ], help="Reassign a task to a different profile, optionally reclaiming first"),
+    _cmd("selfcheck", [
+    ], help="Write-path self-check: sanctioned UDF + guard triggers + fail-closed bare-conn probe (PR-4)"),
     _cmd("diagnostics", [
         _arg("--severity", choices=["warning", "error", "critical"],
              help="Only show diagnostics at or above this severity"),

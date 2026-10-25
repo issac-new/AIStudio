@@ -782,6 +782,15 @@ def _rows_by_task(conn, table: str, ids: list[str]) -> dict[str, list]:
     return by
 
 
+def _cmd_selfcheck(args: argparse.Namespace) -> int:
+    """PR-4（V8.29 治理轮）：看板写路径启动自检——UDF 注册/守卫触发器/裸连接拒绝
+    三面探测，任一失败非零退出（供启动 fail-fast 与 prelaunch 消费）。"""
+    from hermes_cli.kanban_db import write_path_selfcheck
+    report = write_path_selfcheck(board=getattr(args, "board", None))
+    _print_json(report)
+    return 0 if report.get("ok") else 1
+
+
 def _cmd_diagnostics(args: argparse.Namespace) -> int:
     """List active diagnostics on the board via the same rule engine the dashboard uses."""
     from hermes_cli import kanban_diagnostics as kd
