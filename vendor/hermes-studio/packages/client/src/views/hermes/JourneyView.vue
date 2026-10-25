@@ -630,7 +630,10 @@ async function loadJourney(options: { clearData?: boolean; resetInteraction?: bo
     if (options.fitAfterLoad) void fitJourneyView()
   } catch (err: any) {
     if (disposed || generation !== loadGeneration) return generation
-    message.error(err?.message || t('journey.loadFailed'))
+    // Raw server errors can leak host paths (e.g. CLI exec failures); keep them
+    // in the console and surface the localized message to the user instead.
+    console.warn('[journey] load failed:', err?.message || String(err))
+    message.error(t('journey.loadFailed'))
   } finally {
     if (!disposed && generation === loadGeneration) loading.value = false
   }
