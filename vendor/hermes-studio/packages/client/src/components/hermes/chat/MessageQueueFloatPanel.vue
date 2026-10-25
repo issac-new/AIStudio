@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 export interface MessageQueueFloatItem {
@@ -26,8 +27,39 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   insert: [id: string]
   remove: [id: string]
+  edit: [id: string, content: string]
+  reorder: [orderedIds: string[]]
 }>()
 const { t } = useI18n()
+
+// overlay[queue-edit]：内联编辑 + 拖拽重排（zcode chat.queue.edit/drag 对齐）
+const editingId = ref<string | null>(null)
+const editDraft = ref('')
+const dragId = ref<string | null>(null)
+
+function startEdit(item: MessageQueueFloatItem): void {
+  editingId.value = item.id
+  editDraft.value = item.text
+}
+
+function commitEdit(): void {
+  if (editingId.value && editDraft.value.trim()) {
+    emit('edit', editingId.value, editDraft.value.trim())
+  }
+  editingId.value = null
+}
+
+function onDrop(targetId: string): void {
+  const sourceId = dragId.value
+  dragId.value = null
+  if (!sourceId || sourceId === targetId) return
+  const ids = props.items.map(item => item.id)
+  const from = ids.indexOf(sourceId)
+  const to = ids.indexOf(targetId)
+  if (from < 0 || to < 0) return
+  ids.splice(to, 0, ids.splice(from, 1)[0])
+  emit('reorder', ids)
+}
 
 function resolvedInsertTitle(item: MessageQueueFloatItem): string {
   return props.insertTitle?.(item) || t('chat.insertQueuedMessage')
@@ -56,11 +88,41 @@ function resolvedRemoveTitle(item: MessageQueueFloatItem): string {
         v-for="(item, index) in items"
         :key="item.id"
         class="queue-float-item"
+        :class="{ 'is-dragging': dragId === item.id }"
         :data-queue-id="item.id"
+        draggable="true"
+        data-testid="queue-float-item"
+        @dragstart="dragId = item.id"
+        @dragend="dragId = null"
+        @dragover.prevent
+        @drop.prevent="onDrop(item.id)"
       >
         <span class="queue-index">{{ item.position || index + 1 }}</span>
         <span v-if="item.secondary" class="queue-agent">{{ item.secondary }}</span>
-        <span class="queue-text">{{ item.text }}</span>
+        <template v-if="editingId === item.id">
+          <textarea
+            v-model="editDraft"
+            class="queue-edit-input"
+            rows="2"
+            data-testid="queue-edit-input"
+            @keydown.enter.prevent="commitEdit"
+            @keydown.esc.prevent="editingId = null"
+            @click.stop
+          />
+          <button type="button" class="queue-insert" :title="t('chat.queueSave')" :aria-label="t('chat.queueSave')" @click="commitEdit">✓</button>
+          <button type="button" class="queue-remove" :title="t('common.cancel')" :aria-label="t('common.cancel')" @click="editingId = null">✕</button>
+        </template>
+        <template v-else>
+          <span class="queue-text" :title="t('chat.queueEditHint')" @dblclick="startEdit(item)">{{ item.text }}</span>
+          <button
+            type="button"
+            class="queue-remove"
+            :title="t('chat.queueEdit')"
+            :aria-label="t('chat.queueEdit')"
+            data-testid="queue-edit-btn"
+            @click="startEdit(item)"
+          >✎</button>
+        </template>
         <button
           v-if="canInsert"
           type="button"
@@ -162,6 +224,42 @@ function resolvedRemoveTitle(item: MessageQueueFloatItem): string {
   overflow-y: auto;
 }
 
+.queue-edit-input {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid rgba(var(--accent-info-rgb), 0.6);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  outline: none;
+}
+
+.queue-float-item.is-dragging {
+  opacity: 0.45;
+}
+
+
+.queue-edit-input {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid rgba(var(--accent-info-rgb), 0.6);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  outline: none;
+}
+
+.queue-float-item.is-dragging {
+  opacity: 0.45;
+}
 .queue-float-item {
   display: flex;
   align-items: center;
