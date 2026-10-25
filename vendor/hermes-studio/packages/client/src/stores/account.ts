@@ -5,6 +5,7 @@ import { fetchCurrentUser, fetchMyAvatar, type UserAvatar } from '@/api/studio/a
 
 export const useAccountStore = defineStore('account', () => {
   const username = ref(getStoredUsername() || '')
+  const displayName = ref('')
   const avatar = ref<UserAvatar | null>(null)
   const profileAvatar = computed(() => avatar.value?.type === 'image'
     ? { type: 'image' as const, dataUrl: avatar.value.dataUrl }
@@ -17,7 +18,10 @@ export const useAccountStore = defineStore('account', () => {
     if (loaded) return Promise.resolve()
     pending = Promise.allSettled([fetchCurrentUser(), fetchMyAvatar()])
       .then(([userResult, avatarResult]) => {
-        if (userResult.status === 'fulfilled') username.value = userResult.value.username
+        if (userResult.status === 'fulfilled') {
+          username.value = userResult.value.username
+          displayName.value = userResult.value.matrix_display_name || userResult.value.username
+        }
         if (avatarResult.status === 'fulfilled') avatar.value = avatarResult.value
         loaded = userResult.status === 'fulfilled' && avatarResult.status === 'fulfilled'
       })
@@ -25,5 +29,5 @@ export const useAccountStore = defineStore('account', () => {
     return pending
   }
 
-  return { username, avatar, profileAvatar, loadAccount }
+  return { username, displayName, avatar, profileAvatar, loadAccount }
 })
