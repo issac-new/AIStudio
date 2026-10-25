@@ -841,6 +841,9 @@ def _is_summary_stub(content: str) -> bool:
 # user answer is never re-summarized away on a later prune pass.
 _PRUNE_MIN_CHARS = 200
 
+# 分级牺牲表 tier 0（可再生——重跑即得，先牺牲）：只读类工具名前缀。
+_SACRIFICE_REGEN_TOOLS: tuple[str, ...] = ("read", "grep", "glob", "ls", "find", "search")
+
 # Ghost-skill defense: the ONE canonical prune marker; emit sites and presence
 # checks must use the same string so they cannot drift.
 # Ghost-skill defense (#32106): when compaction reduces an old ``skill_view`` result to a 1-line metadata
@@ -2160,7 +2163,10 @@ class ContextCompressor(
     ProactivePruneMixin, ContextEngine,
 ):
     """Default context engine: prune tool results, protect head/tail, summarize the middle
-    with an LLM, and iteratively update the previous summary on later compactions."""
+    with an LLM, and iteratively update the previous summary on later compactions.
+
+    # 最近一次 shed 的指标（_demote_size_ordered 写入）：demoted/shed_bytes/target_chars/met_target。
+    last_shed_metrics: Optional[Dict[str, Any]] = None"""
 
     @property
     def name(self) -> str:
@@ -3300,10 +3306,17 @@ class ContextCompressor(
             c = result[i].get("content", "")
             return len(c) if isinstance(c, str) else _content_length_for_budget(c)
 
+        # 分级牺牲优先级表（codex e7165c2 余半项）：可再生只读工具结果先牺牲
+        # （tier 0），其余工具结果 tier 1；同级内大小降序（保留"最大优先"语义）。
+        def _sacrifice_tier(i: int) -> int:
+            name, _args = call_id_to_tool.get(result[i].get("tool_call_id", ""), ("", ""))
+            n = str(name).lower()
+            return 0 if any(n.startswith(t) for t in _SACRIFICE_REGEN_TOOLS) else 1
+
         order = sorted(
             (i for i in range(boundary)
              if result[i].get("role") == "tool" and _content_len(i) >= min_prune_chars),
-            key=_content_len, reverse=True,
+            key=lambda i: (_sacrifice_tier(i), -_content_len(i)),
         )
         reclaimed = 0
         demoted = 0
@@ -3314,6 +3327,13 @@ class ContextCompressor(
             if self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars, protected_skills):
                 demoted += 1
                 reclaimed += max(0, before - _content_len(i))
+        # shed_bytes 指标（余半项）：回收字节/条数/目标与命中，供调用方上报。
+        self.last_shed_metrics = {
+            "demoted": demoted,
+            "shed_bytes": reclaimed,
+            "target_chars": shed_target_chars,
+            "met_target": shed_target_chars is None or reclaimed >= shed_target_chars,
+        }
         return demoted
 
     def _prune_old_tool_results(

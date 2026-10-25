@@ -72,3 +72,43 @@ class TestSizeOrderShed:
         assert count == 2
         contents = [m["content"] for m in out if m.get("role") == "tool"]
         assert any(c == MID for c in contents)  # 保护尾不动
+
+
+
+class TestTieredSacrificeAndMetrics:
+    """余半项守门：分级牺牲优先级表（可再生先牺牲）+ shed_bytes 指标。"""
+
+    def test_regen_tool_sacrificed_before_bigger_bash(self):
+        # c1=read_file（tier0 可再生，1500 字）先于 c2=bash（tier1，4000 字）牺牲，
+        # 尽管后者更大——目标 1400 时剪 read 即达标停，bash 保留完整。
+        c = ContextCompressor(model="m", quiet_mode=True)
+        regen, heavy = "R" * 1500, "B" * 4000
+        msgs = [
+            {"role": "user", "content": "q"},
+            {"role": "assistant", "content": "",
+             "tool_calls": [
+                 {"id": "c1", "type": "function", "function": {"name": "read_file", "arguments": "{}"}},
+                 {"id": "c2", "type": "function", "function": {"name": "bash", "arguments": "{}"}},
+             ]},
+            _tool_msg("c1", regen),
+            _tool_msg("c2", heavy),
+            {"role": "assistant", "content": "done"},
+        ]
+        out, count = c._prune_old_tool_results(msgs, protect_tail_count=2, shed_target_chars=1400)
+        assert count == 1
+        contents = [m["content"] for m in out if m.get("role") == "tool"]
+        assert heavy in contents and regen not in contents  # 只牺牲可再生者
+        m = c.last_shed_metrics
+        assert m["demoted"] == 1
+        assert m["shed_bytes"] > 0
+        assert m["met_target"] is True
+        assert m["target_chars"] == 1400
+
+    def test_metrics_reflect_full_shed_when_no_target(self):
+        c = ContextCompressor(model="m", quiet_mode=True)
+        c._prune_old_tool_results(_session(BIG, SMALL, MID), protect_tail_count=2)
+        m = c.last_shed_metrics
+        assert m["demoted"] == 2
+        assert m["shed_bytes"] > 0
+        assert m["target_chars"] is None
+        assert m["met_target"] is True  # 无目标=自然尽即命中
