@@ -3288,9 +3288,38 @@ class ContextCompressor(
         hard_share = int(input_window * TAIL_MAX_CONTEXT_FRACTION)
         return pending if sum(_estimate_msg_budget_tokens(messages[i]) for i in pending) <= hard_share else range(0)
 
+    def _demote_size_ordered(
+        self, result: list[dict[str, Any]], boundary: int,
+        call_id_to_tool: dict[str, tuple[str, str]], min_prune_chars: int,
+        protected_skills: Optional[set[str]], shed_target_chars: Optional[int],
+    ) -> int:
+        """Demote eligible old tool results largest-first; early-stop once the char
+        reduction meets ``shed_target_chars`` (None = demote all eligible). Size order
+        only matters for the early-stop path — full demotion is order-invariant."""
+        def _content_len(i: int) -> int:
+            c = result[i].get("content", "")
+            return len(c) if isinstance(c, str) else _content_length_for_budget(c)
+
+        order = sorted(
+            (i for i in range(boundary)
+             if result[i].get("role") == "tool" and _content_len(i) >= min_prune_chars),
+            key=_content_len, reverse=True,
+        )
+        reclaimed = 0
+        demoted = 0
+        for i in order:
+            if shed_target_chars is not None and reclaimed >= shed_target_chars:
+                break
+            before = _content_len(i)
+            if self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars, protected_skills):
+                demoted += 1
+                reclaimed += max(0, before - _content_len(i))
+        return demoted
+
     def _prune_old_tool_results(
         self, messages: list[dict[str, Any]], protect_tail_count: int,
         protect_tail_tokens: int | None = None, min_prune_chars: int = _PRUNE_MIN_CHARS,
+        shed_target_chars: int | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         """Project old tool-result bodies to bounded summaries without rewriting tool-call arguments.
         Returns ``(messages, count)``; token budget (when given) takes priority over the
@@ -3314,9 +3343,8 @@ class ContextCompressor(
         # Pass 2: summarize old tool results. Tool-call arguments are canonical execution
         # records and are never rewritten; summary input is bounded separately by
         # _render_tool_call_for_summary().
-        pruned += sum(
-            self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars, protected_skills)
-            for i in range(max(0, prune_boundary))
+        pruned += self._demote_size_ordered(
+            result, max(0, prune_boundary), call_id_to_tool, min_prune_chars, protected_skills, shed_target_chars,
         )
         # Pass 3: retire image payloads inside the protected tail; re-sent embeds otherwise make
         # compression look ineffective and trip anti-thrash. Newest frames stay live.

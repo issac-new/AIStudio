@@ -65,8 +65,12 @@ class ProactivePruneMixin:
         if session_db and session_id and not callable(getattr(session_db, "archive_and_compact", None)):
             self._warn_reclamation_no_op("prune:store_cannot_persist", current_tokens)
             return messages, 0
+        # 超溢量即目标（"装下即停"）：只回收越线部分+余量，多留完整工具结果。
+        overage_tokens = max(0, int(current_tokens or 0) - self.threshold_tokens) if self.threshold_tokens > 0 else 0
+        shed_target = int(overage_tokens * _cc()._CHARS_PER_TOKEN * 1.2) if overage_tokens > 0 else None
         pruned_msgs, pruned_count = self._prune_old_tool_results(
             messages, protect_tail_count=self.protect_last_n, protect_tail_tokens=None, min_prune_chars=self.proactive_prune_min_result_chars,
+            shed_target_chars=shed_target,
         )
         if not pruned_count:
             # No-op contract: return the INPUT object so callers can gate on `result is not input`.
