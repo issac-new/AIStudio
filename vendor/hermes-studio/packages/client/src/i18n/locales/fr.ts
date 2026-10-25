@@ -1404,7 +1404,7 @@ export default {
     stopSpeech: 'Arrêter',
     speechNotSupported: 'Reproduction vocale non prise en charge dans ce navigateur',
     searchEnterHint: 'Entrée pour ouvrir · Échap pour fermer',
-    searchHint: 'Cmd/Ctrl+K',
+    searchHint: 'Cmd/Ctrl+F',
     searchScope: 'Portée de recherche : base locale des sessions Web UI uniquement ; les sessions d’historique Hermes en lecture seule ne sont pas incluses.',
     searchFailed: 'Échec de la recherche de sessions',
     searchNoSnippet: 'Aucun extrait disponible',

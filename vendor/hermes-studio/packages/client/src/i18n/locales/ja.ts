@@ -1404,7 +1404,7 @@ export default {
     stopSpeech: '停止',
     speechNotSupported: 'このブラウザは音声読み上げをサポートしていません',
     searchEnterHint: 'Enter で開く · Esc で閉じる',
-    searchHint: 'Cmd/Ctrl+K',
+    searchHint: 'Cmd/Ctrl+F',
     searchScope: '検索範囲: Web UI のローカルセッション DB のみ。読み取り専用の Hermes 履歴セッションは含まれません。',
     searchFailed: 'セッション検索に失敗しました',
     searchNoSnippet: '表示できる要約がありません',

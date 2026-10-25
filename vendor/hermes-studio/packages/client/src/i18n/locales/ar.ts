@@ -1325,7 +1325,7 @@ export default {
     searchTitle: 'البحث في الجلسات',
     searchSubtitle: 'ابحث بالعنوان أو بمحتوى الرسالة',
     searchScope: 'نطاق البحث: قاعدة بيانات جلسات واجهة الويب المحلية فقط. جلسات سجل Hermes للقراءة فقط غير مضمّنة.',
-    searchHint: 'Cmd/Ctrl+K',
+    searchHint: 'Cmd/Ctrl+F',
     searchPlaceholder: 'البحث في الجلسات...',
     searchEmpty: 'الجلسات الأخيرة',
     searchRecent: 'جلسة أخيرة',

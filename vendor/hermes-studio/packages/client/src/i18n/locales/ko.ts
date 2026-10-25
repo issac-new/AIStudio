@@ -1404,7 +1404,7 @@ export default {
     stopSpeech: '중지',
     speechNotSupported: '이 브라우저는 음성 재생을 지원하지 않습니다',
     searchEnterHint: 'Enter로 열기 · Esc로 닫기',
-    searchHint: 'Cmd/Ctrl+K',
+    searchHint: 'Cmd/Ctrl+F',
     searchScope: '검색 범위: Web UI 로컬 세션 DB만 포함하며 읽기 전용 Hermes 기록 세션은 포함하지 않습니다.',
     searchFailed: '세션 검색 실패',
     searchNoSnippet: '표시할 요약이 없습니다',

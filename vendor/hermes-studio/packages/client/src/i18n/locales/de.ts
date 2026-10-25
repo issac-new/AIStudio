@@ -1404,7 +1404,7 @@ export default {
     stopSpeech: 'Stoppen',
     speechNotSupported: 'Sprachwiedergabe in diesem Browser nicht unterstützt',
     searchEnterHint: 'Enter zum Öffnen · Esc zum Schließen',
-    searchHint: 'Cmd/Ctrl+K',
+    searchHint: 'Cmd/Ctrl+F',
     searchScope: 'Suchbereich: nur lokale Web-UI-Sitzungsdatenbank; schreibgeschützte Hermes-Verlaufssitzungen sind nicht enthalten.',
     searchFailed: 'Sitzungssuche fehlgeschlagen',
     searchNoSnippet: 'Keine Vorschau verfügbar',

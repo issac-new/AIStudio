@@ -6,6 +6,14 @@ export function useKeyboard() {
   const router = useRouter()
   const { sessionSearchOpen, openSessionSearch, closeSessionSearch } = useSessionSearch()
 
+  function isEditableTarget(target: EventTarget | null): boolean {
+    const el = target instanceof Element ? target : null
+    if (!el) return false
+    if (el.closest('.monaco-editor')) return true
+    const tag = el.tagName
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     const mod = e.ctrlKey || e.metaKey
 
@@ -30,7 +38,10 @@ export function useKeyboard() {
       return
     }
 
-    if (mod && e.key.toLowerCase() === 'k') {
+    // ⌘F opens session search (was ⌘K, which collided with the IDE command
+    // palette). Skip editable targets so monaco's in-editor find and text
+    // inputs keep the browser/editor-native behavior.
+    if (mod && e.key.toLowerCase() === 'f' && !isEditableTarget(e.target)) {
       if (router.currentRoute.value.name === 'login') return
       e.preventDefault()
       openSessionSearch()

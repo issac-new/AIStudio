@@ -1225,7 +1225,7 @@ export default {
     searchTitle: 'Поиск сеансов',
     searchSubtitle: 'Поиск по заголовку или содержимому сообщений',
     searchScope: 'Область поиска: только локальная библиотека сеансов Web UI; сеансы истории Hermes только для чтения не включаются.',
-    searchHint: 'Cmd/Ctrl+K',
+    searchHint: 'Cmd/Ctrl+F',
     searchPlaceholder: 'Поиск сеансов...',
     searchEmpty: 'Недавние сеансы',
     searchRecent: 'Недавние сеансы',
