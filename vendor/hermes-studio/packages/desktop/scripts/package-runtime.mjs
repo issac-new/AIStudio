@@ -73,6 +73,14 @@ for (const dir of [PY_DIR, NODE_DIR]) {
   }
 }
 
+// overlay[run-agent-required]: verify run_agent.py exists at python root.
+const runAgentPy = resolve(PY_DIR, 'run_agent.py')
+if (!existsSync(runAgentPy)) {
+  console.error(`run_agent.py not found at ${runAgentPy} — refusing to package incomplete runtime`)
+  process.exit(1)
+}
+console.log(`✓ run_agent.py verified at ${runAgentPy}`)
+
 const hermesAgentVersion = output(pyBin, [
   '-c',
   hermesInstalledVersionScript,
