@@ -170,6 +170,9 @@ import { deliveryRouter } from '../custom/delivery/delivery-controller'
 // overlay[expertise]: 协作画像「谁懂什么」（天猫数字员工两文吸收轮 2026-10-23）——
 // /api/hermes/expertise/{wall,search}：人×概念×证据画像墙与检索，每条推荐挂可回查证据。
 import { expertiseRouter } from '../custom/expertise/expertise-controller'
+// overlay[precedent]: 判例库检索（天猫吸收轮挂账批 2026-10-23）——
+// /api/hermes/precedent/search：run 即判例单元，活跃 runs+归档 tar 按需抽。
+import { precedentRouter } from '../custom/precedent/precedent-controller'
 // overlay[runtime-verify]（长会话治理 B5 挂载件）：真工具运行时验证器注册表——
 // /api/hermes/runtime-verify/{health,verifiers,miniprogram}。原模块早落而路由从未
 // 挂载（悬空件），606 补登。
@@ -528,6 +531,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(runtimeVerifyRoutes.routes())           // runtime-verify：验证器注册表 REST（B5）
   app.use(deliveryRouter.routes())              // 交付效能：日报/C×L 矩阵/介入账本（天猫吸收轮，fail-soft）
   app.use(expertiseRouter.routes())            // 协作画像：谁懂什么 wall/search（天猫吸收轮，fail-soft）
+  app.use(precedentRouter.routes())             // 判例库：run 判例检索（天猫挂账批，fail-soft）
   app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
   app.use(skillgovGeneratorRoutes.routes())         // 技能治理：生成器 status/run
   app.use(skillgovStoreRoutes.routes())             // 技能治理：角色映射+教训库
