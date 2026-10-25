@@ -27,6 +27,7 @@ import { getCompatibleCustomProviders } from '../../studio/contracts/provider-co
 import { registerClaudeCodeProxyTarget } from './claude-code/proxy'
 import { registerCodexProxyTarget, restoreCodexProxyTarget } from './codex/proxy'
 import { compactCodexThread } from './codex/compact'
+import { scanPathForCommand } from './runtime/command-path-scan'
 import { hermesPromptDocument, writeManagedPromptFile } from './prompt-file'
 import type { ApiMode, CodingAgentImageInput } from '../protocol/types'
 import { PROVIDER_PRESETS, assertProviderAvailable, isRetiredProvider } from '../../studio/contracts/providers'
@@ -464,6 +465,7 @@ function getDesktopCommonBinPaths(): string[] {
   return [
     join(home, '.npm-global', 'bin'),
     join(home, '.local', 'bin'),
+    join(home, '.local', 'share', 'pnpm'),
     join(home, '.yarn', 'bin'),
     join(home, '.config', 'yarn', 'global', 'node_modules', '.bin'),
     join(home, '.pnpm'),
@@ -829,6 +831,8 @@ function getScopedRuntimeConfigRoot(
   const sessionId = String(input.sessionId || '').trim()
   const agentSessionId = String(input.agentSessionId || '').trim()
   if ((!sessionId || !agentSessionId) && (id === 'pi' || id === 'dsh')) {
+    // 16 hex chars (64 bits) keep run dirs unique while staying inside the
+    // Windows 260-char MAX_PATH budget once profile/node_modules segments stack.
     const runtimeKey = createHash('sha256')
       .update(JSON.stringify([
         sessionId || randomUUID(),
@@ -837,12 +841,14 @@ function getScopedRuntimeConfigRoot(
         Date.now(),
       ]))
       .digest('hex')
+      .slice(0, 16)
     return join(rootDir, 'runs', runtimeKey)
   }
   if (!sessionId || !agentSessionId) return rootDir
   const runtimeKey = createHash('sha256')
     .update(JSON.stringify([sessionId, agentSessionId]))
     .digest('hex')
+    .slice(0, 16)
   return join(rootDir, 'runs', runtimeKey)
 }
 
@@ -2121,7 +2127,10 @@ async function commandExists(command: string): Promise<boolean> {
       windowsHide: true,
     })
     return true
-  } catch {
+  } catch (err: any) {
+    // ENOENT means the lookup binary itself is missing (minimal Kylin/container
+    // images ship no `which`); fall back to a direct PATH scan.
+    if (err?.code === 'ENOENT') return scanPathForCommand(command).length > 0
     return false
   }
 }
@@ -2174,8 +2183,12 @@ async function openNativeTerminal(shellCommand: string): Promise<string> {
     const candidates: Array<{ command: string; args: string[] }> = [
       { command: 'xdg-terminal-exec', args: ['bash', '-lc', shellCommand] },
       { command: 'gnome-terminal', args: ['--', 'bash', '-lc', shellCommand] },
+      // Kylin V10 (UKUI) ships mate-terminal; qterminal covers LXQT-based builds.
+      { command: 'mate-terminal', args: ['--', 'bash', '-lc', shellCommand] },
+      { command: 'qterminal', args: ['-e', `bash -lc ${shellQuote(shellCommand)}`] },
       { command: 'konsole', args: ['-e', 'bash', '-lc', shellCommand] },
       { command: 'xfce4-terminal', args: ['--command', `bash -lc ${shellQuote(shellCommand)}`] },
+      { command: 'deepin-terminal', args: ['-e', `bash -lc ${shellQuote(shellCommand)}`] },
       { command: 'kitty', args: ['bash', '-lc', shellCommand] },
       { command: 'alacritty', args: ['-e', 'bash', '-lc', shellCommand] },
       { command: 'xterm', args: ['-e', 'bash', '-lc', shellCommand] },
@@ -2383,7 +2396,11 @@ async function findCommandPaths(command: string, env: NodeJS.ProcessEnv): Promis
       env,
     })
     return stdout.split(/\r?\n/).map(line => normalizeWindowsCommandPath(line.trim())).filter(Boolean)
-  } catch {
+  } catch (err: any) {
+    // ENOENT means the lookup binary itself is missing (minimal Kylin/container
+    // images ship no `which`), which used to masquerade as "DSH is not
+    // installed". Scan PATH directly so discovery still works there.
+    if (err?.code === 'ENOENT') return scanPathForCommand(command, env)
     return []
   }
 }
