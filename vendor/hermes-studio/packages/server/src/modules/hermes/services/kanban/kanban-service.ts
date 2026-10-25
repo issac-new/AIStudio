@@ -9,6 +9,7 @@ import { safeFileStore } from '../../../studio/public/safe-file-store'
 import { getActiveProfileName, getProfileDir } from '../profiles/profile'
 import { RACIDispatchService } from '../../../../custom/services/kanban/raci-dispatch'
 import { evaluateRules } from '../../../../custom/loop/engine/architecture-engine'
+import { RetryGuardService } from '../../../../custom/services/kanban/retry-guard'
 
 const execOpts = { windowsHide: true }
 const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -710,7 +711,24 @@ export async function reopenReview(
 ): Promise<void> {
   const args = [...boardArgs(opts?.board), 'reopen-review', ...taskIds]
   if (reason) args.push('--reason', reason)
+  // HERMES_CUSTOM[aipaydev] BEGIN: 打回熔断闸——第 RETRY_MAX(5) 次起拒绝 reopen（防死循环）
+  for (const tid of taskIds) {
+    await RetryGuardService.assertReopenAllowed(tid)
+  }
+  // HERMES_CUSTOM[aipaydev] END
   await execKanbanMutation(args, 'Hermes CLI: kanban reopen-review failed', 'Failed to reopen review')
+  // HERMES_CUSTOM[aipaydev] BEGIN: 防死循环——测试打回计数 + Leader 介入通知（阈值 3；第 5 次起上方熔断已拒绝）
+  for (const tid of taskIds) {
+    try {
+      const verdict = await RetryGuardService.onTestReject(tid)
+      if (verdict.leaderIntervention) {
+        logger.warn(`[aipaydev] task ${tid} 第 ${verdict.count} 次打回，已达 Leader 介入阈值（3）`)
+      }
+    } catch (e) {
+      logger.warn(`[aipaydev] retry guard failed for ${tid}: ${(e as Error).message}`)
+    }
+  }
+  // HERMES_CUSTOM[aipaydev] END
 }
 
 export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<void> {
