@@ -250,6 +250,10 @@ let activeTerm: Terminal | null = null;
 let activeFitAddon: FitAddon | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let mobileQuery: MediaQueryList | null = null;
+// PTY leak guard: ws.close() is async; without this flag the late close event
+// schedules a reconnect after unmount, leaving an orphaned WebSocket whose
+// server-side PTY is never released.
+let destroyed = false;
 let touchScrollLastY: number | null = null;
 let touchScrollRemainder = 0;
 const TOUCH_SCROLL_LINE_PX = 18;
@@ -312,14 +316,17 @@ function buildWsUrl(): string {
 }
 
 function connect() {
+  if (ws || destroyed) return;
   const url = buildWsUrl();
-  ws = new WebSocket(url);
+  const sock = new WebSocket(url);
+  ws = sock;
 
-  ws.onopen = () => {
+  sock.onopen = () => {
     // Server auto-creates the first session and sends 'created'
   };
 
-  ws.onmessage = (event) => {
+  sock.onmessage = (event) => {
+    if (ws !== sock) return; // stale event from a replaced socket
     const data = typeof event.data === "string" ? event.data : "";
     if (data.charCodeAt(0) === 0x7b) {
       try {
@@ -330,17 +337,15 @@ function connect() {
     }
   };
 
-  // On reconnect, recreate all terminals for existing sessions
-  ws.onopen = () => {
-    // Server will auto-create the first session again
+  sock.onclose = () => {
+    if (ws !== sock) return; // stale close must not touch the live socket
+    ws = null;
+    // Reconnect after delay (never after unmount: that orphaned the socket
+    // and leaked its server-side PTY)
+    if (!destroyed) setTimeout(connect, 3000);
   };
 
-  ws.onclose = () => {
-    // Reconnect after delay
-    setTimeout(connect, 3000);
-  };
-
-  ws.onerror = () => {
+  sock.onerror = () => {
     // let onclose handle reconnect
   };
 }
@@ -570,6 +575,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  destroyed = true;
   mobileQuery?.removeEventListener("change", handleMobileChange);
   unmountActiveTerminal();
   // Dispose all terminal instances
@@ -579,8 +585,18 @@ onUnmounted(() => {
   termMap.clear();
   activeTerm = null;
   activeFitAddon = null;
-  ws?.close();
+  // Strip handlers BEFORE close(): the close event fires asynchronously after
+  // this function returns, and a surviving onclose handler would reconnect
+  // from a dead component (PTY leak root cause).
+  const sock = ws;
   ws = null;
+  if (sock) {
+    sock.onopen = null;
+    sock.onmessage = null;
+    sock.onclose = null;
+    sock.onerror = null;
+    try { sock.close(); } catch { /* already closing */ }
+  }
 });
 </script>
 
