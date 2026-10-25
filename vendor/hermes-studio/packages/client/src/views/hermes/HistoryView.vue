@@ -359,8 +359,7 @@ async function openDefaultHistorySession(replace = false) {
   }
 
   const location = {
-    name: 'hermes.historySession',
-    params: { sessionId: firstSession.id },
+    path: `/app/history/session/${encodeURIComponent(firstSession.id)}`,
     query: firstSession.profile ? { profile: firstSession.profile } : undefined,
   }
   if (replace) await router.replace(location)
@@ -693,8 +692,7 @@ function historySessionProfile(sessionId: string): string | null {
 
 function buildHistorySessionUrl(sessionId: string, profile?: string | null) {
   const href = router.resolve({
-    name: 'hermes.historySession',
-    params: { sessionId },
+    path: `/app/history/session/${encodeURIComponent(sessionId)}`,
     query: profile ? { profile } : undefined,
   }).href
   return `${window.location.origin}${window.location.pathname}${href}`
