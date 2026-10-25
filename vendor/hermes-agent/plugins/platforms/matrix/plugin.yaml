@@ -7,8 +7,15 @@ description: >
   Connects to a Matrix homeserver via mautrix (with optional E2EE) and relays
   messages between Matrix rooms/DMs and the Hermes agent. Supports threads,
   HTML/markdown rendering, native media uploads, mention gating, free-response
-  rooms, and per-room allowlists.
+  rooms, and per-room allowlists. Also exposes room-ops client tools so an agent
+  can create rooms and invite collaborators without a human intermediary.
 author: NousResearch
+# Declared so the loader pre-registers these client tools even while the platform
+# adapter stays deferred (hermes_cli/plugins_loader.py::_register_deferred_platform_tools).
+provides_tools:
+  - matrix_room_create
+  - matrix_room_invite
+  - matrix_room_list
 requires_env:
   - name: MATRIX_HOMESERVER
     description: "Matrix homeserver URL (e.g. https://matrix.org)"
