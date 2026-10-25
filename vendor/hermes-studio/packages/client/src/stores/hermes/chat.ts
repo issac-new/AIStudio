@@ -118,7 +118,7 @@ export interface Message {
   // 不含 <think> 包裹标签；内容自身可以为多段纯文本。
   reasoning?: string
   queued?: boolean
-  systemType?: 'command' | 'error' | 'fork-divider' | 'tool-run'
+  systemType?: 'command' | 'error' | 'fork-divider' | 'tool-run' | 'gateway'
   commandAction?: string
   commandData?: Record<string, unknown>
   finishReason?: string | null

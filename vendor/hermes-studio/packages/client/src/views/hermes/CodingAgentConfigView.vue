@@ -72,8 +72,8 @@ let loadVersion = 0
 const validAgentId = computed<CodingAgentId | null>(() =>
   agentId.value in settingsKeys ? agentId.value as CodingAgentId : null,
 )
-const skillTarget = computed<SkillTarget>(() =>
-  validAgentId.value ? skillTargets[validAgentId.value] || 'hermes' : 'hermes',
+const skillTarget = computed<SkillTarget | null>(() =>
+  validAgentId.value ? skillTargets[validAgentId.value] ?? null : 'hermes',
 )
 const activeEditorKinds = computed(() => editorKinds.filter(kind =>
   validAgentId.value && settingsKeys[validAgentId.value][kind],
@@ -157,7 +157,7 @@ watch([agentId, section], loadSettingsFiles, { immediate: true })
     <DshPluginsPanel v-if="section === 'plugins' && validAgentId === 'dsh'" />
     <DshAgentPresetsPanel v-else-if="section === 'presets' && validAgentId === 'dsh'" />
     <div v-else-if="section === 'skills'" class="coding-agent-skills-content">
-      <CodingAgentSkillsPanel :target="skillTarget" />
+      <CodingAgentSkillsPanel v-if="skillTarget" :target="skillTarget" />
     </div>
 
     <div v-else-if="section === 'mcp' && validAgentId" class="coding-agent-mcp-content">

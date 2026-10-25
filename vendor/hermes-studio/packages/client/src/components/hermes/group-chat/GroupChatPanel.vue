@@ -90,9 +90,9 @@ import { buildRemoteGroupChatRooms, type RemoteGroupChatRoom } from '@/utils/gro
 import { handoffErrorTranslationKey } from './handoff-presentation'
 import { clearGroupChatRoomDraft } from './group-chat-room-drafts'
 import {
-    fetchAgentStatusSnapshot,
+    fetchAgentAvailabilitySnapshot,
     isAgentStatusAvailable,
-    type AgentStatusSnapshot,
+    type AgentAvailabilitySnapshot,
 } from '@/api/agent-status'
 
 const FilesPanel = defineAsyncComponent(async () => (await import('@/components/hermes/chat/FilesPanel.vue')).default)
@@ -137,7 +137,8 @@ const editingAgent = ref<RoomAgent | null>(null)
 const isSavingAgent = ref(false)
 const isLoadingAgentForm = ref(false)
 let agentDrawerLoadSequence = 0
-const agentStatusSnapshot = ref<AgentStatusSnapshot | null>(null)
+// G2（2026-10-10）：改吃 availability 端点（无超管闸）——普通账号进群聊不再 403 toast
+const agentStatusSnapshot = ref<AgentAvailabilitySnapshot | null>(null)
 let agentStatusRequest: Promise<void> | null = null
 const showRoomSettingsModal = ref(false)
 const showUserProfileModal = ref(false)
@@ -296,7 +297,7 @@ function refreshAgentAvailability(): Promise<void> {
     if (agentStatusRequest) return agentStatusRequest
     agentStatusRequest = (async () => {
         try {
-            agentStatusSnapshot.value = await fetchAgentStatusSnapshot()
+            agentStatusSnapshot.value = await fetchAgentAvailabilitySnapshot()
         } catch {
             agentStatusSnapshot.value = null
         }

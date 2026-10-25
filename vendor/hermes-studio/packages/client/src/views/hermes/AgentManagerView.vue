@@ -4,6 +4,8 @@ import { agentMetadata } from '@/utils/agent-catalog'
 import PageLoading from '@/components/common/PageLoading.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { getAgentUpdatePolicies, setAgentAutoUpdate, type AgentUpdatePolicyState } from '@/api/coding-agents'
+// overlay[s3]（补遗⑤）：ekko 配置入口默认关（VITE_CUSTOM_EKKO 再开）
+import { features } from '@/custom/features'
 import { computed, defineAsyncComponent, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -523,7 +525,7 @@ onUnmounted(() => {
           </NAlert>
 
           <div class="coding-agent-grid">
-            <section class="agent-card coding-agent-card" data-testid="agent-card-ekko">
+            <section v-if="features.ekko" class="agent-card coding-agent-card" data-testid="agent-card-ekko">
               <header class="agent-card-header compact">
                 <div class="agent-identity">
                   <img :src="deploymentUrl('/coding-agents/ekko-agent.png')" alt="" class="agent-logo" />
