@@ -180,7 +180,7 @@ export function injectManagedEkkoMcpServers(
       result.targets.push({
         profile,
         status: 'skipped',
-        reason: `existing ${unmanagedCollision.name} MCP server is not managed by Ekko Studio`,
+        reason: `existing ${unmanagedCollision.name} MCP server is not managed by SwarmStudio`,
       })
       continue
     }

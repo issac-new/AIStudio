@@ -1,6 +1,6 @@
-# Ekko Studio
+# SwarmStudio
 
-Electron desktop distribution for Ekko Studio.
+Electron desktop distribution for SwarmStudio.
 
 ## Install
 
@@ -170,7 +170,7 @@ After the packaged desktop app starts, it installs managed command shims:
 
 | Command | Description |
 | --- | --- |
-| `ekko-studio` | Open the Ekko Studio desktop app |
+| `ekko-studio` | Open the SwarmStudio desktop app |
 | `ekko-studio cli ...` | Run the bundled Hermes Agent CLI |
 | `ekko-studio web ...` | Run the bundled `hermes-web-ui` command |
 | `ekko-studio -h` | Show wrapper help |
@@ -185,7 +185,7 @@ Use `ekko-studio cli -h` for Hermes Agent CLI help and
 ## Data directories
 
 On Windows, the first packaged launch after the rename updates the existing
-Studio startup entry from `Hermes Studio.exe` to `Ekko Studio.exe` in the same
+Studio startup entry from `Hermes Studio.exe` to `SwarmStudio.exe` in the same
 installation directory. Its Task Manager enabled/disabled state is preserved.
 No entry is created if startup was never enabled; custom entries and machine-wide
 entries are left alone. The migration is safe to retry on later launches.

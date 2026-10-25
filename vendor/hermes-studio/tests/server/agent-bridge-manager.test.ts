@@ -190,7 +190,7 @@ describe('agent bridge manager command resolution', () => {
     const env = buildAgentBridgeProcessEnv('ipc:///tmp/test.sock', '/tmp/hermes-home', '/tmp/hermes-agent')
 
     expect(env.HERMES_OPENROUTER_APP_REFERER).toBe('https://ekkostudio.xyz')
-    expect(env.HERMES_OPENROUTER_APP_TITLE).toBe('Ekko Studio')
+    expect(env.HERMES_OPENROUTER_APP_TITLE).toBe('SwarmStudio')
     expect(env.HERMES_OPENROUTER_APP_CATEGORIES).toBe('cli-agent,personal-agent')
   })
 

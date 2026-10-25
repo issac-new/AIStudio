@@ -12,7 +12,7 @@ export async function prepareCodeBuddyScopedRuntime(input: ScopedRuntimeInput): 
     CODEBUDDY_MODEL: alias, CODEBUDDY_SMALL_FAST_MODEL: alias, CODEBUDDY_BIG_SLOW_MODEL: alias,
     CODEBUDDY_CODE_SUBAGENT_MODEL: alias, CODEBUDDY_API_KEY: token, CODEBUDDY_AUTH_TOKEN: '',
     CODEBUDDY_BASE_URL: baseUrl, CODEBUDDY_CUSTOM_HEADERS: '' }
-  await write('models', 'models.json', json({ models: [{ id: alias, name: model, vendor: 'Ekko Studio',
+  await write('models', 'models.json', json({ models: [{ id: alias, name: model, vendor: 'SwarmStudio',
     apiKey: '${EKKO_SCOPED_MODEL_TOKEN}', url: `${baseUrl}/chat/completions`,
     maxInputTokens: contextWindow, maxOutputTokens: outputLimit, supportsToolCall: true,
     relatedModels: { lite: alias, reasoning: alias, subagent: alias } }], availableModels: [alias] }))

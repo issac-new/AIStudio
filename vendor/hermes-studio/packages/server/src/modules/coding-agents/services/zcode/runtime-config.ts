@@ -50,7 +50,7 @@ export async function prepareZcodeScopedRuntime(input: ScopedRuntimeInput): Prom
       modelApiRules: [], providerSiteRules: [], templateModelRules: [], builtinProviderModelRules: [] } } }))
   await write('providers', 'personal-providers.json', json({ schemaVersion: 1, config: {
     providerOrder: ['ekko-scoped'], providerConfigRules: { providerRules: [{ providerId: 'ekko-scoped',
-      providerName: 'Ekko Studio', enabled: true, config: { group: 'standard-personal',
+      providerName: 'SwarmStudio', enabled: true, config: { group: 'standard-personal',
         access: { type: 'api-key', apiKey: token }, api: { type: 'anthropic-messages', baseUrl },
         personalModelIds: [model] } }] },
     modelConfigRules: { providerModelRules: [], manualProviderModelRules: [] },

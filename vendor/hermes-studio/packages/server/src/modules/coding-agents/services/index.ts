@@ -1185,7 +1185,7 @@ function inheritClaudeSettings(existingContent: string | null | undefined = ''):
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
     const inherited = { ...parsed } as Record<string, unknown>
     // Scoped Coding Agent runs authenticate exclusively through the selected
-    // Ekko Studio profile proxy. Never inherit native Claude login/provider
+    // SwarmStudio profile proxy. Never inherit native Claude login/provider
     // routing, otherwise a stale OAuth session can override the profile.
     delete inherited.apiKeyHelper
     delete inherited.awsAuthRefresh
@@ -1620,12 +1620,120 @@ function piMcpConfig(profile: string, runTokenFile: string | undefined, ...exter
   }, null, 2)}\n`
 }
 
+function opencodeFamilyRuntimeConfig(
+  family: OpenCodeFamilyId,
+  profile: string,
+  runtime: {
+    provider?: string
+    model?: string
+    baseUrl?: string
+    systemPrompt?: string
+    contextPolicy?: CodingAgentContextPolicy
+    studioMcpTokenFile?: string
+  },
+  ...existingContents: Array<string | null | undefined>
+): string {
+  const config = parseOpenCodeConfig(...existingContents)
+  const externalMcp = config.mcp && typeof config.mcp === 'object' && !Array.isArray(config.mcp)
+    ? { ...config.mcp }
+    : {}
+  for (const name of [...HERMES_MCP_SERVER_NAMES, ...LEGACY_HERMES_MCP_SERVER_NAMES]) delete externalMcp[name]
+  const familyVars = OPENCODE_FAMILY_VARS[family]
+  const disabledManaged = getDisabledManagedMcpServers(family, profile)
+  const managedMcp = Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {
+    const server = managedHermesMcpServerConfig(family, profile, item.name, item.toolset, runtime.studioMcpTokenFile)
+    return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
+  }))
+  const inheritedInstructions = Array.isArray(config.instructions)
+    ? config.instructions.map(String)
+    : typeof config.instructions === 'string'
+      ? [config.instructions]
+      : []
+  if (runtime.model) {
+    delete config.model
+    delete config.provider
+  }
+  delete config.instructions
+  return `${JSON.stringify({
+    ...config,
+    $schema: familyVars.schemaUrl,
+    ...(runtime.model ? {
+      model: `${OPENCODE_PROVIDER_ID}/${runtime.model}`,
+      provider: {
+        [OPENCODE_PROVIDER_ID]: {
+          npm: '@ai-sdk/openai',
+          name: runtime.provider || 'SwarmStudio',
+          options: {
+            baseURL: runtime.baseUrl || '',
+            apiKey: `{env:${familyVars.apiKeyEnv}}`,
+          },
+          models: {
+            [runtime.model]: {
+              name: displayNameForModel(runtime.model),
+              // Always forward images; let the upstream model handle support.
+              attachment: true,
+              modalities: { input: ['text', 'image'], output: ['text'] },
+              ...(runtime.contextPolicy ? { limit: {
+                context: runtime.contextPolicy.contextWindow,
+                input: runtime.contextPolicy.contextWindow,
+                output: runtime.contextPolicy.outputLimit,
+              } } : {}),
+            },
+          },
+        },
+      },
+    } : {}),
+    ...(runtime.contextPolicy ? { compaction: {
+      ...(config.compaction && typeof config.compaction === 'object' ? config.compaction : {}),
+      auto: true,
+      reserved: runtime.contextPolicy.contextWindow - runtime.contextPolicy.triggerTokens,
+    } } : {}),
+    ...((inheritedInstructions.length || runtime.systemPrompt) ? {
+      instructions: [...new Set([
+        ...inheritedInstructions,
+        ...(runtime.systemPrompt ? [runtime.systemPrompt] : []),
+      ])],
+    } : {}),
+    mcp: {
+      ...externalMcp,
+      ...managedMcp,
+    },
+    permission: { '*': 'allow' },
+  }, null, 2)}\n`
+}
+
+function openCodeRuntimeEnv(family: OpenCodeFamilyId, input: {
+  configDir: string
+  databasePath: string
+  runtimeConfig?: string
+  apiKey?: string
+}): Record<string, string> {
+  // OPENCODE_CONFIG_DIR is OpenCode's native global-config override. Keep it
+  // stable at the provider/profile root so OpenCode installs its plugin SDK
+  // once and discovers the same agents, commands, plugins, skills, memory, and
+  // MCP configuration for terminal, chat, group-chat, and workflow launches.
+  //
+  // Per-conversation provider credentials and model selection are applied with
+  // OPENCODE_CONFIG_CONTENT, which OpenCode intentionally loads last. The
+  // native database remains isolated per conversation. Do not redirect HOME or
+  // XDG because that would also redirect git, ssh, npm, and child shells.
+  const familyVars = OPENCODE_FAMILY_VARS[family]
+  return {
+    [familyVars.configDirEnv]: input.configDir,
+    [familyVars.databaseEnv]: input.databasePath,
+    ...(input.runtimeConfig ? { [familyVars.runtimeConfigEnv]: input.runtimeConfig } : {}),
+    // MiMo-Code gates Claude-Code skill import behind an opt-in flag already.
+    ...(family === 'opencode' ? { OPENCODE_DISABLE_CLAUDE_CODE: '1' } : {}),
+    ...(input.apiKey ? { [familyVars.apiKeyEnv]: input.apiKey } : {}),
+  }
+}
+
 export function getCodingAgentManagedMcpServerConfigs(
   id: CodingAgentId,
   profile = 'default',
   runTokenFile?: string,
 ): Record<string, Record<string, unknown>> {
-  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'].includes(id)) return {}
+  if (!['claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'].includes(id)) return {}
   if (id === 'zcode') return {}
   const disabledManaged = getDisabledManagedMcpServers(id, profile)
   return Object.fromEntries(HERMES_MCP_SERVERS.map((item) => {

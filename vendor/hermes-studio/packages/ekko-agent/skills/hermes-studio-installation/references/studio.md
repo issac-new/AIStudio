@@ -1,10 +1,10 @@
-# Ekko Studio installation
+# SwarmStudio installation
 
 Use the installation form already chosen by the user. Desktop is the recommended end-user installation; npm, Docker, and source installs serve different deployment needs.
 
 ## Desktop application
 
-Install the latest platform and architecture-specific package from the Ekko Studio GitHub Releases page. The packaged app bundles the Studio server and can manage a Hermes Runtime separately.
+Install the latest platform and architecture-specific package from the SwarmStudio GitHub Releases page. The packaged app bundles the Studio server and can manage a Hermes Runtime separately.
 
 Once a managed Runtime is ready, packaged Desktop installs managed command shims:
 

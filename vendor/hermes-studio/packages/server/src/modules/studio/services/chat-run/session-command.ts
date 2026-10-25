@@ -170,7 +170,7 @@ export async function handleSessionCommand(
         ok: false,
         action,
         terminal: !state.isWorking,
-        message: 'Use /bundles create in Ekko Studio to open the bundle creator.',
+        message: 'Use /bundles create in SwarmStudio to open the bundle creator.',
       })
       return
     }

@@ -45,8 +45,8 @@ const DEFAULT_MOBILE_RELEASE: StudioMobileRelease = {
   channels: {
     androidApk: {
       version: '1.0.0',
-      githubUrl: 'https://github.com/EKKOLearnAI/ekko-studio/releases/download/v1.0.0/Ekko Studio.apk',
-      cloudflareUrl: 'https://download.ekkolearnai.com/v1.0.0/Ekko Studio.apk',
+      githubUrl: 'https://github.com/EKKOLearnAI/ekko-studio/releases/download/v1.0.0/SwarmStudio.apk',
+      cloudflareUrl: 'https://download.ekkolearnai.com/v1.0.0/SwarmStudio.apk',
       online: true,
     },
     googlePlay: { version: '1.0.0', url: '', online: false },
@@ -708,7 +708,7 @@ onUnmounted(() => {
             <div class="app-download-brand">
               <img class="app-download-logo" :src="deploymentUrl('/logo.png')" alt="">
               <div>
-                <span>Ekko Studio Mobile</span>
+                <span>SwarmStudio Mobile</span>
                 <h3>{{ t('connections.app.downloadTitle') }}</h3>
               </div>
             </div>

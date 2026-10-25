@@ -183,7 +183,7 @@ export async function compactCodexThread(
 
     const clientInfo = {
       name: 'hermes_studio',
-      title: 'Ekko Studio',
+      title: 'SwarmStudio',
       version: '0.6.43',
     }
     child.stdin?.write(JSON.stringify({

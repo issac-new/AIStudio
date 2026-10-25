@@ -298,7 +298,7 @@ export class ChatWebhookDispatcher {
       agent: 'bridge',
       subject: { session_id: 'test' },
       summary: { status: 'completed' },
-      content: 'Ekko Studio webhook test',
+      content: 'SwarmStudio webhook test',
     }, this.options.fetchImpl)
     const status = this.ensureStatus(endpoint.id)
     const attemptedAt = this.now()
