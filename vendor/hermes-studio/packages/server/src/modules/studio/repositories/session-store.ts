@@ -3,11 +3,12 @@
  * Uses the same ensureTable/getDb pattern as usage-store.ts.
  */
 import { isSqliteAvailable, getDb } from '../infrastructure/database'
-import { TASK_PLANS_TABLE, COMPRESSION_SNAPSHOT_TABLE, SESSIONS_TABLE, MESSAGES_TABLE, SESSION_CATEGORIES_TABLE } from '../infrastructure/database/schemas'
+import { TASK_PLANS_TABLE, SESSION_TASKS_TABLE, COMPRESSION_SNAPSHOT_TABLE, SESSIONS_TABLE, MESSAGES_TABLE, SESSION_CATEGORIES_TABLE } from '../infrastructure/database/schemas'
 import { normalizeMessageContentForStorageRole } from './message-content'
 import { copyCompressionSnapshot } from './compression-snapshot'
 import { recordSkillUsageMessage } from './skill-usage-store'
 import { getRecordedSessionTokensBatch } from './usage-store'
+import { SESSION_PREVIEW_SQL, sessionDisplayTitle } from './session-display'
 import { agentFamilyForRuntime, isAgentRuntime } from '../contracts/agents/runtime'
 import { BUILTIN_EKKO_AGENT_IDS, BUILTIN_HISTORY_SOURCES, isBuiltinEkkoAgent, normalizeSessionIdentity } from '../contracts/history-source'
 import { studioSessionAccount } from '../contracts/runs/usage'
@@ -139,7 +140,7 @@ function mapSessionRows(rows: Record<string, unknown>[]): HermesSessionRow[] {
 function mapStoredSessionRow(row: Record<string, unknown>): HermesSessionRow {
   const rawTitle = row.title != null ? String(row.title) : null
   const preview = String(row.preview || '')
-  const title = rawTitle || (preview ? (preview.length > 40 ? preview.slice(0, 40) + '...' : preview) : null)
+  const title = sessionDisplayTitle(rawTitle, preview)
   return {
     id: String(row.id || ''),
     profile: String(row.profile || 'default'),
@@ -510,6 +511,7 @@ export function deleteSession(id: string): boolean {
   db.exec('BEGIN')
   try {
     db.prepare(`DELETE FROM ${TASK_PLANS_TABLE} WHERE session_id = ?`).run(id)
+    db.prepare(`DELETE FROM ${SESSION_TASKS_TABLE} WHERE session_id = ?`).run(id)
     db.prepare(`DELETE FROM ${COMPRESSION_SNAPSHOT_TABLE} WHERE session_id = ?`).run(id)
     db.prepare(`DELETE FROM ${MESSAGES_TABLE} WHERE session_id = ?`).run(id)
     const result = db.prepare(`DELETE FROM ${SESSIONS_TABLE} WHERE id = ?`).run(id)
@@ -528,10 +530,13 @@ export function clearSessionMessages(id: string): number {
   try {
     const result = db.prepare(`DELETE FROM ${MESSAGES_TABLE} WHERE session_id = ?`).run(id)
     db.prepare(`DELETE FROM ${TASK_PLANS_TABLE} WHERE session_id = ?`).run(id)
+    db.prepare(`DELETE FROM ${SESSION_TASKS_TABLE} WHERE session_id = ?`).run(id)
     db.prepare(`DELETE FROM ${COMPRESSION_SNAPSHOT_TABLE} WHERE session_id = ?`).run(id)
     db.prepare(
       `UPDATE ${SESSIONS_TABLE}
        SET history_revision = history_revision + 1,
+           task_summary_revision = task_summary_revision + 1,
+           task_summary_updated_at = 0,
            history_cleared_at = ?,
            message_count = 0,
            last_active = started_at
@@ -588,17 +593,7 @@ export function listSessions(
   const sql = `
     SELECT
       s.*,
-      COALESCE(
-        NULLIF(s.preview, ''),
-        (
-          SELECT SUBSTR(REPLACE(REPLACE(m.content, CHAR(10), ' '), CHAR(13), ' '), 1, 63)
-          FROM ${MESSAGES_TABLE} m
-          WHERE m.session_id = s.id AND m.role = 'user' AND m.content IS NOT NULL
-          ORDER BY m.timestamp, m.id
-          LIMIT 1
-        ),
-        ''
-      ) AS preview,
+      ${SESSION_PREVIEW_SQL} AS preview,
       p.title AS parent_title,
       (
         SELECT REPLACE(REPLACE(m.content, CHAR(10), ' '), CHAR(13), ' ')

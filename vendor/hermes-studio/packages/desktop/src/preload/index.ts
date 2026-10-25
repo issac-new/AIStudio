@@ -101,6 +101,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     return () => ipcRenderer.removeListener('hermes-desktop:pet-window-refresh', listener)
   },
   ...(desktopWindowKind() === 'main' ? { browser: {
+    setRemoteControl: (enable: boolean): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:browser-remote-control', enable),
+    remoteRequest: (body: Record<string, unknown>): Promise<unknown> => ipcRenderer.invoke('hermes-desktop:browser-remote-request', body),
     getState: (): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-get-state'),
     setViewport: (bounds: BrowserBounds, visible: boolean): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-set-viewport', bounds, visible),
     createTab: (url?: string, activate?: boolean): Promise<DesktopBrowserTab> => ipcRenderer.invoke('hermes-desktop:browser-create-tab', url, activate),

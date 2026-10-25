@@ -862,6 +862,7 @@ export class AgentRuntime {
       userSystemMessages,
       memoryContext,
       planningEnabled: this.toolsEnabled && !!this.tools.get('update_plan'),
+      sessionTasksEnabled: this.toolsEnabled && !!this.tools.get('list_session_tasks'),
       clarificationEnabled: this.toolsEnabled && !!this.tools.get('clarify'),
       skillDiscoveryEnabled: this.toolsEnabled && this.areSkillsAvailable() &&
         !!this.tools.get('skill_list') &&

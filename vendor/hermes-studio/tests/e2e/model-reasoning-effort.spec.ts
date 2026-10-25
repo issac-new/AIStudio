@@ -78,6 +78,8 @@ for (const agent of ['Ekko', 'Hermes', 'Codex']) test(`${agent} new-chat forward
   await page.getByRole('button', { name: 'New Chat', exact: true }).click()
   await selectNewChatAgent(page, agent)
   const draft = page.locator('.new-chat-page')
+  await expect(draft.locator('.reasoning-effort-button')).toHaveAttribute('aria-label',
+    agent === 'Hermes' ? /default/i : /none/i)
   await expect(draft.locator('.new-chat-config-bar img, .new-chat-selected-agent')).toHaveCount(0)
   await chooseDraftMax(page)
   await sendNewChatMessage(page, 'Use my draft reasoning effort')

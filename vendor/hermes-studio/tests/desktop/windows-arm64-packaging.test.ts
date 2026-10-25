@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { load } from 'js-yaml'
 import { windowsBuildArgs } from '../../packages/desktop/scripts/windows-build-args.mjs'
+import { pythonBuildEnvironment, pythonDependencyBuildArgs } from '../../packages/desktop/scripts/python-build-env.mjs'
 
 const read = (path: string) => readFileSync(path, 'utf8')
 const workflow = (name: string) => load(read(`.github/workflows/${name}.yml`)) as any
@@ -44,4 +45,24 @@ describe('Windows ARM64 packaging', () => {
       expect(steps[speech].if).toContain('arm64')
     }
   })
+})
+
+describe('ARM64 Python dependency build environment', () => {
+  it('hides the optional x64 MSYS winpty without removing native Git or changing the parent environment', () => {
+    const env = { Path: '/git/cmd;/git/usr/bin;/system', OPENSSL_DIR: '/native/openssl' }
+    const exists = (path: string) => path === '/git/usr/bin/winpty-agent.exe'
+    expect(pythonBuildEnvironment(env, 'win32', 'arm64', exists)).toEqual({
+      Path: '/git/cmd;/system', OPENSSL_DIR: '/native/openssl',
+    })
+    expect(pythonBuildEnvironment(env, 'win32', 'x64', exists)).toEqual(env)
+    expect(env.Path).toBe('/git/cmd;/git/usr/bin;/system')
+  })
+})
+
+it('enables ConPTY through pywinpty-specific build settings only on Windows ARM64', () => {
+  expect(pythonDependencyBuildArgs('win32', 'arm64')).toEqual([
+    '--config-settings-package', 'pywinpty:build-args=--features winpty-rs/conpty',
+  ])
+  expect(pythonDependencyBuildArgs('win32', 'x64')).toEqual([])
+  expect(pythonDependencyBuildArgs('linux', 'arm64')).toEqual([])
 })

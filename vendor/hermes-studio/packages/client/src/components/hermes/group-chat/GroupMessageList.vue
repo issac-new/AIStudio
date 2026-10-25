@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { deploymentUrl } from '@/utils/deployment-url'
+import { AGENT_OPTIONS } from '@/utils/agent-options'
+import { chatSessionAgentAvatar } from '@/utils/chat-agent-avatar'
 import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
 import { NButton, NCheckbox, NDropdown, NModal, NSpin } from 'naive-ui'
 import { desktopBridge } from '@/utils/desktop-bridge'
@@ -33,16 +34,11 @@ const { t } = useI18n()
 const { toolTraceVisible } = useToolTraceVisibility()
 const listRef = ref<InstanceType<typeof VirtualMessageList> | null>(null)
 const showScrollBottomButton = ref(false)
-const emptyStateAgents = [
-    { name: 'Hermes', src: deploymentUrl('/coding-agents/hermes.png') },
-    { name: 'Ekko', src: deploymentUrl('/coding-agents/ekko-agent.png') },
-    { name: 'Codex', src: deploymentUrl('/coding-agents/codex-openai.png') },
-    { name: 'Claude', src: deploymentUrl('/coding-agents/claude-code.svg') },
-    { name: 'Pi', src: deploymentUrl('/coding-agents/pi.svg') },
-    { name: 'Grok', src: deploymentUrl('/coding-agents/grok.svg') },
-    { name: 'OpenCode', src: deploymentUrl('/coding-agents/opencode.png') },
-    { name: 'DeepSeek Harness', src: deploymentUrl('/coding-agents/deepseek.svg') },
-]
+const emptyStateAgents = AGENT_OPTIONS.map(option => ({
+    id: option.value,
+    name: option.label,
+    src: chatSessionAgentAvatar({ agent: option.value }).src,
+}))
 const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
     msg.role !== 'tool' ||
     toolTraceVisible.value ||
@@ -283,7 +279,7 @@ defineExpose({ scrollToBottom })
                         <div class="empty-agent-avatars">
                             <span
                                 v-for="agent in emptyStateAgents"
-                                :key="agent.name"
+                                :key="agent.id"
                                 class="empty-agent-avatar"
                             >
                                 <img :src="agent.src" :alt="agent.name" />
@@ -525,6 +521,7 @@ defineExpose({ scrollToBottom })
 
 .empty-state {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -539,16 +536,23 @@ defineExpose({ scrollToBottom })
 }
 
 .empty-agent-avatars {
+    --avatar-size: 44px;
+    --avatar-overlap: 8px;
     display: flex;
+    flex-wrap: wrap;
+    gap: 10px 0;
     align-items: center;
     justify-content: center;
-    padding-inline-start: calc(8px * var(--spacing-scale, 1));
+    box-sizing: border-box;
+    width: calc(8 * (var(--avatar-size) - var(--avatar-overlap)) + var(--avatar-overlap));
+    max-width: 100%;
+    padding-inline-start: var(--avatar-overlap);
 }
 
 .empty-agent-avatar {
-    width: 44px;
-    height: 44px;
-    margin-inline-start: -8px;
+    flex: 0 0 calc(12.5% + var(--avatar-overlap));
+    aspect-ratio: 1;
+    margin-inline-start: calc(-1 * var(--avatar-overlap));
     overflow: hidden;
     box-sizing: border-box;
     border: var(--border-width, 1px) solid #fff;
@@ -676,6 +680,11 @@ defineExpose({ scrollToBottom })
 
 
 @media (max-width: 640px) {
+    .empty-agent-avatars {
+        --avatar-size: 36px;
+        --avatar-overlap: 6px;
+    }
+
     .summary-anchor-divider {
         grid-template-columns: 1fr;
         gap: calc(8px * var(--spacing-scale, 1));

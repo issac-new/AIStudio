@@ -47,11 +47,12 @@ import {
   type DropdownOption,
 } from "naive-ui";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, provide, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { copyToClipboard } from "@/utils/clipboard";
 import FolderPicker from "./FolderPicker.vue";
 import StarIcon from "@/components/common/StarIcon.vue";
+import SessionTaskIcon from '@/components/common/SessionTaskIcon.vue';
 import ChatInput from "./ChatInput.vue";
 import NewChatAgentCards from "./NewChatAgentCards.vue";
 import { prepareAgentDeployment, type AgentDeploymentController } from "./agentDeployment.mjs";
@@ -98,6 +99,7 @@ const props = withDefaults(defineProps<{
 provide('hermesWorkspaceFilePreview', true);
 
 const FilesPanel = defineAsyncComponent(async () => (await import('./FilesPanel.vue')).default);
+const SessionTasksDrawer = defineAsyncComponent(async () => (await import('@/components/hermes/tasks/SessionTasksDrawer.vue')).default);
 const ConnectionsPanel = defineAsyncComponent(async () => (await import('@/components/hermes/connections/ConnectionsPanel.vue')).default);
 const AgentManagerPanel = defineAsyncComponent(async () => (await import('@/views/hermes/AgentManagerView.vue')).default);
 const ModelsPanel = defineAsyncComponent(async () => (await import('@/views/hermes/ModelsView.vue')).default);
@@ -112,6 +114,16 @@ const filesStore = useFilesStore();
 const toolPanelStore = useToolPanelStore();
 const sessionBrowserPrefsStore = useSessionBrowserPrefsStore();
 const router = useRouter();
+const route = useRoute();
+const sessionTasksMounted = ref(false);
+const showSessionTasks = computed(() => props.contentMode === 'chat' && chatStore.runtimeMode === 'default' && route.query.tasks === '1');
+watch(showSessionTasks, show => { if (show) sessionTasksMounted.value = true; }, { immediate: true });
+function openSessionTasks() {
+  void router.push({ query: { ...route.query, tasks: '1' } });
+}
+function updateSessionTasksVisibility(show: boolean) {
+  if (!show) void router.replace({ query: { ...route.query, tasks: undefined } });
+}
 const message = useMessage();
 const { t } = useI18n();
 const isSuperAdmin = computed(() => isStoredSuperAdmin());
@@ -1208,6 +1220,7 @@ watch(newChatNativeCatalog, catalog => {
   }
 });
 const newChatDraftConfig = computed(() => ({
+  agent: newChatAgent.value,
   profile: newChatProfile.value,
   provider: isNewChatGlobalCodingAgent.value ? "" : newChatProvider.value,
   model: isNewChatGlobalCodingAgent.value ? newChatNativeSelection.value.model : newChatModel.value,
@@ -3017,6 +3030,8 @@ function handleSessionModelSelect(selection: { model: string; provider: string }
 
 
 
+    <SessionTasksDrawer v-if="sessionTasksMounted && !standalone && chatStore.runtimeMode === 'default'" :show="showSessionTasks" @update:show="updateSessionTasksVisibility" />
+
     <div
       class="chat-main"
       :class="{ 'chat-main--sidebar-collapsed': !pageSidebarExpanded }"
@@ -3043,6 +3058,14 @@ function handleSessionModelSelect(selection: { model: string; provider: string }
           <span class="header-session-title" dir="auto">{{ headerTitle }}</span>
         </div>
         <div class="header-actions">
+          <NTooltip v-if="chatStore.runtimeMode === 'default'" trigger="hover">
+            <template #trigger>
+              <NButton class="header-tasks-button" quaternary size="small" circle :aria-label="t('sessionTasks.title')" :aria-expanded="showSessionTasks" aria-haspopup="dialog" @click="openSessionTasks">
+                <template #icon><SessionTaskIcon :size="16" /></template>
+              </NButton>
+            </template>
+            {{ t('sessionTasks.title') }}
+          </NTooltip>
           <NButton
             v-if="!showNewChatPage && chatStore.activeSession?.workspace"
             class="header-workspace-button"

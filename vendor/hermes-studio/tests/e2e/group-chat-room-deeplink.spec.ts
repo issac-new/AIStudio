@@ -631,7 +631,7 @@ for (const { label, platform, width } of [
   { label: 'Windows', platform: 'win32' as const, width: 1280 },
   { label: 'mobile', width: 390 },
 ]) {
-  test(`keeps the Agent drawer header above the application header on ${label}`, async ({ page }) => {
+  test(`keeps the Agent drawer square, below the shared header and usable on ${label}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 })
     await setup(page, '/#/hermes/group-chat/room/room-alpha', platform)
 
@@ -640,7 +640,14 @@ for (const { label, platform, width } of [
       const drawer = page.locator('.n-drawer').filter({ hasText: editing ? 'Edit Worker' : 'Add Agent' })
       await expect(drawer).toBeVisible()
       await expect(drawer).toHaveCSS('width', `${width < 769 ? width : 520}px`)
-      await expect(drawer).toHaveCSS('border-top-left-radius', '5px')
+      await expect(drawer).toHaveCSS('border-radius', '0px')
+      const expectedTop = width < 769 ? 0 : await page.locator('.studio-page-header').evaluate(element => element.getBoundingClientRect().bottom)
+      for (const surface of [drawer, page.locator('.n-drawer-mask:visible')]) {
+        await expect.poll(async () => {
+          const box = (await surface.boundingBox())!
+          return { top: box.y, bottom: box.y + box.height }
+        }).toEqual({ top: expectedTop, bottom: 844 })
+      }
       for (const selector of ['.n-drawer-header__main', '.n-drawer-header__close']) {
         await expect.poll(() => drawer.locator(selector).evaluate(element => {
           const box = element.getBoundingClientRect()

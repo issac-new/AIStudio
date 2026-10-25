@@ -2,6 +2,9 @@ import { randomUUID } from 'crypto'
 import { businessEvents } from './business-events'
 import { ensureBusinessConsumers } from './business-consumers'
 import { acceptTaskPlanRevision, taskPlanWebhookSnapshot } from './task-plan'
+import { sessionTaskWebhookContent } from './session-task'
+import type { SessionTask, SessionTasksSnapshot } from '../../contracts/session-task'
+import { logger } from '../../public/logging'
 import {
   stableChatWebhookEventId,
   truncateChatWebhookContent,
@@ -172,3 +175,37 @@ export function observeChatRunWebhookEvent(input: ObserveChatRunWebhookEventInpu
 
 export * from './dispatcher'
 export * from './envelope'
+
+/** Only persisted task creation and transitions into completed produce notifications. */
+export function publishSessionTaskEvents(input: {
+  profile: string; source: string; previous: SessionTask[]; snapshot: SessionTasksSnapshot
+}): void {
+  try {
+    const previous = new Map(input.previous.map(task => [task.id, task]))
+    const { session_id: sessionId, revision } = input.snapshot
+    const profile = input.profile.trim() || 'default'
+    const events: ChatRunWebhookEvent[] = []
+    for (const task of input.snapshot.tasks) {
+      const old = previous.get(task.id)
+      const types: Array<'chat.task.created' | 'chat.task.completed'> = []
+      if (!old) types.push('chat.task.created')
+      if (task.status === 'completed' && old?.status !== 'completed') types.push('chat.task.completed')
+      for (const type of types) events.push({
+        id: stableChatWebhookEventId(JSON.stringify([type, profile, sessionId, task.id, revision])),
+        type, occurred_at: new Date(task.updated_at).toISOString(), profile, source: normalizeSource(input.source),
+        subject: { session_id: sessionId, task_id: task.id },
+        summary: { status: type === 'chat.task.created' ? 'created' : 'completed' },
+        session_task: sessionTaskWebhookContent({ ...task, revision }, true),
+      })
+    }
+    if (!events.length) return
+    ensureBusinessConsumers()
+    for (const event of events) businessEvents.publish({
+      schema_version: 1, id: event.id, type: event.type, occurred_at: event.occurred_at,
+      profile, source: event.source, subject: event.subject, payload: {}, chat: event,
+    })
+  } catch {
+    // Notification failures must not invalidate the committed task write.
+    logger.warn('[session-tasks] Webhook event publication failed')
+  }
+}

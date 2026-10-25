@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { DEFAULT_REASONING_EFFORTS, modelReasoningEfforts } from '@/utils/model-reasoning-effort'
+import { DEFAULT_REASONING_EFFORTS, agentReasoningEffortOptions, modelReasoningEfforts } from '@/utils/model-reasoning-effort'
 import type { NativeEffortChoice } from '@/utils/native-model-families'
-import { isBuiltinEkkoSession, isExternalCodingAgentSession } from '@/utils/hermes/session-agent'
+import { isBuiltinEkkoSession, isExternalCodingAgentSession, isHermesSession } from '@/utils/hermes/session-agent'
 import { EKKO_SESSION_COMMAND_DEFINITIONS } from '@/utils/hermes/bridge-session-commands'
 import type { Attachment, Session } from '@/stores/hermes/chat'
 import { useChatStore } from '@/stores/hermes/chat'
@@ -42,7 +42,7 @@ const props = withDefaults(defineProps<{
   initialText?: string
   persistDraft?: boolean
   draft?: boolean
-  draftConfig?: Pick<Session, 'profile' | 'provider' | 'model' | 'codingAgentMode'>
+  draftConfig?: Pick<Session, 'profile' | 'provider' | 'model' | 'codingAgentMode' | 'agent'>
   reasoningEffort?: string
   reasoningEffortDisabled?: boolean
   nativeReasoningEfforts?: string[]
@@ -71,6 +71,8 @@ const emit = defineEmits<{
 }>()
 
 const reasoningSession = computed(() => props.draft ? props.draftConfig : composerSession.value)
+const defaultReasoningEffortLabel = computed(() => t(isHermesSession(reasoningSession.value)
+  ? 'chat.reasoningEffort.options.default' : 'chat.reasoningEffort.options.none'))
 const isMoaSession = computed(() => reasoningSession.value?.provider === 'moa')
 const isGlobalCodingAgentSession = computed(() => reasoningSession.value?.codingAgentMode === 'global')
 const isReadOnlyCodingAgentEffort = computed(() => !props.draft && isGlobalCodingAgentSession.value && isExternalCodingAgentSession(composerSession.value))
@@ -78,16 +80,16 @@ function effortLabel(value: string) {
   return DEFAULT_REASONING_EFFORTS.includes(value) || ['ultra', 'disabled', 'enabled'].includes(value) ? t(`chat.reasoningEffort.options.${value}`) : value
 }
 const showReasoningEffort = ref(false)
-const reasoningEffortOptions = computed(() => isGlobalCodingAgentSession.value && props.nativeEffortChoices
+const reasoningEffortOptions = computed(() => agentReasoningEffortOptions(isGlobalCodingAgentSession.value && props.nativeEffortChoices
   ? props.nativeEffortChoices.map(choice => ({ value: choice.effort,
-    label: choice.effort ? effortLabel(choice.effort) : t('chat.reasoningEffort.defaultLabel') })) : [
-  { label: t(isGlobalCodingAgentSession.value ? 'chat.reasoningEffort.defaultLabel' : 'chat.reasoningEffort.options.default'), value: '' },
+    label: choice.effort ? effortLabel(choice.effort) : defaultReasoningEffortLabel.value })) : [
+  { label: defaultReasoningEffortLabel.value, value: '' },
   ...(isGlobalCodingAgentSession.value ? props.nativeReasoningEfforts || [] : modelReasoningEfforts(
     appStore.profileModelGroups?.find(entry => entry.profile === (reasoningSession.value?.profile || profilesStore.activeProfileName))?.groups || appStore.modelGroups || [],
     reasoningSession.value?.provider || appStore.selectedProvider || '',
     reasoningSession.value?.model || appStore.selectedModel || '',
   )).map(value => ({ label: effortLabel(value), value })),
-])
+], isHermesSession(reasoningSession.value)))
 const currentReasoningEffort = computed<string>(() =>
   (props.draft ? props.reasoningEffort : composerSession.value?.reasoningEffort
     || props.nativeEffortChoices?.find(choice => choice.model === composerSession.value?.model)?.effort) || ''
@@ -118,7 +120,7 @@ const canEditReasoningEffort = computed(() => !props.reasoningEffortDisabled && 
   && (!currentReasoningEffort.value || reasoningEffortOptions.value.some(option => option.value === currentReasoningEffort.value)))))
 const reasoningEffortLabel = computed<string>(() => {
   const v = currentReasoningEffort.value
-  if (!v) return t('chat.reasoningEffort.defaultLabel')
+  if (!v) return defaultReasoningEffortLabel.value
   const opt = reasoningEffortOptions.value.find(o => o.value === v)
   return opt?.label || effortLabel(v)
 })

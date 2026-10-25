@@ -81,6 +81,8 @@ export interface DesktopBrowserSelection {
 }
 
 export interface DesktopBrowserBridge {
+  setRemoteControl?: (enable: boolean) => Promise<boolean>
+  remoteRequest?: (body: Record<string, unknown>) => Promise<unknown>
   getState: () => Promise<DesktopBrowserState>
   setViewport: (bounds: DesktopWindowBounds, visible: boolean) => Promise<DesktopBrowserState>
   createTab: (url?: string, activate?: boolean) => Promise<DesktopBrowserTab>
