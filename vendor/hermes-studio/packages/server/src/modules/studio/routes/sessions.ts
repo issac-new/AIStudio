@@ -44,6 +44,7 @@ sessionRoutes.get('/api/studio/sessions/:id/message-selection', ctrl.messageSele
 sessionRoutes.post('/api/studio/sessions/:id/messages/batch-delete', ctrl.deleteMessages)
 sessionRoutes.get('/api/studio/sessions/:id/export', ctrl.exportSession)
 sessionRoutes.get('/api/studio/sessions/:id/usage', ctrl.usageSingle)
+sessionRoutes.get('/api/studio/sessions/:id/usage/rounds', ctrl.usageRuns)
 sessionRoutes.delete('/api/studio/sessions/:id', ctrl.remove)
 sessionRoutes.post('/api/studio/sessions/batch-delete', ctrl.batchRemove)
 sessionRoutes.post('/api/studio/sessions/:id/rename', ctrl.rename)

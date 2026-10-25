@@ -334,6 +334,79 @@ export function getUsageBatch(sessionIds: string[]): Record<string, UsageRecord>
   return map
 }
 
+export interface UsageRoundRow {
+  run_id: string
+  started_at: number
+  ended_at: number
+  api_calls: number
+  input_tokens: number
+  output_tokens: number
+  cache_read_tokens: number
+  cache_write_tokens: number
+  reasoning_tokens: number
+  model: string
+  agent: string
+}
+
+/**
+ * G8 每轮用量：session_usage 表按 run_id 聚合（同 run 多 source 行合并，
+ * token/api_calls 累加、model 取首个非空），started_at 降序截断 limit。
+ * JSON 兜底模式只有 session 级单记录（无 run 维度），返回空数组由前端降级空态。
+ */
+export function getUsageRounds(sessionId: string, limit = 50): UsageRoundRow[] {
+  if (!isSqliteAvailable()) return []
+  const db = getDb()!
+  const rows = db.prepare(
+    `SELECT run_id, source, agent, api_calls, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, model, created_at
+     FROM ${TABLE}
+     WHERE session_id = ? AND run_id <> ''
+     ORDER BY created_at ASC`,
+  ).all(sessionId) as unknown as Array<{
+    run_id: string
+    source: string
+    agent: string
+    api_calls: number
+    input_tokens: number
+    output_tokens: number
+    cache_read_tokens: number
+    cache_write_tokens: number
+    reasoning_tokens: number
+    model: string
+    created_at: number
+  }>
+  const byRun = new Map<string, UsageRoundRow>()
+  for (const r of rows) {
+    const existing = byRun.get(r.run_id)
+    if (!existing) {
+      byRun.set(r.run_id, {
+        run_id: r.run_id,
+        started_at: r.created_at,
+        ended_at: r.created_at,
+        api_calls: r.api_calls ?? 0,
+        input_tokens: r.input_tokens ?? 0,
+        output_tokens: r.output_tokens ?? 0,
+        cache_read_tokens: r.cache_read_tokens ?? 0,
+        cache_write_tokens: r.cache_write_tokens ?? 0,
+        reasoning_tokens: r.reasoning_tokens ?? 0,
+        model: r.model || '',
+        agent: r.agent || '',
+      })
+    } else {
+      existing.ended_at = Math.max(existing.ended_at, r.created_at)
+      existing.api_calls += r.api_calls ?? 0
+      existing.input_tokens += r.input_tokens ?? 0
+      existing.output_tokens += r.output_tokens ?? 0
+      existing.cache_read_tokens += r.cache_read_tokens ?? 0
+      existing.cache_write_tokens += r.cache_write_tokens ?? 0
+      existing.reasoning_tokens += r.reasoning_tokens ?? 0
+      if (!existing.model && r.model) existing.model = r.model
+    }
+  }
+  const rounds = [...byRun.values()].sort((a, b) => b.started_at - a.started_at)
+  const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : rounds.length
+  return rounds.slice(0, cap)
+}
+
 export function deleteUsage(sessionId: string): void {
   if (isSqliteAvailable()) {
     getDb()!.prepare(`DELETE FROM ${TABLE} WHERE session_id = ?`).run(sessionId)

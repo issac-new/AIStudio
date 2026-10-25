@@ -43,7 +43,8 @@ import {
   updateSessionStats as localUpdateSessionStats,
 } from '../public/sessions'
 import { buildDbExportHistory, ExportCompressor } from '../services/context-compressor/export-compressor'
-import { getUsage, getUsageBatch } from '../public/sessions'
+import { getUnpricedHermesUsageSessions, getLocalUsageStats, getRecordedUsageSessionIds, getUsage, getUsageBatch } from '../public/sessions'
+import { getUsageRounds } from '../repositories/usage-store'
 import {
   SESSION_CATEGORY_NAME_MAX_LENGTH,
   createSessionCategory,
@@ -1553,6 +1554,15 @@ export async function usageSingle(ctx: any) {
     return
   }
   ctx.body = result
+}
+
+// G8 每轮用量（IDE 遥测面板轮表数据源）：按 run_id 聚合 session_usage 行
+export async function usageRuns(ctx: any) {
+  const session = localGetSession(ctx.params.id)
+  if (denySessionAccess(ctx, session)) return
+  const rawLimit = parseInt(String(ctx.query?.limit ?? '50'), 10)
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 50
+  ctx.body = { rounds: getUsageRounds(ctx.params.id, limit) }
 }
 
 export async function rename(ctx: any) {
