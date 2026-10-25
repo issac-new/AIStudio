@@ -444,9 +444,9 @@ const showHistoryArchiveLink = computed(() => {
 
 const historyArchiveHref = computed(() => {
   const session = chatStore.activeSession;
-  if (!session?.id) return "#/hermes/history";
+  if (!session?.id) return "#/app/history";
   const profileQuery = session.profile ? `?profile=${encodeURIComponent(session.profile)}` : "";
-  return `#/hermes/history/session/${encodeURIComponent(session.id)}${profileQuery}`;
+  return `#/app/history/session/${encodeURIComponent(session.id)}${profileQuery}`;
 });
 
 const forkLineage = computed(() => {
@@ -455,7 +455,7 @@ const forkLineage = computed(() => {
   return {
     parentSessionId: session.parentSessionId,
     parentTitle: session.parentTitle || session.parentSessionId,
-    parentHref: `#/hermes/history/session/${encodeURIComponent(session.parentSessionId)}${session.profile ? `?profile=${encodeURIComponent(session.profile)}` : ""}`,
+    parentHref: `#/app/history/session/${encodeURIComponent(session.parentSessionId)}${session.profile ? `?profile=${encodeURIComponent(session.profile)}` : ""}`,
     canSwitchParent: chatStore.sessions.some((item) => item.id === session.parentSessionId),
     lastRole: session.parentLastMessageRole || "",
     lastMessage: session.parentLastMessage || "",

@@ -334,8 +334,7 @@ async function loadOlderHistoryMessages(sessionId: string): Promise<boolean> {
 
 function openHistorySession(sessionId: string, profile?: string | null) {
   return router.push({
-    name: 'hermes.historySession',
-    params: { sessionId },
+    path: `/app/history/session/${encodeURIComponent(sessionId)}`,
     query: profile ? { profile } : undefined,
   })
 }
@@ -351,7 +350,7 @@ async function openDefaultHistorySession(replace = false) {
   if (!firstSession) {
     historySessionId.value = null
     historySession.value = null
-    if (routeSessionId.value) await router.replace({ name: 'hermes.history' })
+    if (routeSessionId.value) await router.replace('/app/history')
     return
   }
 
@@ -376,7 +375,7 @@ async function syncRouteSession() {
   if (!summary) {
     historySessionId.value = null
     historySession.value = null
-    await router.replace({ name: 'hermes.history' })
+    await router.replace('/app/history')
     return
   }
 
@@ -768,7 +767,7 @@ async function handleContextMenuSelect(key: string) {
     if (!findHistorySession(contextSessionId.value)) {
       historySessionId.value = null
       historySession.value = null
-      await router.replace({ name: 'hermes.history' })
+      await router.replace('/app/history')
       await openDefaultHistorySession(true)
     }
   }
@@ -797,7 +796,7 @@ async function handleDeleteSession(id: string, profile?: string | null) {
     historySession.value = null
     const next = historySessions.value[0]
     if (next) await handleSessionClick(next.id, next.profile)
-    else await router.replace({ name: 'hermes.history' })
+    else await router.replace('/app/history')
   }
 
   message.success(t('chat.sessionDeleted'))
