@@ -16,6 +16,7 @@ const mockAddComment = vi.hoisted(() => vi.fn())
 const mockLinkTasks = vi.hoisted(() => vi.fn())
 const mockUnlinkTasks = vi.hoisted(() => vi.fn())
 const mockBulkUpdateTasks = vi.hoisted(() => vi.fn())
+const mockReopenReview = vi.hoisted(() => vi.fn())
 const mockGetTaskLog = vi.hoisted(() => vi.fn())
 const mockGetDiagnostics = vi.hoisted(() => vi.fn())
 const mockReclaimTask = vi.hoisted(() => vi.fn())
@@ -67,6 +68,7 @@ vi.mock('../../packages/server/src/modules/hermes/services/kanban/kanban-service
   linkTasks: mockLinkTasks,
   unlinkTasks: mockUnlinkTasks,
   bulkUpdateTasks: mockBulkUpdateTasks,
+  reopenReview: mockReopenReview,
   getTaskLog: mockGetTaskLog,
   getDiagnostics: mockGetDiagnostics,
   reclaimTask: mockReclaimTask,
@@ -674,6 +676,31 @@ describe('kanban controller', () => {
     const exactSearchCtx = ctx({ query: { task_id: 'task-1', profile: 'alice' } })
     await ctrl.searchSessions(exactSearchCtx)
     expect(exactSearchCtx.body.results[0]).toMatchObject({ id: 'session-2', title: 'Matched session' })
+  })
+
+  it('reopen-review：review 直通、非 review 409', async () => {
+    mockGetTask.mockResolvedValue({
+      task: { id: 'task-1', assignee: null, status: 'review' },
+      comments: [], events: [], runs: [],
+    })
+    const okCtx = ctx({
+      query: { board: 'project-a' },
+      request: { body: { task_ids: ['task-1'], reason: '重做' } },
+    })
+    await ctrl.reopenReview(okCtx)
+    expect(okCtx.status).not.toBe(409)
+    expect(mockReopenReview).toHaveBeenCalledWith(['task-1'], '重做', { board: 'project-a' })
+
+    mockGetTask.mockResolvedValue({
+      task: { id: 'task-2', assignee: null, status: 'todo' },
+      comments: [], events: [], runs: [],
+    })
+    const badCtx = ctx({
+      query: { board: 'project-a' },
+      request: { body: { task_ids: ['task-2'] } },
+    })
+    await ctrl.reopenReview(badCtx)
+    expect(badCtx.status).toBe(409)
   })
 
   it('allows completing a review-state task (验收动线) and bulk done from review', async () => {

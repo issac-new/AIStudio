@@ -693,6 +693,16 @@ export async function blockTask(taskId: string, reason: string, opts?: KanbanBoa
   )
 }
 
+export async function reopenReview(
+  taskIds: string[],
+  reason?: string,
+  opts?: KanbanBoardOptions,
+): Promise<void> {
+  const args = [...boardArgs(opts?.board), 'reopen-review', ...taskIds]
+  if (reason) args.push('--reason', reason)
+  await execKanbanMutation(args, 'Hermes CLI: kanban reopen-review failed', 'Failed to reopen review')
+}
+
 export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<void> {
   await execKanbanMutation(
     [...boardArgs(opts?.board), 'unblock', ...taskIds],

@@ -462,6 +462,13 @@ export async function blockTask(taskId: string, reason: string, opts?: KanbanBoa
   })
 }
 
+export async function reopenReview(taskIds: string[], reason?: string, opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/reopen-review', boardParams(opts?.board)), {
+    method: 'POST',
+    body: JSON.stringify(reason ? { task_ids: taskIds, reason } : { task_ids: taskIds }),
+  })
+}
+
 export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>(appendQuery('/api/hermes/kanban/unblock', boardParams(opts?.board)), {
     method: 'POST',

@@ -49,6 +49,8 @@ kanbanRoutes.get('/api/hermes/kanban/:id', ctrl.get)
 kanbanRoutes.post('/api/hermes/kanban', ctrl.create)
 kanbanRoutes.post('/api/hermes/kanban/complete', ctrl.complete)
 kanbanRoutes.post('/api/hermes/kanban/unblock', ctrl.unblock)
+// HERMES_CUSTOM[v121]: review 态打回（等待队列「打回」动线，review→ready 重做）
+kanbanRoutes.post('/api/hermes/kanban/reopen-review', ctrl.reopenReview)
 kanbanRoutes.post('/api/hermes/kanban/:id/block', ctrl.block)
 kanbanRoutes.post('/api/hermes/kanban/:id/assign', ctrl.assign)
 kanbanRoutes.post('/api/hermes/kanban/:id/comments', ctrl.addComment)

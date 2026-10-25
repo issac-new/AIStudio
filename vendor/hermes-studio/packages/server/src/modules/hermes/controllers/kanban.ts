@@ -571,6 +571,29 @@ export async function block(ctx: Context) {
   }
 }
 
+export async function reopenReview(ctx: Context) {
+  const bodyResult = requestBody(ctx)
+  const taskIds = requiredNonEmptyStringArray(bodyResult.body.task_ids, 'task_ids')
+  const reason = optionalString(bodyResult.body.reason, 'reason')
+  if (rejectBadRequest(ctx, taskIds.error || reason.error)) return
+  const board = requestBoard(ctx)
+  if (!board) return
+  try {
+    if (!await authorizeTaskIds(
+      ctx,
+      board,
+      taskIds.value!,
+      new Set<kanbanCli.KanbanTaskStatus>(['review']),
+      'reopen review',
+    )) return
+    await kanbanCli.reopenReview(taskIds.value!, reason.value ?? undefined, { board })
+    ctx.body = { ok: true }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
 export async function unblock(ctx: Context) {
   const bodyResult = requestBody(ctx)
   if (rejectBadRequest(ctx, bodyResult.error)) return
