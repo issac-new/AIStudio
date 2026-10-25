@@ -88,11 +88,6 @@ const router = createRouter({
       meta: { hermesConfig: true },
     },
     {
-      path: '/hermes/workflow',
-      name: 'hermes.workflow',
-      component: () => import('@/views/hermes/WorkflowView.vue'),
-    },
-    {
       path: '/hermes/models',
       name: 'hermes.models',
       component: () => import('@/views/hermes/ChatView.vue'),
@@ -239,30 +234,6 @@ const router = createRouter({
       redirect: { name: 'hermes.agentManager' },
     },
     {
-      path: '/hermes/group-chat',
-      name: 'hermes.groupChat',
-      component: () => import('@/views/hermes/GroupChatView.vue'),
-    },
-    {
-      path: '/hermes/group-chat/room/:roomId',
-      name: 'hermes.groupChatRoom',
-      component: () => import('@/views/hermes/GroupChatView.vue'),
-    },
-    {
-      path: '/hermes/history/group-chat/:roomId',
-      redirect: to => ({
-        name: 'hermes.groupChatRoom',
-        params: { roomId: to.params.roomId },
-      }),
-    },
-    {
-      path: '/hermes/group-chat/history/:roomId',
-      redirect: to => ({
-        name: 'hermes.groupChatRoom',
-        params: { roomId: to.params.roomId },
-      }),
-    },
-    {
       path: '/hermes/files',
       name: 'hermes.files',
       component: () => import('@/views/hermes/FilesView.vue'),
@@ -333,7 +304,10 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.public) {
     // Already has key, skip login
     if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
-      next(resolveLoginRedirect(to.query.redirect))
+      // overlay[ia2]: 默认跳新 IA 总览（而非上游的 /hermes/chat）；保留 query.redirect 保真。
+      // Task 8: cockpit 路由本体已退役，登录默认落点由守卫直落 /app。
+      const resolved = resolveLoginRedirect(to.query.redirect)
+      next(resolved === '/hermes/chat' ? '/app' : resolved)
       return
     }
     next()
@@ -347,7 +321,8 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {
-    next({ name: 'hermes.chat' })
+    // overlay[ia2]: 非 superadmin 兜底落新 IA 总览（Task 8: 原落 cockpit，路由已删）
+    next('/app')
     return
   }
 
