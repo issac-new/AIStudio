@@ -166,6 +166,11 @@ watch([effectiveProfile, () => filesStore.currentWorkspaceSessionId, () => files
   if (seq === rootLoadSeq) treeData.value = nextTreeData
 }, { immediate: true })
 
+// 当 workspaceRoot 变化时（切换到不同任务），重新加载根级目录树
+watch(() => filesStore.workspaceRoot, async () => {
+  treeData.value = await loadChildren('')
+})
+
 watch(() => filesStore.entries, async () => {
   if (!workspaceMode.value) return
   const seq = ++rootLoadSeq
@@ -203,7 +208,11 @@ watch(() => filesStore.entries, async () => {
       expand-on-click
       block-line
       @update:selected-keys="handleSelect"
-    />
+    >
+      <template #empty>
+        <span class="file-tree__empty">{{ t('files.noSubdirs', '无子目录') }}</span>
+      </template>
+    </NTree>
   </div>
 </template>
 
@@ -312,5 +321,13 @@ watch(() => filesStore.entries, async () => {
 
 .root-status-badge {
   margin-inline-start: auto;
+}
+
+.file-tree__empty {
+  display: block;
+  padding: 16px 12px;
+  color: var(--text-muted, #999);
+  font-size: 12px;
+  text-align: center;
 }
 </style>
