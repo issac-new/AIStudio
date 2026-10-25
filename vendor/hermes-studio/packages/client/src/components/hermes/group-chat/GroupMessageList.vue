@@ -12,6 +12,8 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'
 import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff-presentation'
 import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
 import GroupMessageItem from './GroupMessageItem.vue'
+import GatewayNoticeBanner from '@/custom/chat/components/GatewayNoticeBanner.vue'
+import { isGatewayNotice } from '@/custom/chat/gateway-notice'
 import GroupAgentRunCard from './GroupAgentRunCard.vue'
 import VirtualMessageList from '../chat/VirtualMessageList.vue'
 
@@ -40,9 +42,14 @@ const emptyStateAgents = AGENT_OPTIONS.map(option => ({
     src: chatSessionAgentAvatar({ agent: option.value }).src,
 }))
 const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
-    msg.role !== 'tool' ||
-    toolTraceVisible.value ||
-    msg.toolStatus === 'running',
+    !isGatewayNotice(msg.content) &&
+    (
+        msg.role !== 'tool' ||
+        toolTraceVisible.value ||
+        msg.toolStatus === 'running' ||
+        msg.toolName === 'workspace_diff' ||
+        msg.tool_name === 'workspace_diff'
+    ),
 )))
 const supportsMessageSelection = computed(() => props.allowMessageDeletion && !store.inviteGuest)
 const {
