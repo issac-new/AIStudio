@@ -30,6 +30,29 @@ from hermes_state_identity import (
 logger = logging.getLogger("hermes_state")  # caplog tests pin the origin module's name
 
 # One INSERT shape for every message writer (append, batch, replace, compact, import).
+def _advance_prefix_chain(conn, session_id: str, role: str, content) -> None:
+    """overlay[485] 前缀指纹链增量推进：chain_head'=sha1(chain_head||role||NUL||content)。
+
+    独立表零迁移；失败不阻断消息写入（链断则复用点重置——复用是优化非语义依赖）。
+    """
+    import hashlib
+    try:
+        row = conn.execute(
+            "SELECT chain_head, verified_index FROM session_prefix_chain WHERE session_id = ?",
+            (session_id,)).fetchone()
+        prev_head, prev_index = (row[0], row[1]) if row else ("", -1)
+        payload = (str(role) + "\x00" + (content if isinstance(content, str) else str(content or ""))).encode("utf-8", "surrogatepass")
+        new_head = hashlib.sha1(prev_head.encode("utf-8") + payload).hexdigest()
+        conn.execute(
+            """INSERT INTO session_prefix_chain (session_id, chain_head, verified_index, updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(session_id) DO UPDATE SET chain_head = excluded.chain_head,
+                 verified_index = excluded.verified_index, updated_at = excluded.updated_at""",
+            (session_id, new_head, prev_index + 1, __import__("time").time()))
+    except Exception:
+        pass
+
+
 _INSERT_MESSAGE_SQL = """INSERT INTO messages (session_id, role, content, tool_call_id,
                    tool_calls, tool_name, effect_disposition, timestamp, token_count, finish_reason,
                    reasoning, reasoning_content, reasoning_details, codex_reasoning_items,
@@ -421,6 +444,7 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin):
                 turn_lease_holder=turn_lease_holder, turn_lease_ttl_seconds=turn_lease_ttl_seconds)
             msg_id = conn.execute(_INSERT_MESSAGE_SQL, params).lastrowid
             self._bump_session_counters(conn, session_id, 1, _tool_calls_count(tool_calls), unit=True)
+            _advance_prefix_chain(conn, session_id, role, content)
             return msg_id
         # THE critical write (failure aborts the turn): long patience so a sibling legitimately
         # holding the lock for seconds (VACUUM, checkpoint) can't kill it.
@@ -465,6 +489,8 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin):
         )
         inserted, tool_calls_total = self._insert_message_rows(conn, session_id, inserted_rows)
         self._bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
+        for row in inserted_rows:
+            _advance_prefix_chain(conn, session_id, row.get("role"), row.get("content"))
         return inserted
 
     _ROW_STATE_KEYS = ("_row_id", DB_ROW_SNAPSHOT, "timestamp")
