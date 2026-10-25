@@ -79,6 +79,7 @@ import { ekkoConfigRoutes } from '../modules/ekko/routes/config'
 import { petdexPublicRoutes, petdexRoutes } from '../modules/studio/routes/petdex'
 import { petRoutes } from '../modules/studio/routes/pets'
 import traceRoutes from '../custom/controllers/hermes/trace'
+import runtimeCapsRoutes from '../custom/runtimecaps/runtime-caps-controller'
 import ideGitRoutes from '../custom/controllers/ide/git'
 import ideStorageRoutes from '../custom/controllers/system/storage'
 import ideWorktreeRouter from '../custom/controllers/ide/worktree'
@@ -345,6 +346,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(petdexRoutes.routes())
   app.use(petRoutes.routes())
   app.use(traceRoutes.routes())                   // RunTraceView Layer 3 trace API
+  app.use(runtimeCapsRoutes.routes())             // 吸收批 9：hermes 暗能力只读代理（凭证池/放行建议/cron 运行史）
   app.use(terminalToolsRoutes.routes())           // Cockpit terminal coding tools probe
   app.use(ideGitRoutes.routes())                   // IDE Git pane (status/diff/stage/commit)
   app.use(ideStorageRoutes.routes())               // IDE storage manager (M2 resourceManager)
