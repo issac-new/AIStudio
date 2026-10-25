@@ -579,7 +579,7 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
 
   const isWin = process.platform === 'win32'
   const bridgePort = await getFreeTcpPort()
-  const workerPortBase = await getFreeTcpPortInRange(20000, 59000)
+  const workerPortBase = await getFreeTcpPortInRange(20000, 49000)
   const loginShellPath = await getLoginShellPath()
   const nvmNodeBinPaths = getNvmNodeBinPaths()
   const userSearchPath = mergePathEntries(
