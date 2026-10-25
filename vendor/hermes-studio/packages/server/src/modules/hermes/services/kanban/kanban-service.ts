@@ -759,6 +759,14 @@ export async function assignTask(taskId: string, profile: string, opts?: KanbanB
     'Hermes CLI: kanban assign failed',
     'Failed to assign kanban task',
   )
+  // HERMES_CUSTOM[aipaydev] BEGIN: RACI 派发（assign=派发时刻；同任务 sidecar 幂等去重）
+  try {
+    const assigned = (await getTask(taskId, opts))?.task
+    if (assigned) await RACIDispatchService.dispatch(assigned)
+  } catch (e) {
+    logger.warn(`RACI dispatch failed for task ${taskId}: ${(e as Error).message}`)
+  }
+  // HERMES_CUSTOM[aipaydev] END
 }
 
 export async function archiveTasks(taskIds: string[], opts?: KanbanBoardOptions): Promise<void> {
