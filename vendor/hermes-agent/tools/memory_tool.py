@@ -281,10 +281,12 @@ def _memory_tool(action, target, content, old_text, new_text, operations, store)
     # 索引坏只影响本查询，见 tools/memory_index.py 头注释）。
     if action == "search":
         return _memory_search(store, target, content)
+    if action == "consolidate":
+        return _memory_consolidate(store)
     if action == "replace":
         return _invalid(_REPLACE_REMOVED)
     if action not in _STORE_ACTIONS:
-        return _invalid(f"Unknown action '{action}'. Use: add, patch, remove, search")
+        return _invalid(f"Unknown action '{action}'. Use: add, patch, remove, search, consolidate")
     invalid = (_validate_single_op(store, action, target, content, old_text)
                or _background_delete_gate(store, action, None, target, content, old_text)
                or _apply_write_gate(store, action, target, content, old_text))
@@ -312,6 +314,35 @@ def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> t
         )
     finally:
         idx.close()
+
+
+def _memory_consolidate(store: "MemoryStore") -> tuple[str, str]:
+    """action=consolidate：规则式 distill v1（同文副本合一+容量剪枝+报告；P4 二期）。
+
+    删除性变更走 remove 同款门禁语义（#105921）：无人值守只出报告不落盘——同文副本合一
+    没有可寻址的单条目标（pending 回放按 matched_entry 钉条会误删仅存副本），无法 stage，
+    故合并/剪枝统一只出报告；有人值守（有审批权）才应用，容量剪枝再过 _apply_write_gate
+    同款写门禁。落盘走 store._mutate（持锁+漂移守卫，见 tools/memory_consolidate 头注释）。
+    """
+    from tools.memory_consolidate import apply_distill, distill_pass
+    report = distill_pass(store)
+    if report.removals or report.collapse:
+        from tools.skill_provenance import is_unattended_review
+        if is_unattended_review():
+            return _applied({"success": True, "action": "consolidate", "applied": False,
+                             "dry_run": True,
+                             "message": ("无人值守（background review）不落盘删除性变更，本次只出报告；"
+                                         "需要沉淀请在有人值守会话重跑 consolidate。"),
+                             **report.as_dict()})
+        for target, victims in report.removals.items():
+            gated = _apply_write_gate(store, "batch", target, None, None,
+                                      [{"action": "remove", "old_text": e, "matched_entry": e}
+                                       for e in victims])
+            if gated is not None:
+                return "rejected", gated
+    apply_distill(store, report)
+    return _applied({"success": True, "action": "consolidate",
+                     "applied": bool(report.removals or report.collapse), **report.as_dict()})
 
 
 def get_builtin_memory_config(config: Optional[dict[str, Any]] = None) -> dict[str, Any]:
