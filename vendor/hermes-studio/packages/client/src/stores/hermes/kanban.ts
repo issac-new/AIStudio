@@ -644,7 +644,10 @@ export const useKanbanStore = defineStore('kanban', () => {
   }
 
   async function fetchDiagnostics(opts: Omit<KanbanDiagnosticsOptions, 'board'> = {}) {
-    assertCapability('diagnostics')
+    // overlay[kanban-diag-order]: 能力表已加载且 diagnostics 缺失时安静跳过——断言在自身
+    // try/catch 之外抛出会形成未捕获 pageerror（2026-10-20 M3 走查实证）；能力表未加载
+    // 时维持旧行为（尝试+失败如实 console.error）。
+    if (capabilities.value && !isCapabilitySupported('diagnostics')) return
     const board = selectedBoard.value
     try {
       const result = await kanbanApi.getDiagnostics({ ...opts, board })
