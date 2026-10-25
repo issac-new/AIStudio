@@ -690,6 +690,17 @@ export const useKanbanStore = defineStore('kanban', () => {
     return result
   }
 
+  async function uploadTaskAttachmentFromUrl(taskId: string, url: string, opts?: { filename?: string; contentType?: string }) {
+    const board = selectedBoard.value
+    const result = await kanbanApi.uploadAttachmentFromUrl(taskId, url, { board, filename: opts?.filename, contentType: opts?.contentType })
+    if (board === selectedBoard.value) {
+      const list = attachments.value[taskId] || []
+      list.push(result)
+      attachments.value[taskId] = list
+    }
+    return result
+  }
+
   async function deleteTaskAttachment(taskId: string, attachmentId: number) {
     const board = selectedBoard.value
     await kanbanApi.deleteAttachment(attachmentId, { board })
@@ -796,6 +807,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     autoGenerateProfileDescription,
     fetchAttachments,
     uploadTaskAttachment,
+    uploadTaskAttachmentFromUrl,
     deleteTaskAttachment,
   }
 })
