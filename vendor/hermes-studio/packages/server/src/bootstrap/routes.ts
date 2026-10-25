@@ -107,6 +107,8 @@ import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'
 // overlay[kg-evolution]: KG 演化治理——板级 KG 自动同步/版本快照回滚 REST + 启动接线
 import { kgEvolutionRoutes } from '../custom/kgevolution/kg-evolution-controller'
 import { startKgAutoSync } from '../custom/kgtrigger/auto-sync'
+// overlay[harness]: 驾驭工程治理面（能力目录/六类成本账/成熟度自检/八原语对账）
+import { harnessRoutes } from '../custom/harness/harness-controller'
 // overlay[evidence]: 任务证据台账（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）
 import { evidenceRoutes } from '../custom/evidence/evidence-controller'
 // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
@@ -371,6 +373,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(governanceRoutes.routes())              // 治理中心：六闸工件 overview + doc markdown（补功能主清单 2026-09-28）
   app.use(tokenMeterRoutes.routes())              // token-meter：project 三投影/zcode 互校（R5 #9）
   app.use(kgEvolutionRoutes.routes())             // KG 演化治理：status/tick/arm/disarm/versions/rollback（A1/A4）
+  app.use(harnessRoutes.routes())                // 驾驭工程：capability-catalog/cost-accounts/maturity/primitives
   app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
   app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
   app.use(columnAutomationRoutes.routes())        // 列编排：配置+COLUMN_TRANSITION 匹配（P0 §3.6）
