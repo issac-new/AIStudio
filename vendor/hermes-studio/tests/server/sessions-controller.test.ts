@@ -1391,7 +1391,7 @@ describe('session conversations controller', () => {
     await mod.listHermesSessions(ctx)
 
     expect(localListSessionsMock).toHaveBeenCalledWith('travel', undefined, 2000)
-    expect(listSessionSummariesMock).toHaveBeenCalledWith(undefined, 2000, 'travel')
+    expect(listSessionSummariesMock).toHaveBeenCalledWith(undefined, 2000, 'travel', false)
     expect(ctx.body.sessions).toEqual([
       expect.objectContaining({ id: 'cli-1', profile: 'travel', webui_imported: true }),
       expect.objectContaining({ id: 'cli-2', profile: 'travel', webui_imported: false }),
@@ -1510,7 +1510,7 @@ describe('session conversations controller', () => {
     await mod.listHermesSessions(ctx)
 
     expect(localListSessionsMock).toHaveBeenCalledWith('travel', 'cli', 4)
-    expect(listSessionSummariesMock).toHaveBeenCalledWith('cli', 4, 'travel')
+    expect(listSessionSummariesMock).toHaveBeenCalledWith('cli', 4, 'travel', false)
     expect(ctx.body).toMatchObject({
       sessions: [
         expect.objectContaining({ id: 'cli-local' }),
