@@ -50,7 +50,7 @@ import { mountRedteam } from '../redteam/routes'
 import { loadEvalConfig } from './types'
 import { synthesizeProbesForTask } from './synthesize'
 import { ENTERPRISE_AXES, ENTERPRISE_SET_NAME, axesCoverage, buildEnterpriseSeedTasks } from './enterprise-seed'
-import type { EvalRun, EvalSet, LiveEvidence } from './types'
+import type { EvalRun, EvalSet, EvalTask, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 import { buildRedteamVariants } from './redteam-variants'
 import { distillBadCase, judgeAttributionOf, ROOT_CAUSE_LABELS } from './badcase-distill'
@@ -689,12 +689,13 @@ router.post('/badcase/distill', async (ctx) => {
     ctx.body = { ok: true, dryRun: true, proposal, task }
     return
   }
-  const targetMeta = typeof body.targetSetId === 'string' && body.targetSetId.trim()
-    ? listSets().find((s) => s.id === body.targetSetId.trim())
+  const targetSetIdRaw = typeof body.targetSetId === 'string' ? body.targetSetId.trim() : ''
+  const targetMeta = targetSetIdRaw
+    ? listSets().find((s) => s.id === targetSetIdRaw)
     : listSets().find((s) => s.name === REGRESSION_SET_NAME && !s.sealed)
-  if (typeof body.targetSetId === 'string' && body.targetSetId.trim() && !targetMeta) {
+  if (targetSetIdRaw && !targetMeta) {
     ctx.status = 400
-    ctx.body = { ok: false, problems: [`目标评测集不存在：${body.targetSetId}`] }
+    ctx.body = { ok: false, problems: [`目标评测集不存在：${targetSetIdRaw}`] }
     return
   }
   if (targetMeta?.sealed) {
@@ -761,8 +762,9 @@ router.post('/badcase/distill', async (ctx) => {
  */
 router.post('/badcase/variants', async (ctx) => {
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const dimKeys = CF_DIMENSIONS.map((d) => d.key)
   const dims = Array.isArray(body.dims)
-    ? body.dims.filter((d): d is string => typeof d === 'string' && CF_DIMENSIONS.some((dim) => dim.key === d))
+    ? body.dims.filter((d): d is typeof dimKeys[number] => typeof d === 'string' && dimKeys.includes(d as typeof dimKeys[number]))
     : undefined
   if (dims && dims.length === 0) {
     ctx.status = 400
@@ -771,12 +773,14 @@ router.post('/badcase/variants', async (ctx) => {
   }
   // 蓝本定位：taskId 精确找（非密封集），或回归库全部 origin 任务
   const nonSealedSets = listSets().filter((s) => !s.sealed).map((s) => getSet(s.id)).filter((s): s is EvalSet => s !== undefined)
+  const taskIdRaw = typeof body.taskId === 'string' ? body.taskId.trim() : ''
+  const variantTargetRaw = typeof body.targetSetId === 'string' ? body.targetSetId.trim() : ''
   let blueprints: EvalTask[]
-  if (typeof body.taskId === 'string' && body.taskId.trim()) {
-    const found = nonSealedSets.flatMap((s) => s.tasks).find((t) => t.id === body.taskId!.trim())
+  if (taskIdRaw) {
+    const found = nonSealedSets.flatMap((s) => s.tasks).find((t) => t.id === taskIdRaw)
     if (!found) {
       ctx.status = 404
-      ctx.body = { ok: false, problems: [`任务不存在（或所在集已密封）：${body.taskId}`] }
+      ctx.body = { ok: false, problems: [`任务不存在（或所在集已密封）：${taskIdRaw}`] }
       return
     }
     blueprints = [found]
@@ -802,9 +806,7 @@ router.post('/badcase/variants', async (ctx) => {
     const variants = buildBadCaseVariants(blueprint, dims)
     // 目标集：显式 targetSetId > 蓝本所在集
     const ownerSet = nonSealedSets.find((s) => s.tasks.some((t) => t.id === blueprint.id))
-    const targetId = typeof body.targetSetId === 'string' && body.targetSetId.trim()
-      ? body.targetSetId.trim()
-      : ownerSet?.id
+    const targetId = variantTargetRaw || ownerSet?.id
     if (!targetId) {
       ctx.status = 400
       ctx.body = { ok: false, problems: [`蓝本 ${blueprint.id} 所在集不可定位，须显式传 targetSetId`] }

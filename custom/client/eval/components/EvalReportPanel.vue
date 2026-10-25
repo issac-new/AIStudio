@@ -129,9 +129,13 @@ async function distillBadcase(taskId: string, sampleIdx: number): Promise<void> 
       distillMsg.value = L.value.runs.distillDup
       return
     }
-    distillMsg.value = `${L.value.runs.distillDone}：${p.rootCauseLabel ?? p.rootCause}`
+    // duplicate=true：任务已在库（幂等跳过），前缀幂等提示防误读为本次新入库
+    const summary = `${p.rootCauseLabel ?? p.rootCause}`
       + `${p.stepRedline !== null && p.stepRedline !== undefined ? `（${L.value.runs.distillRedline} ${p.stepRedline}）` : ''}`
       + `，${L.value.runs.distillTaboos} ${p.tabooActions.length}`
+    distillMsg.value = res.duplicate
+      ? `${L.value.runs.distillDup}：${summary}`
+      : `${L.value.runs.distillDone}：${summary}`
   } catch (e) {
     error.value = (e as Error).message
   }

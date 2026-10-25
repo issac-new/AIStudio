@@ -162,7 +162,9 @@ export function distillBadCase(
   }
 
   const { rootCause, digest } = classified
-  const failedSteps = attempt.efficiency?.steps ?? (attempt.toolCalls?.length > 0 ? attempt.toolCalls.length : null) ?? null
+  // 失败步数：efficiency.steps 优先，回落工具调用数；两者皆缺席 null 不造数
+  const toolCallsLen = attempt.toolCalls?.length ?? 0
+  const failedSteps = attempt.efficiency?.steps ?? (toolCallsLen > 0 ? toolCallsLen : null)
   const stepRedline = failedSteps !== null ? failedSteps + 2 : null
 
   const firstFailedText = digest.failedAssertions[0]?.text ?? '（失败面在终态校验）'

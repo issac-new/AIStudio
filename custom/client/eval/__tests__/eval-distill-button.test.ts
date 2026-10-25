@@ -61,15 +61,18 @@ describe('报告页提炼按钮', () => {
     expect(msg).toContain('禁忌条数 2')
   })
 
-  it('幂等重复：服务端 appended=0 时回显幂等提示；失败可见', async () => {
+  it('幂等重复：服务端 duplicate=true 时回显幂等提示带摘要；失败可见', async () => {
     vi.mocked(evalApi.distillBadcase).mockResolvedValue({
-      ok: true, appended: 0, duplicate: true, ledgerDuplicate: true, proposal: null,
+      ok: true, appended: 0, duplicate: true, ledgerDuplicate: true,
+      proposal: { taskId: 'bd-x1', rootCause: 'result_defect', rootCauseLabel: '结果缺陷', tabooActions: ['禁止重复失败'], failedSteps: 3, stepRedline: 5 },
     } as never)
     const w = mount(EvalReportPanel, { props: { runId: 'erun-distill-01' } })
     await flushPromises()
     await w.find('[data-testid="distill-t1-1"]').trigger('click')
     await flushPromises()
-    expect(w.find('[data-testid="eval-distill-msg"]').text()).toContain('幂等跳过')
+    const text = w.find('[data-testid="eval-distill-msg"]').text()
+    expect(text).toContain('幂等跳过')
+    expect(text).toContain('结果缺陷')
 
     vi.mocked(evalApi.distillBadcase).mockRejectedValue(new Error('该样本已通过，无需提炼') as never)
     await w.find('[data-testid="distill-t1-1"]').trigger('click')
