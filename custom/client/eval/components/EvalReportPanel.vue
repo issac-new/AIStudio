@@ -28,6 +28,7 @@ const iterations = ref<IterationDto[]>([])
 const error = ref('')
 const note = ref('')
 const reflowMsg = ref('')
+const distillMsg = ref('')
 /** 处置单与同卷复评（收口轮）。 */
 const remediations = ref<RemediationDto[]>([])
 const rerunDraft = ref<Record<string, string>>({})
@@ -113,6 +114,28 @@ async function reflow(taskId: string, sampleIdx: number): Promise<void> {
   try {
     const result = await evalApi.reflow(props.runId, { taskId, sampleIdx })
     reflowMsg.value = result.created ? `${L.value.runs.reflowDone}：${result.set.name}（${result.taskId}）` : L.value.runs.reflowDup
+  } catch (e) {
+    error.value = (e as Error).message
+  }
+}
+
+/** 五要素提炼入库（数据飞轮 round 2 挂账 5）：回显根因/步数红线/禁忌条数摘要。 */
+async function distillBadcase(taskId: string, sampleIdx: number): Promise<void> {
+  distillMsg.value = ''
+  try {
+    const res = await evalApi.distillBadcase(props.runId, { taskId, sampleIdx })
+    const p = res.proposal
+    if (!p) {
+      distillMsg.value = L.value.runs.distillDup
+      return
+    }
+    // duplicate=true：任务已在库（幂等跳过），前缀幂等提示防误读为本次新入库
+    const summary = `${p.rootCauseLabel ?? p.rootCause}`
+      + `${p.stepRedline !== null && p.stepRedline !== undefined ? `（${L.value.runs.distillRedline} ${p.stepRedline}）` : ''}`
+      + `，${L.value.runs.distillTaboos} ${p.tabooActions.length}`
+    distillMsg.value = res.duplicate
+      ? `${L.value.runs.distillDup}：${summary}`
+      : `${L.value.runs.distillDone}：${summary}`
   } catch (e) {
     error.value = (e as Error).message
   }
@@ -531,6 +554,14 @@ function durationText(ms: number | null): string {
             :data-testid="`reflow-${a.taskId}-${a.sampleIdx}`"
             @click="reflow(a.taskId, a.sampleIdx)"
           >{{ L.runs.reflow }}</button>
+          <button
+            v-if="!a.passed"
+            type="button"
+            class="ghost"
+            :title="L.runs.distillHint"
+            :data-testid="`distill-${a.taskId}-${a.sampleIdx}`"
+            @click="distillBadcase(a.taskId, a.sampleIdx)"
+          >{{ L.runs.distill }}</button>
           <span v-if="a.judgeMeta && !a.judgeMeta.online" class="chip chip-warn">{{ L.runs.judgeOffline }}</span>
           <button
             v-if="!a.passed"
@@ -578,6 +609,7 @@ function durationText(ms: number | null): string {
       </div>
       <input v-model="note" class="attr-note" :placeholder="L.runs.attrNotePh" data-testid="eval-attr-note" />
       <p v-if="reflowMsg" class="eval-report__reflow-msg" data-testid="eval-reflow-msg">{{ reflowMsg }}</p>
+      <p v-if="distillMsg" class="eval-report__reflow-msg" data-testid="eval-distill-msg">{{ distillMsg }}</p>
     </template>
 
     <!-- 处置单：失败样本 → 修复 → 同卷复评 → 按结果关闭 -->

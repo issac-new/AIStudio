@@ -7,6 +7,7 @@ import { join } from 'path'
 import {
   experienceBriefLine, experienceLinesForDispatch, injectionRunLabel, selectableExperiences,
 } from '../exp-inject'
+import { recordDistill } from '../../eval/flywheel'
 import { _useStoreDirForTests, listCandidates, writeExpStore, readExpStore } from '../exp-store'
 import type { ExpCandidate } from '../exp-types'
 
@@ -94,5 +95,46 @@ describe('受控注入', () => {
       { ...cand('exp-a', 'approved'), updatedAt: '2026-01-01' },
     ])
     expect(sel.map((c) => c.id)).toEqual(['exp-a', 'exp-b'])
+  })
+})
+
+describe('Few-shot 记忆通道（数据飞轮 round 2 挂账 1）', () => {
+  it('默认关：带 query 也零行为；选通且无 query 不召回（Prompt 保持干净）', () => {
+    delete process.env.FLYWHEEL_FEWSHOT_INJECT
+    expect(experienceLinesForDispatch({ column: 'devimpl' }, '查北京到上海的机票')).toEqual([])
+    process.env.FLYWHEEL_FEWSHOT_INJECT = '1'
+    expect(experienceLinesForDispatch({ column: 'devimpl' })).toEqual([])
+  })
+
+  it('选通+query+台账有相似教训：追加「历史教训」行；EXPERIENCE_INJECT 同开时两路并存', () => {
+    process.env.FLYWHEEL_FEWSHOT_INJECT = '1'
+    const evalDir = join(dir, 'eval-ledger')
+    process.env.EVAL_STORE = evalDir
+    recordDistill({
+      taskId: 'bd-x1', sourceRunId: 'erun-1', sourceTaskId: 't1', sampleIdx: 1,
+      rootCause: 'result_defect', tabooActions: ['禁止重复失败结果'], failedSteps: 5, stepRedline: 7,
+      targetSetId: 'eset-009', problem: '查北京到上海的机票', expectedBehavior: '返回正确航班与价格',
+    })
+    seed([cand('exp-1', 'approved')])
+
+    const withoutExp = experienceLinesForDispatch({ column: 'devimpl' }, '帮我查一下北京到上海的机票哈')
+    expect(withoutExp).toHaveLength(1)
+    expect(withoutExp[0]).toContain('历史教训')
+    expect(withoutExp[0]).toContain('正确做法')
+
+    process.env.EXPERIENCE_INJECT = '1'
+    const both = experienceLinesForDispatch({ column: 'devimpl' }, '帮我查一下北京到上海的机票哈')
+    expect(both).toHaveLength(2)
+    expect(both[0]).toContain('历史经验')
+    expect(both[1]).toContain('历史教训')
+    delete process.env.EXPERIENCE_INJECT
+
+    // 异题零召回：只有经验行（fewshot 空）
+    const unrelated = experienceLinesForDispatch({ column: 'devimpl' }, '完全无关的另一个话题关于股市行情')
+    expect(unrelated).toEqual([])
+
+    delete process.env.FLYWHEEL_FEWSHOT_INJECT
+    delete process.env.EVAL_STORE
+    rmSync(evalDir, { recursive: true, force: true })
   })
 })

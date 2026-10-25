@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, appendFileSync, readFileSync, statSync, renameSy
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { ekkoGuardHook } from '../toolresultguard'
+import { retrievalRelevanceHook } from '../toolresultguard/retrieval-relevance'
 import { ekkoEnforceGateHook } from './enforce-gate'
 import { sequenceGuardHook } from './sequence-guard'
 import { skillGuardHook } from '../skillgov/skill-guard-hook'
@@ -309,7 +310,9 @@ const auditHook = {
 // 数据流护栏（2026-10-21 AGT 调研轮二）：sequenceGuardHook 排链尾（执法门后、
 // 真实执行前）——瀑布首个 {allow:false} 短路，故只有真会执行的调用才记会话污点；
 // 敏感触碰后窗口内外发面被拒（HERMES_TOOL_SEQUENCE_GUARD=1 才生效）。
-export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), skillGuardHook(), ekkoEnforceGateHook(), sequenceGuardHook()]
+// 检索相关性断言（2026-10-25 数据飞轮 round 2）：排结果围栏后——检索类工具结果
+// 过词面覆盖断言，低覆盖 CONFIRM 留痕不阻断（FLYWHEEL_RETRIEVAL_GUARD=1 才生效）。
+export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), retrievalRelevanceHook(), skillGuardHook(), ekkoEnforceGateHook(), sequenceGuardHook()]
 
 // H3 中间态（进程面边界缓解）：钩子装配=server 启动面，扫一遍重启遗留挂起单
 // （waitingAt 标记在案→govbus 提醒+清标记；幂等、fail-soft、fire-and-forget）。

@@ -9,11 +9,14 @@
 // 不进仓库）。
 //
 // 提炼器零 LLM（spec D1）：根因分类只消费既有判词与工具序列（S0 哲学：
-// 能跑规则的绝不叫裁判）；归因给裁判模型挂账下轮。
+// 能跑规则的绝不叫裁判）。round 2 挂账 3 增补：judgeAttributionOf 把确定性根因
+// 交裁判端做 noul 复核（D13 并联不替换——结论只入台账供人工复核，fail-soft）。
 import { createHash } from 'node:crypto'
 import { attemptPassed } from './aggregate'
+import { clefAskMixed, JudgeUnavailableError } from './clef'
 import { originKeyOf } from './origin'
-import type { EvalRun, EvalSet, EvalTask, RubricAssertion, ToolCallRecord } from './types'
+import type { DistillLedgerEntry } from './flywheel'
+import type { EvalConfig, EvalRun, EvalSet, EvalTask, RubricAssertion, ToolCallRecord } from './types'
 
 /** 根因分类（spec D4 优先序，先命中先归）。 */
 export type BadCaseRootCause =
@@ -159,7 +162,9 @@ export function distillBadCase(
   }
 
   const { rootCause, digest } = classified
-  const failedSteps = attempt.efficiency?.steps ?? (attempt.toolCalls?.length > 0 ? attempt.toolCalls.length : null) ?? null
+  // 失败步数：efficiency.steps 优先，回落工具调用数；两者皆缺席 null 不造数
+  const toolCallsLen = attempt.toolCalls?.length ?? 0
+  const failedSteps = attempt.efficiency?.steps ?? (toolCallsLen > 0 ? toolCallsLen : null)
   const stepRedline = failedSteps !== null ? failedSteps + 2 : null
 
   const firstFailedText = digest.failedAssertions[0]?.text ?? '（失败面在终态校验）'
@@ -219,5 +224,61 @@ export function distillBadCase(
       stepRedline,
       digest,
     },
+  }
+}
+
+// ---------- LLM 归因并联复核（round 2 挂账 3，spec D13） ----------
+
+export type AttributionVerdict = NonNullable<DistillLedgerEntry['attribution']>
+
+const ATTR_QUESTION_ID = 'flywheel_attr_confirm'
+
+/**
+ * 确定性根因的裁判端复核：noul 一问「根因={label} 是否与失败证据一致」。
+ * P ≥ tauYes → confirmed；P ≤ tauNo → disputed（提示人工看一眼）；灰区 unknown；
+ * 判定端不可用 → offline（零费路径不受影响）。结论只入台账，不改主判。
+ */
+export async function judgeAttributionOf(
+  distilled: DistilledCase,
+  config: EvalConfig,
+): Promise<AttributionVerdict> {
+  const { digest, rootCause } = distilled
+  const evidence = [
+    `失败断言：${digest.failedAssertions.map((f) => `${f.id}（${f.kind}）${f.text}`).join('；') || '（失败面在终态校验）'}`,
+    `工具序列：${digest.toolCalls.map((c) => `${c.name}${c.ok ? '' : '✗'}`).join(' → ') || '（无工具调用）'}`,
+    digest.loopDetected ? '检出同签名连续重复（死循环信号）' : '',
+    digest.outcomeDetail ? `终态校验：${digest.outcomeDetail}` : '',
+  ].filter(Boolean).join('\n')
+  const request = {
+    model: config.judgeModels[0] ?? config.judgeModel,
+    state: {
+      根因判定: `${ROOT_CAUSE_LABELS[rootCause]}（${rootCause}）`,
+      失败证据: evidence.slice(0, config.maxStateChars),
+      禁忌动作: distilled.tabooActions.join('；'),
+    },
+    questions: {
+      [ATTR_QUESTION_ID]: {
+        type: 'noul' as const,
+        instructions: '失败证据与「根因判定」归类一致吗？（一致=攻击性归纳正确，仅看证据是否支持该根因标签；yes=一致，no=证据更支持其他根因）',
+      },
+    },
+  }
+  try {
+    const answers = await clefAskMixed(request, config)
+    const p = answers[ATTR_QUESTION_ID]
+    const numeric = typeof p === 'number' ? p : Number(p)
+    if (!Number.isFinite(numeric)) {
+      return { verdict: 'unknown', reason: `判定端应答非数值：${String(p)}`, model: request.model, at: Date.now() }
+    }
+    if (numeric >= config.tauYes) {
+      return { verdict: 'confirmed', p: numeric, model: request.model, at: Date.now() }
+    }
+    if (numeric <= config.tauNo) {
+      return { verdict: 'disputed', p: numeric, model: request.model, reason: `裁判端不认同该根因（p=${numeric.toFixed(2)}），建议人工复核`, at: Date.now() }
+    }
+    return { verdict: 'unknown', p: numeric, model: request.model, reason: `灰区（p=${numeric.toFixed(2)}）`, at: Date.now() }
+  } catch (error) {
+    const reason = error instanceof JudgeUnavailableError ? error.message : String(error)
+    return { verdict: 'offline', reason: `判定端不可用，复核缺席：${reason}`, at: Date.now() }
   }
 }

@@ -226,3 +226,58 @@ describe('GET /flywheel（飞轮读数）', () => {
     expect(gate.body.gate.runId).toBe('erun-reg-2')
   })
 })
+
+describe('round 2：fewshot 召回 / 合入门 / 归因复核 HTTP', () => {
+  it('fewshot：无 query 400；提炼后同题召回≥1、异题零召回', async () => {
+    const bad = await get('/api/hermes/eval/flywheel/fewshot')
+    expect(bad.status).toBe(400)
+    const empty = await get('/api/hermes/eval/flywheel/fewshot?query=%E4%BB%BB%E6%84%8F')
+    expect(empty.status).toBe(200)
+    expect(empty.body.recalled).toEqual([])
+
+    const { runId } = await seedFailedRun()
+    await post('/api/hermes/eval/badcase/distill', { runId, taskId: 't1', sampleIdx: 1 })
+    const hit = await get(`/api/hermes/eval/flywheel/fewshot?query=${encodeURIComponent('帮我看看北京到上海的机票呗')}`)
+    expect(hit.status).toBe(200)
+    expect(hit.body.candidates).toBe(1)
+    expect(hit.body.recalled.length).toBeGreaterThanOrEqual(1)
+    expect(hit.body.recalled[0].trigger).toContain('机票')
+    const miss = await get(`/api/hermes/eval/flywheel/fewshot?query=${encodeURIComponent('今天股市行情怎么样')}`)
+    expect(miss.body.recalled).toEqual([])
+  })
+
+  it('merge-gate：无变更 not_required；变更无回放 blocked；回放全过 pass', async () => {
+    const none = await post('/api/hermes/eval/flywheel/merge-gate', {})
+    expect(none.body.status).toBe('not_required')
+
+    const { runId } = await seedFailedRun()
+    const distill = await post('/api/hermes/eval/badcase/distill', { runId, taskId: 't1', sampleIdx: 1 })
+    expect(distill.status).toBe(201)
+    const regressionSetId = distill.body.set.id
+
+    const noRun = await post('/api/hermes/eval/flywheel/merge-gate', { model: true })
+    expect(noRun.body.status).toBe('blocked')
+    expect(noRun.body.reasons.join()).toContain('无运行')
+
+    const { appendRun } = await import('../store')
+    const taskId = distill.body.proposal.taskId
+    appendRun({
+      id: 'erun-mg-1', setId: regressionSetId, target: {}, k: 3, status: 'done', createdAt: 1,
+      attempts: Array.from({ length: 3 }, (_, i) => ({ taskId, sampleIdx: i + 1, passed: true, verdicts: [] })),
+      aggregates: { riskVeto: false } as never,
+    })
+    const pass = await post('/api/hermes/eval/flywheel/merge-gate', { prompt: true, orchestration: true })
+    expect(pass.body.status).toBe('pass')
+    expect(pass.body.changedClasses).toEqual(['prompt', 'orchestration'])
+  })
+
+  it('distill judgeAttribution：判定端不可用如实 offline 且不影响入库', async () => {
+    const { runId } = await seedFailedRun()
+    process.env.EVAL_JUDGE_BASE_URL = 'http://127.0.0.1:1' // 不可达端口，快速失败
+    const res = await post('/api/hermes/eval/badcase/distill', { runId, taskId: 't1', sampleIdx: 1, judgeAttribution: true })
+    delete process.env.EVAL_JUDGE_BASE_URL
+    expect(res.status).toBe(201)
+    expect(res.body.attribution).toMatchObject({ verdict: 'offline' })
+    expect(res.body.proposal.rootCause).toBe('result_defect')
+  })
+})
