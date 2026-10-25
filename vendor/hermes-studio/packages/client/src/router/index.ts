@@ -39,41 +39,76 @@ const router = createRouter({
       component: () => import('@/views/hermes/GroupChatLinkView.vue'),
       meta: { standaloneChat: true },
     },
+    // P4 平行共存（2026-09-11）：原有 AI 协作中心（cockpit）恢复——chat/session/
+    // history/global-agent/swarm-kanban/matrix-chat 嵌套为其子路由；/app 六区域
+    // IA 平行可达，登录默认落点仍为 /app（071 守卫）。
     {
-      path: '/hermes/chat',
-      name: 'hermes.chat',
-      component: () => import('@/views/hermes/ChatView.vue'),
+      path: '/hermes/cockpit',
+      name: 'hermes.cockpit',
+      component: () => import('@/custom/cockpit/views/CockpitView.vue'),
+      meta: { fullscreen: true },
+      children: [
+        {
+          path: 'chat',
+          name: 'hermes.chat',
+          component: () => import('@/views/hermes/ChatView.vue'),
+        },
+        {
+          path: 'session/:sessionId',
+          name: 'hermes.session',
+          component: () => import('@/views/hermes/ChatView.vue'),
+        },
+        {
+          path: 'history',
+          name: 'hermes.history',
+          component: () => import('@/views/hermes/HistoryView.vue'),
+        },
+        {
+          path: 'history/session/:sessionId',
+          name: 'hermes.historySession',
+          component: () => import('@/views/hermes/HistoryView.vue'),
+        },
+        {
+          path: 'global-agent',
+          name: 'hermes.globalAgent',
+          component: () => import('@/views/hermes/GlobalAgentView.vue'),
+        },
+        {
+          path: 'global-agent/session/:sessionId',
+          name: 'hermes.globalAgentSession',
+          component: () => import('@/views/hermes/GlobalAgentView.vue'),
+        },
+        {
+          path: 'swarm-kanban',
+          name: 'hermes.swarmKanban',
+          component: () => import('@/custom/kanban/views/SwarmKanbanView.vue'),
+        },
+        {
+          path: 'matrix-chat',
+          name: 'hermes.matrixChat',
+          component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
+        },
+        {
+          path: 'matrix-chat/room/:roomId',
+          name: 'hermes.matrixChatRoom',
+          component: () => import('@/custom/matrix-chat/views/MatrixChatView.vue'),
+        },
+      ],
     },
-    {
-      path: '/hermes/session/:sessionId',
-      name: 'hermes.session',
-      component: () => import('@/views/hermes/ChatView.vue'),
-    },
+    // 2026-09-12 审查：系统通知/外部深链仍使用搬迁前绝对路径（GlobalPendingActions
+    // pendingSourceClickUrl → completion-notification hash 导航），补路径别名——
+    // name 归 cockpit 子路由所有，别名仅 path 级兼容。
+    { path: '/hermes/chat', component: () => import('@/views/hermes/ChatView.vue') },
+    { path: '/hermes/session/:sessionId', component: () => import('@/views/hermes/ChatView.vue') },
+    { path: '/hermes/history', component: () => import('@/views/hermes/HistoryView.vue') },
+    { path: '/hermes/history/session/:sessionId', component: () => import('@/views/hermes/HistoryView.vue') },
+    { path: '/hermes/global-agent', component: () => import('@/views/hermes/GlobalAgentView.vue') },
+    { path: '/hermes/global-agent/session/:sessionId', component: () => import('@/views/hermes/GlobalAgentView.vue') },
     {
       path: '/desktop-chat/:sessionId',
       name: 'desktop.chat',
       component: () => import('@/views/hermes/ChatView.vue'),
       meta: { standaloneChat: true },
-    },
-    {
-      path: '/hermes/history',
-      name: 'hermes.history',
-      component: () => import('@/views/hermes/HistoryView.vue'),
-    },
-    {
-      path: '/hermes/history/session/:sessionId',
-      name: 'hermes.historySession',
-      component: () => import('@/views/hermes/HistoryView.vue'),
-    },
-    {
-      path: '/hermes/global-agent',
-      name: 'hermes.globalAgent',
-      component: () => import('@/views/hermes/GlobalAgentView.vue'),
-    },
-    {
-      path: '/hermes/global-agent/session/:sessionId',
-      name: 'hermes.globalAgentSession',
-      component: () => import('@/views/hermes/GlobalAgentView.vue'),
     },
     {
       path: '/hermes/jobs',
