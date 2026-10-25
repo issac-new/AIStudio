@@ -131,6 +131,9 @@ import { reportRoutes } from '../custom/report/report-controller'
 // createSession.config.mode 建会话生效+switchCollaborationMode 会话内切（可切子集）；
 // 执法=enforce-gate 阶梯>会话档>全局档。/api/hermes/permmodes/session-mode/*
 import { sessionModeRoutes } from '../custom/permmodes/session-mode-controller'
+// overlay[cluster-inspector]（集群巡检官）：分布式集群异常监控与处置（采集→检测→
+// 定级→govbus system 域留痕；周期 60s，CLUSTER_INSPECTOR=off 关）。/api/hermes/cluster-inspector
+import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clusterinspector/cluster-inspector-controller'
 // overlay[review]: /review 评审域（codex-product §五 P0-1，矩阵 §3.8 P0）
 import { reviewRoutes } from '../custom/review/review-controller'
 // overlay[kanban]: 列级 automation 编排（routa §七#1，矩阵 §3.6 P0）
@@ -407,6 +410,8 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(autonomyLadderRoutes.routes())          // 自治阶梯：配置面 CRUD + govbus 审计（六文调研轮 H2）
   app.use(reportRoutes.routes())                  // 报告链：PART1 骨架出稿 + 验收断言（报告链落地轮）
   app.use(sessionModeRoutes.routes())             // 会话权限档：查/切/清 + 引擎 v4 切档（permmodes v4 通道轮）
+  startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
+  app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
   app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
   app.use(columnAutomationRoutes.routes())        // 列编排：配置+COLUMN_TRANSITION 匹配（P0 §3.6）
   app.use(inboxRoutes.routes())                   // 注意力队列：三档/双轴/双收件人（P1 §3.5）
