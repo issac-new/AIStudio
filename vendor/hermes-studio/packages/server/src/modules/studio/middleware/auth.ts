@@ -25,6 +25,7 @@ export interface AuthenticatedUser {
   username: string
   role: UserRole
   profiles?: string[]
+  matrix_user_id?: string
 }
 
 export interface RequestProfile {
@@ -162,16 +163,17 @@ function isProtectedHttpPath(path: string): boolean {
 }
 
 export function signUserJwt(
-  user: Pick<UserRecord, 'id' | 'username' | 'role'>,
+  user: Pick<UserRecord, 'id' | 'username' | 'role' | 'matrix_user_id'>,
   secret: string,
   now = Date.now(),
   expiresSeconds = DEFAULT_EXPIRES_SECONDS,
 ): string {
   const iat = Math.floor(now / 1000)
-  const payload: JwtPayload = {
+  const payload = {
     sub: String(user.id),
     username: user.username,
     role: user.role,
+    matrix_user_id: user.matrix_user_id || null,
     type: 'access',
     aud: JWT_AUDIENCE,
     iat,
@@ -243,7 +245,7 @@ export function verifyUserJwt(token: string, secret: string, now = Date.now()): 
   return verifyUserJwtPayload(token, secret, now, false)
 }
 
-export async function issueUserJwt(user: Pick<UserRecord, 'id' | 'username' | 'role'>): Promise<string> {
+export async function issueUserJwt(user: Pick<UserRecord, 'id' | 'username' | 'role' | 'matrix_user_id'>): Promise<string> {
   const secret = await getJwtSecret()
   return signUserJwt(user, secret, Date.now(), getUserJwtExpiresSeconds())
 }
@@ -257,16 +259,17 @@ export async function issueAppJwt(
   return signAppJwt(user, deviceCode, connectionType, secret, Date.now(), getUserJwtExpiresSeconds())
 }
 
-export async function issueModelRunJwt(user: Pick<UserRecord, 'id' | 'username' | 'role'>): Promise<string> {
+export async function issueModelRunJwt(user: Pick<UserRecord, 'id' | 'username' | 'role' | 'matrix_user_id'>): Promise<string> {
   const secret = await getJwtSecret()
   return signUserJwt(user, secret, Date.now(), getModelRunJwtExpiresSeconds())
 }
 
-export function toAuthenticatedUser(user: Pick<UserRecord, 'id' | 'username' | 'role'>): AuthenticatedUser {
+export function toAuthenticatedUser(user: Pick<UserRecord, 'id' | 'username' | 'role' | 'matrix_user_id'>): AuthenticatedUser {
   const authenticated: AuthenticatedUser = {
     id: user.id,
     username: user.username,
     role: user.role,
+    matrix_user_id: user.matrix_user_id || undefined,
   }
   if (user.role !== 'super_admin') {
     authenticated.profiles = listUserProfiles(user.id).map(profile => profile.profile_name)
