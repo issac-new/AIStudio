@@ -2569,10 +2569,11 @@ def _dispatch_once_locked(
     board_cap = _resolve_board_concurrency(board)
     board_running: dict[str, int] = {}
     if board_cap is not None:
+        # 0.21.7 起每 board 独立 sqlite（conn 即板库），直接数本库 running。
         rowc = conn.execute(
-            "SELECT COUNT(*) AS n FROM tasks WHERE status = 'running' AND board IS ?", (board,),
+            "SELECT COUNT(*) FROM tasks WHERE status = 'running'",
         ).fetchone()
-        board_running[board] = int(rowc["n"]) if rowc else 0
+        board_running[board] = int(rowc[0]) if rowc else 0
     lane_kwargs: dict[str, Any] = dict(
         dry_run=dry_run, ttl_seconds=ttl_seconds, board=board,
         failure_limit=failure_limit, spawn_fn=spawn_fn,

@@ -26,6 +26,7 @@ if str(_WORKTREE) not in sys.path:
     sys.path.insert(0, str(_WORKTREE))
 
 from hermes_cli import kanban_db as kb
+from hermes_cli.kanban_db_connect import connect  # noqa: E402
 from hermes_cli.kanban_gates import (
     GATE_REASONS,
     GateBlockedError,
@@ -49,7 +50,7 @@ def fresh_home(tmp_path, monkeypatch):
 
 
 def _connect(fresh_home):
-    return kb.connect()
+    return connect()
 
 
 def _make_task(conn, *, title="gate card", body=None, status="ready", assignee="sage"):

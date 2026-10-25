@@ -836,7 +836,7 @@ _BASE_TASK_COLUMNS = (
     ("created_by", "created_by TEXT"),
     ("started_at", "started_at INTEGER"),
     ("completed_at", "completed_at INTEGER"),
-    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'scratch'"),
+    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'dir'"),
     ("workspace_path", "workspace_path TEXT"),
     ("claim_lock", "claim_lock TEXT"),
     ("claim_expires", "claim_expires INTEGER"),
