@@ -97,6 +97,7 @@
     "adm-zip": "^0.6.0",
     "agent-browser": "^0.26.0",
     "boring-avatars-vanilla": "^1.0.2",
+    "echarts": "^6.1.0",
     "eventsource": "^4.1.0",
     "js-tiktoken": "^1.0.21",
     "katex": "^0.17.0",
