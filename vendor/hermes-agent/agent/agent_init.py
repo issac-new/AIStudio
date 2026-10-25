@@ -1124,6 +1124,11 @@ def _load_tools(agent, enabled_toolsets, disabled_toolsets):
     if drops := agent_tool_drops(agent):
         agent.tools = [t for t in agent.tools if t["function"]["name"] not in drops]
 
+    # per-model 工具覆盖（codex 候补吸收）：config.tool_model_overrides 按当前模型
+    # 套 description/parameters，坏 schema 回退捆绑版告警不拖垮装配。
+    from agent.tool_model_overrides import apply_model_tool_overrides
+    agent.tools = apply_model_tool_overrides(agent.tools or [], getattr(agent, "model", None))
+
     agent.valid_tool_names = {tool["function"]["name"] for tool in agent.tools} if agent.tools else set()
     # Kanban guidance is session-static for the dispatcher-owned worker only. Profiles may
     # expose kanban_show interactively, and children/cron runs inherit the env var, without
