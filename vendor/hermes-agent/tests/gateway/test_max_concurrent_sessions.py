@@ -99,7 +99,11 @@ def _silence_global_gateway_hooks(monkeypatch):
     monkeypatch.setattr("tools.approval.has_blocking_approval", lambda *args, **kwargs: False)
 
 
-def test_new_session_gets_clean_error_at_active_session_limit(monkeypatch):
+def test_capacity_refusal_is_not_echoed_and_event_is_queued(monkeypatch):
+    """Storm guard: a capacity refusal must never come back as chat text — a bot's
+    "session limit" note posted into the room is a new room message that re-triggers
+    every agent's dispatch, and each of those refusals echoes again (run4: 97 of 120
+    room messages were limit notices). The rejected event is queued for retry instead."""
     _silence_global_gateway_hooks(monkeypatch)
     runner = _make_runner(max_concurrent_sessions=1)
     _occupy_session(runner, "busy")
@@ -112,9 +116,91 @@ def test_new_session_gets_clean_error_at_active_session_limit(monkeypatch):
     with patch.object(GatewayRunner, "_handle_message_with_agent", fail_if_agent_runs):
         result = asyncio.run(runner._handle_message(event))
 
-    assert "(1/1)" in result
+    assert result is None  # nothing to publish -> the feedback edge cannot close
     assert new_key not in runner._running_agents
     runner.session_store.get_or_create_session.assert_not_called()
+    assert [entry[3] for entry in runner._capacity_retry_queue] == [new_key]
+    # the retry pump was scheduled (asyncio.run cancels it at loop shutdown — existence
+    # and queue contents are the contract)
+    assert runner._capacity_retry_task is not None
+
+
+def test_capacity_rejected_event_retries_when_slot_frees(monkeypatch):
+    _silence_global_gateway_hooks(monkeypatch)
+    runner = _make_runner(max_concurrent_sessions=1)
+    busy_key = _occupy_session(runner, "busy")
+    event = _make_event(chat_id="new")
+    adapter = runner.adapters[Platform.TELEGRAM]
+    runner.CAPACITY_RETRY_POLL_SEC = 0.02  # shrink the poll tick for the test
+    re_dispatched = []
+
+    async def fake_handle(ev):
+        re_dispatched.append(ev)
+
+    async def scenario():
+        with patch.object(
+            GatewayRunner, "_handle_message_with_agent",
+            AsyncMock(side_effect=AssertionError("agent must not run at capacity")),
+        ):
+            assert await runner._handle_message(event) is None
+        adapter.handle_message = fake_handle
+        runner._delivery_adapter_for = lambda _source: adapter
+        # free the slot before the pump's next poll
+        runner._running_agents.pop(busy_key, None)
+        runner._running_agents_ts.pop(busy_key, None)
+        for _ in range(100):
+            if re_dispatched:
+                break
+            await asyncio.sleep(0.02)
+
+    asyncio.run(scenario())
+    assert re_dispatched == [event]  # queued work is re-dispatched, never dropped
+    assert runner._capacity_retry_queue == []
+
+
+def test_capacity_retry_preserves_age_and_backs_off(monkeypatch):
+    """Re-refused events keep their ORIGINAL first-refusal age (the 20min cap must
+    survive the handle_message round trip) and re-enqueue with a backoff deadline so
+    a cross-process saturation cannot spin the pump with zero delay."""
+    _silence_global_gateway_hooks(monkeypatch)
+    runner = _make_runner(max_concurrent_sessions=1)
+    _occupy_session(runner, "busy")  # keep the pump in its sleep branch: it must not drain entries mid-test
+    event = _make_event(chat_id="new")
+
+    async def enqueue_twice():
+        # enqueue needs a running loop (the pump is scheduled via create_task);
+        # two entries for the same event model the cross-process refusal round trip
+        assert runner._queue_capacity_retry(event, None, "new") is True
+        assert runner._queue_capacity_retry(event, None, "new") is True
+
+    asyncio.run(enqueue_twice())
+    first = runner._capacity_retry_queue[0]
+    second = runner._capacity_retry_queue[-1]
+    assert second[0] == first[0]  # age anchored at the FIRST refusal
+    assert second[4] > first[4]  # re-refusal backs off behind the first entry
+    assert len(runner._capacity_retry_queue) == 2
+
+
+def test_non_capacity_refusal_still_replies(monkeypatch):
+    """Ownership/coordination refusals name an actionable conflict on THIS session and
+    keep their reply; only capacity refusals are suppressed and queued."""
+    from hermes_cli.active_sessions import SESSION_NOT_OWNED, ActiveSessionRefusal
+
+    _silence_global_gateway_hooks(monkeypatch)
+    runner = _make_runner(max_concurrent_sessions=1)
+    event = _make_event(chat_id="new")
+    refusal = ActiveSessionRefusal("session already owned by someone else", SESSION_NOT_OWNED)
+    monkeypatch.setattr(
+        GatewayRunner, "_claim_active_session_slot", lambda self, key, source: (None, refusal))
+
+    with patch.object(
+        GatewayRunner, "_handle_message_with_agent",
+        AsyncMock(side_effect=AssertionError("agent must not run")),
+    ):
+        result = asyncio.run(runner._handle_message(event))
+
+    assert result == "session already owned by someone else"
+    assert getattr(runner, "_capacity_retry_queue", []) == []
 
 
 def test_status_command_bypasses_active_session_limit(monkeypatch):

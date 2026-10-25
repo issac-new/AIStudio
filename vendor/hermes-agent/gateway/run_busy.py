@@ -311,6 +311,84 @@ class GatewayBusySessionMixin:
         from hermes_cli.active_sessions import active_session_limit_message
         return active_session_limit_message(active_count, max_sessions)
 
+    # Capacity-refusal retry (notification-storm root fix): a message that lost the race
+    # for a slot is held and re-dispatched when capacity frees, never echoed back into the
+    # chat (see the claim path in run_inbound) and never silently dropped. Bounded so a
+    # burst cannot pile up unbounded waiters; one poller drains the whole queue.
+    CAPACITY_RETRY_POLL_SEC = 2.0
+    CAPACITY_RETRY_MAX_AGE_SEC = 20 * 60.0
+    CAPACITY_RETRY_MAX_PENDING = 64
+
+    def _queue_capacity_retry(self, event: MessageEvent, source: SessionSource, session_key: str) -> bool:
+        """Hold *event* for a silent retry when a session slot frees; False when the
+        bounded queue is full (then the event is dropped WITH a log line, not silently)."""
+        pending = getattr(self, "_capacity_retry_queue", None)
+        if pending is None:
+            pending = self._capacity_retry_queue = []
+        if len(pending) >= self.CAPACITY_RETRY_MAX_PENDING:
+            logger.warning(
+                "Capacity retry queue full (%d); dropping message for %s",
+                len(pending), session_key)
+            return False
+        now = time.monotonic()
+        # Age anchor + re-refusal backoff keyed on the event identity: a cross-process
+        # refusal (slots held by another gateway process or a CLI exec) comes back
+        # through handle_message and re-enqueues as a NEW entry, so both the age limit
+        # and the retry pacing must survive that round trip — otherwise the pump spins
+        # with zero backoff and MAX_AGE never fires (24h review P1/P2).
+        since_map = getattr(self, "_capacity_retry_since", None)
+        if since_map is None:
+            since_map = self._capacity_retry_since = {}
+        first_seen = since_map.get(id(event))
+        if first_seen is None:
+            since_map[id(event)] = now
+            not_before = now
+        else:
+            not_before = now + self.CAPACITY_RETRY_POLL_SEC
+        if len(since_map) > self.CAPACITY_RETRY_MAX_PENDING * 2:
+            # Delivered events never come back; age out their anchors to stay bounded.
+            for k in [k for k, v in since_map.items() if now - v > self.CAPACITY_RETRY_MAX_AGE_SEC]:
+                since_map.pop(k, None)
+        pending.append((first_seen if first_seen is not None else now, event, source, session_key, not_before))
+        pump = getattr(self, "_capacity_retry_task", None)
+        if pump is None or pump.done():
+            if pump is not None and not pump.cancelled():
+                pump.exception()  # retrieve a dead pump's exception; no orphaned-task warning
+            self._capacity_retry_task = asyncio.create_task(self._capacity_retry_pump())
+        return True
+
+    async def _capacity_retry_pump(self) -> None:
+        """Re-dispatch capacity-rejected events once a slot frees (FIFO, age-bounded)."""
+        queue = getattr(self, "_capacity_retry_queue", None) or []
+        while queue:
+            enqueued_ts, event, source, session_key, not_before = queue[0]
+            now = time.monotonic()
+            if now - enqueued_ts > self.CAPACITY_RETRY_MAX_AGE_SEC:
+                queue.pop(0)
+                since_map = getattr(self, "_capacity_retry_since", None)
+                if since_map is not None:
+                    since_map.pop(id(event), None)
+                logger.warning(
+                    "Capacity retry for %s expired after %.0fs; dropping",
+                    session_key, self.CAPACITY_RETRY_MAX_AGE_SEC)
+                continue
+            if now < not_before:
+                await asyncio.sleep(min(self.CAPACITY_RETRY_POLL_SEC, not_before - now))
+                continue
+            if self._active_session_limit_message(session_key) is not None:
+                await asyncio.sleep(self.CAPACITY_RETRY_POLL_SEC)
+                continue
+            queue.pop(0)
+            logger.info("Capacity retry: re-dispatching queued message for %s", session_key)
+            try:
+                adapter = self._delivery_adapter_for(source)
+                if adapter is None:
+                    logger.warning("Capacity retry for %s has no delivery adapter; dropping", session_key)
+                    continue
+                await adapter.handle_message(event)
+            except Exception:
+                logger.warning("Capacity retry dispatch failed for %s", session_key, exc_info=True)
+
     def _claim_active_session_slot(
         self, session_key: str, source: SessionSource
     ) -> tuple[Any, Optional[str]]:

@@ -1303,7 +1303,21 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
         # passes the "already running" guard and spins up a duplicate agent for the same session.
         _active_session_lease, _limit_message = self._claim_active_session_slot(_quick_key, source)
         if _limit_message is not None:
-            logger.info("Rejecting new active session %s: max_concurrent_sessions reached", _quick_key)
+            # Capacity refusals are operational signals, not chat content: echoed into the
+            # room the "session limit" notice is itself a new room message that re-triggers
+            # every agent's dispatch, and every one of those refusals echoes again — a
+            # self-sustaining notification storm in multi-agent rooms. Hold the rejected
+            # event for a silent retry when a slot frees instead of dropping it, and keep
+            # the refusal in the logs only. Ownership/coordination refusals still reply:
+            # they name an actionable conflict on THIS session and cannot amplify across
+            # agents the same way.
+            from hermes_cli.active_sessions import MAX_CONCURRENT_SESSIONS
+            if getattr(_limit_message, "reason", None) in (None, MAX_CONCURRENT_SESSIONS):
+                logger.info(
+                    "Capacity refusal for %s: queued silently for retry when a slot frees "
+                    "(not echoed to chat)", _quick_key)
+                self._queue_capacity_retry(event, source, _quick_key)
+                return None
             return _limit_message
 
         event, source, is_internal = self._hm_rescue_orphaned_fifo(event, source, is_internal, _quick_key)
