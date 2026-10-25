@@ -28,7 +28,11 @@ const PREVIEW_BACKEND_PORT = 8650
 const PREVIEW_FRONTEND_PORT = 8651
 const PREVIEW_AGENT_BRIDGE_PORT = 18650
 const DEFAULT_USERNAME = 'admin'
-const DEFAULT_PASSWORD = '123456'
+// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 出厂默认口令移除（安全轮 M8b，2026-10-16）
+// reset-default-login 改为每次生成随机密码；凭据落 <home>/admin-login.json（0600，
+// 供桌面主进程代理自动登录复用），并打印一次。
+const ADMIN_LOGIN_FILE = join(WEB_UI_HOME, 'admin-login.json')
+// HERMES_CUSTOM[SecNoDefaultCred] END
 const DEFAULT_RESTART_GRACE_MS = 5000
 const DEFAULT_STOP_GRACE_MS = 15000
 const STOP_POLL_INTERVAL_MS = 500
@@ -37,7 +41,6 @@ function envPositiveInt(name) {
   const value = Number(process.env[name])
   return Number.isFinite(value) && value > 0 ? value : undefined
 }
-
 function shouldPreserveBridgeOnShutdown() {
   const raw = String(process.env.HERMES_AGENT_BRIDGE_STOP_ON_SHUTDOWN || '').trim().toLowerCase()
   return ['0', 'false', 'no', 'off'].includes(raw)
@@ -602,6 +605,18 @@ function hashPassword(password) {
   return `scrypt:${salt}:${hash}`
 }
 
+// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 随机密码建号/重置（安全轮 M8b，2026-10-16）
+// 旧行为=每次重置回出厂 admin/123456（已知默认口令的再生产源）。新行为=每次生成
+// 随机密码，凭据写 <home>/admin-login.json（0600，桌面主进程自动登录复用）并打印。
+function generateAdminPassword() {
+  return randomBytes(15).toString('base64url')
+}
+
+function writeAdminLoginFile(username, password) {
+  writeFileSync(ADMIN_LOGIN_FILE, `${JSON.stringify({ username, password, createdAt: Date.now() })}\n`, { mode: 0o600 })
+  try { chmodSync(ADMIN_LOGIN_FILE, 0o600) } catch { /* best-effort */ }
+}
+
 async function resetDefaultLogin(options = {}) {
   const { silent = false } = options
   mkdirSync(WEB_UI_HOME, { recursive: true })
@@ -622,7 +637,8 @@ async function resetDefaultLogin(options = {}) {
     `)
 
     const now = Date.now()
-    const passwordHash = hashPassword(DEFAULT_PASSWORD)
+    const password = generateAdminPassword()
+    const passwordHash = hashPassword(password)
     const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(DEFAULT_USERNAME)
     if (existing?.id) {
       db.prepare(
@@ -630,26 +646,24 @@ async function resetDefaultLogin(options = {}) {
          SET password_hash = ?, role = 'super_admin', status = 'active', updated_at = ?
          WHERE id = ?`
       ).run(passwordHash, now, existing.id)
-      if (!silent) {
-        console.log(`  ✓ Reset default login: ${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD}`)
-        console.log(`    Database: ${WEB_UI_DB_FILE}`)
-      }
-      return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password: DEFAULT_PASSWORD, action: 'updated' }
+    } else {
+      db.prepare(
+        `INSERT INTO users (username, password_hash, role, status, created_at, updated_at)
+         VALUES (?, ?, 'super_admin', 'active', ?, ?)`
+      ).run(DEFAULT_USERNAME, passwordHash, now, now)
     }
-
-    db.prepare(
-      `INSERT INTO users (username, password_hash, role, status, created_at, updated_at)
-       VALUES (?, ?, 'super_admin', 'active', ?, ?)`
-    ).run(DEFAULT_USERNAME, passwordHash, now, now)
+    writeAdminLoginFile(DEFAULT_USERNAME, password)
     if (!silent) {
-      console.log(`  ✓ Created default login: ${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD}`)
+      console.log(`  ✓ ${existing?.id ? 'Reset' : 'Created'} login: ${DEFAULT_USERNAME} / ${password}`)
+      console.log(`    (random password, shown once; also stored at ${ADMIN_LOGIN_FILE})`)
       console.log(`    Database: ${WEB_UI_DB_FILE}`)
     }
-    return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password: DEFAULT_PASSWORD, action: 'created' }
+    return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password, action: existing?.id ? 'updated' : 'created' }
   } finally {
     db.close()
   }
 }
+// HERMES_CUSTOM[SecNoDefaultCred] END
 
 async function main() {
   const command = process.argv[2] || 'start'
@@ -672,7 +686,7 @@ Commands:
   restart [port]     Restart the server
   status             Show server status
   clear-login-locks  Delete the login IP lock file
-  reset-default-login Create or reset the default login (${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD})
+  reset-default-login Create or reset the default login (${DEFAULT_USERNAME} / random password, shown once)
   update             Update to latest version and restart
   upgrade            Alias for update
   version            Show version number

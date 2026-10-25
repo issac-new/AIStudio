@@ -180,22 +180,17 @@ async function ensureDesktopAuthReady(): Promise<void> {
   if (!isDesktopWindow.value || localStorage.getItem('hermes_api_key')) return
   const token = await bridge?.getToken?.().catch(() => '')
   if (token) {
-    try {
-      localStorage.setItem('AUTH_TOKEN', token)
-      const res = await fetch(deploymentUrl('/api/auth/login'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ username: 'admin', password: '123456' }),
-      })
-      const body = await res.json().catch(() => null) as { token?: string; jwt?: string } | null
-      const jwt = body?.token || body?.jwt
-      if (jwt) localStorage.setItem('hermes_api_key', jwt)
-    } catch {
-      /* preload performs the same desktop auto-login; this is a fallback. */
-    }
+    try { localStorage.setItem('AUTH_TOKEN', token) } catch { /* */ }
+  }
+  // HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 登录改走主进程 IPC 代理（安全轮 M8b，
+  // 2026-10-16）——旧实现在此硬编码 admin/123456 换 JWT（口令随客户端 bundle 出厂）。
+  // 主进程用 CLI 随机建号落盘的凭据代理登录，空库首启自动初始化；失败回落手动登录。
+  // HERMES_CUSTOM[SecNoDefaultCred] END
+  try {
+    const jwt = await bridge?.desktopLogin?.().catch(() => '')
+    if (jwt) localStorage.setItem('hermes_api_key', jwt)
+  } catch {
+    /* 主进程代理登录不可用：走手动登录页 */
   }
   for (let i = 0; i < 20 && !localStorage.getItem('hermes_api_key'); i += 1) {
     await new Promise(resolve => window.setTimeout(resolve, 100))

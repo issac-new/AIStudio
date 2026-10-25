@@ -46,7 +46,8 @@ export interface UserSummary {
 }
 
 export const DEFAULT_USERNAME = 'admin'
-export const DEFAULT_PASSWORD = '123456'
+// HERMES_CUSTOM[SecNoDefaultCred]: DEFAULT_PASSWORD（'123456'）已删——出厂不再有
+// 已知默认口令；账号初始化走 CLI 随机密码或 Matrix 登录。
 export const DEFAULT_PROFILE_NAME = 'default'
 
 const SCRYPT_KEY_LEN = 64
@@ -410,21 +411,16 @@ export function replaceUserProfiles(userId: UserId, profiles: string[], defaultP
   }
 }
 
-export function createDefaultSuperAdmin(): UserRecord | null {
+export function createSuperAdmin(username: string, password: string): UserRecord | null {
   const db = getDb()
   if (!db) return null
+  if (!username || !password) return null
 
   const now = Date.now()
   db.prepare(
     `INSERT INTO ${USERS_TABLE} (username, password_hash, role, status, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(DEFAULT_USERNAME, hashPassword(DEFAULT_PASSWORD), 'super_admin', 'active', now, now)
+  ).run(username, hashPassword(password), 'super_admin', 'active', now, now)
 
-  return findUserByUsername(DEFAULT_USERNAME)
-}
-
-export function bootstrapDefaultSuperAdmin(username: string, password: string): UserRecord | null {
-  if (countUsers() > 0) return null
-  if (username !== DEFAULT_USERNAME || password !== DEFAULT_PASSWORD) return null
-  return createDefaultSuperAdmin()
+  return findUserByUsername(username)
 }

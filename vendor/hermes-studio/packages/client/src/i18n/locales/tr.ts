@@ -404,7 +404,7 @@ export default {
     tokenLogin: 'Belirteç',
     usernamePlaceholder: 'Kullanıcı adı',
     passwordPlaceholder: 'Parola',
-    defaultCredentialsHint: 'Varsayılan kullanıcı adı: admin. Varsayılan parola: 123456.',
+    defaultCredentialsHint: 'İlk kez mi? Girişi masaüstü uygulamadan başlatın veya Matrix hesabınızla oturum açın.',
     credentialsRequired: 'Lütfen kullanıcı adı ve parola girin',
     invalidCredentials: 'Geçersiz kullanıcı adı veya parola',
     tooManyAttempts: 'Çok fazla başarısız deneme yapıldı; lütfen daha sonra tekrar deneyin',

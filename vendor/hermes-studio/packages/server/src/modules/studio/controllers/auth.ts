@@ -1,9 +1,7 @@
 import type { Context } from 'koa'
 import { checkPassword, recordPasswordFailure, recordPasswordSuccess, extractIp, getLockedIps, unlockIp, unlockAll } from '../services/auth/login-limiter'
 import {
-  DEFAULT_PASSWORD,
-  DEFAULT_USERNAME,
-  bootstrapDefaultSuperAdmin,
+  createSuperAdmin,
   countActiveSuperAdmins,
   countUsers,
   createFromMatrix,
@@ -89,9 +87,9 @@ export async function currentUser(ctx: Context) {
       updated_at: user.updated_at,
       last_login_at: user.last_login_at,
       avatar: user.avatar || '',
-      requiresCredentialChange: process.env.HERMES_DESKTOP === 'true'
-        ? false
-        : user.username === DEFAULT_USERNAME && verifyPassword(DEFAULT_PASSWORD, user.password_hash),
+      // HERMES_CUSTOM[SecNoDefaultCred]: 出厂默认口令已移除，不再存在"未改默认密码"
+      // 状态；字段保留（API 契约），恒为 false。
+      requiresCredentialChange: false,
       matrix_user_id: user.matrix_user_id,
       matrix_display_name: user.matrix_display_name,
       matrix_avatar_url: user.matrix_avatar_url,
@@ -208,11 +206,25 @@ async function authenticatePasswordUser(
   }
 
   const existingUserCount = countUsers()
-  const user = existingUserCount === 0
-    ? bootstrapDefaultSuperAdmin(username, password)
-    : findUserByUsername(username)
+  if (existingUserCount === 0) {
+    // HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 空库不再以 admin/123456 引导（安全轮 M8b）。
+    // 显式开发门：HERMES_WEB_UI_DEV_BOOTSTRAP=1 时空库首登以提交的凭据建号。
+    if (process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === '1' && username && password) {
+      const created = createSuperAdmin(username, password)
+      if (created) return { ok: true, ip, user: created }
+    }
+    recordPasswordFailure(ip)
+    ctx.status = 401
+    ctx.body = {
+      error: 'No user accounts exist. Sign in with Matrix, or create one with: hermes-web-ui reset-default-login',
+      code: 'NO_USER_ACCOUNTS',
+    }
+    return { ok: false }
+  }
+  // HERMES_CUSTOM[SecNoDefaultCred] END
+  const user = findUserByUsername(username)
 
-  if (!user || user.status !== 'active' || (existingUserCount > 0 && !verifyPassword(password, user.password_hash))) {
+  if (!user || user.status !== 'active' || !verifyPassword(password, user.password_hash)) {
     recordPasswordFailure(ip)
     ctx.status = 401
     ctx.body = { error: 'Invalid username or password' }

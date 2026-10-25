@@ -440,7 +440,7 @@ export default {
     tokenLogin: 'الرمز',
     usernamePlaceholder: 'اسم المستخدم',
     passwordPlaceholder: 'كلمة المرور',
-    defaultCredentialsHint: 'اسم المستخدم الافتراضي: admin. كلمة المرور الافتراضية: 123456.',
+    defaultCredentialsHint: 'أول استخدام؟ أنشئ الحساب من تطبيق سطح المكتب، أو سجّل الدخول بحساب Matrix الخاص بك.',
     credentialsRequired: 'الرجاء إدخال اسم المستخدم وكلمة المرور',
     invalidCredentials: 'اسم المستخدم أو كلمة المرور غير صحيحة',
     tooManyAttempts: 'محاولات فاشلة كثيرة، الرجاء المحاولة لاحقًا',

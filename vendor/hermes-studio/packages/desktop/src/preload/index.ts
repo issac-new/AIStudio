@@ -68,6 +68,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     },
   },
   getToken: (): Promise<string> => ipcRenderer.invoke('hermes-desktop:get-token'),
+  // HERMES_CUSTOM[SecNoDefaultCred]: 主进程代理登录（口令不出主进程；空库首启自动随机建号）
+  desktopLogin: (): Promise<string> => ipcRenderer.invoke('hermes-desktop:login'),
   retryBootstrap: (source?: 'cf' | 'github'): Promise<void> => ipcRenderer.invoke('hermes-desktop:retry-bootstrap', source),
   ...(!REMOTE_SERVER_MODE ? {
     restartApp: (): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:restart-app'),

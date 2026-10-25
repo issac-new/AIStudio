@@ -440,7 +440,7 @@ export default {
     tokenLogin: '權杖登入',
     usernamePlaceholder: '使用者名稱',
     passwordPlaceholder: '密碼',
-    defaultCredentialsHint: '預設登入名：admin，預設密碼：123456',
+    defaultCredentialsHint: '首次使用？請由桌面應用初始化登入，或使用 Matrix 帳號登入。',
     credentialsRequired: '請輸入使用者名稱和密碼',
     invalidCredentials: '使用者名稱或密碼錯誤',
     tooManyAttempts: '登入失敗次數過多，請稍後再試',

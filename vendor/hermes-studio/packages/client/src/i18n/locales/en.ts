@@ -476,7 +476,7 @@ export default {
     tokenLogin: 'Token',
     usernamePlaceholder: 'Username',
     passwordPlaceholder: 'Password',
-    defaultCredentialsHint: 'Default username: admin. Default password: 123456.',
+    defaultCredentialsHint: 'First time here? Initialize the login from the desktop app, or sign in with your Matrix account.',
     credentialsRequired: 'Please enter username and password',
     invalidCredentials: 'Invalid username or password',
     tooManyAttempts: 'Too many failed attempts, please try again later',

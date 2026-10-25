@@ -452,7 +452,7 @@ export default {
     tokenLogin: 'Token',
     usernamePlaceholder: 'Benutzername',
     passwordPlaceholder: 'Passwort',
-    defaultCredentialsHint: 'Standard-Benutzername: admin. Standard-Passwort: 123456.',
+    defaultCredentialsHint: 'Erste Nutzung? Login über die Desktop-App initialisieren oder mit Ihrem Matrix-Konto anmelden.',
     credentialsRequired: 'Bitte Benutzername und Passwort eingeben',
     invalidCredentials: 'Ungultiger Benutzername oder Passwort',
     tooManyAttempts: 'Zu viele fehlgeschlagene Versuche, bitte versuchen Sie es spater erneut',

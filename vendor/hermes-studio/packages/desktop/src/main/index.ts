@@ -29,7 +29,7 @@ import { bundledNode, desktopIcon, desktopLinuxTrayIcon, desktopMacTrayIcon, des
 import { cancelDesktopUpdateDownload, checkForDesktopUpdates, downloadDesktopUpdate, getDesktopUpdateState, initAutoUpdater, installDesktopUpdate } from './updater'
 import { DESKTOP_UPDATE_STATE_CHANNEL, type DesktopUpdateState } from './updater-types'
 import { t } from './desktop-i18n'
-import { resetDesktopDefaultLogin } from './desktop-login-reset'
+import { desktopAutoLogin, resetDesktopDefaultLogin } from './desktop-login-reset'
 import { installHermesStudioCliShim, installHermesStudioMcpShim } from './cli-shim'
 import { parseHermesCliArgs, runBundledHermesCli } from './hermes-cli'
 import { installSelectionContextMenu, registerMessageSelectionContextMenuIpc } from './selection-context-menu'
@@ -1284,6 +1284,15 @@ ipcMain.handle('hermes-desktop:get-token', () => {
   // it to a remote page: it is useless there and would leak desktop state.
   return activeRemoteServerUrl ? '' : getToken()
 })
+// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 主进程代理登录（安全轮 M8b，2026-10-16）。
+// 渲染层旧实现在客户端 bundle 里硬编码 admin/123456 直接换 JWT；改为渲染层只调
+// 本 IPC，口令留在主进程（CLI 随机建号落盘的 admin-login.json），空库首启自动
+// 初始化。远程服务器模式不代理（返回空串，渲染层走手动登录）。
+ipcMain.handle('hermes-desktop:login', async () => {
+  if (activeRemoteServerUrl) return ''
+  return desktopAutoLogin(serverUrl ?? '')
+})
+// HERMES_CUSTOM[SecNoDefaultCred] END
 ipcMain.handle('hermes-desktop:restart-app', event => {
   requireDesktopUpdaterSender(event)
   if (activeRemoteServerUrl) throw new Error('Remote service restarts must be requested from the remote server')

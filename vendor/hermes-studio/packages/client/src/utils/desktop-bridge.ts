@@ -208,6 +208,8 @@ export interface HermesDesktopBridge {
   }
   updater?: DesktopUpdaterBridge
   getToken: () => Promise<string>
+  // HERMES_CUSTOM[SecNoDefaultCred]: 主进程代理登录（返回 JWT；空库首启自动随机建号）
+  desktopLogin?: () => Promise<string>
   ensureAuth?: () => Promise<boolean>
   retryBootstrap: (source?: 'cf' | 'github') => Promise<void>
   restartApp?: () => Promise<boolean>

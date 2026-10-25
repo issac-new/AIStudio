@@ -34,12 +34,23 @@ describe('desktop login reset', () => {
     expect(source).toContain('if (mainWindow) await mainWindow.loadURL(mainRouteUrl() || url)')
   })
 
-  it('resets the default credentials and clears login locks through the Web UI CLI', () => {
+  it('resets the login through the Web UI CLI and reads the generated random credentials', () => {
     const source = readFileSync(resolve('packages/desktop/src/main/desktop-login-reset.ts'), 'utf-8')
 
     expect(source).toContain("runWebUiCliCommand('reset-default-login')")
     expect(source).toContain("runWebUiCliCommand('clear-login-locks')")
-    expect(source).toContain("DEFAULT_USERNAME = 'admin'")
-    expect(source).toContain("DEFAULT_PASSWORD = '123456'")
+    // SecNoDefaultCred（安全轮 M8b）：重置不再返回硬编码口令，改为读 CLI 落盘的
+    // admin-login.json（随机密码）；源码不得再出现出厂默认口令字面量。
+    expect(source).toContain('readAdminLoginFile()')
+    expect(source).not.toContain("DEFAULT_PASSWORD = '123456'")
+    expect(source).not.toContain("'123456'")
+  })
+
+  it('proxies renderer login through the main process (no credentials in the client bundle)', () => {
+    const source = readFileSync(resolve('packages/desktop/src/main/desktop-login-reset.ts'), 'utf-8')
+    const preload = readFileSync(resolve('packages/desktop/src/preload/index.ts'), 'utf-8')
+
+    expect(source).toContain('export async function desktopAutoLogin')
+    expect(preload).toContain("desktopLogin: (): Promise<string> => ipcRenderer.invoke('hermes-desktop:login')")
   })
 })

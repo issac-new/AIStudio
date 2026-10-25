@@ -476,7 +476,7 @@ export default {
     tokenLogin: '令牌登录',
     usernamePlaceholder: '用户名',
     passwordPlaceholder: '密码',
-    defaultCredentialsHint: '默认登录名：admin，默认密码：123456',
+    defaultCredentialsHint: '首次使用？请由桌面应用初始化登录，或使用 Matrix 账号登录。',
     credentialsRequired: '请输入用户名和密码',
     invalidCredentials: '用户名或密码错误',
     tooManyAttempts: '登录失败次数过多，请稍后重试',

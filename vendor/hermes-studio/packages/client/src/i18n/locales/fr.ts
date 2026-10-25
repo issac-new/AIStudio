@@ -452,7 +452,7 @@ export default {
     tokenLogin: 'Jeton',
     usernamePlaceholder: 'Nom d\'utilisateur',
     passwordPlaceholder: 'Mot de passe',
-    defaultCredentialsHint: 'Nom d utilisateur par defaut : admin. Mot de passe par defaut : 123456.',
+    defaultCredentialsHint: "Première utilisation ? Initialisez la connexion depuis l'application de bureau ou connectez-vous avec votre compte Matrix.",
     credentialsRequired: 'Veuillez entrer le nom d\'utilisateur et le mot de passe',
     invalidCredentials: 'Nom d\'utilisateur ou mot de passe incorrect',
     tooManyAttempts: 'Trop de tentatives echouees, veuillez reessayer plus tard',

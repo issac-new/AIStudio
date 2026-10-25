@@ -440,7 +440,7 @@ export default {
     tokenLogin: 'Вход по токену',
     usernamePlaceholder: 'Имя пользователя',
     passwordPlaceholder: 'Пароль',
-    defaultCredentialsHint: 'Логин по умолчанию: admin, пароль по умолчанию: 123456',
+    defaultCredentialsHint: 'Впервые здесь? Инициализируйте вход через настольное приложение или войдите через аккаунт Matrix.',
     credentialsRequired: 'Введите имя пользователя и пароль',
     invalidCredentials: 'Неверное имя пользователя или пароль',
     tooManyAttempts: 'Слишком много неудачных попыток входа, повторите попытку позже',
