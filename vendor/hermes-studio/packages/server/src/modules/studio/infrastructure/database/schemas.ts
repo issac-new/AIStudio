@@ -234,6 +234,10 @@ export const SESSIONS_SCHEMA: Record<string, string> = {
   history_cleared_at: 'INTEGER NOT NULL DEFAULT 0',
   /** Context estimate after a history edit, separate from cumulative billed usage. */
   context_usage_estimate: 'TEXT',
+  // R6 执行租约 daemon 形态（routa execution-backend.ts:54 语义）：会话运行归属
+  // 实例 + 租约到期（重启按租约接管，多实例协同最小充分机制）
+  owner_instance_id: 'TEXT NOT NULL DEFAULT \'\'',
+  lease_expires_at: 'INTEGER NOT NULL DEFAULT 0',
 }
 
 export const SESSIONS_INDEXES = {
