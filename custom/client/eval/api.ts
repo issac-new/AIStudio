@@ -373,6 +373,56 @@ export const evalApi = {
       `/api/governance/heldout/sets/${encodeURIComponent(id)}/score`,
       { method: 'POST', body: JSON.stringify({ answers }) },
     ),
+  // —— 数据飞轮（2026-10-25 吸收轮）：读数 / 五维变体批量扩产 ——
+  flywheel: () => req<FlywheelReadoutDto>('/api/hermes/eval/flywheel'),
+  expandBadcaseVariants: (body: { taskId?: string; allFromRegression?: boolean; dims?: string[] } = { allFromRegression: true }) =>
+    req<FlywheelVariantsDto>('/api/hermes/eval/badcase/variants', { method: 'POST', body: JSON.stringify(body) }),
+}
+
+// ---------- 数据飞轮 DTO（服务端契约镜像：custom/server/eval/flywheel.ts） ----------
+
+export interface FlywheelFunnelDto {
+  badCases: number
+  reflowed: number
+  distilled: number
+  variantBlueprints: number
+  variantTasks: number
+  remediationOpen: number
+  remediationClosed: number
+  conversionRate: number | null
+}
+
+export interface FlywheelRootCauseDto {
+  rootCause: string
+  label: string
+  count: number
+}
+
+export interface FlywheelGateDto {
+  status: 'no_data' | 'insufficient' | 'fail' | 'pass'
+  runId?: string
+  k?: number
+  minPassRate: number
+  minSamples: number
+  tasks: Array<{ taskId: string; samples: number; passed: number; passRate: number | null }>
+  reproduced: string[]
+  riskVeto?: boolean
+  note?: string
+}
+
+export interface FlywheelReadoutDto {
+  ok: boolean
+  funnel: FlywheelFunnelDto
+  byRootCause: FlywheelRootCauseDto[]
+  variantTasksInSets: number
+  gate: FlywheelGateDto
+}
+
+export interface FlywheelVariantsDto {
+  ok: boolean
+  appended: number
+  blueprints: Array<{ taskId: string; appended: number; variantIds: string[]; setId: string }>
+  skippedVariantBlueprints?: string[]
 }
 
 // ---------- 百度评测范式轮 DTO（服务端契约镜像） ----------
