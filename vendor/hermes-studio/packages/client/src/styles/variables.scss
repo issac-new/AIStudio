@@ -73,7 +73,7 @@
   --text-on-overlay: #ffffff;
   --accent-info: #4a90d9;
 
-  // RGB components (for rgba() usage)
+  // HERMES_CUSTOM[Branding] BEGIN: RGB component variables for rgba() usage
   --accent-primary-rgb: 51, 51, 51;
   --accent-hover-rgb: 26, 26, 26;
   --text-primary-rgb: 26, 26, 26;
@@ -83,6 +83,7 @@
   --error-rgb: 198, 40, 40;
   --warning-rgb: 245, 127, 23;
   --accent-info-rgb: 74, 144, 217;
+  // HERMES_CUSTOM[Branding] END
 }
 
 .dark {
@@ -153,6 +154,7 @@
   --error-rgb: 239, 83, 80;
   --warning-rgb: 255, 183, 77;
   --accent-info-rgb: 107, 163, 214;
+  // HERMES_CUSTOM[Branding] END
 }
 
 .comic {
@@ -241,3 +243,18 @@ $transition-normal: 0.25s ease;
     --studio-drawer-width: 100vw;
   }
 }
+// Utility
+$text-on-accent: var(--text-on-accent);
+$text-on-overlay: var(--text-on-overlay);
+$accent-info: var(--accent-info);
+
+// HERMES_CUSTOM[Branding] BEGIN: RGB SCSS variables (delegate to CSS custom properties)
+$accent-primary-rgb: var(--accent-primary-rgb);
+$accent-hover-rgb: var(--accent-hover-rgb);
+$text-primary-rgb: var(--text-primary-rgb);
+$text-muted-rgb: var(--text-muted-rgb);
+$success-rgb: var(--success-rgb);
+$error-rgb: var(--error-rgb);
+$warning-rgb: var(--warning-rgb);
+$accent-info-rgb: var(--accent-info-rgb);
+// HERMES_CUSTOM[Branding] END
