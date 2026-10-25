@@ -1,0 +1,52 @@
+// Combined afterPack hook: runs verify-packaged-webui + node-pty prebuild pruning.
+// electron-builder 25.x only supports a single afterPack string, so we wrap both
+// hooks in one CommonJS module.
+const { existsSync, readdirSync, rmSync } = require('node:fs')
+const { join } = require('node:path')
+
+// electron-builder passes context.arch as a NUMERIC enum (0=ia32, 1=x64,
+// 2=armv7l, 3=arm64, 4=universal), NOT the string name. node-pty's prebuilds
+// dirs are named <platform>-<arch-string> (e.g. darwin-arm64), so we must map
+// the number to the string. Mirrors builder-util's Arch enum and the upstream
+// verify-packaged-webui.mjs ARCH_NAMES array.
+const ARCH_NAMES = ['ia32', 'x64', 'armv7l', 'arm64', 'universal']
+function archName(arch) {
+  if (typeof arch === 'number') return ARCH_NAMES[arch] || String(arch)
+  return String(arch)
+}
+
+function resourcesDirFor(context) {
+  return context.electronPlatformName === 'darwin'
+    ? join(context.appOutDir, context.packager.appInfo.productFilename + '.app', 'Contents', 'Resources')
+    : join(context.appOutDir, 'resources')
+}
+
+async function verifyPackagedWebUi(context) {
+  const webUiRoot = join(resourcesDirFor(context), 'webui')
+  const required = [
+    join(webUiRoot, 'package.json'),
+    join(webUiRoot, 'bin', 'hermes-web-ui.mjs'),
+    join(webUiRoot, 'dist', 'server', 'index.js'),
+  ]
+  for (const f of required) {
+    if (!existsSync(f)) throw new Error('[after-pack] Missing required file: ' + f)
+  }
+}
+
+async function pruneNodePtyPrebuilds(context) {
+  const prebuildsDir = join(resourcesDirFor(context), 'webui', 'node_modules', 'node-pty', 'prebuilds')
+  if (!existsSync(prebuildsDir)) return
+  const target = context.electronPlatformName + '-' + archName(context.arch)
+  for (const entry of readdirSync(prebuildsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    if (entry.name !== target) {
+      rmSync(join(prebuildsDir, entry.name), { recursive: true, force: true })
+      console.log('[after-pack-prune] removed non-target node-pty prebuild: ' + entry.name + ' (keep: ' + target + ')')
+    }
+  }
+}
+
+module.exports = async function (context) {
+  await verifyPackagedWebUi(context)
+  await pruneNodePtyPrebuilds(context)
+}
