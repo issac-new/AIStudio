@@ -425,6 +425,11 @@ class GoalState:
     max_turns: int = DEFAULT_MAX_TURNS
     created_at: float = 0.0
     last_turn_at: float = 0.0
+    # overlay patch 499（goalbudget-server）：token/墙钟预算（缺省 0=不限）。
+    token_budget: int = 0
+    token_used: int = 0
+    wall_clock_budget_sec: float = 0.0
+    goal_started_at: float = 0.0
     last_verdict: Optional[str] = None        # "done" | "blocked" | "continue" | "wait" | "skipped"
     last_reason: Optional[str] = None
     paused_reason: Optional[str] = None       # why we auto-paused (budget, etc.)
@@ -460,7 +465,9 @@ class GoalState:
         data = json.loads(raw)
         raw_subgoals = data.get("subgoals") or []
         ints = {k: int(data.get(k) or 0) for k in ("turns_used", "consecutive_parse_failures", "consecutive_transport_failures", "waiting_on_delegations")}
-        floats = {k: float(data.get(k) or 0.0) for k in ("created_at", "last_turn_at", "waiting_until", "waiting_since")}
+        floats = {k: float(data.get(k) or 0.0) for k in ("created_at", "last_turn_at", "waiting_until", "waiting_since", "wall_clock_budget_sec", "goal_started_at")}
+        # overlay patch 499：token/墙钟预算字段（旧档缺省 0=不限，兼容不炸）。
+        ints_budget = {k: int(data.get(k) or 0) for k in ("token_budget", "token_used")}
         return cls(
             goal=data.get("goal", ""),
             status=data.get("status", "active"),
@@ -1147,6 +1154,11 @@ class GoalManager:
         if s is None or s.status == "cleared":
             return "No active goal. Set one with /goal <text>."
         turns = f"{s.turns_used}/{s.max_turns} turns"
+        # overlay patch 499：预算维度展示（0=不限不显）。
+        if s.token_budget > 0:
+            turns += f" · {s.token_used}/{s.token_budget} tok"
+        if s.wall_clock_budget_sec > 0 and s.goal_started_at > 0:
+            turns += f" · {int(time.time() - s.goal_started_at)}/{int(s.wall_clock_budget_sec)}s"
         sub = f", {len(s.subgoals)} subgoal{'s' if len(s.subgoals) != 1 else ''}" if s.subgoals else ""
         con = ", contract" if self.has_contract() else ""
         gat = f", {len(s.gates)} gate{'s' if len(s.gates) != 1 else ''}" if s.gates else ""
@@ -1509,7 +1521,9 @@ class GoalManager:
         self, last_response: str, *, user_initiated: bool = True,
         background_processes: Optional[list[dict[str, Any]]] = None,
         active_delegations: int = 0,
+        last_usage_tokens: int = 0,
     ) -> dict[str, Any]:
+        # overlay patch 499：调用方传上轮 usage（CLI/gateway 有 usage 面时传；缺省不累计）。
         """Run gates + judge and update state. Return a decision dict (``status``, ``should_continue``,
         ``continuation_prompt``, ``verdict``, ``reason``, ``message``). Both real user prompts and our
         own continuations increment ``turns_used`` — both consume model budget."""
@@ -1530,8 +1544,25 @@ class GoalManager:
                 "用户消息插话——自治目标让位（GOAL-05）；发送你的消息继续",
             )
 
+        # overlay patch 499（goalbudget-server）：墙钟触顶（token 由调用方累加，
+        # evaluate_after_turn(last_usage_tokens=...) 传入；缺省 0 不启用）。
+        if state.wall_clock_budget_sec > 0 and state.goal_started_at > 0:
+            elapsed = time.time() - state.goal_started_at
+            if elapsed >= state.wall_clock_budget_sec:
+                self._pause_state("wall-clock-budget")
+                return _decision("paused", False, None, "budget", "wall clock budget exhausted",
+                                 f"墙钟预算触顶（{int(elapsed)}s/{int(state.wall_clock_budget_sec)}s）")
+        if state.token_budget > 0 and state.token_used >= state.token_budget:
+            self._pause_state("token-budget")
+            return _decision("paused", False, None, "budget", "token budget exhausted",
+                             f"token 预算触顶（{state.token_used}/{state.token_budget}）")
+
         state.turns_used += 1
         state.last_turn_at = time.time()
+        if last_usage_tokens > 0:
+            state.token_used += int(last_usage_tokens)
+        if state.goal_started_at <= 0:
+            state.goal_started_at = state.created_at or time.time()
 
         # Gates run BEFORE the judge: a failing gate is deterministic evidence the goal is not done,
         # so the judge is skipped and the gate's output drives the next turn (same turn budget).
