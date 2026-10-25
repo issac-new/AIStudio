@@ -324,6 +324,12 @@ class GatewayTurnMixin(GatewayTurnPrepareMixin, GatewayTurnHygieneMixin, Gateway
             # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.
             from gateway.session_telemetry import record_turn_telemetry
             record_turn_telemetry(self, session_entry, agent_result, source)
+            # Long-session rotation (603): telemetry-driven session lifecycle policy; default
+            # report mode (notice only), auto reuses the compression-exhaustion funnel.
+            from gateway.session_rotation import maybe_rotate_session
+            response, session_entry = await maybe_rotate_session(
+                self, agent_result, response, session_entry, session_key, source,
+            )
             response, session_entry = await self._hmwa_compression_exhaustion_reset(
                 agent_result, response, session_entry, session_key, source,
             )
