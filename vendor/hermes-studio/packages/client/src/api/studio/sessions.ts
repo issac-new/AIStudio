@@ -205,7 +205,7 @@ export async function fetchSessions(source?: string, limit?: number, profile?: s
   if (profile) params.set('profile', profile)
   const query = params.toString()
   const res = await request<{ sessions: SessionSummary[] }>(`/api/studio/sessions${query ? `?${query}` : ''}`)
-  return res.sessions
+  return res?.sessions ?? []
 }
 
 export async function fetchSessionCategories(): Promise<SessionCategory[]> {
@@ -393,7 +393,7 @@ export async function fetchHermesSessions(source?: string, limit?: number, profi
   if (profile) params.set('profile', profile)
   const query = params.toString()
   const res = await request<{ sessions: SessionSummary[] }>(`/api/studio/sessions/hermes${query ? `?${query}` : ''}`)
-  return res.sessions
+  return res?.sessions ?? []
 }
 
 export async function fetchHermesSessionGroups(
