@@ -38,6 +38,14 @@ RUNAWAY_SIGNALS = (
     "unchanged_progress_repeat",
 )
 
+# 文本侧信号（mimo max-mode ngram 原语，P6 spec §3.2；与工具侧六信号分表冻结）。
+TEXT_SIGNALS = ("text_ngram_repeat",)
+
+_NGRAM_N_WORDS = 8          # mimo max-mode.ts:22-28 同款词级 8-gram
+_NGRAM_REPEAT_THRESHOLD = 0.6
+_NGRAM_CONSECUTIVE_WINDOWS = 2
+_TEXT_WINDOW = 4             # 滚动保留最近几条 assistant 文本
+
 _FINGERPRINT_INPUT_CAP_BYTES = 16 * 1024  # minimax fingerprint.ts 同款有界序列化
 _DEFAULT_WINDOW = 24
 
@@ -103,6 +111,8 @@ class RunawayGuard:
     _actions: list = field(default_factory=list)   # [(tool, action_fp)]
     _results: list = field(default_factory=list)   # [result_fp]
     _errors: list = field(default_factory=list)    # [family]
+    _texts: list = field(default_factory=list)     # [frozenset(ngram) | None]
+    _text_hot_windows: int = 0
     _last_signal: Optional[RunawaySignal] = None
 
     def observe_tool_step(self, tool: str, args: Any, result: Any) -> Optional[RunawaySignal]:
@@ -128,6 +138,49 @@ class RunawayGuard:
         if signal is not None:
             self._last_signal = signal
         return signal
+
+    # ── 文本侧（ngram 防循环，mimo max-mode 原语；P6 spec §3.2）──
+
+    def observe_text_step(self, text: str) -> Optional[RunawaySignal]:
+        """每条完成的 assistant 文本喂一次；相邻两窗 ngram 重复率连续超阈 → 信号。
+
+        只发信号不打断（处置权在人，与 cockpit 失控信号语义一致）。短文本（不足一个
+        8-gram）不参与，避免把简短确认语误判为循环。
+        """
+        grams = self._text_ngrams(text)
+        if not grams:
+            self._texts.append(None)  # 占位保持窗口连续性语义：无法判定 ≠ 通过
+            del self._texts[:-_TEXT_WINDOW]
+            self._text_hot_windows = 0
+            return None
+        self._texts.append(grams)
+        del self._texts[:-_TEXT_WINDOW]
+        prev = self._texts[-2] if len(self._texts) >= 2 else None
+        if prev is None:
+            return None
+        overlap = len(grams & prev) / max(1, len(grams | prev))  # Jaccard
+        if overlap > _NGRAM_REPEAT_THRESHOLD:
+            self._text_hot_windows += 1
+            if self._text_hot_windows >= _NGRAM_CONSECUTIVE_WINDOWS:
+                sig = RunawaySignal(
+                    "text_ngram_repeat", "(assistant-text)", self._text_hot_windows,
+                    f"相邻文本窗 8-gram 重复率连续 {self._text_hot_windows} 次超 {_NGRAM_REPEAT_THRESHOLD}（最新 {overlap:.2f}）",
+                )
+                self._last_signal = sig
+                return sig
+        else:
+            self._text_hot_windows = 0
+        return None
+
+    @staticmethod
+    def _text_ngrams(text: str) -> Optional[frozenset]:
+        words = text.split()
+        if len(words) < _NGRAM_N_WORDS:
+            return None
+        return frozenset(
+            " ".join(words[i:i + _NGRAM_N_WORDS])
+            for i in range(len(words) - _NGRAM_N_WORDS + 1)
+        )
 
     @property
     def last_signal(self) -> Optional[RunawaySignal]:
@@ -225,16 +278,53 @@ def observe_tool_step(agent: Any, tool: str, args: Any, result: Any,
     guard = get_agent_guard(agent)
     signal = guard.observe_tool_step(tool, args, result)
     if signal is not None:
-        logger.warning("runaway-guard [%s] %s: %s", signal.signal, signal.tool, signal.detail)
-        agent._last_runaway_signal = signal
-        if notify is not None:
-            try:
-                notify(signal)
-            except Exception:  # noqa: BLE001 - 通知面故障绝不影响执行链
-                pass
-        if should_interrupt_on_signal():
-            try:
-                agent.interrupt(f"runaway-guard: {signal.signal}")
-            except Exception:  # noqa: BLE001
-                pass
+        _report_signal(agent, signal, notify)
+    return signal
+
+
+def _report_signal(agent: Any, signal: RunawaySignal,
+                   notify: Optional[Callable[[RunawaySignal], None]]) -> None:
+    logger.warning("runaway-guard [%s] %s: %s", signal.signal, signal.tool, signal.detail)
+    agent._last_runaway_signal = signal
+    if notify is not None:
+        try:
+            notify(signal)
+        except Exception:  # noqa: BLE001 - 通知面故障绝不影响执行链
+            pass
+    if should_interrupt_on_signal():
+        try:
+            agent.interrupt(f"runaway-guard: {signal.signal}")
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _text_content(message: Any) -> str:
+    """从 assistant 消息或裸字符串提取文本内容（容错：非文本形态返回空）。"""
+    if isinstance(message, str):
+        return message
+    content = getattr(message, "content", None)
+    if content is None and isinstance(message, dict):
+        content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and isinstance(part.get("text"), str):
+                parts.append(part["text"])
+        return "\n".join(parts)
+    return ""
+
+
+def observe_text_step(agent: Any, message_or_text: Any,
+                      notify: Optional[Callable[[RunawaySignal], None]] = None) -> Optional[RunawaySignal]:
+    """conversation_loop 文本侧接线点（每条 assistant 消息一次）；关守卫时零成本直通。"""
+    if not runaway_guard_enabled():
+        return None
+    guard = get_agent_guard(agent)
+    signal = guard.observe_text_step(_text_content(message_or_text))
+    if signal is not None:
+        _report_signal(agent, signal, notify)
     return signal

@@ -192,6 +192,20 @@ def _resolve_budget_fallback(
     # closed it — the CAS invariant in ``_end_run`` (``WHERE ended_at IS NULL``) guarantees idempotence.
     if _kanban_task:
         _record_kanban_budget_exhausted(_kanban_task, api_call_count, agent.max_iterations, logger)
+        # P7 会话进展 checkpoint（mimo 吸收）：预算触顶触发写手——任务重开可从 checkpoint
+        # 续跑而非从零。只做状态面（不自动改任务状态/派发 next）；env 开关整体关闭；
+        # 写手故障走兜底摘要，绝不阻断收尾链。
+        try:
+            from agent.session_checkpoint import default_call_fn, write_checkpoint
+            write_checkpoint(
+                _kanban_task, api_call_count,
+                reason="budget_exhausted",
+                goal_hint=f"kanban task {_kanban_task}",
+                trajectory_digest=str(getattr(final_response, "content", "") or "")[:1200],
+                call_fn=default_call_fn,
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("session-checkpoint: budget-exhausted write skipped", exc_info=True)
     return final_response, _turn_exit_reason, preserved_verification_fallback, interrupted
 
 

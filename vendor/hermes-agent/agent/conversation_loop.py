@@ -1757,6 +1757,13 @@ def _run_conversation_turn(
                 return _ri.result
             if _ri.action == "continue":
                 continue
+            # ngram 防循环（mimo max-mode 原语，P6）：文本侧每 assistant 消息观测一次，
+            # 只发信号不打断；守卫自身故障零影响主循环。
+            try:
+                from agent.runaway_guard import observe_text_step
+                observe_text_step(agent, s.assistant_message)
+            except Exception:  # noqa: BLE001
+                pass
             _v = _run_phase(
                 run_tool_round if s.assistant_message.tool_calls else finish_text_response, agent, s
             )
