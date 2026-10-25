@@ -123,7 +123,7 @@ async function handleDownload(): Promise<void> {
     } else if (file.workspaceSessionId) {
       await downloadSessionWorkspaceFile(file.workspaceSessionId, file.path, file.name)
     } else {
-      await downloadFile(file.path, file.name, file.profile)
+      await downloadFile(file.path, file.name, file.profile, filesStore.workspaceRoot)
     }
   } catch (error) {
     message.error(error instanceof Error ? error.message : t('download.downloadFailed'))

@@ -91,7 +91,7 @@ async function handleSelect(key: string) {
       try {
         if (filesStore.currentWorkspaceRoomId) await downloadGroupWorkspaceFile(filesStore.currentWorkspaceRoomId, entry.path, entry.name)
         else if (filesStore.currentWorkspaceSessionId) await downloadSessionWorkspaceFile(filesStore.currentWorkspaceSessionId, entry.path, entry.name)
-        else await downloadFile(entry.path, entry.name, filesStore.currentProfile)
+        else await downloadFile(entry.path, entry.name, filesStore.currentProfile, filesStore.workspaceRoot)
       } catch (err: any) { message.error(err.message) }
       break
     case 'copyPath': {
