@@ -141,10 +141,72 @@ def _eval_gates(
         evidence=evidence,
         gates=gates,
     )
+    # overlay[ontology]（本体轮四阶段路线二）：执行式校验器——validatorExec 真跑
+    # studio 本体结卡校验（单任务增量摄取+校验，REST 毫秒级），rc!=0 = 数据契约
+    # 违规。工具缺席（studio 后端未起/超时）= 放行 + detail 注明——工具故障不是
+    # 数据违规，fail-open 不拦卡。与 validatorCommand（证据字面量门）互补：
+    # 字面量门约束"结卡证据要写校验结果"，本门保证"校验真的跑过且通过"。
+    if gates.get("validatorExec"):
+        results.append(_run_ontology_validator(conn, task_id))
     payload: dict[str, Any] = {"to": to_status, "mode": mode, "results": results}
     if actor:
         payload["actor"] = actor
     return mode, results, payload
+
+
+def _board_slug_for_validator(conn: Any) -> str:
+    """从 DB 实路径推板 slug（与 _gates_file_for_conn 同源逻辑：PRAGMA 权威）。"""
+    try:
+        rows = conn.execute("PRAGMA database_list").fetchall()
+        main = next((r for r in rows if r["name"] == "main"), None)
+        if main is None or not main["file"]:
+            return "main"
+        path = str(main["file"]).replace("\\", "/")
+        m = re.search(r"/boards/([^/]+)/kanban\.db$", path)
+        return m.group(1) if m else "main"
+    except Exception:
+        return "main"
+
+
+def _run_ontology_validator(conn: Any, task_id: str) -> dict[str, Any]:
+    """validatorExec 门执行体：POST studio agent 桥（公开段，限回环）。
+
+    走 /api/ontology/agent-bridge/validate-task（cron-bridge 同款公开段通道——
+    鉴权段端点对 agent 侧无凭据恒 401，只能 fail-open 形同虚设）。token 经
+    ONTOLOGY_BRIDGE_TOKEN（与 studio 同名 env；studio 侧设了才需要）。fail-open：
+    连接失败/超时（默认 5s）不判违规——工具缺席放行并留痕。
+    """
+    import json as _json
+    import os
+    import urllib.request
+
+    base = os.environ.get("HERMES_STUDIO_ONTOLOGY_URL", "http://127.0.0.1:8647").rstrip("/")
+    board = _board_slug_for_validator(conn)
+    headers = {"Content-Type": "application/json"}
+    token = os.environ.get("ONTOLOGY_BRIDGE_TOKEN", "").strip()
+    if token:
+        headers["x-ontology-bridge-token"] = token
+    try:
+        req = urllib.request.Request(
+            f"{base}/api/ontology/agent-bridge/validate-task",
+            data=_json.dumps({"board": board, "taskId": task_id}).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = _json.loads(resp.read().decode("utf-8"))
+        if body.get("ok") is True:
+            return {"gate": "validatorExec", "ok": True}
+        violations = body.get("violations") or []
+        detail = "; ".join(
+            f"{v.get('code')} {v.get('path', '')}: {v.get('detail', '')}".strip()
+            for v in violations[:3]
+        ) or str(body.get("detail", "validator failed"))
+        return {"gate": "validatorExec", "ok": False,
+                "reason": "validator_failed", "detail": detail[:300]}
+    except Exception as exc:  # 工具缺席（后端未起/超时/坏响应）——fail-open 放行
+        return {"gate": "validatorExec", "ok": True,
+                "detail": f"ontology validator unavailable (fail-open): {exc}"}
 
 
 def enforce_column_gates(

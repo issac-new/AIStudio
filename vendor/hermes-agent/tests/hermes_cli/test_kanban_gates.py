@@ -274,3 +274,83 @@ class TestTransitionAtomicity:
             expected_run_id=999) is False
         assert kb.get_task(conn, task_id).status == "ready"
         assert not _events(conn, task_id, "column_transition")
+
+
+class TestValidatorExecGate:
+    """overlay[ontology] 四阶段路线二：validatorExec 执行式校验器门。
+
+    三路：真跑（本地 http 桩应答违规/通过）+ 工具缺席 fail-open（放行留痕）。
+    reason 复用 frozen 词表 validator_failed（UI 零改动）。
+    """
+
+    @staticmethod
+    def _stub_server(handler) -> tuple:
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        class _H(BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = handler(self.path)
+                data = json.dumps(body).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *args):
+                pass
+
+        srv = HTTPServer(("127.0.0.1", 0), _H)
+        t = threading.Thread(target=srv.serve_forever, daemon=True)
+        t.start()
+        return srv, f"http://127.0.0.1:{srv.server_address[1]}"
+
+    @staticmethod
+    def _connect():
+        from hermes_cli import kanban_db_connect
+        return kanban_db_connect.connect()
+
+    def test_violation_blocks_in_blocking_mode(self, fresh_home, monkeypatch):
+        srv, url = self._stub_server(lambda _p: {
+            "ok": False, "found": True, "rc": 1,
+            "violations": [{"severity": "error", "code": "field:enum",
+                            "subject": "t", "path": "status", "detail": "status 越出枚举：banana"}],
+        })
+        monkeypatch.setenv("HERMES_STUDIO_ONTOLOGY_URL", url)
+        try:
+            _write_gates(fresh_home, {"done": {"validatorExec": True, "gateMode": "blocking"}})
+            conn = self._connect()
+            task_id = _make_task(conn, title="card")
+            assert _expect_gate_block(
+                lambda: kb.complete_task(conn, task_id, result="done work", summary="done work"),
+                "done")
+            assert kb.get_task(conn, task_id).status == "ready"
+        finally:
+            srv.shutdown()
+
+    def test_pass_records_column_transition(self, fresh_home, monkeypatch):
+        srv, url = self._stub_server(lambda _p: {"ok": True, "rc": 0, "violations": []})
+        monkeypatch.setenv("HERMES_STUDIO_ONTOLOGY_URL", url)
+        try:
+            _write_gates(fresh_home, {"done": {"validatorExec": True}})
+            conn = self._connect()
+            task_id = _make_task(conn, title="card")
+            assert kb.complete_task(conn, task_id, result="ok", summary="ok") is not False
+            assert kb.get_task(conn, task_id).status == "done"
+            events = _events(conn, task_id, "column_transition")
+            assert events and any(
+                r.get("gate") == "validatorExec" and r.get("ok") for r in events[0]["results"])
+        finally:
+            srv.shutdown()
+
+    def test_unavailable_validator_fails_open(self, fresh_home, monkeypatch):
+        monkeypatch.setenv("HERMES_STUDIO_ONTOLOGY_URL", "http://127.0.0.1:1")
+        _write_gates(fresh_home, {"done": {"validatorExec": True, "gateMode": "blocking"}})
+        conn = self._connect()
+        task_id = _make_task(conn, title="card")
+        assert kb.complete_task(conn, task_id, result="ok", summary="ok") is not False
+        assert kb.get_task(conn, task_id).status == "done"  # 工具缺席不拦卡
+        events = _events(conn, task_id, "column_transition")
+        assert events and any(
+            "fail-open" in str(r.get("detail", "")) for r in events[0]["results"])
