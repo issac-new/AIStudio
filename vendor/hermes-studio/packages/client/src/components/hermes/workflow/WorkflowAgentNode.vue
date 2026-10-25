@@ -18,7 +18,18 @@ import { configuredProviderApiMode, canScopedCodingAgentUseProvider } from '@/ut
 
 import '@vue-flow/node-resizer/dist/style.css'
 
-const props = defineProps<NodeProps<WorkflowAgentNodeData>>()
+const props = defineProps<{
+  data: WorkflowAgentNodeData
+  id: string
+  type?: string
+  selected?: boolean
+  connectable?: unknown
+  position?: { x: number; y: number }
+  dimensions?: { width: number; height: number }
+  label?: unknown
+  dragging?: boolean
+  resizing?: boolean
+}>()
 const { t } = useI18n()
 const message = useMessage()
 const attachmentInputRef = ref<HTMLInputElement | null>(null)

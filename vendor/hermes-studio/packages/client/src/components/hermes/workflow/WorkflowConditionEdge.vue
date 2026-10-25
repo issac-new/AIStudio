@@ -7,7 +7,22 @@ import {
   type WorkflowSelfLoopGeometry,
 } from '@/utils/workflow-edge-authoring'
 
-const props = defineProps<EdgeProps>()
+const props = defineProps<{
+  id: string
+  label?: unknown
+  source: string
+  target: string
+  sourceX?: number
+  sourceY?: number
+  targetX?: number
+  targetY?: number
+  sourcePosition?: any
+  targetPosition?: any
+  sourceNode?: any
+  targetNode?: any
+  markerEnd?: unknown
+  data?: unknown
+}>()
 const emit = defineEmits<{ edit: [edgeId: string] }>()
 
 const nodeBounds = computed(() => ({
