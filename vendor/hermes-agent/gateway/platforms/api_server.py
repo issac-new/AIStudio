@@ -2397,6 +2397,18 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
             configured_model=_resolve_gateway_model(), runtime_status=runtime,
             active_api_runs=active_api_runs, process_completion_queue_depth=process_depth,
             active_delegations=active_delegations)
+        # ``platforms`` is a persistent diagnostic map and may carry entries stamped by a
+        # previous gateway run (survived restarts) or another profile. Loaded set only keeps
+        # entries this process wrote, so dashboards cannot mistake stale/other-profile state
+        # for channels loaded by the current gateway.
+        current_start = runtime.get("start_time")
+        loaded_platforms = {
+            key: value for key, value in (runtime.get("platforms") or {}).items()
+            if isinstance(value, dict)
+            and value.get("writer_pid") == os.getpid()
+            and current_start is not None
+            and value.get("writer_start_time") == current_start
+        }
         return web.json_response({
 "status": readiness["status"], "readiness": readiness, "platform": "hermes-agent",
             "version": _hermes_version(), "gateway_state": gw_state,
@@ -2404,6 +2416,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
             "api_server": api_status,
             "metrics_today": api_status["metrics_today"],
             "last_heartbeat": api_status["last_heartbeat"],
+            "loaded_platforms": loaded_platforms,
+            "served_profiles": runtime.get("served_profiles", []),
             "active_agents": gw_active,
             "gateway_busy": derive_gateway_busy(
                 gateway_running=True, gateway_state=gw_state, active_agents=gw_active),
