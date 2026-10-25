@@ -22,6 +22,9 @@ from tools.budget_config import DEFAULT_PREVIEW_SIZE_CHARS, BudgetConfig, DEFAUL
 logger = logging.getLogger(__name__)
 PERSISTED_OUTPUT_TAG = "<persisted-output>"
 PERSISTED_OUTPUT_CLOSING_TAG = "</persisted-output>"
+# ObservationPack tail excerpt (SoL-Pi: head+tail beats head-only — diagnostics live at
+# the end of logs). 512 chars ≈ 128-170 tokens, paid once per archived result.
+DEFAULT_TAIL_EXCERPT_CHARS = 512
 STORAGE_DIR = os.path.join(tempfile.gettempdir(), "hermes-results")
 SPILLOVER_SUBDIR = "cache/spillover"
 # Fallback spillover age only (unreadable config); the real default is the session
@@ -281,6 +284,19 @@ def generate_preview(content: str, max_chars: int = DEFAULT_PREVIEW_SIZE_CHARS) 
     return content[:last_nl + 1 if last_nl > max_chars // 2 else max_chars], True
 
 
+def generate_tail_excerpt(content: str, max_chars: int = DEFAULT_TAIL_EXCERPT_CHARS) -> str:
+    """Last *max_chars* of *content* on a line boundary (SoL-Pi ObservationPack head+tail
+    excerpt). Diagnostics concentrate at the END of logs — stack traces, test summaries,
+    exit lines — so the tail is where a lossy preview pays for itself."""
+    if len(content) <= max_chars:
+        return ""
+    tail = content[-max_chars:]
+    first_nl = tail.find("\n")
+    if 0 < first_nl < max_chars // 2:
+        tail = tail[first_nl + 1:]
+    return tail
+
+
 def _pageable_text(content: str) -> str:
     """Rewrite an MCP handler result envelope into the text it wraps, else return *content*.
 
@@ -364,22 +380,31 @@ def _write_to_sandbox(content: str, remote_path: str, env) -> bool:
 
 
 def _build_persisted_message(preview: str, has_more: bool, original_size: int,
-                             file_path: str) -> str:
-    """Build the <persisted-output> replacement block."""
+                             file_path: str, tail: str = "", tool_ref: str = "") -> str:
+    """Build the <persisted-output> replacement block.
+
+    ``tail``: end-of-output excerpt (lossy previews cut exactly where diagnostics live).
+    ``tool_ref``: the tool_call_id — the stable recall handle ``obs_recall`` keys on.
+    """
     size_kb = original_size / 1024
     size_str = f"{size_kb / 1024:.1f} MB" if size_kb >= 1024 else f"{size_kb:.1f} KB"
+    ref_line = (f"Result id for obs_recall: {tool_ref}\n" if tool_ref else "")
+    tail_block = ""
+    if tail:
+        tail_block = (f"\nTail (last {len(tail)} chars):\n{tail}\n")
     return (
         f"{PERSISTED_OUTPUT_TAG}\n"
         f"This tool result was too large ({original_size:,} characters, {size_str}).\n"
         f"Full output saved to: {file_path}\n"
-        "Use the read_file tool with offset and limit to access specific sections of this output.\n"
-        "Recovery: page through the saved file with read_file (offset/limit) or "
-        "process it with execute_code — do NOT re-request the same data from the "
+        f"{ref_line}"
+        "Recall: obs_recall with the result id (paged, line-numbered) or read_file with "
+        "offset/limit on the saved path — do NOT re-request the same data from the "
         "remote API; the archive is kept while this session's transcript references "
         "it. If it is missing, inspect the current state before retrying — the call "
         "that produced it may already have taken effect.\n\n"
         f"Preview (first {len(preview)} chars):\n"
         + preview + ("\n..." if has_more else "")
+        + tail_block
         + f"\n{PERSISTED_OUTPUT_CLOSING_TAG}")
 
 
@@ -409,11 +434,19 @@ def maybe_persist_tool_result(content: str, tool_name: str, tool_use_id: str, en
     persisted_content = _pageable_text(content)
     filename = _safe_result_filename(tool_use_id)
     preview, has_more = generate_preview(persisted_content, max_chars=config.preview_size)
+    tail = generate_tail_excerpt(persisted_content)
 
     def _persisted(path: str, host_suffix: str = "") -> str:
         logger.info("Persisted large tool result: %s (%s, %d chars -> %s%s)",
                     tool_name, tool_use_id, len(persisted_content), path, host_suffix)
-        return _build_persisted_message(preview, has_more, len(persisted_content), path)
+        message = _build_persisted_message(preview, has_more, len(persisted_content), path,
+                                           tail=tail, tool_ref=str(tool_use_id))
+        from tools.efficiency_ledger import record_efficiency_event
+        record_efficiency_event(
+            "observation_archive", tool=tool_name, ref=str(tool_use_id),
+            chars_original=len(persisted_content), chars_inline=len(message),
+            archive=os.path.basename(path))
+        return message
 
     # Always persist host-side first: cache/spillover is the single canonical home.
     host_path = _write_to_spillover(persisted_content, filename)
