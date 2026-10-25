@@ -7,6 +7,9 @@ import {
 } from '../services/files/file-provider'
 import { isPathWithin, relativePathFromBase } from '../../hermes/services/runtime/path'
 import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
+// HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
+import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../../custom/services/hermes/task-workspace-cache'
+// HERMES_CUSTOM[TaskWorkspaceAllowlist] END
 import { MultipartParseError, parseMultipartBoundary, parseMultipartFilename, splitMultipart } from '../public/multipart'
 
 function requestedProfile(ctx: any): string | undefined {
@@ -27,7 +30,9 @@ function resolveRequestPath(ctx: any, relativePath: string): string {
   if (root) {
     const hermesBase = getHermesBaseDir()
     const candidate = relativePath ? join(root, relativePath) : root
-    if (!isPathWithin(candidate, hermesBase)) {
+    // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 越界时放行已知任务 workspace_path
+    // 否则系统级任务（workspace_path=/Users/<user> 等 ~/.hermes 外目录）无法浏览
+    if (!isPathWithin(candidate, hermesBase) && !isWithinKnownTaskWorkspace(candidate)) {
       throw Object.assign(new Error('Requested path is outside the hermes base sandbox'), { code: 'invalid_path' })
     }
     return candidate
@@ -82,6 +87,15 @@ function handleError(ctx: any, err: any) {
 export async function list(ctx: any) {
   const relativePath = (ctx.query.path as string) || ''
   const root = requestedRoot(ctx)
+  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 仅越界路径需要放行清单——
+  // 沙箱内路径不再被任务 workspace CLI 预热拖住（冷刷新 ~9s 曾落在每个 TTL
+  // 窗口的首个带 root 请求上，repo wiki 列表首开即 9s+）；coding-agent 工作区
+  // 由静态前缀放行，无需等待 CLI 缓存刷新
+  if (root) {
+    const candidate = relativePath ? join(root, relativePath) : root
+    if (!isPathWithin(candidate, getHermesBaseDir()) && !isWithinKnownTaskWorkspace(candidate)) await primeTaskWorkspaceCache()
+  }
+  // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
   // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: 使用 root 时要求 super_admin
   if (root && ctx.state.user?.role !== 'super_admin') {
     ctx.status = 403

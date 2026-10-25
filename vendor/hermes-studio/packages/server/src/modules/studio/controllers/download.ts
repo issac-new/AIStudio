@@ -11,6 +11,9 @@ import { getActiveProfileName } from '../public/profile-config'
 // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: root 参数沙箱校验
 import { isPathWithin } from '../../hermes/services/runtime/path'
 import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
+// HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
+import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../../custom/services/hermes/task-workspace-cache'
+// HERMES_CUSTOM[TaskWorkspaceAllowlist] END
 // HERMES_CUSTOM[SecFileRootSandbox] END
 import { createAppImagePreview } from '../services/files/app-image-preview'
 
@@ -84,6 +87,13 @@ export async function download(ctx: any) {
 
   try {
     const profile = requestedProfile(ctx)
+    // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 仅越界路径需要放行清单——
+    // 沙箱内路径不再被任务 workspace CLI 预热拖住（与 files.ts list 同修）；
+    // coding-agent 工作区由静态前缀放行，无需等待 CLI 缓存刷新
+    if (root && !isPathWithin(resolve(root, filePath), getHermesBaseDir()) && !isWithinKnownTaskWorkspace(resolve(root, filePath))) {
+      await primeTaskWorkspaceCache()
+    }
+    // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
     // Validate the path first
     // Support both absolute and relative paths
     // Support both absolute and relative paths; when a root is provided,
@@ -102,7 +112,9 @@ export async function download(ctx: any) {
       }
       const hermesBase = getHermesBaseDir()
       const candidate = resolve(root, filePath)
-      if (!isPathWithin(candidate, hermesBase)) {
+      // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 越界时放行已知任务 workspace_path
+      if (!isPathWithin(candidate, hermesBase) && !isWithinKnownTaskWorkspace(candidate)) {
+      // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
         ctx.status = 403
         ctx.body = { error: 'Requested path is outside the hermes base sandbox', code: 'invalid_path' }
         return
