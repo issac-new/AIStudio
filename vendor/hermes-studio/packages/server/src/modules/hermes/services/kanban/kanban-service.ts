@@ -7,6 +7,7 @@ import { detectHermesRootHome } from '../runtime/path'
 import { execHermes, spawnHermes } from '../runtime/process'
 import { safeFileStore } from '../../../studio/public/safe-file-store'
 import { getActiveProfileName, getProfileDir } from '../profiles/profile'
+import { RACIDispatchService } from '../../../../custom/services/kanban/raci-dispatch'
 
 const execOpts = { windowsHide: true }
 const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -634,7 +635,15 @@ export async function createTask(
       timeout: 30000,
       ...execOpts,
     })
-    return JSON.parse(stdout)
+    const created = JSON.parse(stdout) as KanbanTask
+    // HERMES_CUSTOM[aipaydev] BEGIN: RACI 派发（best-effort，不阻断任务创建）
+    try {
+      await RACIDispatchService.dispatch(created)
+    } catch (e) {
+      logger.warn(`RACI dispatch failed for task ${created.id}: ${(e as Error).message}`)
+    }
+    // HERMES_CUSTOM[aipaydev] END
+    return created
   } catch (err: any) {
     logger.error(err, 'Hermes CLI: kanban create failed')
     throw new Error(`Failed to create kanban task: ${err.message}`)
