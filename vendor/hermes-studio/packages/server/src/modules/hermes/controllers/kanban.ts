@@ -584,6 +584,14 @@ export async function complete(ctx: Context) {
     await kanbanCli.completeTasks(taskIds.value!, summary.value, { board, operatorOverride: true })
     ctx.body = { ok: true }
   } catch (err: any) {
+    // HERMES_CUSTOM[aipaydev] BEGIN
+    if (err?.kanbanBlocked) {
+      ctx.status = 422
+      ctx.body = { error: err.message, code: 'completion_blocked',
+        hint: /result\/summary/.test(err.message) ? 'fill result/summary then complete' : 'resolve blockers then complete' }
+      return
+    }
+    // HERMES_CUSTOM[aipaydev] END
     ctx.status = 500
     ctx.body = { error: err.message }
   }

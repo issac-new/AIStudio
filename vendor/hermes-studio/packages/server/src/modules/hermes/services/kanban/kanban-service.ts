@@ -404,6 +404,21 @@ async function execKanbanMutation(
     return textFromExecValue(stdout)
   } catch (err: any) {
     logger.error(err, logMessage)
+    // HERMES_CUSTOM[aipaydev] BEGIN
+    // run11 实锤：hermes CLI 完成闸（completion_blocked_empty_result 等）经此冒泡为
+    // 不透明 500。完成闸拒绝是预期业务态（result/summary 缺失、前置未闭环）——
+    // 分类打标并附行动提示，控制器据此映射 422（controllers/kanban.ts 同批）。
+    const raw = String(err?.message || err || '')
+    if (/completion_blocked|cannot complete/i.test(raw)) {
+      const blocked = new Error(
+        `${errorPrefix}: ${raw}` +
+        (/(empty_result|result)/i.test(raw)
+          ? '（完成闸：结构化 result/summary 为空——先在卡上填写 result/summary，或随本次提交一并携带后再完成）'
+          : '（完成闸：完成前置未满足——检查前置依赖/评审项后重试）'))
+      ;(blocked as any).kanbanBlocked = true
+      throw blocked
+    }
+    // HERMES_CUSTOM[aipaydev] END
     throw new Error(`${errorPrefix}: ${err.message}`)
   }
 }
