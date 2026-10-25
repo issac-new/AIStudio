@@ -28,7 +28,7 @@ function storedPreference(key: string, fallback: string): string {
   }
 }
 
-const savedBrightness = storedPreference('hermes_brightness', 'system')
+const savedBrightness = storedPreference('hermes_brightness', 'dark')
 const themeStyle = useTheme().style.value
 
 // Resolve dark mode

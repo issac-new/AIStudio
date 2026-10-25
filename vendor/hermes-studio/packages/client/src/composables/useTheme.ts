@@ -94,7 +94,7 @@ function loadCachedTheme(userId: number | null): UserThemeSettings {
 }
 
 const brightness = ref<BrightnessMode>(
-  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'system',
+  (localStorage.getItem(BRIGHTNESS_KEY) as BrightnessMode) || 'dark',
 )
 // Keep this in sync with the pre-render theme in index.html.
 const style = ref<ThemeStyle>(localStorage.getItem(STYLE_KEY) === 'comic' ? 'comic' : 'ink')
