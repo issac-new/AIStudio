@@ -31,11 +31,17 @@
 - 活体：独立端口实例走查「数据飞轮页签 + 报告页提炼按钮 + fewshot 召回端点」
 - 全量双树对拍（分支树 vs 基线树）零新增回归
 
-## 验证结果（收口回填）
+## 验证结果（2026-10-25 收口实测）
 
-（待收口回填）
+- 新增/扩展测试：`flywheel-debts.test.ts` 9 用例（fewshot 召回/合入门/台账补充/归因四态 mock）+ `retrieval-relevance.test.ts` 9 用例 + `regression-gate.test.ts` 3 用例 + exp-inject fewshot 通道 2 用例 + HTTP 扩 3 用例 + 面板 round2 试算 2 用例 + 提炼按钮 2 用例——全绿。
+- 域回归：eval+reviewgov+expcandidates+toolresultguard+toolpipeline+custom/client/eval 五域 53 文件 463 用例全绿（toolpipeline 2 文件既有环境性失败除外，见对拍）。
+- `npm run typecheck:harness` 出口 0。
+- **ts-node 全编译门**：8667 活体实例启动时抓出 round 1 五处潜伏类型错（controller targetSetId unknown/EvalTask 未导入/taskId 非空断言/dims 键型收窄 + badcase-distill toolCalls 可能未定义）——全部修复后编译过、服务起。此门与 vitest（不查型）/typecheck:harness（旗标口径不同）互补，已随活体验证执行。
+- **活体走查（独立端口 8667/8668，真数据）**：①`GET /flywheel` 真库读数（27 捕获/2 回流）；②`distill dryRun` 预览（根因=结果缺陷/步数红线 4/双禁忌）→ 提交入库（回归库 rev4）→ 归因复核如实 offline（判定端不可达 fail-soft）；③变体扩产 20 条（2 蓝本×10）；④fewshot 召回：语义无关查询正确零召回、真改述召回 1 条（相似度 0.59 带正误示范）；⑤合入门：换模型→blocked 带人话理由；⑥UI：数据飞轮页签六区块渲染+合入门试算 blocked 呈现+召回试算条目+报告页失败样本行提炼按钮（幂等口径走查中抓到显示问题→当轮修复→HMR 复验通过）。截图留档 session artifacts。
+- **全量双树对拍**：分支树 28 文件/39 用例失败 vs 基线树（纯 origin/main）——失败集对拍零新增回归（明细见提交说明；失败均为注入态/兄弟 worktree 路径类环境性失败）。
+- 走查副作用披露：真库写入=回归样本库 +1 提炼任务与 +20 变体（rev4）、飞轮台账 1 条提炼+2 条变体批次——均为功能正身操作、幂等可查，保留在库。
 
 ## 挂账
 
 - embedding 召回升级（D12 v1 词面口径的替代，待向量基建立项）
-- canonical serve-main 8647/8649 换装（待并行升级轮收口）
+- canonical serve-main 8647/8649 换装（待并行升级轮收口；本轮独立端口实例已验证同一棵树）
