@@ -21,7 +21,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from agent.lsp import eventlog
-from agent.lsp.client import DIAGNOSTICS_DOCUMENT_WAIT, LSPClient, _diagnostic_key as _diag_key
+from agent.lsp.client import DIAGNOSTICS_DOCUMENT_WAIT, LSPClient, _diagnostic_key as _diag_key, file_uri
 from agent.lsp.edit_check import EditChecks
 from agent.lsp.servers import (
     SERVERS, UNTRUSTED_SAFE_SERVERS, ServerContext, ServerDef, custom_servers, find_server_for_file, language_id_for,
@@ -29,6 +29,9 @@ from agent.lsp.servers import (
 from agent.lsp.workspace import clear_cache, is_trusted_workspace, operator_workspace_roots, resolve_workspace_for_file
 
 logger = logging.getLogger("agent.lsp.manager")
+
+# 哨兵：导航查询时 (server, root) 对 spawn/init 失败——区别于服务器的真实空答复。
+_NO_CLIENT = object()
 
 DEFAULT_IDLE_TIMEOUT = 600  # seconds; servers idle for >10min get reaped
 _DELTA_BASELINE_CAP = 256  # per-file pre-write snapshots; paths never written again would otherwise live forever (#62950)
@@ -425,6 +428,116 @@ class LSPService:
         else:
             eventlog.log_clean(server_id, file_path)
         return diags
+
+    # ── Read-only navigation (P2, 2026-09-24: agent-callable LSP) ──────────────
+    # Mirrors MiMo-Code tool/lsp.ts: five read-only operations exposed to the
+    # model. Writes stay on write_file/patch; navigation never mutates docs.
+
+    NAV_OPERATIONS = {
+        "hover": "textDocument/hover",
+        "definition": "textDocument/definition",
+        "references": "textDocument/references",
+        "document_symbol": "textDocument/documentSymbol",
+        "workspace_symbol": "workspace/symbol",
+    }
+
+    def navigation_sync(
+        self, file_path: str, operation: str, *, line: Optional[int] = None,
+        character: Optional[int] = None, query: Optional[str] = None,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Answer one read-only navigation query synchronously. Never raises;
+        returns ``{"ok": bool, ...}`` with either ``result`` or ``error`` plus
+        ``server`` metadata so the model can tell "no match" from "no server".
+        """
+        op = str(operation or "").strip()
+        method = self.NAV_OPERATIONS.get(op)
+        if method is None:
+            return {"ok": False, "error": f"unknown operation {op!r}; expected one of {sorted(self.NAV_OPERATIONS)}"}
+        # Pure argument validation first — independent of service state.
+        needs_pos = op in ("hover", "definition", "references")
+        if needs_pos and (line is None or character is None):
+            return {"ok": False, "error": f"{op} requires 1-based `line` and `character`", "operation": op}
+        # 非整数在这里挡掉：params 构造里的 int() 在 try 之外，"abc"/[]/{} 抛
+        # ValueError/TypeError 会逃出 "Never raises" 契约，被 tool_executor 兜底
+        # 成 Error 并级联取消本轮后续调用。
+        if needs_pos and (isinstance(line, bool) or not isinstance(line, int)
+                          or isinstance(character, bool) or not isinstance(character, int)):
+            return {"ok": False, "error": f"{op} requires integer `line` and `character` (1-based)", "operation": op}
+        if op == "workspace_symbol" and not (query or "").strip():
+            return {"ok": False, "error": "workspace_symbol requires `query`", "operation": op}
+        if not self.enabled_for(file_path):
+            from agent.lsp.servers import find_server_for_file
+            srv = find_server_for_file(file_path)
+            why = "no language server registered for this file type" if srv is None else (
+                "LSP is disabled (enable via config `lsp.enabled` or `hermes lsp install`)"
+            )
+            return {"ok": False, "error": why, "operation": op}
+
+        params: Dict[str, Any]
+        if op == "workspace_symbol":
+            params = {"query": str(query)}
+        else:
+            params = {"textDocument": {"uri": file_uri(os.path.abspath(file_path))}}
+            if needs_pos:
+                # Tool args are 1-based (editor convention); LSP positions are 0-based.
+                params["position"] = {"line": int(line) - 1, "character": int(character) - 1}
+            if op == "references":
+                # pyright 无 context 直接 500（Internal Error）。
+                params["context"] = {"includeDeclaration": False}
+
+        srv = self._server_for(file_path)  # enabled_for guarantees a match
+        try:
+            budget = self._wait_budget(file_path)
+            # 外层 join 预算必须盖住 _navigation_async 的内层上界（同 snapshot_baseline
+            # "Outer join budget must exceed the inner wait" 规则），否则慢而活的冷启动
+            # 会被外层掐断。内层上界推导：open_file（本地读 + didOpen，1s 余量）
+            #   + 两轮 navigation_request（首轮空答复 → 1.5s 后重发一轮）
+            #   + 每轮 wait_for 预算 W = max(budget, 1.0)，含 ContentModified 退避
+            #     （0.5+1.0+2.0 = 3.5s，两轮共 7s）→ 2*W + 1.5 + 7 + 1。
+            # 只是上限：内层一完成，外层 join 立即返回。
+            wait = max(budget, 1.0)
+            t = timeout if timeout is not None else 2.0 * wait + 9.5
+            raw = self._loop.run(
+                self._navigation_async(file_path, method, params, budget=budget), timeout=t,
+            )
+        except Exception as e:  # noqa: BLE001
+            # 外层 join 超时抛 concurrent.futures.TimeoutError；仓库 python 下限 3.11，
+            # 自 3.11 起它与 builtin TimeoutError、asyncio.TimeoutError 同一类，
+            # 双写兜住两端语义（≤3.10 分头实现时也不漏判）。
+            if isinstance(e, (asyncio.TimeoutError, TimeoutError)):
+                eventlog.log_timeout(srv.server_id, file_path)
+            else:
+                eventlog.log_server_error(srv.server_id, file_path, e)
+            # 只读查询失败/超时只记日志并返回错误，不调 _mark_broken_for_file：
+            # 拉黑留给写路径诊断，否则大仓冷启动一次慢查询就把共享 LSP 客户端
+            # 杀掉并永久拉黑（broken_retry_seconds=0 → inf）。
+            logger.debug("LSP navigation %s failed for %s: %s", op, file_path, e)
+            return {"ok": False, "error": f"LSP {op} failed: {e}", "operation": op, "server": srv.server_id}
+        if raw is _NO_CLIENT:
+            return {"ok": False, "operation": op, "server": srv.server_id,
+                    "error": "language server unavailable (spawn/init failed; `hermes lsp restart` recovers)"}
+        eventlog.event_log.info("lsp navigation %s ok on %s", op, srv.server_id)
+        return {"ok": True, "operation": op, "server": srv.server_id, "result": raw}
+
+    async def _navigation_async(
+        self, file_path: str, method: str, params: Dict[str, Any], *, budget: Optional[float] = None,
+    ) -> Any:
+        """Spawn/reuse the client, didOpen the file, send the request."""
+        client = await self._get_or_spawn(file_path)
+        if client is None:
+            return _NO_CLIENT
+        srv = self._server_for(file_path)
+        await client.open_file(file_path, language_id=language_id_for(file_path, srv))
+        wait = budget if budget is not None else self._wait_timeout
+        result = await client.navigation_request(method, params, timeout=max(wait, 1.0))
+        if result is None:
+            # Cold start: the just-spawned server often answers the first
+            # hover/definition with null before workspace analysis lands
+            # (pyright observed live). One bounded retry, then trust None.
+            await asyncio.sleep(1.5)
+            result = await client.navigation_request(method, params, timeout=max(wait, 1.0))
+        return result
 
     def _apply_delta(self, file_path: str, diags: _Diags, line_shift: Optional[Callable[[int], Optional[int]]]) -> _Diags:
         """Drop diagnostics present in the pre-write baseline, then roll the baseline forward."""

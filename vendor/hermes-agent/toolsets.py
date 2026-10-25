@@ -11,7 +11,7 @@ from typing import Dict, List, Any, Set, Optional, Tuple
 _HERMES_CORE_TOOLS = [
     "web_search", "web_extract",
     "terminal", "process_manage",
-    "read_file", "write_file", "patch", "search_files",
+    "read_file", "write_file", "patch", "search_files", "lsp",
     "vision_analyze", "image_generate",
     "skills_list", "skill_view", "skill_manage",
     "browser_navigate", "browser_snapshot", "browser_click",

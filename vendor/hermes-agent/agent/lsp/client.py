@@ -495,6 +495,14 @@ class LSPClient:
                     raise
                 await asyncio.sleep(RETRY_BASE_DELAY * (2 ** attempt))
 
+    async def navigation_request(self, method: str, params: Any, *, timeout: float) -> Any:
+        """Send a read-only navigation request (hover/definition/references/symbols).
+
+        The caller owns didOpen freshness (open_file first); retries
+        ``ContentModified`` exactly like the write path so a concurrent sync
+        cannot fail the query."""
+        return await self._send_request_with_retry(method, params, timeout=timeout)
+
     async def _send_notification(self, method: str, params: Any) -> None:
         self._require_open(method)
         try:
