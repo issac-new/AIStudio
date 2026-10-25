@@ -112,7 +112,7 @@
 
 !macro repairHermesStudioUninstaller
   IfFileExists "$INSTDIR\${UNINSTALL_FILENAME}" 0 hermesStudioRepairDone
-    DetailPrint "Repairing Ekko Studio uninstaller..."
+    DetailPrint "Repairing SwarmStudio uninstaller..."
     SetOutPath "$INSTDIR"
     Delete "$INSTDIR\${UNINSTALL_FILENAME}.hermes-repair"
     ClearErrors

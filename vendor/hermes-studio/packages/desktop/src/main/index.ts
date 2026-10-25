@@ -87,6 +87,8 @@ let mainWindow: BrowserWindow | null = null
 let petWindow: BrowserWindow | null = null
 let petWindowLoadPromise: Promise<void> | null = null
 const chatWindows = new Map<string, BrowserWindow>()
+// overlay[wm]: 驾驶舱操作页独立窗口（key = 路由路径含 query）
+const panelWindows = new Map<string, BrowserWindow>()
 let serverUrl: string | null = null
 let pendingProviderImport: string | null = null
 // Resolved once at startup so createWindow can flag remote mode into the main
@@ -564,7 +566,7 @@ function createTray() {
         quality: 'best',
       })
   tray = new Tray(icon)
-  tray.setToolTip('Ekko Studio')
+  tray.setToolTip('SwarmStudio')
   tray.on('click', () => {
     showMainWindow()
     updateTrayMenu()
@@ -578,7 +580,7 @@ async function createWindow(): Promise<void> {
     height: 820,
     minWidth: 769,
     minHeight: 600,
-    title: 'Ekko Studio',
+    title: 'SwarmStudio',
     backgroundColor: '#1a1a1a',
     autoHideMenuBar: true,
     show: false,
@@ -703,7 +705,7 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown): 
     height: 760,
     minWidth: 620,
     minHeight: 480,
-    title: 'Ekko Studio',
+    title: 'SwarmStudio',
     backgroundColor: '#1a1a1a',
     autoHideMenuBar: true,
     show: false,
@@ -754,6 +756,108 @@ async function openChatWindow(sessionIdInput: unknown, profileInput?: unknown): 
 
   await chatWindow.loadURL(url)
 }
+
+  await chatWindow.loadURL(url)
+}
+
+// overlay[wm]: 驾驶舱操作页弹出独立窗口（2026-09-18 统一导航 /goal 追加）。
+// 与 openChatWindow 同模式（preload + window-kind 标记 + 去重聚焦），key = 路由
+// 路径含 query（渲染侧已带 standalone=1，独立窗口据此渲染精简壳）。
+function normalizePanelRoutePath(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed.startsWith('/') || trimmed.length > 1024) return null
+  if (/[\u0000-\u001f\u007f]/.test(trimmed)) return null
+  // 仅允许应用内 hash 路由字符（含 query），拒绝协议/外部 URL 注入
+  if (!/^\/[A-Za-z0-9\-._~!$&'()*+,;=:@%/?]*$/.test(trimmed)) return null
+  return trimmed
+}
+
+async function openPanelWindow(
+  routePathInput: unknown,
+  sizeInput?: unknown,
+): Promise<void> {
+  const routePath = normalizePanelRoutePath(routePathInput)
+  if (!routePath) throw new Error('Invalid panel route path')
+
+  const size =
+    sizeInput && typeof sizeInput === 'object'
+      ? (sizeInput as { width?: unknown; height?: unknown })
+      : {}
+  const width = typeof size.width === 'number' && size.width >= 480 && size.width <= 3840 ? Math.round(size.width) : 1100
+  const height = typeof size.height === 'number' && size.height >= 360 && size.height <= 2160 ? Math.round(size.height) : 720
+
+  const existing = panelWindows.get(routePath)
+  if (existing && !existing.isDestroyed()) {
+    if (existing.isMinimized()) existing.restore()
+    existing.show()
+    existing.focus()
+    return
+  }
+
+  const url = webUiHashUrl(routePath)
+  if (!url) throw new Error('Desktop Web UI is not ready')
+
+  const panelWindow = new BrowserWindow({
+    width,
+    height,
+    minWidth: 480,
+    minHeight: 360,
+    title: 'SwarmStudio',
+    backgroundColor: '#1a1a1a',
+    autoHideMenuBar: true,
+    show: false,
+    ...(process.platform === 'darwin'
+      ? {
+          titleBarStyle: 'hiddenInset' as const,
+          trafficLightPosition: { x: 20, y: 12 },
+        }
+      : process.platform === 'win32'
+        ? {
+            titleBarStyle: 'hidden' as const,
+            titleBarOverlay: { height: 40 },
+          }
+        : {}),
+    ...(process.platform === 'linux' ? { icon: desktopIcon() } : {}),
+    webPreferences: {
+      preload: join(__dirname, '..', 'preload', 'index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      additionalArguments: ['--hermes-window-kind=panel'],
+    },
+  })
+  panelWindows.set(routePath, panelWindow)
+
+  panelWindow.once('ready-to-show', () => {
+    if (panelWindow.isDestroyed()) return
+    panelWindow.show()
+    panelWindow.focus()
+  })
+  panelWindow.on('maximize', () => notifyWindowStateChanged(panelWindow))
+  panelWindow.on('unmaximize', () => notifyWindowStateChanged(panelWindow))
+  panelWindow.on('restore', () => notifyWindowStateChanged(panelWindow))
+  panelWindow.on('closed', () => {
+    if (panelWindows.get(routePath) === panelWindow) panelWindows.delete(routePath)
+  })
+
+  installSelectionContextMenu(panelWindow)
+  panelWindow.webContents.setWindowOpenHandler(({ url: targetUrl, frameName }) => {
+    const agentLinkPopup = groupChatAgentLinkPopupResponse(targetUrl, frameName)
+    if (agentLinkPopup) return agentLinkPopup
+    if (isTrustedDesktopAppUrl(targetUrl, serverUrl)) {
+      return { action: 'allow' }
+    }
+    shell.openExternal(targetUrl).catch(() => undefined)
+    return { action: 'deny' }
+  })
+
+  await panelWindow.loadURL(url)
+}
+
+async function initializeDesktopBrowser(): Promise<void> {
+  if (!mainWindow || mainWindow.isDestroyed() || browserManager) return
+  const root = join(webUiHome(), 'desktop-browser')
 
 async function initializeDesktopBrowser(): Promise<void> {
   if (!mainWindow || mainWindow.isDestroyed() || browserManager) return
@@ -831,7 +935,7 @@ function installMicrophonePermissionHandler() {
 function splashHtml(label = t('desktop.startingLocalServices')): string {
   const startingLabel = escapeHtml(label)
   const pageBackground = process.platform === 'win32' ? 'transparent' : '#1a1a1a'
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ekko Studio</title>
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>SwarmStudio</title>
 <style>
   html,body{margin:0;height:100%;background:${pageBackground};color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;-webkit-app-region:drag;}
   .surface{height:100%;background:#1a1a1a}
@@ -848,7 +952,7 @@ function splashHtml(label = t('desktop.startingLocalServices')): string {
   @keyframes progress{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
   h1{font-weight:500;margin:0;font-size:18px}
 </style></head><body><main class="surface"><div class="wrap">
-<h1>Ekko Studio</h1>
+<h1>SwarmStudio</h1>
 <div class="row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
 <div id="label" class="label">${startingLabel}</div>
 <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
@@ -912,7 +1016,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
         <pre>${safeError}</pre>
        </section>`
     : ''
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ekko Studio</title>
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>SwarmStudio</title>
 <style>
   :root{color-scheme:dark}
   *{box-sizing:border-box}
@@ -940,7 +1044,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
     button{min-height:78px}
   }
 </style></head><body><main class="surface"><div class="wrap">
-<div class="brand">${logoUrl ? `<img class="mark" src="${logoUrl}" alt="Ekko Studio">` : ''}<h1>Ekko Studio</h1></div>
+<div class="brand">${logoUrl ? `<img class="mark" src="${logoUrl}" alt="SwarmStudio">` : ''}<h1>SwarmStudio</h1></div>
 <p class="label">${escapeHtml(t('desktop.selectRuntimeSource'))}</p>
 ${errorBlock}
 <div class="actions">
@@ -1028,7 +1132,7 @@ async function installPackagedCommandShims(): Promise<void> {
   for (const result of results) {
     if (result.status === 'rejected') {
       console.warn(
-        `[cli-shim] failed to install Ekko Studio command: `
+        `[cli-shim] failed to install SwarmStudio command: `
         + `${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
       )
       continue
@@ -1200,9 +1304,17 @@ ipcMain.handle('hermes-desktop:open-chat-window', (event, sessionId?: unknown, p
   }
   return openChatWindow(sessionId, profile)
 })
+// overlay[wm]: 驾驶舱操作页弹出独立窗口（主窗与面板窗均可发起）
+ipcMain.handle('hermes-desktop:open-panel-window', (event, routePath?: unknown, size?: unknown) => {
+  if (!isTrustedDesktopWindowSender(event.sender)) {
+    throw new Error('Panel windows can only be opened from a Hermes desktop window')
+  }
+  return openPanelWindow(routePath, size)
+})
 
 function isTrustedDesktopWindowSender(sender: WebContents): boolean {
-  const windows = [mainWindow, petWindow, ...chatWindows.values()]
+  // overlay[wm]: 面板独立窗口与 chat 窗同权（外部 URL / 二级弹出）
+  const windows = [mainWindow, petWindow, ...chatWindows.values(), ...panelWindows.values()]
   return windows.some(window => window && !window.isDestroyed() && window.webContents === sender)
 }
 
@@ -1550,7 +1662,7 @@ ipcMain.handle('hermes-desktop:notify-completion', (_event, payload?: { title?: 
 
   const title = typeof payload?.title === 'string' && payload.title.trim()
     ? payload.title.trim()
-    : 'Ekko Studio'
+    : 'SwarmStudio'
   const body = typeof payload?.body === 'string' ? payload.body.trim().slice(0, 240) : ''
   const icon = resolveNotificationIcon(payload?.icon)
   const clickUrl = safeNotificationClickUrl(payload?.clickUrl)
@@ -1691,7 +1803,7 @@ function runDesktopApp() {
     })
   }).catch(error => {
     console.error('[desktop] failed during Electron startup:', error)
-    dialog.showErrorBox('Ekko Studio', String(error instanceof Error ? error.message : error))
+    dialog.showErrorBox('SwarmStudio', String(error instanceof Error ? error.message : error))
     quitApp()
   })
 
