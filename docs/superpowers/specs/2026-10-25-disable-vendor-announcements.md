@@ -21,6 +21,8 @@
 - `npx vitest run custom/server/__tests__/announcement-filter.test.ts`（既有版本感知用例全部改挂 env 开启态；新增缺省拦空/恢复两用例）
 - 活体：合入后 serve-main 换新 tip 重启 8647，`GET /api/studio/announcements?locale=zh-CN` 应回 `list:[]`；8649 页面无安全通知弹窗（结果回填于下）。
 
-## 验证结果（收口回填）
+## 验证结果（2026-10-25 收口实测）
 
-（待收口回填）
+- 守门测试 11/11 绿（既有版本感知 9 用例改挂 env 开启态保原行为 + 新增缺省拦空/恢复 2 用例）。
+- 合入 main（merge 2d8d24e06）并换装 serve-main 重启 8647：`GET /api/studio/announcements?locale=zh-CN` 在 8647 直连与 8649 代理两路均回 `{"ok":true,"platform":"desktop","list":[],"serverTime":…}`。
+- 浏览器实证：清除「已读记忆」localStorage 后整页复载 8649——安全通知/Brotli/知道了 三标记全不在页面（服务端拦空生效，非本地记忆压制），应用正常加载。
