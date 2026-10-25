@@ -1,7 +1,8 @@
 import { execFileSync, spawn, type ChildProcess } from 'child_process'
-import { existsSync } from 'fs'
+import { appendFileSync, existsSync, mkdirSync, renameSync, statSync, truncateSync } from 'fs'
 import { createConnection, createServer } from 'net'
-import { isAbsolute, join, resolve } from 'path'
+import { dirname, isAbsolute, join, resolve } from 'path'
+import { homedir } from 'os'
 import { logger } from '../../../studio/public/logging'
 import { config } from '../../../studio/public/config'
 import { OPENROUTER_APP_HEADERS } from '../../../studio/public/openrouter-attribution'
@@ -539,6 +540,61 @@ function forceKillBridgeEndpointProcesses(endpoint: string): void {
   }
 }
 
+// overlay[bridge-stderr-capture]: bounded capture log for broker stdout/stderr.
+// Before every flush the file size is checked and the log is rotated to .1
+// (replacing the previous .1) once it reaches the cap, so long-running broker
+// output cannot grow bridge-stderr.log without limit. Writes are batched over
+// BRIDGE_CAPTURE_LOG_FLUSH_INTERVAL_MS instead of one synchronous fs call per
+// chunk on the main-process event loop; appendFileSync within a flush keeps
+// ordering. A hard kill of the host process loses at most the final batch —
+// call flush() where an immediate write matters.
+export const BRIDGE_CAPTURE_LOG_MAX_BYTES = 5 * 1024 * 1024
+export const BRIDGE_CAPTURE_LOG_FLUSH_INTERVAL_MS = 250
+
+export interface BridgeCaptureLog {
+  append(text: string): void
+  flush(): void
+}
+
+export function createBridgeCaptureLog(
+  logPath: string,
+  maxBytes: number = BRIDGE_CAPTURE_LOG_MAX_BYTES,
+): BridgeCaptureLog {
+  let pending = ''
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const flush = (): void => {
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+    const text = pending
+    if (!text) return
+    pending = ''
+    try {
+      let size = 0
+      try { size = statSync(logPath).size } catch { /* log not created yet */ }
+      if (size >= maxBytes) {
+        try {
+          renameSync(logPath, `${logPath}.1`)
+        } catch {
+          // Rotation failed (e.g. .1 locked on Windows): truncate in place so
+          // the capture log stays bounded either way.
+          try { truncateSync(logPath, 0) } catch { /* ignore */ }
+        }
+      }
+      appendFileSync(logPath, text)
+    } catch { /* capture must never break the bridge */ }
+  }
+  const append = (text: string): void => {
+    if (!text) return
+    pending += text
+    if (timer) return
+    timer = setTimeout(flush, BRIDGE_CAPTURE_LOG_FLUSH_INTERVAL_MS)
+    timer.unref?.()
+  }
+  return { append, flush }
+}
+
 export class AgentBridgeManager {
   endpoint: string
   private readonly options: AgentBridgeManagerOptions
@@ -1003,13 +1059,33 @@ export class AgentBridgeManager {
     const env = buildAgentBridgeProcessEnv(this.endpoint, hermesHome, agentRoot)
 
     logger.info('[agent-bridge] starting: %s %s', command.command, args.join(' '))
+    // overlay[bridge-stderr-capture]: capture broker stdout/stderr so Python
+    // startup failures (import errors, missing modules, path issues) are
+    // visible in ~/.hermes-web-ui/logs/bridge-stderr.log instead of being
+    // silently swallowed. This is critical for diagnosing ECONNREFUSED on
+    // Windows where the broker crashes before binding its port.
+    const bridgeStderrLogPath = join(homedir(), '.hermes-web-ui', 'logs', 'bridge-stderr.log')
+    try { mkdirSync(dirname(bridgeStderrLogPath), { recursive: true }) } catch { /* ignore */ }
+    const captureLog = createBridgeCaptureLog(bridgeStderrLogPath)
     const child = spawn(command.command, args, {
       env,
       cwd: process.cwd(),
-      stdio: ['ignore', 'ignore', 'ignore'],
+      stdio: ['ignore', 'pipe', 'pipe'],
       detached: process.platform !== 'win32',
       windowsHide: true,
     })
+    child.stdout?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString('utf-8')
+      captureLog.append(`[stdout] ${text}`)
+      logger.info('[agent-bridge] broker stdout: %s', text.trim())
+    })
+    child.stderr?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString('utf-8')
+      captureLog.append(`[stderr] ${text}`)
+      logger.warn('[agent-bridge] broker stderr: %s', text.trim())
+    })
+    child.stdout?.on('error', () => { /* EPIPE: ignore */ })
+    child.stderr?.on('error', () => { /* EPIPE: ignore */ })
     this.child = child
     this.attached = false
     this.ready = false
