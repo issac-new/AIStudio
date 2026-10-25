@@ -1199,6 +1199,17 @@ def _commit_tool_result(
             persisted_result, function_name, tool_call_id, get_active_env(effective_task_id), budget,
         )
     else:
+        # Evidence-Preserving Reducer (SoL-Pi mechanism, fail-closed opt-in): runs
+        # BEFORE spillover so the verified receipt — not the raw log — is what enters
+        # context; it archives the original itself, and ANY failure returns the input
+        # unchanged, so an unavailable reducer costs tokens, never correctness.
+        try:
+            from tools.evidence_reducer import maybe_reduce_observation
+            persisted_result = maybe_reduce_observation(
+                content=persisted_result, tool_name=function_name, tool_call_id=tool_call_id,
+                session_id=getattr(agent, "session_id", None))
+        except Exception as _reduce_err:  # noqa: BLE001 — reduction is never load-bearing
+            logging.debug("evidence reducer unavailable: %s", _reduce_err)
         persisted_result = maybe_persist_tool_result(
             content=persisted_result,
             tool_name=function_name,
