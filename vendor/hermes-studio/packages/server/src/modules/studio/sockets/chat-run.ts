@@ -98,6 +98,8 @@ import {
   type MobileHealthResponse,
   type MobileHealthRequest,
 } from '../services/chat-run/mobile-health'
+// overlay[fleet-tap]: 2.13 指挥中心 —— 注册实例供 custom 舰队聚合服务读取
+import { registerChatRunSocket, unregisterChatRunSocket } from '../../../custom/services/hermes/fleet-tap'
 
 type AgentBridgeBackgroundNotification = any
 type AgentBridgeBackgroundSession = any
@@ -736,6 +738,12 @@ export class ChatRunSocket {
     this.backgroundPollTimer.unref?.()
     void this.pollBackgroundWork()
     logger.info('[chat-run-socket] Socket.IO ready at /chat-run')
+    // overlay[fleet-tap]: 舰队聚合注册（失败不影响主链路）
+    try {
+      registerChatRunSocket(this, { getSession, listSessions })
+    } catch (err) {
+      logger.warn(err, '[chat-run-socket] fleet tap registration failed')
+    }
   }
 
   // --- Auth middleware ---
@@ -3294,6 +3302,10 @@ export class ChatRunSocket {
     this.closing = true
     this.stopUsageUpdates()
     for (const sessionId of this.sessionMap.keys()) this.finishTaskPlanRun(sessionId, 'abort.completed')
+    // overlay[fleet-tap]: 注销舰队聚合
+    try {
+      unregisterChatRunSocket()
+    } catch { /* 忽略注销失败 */ }
     if (this.backgroundPollTimer) {
       clearInterval(this.backgroundPollTimer)
       this.backgroundPollTimer = undefined
