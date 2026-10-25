@@ -590,10 +590,11 @@ export async function uploadAttachment(
   return res.attachment
 }
 
-export async function downloadAttachment(attachmentId: number, opts?: KanbanBoardOptions): Promise<Blob> {
+export async function downloadAttachment(taskId: string, attachmentId: number, opts?: KanbanBoardOptions): Promise<Blob> {
   const base = getBaseUrlValue()
   const params = boardParams(opts?.board)
-  const url = `${base}${appendQuery(`/api/hermes/kanban/attachments/${attachmentId}`, params)}`
+  // v0.6.35 上游 readAttachment 路径（含路径校验 + 授权）
+  const url = `${base}${appendQuery(`/api/hermes/kanban/${encodeURIComponent(taskId)}/attachments/${attachmentId}`, params)}`
   const headers: Record<string, string> = {}
   const apiKey = getApiKey()
   if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
@@ -602,9 +603,12 @@ export async function downloadAttachment(attachmentId: number, opts?: KanbanBoar
   return res.blob()
 }
 
-export async function deleteAttachment(attachmentId: number, opts?: KanbanBoardOptions): Promise<{ ok: boolean }> {
+export async function deleteAttachment(attachmentId: number, opts?: KanbanBoardOptions & { taskId?: string }): Promise<{ ok: boolean }> {
+  const params = boardParams(opts?.board)
+  // task_id 供 controller 做 workspace 反向清理（CLI attach-rm 只收 attachment id）
+  if (opts?.taskId) params.set('task_id', opts.taskId)
   return request<{ ok: boolean }>(
-    appendQuery(`/api/hermes/kanban/attachments/${attachmentId}`, boardParams(opts?.board)),
+    appendQuery(`/api/hermes/kanban/attachments/${attachmentId}`, params),
     {
       method: 'DELETE',
     },

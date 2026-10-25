@@ -703,7 +703,7 @@ export const useKanbanStore = defineStore('kanban', () => {
 
   async function deleteTaskAttachment(taskId: string, attachmentId: number) {
     const board = selectedBoard.value
-    await kanbanApi.deleteAttachment(attachmentId, { board })
+    await kanbanApi.deleteAttachment(attachmentId, { board, taskId })
     if (board === selectedBoard.value) {
       const list = attachments.value[taskId] || []
       attachments.value[taskId] = list.filter(a => a.id !== attachmentId)
@@ -714,8 +714,8 @@ export const useKanbanStore = defineStore('kanban', () => {
     return startEventStream()
   }
 
-  async function downloadTaskAttachment(attachmentId: number): Promise<Blob> {
-    return kanbanApi.downloadAttachment(attachmentId, { board: selectedBoard.value })
+  async function downloadTaskAttachment(taskId: string, attachmentId: number): Promise<Blob> {
+    return kanbanApi.downloadAttachment(taskId, attachmentId, { board: selectedBoard.value })
   }
 
   async function saveProfileDescription(name: string, description: string) {
