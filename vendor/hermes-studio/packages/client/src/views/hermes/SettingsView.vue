@@ -17,6 +17,8 @@ import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";
 import AccountSettings from "@/components/hermes/settings/AccountSettings.vue";
 import UserManagementSettings from "@/components/hermes/settings/UserManagementSettings.vue";
 import WebhookSettings from "@/components/hermes/settings/WebhookSettings.vue";
+// overlay[ia2]: P3 Task 8 策略下发最小版——"图引擎策略"只读卡（§7B.4）
+import GraphEnginePolicyCard from "@/custom/ia2/components/GraphEnginePolicyCard.vue";
 import { useAuthStore } from "@/stores/hermes/auth";
 import { useProfilesStore } from "@/stores/hermes/profiles";
 
@@ -38,6 +40,8 @@ const validTabs = computed(() => new Set([
   "compression",
   "privacy",
   "models",
+  // overlay[ia2]: 图引擎策略（只读）
+  "graph",
 ]));
 
 function normalizeTab(value: unknown): string {
@@ -127,6 +131,10 @@ onMounted(() => {
           </NTabPane>
           <NTabPane name="models" :tab="t('settings.tabs.models')">
             <ModelSettings />
+          </NTabPane>
+          <!-- overlay[ia2]: 图引擎策略（GRAPH_ENGINE 模式 + 默认审批超时/熔断阈值，只读） -->
+          <NTabPane name="graph" :tab="t('settings.tabs.graph')">
+            <GraphEnginePolicyCard />
           </NTabPane>
         </NTabs>
       </div>
