@@ -20,7 +20,7 @@ import type { AgentSkill } from '../skills/types'
 import { RunTaskPlan } from '../tools/plan'
 import { AgentToolRegistry, createDefaultToolRegistry } from '../tools/registry'
 import { sanitizeAgentToolResult } from '../tools/tool-result-sanitizer'
-import type { AgentTaskRequest, AgentToolContext, AgentToolResult } from '../tools/types'
+import type { AgentTaskRequest, AgentToolContext, AgentToolResult, ToolExecuteHook } from '../tools/types'
 import {
   inspectLocalSkillValidationIssues,
   resolveSkillRouting,
@@ -209,6 +209,10 @@ export class AgentRuntime {
       : new AgentToolRegistry()
     if (this.toolsEnabled && options.tools && options.toolAuthorizer) {
       this.tools.setAuthorizer(options.toolAuthorizer)
+    }
+    // HERMES_CUSTOM[tool-waterfall] P1：瀑布钩子挂载（自建与外部传入 registry 双路径）
+    if (this.toolsEnabled) {
+      this.tools.setExecuteHooks(options.toolExecuteHooks ?? [])
     }
     this.skillsEnabled = options.skillsEnabled !== false
     this.skillsAvailable = options.skillsAvailable

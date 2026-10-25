@@ -2,7 +2,8 @@ import type { AgentMessage, ModelClient, ModelRequest } from '../model/types'
 import type { AgentMessageInput, AgentOutputMessage } from '../model/messages'
 import type { AgentSkill } from '../skills/types'
 import type { AgentToolRegistry } from '../tools/registry'
-import type { AgentToolAuthorizer, AgentToolContext, AgentToolResult } from '../tools/types'
+import type {
+  ToolExecuteHook, AgentToolAuthorizer, AgentToolContext, AgentToolResult } from '../tools/types'
 import type { AgentRuntimeEvent } from './events'
 import type { MemoryContext, MemoryEvidenceMessageInput, MemoryOrigin, MemoryScope, MemoryWritePolicy } from '../memory/types'
 import type { MemoryService } from '../memory/service'
@@ -45,6 +46,9 @@ export interface AgentRuntimeRecoveryDirective {
 }
 
 export interface AgentRuntimeOptions {
+  /** HERMES_CUSTOM[tool-waterfall] P1（2026-10-04 九源轮）：工具执行瀑布钩子
+   *  （pre 在权限后/post 在结果回填前；默认无钩子=行为零变化）。 */
+  toolExecuteHooks?: ToolExecuteHook[]
   /** JEV configuration values only; the runtime creates its own client and never persists overrides. */
   jev?: EkkoJevOverrides
   /** Fixed profile identity for tool and memory operations. Per-run input cannot override it. */

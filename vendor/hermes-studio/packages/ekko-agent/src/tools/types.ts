@@ -128,3 +128,23 @@ export class AgentToolError extends Error {
     this.name = 'AgentToolError'
   }
 }
+
+// HERMES_CUSTOM[tool-waterfall] P1（2026-10-04 九源轮）：工具执行瀑布钩子。
+// preExecute 在 authorizer 之后、真实执行之前（权限先于一切副作用）；
+// postExecute 在执行之后、结果回填模型之前（可改写）。来源：《Agent Harness
+// 工程》"schema 校验→权限→审批→Hook→能力路由"分层 + dsh tools/pre-execute→
+// tools/execute→tools/post-execute 瀑布。钩子异常=放行原路径（fail-open 由
+// 调用方约定；ekko 默认无钩子，行为零变化）。
+export interface ToolExecuteHook {
+  preExecute?(
+    name: string,
+    input: Record<string, unknown>,
+    context?: AgentToolContext,
+  ): Promise<{ allow: false; error: string } | void> | { allow: false; error: string } | void
+  postExecute?(
+    name: string,
+    input: Record<string, unknown>,
+    result: AgentToolResult,
+    context?: AgentToolContext,
+  ): Promise<AgentToolResult | void> | AgentToolResult | void
+}

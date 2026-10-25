@@ -4,6 +4,7 @@ import type {
   AgentToolContext,
   AgentToolProvider,
   AgentToolResult,
+  ToolExecuteHook,
 } from './types'
 import { UpdatePlanTool } from './plan'
 import { createSessionTasksToolProvider } from './session-tasks'
@@ -25,8 +26,14 @@ export class AgentToolRegistry {
   private readonly tools = new Map<string, AgentTool>()
   private readonly providers = new Map<string, AgentToolProvider>()
   private readonly providerTools = new Map<string, Set<string>>()
+  // HERMES_CUSTOM[tool-waterfall] P1：执行瀑布钩子（authorizer 之后；默认空=零行为变化）
+  private executeHooks: ToolExecuteHook[] = []
 
   constructor(private authorizer?: AgentToolAuthorizer) {}
+
+  setExecuteHooks(hooks: ToolExecuteHook[]): void {
+    this.executeHooks = hooks.slice()
+  }
 
   setAuthorizer(authorizer?: AgentToolAuthorizer): void {
     this.authorizer = authorizer
@@ -101,7 +108,26 @@ export class AgentToolRegistry {
         },
       }
     }
-    if (!authorization || authorization.scope === 'safe') return tool.execute(input, context)
+    // HERMES_CUSTOM[tool-waterfall] P1：pre-execute 钩子（权限已过；{allow:false} 拒绝）
+    for (const hook of this.executeHooks) {
+      const verdict = await hook.preExecute?.(name, input, context)
+      if (verdict && verdict.allow === false) {
+        return {
+          ok: false,
+          content: verdict.error,
+          error: verdict.error,
+        }
+      }
+    }
+    if (!authorization || authorization.scope === 'safe') {
+      // HERMES_CUSTOM[tool-waterfall]：safe 快道同样过 post 钩子（改写=原样跳过）
+      let safeResult = await tool.execute(input, context)
+      for (const hook of this.executeHooks) {
+        const rewritten = await hook.postExecute?.(name, input, safeResult, context)
+        if (rewritten) safeResult = rewritten
+      }
+      return safeResult
+    }
 
     let result: AgentToolResult
     try {
@@ -110,6 +136,11 @@ export class AgentToolRegistry {
       if (context?.signal?.aborted) throw error
       const message = error instanceof Error ? error.message : String(error)
       result = { ok: false, content: message, error: message }
+    }
+    // HERMES_CUSTOM[tool-waterfall]：post-execute 钩子：可改写结果（返回 undefined=原样）
+    for (const hook of this.executeHooks) {
+      const rewritten = await hook.postExecute?.(name, input, result, context)
+      if (rewritten) result = rewritten
     }
     // Approval events reach the UI, not the model. Carry the actual decision in
     // the persisted tool content too, even when execution after approval fails.
