@@ -2690,6 +2690,11 @@ def complete_task(
     # Cheap pre-check; re-checked inside the txn to close the parent-reopen race.
     if not _parents_satisfied(conn, task_id):
         return False
+    # routa 流转门禁四件套（overlay 吸收第一批 #8）：done 列声明式门（approval/
+    # checklist/validator，gateMode blocking|warning）；无 gates.json 即无门。
+    # 拒绝/告警事件留在事务外；通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
+    from hermes_cli.kanban_gates import gate_transition
+    _, gate_payload = gate_transition(conn, task_id, "done", evidence=summary or result)
     from hermes_cli.kanban_pr_acceptance_store import prepare_acceptance, record_acceptance
     verified_cards = _gate_created_cards(conn, task_id, created_cards, summary or result)
     _gate_empty_completion(conn, task_id, result=result, summary=summary)
@@ -2759,6 +2764,9 @@ def complete_task(
             _completed_event_payload(result, event_summary, verified_cards, metadata),
             run_id=run_id,
         )
+        if gate_payload:
+            # 通过事件与状态 UPDATE 同一提交：流转不成（提前 return/回滚）就不落。
+            _append_event(conn, task_id, "column_transition", gate_payload)
     _flag_phantom_prose_refs(conn, task_id, run_id, summary, result, verified_cards)
     # Success wipes the breaker counter (history stays on the event log).
     _clear_failure_counter(conn, task_id)
@@ -3314,6 +3322,11 @@ def request_review(
 
     summary = redact_review_value(summary)
     metadata = redact_review_value(metadata)
+    # routa 流转门禁四件套（overlay 吸收第一批 #8）：review 列声明式门。
+    # GateBlockedError 向上抛（与 ArtifactPreservationError 同为拒绝语义）；拒绝/告警
+    # 事件留在事务外，通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
+    from hermes_cli.kanban_gates import gate_transition
+    _, gate_payload = gate_transition(conn, task_id, "review", evidence=summary)
     # Declared (metadata["artifacts"]) and prose-referenced files
     # must be durable BEFORE anything can clean the scratch workspace up: for a
     # review-bound card the reviewer's completion is the cleanup trigger.
@@ -3408,6 +3421,9 @@ def request_review(
             if staged:
                 payload["artifacts"] = staged
             _append_event(conn, task_id, "review_requested", payload, run_id=run_id)
+        if gate_payload:
+            # 通过事件与状态 UPDATE 同一提交（"回滚后无事件"不变量由此保住）。
+            _append_event(conn, task_id, "column_transition", gate_payload)
     except Exception:
         if staged_copies:
             _discard_staged_copies(staged_copies, staged_copies[0].parent)
@@ -3539,6 +3555,16 @@ def promote_task(
             f"`hermes kanban unlink <parent_id> {task_id}`)"
         )
 
+    # routa 流转门禁四件套（overlay 吸收第一批 #8）：ready 列声明式门；
+    # promote 是 (ok, reason) 语义，blocking 门拒绝转 reason 返回。
+    # dry_run 只校验不落事件（docstring: dry_run only validates）。
+    from hermes_cli.kanban_gates import GateBlockedError, gate_transition
+    try:
+        _, gate_payload = gate_transition(
+            conn, task_id, "ready", actor=actor, dry_run=dry_run)
+    except GateBlockedError as exc:
+        return False, str(exc)
+
     if dry_run:
         return True, None
 
@@ -3550,6 +3576,9 @@ def promote_task(
         if upd.rowcount != 1:
             return False, f"task {task_id} status changed during promotion"
         _append_event(conn, task_id, "promoted_manual", {"actor": actor, "reason": reason})
+        if gate_payload:
+            # 通过事件与状态 UPDATE 同一提交：状态没改成（rowcount≠1/回滚）就不落。
+            _append_event(conn, task_id, "column_transition", gate_payload)
 
     return True, None
 
