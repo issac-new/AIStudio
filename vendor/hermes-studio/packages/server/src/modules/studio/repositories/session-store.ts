@@ -640,6 +640,20 @@ export function countSessions(
   return Number(row.total)
 }
 
+// HERMES_CUSTOM[ChatRunAutoJoin] BEGIN: list session ids owned by a user, for socket auto-join
+// Enables cockpit unread notifications: the chat-run socket auto-joins all of a user's
+// session rooms on connect so it receives run.completed / peer_user_message events for
+// sessions the user is not currently viewing. Unread is in-memory on the client.
+export function listSessionIdsByUserId(userId: string, limit = 2000): string[] {
+  if (!isSqliteAvailable()) return []
+  const db = getDb()!
+  const rows = db.prepare(
+    `SELECT id FROM ${SESSIONS_TABLE} WHERE user_id = ? ORDER BY last_active DESC LIMIT ?`,
+  ).all(String(userId), limit) as Record<string, unknown>[]
+  return rows.map(row => String(row.id || '')).filter(Boolean)
+}
+// HERMES_CUSTOM[ChatRunAutoJoin] END
+
 function escapeSessionSearchLike(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&')
 }
