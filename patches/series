@@ -931,3 +931,6 @@
 
 # 688: 容量泵内省 sidecar 补丁化（2ce5333a0 纯运行时热修在 0.22.4 镜像刷新被抹，pytest 守门复红；补丁通道保证刷新不可再抹）——run_busy 四路径写 <HERMES_HOME>/runtime/capacity_retry.json（限频 2s），cluster-inspector 免改 api_server 可观测容量泵。
 688-agent-capacity-sidecar.patch
+
+# 689（2026-10-26 重启走查轮）：i18n 两族缺键清偿——① ia2.flow 六键全族（chatSection/newChat/newAgentChat/newGroupChat/newMatrixRoom/deleteGroup，zh/en 成对）：508 被临时跳过后「末批迁移」欠账整体清偿，FlowNavPanel/WorkbenchView 现用三处（chatSection/deleteGroup/newGroupChat）无内联兜底属裸键隐患；② ide.landing 五键族（title/sub/empty/board/enter，zh/en）：IdeLandingHero 全部五处 t() 调用从未注册。有兜底处文案逐字取兜底（newChat=新建聊天），无兜底处取 508 原文。
+689-client-i18n-walkthrough-keys.patch
