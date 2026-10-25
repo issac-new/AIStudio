@@ -188,6 +188,12 @@ def prepare_iteration(
     # Appended to the newest tool result; never a synthetic user/system row.
     _maybe_inject_iteration_budget_warning(agent, messages)
 
+    # Rule heartbeat (601): periodic discipline re-anchoring on the same cache-safe seam —
+    # appended to the newest unpersisted tool row every N iterations; 0 disables via config.
+    with suppress(Exception):
+        from agent.rule_heartbeat import maybe_inject_rule_heartbeat
+        maybe_inject_rule_heartbeat(agent, messages)
+
     request_logger = getattr(agent, "logger", None) or logger  # same name as the origin module
     # Per-agent validation cursor skips re-parsing tool_call args already validated.
     # Identity-keyed; a rewritten list breaks the prefix match and forces a re-scan.

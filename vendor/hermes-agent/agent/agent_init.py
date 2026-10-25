@@ -1398,6 +1398,12 @@ def _apply_agent_section(agent, _agent_cfg):
     agent.budget_warning_ratio = normalize_budget_warning_ratio(
         _agent_section.get("budget_warning_ratio")
     )
+    # Rule heartbeat interval (601): None = default 12 iterations, 0 = off, <3 clamps to 3.
+    # Resolved per call in agent/rule_heartbeat.py; never cache-busting.
+    from agent.rule_heartbeat import parse_heartbeat_config
+    agent.rule_heartbeat_interval = parse_heartbeat_config(
+        _agent_section.get("rule_heartbeat_interval")
+    )
     # Both: "auto" (model-list match), true, false, or list of model substrings; independent
     # of each other (gates in agent/system_prompt.py).
     agent._tool_use_enforcement = _agent_section.get("tool_use_enforcement", "auto")
