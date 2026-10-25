@@ -141,6 +141,10 @@ export interface EkkoMcpServerConfig {
   url?: string
   headers?: Record<string, string>
   enabled: boolean
+  /** HERMES_CUSTOM[mcp-tool-mode] P2（2026-10-04 九源轮）：direct（默认，每工具
+   *  一个模型可见定义）/ proxy（单代理收拢）/ defer（装配期不连接不枚举，
+   *  search/call 双元工具按需取用——工具说明也是上下文，按需分配）。 */
+  tool_mode?: 'direct' | 'proxy' | 'defer'
 }
 
 export interface EkkoMcpProfileConfig {
