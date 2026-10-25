@@ -1,115 +1,156 @@
 <script setup lang="ts">
-import { deploymentUrl } from '@/utils/deployment-url'
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { setApiKey, clearApiKey, hasApiKey } from "@/api/client";
-import { fetchAuthStatus, loginWithPassword } from "@/api/studio/auth";
-import { desktopBridge, isDesktopShell } from "@/utils/desktop-bridge";
+import { useAuthStore } from "@/stores/hermes/auth";
 import { resolveLoginRedirect } from "@/utils/login-redirect";
-import { useTheme } from "@/composables/useTheme";
 
 const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
-const { activateUserTheme } = useTheme();
+const authStore = useAuthStore();
 
-const username = ref("");
-const password = ref("");
+const activeTab = ref<'matrix' | 'local'>('matrix');
+
+const homeserverUrl = ref("http://localhost:8008");
+const matrixUsername = ref("@swarm:matrix.test");
+const matrixPassword = ref("TestPass123!");
+
+const localUsername = ref("");
+const localPassword = ref("");
+
+const matrixRememberMe = ref(false);
+const localRememberMe = ref(false);
 const loading = ref(false);
 const errorMsg = ref("");
-const showLockResetHint = ref(false);
-const desktopShell = isDesktopShell() && desktopBridge()?.remoteMode !== true;
 
-if (desktopShell) {
-  // Desktop login is a recovery path. Drop stale JWTs before any background
-  // request can reuse them and show an unrelated expiry notice.
-  clearApiKey();
-} else if (hasApiKey()) {
-  router.replace(resolveLoginRedirect(route.query.redirect));
+// overlay[ia2]: 默认登录后跳新 IA 总览（Task 8 fix: 原落 cockpit，路由已删）；保留 query.redirect 保真。
+function loginRedirectTarget(): string {
+  const resolved = resolveLoginRedirect(route.query.redirect);
+  return resolved === '/hermes/chat' ? '/app' : resolved;
 }
 
-onMounted(async () => {
-  try {
-    await fetchAuthStatus();
-  } catch {
-    // Login remains available; the submit request will surface connection errors.
+const STORAGE_KEYS = {
+  matrix: { user: 'matrix_remembered_username', pass: 'matrix_remembered_password' },
+  local: { user: 'local_remembered_username', pass: 'local_remembered_password' },
+} as const;
+
+function encodePassword(pw: string): string {
+  try { return btoa(pw); } catch { return ''; }
+}
+
+function decodePassword(encoded: string): string {
+  try { return atob(encoded); } catch { return ''; }
+}
+
+function loadSavedCredentials(form: 'matrix' | 'local'): boolean {
+  const keys = STORAGE_KEYS[form];
+  const savedUser = localStorage.getItem(keys.user);
+  const savedPass = localStorage.getItem(keys.pass);
+  if (savedUser !== null && savedPass !== null) {
+    if (form === 'matrix') {
+      matrixUsername.value = savedUser;
+      matrixPassword.value = decodePassword(savedPass);
+      matrixRememberMe.value = true;
+    } else {
+      localUsername.value = savedUser;
+      localPassword.value = decodePassword(savedPass);
+      localRememberMe.value = true;
+    }
+    return true;
   }
+  return false;
+}
+
+function saveCredentials(form: 'matrix' | 'local'): void {
+  const keys = STORAGE_KEYS[form];
+  const username = form === 'matrix' ? matrixUsername.value.trim() : localUsername.value.trim();
+  const password = form === 'matrix' ? matrixPassword.value : localPassword.value;
+  if (username && password) {
+    localStorage.setItem(keys.user, username);
+    localStorage.setItem(keys.pass, encodePassword(password));
+  }
+}
+
+function clearSavedCredentials(form: 'matrix' | 'local'): void {
+  const keys = STORAGE_KEYS[form];
+  localStorage.removeItem(keys.user);
+  localStorage.removeItem(keys.pass);
+}
+
+onMounted(() => {
+  const savedHs = localStorage.getItem('matrix_homeserver_url');
+  if (savedHs) homeserverUrl.value = savedHs;
+  loadSavedCredentials('matrix');
+  loadSavedCredentials('local');
 });
 
-async function handleLogin() {
-  await handlePasswordLogin();
+function classifyLoginError(err: any): string {
+  const errcode = err?.errcode || err?.data?.errcode;
+  if (errcode === 'M_FORBIDDEN' || errcode === 'M_UNKNOWN' || err?.httpStatus === 403) return t("login.invalidCredentials");
+  const name = err?.name || err?.constructor?.name;
+  const msg = String(err?.message || '');
+  if (name === 'ConnectionError') return t("login.homeserverConnectionFailed");
+  if (/Failed to fetch|NetworkError|ERR_CONNECTION|ERR_NETWORK|Load failed/i.test(msg)) return t("login.backendConnectionFailed");
+  return msg || t("login.invalidCredentials");
 }
 
-async function handlePasswordLogin() {
-  if (!username.value.trim() || !password.value) {
-    errorMsg.value = t("login.credentialsRequired");
-    return;
-  }
-
-  loading.value = true;
-  errorMsg.value = "";
-  showLockResetHint.value = false;
-
+async function handleMatrixLogin() {
+  if (!homeserverUrl.value.trim()) { errorMsg.value = t("login.homeserverRequired"); return; }
+  if (!matrixUsername.value.trim() || !matrixPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
+  loading.value = true; errorMsg.value = "";
   try {
-    const session = await loginWithPassword(username.value.trim(), password.value);
-    setApiKey(session.token);
-    activateUserTheme(session.userId, session.theme);
-    router.replace(resolveLoginRedirect(route.query.redirect));
+    await authStore.matrixLogin(homeserverUrl.value.trim(), matrixUsername.value.trim(), matrixPassword.value);
+    localStorage.setItem('matrix_homeserver_url', homeserverUrl.value.trim());
+    if (matrixRememberMe.value) saveCredentials('matrix'); else clearSavedCredentials('matrix');
+    router.replace(loginRedirectTarget());
   } catch (err: any) {
-    if (err.status === 429 || err.status === 503) {
-      errorMsg.value = t("login.tooManyAttempts");
-      showLockResetHint.value = true;
-    } else {
-      errorMsg.value = err.message || t("login.invalidCredentials");
-    }
-  } finally {
-    loading.value = false;
-  }
+    errorMsg.value = classifyLoginError(err);
+    clearSavedCredentials('matrix');
+    if (errorMsg.value === t("login.backendConnectionFailed")) activeTab.value = 'local';
+  } finally { loading.value = false; }
+}
+
+async function handleLocalLogin() {
+  if (!localUsername.value.trim() || !localPassword.value) { errorMsg.value = t("login.credentialsRequired"); return; }
+  loading.value = true; errorMsg.value = "";
+  try {
+    await authStore.localLogin(localUsername.value.trim(), localPassword.value);
+    if (localRememberMe.value) saveCredentials('local'); else clearSavedCredentials('local');
+    router.replace(loginRedirectTarget());
+  } catch (err: any) {
+    errorMsg.value = err?.message || t("login.invalidCredentials");
+    clearSavedCredentials('local');
+  } finally { loading.value = false; }
 }
 </script>
 
 <template>
   <div class="login-view">
     <div class="login-card">
-      <div class="login-logo">
-        <img :src="deploymentUrl('/logo.png')" alt="Ekko Studio" width="80" height="80" />
-      </div>
       <h1 class="login-title">{{ t("login.title") }}</h1>
-      <p class="login-desc">{{ t("login.description") }}</p>
-      <p class="login-default-hint">{{ t("login.defaultCredentialsHint") }}</p>
 
-      <form class="login-form" @submit.prevent="handleLogin">
-        <input
-          v-model="username"
-          type="text"
-          class="login-input"
-          :placeholder="t('login.usernamePlaceholder')"
-          autofocus
-        />
-        <input
-          v-model="password"
-          type="password"
-          class="login-input"
-          :placeholder="t('login.passwordPlaceholder')"
-          @keyup.enter="handleLogin"
-        />
-
+      <!-- Matrix Login Form (default) -->
+      <form v-if="activeTab === 'matrix'" class="login-form" @submit.prevent="handleMatrixLogin">
+        <p class="login-desc">{{ t("login.matrixDescription") }}</p>
+        <input v-model="homeserverUrl" type="url" class="login-input" :placeholder="t('login.homeserverPlaceholder')" autofocus />
+        <input v-model="matrixUsername" type="text" class="login-input" :placeholder="t('login.matrixUsernamePlaceholder')" />
+        <input v-model="matrixPassword" type="password" class="login-input" :placeholder="t('login.passwordPlaceholder')" @keyup.enter="handleMatrixLogin" />
         <div v-if="errorMsg" class="login-error">{{ errorMsg }}</div>
-        <div v-if="showLockResetHint" class="login-lock-hint">
-          <template v-if="desktopShell">
-            <span>{{ t("login.desktopLockResetHint") }}</span>
-          </template>
-          <template v-else>
-            <span>{{ t("login.lockResetHint") }}</span>
-            <code>hermes-web-ui clear-login-locks --restart</code>
-            <span>{{ t("login.defaultLoginResetHint") }}</span>
-            <code>hermes-web-ui reset-default-login</code>
-          </template>
-        </div>
-        <button type="submit" class="login-btn" :disabled="loading">
-          {{ loading ? "..." : t("login.submit") }}
-        </button>
+        <label class="login-remember"><input v-model="matrixRememberMe" type="checkbox" />{{ t("login.rememberMe") }}</label>
+        <button type="submit" class="login-btn" :disabled="loading">{{ loading ? "..." : t("login.submit") }}</button>
+      </form>
+
+      <!-- Local Login Form (fallback) -->
+      <form v-else-if="activeTab === 'local'" class="login-form" @submit.prevent="handleLocalLogin">
+        <p class="login-fallback-hint">{{ t("login.fallbackToLocalHint") }}</p>
+        <p class="login-desc">{{ t("login.localDescription") }}</p>
+        <input v-model="localUsername" type="text" class="login-input" :placeholder="t('login.usernamePlaceholder')" autofocus />
+        <input v-model="localPassword" type="password" class="login-input" :placeholder="t('login.passwordPlaceholder')" @keyup.enter="handleLocalLogin" />
+        <div v-if="errorMsg" class="login-error">{{ errorMsg }}</div>
+        <label class="login-remember"><input v-model="localRememberMe" type="checkbox" />{{ t("login.rememberMe") }}</label>
+        <button type="submit" class="login-btn" :disabled="loading">{{ loading ? "..." : t("login.submit") }}</button>
+        <button type="button" class="login-fallback-link" @click="activeTab = 'matrix'">{{ t("login.useMatrixLogin") }}</button>
       </form>
     </div>
   </div>
@@ -140,14 +181,6 @@ async function handlePasswordLogin() {
   }
 }
 
-.login-logo {
-  margin-bottom: 24px;
-
-  img {
-    border-radius: 25%;
-  }
-}
-
 .login-title {
   font-size: calc(var(--font-size-base, 14px) * 26 / 14);
   font-weight: 600;
@@ -160,13 +193,6 @@ async function handlePasswordLogin() {
   color: $text-muted;
   margin: 0 0 12px;
   line-height: var(--line-height, 1.6);
-}
-
-.login-default-hint {
-  margin: 0 0 28px;
-  font-family: var(--font-code, $font-code);
-  font-size: calc(var(--font-size-base, 14px) * 13 / 14);
-  color: $text-secondary;
 }
 
 .login-form {
@@ -203,25 +229,6 @@ async function handlePasswordLogin() {
   text-align: start;
 }
 
-.login-lock-hint {
-  padding: calc(10px * var(--spacing-scale, 1)) calc(12px * var(--spacing-scale, 1));
-  border: var(--border-width, 1px) solid rgba(var(--warning-rgb), 0.35);
-  border-radius: $radius-sm;
-  background: rgba(var(--warning-rgb), 0.08);
-  color: $text-secondary;
-  font-size: calc(var(--font-size-base, 14px) * 12 / 14);
-  line-height: var(--line-height, 1.5);
-  text-align: start;
-
-  code {
-    display: block;
-    margin-top: 4px;
-    color: $text-primary;
-    font-family: var(--font-code, $font-code);
-    word-break: break-all;
-  }
-}
-
 .login-btn {
   width: 100%;
   padding: calc(14px * var(--spacing-scale, 1));
@@ -242,5 +249,42 @@ async function handlePasswordLogin() {
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+.login-fallback-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--warning-rgb), 0.35);
+  border-radius: $radius-sm;
+  background: rgba(var(--warning-rgb), 0.08);
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: start;
+}
+
+.login-fallback-link {
+  margin-top: 4px;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: $text-muted;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color $transition-fast;
+
+  &:hover { color: $text-primary; }
+}
+
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: $text-secondary;
+  cursor: pointer;
+
+  input[type="checkbox"] { accent-color: $accent-primary; }
 }
 </style>
