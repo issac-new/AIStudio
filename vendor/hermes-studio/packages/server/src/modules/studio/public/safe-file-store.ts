@@ -23,11 +23,11 @@ type MultiTextUpdater<T = void> = (
 ) => MultiTextUpdate | { files: MultiTextUpdate; result: T } | Promise<MultiTextUpdate | { files: MultiTextUpdate; result: T }>
 
 function isTextUpdateResult<T>(value: unknown): value is { content: string; result: T } {
-  return !!value && typeof value === 'object' && Object.hasOwn(value as Record<string, unknown>, 'content')
+  return !!value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value as Record<string, unknown>, 'content')
 }
 
 function isYamlUpdateResult<T>(value: unknown): value is YamlUpdateResult<T> {
-  return !!value && typeof value === 'object' && Object.hasOwn(value as Record<string, unknown>, 'data')
+  return !!value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value as Record<string, unknown>, 'data')
 }
 
 function isMultiTextUpdateResult<T>(value: unknown): value is { files: MultiTextUpdate; result: T } {
