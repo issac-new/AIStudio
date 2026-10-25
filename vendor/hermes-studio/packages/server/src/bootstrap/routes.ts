@@ -215,6 +215,9 @@ import { getSession as getSessionRowForCommandPost } from '../modules/studio/rep
 import { userCanAccessProfile as userCanAccessProfileForCommandPost } from '../modules/studio/repositories/users-store'
 import * as kanbanCliForCommandPost from '../modules/hermes/services/kanban/kanban-service'
 import { killOwnedProcessTree as killOwnedProcessTreeForCommandPost } from '../modules/studio/public/process-tree'
+// overlay[kanban-nudge]: 催办 owner 动态路由挂载（run21/22 复盘①；2026-10-22 P0 接线批）
+import { registerKanbanRoutes } from '../custom/kanban'
+import { setNudgeCardProvider } from '../custom/kanban/owner-routed-nudge'
 // overlay[loop-routes]: Loop Engineering REST API
 import { createLoopRouter } from '../custom/loop/controllers/loop'
 import { createGraphRouter } from '../custom/loop/controllers/graph'
@@ -476,6 +479,21 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(zcodeEngineRoutes.routes())             // zcode 引擎健康面（R4-P1）
   app.use(approvalRoutes.routes())                // 审批域：candidates/evaluate/decide/rules（R5 #4）
   app.use(approvalsRoutes.routes())               // 审批收件箱：pending 聚合/decide 就地裁决/history 决策历史（P1 §二）
+  // overlay[kanban-nudge]: 催办 owner 动态路由（根挂载，绝对前缀 /api/kanban/nudge）；
+  // 卡源=command-post 看板聚合（异步 provider），未就绪端点显式 503 不猜。
+  registerKanbanRoutes(app)
+  setNudgeCardProvider(async () => {
+    try {
+      const overview = await commandPost.overview.getOverview()
+      return overview.tasks.map(({ board, task }: { board: string; task: Record<string, unknown> }) => ({
+        id: String(task.id ?? ''),
+        assignee: (task.assignee as string | undefined) ?? null,
+        title: (task.title as string | undefined) ?? '',
+        board,
+        boardTeam: (task.board_team as string | undefined) ?? (task.boardTeam as string | undefined) ?? null,
+      }))
+    } catch { return null }
+  })
   app.use(changeGovRoutes.routes())               // 变更治理：L1-L4 分级评审/决策时效/五维影响/冻结窗口/管控基准（调研落地 2026-09-29）
   app.use(governanceRoutes.routes())              // 治理中心：六闸工件 overview + doc markdown（补功能主清单 2026-09-28）
   app.use(tokenMeterRoutes.routes())              // token-meter：project 三投影/zcode 互校（R5 #9）
