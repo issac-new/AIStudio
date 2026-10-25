@@ -273,3 +273,15 @@
 - **diagram-design 2.6.120**（物化刷新）：mermaid_extract.py fragment digest 区域摘要一处字节差异，MANIFEST/facts/capability-map/test-r122 同步。
 - 零移动：codex（0.164.0 stable；0.165.0-alpha.1 预告）、comet、gsd-core、ocr、superpowers、ECC、impeccable、codex-security、dsh、pua、semantica、pi、codegraph、GitNexus、mattpocock。
 - 宿主克隆面记档：kimi-code main +21 提交（Plan mode 留给用户且每 plan 评审、会话锁接管、MCP discovery 完成前不宣告）；minimax main +5 提交（compactionTriggerAt 可配、安装器不清共享 .builtin-skills）；均未发版，不升基线。
+
+---
+
+## 2026-10-25 R142 聚焦刷新（2 移动 / 20 零移动）
+
+> 触发：vendor 升级轮（studio v0.7.39 + agent v0.22.5）联动核验技能侧 22 行上游组件基线；宿主克隆面 8 仓同晨随轮同步。完整差异与异常记档见 `docs/research/R142-runtime-refresh.md`。
+
+- **ruflo 3.62.0**（minor，10 提交；npm 通道，上游仓已更名 ruvnet/claude-flow→ruvnet/ruflo）：swarm **合成派发结果必须披露**（synthetic worker dispatch results disclose）；running-worker 取消置终态；headless cancel 落定执行+deadline 计时器清理+escalation 以 exit 为键；daemon 显式 maxConcurrent/workerTimeoutMs 覆盖已存 state；ai-team 最新优先列表+证据全量审计+诚实版本号（0.3.4）；x-gateway 无参 tools/call 与 bare-host POST+拒绝诊断（0.9.1）；ruRE CUDA kernel 静态占用规划（ADR-500/501，纯静态分析扩容延续「只解析不执行」）。
+- **gstack tip 6f7488a70→1e3ee83c4**（v1.91.186-188 三提交；仓内 package.json 版本 1.91.188，git tag 通道为空——版本号以仓内文件为准）：pii.cc 跳过紧凑 YYYYMMDDHHMMSS 时间戳（防 autoplan 审批导入被误脱敏失败）；pregate 解析无扩展名 .jsx/.mts/.cts 与 index.jsx/tsx/mjs import；无人值守契约+gate 应答语法+session-kind 覆盖+语音触发词文档对齐。src-pins gstack SHA 同步 6f7488a70→1e3ee83c4；并修正基线列版本前缀滞后（R141 时 tip 已 v1.91.x 而列仍 v1.87.5.0）。
+- 零移动 20 行：graphify（pypi 0.9.95；GitHub v1.0.0 异源线维持不取）/GitNexus 1.6.12/claude-mem 15.0.2/ocr 1.13.3/openspec 1.15.0/comet 0.5.0/gsd-core 1.18.0/codex-security npm-v0.6.0/mattpocock v1.3.1/diagram-design（main 0b9b10cab 持平）/superpowers 7.0.1/ECC 2.2.3/impeccable cli-v4.7.0/dsh（tag 仍 dsh-v0.2.1-rc.3；master tip 前进至 22ddee3792 见克隆面）/pua 3.5.1/semantica tip 22109ee0 持平/pi 1.4.0/codegraph 未接线/claude-code 2.1.310/codex-cli 0.164.0。
+
+宿主克隆面记档（research/ 仓，2026-10-25 晨同步）：**dsh-TUI v0.16.1→v0.17.0**（10-24 发布，R141 后真移动）；dsh-context main +73→5742e67（10-25 01:44）；minimax-code 缓存 v0.5.1-27（9-23 停更）快进至 da22f11（v0.6.5+5 线，10-21，对齐 R141 已观察态）；multica 缓存 v0.5.2-4（9-24 停更）快进至 3de79cbea（+253，0.7.0 workflow GA 线，10-24，对齐 R141 已观察态）；deepseek-harness 缓存 rc.3→master tip 22ddee3792（tag 是 master 祖先）；kimi-code main 7ccac2b45 持平/npm 2.3.1；codex main +91（stable 0.164.0 不变）；claude-code main +2 未发版；zcode main 3c5b2276 持平（**同步口径改为依上游 main 变更判移动，2026-10-25 用户裁定，不看版本 tag**）。异常记档：routa=本地分叉线（本地领先 4083 提交，上游仅 +4，不盲升待裁决）；codex 缓存有 1 个来路不明的本地提交（"## New Features"，Cargo.toml 版本号 1 行）保持未动。

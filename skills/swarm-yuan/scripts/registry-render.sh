@@ -229,7 +229,7 @@ upstream_baseline_block() {
 }
 
 upstream_baseline_write() {
-  local doc="$ROOT/docs/upstream-baseline.md" block="$TMPDIR_R/ub.write"
+  local doc="$BASE/docs/upstream-baseline.md" block="$TMPDIR_R/ub.write"
   [[ -f "$doc" ]] || { say "✗ 缺 docs/upstream-baseline.md（先建静态骨架）" >&2; exit 1; }
   upstream_baseline_block > "$block"
   awk -v blk="$block" '
@@ -244,7 +244,7 @@ upstream_baseline_write() {
 }
 
 upstream_baseline_check() {
-  local doc="$ROOT/docs/upstream-baseline.md" max=40000 sz
+  local doc="$BASE/docs/upstream-baseline.md" max=40000 sz
   if [[ ! -f "$doc" ]]; then warn "docs/upstream-baseline.md 缺失；跳过状态表对账"; return; fi
   awk '/^<!-- >>> registry:runtimes >>>/{f=1} f{print} /^<!-- <<< registry:runtimes <<</{f=0}' "$doc" > "$TMPDIR_R/ub.block"
   upstream_baseline_block > "$TMPDIR_R/ub.gen"
@@ -407,7 +407,7 @@ cmd_check() {
 
 cmd_dead_facts() {
   local facts="$BASE/assets/facts.conf" key hits waiver
-  waiver="$ROOT/docs/facts-waivers.md"
+  waiver="$BASE/docs/facts-waivers.md"
   printf '▶ 零消费 FACT 键扫描（执行面：*.sh/*.bat/*.yml/*.json；docs 不计消费）\n' >&2
   while IFS= read -r key; do
     [[ -z "$key" ]] && continue

@@ -2,7 +2,7 @@
 
 > **定位**：22 项上游运行时的当前基线状态表。唯一权威源为 `swarm-yuan/assets/registry/runtimes.tsv`；本表由 `registry-render.sh --write-upstream-baseline` 生成，`--check` 校验，禁止手改标记区块。
 > **历史**：逐轮核验、版本差异与旧表全文见 `docs/research/upstream-changelog.md`（append-only）。状态表只保留当前值，不携带版本史。
-> **证据分级**：A=本机实测；B=官方一手直查；C=二手转述（未核验不进基线）。最近一次全量核验：2026-10-24 R140。
+> **证据分级**：A=本机实测；B=官方一手直查；C=二手转述（未核验不进基线）。最近一次全量核验：2026-10-25 R142。
 
 ## 一、状态表
 
@@ -20,8 +20,8 @@
 | mattpocock-skills | mattpocock/skills | MIT | v1.3.1 | cli | M1 | baseline_status=synced |
 | diagram-design | cathrynlavery/diagram-design | MIT | v2.6.120 | cli | M1 | baseline_status=synced |
 | superpowers | obra/superpowers | MIT | v7.0.1 | method | M1 | baseline_status=synced |
-| gstack | garrytan/gstack | MIT | v1.87.5.0 tip 6f7488a70 | method | M1 | baseline_status=synced |
-| ruflo | ruvnet/ruflo | MIT | v3.61.1 | method | M1 | baseline_status=synced |
+| gstack | garrytan/gstack | MIT | v1.91.188 tip 1e3ee83c4 | method | M1 | baseline_status=synced |
+| ruflo | ruvnet/ruflo | MIT | v3.62.0 | method | M1 | baseline_status=synced |
 | ECC | affaan-m/ECC | MIT | v2.2.3 | method | M1 | baseline_status=synced |
 | impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.7.0 | method | M1 | baseline_status=synced |
 | dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.1-rc.3 | source | M0 | baseline_status=synced |

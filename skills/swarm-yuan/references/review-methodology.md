@@ -632,6 +632,14 @@ ocr 新增 LLM provider 支持：
 - **尝试生命周期测试改 fake timers**（GSTA-65 #3356）：office-hours 夹具从 wall-clock sleeps 改 fake timers——**测试确定性：真实时间不可控就不测真实时间**；sleep 等待=把测试正确性押给调度器。
 - **plan-design focus 评级用平实词语**（#3358）：评级输出从行话改大白话——评审结论的消费方是人，措辞即接口。
 
+### v1.91.186-188 增量
+
+> 来源：gstack main tip 1e3ee83c4（细节 `docs/research/R142-runtime-refresh.md`）。注：gstack 仓 git tag 通道为空，版本号以仓内 package.json 为准（tip=1.91.188）。
+
+- **pii.cc 跳过紧凑 YYYYMMDDHHMMSS 时间戳**（v1.91.186.0）：脱敏器把紧凑时间戳误当敏感标识吞噬，致 autoplan 审批导入失败——**脱敏的白名单边界：时间戳/序号类中性 token 不入脱敏面**；脱敏过度与脱敏不足同为缺陷，前者静默破坏数据管道（审批导入失败），后者泄漏敏感面。本仓 redact/审计面同此：审计不落敏感原值≠把一切像密钥的东西都吞掉，中性模式（时间戳/哈希/短 id）保留可读性。
+- **pregate 解析无扩展名 import**（v1.91.188.0，#3340/#3371）：.jsx/.mts/.cts 与 index.jsx/tsx/mjs 的无扩展名 import 此前解析失败——门禁的依赖解析面覆盖不全=漏检通道；新语言变体进门禁视野要先补解析器（与本仓 framework-globs 规则随框架演进同构）。
+- **无人值守契约与 gate 应答语法文档对齐**（v1.91.187.0）：unattended contract、gate reply grammar、session-kind override、voice triggers 的文档与实现对齐——**文档即契约面**：无人值守场景下机器消费的语法（gate 应答/覆盖键）文档漂移=自动化静默失效。
+
 ### openspec 1.15.0 增量（变更预演与精确匹配）
 
 > 来源：openspec v1.15.0（细节 `docs/research/R141-runtime-refresh.md`）。

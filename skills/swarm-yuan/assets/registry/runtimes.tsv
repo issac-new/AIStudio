@@ -11,8 +11,8 @@ codex-security	openai/codex-security	Apache-2.0	npm	@openai/codex-security	^npm-
 mattpocock-skills	mattpocock/skills	MIT	materialized	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.3.1	cli	M1	synced
 diagram-design	cathrynlavery/diagram-design	MIT	materialized	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v2.6.120	cli	M1	synced
 superpowers	obra/superpowers	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v7.0.1	method	M1	synced
-gstack	garrytan/gstack	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.87.5.0 tip 6f7488a70	method	M1	synced
-ruflo	ruvnet/ruflo	MIT	npm	ruflo	^v?[0-9]+\.[0-9]+\.[0-9]+$	v3.61.1	method	M1	synced
+gstack	garrytan/gstack	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v1.91.188 tip 1e3ee83c4	method	M1	synced
+ruflo	ruvnet/ruflo	MIT	npm	ruflo	^v?[0-9]+\.[0-9]+\.[0-9]+$	v3.62.0	method	M1	synced
 ECC	affaan-m/ECC	MIT	git	-	^v?[0-9]+\.[0-9]+\.[0-9]+$	v2.2.3	method	M1	synced
 impeccable	pbakaus/impeccable	Apache-2.0	npm	impeccable	^cli-v?[0-9]+\.[0-9]+\.[0-9]+$	cli-v4.7.0	method	M1	synced
 dsh	deepseek-ai/deepseek-harness	MIT	git	-	^dsh-v?[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$	dsh-v0.2.1-rc.3	source	M0	synced

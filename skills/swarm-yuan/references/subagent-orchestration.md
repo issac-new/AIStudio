@@ -654,6 +654,16 @@ swarm-yuan 的 `state-machine.sh` 采用 `sanitize_input` 白名单字符集过�
 - **CI：插件分发文件变更 plugin.json 版本必须升否则红**（#4447）——版本锁机器门禁，与本仓 facts.conf+test-doc-numbers 机器锚同构：**版本号是契约不是装饰，文件变了版本不变=CI 红**。
 - 其余：桥接搜索窗口 1000→10000 可配（静默截断面收窄要显式）、cost-tracker Stop hook 写错项目修复（写盘点锚定调用方项目，不落会话项目）、`transport use slim` 等未配置 SDK 功能改报「not configured」不在调用点崩、`update all` 补 `--dry-run`、TypeScript 7 native compiler。来源：`docs/research/R141-runtime-refresh.md`。
 
+### 合成结果披露与取消终态（ruflo v3.62.0）
+
+> 1 minor，10 提交。主题=诚实披露续案 + 取消/守护面的终态语义。
+
+- **合成派发结果必须披露**（#4456）：swarm 合成（synthetic）的 worker 派发结果显式披露，不与真实执行结果混排——「结果从哪来」是结果的一部分，合成物冒充实测即虚假成功族的对外形态。
+- **running-worker 取消置终态**（#4457）：已跑 worker 的取消是终态动作，不再允许取消后复活续跑——取消语义要有终态性，半取消态=双跑温床。
+- **headless cancel 落定执行**（#4463/#4466）：cancel 落定执行、deadline 计时器清理、escalation 以 exit 为键——取消路径的三件套：动作落定/资源回收/升级判据锚定真实退出。
+- **守护参数显式值压过持久化 state**（#4462/#4465）：daemon 的显式 maxConcurrent/workerTimeoutMs 覆盖已存 daemon-state——命令行显式参数与持久化配置冲突时，显式者赢（与「锁活性看进程不看锁龄」同族：活的事实优先于记录的事实）。
+- 其余：ai-team 列表最新优先+证据全量审计+诚实版本号 0.3.4（#4467）；x-gateway 无参 tools/call 与 bare-host POST、拒绝带诊断 0.9.1（#4468）；ruRE CUDA kernel 静态占用规划 rure_cuda_launch_plan（ADR-500/501，#4464/#4461——纯静态分析扩容，延续「只解析不执行」边界）；browser doctor 从无关工作目录也能定位（#4454）。来源：`docs/research/R142-runtime-refresh.md`。
+
 ### comet 0.5.0 增量（升级门/恢复先决/eval 产物）
 
 - **升级门=在途任务先收口**：升级前须完成并归档在途任务——升级即破坏性变更，不与在途状态共存。
