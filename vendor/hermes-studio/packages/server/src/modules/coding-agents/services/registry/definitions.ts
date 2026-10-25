@@ -12,6 +12,7 @@ import { CODEX_DEFINITION, CODEX_CONFIG_FILES } from '../codex/definition'
 import { PI_DEFINITION, PI_CONFIG_FILES } from '../pi/definition'
 import { GROK_CODING_AGENT_DEFINITION, GROK_CODING_AGENT_CONFIG_FILES } from '../grok/definition'
 import { OPENCODE_DEFINITION, OPENCODE_CONFIG_FILES } from '../opencode/definition'
+import { MIMO_DEFINITION, MIMO_CONFIG_FILES } from '../mimo/definition'
 import { DSH_DEFINITION, DSH_CONFIG_FILES } from '../dsh/definition'
 import { CURSOR_DEFINITION, CURSOR_CONFIG_FILES } from '../cursor/definition'
 import { NATIVE_CODING_AGENTS } from './native-agents'
@@ -24,6 +25,7 @@ export const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
   PI_DEFINITION,
   GROK_CODING_AGENT_DEFINITION,
   OPENCODE_DEFINITION,
+  MIMO_DEFINITION,
   DSH_DEFINITION,
   CURSOR_DEFINITION,
 ]
@@ -41,6 +43,7 @@ export const CONFIG_FILE_DEFINITIONS: Record<CodingAgentRuntime, CodingAgentConf
   pi: PI_CONFIG_FILES,
   grok: GROK_CODING_AGENT_CONFIG_FILES,
   opencode: OPENCODE_CONFIG_FILES,
+  mimo: MIMO_CONFIG_FILES,
   dsh: DSH_CONFIG_FILES,
   cursor: CURSOR_CONFIG_FILES,
 }

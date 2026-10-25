@@ -9,6 +9,7 @@ import { startDshChatTurn } from '../dsh/chat-turn'
 import { agentUpdateLocked, noteAgentActivity } from '../update-lock'
 import { dirname, join } from 'path'
 import { existsSync, accessSync, chmodSync, constants as fsConstants, readFileSync, writeFileSync } from 'fs'
+import { OPENCODE_FAMILY_VARS, isOpenCodeFamily, type OpenCodeFamilyId } from '../opencode-family'
 import { homedir } from 'os'
 import { spawn, type ChildProcess } from 'child_process'
 import { createSession, addMessage, getSession, updateSession, updateSessionStats } from '../../../studio/public/sessions'
@@ -362,10 +363,10 @@ function truncateCodingAgentToolOutputEvent(event: CanonicalResponsesEvent): Can
 }
 
 function isPrintAgent(agentId: string): boolean {
-  return isNativeCodingAgent(agentId) || agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'antigravity' || agentId === 'cursor' || (agentId === 'opencode' || agentId === 'dsh')
+  return isNativeCodingAgent(agentId) || agentId === 'claude-code' || agentId === 'codex' || agentId === 'pi' || agentId === 'grok' || agentId === 'antigravity' || agentId === 'cursor' || (isOpenCodeFamily(agentId) || agentId === 'dsh')
 }
 
-function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
+function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
   if (isNativeCodingAgent(agentId)) return agentId
   if (agentId === 'codex') return 'codex'
   if (agentId === 'pi') return 'pi'
@@ -373,11 +374,12 @@ function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'gro
   if (agentId === 'dsh') return 'dsh'
   if (agentId === 'opencode') return 'opencode'
   if (agentId === 'antigravity') return 'antigravity'
+  if (agentId === 'mimo') return 'mimo'
   if (agentId === 'cursor') return 'cursor'
   return 'claude'
 }
 
-export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
+export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
   if (isNativeCodingAgent(agentId)) return agentId
   if (agentId === 'codex') return 'codex'
   if (agentId === 'pi') return 'pi'
@@ -385,6 +387,7 @@ export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi
   if (agentId === 'dsh') return 'dsh'
   if (agentId === 'opencode') return 'opencode'
   if (agentId === 'antigravity') return 'antigravity'
+  if (agentId === 'mimo') return 'mimo'
   if (agentId === 'cursor') return 'cursor'
   return 'claude_code'
 }
@@ -418,11 +421,12 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
       return false
     }
   }
-  if (run.launch.agentId === 'opencode') {
-    const configDir = String(run.launch.env?.OPENCODE_CONFIG_DIR || '').trim()
+  if (isOpenCodeFamily(run.launch.agentId)) {
+    const familyVars = OPENCODE_FAMILY_VARS[run.launch.agentId]
+    const configDir = String(run.launch.env?.[familyVars.configDirEnv] || '').trim()
     if (!configDir) return false
     try {
-      const config = readFileSync(join(configDir, 'opencode.json'), 'utf-8')
+      const config = readFileSync(join(configDir, familyVars.configFileName), 'utf-8')
       return config.includes('"ekko-studio-api"') && config.includes('"ekko-studio-use"') && config.includes('"ekko-studio-interaction"')
     } catch {
       return false
@@ -548,7 +552,7 @@ function codingAgentDisplayName(agentId: string): string {
   if (agentId === 'codex') return 'Codex'
   if (agentId === 'pi') return 'Pi'
   if (agentId === 'grok') return 'Grok'
-  if (agentId === 'opencode') return 'OpenCode'
+  if (isOpenCodeFamily(agentId)) return OPENCODE_FAMILY_VARS[agentId].brandName
   if (agentId === 'dsh') return 'DeepSeek Harness'
   return 'Claude Code'
 }
@@ -800,8 +804,8 @@ export class CodingAgentRunManager {
           ? 'Pi'
           : launch.agentId === 'grok'
             ? 'Grok'
-            : launch.agentId === 'opencode'
-              ? 'OpenCode'
+            : isOpenCodeFamily(launch.agentId)
+              ? OPENCODE_FAMILY_VARS[launch.agentId].brandName
             : launch.agentId === 'dsh'
               ? 'DeepSeek Harness'
             : launch.agentId === 'antigravity'
@@ -940,7 +944,7 @@ export class CodingAgentRunManager {
       this.startDshTurn(run, text, systemPrompt, images)
       return { runId: run.id, messageId }
     }
-    if (run.launch.agentId === 'opencode') {
+    if (isOpenCodeFamily(run.launch.agentId)) {
       this.startOpenCodeTurn(run, text, systemPrompt, images)
       return { runId: run.id, messageId }
     }
@@ -1233,7 +1237,7 @@ export class CodingAgentRunManager {
       // for transport and usage accounting only.
       return
     }
-    if ((run.launch.agentId === 'opencode' || run.launch.agentId === 'dsh' || run.launch.agentId === 'antigravity' || isNativeCodingAgent(run.launch.agentId)) && !run.acceptingPrintEvent) {
+    if ((isOpenCodeFamily(run.launch.agentId) || run.launch.agentId === 'dsh' || run.launch.agentId === 'antigravity' || isNativeCodingAgent(run.launch.agentId)) && !run.acceptingPrintEvent) {
       // Native JSON/ACP stdout is the authoritative turn stream. A single
       // turn can contain several provider requests, so treating each
       // proxy response.completed event as the turn boundary duplicates output
@@ -1299,7 +1303,7 @@ export class CodingAgentRunManager {
     if (isTerminalEvent) {
       run.assistantMessageId = this.persistTerminalResponse(run)
       const final = (storageSafeResponseEvent.data as any).response || storageSafeResponseEvent.data
-      if (run.launch.mode !== 'scoped' && !['opencode', 'pi'].includes(run.launch.agentId)) {
+      if (run.launch.mode !== 'scoped' && !['opencode', 'mimo', 'pi'].includes(run.launch.agentId)) {
         this.captureUsage(run, () => {
           const rows = (run.nativeUsage || new NativeTurnUsage()).rows(run.launch.agentId, final?.usage, final?.model || run.launch.model)
           this.recordNativeUsage(run, rows, final?.id || run.printResponseId || run.runMarker || run.id)
@@ -3077,7 +3081,7 @@ export class CodingAgentRunManager {
     return {
       spawn: spawnCodingAgentChild, isRunning: childIsRunning, terminate: terminateChildProcess,
       processError: error => childProcessErrorMessage(error, run.launch.agentId),
-      exitError: (code, stderr) => exitErrorMessage('OpenCode', code, stderr),
+      exitError: (code, stderr) => exitErrorMessage(OPENCODE_FAMILY_VARS[isOpenCodeFamily(run.launch.agentId) ? (run.launch.agentId as OpenCodeFamilyId) : 'opencode'].brandName, code, stderr),
       errorMessage: responseErrorMessage, sanitizeOutput: sanitizeCodingAgentTerminalOutput,
       appendedTextDelta, truncateToolOutput: truncateCodingAgentToolOutputForStorage,
       touch: () => this.touch(run), line: line => this.handleOpenCodeLine(run, line),

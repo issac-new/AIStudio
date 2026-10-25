@@ -1,9 +1,9 @@
 import type { AgentFamily } from './family'
 
-export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'] as const
+export const AGENT_RUNTIMES = ['hermes', 'ekko', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'] as const
 
 export type AgentRuntime = typeof AGENT_RUNTIMES[number]
-export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'>
+export type CodingAgentRuntime = Extract<AgentRuntime, 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'>
 
 const AGENT_RUNTIME_SET = new Set<string>(AGENT_RUNTIMES)
 
@@ -16,6 +16,7 @@ const RUNTIME_FAMILIES: Record<AgentRuntime, AgentFamily> = {
   grok: 'coding',
   opencode: 'coding',
   dsh: 'coding',
+  mimo: 'coding',
   cursor: 'coding',
   antigravity: 'coding',
   qwen: 'coding',

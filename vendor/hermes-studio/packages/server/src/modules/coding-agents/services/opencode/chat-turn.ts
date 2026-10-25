@@ -6,6 +6,7 @@ import type { OpenCodeTurnHost } from './turn-host'
 import { logger } from '../../../studio/public/logging'
 import { updateManagedPromptFileSync } from '../prompt-file'
 import { isolatedCodingAgentChildEnv } from '../runtime/child-env'
+import { OPENCODE_FAMILY_VARS, isOpenCodeFamily, type OpenCodeFamilyId } from '../opencode-family'
 
 export function startOpenCodeTurn(
   run: ManagedCodingAgentRun,
@@ -15,7 +16,9 @@ export function startOpenCodeTurn(
   host: OpenCodeTurnHost,
 ) {
   if (host.isRunning(run.currentChild)) {
-    throw new Error('OpenCode is still processing the previous input')
+    // overlay[mimo-agent]: opencode 家族(MiMo fork)品牌差异单一事实源在 opencode-family.ts
+    const family: OpenCodeFamilyId = isOpenCodeFamily(run.launch.agentId) ? (run.launch.agentId as OpenCodeFamilyId) : 'opencode'
+    throw new Error(`${OPENCODE_FAMILY_VARS[family].brandName} is still processing the previous input`)
   }
 
   const responseId = `resp_${Date.now()}`
@@ -39,11 +42,14 @@ export function startOpenCodeTurn(
   })
 
   if (run.launch.promptFile) updateManagedPromptFileSync(run.launch.promptFile, systemPrompt)
+  const family: OpenCodeFamilyId = isOpenCodeFamily(run.launch.agentId) ? (run.launch.agentId as OpenCodeFamilyId) : 'opencode'
+  const familyVars = OPENCODE_FAMILY_VARS[family]
   const args = [
     'run',
     '--format', 'json',
     '--agent', 'build',
-    '--auto',
+    // MiMo fork 已移除 --auto(见 opencode-family.ts runSupportsAutoFlag)
+    ...(familyVars.runSupportsAutoFlag ? ['--auto'] : []),
     '--thinking',
     ...run.launch.args,
     ...(run.launch.agentNativeSessionId && run.nativeResumeReady

@@ -1,6 +1,6 @@
 import type { CodingAgentDefinition, CodingAgentConfigFileDefinition } from '../contracts/definition'
 import { TOOL_DEFINITIONS, CONFIG_FILE_DEFINITIONS } from './registry/definitions'
-import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, openCodeRuntimeEnv, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID } from './opencode/config'
+import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, parseOpenCodeConfig, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID, OPENCODE_SHARED_CONFIG_DIRS } from './opencode/config'
 import { prepareOpenCodeBaseConfig } from './opencode/runtime-config'
 import { prepareZcodeGlobalModel } from './zcode/runtime-config'
 import { NATIVE_CODING_AGENTS, prepareNativeScopedRuntime, nativeScopedUsesChatCompletions, checkNativeCodingAgentEnvironment, checkNativeCodingAgentPlatform } from './registry/native-agents'
@@ -34,6 +34,7 @@ import { PROVIDER_PRESETS, assertProviderAvailable, isRetiredProvider } from '..
 import { getModelContextLength, getModelRuntimeCapabilities } from '../../studio/public/provider-runtime'
 import { getSystemPrompt, studioMcpUsageGuidelines } from '../../studio/public/runs/prompt'
 import { codingAgentRunManager } from './runtime/run-manager'
+import { OPENCODE_FAMILY_VARS, isOpenCodeFamily, type OpenCodeFamilyId } from './opencode-family'
 import { mergePiSettings, userSettingsProvidesPiMcpAdapter } from './pi/settings'
 import { ANTIGRAVITY_DEFAULT_SETTINGS, ANTIGRAVITY_INSTALL_URL, prepareAntigravityRuntime, validateAntigravitySettings } from './antigravity/config'
 import { CURSOR_DEFAULT_SETTINGS, cursorSettingsPath, validateCursorSettings } from './cursor/settings'
@@ -786,7 +787,7 @@ function storedCodingAgentMode(session: HermesSessionRow | null): 'scoped' | 'gl
   return session?.provider === 'global' ? 'global' : 'scoped'
 }
 
-function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
+function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'mimo' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' {
   if (isNativeCodingAgent(id)) return id
   if (id === 'codex') return 'codex'
   if (id === 'pi') return 'pi'
@@ -794,6 +795,7 @@ function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'ope
   if (id === 'dsh') return 'dsh'
   if (id === 'opencode') return 'opencode'
   if (id === 'antigravity') return 'antigravity'
+  if (id === 'mimo') return 'mimo'
   if (id === 'cursor') return 'cursor'
   return 'claude'
 }
@@ -1138,7 +1140,7 @@ function managedHermesMcpServerConfig(
     if (env?.[HERMES_MCP_MANAGED_ENV_KEY] === '1') {
       server.env = { ...env, HERMES_MCP_SERVER_NAME: serverName, HERMES_MCP_USER_CLARIFICATION: '1' }
     }
-    if (agentId === 'claude-code' || agentId === 'opencode' || agentId === 'cursor' || agentId === 'antigravity') server.timeout = Math.max(360_000, Number(server.timeout) || 0)
+    if (agentId === 'claude-code' || isOpenCodeFamily(agentId) || agentId === 'cursor' || agentId === 'antigravity') server.timeout = Math.max(360_000, Number(server.timeout) || 0)
     if (agentId === 'dsh') server.toolCallTimeoutMs = Math.max(360_000, Number(server.toolCallTimeoutMs) || 0)
   }
   return server
@@ -1757,7 +1759,7 @@ export function getCodingAgentManagedMcpServerConfigs(
         ...(disabledManaged.has(item.name) ? { enabled: false } : {}),
       }]
     }
-    if (id === 'opencode') {
+    if (isOpenCodeFamily(id)) {
       return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
     }
     return [item.name, {
@@ -2112,12 +2114,102 @@ async function ensurePiScopedBaseConfigFiles(scope: Required<CodingAgentConfigSc
   }
 }
 
-function ensureOpenCodeScopedBaseConfigFiles(scope: Required<CodingAgentConfigScope>, systemPrompt: string, workspaceDir = resolveLaunchWorkspaceRoot(scope, null)) {
-  return prepareOpenCodeBaseConfig({
-    rootDir: getScopedConfigRoot('opencode', scope),
-    sourceHome: dirname(getLiveConfigFileDefinition('opencode', 'config')?.absolutePath || ''),
-    profile: scope.profile, systemPrompt, workspaceDir, writeLauncherScript, opencodeRuntimeConfig,
+function shouldShareOpenCodeGlobalFile(name: string): boolean {
+  if (name === 'AGENTS.md' || name === 'opencode.json' || name === 'opencode.jsonc' || name === 'mimocode.json' || name === 'mimocode.jsonc' || name === 'config.json') return false
+  if (name === '.gitignore' || name === 'package.json' || name === 'package-lock.json' || name === 'bun.lock') return false
+  if (name.endsWith('.lock') || name.endsWith('.pid') || name.endsWith('.sock')) return false
+  if (name.endsWith('.db') || name.endsWith('.db-shm') || name.endsWith('.db-wal')) return false
+  if (name.endsWith('.sqlite') || name.endsWith('.sqlite-shm') || name.endsWith('.sqlite-wal')) return false
+  return !name.endsWith('.log')
+}
+
+async function shareOpenCodeGlobalEntry(source: string, target: string, type: 'file' | 'dir'): Promise<void> {
+  if (await pathEntryExists(target)) return
+  try {
+    await symlink(source, target, process.platform === 'win32' && type === 'dir' ? 'junction' : type)
+    return
+  } catch (err: any) {
+    if (err?.code !== 'EEXIST' && err?.code !== 'EPERM' && err?.code !== 'ENOTSUP' && err?.code !== 'EINVAL') {
+      throw err
+    }
+    if (err?.code === 'EEXIST') return
+  }
+  if (type === 'dir') {
+    await cp(source, target, {
+      recursive: true,
+      dereference: true,
+      errorOnExist: false,
+      force: false,
+      preserveTimestamps: true,
+    })
+  } else {
+    await copyFile(source, target)
+  }
+}
+
+async function ensureOpenCodeScopedBaseConfigFiles(
+  family: OpenCodeFamilyId,
+  scope: Required<CodingAgentConfigScope>,
+  systemPrompt: string,
+  workspaceDir = resolveLaunchWorkspaceRoot(scope, null),
+): Promise<{
+  rootDir: string
+  memoryFile: string
+  promptFile: string
+  configFile: string
+  launcherFile: string
+  launcherRuntimeConfig: string
+}> {
+  const familyVars = OPENCODE_FAMILY_VARS[family]
+  const rootDir = getScopedConfigRoot(family, scope)
+  const sourceHome = dirname(getLiveConfigFileDefinition(family, 'config')?.absolutePath || '')
+  await mkdir(rootDir, { recursive: true, mode: 0o700 })
+  await mkdir(sourceHome, { recursive: true })
+
+  for (const directory of OPENCODE_SHARED_CONFIG_DIRS) {
+    const source = join(sourceHome, directory)
+    const target = join(rootDir, directory)
+    if (directory === 'skills') await mkdir(source, { recursive: true })
+    if (!existsSync(source)) continue
+    await shareOpenCodeGlobalEntry(source, target, 'dir')
+  }
+
+  if (sourceHome !== rootDir && existsSync(sourceHome)) {
+    for (const entry of await readdir(sourceHome, { withFileTypes: true })) {
+      if (!entry.isFile() || !shouldShareOpenCodeGlobalFile(entry.name)) continue
+      await shareOpenCodeGlobalEntry(join(sourceHome, entry.name), join(rootDir, entry.name), 'file')
+    }
+  }
+
+  const memoryFile = join(rootDir, 'AGENTS.md')
+  const promptFile = join(rootDir, 'hermes-rules.md')
+  const configFile = join(rootDir, familyVars.configFileName)
+  const globalInstructions = await safeReadFile(join(sourceHome, 'AGENTS.md')) || ''
+  const globalConfig = await safeReadFile(join(sourceHome, familyVars.configFileName))
+    || await safeReadFile(join(sourceHome, `${familyVars.configFileName}c`))
+    || (family === 'mimo' ? await safeReadFile(join(sourceHome, 'config.json')) : '')
+    || ''
+  await writeFile(memoryFile, globalInstructions, 'utf-8')
+  await writeManagedPromptFile(promptFile, systemPrompt, '')
+  await writeFile(
+    configFile,
+    opencodeFamilyRuntimeConfig(family, scope.profile, {}, globalConfig),
+    'utf-8',
+  )
+  const launcherRuntimeConfig = opencodeFamilyRuntimeConfig(family, scope.profile, { systemPrompt: promptFile })
+  const env = openCodeRuntimeEnv(family, {
+    configDir: rootDir,
+    databasePath: join(rootDir, familyVars.databaseFile),
+    runtimeConfig: launcherRuntimeConfig,
   })
+  const launcherFile = await writeLauncherScript({
+    rootDir,
+    workspaceDir,
+    env,
+    command: family,
+    args: [],
+  })
+  return { rootDir, memoryFile, promptFile, configFile, launcherFile, launcherRuntimeConfig }
 }
 
 function buildLaunchShellCommand(input: {
@@ -2652,7 +2744,7 @@ export function withCodingAgentRegistry(id: CodingAgentId, args: string[]): stri
   // DSH's native dependencies share a process-wide FFI type registry; duplicate
   // copies can crash plugin startup after an otherwise successful npm update.
   const installOptions = id === 'dsh' && args[0] === 'install' ? ['--prefer-dedupe'] : []
-  return id === 'codex' || id === 'grok' || id === 'opencode' || id === 'dsh'
+  return id === 'codex' || id === 'grok' || isOpenCodeFamily(id) || id === 'dsh'
     ? [...args, ...installOptions, `--registry=${OFFICIAL_NPM_REGISTRY}`]
     : [...args]
 }
@@ -3019,7 +3111,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope: 
       )
       : id === 'grok' && key === 'settings'
         ? grokSettingsConfig(sourceContent)
-        : id === 'opencode' && key === 'settings'
+        : isOpenCodeFamily(id) && key === 'settings'
           ? openCodeSettingsConfig(sourceContent)
         : sourceContent
     return {
@@ -3038,7 +3130,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope: 
       : id === 'cursor' && key === 'settings' ? CURSOR_DEFAULT_SETTINGS
       : id === 'pi'
         ? piLiveConfigDefault(key, normalizedScope.profile) || ''
-        : id === 'opencode' && key === 'settings'
+        : isOpenCodeFamily(id) && key === 'settings'
           ? '{}\n'
           : id === 'dsh' && key === 'settings' ? '{}\n'
             : id === 'dsh' && key === 'mcp' ? '[]\n'
@@ -3075,7 +3167,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
     persistedContent = key === 'mcp'
       ? mergeGrokUserMcpConfig(existingContent, persistedContent)
       : mergeGrokSettingsConfig(existingContent, persistedContent)
-  } else if (id === 'opencode' && key === 'settings') {
+  } else if (isOpenCodeFamily(id) && key === 'settings') {
     const existingContent = await safeReadFile(definition.absolutePath) || '{}'
     persistedContent = mergeOpenCodeSettingsConfig(existingContent, persistedContent)
   }
@@ -3103,7 +3195,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
         )
       : id === 'grok' && key === 'settings'
         ? grokSettingsConfig(persistedContent)
-        : id === 'opencode' && key === 'settings'
+        : isOpenCodeFamily(id) && key === 'settings'
           ? openCodeSettingsConfig(persistedContent)
         : content,
     exists: true,
@@ -3295,17 +3387,18 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
       files = prepared.files
       args = prepared.args
       env = {}
-    } else if (tool.id === 'opencode') {
-      const prepared = await ensureOpenCodeScopedBaseConfigFiles(scope, systemPrompt, workspaceDir)
+    } else if (isOpenCodeFamily(tool.id)) {
+      const familyVars = OPENCODE_FAMILY_VARS[tool.id]
+      const prepared = await ensureOpenCodeScopedBaseConfigFiles(tool.id, scope, systemPrompt, workspaceDir)
       // Share native configuration, but keep each conversation's dynamic
       // instructions separate from other chats and workflow/group-chat runs.
       promptFile = join(rootDir, 'hermes-rules.md')
       await writeManagedPromptFile(promptFile, systemPrompt, '')
-      env = openCodeRuntimeEnv({
+      env = openCodeRuntimeEnv(tool.id, {
         configDir: prepared.rootDir,
         // Preserve the existing database location so native sessions can resume.
-        databasePath: join(prepared.rootDir, OPENCODE_DATABASE_FILE),
-        runtimeConfig: opencodeRuntimeConfig(scope.profile, { systemPrompt: promptFile, studioMcpTokenFile: input.studioMcpTokenFile }),
+        databasePath: join(prepared.rootDir, familyVars.databaseFile),
+        runtimeConfig: opencodeFamilyRuntimeConfig(tool.id, scope.profile, { systemPrompt: promptFile, studioMcpTokenFile: input.studioMcpTokenFile }),
       })
       const launcherFile = await writeLauncherScript({
         rootDir,
@@ -3317,7 +3410,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
       files = [
         { key: 'agents', path: 'AGENTS.md', absolutePath: prepared.memoryFile },
         { key: 'prompt', path: 'hermes-rules.md', absolutePath: promptFile },
-        { key: 'config', path: OPENCODE_CONFIG_FILE, absolutePath: prepared.configFile },
+        { key: 'config', path: familyVars.configFileName, absolutePath: prepared.configFile },
         {
           key: 'launcher',
           path: process.platform === 'win32' ? WINDOWS_LAUNCHER_FILE : POSIX_LAUNCHER_FILE,
@@ -3787,11 +3880,13 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
           chatSessionId: isolatedInput.sessionId,
         })
       : null
-    const baseRuntime = await ensureOpenCodeScopedBaseConfigFiles(scope, scopedSystemPrompt, workspaceDir)
-    const configPath = join(rootDir, OPENCODE_CONFIG_FILE)
+    const ocFamily: OpenCodeFamilyId = isOpenCodeFamily(tool.id) ? tool.id : 'opencode'
+    const familyVars = OPENCODE_FAMILY_VARS[ocFamily]
+    const baseRuntime = await ensureOpenCodeScopedBaseConfigFiles(ocFamily, scope, scopedSystemPrompt, workspaceDir)
+    const configPath = join(rootDir, familyVars.configFileName)
     const promptPath = join(rootDir, 'AGENTS.md')
     await writeManagedPromptFile(promptPath, scopedSystemPrompt, '')
-    const runtimeConfig = opencodeRuntimeConfig(scope.profile, {
+    const runtimeConfig = opencodeFamilyRuntimeConfig(ocFamily, scope.profile, {
       studioMcpTokenFile: input.studioMcpTokenFile,
       provider,
       model,
@@ -3801,12 +3896,12 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
     })
     await writeFile(configPath, runtimeConfig, 'utf-8')
     files.push(
-      { key: 'config', path: OPENCODE_CONFIG_FILE, absolutePath: configPath },
+      { key: 'config', path: familyVars.configFileName, absolutePath: configPath },
       { key: 'agents', path: 'AGENTS.md', absolutePath: promptPath },
     )
-    env = openCodeRuntimeEnv({
+    env = openCodeRuntimeEnv(ocFamily, {
       configDir: baseRuntime.rootDir,
-      databasePath: join(rootDir, OPENCODE_DATABASE_FILE),
+      databasePath: join(rootDir, familyVars.databaseFile),
       runtimeConfig,
       apiKey: proxyTarget?.token || apiKey,
     })
@@ -3861,7 +3956,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
       ? join(rootDir, 'hermes-rules.md')
       : tool.id === 'grok' || tool.id === 'dsh'
         ? join(rootDir, 'AGENTS.md')
-        : tool.id === 'opencode'
+        : isOpenCodeFamily(tool.id)
           ? join(rootDir, 'AGENTS.md')
         : undefined,
     reasoningEffort,
@@ -3926,10 +4021,10 @@ async function startCodingAgentRunInternal(
     isolateSettings: true,
     piOutputMode: id === 'pi' ? 'rpc' : undefined,
   })
-  const runtimeMcpFile = launch.files.find(file => file.key === (id === 'dsh' ? 'cordis.patch.yml' : id === 'codex' || id === 'grok' || id === 'opencode' ? 'config' : 'mcp'))
+  const runtimeMcpFile = launch.files.find(file => file.key === (id === 'dsh' ? 'cordis.patch.yml' : id === 'codex' || id === 'grok' || isOpenCodeFamily(id) ? 'config' : 'mcp'))
   const runtimeMcpPath = runtimeMcpFile?.absolutePath
-    || (id === 'codex' || id === 'grok' || id === 'opencode'
-      ? join(launch.rootDir, id === 'opencode' ? OPENCODE_CONFIG_FILE : 'config.toml')
+    || (id === 'codex' || id === 'grok' || isOpenCodeFamily(id)
+      ? join(launch.rootDir, isOpenCodeFamily(id) ? OPENCODE_FAMILY_VARS[id].configFileName : 'config.toml')
       : id === 'pi'
         ? join(launch.rootDir, 'mcp.json')
         : '')
