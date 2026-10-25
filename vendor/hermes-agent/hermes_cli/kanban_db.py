@@ -4068,6 +4068,12 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
     _ctx_checkpoint_recap(lines, task_id, task)
     _ctx_role_history(lines, conn, task, now)
     _ctx_comments(lines, list_comments(conn, task_id), now)
+    # 604 交接检查点段：轮换/分叉会话留下的机械交接记录（无则空段；fail-open）
+    with contextlib.suppress(Exception):
+        from agent.handoff_checkpoint import worker_context_block
+        _ckpt_block = worker_context_block()
+        if _ckpt_block:
+            lines.append(_ckpt_block)
     return "\n".join(lines).rstrip() + "\n"
 
 

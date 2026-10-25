@@ -167,9 +167,18 @@ async def maybe_rotate_session(
             )
             return (response or "") + REPORT_NOTICE.format(reason=reason), session_entry
 
-        # auto：复用压缩耗尽漏斗（reset + evict + 清会话作用域 + 通知）
+        # auto：复用压缩耗尽漏斗（reset + evict + 清会话作用域 + 通知）；
+        # 轮换前落交接检查点（604），轮换后把检查点 note 挂给新会话首回合 sidecar。
         logger.info("Auto-rotating session %s (long-session limit: %s).", session_key, reason)
         note_rotation(session_key, reason=f"auto:{reason}")
+        checkpoint_note = ""
+        with suppress(Exception):
+            from agent.handoff_checkpoint import (
+                build_checkpoint_note, checkpoint_from_turn, write_checkpoint,
+            )
+            record = checkpoint_from_turn(session_key, session_entry, agent_result, entry, reason)
+            if write_checkpoint(session_key, "rotation", record) is not None:
+                checkpoint_note = build_checkpoint_note(record)
         new_entry = await gateway.async_session_store.reset_session(session_key)
         gateway._evict_cached_agent(session_key)
         gateway._clear_conversation_scope(session_key, reason=f"long_session_rotation:{reason}")
@@ -180,6 +189,9 @@ async def maybe_rotate_session(
                     gateway._sync_telegram_topic_binding, source, session_entry,
                     reason="long-session-rotation",
                 )
+        if checkpoint_note:
+            with suppress(Exception):
+                gateway._set_pending_turn_sidecar_notes(session_key, [checkpoint_note])
         return (response or "") + AUTO_NOTICE.format(reason=reason), session_entry
     except Exception:  # noqa: BLE001 - 轮换面故障绝不冒泡
         logger.warning("session rotation check failed", exc_info=True)

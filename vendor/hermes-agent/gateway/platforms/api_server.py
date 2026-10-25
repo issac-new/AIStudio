@@ -3310,6 +3310,14 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         except ValueError as exc:
             return _error_response(str(exc), 400, code="invalid_title")
         fork = await asyncio.to_thread(db.get_session, fork_id) or {"id": fork_id, "parent_session_id": source_id}
+        # 604 交接检查点写侧：fork 即生命周期边界，给子会话留机械指针（fail-open）
+        with suppress(Exception):
+            from agent.handoff_checkpoint import write_checkpoint
+            write_checkpoint(f"fork-{fork_id}", "fork", {
+                "objective": str(source.get("title") or ""),
+                "pointers": {"parent_session_id": source_id, "fork_session_id": fork_id},
+                "left": "the fork carries the parent transcript; confirm continuity from it",
+            })
         return web.json_response({"object": "hermes.session", "session": self._session_response(fork)}, status=201)
 
     async def _prepare_session_chat(self, request: web.Request) -> tuple:
