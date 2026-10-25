@@ -23,62 +23,69 @@ function appendProfile(params: URLSearchParams, profile?: string | null): void {
   if (value) params.set('profile', value)
 }
 
-export async function listFiles(path: string = '', profile?: string | null): Promise<FileListResult> {
+function appendRoot(params: URLSearchParams, root?: string): void {
+  if (root) params.set('root', root)
+}
+
+export async function listFiles(path: string = '', root?: string, profile?: string | null): Promise<FileListResult> {
   const params = new URLSearchParams()
   if (path) params.set('path', path)
+  appendRoot(params, root)
   appendProfile(params, profile)
   const query = params.toString()
   return request<{ entries: FileEntry[]; path: string }>(`/api/studio/files/list${query ? `?${query}` : ''}`)
 }
 
-export async function statFile(path: string, profile?: string | null): Promise<FileStat> {
+export async function statFile(path: string, root?: string, profile?: string | null): Promise<FileStat> {
   const params = new URLSearchParams({ path })
+  appendRoot(params, root)
   appendProfile(params, profile)
   return request<FileStat>(`/api/studio/files/stat?${params.toString()}`)
 }
 
-export async function readFile(path: string, profile?: string | null): Promise<{ content: string; path: string; size: number }> {
+export async function readFile(path: string, root?: string, profile?: string | null): Promise<{ content: string; path: string; size: number }> {
   const params = new URLSearchParams({ path })
+  appendRoot(params, root)
   appendProfile(params, profile)
   return request<{ content: string; path: string; size: number }>(`/api/studio/files/read?${params.toString()}`)
 }
 
-export async function writeFile(path: string, content: string, profile?: string | null): Promise<void> {
-  await request<{ ok: boolean }>('/api/studio/files/write', {
+export async function writeFile(path: string, content: string, root?: string, profile?: string | null): Promise<void> {
+  await request<{ ok: boolean }>(`/api/studio/files/write${root ? `?root=${encodeURIComponent(root)}` : ''}`, {
     method: 'PUT',
     body: JSON.stringify({ path, content, profile: normalizeProfile(profile) || undefined }),
   })
 }
 
-export async function deleteFile(path: string, recursive: boolean = false, profile?: string | null): Promise<void> {
-  await request<{ ok: boolean }>('/api/studio/files/delete', {
+export async function deleteFile(path: string, recursive: boolean = false, root?: string, profile?: string | null): Promise<void> {
+  await request<{ ok: boolean }>(`/api/studio/files/delete${root ? `?root=${encodeURIComponent(root)}` : ''}`, {
     method: 'DELETE',
     body: JSON.stringify({ path, recursive, profile: normalizeProfile(profile) || undefined }),
   })
 }
 
-export async function renameFile(oldPath: string, newPath: string, profile?: string | null): Promise<void> {
-  await request<{ ok: boolean }>('/api/studio/files/rename', {
+export async function renameFile(oldPath: string, newPath: string, root?: string, profile?: string | null): Promise<void> {
+  await request<{ ok: boolean }>(`/api/studio/files/rename${root ? `?root=${encodeURIComponent(root)}` : ''}`, {
     method: 'POST',
     body: JSON.stringify({ oldPath, newPath, profile: normalizeProfile(profile) || undefined }),
   })
 }
 
-export async function mkDir(path: string, profile?: string | null): Promise<void> {
-  await request<{ ok: boolean }>('/api/studio/files/mkdir', {
+export async function mkDir(path: string, root?: string, profile?: string | null): Promise<void> {
+  await request<{ ok: boolean }>(`/api/studio/files/mkdir${root ? `?root=${encodeURIComponent(root)}` : ''}`, {
     method: 'POST',
     body: JSON.stringify({ path, profile: normalizeProfile(profile) || undefined }),
   })
 }
 
-export async function copyFile(srcPath: string, destPath: string, profile?: string | null): Promise<void> {
-  await request<{ ok: boolean }>('/api/studio/files/copy', {
+export async function copyFile(srcPath: string, destPath: string, root?: string, profile?: string | null): Promise<void> {
+  await request<{ ok: boolean }>(`/api/studio/files/copy${root ? `?root=${encodeURIComponent(root)}` : ''}`, {
     method: 'POST',
     body: JSON.stringify({ srcPath, destPath, profile: normalizeProfile(profile) || undefined }),
   })
 }
 
-export async function uploadFiles(targetDir: string, files: File[], profile?: string | null): Promise<{ name: string; path: string }[]> {
+export async function uploadFiles(targetDir: string, files: File[], root?: string, profile?: string | null): Promise<{ name: string; path: string }[]> {
   const base = getBaseUrlValue()
   const formData = new FormData()
   for (const file of files) {
@@ -86,6 +93,7 @@ export async function uploadFiles(targetDir: string, files: File[], profile?: st
   }
   const params = new URLSearchParams()
   if (targetDir) params.set('path', targetDir)
+  appendRoot(params, root)
   appendProfile(params, profile)
   const query = params.toString()
   const url = `${base}/api/studio/files/upload${query ? `?${query}` : ''}`
@@ -128,10 +136,11 @@ export async function uploadRuntimeFiles(files: File[]): Promise<{ name: string;
   return data.files
 }
 
-export function getFileDownloadUrl(relativePath: string, fileName?: string, profile?: string | null): string {
+export function getFileDownloadUrl(relativePath: string, fileName?: string, root?: string, profile?: string | null): string {
   const base = getBaseUrlValue()
   const params = new URLSearchParams({ path: relativePath })
   if (fileName) params.set('name', fileName)
+  appendRoot(params, root)
   const explicitProfile = normalizeProfile(profile)
   const profileName = profile === undefined ? getActiveProfileName() : explicitProfile
   if (profileName) params.set('profile', profileName)
