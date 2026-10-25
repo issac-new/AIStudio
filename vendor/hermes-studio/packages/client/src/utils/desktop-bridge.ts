@@ -215,6 +215,8 @@ export interface HermesDesktopBridge {
   notifyCompletion: (payload: { title: string; body?: string; icon?: string; tag?: string; clickUrl?: string }) => Promise<boolean>
   openExternalUrl?: (url: string) => Promise<boolean>
   openChatWindow?: (sessionId: string, profile?: string) => Promise<void>
+  // overlay[wm]: 驾驶舱操作页弹出独立窗口（routePath 为应用内 hash 路由，含 query）
+  openPanelWindow?: (routePath: string, size?: { width?: number; height?: number }) => Promise<void>
   getWindowState: () => Promise<{ isMaximized: boolean }>
   windowControl: (action: 'minimize' | 'toggle-maximize' | 'close') => Promise<{ isMaximized: boolean }>
   onWindowStateChange?: (callback: (state: { isMaximized: boolean }) => void) => () => void
@@ -226,7 +228,7 @@ export interface HermesDesktopBridge {
   platform: string
   isDesktop: boolean
   remoteMode?: boolean
-  windowKind?: 'main' | 'pet' | 'chat'
+  windowKind?: 'main' | 'pet' | 'chat' | 'panel'
 }
 
 export type WindowWithHermesDesktop = Window & typeof globalThis & {
