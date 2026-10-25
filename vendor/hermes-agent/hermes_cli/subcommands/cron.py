@@ -72,6 +72,9 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
             "`hermes model` changes never touch it. Ignored when --model is given.")
     cron_create.add_argument("--provider", dest="model_provider",
         help="Inference provider paired with --model (e.g. 'openrouter', 'nous').")
+    cron_create.add_argument("--base-url", dest="base_url",
+        help="Inference base URL paired with --model/--provider (custom "
+            "endpoints). Pass empty string to clear.")
     cron_create.add_argument("--reasoning-effort", dest="reasoning_effort",
         help="Pin this job's reasoning (thinking) effort: none, minimal, low, "
             "medium, high, xhigh, max, or ultra. Overrides agent.reasoning_effort "
@@ -151,6 +154,9 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
     cron_edit.add_argument("--interpreter",
         help="Absolute or ~ path to a Python for a .py script / monitor script. "
             "Pass empty string to clear (back to Hermes' Python).")
+    cron_edit.add_argument("--base-url", dest="base_url",
+        help="Inference base URL paired with --model/--provider (custom "
+            "endpoints). Pass empty string to clear.")
 
     # lifecycle actions
     cron_pause = cron_subparsers.add_parser("pause", help="Pause a scheduled job")
