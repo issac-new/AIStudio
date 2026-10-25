@@ -590,11 +590,34 @@ export async function bootstrap() {
       console.log(`[agent-health] proxy ${ctx.method} ${ctx.path} -> ${probeUrl} (authKey=${hadKey ? 'yes' : 'no'})`)
       try {
         const res = await fetch(probeUrl, { headers: healthHeaders })
-        ctx.status = res.status
-        const contentType = res.headers.get('content-type') || 'application/json'
-        ctx.type = contentType
-        ctx.body = await res.text()
-        console.log(`[agent-health] <- ${res.status} ${ctx.path} (contentType=${contentType})`)
+        // overlay[agent-health-detailed-fallback]: /health/detailed requires
+        // API_SERVER_KEY. If missing/wrong, fall back to the unauthenticated
+        // /health endpoint and synthesize the minimal shape CockpitTopBar needs.
+        if (sub === '/detailed' && res.status === 401) {
+          console.warn(`[agent-health] detailed returned 401; falling back to ${agentHealthTarget}/health`)
+          const fallback = await fetch(`${agentHealthTarget}/health`)
+          const fallbackText = await fallback.text()
+          if (!fallback.ok) {
+            throw new Error(`health fallback returned HTTP ${fallback.status}: ${fallbackText.slice(0, 200)}`)
+          }
+          let fallbackData: any = {}
+          try { fallbackData = JSON.parse(fallbackText) } catch { /* plain text health response */ }
+          ctx.status = 200
+          ctx.type = 'application/json'
+          ctx.body = JSON.stringify({
+            ...fallbackData,
+            status: fallbackData.status || 'ok',
+            gateway_state: 'running',
+            detailed_unavailable: true,
+          })
+          console.log(`[agent-health] detailed fallback <- 200 ${ctx.path} (gateway_state=running)`)
+        } else {
+          ctx.status = res.status
+          const contentType = res.headers.get('content-type') || 'application/json'
+          ctx.type = contentType
+          ctx.body = await res.text()
+          console.log(`[agent-health] <- ${res.status} ${ctx.path} (contentType=${contentType})`)
+        }
       } catch (err) {
         const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
         console.error(`[agent-health] proxy FAILED ${ctx.path} -> ${probeUrl}: ${msg}`)
