@@ -1,0 +1,151 @@
+"""Agent 名册配置层（第一批吸收 #10 独立子件：dsh 角色配置 + kimi 昵称池 + routa 团队名册）。
+
+Origin：upstream 分析（docs/upstream-analysis/）——dsh-TUI agent roles 配置层、kimi
+TEAM_RUNTIME_LABELS（routa orchestrator.ts:129-139 同源：运行时给 team 系 agent 分配
+人类名做 displayLabel 且同角色内去重）、routa team/ 九角色名册（researcher/frontend/
+backend/qa/ux/code-reviewer/operations/general-engineer/agent-lead）。
+
+定位：**展示与任务路由提示层**——委派语义角色（leaf/orchestrator，delegate_tool
+_normalize_role）不变；本层为子代理目录提供「角色目录 + 昵称池 + 护栏配置面」：角色
+目录与昵称池的单一事实源在此，护栏默认值的单一事实源在 tools/delegate_tool_config.py
+（delegate_task 实际执行的护栏），本层只导入派生、YAML 可覆盖取值，不写第二份字面量。
+配置文件 ``<HERMES_HOME>/agent-roster.yaml``（缺席走内置默认，坏文件
+告警回默认不炸）。
+
+continuation 路由（send_message 转向 / interrupt 只停当前轮）依赖 delegate 后台化
+（mimo 调研 P3，已缓办），本模块的 roster 即其后置数据面。
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional
+
+# 护栏默认值的单一事实源（Y2 收敛，原 4/2 与真实护栏 10/1 矛盾）。单向 import：本模块
+# 只依赖 tools 侧常量；tools.delegate_tool_config 模块级仅 import utils 与
+# hermes_cli.fallback_config（都不反向 import agent/），无循环 import。
+# 跨模块引私有名沿用 tools/delegate_tool.py 的既有先例。
+from tools.delegate_tool_config import (  # noqa: F401
+    MAX_DEPTH as _DELEGATE_MAX_DEPTH,
+    _DEFAULT_MAX_CONCURRENT_CHILDREN,
+)
+
+logger = logging.getLogger(__name__)
+
+# routa team/ 名册 + dsh 角色并集（内置默认；Ycode 侧按需在 YAML 扩展）。
+DEFAULT_ROLE_CATALOG: tuple[str, ...] = (
+    "researcher", "frontend", "backend", "qa", "ux",
+    "code-reviewer", "operations", "general-engineer", "agent-lead",
+)
+
+# kimi 人类名池（TEAM_RUNTIME_LABELS 同义）：display 用，同角色内去重分配。
+DEFAULT_NICKNAME_POOL: tuple[str, ...] = ("Alex", "Sam", "Lee", "Riley", "Jordan", "Casey", "Morgan", "Avery")
+
+# 并发/深度护栏默认：与 delegate_task 实际护栏同源（上 import 派生，禁止在此写第二份
+# 字面量）。YAML 可在 load_roster 覆盖进程内取值。
+DEFAULT_MAX_CONCURRENT_CHILDREN = _DEFAULT_MAX_CONCURRENT_CHILDREN  # 10：delegation.max_concurrent_children 默认
+DEFAULT_MAX_DELEGATION_DEPTH = _DELEGATE_MAX_DEPTH  # 1：flat（parent 0 → child 1）；routa 的 orchestrator→leaf（2）需 YAML 显式开启
+
+
+@dataclass
+class RosterRole:
+    role: str
+    display_name: str
+    description: str = ""
+
+
+@dataclass
+class AgentRoster:
+    role_catalog: tuple[str, ...] = DEFAULT_ROLE_CATALOG
+    nickname_pool: tuple[str, ...] = DEFAULT_NICKNAME_POOL
+    max_concurrent_children: int = DEFAULT_MAX_CONCURRENT_CHILDREN
+    max_delegation_depth: int = DEFAULT_MAX_DELEGATION_DEPTH
+    role_descriptions: dict[str, str] = field(default_factory=dict)
+    _nick_taken: dict[str, set[str]] = field(default_factory=dict)
+
+    def roles(self) -> tuple[RosterRole, ...]:
+        return tuple(
+            RosterRole(role=r, display_name=r.replace("-", " ").title(),
+                       description=self.role_descriptions.get(r, ""))
+            for r in self.role_catalog
+        )
+
+    def assign_nickname(self, role: str) -> str:
+        """同角色内昵称去重分配（kimi 语义）；池耗尽追加序号。跨角色可重名。"""
+        taken = self._nick_taken.setdefault(role, set())
+        for nick in self.nickname_pool:
+            if nick not in taken:
+                taken.add(nick)
+                return nick
+        n = len(taken) + 1
+        name = f"{self.nickname_pool[0]}-{n}" if self.nickname_pool else f"agent-{n}"
+        taken.add(name)
+        return name
+
+    def release_nickname(self, role: str, nickname: str) -> None:
+        self._nick_taken.setdefault(role, set()).discard(nickname)
+
+    def guards(self) -> dict[str, int]:
+        return {
+            "max_concurrent_children": self.max_concurrent_children,
+            "max_delegation_depth": self.max_delegation_depth,
+        }
+
+
+def roster_config_path() -> Path:
+    home = os.environ.get("HERMES_HOME", "").strip()
+    base = Path(home) if home else Path.home() / ".hermes"
+    return base / "agent-roster.yaml"
+
+
+def load_roster(path: Optional[Path] = None) -> AgentRoster:
+    """YAML 覆盖四要素（角色目录/昵称池/两护栏）；缺席或坏文件回内置默认（告警不炸）。"""
+    p = path or roster_config_path()
+    roster = AgentRoster()
+    try:
+        if not p.is_file():
+            return roster
+        import yaml  # hermes 栈已有 yaml 依赖
+        raw = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        if not isinstance(raw, dict):
+            raise ValueError("roster YAML 顶层须为映射")
+        if isinstance(raw.get("roles"), list) and raw["roles"]:
+            roles = tuple(str(r) for r in raw["roles"] if str(r).strip())
+            if roles:
+                roster.role_catalog = roles
+        if isinstance(raw.get("nicknames"), list) and raw["nicknames"]:
+            nicks = tuple(str(n) for n in raw["nicknames"] if str(n).strip())
+            if nicks:
+                roster.nickname_pool = nicks
+        for key, attr in (
+            ("max_concurrent_children", "max_concurrent_children"),
+            ("max_delegation_depth", "max_delegation_depth"),
+        ):
+            v = raw.get(key)
+            if isinstance(v, int) and v > 0:
+                setattr(roster, attr, v)
+        if isinstance(raw.get("role_descriptions"), dict):
+            roster.role_descriptions = {str(k): str(v) for k, v in raw["role_descriptions"].items()}
+    except Exception as exc:  # noqa: BLE001 - 配置面故障回默认不阻断委派
+        logger.warning("agent-roster 配置读取失败，回内置默认：%s", exc)
+        return AgentRoster()
+    return roster
+
+
+# 进程级缓存（配置文件按启动读一次；测试用 reset 显式失效）。
+_cached: Optional[AgentRoster] = None
+
+
+def get_roster() -> AgentRoster:
+    global _cached
+    if _cached is None:
+        _cached = load_roster()
+    return _cached
+
+
+def reset_roster_cache() -> None:
+    global _cached
+    _cached = None
