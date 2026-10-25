@@ -150,6 +150,101 @@ def _assert_not_delegated_child_mutation(path: str | Path | None = None) -> None
         raise PermissionError("delegate_task child contexts cannot mutate Kanban tasks or boards")
 
 
+
+
+
+# ── 看板写闸层（607 收编：宿主自更新带入的 sanctioned-writer guardrail）──
+GUARDRAIL_UDF_NAME = "kanban_write_sanctioned"
+
+# Every user table the kanban schema owns. install_guardrail_triggers() puts
+# an INSERT/UPDATE/DELETE guard trigger on each so NO write path — not the
+# CLI, not the structured tools, not a raw `sqlite3` process poking the file —
+# can touch board state without an attesting connection. 2026-09-01
+# t_d37428d2: a delegated child bypassed the CLI guard by shelling out to
+# `sqlite3 INSERT` directly; this layer closes that vector at the schema.
+
+_GUARDRAIL_TABLES = (
+    "tasks",
+    "task_links",
+    "task_comments",
+    "task_events",
+    "task_runs",
+    "task_attachments",
+    "kanban_notify_subs",
+)
+
+def _guardrail_trigger_name(table: str, op: str) -> str:
+    """Trigger name for *table*/*op*; also documents the DROP rollback form."""
+    return f"kanban_guard_{table}_{op}"
+
+def register_write_sanction_udf(
+    conn: sqlite3.Connection,
+    *,
+    guard_fn=None,
+) -> None:
+    """Mark *conn* as a sanctioned kanban writer for schema-level guard triggers.
+
+    Boards protected by ``install_guardrail_triggers()`` reject any INSERT /
+    UPDATE / DELETE whose WHEN clause sees ``kanban_write_sanctioned() <> 1``.
+    The guard UDF is connection-scoped, so a bare ``sqlite3`` process (no UDF
+    registered) is rejected at prepare time with "no such function" — that is
+    the fail-closed property this whole layer rests on.
+
+    ``guard_fn`` lets tests inject the attestation; production callers omit it
+    and get the delegation-context check: attestation is granted only when this
+    process is NOT a ``delegate_task`` child, mirroring
+    ``_assert_not_delegated_child_mutation()`` at the DB layer.
+    """
+    if guard_fn is None:
+        def guard_fn() -> int:
+            try:
+                from agent.delegation_context import is_delegated_child_process_context
+
+                return 0 if is_delegated_child_process_context() else 1
+            except Exception:
+                return 0
+
+    conn.create_function(GUARDRAIL_UDF_NAME, 0, guard_fn)
+# <<< swarm:kanban-guardrail-rearm <<<
+
+def install_guardrail_triggers(conn: sqlite3.Connection) -> None:
+    """Install the sanctioned-writer guard triggers on a kanban DB.
+
+    Idempotent (``CREATE TRIGGER IF NOT EXISTS``), safe to call from multiple
+    processes (DDL takes the DB write lock briefly). After installation every
+    INSERT/UPDATE/DELETE on kanban tables is rejected unless the writing
+    connection has register_write_sanction_udf's UDF registered:
+
+    * a bare ``sqlite3`` process (the 2026-09-01 incident vector) fails at
+      statement-prepare time — the WHEN clause references a function its
+      connection doesn't have — with ``no such function:
+      kanban_write_sanctioned``;
+    * a Python connection that went through ``connect`` attests via the
+      delegation-context guard and passes;
+    * an in-process delegated child that imports this module directly and
+      builds its own raw ``sqlite3.connect()`` fails the guard_fn check.
+
+    Reads are untouched. Rollback = ``DROP TRIGGER kanban_guard_<table>_<op>;``
+    (see _guardrail_trigger_name).
+    """
+    # Installing the triggers is itself a schema mutation: same trust bar.
+    _assert_not_delegated_child_mutation()
+    for table in _GUARDRAIL_TABLES:
+        for op in ("insert", "update", "delete"):
+            conn.execute(
+                f"""
+                CREATE TRIGGER IF NOT EXISTS {_guardrail_trigger_name(table, op)}
+                BEFORE {op} ON {table}
+                FOR EACH ROW
+                WHEN kanban_write_sanctioned() <> 1
+                BEGIN
+                    SELECT RAISE(ABORT,
+                        'unsanctioned kanban write (delegate child or raw sqlite3 client)');
+                END
+                """
+            )
+    conn.commit()
+
 def _fire_kanban_lifecycle_hook(event: str, task_id: str, **fields: Any) -> None:
     """Best-effort lifecycle hook. Call AFTER the write txn commits (plugins never
     run under the SQLite write lock, always see durable state); failures are

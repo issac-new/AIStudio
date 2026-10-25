@@ -78,6 +78,11 @@ def _sqlite_connect(path: Path) -> sqlite3.Connection:
         with contextlib.suppress(Exception):
             conn.close()
         raise
+    # 看板写闸接线（607 收编补全）：凡经本助手的连接一律注册 sanctioned-writer UDF——
+    # 旧板上残留的 kanban_guard_* 触发器在 WHEN 子句引用该函数，未注册的连接首个写
+    # 即 "no such function: kanban_write_sanctioned"（2026-10-22 升级轮 aiteam/[已移除] 等
+    # 四板 500 实锤）。委托子进程上下文由 guard_fn 判 0 拒写，fail-closed 语义不变。
+    _kb.register_write_sanction_udf(conn)
     return conn
 
 
