@@ -260,6 +260,12 @@ export const useGroupChatStore = defineStore('groupChat', () => {
         return `${roomId}:${clarifyId}`
     }
     const totalMessages = ref(0)
+    // Unread tracking
+    const unreadCounts = ref<Record<string, number>>({})
+    const lastMessageMap = ref<Record<string, { content: string; senderName: string; ts: number }>>({})
+    function clearRoomUnread(roomId: string) { if (unreadCounts.value[roomId]) { const next = { ...unreadCounts.value }; delete next[roomId]; unreadCounts.value = next } }
+    function clearAllUnread() { unreadCounts.value = {} }
+    function getRoomUnread(roomId: string): number { return unreadCounts.value[roomId] ?? 0 }
     const loadedMessageCount = ref(0)
     const hasMoreBefore = ref(false)
     const isLoadingOlderMessages = ref(false)
@@ -2064,6 +2070,11 @@ export const useGroupChatStore = defineStore('groupChat', () => {
     }
 
     return {
+        unreadCounts,
+        lastMessageMap,
+        clearRoomUnread,
+        clearAllUnread,
+        getRoomUnread,
         // State
         connected,
         currentRoomId,
