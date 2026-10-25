@@ -1,8 +1,8 @@
 diff --git a/packages/ekko-agent/src/config.ts b/packages/ekko-agent/src/config.ts
-index 9a8132c99..3721cb7cc 100644
+index bcbc7c5d9..a9b07322b 100644
 --- a/packages/ekko-agent/src/config.ts
 +++ b/packages/ekko-agent/src/config.ts
-@@ -135,6 +135,10 @@ export interface EkkoMcpServerConfig {
+@@ -141,6 +141,10 @@ export interface EkkoMcpServerConfig {
    url?: string
    headers?: Record<string, string>
    enabled: boolean
@@ -14,7 +14,7 @@ index 9a8132c99..3721cb7cc 100644
  
  export interface EkkoMcpProfileConfig {
 diff --git a/packages/ekko-agent/src/tools/mcp.ts b/packages/ekko-agent/src/tools/mcp.ts
-index 65140e738..7aa342e09 100644
+index 2da6688dc..3b163f686 100644
 --- a/packages/ekko-agent/src/tools/mcp.ts
 +++ b/packages/ekko-agent/src/tools/mcp.ts
 @@ -8,6 +8,7 @@ interface StdioMcpServerConfig {
@@ -22,14 +22,15 @@ index 65140e738..7aa342e09 100644
    env: Record<string, string>
    supportsParallelToolCalls: boolean
 +  toolMode: McpToolMode
+   requestTimeoutMs?: number
  }
  
- interface StreamableHttpMcpServerConfig {
-@@ -15,11 +16,21 @@ interface StreamableHttpMcpServerConfig {
+@@ -16,12 +17,22 @@ interface StreamableHttpMcpServerConfig {
    url: string
    headers: Record<string, string>
    supportsParallelToolCalls: boolean
 +  toolMode: McpToolMode
+   requestTimeoutMs?: number
  }
  
  type McpServerConfig = StdioMcpServerConfig | StreamableHttpMcpServerConfig
@@ -47,32 +48,32 @@ index 65140e738..7aa342e09 100644
  const DEFAULT_MCP_TIMEOUT_MS = 30_000
  const MODEL_TOOL_NAME_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/
  const MCP_PROXY_PREFIX = 'mcp__'
-@@ -43,6 +54,8 @@ function normalizeServerType(value: unknown): string {
+@@ -45,6 +56,8 @@ function normalizeServerType(value: unknown): string {
  function normalizeServerConfig(value: unknown): McpServerConfig | null {
    if (!isRecord(value) || value.enabled === false) return null
    const supportsParallelToolCalls = value.supports_parallel_tool_calls === true
 +  const rawMode = typeof value.tool_mode === 'string' ? value.tool_mode.trim().toLowerCase() : ''
 +  const toolMode: McpToolMode = rawMode === 'proxy' || rawMode === 'defer' ? rawMode : 'direct'
+   const requestTimeoutMs = typeof value.requestTimeoutMs === 'number'
+     && Number.isInteger(value.requestTimeoutMs) && value.requestTimeoutMs > 0 ? value.requestTimeoutMs : undefined
    const configuredType = normalizeServerType(value.type)
-   const command = typeof value.command === 'string' ? value.command.trim() : ''
-   const rawUrl = typeof value.url === 'string' ? value.url.trim() : ''
-@@ -57,6 +70,7 @@ function normalizeServerConfig(value: unknown): McpServerConfig | null {
+@@ -61,6 +74,7 @@ function normalizeServerConfig(value: unknown): McpServerConfig | null {
          url: url.toString(),
          headers: normalizeStringRecord(value.headers),
          supportsParallelToolCalls,
 +        toolMode,
+         requestTimeoutMs,
        }
      } catch {
-       return null
-@@ -71,6 +85,7 @@ function normalizeServerConfig(value: unknown): McpServerConfig | null {
+@@ -76,6 +90,7 @@ function normalizeServerConfig(value: unknown): McpServerConfig | null {
      args: Array.isArray(value.args) ? value.args.map(arg => String(arg)) : [],
      env: normalizeProcessEnv(value.env),
      supportsParallelToolCalls,
 +    toolMode,
+     requestTimeoutMs,
    }
  }
- 
-@@ -288,6 +303,97 @@ class McpProxyTool implements AgentTool {
+@@ -294,6 +309,97 @@ class McpProxyTool implements AgentTool {
    }
  }
  
@@ -170,7 +171,7 @@ index 65140e738..7aa342e09 100644
  function modelSafeToolName(name: string): boolean {
    return MODEL_TOOL_NAME_PATTERN.test(name)
  }
-@@ -349,11 +455,27 @@ export function createMcpToolProvider(): AgentToolProvider {
+@@ -355,11 +461,27 @@ export function createMcpToolProvider(): AgentToolProvider {
            sessions.set(serverName, session)
          }
  

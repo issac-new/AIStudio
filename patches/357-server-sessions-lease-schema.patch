@@ -1,10 +1,8 @@
 diff --git a/packages/server/src/modules/studio/infrastructure/database/schemas.ts b/packages/server/src/modules/studio/infrastructure/database/schemas.ts
-index 0f5f79463..c3bfbde00 100644
+index d7a2da3e0..1954ced1d 100644
 --- a/packages/server/src/modules/studio/infrastructure/database/schemas.ts
 +++ b/packages/server/src/modules/studio/infrastructure/database/schemas.ts
-@@ -200,6 +200,10 @@ export const SESSIONS_SCHEMA: Record<string, string> = {
-   history_revision: 'INTEGER NOT NULL DEFAULT 0',
-   /** Milliseconds of the last history clear; provider usage before it describes deleted history. */
+@@ -234,6 +234,10 @@ export const SESSIONS_SCHEMA: Record<string, string> = {
    history_cleared_at: 'INTEGER NOT NULL DEFAULT 0',
    /** Context estimate after a history edit, separate from cumulative billed usage. */
    context_usage_estimate: 'TEXT',
@@ -13,3 +11,5 @@ index 0f5f79463..c3bfbde00 100644
 +  owner_instance_id: 'TEXT NOT NULL DEFAULT \'\'',
 +  lease_expires_at: 'INTEGER NOT NULL DEFAULT 0',
  }
+ 
+ export const SESSIONS_INDEXES = {
