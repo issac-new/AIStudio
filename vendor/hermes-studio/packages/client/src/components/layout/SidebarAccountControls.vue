@@ -56,6 +56,8 @@ function handleReloadClient() {
 async function handleLogout() {
   const userId = getStoredUserId();
   if (userId) await clearThemeBackgroundCache(userId);
+  // 手动登出标记：LoginView 据此跳过 C2 自动登录，避免退出后立即被 gateway 账号拉回。
+  sessionStorage.setItem('hermes_manual_logout', '1');
   localStorage.clear();
   window.location.reload();
 }

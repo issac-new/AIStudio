@@ -123,6 +123,8 @@ export const useAuthStore = defineStore('hermes-auth', () => {
     user.value = null
     hermesToken.value = null
     matrixToken.value = null
+    // 手动登出标记：LoginView 据此跳过 C2 自动登录，避免退出后立即被 gateway 账号拉回。
+    try { sessionStorage.setItem('hermes_manual_logout', '1') } catch { /* SSR/隐私模式降级 */ }
     clearApiKey()
     clearMatrixCredentials()
   }
