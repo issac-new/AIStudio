@@ -700,6 +700,11 @@ export async function bootstrap() {
   const activeGroupChatServer = new GroupChatServer(servers)
   groupChatServer = activeGroupChatServer
   setGroupChatServer(activeGroupChatServer)
+  // overlay[v14 P2B]: ChatBridge——matrix 房间 ↔ 本地群聊桥（CHAT_BRIDGE_ENABLED 门控；
+  // 动态 import 保证桥缺失/失败不阻断主进程启动）
+  void import('../custom/matrix/chat-bridge')
+    .then(m => m.startChatBridge(activeGroupChatServer))
+    .catch(() => { /* 桥启动失败不阻断 */ })
   groupAgentRelayServer = new GroupAgentRelayServer(activeGroupChatServer.getIO(), activeGroupChatServer)
   additionalShutdownSteps.push({
     name: 'Group agent relay',
