@@ -18,6 +18,12 @@ __pycache__/
 # 静默覆盖宿主演进态，pin/guardrail/域隔离层被抹）。只忽略其运行垃圾：
 runtime/.pytest_cache/
 runtime/**/__pycache__/
+# hermes 系统记录同步副本（runtime/hermes-records/MANIFEST.md 自述为本地工作副本：
+# 舰队记录仍在源位置、更新后手动反同步回流；含内部决策/调研快照不入库）
+runtime/hermes-records/
+# swarm-yuan 生成器对 skills/ 树运行时落的状态目录（仅 .gate-fail-flag 类瞬态标记）；
+# 根 .swarm-yuan/ 是「有意入库」例外——根锚定，不误伤
+/skills/.swarm-yuan/
 vite.config.overlay.wt.ts
 
 # worktree 环境的上游符号链（主 checkout 中 upstream/ 是仓外真实目录，不入库）
