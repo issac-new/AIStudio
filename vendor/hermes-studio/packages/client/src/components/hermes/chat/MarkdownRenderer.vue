@@ -24,6 +24,11 @@ import { isPreviewableFile } from '@/utils/hermes/file-preview'
 import { openUrlInDesktopBrowser } from '@/utils/desktop-browser'
 import ImagePreviewOverlay from './ImagePreviewOverlay.vue'
 
+// 本地媒体只渲染占位属性（data-local-media + 透明 gif），由宿主容器或全局
+// 重写器（overlay entry 安装）用 Authorization fetch 换成 blob URL——API key
+// 不再进入 <img>/<video>/<audio> 的 src（SecNoQueryToken 后直连必 401）。
+const DEFERRED_MEDIA_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
 const LATEX_FENCE_LANGS = new Set(['latex', 'tex', 'math', 'katex'])
 function getFenceLanguage(info: string): string {
   return info.trim().split(/\s+/)[0]?.toLowerCase() ?? ''
@@ -60,6 +65,8 @@ function renderLatexFence(content: string): string {
     strict: 'ignore',
   })}</div>`
 }
+
+const ideDeferLocalMedia = inject<boolean>('ideDeferLocalMedia', true)
 
 const props = withDefaults(defineProps<{
     content: string
@@ -284,6 +291,12 @@ const renderedHtml = computed(() => {
       try { decodedPath = decodeURIComponent(decodedPath) } catch { /* Keep literal paths. */ }
       return `src="${md.utils.escapeHtml(props.resolveImageUrl(normalizeLocalFilePath(decodedPath)))}"`
     }
+    // 本地媒体默认占位（容器/全局重写器用 Authorization fetch 换 blob）——
+    // query token 已被服务端拒绝（SecNoQueryToken），直连 src 必 401。
+    if (ideDeferLocalMedia) {
+      const localPath = md.utils.escapeHtml(normalizeLocalFilePath(path))
+      return `data-local-media=${quote}${localPath}${quote} src="${DEFERRED_MEDIA_PLACEHOLDER}"`
+    }
     const downloadUrl = getDownloadUrl(normalizeLocalFilePath(path))
     return `src=${quote}${downloadUrl}${quote}`
   })
@@ -303,8 +316,11 @@ const renderedHtml = computed(() => {
     // downloadable document, so keep the player instead of opening source view.
     if (hasExtension(path, VIDEO_EXTENSIONS)) {
       const downloadUrl = getDownloadUrl(path)
+      const videoAttrs = ideDeferLocalMedia
+        ? `preload="none" data-local-media="${md.utils.escapeHtml(path)}"`
+        : `preload="metadata" src="${downloadUrl}"`
       return `<div class="markdown-video-container">
-        <video class="markdown-video" controls preload="metadata" src="${downloadUrl}"></video>
+        <video class="markdown-video" controls ${videoAttrs}></video>
         <div class="markdown-video-footer">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <polygon points="5 3 19 12 5 21 5 3"/>
@@ -317,8 +333,11 @@ const renderedHtml = computed(() => {
     // Audio files: render as inline audio player
     if (hasExtension(path, AUDIO_EXTENSIONS)) {
       const downloadUrl = getDownloadUrl(path)
+      const audioAttrs = ideDeferLocalMedia
+        ? `preload="none" data-local-media="${md.utils.escapeHtml(path)}"`
+        : `preload="metadata" src="${downloadUrl}"`
       return `<div class="markdown-audio-container">
-        <audio class="markdown-audio" controls preload="metadata" src="${downloadUrl}"></audio>
+        <audio class="markdown-audio" controls ${audioAttrs}></audio>
         <div class="markdown-audio-footer">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M9 18V5l12-2v13" />
