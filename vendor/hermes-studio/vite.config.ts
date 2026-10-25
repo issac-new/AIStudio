@@ -41,6 +41,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // overlay custom modules — must come BEFORE '@' so '@/custom/...' resolves
+      // to the overlay custom/client dir instead of packages/client/src/custom.
+      '@/custom': resolve(__dirname, '../../overlay/custom/client'),
+      '@custom': resolve(__dirname, '../../overlay/custom/client'),
       '@': resolve(__dirname, 'packages/client/src'),
     },
   },
