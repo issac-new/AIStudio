@@ -28,6 +28,8 @@ import { userCanAccessProfile as userCanAccessProfileForCommandPost } from '../m
 import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
 // overlay[zcode-projection]: zcode 会话投影 Socket.IO namespace（R4-P2）
 import { setupZcodeProjectionSocket } from '../custom/zcode/projection-socket'
+// overlay[matrix-server-info]: element-web config.json 的 homeserver 口径=server-info 单一事实源
+import { getMatrixServerInfo } from '../custom/matrix/server-info'
 import { setChatRunServer } from '../modules/studio/public/chat-run'
 import { GroupChatServer } from '../modules/studio/public/group-chat'
 import {
@@ -524,6 +526,27 @@ export async function bootstrap() {
   // Serve element-web static files at /element-web/*
   const elementWebDir = resolve(__dirname, '..', 'element-web')
   app.use(async (ctx, next) => {
+    // Dynamic element-web config.json — 必须先于下方静态分支（startsWith 会把它吞成
+    // index.html，patch 008 引入的遮蔽缺陷）；homeserver 口径=server-info 单一事实源，
+    // ?hs= 显式覆盖保留（运维调试），覆盖时 server_name 按 URL hostname 推导（维持旧行为）。
+    if (ctx.path === '/element-web/config.json') {
+      const hsOverride = typeof ctx.query.hs === 'string' && ctx.query.hs.trim() !== '' ? ctx.query.hs.trim() : ''
+      const info = getMatrixServerInfo()
+      const homeserverUrl = hsOverride || info.homeserverUrl
+      ctx.type = 'application/json'
+      ctx.body = JSON.stringify({
+        'default_server_config': {
+          'm.homeserver': {
+            'base_url': homeserverUrl,
+            'server_name': hsOverride ? new URL(homeserverUrl).hostname : info.serverName,
+          },
+        },
+        'disable_custom_urls': true,
+        'disable_guests': true,
+        'brand': 'Hermes Matrix Chat',
+      })
+      return
+    }
     if (ctx.path.startsWith('/element-web/')) {
       const relativePath = ctx.path.replace(/^\/element-web\//, '') || 'index.html'
       try {
@@ -534,23 +557,6 @@ export async function bootstrap() {
         await send(ctx, 'index.html', { root: elementWebDir })
         return
       }
-    }
-    // Dynamic element-web config.json — inject homeserver from query params or default
-    if (ctx.path === '/element-web/config.json') {
-      const homeserverUrl = (ctx.query.hs as string) || 'https://matrix.org'
-      ctx.type = 'application/json'
-      ctx.body = JSON.stringify({
-        'default_server_config': {
-          'm.homeserver': {
-            'base_url': homeserverUrl,
-            'server_name': new URL(homeserverUrl).hostname,
-          },
-        },
-        'disable_custom_urls': true,
-        'disable_guests': true,
-        'brand': 'Hermes Matrix Chat',
-      })
-      return
     }
     await next()
   })
