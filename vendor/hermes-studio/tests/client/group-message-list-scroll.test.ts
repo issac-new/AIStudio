@@ -99,6 +99,8 @@ vi.mock('@/components/hermes/group-chat/GroupMessageItem.vue', () => ({
 import GroupMessageList from '@/components/hermes/group-chat/GroupMessageList.vue'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { getRoomDetail } from '@/api/studio/group-chat'
+import { AGENT_OPTIONS } from '@/utils/agent-options'
+import { chatSessionAgentAvatar } from '@/utils/chat-agent-avatar'
 
 function makeMessage(id: string): ChatMessage {
   return {
@@ -139,16 +141,10 @@ describe('GroupMessageList scroll behavior', () => {
     const wrapper = mount(GroupMessageList)
     const avatars = wrapper.findAll('.empty-agent-avatar img')
 
-    expect(avatars.map(avatar => avatar.attributes('alt'))).toEqual([
-      'Hermes',
-      'Ekko',
-      'Codex',
-      'Claude',
-      'Pi',
-      'Grok',
-      'OpenCode',
-      'DeepSeek Harness',
-    ])
+    expect(avatars.map(avatar => avatar.attributes('alt'))).toEqual(AGENT_OPTIONS.map(option => option.label))
+    expect(avatars.map(avatar => avatar.attributes('src'))).toEqual(
+      AGENT_OPTIONS.map(option => chatSessionAgentAvatar({ agent: option.value }).src),
+    )
     expect(wrapper.get('.empty-state p').text()).toBe('groupChat.emptyState')
     expect(wrapper.text()).not.toContain('chat.emptyState')
   })

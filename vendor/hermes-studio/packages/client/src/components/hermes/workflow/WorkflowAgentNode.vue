@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { modelReasoningEfforts } from '@/utils/model-reasoning-effort'
+import { agentReasoningEffortOptions, agentReasoningEffortValue, modelReasoningEfforts } from '@/utils/model-reasoning-effort'
 import NativeCodingAgentModelFields from '@/components/hermes/models/NativeCodingAgentModelFields.vue'
 import { isGlobalOnlyCodingAgent } from "@/utils/agent-catalog"
 import DshSessionPresetSelect from "@/components/coding-agents/dsh/DshSessionPresetSelect.vue"
@@ -59,16 +59,17 @@ const apiModeOptions = computed(() => [
   { label: t('codingAgents.protocolOpenAiResponses'), value: 'codex_responses' },
   { label: t('codingAgents.protocolAnthropicMessages'), value: 'anthropic_messages' },
 ])
-const reasoningEffortOptions = computed(() => [
-  { label: t('chat.reasoningEffort.options.default'), value: 'default' },
+const reasoningEffortOptions = computed(() => agentReasoningEffortOptions([
+  { label: t(props.data.agent === 'hermes' ? 'chat.reasoningEffort.options.default' : 'chat.reasoningEffort.options.none'), value: 'default' },
   ...modelReasoningEfforts(
     props.data.modelGroups,
     props.data.provider,
     props.data.model,
   ).map(value => ({ label: t(`chat.reasoningEffort.options.${value}`), value })),
-])
+], props.data.agent === 'hermes', 'default'))
+const reasoningEffortValue = computed(() => agentReasoningEffortValue(props.data.reasoningEffort, reasoningEffortOptions.value, 'default'))
 watch([reasoningEffortOptions, () => props.data.reasoningEffort], ([options, effort]) => {
-  if (!props.data.readonly && usesScopedModel.value && effort && !options.some(option => option.value === effort)) {
+  if (!props.data.readonly && usesScopedModel.value && effort && effort !== 'default' && !options.some(option => option.value === effort)) {
     updateField('reasoningEffort', 'default')
   }
 }, { immediate: true })
@@ -235,7 +236,7 @@ async function uploadImages(files: File[]) {
         <span class="node-field-label-row">{{ t('chat.reasoningEffort.tooltip') }}</span>
         <NSelect
           v-if="usesScopedModel"
-          :value="data.reasoningEffort"
+          :value="reasoningEffortValue"
           :options="reasoningEffortOptions"
           size="small"
           :disabled="data.readonly"

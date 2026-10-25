@@ -4,6 +4,8 @@ import { studioMcpUsageGuidelines } from '../../public/runs/prompt'
 import { leaseEkkoMcpServers } from './ekko-mcp-lease'
 import { studioMcpCapabilities } from '../../public/runs/mcp-capabilities'
 import { saveTaskPlan } from '../../repositories/task-plan-store'
+import { getSessionTasks, updateSessionTasks } from '../session-tasks'
+import type { SessionTasksUpdate } from '../../contracts/session-task'
 import type { TaskPlanSnapshot } from '../../contracts/task-plan'
 import type { Server, Socket } from 'socket.io'
 import { createHash, randomUUID } from 'crypto'
@@ -133,7 +135,7 @@ function normalizeReasoningEffort(value: unknown): ModelReasoningEffort | undefi
 }
 
 function resolveReasoningEffort(value: unknown): ModelReasoningEffort {
-  return normalizeReasoningEffort(value) ?? 'medium'
+  return normalizeReasoningEffort(value) ?? 'none'
 }
 
 function parseJsonRecord(value: unknown): Record<string, unknown> | null {
@@ -1288,6 +1290,15 @@ export async function handleEkkoAgentRun(
       userId: socket.data?.user?.id, signal: abortController.signal })
     releaseMcp = mcpLease.dispose
     logger.info('[chat-run-socket] starting ekko-agent run for session %s', sessionId)
+    const goalHistoryRevision = getSession(sessionId)?.history_revision || 0
+    const assertSessionGoalsActive = () => {
+      if (foregroundEnded || abortController.signal.aborted || !state.isWorking) throw new Error('Session goal context is unavailable or has expired.')
+      const currentSession = getSession(sessionId)
+      if (!currentSession || (currentSession.profile || 'default') !== profile
+        || (currentSession.history_revision || 0) !== goalHistoryRevision) {
+        throw new Error('The current session goal ledger is unavailable.')
+      }
+    }
     const toolContext = {
       cwd: workspace,
       workspaceRoot: workspace,
@@ -1295,6 +1306,16 @@ export async function handleEkkoAgentRun(
       userId: authenticatedUserId,
       sessionId,
       profileId: profile,
+      ...(!['group_chat', 'workflow', 'global_agent'].includes(sessionSource) && !data.background_delegation_id ? {
+        listSessionTasks: () => {
+          assertSessionGoalsActive()
+          return getSessionTasks(sessionId)
+        },
+        updateSessionTasks: (input: SessionTasksUpdate) => {
+          assertSessionGoalsActive()
+          return updateSessionTasks(sessionId, profile, { ...input }, goalHistoryRevision)
+        },
+      } : {}),
       browserSessionId: sessionId,
       mcpServers: mcpLease.servers,
       mcpSessionSignal: mcpLease.signal,

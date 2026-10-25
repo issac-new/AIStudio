@@ -5,9 +5,9 @@ import { webUiHome } from './paths'
 export const REMOTE_SERVER_URL_ENV = 'EKKO_STUDIO_DESKTOP_SERVER_URL'
 export const REMOTE_SERVER_SETTINGS_NAME = 'desktop-remote-server.json'
 
-const DEFAULT_REMOTE_READY_TIMEOUT_MS = 30_000
+const DEFAULT_REMOTE_READY_TIMEOUT_MS = 300_000
 const REMOTE_READY_POLL_INTERVAL_MS = 500
-const REMOTE_READY_REQUEST_TIMEOUT_MS = 2_000
+const REMOTE_READY_REQUEST_TIMEOUT_MS = 300_000
 
 export function desktopPreloadArguments(kind: 'main' | 'pet' | 'chat', remoteMode: boolean): string[] {
   return [
@@ -85,7 +85,8 @@ export async function waitForRemoteServerReady(serverUrl: string, timeoutMs: num
   let lastFailure = 'no response'
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(healthUrl, { signal: AbortSignal.timeout(REMOTE_READY_REQUEST_TIMEOUT_MS), redirect: 'error', cache: 'no-store' })
+      const requestTimeout = Math.min(REMOTE_READY_REQUEST_TIMEOUT_MS, Math.max(1, deadline - Date.now()))
+      const res = await fetch(healthUrl, { signal: AbortSignal.timeout(requestTimeout), redirect: 'error', cache: 'no-store' })
       if (res.ok) {
         const data = await res.json().catch(() => null) as { status?: unknown } | null
         if (data?.status === 'ready') return
@@ -96,7 +97,8 @@ export async function waitForRemoteServerReady(serverUrl: string, timeoutMs: num
     } catch (err) {
       lastFailure = err instanceof Error ? err.message : String(err)
     }
-    await new Promise(resolveDelay => setTimeout(resolveDelay, REMOTE_READY_POLL_INTERVAL_MS))
+    const remaining = deadline - Date.now()
+    if (remaining > 0) await new Promise(resolveDelay => setTimeout(resolveDelay, Math.min(REMOTE_READY_POLL_INTERVAL_MS, remaining)))
   }
   throw new Error(`Remote server ${serverUrl} did not become ready within ${timeoutMs}ms (${lastFailure})`)
 }

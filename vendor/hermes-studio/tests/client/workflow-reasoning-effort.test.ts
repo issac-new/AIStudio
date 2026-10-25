@@ -12,7 +12,7 @@ describe('workflow reasoning effort authoring contract', () => {
     const view = read('packages/client/src/views/hermes/WorkflowView.vue')
     expect(types).toMatch(/reasoningEffort:\s*string/)
     expect(types).toMatch(/WorkflowAgentNodeEditableData[^\n]+reasoningEffort/)
-    expect(node).toContain(':value="data.reasoningEffort"')
+    expect(node).toContain(':value="reasoningEffortValue"')
     expect(node).toContain("updateField('reasoningEffort'")
     expect(view).toContain("reasoningEffort: hasLegacyGlobalSelection ? 'default' : data.reasoningEffort || 'default'")
     expect(view).toContain('reasoningEffort: node.data.reasoningEffort')

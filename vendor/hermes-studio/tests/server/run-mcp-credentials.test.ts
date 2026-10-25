@@ -94,6 +94,7 @@ it('leases authenticated direct-chat MCP credentials without replacing a running
     await requireUserJwt(ctx, next)
     expect(next).toHaveBeenCalledOnce()
     expect((a.servers!['ekko-studio-browser'] as any).env.AUTH_TOKEN).toBe('')
+    expect((a.servers!['ekko-studio-browser'] as any).requestTimeoutMs).toBe(300_000)
     expect(a.servers!.custom).toBe(servers.custom)
     expect(servers['ekko-studio-browser'].env.AUTH_TOKEN).toBe('stale-static-token')
     controller.abort()
@@ -105,7 +106,7 @@ it('leases authenticated direct-chat MCP credentials without replacing a running
   expect(existsSync(file(b))).toBe(false)
 })
 
-it.each(['/api/studio/task-plans/update', '/api/studio/clarifications/request'])('authorizes only the current anonymous interaction: %s', async path => {
+it.each(['/api/studio/task-plans/update', '/api/studio/clarifications/request', '/api/studio/session-tasks/list', '/api/studio/session-tasks/update'])('authorizes only the current anonymous interaction: %s', async path => {
   let current = true
   const credential = await issue('anonymous', { isActive: () => current })
   const ctx = context(credential, path)
@@ -277,7 +278,7 @@ it('serves concurrent group contexts through one shared MCP process despite an e
 
 it('round-trips real MCP processes through HTTP auth for simultaneous fresh profiles and fails closed after revocation', async () => {
   const plans = new TaskPlanRuns(() => {}, () => {})
-  const start = (session: string) => plans.begin(session, 'research', () => ({ isWorking: true, activeRunMarker: `turn-${session}` }))
+  const start = (session: string) => plans.begin(session, 'research', () => ({ isWorking: true, activeRunMarker: `turn-${session}` }), undefined, true)
   const [a, b] = await Promise.all([issue('mcp-a', { contextId: start('mcp-a') }), issue('mcp-b', { contextId: start('mcp-b') })])
   writeFileSync(join(home, '.token'), 'stale-static-token')
   expect(existsSync(join(home, 'profiles', 'research', '.model-run-token'))).toBe(false)
@@ -287,9 +288,11 @@ it('round-trips real MCP processes through HTTP auth for simultaneous fresh prof
   app.use(resolveUserProfile)
   app.use(ctx => {
     const body = ctx.request.body as any
-    ctx.body = ctx.path === '/api/studio/clarifications/request'
-      ? { ok: true, response: 'approved text' }
-      : { ok: true, ...plans.update(body.context_id, ctx.state.profile!.name, body) }
+    ctx.body = ctx.path.startsWith('/api/studio/session-tasks/')
+      ? { ok: true, session_id: plans.sessionForContext(body.context_id, ctx.state.profile!.name), revision: body.revision ?? 0, changes: body.changes, tasks: [] }
+      : ctx.path === '/api/studio/clarifications/request'
+        ? { ok: true, response: 'approved text' }
+        : { ok: true, ...plans.update(body.context_id, ctx.state.profile!.name, body) }
   })
   const server = app.listen(0, '127.0.0.1')
   await new Promise<void>(resolve => server.once('listening', resolve))
@@ -303,6 +306,13 @@ it('round-trips real MCP processes through HTTP auth for simultaneous fresh prof
     expect(foreign.isError).toBe(true)
     const answer = await clients[0].call({ context_id: a.context_id, question: 'Choose a folder' }, 'ekko_studio_clarify')
     expect(JSON.parse(answer.content[0].text).response).toBe('approved text')
+    const read = await clients[0].call({ context_id: a.context_id }, 'ekko_studio_list_session_tasks')
+    expect(JSON.parse(read.content[0].text).session_id).toBe('mcp-a')
+    const changes = [{ title: 'Export', summary: 'Requested', status: 'open' }]
+    const write = await clients[0].call({ context_id: a.context_id, revision: 0, changes }, 'ekko_studio_update_session_tasks')
+    expect(JSON.parse(write.content[0].text)).toMatchObject({ session_id: 'mcp-a', changes })
+    const foreignGoals = await clients[0].call({ context_id: b.context_id }, 'ekko_studio_list_session_tasks')
+    expect(foreignGoals.isError).toBe(true)
     runMcpCredentials.revoke('mcp-a')
     expect((await clients[0].call(input(a.context_id))).content[0].text).toContain('credential is unavailable')
     expect((await clients[1].call({ ...input(b.context_id), profile: 'other' })).isError).toBe(true)

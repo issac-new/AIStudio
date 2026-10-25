@@ -4,6 +4,28 @@ import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesZhTw } from '../social-messages'
 
 export default {
+  sessionTasks: {
+      "title": "任務",
+      "task": "任務",
+      "source": "來源對話",
+      "status": "狀態",
+      "updated": "更新於",
+      "search": "搜尋任務或對話",
+      "filterStatus": "篩選任務狀態",
+      "all": "全部狀態",
+      "open": "未完成",
+      "completed": "已完成",
+      "openChat": "開啟對話",
+      "openTask": "在對話中查看：{title}",
+      "loading": "正在載入任務",
+      "loadFailed": "任務載入失敗",
+      "retry": "重試",
+      "noResults": "沒有符合條件的任務",
+      "empty": "對話中記錄的任務會顯示在這裡",
+      "untitled": "未命名對話",
+      "jumpUnavailable": "關聯訊息已無法使用，已開啟所屬對話"
+  },
+
   remoteDevices: remoteDeviceMessages["zh-TW"],
   modelApi: {
     "localRoute": "本機位址",
@@ -213,6 +235,7 @@ export default {
       "auth_failed": "TypeSafe 驗證失敗，請檢查 API 金鑰及其權限。",
       "rate_limited": "已達到 TypeSafe 請求頻率限制，請稍後再試。",
       "provider_error": "TypeSafe 無法處理請求，請檢查模型後重試。",
+      "endpoint_not_found": "JEV 介面不存在（HTTP 404），請檢查介面位址是否包含閘道所需的路徑前綴。",
       "request_failed": "無法連線至 JEV，請檢查 API 位址與網路連線。",
       "settings_failed": "無法讀取或儲存 JEV 設定，請檢查 Studio 資料目錄。",
       "forbidden": "你沒有存取此設定檔的權限。",
@@ -386,6 +409,14 @@ export default {
   },
   socialMessages: socialMessagesZhTw,
   browser: {
+    remoteOwnerActive: '当前控制设备',
+    remoteOwnerStandby: '待命：另一设备正在使用，闲置10分钟后可接管',
+    remoteOwnerBusy: '待命：浏览器操作正在执行',
+    remoteOwnerConnecting: '正在连接',
+
+    remoteControl: '允许远程控制',
+    remoteControlStop: '停止远程控制',
+
     title: '瀏覽器', settings: '瀏覽器設定', desktopOnly: '內建瀏覽器僅在 Ekko Studio 桌面版可用。', newTab: '新分頁',
     back: '上一頁', forward: '下一頁', reload: '重新整理', stop: '停止', addressPlaceholder: '搜尋或輸入網址',
     undoAnnotation: '復原上一個', deleteAnnotation: '刪除標註 {index}',
@@ -2620,7 +2651,10 @@ export default {
       localInboxPayloadTitle: '收到的 Webhook Payload',
       clearInboxConfirm: '確定要清空本機測試收件匣中的所有事件？',
       columns: { name: '名稱', url: 'URL', events: '事件', profiles: 'Profile', status: '狀態', actions: '操作', receivedAt: '接收時間', event: '事件', eventId: 'Event ID', deliveryId: 'Delivery ID' },
-      events: { runUpdated: '執行狀態更新', planUpdated: '任務卡片進度更新', groupMessageCreated: '群聊訊息已建立', messageCreated: '使用者訊息已建立', runQueued: '執行已排入佇列', runStarted: '執行已開始', toolStarted: '工具已開始', toolCompleted: '工具已完成', toolFailed: '工具執行失敗', approvalRequested: '要求授權', approvalResolved: '授權已處理', clarificationRequested: '要求澄清', clarificationResolved: '澄清已處理', completed: '執行完成', failed: '執行失敗' },
+      events: {
+        taskCreated: "工作階段任務已建立",
+        taskCompleted: "工作階段任務已完成",
+        runUpdated: '執行狀態更新', planUpdated: '任務卡片進度更新', groupMessageCreated: '群聊訊息已建立', messageCreated: '使用者訊息已建立', runQueued: '執行已排入佇列', runStarted: '執行已開始', toolStarted: '工具已開始', toolCompleted: '工具已完成', toolFailed: '工具執行失敗', approvalRequested: '要求授權', approvalResolved: '授權已處理', clarificationRequested: '要求澄清', clarificationResolved: '澄清已處理', completed: '執行完成', failed: '執行失敗' },
       status: { enabled: '已啟用', disabled: '已停用' },
       runtime: { idle: '閒置', delivering: '投遞中', retrying: '等待重試', success: '已送達', failed: '投遞失敗', dropped: '已捨棄' },
       actions: { add: '新增 Webhook', localTest: '使用本機測試接收器', test: '測試', enable: '啟用', disable: '停用', refresh: '重新整理', clear: '清空', view: '檢視' },
@@ -2637,8 +2671,8 @@ export default {
         profiles: 'Profile',
         profilesPlaceholder: '留空即可接收所有 Profile',
         maxRetries: '首次失敗後的重試次數（0–10）',
-        includeContent: '包含助理最終文字',
-        includeContentHint: '最終回覆可能包含敏感資訊。推理內容、系統提示詞與工具參數永遠不會傳送。',
+        includeContent: "包含回覆與任務內容",
+        includeContentHint: "回覆與任務內容可能包含敏感資訊，包括任務標題、摘要與完成依據。不會包含思考過程、系統提示詞或工具參數。",
         includeUserContent: '包含使用者訊息文字',
         includeUserContentHint: '使用者訊息可能包含敏感資訊，預設為關閉。系統提示詞、推理內容、工具參數與工具結果不會因此傳送。',
         allowPrivateNetwork: '允許私有或本機網路位址',
@@ -3866,6 +3900,18 @@ export default {
 
   // 更新日誌
   changelog: {
+    new_0_7_39_1: "新增跨輪次工作階段任務記錄，Agent 可持續追蹤使用者目標並儲存完成依據 (#3499)",
+    new_0_7_39_2: "新增工作階段任務抽屜，可跳轉至相關對話；改善行動版清單、任務詳情與工作階段名稱，減少瑣碎任務記錄 (#3501、#3509、#3510)",
+    new_0_7_39_3: "遠端 Studio 的 Agent 可在桌面端明確授權後使用本機內建瀏覽器，並可隨時停止共用 (#3478)",
+    new_0_7_39_4: "帳號主題快捷切換新增跟隨系統模式；統一抽屜的頂部間距、主題背景與直角樣式 (#3496、#3475)",
+    new_0_7_39_5: "群聊空白狀態顯示全部 Agent，並適應不同視窗寬度 (#3471)",
+    new_0_7_39_6: "Ekko 預設推理強度調整為無，統一單聊、群聊和工作流程中的 Agent 標籤 (#3488)",
+    new_0_7_39_7: "修正停止後思考指示器未消失，以及工具結果截斷時中文字元或表情損壞、請求失敗的問題 (#3473、#3457、#3460)",
+    new_0_7_39_8: "服務商匯入連結支援自動 API 模式；JEV 相容含版本前綴及完整端點網址，並區分端點不存在與模型錯誤 (#3494、#3493、#3491)",
+    new_0_7_39_9: "桌面擷取畫面缺少螢幕錄製權限時可直接開啟系統設定授權，避免阻塞式對話框 (#3492)",
+    new_0_7_39_10: "修正 Windows ARM64 原生 Hermes 執行環境建置中的相依套件與終端機相容性問題 (#3429)",
+    new_0_7_39_11: "停止提供 TerraMaster TOS 專用安裝套件與自動建置支援 (#3503)",
+    new_0_7_39_12: "工作階段任務新增建立與完成 Webhook 事件，可分別訂閱，並由內容開關控制任務標題、摘要與完成依據的傳送 (#3512)",
     new_0_7_38_1: "新增自動 API 模式，可依已知連線與模型比對協定，支援帶有服務商前綴的模型名稱；新增連線仍預設使用 Chat Completions (#3469)",
     new_0_7_38_2: "桌面版新增本機與遠端裝置切換及裝置管理，取代舊的區域網路配對入口 (#3464)",
     new_0_7_38_3: "模型 API 新增雲端存取、金鑰可用模型限制及累計美元預算，恢復 Agent 用量明細，並修正面板寬度 (#3440、#3450)",
@@ -3887,14 +3933,5 @@ export default {
     new_0_7_37_9: "清除 Claude OAuth 登入時同步移除各 Profile 管理的憑證，避免殘留登入狀態 (#3442)",
     new_0_7_37_10: "新增 Windows ARM64 桌面安裝套件建置支援 (#3428)",
     new_0_7_37_11: "修復 TOS 7 全新安裝、入口路徑與服務重新啟動策略，減少對主機環境及預先建立使用者的依賴 (#3413、#3431)",
-    new_0_7_36_1: '新增佈景主題即時自訂，可依介面區域設定背景、透明度、模糊、圓角、邊框和陰影 (#3394)',
-    new_0_7_36_2: '新增具名佈景主題預設，支援建立、複製、切換、匯入和匯出，並依帳號儲存 (#3394)',
-    new_0_7_36_3: '統一模型可見性設定在模型選擇器中的套用範圍，並為大型模型目錄新增效能提示 (#3392)',
-    new_0_7_36_4: '可見模型管理新增搜尋功能 (#3393)',
-    new_0_7_36_5: '將新建聊天的分類選擇移至輸入框工具列 (#3389)',
-    new_0_7_36_6: '修復小螢幕下工作流程執行記錄抽屜內容寬度不足和背景透明的問題 (#3398)',
-    new_0_7_36_7: '修復群組聊天 AI 訊息的佈景主題同步，並消除訊息氣泡及表格中的重複背景和模糊 (#3398)',
-    new_0_7_36_8: '新增隨版本發佈自動建置與驗證 TOS 7 x86_64 測試安裝套件的流程 (#3397)',
-    new_0_7_36_9: '完善 GIF、動態 WebP 和 APNG 背景支援，上限提升至 30 MB，儲存、快取及佈景主題匯入匯出皆保留動畫',
   },
 }

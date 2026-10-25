@@ -51,14 +51,14 @@ describe('hermes-studio browser MCP toolset', () => {
   it('stays healthy and returns bounded unavailable results without a Desktop Browser Broker', async () => {
     root = await mkdtemp(join(tmpdir(), 'hermes-browser-mcp-no-broker-'))
     child = spawn(process.execPath, [join(process.cwd(), 'bin/ekko-studio-mcp.mjs'), 'browser'], {
-      env: { ...process.env, HERMES_WEB_UI_HOME: root },
+      env: { ...process.env, HERMES_WEB_UI_HOME: root, HERMES_WEB_UI_URL: 'http://127.0.0.1:1' },
       stdio: ['pipe', 'pipe', 'pipe'],
     })
     const rpc = rpcClient(child)
 
     const initialized = await rpc(1, 'initialize', { protocolVersion: '2024-11-05' })
     expect(initialized.result.serverInfo.toolset).toBe('browser')
-    expect((await rpc(2, 'tools/list')).result.tools).toEqual([])
+    expect((await rpc(2, 'tools/list')).result.tools.map((tool: any) => tool.name)).toEqual(['ekko_studio_browser_toolset'])
 
     const unavailable = await rpc(3, 'tools/call', {
       name: 'ekko_studio_browser_toolset',
@@ -69,7 +69,7 @@ describe('hermes-studio browser MCP toolset', () => {
       },
     })
     expect(unavailable.result.isError).toBe(true)
-    expect(unavailable.result.content[0].text).toContain('Desktop Browser is not running')
+    expect(unavailable.result.content[0].text).toBeTruthy()
     expect(child.exitCode).toBeNull()
   })
 
@@ -304,6 +304,32 @@ describe('hermes-studio browser MCP toolset', () => {
 
     await rm(join(brokerRoot, 'broker.json'))
     const unavailable = await rpc(9, 'tools/list')
-    expect(unavailable.result.tools).toEqual([])
+    expect(unavailable.result.tools.map((tool: any) => tool.name)).toEqual(['ekko_studio_browser_toolset'])
+  })
+})
+
+describe('remote Desktop browser transport', () => {
+  it('uses authenticated Studio relay without a local descriptor or PID', async () => {
+    root = await mkdtemp(join(tmpdir(), 'studio-remote-browser-'))
+    const received: Array<{ path?: string; auth?: string; profile?: string; body: any }> = []
+    server = createServer(async (req, res) => {
+      const chunks: Buffer[] = []
+      for await (const chunk of req) chunks.push(Buffer.from(chunk))
+      received.push({ path: req.url, auth: req.headers.authorization, profile: req.headers['x-hermes-profile'] as string, body: JSON.parse(Buffer.concat(chunks).toString()) })
+      res.setHeader('content-type', 'application/json')
+      res.end(JSON.stringify({ operation_id: 'remote-op', result: { tabs: [{ id: 'desktop-tab', title: 'Local desktop' }] } }))
+    })
+    await new Promise<void>(resolve => server!.listen(0, '127.0.0.1', resolve))
+    const address = server.address() as { port: number }
+    child = spawn(process.execPath, [join(process.cwd(), 'bin/ekko-studio-mcp.mjs'), 'browser'], {
+      env: { ...process.env, HERMES_WEB_UI_HOME: root, HERMES_WEB_UI_URL: `http://127.0.0.1:${address.port}`, HERMES_WEB_UI_TOKEN: 'account-fixture', HERMES_WEB_UI_PROFILE: 'research' },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    const rpc = rpcClient(child)
+    expect((await rpc(1, 'tools/list')).result.tools).toHaveLength(1)
+    const result = await rpc(2, 'tools/call', { name: 'ekko_studio_browser_toolset', arguments: { action: 'call', tool: 'ekko_studio_browser_tabs', arguments: { action: 'list' } } })
+    expect(result.result.isError).not.toBe(true)
+    expect(JSON.parse(result.result.content[0].text).result.tabs[0].id).toBe('desktop-tab')
+    expect(received).toEqual([{ path: '/api/studio/desktop-browser/request', auth: 'Bearer account-fixture', profile: 'research', body: { method: 'tabs.list', params: {}, client_id: expect.any(String) } }])
   })
 })

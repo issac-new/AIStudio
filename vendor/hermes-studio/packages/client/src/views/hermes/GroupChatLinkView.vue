@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { deploymentUrl } from '@/utils/deployment-url'
-import { modelReasoningEfforts } from '@/utils/model-reasoning-effort'
+import { agentReasoningEffortOptions as reasoningOptions, agentReasoningEffortValue as reasoningValue, modelReasoningEfforts } from '@/utils/model-reasoning-effort'
 import { isNativeCodingAgent, isGlobalOnlyCodingAgent } from '@/utils/agent-catalog'
 import PageLoading from '@/components/common/PageLoading.vue'
 import { GROUP_AGENT_OPTIONS } from "@/utils/agent-options"
@@ -179,14 +179,18 @@ const agentApiModeOptions = computed(() => [
   { label: t('codingAgents.protocolOpenAiResponses'), value: 'codex_responses' },
   { label: t('codingAgents.protocolAnthropicMessages'), value: 'anthropic_messages' },
 ])
-const agentReasoningEffortOptions = computed(() => [
-  { label: t('chat.reasoningEffort.options.default'), value: '' },
+const agentReasoningEffortOptions = computed(() => reasoningOptions([
+  { label: t(selectedAgentType.value === 'hermes' ? 'chat.reasoningEffort.options.default' : 'chat.reasoningEffort.options.none'), value: '' },
   ...modelReasoningEfforts(
     getAgentModelGroups(selectedProfile.value),
     selectedAgentProvider.value,
     selectedAgentModel.value,
   ).map(value => ({ label: t(`chat.reasoningEffort.options.${value}`), value })),
-])
+], selectedAgentType.value === 'hermes'))
+const agentReasoningEffortValue = computed({
+  get: () => reasoningValue(selectedAgentReasoningEffort.value, agentReasoningEffortOptions.value),
+  set: (value: string) => { selectedAgentReasoningEffort.value = value },
+})
 const supportsGlobalAgentMode = computed(() => ['claude', 'codex', 'pi', 'grok', 'opencode', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode'].includes(selectedAgentType.value))
 const usesGlobalAgentMode = computed(() => supportsGlobalAgentMode.value && selectedAgentMode.value === 'global')
 const agentModeOptions = computed(() => [
@@ -738,7 +742,7 @@ onUnmounted(() => {
           <div v-if="!usesGlobalAgentMode" class="field">
             <label>{{ t('chat.reasoningEffort.tooltip') }}</label>
             <NSelect
-              v-model:value="selectedAgentReasoningEffort"
+              v-model:value="agentReasoningEffortValue"
               :options="agentReasoningEffortOptions"
               :disabled="waitingForApproval"
             />

@@ -247,17 +247,44 @@ describe('JEV settings', () => {
 })
 
 describe('shared JEV client', () => {
-  it('batches all three primitives with selected profile credentials and preserves results', async () => {
+  it.each([
+    ['https://jev.example.test/', 'https://jev.example.test'],
+    ['https://jev.example.test/v1', 'https://jev.example.test'],
+    ['https://jev.example.test/v1/', 'https://jev.example.test'],
+    ['https://jev.example.test/v1/systemone', 'https://jev.example.test'],
+    ['https://jev.example.test/v1/systemone/', 'https://jev.example.test'],
+    ['https://jev.example.test/gateway', 'https://jev.example.test/gateway'],
+    ['https://jev.example.test/gateway/v1/', 'https://jev.example.test/gateway'],
+    ['https://jev.example.test/gateway/v1/systemone/', 'https://jev.example.test/gateway'],
+    ['https://jev.example.test/v1/systemone/gateway/', 'https://jev.example.test/v1/systemone/gateway'],
+  ])('batches typed questions with profile credentials at %s', async (baseUrl, root) => {
     await saveJevSettings('default', { apiKey: 'default-key' })
-    await saveJevSettings('research', { apiKey: 'research-key', model: 'jev-research', baseUrl: 'https://jev.example.test/' })
+    await saveJevSettings('research', { apiKey: 'research-key', model: 'jev-research', baseUrl })
     const result = await evaluateJev('research', { state: { message: 'billing issue' }, questions })
     expect(result).toEqual(response)
     expect(upstream).toHaveBeenCalledTimes(1)
     const [url, init] = upstream.mock.calls[0]
-    expect(url).toBe('https://jev.example.test/v1/systemone')
+    expect(url).toBe(`${root}/v1/systemone`)
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer research-key')
     expect(init?.redirect).toBe('error')
     expect(JSON.parse(init!.body as string)).toEqual({ state: { message: 'billing issue' }, questions, model: 'jev-research' })
+    expect(await getJevSettings('research')).toMatchObject({ baseUrl: root })
+    expect(await getJevRuntimeConfig('research')).toMatchObject({ baseUrl: root })
+  })
+
+  it('normalizes an existing saved endpoint when reading settings without rewriting the file', async () => {
+    await saveJevSettings('research', { apiKey: 'research-key' })
+    const [file] = await readdir(directory)
+    const path = join(directory, file)
+    const saved = JSON.parse(await readFile(path, 'utf8'))
+    saved.baseUrl = 'https://jev.example.test/gateway/v1/systemone/'
+    const original = JSON.stringify(saved)
+    await writeFile(path, original)
+
+    await expect(evaluateJev('research', { state: null, questions })).resolves.toEqual(response)
+    expect(upstream.mock.calls[0][0]).toBe('https://jev.example.test/gateway/v1/systemone')
+    expect(await getJevRuntimeConfig('research')).toMatchObject({ baseUrl: 'https://jev.example.test/gateway' })
+    expect(await readFile(path, 'utf8')).toBe(original)
   })
 
   it('does not fall back to another profile or the process environment', async () => {
@@ -278,10 +305,10 @@ describe('shared JEV client', () => {
     expect(JSON.parse(init!.body as string).model).toBe('jev-override')
   })
 
-  it.each([401, 403, 429, 500])('sanitizes provider HTTP %i errors without retries', async status => {
+  it.each([400, 401, 403, 404, 429, 500, 503])('sanitizes provider HTTP %i errors without retries', async status => {
     await saveJevSettings('research', { apiKey: 'private-key' })
     upstream.mockResolvedValue(Response.json({ error: 'private-key and private-state' }, { status }))
-    const code = [401, 403].includes(status) ? 'jev_auth_failed' : status === 429 ? 'jev_rate_limited' : 'jev_provider_error'
+    const code = [401, 403].includes(status) ? 'jev_auth_failed' : status === 404 ? 'jev_endpoint_not_found' : status === 429 ? 'jev_rate_limited' : 'jev_provider_error'
     await expect(evaluateJev('research', { state: 'private-state', questions })).rejects.toMatchObject({ status: 502, code, message: `JEV provider returned HTTP ${status}` })
     expect(upstream).toHaveBeenCalledTimes(1)
   })

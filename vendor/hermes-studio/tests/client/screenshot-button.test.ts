@@ -116,6 +116,32 @@ describe('screenshot composer button', () => {
     expect(wrapper.get('button').attributes('disabled')).toBeUndefined()
   })
 
+  it('opens system authorization directly after the screenshot permission failure', async () => {
+    nativeBridge(vi.fn().mockRejectedValue(new Error('SCREENSHOT_PERMISSION_DENIED')))
+    const request = vi.fn().mockResolvedValue(undefined)
+    desktop.bridge.platform = 'darwin'
+    desktop.bridge.computerUsePermissions = { request }
+    const wrapper = mount(ScreenshotButton)
+    await wrapper.get('button.screenshot-button').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="screenshot-permission-guide"]').exists()).toBe(false)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(request).toHaveBeenCalledExactlyOnceWith('screenRecording')
+  })
+
+  it('keeps the inline retry action when opening system settings fails', async () => {
+    nativeBridge(vi.fn().mockRejectedValue(new Error('SCREENSHOT_PERMISSION_DENIED')))
+    desktop.bridge.platform = 'darwin'
+    desktop.bridge.computerUsePermissions = { request: vi.fn().mockRejectedValue(new Error('unavailable')) }
+    const wrapper = mount(ScreenshotButton)
+    await wrapper.get('button.screenshot-button').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="screenshot-authorize"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toBe('computerUsePermissions.openFailed')
+    expect(wrapper.get('[data-testid="screenshot-authorize"]').attributes('disabled')).toBeUndefined()
+  })
+
   it('disables Linux hiding with an explanation while allowing ordinary screenshots', async () => {
     const native = nativeBridge()
     native.getCapabilities = vi.fn().mockResolvedValue({ capture: 'electron', hideWindows: false })

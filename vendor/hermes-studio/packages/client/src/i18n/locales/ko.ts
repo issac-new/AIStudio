@@ -4,6 +4,28 @@ import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesKo } from '../social-messages-locales'
 
 export default {
+  sessionTasks: {
+      "title": "작업",
+      "task": "작업",
+      "source": "원본 대화",
+      "status": "상태",
+      "updated": "업데이트",
+      "search": "작업 또는 대화 검색",
+      "filterStatus": "작업 상태 필터",
+      "all": "모든 상태",
+      "open": "미완료",
+      "completed": "완료",
+      "openChat": "대화 열기",
+      "openTask": "대화에서 보기: {title}",
+      "loading": "작업 불러오는 중",
+      "loadFailed": "작업을 불러올 수 없습니다",
+      "retry": "다시 시도",
+      "noResults": "일치하는 작업 없음",
+      "empty": "대화에 기록된 작업이 여기에 표시됩니다",
+      "untitled": "제목 없는 대화",
+      "jumpUnavailable": "연결된 메시지를 사용할 수 없어 대화를 열었습니다."
+  },
+
   remoteDevices: remoteDeviceMessages["ko"],
   modelApi: {
     "localRoute": "로컬 주소",
@@ -213,6 +235,7 @@ export default {
       "auth_failed": "TypeSafe 인증에 실패했습니다. API 키와 권한을 확인하세요.",
       "rate_limited": "TypeSafe 요청 한도에 도달했습니다. 나중에 다시 시도하세요.",
       "provider_error": "TypeSafe가 요청을 처리하지 못했습니다. 모델을 확인한 후 다시 시도하세요.",
+      "endpoint_not_found": "JEV 엔드포인트를 찾을 수 없습니다(HTTP 404). API 기본 URL에 게이트웨이 경로 접두사가 포함되어 있는지 확인하세요.",
       "request_failed": "JEV에 연결할 수 없습니다. API 주소와 네트워크를 확인하세요.",
       "settings_failed": "JEV 설정을 읽거나 저장할 수 없습니다. Studio 데이터 디렉터리를 확인하세요.",
       "forbidden": "이 프로필에 접근할 권한이 없습니다.",
@@ -386,6 +409,14 @@ export default {
   },
   socialMessages: socialMessagesKo,
   browser: {
+    remoteOwnerActive: 'Current control device',
+    remoteOwnerStandby: 'Standby — another device is active',
+    remoteOwnerBusy: 'Standby — browser operation in progress',
+    remoteOwnerConnecting: 'Connecting',
+
+    remoteControl: 'Allow remote control',
+    remoteControlStop: 'Stop remote control',
+
     title: '브라우저', settings: '브라우저 설정', desktopOnly: '내장 브라우저는 Ekko Studio Desktop에서만 사용할 수 있습니다.', newTab: '새 탭',
     back: '뒤로', forward: '앞으로', reload: '새로고침', stop: '중지', addressPlaceholder: '검색 또는 주소 입력',
     undoAnnotation: '마지막 주석 취소', deleteAnnotation: '주석 {index} 삭제',
@@ -2177,7 +2208,10 @@ export default {
       localInboxPayloadTitle: '수신한 웹훅 페이로드',
       clearInboxConfirm: '로컬 테스트 수신함의 모든 이벤트를 지울까요?',
       columns: { name: '이름', url: 'URL', events: '이벤트', profiles: '프로필', status: '상태', actions: '작업', receivedAt: '수신 시간', event: '이벤트', eventId: '이벤트 ID', deliveryId: '전송 ID' },
-      events: { runUpdated: '실행 상태 업데이트', planUpdated: '작업 카드 진행 상황 업데이트', groupMessageCreated: '그룹 메시지 생성됨', messageCreated: '사용자 메시지 생성됨', runQueued: '실행 대기열 추가됨', runStarted: '실행 시작됨', toolStarted: '도구 시작됨', toolCompleted: '도구 완료됨', toolFailed: '도구 실패', approvalRequested: '승인 요청됨', approvalResolved: '승인 처리됨', clarificationRequested: '확인 요청됨', clarificationResolved: '확인 처리됨', completed: '실행 완료', failed: '실행 실패' },
+      events: {
+        taskCreated: "세션 작업 생성됨",
+        taskCompleted: "세션 작업 완료됨",
+        runUpdated: '실행 상태 업데이트', planUpdated: '작업 카드 진행 상황 업데이트', groupMessageCreated: '그룹 메시지 생성됨', messageCreated: '사용자 메시지 생성됨', runQueued: '실행 대기열 추가됨', runStarted: '실행 시작됨', toolStarted: '도구 시작됨', toolCompleted: '도구 완료됨', toolFailed: '도구 실패', approvalRequested: '승인 요청됨', approvalResolved: '승인 처리됨', clarificationRequested: '확인 요청됨', clarificationResolved: '확인 처리됨', completed: '실행 완료', failed: '실행 실패' },
       status: { enabled: '활성화됨', disabled: '비활성화됨' },
       runtime: { idle: '대기', delivering: '전송 중', retrying: '재시도 대기', success: '전송됨', failed: '실패', dropped: '삭제됨' },
       actions: { add: '웹훅 추가', localTest: '로컬 테스트 수신기 사용', test: '테스트', enable: '활성화', disable: '비활성화', refresh: '새로고침', clear: '지우기', view: '보기' },
@@ -2194,8 +2228,8 @@ export default {
         profiles: '프로필',
         profilesPlaceholder: '모든 프로필을 받으려면 비워 두세요',
         maxRetries: '첫 실패 후 재시도 횟수(0~10)',
-        includeContent: '어시스턴트의 최종 텍스트 포함',
-        includeContentHint: '최종 답변에 민감한 정보가 포함될 수 있습니다. 추론, 시스템 프롬프트, 도구 인수는 전송되지 않습니다.',
+        includeContent: "응답 및 작업 텍스트 포함",
+        includeContentHint: "응답 및 작업 텍스트에는 작업 제목, 요약, 완료 근거 등 민감한 정보가 포함될 수 있습니다. 추론, 시스템 프롬프트 및 도구 인수는 포함되지 않습니다.",
         includeUserContent: '사용자 메시지 텍스트 포함',
         includeUserContentHint: '사용자 메시지에는 민감한 정보가 포함될 수 있습니다. 기본적으로 비활성화되며 시스템 프롬프트, 추론, 도구 인수 및 결과는 포함되지 않습니다.',
         allowPrivateNetwork: '사설 또는 로컬 네트워크 주소 허용',
@@ -3503,6 +3537,18 @@ export default {
   },
 
   changelog: {
+    new_0_7_39_1: "대화 턴을 넘어 유지되는 세션 작업을 추가하여 Agent가 사용자 목표를 계속 추적하고 완료 근거를 기록할 수 있습니다 (#3499)",
+    new_0_7_39_2: "관련 대화로 이동할 수 있는 세션 작업 서랍을 추가했습니다. 모바일 목록, 작업 상세 및 세션 이름을 개선하고 사소한 작업 기록을 줄였습니다 (#3501, #3509, #3510)",
+    new_0_7_39_3: "데스크톱에서 명시적으로 허용하면 원격 Studio의 Agent가 로컬 내장 브라우저를 사용할 수 있으며 언제든 공유를 중지할 수 있습니다 (#3478)",
+    new_0_7_39_4: "계정 테마 바로가기에 시스템 설정 따르기 모드를 추가하고 서랍의 상단 여백, 테마 배경 및 직각 모서리를 통일했습니다 (#3496, #3475)",
+    new_0_7_39_5: "그룹 채팅의 빈 화면에 모든 Agent를 표시하고 창 너비에 맞춰 배치합니다 (#3471)",
+    new_0_7_39_6: "Ekko의 기본 추론 강도를 없음으로 변경하고 채팅, 그룹 채팅 및 워크플로의 Agent 표기를 통일했습니다 (#3488)",
+    new_0_7_39_7: "중지 후 사고 표시가 남는 문제와 도구 결과를 자를 때 중국어 또는 이모지가 손상되어 요청이 실패하는 문제를 수정했습니다 (#3473, #3457, #3460)",
+    new_0_7_39_8: "공급자 가져오기 링크가 자동 API 모드를 지원합니다. JEV는 버전 경로가 포함된 URL과 전체 엔드포인트 URL을 지원하며 엔드포인트 누락과 모델 오류를 구분합니다 (#3494, #3493, #3491)",
+    new_0_7_39_9: "데스크톱 스크린샷에 화면 녹화 권한이 없으면 작업을 막는 대화상자 없이 시스템 설정을 바로 열 수 있습니다 (#3492)",
+    new_0_7_39_10: "Windows ARM64 네이티브 Hermes 런타임 빌드의 의존성 및 터미널 호환성 문제를 수정했습니다 (#3429)",
+    new_0_7_39_11: "TerraMaster TOS 전용 패키지와 자동 빌드 제공을 종료했습니다 (#3503)",
+    new_0_7_39_12: "세션 작업 생성과 완료를 각각 구독할 수 있는 Webhook 이벤트를 추가했습니다. 작업 제목, 요약 및 완료 근거 전송은 콘텐츠 설정을 따릅니다 (#3512)",
     new_0_7_38_1: "알려진 연결과 모델에 맞는 자동 API 모드를 추가했습니다. 공급자 접두사가 있는 모델 이름을 지원하며 새 연결의 기본값은 Chat Completions를 유지합니다 (#3469)",
     new_0_7_38_2: "데스크톱에 로컬·원격 기기 전환과 기기 관리를 추가하고 기존 LAN 페어링 진입점을 대체했습니다 (#3464)",
     new_0_7_38_3: "모델 API에 클라우드 접근, 키별 모델 제한 및 누적 USD 예산을 추가했습니다. Agent별 사용량 내역을 복원하고 패널 너비를 수정했습니다 (#3440, #3450)",
@@ -3524,14 +3570,5 @@ export default {
     new_0_7_37_9: "Claude OAuth 로그인 해제 시 모든 Profile 관리 자격 증명을 제거하여 로그인 상태가 남지 않도록 했습니다 (#3442)",
     new_0_7_37_10: "Windows ARM64 데스크톱 설치 프로그램 빌드를 지원합니다 (#3428)",
     new_0_7_37_11: "TOS 7 신규 설치, 포털 경로 및 서비스 재시작 정책을 수정하여 호스트 환경과 미리 생성된 사용자에 대한 의존성을 줄였습니다 (#3413, #3431)",
-    new_0_7_36_1: '화면 영역별로 배경, 불투명도, 흐림, 모서리, 테두리 및 그림자를 실시간 조정하는 테마 설정 추가 (#3394)',
-    new_0_7_36_2: '이름이 있는 테마의 생성, 복제, 전환, 가져오기, 내보내기 및 계정별 저장 지원 (#3394)',
-    new_0_7_36_3: '모델 표시 설정을 모델 선택기에 일관되게 적용하고 대규모 모델 목록에 성능 안내 표시 (#3392)',
-    new_0_7_36_4: '표시 모델 관리에 검색 기능 추가 (#3393)',
-    new_0_7_36_5: '새 채팅의 카테고리 선택을 입력창 도구 모음으로 이동 (#3389)',
-    new_0_7_36_6: '작은 화면에서 워크플로 실행 기록 패널의 너비가 채워지지 않고 배경이 투명해지는 문제 수정 (#3398)',
-    new_0_7_36_7: '그룹 채팅 AI 메시지의 테마 동기화와 메시지 말풍선 및 표에 배경과 흐림이 중복되는 문제 수정 (#3398)',
-    new_0_7_36_8: '릴리스 게시 시 TOS 7 x86_64 테스트 패키지를 자동 빌드하고 검증하는 작업 추가 (#3397)',
-    new_0_7_36_9: 'GIF, 애니메이션 WebP 및 APNG 배경을 최대 30 MB까지 지원하고 저장, 캐시 및 테마 가져오기와 내보내기에서 애니메이션 유지',
   },
 }

@@ -6,10 +6,16 @@ declared Studio default, and expose adjustable options in the frontend. `npm run
 enforces the registration and configuration wiring.
 
 The Models page has a **JEV** tab for the selected `modelProfile`. Save a TypeSafe
-API key, API root (default `https://api.typesafe.ai`, without `/v1`), model
+API key, API root (default `https://api.typesafe.ai`), model
 (`jev-latest`) and timeout. **Test saved configuration** submits one fixed sample
 with Choice, Score and Noul questions; it uses the saved settings, not unsaved form
 values, and consumes a provider request.
+
+The API URL also accepts a trailing `/v1` or the full `/v1/systemone` endpoint.
+Studio and standalone Ekko normalize either form to the API root before the SDK
+adds its endpoint path, preserving any gateway prefix. Existing saved URLs are
+normalized when read. For example, `https://api.example.com/v1/systemone` uses
+the API root `https://api.example.com` and sends one request to the supplied endpoint.
 
 Changing the page Profile only changes the configuration being edited. Each HTTP
 request explicitly sends `X-Hermes-Profile`; it does not change the active global
@@ -268,3 +274,12 @@ native observation and images. They never click, retry or alter native success.
 Field values and images are excluded from JEV. Disabled/unconfigured features
 make zero provider requests; optional failures retain the native result.
 See [configuration and examples](../packages/ekko-agent/docs/computer-use.md#optional-jev-assessments).
+
+### Gateway base URL paths
+
+The base URL must include any gateway path prefix. For example, if the gateway serves
+`/typesafe/v1/systemone`, configure `https://gateway.example/typesafe`. The SDK appends
+`/v1/systemone`; do not include that endpoint in the base URL. An upstream HTTP 404
+is reported as `jev_endpoint_not_found` and prompts users to check the address and
+path prefix, rather than change the model. Other causes of upstream 404 responses
+are still possible; this message is a diagnostic hint, not automatic URL rewriting.

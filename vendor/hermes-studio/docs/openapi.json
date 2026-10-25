@@ -3,7 +3,7 @@
   "info": {
     "title": "Ekko Studio API",
     "description": "Ekko Studio API — chat sessions, scheduled jobs, platform channels, model management, skills, memory, logs, file browser, group chat, and terminal.",
-    "version": "0.7.38"
+    "version": "0.7.39"
   },
   "servers": [
     {
@@ -12,6 +12,10 @@
     }
   ],
   "tags": [
+    {
+      "name": "Desktop Browser",
+      "description": "Authenticated remote Desktop browser relay with explicit Desktop consent"
+    },
     {
       "name": "Profiles",
       "description": "Hermes profile management"
@@ -12786,6 +12790,85 @@
         "x-session-share-permission": "input"
       }
     },
+    "/api/studio/desktop-browser/request": {
+      "post": {
+        "tags": [
+          "Desktop Browser"
+        ],
+        "summary": "Operate the explicitly authorized remote Desktop browser",
+        "description": "Requires an identified Studio user and matching Profile with an explicitly authorized active Desktop. Ownership transfers only on real user input after 10 minutes of owner inactivity and no in-flight operation. No browser credentials or debug ports are exposed. Run bindings never silently switch desktops; disconnected or replaced targets fail closed.",
+        "operationId": "requestDesktopBrowser",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Identified Studio account required"
+          },
+          "409": {
+            "description": "Unavailable, ambiguous, disconnected, revoked or invalid browser operation"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "method",
+                  "client_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "client_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Stable browser MCP process identity bound with authenticated token/context to the original Desktop."
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "state",
+                      "tabs.list",
+                      "tabs.create",
+                      "tabs.activate",
+                      "tabs.close",
+                      "lease.release",
+                      "navigate",
+                      "navigation.action",
+                      "snapshot",
+                      "text.read",
+                      "interact",
+                      "interact.batch",
+                      "screenshot",
+                      "console.read",
+                      "console.clear"
+                    ]
+                  },
+                  "params": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/studio/files/copy": {
       "post": {
         "tags": [
@@ -19686,6 +19769,345 @@
         }
       }
     },
+    "/api/studio/session-tasks": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "List conversation tasks across accessible profiles",
+        "description": "Lists persisted single-chat tasks, including archived sessions, with stable pagination. Profile access and pending deletions are applied before counting. Group, workflow and global-agent tasks are excluded. Open tasks precede completed tasks; update time and id determine stable order within each status. Does not invoke a model or modify task status.",
+        "operationId": "listSessionTaskItems",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized task page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "tasks",
+                    "total",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SessionTaskListItem"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filters or pagination."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Profile access denied."
+          }
+        },
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional exact profile filter. Empty selects all accessible, existing profiles; run credentials remain bound to their profile."
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Literal substring in task title, summary or session name, including its first-message fallback."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "completed"
+              ]
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ],
+              "default": "newest"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ]
+      }
+    },
+    "/api/studio/session-tasks/list": {
+      "post": {
+        "tags": [
+          "Chat Run"
+        ],
+        "summary": "Read the active turn session goals",
+        "description": "The current turn context binds the session and profile. Expired contexts, other profiles, group chats, workflows and background/delegated runs are rejected. No per-turn task plan is created or modified. Writes upsert only changed/new goals and preserve omitted goals; revision conflicts require rereading. New completions require completion_evidence.",
+        "operationId": "listSessionTasks",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current goal ledger; tasks is empty before the first goal is recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "session_id",
+                    "revision",
+                    "updated_at",
+                    "tasks"
+                  ],
+                  "properties": {
+                    "session_id": {
+                      "type": "string"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "updated_at": {
+                      "type": "integer"
+                    },
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SessionTask"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, foreign task id, duplicate goal or missing completion evidence."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The authenticated user cannot access this session profile."
+          },
+          "409": {
+            "description": "Context expired, session scope unavailable, or revision changed; reread before retrying."
+          },
+          "503": {
+            "description": "Chat run service unavailable."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "context_id"
+                ],
+                "properties": {
+                  "context_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/session-tasks/update": {
+      "post": {
+        "tags": [
+          "Chat Run"
+        ],
+        "summary": "Update the active turn session goals",
+        "description": "The current turn context binds the session and profile. Expired contexts, other profiles, group chats, workflows and background/delegated runs are rejected. No per-turn task plan is created or modified. Writes upsert only changed/new goals and preserve omitted goals; revision conflicts require rereading. New completions require completion_evidence.",
+        "operationId": "updateSessionTasks",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current goal ledger; tasks is empty before the first goal is recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "session_id",
+                    "revision",
+                    "updated_at",
+                    "tasks"
+                  ],
+                  "properties": {
+                    "session_id": {
+                      "type": "string"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "updated_at": {
+                      "type": "integer"
+                    },
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SessionTask"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, foreign task id, duplicate goal or missing completion evidence."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The authenticated user cannot access this session profile."
+          },
+          "409": {
+            "description": "Context expired, session scope unavailable, or revision changed; reread before retrying."
+          },
+          "503": {
+            "description": "Chat run service unavailable."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "context_id",
+                  "revision",
+                  "changes"
+                ],
+                "properties": {
+                  "context_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "changes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 30,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "title",
+                        "summary",
+                        "status"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200,
+                          "description": "Concise user outcome; reuse the existing goal for refinements and corrections."
+                        },
+                        "summary": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000,
+                          "description": "One or two short sentences about results and remaining blockers. Keep implementation and test logs in the conversation."
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "completed"
+                          ]
+                        },
+                        "completion_evidence": {
+                          "type": "string",
+                          "maxLength": 1000,
+                          "description": "Required for newly completed goals: evidence of verified delivery."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/studio/sessions": {
       "get": {
         "tags": [
@@ -21598,6 +22020,85 @@
           }
         ],
         "x-session-share-permission": "switchWorkspace"
+      }
+    },
+    "/api/studio/sessions/{id}/tasks": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Read durable session goals",
+        "description": "Returns persisted goals for an accessible Studio session. The current conversation agent reviews them at turn start and records only independent deliverables, ongoing follow-up or explicitly requested tracking. Simple questions, one-off lookups and trivial edits without lasting tracking value are skipped; refinements and corrections reuse the same goal. Eligible goals are created before execution; changed results are saved before the final response. Summaries contain one or two short sentences about results and remaining blockers. Goals span turns and are separate from run plans. Reading goals does not require a write or create a per-turn task-plan card.",
+        "operationId": "getSessionTasks",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current goal ledger; tasks is empty before the first goal is recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "session_id",
+                    "revision",
+                    "updated_at",
+                    "tasks"
+                  ],
+                  "properties": {
+                    "session_id": {
+                      "type": "string"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "updated_at": {
+                      "type": "integer"
+                    },
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SessionTask"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The authenticated user cannot access this session profile."
+          },
+          "404": {
+            "description": "Session not found, or the explicit profile filter does not match."
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional exact session profile filter."
+          }
+        ]
       }
     },
     "/api/studio/sessions/{id}/unarchive": {
@@ -27091,6 +27592,102 @@
             "description": "Stable JEV error code used for client-side translation; middleware errors may omit it."
           }
         }
+      },
+      "SessionTask": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "status",
+          "source_message_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "completed"
+            ]
+          },
+          "source_message_id": {
+            "type": "integer"
+          },
+          "evidence_message_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "completion_evidence": {
+            "type": "string",
+            "description": "Concise evidence of verified delivery supplied by the conversation agent."
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "Unix time in milliseconds."
+          },
+          "updated_at": {
+            "type": "integer"
+          },
+          "completed_at": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "SessionTaskListItem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SessionTask"
+          },
+          {
+            "type": "object",
+            "required": [
+              "session_id",
+              "session_title",
+              "profile",
+              "source",
+              "agent",
+              "message_id"
+            ],
+            "properties": {
+              "session_id": {
+                "type": "string"
+              },
+              "session_title": {
+                "type": "string",
+                "nullable": true,
+                "description": "Conversation display name, using the same first-user-message fallback as the session list when no title is set."
+              },
+              "profile": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "agent": {
+                "type": "string"
+              },
+              "message_id": {
+                "type": "integer",
+                "nullable": true,
+                "description": "Visible user message beginning the request turn for open tasks or the completion turn for completed tasks. Use with the session/profile to navigate chat."
+              }
+            }
+          }
+        ]
       }
     },
     "responses": {

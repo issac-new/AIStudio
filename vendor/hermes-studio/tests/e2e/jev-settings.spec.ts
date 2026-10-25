@@ -26,7 +26,7 @@ for (const [locale, messages] of [['en', en], ['zh', zh]] as const) {
     await page.addInitScript(value => localStorage.setItem('hermes_locale', value), locale)
     await mockHermesApi(page, { initialProfileName: 'default' })
     let loadFailed = true
-    let testFailure: 'auth_failed' | 'timeout' | 'network' | null = 'auth_failed'
+    let testFailure: 'auth_failed' | 'endpoint_not_found' | 'timeout' | 'network' | null = 'auth_failed'
     await page.route('**/api/studio/jev/settings', async route => {
       if (loadFailed) {
         await route.fulfill({ status: 500, json: { error: 'Internal storage failure', code: 'jev_settings_failed' } })
@@ -60,6 +60,10 @@ for (const [locale, messages] of [['en', en], ['zh', zh]] as const) {
     await testButton.click()
     await expect(panel).toContainText(messages.jev.errors.auth_failed)
     await expect(panel).not.toContainText('Upstream English diagnostic')
+    testFailure = 'endpoint_not_found'
+    await testButton.click()
+    await expect(panel).toContainText(messages.jev.errors.endpoint_not_found)
+    await expect(panel).not.toContainText(messages.jev.errors.provider_error)
     testFailure = 'timeout'
     await testButton.click()
     await expect(panel).toContainText(messages.jev.errors.timeout)

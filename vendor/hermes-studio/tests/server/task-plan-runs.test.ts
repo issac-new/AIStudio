@@ -15,6 +15,32 @@ function harness() {
 }
 
 describe('shared MCP task plans', () => {
+  it('resolves session goals without creating a plan and expires their capabilities with the turn', () => {
+    const { runs, state, commit, publish } = harness()
+    const id = runs.begin('session-1', 'research', () => state, undefined, true)
+    expect(runs.sessionForContext(id, 'research')).toBe('session-1')
+    expect(commit).not.toHaveBeenCalled()
+    expect(publish).not.toHaveBeenCalled()
+    expect(() => runs.sessionForContext(id, 'other')).toThrow('expired')
+    state.responseRun.runMarker = 'turn-2'
+    expect(() => runs.sessionForContext(id, 'research')).toThrow('expired')
+    const group = runs.begin('group', 'research', () => state)
+    expect(() => runs.sessionForContext(group, 'research')).toThrow('unavailable')
+    const next = runs.begin('session-1', 'research', () => state, undefined, true)
+    runs.finish(next, 'ended')
+    expect(() => runs.sessionForContext(next, 'research')).toThrow('expired')
+  })
+
+  it('injects session goal review at turn start only for eligible primary conversations', () => {
+    const text = taskPlanTurnInstruction('fresh-context', true)
+    expect(text).toContain('At the beginning of every turn')
+    expect(text).toContain('Keep one goal per user outcome')
+    expect(text).toContain('Before the final response')
+    expect(text).toContain('ekko_studio_list_session_tasks')
+    expect(text).toContain('ekko_studio_update_session_tasks')
+    expect(text).toContain('context_id="fresh-context"')
+    expect(taskPlanTurnInstruction('group-context')).not.toContain('studio_session_tasks_context')
+  })
   it('uses the history turn marker and publishes only after persistence, maintaining one card', () => {
     const { runs, contextId, commit, publish } = harness()
     const first = runs.update(contextId, 'research', steps())
