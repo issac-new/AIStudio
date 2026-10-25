@@ -18,6 +18,7 @@ import { codeBuddyModels } from '../codebuddy/models'
 import { copilotModels } from '../copilot/models'
 import { dshModels } from '../dsh/models'
 import { zcodeModels } from '../zcode/models'
+import { mimoModels } from '../mimo/models'
 import { createModelDiscoveryContext, type ModelCommand } from './process'
 import { discoveryError, normalizeModels, type ModelDiscoveryAdapter } from './types'
 
@@ -25,7 +26,7 @@ const adapters: Record<CodingAgentRuntime, ModelDiscoveryAdapter> = {
   codex: codexModels, 'claude-code': claudeCodeModels, pi: piModels, grok: grokModels,
   opencode: openCodeModels, cursor: cursorModels, antigravity: antigravityModels, qoder: qoderModels,
   qwen: qwenModels, kimi: kimiModels, codebuddy: codeBuddyModels, copilot: copilotModels,
-  dsh: dshModels, zcode: zcodeModels,
+  dsh: dshModels, zcode: zcodeModels, mimo: mimoModels,
 }
 
 export interface CodingAgentModelsHost {
