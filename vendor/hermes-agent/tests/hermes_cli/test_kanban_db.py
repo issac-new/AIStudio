@@ -814,7 +814,7 @@ def test_worktree_workspace_explicit_target_materializes_linked_worktree(kanban_
 def test_complete_task_persists_scratch_artifacts_before_cleanup(kanban_home):
     """Completion artifacts from scratch workspaces survive workspace cleanup."""
     with kbc.connect() as conn:
-        t = kb.create_task(conn, title="render chart")
+        t = kb.create_task(conn, title="render chart", workspace_kind="scratch")  # overlay 273: pin scratch (test targets scratch cleanup, not the overlay dir default)
         task = kb.get_task(conn, t)
         ws = kbw.resolve_workspace(task)
         kbw.set_workspace_path(conn, t, ws)
@@ -851,7 +851,7 @@ def test_review_bound_handoff_preserves_declared_artifacts(kanban_home):
     """A review-bound card's declared files must outlive the reviewer's
     completion — that completion is what cleans the scratch workspace up."""
     with kbc.connect() as conn:
-        t = kb.create_task(conn, title="review bound")
+        t = kb.create_task(conn, title="review bound", workspace_kind="scratch")  # overlay 273: pin scratch
         task = kb.get_task(conn, t)
         ws = kbw.resolve_workspace(task)
         kbw.set_workspace_path(conn, t, ws)
@@ -880,7 +880,7 @@ def test_request_review_rollback_discards_staged_copies(kanban_home):
     """A failure after staging rolls the txn back; the copied file must go
     too, or the retry stages ``evidence_1.json`` next to an orphan."""
     with kbc.connect() as conn:
-        t = kb.create_task(conn, title="review rollback")
+        t = kb.create_task(conn, title="review rollback", workspace_kind="scratch")  # overlay 273: pin scratch
         ws = kbw.resolve_workspace(kb.get_task(conn, t))
         kbw.set_workspace_path(conn, t, ws)
         artifact = ws / "evidence.json"
@@ -921,7 +921,7 @@ def test_dir_child_completion_unblocks_deferred_scratch_parent(kanban_home, tmp_
     child_dir = tmp_path / "persistent-child"
     child_dir.mkdir()
     with kbc.connect() as conn:
-        parent = kb.create_task(conn, title="scratch parent")
+        parent = kb.create_task(conn, title="scratch parent", workspace_kind="scratch")  # overlay 273: pin scratch
         child = kb.create_task(
             conn, title="dir child", workspace_kind="dir",
             workspace_path=str(child_dir),
