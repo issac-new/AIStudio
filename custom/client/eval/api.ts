@@ -315,6 +315,12 @@ export const evalApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  // —— 数据飞轮 round 2：失败样本五要素提炼（报告页按钮消费）——
+  distillBadcase: (runId: string, body: { taskId: string; sampleIdx: number; targetSetId?: string; dryRun?: boolean; judgeAttribution?: boolean }) =>
+    req<DistillResponseDto>(`/api/hermes/eval/badcase/distill`, {
+      method: 'POST',
+      body: JSON.stringify({ runId, ...body }),
+    }),
   // —— 收口轮：同卷复评 + 处置单 ——
   rerunRun: (runId: string, body: { samples: Record<string, Array<{ sessionId?: string; evidence?: { transcript?: string } }>>; target?: Record<string, string>; crossValidate?: boolean; note?: string }) =>
     req<{ run: EvalRunDto }>(`/api/hermes/eval/runs/${encodeURIComponent(runId)}/rerun`, { method: 'POST', body: JSON.stringify(body) }),
@@ -377,6 +383,11 @@ export const evalApi = {
   flywheel: () => req<FlywheelReadoutDto>('/api/hermes/eval/flywheel'),
   expandBadcaseVariants: (body: { taskId?: string; allFromRegression?: boolean; dims?: string[] } = { allFromRegression: true }) =>
     req<FlywheelVariantsDto>('/api/hermes/eval/badcase/variants', { method: 'POST', body: JSON.stringify(body) }),
+  // —— 数据飞轮 round 2：Few-shot 召回试算 / 合入门试算 ——
+  fewshotRecall: (query: string) =>
+    req<FewshotRecallDto>(`/api/hermes/eval/flywheel/fewshot?query=${encodeURIComponent(query)}`),
+  flywheelMergeGate: (body: { prompt?: boolean; model?: boolean; orchestration?: boolean }) =>
+    req<MergeGateDto>('/api/hermes/eval/flywheel/merge-gate', { method: 'POST', body: JSON.stringify(body) }),
 }
 
 // ---------- 数据飞轮 DTO（服务端契约镜像：custom/server/eval/flywheel.ts） ----------
@@ -423,6 +434,45 @@ export interface FlywheelVariantsDto {
   appended: number
   blueprints: Array<{ taskId: string; appended: number; variantIds: string[]; setId: string }>
   skippedVariantBlueprints?: string[]
+}
+
+/** 提炼响应（round 2 挂账 5：报告页按钮消费；dryRun=true 时 task 随附）。 */
+export interface DistillResponseDto {
+  ok: boolean
+  appended?: number
+  duplicate?: boolean
+  ledgerDuplicate?: boolean
+  dryRun?: boolean
+  proposal?: {
+    taskId: string
+    rootCause: string
+    rootCauseLabel?: string
+    tabooActions: string[]
+    failedSteps: number | null
+    stepRedline: number | null
+  }
+  attribution?: { verdict: 'confirmed' | 'disputed' | 'unknown' | 'offline'; p?: number; model?: string; reason?: string }
+  set?: { id: string; name: string; taskCount: number; revision: number }
+  problems?: string[]
+}
+
+/** Few-shot 召回（round 2 挂账 1）。 */
+export interface FewshotRecallDto {
+  ok: boolean
+  query: string
+  minSim: number
+  candidates: number
+  recalled: Array<{ ledgerId: string; trigger: string; wrongDemo: string; rightDemo: string; rootCause: string; similarity: number }>
+}
+
+/** 合入门试算（round 2 挂账 2）。 */
+export interface MergeGateDto {
+  ok: boolean
+  status: 'not_required' | 'blocked' | 'pass'
+  changedClasses: Array<'prompt' | 'model' | 'orchestration'>
+  reasons: string[]
+  runId?: string
+  setId?: string
 }
 
 // ---------- 百度评测范式轮 DTO（服务端契约镜像） ----------

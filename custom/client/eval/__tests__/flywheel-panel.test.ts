@@ -7,7 +7,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'zh' } }) }))
 vi.mock('@/api/client', () => ({ request: vi.fn(), getApiKey: () => '', getBaseUrlValue: () => '' }))
 vi.mock('@/custom/eval/api', () => ({
-  evalApi: { flywheel: vi.fn(), expandBadcaseVariants: vi.fn() },
+  evalApi: { flywheel: vi.fn(), expandBadcaseVariants: vi.fn(), flywheelMergeGate: vi.fn(), fewshotRecall: vi.fn() },
 }))
 
 import FlywheelPanel from '@/custom/eval/components/FlywheelPanel.vue'
@@ -99,5 +99,51 @@ describe('FlywheelPanel 冒烟', () => {
     await flushPromises()
     expect(wrapper.find('[data-testid="eval-flywheel-roots-empty"]').text()).toContain('飞轮未转')
     expect(wrapper.find('[data-testid="eval-flywheel-rate"]').text()).toContain('—')
+  })
+})
+
+describe('FlywheelPanel round 2：合入门与 fewshot 试算', () => {
+  it('合入门试算：勾选变更 → blocked 理由呈现；全不勾 → not_required', async () => {
+    vi.mocked(evalApi.flywheelMergeGate).mockResolvedValue({
+      ok: true, status: 'blocked', changedClasses: ['prompt'],
+      reasons: ['回归样本库无运行：变更后未做过历史坏例回放'],
+    } as never)
+    const wrapper = mount(FlywheelPanel)
+    await flushPromises()
+    await wrapper.find('[data-testid="eval-flywheel-merge-prompt"]').setValue(true)
+    await wrapper.find('[data-testid="eval-flywheel-merge-btn"]').trigger('click')
+    await flushPromises()
+    expect(evalApi.flywheelMergeGate).toHaveBeenCalledWith({ prompt: true, model: false, orchestration: false })
+    expect(wrapper.find('[data-testid="eval-flywheel-merge-blocked"]').text()).toContain('拒绝合入')
+    expect(wrapper.find('[data-testid="eval-flywheel-merge-blocked"]').text()).toContain('无运行')
+
+    vi.mocked(evalApi.flywheelMergeGate).mockResolvedValue({
+      ok: true, status: 'not_required', changedClasses: [], reasons: ['三类变更皆未动'],
+    } as never)
+    await wrapper.find('[data-testid="eval-flywheel-merge-btn"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="eval-flywheel-merge-not_required"]').text()).toContain('不触发')
+  })
+
+  it('fewshot 试算：召回条目呈现错误/正确示范；零召回如实空态', async () => {
+    vi.mocked(evalApi.fewshotRecall).mockResolvedValue({
+      ok: true, query: '查机票', minSim: 0.45, candidates: 2,
+      recalled: [{ ledgerId: 'fw-0001', trigger: '查北京到上海的机票', wrongDemo: 'result_defect：禁止重复失败', rightDemo: '返回正确航班', rootCause: 'result_defect', similarity: 0.62 }],
+    } as never)
+    const wrapper = mount(FlywheelPanel)
+    await flushPromises()
+    await wrapper.find('[data-testid="eval-flywheel-fewshot-query"]').setValue('查北京到上海的机票')
+    await wrapper.find('[data-testid="eval-flywheel-fewshot-btn"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="eval-flywheel-fewshot-fw-0001"]').text()).toContain('错误示范')
+    expect(wrapper.find('[data-testid="eval-flywheel-fewshot-fw-0001"]').text()).toContain('正确做法')
+    expect(wrapper.find('[data-testid="eval-flywheel-fewshot-meta"]').text()).toContain('2')
+
+    vi.mocked(evalApi.fewshotRecall).mockResolvedValue({
+      ok: true, query: 'x', minSim: 0.45, candidates: 0, recalled: [],
+    } as never)
+    await wrapper.find('[data-testid="eval-flywheel-fewshot-btn"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="eval-flywheel-fewshot-empty"]').text()).toContain('零召回')
   })
 })

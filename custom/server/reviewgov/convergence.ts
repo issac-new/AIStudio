@@ -382,6 +382,10 @@ export function mergeReadiness(c: ReviewCase, policy: ReviewPolicy = DEFAULT_POL
   if (rejections.length) blockers.push(`changes_requested：${rejections.length} 条人类反对意见`)
   if (blocking.length) blockers.push(`blocking_findings：${blocking.length} 条重要发现未关闭`)
   if (c.checks !== 'green') blockers.push(`checks_${c.checks}：自动检查未全绿`)
+  // 坏例通过率门（数据飞轮 round 2）：字段存在且 blocked 才拦——显式接入不静默扩权
+  if (c.regressionGate?.status === 'blocked') {
+    blockers.push(`regression_gate：${c.regressionGate.summary ?? '历史坏例回放门未过'}`)
+  }
   const roundCapHit = c.rounds.length >= policy.convergence.maxRounds
   if (roundCapHit && blockers.length) blockers.push(`round_cap_reached：已达 ${policy.convergence.maxRounds} 轮，需重新审视方案`)
   return {

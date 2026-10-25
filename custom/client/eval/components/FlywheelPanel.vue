@@ -53,6 +53,50 @@ function pct(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : `${Math.round(value * 100)}%`
 }
 
+// —— round 2：合入门试算（三类变更 → 回归库红线）——
+const mergeChanged = ref({ prompt: false, model: false, orchestration: false })
+const mergeResult = ref<import('@/custom/eval/api').MergeGateDto | null>(null)
+const mergeBusy = ref(false)
+
+async function evaluateMergeGate(): Promise<void> {
+  mergeBusy.value = true
+  error.value = ''
+  try {
+    mergeResult.value = await evalApi.flywheelMergeGate({ ...mergeChanged.value })
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    mergeBusy.value = false
+  }
+}
+
+const mergeStatusLabel = computed(() => {
+  const r = mergeResult.value
+  if (!r) return ''
+  const f = L.value.flywheel
+  if (r.status === 'not_required') return f.mergeNotRequired
+  if (r.status === 'blocked') return f.mergeBlocked
+  return f.mergePass
+})
+
+// —— round 2：Few-shot 召回试算（秒级疫苗）——
+const fewshotQuery = ref('')
+const fewshotResult = ref<import('@/custom/eval/api').FewshotRecallDto | null>(null)
+const fewshotBusy = ref(false)
+
+async function recall(): Promise<void> {
+  if (!fewshotQuery.value.trim()) return
+  fewshotBusy.value = true
+  error.value = ''
+  try {
+    fewshotResult.value = await evalApi.fewshotRecall(fewshotQuery.value.trim())
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    fewshotBusy.value = false
+  }
+}
+
 const gateStatusLabel = computed(() => {
   const gate = readout.value?.gate
   if (!gate) return ''
@@ -162,6 +206,49 @@ const rootCauseMax = computed(() => Math.max(1, ...(readout.value?.byRootCause ?
         >{{ L.flywheel.expandBtn }}</button>
         <span v-if="expandNote" class="eval-flywheel__note" data-testid="eval-flywheel-expand-note">{{ expandNote }}</span>
       </div>
+
+      <!-- 合入门试算（round 2：三类变更 → 坏例回放红线） -->
+      <h3>{{ L.flywheel.mergeTitle }}</h3>
+      <div class="eval-flywheel__merge" data-testid="eval-flywheel-merge">
+        <label><input v-model="mergeChanged.prompt" type="checkbox" data-testid="eval-flywheel-merge-prompt" /> {{ L.flywheel.mergePrompt }}</label>
+        <label><input v-model="mergeChanged.model" type="checkbox" data-testid="eval-flywheel-merge-model" /> {{ L.flywheel.mergeModel }}</label>
+        <label><input v-model="mergeChanged.orchestration" type="checkbox" data-testid="eval-flywheel-merge-orch" /> {{ L.flywheel.mergeOrch }}</label>
+        <button type="button" data-testid="eval-flywheel-merge-btn" :disabled="mergeBusy" @click="evaluateMergeGate">{{ L.flywheel.mergeBtn }}</button>
+      </div>
+      <p
+        v-if="mergeResult"
+        class="eval-flywheel__gate-status"
+        :class="`eval-flywheel__gate-status--${mergeResult.status === 'pass' ? 'pass' : mergeResult.status === 'blocked' ? 'fail' : 'no_data'}`"
+        :data-testid="`eval-flywheel-merge-${mergeResult.status}`"
+      >
+        {{ mergeStatusLabel }}
+        <template v-if="mergeResult.reasons.length">——{{ mergeResult.reasons.join('；') }}</template>
+      </p>
+
+      <!-- Few-shot 召回试算（round 2：秒级疫苗） -->
+      <h3>{{ L.flywheel.fewshotTitle }}</h3>
+      <div class="eval-flywheel__merge">
+        <input
+          v-model="fewshotQuery"
+          type="text"
+          :placeholder="L.flywheel.fewshotPh"
+          data-testid="eval-flywheel-fewshot-query"
+          @keydown.enter="recall"
+        />
+        <button type="button" data-testid="eval-flywheel-fewshot-btn" :disabled="fewshotBusy" @click="recall">{{ L.flywheel.fewshotBtn }}</button>
+      </div>
+      <p v-if="fewshotResult" class="muted" data-testid="eval-flywheel-fewshot-meta">
+        {{ L.flywheel.fewshotCandidates }} {{ fewshotResult.candidates }} · {{ L.flywheel.fewshotMinSim }} {{ fewshotResult.minSim }}
+      </p>
+      <p v-if="fewshotResult && fewshotResult.recalled.length === 0" class="muted" data-testid="eval-flywheel-fewshot-empty">{{ L.flywheel.fewshotEmpty }}</p>
+      <ul v-if="fewshotResult && fewshotResult.recalled.length > 0" class="eval-flywheel__fewshot" data-testid="eval-flywheel-fewshot-list">
+        <li v-for="t in fewshotResult.recalled" :key="t.ledgerId" :data-testid="`eval-flywheel-fewshot-${t.ledgerId}`">
+          <strong>{{ t.trigger }}</strong>
+          <span class="eval-flywheel__sim">{{ L.flywheel.fewshotSim }} {{ t.similarity.toFixed(2) }}</span>
+          <div class="muted">{{ L.flywheel.fewshotWrong }}：{{ t.wrongDemo }}</div>
+          <div class="muted">{{ L.flywheel.fewshotRight }}：{{ t.rightDemo }}</div>
+        </li>
+      </ul>
     </template>
   </section>
 </template>
@@ -183,4 +270,9 @@ const rootCauseMax = computed(() => Math.max(1, ...(readout.value?.byRootCause ?
 .eval-flywheel__rate-bad { color: #f85149; font-weight: 600; }
 .eval-flywheel__actions { display: flex; align-items: center; gap: 10px; }
 .eval-flywheel__note { color: var(--success, green); }
+.eval-flywheel__merge { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 8px; }
+.eval-flywheel__merge input[type='text'] { flex: 1; min-width: 240px; padding: 6px 8px; }
+.eval-flywheel__fewshot { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.eval-flywheel__fewshot li { border: 1px solid var(--border, #ddd); border-radius: 8px; padding: 8px 12px; }
+.eval-flywheel__sim { margin-left: 8px; color: var(--muted, #888); font-size: 12px; }
 </style>

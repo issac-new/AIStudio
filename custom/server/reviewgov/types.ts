@@ -208,6 +208,13 @@ export interface ReviewCase {
   findings: ReviewFinding[]
   approvals: ReviewApproval[]
   checks: CheckState
+  /**
+   * 坏例通过率门（2026-10-25 数据飞轮 round 2）：涉及 Prompt/模型/编排变更的案例
+   * 显式接入——status=blocked 时 mergeReadiness 追加 blocker。字段缺席=不受该门
+   * 管辖（治理对象显式选择接入，不静默扩权）；读数源=eval 域
+   * POST /api/hermes/eval/flywheel/merge-gate。
+   */
+  regressionGate?: { status: 'pass' | 'blocked'; summary?: string }
   state: CaseState
   createdAt: number
   updatedAt: number

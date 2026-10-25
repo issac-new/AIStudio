@@ -30,6 +30,19 @@ export interface DistillLedgerEntry {
   targetSetId: string
   actor?: string
   at: number
+  /** 坏例题面快照（round 2 D16：源集非密封才存；fewshot 召回的触发场景源）。 */
+  problem?: string
+  /** 正确做法快照（同上；fewshot 三元组的正确示范源）。 */
+  expectedBehavior?: string
+  /** LLM 归因并联复核（round 2 D13：只入台账供人工复核，不改主判；缺省=未开启）。 */
+  attribution?: {
+    verdict: 'confirmed' | 'disputed' | 'unknown' | 'offline'
+    /** 判定端 P(yes)（confirmed/disputed/unknown 携带；offline 缺席）。 */
+    p?: number
+    model?: string
+    reason?: string
+    at: number
+  }
 }
 
 export interface VariantBatchEntry {
@@ -84,13 +97,21 @@ function writeLedger(ledger: LedgerShape): void {
   renameSync(tmp, file)
 }
 
-/** 登记一次提炼（幂等：同 sourceRunId+sourceTaskId+sampleIdx 已在册则跳过）。 */
+/** 登记一次提炼（幂等：同 sourceRunId+sourceTaskId+sampleIdx 已在册则跳过；重复提交可补快照/归因复核）。 */
 export function recordDistill(entry: Omit<DistillLedgerEntry, 'id' | 'at'>): { ok: true; id: string; duplicate: boolean } {
   const ledger = readLedger()
   const dup = ledger.distills.find(
     (d) => d.sourceRunId === entry.sourceRunId && d.sourceTaskId === entry.sourceTaskId && d.sampleIdx === entry.sampleIdx,
   )
-  if (dup) return { ok: true, id: dup.id, duplicate: true }
+  if (dup) {
+    // 旧记录缺文本快照 → 补齐（fewshot 召回随即生效）；归因复核重复执行以最近一次为准
+    let mutated = false
+    if (!dup.problem && entry.problem) { dup.problem = entry.problem; mutated = true }
+    if (!dup.expectedBehavior && entry.expectedBehavior) { dup.expectedBehavior = entry.expectedBehavior; mutated = true }
+    if (entry.attribution) { dup.attribution = entry.attribution; mutated = true }
+    if (mutated) writeLedger(ledger)
+    return { ok: true, id: dup.id, duplicate: true }
+  }
   const id = `fw-${String(ledger.nextSeq).padStart(4, '0')}`
   ledger.distills.push({ ...entry, id, at: Date.now() })
   ledger.nextSeq += 1
@@ -292,4 +313,56 @@ export function passRateGateOf(run: EvalRun | undefined, opts: GateOptions = {})
 export function latestRunOfSet(runs: EvalRun[], setId: string): EvalRun | undefined {
   const scoped = runs.filter((r) => r.setId === setId)
   return scoped.length === 0 ? undefined : scoped.reduce((latest, r) => (r.createdAt > latest.createdAt ? r : latest))
+}
+
+// ---------- 合入门（round 2 挂账 2：三类变更触发回归库门） ----------
+
+/** 变更清单三类（与 EvalRunTarget 三锚对齐：profile=提示词档、model、harnessRef=编排）。 */
+export interface ChangeManifest {
+  prompt?: boolean
+  model?: boolean
+  orchestration?: boolean
+}
+
+export interface MergeGateResult {
+  /** not_required=三类变更皆未动；blocked=红线未过（fail-closed）；pass=可合入。 */
+  status: 'not_required' | 'blocked' | 'pass'
+  /** 命中的变更类（呈现面）。 */
+  changedClasses: Array<'prompt' | 'model' | 'orchestration'>
+  /** blocked 时的逐条理由（执法面 fail-closed：证据缺任何一环即拦）。 */
+  reasons: string[]
+  /** 所依据的回归库 run（缺省=no run）。 */
+  runId?: string
+}
+
+/**
+ * 合入门（spec D14，源文 CI 红线「改 Prompt/升级模型/调编排，合并前必须通过
+ * 历史 Bad Case 回放」的 in-product 承接）：三类变更任一为真 → 回归库最新 run
+ * 必须存在、k≥2、通过率门 pass、无 riskVeto，任一不满足即 blocked。
+ * 无相关变更 → not_required（不扩权）。纯函数。
+ */
+export function mergeGateOf(manifest: ChangeManifest, latestRun: EvalRun | undefined, opts: GateOptions = {}): MergeGateResult {
+  const changedClasses = (['prompt', 'model', 'orchestration'] as const).filter((k) => manifest?.[k] === true)
+  if (changedClasses.length === 0) {
+    return { status: 'not_required', changedClasses: [], reasons: ['三类变更（Prompt/模型/编排）皆未动，不触发坏例回放门'] }
+  }
+  const reasons: string[] = []
+  if (!latestRun) {
+    reasons.push('回归样本库无运行：变更后未做过历史坏例回放')
+    return { status: 'blocked', changedClasses, reasons }
+  }
+  if (latestRun.k < 2) {
+    // k<2 时 passRateGateOf 只会回 insufficient，此处直接给人话理由
+    reasons.push(`k=${latestRun.k} < 2：单跑不作门禁`)
+  } else {
+    const gate = passRateGateOf(latestRun, opts)
+    if (gate.status === 'fail') reasons.push(gate.note ?? '坏例通过率门未过')
+  }
+  if (latestRun.aggregates?.riskVeto === true) reasons.push('riskVeto 命中：红线断言一票否决')
+  return {
+    status: reasons.length > 0 ? 'blocked' : 'pass',
+    changedClasses,
+    reasons,
+    runId: latestRun.id,
+  }
 }

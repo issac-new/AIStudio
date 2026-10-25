@@ -12,9 +12,12 @@
  * GET  /api/hermes/eval/runs/:id                   运行报告（密封集只回聚合——防探测：逐条对错可被重试探测）
  * GET  /api/hermes/eval/runs/compare?base=&head=   A/B 对比（同集两 run 逐任务翻转表+读数 delta；密封集拒绝）
  * POST /api/hermes/eval/runs/:id/reflow            坏例回流（失败任务一键转回归样本库，带溯源；幂等）
- * POST /api/hermes/eval/badcase/distill            失败样本五要素提炼入回归库（根因/禁忌动作/步数红线；dryRun 可预览）
+ * POST /api/hermes/eval/badcase/distill            失败样本五要素提炼入回归库（根因/禁忌动作/步数红线；dryRun 可预览；
+ *                                                   judgeAttribution=true 附裁判端归因复核，四态入台账不改主判）
  * POST /api/hermes/eval/badcase/variants           坏例蓝本五维反事实变体扩产（默认 10 条，幂等；变体不可再当蓝本）
  * GET  /api/hermes/eval/flywheel                   数据飞轮读数（转化漏斗/根因聚类/坏例通过率退化门）
+ * GET  /api/hermes/eval/flywheel/fewshot?query=    Few-shot 记忆按相似度召回（台账三元组；无相关历史=空）
+ * POST /api/hermes/eval/flywheel/merge-gate        合入门试算（Prompt/模型/编排三类变更 → 回归库门 fail-closed）
  * POST /api/hermes/eval/runs/:id/verdicts          人工仲裁（冲突/unknown 断言的最终裁决）
  * POST /api/hermes/eval/runs/:id/attributions      归因双 Loop（finding=judge_wrong/rubric_ambiguous → Rubric Loop；
  *                                                   route=agent → 指回 review 域既有流程）
@@ -50,9 +53,10 @@ import { ENTERPRISE_AXES, ENTERPRISE_SET_NAME, axesCoverage, buildEnterpriseSeed
 import type { EvalRun, EvalSet, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 import { buildRedteamVariants } from './redteam-variants'
-import { distillBadCase, ROOT_CAUSE_LABELS } from './badcase-distill'
+import { distillBadCase, judgeAttributionOf, ROOT_CAUSE_LABELS } from './badcase-distill'
 import { buildBadCaseVariants, CF_DIMENSIONS } from './badcase-variants'
-import { flywheelReadoutOf, latestRunOfSet, listLedger, passRateGateOf, recordDistill, recordVariantBatch } from './flywheel'
+import { flywheelReadoutOf, latestRunOfSet, listLedger, mergeGateOf, passRateGateOf, recordDistill, recordVariantBatch, type ChangeManifest } from './flywheel'
+import { recallFewshot } from './fewshot'
 import { evaluateReleaseHold } from './release-hold'
 import { buildBehaviorSignals } from './behavior-signals'
 import { businessSummaryOf } from './business-summary'
@@ -719,6 +723,10 @@ router.post('/badcase/distill', async (ctx) => {
     appended = result.appended
     setSummaryLine = { id: result.set.id, name: result.set.name, taskCount: result.set.tasks.length, revision: result.set.revision }
   }
+  // LLM 归因并联复核（round 2 D13）：选通才调用；判定端不可用如实 offline，不影响入库
+  const attribution = body.judgeAttribution === true
+    ? await judgeAttributionOf(distilled.distilled, loadEvalConfig())
+    : undefined
   const ledger = recordDistill({
     taskId: task.id,
     sourceRunId: runId,
@@ -730,6 +738,10 @@ router.post('/badcase/distill', async (ctx) => {
     stepRedline,
     targetSetId: setSummaryLine.id,
     ...(actorOf(ctx) ? { actor: actorOf(ctx) } : {}),
+    // 文本快照（D16）：源集非密封（上文已拦），fewshot 召回的触发场景/正确示范源
+    problem: source.tasks.find((t) => t.id === taskId)?.problem,
+    expectedBehavior: source.tasks.find((t) => t.id === taskId)?.expectedBehavior,
+    ...(attribution ? { attribution } : {}),
   })
   ctx.status = appended > 0 ? 201 : 200
   ctx.body = {
@@ -738,6 +750,7 @@ router.post('/badcase/distill', async (ctx) => {
     duplicate: appended === 0,
     ledgerDuplicate: ledger.duplicate,
     proposal,
+    ...(attribution ? { attribution } : {}),
     set: setSummaryLine,
   }
 })
@@ -833,6 +846,43 @@ router.get('/flywheel', async (ctx) => {
   const regression = sets.find((s) => s.name === REGRESSION_SET_NAME)
   const latest = regression ? latestRunOfSet(runs, regression.id) : undefined
   ctx.body = { ok: true, ...readout, gate: passRateGateOf(latest) }
+})
+
+/**
+ * GET /flywheel/fewshot?query= —— Few-shot 记忆按相似度召回（round 2 挂账 1）：
+ * 飞轮台账三元组（触发场景/错误示范/正确示范）按词面相似度召回，超阈值才有返回，
+ * 无相关历史=空（Prompt 保持干净）。阈值 FLYWHEEL_FEWSHOT_MIN_SIM 可调（D12）。
+ */
+router.get('/flywheel/fewshot', async (ctx) => {
+  const query = typeof ctx.query.query === 'string' ? ctx.query.query : ''
+  if (!query.trim()) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['query 必填（当前任务的题面/派单语境）'] }
+    return
+  }
+  const recall = recallFewshot(query, listLedger().distills)
+  ctx.body = { ok: true, ...recall }
+})
+
+/**
+ * POST /flywheel/merge-gate {prompt?, model?, orchestration?} —— 合入门试算
+ * （round 2 挂账 2）：三类变更任一为真 → 回归库最新 run 必须过通过率门且无
+ * riskVeto，否则 blocked（fail-closed）。reviewgov 案例可显式携带该读数接入
+ * mergeReadiness（regressionGate 字段）。
+ */
+router.post('/flywheel/merge-gate', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const manifest: ChangeManifest = {
+    ...(body.prompt === true ? { prompt: true } : {}),
+    ...(body.model === true ? { model: true } : {}),
+    ...(body.orchestration === true ? { orchestration: true } : {}),
+  }
+  const sets = listSets().map((meta) => getSet(meta.id)).filter((s): s is EvalSet => s !== undefined)
+  const runs = listRuns()
+  const regression = sets.find((s) => s.name === REGRESSION_SET_NAME)
+  const latest = regression ? latestRunOfSet(runs, regression.id) : undefined
+  const result = mergeGateOf(manifest, latest)
+  ctx.body = { ok: true, ...result, ...(regression ? { setId: regression.id } : {}) }
 })
 
 router.get('/runs/:id', async (ctx) => {
