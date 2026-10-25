@@ -10,6 +10,8 @@ import { useFilesStore } from '@/stores/hermes/files'
 import { withDefaultAssignee } from '@/utils/hermes/kanban-assignees'
 import HistoryMessageList from '@/components/hermes/chat/HistoryMessageList.vue'
 import FilePreview from '@/components/hermes/files/FilePreview.vue'
+// OVERLAY[505] body/评论 Markdown 渲染（此前 {{ }} 裸插值把 **标题**/```yaml 当字面量显示）
+import KanbanMarkdown from '@/custom/kanban/components/KanbanMarkdown.vue'
 import { fetchAuthenticatedBlob, saveBlob } from '@/api/studio/binary-content'
 import type { Session, Message } from '@/stores/hermes/chat'
 import type { KanbanAttachment, KanbanTaskDetail } from '@/api/hermes/kanban'
@@ -496,7 +498,7 @@ function handleNavigateTask(taskId: string) {
           <!-- Body -->
           <div v-if="detail.task.body" class="detail-section">
             <div class="section-title">{{ t('kanban.form.body') }}</div>
-            <div class="detail-body" dir="auto">{{ detail.task.body }}</div>
+            <div class="detail-body" dir="auto"><KanbanMarkdown :source="detail.task.body" /></div>
           </div>
 
           <!-- Result / Summary -->
@@ -608,7 +610,7 @@ function handleNavigateTask(taskId: string) {
                 <span class="comment-author">{{ comment.author }}</span>
                 <span class="comment-time">{{ formatTime(comment.created_at) }}</span>
               </div>
-              <div class="comment-body">{{ comment.body }}</div>
+              <div class="comment-body"><KanbanMarkdown :source="comment.body" /></div>
             </div>
           </div>
           <div v-if="canMutateTask" class="detail-section">
