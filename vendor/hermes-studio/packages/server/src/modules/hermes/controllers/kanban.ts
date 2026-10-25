@@ -1,7 +1,7 @@
 import type { Context } from 'koa'
 import { readFile, stat, copyFile, readdir } from 'fs/promises'
 import { homedir } from 'os'
-import { join, resolve, normalize } from 'path'
+import { join, resolve, normalize, isAbsolute } from 'path'
 import * as kanbanCli from '../services/kanban/kanban-service'
 import { detectHermesRootHome, isRealPathWithin, isPathWithin } from '../services/runtime/path'
 // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
@@ -960,8 +960,15 @@ export async function listWorkspaceFiles(ctx: Context) {
   const taskId = ctx.query.task_id as string | undefined; const board = (ctx.query.board as string | undefined) || 'default'; const sub = (ctx.query.path as string | undefined) ?? ''; const depthRaw = parseInt(ctx.query.depth as string, 10); const depth = Number.isFinite(depthRaw) ? Math.min(Math.max(depthRaw, 1), 4) : 2
   if (!taskId) { ctx.status = 400; ctx.body = { error: 'task_id is required' }; return }
   const detail = await kanbanCli.getTask(taskId, { board }); const wsPath = detail?.task?.workspace_path; if (!wsPath) { ctx.body = { path: '', entries: [] }; return }
+  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 预热任务 workspace 缓存
+  await primeTaskWorkspaceCache()
+  // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
   const kanbanHome = resolve(homedir(), '.hermes', 'kanban'); const workspacesRoot = board === 'default' ? resolve(kanbanHome, 'workspaces') : resolve(kanbanHome, 'boards', board, 'workspaces')
-  const root = resolve(workspacesRoot, normalize(wsPath)); if (!isPathWithin(root, workspacesRoot)) { ctx.status = 403; ctx.body = { error: 'workspace path out of sandbox' }; return }
+  // wsPath 可能是绝对路径（系统级任务 workspace 在 ~/.hermes 外），也可能是相对 workspacesRoot 的路径
+  const root = isAbsolute(wsPath) ? resolve(normalize(wsPath)) : resolve(workspacesRoot, normalize(wsPath))
+  // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 越界时放行已知任务 workspace_path
+  if (!isPathWithin(root, workspacesRoot) && !isWithinKnownTaskWorkspace(root)) { ctx.status = 403; ctx.body = { error: 'workspace path out of sandbox' }; return }
+  // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
   const target = sub ? resolve(root, normalize(sub)) : root; if (!isPathWithin(target, root)) { ctx.status = 403; ctx.body = { error: 'sub path out of task workspace' }; return }
   try { const entries = await readDirTree(target, depth); ctx.body = { path: sub, entries } } catch (err: any) { ctx.status = 500; ctx.body = { error: err.message } }
 }
