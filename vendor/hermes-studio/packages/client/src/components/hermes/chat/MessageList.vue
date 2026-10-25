@@ -30,6 +30,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
 import { chatSessionAgentAvatar } from "@/utils/chat-agent-avatar";
 import { parseThinking } from "@/utils/thinking-parser";
 import { groupCompletedToolsByRun } from "./tool-run-grouping";
+import GatewayNoticeBanner from "@/custom/chat/components/GatewayNoticeBanner.vue";
 import { useMessageSelection } from './useMessageSelection';
 import type { MessageSelectionRow } from './message-selection';
 import { desktopBridge } from '@/utils/desktop-bridge';
@@ -473,6 +474,24 @@ async function openForkParent(event?: MouseEvent) {
 }
 
 function handleApproval(choice: "once" | "session" | "always" | "deny") {
+  // HERMES_CUSTOM[IdeApprovalLearning] BEGIN
+  // R2 批准即学习：上游 MessageList 按钮改为发 CustomEvent（不新增 props/emit，
+  // 避免波及全部调用点）；overlay IdeChatPane 捕获后做记忆+提示再转发
+  // respondApproval。无监听（ChatPanel 等场景）时退化为直接响应，语义零变化。
+  if (typeof window !== "undefined") {
+    const pending = chatStore.activePendingApproval;
+    window.dispatchEvent(
+      new CustomEvent("overlay:approval-decision", {
+        detail: {
+          choice,
+          sessionId: chatStore.activeSessionId,
+          toolName: pending?.description ?? "",
+          command: pending?.command ?? "",
+        },
+      }),
+    );
+  }
+  // HERMES_CUSTOM[IdeApprovalLearning] END
   chatStore.respondApproval(choice);
 }
 
@@ -762,6 +781,7 @@ defineExpose({
 
 <template>
   <div class="message-list-shell" :aria-busy="isSearchLoading">
+    <GatewayNoticeBanner :session-id="chatStore.activeSessionId" :messages="chatStore.messages" />
     <NDropdown trigger="manual" placement="bottom-start" :show="selectionMenu.show"
       :x="selectionMenu.x" :y="selectionMenu.y" :options="selectionMenuOptions"
       @select="selectFromMenu" @clickoutside="selectionMenu.show = false" @update:show="selectionMenu.show = $event" />
