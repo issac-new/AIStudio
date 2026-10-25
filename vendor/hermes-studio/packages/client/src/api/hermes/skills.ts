@@ -156,10 +156,14 @@ export async function fetchMemory(): Promise<MemoryData> {
   return request<MemoryData>('/api/hermes/memory')
 }
 
-export async function saveMemory(section: 'memory' | 'user' | 'soul', content: string): Promise<void> {
+export async function saveMemory(
+  section: 'memory' | 'user' | 'soul',
+  content: string,
+  expectedMtime?: string | number | null,
+): Promise<void> {
   await request('/api/hermes/memory', {
     method: 'POST',
-    body: JSON.stringify({ section, content }),
+    body: JSON.stringify({ section, content, expected_mtime: expectedMtime ?? null }),
   })
 }
 

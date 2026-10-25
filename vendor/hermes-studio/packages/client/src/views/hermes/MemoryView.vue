@@ -49,13 +49,23 @@ async function handleSave() {
   if (!editingSection.value) return
   saving.value = true
   try {
-    await saveMemory(editingSection.value, editContent.value)
+    // 带上加载时 mtime 做 CAS：agent（hermes memory 工具）并写同一批文件时
+    // 服务端 409 拒写，避免互相覆盖；冲突时编辑区改载服务端最新内容（见 catch）。
+    const section = editingSection.value
+    const expectedMtime = data.value ? (data.value as Record<string, unknown>)[`${section}_mtime`] : null
+    await saveMemory(section, editContent.value, expectedMtime as string | number | null)
     await loadMemory()
     editingSection.value = null
     editContent.value = ''
     message.success(t('common.saved'))
   } catch (err: any) {
     message.error(`${t('common.saveFailed')}: ${err.message}`)
+    await loadMemory()
+    // 409 冲突：保存被拒、旧文从未落盘，而 data 已刷成服务端最新。把编辑区替换为
+    // 最新内容，重试保存不得携带陈旧编辑——保留旧文重试只会覆盖对方的改动。
+    if (err?.status === 409 && editingSection.value) {
+      editContent.value = data.value?.[editingSection.value] || ''
+    }
   } finally {
     saving.value = false
   }
