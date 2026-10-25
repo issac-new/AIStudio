@@ -333,7 +333,10 @@ export function initAutoUpdater(nextOptions: AutoUpdaterOptions = {}) {
   if (!app.isPackaged) return // dev mode: skip
 
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true
+  // overlay[quit-no-auto-install]: 退出不静默安装——下载完成的更新若开启 quit 自动安装，
+  // 每次 tray Quit 都会触发 NSIS 静默安装，拉起 SwarmStudio.exe --quit 干扰关机流程。
+  // 仅在用户显式点“立即重启”（quitAndInstallDownloadedUpdate）时安装。
+  autoUpdater.autoInstallOnAppQuit = false
 
   if (process.platform === 'darwin') {
     nativeAutoUpdater.on('update-downloaded', () => {
@@ -388,7 +391,8 @@ export function initAutoUpdater(nextOptions: AutoUpdaterOptions = {}) {
   autoUpdater.on('update-downloaded', (info: UpdateDownloadedEvent) => {
     if (!activeDownload || activeDownload.token.cancelled || activeDownload.error || info.version !== activeDownload.version) return
     activeDownload.info = info
-    autoUpdater.autoInstallOnAppQuit = true
+    // overlay[quit-no-auto-install]: 下载完成也不启用退出静默安装（同 initAutoUploader 处注释）
+    autoUpdater.autoInstallOnAppQuit = false
     publishUpdateState({ status: 'preparing', percent: 100, bytesPerSecond: 0 })
   })
 
