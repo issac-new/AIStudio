@@ -21,7 +21,12 @@ export function modelRunProfileTokenPath(profile: string): string {
 
 export async function writeModelRunProfileToken(user: AuthenticatedUser | undefined, profile: string): Promise<void> {
   if (!user) return
-  const token = await issueModelRunJwt(user)
+  const token = await issueModelRunJwt({
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    matrix_user_id: user.matrix_user_id || null,
+  })
   const tokenPath = modelRunProfileTokenPath(profile)
   const mkdirOptions: any = { recursive: true }
   const writeOptions: any = {}
