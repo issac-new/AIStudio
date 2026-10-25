@@ -8,6 +8,7 @@ import { execHermes, spawnHermes } from '../runtime/process'
 import { safeFileStore } from '../../../studio/public/safe-file-store'
 import { getActiveProfileName, getProfileDir } from '../profiles/profile'
 import { RACIDispatchService } from '../../../../custom/services/kanban/raci-dispatch'
+import { evaluateRules } from '../../../../custom/loop/engine/architecture-engine'
 
 const execOpts = { windowsHide: true }
 const BOARD_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -721,6 +722,20 @@ export async function unblockTasks(taskIds: string[], opts?: KanbanBoardOptions)
 }
 
 export async function assignTask(taskId: string, profile: string, opts?: KanbanBoardOptions): Promise<void> {
+  // HERMES_CUSTOM[aipaydev] BEGIN: 架构规则引擎派发前校验（规则熔断：报错阻断，升级人工）
+  {
+    const current = (await getTask(taskId, opts))?.task
+    if (current) {
+      const verdict = await evaluateRules(current, {
+        // 依赖状态查询注入（规则 001 需要；custom 树禁 import upstream，只能由调用方提供）
+        getTaskStatus: async (depId: string) => (await getTask(depId, opts))?.task?.status ?? null,
+      })
+      if (verdict && verdict.type === 'BLOCKED_BY_POLICY') {
+        throw new Error(`BLOCKED_BY_POLICY: ${verdict.message}（rule=${verdict.ruleId ?? 'n/a'}）——派发熔断，解除规则违例后重试`)
+      }
+    }
+  }
+  // HERMES_CUSTOM[aipaydev] END
   await execKanbanMutation(
     [...boardArgs(opts?.board), 'assign', taskId, profile],
     'Hermes CLI: kanban assign failed',
