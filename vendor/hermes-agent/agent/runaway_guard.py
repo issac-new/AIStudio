@@ -296,6 +296,13 @@ def _report_signal(agent: Any, signal: RunawaySignal,
             agent.interrupt(f"runaway-guard: {signal.signal}")
         except Exception:  # noqa: BLE001
             pass
+    # 605 监督决策面：report/watchdog_retry/ralph_loop 三模式处置（默认 report 只报）。
+    # 懒加载避免模块环；fail-open。
+    try:
+        from agent.runaway_supervisor import handle_runaway_signal
+        handle_runaway_signal(agent, signal)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _text_content(message: Any) -> str:
