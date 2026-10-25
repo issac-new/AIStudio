@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useAccountStore } from "@/stores/account";
-import { NButton, NInput, NModal, NForm, NFormItem, NPopconfirm, useMessage } from "naive-ui";
+import { NButton, NInput, NModal, NForm, NFormItem, NPopconfirm, NTag, useMessage } from "naive-ui";
 import { useI18n } from "vue-i18n";
-import { changePassword, changeUsername, fetchLockedIps, unlockSpecificIp, unlockAllIps, updateMyAvatar, resetMyAvatar } from "@/api/studio/auth";
+import { useAuthStore } from "@/stores/hermes/auth";
+import { changePassword, changeUsername, fetchLockedIps, unlockSpecificIp, unlockAllIps, updateMyAvatar, resetMyAvatar, resetMatrixUserPassword } from "@/api/studio/auth";
 import type { LockedIp } from "@/api/studio/auth";
 import ProfileAvatar from "@/components/hermes/profiles/ProfileAvatar.vue";
 import boring from "boring-avatars-vanilla";
@@ -15,6 +16,12 @@ const message = useMessage();
 const accountStore = useAccountStore();
 const { username, avatar } = storeToRefs(accountStore);
 const loading = ref(false);
+
+// HERMES_CUSTOM[MatrixAccount] BEGIN: matrix 用户判定（密码改走 Matrix 侧）
+const authStore = useAuthStore();
+const user = computed(() => authStore.user);
+const isMatrixUser = computed(() => user.value?.authSource === 'matrix');
+// HERMES_CUSTOM[MatrixAccount] END
 
 // User avatar
 const avatarFileInput = ref<HTMLInputElement | null>(null);
@@ -127,6 +134,11 @@ const showChangeUsernameModal = ref(false);
 const currentPasswordForName = ref("");
 const newUsernameVal = ref("");
 
+// HERMES_CUSTOM[MatrixAccount]: matrix 密码重置弹窗状态
+const showMatrixPasswordModal = ref(false);
+const matrixNewPassword = ref("");
+const matrixPasswordConfirm = ref("");
+
 onMounted(() => { void accountStore.loadAccount(); });
 
 async function handleChangePassword() {
@@ -184,6 +196,37 @@ function openChangeUsernameModal() {
   currentPasswordForName.value = "";
   newUsernameVal.value = "";
   showChangeUsernameModal.value = true;
+}
+
+// Matrix password handlers
+function openMatrixPasswordModal() {
+  matrixNewPassword.value = "";
+  matrixPasswordConfirm.value = "";
+  showMatrixPasswordModal.value = true;
+}
+
+async function handleMatrixPasswordChange() {
+  if (matrixNewPassword.value !== matrixPasswordConfirm.value) {
+    message.error(t("login.passwordMismatch"));
+    return;
+  }
+  if (matrixNewPassword.value.length < 6) {
+    message.error(t("login.passwordTooShort"));
+    return;
+  }
+  loading.value = true;
+  try {
+    if (!user.value?.matrixUserId) throw new Error('No Matrix user');
+    await resetMatrixUserPassword(user.value.matrixUserId, matrixNewPassword.value);
+    showMatrixPasswordModal.value = false;
+    matrixNewPassword.value = "";
+    matrixPasswordConfirm.value = "";
+    message.success(t("settings.matrixIdentity.passwordChanged"));
+  } catch (err: any) {
+    message.error(err.message || t("common.saveFailed"));
+  } finally {
+    loading.value = false;
+  }
 }
 
 // Locked IPs management
@@ -265,9 +308,59 @@ onMounted(() => { loadLockedIps(); });
       </div>
     </div>
 
+    <!-- Matrix Identity Section -->
+    <div v-if="isMatrixUser" class="matrix-identity-section">
+      <h3 class="section-title">{{ t('settings.matrixIdentity.title') }}</h3>
+      <div class="identity-card">
+        <div class="identity-avatar">
+          <ProfileAvatar
+            :name="user?.displayName || 'default'"
+            :avatar="user?.avatarUrl ? { type: 'image', dataUrl: user.avatarUrl } : null"
+            :size="64"
+          />
+        </div>
+        <div class="identity-info">
+          <div class="identity-row">
+            <span class="identity-label">{{ t('settings.matrixIdentity.userId') }}</span>
+            <span class="identity-value">{{ user?.matrixUserId }}</span>
+          </div>
+          <div class="identity-row">
+            <span class="identity-label">{{ t('settings.matrixIdentity.displayName') }}</span>
+            <span class="identity-value">{{ user?.displayName }}</span>
+          </div>
+          <div class="identity-row">
+            <span class="identity-label">{{ t('settings.matrixIdentity.homeserver') }}</span>
+            <span class="identity-value">{{ user?.homeserverUrl }}</span>
+          </div>
+          <div class="identity-row">
+            <span class="identity-label">{{ t('settings.matrixIdentity.role') }}</span>
+            <span class="identity-value">
+              <NTag :type="user?.role === 'super_admin' ? 'warning' : 'default'" size="small">
+                {{ user?.role === 'super_admin' ? t('users.roles.superAdmin') : t('users.roles.admin') }}
+              </NTag>
+            </span>
+          </div>
+          <div class="identity-row">
+            <span class="identity-label">{{ t('settings.matrixIdentity.authSource') }}</span>
+            <span class="identity-value">
+              <NTag type="info" size="small">Matrix</NTag>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="configured-section">
-      <div class="action-row">
-        <span class="action-label">{{ t("login.passwordLoginConfigured", { username }) }}</span>
+      <!-- For Matrix users: show Matrix password change -->
+      <div v-if="isMatrixUser" class="action-row">
+        <span class="action-label">{{ t("settings.matrixIdentity.passwordManagedByMatrix") }}</span>
+        <div class="action-buttons">
+          <NButton @click="openMatrixPasswordModal">{{ t("settings.matrixIdentity.changeMatrixPassword") }}</NButton>
+        </div>
+      </div>
+      <!-- For local users: keep existing password/username change -->
+      <div v-else class="action-row">
+        <span class="action-label">{{ t("login.passwordLoginConfigured", { username: user?.username }) }}</span>
         <div class="action-buttons">
           <NButton @click="openChangePasswordModal">{{ t("login.changePassword") }}</NButton>
           <NButton @click="openChangeUsernameModal">{{ t("login.changeUsername") }}</NButton>
@@ -335,6 +428,22 @@ onMounted(() => { loadLockedIps(); });
       <template #action>
         <NButton @click="showChangeUsernameModal = false">{{ t("common.cancel") }}</NButton>
         <NButton type="primary" :loading="loading" @click="handleChangeUsername">{{ t("common.save") }}</NButton>
+      </template>
+    </NModal>
+
+    <!-- Matrix password reset modal -->
+    <NModal v-model:show="showMatrixPasswordModal" preset="dialog" :title="t('settings.matrixIdentity.changeMatrixPassword')">
+      <NForm label-placement="top">
+        <NFormItem :label="t('login.newPassword')">
+          <NInput v-model:value="matrixNewPassword" type="password" show-password-on="click" :placeholder="t('login.newPassword')" />
+        </NFormItem>
+        <NFormItem :label="t('login.confirmPassword')">
+          <NInput v-model:value="matrixPasswordConfirm" type="password" show-password-on="click" :placeholder="t('login.confirmPassword')" @keyup.enter="handleMatrixPasswordChange" />
+        </NFormItem>
+      </NForm>
+      <template #action>
+        <NButton @click="showMatrixPasswordModal = false">{{ t("common.cancel") }}</NButton>
+        <NButton type="primary" :loading="loading" @click="handleMatrixPasswordChange">{{ t("common.save") }}</NButton>
       </template>
     </NModal>
   </div>
@@ -456,5 +565,50 @@ onMounted(() => { loadLockedIps(); });
   font-size: calc(var(--font-size-base, 14px) * 12 / 14);
   color: $text-muted;
   margin: 0 0 12px;
+}
+
+.matrix-identity-section {
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid $border-color;
+}
+
+.identity-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid $border-color;
+  border-radius: $radius-sm;
+  background: $bg-input;
+}
+
+.identity-avatar {
+  flex-shrink: 0;
+}
+
+.identity-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.identity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.identity-label {
+  font-size: 13px;
+  color: $text-muted;
+  min-width: 100px;
+}
+
+.identity-value {
+  font-size: 14px;
+  color: $text-primary;
+  font-family: $font-code;
 }
 </style>
