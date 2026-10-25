@@ -3,6 +3,8 @@ import { existsSync, readdirSync } from 'fs'
 import { createHash } from 'crypto'
 import { join, resolve } from 'path'
 import { logger } from '../../../studio/public/logging'
+// overlay[skillgov] 注入通路注册扫描（installManagedSkill 只在 hash 变化时被调，量有界）
+import { recordSkillScan } from '../../../../custom/skillgov/skill-scan'
 import { detectHermesRootHome } from '../runtime/path'
 
 const MANIFEST_FILENAME = '.webui-managed-skills.json'
@@ -227,6 +229,13 @@ export class HermesSkillInjector {
       await rm(targetSkillDir, { recursive: true, force: true })
     }
     await this.copyDir(sourceSkillDir, targetSkillDir)
+    // overlay[skillgov] 注入即扫描（fail-soft：扫描异常不阻断注入；dangerous 记账本供装载期执法）
+    try {
+      const scanned = recordSkillScan(targetSkillDir)
+      if (scanned.verdict === 'dangerous') {
+        logger.warn(`[skill-injector] 内置技能 ${scanned.name} 注册扫描判定 dangerous（${scanned.findings.filter(f => f.severity === 'high').length} 项高危）——详见 /api/skillgov/scan/latest`)
+      }
+    } catch { /* 扫描失败不遮蔽注入 */ }
     return await this.hashDir(targetSkillDir)
   }
 

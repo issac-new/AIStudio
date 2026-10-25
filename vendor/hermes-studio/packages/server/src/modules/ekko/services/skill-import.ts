@@ -3,6 +3,8 @@ import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import AdmZip from 'adm-zip'
+// overlay[skillgov] ekko 导入通路注册扫描（fail-soft）
+import { recordSkillScan } from '../../../custom/skillgov/skill-scan'
 import type { EkkoAgentSetup } from '../../../../../ekko-agent/src'
 import { setupGlobalEkkoAgent } from './manager'
 import { getEkkoSkill, listEkkoSkills, type EkkoSkillDetail } from './skills'
@@ -160,6 +162,13 @@ export async function importEkkoSkill(
       throw error
     }
     resolved.config.setSkillEnabled(imported.name, true, profile)
+    // overlay[skillgov] 导入即扫描（fail-soft；结论入账本与 /scan/latest，装载期执法见工具瀑布）
+    try {
+      const scanned = recordSkillScan(target)
+      if (scanned.verdict === 'dangerous') {
+        console.warn(`[skill-import] ekko 技能 ${scanned.name} 注册扫描判定 dangerous——详见 /api/skillgov/scan/latest`)
+      }
+    } catch { /* 扫描失败不遮蔽导入 */ }
     return await getEkkoSkill(profile, imported.name, resolved)
   } finally {
     await rm(staging, { recursive: true, force: true })

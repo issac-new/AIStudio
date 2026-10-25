@@ -1,4 +1,6 @@
 import { getSkillFileProvider } from '../../studio/public/skill-files'
+// overlay[skillgov] 三段治理第一段：导入即注册扫描（fail-soft——扫描失败不遮蔽导入结果）
+import { recordSkillScan } from '../../../custom/skillgov/skill-scan'
 import { assertCodingAgentSkillWritable, isSharedCodingAgentSkill } from '../../studio/public/shared-skills'
 import { mkdir, readdir, readFile, realpath, rm, stat, writeFile, cp } from 'fs/promises'
 import { homedir, tmpdir } from 'os'
@@ -1155,6 +1157,8 @@ export async function importSkill(ctx: any) {
 
   let skillName = ''
   let stagingDir = ''
+  // overlay[skillgov] 两分支各自的 targetDir 提升到共享作用域（导入成功后的注册扫描要用）
+  let importedSkillDir: string | undefined
 
   try {
     if (isSingleZip) {
@@ -1256,6 +1260,7 @@ export async function importSkill(ctx: any) {
       }
       await mkdir(targetRoot, { recursive: true })
       await cp(skillSrcDir, targetDir, { recursive: true })
+      importedSkillDir = targetDir
     } else {
       // ============ FOLDER MODE (multiple files with relative paths) ============
       // Determine top-level dir name from the first segment of every relative path
@@ -1335,9 +1340,19 @@ export async function importSkill(ctx: any) {
       }
 
       await cp(stagingSkillDir, targetDir, { recursive: true })
+      importedSkillDir = targetDir
     }
 
-    ctx.body = { success: true, name: skillName }
+    // overlay[skillgov] 导入成功即扫描（注册扫描锚点；dangerous 随响应警示，装载期执法见工具瀑布钩子）
+    let scanBlock: { verdict: string; findingsCount: number; findings: unknown[] } | undefined
+    if (importedSkillDir) {
+      try {
+        const scanned = recordSkillScan(importedSkillDir)
+        scanBlock = { verdict: scanned.verdict, findingsCount: scanned.findings.length, findings: scanned.findings.slice(0, 8) }
+      } catch { /* 扫描失败不遮蔽导入结果 */ }
+    }
+
+    ctx.body = { success: true, name: skillName, ...(scanBlock ? { scan: scanBlock } : {}) }
   } catch (err: any) {
     ctx.status = err.status || 500
     ctx.body = { error: err.message }
