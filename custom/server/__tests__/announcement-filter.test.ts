@@ -1,12 +1,22 @@
 // overlay/custom/server/__tests__/announcement-filter.test.ts
 // 版本感知公告过滤守门（2026-09-22 实锤：0.7.23 机器弹「请更新至0.7.20」）。
-import { describe, it, expect } from 'vitest'
+// 通道开关守门（2026-10-25 用户指示）：缺省拦空全量 list（厂商远程公告零弹窗），
+// HERMES_STUDIO_ANNOUNCEMENTS=1 恢复版本感知过滤的原行为。
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   referencedVersions, compareSemver, parseSemver,
-  isStaleAnnouncement, filterStaleAnnouncementPayload,
+  isStaleAnnouncement, filterStaleAnnouncementPayload, vendorAnnouncementsEnabled,
 } from '../studio/announcement-filter'
 
-describe('announcement-filter 版本感知过滤', () => {
+beforeEach(() => {
+  process.env.HERMES_STUDIO_ANNOUNCEMENTS = '1'
+})
+
+afterEach(() => {
+  delete process.env.HERMES_STUDIO_ANNOUNCEMENTS
+})
+
+describe('announcement-filter 版本感知过滤（通道开启态）', () => {
   it('referencedVersions 提取 x.y.z（多处出现全收）', () => {
     expect(referencedVersions('0.7.20新增DeepSeek Harness Agent，如需使用，请更新至0.7.20'))
       .toEqual([[0, 7, 20], [0, 7, 20]])
@@ -80,5 +90,43 @@ describe('announcement-filter 版本感知过滤', () => {
     // list 非数组 / 非对象原样返回
     expect(filterStaleAnnouncementPayload({ ok: true }, '0.7.23')).toEqual({ ok: true })
     expect(filterStaleAnnouncementPayload(null, '0.7.23')).toBeNull()
+  })
+})
+
+describe('announcement-filter 通道开关（2026-10-25：缺省关闭）', () => {
+  it('缺省：全量拦空——含无版本号的安全通告（Brotli 通知实锤形态），其它字段透传', () => {
+    delete process.env.HERMES_STUDIO_ANNOUNCEMENTS
+    expect(vendorAnnouncementsEnabled()).toBe(false)
+    const payload = {
+      ok: true, platform: 'desktop', locale: 'zh-CN',
+      list: [
+        { id: 9, title: '版本通知', content: '0.9.0已发布，请更新', updateTime: 1 },
+        { id: 11, title: '安全通知', content: 'nodejs Brotli 高危漏洞，部署webui的用户需要更新自身node版本得以修复', updateTime: 2 },
+      ],
+      serverTime: 3,
+    }
+    const out = filterStaleAnnouncementPayload(payload, '0.7.39') as typeof payload
+    // 不论版本判定，通道关闭即零弹窗；ok/platform 等字段原样（客户端协议不变）
+    expect(out.list).toEqual([])
+    expect(out.ok).toBe(true)
+    expect(out.platform).toBe('desktop')
+    expect(out.serverTime).toBe(3)
+    // list 非数组 / 非对象仍原样返回（缺省关不改透传边界）
+    expect(filterStaleAnnouncementPayload({ ok: true }, '0.7.39')).toEqual({ ok: true })
+    expect(filterStaleAnnouncementPayload(null, '0.7.39')).toBeNull()
+  })
+
+  it('HERMES_STUDIO_ANNOUNCEMENTS=1：恢复版本感知过滤原行为', () => {
+    process.env.HERMES_STUDIO_ANNOUNCEMENTS = '1'
+    expect(vendorAnnouncementsEnabled()).toBe(true)
+    const payload = {
+      ok: true, platform: 'desktop',
+      list: [
+        { id: 9, title: '版本通知', content: '0.7.20新增，请更新至0.7.20', updateTime: 1 },
+        { id: 10, title: '维护通知', content: '今晚停机维护', updateTime: 2 },
+      ],
+    }
+    const out = filterStaleAnnouncementPayload(payload, '0.7.23') as typeof payload
+    expect(out.list.map((i) => i.id)).toEqual([10])
   })
 })

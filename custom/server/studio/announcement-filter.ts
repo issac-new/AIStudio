@@ -8,6 +8,16 @@
 //   - 任一引用版本 > 本机 → 保留（确有新版可升，正是用户该看的）；
 //   - 无版本号 → 保留（维护通知/活动公告无法推断，不误杀）；
 //   - 本机版本无法解析 → 全部保留（fail-open，过滤不可用时不影响厂商通道）。
+//
+// 通道开关（2026-10-25 用户指示：nodejs Brotli 安全通知已处置，厂商公告通道
+// 默认关闭）：本过滤器是公告下发的唯一 overlay 收口点，缺省拦空全量 list
+// （客户端拿空列表零弹窗，全浏览器生效）；HERMES_STUDIO_ANNOUNCEMENTS=1
+// 显式恢复厂商通道（删除类可回滚）。服务端拉取与 TTL 缓存行为不变。
+
+/** 厂商公告通道是否显式开启（缺省关闭）。 */
+export function vendorAnnouncementsEnabled(): boolean {
+  return process.env.HERMES_STUDIO_ANNOUNCEMENTS?.trim() === '1'
+}
 
 export interface AnnouncementEntry {
   title?: unknown
@@ -70,11 +80,15 @@ export function isStaleAnnouncement(item: AnnouncementEntry, currentVersion: str
 
 /**
  * 过滤公告 payload 的 list（其它字段原样透传；list 非数组原样返回）。
+ * 通道关闭（缺省）时全量拦空——含无版本号的维护/安全通告，零弹窗。
  */
 export function filterStaleAnnouncementPayload(payload: unknown, currentVersion: string): unknown {
   if (!payload || typeof payload !== 'object') return payload
   const obj = payload as { list?: unknown }
   if (!Array.isArray(obj.list)) return payload
+  if (!vendorAnnouncementsEnabled()) {
+    return { ...(payload as Record<string, unknown>), list: [] }
+  }
   return {
     ...(payload as Record<string, unknown>),
     list: obj.list.filter((item) => !isStaleAnnouncement(item as AnnouncementEntry, currentVersion)),
