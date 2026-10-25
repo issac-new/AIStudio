@@ -758,6 +758,14 @@ async function launchWebUiServer(webUiDirectory: string, entry: string, env: Nod
     + `Electron ${process.versions.electron || '-'}; Node ${process.versions.node}\n`
     + `Executable: ${executable}\nWeb UI: ${webUiDirectory}\nEntry: ${entry}`,
   )
+  // overlay[fix-window-raise]: keep the Web UI server as a normal child so its
+  // lifecycle stays bound to the Electron parent. A previous attempt used
+  // `detached: true` + `unref()` so a child killed by antivirus (e.g. during
+  // WMI enumeration) wouldn't take the desktop parent down; but on Windows
+  // that left an orphaned node.exe running the Web UI server after the user
+  // quit SwarmStudio, and the next launch's second-instance event re-showed
+  // the (now-restarted) window every few seconds. The WMI-polling fix
+  // (patch 129) removed the original trigger, so detached is no longer needed.
   serverProc = spawn(executable, [entry], {
     cwd: webUiDirectory,
     env,
