@@ -3971,10 +3971,35 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
     _ctx_attachments(lines, list_attachments(conn, task_id))
     _ctx_prior_attempts(lines, conn, task_id, now)
     _ctx_parent_results(lines, conn, task_id, now)
+    _ctx_checkpoint_recap(lines, task_id, task)
     _ctx_role_history(lines, conn, task, now)
     _ctx_comments(lines, list_comments(conn, task_id), now)
     return "\n".join(lines).rstrip() + "\n"
 
+
+def _ctx_checkpoint_recap(lines: list[str], task_id: str, task: Task) -> None:
+    """recap v1（cc/codex/dsh 三源合并域，矩阵 §3.9 recap 行 P0）：任务重派时若存在
+    checkpoint（P7 写手在预算触顶/中断落盘），把 上次进展 注入开局——续跑不重做。
+    对账判级锚定任务 workspace（相对文件锚点不按网关进程 cwd 误判）；reconcile 会把
+    [unverified] 标注原子回写 checkpoint 文件（非只读），注入文本取回写前内容。无
+    workspace 不判级；load/reconcile 异常零影响。"""
+    try:
+        from agent.session_checkpoint import load_checkpoint, reconcile_checkpoint
+        _cp = load_checkpoint(str(task_id))
+        if _cp:
+            if task.workspace_path:
+                try:
+                    reconcile_checkpoint(str(task_id), workspace_root=Path(task.workspace_path))
+                except Exception:
+                    pass
+            lines.append("## 上次进展（checkpoint 续跑——已完成项勿重做）")
+            for _sec in ("goal", "done", "next", "blockers"):
+                _body = (_cp.get(_sec) or "").strip()
+                if _body and _body.lower() != "none":
+                    lines.append(f"- {_sec}: {_body[:400]}")
+            lines.append("")
+    except Exception:
+        pass
 
 # --- Stats + SLA helpers ---
 
