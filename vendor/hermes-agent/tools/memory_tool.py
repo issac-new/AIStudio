@@ -277,16 +277,41 @@ def _memory_tool(action, target, content, old_text, new_text, operations, store)
             "Missing required parameter: provide 'action' (add/patch/remove) "
             "or 'operations' (batch list). Got neither."
         )
+    # P4 一期：FTS 检索（只读，reconcile-then-query；markdown 仍为唯一事实源，
+    # 索引坏只影响本查询，见 tools/memory_index.py 头注释）。
+    if action == "search":
+        return _memory_search(store, target, content)
     if action == "replace":
         return _invalid(_REPLACE_REMOVED)
     if action not in _STORE_ACTIONS:
-        return _invalid(f"Unknown action '{action}'. Use: add, patch, remove")
+        return _invalid(f"Unknown action '{action}'. Use: add, patch, remove, search")
     invalid = (_validate_single_op(store, action, target, content, old_text)
                or _background_delete_gate(store, action, None, target, content, old_text)
                or _apply_write_gate(store, action, target, content, old_text))
     if invalid is not None:
         return "rejected", invalid
     return _applied(_STORE_ACTIONS[action][0](store, target, content, old_text))
+
+
+def _memory_search(store: "MemoryStore", target: str, query: Optional[str]) -> tuple[str, str]:
+    """action=search：全量 reconcile 后 BM25 检索；target 限定可查单桶。"""
+    from tools.memory_index import MemoryFTSIndex
+    if not (query or "").strip():
+        return _invalid("search 需要 content 作为查询词")
+    idx = MemoryFTSIndex()
+    try:
+        targets: Dict[str, List[str]] = {
+            "memory": list(store.memory_entries),
+            "user": list(store.user_entries),
+        }
+        stats = idx.reconcile(targets)
+        results = idx.search(query, target=None if target in (None, "", "all") else target)
+        return _applied(
+            {"success": True, "action": "search", "query": query, "stats": stats,
+             "count": len(results), "results": results},
+        )
+    finally:
+        idx.close()
 
 
 def get_builtin_memory_config(config: Optional[dict[str, Any]] = None) -> dict[str, Any]:
