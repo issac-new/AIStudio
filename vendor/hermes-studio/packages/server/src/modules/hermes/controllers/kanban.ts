@@ -1,8 +1,12 @@
 import type { Context } from 'koa'
-import { readFile, stat, copyFile } from 'fs/promises'
-import { join, resolve } from 'path'
+import { readFile, stat, copyFile, readdir } from 'fs/promises'
+import { homedir } from 'os'
+import { join, resolve, normalize } from 'path'
 import * as kanbanCli from '../services/kanban/kanban-service'
-import { detectHermesRootHome, isRealPathWithin } from '../services/runtime/path'
+import { detectHermesRootHome, isRealPathWithin, isPathWithin } from '../services/runtime/path'
+// HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
+import { isWithinKnownTaskWorkspace, primeTaskWorkspaceCache } from '../../../custom/services/hermes/task-workspace-cache'
+// HERMES_CUSTOM[TaskWorkspaceAllowlist] END
 import { listProfileNamesFromDisk, getActiveProfileName, getProfileDir } from '../services/profiles/profile'
 import { safeFileStore } from '../../studio/public/safe-file-store'
 import {
@@ -943,6 +947,30 @@ export async function readArtifact(ctx: Context) {
   }
 }
 
+interface WorkspaceFileEntry { name: string; isDir: boolean; size: number; modified: number; children?: WorkspaceFileEntry[] }
+async function readDirTree(dir: string, depth: number): Promise<WorkspaceFileEntry[]> {
+  if (depth <= 0) return []; let names: string[]; try { names = await readdir(dir) } catch { return [] }
+  return Promise.all(names.map(async (name) => {
+    const full = join(dir, name); let st: Awaited<ReturnType<typeof stat>>; try { st = await stat(full) } catch { return { name, isDir: false, size: 0, modified: 0 } }
+    const entry: WorkspaceFileEntry = { name, isDir: st.isDirectory(), size: st.size, modified: st.mtimeMs }
+    if (entry.isDir && depth > 1) entry.children = await readDirTree(full, depth - 1); return entry
+  }))
+}
+export async function listWorkspaceFiles(ctx: Context) {
+  const taskId = ctx.query.task_id as string | undefined; const board = (ctx.query.board as string | undefined) || 'default'; const sub = (ctx.query.path as string | undefined) ?? ''; const depthRaw = parseInt(ctx.query.depth as string, 10); const depth = Number.isFinite(depthRaw) ? Math.min(Math.max(depthRaw, 1), 4) : 2
+  if (!taskId) { ctx.status = 400; ctx.body = { error: 'task_id is required' }; return }
+  const detail = await kanbanCli.getTask(taskId, { board }); const wsPath = detail?.task?.workspace_path; if (!wsPath) { ctx.body = { path: '', entries: [] }; return }
+  const kanbanHome = resolve(homedir(), '.hermes', 'kanban'); const workspacesRoot = board === 'default' ? resolve(kanbanHome, 'workspaces') : resolve(kanbanHome, 'boards', board, 'workspaces')
+  const root = resolve(workspacesRoot, normalize(wsPath)); if (!isPathWithin(root, workspacesRoot)) { ctx.status = 403; ctx.body = { error: 'workspace path out of sandbox' }; return }
+  const target = sub ? resolve(root, normalize(sub)) : root; if (!isPathWithin(target, root)) { ctx.status = 403; ctx.body = { error: 'sub path out of task workspace' }; return }
+  try { const entries = await readDirTree(target, depth); ctx.body = { path: sub, entries } } catch (err: any) { ctx.status = 500; ctx.body = { error: err.message } }
+}
+export async function listTimeline(ctx: Context) {
+  const limitRaw = parseInt(ctx.query.limit as string, 10); const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 100; const since = parseInt(ctx.query.since as string, 10); const sinceTs = Number.isFinite(since) ? since : 0
+  const allTasks = await kanbanCli.listTasks({}); const items: Array<Record<string, unknown>> = []
+  await Promise.all(allTasks.map(async (t) => { const detail = await kanbanCli.getTask(t.id); if (!detail) return; const archived = detail.task.status === 'archived'; for (const e of detail.events ?? []) items.push({ source: 'event', id: 'evt-' + e.id, taskId: t.id, taskTitle: t.title, taskArchived: archived, ts: e.created_at, kind: e.kind, payload: e.payload }); for (const c of detail.comments ?? []) items.push({ source: 'comment', id: 'cmt-' + c.id, taskId: t.id, taskTitle: t.title, taskArchived: archived, ts: c.created_at, author: c.author, body: c.body }) }))
+  const filtered = items.filter(x => (x.ts as number) >= sinceTs).sort((a, b) => (b.ts as number) - (a.ts as number)).slice(0, limit); ctx.body = { items: filtered, total: filtered.length }
+}
 export async function searchSessions(ctx: Context) {
   const { task_id, profile, q } = ctx.query as {
     task_id?: string
@@ -1159,6 +1187,27 @@ async function findAttachmentById(taskId: string, attachmentId: number, board?: 
   return (list as any[]).find(a => Number(a?.id) === attachmentId) ?? null
 }
 
+async function syncAttachmentToWorkspace(taskId: string, board: string | undefined, filename: string, srcPath: string): Promise<void> {
+  try {
+    const detail = await kanbanCli.getTask(taskId, { board: board || 'default' })
+    const wsPath = detail?.task?.workspace_path; if (!wsPath) return
+    const kanbanHome = resolve(homedir(), '.hermes', 'kanban')
+    const workspacesRoot = (!board || board === 'default') ? resolve(kanbanHome, 'workspaces') : resolve(kanbanHome, 'boards', board, 'workspaces')
+    const root = resolve(workspacesRoot, normalize(wsPath)); if (!isPathWithin(root, workspacesRoot)) return
+    await mkdir(root, { recursive: true }); await copyFile(srcPath, join(root, filename)).catch(() => {})
+  } catch { }
+}
+async function removeAttachmentFromWorkspace(taskId: string, board: string | undefined, filename: string): Promise<void> {
+  try {
+    const detail = await kanbanCli.getTask(taskId, { board: board || 'default' })
+    const wsPath = detail?.task?.workspace_path; if (!wsPath) return
+    const kanbanHome = resolve(homedir(), '.hermes', 'kanban')
+    const workspacesRoot = (!board || board === 'default') ? resolve(kanbanHome, 'workspaces') : resolve(kanbanHome, 'boards', board, 'workspaces')
+    const root = resolve(workspacesRoot, normalize(wsPath)); if (!isPathWithin(root, workspacesRoot)) return
+    await unlink(join(root, filename)).catch(() => {})
+  } catch { }
+}
+
 export async function uploadAttachment(ctx: Context) {
   const taskId = ctx.params.id
   const board = ctx.query.board as string | undefined
@@ -1228,6 +1277,7 @@ export async function uploadAttachment(ctx: Context) {
     // CLI attach 不写 HTTP 返回；回读附件列表取最新一条返回（按 id 最大）
     const list = await kanbanCli.listAttachments(taskId, { board })
     const record = (list as AttachmentMeta[]).reduce<AttachmentMeta | null>((a, b) => (a && a.id > b.id ? a : b), null)
+    if (record?.stored_path) await syncAttachmentToWorkspace(taskId, board, record.filename, record.stored_path)
     ctx.body = { attachment: record ?? { id: 0, filename: safeName, content_type: null, size: uploadedFile.size, uploaded_by: ctx.state.user?.username || 'dashboard', stored_path: '', created_at: Math.floor(Date.now() / 1000) } }
   } catch (err: any) {
     ctx.status = 500
@@ -1238,7 +1288,13 @@ export async function uploadAttachment(ctx: Context) {
 export async function removeAttachment(ctx: Context) {
   const attachmentId = Number(ctx.params.id)
   const board = ctx.query.board as string | undefined
+  const taskId = (ctx.query.task_id as string | undefined) || undefined
   try {
+    // CLI 模型下 attach-rm 只收 attachment id；workspace 反向清理需先按 task_id 查到记录
+    if (taskId) {
+      const rec = await findAttachmentById(taskId, attachmentId, board)
+      if (rec) await removeAttachmentFromWorkspace(taskId, board, rec.filename)
+    }
     await runKanbanAttachRm(attachmentId, board)
     ctx.body = { ok: true }
   } catch (err: any) {
