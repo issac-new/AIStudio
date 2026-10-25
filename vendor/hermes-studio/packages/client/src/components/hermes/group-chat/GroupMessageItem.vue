@@ -12,6 +12,7 @@ import {
     renderHighlightedCodeBlock,
 } from '../chat/highlight'
 import { parseThinking, countThinkingChars } from '@/utils/thinking-parser'
+import { isGatewayNotice as isGatewayNoticeText } from '@/custom/chat/gateway-notice'
 import { useGlobalSpeech } from '@/composables/useSpeech'
 import { useVoiceSettings } from '@/composables/useVoiceSettings'
 import { speedToEdgeRate, hzToEdgePitch } from '@/utils/ttsHelpers'
@@ -85,6 +86,8 @@ const isAgentError = computed(() => {
     if (props.message.finish_reason === 'error') return true
     return /^Error:\s*/i.test(props.message.content || '')
 })
+
+const isGatewayNotice = computed(() => isGatewayNoticeText(props.message.content))
 
 const isSelf = computed(() => {
     return !!props.currentUserId && props.message.senderId === props.currentUserId
@@ -763,6 +766,7 @@ onBeforeUnmount(() => {
                 :class="{
                     'agent-content': isAgent,
                     'agent-error': isAgentError,
+                    'gateway-notice': isGatewayNotice,
                     'speech-playing': isPlayingThisMessage && !isPausedThisMessage,
                 }"
             >
@@ -945,6 +949,19 @@ onBeforeUnmount(() => {
         :deep(.markdown-body strong),
         :deep(.markdown-body code) {
             color: $error;
+        }
+    }
+
+    &.agent .msg-content.gateway-notice {
+        color: $text-secondary;
+        background-color: rgba(128, 128, 128, 0.06);
+        border: 1px solid rgba(128, 128, 128, 0.2);
+        font-size: 0.85em;
+
+        :deep(.markdown-body),
+        :deep(.markdown-body p) {
+            color: $text-secondary;
+            margin: 0;
         }
     }
 
