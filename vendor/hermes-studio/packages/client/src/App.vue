@@ -29,6 +29,7 @@ import { watchServerTtsSettingsHydration } from "@/composables/useTtsSettingsHyd
 import { useAppStore } from "@/stores/hermes/app";
 import { useProfilesStore } from "@/stores/hermes/profiles";
 import { isStoredSuperAdmin } from "@/api/client";
+import { useAuthStore } from "@/stores/hermes/auth";
 import AuthEventListener from "@/components/auth/AuthEventListener.vue";
 import { desktopBridge } from "@/utils/desktop-bridge";
 import { naiveLocaleFor } from "@/constants/naiveLocale";
@@ -107,6 +108,7 @@ const naiveLocale = computed(() => naiveLocaleFor(locale.value));
 const naiveRtl = computed(() => naiveRtlFor(locale.value));
 const appStore = useAppStore();
 const profilesStore = useProfilesStore();
+const authStore = useAuthStore();
 watch(() => profilesStore.activeProfileName, () => { void stopRemoteBrowserRelay() });
 const route = useRoute();
 const { sessionSearchOpen } = useSessionSearch();
@@ -159,24 +161,8 @@ provide(pageHeaderTargetKey, computed(() => showNavigationRail.value ? pageHeade
 function handleWideViewportChange(event: MediaQueryListEvent) {
   isWideViewport.value = event.matches;
 }
-const usesPageSidebar = computed(() =>
-  [
-    "hermes.chat",
-    "hermes.session",
-    "hermes.connections",
-    "hermes.agentManager",
-    "hermes.models",
-    "hermes.usage",
-    "hermes.apiRelay",
-    "hermes.history",
-    "hermes.historySession",
-    "hermes.globalAgent",
-    "hermes.globalAgentSession",
-    "hermes.groupChat",
-    "hermes.groupChatRoom",
-    "hermes.workflow",
-  ].includes(route.name as string),
-);
+const usesPageSidebar = computed(() => false);
+const isFullscreen = computed(() => route.meta?.fullscreen === true);
 const usesHermesConfigSidebar = computed(
   () => route.meta?.hermesConfig === true,
 );
@@ -190,7 +176,7 @@ const showAppSidebar = computed(
   () =>
     !isLoginPage.value &&
     !isStandaloneChatPage.value &&
-    !usesPageSidebar.value &&
+    !isFullscreen.value &&
     !usesHermesConfigSidebar.value &&
     !usesEkkoConfigSidebar.value &&
     !usesCodingAgentConfigSidebar.value,
@@ -202,8 +188,8 @@ const showMobileMenuButton = computed(
   () =>
     !isLoginPage.value &&
     !isStandaloneChatPage.value &&
+    !isFullscreen.value &&
     (showAppSidebar.value ||
-      usesPageSidebar.value ||
       usesHermesConfigSidebar.value ||
       usesEkkoConfigSidebar.value ||
       usesCodingAgentConfigSidebar.value),
@@ -263,6 +249,7 @@ watch(
       appStore.stopHealthPolling();
       return;
     }
+    authStore.fetchUser();
     appStore.loadModels();
     appStore.startHealthPolling();
   },
