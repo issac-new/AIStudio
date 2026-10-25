@@ -49,7 +49,7 @@ import { fileRoutes } from '../modules/studio/routes/files'
 import { downloadRoutes } from '../modules/studio/routes/download'
 import { jobRoutes } from '../modules/hermes/routes/jobs'
 import { cronHistoryRoutes } from '../modules/hermes/routes/cron-history'
-import { kanbanRoutes } from '../modules/hermes/routes/kanban'
+import { kanbanDashboardUrlRoutes, kanbanRoutes } from '../modules/hermes/routes/kanban'
 import { workflowRoutes } from '../modules/studio/routes/workflows'
 import { ttsRoutes, ttsProtectedRoutes } from '../modules/studio/routes/tts'
 import { sttProtectedRoutes } from '../modules/studio/routes/stt'
@@ -143,6 +143,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(downloadRoutes.routes())
   app.use(jobRoutes.routes())
   app.use(cronHistoryRoutes.routes())
+  app.use(kanbanDashboardUrlRoutes.routes())
   app.use(kanbanRoutes.routes())
   app.use(workflowRoutes.routes())
   app.use(ttsProtectedRoutes.routes())
