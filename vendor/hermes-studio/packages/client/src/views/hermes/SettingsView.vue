@@ -17,13 +17,14 @@ import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";
 import AccountSettings from "@/components/hermes/settings/AccountSettings.vue";
 import UserManagementSettings from "@/components/hermes/settings/UserManagementSettings.vue";
 import WebhookSettings from "@/components/hermes/settings/WebhookSettings.vue";
-import { isStoredSuperAdmin } from "@/api/client";
+import { useAuthStore } from "@/stores/hermes/auth";
 import { useProfilesStore } from "@/stores/hermes/profiles";
 
 const settingsStore = useSettingsStore();
 const profilesStore = useProfilesStore();
+const authStore = useAuthStore();
 const { t } = useI18n();
-const canManageUsers = isStoredSuperAdmin();
+const canManageUsers = computed(() => authStore.isSuperAdmin);
 const route = useRoute();
 const router = useRouter();
 const activeTab = ref("account");
