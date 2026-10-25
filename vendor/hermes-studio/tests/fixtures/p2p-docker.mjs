@@ -39,7 +39,7 @@ if (process.argv.includes('--server')) {
     execFileSync('docker', ['run', '--rm', '-d', '--name', name,
       '-p', `127.0.0.1:${port}:${port}/tcp`, '-p', `${udpRange}:${udpRange}/udp`,
       '-e', `STUDIO_P2P_UDP_PORT_RANGE=${udpRange}`, '-e', `STUDIO_P2P_ADVERTISE_ADDRESSES=${source}`,
-      '-v', `${root}:/workspace:ro`, '-w', '/workspace', 'node:24-bookworm-slim', 'node', 'tests/fixtures/p2p-docker.mjs', '--server'], { stdio: 'pipe' })
+      '-v', `${root}:/workspace:ro`, '-w', '/workspace', 'node:24.22.1-bookworm-slim', 'node', 'tests/fixtures/p2p-docker.mjs', '--server'], { stdio: 'pipe' })
     await (async () => {
       for (let attempt = 0; attempt < 80; attempt++) {
         try { if ((await fetch(`http://127.0.0.1:${port}/health`)).ok) return } catch {}

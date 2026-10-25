@@ -16,6 +16,7 @@ import { ClarificationRuns } from '../services/clarification-runs'
 import { TaskPlanRuns, taskPlanRunInstruction } from '../services/task-plan-runs'
 import { runMcpCredentials } from '../services/auth/run-mcp-credentials'
 import { saveTaskPlan } from '../repositories/task-plan-store'
+import { getSessionTasks, updateSessionTasks, SessionTasksError } from '../services/session-tasks'
 import { getSessionTaskPlans } from '../services/task-plans'
 import { bindLegacyAppEvents } from '../services/webhooks/legacy-app-events'
 import { bindAppEventSubscription } from '../services/webhooks/app-events'
@@ -491,6 +492,26 @@ export class ChatRunSocket {
     return this.taskPlanRuns.update(contextId, profile, input)
   }
 
+  private sessionTasksContext(contextId: string, profile: string) {
+    const sessionId = this.taskPlanRuns.sessionForContext(contextId, profile)
+    const session = getSession(sessionId)
+    const state = this.sessionMap.get(sessionId)
+    if (!session || (session.profile || 'default') !== profile
+      || ['group_chat', 'workflow', 'global_agent'].includes(session.source || '')
+      || ['group_chat', 'workflow', 'global_agent'].includes(state?.source || '')) {
+      throw new SessionTasksError('Session goals are unavailable in this context', 409)
+    }
+    return sessionId
+  }
+
+  listSessionTasks(contextId: string, profile: string) {
+    return getSessionTasks(this.sessionTasksContext(contextId, profile))
+  }
+
+  updateSessionTasks(contextId: string, profile: string, input: Record<string, unknown>) {
+    return updateSessionTasks(this.sessionTasksContext(contextId, profile), profile, input)
+  }
+
   requestClarification(contextId: string, profile: string, input: Record<string, unknown>, signal?: AbortSignal) {
     return this.clarificationRuns.request(contextId, profile, input, signal)
   }
@@ -501,11 +522,11 @@ export class ChatRunSocket {
     return { contextId, finish: (state: 'ended' | 'interrupted' | 'failed') => this.taskPlanRuns.finish(contextId, state) }
   }
 
-  private beginTaskPlanRun(sessionId: string | undefined, profile: string) {
+  private beginTaskPlanRun(sessionId: string | undefined, profile: string, sessionTasksEnabled = true) {
     if (!sessionId) return undefined
     runMcpCredentials.revoke(sessionId)
     this.clarificationRuns.finishSession(sessionId)
-    return this.taskPlanRuns.begin(sessionId, profile, () => this.sessionMap.get(sessionId))
+    return this.taskPlanRuns.begin(sessionId, profile, () => this.sessionMap.get(sessionId), undefined, sessionTasksEnabled)
   }
 
   private finishTaskPlanRun(sessionId: string, event: string, payload?: any, contextId?: string) {
@@ -1700,7 +1721,7 @@ export class ChatRunSocket {
         return
       }
 
-      const planContext = mcpCapabilities.interaction ? this.beginTaskPlanRun(data.session_id, profile) : undefined
+      const planContext = mcpCapabilities.interaction ? this.beginTaskPlanRun(data.session_id, profile, !data.background_delegation_id) : undefined
       if (planContext) data.instructions = [data.instructions, taskPlanRunInstruction()].filter(Boolean).join('\n\n')
       let fullInstructions = data.instructions
         ? `${getSystemPrompt(undefined, { source, mcpCapabilities })}\n${data.instructions}`

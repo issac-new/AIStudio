@@ -25,9 +25,12 @@ export async function requestComputerUsePermission(permission: unknown): Promise
     // Only an explicit user action may register/request permission for this app.
     systemPreferences.isTrustedAccessibilityClient(true)
   } else if (!['granted', 'restricted'].includes(systemPreferences.getMediaAccessStatus('screen'))) {
-    // Register the app with TCC before opening Settings. Do not collect thumbnails
-    // or return desktop sources to the renderer. A denial still needs the guide.
-    await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 }, fetchWindowIcons: false }).catch(() => {})
+    // Registration can wait on a native consent dialog indefinitely. Start it
+    // without awaiting it so the explicit authorization action opens Settings now.
+    // Never collect thumbnails or return source metadata to the renderer.
+    try {
+      void desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 }, fetchWindowIcons: false }).catch(() => {})
+    } catch { /* Registration failure must not block opening the permission pane. */ }
   }
   const pane = permission === 'accessibility' ? 'Privacy_Accessibility' : 'Privacy_ScreenCapture'
   await shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?${pane}`)

@@ -80,11 +80,6 @@ Desktop packaging is intentionally split:
 - Pull requests run the web UI build and tests in `.github/workflows/build.yml`.
 - Published GitHub Releases run Web UI artifact packaging and Docker image publishing without
   marking the release as GitHub latest.
-- The independent `tos-package-test.yml` workflow, triggered manually or by
-  TOS-related pull requests, builds a
-  TOS 7 x86_64 Deb service with a private Node.js runtime. It keeps beta packages,
-  checksums and static verification reports in Actions artifacts only, pending
-  TNAS lifecycle acceptance; it is separate from the main release workflows.
 - Manual dispatches run full desktop artifact packaging in `.github/workflows/desktop-release.yml`.
 - `.github/workflows/desktop-manual-build.yml` builds one desktop target for targeted repairs or re-runs.
 - Windows x64 and ARM64 use native runners and separate updater manifests

@@ -13,10 +13,6 @@ npm run test:e2e
 npm run build
 ```
 
-- `npm run pack:tos -- --webui-dir /absolute/staged/webui` adds the optional
-  TOS 7 x86_64 headless Deb target. See `packages/tos/README.md` for production
-  dependency staging, runtime requirements and device acceptance.
-
 - `npm run dev` starts the Vite client and Koa server together.
 - `npm run test` runs Vitest unit tests.
 - `npm run test:coverage` is what the Build workflow runs before `npm run build`.

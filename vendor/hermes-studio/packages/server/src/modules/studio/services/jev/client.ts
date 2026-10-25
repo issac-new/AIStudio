@@ -78,7 +78,9 @@ export async function evaluateJevWithCredentials<Q extends Questions>(
     if (error instanceof APITimeoutError) throw new JevError('JEV request timed out', 504, 'jev_timeout')
     if (error instanceof APIUserAbortError || options.signal?.aborted) throw new JevError('JEV request cancelled', 499, 'jev_cancelled')
     if (error instanceof APIError) {
-      const code = [401, 403].includes(error.status) ? 'jev_auth_failed' : error.status === 429 ? 'jev_rate_limited' : 'jev_provider_error'
+      const code = [401, 403].includes(error.status) ? 'jev_auth_failed'
+        : error.status === 404 ? 'jev_endpoint_not_found'
+        : error.status === 429 ? 'jev_rate_limited' : 'jev_provider_error'
       throw new JevError(`JEV provider returned HTTP ${error.status}`, 502, code)
     }
     throw new JevError('JEV request failed', 502, 'jev_request_failed')

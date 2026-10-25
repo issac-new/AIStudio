@@ -80,7 +80,7 @@ test('opens the two-column mobile drawer and restores the desktop rail after res
   await expect(rail.getByRole('link', { name: 'Group Chat', exact: true })).toBeVisible()
   await expect(sidebar.locator('.session-items')).toBeVisible()
   await expect(drawer).toHaveCSS('width', '351px')
-  await expect(drawer).toHaveCSS('border-top-right-radius', '5px')
+  await expect(drawer).toHaveCSS('border-top-right-radius', '0px')
   await expect.poll(async () => (await rail.boundingBox())?.x).toBe(0)
   expect(await rail.boundingBox()).toMatchObject({ width: 64, height: 800 })
   expect((await sidebar.boundingBox())?.x).toBe(65)

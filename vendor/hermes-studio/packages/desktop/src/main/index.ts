@@ -204,7 +204,7 @@ function desktopRemoteDevices(): DesktopRemoteDevices {
     home: webUiHome(),
     activeServerUrl: activeRemoteServerUrl,
     env: process.env,
-    checkReady: url => waitForRemoteServerReady(url, Math.min(remoteReadyTimeoutMs(), 5000)),
+    checkReady: url => waitForRemoteServerReady(url, remoteReadyTimeoutMs()),
     restart: () => scheduleAppRestart(250),
   })
 }
@@ -216,6 +216,7 @@ async function prepareAppShutdown(): Promise<void> {
       cancelWindowFade()
       screenshotShortcut.dispose()
       await showShutdownSplash()
+      revokeRemoteBrowserGrant()
       await browserBroker?.stop().catch(() => undefined)
       await browserManager?.destroy().catch(() => undefined)
       browserBroker = null
@@ -1335,6 +1336,52 @@ function browserForEvent(event: IpcMainInvokeEvent): BrowserManager {
   if (!browserManager) throw new Error('Desktop browser is still starting')
   return browserManager
 }
+
+// Remote renderer gets an explicit capability, never the local broker's secrets.
+let remoteBrowserGrantGeneration = 0
+let remoteBrowserGrant: { clientId: string; token: string; endpoint: string } | null = null
+function revokeRemoteBrowserGrant(): void {
+  remoteBrowserGrantGeneration++
+  if (remoteBrowserGrant) browserBroker?.revokeClient(remoteBrowserGrant.clientId)
+  remoteBrowserGrant = null
+}
+ipcMain.handle('hermes-desktop:browser-remote-control', async (event, enable: unknown) => {
+  browserForEvent(event)
+  if (enable !== true) { revokeRemoteBrowserGrant(); return false }
+  if (!activeRemoteServerUrl || !browserBroker || !mainWindow) throw new Error('Remote device browser is unavailable')
+  revokeRemoteBrowserGrant()
+  const generation = remoteBrowserGrantGeneration
+  const owner = mainWindow.webContents
+  const remoteUrl = activeRemoteServerUrl
+  // Clicking the browser-panel switch is the explicit grant. Do not prompt twice.
+  if (owner.isDestroyed()) return false
+  owner.once('did-start-navigation', revokeRemoteBrowserGrant)
+  owner.once('render-process-gone', revokeRemoteBrowserGrant)
+  const descriptor = await browserBroker.start()
+  const url = new URL(descriptor.endpoint); url.pathname = '/v1/session'
+  const registration = await fetch(url, {
+    method: 'POST', headers: { Authorization: `Bearer ${descriptor.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client: 'remote-device-relay' }), signal: AbortSignal.timeout(5000),
+  })
+  const session = await registration.json() as { client_id: string; session_token: string }
+  if (!registration.ok || !session.client_id || !session.session_token) throw new Error('Browser relay registration failed')
+  if (generation !== remoteBrowserGrantGeneration || owner.isDestroyed() || mainWindow?.webContents !== owner || activeRemoteServerUrl !== remoteUrl) { browserBroker?.revokeClient(session.client_id); return false }
+  remoteBrowserGrant = { clientId: session.client_id, token: session.session_token, endpoint: descriptor.endpoint }
+  return true
+})
+ipcMain.handle('hermes-desktop:browser-remote-request', async (event, input: unknown) => {
+  browserForEvent(event)
+  const grant = remoteBrowserGrant
+  if (!grant || !activeRemoteServerUrl) throw new Error('Desktop browser remote control has not been authorized')
+  const response = await fetch(grant.endpoint, {
+    method: 'POST', headers: { Authorization: `Bearer ${grant.token}`, 'Content-Type': 'application/json', 'X-Hermes-Browser-Client': grant.clientId },
+    body: JSON.stringify(input), signal: AbortSignal.timeout(300_000),
+  })
+  const result = await response.json() as { error?: string }
+  if (grant !== remoteBrowserGrant) throw new Error('Desktop browser permission was revoked')
+  if (!response.ok) throw new Error(result.error || 'Browser request failed')
+  return result
+})
 
 ipcMain.handle('hermes-desktop:browser-get-state', event => browserForEvent(event).state())
 ipcMain.handle('hermes-desktop:browser-set-viewport', (event, bounds?: unknown, visible?: unknown) => {

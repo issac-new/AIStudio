@@ -1,4 +1,5 @@
 import type { BrowserWindow } from 'electron'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { parseBrowserBatchActions } from '../../packages/desktop/src/main/browser/browser-batch'
 
@@ -196,10 +197,10 @@ describe('desktop browser batch interactions', () => {
     const item = { getFilename: () => 'example.zip', getURL: () => 'https://example.com/example.zip',
       getTotalBytes: () => 100, setSaveDialogOptions: vi.fn(), setSavePath: vi.fn(), on: vi.fn(), once: vi.fn() }
     internal.handleDownload({ id: 'profile', downloadPath: '/tmp/studio-browser-batch-unused/downloads', askBeforeDownload: false, downloadConflictPolicy: 'ask' }, item, contents)
-    expect(item.setSavePath).toHaveBeenCalledWith('/tmp/studio-browser-batch-unused/downloads/example.zip')
+    expect(item.setSavePath).toHaveBeenCalledWith(join('/tmp/studio-browser-batch-unused/downloads', 'example.zip'))
     expect(item.setSaveDialogOptions).not.toHaveBeenCalled()
     internal.handleDownload({ id: 'profile', downloadPath: '/tmp/studio-browser-batch-unused/downloads', askBeforeDownload: true, downloadConflictPolicy: 'ask' }, item, contents)
-    expect(item.setSaveDialogOptions).toHaveBeenCalledWith({ defaultPath: '/tmp/studio-browser-batch-unused/downloads/example.zip' })
+    expect(item.setSaveDialogOptions).toHaveBeenCalledWith({ defaultPath: join('/tmp/studio-browser-batch-unused/downloads', 'example.zip') })
   })
 
   it('checks for cancellation after DOM resolution and before page side effects', async () => {

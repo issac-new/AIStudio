@@ -435,7 +435,7 @@ describe('hermes-web-ui MCP server', () => {
     try {
       writeRpc(child, 1, 'tools/list')
       const tools = (await waitForRpc(responses, 1)).result.tools
-      expect(tools.map((tool: any) => tool.name)).toEqual(['ekko_studio_clarify', 'ekko_studio_update_plan'])
+      expect(tools.map((tool: any) => tool.name)).toEqual(['ekko_studio_clarify', 'ekko_studio_update_plan', 'ekko_studio_list_session_tasks', 'ekko_studio_update_session_tasks'])
       expectProviderSafeToolNames('ekko-studio-interaction', tools)
       expect(tools[0].inputSchema.required).toEqual(['context_id', 'question'])
       const input = { context_id: 'current-turn', question: 'Which folder?', choices: ['client', 'server'] }
@@ -490,7 +490,7 @@ describe('hermes-web-ui MCP server', () => {
     try {
       writeRpc(child, 1, 'tools/list')
       const tools = (await waitForRpc(responses, 1)).result.tools
-      expect(tools.map((tool: any) => tool.name)).toEqual(native ? [] : clarify ? ['ekko_studio_clarify', 'ekko_studio_update_plan'] : ['ekko_studio_update_plan'])
+      expect(tools.map((tool: any) => tool.name)).toEqual(native ? [] : clarify ? ['ekko_studio_clarify', 'ekko_studio_update_plan', 'ekko_studio_list_session_tasks', 'ekko_studio_update_session_tasks'] : ['ekko_studio_update_plan', 'ekko_studio_list_session_tasks', 'ekko_studio_update_session_tasks'])
       if (!native) expect(tools.find((tool: any) => tool.name === 'ekko_studio_update_plan').inputSchema.required).toEqual(['context_id', 'plan'])
       const input = { context_id: 'current-turn', plan: [{ id: 'check', step: 'Check', status: 'in_progress' }] }
       writeRpc(child, 2, 'tools/call', { name: 'ekko_studio_update_plan', arguments: input })

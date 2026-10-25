@@ -15,11 +15,8 @@ files, tool results, workspaces, agent configuration and operational logs on the
 host. Tools and agents may read files, run commands and access networks with the
 permissions you grant. Review prompts, attachments and tool access before use.
 
-In the TOS package the dedicated account stores application-managed data under
-`/usr/local/com.hermeswebui.studio/data/` and file logs under `logs/`. TOS maps
-this application path onto its installation volume. Other installations use the
-configured Studio/agent home directories. External workspaces and backups are
-separate from application-managed storage.
+Application-managed storage follows the configured Studio/agent home directories.
+External workspaces and administrator backups are separate from that storage.
 
 ## External services and sharing
 
@@ -64,20 +61,16 @@ For complete local deletion, stop Studio and ask the host administrator to remov
 its configured Studio and agent data, uploads, logs, caches and unwanted backups.
 External workspaces require separate deletion by their owner.
 
-**The TOS package removes its managed data and logs on uninstall, including
-workspaces inside its data directory. Export or back up anything you need first.**
-Upgrades retain managed data. Uninstall does not delete external workspaces,
-administrator backups or data already sent to third parties. Request deletion
-from those providers directly under their policies; local deletion cannot recall
-previously transmitted data.
+Uninstall and deletion behavior depends on your deployment method. Back up data
+before removing application storage. Removing Studio does not recall data already
+sent to third parties or delete external workspaces and administrator backups.
 
 ## Security and your rights
 
-The TOS service runs under a dedicated non-root account with restrictive data
-directory permissions and systemd hardening. These measures do not guarantee
-security or encryption at rest. The TOS backend listens on loopback behind the portal proxy. Portal transport
-security depends on the NAS HTTPS configuration; enable HTTPS and restrict
-access with administrator network controls. Protect the host, backups, API keys and administrator accounts.
+Security depends on your deployment configuration. Run with least privilege,
+restrict network access, use HTTPS on untrusted networks, and protect host data,
+backups, API keys and administrator accounts. Local-first does not guarantee
+encryption at rest or eliminate risks from tools and external services.
 
 You or your host administrator can inspect, export/copy, correct and delete local
 data and disable integrations. Availability of export/edit actions varies by

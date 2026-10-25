@@ -1,16 +1,5 @@
 # Validation Guide
 
-For TOS packaging changes, run `npx vitest run tests/server/tos-packaging.test.ts`,
-`npm run harness:check`, and build a real package with `npm run pack:tos`.
-The package verifier checks metadata placement, languages, lifecycle syntax,
-identity, symlinks and glibc compatibility. Follow `packages/tos/README.md` for
-non-root startup and TNAS install/start/stop/upgrade/remove acceptance; an
-Ubuntu smoke test is not a substitute for TOS device validation.
-Run `bash scripts/test-tos-install.sh /absolute/path/to/package.deb` with Docker
-after packaging to verify a clean installation without a pre-created account
-or host venv, non-root HTTP startup, upgrade retention and destructive uninstall cleanup. This check
-records systemctl calls and simulates stop exit code 5; it does not exercise the real service manager.
-
 Run the smallest relevant checks while iterating. Escalate to the broad checks
 when touching shared behavior, release automation, auth, persistence, or chat.
 

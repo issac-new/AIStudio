@@ -378,6 +378,7 @@ export async function requireUserJwt(ctx: Context, next: Next): Promise<void> {
     const profiles = [ctx.get('x-hermes-profile'), ctx.query.profile, body?.profile].filter(value => value !== undefined && value !== '')
     const interaction = ctx.method === 'POST' && (
       ctx.path === '/api/studio/task-plans/update' || ctx.path === '/api/studio/clarifications/request'
+      || ctx.path === '/api/studio/session-tasks/list' || ctx.path === '/api/studio/session-tasks/update'
     )
     if (ctx.get('x-studio-run-context') !== binding.contextId
       || profiles.some(value => typeof value !== 'string' || value.trim() !== binding.profile)
@@ -396,7 +397,7 @@ export async function requireUserJwt(ctx: Context, next: Next): Promise<void> {
       ctx.state.user = toAuthenticatedUser(user)
     } else if (!interaction) {
       ctx.status = 403
-      ctx.body = { error: 'This run credential only permits its task plan and clarification requests' }
+      ctx.body = { error: 'This run credential only permits its interaction requests' }
       return
     }
     ctx.state.profile = { name: binding.profile }
