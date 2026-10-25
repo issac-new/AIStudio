@@ -2,10 +2,11 @@
 import PageSidebar from "./PageSidebar.vue";
 import SidebarResizeHandle from "./SidebarResizeHandle.vue";
 import { usePageSidebarState } from "@/composables/usePageSidebar";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useAppStore } from "@/stores/hermes/app";
+import { useAuthStore } from "@/stores/hermes/auth";
 import RouteLinkItem from "@/components/common/RouteLinkItem.vue";
 import PageSidebarFooter from "@/components/layout/PageSidebarFooter.vue";
 import { isStoredSuperAdmin } from "@/api/client";
@@ -14,11 +15,29 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
+const authStore = useAuthStore();
+// overlay: 响应式超管判定（authStore 优先，回退 localStorage 快照）
+const isSuperAdmin = computed(() => authStore.isSuperAdmin ?? isStoredSuperAdmin());
+// overlay[ia2]: P3 六区域新 IA 高亮（Task 8: cockpit 入口随退役移除，仅保留新 IA 项）
+const isIa2Area = computed(() => String(route.name ?? "").startsWith("ia2."));
+
+// overlay[nav-restore]: IDE 一级入口恢复（守门口径：一级双入口 驾驶舱+IDE）
+const isIdeShellArea = computed(() => String(route.name ?? "").startsWith("ide."));
+// overlay[nav]: 系统折叠分组（统一导航裁决）——低频运维/配置入口收敛；
+// 当前命中系统页时默认展开
+const SYSTEM_ROUTE_NAMES = [
+  // V5 补遗⑤ S1：系统组收缩为 设置+日志+用量（+superadmin/桌面条件项）——
+  // 技能用量/主题/宠物商店入口摘除（路由与页面保留，主题切换用页头开关）
+  "hermes.logs", "hermes.usage", "hermes.performance",
+  "hermes.browser", "hermes.versionPreview",
+  "hermes.profiles", "hermes.settings",
+];
+const systemOpen = ref(SYSTEM_ROUTE_NAMES.includes(String(route.name ?? "")));
+const isSettingsPage = computed(() => route.name === 'hermes.settings');
 const { expanded, isMobile } = usePageSidebarState();
 const selectedKey = computed(() => {
   return route.name as string;
 });
-const isSuperAdmin = computed(() => isStoredSuperAdmin());
 const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
 const isDesktopShell = computed(
   () =>
@@ -58,6 +77,90 @@ function handleSidebarClick(event: MouseEvent) {
   >
     <SidebarResizeHandle />
     <nav class="sidebar-nav">
+      <!-- overlay[ia2]: 六区域新 IA 一级入口（P3 登录默认；Task 8 cockpit 退役后唯一入口）。
+           V5 补遗⑤ M2：IDE 工作台一级入口移除（归一 /app/ide，驾驶舱子页面；
+           进入路径=页头视图切换/任务 ⌨IDE 动线），主侧栏一级仅剩驾驶舱。 -->
+      <RouteLinkItem
+        class="nav-item"
+        :to="{ name: 'ia2.collab' }"
+        :active="isIa2Area"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        <span>{{ t("ia2.brand") }}</span>
+      </RouteLinkItem>
+      <RouteLinkItem
+              class="nav-item"
+              :to="{ name: 'ide.shell' }"
+              :active="isIdeShellArea"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M8 6 3 12l5 6" />
+                <path d="M16 6l5 6-5 6" />
+              </svg>
+              <span>{{ t("sidebar.ideWorkspace") }}</span>
+            </RouteLinkItem>
+      <!-- overlay[nav]: 系统折叠分组头（统一导航：一级仅 驾驶舱/IDE 双入口） -->
+      <button
+        class="nav-item sidebar-system-toggle"
+        data-testid="sidebar-system-toggle"
+        :aria-expanded="systemOpen"
+        @click="systemOpen = !systemOpen"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+          />
+        </svg>
+        <span>{{ t("sidebar.systemGroup") }}</span>
+        <svg
+          class="sidebar-system-toggle__arrow"
+          :class="{ 'sidebar-system-toggle__arrow--open': systemOpen }"
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+      <div v-show="systemOpen" class="sidebar-system-items">
       <RouteLinkItem
         class="nav-item"
         :to="{ name: 'hermes.logs' }"
@@ -102,26 +205,6 @@ function handleSidebarClick(event: MouseEvent) {
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
         </svg>
         <span>{{ t("sidebar.performance") }}</span>
-      </RouteLinkItem>
-      <RouteLinkItem
-        class="nav-item"
-        :to="{ name: 'hermes.skillsUsage' }"
-        :active="selectedKey === 'hermes.skillsUsage'"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M21.21 15.89A10 10 0 1 1 8.11 2.79" />
-          <path d="M22 12A10 10 0 0 0 12 2v10z" />
-        </svg>
-        <span>{{ t("sidebar.skillsUsage") }}</span>
       </RouteLinkItem>
       <RouteLinkItem
         v-if="isDesktopShell && hasRoute('hermes.browser')"
@@ -176,52 +259,6 @@ function handleSidebarClick(event: MouseEvent) {
         <span>{{ t("sidebar.versionPreview") }}</span>
       </RouteLinkItem>
       <RouteLinkItem
-        class="nav-item"
-        :to="{ name: 'hermes.theme' }"
-        :active="selectedKey === 'hermes.theme'"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="13.5" cy="6.5" r="2.5" />
-          <circle cx="17.5" cy="10.5" r="2.5" />
-          <circle cx="8.5" cy="7.5" r="2.5" />
-          <path
-            d="M12 3a9 9 0 1 0 9 9c0-1.1-.9-2-2-2h-1.2a2.8 2.8 0 0 1-2.8-2.8V5c0-1.1-.9-2-2-2h-1z"
-          />
-        </svg>
-        <span>{{ t("sidebar.theme") }}</span>
-      </RouteLinkItem>
-      <RouteLinkItem
-        class="nav-item"
-        :to="{ name: 'hermes.petdex' }"
-        :active="selectedKey === 'hermes.petdex'"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M12 3l7 4v6c0 4-3 7-7 8-4-1-7-4-7-8V7l7-4z" />
-          <path d="M9 11h.01" />
-          <path d="M15 11h.01" />
-          <path d="M9.5 15c1.6 1.1 3.4 1.1 5 0" />
-        </svg>
-        <span>{{ t("sidebar.petdex") }}</span>
-      </RouteLinkItem>
-      <RouteLinkItem
         v-if="isSuperAdmin"
         class="nav-item"
         :to="{ name: 'hermes.profiles' }"
@@ -264,31 +301,13 @@ function handleSidebarClick(event: MouseEvent) {
         </svg>
         <span>{{ t("sidebar.settings") }}</span>
       </RouteLinkItem>
+      </div>
     </nav>
 
-    <PageSidebarFooter :collapsed="appStore.sidebarCollapsed" class="sidebar-account-footer" />
+    <PageSidebarFooter v-if="!isSettingsPage" :collapsed="appStore.sidebarCollapsed" class="sidebar-account-footer" />
 
     <div class="sidebar-top-actions">
-      <RouteLinkItem
-        class="nav-item sidebar-return-tab"
-        :to="{ name: 'hermes.chat' }"
-        :title="t('sidebar.backToChat')"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.7"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="15 18 9 12 15 6" />
-          <line x1="9" y1="12" x2="21" y2="12" />
-        </svg>
-        <span>{{ t("sidebar.backToChat") }}</span>
-      </RouteLinkItem>
+      <!-- overlay[nav]: 返回驾驶舱 hack 退役——一级已双入口直达，仅保留折叠按钮 -->
       <button
         class="collapse-btn"
         @click="appStore.toggleSidebarCollapsed()"
@@ -401,6 +420,20 @@ function handleSidebarClick(event: MouseEvent) {
   min-width: 0;
   padding: calc(8px * var(--spacing-scale, 1)) calc(10px * var(--spacing-scale, 1));
   font-size: calc(var(--font-size-base, 14px) * 13 / 14);
+}
+
+/* overlay[nav]: 系统折叠分组——容器不产生盒模型，仅收拢子项显隐 */
+.sidebar-system-items {
+  display: contents;
+}
+.sidebar-system-toggle__arrow {
+  margin-left: auto;
+  flex: none;
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+.sidebar-system-toggle__arrow--open {
+  transform: rotate(90deg);
 }
 
 .sidebar-account-footer {
