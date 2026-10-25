@@ -46,8 +46,9 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>
   codebuddy: {},
   qoder: {},
   copilot: {},
-  zcode: {},
   antigravity: { preference: 'memory', configuration: 'settings' },
+  mimo: { preference: 'memory', configuration: 'settings' },
+  zcode: {},
 }
 
 const skillTargets: Partial<Record<CodingAgentId, SkillTarget>> = {
