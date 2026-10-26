@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { openBrowser, bootApp, gotoHash, clearMasks, Ledger, SHOTS } from './harness.mjs'
-import { isBlankContent, isLateRequest, routeSettled } from './walkthrough-probes.mjs'
+import { canonicalBounced, isBlankContent, isLateRequest, routeSettled } from './walkthrough-probes.mjs'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const RAW_KEY_RE = /\b(?:ia2|common|approvals|ide|ma|chat|settings|nav)[.][a-zA-Z0-9_.]+\b/
@@ -128,10 +128,32 @@ page.on('response', response => {
   requestOrigins.delete(response.request())
 })
 
+// 生产链无 dev 自动登录：WALK_LOGIN=user:pass 时经同源 /api/auth/login 换 JWT 注入
+// localStorage（与 dev 链 devAutoLogin 同键），再重载进壳。dev 链不设此变量即原行为。
+async function ensureLogin() {
+  const login = process.env.WALK_LOGIN
+  if (!login || !login.includes(':')) return
+  const [username, password] = login.split(/:(.+)/)
+  const token = await page.evaluate(async ({ username, password }) => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    })
+    const body = await res.json().catch(() => null)
+    const jwt = body?.token || body?.jwt
+    if (jwt) localStorage.setItem('hermes_api_key', jwt)
+    return jwt
+  }, { username, password })
+  if (!token) throw new Error('WALK_LOGIN 登录失败（检查凭据与后端）')
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1500)
+}
+
 led.record('路由清单覆盖', true,
   `${manifest.counts.routes} 路由（${manifest.counts.pages} 页面/${manifest.counts.redirects} 重定向）+ ${manifest.counts.stageTabs} 阶段页签；本次匹配 ${visits.length} 项`)
 try {
   await bootApp(page)
+  await ensureLogin()
   await waitForApp(page)
   for (const visit of visits) {
     consoleErrors = []
@@ -178,10 +200,12 @@ try {
     }, RAW_KEY_RE.source)
 
     const expectedPath = `/${visit.visitPath.replace(/^\//, '')}`
+    const currentPath = visit.path === '/' ? expectedPath : await currentRoute(page)
     const reached = visit.path === '/' || routeSettled({
-      current: await currentRoute(page), browser: probe.url.slice(1), expected: expectedPath,
+      current: currentPath, browser: probe.url.slice(1), expected: expectedPath,
       kind: visit.kind, allowCanonical: visit.allowCanonical, allowQuery: visit.allowQuery,
     })
+    const bounced = canonicalBounced({ allowCanonical: visit.allowCanonical, current: currentPath, expected: expectedPath })
     const blank = isBlankContent(probe)
     const note = `→ ${probe.url} | 内容 ${probe.contentLen}${probe.msgs.length ? ` | 提示:${probe.msgs.join(' / ')}` : ''}`
     if (!reached) led.defect(`${visit.label} 未到达目标`, `期望 ${expectedPath}，实际 ${probe.url}`, 'P1')
@@ -191,6 +215,8 @@ try {
       led.record(`${visit.label}（未认证）`, reached, `${note} | 未验证房间数据`, 'WARN')
     } else if (visit.allowBlank && blank) {
       led.record(`${visit.label}（默认关闭）`, reached, `${note} | 合法透明空态，未验收宠物内容`, 'WARN')
+    } else if (bounced) {
+      led.record(`${visit.label}（守卫弹回）`, reached, `${note} | 守卫改道，未验收该页内容`, 'WARN')
     } else {
       led.record(visit.label, reached && !blank, note)
     }

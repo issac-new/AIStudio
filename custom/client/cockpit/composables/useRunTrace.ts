@@ -295,10 +295,8 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     const primarySession = allSessions.find(s => s.id === primarySid)
     if (!primarySession) return []
 
-    // 方法 1: 通过 parent_session_id 发现子会话
-    const childSessionsByParent = allSessions.filter(s => (s as any).parent_session_id === primarySid)
-
     // 同时检查主会话是否是子会话（有 parent_session_id），发现其父会话和兄弟会话
+    // （子会话发现在下方循环内经 parent_session_id 内联判定）
     const primaryParentId = (primarySession as any).parent_session_id
     const siblingSessions: typeof allSessions = []
     let parentSession: typeof allSessions[0] | undefined

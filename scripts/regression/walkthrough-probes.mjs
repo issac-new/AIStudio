@@ -29,3 +29,8 @@ export function isLateRequest({ origin, pageAtResponse }) {
   if (!origin || !pageAtResponse) return false
   return pageRouteKey(origin) !== pageRouteKey(pageAtResponse)
 }
+
+/** canonical 页被守卫弹回（离开原址）：走查记 WARN「未验收该页内容」，不冒充内容通过。 */
+export function canonicalBounced({ allowCanonical, current, expected }) {
+  return Boolean(allowCanonical) && Boolean(current) && current !== expected
+}
