@@ -39,7 +39,8 @@
   - 活体委托会话三次（14:40/14:46/15:04）：`engine_bin_source=ycode-fork engine_bin=~/.hermes/ycode/zcode.cjs` 三次命中；分叉引擎握手/建会话/流 update 全通；**引擎身份链闭环**。端到端最终回包未取得——上游提供方 `open.bigmodel.cn/api/anthropic`（account:bigmodel-individual-coding-plan / GLM-5.3-Flash）持续 HTTP 500，三轮各重试 10 次全败（引擎侧日志 ~/.zcode/cli/log 实锚，reason=server_error，与分叉接线无关）。**复验口令**：提供方恢复后重跑本节三次会话同款命令，断言 `RESULT exit=0` 即闭环。
 - P1-4（实测）：补丁 691 生成走快照重建法（基线+11 个触及 http.ts 补丁重放→纯增量 diff）；`npm run clean`+`npm run inject` 全链重放后门在位（:531/:555）；目标测试 13/13 绿（server-info 10+failsoft 3）。
 - P2-6：模板 JSON 语法校验过；无 gates.json 板零行为变化（kanban_gates.py 惰性语义既有测试覆盖）。
-- 合并前：`npm test` 全量 + `npm run typecheck:harness`。
+- 合并前全量（2026-10-26 worktree 实测）：6,346 用例＝6,277 过/13 跳过/56 败；56 败定性为既有环境类基线——最可疑的 4 个文件（zcode-engine-chain/zcode-engine-bridge/panel-window-ipc/mcp-tool-mode-gate）在主树差分同败（13/13 同构），无一在本轮改动面；typecheck:harness 绿。
+- 文档批（D-2~D-7）：总账刷新（401/7、V8.53、纪律 86、v2.95.0、341/62 specs/plans）；README/AGENTS 版本表对齐 VENDOR.md（0.7.39/0.22.5）＋「只读运行面」措辞校正＋全量行按实测口径改写；整合正本 R10（旧路径勘正、§3.4 网关互调双通道入册、§3.2 Ycode-ACP 现状入册、§6.1 vendor 四步）；全流程方案 V8.53（词表 Ycode＝三十五词补齐、步 25 措辞对齐、升版行注「26 步/六闸/判据零改动」）；team 双语 README 工作区口径修正＋simharness 三十项核验＋runtime/README 重写双职责；USAGE 无过期口径（零改动）。gongwen-lint 机械首查跑过，违规集中于表格分号/加粗密度＝决策记录体裁合法形态（人工判定）。
 - 未验证项（如实声明）：ACP 委托在真实推演轮（run 级）的引擎断言；提供方恢复后的端到端回包（见上复验口令）。
 
 ## 挂账（本轮不做）

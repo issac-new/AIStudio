@@ -121,9 +121,9 @@ Gateway 消息 (Matrix/Weixin/API Server/Email)
 ## 核心特性
 
 - **智能路由**：Gateway 消息按复杂度路由——轻量（≤2 次工具调用）直接执行，中等（3-5 次）轻量留痕，重型（≥6 次）走完整看板流程。
-- **持久 Worktree 工作区**：每个看板任务默认 `workspace_kind="worktree"`，输出以 commit 形式持久化，多任务并行不冲突。
+- **持久工作区**：任务工作区按板型默认——普通板默认共享目录（`workspace_kind="dir"`），project-scoped 板默认 worktree（`<repo>/.worktrees/<task-id>`，输出以 commit 持久化，多任务并行不冲突）；建卡时可显式改 `scratch|worktree|dir`。
 - **Loop Engineering 验证门**：每次 `kanban_complete` 前必须通过验证门（从任务 body 提取验收条件，用工具验证非自述）。
-- **ACP 编码委托**：编码工作通过 ACP 委托外部编码 agent（claude/codex），worker 不直接写代码。
+- **ACP 编码委托**：编码工作通过 ACP 委托外部编码 agent（claude / codex / zcode——zcode 即本体系编码引擎 Ycode，经 `zcode-acp-server` 桥调用），worker 不直接写代码；默认 provider 由各 profile 配置决定。
 - **隐私加固**：真实邮箱 → `your-bot@example.com`，用户名路径 → `/Users/YOURNAME`，密钥 → `${ENV_VAR}` 占位符。
 - **单一事实源**：共享规则收敛在 `_shared/` 六层目录（调度总线/组织编排/进化记忆/专业能力/工程执行/观测治理）。
 - **列门禁（opt-in）**：done 列人工审批闸可选启用——把 [`gates.template.json`](gates.template.json) 拷为 `<boards_root>/<slug>/gates.json`（与该板 `kanban.db` 同目录）。`requiredHumanApproval` 要求任务标题/正文携带人写的 `APPROVED` 判词（审批是人类产物，不是 UI 开关）；文件缺席=无门禁，存量板零行为变化。语义单一事实源=`hermes_cli/kanban_gates.py`。
