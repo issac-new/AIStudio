@@ -1,10 +1,10 @@
 ---
 name: upstream-agent-skill-fusion
 description: "融合上游 agent 工具/skill 进 Hermes：调研→裁剪安装→hermes 化→Exercised 验收。"
-version: 1.1.0
+version: 1.2.0
 metadata:
   hermes:
-    source: archify 融合（2026-09-01）实战蒸馏
+    source: archify 融合（2026-09-01）实战蒸馏；REAP 融合补强（fleet 拓扑/Resolver 注册/yaml 对账）
     tags: [devops, skill-fusion, open-source, integration]
     related_skills: [open-source-architecture-research, deep-research-workflow]
 ---
@@ -42,9 +42,14 @@ tar -xzf /tmp/X.tar.gz && mv <repo>-main /tmp/X-src
 # 保留运行时必需：bin/ renderers/ schemas/ examples/ references/；裁 test/ migrations/ 构建链
 ```
 
+**落点共享拓扑先查再写**：`readlink ~/.hermes/profiles/<p>/skills/<category>`——多数 category（devops/cybersecurity 等）是各 profile 软链到 `~/.hermes/skills/<category>` 的**单物理副本**，写一处即全 fleet 生效。禁止逐 profile rm+ln「广播」——那是硬链时代的旧方案，会把软链替成分叉副本制造版本漂移；inode 跨 profile 相同≠硬链（软链穿透 stat 同样同 inode），以 readlink 为准。验收三件套：readlink 指向共享区 + 全 profile 路径 md5 `sort -u | wc -l == 1` + `os.path.samefile()` 核对双路径同 inode。例外：个别 profile 是 REAL-DIR 不挂共享，装前先查 readlink。
+
 ### Step 5: hermes 化 SKILL.md
 - 上游正文原样保留；顶部加「Hermes 使用纪律」段（产物落盘位置/禁联网开关/验收证据进 metadata/修复循环上限）
 - frontmatter 加 `metadata.source`（上游+版本+日期）与 `related_skills`
+
+### Step 5b: 接入派工面（技能要进 hack 团队作业流时必做）
+hack 看板派单前跑确定性 Resolver（`_shared/scripts/resolver_cli.py`，读 `skill_routing.json` 词典）——技能不注册=Resolver 路由不到=装了白装。按既有条目 shape（name/phase/target_type/technologies/task_types/aliases/is_broad_knowledge/input_format）加一条，aliases 覆盖中英触发词并含任务描述常用口语。验收入典：`resolver_cli.py "<典型任务描述>" --json` 的 primary 或 supports 命中新条目才算接通。
 
 ### Step 6: Exercised 级验收（必做）
 新装目录里重跑 Step 3 的端到端（不是源仓库目录！）：工具自检 + 真实素材产物 + 工具自己的 receipt/自检输出当证据，
@@ -67,7 +72,10 @@ tar -xzf /tmp/X.tar.gz && mv <repo>-main /tmp/X-src
 
 ### 4. 与既有工具互补不互斥
 新工具与集群已有的同类能力（如 mermaid 文本图）写清边界：文本可 diff 的场景保留，
-对外交付/重展示走新工具。不重复造同一场景的两条互斥路径。
+对外交付/高展示走新工具。不重复造同一场景的两条互斥路径。
+
+### 5. PyYAML 整文件重写 profile config 后必做键集对账
+融合常需给 profile config.yaml 加段（如 MCP 注册）——`yaml.safe_dump` 整文件重写会静默洗掉注释与非常规字段且不报错。写后用**未触碰的兄弟 profile config** 对比 top-level key 集合，lost/gained 必须为空才放行；不对账发现不了，发现时已是下游故障。
 
 ## Reference Files
 

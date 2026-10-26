@@ -1,0 +1,14 @@
+diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+index b2bd1f46b..e6203c863 100644
+--- a/packages/server/src/bootstrap/http.ts
++++ b/packages/server/src/bootstrap/http.ts
+@@ -524,7 +524,8 @@ export async function bootstrap() {
+   app.use(createStaticCompressionMiddleware())
+ 
+   // Serve element-web static files at /element-web/*
+-  const elementWebDir = resolve(__dirname, '..', 'element-web')
++  // 部署方可通过 ELEMENT_WEB_DIR 指认自备静态目录；缺省沿用仓内参照目录。
++  const elementWebDir = resolve(process.env.ELEMENT_WEB_DIR?.trim() || resolve(__dirname, '..', 'element-web'))
+   // overlay[element-web-failsoft]: element-web 是参照实现，默认不入仓（verify-clean
+   // 立法）。目录缺席时 /element-web/* 静态请求 fail-soft 明示 503 available:false，
+   // 不再落「双 send 抛 404/500」悬挂面；config.json 动态端点在前一分支已返回，不受影响。
