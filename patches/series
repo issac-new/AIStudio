@@ -949,3 +949,6 @@
 
 # 694（2026-10-26 真实账号验证轮）：element-web CSP wasm 放行——element-web rust crypto（matrix-sdk-crypto wasm）登录后实例化被全局 CSP script-src（无 wasm 源）以 CompileError 拒绝：登录 POST 200 但会话启动死锁（无 /sync、无 /keys/upload），有头无头同卡。仅 /element-web/ 路径的 script-src 追加窄 token wasm-unsafe-eval，其余路径与 CSP 其他指令逐字不变（不开整 eval）。
 694-server-element-web-wasm-csp.patch
+
+# 695（2026-10-26 Qoder 主动性文章吸收轮）：proactivity 域挂载——/api/hermes/proactivity/{model,assess,alignment} 两轴裁决（谁定义问题 L1-L5 × 做到哪一步五档）+长期目标漂移防线（确认台账+新鲜度），判定面 fail-soft；enforce-gate 执行面接线挂账见 spec=2026-10-26-proactivity-two-axis.md
+695-server-proactivity-routes.patch

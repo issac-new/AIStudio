@@ -1,0 +1,22 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -174,6 +174,10 @@ import { expertiseRouter } from '../custom/expertise/expertise-controller'
+ // overlay[precedent]: 判例库检索（天猫吸收轮挂账批 2026-10-23）——
+ // /api/hermes/precedent/search：run 即判例单元，活跃 runs+归档 tar 按需抽。
+ import { precedentRouter } from '../custom/precedent/precedent-controller'
++// overlay[proactivity]: 主动性两轴与目标持续对齐（阿里技术《Personal Agent 落地思考》吸收轮 2026-10-26）——
++// /api/hermes/proactivity/{model,assess,alignment}：谁定义问题（L1-L5）×做到哪一步五档组合裁决，
++// 长期目标漂移防线（确认台账+新鲜度）。判定面 fail-soft，enforce-gate 接线挂账见本轮 spec。
++import { proactivityRouter } from '../custom/proactivity/proactivity-controller'
+ // overlay[runtime-verify]（长会话治理 B5 挂载件）：真工具运行时验证器注册表——
+ // /api/hermes/runtime-verify/{health,verifiers,miniprogram}。原模块早落而路由从未
+ // 挂载（悬空件），606 补登。
+@@ -534,6 +538,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(deliveryRouter.routes())              // 交付效能：日报/C×L 矩阵/介入账本（天猫吸收轮，fail-soft）
+   app.use(expertiseRouter.routes())            // 协作画像：谁懂什么 wall/search（天猫吸收轮，fail-soft）
+   app.use(precedentRouter.routes())             // 判例库：run 判例检索（天猫挂账批，fail-soft）
++  app.use(proactivityRouter.routes())           // 主动性两轴裁决+目标对齐台账（Qoder 吸收轮，fail-soft）
+   app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
+   app.use(skillgovGeneratorRoutes.routes())         // 技能治理：生成器 status/run
+   app.use(skillgovStoreRoutes.routes())             // 技能治理：角色映射+教训库
