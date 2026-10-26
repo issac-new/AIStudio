@@ -31,7 +31,11 @@
 
 ## 4、验证
 
-（实施后回填）
+1. `test-design-sync.sh` 23 断言全绿（新增 5a/5b：fixture 仓 cd+env PROJECT_DIR 跑 `precheck.sh --spec-first` 全链——touched 未兑现 fail（gate_design_sync）/兑现 pass）。固化的两个实现细节：precheck 变更集检测走 cwd 的 git（须 cd 进目标树，与真实用法一致）；set -e 下预期非零须 `|| true`。
+2. 回归 `test-r101-spec-first-universal`/`test-r128-spec-first`/`test-template-lexical-consistency` 全 PASS；self-check 预算三项对账过（变量 199≤200、四脚本 9363 不变、引擎域源 7800 不变——本批不触执法脚本）。
+3. env 覆盖双实证：主仓态不传 env 零行为变化（同旧值）；fixture 态传 env 后 L3 检测树正确指向 fixture（5a/5b 载体）。
+4. L2 自证实录：本批首笔提交被 L2 拦（spec 声明 touched 总账但总账修订未入暂存区）——按判据并入总账修订后放行，「声明与兑现同一批」执法闭环第二例。
+5. 并行披露：在途 worktree 4 个（均为并行会话 IN-FLIGHT<24h）已达上限，本批建第 5 个短命 worktree 即刻收口（D3 用户指令优先）。
 
 ## 5、风险与回滚
 

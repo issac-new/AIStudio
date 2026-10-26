@@ -199,9 +199,60 @@ grep -q 'spf_design_sync_check' assets/gates-warn.sh \
 grep -q 'DESIGN_SYNC_REQUIRED' assets/precheck.conf \
   && ok "4c conf 模板含 DESIGN_SYNC_REQUIRED（opt-in 默认关）" || bad "4c conf 模板缺变量"
 
+# ===== ⑤ L3 全链端到端（precheck.sh --spec-first；PROJECT_DIR env 覆盖查 fixture 树）=====
+# 尾部批 D1/D2：conf 的 PROJECT_DIR 改 ${PROJECT_DIR:-默认} 形态后，env 可把 L3 检测树
+# 指到任意 worktree/fixture——修「实例 conf 硬编码主仓致分支态 L3 永远查主仓」边界。
+SK3="$TMP/skill3"; PJ3="$TMP/proj3"
+mkdir -p "$SK3/scripts" "$PJ3/src" "$PJ3/docs/specs"
+cp assets/precheck.sh assets/gates-strict.sh assets/gates-warn.sh assets/gates-advisory.sh assets/spec-first-lib.sh "$SK3/scripts/"
+cat > "$SK3/scripts/precheck.conf" <<'EOF'
+SPEC_REQUIRED=1
+SPEC_GLOB=docs/specs/*.md
+WRITABLE_DIRS=("src")
+DESIGN_SYNC_REQUIRED=1
+DESIGN_DOCS=("docs/design.md")
+BASE_BRANCH=main
+EOF
+git init -q -b main "$PJ3" >/dev/null 2>&1 || git init -q "$PJ3"
+git -C "$PJ3" config user.email t@t.local && git -C "$PJ3" config user.name t
+echo a > "$PJ3/src/a.txt" && git -C "$PJ3" add -A && git -C "$PJ3" commit -qm init
+git -C "$PJ3" checkout -qb feat/x
+echo b > "$PJ3/src/a.txt"
+cat > "$PJ3/docs/specs/2026-01-01-x.md" <<'EOF'
+# 测试 spec
+
+## 决策记录
+
+| D1 | 测试 | Mechanical |
+
+## 设计文档影响
+
+- DESIGN_SYNC: touched
+  - docs/design.md —— 版本行
+EOF
+git -C "$PJ3" add -A
+
+# 5a touched 未兑现 → L3 fail（gate_design_sync）
+# precheck 的变更集检测走 cwd 的 git——须 cd 进 fixture（与真实用法一致：AI 在目标树里跑门禁）
+( cd "$PJ3" && PROJECT_DIR="$PJ3" bash "$SK3/scripts/precheck.sh" --spec-first ) >"$TMP/l3a.out" 2>&1 || true
+if grep -q 'gate_design_sync' "$TMP/l3a.out"; then
+  ok "5a L3 全链拦 touched 未兑现（precheck --spec-first fail）"
+else
+  bad "5a L3 未拦（$(tail -3 "$TMP/l3a.out" | tr '\n' ' ')）"
+fi
+
+# 5b 兑现（design.md 并入 staged）→ L3 pass
+printf '# 正本\n' > "$PJ3/docs/design.md" && git -C "$PJ3" add docs/design.md
+( cd "$PJ3" && PROJECT_DIR="$PJ3" bash "$SK3/scripts/precheck.sh" --spec-first ) >"$TMP/l3b.out" 2>&1 || true
+if grep -q 'spec-first: 可写区变更有变更集内已批准 spec' "$TMP/l3b.out" && ! grep -q 'gate_design_sync' "$TMP/l3b.out"; then
+  ok "5b L3 全链放行 touched 已兑现（precheck --spec-first pass）"
+else
+  bad "5b L3 兑现后仍拦（$(grep -E '✗|gate_design_sync' "$TMP/l3b.out" | head -2 | tr '\n' ' ')）"
+fi
+
 echo
 if [[ "$FAIL" -eq 0 ]]; then
-  echo "PASS: design-sync 判定矩阵 + L2 端到端四场景全绿"
+  echo "PASS: design-sync 判定矩阵 + L2/L3 端到端全场景全绿"
   exit 0
 else
   echo "FAIL: design-sync 守门存在失败项" >&2
