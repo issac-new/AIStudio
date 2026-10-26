@@ -16,6 +16,7 @@ import { showToast } from '../utils/toast'
 import { buildRecap } from '../composables/useIdeSessionHooks'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
+import { upstreamPath } from '../../../test/upstream-root'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 
@@ -191,7 +192,7 @@ describe('会话恢复 recap（claude-code 2.1.108 语义）', () => {
 
 describe('patch 342/343 漂移守卫', () => {
   const overlayRoot = resolve(__dirname, '../../../..')
-  const UPSTREAM_CLIENT = resolve(overlayRoot, '../upstream/hermes-studio/packages/client/src')
+  const UPSTREAM_CLIENT = upstreamPath('hermes-studio/packages/client/src')
 
   it('342 审批学习 CustomEvent 已接线（注入态 MessageList 直断）', () => {
     const ml = readFileSync(resolve(UPSTREAM_CLIENT, 'components/hermes/chat/MessageList.vue'), 'utf8')

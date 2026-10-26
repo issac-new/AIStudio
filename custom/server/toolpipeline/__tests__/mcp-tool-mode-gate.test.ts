@@ -3,10 +3,11 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { upstreamPath } from '../../../test/upstream-root'
 
 const overlayRoot = resolve(import.meta.dirname, '..', '..', '..', '..')
-const mcpSrc = readFileSync(resolve(overlayRoot, '..', 'upstream', 'hermes-studio', 'packages', 'ekko-agent', 'src', 'tools', 'mcp.ts'), 'utf8')
-const cfgSrc = readFileSync(resolve(overlayRoot, '..', 'upstream', 'hermes-studio', 'packages', 'ekko-agent', 'src', 'config.ts'), 'utf8')
+const mcpSrc = readFileSync(upstreamPath('hermes-studio/packages/ekko-agent/src/tools/mcp.ts'), 'utf8')
+const cfgSrc = readFileSync(upstreamPath('hermes-studio/packages/ekko-agent/src/config.ts'), 'utf8')
 
 describe('P2 tool_mode 配置面（注入态守门）', () => {
   it('config.ts：EkkoMcpServerConfig.tool_mode 三值字段在档', () => {

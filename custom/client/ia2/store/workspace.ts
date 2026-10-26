@@ -37,6 +37,7 @@ export interface ScheduleEvent {
   taskId?: string
   time?: string           // HH:mm（由 ts 派生）
   ts?: number             // 毫秒时间戳（右栏按时间排序）
+  remindAt?: number       // todo 的真实提醒时刻；缺省时不显示闹钟
   priority?: CockpitPriority   // task 类：优先级（右栏色带/视觉权重）
   status?: string              // task 类：状态（9 值之一）
   archived?: boolean
@@ -328,7 +329,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     }
     for (const t of userTodos.value) {
       if (!map[t.date]) map[t.date] = []
-      map[t.date].push({ id: t.id, date: t.date, title: t.title, kind: 'todo', ts: t.createdAt })
+      map[t.date].push({ id: t.id, date: t.date, title: t.title, kind: 'todo', ts: t.remindAt ?? t.createdAt, remindAt: t.remindAt })
     }
     return map
   })

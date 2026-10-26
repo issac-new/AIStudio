@@ -147,14 +147,14 @@ export const useCockpitStore = defineStore('cockpit', () => {
     const teamBoards = _teamBoardSet.value
     const source = teamBoards ? tasks.value.filter(t => teamBoards.has(t.boardSlug)) : tasks.value
     return source
-      .map(t => attentionAdapter.toAttention({ ...t, status: t.status } as any))
+      .map(t => attentionAdapter.toAttention(t))
       .filter((x): x is AttentionItem => x !== null)
       .sort((a, b) => {
         // 第一层：按状态分梯队（阻塞 > 待审 > 待分类）
         const tier = attentionAdapter.attentionTier(a.status) - attentionAdapter.attentionTier(b.status)
         if (tier !== 0) return tier
         // 第二层：梯队内按优先级（P0 > P1 > P2 > P3）
-        const pri = (a.priority ?? 3) - (b.priority ?? 3)
+        const pri = attentionAdapter.attentionPriorityRank(a.priority) - attentionAdapter.attentionPriorityRank(b.priority)
         if (pri !== 0) return pri
         // 第三层：同优先级按创建时间降序（晚的在前）
         return b.createdAt - a.createdAt

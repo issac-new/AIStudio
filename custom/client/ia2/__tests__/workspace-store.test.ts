@@ -196,6 +196,28 @@ describe('workspace store：日程弹窗状态', () => {
       vi.useRealTimers()
     }
   })
+
+  it('待办按 remindAt 排序，无提醒项回退 createdAt 且不冒充闹钟', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-09-10T12:00:00'))
+      const remindAt = new Date('2026-09-10T14:00:00').getTime()
+      const store = useWorkspaceStore()
+      store.addUserTodo('2026-09-10', '十四点提醒', undefined, remindAt)
+      store.addUserTodo('2026-09-10', '无提醒')
+      store.setScheduleDate('2026-09-10')
+      const events = store.scheduleEventsForSelectedSorted
+      const reminded = events.find(e => e.title === '十四点提醒')!
+      const unreminded = events.find(e => e.title === '无提醒')!
+      expect(reminded.ts).toBe(remindAt)
+      expect(reminded.remindAt).toBe(remindAt)
+      expect(unreminded.ts).toBe(store.userTodos.find(t => t.title === '无提醒')!.createdAt)
+      expect(unreminded.remindAt).toBeUndefined()
+      expect(events.map(e => e.title)).toEqual(['无提醒', '十四点提醒'])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 describe('workspace store：看板聚合 WS 生命周期', () => {

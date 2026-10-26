@@ -9,10 +9,11 @@ import { tmpdir } from 'os'
 import net from 'net'
 import { WebSocketServer } from 'ws'
 import { connectZCodeEngine, wsMessageToVSBuffer } from '../zcode/engine-bridge'
+import { upstreamPath } from '../../test/upstream-root'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 const VENDOR = resolve(OVERLAY_ROOT, 'custom/server/zcode/vendor/rpc')
-const ZCODE_RPC_SRC = resolve(OVERLAY_ROOT, '../upstream/zcode/packages/rpc/src')
+const ZCODE_RPC_SRC = upstreamPath('zcode/packages/rpc/src')
 
 const VENDORED_FILES = ['buffer.ts', 'foundation.ts', 'serialization.ts', 'protocol.ts', 'channelClient.ts', 'proxy-channel.ts']
 
@@ -56,7 +57,7 @@ describe('zcode engine bridge（R4-P1）', () => {
   it('patch 380 登记且挂载点存在（注入态 routes.ts 含 import+use）', () => {
     const series = readFileSync(resolve(OVERLAY_ROOT, 'patches/series'), 'utf8')
     expect(series).toMatch(/^380-server-zcode-engine-health-route\.patch$/m)
-    const routesPath = resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/server/src/bootstrap/routes.ts')
+    const routesPath = upstreamPath('hermes-studio/packages/server/src/bootstrap/routes.ts')
     if (existsSync(routesPath)) {
       const routes = readFileSync(routesPath, 'utf8')
       expect(routes).toContain("import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'")

@@ -225,4 +225,24 @@ describe('CockpitScheduleModal（workspace store 承载）', () => {
     expect(routerMocks.push).toHaveBeenCalledWith({ path: '/app/board', query: { task: 't-nav' } })
     expect(store.scheduleOpen).toBe(false)
   })
+
+  it('只显示真实 remindAt，无提醒待办不显示创建时间闹钟', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-09-10T12:00:00'))
+      const store = useWorkspaceStore()
+      store.openSchedule()
+      store.addUserTodo('2026-09-10', '十四点提醒', undefined, new Date('2026-09-10T14:00:00').getTime())
+      store.addUserTodo('2026-09-10', '无提醒')
+      const wrapper = mount(CockpitScheduleModal)
+      const rows = wrapper.findAll('.cockpit-schedule__ev')
+      const reminded = rows.find(row => row.text().includes('十四点提醒'))!
+      const unreminded = rows.find(row => row.text().includes('无提醒'))!
+      expect(reminded.find('.cockpit-schedule__ev-alarm').text()).toContain('14:00')
+      expect(reminded.text()).not.toContain('12:00')
+      expect(unreminded.find('.cockpit-schedule__ev-alarm').exists()).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

@@ -195,8 +195,8 @@ describe('useRunTrace', () => {
     const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/studio/sessions')
     const { getTask } = await import('@/api/hermes/kanban')
     ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
-      if (profile === 'orchestrator') return [{ id: 's1', title: 'work kanban task t_abc', profile: 'orchestrator', ended_at: null }]
-      if (profile === 'worker-coder') return [{ id: 's2', title: 'work kanban task t_def', profile: 'worker-coder', ended_at: null }]
+      if (profile === 'orchestrator') return [{ id: 's1', title: 'work kanban task t_abc', profile: 'orchestrator', ended_at: null, message_count: 2 }]
+      if (profile === 'worker-coder') return [{ id: 's2', title: 'work kanban task t_def', profile: 'worker-coder', ended_at: null, message_count: 4 }]
       return []
     })
     ;(getTask as any).mockImplementation(async (tid: string) => {
@@ -209,9 +209,11 @@ describe('useRunTrace', () => {
         return {
           messages: [
             { role: 'user', content: 'do work', timestamp: 1000 },
-            { role: 'assistant', content: 'done', timestamp: 1001 },
+            { role: 'assistant', content: '', reasoning: '先检查输入', timestamp: 1001 },
+            { role: 'tool', tool_name: 'read_file', content: 'ok', timestamp: 1002 },
+            { role: 'assistant', content: 'done', timestamp: 1003 },
           ],
-          total: 2, offset: 0, limit: 500, hasMore: false, session: {},
+          total: 4, offset: 0, limit: 500, hasMore: false, session: {},
         }
       }
       return { messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} }
@@ -225,13 +227,92 @@ describe('useRunTrace', () => {
 
     // attachLive 异步：loadRelatedSessions → connectChatRun → loadRelatedTraces
     await flush()
+    const runStarted = mocks.socket.on.mock.calls.find(([event]) => event === 'run.started')![1]
+    runStarted({ event: 'run.started', run_id: 'main-run', session_id: 's1', timestamp: 999 })
+    await flush()
     await flush()
     await flush()
 
-    // s2 的 run 节点应存在于主 state（节点 id 含 :s2:）
-    const hasS2Run = trace.nodes.value.some(n => n.id.includes(':s2:'))
-    expect(hasS2Run).toBe(true)
+    // 关联 run、thinking、tool 必须都归属于 s2，且主 run 不被改写。
+    const relatedRun = trace.nodes.value.find(n => n.id === 'run:s2:replay-s2')
+    expect(relatedRun?.status).toBe('ok')
+    expect(relatedRun?.children?.some(c => c.kind === 'thinking' && c.text === '先检查输入')).toBe(true)
+    const relatedTool = trace.nodes.value.find(n => n.kind === 'tool' && n.ref?.sessionId === 's2')
+    expect(relatedTool).toBeTruthy()
+    expect(trace.edges.value.some(e => e.from === relatedRun?.id && e.to === relatedTool?.id)).toBe(true)
+    expect(trace.state.value?.runId).toBe('main-run')
+    const nodeIds = new Set(trace.nodes.value.map(n => n.id))
+    expect(trace.edges.value.every(e => nodeIds.has(e.from) && nodeIds.has(e.to))).toBe(true)
 
+    scope.stop()
+  })
+
+  it('实时主会话与关联会话各自闭合 run，工具边不跨 session', async () => {
+    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/studio/sessions')
+    ;(fetchHermesSessions as any).mockImplementation(async () => [])
+    ;(fetchSessionMessagesPage as any).mockImplementation(async () => ({ messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} }))
+    const scope = effectScope()
+    let trace!: ReturnType<typeof useRunTrace>
+    scope.run(() => { trace = useRunTrace(ref<string | null>('s1')) })
+    await flush()
+    trace.relatedSessionIds.value = new Set(['s1', 's2'])
+    trace.aggregateMode.value = true
+    const on = (event: string) => mocks.socket.on.mock.calls.find(([name]) => name === event)![1]
+    on('run.started')({ event: 'run.started', run_id: 'main-run', session_id: 's1', timestamp: 1000 })
+    on('run.started')({ event: 'run.started', run_id: 'related-run', session_id: 's2', timestamp: 1001 })
+    on('tool.started')({ event: 'tool.started', run_id: 'related-run', session_id: 's2', tool: 'read_file', timestamp: 1002 })
+    on('tool.completed')({ event: 'tool.completed', run_id: 'related-run', session_id: 's2', tool: 'read_file', output: 'ok', timestamp: 1003 })
+    on('run.completed')({ event: 'run.completed', run_id: 'related-run', session_id: 's2', timestamp: 1004 })
+    on('run.completed')({ event: 'run.completed', run_id: 'main-run', session_id: 's1', timestamp: 1005 })
+
+    expect(trace.nodes.value.find(n => n.id === 'run:s1:main-run')?.status).toBe('ok')
+    expect(trace.nodes.value.find(n => n.id === 'run:s2:related-run')?.status).toBe('ok')
+    const tool = trace.nodes.value.find(n => n.kind === 'tool' && n.ref?.sessionId === 's2')
+    expect(trace.edges.value.some(e => e.from === 'run:s2:related-run' && e.to === tool?.id)).toBe(true)
+    expect(trace.state.value?.runId).toBe('main-run')
+    const nodeIds = new Set(trace.nodes.value.map(n => n.id))
+    expect(trace.edges.value.every(e => nodeIds.has(e.from) && nodeIds.has(e.to))).toBe(true)
+    scope.stop()
+  })
+
+  it('关联历史加载期间缓冲实时事件，慢响应不覆盖新 run', async () => {
+    const { fetchHermesSessions, fetchSessionMessagesPage } = await import('@/api/studio/sessions')
+    const { getTask } = await import('@/api/hermes/kanban')
+    ;(fetchHermesSessions as any).mockImplementation(async (_s: any, _l: any, profile: string) => {
+      if (profile === 'orchestrator') return [{ id: 's1', title: 'work kanban task t_abc', profile: 'orchestrator', ended_at: null, message_count: 5 }]
+      if (profile === 'worker-coder') return [{ id: 's2', title: 'work kanban task t_def', profile: 'worker-coder', ended_at: null, message_count: 5 }]
+      return []
+    })
+    ;(getTask as any).mockImplementation(async (tid: string) => {
+      if (tid === 't_abc') return { task: { session_id: null }, parents: [], children: ['t_def'] }
+      if (tid === 't_def') return { task: { session_id: null }, parents: ['t_abc'], children: [] }
+      return { task: { session_id: null }, parents: [], children: [] }
+    })
+    let releaseRelated!: (value: any) => void
+    const relatedPage = new Promise(resolve => { releaseRelated = resolve })
+    ;(fetchSessionMessagesPage as any).mockImplementation(async (sid: string) => {
+      if (sid === 's2') return relatedPage
+      return { messages: [], total: 0, offset: 0, limit: 500, hasMore: false, session: {} }
+    })
+    const scope = effectScope()
+    let trace!: ReturnType<typeof useRunTrace>
+    scope.run(() => { trace = useRunTrace(ref<string | null>('s1')) })
+    await flush(); await flush()
+    const on = (event: string) => mocks.socket.on.mock.calls.find(([name]) => name === event)![1]
+    on('run.started')({ event: 'run.started', run_id: 'main-run', session_id: 's1', timestamp: 1000 })
+    on('run.started')({ event: 'run.started', run_id: 'live-s2', session_id: 's2', timestamp: 1001 })
+    on('tool.started')({ event: 'tool.started', run_id: 'live-s2', session_id: 's2', tool: 'read_file', timestamp: 1002 })
+    on('run.completed')({ event: 'run.completed', run_id: 'live-s2', session_id: 's2', timestamp: 1003 })
+    releaseRelated({ messages: [
+      { role: 'user', content: 'old', timestamp: 900 },
+      { role: 'assistant', content: 'old done', timestamp: 901 },
+    ], total: 2, offset: 0, limit: 500, hasMore: false, session: {} })
+    await flush(); await flush(); await flush(); await flush()
+
+    expect(trace.nodes.value.find(n => n.id === 'run:s2:live-s2')?.status).toBe('ok')
+    const tool = trace.nodes.value.find(n => n.kind === 'tool' && n.ref?.sessionId === 's2')
+    expect(trace.edges.value.some(e => e.from === 'run:s2:live-s2' && e.to === tool?.id)).toBe(true)
+    expect(trace.state.value?.runId).toBe('main-run')
     scope.stop()
   })
 

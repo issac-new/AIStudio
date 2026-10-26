@@ -28,4 +28,12 @@ describe('dedupePending（待裁决同对象去重）', () => {
     ])
     expect(out.map((i) => i.id).sort()).toEqual(['review:a', 'review:b', 'review:c'])
   })
+
+  it('同会话同标题的不同命令审批全部保留', () => {
+    const out = dedupePending([
+      { ...mk('command:a', undefined, 1000, '会话 A'), kind: 'command', sessionId: 's1' },
+      { ...mk('command:b', undefined, 2000, '会话 A'), kind: 'command', sessionId: 's1' },
+    ])
+    expect(out.map((i) => i.id)).toEqual(['command:a', 'command:b'])
+  })
 })

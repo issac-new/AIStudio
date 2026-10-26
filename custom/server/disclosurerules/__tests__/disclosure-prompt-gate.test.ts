@@ -3,10 +3,11 @@
 import { describe, expect, it } from 'vitest'
 import { existsSync, readFileSync } from 'fs'
 import { resolve } from 'path'
+import { upstreamPath } from '../../../test/upstream-root'
 
 const overlayRoot = resolve(import.meta.dirname, '..', '..', '..', '..')
-const ekkoPrompt = resolve(overlayRoot, '..', 'upstream', 'hermes-studio', 'packages', 'ekko-agent', 'src', 'runtime', 'system-prompt.ts')
-const agentPrompt = resolve(overlayRoot, '..', 'upstream', 'hermes-agent', 'agent', 'system_prompt.py')
+const ekkoPrompt = upstreamPath('hermes-studio/packages/ekko-agent/src/runtime/system-prompt.ts')
+const agentPrompt = upstreamPath('hermes-agent/agent/system_prompt.py')
 
 describe('P12 讨好者防线（patch 563/564 注入态守门）', () => {
   it('ekko TS：EKKO_DISCLOSURE_GUIDELINES 常量 + buildSystemPrompt 接线在位', () => {

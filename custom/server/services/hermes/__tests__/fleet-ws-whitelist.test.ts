@@ -11,14 +11,12 @@
 // 白名单漂移时当场 fail。
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
+import { upstreamPath } from '../../../../test/upstream-root'
 import { resolve } from 'path'
 
 // 自本文件 6 级到 ncwk 根（__tests__ → hermes → services → server → custom → overlay根 → ncwk），
 // 再进 upstream/hermes-studio。
-const HTTP_TS = resolve(
-  __dirname,
-  '../../../../../../upstream/hermes-studio/packages/server/src/bootstrap/http.ts',
-)
+const HTTP_TS = upstreamPath('hermes-studio/packages/server/src/bootstrap/http.ts')
 
 describe('fleet/kanban-overview WS catch-all 白名单（patch 251 守门）', () => {
   const src = readFileSync(HTTP_TS, 'utf8')

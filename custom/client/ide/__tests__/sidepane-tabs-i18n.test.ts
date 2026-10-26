@@ -5,8 +5,9 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { upstreamPath } from '../../../test/upstream-root'
 
-const UPSTREAM_CLIENT = '../../../../../upstream/hermes-studio/packages/client/src'
+const UPSTREAM_CLIENT = upstreamPath('hermes-studio/packages/client/src')
 const TABS_SRC = resolve(__dirname, '../views/IdeSidePane.vue')
 
 function readUpstream(rel: string): string {

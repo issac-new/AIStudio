@@ -7,9 +7,10 @@ import { resolve } from 'path'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { upstreamPath } from '../../../test/upstream-root'
 
 const overlayRoot = resolve(import.meta.dirname, '..', '..', '..', '..')
-const up = (rel: string) => resolve(overlayRoot, '..', 'upstream', 'hermes-studio', rel)
+const up = (rel: string) => upstreamPath('hermes-studio', rel)
 
 describe('P1 工具执行瀑布（注入态守门）', () => {
   it('ekko types.ts：ToolExecuteHook 接口在档（pre 拒绝形态+post 改写形态）', () => {

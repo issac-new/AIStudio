@@ -22,7 +22,8 @@ async function confirmDecision(): Promise<void> {
 // U2 改版（locale 时间随界面语言）：mock 需带 locale ref，否则 fmtTime 读 locale.value 炸挂载
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<string, unknown>) => (named ? `${k}:${JSON.stringify(named)}` : k), locale: ref('zh-CN') }) }))
 // mock 整个 approvals API 模块：经 @/api/client 会连锁拉入上游 router（node 环境无 location）
-vi.mock('../api/approvals', async () => {
+vi.mock('../api/approvals', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/approvals')>()
   const state = {
     pending: { items: [] as unknown[] }, history: { entries: [] as unknown[] },
     spotcheck: { items: [] as unknown[], resolved: [] as unknown[] },
@@ -30,7 +31,7 @@ vi.mock('../api/approvals', async () => {
     spotResolveResult: { ok: true } as Record<string, unknown>,
   }
   return {
-    dedupePending: (items: unknown[]) => items,
+    dedupePending: actual.dedupePending,
     fetchPendingApprovals: vi.fn(async () => JSON.parse(JSON.stringify(state.pending))),
     fetchApprovalHistory: vi.fn(async () => JSON.parse(JSON.stringify(state.history))),
     fetchSpotChecks: vi.fn(async () => JSON.parse(JSON.stringify(state.spotcheck))),
@@ -72,6 +73,18 @@ describe('ApprovalPanel（P1 审批面板）', () => {
     expect(wrap.find('[data-testid="approval-row-command"]').exists()).toBe(true)
     expect(wrap.find('[data-testid="approval-row-review"]').exists()).toBe(true)
     expect(wrap.find('[data-testid="approval-pending-count"]').text()).toContain('2')
+  })
+
+  it('同标题的不同命令审批都出现在收件箱', async () => {
+    api.__setState({ pending: { items: [
+      pendingItems[0],
+      { ...pendingItems[0], id: 'fleet:s1:a2', detail: 'git status', createdAt: 1759000001000 },
+    ] }, history: { entries: [] } })
+    const wrap = mount(ApprovalPanel, { props: { pollMs: 0 } })
+    await flushPromises()
+    expect(wrap.findAll('[data-testid="approval-row-command"]')).toHaveLength(2)
+    expect(wrap.text()).toContain('git push origin main')
+    expect(wrap.text()).toContain('git status')
   })
 
   // 2026-10-04 影响面预览（Blast Radius）：impact 命中渲染展开块；无 impact 不渲染

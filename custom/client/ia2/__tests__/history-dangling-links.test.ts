@@ -6,9 +6,10 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { upstreamPath } from '../../../test/upstream-root'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../../..')
-const UP = resolve(OVERLAY_ROOT, '../upstream/hermes-studio')
+const UP = upstreamPath('hermes-studio')
 function read(rel: string): string {
   return readFileSync(resolve(UP, rel), 'utf8')
 }

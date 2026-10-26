@@ -75,10 +75,6 @@ export interface TraceState {
   relatedSessionIds?: Set<string>
 }
 
-function ts(event: RunEvent): number {
-  return typeof event.timestamp === 'number' ? event.timestamp : Date.now()
-}
-
 function upsertNode(nodes: TraceNode[], node: TraceNode): TraceNode[] {
   const idx = nodes.findIndex(n => n.id === node.id)
   if (idx < 0) return [...nodes, node]
@@ -93,17 +89,6 @@ function upsertEdge(edges: TraceEdge[], edge: TraceEdge): TraceEdge[] {
 
 function currentRunNodeId(state: TraceState): string | null {
   return state.runId ? `run:${state.sessionId}:${state.runId}` : null
-}
-
-function appendChildToNode(nodes: TraceNode[], nodeId: string, item: TraceTimelineItem): TraceNode[] {
-  return nodes.map(n => n.id === nodeId ? { ...n, children: [...(n.children ?? []), item] } : n)
-}
-
-function firstOpenToolId(state: TraceState, toolName?: string): string | null {
-  const entries = Object.entries(state.openToolNodeIds)
-  if (!entries.length) return null
-  if (!toolName) return entries[0][0]
-  return entries.find(([id]) => id.includes(`:${toolName}:`))?.[0] ?? entries[0][0]
 }
 
 function isActiveRunEvent(state: TraceState, event: RunEvent): boolean {
@@ -132,189 +117,6 @@ export function createTraceState(sessionId: string, relatedSessionIds?: Set<stri
 
 export function getFocusedNode(state: TraceState): TraceNode | null {
   return state.nodes.find(n => n.id === state.focusedNodeId) ?? null
-}
-
-function handleRunStarted(state: TraceState, event: RunEvent): TraceState {
-  const runId = event.run_id || `local-${state.sequence + 1}`
-  const ingressId = `ingress:${state.sessionId}`
-  const runNodeId = `run:${state.sessionId}:${runId}`
-  const startedAt = ts(event)
-  const ingress: TraceNode = {
-    id: ingressId,
-    kind: 'ingress',
-    label: '外部消息',
-    detail: state.sessionId,
-    status: 'ok',
-    startedAt,
-    evidence: 'L1',
-    ref: { sessionId: state.sessionId },
-  }
-  const runNode: TraceNode = {
-    id: runNodeId,
-    kind: 'workflow',
-    label: `Run ${runId}`,
-    detail: 'Workflow DAG',
-    status: 'running',
-    startedAt,
-    evidence: 'L1',
-    children: [],
-    ref: { sessionId: state.sessionId, runId },
-  }
-  const edge: TraceEdge = {
-    id: `edge:${ingressId}->${runNodeId}`,
-    from: ingressId,
-    to: runNodeId,
-    kind: 'spawn',
-    evidence: 'L1',
-  }
-  return {
-    ...state,
-    runId,
-    nodes: upsertNode(upsertNode(state.nodes, ingress), runNode),
-    edges: upsertEdge(state.edges, edge),
-    focusedNodeId: runNodeId,
-    // 新 run 开始时清掉上一 run 的瞬时状态,避免 skill/tool/subagent 归因泄漏。
-    openToolNodeIds: {},
-    activeSkillNodeId: null,
-    openSubagentNodeIds: {},
-    outputText: '',
-    usage: undefined,
-    sequence: state.sequence + 1,
-  }
-}
-
-function handleToolStarted(state: TraceState, event: RunEvent): TraceState {
-  const startedAt = ts(event)
-  const toolName = event.tool || event.name || 'tool'
-  const seq = state.sequence + 1
-  const toolId = `tool:${state.sessionId}:${toolName}:${seq}`
-  const parentId = state.activeSkillNodeId ?? currentRunNodeId(state)
-  const node: TraceNode = {
-    id: toolId,
-    kind: 'tool',
-    label: toolName,
-    detail: event.preview,
-    status: 'running',
-    startedAt,
-    evidence: 'L1',
-    ref: { sessionId: state.sessionId, runId: state.runId ?? undefined, toolCallId: toolId },
-  }
-  let nodes = upsertNode(state.nodes, node)
-  let edges = state.edges
-  if (parentId) {
-    edges = upsertEdge(edges, { id: `edge:${parentId}->${toolId}`, from: parentId, to: toolId, kind: 'call', evidence: 'L1' })
-    if (state.activeSkillNodeId) {
-      nodes = appendChildToNode(nodes, state.activeSkillNodeId, {
-        id: `timeline:${toolId}`,
-        kind: 'tool',
-        ts: startedAt,
-        toolName,
-        toolArgs: event.preview,
-        status: 'running',
-        attribution: 'inferred',
-      })
-    }
-  }
-  return { ...state, nodes, edges, openToolNodeIds: { ...state.openToolNodeIds, [toolId]: toolId }, sequence: seq, focusedNodeId: toolId }
-}
-
-function handleToolCompleted(state: TraceState, event: RunEvent): TraceState {
-  const endedAt = ts(event)
-  const toolName = event.tool || event.name
-  const toolId = firstOpenToolId(state, toolName)
-  if (!toolId) return state
-  const existing = state.nodes.find(n => n.id === toolId)
-  if (!existing) return state
-  const status: SpanStatus = event.error ? 'error' : 'ok'
-  const durationMs = Math.max(0, endedAt - existing.startedAt)
-  const nodes = state.nodes.map(n => {
-    if (n.id === toolId) return { ...n, status, endedAt, durationMs, detail: event.output || event.error || n.detail }
-    if (n.id === state.activeSkillNodeId) {
-      return {
-        ...n,
-        children: (n.children ?? []).map(item => item.id === `timeline:${toolId}`
-          ? { ...item, status, durationMs, toolResult: event.output || event.error }
-          : item),
-      }
-    }
-    return n
-  })
-  const openToolNodeIds = { ...state.openToolNodeIds }
-  delete openToolNodeIds[toolId]
-  return { ...state, nodes, openToolNodeIds, focusedNodeId: toolId }
-}
-
-function handleReasoning(state: TraceState, event: RunEvent): TraceState {
-  const parentId = state.activeSkillNodeId ?? currentRunNodeId(state)
-  const text = event.text || event.delta || ''
-  if (!parentId || !text) return state
-  const item: TraceTimelineItem = {
-    id: `thinking:${state.sessionId}:${state.sequence + 1}`,
-    kind: 'thinking',
-    ts: ts(event),
-    text,
-    attribution: state.activeSkillNodeId ? 'inferred' : 'accurate',
-  }
-  return { ...state, nodes: appendChildToNode(state.nodes, parentId, item), sequence: state.sequence + 1 }
-}
-
-function handleMessageDelta(state: TraceState, event: RunEvent): TraceState {
-  return { ...state, outputText: state.outputText + (event.delta || event.text || '') }
-}
-
-function handleRunFinished(state: TraceState, event: RunEvent, status: SpanStatus): TraceState {
-  const runId = currentRunNodeId(state)
-  if (!runId) return state
-  const endedAt = ts(event)
-  const nodes = state.nodes.map(n => n.id === runId
-    ? { ...n, status, endedAt, durationMs: Math.max(0, endedAt - n.startedAt), detail: event.error || n.detail }
-    : n)
-  return {
-    ...state,
-    nodes,
-    usage: event.usage ?? state.usage,
-    focusedNodeId: runId,
-    openToolNodeIds: {},
-    activeSkillNodeId: null,
-    openSubagentNodeIds: {},
-  }
-}
-
-function handleSubagent(state: TraceState, event: RunEvent): TraceState {
-  const eventTs = ts(event)
-  const label = event.name || event.tool || event.preview || event.event
-  const existingId = state.openSubagentNodeIds[label]
-  const nodeId = existingId ?? `agent:${state.sessionId}:${label}:${state.sequence + 1}`
-  const parentId = currentRunNodeId(state)
-  const status: SpanStatus = event.event.endsWith('.complete') ? 'ok' : 'running'
-  const existing = state.nodes.find(n => n.id === nodeId)
-  const node: TraceNode = {
-    id: nodeId,
-    kind: 'agent',
-    label,
-    detail: event.preview ?? existing?.detail,
-    status,
-    startedAt: existing?.startedAt ?? eventTs,
-    endedAt: status === 'ok' ? eventTs : existing?.endedAt,
-    durationMs: status === 'ok' && existing ? Math.max(0, eventTs - existing.startedAt) : existing?.durationMs,
-    evidence: 'L1',
-    ref: { sessionId: state.sessionId, runId: state.runId ?? undefined },
-  }
-  let edges = state.edges
-  if (parentId && !existing) {
-    edges = upsertEdge(edges, { id: `edge:${parentId}->${nodeId}`, from: parentId, to: nodeId, kind: 'delegate', evidence: 'L1' })
-  }
-  const openSubagentNodeIds = { ...state.openSubagentNodeIds }
-  if (status === 'ok') delete openSubagentNodeIds[label]
-  else openSubagentNodeIds[label] = nodeId
-  return {
-    ...state,
-    nodes: upsertNode(state.nodes, node),
-    edges,
-    openSubagentNodeIds,
-    focusedNodeId: nodeId,
-    sequence: existing ? state.sequence : state.sequence + 1,
-  }
 }
 
 export function activateSkill(state: TraceState, input: { skillName: string; ts: number; detail?: string }): TraceState {
@@ -567,87 +369,49 @@ export function buildCrossSessionEdges(
  * @param sid 会话 ID
  * @returns 更新后的 TraceState
  */
-export function replayMessagesIntoState(state: TraceState, messages: any[], sid: string): TraceState {
-  let s = state
+/** 将历史消息转换为统一的 RunEvent 序列；进度与异步调度由调用方负责。 */
+export function replayMessageEvents(messages: any[], sid: string): RunEvent[] {
+  const events: RunEvent[] = []
   let processed = 0
-  const total = messages.length
-
   for (const msg of messages) {
-    const ts = msg.timestamp * 1000 // messages use seconds
+    const ts = msg.timestamp * 1000
     const role = msg.role || msg.display_role
-
-    // Synthesize run.started for the first user message
     if (role === 'user' && processed === 0) {
-      const startEvent: RunEvent = {
-        event: 'run.started',
-        session_id: sid,
-        run_id: `replay-${sid}`,
-        timestamp: ts,
-      } as any
-      s = applyRunEvent(s, startEvent)
+      events.push({
+        event: 'run.started', session_id: sid, run_id: `replay-${sid}`, timestamp: ts,
+      } as any)
     }
-
-    // Tool messages → tool.completed events
     if (role === 'tool' || msg.tool_name) {
-      const toolEvent: RunEvent = {
-        event: 'tool.completed',
-        session_id: sid,
-        run_id: `replay-${sid}`,
-        tool: msg.tool_name || 'tool',
-        name: msg.tool_name,
-        output: typeof msg.content === 'string' ? msg.content.slice(0, 200) : '',
-        timestamp: ts,
-      } as any
-      // First emit tool.started for node creation
-      const startEvent: RunEvent = {
-        event: 'tool.started',
-        session_id: sid,
-        run_id: `replay-${sid}`,
-        tool: msg.tool_name || 'tool',
-        name: msg.tool_name,
-        preview: '',
-        timestamp: ts - 1,
-      } as any
-      s = applyRunEvent(s, startEvent)
-      s = applyRunEvent(s, toolEvent)
+      events.push({
+        event: 'tool.started', session_id: sid, run_id: `replay-${sid}`,
+        tool: msg.tool_name || 'tool', name: msg.tool_name, preview: '', timestamp: ts - 1,
+      } as any)
+      events.push({
+        event: 'tool.completed', session_id: sid, run_id: `replay-${sid}`,
+        tool: msg.tool_name || 'tool', name: msg.tool_name,
+        output: typeof msg.content === 'string' ? msg.content.slice(0, 200) : '', timestamp: ts,
+      } as any)
     }
-
-    // Reasoning content → reasoning.delta events
     const reasoning = msg.reasoning || msg.reasoning_content
     if (reasoning && typeof reasoning === 'string' && reasoning.trim()) {
-      const reasoningEvent: RunEvent = {
-        event: 'reasoning.delta',
-        session_id: sid,
-        run_id: `replay-${sid}`,
-        text: reasoning,
-        timestamp: ts,
-      } as any
-      s = applyRunEvent(s, reasoningEvent)
+      events.push({
+        event: 'reasoning.delta', session_id: sid, run_id: `replay-${sid}`, text: reasoning, timestamp: ts,
+      } as any)
     }
-
-    // Assistant text → message.delta
     if (role === 'assistant' && msg.content) {
-      const msgEvent: RunEvent = {
-        event: 'message.delta',
-        session_id: sid,
-        run_id: `replay-${sid}`,
-        delta: msg.content,
-        timestamp: ts,
-      } as any
-      s = applyRunEvent(s, msgEvent)
+      events.push({
+        event: 'message.delta', session_id: sid, run_id: `replay-${sid}`, delta: msg.content, timestamp: ts,
+      } as any)
     }
-
     processed++
   }
-
-  // Emit run.completed to close the workflow node
-  const endEvent: RunEvent = {
-    event: 'run.completed',
-    session_id: sid,
-    run_id: `replay-${sid}`,
+  events.push({
+    event: 'run.completed', session_id: sid, run_id: `replay-${sid}`,
     timestamp: messages.length > 0 ? messages[messages.length - 1].timestamp * 1000 : Date.now(),
-  } as any
-  s = applyRunEvent(s, endEvent)
+  } as any)
+  return events
+}
 
-  return s
+export function replayMessagesIntoState(state: TraceState, messages: any[], sid: string): TraceState {
+  return replayMessageEvents(messages, sid).reduce((s, event) => applyRunEvent(s, event), state)
 }

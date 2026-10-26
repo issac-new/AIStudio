@@ -8,6 +8,9 @@ import {
   createTraceState,
   fetchLayer2Trace,
   mergeLayer2Data,
+  mergeTraceStates,
+  replayMessageEvents,
+  replayMessagesIntoState,
   type TraceState,
 } from '../adapters/run-trace-adapter'
 
@@ -70,7 +73,8 @@ function removeSocketListener(socket: SocketLike, event: string, handler: EventH
 }
 
 export function useRunTrace(sessionId: Ref<string | null>) {
-  const state = ref<TraceState | null>(sessionId.value ? createTraceState(sessionId.value) : null)
+  let primaryState: TraceState | null = sessionId.value ? createTraceState(sessionId.value) : null
+  const state = ref<TraceState | null>(primaryState)
   const nodes = ref<TraceState['nodes']>(state.value?.nodes ?? [])
   const edges = ref<TraceState['edges']>(state.value?.edges ?? [])
   const focusedNodeId = ref<string | null>(state.value?.focusedNodeId ?? null)
@@ -93,63 +97,112 @@ export function useRunTrace(sessionId: Ref<string | null>) {
   let allSessionsRef: Ref<Array<SessionSummary & { profile?: string }>> | null = null
 
   // 任务树关系（匹配A，100%确定）与 会话↔任务映射（匹配B+C，100%确定）。
-  // loadRelatedSessions 填充，loadRelatedTraces 据此构建跨会话 delegate/spawn 边（匹配E）。
+  // loadRelatedSessions 填充，展示投影据此构建跨会话 delegate/spawn 边（匹配E）。
   let taskRelations: Array<{ parent: string; child: string }> = []
   let sessionTaskMap: Map<string, { taskId: string; role: RelatedSessionRole }> = new Map()
 
   let cleanup: (() => void) | null = null
   let replayAbort: (() => void) | null = null
+  // 每个 session 独立的 reducer 上下文；state 仅是展示投影，不能作为关联事件的输入。
+  const relatedTraceStates = new Map<string, TraceState>()
+  const relatedHistoryPending = new Set<string>()
+  const pendingRelatedEvents = new Map<string, RunEvent[]>()
+  let generation = 0
+
+  function publish() {
+    const ordered = [...relatedSessionIds.value]
+      .map(sid => relatedTraceStates.get(sid))
+      .filter((s): s is TraceState => !!s)
+    let merged = primaryState ? mergeTraceStates(primaryState, ordered) : null
+    if (merged && (taskRelations.length > 0 || sessionTaskMap.size > 0)) {
+      const crossEdges = buildCrossSessionEdges(merged, taskRelations, sessionTaskMap)
+      if (crossEdges.length > 0) {
+        const existingIds = new Set(merged.edges.map(e => e.id))
+        merged = { ...merged, edges: [...merged.edges, ...crossEdges.filter(e => !existingIds.has(e.id))] }
+      }
+    }
+    if (merged) {
+      const profiles = new Map(relatedSessions.value.map(s => [s.sessionId, s.profile]))
+      merged = {
+        ...merged,
+        nodes: merged.nodes.map(n => {
+          const sid = n.ref?.sessionId
+          const taskId = sid ? sessionTaskMap.get(sid)?.taskId : undefined
+          const profile = sid ? profiles.get(sid) : undefined
+          if ((taskId && n.cluster !== taskId) || (profile && n.profile !== profile)) {
+            return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile }
+          }
+          return n
+        }),
+      }
+    }
+    state.value = merged
+    nodes.value = merged?.nodes ?? []
+    edges.value = merged?.edges ?? []
+    focusedNodeId.value = merged?.focusedNodeId ?? null
+  }
 
   function sync(next: TraceState | null) {
-    state.value = next
-    nodes.value = next?.nodes ?? []
-    edges.value = next?.edges ?? []
-    focusedNodeId.value = next?.focusedNodeId ?? null
+    primaryState = next
+    publish()
+  }
+
+  function syncRelated(sid: string, next: TraceState) {
+    relatedTraceStates.set(sid, next)
+    publish()
   }
 
   function route(event: RunEvent) {
     const sid = sessionId.value
-    if (!sid || !state.value) return
-    // 原硬过滤：event.session_id !== sid → 丢弃
-    // 新：如果聚合模式开启且事件来自关联会话，也放行
-    const isPrimary = event.session_id === sid
-    const isRelated = aggregateMode.value && event.session_id && relatedSessionIds.value.has(event.session_id)
+    const eventSid = event.session_id
+    if (!sid || !primaryState || !eventSid) return
+    const isPrimary = eventSid === sid
+    const isRelated = aggregateMode.value && relatedSessionIds.value.has(eventSid)
     if (!isPrimary && !isRelated) return
-    // 保持 state.relatedSessionIds 与 ref 同步：ref 可能在 loadRelatedSessions 完成后被更新，
-    // 而 state 可能在更早的 createTraceState 时持有旧 Set 引用。同步后 applyRunEvent 的会话过滤
-    // 才能基于最新关联会话集合判断，避免误过滤已放行的关联会话事件。
-    const current = state.value
-    if (current.relatedSessionIds !== relatedSessionIds.value) {
-      state.value = { ...current, relatedSessionIds: relatedSessionIds.value }
+    if (isPrimary) {
+      if (primaryState.relatedSessionIds !== relatedSessionIds.value) {
+        primaryState = { ...primaryState, relatedSessionIds: relatedSessionIds.value }
+      }
+      sync(applyRunEvent(primaryState, event))
+    } else if (!relatedTraceStates.has(eventSid) && relatedHistoryPending.has(eventSid)) {
+      const pending = pendingRelatedEvents.get(eventSid) ?? []
+      pendingRelatedEvents.set(eventSid, [...pending, event])
+    } else {
+      const current = relatedTraceStates.get(eventSid) ?? createTraceState(eventSid, new Set([eventSid]))
+      syncRelated(eventSid, applyRunEvent(current, event))
     }
-    const next = applyRunEvent(state.value, event)
-    sync(next)
-    // Update scrubber time to latest event timestamp
     const eventTs = event.timestamp ?? Date.now()
     if (eventTs > scrubberTime.value) scrubberTime.value = eventTs
-    // When run completes, try to fetch L2 data
-    if ((event.event === 'run.completed' || event.event === 'run.failed') && event.session_id) {
-      fetchL2Data(event.session_id)
+    if ((event.event === 'run.completed' || event.event === 'run.failed') &&
+      (isPrimary || relatedTraceStates.has(eventSid))) {
+      void fetchL2Data(eventSid)
     }
   }
 
-  /** Fetch Layer 2 trace data from backend API and merge into current state */
-  async function fetchL2Data(sid: string, profile?: string | null) {
+  /** Fetch Layer 2 trace data and merge only into the owning session state. */
+  async function fetchL2Data(sid: string, profile?: string | null, ticket = generation) {
     const l2Data = await fetchLayer2Trace(sid, profile)
-    if (!l2Data || !state.value) return
-    const merged = mergeLayer2Data(state.value, l2Data)
-    sync(merged)
-    l2Available.value = true
-    if (l2Data.meta?.usage) l2Usage.value = l2Data.meta.usage
-    // Update session startedAt from L2 meta if available
-    if (l2Data.meta?.started_at) sessionStartedAt.value = l2Data.meta.started_at * 1000
+    if (!l2Data || ticket !== generation) return
+    if (primaryState?.sessionId === sid) {
+      sync(mergeLayer2Data(primaryState, l2Data))
+      l2Available.value = true
+      if (l2Data.meta?.usage) l2Usage.value = l2Data.meta.usage
+      if (l2Data.meta?.started_at) sessionStartedAt.value = l2Data.meta.started_at * 1000
+    } else {
+      const related = relatedTraceStates.get(sid)
+      if (related) syncRelated(sid, mergeLayer2Data(related, l2Data))
+    }
   }
 
   function detach() {
+    generation += 1
     cleanup?.()
     cleanup = null
     replayAbort?.()
     replayAbort = null
+    relatedTraceStates.clear()
+    relatedHistoryPending.clear()
+    pendingRelatedEvents.clear()
   }
 
   /**
@@ -166,7 +219,7 @@ export function useRunTrace(sessionId: Ref<string | null>) {
    * 单 session 直进（跳过选择模式）时，loadRelatedSessions 也能拿到全量会话。
    * 结果回填到 allSessionsRef（若存在），供 modal 选择器复用，避免重复请求。
    */
-  async function ensureAllSessions(): Promise<Array<SessionSummary & { profile?: string }>> {
+  async function ensureAllSessions(ticket = generation): Promise<Array<SessionSummary & { profile?: string }>> {
     // 1. 优先复用 modal 已加载的 allSessions
     if (allSessionsRef && allSessionsRef.value && allSessionsRef.value.length > 0) {
       return allSessionsRef.value
@@ -200,7 +253,7 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     console.debug(`[loadRelatedSessions] ensureAllSessions: loaded ${merged.length} sessions across ${profileNames.length} profiles`)
 
     // 3. 回填到 allSessionsRef（供 modal 复用）
-    if (allSessionsRef) {
+    if (allSessionsRef && ticket === generation) {
       allSessionsRef.value = merged
     }
     return merged
@@ -215,9 +268,14 @@ export function useRunTrace(sessionId: Ref<string | null>) {
    *
    * 返回关联会话 ID 列表（不含主会话），供 attachLive/startReplay 聚合加载。
    */
-  async function loadRelatedSessions(primarySid: string): Promise<string[]> {
+  async function loadRelatedSessions(primarySid: string, ticket = generation): Promise<string[]> {
     relatedSessionIds.value = new Set([primarySid])
     relatedSessions.value = []
+    taskRelations = []
+    sessionTaskMap = new Map()
+    const nextRelatedSessionIds = new Set([primarySid])
+    const nextTaskRelations: Array<{ parent: string; child: string }> = []
+    const nextSessionTaskMap: Map<string, { taskId: string; role: RelatedSessionRole }> = new Map()
 
     if (!aggregateMode.value) {
       return []
@@ -226,7 +284,7 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     // 确保有全量会话列表（allSessionsRef 为空时自加载，修复单 session 直进时聚合失效）
     let allSessions: Array<SessionSummary & { profile?: string }> = []
     try {
-      allSessions = await ensureAllSessions()
+      allSessions = await ensureAllSessions(ticket)
     } catch (e) {
       console.warn('[loadRelatedSessions] ensureAllSessions failed:', e)
       return []
@@ -257,9 +315,6 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     const primaryTaskId = matchSessionTaskId(primarySession.title || '')
       ?? extractKanbanTaskId(primarySession.title || '')
     const taskIds = new Set<string>(primaryTaskId ? [primaryTaskId] : [])
-    // 重置任务树关系与 会话↔任务映射（供 loadRelatedTraces 构建跨会话边）
-    taskRelations = []
-    sessionTaskMap = new Map()
 
     if (primaryTaskId) {
       // 解析 board：cockpit store（boardSlugOf）已随 P3 Task 8 退役删除，
@@ -284,17 +339,17 @@ export function useRunTrace(sessionId: Ref<string | null>) {
             // 匹配A（100%确定）：记录任务树父子关系
             if (detail.parents) for (const p of detail.parents) {
               taskIds.add(p); queue.push(p)
-              taskRelations.push({ parent: p, child: tid })
+              nextTaskRelations.push({ parent: p, child: tid })
             }
             if (detail.children) for (const c of detail.children) {
               taskIds.add(c); queue.push(c)
-              taskRelations.push({ parent: tid, child: c })
+              nextTaskRelations.push({ parent: tid, child: c })
             }
             // 匹配B（100%确定）：task.session_id 是创建该任务的 agent 会话
             const creatorSid = detail.task?.session_id
             if (creatorSid && creatorSid !== primarySid) {
-              relatedSessionIds.value.add(creatorSid)
-              sessionTaskMap.set(creatorSid, { taskId: tid, role: 'creator' })
+              nextRelatedSessionIds.add(creatorSid)
+              nextSessionTaskMap.set(creatorSid, { taskId: tid, role: 'creator' })
             }
           } catch (e) { console.warn(`[loadRelatedSessions] kanban task ${tid} fetch failed:`, e) }
         }
@@ -318,7 +373,7 @@ export function useRunTrace(sessionId: Ref<string | null>) {
       role: 'primary',
       isEmpty: (primarySession.message_count ?? 0) <= 1,
     })
-    if (primaryTaskId) sessionTaskMap.set(primarySid, { taskId: primaryTaskId, role: primarySession.title && matchSessionTaskId(primarySession.title) ? 'worker' : 'primary' })
+    if (primaryTaskId) nextSessionTaskMap.set(primarySid, { taskId: primaryTaskId, role: primarySession.title && matchSessionTaskId(primarySession.title) ? 'worker' : 'primary' })
 
     for (const s of allSessions) {
       if (addedSessionIds.has(s.id)) continue
@@ -328,20 +383,20 @@ export function useRunTrace(sessionId: Ref<string | null>) {
       const sTaskId = matchSessionTaskId(title)
       const matchedByKanban = sTaskId && taskIds.has(sTaskId)
       // 匹配B（100%确定）：会话是某任务的创建者会话（sessionTaskMap 已记录）
-      const isCreator = sessionTaskMap.has(s.id) && sessionTaskMap.get(s.id)!.role === 'creator'
+      const isCreator = nextSessionTaskMap.has(s.id) && nextSessionTaskMap.get(s.id)!.role === 'creator'
       // 旧 fallback：parent_session_id（架构性为空，保留兼容）
       const isChild = (s as any).parent_session_id === primarySid
       const isParent = primaryParentId && s.id === primaryParentId
       const isSibling = primaryParentId && (s as any).parent_session_id === primaryParentId
 
       if (matchedByKanban || isCreator || isChild || isParent || isSibling) {
-        relatedSessionIds.value.add(s.id)
+        nextRelatedSessionIds.add(s.id)
         addedSessionIds.add(s.id)
         const role: RelatedSessionRole = isCreator ? 'creator' : 'worker'
         const isEmpty = (s.message_count ?? 0) <= 1
         matchedSessions.push({
           sessionId: s.id,
-          taskId: sTaskId ?? (isCreator ? sessionTaskMap.get(s.id)?.taskId ?? null : null),
+          taskId: sTaskId ?? (isCreator ? nextSessionTaskMap.get(s.id)?.taskId ?? null : null),
           title: title,
           profile: (s as any).profile,
           isPrimary: false,
@@ -349,101 +404,66 @@ export function useRunTrace(sessionId: Ref<string | null>) {
           role,
           isEmpty,
         })
-        if (sTaskId) sessionTaskMap.set(s.id, { taskId: sTaskId, role })
+        if (sTaskId) nextSessionTaskMap.set(s.id, { taskId: sTaskId, role })
       }
     }
 
+    if (ticket !== generation) return []
+    taskRelations = nextTaskRelations
+    sessionTaskMap = nextSessionTaskMap
+    relatedSessionIds.value = nextRelatedSessionIds
     relatedSessions.value = matchedSessions
 
-    console.debug(`[loadRelatedSessions] 发现 ${matchedSessions.length - 1} 个关联会话: taskTree=${taskIds.size}任务, relations=${taskRelations.length}条, creators=${[...sessionTaskMap.values()].filter(v => v.role === 'creator').length}个`)
+    console.debug(`[loadRelatedSessions] 发现 ${matchedSessions.length - 1} 个关联会话: taskTree=${taskIds.size}任务, relations=${nextTaskRelations.length}条, creators=${[...nextSessionTaskMap.values()].filter(v => v.role === 'creator').length}个`)
 
     return matchedSessions.filter(s => !s.isPrimary).map(s => s.sessionId)
   }
 
-  /**
-   * 聚合加载关联会话的 trace 数据。
-   * 复用主会话的 processMessages 重建逻辑，确保 skill/subagent 等结构与主会话一致。
-   * 关联会话事件 session_id=rsid 在 relatedSessionIds 中，会被 applyRunEvent 放行，
-   * 并经 effectiveSid 用各自 sessionId 生成节点 ID，避免与主会话节点碰撞。
-   */
-  async function loadRelatedTraces(relatedSids: string[]) {
-    if (relatedSids.length === 0 || !state.value) return
+  /** 关联会话各自回放，历史加载期间的实时事件先缓冲再按序应用。 */
+  async function loadRelatedTraces(relatedSids: string[], ticket = generation) {
+    if (relatedSids.length === 0 || !primaryState) return
+    for (const rsid of relatedSids) relatedHistoryPending.add(rsid)
 
     for (const rsid of relatedSids) {
+      let related: TraceState | null = null
       try {
-        // 从 relatedSessions 获取该会话的 profile 与空壳标记
         const sessionInfo = relatedSessions.value.find(s => s.sessionId === rsid)
         const profile = sessionInfo?.profile
         const isEmpty = sessionInfo?.isEmpty ?? false
         const page = await fetchSessionMessagesPage(rsid, 0, 500, profile)
-        if (!page || !page.messages || page.messages.length === 0) continue
-
-        // 先发 run.started 建立该关联会话的 run 节点（rsid 在 relatedSessionIds 中，会被放行）
-        const startedEvent: RunEvent = {
-          event: 'run.started',
-          session_id: rsid,
-          run_id: `replay-${rsid}`,
-          timestamp: page.messages[0]?.timestamp ? page.messages[0].timestamp * 1000 : Date.now(),
-        } as any
-        sync(applyRunEvent(state.value!, startedEvent))
-
-        // 空壳会话（仅含 work kanban task 提示，无 tool/reasoning）：跳过 processMessages，
-        // 仅保留 ingress+run 节点（保持图完整性，便于构建跨会话边）。run 节点标 cancelled 视觉降级。
-        if (!isEmpty) {
-          // 复用 processMessages 重建该关联会话的 trace（与主会话重建逻辑一致）
-          await processMessages(page.messages, rsid)
-          // 尝试获取 L2 数据并合并到主 state
-          const l2 = await fetchLayer2Trace(rsid, profile)
-          if (l2 && state.value) {
-            sync(mergeLayer2Data(state.value, l2))
+        if (ticket !== generation) return
+        const messages = page?.messages ?? []
+        if (messages.length > 0) {
+          const startedEvent: RunEvent = {
+            event: 'run.started',
+            session_id: rsid,
+            run_id: `replay-${rsid}`,
+            timestamp: messages[0]?.timestamp ? messages[0].timestamp * 1000 : Date.now(),
+          } as any
+          related = applyRunEvent(createTraceState(rsid, new Set([rsid])), startedEvent)
+          if (!isEmpty) {
+            related = replayMessagesIntoState(related, messages, rsid)
+            const l2 = await fetchLayer2Trace(rsid, profile)
+            if (ticket !== generation) return
+            if (l2) related = mergeLayer2Data(related, l2)
+          } else {
+            const runNodeId = `run:${rsid}:replay-${rsid}`
+            related = {
+              ...related,
+              nodes: related.nodes.map(n => n.id === runNodeId ? { ...n, status: 'cancelled' as const } : n),
+            }
           }
-        } else if (state.value) {
-          // 空壳会话：将 run 节点状态降级为 cancelled（复用现有视觉淡化）
-          const runNodeId = `run:${rsid}:replay-${rsid}`
-          const updatedNodes = state.value.nodes.map(n =>
-            n.id === runNodeId ? { ...n, status: 'cancelled' as const } : n,
-          )
-          sync({ ...state.value, nodes: updatedNodes })
         }
       } catch (e) {
         console.warn(`[loadRelatedTraces] 关联会话 ${rsid} 加载失败:`, e)
       }
-    }
-
-    // 匹配E（高置信度）：基于任务树父子关系构建跨会话 delegate/spawn 边。
-    // 在所有会话 trace 聚合完成后构建，确保两端节点已存在。
-    if (state.value && (taskRelations.length > 0 || sessionTaskMap.size > 0)) {
-      const crossEdges = buildCrossSessionEdges(state.value, taskRelations, sessionTaskMap)
-      if (crossEdges.length > 0 && state.value) {
-        const existingIds = new Set(state.value.edges.map(e => e.id))
-        const newEdges = crossEdges.filter(e => !existingIds.has(e.id))
-        if (newEdges.length > 0) {
-          sync({ ...state.value, edges: [...state.value.edges, ...newEdges] })
-        }
-      }
-      console.debug(`[loadRelatedTraces] 跨会话边构建: ${crossEdges.length} 条 (delegate+spawn)`)
-    }
-
-    // 后处理：为每个节点标注 cluster（所属任务 taskId）与 profile（agent）。
-    // 通过 node.ref.sessionId 反查 sessionTaskMap 得 taskId；profile 从 relatedSessions 取。
-    // 力导向图谱按 cluster 聚类，节点按 profile 着色。
-    if (state.value && state.value.nodes.length > 0) {
-      const sessionProfileMap = new Map<string, string | undefined>()
-      for (const rs of relatedSessions.value) {
-        if (rs.profile) sessionProfileMap.set(rs.sessionId, rs.profile)
-      }
-      let changed = false
-      const annotatedNodes = state.value.nodes.map(n => {
-        const sid = n.ref?.sessionId
-        const taskId = sid ? sessionTaskMap.get(sid)?.taskId : undefined
-        const profile = sid ? sessionProfileMap.get(sid) : undefined
-        if ((taskId && n.cluster !== taskId) || (profile && n.profile !== profile)) {
-          changed = true
-          return { ...n, cluster: taskId ?? n.cluster, profile: profile ?? n.profile }
-        }
-        return n
-      })
-      if (changed) sync({ ...state.value, nodes: annotatedNodes })
+      if (ticket !== generation) return
+      relatedHistoryPending.delete(rsid)
+      const pending = pendingRelatedEvents.get(rsid) ?? []
+      if (!related && pending.length > 0) related = createTraceState(rsid, new Set([rsid]))
+      for (const event of pending) related = applyRunEvent(related!, event)
+      pendingRelatedEvents.delete(rsid)
+      if (related) syncRelated(rsid, related)
     }
   }
 
@@ -453,12 +473,16 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     scrubberTime.value = Date.now()
     replayProgress.value = 0
     // 先发现关联会话，再用 relatedSessionIds 创建 trace state
-    const relatedSids = await loadRelatedSessions(sid)
+    const ticket = generation
+    const relatedSids = await loadRelatedSessions(sid, ticket)
+    if (ticket !== generation) return
     const primaryProfile = relatedSessions.value.find(s => s.isPrimary)?.profile
     sync(createTraceState(sid, relatedSessionIds.value))
     const socket = connectChatRun()
     const handlers = TRACE_EVENTS.map((eventName) => {
-      const handler: EventHandler = (event) => route({ ...event, event: event.event || eventName })
+      const handler: EventHandler = (event) => {
+        if (ticket === generation) route({ ...event, event: event.event || eventName })
+      }
       socket.on(eventName, handler)
       return { eventName, handler }
     })
@@ -466,16 +490,17 @@ export function useRunTrace(sessionId: Ref<string | null>) {
       handlers.forEach(({ eventName, handler }) => removeSocketListener(socket, eventName, handler))
     }
     // Try to fetch L2 data + historical messages for context
-    fetchL2Data(sid, primaryProfile)
+    void fetchL2Data(sid, primaryProfile, ticket)
     // Also fetch historical messages as fallback (in case session is ended)
     fetchSessionMessagesPage(sid, 0, 500, primaryProfile).then(page => {
-      if (page && page.messages && page.messages.length > 0 && state.value && state.value.nodes.length === 0) {
+      if (ticket !== generation) return
+      if (page && page.messages && page.messages.length > 0 && primaryState && primaryState.nodes.length === 0) {
         // No live events received; rebuild from history
-        processMessages(page.messages, sid)
+        void processMessages(page.messages, sid, ticket)
       }
     }).catch(() => {})
     // 聚合加载关联会话的 trace（异步，不阻塞主会话实时事件）
-    loadRelatedTraces(relatedSids).catch(e => console.warn('[attachLive] loadRelatedTraces failed:', e))
+    void loadRelatedTraces(relatedSids, ticket).catch(e => console.warn('[attachLive] loadRelatedTraces failed:', e))
   }
 
   /** Replay mode: fetch historical messages via REST API and rebuild trace */
@@ -485,7 +510,9 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     replayProgress.value = 0
 
     // 先发现关联会话
-    const relatedSids = await loadRelatedSessions(sid)
+    const ticket = generation
+    const relatedSids = await loadRelatedSessions(sid, ticket)
+    if (ticket !== generation) return
     const primaryProfile = relatedSessions.value.find(s => s.isPrimary)?.profile
 
     // Initialize state with a synthetic run.started so tool/thinking events are accepted
@@ -508,12 +535,12 @@ export function useRunTrace(sessionId: Ref<string | null>) {
         if (firstMsg?.timestamp) {
           sessionStartedAt.value = firstMsg.timestamp * 1000
         }
-        await processMessages(page.messages, sid)
+        await processMessages(page.messages, sid, ticket)
       }
       // Also try resumeSession for live events (if session is still active)
       try {
         const socket = resumeSession(sid, (data: ResumeSessionPayload) => {
-          processResumeData(data, sid)
+          processResumeData(data, sid, ticket)
         })
         replayAbort = () => {
           removeSocketListener(socket, 'resumed', () => {})
@@ -523,13 +550,14 @@ export function useRunTrace(sessionId: Ref<string | null>) {
         // Session may be ended; REST messages are sufficient
       }
       // Fetch L2 data for accurate tool durations
-      await fetchL2Data(sid, primaryProfile)
+      await fetchL2Data(sid, primaryProfile, ticket)
       // 聚合加载关联会话的 trace
-      await loadRelatedTraces(relatedSids)
+      await loadRelatedTraces(relatedSids, ticket)
     } catch {
+      if (ticket !== generation) return
       // Fallback: try resumeSession only
       const socket = resumeSession(sid, (data: ResumeSessionPayload) => {
-        processResumeData(data, sid)
+        processResumeData(data, sid, ticket)
       })
       replayAbort = () => {
         removeSocketListener(socket, 'resumed', () => {})
@@ -538,110 +566,36 @@ export function useRunTrace(sessionId: Ref<string | null>) {
     }
   }
 
-  /** Process historical messages to rebuild trace */
-  async function processMessages(messages: any[], sid: string) {
-    const total = messages.length
-    let processed = 0
-
-    for (const msg of messages) {
-      const ts = msg.timestamp * 1000 // messages use seconds
-      const role = msg.role || msg.display_role
-
-      // Synthesize run.started for the first user message
-      if (role === 'user' && processed === 0) {
-        const startEvent: RunEvent = {
-          event: 'run.started',
-          session_id: sid,
-          run_id: `replay-${sid}`,
-          timestamp: ts,
-        } as any
-        sync(applyRunEvent(state.value!, startEvent))
-      }
-
-      // Tool messages → tool.completed events
-      if (role === 'tool' || msg.tool_name) {
-        const toolEvent: RunEvent = {
-          event: 'tool.completed',
-          session_id: sid,
-          run_id: `replay-${sid}`,
-          tool: msg.tool_name || 'tool',
-          name: msg.tool_name,
-          output: typeof msg.content === 'string' ? msg.content.slice(0, 200) : '',
-          timestamp: ts,
-        } as any
-        // First emit tool.started for node creation
-        const startEvent: RunEvent = {
-          event: 'tool.started',
-          session_id: sid,
-          run_id: `replay-${sid}`,
-          tool: msg.tool_name || 'tool',
-          name: msg.tool_name,
-          preview: '',
-          timestamp: ts - 1,
-        } as any
-        sync(applyRunEvent(state.value!, startEvent))
-        sync(applyRunEvent(state.value!, toolEvent))
-      }
-
-      // Reasoning content → reasoning.delta events
-      const reasoning = msg.reasoning || msg.reasoning_content
-      if (reasoning && typeof reasoning === 'string' && reasoning.trim()) {
-        const reasoningEvent: RunEvent = {
-          event: 'reasoning.delta',
-          session_id: sid,
-          run_id: `replay-${sid}`,
-          text: reasoning,
-          timestamp: ts,
-        } as any
-        sync(applyRunEvent(state.value!, reasoningEvent))
-      }
-
-      // Assistant text → message.delta
-      if (role === 'assistant' && msg.content) {
-        const msgEvent: RunEvent = {
-          event: 'message.delta',
-          session_id: sid,
-          run_id: `replay-${sid}`,
-          delta: msg.content,
-          timestamp: ts,
-        } as any
-        sync(applyRunEvent(state.value!, msgEvent))
-      }
-
-      processed++
-      replayProgress.value = Math.round((processed / total) * 100)
-      // Yield to UI every 20 messages
-      if (processed % 20 === 0) {
+  /** 主回放复用统一事件转换，只保留进度与异步让出。 */
+  async function processMessages(messages: any[], sid: string, ticket = generation) {
+    const events = replayMessageEvents(messages, sid)
+    for (let i = 0; i < events.length; i++) {
+      if (ticket !== generation || !primaryState) return
+      sync(applyRunEvent(primaryState, events[i]))
+      replayProgress.value = Math.round(((i + 1) / events.length) * 100)
+      if ((i + 1) % 20 === 0) {
         await new Promise(r => setTimeout(r, 0))
       }
     }
-
-    // Emit run.completed to close the workflow node
-    const endEvent: RunEvent = {
-      event: 'run.completed',
-      session_id: sid,
-      run_id: `replay-${sid}`,
-      timestamp: messages.length > 0 ? messages[messages.length - 1].timestamp * 1000 : Date.now(),
-    } as any
-    sync(applyRunEvent(state.value!, endEvent))
   }
 
   /** Process ResumeSessionPayload events (if session is still active) */
-  function processResumeData(data: ResumeSessionPayload, sid: string) {
+  function processResumeData(data: ResumeSessionPayload, sid: string, ticket = generation) {
+    if (ticket !== generation || !primaryState) return
     // If data has events array (live RunEvent stream), process directly
     if (data.events && Array.isArray(data.events) && data.events.length > 0) {
       const total = data.events.length
       let processed = 0
       for (const { event, data: eventData } of data.events) {
         const runEvent = { ...eventData, event, session_id: sid } as RunEvent
-        sync(applyRunEvent(state.value!, runEvent))
+        sync(applyRunEvent(primaryState!, runEvent))
         processed++
         replayProgress.value = Math.round((processed / total) * 100)
       }
     }
     // Process messages if events not available
-    else if (data.messages && Array.isArray(data.messages) && data.messages.length > 0 && state.value!.nodes.length <= 1) {
-      processMessages(data.messages, sid)
+    else if (data.messages && Array.isArray(data.messages) && data.messages.length > 0 && primaryState.nodes.length <= 1) {
+      void processMessages(data.messages, sid, ticket)
     }
   }
 
