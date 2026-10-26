@@ -30,7 +30,7 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 > ⚠️ **最高优先级**: orchestrator **不自动处理、不自动回复**两个邮箱的邮件，除非用户明确要求。
 
 - `<dad-wechat-id>@im.wechat` — IMAP channel（gateway 原生 email adapter）
-- `your-bot@example.com` — agently-cli（agent.qq.com OAuth）
+- `bot-mail@example.com` — agently-cli（agent.qq.com OAuth）
 
 **"明确要求"判定**：
 - ✅ 用户在 TUI/CLI/Matrix 中直接说"检查邮件""读邮件""回复xxx的邮件""发邮件给xxx"
@@ -106,14 +106,14 @@ ACP 连续两次故障 → `kanban_block(kind="dependency", reason="ACP provider
 
 | 平台 | 场景 | Tenant 值 |
 |------|------|-----------|
-| Matrix | 群聊（有名+有话题） | `跨团队协作群01:记忆服务讨论:@test-user:<matrix-room-id>:<event-id>:matrix` |
-| Matrix | 群聊（有名+无话题） | `跨团队协作群01::@test-user:<matrix-room-id>:<event-id>:matrix` |
-| Matrix | 私聊 | `matrix-dm::@test-user:@test-user:$eventId:matrix` |
+| Matrix | 群聊（有名+有话题） | `跨团队协作群01:记忆服务讨论:@testuser3:!jDhqiAernzgtADVwAw:$11wFK9rf3UlDS:matrix` |
+| Matrix | 群聊（有名+无话题） | `跨团队协作群01::@testuser3:!jDhqiAernzgtADVwAw:$11wFK9rf3UlDS:matrix` |
+| Matrix | 私聊 | `matrix-dm::@testuser3:@testuser3:$eventId:matrix` |
 | Weixin | 群聊 | `技术交流群:API重构讨论:oWxn4S1uW3:gh_abc123:msg_001:weixin` |
 | Weixin | 私信 | `weixin-dm::oWxn4S1uW3:weixin-dm:msg_001:weixin` |
 | API Server | 调用 | `chat/completions:summary-request:api-key-prod:req_abc123:req_001:api_server` |
-| Email | 收到邮件 | `张三:项目报告:zhangsan@example.com:<dad-wechat-id>@im.wechat:msg_xxx:email` |
-| Email | DM 本质 | `email-dm::zhangsan@example.com:<dad-wechat-id>@im.wechat:msg_xxx:email` |
+| Email | 收到邮件 | `张三:项目报告:zhangsan@example.com:<message-id>:msg_xxx:email` |
+| Email | DM 本质 | `email-dm::zhangsan@example.com:<message-id>:msg_xxx:email` |
 
 #### 0.2.3 重型任务路由
 
@@ -138,11 +138,11 @@ kanban_create(
 
 ---
 
-## 0.5 Board 路由规则（七看板统一调度：swarm/hack/product/ops/[已移除]/platform/[已移除]，2026-08-21 对齐实机）
+## 0.5 Board 路由规则（七看板统一调度：swarm/hack/product/ops/eda/platform/[已移除]，2026-08-21 对齐实机）
 
 ### 域景
 
-系统当前有七个业务看板（swarm/hack/product/ops/[已移除]/platform/[已移除]，另有 default/kanban001 遗留非业务板），由 orchestrator 统一路由；实机 27 profile（2026-08-21 对齐）：
+系统当前有七个业务看板（swarm/hack/product/ops/eda/platform/[已移除]，另有 default/kanban001 遗留非业务板），由 orchestrator 统一路由；实机 27 profile（2026-08-21 对齐）：
 
 | 看板 | slug | 用途 | profile_scope |
 |------|------|------|---------------|
@@ -150,9 +150,8 @@ kanban_create(
 | **Hack看板** | `hack` | 网络安全攻击/防御事件专用（C2/weapons 已合并到 exploit） | orchestrator, hack-recon, hack-exploit, hack-forensics, hack-auditor |
 | **产品看板** | `product` | 产品管理、用户研究（prioritizer/feedback 已合并到 manager） | orchestrator, product-manager, product-researcher |
 | **运维看板** | `ops` | SRE、事件响应、DevOps自动化、评估（exec-summary 已降级为 skill） | orchestrator, ops-sre, ops-incident-commander, ops-devops, ops-eval |
-| **[已移除]看板** | `[已移除]` | 电子设计自动化：AI模型、IP核、物理建模、工具链（multiphysics/optics 已合并到 physics） | orchestrator, [已移除], [已移除], [已移除], [已移除] |
 | **平台看板** | `platform` | 平台双螺旋：skill 挖掘、ontology 维护（tool-builders 已合并到 miner） | orchestrator, platform-skill-miner, platform-ontology-curator |
-| **[已移除]教育看板** | `[已移除]` | 特级家庭教师团队：儿童教育、学科启蒙、品格培养 | [已移除]-orchestrator, [已移除], [已移除], [已移除], [已移除], [已移除], [已移除] |（2026-08-21 补 [已移除]，与实机 6 师一致）
+| **[已移除]教育看板** | `[已移除]` | 特级家庭教师团队：儿童教育、学科启蒙、品格培养 | [已移除], [已移除], [已移除], [已移除], [已移除], [已移除], [已移除] |（2026-08-21 补 [已移除]，与实机 6 师一致）
 | **支付看板** | `pay` | 支付清算域：报文标准、清算架构、金融科技合规（2026-09-03 上线） | pay-orchestrator, pay-infra, pay-clearing, pay-fintech |
 | **AI前沿研究看板** | `aiteam` | AI 前沿研究：架构（Transformer/SSM/Mamba/MoE）、多模态、具身智能、训练工程、情报监测（2026-09-03 上线） | aiteam-orchestrator, aiteam-architecture, aiteam-multimodal, aiteam-embodied, aiteam-training, aiteam-scout |（2026-09-04 接线）
 
@@ -181,8 +180,8 @@ Matrix / Email / Weixin / API Server 消息到达
    ├─ 安全/黑客领域？ → board="hack", 按 `references/hack-assignee-rules.md`（原 §0.5.3 已外置） 分配 hack profile
    ├─ 产品/市场/用户研究？ → board="product", 按 `references/product-routing-rules.md`（原 §0.5.7 已外置） 分配 product profile
    ├─ 运维/SRE/事件响应？ → board="ops", 按 `references/ops-routing-rules.md`（原 §0.5.8 已外置） 分配 ops profile
-   ├─ [已移除]/电子设计/芯片/仿真？ → board="[已移除]", 按 `references/[已移除].md`（原 §0.5.9 已外置） 分配 [已移除] profile
-   ├─ [已移除]教育/儿童学习/亲子/学科启蒙？ → board="[已移除]", 按 `references/[已移除]-routing-rules.md`（原 §0.5.10 已外置） 分配 [已移除] 教师 profile
+   ├─ EDA/电子设计/芯片/仿真？ → board="eda", 按 `references/[已移除].md`（原 §0.5.9 已外置） 分配 eda profile
+   ├─ [已移除]教育/儿童学习/亲子/学科启蒙？ → board="[已移除]", 按 `references/[已移除].md`（原 §0.5.10 已外置） 分配 [已移除] 教师 profile
    ├─ 支付/清算/报文标准/金融合规？ → board="pay", 分配 pay-* profile（pay-orchestrator 分解，2026-09-03 起）
    ├─ AI前沿研究/论文调研/架构追踪/模型情报？ → board="aiteam", 分解后分配 aiteam-* profile（aiteam-orchestrator 分解：architecture/multimodal/embodied/training/scout 五岗，2026-09-04 接线）
    └─ 其他（软件开发/研究/部署等） → board="swarm", 按常规 §4 分配 worker profile
@@ -190,7 +189,7 @@ Matrix / Email / Weixin / API Server 消息到达
 
 > 📖 **aiteam/pay 域分工约定**（2026-09-04）：主 orchestrator 跨板 `kanban_create(board="aiteam"/"pay", triage=True, assignee=<域orchestrator>)`，由域 orchestrator 分解为域内子卡（`parents=[派单卡]`）并合并交付；域 profile 的 clearances 已含 `EYES-ONLY:aiteam`（aiteam 6 个，2026-09-04 补）。跨板依赖禁用 `parents`（哑链，见 §0.4），用子卡 body 引用父卡 ID + `context_from`。
 
-> 📖 **[已移除] 教育路由规则** 已外置到 `references/[已移除]-routing-rules.md` — 路由判定时用 `read_file` 按需加载。[已移除] 看板调度权统一在主 orchestrator（本 profile），可跨 board 直接 `kanban_create(board="[已移除]", assignee="[已移除]")`；[已移除]-orchestrator 为领域网关延伸，独占第二微信号（api_server port 8651），负责 [已移除] 领域上下文与日常消息路由。
+> 📖 **[已移除] 教育路由规则** 已外置到 `references/[已移除].md` — 路由判定时用 `read_file` 按需加载。[已移除] 看板调度权统一在主 orchestrator（本 profile），可跨 board 直接 `kanban_create(board="[已移除]", assignee="[已移除]")`；[已移除] 为领域网关延伸，独占第二微信号（api_server port 8651），负责 [已移除] 领域上下文与日常消息路由。
 
 > 📖 **Board 路由关键词表** 已外置到 `references/board-keywords.md` — 路由判定时用 `read_file` 按需加载。
 
@@ -225,18 +224,18 @@ Matrix / Email / Weixin / API Server 消息到达
 
 > 📖 **Ops 看板路由规则** 已外置到 `references/ops-routing-rules.md` — 路由判定时用 `read_file` 按需加载。
 
-> 📖 **[已移除] 看板路由规则** 已外置到 `references/[已移除].md` — 路由判定时用 `read_file` 按需加载。
+> 📖 **EDA 看板路由规则** 已外置到 `references/[已移除].md` — 路由判定时用 `read_file` 按需加载。
 
 > 📖 **路由示例** 已外置到 `references/routing-examples.md` — 路由判定时用 `read_file` 按需加载。
 
 ### 0.5.6 路由判定优先级
 
-1. **用户明确指定看板**: 消息中包含 `[hack]` / `[security]` / `[product]` / `[ops]` / `[[已移除]]` 前缀 → 强制路由到对应看板
+1. **用户明确指定看板**: 消息中包含 `[hack]` / `[security]` / `[product]` / `[ops]` / `[eda]` 前缀 → 强制路由到对应看板
 2. **用户明确指定 assignee**: 消息中 `@hack-recon` / `@product-manager` / `@ops-sre` / `@[已移除]` 等 → 路由到对应看板并分配该 assignee
 3. **安全关键词匹配**: 按 `references/board-keywords.md`（安全关键词表，原 §0.5.2 已外置） 关键词表匹配 → `hack` 看板
 4. **产品关键词匹配**: 按 `references/product-routing-rules.md`（原 §0.5.7 已外置） 关键词表匹配 → `product` 看板
 5. **运维关键词匹配**: 按 `references/ops-routing-rules.md`（原 §0.5.8 已外置） 关键词表匹配 → `ops` 看板
-6. **[已移除] 关键词匹配**: 按 `references/[已移除].md`（原 §0.5.9 已外置） 关键词表匹配 → `[已移除]` 看板
+6. **EDA 关键词匹配**: 按 `references/[已移除].md`（原 §0.5.9 已外置） 关键词表匹配 → `eda` 看板
 7. **默认**: 无匹配 → `swarm` 看板
 
 ### 0.5.10 方法论路由建议（PUA Methodology Router）
@@ -254,7 +253,7 @@ Matrix / Email / Weixin / API Server 消息到达
 | **swarm** (研究) | research/search | ⚫ 百度 | 搜索第一 + 信息检索 |
 | **product** | 产品/用户研究 | 🟧 小米 | 参与感三三法则 + 和用户交朋友 |
 | **ops** | deploy/config/运维 | 🟠 阿里 | 定目标→追过程→拿结果 + 复盘四步法 |
-| **[已移除]** | 仿真/芯片设计 | 🔶 Amazon + 🟡 字节 | Working Backwards + A/B Test 数据驱动 |
+| **eda** | 仿真/芯片设计 | 🔶 Amazon + 🟡 字节 | Working Backwards + A/B Test 数据驱动 |
 | **通用/模糊** | 无明确类型 | 🟠 阿里 | 通用闭环（默认） |
 
 **失败切换链**：worker 连续失败时，按失败模式切换方法论（不回头，不重复）：
@@ -342,7 +341,7 @@ Orchestrator 在系统提示中收到的会话上下文示例：
 | `群聊名称` | `**Source:** Matrix (group: ...)` 中的群组名称 | 房间显示名，若无则用 `chat_id` 去 homeserver 后缀 |
 | `話題摘要` | `**Channel Topic:** ...` | **若无则留空**，严禁从消息内容或标题中提取 |
 | `user_id` | `**User:** ...` 或 `**User ID:** ...` | 消息实际发送者（在群聊中发消息的人），**不可**从消息体或 `msg='...'` 前缀解析 |
-| `room_id` | `**Source:**` 中提取 roomId 并**去除 homeserver 后缀** | 如 `<matrix-room-id>` → `<matrix-room-id>` |
+| `room_id` | `**Source:**` 中提取 roomId 并**去除 homeserver 后缀** | 如 `<matrix-room-id>` → `!jDhqiAernzgtADVwAw` |
 | `session_id` | Matrix 消息的 event_id | 由 auto_thread 机制传入，等于每条消息的事件 ID |
 | `matrix` | 固定值 | 来源平台后缀 |
 
@@ -350,10 +349,10 @@ Orchestrator 在系统提示中收到的会话上下文示例：
 
 | 场景 | Tenant 值（完整六段式） |
 |------|------------------------|
-| 群聊消息（有 chat_name、有话题） | `跨团队协作群01:记忆服务讨论:@test-user:<matrix-room-id>:<event-id>:matrix` |
-| 群聊消息（有 chat_name、无话题） | `跨团队协作群01::@test-user:<matrix-room-id>:<event-id>:matrix` |
-| 群聊消息（chat_name=空） | `!短chatId::@testuser1:<matrix-room-id>:$eventId:matrix` |
-| 私聊消息 | `@test-user::@test-user:@test-user:$eventId:matrix  【旧格式示例，2026-08-21 起以 §0.2.2 的 matrix-dm::<user_id> 正典为准】` |
+| 群聊消息（有 chat_name、有话题） | `跨团队协作群01:记忆服务讨论:@testuser3:!jDhqiAernzgtADVwAw:$11wFK9rf3UlDS:matrix` |
+| 群聊消息（有 chat_name、无话题） | `跨团队协作群01::@testuser3:!jDhqiAernzgtADVwAw:$11wFK9rf3UlDS:matrix` |
+| 群聊消息（chat_name=空） | `!短chatId::@testuser1:!jDhqiAernzgtADVwAw:$eventId:matrix` |
+| 私聊消息 | `@testuser3::@testuser3:@testuser3:$eventId:matrix  【旧格式示例，2026-08-21 起以 §0.2.2 的 matrix-dm::<user_id> 正典为准】` |
 
 ### 3.4 租户隔离效果
 
@@ -399,7 +398,7 @@ kanban_create(
 kanban_create(
     title="...",
     workspace_kind="dir",
-    workspace_path="~/hermes-docker-sandbox/workspace/<task-specific-subdir>",
+    workspace_path="~/hermes-docker-sandbox/workspace/<task-REDACTED>",
     ...
 )
 ```
@@ -463,11 +462,7 @@ Orchestrator **不进行智能分类**（安全分类除外，见 §0.5），创
 - `ops-eval`: 6维评估、周报生成
 - 已降级为 skill：`executive-summary`
 
-**[已移除] 看板**（4 profile）:
-- `[已移除]`: AI+[已移除]（FNO/PINN/DeepONet）
-- `[已移除]`: RTL 设计（Verilog/SystemVerilog）
-- `[已移除]`: 物理建模、多物理场、光学计算（吸收 multiphysics/optics）
-- `[已移除]`: SI/PI/眼图/工具链
+**EDA 看板**（4 profile）:
 - 已降级为 skill：`optical-computing`
 
 **Platform 看板**（2 profile）:
@@ -613,7 +608,7 @@ notification_sources: ['*']  # 或 ['orchestrator']
 
 ### §0.7.0 孩子记忆双写（2026-08-14确立，强制）
 
-orchestrator（swarm bank）与 [已移除]-orchestrator（[已移除] bank）的 hindsight 记忆默认隔离，但**孩子（孩子昵称）相关记忆必须双写**，否则妈妈那边的6位教师 recall 不到。
+orchestrator（swarm bank）与 [已移除]（[已移除] bank）的 hindsight 记忆默认隔离，但**孩子（孩子昵称）相关记忆必须双写**，否则妈妈那边的6位教师 recall 不到。
 
 **规则**：
 1. 用 `hindsight_retain` 存孩子相关记忆（含关键词：孩子昵称/孩子/妈妈/爸爸/[已移除]/投壶/社交/感统/档案/亲戚等）后，**必须**触发双写同步：
@@ -621,17 +616,7 @@ orchestrator（swarm bank）与 [已移除]-orchestrator（[已移除] bank）�
    python3 ~/hermes-docker-sandbox/workspace/life-workbench/scripts/child_memory_sync.py
    ```
 2. 兜底机制：cron `孩子记忆双写同步`（ee4e73aacab8）每天 9:00/21:00 自动**双向**同步（正向swarm→[已移除]筛选孩子相关，反向[已移除]→swarm全量），漏触发的会被兜底捕获。
-3. 孩子档案事实源仍是 `~/.hermes/profiles/[已移除]-orchestrator/references/child-profile.md`（两边共享同一文件），hindsight 双写只覆盖分析性记忆。
-
-### §0.7.0b 孩子教育能力对齐（2026-08-14确立，强制）
-
-**爸爸侧（orchestrator）回答孩子教育问题时，必须具备与妈妈侧（[已移除]-orchestrator）同等的能力和知识**。对齐清单：
-
-1. **知识库对齐**：回答任何孩子教育问题前，**必须**读 `~/.hermes/profiles/[已移除]-orchestrator/references/child-profile.md`（孩子档案事实源，129KB）的关键部分。重点段落用 grep 定位：`grep -n "章节关键词" child-profile.md`。
-2. **规则对齐**：教育建议必须遵循 [已移除] 侧 context-aware-rules.md 的 15 条强制规则（关系导向范式/成长型思维/年龄动态计算/RDI建楼比喻/L4社交干预/行程感知/安全红线/蛋奶过敏等）。快速索引：`grep -n "^1[0-5]\.\|^9\." context-aware-rules.md`
-3. **教师调度对齐**：爸爸侧需要学科深度支持时，与妈妈侧同路径——跨 board `kanban_create(board="[已移除]", assignee="[已移除]")`，教师分配表见 references/[已移除]-routing-rules.md。
-4. **记忆对齐**：见 §0.7.0 双写机制。
-5. **家长身份对齐**：爸爸侧消息默认来自图爸；涉及孩子话题称"图爸"；妈妈侧消息走 [已移除] 网关（8651）。两侧档案/记忆共享，任一侧更新后另一侧立即可见（文件共享）或双写可见（记忆同步）。
+3. 孩子档案事实源仍是 `~/.hermes/profiles/[已移除]/references/child-profile.md`（两边共享同一文件），hindsight 双写只覆盖分析性记忆。
 
 ### §0.7.1 协调者禁做技术决策（maestro 治理规则，强制）
 
@@ -665,10 +650,10 @@ research-findings 落盘后才路由 worker-coder。已有等价物（worker-res
 备选 profile 顶上并 `kanban_comment` 记录切换理由。路由表维护在 §0.5 既有 board 路由中，
 本节增补"主备"维度。
 
-### §0.7.6 任务类型标签（swarm-yuan task-type-gates）
+### §0.7.6 任务类型标签（swarm-yuan task-REDACTED）
 
 编码类任务卡在 body 首行声明 `task_type: feature|fix|refactor|chore|docs|test|exp`
-+ `gate_level: core|standard|compliance`（详见 skill `task-type-gate-routing`）。
++ `gate_level: core|standard|compliance`（详见 skill `task-REDACTED`）。
 worker-coder 按类型决定验证强度；与 pua-methodology-router 并存（验证强度 × 方法论，正交）。
 
 ### §0.7.7 新增 skills 索引（三源融合产物；落点按适配性归位：编排层→devops，执行层→devops-worker）
@@ -683,7 +668,7 @@ worker-coder 按类型决定验证强度；与 pua-methodology-router 并存（�
 | kanban-triage-stall-recovery | 编排 | devops | 融合新增 | triage 卡不拾取时手动 promote+验证 spawn |
 | memlog | 执行 | devops-worker | BMAD | append-only 盲写任务内记忆日志 |
 | decision-taxonomy | 执行 | devops-worker | swarm-yuan | 三级决策分类+UserChallenge 五要素 |
-| task-type-gate-routing | 执行 | devops-worker | swarm-yuan | 任务类型×门禁路由+破窗台账 |
+| task-REDACTED | 执行 | devops-worker | swarm-yuan | 任务类型×门禁路由+破窗台账 |
 | kernel-context-budget | 执行 | devops-worker | BMAD | 常驻文档 instruction budget+写作三铁律 |
 | context-layering-rules | 执行 | devops-worker | swarm-yuan | 规则落位六层模型 |
 | adversarial-review-lens | 执行 | devops-worker | BMAD+swarm-yuan | 对抗评审 lens+FORCE 立场+逻辑剃刀+abstain |
@@ -742,3 +727,18 @@ worker-coder 按类型决定验证强度；与 pua-methodology-router 并存（�
 3. 风险判例法（数据外泄/凭据探测/持久安全削弱/破坏性操作，4 类 11 条）见 `_shared/skills/codex-guardian-review/SKILL.md`
 4. DENY 后换路径重试同类命令 = 绕审违规，直接 ESCALATE_TO_USER
 5. 例外：用户明确说"直接执行"的单条命令可跳过，但须 `kanban_comment` 留痕
+
+## §0.10 终态卡续跑（resume epoch，2026-10-19 融合自 LHH supervisor/lifecycle.py）
+
+**触发**：done/failed/gave_up 终态卡收到追问、补充需求或复跑要求时。终态卡**不复活**（不 reopen、不改状态），不 parents 回挂终态卡。
+
+**动作**：
+1. 在原卡 `kanban_comment` 记录续跑诉求（谁、要什么、为何不能就地答）。
+2. `python3 ~/.hermes/bin/kanban-resume.py --task <原卡id> --board <slug>` dry-run 看模板，确认后加 `--create` 真建续卡。脚本自动：继承原卡 title/result 摘要/产物绝对路径清单/assignee，生成含「继承上下文 / 续跑范围（待填）/ 验收标准（frozen 骨架）」的续卡 body，并在原卡 comment 追加 `resumed-as:<新卡id> epoch:N` 行。
+3. 续跑范围与验收标准**必须人工补齐**后再派发——模板骨架留空即派 = 违规。
+4. epoch 语义：N=该原卡已被续跑次数+1，从原卡 comment 标记行推导；`epoch:N` 之前的结论/回执不得挂到新卡（防旧回执误挂，沿用上游 RESUME_EPOCH_KEY 思想）。
+5. 回执防串扰：验收续卡产出时，只认续卡自身验收标准；原卡 done 结论仅作继承上下文，不作为续卡的通过依据。
+
+**与 kanban_schedule（Park）的区别一句话**：Park 是把**未终态**的 running/blocked 卡暂停择期再跑（卡还活着）；终态卡续跑是 done 卡已关账后**派生新卡**承接上下文（原卡永远停在 done）。
+
+**边界**：脚本对 kanban.db 严格只读（immutable=1），写操作全走 hermes CLI；worker 上下文内 CLI 写会被围栏拦截（kanban.py:153 设计行为），续跑建卡应在 orchestrator/人工 shell 侧执行。

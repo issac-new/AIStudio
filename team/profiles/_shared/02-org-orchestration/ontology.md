@@ -1,7 +1,7 @@
 # 共享 Ontology — 跨团队对象模型契约
 
 > 灵感来源：Palantir Ontology（data + logic + action + security 四要素集成）
-> 适用范围：所有 Hermes agent team（swarm/hack/product/ops/[已移除]/platform）
+> 适用范围：所有 Hermes agent team（swarm/hack/product/ops/eda/platform）
 > 作用：所有 SOUL.md 的「输出契约」段必须引用本文件的 object types；kanban_complete 的 metadata 必须用本文件定义的 property 名
 
 ---
@@ -36,7 +36,7 @@ properties:
   status: {type: enum, values: [triage, todo, scheduled, ready, running, blocked, review, done, archived]}  # 对齐 kanban_db.py:100 的 9 态实现
   assignee: {type: string, desc: "执行者 profile 名"}
   priority: {type: int, range: "0-30"}
-  board: {type: enum, values: [swarm, hack, product, ops, [已移除], platform, [已移除]]}
+  board: {type: enum, values: [swarm, hack, product, ops, eda, platform, [已移除]]}
   parents: {type: "list[ref:Task]", desc: "依赖的任务"}
   children: {type: "list[ref:Task]", desc: "派生的子任务"}
   created_at: {type: datetime}
@@ -141,7 +141,7 @@ links:
 ```yaml
 object_type: Knowledge
 properties:
-  domain: {type: enum, values: [devops, security, [已移除], ops, product, [已移除], swarm]}  # v1.3: 补 [已移除]/swarm——孩子记忆知识每日 swarm↔[已移除] 双写
+  domain: {type: enum, values: [devops, security, eda, ops, product, [已移除], swarm]}  # v1.3: 补 [已移除]/swarm——孩子记忆知识每日 swarm↔[已移除] 双写
   pattern: {type: string, desc: "识别到的重复模式"}
   frequency: {type: int, desc: "出现次数"}
   abstracted: {type: bool}
@@ -397,7 +397,7 @@ kanban_complete(
 | **G4** | 对象间关系仅 prose 无物理外键 | Finding.evidence / Decision.based_on / Report.cites 只在 body 文本 | 🟠 HIGH |
 | **G5** | Process/ValueChain 仅装饰性概念 | 无实例/字段，产能指标无法采集 | 🟠 HIGH |
 | **G6** | metadata 字段名不合规 | 仅 swarm 4/81 done 含 artifacts_produced；其余 6 board = 0 | 🟠 HIGH |
-| **G7** | markings 列缺失 4/7 board | [已移除]/hack/ops/platform 无 markings 列（C1 已补齐） | 🟠 HIGH |
+| **G7** | markings 列缺失 4/7 board | eda/hack/ops/platform 无 markings 列（C1 已补齐） | 🟠 HIGH |
 | **G8** | CQ/OEL/引用审计未接 cron | `ontology-cq-regression.py` 与 `oel_aggregate.py` 存在但无 cron 绑定 | 🟡 MEDIUM |
 | **G9** | 无本体演化影响面分析工具 | 改动 ontology.md 依赖人工 grep | 🟡 MEDIUM |
 | **G10** | 稳定单元影响域弱连接 | worker 写 `impacted:[...]` 无校验 | 🟡 MEDIUM |
@@ -480,7 +480,6 @@ kanban_complete(
 
 | 路径 | 类型 | 已知下游 |
 |---|---|---|
-| `~/.hermes/profiles/[已移除]-orchestrator/references/child-profile.md` | 孩子档案（hindsight 双写源） | [已移除] 6 师 + swarm↔[已移除] 双写 cron |
 
 ## 变更纪律
 

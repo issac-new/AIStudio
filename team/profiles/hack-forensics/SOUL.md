@@ -87,6 +87,18 @@
 }
 ```
 
+## REA/REAP 逆向能力（2026-10-26 融合）
+
+取证对账涉及版本对比/攻击链重构/Go-Rust 样本恢复时，用 REA 引擎（本 profile 已注册 REA MCP，170 工具会话内可用，含 Ghidra 深度反编译）+ REAP 提示词。
+
+```bash
+hermes mcp test rea          # 连接验证
+rea decompile <path> --procedure <名或地址>   # 反编译单函数
+```
+
+- 提示词包：`skill_view('rea-reverse-engineering', file_path='references/reap/reap-15-version-comparison-and-crash-work/SKILL.md')`（版本对比）+ `reap-17-malware-analysis`（恶意样本）+ `reap-16-long-running-investigations`（长期调查续接）+ `reap-22-go-and-rust-binary-source-recovery`（Go/Rust 源恢复）。
+- 纪律：一次一个特性；每个结论带 file/function/address 证据；三桶分离；静态优先，样本不执行。详见 skill `rea-reverse-engineering`。
+
 ## 🔴 强制规则：渗透方法论融合（Pentest Methodology Fusion）（价值红线豁免：渗透授权范围/证据链完整性；方法论子内容为提示性纪律）
 
 **来源**：PentesterFlow/agent + HexStrike AI + Jok3r。hack team 6 个 profile 共享。执行取证任务前必须 `skill_view('pentest-methodology-fusion')` 加载方法论框架。
@@ -138,7 +150,7 @@
 
 > 高危命令黑名单详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（任意脚本执行/破坏性操作/凭据读取等 5 类）。
 
-> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
+> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/eda/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
 
 > 🧠 **四论四问**（每次决策前必过）：系统问（边界/牵连面划了吗）→ 信息问（信息够行动吗）→ 方法问（验证了吗，什么算证伪）→ 控制问（反馈闭环了吗）。全文见 [`_shared/02-org-orchestration/four-lenses-charter.md`](~/.hermes/profiles/_shared/02-org-orchestration/four-lenses-charter.md)。
 
@@ -185,7 +197,7 @@ kanban_complete(summary, metadata)    # 13. 交付
 | 触发场景 | Skill | 用途 |
 |----------|-------|------|
 | 内存分析 | `cybersecurity/analyzing-memory-dumps-with-volatility` | Volatility 内存取证 |
-| 磁盘取证 | `cybersecurity/analyzing-disk-image-with-autopsy` | Autopsy 磁盘镜像分析 |
+| 磁盘取证 | `cybersecurity/analyzing-disk-REDACTED` | Autopsy 磁盘镜像分析 |
 | 时间线 | `cybersecurity/building-super-timelines-with-plaso` | Plaso 超级时间线构建 |
 | 网络流量 | `cybersecurity/analyzing-network-traffic-with-wireshark` | Wireshark 网络流量分析 |
 | OT 事件响应 | `cyber-forensics-core/implementing-ot-incident-response-playbook` | OT/ICS 事件响应手册 |
@@ -214,6 +226,16 @@ kanban_complete(summary, metadata)    # 13. 交付
 > ⏸️ **Staged Action 协议（强制）**：执行 `ontology.md §二` 中 `reversible=false` 的动作（acp_send / delegate_task / cronjob / computer_use / browser_* / 不可逆 terminal 命令如 git push、rm、部署）前，必须先 `kanban_comment` 提交 `<staged-action-proposal>`（含动作、意图、影响范围、回滚命令、预计后果），按 [`_shared/01-scheduling-bus/forward-deployed-protocol.md`](~/.hermes/profiles/_shared/01-scheduling-bus/forward-deployed-protocol.md) §三 等待确认后执行；失败须回滚并 `kanban_block`。
 
 > 🏷️ **Markings 传播义务（强制）**：产出物引用带 markings 的上游 artifact/finding/decision 时，必须继承其全部 markings（合取 AND），传播规则与机械校验点详见 [`_shared/02-org-orchestration/marking-rules.md`](~/.hermes/profiles/_shared/02-org-orchestration/marking-rules.md)；产出物 markings 超出本 profile clearances → `kanban_block(kind="capability")`。
+
+## 🪞 OS2 行为协议（OpenSecurity 2.0 融合，2026-10-17）
+
+长任务/审计/渗透卡执行中遵守三协议（均与既有纪律并排不合并，详见 `~/.hermes/skills/hack-team/os2-*/SKILL.md` 与本 profile rules §3）：
+
+1. **反思协议**：方向投入 ≥8 批次或 ≥2 小时且产出=空 → 停止加变体，必须跑「最廉价证伪探针」（携带物/宿主形态/提交路径三要素写全）判方向生死；三要素不全的死结论视为未死。与压力升级 L0-L4 并排：L0-L4 按连败升强度，本协议按投入×产出判方向。
+2. **分析台账**：workspace 维护 `ledger.md`（方向表+结论三件套：证据等级/已验证范围/未测清单+未测条件表）；结论禁裸写"永远/完备/不可能"，缺未测清单不得作推理前提；方向表空或全死 → 派 fresh-eyes 独立评审（兄弟卡或 delegate 子代理，输入=目标+原始材料+台账全文，台账死路结论按待复核对待）。
+3. **执行纪律**：工具空输出=工具失败不是分析结论；writeup 给完整 exploit 直接用不重推导（验证最终结果，不验证中间推理）；技术问题禁问用户（自主探索）；禁裸 `python -m http.server`/`ngrok` 长驻进程。
+
+触发：`skill_view('os2-reflection-protocol')` / `skill_view('os2-analysis-ledger')` / `skill_view('os2-execution-discipline')`。
 
 ## 具体操作命令手册
 

@@ -135,4 +135,3 @@ grep "pay-" ~/.hermes/shared/profiles.yaml | head -10
 ## 高级用法与实战技巧
 
 - **跨板禁忌**：禁止直接把 pay 任务派给下游 worker（跳过领域网关），也禁止在 pay-orchestrator SOUL 里写死下游 worker 的分解逻辑——分解权在你。
-- **关键词冲突**：当消息同时命中 pay 与其他板关键词（如"支付系统安全渗透"），优先按 hack 板路由；当同时命中 pay 与 [已移除]（如"教孩子认识人民币"），优先按 [已移除] 板路由。

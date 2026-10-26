@@ -54,7 +54,7 @@ description: Use when delivering nightly report briefs or PDF emails.
 ## [已移除] 源可用性台账（扩源前先查，勿重复踩）
 
 - ✅ 稳定 8 源：additude/mindshift/hechinger/scidaily_child/**the74**/36kr(RSSHub)/qbitai(wp-json)/jiemodui。
-- ❌ Cloudflare 指纹挑战不可入库（curl 简单 UA 时通时断、完整 Chrome 串反被挑战、urllib 全拦）：edutopia/psypost/readingrockets/commonsensemedia/k12digest/zhihu(404)。fetch 函数保留备用并注明状态；接 computer_use 后可复用。纯 RSS 扩源空间已近上限。
+- ❌ Cloudflare 指纹挑战不可入库（curl 简单 UA 时通时断、完整 Chrome 串反被挑战、urllib 全拦）：edutopia/psypost/readingrockets/commonsensemedia/[已移除]/zhihu(404)。fetch 函数保留备用并注明状态；接 computer_use 后可复用。纯 RSS 扩源空间已近上限。
 - RSSHub 容器会静默 Exited——某源突断先查 `docker ps | grep rsshub`，`docker start rsshub` 即恢复。
 
 ## 验收清单

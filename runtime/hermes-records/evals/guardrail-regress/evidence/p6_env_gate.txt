@@ -1,0 +1,7 @@
+### P6 env 门控：未设 HERMES_KANBAN_WRITE_GUARDRAIL 时新库不装触发器
+### captured 2026-10-26 10:03:27 runs=1 verdict=PASS
+guardrail=1 -> rc=0 stdout=triggers=21 (期望 triggers=21)
+guardrail=0 -> rc=0 stdout=triggers=0 (期望 triggers=0)
+on_ok=True off_ok=True
+
+verdict=PASS

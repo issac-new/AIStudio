@@ -14,7 +14,10 @@ EXPECTED_MARKERS=2   # 一对标记
 [ -f "$SRC" ] || { echo "FATAL: $SRC missing"; exit 2; }
 [ -f "$PATCH" ] || { echo "FATAL: patch missing: $PATCH"; exit 2; }
 
-n=$(grep -c "$MARKER" "$SRC" 2>/dev/null || echo 0)
+# 10-20 修: `grep -c || echo 0` 在 rc=1 时输出 "0\n0" 两行 → 整数比较炸。
+# grep -c 自身失败时总输出 0，不需要 fallback 再补一个。
+n=$(grep -c "$MARKER" "$SRC" 2>/dev/null)
+n=${n:-0}
 if [ "$n" -ge "$EXPECTED_MARKERS" ]; then
   # 健康; --verbose 才打印
   [ "${1:-}" = "--verbose" ] && echo "✓ smartcache markers present ($n)"

@@ -1,0 +1,169 @@
+# =====================================================================
+# decision-tiers.yaml — 决策三层分类 + judgment-tier 分流机制
+# =====================================================================
+# 来源: wx-fusion-20261016 子卡 C1（t_dd27ac01）
+#   机制出处: 麦肯锡《The judgment bottleneck》§04/§05/§07
+#     Analysis runs on AI time, but judgment still runs on human time.
+#   痛点实证: FUSION-VERDICT-20261016.md §2/§3 —— 全部卡同质处理（tasks 表
+#     41 列无 tier/risk 字段，2026-10-16 实测），低 reliability profile
+#     （ops-eval 0.0 / data-orchestrator 0.2 / aiteam-orchestrator 0.246）
+#     反复 crashed 与「无决策分层 + 无多视角复核 + 单兵自报 done」同构。
+# 消费方: orchestrator 及各域网关（派卡定层）；审计 cron（T1 抽样）
+# 维护方: platform 域（platform-ontology-curator）。修改走提案制。
+# 关系: 本文件是分层的单一事实源；orchestrator SOUL 只引用不复制。
+#   复用既有机制不重复建设：T3 人审门 = 既有 Staged Action 协议
+#   （_shared/01-scheduling-bus/forward-deployed-protocol.md）；
+#   T1 机械审计 = 既有 skill devops/worker-completion-independence-verification。
+# =====================================================================
+
+meta:
+  version: "1.0"
+  created: "2026-10-16"
+  owner_profile: platform-ontology-curator
+  source_task: t_dd27ac01
+  change_rule: 只由 platform 域 profile 改；破坏性变更升大版本号并附迁移说明
+
+# ---------------------------------------------------------------------
+# 三轴判据（各轴 1-3 分，打分时逐轴独立判，不许互相迁就）
+# ---------------------------------------------------------------------
+axes:
+  uncertainty:            # 不确定性：参数、验收、环境是否已知
+    1: 参数与验收标准已冻结（frozen 验收命令可机械复跑），历史规律有效
+    2: 方法论已知但落点有分叉（≥2 个可行方案待选），或影响面部分未知
+    3: 无先例 / 历史规律可能失效 / 新域新环境（监管新规、框架大改、首次接入）
+  consequence:            # 后果：出错时的波及面
+    1: 单卡单域，失败可重派，无跨域影响，无外部可见后果
+    2: 多卡或共享文件受影响（2-5 个 profile / 单板多卡返工）
+    3: 跨板裁决 / 删除性操作 / 发布放行外发 / 资金相关 / 儿童相关外发 / 全 fleet 共享态变更
+  reversibility:          # 可逆性：错了能否低成本撤回
+    1: 纯新增（加法演进），revert 零成本
+    2: 可逆但需备份+迁移（改既有产线文件，有 .bak 可回滚）
+    3: 不可逆或回滚代价高（删除数据、对外发布后不可撤回、放行后已消费）
+
+# ---------------------------------------------------------------------
+# 分层阈值（保守高判：任一轴触顶即入高层）
+# ---------------------------------------------------------------------
+thresholds:
+  rules:
+    - id: max-rule
+      rule: 任一轴 = 3 → T3
+      rationale: 后果/不可逆/不确定性任一触顶，都不许自动流放行
+    - id: mid-rule
+      rule: 无轴=3 且 ≥2 轴 ≥2 → T2
+    - id: base-rule
+      rule: 其余（三轴全 1，或仅一轴=2）→ T1
+  tie_break:
+    - 拿不准 → 取高判（T2/T3 边界模糊判 T3；T1/T2 模糊判 T2）
+    - uncertainty 与 consequence 评分不一致时，按 consequence 轴定层
+    - 卡 body 自带 tier 标记但评审质疑时，重打分；重打分取高
+
+# ---------------------------------------------------------------------
+# 三层定义与分流流程
+# ---------------------------------------------------------------------
+tiers:
+  - id: T1
+    name: 常规自动化层
+    article_anchor: 文章C §05 第一层（guardrails 内 AI 自动化）
+    scoring_profile: 三轴全 1（或仅一轴=2 且非 consequence）
+    process:
+      - guardrails 内全自动：AI 直接执行 + kanban_complete 留痕
+      - 验收只跑冻结命令，不看自述文字
+      - 不要求人审；靠抽样机械审计兜底（见 audit_automation_bias）
+    audit_automation_bias:   # automation bias 反制（文章C §04）
+      principle: 不因「结果来自机器/done 状态」就信——抽样卡必须机械复核产物
+      method_ref: devops/worker-completion-independence-verification (v1.8)
+      sample: 每板每周抽 3 张近 7 天 done 的 T1 卡
+      commands: |
+        B=<board>
+        for t in $(sqlite3 "file:$HOME/.hermes/kanban/boards/$B/kanban.db?immutable=1" \
+          "SELECT id FROM tasks WHERE status='done' AND priority<=4 \
+           AND completed_at>=strftime('%s','now','-7 days') \
+           ORDER BY completed_at DESC LIMIT 3"); do
+          echo "== $t =="
+          sqlite3 "file:$HOME/.hermes/kanban/boards/$B/kanban.db?immutable=1" \
+            "SELECT json_extract(metadata,'$.artifacts_produced') FROM tasks WHERE id='$t';"
+        done
+        # 对每个 artifacts_produced[].path 逐项独立核验（不走 worker 自报通道）：
+        #   ls -la <path>                      # 产物存在且非空
+        #   python3 -m py_compile <path>       # .py 语法有效
+        #   python3 -c "import yaml;yaml.safe_load(open('<path>'))"  # .yaml 有效
+        #   bash -n <path>                     # .sh 语法有效
+        # 复跑卡 body 的验收命令，退出码须一致
+      verdict: 核验结论写 kanban_comment（✅真实 / ⚠️误导 / ❌虚假 + 证据命令输出）
+    kanban_priority: {max: 4, default: 0}
+
+  - id: T2
+    name: 人主导 AI 支持层
+    article_anchor: 文章C §05 第二层（不确定性高，人主导 AI 辅助）+ §05 wytbb
+    scoring_profile: 无轴=3 且 ≥2 轴 ≥2
+    process:
+      - AI 产方案 + 证据，人拍板选向（卡 body 呈现选项与取舍，不直接执行终态）
+      - 双视角 AI 复核：risk（风险视角，什么会坏）+ fact（事实核查，证据链是否成立）
+      - 卡 body 必含 wytbb 节（前置假设 ≥2 条，模板见 dispatch.wytbb.template）
+      - 涉及产线文件改动仍走既有 Staged Action 提案制（本层不豁免）
+    kanban_priority: {min: 5, max: 79}
+
+  - id: T3
+    name: 重大后果人责层
+    article_anchor: 文章C §05 第三层 + §07（单一责任人 + 多视角 AI 复核）
+    scoring_profile: 任一轴 = 3
+    triggers:               # 命中即 T3，不再逐轴打分
+      - 跨板裁决（影响 ≥2 板的共享决定）
+      - 删除性操作（删 object type / 删数据 / 删共享规则）
+      - 发布放行（对外发布、公开仓 release、外发推送）
+      - 资金相关（pay 域通道参数/备付金/清算规则变更）
+      - 儿童相关外发（涉儿童数据出域一律 T3——多租户通则）
+      - 全 fleet 共享态变更（profiles.yaml / 共享规则文件 / ontology schema）
+    process:
+      - 单一决策责任人：orchestrator 或域网关（记卡 created_by），责任人可挑战假设并承担决策
+      - 三视角 AI 复核（执行前并行跑，结论写 kanban_comment）：
+        - risk（风险经理视角）：最坏情况、波及面、失效模式
+        - red（反对派视角，devil's advocate）：专门论证「为什么不该做/哪里会错」
+        - fact（事实核查视角）：逐条验证方案声明的证据链（file:line / 命令输出）
+      - 必过人审：执行前 kanban_block(kind=needs_input) 等用户批准（headless 下禁 clarify）
+      - 卡 body 必含 wytbb 节（前置假设 ≥2 条）
+      - 与既有 Staged Action 协议合流：T3 = staged 提议 → 人确认 → 执行 → 验证 的强制子集
+    kanban_priority: {min: 80}
+
+# ---------------------------------------------------------------------
+# 派单接线（零 schema 变更：tasks 表无 tier 列，2026-10-16 实测 41 列）
+# ---------------------------------------------------------------------
+dispatch:
+  marker:
+    format: '卡 body 首行 tier 标记（并入既有 routed: 行或紧随其后）'
+    example: 'routed:heavy:tier=T3 src=wx-fusion-20261016 gap=C1'
+    rationale: '沿用 routed: 标记约定，不新增 kanban.db 列，零迁移成本'
+  priority_mapping:
+    note: priority 是 dispatcher 拾取 tiebreaker；tier 是流程契约——定层后按层落 priority
+    T3: {set: '>=80', reason: 抬升，确保优先被人看见}
+    T2: {set: '5-79'}
+    T1: {set: '<=4', default: 0}
+  wytbb:
+    applies_to: [T2, T3]
+    requirement: "卡 body 必含「## 前置假设（what you'd have to believe）」节，≥2 条"
+    template: ~/hermes-docker-sandbox/workspace/research/wx-fusion-20261016/ws-c1-decision/wytbb-template.md
+
+# ---------------------------------------------------------------------
+# 各板示例（全部为真实卡 task_id，2026-10-16 sqlite 实查；判定含理由）
+# ---------------------------------------------------------------------
+examples:
+  swarm:
+    - {task: t_2d0b13c1, tier: T1, why: 恢复后终验类——按已冻结验收命令机械复跑，单域无跨板影响}
+    - {task: t_bf5e881c, tier: T2, why: 变异测试机制落地——方法论已知但落点有分叉（方案待选），影响 swarm 板测试链}
+    - {task: t_a23c2889, tier: T3, why: 整体设计文档同步门禁状态——全集群事实源文档，错述会误导所有下游读者（priority=95 与 T3 映射吻合）}
+  ops:
+    - {task: t_1492d063, tier: T1, why: 网关留痕修复+V3 验证——参数明确、验收命令冻结、单点修复}
+    - {task: t_1385fbcd, tier: T2, why: 4 个边界 bug 根治+层级收敛——方法论已知，影响面中等（多文件多 worker）}
+    - {task: t_b7793b98, tier: T3, why: profiles.yaml 共享层根治——全 fleet 共享态变更，consequence=3 触发 max-rule}
+  pay:
+    - {task: t_fc0dcc7d, tier: T1, why: 冒烟测试问答卡——零资金后果，单卡单域}
+    - {task: t_6de75e96, tier: T2, why: GENIUS Act 提案映射清算通道设计约束——监管新规环境变化，uncertainty 高，产出仅信息制品（人主导定取舍）}
+    - {task: t_190bf533, tier: T2, note: '教学例——priority=90 但无外发/资金后果，判 T2；priority 高≠T3，分层看后果不看热度'}
+    - {task: null, tier: T3, note: 'pay 板当前无在案资金操作卡；若出现清算通道参数变更/备付金规则上线类卡，命中 triggers 自动 T3'}
+# ---------------------------------------------------------------------
+# 现状差距（本机制要修什么，详见 ws-c1-decision/REPORT.md）
+# ---------------------------------------------------------------------
+gap_evidence:
+  - tasks 表 41 列无 tier/risk 字段（PRAGMA table_info 实测，2026-10-16）
+  - priority 使用无契约：swarm 板 220 卡挤在 priority=0；儿童相关 blocked 卡仅 priority=7
+  - 无分层流程：高风险卡（跨板/共享态）与冒烟问答卡走同一 complete 流程

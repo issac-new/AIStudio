@@ -1,0 +1,25 @@
+diff --git a/tools/mcp_tool_registration.py b/tools/mcp_tool_registration.py
+index 5a16e82201..3ead9ff6cf 100644
+--- a/tools/mcp_tool_registration.py
++++ b/tools/mcp_tool_registration.py
+@@ -257,6 +257,20 @@ def _tool_candidates(name: str, tools: Iterable[Any], should_register: Callable[
+         if not should_register(t.name):
+             logger.debug("MCP server '%s': skipping tool '%s' (filtered by config)", name, t.name)
+             continue
++        # >>> swarm:tool_schema_gate >>>
++        # Pre-admission schema gate (gap-20260922-004): scan the FULL tool def
++        # (name/description/inputSchema) BEFORE the schema string can reach the Agent
++        # context. This funnel covers every admission path (live tools/list, list_changed
++        # refresh, schema-cache lazy startup, cross-scope adoption). blocked -> the tool is
++        # rejected here and never registered; suspicious -> WARN only (see tool_schema_gate).
++        from tools.tool_schema_gate import gate_tool_schema
++        admit, gate_verdict = gate_tool_schema(name, t.name, t)
++        if not admit:
++            logger.warning(
++                "MCP server '%s': tool %r REJECTED by tool_schema_gate (verdict=%s) — "
++                "not entering the tool registry", name, t.name, gate_verdict)
++            continue
++        # <<< swarm:tool_schema_gate <<<
+         _schema._scan_mcp_description(name, t.name, t.description or "")
+         schema = _schema._convert_mcp_schema(name, t)
+         handler = _handlers._make_tool_handler(name, t.name, tool_timeout)

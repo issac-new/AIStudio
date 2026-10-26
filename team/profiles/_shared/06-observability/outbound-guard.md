@@ -81,3 +81,12 @@ gateway:
   ▼
 发送
 ```
+
+## 六、外发前脱敏检查（2026-10-19 增补，dsh alpha.3 机制）
+
+> 建议（advisory）控制，与既有一/二/三/四道频率与语义控制并列：前四道管「发不发」，本道管「内容里有没有密钥」。
+
+- **规则**：出站消息在过完去重/限频/安静时段/事实性边界后、实际发送前，对正文跑 `python3 ~/.hermes/bin/mask_secrets.py --check`；任一命中 → 先遮蔽（`--stdin` 模式输出）再发，或剥离命中片段。
+- **门模式语义**：exit 1 + 行号列表 = 检出；exit 0 = 零命中放行。cron/报告管线可直接以退出码做闸。
+- **取舍**：宁漏报不误伤（fail-open 取向）——普通 base64 / sha256 hex / URL 参数 id / MAC 地址不命中。
+- 详细规则与样态清单见 `_shared/02-org-orchestration/mandatory-privacy.md`「消息级凭据脱敏」节；来源 dsh v0.2.1-alpha.3（t_227687da 融合）。

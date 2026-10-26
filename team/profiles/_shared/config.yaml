@@ -2,7 +2,7 @@ mcp_servers:
   ekko-studio-api:
     command: /usr/local/bin/node
     args:
-      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/AIStudio/vendor/hermes-studio/bin/ekko-studio-mcp.mjs
       - api
     env:
       ELECTRON_RUN_AS_NODE: "1"
@@ -18,7 +18,7 @@ mcp_servers:
   ekko-studio-browser:
     command: /usr/local/bin/node
     args:
-      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/AIStudio/vendor/hermes-studio/bin/ekko-studio-mcp.mjs
       - browser
     env:
       ELECTRON_RUN_AS_NODE: "1"
@@ -31,26 +31,10 @@ mcp_servers:
       HERMES_MCP_USER_CLARIFICATION: "0"
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
-  ekko-studio-devices:
-    command: /usr/local/bin/node
-    args:
-      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
-      - devices
-    env:
-      ELECTRON_RUN_AS_NODE: "1"
-      HERMES_WEB_UI_URL: http://127.0.0.1:8647
-      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
-      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
-      HERMES_WEB_UI_PROFILE: _shared
-      HERMES_MCP_SERVER_NAME: ekko-studio-devices
-      HERMES_MCP_TOOLSET: devices
-      HERMES_MCP_USER_CLARIFICATION: "0"
-      HERMES_WEB_UI_MANAGED_MCP: "1"
-    enabled: true
   ekko-studio-use:
     command: /usr/local/bin/node
     args:
-      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/AIStudio/vendor/hermes-studio/bin/ekko-studio-mcp.mjs
       - use
     timeout: 1860
     env:
@@ -67,7 +51,7 @@ mcp_servers:
   ekko-studio-interaction:
     command: /usr/local/bin/node
     args:
-      - /Users/YOURNAME/lab/ncwk/upstream/hermes-studio/bin/ekko-studio-mcp.mjs
+      - /Users/YOURNAME/lab/AIStudio/vendor/hermes-studio/bin/ekko-studio-mcp.mjs
       - plan
     env:
       ELECTRON_RUN_AS_NODE: "1"
@@ -82,56 +66,42 @@ mcp_servers:
     enabled: true
 auxiliary:
   vision:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   compression:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   approval:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   title_generation:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   background_review:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   goal_judge:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   kanban_decomposer:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   moa_aggregator:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   moa_reference:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   profile_describer:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   triage_specifier:
-    api_mode: anthropic_messages
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   session_search:
-    provider: custom:cc-switch
-    model: aim
+    provider: auto
   web_extract:
-    provider: custom:cc-switch
-    model: aim
-fallback_providers:
-  - provider: custom:cc-switch
-    model: aim
-    api_mode: anthropic_messages
+    provider: auto
+fallback_providers: []
+custom_providers:
+- name: cc-switch-route
+  base_url: http://127.0.0.1:15721/hermes/v1
+  api_key: PROXY_MANAGED
+  api_mode: codex_responses
+  session_affinity_header: session_id
+  models:
+    glm-5.3:
+      context_length: 1048576
+  model: glm-5.3
+model:
+  default: glm-5.3
+  provider: cc-switch-route

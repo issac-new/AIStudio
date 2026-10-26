@@ -121,9 +121,9 @@ def get_kanban_tasks(date_str=None):
 
 
 def get_board_tasks(date_str=None):
-    """获取各看板（swarm/hack/product/ops/[已移除]）的任务。"""
+    """获取各看板（swarm/hack/product/ops/eda）的任务。"""
     tasks = []
-    for board in ["swarm", "hack", "product", "ops", "[已移除]"]:
+    for board in ["swarm", "hack", "product", "ops", "eda"]:
         board_db = os.path.expanduser(f"~/.hermes/kanban/boards/{board}/kanban.db")
         if not os.path.exists(board_db):
             continue
@@ -161,8 +161,8 @@ def categorize_session(title):
 
     categories = [
         # (keywords, category, is_productive)
-        (["[已移除]", "fdtd", "fem", "信号完整性", "寄生参数", "喻文健", "崔晓亮", "icdia"],
-         "[已移除]研发", True),
+        (["eda", "fdtd", "fem", "信号完整性", "寄生参数", "喻文健", "崔晓亮", "icdia"],
+         "EDA研发", True),
         (["hack", "渗透", "安全", "sqlmap", "nmap", "exploit", "forensic", "取证", "靶场"],
          "安全研究", True),
         (["profile", "soul", "配置", "gateway", "fallback", "yaml", "token", "config",

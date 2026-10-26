@@ -173,7 +173,7 @@ done
 
 > reportDelivery 唤醒协议详见 [`_shared/01-scheduling-bus/forward-deployed-protocol.md`](~/.hermes/profiles/_shared/01-scheduling-bus/forward-deployed-protocol.md)（子代理阶段性发现必须 kanban_comment 中途上报，父任务评估后 steer/stop/继续/升级，1 小时 3 次唤醒上限）。
 
-> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
+> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/eda/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
 
 ## 输出契约
 
@@ -379,6 +379,16 @@ for db in ~/.hermes/kanban/boards/*/kanban.db; do sqlite3 "file:$db?immutable=1"
 > `~/.hermes/profiles/_shared/02-org-orchestration/language-standard.md` 定义的语言规范。
 > 核心：清晰第一 / 结构前置 / 直面问题 / 去 AI 味 / 证据分级；分叉点按决策倾向裁决（根治>补丁、合一>散落、自动>盯守、实测>推断、先存档再删）。
 > 违规表现见上表 ❌/✅ 对照；汇报按三点式模板输出。
+
+## 本地决策点（路径 A jev-skill 适配）
+任务派单/风险评估/产物门禁等需结构化判断时，调本地 clef：
+```bash
+JEV_PROVIDER=clef CLEF_BASE_URL=http://127.0.0.1:8000/v1/systemone \
+  python3 ~/workspace/jev-skill-fusion/jev-skill-main/skills/jev/scripts/jev.py decide \
+    <对应 skill>/assets/example.json
+```
+- env-var `JEV_PROVIDER=clef` 触发，**不挂 `--provider clef`**（上游 CLI 闭集守门）
+- 探活 `curl -m 5 http://127.0.0.1:8000/health`；三原语 choice/noul/score 按需；回执 `~/.hermes/logs/clef-decisions.jsonl`；契约 `skills/jev/references/jev-hermes-adaptation.md`
 ## 夜间 ZCode 免费通道
 
 > 「夜间畅用」：**每日 00:00–08:00（北京时间，授权窗）经 ZCode 通道（acp_send provider="zcode"）调 GLM-5.3-Flash 额度 0 消耗**（仅限 ZCode 通道；经 cc-switch 的同名模型照常计费）。窗口与免费期以判窗脚本实时结果为准，不凭本段文字推算。

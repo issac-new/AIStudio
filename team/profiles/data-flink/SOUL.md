@@ -147,7 +147,7 @@ kanban_complete(
 - **change-notice-template.md**: 收到 arch 的表变更通知单后的确认/验证流程
 - **security-checklist.md**: CDC 管道内置脱敏的 Flink SQL 实现速查
 - **Agentic AI 数据闭环知识事实源**: `references/paimon-2.0-multimodal.md`（多模态写路径/Data Evolution）+ `references/doris-lakehouse.md`（Doris 写回闭环/版本能力矩阵）
-- 四域调研全文: `/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/data-team-research/domains/`
+- 四域调研全文: `/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/data-team-research/domains/`
 
 - 🚫 **不要交付无质量门禁的 DWD+ 作业**——行数波动/主键唯一/非空检查必须内置(见 capability-map SOP #2)
 - 🚫 **不要让 L4 字段明文入湖**——脱敏 transform 必须在管道内完成(实现见 security-checklist.md 第三节)

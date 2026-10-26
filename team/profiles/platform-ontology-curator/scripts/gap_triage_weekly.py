@@ -33,8 +33,8 @@ PLACEHOLDER_MARKS = (
 )
 SEVERITY_RANK = {"high": 2, "medium": 1}
 DOMAIN_ASSIGNEE = {
-    "agent": "worker-coder", "llm": "worker-coder", "[已移除]": "[已移除]",
-    "hack": "hack-auditor", "[已移除]": "[已移除]-orchestrator",
+    "agent": "worker-coder", "llm": "worker-coder", "eda": "[已移除]",
+    "hack": "hack-auditor", "[已移除]": "[已移除]",
     "pay": "pay-orchestrator", "tech": "platform-skill-miner",
     "data": "data-orchestrator", "platform": "platform-ontology-curator",
     "product": "product-researcher", "aiteam": "aiteam-orchestrator",

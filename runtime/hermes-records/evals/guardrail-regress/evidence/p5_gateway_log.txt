@@ -1,0 +1,7 @@
+### P5 gateway error.log 窗口内无护栏 ABORT 误伤
+### captured 2026-10-26 10:03:26 runs=1 verdict=PASS
+window_sec=600
+guardrail_anomaly_lines=0
+log=/Users/YOURNAME/.hermes/profiles/orchestrator/logs/gateway.error.log
+
+verdict=PASS

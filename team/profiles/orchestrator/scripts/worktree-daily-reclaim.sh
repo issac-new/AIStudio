@@ -6,7 +6,7 @@ set -u
 MAIN=/Users/YOURNAME/hermes-docker-sandbox/workspace
 CENTRAL_DB="$HOME/.hermes/kanban.db"
 BOARDS_DIR="$HOME/.hermes/kanban/boards"
-ARCHIVE_BASE=/Volumes/YOURVOLUME/lab/_trash/wt-untracked-daily
+ARCHIVE_BASE=/Volumes/nvme2230/lab/_trash/wt-untracked-daily
 LOG="$HOME/.hermes/logs/worktree-reclaim.log"
 RETAIN_DAYS=30          # 归档保留期
 TODAY=$(date +%Y%m%d)

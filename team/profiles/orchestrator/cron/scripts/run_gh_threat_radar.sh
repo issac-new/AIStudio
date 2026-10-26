@@ -10,7 +10,7 @@ STATE="$KB_DIR/gh_radar_state.json"
 TODAY=$(date +%F)
 OUT_JSON="$KB_DIR/gh_alerts_${TODAY}.json"
 LOG="$KB_DIR/gh_radar_last_run.log"
-PY=/Users/YOURNAME/.hermes/hermes-agent/venv/bin/python
+PY=/Users/YOURNAME/hermes-docker-sandbox/workspace/life-workbench/.venv/bin/python
 
 mkdir -p "$KB_DIR"
 

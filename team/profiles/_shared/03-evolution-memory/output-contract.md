@@ -1,7 +1,7 @@
 # 输出与验收契约
 
 > 本文件合并以下来源（历史归 git）：
-> `output-contract.md`（主体）+ `verification-checklist.md`（§二验证清单）+ `dod-checklist.md`（`workspace/AGENTS.md` 项目级 DoD 引用）+ `task-contract-guard.md` 契约守卫段
+> `output-contract.md`（主体）+ `verification-checklist.md`（§二验证清单）+ `dod-checklist.md`（`workspace/AGENTS.md` 项目级 DoD 引用）+ `task-REDACTED.md` 契约守卫段
 > 层级定位：L2 输出与验收——kanban_complete 前的输出契约、验证清单、完成定义与任务契约守卫。
 > 原则：不改语义，只做结构化归并；原各文件的来源标注保留在对应章节内。
 
@@ -132,7 +132,7 @@ kanban_comment(body=(
 - [ ] 每条 Recommendation 有验收标准（怎么算"做完了"）
 - [ ] Methodology 可复现（给出具体命令）
 - [ ] Appendix 有完整索引（非"详见上文"）
-- [ ] **重型多轮任务必含「已验证行为 / 未验证遗留」两节**（HoH 融合 A+E 双状态，2026-09-04）：多轮推进的重型任务（hack 攻击面验证、[已移除] 签核链、跨阶段编码）合并报告必须显式区分「已验证行为（Verified，附验证证据锚点）」与「未验证遗留（Gap，附未验证原因）」——下游任务依据此节规划，不用靠猜重建哪些结论可信
+- [ ] **重型多轮任务必含「已验证行为 / 未验证遗留」两节**（HoH 融合 A+E 双状态，2026-09-04）：多轮推进的重型任务（hack 攻击面验证、eda 签核链、跨阶段编码）合并报告必须显式区分「已验证行为（Verified，附验证证据锚点）」与「未验证遗留（Gap，附未验证原因）」——下游任务依据此节规划，不用靠猜重建哪些结论可信
 - [ ] **Checklist 反射核对面**（QwenPaw-Data 软验证回路收缩吸收，2026-10-14）：数据分析类无编译器反馈的交付（调研/审计/报告/教案），验证目标从「证明结论正确」降档为「确认方法被可复现、可审查地执行」。worker 收尾前按冻结验收项逐条生成自检清单并附证据锚（file:line/退出码/命令输出）；验收方按同一清单逐项独立复跑（对齐 skill `worker-completion-independence-verification`），不新增独立评审 agent 岗（judge 独立性纪律已覆盖）。清单随交付物落盘，缺清单按「未验证」处理。
 
 #### Checklist 反射核对面（QwenPaw-Data 软验证融合，2026-10-14）
@@ -153,13 +153,11 @@ kanban_comment(body=(
 
 ```markdown
 ## 技能路由决策
-- 启用 skill: [已移除]
   - reason: 家长需要完整教案/活动方案
   - parameters: {subject: "chinese", grade: "1"}
   - 反例约束: 不适用于简单知识问答（仅完整教案场景）
 - 跳过 skill: mom-feedback-coaching
   - reason: 本次任务不涉及家长反馈话术
-- 执行 profile: [已移除]
 ```
 
 #### 四要素
@@ -195,6 +193,7 @@ kanban_comment(body=(
 5. **linter**：`ruff check` / `eslint` / 项目规定的 linter
 6. **构建**：`npm run build` / `make build` / 项目规定的 build 命令
 7. **ACP session_id 验证**：如果用了 acp_send，session_id 必须真实（从 acp_sessions 输出取）
+8. **汇报语真实性**：summary/metadata 里的完成声明（已修复/测试通过/已写入类动词）逐条对照本 run 工具调用记录，无对应写操作 → 先补做或改口，再收卡（详见 §2.9 与 skill `claim-check`）
 
 ### 2.2 代码审查纪律项（不可省略）
 
@@ -205,10 +204,9 @@ kanban_comment(body=(
 ### 2.3 领域特定检查项
 
 - **代码类 worker**：必须跑完整 test suite，不接受"我改了 X 但没跑测试"
-- **[已移除] 类**：必须跑 [已移除] 脚本 + 核验 S 参数曲线/眼图/PDN 阻抗在物理上合理
+- **EDA 类**：必须跑 EDA 脚本 + 核验 S 参数曲线/眼图/PDN 阻抗在物理上合理
 - **Hack 类**：必须交叉校验 3 源（ASN+DNS+证书），至少 3 个独立来源确认
 - **研究类**：必须三角验证 + 标注时效 + 列取舍依据
-- **[已移除] 类**：必须验证教案是否符合年龄段（参考 child-profile.md）
 
 ### 2.4 反模式
 
@@ -298,6 +296,21 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 
 ---
 
+### 2.9 扩展：汇报语真实性（claim check，2026-10-19 增补，openexec #487 融合）
+
+> 来源：openexec `orchestrator/claim_check.py:1-212`（#487），调研报告 `workspace/research/openexec-delta-20261018/` §四 N1/P1。
+> 与 G6 的互补关系：**G6 管环境终态判定**（产物在不在、测试绿不绿——验收层）；**claim-check 管汇报语对照**（回复里说做了的事，操作记录里有没有——汇报层）。G6 拦得住产物缺失，拦不住对话中的「说做了其实没做」。
+> 操作细节在 skill `devops-worker/claim-check`，此处为 worker 收卡自查接线。
+
+worker `kanban_complete` 前的自查纪律：
+
+1. 收集本 run 回复原文中所有完成声明（已修复/已写入/测试通过/已归档类动词，词表见 skill）。
+2. 逐条对照工具调用记录：声明的变更必须有对应**写操作**——命令实际执行且退出码可查、文件真实落盘、测试命令跑过。失败或被拒的调用不支撑声明（非零退出后未修复 ≠ 已修复）。
+3. 无对应操作的声明 → 单轮 nudge 自己：现在用工具补做并留记录，或把汇报语改准确（「未验证」「尚未确认」照写）。不重复 nudge。
+4. fail-open：检查流程本身失败/记录缺失 → 放行收卡，不因检查挂掉阻塞交付。真实性红线（不编造结果）不在此豁免范围。
+
+---
+
 ## 反向自查与模拟问话（来源：金办发〔2025〕93号 六大领域+四阶段）
 
 > 93号文核心突破 = 从"制度合规"到"能力验证"。检查方不是问"有没有制度"，而是**找人问话/要证据**来验证能力真实存在。集群等效机制 = 反向自查 + 模拟问话。
@@ -349,7 +362,6 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 #### 3. 安全与隐私
 - [ ] diff 中无硬编码 secret / API key / token
 - [ ] 未将 `.env` / 凭据文件加入版本控制
-- [ ] 未在输出中暴露完整 session_id / 绝对路径（[已移除] 域额外：无孩子 PII）
 
 #### 4. 验收标准对齐
 - [ ] 逐条对照 kanban body 的验收项打勾（不接受"大致符合"）
@@ -369,7 +381,7 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 - [ ] **事故/返工类任务**：完成前产物中必须含回流卡 id（`[incident-reflux]` 前缀，parents 指向事故卡）——postmortem 不回流 = Loop 未闭合，不予验收（2026-08-27，来源 Playbook Maintain）
 - [ ] 重型任务（triage=True）worker 开工时在工作区落 `plan.md`，四节结构：**Files that change / Order of work / Risks / Proof**（来源 Playbook L820-850）。实现偏离计划时同 commit 更新 plan.md；完成时 Proof 节并入 kanban_comment 验证段
 
-#### 编码类（worker-coder / ops-devops / [已移除]）
+#### 编码类（worker-coder / ops-devops / eda）
 - [ ] 语法检查通过（`python -m py_compile` / `tsc --noEmit` / `bash -n`）
 - [ ] 类型检查通过（如项目有 type hints）
 - [ ] 单元测试全绿（`pytest -v` 或对应框架）
@@ -419,7 +431,7 @@ failure → reproduction → diagnosis → bounded repair → validate-again
 |---|---|---|
 | `[context-gap]` | 上下文/信息缺失（语义层空白、缺凭据、上游交接不足） | `[context-gap] 缺少生产 DB 只读账号` |
 | `[tool-failure]` | 工具/环境失败（网络、安装失败、外部服务 5xx） | `[tool-failure] npm registry 403` |
-| `[routing-error]` | 路由/分派错误（任务派错 profile、缺前置依赖卡） | `[routing-error] 需要 [已移除] 领域知识但派给了 worker-coder` |
+| `[routing-error]` | 路由/分派错误（任务派错 profile、缺前置依赖卡） | `[routing-error] 需要 eda 领域知识但派给了 worker-coder` |
 | `[capability-gap]` | 能力缺口（没有对应 skill/工具，任务本身可做但集群暂不具备） | `[capability-gap] 无 PDF 扫描件 OCR 能力` |
 
 标签后接一两句具体说明。轻量任务豁免。orchestrator 月度汇总四类分布 → 分布异常时修 routing 规则或补 skill。
@@ -465,7 +477,7 @@ kanban_complete 前自评当前任务的证据强度（表同 §2.5，此处不�
 
 ---
 
-## 四、任务契约守卫协议（原 task-contract-guard.md 契约守卫段）
+## 四、任务契约守卫协议（原 task-REDACTED.md 契约守卫段）
 
 > 来源：LongHorizon-Harness（arXiv:2608.01964，AMAP-ML，MIT）MEA 循环。
 > 源码验证：`manager.py` / `prompt_texts.py` / `auditor_agent.py` / `claude_permissions.py`。

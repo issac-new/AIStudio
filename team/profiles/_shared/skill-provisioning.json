@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "roles": [
+    {
+      "match": "orchestrator",
+      "skills": [
+        "matrix-cross-machine-collab",
+        "inter-agent-communication-architecture",
+        "kanban-orchestrator",
+        "orchestrator-kanban-tracing",
+        "orchestrator-team-hierarchy",
+        "security-domain-delegation",
+        "delegation-brief-format",
+        "diagram-design"
+      ],
+      "note": "源=skill-catalog.md 02 层 orchestrator 行（2026-10-18 收编种子，可在 /app/skillgov 供给对账页签编辑）"
+    },
+    {
+      "match": "researcher",
+      "skills": [
+        "evidence-labeled-research",
+        "grounded-citations",
+        "llm-wiki",
+        "deep-research-workflow",
+        "open-source-architecture-research",
+        "verify-prd"
+      ],
+      "note": "源=skill-catalog.md researcher 行"
+    },
+    {
+      "match": "worker-coder",
+      "skills": [
+        "code-review",
+        "requesting-code-review",
+        "rd-apply",
+        "verify-requirement"
+      ],
+      "note": "源=skill-catalog.md coder 行"
+    },
+    {
+      "match": "*-tester",
+      "skills": [
+        "backend-integration-testing"
+      ],
+      "note": "源=simharness mx-lib.sh install_skills 硬编码（唯一可执行旧源，收编于此）"
+    },
+    {
+      "match": "*-sys-analyst",
+      "skills": [
+        "aipaydev-sys-analysis",
+        "diagram-design"
+      ],
+      "note": "源=simharness mx-lib.sh install_skills 硬编码"
+    },
+    {
+      "match": "ops-*",
+      "skills": [
+        "release-plan"
+      ],
+      "note": "源=skill-catalog.md ops 行（ops-devops/ops-sre/ops-eval/ops-incident-commander）"
+    },
+    {
+      "match": "*-researcher",
+      "skills": [
+        "cognition-lattice",
+        "diagram-design",
+        "executive-summary",
+        "kanban-worker",
+        "memory-consolidation"
+      ],
+      "note": "2026-10-19 diagram 轮：researcher 产出报告图；含 * base 4 保期望集不回退（matchRole 取最具体胜者）"
+    },
+    {
+      "match": "*",
+      "skills": [
+        "cognition-lattice",
+        "memory-consolidation",
+        "kanban-worker",
+        "executive-summary"
+      ],
+      "note": "源=skill-catalog.md 所有/通用行（docx/pdf 等 Office 技能全局库多已内置，不重复列）"
+    }
+  ],
+  "note": "2026-10-19 无源裁决：devops-rd=分类目录非技能；hermes-ops=[已移除] 自建非全局源；test-evidence-verification=sim 专属（硬编码 sim 路径）；committee-review/adversarial-review-lens/routine-self-reflect/dynamic-workflow-protocol/orchestration-skill-routing/scale-adaptive-routing=catalog 愿景名无处可寻；executive-summary+backend-integration-testing 已从 sim 树补入 host 全局"
+}

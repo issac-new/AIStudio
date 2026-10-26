@@ -8,7 +8,7 @@
 #       继续用历史值评估（可在告警段标注 source_error）；set -u 防变量笔误静默错判
 set -u
 
-GAP_DIR="/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/life-workbench/gap_workspaces/gap-20260909-005"
+GAP_DIR="/Users/YOURNAME/hermes-docker-sandbox/workspace/life-workbench/gap_workspaces/gap-20260909-005"
 DAILY_DIR="$GAP_DIR/daily"
 SCANNER="$GAP_DIR/egress_write_audit.py"
 RULES="$GAP_DIR/ops-sre-watchdog/egress-audit-alert-rules.yaml"

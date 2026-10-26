@@ -1,0 +1,85 @@
+{
+  "suite": "guardrail-regress",
+  "version": 2,
+  "description": "kanban 写护栏常驻安全回归集：把 guardrail-r2 一次性回归固化为可重复执行的探针矩阵。守护对象 = 9 板 21 个 kanban_guard_* ABORT 触发器 + kanban_write_sanctioned UDF 作证链。",
+  "derived_from": "~/.hermes/evals/guardrail-r2-regress/ (2026-09-04 一次性回归, commit 9996e5931b)",
+  "known_uncovered": [
+    "多租户越权：本套探针全部为单用户语境（无租户隔离/跨租户写入向量），多租户下的 kanban 写越权不在覆盖面（gap-20261021-001 观察项，卡级工具授权收缩裁决后再评估）",
+    "成本失控：探针不测量任何写操作的成本面（token 消耗/调用风暴/预算击穿）——成本守护归 cost-governance/cost-ledger 体系，本套零探针",
+    "外发内容质量：出站消息（微信/Telegram）的内容红线与质量护栏不在本套覆盖面（外发门在 T3 人审+出站推送防骚扰层，本套只守 kanban 写路径）",
+    "SOUL/config 文件直写：本套守 kanban.db 写路径，绕过 kanban 直接改 profile SOUL/config 文件的向量不在探针矩阵内（该面由 fleet-artifact-sync md5 验收与 skill-fence 承担）",
+    "读路径信息泄露：P4 只验证读不被误伤，不验证读结果的敏感信息过滤——markings/clearance 的读侧泄露防护不在本套"
+  ],
+  "board": "guardrail-test",
+  "guardrail_env": "HERMES_KANBAN_WRITE_GUARDRAIL",
+  "sacrifice_card": "t_ff757140",
+  "trigger_name_prefix": "kanban_guard_",
+  "trigger_count_expected": 21,
+  "triggers_must_exist_probes": ["P2", "P3", "P4", "P5"],
+  "probes": [
+    {
+      "id": "P1",
+      "title": "delegate 子上下文经 hermes CLI 写越权应被拒",
+      "type": "negative",
+      "expected_rc": "nonzero",
+      "rationale": "复现 2026-09-01 事故向量：delegate_task 子 shell 出调 hermes kanban complete。护栏须 DENIED（CLI fast-fail 或触发器 ABORT）。",
+      "evidence_file": "p1_delegate_child.txt"
+    },
+    {
+      "id": "P2",
+      "title": "裸 sqlite3 直连写敏感表应被拒（无 UDF 作证）",
+      "type": "negative",
+      "expected_rc": "nonzero",
+      "rationale": "复现 T7 向量：绕过 hermes 连接层，不经 kanban_write_sanctioned 作证。触发器须 ABORT（报 no such function 或 unsanctioned）。",
+      "evidence_file": "p2_bare_sqlite.txt"
+    },
+    {
+      "id": "P3",
+      "title": "合法 hermes 连接层写非敏感列应放行",
+      "type": "positive",
+      "expected_rc": "zero",
+      "rationale": "对照探针：经 kanban_db_connect.connect_closing 写 task_comments 非敏感列（不触发 kanban_guard 触发器），应正常落库。证明护栏不误伤合法写。",
+      "evidence_file": "p3_legit_write.txt"
+    },
+    {
+      "id": "P4",
+      "title": "读路径不应被护栏误伤（新进程 + 裸 sqlite3 SELECT）",
+      "type": "positive",
+      "expected_rc": "zero",
+      "rationale": "读不该要求写作证。新进程 connect 读 + 裸 sqlite3 SELECT 都须成功，且 SELECT 不报 no such function。",
+      "evidence_file": "p4_read_paths.txt"
+    },
+    {
+      "id": "P5",
+      "title": "gateway error.log 窗口内无护栏 ABORT 误伤",
+      "type": "positive",
+      "expected_rc": "zero",
+      "rationale": "观察型探针：runner 跑完 P1-P4 后检查 gateway error.log，窗口内若出现 kanban_guard / ABORT / no such function 新增行 = 护栏被误触发或已失效。",
+      "evidence_file": "p5_gateway_log.txt"
+    },
+    {
+      "id": "P6",
+      "title": "env 门控：未设 HERMES_KANBAN_WRITE_GUARDRAIL 时新库不装触发器",
+      "type": "positive",
+      "expected_rc": "zero",
+      "rationale": "门控 sanity：env 未设（默认开）时新库 connect 应装 21 触发器；显式设 =0 时不装。证明门控语义未被改坏。",
+      "evidence_file": "p6_env_gate.txt"
+    },
+    {
+      "id": "P7a",
+      "title": "skill 写入契约守门器：合法内容（带 cue/lesson/evidence）应通过 enforce",
+      "type": "positive",
+      "expected_rc": "zero",
+      "rationale": "rsi-harness 调研第三波 A 任务产出。验证 exp_contract 三字段齐全的 SKILL.md 喂入 enforce 返 rc=0。",
+      "evidence_file": "p7_skill_contract_pos.txt"
+    },
+    {
+      "id": "P7b",
+      "title": "skill 写入契约守门器：缺 cue 字段应被 strict 模式拒绝",
+      "type": "negative",
+      "expected_rc": "nonzero",
+      "rationale": "正向对照：缺 cue/lesson/evidence 任一字段时 enforce 必须返 rc=1 防止无契约 skill 落盘。",
+      "evidence_file": "p7_skill_contract_neg.txt"
+    }
+  ]
+}

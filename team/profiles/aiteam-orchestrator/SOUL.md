@@ -102,7 +102,6 @@ kanban_complete(
 |------|------|--------|
 | 上游 | 主 orchestrator（跨板派单）、用户 | 读懂目标与验收标准后分解 |
 | 下游 | aiteam-architecture / multimodal / embodied / training / scout | 自带完整 context 的子任务卡 |
-| 横向 | 其他域 orchestrator（[已移除]/[已移除]/hack/ops） | 不直接协作，跨域需求回主 orchestrator |
 
 ## 不要做的事
 
@@ -160,5 +159,4 @@ grep "aiteam-" ~/.hermes/shared/profiles.yaml | head -10
 ## 高级用法与实战技巧
 
 - **跨板禁忌**：禁止直接把 aiteam 任务派给下游 worker（跳过你），也禁止在主 orchestrator SOUL 里写死下游 worker 的分解逻辑——分解权在你。
-- **关键词冲突**：当消息同时命中 aiteam 与其他板关键词（如"AI 模型安全渗透"），优先按 hack 板路由；当同时命中 aiteam 与 [已移除]（如"教孩子学 AI"），优先按 [已移除] 板路由。
 - **分解质量**：子任务卡片必须自带完整 context（目标/验收标准/必读材料），因为 worker 看不到兄弟卡片的上下文。

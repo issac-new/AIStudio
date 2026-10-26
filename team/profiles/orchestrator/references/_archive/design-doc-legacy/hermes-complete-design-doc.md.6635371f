@@ -582,7 +582,6 @@ data 团队的能力载体分两层：**技术层**（版本锁定 + 部署拓�
 
 <!-- gap-closed:gap-20260904-[已移除] --> **[已移除] 团队扩编至集成电路全产业链 10 岗** — ADOPT 落地：[已移除]/ipcore/dv/backend/ams/physics/toolchain/pdk/packtest/ai 十岗部署 + config 逐字段断言 + roster 双向隔离实测 + 冒烟卡通过；机制设计固化于附录 B.1（契约总纲 `_shared/knowledge/[已移除].md`）
 
-<!-- gap-closed:gap-20260905-[已移除]-64d4ab --> **学而思科考×TNF 户外夜探活动雷达信号** — ADOPT 判定（卡 t_8ced2e5c）：吸收 4 层活动设计模式落地《济南夜探小侦探》A4 PDF 4 页（本地渲染实测）；不采纳异地报班/专家依赖/触摸强推（档案护栏）；属 [已移除] 单次活动案例，不构成机制设计修改，全档 gap_workspaces/gap-20260905-[已移除]-64d4ab/
 
 <!-- gap-closed:gap-20260907-ops-itil --> **ITIL 4 核心理念调研与 ops 团队映射对账** — 判定「零框架级吸收」：34 项实践逐条核对，29 项已有 SRE/DevOps 谱系等价能力；真实缺口 2 主 1 轻（Change Enablement / Service Configuration Management / Service Catalog 轻）。裁决最小组合落地：变更三分法+授权矩阵成文（action-risk.md §1.3，见 §3.2）+ 配置基线 tag 化（cfg-* tag+watchdog L3 对账，见 §5.8）；SCM-C（sqlite CI 注册表）判当前规模过度建设不落地；34 实践映射矩阵存档 `research/itil-v4-absorption/`（2026-09-07，卡 t_3dddf3df/t_54e738e2/t_9851f2ea）
 

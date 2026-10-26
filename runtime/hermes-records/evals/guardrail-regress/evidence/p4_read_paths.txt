@@ -1,0 +1,9 @@
+### P4 读路径不应被护栏误伤（新进程 + 裸 sqlite3 SELECT）
+### captured 2026-10-26 10:03:26 runs=1 verdict=PASS
+rc=0
+stdout: connect_read_tasks= 1
+bare_select_comments= 16
+stderr: [HERMES_HOME fallback] HERMES_HOME is unset but active profile is 'orchestrator'. Falling back to /Users/YOURNAME/.hermes, which is the DEFAULT profile — not 'orchestrator'. Any data this process writes will land in the wrong profile. The subprocess spawner should pass HERMES_HOME explicitly (see issu
+read_paths_ok=<re.Match object; span=(22, 46), match='bare_select_comments= 16'>
+
+verdict=PASS

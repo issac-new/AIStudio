@@ -1,0 +1,14 @@
+{
+  "hindsight": {
+    "catalog": {
+      "name": "hindsight",
+      "pin": "176f8c2de1369f569c489b831d143b78128b5535",
+      "repo": "https://github.com/vectorize-io/hindsight",
+      "sha": "176f8c2de1369f569c489b831d143b78128b5535",
+      "tier": "community"
+    },
+    "pinned": true,
+    "revision": "176f8c2de1369f569c489b831d143b78128b5535",
+    "source": "https://github.com/vectorize-io/hindsight#hindsight-integrations/hermes"
+  }
+}

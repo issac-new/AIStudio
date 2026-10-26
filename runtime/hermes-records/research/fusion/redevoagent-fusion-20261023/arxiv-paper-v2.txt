@@ -1,0 +1,1341 @@
+RedEvoAgent: Automatic Red-Teaming Agent
+with Experience-Driven Skill Evolution
+
+Junjie Zhang1  Hui Liu1∗  Kecheng Chen1
+
+Xianbo Mo2  Changsheng Chen2  Haoliang Li1
+
+1 City University of Hong Kong  2 Shenzhen MSU-BIT University
+
+Abstract
+
+ 
+LLM-based agents are increasingly deployed in product-level execution harnesses, where jailbreaks can trigger harmful tool use and persistent state changes, creating greater risks than unsafe text generation alone.
+Existing automatic red-teaming methods often rely on fixed attacks, while recent agentic attackers coordinate multiple jailbreak tools and show stronger potential through trajectory-based retrieval.
+However, such retrieval can reuse misleading experiences due to retrieval bias and unclear tool credit, and full trajectories add context overhead while reducing interpretability.
+We propose RedEvoAgent, a black-box red-teaming agent that distills cross-case attack trajectories into a concise, human-readable attack skill.
+The attack skill adaptively evolves through tool-effectiveness profiling and Deciding-Tool Attribution for skill updates, and a validation ratchet that retains only updates improving validation performance.
+Experiments on multiple benchmarks, target models, and target execution harnesses show that RedEvoAgent outperforms fixed and agentic baselines, improves tool efficiency, and transfers across attacker models and target execution harnesses.
+
+ 
+
+ | 
+
+11footnotetext: Corresponding author.
+
+1 Introduction
+
+LLM-based agents are increasingly integrated into product-level harnesses such as Claude Code (Anthropic, 2026a) and Codex (OpenAI, 2025), which allow them to modify local files, transfer data, and call external APIs (Yao et al., 2023; Yang et al., 2024b; Wang et al., 2024; Yehudai et al., 2026).
+These capabilities broaden the security implications of jailbreaks, as successful attacks may cause destructive tool use and persistent changes to system state rather than unsafe text generation (Greshake et al., 2023; Ruan et al., 2024; Andriushchenko et al., 2025).
+Therefore, product-level black-box agents require adversarial evaluation to characterize their security robustness.
+Automatic red-teaming provides a scalable approach for continuous evaluation by simulating real-world malicious attacks, adversarial inputs, and exploit attempts (Perez et al., 2022; Ganguli et al., 2022; Mazeika et al., 2024).
+
+Most existing jailbreak methods rely on a fixed attack mechanism.
+Some transform or rewrite the original attack prompt to circumvent an agent’s safety-alignment defenses, such as FlipAttack (Liu et al., 2025b), whereas others optimize adversarial prompts within a predefined search space, as in GCG (Zou et al., 2023) and AutoDAN (Liu et al., 2024).
+Because such methods explore only a limited subset of the attack space, they may miss vulnerabilities exposed by alternative mechanisms and are more likely to fail.
+Recent work, therefore, investigates agentic automatic red-teaming, in which an LLM-driven attacker agent leverages prior knowledge about existing attack methods to adaptively coordinate them within a unified workflow.
+For example, RedCodeAgent (Guo et al., 2026) models attack methods as sequentially invocable tools and utilizes semantic similarity to retrieve successful trajectories as priors to guide the attacker agent’s subsequent decisions.
+
+Despite its effectiveness, trajectory-based retrieval has several limitations.
+First, this paradigm assumes that all retrieved trajectories are useful, which may not hold because semantic retrieval can introduce bias, and the contribution of any individual tool-choice decision to final attack success is often unclear.
+Consequently, irrelevant or misleading experiences may be reused, causing unstable optimization and degraded attack performance. Second, full-trajectory contexts introduce substantial overhead by consuming context-window budget and increasing inference cost.
+Their low-level action records are also difficult for humans to interpret and monitor, hindering auditing over the evolution of strategy.
+
+Figure 1: RedEvoAgent overview.
+Given a jailbreak prompt, the attacker agent uses the current attack skill to select and call tools from an extensible attack toolbox, such as GCG and FlipAttack, and iteratively attacks a product-level target agent.
+On the training split, RedEvoAgent collects successful and failed attack trajectories and independently evaluates each attack tool to build a tool-effectiveness profile.
+Skill evolution combines the profile with these trajectories to extract tool priorities and attack strategies.
+A candidate attack skill update is accepted only if it improves attack performance on the validation split, while the test split remains locked for final evaluation.
+
+To address these gaps, as illustrated in Figure 1, we propose RedEvoAgent, an automatic black-box red-teaming agent with experience-driven attack-skill evolution.
+RedEvoAgent integrates diverse jailbreak methods into an attack toolbox and distills attack trajectories into a concise, human-readable attack skill that summarizes high-level orchestration strategies.
+Compared with trajectory-based historical priors, such a skill-level abstraction reduces context overhead and improves interpretability, consistent with evidence from general agent tasks that high-level skill summaries can outperform similarity-based trajectory retrieval (Ni et al., 2026; Yang et al., 2026).
+Concretely, we construct training and validation splits for experience evolution. RedEvoAgent first measures the effectiveness of jailbreak tools on the training split to build a tool-effectiveness profile.
+To prevent skill evolution from conflating frequently co-occurring tools in successful trajectories with genuinely effective tools, we introduce Deciding-Tool Attribution, which provides clearer tool-selection signals by labeling the tool that directly leads to attack success as the deciding tool.
+We further design a validation-ratchet mechanism that accepts a candidate skill update only if it yields a improvement on an independent validation set.
+Otherwise, the previous skill is retained, and failed candidates are recorded to guide later iterations, mitigating irrelevant or misleading update signals.
+In this way, tool-effectiveness measurements and attack trajectories determine what the skill learns, while validation feedback determines which revisions persist.
+
+To validate the effectiveness of our framework, we conduct experiments on Agent Security Bench (ASB) (Zhang et al., 2025a) and AgentHarm (Andriushchenko et al., 2025) across multiple target models, as well as the Claude Code and Codex target execution harnesses.
+The results show that RedEvoAgent outperforms existing fixed and agentic baselines, and that the evolved attack skill transfers across different attacker models and target execution harnesses.
+
+We summarize our contributions as follows:
+
+• 
+
+We introduce RedEvoAgent, an automatic red-teaming agent that distills cross-case attack experience into an evolving and human-readable attack skill. The framework learns skill updates from training-set attack experience and employs a validation ratchet to reduce noisy tool credit assignment and restrict skill evolution to revisions that improve held-out attack performance.
+
+• 
+
+We conduct extensive experiments across multiple target models and target execution harnesses, demonstrating improvements in attack effectiveness, attack-tool efficiency, and cross-attacker and cross-harness transferability. Moreover, our reproduced target execution harnesses can provide reusable infrastructure for future agentic red-teaming research.
+
+2 Related Work
+
+Jailbreak Attacks and Automatic Red-Teaming. 
+Earlier jailbreak attacks usually rely on one predefined optimization method, such as gradient-based search in GCG (Zou et al., 2023), evolutionary search in AutoDAN (Liu et al., 2024), LLM-based iterative refinement in PAIR (Chao et al., 2025), or tree-structured black-box search in TAP (Mehrotra et al., 2024).
+A recent line of work instead selects and combines multiple attack strategies or tools.
+JailbreakOPT (Shi et al., 2026) packages diverse attacks as tools and models tool selection across cases as a contextual bandit, using past attack outcomes to balance exploration and exploitation.
+MAJIC (Qi et al., 2026) updates the Markov transition probabilities between disguise strategies based on attack feedback.
+RedCodeAgent (Guo et al., 2026) introduces agent-based automatic red-teaming and retrieves successful attack trajectories similar to the current task to guide tool selection and prompt optimization.
+Although all three systems reuse past experience, RedCodeAgent stores it in case-specific trajectories, whereas JailbreakOPT and MAJIC encode it in a contextual-bandit policy and a Markov transition matrix, respectively.
+Retrieving trajectories adds context overhead at inference time, while these numerical states do not explicitly present the learned preferences for choosing attacks as interpretable guidance.
+Related experience-centric systems use retrievable natural-language strategies, structured experience pools, hybrid text/code libraries, or skill-structured memories (Liu et al., 2025a; Wang et al., 2025; Zhang et al., 2025b; Zhang et al., 2026).
+These methods do not apply incumbent-relative held-out validation to a complete orchestration artifact; AutoRedTeamer instead validates newly implemented attack operators against an absolute ASR threshold before library insertion (Zhou et al., 2025).
+In contrast, we distill feedback across cases into a compact and interpretable attack skill.
+A validation ratchet retains a candidate only when it outperforms the current skill on an independent validation set.
+
+Skill Learning and Evolution from Experience. 
+Skill learning from experience uses records of past runs to produce reusable natural-language skill documents: concise instructions that an agent can follow in later runs.
+Skill evolution then revises these documents using feedback from later runs.
+Trace2Skill (Ni et al., 2026) extracts lessons from individual trajectories in parallel, then combines recurring lessons in stages to form a unified skill.
+In its experiments, the unified skill outperforms a memory baseline that retrieves individual past episodes, while requiring no retrieval at test time.
+SkillOpt (Yang et al., 2026) uses scored rollouts to propose a limited set of additions, deletions, or replacements in a single skill document, and accepts a candidate only when it improves performance on a held-out validation set.
+SkillOpt-Lite (Shen et al., 2026) simplifies this process by exploring stored trajectories, extracting patterns shared across cases, and independently validating each candidate update.
+To our knowledge, this work is the first automatic red-teaming method to evolve a single natural-language tool-orchestration skill through incumbent-relative held-out validation.
+
+3 Method
+
+In this section, we present RedEvoAgent, an experience-driven framework for evolving an attack skill against black-box target agents, as illustrated in Figure 1.
+§3.1 formalizes the problem setting, optimization objective, and data splits; the following subsection describes the attacker agent architecture, including the toolbox, skill document, and attack workflow; §3.3 explains how attack experience is collected and structured; and §3.4 describes validation-guided skill evolution, retaining only candidates that improve validation performance.
+
+3.1 Problem Formulation
+
+We consider jailbreaking a black-box target agent Mtar=(mtar,htar)M_{\mathrm{tar}}=(m_{\mathrm{tar}},h_{\mathrm{tar}}), where mtarm_{\mathrm{tar}} is the target model and htarh_{\mathrm{tar}} is its execution harness, which provides the interaction interface and tool environment.
+To improve the attack effectiveness of a jailbreak prompt against MtarM_{\mathrm{tar}}, we introduce an attacker agent Matt​(s)=(matt,hatt​(s,𝒯))M_{\mathrm{att}}(s)=(m_{\mathrm{att}},h_{\mathrm{att}}(s,\mathcal{T})), which iteratively optimizes the prompt and launches it against the target; mattm_{\mathrm{att}} is the attacker model, and hatt​(s,𝒯)h_{\mathrm{att}}(s,\mathcal{T}) implements this optimize-then-attack loop in a ReAct framework (Yao et al., 2023).
+It integrates an attack toolbox 𝒯={t1,…,tK}\mathcal{T}=\{t_{1},\ldots,t_{K}\} containing jailbreak tools (e.g., GCG, FlipAttack), alongside an attack skill ss that provides attack strategy guidance.
+
+In each ReAct turn, MattM_{\mathrm{att}} performs reasoning based on skill ss and execution history and decides its action: either calling a jailbreak tool tk∈𝒯t_{k}\in\mathcal{T} to optimize the current jailbreak prompt, or executing QueryTarget—submitting the current prompt to MtarM_{\mathrm{tar}} and receiving the target agent’s response as an observation for the next turn.
+Our goal is to learn the attack skill ss that best guides MattM_{\mathrm{att}} to maximize attack effectiveness against MtarM_{\mathrm{tar}}.
+Throughout evolution, MtarM_{\mathrm{tar}}, mattm_{\mathrm{att}}, hatth_{\mathrm{att}}, and 𝒯\mathcal{T} remain frozen; only ss is updated based on attack experience.
+
+For an original jailbreak prompt xx, one complete attack rollout under skill ss produces a trajectory τx​(s)\tau_{x}(s) and a benchmark-native case score rx​(s)r_{x}(s) evaluated by an external judge based on the target agent’s response:
+
+ | 
+(τx​(s),rx​(s))=Rollout⁡(Matt​(s),Mtar,x).\bigl(\tau_{x}(s),r_{x}(s)\bigr)=\operatorname{Rollout}\bigl(M_{\mathrm{att}}(s),M_{\mathrm{tar}},x\bigr). | 
+ | 
+(1) | 
+
+For a set of original jailbreak prompts DD, we measure the skill’s mean effectiveness as
+
+ | 
+JD​(s)=1|D|​∑x∈Drx​(s).J_{D}(s)=\frac{1}{|D|}\sum_{x\in D}r_{x}(s). | 
+ | 
+(2) | 
+
+RedEvoAgent uses the training split DtrD_{\mathrm{tr}} to collect attack experience and generate candidate skills, the validation split DvaD_{\mathrm{va}} to select updates, and the test split DteD_{\mathrm{te}} only to evaluate the final accepted skill.
+
+3.2 Attacker Agent Architecture
+
+The action space 𝒜\mathcal{A} of Matt​(s)M_{\mathrm{att}}(s) comprises tool-call actions from the toolbox 𝒯\mathcal{T} and QueryTarget:
+
+ | 
+𝒜=𝒯∪{QueryTarget}.\mathcal{A}=\mathcal{T}\cup\{\textsc{QueryTarget}\}. | 
+ | 
+(3) | 
+
+Calling a tool tk∈𝒯t_{k}\in\mathcal{T} applies that jailbreak tool to the current prompt and returns an optimized variant.
+QueryTarget then submits this prompt to MtarM_{\mathrm{tar}} and returns the target agent’s response as an observation.
+Each action from 𝒜\mathcal{A} consumes one turn of Matt​(s)M_{\mathrm{att}}(s).
+
+The attack toolbox 𝒯\mathcal{T} integrates seven complementary jailbreak tools:
+gradient-based search (GCG) (Zou et al., 2023), evolutionary search (AutoDAN) (Liu et al., 2024), generator-based suffix generation (AmpleGCG) (Liao & Sun, 2024), predefined template wrapping (Template) (Yu et al., 2023), character flipping disguise (FlipAttack) (Liu et al., 2025b), role-playing reformulation (RolePlay) (Guo et al., 2026),
+and our proposed Prompt Substitution, which uses an auxiliary LLM to rephrase a failed prompt while keeping the same intent.
+
+The attack skill ss is a Markdown document inserted into MattM_{\mathrm{att}}’s system prompt.
+It summarizes measured tool effectiveness and attack orchestration heuristics as compact, reusable guidance.
+
+For a given case xx, the execution flow proceeds as follows:
+Matt​(s)M_{\mathrm{att}}(s) iteratively reasoning based on skill ss and execution history to select actions from 𝒜\mathcal{A}—either optimizing the jailbreak prompt via tk∈𝒯t_{k}\in\mathcal{T} or probing MtarM_{\mathrm{tar}} via QueryTarget.
+This process iterates until a jailbreak succeeds or a maximum number of turns is reached, yielding the rollout trajectory τx​(s)\tau_{x}(s).
+
+3.3 Experience Collection
+
+Experience determines what the skill learns.
+RedEvoAgent constructs two complementary inputs for skill evolution: an empirical attack tool effectiveness profile and annotated trajectories from adaptive attack rollouts.
+
+Figure 2: Trajectory-to-skill case study.
+(a) Each card shows the prompt sent after the labeled transformation; arrows preserve attempt order, and badges report the target outcome.
+The first successful query follows FlipAttack, so Deciding-Tool Attribution credits FlipAttack.
+(b) Together with other training cases, this evidence contributes to an evolved skill that records tool priorities and an actionable attack policy.
+
+Tool-Effectiveness Profile. 
+Each target agent is a pairing Mtar=(mtar,htar)M_{\mathrm{tar}}=(m_{\mathrm{tar}},h_{\mathrm{tar}}) of a target model and an execution harness; different pairings exhibit varying resistance to different jailbreak tools, which means that an attack strategy that works well against one target agent may be suboptimal against another.
+RedEvoAgent therefore measures each tool t∈𝒯t\in\mathcal{T} in isolation on DtrD_{\mathrm{tr}} before skill evolution, with effectiveness defined as:
+
+ | 
+et=1|Dtr|​∑x∈Dtrrx​(t),t∈𝒯.e_{t}=\frac{1}{|D_{\mathrm{tr}}|}\sum_{x\in D_{\mathrm{tr}}}r_{x}(t),\qquad t\in\mathcal{T}. | 
+ | 
+(4) | 
+
+Together, these measurements form the tool-effectiveness profile:
+
+ | 
+𝐞=(et)t∈𝒯,\mathbf{e}=(e_{t})_{t\in\mathcal{T}}, | 
+ | 
+(5) | 
+
+The profile provides prior knowledge for skill evolution as an empirical tool ranking derived from training cases.
+
+Trajectory Collection. 
+RedEvoAgent runs Matt​(s)M_{\mathrm{att}}(s) on DtrD_{\mathrm{tr}} under the current skill ss, starting from an empty skill and repeating this collection only after a candidate is accepted.
+The system logs the complete execution trace for each case—including tool calls, candidate prompts, QueryTarget actions, target agent responses, and case scores—yielding the set of training trajectories:
+
+ | 
+Γ⁡(s)={τx​(s)∣x∈Dtr}.\Gamma(s)=\{\tau_{x}(s)\mid x\in D_{\mathrm{tr}}\}. | 
+ | 
+(6) | 
+
+During skill evolution, these raw trajectories are partitioned into minibatches and passed to a Reflect step that extracts reusable attack strategies.
+
+Deciding-Tool Attribution. 
+While the tool-effectiveness profile reveals which tools are most effective overall, the skill must also extract dynamic orchestration strategies from adaptive attack trajectories.
+However, adaptive attack trajectories can create a self-reinforcing tool-selection bias.
+Because MattM_{\mathrm{att}} has its own tool preferences, certain tools may frequently appear in successful trajectories even when a subsequent tool produces the successful QueryTarget action.
+If skill evolution treats mere co-occurrence frequency as genuine contribution, it erroneously promotes these co-occurring tools in the skill.
+The updated skill then compels MattM_{\mathrm{att}} to select these tools even more frequently, amplifying the bias and ultimately leading to a strategy collapse.
+
+To break this self-reinforcing misattribution, RedEvoAgent introduces Deciding-Tool Attribution, which assigns each successful trajectory to the jailbreak tool immediately preceding its successful QueryTarget action.
+This mechanism serves as a crucial stabilizer for skill evolution rather than a source of new attack capabilities: when tool co-occurrence in raw trajectories is low, its impact may be modest; however, under severe selection bias, it significantly mitigates the risk of strategy collapse.
+
+Figure 2 illustrates how a training trajectory records successive prompt transformations and target outcomes, and how this evidence, together with other training cases, contributes to reusable tool priorities and attack rules in the evolved skill.
+
+3.4 Skill Evolution
+
+Algorithm 1 Experience-driven attack-skill evolution
+
+ 1:
+ 
+ 
+  Input: frozen target agent MtarM_{\mathrm{tar}}, attacker agent Matt​(⋅)M_{\mathrm{att}}(\cdot), toolbox 𝒯\mathcal{T}, train split DtrD_{\mathrm{tr}}, val split DvaD_{\mathrm{va}}, max rounds RR
+
+ 2:
+ 
+ 
+  Output: final accepted attack skill s∗s^{\ast}
+
+ 3:
+ 
+ 
+  s∗←∅,v∗←JDva​(s∗),𝒞←∅s^{\ast}\leftarrow\emptyset,\quad v^{\ast}\leftarrow J_{D_{\mathrm{va}}}(s^{\ast}),\quad\mathcal{C}\leftarrow\emptyset
+
+ 4:
+ 
+ 
+  𝐞←EvaluateTools​(𝒯,Dtr),Γ∗←CollectExperience​(s∗,Dtr)\mathbf{e}\leftarrow\textsc{EvaluateTools}(\mathcal{T},D_{\mathrm{tr}}),\quad\Gamma^{\ast}\leftarrow\textsc{CollectExperience}(s^{\ast},D_{\mathrm{tr}})
+
+ 5:
+ 
+ 
+  for i=1i=1 to RR do
+
+ 6:
+ 
+ 
+   s^i←Synthesize(s∗,Γ∗,𝒞[,𝐞]),v^i←JDva(s^i)\hat{s}_{i}\leftarrow\textsc{Synthesize}(s^{\ast},\Gamma^{\ast},\mathcal{C}[,\mathbf{e}]),\quad\hat{v}_{i}\leftarrow J_{D_{\mathrm{va}}}(\hat{s}_{i})
+
+ 7:
+ 
+ 
+   if v^i>v∗\hat{v}_{i}>v^{\ast} then
+
+ 8:
+ 
+ 
+    s∗←s^i,v∗←v^i,Γ∗←CollectExperience​(s∗,Dtr),𝒞←∅s^{\ast}\leftarrow\hat{s}_{i},\quad v^{\ast}\leftarrow\hat{v}_{i},\quad\Gamma^{\ast}\leftarrow\textsc{CollectExperience}(s^{\ast},D_{\mathrm{tr}}),\quad\mathcal{C}\leftarrow\emptyset
+
+ 9:
+ 
+ 
+   else
+
+ 10:
+ 
+ 
+    𝒞←Append​(𝒞,(s^i,v^i))\mathcal{C}\leftarrow\textsc{Append}(\mathcal{C},(\hat{s}_{i},\hat{v}_{i}))
+
+ 11:
+ 
+ 
+   end if
+
+ 12:
+ 
+ 
+  end for
+
+ 13:
+ 
+ 
+  return s∗s^{\ast}
+
+Validation feedback determines whether a skill update is accepted.
+As described in Section 3.3, RedEvoAgent constructs the tool-effectiveness profile 𝐞\mathbf{e} and the attack trajectories Γ⁡(s)\Gamma(s) with Deciding-Tool Attribution.
+However, synthesizing a new skill from historical trajectories does not guarantee improved subsequent attack performance.
+Attack trajectories contain both genuinely effective attack strategies and failed attempts, redundant steps, and spurious patterns induced by the attacker agent’s own preferences; Reflect and Rewrite may also introduce ineffective or overfit rules.
+For example, RedCodeAgent (Guo et al., 2026) retrieves complete historical trajectories by case similarity; this reuses similar attack experience, but similarity alone does not verify that retrieved trajectories help the current case, and redundant steps can increase context overhead and interfere with the attacker agent’s decisions.
+Therefore, RedEvoAgent does not adopt a rewritten skill directly; each candidate must demonstrate effectiveness on the validation split DvaD_{\mathrm{va}}.
+A candidate replaces the current best skill s∗s^{\ast} only if it strictly outperforms s∗s^{\ast} on DvaD_{\mathrm{va}}.
+
+Candidate Skill Synthesis. 
+The training trajectories Γ⁡(s∗)\Gamma(s^{\ast}) are partitioned into minibatches.
+A single trajectory tends to yield anecdotal fixes, whereas reflecting on the full training set at once mixes heterogeneous, often conflicting lessons into one update that Rewrite cannot absorb in a limited number of edits; a minibatch instead exposes recurring attack procedures (Yang et al., 2026).
+Reflect analyzes these train-split minibatches in parallel and proposes skill revisions; Rewrite then merges the per-batch suggestions and applies only a limited number of edits to the current skill to produce a candidate s^i\hat{s}_{i}.
+
+The tool-effectiveness profile 𝐞\mathbf{e} is injected only in the first round, when s∗=∅s^{\ast}=\emptyset, as prior knowledge for a measured tool ranking.
+We further maintain a rejection context 𝒞\mathcal{C} that records rejected candidates and their validation scores since the last accepted update, so that later revisions can avoid repeating edit directions that already failed on the same evidence.
+
+Validation Ratchet. 
+After candidate s^i\hat{s}_{i} is synthesized, RedEvoAgent runs Matt​(s^i)M_{\mathrm{att}}(\hat{s}_{i}) independently on DvaD_{\mathrm{va}} and computes JDva​(s^i)J_{D_{\mathrm{va}}}(\hat{s}_{i}).
+If JDva​(s^i)J_{D_{\mathrm{va}}}(\hat{s}_{i}) strictly exceeds the validation score of the current best skill, the system accepts s^i\hat{s}_{i} as the new s∗s^{\ast}, re-collects trajectories on DtrD_{\mathrm{tr}} under the new skill, and clears 𝒞\mathcal{C}.
+Otherwise, the system keeps s∗s^{\ast} and the current trajectories, and appends (s^i,JDva​(s^i))(\hat{s}_{i},J_{D_{\mathrm{va}}}(\hat{s}_{i})) to 𝒞\mathcal{C}.
+
+The skill is updated by
+
+ | 
+si∗={s^i,JDva​(s^i)>JDva​(si−1∗),si−1∗,otherwise.s_{i}^{\ast}=\begin{cases}\hat{s}_{i},&J_{D_{\mathrm{va}}}(\hat{s}_{i})>J_{D_{\mathrm{va}}}(s_{i-1}^{\ast}),\\
+s_{i-1}^{\ast},&\text{otherwise}.\end{cases} | 
+ | 
+(7) | 
+
+Reflect and Rewrite read only the tool-effectiveness profile 𝐞\mathbf{e} and attack trajectories built from DtrD_{\mathrm{tr}}; DvaD_{\mathrm{va}} supplies the scalar used for candidate selection, and DteD_{\mathrm{te}} evaluates the final accepted s∗s^{\ast} once.
+
+4 Experiments
+
+4.1 Setup
+
+Datasets and Target Agents. We evaluate RedEvoAgent on Agent Security Bench (ASB) (Zhang et al., 2025a), a benchmark with 400 cases (10 agents ×\times 40 attacker tools) and no prompt-variant augmentation, and AgentHarm (Andriushchenko et al., 2025), which includes 52 base behaviors and four prompt variants (208 cases).
+We split them into train/validation/test as 80/40/280 and 40/20/148, respectively.
+Target models are MiniMax-M2.5 (MiniMax, 2026), DeepSeek-V4-Flash (DeepSeek-AI, 2026), and Qwen3.5-35B (Qwen Team, 2026), each paired with Claude Code (Anthropic, 2026a) or Codex (OpenAI, 2025) as the target execution harness.
+
+Baselines and Metrics. We define No Jailbreak as a single target query using the original benchmark prompt, without attack tool transformation or the attacker loop.
+The six isolated attack tool baselines are GCG (Zou et al., 2023), AmpleGCG (Liao & Sun, 2024), AutoDAN (Liu et al., 2024), Template from GPTFuzzer (Yu et al., 2023), FlipAttack (Liu et al., 2025b), and RolePlay, an LLM-based role-play rewriter adopted from RedCodeAgent (Guo et al., 2026).
+We also compare with RedCodeAgent (Guo et al., 2026), an automatic red-teaming agent, and MAJIC (Qi et al., 2026), an adaptive jailbreaking framework.
+We report ASR and RR on ASB (Zhang et al., 2025a), HarmScore and RR on AgentHarm (Andriushchenko et al., 2025), and average attack-tool calls per case in Table 2 as an efficiency measure.
+ASR is the fraction of cases in which the target executes the attacker goal, using ASB’s native substring check.
+HarmScore follows the AgentHarm grading protocol: the mean of each case’s grader checks, in [0,1][0,1] and reported as a percentage.
+RR is the fraction of cases in which the target explicitly refuses the request.
+
+Implementation Details. We use GPT-4o mini (OpenAI, 2024) as the attacker model and an interaction budget of B=20B{=}20 attacker-agent loop steps. The MiniMax and DeepSeek campaigns use Claude Opus 4.8 (Anthropic, 2026b) for skill evolution; the Qwen campaign uses Codex GPT-5.6 Terra (OpenAI, 2026) at high reasoning effort.
+Skill evolution runs for R=4R{=}4 rounds using SkillOpt’s default minibatch size 8 and edit cap L=6L{=}6 (Yang et al., 2026), with stratified sampling and seed=42\text{seed}{=}42.
+Candidate attack skills are selected by ASR on ASB and HarmScore on AgentHarm.
+GCG and AutoDAN optimize on the white-box surrogate Qwen2.5-7B-Instruct (Yang et al., 2024a); AmpleGCG uses the public Llama-2-7B-chat generator (Touvron et al., 2023; Liao & Sun, 2024).
+The optimized prompts are then submitted to the black-box target agent, which is the standard transfer protocol for these tools when target weights are unavailable (Zou et al., 2023; Liu et al., 2024; Guo et al., 2026).
+
+4.2 Comparison with Attack Baselines
+
+Table 1: RedEvoAgent vs. attack baselines. Cells report ASR/RR (%)
+on ASB and mean HarmScore/RR (%) on AgentHarm. Bold and underline mark the
+best and second-best ASR or HarmScore within each displayed row, respectively.
+
+(a) Claude Code harness | 
+
+Benchmark | 
+Target Model | 
+No Jailbreak | 
+GCG | 
+AmpleGCG | 
+AutoDAN | 
+Template | 
+FlipAttack | 
+RolePlay | 
+RedCodeAgent | 
+MAJIC | 
+RedEvoAgent | 
+
+ASB | 
+MiniMax-M2.5 | 
+72.5/26.1 | 
+63.6/28.9 | 
+61.8/26.4 | 
+38.6/53.2 | 
+40.4/47.1 | 
+91.8/3.9 | 
+68.2/23.2 | 
+76.4/21.4 | 
+74.2/15.1 | 
+93.2/6.1 | 
+
+DeepSeek-V4-Flash | 
+83.9/7.5 | 
+81.1/8.2 | 
+77.9/13.6 | 
+40.7/21.1 | 
+66.4/15.7 | 
+94.3/2.1 | 
+91.8/2.5 | 
+90.7/8.6 | 
+94.6/2.5 | 
+99.3/0.0 | 
+
+Qwen3.5-35B | 
+82.8/15.1 | 
+81.7/16.1 | 
+77.4/16.1 | 
+77.4/16.1 | 
+47.3/20.4 | 
+83.9/15.1 | 
+84.9/15.1 | 
+79.6/11.8 | 
+80.6/12.9 | 
+87.1/12.9 | 
+
+AgentHarm | 
+MiniMax-M2.5 | 
+9.2/85.1 | 
+7.9/81.1 | 
+6.1/84.2 | 
+1.0/89.9 | 
+0.0/88.5 | 
+18.6/28.1 | 
+8.7/80.8 | 
+20.9/75.5 | 
+22.6/34.7 | 
+20.8/58.9 | 
+
+DeepSeek-V4-Flash | 
+47.7/44.3 | 
+37.2/48.3 | 
+34.8/51.7 | 
+10.5/60.7 | 
+28.5/48.3 | 
+67.9/11.7 | 
+43.8/43.3 | 
+37.5/67.6 | 
+45.5/32.4 | 
+74.3/15.9 | 
+
+Qwen3.5-35B | 
+5.1/81.6 | 
+4.1/77.6 | 
+4.5/75.5 | 
+0.0/87.5 | 
+0.0/97.5 | 
+5.7/75.0 | 
+6.7/80.0 | 
+9.6/66.7 | 
+11.1/49.0 | 
+15.1/63.3 | 
+
+(b) Codex harness | 
+
+Benchmark | 
+Target Model | 
+No Jailbreak | 
+GCG | 
+AmpleGCG | 
+AutoDAN | 
+Template | 
+FlipAttack | 
+RolePlay | 
+RedCodeAgent | 
+MAJIC | 
+RedEvoAgent | 
+
+ASB | 
+MiniMax-M2.5 | 
+63.2/33.2 | 
+62.9/28.5 | 
+61.8/29.6 | 
+49.3/42.8 | 
+38.2/40.9 | 
+81.1/7.0 | 
+70.4/26.6 | 
+75.3/23.3 | 
+71.0/22.6 | 
+92.8/6.9 | 
+
+DeepSeek-V4-Flash | 
+97.1/1.8 | 
+92.1/2.6 | 
+91.4/4.0 | 
+91.1/4.7 | 
+90.4/6.6 | 
+94.6/0.4 | 
+93.9/2.6 | 
+98.6/1.4 | 
+98.9/0.7 | 
+100.0/0.0 | 
+
+Qwen3.5-35B | 
+89.2/10.8 | 
+86.0/12.9 | 
+87.1/11.8 | 
+77.4/15.1 | 
+68.8/21.5 | 
+92.5/7.5 | 
+87.1/10.8 | 
+88.2/9.7 | 
+80.6/6.5 | 
+94.6/5.4 | 
+
+AgentHarm | 
+MiniMax-M2.5 | 
+9.4/79.6 | 
+4.8/87.2 | 
+7.8/85.0 | 
+0.0/95.9 | 
+0.1/87.8 | 
+13.3/39.9 | 
+10.8/81.8 | 
+14.1/81.1 | 
+17.5/40.8 | 
+21.7/45.0 | 
+
+DeepSeek-V4-Flash | 
+61.9/25.2 | 
+59.5/28.4 | 
+62.3/25.0 | 
+53.6/22.6 | 
+40.1/44.2 | 
+67.3/9.9 | 
+61.8/26.8 | 
+69.4/32.4 | 
+71.5/25.0 | 
+74.4/18.0 | 
+
+Qwen3.5-35B | 
+14.0/61.2 | 
+3.7/89.8 | 
+6.7/75.5 | 
+0.0/95.0 | 
+0.0/87.5 | 
+10.1/72.5 | 
+5.4/77.5 | 
+16.7/61.2 | 
+20.1/61.2 | 
+20.9/64.6 | 
+
+Table 1 compares RedEvoAgent with baselines at two levels: six isolated attack tools and two automatic red-teaming methods, RedCodeAgent and MAJIC. No Jailbreak provides a reference without attack transformation.
+The results show that different target agents, each formed by pairing a target model with an execution harness, resist different jailbreak tools, and that no single tool succeeds against all of these combinations.
+This uneven resistance indicates that composing jailbreak tools is necessary rather than relying on any one attack method.
+On many rows, GCG, AmpleGCG, and AutoDAN fall below No Jailbreak: the transferred suffix or templated prefix can look more anomalous in a product-level agent harness than the original request, which raises refusal, whereas semantic disguises such as FlipAttack and RolePlay remain stronger.
+Guided by an attack skill, RedEvoAgent matches or exceeds the strongest isolated tool in every setting.
+On AgentHarm with DeepSeek-V4-Flash under Claude Code, it reaches 74.3 HarmScore versus 67.9 for FlipAttack; on ASB with MiniMax-M2.5 under Codex, 92.8 ASR versus 81.1 for FlipAttack.
+Compared with automatic red-teaming methods, RedEvoAgent also improves over RedCodeAgent and MAJIC in most settings, and is slightly behind MAJIC only on MiniMax-M2.5 / AgentHarm under Claude Code (20.8 vs. 22.6).
+On AgentHarm with DeepSeek-V4-Flash under Claude Code, the retrieved trajectories used by RedCodeAgent do not help beyond FlipAttack (37.5 vs. 67.9 HarmScore), indicating that memory retrieved by vector similarity has no positive effect on the attack in this setting.
+In contrast, RedEvoAgent, guided by the attack skill, reaches 74.3 HarmScore.
+
+4.3 Ablation Studies
+
+We conducted ablation studies to assess the contributions of RedEvoAgent’s core components.
+The results show that all proposed components contribute to RedEvoAgent’s performance.
+
+Skill Contribution. This study asks whether encoding the attack strategy as an attack skill document is useful.
+Table 2 compares No Skill, Human Skill, and the evolved attack skill.
+No Skill uses the attacker agent’s default system prompt with no attack skill document, Human Skill inserts generic human-written guidance adapted from RedCodeAgent’s attacker prompt (Guo et al., 2026), and RedEvoAgent inserts the attack skill produced by skill evolution.
+RedEvoAgent achieves the highest attack performance in every evaluated setting.
+It also uses the fewest attack-tool calls per case, indicating lower attack cost and higher efficiency through more directed tool selection.
+
+Table 2: Skill contribution. Cells report ASR / average attack tool calls
+per case on ASB and mean HarmScore / average attack tool calls per case on AgentHarm.
+Bold marks the best ASR or HarmScore.
+
+Benchmark | 
+Harness | 
+ 
+
+Target
+
+Model
+ | 
+ 
+
+No
+
+Skill
+ | 
+ 
+
+Human
+
+Skill
+ | 
+ 
+
+RedEvo
+
+Agent
+ | 
+
+ASB | 
+Claude Code | 
+MiniMax-M2.5 | 
+77.5/3.0 | 
+78.3/3.2 | 
+93.2/1.8 | 
+
+DeepSeek-V4-Flash | 
+96.4/2.6 | 
+96.4/2.7 | 
+99.3/0.9 | 
+
+Codex | 
+MiniMax-M2.5 | 
+80.8/2.7 | 
+81.3/3.0 | 
+92.8/1.8 | 
+
+DeepSeek-V4-Flash | 
+97.9/2.7 | 
+98.9/2.8 | 
+100.0/0.8 | 
+
+AgentHarm | 
+Claude Code | 
+MiniMax-M2.5 | 
+15.4/3.9 | 
+13.1/4.2 | 
+20.8/2.4 | 
+
+DeepSeek-V4-Flash | 
+34.3/3.0 | 
+40.5/3.0 | 
+74.3/2.2 | 
+
+Codex | 
+MiniMax-M2.5 | 
+15.5/3.9 | 
+13.5/4.1 | 
+21.7/2.3 | 
+
+DeepSeek-V4-Flash | 
+59.4/3.2 | 
+59.7/2.9 | 
+74.4/2.6 | 
+
+Experience Components. This study tests the necessity of each experience component used to construct the attack skill.
+Table 4 removes the Tool-Effectiveness Profile, trajectory collection, or Deciding-Tool Attribution, lowering ASR from 93.2% to 76.9%, 85.0%, and 87.5%, respectively.
+Removing the profile is the largest degradation (−16.3-16.3): without it, skill evolution lacks this prior knowledge, and the attacker agent selects tools blindly.
+Removing trajectory collection is milder (−8.2-8.2): skill evolution then cannot observe how jailbreak tools are composed and sequenced.
+Removing Deciding-Tool Attribution is smaller still (−5.7-5.7): the attacker model already favors some tools even when they cannot jailbreak the target, and without this mechanism that bias is written back into the skill, which can lower attack success and increase the number of attack-tool calls.
+
+Table 3: Experience-component ablations on the ASB test set with MiniMax-M2.5
+and the Claude Code harness. Cells are ASR (%).
+✓\checkmark = included, ×\times = removed.
+“–” = not applicable: Deciding-Tool Attribution labels collected
+trajectories, so it is undefined when trajectory collection is off.
+Bold is the full system.
+
+ | 
+
+Table 4: Zero-shot transfer of the MiniMax-M2.5 attack skill evolved with
+GPT-4o mini and Claude Code. Cells are ASR (%) on the ASB test set.
+No Skill is the destination baseline with the default attacker prompt;
+Transferred reuses the source skill without re-evolution.
+Parentheses are gains over No Skill.
+
+ | 
+
+ 
+
+Tool-Effectiveness
+
+Profile
+ | 
+ 
+
+Trajectory
+
+Collection
+ | 
+ 
+
+Deciding-Tool
+
+Attribution
+ | 
+ASR | 
+
+×\times | 
+✓\checkmark | 
+✓\checkmark | 
+76.9 | 
+
+✓\checkmark | 
+×\times | 
+– | 
+85.0 | 
+
+✓\checkmark | 
+✓\checkmark | 
+×\times | 
+87.5 | 
+
+✓\checkmark | 
+✓\checkmark | 
+✓\checkmark | 
+93.2 | 
+
+ | 
+
+(a) Attacker transfer (from GPT-4o mini) | 
+
+Destination | 
+No Skill | 
+Transferred | 
+
+Qwen3-8B | 
+89.7 | 
+95.3 (+5.6) | 
+
+Qwen3-4B | 
+83.3 | 
+90.6 (+7.3) | 
+
+(b) Harness transfer (from Claude Code) | 
+
+Destination | 
+No Skill | 
+Transferred | 
+
+Codex | 
+80.8 | 
+90.5 (+9.7) | 
+
+ | 
+
+Ratchet Depth. This study varies the maximum number of validation-ratchet rounds RR, both as a test of iterative validation and as a hyperparameter study of ratchet depth.
+Figure 3 shows validation and test performance as the maximum number of ratchet rounds RR increases, using at each RR the skill accepted under that budget.
+Accepted rounds raise test scores when there is room above the isolated-tool ceiling: ASB/MiniMax accepts R1 and R3 (test ASR 93.2) and AgentHarm/DeepSeek accepts through R3 (test HarmScore 74.3), rejecting the remaining candidates.
+ASB/DeepSeek is already near saturation after R1, where validation ASR reaches 100 and later rounds stop (test ASR 99.3).
+The exception is AgentHarm/MiniMax: R4 improves validation HarmScore from 18.5 to 28.1 but reduces test HarmScore from 28.8 to 20.8 relative to R2.
+Inspection of the accepted skills suggests a plausible explanation: R4 shifts its guidance from broad one-pass coverage of distinct tools toward repeated sampling of FlipAttack and RolePlay.
+This more concentrated policy is rewarded on the validation split but generalizes less well to the broader test behaviors; a more diverse validation split is one possible remedy.
+
+Figure 3: Validation-ratchet evolution.
+The x-axis is the maximum number of ratchet rounds RR; R=0R{=}0 is the No Skill condition.
+The y-axis is ASR on ASB and HarmScore on AgentHarm, with an independent scale per panel.
+Orange step lines show the validation score of the skill accepted after each round; filled orange circles mark accepted candidate skills, gray crosses show rejected candidate skills at their validation scores, and solid green lines show test scores for accepted skill versions.
+Rejected candidates are not tested, and flat orange segments carry forward the previous accepted skill version.
+Candidate skills are accepted based only on validation scores; test scores are not used by the gate.
+
+4.4 Zero-Shot Transfer
+
+Table 4 tests zero-shot transfer of the MiniMax-M2.5 attack skill evolved with GPT-4o mini and Claude Code, reusing it without re-running skill evolution while fixing the target model and ASB test set and varying either the attacker model (Qwen3-8B and Qwen3-4B (Yang et al., 2025)) or the target execution harness.
+The transferred attack skill improves over the corresponding No Skill baseline in every setting.
+When the target execution harness is switched from Claude Code to Codex, Transferred reaches 90.5 ASR versus 80.8 for No Skill, retaining most of the 92.8 ASR of a skill evolved directly for Codex.
+Thus, the transferred attack skill remains useful beyond the attacker model and target execution harness used to evolve it.
+
+4.5 When Do Skills Help?
+
+An attack skill is most useful when a target agent exhibits uneven resistance across the attack toolbox and different attack tools expose complementary weaknesses across cases.
+In this regime, no isolated attack tool is uniformly effective, so an evolved attack skill can prioritize promising tools and guide the attacker agent to switch or sequence them after failures.
+Conversely, when No Jailbreak or one isolated attack tool already approaches saturation, little room remains.
+Our cross-target results are qualitatively consistent with this pattern: RedEvoAgent gains more where fixed baselines leave room and little where they are already near ceiling.
+
+5 Conclusion
+
+We present RedEvoAgent, an automatic red-teaming agent that learns and evolves an attack skill document from past attack experience.
+Across all experimental settings, RedEvoAgent outperforms the strongest isolated attack tool baseline and existing automatic red-teaming methods.
+In the skill ablation, the evolved skill achieves the highest attack effectiveness with the fewest attack tool calls.
+The skill document explicitly records tool priorities and attack strategies and can be transferred across attacker models and target execution harnesses.
+New attack tools can also be added to the same evaluation and evolution process, although performance depends on the strength and diversity of the toolbox.
+
+References
+
+ 
+Andriushchenko et al. (2025)
+
+Maksym Andriushchenko, Alexandra Souly, Mateusz Dziemian, Derek Duenas, Maxwell
+Lin, Justin Wang, Dan Hendrycks, Andy Zou, Zico Kolter, Matt Fredrikson,
+Yarin Gal, and Xander Davies.
+
+AgentHarm: A benchmark for measuring harmfulness of LLM agents.
+
+In International Conference on Learning Representations, pp. 79185–79220, 2025.
+
+URL
+https://proceedings.iclr.cc/paper_files/paper/2025/hash/c493d23af93118975cdbc32cbe7323f5-Abstract-Conference.html.
+
+ 
+Anthropic (2026a)
+
+Anthropic.
+
+Claude Code Overview.
+
+https://code.claude.com/docs/en/overview, 2026a.
+
+ 
+Anthropic (2026b)
+
+Anthropic.
+
+Introducing Claude Opus 4.8.
+
+https://www.anthropic.com/news/claude-opus-4-8,
+2026b.
+
+ 
+Chao et al. (2025)
+
+Patrick Chao, Alexander Robey, Edgar Dobriban, Hamed Hassani, George J. Pappas,
+and Eric Wong.
+
+Jailbreaking black box large language models in twenty queries.
+
+In 2025 IEEE Conference on Secure and Trustworthy Machine
+Learning (SaTML), pp. 23–42. IEEE, 2025.
+
+doi: 10.1109/SATML64287.2025.00010.
+
+ 
+DeepSeek-AI (2026)
+
+DeepSeek-AI.
+
+DeepSeek-V4: Towards highly efficient million-token context
+intelligence.
+
+arXiv preprint arXiv:2606.19348, 2026.
+
+URL https://arxiv.org/abs/2606.19348.
+
+ 
+Ganguli et al. (2022)
+
+Deep Ganguli, Liane Lovitt, Jackson Kernion, Amanda Askell, Yuntao Bai, Saurav
+Kadavath, Ben Mann, Ethan Perez, Nicholas Schiefer, Kamal Ndousse, Andy
+Jones, Sam Bowman, Anna Chen, Tom Conerly, Nova DasSarma, Dawn Drain, Nelson
+Elhage, Sheer El-Showk, Stanislav Fort, Zac Hatfield-Dodds, Tom Henighan,
+Danny Hernandez, Tristan Hume, Josh Jacobson, Scott Johnston, Shauna Kravec,
+Catherine Olsson, Sam Ringer, Eli Tran-Johnson, Dario Amodei, Tom Brown,
+Nicholas Joseph, Sam McCandlish, Chris Olah, Jared Kaplan, and Jack Clark.
+
+Red teaming language models to reduce harms: Methods, scaling
+behaviors, and lessons learned.
+
+arXiv preprint arXiv:2209.07858, 2022.
+
+URL https://arxiv.org/abs/2209.07858.
+
+ 
+Greshake et al. (2023)
+
+Kai Greshake, Sahar Abdelnabi, Shailesh Mishra, Christoph Endres, Thorsten
+Holz, and Mario Fritz.
+
+Not what you’ve signed up for: Compromising real-world llm-integrated
+applications with indirect prompt injection.
+
+arXiv preprint arXiv:2302.12173, 2023.
+
+ 
+Guo et al. (2026)
+
+Chengquan Guo, Chulin Xie, Yu Yang, Zhaorun Chen, Zinan Lin, Xander Davies,
+Yarin Gal, Dawn Song, and Bo Li.
+
+RedCodeAgent: Automatic red-teaming agent against diverse code
+agents.
+
+In International Conference on Learning Representations, 2026.
+
+URL
+https://openreview.net/pdf/e7bfe29791552fb28e63fdbb4a355263d3610fc2.pdf.
+
+ 
+Liao & Sun (2024)
+
+Zeyi Liao and Huan Sun.
+
+AmpleGCG: Learning a universal and transferable generative model of
+adversarial suffixes for jailbreaking both open and closed LLMs.
+
+In First Conference on Language Modeling, 2024.
+
+URL https://openreview.net/forum?id=UfqzXg95I5.
+
+ 
+Liu et al. (2024)
+
+Xiaogeng Liu, Nan Xu, Muhao Chen, and Chaowei Xiao.
+
+AutoDAN: Generating stealthy jailbreak prompts on aligned large
+language models.
+
+In International Conference on Learning Representations, pp. 56174–56194, 2024.
+
+URL
+https://proceedings.iclr.cc/paper_files/paper/2024/hash/f83cb637e159e789f5576ff6848874de-Abstract-Conference.html.
+
+ 
+Liu et al. (2025a)
+
+Xiaogeng Liu, Peiran Li, G. Edward Suh, Yevgeniy Vorobeychik, Zhuoqing Mao,
+Somesh Jha, Patrick McDaniel, Huan Sun, Bo Li, and Chaowei Xiao.
+
+AutoDAN-Turbo: A lifelong agent for strategy self-exploration to
+jailbreak LLMs.
+
+In International Conference on Learning Representations, pp. 10313–10360, 2025a.
+
+URL
+https://proceedings.iclr.cc/paper_files/paper/2025/hash/1bff3663270ba47f801e917f782d7935-Abstract-Conference.html.
+
+ 
+Liu et al. (2025b)
+
+Yue Liu, Xiaoxin He, Miao Xiong, Jinlan Fu, Shumin Deng, Yingwei Ma, Jiaheng
+Zhang, and Bryan Hooi.
+
+FlipAttack: Jailbreak LLMs via flipping.
+
+In Proceedings of the 42nd International Conference on Machine
+Learning, volume 267 of Proceedings of Machine Learning Research,
+pp. 38623–38663. PMLR, 2025b.
+
+URL https://proceedings.mlr.press/v267/liu25z.html.
+
+ 
+Mazeika et al. (2024)
+
+Mantas Mazeika, Long Phan, Xuwang Yin, Andy Zou, Zifan Wang, Norman Mu, Elham
+Sakhaee, Nathaniel Li, Steven Basart, Bo Li, David Forsyth, and Dan
+Hendrycks.
+
+HarmBench: A standardized evaluation framework for automated red
+teaming and robust refusal.
+
+In Proceedings of the 41st International Conference on Machine
+Learning, volume 235 of Proceedings of Machine Learning Research,
+pp. 35181–35224. PMLR, 2024.
+
+URL https://proceedings.mlr.press/v235/mazeika24a.html.
+
+ 
+Mehrotra et al. (2024)
+
+Anay Mehrotra, Manolis Zampetakis, Paul Kassianik, Blaine Nelson, Hyrum
+Anderson, Yaron Singer, and Amin Karbasi.
+
+Tree of attacks: Jailbreaking black-box LLMs automatically.
+
+In Advances in Neural Information Processing Systems,
+volume 37, pp. 61065–61105. Curran Associates, Inc., 2024.
+
+doi: 10.52202/079017-1952.
+
+URL
+https://proceedings.neurips.cc/paper_files/paper/2024/hash/70702e8cbb4890b4a467b984ae59828a-Abstract-Conference.html.
+
+ 
+MiniMax (2026)
+
+MiniMax.
+
+The MiniMax-M2 series: Mini activations unleashing max real-world
+intelligence.
+
+arXiv preprint arXiv:2605.26494, 2026.
+
+URL https://arxiv.org/abs/2605.26494.
+
+ 
+Ni et al. (2026)
+
+Jingwei Ni, Yihao Liu, Xinpeng Liu, Yutao Sun, Mengyu Zhou, Pengyu Cheng, Dexin
+Wang, Erchao Zhao, Xiaoxi Jiang, and Guanjun Jiang.
+
+Trace2Skill: Distill trajectory-local lessons into transferable
+agent skills.
+
+arXiv preprint arXiv:2603.25158, 2026.
+
+URL https://arxiv.org/abs/2603.25158.
+
+ 
+OpenAI (2024)
+
+OpenAI.
+
+GPT-4o mini: Advancing cost-efficient intelligence.
+
+https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/,
+2024.
+
+ 
+OpenAI (2025)
+
+OpenAI.
+
+Codex.
+
+https://developers.openai.com/codex, 2025.
+
+ 
+OpenAI (2026)
+
+OpenAI.
+
+Codex Models.
+
+https://developers.openai.com/codex/models, 2026.
+
+ 
+Perez et al. (2022)
+
+Ethan Perez, Saffron Huang, Francis Song, Trevor Cai, Roman Ring, John
+Aslanides, Amelia Glaese, Nat McAleese, and Geoffrey Irving.
+
+Red teaming language models with language models.
+
+In Proceedings of the 2022 Conference on Empirical Methods in
+Natural Language Processing, pp. 3419–3448. Association for Computational
+Linguistics, 2022.
+
+doi: 10.18653/v1/2022.emnlp-main.225.
+
+ 
+Qi et al. (2026)
+
+Weiwei Qi, Shuo Shao, Wei Gu, Tianhang Zheng, Puning Zhao, Zhan Qin, and Kui
+Ren.
+
+MAJIC: Markovian adaptive jailbreaking via iterative composition of
+diverse innovative strategies.
+
+In Proceedings of the AAAI Conference on Artificial
+Intelligence, volume 40, pp. 32755–32763, 2026.
+
+doi: 10.1609/aaai.v40i39.40554.
+
+URL https://ojs.aaai.org/index.php/AAAI/article/view/40554.
+
+ 
+Qwen Team (2026)
+
+Qwen Team.
+
+Qwen3.5: Towards native multimodal agents.
+
+https://qwen.ai/blog?id=qwen3.5, 2026.
+
+ 
+Ruan et al. (2024)
+
+Yangjun Ruan, Haonan Dong, Andrew Wang, et al.
+
+Identifying the risks of lm agents with an lm-emulated sandbox.
+
+In International Conference on Learning Representations, 2024.
+
+ 
+Shen et al. (2026)
+
+Yifei Shen, Bo Li, and Xinjie Zhang.
+
+SkillOpt-Lite: Better and faster agent self-evolution via one line
+of vibe.
+
+arXiv preprint arXiv:2607.03451, 2026.
+
+URL https://arxiv.org/abs/2607.03451.
+
+ 
+Shi et al. (2026)
+
+Ge Shi, Jun Yin, Donglin Xie, Fangyi Liu, Yucan Li, and Menglin Liu.
+
+JailbreakOPT: Tool-assisted iterative jailbreak prompt
+optimization.
+
+arXiv preprint arXiv:2606.11425, 2026.
+
+URL https://arxiv.org/abs/2606.11425.
+
+ 
+Touvron et al. (2023)
+
+Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi, Yasmine
+Babaei, Nikolay Bashlykov, Soumya Batra, Prajjwal Bhargava, Shruti Bhosale,
+et al.
+
+Llama 2: Open foundation and fine-tuned chat models.
+
+arXiv preprint arXiv:2307.09288, 2023.
+
+URL https://arxiv.org/abs/2307.09288.
+
+ 
+Wang et al. (2024)
+
+Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang, Zhiyuan
+Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei, and
+Ji-Rong Wen.
+
+A survey on large language model based autonomous agents.
+
+Frontiers of Computer Science, 18(6):186345, 2024.
+
+doi: 10.1007/s11704-024-40231-1.
+
+URL https://doi.org/10.1007/s11704-024-40231-1.
+
+ 
+Wang et al. (2025)
+
+Xi Wang, Songlei Jian, Shasha Li, Xiaopeng Li, Bin Ji, Jun Ma, Jing Wang,
+Xiaodong Liu, Feilong Bao, Jianfeng Zhang, Baosheng Wang, and Jie Yu.
+
+Stand on the shoulders of giants: Building JailExpert from
+previous attack experience.
+
+In Proceedings of the 2025 Conference on Empirical Methods in
+Natural Language Processing, pp. 3826–3843, Suzhou, China, 2025.
+Association for Computational Linguistics.
+
+doi: 10.18653/v1/2025.emnlp-main.190.
+
+URL https://aclanthology.org/2025.emnlp-main.190/.
+
+ 
+Yang et al. (2024a)
+
+An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu,
+Chengyuan Li, Dayiheng Liu, Fei Huang, Haoran Wei, Huan Lin, Jian Yang,
+Jianhong Tu, Jianwei Zhang, Jianxin Yang, Jiaxi Yang, Jingren Zhou, Junyang
+Lin, Kai Dang, Keming Lu, Keqin Bao, Kexin Yang, Le Yu, Mei Li, Mingfeng Xue,
+Pei Zhang, Qin Zhu, Rui Men, Runji Lin, Tianhao Li, Tingyu Xia, Xingzhang
+Ren, Xuancheng Ren, Yang Fan, Yang Su, Yichang Zhang, Yu Wan, Yuqiong Liu,
+Zeyu Cui, Zhenru Zhang, and Zihan Qiu.
+
+Qwen2.5 technical report.
+
+arXiv preprint arXiv:2412.15115, 2024a.
+
+URL https://arxiv.org/abs/2412.15115.
+
+ 
+Yang et al. (2025)
+
+An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen
+Yu, Chang Gao, Chengen Huang, Chenxu Lv, Chujie Zheng, Dayiheng Liu, Fan
+Zhou, Fei Huang, Feng Hu, Hao Ge, Haoran Wei, Huan Lin, Jialong Tang, Jian
+Yang, Jianhong Tu, Jianwei Zhang, Jianxin Yang, Jiaxi Yang, Jing Zhou,
+Jingren Zhou, Junyang Lin, Kai Dang, Keqin Bao, Kexin Yang, Le Yu, Lianghao
+Deng, Mei Li, Mingfeng Xue, Mingze Li, Pei Zhang, Peng Wang, Qin Zhu, Rui
+Men, Ruize Gao, Shixuan Liu, Shuang Luo, Tianhao Li, Tianyi Tang, Wenbiao
+Yin, Xingzhang Ren, Xinyu Wang, Xinyu Zhang, Xuancheng Ren, Yang Fan, Yang
+Su, Yichang Zhang, Yinger Zhang, Yu Wan, Yuqiong Liu, Zekun Wang, Zeyu Cui,
+Zhenru Zhang, Zhipeng Zhou, and Zihan Qiu.
+
+Qwen3 technical report.
+
+arXiv preprint arXiv:2505.09388, 2025.
+
+URL https://arxiv.org/abs/2505.09388.
+
+ 
+Yang et al. (2024b)
+
+John Yang, Carlos E. Jimenez, Alexander Wettig, Kilian Lieret, Shunyu Yao,
+Karthik Narasimhan, and Ofir Press.
+
+SWE-agent: Agent-computer interfaces enable automated software
+engineering.
+
+In Advances in Neural Information Processing Systems,
+volume 37. Curran Associates, Inc., 2024b.
+
+URL
+https://proceedings.neurips.cc/paper_files/paper/2024/hash/5a7c947568c1b1328ccc5230172e1e7c-Abstract-Conference.html.
+
+ 
+Yang et al. (2026)
+
+Yifan Yang, Ziyang Gong, Weiquan Huang, Qihao Yang, Ziwei Zhou, Zisu Huang, Yan
+Li, Xuemei Gao, Qi Dai, Bei Liu, Kai Qiu, Yuqing Yang, Dongdong Chen, Xue
+Yang, and Chong Luo.
+
+SkillOpt: Executive strategy for self-evolving agent skills.
+
+arXiv preprint arXiv:2605.23904, 2026.
+
+URL https://arxiv.org/abs/2605.23904.
+
+ 
+Yao et al. (2023)
+
+Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan,
+and Yuan Cao.
+
+ReAct: Synergizing reasoning and acting in language models.
+
+In International Conference on Learning Representations, 2023.
+
+URL https://openreview.net/forum?id=WE_vluYUL-X.
+
+ 
+Yehudai et al. (2026)
+
+Asaf Yehudai, Lilach Eden, Alan Li, Guy Uziel, Yilun Zhao, Roy Bar-Haim, Arman
+Cohan, and Michal Shmueli-Scheuer.
+
+A survey on evaluation of LLM-based agents.
+
+In Findings of the Association for Computational Linguistics:
+ACL 2026, pp. 26690–26714, San Diego, California, United States, 2026.
+Association for Computational Linguistics.
+
+doi: 10.18653/v1/2026.findings-acl.1330.
+
+URL https://aclanthology.org/2026.findings-acl.1330/.
+
+ 
+Yu et al. (2023)
+
+Jiahao Yu, Xingwei Lin, Zheng Yu, and Xinyu Xing.
+
+GPTFUZZER: Red teaming large language models with auto-generated
+jailbreak prompts.
+
+arXiv preprint arXiv:2309.10253, 2023.
+
+URL https://arxiv.org/abs/2309.10253.
+
+ 
+Zhang et al. (2025a)
+
+Hanrong Zhang, Jingyuan Huang, Kai Mei, Yifei Yao, Zhenting Wang, Chenlu Zhan,
+Hongwei Wang, and Yongfeng Zhang.
+
+Agent security bench (ASB): Formalizing and benchmarking attacks
+and defenses in LLM-based agents.
+
+In International Conference on Learning Representations, pp. 35331–35366, 2025a.
+
+URL
+https://proceedings.iclr.cc/paper_files/paper/2025/hash/5750f91d8fb9d5c02bd8ad2c3b44456b-Abstract-Conference.html.
+
+ 
+Zhang et al. (2026)
+
+Junke Zhang, Jianwei Wang, Sishuo Chen, Yizhang He, Qingshuai Feng, and Zhengyi
+Yang.
+
+Evolving skill-structured attack memory enhances LLM jailbreaking.
+
+arXiv preprint arXiv:2605.29237, 2026.
+
+doi: 10.48550/arXiv.2605.29237.
+
+URL https://arxiv.org/abs/2605.29237.
+
+Under review.
+
+ 
+Zhang et al. (2025b)
+
+Zheng Zhang, Jiarui He, Yuchen Cai, Deheng Ye, Peilin Zhao, Ruili Feng, and Hao
+Wang.
+
+Genesis: Evolving attack strategies for LLM web agent
+red-teaming.
+
+arXiv preprint arXiv:2510.18314, 2025b.
+
+doi: 10.48550/arXiv.2510.18314.
+
+URL https://arxiv.org/abs/2510.18314.
+
+Accepted by IEEE ICME 2026.
+
+ 
+Zhou et al. (2025)
+
+Andy Zhou, Kevin Wu, Francesco Pinto, Zhaorun Chen, Yi Zeng, Yu Yang, Shuang
+Yang, Sanmi Koyejo, James Zou, and Bo Li.
+
+AutoRedTeamer: Autonomous red teaming with lifelong attack
+integration.
+
+In Advances in Neural Information Processing Systems,
+volume 38, pp. 169852–169895. Curran Associates, Inc., 2025.
+
+URL
+https://proceedings.neurips.cc/paper_files/paper/2025/hash/f810a445357d94070669d970a95fc5d8-Abstract-Conference.html.
+
+ 
+Zou et al. (2023)
+
+Andy Zou, Zifan Wang, Nicholas Carlini, Milad Nasr, J. Zico Kolter, and Matt
+Fredrikson.
+
+Universal and transferable adversarial attacks on aligned language
+models.
+
+arXiv preprint arXiv:2307.15043, 2023.
+
+URL https://arxiv.org/abs/2307.15043.
+
+ 
+
+ 
+ Experimental support, please
+ view the build logs
+ for errors. Generated by
+ 
+ 
+ L
+ A
+ T
+ E
+ 
+ xml
+ 
+ .
+ 
+
+ 
+ Instructions for reporting errors
+
+ We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+ support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+ methods listed below:
+
+ 
+ Click the "Report Issue" () button, located in the page header.
+
+ 
+ Tip: You can select the relevant text first, to include it in your report.
+
+ Our team has already identified the following issues. We appreciate your time reviewing and reporting rendering errors we
+ may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+ should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+ all.
+
+ Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a list of packages that need conversion, and welcome developer contributions.
+
+ 
+
+ 
+ 
+ 
+ We gratefully acknowledge support from
+ our major funders,
+ member institutions, ,
+ and all contributors.
+ 
+
+ 
+ About
+ ·
+ Help
+ ·
+ Contact
+ ·
+ Subscribe
+ ·
+ Copyright
+ ·
+ Privacy
+ ·
+ Accessibility
+ ·
+ Operational Status (opens in new tab)
+ 
+ 
+
+ 
+ Major funding support from

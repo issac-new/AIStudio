@@ -1,0 +1,8 @@
+### P2 裸 sqlite3 直连写敏感表应被拒（无 UDF 作证）
+### captured 2026-10-26 10:03:25 runs=1 verdict=PASS
+triggers_before=21
+attack_sql=INSERT INTO task_comments (task_id,author,body,created_at) VALUES ('t_ff757140','gr-probe-p2','T7 vector replay',1792980205);
+rc=1
+stderr: Error: in prepare, no such function: kanban_write_sanctioned
+
+verdict=PASS

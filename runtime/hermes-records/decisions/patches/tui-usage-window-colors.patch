@@ -1,0 +1,393 @@
+--- a/ui-tui/src/components/appLayout.tsx
++++ b/ui-tui/src/components/appLayout.tsx
+@@ -22,12 +22,390 @@ import {
+ } from '../lib/inputMetrics.js'
+ import { PerfPane } from '../lib/perfPane.js'
+ import { composerPromptText } from '../lib/prompt.js'
++import { fmtK } from '../lib/text.js'
+ import { ActiveWidgetSlot, AmbientDock, AmbientRail, useAmbientRailWidth } from '../sdk/host.js'
+ 
+ import { AgentsOverlay } from './agentsOverlay.js'
+ import { GoodVibesHeart, StatusRule, StickyPromptTracker, TranscriptScrollbar } from './appChrome.js'
+ import { FloatingOverlays, PromptZone } from './appOverlays.js'
+ import { Banner, Panel, SessionPanel } from './branding.js'
++
++// Poll the local cc switch proxy (127.0.0.1:15721) for the ACTUAL upstream
++// provider+model. The proxy ignores the requested model name and routes to
++// whichever provider is active in its failover queue, so the declared model
++// (e.g. "glm-5.2") is often wrong. Returns "provider/model" or '' on failure.
++function useCcSwitchModel(): string {
++  const [model, setModel] = useState('')
++
++  useEffect(() => {
++    let cancelled = false
++
++    async function poll() {
++      try {
++        const res = await fetch('http://127.0.0.1:15721/status', {
++          signal: AbortSignal.timeout(2500)
++        })
++
++        if (!res.ok) {return}
++        const j = await res.json() as { current_provider?: string; current_provider_id?: string }
++        const provider = j.current_provider || ''
++        const providerId = j.current_provider_id || ''
++
++        if (!provider || cancelled) {return}
++        // Query the cc-switch SQLite DB for the actual model on the RUNTIME
++        // current provider (from /status), NOT the DB is_current flag. The
++        // is_current flag reflects the user's manual selection and lags
++        // behind proxy failover/circuit-breaker switches — after a failover
++        // the proxy routes to a different provider while is_current still
++        // points at the old one, making the status bar show stale model+usage.
++        const { execSync } = await import('child_process')
++        const dbPath = (process.env.HOME || '') + '/.cc-switch/cc-switch.db'
++        const sqlWhere = providerId && /^[\w-]+$/.test(providerId) ? `p.id='${providerId}'` : `p.is_current=1`
++        const sql = `SELECT json_extract(p.settings_config, '$.env.ANTHROPIC_MODEL') as model FROM providers p WHERE p.app_type='claude' AND ${sqlWhere} LIMIT 1;`
++        const out = execSync(`sqlite3 -json "${dbPath}" "${sql.replace(/\n/g, ' ')}"`, { timeout: 2000 }).toString().trim()
++        const rows = out ? JSON.parse(out) : []
++        const actualModel = rows.length ? rows[0].model : ''
++
++        if (!cancelled) {setModel(`${provider}/${actualModel}`)}
++      } catch {
++        // cc switch not running — leave model empty so ui.info.model is used
++      }
++    }
++
++    poll()
++    const id = setInterval(poll, 5000)
++
++    return () => { cancelled = true; clearInterval(id) }
++  }, [])
++
++  return model
++}
++
++// Cached public IP + weather string (refreshed every 10 min).
++type IpWeatherCache = { text: string; ts: number }
++
++async function fetchIpWeather(): Promise<string> {
++  const now = Date.now()
++
++  if (fetchIpWeather.cache && now - fetchIpWeather.cache.ts < 600000) {return fetchIpWeather.cache.text}
++
++  try {
++    const ipRes = await fetch('https://myip.ipip.net', { signal: AbortSignal.timeout(3000) })
++    const ipText = (await ipRes.text()).trim()
++    const ipAddr = ipText.match(/IP：(\S+)/)?.[1] || '-'
++    let weather = ''
++
++    try {
++      const wRes = await fetch('https://wttr.in/?format=%c+%t', { signal: AbortSignal.timeout(3000) })
++      weather = (await wRes.text()).trim()
++    } catch {
++      // weather optional
++    }
++
++    fetchIpWeather.cache = { text: [ipAddr, weather].filter(Boolean).join(' '), ts: now }
++
++    return fetchIpWeather.cache.text
++  } catch {
++    return '-'
++  }
++}
++
++fetchIpWeather.cache = null as (IpWeatherCache | null)
++
++// Volcengine (huoshan) coding-plan usage via V4 signature.
++async function fetchVolcengineUsage(ak: string, sk: string): Promise<string> {
++  const { createHmac, createHash } = await import('crypto')
++  const host = 'open.volcengineapi.com', service = 'ark', region = 'cn-beijing'
++  const ct = 'application/json; charset=utf-8', sh = 'host;x-date;x-content-sha256;content-type'
++  const now = new Date()
++  const xDate = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
++  const shortDate = xDate.slice(0, 8)
++  const hmac = (k: Buffer | string, d: string) => createHmac('sha256', k).update(d).digest()
++  const sha = (d: Buffer | string) => createHash('sha256').update(d).digest('hex')
++  const pairs = [['Action', 'GetCodingPlanUsage'], ['Region', region], ['Version', '2024-01-01']].sort((a, b) => a[0].localeCompare(b[0]))
++  const cq = pairs.map(([k, v]) => `${k}=${v}`).join('&')
++  const body = Buffer.alloc(0)
++  const xcs = sha(body.toString())
++  const ch = `host:${host}\nx-date:${xDate}\nx-content-sha256:${xcs}\ncontent-type:${ct}\n`
++  const cr = `POST\n/\n${cq}\n${ch}\n${sh}\n${xcs}`
++  const cs = `${shortDate}/${region}/${service}/request`
++  const sts = `HMAC-SHA256\n${xDate}\n${cs}\n${sha(Buffer.from(cr))}`
++  const kDate = hmac(Buffer.from(sk, 'utf-8'), shortDate)
++  const kSig = hmac(hmac(hmac(kDate, region), service), 'request')
++  const sig = hmac(kSig, sts).toString('hex')
++  const auth = `HMAC-SHA256 Credential=${ak}/${cs}, SignedHeaders=${sh}, Signature=${sig}`
++
++  const res = await fetch(`https://${host}/?${cq}`, {
++    method: 'POST',
++    headers: { Host: host, 'X-Date': xDate, 'X-Content-Sha256': xcs, 'Content-Type': ct, Authorization: auth },
++    body, signal: AbortSignal.timeout(5000),
++  })
++
++  if (!res.ok) {throw new Error(`HTTP ${res.status}`)}
++  const j = await res.json() as { Result?: { QuotaUsage?: Array<{ Level?: string; Percent?: number }> } }
++  const tiers: Record<string, string> = {}
++
++  for (const q of (j.Result?.QuotaUsage || [])) {tiers[q.Level || ''] = q.Percent?.toFixed(0) || '?'}
++
++  return `5h ${tiers.session || '-'}% │ 7d ${tiers.weekly || '-'}% │ mo ${tiers.monthly || '-'}%`
++}
++
++// A single colored segment of the cc-extra status line.
++// `t` is the text shown; `k` is a semantic key the renderer maps to a theme
++// color (prov | usage | usagePct | latency | tokens | status | statusOk |
++// statusErr | ip | sep). Numbers get urgency-based colors: high usage → warn,
++// slow latency → warn, non-200 status → error, 200 → good.
++type CcSegment = { t: string; k?: string }
++
++// Structured cc-switch status: `text` for width math, `segs` for colored render.
++type CcExtra = { text: string; segs: CcSegment[] }
++
++// Map a usage percentage to a semantic urgency key.
++function usageKey(pct: number | null): string {
++  if (pct == null) {return 'usage'}
++
++  if (pct >= 80) {return 'usageBad'}
++
++  if (pct >= 50) {return 'usageWarn'}
++
++  return 'usageOk'
++}
++
++// >>> swarm:usage-window-colors >>> per-window usage coloring
++// One usage window chunk (e.g. "5h 62% ↻3h") plus its raw percentage, so each
++// window (5h / 7d / mo) carries its own green/yellow/red urgency color.
++type UsagePiece = { t: string; pct?: number | null }
++
++// Render usage pieces as colored segments: each window keyed by its own
++// percentage (usageKey); separators between windows stay muted. `sep` lets the
++// caller keep its historical separator (' | ' for kimi/bigmodel, ' │ ' for volc).
++function usagePiecesToSegs(pieces: UsagePiece[], sep = ' | '): CcSegment[] {
++  const segs: CcSegment[] = []
++
++  pieces.forEach((p, i) => {
++    if (i > 0) {segs.push({ t: sep, k: 'sep' })}
++
++    segs.push({ t: p.t, k: p.pct == null ? 'usage' : usageKey(p.pct) })
++  })
++
++  return segs
++}
++// <<< swarm:usage-window-colors <<<
++
++// Map a latency in ms to a semantic urgency key.
++function latencyKey(ms: number | null): string {
++  if (ms == null) {return 'latency'}
++
++  if (ms >= 30000) {return 'latencyBad'}
++
++  if (ms >= 10000) {return 'latencyWarn'}
++
++  return 'latencyOk'
++}
++
++// Compact usage + last-request line for the active cc switch provider, merged
++// into the status bar's tail (lowest-priority segment, drops first on narrow
++// terminals). Replaces the old standalone dock-top widget row.
++function useCcSwitchExtra(): CcExtra {
++  const [extra, setExtra] = useState<CcExtra>({ text: '', segs: [] })
++
++  useEffect(() => {
++    let cancelled = false
++
++    async function tick() {
++      try {
++        const { execSync } = await import('child_process')
++        const dbPath = (process.env.HOME || '') + '/.cc-switch/cc-switch.db'
++        const sql = (s: string) => execSync(`sqlite3 -json "${dbPath}" "${s.replace(/\n/g, ' ')}"`, { timeout: 2000 }).toString().trim()
++
++        // Resolve the RUNTIME current provider from the proxy's /status
++        // endpoint. The DB is_current flag lags behind proxy failover: after
++        // a circuit-breaker trip or manual failover, /status reports the new
++        // active provider while is_current still points at the old one. Querying
++        // by is_current would return the stale provider's model, usage, token,
++        // and last-request row — making the status bar freeze on old data.
++        const provRes = await fetch('http://127.0.0.1:15721/status', { signal: AbortSignal.timeout(2500) }).then(r => r.ok ? r.json() as { current_provider?: string; current_provider_id?: string } : null).catch(() => null)
++        const provId = provRes?.current_provider_id || ''
++        // Fallback to is_current if the proxy is unreachable or the id is absent.
++        const whereClause = provId && /^[\w-]+$/.test(provId) ? `p.id='${provId}'` : `p.is_current=1`
++
++        const rows = JSON.parse(sql(`SELECT json_extract(p.settings_config,'$.env.ANTHROPIC_AUTH_TOKEN') as token, json_extract(p.settings_config,'$.env.ANTHROPIC_BASE_URL') as baseUrl, p.name, p.id, p.meta FROM providers p WHERE p.app_type='claude' AND ${whereClause} LIMIT 1;`) || '[]')
++
++        if (!rows.length) {return}
++        const r = rows[0]
++        const name = r.name || ''
++        const baseUrl = (r.baseUrl || '').toLowerCase()
++        const token = r.token || ''
++        let meta: any = {}
++
++        try {
++          meta = JSON.parse(r.meta || '{}')
++        } catch {
++          meta = {}
++        }
++
++        // public IP + weather (cached 10 min via fetchIpWeather)
++        const ipw = await fetchIpWeather()
++
++        // usage by provider type — each window (5h/7d/mo) is a separate
++        // piece carrying its own percentage so it gets its own color
++        // (>>> swarm:usage-window-colors <<<)
++        let usageText = ''
++        let usageSegs: CcSegment[] = []
++        let usagePct: number | null = null
++
++        if (baseUrl.includes('api.kimi.com')) {
++          const u = await (await fetch('https://api.kimi.com/coding/v1/usages', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { usage?: { limit?: string; remaining?: string }; limits?: Array<{ detail?: { limit?: number; used?: number } }> }
++          const d7 = ((u.limits || [])[0] || {}).detail || {}
++          const d7Pct = u.usage?.limit !== '?' && u.usage?.remaining !== '?' ? Number(((1 - Number(u.usage?.remaining) / Number(u.usage?.limit)) * 100).toFixed(0)) : null
++          const h5Pct = d7.limit && d7.used ? Number((Number(d7.used) / Number(d7.limit) * 100).toFixed(0)) : null
++          usagePct = d7Pct ?? h5Pct
++          usageText = `5h ${h5Pct ?? '?'}% | 7d ${d7Pct ?? '?'}%`
++          usageSegs = usagePiecesToSegs([
++            { t: `5h ${h5Pct ?? '?'}%`, pct: h5Pct },
++            { t: `7d ${d7Pct ?? '?'}%`, pct: d7Pct },
++          ])
++        } else if (baseUrl.includes('open.bigmodel.cn')) {
++          const u = await (await fetch('https://open.bigmodel.cn/api/monitor/usage/quota/limit', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { data?: { limits?: Array<{ type?: string; unit?: number; percentage?: number; nextResetTime?: number }> } }
++          let h5 = '?', d7 = '?', h5Reset = '', d7Reset = ''
++
++          // Reset countdown: API returns nextResetTime (epoch ms). Show as
++          // ↻Xh Ym (5h window) / ↻Xd Yh (7d window) — user-requested 09-05.
++          const fmtReset = (ms?: number): string => {
++            if (!ms) {return ''}
++            const left = ms - Date.now()
++
++            if (left <= 0) {return '↻now'}
++            const m = Math.floor(left / 60000)
++
++            if (m < 60) {return `↻${m}m`}
++            const h = Math.floor(m / 60)
++
++            if (h < 48) {return `↻${h}h${m % 60 ? (m % 60) + 'm' : ''}`}
++
++            return `↻${Math.floor(h / 24)}d${h % 24}h`
++          }
++
++          for (const l of (u.data?.limits || [])) {
++            if (l.type === 'TOKENS_LIMIT') {
++              if (l.unit === 3) {
++                h5 = `${l.percentage}%`
++                h5Reset = fmtReset(l.nextResetTime)
++              }
++
++              if (l.unit === 6) {
++                d7 = `${l.percentage}%`
++                d7Reset = fmtReset(l.nextResetTime)
++              }
++            }
++          }
++
++          usageText = `5h ${h5}${h5Reset ? ' ' + h5Reset : ''} | 7d ${d7}${d7Reset ? ' ' + d7Reset : ''}`
++
++          // percentage strings like "62%" → numeric pct for color mapping
++          const pctOf = (s: string): number | null => {
++            const m = s.match(/^(\d+(?:\.\d+)?)%$/)
++
++            return m ? Number(m[1]) : null
++          }
++
++          usageSegs = usagePiecesToSegs([
++            { t: `5h ${h5}${h5Reset ? ' ' + h5Reset : ''}`, pct: pctOf(h5) },
++            { t: `7d ${d7}${d7Reset ? ' ' + d7Reset : ''}`, pct: pctOf(d7) },
++          ])
++        } else if (baseUrl.includes('api.deepseek.com')) {
++          const u = await (await fetch('https://api.deepseek.com/user/balance', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(3000) })).json() as { balance_infos?: Array<{ total_balance?: string }> }
++          const info = (u.balance_infos || [])[0] || {}
++          usageText = `${info.total_balance || '-'} CNY`
++        } else if (name === 'huoshan' || baseUrl.includes('volcengine')) {
++          const us = meta?.usage_script
++
++          if (us?.accessKeyId && us?.secretAccessKey) {
++            usageText = await fetchVolcengineUsage(us.accessKeyId, us.secretAccessKey)
++
++            // fetchVolcengineUsage returns "5h X% │ 7d Y% │ mo Z%" — re-split
++            // into per-window pieces so each level colors independently.
++            const vm: UsagePiece[] = []
++
++            for (const m of usageText.matchAll(/(5h|7d|mo) (\S+)(?: (\u21bb\S+))?/g)) {
++              const pm = m[2].match(/^(\d+(?:\.\d+)?)%$/)
++
++              vm.push({ t: `${m[1]} ${m[2]}${m[3] ? ' ' + m[3] : ''}`, pct: pm ? Number(pm[1]) : null })
++            }
++
++            if (vm.length) {usageSegs = usagePiecesToSegs(vm, ' \u2502 ')}
++          } else {
++            const reqs = JSON.parse(sql(`SELECT COUNT(*) as n FROM proxy_request_logs WHERE provider_id='${r.id}' AND created_at >= strftime('%s','now','-1 hour');`) || '[]')
++            const n = reqs.length ? Number(reqs[0].n) : 0
++            usagePct = Number((n / 500 * 100).toFixed(0))
++            usageText = `${usagePct}%`
++          }
++        } else {
++          // rate-limit proxy for weekly-z.ai / opus5 etc.
++          const reqs = JSON.parse(sql(`SELECT COUNT(*) as n FROM proxy_request_logs WHERE provider_id='${r.id}' AND created_at >= strftime('%s','now','-1 hour');`) || '[]')
++          const n = reqs.length ? Number(reqs[0].n) : 0
++          usagePct = Number((n / 500 * 100).toFixed(0))
++          usageText = `${usagePct}%`
++        }
++
++        // last request — tokens, latency, status, time (compact: ms→s, drop model)
++        const lr = JSON.parse(sql(`SELECT latency_ms, first_token_ms, input_tokens, output_tokens, status_code, error_message, datetime(created_at,'unixepoch','localtime') as ts FROM proxy_request_logs ORDER BY created_at DESC LIMIT 1;`) || '[]')
++        const lr0 = lr.length ? lr[0] : null
++        const latMs = lr0 ? lr0.latency_ms : null
++        const fmtMs = (ms: number | null) => ms == null ? '' : ms >= 1000 ? `${(ms / 1000).toFixed(0)}s` : `${ms}ms`
++        const lastL = fmtMs(latMs)
++        const lastFT = lr0 && lr0.first_token_ms != null ? `ttft${fmtMs(lr0.first_token_ms)}` : ''
++        const lastTok = lr0 ? `${fmtK(lr0.input_tokens || 0)}\u2192${fmtK(lr0.output_tokens || 0)}` : ''
++        const isOk = lr0 ? lr0.status_code === 200 : false
++        const lastSt = lr0 ? (isOk ? '\u2713' : `${lr0.status_code}\u2717`) : '-'
++        const lastErr = lr0 && lr0.error_message ? lr0.error_message.slice(0, 12) : ''
++        const lastT = lr0 ? (lr0.ts?.split(' ')[1]?.slice(0, 5) || '-') : '-'
++
++        // provider from the /status proxy (model+effort already shown in the
++        // pinned modelText segment by useCcSwitchModel, so no duplication here)
++        const prov = provRes?.current_provider || r.name || '-'
++
++        // Build compact colored segments: prov │ usage │ tok lat ttft status time │ ip
++        const latText = `${lastL}${lastFT ? ' ' + lastFT : ''}`.trim()
++        const stText = `${lastSt}${lastErr ? ' ' + lastErr : ''}`.trim()
++
++        const segs: CcSegment[] = [
++          { t: prov, k: 'prov' },
++          { t: ' \u2502 ', k: 'sep' },
++          // Per-window colored usage segments when available (>>> swarm:usage-window-colors <<<);
++          // fallback: whole string keyed by the single usagePct.
++          ...(usageSegs.length ? usageSegs : [{ t: usageText, k: usageKey(usagePct) }]),
++          { t: ' \u2502 ', k: 'sep' },
++          { t: lastTok, k: 'tokens' },
++          { t: ' ', k: 'sep' },
++          { t: latText, k: latencyKey(latMs) },
++          { t: ' ', k: 'sep' },
++          { t: stText, k: isOk ? 'statusOk' : 'statusErr' },
++          { t: ' ', k: 'sep' },
++          { t: lastT, k: 'muted' },
++          { t: ' \u2502 ', k: 'sep' },
++          { t: ipw, k: 'ip' },
++        ]
++
++        const text = segs.map(s => s.t).join('')
++
++        if (!cancelled) {
++          setExtra({ text, segs })
++        }
++      } catch {
++        // silent — leave previous line
++      }
++    }
++
++    tick()
++    const id = setInterval(tick, 5000)
++
++    return () => { cancelled = true; clearInterval(id) }
++  }, [])
++
++  return extra
++}
++
+ import { FpsOverlay } from './fpsOverlay.js'
+ import { HelpHint } from './helpHint.js'
+ import { Journey } from './journey.js'

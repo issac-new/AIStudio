@@ -38,7 +38,7 @@ import time
 from pathlib import Path
 
 HOME = Path.home()
-BOARDS = ["swarm", "hack", "product", "ops", "[已移除]", "platform", "[已移除]", "aiteam", "pay", "data"]
+BOARDS = ["swarm", "hack", "product", "ops", "eda", "platform", "[已移除]", "aiteam", "pay", "data"]
 FAIL_OUTCOMES = {"crashed", "timed_out", "failed", "gave_up", "abandoned"}
 
 # ── 指纹库：错误模式 → FM 模式 + 根因候选 + 对策 ──────────────────────────

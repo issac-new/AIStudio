@@ -88,3 +88,4 @@
 - **hindsight**：沉淀落点不变（`hindsight_retain` + redact 纪律），本协议只管「要不要触发」，不动写入格式。
 - **自愈机制**（Hermes 侧补充判据，非上游转译）：toolError 的 ≤2 轮重试属正常自愈；累计 ≥3 次才升级为摩擦信号——两者不冲突，一个是「当次怎么救」，一个是「事后学什么」。
 - **失败案例库 / memory**：本协议判定为「值得沉淀」的任务，其踩坑经验按 routine-self-reflect 既有格式入库；本协议自身不新建存储。
+- **learning-lifecycle（下游消费者）**：本协议只管「要不要触发」；入库后的经验何时转正/归档/降权，由 [learning-lifecycle.md](learning-lifecycle.md) 接管（friction 触发候选经验入库，learning-lifecycle 管经验转正）。

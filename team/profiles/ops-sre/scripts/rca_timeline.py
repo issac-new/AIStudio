@@ -39,7 +39,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 
-DEFAULT_REPO = "/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace"
+DEFAULT_REPO = "/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace"
 
 
 def default_kanban_dbs():

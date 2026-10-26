@@ -11,7 +11,7 @@ import os, re, sqlite3, sys, glob, yaml
 from pathlib import Path
 
 HOME = Path.home()
-BOARDS = ["swarm", "hack", "product", "ops", "[已移除]", "platform", "[已移除]"]
+BOARDS = ["swarm", "hack", "product", "ops", "eda", "platform", "[已移除]"]
 PROFILES = HOME / ".hermes" / "profiles"
 
 def profile_clearances(prof: str) -> set:

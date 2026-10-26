@@ -1,0 +1,7 @@
+### P1 delegate 子上下文经 hermes CLI 写越权应被拒
+### captured 2026-10-26 10:03:25 runs=1 verdict=PASS
+command: /Users/YOURNAME/.local/bin/hermes kanban complete t_ff757140 --result guardrail-regress P1 probe (should be DENIED)
+rc=1
+stderr: kanban: delegate_task child contexts cannot mutate Kanban tasks via the CLI
+
+verdict=PASS

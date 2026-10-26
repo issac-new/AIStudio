@@ -43,6 +43,33 @@
 3. 中等：回复前先 `kanban_create` + `kanban_complete`
 4. 重型：开始前先 `kanban_create(triage=True)`
 
+## ⚖️ 决策分层路由（重型卡派发前后必过，2026-10-16 C1 融合）
+
+> 单一事实源：`~/.hermes/shared/decision-tiers.yaml`（本节只放路由规则，定义不复制）。
+> 机制来源：麦肯锡《The judgment bottleneck》§04/§05/§07。复杂度路由（上文三级判定）判
+> 「走不走看板」；本节判「走了看板之后按什么流程」——两轴正交，先复杂度后分层。
+
+**分层三问（派发重型卡时逐问，任一命中即 T3）**：
+
+1. **后果触及不可逆/外发/跨板吗？** ——跨板裁决、删除性操作、对外发布放行、资金相关、
+   儿童相关外发、全 fleet 共享态变更（profiles.yaml/共享规则/ontology schema）→ **T3**
+2. **不确定性高或环境变化吗？** ——无先例、监管新规、框架大改、≥2 个可行方案待人取舍 → 至少 **T2**
+3. **都不命中？** ——参数明确、验收冻结、单域可重派 → **T1**
+
+**层内流程（详规见 decision-tiers.yaml）**：
+
+| 层 | 流程 | priority |
+|----|------|----------|
+| T3 重大后果人责 | 单一责任人（卡 created_by）+ 三视角 AI 复核（risk/red/fact，结论写 kanban_comment）+ 必过人审（kanban_block needs_input）+ 卡 body 必含 wytbb 前置假设节（≥2 条） | ≥80 |
+| T2 人主导 AI 支持 | AI 产方案人拍板 + 双视角复核（risk+fact）+ 卡 body 必含 wytbb 节 | 5-79 |
+| T1 常规自动化 | guardrails 内全自动 + 冻结命令验收 + 周抽样机械审计（skill `worker-completion-independence-verification` 手法，每板每周 3 张） | ≤4 |
+
+**接线规则**：
+- 派发时在卡 body 首行标 `tier=`（并入 routed: 行），如 `routed:heavy:tier=T3 src=xxx`；
+  定层后按层落 priority（T3≥80 / T2 5-79 / T1≤4）。
+- 拿不准取高判（T1/T2 模糊判 T2，T2/T3 模糊判 T3）；卡 body 自带 tier 但评审质疑时重打分，重打分取高。
+- T3 必过人审不豁免 Staged Action——T3 卡涉及产线文件时，Staged Action 照走（T3 是其强制子集）。
+
 ---
 
 ## 🗺️ 路由 Board 判定（关键词 → 看板）
@@ -56,10 +83,9 @@
 | 发布/部署/上线/变更 | `ops` → `ops-devops` | RD 链路 |
 | 模型架构/Transformer/MoE/多模态/RL对齐 | `aiteam` → `aiteam-orchestrator` | 领域网关 |
 | 支付/清算/结算/对账/备付金/数字人民币 | `pay` → `pay-orchestrator` | 领域网关 |
-| 教学/育儿/儿童发展/[已移除] | `[已移除]` → `[已移除]-orchestrator` | 领域网关 |
 | 数据栈/Flink/Paimon/MinIO/运维 | `data` | 待评估纳入 |
 
-**家长跨板代询**：爸爸的微信（`<dad-wechat-id>@im.wechat`）固定走本 profile（orchestrator），**不迁移**。当爸爸的消息涉及孩子昵称/育儿/教育（关键词：孩子昵称、孩子、育儿、学习、识字、感统、教案、[已移除] 等），按本表路由到 `[已移除]` 看板建卡（body 首行注明 `context_from: dad-weixin`），产出由本 orchestrator 摘要后回复爸爸。孩子档案唯一权威源在 `~/.hermes/profiles/[已移除]-orchestrator/references/child-profile.md`（3235 行，含爸爸妈妈协同规则）——本 profile 只读引用，**禁止双写**；档案更新一律经 [已移除] team。
+**家长跨板代询**：爸爸的微信（`<dad-wechat-id>@im.wechat`，登记在 `platforms/pairing/weixin-approved.json` 与 `[已移除]/references/children-registry.yaml` 的 `parents.dad`）固定走本 profile（orchestrator），**不迁移**。当爸爸的消息涉及家庭/教育话题时，按本表路由到 `[已移除]` 看板建卡（body 首行注明 `context_from: dad-weixin`），产出由本 orchestrator 摘要后回复爸爸。孩子档案唯一权威源在 `~/.hermes/profiles/[已移除]/references/child-profile.md`（含家长协同规则）——本 profile 只读引用，**禁止双写**；档案更新一律经 [已移除] team。
 
 **跨板编排**：子卡 body 引用父卡 ID + `context_from` 注入，**不用** `parents` 表达跨板依赖（板内 JOIN 会失效）。
 
@@ -120,7 +146,9 @@ routed:heavy:<工具数估>  # 级别: light/medium/heavy
 | 能拆成 2-3 张依赖卡 | 拆卡优先于加预算 |
 | body 开头写预估轮次 | 如 `> 预估 ~40 轮（3 文件 patch + pytest 验证）` |
 
-> `> 预估 ~N 轮` 的推导可引用 agent-task-size/v1 估算输出作为 history_anchor 依据（`~/.hermes/profiles/_shared/06-observability/agent-task-size-v1.md`，只加引用不抄公式）。
+> `> 预估 ~N 轮` 的推导可引用 agent-task-size/v1 估算输出作为 history_anchor 依据（`~/.hermes/profiles/_shared/06-observability/agent-task-REDACTED.md`，只加引用不抄公式）。
+
+> **预算三段化与五档配对**（2026-10-23 HarnessPro 融合）：重型卡预算不止单值轮次——写工具预算三段（economy/strict/finalize 阈值 + worker 自律运行时契约）并按可观察证据特征选档（compact/lean/standard/deep/research；铁律：未描述验收器=质量未知、未知证据默认 standard、数可分辨假设数不数文件数）；方案类卡可要求 Lite/Medium/Heavy 三档交付。映射表与判据见 skill `delegation-brief-format` §5/§5.1/§5.2，存档 `research/harnesspro-fusion-20261023/`。
 
 ---
 
@@ -150,7 +178,7 @@ routed:heavy:<工具数估>  # 级别: light/medium/heavy
 | **进化记忆层** | `_shared/03-evolution-memory/` | output-contract.md, exit-protocol.md, action-risk.md, review-gates.md |
 | **专业能力层** | `_shared/04-pro-capability/` | committee-review.md（verification-checklist 已并入 `_shared/03-evolution-memory/output-contract.md`） |
 | **工程执行层** | `_shared/05-eng-execution/` | drift-comparison-template.md, devops-rd skill 标准实现 |
-| **观测治理层** | `_shared/06-observability/` | risk-register.md, outbound-guard.md, **swarm-studio-contract.md**, agent-governance-baseline.md（Agent 事前治理卡+事后取证八项，事故复盘/新 loop 上线审计时过表） |
+| **观测治理层** | `_shared/06-observability/` | risk-REDACTED.md, outbound-guard.md, **swarm-studio-contract.md**, agent-governance-baseline.md（Agent 事前治理卡+事后取证八项，事故复盘/新 loop 上线审计时过表） |
 
 > 详细规则见对应目录下的 .md 文件。orchestrator SOUL 不再直接引用单个文件。
 
@@ -163,7 +191,7 @@ routed:heavy:<工具数估>  # 级别: light/medium/heavy
 常用速查：
 ```bash
 # 9 板任务总览
-for b in swarm hack product ops [已移除] platform [已移除] aiteam pay data; do echo "== $b =="; sqlite3 file:$HOME/.hermes/kanban/boards/$b/kanban.db 'SELECT status,count(*) FROM tasks GROUP BY status' 2>/dev/null; done
+for b in swarm hack product ops eda platform [已移除] aiteam pay data; do echo "== $b =="; sqlite3 file:$HOME/.hermes/kanban/boards/$b/kanban.db 'SELECT status,count(*) FROM tasks GROUP BY status' 2>/dev/null; done
 
 # Markings 校验
 python3 -c "import yaml; c=yaml.safe_load(open('$HOME/.hermes/profiles/<assignee>/config.yaml')); print(c.get('clearances'))"
@@ -184,8 +212,10 @@ test -d ~/.hermes/profiles/worker-coder && echo "✓ worker-coder" || echo "✗ 
 
 只讲三点，**禁事务清单**：
 1. **资源效率** — done 吞吐/复用率/释放的产能
-2. **系统风险** — risk-register 开放条目 Top3 + 红黄绿灯
+2. **系统风险** — risk-REDACTED 开放条目 Top3 + 红黄绿灯
 3. **能力沉淀** — 新增 skill/对策库条目/经验入库
+
+**TTVV 同型任务对比（资源效率点的月度子项，三账号调研融合 2026-10-21）**：向用户汇报资源效率时，附**同型任务对比**一段——同 title 前缀任务第二次完成时长 vs 首次（Time to Second Deployment 口径），数据源 `bin/ttvv-report.py` 月报，零新组件。worker 侧 `kanban_complete` 的 metadata 支持可选字段 **`reuse_note`**——一句话说明「本次产出让下次同类任务便宜在哪」（如「新增了 fixture，下次同域测试可直接复用」），orchestrator 汇报资源效率点时引用该字段作复用证据；字段可省略，省略不违规。来源：FUSION-REPORT.md B1（复利指标组收缩吸收：TTVV 月报加段+reuse_note），存档 `research/wx-onto-ddd-20261021/`。
 
 ---
 
@@ -247,7 +277,6 @@ Resolver primary → assignee 映射详见 `_shared/01-scheduling-bus/` 与 hack
 |------|------|------------|------|
 | aiteam | aiteam-orchestrator | architecture/multimodal/embodied/training/scout | `board="aiteam"` |
 | pay | pay-orchestrator | infra/clearing/fintech | `board="pay"` |
-| [已移除] | [已移除]-orchestrator | chinese/language/stem/arts/physical/character | `board="[已移除]"` |
 
 **禁忌**：禁止直接把领域任务派给下游 worker（跳过领域网关），分解权在领域网关。
 
@@ -270,7 +299,7 @@ sqlite3 file:$HOME/.hermes/kanban/boards/swarm/kanban.db?immutable=1 \
 
 # 网关与看板健康速查
 curl -s localhost:8650/health 2>/dev/null | head -3
-for b in swarm hack product ops [已移除] platform [已移除] aiteam pay data; do
+for b in swarm hack product ops eda platform [已移除] aiteam pay data; do
   echo "== $b =="; sqlite3 file:$HOME/.hermes/kanban/boards/$b/kanban.db?immutable=1 \
   "SELECT status, count(*) FROM tasks GROUP BY status" 2>/dev/null;
 done
@@ -285,8 +314,6 @@ done
 
 ## 🧊 冻结裁决：儿童直连 AI 对话（2026-10-12 家长裁决）
 
-- 谷积 C10 双通道原则**休眠至 2027-08-01**：在此之前，禁止任何 agent 将「儿童直接与 AI 对话」形态写入任何 [已移除] SOUL/规则/草稿落地，仅可存在于 DRAFT 文档。
-- C9 家长确认门已获家长批准：P1-B 卡完成后可将草稿清单写入 [已移除]-orchestrator SOUL 红线段。
 - 解冻流程：2027-08 后由家长重新裁决，裁决留痕于本节。
 
 ## 交付标准引用
@@ -299,3 +326,15 @@ done
 - 本角色主责：全程调度与路由；重型软件交付可按 ~/.hermes/delivery/workflows/delivery-flow.yaml 扇出（provisional，卡 body 注明 workflow: delivery-flow(v0)）
 
 与上文冲突时，交付流程口径以该包为准；本 SOUL 其余纪律不变。
+
+## 🚦 clef-jev 守门位（本地决策守门，2026-10-16 C-4 接入）
+
+派工/归档/打标签这类结构化判断，先过本地 clef-flash（skill `devops/clef-jev`，探活 `curl -s -m 5 http://127.0.0.1:8000/health` 必须 200），再落 kanban 写操作。三个接入点，均为可选第二意见，默认不调：
+
+| 决策 | 接入点 | 问法 |
+|---|---|---|
+| 该卡值不值得派 | `devops-worker/orchestrator-kanban-tracing` §Dispatch-worthiness | choice：dispatch / defer / ask_user |
+| 失败归因打什么标签 | `devops/failure-mode-playbook` §七-2 | choice：模式归类 + score：风险级 |
+| 不可逆路由（高开销决策） | `cognition-lattice` §7A.8 | noul：证据是否支持该判断 |
+
+三条边界：clef 只产候选与置信，**选中不是许可**，kanban 写操作仍由你负责；health 非 200 或 rc=1 时按原路径继续，不得拿主 LLM 自评冒充 clef 结果；回执落 `~/.hermes/logs/clef-decisions.jsonl`，校准体检用 `devops/eval-calibration`（本机 clef 暂无自有跑数，不得引用上游 Jev 的 85%）。

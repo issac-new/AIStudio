@@ -39,7 +39,6 @@
 - [ ] 不含完整 prompt 原文（只引用必要片段）
 - [ ] 不含 session_id / 绝对路径 / 用户 home 目录细节
 - [ ] 不含 secrets / tokens / API keys（即使是 mask 后的也避免）
-- [ ] [已移除] 域额外检查：不含孩子真实姓名/学校/地址等 PII
 
 **打回信号**：finding 里贴了 `~/.hermes/profiles/xxx/config.yaml` 的完整路径 + 内容；包含对话原文大段引用。
 
@@ -550,7 +549,7 @@ owner: "orchestrator"
 | 源字段 | Hermes 最小子集 | 说明 |
 |---|---|---|
 | 9 类资产（memory/repository-knowledge/rule/skill/hook/gate/agent/workflow/eval） | ❌ 不采用 | 初期过度设计 |
-| 6 类 cause（harness/repository/model-capability/requirements/external-system/task-complexity） | ❌ 不采用 | 初期过度设计 |
+| 6 类 cause（harness/repository/model-capability/requirements/external-system/task-REDACTED） | ❌ 不采用 | 初期过度设计 |
 | 5 态结果 | ✅ 采用 | pending/improving/unchanged/regressing/outcome-supported |
 | 隐私校验（RAW_FIELD_RE / 绝对路径 / session id 拒绝） | ✅ 采用 | 见 `_shared/02-org-orchestration/mandatory-privacy.md` |
 | intervention / outcome / evidenceRef / owner | ✅ 采用 | 最小 4 字段 |
@@ -614,6 +613,101 @@ worker 在自己任务卡上 `kanban_comment`，格式：
 - 验收门标准：本文件第二章证据强度四分级（L4 直接证明才可放行）
 - 三行控制头：`_shared/03-evolution-memory/output-contract.md` §4.5（申诉时引用原控制头作为争议锚点）
 - 健康度统计：`ops-eval/SOUL.md` 第七维 Agent 健康度
+
+---
+
+## 六、只读委派零改动门（teamai G3 转译）
+
+> 来源：teamai v0.27 workflow 引擎「prompt 步骤只读校验」（docs/guide/workflow.md:124 + workflow-advanced.md:64）。
+> 机制：prompt 步骤前后快照整个 worktree，工具改了仓库即 fail 并保留现场。
+> 本节把它从蓝军对抗审查四维之【越界】（open-source-skill-fusion-v2 SKILL.md:129）的特例，升级为所有研究/审查类委派的通用 review-gate。
+
+### 6.1 适用判据（哪些卡是「只读委派」）
+
+同时满足以下两条的卡，收尾必须过零改动门：
+
+1. **产出契约不含生产文件写入**：交付物是报告/审查记录/调研结论/验证回执类（kanban_comment + 落盘 md 报告），不含源码、配置、manifest 修改。
+2. **assignee 属于只读角色类**：调研/审查/验收/蓝军核查类 profile（如 worker-researcher、worker-reviewer、worker-tester 的报告型卡），或卡体明示「本卡不修代码不修文档」。
+
+边界判定：卡的 body 里有「只读」「不修」「仅报告」字样，或交付物清单全是报告路径 → 按只读委派处理。
+
+### 6.2 校验方法（收尾必跑，二选一）
+
+**git 工作区**（工作区含 `.git`）：
+
+```bash
+# 派单时（开工前）取基线快照
+git -C <工作区> status --porcelain > /tmp/ro-baseline.txt
+# 收尾时对照
+git -C <工作区> status --porcelain > /tmp/ro-after.txt
+diff /tmp/ro-baseline.txt /tmp/ro-after.txt && echo ZERO-CHANGE || echo DIRTY
+```
+
+**非 git 工作区**（`find -newer` 基准文件法）：
+
+```bash
+# 派单时（开工前）创建基准
+touch /tmp/ro-ref-marker && find <工作区> -type f -newer /tmp/ro-ref-marker
+# 收尾时清点开工后被改的文件
+find <工作区> -type f -newer /tmp/ro-ref-marker
+# 列表非空（除本次任务声明产物）= 越界写
+```
+
+例外白名单（不计入越界）：任务卡 body 显式声明的交付物路径、备份文件（`.bak-*`）、临时目录（`/tmp`、scratch）。
+
+### 6.3 违例处置（非零 diff = 越界写）
+
+按 review-gates 既有失败路径处理，对齐 teamai「fail 并保留现场」语义：
+
+1. **kanban_comment 记录**：贴出前后对照输出与越界文件清单。
+2. **打回**：不允许静默回滚后假装零改动；越界写即按 `kanban_request_changes`（审查卡）或打回重做（实施卡）。
+3. **保留现场禁回滚抹痕**：越界产生的 diff 原样保留（不 revert、不 stash、不删文件），供蓝军归因。这条与「越界疑点归因留给 orchestrator 确认」（SKILL.md:129）一致——工作区只留证，不动手。
+4. **升级路径**：只读委派越界写同一工作区连续 2 次出现 → 报 BLOCKER，由 orchestrator 派修复卡处理现场，避免报告型 worker 自行改动扩面。
+
+### 6.4 与既有「编码任务 git diff 无越界」条的关系
+
+互补不重复：
+
+- **§2.4 验证门示例**（本文件，review-gates.md:135）：管**编码卡**——允许按任务契约改文件，检查改动是否越出申报清单（`git diff` 范围约束）。
+- **§6 本节**：管**只读卡**——预期零改动，任何 diff 都是违例（`git status --porcelain` 前后对照 / `find -newer`），处置不是「修 diff」而是「打回 + 保留现场」。
+
+一句话：编码卡问「改了没改错地方」，只读卡问「有没有根本不该发生的改动」。
+
+### 6.5 派卡触发提示（orchestrator 模板片段）
+
+orchestrator 派研究/审查类卡时，把以下片段并入卡 body（或验收标准）：
+
+```text
+## 只读校验（G3）
+- 开工前：git -C <工作区> status --porcelain > 基线（非 git 区改用 find -newer 基准文件法）
+- 收尾时：复跑并 diff 基线；非零 diff = 越界写 → kanban_comment 贴对照输出 + 打回，diff 保留现场禁回滚抹痕
+- 白名单：本卡声明交付物 + .bak-* 备份 + /tmp、scratch 临时目录
+```
+
+---
+
+## 七、Agent 评审收敛四律（Anthropic 融合，2026-10-19）
+
+> 来源：Anthropic《How the Claude Code team does code review》（2026-10-15，https://claude.dev/blog/solving-code-review-at-anthropic/ ；转述文与裁决矩阵存档 `research/wechat-agent-teams/`，VERDICT-20261019.md A11）。
+> 解决问题：agent 作者 × agent 审查员无限互搏——Claude Code CLI 仓库实锤事故：一夜 50+ 轮评审/修复循环，作者早上手动停掉。git blame 诊断：审查员反复揪的行 59% 在首轮评审时就已存在（翻旧账而非抓新 bug）。
+> 适用：delegate_task 子代理互审、kanban 卡 request_changes↔修复循环、goal-mode 卡自审。
+
+### 7.1 四律（逐条机械执行）
+
+1. **轮上限 3**：同一评审对象（diff/卡）agent 评审累计第 3 轮仍不通过 → 停止逐项修复，升级人裁决（换方案/裁验收标准/换执行者），禁原地第 4 轮。与 code-review v2.5 打回循环上限同构，适用面扩到 agent↔agent 场景。
+2. **diff-only re-review**：第 2 轮起只审新增/变更行，不重审旧代码旧账。存量问题不卡当前卡——登记后放行，转存量扫描。
+3. **按 bug 类打包**：打回意见按 bug 类型归类（如同为「异常处理缺失」的 3 处合并为 1 条），作者一次修完同类，禁逐行挤牙膏。
+4. **不重复已发意见**：已发过的 finding 不得在后续轮次重复出现；复查时只核对「已修/未修」状态。
+
+### 7.2 存量旧账分离
+
+旧代码问题（非本次 diff 引入）一律单列「存量问题登记」区，不阻塞当次合入；批量转交夜间/定期存量扫描（cron 存量扫描卡）。诊断法：对反复 flag 的行跑 `git blame` / 对照首轮基线，超半数命中旧账 = 审查循环已退化为翻旧账，立即触发 7.1-1 停轮。
+
+### 7.3 与既有机制的关系
+
+- 与 code-review skill v2.5「同一检查项第 3 次打回强制升级」互补：v2.5 管 orchestrator↔worker 打回循环，本节管 agent↔agent 评审互搏。
+- 与 Intervention Ledger（§四）衔接：触发轮上限停轮时记一条 intervention（4 字段），5 态结果记 `escalated`。
+- 「agent 点赞不顶人审名额」：agent 的评审通过/approval 不得替代 decision-tiers（`~/.hermes/shared/decision-tiers.yaml`）T2/T3 要求的人审名额；T3 单一责任人=卡 created_by，不因 agent 参与而转移。
 
 ---
 

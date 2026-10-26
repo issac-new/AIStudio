@@ -1,20 +1,21 @@
 model:
-  default: aim
-  provider: custom:cc-switch
+  default: glm-5.3
+  provider: cc-switch-route
 providers: {}
 custom_providers:
-  - api_key: PROXY_MANAGED
-    api_mode: anthropic_messages
-    base_url: http://127.0.0.1:15721
-    context_length: 1048576
-    models:
-      glm-5.3-flash:
-        name: glm-5.3-flash
-    name: cc-switch
+- name: cc-switch-route
+  base_url: http://127.0.0.1:15721/hermes/v1
+  api_key: PROXY_MANAGED
+  api_mode: codex_responses
+  session_affinity_header: session_id
+  models:
+    glm-5.3:
+      context_length: 1048576
+  model: glm-5.3
 toolsets:
-  - hermes-cli
-  - kanban
-  - memory
+- hermes-cli
+- kanban
+- memory
 agent:
   environment_probe: false
   max_turns: 90
@@ -34,14 +35,16 @@ compression:
   threshold: 0.35
 memory:
   memory_enabled: true
-  provider: ''
+  provider: hindsight
   user_profile_enabled: true
 kanban:
   auto_decompose: false
+  board_concurrency: 5
   dispatch_in_gateway: true
   dispatch_interval_seconds: 60
   failure_limit: 2
-  max_in_progress_per_profile: 4
+  max_in_progress: 8
+  max_in_progress_per_profile: 5
   orchestrator_profile: orchestrator
   default_assignee: hack-auditor
 display:
@@ -56,84 +59,67 @@ approvals:
   mode: 'off'
 auxiliary:
   approval:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
+    provider: auto
   background_review:
-    provider: custom:cc-switch
-    model: glm-5.3-flash
+    provider: auto
   compression:
-    model: claude-opus-5
-    provider: custom:cc-switch
+    provider: auto
   goal_judge:
-    provider: custom:cc-switch
-    model: glm-5.3-flash
+    provider: auto
   kanban_decomposer:
-    provider: custom:cc-switch
-    model: glm-5.3-flash
+    provider: auto
   moa_aggregator:
-    provider: custom:cc-switch
-    model: glm-5.3-flash
+    provider: auto
   moa_reference:
-    provider: custom:cc-switch
-    model: glm-5.3-flash
+    provider: auto
   profile_describer:
-    provider: custom:cc-switch
-    model: glm-5.3-flash
+    provider: auto
   session_search:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
+    provider: auto
   title_generation:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
+    provider: auto
   triage_specifier:
-    provider: custom:cc-switch
-    model: glm-5.3-flash
+    provider: auto
   vision:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
+    provider: auto
   web_extract:
-    model: glm-5.3-flash
-    provider: custom:cc-switch
-fallback_providers:
-  - provider: custom:cc-switch
-    model: aim
-    api_mode: anthropic_messages
+    provider: auto
+fallback_providers: []
 platforms:
   api_server:
     enabled: false
   matrix:
     enabled: false
 plugins:
-  disabled:
-    - hindsight
+  disabled: []
   enabled:
-    - acp-client
-    - hindsight
-    - observability/langfuse
-    - run-trace
+  - acp-client
+  - hindsight
+  - observability/langfuse
+  - run-trace
 extra:
   skills_enabled_by_category:
-    - software-development
-    - devops
-    - github
-    - research
-    - cybersecurity
-    - autonomous-ai-agents
-    - note-taking
-    - productivity
-    - hack-team
+  - software-development
+  - devops
+  - github
+  - research
+  - cybersecurity
+  - autonomous-ai-agents
+  - note-taking
+  - productivity
+  - hack-team
   skills_pinned:
-    - skill-recall
-    - cognition-lattice
-    - computer-use
-    - wechat-article-extractor
-    - wechat-article-search
-    - hack-team
+  - skill-recall
+  - cognition-lattice
+  - computer-use
+  - wechat-article-extractor
+  - wechat-article-search
+  - hack-team
 mcp_servers:
   ekko-studio-api:
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-      - api
+    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+    - api
     command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     enabled: false
     env:
@@ -146,8 +132,8 @@ mcp_servers:
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
   ekko-studio-browser:
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-      - browser
+    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+    - browser
     command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     enabled: false
     env:
@@ -158,24 +144,10 @@ mcp_servers:
       HERMES_WEB_UI_MANAGED_MCP: '1'
       HERMES_WEB_UI_PROFILE: hack-auditor
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
-  ekko-studio-devices:
-    args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-      - devices
-    command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
-    enabled: false
-    env:
-      HERMES_MCP_SERVER_NAME: hermes-studio-devices
-      HERMES_MCP_TOOLSET: devices
-      HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
-      HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
-      HERMES_WEB_UI_MANAGED_MCP: '1'
-      HERMES_WEB_UI_PROFILE: hack-auditor
-      HERMES_WEB_UI_URL: http://127.0.0.1:8748
   ekko-studio-use:
     args:
-      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-      - use
+    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+    - use
     command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     enabled: false
     env:
@@ -187,11 +159,21 @@ mcp_servers:
       HERMES_WEB_UI_PROFILE: hack-auditor
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
     timeout: 1860
+  rea:
+    command: /Users/YOURNAME/lab/tools/rea-mcp-wrapper.sh
+    args:
+    - mcp
+    enabled: true
+    env:
+      GHIDRA_INSTALL_DIR: /Users/YOURNAME/lab/tools/ghidra_12.1.4_PUBLIC
+      JAVA_HOME: /Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home
 onboarding:
   seen:
     tool_progress_prompt: true
-_config_version: 50
+_config_version: 51
 clearances:
-  - TLP:AMBER
-  - TLP:GREEN
-  - TLP:CLEAR
+- TLP:AMBER
+- TLP:GREEN
+- TLP:CLEAR
+_left_core_installed:
+- langfuse

@@ -1,0 +1,5 @@
+### P7b skill 写入契约守门器：缺 cue 字段应被 strict 模式拒绝
+### captured 2026-10-26 10:03:27 runs=1 verdict=PASS
+rc=1 stdout=FAIL: FAIL: missing/empty required field(s): cue
+
+verdict=PASS

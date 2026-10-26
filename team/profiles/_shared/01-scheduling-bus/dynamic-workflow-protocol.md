@@ -71,6 +71,20 @@ inputs 渲染进 goal 文本时：
 - **超时**：orchestrator 巡检 blocked 卡超 timeout → 按 on_timeout 处置（escalate=升级用户 / proceed=放行 / fail=终止）
 - **expected_reply_shape**：unblock 回复的期望形态，写入 block reason 供 worker 恢复时校验
 
+### §六-2 steps_fingerprint 暂停期防偷换（openexec N2 融合 2026-10-19）
+
+> 来源：OpenExecutive `workflows/wait_for_human.py:52-120`（WorkflowResumeState.steps_fingerprint）。上游动机原文：暂停期间有人保持 gate 步骤不动、偷换 gate **之后**的每一个步骤——审批人批准的是他看到的问题，回执却记在他从未见过的工作上，审批门就失效了。
+
+- **block 时快照**：卡 `kanban_block(kind="needs_input")` 时，把 **body 全文 + 验收标准清单** 的 sha256 哈希写入 `metadata.steps_fingerprint`（同轮附 `steps_sha256` 字符串与快照时间）。多步卡再加每个子步骤（YAML steps）拼接哈希。计算例：
+  ```bash
+  python3 -c "import hashlib,sys;print(hashlib.sha256(open('<body_file>').read().encode()).hexdigest())"
+  ```
+- **unblock/dispatch 前比对**：dispatcher/续跑 worker 拿卡后先重算 body+验收标准哈希，与 `metadata.steps_fingerprint` 比对：
+  - **一致** → 正常续跑。
+  - **不一致** → 该 unblock 回执**不能记在当前卡内容上**：打回重新走审批（回 blocked 并 @审批人），`kanban_comment` 留痕「fingerprint 不一致：block 时 <旧哈希前8位> / 复跑时 <新哈希前8位>，卡内容在暂停期被改动」。
+- **只防偷换，不冻更新**：确需在暂停期改卡的正当流程 = 先改 body → comment 声明改动点并 @原审批人 → 重新 block 走审批 → 新 fingerprint 覆盖旧值。改动透明即合法；静默改才是偷换。
+- **上游同型锚**：`gate_step_index` 派生不存储（两份游标会打架，攻击者控制的那份会赢）——本侧同理由 comment 留痕承担审计轨迹，不另存第二份步骤游标。
+
 ## 七、首批内置工作流（建议）
 
 | 工作流 | 用途 | 步骤链 |

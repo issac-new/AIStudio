@@ -1,0 +1,39 @@
+name: langfuse
+label: Langfuse
+kind: standalone
+version: 2.0.0
+author: NousResearch
+homepage: https://github.com/NousResearch/hermes-official-plugins/tree/main/langfuse
+description: >
+  Langfuse observability for Hermes Agent: one trace per turn, one generation
+  per LLM call (usage and cost from Hermes' own pricing, including cache and
+  reasoning tokens), one observation per tool call and subagent. Content
+  capture is sanitized by default (metadata and full are opt-in). Formerly
+  built into Hermes core as observability/langfuse.
+requires_hermes: ">=0.21.7"
+provides_hooks:
+  - pre_api_request
+  - post_api_request
+  - api_request_error
+  - pre_llm_call
+  - post_llm_call
+  - pre_tool_call
+  - post_tool_call
+  - on_session_finalize
+  - on_session_end
+  - subagent_start
+  - subagent_stop
+requires_env:
+  - name: HERMES_LANGFUSE_PUBLIC_KEY
+    description: "Langfuse project public key (pk-lf-...)"
+    url: https://cloud.langfuse.com
+    secret: false
+  - name: HERMES_LANGFUSE_SECRET_KEY
+    description: "Langfuse project secret key (sk-lf-...)"
+    url: https://cloud.langfuse.com
+    secret: true
+optional_env:
+  - name: HERMES_LANGFUSE_BASE_URL
+    description: "Langfuse server URL for a self-hosted instance (default: https://cloud.langfuse.com)"
+    prompt: "Langfuse server URL"
+    password: false

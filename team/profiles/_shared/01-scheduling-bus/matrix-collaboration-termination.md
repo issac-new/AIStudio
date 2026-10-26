@@ -61,7 +61,7 @@
 
 **机制**：在进 agent turn 之前调用 `noise_reason()` 判定，命中即拦截并打 debug 日志（含原因）。可观测 + 可回退。
 
-**开关命名**：`{PLATFORM}_NOISE_FILTER` 总开关 + `{PLATFORM}_NOISE_FILTER_{CLASS}` 子类开关（默认 true 开启；语义级 SEMANTIC_* 默认 false）。matrix 开关在 orchestrator/.env；weixin 开关在 orchestrator/.env + [已移除]-orchestrator/.env（两个 gateway 进程）。
+**开关命名**：`{PLATFORM}_NOISE_FILTER` 总开关 + `{PLATFORM}_NOISE_FILTER_{CLASS}` 子类开关（默认 true 开启；语义级 SEMANTIC_* 默认 false）。matrix 开关在 orchestrator/.env；weixin 开关在 orchestrator/.env + [已移除]/.env（两个 gateway 进程）。
 
 **已验证**：matrix 路径 10 例、weixin 路径 9 例、语义级 2 例单元测试全部通过；平台差异精确生效（matrix 拦加密占位/同步重放、weixin 拦 STT 失败/撤回回声）。漂移→自动重打场景端到端验证通过。
 
@@ -146,7 +146,7 @@
 
 `MATRIX_IGNORE_USER_PATTERNS` 黑名单**保留但仅用于已 100% 确认为纯 bot 的对端 MXID**（如对端明确部署的自动化 agent，无人类使用）。**人类账号一律不加**。
 
-> ⚠️ 黑名单是**辅助**而非主防——它无法区分人和 bot，主防永远靠七层防线（特征+结构）。对端账号性质台账见 `_shared/knowledge/candidate/matrix-peers.md`。**当前黑名单为空**（已知 @cuishi/@testuser2 均为人类账号）。
+> ⚠️ 黑名单是**辅助**而非主防——它无法区分人和 bot，主防永远靠七层防线（特征+结构）。对端账号性质台账见 `_shared/knowledge/candidate/matrix-peers.md`。**当前黑名单为空**（已知 @YOURNAME/@testuser2 均为人类账号）。
 
 ## 四、落地位置总览
 

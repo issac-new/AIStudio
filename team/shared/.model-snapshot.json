@@ -1,0 +1,124 @@
+{
+ "models": {
+  "aiteam-architecture": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "aiteam-embodied": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "aiteam-multimodal": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "aiteam-orchestrator": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "aiteam-scout": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "aiteam-training": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "hack-auditor": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "hack-exploit": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "hack-forensics": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "hack-recon": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "ops-devops": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "ops-eval": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "ops-incident-commander": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "ops-sre": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "orchestrator": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "pay-clearing": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "pay-fintech": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "pay-infra": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "pay-orchestrator": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "platform-ontology-curator": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "platform-skill-miner": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "product-manager": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "product-researcher": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "worker-coder": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "worker-researcher": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "worker-tester": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "data-orchestrator": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "data-arch": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "data-flink": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  },
+  "data-infra": {
+   "default": "aim",
+   "provider": "custom:cc-switch"
+  }
+ }
+}
