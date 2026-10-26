@@ -4,7 +4,7 @@ index 0000000000..c143174083
 --- /dev/null
 +++ b/optional-mcps/exa/manifest.yaml
 @@ -0,0 +1,51 @@
-+# SwarmStudio base runtime: exa (code-specialized external search MCP).
++# AIStudio base runtime: exa (code-specialized external search MCP).
 +# Single source of truth — injected into hermes-agent optional-mcps/exa/ by patch 396（原 384，撞号重编）.
 +# Consumed by the studio MCP catalog browser and `hermes mcp install exa`.
 +# Rationale: MiMo-Code ships a codesearch tool on the Exa Code API; hermes web_search

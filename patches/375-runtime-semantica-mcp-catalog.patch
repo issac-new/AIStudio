@@ -4,7 +4,7 @@ index 0000000000..5a70aa42b7
 --- /dev/null
 +++ b/optional-mcps/semantica/manifest.yaml
 @@ -0,0 +1,62 @@
-+# SwarmStudio base runtime: semantica (graph-native knowledge infrastructure).
++# AIStudio base runtime: semantica (graph-native knowledge infrastructure).
 +# Single source of truth — copied into hermes-agent optional-mcps/ by patch 375.
 +# Consumed by the studio MCP catalog browser and `hermes mcp install semantica`.
 +manifest_version: 1
