@@ -15,6 +15,9 @@
 // 安全边界：只暴露非敏感部署地址（homeserver 本就显示在登录表单里），不读不返回
 // access_token；与 gateway-env 的凭据读取共用同一 dotenv 解析，但不导出凭据字段。
 
+import { existsSync } from 'fs'
+import { resolve } from 'path'
+
 import { readGatewayMatrixFile } from './gateway-env'
 
 export interface MatrixServerInfo {
@@ -52,4 +55,21 @@ export function getMatrixServerInfo(env: Record<string, string | undefined> = pr
     || FALLBACK_MATRIX_SERVER_INFO.serverName
   const elementWebUrl = env.ELEMENT_WEB_URL?.trim() || FALLBACK_MATRIX_SERVER_INFO.elementWebUrl
   return { homeserverUrl, serverName, elementWebUrl }
+}
+
+/**
+ * element-web 静态目录在位探测（九点对账轮 P1-4）：element-web 是参照实现默认
+ * 不入仓，elementWebUrl 指向的静态面可能缺席——消费方须同时看 available，不得
+ * 把入口 URL 当可用承诺。口径与 vendor http.ts 的 resolve(__dirname,'..',
+ * 'element-web') 一致；src/dist/打包三形态多候选，env ELEMENT_WEB_DIR 显式覆盖
+ * 供部署方指认自备静态目录。
+ */
+export function elementWebDirExists(fromDir: string = __dirname): boolean {
+  const override = process.env.ELEMENT_WEB_DIR?.trim()
+  if (override) return existsSync(override)
+  return [
+    resolve(fromDir, '../../../element-web'),
+    resolve(fromDir, '../../../../element-web'),
+    resolve(fromDir, '../../element-web'),
+  ].some((p) => existsSync(p))
 }

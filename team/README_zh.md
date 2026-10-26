@@ -126,6 +126,7 @@ Gateway 消息 (Matrix/Weixin/API Server/Email)
 - **ACP 编码委托**：编码工作通过 ACP 委托外部编码 agent（claude/codex），worker 不直接写代码。
 - **隐私加固**：真实邮箱 → `your-bot@example.com`，用户名路径 → `/Users/YOURNAME`，密钥 → `${ENV_VAR}` 占位符。
 - **单一事实源**：共享规则收敛在 `_shared/` 六层目录（调度总线/组织编排/进化记忆/专业能力/工程执行/观测治理）。
+- **列门禁（opt-in）**：done 列人工审批闸可选启用——把 [`gates.template.json`](gates.template.json) 拷为 `<boards_root>/<slug>/gates.json`（与该板 `kanban.db` 同目录）。`requiredHumanApproval` 要求任务标题/正文携带人写的 `APPROVED` 判词（审批是人类产物，不是 UI 开关）；文件缺席=无门禁，存量板零行为变化。语义单一事实源=`hermes_cli/kanban_gates.py`。
 
 ## 快速开始
 

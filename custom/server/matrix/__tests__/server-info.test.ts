@@ -4,8 +4,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { getMatrixServerInfo, domainOfMxid, FALLBACK_MATRIX_SERVER_INFO } from '../server-info'
+import { join, resolve } from 'node:path'
+import { getMatrixServerInfo, domainOfMxid, elementWebDirExists, FALLBACK_MATRIX_SERVER_INFO } from '../server-info'
 
 let home = ''
 beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'server-info-')) })
@@ -67,6 +67,35 @@ describe('domainOfMxid', () => {
     expect(domainOfMxid('')).toBe('')
     expect(domainOfMxid('alice')).toBe('')
     expect(domainOfMxid('@alice')).toBe('')
+  })
+})
+
+describe('elementWebDirExists（九点对账轮 P1-4）', () => {
+  it('候选位有目录 → true；全缺 → false（fail-soft 不造假）', () => {
+    // fromDir=…/custom/server/matrix 形态：../../../element-web 即 src 侧候选（归一后落 home 下）
+    const probeRoot = join(home, 'custom', 'server', 'matrix')
+    mkdirSync(probeRoot, { recursive: true })
+    expect(elementWebDirExists(probeRoot)).toBe(false)
+    const cand = resolve(probeRoot, '../../../element-web')
+    mkdirSync(cand, { recursive: true })
+    expect(elementWebDirExists(probeRoot)).toBe(true)
+  })
+
+  it('ELEMENT_WEB_DIR 显式覆盖优先（部署方自备静态目录指认）', () => {
+    const override = join(home, 'custom-element-web')
+    mkdirSync(override, { recursive: true })
+    process.env.ELEMENT_WEB_DIR = override
+    try {
+      expect(elementWebDirExists(join(home, 'nowhere'))).toBe(true)
+    } finally {
+      delete process.env.ELEMENT_WEB_DIR
+    }
+    process.env.ELEMENT_WEB_DIR = join(home, 'absent')
+    try {
+      expect(elementWebDirExists(join(home, 'nowhere'))).toBe(false)
+    } finally {
+      delete process.env.ELEMENT_WEB_DIR
+    }
   })
 })
 

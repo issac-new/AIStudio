@@ -96,7 +96,47 @@ async function serve() {
   await new Promise(() => {});
 }
 
+// install-cli：构建分叉 CLI 并安装到 ~/.hermes/ycode/zcode.cjs——ACP 桥
+// （zcode-acp-server）的引擎身份正身。桥以 [node, ZCODE_BIN, 'app-server',
+// '--stdio'] 形式 spawn（resolve.js 头注释），.cjs 路径即可，无需可执行位。
+// 安装位在 ~/.hermes 下与 hermes 运行时同域；重跑即覆盖更新（幂等）。
+const CLI_ENTRY = resolve(zcodeRoot, 'apps/zcode-cli/packages/cli/dist/zcode.cjs');
+
+async function ensureCli() {
+  if (!existsSync(resolve(zcodeRoot, 'node_modules'))) {
+    log('install-cli', 'node_modules 缺失,执行 pnpm install(跳过 electron 二进制)');
+    run('pnpm', ['install'], { env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' } });
+  }
+  if (existsSync(CLI_ENTRY)) {
+    log('install-cli', '分叉 CLI 构建产物已就绪');
+    return;
+  }
+  // CLI 依赖工作区包（@zcode/core、@zcode/i18n 等）的 dist——必须按依赖闭包
+  // 构建：turbo 在 apps/zcode-cli 工作区（turbo.json 在该层），二进制借用
+  // monorepo 根 node_modules/.bin/turbo（app 层 PATH 无 turbo，实测）。
+  log('install-cli', '分叉 CLI 产物缺失,按依赖闭包构建');
+  const turboBin = resolve(zcodeRoot, 'node_modules', '.bin', 'turbo');
+  const cliWorkspace = resolve(zcodeRoot, 'apps/zcode-cli');
+  if (existsSync(turboBin)) {
+    run(turboBin, ['run', 'build', '--filter=@zcode/cli...'], { cwd: cliWorkspace, env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' } });
+  } else {
+    run('pnpm', ['--filter', '@zcode/cli', 'build'], { env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' } });
+  }
+}
+
+async function installCli() {
+  await ensureCli();
+  const { copyFileSync, mkdirSync } = await import('node:fs');
+  const { homedir } = await import('node:os');
+  const destDir = resolve(homedir(), '.hermes', 'ycode');
+  const dest = resolve(destDir, 'zcode.cjs');
+  mkdirSync(destDir, { recursive: true });
+  copyFileSync(CLI_ENTRY, dest);
+  log('install-cli', `已安装分叉 CLI: ${dest}(ACP 桥设 ZCODE_BIN=${dest} 即用)`);
+}
+
 const mode = process.argv[2] ?? 'serve';
 if (mode === 'ensure') await ensure();
 else if (mode === 'serve') await serve();
-else { console.error(`未知参数: ${mode}(可用 ensure|serve)`); process.exit(1); }
+else if (mode === 'install-cli') await installCli();
+else { console.error(`未知参数: ${mode}(可用 ensure|serve|install-cli)`); process.exit(1); }

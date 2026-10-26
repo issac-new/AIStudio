@@ -57,6 +57,27 @@ def find_engine(override: str):
     return None
 
 
+YCODE_FORK_CLI = os.path.expanduser("~/.hermes/ycode/zcode.cjs")
+
+
+def resolve_engine_bin_env():
+    """ACP 桥拉起编码引擎的环境校正（九点对账轮 P0-2）。
+
+    桥（zcode-acp-server）按 ZCODE_BIN > PATH zcode > 官方 ZCode.app 桌面捆绑
+    解析引擎（其 resolve.js）。为使「ACP 调用的是 Ycode（本仓 zcode 分叉）」
+    成立，spawn 桥前注入：显式 ZCODE_BIN（用户覆盖，不动） > 本机部署的分叉
+    CLI（~/.hermes/ycode/zcode.cjs，`scripts/zcode-engine.mjs install-cli` 落位）
+    > 桥自身兜底。桥以 [node, ZCODE_BIN, 'app-server', '--stdio'] 形式 spawn，
+    .cjs 路径即可。返回来源标记供日志断言引擎身份。
+    """
+    if os.environ.get("ZCODE_BIN", "").strip():
+        return "env"
+    if os.path.isfile(YCODE_FORK_CLI):
+        os.environ["ZCODE_BIN"] = YCODE_FORK_CLI
+        return "ycode-fork"
+    return "bridge-default"
+
+
 def compact_update(update: dict) -> str:
     """session/update → 一行摘要（工具调用标题是 diff 评审的主证据）。
 
@@ -115,7 +136,9 @@ def main() -> int:
         return EXIT_ENGINE_MISSING
 
     cwd = os.path.abspath(args.cwd)
-    log(f"engine={' '.join(cmd)} cwd={cwd} timeout={args.timeout}s prompt_chars={len(prompt)}")
+    engine_src = resolve_engine_bin_env()
+    engine_bin = os.environ.get("ZCODE_BIN", "(桥自解析)")
+    log(f"engine={' '.join(cmd)} engine_bin_source={engine_src} engine_bin={engine_bin} cwd={cwd} timeout={args.timeout}s prompt_chars={len(prompt)}")
 
     try:
         proc = subprocess.Popen(

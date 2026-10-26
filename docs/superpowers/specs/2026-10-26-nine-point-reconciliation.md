@@ -32,12 +32,15 @@
 
 ## 验证
 
-- P0-2：主树 inject 后构建分叉 CLI（`pnpm --filter @zcode/cli build`）；`node scripts/zcode-engine.mjs install-cli` 落位；活体委托会话（小任务）断言 delegate 日志 `engine=` 行与桥实际拉起引擎=分叉（非 /Applications/ZCode.app）；`npx vitest run` 覆盖 delegate 引擎解析序（Python 单测跑拼合树）。
-- P1-4：目录缺席 → `/element-web/*` 503 `{available:false}`（非 500）、`/element-web/config.json` 仍 200；series 登记+`npm run inject` 重放+后端重启走查。
-- P2-6：模板 JSON 语法校验；存量板零行为变化（无 gates.json 时惰性，kanban_gates.py 既有语义）。
-- 文档批：数字总账以实测为准（series 计数 `wc`、版本对 VENDOR.md、测试数取本轮全量实测）；gongwen-bifa 技能先调再动笔。
-- 合并前：`npm test` 全量 + `npm run typecheck:harness`（涉服务端文件）。
-- 未验证项（如实声明）：ACP 委托在真实推演轮（run 级）的引擎断言——本轮只做本机活体会话级验证。
+- P0-2（实测 2026-10-26 14:3x-15:0x）：
+  - 分叉 CLI 构建链通：`vendor/zcode` 注入 zcode-patches 002-008 → pnpm install（2m52s）→ turbo 依赖闭包构建 11 任务全过 → `apps/zcode-cli/packages/cli/dist/zcode.cjs`（28.7MB，0.17.0）；`app-server --stdio` 冒烟直出 ZCode Protocol NDJSON 帧。
+  - install-cli 幂等落位 `~/.hermes/ycode/zcode.cjs`；桥（zcode-acp-server，`[node, ZCODE_BIN, 'app-server','--stdio']` 形态）接受该路径。
+  - 引擎解析序单测 3/3 绿（runtime/tests/hermes_skills/test_zcode_acp_delegate.py）。
+  - 活体委托会话三次（14:40/14:46/15:04）：`engine_bin_source=ycode-fork engine_bin=~/.hermes/ycode/zcode.cjs` 三次命中；分叉引擎握手/建会话/流 update 全通；**引擎身份链闭环**。端到端最终回包未取得——上游提供方 `open.bigmodel.cn/api/anthropic`（account:bigmodel-individual-coding-plan / GLM-5.3-Flash）持续 HTTP 500，三轮各重试 10 次全败（引擎侧日志 ~/.zcode/cli/log 实锚，reason=server_error，与分叉接线无关）。**复验口令**：提供方恢复后重跑本节三次会话同款命令，断言 `RESULT exit=0` 即闭环。
+- P1-4（实测）：补丁 691 生成走快照重建法（基线+11 个触及 http.ts 补丁重放→纯增量 diff）；`npm run clean`+`npm run inject` 全链重放后门在位（:531/:555）；目标测试 13/13 绿（server-info 10+failsoft 3）。
+- P2-6：模板 JSON 语法校验过；无 gates.json 板零行为变化（kanban_gates.py 惰性语义既有测试覆盖）。
+- 合并前：`npm test` 全量 + `npm run typecheck:harness`。
+- 未验证项（如实声明）：ACP 委托在真实推演轮（run 级）的引擎断言；提供方恢复后的端到端回包（见上复验口令）。
 
 ## 挂账（本轮不做）
 

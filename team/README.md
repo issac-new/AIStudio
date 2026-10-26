@@ -139,6 +139,7 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
 - **ACP Coding Delegation**: All coding work delegated to Claude Code via `acp_send(provider="claude")`. Workers don't write code directly.
 - **PII Hardened**: Real emails → `your@email.com`, username paths → `$HOME/`, secrets → `${ENV_VAR}` placeholders.
 - **Forward-Deployed Protocol**: Every worker's first step is frontline reconnaissance (read_file + search_files + session_search), not immediate execution.
+- **Column Gates (opt-in)**: Done-column human approval available via `gates.json` — copy [`gates.template.json`](gates.template.json) to `<boards_root>/<slug>/gates.json` (beside the board's `kanban.db`). `requiredHumanApproval` demands a human-written `APPROVED` verdict in the task text (approval is a human artifact, not a UI toggle); absent file = no gates, existing boards unchanged. Semantics: `hermes_cli/kanban_gates.py` is the single source of truth.
 
 ## Quick Start / 快速开始
 

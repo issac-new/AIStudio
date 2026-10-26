@@ -2,7 +2,7 @@
 import type Koa from 'koa';
 import Router from '@koa/router';
 import { readGatewayMatrixEnv } from './gateway-env';
-import { getMatrixServerInfo } from './server-info';
+import { elementWebDirExists, getMatrixServerInfo } from './server-info';
 
 /** TCP 对端是否本机回环（127.0.0.0/8 / ::1 / ::ffff:127.x）。 */
 function isLoopbackPeer(addr: string | undefined): boolean {
@@ -108,8 +108,10 @@ export function registerMatrixAuthRoutes(app: Koa) {
   // 登录页预填 / 建号与邀请表单默认值 / element-web 入口共用。只暴露非敏感部署地址
   // （homeserver 本就显示在登录表单里），不涉凭据——故不设 gateway-credentials 的
   // 回环四闸：登录页在鉴权前、LAN 部署的浏览器同样需要它（决策 D4）。
+  // elementWebAvailable（九点对账轮 P1-4）：element-web 静态面缺席是常态（参照
+  // 实现不入仓），入口 URL 不构成可用承诺，消费方按 available:false fail-soft。
   router.get('/server-info', (ctx) => {
-    ctx.body = getMatrixServerInfo();
+    ctx.body = { ...getMatrixServerInfo(), elementWebAvailable: elementWebDirExists() };
   });
 
   app.use(router.routes());
