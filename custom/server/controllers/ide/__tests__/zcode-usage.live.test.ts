@@ -34,28 +34,42 @@ describe.skipIf(!existsSync(dbPath))('zcode-usage 真库探针', () => {
     expect(body.bySource.map(s => s.source)).toContain('main_turn')
   }, 60_000)
 
-  it('sessions：首行字段齐全且可作 rounds/tools 的输入', () => {
+  it('sessions：真库存在字段齐全的会话（可作 rounds/tools 的输入）', () => {
     const c = ctx()
     handleUsageSessions(c)
     const rows = (c.body as { sessions: UsageSessionRow[] }).sessions
     expect(rows.length).toBeGreaterThan(0)
-    const s = rows[0]
-    expect(s.turns).toBeGreaterThan(0)
-    expect(s.billedTokens).toBeGreaterThan(0)
+    // sessions 按 last_at 倒序，rows[0] 恰是运行本探针的活跃会话：回合未收口时
+    // billedTokens 聚合为 0（2026-10-26 全量轮 3 败根因=探针与被测行同会话自扰）。
+    // 探针语义=真库上存在字段完备的会话，不绑定特定行。
+    const s = rows.find(r => r.turns > 0 && r.billedTokens > 0)
+    expect(s, '前 30 会话中应存在 turns/billedTokens 完备者').toBeDefined()
+    expect(s!.turns).toBeGreaterThan(0)
+    expect(s!.billedTokens).toBeGreaterThan(0)
   }, 60_000)
 
   it('rounds/tools：真会话有轮有 TTFT 真值、工具有时间线', () => {
     const cs = ctx()
     handleUsageSessions(cs)
-    const first = (cs.body as { sessions: UsageSessionRow[] }).sessions[0]
-    const cr = ctx()
-    handleUsageRounds(cr, first.id)
-    const rounds = (cr.body as { rounds: UsageRoundRow[] }).rounds
+    const sessions = (cs.body as { sessions: UsageSessionRow[] }).sessions
+    // 同自扰根因：活跃会话回合未收口 ttft 为 null——在前 10 会话中取首个
+    // rounds(ttft) 与 tools(readOnly) 同会话齐备的样本（原语义=单会话三维齐备）。
+    let rounds: UsageRoundRow[] = []
+    let tools: UsageToolRow[] = []
+    let picked: UsageSessionRow | undefined
+    for (const s of sessions.slice(0, 10)) {
+      const cr = ctx()
+      handleUsageRounds(cr, s.id)
+      const rs = (cr.body as { rounds: UsageRoundRow[] }).rounds
+      if (!(rs.length > 0 && rs.some(r => r.ttftMs != null && r.ttftMs > 0))) continue
+      const ct = ctx()
+      handleUsageTools(ct, s.id)
+      const ts = (ct.body as { tools: UsageToolRow[] }).tools
+      if (ts.length > 0 && ts.some(t => t.readOnly)) { rounds = rs; tools = ts; picked = s; break }
+    }
+    expect(picked, '前 10 会话中应存在 rounds(ttft)/tools(readOnly) 齐备者').toBeDefined()
     expect(rounds.length).toBeGreaterThan(0)
     expect(rounds.some(r => r.ttftMs != null && r.ttftMs > 0)).toBe(true)
-    const ct = ctx()
-    handleUsageTools(ct, first.id)
-    const tools = (ct.body as { tools: UsageToolRow[] }).tools
     expect(tools.length).toBeGreaterThan(0)
     expect(tools.some(t => t.readOnly)).toBe(true)
   }, 60_000)
@@ -65,19 +79,25 @@ describe.skipIf(!existsSync(dbPath))('zcode-context 真库探针（Phase 2）', 
   it('context：requests 精确值非空/构成六类折叠/压缩事件可数', () => {
     const cs = ctx()
     handleUsageSessions(cs)
-    const first = (cs.body as { sessions: UsageSessionRow[] }).sessions[0]
-    const c = ctx()
-    handleUsageContext(c, first.id)
-    const body = c.body as UsageContext
-    expect(body.requests.length).toBeGreaterThan(0)
-    expect(body.requests[0].promptTokens).toBeGreaterThan(0)
-    const keys = body.est.categories.map(x => x.key)
+    const sessions = (cs.body as { sessions: UsageSessionRow[] }).sessions
+    // 同自扰根因：活跃会话上下文请求 token 未落——前 10 会话取首个 requests 完备样本
+    let body: UsageContext | undefined
+    for (const s of sessions.slice(0, 10)) {
+      const c = ctx()
+      handleUsageContext(c, s.id)
+      const b = c.body as UsageContext
+      if (b.requests.length > 0 && b.requests[0].promptTokens > 0) { body = b; break }
+    }
+    expect(body, '前 10 会话中应存在 requests/promptTokens 完备者').toBeDefined()
+    expect(body!.requests.length).toBeGreaterThan(0)
+    expect(body!.requests[0].promptTokens).toBeGreaterThan(0)
+    const keys = body!.est.categories.map(x => x.key)
     expect(keys).toEqual(expect.arrayContaining(['user-text', 'assistant-text', 'reasoning', 'tool']))
-    expect(body.est.estTotalTokens).toBeGreaterThan(0)
-    expect(body.largest.length).toBeGreaterThan(0)
-    expect(body.largest[0].preview.length).toBeLessThanOrEqual(120)
+    expect(body!.est.estTotalTokens).toBeGreaterThan(0)
+    expect(body!.largest.length).toBeGreaterThan(0)
+    expect(body!.largest[0].preview.length).toBeLessThanOrEqual(120)
     // 压缩事件可为 0，但字段形状必须稳定
-    body.compactions.forEach(cp => {
+    body!.compactions.forEach(cp => {
       expect(typeof cp.at).toBe('number')
       expect(typeof cp.trigger).toBe('string')
     })
