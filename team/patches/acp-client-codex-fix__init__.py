@@ -157,9 +157,41 @@ def _resolve_provider(name: str) -> Tuple[List[str], str]:
             "  2) npx (Node.js) to run @agentclientprotocol/claude-agent-acp"
         )
 
+    elif name == "zcode":
+        # 1) Direct binary (preferred): configured path, else zcode-acp-server / zcode-acp on PATH
+        binary = provider_cfg.get("binary", "")
+        if not binary:
+            for candidate in ("zcode-acp-server", "zcode-acp"):
+                found = shutil.which(candidate)
+                if found:
+                    binary = found
+                    break
+        if binary:
+            binary = os.path.expanduser(binary)
+            if not os.path.isfile(binary):
+                raise FileNotFoundError(
+                    f"ZCode ACP binary not found at '{binary}'. "
+                    f"Install zcode-acp-server (npm i -g zcode-acp-server) or set providers.zcode.binary in config.yaml"
+                )
+            extra_args = provider_cfg.get("args", [])
+            return [binary] + extra_args, "ZCode Agent"
+
+        # 2) Via npx (fallback)
+        npx = provider_cfg.get("npx", "npx")
+        npx_path = shutil.which(npx)
+        if npx_path:
+            package = provider_cfg.get("package", "zcode-acp-server")
+            return [npx_path, package], "ZCode Agent"
+
+        raise FileNotFoundError(
+            "ZCode ACP provider requires either:\n"
+            "  1) binary path to zcode-acp-server, or\n"
+            "  2) npx (Node.js) to run zcode-acp-server"
+        )
+
     else:
         raise ValueError(
-            f"Unknown ACP provider: '{name}'. Available: opencode, codex, claude"
+            f"Unknown ACP provider: '{name}'. Available: opencode, codex, claude, zcode"
         )
 
 
@@ -172,12 +204,17 @@ class ACPClient:
     """Manage an ACP server subprocess with bidirectional JSON-RPC 2.0."""
 
     def __init__(self, cmd: List[str], default_cwd: str, auto_approve: bool = True,
-                 provider_name: str = "opencode"):
+                 provider_name: str = "opencode", env_extra: Optional[Dict[str, str]] = None):
         self.cmd = cmd
         self.default_cwd = os.path.expanduser(default_cwd)
         self.auto_approve = auto_approve
         self.provider_name = provider_name
+        # providers.<name>.env 注入子进程；值绝不进日志。
+        self.env_extra: Dict[str, str] = {k: str(v) for k, v in (env_extra or {}).items()}
         self.process: Optional[subprocess.Popen] = None
+        # 会话工作区根（new_session 登记）：fs 写与 terminal cwd 的越界判定边界。
+        self._session_roots: List[str] = []
+        self._session_cwds: Dict[str, str] = {}
 
         # JSON-RPC bookkeeping
         self._msg_id = 0
@@ -229,6 +266,7 @@ class ACPClient:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env={**os.environ, **self.env_extra},
         )
 
         self._alive = True  # must be set BEFORE reader starts
@@ -568,27 +606,23 @@ class ACPClient:
                 pass
 
     def _do_permission(self, mid: int, params: dict):
-        oid = "allow_once"
-        if self.auto_approve:
-            # Prefer allow_always, fall back to allow_once, then any available
-            options = params.get("options", [])
-            for opt in options:
-                if opt.get("kind") == "allow_always":
-                    oid = opt["optionId"]
-                    break
-            else:
-                for opt in options:
-                    if opt.get("kind") == "allow_once":
-                        oid = opt["optionId"]
-                        break
-                else:
-                    # Codex ACP uses different option kinds (e.g. execpolicy-amendment).
-                    # Fall back to the first available option so auto-approve works.
-                    if options:
-                        oid = options[0].get("optionId", oid)
+        """权限应答：auto_approve 也只选显式 allow_once；缺单次允许项或关闭
+        auto_approve 一律 cancel——不退 allow_always/首个选项（越权面）。"""
+        def _find(kind: str) -> Optional[str]:
+            for opt in params.get("options", []):
+                if isinstance(opt, dict) and opt.get("kind") == kind and opt.get("optionId"):
+                    return opt["optionId"]
+            return None
+
+        oid = _find("allow_once") if self.auto_approve else None
+        if oid is None:
+            # ACP spec-compliant cancel；委托会话由调用方决定升级人工，客户端不代行放行。
+            self._send({
+                "jsonrpc": "2.0", "id": mid,
+                "result": {"outcome": {"outcome": "cancel"}},
+            })
+            return
         # Return ACP spec-compliant format: outcome wrapper with option_id.
-        # Claude Code ACP tolerates legacy {"optionId": ...} but codex-acp requires
-        # the {"outcome": {"outcome": "selected", "option_id": ...}} structure.
         self._send({
             "jsonrpc": "2.0", "id": mid,
             "result": {
@@ -611,8 +645,28 @@ class ACPClient:
                 "error": {"code": -32603, "message": str(exc)},
             })
 
+    @staticmethod
+    def _path_within_roots(path: str, roots: List[str]) -> bool:
+        """写边界：目标路径须落在任一会话工作区根内（realpath 归一，commonpath 判界）。"""
+        import os as _os
+        try:
+            target = _os.path.realpath(_os.path.expanduser(str(path)))
+            for root in roots or []:
+                r = _os.path.realpath(_os.path.expanduser(str(root)))
+                if _os.path.commonpath([target, r]) == r:
+                    return True
+        except (OSError, ValueError):
+            return False
+        return False
+
     def _do_fs_write(self, mid: int, params: dict):
         path = params.get("path", "")
+        if not self._path_within_roots(path, self._session_roots):
+            self._send({
+                "jsonrpc": "2.0", "id": mid,
+                "error": {"code": -32001, "message": f"write outside session workspace refused: {path}"},
+            })
+            return
         content = params.get("content", "")
         try:
             dirname = os.path.dirname(path)
@@ -635,6 +689,12 @@ class ACPClient:
             command = params.get("command", "")
             args = params.get("args", [])
             cwd = params.get("cwd", self.default_cwd)
+            if not self._path_within_roots(cwd, self._session_roots):
+                self._send({
+                    "jsonrpc": "2.0", "id": mid,
+                    "error": {"code": -32001, "message": f"terminal cwd outside session workspace refused: {cwd}"},
+                })
+                return
             env = {**os.environ, **(params.get("env") or {})}
 
             cmd = [command] + args if args else command
@@ -727,10 +787,24 @@ class ACPClient:
     # ── High-level API ────────────────────────────────────────────────
 
     def new_session(self, cwd: str = None) -> dict:
-        """Create a new ACP session for a workspace."""
-        return self._request("session/new", {
-            "cwd": os.path.expanduser(cwd or self.default_cwd),
+        """Create a new ACP session for a workspace; 登记 cwd 为写边界根。"""
+        root = os.path.expanduser(cwd or self.default_cwd)
+        resp = self._request("session/new", {
+            "cwd": root,
             "mcpServers": [],
+        })
+        if isinstance(resp, dict) and "result" in resp:
+            sid = resp.get("result", {}).get("sessionId")
+            if isinstance(sid, str) and sid:
+                self._session_cwds[sid] = root
+                if root not in self._session_roots:
+                    self._session_roots.append(root)
+        return resp
+
+    def set_model(self, session_id: str, model_id: str) -> dict:
+        """session/setModel：桥侧失败即抛（applyModelSwitch 拒绝），成功回执=已生效。"""
+        return self._request("session/setModel", {
+            "sessionId": session_id, "modelId": model_id,
         })
 
     def prompt(self, session_id: str, text: str, timeout: int = 600) -> dict:
@@ -785,20 +859,84 @@ class ACPClient:
 #  Client pool — one per provider
 # ═══════════════════════════════════════════════════════════════════════════
 
-_clients: Dict[str, ACPClient] = {}
+_clients: Dict[Tuple[str, str], "ACPClient"] = {}
 _clients_lock = threading.Lock()
 
 
-def _get_client(provider: str = None) -> ACPClient:
-    """Get or create the client for a given provider."""
-    cfg = _load_config(reload=True)
+def _client_key(provider: str, cwd: Optional[str]) -> Tuple[str, str]:
+    """池键=provider+规范化工作区：同引擎多任务工作区互不串话；其他键位存活
+    客户端不强杀（准备新会话不影响在途任务），由进程生命周期自然回收。"""
+    root = os.path.expanduser((cwd or "").strip() or "~")
+    return (provider, os.path.realpath(root))
 
-    if not provider:
-        provider = cfg.get("default_provider", "opencode")
+
+def _provider_default_cwd(provider: str, cfg: dict) -> str:
+    cwd = cfg.get("default_cwd", "~")
+    pcfg = (cfg.get("providers") or {}).get(provider) or {}
+    if isinstance(pcfg, dict) and pcfg.get("default_cwd"):
+        cwd = pcfg["default_cwd"]
+    return os.path.expanduser(str(cwd))
+
+
+def _resolve_model(provider: str, args: Dict[str, Any], cfg: dict) -> Optional[str]:
+    """会话模型解析序：显式参数 > ZCODE_ACP_MODEL > providers.<p>.model > env ZCODE_MODEL。"""
+    explicit = args.get("model")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+    env_model = os.environ.get("ZCODE_ACP_MODEL", "").strip()
+    if env_model:
+        return env_model
+    pcfg = (cfg.get("providers") or {}).get(provider) or {}
+    if isinstance(pcfg, dict):
+        if isinstance(pcfg.get("model"), str) and pcfg["model"].strip():
+            return pcfg["model"].strip()
+        envs = pcfg.get("env") or {}
+        if isinstance(envs, dict):
+            m = envs.get("ZCODE_MODEL")
+            if isinstance(m, str) and m.strip():
+                return m.strip()
+    return None
+
+
+def _resolve_provider_name(provider: str, cfg: dict) -> str:
+    """Provider 解析：显式参数 > HERMES_ACP_PROVIDER > config.default_provider。
+
+    profile `.env` 注入任务级默认（worker-coder=zcode/Ycode），避免每个任务在
+    提示词里重复指定引擎；显式参数始终优先。
+    """
+    if provider:
+        return provider
+    env_provider = os.environ.get("HERMES_ACP_PROVIDER", "").strip()
+    if env_provider:
+        return env_provider
+    return cfg.get("default_provider", "opencode")
+
+
+def _resolve_cwd(args: Dict[str, Any], client: ACPClient) -> str:
+    """cwd 解析：显式参数 > HERMES_KANBAN_WORKSPACE > client 默认。
+
+    kanban 派发把任务根写进 HERMES_KANBAN_WORKSPACE；不跟随就会把编码引擎
+    落到全局沙箱，读写错目录且任务上下文缺失。
+    """
+    explicit = args.get("cwd")
+    if isinstance(explicit, str) and explicit.strip():
+        return os.path.expanduser(explicit)
+    workspace = os.environ.get("HERMES_KANBAN_WORKSPACE", "").strip()
+    if workspace:
+        return os.path.expanduser(workspace)
+    return client.default_cwd
+
+
+def _get_client(provider: str = None, cwd: str = None) -> ACPClient:
+    """Get or create the client for a (provider, workspace) pair."""
+    cfg = _load_config(reload=True)
+    provider = _resolve_provider_name(provider or "", cfg)
+    root = os.path.expanduser(cwd.strip()) if isinstance(cwd, str) and cwd.strip() else _provider_default_cwd(provider, cfg)
+    key = _client_key(provider, root)
 
     # Fast path: check for existing alive client
     with _clients_lock:
-        existing = _clients.get(provider)
+        existing = _clients.get(key)
         if existing and existing.is_alive:
             return existing
         if existing:
@@ -806,21 +944,16 @@ def _get_client(provider: str = None) -> ACPClient:
 
     # Create and start client outside lock (start() does network I/O)
     cmd, display = _resolve_provider(provider)
-    cwd = cfg.get("default_cwd", "~")
     auto = cfg.get("auto_approve", True)
+    pcfg = (cfg.get("providers") or {}).get(provider) or {}
+    env_extra = pcfg.get("env") if isinstance(pcfg, dict) else None
 
-    # Per-provider cwd override
-    providers_cfg = cfg.get("providers", {})
-    pcfg = providers_cfg.get(provider, {})
-    if pcfg.get("default_cwd"):
-        cwd = pcfg["default_cwd"]
-
-    client = ACPClient(cmd, cwd, auto, provider_name=provider)
+    client = ACPClient(cmd, root, auto, provider_name=provider, env_extra=env_extra)
     client.start()
 
     # Insert into dictionary under lock
     with _clients_lock:
-        _clients[provider] = client
+        _clients[key] = client
     return client
 
 
@@ -956,8 +1089,8 @@ def handle_acp_agents(args: Dict[str, Any], **kwargs) -> str:
     """Discover available agents/modes from the ACP server."""
     try:
         provider = args.get("provider", "")
-        client = _get_client(provider or None)
-        cwd = args.get("cwd") or client.default_cwd
+        client = _get_client(provider or None, args.get("cwd") if isinstance(args.get("cwd"), str) else None)
+        cwd = _resolve_cwd(args, client)
         resp = client.new_session(cwd=cwd)
 
         if "error" in resp:
@@ -1002,10 +1135,11 @@ def handle_acp_send(args: Dict[str, Any], **kwargs) -> str:
     try:
         provider = args.get("provider", "")
         client = _get_client(provider or None)
-        cwd = args.get("cwd") or client.default_cwd
+        cwd = _resolve_cwd(args, client)
         agent = args.get("agent", "")
         session_id = args.get("session_id", "")
         timeout = int(args.get("timeout", 600))
+        model = _resolve_model(client.provider_name, args, _load_config())
 
         # Create or reuse session
         if not session_id:
@@ -1025,6 +1159,17 @@ def handle_acp_send(args: Dict[str, Any], **kwargs) -> str:
                         "error": f"Failed to set agent '{agent}': {mode_resp['error']}",
                         "session_id": session_id,
                     })
+            # 会话模型钉定（fail-closed）：解析到模型即 setModel；失败/被拒即终止——
+            # 换默认模型偷跑=结果不真。桥侧 setModel 内部走 updateRuntimeModelConfig，
+            # 失败即抛错，成功空回执即已生效。
+            if model:
+                try:
+                    setm = client.set_model(session_id, model)
+                except Exception as exc:
+                    return json.dumps({"error": f"session/setModel failed: {exc}", "session_id": session_id})
+                if not (isinstance(setm, dict) and "result" in setm and "error" not in setm):
+                    return json.dumps({"error": f"session/setModel rejected (model={model})",
+                                       "session_id": session_id})
         elif agent:
             # Existing session — try switching mode (ignore if same)
             client.set_mode(session_id, agent)
@@ -1035,6 +1180,8 @@ def handle_acp_send(args: Dict[str, Any], **kwargs) -> str:
         assembled["provider"] = client.provider_name
         assembled["session_id"] = session_id
         assembled["agent"] = agent or "default"
+        if model:
+            assembled["model"] = model
 
         return json.dumps(assembled)
 
