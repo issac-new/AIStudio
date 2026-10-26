@@ -1,4 +1,4 @@
-// ide-sidepane-regress.mjs — SwarmStudio IDE 工作台 repo wiki + 辅助工具栏 44 项浏览器回归
+// ide-sidepane-regress.mjs — AIStudio IDE 工作台 repo wiki + 辅助工具栏 44 项浏览器回归
 // （2026-10-10 回归轮终态固化：D1-D6 修复轮 + UX 三件遗留项的守门面）。
 //
 // 用法（需 overlay dev 链路在跑：cd overlay && npm run serve & npm run dev → 8647/8649）：

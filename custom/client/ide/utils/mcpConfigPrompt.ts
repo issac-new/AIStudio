@@ -31,7 +31,7 @@ export function buildMcpConfigPrompt(target: McpConfigTarget): string {
     '   - claude：~/.claude.json 的 mcpServers，或项目根 .mcp.json（JSON）',
     '   - dsh：~/.dsh/ 下的插件与配置',
     `   - 本次默认目标是 ${agent} 的全局配置；我要改别的底座时会明说。`,
-    '   - SwarmStudio 工作台自身的 MCP（/hermes/mcp 管理页）不经文件管理：',
+    '   - AIStudio 工作台自身的 MCP（/hermes/mcp 管理页）不经文件管理：',
     '     需要改它时，引导我打开管理页操作，不要尝试用 curl/HTTP 直改服务端。',
     '',
     '## 编辑纪律',

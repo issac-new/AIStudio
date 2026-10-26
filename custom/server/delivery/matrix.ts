@@ -1,7 +1,7 @@
 // overlay[delivery]: C×L 效能画像矩阵纯函数（2026-10-23 天猫数字员工两文吸收轮）。
 // 文章口径（实践篇 §5.1）：需求分层 C1-C4（复杂度）× AI 交付深度 L1-L4（承接范围）
 // 交叉画像，每格「需求数 + 平均介入次数」。
-// SwarmStudio 代用口径（spec D4-D6，实测约束：estimate_days/task_links 全空为主、
+// AIStudio 代用口径（spec D4-D6，实测约束：estimate_days/task_links 全空为主、
 // task_events 无 column_transition）：
 //   C 档=estimate_days 与子任务数取高，信号全缺席=C0 未评估（如实降档，不伪精确）
 //   L 档=看板生命周期：L0 未启动/L1 已认领/L2 执行中/L3 评审中(或完成无产物)/L4 完成有产物

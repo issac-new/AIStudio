@@ -1,4 +1,4 @@
-# SwarmStudio ↔ Hermes Agent Cluster 契约文档
+# AIStudio ↔ Hermes Agent Cluster 契约文档
 
 > 版本：v1.0 (2026-09-07)
 > 定位：观测治理层（第 6 层）与前五层的显式接口契约
@@ -163,10 +163,10 @@ def can_route(assignee: str, inherited_markings: Set[str]) -> bool:
 
 ---
 
-## 6. 验收门禁契约（SwarmStudio 显示用）
+## 6. 验收门禁契约（AIStudio 显示用）
 
 ### 6.1 完成定义（DoD）证据分级
-| 证据等级 | 分数上限 | SwarmStudio 显示 |
+| 证据等级 | 分数上限 | AIStudio 显示 |
 |---------|---------|-----------------|
 | Missing | 59 | 🔴 红 - 机制缺失 |
 | Present | 74 | 🟡 黄 - 仅配置存在 |
@@ -204,5 +204,5 @@ def can_route(assignee: str, inherited_markings: Set[str]) -> bool:
 
 ---
 
-> 本契约是 SwarmStudio 与 Hermes Agent Cluster 之间的**单一事实源**。
+> 本契约是 AIStudio 与 Hermes Agent Cluster 之间的**单一事实源**。
 > 任何一方修改接口，必须同步更新本文档并通过契约测试。

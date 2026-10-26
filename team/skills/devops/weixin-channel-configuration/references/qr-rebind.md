@@ -41,7 +41,7 @@ only a fresh QR confirmation can.
    then grep the block for the old account id (zero hits = done).
 
 6. **Restart the gateway** (`launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway-<profile>`
-   for launchd-managed, or `kill -TERM` for SwarmStudio-managed) and require
+   for launchd-managed, or `kill -TERM` for AIStudio-managed) and require
    the log line `✓ weixin connected (profile: <profile>)`.
 
 7. **Smoke test**: one `send_weixin_direct` to the bound chat; require

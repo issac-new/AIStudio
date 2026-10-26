@@ -28,7 +28,7 @@ export function part1Skeleton(f: RunFacts): string {
   const dispSum = `已修 ${f.disp['已修']}，观察 ${f.disp['观察']}，延后 ${f.disp['延后']}`
   return `<div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：${f.rfd} ｜ ${f.windowText}</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：${f.rfd} ｜ ${f.windowText}</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>【TODO 一句】（特性旗标实抽：${f.featureFlags}）</div>
 

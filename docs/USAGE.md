@@ -1,10 +1,10 @@
-# SwarmStudio 使用指南
+# AIStudio 使用指南
 
-本指南写给第一次把 SwarmStudio 跑起来的使用者与评估者：怎么启动、三种工作模式各怎么走、不同角色从哪里入手、出问题怎么排。安装与架构背景见 [README](../README.md)，设计事实见[《完整设计文档》](superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)。
+本指南写给第一次把 AIStudio 跑起来的使用者与评估者：怎么启动、三种工作模式各怎么走、不同角色从哪里入手、出问题怎么排。安装与架构背景见 [README](../README.md)，设计事实见[《完整设计文档》](superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)。
 
 ## 1、启动（浏览器 web 版）
 
-SwarmStudio 的日常验证与使用走浏览器 web 版，不需要安装桌面包。
+AIStudio 的日常验证与使用走浏览器 web 版，不需要安装桌面包。
 
 ### 1.1 前置条件
 

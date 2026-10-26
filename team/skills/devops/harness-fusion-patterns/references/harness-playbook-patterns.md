@@ -129,7 +129,7 @@
 | 2 | 可信控制面 | approvals 三模式+action_gate+tirith+Guardian 二审；ACP 沙箱收有界请求 | ✓ |
 | 3 | 有界工作 | max_turns/goal_max_turns 硬限+delegation-brief 1.2.0 预算字段；后台子代理无中心 token cap | ◐ |
 | 4 | 显式兼容 | provider 怪癖散在 config——用户已裁决模型路由不入设计 | 不追 |
-| 5 | 视图投影 | 图 2-4 驾驶舱=投影非权威；SwarmStudio 五接口 | ✓ |
+| 5 | 视图投影 | 图 2-4 驾驶舱=投影非权威；AIStudio 五接口 | ✓ |
 
 **已落地融合**（2026-09-11）：F1 token-meter --tools 工具税度量 / F2 devops SKILL version 178/178 / F3 delegation-brief 1.2.0 预算字段 / F5 设计文档 §3.4 工具税佐证。
 

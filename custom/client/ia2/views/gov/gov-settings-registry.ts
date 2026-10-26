@@ -13,7 +13,7 @@ export interface GovSettingEntry {
   name: string
   /** 展示名（治理域语言，非侧栏原词） */
   label: string
-  /** 来源徽标：原生=SwarmStudio 原生（F 组）；旧族=hermes 并入（E 组） */
+  /** 来源徽标：原生=AIStudio 原生（F 组）；旧族=hermes 并入（E 组） */
   source: 'native' | 'legacy'
   /** 门控：superAdmin 条目对非管理员不可见（C9 验收门） */
   superAdmin?: boolean

@@ -28,7 +28,7 @@ CLEF_MODEL=27b bash runtime/clef/start-clef.sh
 bash runtime/clef/verify-clef.sh
 ```
 
-## 与 SwarmStudio 的接线
+## 与 AIStudio 的接线
 
 - toolresultguard（P1a）：`TRG_BASE_URL` 默认 `http://127.0.0.1:8000`（flash 主力）、
   `TRG_TIMEOUT_MS` 默认 12000（flash 守卫 schema 实测 8.8s）、`TRG_ENABLED=1` 启用

@@ -5,7 +5,7 @@ digest-bound :class:`ApprovalRequest`; the transport presents it to a human
 and returns a correlated :class:`ApprovalDecision`. This implementation:
 
 1. appends the request (id/digest/command/description/choices/timeout) to
-   ``<HERMES_HOME>/approvals/queue.jsonl`` — SwarmStudio's approval inbox
+   ``<HERMES_HOME>/approvals/queue.jsonl`` — AIStudio's approval inbox
    (``/api/approvals/pending``) tails this file;
 2. polls ``<HERMES_HOME>/approvals/responses/<request_id>.json`` until the
    request deadline; the studio decide endpoint writes that file;

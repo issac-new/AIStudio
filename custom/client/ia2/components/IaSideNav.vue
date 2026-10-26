@@ -233,7 +233,7 @@ function recentTimeLabel(ts: number): string {
   >
     <div class="isn__brand">
       <span class="isn__logo" aria-hidden="true">S</span>
-      <span v-if="!effectiveCollapsed" class="isn__brand-name">SwarmStudio</span>
+      <span v-if="!effectiveCollapsed" class="isn__brand-name">AIStudio</span>
       <button
         type="button"
         class="isn__collapse"

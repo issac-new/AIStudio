@@ -1,10 +1,10 @@
 /**
  * 工作流引擎 REST（/api/ia2/workflow/runs）——2026-10-23 五轮 H 用户裁定：
  * 「循环」调整为 zcode 的 workflow 功能（参考 zcode dynamic-workflow 引擎的
- * agent().ask() 子代理调度模型），且步骤目标可调度 SwarmStudio 的分布式
+ * agent().ask() 子代理调度模型），且步骤目标可调度 AIStudio 的分布式
  * hermes agent 与 matrix 集群。
  *
- * 模型（zcode facade 的 SwarmStudio 形态）：
+ * 模型（zcode facade 的 AIStudio 形态）：
  * - step.target kind='identity' → 本机网关分布式 hermes agent（49 profile），
  *   经 peer dm 协议（identity-chat.ts 的 ensureBotChat+chat；agent().ask() 的
  *   服务器对等物：同步等回，超时=turn 已入队标 queued 不重发）。

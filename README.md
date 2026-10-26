@@ -4,11 +4,11 @@
 
 Hard times create human code, human code create AI times, AI times create weak men, and weak men create hard times.
 
-AIStudio 是 SwarmStudio 体系的单一完整项目仓（原 ncwk 工作区多仓整合，2026-10-24 起）：产品应用 SwarmStudio、通信基座 Matrix、运行面 hermes agent（teams）、编码引擎 Ycode、能力层 swarm-yuan 技能与全流程推演 harness（simharness）的全部源码与依赖清单都在这一个仓里，克隆即构建。SwarmStudio 是一套让「人指挥 AI 团队交付软件」的工作系统：分布式需求分析、研发协作、实施交付、测试验证在同一个驾驶舱完成。它基于 [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) 二次开发：上游基线以钉版快照收录在 `vendor/`（台账见 [vendor/VENDOR.md](vendor/VENDOR.md)），二次开发住在本仓 `patches/` 与 `custom/`，构建期注入叠加，基线保持纯净、可独立升级。
+AIStudio 是单一完整项目仓（原 ncwk 工作区多仓整合，2026-10-24 起）：产品应用 AIStudio、通信基座 Matrix、运行面 hermes agent（teams）、编码引擎 Ycode、能力层 swarm-yuan 技能与全流程推演 harness（simharness）的全部源码与依赖清单都在这一个仓里，克隆即构建。AIStudio 是一套让「人指挥 AI 团队交付软件」的工作系统：分布式需求分析、研发协作、实施交付、测试验证在同一个驾驶舱完成。它基于 [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) 二次开发：上游基线以钉版快照收录在 `vendor/`（台账见 [vendor/VENDOR.md](vendor/VENDOR.md)），二次开发住在本仓 `patches/` 与 `custom/`，构建期注入叠加，基线保持纯净、可独立升级。
 
 ## 理念：四个阶段的问题与解法
 
-AI 协作从「单机单 Agent」走向「多人 + 多 Agent 并行」后，交付的四个阶段各暴露一类结构性问题。SwarmStudio 的功能逐条对着这四类问题来。
+AI 协作从「单机单 Agent」走向「多人 + 多 Agent 并行」后，交付的四个阶段各暴露一类结构性问题。AIStudio 的功能逐条对着这四类问题来。
 
 | 阶段 | 问题 | 解法 |
 |---|---|---|
@@ -21,10 +21,10 @@ AI 协作从「单机单 Agent」走向「多人 + 多 Agent 并行」后，交�
 
 ## 体系：五件套构成完整交付系统
 
-SwarmStudio 不是单一应用，而是五个组件构成的分布式交付体系：
+AIStudio 不是单一应用，而是五个组件构成的分布式交付体系：
 
 ```
-产品面  SwarmStudio（本仓）
+产品面  AIStudio（本仓）
         驾驶舱：看板 / 审批 / 沟通 / 推演 / IDE / 治理 —— 只读消费运行面
           │
 通信基座  Matrix
@@ -141,9 +141,9 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 
 ## 文档
 
-- [交互式介绍页](docs/intro.html)：一页看懂 AIStudio 与 SwarmStudio 体系，分屏滚动叙事，离线单文件。
+- [交互式介绍页](docs/intro.html)：一页看懂 AIStudio 与 AIStudio 体系，分屏滚动叙事，离线单文件。
 - [使用指南](docs/USAGE.md)：启动、三种工作模式走法、角色旅程、重启与排障。
-- [SwarmStudio 完整设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施、使用五层正本。
+- [AIStudio 完整设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施、使用五层正本。
 - [全流程推演方案](docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步六闸推演唯一正本（V8.52）。
 - [设计数字总账](docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)：全域数字唯一事实源。
 - 历史 spec 索引见[附录 A](docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)。

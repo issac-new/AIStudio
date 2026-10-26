@@ -30,7 +30,7 @@ Complements `gateway-platform-management` (platform-add mechanics) with the
   refusing to start the duplicate` for a profile pair (Root Cause #3)
 - One child's/person's account connects while another's does not, on the
   same host
-- Setting up weixin credentials for the first time in a SwarmStudio-managed
+- Setting up weixin credentials for the first time in a AIStudio-managed
   multiplex deployment
 
 > **One gateway, many accounts.** In `multiplex_profiles: true` mode there is
@@ -118,10 +118,10 @@ curl -s -X POST https://ilinkai.weixin.qq.com/ilink/bot/getconfig \
 ls ~/.hermes/weixin/accounts/
 ```
 
-## Restart Pattern (SwarmStudio-managed)
+## Restart Pattern (AIStudio-managed)
 
 `hermes gateway restart` is **blocked from inside the gateway process**
-(SIGTERM propagates). Kill the PID instead — SwarmStudio's
+(SIGTERM propagates). Kill the PID instead — AIStudio's
 `autoRestartEnabled` + `scheduleRestart` respawns it automatically:
 
 ```bash
@@ -138,7 +138,7 @@ Verify success: `✓ weixin connected` and `Gateway running with 4 platform(s)`.
 - **iLink token format** is `account_id:secret` (e.g.
   `<main-bot-account-id>@im.bot:0600...`) — the full string is the token, keep it intact.
 - **`hermes config set platforms.weixin.enabled`** writes to the PROFILE
-  config when `active_profile` is set, NOT the global config the SwarmStudio
+  config when `active_profile` is set, NOT the global config the AIStudio
   startup check reads. Edit global `~/.hermes/config.yaml` directly
   (patch/write_file) for the platforms section.
 - **Old poll errors are historical**: `Cannot connect to host
@@ -148,12 +148,12 @@ Verify success: `✓ weixin connected` and `Gateway running with 4 platform(s)`.
 - **Rate-limit cooldown** (`sendmessage rate limited; cooldown active 30s`)
   is transient — not a config problem.
 - **Weixin adapter is JS/shell-free in gateway**: `check_weixin_requirements()`
-  only needs `aiohttp` + `cryptography` installed in the SwarmStudio
+  only needs `aiohttp` + `cryptography` installed in the AIStudio
   desktop-runtime python, not the Hermes venv.
 - **Multiplex: global config.yaml has platforms.weixin.enabled, profile config.yaml may not** — in `multiplex_profiles: true` mode, the gateway reads platform enablement from the **global** `~/.hermes/config.yaml` (under `gateway:` → `platforms:`), but credentials from the **active profile's** `.env`. If global has weixin enabled but profile .env lacks WEIXIN_TOKEN/WEIXIN_ACCOUNT_ID, the platform silently fails to connect (no "Connecting to weixin..." log line). Fix: ensure shared `.env.common` has the credentials so `generate-configs.py` propagates them to all profiles.
 - **Shared .env.common is the single source for credentials** — `generate-configs.py` merges `.env.common` + `profiles.yaml` env_extra into each profile's `.env`. If WEIXIN_TOKEN/WEIXIN_ACCOUNT_ID are only in global `~/.hermes/.env` (or only in one profile's `.env`), other profiles won't get them. The fix is adding them to `.env.common` (or to each profile's `env_extra` in `profiles.yaml`) and re-running `generate-configs.py`.
 - **Account file location is unified HERMES_HOME (`~/.hermes/weixin/accounts/`)**, not per-profile — even with multiplex, the weixin adapter looks only at `$HERMES_HOME/weixin/accounts/<account_id>.json` where `HERMES_HOME=~/.hermes`. If QR setup saved it under a profile home (`~/.hermes/profiles/<profile>/weixin/accounts/`), copy it to the unified location.
-- **SwarmStudio auto-restart after kill works** — kill the gateway PID (`kill -TERM <pid>`), SwarmStudio's `autoRestartEnabled` + `scheduleRestart` respawns it with the new config. Verify in logs: `✓ weixin connected` and `Gateway running with N platform(s)` including weixin.
+- **AIStudio auto-restart after kill works** — kill the gateway PID (`kill -TERM <pid>`), AIStudio's `autoRestartEnabled` + `scheduleRestart` respawns it with the new config. Verify in logs: `✓ weixin connected` and `Gateway running with N platform(s)` including weixin.
 - **Bot re-bind swaps more than the token** — after a QR re-bind, the profile `.env` (profile-specific block), the `weixin/accounts/<id>.json` file, and the gateway restart all three must land; skipping the smoke test leaves a route that looks configured but has never delivered.
 
 ## Multi-account multiplex (verified 2026-09-26)

@@ -27,7 +27,7 @@ metadata:
 
 ### 机制（file:line 锚点，已核实）
 
-- cron job 由 **gateway 进程**承载调度执行。gateway 重启/被 `--replace` 替换（SwarmStudio 拉起新会话、重启服务）时，正在跑的 cron 子进程被一起杀掉。
+- cron job 由 **gateway 进程**承载调度执行。gateway 重启/被 `--replace` 替换（AIStudio 拉起新会话、重启服务）时，正在跑的 cron 子进程被一起杀掉。
 - 恢复机制 `cron/executions.py:271 recover_interrupted_executions()` **只把被打断的执行标成 `unknown`，docstring 明确 `without scheduling retries`——不自动重跑**（file:line 已读）。
 - 结果：长任务在 gateway 重启时段被撞上 → 静默丢一天，**只能等下一次 24h 后的 cron 触发**，没有任何自动补跑。
 

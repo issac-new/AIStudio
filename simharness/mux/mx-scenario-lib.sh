@@ -17,7 +17,7 @@ mkdir -p "$EVID_DIR"
 # ── 姿态旋钮+代偿台账（2026-10-15 治理轮批次一）──
 # MX_POSTURE=strict|standard|demo，缺省 standard。strict=零代偿测自组织真力；
 # standard=现状保留但每笔代偿落台账（报告净额对账/清偿门数据源）；demo=演示调度。
-# 用户裁定 2026-10-15：代偿在下一轮推演前必须根治后合入 SwarmStudio 产品能力。
+# 用户裁定 2026-10-15：代偿在下一轮推演前必须根治后合入 AIStudio 产品能力。
 posture() {
   local p="${MX_POSTURE:-$(sget posture)}"
   case "$p" in strict|standard|demo) echo "$p" ;; *) echo "standard" ;; esac

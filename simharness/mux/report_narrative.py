@@ -528,7 +528,7 @@ def render_chapter0(state, evid, journey_html=None, steps_dir=None, zone_hits=No
 
     out.append('<h2 id="ch0-collab">第 0 章 · 推演逻辑与协作顺序总述（R15）</h2>')
     out.append('<div class="gatebox"><b style="font-size:14px">产品定位（一页）</b>'
-               '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">Swarm Studio 是 AI 员工驱动的研发交付系统：'
+               '<p style="margin:6px 0;font-size:13.5px;line-height:1.8">AIStudio 是 AI 员工驱动的研发交付系统：'
                '15 人编制（人+AI 助理 30 个 matrix 账号）在"每人一套 hermes agent + swarm studio、共用 matrix 后台"的形态下，'
                '完整跑通"需求冻结→系统分析→架构评审→排期→编码→独立测试→发布准出→UAT→治理复盘"。'
                '人的角色=<b>意图持有者、仲裁者、最终验证者</b>；AI 员工（需求设计/应用研发/质量测试/研发治理四类）主理执行；'

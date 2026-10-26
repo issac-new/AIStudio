@@ -944,7 +944,7 @@ _vc_proj_root() {  # $1=skill_dir → stdout 项目根（①环境 PROJECT_DIR �
 }
 
 # ── 交付形态嗅探（2026-10-11 平台根治：交付六型 DoD 盖章，run14 教训——单测全绿≠可运行）──
-# 形态标记与每型运行证据的正本=Swarm Studio custom/server/delivery-contract；此处仅嗅探呈现，AI 核正后写入 DoD。
+# 形态标记与每型运行证据的正本=AIStudio custom/server/delivery-contract；此处仅嗅探呈现，AI 核正后写入 DoD。
 _detect_delivery_shapes() {
   local d="$1" out=""
   # R126：mini-program 嗅探补 maxdepth 3 与排除链（旧版全树 find 不排 node_modules/.git，

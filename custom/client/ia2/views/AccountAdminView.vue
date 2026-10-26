@@ -29,10 +29,10 @@ async function invite() {
 }
 function copyInvite(): void {
   const r = inviteResult.value; if (!r) return
-  const text = `SwarmStudio 账号邀请
+  const text = `AIStudio 账号邀请
 Matrix 账号：${r.userId}
 初始口令（一次性，请尽快登录后修改）：${r.initialPassword}
-登录：打开 SwarmStudio 登录页 → Matrix 页签 → 服务器 ${inv.value.homeserverUrl} → 输入账号与初始口令 → 登录后到设置中修改密码。`
+登录：打开 AIStudio 登录页 → Matrix 页签 → 服务器 ${inv.value.homeserverUrl} → 输入账号与初始口令 → 登录后到设置中修改密码。`
   void navigator.clipboard?.writeText(text).then(() => { invCopied.value = true; setTimeout(() => { invCopied.value = false }, 2000) })
 }
 

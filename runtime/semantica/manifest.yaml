@@ -1,4 +1,4 @@
-# SwarmStudio base runtime: semantica (graph-native knowledge infrastructure).
+# AIStudio base runtime: semantica (graph-native knowledge infrastructure).
 # Single source of truth — copied into hermes-agent optional-mcps/ by patch 375.
 # Consumed by the studio MCP catalog browser and `hermes mcp install semantica`.
 manifest_version: 1

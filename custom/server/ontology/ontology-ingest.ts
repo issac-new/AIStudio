@@ -3,7 +3,7 @@
  *
  * 把 swarm kanban 真实任务自动搬进本体（A-Box），本体不再只是手工字典：
  *   tasks 行      → Task 实例（id=kb:<slug>:task:<tid>，taskRef=<slug>#<tid> 唯一键防重）
- *   assignee      → Agent 实例（id=kb:agent:<name>，跨板共享；SwarmStudio 看板执行者
+ *   assignee      → Agent 实例（id=kb:agent:<name>，跨板共享；AIStudio 看板执行者
  *                   现状全是 AI 代理名——如实映射 Agent，人类协作方人工补录 Human）
  *   板            → Board 实例（id=kb:board:<slug>）
  *   task_links    → dependsOn 关系（两端任务都摄取才建边，无环公理求值兜底）

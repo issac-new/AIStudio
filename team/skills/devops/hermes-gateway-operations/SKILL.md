@@ -20,10 +20,10 @@ deployment with dashboard, multi-board Kanban, and bulk cleanup.
 
 ## launchd「坏掉」误判与 host-gateway 兜底实测（2026-09-27）
 
-`gateway.error.log` 满屏 `execution error: non-zero status (75)` + `launchctl print` 显示 `last exit code=1` **不等于 launchd 路径坏了**。真实机制：host-gateway 架构下（`One gateway per host serves every profile`），launchd 服务起 `gateway run` 时若检测到别的进程已在服务全部 profile，会让位退出（KeepAlive `SuccessfulExit=false` 正确停放）；75 刷屏是它与 SwarmStudio 手拉进程打架的历史产物。**判性必须实测**：kill 当前网关进程，launchd 会在 ~30-60s（ThrottleInterval）内自动拉起并重连全部平台（实测 api_server/matrix/weixin/[已移除]-weixin 全绿）。
+`gateway.error.log` 满屏 `execution error: non-zero status (75)` + `launchctl print` 显示 `last exit code=1` **不等于 launchd 路径坏了**。真实机制：host-gateway 架构下（`One gateway per host serves every profile`），launchd 服务起 `gateway run` 时若检测到别的进程已在服务全部 profile，会让位退出（KeepAlive `SuccessfulExit=false` 正确停放）；75 刷屏是它与 AIStudio 手拉进程打架的历史产物。**判性必须实测**：kill 当前网关进程，launchd 会在 ~30-60s（ThrottleInterval）内自动拉起并重连全部平台（实测 api_server/matrix/weixin/[已移除]-weixin 全绿）。
 
 重启姿势（按官方指引实测）：
-1. `hermes gateway run --force` — 起新宿主接管（`--replace` 只接管「服务同一 profile」的 owner，对 SwarmStudio 拉的宿主无效）
+1. `hermes gateway run --force` — 起新宿主接管（`--replace` 只接管「服务同一 profile」的 owner，对 AIStudio 拉的宿主无效）
 2. 停老进程：`kill -TERM <old_pid>`，新进程自动绑 8650
 3. 若 api_server 报 `address already in use` 被 park（老进程退干净前抢绑），端口释放后再起一次即恢复
 4. 注意：从 TUI 会话 `gateway run --force` 起的进程父链挂在 TUI 进程下（TUI 关闭可能连带死亡）；launchd 服务是持久兜底，两者并存时 launchd 让位、TUI 进程死后 launchd 接管
@@ -207,12 +207,12 @@ absolute file path, or create a new skill in the active profile.
 
 ---
 
-## 重启 gateway 的正确姿势（multiplex 宿主 + SwarmStudio 管控，2026-09 实测）
+## 重启 gateway 的正确姿势（multiplex 宿主 + AIStudio 管控，2026-09 实测）
 
-本集群是 **multiplex 单宿主网关**：一个 `hermes gateway run` 进程服务全部 47 个 profile（不是每 profile 一个网关）。且它常由 **SwarmStudio 拉起**（父进程是 SwarmStudio，非 launchd），launchd plist 走 `osascript → exec hermes gateway run` 那层可能 `error 75` 反复重试（坏着），`launchctl kickstart` 挂起不生效。此时正确路径：
+本集群是 **multiplex 单宿主网关**：一个 `hermes gateway run` 进程服务全部 47 个 profile（不是每 profile 一个网关）。且它常由 **AIStudio 拉起**（父进程是 AIStudio，非 launchd），launchd plist 走 `osascript → exec hermes gateway run` 那层可能 `error 75` 反复重试（坏着），`launchctl kickstart` 挂起不生效。此时正确路径：
 
 ```bash
-# 1. 起新宿主实例（--force 让它接管「服务全部 profile」的宿主；--replace 只接管服务同一 profile 的 owner，对 SwarmStudio 起的宿主无效）
+# 1. 起新宿主实例（--force 让它接管「服务全部 profile」的宿主；--replace 只接管服务同一 profile 的 owner，对 AIStudio 起的宿主无效）
 exec hermes gateway run --force >> <日志> 2>&1 &     # 后台长驻
 # 2. 等它绑端口（8650 是 api_server），再 SIGTERM 停老的宿主进程 → 新的接管
 # 3. 就绪验证（写在 orchestrator/logs/gateway.log，不是别的日志文件）
@@ -226,7 +226,7 @@ tail ~/.hermes/profiles/[已移除]-orchestrator/logs/gateway.log | grep -i 'wei
 
 **坑：`hermes gateway restart` 前台阻塞**（drain 期可达数百秒）会触发 terminal 180s 超时；超时 ≠ 失败，但可能打断重启。multiplex 宿主场景优先用 `gateway run --force` 后台 + 轮询，别用阻塞式 restart。
 
-**坑：`--replace` vs `--force`**。`--replace` 只接管「服务同一 profile」的旧 owner；`--force` 才抢宿主（服务全部 profile 的那个）。SwarmStudio 拉起的全 profile 宿主进程用 `--replace` 接管不了。
+**坑：`--replace` vs `--force`**。`--replace` 只接管「服务同一 profile」的旧 owner；`--force` 才抢宿主（服务全部 profile 的那个）。AIStudio 拉起的全 profile 宿主进程用 `--replace` 接管不了。
 
 ### 为什么必须重启才让配置改动生效（agent 构造时定格）
 
@@ -257,9 +257,9 @@ done
 **坑**：新建的 kanban 任务会被 dispatcher **秒拾取**进 running。所以"建任务"和"重启 gateway"
 不能在同一拍做——先把要建的卡建完、等它们全 done，再重启。边建边重启会反复打断新 worker。
 
-### 非 launchd 环境（SwarmStudio 管控）的主端口诊断与恢复
+### 非 launchd 环境（AIStudio 管控）的主端口诊断与恢复
 
-本集群 gateway 归 **SwarmStudio** 管（非 launchd，profile 下有 `.gateway-launchd-unsupported`
+本集群 gateway 归 **AIStudio** 管（非 launchd，profile 下有 `.gateway-launchd-unsupported`
 标记）。launchctl 那套不适用。主 orchestrator gateway 挂掉（如 8650 无监听）时的诊断：
 
 ```bash
@@ -283,9 +283,9 @@ cat ~/.hermes/profiles/orchestrator/gateway_state.json | python3 -m json.tool | 
 
 **恢复**：主 gateway 重启命令形如
 `hermes_cli.main --profile orchestrator gateway run --replace`
-（前台进程，归 SwarmStudio 管）。**这属 HumanGate 高级操作**（长期驻留进程 + 影响
+（前台进程，归 AIStudio 管）。**这属 HumanGate 高级操作**（长期驻留进程 + 影响
 Matrix/Weixin 渠道收发 + 第三方管控），不要让 agent 盲目自主执行——应给图爸出方案，
-确认时机（worker 空窗）与执行方（agent 重启 vs 图爸经 SwarmStudio 重启）后再动。
+确认时机（worker 空窗）与执行方（agent 重启 vs 图爸经 AIStudio 重启）后再动。
 
 **顺带收益**：若本次重启是为了让某个源码 patch（如新增 DB 列）生效，可在同一重启里
 一并恢复挂掉的主 gateway——一次重启解决两件事。

@@ -50,7 +50,7 @@
 | outbound-guard.md | 外发守卫 |
 | cost-governance.md | 成本治理：harness 先行归因、动作空间收窄 |
 | agent-task-size-v1.md | 任务规模估算 v1（预算轮次推导依据） |
-| swarm-studio-contract.md | SwarmStudio 投影契约 |
+| swarm-studio-contract.md | AIStudio 投影契约 |
 | skill-catalog.md | 目标 skill 生成状态目录 |
 
 ## 派工纪律（skill 载体，索引防漏）

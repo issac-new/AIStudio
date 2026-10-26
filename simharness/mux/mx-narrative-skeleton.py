@@ -79,7 +79,7 @@ def part1_skeleton() -> str:
 # 数字槽由 merge 合入时实测填充，保持 {{...}} 原样勿手填。
 <div class="guide" style="background:#fbfbfa;padding:6px 0 20px">
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{{{run_id}}}} ｜ 任务：{rfd} ｜ {{{{window}}}}</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{{{run_id}}}} ｜ 任务：{rfd} ｜ {{{{window}}}}</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>【TODO 一句：本轮特性组合与定位】</div>
 

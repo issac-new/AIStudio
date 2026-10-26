@@ -3,7 +3,7 @@
  *
  * 对标 ZCode 3.12.3 resourceManager(65 键)（spec §三.2，M2）：
  * 磁盘占用分类扫描 / 安全分类清理 / 在文件管理器中显示。
- * 数据面 = 本机 ~/.hermes 目录（SwarmStudio 运行时数据根）。
+ * 数据面 = 本机 ~/.hermes 目录（AIStudio 运行时数据根）。
  *
  * 挂载：B 类 patch（series 312）在 packages/server/src/bootstrap/routes.ts
  * `app.use(ideStorageRoutes.routes())`，与 ide/git 同款模式。

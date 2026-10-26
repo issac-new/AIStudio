@@ -1,7 +1,7 @@
 # Windows x64 部署与开发环境指引
 
 > 2026-09-22 win-x64 兼容排查轮配套文档,撰写于多仓布局时期(overlay 仓 + 外置 upstream/)。适用:在 Windows 10/11 x64 主机上搭建
-> SwarmStudio 的开发/构建/打包环境。桌面应用(安装包)本身的运行时兼容
+> AIStudio 的开发/构建/打包环境。桌面应用(安装包)本身的运行时兼容
 > 由上游保证(Electron 42 + node-pty/sharp/sherpa-onnx 均有 win32-x64 prebuilt、
 > N-API 免 rebuild),此前断点集中在 overlay 的注入/构建编排层,本轮已根治。
 > 2026-10-24 起 overlay 已整合为 AIStudio 单仓(上游基线入 vendor/),本文流程未在单仓布局下重验;Windows 环境以 README「使用」步骤为准,本文留作排查实录。

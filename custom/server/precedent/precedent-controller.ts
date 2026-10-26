@@ -1,7 +1,7 @@
 // overlay[precedent]: 判例库检索（2026-10-23 挂账批 D18）。
 // 文章口径（协作篇 §7.2 过程维度）：「类似需求怎么做的、这类单的基线是什么」——
 // 判例库按需求聚合群看板轨迹与工单记录，接需求时检索类似判例当样板。
-// SwarmStudio 落法：run 即判例单元。源=①活跃 runs/<id>/evidence（台账派发词+issues.log）
+// AIStudio 落法：run 即判例单元。源=①活跃 runs/<id>/evidence（台账派发词+issues.log）
 // ②归档 tar（archive/*/runs.tar：先列清单缓存、命中 run 后 tar -xOf 按需抽单文件，
 // 不全量解压——NVMe 归档面体积可控纪律）。
 // 检索词命中台账派发原文/问题行；命中卡={run, 派发词数, 问题/处置数, 命中片段(带锚点)}。

@@ -107,7 +107,7 @@ What works / doesn't:
   accepts delivery via that channel. Fastest unblock.
 - ✅ **Restart the gateway to restore the poll heartbeat**:
   `launchctl kickstart -k "gui/$(id -u)/ai.hermes.gateway-<profile>"`
-  (launchd-managed gateways; main is SwarmStudio-managed, [已移除] is
+  (launchd-managed gateways; main is AIStudio-managed, [已移除] is
   launchd). Log confirms `✓ weixin connected account=...`. This did NOT
   lift the server-side -2 in the 2026-08 case, but is the right hygiene.
 - ❌ Clearing `_LIVE_ADAPTERS`, retrying after 30s/2min/5min, toggling

@@ -197,7 +197,7 @@ def dn(acc: str) -> str:
 # actor: human=人主导 / ai=AI 主导 / both=人机协同 / gate=强制关卡（含人确认点）
 # 叙事全部锚定真实事件（scenario.log / matrix event / git 提交），不虚构。
 # imgs 三元组 (图 id, 中文图注, 来源类别)：
-#   'ui'  = 产品界面实拍（Swarm Studio 真实页面，浏览器截图）
+#   'ui'  = 产品界面实拍（AIStudio 真实页面，浏览器截图）
 #   'doc' = 仓内工件/数据实查（git 文档、sqlite 卡记录、真值日志的排版呈现——非产品界面）
 #   'msg' = matrix 真实消息转录（event_id 可反查——非产品界面）
 # 报告读者必须能一眼区分「产品长什么样」与"证据是什么"，杜绝工件冒充 UI。
@@ -211,7 +211,7 @@ STEPS_META_RUN2 = {
             imgs=[
                   ('ui-02-profiles', '产品界面：看板切换器（看板: … ▾ 展开）——单 gateway 多路复用下按账号隔离的板可见性（28 板实况）', 'ui'),]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
-            narrative='用户打开 Swarm Studio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；02:16:07 14 账号 matrix-login+账号板 kanban 可达真值核验 ✓，登录后只见本账号档案与看板。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
+            narrative='用户打开 AIStudio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；02:16:07 14 账号 matrix-login+账号板 kanban 可达真值核验 ✓，登录后只见本账号档案与看板。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
             imgs=[
                   ('ui-03-cockpit', '驾驶舱全景：顶栏任务计数/注意力条实时聚合 + 左房间列表 + 右「任务·决策」三节+动态 feed', 'ui'),]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
@@ -464,7 +464,7 @@ STEPS_META_RUN1 = {
             imgs=[
                   ('ui-02-profiles', '产品界面：看板切换器——单 gateway 多路复用下按账号隔离的板可见性（28 板实况；profiles 配置页按产品设计仅 super_admin 可见，本编制无此档账号，如实声明）', 'ui'),]),
     3: dict(keys=['smoke_done'], actor='human', actorText='人 · 各用户',
-            narrative='用户打开 Swarm Studio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；登录后只见本账号档案与看板（ACL 隔离抽查通过）。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
+            narrative='用户打开 AIStudio 免密登录（凭 gateway 已配 Orchestrator channel），也支持 matrix 地址+账号+密码登录；登录后只见本账号档案与看板（ACL 隔离抽查通过）。驾驶舱顶栏任务计数/注意力条实时聚合跨板数据。',
             imgs=[
                   ('ui-03-cockpit', '驾驶舱全景：顶栏任务计数/注意力条实时聚合 + 左房间列表 + 右「任务·决策」三节+动态 feed', 'ui'),]),
     4: dict(keys=['smoke_done'], actor='ai', actorText='脚本 · 冒烟门禁',
@@ -4133,7 +4133,7 @@ _GOV_FINAL_OVERRIDES_BY_RUN = {
 # 故事）。当轮内容入注册表；未登记轮给诚实兜底文案，指真实数据源，不编造。
 _GOV_EVIDENCE_BY_RUN = {
     '20261007-v8-run10': (
-        '本轮四起接线事故的根因与修复已存入跨轮记忆库——下轮推演时 AI 员工会自动回忆这些教训，不会再踩同一个坑。这正是 SwarmStudio"治理靠机制不靠自觉"的实装：问题不只被修掉，还被记住。',
+        '本轮四起接线事故的根因与修复已存入跨轮记忆库——下轮推演时 AI 员工会自动回忆这些教训，不会再踩同一个坑。这正是 AIStudio"治理靠机制不靠自觉"的实装：问题不只被修掉，还被记住。',
         'run9 六闸全首过、交付率 4/4；run10 在四起接线事故下仍然六闸全过、26 步走完——治理系统在逆境中的鲁棒性得到验证。run11 目标：零事故+流式并行（净墙钟 ≤3h）。',
     ),
     '20261010-v8-run14': (
@@ -4771,7 +4771,7 @@ html[data-theme="dark"] ::selection{background:#2b4c8c;color:#fff}
 html = f'''<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Swarm Studio 全流程推演报告 · RFD-001</title>
+<title>AIStudio 全流程推演报告 · RFD-001</title>
 <style>
 {_REPORT_TOKENS}
 {_THEME_TOGGLE_CSS}
@@ -5063,12 +5063,12 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 </head><body>
 <div class="layout">
 <nav class="sidebar">
-  <div class="nav-title">Swarm Studio<br>全流程推演报告<br><span style="font-size:13px;color:var(--muted)">RFD-001 · 支付收银台</span></div>
+  <div class="nav-title">AIStudio<br>全流程推演报告<br><span style="font-size:13px;color:var(--muted)">RFD-001 · 支付收银台</span></div>
   {nav_html}
 </nav>
 <main class="main">
   <header class="hero">
-    <h1>Swarm Studio 全流程推演报告</h1>
+    <h1>AIStudio 全流程推演报告</h1>
     <div class="sub">RFD-001 收单商户多端小程序支付收银台 · 15 人 × AI 分布式集群协作 · 四类 AI 员工（需求设计/应用研发/质量测试/研发治理）<br>
     推演轮次 {RUN_ID or 'V3 基线轮'} · 锚定本轮 state 写入通过标记时间窗 · 标题与把关逐字引用方案原文 · 每步标注人/AI 角色与结果锚点</div>
     <div class="hero-stats">
@@ -5126,7 +5126,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
 
   <h2 class="section-hd" id="ch9-gov">第 9 章 · 完整循环治理终态——治理系统工作了吗？</h2>
-  <p class="stat-note">本章回答一个问题：SwarmStudio 的治理机制在真实研发中是否形成了完整循环（问题 100% 处置、经验积累、度量可追踪）。</p>
+  <p class="stat-note">本章回答一个问题：AIStudio 的治理机制在真实研发中是否形成了完整循环（问题 100% 处置、经验积累、度量可追踪）。</p>
 
   <div style="margin:12px 0;padding:12px 16px;background:var(--bg);border-radius:8px;border-left:4px solid {_gov_verdict_color}">
     <b style="color:{_gov_verdict_color}">结论：{_gov_verdict_title}</b>——{_gov_verdict_body}
@@ -5140,7 +5140,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
     <tr><td>处置完整循环率</td><td>{'100%' if n_issue_open == 0 else f'{n_resolved}/{n_issue_keys}'}{f'（表外词 {n_nonstd} 键）' if n_nonstd else ''}</td><td>每个问题都有结论，没有静默丢失；表外词键=处置在案但首词越三态词表（台账卫生）</td></tr>
     </table>
   </div>
-  <p class="stat-note">每个问题从发现（ISSUE 行）到处置（DISP 行）全程在看板上留痕，SwarmStudio 治理中心的台账区可随时回查。</p>
+  <p class="stat-note">每个问题从发现（ISSUE 行）到处置（DISP 行）全程在看板上留痕，AIStudio 治理中心的台账区可随时回查。</p>
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据二：经验积累（记忆库）</h3>
   <p style="font-size:13px;color:var(--text)">{_gov_ev2}</p>
@@ -5170,7 +5170,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <p class="stat-note">{art_note_g5}</p>
 
   <div class="footer">报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本（单一事实源），交付物自中央仓实读，问题单与计数自台账实测统计<br>
-全部证据图=Swarm Studio 产品界面真实浏览器截图（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
+全部证据图=AIStudio 产品界面真实浏览器截图（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
 </main>
 </div>
 <button id="back-top" title="回到顶部" aria-label="回到顶部" style="display:none;position:fixed;right:26px;bottom:30px;z-index:90;width:42px;height:42px;border:none;border-radius:50%;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(15,23,42,.22);opacity:.92">↑</button>

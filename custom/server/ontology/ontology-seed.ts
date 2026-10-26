@@ -1,9 +1,9 @@
 /**
- * SwarmStudio 领域种子本体（GB/T 48000.3 方法论产品化）。
+ * AIStudio 领域种子本体（GB/T 48000.3 方法论产品化）。
  *
  * 国标 5.1 边界：它规范的是「标准领域」本体，领域实体类型清单必须自己扩展——
  * 「抄骨架，别抄内容」。本种子按国标四类组织法（协作主体/工作对象/知识资产/
- * 运行环境）给出 SwarmStudio 群体协作域的起步骨架：16 实体类型 + 12 对象属性
+ * 运行环境）给出 AIStudio 群体协作域的起步骨架：16 实体类型 + 12 对象属性
  * + 6 公理；每类型/属性/公理带应/宜/可情态分级。
  *
  * 关系语义取自仓内真实协作面：Task/Board=看板面，Agent/Role/Squad=五角色边界
@@ -21,7 +21,7 @@ export function seedSpec(now = Date.now()): OntologySpec {
     namespace: SEED_NAMESPACE,
     version: 1,
     versionIri: versionIriOf(SEED_NAMESPACE, 1),
-    label: 'SwarmStudio 群体协作核心本体（种子）',
+    label: 'AIStudio 群体协作核心本体（种子）',
     entityTypes: [
       // —— 协作主体 ——
       {

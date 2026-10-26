@@ -111,7 +111,7 @@ bash install.sh
 
 大型项目（>100 文件）可用 Dynamic Workflow 并行扇出三路子代理，交叉验证特征卡。
 
-#### 落地示例（AIStudio 单仓，原 SwarmStudio overlay 仓）
+#### 落地示例（AIStudio 单仓，原 AIStudio overlay 仓）
 
 | # | 特征项 | 真实值 |
 |---|--------|--------|

@@ -1,5 +1,5 @@
 // overlay/custom/client/ide/utils/diagram-export.ts
-// Vue Flow 活图 → SwarmStudio 品牌静态 HTML+SVG 导出（spec 项6）。
+// Vue Flow 活图 → AIStudio 品牌静态 HTML+SVG 导出（spec 项6）。
 // 纯函数：nodes/edges + 绝对坐标 → 自包含 HTML（正交连线 r=8、标签 paper 遮罩、
 // a11y title/desc、4px 网格、font source=system）。
 // 品牌 token 为客户端副本（client 不 import server 模块，仓库既有边界）；

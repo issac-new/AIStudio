@@ -1,5 +1,5 @@
 // overlay/custom/server/diagram/mermaid-branded.ts
-// Mermaid IR → SwarmStudio 品牌 HTML+SVG 重绘（spec 项5）。
+// Mermaid IR → AIStudio 品牌 HTML+SVG 重绘（spec 项5）。
 //
 // 「提取内容、丢弃源样式」（diagram-design import 教义）：IR 只携带节点/边/标签语义，
 // 视觉全部由品牌 token 与连线硬规则（正交走线 r=8、标签垫 paper 遮罩、4px 网格）重建。

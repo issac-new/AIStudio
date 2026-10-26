@@ -75,7 +75,7 @@ term:verdict-delivery-complete | DELIVERY-STANDARD-COMPLETE | | 交付标准齐�
 term:verdict-review-dev-done | REVIEW-DEV-MP-DONE | | 开发评审任务交卷判词（MP=收银台前端域） | 方案协议
 term:completeness-check | 完备性检查 |  | 交付清单逐件核对防漏交付 | 工程约定
 # ── 产品 IA 面（V8.44，2026-10-18 左侧导航+阶段页签；术语正本=overlay 2026-10-18-fullflow-v844-workbench-refactor.md §二）──
-term:workbench | 工作台 | 驾驶舱 | SwarmStudio 操作界面（左侧导航五组＋顶部上下文栏＋页内单层页签；流程总览为默认入口） | 产品术语
+term:workbench | 工作台 | 驾驶舱 | AIStudio 操作界面（左侧导航五组＋顶部上下文栏＋页内单层页签；流程总览为默认入口） | 产品术语
 term:left-nav | 左侧导航 | 左栏 | 工作台左侧常驻导航：常用/流程/整轮/专题/管理五组，可折叠 | 产品术语
 term:stage-nav | 时序六阶段 | 六阶段 | 左侧流程组六阶段：①搭建/②需求/③分析设计/④开发/⑤验收/⑥治理（/app/stage/*） | 产品术语
 term:stage-tabs | 阶段页签 | | 六阶段页每阶段一层页签（?tab= 可刷新可分享），共 29 签；页签内就地操作 | 产品术语

@@ -144,6 +144,7 @@ describe('IaShellHeader — 统一壳页头', () => {
     const w = await mountHeader()
     expect(w.text()).not.toContain('ia2.brand')
     expect(w.text()).not.toContain('Swarm Studio')
+    expect(w.text()).not.toContain('SwarmStudio')
     expect(w.find('[data-testid="ia-view-toggle"]').exists()).toBe(false)
     expect(w.find('[data-testid="ia-viewswitch-row"]').exists()).toBe(false)
     expect(w.find('[data-testid="ia-locale-toggle"]').exists()).toBe(true)

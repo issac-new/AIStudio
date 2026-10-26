@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// sync-diagram-skill.mjs — diagram-design 技能同步到主机全局库 + SwarmStudio 品牌化妆。
+// sync-diagram-skill.mjs — diagram-design 技能同步到主机全局库 + AIStudio 品牌化妆。
 //
 // 三步（幂等，漂移才重写，原子 rename）：
 //   1. overlay assets/skills/diagram-design/ → <hostRoot>/skills/diagram-design/

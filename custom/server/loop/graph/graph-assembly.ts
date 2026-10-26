@@ -298,7 +298,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   const simRegistry = createSpecRuntimeRegistry({
     gateCommands: (process.env.LOOP_GATE_COMMANDS ?? '').split(',').map(s => s.trim()).filter(Boolean),
   })
-  // 真桥接线（二期）：GRAPH_KANBAN_BASE 指向 SwarmStudio 自身 base（如
+  // 真桥接线（二期）：GRAPH_KANBAN_BASE 指向 AIStudio 自身 base（如
   // http://127.0.0.1:8802）即走 REST 建卡/查卡；未设=DryRun（shadow 安全缺省）
   const kanbanBase = process.env.GRAPH_KANBAN_BASE
   // report-gen 注入源（三期）：GRAPH_REPORT_MODULE=JS 模块路径（export reportFns）

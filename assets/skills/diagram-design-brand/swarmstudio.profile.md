@@ -1,5 +1,5 @@
 <!-- diagram-design-profile
-name: SwarmStudio Pure Ink
+name: AIStudio Pure Ink
 slug: swarmstudio
 source-url: none
 created: 2026-10-19
@@ -11,7 +11,7 @@ notes: Brand skin anchored to custom/client/cockpit/styles/status-colors.ts (Pur
 
 **The single source of truth for colors, typography, and tokens.** Every diagram draws from this — not from hex values inlined in other reference files. If you want to change the visual skin of Diagram Design, change this file.
 
-This skin is the SwarmStudio brand — Pure Ink doctrine: ink-black accent, near-white paper, status hues held to the studio's semantic-color source of truth (`custom/client/cockpit/styles/status-colors.ts`). Every new diagram inherits this skin without touching any type-specific logic.
+This skin is the AIStudio brand — Pure Ink doctrine: ink-black accent, near-white paper, status hues held to the studio's semantic-color source of truth (`custom/client/cockpit/styles/status-colors.ts`). Every new diagram inherits this skin without touching any type-specific logic.
 
 To generate your own from a website URL, see [`onboarding.md`](onboarding.md).
 
@@ -37,7 +37,7 @@ Every token is referred to by **semantic role**, not by its hex value. Type refe
 | `accent-tint` | Fill for accent-bordered boxes | `rgba(51,51,51,0.06)` | `rgba(232,232,232,0.10)` |
 | `link` | HTTP/API calls, external arrows | `#2e6db4` | `#8fb8e8` |
 
-> **Brand palette source:** SwarmStudio Pure Ink, anchored to the studio semantic-color single source of truth (`custom/client/cockpit/styles/status-colors.ts` + `resolveNeutrals()`): `--accent-primary #333333` (ink is the focal color), `--text-primary #1a1a1a`, `--text-secondary #666666`, `--border-color #e0e0e0`, `--bg-secondary #f0f0f0`. The studio `--accent-info #4a90d9` reads 3.20:1 on `paper`, too faint for text, so `link` uses `#2e6db4`, the same hue darkened until it clears 4.5:1. `soft` is `#6b6b6b` for the same reason (`#999999` would read 2.8:1). Status hues (error/warning/success/info) stay in the app; diagrams carry only this neutral skin plus the one ink accent. Every derived value is held to the contrast contract below.
+> **Brand palette source:** AIStudio Pure Ink, anchored to the studio semantic-color single source of truth (`custom/client/cockpit/styles/status-colors.ts` + `resolveNeutrals()`): `--accent-primary #333333` (ink is the focal color), `--text-primary #1a1a1a`, `--text-secondary #666666`, `--border-color #e0e0e0`, `--bg-secondary #f0f0f0`. The studio `--accent-info #4a90d9` reads 3.20:1 on `paper`, too faint for text, so `link` uses `#2e6db4`, the same hue darkened until it clears 4.5:1. `soft` is `#6b6b6b` for the same reason (`#999999` would read 2.8:1). Status hues (error/warning/success/info) stay in the app; diagrams carry only this neutral skin plus the one ink accent. Every derived value is held to the contrast contract below.
 
 > **Note:** The pre-baked example HTML files in `assets/` were built under an earlier skin. Regenerating them against the current `style-guide.md` is a v5.1 task. New diagrams the skill produces will use the tokens above.
 

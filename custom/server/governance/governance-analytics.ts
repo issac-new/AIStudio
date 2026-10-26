@@ -383,7 +383,7 @@ export function collectQgateRuns(rootsOverride?: string[]): GateStats {
   return { runs, byVerdict, passRate: denominator > 0 ? (byVerdict['pass'] ?? 0) / denominator : null, lastAt, roots, sourceDistribution, advisoryRuns }
 }
 
-// ---------- qgate 逐门最新判定（吸收轮：判定流进 SwarmStudio 的数据面） ----------
+// ---------- qgate 逐门最新判定（吸收轮：判定流进 AIStudio 的数据面） ----------
 
 export interface QgateVerdictRow {
   gateId: string
