@@ -13,7 +13,7 @@ AI 协作从「单机单 Agent」走向「多人 + 多 Agent 并行」后，交�
 | 阶段 | 问题 | 解法 |
 |---|---|---|
 | 需求 | 跨地域、跨团队协作割裂：群聊、看板、终端、文档各说各话 | Studio 驾驶舱统一视图，Kanban 唯一看板，Matrix 做通信基座（消息即凭证） |
-| 设计 | 设计一致性与架构延续性难保 | 全部 Agent 服务端运行：单网关多路复用 42 个智能体 profile，产品面只读运行面、可换皮不动运行面 |
+| 设计 | 设计一致性与架构延续性难保 | 全部 Agent 服务端运行：单网关多路复用 42 个智能体 profile，消息与派发统一走网关、产品面只读消费运行面（可换皮不动运行面） |
 | 编码 | 长程任务跑不稳，完成声明不可信 | 长程可信执行层（主张三态审计、完成态双准入、原子断点），改进实验台为浅层 RSI 打底（观测、正则化、A/B 对比；不做自主自我改进） |
 | 测试 | 质量门禁来得太晚 | 门禁左移：从 G1 需求冻结起设六道质量门（G1-G6），spec-first 钩子在写代码之前就拦截无设计改动 |
 
@@ -90,14 +90,14 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 上游基线钉版快照收录在 `vendor/`（git 跟踪 pristine 基线，台账见 [vendor/VENDOR.md](vendor/VENDOR.md)），所有二次开发住在本仓，构建期注入：
 
 - A 类接入：`custom/` 纯新增组件，构建期 alias 重定向加运行时注册。
-- B 类 patch：`patches/` 按编号序列 `git apply`（series 当前登记 studio 补丁 684 个、zcode 补丁 8 个），幂等可反向还原；vendor 树注入后的脏态是预期工作态，提交被 pre-commit 钩子挡护。
+- B 类 patch：`patches/` 按编号序列 `git apply`（series 当前登记 studio 补丁 401 个、zcode 补丁 7 个），幂等可反向还原；vendor 树注入后的脏态是预期工作态，提交被 pre-commit 钩子挡护。
 - 上游升级走净树重放：外置升级源树 `git pull` → `vendor/` 整树替换 → `npm run inject` 重放。0.7.37 到 0.7.38 升级时 310 个补丁全量通过，二次开发不陷分叉泥潭。
 - 仓内其余组件：`simharness/`（全流程推演 harness，subtree 并入）、`skills/swarm-yuan/`（技能本体源码）、`docs/superpowers/`（设计正本）。
 
 | 基线 | 用途 | 对齐版本 |
 |---|---|---|
-| [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) | 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），注入目标 | v0.7.38 |
-| [hermes-agent](https://github.com/NousResearch/hermes-agent) | Agent 运行时（Python，单网关多路复用） | v0.22.4 |
+| [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) | 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），注入目标 | v0.7.39 |
+| [hermes-agent](https://github.com/NousResearch/hermes-agent) | Agent 运行时（Python，单网关多路复用） | v0.22.5 |
 | zcode（Ycode 引擎底座） | IDE 编码引擎，`zcode-patches/` 注入 | v3.16.1 系列 |
 | [element-web](https://github.com/element-hq/element-web) | Matrix 客户端参考实现（无构建依赖，不入仓） | v1.12.32 |
 
@@ -108,7 +108,7 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 | 通讯 | Matrix（matrix-js-sdk）+ Socket.IO |
 | 后端 | Koa + SQLite |
 | 桌面 | Electron（可选，日常验证走浏览器 web 版） |
-| 测试 | Vitest，custom 下 872 个测试文件 |
+| 测试 | Vitest，custom 下 884 个测试文件 |
 
 ## 使用：五分钟跑起来
 
@@ -135,7 +135,7 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 数字以[《设计数字总账》](docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)为准（核实日 2026-10-23）：
 
 - 全流程推演 22 轮；run22 收官：19.6 小时、26 步、六道质量门全部通过。
-- 全量测试 6,149 通过、0 失败；custom 下 872 个测试文件、343 个 Vue 组件。
+- 全量测试 6,346 用例：6,277 通过、13 跳过、56 失败为环境类基线（依赖活体服务与宿主路径，主树差分同败；2026-10-26 worktree 实测）；custom 下 884 个测试文件、343 个 Vue 组件。
 - AI 团队编制 15 人、30 账号、42 个智能体；产品面 33 个页签、65 页走查通过。
 - 上游 0.7.38 升级净树重放全过；桌面安装包已出 mac arm64 与 win x64。
 

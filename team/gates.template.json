@@ -1,0 +1,12 @@
+{
+  "_comment": "kanban 列门禁 opt-in 参考模板（2026-10-26 九点对账轮）。放置：命名板=<boards_root>/<slug>/gates.json（与该板 kanban.db 同目录）；默认板=<kanban_home>/kanban/gates.json。语义（runtime/hermes_cli/kanban_gates.py 为单一事实源）：requiredHumanApproval=任务标题+正文须携带人写的 APPROVED 判词；requiredChecklist=正文复选项全勾且至少一项；validatorCommand=流转证据须含指定命令字面量；gateMode=blocking 拒绝流转 / warning 放行但记 gate_warning 事件。文件缺席=无门（零默认锁定），删掉本文件即可回退。",
+  "done": {
+    "requiredHumanApproval": true,
+    "requiredChecklist": true,
+    "gateMode": "blocking"
+  },
+  "review": {
+    "requiredChecklist": true,
+    "gateMode": "warning"
+  }
+}

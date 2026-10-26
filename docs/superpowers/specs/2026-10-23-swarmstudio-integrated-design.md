@@ -1,7 +1,7 @@
-# SwarmStudio 完整设计文档
+# AIStudio 完整设计文档
 
-> 三域一体：SwarmStudio（产品面）× hermes agent teams（运行面）× swarm-yuan（能力层）
-> 版本：2026-10-24 整合 R9｜核实日：2026-10-24（R4 天猫批与 R5 D26 批因多会话并行序倒，以变更记录表时间序为准；R9 起章节按理念→产品→设计→实施→使用分层重组，决策 I10）
+> 三域一体：AIStudio（产品面）× hermes agent teams（运行面）× swarm-yuan（能力层）
+> 版本：2026-10-26 整合 R10｜核实日：2026-10-26（R10=九点对账批：多仓旧路径勘正、网关互调双通道入册、Ycode-ACP 现状入册、数字随总账；R9 起章节按理念→产品→设计→实施→使用分层重组，决策 I10）
 > 本文是**当前唯一整合正本**：产品是什么、系统怎么搭、机制怎么运转、历史怎么来、现在到哪、下一步去哪，一文读完。原设计正本 R6、产品正本 R5、SwarmStudio 专题正本 R10 为历史档案（保留可查）；数字真值表与索引附录列文末参考文献。
 
 ---
@@ -10,7 +10,7 @@
 
 ### 0.1 一页纸
 
-SwarmStudio 是一套让「人指挥 AI 团队交付软件」的工作系统。它把三件事装进一个体系：人怎么看（一个驾驶舱，三种工作模式，看到谁在干什么、卡在哪、证据在哪）；AI 怎么干（一个有编制、有权限、有任务、有审计的 AI 团队）；项目知识怎么长（一个生成器，对任意代码仓库生成项目专属开发技能）。
+AIStudio 是一套让「人指挥 AI 团队交付软件」的工作系统。它把三件事装进一个体系：人怎么看（一个驾驶舱，三种工作模式，看到谁在干什么、卡在哪、证据在哪）；AI 怎么干（一个有编制、有权限、有任务、有审计的 AI 团队）；项目知识怎么长（一个生成器，对任意代码仓库生成项目专属开发技能）。
 
 三个断言贯穿全部设计：
 
@@ -172,13 +172,15 @@ spec 2026-10-24-swarm-eval-benchmark-absorption.md）：交付效能页第 ⑤ �
 
 | 维度 | 产品面 | 运行面 | 能力层 |
 |---|---|---|---|
-| 代码位置 | `overlay/custom/{client,server}`＋定制层 | `upstream/hermes-agent`＋Matrix | `~/lab/Swarm-yuan` 与安装态 |
+| 代码位置 | `custom/{client,server}`＋`patches/`（注入 vendor 基线） | `vendor/hermes-agent`＋Matrix（运行时覆盖层 `runtime/`） | `skills/swarm-yuan/`（本体入仓）与安装态 |
 | 状态存储 | 读模型＋少量本地配置 | kanban SQLite、Matrix 房间、证据 JSONL | 目标项目 `.swarm-yuan/`、技能目录、门禁账 |
 | 变化速度 | 周 | 日 | 月 |
 
 ### 3.2 五组件
 
-五基础组件：SwarmStudio（产品面，驾驶舱）、hermes agent（自改进运行时）、Matrix（协作基座，消息即凭证）、Ycode（编码引擎：zcode 分叉、内置 computer-use 插件，IDE 工作区的本机编码执行底座）、swarm-yuan（能力层，生成器造项目技能）。四个跨地域分布的组件经 Matrix 协议与 git 制品协同，覆盖分布式需求分析、研发协作、实施交付、测试验证四条主线（§1.1 体系）。
+五基础组件：AIStudio（产品面，驾驶舱）、hermes agent（自改进运行时）、Matrix（协作基座，消息即凭证）、Ycode（编码引擎：zcode 分叉、内置 computer-use 插件，IDE 工作区的本机编码执行底座）、swarm-yuan（能力层，生成器造项目技能）。四个跨地域分布的组件经 Matrix 协议与 git 制品协同，覆盖分布式需求分析、研发协作、实施交付、测试验证四条主线（§1.1 体系）。
+
+编码委托链（ACP，2026-10-26 现状）：执行者经 coding-delegate 技能以 `zcode-acp-server` stdio 桥调用 Ycode；桥按 `ZCODE_BIN` 环境解析引擎，本机默认指到 `~/.hermes/ycode/zcode.cjs`（分叉 CLI 构建产物，`scripts/zcode-engine.mjs install-cli` 构建并落位；环境未设且部署位缺席时桥回落 PATH/官方 zcode，委托日志记录 `engine_bin_source` 以供审计）。任务 workspace 即引擎会话项目根（dispatcher 注入 `HERMES_KANBAN_WORKSPACE`，驱动以 `--cwd` 传入 `session/new`）。
 
 ### 3.3 产品面六层
 
@@ -187,6 +189,8 @@ spec 2026-10-24-swarm-eval-benchmark-absorption.md）：交付效能页第 ⑤ �
 ### 3.4 运行面架构
 
 单网关多路复用 42 profile；账号与身份在 Matrix；任务真值在 kanban；证据在文件；协调靠房间消息；跨机靠 git 制品。per-agent node_modules 隔离依赖；gateway 按 profile 独立锁目录。
+
+网关是消息与派发的唯一入口；其它用户的分布式 bot agent 互调也以本机网关为入口，走两条通道：peer api_server 协议（`hermes peer` 直连对端网关的 `/p/<profile>` 镜像面，凭据经 `HERMES_PEER_<NAME>_KEY`，跨源重定向剥凭证）与 Matrix 协议事件（投递单经 Matrix 落到成员本机 kanban）。产品面的统一身份聊天窗消费 peer 通道。产品面读运行面模型经 AgentBridge／hermes CLI 子进程／引擎 WS 桥多通道，只读不复制。
 
 ### 3.5 能力层架构
 
@@ -282,7 +286,7 @@ L1 写时 hook（实测 3 家/渲染 5 家）、L2 pre-commit、L3 check_spec_fi
 
 ### 5.6 演化与决策
 
-能力层决策史 2,837 行（design-evolution，编号决策 1-50），决策只增不改。演化主线：R13 去抽象化重构（范式作为条件而非内容）→ R37 Harness 实践吸收（证据分级）→ R50 吸收层接线台账（双向对账）→ R53 平实语言轮 → R125 深度复盘重构（分发面/生成器侧分离＋预算棘轮根治）→ R128 backlog 清零（行为保持式拆分证据标准）→ 2026-10-23 v2.93.0（合规检查能力入 main：执法检查知识层 173 条主表＋罚则库＋智能体安全＋采购 AI）。十条决定性决策见 §7.8。
+能力层决策史 2,837 行（design-evolution，编号决策 1-50），决策只增不改。演化主线：R13 去抽象化重构（范式作为条件而非内容）→ R37 Harness 实践吸收（证据分级）→ R50 吸收层接线台账（双向对账）→ R53 平实语言轮 → R125 深度复盘重构（分发面/生成器侧分离＋预算棘轮根治）→ R128 backlog 清零（行为保持式拆分证据标准）→ 2026-10-23 v2.93.0（合规检查能力入 main：执法检查知识层 173 条主表＋罚则库＋智能体安全＋采购 AI）→ 2026-10-24 v2.95.0（技能本体入仓，`skills/swarm-yuan/` 为单一事实源；2026-10-25 R142 运行时刷新）。十条决定性决策见 §7.8。
 
 ---
 
@@ -290,7 +294,7 @@ L1 写时 hook（实测 3 家/渲染 5 家）、L2 pre-commit、L3 check_spec_fi
 
 ### 6.1 五分钟跑起来
 
-日常验证与使用走浏览器 web 版，不做安装包。四步：`npm run inject` 注入；进 `../upstream/hermes-studio` 装 `npm install --no-audit --no-fund --ignore-scripts` 并 `mkdir -p dist`；回 overlay 起 `bash scripts/serve-server.sh &`（后端 8647）；`npm run dev`（前端 8649）。浏览器开 `http://localhost:8649`；首次空库引导须后端显式 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`（出厂默认口令已移除）。完整步骤、角色旅程与排障见《使用指南》（`docs/USAGE.md`）。
+日常验证与使用走浏览器 web 版，不做安装包。四步：`npm run inject` 注入；进 `vendor/hermes-studio` 装 `npm install --no-audit --no-fund --ignore-scripts` 并 `mkdir -p dist`；回仓根起 `npm run serve`（后端 8647）；`npm run dev`（前端 8649）。浏览器开 `http://localhost:8649`；首次空库引导须后端显式 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`（出厂默认口令已移除）。完整步骤、角色旅程与排障见《使用指南》（`docs/USAGE.md`）。
 
 ### 6.2 三种走法
 
@@ -424,7 +428,7 @@ A 类导出可抽出→全归定制层；重写看板视图→独立路由；三
 
 ## 参考文献
 
-> 以下为本文引用的正本、档案与索引；同一事实以被引正本为准。未标注路径的文件与本文同目录（`overlay/docs/superpowers/specs/`）。
+> 以下为本文引用的正本、档案与索引；同一事实以被引正本为准。未标注路径的文件与本文同目录（`docs/superpowers/specs/`）。
 
 **外部调研（2026-10-23 天猫吸收轮）**
 
@@ -434,7 +438,7 @@ A 类导出可抽出→全归定制层；重写看板视图→独立路由；三
 
 **方案与档案**
 
-1. 全流程推演方案唯一正本 V8.52：`2026-10-05-mux-v8-fullflow-plan.md`（§2.6.9 介入归因与协作资产消费，2026-10-23 天猫吸收轮；§2.6.10 评测读数面、§2.6.11 群体协作读数，2026-10-24）。
+1. 全流程推演方案唯一正本 V8.53：`2026-10-05-mux-v8-fullflow-plan.md`（§2.6.9 介入归因与协作资产消费，2026-10-23 天猫吸收轮；§2.6.10 评测读数面、§2.6.11 群体协作读数，2026-10-24；V8.53 术语对齐批＝Ycode 入词表，2026-10-26）。
 2. SwarmStudio 完整设计（专题档案 R10）：`2026-10-21-swarmstudio-complete-design.md`——14R+8N 需求基线全文、演进史、148 条用户决策全表。
 3. 设计正本 R6／产品正本 R5（历史档案，2026-10-23 起不再维护）：`2026-10-21-ncwk-design-spec.md`／`2026-10-21-ncwk-product-spec.md`（NCWK 为旧代号）。
 
@@ -446,10 +450,10 @@ A 类导出可抽出→全归定制层；重写看板视图→独立路由；三
 7. 附录 D：`2026-10-21-swarmstudio-appendix-d-lessons-rules.md`——45 条反馈规则＋20 条最高价值规则＋12 类工程陷阱；其中七条为红线：已验证才声明、测试未绿禁提交、根治到产生层、未经指令不 push、未经指令不起轮、禁拆闸、worktree 只走 git 清理。
 8. 数字总账：`2026-10-23-swarmstudio-design-ledger.md`——全域数字唯一事实源。
 
-**能力层文档（Swarm-yuan 仓，其仓库为单一事实源）**
+**能力层文档（本体已入仓，`skills/swarm-yuan/` 为单一事实源）**
 
-9. swarm-yuan 设计内核 v2.93.0：`~/lab/Swarm-yuan/swarm-yuan/README.md`。
-10. swarm-yuan 设计演化史（决策 1-50 全文，2,837 行）：`~/lab/Swarm-yuan/docs/design-evolution.md`。
+9. swarm-yuan 设计内核 v2.95.0：`skills/swarm-yuan/README.md`。
+10. swarm-yuan 设计演化史（决策 1-50 全文，2,837 行）：`skills/swarm-yuan/docs/design-evolution.md`。
 
 ---
 

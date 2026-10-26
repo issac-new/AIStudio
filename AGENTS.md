@@ -21,7 +21,7 @@
 | `custom/client/` | Vue 客户端扩展；组件约定见 `custom/client/AGENTS.md` |
 | `custom/qgate/` | 质量门禁框架（L0-L5 gate packs） |
 | `patches/` | 上游注入补丁（编号 series）；改上游行为必须走这里 |
-| `vendor/` | 上游钉版基线（hermes-studio v0.7.38 / hermes-agent v0.22.4 / zcode）；只读，台账见 `vendor/VENDOR.md` |
+| `vendor/` | 上游钉版基线（hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode v3.16.1 系列）；只读，台账见 `vendor/VENDOR.md` |
 | `simharness/` | 全流程推演 harness（mx-* 脚本/场景/守门测试；SIM_ROOT 等运行态在仓外） |
 | `skills/swarm-yuan/` | swarm-yuan 技能本体源码（六段目录；dist 离线包不入库） |
 | `runtime/` | agent 运行时扩展（Python/TS 工具与检查器；部署到 ~/.hermes/hermes-agent） |

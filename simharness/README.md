@@ -16,7 +16,7 @@
 cd simharness
 bash mux/mx-setup.sh                  # 环境供给：账号/看板/团队/记忆库/中央仓，可反复跑
 bash mux/mx-up.sh                     # 起单 gateway(:8801) + 单 studio(:8802)
-bash mux/mx-prelaunch-check.sh        # 开跑前二十二项核验，全绿才开跑
+bash mux/mx-prelaunch-check.sh        # 开跑前三十项核验，全绿才开跑
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 ```
 

@@ -1,8 +1,22 @@
 # 基础运行时层(runtime/)
 
-AIStudio 的「基础运行时」:两个经源码级调研后选定、按固定版本 pin 下来的外部
-运行时,分别承载《AI-Native 研发范式实践手册》(2026-09-19)企业级基础设施框架中的
-两大能力位。更新流程见下文 SOP —— 本目录是对上游的**受管镜像**,不是 fork:
+本目录承载两类东西(2026-10-26 九点对账轮勘正——此前本 README 只记第二类,与目录实况不符):
+
+**① hermes-agent 运行时覆盖层(主体)**。`runtime/` 内的 `hermes_cli/`、`gateway/`、
+`agent/`、`tools/`、`plugins/`、`hermes-skills/`、`tests/` 等是 hermes-agent 钉版基线
+(`vendor/hermes-agent`)之上的部分覆盖:修复与增强先落这里,经
+`runtime-manifest.json`(48 条,单一事实源)由 `node scripts/deploy-agent-runtime.mjs
+--apply` 部署到 `~/.hermes/hermes-agent/`(默认 dry-run,幂等,覆盖前留 .bak)。
+文件族:kanban 域(kanban_db/dispatch/gates/boards 等)、gateway 域(容量排队/出站
+守卫/看板 watcher/会话遥测)、agent 守卫(runaway/交接检查点/规则心跳)、
+obs_recall 工具族、style-charter 插件、coding-delegate 技能(zcode ACP 驱动)。
+纪律:镜像基线=upstream 基线+patches/series 全链应用后的状态,对账方法见 manifest
+notes;**源须持续含全部运行时修复,否则同步会覆盖回退**。测试在 `runtime/tests/`
+(拼合树跑法:`vendor/hermes-agent` 检出+本层覆盖后 `python3.14 -m pytest`)。
+
+**② 外部运行时受管镜像(两个,按固定版本 pin)**。经源码级调研后选定,分别承载
+《AI-Native 研发范式实践手册》(2026-09-19)企业级基础设施框架中的
+两大能力位。更新流程见下文 SOP —— 这部分是对上游的**受管镜像**,不是 fork:
 
 | 运行时 | 能力位(手册章节) | 形态 | 接入方式 |
 |---|---|---|---|

@@ -120,7 +120,8 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
 ┌─────────────────────────────────────────────────────┐
 │  Orchestrator (顶层路由器 + 分解器)                  │
 │  Smart routing: light/medium/heavy by complexity    │
-│  workspace_kind="worktree" (persistent git branch)  │
+│  workspace by board type: dir (plain) / worktree    │
+│  (project-scoped, persistent git branch)            │
 └──────────────────┬──────────────────────────────────┘
                    ↓
    ┌────┬────┬───┬────┬────┬────┬────┬────┬────┐
@@ -134,11 +135,12 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
 ## Key Features / 核心特性
 
 - **Smart Routing**: Gateway messages routed by complexity — light (≤2 tools) direct execute, medium (3-5) light tracing, heavy (≥6) full Kanban flow.
-- **Persistent Worktree Workspaces**: Every kanban task defaults to `workspace_kind="worktree"` — each task gets its own git branch under `.worktrees/<task-id>/`, outputs persist as commits, multiple tasks run in parallel without file conflicts.
+- **Persistent Workspaces**: task workspaces default by board type — plain boards default to a shared directory (`workspace_kind="dir"`), project-scoped boards default to worktree (`<repo>/.worktrees/<task-id>/`, outputs persist as commits, multiple tasks run in parallel without file conflicts); explicit `scratch|worktree|dir` overrides at card creation.
 - **Loop Engineering Gates**: Every `kanban_complete` must pass verification gates (acceptance criteria extracted from task body, verified by tools not self-report).
-- **ACP Coding Delegation**: All coding work delegated to Claude Code via `acp_send(provider="claude")`. Workers don't write code directly.
+- **ACP Coding Delegation**: Coding work delegated to external coding agents via `acp_send` (claude / codex / zcode — zcode is the coding engine Ycode in this system, bridged via `zcode-acp-server`). Workers don't write code directly; the default provider is per-profile config.
 - **PII Hardened**: Real emails → `your@email.com`, username paths → `$HOME/`, secrets → `${ENV_VAR}` placeholders.
 - **Forward-Deployed Protocol**: Every worker's first step is frontline reconnaissance (read_file + search_files + session_search), not immediate execution.
+- **Column Gates (opt-in)**: Done-column human approval available via `gates.json` — copy [`gates.template.json`](gates.template.json) to `<boards_root>/<slug>/gates.json` (beside the board's `kanban.db`). `requiredHumanApproval` demands a human-written `APPROVED` verdict in the task text (approval is a human artifact, not a UI toggle); absent file = no gates, existing boards unchanged. Semantics: `hermes_cli/kanban_gates.py` is the single source of truth.
 
 ## Quick Start / 快速开始
 
