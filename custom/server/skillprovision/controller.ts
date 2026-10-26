@@ -2,12 +2,15 @@
 //
 // 不新增上游 patch、不触发 inject。读面 fail-soft；写面全部要求显式确认，且
 // manifest 缺失时拒绝供给。
-import { isAbsolute } from 'node:path'
+import { isAbsolute, join, resolve } from 'node:path'
 import Router from '@koa/router'
-import { buildReport } from './reconcile'
-import { loadManifest, resolveManifestPath, writeManifest } from './manifest'
+import type { Context } from 'koa'
+import { buildReport, defaultHostRoot } from './reconcile'
+import { loadManifest, matchRole, normalizeManifest, resolveManifestPath, writeManifest } from './manifest'
 import { applyProvision, rollbackProvision } from './provision'
 import { fleetDir, readFleetReport } from './fleet'
+import { listProfiles } from './scan'
+import { canUserAccessProfile, type ProfileAccessDeps, type ProfileAccessUser } from '../services/hermes/profile-access'
 
 function bodyOf(ctx: unknown): Record<string, unknown> {
   const req = (ctx as { request?: { body?: unknown } })?.request
@@ -26,7 +29,39 @@ function profilesOf(value: unknown): string[] | undefined {
   return value as string[]
 }
 
-export function attachSkillProvisionRoutes(router: Router): void {
+function callerOf(ctx: unknown): ProfileAccessUser | null {
+  return ((ctx as { state?: { user?: ProfileAccessUser } })?.state?.user) ?? null
+}
+
+function hostProfiles(body: Record<string, unknown>): string[] {
+  const hostRoot = absoluteQuery(body.hostRoot, 'hostRoot') ?? defaultHostRoot()
+  // _shared 由 provision 明确排除，不属于技能写目标；其余默认全量目标都须过 ACL。
+  return listProfiles(join(resolve(hostRoot), 'profiles')).filter(profile => profile !== '_shared')
+}
+
+function authorizeTargets(
+  ctx: Context,
+  deps: ProfileAccessDeps | undefined,
+  targets: string[],
+  requireTarget = false,
+): boolean {
+  const user = callerOf(ctx)
+  if (!user || user.role === 'super_admin') return true
+  const denied = requireTarget && targets.length === 0
+    || targets.some(profile => !canUserAccessProfile(user, profile, deps))
+  if (!denied) return true
+  ctx.status = 403
+  ctx.body = { ok: false, problems: ['profile_forbidden：请求包含当前用户不可见或无法确定的 profile'] }
+  return false
+}
+
+function manifestTargets(payload: unknown, body: Record<string, unknown>, explicit: string[] | undefined): string[] {
+  const manifest = normalizeManifest(payload)
+  const matched = hostProfiles(body).filter(profile => matchRole(profile, manifest.roles) !== null)
+  return [...new Set([...matched, ...(explicit ?? [])])]
+}
+
+export function attachSkillProvisionRoutes(router: Router, deps?: ProfileAccessDeps): void {
   router.get('/provision/report', async (ctx) => {
     try {
       const report = buildReport({
@@ -63,10 +98,12 @@ export function attachSkillProvisionRoutes(router: Router): void {
   })
 
   router.put('/provision/manifest', async (ctx) => {
-    const body = bodyOf(ctx) as { manifest?: unknown; manifestPath?: unknown }
+    const body = bodyOf(ctx)
     const payload = body.manifest ?? body
     const path = absoluteQuery(body.manifestPath, 'manifestPath') ?? resolveManifestPath()
     try {
+      const targets = manifestTargets(payload, body, profilesOf(body.profiles))
+      if (!authorizeTargets(ctx, deps, targets, true)) return
       const written = writeManifest(payload, path)
       ctx.body = { ok: true, ...written, effectiveReadPath: resolveManifestPath() }
     } catch (e) {
@@ -84,11 +121,13 @@ export function attachSkillProvisionRoutes(router: Router): void {
       return
     }
     try {
+      const profiles = profilesOf(body.profiles)
+      if (!authorizeTargets(ctx, deps, profiles ?? hostProfiles(body))) return
       const result = applyProvision({
         hostRoot: absoluteQuery(body.hostRoot, 'hostRoot'),
         simRoot: absoluteQuery(body.simRoot, 'simRoot'),
         manifestPath: absoluteQuery(body.manifestPath, 'manifestPath'),
-        profiles: profilesOf(body.profiles),
+        profiles,
         dryRun,
         confirm: body.confirm === true,
       })
@@ -113,11 +152,13 @@ export function attachSkillProvisionRoutes(router: Router): void {
       return
     }
     try {
+      const profiles = profilesOf(body.profiles)
+      if (!authorizeTargets(ctx, deps, profiles ?? hostProfiles(body))) return
       const result = rollbackProvision({
         hostRoot: absoluteQuery(body.hostRoot, 'hostRoot'),
         simRoot: absoluteQuery(body.simRoot, 'simRoot'),
         manifestPath: absoluteQuery(body.manifestPath, 'manifestPath'),
-        profiles: profilesOf(body.profiles),
+        profiles,
         dryRun,
         confirm: body.confirm === true,
       })

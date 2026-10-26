@@ -14,14 +14,15 @@
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import type { FleetSession } from '../../services/hermes/fleet-snapshot'
-import type { KanbanOverviewResult } from '../../services/hermes/kanban-overview'
+import type { KanbanOverviewRawResult } from '../../services/hermes/kanban-overview'
+import { projectOverviewForAll, projectOverviewForUser } from '../../services/hermes/overview-access'
 
 export interface FleetRouterDeps {
   buildSnapshot: () => FleetSession[]
   respondApproval: (approvalId: string, choice: string) => Promise<{ resolved: boolean; error?: string }>
   respondClarify: (clarifyId: string, response: string) => Promise<{ resolved: boolean; error?: string }>
   getSession: (sessionId: string) => { profile?: string | null } | null
-  getOverview: () => Promise<KanbanOverviewResult>
+  getOverview: () => Promise<KanbanOverviewRawResult>
   teams: {
     list(): Promise<any[]>
     create(input: any): Promise<any>
@@ -110,7 +111,11 @@ export function createFleetRouter(deps: FleetRouterDeps): Router {
   })
 
   router.get('/api/hermes/kanban/overview', async ctx => {
-    ctx.body = await deps.getOverview()
+    const raw = await deps.getOverview()
+    const user = currentUser(ctx)
+    ctx.body = !user || user.role === 'super_admin'
+      ? projectOverviewForAll(raw)
+      : projectOverviewForUser(raw, profile => canAccessProfile(user, profile, deps))
   })
 
   router.get('/api/hermes/teams', async ctx => {

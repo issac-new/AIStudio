@@ -20,6 +20,7 @@ import type { Server as HttpServer, IncomingMessage } from 'http'
 import type { Duplex } from 'stream'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { projectOverviewForUser } from './overview-access'
 
 export interface KanbanOverviewDeps {
   listBoards: (opts?: { includeArchived?: boolean }) => Promise<any[]>
@@ -35,10 +36,34 @@ export interface KanbanOverviewDeps {
   kanbanDir?: string | (() => string)
 }
 
+export interface KanbanOverviewBoard {
+  slug: string
+  name: string
+  total: number
+  archived: boolean
+}
+
+/** 原始缓存额外携带板团队键；REST 出口由 overview-access 剥除。 */
+export interface KanbanOverviewRawBoard extends KanbanOverviewBoard {
+  profiles?: unknown
+  profile_scope?: unknown
+}
+
 export interface KanbanOverviewResult {
-  boards: Array<{ slug: string; name: string; total: number; archived: boolean }>
+  boards: KanbanOverviewBoard[]
   tasks: Array<{ board: string; task: any }>
   fetchedAt: number
+}
+
+export interface KanbanOverviewRawResult extends Omit<KanbanOverviewResult, 'boards'> {
+  boards: KanbanOverviewRawBoard[]
+}
+
+function boardTeamFields(board: any): { profiles?: unknown; profile_scope?: unknown } {
+  const team: { profiles?: unknown; profile_scope?: unknown } = {}
+  if (Object.prototype.hasOwnProperty.call(board, 'profiles')) team.profiles = board.profiles
+  if (Object.prototype.hasOwnProperty.call(board, 'profile_scope')) team.profile_scope = board.profile_scope
+  return team
 }
 
 interface BoardCacheEntry {
@@ -108,7 +133,12 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
       if (mainDb) {
         const total = queryBoardDb(mainDb, db => (db.prepare('select count(*) n from tasks').get() as any)?.n ?? 0)
         if (total === null) return null // 主库读不了 → 整体回落（与分板语义一致，防"Default 板 0 任务"假象）
-        out.push({ slug: 'default', name: 'Default', total, archived: false })
+        let defaultTeam: { profiles?: unknown; profile_scope?: unknown } = {}
+        try {
+          const meta = JSON.parse(readFileSync(join(boardsDir, 'default', 'board.json'), 'utf8'))
+          defaultTeam = boardTeamFields(meta)
+        } catch { /* default 无独立元数据时保持原口径 */ }
+        out.push({ slug: 'default', name: 'Default', total, archived: false, ...defaultTeam })
       }
       for (const slug of readdirSync(boardsDir)) {
         // 下划线前缀=特殊/归档目录（_archive 等）与 default 残根（真 default
@@ -120,14 +150,16 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
         if (!existsSync(dbPath)) continue
         let name = slug
         let archived = false
+        let team: { profiles?: unknown; profile_scope?: unknown } = {}
         try {
           const meta = JSON.parse(readFileSync(join(boardsDir, slug, 'board.json'), 'utf8'))
           name = meta.name || slug
           archived = Boolean(meta.archived)
+          team = boardTeamFields(meta)
         } catch { /* board.json 缺失时用 slug */ }
         const total = queryBoardDb(dbPath, db => (db.prepare('select count(*) n from tasks').get() as any)?.n ?? 0)
         if (total === null) return null // 该板读不了 → 整体回落，保证语义一致
-        out.push({ slug, name, total, archived })
+        out.push({ slug, name, total, archived, ...team })
       }
       return out.length ? out : null
     } catch {
@@ -308,11 +340,11 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
   // （cockpit/teams-adapter 与 workspace 各一），冷启动 boards→tasks 两跳 CLI
   // 实测 9s+——结果级 single-flight + 短 TTL 把并发与紧邻重复压成一次；
   // 板级事件失效（invalidateBoard）会连带作废。
-  let overviewResult: { value: KanbanOverviewResult; ts: number } | null = null
-  let overviewInflight: Promise<KanbanOverviewResult> | null = null
+  let overviewResult: { value: KanbanOverviewRawResult; ts: number } | null = null
+  let overviewInflight: Promise<KanbanOverviewRawResult> | null = null
   const OVERVIEW_RESULT_TTL_MS = 3_000
 
-  async function getOverview(): Promise<KanbanOverviewResult> {
+  async function getOverview(): Promise<KanbanOverviewRawResult> {
     if (overviewResult && Date.now() - overviewResult.ts < OVERVIEW_RESULT_TTL_MS) {
       return overviewResult.value
     }
@@ -327,12 +359,13 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
           for (const task of result.value || []) tasks.push({ board: board.slug, task })
         }
       })
-      const value: KanbanOverviewResult = {
+      const value: KanbanOverviewRawResult = {
         boards: boards.map(board => ({
           slug: board.slug,
           name: board.name,
           total: Number(board.total ?? 0),
           archived: Boolean(board.archived),
+          ...boardTeamFields(board),
         })),
         tasks,
         fetchedAt: Date.now(),
@@ -356,29 +389,50 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     readyState: number
   }
 
+  interface OverviewWsUser {
+    id: number
+    role: string
+  }
+
+  interface OverviewClientRecord {
+    raw: OverviewClient
+    boards: string[]
+    user: OverviewWsUser | null
+    canAccess: (profile: string) => boolean
+  }
+
   let wss: WebSocketServer | null = null
   // boards=该连接 ensure 过的板（close 时逐板 release——refs 只增不减会让空闲回收器
   // 被 refs>0 永久短路，watch 子进程到 stop() 前不回收，"无订阅者自动回收"承诺失效）
-  const clients = new Set<{ raw: OverviewClient; boards: string[] }>()
+  const clients = new Set<OverviewClientRecord>()
   const upgradeHandlers: Array<(req: IncomingMessage, socket: Duplex, head: Buffer) => void> = []
 
   function broadcast(board: string): void {
     if (!wss || clients.size === 0) return
-    const payload = JSON.stringify({ type: 'board-event', board, ts: Date.now() })
-    for (const client of clients) {
-      try {
-        if (client.raw.readyState === 1) client.raw.send(payload)
-      } catch {
-        clients.delete(client)
+    // 事件本身不带任务正文/计数，但是否可见该板仍由同一投影判定；
+    // 共享 raw 缓存只读，按连接分别过滤，失败时不广播（fail closed）。
+    void getOverview().then(raw => {
+      for (const client of clients) {
+        const visibleBoards = !client.user || client.user.role === 'super_admin'
+          ? raw.boards
+          : projectOverviewForUser(raw, client.canAccess).boards
+        if (!visibleBoards.some(item => item.slug === board)) continue
+        const payload = JSON.stringify({ type: 'board-event', board, ts: Date.now() })
+        try {
+          if (client.raw.readyState === 1) client.raw.send(payload)
+        } catch {
+          clients.delete(client)
+        }
       }
-    }
+    }).catch(() => { /* 聚合失败时不向任何账户发事件 */ })
   }
 
   function attachWebSocket(
     httpServers: HttpServer | HttpServer[],
     auth: {
       isAuthEnabled: () => Promise<boolean>
-      authenticateUserToken: (token: string) => Promise<unknown>
+      authenticateUserToken: (token: string) => Promise<OverviewWsUser | null>
+      userCanAccessProfile: (userId: number, profile: string) => boolean
     },
   ): void {
     if (wss) return
@@ -387,9 +441,10 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     const onUpgrade = async (req: IncomingMessage, socket: Duplex, head: Buffer) => {
       const url = new URL(req.url || '/', 'http://localhost')
       if (url.pathname !== '/api/hermes/kanban/overview/events') return
+      let user: OverviewWsUser | null = null
       if (await auth.isAuthEnabled()) {
         const token = url.searchParams.get('token') || ''
-        const user = await auth.authenticateUserToken(token)
+        user = await auth.authenticateUserToken(token)
         if (!user) {
           socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
           socket.destroy()
@@ -397,7 +452,15 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
         }
       }
       wss!.handleUpgrade(req, socket, head, ws => {
-        const client = { raw: ws as unknown as OverviewClient, boards: [] as string[] }
+        const client: OverviewClientRecord = {
+          raw: ws as unknown as OverviewClient,
+          boards: [],
+          user,
+          canAccess: profile => {
+            if (!user || user.role === 'super_admin') return true
+            return auth.userCanAccessProfile(user.id, profile || 'default')
+          },
+        }
         clients.add(client)
         ws.on('close', () => {
           clients.delete(client)

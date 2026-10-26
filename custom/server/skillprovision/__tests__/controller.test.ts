@@ -9,8 +9,12 @@ type Handler = (ctx: any) => Promise<void>
 let root = ''
 let routes: Map<string, Handler>
 
-function fakeCtx(query: Record<string, string> = {}, body: Record<string, unknown> = {}): any {
-  return { query, request: { body }, status: 200, body: null }
+function fakeCtx(
+  query: Record<string, string> = {},
+  body: Record<string, unknown> = {},
+  user: { id: number; role: string } | null = null,
+): any {
+  return { query, request: { body }, state: user ? { user } : {}, status: 200, body: null }
 }
 
 function skill(dir: string): void {
@@ -30,7 +34,9 @@ beforeEach(() => {
     post: (p: string, h: Handler) => routes.set(`POST ${p}`, h),
     put: (p: string, h: Handler) => routes.set(`PUT ${p}`, h),
   }
-  attachSkillProvisionRoutes(fakeRouter as never)
+  attachSkillProvisionRoutes(fakeRouter as never, {
+    canAccessProfile: (user, profile) => user.id === 1 && profile === 'p1',
+  })
 })
 
 afterEach(() => {
@@ -98,5 +104,82 @@ describe('skillprovision controller', () => {
     await routes.get('POST /provision/rollback')!(rollback)
     expect(rollback.body.summary.removed).toBe(1)
     expect(existsSync(join(hostRoot(), 'profiles', 'p1', 'skills', 'alpha'))).toBe(false)
+  })
+
+  it('apply 任一显式目标越权则整请求拒绝，已授权 profile 也不得先写', async () => {
+    mkdirSync(join(hostRoot(), 'profiles', 'p2', 'skills'), { recursive: true })
+    const ctx = fakeCtx({}, {
+      hostRoot: hostRoot(), manifestPath: manifestPath(), profiles: ['p1', 'p2'], dryRun: false, confirm: true,
+    }, { id: 1, role: 'user' })
+    await routes.get('POST /provision/apply')!(ctx)
+    expect(ctx.status).toBe(403)
+    expect(ctx.body.ok).toBe(false)
+    expect(existsSync(join(hostRoot(), 'profiles', 'p1', 'skills', 'alpha'))).toBe(false)
+    expect(existsSync(join(hostRoot(), 'profiles', 'p2', 'skills', 'alpha'))).toBe(false)
+  })
+
+  it('apply 未传 profiles 时校验默认全量目标，而非只检查请求参数', async () => {
+    mkdirSync(join(hostRoot(), 'profiles', 'p2', 'skills'), { recursive: true })
+    const ctx = fakeCtx({}, {
+      hostRoot: hostRoot(), manifestPath: manifestPath(), dryRun: false, confirm: true,
+    }, { id: 1, role: 'user' })
+    await routes.get('POST /provision/apply')!(ctx)
+    expect(ctx.status).toBe(403)
+    expect(existsSync(join(hostRoot(), 'profiles', 'p1', 'skills', 'alpha'))).toBe(false)
+    expect(existsSync(join(hostRoot(), 'profiles', 'p2', 'skills', 'alpha'))).toBe(false)
+  })
+
+  it('rollback 任一目标越权则保留所有台账与技能目录', async () => {
+    mkdirSync(join(hostRoot(), 'profiles', 'p2', 'skills'), { recursive: true })
+    const setup = fakeCtx({}, {
+      hostRoot: hostRoot(), manifestPath: manifestPath(), dryRun: false, confirm: true,
+    })
+    await routes.get('POST /provision/apply')!(setup)
+    expect(setup.body.summary.copied).toBe(2)
+
+    const ctx = fakeCtx({}, {
+      hostRoot: hostRoot(), manifestPath: manifestPath(), profiles: ['p1', 'p2'], dryRun: false, confirm: true,
+    }, { id: 1, role: 'user' })
+    await routes.get('POST /provision/rollback')!(ctx)
+    expect(ctx.status).toBe(403)
+    expect(existsSync(join(hostRoot(), 'profiles', 'p1', 'skills', 'alpha'))).toBe(true)
+    expect(existsSync(join(hostRoot(), 'profiles', 'p2', 'skills', 'alpha'))).toBe(true)
+    expect(existsSync(join(hostRoot(), 'profiles', 'p1', 'skills', '.skill-provisioning.json'))).toBe(true)
+    expect(existsSync(join(hostRoot(), 'profiles', 'p2', 'skills', '.skill-provisioning.json'))).toBe(true)
+  })
+
+  it('manifest 写入先校验清单实际命中的目标，越权时不创建文件', async () => {
+    mkdirSync(join(hostRoot(), 'profiles', 'p2', 'skills'), { recursive: true })
+    const target = join(root, 'nested', 'manifest.json')
+    const ctx = fakeCtx({}, {
+      hostRoot: hostRoot(),
+      manifestPath: target,
+      manifest: { version: 1, roles: [{ match: 'p2', skills: ['alpha'] }] },
+    }, { id: 1, role: 'user' })
+    await routes.get('PUT /provision/manifest')!(ctx)
+    expect(ctx.status).toBe(403)
+    expect(ctx.body.ok).toBe(false)
+    expect(existsSync(target)).toBe(false)
+  })
+
+  it('manifest 全部目标可见时允许写入，super_admin 可写任意目标', async () => {
+    mkdirSync(join(hostRoot(), 'profiles', 'p2', 'skills'), { recursive: true })
+    const ownTarget = join(root, 'own-manifest.json')
+    const own = fakeCtx({}, {
+      hostRoot: hostRoot(), manifestPath: ownTarget,
+      manifest: { version: 1, roles: [{ match: 'p1', skills: ['alpha'] }] },
+    }, { id: 1, role: 'user' })
+    await routes.get('PUT /provision/manifest')!(own)
+    expect(own.body.ok).toBe(true)
+    expect(existsSync(ownTarget)).toBe(true)
+
+    const rootTarget = join(root, 'root-manifest.json')
+    const admin = fakeCtx({}, {
+      hostRoot: hostRoot(), manifestPath: rootTarget,
+      manifest: { version: 1, roles: [{ match: 'p2', skills: ['alpha'] }] },
+    }, { id: 9, role: 'super_admin' })
+    await routes.get('PUT /provision/manifest')!(admin)
+    expect(admin.body.ok).toBe(true)
+    expect(existsSync(rootTarget)).toBe(true)
   })
 })

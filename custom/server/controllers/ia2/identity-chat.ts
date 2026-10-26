@@ -19,10 +19,21 @@
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { canUserAccessProfile, type ProfileAccessDeps } from '../../services/hermes/profile-access'
 
 // 注：真进程 koa-router 新增路由不生效（routes.ts 404 缺陷注释同源，engine-models
 // 先例）——出口用原生中间件精确匹配（identityChatNativeRoutes），router 定义退役。
-type Ctx = { method?: string; path?: string; query?: Record<string, string>; params?: Record<string, string>; request?: { body?: unknown }; status?: number; body?: unknown; set(k: string, v: string): void }
+type Ctx = {
+  method?: string
+  path?: string
+  query?: Record<string, string>
+  params?: Record<string, string>
+  request?: { body?: unknown }
+  state?: { user?: Parameters<typeof canUserAccessProfile>[0] }
+  status?: number
+  body?: unknown
+  set(k: string, v: string): void
+}
 type Next = () => Promise<void>
 
 const BOT_CHAT_TITLE = 'Bot Chat'
@@ -111,7 +122,7 @@ async function ensureBotChat(profile: string): Promise<string> {
  * 在线态取 /health/detailed platforms 键的 <profile>:<platform> 前缀（无前缀
  * 键=default profile）。/health/detailed 不含 served_profiles（实测），目录
  * 才是网关 Cron tick 的同一份 profile 全集。 */
-async function handleIdentities(ctx: Ctx): Promise<void> {
+async function handleIdentities(ctx: Ctx, deps?: ProfileAccessDeps): Promise<void> {
   ctx.set('Cache-Control', 'no-store')
   try {
     const profileDir = join(homedir(), '.hermes', 'profiles')
@@ -135,12 +146,14 @@ async function handleIdentities(ctx: Ctx): Promise<void> {
     } catch { /* 网关不在 → 全部离线态 */ }
     ctx.body = {
       ok: true,
-      identities: served.map((profile) => ({
-        kind: 'gateway' as const,
-        id: profile,
-        label: profile,
-        online: online.get(profile) === true,
-      })),
+      identities: served
+        .filter(profile => canUserAccessProfile(ctx.state?.user, profile, deps))
+        .map((profile) => ({
+          kind: 'gateway' as const,
+          id: profile,
+          label: profile,
+          online: online.get(profile) === true,
+        })),
       gatewayBase: gatewayBase(),
     }
   } catch (err) {
@@ -211,23 +224,35 @@ function botChatHint(err: unknown): string | undefined {
   return undefined
 }
 
+function allowIdentity(ctx: Ctx, profile: string, deps?: ProfileAccessDeps): boolean {
+  if (canUserAccessProfile(ctx.state?.user, profile, deps)) return true
+  ctx.set('Cache-Control', 'no-store')
+  ctx.status = 403
+  ctx.body = { ok: false, error: 'profile not available for this user' }
+  return false
+}
+
 /** 原生 koa 中间件：精确匹配方法+路径（非匹配 next 放行；ideNativeRoutes 同款）。 */
-export function identityChatNativeRoutes(): (ctx: Ctx, next: Next) => Promise<void> {
+export function identityChatNativeRoutes(deps?: ProfileAccessDeps): (ctx: Ctx, next: Next) => Promise<void> {
   return async (ctx: Ctx, next: Next): Promise<void> => {
     const path = String(ctx.path ?? '')
     const method = String(ctx.method ?? '').toUpperCase()
     if (method === 'GET' && path === '/api/ia2/identities') {
-      await handleIdentities(ctx)
+      await handleIdentities(ctx, deps)
       return
     }
     const mChat = path.match(/^\/api\/ia2\/identity-chat\/([^/]+)\/chat$/)
     if (method === 'POST' && mChat) {
-      await handleChat(ctx, decodeURIComponent(mChat[1]))
+      const profile = decodeURIComponent(mChat[1])
+      if (!allowIdentity(ctx, profile, deps)) return
+      await handleChat(ctx, profile)
       return
     }
     const mMsg = path.match(/^\/api\/ia2\/identity-chat\/([^/]+)\/messages$/)
     if (method === 'GET' && mMsg) {
-      await handleMessages(ctx, decodeURIComponent(mMsg[1]))
+      const profile = decodeURIComponent(mMsg[1])
+      if (!allowIdentity(ctx, profile, deps)) return
+      await handleMessages(ctx, profile)
       return
     }
     await next()

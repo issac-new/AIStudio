@@ -78,3 +78,75 @@ describe('身份聊天中间件路由', () => {
     expect(chatCall).toContain('/p/worker-coder/api/sessions/local-s1/chat')
   })
 })
+
+describe('身份聊天 profile 授权', () => {
+  const deps = {
+    canAccessProfile: (user: { id: number }, profile: string) => user.id === 1 && profile === 'worker-coder',
+  }
+  const mw = () => (mod as unknown as {
+    identityChatNativeRoutes: (deps?: unknown) => (c: unknown, n: () => Promise<void>) => Promise<void>
+  }).identityChatNativeRoutes(deps)
+
+  beforeEach(() => { fetchMock.mockReset() })
+
+  it('身份清单只返回当前账户可见 profiles；无可见 profile 时为空', async () => {
+    fetchMock.mockResolvedValue(jsonRes({ platforms: {} }))
+    const alice = {
+      method: 'GET', path: '/api/ia2/identities', set: vi.fn(), status: 0, body: null as unknown,
+      state: { user: { id: 1, role: 'user' } },
+    }
+    await mw()(alice, async () => {})
+    expect((alice.body as { identities: Array<{ id: string }> }).identities.map(identity => identity.id)).toEqual(['worker-coder'])
+
+    const nobody = {
+      method: 'GET', path: '/api/ia2/identities', set: vi.fn(), status: 0, body: null as unknown,
+      state: { user: { id: 2, role: 'user' } },
+    }
+    await mw()(nobody, async () => {})
+    expect((nobody.body as { identities: unknown[] }).identities).toEqual([])
+  })
+
+  it('历史读取在 ensure Bot Chat 和网关调用之前拒绝他人 profile', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith('/messages')) return jsonRes({ messages: [{ role: 'assistant', content: '他人历史' }] })
+      return jsonRes({ data: [{ id: 'other-s1', title: 'Bot Chat' }] })
+    })
+    const ctx = {
+      method: 'GET', path: '/api/ia2/identity-chat/orchestrator/messages', query: {}, set: vi.fn(), status: 0, body: null as unknown,
+      state: { user: { id: 1, role: 'user' } },
+    }
+    await mw()(ctx, async () => {})
+    expect(ctx.status).toBe(403)
+    expect(ctx.body).toMatchObject({ ok: false })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('聊天调用在 ensure Bot Chat 和消息入队之前拒绝他人 profile', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith('/chat')) return jsonRes({ object: 'hermes.session.chat.completion', message: { content: '不应执行' } })
+      return jsonRes({ data: [{ id: 'other-s1', title: 'Bot Chat' }] })
+    })
+    const ctx = {
+      method: 'POST', path: '/api/ia2/identity-chat/orchestrator/chat', set: vi.fn(), status: 0, body: null as unknown,
+      request: { body: { message: '越权调用' } }, state: { user: { id: 1, role: 'user' } },
+    }
+    await mw()(ctx, async () => {})
+    expect(ctx.status).toBe(403)
+    expect(ctx.body).toMatchObject({ ok: false })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('super_admin 不受 profile 清单过滤，无鉴权上下文维持原目录全集', async () => {
+    fetchMock.mockResolvedValue(jsonRes({ platforms: {} }))
+    const root = {
+      method: 'GET', path: '/api/ia2/identities', set: vi.fn(), status: 0, body: null as unknown,
+      state: { user: { id: 9, role: 'super_admin' } },
+    }
+    await mw()(root, async () => {})
+    expect((root.body as { identities: unknown[] }).identities).toHaveLength(3)
+
+    const local = { method: 'GET', path: '/api/ia2/identities', set: vi.fn(), status: 0, body: null as unknown }
+    await mw()(local, async () => {})
+    expect((local.body as { identities: unknown[] }).identities).toHaveLength(3)
+  })
+})

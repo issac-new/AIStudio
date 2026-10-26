@@ -1,0 +1,187 @@
+// @vitest-environment node
+import { describe, expect, it, vi } from 'vitest'
+import { createServer, type Server } from 'node:http'
+import { EventEmitter } from 'node:events'
+import { WebSocket } from 'ws'
+import { createFleetRouter } from '../../../controllers/hermes/fleet'
+import { createKanbanOverview } from '../kanban-overview'
+
+interface TestUser { id: number; role: string; username?: string }
+
+function overviewHandler(raw: any) {
+  const router = createFleetRouter({
+    buildSnapshot: () => [],
+    respondApproval: async () => ({ resolved: true }),
+    respondClarify: async () => ({ resolved: true }),
+    getSession: () => null,
+    getOverview: async () => raw,
+    teams: {
+      list: async () => [],
+      create: async input => input,
+      update: async (_id, patch) => patch,
+      remove: async () => true,
+    },
+    userCanAccessProfile: (userId, profile) => (
+      (userId === 1 && ['default', 'alice-agent'].includes(profile))
+      || (userId === 2 && ['default', 'bob-agent'].includes(profile))
+    ),
+  })
+  const layer = router.stack.find(item => item.path === '/api/hermes/kanban/overview')
+  const handler = layer?.stack.at(-1)
+  if (!handler) throw new Error('overview route missing')
+  return handler
+}
+
+function ctxFor(user: TestUser | null): any {
+  return { state: user ? { user } : {}, status: 200, body: null }
+}
+
+describe('overview 账户授权投影', () => {
+  it('两个账户复用同一原始缓存时各自只看 assignee 可见任务，板计数由各自任务重算', async () => {
+    const raw = {
+      boards: [{ slug: 'main', name: 'Main', total: 99, archived: false }],
+      tasks: [
+        { board: 'main', task: { id: 'A-1', title: 'alice secret', assignee: 'alice-agent' } },
+        { board: 'main', task: { id: 'B-1', title: 'bob secret', assignee: 'bob-agent' } },
+        { board: 'main', task: { id: 'D-1', title: 'default task', assignee: null } },
+      ],
+      fetchedAt: 123,
+    }
+    const handler = overviewHandler(raw)
+
+    const alice = ctxFor({ id: 1, role: 'user' })
+    await handler(alice)
+    expect(alice.body.tasks.map((row: any) => row.task.id)).toEqual(['A-1', 'D-1'])
+    expect(alice.body.boards).toEqual([{ slug: 'main', name: 'Main', total: 2, archived: false }])
+
+    const bob = ctxFor({ id: 2, role: 'user' })
+    await handler(bob)
+    expect(bob.body.tasks.map((row: any) => row.task.id)).toEqual(['B-1', 'D-1'])
+    expect(bob.body.boards).toEqual([{ slug: 'main', name: 'Main', total: 2, archived: false }])
+    // 投影不得把第一账户的过滤结果写回共享原始对象。
+    expect(raw.tasks).toHaveLength(3)
+    expect(raw.boards[0].total).toBe(99)
+  })
+
+  it('空板按 profiles 优先、profile_scope 回落的团队交集可见，legacy 空板保留空投影', async () => {
+    const raw = {
+      boards: [
+        { slug: 'profiles-a', name: 'A', total: 0, archived: false, profiles: ['alice-agent'] },
+        { slug: 'scope-b', name: 'B', total: 0, archived: false, profile_scope: ['bob-agent'] },
+        { slug: 'preferred', name: 'P', total: 0, archived: false, profiles: ['bob-agent'], profile_scope: ['alice-agent'] },
+        { slug: 'present-empty', name: 'E', total: 0, archived: false, profiles: [], profile_scope: ['alice-agent', 'bob-agent'] },
+        { slug: 'legacy', name: 'L', total: 0, archived: false },
+      ],
+      tasks: [],
+      fetchedAt: 123,
+    }
+    const handler = overviewHandler(raw)
+
+    const alice = ctxFor({ id: 1, role: 'user' })
+    await handler(alice)
+    expect(alice.body.boards.map((board: any) => board.slug)).toEqual(['profiles-a', 'legacy'])
+
+    const bob = ctxFor({ id: 2, role: 'user' })
+    await handler(bob)
+    expect(bob.body.boards.map((board: any) => board.slug)).toEqual(['scope-b', 'preferred', 'legacy'])
+  })
+
+  it('已认证但无任何可见 profile 时不返回任务、团队空板或原始计数', async () => {
+    const raw = {
+      boards: [
+        { slug: 'legacy', name: 'Legacy', total: 7, archived: false },
+        { slug: 'secret-team', name: 'Secret', total: 4, archived: false, profiles: ['bob-agent'] },
+      ],
+      tasks: [
+        { board: 'legacy', task: { id: 'B-1', title: 'not visible', assignee: 'bob-agent' } },
+        { board: 'secret-team', task: { id: 'B-2', title: 'also invisible', assignee: 'bob-agent' } },
+      ],
+      fetchedAt: 123,
+    }
+    const ctx = ctxFor({ id: 3, role: 'user' })
+    await overviewHandler(raw)(ctx)
+    expect(ctx.body.tasks).toEqual([])
+    expect(ctx.body.boards).toEqual([{ slug: 'legacy', name: 'Legacy', total: 0, archived: false }])
+  })
+
+  it('super_admin 与无鉴权本地部署保留全量任务、空板和原始计数', async () => {
+    const raw = {
+      boards: [
+        { slug: 'main', name: 'Main', total: 9, archived: false },
+        { slug: 'unassigned', name: 'Empty', total: 0, archived: false, profiles: [] },
+      ],
+      tasks: [
+        { board: 'main', task: { id: 'A-1', assignee: 'alice-agent' } },
+        { board: 'main', task: { id: 'B-1', assignee: 'bob-agent' } },
+      ],
+      fetchedAt: 123,
+    }
+    const handler = overviewHandler(raw)
+    for (const ctx of [ctxFor({ id: 9, role: 'super_admin' }), ctxFor(null)]) {
+      await handler(ctx)
+      expect(ctx.body.tasks.map((row: any) => row.task.id)).toEqual(['A-1', 'B-1'])
+      expect(ctx.body.boards.map((board: any) => board.slug)).toEqual(['main', 'unassigned'])
+      expect(ctx.body.boards[0].total).toBe(9)
+    }
+  })
+})
+
+describe('overview WebSocket 授权投影', () => {
+  it('同一板事件只推给投影中仍可见该板的账户', async () => {
+    const children = new Map<string, any>()
+    const overview = createKanbanOverview({
+      listBoards: async () => [
+        { slug: 'alpha', name: 'Alpha', total: 0, archived: false, profiles: ['alice-agent'] },
+        { slug: 'beta', name: 'Beta', total: 0, archived: false, profiles: ['bob-agent'] },
+      ],
+      listTasks: async () => [],
+      watchEvents: (opts) => {
+        const child = new EventEmitter() as any
+        child.pid = children.size + 100
+        child.stdout = new EventEmitter()
+        child.kill = vi.fn()
+        children.set(opts?.board || 'default', child)
+        return child
+      },
+      killWatch: (_pid, fallback) => fallback(),
+    })
+    const server: Server = createServer()
+    let ws: WebSocket | null = null
+    try {
+      await overview.getOverview() // 共享原始缓存；不得按首个连接账户改写。
+      overview.attachWebSocket(server, {
+        isAuthEnabled: async () => true,
+        authenticateUserToken: async token => token === 'alice-token' ? { id: 1, role: 'user' } : null,
+        userCanAccessProfile: (userId, profile) => userId === 1 && profile === 'alice-agent',
+      } as any)
+      await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+      const address = server.address()
+      if (!address || typeof address === 'string') throw new Error('test server address missing')
+      const messages: any[] = []
+      ws = new WebSocket(`ws://127.0.0.1:${address.port}/api/hermes/kanban/overview/events?token=alice-token`)
+      ws.on('message', data => messages.push(JSON.parse(data.toString())))
+      await new Promise<void>((resolve, reject) => {
+        ws!.once('open', resolve)
+        ws!.once('error', reject)
+      })
+      await vi.waitFor(() => {
+        if (!messages.some(message => message.type === 'connected')) throw new Error('connected message missing')
+        if (children.size !== 2) throw new Error('board watchers not ready')
+      })
+
+      children.get('beta').stdout.emit('data', '{"kind":"task","id":"B-1"}\n')
+      children.get('alpha').stdout.emit('data', '{"kind":"task","id":"A-1"}\n')
+      await vi.waitFor(() => {
+        if (!messages.some(message => message.type === 'board-event' && message.board === 'alpha')) {
+          throw new Error('visible board event missing')
+        }
+      })
+      await new Promise(resolve => setTimeout(resolve, 30))
+      expect(messages.filter(message => message.type === 'board-event').map(message => message.board)).toEqual(['alpha'])
+    } finally {
+      ws?.terminate()
+      await overview.stop()
+      await new Promise<void>(resolve => server.close(() => resolve()))
+    }
+  })
+})
