@@ -31,7 +31,7 @@
 | 能力层 | references/research/reviews | 57/99/1 |
 | 能力层 | 随发文件 | 92（lite 46） |
 | 能力层 | 变量/预算 | 199/200（2026-10-26 设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS） |
-| 文档 | specs/plans/研究档 | 342（含在途轮次）/62/32 |
+| 文档 | specs/plans/研究档 | 343（含在途轮次）/62/32 |
 
 ## 来源覆盖（2026-10-26 复测）
 
