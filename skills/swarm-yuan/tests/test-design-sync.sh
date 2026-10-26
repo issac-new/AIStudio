@@ -102,6 +102,30 @@ printf 'D\n' > "$PJ/docs/design.md" && git -C "$PJ" add docs/design.md
 [[ -z "$(spf_design_sync_check "$PJ" "$TMP/cfg/precheck.conf" "$PJ/docs/specs/2026-01-01-x.md" 'staged branch')" ]] \
   && ok "2g spec 绝对路径形态同判（L2 调用形态）" || bad "2g 绝对路径形态误判"
 
+# 2h governing 选择器排除表（正本自身含「## 决策记录」章不得抢注——2026-10-26 立法轮实证缺陷）
+_mkspec touched   # spec 含声明段（touched design.md）
+printf '# 正本\n\n## 决策记录\n\nI1 测试。\n\n## 设计文档影响\n\n- DESIGN_SYNC: touched\n  - docs/design.md —— 行\n' > "$PJ/docs/design.md"
+git -C "$PJ" add docs/design.md docs/specs/2026-01-01-x.md
+_sel_plain="$(spf_find_governing_spec "$PJ" "docs/specs/*.md" 'staged branch' "$TMP/cfg/precheck.conf" index)"
+_sel_excl="$(spf_find_governing_spec "$PJ" "docs/specs/*.md" 'staged branch' "$TMP/cfg/precheck.conf" index docs/design.md)"
+case "$_sel_plain" in *2026-01-01-x.md*) [[ -z "$_sel_excl" || "$_sel_excl" == *"2026-01-01-x.md"* ]] ;; *) true ;; esac
+# 正本不在 SPEC_GLOB 外的常规态下排除表不改变 spec 命中；关键断言：正本进 glob 时（正本在 docs/specs/ 的仓形态）
+# 用专测目录模拟：把正本造进 glob 目录再验排除生效
+mkdir -p "$PJ/docs/specs"
+printf '# 正本\n\n## 决策记录\n\nI1。\n' > "$PJ/docs/specs/2026-01-02-ledger.md"
+git -C "$PJ" add docs/specs/2026-01-02-ledger.md
+_sel2="$(spf_find_governing_spec "$PJ" "docs/specs/*.md" 'staged branch' "$TMP/cfg/precheck.conf" index)"
+_sel3="$(spf_find_governing_spec "$PJ" "docs/specs/*.md" 'staged branch' "$TMP/cfg/precheck.conf" index docs/specs/2026-01-02-ledger.md)"
+if [[ "$_sel2" == *"2026-01-02-ledger.md" ]] && [[ "$_sel3" == *"2026-01-01-x.md" ]]; then
+  ok "2h 选择器排除表：正本抢注被排除后命中真 spec"
+elif [[ "$_sel3" == *"2026-01-01-x.md" ]]; then
+  ok "2h 选择器排除表：排除后命中真 spec（正本未抢注序）"
+else
+  bad "2h 选择器排除异常：plain=[$_sel2] excl=[$_sel3]"
+fi
+git -C "$PJ" reset -q HEAD -- docs/specs/2026-01-02-ledger.md 2>/dev/null || true
+rm -f "$PJ/docs/specs/2026-01-02-ledger.md"
+
 # ===== ③ L2 端到端（spec-first-pre-commit.sh 直调；conf/库/钩子成套 fixture） =====
 SK="$TMP/skill"; mkdir -p "$SK/scripts"
 cp assets/spec-first-lib.sh "$SK/scripts/"
@@ -147,6 +171,24 @@ if [[ "$_r" == "rc=1" ]] && grep -q 'missing-declaration' "$TMP/l2.err"; then
   ok "3d L2 拦 spec 缺声明段（exit 1 + missing-declaration）"
 else
   bad "3d L2 缺声明段未拦（$_r / $(cat "$TMP/l2.err"))"
+fi
+
+# 3e 正本与 spec 同在变更集（正本含决策记录章模拟抢注形态）→ L2 放行且不误中正本
+_mkspec touched
+printf '# 正本\n\n## 决策记录\n\nI1。\n' > "$PJ/docs/design.md"
+git -C "$PJ" add docs/design.md docs/specs/2026-01-01-x.md
+_r="$(_run_l2; echo "rc=$?")" || true
+[[ "$_r" == "rc=0" ]] && ok "3e L2 放行正本+spec 同批（选择器排除正本不误拦）" || bad "3e 正本抢注误拦（$(cat "$TMP/l2.err"))"
+
+# 3f 正本修订在变更集但无治理 spec（撤出 spec）→ L2 拦 unowned-doc-change
+git -C "$PJ" reset -q HEAD -- docs/specs/ 2>/dev/null || true
+rm -f "$PJ/docs/specs/2026-01-01-x.md"
+git -C "$PJ" add -A 2>/dev/null || true
+_r="$(_run_l2; echo "rc=$?")" || true
+if [[ "$_r" == "rc=1" ]] && grep -q 'unowned-doc-change' "$TMP/l2.err"; then
+  ok "3f L2 拦正本修订无治理 spec（unowned-doc-change）"
+else
+  bad "3f 无治理 spec 未拦（$_r / $(cat "$TMP/l2.err"))"
 fi
 
 # ===== ④ 静态锚：调用点落位（L2/L3 消费 lib 单一事实源） =====

@@ -170,10 +170,13 @@ spf_on_base_branch() {  # $1=项目根 $2=conf 路径（可空——读 BASE_BRA
 # $1=项目根 $2=spec glob（相对根） $3=关联面（空格分隔：staged branch untracked）
 # $4=conf 路径（可空——branch 面的 BASE_BRANCH 优先级来源，与 precheck _git_base 同口径）
 # $5=正文视图（默认 worktree；L2 传 index，校验实际将提交的 index blob）
+# $6=排除表（可空，空格分隔仓库相对路径——命中 glob 但属排除对象的候选跳过。
+#    消费方：design-sync 传 DESIGN_DOCS（设计正本自身常含「## 决策记录」章且落 SPEC_GLOB，
+#    不排除会抢注 governing 选择——正本是被同步对象，不是治理 spec；2026-10-26 立法轮实证）
 # → stdout 命中路径（空=变更集内无已批准 spec）。变更集决定候选，正文视图决定证据快照；
 # L2 的 index 已含未改动的 HEAD 文件，既认本分支已提交 spec，也尊重 staged 删除/撤回批准。
 spf_find_governing_spec() {
-  local _root="$1" _glob="$2" _faces="$3" _conf="${4:-}" _view="${5:-worktree}"
+  local _root="$1" _glob="$2" _faces="$3" _conf="${4:-}" _view="${5:-worktree}" _exclude="${6:-}"
   local _cand _p _base _content _changed=""
   [[ -d "$_root" ]] || return 0
   case " ${_faces} " in
@@ -203,6 +206,14 @@ spf_find_governing_spec() {
   [[ -z "$_changed" ]] && return 0
   while IFS= read -r _cand; do
     [[ -z "${_cand:-}" ]] && continue
+    # 排除表命中即跳过（design-sync 消费：正本不是治理 spec）
+    if [[ -n "$_exclude" ]]; then
+      local _ex_hit=0 _ex
+      for _ex in $_exclude; do
+        [[ "$_cand" == "$_ex" ]] && { _ex_hit=1; break; }
+      done
+      [[ "$_ex_hit" -eq 1 ]] && continue
+    fi
     # glob 匹配（bash 3.2 兼容：case 模式内变量展开即 glob；spec glob 形如 docs/specs/*.md）
     case "$_cand" in
       ${_glob})
