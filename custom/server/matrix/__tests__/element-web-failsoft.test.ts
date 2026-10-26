@@ -29,6 +29,12 @@ describe('element-web fail-soft（补丁 691 锁定）', () => {
     expect(s).toContain('available: false')
   })
 
+  it('ELEMENT_WEB_DIR 显式覆盖同时作用于静态目录与可用性判定', () => {
+    const s = src()
+    expect(s).toContain('process.env.ELEMENT_WEB_DIR?.trim()')
+    expect(s).toContain('const elementWebAvailable = existsSync(elementWebDir)')
+  })
+
   it('config.json 动态端点仍在静态分支之前（补丁 667 序不被 691 打乱）', () => {
     const s = src()
     const cfg = s.indexOf("ctx.path === '/element-web/config.json'")

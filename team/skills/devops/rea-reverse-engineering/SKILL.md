@@ -1,13 +1,13 @@
 ---
 name: rea-reverse-engineering
-description: "Use when 用 REA 做逆向分析或排查其 CLI/MCP 故障：免 provider 能力入口与实测坑。"
-version: 1.1.0
+description: "Use when 用 REA 做逆向分析、按 REAP 提示词跑逆向任务、或排查 REA CLI/MCP 故障：免 provider 能力入口+26 提示词包+实测坑。"
+version: 1.2.0
 metadata:
   author: orchestrator
   license: MIT
-  source: morluto/rea v6.4.0 融合实测（2026-10-11）
-  tags: [devops, security, reverse-engineering, mcp]
-  related_skills: [upstream-agent-skill-fusion, open-source-architecture-research]
+  source: "morluto/rea v6.4.0 融合实测（2026-10-11）；JoasASantos/REA-Prompts REAP 融合（2026-10-26）"
+  tags: [devops, security, reverse-engineering, mcp, prompts]
+  related_skills: [upstream-agent-skill-fusion, open-source-architecture-research, security-domain-delegation]
 ---
 
 # REA（Reverse Engineer Anything）集群使用
@@ -44,3 +44,27 @@ rea doctor                    # 环境/注册诊断
 6. 本机边界：pwntools/pwndbg 类（ELF 布局/崩溃转储）上游标注 Linux x64，macOS 不可用。
 7. **Ghidra 深度 provider 已全通（2026-10-11）**：Ghidra 12.1.4 在 `~/lab/tools/ghidra_12.1.4_PUBLIC`（含源码构建的 mac_arm_64 decompile）；MCP 注册走 wrapper `~/lab/tools/rea-mcp-wrapper.sh`（内嵌 GHIDRA_INSTALL_DIR+JAVA_HOME=temurin-21）。系统二进制是 fat/arm64e，Ghidra 不支持 universal——先 `lipo -thin x86_64` 切片再分析。源码构建纪要：`gradle -I gradle/support/fetchDependencies.gradle` 后需手动把 `dependencies/downloads/` 的 jar/tlb cp 进 `flatRepo/`，再 `gradle --no-daemon :Decompiler:buildNatives`（46s）。
 8. 反编译 CLI：`rea decompile <path> --procedure <名或地址>`（函数名不对会报 Unknown procedure，先用 nm/entry 地址 0x100000f60 类入口试）。
+
+## REAP 提示词库（2026-10-26 融合）
+
+来源：JoasASantos/REA-Prompts（REAP，MIT，2462★）。26 个场景包 / 102 个提示词，存于本技能 `references/reap/`（`reap-00`…`reap-22` + `reap-prompts` 索引 + `reap-wildcard` + `reap-prompt-writing-tips` + `system_prompt.md` 全库单文件）。正典快照：`~/.hermes/shared/research/reap-fusion-20261026/REA-Prompts-main/`。
+
+### 用法（hack worker 接逆向任务时）
+
+1. 按目标类型选包：`skill_view('rea-reverse-engineering', file_path='references/reap/<pack>/SKILL.md')` 读该场景全部提示词。
+2. 复制提示词模板，替换 `<尖括号>` 占位符，一次只聚焦**一个特性**（窄问得证据链，宽问得浅地图）。
+3. 产出纪律：每个结论带 file/function/address 证据；确认事实 / 推断 / 未知三桶分离；静态优先（明确「本步不执行目标」）；以具体交付物收尾（SPEC.md / reader 脚本 / 对比表）。
+
+### hack 角色 → REAP 包映射
+
+| hack 角色 | 主用包 | 说明 |
+|---|---|---|
+| hack-recon | reap-02 (feature tracing), reap-11 (Electron/Web) | 攻击面初绘：单特性追踪 + Web/JS 面指纹 |
+| hack-exploit | reap-10 (vuln research), reap-19 (kernel exploit), reap-03 (native binary) | 漏洞研究：信任边界审计→source→sink 追踪→补丁 diff |
+| hack-auditor | reap-17 (malware), reap-21 (protectors), reap-14 (cracking), reap-12/13 (anti-cheat/DMA 防御) | 样本分析、保护层研究、合规审计 |
+| hack-forensics | reap-15 (version compare), reap-17 (malware), reap-16 (long-running), reap-22 (Go/Rust 恢复) | 取证对账：版本对比、攻击链重构、长期调查续接 |
+| 跨角色 | reap-18 (反混淆), reap-08 (Android), reap-07 (固件), reap-09 (内核分析), reap-04/20 (clean-room 克隆), reap-05/06 (游戏/WASM) | 按任务域取用 |
+
+### 安全边界（与 security-domain-delegation 对齐）
+
+REAP 原文红线逐字保留：仅分析自有软件、明确授权的软件或合法研究目标。逆向任务派工照旧过授权门（被动优先、范围限定、授权来自目标侧）。clean-room 克隆只提取行为规格，禁复制代码/资产/品牌/授权机制。
