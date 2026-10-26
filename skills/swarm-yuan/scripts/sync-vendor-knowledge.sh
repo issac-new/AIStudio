@@ -101,18 +101,12 @@ log "=== vendor-knowledge 镜像同步（学习研究用途）==="
 log "源：$SRC"
 [[ -d "$SRC" ]] || fail "hermes 运行时根不存在：${SRC}（设 SRC=<path> 自定义）"
 
-# git LFS 跟踪规则（大文件/版权材料入 LFS）
-if command -v git-lfs >/dev/null 2>&1 || git lfs version >/dev/null 2>&1; then
-  git -C "$BASE" lfs install --local >/dev/null 2>&1 || true
-  for pat in \
-    "swarm-yuan/vendor-knowledge/pay-team/references/standards/**" \
-    "swarm-yuan/vendor-knowledge/pay-team/references/books/**" \
-    "swarm-yuan/vendor-knowledge/pay-team/references/fulltext/**"; do
-    git -C "$BASE" lfs track "$pat" >/dev/null 2>&1 || true
-  done
-  log "  ✓ git LFS 跟踪规则就绪（standards/books/fulltext）"
-else
-  log "  ⚠ 未检出 git-lfs：大文件将走普通 git（建议 brew install git-lfs / 包管理器装）"
+# LFS 外置为登记债务：AIStudio 镜像按普通 git 对象入库，仅字节保真（.gitattributes -text）。
+# 历史版本在此处 git lfs track——挂 filter 后普通 blob 会在 git add 时被转成指针（仓内无 LFS
+# 对象库，数据雷），故移除；恢复 LFS 须先 git lfs migrate import 全量迁移再登记。
+if grep -q '^vendor-knowledge/\*\* filter=lfs' "$BASE/.gitattributes" 2>/dev/null; then
+  log "  ✗ .gitattributes 仍挂 vendor-knowledge filter=lfs（会把普通 blob 转指针）——改为 -text 后重试"
+  exit 1
 fi
 
 # 1) pay 知识库全量（主源缺失=致命）
@@ -133,5 +127,5 @@ find "$VK" -name '.git' -type d 2>/dev/null | while IFS= read -r g; do rm -rf "$
 
 n=$(find "$VK" -type f 2>/dev/null | wc -l | tr -d ' ')
 log "✓ 同步完成：vendor-knowledge 共 $n 文件"
-log "  下一步：git add vendor-knowledge && git commit（大文件已走 LFS）"
+log "  下一步：git add vendor-knowledge && git commit（字节保真 -text，未启用 LFS）"
 log "  校验：bash scripts/sync-vendor-knowledge.sh --check"

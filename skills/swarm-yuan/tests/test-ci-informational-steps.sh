@@ -2,20 +2,20 @@
 # test-ci-informational-steps.sh — CI 信息性步骤台账锁（R130）
 #
 # 守两件事：
-#   ① ci.yml ↔ ci/informational-steps.conf 对账：每个 continue-on-error: true 步骤必有 id 且登记在台账；
-#     台账每项在 ci.yml 真实存在；含信息性步骤的 Job 末尾有 if: always() 的对账步并注入全部 outcome。
+#   ① swarm-yuan.yml ↔ ci/informational-steps.conf 对账：每个 continue-on-error: true 步骤必有 id 且登记在台账；
+#     台账每项在 swarm-yuan.yml 真实存在；含信息性步骤的 Job 末尾有 if: always() 的对账步并注入全部 outcome。
 #   ② ci/informational-steps-check.sh 三值语义行为级：observe 到期即红 / red 转绿即红（棘轮）/ green 变红即红。
 #   ③ 真台账在今天日期下合规——**注意**：observe 项到期后本断言会按设计转红，这不是回归，
 #     是逼人把该步骤归类为 red 或 green（改 ci/informational-steps.conf 即可）。
 set -uo pipefail
 cd "$(dirname "${0}")/.." || exit 1
-BASE="$(pwd)"; REPO="$(cd "${BASE}/.." && pwd)"
-CI="$REPO/.github/workflows/ci.yml"; CONF="$BASE/ci/informational-steps.conf"; CHK="$BASE/ci/informational-steps-check.sh"
+BASE="$(pwd)"; SWARM_YUAN_SOURCE_ROOT="$(cd "${BASE}/../.." && pwd)"
+CI="$SWARM_YUAN_SOURCE_ROOT/.github/workflows/swarm-yuan.yml"; CONF="$BASE/ci/informational-steps.conf"; CHK="$BASE/ci/informational-steps-check.sh"
 TMP="$(mktemp -d /tmp/ciinfo.XXXXXX)"; trap 'rm -rf "$TMP"' EXIT
 FAIL=0; ok() { echo "  ✓ $1"; }; bad() { echo "  ✗ $1" >&2; FAIL=1; }
 
-# ===== ① ci.yml ↔ 台账对账 =====
-[[ -f "$CI" && -f "$CONF" && -x "$CHK" ]] && ok "①a 三件在位（ci.yml / conf / check.sh 可执行）" || bad "①a 缺件"
+# ===== ① swarm-yuan.yml ↔ 台账对账 =====
+[[ -f "$CI" && -f "$CONF" && -x "$CHK" ]] && ok "①a 三件在位（swarm-yuan.yml / conf / check.sh 可执行）" || bad "①a 缺件"
 # 每个 continue-on-error: true 向上找最近的 "- name:" 块内须有 id:
 _coe_total=0; _coe_noid=""
 while IFS= read -r ln; do
@@ -23,18 +23,18 @@ while IFS= read -r ln; do
   _start=$(awk -v L="$ln" 'NR<=L && /^      - name:/{s=NR} END{print s}' "$CI")
   _id=$(sed -n "${_start},${ln}p" "$CI" | grep -E '^        id: ' | sed 's/^ *id: *//' | head -1)
   if [[ -z "$_id" ]]; then _coe_noid="${_coe_noid} L${ln}"; else
-    grep -q "^${_id}	" "$CONF" || bad "①b 步骤 id=${_id}（ci.yml:${ln}）未登记台账"
+    grep -q "^${_id}	" "$CONF" || bad "①b 步骤 id=${_id}（swarm-yuan.yml:${ln}）未登记台账"
   fi
 done < <(grep -n 'continue-on-error: true' "$CI" | cut -d: -f1)
 [[ -z "$_coe_noid" ]] && ok "①b 全部 ${_coe_total} 个 continue-on-error 步骤有 id 且登记台账" || bad "①b 无 id 的信息性步骤: ${_coe_noid}"
-# 台账每项在 ci.yml 存在 id:
+# 台账每项在 swarm-yuan.yml 存在 id:
 while IFS=$'\t' read -r sid _ _ _ || [[ -n "${sid:-}" ]]; do
   [[ -z "${sid:-}" || "$sid" == \#* ]] && continue
-  grep -q "^        id: ${sid}\$" "$CI" || bad "①c 台账项 ${sid} 在 ci.yml 无对应 id:"
+  grep -q "^        id: ${sid}\$" "$CI" || bad "①c 台账项 ${sid} 在 swarm-yuan.yml 无对应 id:"
   grep -q "INFO_OUTCOME_$(printf '%s' "$sid" | tr '[:lower:]' '[:upper:]'): \${{ steps.${sid}.outcome }}" "$CI" \
     || bad "①c 台账项 ${sid} 的 outcome 未注入对账步 env"
 done < "$CONF"
-[[ $FAIL -eq 0 ]] && ok "①c 台账项全部在 ci.yml 有 id 且 outcome 注入对账步"
+[[ $FAIL -eq 0 ]] && ok "①c 台账项全部在 swarm-yuan.yml 有 id 且 outcome 注入对账步"
 [[ $(grep -c 'informational-steps-check.sh ci/informational-steps.conf' "$CI") -eq 2 ]] \
   && ok "①d 两个含信息性步骤的 Job 各有对账步" || bad "①d 对账步数量≠2"
 [[ $(grep -A1 '信息性步骤台账对账' "$CI" | grep -c 'if: always()') -eq 2 ]] \

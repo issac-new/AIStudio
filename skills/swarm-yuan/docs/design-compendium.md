@@ -134,7 +134,7 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 | 要找什么 | 看哪里 |
 |---|---|
 | 设计论证（What/Why/How 五层） | `swarm-yuan/README.md`（自述「唯一设计文档」，六章 + 附录 A–E） |
-| 终态设计说明（机制/不变量/失效模式/验收） | `docs/design-terminal.md` |
+| 终态设计说明（机制/不变量/失效模式/验收；已归档，规范源见 README） | `docs/reviews/design-terminal-2026-10-26-archived.md` |
 | 决策全文（编号见该文件） | `docs/design-evolution.md`；索引在技能 README 附录 C |
 | 上游运行时台账（22 项） | `docs/upstream-baseline.md`；历史在 `docs/research/upstream-changelog.md` |
 | 历轮细节 | `docs/research/R*.md`（份数以目录实测为准）+ `docs/reviews/`（复审类） |

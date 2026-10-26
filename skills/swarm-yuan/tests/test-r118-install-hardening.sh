@@ -15,7 +15,6 @@
 set -uo pipefail
 
 BASE="$(cd "$(dirname "$0")/.." && pwd)"
-REPO="$(cd "$BASE/.." && pwd)"
 INSTALL="$BASE/install.sh"
 TA_DIR="$BASE/assets/tool-adapters"
 
@@ -104,11 +103,15 @@ PY
 # ① .gitattributes eol 规则 + install.sh 自身 CRLF 检测
 # ============================================================
 echo "[1] .gitattributes 换行规则 + CRLF 自检"
-if grep -qx '\* text=auto' "$REPO/.gitattributes"; then ok "1a * text=auto"; else bad "1a 缺 * text=auto"; fi
-if grep -qx '\*.sh text eol=lf' "$REPO/.gitattributes"; then ok "1b *.sh eol=lf"; else bad "1b 缺 *.sh eol=lf"; fi
-if grep -qx '\*.bat text eol=crlf' "$REPO/.gitattributes"; then ok "1c *.bat eol=crlf"; else bad "1c 缺 *.bat eol=crlf"; fi
-# 8cc5b03 起 LFS 规则收敛为一条宽匹配（vendor-knowledge/**）；旧断言"恰 3 条"未随收敛同步。
-if grep -q '^swarm-yuan/vendor-knowledge/\*\* filter=lfs' "$REPO/.gitattributes"; then ok "1d 既有 vendor LFS 规则保留"; else bad "1d LFS 规则被破坏"; fi
+if grep -qx '\* text=auto' "$BASE/.gitattributes"; then ok "1a * text=auto"; else bad "1a 缺 * text=auto"; fi
+if grep -qx '\*.sh text eol=lf' "$BASE/.gitattributes"; then ok "1b *.sh eol=lf"; else bad "1b 缺 *.sh eol=lf"; fi
+if grep -qx '\*.bat text eol=crlf' "$BASE/.gitattributes"; then ok "1c *.bat eol=crlf"; else bad "1c 缺 *.bat eol=crlf"; fi
+# 8cc5b03 起 LFS 规则收敛为一条宽匹配（vendor-knowledge/**）；2026-10-26 集成轮改判：
+# AIStudio 镜像是普通 blob 且未建 LFS 对象库，挂 filter=lfs 会在 git add 时把普通 blob 静默
+# 转成指针（数据雷）。守门改为：字节保真 -text 在位 + filter=lfs 不得回归。
+if grep -qxF 'vendor-knowledge/** -text' "$BASE/.gitattributes" \
+   && ! grep -qF 'vendor-knowledge/** filter=lfs' "$BASE/.gitattributes"; then
+  ok "1d vendor 字节保真在位且未挂 LFS 指针转换"; else bad "1d vendor 规则应为 -text 且禁 filter=lfs"; fi
 
 # 混合 CR（bash 可解析的形态）：脚本应显式报 CRLF 错误而非继续执行
 awk 'NR==1 { printf "%s\r\n", $0; next } { print }' "$INSTALL" > "$TMP/install-crlf-mixed.sh"

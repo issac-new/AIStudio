@@ -88,25 +88,25 @@ run_gate() { # $1=base 布局目录 → stdout=输出；exit 码=FAIL 状态（�
     exit "$FAIL"
   )
 }
-# 3a repo 布局缺 ci.yml → warn + FAIL
-# 布局：swarm/ci/self-precheck.conf 在，父目录含 verifier/（repo 标记），无 .github/ci.yml
-B1P="$TMP/g1p"; mkdir -p "$B1P/swarm/ci" "$B1P/verifier"
-printf 'SPEC_FILE="x"\n' > "$B1P/swarm/ci/self-precheck.conf"
-out=$(run_gate "$B1P/swarm" 2>&1); rc=$?
-[[ $rc -eq 1 ]] && printf '%s' "$out" | grep -q 'CI workflow 不存在' && ok "3a repo 布局缺 ci.yml → warn+FAIL" || bad "3a 分支行为异常: $out (rc=$rc)"
-# 3b 部署副本布局（父目录无 verifier/）→ ⊘ skip 且不 FAIL
-B2P="$TMP/g2p"; mkdir -p "$B2P/swarm/ci"; printf 'SPEC_FILE="x"\n' > "$B2P/swarm/ci/self-precheck.conf"
-out=$(run_gate "$B2P/swarm" 2>&1); rc=$?
+# 3a 单仓源码布局缺 swarm-yuan.yml → warn + FAIL
+# 布局：skills/swarm/ci/self-precheck.conf 与技能内 verifier/ 在，仓根无 .github/swarm-yuan.yml
+B1P="$TMP/g1p"; mkdir -p "$B1P/skills/swarm/ci" "$B1P/skills/swarm/verifier"
+printf 'SPEC_FILE="x"\n' > "$B1P/skills/swarm/ci/self-precheck.conf"
+out=$(run_gate "$B1P/skills/swarm" 2>&1); rc=$?
+[[ $rc -eq 1 ]] && printf '%s' "$out" | grep -q 'CI workflow 不存在' && ok "3a repo 布局缺 swarm-yuan.yml → warn+FAIL" || bad "3a 分支行为异常: $out (rc=$rc)"
+# 3b 部署副本布局（技能内无 verifier/）→ ⊘ skip 且不 FAIL
+B2P="$TMP/g2p"; mkdir -p "$B2P/skills/swarm/ci"; printf 'SPEC_FILE="x"\n' > "$B2P/skills/swarm/ci/self-precheck.conf"
+out=$(run_gate "$B2P/skills/swarm" 2>&1); rc=$?
 [[ $rc -eq 0 ]] && printf '%s' "$out" | grep -q '⊘ SKIPPED（部署副本无 .github' && ok "3b 部署副本 → ⊘ skip 不 FAIL" || bad "3b 分支行为异常: $out (rc=$rc)"
-# 3c 齐全（ci.yml 含三档 step）→ pass 不 FAIL
-B3P="$TMP/g3p"; mkdir -p "$B3P/swarm/ci" "$B3P/verifier" "$B3P/.github/workflows"
-printf 'SPEC_FILE="x"\n' > "$B3P/swarm/ci/self-precheck.conf"
-cat > "$B3P/.github/workflows/ci.yml" <<'YEOF'
+# 3c 齐全（仓根 swarm-yuan.yml 含三档 step）→ pass 不 FAIL
+B3P="$TMP/g3p"; mkdir -p "$B3P/skills/swarm/ci" "$B3P/skills/swarm/verifier" "$B3P/.github/workflows"
+printf 'SPEC_FILE="x"\n' > "$B3P/skills/swarm/ci/self-precheck.conf"
+cat > "$B3P/.github/workflows/swarm-yuan.yml" <<'YEOF'
 - run: bash scripts/precheck.sh --all
 - run: bash scripts/precheck.sh --all-full
 - run: bash scripts/precheck.sh --compliance-suite
 YEOF
-out=$(run_gate "$B3P/swarm" 2>&1); rc=$?
+out=$(run_gate "$B3P/skills/swarm" 2>&1); rc=$?
 [[ $rc -eq 0 ]] && printf '%s' "$out" | grep -q 'CI 自举三档 step 齐全' && ok "3c 三档齐全 → pass" || bad "3c 分支行为异常: $out (rc=$rc)"
 
 # ===== ④ install 分发边界 =====

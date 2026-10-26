@@ -1,0 +1,221 @@
+name: swarm-yuan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/swarm-yuan/**'
+      - '.github/workflows/swarm-yuan.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'skills/swarm-yuan/**'
+      - '.github/workflows/swarm-yuan.yml'
+  schedule:
+    - cron: '17 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 同一 PR/分支的新推送取消旧运行；技能目录未变时由 paths 过滤直接跳过。
+concurrency:
+  group: swarm-yuan-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sweep:
+    name: Full regression sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+      - name: Run the same full sweep as local development
+        run: SWEEP_JOBS=2 bash skills/swarm-yuan/tests/run-sweep.sh
+
+  generator-self-gate:
+    name: Generator self-gate (three gate profiles)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Bootstrap precheck --all
+        working-directory: skills/swarm-yuan
+        run: |
+          tmpdir="$(mktemp -d)"
+          cp assets/precheck.sh assets/gates-strict.sh assets/gates-warn.sh assets/gates-advisory.sh "$tmpdir/"
+          sed "s|__REPO_ROOT__|$GITHUB_WORKSPACE|g" ci/self-precheck.conf > "$tmpdir/precheck.conf"
+          git checkout -b feat/generator-self-gate
+          set +e
+          bash "$tmpdir/precheck.sh" --all
+          rc=$?
+          set -e
+          rm -rf "$tmpdir"
+          [[ "$rc" -eq 0 ]] || { echo "Generator self-gate --all failed RC=$rc"; exit 1; }
+      - name: Self-gate --all-full
+        working-directory: skills/swarm-yuan
+        run: |
+          tmpdir="$(mktemp -d)"
+          cp assets/precheck.sh assets/gates-strict.sh assets/gates-warn.sh assets/gates-advisory.sh "$tmpdir/"
+          sed "s|__REPO_ROOT__|$GITHUB_WORKSPACE|g" ci/self-precheck.conf > "$tmpdir/precheck.conf"
+          git checkout -b feat/generator-self-gate-full
+          set +e
+          bash "$tmpdir/precheck.sh" --all-full
+          rc=$?
+          set -e
+          rm -rf "$tmpdir"
+          [[ "$rc" -eq 0 ]] || { echo "Generator self-gate --all-full failed RC=$rc"; exit 1; }
+      - name: Self-gate --compliance-suite
+        working-directory: skills/swarm-yuan
+        run: |
+          tmpdir="$(mktemp -d)"
+          cp assets/precheck.sh assets/gates-strict.sh assets/gates-warn.sh assets/gates-advisory.sh "$tmpdir/"
+          sed "s|__REPO_ROOT__|$GITHUB_WORKSPACE|g" ci/self-precheck.conf > "$tmpdir/precheck.conf"
+          set +e
+          bash "$tmpdir/precheck.sh" --compliance-suite
+          rc=$?
+          set -e
+          rm -rf "$tmpdir"
+          [[ "$rc" -eq 0 ]] || { echo "Generator self-gate --compliance-suite failed RC=$rc"; exit 1; }
+
+  macos-bsd-compat:
+    name: macOS BSD compatibility
+    runs-on: macos-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: skills/swarm-yuan
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: bash -n with Bash 3.2
+        run: |
+          bash --version | head -1
+          fail=0
+          for f in assets/precheck.sh scripts/*.sh tests/run-framework-fixture.sh tests/run-gate-fixture.sh assets/framework-gates/*.sh; do
+            bash -n "$f" || { echo "BASH-N FAIL: $f"; fail=$((fail+1)); }
+          done
+          [[ "$fail" -eq 0 ]] || exit 1
+      - name: Framework fixtures on BSD
+        run: |
+          fail=0
+          for md in references/frameworks/*.md; do
+            id=$(basename "$md" .md)
+            [[ "$id" == "_template" ]] && continue
+            if ! bash tests/run-framework-fixture.sh "$id" >/tmp/fx-$id.log 2>&1; then
+              echo "FIXTURE FAIL: $id"
+              tail -20 "/tmp/fx-$id.log" | sed 's/^/    /'
+              fail=$((fail+1))
+            fi
+          done
+          [[ "$fail" -eq 0 ]] || exit 1
+      - name: Gate fixtures on BSD（信息性）
+        id: gate_fixtures_bsd
+        continue-on-error: true
+        run: |
+          fail=0
+          for g in $(ls tests/gate-fixtures/); do
+            [[ -d "tests/gate-fixtures/$g" ]] || continue
+            if ! bash tests/run-gate-fixture.sh "$g"; then
+              echo "GATE FIXTURE FAIL: $g"
+              fail=$((fail+1))
+            fi
+          done
+          [[ "$fail" -eq 0 ]] || { echo "$fail gate-fixture groups failed（信息性，BSD 兼容逐个修中）"; exit 1; }
+      - name: 信息性步骤台账对账
+        if: always()
+        env:
+          INFO_OUTCOME_GATE_FIXTURES_BSD: ${{ steps.gate_fixtures_bsd.outcome }}
+        run: bash ci/informational-steps-check.sh ci/informational-steps.conf
+
+  windows-syntax:
+    name: Windows syntax smoke
+    runs-on: windows-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: skills/swarm-yuan
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: bash -n on Windows
+        shell: bash
+        run: |
+          fail=0
+          for f in assets/precheck.sh scripts/*.sh tests/run-framework-fixture.sh tests/run-gate-fixture.sh assets/framework-gates/*.sh; do
+            bash -n "$f" || { echo "BASH-N FAIL: $f"; fail=$((fail+1)); }
+          done
+          [[ "$fail" -eq 0 ]] || exit 1
+      - name: Batch wrapper smoke
+        shell: cmd
+        run: |
+          install.bat --list || echo install.bat --list returned non-zero
+          if not exist ..\win-smoke-proj mkdir ..\win-smoke-proj
+          if not exist ..\win-smoke-out mkdir ..\win-smoke-out
+          echo {"name":"win-smoke"} > ..\win-smoke-proj\package.json
+          scripts\generate-skill.bat win-smoke-skill ..\win-smoke-proj ..\win-smoke-out || (echo generate-skill.bat failed & exit /b 1)
+          if exist ..\win-smoke-out\win-smoke-skill\SKILL.md (echo batch smoke passed) else (echo batch smoke failed & exit /b 1)
+
+  windows-compat:
+    name: Windows compatibility full
+    runs-on: windows-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: skills/swarm-yuan
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: bash -n on Windows
+        run: |
+          fail=0
+          for f in assets/precheck.sh scripts/*.sh tests/run-framework-fixture.sh tests/run-gate-fixture.sh assets/framework-gates/*.sh; do
+            bash -n "$f" || { echo "BASH-N FAIL: $f"; fail=$((fail+1)); }
+          done
+          [[ "$fail" -eq 0 ]] || exit 1
+      - name: Framework fixtures on Windows（信息性）
+        id: fixtures_windows
+        continue-on-error: true
+        run: |
+          fail=0
+          for md in references/frameworks/*.md; do
+            id=$(basename "$md" .md)
+            [[ "$id" == "_template" ]] && continue
+            if ! bash tests/run-framework-fixture.sh "$id" >/tmp/fx-$id.log 2>&1; then
+              echo "FIXTURE FAIL: $id"
+              tail -20 "/tmp/fx-$id.log" | sed 's/^/    /'
+              fail=$((fail+1))
+            fi
+          done
+          [[ "$fail" -eq 0 ]] || { echo "$fail fixtures failed（信息性，Git Bash 兼容问题逐个修中）"; exit 1; }
+      - name: Gate fixtures on Windows（信息性）
+        id: gate_fixtures_windows
+        continue-on-error: true
+        run: |
+          fail=0
+          for g in $(ls tests/gate-fixtures/); do
+            [[ -d "tests/gate-fixtures/$g" ]] || continue
+            if ! bash tests/run-gate-fixture.sh "$g" >/tmp/gfx-$g.log 2>&1; then
+              echo "GATE FIXTURE FAIL: $g"
+              tail -20 "/tmp/gfx-$g.log" | sed 's/^/    /'
+              fail=$((fail+1))
+            fi
+          done
+          [[ "$fail" -eq 0 ]] || { echo "$fail gate-fixture groups failed（信息性）"; exit 1; }
+      - name: 信息性步骤台账对账
+        if: always()
+        env:
+          INFO_OUTCOME_FIXTURES_WINDOWS: ${{ steps.fixtures_windows.outcome }}
+          INFO_OUTCOME_GATE_FIXTURES_WINDOWS: ${{ steps.gate_fixtures_windows.outcome }}
+        run: bash ci/informational-steps-check.sh ci/informational-steps.conf

@@ -11,7 +11,7 @@
 # git 写操作仅发生在 mktemp 沙箱内）。
 set -uo pipefail
 BASE="$(cd "$(dirname "$0")/.." && pwd)"   # swarm-yuan/
-REPO="$(cd "$BASE/.." && pwd)"
+VERIFIER="$BASE/verifier/v1"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ✓ $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  ✗ $1" >&2; }
@@ -120,26 +120,26 @@ fi
 
 # ===== B. cli-ab-test.sh 基线可配（CLI_AB_BASE）=====
 GB="$TMP/gb"
-mkdir -p "$GB/swarm-yuan/assets" \
-  "$GB/swarm-yuan/tests/gate-fixtures/summary/compliant" \
-  "$GB/swarm-yuan/tests/gate-fixtures/sensitive/violating" \
-  "$GB/verifier/v1"
-cp "$REPO/verifier/v1/cli-ab-test.sh" "$GB/verifier/v1/"
+mkdir -p "$GB/skills/swarm-yuan/assets" \
+  "$GB/skills/swarm-yuan/tests/gate-fixtures/summary/compliant" \
+  "$GB/skills/swarm-yuan/tests/gate-fixtures/sensitive/violating" \
+  "$GB/skills/swarm-yuan/verifier/v1"
+cp "$VERIFIER/cli-ab-test.sh" "$GB/skills/swarm-yuan/verifier/v1/"
 mk_stub() { # $1=版本标记；$* 用单引号格式保留给 stub 自身（不在本层展开）
   printf 'GATE_FLAGS=(--demo)\n'
   printf 'echo "STUB %s"\n' "$1"
   printf 'echo "argv:[$*]"\n'
   printf 'exit 0\n'
 }
-mk_stub ver-A > "$GB/swarm-yuan/assets/precheck.sh"
+mk_stub ver-A > "$GB/skills/swarm-yuan/assets/precheck.sh"
 ( cd "$GB" && git init -q && git config user.email t@t && git config user.name t \
   && git add -A && git commit -qm vA )
-mk_stub ver-B > "$GB/swarm-yuan/assets/precheck.sh"
+mk_stub ver-B > "$GB/skills/swarm-yuan/assets/precheck.sh"
 ( cd "$GB" && git add -A && git commit -qm vB )
 # 工作区==HEAD（ver-B，已提交）：缺省口径 A==B 恒等全绿；CLI_AB_BASE=HEAD 须逐字节等价
-bash "$GB/verifier/v1/cli-ab-test.sh" "$GB" > "$TMP/b-default.log" 2>&1; _rc_def=$?
-CLI_AB_BASE=HEAD bash "$GB/verifier/v1/cli-ab-test.sh" "$GB" > "$TMP/b-head.log" 2>&1; _rc_head=$?
-if [[ "$_rc_def" -eq "$_rc_head" ]] && cmp -s "$TMP/b-default.log" "$TMP/b-head.log"; then
+bash "$GB/skills/swarm-yuan/verifier/v1/cli-ab-test.sh" "$GB" > "$TMP/b-default.log" 2>&1; _rc_def=$?
+CLI_AB_BASE=HEAD bash "$GB/skills/swarm-yuan/verifier/v1/cli-ab-test.sh" "$GB" > "$TMP/b-head.log" 2>&1; _rc_head=$?
+if [[ "$_rc_def" -eq 0 && "$_rc_head" -eq 0 ]] && cmp -s "$TMP/b-default.log" "$TMP/b-head.log"; then
   ok "B1 CLI_AB_BASE=HEAD 与缺省行为逐字节一致（rc=${_rc_def}）"
 else
   bad "B1 缺省 vs =HEAD 输出或退出码不一致（${_rc_def} vs ${_rc_head}）"
@@ -150,14 +150,14 @@ else
   bad "B2 缺省口径不再全绿：$(tail -3 "$TMP/b-default.log")"
 fi
 # 基线指 HEAD~1：A=ver-A（改动前）↔ B=ver-B（已提交）——提交后仍可测的关键场景
-CLI_AB_BASE=HEAD~1 bash "$GB/verifier/v1/cli-ab-test.sh" "$GB" > "$TMP/b-old.log" 2>&1; _rc_old=$?
+CLI_AB_BASE=HEAD~1 bash "$GB/skills/swarm-yuan/verifier/v1/cli-ab-test.sh" "$GB" > "$TMP/b-old.log" 2>&1; _rc_old=$?
 if [[ "$_rc_old" -eq 1 ]] && grep -q 'STUB ver-A' "$TMP/b-old.log" && grep -q 'STUB ver-B' "$TMP/b-old.log"; then
   ok "B3 基线指 HEAD~1 捕获已提交改动（A/B 如期 DIFF，rc=1）"
 else
   bad "B3 对账历史基线未按预期报 DIFF（rc=${_rc_old}）"
 fi
 # 显式不可解析 ref：fail-closed 报错而非静默比较
-CLI_AB_BASE=no-such-ref-xyz bash "$GB/verifier/v1/cli-ab-test.sh" "$GB" > "$TMP/b-badref.log" 2>&1; _rc_bad=$?
+CLI_AB_BASE=no-such-ref-xyz bash "$GB/skills/swarm-yuan/verifier/v1/cli-ab-test.sh" "$GB" > "$TMP/b-badref.log" 2>&1; _rc_bad=$?
 if [[ "$_rc_bad" -ne 0 ]] && grep -q 'CLI_AB FAIL' "$TMP/b-badref.log"; then
   ok "B4 不可解析 ref 明确报错 rc=${_rc_bad}（非静默比较/假绿）"
 else
@@ -165,13 +165,13 @@ else
 fi
 # 非 git 目录 + 缺省 HEAD：维持「未配置静默跳过」既有语义
 NOGIT="$TMP/nogit"
-mkdir -p "$NOGIT/swarm-yuan/assets" \
-  "$NOGIT/swarm-yuan/tests/gate-fixtures/summary/compliant" \
-  "$NOGIT/swarm-yuan/tests/gate-fixtures/sensitive/violating" \
-  "$NOGIT/verifier/v1"
-cp "$GB/swarm-yuan/assets/precheck.sh" "$NOGIT/swarm-yuan/assets/"
-cp "$REPO/verifier/v1/cli-ab-test.sh" "$NOGIT/verifier/v1/"
-bash "$NOGIT/verifier/v1/cli-ab-test.sh" "$NOGIT" > "$TMP/b-nogit.log" 2>&1; _rc_ng=$?
+mkdir -p "$NOGIT/skills/swarm-yuan/assets" \
+  "$NOGIT/skills/swarm-yuan/tests/gate-fixtures/summary/compliant" \
+  "$NOGIT/skills/swarm-yuan/tests/gate-fixtures/sensitive/violating" \
+  "$NOGIT/skills/swarm-yuan/verifier/v1"
+cp "$GB/skills/swarm-yuan/assets/precheck.sh" "$NOGIT/skills/swarm-yuan/assets/"
+cp "$VERIFIER/cli-ab-test.sh" "$NOGIT/skills/swarm-yuan/verifier/v1/"
+bash "$NOGIT/skills/swarm-yuan/verifier/v1/cli-ab-test.sh" "$NOGIT" > "$TMP/b-nogit.log" 2>&1; _rc_ng=$?
 if [[ "$_rc_ng" -eq 0 ]] && grep -q 'CLI_AB_SKIP' "$TMP/b-nogit.log"; then
   ok "B5 非 git 目录维持未配置静默跳过（rc=0）"
 else

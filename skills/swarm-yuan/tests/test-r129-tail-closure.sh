@@ -9,7 +9,7 @@
 set -uo pipefail
 cd "$(dirname "${0}")/.." || exit 1
 BASE="$(pwd)"
-REPO="$(cd "${BASE}/.." && pwd)"
+VERIFIER="$BASE/verifier/v1/run-verifier.sh"
 TMP="$(mktemp -d /tmp/r129t.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 FAIL=0
@@ -57,7 +57,7 @@ printf "BASE_BRANCH='release/x'\nSPEC_GLOB=\"docs/**/*.md\"\nBARE=plain\n" > "$C
 [[ "$(spf_conf_val "$C2" BARE)" == "plain" ]] && ok "态2c 裸值不受影响" || bad "态2c"
 
 # ===== 态3：VERIFIER_SKIP_E2E 接线（静态）=====
-grep -q 'VERIFIER_SKIP_E2E' "$REPO/verifier/v1/run-verifier.sh" && grep -q 'E2E SKIP' "$REPO/verifier/v1/run-verifier.sh" \
+grep -q 'VERIFIER_SKIP_E2E' "$VERIFIER" && grep -q 'E2E SKIP' "$VERIFIER" \
   && ok "态3a run-verifier all 识别 VERIFIER_SKIP_E2E 并披露 SKIP" || bad "态3a run-verifier 缺开关"
 grep -q 'VERIFIER_SKIP_E2E=1 bash' "$BASE/tests/run-sweep.sh" \
   && ok "态3b run-sweep 传入 VERIFIER_SKIP_E2E=1" || bad "态3b run-sweep 未传开关"

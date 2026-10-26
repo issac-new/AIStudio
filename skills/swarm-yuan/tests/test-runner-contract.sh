@@ -27,6 +27,36 @@ else
   bad "index.tsv 未登记:${missing}"
 fi
 
+# 行为域元数据闭环：每个测试恰有一个域；域行不指向缺失测试；域筛选与零命中语义可用。
+DOM="$BASE/tests/domains.tsv"
+if [[ -f "$DOM" ]]; then
+  dom_missing=""; dom_orphan=""
+  for f in "$BASE"/tests/test-*.sh "$BASE"/tests/scripts/test-*.sh; do
+    [[ -f "$f" ]] || continue
+    b="$(basename "$f")"
+    awk -F '\t' -v n="$b" '!/^#/ && $1==n {found=1} END{exit !found}' "$DOM" || dom_missing="$dom_missing $b"
+  done
+  while IFS=$'\t' read -r dt dd; do
+    [[ -z "$dt" || "$dt" == \#* ]] && continue
+    [[ -f "$BASE/tests/$dt" || -f "$BASE/tests/scripts/$dt" ]] || dom_orphan="$dom_orphan $dt"
+  done < "$DOM"
+  dup_dom="$(awk -F '\t' '!/^#/ && NF {print $1}' "$DOM" | sort | uniq -d | tr '\n' ' ')"
+  [[ -z "$dom_missing" ]] && ok "全部 test-*.sh 已登记行为域" || bad "domains.tsv 未登记:${dom_missing}"
+  [[ -z "$dom_orphan" ]] && ok "行为域行无孤儿（全部指向实存测试）" || bad "domains.tsv 孤儿行:${dom_orphan}"
+  [[ -z "$dup_dom" ]] && ok "行为域登记无重复测试" || bad "domains.tsv 重复登记:${dup_dom}"
+  dom_n="$(SWARM_RUN_NO_LOCK=1 bash "$BASE/tests/run.sh" --list-domains 2>/dev/null | wc -l | tr -d ' ')"
+  [[ "$dom_n" -ge 8 ]] && ok "run.sh --list-domains 输出 ${dom_n} 个域" || bad "run.sh --list-domains 仅 ${dom_n} 个域"
+  dom_one="$(SWARM_RUN_NO_LOCK=1 bash "$BASE/tests/run.sh" --domain gates --filter test-gate-rules --list 2>/dev/null | awk 'NF{n++} END{print n+0}')"
+  [[ "$dom_one" -eq 1 ]] && ok "--domain gates 精确命中 1 个测试" || bad "--domain gates 命中 ${dom_one} 个测试"
+  if SWARM_RUN_NO_LOCK=1 bash "$BASE/tests/run.sh" --domain __no_such_domain__ --filter test-gate-rules >/dev/null 2>&1; then
+    bad "未知域未 fail-closed"
+  else
+    ok "未知域 fail-closed"
+  fi
+else
+  bad "缺 tests/domains.tsv（行为域元数据不可读）"
+fi
+
 # 零命中必须拒绝假绿
 if SWARM_RUN_NO_LOCK=1 bash "$BASE/tests/run.sh" --filter __no_such_test__ >/dev/null 2>&1; then
   bad "零命中未 fail-closed"

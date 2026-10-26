@@ -18,8 +18,10 @@
 set -euo pipefail
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-# 技能本体目录：默认构建器所在 scripts/ 的上级；可用 SWARM_YUAN_DIR 覆盖（从任意位置运行）
-SKILL_ROOT="${SWARM_YUAN_DIR:-$(cd "$SELF_DIR/.." && pwd)}"
+# 技能本体目录：默认构建器所在 scripts/ 的上级；保留 SWARM_YUAN_DIR 兼容入口。
+SKILL_ROOT="${SWARM_YUAN_HOME:-${SWARM_YUAN_DIR:-$(cd "$SELF_DIR/.." && pwd)}}"
+SWARM_YUAN_HOME="$SKILL_ROOT"
+SWARM_YUAN_SOURCE_ROOT="${SWARM_YUAN_SOURCE_ROOT:-$(cd "$SWARM_YUAN_HOME/../.." && pwd)}"
 [[ -f "$SKILL_ROOT/install.sh" ]] || { echo "✗ 技能目录无效（缺 install.sh）: $SKILL_ROOT——用 SWARM_YUAN_DIR=/path/to/swarm-yuan 指定" >&2; exit 1; }
 MANIFEST="$SELF_DIR/offline-manifest.conf"
 ALLOW_PARTIAL=0
@@ -48,9 +50,14 @@ for arg in "$@"; do
     *) [[ -z "$OUT_ROOT" ]] || { echo "✗ 只接受一个输出目录参数" >&2; exit 1; }; OUT_ROOT="$arg" ;;
   esac
 done
-OUT_ROOT="${OUT_ROOT:-$SKILL_ROOT/../dist}"
+OUT_ROOT="${OUT_ROOT:-$SWARM_YUAN_SOURCE_ROOT/dist}"
 VER="$(git -C "$SKILL_ROOT" describe --tags --always 2>/dev/null || echo unknown)"
+VER="${VER#swarm-yuan-}"   # AIStudio tag 形如 swarm-yuan-v2.95.0，包名与版本文件只留 v 前缀
 VER="${VER//\//-}"
+if [[ ! "$VER" =~ ^v[0-9] ]]; then
+  _cv=$(sed -nE 's/^## \[(v[0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' "$SKILL_ROOT/CHANGELOG.md" 2>/dev/null | head -1 || true)
+  [[ -n "$_cv" ]] && VER="$_cv"   # 无 tag 历史（浅克隆/重写主线）回退到 CHANGELOG 版本
+fi
 BUNDLE_NAME="swarm-yuan-offline-$VER"
 if [[ "$WITH_DOCS" -eq 1 && "$WITH_GH_SRC" -eq 1 && "$WITH_VENDOR" -eq 1 ]]; then
   BUNDLE_NAME="${BUNDLE_NAME}-everything"   # 零降级件（npm/pip 走源）——后缀不与 -novendor 叠用
@@ -84,7 +91,7 @@ for item in "$SKILL_ROOT"/* "$SKILL_ROOT"/.[!.]*; do
   base="$(basename "$item")"
   # R118：vendor-knowledge 为第三方规范/版权材料（MANIFEST 声明不分发），与 install.sh 同步排除。
   # R126-dist8：docs/ 补入排除——install.sh 装机侧有 rm -rf $dest/docs 补救（:263 一带），bundle 侧
-  # 此前无对应排除，R125 重建 swarm-yuan/docs/（预算例外台账等生成器侧档案）后会被打进离线包，
+  # 此前无对应排除，R125 重建生成器侧 docs/（预算例外台账等档案）后会被打进离线包，
   # 两条分发路径产物内容悄然分叉（历史实证：v2.83.0 包内嵌套上层 dist 包的自我污染残骸）。
   case "$base" in
     research|.swarm-yuan|offline-cache|ci|dist|docs) continue ;;
@@ -98,7 +105,12 @@ cp "$SELF_DIR/make-offline-bundle.sh" "$SELF_DIR/offline-manifest.conf" "$BUNDLE
 # 版本溯源随包（R133）：包内无 .git，目标机 install.sh 的 git describe 落空——兜底读此文件，
 # 离线安装的 .swarm-yuan-version 与 install.sh --version 不再是 unknown。
 _bv_ver="$(git -C "$SKILL_ROOT" describe --tags --always 2>/dev/null || true)"
+_bv_ver="${_bv_ver#swarm-yuan-}"
 _bv_sha="$(git -C "$SKILL_ROOT" rev-parse --short HEAD 2>/dev/null || true)"
+if [[ ! "$_bv_ver" =~ ^v[0-9] ]]; then
+  _cv=$(sed -nE 's/^## \[(v[0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' "$SKILL_ROOT/CHANGELOG.md" 2>/dev/null | head -1 || true)
+  [[ -n "$_cv" ]] && _bv_ver="${_cv}${_bv_sha:+-g$_bv_sha}"
+fi
 cat > "$BUNDLE/$SRC_BASE/.bundle-version" <<EOF
 version=${_bv_ver:-unknown}
 source_commit=${_bv_sha:-unknown}
@@ -106,12 +118,11 @@ built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 bundle=${BUNDLE_NAME}
 EOF
 
-# ①b 仓库 docs/ 档案随包（R134 --with-docs）：放包根 docs/（不进技能目录——安装侧对 dest/docs
+# ①b 技能根 docs/ 档案随包（R134 --with-docs）：放包根 docs/（不进技能目录——安装侧对 dest/docs
 # 有清理惯例；档案是阅读材料，随解压目录常在即"不丢失"）。
 if [[ "$WITH_DOCS" -eq 1 ]]; then
-  _repo_root="$(cd "$SKILL_ROOT/.." && pwd)"
-  if [[ -d "$_repo_root/docs" ]]; then
-    cp -R "$_repo_root/docs" "$BUNDLE/docs/"
+  if [[ -d "$SWARM_YUAN_HOME/docs" ]]; then
+    cp -R "$SWARM_YUAN_HOME/docs" "$BUNDLE/docs/"
     echo "  ✓ docs/ 档案随包（$(find "$BUNDLE/docs" -type f | wc -l | tr -d ' ') 个文件）"
   else
     echo "  ⚠ --with-docs：仓库无 docs/ 目录，跳过" >&2

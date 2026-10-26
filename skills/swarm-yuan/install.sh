@@ -100,6 +100,7 @@ find_external_symlinks() {
     base="$(basename "$item")"
     case "$base" in
       research|.swarm-yuan|offline-cache|ci|vendor-knowledge|dist) continue ;;
+      verifier|CLAUDE.md|CONTRIBUTING.md|.gitattributes) continue ;;
     esac
     while IFS= read -r p; do
       [[ -n "$p" ]] || continue
@@ -361,11 +362,13 @@ install_to() {
   fi
 
   # 复制（逐项 cp -R 覆盖隐藏文件，三平台兼容，无需 tar --exclude）
-  # 分发边界：以下四项是仓库本地过程产物，不进入安装产物——
+  # 分发边界：以下项是仓库本地过程产物或生成器侧资产，不进入安装产物——
   #   research/（上游调研原料，未跟踪入仓）、.swarm-yuan/（生成器自身运行留痕）、
   #   offline-cache/（历史遗留缓存，未跟踪入仓，溯源已迁 release 源码包体系）、
   #   ci/（生成器仓 CI 自举配置，仅 repo 布局消费——R102 补排除：self-check G4 的
-  #   「安装态无 ci/ 静默跳过」假设因未排除而失效，部署副本被 CI 三档对账误伤）
+  #   「安装态无 ci/ 静默跳过」假设因未排除而失效，部署副本被 CI 三档对账误伤）、
+  #   verifier/（独立验证器，生成器侧司法层）、CLAUDE.md/CONTRIBUTING.md/.gitattributes
+  #   （仓库级治理与换行规则，目标技能不消费）
   mkdir -p "$skill_dir" "$dest"
   local item _item_base
   for item in "$SRC_DIR"/* "$SRC_DIR"/.[!.]* "$SRC_DIR"/..?*; do
@@ -373,6 +376,7 @@ install_to() {
     _item_base="$(basename "$item")"
     case "$_item_base" in
       research|.swarm-yuan|offline-cache|ci|vendor-knowledge|dist) continue ;;
+      verifier|CLAUDE.md|CONTRIBUTING.md|.gitattributes) continue ;;
     esac
     # -P = 不解引用符号链接（GNU/BSD 均支持；外指链接已在前面拒绝）。源树内链接原样复制。
     cp -R -P "$item" "$dest/"
@@ -397,8 +401,10 @@ install_to() {
   # R133：离线包无 .git——兜底读包内 .bundle-version（构建机 git describe 落盘），不落 unknown。
   # 注意 set -e/pipefail：缺文件时 sed rc=2 会让 `||` 末命令失败而早退（R126 G5 同族），须守卫+兜底。
   _src_ver=$(git -C "$SRC_DIR" describe --tags --always 2>/dev/null || true)
+  _src_ver="${_src_ver#swarm-yuan-}"
   if [[ -z "$_src_ver" && -f "$SRC_DIR/.bundle-version" ]]; then
     _src_ver=$(sed -n 's/^version=//p' "$SRC_DIR/.bundle-version" 2>/dev/null | head -1 || true)
+    _src_ver="${_src_ver#swarm-yuan-}"
   fi
   [[ -n "$_src_ver" ]] || _src_ver="unknown"
   cat > "$dest/.swarm-yuan-version" <<EOF
@@ -521,10 +527,12 @@ case "$MODE" in
     ver=""
     if git -C "$SRC_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
       ver=$(git -C "$SRC_DIR" describe --tags --always 2>/dev/null || true)
+      ver="${ver#swarm-yuan-}"   # AIStudio tag 命名空间前缀只用于仓库标识，展示/落盘统一剥除
     fi
     # R133：离线包/已安装副本无 .git——兜底读 .bundle-version（随包与随安装复制）；缺文件守卫防 set -e 早退
     if [[ -z "$ver" && -f "$SRC_DIR/.bundle-version" ]]; then
       ver=$(sed -n 's/^version=//p' "$SRC_DIR/.bundle-version" 2>/dev/null | head -1 || true)
+      ver="${ver#swarm-yuan-}"
     fi
     [[ -n "$ver" ]] || ver="unknown"
     echo "swarm-yuan installer $ver"

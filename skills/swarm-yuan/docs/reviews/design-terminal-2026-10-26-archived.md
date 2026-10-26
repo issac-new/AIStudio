@@ -1,3 +1,5 @@
+> **已归档（2026-10-26）**：有效内容已合并进 `README.md`——治理不变量见 README 附录 F，证据分级 M0–M4 见 `assets/registry/README.md`。本文保留为终态设计快照，不再维护；与 README 冲突时以 README 为准。
+
 # swarm-yuan 终态设计说明
 
 ## 摘要

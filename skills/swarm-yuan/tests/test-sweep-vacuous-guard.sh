@@ -11,7 +11,8 @@
 set -uo pipefail
 cd "$(dirname "${0}")/.." || exit 1
 BASE="$(pwd)"                                        # swarm-yuan/
-REPO="$(cd "${BASE}/.." && pwd)"                     # 仓库根
+SWARM_YUAN_SOURCE_ROOT="$(cd "${BASE}/../.." && pwd)"
+VERIFIER="$BASE/verifier/v1/run-verifier.sh"
 TMP="$(mktemp -d /tmp/svg.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 FAIL=0
@@ -19,8 +20,8 @@ ok()  { echo "  ✓ $1"; }
 bad() { echo "  ✗ $1" >&2; FAIL=1; }
 
 # ===== 态1：verifier fixtures 模式空树 fail-closed（行为级） =====
-mkdir -p "$TMP/fakeroot/swarm-yuan/tests"            # 有 swarm-yuan 树但无 fixtures 目录
-out="$(bash "$REPO/verifier/v1/run-verifier.sh" fixtures "$TMP/fakeroot" 2>&1)"; rc=$?
+mkdir -p "$TMP/fakeroot/skills/swarm-yuan/tests"            # 有 swarm-yuan 树但无 fixtures 目录
+out="$(bash "$VERIFIER" fixtures "$TMP/fakeroot" 2>&1)"; rc=$?
 if [[ $rc -ne 0 ]] && printf '%s' "$out" | grep -q '拒绝 vacuous pass'; then
   ok "态1 fixtures 空树 fail-closed（rc=${rc}）"
 else
@@ -28,8 +29,8 @@ else
 fi
 
 # ===== 态2：verifier gate-fixtures 模式空目录 fail-closed（行为级） =====
-mkdir -p "$TMP/fakeroot/swarm-yuan/tests/gate-fixtures"   # 目录在但空
-out="$(bash "$REPO/verifier/v1/run-verifier.sh" gate-fixtures "$TMP/fakeroot" 2>&1)"; rc=$?
+mkdir -p "$TMP/fakeroot/skills/swarm-yuan/tests/gate-fixtures"   # 目录在但空
+out="$(bash "$VERIFIER" gate-fixtures "$TMP/fakeroot" 2>&1)"; rc=$?
 if [[ $rc -ne 0 ]] && printf '%s' "$out" | grep -q '拒绝 vacuous pass'; then
   ok "态2 gate-fixtures 空目录 fail-closed（rc=${rc}）"
 else
@@ -45,7 +46,7 @@ else
 fi
 
 # ===== 态4：sweep 单实例锁行为级——活锁占位时第二个 sweep 拒跑（rc=2 快速返回） =====
-LOCK_DIR="${TMPDIR:-/tmp}/swarm-yuan-sweep.$(printf '%s' "$REPO" | cksum | awk '{print $1}').lock"
+LOCK_DIR="${TMPDIR:-/tmp}/swarm-yuan-sweep.$(printf '%s' "$SWARM_YUAN_SOURCE_ROOT" | cksum | awk '{print $1}').lock"
 rm -rf "$LOCK_DIR"; mkdir -p "$LOCK_DIR"
 printf '%s\n' "$$" > "$LOCK_DIR/pid"               # 本测试进程存活 → 模拟在跑 sweep
 out="$(bash "$BASE/tests/run-sweep.sh" 2>&1)"; rc=$?

@@ -1,0 +1,10 @@
+# Windows 克隆下 Shell 一律 LF，批处理一律 CRLF。
+* text=auto
+*.sh text eol=lf
+*.bat text eol=crlf
+# 上游运行时镜像与第三方知识资产按字节保真，不做 EOL 规范化。
+runtime/** -text
+# vendor-knowledge 在 AIStudio 以普通 git 对象入库（未建 LFS 对象库）；
+# 挂 filter=lfs 会在下次 git add 时把普通 blob 静默转成指针（数据雷），故只保留 -text。
+# LFS 外置属登记债务（docs/design-refactor-2026-10-24.md §4.2）。
+vendor-knowledge/** -text

@@ -32,7 +32,8 @@ fi
 # 态2 novendor 构建（离线快路径：不 npm pack 不 pip download）
 T="$(mktemp -d /tmp/r133b.XXXXXX)"
 bash scripts/make-offline-bundle.sh "$T" --no-vendor >"$T/build.log" 2>&1
-BD="$T/swarm-yuan-offline-$(git describe --tags --always 2>/dev/null || echo unknown)-novendor"
+_zip="$(ls "$T"/*.zip 2>/dev/null | head -1)"
+BD="${_zip%.zip}"
 if [[ -d "$BD" ]]; then ok "态2a novendor 构建成功"; else bad "态2a 构建失败：$(tail -3 "$T/build.log" | tr '\n' ' ')"; fi
 if [[ -f "$BD/swarm-yuan/.bundle-version" ]] && grep -q '^version=v' "$BD/swarm-yuan/.bundle-version"; then
   ok "态2b .bundle-version 随包（$(sed -n 's/^version=//p' "$BD/swarm-yuan/.bundle-version" | head -1)）"

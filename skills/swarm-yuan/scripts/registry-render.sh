@@ -283,6 +283,25 @@ cmd_lifecycle() {
   awk -F '\t' '!/^#/ && NF && $7=="rendered" {printf "  %-22s evidence=%s claim=%s\n", $1, $7, $8}' "$REG/hosts.tsv"
 }
 
+# facts 双段重叠键等值：手写段服务安装态，生成段服务仓库态；同键双值即漂移。
+facts_overlap_check() {
+  local hw="$BASE/assets/facts.conf" gen="$BASE/assets/facts.generated.conf"
+  local key a b n=0 bad=""
+  [[ -f "$gen" ]] || { ok "facts 双段对账跳过（无 facts.generated.conf，安装态）"; return 0; }
+  while IFS= read -r key; do
+    grep -qE "^${key}=" "$gen" || continue
+    n=$((n + 1))
+    a="$(grep -E "^${key}=" "$hw" | tail -1 | cut -d= -f2- | awk '{print $1}')"
+    b="$(grep -E "^${key}=" "$gen" | tail -1 | cut -d= -f2- | awk '{print $1}')"
+    [[ "$a" == "$b" ]] || bad="${bad} ${key}(手写=${a} 生成=${b})"
+  done < <(grep -oE '^FACT_[A-Z0-9_]+' "$hw" | sort -u)
+  if [[ -z "$bad" ]]; then
+    ok "facts 双段重叠键等值（${n} 键）"
+  else
+    bad "facts 双段重叠键失配:${bad}"
+  fi
+}
+
 cmd_check() {
   say "▶ 注册表一致性（G26）"
   check_file "$REG/gates.tsv" 56 "gates"
@@ -399,6 +418,8 @@ cmd_check() {
   enforce_decl_check
   upstream_baseline_check
 
+  facts_overlap_check
+
   facts_diff
 
   if [[ "$RC" -eq 0 ]]; then say "✓ 注册表一致性通过"; else say "✗ 注册表一致性失败"; fi
@@ -413,7 +434,7 @@ cmd_dead_facts() {
     [[ -z "$key" ]] && continue
     hits="$(grep -rl --include='*.sh' --include='*.bat' --include='*.yml' --include='*.json' \
       --exclude='facts.conf' --exclude='facts.generated.conf' --exclude-dir='registry' \
-      -- "$key" "$BASE/assets" "$BASE/scripts" "$BASE/tests" "$ROOT/verifier/v1" 2>/dev/null \
+      -- "$key" "$BASE/assets" "$BASE/scripts" "$BASE/tests" "$BASE/verifier/v1" 2>/dev/null \
       | grep -v '/self-check.sh$' | head -1 || true)"
     if [[ -z "$hits" ]]; then
       if grep -v '_fk_exempt' "$BASE/scripts/self-check.sh" 2>/dev/null | grep -c -- "$key" >/dev/null 2>&1; then

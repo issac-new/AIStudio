@@ -221,6 +221,54 @@ _resolve_rel_imports() {
 # 注：框架适配变量（JAVA_BUILD_FILES/MYBATIS_* 等）由注入的 framework-gates 片段消费，
 #     本文件内看似未使用，故关闭 SC2034。
 # shellcheck disable=SC2034
+_default_conf_compliance() {
+  COMPLIANCE_MATRIX_FILE=""
+  COMPLIANCE_REQUIRED_SECTIONS=()
+  DOCS_PACK_PROFILE=""
+  DOCS_PACK_DIR=""
+  DOCS_PACK_REQUIRED=()
+  DOCS_PACK_ALLOW_TBD=0
+  SBOM_REQUIRED=0
+  SBOM_OUTPUT_DIR=""
+  SBOM_FORMAT=""
+  SBOM_TOOL=""
+  SBOM_LICENSE_BLOCKLIST=()
+  SBOM_LICENSE_EXEMPTIONS=()
+  # 安全门禁豁免变量（显式豁免须填理由，否则 fail-closed）
+  SBOM_EXEMPT_REASON=""
+  DENGBAO_EXEMPT_REASON=""
+  PIA_EXEMPT_REASON=""
+  CRYPTO_EXEMPT_REASON=""
+  SAST_DEEP_EXEMPT_REASON=""
+  RELEASE_SIGN_EXEMPT_REASON=""
+  OSS_EVAL_EXEMPT_REASON=""
+  PRIVACY_SCAN_DIRS=()
+  PRIVACY_EXTRA_PATTERNS=()
+  PRIVACY_SENSITIVE_KEYWORDS=()
+  PRIVACY_EXEMPTIONS=()
+  # 三个 *_TOOL 用 ${VAR:-默认} 保留环境变量：_default_conf 在 source conf 前执行，写死赋值会覆盖 conf 里的 ${VAR:-auto}。
+  SENSITIVE_TOOL="${SENSITIVE_TOOL:-auto}"
+  SENSITIVE_EXCLUDE_GLOBS=()
+  SECURITY_TOOL="${SECURITY_TOOL:-auto}"
+  AUTHZ_SCAN_DIRS=()
+  AUTHZ_EXTRA_PATTERNS=()
+  REQUIREMENTS_STRICT=0
+  REQUIREMENTS_ID_REQUIRED=0
+  # 需求术语同义词对（ISO/IEC/IEEE 29148 §5.2.7.2 术语一致性检查）
+  # 格式: ("术语A|术语B" "同义词A|同义词B")，如 ("用户|客户" "系统|平台")
+  REQUIREMENTS_SYNONYM_PAIRS=()
+  CRYPTO_PROFILE=""
+  CRYPTO_SCAN_DIRS=()
+  # 长期清单收口（P3）：需求追溯矩阵（--rtm）+ 发布签名（--release-sign，SLSA Build L2）
+  RTM_REQUIRED=0
+  RTM_MATRIX_FILE=""
+  RTM_MATRIX_REQUIRED=0
+  RELEASE_SIGN_REQUIRED=0
+  RELEASE_ARTIFACTS_GLOB=""
+  RELEASE_SIGN_TOOL=""
+  RELEASE_PROVENANCE_REQUIRED=0
+  RELEASE_PROVENANCE_FILE=""
+}
 _default_conf() {
   # 基础配置
   PROJECT_DIR="."
@@ -329,56 +377,7 @@ _default_conf() {
   SHARDED_TABLES=()
   SHARDING_BROADCAST_TABLES=()
   SPRING_BATCH_JOB_DIRS=()
-  # 标准合规
-  COMPLIANCE_MATRIX_FILE=""
-  COMPLIANCE_REQUIRED_SECTIONS=()
-  DOCS_PACK_PROFILE=""
-  DOCS_PACK_DIR=""
-  DOCS_PACK_REQUIRED=()
-  DOCS_PACK_ALLOW_TBD=0
-  SBOM_REQUIRED=0
-  SBOM_OUTPUT_DIR=""
-  SBOM_FORMAT=""
-  SBOM_TOOL=""
-  SBOM_LICENSE_BLOCKLIST=()
-  SBOM_LICENSE_EXEMPTIONS=()
-  # 安全门禁豁免变量（显式豁免须填理由，否则 fail-closed）
-  SBOM_EXEMPT_REASON=""
-  DENGBAO_EXEMPT_REASON=""
-  PIA_EXEMPT_REASON=""
-  CRYPTO_EXEMPT_REASON=""
-  SAST_DEEP_EXEMPT_REASON=""
-  RELEASE_SIGN_EXEMPT_REASON=""
-  OSS_EVAL_EXEMPT_REASON=""
-  PRIVACY_SCAN_DIRS=()
-  PRIVACY_EXTRA_PATTERNS=()
-  PRIVACY_SENSITIVE_KEYWORDS=()
-  PRIVACY_EXEMPTIONS=()
-  # 安全门禁族深化（P1-3/P1-9）：工具链降级 + 授权/需求/密码门禁
-  # 六轮复盘：三个 *_TOOL 用 ${VAR:-默认} 保留环境变量（_default_conf 在 source conf 前执行，
-  # 写死赋值会先覆盖环境变量，使 conf 里的 ${VAR:-auto} 也读到被重置的值 →
-  # `SECURITY_TOOL=builtin bash precheck.sh --security` 失效）。便于排障临时切工具链。
-  SENSITIVE_TOOL="${SENSITIVE_TOOL:-auto}"
-  SENSITIVE_EXCLUDE_GLOBS=()
-  SECURITY_TOOL="${SECURITY_TOOL:-auto}"
-  AUTHZ_SCAN_DIRS=()
-  AUTHZ_EXTRA_PATTERNS=()
-  REQUIREMENTS_STRICT=0
-  REQUIREMENTS_ID_REQUIRED=0
-  # 需求术语同义词对（ISO/IEC/IEEE 29148 §5.2.7.2 术语一致性检查）
-  # 格式: ("术语A|术语B" "同义词A|同义词B")，如 ("用户|客户" "系统|平台")
-  REQUIREMENTS_SYNONYM_PAIRS=()
-  CRYPTO_PROFILE=""
-  CRYPTO_SCAN_DIRS=()
-  # 长期清单收口（P3）：需求追溯矩阵（--rtm）+ 发布签名（--release-sign，SLSA Build L2）
-  RTM_REQUIRED=0
-  RTM_MATRIX_FILE=""
-  RTM_MATRIX_REQUIRED=0
-  RELEASE_SIGN_REQUIRED=0
-  RELEASE_ARTIFACTS_GLOB=""
-  RELEASE_SIGN_TOOL=""
-  RELEASE_PROVENANCE_REQUIRED=0
-  RELEASE_PROVENANCE_FILE=""
+  _default_conf_compliance
   # 门禁工具化（P1-4/P1-5）：gate-runs 证据落盘目录（空=关闭，不影响任何既有输出）
   GATE_RUNS_DIR=""
 }

@@ -11,7 +11,7 @@
 #   ⑥ 清单对账：offline-manifest.conf 版本 vs docs/upstream-baseline.md（显式豁免可登记）
 set -uo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"   # SWARM_YUAN_HOME
 FAIL=0
 ok()  { echo "  ✓ $1"; }
 bad() { echo "  ✗ $1" >&2; FAIL=1; }
@@ -359,7 +359,7 @@ fi
 # ===== ⑥ 清单 ↔ 上游基线自动对账 =====
 echo "⑥ 清单与 upstream-baseline 对账"
 MF="$REPO_ROOT/scripts/offline-manifest.conf"
-BL="$(dirname "$REPO_ROOT")/docs/upstream-baseline.md"
+BL="$REPO_ROOT/docs/upstream-baseline.md"
 if [[ -f "$MF" && -f "$BL" ]]; then
   SYNC_OK=0; SYNC_EXEMPT=0; SYNC_CHECKED=0
   while IFS='|' read -r rt ch spec _note; do

@@ -16,18 +16,20 @@
 #   bash build-compendium.sh --regen    # 重灌六卷正本段（其余卷原样保留），自校验通过才落盘
 #   bash build-compendium.sh --help
 set -uo pipefail
-BASE="$(cd "$(dirname "$0")/.." && pwd)"
-ROOT="$(cd "${BASE}/.." && pwd)"
-FULL="$ROOT/docs/design-compendium-full.md"
+SWARM_YUAN_HOME="${SWARM_YUAN_HOME:-$(cd "$(dirname "$0")/.." && pwd)}"
+SWARM_YUAN_SOURCE_ROOT="${SWARM_YUAN_SOURCE_ROOT:-$(cd "${SWARM_YUAN_HOME}/../.." && pwd)}"
+BASE="$SWARM_YUAN_HOME"
+ROOT="$SWARM_YUAN_SOURCE_ROOT"
+FULL="$SWARM_YUAN_HOME/docs/design-compendium-full.md"
 
 # 卷表（顺序即汇编卷序；标题行须与汇编逐字一致）
 VOL_KEY=(一 二 三 四 五 六)
 VOL_NAME=("设计论证" "决策史" "上游供应链台账" "使用手册" "数字口径单源" "吸收清单")
 VOL_SRC=(
   "$BASE/README.md"
-  "$ROOT/docs/design-evolution.md"
-  "$ROOT/docs/upstream-baseline.md"
-  "$ROOT/docs/usage-manual.md"
+  "$SWARM_YUAN_HOME/docs/design-evolution.md"
+  "$SWARM_YUAN_HOME/docs/upstream-baseline.md"
+  "$SWARM_YUAN_HOME/docs/usage-manual.md"
   "$BASE/assets/facts.conf"
   "$BASE/references/capability-map.md"
 )

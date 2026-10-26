@@ -90,6 +90,7 @@ test-runner-contract.sh	1	yes	general	-
 test-shift-left-test-paths.sh	2	yes	general	-
 test-signal-index.sh	2	yes	general	-
 test-skill-manifest.sh	3	yes	general	-
+test-source-layout.sh	1	yes	general	2026-10-26
 test-spec-task-type-gating.sh	2	yes	general	-
 test-spec-template-gating.sh	2	yes	general	-
 test-split-gates.sh	2	yes	general	-

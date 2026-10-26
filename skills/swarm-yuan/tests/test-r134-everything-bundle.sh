@@ -9,7 +9,9 @@
 #   ④ --with-knowledge：vendor-knowledge 复制进已装技能目录（支付 profile 离线生成可用）。
 # 夹具：file:// 本地 git 仓三件（SWARM_YUAN_SRC_URL_* 覆盖，无网络）；bun/npm 与技能安装全桩。
 set -uo pipefail
-cd "$(dirname "${0}")/.." || exit 1
+SWARM_YUAN_HOME="$(cd "$(dirname "${0}")/.." && pwd)"
+SWARM_YUAN_SOURCE_ROOT="$(cd "$SWARM_YUAN_HOME/../.." && pwd)"
+cd "$SWARM_YUAN_HOME" || exit 1
 FAIL=0
 ok()  { echo "  ✓ $1"; }
 bad() { echo "  ✗ $1" >&2; FAIL=1; }
@@ -113,6 +115,20 @@ if [[ -n "$BD" ]]; then
   grep -q '回落通用安装' "$T/inst15.log" && ok "态15b 空检测回落文案在位" || bad "态15b 未回落（仍 --all 空检测中止）"
   grep -q '缺 node/npm' "$T/inst15.log" && ok "态15c 缺 npm 披露式跳过（不计 FAIL）" || bad "态15c 缺 npm 处理不符"
   [[ -f "$H4/.zcode/skills/swarm-yuan/SKILL.md" ]] && ok "态15d 技能本体经回落通道装入（桩标记）" || bad "态15d 技能未装"
+fi
+
+# 态16：未显式给输出目录时，默认 dist 归当前源码仓根，而不是旧的 skills/ 父目录。
+DF="$T/default-layout"
+mkdir -p "$DF/skills/swarm-yuan/scripts"
+cp scripts/make-offline-bundle.sh scripts/offline-manifest.conf "$DF/skills/swarm-yuan/scripts/"
+printf '# fixture skill\n' > "$DF/skills/swarm-yuan/SKILL.md"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$DF/skills/swarm-yuan/install.sh"
+SWARM_YUAN_DIR="$DF/skills/swarm-yuan" bash "$DF/skills/swarm-yuan/scripts/make-offline-bundle.sh" --no-vendor >"$T/default-layout.log" 2>&1
+_rc16=$?
+if [[ $_rc16 -eq 0 && -d "$DF/dist" && ! -e "$DF/skills/dist" ]]; then
+  ok '态16 默认离线包输出到 SWARM_YUAN_SOURCE_ROOT/dist'
+else
+  bad "态16 默认输出目录漂移（rc=${_rc16}）：$(tail -2 "$T/default-layout.log" | tr '\n' ' ')"
 fi
 
 rm -rf "$T"

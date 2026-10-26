@@ -10,7 +10,7 @@ fix 任务类型在开发工作流②探查～⑥测试节点的专项展开：�
 
 | 步 | 输入 | 动作与工具 | 证据落盘 | 产出 |
 |----|------|-----------|---------|------|
-| ① 日志定位 | 现象描述/时间窗/traceId | ELK 或远端日志：`ops-readonly-guard.sh shell -- "ssh <堡垒机> 'tail/grep …'"`；连接方式见 [mcp-tools.md](../scripts/mcp-tools.md) | ops.jsonl | 异常堆栈 + 首个异常时间点 + 关联 traceId |
+| ① 日志定位 | 现象描述/时间窗/traceId | ELK 或远端日志：`ops-readonly-guard.sh shell -- "ssh <堡垒机> 'tail/grep …'"`；连接方式见 [mcp-tools.md](../assets/mcp-tools.md) | ops.jsonl | 异常堆栈 + 首个异常时间点 + 关联 traceId |
 | ② 查库取证 | ①的怀疑对象（订单/状态机/配置） | 只读账号经隧道连库（`tunnel.conf` 的 db 条目），SQL 先过 `ops-readonly-guard.sh sql --` 再执行 | ops.jsonl | 数据形态：佐证或排除根因假设 |
 | ③ 远程断点复现 | ①②缩小后的代码路径 | 按 [remote-debug-jvm.md](remote-debug-jvm.md)：隧道 jdwp 条目 → IDE attach → 条件断点复现 | trace.jsonl + spec 证据段 | 复现路径 + 断点处变量/栈帧 |
 | ④ 根因定论 | ①②③证据 | 写入简化 spec 的根因段；**日志、数据、断点三类证据至少两类互证**才许下结论；单证据只能写"推测+缺口" | spec 文件 | 一句话根因（为什么走到错误分支） |
@@ -42,7 +42,7 @@ AI 对研发环境只读取证，写操作一律走人审通道。防线从强�
 |------|------|----------------|
 | `scripts/tunnel.sh` + `scripts/tunnel.conf` | 堡垒机 ProxyJump 隧道 up/down/status/doctor | db 与 jdwp 两条隧道的统一编排 |
 | `scripts/ops-readonly-guard.sh` | 外部操作只读守卫 + ops.jsonl 账本 | ①②步每条命令的判定与留痕 |
-| [mcp-tools.md](../scripts/mcp-tools.md) | 数据库/ELK 连接信息登记（用户填充） | ①②步的连接入口 |
+| [mcp-tools.md](../assets/mcp-tools.md) | 数据库/ELK 连接信息登记（用户填充） | ①②步的连接入口 |
 | [remote-debug-jvm.md](remote-debug-jvm.md) | JDWP 远程调试全链路 | ③步展开 |
 | `assets/task-type-gates.conf` fix 档 | 简化 spec + 核心门禁 | ④⑥步的档位与验收 |
 | `scripts/trace-log.sh` | 全链路调用留痕 | 各节点动作记账 |

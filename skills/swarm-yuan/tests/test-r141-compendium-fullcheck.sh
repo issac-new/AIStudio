@@ -8,6 +8,8 @@
 #   fail-closed / regen 自愈 / 收口门接线。
 set -uo pipefail
 cd "$(dirname "${0}")/.." || exit 1
+SWARM_YUAN_SOURCE_ROOT="$(cd ../.. && pwd)"
+CI="$SWARM_YUAN_SOURCE_ROOT/.github/workflows/swarm-yuan.yml"
 FAIL=0
 ok()  { echo "  ✓ $1"; }
 bad() { echo "  ✗ $1" >&2; FAIL=1; }
@@ -27,21 +29,22 @@ fi
 
 # ③ 沙箱（最小树，保相对路径布局；每例先还原再变异）
 SB="$(mktemp -d /tmp/r141sb.XXXXXX)"
+SBHOME="$SB/skills/swarm-yuan"
 trap 'rm -rf "${SB}"' EXIT
-mkdir -p "$SB/swarm-yuan/scripts" "$SB/swarm-yuan/assets" "$SB/swarm-yuan/references" "$SB/docs"
-cp "$BC" "$SB/swarm-yuan/scripts/"
+mkdir -p "$SBHOME/scripts" "$SBHOME/assets" "$SBHOME/references" "$SBHOME/docs"
+cp "$BC" "$SBHOME/scripts/"
 sb_restore() {
-  cp README.md "$SB/swarm-yuan/" 2>/dev/null || true
-  cp assets/facts.conf "$SB/swarm-yuan/assets/"
-  cp references/capability-map.md "$SB/swarm-yuan/references/"
-  cp ../docs/design-compendium-full.md ../docs/design-evolution.md ../docs/upstream-baseline.md ../docs/usage-manual.md "$SB/docs/"
+  cp README.md "$SBHOME/" 2>/dev/null || true
+  cp assets/facts.conf "$SBHOME/assets/"
+  cp references/capability-map.md "$SBHOME/references/"
+  cp docs/design-compendium-full.md docs/design-evolution.md docs/upstream-baseline.md docs/usage-manual.md "$SBHOME/docs/"
 }
 sb_restore
 
 # ③a 深位变异（旧版前 200 非空行窗口外——R140 假绿场景①实态）
 sb_restore
-printf '\n## 尾部深位新增段（R141 变异）\n' >> "$SB/docs/usage-manual.md"
-out=$( (cd "$SB/swarm-yuan" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
+printf '\n## 尾部深位新增段（R141 变异）\n' >> "$SBHOME/docs/usage-manual.md"
+out=$( (cd "$SBHOME" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
 if [[ $rc -eq 1 ]] && printf '%s\n' "$out" | grep -q "卷四（usage-manual.md）已变更"; then
   ok "③a usage-manual 尾部深位漂移 → rc 1 点名卷四（旧版假绿场景被封死）"
 else
@@ -50,8 +53,8 @@ fi
 
 # ③b 零覆盖卷变异（旧版卷二完全不在检查面——R140 假绿场景②实态）
 sb_restore
-printf '\n<!-- R141 变异 -->\n' >> "$SB/docs/design-evolution.md"
-out=$( (cd "$SB/swarm-yuan" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
+printf '\n<!-- R141 变异 -->\n' >> "$SBHOME/docs/design-evolution.md"
+out=$( (cd "$SBHOME" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
 if [[ $rc -eq 1 ]] && printf '%s\n' "$out" | grep -q "卷二（design-evolution.md）已变更"; then
   ok "③b design-evolution 尾部漂移 → rc 1 点名卷二（旧零覆盖卷入检）"
 else
@@ -60,8 +63,8 @@ fi
 
 # ③c 卷五变异（facts.conf）
 sb_restore
-printf '\n# R141_MUTATION_LINE\n' >> "$SB/swarm-yuan/assets/facts.conf"
-out=$( (cd "$SB/swarm-yuan" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
+printf '\n# R141_MUTATION_LINE\n' >> "$SBHOME/assets/facts.conf"
+out=$( (cd "$SBHOME" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
 if [[ $rc -eq 1 ]] && printf '%s\n' "$out" | grep -q "卷五（facts.conf）已变更"; then
   ok "③c facts.conf 追加行 → rc 1 点名卷五（旧零覆盖卷入检）"
 else
@@ -70,8 +73,8 @@ fi
 
 # ③d 行级改写（旧版「行在全文任一处命中即过」的判定盲区）
 sb_restore
-sed -i.bak 's/升级先核验项目状态机/升级先核验项目状态机（R141 行级变异）/' "$SB/docs/usage-manual.md" && rm -f "$SB/docs/usage-manual.md.bak"
-out=$( (cd "$SB/swarm-yuan" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
+sed -i.bak 's/升级先核验项目状态机/升级先核验项目状态机（R141 行级变异）/' "$SBHOME/docs/usage-manual.md" && rm -f "$SBHOME/docs/usage-manual.md.bak"
+out=$( (cd "$SBHOME" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
 if [[ $rc -eq 1 ]] && printf '%s\n' "$out" | grep -q "卷四"; then
   ok "③d 单行改写 → rc 1 点名卷四（行级命中盲区封死）"
 else
@@ -80,8 +83,8 @@ fi
 
 # ③e 结构守卫：删「# 卷五」标题行 → fail-closed
 sb_restore
-sed -i.bak '/^# 卷五 数字口径单源$/d' "$SB/docs/design-compendium-full.md" && rm -f "$SB/docs/design-compendium-full.md.bak"
-out=$( (cd "$SB/swarm-yuan" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
+sed -i.bak '/^# 卷五 数字口径单源$/d' "$SBHOME/docs/design-compendium-full.md" && rm -f "$SBHOME/docs/design-compendium-full.md.bak"
+out=$( (cd "$SBHOME" && bash scripts/build-compendium.sh --check) 2>&1 ); rc=$?
 if [[ $rc -eq 1 ]] && printf '%s\n' "$out" | grep -q "卷结构缺失或失序"; then
   ok "③e 卷标题被删 → rc 1 点名卷结构（fail-closed）"
 else
@@ -90,9 +93,9 @@ fi
 
 # ③f --regen 自愈：保留 ③c 变异（facts 追加行），regen 后检查转绿且变异行入册
 sb_restore
-printf '\n# R141_MUTATION_LINE\n' >> "$SB/swarm-yuan/assets/facts.conf"
-out=$( (cd "$SB/swarm-yuan" && bash scripts/build-compendium.sh --regen) 2>&1 ); rc=$?
-if [[ $rc -eq 0 ]] && grep -q "R141_MUTATION_LINE" "$SB/docs/design-compendium-full.md"; then
+printf '\n# R141_MUTATION_LINE\n' >> "$SBHOME/assets/facts.conf"
+out=$( (cd "$SBHOME" && bash scripts/build-compendium.sh --regen) 2>&1 ); rc=$?
+if [[ $rc -eq 0 ]] && grep -q "R141_MUTATION_LINE" "$SBHOME/docs/design-compendium-full.md"; then
   ok "③f --regen 自愈：重灌后检查 rc 0 且变异行已入册"
 else
   bad "③f regen 未自愈（rc=${rc}）：$(printf '%s\n' "$out" | tail -2 | tr '\n' ' ')"
@@ -100,21 +103,24 @@ fi
 
 # ③g --regen 事故守卫：卷结构残缺时 regen 拒绝落盘（原件保留）
 sb_restore
-sed -i.bak '/^# 卷六 吸收清单$/d' "$SB/docs/design-compendium-full.md" && rm -f "$SB/docs/design-compendium-full.md.bak"
-cp "$SB/docs/design-compendium-full.md" /tmp/r141-broken.md
-out=$( (cd "$SB/swarm-yuan" && bash scripts/build-compendium.sh --regen) 2>&1 ); rc=$?
-if [[ $rc -eq 1 ]] && cmp -s /tmp/r141-broken.md "$SB/docs/design-compendium-full.md"; then
+sed -i.bak '/^# 卷六 吸收清单$/d' "$SBHOME/docs/design-compendium-full.md" && rm -f "$SBHOME/docs/design-compendium-full.md.bak"
+cp "$SBHOME/docs/design-compendium-full.md" /tmp/r141-broken.md
+out=$( (cd "$SBHOME" && bash scripts/build-compendium.sh --regen) 2>&1 ); rc=$?
+if [[ $rc -eq 1 ]] && cmp -s /tmp/r141-broken.md "$SBHOME/docs/design-compendium-full.md"; then
   ok "③g 结构残缺时 --regen 拒绝落盘（原件字节保留）"
 else
-  bad "③g regen 事故守卫失效（rc=${rc}，原件被改:$(cmp -s /tmp/r141-broken.md "$SB/docs/design-compendium-full.md" && echo no || echo yes)）"
+  bad "③g regen 事故守卫失效（rc=${rc}，原件被改:$(cmp -s /tmp/r141-broken.md "$SBHOME/docs/design-compendium-full.md" && echo no || echo yes)）"
 fi
 rm -f /tmp/r141-broken.md
 
 # ④ 收口门接线
 grep -q "build-compendium" tests/run-sweep.sh \
   && ok "④a run-sweep ⑦阶段在位" || bad "④a sweep 未接 build-compendium"
-grep -q "build-compendium" ../.github/workflows/ci.yml \
-  && ok "④b CI 步在位" || bad "④b CI 未接 build-compendium"
+if grep -q 'bash skills/swarm-yuan/tests/run-sweep.sh' "$CI" && grep -q 'build-compendium' tests/run-sweep.sh; then
+  ok "④b CI 经统一 sweep 接 build-compendium"
+else
+  bad "④b CI 未经统一 sweep 接 build-compendium"
+fi
 
 # ===== 收口 =====
 if [[ "${FAIL}" -eq 0 ]]; then

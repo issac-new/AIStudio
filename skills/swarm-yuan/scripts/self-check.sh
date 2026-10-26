@@ -25,6 +25,8 @@
 # 单个检查失败（运行时缺失/文档不一致等）不应中断后续检查，须全部跑完汇总报告。
 # 有意偏离 set -euo pipefail 标准（注释即规范），检查函数内部已用 fail/warn 分级处理。
 set -uo pipefail
+SWARM_YUAN_HOME="${SWARM_YUAN_HOME:-$(cd "$(dirname "$0")/.." && pwd)}"
+SWARM_YUAN_SOURCE_ROOT="${SWARM_YUAN_SOURCE_ROOT:-$(cd "$SWARM_YUAN_HOME/../.." && pwd)}"
 FAIL=0
 pass(){ echo "  ✓ $1"; }
 miss(){ if [[ $CI_MODE -eq 1 ]]; then echo "  ⚠ $1 未安装（--ci 环境豁免：CI 容器无此运行时属环境态，非代码缺陷）"; return 1; fi; echo "  ✗ $1 未安装"; FAIL=1; return 1; }
@@ -675,43 +677,8 @@ _count_check_fns() {
   _all_gate_files "$base" | xargs grep -hcE '^check_[a-z_]+\(\)' 2>/dev/null | awk '{s+=$1} END{print s+0}'
 }
 
-check_doc_consistency() {
-  echo "▶ 文档一致性检查（真值对账 + 预算断言；文档不手抄数字，无手抄即无漂移）"
-  local base; base="$(cd "$(dirname "$0")/.." && pwd)"
-  local facts_conf="$base/assets/facts.conf"
-  local _have_facts=1
-  if [[ -f "$facts_conf" ]]; then
-    set +u; # shellcheck disable=SC1090
-    source "$facts_conf"; set -u
-  else
-    _have_facts=0   # 目标技能上下文（facts.conf 不随技能分发）——FACT_ 断言走 :-0 假默认必误报，整段跳过
-  fi
-
-  # 1. 框架规则文件数 == 门禁片段数（真值对账）
-  # R118：生成物不含框架规则库（0==0）时不再打印 ✓ 假通过，显式标不适用。
-  if [[ "$_have_facts" -eq 1 ]]; then
-    local rule_cnt=0 gate_cnt=0 _f
-    for _f in "$base/references/frameworks/"*.md; do [[ -f "$_f" ]] || continue; [[ "$(basename "$_f")" == _template.md ]] && continue; rule_cnt=$((rule_cnt+1)); done
-    for _f in "$base/assets/framework-gates/"*.sh; do [[ -f "$_f" ]] || continue; gate_cnt=$((gate_cnt+1)); done
-    if [[ "$rule_cnt" == "$gate_cnt" ]]; then
-      echo "  ✓ 框架规则($rule_cnt) == 门禁片段($gate_cnt)"
-    else
-      warn "框架规则($rule_cnt) != 门禁片段($gate_cnt)——孤立/缺片段"
-      FAIL=1
-    fi
-    # R126：FACT_FRAMEWORK_GATE_PAIR 按键名接消费者（配对真值对账）——
-    # 消费闭环锁（下方 2c-补）要求每个 FACT 键有执行面消费者或豁免登记。
-    if [[ "${FACT_FRAMEWORK_GATE_PAIR:-0}" == "$gate_cnt" ]]; then
-      echo "  ✓ FACT_FRAMEWORK_GATE_PAIR(${FACT_FRAMEWORK_GATE_PAIR}) == 门禁片段真值($gate_cnt)"
-    else
-      warn "FACT_FRAMEWORK_GATE_PAIR(${FACT_FRAMEWORK_GATE_PAIR:-?}) != 门禁片段真值($gate_cnt)——更新 facts.conf"
-      FAIL=1
-    fi
-  else
-    echo "  ⊘ 不适用（生成物无 assets/facts.conf / 框架规则库，跳过对账）"
-  fi
-
-  if [[ "$_have_facts" -eq 1 ]]; then
+_doc_check_fact_kinds() {
+  local base="$1" facts_conf="$2"
   # 2. FACT_GATES_TOTAL vs check_* 函数真值
   local actual_gates
   actual_gates=$(grep -hE "^check_[a-z_0-9]+\(\)" "$base/assets/gates-strict.sh" "$base/assets/gates-warn.sh" "$base/assets/gates-advisory.sh" "$base/assets/precheck.sh" 2>/dev/null | wc -l | tr -d ' ')
@@ -752,11 +719,11 @@ check_doc_consistency() {
   # MEASURE_METADATA_COVERED 的判词同型）。豁免名单即登记台帐，新增须附理由。
   local _fk _fk_miss=""
   # 豁免登记已外移 docs/facts-waivers.md（WP1）：新增键二选一——接消费者或登记理由。
-  local _fk_waiver="$base/../docs/facts-waivers.md"
+  local _fk_waiver="$base/docs/facts-waivers.md"
   while IFS= read -r _fk; do
     [[ -z "$_fk" ]] && continue
     if [[ -f "$_fk_waiver" ]] && grep -q -- "$_fk" "$_fk_waiver"; then continue; fi
-    if ! grep -rqs --exclude=facts.conf --exclude=facts.generated.conf "$_fk" "$base/scripts" "$base/tests" "$base/assets" "$base/../verifier" 2>/dev/null; then
+    if ! grep -rqs --exclude=facts.conf --exclude=facts.generated.conf "$_fk" "$base/scripts" "$base/tests" "$base/assets" "$base/verifier" 2>/dev/null; then
       _fk_miss="${_fk_miss} ${_fk}"
     fi
   done < <(sed -n 's/^\(FACT_[A-Z0-9_]*\)=.*/\1/p' "$facts_conf")
@@ -785,6 +752,12 @@ check_doc_consistency() {
     FAIL=1
   fi
 
+}
+
+_doc_check_doc_truths() {
+  local base="$1"
+  local rule_cnt=0 _f
+  for _f in "$base/references/frameworks/"*.md; do [[ -f "$_f" ]] || continue; [[ "$(basename "$_f")" == _template.md ]] && continue; rule_cnt=$((rule_cnt+1)); done
   # 2d. FACT_FLOW_STEPS 等值断言（该 key 此前零消费者——生成流程步骤数漂移只会静默失真；
   # 真值源：references/generation-flow.md "^## Step" 主步骤标题机械计数，与 facts.conf 注释口径一致）
   local _flow_steps
@@ -851,10 +824,49 @@ check_doc_consistency() {
     warn "FACT_SPEC_SECTIONS(${FACT_SPEC_SECTIONS:-?}) != spec-template.md 整数节($_spec_secs)——更新 facts.conf"
     FAIL=1
   fi
+}
+
+check_doc_consistency() {
+  echo "▶ 文档一致性检查（真值对账 + 预算断言；文档不手抄数字，无手抄即无漂移）"
+  local base; base="$(cd "$(dirname "$0")/.." && pwd)"
+  local facts_conf="$base/assets/facts.conf"
+  local _have_facts=1
+  if [[ -f "$facts_conf" ]]; then
+    set +u; # shellcheck disable=SC1090
+    source "$facts_conf"; set -u
+  else
+    _have_facts=0   # 目标技能上下文（facts.conf 不随技能分发）——FACT_ 断言走 :-0 假默认必误报，整段跳过
+  fi
+  # 1. 框架规则文件数 == 门禁片段数（真值对账）
+  # R118：生成物不含框架规则库（0==0）时不再打印 ✓ 假通过，显式标不适用。
+  if [[ "$_have_facts" -eq 1 ]]; then
+    local rule_cnt=0 gate_cnt=0 _f
+    for _f in "$base/references/frameworks/"*.md; do [[ -f "$_f" ]] || continue; [[ "$(basename "$_f")" == _template.md ]] && continue; rule_cnt=$((rule_cnt+1)); done
+    for _f in "$base/assets/framework-gates/"*.sh; do [[ -f "$_f" ]] || continue; gate_cnt=$((gate_cnt+1)); done
+    if [[ "$rule_cnt" == "$gate_cnt" ]]; then
+      echo "  ✓ 框架规则($rule_cnt) == 门禁片段($gate_cnt)"
+    else
+      warn "框架规则($rule_cnt) != 门禁片段($gate_cnt)——孤立/缺片段"
+      FAIL=1
+    fi
+    # R126：FACT_FRAMEWORK_GATE_PAIR 按键名接消费者（配对真值对账）——
+    # 消费闭环锁（下方 2c-补）要求每个 FACT 键有执行面消费者或豁免登记。
+    if [[ "${FACT_FRAMEWORK_GATE_PAIR:-0}" == "$gate_cnt" ]]; then
+      echo "  ✓ FACT_FRAMEWORK_GATE_PAIR(${FACT_FRAMEWORK_GATE_PAIR}) == 门禁片段真值($gate_cnt)"
+    else
+      warn "FACT_FRAMEWORK_GATE_PAIR(${FACT_FRAMEWORK_GATE_PAIR:-?}) != 门禁片段真值($gate_cnt)——更新 facts.conf"
+      FAIL=1
+    fi
+  else
+    echo "  ⊘ 不适用（生成物无 assets/facts.conf / 框架规则库，跳过对账）"
+  fi
+
+  if [[ "$_have_facts" -eq 1 ]]; then
+    _doc_check_fact_kinds "$base" "$facts_conf"
+    _doc_check_doc_truths "$base"
   else
     echo "  ℹ 非生成器仓（无 assets/facts.conf）——#2/#2b/#2c/#2d/#3 FACT_ 真值断言跳过（防 :-0 假默认误报）；#1 结构对账与 #4 预算断言仍执行"
   fi
-
   # 4. 预算断言——口径修正：生成物"每会话固定税"（SKILL.md+hooks.json+settings+conf ≤8KB）+
   # "上下文预算 references 拷贝"（≤256KB）——脚本是按需调用工具不算税（Codex"正文选中才注入"同构：工具不占预读认知）。
   # R125 口径修正：refd（distill 净化）条目按净化后体积计量——复制进目标技能时吸收叙述段
@@ -889,29 +901,35 @@ check_doc_consistency() {
     warn "生成物上下文预算（references 拷贝）${uf_bytes}B > 预算 ${uf_budget}B（预算断言）——references 按需拷贝收窄或瘦身"
     FAIL=1
   fi
-
   # 5. 文档数字手抄退役声明：SKILL.md/README 不再内联具体计数（渲染由发布脚本注入）
   if grep -qE '(^|[^0-9.])[0-9]+ ?个(质量)?门禁' "$base/SKILL.md" 2>/dev/null && ! grep -q 'FACT_GATES_TOTAL' "$base/SKILL.md" 2>/dev/null; then
     warn "SKILL.md 仍手抄门禁数字（应引用 facts.conf 或不写数字）"
   fi
-
-  # 6. 版本口径三面机器锚（决策 38：根 README badge = 技能 README badge = CHANGELOG 首行版本）
+  # 6. 版本口径机器锚（决策 38；2026-10-26 适配 AIStudio：技能 CHANGELOG 为主，根 badge 可选）
   # 成因：v2.8.0 起四次发版漏改根 README badge（停在 v2.7.0）——发版 checklist 靠人记必然漏。
-  # 仓库根 = $base 上一级；安装态（~/.claude/skills/swarm-yuan）无 CHANGELOG.md 时显式跳过（同 _have_facts 守卫模式）。
-  local repo_root; repo_root="$(cd "$base/.." && pwd)"
-  local _cl_ver _root_badge _skill_badge
-  _cl_ver=$(grep -m1 -oE '^## \[v[0-9]+\.[0-9]+\.[0-9]+\]' "$repo_root/CHANGELOG.md" 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')
+  # AIStudio 根 README 是应用面，无技能 badge；技能版本以技能 CHANGELOG 首行为准，
+  # 技能 README badge 必须一致；根 README 若有技能 badge 则一并纳入三面比较。
+  local repo_root; repo_root="${SWARM_YUAN_SOURCE_ROOT:-$(cd "$base/../.." && pwd)}"
+  local _cl_src _cl_ver _root_badge _skill_badge
+  _cl_src="$base/CHANGELOG.md"
+  [[ -f "$_cl_src" ]] || _cl_src="$repo_root/CHANGELOG.md"
+  _cl_ver=$(grep -m1 -oE '^## \[v[0-9]+\.[0-9]+\.[0-9]+\]' "$_cl_src" 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')
   _root_badge=$(grep -m1 -oE 'release-v[0-9]+\.[0-9]+\.[0-9]+' "$repo_root/README.md" 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')
   _skill_badge=$(grep -m1 -oE 'release-v[0-9]+\.[0-9]+\.[0-9]+' "$base/README.md" 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')
   if [[ -z "$_cl_ver" ]]; then
-    echo "  ℹ 版本口径锚跳过（${repo_root} 无 CHANGELOG.md——安装态/目标技能上下文）"
-  else
+    echo "  ℹ 版本口径锚跳过（无技能/仓库 CHANGELOG.md——安装态/目标技能上下文）"
+  elif [[ -n "$_root_badge" ]]; then
     if [[ "$_root_badge" == "$_cl_ver" && "$_skill_badge" == "$_cl_ver" ]]; then
       echo "  ✓ 版本口径三面一致（CHANGELOG 首行 = 根 README badge = 技能 README badge = ${_cl_ver}）"
     else
       warn "版本口径漂移：CHANGELOG=${_cl_ver:-?} 根README badge=${_root_badge:-无} 技能README badge=${_skill_badge:-无}——发版须三面同步（决策 38 机器锚）"
       FAIL=1
     fi
+  elif [[ "$_skill_badge" == "$_cl_ver" ]]; then
+    echo "  ✓ 版本口径两面一致（技能 CHANGELOG 首行 = 技能 README badge = ${_cl_ver}；根 README 无技能 badge）"
+  else
+    warn "版本口径漂移：技能 CHANGELOG=${_cl_ver:-?} 技能 README badge=${_skill_badge:-无}——发版须两面同步（决策 38 机器锚）"
+    FAIL=1
   fi
 }
 check_doc_consistency
@@ -948,7 +966,8 @@ check_dead_doc_links
 # 口径漂移机器执法：任一项不符 warn + FAIL=1。
 check_bootstrap_gate() {
   local base; base="$(cd "$(dirname "$0")/.." && pwd)"
-  local conf="$base/ci/self-precheck.conf" ci="$base/../.github/workflows/ci.yml"
+  local source_root="${SWARM_YUAN_SOURCE_ROOT:-$(cd "$base/../.." && pwd)}"
+  local conf="$base/ci/self-precheck.conf" ci="$source_root/.github/workflows/swarm-yuan.yml"
   # 安装态（~/.claude/skills/swarm-yuan/）无 ci/ 目录与 .github/，静默跳过
   [[ -f "$conf" ]] || return 0
   echo "▶ 自举门禁三档断言（G4）"
@@ -969,8 +988,8 @@ check_bootstrap_gate() {
       warn "CI 自举 step 数=$n < 3（应含 --all/--all-full/--compliance-suite）"
       FAIL=1
     fi
-  elif [[ -d "$base/../verifier" ]]; then
-    # 生成器仓布局（repo 根有 verifier/）但缺 ci.yml = 真缺口：三档 step 无从对账
+  elif [[ -d "$base/verifier" ]]; then
+    # 开发源码布局（技能根有 verifier/）但缺 swarm-yuan.yml = 真缺口：三档 step 无从对账
     warn "CI workflow 不存在: ${ci}（生成器仓布局缺失，无法对账三档 step）"
     FAIL=1
   else
@@ -1120,7 +1139,7 @@ check_mem_backends
 # 防止新增框架后 golden 未重建导致 C1 golden diff 对新 fixture 失效
 check_golden_vector() {
   local base; base="$(cd "$(dirname "$0")/.." && pwd)"
-  local golden="$base/../verifier/v1/golden-vector.txt"
+  local golden="$base/verifier/v1/golden-vector.txt"
   [[ -f "$golden" ]] || return 0
   # facts.conf 若已被前序函数 source 则直接用
   if [[ -z "${FACT_FRAMEWORKS:-}" && -f "$base/assets/facts.conf" ]]; then
@@ -1138,7 +1157,7 @@ check_golden_vector() {
     # 显式一键重建（opt-in，不自动跟随漂移——保基线独立性）。
     # 用法：SWARM_YUAN_GOLDEN_REBUILD=1 bash scripts/self-check.sh（重建后本轮即对账）
     echo "  ℹ SWARM_YUAN_GOLDEN_REBUILD=1：执行 verifier 官方重建……"
-    bash "$base/../verifier/v1/run-verifier.sh" rebuild-golden >/dev/null 2>&1 || true
+    bash "$base/verifier/v1/run-verifier.sh" rebuild-golden >/dev/null 2>&1 || true
     golden_lines=$(wc -l < "$golden" | tr -d ' ')
     if [[ "$golden_lines" == "$exp_lines" ]]; then
       echo "  ✓ golden-vector 已重建 ${golden_lines} 行并与 facts.conf 一致（请审 git diff 后提交）"
@@ -1503,9 +1522,9 @@ check_universal_files_count
 # warn-only 不置 FAIL：修辞强度是诚实提醒，非数字硬契约。
 check_claim_intensity() {
   local base; base="$(cd "$(dirname "$0")/.." && pwd)"
-  local _root_docs="$base/.."
+  local _root_docs="$base"
   # 与 check_doc_consistency 的 _scan_docs 保持一致（G6/G8 同源盲区）
-  local _scan_docs="README.md .claude/commands/swarm-yuan.md $base/../CLAUDE.md references/case-studies/articulation-orchestration.md references/standards-compliance.md ${_root_docs}/verifier/v1/acceptance-criteria.md"
+  local _scan_docs="README.md .claude/commands/swarm-yuan.md $base/CLAUDE.md references/case-studies/articulation-orchestration.md references/standards-compliance.md ${_root_docs}/verifier/v1/acceptance-criteria.md"
   local _cmd_dir="$base/.claude/commands"
   if [[ -d "$_cmd_dir" ]]; then
     local _cf
@@ -1902,7 +1921,7 @@ check_multibyte_var_adjacency() {
   local _g20_files=( ) _g
   for _g in "$base"/scripts/*.sh "$base"/assets/*.sh "$base"/assets/hooks/*.sh \
             "$base"/tests/*.sh "$base"/tests/e2e/*.sh \
-            "$base"/../verifier/v1/*.sh "$base"/../verifier/v2/*.sh; do
+            "$base"/verifier/v1/*.sh "$base"/verifier/v2/*.sh; do
     [[ -f "$_g" ]] && _g20_files+=( "$_g" )
   done
   if [[ ${#_g20_files[@]} -eq 0 ]]; then
@@ -1943,7 +1962,7 @@ check_sed_regex_dialect() {
   for _g in "$base"/scripts/*.sh "$base"/assets/*.sh "$base"/assets/hooks/*.sh \
             "$base"/assets/framework-gates/*.sh \
             "$base"/tests/*.sh "$base"/tests/e2e/*.sh \
-            "$base"/../verifier/v1/*.sh "$base"/../verifier/v2/*.sh; do
+            "$base"/verifier/v1/*.sh "$base"/verifier/v2/*.sh; do
     [[ -f "$_g" ]] && _g22_files+=( "$_g" )
   done
   if [[ ${#_g22_files[@]} -eq 0 ]]; then
@@ -1994,7 +2013,7 @@ check_portability() {
   local files
   files="$(grep -lE "$_suspect_re" "$base"/scripts/*.sh "$base"/assets/*.sh "$base"/assets/hooks/*.sh \
            "$base"/assets/framework-gates/*.sh "$base"/tests/*.sh "$base"/tests/e2e/*.sh \
-           "$base"/../verifier/v1/*.sh "$base"/../verifier/v2/*.sh 2>/dev/null)"
+           "$base"/verifier/v1/*.sh "$base"/verifier/v2/*.sh 2>/dev/null)"
   for f in $files; do
     [[ -f "$f" ]] || continue
     # 检查器/lint 文件整文件豁免：它们以字面量引用 declare -A/readlink -f/mktemp 等做拦截，

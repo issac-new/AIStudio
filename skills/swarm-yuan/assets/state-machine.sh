@@ -181,6 +181,47 @@ set_field() {
   echo "✓ $field = $value"
 }
 
+_guard_archive() {
+  local ok=1
+      # 门禁：verify 通过
+      local vr
+      vr=$(get_field verify_result)
+      [[ "$vr" != "pass" ]] && { fail "verify_result=${vr}，须先 pass"; ok=0; }
+      # MEA 铁律（LHH 吸收，2026-08-16）：自我声明不改变持久状态——
+      # verify_result=pass 之外还须有证据引用（gate-run#N / 验证报告路径 / verifier 报告）。
+      # warn 不 fail：存量状态文件无此字段，硬 fail 破坏向后兼容（守决策 26 预算：不新增 fail 调用）。
+      local ev
+      ev=$(get_field verify_evidence)
+      if [[ -n "$ev" ]]; then
+        pass "archive 准入: verify_evidence=${ev}（收口有据）"
+      else
+        echo "  ⠿ archive 准入: verify_evidence 为空——自我声明不改变持久状态（MEA 铁律），建议 set verify_evidence \"<gate-run#N 或验证报告路径>\"（warn 不阻塞）"
+      fi
+      # 破窗台账（broken-windows ledger，gsd-core v1.8.0 #1950 吸收）：
+      # 若 .swarm-yuan/WINDOWS.md 存在且含 open 条目，warn 不 fail（仅提示 ship 前清账）。
+      # gsd-core 的 /gsd-ship 在有 open 条目时阻断；swarm-yuan 降为 warn 以避免新增 fail 调用（守决策 26 预算）。
+      # 台账格式：frontmatter 含 open_count 字段，或正文含 "- [ ]" 未决项。
+      local win_file="${PROJECT_DIR:-$(pwd)}/.swarm-yuan/WINDOWS.md"
+      if [[ -f "$win_file" ]]; then
+        local open_cnt=0
+        # 优先读 frontmatter 的 open_count；否则降级数正文 "- [ ]" 未决项
+        local fm_cnt
+        fm_cnt=$(sed -n '/^---$/,/^---$/{/^open_count:/s/^open_count:[[:space:]]*//p;}' "$win_file" 2>/dev/null | tr -d '[:space:]')
+        if [[ -n "$fm_cnt" ]]; then
+          open_cnt="$fm_cnt"
+        else
+          open_cnt=$(grep -c '^\- \[ \]' "$win_file" 2>/dev/null || echo 0)
+        fi
+        if [[ "${open_cnt:-0}" -gt 0 ]]; then
+          echo "  ⠿ archive 准入: 破窗台账 ${win_file} 有 ${open_cnt} 项 open（stubs/TODOs/skipped-tests/unrun-verifies；建议 ship 前清账或 waive，warn 不阻塞）"
+        else
+          pass "archive 准入: 破窗台账 open_count=0（干净）"
+        fi
+      fi
+      [[ $ok -eq 1 ]] && pass "archive 准入: verify_result=${vr}"
+  return $((1-ok))
+}
+
 guard_phase() {
   local phase="${1:-}"
   [[ -z "$phase" ]] && { echo "Usage: state-machine.sh guard <phase>"; exit 1; }
@@ -275,42 +316,7 @@ guard_phase() {
       fi
       ;;
     archive)
-      # 门禁：verify 通过
-      local vr
-      vr=$(get_field verify_result)
-      [[ "$vr" != "pass" ]] && { fail "verify_result=${vr}，须先 pass"; ok=0; }
-      # MEA 铁律（LHH 吸收，2026-08-16）：自我声明不改变持久状态——
-      # verify_result=pass 之外还须有证据引用（gate-run#N / 验证报告路径 / verifier 报告）。
-      # warn 不 fail：存量状态文件无此字段，硬 fail 破坏向后兼容（守决策 26 预算：不新增 fail 调用）。
-      local ev
-      ev=$(get_field verify_evidence)
-      if [[ -n "$ev" ]]; then
-        pass "archive 准入: verify_evidence=${ev}（收口有据）"
-      else
-        echo "  ⠿ archive 准入: verify_evidence 为空——自我声明不改变持久状态（MEA 铁律），建议 set verify_evidence \"<gate-run#N 或验证报告路径>\"（warn 不阻塞）"
-      fi
-      # 破窗台账（broken-windows ledger，gsd-core v1.8.0 #1950 吸收）：
-      # 若 .swarm-yuan/WINDOWS.md 存在且含 open 条目，warn 不 fail（仅提示 ship 前清账）。
-      # gsd-core 的 /gsd-ship 在有 open 条目时阻断；swarm-yuan 降为 warn 以避免新增 fail 调用（守决策 26 预算）。
-      # 台账格式：frontmatter 含 open_count 字段，或正文含 "- [ ]" 未决项。
-      local win_file="${PROJECT_DIR:-$(pwd)}/.swarm-yuan/WINDOWS.md"
-      if [[ -f "$win_file" ]]; then
-        local open_cnt=0
-        # 优先读 frontmatter 的 open_count；否则降级数正文 "- [ ]" 未决项
-        local fm_cnt
-        fm_cnt=$(sed -n '/^---$/,/^---$/{/^open_count:/s/^open_count:[[:space:]]*//p;}' "$win_file" 2>/dev/null | tr -d '[:space:]')
-        if [[ -n "$fm_cnt" ]]; then
-          open_cnt="$fm_cnt"
-        else
-          open_cnt=$(grep -c '^\- \[ \]' "$win_file" 2>/dev/null || echo 0)
-        fi
-        if [[ "${open_cnt:-0}" -gt 0 ]]; then
-          echo "  ⠿ archive 准入: 破窗台账 ${win_file} 有 ${open_cnt} 项 open（stubs/TODOs/skipped-tests/unrun-verifies；建议 ship 前清账或 waive，warn 不阻塞）"
-        else
-          pass "archive 准入: 破窗台账 open_count=0（干净）"
-        fi
-      fi
-      [[ $ok -eq 1 ]] && pass "archive 准入: verify_result=${vr}"
+      _guard_archive || ok=0
       ;;
     operate)
       # D 方向：operate 发布后运营准入——verify 通过 + 运营报告（warn 不 fail，可选延伸阶段）

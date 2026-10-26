@@ -12,11 +12,11 @@ pass=0; fail=0
 ok()  { echo "  ✓ $1"; pass=$((pass+1)); }
 bad() { echo "  ✗ $1"; fail=$((fail+1)); }
 
-DE=../docs/design-evolution.md
+DE=docs/design-evolution.md
 CM=references/capability-map.md
 ST=assets/spec-template.md
 TS=references/template-spec.md
-R76=../docs/research/R76-flow-orchestration-absorption.md
+R76=docs/research/R76-flow-orchestration-absorption.md
 
 # ---- L1 决策 46 在位 ----
 grep -qF '### 决策 46：吸收判据两问' "$DE" && ok "L1 决策 46 标题在位" || bad "L1 决策 46 被删"

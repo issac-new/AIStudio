@@ -158,7 +158,7 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 | 要找什么 | 看哪里 |
 |---|---|
 | 设计论证（What/Why/How 五层） | `swarm-yuan/README.md`（自述「唯一设计文档」，六章 + 附录 A–E） |
-| 终态设计说明（机制/不变量/失效模式/验收） | `docs/design-terminal.md` |
+| 终态设计说明（机制/不变量/失效模式/验收；已归档，规范源见 README） | `docs/reviews/design-terminal-2026-10-26-archived.md` |
 | 决策全文（编号见该文件） | `docs/design-evolution.md`；索引在技能 README 附录 C |
 | 上游运行时台账（22 项） | `docs/upstream-baseline.md`；历史在 `docs/research/upstream-changelog.md` |
 | 历轮细节 | `docs/research/R*.md`（份数以目录实测为准）+ `docs/reviews/`（复审类） |
@@ -185,13 +185,15 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 > 对任意代码仓库跑一次，生成一个项目专属的开发技能。此后 AI 在这个项目里写代码，先查组件、依赖和规矩，再动手。
 
 [![Release](https://img.shields.io/badge/release-v2.95.0-blue)](https://github.com/issac-new/Swarm-yuan/releases/tag/v2.95.0)
-[![License](https://img.shields.io/badge/license-MIT-lightgrey)]()
+[![License](https://img.shields.io/badge/license-Apache--2.0-lightgrey)]()
 
 ---
 
 ## 文档边界与读法
 
-本文是 swarm-yuan 的唯一设计文档，回答四个问题：系统是什么、为什么这样设计、怎么落地、凭什么有效。操作命令查 `docs/usage-manual.md`。演化过程与决策史查 `docs/design-evolution.md`。上游运行时基线查 `docs/upstream-baseline.md`。全部数字的真值在 `swarm-yuan/assets/facts.conf`，self-check 做机器对账。
+本文是 swarm-yuan 的唯一规范设计文档，回答四个问题：系统是什么、为什么这样设计、怎么落地、凭什么有效。操作命令查 `docs/usage-manual.md`。演化过程与决策史查 `docs/design-evolution.md`。上游运行时基线查 `docs/upstream-baseline.md`。全部数字的真值在 `swarm-yuan/assets/facts.conf`，self-check 做机器对账。
+
+文档角色：本文为规范源；终态设计摘要已于 2026-10-26 合并进本文并归档到 `docs/reviews/design-terminal-2026-10-26-archived.md`；带日期的设计文档是历史记录，不作为规范源。证据分级 M0–M4 的定义在 `assets/registry/README.md`，验收指标见附录 D。
 
 读法：第一、二章给判断依据（要不要用、为什么需要）。第三章是主体，讲每层机制与检查。第四章把机制映射到文件。第五章给适用边界。第六章收口。数字、来源、验收明细收在附录，正文不罗列。
 
@@ -576,6 +578,34 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 调研证据链 | `docs/research/` | 各轮调研报告（决策史引用的外部项目调研过程档案） |
 | 对外汇报案例 | `references/case-studies/articulation-orchestration.md` | 关节编排汇报场景的论据映射 |
 
+## 附录 F：治理不变量
+
+合并自终态设计摘要。五条治理原则：
+
+| 原则 | 含义 | 机器锚 |
+|---|---|---|
+| 事实单源 | 有两处以上引用的事实只保留一个权威源，其余由脚本生成 | 注册表三向对账，纳入自检与 CI |
+| 清单即数据 | 分发、装载、安装与宿主范围由表驱动，代码中不出现第二份清单 | 分发表与宿主表，代码只读表 |
+| 历史与状态分离 | 注册表只存当前值与最近一次修改，过程史进入修改记录 | 表行不携带版本史，记录追加 |
+| 宣称与证据绑定 | 对外的支持、整合与实证表述须对应五级记分与证据指针 | 表内等级列与术语校验 |
+| 能力有生命周期 | 分为进入、激活、验证、观察、退役五态，无退役条件不得新增 | 框架表与运行时表有 `status` 列；`registry-render.sh --lifecycle` 输出候选 |
+
+九条不变量：
+
+| 不变量 | 执法方式 | 强度 |
+|---|---|---|
+| 门禁预算 56 | 自检复杂度预算断言 | 强制 |
+| 配置变量预算 200 | 自检同上 | 强制 |
+| 四项体积上限 | 自检断言与生成链路断言 | 强制 |
+| 入口文件 20000 字符硬顶 | 生成链路断言 | 强制 |
+| 注册表与代码、样例三向一致 | 注册表对账 | 强制 |
+| 零消费事实键须登记例外 | 对账与例外表 | 强制 |
+| 每项能力具备证据等级 | 记分表与宣称矩阵 | 强制 |
+| 激活三项条件 | 激活命令 | 强制 |
+| 行为保持式拆分 | 基线产物逐字节比对 | 强制 |
+
+证据分级 M0–M4 定义见 `assets/registry/README.md`；验收指标见附录 D；能力退役候选由 `registry-render.sh --lifecycle` 输出。
+
 ## 离线分发设计（2026-10-22 终口径）
 
 目标环境画像：GitHub 不可达，npm/pip 源（内部镜像）可用，Windows / macOS / Linux 三平台。
@@ -588,7 +618,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 
 ## License
 
-MIT — see [LICENSE](../LICENSE)
+Apache-2.0 — see [LICENSE](LICENSE)（实体文件 2026-10-24 供应链治理轮入库，取自旧独立仓归档正本；历史正文标 MIT 与实体不符，以实体文件为准）
 
 # 卷二 决策史
 
@@ -3478,7 +3508,7 @@ Claude Code / Codex / Cursor / Windsurf / OpenCode / Gemini CLI / Kimi——自�
 
 > **定位**：22 项上游运行时的当前基线状态表。唯一权威源为 `swarm-yuan/assets/registry/runtimes.tsv`；本表由 `registry-render.sh --write-upstream-baseline` 生成，`--check` 校验，禁止手改标记区块。
 > **历史**：逐轮核验、版本差异与旧表全文见 `docs/research/upstream-changelog.md`（append-only）。状态表只保留当前值，不携带版本史。
-> **证据分级**：A=本机实测；B=官方一手直查；C=二手转述（未核验不进基线）。最近一次全量核验：2026-10-24 R140。
+> **证据分级**：A=本机实测；B=官方一手直查；C=二手转述（未核验不进基线）。最近一次全量核验：2026-10-25 R142。
 
 ## 一、状态表
 
@@ -3496,8 +3526,8 @@ Claude Code / Codex / Cursor / Windsurf / OpenCode / Gemini CLI / Kimi——自�
 | mattpocock-skills | mattpocock/skills | MIT | v1.3.1 | cli | M1 | baseline_status=synced |
 | diagram-design | cathrynlavery/diagram-design | MIT | v2.6.120 | cli | M1 | baseline_status=synced |
 | superpowers | obra/superpowers | MIT | v7.0.1 | method | M1 | baseline_status=synced |
-| gstack | garrytan/gstack | MIT | v1.87.5.0 tip 6f7488a70 | method | M1 | baseline_status=synced |
-| ruflo | ruvnet/ruflo | MIT | v3.61.1 | method | M1 | baseline_status=synced |
+| gstack | garrytan/gstack | MIT | v1.91.188 tip 1e3ee83c4 | method | M1 | baseline_status=synced |
+| ruflo | ruvnet/ruflo | MIT | v3.62.0 | method | M1 | baseline_status=synced |
 | ECC | affaan-m/ECC | MIT | v2.2.3 | method | M1 | baseline_status=synced |
 | impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.7.0 | method | M1 | baseline_status=synced |
 | dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.1-rc.3 | source | M0 | baseline_status=synced |
@@ -3649,12 +3679,12 @@ bash install.sh
 
 大型项目（>100 文件）可用 Dynamic Workflow 并行扇出三路子代理，交叉验证特征卡。
 
-#### 落地示例（SwarmStudio overlay 项目）
+#### 落地示例（AIStudio 单仓，原 AIStudio overlay 仓）
 
 | # | 特征项 | 真实值 |
 |---|--------|--------|
-| 1 | 项目类型 | overlay 注入式二次开发（Vue 3 + Electron） |
-| 2 | 可改范围 | 可改: overlay/；只读: upstream/（严格禁止） |
+| 1 | 项目类型 | 单仓整合 + vendor 钉版基线注入式二次开发（Vue 3 + Electron） |
+| 2 | 可改范围 | 可改: custom/、patches/、本仓源码；只读: vendor/（钉版基线，严格禁止手改） |
 | 3 | 改造分类 | A类（custom/ 纯新增）+ B类（patches/ 骨架修改） |
 | 4 | 技术栈 | Vue 3 + TypeScript + Vite + NaiveUI + Vitest + SQLite + Koa |
 | 5 | 构建命令 | `npm run dev`(:8649) / `npm run build` / `npm test` / `npm run inject` |
@@ -4147,6 +4177,9 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 #   2. 跑 `bash scripts/self-check.sh` 验证文档口径一致（漂移检测会列出未同步的文档）
 #   3. 按提示同步文档叙事层的数字
 #
+# 双段契约：本文件手写段服务安装态；facts.generated.conf 服务仓库态并在末尾 source 覆盖。
+# 两段重叠键必须等值（registry-render.sh --check 断言）——同键禁止双值。
+#
 # 真值来源（机械计数，不写死）：
 #   - 门禁数 = precheck.sh + gates-strict/warn/advisory.sh 四文件 ^check_[a-z_]+\(\) 合计计数
 #     （WP-Q1.3 三档拆分后 check_* 函数在 gates-*.sh 三文件，不在 precheck.sh 主文件；
@@ -4173,9 +4206,9 @@ FACT_GATES_FULL=50            # ALL_GATES_FULL（field-feedback +method_size 48�
 # 决策 28 后：169 → 171（+STABLE_PROPAGATE/STABLE_PROPAGATE_HOPS，Palantir markings-propagate 映射）
 # 七轮复盘后：171 → 173（CORE 12→13 修正历史漂移 e45d253；ARCH 111→112 +EVAL_WHITELIST 七轮误报治理）
 # WP-P2-extension 后：arch.conf +5 框架 globs（SPARK/HIVE/TDENGINE/DORIS/HARMONYOS_SRC_GLOBS）178→183
-FACT_CONF_VARS=197            # core+arch+compliance 合计（WP-P2-extension +5 框架 globs 178→183；P0-5 +BUILD_DEEP_RUNTIMES 183→184；R23 回归 D8 +BASE_BRANCH 184→185；测试质量轮 +8 core 覆盖率/断言/变异 +4 arch 接口测试 185→197）
-FACT_CONF_VARS_USERFACE=20      # R13 conf 收缩：user 面必配项预算（开关/位置/预算类；43 glob 阈值数据已迁 rules.d/framework-globs.rules——物理变量 197 含兼容别名，user 面必配 ≈ 133 中约 20 开关项）
-FACT_CONF_VARS_CORE=28        # precheck.conf（field-feedback +SPEC_REQUIRED/SPEC_GLOB 16→18；P0-5 +BUILD_DEEP_RUNTIMES 18→19；R23 回归 D8 +BASE_BRANCH 19→20；测试质量轮 +8 覆盖率/断言密度/负向/变异 20→28）
+FACT_CONF_VARS=199            # core+arch+compliance 合计（WP-P2-extension +5 框架 globs 178→183；P0-5 +BUILD_DEEP_RUNTIMES 183→184；R23 回归 D8 +BASE_BRANCH 184→185；测试质量轮 +8 core 覆盖率/断言/变异 +4 arch 接口测试 185→197；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 197→199）
+FACT_CONF_VARS_USERFACE=20      # R13 conf 收缩：user 面必配项预算（开关/位置/预算类；43 glob 阈值数据已迁 rules.d/framework-globs.rules——物理变量 199 含兼容别名，user 面必配 ≈ 133 中约 20 开关项）
+FACT_CONF_VARS_CORE=30        # precheck.conf（field-feedback +SPEC_REQUIRED/SPEC_GLOB 16→18；P0-5 +BUILD_DEEP_RUNTIMES 18→19；R23 回归 D8 +BASE_BRANCH 19→20；测试质量轮 +8 覆盖率/断言密度/负向/变异 20→28；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 28→30）
 FACT_CONF_VARS_ARCH=121       # precheck.arch.conf（WP-P2-extension +5 框架 globs 112→117；测试质量轮 +4 接口测试 117→121）
 FACT_CONF_VARS_COMPLIANCE=48  # precheck.compliance.conf（WP-S1 30+9 + WP-S2 +7）
 
@@ -4294,14 +4327,14 @@ FACT_MEASURE_METADATA_REQUIRED=1   # 1=fail（十一轮复盘：核心 13/13 全
 # ===== 生成管线工具化（WP-P2~P5）=====
 FACT_FRAMEWORK_EVIDENCE=1               # framework-evidence.sh 产出（1=启用，台账 TSV）
 FACT_CONF_RENDER_PROFILES=3             # conf-render.sh profile 档（lite/standard/compliance）
-FACT_UNIVERSAL_FILES_CORE=46            # UNIVERSAL_FILES 标 lite 档的条目数（三 profile 都拷）（C1 机械计数，含带尾注释条目；audit-2026-08-25 修正：30 是行尾锚定 grep 的盲区读数；v2.14.2 自包含轮 +3 边集/核验工具随发=40；v2.14.3 排查 A3 +relations-query.sh=41；R72 全量回归轮 +mine-habits.sh 随发=42；R100 受控语言轮 +controlled-language-methodology.md（lite 档）=43；R98 记忆后端适配轮 +memory-backends.sh 随发（lite 档）=44 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite 档，fail-gate-hook lite 依赖判定库）=45 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh（lite 档，目标技能侧结构自检）=46）
+FACT_UNIVERSAL_FILES_CORE=47            # UNIVERSAL_FILES 标 lite 档的条目数（三 profile 都拷）（C1 机械计数，含带尾注释条目；audit-2026-08-25 修正：30 是行尾锚定 grep 的盲区读数；v2.14.2 自包含轮 +3 边集/核验工具随发=40；v2.14.3 排查 A3 +relations-query.sh=41；R72 全量回归轮 +mine-habits.sh 随发=42；R100 受控语言轮 +controlled-language-methodology.md（lite 档）=43；R98 记忆后端适配轮 +memory-backends.sh 随发（lite 档）=44 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite 档，fail-gate-hook lite 依赖判定库）=45 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh（lite 档，目标技能侧结构自检）=46；2026-10-26 双段对账修正为 47（生成段与 dist.tsv lite 行实测一致））
 
 # ===== 复杂度负向预算（决策 26，WP-rhetoric-honesty）=====
 # 范式声称帮项目降复杂度，自身复杂度不可逆上升（门禁 27->52->54）会证伪范式可信度。
 # 预算上限冻结当前规模，新增须等额删除或申请例外（决策 26 记录理由）。
 # self-check.sh 断言：FACT_GATES_TOTAL <= FACT_GATES_BUDGET，否则 fail。
 FACT_GATES_BUDGET=56                    # 门禁数负向预算上限（当前 56 冻结，新增须等额删除或申请例外；决策 26.2 记录）
-FACT_CONF_VARS_BUDGET=200               # conf 变量数预算上限（当前 197，预留 3 增长空间；新增测试质量变量后逼近上限，下一步应与旧变量合并/退役同步）
+FACT_CONF_VARS_BUDGET=200               # conf 变量数预算上限（当前 199，预留 1 增长空间；设计文档同步轮 +2 后逼近上限，下一步新增须与旧变量合并/退役同步）
 
 # ===== 上下文表面预算（决策 32，上下文窗口自适应压缩）=====
 # context-surface.sh --gen 计量生成期必读三件套（SKILL.md + exploration-guide + template-spec）字节。
@@ -4312,7 +4345,7 @@ FACT_CONF_VARS_BUDGET=200               # conf 变量数预算上限（当前 19
 # 本轮 template-spec +spec §25 填充指引 714B；此前 vendor-knowledge 轮注记 +451B 未记账，一并归零），
 # warn-only 保持——理由：SKILL.md 仍在吸收新方法论（refs 持续增长），过早翻 fail 会阻断吸收；
 # 推进条件：连续 3 个批次实测不增长后可翻 fail。（audit-claims-reality 修正：旧记录 154088B 未随实测同步）
-FACT_CONTEXT_SURFACE_BUDGET=194560          # 生成期必读三件套字节上限（生成期一次加载，决策 32 税制锚）。v2.14.3 排查轮（2026-09-15）首次例外登记 180000→184000：实测 180189B 超 189B，成因=B1 文档证据源优先级表 + B2 文档转换流程 + A1/A2 字段级边消费指引三处如实功能增量（exploration-guide +3362B、template-spec +1265B，净增方法论文档非注记膨胀）；对齐 FACT_ARTIFACT_BYTES_BUDGET 逐例登记先例，不构成先例。R49 知识生命周期轮（2026-09-24）第二次例外登记 184000→188416（+4KiB，沿决策 38 决定二冻结现状+显式余量形态）：实测 187040B 超 3040B——其中 969B 为 R48 收口时未登记的预存超额（R45-R48 期矛盾裁决节等功能增量沉淀，本轮实测对账发现并补登记），2071B 为本轮五机制接线净增量（页面三角/悬置回填/回归分级/六步协议/三态处置，协议文本为功能本体不可注记化瘦身）；本轮 SKILL.md 两处枚举已瘦（与档重复的六步/三态枚举收敛为档引用）。R58 知识库真机演练轮（2026-09-25）第三次登记 188416→190464（184KiB→186KiB）：实测 189570B 超 1154B，成因=D1 四查契约面/D5 页面三角承载位/D6 悬置清单接线/D8 三态触发双路四处知识协议产品化增量（template-spec +900B、SKILL.md +110B）——演练实弹修复的功能本体，非注记膨胀；不构成先例；R70 CI 修复轮（2026-09-29）第四次登记 190464→194560（186KiB→190KiB，+4KiB）：实测 190690B 超 226B，成因=R70/R71 运行时刷新注记增量（codex/ruflo/dsh 版本注记落入计量面），非内容膨胀；不构成先例
+FACT_CONTEXT_SURFACE_BUDGET=195584          # 生成期必读三件套字节上限（生成期一次加载，决策 32 税制锚）。v2.14.3 排查轮（2026-09-15）首次例外登记 180000→184000：实测 180189B 超 189B，成因=B1 文档证据源优先级表 + B2 文档转换流程 + A1/A2 字段级边消费指引三处如实功能增量（exploration-guide +3362B、template-spec +1265B，净增方法论文档非注记膨胀）；对齐 FACT_ARTIFACT_BYTES_BUDGET 逐例登记先例，不构成先例。R49 知识生命周期轮（2026-09-24）第二次例外登记 184000→188416（+4KiB，沿决策 38 决定二冻结现状+显式余量形态）：实测 187040B 超 3040B——其中 969B 为 R48 收口时未登记的预存超额（R45-R48 期矛盾裁决节等功能增量沉淀，本轮实测对账发现并补登记），2071B 为本轮五机制接线净增量（页面三角/悬置回填/回归分级/六步协议/三态处置，协议文本为功能本体不可注记化瘦身）；本轮 SKILL.md 两处枚举已瘦（与档重复的六步/三态枚举收敛为档引用）。R58 知识库真机演练轮（2026-09-25）第三次登记 188416→190464（184KiB→186KiB）：实测 189570B 超 1154B，成因=D1 四查契约面/D5 页面三角承载位/D6 悬置清单接线/D8 三态触发双路四处知识协议产品化增量（template-spec +900B、SKILL.md +110B）——演练实弹修复的功能本体，非注记膨胀；不构成先例；R70 CI 修复轮（2026-09-29）第四次登记 190464→194560（186KiB→190KiB，+4KiB）：实测 190690B 超 226B，成因=R70/R71 运行时刷新注记增量（codex/ruflo/dsh 版本注记落入计量面），非内容膨胀；不构成先例。设计文档同步轮（2026-10-26）第五次登记 194560→195584（190KiB→191KiB，+1KiB）：实测 195339B 超 779B，成因=design-sync 机制立法——template-spec 9 节点命名表对齐实际 emit 版（修复既有不同步缺陷）+§20.4/文档左移/合入序列描述、SKILL.md 节点③⑦⑧职责行扩（机制本体描述非注记膨胀）；不构成先例
 
 # ===== 脚本行数（LOC）监控 =====
 # precheck.sh + gates-strict/warn/advisory.sh 四文件 wc -l 合计。
@@ -4322,14 +4355,14 @@ FACT_CONTEXT_SURFACE_BUDGET=194560          # 生成期必读三件套字节上�
 # 三轮复盘状态记录（防僵尸开关）：warn-only 长期保持——理由：LOC 增删属正常开发活动，
 # 本 key 的用途是"改脚本后提示同步文档口径"，非"限制脚本规模"（规模由 FACT_GATES_BUDGET 管）。
 # 不设推进条件（无需翻 fail）。
-FACT_SCRIPT_LOC=9332            # 四脚本（assets/precheck+gates-strict/warn/advisory）合计行数（self-check 机械计数；改脚本后同步本值；R141 实测对齐）
+FACT_SCRIPT_LOC=9362            # 四脚本（assets/precheck+gates-strict/warn/advisory）合计行数（self-check 机械计数；改脚本后同步本值；R141 实测对齐；设计文档同步轮 +9=check_spec_first 域源 design-sync 核验再生；2026-10-26 函数拆分净 0）
 
 # ===== 执行面复杂度预算（2026-10-24 重构轮，决策 54）=====
 # 事实：门禁/变量有预算，但门禁代码与框架注入代码的行数长期无上限（终态设计 §十已登记为风险）。
 # 口径：引擎 LOC = assets/precheck.sh + assets/gates/_lib.sh + assets/gates/<domain>/*.sh（域源，不含生成的 gates-*.sh 聚合视图，避免双计）；
 #       框架门禁 LOC = assets/framework-gates/*.sh（注入目标技能的执行面）。
 # 强度：超过上限即 fail（与门禁 56 同族）；下降不拦，但应在下一轮把上限收紧到新实测值。
-FACT_ENGINE_CODE_LOC_MAX=7769           # 引擎域源代码行数上限（2026-10-24 实测冻结：precheck 2094 + gates/_lib.sh 778 + gates 域源 4897）
+FACT_ENGINE_CODE_LOC_MAX=7800           # 引擎域源代码行数上限（2026-10-24 实测冻结 7769：precheck 2094 + gates/_lib.sh 778 + gates 域源 4897；2026-10-26 设计文档同步轮登记上调 7769→7800：check_spec_first/L2 接 design-sync 核验+选择器排除表修正本抢注缺陷（同轮两段增量）——扩展现有门禁内涵非新增门禁数，决策 54 预算例外登记）
 FACT_FRAMEWORK_GATE_LOC_MAX=18469       # 框架门禁注入代码行数上限（2026-10-24 冻结 18464；R141 sharding 聚合外包检测 +5 行登记上调）
 
 # ===== 版本 oracle 单源真值（G10，claude-mem v13.12.1 吸收）=====

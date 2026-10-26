@@ -2,7 +2,7 @@
 # test-r131-edges.sh — R131 四条边角收口锁：bridge awk \uXXXX 透传 / freshness 旗标禁缓存接线 / 活文档行号锚 / stat 回退链 stdout 污染
 set -uo pipefail
 cd "$(dirname "${0}")/.." || exit 1
-BASE="$(pwd)"; REPO="$(cd "${BASE}/.." && pwd)"
+BASE="$(pwd)"; SWARM_YUAN_SOURCE_ROOT="$(cd "${BASE}/../.." && pwd)"
 TMP="$(mktemp -d /tmp/r131e.XXXXXX)"; trap 'rm -rf "$TMP"' EXIT
 FAIL=0; ok(){ echo "  ✓ $1"; }; bad(){ echo "  ✗ $1" >&2; FAIL=1; }
 
@@ -26,9 +26,9 @@ grep -q -- '--strict-freshness.*cache_on=0' "$BASE/scripts/self-check.sh" \
   && ok "态2b --strict-freshness 在场即禁缓存（时间依赖不被缓存掩盖）" || bad "态2b 缺禁缓存分支"
 
 # 态3 活文档行号锚（行为面由 test-doc-numbers 断言，此处锁锚改写后的稳定锚存在）
-grep -q '_fg_emit_skill_md`（R128 拆分后函数名锚' "$REPO/docs/design-evolution.md" \
+grep -q '_fg_emit_skill_md`（R128 拆分后函数名锚' "$BASE/docs/design-evolution.md" \
   && ok "态3a design-evolution 用函数名锚" || bad "态3a"
-grep -q 'generate-skill\.sh:[0-9]' "$REPO/docs/design-evolution.md" && bad "态3b design-evolution 行号残留" || ok "态3b design-evolution 行号零残留"
+grep -q 'generate-skill\.sh:[0-9]' "$BASE/docs/design-evolution.md" && bad "态3b design-evolution 行号残留" || ok "态3b design-evolution 行号零残留"
 
 # 态4 stat 回退链 stdout 污染锁：PATH 注入模拟 GNU stat（-f 失败前向 stdout 写 File 行）
 # ——restore-journal 须 rc=0、stderr 为空。BSD-first 链会在 set -u 下报 unbound variable（CI Linux 实证）。

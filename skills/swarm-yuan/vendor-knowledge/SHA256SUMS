@@ -1,4 +1,4 @@
-1535fb829d6b7a196046bf916e8db2ed9d0247adf09e011ea62659cfc6e1266c  ./MANIFEST.md
+cac1b6122264e38230ddf430f857bdd01dbd211ac58aa04922bd8611f7d0493e  ./MANIFEST.md
 4c3f515e0460140563200fe98576e0990217f5998f23851ae19d88c908eb5da0  ./pay-team/references/chentianyu-fulltext-analysis.md
 2b181b1a633549ed9d745d766ec914c9bed616462f020f485c32d6d793f7de62  ./pay-team/references/chentianyu-kernel-frameworks.md
 4c90e4140c09e45412c5c4350a37fb16af5426b0fdb1fcf70a66c794602368ea  ./pay-team/references/pay-knowledge-index.md
@@ -218,7 +218,7 @@ bb2ad7e230de4699ef5d1f0314e558c892edba989f0c043a43a72d2e49f88ec0  ./pay-team/ref
 c330f608d03a6c08f56e02b1c6a15f7797bac6950e6431d045ec41a5ef90981a  ./pay-team/references/standards/unionpay/CUP_银联卡受理终端安全规范-第4卷：辅助卷-第3部分：POS互联网接入系统部署方案.md
 a6d56b4443271dfdb1a423756664b5bcc887328f71d438748711d5d5ab0bf7f5  ./pay-team/references/standards/unionpay/CUP_中国银联IC卡技术规范——产品规范_第8部分_金融IC可视卡规范.md
 2793b142d5ec1f0bd93e90af5bf7fb5e4a48f3eae8fd4a63be809c6bc04bb5eb  ./pay-team/references/standards/unionpay/CUP_中国银联移动支付技术规范_设备卷_第1部分_智能卡产品技术规范.md
-f78ffaaa9b844060029b98e64b35859faa4ea09f49f1de2b65200256f8c2ce49  ./pay-team/references/standards/unionpay/CUP_中国银联银行卡联网联合技术规范V2.1_第3部分_文件接口规范.md
+2cbc1c86c5f3b7a3e679f1a77132f15947ddaa1c34f167ae802b0415631e1a9c  ./pay-team/references/standards/unionpay/CUP_中国银联银行卡联网联合技术规范V2.1_第3部分_文件接口规范.md
 0abeb6c256c6627cc87514a918639f1a7b75e0ada3e9298714e3ed2b33eef36d  ./pay-team/references/standards/unionpay/CUP_中国银联IC卡技术规范——基础规范_第0部分：术语与定义.md
 1e55fc7a7e50969439924eee8927d8780aa27c60b4506b0e65a5dc9d4ce547cb  ./pay-team/references/standards/unionpay/CUP_中国银联可信执行环境集成（TEEI）技术规范第13部分：N3TEE应用管理指南.md
 8e1fed5efa342724eae9ff8b26b05b4459b205665c7087c4540a0fca40578864  ./pay-team/references/standards/unionpay/CUP_多渠道平台接入接口规范-第5部分：附录(QCUP_035.5-2010).md
@@ -239,7 +239,7 @@ a29ba9f597b384d7036aba11b6f1b87079aa3b03251af6175afe941a6eba5981  ./pay-team/ref
 3b4733c9dbdd79c154c3720cc0a4212a040e5be1023dee19a8ef77e70731f2f9  ./pay-team/references/standards/unionpay/CUP_银联卡受理终端应用规范-第4部分：密钥分发专用POS终端规范(QCUP_009.4-2011).md
 1c21bbb2c96a82f339f945e6a2cd02231e532d7dc90a20636d1960e91e2dcab9  ./pay-team/references/standards/unionpay/CUP_多渠道平台接入接口规范-第4部分：文件接口(QCUP_035.4-2013).md
 a10ddba5e534ad162f3cfb9b60fed2733ced1ee32f2e52c49aa1afaf562dc50b  ./pay-team/references/standards/unionpay/CUP_中国银联银联卡受理终端应用规范_第三部分_银联卡（IC卡）脱机受理终端规范(QCUP_009.3-2012).md
-24e2567bfaed0fc21bfd41d25dc3de140da2421c9fb501f19bcdc3f9b1bd1c55  ./pay-team/references/standards/unionpay/CUP_中国银联银行卡交换系统技术规范_第3部分_文件接口规范.md
+f65ff4c5b049a5c977fdbb46d09b5f8cc8e747580093ef2be76c99d7eb8ab582  ./pay-team/references/standards/unionpay/CUP_中国银联银行卡交换系统技术规范_第3部分_文件接口规范.md
 f67c0f49fd1def5c4e0325c80fa2674be1e1cce2b0ce19808230f7d490761e7e  ./pay-team/references/standards/unionpay/CUP_中国银联银行卡联网联合技术规范V2.1（跨境卷）_第3部分_文件接口规范.md
 ff4ddb3c6d738b6d8e7b93b727f8d9141d0b0219d67ec81ce2da4c6353f9b075  ./pay-team/references/standards/unionpay/CUP_银联卡受理终端安全规范-第2卷：产品卷-第2部分：无人值守（自助）终端.md
 e4fec8246d97520e7f7030c598926e8bf49505b4f1d0179156473d4c494ce3ad  ./pay-team/references/standards/unionpay/CUP_中国银联IC卡技术规范——基础规范_第2部分：借记贷记应用卡片规范.md
@@ -300,5 +300,5 @@ d5e931e3be2213328acdfe90ee173284b5377b1b48ba947577415850498fcb50  ./pay-team/ref
 55f328ef92612bf8546bd3818c7060f2adf60c19aa4bef467227ed7e3d8f8ae2  ./pay-team/references/standards/unionpay/CUP_中国银联可信执行环境集成（TEEI）技术规范第1部分：整体架构规范.md
 5f241e3138d77bd98cbf2d3d38d43c2b562ce1eb68f3fa4663fb63818718f9be  ./pay-team/references/standards/unionpay/CUP_中国银联银行卡联网联合技术规范V2.1（跨境卷）_第6部分_附录.md
 288dd07c0f9702f1908c0997497148558b5ccae0c45386ef327b28005f1b4e5e  ./_shared/02-org-orchestration/language-standard.md
-1a99b698d51e76b223a185f98f54e01844a05e4e8af25ab764ca42c37512389e  ./_shared/02-org-orchestration/four-lenses-charter.md
-f15fcb236d62aaf129cfc245889b2dd668856d57c127fff51915d95b30215428  ./_shared/03-evolution-memory/output-contract.md
+c6adc8f172f6f19465d52df3b7190b8c0414a2524f29c1f90860664fd5d2f829  ./_shared/02-org-orchestration/four-lenses-charter.md
+597069f5a9fbd58d48d980855e8775cba720bb01ab46a323faa2616613656cac  ./_shared/03-evolution-memory/output-contract.md

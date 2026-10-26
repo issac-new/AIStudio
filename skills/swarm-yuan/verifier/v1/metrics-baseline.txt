@@ -1,0 +1,15 @@
+# C6 可维护性度量基线与阈值真值（P1 批起点，2026-07-20）
+# 判定逻辑见 v1/metrics-assert.sh；本文件是唯一阈值来源。
+# 改值须附对照证据（实测命令+输出）入 verifier/runs/ 并在 verifier/README.md 留痕。
+#
+# BASELINE_LOC_PRECHECK：feat/standards-compliance（P0 已提交）工作区实测
+#   命令：wc -l < swarm-yuan/assets/precheck.sh → 2982
+BASELINE_LOC_PRECHECK=2982
+# LOC 增长上限：较基线增长 <40%（整数判定：5*loc < 7*baseline）
+LOC_GROWTH_LIMIT_PCT=40
+# 注入双副本 diff 行数上限：<30（74 片段全量 --inject-frameworks 产物标记块
+#   vs assets/framework-gates/*.sh 同序串联，计 diff 输出 '^[<>]' 行数；正常应为 0）
+DUP_GATES_DIFF_MAX=29
+# WP-P0 上下文表面基线（信息性，不设阈值；重跑 capture-baseline.sh 后 diff 对比）
+BASELINE_CONTEXT_SURFACE_GEN_BYTES=193226
+BASELINE_CONTEXT_SURFACE_GEN_LINES=2144

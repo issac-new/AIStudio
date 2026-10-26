@@ -1,7 +1,7 @@
 # vendor-knowledge — 领域知识实体镜像（学习研究用途）
 
 > 本目录镜像依赖本机 hermes 运行时（非 npm/pip 可装）的领域知识实体，供迁移到其它机器后 swarm-yuan 引用可达。
-> **使用立场**：`standards/` `books/` `fulltext/` 为第三方规范全文与版权材料（EMVCo/银联规范、《支付之门》、付费专栏文章），**仅供学习研究使用，不分发、不商用**；大文件走 git LFS 管理，迁移经内部远端或本地拷贝。`.gitattributes` 的 LFS 跟踪规则已入库（可安全 push 公开仓），实体内容仅在私有分支/本地流转。
+> **使用立场**：`standards/` `books/` `fulltext/` 为第三方规范全文与版权材料（EMVCo/银联规范、《支付之门》、付费专栏文章），**仅供学习研究使用，不分发、不商用**；AIStudio 镜像按普通 git 对象入库并字节保真（`.gitattributes` 记 `-text`，未启用 LFS 对象库——LFS 外置属登记债务）；实体内容仅在私有仓/本地流转，不入公开仓。
 
 ## 目录
 
@@ -25,7 +25,9 @@ bash scripts/sync-vendor-knowledge.sh          # 从 ~/.hermes 镜像（SRC=<pat
 bash scripts/sync-vendor-knowledge.sh --check  # 校验镜像完整性（不拉取）
 ```
 
-克隆机取回 LFS 实体：`git lfs pull`（未拉取时版权大文件为 130B 指针，降级为知识地图）。
+当前镜像无 LFS 指针（普通对象随克隆即可读）。若未来外置为 LFS：克隆机须 `git lfs pull` 取回实体，未取回时版权大文件降级为知识地图。
+
+`SHA256SUMS` 覆盖镜像实体。重签前须先核对差异来源：2026-10-26 重签的 4 项中，银联两份规范的 `EDA` 标识为脱敏 `[已移除]`，`_shared` 两份与现行裁剪正本逐字节一致。
 
 ## 引用纪律
 

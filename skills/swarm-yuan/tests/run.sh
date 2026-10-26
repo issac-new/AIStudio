@@ -3,10 +3,12 @@
 #
 # 用法:
 #   bash tests/run.sh [--level all|0-5|0,1] [--jobs N] [--isolated]
-#                     [--format text|tap] [--filter SUBSTR] [--list]
+#                     [--format text|tap] [--filter SUBSTR] [--domain NAME[,NAME]]
+#                     [--list] [--list-domains]
 #
 # 元数据: tests/index.tsv（test / level / parallel_safe / owner / since）。
 #   未登记的测试默认 level=2、parallel_safe=yes。
+# 行为域: tests/domains.tsv（test / domain）；--domain 按域筛选，--list-domains 列出域与用例数。
 # 并行: 按批启动 N 个后台作业（bash 3.2 无 wait -n），批内并发、批间串行；
 #   parallel_safe=no 的测试排到最后逐个独占，不与任何测试同跑。
 # 隔离: --isolated 为每个测试设置独立 TMPDIR；不修改 HOME。
@@ -17,12 +19,15 @@ BASE="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck disable=SC1091
 . "$BASE/assets/lib/run.sh"
 IDX="$BASE/tests/index.tsv"
+DOMAINS_FILE="$BASE/tests/domains.tsv"
 JOBS=1
 LEVEL="all"
 FORMAT="text"
 FILTER=""
+DOMAIN=""
 ISOLATED=0
 LIST=0
+LIST_DOMAINS=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -31,8 +36,10 @@ while [[ $# -gt 0 ]]; do
     --isolated) ISOLATED=1; shift ;;
     --format) FORMAT="${2:?--format 需要 text|tap}"; shift 2 ;;
     --filter) FILTER="${2:?--filter 需要子串}"; shift 2 ;;
+    --domain) DOMAIN="${2:?--domain 需要域名（逗号分隔）}"; shift 2 ;;
     --list) LIST=1; shift ;;
-    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --list-domains) LIST_DOMAINS=1; shift ;;
+    -h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "未知参数: $1" >&2; exit 2 ;;
   esac
 done
@@ -64,6 +71,10 @@ safe_of() {  # $1=test basename → yes/no（默认 yes）
   fi
   printf '%s' "${s:-yes}"
 }
+domain_of() {  # $1=test basename → 行为域（domains.tsv 未登记则空）
+  [[ -f "$DOMAINS_FILE" ]] || return 0
+  awk -F '\t' -v n="$1" '!/^#/ && $1==n {print $2; exit}' "$DOMAINS_FILE"
+}
 level_match() {  # $1=level → rc 0=选中
   local l="$1"
   if [[ "$LEVEL" == "all" ]]; then return 0; fi
@@ -75,6 +86,12 @@ level_match() {  # $1=level → rc 0=选中
   case ",${LEVEL}," in *",${l},"*) return 0 ;; *) return 1 ;; esac
 }
 
+if [[ "$LIST_DOMAINS" -eq 1 ]]; then
+  [[ -f "$DOMAINS_FILE" ]] || { echo "✗ 缺 tests/domains.tsv" >&2; exit 2; }
+  awk -F '\t' '!/^#/ && NF {c[$2]++} END{for (d in c) printf "%s\t%d\n", d, c[d]}' "$DOMAINS_FILE" | sort
+  exit 0
+fi
+
 TESTS=(); LEVELS=(); SAFE=()
 for t in "$BASE"/tests/test-*.sh "$BASE"/tests/scripts/test-*.sh; do
   [[ -f "$t" ]] || continue
@@ -82,6 +99,9 @@ for t in "$BASE"/tests/test-*.sh "$BASE"/tests/scripts/test-*.sh; do
   [[ -n "$FILTER" && "$n" != *"$FILTER"* ]] && continue
   l="$(level_of "$n")"
   level_match "$l" || continue
+  if [[ -n "$DOMAIN" ]]; then
+    case ",${DOMAIN}," in *",$(domain_of "$n"),"*) ;; *) continue ;; esac
+  fi
   TESTS+=("$t"); LEVELS+=("$l"); SAFE+=("$(safe_of "$n")")
 done
 
@@ -95,7 +115,7 @@ if [[ "$LIST" -eq 1 ]]; then
   exit 0
 fi
 if [[ "$N" -eq 0 ]]; then
-  echo "✗ 零测试命中（level=${LEVEL} filter=${FILTER}）——拒绝假绿" >&2
+  echo "✗ 零测试命中（level=${LEVEL} domain=${DOMAIN} filter=${FILTER}）——拒绝假绿" >&2
   exit 2
 fi
 

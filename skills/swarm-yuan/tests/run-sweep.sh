@@ -3,7 +3,7 @@
 # 只跑 tests/test-*.sh，不含 verifier（shellcheck/产物 e2e/夹具双态）——R66-R69 连续四轮
 # CI 红的流程根因。本脚本把"收口前必跑"的完整面固化为单一命令，任一环节失败即非零退出。
 #
-# 用法: bash swarm-yuan/tests/run-sweep.sh
+# 用法: bash skills/swarm-yuan/tests/run-sweep.sh
 # 覆盖面（与 CI 同构）:
 #   ① tests/test-*.sh + tests/scripts/test-*.sh 全部锁测试（R126 补后者——
 #     test-memory-writeback 等此前只在 CI 跑，本地 sweep 名实不符）
@@ -20,9 +20,11 @@
 #     陈旧锁自动回收）——sbom/scope fixture 原地 setup/teardown 与 .gate-fail-flag 写
 #     仓库树，并发互撞从此显式报错而非互相污染。
 set -u
-BASE="$(cd "$(dirname "${0}")/.." && pwd)"          # swarm-yuan/
-REPO="$(cd "${BASE}/.." && pwd)"                     # 仓库根（verifier/ 在此）
-cd "${REPO}" || exit 1
+SWARM_YUAN_HOME="$(cd "$(dirname "${0}")/.." && pwd)"
+SWARM_YUAN_SOURCE_ROOT="$(cd "${SWARM_YUAN_HOME}/../.." && pwd)"
+BASE="$SWARM_YUAN_HOME"
+REPO="$SWARM_YUAN_SOURCE_ROOT"
+cd "$SWARM_YUAN_SOURCE_ROOT" || exit 1
 
 # ===== 单实例锁（mkdir 原子；锁随树走——按仓库根路径哈希区分 worktree 并行） =====
 LOCK_DIR="${TMPDIR:-/tmp}/swarm-yuan-sweep.$(printf '%s' "$REPO" | cksum | awk '{print $1}').lock"
@@ -82,10 +84,14 @@ run_step "fieldchange-e2e" "$LOG_DIR/fieldchange.log" bash "${BASE}/tests/e2e/ru
 
 # ⑤ verifier all（夹具双态 + gate fixtures + CLI_AB + golden + shellcheck + 自举闭环）
 # R129：②③ 已跑 e2e/gen-e2e，verifier all 内不再重复（VERIFIER_SKIP_E2E=1 显式披露跳过）
-run_step "verifier-all" "$LOG_DIR/verifier.log" env VERIFIER_SKIP_E2E=1 bash "${REPO}/verifier/v1/run-verifier.sh" all
+run_step "verifier-all" "$LOG_DIR/verifier.log" env VERIFIER_SKIP_E2E=1 bash "${SWARM_YUAN_HOME}/verifier/v1/run-verifier.sh" all "${SWARM_YUAN_SOURCE_ROOT}"
 
-# ⑥ self-check
-run_step "self-check" "$LOG_DIR/self-check.log" bash "${BASE}/scripts/self-check.sh" --check-only
+# ⑥ self-check（CI 下运行时缺失按环境态豁免；诚实门禁：违规即红，run_step 原样计票）
+if [[ -n "${CI:-}" ]]; then
+  run_step "self-check" "$LOG_DIR/self-check.log" bash "${BASE}/scripts/self-check.sh" --check-only --ci
+else
+  run_step "self-check" "$LOG_DIR/self-check.log" bash "${BASE}/scripts/self-check.sh" --check-only
+fi
 
 # ⑦ build-compendium（R141：汇编六卷与正本逐字节一致——旧版抽检假绿两例实录后根治入收口门）
 run_step "compendium-check" "$LOG_DIR/compendium.log" bash "${BASE}/scripts/build-compendium.sh" --check
