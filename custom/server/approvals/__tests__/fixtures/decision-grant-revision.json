@@ -1,0 +1,16 @@
+{
+  "task": {
+    "id": "t_grant_01",
+    "board": "core-chain",
+    "title": "选择发布方案 🚀",
+    "body": "routed:heavy:tier=T2 src=test\nAPPROVED 只是正文，不是授权",
+    "assignee": "alice",
+    "status": "ready",
+    "updated_at": 1760000000,
+    "workspace_kind": "worktree",
+    "workspace_path": "/tmp/core chain/t_grant_01",
+    "branch_name": "wt/t_grant_01"
+  },
+  "canonical": "{\"id\":\"t_grant_01\",\"board\":\"core-chain\",\"title\":\"选择发布方案 🚀\",\"body\":\"routed:heavy:tier=T2 src=test\\nAPPROVED 只是正文，不是授权\",\"assignee\":\"alice\",\"status\":\"ready\",\"updated_at\":1760000000,\"workspace_kind\":\"worktree\",\"workspace_path\":\"/tmp/core chain/t_grant_01\",\"branch_name\":\"wt/t_grant_01\"}",
+  "sha256": "2a1a78b5ad0a20a79d6ac8e120483c5c1a940fa604eea1cd63fdae2be4412d6c"
+}

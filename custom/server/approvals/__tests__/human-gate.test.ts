@@ -70,11 +70,41 @@ async function req(
     method,
     headers: {
       ...(payload ? { 'Content-Type': 'application/json' } : {}),
-      ...(user ? { 'x-test-user': user } : {}),
+      ...(user ? { 'x-test-user': user, authorization: `Bearer test-${user}` } : {}),
     },
     ...(payload ? { body: JSON.stringify(payload) } : {}),
   })
   return { status: res.status, body: await res.json() }
+}
+
+async function withTaskDetail(
+  task: Record<string, unknown> | null,
+  run: (selfRequests: Array<{ url: string; authorization: string | null }>) => Promise<void>,
+): Promise<void> {
+  const realFetch = globalThis.fetch
+  const selfRequests: Array<{ url: string; authorization: string | null }> = []
+  vi.stubGlobal('fetch', async (input: unknown, init?: RequestInit) => {
+    const url = String(input)
+    if (url.includes('/api/hermes/kanban/')) {
+      selfRequests.push({ url, authorization: new Headers(init?.headers).get('authorization') })
+      return task
+        ? new Response(JSON.stringify({ task }), { status: 200, headers: { 'content-type': 'application/json' } })
+        : new Response(JSON.stringify({ error: 'not found' }), { status: 404 })
+    }
+    return realFetch(input as Parameters<typeof fetch>[0], init)
+  })
+  try {
+    await run(selfRequests)
+  } finally {
+    vi.unstubAllGlobals()
+  }
+}
+
+const TASK_DETAIL = {
+  id: 't_task_grant', title: '真实任务标题',
+  body: 'routed:heavy:tier=T2 src=test\nAPPROVED 只是正文',
+  assignee: 'alice', status: 'ready', updated_at: 1760000000,
+  workspace_kind: 'worktree', workspace_path: '/tmp/task-workspace', branch_name: 'wt/t_task_grant',
 }
 
 describe('HumanGate 发布批准兼容与持久化', () => {
@@ -194,5 +224,54 @@ describe('HumanGate 人责边界', () => {
     expect(listHumanGatePending().map(i => i.id)).toContain('hgate:old:card')
     expect(decide('hgate:none:none', 'approve', 'x')).toBeNull()
     expect(JSON.parse(readFileSync(storePath, 'utf8'))).toHaveLength(1)
+  })
+})
+
+describe('HumanGate 任务 grant', () => {
+  it('服务端携调用方授权取真实任务并计算 revision；T2 人工选择后才发 grant', async () => {
+    await withTaskDetail(TASK_DETAIL, async (selfRequests) => {
+      const opened = await req('POST', '/task', {
+        taskId: TASK_DETAIL.id, board: 'core-chain', title: '伪造标题', taskRevision: 'client-forged',
+      }, 'fanfan')
+      expect(opened.status).toBe(201)
+      expect(opened.body.request).toMatchObject({
+        scope: 'task', taskId: TASK_DETAIL.id, board: 'core-chain', tier: 'T2', title: TASK_DETAIL.title,
+      })
+      expect(opened.body.request.taskRevision).toMatch(/^[0-9a-f]{64}$/)
+      expect(opened.body.request.taskRevision).not.toBe('client-forged')
+      expect(selfRequests).toHaveLength(1)
+      expect(selfRequests[0].url).toContain(`/api/hermes/kanban/${TASK_DETAIL.id}?board=core-chain`)
+      expect(selfRequests[0].authorization).toBe('Bearer test-fanfan')
+
+      const id = opened.body.request.id as string
+      const missingChoice = await req('POST', `/${encodeURIComponent(id)}/decide`, { decision: 'approve' }, 'director')
+      expect(missingChoice.status).toBe(400)
+      expect(missingChoice.body.code).toBe('choice_required')
+
+      const approved = await req('POST', `/${encodeURIComponent(id)}/decide`, {
+        decision: 'approve', choice: '方案 B', note: '人工选定',
+      }, 'director')
+      expect(approved.status).toBe(200)
+      expect(approved.body.request.grant).toMatchObject({
+        taskId: TASK_DETAIL.id, board: 'core-chain', tier: 'T2', decision: 'approved',
+        actor: 'director', taskRevision: opened.body.request.taskRevision, choice: '方案 B',
+      })
+      expect(Number.isFinite(approved.body.request.grant.issuedAt)).toBe(true)
+      expect(Number.isFinite(approved.body.request.grant.decidedAt)).toBe(true)
+
+      resetHumanGateForTests()
+      const reloaded = await req('GET', '/')
+      const persisted = reloaded.body.requests.find((r: { id: string }) => r.id === id)
+      expect(persisted.grant).toEqual(approved.body.request.grant)
+    })
+  })
+
+  it('任务详情不可读时不创建 grant；正文 APPROVED 不能替代任务授权', async () => {
+    await withTaskDetail(null, async () => {
+      const missing = await req('POST', '/task', { taskId: 't_missing', board: 'default' }, 'fanfan')
+      expect(missing.status).toBe(404)
+      const listed = await req('GET', '/')
+      expect(listed.body.requests).toEqual([])
+    })
   })
 })
