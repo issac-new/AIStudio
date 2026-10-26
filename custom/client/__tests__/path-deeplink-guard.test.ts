@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { shouldMigratePathToHash, hashDeeplinkTarget } from '../../../registries/client/deeplink'
+import { upstreamPath } from '../../test/upstream-root'
 
 // 守门：路径形态深链迁移（原 ide-deeplink-loses-task 根治 patch 368；2026-10-10
 // run13 步18 实锤后放宽——裸路径深链 /app/ide 冷启动落登录链→#/app→被带进最近
@@ -9,10 +10,7 @@ import { shouldMigratePathToHash, hashDeeplinkTarget } from '../../../registries
 // entry.mts 与 patch 368（upstream main.ts 内联副本）消费同一语义。
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
-const UPSTREAM_MAIN = join(
-  OVERLAY_ROOT,
-  '../upstream/hermes-studio/packages/client/src/main.ts',
-)
+const UPSTREAM_MAIN = upstreamPath('hermes-studio/packages/client/src/main.ts')
 const PATCH_FILE = join(OVERLAY_ROOT, 'patches/368-client-path-deeplink-to-hash.patch')
 const SERIES = join(OVERLAY_ROOT, 'patches/series')
 

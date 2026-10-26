@@ -10,10 +10,11 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { upstreamPath } from '../../test/upstream-root'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 const CLIENT_ROOTS = [
-  resolve(OVERLAY_ROOT, '../upstream/hermes-studio/packages/client/src'),
+  upstreamPath('hermes-studio/packages/client/src'),
   resolve(OVERLAY_ROOT, 'custom/client'),
 ]
 

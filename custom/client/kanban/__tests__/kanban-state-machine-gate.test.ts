@@ -11,10 +11,11 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { upstreamPath } from '../../../test/upstream-root'
 
 const here = dirname(fileURLToPath(import.meta.url))
 // __tests__ → kanban → client → custom → overlay → ncwk 根；上游只读面从 ncwk/ 进
-const upstreamRoot = resolve(here, '../../../../../upstream/hermes-studio')
+const upstreamRoot = upstreamPath('hermes-studio')
 
 function readInjected(relPath: string): string {
   const full = resolve(upstreamRoot, relPath)

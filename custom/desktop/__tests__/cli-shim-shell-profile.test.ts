@@ -13,11 +13,10 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync } from 'fs'
 import { resolve } from 'path'
+import { upstreamPath } from '../../test/upstream-root'
 
 const overlayRoot = resolve(__dirname, '..', '..', '..')
-const cliShimPath = resolve(
-  overlayRoot, '..', 'upstream', 'hermes-studio', 'packages', 'desktop', 'src', 'main', 'cli-shim.ts',
-)
+const cliShimPath = upstreamPath('hermes-studio/packages/desktop/src/main/cli-shim.ts')
 
 const readInjected = (): string | null => {
   if (!existsSync(cliShimPath)) return null

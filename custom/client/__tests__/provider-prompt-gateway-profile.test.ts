@@ -11,12 +11,12 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { UPSTREAM_ROOT } from '../../test/upstream-root'
 
 // upstream 根定位：与 vitest.config.ts 的 upstreamRoot 推导同款（env 优先，
 // 缺省 overlay 根上溯 ../upstream；worktree 内符号链接回 .claude/worktrees/upstream
 // 也指向共享树）。组件已由 patch 680 注入共享树。
-const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
-  || resolve(__dirname, '..', '..', '..', '..', 'upstream')
+const upstreamRoot = UPSTREAM_ROOT
 const component = readFileSync(
   resolve(upstreamRoot, 'hermes-studio/packages/client/src/components/hermes/models/ProviderConfigurationPrompt.vue'),
   'utf8',

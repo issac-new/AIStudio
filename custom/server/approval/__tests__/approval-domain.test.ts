@@ -15,6 +15,7 @@ import {
 } from '../approval-domain'
 import { ApprovalRuleStore, __resetApprovalStoreForTests, resolveApprovalRulesPath } from '../approval-store'
 import { approvalRoutes } from '../approval-controller'
+import { upstreamPath } from '../../../test/upstream-root'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../../..')
 
@@ -249,7 +250,7 @@ describe('控制器接线（patch 402）', () => {
     }
     const series = readFileSync(join(OVERLAY_ROOT, 'patches/series'), 'utf8')
     expect(series).toMatch(/^402-server-approval-routes-mount\.patch$/m)
-    const routesPath = join(OVERLAY_ROOT, '../upstream/hermes-studio/packages/server/src/bootstrap/routes.ts')
+    const routesPath = upstreamPath('hermes-studio/packages/server/src/bootstrap/routes.ts')
     if (existsSync(routesPath)) {
       expect(readFileSync(routesPath, 'utf8')).toContain("import { approvalRoutes } from '../custom/approval/approval-controller'")
     }

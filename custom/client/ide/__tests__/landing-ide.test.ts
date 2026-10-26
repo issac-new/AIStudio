@@ -7,8 +7,9 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { upstreamPath } from '../../../test/upstream-root'
 
-const UPSTREAM_CLIENT = '../../../../../upstream/hermes-studio/packages/client/src'
+const UPSTREAM_CLIENT = upstreamPath('hermes-studio/packages/client/src')
 
 function readUpstream(rel: string): string {
   return readFileSync(resolve(__dirname, `${UPSTREAM_CLIENT}/${rel}`), 'utf8')
