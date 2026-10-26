@@ -1730,15 +1730,16 @@ def _board_json_unreadable(board: str) -> bool:
 
 def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optional[frozenset]:
     """HERMES_CUSTOM[board-team-fence]: per-board team allowlist from the board's
-    ``board.json`` ``profiles`` key. ``None`` = key absent (no fence, upstream
-    behavior). A present value is fail-closed: an empty list or unreadable
-    board.json claims nothing — a corrupt/misconfigured board must never widen
-    this dispatcher's claim scope.
+    ``board.json`` team key. Accepts ``profiles`` (fence contract) and
+    ``profile_scope`` (board lifecycle UI / board.json writer). ``None`` = key
+    absent (no fence, upstream behavior). A present value is fail-closed: an empty
+    list or unreadable board.json claims nothing — a corrupt/misconfigured board
+    must never widen this dispatcher's claim scope.
 
     ``read_board_metadata`` swallows every read error, so the ``except`` below is
     only a last resort; the corrupt case is settled by probing the raw file via
     :func:`_board_json_unreadable`: 存在但读不出 → ``frozenset()`` fail-closed
-    并 log；文件不存在或合法空配置（无 ``profiles`` 键）→ ``None`` 无围栏。"""
+    并 log；文件不存在或合法空配置（无团队键）→ ``None`` 无围栏。"""
     if not board:
         return None
     try:
@@ -1749,7 +1750,10 @@ def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optio
             board, exc,
         )
         return frozenset()
-    raw = meta.get("profiles") if isinstance(meta, dict) else None
+    raw = None
+    if isinstance(meta, dict):
+        from hermes_cli.board_team_keys import team_raw
+        raw = team_raw(meta)
     if raw is None:
         if _board_json_unreadable(board):
             _kb._log.warning(

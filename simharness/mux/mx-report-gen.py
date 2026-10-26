@@ -84,10 +84,11 @@ if '--print-paths' in sys.argv:
 # （默认同主树；NVMe 镜像树 2026-10-16 已整树删除，镜像兜底随之退役——两树并存的
 # 分叉实录见 2026-10-05-v7-plan-structure-audit.md §二）。
 # 块终止符扩到 h2/h3（V8 结构分离版逐步节后接 ### 小节，只认 ^## 会吞块）。
+_REPO = Path(__file__).resolve().parents[2]
 _plan_candidates = [
     os.environ.get('MX_PLAN_PATH', ''),
-    '/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
-    os.environ.get('MX_OVERLAY_ROOT', '/Users/cuishi/lab/ncwk/overlay')+'/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+    str(_REPO / 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'),
+    os.environ.get('MX_OVERLAY_ROOT', str(_REPO)) + '/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
 ]
 PLAN_PATH = next((Path(p) for p in _plan_candidates if p and Path(p).exists()),
                  Path(_plan_candidates[1]))
@@ -3100,7 +3101,7 @@ def ontology_html():
             _seed = Path(os.environ.get('MX_OVERLAY_ROOT', '')) / \
                 'custom/server/ontology/ontology-seed.ts'
             if not _seed.exists():
-                _seed = Path('/Users/cuishi/lab/ncwk/overlay/custom/server/ontology/ontology-seed.ts')
+                _seed = _REPO / 'custom/server/ontology/ontology-seed.ts'
             _txt = _seed.read_text(encoding='utf-8', errors='replace')
             _et = len(re.findall(r"\bid: '\w+', label: '[^']+', labelEn:", _txt))
             _op = len(re.findall(r"domain: \[", _txt))

@@ -10,6 +10,8 @@
 //   1. pua 技能集 → config.yaml `skills.external_dirs` 追加
 //      overlay/runtime/pua/skills 的绝对路径(幂等;hermes 语义:外部目录只读、
 //      与本地技能重名时本地优先 —— 更新一律在 overlay 侧做,注册一次即可)。
+//   1b. 本仓技能集 → `skills.external_dirs` 追加 overlay/runtime/hermes-skills
+//      （coding-delegate 等；同样只读挂载，不复制第二份）。
 //   2. semantica → 不自动安装(安装=git clone+venv+pip,分钟级,留给
 //      `hermes mcp install semantica` 或 studio MCP 浏览器触发)。本脚本只
 //      报告 mcp_servers.semantica 是否已配置。
@@ -24,11 +26,13 @@ import YAML, { YAMLMap, YAMLSeq, Scalar, isMap, isSeq } from 'yaml';
 
 const overlayRoot = resolve(import.meta.dirname, '..', '..');
 export const PUA_SKILLS_DIR = resolve(overlayRoot, 'runtime', 'pua', 'skills');
+// 本仓自有的技能目录（coding-delegate 等）：以只读 external_dir 挂载，避免复制出第二真值。
+export const RUNTIME_SKILLS_DIR = resolve(overlayRoot, 'runtime', 'hermes-skills');
 
 /** 计算 config.yaml 文本应发生的注册变更(纯函数)。
  *  返回 { changed, nextText, alreadyRegistered, registeredPath }。
  *  configText 为 null 时按"无既有配置"处理(生成最小合法配置)。 */
-export function applyPuaRegistration(configText, skillsDirAbsPath) {
+export function applySkillDirRegistration(configText, skillsDirAbsPath) {
   const doc = configText === null ? new YAML.Document() : YAML.parseDocument(configText);
   if (configText !== null && doc.errors.length > 0) {
     throw new Error(`config.yaml 解析失败: ${doc.errors[0].message}`);
@@ -60,6 +64,9 @@ export function applyPuaRegistration(configText, skillsDirAbsPath) {
   };
 }
 
+// 兼容既有调用（runtime-doctor 仍按 pua 名引用）。
+export const applyPuaRegistration = applySkillDirRegistration;
+
 /** 读取 config 中 semantica MCP 的注册状态(纯函数)。 */
 export function semanticaMcpStatus(configText) {
   if (configText === null || configText === undefined) return { configured: false };
@@ -82,13 +89,24 @@ function main() {
     process.exit(1);
   }
 
-  const configText = existsSync(configPath) ? readFileSync(configPath, 'utf8') : null;
-  const reg = applyPuaRegistration(configText, PUA_SKILLS_DIR);
-  if (reg.changed) {
-    writeFileSync(configPath, reg.nextText, 'utf8');
-    console.log(`[register-runtime] 已把 pua 技能目录写入 ${configPath} → skills.external_dirs`);
-  } else {
-    console.log(`[register-runtime] pua 技能目录已注册(幂等跳过): ${configPath}`);
+  let configText = existsSync(configPath) ? readFileSync(configPath, 'utf8') : null;
+  const targets = [
+    { label: 'pua', dir: PUA_SKILLS_DIR },
+    { label: 'runtime-hermes-skills', dir: RUNTIME_SKILLS_DIR },
+  ];
+  for (const target of targets) {
+    if (!existsSync(target.dir)) {
+      console.warn(`[register-runtime] ${target.label} 技能目录不存在，跳过: ${target.dir}`);
+      continue;
+    }
+    const reg = applySkillDirRegistration(configText, target.dir);
+    if (reg.changed) {
+      writeFileSync(configPath, reg.nextText, 'utf8');
+      configText = reg.nextText;
+      console.log(`[register-runtime] 已把 ${target.label} 技能目录写入 ${configPath} → skills.external_dirs`);
+    } else {
+      console.log(`[register-runtime] ${target.label} 技能目录已注册(幂等跳过): ${configPath}`);
+    }
   }
 
   const sem = semanticaMcpStatus(configText);

@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 // 推演全流程 GraphSpec 模板守门冒烟（loop-graph 自驱动落实件，2026-10-09）：
 // 模板/编译器在 overlay 正本，本测试以绝对路径直取（模板零运行时依赖，type-only
 // import 不触发 overlay 缺席的 vitest 依赖树）——模板或 validate 任一端改动当场红。
-import { compileRequirementToGraph, defaultSimulationGraph } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/simulation-graph-template'
-import { validateGraphSpec } from '/Users/cuishi/lab/ncwk/overlay/custom/server/loop/graph/graph-spec'
-import { appendContractsById } from '/Users/cuishi/lab/ncwk/overlay/custom/server/loop/graph/phase-nodes'
+import { compileRequirementToGraph, defaultSimulationGraph } from '../../custom/server/graph/simulation-graph-template'
+import { validateGraphSpec } from '../../custom/server/loop/graph/graph-spec'
+import { appendContractsById } from '../../custom/server/loop/graph/phase-nodes'
 // appendById 是领域 reducer：引擎所有内部调用方（compiler/shadow/assembly）均经
 // 第三参注入 {appendById}——校验须同参（REST 端点缺此参的缺口已在 overlay 侧修复）
 const DOMAIN_REDUCERS = { appendById: appendContractsById }

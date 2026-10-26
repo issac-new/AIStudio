@@ -13,12 +13,53 @@
  */
 import Router from '@koa/router'
 import { execFile } from 'node:child_process'
-import { existsSync, statSync } from 'node:fs'
+import {
+  existsSync, lstatSync, mkdirSync, readlinkSync, statSync, symlinkSync, unlinkSync,
+} from 'node:fs'
 import { homedir } from 'node:os'
-import { resolve } from 'node:path'
+import { basename, resolve } from 'node:path'
 import { latestSkillScan, runSkillScan, scanSkillDir } from './skill-scan'
 
 const router = new Router({ prefix: '/api/skillgov' })
+
+/** 项目技能名约定：`<项目目录名>-dev`，字符集归一到 [A-Za-z0-9._-]。
+ *  与 worker-coder SOUL 的生成命令保持同一规则，避免两处各起一套名字。 */
+export function deriveProjectSkillName(projectDir: string): string {
+  const base = basename(resolve(projectDir))
+    .replace(/[^A-Za-z0-9._-]/g, '-')
+    .replace(/^[^A-Za-z0-9]+/, '')
+    .slice(0, 60)
+  return `${base || 'project'}-dev`
+}
+
+/** 项目技能默认落点：项目内 `.claude/skills/<name>`（swarm-yuan 默认根，也是既有布局）。 */
+export function defaultSkillTargetDir(projectDir: string, name: string): string {
+  return resolve(projectDir, '.claude', 'skills', name)
+}
+
+/** 把项目技能挂进 Ycode 用户级技能根（`~/.zcode/skills`）。
+ *  Ycode 扫 `.zcode/skills` 而非 `.claude/skills`；用软链保持单一产物，
+ *  与既有 `aistudio-dev` 布局一致。fail-soft：链接失败不遮蔽生成成功。 */
+export function linkEngineSkill(
+  targetDir: string,
+  name: string,
+  engineRoot: string = resolve(homedir(), '.zcode', 'skills'),
+): { linked: boolean; link: string; reason?: string } {
+  const link = resolve(engineRoot, name)
+  try {
+    mkdirSync(engineRoot, { recursive: true })
+    try {
+      const st = lstatSync(link)
+      if (!st.isSymbolicLink()) return { linked: false, link, reason: 'target_exists_not_symlink' }
+      if (readlinkSync(link) === targetDir) return { linked: true, link }
+      unlinkSync(link)
+    } catch { /* link 不存在 */ }
+    symlinkSync(targetDir, link, 'dir')
+    return { linked: true, link }
+  } catch (err) {
+    return { linked: false, link, reason: (err as Error).message }
+  }
+}
 
 // ---------- 三段治理 · 第一段：注册扫描 ----------
 
@@ -75,7 +116,7 @@ router.get('/generator/status', async (ctx) => {
   } catch { available = false }
   ctx.body = {
     ok: true,
-    generator: { path: p, available, usage: available ? `bash ${p} --profile <lite|standard|compliance> <skill-name> <project-dir> <target-dir>` : null },
+    generator: { path: p, available, usage: available ? `bash ${p} --profile <lite|standard|compliance> [skill-name] <project-dir> [target-dir]（name 缺省=<项目目录名>-dev；target 缺省=<项目>/.claude/skills/<name>，并软链到 ~/.zcode/skills/<name> 供 Ycode 装载）` : null },
   }
 })
 
@@ -85,11 +126,6 @@ router.post('/generator/run', async (ctx) => {
   if (profile !== 'lite' && profile !== 'standard' && profile !== 'compliance') {
     ctx.status = 400
     ctx.body = { ok: false, detail: 'profile 必填（lite|standard|compliance）' }
-    return
-  }
-  if (!name || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(name)) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'name 必填（字母数字开头，≤64 字符，限 [A-Za-z0-9._-]）' }
     return
   }
   if (!projectDir || !projectDir.startsWith('/') || projectDir === '/') {
@@ -102,16 +138,23 @@ router.post('/generator/run', async (ctx) => {
     ctx.body = { ok: false, detail: `projectDir 不存在：${projectDir}` }
     return
   }
+  const requested = typeof name === 'string' ? name.trim() : ''
+  const skillName = requested || deriveProjectSkillName(projectDir)
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(skillName)) {
+    ctx.status = 400
+    ctx.body = { ok: false, detail: 'name 不合法（字母数字开头，≤64 字符，限 [A-Za-z0-9._-]）' }
+    return
+  }
   const gen = generatorPath()
   if (!existsSync(gen)) {
     ctx.status = 409
     ctx.body = { ok: false, reason: 'generator_unavailable', detail: `生成器不在位（${gen}）——安装 swarm-yuan 或设 SKILLGEN_PATH` }
     return
   }
-  const out = targetDir && targetDir.startsWith('/') ? targetDir : resolve(projectDir, '..', `${name}-skill`)
+  const out = targetDir && targetDir.startsWith('/') ? targetDir : defaultSkillTargetDir(projectDir, skillName)
   try {
     const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolveP, rejectP) => {
-      execFile('bash', [gen, '--profile', profile, name, projectDir, out], { timeout: 300_000, maxBuffer: 4 * 1024 * 1024 }, (err, so, se) => {
+      execFile('bash', [gen, '--profile', profile, skillName, projectDir, out], { timeout: 300_000, maxBuffer: 4 * 1024 * 1024 }, (err, so, se) => {
         if (err) rejectP(err)
         else resolveP({ stdout: String(so), stderr: String(se) })
       })
@@ -122,9 +165,13 @@ router.post('/generator/run', async (ctx) => {
     try {
       scan = scanSkillDir(out)
     } catch { /* 扫描失败不遮蔽生成成功 */ }
+    // 产物在 .claude/skills；Ycode 扫 ~/.zcode/skills——软链一次，保持单一产物。
+    const engineLink = linkEngineSkill(out, skillName)
     ctx.body = {
       ok: true,
+      name: skillName,
       targetDir: out,
+      engineLink,
       output: `${stdout}\n${stderr}`.slice(-4000),
       ...(scan ? {
         scan: {

@@ -1,6 +1,6 @@
 // 技能治理域测试：角色映射存取、教训库有界扫描、生成器状态面、路由契约。
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readlinkSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -47,5 +47,41 @@ describe('skillgov 生成器状态与路由', () => {
     process.env.SKILLGEN_PATH = '/nonexistent/gen.sh'
     // generatorPath 可覆盖；status 的可用性由文件系统判定——此处仅断言不抛异常的路径函数
     expect(mod.generatorPath()).toBe('/nonexistent/gen.sh')
+  })
+})
+
+describe('skillgov 项目技能命名与落点', () => {
+  it('缺省名派生 <项目>-dev，字符集归一并截断', async () => {
+    const { deriveProjectSkillName } = await import('../skillgov-controller')
+    expect(deriveProjectSkillName('/tmp/aipaydev')).toBe('aipaydev-dev')
+    expect(deriveProjectSkillName('/tmp/My Project')).toBe('My-Project-dev')
+    expect(deriveProjectSkillName('/tmp/--')).toBe('project-dev')
+    expect(deriveProjectSkillName('/tmp/' + 'a'.repeat(80))).toBe(`${'a'.repeat(60)}-dev`)
+  })
+
+  it('默认落点=项目内 .claude/skills/<name>（既有布局），不再落项目同级', async () => {
+    const { defaultSkillTargetDir } = await import('../skillgov-controller')
+    expect(defaultSkillTargetDir('/work/proj', 'proj-dev')).toBe('/work/proj/.claude/skills/proj-dev')
+  })
+
+  it('软链到 Ycode 用户技能根；幂等且不覆盖真目录', async () => {
+    const { linkEngineSkill } = await import('../skillgov-controller')
+    const root = mkdtempSync(join(tmpdir(), 'sg-link-'))
+    const target = join(root, 'proj', '.claude', 'skills', 'proj-dev')
+    const engine = join(root, 'zcode-skills')
+    mkdirSync(target, { recursive: true })
+
+    const first = linkEngineSkill(target, 'proj-dev', engine)
+    expect(first.linked).toBe(true)
+    expect(readlinkSync(join(engine, 'proj-dev'))).toBe(target)
+
+    const again = linkEngineSkill(target, 'proj-dev', engine)
+    expect(again.linked).toBe(true)
+
+    mkdirSync(join(engine, 'real-skill'), { recursive: true })
+    const blocked = linkEngineSkill(target, 'real-skill', engine)
+    expect(blocked.linked).toBe(false)
+    expect(blocked.reason).toBe('target_exists_not_symlink')
+    rmSync(root, { recursive: true, force: true })
   })
 })

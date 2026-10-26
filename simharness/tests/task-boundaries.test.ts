@@ -6,12 +6,12 @@ import {
   ROLE_BOUNDARIES, withBoundary, deriveBoundaryRole,
   roleBoundariesSnapshot, setBoundaryRegistry, setAgentRoleOverrides,
   setCapabilitiesProvider, applyBoundary,
-} from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/node-executors/task-boundaries'
+} from '../../custom/server/graph/node-executors/task-boundaries'
 import {
   parseCapabilitiesTable, composeBoundary, requirementsFrom, capabilitiesRegistrySeed,
-} from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/node-executors/capability-composer'
-import { compileRequirementToGraph } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/simulation-graph-template'
-import { registerSimulationNodeTypes } from '/Users/cuishi/lab/ncwk/overlay/custom/server/graph/node-executors/index'
+} from '../../custom/server/graph/node-executors/capability-composer'
+import { compileRequirementToGraph } from '../../custom/server/graph/simulation-graph-template'
+import { registerSimulationNodeTypes } from '../../custom/server/graph/node-executors/index'
 
 describe('派发边界纪律（task-boundaries 产品能力）', () => {
   it('五种角色边界声明齐备且含关键禁做语', () => {

@@ -22,7 +22,11 @@ const HERE = typeof __dirname !== 'undefined'
   : resolve(process.cwd(), 'custom/server/harness')
 const OVERLAY_ROOT = resolve(HERE, '../../..')
 const WORKSPACE_ROOT = resolve(OVERLAY_ROOT, '..')
-const SCRIPT_DIR = process.env.SIM_HARNESS_DIR?.trim() || resolve(WORKSPACE_ROOT, 'simharness')
+// 单仓整合（2026-10-24）：simharness 在仓根内；旧 overlay/ncwk 分仓布局才在仓外。
+const SCRIPT_DIR = process.env.SIM_HARNESS_DIR?.trim()
+  || (existsSync(resolve(OVERLAY_ROOT, 'simharness', 'aipay-scenario.sh'))
+    ? resolve(OVERLAY_ROOT, 'simharness')
+    : resolve(WORKSPACE_ROOT, 'simharness'))
 const SCRIPT = resolve(SCRIPT_DIR, 'aipay-scenario.sh')
 const SIM_ROOT = process.env.SIM_ROOT?.trim() || process.env.OBS_SIM_ROOT?.trim() || resolve(WORKSPACE_ROOT, 'ncwk-sim-mux')
 const DRIVER_LOCK = resolve(SIM_ROOT, '.driver.lock.d')

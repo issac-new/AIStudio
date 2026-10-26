@@ -821,12 +821,39 @@ _clients: Dict[str, ACPClient] = {}
 _clients_lock = threading.Lock()
 
 
+def _resolve_provider_name(provider: str, cfg: dict) -> str:
+    """Provider 解析：显式参数 > HERMES_ACP_PROVIDER > config.default_provider。
+
+    profile `.env` 注入任务级默认（worker-coder=zcode/Ycode），避免每个任务在
+    提示词里重复指定引擎；显式参数始终优先。
+    """
+    if provider:
+        return provider
+    env_provider = os.environ.get("HERMES_ACP_PROVIDER", "").strip()
+    if env_provider:
+        return env_provider
+    return cfg.get("default_provider", "opencode")
+
+
+def _resolve_cwd(args: Dict[str, Any], client: ACPClient) -> str:
+    """cwd 解析：显式参数 > HERMES_KANBAN_WORKSPACE > client 默认。
+
+    kanban 派发把任务根写进 HERMES_KANBAN_WORKSPACE；不跟随就会把编码引擎
+    落到全局沙箱，读写错目录且任务上下文缺失。
+    """
+    explicit = args.get("cwd")
+    if isinstance(explicit, str) and explicit.strip():
+        return os.path.expanduser(explicit)
+    workspace = os.environ.get("HERMES_KANBAN_WORKSPACE", "").strip()
+    if workspace:
+        return os.path.expanduser(workspace)
+    return client.default_cwd
+
+
 def _get_client(provider: str = None) -> ACPClient:
     """Get or create the client for a given provider."""
     cfg = _load_config(reload=True)
-
-    if not provider:
-        provider = cfg.get("default_provider", "opencode")
+    provider = _resolve_provider_name(provider or "", cfg)
 
     # Fast path: check for existing alive client
     with _clients_lock:
@@ -989,7 +1016,7 @@ def handle_acp_agents(args: Dict[str, Any], **kwargs) -> str:
     try:
         provider = args.get("provider", "")
         client = _get_client(provider or None)
-        cwd = args.get("cwd") or client.default_cwd
+        cwd = _resolve_cwd(args, client)
         resp = client.new_session(cwd=cwd)
 
         if "error" in resp:
@@ -1034,7 +1061,7 @@ def handle_acp_send(args: Dict[str, Any], **kwargs) -> str:
     try:
         provider = args.get("provider", "")
         client = _get_client(provider or None)
-        cwd = args.get("cwd") or client.default_cwd
+        cwd = _resolve_cwd(args, client)
         agent = args.get("agent", "")
         session_id = args.get("session_id", "")
         timeout = int(args.get("timeout", 600))

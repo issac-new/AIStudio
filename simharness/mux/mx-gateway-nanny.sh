@@ -10,7 +10,7 @@ PIDF="$SIM_ROOT/pids/gateway.pid"
 STOP="$SIM_ROOT/var/gateway-nanny.stop"
 FORE="$SIM_ROOT/logs/gateway-nanny.log"
 ISS="$SIM_ROOT/runs/20261015-v8-run20/evidence/issues.log"
-cd /Users/cuishi/lab/ncwk/simharness || exit 1
+cd "$(dirname "$0")/.." || exit 1
 echo "[$(date '+%F %T')] gateway-nanny 上岗（pid $$，30s 巡检；stop=$STOP）" >> "$FORE"
 while true; do
   if [ -f "$STOP" ]; then

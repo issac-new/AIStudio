@@ -655,10 +655,10 @@ def fold_machine_appendix(machine_main: str, n_disp: int):
 
 # ── V8.4 人读层 jargon 体检（§5.5 文案质量④：HARD>0 拒出报告；词表与
 #    overlay/scripts/plan-html/jargon-check.py 同源维护，禁复制词表防漂移）──
+_REPO = Path(__file__).resolve().parents[2]
 _JARGON_CANDIDATES = [
     os.environ.get('MX_JARGON_CHECK', ''),
-    str(Path(__file__).resolve().parent.parent / 'overlay' / 'scripts' / 'plan-html' / 'jargon-check.py'),
-    '/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py',
+    str(_REPO / 'scripts' / 'plan-html' / 'jargon-check.py'),
 ]
 
 

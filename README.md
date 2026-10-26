@@ -91,7 +91,7 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 
 - A 类接入：`custom/` 纯新增组件，构建期 alias 重定向加运行时注册。
 - B 类 patch：`patches/` 按编号序列 `git apply`（series 当前登记 studio 补丁 401 个、zcode 补丁 7 个），幂等可反向还原；vendor 树注入后的脏态是预期工作态，提交被 pre-commit 钩子挡护。
-- 上游升级走净树重放：外置升级源树 `git pull` → `vendor/` 整树替换 → `npm run inject` 重放。0.7.37 到 0.7.38 升级时 310 个补丁全量通过，二次开发不陷分叉泥潭。
+- 上游升级走净树重放：外置升级源树 `git pull` → `vendor/` 整树替换 → `npm run inject` 重放。0.7.38 到 0.7.39 升级时补丁全量重放通过，二次开发不陷分叉泥潭。
 - 仓内其余组件：`simharness/`（全流程推演 harness，subtree 并入）、`skills/swarm-yuan/`（技能本体源码）、`docs/superpowers/`（设计正本）。
 
 | 基线 | 用途 | 对齐版本 |

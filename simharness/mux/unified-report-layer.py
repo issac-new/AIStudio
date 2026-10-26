@@ -134,7 +134,7 @@ def load_facts(run_dir: Path) -> dict:
 
     # 门禁落键汇总（六闸真值锚）
     gates = {}
-    for k in ("g1_frozen", "g2_arch_pass", "g3_code_pass", "g5_ready_pass", "g6_report_pass"):
+    for k in ("g1_frozen", "g2_arch_pass", "g3_code_pass", "g4_pass", "g5_ready", "retro_done"):
         gates[k] = "在位" if state.get(k) else "未见"
     for k in list(state):
         if re.match(r"^g[0-9]_", k) and k not in gates:

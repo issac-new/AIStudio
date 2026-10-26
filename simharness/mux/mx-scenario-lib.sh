@@ -2158,9 +2158,14 @@ rfd_doc_snapshot() { # 需求书判读/提取用快照路径：origin/main 优�
 }
 
 reqgate_judge() { # 导演侧机械化判读 G1 四要素（不依赖 LLM）→ 0 全过 / 其他=缺失项清单
-  local doc="$1" miss=""
-  grep -q "^## .*验收标准" "$doc" && grep -qE "AC-[0-9]" "$doc" \
-    || miss="${miss}验收标准段缺失或无 AC 编号；"
+  local doc="$1" miss="" ac_count=0
+  if grep -q "^## .*验收标准" "$doc"; then
+    ac_count=$(sed -n '/^## .*验收标准/,/^## /p' "$doc" | grep -cE "^\- \*\*AC-[0-9]+" || true)
+  fi
+  # 方案 §5.3 G1：逐条 AC ≥3（禁空话）。只认 AC 条目行，不扫规则说明行。
+  if [ "$ac_count" -lt 3 ]; then
+    miss="${miss}验收标准段缺失或 AC 少于 3 条（实测 ${ac_count}）；"
+  fi
   # AC 模糊词检查：仅扫 AC 条目行（行首 "- **AC-N"），不扫段落说明行——
   # 规则说明行本身会引用模糊词示例，扫全段必然自指误报（2026-09-25 v3 实测 bug）。
   if sed -n '/^## .*验收标准/,/^## /p' "$doc" | grep -E "^\- \*\*AC-[0-9]" | grep -qE "性能良好|体验优秀|快速|稳定"; then

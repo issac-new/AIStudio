@@ -1,9 +1,12 @@
 # ACP Client Plugin Configuration
 
 # Default provider when none specified ('opencode' or 'codex')
+# 解析优先级：acp_send(provider=...) > 环境变量 HERMES_ACP_PROVIDER > 本项。
+# worker-coder 的 profile .env 已注入 HERMES_ACP_PROVIDER=zcode（Ycode ACP 桥）。
 default_provider: opencode
 
 # Default workspace directory for new sessions
+# 任务上下文优先：环境变量 HERMES_KANBAN_WORKSPACE > 本项。
 default_cwd: ~/projects
 
 # Auto-approve all permission requests from agents
@@ -19,3 +22,8 @@ providers:
     npx: npx
     package: "@zed-industries/codex-acp"
     # default_cwd: ~/codex-projects  # optional per-provider workspace
+  zcode:
+    # Ycode 的 ACP 桥；编码默认引擎
+    binary: /opt/homebrew/bin/zcode-acp-server
+    env:
+      ZCODE_MODEL: "GLM-5.3-Flash"

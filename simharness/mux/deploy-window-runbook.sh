@@ -23,9 +23,9 @@
 #   bash deploy-window-runbook.sh --step prelaunch|inject|deploy|escalate|verify|build|all
 set -u
 LC_ALL=C
-OV="${MX_OVERLAY_ROOT:-/Users/cuishi/lab/ncwk/overlay}"
+OV="${MX_OVERLAY_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 SR="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
-HAR="${MX_HARNESS_ROOT:-/Users/cuishi/lab/ncwk/simharness}"
+HAR="${MX_HARNESS_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 
 # ── 孤儿兜底：本脚本被外层超时/信号杀中途时，清掉它派生的 kanban CLI 子进程
 #    （hermes-sim kanban 单次 ~4s 全量 import；29 板串行=~2min，被杀的父 bash

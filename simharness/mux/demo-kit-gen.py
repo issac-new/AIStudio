@@ -96,8 +96,8 @@ def main():
                    'anexec_done', 'review_done', 'g2_arch_pass', 'close_done', 'plan_done',
                    'devimpl_done', 'defect_done', 'testpass_done', 'g5_ready', 'release_done',
                    'uat_done', 'workmgr_done', 'audit_done', 'retro_done', 'ide_done', 'report_done']
-    GATES = {'g1_frozen': 'G1', 'g2_arch_pass': 'G2', 'devimpl_done': 'G3',
-             'testpass_done': 'G4', 'g5_ready': 'G5', 'retro_done': 'G6'}
+    GATES = {'g1_frozen': 'G1', 'g2_arch_pass': 'G2', 'g3_code_pass': 'G3',
+             'g4_pass': 'G4', 'g5_ready': 'G5', 'retro_done': 'G6'}
     tl_rows = []
     for k in STAGE_ORDER:
         v = state.get(k)
