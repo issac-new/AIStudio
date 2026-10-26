@@ -20,15 +20,15 @@ index 7ad7496a3..d474d9b9c 100644
      private roomSummaryService: GroupRoomSummaryService
      private summaryReviewService: GroupSummaryReviewService
      private messageRoutingService: GroupMessageRoutingService
-@@ -3692,6 +3696,58 @@ export class GroupChatServer {
+@@ -3692,6 +3696,40 @@ export class GroupChatServer {
          return this.chatRunService
      }
  
 +    /**
-+     * overlay[v14 P2B ChatBridge]: 非 socket 人类消息注入——matrix 桥把远端人的
-+     * 话落进本地群房。复用 handleMessage 的持久化/广播/编排尾段；无 socket 语义
-+     * （无 ack/push 快照/LLM 兜底路由分支——processMentions 自带文本 mention
-+     * 解析，user 角色 0 mention 亦按上游策略派发）。房不在返回 null。
++     * overlay[v14 P2B ChatBridge→投影化（2026-10-26 九段校正 Task 3）]: 非 socket
++     * 人类消息投影——matrix 桥把远端人的话落进本地群房做展示与留痕。只持久化+
++     * 广播，不触发 agentClients 编排：agent turn 的唯一入口是本机 hermes gateway
++     * （Matrix 原生链），本桥不再当第二套编排器。房不在返回 null。
 +     */
 +    publishBridgeMemberMessage(input: {
 +        roomId: string
@@ -55,31 +55,13 @@ index 7ad7496a3..d474d9b9c 100644
 +        this.nsp.to(input.roomId).emit('message', buildOutboundGroupMessage(saved.message))
 +        this.notifyGroupReply(input.roomId, saved.message)
 +        this.nsp.to(input.roomId).emit('room_updated', { roomId: input.roomId, totalTokens: saved.totalTokens })
-+        this.agentClients.processMentions(input.roomId, {
-+            messageId: saved.message.id,
-+            content: contentToText(saved.message.content),
-+            input: undefined,
-+            senderName: saved.message.senderName,
-+            senderId: saved.message.senderId,
-+            timestamp: saved.message.timestamp,
-+            role: saved.message.role,
-+            mentionDepth: 0,
-+            handoffChainId: saved.message.id,
-+            mentions: saved.message.mentions,
-+            executionQueueCapabilityHash: '',
-+        }).catch((err) => {
-+            logger.error(`[GroupChat] bridge processMentions error: ${err.message}`)
-+        }).finally(() => {
-+            if (typeof this.agentClients.processSummaryCheck !== 'function') return
-+            this.agentClients.processSummaryCheck(input.roomId, saved.message.id).catch(() => { /* 桥路径 summary 失败不阻断 */ })
-+        })
 +        return saved.message
 +    }
 +
      publishAgentAttachmentMessage(input: {
          roomId: string
          agentId: string
-@@ -5430,6 +5486,8 @@ export class GroupChatServer {
+@@ -5430,6 +5468,8 @@ export class GroupChatServer {
              requestedAt: Date.now(),
          }
          this.pendingApprovalRoutes.set(routeKey, pendingRoute)
