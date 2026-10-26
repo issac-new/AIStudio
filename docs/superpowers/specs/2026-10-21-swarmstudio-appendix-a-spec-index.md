@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（346 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（347 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 完整设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 346 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 347 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -336,6 +336,7 @@
 | 2026-10-26-acp-client-hardening | ACP 客户端加固 | 权限只允许一次、按工作区分池、env 注入、setModel fail-closed、写界=会话根；真实回合未验 |
 | 2026-10-26-delegate-task-context | delegate --task 上下文装配 | build_worker_context 程序注入+delegate-result.json 全路径机器回执；拼合树 46/46 |
 | 2026-10-26-g3-g5-hard-gates | G3 委托双证与 G5 真人门 | G3 消费 result.json（exit=0+end_turn）；strict 等真实 HumanGate、standard 记 director-proxy |
+| 2026-10-26-chatbridge-projection-only | ChatBridge 入向投影化 | 撤 processMentions 旁路、task.assign 回执 observed；gateway 承接挂独立批 |
 | 2026-10-26-a2a-board-harness-alignment | A2A、看板归属与 harness 单仓化校正 | A2A 默认本机、板团队键单源、闸键对齐；真实跨机与合并树行为未验 |
 | 2026-10-26-aistudio-architecture-execution-alignment | AIStudio 九段架构执行校正 | 聚焦授权、人工门、任务上下文与技能实证；完整推演、真人会签和多机未验 |
 | 2026-10-26-cockpit-debt-completion | 驾驶舱挂账清偿 | 恢复 REAP 26 包与两技能、element-web 官方构建与 ELEMENT_WEB_DIR、serve-main 换装 |
