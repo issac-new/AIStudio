@@ -3719,6 +3719,24 @@ def qgate_block(n: int) -> str:
             '（release-report 原文透传，来源分布随行——§5.5：降级/声明/无信号桶非零或存在未验证声明时不得表述为全绿/已核验）</summary>'
             f'<pre class="art-code">{H.escape(raw)}</pre></details>')
 
+
+def delegate_identity_block(n: int) -> str:
+    """V8.54 §5.4.3 编码委托证据位（步 18）：各分支委托日志的引擎身份/终态/模型行
+    由 G3 闸门采集至 evidence/delegate-identity.txt——在位即原文透传（缺身份行的
+    分支已由闸门记 delegate-identity-missing 问题单，此处不重复判定只透传）；
+    缺席零渲染（非 ACP 后端轮零影响）。"""
+    if n != 18:
+        return ''
+    df = EVID / 'delegate-identity.txt'
+    if not df.exists():
+        return ''
+    raw = df.read_text(encoding='utf-8', errors='replace').strip()
+    if not raw:
+        return ''
+    return ('<details class="st-artifact st-delegate"><summary>🧾 编码委托证据'
+            '（各分支 delegate-log 引擎身份/终态行透传——V8.54 §5.4.3：engine_bin_source 可审计）</summary>'
+            f'<pre class="art-code">{H.escape(raw)}</pre></details>')
+
 # 六文调研治理能力入报告证据链（方案 §2.5 治理证据端点注/§2.6-10）：
 # 步 23 事故报告汇编、步 24 自治度对账+虚拟损益表——evidence/ 导出件在位才透传。
 # V8.7（2026-10-10 本体语义层，方案 §2.5 V8.7 块）：步 24 追加本体体检+Turtle 导出。
@@ -4629,7 +4647,8 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         else:
             imgs_html = f'<p class="no-evidence">（截图缺失·{_bkey}——按 §5.6 采集纪律⑩ 登记在案，无帧明示；补拍须按拍摄位规划准确补拍+图注明示时点）</p>'
         # 8.6 交付物视图（补遗③ R11）：实物渲染+模版核对；无文件域步出声明（§5.4）+步 20 QGate 证据透传（§5.5）
-        art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + contract_block(n) + gov_evidence_block(n)
+        #    +步 18 编码委托证据透传（V8.54 §5.4.3：引擎身份行可审计）
+        art_html = (artifact_block(n) or _no_artifact_note(n)) + qgate_block(n) + contract_block(n) + gov_evidence_block(n) + delegate_identity_block(n)
         # 防御性回退（STEPS_META_RUN11 建表漏 'actor' 全量，首次到报告步即崩）
         abg, afg, atxt = ACTOR_STYLE.get(meta.get('actor'), ACTOR_STYLE['both'])
         if PLAN_V82:

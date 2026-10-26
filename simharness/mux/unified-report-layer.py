@@ -45,6 +45,7 @@ ISSUE_OWNER = {
     "design-push-gap": "architecture",
     "g3-local-gate-missing": "coding",
     "acp-backend-delegate-log-missing": "coding",
+    "delegate-identity-missing": "coding",
     "dev-branch-missing": "coding",
     "test-report-missing": "testing",
     "r18-delivery-frame-missing": "testing",
@@ -216,8 +217,8 @@ def build_cards(f: dict) -> dict:
          if "dispatch_count" in f else NA),
         "scenario.log 关键词计数", src.get("scenario", NA))
 
-    # 代码开发
-    g3 = ic.get("g3-local-gate-missing", 0) + ic.get("dev-branch-missing", 0) + ic.get("acp-backend-delegate-log-missing", 0)
+    # 代码开发（delegate-identity-missing=V8.54 编码委托证据位，与委托日志缺件同族计入）
+    g3 = ic.get("g3-local-gate-missing", 0) + ic.get("dev-branch-missing", 0) + ic.get("acp-backend-delegate-log-missing", 0) + ic.get("delegate-identity-missing", 0)
     add("coding", "开发证据链完整吗？",
         verdict_sentence(g3 == 0, "分支/testlog/委托日志类零缺件。",
                          f"开发证据缺件 {g3} 条（分支或 testlog 缺失）。"),

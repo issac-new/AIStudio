@@ -34,6 +34,26 @@ export function qgateBlock(rawReleaseReport: string): string {
   )
 }
 
+/**
+ * 编码委托证据块（V8.54 §5.4.3 编码委托证据位，2026-10-26 接线）：
+ * materials/delegate-log.txt 原文透传＋引擎身份判定横幅。身份行
+ * （engine_bin_source=）是「ACP 调用的是谁」的报告证据——缺身份行=证据
+ * 不全（type=delegate-identity-missing），横幅如实标注禁放行式呈现。
+ */
+export function delegateEvidenceBlock(delegateLogText: string): string {
+  const raw = maskEnvPaths(delegateLogText)
+  const hasIdentity = /engine_bin_source=/.test(delegateLogText)
+  const banner = hasIdentity
+    ? '<div class="art-chk pass">引擎身份行齐备（engine_bin_source= 在案，可审计）</div>'
+    : '<div class="art-chk miss">引擎身份行缺失（delegate-identity-missing——§5.4.3：委托日志缺 engine_bin_source=，证据不全记问题单）</div>'
+  return (
+    '<details class="st-artifact st-delegate"><summary>🧾 编码委托证据' +
+    '（delegate-log 原文透传，引擎身份/终态行随行——V8.54 §5.4.3）</summary>' +
+    banner +
+    `<pre class="art-code">${escapeHtml(raw.trim())}</pre></details>`
+  )
+}
+
 export interface GovEvidenceItem {
   /** 展示名（含导出来源 API 说明） */
   label: string

@@ -583,6 +583,11 @@ uat_evidence_body 1790930955`, root)
     // ③G3 后端指纹真查：启用时分支须含 materials/delegate-log.txt（缺=记单）
     expect(scen).toContain('acp-backend-delegate-log-missing')
     expect(scen).toContain('materials/delegate-log.txt')
+    // ④V8.54 编码委托证据位：日志在位还须含引擎身份行（engine_bin_source=），
+    //    缺=delegate-identity-missing 记单；身份/终态行采集进 evidence/delegate-identity.txt
+    expect(scen).toContain('delegate-identity-missing')
+    expect(scen).toContain('engine_bin_source=')
+    expect(scen).toContain('delegate-identity.txt')
   })
 
   it('㉓：网关挂死槽周期扫（run11 容量饥饿根治补口，patch 586——撞号清理 577→586 后引用同步）', () => {
@@ -604,8 +609,11 @@ uat_evidence_body 1790930955`, root)
 
   it('㉔：Ycode 引擎驱动接线三断言（2026-10-12 hermes→ACP→Ycode 链路接线轮）', () => {
     const lib = read(join(MX, 'mx-lib.sh'))
-    const OVERLAY = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay')
-    const skillDir = join(OVERLAY, 'runtime/hermes-skills/coding-delegate')
+    // 单仓整合（2026-10-24）起 runtime/ 在仓根——旧回退 ../overlay 是多仓期布局，
+    // bare worktree 下 cat 旧路径必炸（本轮实锤）；MX_OVERLAY_ROOT 覆盖语义保留
+    // （推演环境 overlay 根=该 env，runtime 同在其下）。
+    const ROOT = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..')
+    const skillDir = join(ROOT, 'runtime/hermes-skills/coding-delegate')
     const card = read(join(skillDir, 'SKILL.md'))
     // ①技能卡引擎命令=自带驱动（zcode-acp-delegate.py），claude -p 旧形态退役
     expect(card).toContain('scripts/zcode-acp-delegate.py')

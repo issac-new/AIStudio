@@ -1419,9 +1419,21 @@ DEVSPECS
       fi
     fi
     if [[ "${MX_ACP_BACKEND:-0}" == "1" ]]; then
-      repo_branch_has "feat/$b" "materials/delegate-log.txt" \
-        || { note "[观察] $b 缺 ACP 委托日志（编码后端承载面，记问题单）"; \
-             echo "ISSUE|acp-backend-delegate-log-missing|$b|分支缺 materials/delegate-log.txt（未走编码后端）" >> "$EVID_DIR/issues.log"; }
+      if repo_branch_has "feat/$b" "materials/delegate-log.txt"; then
+        # V8.54 编码委托证据位：日志在位须含引擎身份行（engine_bin_source=）——
+        # 「ACP 调用的是谁」可审计；身份/终态/模型行采集进 evidence 供报告透传。
+        if ! repo_branch_grep "feat/$b" "materials/delegate-log.txt" 'engine_bin_source='; then
+          note "[观察] $b 委托日志缺引擎身份行（V8.54 证据位，记问题单）"
+          echo "ISSUE|delegate-identity-missing|$b|materials/delegate-log.txt 缺 engine_bin_source= 身份行（引擎身份不可审计）" >> "$EVID_DIR/issues.log"
+        fi
+        mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+        git -C "$DIRECTOR_CLONE" show "refs/remotes/origin/feat/$b:materials/delegate-log.txt" 2>/dev/null \
+          | grep -E 'engine_bin_source=|RESULT exit=|session 模型已设置' \
+          | sed "s/^/[$b] /" >> "$EVID_DIR/delegate-identity.txt"
+      else
+        note "[观察] $b 缺 ACP 委托日志（编码后端承载面，记问题单）"
+        echo "ISSUE|acp-backend-delegate-log-missing|$b|分支缺 materials/delegate-log.txt（未走编码后端）" >> "$EVID_DIR/issues.log"
+      fi
     fi
   done
   if [[ -n "$_g3_miss" && "$(sget lite_round)" != "1" ]]; then
