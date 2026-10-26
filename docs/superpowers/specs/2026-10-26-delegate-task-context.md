@@ -29,3 +29,16 @@ DESIGN_SYNC: none —— 全流程方案 V8.54 §5.4.3 已立"编码委托证据
 - 拼合树（vendor/hermes-agent + runtime 覆盖）`python3.14 -m pytest runtime/tests/hermes_skills/test_zcode_acp_delegate.py team/tests runtime/tests/hermes_cli/test_decision_grant.py runtime/tests/hermes_cli/test_board_team_keys.py runtime/tests/hermes_cli/test_board_team_fence.py -q` → **46/46**（新增 4 项：prompt 组装序、相对锚定/逃逸拒绝/scratch 预测、缺任务/未物化/物化后装配、回执原子落盘无 tmp 残留）。
 - `py_compile` 通过。板围栏测试在合并树通过，清偿前批"合并树未验证"挂账一例。
 - 未验证项：真实引擎回合（额度 2026-10-27 02:17 重置）；`--task` 与真实桥 session/new 的 cwd 回读对账（待 E2E）。
+
+## 真实桥协议级 E2E（2026-10-26 22:14，补录）
+
+临时任务（dir workspace + `验收：E2E-SKILL-ECHO-OK` 正文）+ 项目内 `.agents/skills/echo-dev` 技能 + 真实 `zcode-acp-server` 0.43.2 桥：
+
+- **上下文装配** ✓：`--task t_8878b1cc` → workspace 解析 `/tmp/e2e-delegate-task/proj`，prompt 268 字符（worker_context+指令）。
+- **引擎身份链** ✓：`engine_bin_source=official-bundle`（/Applications/ZCode.app 捆绑）。
+- **建会话** ✓：sessionId `af74d03f…`，桥自动命名 `Kanban task t_8878b1cc: E2E 委托探针`（任务上下文可见性旁证）。
+- **模型钉定+回读** ✓：setModel GLM-5.3 后 `config_option_update` 回读 `builtin:bigmodel-coding-plan\GLM-5.3`。
+- **模型回合 fail-closed** ✓：额度 1310（周/月上限，2026-10-27 02:17:24 重置）→ `RESULT exit=4 stage=prompt`，不装绿。
+- **机器回执** ✓：delegate-result.json 全字段（taskId/sessionId/cwd/engine/model/stage=prompt_error/exit=4/promptSha256/起止时间）。
+
+证据：`evidence/2026-10-26-nine-segment/delegate-task-e2e-{run.log,result.json}`。待额度重置后补模型回合（口令：同命令重跑，断言 RESULT exit=0 且引擎答复含 E2E-SKILL-ECHO-OK＝Skill 真实调用闭环）。
