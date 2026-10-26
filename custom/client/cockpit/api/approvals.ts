@@ -58,14 +58,13 @@ export function fetchPendingApprovals(): Promise<{ items: PendingApprovalItem[] 
 }
 
 /**
- * 待裁决去重（视觉审计 2026-09-29 第 5 条）：同一对象（taskId 优先，无则 title）只保留
- * 最新一条——后端 pending 可能对同一评审对象产生多条记录（run2 实锤 t_9e5c6c18 双卡，
- * 16:27/17:54 各一），前端聚合按新盖旧，避免"2 项待审"实为同卡。
+ * 评审待裁决去重（视觉审计 2026-09-29 第 5 条）：同一评审对象（taskId 优先，无则 title）
+ * 只保留最新一条。命令审批按独立 id 保留，不能用会话标题合并不同的风险请求。
  */
 export function dedupePending(items: PendingApprovalItem[]): PendingApprovalItem[] {
   const byKey = new Map<string, PendingApprovalItem>()
   for (const it of items) {
-    const key = `${it.kind}:${it.taskId || it.title}`
+    const key = it.kind === 'command' ? `command:${it.id}` : `review:${it.taskId || it.title}`
     const prev = byKey.get(key)
     if (!prev || it.createdAt > prev.createdAt) byKey.set(key, it)
   }

@@ -193,8 +193,8 @@ async function openAddForm() {
 
 // 待办闹钟时刻可读化（HH:mm）
 function todoRemindLabel(ev: ScheduleEvent): string {
-  if (ev.kind !== 'todo' || !ev.ts) return ''
-  const d = new Date(ev.ts)
+  if (ev.kind !== 'todo' || !ev.remindAt) return ''
+  const d = new Date(ev.remindAt)
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { toAttention } from '@/custom/cockpit/adapters/attention-adapter'
 import type { KanbanTask } from '@/api/hermes/kanban'
+import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 
 const t = (over: Partial<KanbanTask> = {}): KanbanTask => ({
   id: 't1', title: 'T', body: null, assignee: null, status: 'todo',
@@ -24,6 +25,17 @@ describe('toAttention', () => {
     const out = toAttention(t({ id: 't1', title: 'Z', status: 'triage' }))
     expect(out).toMatchObject({ id: 'att-t1', taskId: 't1', severity: 'high', title: '待分类 · Z' })
   })
+  it('CockpitTask 保留毫秒创建时间并转换优先级', () => {
+    const task: CockpitTask = {
+      id: 'c1', title: ' cockpit ', priority: 'P0', status: 'blocked', assignee: 'alice',
+      workspace: '/tmp/work', tenant: null, boardSlug: 'default', createdAt: 1_700_000_000_000,
+    }
+    const out = toAttention(task)
+    expect(out?.createdAt).toBe(1_700_000_000_000)
+    expect(out?.priority).toBe(3)
+    expect(out?.severity).toBe('high')
+  })
+
   it('other statuses → null', () => {
     for (const s of ['todo', 'running', 'ready', 'scheduled', 'done', 'archived'] as const) {
       expect(toAttention(t({ status: s }))).toBeNull()

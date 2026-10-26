@@ -18,6 +18,8 @@ import {
   type TraceState,
 } from '../adapters/run-trace-adapter'
 
+import * as traceAdapter from '../adapters/run-trace-adapter'
+
 const evt = (over: Record<string, any> = {}) => ({
   event: 'run.started',
   run_id: 'run-1',
@@ -236,6 +238,24 @@ describe('mergeTraceStates', () => {
 
     const merged = mergeTraceStates(main, [])  // no others
     expect(merged.nodes.length).toBe(mainNodeCount)
+  })
+})
+
+describe('replayMessageEvents', () => {
+  it('统一生成历史回放事件，且 replayMessagesIntoState 等价逐事件归约', () => {
+    expect(typeof (traceAdapter as any).replayMessageEvents).toBe('function')
+    const messages = [
+      { role: 'user', content: 'work', timestamp: 1000 },
+      { role: 'tool', tool_name: 'read_file', content: 'ok', timestamp: 1001 },
+      { role: 'assistant', content: 'done', reasoning: 'check', timestamp: 1002 },
+    ]
+    const events = (traceAdapter as any).replayMessageEvents(messages, 's1')
+    expect(events.map((e: any) => e.event)).toEqual([
+      'run.started', 'tool.started', 'tool.completed', 'reasoning.delta', 'message.delta', 'run.completed',
+    ])
+    const expected = events.reduce((state: TraceState, event: any) => applyRunEvent(state, event), createTraceState('s1'))
+    const actual = traceAdapter.replayMessagesIntoState(createTraceState('s1'), messages, 's1')
+    expect(actual).toEqual(expected)
   })
 })
 

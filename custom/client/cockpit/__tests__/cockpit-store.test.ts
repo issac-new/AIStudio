@@ -203,6 +203,16 @@ describe('cockpit store bootstrap + 派生态', () => {
     expect(s.attention.find(a => a.taskId === 'r1')!.severity).toBe('medium')
   })
 
+  it('attention 按 P0→P3 排序并保留创建时间', async () => {
+    mockKanbanTasks.push(
+      kt({ id: 'low', title: '低优先级', status: 'blocked', priority: 0, created_at: 100 }),
+      kt({ id: 'high', title: '高优先级', status: 'blocked', priority: 3, created_at: 200 }),
+    )
+    const s = useCockpitStore()
+    expect(s.attention.map(a => a.taskId)).toEqual(['high', 'low'])
+    expect(s.attention.map(a => a.createdAt)).toEqual([200_000, 100_000])
+  })
+
   it('sortedTasks orders P0 before P1 before P2 before P3', async () => {
     mockKanbanTasks.push(
       kt({ id: 'p2', priority: 1 }),
