@@ -639,6 +639,32 @@ function restoreNonPatchArtifacts(label) {
     });
 }
 
+function restorePatchTouchedResidue(label) {
+  // clean 兜底步（2026-10-26 走查挂账清偿）：反放是逐补丁 fail-soft（WARN 继续），
+  // 半注入态（如手工重置过个别 vendor 文件后再 clean）会让 locale 等共享文件的
+  // 反放上下文失配 → 级联反放失败 → patch 触碰面 tracked 残留挡死后续 inject。
+  // clean 的契约是「vendor 回到 HEAD」：对 series 触碰面内仍 " M" 的 tracked 文件
+  // git checkout 兜底还原（hermes-studio/hermes-agent 双树）。非触碰面的本地改动
+  // 不动——那类留给 inject 的 dirty-check 报告，不在此静默吞掉。
+  const { patchTargets } = patchFileSets();
+  for (const treeRoot of [hermesStudioRoot, hermesAgentRoot]) {
+    const c = treeGitCtx(treeRoot);
+    treeStatus(treeRoot)
+      .split('\n')
+      .map((l) => l.replace(/\r$/, ''))
+      .filter(Boolean)
+      .forEach((line) => {
+        const f = line.slice(3).trim();
+        if (patchTargets.has(f) && line.startsWith(' M')) {
+          try {
+            execSync(`git checkout -- "${c.relPrefix}${f}"`, { cwd: c.gitCwd, stdio: 'ignore' });
+            console.log(`[${label}] restored patch-touched residue: ${f}`);
+          } catch { /* 可能是 untracked 或已删,跳过 */ }
+        }
+      });
+  }
+}
+
 function main() {
   if (!existsSync(hermesStudioRoot)) {
     console.error(`[inject] 上游目录不存在: ${hermesStudioRoot}`);
@@ -759,6 +785,8 @@ function main() {
     // zcode patch 反向(独立树;manifest 缺项时回退 series 全量)
     reverseZcodePatches(manifest.appliedZcodePatches || readZcodeSeries());
     reversePatches(applied);
+    // 反放失败级联的 tracked 残留兜底还原（clean:260 注释承诺、此前未实现）
+    restorePatchTouchedResidue('clean');
     // 还原非 patch 的 build 产物(如 openapi.json),保持上游完全干净
     restoreNonPatchArtifacts('clean');
     // 删除 patch 新增的 untracked 文件（git apply -R 不会删新文件,只还原修改）
