@@ -109,6 +109,10 @@ export interface FiboPackSummary {
 }
 export interface FiboApplied { concepts: number; total: number; applied: string[] }
 export interface FiboPackResponse { ok: boolean; pack: FiboPackSummary; applied: FiboApplied }
+/** 术语→关联 spec 文档（JoyAI 闭环吸收轮 P3）：概念多形态 × specs 全文提及投影。 */
+export interface FiboRelatedDoc { file: string; title: string; date: string | null; matchedLine: string; term: string }
+export interface FiboRelatedConcept { conceptId: string; label: string; docs: FiboRelatedDoc[] }
+export interface FiboRelatedDocsResponse { ok: boolean; specsScanned: number; total: number; related: FiboRelatedConcept[] }
 export interface FiboMergeCounts { types: number; objectProperties: number; axioms: number }
 export interface FiboImportResponse {
   ok: boolean; added: FiboMergeCounts; skipped: FiboMergeCounts
@@ -200,6 +204,7 @@ export const ontologyApi = {
     req<{ ok: boolean; ingest: IngestResultDto }>('/api/hermes/ontology/ingest', { method: 'POST', body: JSON.stringify(board ? { board } : {}) }),
   /** FIBO 对齐包目录（真实 IRI/定义/模块版本；只读）。 */
   getFiboPack: () => req<FiboPackResponse>('/api/hermes/ontology/fibo'),
+  getFiboRelatedDocs: () => req<FiboRelatedDocsResponse>('/api/hermes/ontology/fibo/related-docs'),
   /** 增量导入 FIBO 包：只加缺失项；同 id 不同 IRI 服务端 409 整批不写。 */
   importFibo: () => req<FiboImportResponse>('/api/hermes/ontology/fibo/import', { method: 'POST', body: '{}' }),
   /** 运营快照：报告证据、术语表/映射/域目录计数、版本锁、门禁与脱敏试点。 */

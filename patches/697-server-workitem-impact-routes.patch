@@ -1,0 +1,25 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -178,6 +178,12 @@
+ // /api/hermes/proactivity/{model,assess,alignment}：谁定义问题（L1-L5）×做到哪一步五档组合裁决，
+ // 长期目标漂移防线（确认台账+新鲜度）。判定面 fail-soft，enforce-gate 接线挂账见本轮 spec。
+ import { proactivityRouter } from '../custom/proactivity/proactivity-controller'
++// overlay[workitem+impact]（JoyAI 闭环吸收轮 2026-10-26）：工作项全景串联 + 需求影响推演——
++// /api/hermes/workitem/:taskId/panorama：以看板 taskId 为统一上下文锚汇聚全链路八面产物（纯读侧
++// fail-soft）；/api/hermes/impact/requirement：需求文本四路词面命中（本体实例/板级 KG/FIBO 术语/
++// specs 历史迭代）+ 建议模块。spec=2026-10-26-joyai-closed-loop-absorption.md
++import { workitemRoutes } from '../custom/workitem/workitem-controller'
++import { impactRoutes } from '../custom/impact/impact-controller'
+ // overlay[runtime-verify]（长会话治理 B5 挂载件）：真工具运行时验证器注册表——
+ // /api/hermes/runtime-verify/{health,verifiers,miniprogram}。原模块早落而路由从未
+ // 挂载（悬空件），606 补登。
+@@ -539,6 +545,8 @@
+   app.use(expertiseRouter.routes())            // 协作画像：谁懂什么 wall/search（天猫吸收轮，fail-soft）
+   app.use(precedentRouter.routes())             // 判例库：run 判例检索（天猫挂账批，fail-soft）
+   app.use(proactivityRouter.routes())           // 主动性两轴裁决+目标对齐台账（Qoder 吸收轮，fail-soft）
++  app.use(workitemRoutes.routes())              // 工作项全景串联：taskId → 全链路八面（JoyAI 吸收轮，fail-soft）
++  app.use(impactRoutes.routes())                 // 需求影响推演：四路词面命中（JoyAI 吸收轮，fail-soft）
+   app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
+   app.use(skillgovGeneratorRoutes.routes())         // 技能治理：生成器 status/run
+   app.use(skillgovStoreRoutes.routes())             // 技能治理：角色映射+教训库

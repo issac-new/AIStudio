@@ -7,8 +7,9 @@
 //
 // Few-shot 记忆通道（2026-10-25 数据飞轮 round 2 挂账 1）：FLYWHEEL_FEWSHOT_INJECT=1
 // 选通且调用方带 query（当前任务语境）时，按词面相似度召回飞轮台账教训附加一行。
-// 无 query 不召回（Prompt 保持干净——源文纪律）；当前 column-dispatch 层无任务
-// 文本可传，通道就绪待语境接线（不造无效召回）。
+// 无 query 不召回（Prompt 保持干净——源文纪律）。语境源已接线（2026-10-26 JoyAI
+// 闭环吸收轮 P1）：column-dispatch 按 taskId 取任务标题传入；事件自动触发面等无
+// taskId 的调用路径仍无语境（fail-soft 回落，不造无效召回）。
 import { listCandidates, recordInjection } from './exp-store'
 import type { ExpCandidate } from './exp-types'
 import type { DispatchTarget } from '../constraints/constraint-types'

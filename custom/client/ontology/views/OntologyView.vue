@@ -12,7 +12,7 @@ import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import {
   ontologyApi, type EntityType, type Health, type OntologyInstance, type OntologySpec,
-  type SpecSnapshotMeta, type OntologyStats, type Violation, type FiboPackSummary,
+  type SpecSnapshotMeta, type OntologyStats, type Violation, type FiboPackSummary, type FiboRelatedConcept,
 } from '@/custom/ontology/api'
 import { ontologyMessages } from '@/custom/ontology/i18n'
 import ConstraintsPanel from '@/custom/ontology/components/ConstraintsPanel.vue'
@@ -67,6 +67,11 @@ const fiboLoading = ref(false)
 const fiboImporting = ref(false)
 const fiboError = ref('')
 const fiboResult = ref('')
+// 术语→关联 spec（JoyAI 闭环吸收轮 P3）：概念 id → 关联文档清单；fail-soft，
+// 读数失败只清空（fiboRelatedError 提示），不阻断 fibo 面其他读数。
+const fiboRelated = ref<Map<string, FiboRelatedConcept>>(new Map())
+const fiboRelatedError = ref('')
+const fiboRelatedExpanded = ref<string>('')
 
 const fiboConceptsShown = computed(() => {
   const q = fiboQuery.value.trim().toLowerCase()
@@ -91,6 +96,19 @@ async function refreshFibo(): Promise<void> {
   } finally {
     fiboLoading.value = false
   }
+  // 关联 spec 投影随 fibo 面一并拉（读侧计算，specs 缺席=空 Map 不报错打断）
+  try {
+    const rr = await ontologyApi.getFiboRelatedDocs()
+    fiboRelated.value = new Map(rr.related.map((x) => [x.conceptId, x]))
+    fiboRelatedError.value = ''
+  } catch {
+    fiboRelated.value = new Map()
+    fiboRelatedError.value = L.value.fibo.relatedLoadError
+  }
+}
+
+function toggleFiboRelated(id: string): void {
+  fiboRelatedExpanded.value = fiboRelatedExpanded.value === id ? '' : id
 }
 
 async function doImportFibo(): Promise<void> {
@@ -482,16 +500,35 @@ function fmtBytes(b: number): string {
       </div>
       <FiboReferencePanel v-if="fiboPack?.reference" :reference="fiboPack.reference" />
       <table v-if="fiboPack" class="onto-table" data-testid="ontology-fibo-table">
-        <thead><tr><th>{{ L.fibo.concepts }}</th><th>{{ L.fibo.iri }}</th><th>{{ L.fibo.origin }}</th><th>{{ L.fibo.maturity }}</th><th>{{ L.fibo.definition }}</th></tr></thead>
+        <thead><tr><th>{{ L.fibo.concepts }}</th><th>{{ L.fibo.iri }}</th><th>{{ L.fibo.origin }}</th><th>{{ L.fibo.maturity }}</th><th>{{ L.fibo.definition }}</th><th :title="L.fibo.relatedSpecsHint">{{ L.fibo.relatedSpecs }}</th></tr></thead>
         <tbody>
-          <tr v-for="c in fiboConceptsShown" :key="c.id">
+          <template v-for="c in fiboConceptsShown" :key="c.id">
+          <tr>
             <td><strong>{{ c.labelZh }}</strong><br><span class="onto-chip">{{ c.label }}</span><br><span class="onto-type__iri">{{ c.id }}</span></td>
             <td><code class="onto-type__iri">{{ c.iri }}</code><br><a v-if="c.sourceUrl" :href="c.sourceUrl" target="_blank" rel="noreferrer" :data-testid="`ontology-fibo-concept-source-${c.id}`">{{ L.fibo.sourceRdf }}</a></td>
             <td><span class="onto-sev onto-sev--info">{{ c.origin }}</span><br><span class="onto-type__iri">{{ c.module ?? '—' }}</span></td>
             <td>{{ c.maturity ?? '—' }}</td>
             <td>{{ c.definitionZh }}<br><span class="onto-type__en">{{ c.definitionEn || '—' }}</span></td>
+            <td>
+              <button v-if="fiboRelated.get(c.id)" type="button" class="onto-chip onto-chip--btn"
+                :data-testid="`ontology-fibo-related-${c.id}`"
+                @click="toggleFiboRelated(c.id)">{{ L.fibo.relatedDocsCount.replace('{n}', String(fiboRelated.get(c.id)!.docs.length)) }}</button>
+              <span v-else class="onto-type__iri">{{ L.fibo.relatedEmpty }}</span>
+            </td>
           </tr>
-          <tr v-if="fiboConceptsShown.length === 0"><td colspan="5" class="onto-table__empty">{{ L.fibo.empty }}</td></tr>
+          <tr v-if="fiboRelatedExpanded === c.id && fiboRelated.get(c.id)" :data-testid="`ontology-fibo-related-detail-${c.id}`">
+            <td :colspan="6" class="onto-table__related">
+              <p class="onto__hint">{{ L.fibo.relatedSpecsHint }}<span v-if="fiboRelatedError"> · {{ fiboRelatedError }}</span></p>
+              <ul class="onto-related__list">
+                <li v-for="d in fiboRelated.get(c.id)!.docs" :key="d.file">
+                  <strong>{{ d.title }}</strong> <code class="onto-type__iri">{{ d.date ?? d.file }}</code>
+                  <br><span class="onto-type__en">{{ d.matchedLine }}</span>
+                </li>
+              </ul>
+            </td>
+          </tr>
+          </template>
+          <tr v-if="fiboConceptsShown.length === 0"><td colspan="6" class="onto-table__empty">{{ L.fibo.empty }}</td></tr>
         </tbody>
       </table>
     </section>
@@ -790,6 +827,12 @@ function fmtBytes(b: number): string {
   &__enum { font-size: 10.5px; opacity: 0.65; }
 }
 .onto-chip { display: inline-block; border-radius: 6px; padding: 1px 8px; font-size: 11px; background: var(--bg-tertiary); }
+/* 关联 spec 计数徽标（P3）：chip 形态可点，展开关联文档清单 */
+.onto-chip--btn { cursor: pointer; border: 1px solid var(--border); font-family: inherit; }
+.onto-chip--btn:hover { background: var(--bg-secondary); }
+.onto-table__related { background: var(--bg-secondary); }
+.onto-related__list { margin: 4px 0 0; padding-left: 18px; }
+.onto-related__list li { margin: 4px 0; font-size: 12px; }
 .onto-pager { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
 .onto-table {
   width: 100%; border-collapse: collapse; font-size: 12.5px;

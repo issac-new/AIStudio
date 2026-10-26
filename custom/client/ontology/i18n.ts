@@ -69,6 +69,11 @@ export const ontologyMessages = {
         class: '类',
         individual: '实例',
         sourceLink: '官方来源',
+        relatedSpecs: '关联 spec',
+        relatedSpecsHint: '术语在设计规格全文的提及投影（读侧计算，不落盘）',
+        relatedDocsCount: '{n} 份',
+        relatedEmpty: '—',
+        relatedLoadError: '关联 spec 读数失败',
       },
       schema: {
         typesTitle: '实体类型（按国标分组法组织）',
@@ -296,6 +301,11 @@ export const ontologyMessages = {
         class: 'Class',
         individual: 'Individual',
         sourceLink: 'Official source',
+        relatedSpecs: 'Related specs',
+        relatedSpecsHint: 'Term mentions across design specs (computed read-side, not persisted)',
+        relatedDocsCount: '{n} docs',
+        relatedEmpty: '—',
+        relatedLoadError: 'Failed to load related specs',
       },
       schema: {
         typesTitle: 'Entity types (grouped per the standard)', propsTitle: 'Object properties (explicit Domain / Range)', axiomsTitle: 'Axioms (class / property / relation)',
