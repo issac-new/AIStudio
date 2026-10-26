@@ -1,5 +1,5 @@
 // overlay/custom/server/diagram/brand-tokens.ts
-// SwarmStudio 品牌 token 的 TS 镜像（spec 项5 D-绊线）：唯一事实源=
+// AIStudio 品牌 token 的 TS 镜像（spec 项5 D-绊线）：唯一事实源=
 // assets/skills/diagram-design-brand/swarmstudio.profile.md（light 列）。
 // 本文件值由 custom/server/diagram/__tests__/diagram-mermaid.test.ts 的绊线测试
 // 与 profile 文件逐值对账——改任何一边，测试当场 fail，禁双源漂移。

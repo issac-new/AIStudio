@@ -1,7 +1,7 @@
 // overlay[expertise]: 协作画像「谁懂什么」证据提炼纯函数（2026-10-23 天猫数字员工两文吸收轮）。
 // 文章口径（协作篇 §6.3/§7.2 协作维度）：从真实痕迹提炼「人 × 业务概念 × 证据」画像——
 // 谁最熟这个概念、什么类型的问题该找谁、此刻找不找得到；每次推荐挂可回查原文证据。
-// SwarmStudio 证据源（spec D8；实测约束：SIM gc_messages 空表且 senderType 无人类/AI
+// AIStudio 证据源（spec D8；实测约束：SIM gc_messages 空表且 senderType 无人类/AI
 // 判别位 → 不依赖聊天库）：
 //   ① 推演台账 dispatch-preset（from=<人> text=<原话>）——人在协作现场留下的业务话迹
 //   ② 看板 slug（28 块全为 <人>-<域> 形态，如 chen-pay-api）——人长期负责的业务域

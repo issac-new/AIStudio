@@ -72,10 +72,10 @@ if [[ -f "$KS" ]]; then
   fi
 fi
 
-# ── 4. SwarmStudio desktop bundled runtime ──────────────────────
+# ── 4. AIStudio desktop bundled runtime ──────────────────────
 # The desktop app ships its OWN frozen copy of hermes_cli in
 # ~/.hermes-web-ui/desktop-runtime/<version>/.../site-packages/.
-# Patch every version found there so the SwarmStudio gateway also
+# Patch every version found there so the AIStudio gateway also
 # defaults to worktree.
 DESKTOP_RUNTIME="$HOME/.hermes-web-ui/desktop-runtime/hermes"
 if [[ -d "$DESKTOP_RUNTIME" ]]; then

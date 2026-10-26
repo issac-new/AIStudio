@@ -86,7 +86,7 @@ export class DryRunKanbanBridge implements KanbanBridge {
 }
 
 // ============================================================================
-// HttpKanbanBridge — 真桥（二期）：走 SwarmStudio 既有 kanban REST
+// HttpKanbanBridge — 真桥（二期）：走 AIStudio 既有 kanban REST
 // （POST /api/hermes/kanban 建卡、GET /api/hermes/kanban/:id 查卡；路由=上游
 // routes/kanban.ts:48-49）。卡状态是唯一完成真值——本桥只建/查，spawn 仍归
 // hermes-agent 派发器。结构化 body 经 JSON 字符串随卡落库（estimate_days 等）。

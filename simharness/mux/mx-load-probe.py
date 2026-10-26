@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """mx-load-probe.py — 容量压测探针（评测门禁·QPS×2 档，2026-10-13 挂账清偿续批）。
 
-用途：对运行中的 SwarmStudio/hermes 服务按目标 QPS 持续打压，实测可达吞吐与
+用途：对运行中的 AIStudio/hermes 服务按目标 QPS 持续打压，实测可达吞吐与
 错误率，产出「峰值 QPS×2 压测通过/不通过」的机械判据（腾讯 ADP Pre-Launch
 清单口径；方案 V8.22 §2.6.3 评测门禁）。纯标准库，零第三方依赖。
 

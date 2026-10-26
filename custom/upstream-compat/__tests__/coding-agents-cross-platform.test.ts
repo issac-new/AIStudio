@@ -1,6 +1,6 @@
 // 守门测试:patch 265/266(server 侧 ACP + 麒麟发现兜底)的跨平台逻辑。
 //
-// 背景:SwarmStudio 长期只在 macOS 上开发发布,Windows/麒麟上的 ACP 调用与
+// 背景:AIStudio 长期只在 macOS 上开发发布,Windows/麒麟上的 ACP 调用与
 // 命令发现积累了一批平台假设。此测试锁定四个修复点:
 //   1. child-env win32 大小写归一(Windows 注册的是 Path/windir)
 //   2. command-path-scan which 缺失时的 PATH 直扫(精简麒麟镜像无 which)

@@ -411,7 +411,7 @@ export class ChatBridge {
       r.description ? `说明：${r.description}` : '',
       r.command ? `命令：\n${r.command}` : '',
       `选项：${(r.choices ?? []).join(' / ') || 'once / session / deny'}`,
-      '请在 SwarmStudio 工作台右栏或群聊内应答（远端应答列演进）。',
+      '请在 AIStudio 工作台右栏或群聊内应答（远端应答列演进）。',
     ].filter(Boolean)
     try {
       await matrixSend(this.opts.env, mapping.matrixRoomId, 'm.room.message', {

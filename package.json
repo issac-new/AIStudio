@@ -3,7 +3,7 @@
   "version": "1.0.0-overlay",
   "private": true,
   "type": "module",
-  "description": "AIStudio：SwarmStudio 体系单一完整项目仓（产品面+Matrix+hermes agent+Ycode+swarm-yuan 技能+simharness）；vendor/ 钉版基线经构建期注入",
+  "description": "AIStudio：单一完整项目仓（产品面+Matrix+hermes agent+Ycode+swarm-yuan 技能+simharness）；vendor/ 钉版基线经构建期注入",
   "scripts": {
     "inject": "node scripts/inject.mjs",
     "clean": "node scripts/inject.mjs --clean",

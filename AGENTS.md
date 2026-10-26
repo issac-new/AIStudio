@@ -1,6 +1,6 @@
-# AIStudio（SwarmStudio 体系单仓）— AI 工作入口
+# AIStudio 单仓 — AI 工作入口
 
-一句话：AIStudio 是 SwarmStudio 体系的单一完整项目仓（原 ncwk 多仓于 2026-10-24 整合）：SwarmStudio 桌面应用（Electron + Koa + Vue 3）的二次开发层 + `vendor/` 钉版上游基线 + `simharness/` 推演 harness + `skills/swarm-yuan/` 技能本体。所有改动经 `patches/` 与 `custom/` 在构建期注入 `vendor/` 基线（`npm run inject`）。
+一句话：AIStudio 是单一完整项目仓（原 ncwk 多仓于 2026-10-24 整合）：AIStudio 桌面应用（Electron + Koa + Vue 3）的二次开发层 + `vendor/` 钉版上游基线 + `simharness/` 推演 harness + `skills/swarm-yuan/` 技能本体。所有改动经 `patches/` 与 `custom/` 在构建期注入 `vendor/` 基线（`npm run inject`）。
 
 ## 工作规则
 

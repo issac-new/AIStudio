@@ -24,7 +24,7 @@ const SIM_ROOT = process.env.AIPAY_SIM_ROOT || '/Users/cuishi/lab/ncwk-sim-mux'
 const MX_SERVER_NAME = process.env.MX_SERVER_NAME || 'matrix.test'
 const MX_HS_URL = process.env.MX_HS || 'http://127.0.0.1:8008'
 
-// 拍摄位规划覆盖（2026-10-10 用户指令"截图按 Swarm Studio UI 功能规划，不乱拍凑数"）：
+// 拍摄位规划覆盖（2026-10-10 用户指令"截图按 AIStudio UI 功能规划，不乱拍凑数"）：
 // mux/capture-plan.env = 步→界面单一事实源（语义正本=方案 §2.5）。本射手是唯一执行
 // 点——按步名覆盖 --url/--user，调用方传参仅作规划缺席时的回落；覆盖留痕进侧车日志
 // （capture-plan.log，采集时刻/步/页面/账号可审计）。射手是按次启动的 node 工具，

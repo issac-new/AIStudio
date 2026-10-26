@@ -102,7 +102,7 @@ GUIDE_CSS = '''<style>.guide{font-family:-apple-system,"PingFang SC","Microsoft 
 # run6 正本（处置口径与 2026-10-02 处置轮终态核对一致）：
 PART1_RUN6 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-01 08:20 → 10-02 14:02（含一夜停摆 8 小时）</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-01 08:20 → 10-02 14:02（含一夜停摆 8 小时）</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>让 14 个 AI 角色（产品经理、架构师、四名开发、两名测试、安全、审计、运维等）像一个真实研发团队那样，用真实的聊天群（Matrix）、真实的看板、真实的 Git 仓库，从需求一路做到上线验收——全程不许谎报进度，所有「做完了」都要拿出可查的证据。一条监控程序脚本负责派活和验收，人类（需求分析师A）扮演需求方和最终拍板人。</div>
 
@@ -201,7 +201,7 @@ PART1_RUN6 = '''
 
 PART1_RUN8 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-04 全天 07:09-00:17（约 17 小时）</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-04 全天 07:09-00:17（约 17 小时）</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>12 个 AI 角色用真实聊天群、真实看板、真实 Git 仓库，从需求做到验收；本轮重点检验 V7 韧性方案（真分批并发预算/活性判据/回灌完整循环/接力自愈）在事故压力下的表现。</div>
 
@@ -214,7 +214,7 @@ PART1_RUN8 = '''
 
 PART1_RUN7 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-02 16:49 → 10-03 05:54（13 小时 5 分钟，全程无停摆）</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-02 16:49 → 10-03 05:54（13 小时 5 分钟，全程无停摆）</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>14 个 AI 角色（产品经理、架构师、四名开发、两名测试、安全、审计、运维等）像真实研发团队那样，用真实的聊天群（Matrix）、真实的看板、真实的 Git 仓库，从需求一路做到上线验收——全程不许谎报进度，所有「做完了」都要拿出可查的证据。本轮是「修复验证轮」：上一轮（run6）暴露的三类缺陷——假凭证能混过闸门、任务卡死在超时窗、旧分支冒充新交付——根治后第一次全流程实战检验。结果：<b>三处修复全部按预期工作，还顺手逮住了三个新问题</b>（详见第三节）。</div>
 
@@ -325,7 +325,7 @@ PART1_RUN7 = '''
 
 PART1_RUN9 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-06 00:24 → 18:05（约 17.7 小时，含外置盘脱挂中断 8.5 小时，净执行约 9.2 小时）</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-06 00:24 → 18:05（约 17.7 小时，含外置盘脱挂中断 8.5 小时，净执行约 9.2 小时）</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>V8 终态正本的首跑轮，同时是 564 补丁（网关响应投递兜底）的统一验证轮。run8 定因了五起「AI 员工集体偷懒」实为网关静默丢回复；run9 的四道验收线：交付率 ≥3/4、假停摆零复发、接力棒 &lt;50、必采证据矩阵 11/11 当轮采集（当轮矩阵口径；现矩阵 13 项口径 11/13——新增 skill/门禁灯两项缺口记入问题清单）。</div>
 
@@ -361,7 +361,7 @@ PART1_RUN9 = '''
 # 防旧轮叙事冒充新轮报告。新轮正本=人工按该轮实测依据编写后注册。
 PART1_RUN10 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 全量重建轮） ｜ 2026-10-07 01:21 → 14:29（约 13.1 小时，含系分误拦空转 2 小时、编码滞留 2h36m 事故窗）</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 全量重建轮） ｜ 2026-10-07 01:21 → 14:29（约 13.1 小时，含系分误拦空转 2 小时、编码滞留 2h36m 事故窗）</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>V8 终态正本的第二跑，mx-clean 整库重置后的首轮 0→1 全量重建；同时是五件新机制的首次实战场：快模式 MX_FAST=1（轮询 5s/治理三步并发）、系分与编码四路同时派出（闸值 4 占满）、569 gate-guard 显式启用、半程自动提醒、clef-flash 本地判定后端（mlx 量化 4bit）。</div>
 
@@ -387,7 +387,7 @@ PART1_RUN10 = '''
 
 PART1_RUN11 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 第二轮全量重建） ｜ {{window}}</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（mx-clean 后 0→1 第二轮全量重建） ｜ {{window}}</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>五件新机制的首次实战场——①帧采集固定死驱动（capture_step 逐步实拍+零帧拒出报告+自动检查⑰，run10"13 小时零实时帧"红线的机制兑现）；②R18 必采清单采集链接线（run10 0/13 缺口的本轮兑现，对话/操作/效果三类载荷当轮实时落盘）；③系分四路同时派出不分批（§4.2 流水线改革：run9/10 实证闸值 4 占满无撞闸，废除 2+2 分批）；④报告验收熔断全程值守（mx-report-audit FAIL 即禁出报告，§5.6 收尾判据②）；⑤交付物模板公文技法批次迁移（13 张入中央仓 templates/，commit 9f517a5）。</div>
 
@@ -406,7 +406,7 @@ PART1_RUN11 = '''
 
 PART1_RUN12 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-09 02:29 → 10-10 03:39（约 25 小时）</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台 ｜ 2026-10-09 02:29 → 10-10 03:39（约 25 小时）</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>多智能体团队能不能独立走完「需求→分析→设计→编码→测试→发布→验收→审计」全流程，同时是三件新机制的首次实战：六路开发同时派出（提速措施二：六张开发卡同一时刻派出）、测试并行拆解（7 组用例分给两名测试员+检查员预审，三方并行）、并行能力产品化代码首次运行。另外这轮撞上了大半夜的真实事故链——事故怎么被发现、被修复、被记账，本身就是这场推演的重要验证对象。</div>
 
@@ -425,7 +425,7 @@ PART1_RUN12 = '''
 
 PART1_RUN13 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 回归轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（契约沿用源轮） ｜ 2026-10-10 开跑（回归轮）</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 回归轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（契约沿用源轮） ｜ 2026-10-10 开跑（回归轮）</span></h1>
 
 <div class="card info"><b>这轮是什么、不是什么：</b>这是一次「回归轮」——不是在精简地处理一个需求，而是复用上一轮已冻结的需求与分析工件，重跑开发→测试→发布→验收链条，验证产品与流程的新能力。一个完整的需求永远走全程（需求→分析→设计→编码→测试→发布→验收→审计），不存在精简版。报告里前半部分标「沿用·run12」的步骤=不在本轮范围、直接沿用上一轮成果，如实标注不冒充。</div>
 
@@ -435,7 +435,7 @@ PART1_RUN13 = '''
 
 <div class="card warn"><b>真实发生的缺口（记入问题清单在案，不藏）：</b>① UAT 三条验收标准不通过：AC-1 下单幂等、AC-5 回调幂等、AC-6 超时关单（产品经理A 一手复测 31/34 用例+3 失败，与 tsc TS2339〔handleChannelNotify 缺失〕和 测试工程师A 报备双源一致）——整改列 backlog，放行权归需求提出方 需求分析师A；② 集成合并 2/6：PAYCORE-C/CHWX/CHALI/MP 四分支因 RFD-001 契约文档 add/add 冲突未合入 integration（分支在 origin 可反查）；③ 两起驱动重启循环事故（G5 收尾回归轮缺守卫、repo_has 新鲜度×夹具时间戳冲突，均已根治：b05131f/6959a2b）；④ 步 18/19 帧错页（IDE 裸路由+弹窗清扫误关页签，修复后准确补拍）；⑤ QGate 证据件与产品成效件缺席（登记在案）。全部 26 个问题键有处置结论。</div>
 
-<div class="card info"><b>怎么读这份报告：</b>PART 2 前半（步 1-17）不在本轮范围（「沿用·run12」标签逐步注明）；后半（步 18-26）是本轮真实执行的环节；每步截图按拍摄位规划（Swarm Studio 对应界面）拍摄。无帧时如实分三态标注：「未采集」=当轮采集失败（附问题单号）、「无对应产品界面」=该步产品暂无此 UI（缺失功能已列实施方案）、「补拍」=收尾后按原规划页面准确补拍（图注注明补拍时点）——绝不贴无关页面凑数。全部计数自 issues.log 与 state.env 实测统计。</div>
+<div class="card info"><b>怎么读这份报告：</b>PART 2 前半（步 1-17）不在本轮范围（「沿用·run12」标签逐步注明）；后半（步 18-26）是本轮真实执行的环节；每步截图按拍摄位规划（AIStudio 对应界面）拍摄。无帧时如实分三态标注：「未采集」=当轮采集失败（附问题单号）、「无对应产品界面」=该步产品暂无此 UI（缺失功能已列实施方案）、「补拍」=收尾后按原规划页面准确补拍（图注注明补拍时点）——绝不贴无关页面凑数。全部计数自 issues.log 与 state.env 实测统计。</div>
 
 <div class="card info"><b>过程日志术语对照（正文时间线里的日志行是系统原话，逐字保留）：</b>（观察＝系统旁白）（真值＝与实际状态核对过的确认）（闸点归档＝关卡通过后归档的检查记录）（收口＝收尾合并完成）（齐发＝多分支同时开工）（契约件＝接口定义文件）（六路＝六个并行开发分支）（判词＝验收结论行）</div>
 
@@ -447,9 +447,9 @@ PART1_RUN13 = '''
 
 PART1_RUN14 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全新环境） ｜ 2026-10-10 14:15 开跑（全量轮）</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全新环境） ｜ 2026-10-10 14:15 开跑（全量轮）</span></h1>
 
-<div class="card info"><b>这轮是什么：</b>一次完整的全流程推演——mx-clean 三旗标全清后从零重建环境，26 步从账号分配一路走到出报告，验证三样新东西：方案 V8.5 的条款修订（问题单配对规则、登记去重、关卡时刻保护等）、Swarm Studio 的四项界面修复（IDE 落地引导、权限降噪、跨账号台账视图）、以及一套修好的报告采集链（当轮实时截图、产品成效三件、并行度实测）。上一轮（run13）是只重跑后半程的回归轮，本轮是全部 26 步实际执行。</div>
+<div class="card info"><b>这轮是什么：</b>一次完整的全流程推演——mx-clean 三旗标全清后从零重建环境，26 步从账号分配一路走到出报告，验证三样新东西：方案 V8.5 的条款修订（问题单配对规则、登记去重、关卡时刻保护等）、AIStudio 的四项界面修复（IDE 落地引导、权限降噪、跨账号台账视图）、以及一套修好的报告采集链（当轮实时截图、产品成效三件、并行度实测）。上一轮（run13）是只重跑后半程的回归轮，本轮是全部 26 步实际执行。</div>
 
 <div class="card info"><b>这场推演在验证什么：</b>① 全新环境独立回归——不留上一轮任何产物与状态，通过=系统真的好，失败=系统真的有 bug；② 图执行引擎全程接管调度（GRAPH_ENGINE=on）；③ 报告链修复的首次全量实战：当轮实时帧采集（不再收尾补拍）、产品成效三件必采（幂等执行输出/下单帧/质量数字）、并行度按段界锚实测。</div>
 
@@ -467,7 +467,7 @@ PART1_RUN14 = '''
 
 PART1_RUN15 = '''
 
-<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全量） ｜ 2026-10-11 23:54 开跑</span></h1>
+<h1 style="font-size:24px">AIStudio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全量） ｜ 2026-10-11 23:54 开跑</span></h1>
 
 <div class="card info"><b>这轮是什么：</b>一次完整的 26 步全流程推演（需求单→分析→设计→并行开发→测试→发布→验收→审计→报告，全程 {{steps_done}} 步走完、六道关卡 {{gates_pass}}/6）。本轮首次实装七项机制：三张左移任务卡（用例/集成/质量在开发前就开工）、涉敏需求安全评审前置（真拦截了两处代码缺陷）、六域健康体检当轮出数、接口契约观察器影子运行（零破坏）、任务卡直达群聊、既有评审结论复用不重派、以及全程零补拍的实时截图（当轮实拍 {{n_frames}} 张）。</div>
 
@@ -478,7 +478,7 @@ PART1_RUN15 = '''
 
 PART1_RUN16 = '''
 
-<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全量） ｜ 2026-10-12 16:33 开跑</span></h1>
+<h1 style="font-size:24px">AIStudio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全量） ｜ 2026-10-12 16:33 开跑</span></h1>
 
 <div class="card info"><b>这轮是什么：</b>一次完整的 26 步全流程推演（需求单→分析→设计→并行开发→测试→发布→验收→审计→报告，全程 {{steps_done}} 步走完、六道关卡 {{gates_pass}}/6）。本轮首验两大新机制：V8.16 全阶段饱和并行（系分四稿同刻并发/架构与安全评审双工位/测试后端三片+前端两片各自会话——系分 16 分钟、测试 20 分钟，比上轮同段快一个量级）；V8.17 复盘纪律版（安全评审新口径 7 分钟过闸，不再死锁）。</div>
 
@@ -489,7 +489,7 @@ PART1_RUN16 = '''
 
 PART1_RUN18_LITE = '''
 
-<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · lite 专项验证轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（lite 轮，开发→报告段） ｜ 2026-10-13 03:08 开跑</span></h1>
+<h1 style="font-size:24px">AIStudio 多智能体研发推演 · lite 专项验证轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（lite 轮，开发→报告段） ｜ 2026-10-13 03:08 开跑</span></h1>
 
 <div class="card info"><b>这轮是什么：</b>一轮带专项命题的轻量推演（跳过需求/分析/设计段——真值沿用 10-12 的 run16），专验一件事：<b>「员工写代码」这条路换成外部编码引擎后还能不能跑通</b>——仿真工程师不再亲手写实现，而是按技能卡把任务委托给 Ycode 编码引擎（经 ACP 协议双向通信），自己只负责拆要求、审产物、做集成。开发段六路并行，全程 {{steps_done}} 步走完、六道关卡 {{gates_pass}}/6（G1/G2 沿用源轮真值）。</div>
 
@@ -502,7 +502,7 @@ PART1_RUN18_LITE = '''
 
 PART1_RUN19 = '''
 
-<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-13 16:07:58 开跑</span></h1>
+<h1 style="font-size:24px">AIStudio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-13 16:07:58 开跑</span></h1>
 
 <div class="card info"><b>这轮是什么：</b>从零环境起步（开跑前全量清理重建），26 步全流程走完、六道关卡 {{gates_pass}}/6，用户验收 12:21 完成、复盘 12:24 归档，全流程窗口 {{window}}。本轮首验七项新机制，其中最重的是<b>300 秒时限</b>：任何异常须在 5 分钟内识别并推进——总控程序的自动提醒令（每 300 秒一发的节奏首次实战兑现）、产品的阻塞卡停滞检测器、方案的纪律条款，三层同轮实现。</div>
 
@@ -513,7 +513,7 @@ PART1_RUN19 = '''
 
 PART1_RUN20 = '''
 
-<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-15 14:41 → 2026-10-16（收尾中）</span></h1>
+<h1 style="font-size:24px">AIStudio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-15 14:41 → 2026-10-16（收尾中）</span></h1>
 
 <div class="card info"><b>这轮是什么：</b>零环境起步（mx-clean 全量重建），26 步全流程走完、六道关卡 {{gates_pass}}/6（首过实测自 issues.log 闸键登记），全流程窗口 {{window}}。本轮为 V8.30-V8.34 五轮治理修版的实跑验证轮。</div>
 
@@ -528,7 +528,7 @@ PART1_RUN20 = '''
 
 PART1_RUN21 = '''
 
-<h1 style="font-size:24px">Swarm Studio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-17 21:38 → 2026-10-18（收尾轮）</span></h1>
+<h1 style="font-size:24px">AIStudio 多智能体研发推演 · 全量轮报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 支付收银台（26 步全流程） ｜ 2026-10-17 21:38 → 2026-10-18（收尾轮）</span></h1>
 
 <div class="card info"><b>这轮是什么：</b>26 步全流程正跑轮（V8.36-V8.42 治理批的实跑验证：并行提速/总分总报告/lead 合并把关产品化后的首轮全量），六道关卡 {{gates_pass}}/6 全过且含真实打回（G5 四轮往返、G2 安全评审超时复审），全流程窗口 {{window}}。</div>
 
@@ -544,7 +544,7 @@ PART1_RUN21 = '''
 # run22 PART1（2026-10-21 开跑窗注册：定位卡实写；结局卡随轮补写——数字槽保持 {…} 原样）
 PART1_RUN22 = '''
 
-<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）Swarm Studio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 ｜ {{window}}</span></h1>
+<h1 style="font-size:24px"> PART 1 · 一页读懂（说人话版）AIStudio 多智能体研发推演 · 最终报告<br><span class="sub">RUN={{run_id}} ｜ 任务：RFD-001 ｜ {{window}}</span></h1>
 
 <div class="card info"><b>这场推演在验证什么：</b>V8.46 治理结果层首轮实跑——评审治理、观测告警、改进实验、评测处置、发布门与 UAT 逐条判定记录首次接进 26 步主链与报告（G6 完成键统一为复盘完成，六闸判据不变）；执行面首次跑在 hermes-studio 0.7.38 完整构建（product-dist 自 overlay main 2508efec 开跑当晨重建，构建链类型检查与产物门禁全过）。</div>
 
@@ -916,7 +916,7 @@ def main():
 
     out = f'''<!doctype html>
 <html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Swarm Studio 多智能体研发推演 · 最终报告（{args.run} · 合并版）</title>
+<title>AIStudio 多智能体研发推演 · 最终报告（{args.run} · 合并版）</title>
 {machine_styles}
 <style>
 /* PART1/第0章暗色修补（用户 2026-10-13 裁定 dark 报告）——机器 token 暗色层已在 machine_styles 尾；

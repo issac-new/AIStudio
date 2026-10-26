@@ -29,7 +29,7 @@ async function handleLogout(): Promise<void> {
 const route = useRoute()
 const { t } = useI18n()
 
-const productTitle = 'Swarm Studio'
+const productTitle = 'AIStudio'
 const tabTitle = computed(() => `${t('sidebar.matrixChat')} - ${productTitle}`)
 
 watch(tabTitle, (value) => {

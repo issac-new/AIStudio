@@ -470,7 +470,7 @@ async function handleCuaStatus(ctx: Context): Promise<void> {
     ...availability,
     broker: broker ? { authority: broker.authority, healthy: brokerHealthy, detail: brokerDetail } : null,
     note: availability.available
-      ? '官方 computer-use 插件已 seed；开启会话时自动拉起 SwarmStudio 自有 broker（upstream/zcode 补丁源码 Node 后端，003/006 协议对齐）'
+      ? '官方 computer-use 插件已 seed；开启会话时自动拉起 AIStudio 自有 broker（upstream/zcode 补丁源码 Node 后端，003/006 协议对齐）'
       : '插件缓存未 seed：跑一次 zcode plugins list（或桌面端装一次插件）后可用',
   }
 }

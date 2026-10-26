@@ -72,7 +72,7 @@ function liveStudioServerListening() {
   }
 }
 if (mode === 'clean' && liveStudioServerListening()) {
-  console.error('[clean] 拒绝执行：检测到 8647 端口有 SwarmStudio server 在运行。');
+  console.error('[clean] 拒绝执行：检测到 8647 端口有 AIStudio server 在运行。');
   console.error('[clean] 带服 clean 会造成运行进程与树状态分裂（模块缓存/库句柄悬空），');
   console.error('[clean] 2026-10-13 夜间曾因此触发 server SQLite schema 缓存污染（登录 500）。');
   console.error('[clean] 请先停服再 clean；确需带服清理请设 OVERLAY_ALLOW_LIVE_CLEAN=1。');

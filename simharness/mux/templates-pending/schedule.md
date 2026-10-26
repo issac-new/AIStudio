@@ -41,4 +41,4 @@
 
 ## 交付形态字段（2026-10-11 平台根治）
 
-排期表任务行必带「交付形态」列（六型：backend-service/web-frontend/mini-program/mobile-app/library-sdk/governance-doc，正本=Swarm Studio custom/server/delivery-contract）；每型完成定义含对应运行证据（runtime-proof/走查帧/冒烟日志/契约用例），派发词随形态注入 DoD 与 RUNTIME-OK/RUNTIME-FAIL 结论行——单测全绿不等于可运行。
+排期表任务行必带「交付形态」列（六型：backend-service/web-frontend/mini-program/mobile-app/library-sdk/governance-doc，正本=AIStudio custom/server/delivery-contract）；每型完成定义含对应运行证据（runtime-proof/走查帧/冒烟日志/契约用例），派发词随形态注入 DoD 与 RUNTIME-OK/RUNTIME-FAIL 结论行——单测全绿不等于可运行。
