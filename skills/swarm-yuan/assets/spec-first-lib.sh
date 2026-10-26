@@ -251,3 +251,105 @@ spf_path_in_dirs() {  # $1=规范化路径 $2=项目根(可空) $3..=目录/文�
 spf_is_draft() {  # $1=SKILL.md 路径（可空） → rc 0=draft 1=非 draft/缺文件
   [[ -n "${1:-}" && -f "$1" ]] && grep -q '^status: draft' "$1" 2>/dev/null
 }
+
+# ===== 设计文档同步（DESIGN_SYNC——声明式+机械核验，2026-10-26 立法）=====
+# 判据：DESIGN_SYNC_REQUIRED=1 时 spec 须含「设计文档影响」段（DESIGN_SYNC: touched/none）；
+# touched 所列 DESIGN_DOCS 路径必须出现在变更集（声明与兑现同一批——与 R109-D8 spec
+# 变更关联模型同构）；none 放行（合理性归节点⑦独立审查背书，机械层不猜）。
+# fail-open 面（与主判据同哲学）：开关未启用 / DESIGN_DOCS 未配（opt-in 两半齐才生效）/
+# 无 governing spec（缺失归主判据管）/ spec 正文不可读。
+
+# DESIGN_DOCS 解析（与 spf_writable_dirs 同链：剥行尾注释/括号/引号，空格分隔输出）。
+spf_design_docs() {  # $1=conf 文件路径 → stdout 空格分隔文档路径表（未配置=空）
+  local _v=""
+  if [[ -f "$1" ]]; then
+    _v=$(grep '^DESIGN_DOCS=' "$1" 2>/dev/null | tail -1 | spf_strip_comment | sed -e 's/^DESIGN_DOCS=(//' -e 's/[[:space:]]*)[[:space:]]*$//' -e 's/"//g' || true)
+  fi
+  printf '%s' "${_v}"
+  return 0
+}
+
+# 变更集文件清单（faces 语义与 spf_find_governing_spec 对齐：staged/branch/untracked）。
+spf_changed_files() {  # $1=项目根 $2=关联面 $3=conf 路径（可空）→ stdout 变更文件（仓库相对路径，每行一条）
+  local _root="$1" _faces="$2" _conf="${3:-}"
+  local _base _changed=""
+  [[ -d "$_root" ]] || return 0
+  case " ${_faces} " in
+    *" branch "*)
+      _base=""
+      [[ -n "$_conf" && -f "$_conf" ]] && _base="$(spf_conf_val "$_conf" BASE_BRANCH)"
+      if [[ -z "$_base" ]] || ! git -C "$_root" rev-parse --verify -q "$_base" >/dev/null 2>&1; then
+        _base=""
+      fi
+      if [[ -z "$_base" ]] && git -C "$_root" rev-parse --verify -q main >/dev/null 2>&1; then
+        _base="main"
+      elif [[ -z "$_base" ]] && git -C "$_root" rev-parse --verify -q master >/dev/null 2>&1; then
+        _base="master"
+      elif [[ -z "$_base" ]]; then
+        git -C "$_root" rev-parse --verify -q HEAD~1 >/dev/null 2>&1 && _base="HEAD~1"
+      fi
+      [[ -n "$_base" ]] && _changed="${_changed}${_changed:+$'\n'}$(git -C "$_root" diff --name-only "${_base}...HEAD" 2>/dev/null || true)"
+      ;;
+  esac
+  case " ${_faces} " in
+    *" staged "*) _changed="${_changed}${_changed:+$'\n'}$(git -C "$_root" diff --cached --name-only 2>/dev/null || true)" ;;
+  esac
+  case " ${_faces} " in
+    *" untracked "*) _changed="${_changed}${_changed:+$'\n'}$(git -C "$_root" ls-files --others --exclude-standard 2>/dev/null || true)" ;;
+  esac
+  [[ -n "$_changed" ]] && printf '%s\n' "$_changed"
+  return 0
+}
+
+# 设计文档影响声明核验主体。
+# $1=项目根 $2=conf 路径 $3=spec 路径（绝对或相对均可，index 视图须可规范化为仓库相对）
+# $4=关联面（staged/branch/untracked 组合）$5=正文视图（worktree/index，L2 传 index）
+# → stdout 违规描述（空=通过/fail-open）；恒 rc=0。
+spf_design_sync_check() {
+  local _root="$1" _conf="$2" _spec="$3" _faces="$4" _view="${5:-worktree}"
+  local _req _docs _content _decl _mode _d _changed _specrel _missing
+  _req="$(spf_conf_val "$_conf" DESIGN_SYNC_REQUIRED)"
+  [[ "$_req" != "1" ]] && return 0
+  _docs="$(spf_design_docs "$_conf")"
+  [[ -z "$_docs" ]] && return 0
+  [[ -z "$_spec" ]] && return 0
+  _specrel="$_spec"
+  case "$_specrel" in
+    "${_root}/"*) _specrel="${_specrel#"${_root}/"}" ;;
+  esac
+  [[ -z "$_specrel" ]] && return 0
+  if [[ "$_view" == "index" ]]; then
+    _content="$(git -C "$_root" show ":${_specrel}" 2>/dev/null || true)"
+  elif [[ -f "${_root}/${_specrel}" ]]; then
+    _content="$(cat "${_root}/${_specrel}" 2>/dev/null || true)"
+  else
+    return 0
+  fi
+  [[ -z "$_content" ]] && return 0
+  # 「设计文档影响」段抽取：标题行（# 系列含关键字）到下一个标题行之间
+  _decl="$(printf '%s\n' "$_content" | LC_ALL=C awk '
+    /^#+[[:space:]].*设计文档影响/ { inseg=1; next }
+    inseg && /^#/ { inseg=0 }
+    inseg { print }
+  ')"
+  _mode="$(printf '%s\n' "$_decl" | grep -oE 'DESIGN_SYNC:[[:space:]]*(touched|none)' | head -1 | sed 's/.*:[[:space:]]*//' || true)"
+  if [[ -z "$_mode" ]]; then
+    printf '%s' "missing-declaration: spec(${_specrel}) 缺「设计文档影响」声明——须含 DESIGN_SYNC: touched（逐行列出 DESIGN_DOCS 路径与修订点）或 none（无需更新+理由）"
+    return 0
+  fi
+  [[ "$_mode" == "none" ]] && return 0
+  # touched：声明段内提及的 DESIGN_DOCS 路径逐个核验变更集（未提及的路径不在本批声明面内）
+  _changed="$(spf_changed_files "$_root" "$_faces" "$_conf")"
+  _missing=""
+  for _d in $_docs; do
+    if printf '%s\n' "$_decl" | grep -qF -- "$_d"; then
+      if [[ -z "$_changed" ]] || ! printf '%s\n' "$_changed" | grep -qxF -- "$_d"; then
+        _missing="${_missing}${_missing:+、}${_d}"
+      fi
+    fi
+  done
+  if [[ -n "$_missing" ]]; then
+    printf '%s' "unfulfilled: ${_missing} 声明 touched 但变更集未含其修订（声明与兑现须同一批——把设计文档修订并入本批或改声明 none 附理由）"
+  fi
+  return 0
+}

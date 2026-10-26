@@ -67,14 +67,37 @@ _sg="${_sg:-docs/specs/*.md}"
 # R109-D8 spec-变更关联：特性分支上，治理 spec 须出现在变更集（staged ∪ 本分支 diff）——
 # 历史 spec（合入 main 前的）不再天然放行（R108 probe 实证护栏退化）。
 # 基分支（main/master/BASE_BRANCH）保留存在性：主干直提交归分支门管，合并后复查按宽口径。
+_ds_spec=""
 if spf_on_base_branch "$ROOT" "$CONF"; then
   _approved="$(spf_find_approved_spec "$ROOT" "$_sg" index)"
-  [[ -n "$_approved" ]] && exit 0
+  if [[ -n "$_approved" ]]; then
+    _ds_spec="$_approved"
+    _ds_faces="staged"
+  fi
 else
   _governing="$(spf_find_governing_spec "$ROOT" "$_sg" 'staged branch' "$CONF" index)"
   if [[ -n "$_governing" ]]; then
-    exit 0
+    _ds_spec="$_governing"
+    _ds_faces="staged branch"
   fi
+fi
+
+# DESIGN_SYNC 二段核验（spec 判定通过后才查——spec 缺失优先按主判据报）：
+# 1) spec 须含「设计文档影响」声明（touched/none）；2) touched 所列 DESIGN_DOCS
+# 路径必须出现在本变更集（声明与兑现同一批）。none 放行——合理性归节点⑦审查。
+if [[ -n "$_ds_spec" ]]; then
+  _ds_violation="$(spf_design_sync_check "$ROOT" "$CONF" "$_ds_spec" "$_ds_faces" index)"
+  if [[ -n "$_ds_violation" ]]; then
+    _audit_dir="$ROOT/.swarm-yuan"
+    mkdir -p "$_audit_dir" 2>/dev/null || true
+    _ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    _e="$(printf '%s' "$_ds_violation" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr -d '\r\n')"
+    printf '{"ts":"%s","tool":"git-commit","target":"%s","gates":"design-sync"}\n' "$_ts" "$_e" >> "$_audit_dir/gate-deny.jsonl" 2>/dev/null || true
+    echo "✗ swarm-yuan design-sync（L2 提交时强拦）: ${_ds_violation}" >&2
+    echo "  解除方式: 1) 把声明触及的设计文档修订并入本批提交；2) 确属无需更新——spec 声明改为 DESIGN_SYNC: none 并附理由（节点⑦审查背书）；3) 逃生门: git commit --no-verify（L3 门禁兜底，deny 已落盘 gate-deny.jsonl）。" >&2
+    exit 1
+  fi
+  exit 0
 fi
 
 # 拦截：落审计（与 fail-gate-hook 同 jsonl 格式，tool=git-commit）+ stderr 原因与解除路径

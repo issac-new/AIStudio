@@ -2735,7 +2735,7 @@ _fg_emit_workflow() {
 
 **③ 前序依赖检查（准入）：** 节点②探查完成（特征卡+组件库清单就绪；架构设计/演进类变更还须四层架构枚举——探查侧 §D.0.6，生成器侧 exploration-guide）
 
-**④ 质量门禁：** ★测试左移（spec §19 测试设计）+ ★运维左移（spec §21 可观测性约束）+ SPEC_REQUIRED 前置门（fail-gate-hook 拦无 spec 写码）+ 架构类变更须填 spec §24 架构映射（TOGAF BDAT 四层+纵向链验证，非架构变更可豁免）+ 规模与工作量估算（spec §25 功能点法，feature 档推荐选填、无门禁执法——识别规则与因子表查 references/cost-estimation-methodology.md）
+**④ 质量门禁：** ★测试左移（spec §19 测试设计）+ ★运维左移（spec §21 可观测性约束）+ SPEC_REQUIRED 前置门（fail-gate-hook 拦无 spec 写码）+ ★文档左移（DESIGN_SYNC_REQUIRED=1 时 spec 须含「设计文档影响」段——`DESIGN_SYNC: touched`（逐行列出触及的 DESIGN_DOCS 路径与修订点）或 `DESIGN_SYNC: none`（无需更新+理由；触及产品/架构面必 touched，纯测试/文案类可 none）+ 架构类变更须填 spec §24 架构映射（TOGAF BDAT 四层+纵向链验证，非架构变更可豁免）+ 规模与工作量估算（spec §25 功能点法，feature 档推荐选填、无门禁执法——识别规则与因子表查 references/cost-estimation-methodology.md）
 
 
 
@@ -2801,7 +2801,7 @@ _fg_emit_workflow() {
 
 **① 流程入口（顺序/并行）：** 前序=节点⑥
 
-**④ 质量门禁：** 独立 code review（第三方 reviewer 视角，非 Step 7 自检）+ `check_review` 门禁（核验 `references/review-record.md` 留痕非空：5 维审查点 + findings 表）。审查范围含质量门禁序列运行证据——确认节点⑥的序列真实跑过而非声称跑过（gate-runs.jsonl 有当次 run 记录，"配置≠使用≠有效"）。
+**④ 质量门禁：** 独立 code review（第三方 reviewer 视角，非 Step 7 自检）+ `check_review` 门禁（核验 `references/review-record.md` 留痕非空：5 维审查点 + findings 表）。审查范围含质量门禁序列运行证据——确认节点⑥的序列真实跑过而非声称跑过（gate-runs.jsonl 有当次 run 记录，"配置≠使用≠有效"）。DESIGN_SYNC_REQUIRED=1 时加核设计文档影响声明合理性：声明 none 的变更是否真无产品/架构面影响（触及新端点/新页面/新路由/架构边界仍声明 none=打回）；声明 touched 的修订点是否覆盖 DESIGN_DOCS 应改面（版本行/变更记录/总账行缺项=打回）。
 
 **⑥ 产出物与调用追踪：** `references/review-record.md` 审查证据产物（从 review-record-template.md 填充）
 
@@ -2815,7 +2815,10 @@ _fg_emit_workflow() {
 
 **① 流程入口（顺序/并行）：** 前序=节点⑦
 
-**④ 质量门禁：** ★变更左移（回滚预案存在 + 数据库变更兼容：向前兼容/双写期）
+**④ 质量门禁：**
+- ★变更左移（回滚预案存在 + 数据库变更兼容：向前兼容/双写期）
+- ★文档左移（设计文档随批——DESIGN_SYNC_REQUIRED=1 时）：spec「设计文档影响」声明 touched 的 DESIGN_DOCS 修订须在本变更集内（L2 pre-commit 机械核验，与 spec 变更关联模型同构——声明与兑现必须同一批）；声明 none 以节点⑦审查背书为准
+- 合入序列（多人协作防本地 main 滞后远端，2026-10-26 立法）：主工作区 `git fetch origin` → 本地 main `git merge --ff-only origin/main`（不可快进=远端历史被改写，停下对账勿强推）→ worktree 分支 `git rebase <main>`（冲突在 worktree 内解决，不在 main 改）→ `git merge --no-ff <branch>`（保留任务边界）→ `git push origin main`
 
 **⑥ 产出物与调用追踪：** merge commit
 
@@ -2844,12 +2847,12 @@ _fg_emit_workflow() {
 （全流程完成前的 checkbox 清单，汇总所有节点的门禁）
 - [ ] 节点①需求理解：特征卡 17 项齐备
 - [ ] 节点②探查：组件库清单全量 + 调用链
-- [ ] 节点③设计 spec：§19 测试设计 + §21 可观测性
+- [ ] 节点③设计 spec：§19 测试设计 + §21 可观测性 + 设计文档影响声明（DESIGN_SYNC_REQUIRED=1 时 touched/none）
 - [ ] 节点④实施 plan：§20 变更影响范围
 - [ ] 节点⑤编码实现：测试与实现同分支提交
 - [ ] 节点⑥测试验证：check_test 通过（覆盖率阈值/断言质量/负向用例）+ --api 接口测试覆盖通过（5 维度审查属节点⑦）
-- [ ] 节点⑦独立审查：review-record.md 留痕 + check_review 门禁
-- [ ] 节点⑧合入 main：回滚预案 + 迁移兼容
+- [ ] 节点⑦独立审查：review-record.md 留痕 + check_review 门禁 + 设计文档影响声明合理性背书（none 声明）
+- [ ] 节点⑧合入 main：回滚预案 + 迁移兼容 + 设计文档随批兑现（touched 声明）+ 本地 main 已 fetch 快进（ff-only）后合入
 - [ ] 节点⑨构建发布：灰度 + 告警 + runbook
 WFEOF
 }

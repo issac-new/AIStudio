@@ -90,8 +90,8 @@ facts_eq FACT_RUNTIMES_METHOD 5
 facts_eq FACT_FEATURE_CARDS 17
 facts_eq FACT_FEATURE_CARDS_P0 6
 facts_eq FACT_FEATURE_CARDS_P1 11
-facts_eq FACT_CONF_VARS 197
-facts_eq FACT_CONF_VARS_CORE 28
+facts_eq FACT_CONF_VARS 199
+facts_eq FACT_CONF_VARS_CORE 30
 facts_eq FACT_CONF_VARS_ARCH 121
 facts_eq FACT_REFERENCES 57
 # 合规检查点库（compliance 档随发）：主表/罚则库条数机械计数对账（口径见 facts.conf 合规检查点库段）

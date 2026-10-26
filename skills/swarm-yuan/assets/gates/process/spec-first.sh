@@ -57,6 +57,15 @@ check_spec_first() {
     _approved="$(spf_find_governing_spec "$_root" "$_sg" 'staged branch untracked' "$_CONF_PATH")"
   fi
   if [[ -n "$_approved" ]]; then
+    # DESIGN_SYNC 二段核验（与 L2 同判据 spec-first-lib；关联面=门禁态 staged∪branch∪untracked，worktree 视图）。
+    if command -v spf_design_sync_check >/dev/null 2>&1; then
+      local _ds_violation
+      _ds_violation="$(spf_design_sync_check "$_root" "$_CONF_PATH" "$_approved" 'staged branch untracked' worktree)"
+      if [[ -n "$_ds_violation" ]]; then
+        fail "gate_design_sync: ${_ds_violation}——解除：把声明触及的设计文档修订并入本批，或改声明 DESIGN_SYNC: none 附理由（节点⑦审查背书）；开关 DESIGN_SYNC_REQUIRED/DESIGN_DOCS（precheck.conf）"
+        return 0
+      fi
+    fi
     pass "spec-first: 可写区变更有变更集内已批准 spec（${_approved}）"
   else
     fail "gate_spec_first_missing: git 变更触及可写源码区（如 ${_hit}）但本变更集无已批准 spec（须含「## 决策记录」段且非占位；R109-D8 起=spec 须随本分支提交/staged/untracked 携带，历史 spec 不再放行）——先 spec 再编码；四层拦截同判据（L1 写时 hook/L2 提交时 pre-commit/本门/L4 状态机 build 准入）"
