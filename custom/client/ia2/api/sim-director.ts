@@ -84,14 +84,48 @@ export interface RequirementImpactDto {
   counts: { ontology: number; boardKg: number; fibo: number; specs: number }
 }
 
-export async function analyzeRequirementImpact(title: string, description: string): Promise<RequirementImpactDto> {
-  const r = await json<{ ok: boolean; impact?: RequirementImpactDto }>('/api/hermes/impact/requirement', {
+/** 影响推演响应（含需求指纹——标注 key，挂账清偿批二 C1）。 */
+export interface ImpactResponseDto {
+  fingerprint: string
+  impact: RequirementImpactDto
+}
+
+export async function analyzeRequirementImpact(title: string, description: string): Promise<ImpactResponseDto> {
+  const r = await json<{ ok: boolean; fingerprint?: string; impact?: RequirementImpactDto }>('/api/hermes/impact/requirement', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, description }),
   })
-  if (!r.ok || !r.impact) throw new Error('影响推演失败')
-  return r.impact
+  if (!r.ok || !r.impact || !r.fingerprint) throw new Error('影响推演失败')
+  return { fingerprint: r.fingerprint, impact: r.impact }
+}
+
+/** 业务地图标注（C1：持久化标注+异步协同）。 */
+export interface MapAnnotationDto {
+  nodeId: string
+  note: string
+  checked: boolean
+  by: string
+  at: number
+}
+
+export async function fetchMapAnnotations(key: string): Promise<MapAnnotationDto[]> {
+  const r = await json<{ ok: boolean; annotations?: MapAnnotationDto[] }>(`/api/hermes/map-annotations?key=${encodeURIComponent(key)}`)
+  return r.annotations ?? []
+}
+
+export async function saveMapAnnotation(key: string, annotation: { nodeId: string; note: string; checked: boolean }): Promise<MapAnnotationDto> {
+  const r = await json<{ ok: boolean; annotation?: MapAnnotationDto }>('/api/hermes/map-annotations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, by: 'map-editor', ...annotation }),
+  })
+  if (!r.annotation) throw new Error('标注保存失败')
+  return r.annotation
+}
+
+export async function deleteMapAnnotation(key: string, nodeId: string): Promise<void> {
+  await json(`/api/hermes/map-annotations?key=${encodeURIComponent(key)}&nodeId=${encodeURIComponent(nodeId)}`, { method: 'DELETE' })
 }
 
 /** LLM 拆模块（挂账清偿批 B1）：clef 判定端拆解；离线回落词表（modulesSource 如实标注）。 */

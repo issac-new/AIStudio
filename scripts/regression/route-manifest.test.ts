@@ -21,7 +21,8 @@ describe('全功能路由清单生成器', () => {
       'matrix.client', 'matrix.clientRoom', 'ide.shell',
       'ia2.eval', 'ia2.bpa', 'ia2.ontology', 'ia2.skillgov',
     ]))
-    expect(manifest.stageTabs).toHaveLength(36)
+    // 37=36+sim/map 业务地图页签（挂账清偿批二 C1 前端入口；注册链自动发现）
+    expect(manifest.stageTabs).toHaveLength(37)
     expect(new Set(names.filter(Boolean)).size).toBe(names.filter(Boolean).length)
     expect(manifest.routes.every((r: any) => r.visitPath && !r.visitPath.includes('/:'))).toBe(true)
     expect(manifest.routes.every((r: any) => r.kind === 'page' || r.kind === 'redirect')).toBe(true)

@@ -11,6 +11,7 @@
 import Router from '@koa/router'
 import { analyzeRequirementImpact } from './requirement-impact'
 import { suggestModules } from './module-suggest'
+import { sha1Of } from '../eval/clef'
 
 const router = new Router({ prefix: '/api/hermes/impact' })
 
@@ -29,7 +30,7 @@ router.post('/requirement', (ctx) => {
     ctx.body = { ok: false, error: 'description 非法（非空且 ≤2000 字符）' }
     return
   }
-  ctx.body = { ok: true, impact: analyzeRequirementImpact(title, description) }
+  ctx.body = { ok: true, fingerprint: sha1Of(`${title}\n${description}`), impact: analyzeRequirementImpact(title, description) }
 })
 
 router.post('/suggest-modules', async (ctx) => {

@@ -21,7 +21,9 @@ import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluati
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
+import { listLedger } from '../eval/flywheel'
 import { appendEvidence } from '../evidence/evidence-store'
+import { fewshotRerank, rerankInjectLine, type RerankOutcome } from '../eval/fewshot-rerank'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
@@ -55,6 +57,8 @@ export interface ColumnDispatchResult {
   /** 派发幂等去重（长会话治理 B4）：重放/重启环里被跳过的 step——
    *  30 分钟窗口内同 taskId+column+provider 已派发过即跳（4be3a3b 教训产品化）。 */
   deduped: Array<{ taskId: string; column: string; stepId: string; provider: string }>
+  /** fewshot LLM 重排读数（挂账清偿批二 C2）：null=off/无语境；source=llm|fallback。 */
+  rerank: { source: string; reason?: string } | null
 }
 
 /** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
@@ -118,7 +122,7 @@ function contractFooter(): string {
   ].join('')
 }
 
-export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null, taskTitle?: string | null): string {
+export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null, taskTitle?: string | null, rerankLine?: string | null): string {
   const lines = steps.map((s, i) => `  ${i + 1}. ${s.id}（${s.role}${s.specialist ? ` / ${s.specialist}` : ''}）`)
   // 第五期 ①：语义上下文块（agent 消费本体）——单元/能力/SLO 目标/判定词表随负载下发，
   // buildDispatchSemanticContext 内部 fail-soft（注册表缺该单元返回 null 不占行）。
@@ -155,6 +159,7 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
     ...(step.constraints?.length ? [`约束（硬边界，越界须升级申请）：${step.constraints.map((c, i) => `${i + 1}. ${c}`).join('；')}`] : []),
     ...constraintCardLines,
     ...experienceLines,
+    ...(rerankLine ? [rerankLine] : []),
     ...(precedentLine ? [precedentLine] : []),
     ...(semantic ? [semantic] : []),
     contractFooter(),
@@ -196,7 +201,11 @@ export async function dispatchColumnTransition(
   const deduped: ColumnDispatchResult['deduped'] = []
   // P1：taskId → 任务标题（一次解析，全 step 复用）——fewshot 召回语境源；
   // 查不到/无 taskId 保持 null，回落无语境现状（fail-soft 不阻断派发）。
+  // C2（挂账清偿批二）：标题就绪后跑 LLM 重排（query=标题，与词面召回同语境；
+  // 独立限时 3s、off/离线/超时零负担回落——重排行注入简报，结果随 REST 透出）。
   const taskTitle = params.taskId ? await fetchTaskTitleByTaskId(params.taskId).catch(() => null) : null
+  const rerank = taskTitle ? await fewshotRerank(taskTitle, listLedger().distills).catch(() => null) : null
+  const rerankLine = rerank ? rerankInjectLine(rerank) : null
   // B4 在途键：并发重入的同键派发合并（进程内；跨进程靠台账窗口）
   const inflight = new Set<string>()
   for (const trigger of triggers) {
@@ -222,7 +231,7 @@ export async function dispatchColumnTransition(
       }
       inflight.add(idemKey)
       let stepOutcomes: MentionOutcome[]
-      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine, taskTitle)}`
+      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine, taskTitle, rerankLine)}`
       try {
         stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text, ...(params.taskId ? { taskId: params.taskId } : {}) })
       } finally {
@@ -266,6 +275,6 @@ export async function dispatchColumnTransition(
       }
     }
   }
-  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped }
+  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null }
 }
 

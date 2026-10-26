@@ -21,6 +21,7 @@
 import { sessionModeOf } from '../permmodes/session-mode-store'
 import { ENGINE_MODE_MAP } from '../permmodes/permission-modes'
 import { randomUUID } from 'crypto'
+import { appendEvidence } from '../evidence/evidence-store'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
 import {
   resolveSquad, isSelfTrigger, buildSquadBriefing, recordEvaluation,
@@ -357,6 +358,8 @@ export class MentionDispatchService {
       if (undelivered === null) existing.coalesced.push(sendText)
       // squad 占位（P-B(a)）：交付到 leader run 才记账（并入也算「起跑」）；未起跑不记。
       if (plan.squad && undelivered === null) this.recordSquadPlaceholder(plan.squad, params.workspacePath, existing.sessionId)
+      // C3：并入送达=既有会话又一次泳道使用（幂等 evidenceId 同会话只记首条，使用痕迹在 detail）
+      if (undelivered === null) this.recordLaneSession(params.taskId, existing.sessionId, commandId)
       return emit({
         ...envelope, reason: 'coalesced', sessionId: existing.sessionId, commandId,
         detail: wrapDetail(undelivered === null
@@ -412,7 +415,25 @@ export class MentionDispatchService {
 
     this.pending.set(key, { sessionId, since: this.now(), coalesced: [] })
     if (plan.squad) this.recordSquadPlaceholder(plan.squad, params.workspacePath, sessionId)
+    this.recordLaneSession(params.taskId, sessionId, commandId)
     return emit({ ...envelope, reason: 'queued', sessionId, commandId, detail: wrapDetail('run 已派发（createSession+sendText）') })
+  }
+
+  /** 泳道会话落账（挂账清偿批二 C3）：@mention 通道的 lane_session 摄取源——
+   *  taskId 存在且会话投入使用（queued 新建/coalesced 送达）即写一条；确定性
+   *  evidenceId 幂等，fail-soft 只 warn 不阻断派发（review-store 落账纪律）。 */
+  private recordLaneSession(taskId: string | undefined, sessionId: string, commandId: string): void {
+    if (!taskId) return
+    try {
+      const evidenceId = `lane-${taskId}-mention-${sessionId}`.replace(/[^A-Za-z0-9._:-]/g, '_').slice(0, 120)
+      const r = appendEvidence({
+        evidenceId, taskId, kind: 'lane_session', at: Date.now(),
+        artifactType: 'mention', ref: commandId.slice(0, 200), note: `@mention 会话 ${sessionId}`, actor: 'mention-dispatch',
+      })
+      if (r.code) console.warn(`[mention-dispatch] lane_session 落账 code=${r.code}（不阻断派发）`)
+    } catch (e) {
+      console.warn(`[mention-dispatch] lane_session 落账异常：${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   /** squad 评估占位（P-B(a)）：verdict:'pending' 非实评；leader verdict 摄入链路待接（输入面未定）。 */
