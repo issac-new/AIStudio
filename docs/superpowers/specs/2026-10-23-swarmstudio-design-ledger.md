@@ -5,7 +5,7 @@
 
 | 域 | 项 | 数字 |
 |---|---|---|
-| 产品面 | 模式/页签/入口/岛 | 3/33/6/4 |
+| 产品面 | 模式/页签/入口/岛 | 3/34/6/4（2026-10-26 加挂微轮 +⑥治理·主动性两轴页签） |
 | 产品面 | 路由/客户端目录/服务端域 | 89/19/152（+delivery/precedent/expertise/proactivity，2026-10-26 Qoder 吸收轮；2026-10-26 JoyAI 闭环吸收轮 +specs/workitem/impact 三域） |
 | 产品面 | 补丁 studio/zcode（series 登记） | 407/8（2026-10-26 晚口径并 Qoder 双轮实测：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp、695 proactivity 挂载、696 agent 目标登记对齐台账；JoyAI 闭环吸收轮 697 workitem+impact 挂载；zcode 009 claude-skills-compat） |
 | 产品面 | 用户决策/常设/纠正 | 148/30/27 |
