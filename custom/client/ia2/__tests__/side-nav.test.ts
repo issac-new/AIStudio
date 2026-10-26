@@ -47,7 +47,8 @@ vi.mock('../composables/useDecisionRows', async () => {
 const NAV_BADGES: Record<string, number> = { journey: 15, workbench: 15, board: 14, inbox: 2, stage3: 11, stage4: 17 }
 vi.mock('../composables/useSideNavBadges', async () => {
   const { ref } = await import('vue')
-  return { useSideNavBadges: () => ({ badges: ref(NAV_BADGES) }) }
+  // blockedCount=14（与 board 徽标同值）→ ④ 计数章呈 blocked 红；③ 恒 current 黄
+  return { useSideNavBadges: () => ({ badges: ref(NAV_BADGES), blockedCount: ref(14) }) }
 })
 
 import IaSideNav from '../components/IaSideNav.vue'
@@ -136,40 +137,48 @@ describe('IaSideNav — 左侧常驻导航', () => {
     w.unmount()
   })
 
-  it('待办徽标：常用四项与阶段③④出数，检索/①②⑤⑥不出；③④徽标与状态点共存', async () => {
+  it('待办徽标：常用四项与阶段③④出数，检索/①②⑤⑥不出；③④徽标与状态点合一为计数章', async () => {
     const { w } = await mountAt('/app/stage/build')
     const badgeOf = (sel: string) => w.find(`${sel} .isn-item__badge`).text()
     expect(badgeOf('[data-testid="ia-side-nav-journey"]')).toBe('15')
     expect(badgeOf('[data-testid="ia-side-nav-workbench"]')).toBe('15')
     expect(badgeOf('[data-testid="ia-side-nav-board"]')).toBe('14')
     expect(badgeOf('[data-testid="ia-side-nav-inbox"]')).toBe('2')
-    // 检索与无看板态映射的阶段①②⑤⑥不造数字
+    // 检索与无看板态映射的阶段①②⑤⑥不造数字也不出章（保留生命周期状态点）
     for (const id of ['search', 'stage1', 'stage2', 'stage5', 'stage6']) {
       expect(w.find(`[data-testid="ia-side-nav-${id}"] .isn-item__badge`).exists(), id).toBe(false)
+      expect(w.find(`[data-testid="ia-side-nav-${id}"] .isn-item__pill`).exists(), id).toBe(false)
     }
-    // 阶段③（done ✓）与④（current 灯胆）徽标与状态点同显，互不挤占；
-    // 二轮去棕后 current/blocked 无文本字形，视觉由 CSS 灯胆类提供
+    // ③④合并为单一计数章（2026-10-26 合一轮）：数字承计数、7px 灯胆承交通灯色；
+    // ④桶含 blocked 且 blockedCount=14>0 → 红章，③桶无 blocked 恒黄章；行内不再
+    // 单独出现 .isn-item__badge / .isn-item__status（单行单义）
     const s3 = w.find('[data-testid="ia-side-nav-stage3"]')
-    expect(s3.find('.isn-item__badge').text()).toBe('11')
-    expect(s3.find('.isn-item__status').text()).toBe('✓')
+    expect(s3.find('.isn-item__pill').text()).toBe('11')
+    expect(s3.find('.isn-item__pill').classes()).toContain('isn-item__pill--current')
+    expect(s3.find('.isn-item__pill-lamp').exists()).toBe(true)
+    expect(s3.find('.isn-item__badge').exists()).toBe(false)
+    expect(s3.find('.isn-item__status').exists()).toBe(false)
     const s4 = w.find('[data-testid="ia-side-nav-stage4"]')
-    expect(s4.find('.isn-item__badge').text()).toBe('17')
-    expect(s4.find('.isn-item__status').text()).toBe('')
-    expect(s4.find('.isn-item__status').classes()).toContain('isn-item__status--current')
+    expect(s4.find('.isn-item__pill').text()).toBe('17')
+    expect(s4.find('.isn-item__pill').classes()).toContain('isn-item__pill--blocked')
+    expect(s4.find('.isn-item__pill-lamp').exists()).toBe(true)
+    expect(s4.find('.isn-item__badge').exists()).toBe(false)
+    expect(s4.find('.isn-item__status').exists()).toBe(false)
     // 徽标项挂口径说明 title，无徽标项保持无 title
     expect(w.find('[data-testid="ia-side-nav-board"]').attributes('title')).toContain('受阻')
     expect(w.find('[data-testid="ia-side-nav-search"]').attributes('title')).toBeUndefined()
     w.unmount()
   })
 
-  it('当前阶段高亮：④开发 active，其余不高亮；状态点按 stageState 呈现', async () => {
+  it('当前阶段高亮：④开发 active，其余不高亮；空桶阶段保留生命周期状态点', async () => {
     const { w } = await mountAt('/app/stage/build')
     const stage4 = w.find('[data-testid="ia-side-nav-stage4"]')
     expect(stage4.classes()).toContain('isn-item--active')
     expect(stage4.attributes('aria-current')).toBe('page')
     expect(w.find('[data-testid="ia-side-nav-stage5"]').classes()).not.toContain('isn-item--active')
-    expect(stage4.find('.isn-item__status').text()).toBe('')
-    expect(stage4.find('.isn-item__status').classes()).toContain('isn-item__status--current')
+    // ④有在办数 → 合一计数章（无独立状态点）；①无映射 → 生命周期 ✓ 点保留
+    expect(stage4.find('.isn-item__status').exists()).toBe(false)
+    expect(stage4.find('.isn-item__pill').classes()).toContain('isn-item__pill--blocked')
     expect(w.find('[data-testid="ia-side-nav-stage1"] .isn-item__status').text()).toBe('✓')
     w.unmount()
   })

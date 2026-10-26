@@ -68,13 +68,19 @@ const statusTone = computed(() =>
     <span class="isn-item__lead" :class="{ 'isn-item__lead--number': leadKind === 'number' }">{{ lead }}</span>
     <span class="isn-item__label">{{ label }}</span>
     <span class="isn-item__trail">
-      <!-- 2026-10-22 待办徽标轮：徽标与状态点共存（阶段③④既显示在办数也保留
-           当前阶段状态点），元信息槽只在两者都缺席时显示 -->
-      <span v-if="badge !== ''" class="isn-item__badge">{{ badgeText }}</span>
-      <span v-if="status" class="isn-item__status" :class="`isn-item__status--${statusTone}`" :aria-label="statusLabel || undefined">
+      <!-- 2026-10-26 徽标/状态点合一轮：③④有在办数时两者合成单一计数章——章内
+           7px 灯胆承交通灯色、数字承计数，章色=本阶段桶自身状态（红=桶内有阻塞、
+           黄=桶有卡在办、绿✓=完成态带计数）；单独出现的徽标/状态点形态不变。 -->
+      <span v-if="badge !== '' && status" class="isn-item__pill" :class="`isn-item__pill--${statusTone}`" :aria-label="statusLabel || undefined">
+        <i v-if="statusTone === 'current' || statusTone === 'blocked'" class="isn-item__pill-lamp" />
+        <span v-else class="isn-item__pill-glyph">✓</span>
+        {{ badgeText }}
+      </span>
+      <span v-else-if="badge !== ''" class="isn-item__badge">{{ badgeText }}</span>
+      <span v-else-if="status" class="isn-item__status" :class="`isn-item__status--${statusTone}`" :aria-label="statusLabel || undefined">
         {{ statusGlyph }}
       </span>
-      <span v-if="badge === '' && !status" class="isn-item__meta" :title="trail">{{ trail }}</span>
+      <span v-else class="isn-item__meta" :title="trail">{{ trail }}</span>
     </span>
   </button>
 </template>
@@ -172,6 +178,39 @@ const statusTone = computed(() =>
   font-size: 11px;
   line-height: 1;
 }
+/* 计数章（2026-10-26 徽标/状态点合一）：数字+交通灯一体的单一右槽元素。
+   黄作文本色在浅底无合格对比度（2026-10-22 状态点立法同源），黄/红章内放
+   7px 灯胆自发光图形承色，数字用 --text-primary/--error 保对比；绿章绿字
+   （--ia-fresh 作文本色对比合格，同状态点 done 形态）。 */
+.isn-item__pill {
+  min-width: 24px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.isn-item__pill-lamp {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.isn-item__pill-glyph {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--ia-fresh);
+}
+.isn-item__pill--blocked { background: color-mix(in srgb, var(--error) 14%, transparent); color: var(--error); }
+.isn-item__pill--blocked .isn-item__pill-lamp { background: var(--ia-fail-lamp); box-shadow: inset 0 0 0 1px rgba(82, 0, 0, 0.28); }
+.isn-item__pill--current { background: color-mix(in srgb, var(--ia-warn-lamp) 18%, transparent); color: var(--text-primary); }
+.isn-item__pill--current .isn-item__pill-lamp { background: var(--ia-warn-lamp); box-shadow: inset 0 0 0 1px rgba(66, 44, 0, 0.35); }
+.isn-item__pill--done { background: color-mix(in srgb, var(--ia-fresh) 14%, transparent); color: var(--ia-fresh); }
 /* 交通灯（2026-10-22 用户两轮裁定：红黄绿＋「不要棕色」）：绿✓=完成（文本色，
    合格对比度）；黄/红＝实心圆灯胆（灯胆 token 单一源 ia2.scss，不随主题反转——
    自发光图形；内描环保证浅底可见）。黄色作文本色在浅底无 ≥4.5:1 合格值，
