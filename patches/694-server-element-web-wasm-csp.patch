@@ -1,0 +1,24 @@
+diff --git a/packages/server/src/modules/studio/middleware/security.ts b/packages/server/src/modules/studio/middleware/security.ts
+index 8565864e3..978d01792 100644
+--- a/packages/server/src/modules/studio/middleware/security.ts
++++ b/packages/server/src/modules/studio/middleware/security.ts
+@@ -156,12 +156,18 @@ export function securityHeaders(): Middleware {
+       'Cross-Origin-Opener-Policy',
+       isGroupChatAgentLinkDocument(ctx) ? 'unsafe-none' : 'same-origin-allow-popups',
+     )
++    // overlay[element-web-wasm-csp]: element-web 的 rust crypto（matrix-sdk-crypto
++    // wasm）登录后实例化，全局 script-src 无 wasm 源会被 CSP 以 CompileError 拒绝
++    // （登录 200 但会话启动死锁、无 /sync，真实账号验证轮实锤）。仅 /element-web/
++    // 追加窄 token wasm-unsafe-eval（dsh 网关用的是更宽的整 eval 放行），其余
++    // 路径零加宽、不开 eval。
++    const isElementWeb = ctx.path.startsWith('/element-web/')
+     ctx.set('Content-Security-Policy', [
+       "default-src 'self'",
+       "base-uri 'self'",
+       "object-src 'none'",
+       "frame-ancestors 'none'",
+-      "script-src 'self' 'unsafe-inline'",
++      `script-src 'self' 'unsafe-inline'${isElementWeb ? " 'wasm-unsafe-eval'" : ''}`,
+       "style-src 'self' 'unsafe-inline'",
+       "img-src 'self' data: blob: https:",
+       "font-src 'self' data:",
