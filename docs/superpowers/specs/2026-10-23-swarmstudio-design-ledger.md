@@ -1,12 +1,13 @@
 # SwarmStudio 设计数字总账
 
 > 全域数字唯一事实源（2026-10-23 自整合正本 R1 附录 B 独立成档，整合 R2 决策 I5）。
-> 核实日：2026-10-26（九点对账轮全量复测；设计文档同步机制立法批随批更新：变量 199/specs 342；Qoder 主动性吸收轮刷新三行：补丁 405/服务端域 149/specs 350 实测）。任何文档引用数字以本表为准；本表只增改不并列双口径，历史口径见各档案。
+> 核实日：2026-10-26（九点对账轮全量复测；设计文档同步机制立法批随批更新：变量 199/specs 342；Qoder 主动性吸收轮刷新三行：补丁 405/服务端域 149/specs 350 实测；挂账清偿批：补丁 406/specs 351）。任何文档引用数字以本表为准；本表只增改不并列双口径，历史口径见各档案。
 
 | 域 | 项 | 数字 |
 |---|---|---|
 | 产品面 | 模式/页签/入口/岛 | 3/33/6/4 |
-| 产品面 | 补丁 studio/zcode（series 登记） | 405/8（2026-10-26 晚口径并 Qoder 轮实测：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp、695 proactivity 挂载＋zcode 009 claude-skills-compat） |
+| 产品面 | 路由/客户端目录/服务端域 | 89/19/149（+delivery/precedent/expertise/proactivity，2026-10-26 Qoder 吸收轮；proactivity 同域增执法策略存储不算新域） |
+| 产品面 | 补丁 studio/zcode（series 登记） | 406/8（2026-10-26 晚口径并 Qoder 双轮实测：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp、695 proactivity 挂载、696 agent 目标登记对齐台账＋zcode 009 claude-skills-compat） |
 | 产品面 | 用户决策/常设/纠正 | 148/30/27 |
 | 产品面 | 全量测试 | 滚动口径见各轮 spec 验证段（2026-10-26 注入态主树=6,366 过/4 败（并行 TDD 红测）/11 跳过；主树未注入时全量出假红，必须先 inject） |
 | 产品面 | 六闸/介入/检测器/prelaunch | 6/14/31/30 |
@@ -30,6 +31,7 @@
 | 能力层 | references/research/reviews | 57/99/1 |
 | 能力层 | 随发文件 | 92（lite 46） |
 | 能力层 | 变量/预算 | 199/200（2026-10-26 设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS） |
+| 文档 | specs/plans/研究档 | 353/63/32（2026-10-26 挂账清偿批实测；两行并行轮丢失本次恢复） |
 
 ## 来源覆盖（2026-10-26 复测）
 

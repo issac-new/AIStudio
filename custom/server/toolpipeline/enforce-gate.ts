@@ -32,6 +32,8 @@ import { sessionModeOf } from '../permmodes/session-mode-store'
 import { appendPolicyDecision } from './policy-decisions'
 import { evaluatePolicy, type PolicySnapshot, type PolicyToolCategory } from '../toolpolicy/tool-policy'
 import { loadPolicySnapshot } from '../toolpolicy/policy-store'
+import { proactivityPolicyForProfile, type ProactivityPolicyLite } from '../proactivity/enforcement-policy'
+import { assess } from '../proactivity/proactivity-model'
 
 /** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。 */
 interface PreExecuteVerdict { allow: false; error: string }
@@ -64,6 +66,9 @@ export type EnforceRule =
   | 'mode-needs-approval'    // 全局模式矩阵判 RA（需审批，v1 无交互桥→拒并指引）
   | 'approval-passed'        // 审批桥放行（批单在案且未消费，consume-on-pass；applyApprovalBridge 终态）
   | 'strict-deny'            // strict 模式无任何策略配置（deny-by-default；AGT 吸收轮 F）
+  | 'proactivity-inform-only' // 两轴 L5（推断目标）非观察面（挂账清偿批 H4）
+  | 'proactivity-draft-cap'   // 两轴 L4 无契约上限起草（可走审批桥——人核即起草语义闭环）
+  | 'proactivity-goal-drift'  // 两轴目标漂移防线（L4 目标 stale/未确认——须重新确认目标，非批单可豁免）
   | 'sandbox-path'           // 显式路径超出沙箱根（P2-5）
   | 'sandbox-network'        // 浏览器 URL 被网络策略拒绝（P2-5）
   | 'budget-exceeded'        // 当日预算耗尽且策略动作为 block（残余项⑤）
@@ -197,6 +202,45 @@ export function approvalPointHit(ladder: AutonomyLadderEntry, tool: string, inpu
   return null
 }
 
+// ---------- 两轴策略源（挂账清偿批 H4，proactivity 域消费） ----------
+
+/** 两轴限制裁决（纯函数）：read 类=观察面恒放行（L5 告知也要能看，D2）；
+ *  非 read 按风险档映射纵轴（high→irreversible_exec，其余→reversible_exec），
+ *  复用 proactivity-model.assess() 单一事实源。返回 null=两轴不限制。 */
+export function proactivityRestriction(
+  tool: string,
+  input: Record<string, unknown>,
+  policy: ProactivityPolicyLite,
+): { rule: 'proactivity-inform-only' | 'proactivity-draft-cap' | 'proactivity-goal-drift'; error: string } | null {
+  const category = toolCategoryOf(tool)
+  if (category === 'read') return null
+  const action = riskOfCall(tool, input) === 'high' ? 'irreversible_exec' : 'reversible_exec'
+  const verdict = assess({
+    level: policy.level,
+    action,
+    ...(policy.contract ? { contract: policy.contract } : {}),
+    ...(policy.goalStatus ? { goalStatus: policy.goalStatus } : {}),
+  })
+  if (verdict.allowed) return null
+  const reason = verdict.reasons.join('；')
+  if (policy.level === 'L5') {
+    return {
+      rule: 'proactivity-inform-only',
+      error: `两轴裁决 L5（推断目标）只告知：工具 ${tool} 属 ${category} 类（非观察面）——${reason}`,
+    }
+  }
+  if (policy.goalStatus && policy.goalStatus !== 'fresh') {
+    return {
+      rule: 'proactivity-goal-drift',
+      error: `两轴裁决目标漂移防线：工具 ${tool}（${category} 类）被压回起草——${reason}。请先在目标对齐台账重新确认目标（PUT /api/hermes/proactivity/alignment/<goalId>/confirm），审批单不可豁免漂移防线`,
+    }
+  }
+  return {
+    rule: 'proactivity-draft-cap',
+    error: `两轴裁决 L4 无契约上限起草：工具 ${tool} 属 ${category} 类——${reason}。可走审批（人核后放行=起草待确认语义）或补目标契约（说清目标+验收规则）升仓`,
+  }
+}
+
 // ---------- 裁决核心（纯函数，测试面） ----------
 
 /** 身份最小面（agentidentity 的投影；不 import 存储，保持纯函数可测）。 */
@@ -224,6 +268,10 @@ export interface EnforceEnv {
   budgetBlocked?: boolean
   /** 声明式策略快照注入（测试用；缺省读 policy-store，带 1s 缓存）。null=未配置。 */
   policyOf?: () => PolicySnapshot | null
+  /** 两轴策略总闸（HERMES_PROACTIVITY_ENFORCE=1；缺省读 env）。 */
+  proactivityOn?: boolean
+  /** 两轴策略注入（测试用；缺省读 proactivity/enforcement-policy，异常 fail-open）。 */
+  proactivityOf?: (profileId?: string) => ProactivityPolicyLite | null
 }
 
 /** 工具白名单匹配：精确名或 `prefix*`。 */
@@ -383,6 +431,21 @@ export function evaluateEnforcement(
     }
   }
 
+  // 策略链 0.7（挂账清偿批 H4）：两轴策略（proactivity 域）。只收紧不放宽——
+  // 硬边界（身份/沙箱/预算/声明式策略）之后、粗粒度阶梯/模式之前。独立总闸
+  // HERMES_PROACTIVITY_ENFORCE=1（默认 0=零行为变化）且该 profile 配了两轴
+  // 策略才执法；缺配置/内部异常一律不拦（不装已治理）。
+  const proactOn = env.proactivityOn ?? (process.env.HERMES_PROACTIVITY_ENFORCE === '1')
+  if (proactOn) {
+    const policy = (env.proactivityOf ?? ((p?: string) => proactivityPolicyForProfile(p ?? '')))(profileId)
+    if (policy) {
+      const restriction = proactivityRestriction(tool, input, policy)
+      if (restriction) {
+        return { enforcing: true, allow: false, ...restriction, ...policyMeta }
+      }
+    }
+  }
+
   // 档位解析三级链（阶梯＞会话档＞全局档）：会话档 per-profile 更具体故恒胜全局档
   // （v4 通道轮）；全局档=env 注入位（测试用 globalMode / 运行用 HERMES_TOOL_ENFORCE_MODE）。
   const sessionMode = env.sessionModeOf !== undefined
@@ -480,6 +543,7 @@ export const APPROVAL_CLASS_RULES: ReadonlySet<string> = new Set([
   'mode-needs-approval',
   'ladder-approval-point',
   'policy-require-approval',
+  'proactivity-draft-cap',  // 两轴 L4 无契约：人核=「起草待确认」语义闭环（D3）
 ])
 
 export function applyApprovalBridge(

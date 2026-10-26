@@ -1,8 +1,8 @@
-// overlay/proactivity 域 REST（阿里技术《Personal Agent 落地思考》吸收轮 2026-10-26）：
-// GET /api/hermes/proactivity/model（两轴模型只读）、POST /assess（组合裁决）、
-// GET|POST /alignment、PUT /alignment/:goalId/confirm、DELETE /alignment/:goalId（目标持续对齐台账）。
-// 定位=判定面+台账（诚实边界：enforce-gate 执行面接线见 spec 挂账 H4，本域不假装能拦）。
-// 变更发 govbus autonomy 域事件（对齐 autonomyladder 审计面先例）。
+// overlay/proactivity 域 REST（阿里技术《Personal Agent 落地思考》吸收轮 2026-10-26 + 挂账清偿批）：
+// GET /api/hermes/proactivity/model（两轴模型只读+档位上限）、POST /assess（组合裁决）、
+// GET|POST /alignment、PUT /alignment/:goalId/confirm、DELETE /alignment/:goalId（目标持续对齐台账）、
+// GET/PUT/DELETE /policy(/:profile)（两轴执法策略——enforce-gate 第四级策略源，总闸
+// HERMES_PROACTIVITY_ENFORCE=1 才生效）。变更发 govbus autonomy 域事件。
 import Router from '@koa/router'
 
 import { appendGovEvent } from '../govbus/event-log'
@@ -13,6 +13,7 @@ import {
   PROBLEM_DEFINER_TITLES,
   assess,
   failureCostTier,
+  maxActionTierForLevel,
   upgradeAdvice,
   type ActionTier,
   type FailureCostFacts,
@@ -31,6 +32,15 @@ import {
   validateGoalInput,
   type GoalAlignmentEntry,
 } from './goal-alignment'
+import {
+  getPolicy,
+  listPolicies,
+  proactivityPolicyForProfile,
+  removePolicy,
+  upsertPolicy,
+  validatePolicyInput,
+  type ProactivityPolicyEntry,
+} from './enforcement-policy'
 
 export const proactivityRouter = new Router({ prefix: '/api/hermes/proactivity' })
 
@@ -61,7 +71,13 @@ proactivityRouter.get('/model', (ctx) => {
       '目标漂移防线：L4 目标 stale/never-confirmed 一律压回起草，契约不豁免（§2.2③/§6.1）',
     ],
     alignmentPolicy: DEFAULT_ALIGNMENT_POLICY,
-    executionFace: 'advisory-only（判定面；enforce-gate 接线挂账 H4）',
+    // 各横轴档位的纵轴上限（无契约/有契约）——呈现面直接渲染，不在客户端复算
+    caps: PROBLEM_DEFINER_LEVELS.map((level) => ({
+      level,
+      noContract: maxActionTierForLevel(level),
+      withContract: maxActionTierForLevel(level, { goalExplicit: true, acceptanceCriteria: true }),
+    })),
+    executionFace: 'enforce-gate 第四级策略源已接（HERMES_PROACTIVITY_ENFORCE=1 才执法，默认关）',
   }
 })
 
@@ -203,6 +219,69 @@ proactivityRouter.delete('/alignment/:goalId', (ctx) => {
     source: 'proactivity/proactivity-controller',
     summary: `长期目标移除：${ctx.params.goalId}`,
     refs: { goalId: ctx.params.goalId },
+  })
+  ctx.body = { ok: true }
+})
+
+// ── 两轴执法策略（挂账清偿批 H4：enforce-gate 第四级策略源的配置面）────
+
+function withResolved(entry: ProactivityPolicyEntry) {
+  return { ...entry, resolved: proactivityPolicyForProfile(entry.profile) }
+}
+
+proactivityRouter.get('/policy', (ctx) => {
+  ctx.body = { ok: true, entries: listPolicies().map(withResolved) }
+})
+
+proactivityRouter.put('/policy/:profile', (ctx) => {
+  const body = bodyOf(ctx)
+  const contract = body.contract as Record<string, unknown> | undefined
+  const problems = validatePolicyInput({
+    profile: ctx.params.profile,
+    level: body.level,
+    contract,
+    goalId: body.goalId,
+  })
+  if (problems.length > 0) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems }
+    return
+  }
+  const c = contract as unknown as GoalContract
+  const entry = upsertPolicy({
+    profile: String(ctx.params.profile),
+    level: body.level as ProblemDefinerLevel,
+    ...(contract ? { contract: { goalExplicit: !!c.goalExplicit, acceptanceCriteria: !!c.acceptanceCriteria } } : {}),
+    ...(typeof body.goalId === 'string' && body.goalId ? { goalId: body.goalId } : {}),
+    ...(typeof body.note === 'string' ? { note: body.note } : {}),
+    updatedBy: actorOf(ctx),
+  })
+  appendGovEvent({
+    domain: 'autonomy',
+    severity: 'info',
+    type: 'proactivity.policy_upserted',
+    source: 'proactivity/proactivity-controller',
+    summary: `两轴策略配置：${entry.profile} → ${entry.level}${entry.contract ? '（有契约）' : ''}`,
+    refs: { profile: entry.profile },
+    payload: { level: entry.level, goalId: entry.goalId ?? null },
+  })
+  ctx.body = { ok: true, entry: withResolved(entry) }
+})
+
+proactivityRouter.delete('/policy/:profile', (ctx) => {
+  const removed = removePolicy(ctx.params.profile)
+  if (!removed) {
+    ctx.status = 404
+    ctx.body = { ok: false, detail: '无该 profile 的两轴策略' }
+    return
+  }
+  appendGovEvent({
+    domain: 'autonomy',
+    severity: 'info',
+    type: 'proactivity.policy_removed',
+    source: 'proactivity/proactivity-controller',
+    summary: `两轴策略移除：${ctx.params.profile}`,
+    refs: { profile: ctx.params.profile },
   })
   ctx.body = { ok: true }
 })

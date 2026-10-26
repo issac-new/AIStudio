@@ -24,6 +24,8 @@ export interface GoalAlignmentEntry {
   createdAt: number
   /** 确认台账：append-only，每次确认 push 一条（不覆盖历史——审批留痕先例）。 */
   confirmations: GoalConfirmation[]
+  /** 目标契约（补丁 696：hermes /goal 创建时透传——completion contract=验收规则即 L4 升仓判据）。 */
+  contract?: { goalExplicit: boolean; acceptanceCriteria: boolean }
 }
 
 export interface AlignmentPolicy {
@@ -118,11 +120,15 @@ function normalize(raw: unknown): GoalAlignmentEntry | null {
           !!c && typeof c === 'object' && typeof (c as GoalConfirmation).at === 'number',
       )
     : []
+  const contract = e.contract as Partial<{ goalExplicit: unknown; acceptanceCriteria: unknown }> | undefined
   return {
     goalId: e.goalId,
     goalSummary: typeof e.goalSummary === 'string' ? e.goalSummary : '',
     createdAt: typeof e.createdAt === 'number' ? e.createdAt : Date.now(),
     confirmations,
+    ...(contract && typeof contract.goalExplicit === 'boolean' && typeof contract.acceptanceCriteria === 'boolean'
+      ? { contract: { goalExplicit: contract.goalExplicit, acceptanceCriteria: contract.acceptanceCriteria } }
+      : {}),
   }
 }
 
