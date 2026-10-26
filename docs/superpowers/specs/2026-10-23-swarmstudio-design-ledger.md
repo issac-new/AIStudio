@@ -7,15 +7,15 @@
 |---|---|---|
 | 产品面 | 模式/页签/入口/岛 | 3/33/6/4 |
 | 产品面 | 路由/客户端目录/服务端域 | 89/19/148（+delivery/precedent/expertise） |
-| 产品面 | 补丁 studio/zcode（series 登记） | 401/7（2026-10-25 升级轮补丁族重编号后口径，含 691 fail-soft） |
+| 产品面 | 补丁 studio/zcode（series 登记） | 404/8（2026-10-26 晚口径：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp＋zcode 009 claude-skills-compat） |
 | 产品面 | 用户决策/常设/纠正 | 148/30/27 |
-| 产品面 | 全量测试 | 滚动口径见各轮 spec 验证段（2026-10-26 侧栏轮=6,336 过/3 败环境类） |
+| 产品面 | 全量测试 | 滚动口径见各轮 spec 验证段（2026-10-26 注入态主树=6,366 过/4 败（并行 TDD 红测）/11 跳过；主树未注入时全量出假红，必须先 inject） |
 | 产品面 | 六闸/介入/检测器/prelaunch | 6/14/31/30 |
-| 产品面 | 净树重放 | clean+inject 全链通过（401 applied，2026-10-26 worktree 实测） |
+| 产品面 | 净树重放 | clean+inject 全链通过（2026-10-26 worktree 实测；series 现量见上行随批对账） |
 | 产品面 | FIBO | 37/21/16 |
 | 产品面 | 天猫吸收面（2026-10-23） | 端点 7（delivery 4+expertise 2+precedent 1）；介入六类/两层（run22=98/85+13）；画像 14 人 455 证据；C 档补数 81/81；判例=run 单元 |
 | 产品面 | 群体协作读数面（2026-10-24 含清账批） | 端点 1（delivery swarm-collab＋?compare= 消融对比）；四维度读数＋全文保真双口径＋拜占庭 BCR/暴露窗；红队种子库 v2=36 任务 6 向量；交付效能第⑤区；消融/拜占庭旋钮（默认关）＋mixed-motive-bidding 场景＋welfare/gini/nash 指标器；obs-signals byProfile 分桶；simharness 采集透传（判据零变化） |
-| 产品面 | 推演/方案/纪律 | 22 轮（run22 六闸全过）/V8.53/86 条正文（编号至 86） |
+| 产品面 | 推演/方案/纪律 | 22 轮（run22 六闸全过）/V8.54/86 条正文（编号至 86） |
 | 运行面 | 编制/账号/profile/板 | 15/30/42/28 |
 | 运行面 | 宿主/sim profile | 49-50/45 |
 | 运行面 | 技能中位 | 296（8-563） |
@@ -31,7 +31,7 @@
 | 能力层 | references/research/reviews | 57/99/1 |
 | 能力层 | 随发文件 | 92（lite 46） |
 | 能力层 | 变量/预算 | 199/200（2026-10-26 设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS） |
-| 文档 | specs/plans/研究档 | 343（含在途轮次）/62/32 |
+| 文档 | specs/plans/研究档 | 350（含在途轮次）/62/32 |
 
 ## 来源覆盖（2026-10-26 复测）
 
