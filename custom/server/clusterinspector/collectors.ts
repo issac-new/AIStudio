@@ -314,7 +314,10 @@ export function collectProfiles(deps: CollectorDeps = {}): ProfilesFace {
       face.ok = true
       return face
     }
-    for (const name of readdirSync(dir).sort()) {
+    // `_` 前缀目录（_shared/_archive）是容器不是 agent（hermes 名字正则同款排除）：
+    // 它们没有真实工作行（_shared 的 agent.log 仅两条维护日志），采进停摆观测面
+    // 会造幻影 profile 行（2026-10-26 排除面审计实锤——_shared 排序最前必占 cap 位）。
+    for (const name of readdirSync(dir).sort().filter((d) => !d.startsWith('_'))) {
       if (face.tails.length >= cap) break
       const logsDir = join(dir, name, 'logs')
       const log = join(logsDir, 'agent.log')
