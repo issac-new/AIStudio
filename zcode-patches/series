@@ -62,3 +62,9 @@
 #      BrokerError(code=unavailable)，details.cause 保留原始 errno，fail-closed
 #      语义与官方 SDK 消费面一致。
 008-broker-unavailable-error-code.patch
+
+# 009（2026-10-26 九点对账轮·技能回环实证）：Ycode 追加 .claude/skills 兼容技能根。
+# 实测基线：分叉与官方引擎均只读 .zcode/skills + .agents/skills，不读 .claude/skills
+#（skills list 三目录对照）。项目技能推荐落 .agents/skills（三引擎通吃）；本补丁
+# 只补分叉对既有 .claude/skills 资产的兼容，source 复用 agents，优先级排在原生根后。
+009-claude-skills-compat-root.patch

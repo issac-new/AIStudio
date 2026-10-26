@@ -1,0 +1,27 @@
+diff --git a/apps/zcode-cli/packages/adapters/src/skills/roots.ts b/apps/zcode-cli/packages/adapters/src/skills/roots.ts
+index 0000000..0000001 100644
+--- a/apps/zcode-cli/packages/adapters/src/skills/roots.ts	2026-10-21 09:50:24
++++ b/apps/zcode-cli/packages/adapters/src/skills/roots.ts	2026-10-26 20:08:13
+@@ -9,6 +9,7 @@
+ const SKILLS_DIR = "skills";
+ const ZCODE_DIR = ".zcode";
+ const AGENTS_DIR = ".agents";
++const CLAUDE_DIR = ".claude";
+ 
+ export interface SkillRootResolutionOptions {
+   homeDirectory?: string;
+@@ -111,9 +112,14 @@
+ ): SkillRoot[] {
+   // 合并而不是 fallback：用户可能同时安装原生 `.zcode` skill 和兼容 `.agents` skill。
+   // 同一级别仍保持 `.zcode` 优先，后续同名按 root 顺序解析。
++  // Ycode 分叉：追加 `.claude/skills` 兼容根（Claude Code 生态落点）。
++  // 注意：项目技能推荐落 `.agents/skills`——官方与分叉引擎都读它；
++  // 本根只保证分叉对既有 `.claude/skills` 资产的兼容，source 复用
++  // "agents"（兼容生态族），优先级排在原生 `.zcode`/`.agents` 之后。
+   return [
+     root(join(baseDirectory, ZCODE_DIR, SKILLS_DIR), scope, "zcode", nextPriority()),
+     root(join(baseDirectory, AGENTS_DIR, SKILLS_DIR), scope, "agents", nextPriority()),
++    root(join(baseDirectory, CLAUDE_DIR, SKILLS_DIR), scope, "agents", nextPriority()),
+   ];
+ }
+ 
