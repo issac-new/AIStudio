@@ -21,7 +21,9 @@
 
 | # | 决策 | 理由 | 否决的备选 | 可逆 |
 |---|---|---|---|---|
-| D1 | ACP 引擎身份走「桥进程环境」而非改桥/改桥调用方：delegate 驱动在 spawn 桥前解析引擎 env（ZCODE_BIN > ~/.hermes/ycode/zcode > 桥兜底） | 第三方桥 zcode-acp-server 以 `ZCODE_BIN > PATH zcode > /Applications/ZCode.app` 解析引擎（resolve.js:96-112）；env 是它原生开关，注入点收敛在自家驱动一处，零三方补丁 | 改桥源码/换桥（否决：引入三方维护面）；只在 team profile env 注入（否决：team/shared/profiles.yaml 是 core-chain 在改文件，且逐 profile 注入扩散） | 是 |
+| D1 | ACP 引擎身份走「桥进程环境」而非改桥/改桥调用方：delegate 驱动在 spawn 桥前解析引擎 env | 第三方桥 zcode-acp-server 以 `ZCODE_BIN > PATH zcode > /Applications/ZCode.app` 解析引擎（resolve.js）；env 是它原生开关，注入点收敛在自家驱动一处，零三方补丁 | 改桥源码/换桥（否决：引入三方维护面） | 是 |
+| D9 | 收尾批：引擎解析序改四级=显式 env > 官方捆绑 > 分叉部署位 > 桥兜底（默认走官方） | 2026-10-26 九连差分定谳：coding-plan 端点对公开 main 基底客户端全量 500（分叉/纯净构建、双模型皆败），仅私有 3.16.3 线通过且源码未发布——委托链今日可用的唯一正身=官方捆绑；upstream 追平后一行回切 | 维持分叉默认（否决：委托链 100% 500 不可用）；等待 upstream（否决：无 ETA，链路悬空） | 是（一行回切） |
+| D10 | delegate 增 `--model`/`ZCODE_ACP_MODEL`（session/setModel 通道，设置失败=EXIT_PROTOCOL 终止） | 计划端点侧模型面是动态的（同日 Flash 全量 500 实例）；委托方必须能按任务指定模型，且显式指定的模型设置失败时不得偷跑默认模型（结果不真） | 失败回落默认模型（否决：静默换模型=委托结果失真） | 是 |
 | D2 | 分叉 CLI 安装位 `~/.hermes/ycode/zcode`（shell 包装器 exec node zcode.cjs） | 主树 vendor/zcode 是宿主稳定位但仓内路径不该硬编码进生产脚本；~/.hermes 下已有运行时部署惯例（hermes-agent 同域）；包装器免 .cjs 可执行位/shebang 依赖 | 直接引用仓内 dist 路径（否决：checkout 位置耦合）；SEA 打包（否决：超出本轮） | 是 |
 | D3 | Ycode 不改 UI/二进制命名，作为文档统称（=vendor/zcode+zcode-patches 分叉构建物） | 用户裁定；补丁 690 rebrand 轮已刻意保留 zcode 标识符，重开品牌面需另立项 | 产品面统一改名（否决：i18n 大面改动+与 690 保留清单冲突） | 是 |
 | D4 | element-web 悬挂面以新补丁修（不动 008/667 中链段），目录缺席=503 fail-soft | series 是顺序重放链，改中段补丁有重放冲突风险（667 依赖 008 形态）；503+available:false 符合仓「fail-soft 不造假」不变量，优于摘除（element 参照位保留） | 重写 008（否决：链风险）；整段摘除 element 面 descendant（否决：config.json 单源端点与参照语义仍有消费者） | 是 |
@@ -35,16 +37,24 @@
 - P0-2（实测 2026-10-26 14:3x-15:0x）：
   - 分叉 CLI 构建链通：`vendor/zcode` 注入 zcode-patches 002-008 → pnpm install（2m52s）→ turbo 依赖闭包构建 11 任务全过 → `apps/zcode-cli/packages/cli/dist/zcode.cjs`（28.7MB，0.17.0）；`app-server --stdio` 冒烟直出 ZCode Protocol NDJSON 帧。
   - install-cli 幂等落位 `~/.hermes/ycode/zcode.cjs`；桥（zcode-acp-server，`[node, ZCODE_BIN, 'app-server','--stdio']` 形态）接受该路径。
-  - 引擎解析序单测 3/3 绿（runtime/tests/hermes_skills/test_zcode_acp_delegate.py）。
-  - 活体委托会话三次（14:40/14:46/15:04）：`engine_bin_source=ycode-fork engine_bin=~/.hermes/ycode/zcode.cjs` 三次命中；分叉引擎握手/建会话/流 update 全通；**引擎身份链闭环**。端到端最终回包未取得——上游提供方 `open.bigmodel.cn/api/anthropic`（account:bigmodel-individual-coding-plan / GLM-5.3-Flash）持续 HTTP 500，三轮各重试 10 次全败（引擎侧日志 ~/.zcode/cli/log 实锚，reason=server_error，与分叉接线无关）。**复验口令**：提供方恢复后重跑本节三次会话同款命令，断言 `RESULT exit=0` 即闭环。
+  - **500 根因更正（同日收尾批，用户打回「提供方故障」误诊后九连差分定谳）**：既非提供方故障也非模型死亡——coding-plan anthropic 端点对**公开 main 基底客户端（3c5b2276=3.16.1 系列）的请求一律 500**（分叉与无补丁纯净构建、GLM-5.3 与 Flash 双模型皆然；ZCODE_CUA_DISABLE/伪装 ZCODE_APP_VERSION=3.16.3 均无效），仅私有发布线 3.16.3 客户端通过（官方捆绑+GLM-5.3 27s 绿、+Flash 18s 绿；同凭据同提示词同桥）。观测到的请求差异面：http-referer（公开基底=open.bigmodel.cn，官方=zcode.z.ai，随客户端版本由路由服务动态下发）与工具数/系统提示长度。修复源未发布：upstream tag 止于 v3.15.1、origin/main 停 3c5b2276（2026-10-20）。
+  - **收尾批处置（fix/acp-delegate-model-select）**：delegate 增 `--model`/`ZCODE_ACP_MODEL`（桥 session/setModel，设置失败即终止不偷跑默认模型）；引擎解析序改四级＝显式 ZCODE_BIN > 官方捆绑（在位时）> 分叉部署位 > 桥兜底，日志 engine_bin_source 可审计——**upstream main 追平 3.16.2+ 后把 OFFICIAL 分支下移一行即回切分叉**（默认引擎回切=一行+复跑本节验收）。解析序单测 4/4 绿。
+  - **端到端终验（17:00，零参数默认通道）**：engine_bin_source=official-bundle 自动命中，`RESULT exit=0 stopReason=end_turn`，15 秒回包 ENGINE-VERIFY-OK——ACP 委托链默认可用，闭环。
 - P1-4（实测）：补丁 691 生成走快照重建法（基线+11 个触及 http.ts 补丁重放→纯增量 diff）；`npm run clean`+`npm run inject` 全链重放后门在位（:531/:555）；目标测试 13/13 绿（server-info 10+failsoft 3）。
 - P2-6：模板 JSON 语法校验过；无 gates.json 板零行为变化（kanban_gates.py 惰性语义既有测试覆盖）。
 - 合并前全量（2026-10-26 worktree 实测）：6,346 用例＝6,277 过/13 跳过/56 败；56 败定性为既有环境类基线——最可疑的 4 个文件（zcode-engine-chain/zcode-engine-bridge/panel-window-ipc/mcp-tool-mode-gate）在主树差分同败（13/13 同构），无一在本轮改动面；typecheck:harness 绿。
 - 文档批（D-2~D-7）：总账刷新（401/7、V8.53、纪律 86、v2.95.0、341/62 specs/plans）；README/AGENTS 版本表对齐 VENDOR.md（0.7.39/0.22.5）＋「只读运行面」措辞校正＋全量行按实测口径改写；整合正本 R10（旧路径勘正、§3.4 网关互调双通道入册、§3.2 Ycode-ACP 现状入册、§6.1 vendor 四步）；全流程方案 V8.53（词表 Ycode＝三十五词补齐、步 25 措辞对齐、升版行注「26 步/六闸/判据零改动」）；team 双语 README 工作区口径修正＋simharness 三十项核验＋runtime/README 重写双职责；USAGE 无过期口径（零改动）。gongwen-lint 机械首查跑过，违规集中于表格分号/加粗密度＝决策记录体裁合法形态（人工判定）。
-- 未验证项（如实声明）：ACP 委托在真实推演轮（run 级）的引擎断言；提供方恢复后的端到端回包（见上复验口令）。
+- 未验证项（如实声明）：ACP 委托在真实推演轮（run 级）的引擎断言（本轮验证=本机会话级）；分叉引擎作为 ACP 委托引擎的可用性（当前默认走官方捆绑，upstream 追平 3.16.2+ 后回切复验）。
+
+## 设计文档影响
+
+DESIGN_SYNC: touched
+- docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md — §3.2 编码委托链段：引擎解析序由「分叉默认」改为「官方捆绑默认（四级序）+upstream 追平后一行回切」，补 `--model` 通道与 500 根因一句话口径。
+- docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md — 词表 Ycode 条目与步 25 已在前批（V8.53）对齐；本批引擎默认位变化不触及 26 步/六闸/判据，零改动（术语批口径「Ycode=统称，UI 仍 zcode」不受引擎默认位影响）。
 
 ## 挂账（本轮不做）
 
+- **ACP 委托引擎默认位=官方捆绑**（收尾批裁定）：upstream/zcode 公开 main（3c5b2276）被 coding-plan 端点全量 500，私有 3.16.3 线未发布源码——upstream main 追平 3.16.2+ 后回切分叉默认位（delegate.py resolve_engine_bin_env 下移 OFFICIAL 分支一行+复跑验收）。
 - ACP L2（协议级 coding_delegate 工具）与 L3（zcode headless 自举）维持设计挂账。
 - board→profile/员工归属绑定（第 4 点）与 A2A 跨用户互调接口契约 spec（第 3 点后半句的正本段落本轮入整合正本，接口级 spec 另批）——core-chain 会话挂账一致。
 - 历史档案文档（ncwk 导航页 V8.47 引用、RELEASE-NOTES SwarmStudio 标题）按仓规不改写。
