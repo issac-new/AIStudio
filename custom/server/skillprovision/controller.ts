@@ -6,7 +6,7 @@ import { isAbsolute, join, resolve } from 'node:path'
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { buildReport, defaultHostRoot } from './reconcile'
-import { loadManifest, matchRole, normalizeManifest, resolveManifestPath, writeManifest } from './manifest'
+import { loadManifest, resolveManifestPath, writeManifest } from './manifest'
 import { applyProvision, rollbackProvision } from './provision'
 import { fleetDir, readFleetReport } from './fleet'
 import { listProfiles } from './scan'
@@ -39,26 +39,32 @@ function hostProfiles(body: Record<string, unknown>): string[] {
   return listProfiles(join(resolve(hostRoot), 'profiles')).filter(profile => profile !== '_shared')
 }
 
+function restrictedCaller(ctx: Context): ProfileAccessUser | null {
+  const user = callerOf(ctx)
+  return user && user.role !== 'super_admin' ? user : null
+}
+
+function denyPathOverrides(ctx: Context, body: Record<string, unknown>): boolean {
+  if (!restrictedCaller(ctx)) return false
+  const overridden = ['hostRoot', 'simRoot', 'manifestPath'].some(field => body[field] !== undefined)
+  if (!overridden) return false
+  ctx.status = 403
+  ctx.body = { ok: false, problems: ['profile_path_override_forbidden：普通用户只能使用默认运行根与默认清单'] }
+  return true
+}
+
 function authorizeTargets(
   ctx: Context,
   deps: ProfileAccessDeps | undefined,
   targets: string[],
-  requireTarget = false,
 ): boolean {
   const user = callerOf(ctx)
   if (!user || user.role === 'super_admin') return true
-  const denied = requireTarget && targets.length === 0
-    || targets.some(profile => !canUserAccessProfile(user, profile, deps))
+  const denied = targets.some(profile => !canUserAccessProfile(user, profile, deps))
   if (!denied) return true
   ctx.status = 403
   ctx.body = { ok: false, problems: ['profile_forbidden：请求包含当前用户不可见或无法确定的 profile'] }
   return false
-}
-
-function manifestTargets(payload: unknown, body: Record<string, unknown>, explicit: string[] | undefined): string[] {
-  const manifest = normalizeManifest(payload)
-  const matched = hostProfiles(body).filter(profile => matchRole(profile, manifest.roles) !== null)
-  return [...new Set([...matched, ...(explicit ?? [])])]
 }
 
 export function attachSkillProvisionRoutes(router: Router, deps?: ProfileAccessDeps): void {
@@ -99,11 +105,14 @@ export function attachSkillProvisionRoutes(router: Router, deps?: ProfileAccessD
 
   router.put('/provision/manifest', async (ctx) => {
     const body = bodyOf(ctx)
+    if (restrictedCaller(ctx)) {
+      ctx.status = 403
+      ctx.body = { ok: false, problems: ['profile_manifest_forbidden：只有 super_admin 可以写入共享供给清单'] }
+      return
+    }
     const payload = body.manifest ?? body
     const path = absoluteQuery(body.manifestPath, 'manifestPath') ?? resolveManifestPath()
     try {
-      const targets = manifestTargets(payload, body, profilesOf(body.profiles))
-      if (!authorizeTargets(ctx, deps, targets, true)) return
       const written = writeManifest(payload, path)
       ctx.body = { ok: true, ...written, effectiveReadPath: resolveManifestPath() }
     } catch (e) {
@@ -120,6 +129,7 @@ export function attachSkillProvisionRoutes(router: Router, deps?: ProfileAccessD
       ctx.body = { ok: false, problems: ['confirm_required：非干跑必须显式 confirm=true'] }
       return
     }
+    if (denyPathOverrides(ctx, body)) return
     try {
       const profiles = profilesOf(body.profiles)
       if (!authorizeTargets(ctx, deps, profiles ?? hostProfiles(body))) return
@@ -151,6 +161,7 @@ export function attachSkillProvisionRoutes(router: Router, deps?: ProfileAccessD
       ctx.body = { ok: false, problems: ['confirm_required：非干跑必须显式 confirm=true'] }
       return
     }
+    if (denyPathOverrides(ctx, body)) return
     try {
       const profiles = profilesOf(body.profiles)
       if (!authorizeTargets(ctx, deps, profiles ?? hostProfiles(body))) return

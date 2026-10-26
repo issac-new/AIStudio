@@ -6,7 +6,18 @@ import { WebSocket } from 'ws'
 import { createFleetRouter } from '../../../controllers/hermes/fleet'
 import { createKanbanOverview } from '../kanban-overview'
 
-interface TestUser { id: number; role: string; username?: string }
+const ordinaryKanbanDeps = vi.hoisted(() => ({ listTasks: vi.fn(), listUserProfiles: vi.fn() }))
+vi.mock('../../../../../vendor/hermes-studio/packages/server/src/modules/hermes/services/kanban/kanban-service', async importOriginal => ({
+  ...await importOriginal(),
+  normalizeBoardSlug: (board?: string | null) => board?.trim() || 'default',
+  listTasks: ordinaryKanbanDeps.listTasks,
+}))
+vi.mock('../../../../../vendor/hermes-studio/packages/server/src/modules/studio/public/users', async importOriginal => ({
+  ...await importOriginal(),
+  listUserProfiles: ordinaryKanbanDeps.listUserProfiles,
+}))
+
+interface TestUser { id: number; role: string; username?: string; profiles?: string[] }
 
 function overviewHandler(raw: any) {
   const router = createFleetRouter({
@@ -24,6 +35,7 @@ function overviewHandler(raw: any) {
     userCanAccessProfile: (userId, profile) => (
       (userId === 1 && ['default', 'alice-agent'].includes(profile))
       || (userId === 2 && ['default', 'bob-agent'].includes(profile))
+      || (userId === 4 && profile === 'alice-agent')
     ),
   })
   const layer = router.stack.find(item => item.path === '/api/hermes/kanban/overview')
@@ -61,6 +73,37 @@ describe('overview 账户授权投影', () => {
     // 投影不得把第一账户的过滤结果写回共享原始对象。
     expect(raw.tasks).toHaveLength(3)
     expect(raw.boards[0].total).toBe(99)
+  })
+
+  it('未指派输入与普通 Kanban 对照：未指派卡不滤（补丁 547），空映射不限制（477）', async () => {
+    const sharedTasks = [
+      { id: 'U-1', title: 'unassigned', assignee: null, status: 'blocked' },
+      { id: 'A-1', title: 'alice task', assignee: 'alice-agent', status: 'todo' },
+      { id: 'B-1', title: 'bob task', assignee: 'bob-agent', status: 'done' },
+    ]
+    ordinaryKanbanDeps.listTasks.mockResolvedValue(sharedTasks)
+    ordinaryKanbanDeps.listUserProfiles.mockReturnValue([{ profile_name: 'alice-agent' }])
+    const ordinaryKanban = await import('../../../../../vendor/hermes-studio/packages/server/src/modules/hermes/controllers/kanban')
+    const ordinaryCtx: any = {
+      query: { board: 'default' }, state: { user: { id: 4, role: 'user' } }, status: 200, body: null,
+    }
+    await ordinaryKanban.list(ordinaryCtx)
+    // 普通 Kanban（注入后）：未指派卡不滤、assignee 仍按可见集过滤（实测定谳）。
+    expect(ordinaryCtx.body.tasks.map((task: any) => task.id)).toEqual(['U-1', 'A-1'])
+
+    const raw = {
+      boards: [{ slug: 'default', name: 'Default', total: 3, archived: false }],
+      tasks: sharedTasks.map(task => ({ board: 'default', task })),
+      fetchedAt: 123,
+    }
+    const projected = ctxFor({ id: 4, role: 'user', profiles: ['alice-agent'] })
+    await overviewHandler(raw)(projected)
+    expect(projected.body.tasks.map((row: any) => row.task.id)).toEqual(ordinaryCtx.body.tasks.map((task: any) => task.id))
+
+    // user_profiles 空集（477 同款豁免）：不限制，与普通 Kanban 行为一致。
+    const nobody = ctxFor({ id: 3, role: 'user', profiles: [] })
+    await overviewHandler({ ...raw, tasks: [raw.tasks[0]] })(nobody)
+    expect(nobody.body.tasks.map((row: any) => row.task.id)).toEqual(['U-1'])
   })
 
   it('空板按 profiles 优先、profile_scope 回落的团队交集可见，legacy 空板保留空投影', async () => {
@@ -178,6 +221,66 @@ describe('overview WebSocket 授权投影', () => {
       })
       await new Promise(resolve => setTimeout(resolve, 30))
       expect(messages.filter(message => message.type === 'board-event').map(message => message.board)).toEqual(['alpha'])
+    } finally {
+      ws?.terminate()
+      await overview.stop()
+      await new Promise<void>(resolve => server.close(() => resolve()))
+    }
+  })
+
+  it('raw 只有他人任务时不发事件，raw 变真空板后恢复现有通知', async () => {
+    const children = new Map<string, any>()
+    let legacyTasks: any[] = [{ id: 'B-1', title: 'hidden activity', assignee: 'bob-agent' }]
+    const overview = createKanbanOverview({
+      listBoards: async () => [{ slug: 'legacy', name: 'Legacy', total: 1, archived: false }],
+      listTasks: async () => [...legacyTasks],
+      watchEvents: (opts) => {
+        const child = new EventEmitter() as any
+        child.pid = 200
+        child.stdout = new EventEmitter()
+        child.kill = vi.fn()
+        children.set(opts?.board || 'default', child)
+        return child
+      },
+      killWatch: (_pid, fallback) => fallback(),
+    })
+    const server: Server = createServer()
+    let ws: WebSocket | null = null
+    try {
+      await overview.getOverview()
+      overview.attachWebSocket(server, {
+        isAuthEnabled: async () => true,
+        authenticateUserToken: async () => ({ id: 1, role: 'user', profiles: ['alice-agent'] }),
+        userCanAccessProfile: (userId, profile) => userId === 1 && profile === 'alice-agent',
+      } as any)
+      await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+      const address = server.address()
+      if (!address || typeof address === 'string') throw new Error('test server address missing')
+      const messages: any[] = []
+      ws = new WebSocket(`ws://127.0.0.1:${address.port}/api/hermes/kanban/overview/events?token=alice-token`)
+      ws.on('message', data => messages.push(JSON.parse(data.toString())))
+      await new Promise<void>((resolve, reject) => {
+        ws!.once('open', resolve)
+        ws!.once('error', reject)
+      })
+      await vi.waitFor(() => {
+        if (!messages.some(message => message.type === 'connected')) throw new Error('connected message missing')
+        if (children.size !== 1) throw new Error('board watcher not ready')
+      })
+
+      children.get('legacy').stdout.emit('data', '{"kind":"task","id":"B-1"}\n')
+      await new Promise(resolve => setTimeout(resolve, 40))
+      expect(messages.filter(message => message.type === 'board-event')).toEqual([])
+
+      legacyTasks = []
+      children.get('legacy').stdout.emit('data', '{"kind":"task","id":"B-1","status":"archived"}\n')
+      // 第二条事件落在 watcher 的 2s 事件合并窗内，flush 由合并定时器延后触发。
+      await vi.waitFor(() => {
+        if (!messages.some(message => message.type === 'board-event' && message.board === 'legacy')) {
+          throw new Error('empty board event missing')
+        }
+      }, { timeout: 4_000 })
+      expect(messages.filter(message => message.type === 'board-event').map(message => message.board)).toEqual(['legacy'])
     } finally {
       ws?.terminate()
       await overview.stop()

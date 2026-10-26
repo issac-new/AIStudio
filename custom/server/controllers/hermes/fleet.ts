@@ -115,7 +115,13 @@ export function createFleetRouter(deps: FleetRouterDeps): Router {
     const user = currentUser(ctx)
     ctx.body = !user || user.role === 'super_admin'
       ? projectOverviewForAll(raw)
-      : projectOverviewForUser(raw, profile => canAccessProfile(user, profile, deps))
+      : projectOverviewForUser(
+          raw,
+          profile => canAccessProfile(user, profile, deps),
+          // 与普通 Kanban 补丁 477 同款豁免：user_profiles 空集（matrix 自动建号）
+          // 视为不限制；认证中间件对非 super_admin 恒填 profiles 数组。
+          Array.isArray((user as any).profiles) && (user as any).profiles.length === 0,
+        )
   })
 
   router.get('/api/hermes/teams', async ctx => {

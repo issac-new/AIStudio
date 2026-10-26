@@ -407,22 +407,32 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
   const clients = new Set<OverviewClientRecord>()
   const upgradeHandlers: Array<(req: IncomingMessage, socket: Duplex, head: Buffer) => void> = []
 
+  function sendBoardEvent(client: OverviewClientRecord, board: string): void {
+    const payload = JSON.stringify({ type: 'board-event', board, ts: Date.now() })
+    try {
+      if (client.raw.readyState === 1) client.raw.send(payload)
+    } catch {
+      clients.delete(client)
+    }
+  }
+
   function broadcast(board: string): void {
     if (!wss || clients.size === 0) return
     // 事件本身不带任务正文/计数，但是否可见该板仍由同一投影判定；
     // 共享 raw 缓存只读，按连接分别过滤，失败时不广播（fail closed）。
     void getOverview().then(raw => {
       for (const client of clients) {
-        const visibleBoards = !client.user || client.user.role === 'super_admin'
-          ? raw.boards
-          : projectOverviewForUser(raw, client.canAccess).boards
-        if (!visibleBoards.some(item => item.slug === board)) continue
-        const payload = JSON.stringify({ type: 'board-event', board, ts: Date.now() })
-        try {
-          if (client.raw.readyState === 1) client.raw.send(payload)
-        } catch {
-          clients.delete(client)
+        if (!client.user || client.user.role === 'super_admin') {
+          sendBoardEvent(client, board)
+          continue
         }
+        const projected = projectOverviewForUser(raw, client.canAccess)
+        // legacy 无团队键的空板可保留通知；raw 仍有任务而该账户一张也看不到时，
+        // 不得借 legacy 空板分支泄露隐藏任务的活动时序。
+        const boardHasTasks = raw.tasks.some(row => row.board === board)
+        if (boardHasTasks && !projected.tasks.some(row => row.board === board)) continue
+        if (!projected.boards.some(item => item.slug === board)) continue
+        sendBoardEvent(client, board)
       }
     }).catch(() => { /* 聚合失败时不向任何账户发事件 */ })
   }

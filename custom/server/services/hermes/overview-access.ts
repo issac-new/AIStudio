@@ -29,11 +29,17 @@ function boardTeam(board: KanbanOverviewRawBoard): string[] | null {
     .filter(Boolean))]
 }
 
-/** 非超级管理员投影：任务、计数与空板都源自同一份过滤后任务集。 */
+/** 非超级管理员投影：任务、计数与空板都源自同一份过滤后任务集。
+ *  与普通 Kanban（注入后 kanban.ts）同判据：未指派卡不滤（补丁 547——认领围栏
+ *  在 board.json 层，列表可见性不拦未指派）；visible 集为空=不限制（补丁 477——
+ *  matrix 自动建号 admin 无 user_profiles 行）。unrestricted 由调用方按同一
+ *  user_profiles 空集判定传入。 */
 export function projectOverviewForUser(
   raw: KanbanOverviewRawResult,
   canAccess: CanAccessOverviewProfile,
+  unrestricted = false,
 ): KanbanOverviewResult {
+  if (unrestricted) return projectOverviewForAll(raw)
   const accessCache = new Map<string, boolean>()
   const canAccessCached = (profile: string): boolean => {
     const cached = accessCache.get(profile)
@@ -42,7 +48,11 @@ export function projectOverviewForUser(
     accessCache.set(profile, allowed)
     return allowed
   }
-  const tasks = raw.tasks.filter(row => canAccessCached(assigneeProfile(row.task)))
+  const tasks = raw.tasks.filter(row => {
+    const assignee = row.task?.assignee
+    if (typeof assignee !== 'string' || !assignee.trim()) return true
+    return canAccessCached(assigneeProfile(row.task))
+  })
   const totals = new Map<string, number>()
   for (const row of tasks) totals.set(row.board, (totals.get(row.board) ?? 0) + 1)
 
