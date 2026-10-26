@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isBlankContent, isLateRequest, routeReached, routeSettled } from './walkthrough-probes.mjs'
+import { canonicalBounced, isBlankContent, isLateRequest, routeReached, routeSettled } from './walkthrough-probes.mjs'
 
 describe('只读走查探针', () => {
   it('加载中或壳层图标页不能误判为内容就绪，canvas 可以无文本', () => {
@@ -15,6 +15,12 @@ describe('只读走查探针', () => {
     expect(routeSettled({ current: '/app/board', browser: '/app/history/session/missing', expected: '/app/history/session/missing', kind: 'page', allowCanonical: true })).toBe(false)
     expect(routeSettled({ current: '/app/history', browser: '/app/history', expected: '/app/history/session/missing', kind: 'page', allowCanonical: true })).toBe(true)
     expect(routeSettled({ current: '/app/history/session/missing', browser: '/app/history/session/missing', expected: '/app/history/session/missing', kind: 'page', allowCanonical: true })).toBe(true)
+  })
+
+  it('外链守卫弹回：canonical 页离开原址记弹回，非 canonical 页不受影响', () => {
+    expect(canonicalBounced({ allowCanonical: true, current: '/app', expected: '/share/group-chat/x' })).toBe(true)
+    expect(canonicalBounced({ allowCanonical: true, current: '/share/group-chat/x', expected: '/share/group-chat/x' })).toBe(false)
+    expect(canonicalBounced({ allowCanonical: false, current: '/app', expected: '/share/group-chat/x' })).toBe(false)
   })
 
   it('允许页面自写查询参数，并按发起页识别跨页延迟请求', () => {

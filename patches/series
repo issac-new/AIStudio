@@ -940,3 +940,6 @@
 
 # 691（2026-10-26 九点对账轮 P1-4）：element-web 悬挂面 fail-soft——目录缺席时 /element-web/* 静态请求 503 {available:false}（不再落双 send 404/500 悬挂面），config.json 动态端点不受影响；不动 008/667 中链段。spec=2026-10-26-nine-point-reconciliation.md
 691-server-element-web-failsoft.patch
+
+# 692（2026-10-26 驾驶舱写流验收轮）：PATCH status:'running' 静默 no-op 根治——写流验收（walk-writes）实锤 PATCH 直连对 running（及任意未知 status）无分支静默吞掉返回 200+旧任务；同类病第三例（v121 review 缺分支、v126 bulk 吞错均已修）。running 只能由 worker 领卡（claim）进入，bulk 链 default 已显式抛错，PATCH 链补 else 分支对齐 fail-loud（500+人话错误）。
+692-server-kanban-patch-running-reject.patch

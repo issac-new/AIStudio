@@ -96,3 +96,14 @@ describe('patch 335 客户端：moveTask 回检 bulk results 不再假成功', (
     expect(moveBody).toMatch(/await fetchTasks\(true\)/)
   })
 })
+
+describe('patch 692 服务端：PATCH status running 显式拒绝（fail-loud）', () => {
+  const src = readInjected(SERVER)
+  const patchBody = sliceBetween(src, 'export async function patchTask', 'export interface HomeChannel')
+
+  it('running/未知 status 走 else 抛错（不再静默 200+旧任务）', () => {
+    expect(patchBody).toContain('HERMES_CUSTOM[KanbanPatchRunningReject]')
+    expect(patchBody).toMatch(/throw new Error\(\s*`Failed to set task status to \$\{s\}/)
+    expect(patchBody).toContain('entered by a worker claim')
+  })
+})
