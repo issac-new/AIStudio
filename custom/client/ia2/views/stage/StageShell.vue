@@ -12,6 +12,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
+import ProactivitySection from '@/custom/governance/components/ProactivitySection.vue'
 import OrgEditor from '../../components/gov/OrgEditor.vue'
 import ClearancePanel from '../gov/ClearancePanel.vue'
 import GovIssuesPanel from '../gov/GovIssuesPanel.vue'
@@ -187,6 +188,7 @@ const TAB_COMPONENTS: Record<string, Component> = {
   improve: AsyncImprove,
   metrics: StageMetricsPanel,
   gateLog: StageGatePanel,
+  proactivity: ProactivitySection,
 }
 
 const TAB_PROPS: Record<string, Record<string, unknown>> = {

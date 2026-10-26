@@ -68,6 +68,8 @@ export const STAGE_TABS: Readonly<Record<StageNo, readonly StageTabMeta[]>> = {
     { key: 'metrics', zh: '度量检查', en: 'Metrics', component: 'metrics' },
     { key: 'docs', zh: '文档评审', en: 'Doc review', component: 'docs' },
     { key: 'gateLog', zh: '质量门记录', en: 'Gate records', component: 'gateLog' },
+    // 2026-10-26 Qoder 主动性吸收轮·加挂微轮：两轴裁决/执法策略/目标对齐（组件同①搭建→环境与资产）
+    { key: 'proactivity', zh: '主动性两轴', en: 'Proactivity two-axis', component: 'proactivity' },
   ],
 }
 
