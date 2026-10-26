@@ -77,7 +77,7 @@ export interface PendingGate {
 export interface RequirementImpactDto {
   title: string
   description: string
-  entities: Array<{ source: 'ontology-instance' | 'board-kg' | 'fibo-term'; id: string; label: string; matchedTerm: string; detail?: string }>
+  entities: Array<{ source: 'ontology-instance' | 'board-kg' | 'fibo-term'; id: string; label: string; matchedTerm: string; detail?: string; docs?: string[] }>
   relatedSpecs: Array<{ file: string; title: string; date: string | null; matchedLine: string }>
   suggestedModules: string[]
   boundary: string
@@ -92,6 +92,25 @@ export async function analyzeRequirementImpact(title: string, description: strin
   })
   if (!r.ok || !r.impact) throw new Error('影响推演失败')
   return r.impact
+}
+
+/** LLM 拆模块（挂账清偿批 B1）：clef 判定端拆解；离线回落词表（modulesSource 如实标注）。 */
+export interface ModuleSuggestionDto {
+  modules: string[]
+  rationales: string[]
+  modulesSource: 'llm' | 'fallback'
+  online: boolean
+  reason?: string
+}
+
+export async function suggestModules(title: string, description: string): Promise<ModuleSuggestionDto> {
+  const r = await json<{ ok: boolean; suggestion?: ModuleSuggestionDto }>('/api/hermes/impact/suggest-modules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description }),
+  })
+  if (!r.ok || !r.suggestion) throw new Error('模块拆解失败')
+  return r.suggestion
 }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {

@@ -164,6 +164,7 @@ export const SIM_NAVS: readonly SimNavMeta[] = [
   { key: 'sim-ops', lead: '◈', zh: '运行监控', en: 'Run monitoring', name: 'ia2.simOps', testid: 'ia-side-nav-sim-ops' },
   { key: 'sim-evidence', lead: '▤', zh: '证据库', en: 'Evidence', name: 'ia2.simEvidence', testid: 'ia-side-nav-sim-evidence' },
   { key: 'sim-orchestration', lead: '⟐', zh: '运行编排', en: 'Orchestration', name: 'ia2.simOrchestration', testid: 'ia-side-nav-sim-orchestration' },
+  { key: 'sim-map', lead: '⬡', zh: '业务地图', en: 'Business map', name: 'ia2.simMap', testid: 'ia-side-nav-sim-map' },
   { key: 'sim-settings', lead: '⚙', zh: '推演设置', en: 'Simulation settings', name: 'ia2.simSettings', testid: 'ia-side-nav-sim-settings' },
 ]
 

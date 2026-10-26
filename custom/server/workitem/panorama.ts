@@ -11,6 +11,7 @@
 // 双路匹配）。不引入新主键、不改任何写入面——纯读侧投影。
 import { openReadonly, kanbanDbFiles } from '../governance/governance-analytics'
 import { listEvidence, latestVerdict } from '../evidence/evidence-store'
+import { laneTimeline, type LaneEvent } from '../evidence/lane-timeline'
 import { listSets, getSet, listRuns } from '../eval/store'
 import { listCases } from '../reviewgov/store'
 import { listRequested } from '../plan/plan-mode'
@@ -84,6 +85,16 @@ export interface TraceFace {
   via: 'eval_origin' | 'attempt'
 }
 
+/** 泳道时间线行（evidence/lane-timeline LaneTimelineRow 的直读投影）。 */
+export interface LaneRowFace {
+  laneId: string
+  kind: 'session' | 'handoff'
+  ref: string
+  at: number
+  /** handoff 行展示 from→to（lane-timeline label 口径）。 */
+  label: string
+}
+
 export interface WorkitemPanorama {
   taskId: string
   generatedAt: number
@@ -95,6 +106,8 @@ export interface WorkitemPanorama {
   plans: Face<PlanFace[]>
   graphRuns: Face<GraphRunFace[]>
   traces: Face<TraceFace[]>
+  /** 泳道时间线（挂账清偿批 B3）：lane_* 证据映射 LaneEvent 后的投影（无记录=空非失败）。 */
+  laneTimeline: Face<LaneRowFace[]>
   /** 串联覆盖边界（诚实声明——哪些关联通道不存在，防止读数被误读为「无产物」）。 */
   coverage: {
     tracesIndexedByTask: boolean
@@ -262,6 +275,33 @@ export async function buildPanorama(taskId: string): Promise<WorkitemPanorama> {
     }
   }
 
+  // 泳道时间线（挂账清偿批 B3）：lane_* 证据 → LaneEvent 投影（写入端 D3 编码的
+  // 逆映射：handoff 的 laneId=来源泳道（note 前段，缺席回落目标列）、peerLane=去向
+  // （artifactType）；session 的 laneId=artifactType）
+  let lanes: Face<LaneRowFace[]> = { available: false }
+  try {
+    const laneEvents: LaneEvent[] = [
+      ...listEvidence(taskId, 'lane_session').map((r) => ({
+        laneId: r.artifactType ?? '', kind: 'session' as const, ref: r.ref, at: r.at,
+      })),
+      ...listEvidence(taskId, 'lane_handoff').map((r) => ({
+        laneId: (r.note ?? '').split('→')[0]?.trim() || r.artifactType || '',
+        kind: 'handoff' as const,
+        ref: r.ref,
+        at: r.at,
+        peerLane: r.artifactType ?? '',
+      })),
+    ]
+    lanes = {
+      available: true,
+      data: laneTimeline(laneEvents).map((row) => ({
+        laneId: row.laneId, kind: row.kind, ref: row.ref, at: row.at, label: row.label,
+      })),
+    }
+  } catch (e) {
+    lanes = { available: false, error: `泳道时间线读取失败：${(e as Error).message}` }
+  }
+
   return {
     taskId,
     generatedAt: Date.now(),
@@ -273,6 +313,7 @@ export async function buildPanorama(taskId: string): Promise<WorkitemPanorama> {
     plans,
     graphRuns,
     traces: { available: true, data: traceSessions },
+    laneTimeline: lanes,
     coverage: {
       // trace 目录按 sessionId 组织、无 taskId 索引——只有 eval origin/attempt 桥接的
       // 已知关联可见；「无 trace」≠「无会话」，是索引边界。

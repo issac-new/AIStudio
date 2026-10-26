@@ -441,6 +441,13 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/sim/SimOrchestrationView.vue'),
         },
         {
+          // 业务地图（挂账清偿批 B5）：需求×四路知识面多图层叠加画布（JoyAI ONE 沙盘
+          // 的可视化层——影响推演结果的画布化呈现），壳层挂面非第七签
+          path: 'sim/map',
+          name: 'ia2.simMap',
+          component: () => import('./views/sim/BusinessMapView.vue'),
+        },
+        {
           // 全部运行 → 全流程推演（B1，2026-10-16）：RunCenter 整页退役为重定向，
           // 保留一个版本周期（A13 升格=运行列表能力并入全流程推演后移除本记录）；
           // 按名跳的既有调用面（IaGlobalTop/SpotlightPanel 等）随

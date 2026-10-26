@@ -24,6 +24,7 @@ export interface ReviewFace { caseId: string; title: string; state: string; tier
 export interface PlanFace { planId: string; state: string; fromAgent: string; at: number }
 export interface GraphRunFace { runId: string; graphId: string; artifact: string; ts: number }
 export interface TraceFace { sessionId: string; via: 'eval_origin' | 'attempt' }
+export interface LaneRowFace { laneId: string; kind: 'session' | 'handoff'; ref: string; at: number; label: string }
 
 export interface WorkitemPanoramaDto {
   taskId: string
@@ -36,6 +37,7 @@ export interface WorkitemPanoramaDto {
   plans: Face<PlanFace[]>
   graphRuns: Face<GraphRunFace[]>
   traces: Face<TraceFace[]>
+  laneTimeline: Face<LaneRowFace[]>
   coverage: { tracesIndexedByTask: boolean; evalTaskIdMapping: string; note: string }
 }
 

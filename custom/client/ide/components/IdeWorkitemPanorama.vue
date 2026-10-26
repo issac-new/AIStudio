@@ -68,6 +68,7 @@ function fmtTs(ms?: number | null): string {
         <div class="ide-pano__face"><h4>计划</h4><p class="ide-pano__num" data-testid="ide-pano-count-plans">{{ count(p.plans) }}</p></div>
         <div class="ide-pano__face"><h4>图运行</h4><p class="ide-pano__num" data-testid="ide-pano-count-graphruns">{{ count(p.graphRuns) }}</p></div>
         <div class="ide-pano__face"><h4>trace 会话</h4><p class="ide-pano__num" data-testid="ide-pano-count-traces">{{ count(p.traces) }}</p></div>
+        <div class="ide-pano__face"><h4>泳道履历</h4><p class="ide-pano__num" data-testid="ide-pano-count-lanes">{{ count(p.laneTimeline) }}</p></div>
       </section>
       <!-- 明细（最近项） -->
       <section v-if="p.evidence.available && p.evidence.data?.records.length" class="ide-pano__face">
@@ -90,6 +91,12 @@ function fmtTs(ms?: number | null): string {
         <h4>图运行（loop.persisted）</h4>
         <ul class="ide-pano__list">
           <li v-for="g in p.graphRuns.data.slice(0, 5)" :key="g.runId">{{ fmtTs(g.ts) }} · {{ g.runId }} → {{ g.artifact }}</li>
+        </ul>
+      </section>
+      <section v-if="p.laneTimeline.available && p.laneTimeline.data?.length" class="ide-pano__face" data-testid="ide-pano-lanes">
+        <h4>泳道履历</h4>
+        <ul class="ide-pano__list">
+          <li v-for="row in p.laneTimeline.data.slice(0, 6)" :key="`${row.kind}-${row.ref}-${row.at}`">{{ fmtTs(row.at) }} · {{ row.label }}</li>
         </ul>
       </section>
       <!-- 覆盖边界（诚实声明） -->

@@ -9,7 +9,12 @@
 // env FLYWHEEL_FEWSHOT_MIN_SIM 可调）；三元组来源=飞轮台账提炼记录（源集非
 // 密封才带文本快照，旧记录无快照 fail-soft 跳过）。封顶 3 条（与经验注入同额）。
 import { similarityScore } from './similarity'
+import { bigramVector, cosine } from './vectorizer'
 import type { DistillLedgerEntry } from './flywheel'
+
+/** 召回清洁口径与既有 ROUGE-L 调用一致（stopwords 显式关闭——台账题面是任务语境
+ * 原文，清洁会丢专名字符），向量口径沿用同一清洁设定保口径对齐。 */
+const EMPTY_STOPWORDS = new Set<string>()
 
 /** 召回上限：与 expcandidates 经验注入同额（防简报膨胀）。 */
 export const FEWSHOT_RECALL_LIMIT = 3
@@ -57,7 +62,10 @@ export interface FewshotRecall {
   candidates: number
 }
 
-/** 新查询 → 召回最相关教训（纯函数；同输入同输出）。 */
+/** 新查询 → 召回最相关教训（纯函数；同输入同输出）。
+ * 相似度双口径（挂账清偿批 B2）：max(字符 ROUGE-L, bigram 向量余弦)——词面序列
+ * 与词组构成两口径互兜盲区；向量口径=特征哈希 bigram（vectorizer.ts，零依赖
+ * 确定性），排序仍按相似度降序+ledgerId 稳定序。 */
 export function recallFewshot(
   query: string,
   distills: DistillLedgerEntry[],
@@ -70,8 +78,13 @@ export function recallFewshot(
   if (!trimmed || triples.length === 0) {
     return { query: trimmed, minSim, recalled: [], candidates: triples.length }
   }
+  const queryVec = bigramVector(trimmed, EMPTY_STOPWORDS)
   const scored = triples
-    .map((t) => ({ ...t, similarity: similarityScore({ transcript: trimmed, reference: t.trigger, stopwords: [] }) }))
+    .map((t) => {
+      const rouge = similarityScore({ transcript: trimmed, reference: t.trigger, stopwords: [] })
+      const vec = cosine(queryVec, bigramVector(t.trigger, EMPTY_STOPWORDS))
+      return { ...t, similarity: Math.max(rouge, vec) }
+    })
     .filter((t) => t.similarity >= minSim)
     .sort((a, b) => b.similarity - a.similarity || a.ledgerId.localeCompare(b.ledgerId))
     .slice(0, limit)
