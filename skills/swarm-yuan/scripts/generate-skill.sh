@@ -3026,8 +3026,12 @@ MEOF
 # R101 L2 提交时强拦装配：git pre-commit 垫片 + core.hooksPath（宿主无关拦截点——
 # L1 未覆盖宿主（Cursor/Windsurf/OpenCode/Gemini/Kimi，hook 通道在册、本生成链未整合）此前只有 advisory 规则文件，
 # git pre-commit 是它们唯一的真强制点；有 hook 宿主（Claude Code/Codex/ZCode）则
-# 与 L1 写时拦截构成纵深）。垫片指向技能内 scripts/spec-first-pre-commit.sh 绝对
-# 路径（用户级安装技能目录不在仓库内，相对路径不可达——与 codex hooks.json 同款取舍）。
+# 与 L1 写时拦截构成纵深）。垫片两条职责：①委托技能内 scripts/spec-first-pre-commit.sh
+# 绝对路径（用户级安装技能目录不在仓库内，相对路径不可达——与 codex hooks.json 同款
+# 取舍；缺席 fail-open 降级，全新克隆不因路径缺失打死提交，L1/L3 仍在）；
+# ②vendor/** 挡护——inject 注入脏态是预期工作态不入提交，普通提交自动撤出暂存区，
+# 基线替换走 VENDOR_SYNC=1 显式通道（AIStudio 仓规；2026-10-24 b7aef6874 首装、
+# 2026-10-26 修复重生成丢失后回移本模板，custom/__tests__/precommit-vendor-guard.test.ts 锁同步）。
 # 尊重现状：项目已有自定义 core.hooksPath 不覆盖（披露+手工接入指引）；非 git 项目跳过披露。
 _fg_install_precommit() {
 if [[ "$MODE" != "upgrade" && "$PROFILE" != "lite" ]] && git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -3035,9 +3039,19 @@ if [[ "$MODE" != "upgrade" && "$PROFILE" != "lite" ]] && git -C "$PROJECT_DIR" r
   mkdir -p "$_syh_dir"
   cat > "$_syh_dir/pre-commit" <<PCEOF
 #!/usr/bin/env bash
-# swarm-yuan spec-first L2 提交时强拦垫片（由 generate-skill.sh 装配，勿手改；
+# swarm-yuan L2 pre-commit 垫片：spec-first 强拦委托 + vendor 挡护（由 generate-skill.sh 装配，勿手改；
 # 卸载: git config --unset core.hooksPath && rm -rf .swarm-yuan/hooks）
-exec bash "${SKILL_DIR}/scripts/spec-first-pre-commit.sh" "\$@"
+SF="${SKILL_DIR}/scripts/spec-first-pre-commit.sh"
+if [ -f "\$SF" ]; then
+  bash "\$SF" "\$@" || exit \$?
+else
+  echo "[pre-commit] spec-first 工作区脚本缺席（全新克隆形态），L2 降级跳过；L1/L3 门禁不变。"
+fi
+if [ "\${VENDOR_SYNC:-0}" != "1" ] && git diff --cached --name-only -- vendor/ 2>/dev/null | grep -q .; then
+  git reset -q HEAD -- vendor/
+  echo "[pre-commit] vendor/** 为钉版基线：inject 注入态不入提交（已自动撤出暂存区）；基线替换走 VENDOR_SYNC=1 + scripts/vendor-sync.sh。"
+fi
+exit 0
 PCEOF
   chmod +x "$_syh_dir/pre-commit"
   _syh_hp="$(git -C "$PROJECT_DIR" config core.hooksPath 2>/dev/null || true)"

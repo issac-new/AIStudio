@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
-# swarm-yuan spec-first L2 提交时强拦垫片（由 generate-skill.sh 装配，勿手改；
+# swarm-yuan L2 pre-commit 垫片：spec-first 强拦委托 + vendor 挡护（由 generate-skill.sh 装配，勿手改；
 # 卸载: git config --unset core.hooksPath && rm -rf .swarm-yuan/hooks）
-exec bash "/Users/cuishi/lab/AIStudio/.claude/skills/aistudio-dev/scripts/spec-first-pre-commit.sh" "$@"
+SF="/Users/cuishi/lab/AIStudio/.claude/skills/aistudio-dev/scripts/spec-first-pre-commit.sh"
+if [ -f "$SF" ]; then
+  bash "$SF" "$@" || exit $?
+else
+  echo "[pre-commit] spec-first 工作区脚本缺席（全新克隆形态），L2 降级跳过；L1/L3 门禁不变。"
+fi
+if [ "${VENDOR_SYNC:-0}" != "1" ] && git diff --cached --name-only -- vendor/ 2>/dev/null | grep -q .; then
+  git reset -q HEAD -- vendor/
+  echo "[pre-commit] vendor/** 为钉版基线：inject 注入态不入提交（已自动撤出暂存区）；基线替换走 VENDOR_SYNC=1 + scripts/vendor-sync.sh。"
+fi
+exit 0
