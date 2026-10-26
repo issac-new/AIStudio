@@ -38,8 +38,16 @@ function parseFileTable(lines: string[], lineOffset: number): TableRow[] {
   const headers = splitTableRow(lines[headerIndex])
   if (headers.length !== 3) throw new Error(`文件索引表必须为 3 列，实际为 ${headers.length} 列`)
   const delimiter = lines[headerIndex + 1]?.trim() ?? ''
-  if (!/^\|(?:\s*:?-{3,}:?\s*\|)+$/.test(delimiter)) {
-    throw new Error(`第 ${lineOffset + headerIndex + 1} 行缺少合法 Markdown 表格分隔行`)
+  const delimiterLine = lineOffset + headerIndex + 1
+  const delimiterCells = delimiter ? splitTableRow(delimiter) : []
+  if (delimiterCells.length !== headers.length) {
+    throw new Error(
+      `第 ${delimiterLine} 行分隔行列数错误：表头 ${headers.length} 列，分隔行 ${delimiterCells.length} 列`,
+    )
+  }
+  const invalidDelimiterCell = delimiterCells.find((cell) => !/^:?-{3,}:?$/.test(cell))
+  if (invalidDelimiterCell !== undefined) {
+    throw new Error(`第 ${delimiterLine} 行分隔行单元格不符合 :?-{3,}:?：${invalidDelimiterCell}`)
   }
 
   const rows: TableRow[] = []
@@ -115,6 +123,26 @@ describe('specs 文档单一事实源守门', () => {
 ## A.2 历史快照
 `
     expect(() => parseAppendix(malformed)).toThrow(/列数错误：表头 3 列，数据行 2 列/)
+  })
+
+  it.each([
+    { label: '少一列', delimiter: '|---|---|', columns: 2 },
+    { label: '多一列', delimiter: '|---|---|---|---|', columns: 4 },
+  ])('解析器拒绝分隔行$label（表头 3 列）', ({ delimiter, columns }) => {
+    const malformed = `# 附录 A：测试索引（1 份文档）
+## A.1 逐份索引
+| 文件名 | 主旨 | 结论要点 |
+|---|---|---|
+| 2026-01-01-design | 设计 | 保留 |
+### 角色/排除（非 spec 文档）
+| 文件名 | 角色/排除 | 说明 |
+${delimiter}
+| 2026-01-01-navigation | 导航 | 指向正本 |
+## A.2 历史快照
+`
+    expect(() => parseAppendix(malformed)).toThrow(
+      new RegExp(`分隔行列数错误：表头 3 列，分隔行 ${columns} 列`),
+    )
   })
 
   it('附录包含且只包含一个 A.1 内的角色/排除表', () => {

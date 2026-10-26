@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（340 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（343 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 完整设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。349 份直接根 Markdown 中，A.1 收 340 份实际设计、规格与决策文档（含历史业务 spec）；其余 9 份导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 343 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -335,12 +335,15 @@
 | 2026-10-25-upgrade-studio-0739-agent-0225 | studio 0.7.39 与 agent 0.22.5 升级 | 397 补丁重放、pytest 44 通过；规范位残 5 个失败文件逐项定性，未记作全绿 |
 | 2026-10-26-a2a-board-harness-alignment | A2A、看板归属与 harness 单仓化校正 | A2A 默认本机、板团队键单源、闸键对齐；真实跨机与合并树行为未验 |
 | 2026-10-26-aistudio-architecture-execution-alignment | AIStudio 九段架构执行校正 | 聚焦授权、人工门、任务上下文与技能实证；完整推演、真人会签和多机未验 |
+| 2026-10-26-cockpit-debt-completion | 驾驶舱挂账清偿 | 恢复 REAP 26 包与两技能、element-web 官方构建与 ELEMENT_WEB_DIR、serve-main 换装 |
 | 2026-10-26-cockpit-followup | 驾驶舱未做项清偿 | 生产走查与写流补验，patch 692 修 running 静默；REAP 26 包留原会话处理 |
 | 2026-10-26-cockpit-source-design-refactor | 驾驶舱功能设计与源码盘点重构 | 保留 IA，修审批/注意力/轨迹/日程；152 个只读态走查，写流与生产包交后续批 |
 | 2026-10-26-core-coding-chain-alignment | ACP→Ycode→项目技能→任务工作区 | provider/cwd 与技能先行接线；定向测试过，live 部署和真实 ACP 回合未验 |
 | 2026-10-26-design-sync-followup | 设计文档同步尾部清偿 | PROJECT_DIR 可由 env 覆盖，L3 分支态拦/放双场景固化为 23 项断言 |
 | 2026-10-26-dev-skill-design-doc-sync | XXX-DEV 设计文档同步机制 | 四要素声明由 L2/L3 机械核验，合入序列入技能；doc-numbers 基线失败另列 |
+| 2026-10-26-element-web-csp | element-web CSP wasm 放行 | 补丁 694 窄放行 wasm-unsafe-eval 根治登录后会话死锁；真实账号双端收发终验 |
 | 2026-10-26-nine-point-reconciliation | 九点产品逻辑对账校正 | 该轮裁定 ACP 官方捆绑默认、element fail-soft、done 人闸 opt-in；分叉与 run 级未验 |
+| 2026-10-26-skill-roots-claude-compat | Ycode 技能根兼容与落点实证 | 补丁 009 加 .claude/skills 兼容根；项目技能落点 .agents/skills 三引擎通吃，软链方案并存 |
 | 2026-10-26-precommit-vendor-guard-restore | pre-commit vendor 挡护还原 | 模板、产物、守门三层同步；自动撤出暂存，VENDOR_SYNC=1 为显式逃生 |
 | 2026-10-26-rebrand-aistudio | 产品品牌统一 AIStudio | 用户可见品牌收敛，安装/协议/路径标识保留；历史文档不改写 |
 | 2026-10-26-shared-exclusion-leaks | _shared 排除面两漏补齐 | 巡检日志尾与能力上报统一滤 `_` 前缀；41 项测试过，上报 50→49 |
