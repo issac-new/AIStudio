@@ -8,7 +8,7 @@
 import { chromium } from '@playwright/test'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
-export const BASE = process.env.WALK_BASE || 'http://localhost:8689'
+export const BASE = process.env.WALK_BASE || 'http://localhost:8649'
 export const SHOTS = process.env.WALK_SHOTS || '/tmp/regression-shots'
 
 mkdirSync(SHOTS, { recursive: true })
