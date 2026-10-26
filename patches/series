@@ -958,3 +958,6 @@
 
 # 697（2026-10-26 JoyAI 闭环吸收轮）：workitem+impact 域挂载——/api/hermes/workitem/:taskId/panorama 以看板 taskId 为统一上下文锚汇聚全链路八面产物（卡片/事件/证据/评测/评审/计划/图运行/trace 桥接，每面 fail-soft）；/api/hermes/impact/requirement 需求文本四路词面命中（本体实例/板级 KG/FIBO 术语/specs 历史迭代）+建议模块。spec=2026-10-26-joyai-closed-loop-absorption.md
 697-server-workitem-impact-routes.patch
+
+# 698（2026-10-27 JoyAI 挂账清偿批二）：mapnotes 域挂载——/api/hermes/map-annotations（GET/POST/DELETE）：业务地图节点标注按需求指纹（sha1(title+description)，impact 响应下发）持久化，多用户异步协同。spec=2026-10-27-joyai-annotations-rerank.md
+698-server-mapnotes-routes.patch

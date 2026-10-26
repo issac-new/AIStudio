@@ -1,0 +1,22 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -184,6 +184,10 @@
+ // specs 历史迭代）+ 建议模块。spec=2026-10-26-joyai-closed-loop-absorption.md
+ import { workitemRoutes } from '../custom/workitem/workitem-controller'
+ import { impactRoutes } from '../custom/impact/impact-controller'
++// overlay[mapnotes]（JoyAI 挂账清偿批二 C1，2026-10-27）：业务地图标注——节点备注/确认
++// 勾选按需求指纹（impact 响应下发 sha1）持久化，多用户读写同一存储=异步协同。
++// spec=2026-10-27-joyai-annotations-rerank.md
++import { mapAnnotationsRoutes } from '../custom/mapnotes/mapnotes-controller'
+ // overlay[runtime-verify]（长会话治理 B5 挂载件）：真工具运行时验证器注册表——
+ // /api/hermes/runtime-verify/{health,verifiers,miniprogram}。原模块早落而路由从未
+ // 挂载（悬空件），606 补登。
+@@ -547,6 +551,7 @@
+   app.use(proactivityRouter.routes())           // 主动性两轴裁决+目标对齐台账（Qoder 吸收轮，fail-soft）
+   app.use(workitemRoutes.routes())              // 工作项全景串联：taskId → 全链路八面（JoyAI 吸收轮，fail-soft）
+   app.use(impactRoutes.routes())                 // 需求影响推演：四路词面命中（JoyAI 吸收轮，fail-soft）
++  app.use(mapAnnotationsRoutes.routes())         // 业务地图标注：按需求指纹持久化（JoyAI 清偿批二 C1）
+   app.use(ontologyRoutes.routes())                // 本体工作台：spec/instances/validate/export/versions REST
+   app.use(skillgovGeneratorRoutes.routes())         // 技能治理：生成器 status/run
+   app.use(skillgovStoreRoutes.routes())             // 技能治理：角色映射+教训库
