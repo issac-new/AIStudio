@@ -955,3 +955,6 @@
 
 # 696（2026-10-26 Qoder 主动性文章吸收·挂账清偿批）：hermes /goal 目标创建/契约变更时 fail-soft 登记到 studio proactivity 对齐台账（同机共享 JSON，原子替换、保确认历史）；completion contract（验收规则）透传为 L4 升仓判据 acceptanceCriteria；HERMES_GOAL_ALIGNMENT_OFF=1 可关。spec=2026-10-26-proactivity-followup.md
 696-agent-goals-alignment-register.patch
+
+# 697（2026-10-26 JoyAI 闭环吸收轮）：workitem+impact 域挂载——/api/hermes/workitem/:taskId/panorama 以看板 taskId 为统一上下文锚汇聚全链路八面产物（卡片/事件/证据/评测/评审/计划/图运行/trace 桥接，每面 fail-soft）；/api/hermes/impact/requirement 需求文本四路词面命中（本体实例/板级 KG/FIBO 术语/specs 历史迭代）+建议模块。spec=2026-10-26-joyai-closed-loop-absorption.md
+697-server-workitem-impact-routes.patch

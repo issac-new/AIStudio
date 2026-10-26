@@ -14,9 +14,10 @@ import {
   fetchDirectorScenarios, planDirectorScenario, startDirectorScenario,
   fetchGraphRun, fetchGraphEvents, resumeGraphGate,
   fetchSimLaunchStatus, startSimLaunch, stopSimLaunch,
-  pendingGatesOf, recentEventRows,
+  pendingGatesOf, recentEventRows, analyzeRequirementImpact,
   type DirectorScenario, type DirectorInput, type DirectorPlan,
   type GraphEvent, type GraphRunState, type SimLaunchStatus, type DirectorNotifyStatus,
+  type RequirementImpactDto,
 } from '../../api/sim-director'
 
 /** 事件通知回执文案（2026-10-21）：已发=房间留痕；未发=如实给原因，不装成功 */
@@ -122,6 +123,29 @@ async function preview(): Promise<void> {
     graphError.value = e instanceof Error ? e.message : String(e)
   } finally {
     planning.value = false
+  }
+}
+
+// 影响推演（JoyAI 闭环吸收轮 P5）：填模块前的参考卡——四路词面命中（本体实例/
+// 板级 KG/FIBO 术语/specs 历史迭代）+ 与导演台同源的建议模块；规则式非语义理解。
+const impact = ref<RequirementImpactDto | null>(null)
+const impacting = ref(false)
+const impactError = ref('')
+const IMPACT_SOURCE_LABEL: Record<string, string> = {
+  'ontology-instance': '本体实例', 'board-kg': '板级图谱', 'fibo-term': 'FIBO 术语',
+}
+async function previewImpact(): Promise<void> {
+  const input = buildInput()
+  if (!input.title || !input.description) { impactError.value = '需求标题和描述不能为空。'; return }
+  impacting.value = true
+  impactError.value = ''
+  try {
+    impact.value = await analyzeRequirementImpact(input.title, input.description)
+  } catch (e) {
+    impact.value = null
+    impactError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    impacting.value = false
   }
 }
 
@@ -354,12 +378,44 @@ onBeforeUnmount(() => { stopPolling() })
       </div>
       <p v-if="scenarioFallback" class="dir__hint" data-testid="director-scenario-fallback">场景列表不可用——当前为内置默认场景</p>
       <div class="dir__actions">
+        <button type="button" class="dir__btn" :disabled="impacting" data-testid="director-impact" @click="previewImpact">
+          {{ impacting ? '推演中…' : '影响推演' }}
+        </button>
         <button type="button" class="dir__btn" :disabled="planning" data-testid="director-plan" @click="preview">
           {{ planning ? '生成中…' : '预览场景' }}
         </button>
         <button type="button" class="dir__btn dir__btn--primary" :disabled="starting" data-testid="director-start-graph" @click="start">
           {{ starting ? '启动中…' : '启动推演 →' }}
         </button>
+      </div>
+      <p v-if="impactError" class="dir__error" data-testid="director-impact-error">{{ impactError }}</p>
+
+      <!-- 影响推演卡（P5）：填模块/起跑前的参考面——词面命中可核对，边界如实声明 -->
+      <div v-if="impact" class="dir__plan" data-testid="director-impact-card">
+        <div class="dir__plan-row">
+          <b>影响推演</b>
+          <span class="dir__hint">本体 {{ impact.counts.ontology }} · 图谱 {{ impact.counts.boardKg }} · 术语 {{ impact.counts.fibo }} · 历史 spec {{ impact.counts.specs }}</span>
+        </div>
+        <div v-if="impact.entities.length" class="dir__plan-row">
+          <b>命中实体</b>
+          <span v-for="e in impact.entities.slice(0, 12)" :key="`${e.source}:${e.id}`" class="dir__pill" :title="`${IMPACT_SOURCE_LABEL[e.source]}：${e.label}（命中词面「${e.matchedTerm}」${e.detail ? ` · ${e.detail}` : ''}）`">
+            {{ e.label }}<em class="dir__pill-term">{{ e.matchedTerm }}</em>
+          </span>
+        </div>
+        <div v-if="impact.suggestedModules.length" class="dir__plan-row">
+          <b>建议模块</b>
+          <span v-for="m in impact.suggestedModules" :key="m" class="dir__pill">{{ m }}</span>
+        </div>
+        <details v-if="impact.relatedSpecs.length" class="dir__events">
+          <summary>关联历史 spec（{{ impact.relatedSpecs.length }}）</summary>
+          <ul>
+            <li v-for="s in impact.relatedSpecs" :key="s.file">
+              <span>{{ s.date ?? s.file }} · {{ s.title }}</span>
+              <span class="dir__hint"> — {{ s.matchedLine }}</span>
+            </li>
+          </ul>
+        </details>
+        <p class="dir__hint">{{ impact.boundary }}</p>
       </div>
       <p v-if="graphError" class="dir__error" data-testid="director-graph-error">{{ graphError }}</p>
       <p v-if="graphMsg" class="dir__ok" data-testid="director-graph-msg">{{ graphMsg }}</p>
@@ -567,6 +623,8 @@ onBeforeUnmount(() => { stopPolling() })
 .dir__plan-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
 .dir__pill { border: 1px solid var(--border-color); border-radius: 999px; padding: 0 8px; font-size: 11px; }
 .dir__pill--person { color: var(--accent-primary); border-color: var(--accent-primary); }
+/* 影响推演卡（P5）：命中实体 pill 内的命中词面（可核对的词面证据） */
+.dir__pill-term { font-style: normal; opacity: .6; margin-left: 4px; font-size: 10px; }
 .dir__run { border-top: 1px solid var(--border-color); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .dir__run-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .dir__status { font-size: 11px; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--border-color); color: var(--text-muted); }

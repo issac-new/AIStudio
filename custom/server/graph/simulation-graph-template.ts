@@ -192,8 +192,10 @@ export function compileRequirementToGraph(req: RequirementInput): GraphSpec {
   }
 }
 
-// AI 模块推导（简化版：关键词匹配；完整版接 LLM）
-function inferModules(desc: string): string[] {
+// AI 模块推导（简化版：关键词匹配；完整版接 LLM）。
+// 导出供 impact 域复用（JoyAI 闭环吸收轮 P5：影响推演的建议模块与导演台同源，
+// 单一事实源——两处各写一份词表必然漂移）
+export function inferModules(desc: string): string[] {
   const mods: string[] = []
   if (/支付|pay|charge|order/.test(desc)) mods.push('pay-core')
   if (/微信|wechat|wx/.test(desc)) mods.push('channel-wechat')

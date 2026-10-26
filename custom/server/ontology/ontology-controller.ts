@@ -14,6 +14,7 @@
  * POST /seed               重置为种子本体（super_admin 闸）
  * GET  /fibo               FIBO 对齐包（真实 IRI/定义/模块版本）+ 当前已导入数
  * POST /fibo/import        增量导入 FIBO 包（super_admin 闸；冲突整批不写）
+ * GET  /fibo/related-docs  术语→关联 spec 文档（JoyAI 闭环吸收轮 P3，读侧投影）
  *
  * 写面（PUT spec / DELETE instance / rollback / seed / fibo import）与
  * kg-evolution 管理维护端点同闸：super_admin 或无鉴权上下文（本地 dev）可操作，
@@ -27,6 +28,8 @@ import {
   deleteInstance, listSpecSnapshots, loadInstances, loadSpec, resetToSeed, rollbackSpec, saveSpec, upsertInstance,
 } from './ontology-store'
 import { fiboPackApplied, fiboPackSummary, mergeFiboPack } from './ontology-fibo'
+import { fiboGlossary } from './ontology-fibo-glossary'
+import { listSpecDocs, scanTermsInSpecs } from '../specs/specs-index'
 import { ingestFiboDemo } from './ontology-fibo-instances'
 import { fiboOpsSnapshot } from './ontology-fibo-ops'
 import { redactInstancesForRole } from './ontology-field-policy'
@@ -272,6 +275,31 @@ router.post('/watch/tick', async (ctx) => {
 router.get('/fibo', (ctx) => {
   const spec = loadSpec()
   ctx.body = { ok: true, pack: fiboPackSummary(), applied: fiboPackApplied(spec) }
+})
+
+/**
+ * 术语→关联文档（JoyAI 闭环吸收轮 P3，2026-10-26）：ZERO「术语→关联全量文档」
+ * 的读侧投影——FIBO 概念（中文名/英文名/别名）× docs/superpowers/specs 全文提及
+ * 扫描。纯计算不落盘（glossary 数据结构与版本快照不动）；specs 索引由
+ * specs-index 模块承载（mtime 缓存）。?conceptId= 单概念过滤。
+ * 每概念命中封顶 8 份（新优先），泛化别名刷屏有界；specs 目录缺席=空清单
+ * （fail-soft，不阻断 fibo 面其他读数）。
+ */
+router.get('/fibo/related-docs', (ctx) => {
+  const conceptId = typeof ctx.query.conceptId === 'string' && ctx.query.conceptId ? ctx.query.conceptId : ''
+  const entries = conceptId ? fiboGlossary().entries.filter((e) => e.id === conceptId) : fiboGlossary().entries
+  const related = []
+  for (const e of entries) {
+    const terms = [e.labelZh, e.label, ...e.aliases].filter((t) => typeof t === 'string' && t.trim())
+    // 多术语批扫：同一文档多形态命中（支付/Payment）只计一次，命中形态取首个
+    const byFile = new Map<string, { file: string; title: string; date: string | null; matchedLine: string; term: string }>()
+    for (const hit of scanTermsInSpecs(terms)) {
+      if (!byFile.has(hit.file)) byFile.set(hit.file, { file: hit.file, title: hit.title, date: hit.date, matchedLine: hit.matchedLine, term: hit.term })
+    }
+    const docs = [...byFile.values()].sort((a, b) => b.file.localeCompare(a.file)).slice(0, 8)
+    if (docs.length) related.push({ conceptId: e.id, label: e.labelZh, docs })
+  }
+  ctx.body = { ok: true, specsScanned: listSpecDocs().length, total: related.length, related }
 })
 
 /**

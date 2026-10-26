@@ -73,6 +73,27 @@ export interface PendingGate {
   prompt: string
 }
 
+/** 需求影响推演（JoyAI 闭环吸收轮 P5）：规则式四路命中影响卡。 */
+export interface RequirementImpactDto {
+  title: string
+  description: string
+  entities: Array<{ source: 'ontology-instance' | 'board-kg' | 'fibo-term'; id: string; label: string; matchedTerm: string; detail?: string }>
+  relatedSpecs: Array<{ file: string; title: string; date: string | null; matchedLine: string }>
+  suggestedModules: string[]
+  boundary: string
+  counts: { ontology: number; boardKg: number; fibo: number; specs: number }
+}
+
+export async function analyzeRequirementImpact(title: string, description: string): Promise<RequirementImpactDto> {
+  const r = await json<{ ok: boolean; impact?: RequirementImpactDto }>('/api/hermes/impact/requirement', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description }),
+  })
+  if (!r.ok || !r.impact) throw new Error('影响推演失败')
+  return r.impact
+}
+
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await authFetch(path, init)
   if (!res.ok) {

@@ -32,6 +32,7 @@ import { bucketPriority } from '@/custom/cockpit/adapters/task-adapter'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useIdeKanbanOverview } from '../composables/useIdeKanbanOverview'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
+import IdeWorkitemPanorama from '../components/IdeWorkitemPanorama.vue'
 import { fetchArchivedSessions, type ArchivedSessionItem } from '../api/archivedSessions'
 import { restoreAllArchived } from '../utils/archive-restore'
 import { formatRelativeTime, workspaceLabel } from '../utils/time'
@@ -165,6 +166,11 @@ function openKanbanTask(id: string): void {
 }
 function openKanbanBoard(): void {
   void router.push('/app/board')
+}
+// 工作项全景串联（JoyAI 闭环吸收轮 P4）：行内展开，同屏只开一张（再点收起）
+const panoTaskId = ref('')
+function togglePano(id: string): void {
+  panoTaskId.value = panoTaskId.value === id ? '' : id
 }
 function sessionPriority(s: Session): number | null {
   const map = taskPriorityBySession.value
@@ -703,6 +709,14 @@ onMounted(async () => {
                     <span class="ide-taskbar__kanban-meta">{{ entry.board }} · {{ entry.task.status }}</span>
                   </span>
                 </button>
+                <button
+                  type="button"
+                  class="ide-taskbar__kanban-pano"
+                  :data-testid="`ide-task-kanban-pano-${entry.task.id}`"
+                  title="全景串联（全链路产物汇聚）"
+                  @click.stop="togglePano(entry.task.id)"
+                >⌗</button>
+                <IdeWorkitemPanorama v-if="panoTaskId === entry.task.id" :task-id="entry.task.id" @close="togglePano(entry.task.id)" />
               </li>
             </ul>
             <button type="button" class="ide-taskbar__kanban-more" data-testid="ide-task-kanban-open-board" @click="openKanbanBoard">
@@ -1130,6 +1144,10 @@ onMounted(async () => {
 }
 
 .ide-taskbar__kanban-row { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+/* 全景串联展开钮（P4）：行尾常驻小钮；展开面板 flex-basis 100% 换行占满 */
+.ide-taskbar__kanban-pano { flex: 0 0 auto; border: none; background: none; cursor: pointer; opacity: 0.55; font-size: 12px; padding: 2px 4px; }
+.ide-taskbar__kanban-pano:hover { opacity: 1; }
+.ide-taskbar__item :deep(.ide-pano) { flex-basis: 100%; }
 .ide-taskbar__kanban-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ide-taskbar__kanban-meta { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ide-taskbar__kanban-more { display: block; width: 100%; border: 0; background: transparent; color: var(--accent-primary); font-size: 11px; text-align: left; padding: 3px 8px 5px; cursor: pointer; }

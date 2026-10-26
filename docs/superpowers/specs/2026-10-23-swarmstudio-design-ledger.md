@@ -1,20 +1,21 @@
 # SwarmStudio 设计数字总账
 
 > 全域数字唯一事实源（2026-10-23 自整合正本 R1 附录 B 独立成档，整合 R2 决策 I5）。
-> 核实日：2026-10-26（九点对账轮全量复测；设计文档同步机制立法批随批更新：变量 199/specs 342；Qoder 主动性吸收轮刷新三行：补丁 405/服务端域 149/specs 350 实测；挂账清偿批：补丁 406/specs 351）。任何文档引用数字以本表为准；本表只增改不并列双口径，历史口径见各档案。
+> 核实日：2026-10-26（九点对账轮全量复测；设计文档同步机制立法批随批更新：变量 199/specs 342；Qoder 主动性吸收轮刷新三行：补丁 405/服务端域 149/specs 350 实测；挂账清偿批：补丁 406/specs 351；JoyAI 闭环吸收轮：补丁 407/服务端域 152/specs 354）。任何文档引用数字以本表为准；本表只增改不并列双口径，历史口径见各档案。
 
 | 域 | 项 | 数字 |
 |---|---|---|
 | 产品面 | 模式/页签/入口/岛 | 3/33/6/4 |
-| 产品面 | 路由/客户端目录/服务端域 | 89/19/149（+delivery/precedent/expertise/proactivity，2026-10-26 Qoder 吸收轮；proactivity 同域增执法策略存储不算新域） |
-| 产品面 | 补丁 studio/zcode（series 登记） | 406/8（2026-10-26 晚口径并 Qoder 双轮实测：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp、695 proactivity 挂载、696 agent 目标登记对齐台账＋zcode 009 claude-skills-compat） |
+| 产品面 | 路由/客户端目录/服务端域 | 89/19/152（+delivery/precedent/expertise/proactivity，2026-10-26 Qoder 吸收轮；2026-10-26 JoyAI 闭环吸收轮 +specs/workitem/impact 三域） |
+| 产品面 | 补丁 studio/zcode（series 登记） | 407/8（2026-10-26 晚口径并 Qoder 双轮实测：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp、695 proactivity 挂载、696 agent 目标登记对齐台账；JoyAI 闭环吸收轮 697 workitem+impact 挂载；zcode 009 claude-skills-compat） |
 | 产品面 | 用户决策/常设/纠正 | 148/30/27 |
-| 产品面 | 全量测试 | 滚动口径见各轮 spec 验证段（2026-10-26 挂账清偿批 worktree=6,420 过/0 败/11 跳过——并行 TDD 红测已由其归属轮修复；主树未注入时全量出假红，必须先 inject） |
+| 产品面 | 全量测试 | 滚动口径见各轮 spec 验证段（2026-10-26 JoyAI 闭环吸收轮 worktree=6,438 过/0 败/11 跳过两轮实测；主树未注入时全量出假红，必须先 inject） |
 | 产品面 | 六闸/介入/检测器/prelaunch | 6/14/31/30 |
 | 产品面 | 净树重放 | clean+inject 全链通过（2026-10-26 worktree 实测；series 现量见上行随批对账） |
 | 产品面 | FIBO | 37/21/16 |
 | 产品面 | 天猫吸收面（2026-10-23） | 端点 7（delivery 4+expertise 2+precedent 1）；介入六类/两层（run22=98/85+13）；画像 14 人 455 证据；C 档补数 81/81；判例=run 单元 |
 | 产品面 | 群体协作读数面（2026-10-24 含清账批） | 端点 1（delivery swarm-collab＋?compare= 消融对比）；四维度读数＋全文保真双口径＋拜占庭 BCR/暴露窗；红队种子库 v2=36 任务 6 向量；交付效能第⑤区；消融/拜占庭旋钮（默认关）＋mixed-motive-bidding 场景＋welfare/gini/nash 指标器；obs-signals byProfile 分桶；simharness 采集透传（判据零变化） |
+| 产品面 | 研发闭环串联面（2026-10-26） | 端点 3（workitem panorama＋impact requirement＋ontology fibo/related-docs）；fewshot 派发语境接线（FLYWHEEL_FEWSHOT_INJECT 通道闭环）；IDE 任务侧栏⌗全景面板＋导演台影响推演卡＋FIBO 关联 spec 列；specs 只读索引（mtime 缓存）共享底座 |
 | 产品面 | 推演/方案/纪律 | 22 轮（run22 六闸全过）/V8.54/86 条正文（编号至 86） |
 | 运行面 | 编制/账号/profile/板 | 15/30/42/28 |
 | 运行面 | 宿主/sim profile | 49-50/45 |
@@ -31,7 +32,7 @@
 | 能力层 | references/research/reviews | 57/99/1 |
 | 能力层 | 随发文件 | 92（lite 46） |
 | 能力层 | 变量/预算 | 199/200（2026-10-26 设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS） |
-| 文档 | specs/plans/研究档 | 353/63/32（2026-10-26 挂账清偿批实测；两行并行轮丢失本次恢复） |
+| 文档 | specs/plans/研究档 | 354/63/32（2026-10-26 JoyAI 闭环吸收批 +1 spec；此前挂账清偿批实测 353；两行并行轮丢失本次恢复） |
 
 ## 来源覆盖（2026-10-26 复测）
 

@@ -21,6 +21,23 @@ import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluati
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
+import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+
+/** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
+ * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
+ * 只读各板 SQLite 主键查询（毫秒级）；查不到返回 null，调用方回落无语境现状。 */
+export async function fetchTaskTitleByTaskId(taskId: string, homeDir?: string): Promise<string | null> {
+  for (const dbPath of kanbanDbFiles(homeDir)) {
+    let db: Awaited<ReturnType<typeof openReadonly>> | undefined
+    try {
+      db = await openReadonly(dbPath)
+      const row = db.prepare('SELECT title FROM tasks WHERE id = ?').get(taskId) as { title?: string | null } | undefined
+      if (row?.title?.trim()) return row.title.trim()
+    } catch { /* 单板读失败换下一板（fail-soft，语境缺席不阻断派发） */ }
+    finally { try { db?.close() } catch { /* 已关 */ } }
+  }
+  return null
+}
 
 export interface ColumnDispatchResult {
   triggers: ColumnTransitionTrigger[]
@@ -100,7 +117,7 @@ function contractFooter(): string {
   ].join('')
 }
 
-export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null): string {
+export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null, taskTitle?: string | null): string {
   const lines = steps.map((s, i) => `  ${i + 1}. ${s.id}（${s.role}${s.specialist ? ` / ${s.specialist}` : ''}）`)
   // 第五期 ①：语义上下文块（agent 消费本体）——单元/能力/SLO 目标/判定词表随负载下发，
   // buildDispatchSemanticContext 内部 fail-soft（注册表缺该单元返回 null 不占行）。
@@ -117,11 +134,17 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
   })
   // 历史经验注入（阿里调研轮 B2，方案正本纪律 49）：EXPERIENCE_INJECT=1 才启用，
   // 已审核候选封顶 3 条，凭据形态改写为「历史经验出处」，留痕 injectedRuns。
-  const experienceLines = experienceLinesForDispatch({
-    column: trigger.column,
-    specialist: step.specialist || undefined,
-    stepId: step.id,
-  })
+  // query=P1（JoyAI 闭环吸收轮）：任务标题随派单取到才传——fewshot 按任务语境
+  // 召回历史教训（FLYWHEEL_FEWSHOT_INJECT=1 选通）；无语境不传（不造无效召回）。
+  // 语境=纯任务标题（不带列前缀：召回是字符级 ROUGE-L，前缀噪声稀释相似度）。
+  const experienceLines = experienceLinesForDispatch(
+    {
+      column: trigger.column,
+      specialist: step.specialist || undefined,
+      stepId: step.id,
+    },
+    taskTitle ?? undefined,
+  )
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
@@ -170,6 +193,9 @@ export async function dispatchColumnTransition(
   const ruleEvals: RuleEvaluation[] = []
   const precedents: Array<{ stepId: string; line: string | null }> = []
   const deduped: ColumnDispatchResult['deduped'] = []
+  // P1：taskId → 任务标题（一次解析，全 step 复用）——fewshot 召回语境源；
+  // 查不到/无 taskId 保持 null，回落无语境现状（fail-soft 不阻断派发）。
+  const taskTitle = params.taskId ? await fetchTaskTitleByTaskId(params.taskId).catch(() => null) : null
   // B4 在途键：并发重入的同键派发合并（进程内；跨进程靠台账窗口）
   const inflight = new Set<string>()
   for (const trigger of triggers) {
@@ -195,7 +221,7 @@ export async function dispatchColumnTransition(
       }
       inflight.add(idemKey)
       let stepOutcomes: MentionOutcome[]
-      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine)}`
+      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine, taskTitle)}`
       try {
         stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text, ...(params.taskId ? { taskId: params.taskId } : {}) })
       } finally {
