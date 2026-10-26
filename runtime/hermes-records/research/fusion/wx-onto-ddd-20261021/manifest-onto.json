@@ -1,0 +1,763 @@
+[
+ {
+  "title": "Palantir、Databricks、Snowflake背后的五条本体技术路线",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510045&idx=1&sn=260d06a732894a1fc48006be71803728&chksm=ea0e0b75dd798263b2a3feef8b11bf6a24ddea7cd6c2c0712744ab1abc018e3e4ce7bfe57931#rd",
+  "status": "ok",
+  "error": "no content",
+  "file": "corpus-onto/2247510045-1.json",
+  "chars": 4871
+ },
+ {
+  "title": "《解剖 Palantir FDE 16》从战场到工厂：Palantir FDE最值得研究的几个真实案例",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510041&idx=2&sn=d8e0f0969dc95eea4749d571bbd63f2a&chksm=ea0e0b71dd798267a21f4cecd25e1c8d0f4cc87d84c993e298ad1a2a330b9943a4adaf4b3dbb#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510041-2.json",
+  "chars": 9955
+ },
+ {
+  "title": "一场比数据锁定更深的AI竞争正在展开",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510041&idx=1&sn=5721bf60b49d3a47aec27203363b2ebe&chksm=ea0e0b71dd798267035ca809a3cbda32f4cdc1f88925af1cd2d322e52103614a9be1433a9401#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510041-1.json",
+  "chars": 9640
+ },
+ {
+  "title": "《解剖Palantir FDE 15》Palantir FDE绩效考核办法",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510033&idx=1&sn=9497fdde4ce1d6230e1b3f51fbbd3273&chksm=ea0e0b79dd79826fa2ea16d7902a3db44bfd2e40bfe17caca95c842feba695c51b6f8b5126f0#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510033-1.json",
+  "chars": 8950
+ },
+ {
+  "title": "《解剖 Palantir FDE 14》Palantir怎样培养一个FDE？从新人到可以独立面对客户",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510030&idx=1&sn=96607cd89aa8e4c093c856e17b971264&chksm=ea0e0b66dd798270e2160e9e864297e5761be860ce285e6299f10eacad1c1132b8bf9bbd854a#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510030-1.json",
+  "chars": 9119
+ },
+ {
+  "title": "《解剖Palantir FDE 13》Palantir怎样招聘FDE？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510027&idx=1&sn=d9e67d16d13cd456b2ab3c1201981662&chksm=ea0e0b63dd79827561435068416066fa2e0941dc73fb6566109964f8dd31985b046370e3b20b#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510027-1.json",
+  "chars": 9730
+ },
+ {
+  "title": "本体智能简报 - 第13期/20261013",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510024&idx=2&sn=a2eb17578f13112a9c267395e653e8d1&chksm=ea0e0b60dd7982763bf5c8e139b66c4269d2dcc4955d60aa8c147c0601626c683b258880a25c#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510024-2.json",
+  "chars": 2902
+ },
+ {
+  "title": "《解剖Palantir FDE 12》代码写完以后才是开始：Palantir FDE的产品回流机制",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510024&idx=1&sn=e907d4d2068ad16c5fba0c243a60b7ca&chksm=ea0e0b60dd79827634271d92b7745ab5f19826dd225260d66b25c1448816a786da9d16b4471d#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510024-1.json",
+  "chars": 9193
+ },
+ {
+  "title": "《解剖 Palantir FDE 11》Palantir FDE 怎样做到既定制、又不沦为外包？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510017&idx=1&sn=24ce4a0b7595fa2c2b94d5a43d6597a1&chksm=ea0e0b69dd79827f3be66400189171437258e0814dc67c8043feb0ddefcf7ad2646284f4d687#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510017-1.json",
+  "chars": 8870
+ },
+ {
+  "title": "《解剖Palantir FDE 10》AIP Bootcamp：Palantir如何把几个月的AI项目压缩到几天",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510014&idx=1&sn=5b1f5b6af19851a87aedc887333aee7c&chksm=ea0e0496dd798d801a0f1b4eef239d729078d032edbc764e81af47888f4dc826b23ef5730760#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510014-1.json",
+  "chars": 8813
+ },
+ {
+  "title": "《解剖 Palantir FDE 09》从 Problem 到 Ontology：Palantir FDE 是怎样理解一家企业的？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510010&idx=1&sn=3b0bb51257f65927e9c13288d64bdaa6&chksm=ea0e0492dd798d84e4be1cd2599eabc2f91c6edbf45a41b70385db4e73304e2c8c78dfbe481b#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510010-1.json",
+  "chars": 9494
+ },
+ {
+  "title": "本体智能简报 - 第9期/20261009",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510007&idx=2&sn=36c645dc29453a6990c5ba2fecb13b47&chksm=ea0e049fdd798d89f722ff9e6ea89c6f2de474e925f1a552103ccb16612c7cc4effa5519525b#rd",
+  "status": "ok",
+  "error": "no content",
+  "file": "corpus-onto/2247510007-2.json",
+  "chars": 3244
+ },
+ {
+  "title": "《解剖Palantir FDE 08》Palantir为什么不相信传统需求文档？FDE如何发现真正的问题",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510007&idx=1&sn=b77d968443228226fa6f2de3aa49d55b&chksm=ea0e049fdd798d896b4b0a1317473b87d43be89bde1d087dbe7aa4b3a672d484a9ada50b58f0#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510007-1.json",
+  "chars": 8437
+ },
+ {
+  "title": "本体智能简报 - 第8期/20261008",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510000&idx=2&sn=91fe546c3c4b26733a9ec95909337f6d&chksm=ea0e0498dd798d8e0daada6f30cd2d154f5cd6c8cc4b3c169e7531eeb4f809d2e588c659977f#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510000-2.json",
+  "chars": 3062
+ },
+ {
+  "title": "《解剖Palantir FDE 07》Palantir FDE到客户现场的第一周，到底在干什么？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247510000&idx=1&sn=e9b5e71983337150ae1c1dd3d910704f&chksm=ea0e0498dd798d8e89a63007d4d8947fc7ac091f3c8aaa78bb8cdc3a9ed83586dc24321bf63c#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247510000-1.json",
+  "chars": 7754
+ },
+ {
+  "title": "本体智能简报 - 第7期/20261007",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509992&idx=3&sn=d893716e467a7f0b72cde186bd1556e2&chksm=ea0e0480dd798d96ba97d71fd77cfb37711dc9eaec2523d2117b09953b2cbe6eb72f55e84b8a#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509992-3.json",
+  "chars": 3837
+ },
+ {
+  "title": "《解剖Palantir FDE 06》一个Palantir项目是怎样启动的？从业务问题到第一个可运行系统",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509992&idx=2&sn=a5873f93280f2ed3cbaf294c620c1547&chksm=ea0e0480dd798d96d39fdd3df0533a9d940e93a9818752adb54183dc3ff39e5f2c1d85377db5#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509992-2.json",
+  "chars": 9080
+ },
+ {
+  "title": "《解剖决策智能标的 01》从BI到决策智能，观远差什么？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509992&idx=1&sn=a25e83df7ea5b4be6d1721ecdb5c11a7&chksm=ea0e0480dd798d963ea075241879f3f80bdacb01b0f5271587b0f0bc8c65784cbfa8e9eb3737#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509992-1.json",
+  "chars": 9768
+ },
+ {
+  "title": "本体智能简报 - 第6期/20261006",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509978&idx=2&sn=0fade00ff5be1d441ef32a271506d105&chksm=ea0e04b2dd798da4ee2a923a848bf241cbe1a370f84fd90a267e7485d8ed71b5d5116891a3da#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509978-2.json",
+  "chars": 3386
+ },
+ {
+  "title": "《解剖Palantir FDE 05》为什么Palantir的FDE不属于传统研发部门？组织结构决定了什么？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509978&idx=1&sn=662e92a316bd6215687f9b7eef34466d&chksm=ea0e04b2dd798da4675f74898f46fe1bf84fc651f35d012ff98f543a861abe10fcb121522c30#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509978-1.json",
+  "chars": 8199
+ },
+ {
+  "title": "本体智能简报 - 第5期/20261005",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509969&idx=2&sn=4cb1d1398c47999209dd84514e206e7b&chksm=ea0e04b9dd798daf2d6a4880e497f6c5ba2642800640565a329cf6bd6dd9e34405014b6da875#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509969-2.json",
+  "chars": 3117
+ },
+ {
+  "title": "《解剖Palantir FDE 04》Echo、Delta、Dev：拆开 Palantir一线作战团队的真实角色分工",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509969&idx=1&sn=73f547d45c473489d4551069b2ca0ede&chksm=ea0e04b9dd798daff431140b48c02f220c96ab20403af96a530e125368c938d984fa42e54360#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509969-1.json",
+  "chars": 7437
+ },
+ {
+  "title": "本体智能简报 - 第4期/20261004",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509915&idx=2&sn=d8985f8edf0b8f6b87a541437392b511&chksm=ea0e04f3dd798de5e7c48356094a6fb5882c6911412602da93a1790ba15486bbf9e5245071ec#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509915-2.json",
+  "chars": 3173
+ },
+ {
+  "title": "《解剖Palantir FDE 03》Human Backpropagation：Palantir FDE最核心的思想到底是什么？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509915&idx=1&sn=03c87fba85cbdd37c14d14ea9d08c4bc&chksm=ea0e04f3dd798de53a407697c4e6ef76dffd93b4b2c06a23ef85b80a8714cabd521093486b64#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509915-1.json",
+  "chars": 7980
+ },
+ {
+  "title": "本体智能简报 - 第3期/20261003",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509905&idx=2&sn=7c804058e5cf727a3739ae354a4688f4&chksm=ea0e04f9dd798defc3333c3ac6c1f38c351da2645c061ca2712457cc01428f2755145f496f72#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509905-2.json"
+ },
+ {
+  "title": "《解剖Palantir FDE 02》FDE到底是什么？Palantir为什么非要把工程师派到客户最前线？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509905&idx=1&sn=75b8d3ba5e14c7d1363617902a2f825a&chksm=ea0e04f9dd798def2097d48a976d855333bba27f5bf2ea1c515eab7cf3feac625d4abbce005d#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509905-1.json",
+  "chars": 6767
+ },
+ {
+  "title": "本体智能简报 - 第2期/20261002",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509853&idx=2&sn=6f520f28ace64b8b4f41f6b3883b8dc7&chksm=ea0e0435dd798d23129e95270b290d046841b280a2add9097d00d4b5dc9ba502b076dc280d30#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509853-2.json",
+  "chars": 3087
+ },
+ {
+  "title": "《解剖Palantir FDE 01》Ontology 是明线，FDE是暗线",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509853&idx=1&sn=9244675ab59cadf99dd35867b9ffc953&chksm=ea0e0435dd798d23acc6fcc6d32a71cd4a28c4d029fa3420784f8fa986659039941b8cac5b79#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509853-1.json",
+  "chars": 6253
+ },
+ {
+  "title": "本体智能简报 - 第1期/20261001",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509832&idx=2&sn=e769b54ba9d275fa715e8a6c2d551421&chksm=ea0e0420dd798d3626fc1b61f1698289353983ca26dfe2a77baceae4fae5a86d2ddb996f1344#rd",
+  "status": "ok",
+  "error": "no content",
+  "file": "corpus-onto/2247509832-2.json"
+ },
+ {
+  "title": "电信运营商适合什么样的FDE 模式？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509832&idx=1&sn=83caa299a87ae04ad86f061bfc4b6871&chksm=ea0e0420dd798d36c0648de75dcb10081e05d7de5e9ea2f51f5f2fb2feaf24fc497c14039956#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509832-1.json",
+  "chars": 4318
+ },
+ {
+  "title": "顶级FDE画像：与高管谈价值，与一线谈细节",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509822&idx=1&sn=3ef27c3d157f1a00e478050e7fd60dda&chksm=ea0e0456dd798d40e2b9b7a7956edd02bbafc0ef59f57e9a0dc38529ba48a06f6decc9151860#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509822-1.json",
+  "chars": 6580
+ },
+ {
+  "title": "从 FDE 1.0 到 FDE 4.0：AI 时代，软件交付正在被重新发明",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509818&idx=1&sn=b09f450acffd48d1f219830d67cb74df&chksm=ea0e0452dd798d4499f047b37fa96cc2d054032923990a2c92d47a74f37180f9fa0d8f93b1fd#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509818-1.json",
+  "chars": 5266
+ },
+ {
+  "title": "全球FDE竞赛：OpenAI、Palantir、Anthropic、微软、Databricks、IBM正在重新发明企业AI交付",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509815&idx=1&sn=4b511bb7a37c465b8c1beb27412d9fa7&chksm=ea0e045fdd798d493ab320cbc162fb70c71578cf8ce02cc53f9badc6893a242cfe04f4b22629#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509815-1.json",
+  "chars": 10024
+ },
+ {
+  "title": "Palantir的最新技术演进方向",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509804&idx=1&sn=6aef66a5ace7edac90314b718c566773&chksm=ea0e0444dd798d52f0b6a3d857ffc0825fb41d543fb531a18a8898de46d92de092ca8213d433#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509804-1.json",
+  "chars": 6054
+ },
+ {
+  "title": "从本体技术演进的八个阶段看企业 AI 的未来",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509799&idx=1&sn=693ad7d99bcab83e4d2dea1771317203&chksm=ea0e044fdd798d59b5ad132d8ee0e202147bdf5398c5ad6ab270b78d610009a28f232f36a986#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509799-1.json"
+ },
+ {
+  "title": "Gartner的本体论",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509791&idx=1&sn=f45c323156246bba971565b7cb159c08&chksm=ea0e0477dd798d614865d5d6cb66934c361afa2f5e2f1ce17cfb827b86994a0d4737e9770a3c#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509791-1.json",
+  "chars": 2876
+ },
+ {
+  "title": "Palantir Vulcan：Ontology正在穿过屏幕，进入真实的物理世界",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509787&idx=1&sn=905d6a2fc5737dd92a1c416f987006eb&chksm=ea0e0473dd798d65ff9c9bf78d3f8ace6d9f4cc7701d01bd45244f5da7003b7fc38547f50c06#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509787-1.json"
+ },
+ {
+  "title": "Palantir的野心：Ontology、AI FDE与Agent开始合流",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509780&idx=1&sn=77d5d983f451783f58ab3a2158dff5f2&chksm=ea0e047cdd798d6a0162ad1b69f6271154ce52ae7d6e6c78343fa41d3549c3c5d9e2d4145c15#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509780-1.json",
+  "chars": 2934
+ },
+ {
+  "title": "Palantir AIP Evolve：让AI开始改造AI",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509779&idx=1&sn=d6cb54d0eb2a617a6bb8bcbcb62db1cd&chksm=ea0e047bdd798d6d5d263d043e2743438008282555f6c85ad295d942f0ec8ca6d546d11ca214#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509779-1.json"
+ },
+ {
+  "title": "全世界刚学会FDE，Palantir已经开始让Agent接管FDE、推出FDA",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509778&idx=1&sn=742bf1d07fd0cec335479b65f72d2c42&chksm=ea0e047add798d6c084e73cbb529a611abd256737ea1bb5e97cd1006fe8fffef5fe140d4c82c#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509778-1.json",
+  "chars": 2653
+ },
+ {
+  "title": "工业AI与本体智能平台实践交流分享",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509765&idx=1&sn=c3309592627d7faff26905e4ecbfdd3e&chksm=ea0e046ddd798d7b1b6682fe144cc5bb0d237d731eca7ad822980fe0b6123c0422965e8e1380#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509765-1.json"
+ },
+ {
+  "title": "本体是十年前已经淘汰的老技术吗？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509761&idx=2&sn=07b04d89886ea07a4fd9f2be080895eb&chksm=ea0e0469dd798d7f4249a5be9ce2a839527249676ac6b6a0d8417473b9c7ef4abe4752e79453#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509761-2.json",
+  "chars": 3218
+ },
+ {
+  "title": "Databricks的六层本体建设方法论：怎样真正建设 Genie Ontology？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509755&idx=1&sn=c87c3a8d5c1397f6cfe8a3ed591a1d58&chksm=ea0e0593dd798c85d73a93e0a3499a056398409124258dcc14e9ec8996a83ffbee695c258411#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509755-1.json"
+ },
+ {
+  "title": "Palantir Alex Karp：Ontology正在成为企业抵御前沿模型殖民的保护层",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509748&idx=1&sn=679f7ad6c508690b51d96321b43069a0&chksm=ea0e059cdd798c8adc9ec6a5d7721231a80b5753c3a088f7a9d7bd06dcb3f2dede9fd3656acc#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509748-1.json",
+  "chars": 6907
+ },
+ {
+  "title": "Agent时代真正的操作系统：Palantir正在证明Ontology与Harness最终会合流",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509739&idx=1&sn=6b39f1c34d6000930f42df18279b4bcb&chksm=ea0e0583dd798c95c070c88011db8e6d57dd8c2c335dc3142f5a30da51712fb4166b343c2a8f#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509739-1.json"
+ },
+ {
+  "title": "GPT-6越强，Ontology + Harness的战略价值越大",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509735&idx=1&sn=5176de68a090c635f7c485cb3d2d268e&chksm=ea0e058fdd798c99a7c86c7b08094f747a448aa38fbd7d3181266badf13ecb5dcb72b2f406fa#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509735-1.json",
+  "chars": 7932
+ },
+ {
+  "title": "从 MVP 到 MVO：企业AI最大的错误，是一开始就想建完所有本体",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509724&idx=1&sn=1be89e243bc05aaf165e2451e00d253b&chksm=ea0e05b4dd798ca2f03198c946e0e221ccfd91b08059e762909ec420bacc38c61471ae684573#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509724-1.json",
+  "chars": 6271
+ },
+ {
+  "title": "Palantir和微软的本体对决：从Palantir Ontology到Fabric IQ Ontology",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509710&idx=1&sn=e25a3608d1f2ac9c23589f044b815a46&chksm=ea0e05a6dd798cb021e9a0b981d157157c5a578e80b179837a63fa7c58cb729985f6222baa63#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509710-1.json",
+  "chars": 5086
+ },
+ {
+  "title": "Palantir和Databricks的本体决战：从Palantir Ontology到Genie Ontology",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509703&idx=1&sn=7fd97c5527f088d1646fec79417b6b6d&chksm=ea0e05afdd798cb9d0142d54c92a45f3f19f4e2d1c040741248d6568bbcffb3e913394810484#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509703-1.json",
+  "chars": 12489
+ },
+ {
+  "title": "数据引力（Data Gravity）：Snowflake、Databricks、Palantir的共同护城河",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509697&idx=1&sn=f46f1c1ff73b6d8db7d5b017ed203028&chksm=ea0e05a9dd798cbfaf0b7de5bb27c6838c01d74f52de144c3425d3760361a8caf6eb6e6d60c8#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509697-1.json",
+  "chars": 5894
+ },
+ {
+  "title": "进入本体时代：企业AI Agent的蓝图",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509689&idx=1&sn=4ee8a702ceb8a7ea9e51d6439b5609d0&chksm=ea0e05d1dd798cc7cfc938dbc3e28bc67ad4629edee806abc9df66697a00c8744937f707e60a#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509689-1.json",
+  "chars": 5811
+ },
+ {
+  "title": "Palantir、Databricks、Snowflake激烈争夺企业AI的控制权",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509679&idx=1&sn=3c0b0b47cbdaed6f6272bd412adba955&chksm=ea0e05c7dd798cd10f01d8a37c4114c9f44d56e724d1c0fb4ad747acf2f64c5780d55adb78fa#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509679-1.json",
+  "chars": 5774
+ },
+ {
+  "title": "AI FDE成为Palantir的智能开发与运维中枢",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509675&idx=1&sn=f51a49a3361f0fa7f18649382e38408d&chksm=ea0e05c3dd798cd50d847a2fef833eba35cef7631c76c08e9a05c8a0bb340bf18398c4c1795e#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509675-1.json",
+  "chars": 6122
+ },
+ {
+  "title": "Databricks 正在逼近 Palantir 的核心区",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509669&idx=1&sn=b8ade3efc79e6b5bab68bca4feba6072&chksm=ea0e05cddd798cdb6ec7bfd23d8dc4c19f78c7ce1d9e4cb03ab89a83824e2a0887748acd11d7#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509669-1.json",
+  "chars": 9531
+ },
+ {
+  "title": "Agent越来越薄，Ontology越来越厚：企业AI的下一场架构迁移",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509658&idx=1&sn=87c167fac86fc2cae336091e01c8b898&chksm=ea0e05f2dd798ce4bb720492bd59fb2ee55439350feb6f12d9bc162e7e5fedf2c28583758756#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509658-1.json",
+  "chars": 9481
+ },
+ {
+  "title": "WAIC 2026，本体大爆发：14家厂商谁最接近Palantir？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509636&idx=1&sn=ca39b0d5d5145f572ac6e26c600bb46a&chksm=ea0e05ecdd798cfa0dd6e291806523cec78557824c4d2536593f681cfc36c6029acd14bb8c51#rd",
+  "status": "fail",
+  "error": "no content",
+  "error2": "len=0 err=no content"
+ },
+ {
+  "title": "关于本体建设和治理的四点思考",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509624&idx=1&sn=2ace0d58162fb6fb3824b13044a0c868&chksm=ea0e0510dd798c06631d5c2d52bd57fcf0b9324a3c67854aa7417ac44b50622098df9fdc2529#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509624-1.json",
+  "chars": 3979
+ },
+ {
+  "title": "企业AI的下一场战争：Palantir 两面受敌，一个万亿市场正在重新洗牌",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509602&idx=1&sn=e358128919626e9759197c8290524269&chksm=ea0e050add798c1c34f4a95b88e4f9f49deb2f426dfa1cb467bb00c1cd50173dbf2d98199b17#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509602-1.json",
+  "chars": 2209
+ },
+ {
+  "title": "数据库正在反向吞噬SaaS，Databricks收购PostgreSQL 厂商",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509498&idx=1&sn=5066690b8dea1bfdde390146437c1c08&chksm=ea0e0692dd798f84d05a2dc03e707c5b23497c7c2b90952d102481e231db5b1f0c7cd7a02fd1#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509498-1.json",
+  "chars": 3009
+ },
+ {
+  "title": "AI 产业的主战场，已经开始从模型层转向工作流层",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509481&idx=1&sn=a0a421b77929c91f24a7208849a7f412&chksm=ea0e0681dd798f9783741cc1a8f89ef20ab6a73163a94fbd9dc69a48da45b13f1063c935a11a#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509481-1.json",
+  "chars": 2460
+ },
+ {
+  "title": "Palantir AIP本体的三个作用：链接、增强、封装",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509477&idx=1&sn=db50405af23618a345b7e3abc895ef35&chksm=ea0e068ddd798f9b89f22828948c479ab71e3bf640e70da1c36f7dc6ccb929dd0619de81acc1#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509477-1.json",
+  "chars": 3524
+ },
+ {
+  "title": "AI正在改变组织权力结构",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509467&idx=1&sn=c3201d24d1c0170d355678b91010dcce&chksm=ea0e06b3dd798fa5a00357df4e1a05a75b675709dec184a5c606575de2dea85d7a71e993c92e#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509467-1.json",
+  "chars": 2233
+ },
+ {
+  "title": "OpenAI 与 Anthropic 正在复制 Palantir",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509455&idx=1&sn=7777c0db0ca8119273232ac949d71cb5&chksm=ea0e06a7dd798fb1963eb282e8413bfc9a91ffd583e4026199addd78cdac9881882df79d69aa#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509455-1.json",
+  "chars": 2502
+ },
+ {
+  "title": "Palantir AIP 的三块基石：对象、变量、函数",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509441&idx=2&sn=5d1d127c690f4d79217fc9cf48318437&chksm=ea0e06a9dd798fbf1149cc4df6d86d8ab59e23a4dcbe0df2678c507ae910fbe6eed1dc85ae69#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509441-2.json",
+  "chars": 8403
+ },
+ {
+  "title": "Palantir AIP的神来之笔：Agent as Function",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509428&idx=1&sn=a45c6ccce04d96e6490853f4cace96df&chksm=ea0e06dcdd798fca60d7f90033a834eb012a3cba329691e515e23ac48b173f223d08011a3d9d#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509428-1.json",
+  "chars": 7097
+ },
+ {
+  "title": "Palantir AIP Analyst剖析：复杂分析、业务解释、决策执行",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509424&idx=1&sn=293bb1ba5b4359a553e9b7f59a9984ae&chksm=ea0e06d8dd798fce4e3da55e3a55b50a219486ebc9380945507c28e12d5bc1bafa5bc9f61f52#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509424-1.json",
+  "chars": 22512
+ },
+ {
+  "title": "自然语言驱动执行：一张图提炼AIP Agent的五个关键技术",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509411&idx=1&sn=ab91d539f4cfd2e8a1d7683eed507e3c&chksm=ea0e06cbdd798fddf186db073d84fc97d2772812f544d5fc168c041e73e96e50250b7caa4bc2#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509411-1.json",
+  "chars": 12699
+ },
+ {
+  "title": "Palantir  AIP构建企业业务孪生、驱动企业智能决策",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509389&idx=1&sn=d0f7773816aaec585cb523bf935307a6&chksm=ea0e06e5dd798ff3b86716d1682810d72fda0a4784188be5e2fe11b9757014a6398924aad97b#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509389-1.json",
+  "chars": 237
+ },
+ {
+  "title": "分析Palantir AIP中的规则",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509362&idx=1&sn=4f62cb7a1d5b5707fa1b24f59b32b3cd&chksm=ea0e061add798f0cfdabe7189f31b4f1aea239d95f16d21c0b1bca315832e14f56e04a30826e#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509362-1.json",
+  "chars": 4592
+ },
+ {
+  "title": "微软的本体产品：Microsoft Fabric IQ",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509340&idx=2&sn=08267c09c85f48b088671f8eed1bacf8&chksm=ea0e0634dd798f227bbf0809f7733fae15e42c45fecd7c170fe0793d4d033ed7e815aa510165#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509340-2.json",
+  "chars": 1716
+ },
+ {
+  "title": "Palantir区别于RAG应用的本质",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509340&idx=1&sn=da5c24d9485ddc4a59f9c053032f420f&chksm=ea0e0634dd798f22ad4e9e932f4d95250c47ac5adf861dcefb6fa466911b1b0f741a4e7096bd#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509340-1.json",
+  "chars": 1859
+ },
+ {
+  "title": "Palantir AIP Terminal：自然语言操作终端背后的实现逻辑",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509328&idx=1&sn=fc90629a5a504341111ae24d19629d61&chksm=ea0e0638dd798f2e76e64bc83fc6f1db3611f312fcd1efeb235287ca515d9c204f4660570d0b#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509328-1.json",
+  "chars": 3146
+ },
+ {
+  "title": "Palantir AIP就是企业版OpenClaw",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509324&idx=1&sn=40533cdbd8618feb224edd3646d5c3c6&chksm=ea0e0624dd798f322644bc9acb0ad435ae08d4f6b2ddb944ebf40e1995b2b078691f55744c6c#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509324-1.json",
+  "chars": 2701
+ },
+ {
+  "title": "AI时代两大基础设施：硬件GPU与软件Ontology",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509316&idx=1&sn=7ae933890a6ceb50ca82af2db31d8cd4&chksm=ea0e062cdd798f3a8f1087d2974b0676ac8579f1d20468a455c247797aff444f1b7779fb63a3#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509316-1.json",
+  "chars": 2805
+ },
+ {
+  "title": "从数据存取到认知世界：从IT时代的数据库走向AI时代的本体库",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509269&idx=1&sn=e1a2fa807467d178a1313d9e13507d37&chksm=ea0e067ddd798f6b07f548625c0c8c62446d101f03ec712387b9097c6a5719fef80b1086f286#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509269-1.json",
+  "chars": 2303
+ },
+ {
+  "title": "用15个大模型回答同一个问题：Palantir AIP的函数有几种？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509264&idx=1&sn=522db35eba2ec1136431cc1f6b76ae45&chksm=ea0e0678dd798f6e1eb07a2b7558082e98bff9200809e5ce1cecddf3d581ae04600dd1bb5d3e#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509264-1.json"
+ },
+ {
+  "title": "Palantir AIP是如何解决Agent长期记忆和短期记忆的？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509260&idx=1&sn=dcaec51a6fb31ba21ff816e69785a766&chksm=ea0e0664dd798f72807cc55da50cb0dcaa6fd44427579f868dbf355f856919621da78256d69f#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509260-1.json",
+  "chars": 2093
+ },
+ {
+  "title": "Palantir给中国AI软件公司出海及本土化的三条核心启示",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509237&idx=1&sn=e5d6c3a2abf034cc342f683a890e7d6a&chksm=ea0e079ddd798e8b12dca86cb6b1bf78fa0ef3ab4e2cc4a51cc5af3c9c03b936298d08f3689c#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509237-1.json"
+ },
+ {
+  "title": "Palantir AIP演示录：5场经典AIP演示背后的产品设计艺术",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509236&idx=1&sn=be0e32a46a5d925d5872f4884ebb9987&chksm=ea0e079cdd798e8acf1879c2ca087cffff1ffcb6f1d49970810549360e2a92719891cbf67650#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509236-1.json",
+  "chars": 1693
+ },
+ {
+  "title": "Palantir AIP案例：J.P. Morgan (摩根大通)",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509215&idx=1&sn=8eee4af06270fbdf16f1c56a0c069a5e&chksm=ea0e07b7dd798ea1c7b6500b8fc5a798cea2a24147d7fb720e5584938e1ec1903f614e09b03f#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509215-1.json"
+ },
+ {
+  "title": "AI盈利收割机：Palantir最新财报解读",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509204&idx=2&sn=7f0af8dbe0b45599c0275d4c63dc5ae4&chksm=ea0e07bcdd798eaa883c9a9edc60501a9705b9ad814b3314186b8585d2124897b654a41b3edf#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509204-2.json",
+  "chars": 1163
+ },
+ {
+  "title": "Palantir业绩炸裂，CEO致股东信",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509204&idx=1&sn=3ccd852ae2dc74c862c452177e85fd44&chksm=ea0e07bcdd798eaa8deeaf858dbe262df37ac53cfc01288e02e45a20815b70b2ab2e4dde5af2#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509204-1.json",
+  "chars": 3622
+ },
+ {
+  "title": "Palantir AIP案例：英国石油（BP）",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509183&idx=1&sn=32dbeb285e52c441af9a139707f8b4c1&chksm=ea0e07d7dd798ec1a8fcf3ff08170e96fe981105c7e8aa1458929dc14ba1501c96ecff34dc07#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509183-1.json",
+  "chars": 3731
+ },
+ {
+  "title": "Palantir AIP实现多智能体协作的五种模式",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509178&idx=2&sn=9f5334f493a8d922a0de23ac291562af&chksm=ea0e07d2dd798ec46ea4b159349564dcb1b950cd76ffa1a4dbd2e7547c113bcb5a873ea2a6e4#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509178-2.json",
+  "chars": 2495
+ },
+ {
+  "title": "Palantir AIP案例：花旗财富（Citi Wealth）",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509154&idx=1&sn=d0f280d058a3f690a681273dead6e26f&chksm=ea0e07cadd798edc53d1dd72964314429ba76e04078eb97cca3bb3c2c43062f3d98592f5affb#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509154-1.json",
+  "chars": 2819
+ },
+ {
+  "title": "诺华制药data42与AIP：唤醒沉睡的研发数据",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509146&idx=2&sn=2b3e5e6371de1ef5fe909c8842d53ca7&chksm=ea0e07f2dd798ee49646382d2acd409cad09658aa5b8b58ca77e470cd4ac01c36a09ed92448d#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509146-2.json",
+  "chars": 237
+ },
+ {
+  "title": "Palantir AIP案例剖析：诺华制药(data42&AIP Transformation)",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509146&idx=1&sn=8aed2e3814cd18115b250cbcb3513bd0&chksm=ea0e07f2dd798ee496c3a84e32970b0bc05a01f9d50e6db726643f8870a4358fe28e23bf60b3#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509146-1.json",
+  "chars": 4832
+ },
+ {
+  "title": "【PPT讲稿】Palantir AIP产品的营销套路",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509124&idx=2&sn=9f63bc3433f7d32c7eb6cd982596a8aa&chksm=ea0e07ecdd798efada8bc4f5195b2b28bc0fb02dad7364f07c0dff1bc0e2b41ce014175ddcc7#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509124-2.json",
+  "chars": 237
+ },
+ {
+  "title": "Palantir AIP产品的营销套路",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509124&idx=1&sn=05716d5af8b9cca41f3c2517c49e7ccf&chksm=ea0e07ecdd798efaa637afba69e686407280f424047ff1f28e32b262e18d112d859fdc1993bc#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509124-1.json"
+ },
+ {
+  "title": "【PPT讲稿】押注于真实世界",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509105&idx=3&sn=c9bb799138cc21000046bf65409f033b&chksm=ea0e0719dd798e0f5e39e1f260153a4d9be3c103135d06bc11e02e3fe00bc71cdbfb579ee5d2#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509105-3.json",
+  "chars": 237
+ },
+ {
+  "title": "Palantir为什么要逃离硅谷，搬去丹佛？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509105&idx=1&sn=caae7c7dc763c05f3f7908893d3769d8&chksm=ea0e0719dd798e0faf5a65d068b0e1fe92239c60ff716379748054ed3b1c8ba881600c92b403#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509105-1.json",
+  "chars": 2599
+ },
+ {
+  "title": "【PPT讲稿】Agentic Enterprise的技术架构新范式",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509086&idx=2&sn=ee9752c527add359b1bd51fc0453ce46&chksm=ea0e0736dd798e20703e549d0ef7bbd20b432b4d8795798841019a72b59666240d235f9e1bae#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509086-2.json",
+  "chars": 237
+ },
+ {
+  "title": "Palantir AIP启示：为什么未来企业的IT架构将不再以应用为中心？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509086&idx=1&sn=85558bb70b014c4e6ce39b2bf7c7a9fd&chksm=ea0e0736dd798e206a4afc44ce7a195a4402156861f53db075172dea4e616e07cd312bc09a51#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509086-1.json",
+  "chars": 3009
+ },
+ {
+  "title": "【PPT讲稿】十八面体的数字孪生矩阵",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509085&idx=2&sn=7ac1db1cdd0affac983b2b7f55a8b073&chksm=ea0e0735dd798e23a8f1d85a0aae6f7d34d8f7bbd49e85f17aad36149225a21f7fa477ed0979#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509085-2.json",
+  "chars": 237
+ },
+ {
+  "title": "Palantir AIP本体是个十八面体、多数人只看到一两个面",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509085&idx=1&sn=1f0fab77d5ed722095f2c3b3c23c8266&chksm=ea0e0735dd798e23b4e10373e2ce4e8e32c59e038bea9a425a8a990bf2b3eeaed68864ba258a#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509085-1.json",
+  "chars": 3210
+ },
+ {
+  "title": "【PPT讲稿】Palantir AIP权限设计机制详解",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509065&idx=2&sn=937c0dc53fa20678fb9683e98d8dd2b5&chksm=ea0e0721dd798e37c99a304a53bcc728a886393eb8b3398f9e5a6f53a05d3967aa85a33fd2b4#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509065-2.json",
+  "chars": 237
+ },
+ {
+  "title": "Palantir AIP是如何设计权限的？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509065&idx=1&sn=d34f44870caed492935eb8a60a6888ac&chksm=ea0e0721dd798e3772d8177da7bbb6f1c483567dbeade0adbd6b007fefcf0578e107677316f7#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509065-1.json",
+  "chars": 6874
+ },
+ {
+  "title": "【PPT讲稿】Palantir AIP Terminal：决策智能的底层逻辑",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509041&idx=2&sn=9deb5b202642148541f21fa636f9c244&chksm=ea0e0759dd798e4f8c0bd2c2e3f427311557b3ba0ff25d82b2866592485bff1a299738663b2d#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509041-2.json",
+  "chars": 237
+ },
+ {
+  "title": "拆解Palantir AIP Terminal的自然语言编程范式",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509041&idx=1&sn=5ea50bad04aa941b314c4ca78fff2de3&chksm=ea0e0759dd798e4f0c4ec315143e10802ba22baa4a09969b6cc88128ae2a0b83b691fbcc1a9b#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509041-1.json",
+  "chars": 2984
+ },
+ {
+  "title": "Palantir CEO和贝莱德CEO达沃斯对谈",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247509002&idx=1&sn=a42d424345ccac43004250a15a8df156&chksm=ea0e0762dd798e7421270fa3f84784f7d39e133fb5cc4028201f2399b9ad6526ed77fa0a1bba#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247509002-1.json",
+  "chars": 2843
+ },
+ {
+  "title": "【PPT讲稿】Palantir AIP架构技术复盘",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508998&idx=2&sn=c63a6e63b86606f239c42f3adaad4e01&chksm=ea0e076edd798e787396e3e7a73ece9c6623607050d50849fe1ff70912569e06c6fff7984f1e#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508998-2.json",
+  "chars": 237
+ },
+ {
+  "title": "从Foundry到AIP：一家20年的大数据公司，如何用3个月完成了AI转型？",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508998&idx=1&sn=673d053e967ad790d02ecfab1ede30cd&chksm=ea0e076edd798e7816ae938d645b278d97df4e40a6fe6bbe0fc30a82e15aefbc2a1c4969b869#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508998-1.json",
+  "chars": 2670
+ },
+ {
+  "title": "【PPT讲稿】Palantir AIP信任的架构：权限即上下文",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508982&idx=2&sn=6d5036c8a0052420885fdf13193101d7&chksm=ea0e009edd798988e7209bc5a2ccc9c8a877a6fd14ed1d06c9a5faa9cb07fe5cd15207565fed#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508982-2.json",
+  "chars": 237
+ },
+ {
+  "title": "越过权限谈AI都是灾难：Palantir ACL安全上下文注入技术栈剖析",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508982&idx=1&sn=3a1d5d93bb55dd7d2a02e3da236cd799&chksm=ea0e009edd798988dc97944e4644614b553e63b76638452e9608bfac2d0695eb0939de8ce24c#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508982-1.json",
+  "chars": 6843
+ },
+ {
+  "title": "【PPT讲稿】告别RAG裸奔，拥抱Ontology",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508937&idx=2&sn=52857054bf9e628d0c793f2718440729&chksm=ea0e00a1dd7989b7864530131750347083048cf522eb9d078393c1ce21c7b269c34c6bf0d39b#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508937-2.json",
+  "chars": 237
+ },
+ {
+  "title": "深度分析Palantir AIP如何利用本体层扼杀AI幻觉",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508937&idx=1&sn=7d7780674a78f323545a39e29d7b9b93&chksm=ea0e00a1dd7989b719c9480e27bf6f2832c93456a723fb67e3364447a93bc685e639a8aacba5#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508937-1.json",
+  "chars": 2989
+ },
+ {
+  "title": "a16z撰文：万物皆可Palantir化",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508892&idx=1&sn=7614cb5333bcb6418517764e09a70c60&chksm=ea0e00f4dd7989e20cf652c16d3bd956c2d6e6f3502cc4832dd2427ea46ad3a9d26ff1cff754#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508892-1.json",
+  "chars": 2210
+ },
+ {
+  "title": "Palantir AIP架构核心推演：Data-to-Action的实现路径",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508888&idx=1&sn=d9d58bb119ce209937a3e3909d3b1c86&chksm=ea0e00f0dd7989e6761b6680821349abbf139c46a3d9622e3c4a17dd686a287881a4e31828cc#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508888-1.json",
+  "chars": 2297
+ },
+ {
+  "title": "彼得·蒂尔的影子：从《从0到1》看Palantir的创办初衷与垄断意志",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508887&idx=1&sn=838c03396bfc59b7523e5360d2f61720&chksm=ea0e00ffdd7989e95f0a8c1399790ee8ea3fb6c1c9eb6f2679f705b35660468f854081cdd884#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508887-1.json",
+  "chars": 3100
+ },
+ {
+  "title": "C3.ai为什么掉队了？对中国AI创业者的警示：复盘两家Enterprise AI公司的不同命运",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzI1ODEyNzM2Nw==&mid=2247508880&idx=1&sn=ef0ec030c2a3dd94c0ef95c083e8d4d1&chksm=ea0e00f8dd7989eef250e259213cfe19f4b048084e1fea7212b706cf2af1b047560647055744#rd",
+  "status": "ok",
+  "file": "corpus-onto/2247508880-1.json",
+  "chars": 3681
+ }
+]

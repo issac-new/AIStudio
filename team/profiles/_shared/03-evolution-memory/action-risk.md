@@ -541,10 +541,9 @@ Hermes 当前 `approval_policy=never` 是全局一刀切配置。本协议在不
 | **worker-tester** | `acceptEdits` | 测试可能需要写入测试文件 | 中 |
 | **hack-*** | `bypassPermissions` | 安全测试需要高危操作 | **高**（必须 Guardian 二审） |
 | **ops-*** | `acceptEdits` | 运维操作需要系统修改 | 中 |
-| **[已移除]-*** | `dontAsk` | 教学内容生成以只读为主 | 低 |
 | **product-*** | `dontAsk` | 产品文档以只读为主 | 低 |
 | **platform-*** | `acceptEdits` | 平台治理需要配置修改 | 中 |
-| **[已移除]-*** | `acceptEdits` | [已移除] 工具链需要脚本执行 | 中 |
+
 
 ### 4.3 权限使用规则
 
@@ -611,7 +610,7 @@ dontAsk → acceptEdits → auto → plan → bypassPermissions
 ### SOUL 内单行引用
 
 ```
-ACP 权限分级（详见 _shared/03-evolution-memory/action-risk.md 第四章）：orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审。
+ACP 权限分级（详见 _shared/03-evolution-memory/action-risk.md 第四章）：orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/eda/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审。
 ```
 
 ---

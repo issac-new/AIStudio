@@ -1,0 +1,92 @@
+version: 1
+updated: '2026-09-17'
+domains:
+- domain: swarm
+  board: swarm
+  profiles:
+  - orchestrator
+  - worker-researcher
+  - worker-coder
+  - worker-tester
+  knowledge:
+  - ~/.hermes/delivery/（软件开发交付标准工作模板 v1.0.0，2026-09-17 起；六阶段×六门禁，工具无关）
+  target_skill: null
+  owner_of_domain: orchestrator
+- domain: ops
+  board: ops
+  profiles:
+  - ops-devops
+  - ops-sre
+  - ops-incident-commander
+  - ops-eval
+  knowledge: []
+  target_skill: pending
+  owner_of_domain: ops-devops
+- domain: pay
+  board: pay
+  profiles:
+  - pay-orchestrator
+  - pay-fintech
+  - pay-infra
+  - pay-clearing
+  knowledge:
+  - ~/.hermes/profiles/pay-orchestrator/references/ (pay-kb, tag pay-kb-v20260903)
+  target_skill: pending
+  owner_of_domain: pay-orchestrator
+- domain: data
+  board: data
+  profiles:
+  - data-orchestrator
+  - data-arch
+  - data-flink
+  - data-infra
+  knowledge: []
+  target_skill: pending
+  owner_of_domain: data-orchestrator
+- domain: hack
+  board: hack
+  profiles:
+  - hack-recon
+  - hack-exploit
+  - hack-auditor
+  - hack-forensics
+  knowledge:
+  - 网安知识库（hack 团队 references/）
+  target_skill: pending
+  owner_of_domain: hack-auditor
+- domain: product
+  board: product
+  profiles:
+  - product-manager
+  - product-researcher
+  knowledge: []
+  target_skill: null
+  owner_of_domain: product-manager
+- domain: platform
+  board: platform
+  profiles:
+  - platform-skill-miner
+  - platform-ontology-curator
+  knowledge: []
+  target_skill: null
+  owner_of_domain: platform-ontology-curator
+- domain: aiteam
+  board: aiteam
+  profiles:
+  - aiteam-orchestrator
+  - aiteam-architecture
+  - aiteam-multimodal
+  - aiteam-embodied
+  - aiteam-training
+  - aiteam-scout
+  knowledge: []
+  target_skill: pending
+  owner_of_domain: aiteam-orchestrator
+- domain: eda
+  board: eda
+  profiles:
+  - orchestrator
+  knowledge: []
+  target_skill: null
+  status: active
+  note: 在整体设计文档中不体现（用户口径），运行态活跃

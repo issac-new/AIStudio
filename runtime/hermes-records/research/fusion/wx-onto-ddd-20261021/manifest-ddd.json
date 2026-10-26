@@ -1,0 +1,138 @@
+[
+ {
+  "title": "别再被 Agent 概念忽悠！一文看懂 AI Agent 到底是什么，以及普通人该怎么上手实战",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483796&idx=1&sn=74155d3b54e432344d312da4713c61ac&chksm=f4ae3cb2c3d9b5a4df23d7cb2952fc68cd3000db8025c9111f732d776cedbb9d031e0c19e977#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483796-1.json",
+  "chars": 3623
+ },
+ {
+  "title": "LangGraph、Spring AI Alibaba、Dify、LlamaIndex 怎么选？Agent 技术栈选型决策指南",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483797&idx=1&sn=a4dc312566f3e965872f91811d6bb660&chksm=f4ae3cb3c3d9b5a57395f007c2af569c2623ed76c58b547d2f08a6b032a5471c2b1e57430878#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483797-1.json",
+  "chars": 3795
+ },
+ {
+  "title": "开发环境搭建：一键启动 Agent 本地开发环境，Docker Compose 快速搭建全套调试栈",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483798&idx=1&sn=55fc92ebbfded8f53ef84bcfb87fee24&chksm=f4ae3cb0c3d9b5a6cb14f6fedb8d18642bb77e92ac5408cb27a19c948900a4bce68140ba7574#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483798-1.json",
+  "chars": 3470
+ },
+ {
+  "title": "最小 Agent 实战 1：从零手写第一个工具调用 Agent，拆解 LLM+Tool 调用完整链路",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483804&idx=1&sn=17f303e9d633619969e784029fce7c91&chksm=f4ae3cbac3d9b5acd2d7f144e5bd16c8eb456cfdb6f0534d4b3cba98c11bb6c8943877fbf629#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483804-1.json",
+  "chars": 2977
+ },
+ {
+  "title": "最小 Agent 实战 2：记忆系统详解，短期上下文、长期向量记忆、会话记忆的代码实现",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483810&idx=1&sn=3200cc622c6ad1eff2dbfc8be11cfb2b&chksm=f4ae3c84c3d9b592995a8a9dd52e8185d7f9368ce1d41b36a52aad465296d646922b25cce22c#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483810-1.json",
+  "chars": 3609
+ },
+ {
+  "title": "最小 Agent 实战 3：思考与规划，ReAct、Plan&Solve，手把手实现 Agent 自主推理循环",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483820&idx=1&sn=4a84714a5658f2bbe94bb91a2b3c5d90&chksm=f4ae3c8ac3d9b59ccc5cc1ef305eb83072fadfcc8eb42cba543618c2f2c849816faa585e6ffd#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483820-1.json",
+  "chars": 4500
+ },
+ {
+  "title": "最小 Agent 实战 4：状态持久化与断点续传，把 Demo 变成可运行的业务系统",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483826&idx=1&sn=cf08ab3bbbaf75bf9c7235f8b5346445&chksm=f4ae3c94c3d9b5826ca4ae52a02d16bd24c555ac34c29e0d53a5ea536e6b3551bb0b7eb06941#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483826-1.json",
+  "chars": 5095
+ },
+ {
+  "title": "最小 Agent 实战 5：异步任务、人工校验、异常重试与降级策略，构建 Agent 容错体系",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483831&idx=1&sn=a22663e143f3a7af80cf8f273ad62b70&chksm=f4ae3c91c3d9b5874c22e476f4e476ad171d8c4e2329c96cfe8b0b32ef954f7464d22ec6d861#rd",
+  "status": "ok",
+  "error": "no content",
+  "file": "corpus-ddd/2247483831-1.json",
+  "chars": 8919
+ },
+ {
+  "title": "最小 Agent 实战 6：Agent 可观测体系，日志、指标、链路追踪、告警与成本监控",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483837&idx=1&sn=4e9d70001260c35d3e8ca9ec7880bb4a&chksm=f4ae3c9bc3d9b58d0c7610c2adee76c440ae963f049680900c5e7076413ff6bcb7540a0e2789#rd",
+  "status": "ok",
+  "error": "no content",
+  "file": "corpus-ddd/2247483837-1.json",
+  "chars": 6180
+ },
+ {
+  "title": "最小 Agent 实战 7：Agent 自动化评测体系，构建评测数据集、评估指标、批量回归测试",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483843&idx=1&sn=958c51467c5ad92c89dba25b48a74c16&chksm=f4ae3ce5c3d9b5f3651a5fd93acf1d1052b609b1647c61b16a3ddce09d5d5d13c36613b4b73c#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483843-1.json",
+  "chars": 4471
+ },
+ {
+  "title": "多 Agent 协作实战 8：从单 Agent 到多 Agent，架构升级的第一步",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483851&idx=1&sn=b272281180d1d23a7094975941f19119&chksm=f4ae3cedc3d9b5fba4968b422cd7c3a2bd6eee2c088eff766d0796168a5f819e7cc5eac089cf#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483851-1.json",
+  "chars": 3149
+ },
+ {
+  "title": "多 Agent 协作实战 9：Agent 之间怎么通信？消息总线、状态同步与消息可靠传递",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483860&idx=1&sn=57a8e61844f93be81767ede12390a898&chksm=f4ae3cf2c3d9b5e4fd3a4052bb2a26bc6b23d05ae113fefd810aedb6cc84f9c443a3f72b5be1#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483860-1.json",
+  "chars": 4566
+ },
+ {
+  "title": "多 Agent 协作实战 10：A2A 最小可运行 Demo，从零实现任务委派",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483874&idx=1&sn=fa890fa636513722e4a52e9f93d8ad69&chksm=f4ae3cc4c3d9b5d2a072dcad3ca0629074bef228a616d5ee41bc91afabf3b6376ad5d3b79b02#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483874-1.json",
+  "chars": 5798
+ },
+ {
+  "title": "多 Agent 协作实战 11：A2A 生态组件大盘点，不用从零手写协议",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483882&idx=1&sn=0a6ff8d37c8342b5fcfff7114fe43cee&chksm=f4ae3cccc3d9b5da763ea13eeee89ed568b315b62d3c7b73b4391ef03eefcb3de35d1c42d64e#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483882-1.json",
+  "chars": 5335
+ },
+ {
+  "title": "多 Agent 协作实战 12：A2A+MCP 端到端全链路实战",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483891&idx=1&sn=8a2294a131cf5f0f42137b4862cd47e9&chksm=f4ae3cd5c3d9b5c3953d7e67ba19926f6d302cb052ac7e170ef51e7fc6917a76fdce9af045ff#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483891-1.json",
+  "chars": 4860
+ },
+ {
+  "title": "Agent 架构设计 13：用 DDD 思想拆解 Agent 领域，实体、指令、工具、会话、状态模型设计",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483901&idx=1&sn=6711d27b67b7c1f67db20e5cccceaaeb&chksm=f4ae3cdbc3d9b5cde30465cc497737be3214c6752b295653deec1bc73e814346828237f1f81c#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483901-1.json",
+  "chars": 5597
+ },
+ {
+  "title": "Agent 架构设计 14：基于 DDD 领域模型，实现 Agent Checkpoint 断点快照与任务恢复服务",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483909&idx=1&sn=68139a83f81298064a5899b889a05321&chksm=f4ae3f23c3d9b6353705dcb9c649048996ea086b77079d7010a75d4439e8602c3ed569da8e95#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483909-1.json",
+  "chars": 5760
+ },
+ {
+  "title": "Agent架构设计15：Agent 权限模型设计，工具权限、指令权限、租户隔离、MCP 工具的调用鉴权落地。",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483917&idx=1&sn=ff893b603b079f1c894aee3fa54aec00&chksm=f4ae3f2bc3d9b63d005ac5f730cfd74a4ad9db366feaf5b338bd88a708c6212de21ad5e2f46d#rd",
+  "status": "ok",
+  "file": "corpus-ddd/2247483917-1.json",
+  "chars": 5313
+ },
+ {
+  "title": "Agent 架构设计 16：Agent 限流、熔断、降级、排队调度，搞定 LLM 与 MCP 工具的流量稳定性",
+  "link": "http://mp.weixin.qq.com/s?__biz=MzcwMDQ2MDEwNQ==&mid=2247483923&idx=1&sn=dce8b4db7349d2830afa9b9eab815e0e&chksm=f4ae3f35c3d9b623f07561a10d667fcf0872eed5495096dced3ada2047693b1add7e626bd4aa#rd",
+  "status": "ok",
+  "error": "no content",
+  "file": "corpus-ddd/2247483923-1.json",
+  "chars": 5833
+ }
+]

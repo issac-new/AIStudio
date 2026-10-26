@@ -1,0 +1,10 @@
+# capability-gap-suggestions — 能力缺口替代建议（脚本生成，勿手改）
+#
+# 生成: bin/capability-substitute-suggest.py；每次运行整体覆盖。
+# 消费: orchestrator 分解环 1 择优次级信号；人工复核后折叠进
+#       capability-graph.yaml 手工区 substitutes（折叠不改本文件）。
+generated_at: 2026-10-19T02:16:25
+window_days: 30
+threshold: 2
+suggestions:
+  []  # 窗口内无达标缺口信号

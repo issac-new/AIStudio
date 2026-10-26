@@ -1,0 +1,46 @@
+{"ts":"2026-10-20T00:40:00+08:00","type":"ioc-batch","campaign":"Cling / ClingSTUN IoT botnet","source_primary":"Nozomi Networks Labs 2026-10-01 https://www.nozominetworks.com/blog/a-stunning-disguise-cling-malware-masquerades-as-google-","source_secondary":["FreeBuf 504785 2026-10-05","Fortinet FortiGuard 2026-10-05 (ClingSTUN)"],"gap_id":"gap-20261007-005","kanban_task":"t_d35e523f","skill":"hack-team/stun-c2-detection v1.0.0"}
+{"ioc_type":"sha1","value":"3b0ac6aaabb3bf8058ca14f9c8ccc613cfa3ea71","arch":"mips","note":"Nozomi 主分析样本"}
+{"ioc_type":"sha1","value":"08636d09d9ffd1713bd6bcb965ad40b6ce3de1aa","arch":"mips","note":"同簇样本"}
+{"ioc_type":"sha1","value":"90d738a8d650e3fefda9d7efa4baa11bd89ab05fcf0eb173e04aa01a52b465e2","note":"YARA hash1"}
+{"ioc_type":"sha1","value":"3a6927a3399f2a10bb2e2229482e5096e5f1c3401a87f7f1730db11243531e28","note":"YARA hash2"}
+{"ioc_type":"ip:port","value":"145.249.115.184:3478","role":"operator-controlled STUN server","evidence":"回全零 txid 指纹确认 + 不相交端口集注册实验收到 C2 指令"}
+{"ioc_type":"ip:port","value":"74.125.250.129:19302","role":"spoofed source (stun.l.google.com)","note":"合法 Google STUN；C2 指令包伪造此源（TTL 差异佐证），不可封禁"}
+{"ioc_type":"ip:port","value":"216.93.246.18:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"85.17.88.164:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"77.72.169.213:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"77.72.169.211:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"5.39.72.109:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"81.187.30.115:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"212.227.67.34:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"212.227.67.33:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"207.38.82.134:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"83.211.9.232:3478","role":"stun-server-list"}
+{"ioc_type":"ip:port","value":"212.53.40.43:3478","role":"stun-server-list"}
+{"ioc_type":"url","value":"http://118.45.196.225:800/mipsel","role":"loader-host"}
+{"ioc_type":"url","value":"http://120.193.219.210:800/mipsel","role":"loader-host"}
+{"ioc_type":"url","value":"http://58.211.144.243:800/mipsel","role":"loader-host"}
+{"ioc_type":"url","value":"http://121.32.243.81:1337","role":"loader-host","note":"scan-and-exploit 指令指定的载荷源"}
+{"ioc_type":"file-artifact","value":"/root/.cling","role":"persistence"}
+{"ioc_type":"file-artifact","value":"/usr/local/bin/.cling","role":"persistence"}
+{"ioc_type":"file-artifact","value":"wget.r","role":"wget-hijack","note":"原 wget 被移至此名，旁挂 wget.p 记录原路径；扫 /bin /sbin /usr/bin /usr/sbin /usr/local/bin"}
+{"ioc_type":"init-entry","value":"/etc/inittab;.cling","role":"persistence"}
+{"ioc_type":"init-entry","value":"/etc/init.d/rcS;.cling","role":"persistence"}
+{"ioc_type":"init-entry","value":"/etc/rc.d/rc.boot;.cling","role":"persistence"}
+{"ioc_type":"network-behavior","value":"SO_REUSEADDR bind tcp/udp:33957","role":"single-instance-lock"}
+{"ioc_type":"network-behavior","value":"stun binding request all-zero-txid every-5s to 13 servers","role":"c2-poll","detect_rule":"R1"}
+{"ioc_type":"network-behavior","value":"non-stun registration datagram to stun ports containing .selfrep tag","role":"c2-register","detect_rule":"R2"}
+{"ioc_type":"http-ua","value":"clingwashere","role":"scanner-ua"}
+{"ioc_type":"ddos-target","value":"112.151.157.222:8080","note":"South Korean ISP"}
+{"ioc_type":"ddos-target","value":"192.170.240.137:53","note":"University of Chicago"}
+{"ioc_type":"ddos-target","value":"23.81.40.193:25565","note":"Minecraft"}
+{"ioc_type":"ddos-target","value":"147.185.221.129:25565","note":"Minecraft"}
+{"ioc_type":"cve","value":"CVE-2021-35394","cvss":"9.8","role":"initial-access","product":"Realtek Jungle SDK v2.0-3.4.14B UDPServer UDP/9034 orf; command injection"}
+{"ioc_type":"cve","value":"CVE-2014-8361","role":"propagation","product":"Realtek miniigd"}
+{"ioc_type":"cve","value":"CVE-2016-10372","role":"propagation","product":"Eir D1000"}
+{"ioc_type":"cve","value":"CVE-2016-20016","role":"propagation","product":"MVPower CCTV DVR"}
+{"ioc_type":"cve","value":"CVE-2023-26801","role":"propagation","product":"LB-LINK routers"}
+{"ioc_type":"cve","value":"CVE-2023-41011","role":"propagation","product":"FiberHome SR1041F / China Mobile HG6543C4"}
+{"ioc_type":"cve","value":"CVE-2024-3721","role":"propagation","product":"TBK DVR"}
+{"ioc_type":"cve","value":"CVE-2025-34037","role":"propagation","product":"Linksys"}
+{"ioc_type":"cve","value":"CVE-2026-87827","role":"propagation","product":"KGUARD DVR (Fortinet 补充)"}
+{"ioc_type":"yara","value":"IOT_WORM_Cling_sample","author":"Nozomi Networks Labs","tlp":"clear","date":"2026-09-17"}

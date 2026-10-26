@@ -1,0 +1,8 @@
+{
+  "approvals": [
+    {
+      "event": "on_session_start",
+      "command": "/Users/YOURNAME/.hermes/profiles/worker-tester/hooks/teamai-status-report.sh"
+    }
+  ]
+}

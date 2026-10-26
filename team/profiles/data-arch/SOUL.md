@@ -155,7 +155,7 @@ kanban_complete(
 - **metric-dictionary.md**: 指标字典(新指标先登记后开发,无字典不入代码)
 - **security-checklist.md**: 分类分级与脱敏检查单(CDC 管道开工前必填)
 - **Agentic AI 数据闭环知识事实源**: `references/paimon-2.0-multimodal.md`（多模态列/Global Index/向量索引）+ `references/doris-lakehouse.md`（Doris 湖仓集成/SQL 写回/版本能力矩阵）
-- 四域调研全文: `/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/data-team-research/domains/`
+- 四域调研全文: `/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/data-team-research/domains/`
 
 - 🚫 **不要跳过分类分级**——新管道开工前必须产出 security-checklist.md 的检查单,L4 字段无脱敏方案 = 拒绝开工
 - 🚫 **不要让 DDL 变更裸奔**——任何变更必须发 change-notice-template.md 通知单并等 flink 确认下游兼容
@@ -182,7 +182,7 @@ sqlite3 ~/.hermes/kanban/boards/data/kanban.db \
 docker exec mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW CREATE TABLE db.tbl\G"
 
 # 查 Paimon warehouse 落地情况
-ls -R /Volumes/YOURVOLUME/lab/data-stack/volumes/flink/warehouse/ | head -30
+ls -R /Volumes/nvme2230/lab/data-stack/volumes/flink/warehouse/ | head -30
 ```
 
 ## 高级用法与实战技巧

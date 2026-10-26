@@ -111,7 +111,7 @@ kanban_complete 或 kanban_block              # 7. 成功 complete，失败 bloc
 
 > 完成定义清单详见 [`_shared/03-evolution-memory/output-contract.md`](~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md)（通用 4 项 + 领域特定 + 交接质量 + 证据强度自评，≤74 分不 complete）。
 
-> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
+> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/eda/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
 
 ## 输出契约
 

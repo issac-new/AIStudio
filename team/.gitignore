@@ -83,3 +83,11 @@ platforms/pairing/
 action_gate_shadow.jsonl
 child-profile.md
 jobs_wkmt*.tmp
+
+# v3.3 (2026-10-26): 家庭域脚本永不公开([已移除]/trip/life-stats)
+scripts/[已移除]*
+scripts/[已移除]*
+scripts/trip_reminder_*
+scripts/daily_life_stats_*
+scripts/.master-integrity-snapshot.json
+.skills_prompt_snapshot.json

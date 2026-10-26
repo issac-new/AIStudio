@@ -1,0 +1,127 @@
+# =====================================================================
+# context-layers.yaml — Context L1/L2/L3 分档契约（platform 域共享台账）
+# 来源: wx-fusion-20261016 子卡C4，机制文章A §3.3（A4/A5/A6 锚点）
+# 裁决: FUSION-VERDICT-20261016.md §5 —— 模型仅两档(aim/glm-5.3-flash)，
+#       禁提议第三模型/供应商；本文件不改 profiles.yaml 等既有台账。
+# 语义: 本文件是"资产→context 档位"的声明性契约（declarative contract），
+#       运行时由各 profile 自律执行（分档拉取），非注入器配置。
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# ⚠️ 冷启动重开（cold-restart）触发条件 —— 引用不重复 long-session-hygiene
+# 过早重启 = 丢失已建立的理解成本（文章A §3.3 L150 原文警告）。
+# 重开前的"状态保全"动作纪律（task-state.md 落盘/re-read 恢复）由
+# devops/long-session-hygiene 定义；本节只声明"何时该重开"的触发线。
+# ---------------------------------------------------------------------
+cold_restart:
+  purpose: 对话轮数过多 / 响应变慢 / context 逼近上限时，主动重开清除稀释上下文
+  triggers:
+    - id: CR-T1
+      signal: 会话对话轮数 ≥ 60 轮（与 long-session-hygiene「拆卡优先于加预算」同基线）
+      action: 先落盘 task-state.md，再冷启动重开，重开后第一动作 re-read
+    - id: CR-T2
+      signal: AI 响应明显变慢 / 频繁超时（同一操作连续 2 次超时且非网络原因）
+      action: 同上
+    - id: CR-T3
+      signal: 上下文压缩已被触发 ≥ 1 次（/compress 或自动压缩）
+      action: 同上；若压缩 ≥ 3 次按 long-session-hygiene HIGH_RISK 处置（收卡加严）
+    - id: CR-T4
+      signal: context 用量 ≥ 80% 上限
+      action: 同上
+  warning: >-
+    过早重启 = 丢失理解成本。未达任何触发线时禁止重开；
+    达线后也必须先完成状态外置落盘（见 long-session-hygiene 纪律 1/2/3）再重开，
+    否则重开即任务倒退。
+
+layers:
+  L1:
+    name: 常驻摘要档
+    definition: 会话全程常驻 context 的最小骨架——身份头部+触发词+命令速查
+    injection: session-start 自动注入，禁止手工往 L1 追加内容
+    budget: 每资产 ≤ 2KB；profile 合计 ≤ 8KB
+    assets:
+      - asset: SOUL.md 头部（身份段+核心职责，不含操作手册长文）
+        source: ~/.hermes/profiles/<profile>/SOUL.md
+        note: 49 个 profile SOUL 全文均值 ~293 行；头部之外部分按 L2/L3 归档
+      - asset: skill 触发词清单（description 段）
+        source: session 注入的 <available_skills> 摘要块
+        note: skills 列表本身已是摘要形态，维持现状
+      - asset: 命令速查（每 SOUL 的「具体操作命令手册」节）
+        source: SOUL.md 内既有章节
+        note: 完整命令带输出说明留在 L2，L1 只留命令名
+      - asset: 本契约触发线（cold_restart.triggers 的 CR-T1..T4 一行版）
+        source: ~/.hermes/shared/context-layers.yaml
+        note: 重开决策在会话内自检，不依赖 re-read
+
+  L2:
+    name: 按需全文档
+    definition: 按需拉取的操作知识全文——skill_view 拉取 / SOUL 分节读
+    injection: 触发词命中或任务需要时拉取；单会话建议驻留 ≤ 3 个 skill 全文
+    budget: 每资产 ≤ 15KB（与 web_extract 默认 char_limit 同数量级）
+    assets:
+      - asset: skill 全文（SKILL.md 正文）
+        source: skill_view(name=...) 拉取
+        note: cognition-lattice 一类巨型 reference 属 L3（路径引用，不进 context）
+      - asset: SOUL.md 操作手册节（侦察协议/标准作业循环/协作协议全文）
+        source: read_file(~/.hermes/profiles/<profile>/SOUL.md, offset/limit)
+        note: 334 行级全文不常驻，分节按需
+      - asset: 领域规则文件（_shared/02-org-orchestration/*.md 等）
+        source: read_file 按需
+        note: marking-rules.md / four-lenses-charter.md 等，命中场景才拉
+      - asset: kanban 任务卡 body + 前线侦察摘要 comment
+        source: kanban_show(task_id)
+        note: 父卡 handoff 与本卡验收标准，开工必读属 L2；完成内容不回灌
+
+  L3:
+    name: 原始锚点档
+    definition: 不进模型 context 的原始证据——路径+行号引用，验证时定点读
+    injection: 永不整体注入；只在需要核对时 read_file(offset/limit) 定点读片段
+    budget: 单次定点读 ≤ 2000 行（read_file 默认上限）
+    assets:
+      - asset: 调研源文章全文（article-A/B/C 等）
+        source: ~/hermes-docker-sandbox/workspace/research/wx-fusion-20261016/*.md
+        note: 引用形态 article-A-harness-rewrite.md:148-150（路径+行号锚点）
+      - asset: skill 巨型 references（cognition-lattice 的 239 条偏差库等）
+        source: ~/.hermes/profiles/<profile>/skills/<name>/references/*.md
+        note: 引用其存在与条目数，正文不进 context
+      - asset: kanban 任务卡全链历史（events/runs/全部 comments）
+        source: kanban_show / kanban db 只读查询
+        note: 挖掘与审计场景才定点读，日常执行不拉
+      - asset: 共享台账全量（profiles.yaml 11286 行级）
+        source: ~/.hermes/shared/*.yaml
+        note: grep/定点读；台账变更走 platform 域 owner，不整读
+      - asset: 运行数据（state.db / langfuse trace / 会话压缩链）
+        source: ~/.hermes/state.db 等
+        note: 只读查询 + 路径引用
+
+# ---------------------------------------------------------------------
+# 四类资产逐档归位清单（任务卡步骤 1 第二项要求）
+# ---------------------------------------------------------------------
+asset_placement:
+  by_class:
+    soul:
+      L1: 身份段+核心职责+命令速查（全文行数 ≤ 10% 的头部）
+      L2: 操作手册各节（侦察协议/作业循环/协作协议/输出契约）
+      L3: 无（SOUL 是注入资产本身，无更深原始层）
+    skill:
+      L1: 触发词 description（session 摘要块已有）
+      L2: SKILL.md 正文（skill_view 拉取）
+      L3: references/*.md 巨型参考文件（路径引用）
+    role_contract:
+      L1: 角色名+一句话职责（SOUL 头部即含）
+      L2: 协作协议表+输出契约节
+      L3: 上下游交接的历史实例（kanban 全链，审计时定点读）
+    reference_doc:
+      L1: 无（参考文献天然不常驻）
+      L2: 正被使用的章节（如 marking-rules 的传播规则节）
+      L3: 默认档位——全文路径+行号锚点
+  defaults:
+    - 新资产默认进 L3；被 ≥3 个会话实际引用才升 L2；每会话常驻才升 L1
+    - 升档/降档由 platform-skill-miner 提案、platform-skill-curator 裁决
+    - 单会话 L2 驻留超 3 个 skill 全文 = 违约信号，收卡时记录
+
+  stats_baseline:   # 2026-10-16 实测基线，供迁移后对比
+    soul_files: 49
+    soul_total_lines: 14354
+    soul_avg_lines: 293
+    largest_skill_reference: cognition-lattice/references/cognitive_biases.md  # 239 条目全量

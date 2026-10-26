@@ -51,19 +51,21 @@ A3 anti_loop_hook.py（预算审批案例）等效映射：当 worker 准备向�
 
 ## 5. per-task 归因口径
 
-主口径：`task-cost-attribution.py`，state.db session join 到任务级。
+主口径：`task-REDACTED.py`，state.db session join 到任务级。
 
 方向性口径（不可直 join）：cc-switch 时间窗口径。原因：cc-switch 的 session_id 格式与 state.db 不同，不可直接 join。预算评审时只做方向性参考（时间窗内成本趋势），不做精确归因。
+
+精确归因路径（2026-10-19 落地）：`task_runs.started_at ↔ state.db kanban sessions.started_at` 时间窗 join（同 profile + source='kanban' + ±30s 容差），工具 `--exact` 模式。并发多命中时打 ambiguous 不静默取一，单价反推不出的 model 标 `pricing:unknown` 成本留空。命令示例：`~/.hermes/bin/task-REDACTED.py --exact --since 7d --board swarm [--task <id>]`。
 
 产物路径：`research/metrics/` 下的 baseline JSON。评审时引用最新基线，与历史窗口对比，不单独看绝对值。
 
 ```
 review 命令：
-~/.hermes/bin/task-cost-attribution.py --flag-review   # >=3× median 候选
+~/.hermes/bin/task-REDACTED.py --flag-review   # >=3× median 候选
 ~/.hermes/bin/failure-classify.py --dump-unclassified   # 未分类机器可读
 ```
 
-per-task 规模→工作量换算的唯一事实源见 [`agent-task-size-v1.md`](~/.hermes/profiles/_shared/06-observability/agent-task-size-v1.md)（本处只加指针，禁止抄公式）。
+per-task 规模→工作量换算的唯一事实源见 [`agent-task-REDACTED.md`](~/.hermes/profiles/_shared/06-observability/agent-task-REDACTED.md)（本处只加指针，禁止抄公式）。
 
 ## 6. 复杂度感知接纳（提案扩开支须证明收益匹配）
 

@@ -1,0 +1,5 @@
+### P7a skill 写入契约守门器：合法内容（带 cue/lesson/evidence）应通过 enforce
+### captured 2026-10-26 10:03:27 runs=1 verdict=PASS
+rc=0 stdout=OK: OK (3 fields)
+
+verdict=PASS

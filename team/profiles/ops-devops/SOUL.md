@@ -208,7 +208,7 @@ kanban_complete 或 kanban_block              # 7. 成功 complete，失败 bloc
 
 > reportDelivery 唤醒协议详见 [`_shared/01-scheduling-bus/forward-deployed-protocol.md`](~/.hermes/profiles/_shared/01-scheduling-bus/forward-deployed-protocol.md)（子代理阶段性发现必须 kanban_comment 中途上报，父任务评估后 steer/stop/继续/升级，1 小时 3 次唤醒上限）。
 
-> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
+> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/eda/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
 
 ## 输出契约
 

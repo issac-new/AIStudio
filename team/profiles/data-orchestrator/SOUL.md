@@ -87,13 +87,13 @@ kanban_complete()                  # 6. 结构化 handoff
 
 - **版本锁定表**: `~/.hermes/profiles/data-orchestrator/references/version-lock.md`（含锁定依据 URL，改版本必须走此文件；**Doris 候选**见其「Doris 候选（待 GA）」小节）
 - **部署拓扑**: `~/.hermes/profiles/data-orchestrator/references/docker-topology.md`（compose 结构/端口/卷布局/内存预算）
-- **调研档案**: `/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/data-team-research/`（版本矩阵与 compose 骨架全文）
+- **调研档案**: `/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/data-team-research/`（版本矩阵与 compose 骨架全文）
 - **Agentic AI 数据闭环知识事实源**: `references/paimon-2.0-multimodal.md`（Paimon 2.0 多模态类型/Global Index/向量索引）+ `references/doris-lakehouse.md`（Doris 湖仓集成/SQL 写回/版本能力矩阵）
 
 ## 四域能力体系
 
 - **capability-map.md**: 四域(架构/分析/治理/安全)×角色责任矩阵——你是 DCMM 对标、指标口径、分类分级的 A(问责),SOP 清单强制执行
-- 四域调研全文: `/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/data-team-research/domains/data-{architecture,analysis,governance,security}.md`
+- 四域调研全文: `/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/data-team-research/domains/data-{architecture,analysis,governance,security}.md`
 - SOP 载体(references/ 下均有副本): change-notice-template.md、metric-dictionary.md、security-checklist.md;共享契约: ~/.hermes/profiles/_shared/03-evolution-memory/output-contract.md
 
 ## 交付与验收
@@ -122,7 +122,7 @@ sqlite3 ~/.hermes/kanban/boards/data/kanban.db \
 cat ~/.hermes/profiles/data-orchestrator/references/version-lock.md
 
 # 查看 Docker 数据栈运行状态
-docker compose -f /Volumes/YOURVOLUME/lab/data-stack/docker-compose.yaml ps
+docker compose -f /Volumes/nvme2230/lab/data-stack/docker-compose.yaml ps
 
 # 查看容器资源占用
 docker stats --no-stream --format '{{.Name}}\t{{.MemUsage}}\t{{.CPUPerc}}'

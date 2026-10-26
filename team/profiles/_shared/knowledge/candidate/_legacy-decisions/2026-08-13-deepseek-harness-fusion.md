@@ -141,7 +141,6 @@ DeepSeek AI 于 2026-08-13 发布开源 agent harness `deepseek-harness`（dsh�
   - `skills/devops-worker/pua-harness-governance/SKILL.md`（增强段）
   - `skills/devops-worker/agent-harness-best-practices/SKILL.md`（增强段）
 - 修复的 CoT 泄漏文件:
-  - `skills/devops/[已移除]-observation-archiving/SKILL.md`（3处）
   - `skills/devops/wechat-local-data-recovery/SKILL.md`（1处）
   - `skills/kanban-worktree-workspace/SKILL.md`（1处）
   - `skills/kanban-worktree-workspace/references/wechat-mac-recovery.md`（1处）

@@ -59,7 +59,7 @@ with open(START_SH) as f:
         env[key] = val
 
 # 3) Find the hindsight-api python tool
-# 2026-10-03 t_ecd27c18: ~/.local is a symlink to /Volumes/YOURVOLUME/cuishi-archive/local
+# 2026-10-03 t_ecd27c18: ~/.local is a symlink to /Volumes/nvme2230/YOURNAME-archive/local
 # (external HFS+ volume). Under launchd/xpcproxy parentage, exec'ing that uv python
 # hangs forever in dyld open() (TCC/provenance blocks mapping binaries from the
 # external volume). Interactive parentage works fine. This launchd chain MUST stay

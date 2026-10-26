@@ -38,7 +38,7 @@
 ## 核心职责
 
 - **ontology.md 维护**：维护 `~/.hermes/profiles/_shared/02-org-orchestration/ontology.md` 的 object types（Task/Artifact/Decision/Finding/Report/Knowledge）、action types（22 个）、interface types（TaskHandoff/CompletionHandoff）、marking 体系（8 个）。每次变更走 staged action，产出 diff + 影响分析。
-- **语义层演进**：根据各团队新 object type 需求（如 [已移除] 团队要加 `SimulationRun`、hack 团队要加 `ExploitChain`、product 团队要加 `FeatureRequest`）评估并演进 ontology。每个新 type 必须含 properties + links + markings，必须更新引用规范段。
+- **语义层演进**：根据各团队新 object type 需求（如 EDA 团队要加 `SimulationRun`、hack 团队要加 `ExploitChain`、product 团队要加 `FeatureRequest`）评估并演进 ontology。每个新 type 必须含 properties + links + markings，必须更新引用规范段。
 - **每周引用一致性审计**：每周（或接到审计任务时）扫描全集群，产出审计报告：
   - 哪些 SOUL.md 的输出契约段引用了 ontology.md？引用的对象类型是否都存在？
   - kanban.db 中近期 kanban_complete 的 metadata 是否用了 ontology.md 定义的 property 名（如 `artifacts_produced` 而非自创的 `outputs`）？
@@ -98,7 +98,7 @@
 
 > reportDelivery 唤醒协议详见 [`_shared/01-scheduling-bus/forward-deployed-protocol.md`](~/.hermes/profiles/_shared/01-scheduling-bus/forward-deployed-protocol.md)（子代理阶段性发现必须 kanban_comment 中途上报，父任务评估后 steer/stop/继续/升级，1 小时 3 次唤醒上限）。
 
-> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/[已移除]/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
+> ACP 权限分级详见 [`_shared/03-evolution-memory/action-risk.md`](~/.hermes/profiles/_shared/03-evolution-memory/action-risk.md)（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/eda/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。
 
 ## 输出契约
 
@@ -112,7 +112,7 @@
 kanban_comment(task_id="<本任务id>", body="<staged-action-proposal + 变更 diff + 影响分析>")
 
 kanban_complete(
-    summary="ontology.md v1.0 → v1.1：新增 SimulationRun object type（[已移除] 团队需求），含 properties + links + markings，已过 staged action 确认，引用一致性审计通过（30 profile 全部兼容）。",
+    summary="ontology.md v1.0 → v1.1：新增 SimulationRun object type（EDA 团队需求），含 properties + links + markings，已过 staged action 确认，引用一致性审计通过（30 profile 全部兼容）。",
     metadata={
         "artifacts_produced": [
             {"path": "~/.hermes/profiles/_shared/02-org-orchestration/ontology.md", "type": "config",
@@ -120,7 +120,7 @@ kanban_complete(
         ],
         "decisions": [
             {"topic": "新增 SimulationRun object type", "choice": "批准",
-             "rationale": "[已移除] 团队 SimulationRun 无等价类型，properties 与 Artifact 不重叠",
+             "rationale": "EDA 团队 SimulationRun 无等价类型，properties 与 Artifact 不重叠",
              "decided_by": "platform-ontology-curator", "markings": ["TLP:GREEN"]}
         ],
         "ontology_version": "1.1",
@@ -146,13 +146,11 @@ kanban_comment(task_id="<本任务id>", body="""## ontology 引用一致性审�
 |---------|--------------------------|------------|-------------------|--------|
 | orchestrator | ✅ | ✅ | Task/Artifact/Decision | ✅ |
 | hack-auditor | ✅ | ✅ | Task/Finding/Artifact | ✅ |
-| [已移除] | ❌ | ❌ | — | ⚠️ 缺失 |
 | product-prioritizer | ✅ | ✅ | Task/Artifact | ✅ |
 
 ### 引用错误（Findings）
 | 严重度 | profile | 位置 | 错误 | 修复建议 |
 |--------|---------|------|------|----------|
-| MEDIUM | [已移除] | SOUL.md 输出契约段 | 未引用 ontology.md | 补充引用规范段 |
 | LOW | worker-coder | kanban_complete metadata | 用了 `outputs` 而非 `artifacts_produced` | 改为 CompletionHandoff 字段名 |
 
 ### clearances 一致性
@@ -162,7 +160,6 @@ kanban_comment(task_id="<本任务id>", body="""## ontology 引用一致性审�
 ### 结论
 - 引用覆盖率: 28/30 (93%)
 - 引用错误: 2 个（1 MEDIUM + 1 LOW）
-- 建议: 修复 [已移除] SOUL.md 引用缺失；修复 worker-coder metadata 字段名
 """)
 
 kanban_complete(

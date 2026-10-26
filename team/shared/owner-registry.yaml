@@ -1,0 +1,103 @@
+version: 1
+updated: '2026-09-11'
+registry:
+- profile: worker-researcher
+  matrix: '@worker-researcher'
+  owns:
+  - module: 需求分析与设计（全应用域）
+    scope: PRD/概设/影响面穷举/规范比对
+    target_skill: null
+  backup:
+  - product-manager
+  - pay-fintech
+- profile: worker-coder
+  matrix: '@worker-coder'
+  owns:
+  - module: 编码执行（全应用域）
+    scope: 组件拼装+最小胶水，经 ACP 编码工具，55 道门禁执法
+    target_skill: null
+  backup:
+  - pay-infra
+- profile: worker-tester
+  matrix: '@worker-tester'
+  owns:
+  - module: 回归测试（全应用域）
+    scope: 三源用例/退出码判定/影子转正
+    target_skill: null
+  backup:
+  - pay-clearing
+- profile: ops-devops
+  matrix: '@ops-devops'
+  owns:
+  - module: 交付部署与发布准入
+    scope: release-plan 双评审/灰度/高危观察窗
+    target_skill: null
+  - module: 夜间雷达管道
+    scope: fetch→报告→投递的管道运维与扩源
+    target_skill: null
+  backup:
+  - ops-sre
+- profile: ops-sre
+  matrix: '@ops-sre'
+  owns:
+  - module: 生产监控与 SLO
+    scope: 监控纳管准入/告警质量/toil 消除
+    target_skill: null
+  backup:
+  - ops-devops
+- profile: ops-incident-commander
+  matrix: '@ops-incident-commander'
+  owns:
+  - module: 事件响应与问题回顾
+    scope: SEV 定级/指挥/五步回顾+案例库沉淀
+    target_skill: null
+  backup: []
+- profile: ops-eval
+  matrix: '@ops-eval'
+  owns:
+  - module: 后评价与工作流评估
+    scope: 周报四维/基线回归/改进建议
+    target_skill: null
+  backup: []
+- profile: pay-fintech
+  matrix: '@pay-fintech'
+  owns:
+  - module: 支付合规需求（pay 域）
+    scope: 监管/牌照/AML 约束识别，引用 pay-kb
+    target_skill: swarm-yuan-pay（pending）
+  backup:
+  - worker-researcher
+- profile: pay-infra
+  matrix: '@pay-infra'
+  owns:
+  - module: 支付系统实现（收银台/网关/账户）
+    scope: 领域约束出判据，编码经 ACP 回基座执法
+    target_skill: swarm-yuan-pay（pending）
+  backup:
+  - worker-coder
+  apps:
+  - app: 示例-收银台系统
+    status: pending-componentization
+    duty: 研发+交付+质量自测全责
+- profile: pay-clearing
+  matrix: '@pay-clearing'
+  owns:
+  - module: 清算对账（pay 域测试等价物）
+    scope: 账实相符=回归判据，差额=退出码非零
+    target_skill: swarm-yuan-pay（pending）
+  backup:
+  - worker-tester
+- profile: data-arch
+  matrix: '@data-arch'
+  owns:
+  - module: 数据架构与表模型（data 域）
+    scope: 表变更通知/指标字典/质量门禁
+    target_skill: swarm-yuan-data（pending）
+  backup: []
+- profile: platform-ontology-curator
+  matrix: '@platform-ontology-curator'
+  owns:
+  - module: 本体与 skill 治理（platform 域）
+    scope: 本体一致性/CQ 回归/skill 目录治理
+    target_skill: null
+  backup: []

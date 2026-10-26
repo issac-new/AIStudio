@@ -26,7 +26,7 @@ if [ "$COUNT" = "0" ] || [ -z "$COUNT" ]; then
 fi
 
 # Output the unread messages summary for the agent to process
-echo "You have $COUNT new unread email(s) in your-bot@example.com:"
+echo "You have $COUNT new unread email(s) in bot-mail@example.com:"
 echo ""
 echo "$UNREAD" | python3 -c "
 import sys, json

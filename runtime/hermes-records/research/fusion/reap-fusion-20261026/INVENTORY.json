@@ -1,0 +1,23 @@
+{
+  "source": {
+    "wx_url": "https://mp.weixin.qq.com/s/iGjicg_WqDaqyN_Srlisfg",
+    "repo": "https://github.com/JoasASantos/REA-Prompts",
+    "stars": 2462,
+    "created": "2026-10-19",
+    "license": "MIT (prompts)",
+    "default_branch": "main",
+    "snapshot_date": "2026-10-26"
+  },
+  "content": {
+    "sections": 23,
+    "prompts": 102,
+    "skill_packs": 26,
+    "files": [
+      "README.md 56KB",
+      "system_prompt.md 52KB",
+      "Skills/ 26 dirs",
+      "setup.sh/bat"
+    ]
+  },
+  "fidelity": "微信转述文准确无残缺；正典=repo README（技能纪律：转述对象为开源 repo 时以 README+官方源为锚）"
+}

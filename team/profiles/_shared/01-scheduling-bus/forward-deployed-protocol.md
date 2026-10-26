@@ -248,7 +248,6 @@ Mission Coordinator 不是独立 profile，而是**编排职能**，由以下真
 | 场景 | Coordinator 承担者（已验证存在） | 前线 worker |
 |---|---|---|
 | 跨 team 编排 | `orchestrator` | 各 team worker |
-| [已移除] 领域编排 | `[已移除]-orchestrator` | [已移除]-* 六师 |
 | 功能开发 mission | `worker-coder`（自编排子任务） | worker-tester |
 | 技术调研 mission | `worker-researcher` | — |
 | 安全审计 mission | `hack-recon`（侦察）+ `hack-auditor`（审计） | hack-exploit |
@@ -274,8 +273,6 @@ test -d ~/.hermes/profiles/<assignee> || echo "✗ assignee 不存在，禁止�
 | 技术调研 | worker-researcher |
 | 安全审计 | hack-recon + hack-auditor（+ hack-exploit 按需） |
 | 缺陷修复 | worker-coder + worker-tester |
-| [已移除] 调研/实现 | [已移除] / [已移除] / [已移除] / [已移除] 按域选 |
-| [已移除] 教学 | [已移除]-orchestrator → [已移除]-* 六师 |
 
 编组通过 `kanban_create(parents=[mission_task])` 实现，每个 worker 任务是 mission 的子任务。**引用不存在的 assignee = dispatcher 静默丢弃**（卡片永久滞留 ready）——这是比 squad 设计错误更严重的故障模式。
 

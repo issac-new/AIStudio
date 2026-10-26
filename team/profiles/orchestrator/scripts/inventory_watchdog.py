@@ -158,7 +158,7 @@ if problems:
     print(f"skill-board drift detected ({len(problems)} issues):")
     for p in problems:
         print(f"  - {p}")
-    print("Fix: ~/.hermes/hermes-agent/venv/bin/python ~/.hermes/shared/skill-fence.py apply --with-configs")
+    print("Fix: ~/.hermes/hermes-agent/.hermes/bin/hermes skill-fence apply --with-configs")
     sys.exit(1)
 # healthy: stay silent
 

@@ -1,0 +1,80 @@
+# =====================================================================
+# model-routing.yaml — 阶段×模型路由表（platform 域共享台账）
+# 来源: wx-fusion-20261016 子卡C4，机制文章A §3.3 A5 锚点
+# 裁决: 模型裁决 2026-09-17（FUSION-VERDICT §5 + 全局约束）——
+#       全舰队统一 custom:cc-switch，models 白名单仅 aim，
+#       auxiliary 用 glm-5.3-flash。只有这两档；
+#       任何卡禁提议/配置第三模型或供应商。
+# 语义: 声明性契约——哪个任务阶段用哪档模型。落地接线（如 profiles.yaml
+#       的 auxiliary 扩展）属执行层，须另行提案审批，本表不自动生效。
+# =====================================================================
+
+schema_version: "1.0"
+owner_domain: platform
+source_of_truth:
+  verdict: ~/hermes-docker-sandbox/workspace/research/wx-fusion-20261016/FUSION-VERDICT-20261016.md
+  model_adjudication_date: "2026-09-17"
+
+models:
+  primary:
+    id: aim
+    provider: custom:cc-switch
+    api_mode: anthropic_messages
+    tier: strong-reasoning
+    note: "全 fleet 主模型（profiles.yaml 47 profile 实测全为 aim）"
+  auxiliary:
+    id: glm-5.3-flash
+    tier: weak-reasoning
+    current_wiring: "profiles.yaml approvals.auxiliary.approval.model（审批流已接线）"
+    note: 当前仅在审批 auxiliary 一处接线；扩展接线须另行提案
+
+# 阶段→模型档位路由表（任务卡步骤 2 要求的四强+四弱）
+stage_routing:
+  - stage: design            # 设计：架构决策/契约拟定/方案裁决
+    model_tier: primary
+    model: aim
+    examples: [方案设计与权衡, 接口契约拟定, yaml/schema 设计, 决策文档撰写]
+  - stage: code_review       # CR：多角色代码审查（对应子卡C3 的 CR 角色）
+    model_tier: primary
+    model: aim
+    examples: [代码审查, 安全契约性能审查, PR review, 变更裁决]
+  - stage: development       # 开发：实现/调试/重构
+    model_tier: primary
+    model: aim
+    examples: [功能实现, 根因调试, 重构, 测试编写]
+  - stage: adjudication      # 裁决：验收判定/冲突裁决/终局决定
+    model_tier: primary
+    model: aim
+    examples: [验收判定, skill 提案裁决, 冲突裁决, 收卡复核]
+  - stage: doc_sync          # 文档同步：把已定结论同步进文档
+    model_tier: auxiliary
+    model: glm-5.3-flash
+    examples: [设计文档同步, 台账字段补写, 版本号日期戳更新]
+  - stage: smoke_test        # 冒烟验证：机械验证命令跑通与否的判读
+    model_tier: auxiliary
+    model: glm-5.3-flash
+    examples: [yaml 解析验收命令执行, lint/build 冒烟, 存在性检查]
+  - stage: title_gen         # 标题/命名生成
+    model_tier: auxiliary
+    model: glm-5.3-flash
+    examples: [报告标题, kanban 卡标题润色, commit message 草拟]
+  - stage: summary           # 摘要：压缩/摘要/转述
+    model_tier: auxiliary
+    model: glm-5.3-flash
+    examples: [长文摘要, comment 精简, 会话压缩辅助]
+
+routing_rules:
+  - id: MR-R1
+    rule: "默认档 = primary(aim)。未列入 stage_routing 的阶段一律用主模型。"
+  - id: MR-R2
+    rule: "弱档判据：输出可被机械验证（yaml 可 parse / 命令可重跑 / 文本可 diff）且不涉及架构决策，才降档到 auxiliary。"
+  - id: MR-R3
+    rule: "输出直接进共享台账/产线代码的内容，即使看起来简单也用 primary（错误成本高于 token 成本）。"
+  - id: MR-R4
+    rule: "禁止提议或配置第三模型/第三供应商（模型裁决 2026-09-17 冻结）。"
+  - id: MR-R5
+    rule: "auxiliary 接线扩展属执行层变更：platform 域提案 → curator 裁决 → 才能动 profiles.yaml。"
+
+baseline:   # 2026-10-16 实测：现状 = 无阶段路由，全阶段用 aim
+  observed: "profiles.yaml 47 profile 全部主模型 aim；auxiliary 仅审批流一处接线"
+  gap: "阶段路由表此前不存在；本表是首个声明性契约，落地接线未执行（只建议不执行）"

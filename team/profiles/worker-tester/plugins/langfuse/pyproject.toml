@@ -1,0 +1,14 @@
+[project]
+name = "hermes-langfuse"
+version = "2.0.0"
+description = "Langfuse tracing for Hermes Agent turns, LLM calls and tools (official plugin)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Nous Research" }]
+requires-python = ">=3.11"
+dependencies = [
+  "langfuse==4.15.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/NousResearch/hermes-official-plugins/tree/main/langfuse"

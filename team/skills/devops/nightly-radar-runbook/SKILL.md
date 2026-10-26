@@ -181,7 +181,7 @@ note；supervisor 心跳两分支通道状态行；send_report_email argv[3] not
 ## [已移除] 源可用性台账（扩源前先查，勿重复踩）
 
 - ✅ 稳定 8 源：additude/mindshift/hechinger/scidaily_child/**the74（学校政策）**/36kr(RSSHub)/qbitai(wp-json)/jiemodui。
-- ❌ Cloudflare 指纹挑战不可入库（curl 简单 UA 时通时断、完整 Chrome 串反被挑战、urllib 全拦）：edutopia/psypost/readingrockets/commonsensemedia/k12digest/zhihu(rss 404)。fetch 函数保留备用并注明实测状态；接 computer_use 后可复用。纯 RSS 扩源空间已近上限，国内家长实操内容需 computer_use 方案（SOUL 已留占位）。
+- ❌ Cloudflare 指纹挑战不可入库（curl 简单 UA 时通时断、完整 Chrome 串反被挑战、urllib 全拦）：edutopia/psypost/readingrockets/commonsensemedia/[已移除]/zhihu(rss 404)。fetch 函数保留备用并注明实测状态；接 computer_use 后可复用。纯 RSS 扩源空间已近上限，国内家长实操内容需 computer_use 方案（SOUL 已留占位）。
 - RSSHub 容器（127.0.0.1:1200，36kr 依赖）会静默 Exited——某源突断先查 `docker ps | grep rsshub`，`docker start rsshub` 即恢复。
 
 ## zcode-ACP 断链与 anthropic-direct 免费回退（2026-09-17）

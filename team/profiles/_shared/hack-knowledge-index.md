@@ -123,9 +123,79 @@ grep -rh '"target":"example-ltd"' ~/.hermes/profiles/_shared/hack-kb/{poc,cve,in
 
 ---
 
+## 五、审计覆盖账本与对抗验证纪律（Cloudflare security-audit-skill 融合，2026-10-21）
+
+> 来源：公众号「Tom」转述 + 一手核验（github.com/cloudflare/security-audit-skill README，MIT，约 28.4k Star；blog.cloudflare.com/build-your-own-vulnerability-harness 全文）。裁决矩阵 `workspace/research/wechat-swarm-teams-20261021/FUSION-VERDICT.md`（CF2/CF4/CF5/CF9/CF10-Shallow）。
+
+### 5.1 覆盖账本（coverage-ledger）
+
+「没看过的地方可见」——审计类任务（多区域代码安全审计、大仓调研）的最大风险不是看错，是没看。落地：
+
+- **触发面**：hack auditor 全仓审计 / 多组件调研类任务（组件数 ≥5 或目录区域 ≥5）。
+- **载体**：任务工作区 `coverage-ledger.json`——每行 `{"area":"src/auth","attack_class":"注入","status":"checked|pending|gap","evidence":"<comment 或 finding 引用>"}`。状态三值，不许含糊中间态。
+- **覆盖批评**：orchestrator 验收时先读账本而非先看报告——账本大面积 `pending/gap` 而报告自称「全面审计」即矛盾信号，按覆盖不全打回（FM-E2 空口完成未验证的审计域变体）。
+- **重派续跑**：同仓库二次审计先读历史账本，只跑 `gap/pending` 格与变更过的源码（增量运行；Cloudflare 实测单次运行约只找到多轮总量一半，单次跑完即收工=自欺）。
+
+### 5.2 对抗验证：发现者不验证自己的发现
+
+§一 finding 写入前的既有纪律（结构化 JSONL）之上，追加两条：
+
+- **验证者隔离**：candidate finding 的复核必须由**未参与该发现**的上下文执行（kanban 面上=另一张卡/另一 worker，或同卡内显式声明的独立复核轮）。同上下文自找自证=结构性误报温床。
+- **三档判定**（写入 JSONL 前记在 comment 结构化块）：
+  - `confirmed`：有完整源码追踪链 + 有界观察结果（可复现证据）；
+  - `needs_validation`：存在一个确切的未解事实（写明是哪个事实），**不给严重性评分**——不允许含糊中间态；
+  - `rejected`：已被证伪的候选（留档防重复上报）。
+
+### 5.3 判定红线（防夸大）
+
+- **纵深防御的缺口不算漏洞**：A 层已挡住攻击时，缺 B 层只是加固建议（`hardening` 类），不写入 finding 统计。
+- **严重性需影响**：likelihood × impact，偏离清单不等于漏洞严重。
+
+### 5.4 Shallow 检测
+
+审计卡 complete 时覆盖账本全空（零区域记录）或全 `pending` → 验收方先疑「空跑伪成功」（覆盖未发生），按 FM-E2 处置要求补证，不接受「未发现漏洞」当结论——零发现必须有覆盖证据托底。
+
+### 与既有机制的关系
+
+- 六阶段流水线/多轮增量/OS 级沙箱/hack-kb 索引：集群已有同构（Phase 门 checkpoint、crash 重派、docker-sandbox、§一 JSONL），本节只补「覆盖可见性 + 对抗验证 + 三档语义」三个真缺口。
+- 16 类攻击面文件：hack team 已有 llm-redteam v1.7.0（OWASP Agentic Top10 + 经验进化红队测试面）覆盖 AI/LLM 类；**桌面/移动/本地 IPC 类未覆盖**——登记缺口，触发条件=首批桌面/移动审计任务到来时提案，不预建。
+
+---
+
+## 六、攻击技能文档载体（RedEvoAgent 融合，2026-10-24）
+
+> 来源：arXiv 2608.27439 RedEvoAgent（v2 全文已通读）+ 蜜罐先生转述文 + yechao-zhang/red-team-agent-skills 配套仓库。裁决矩阵 `~/.hermes/shared/research/redevoagent-fusion-20261023/FUSION-VERDICT-20261023.md`（20 行判定）。执行正本 = `~/.hermes/skills/hack-team/llm-redteam/` v1.7「经验进化红队与执行环境测试面」节；本节只登记载体与写入门，不复述纪律。
+
+### 6.1 载体
+
+- **命名**：`attack-skill-<target>.md`，`<target>` 用「模型-harness」二元组（如 `attack-skill-minimax-claude-code.md`）——目标定义即配对，同模型换 harness 是两个目标（论文 Table 2：同模型无技能基线 Claude Code 77.5 vs Codex 80.8）。
+- **存放**：对应 campaign 的任务工作区，随 finding/coverage-ledger 同目录；campaign 结束后有价值者归档到知识库并在 `knowledge-base/redteam/` 索引行登记。
+- **内容三段**：工具优先级（preflight 画像产物）+ 编排启发式 + 失败方向记录。禁贴原始调用流水（论文实证：技能级抽象优于轨迹检索 74.3 vs 37.5，且调用次数 3.0→1.8）。
+
+### 6.2 写入门（验证棘轮的人工执行形态）
+
+对 attack-skill 文档的每次修订：
+
+1. 候选修订先在**独立验证样本**（非本次作战样本）上与在位版本对比；
+2. 严格超过在位版本才替换，否则保留旧版，并把候选与失败原因记入文档尾「拒绝上下文」段，防重复失败方向；
+3. 归因纪律：成功只归因到紧邻成功查询的那次技术调用，禁共现频次归因（防自强化偏差→策略塌缩）；
+4. 深度边界：连续多轮接受更新后抽测冷样本；文档出现「反复只推荐同一两种技术」即塌缩信号，回退上一版（论文反例：R4 验证分 18.5→28.1 但测试分 28.8→20.8）。
+
+无机械强制器（现状声明）：上述门为纪律级，无自动化校验脚本拦截不合门写入；升级路径 = 后续给 attack-skill 写入加检查脚本（裁决 §八 已登记）。
+
+### 与既有机制的关系
+
+- §五 coverage-ledger 管「测试面覆盖没覆盖」，本节 attack-skill 管「攻击经验怎么组织进化」；同 campaign 并用，互不替代。
+- `failure-trace-index`（既有 skill）：留痕口径按本节归因纪律（紧邻成功步骤）记。
+- 执行纪律与 references 产物索引见 llm-redteam v1.7 新节；本节不重复。
+
+---
+
 ## 修订记录
 | 版本 | 日期 | 内容 |
 |---|---|---|
 | v1.0 | 2026-08-29 | 调研 YunkunSec KnowledgeIndexService + 持久化恢复后补齐本机 hack team 本地索引与任务内韧性 |
 | v1.1 | 2026-10-14 | DSH RedTeam 模式融合：finding 记录增补 target/chain 字段 + 按靶标聚合检索约定（§四） |
 | v1.2 | 2026-10-14 | AI-Infra-Guard 融合：供应链风险归档参照轴（§四 aig_ref 字段，MCP01-MCP10/T01-T09 命名对照） |
+| v1.3 | 2026-10-21 | Cloudflare security-audit-skill 融合：§五 审计覆盖账本 + 对抗验证三档判定 + Shallow 检测（CF2/CF4/CF5/CF9/CF10-Shallow） |
+| v1.4 | 2026-10-24 | RedEvoAgent 融合：§六 攻击技能文档载体（attack-skill-\<target\>.md 命名/三段结构）+ 验证棘轮写入门 + 决定归因纪律；§五 llm-redteam 引用对齐 v1.7.0 |

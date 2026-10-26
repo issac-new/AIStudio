@@ -10,8 +10,8 @@
 #   - 用户明确要求时才执行邮件相关操作
 #
 # v2.0 变更: 从 IMAP/SMTP 直连切换到 agently-cli (agent.qq.com OAuth)
-#   - 邮箱地址: your-bot@example.com (agently-cli)
-#   - 邮箱地址: <dad-wechat-id>@im.wechat (IMAP channel, gateway 原生 adapter)
+#   - 邮箱地址: bot-mail@example.com (agently-cli)
+#   - 邮箱地址: <dad-email> (IMAP channel, gateway 原生 adapter)
 #   - 定时检查: cron job 已暂停
 
 ---
@@ -22,8 +22,8 @@
 
 > ⚠️ **最高优先级规则**: orchestrator **不自动处理、不自动回复**两个邮箱的邮件，除非用户明确要求。
 
-- `<dad-wechat-id>@im.wechat` — IMAP channel（gateway 原生 email adapter）
-- `your-bot@example.com` — agently-cli（agent.qq.com OAuth）
+- `<dad-email>` — IMAP channel（gateway 原生 email adapter）
+- `bot-mail@example.com` — agently-cli（agent.qq.com OAuth）
 
 **"明确要求"的判定标准**：
 - 用户在 TUI/CLI 对话中直接说"检查邮件""读邮件""回复xxx的邮件""发邮件给xxx"
@@ -73,7 +73,7 @@ Email 平台沿用全平台统一六段式 tenant（见 `orchestrator_rules.md �
 | 1 chat_name | 会话/上下文名称 | 发件人显示名（若无则用邮箱地址） |
 | 2 topic | 话题/主题 | 邮件主题（去 `Re:`/`Fwd:` 前缀） |
 | 3 user_id | 发送者标识 | 发件人邮箱地址 |
-| 4 chat_id | 会话标识 | 收件人邮箱地址（`your-bot@example.com` 或 `<dad-wechat-id>@im.wechat`） |
+| 4 chat_id | 会话标识 | 收件人邮箱地址（`bot-mail@example.com` 或 `<dad-email>`） |
 | 5 session_id | 消息标识 | agently-cli `msg_xxx` 或 IMAP UID |
 | 6 platform | 固定后缀 | `email` |
 
@@ -81,8 +81,8 @@ Email 平台沿用全平台统一六段式 tenant（见 `orchestrator_rules.md �
 
 | 场景 | Tenant 值 |
 |------|-----------|
-| agently-cli 邮件 | `张三:项目报告:zhangsan@example.com:your-bot@example.com:msg_xxx:email` |
-| IMAP channel 邮件 | `李四:漏洞报告:lisi@security.com:<dad-wechat-id>@im.wechat:42:email` |
+| agently-cli 邮件 | `张三:项目报告:zhangsan@example.com:bot-mail@example.com:msg_xxx:email` |
+| IMAP channel 邮件 | `李四:漏洞报告:lisi@security.com:<message-id>:42:email` |
 
 ---
 
@@ -140,14 +140,14 @@ agently-cli message +reply --id msg_xxx --body "回复正文" --confirmation-tok
 
 ## 5. 邮箱配置
 
-### 5.1 <dad-wechat-id>@im.wechat (IMAP Channel)
+### 5.1 <dad-email> (IMAP Channel)
 
 - **方式**: gateway 原生 email adapter（IMAP 收 / SMTP 发）
 - **配置**: `~/.hermes/shared/.env.common` 中的 `EMAIL_*` 环境变量
 - **config**: `platforms.email.enabled: true`
 - **状态**: 已配置，IMAP/SMTP 连接正常
 
-### 5.2 your-bot@example.com (agently-cli)
+### 5.2 bot-mail@example.com (agently-cli)
 
 - **方式**: agently-cli（agent.qq.com OAuth）
 - **授权**: `agently-cli auth status` → logged_in
@@ -190,4 +190,4 @@ agently-cli message +reply --id msg_xxx --body "回复正文" --confirmation-tok
 *更新时间: 2026-07-23 (v2.0 — 切换到 agently-cli + agent.qq.com OAuth)*
 *更新时间: 2026-07-23 (v3.0 — 全局规则: 不自动处理邮件，除非用户明确要求)*
 *适用 profile: orchestrator*
-*邮箱地址: <dad-wechat-id>@im.wechat (IMAP) + your-bot@example.com (agently-cli)*
+*邮箱地址: <dad-email> (IMAP) + bot-mail@example.com (agently-cli)*

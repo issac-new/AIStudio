@@ -4,7 +4,7 @@
 # 幂等：今日已成功产出+推送则静默退出；未产出则调 nightly_radar.py 从断点续跑。
 # stdout 只在补跑时输出干净摘要（no_agent 模式 stdout 会投递，成功补跑才说话）。
 
-BASE=/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/life-workbench
+BASE=/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/life-workbench
 WRAPPER="$BASE/scripts/nightly_radar.py"
 LOG="$BASE/logs/nightly_supervisor.log"
 TODAY=$(date +%F)
@@ -15,7 +15,7 @@ if [ "$HOUR" -lt 9 ]; then
 fi
 STATE_FILE="$BASE/cache/radar/wrapper_state_${TODAY}.json"
 PDF_FILE="$BASE/reports/nightly_radar_${TODAY}.pdf"
-H=~/.hermes/hermes-agent/venv/bin
+H=/Users/YOURNAME/hermes-docker-sandbox/workspace/life-workbench/.venv/bin
 
 mkdir -p "$BASE/logs"
 echo "[$(date '+%F %T')] supervisor tick $TODAY" >> "$LOG"

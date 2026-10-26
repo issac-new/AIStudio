@@ -3,17 +3,17 @@
 # 背景：演练 #1 (t_90ef5b62) 实锤 curator_backups 仅覆盖 ~10/328 skill，
 #       本脚本提供真实全量备份。tar -L 解引用 symlink（28/30 顶层项为软链，
 #       不 -L 则备份的是悬空指针）。
-# 目标：外部盘 /Volumes/YOURVOLUME（系统卷常近满，禁止在系统卷放大副本）
+# 目标：外部盘 /Volumes/nvme2230（系统卷常近满，禁止在系统卷放大副本）
 # 保留：最近 14 份（每日 1 份 = 2 周窗口）
 set -euo pipefail
 
 SRC="$HOME/.hermes/profiles/orchestrator/skills"
-DEST="/Volumes/YOURVOLUME/hermes-backups/skills"
+DEST="/Volumes/nvme2230/hermes-backups/skills"
 KEEP=14
 
 # 外部盘未挂载 → 静默失败并留痕（cron 下不弹错）
-if [ ! -d "/Volumes/YOURVOLUME" ]; then
-  echo "$(date -u +%FT%TZ) SKIP: /Volumes/YOURVOLUME not mounted" >> "$HOME/.hermes/logs/skill-backup.log"
+if [ ! -d "/Volumes/nvme2230" ]; then
+  echo "$(date -u +%FT%TZ) SKIP: /Volumes/nvme2230 not mounted" >> "$HOME/.hermes/logs/skill-backup.log"
   exit 0
 fi
 

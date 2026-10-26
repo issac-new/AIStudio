@@ -10,8 +10,13 @@
 # 消费：晨检 grep 'kind=ga' rc-watch-last-events.txt → 按 upgrade-eval-checklist.md §3 阶段 0 建评估卡
 set -u
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
-SCRIPT="/Volumes/YOURVOLUME/lab/data-stack/scripts/rc-watch.sh"
-LOGDIR="/Volumes/YOURVOLUME/lab/data-stack/logs"
+# 10-20: 引擎 rc-watch.sh 在 nvme 冻结卷, 未挂载时 SKIP(rc0) 防每夜 127 噪音; 挂载后自动恢复
+if [ ! -f "/Volumes/nvme2230/lab/data-stack/scripts/rc-watch.sh" ]; then
+  echo "SKIP: rc-watch engine not mounted (/Volumes/nvme2230)"
+  exit 0
+fi
+SCRIPT="/Volumes/nvme2230/lab/data-stack/scripts/rc-watch.sh"
+LOGDIR="/Volumes/nvme2230/lab/data-stack/logs"
 LOG="$LOGDIR/rc-watch.log"
 LAST="$LOGDIR/rc-watch-last-events.txt"
 TS="$(date '+%F %T')"

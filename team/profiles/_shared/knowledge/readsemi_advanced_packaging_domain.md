@@ -1,7 +1,7 @@
 # 高级封装与异构集成领域知识（readsemi/芯联汇 调研沉淀）
 
 > 来源：readsemi（公众号「芯联汇」）41 篇技术文章全量抓取（2026-08-27）。所有断言均来自原文标题/正文，可回溯，无臆造参数。
-> 用途：[已移除] Team 4 个 profile 共享的领域背景速查。详见 `~/hermes-docker-sandbox/workspace/readsemi_research_report.md` 完整报告。
+> 用途：EDA Team 4 个 profile 共享的领域背景速查。详见 `~/hermes-docker-sandbox/workspace/readsemi_research_report.md` 完整报告。
 
 ## 一、核心范式转变：从 Device Scaling 到 System Scaling
 
@@ -53,12 +53,8 @@ readsemi 的「不是 X，而是 Y」洞察范式（可指导学生代理的归�
 - **X-ray + CL（阴极发光）**：破解 3D IC 检测难题，分辨率/速度/大尺寸权衡。
 - **SIMS/Orbitrap**：imec 用超高质量分辨率 Orbitrap + SF-SIMS 实现 GAA/CFET 微小结构掺杂定量（质量分辨率 240,000，破解 SiGe 中 As 质量峰干扰）。
 
-## 八、对 [已移除] Team 4 profile 的能力映射
+## 八、对 EDA Team 4 profile 的能力映射
 
-- **[已移除]**：先进封装 SI/PI 分析、TGV/玻璃基板 S 参数与翘曲、CPO 光-热耦合可视化、PDN IR-drop 仿真、PLP DFM。
-- **[已移除]**：Hybrid Bonding CMP 表面/界面物理、TGV 电磁特性、CPO 热-光耦合 PDE/CEM/TCAD 求解器支撑、X-ray/CL/SIMS 成像仿真接口。
-- **[已移除]**：HBM/PIM/CXL 存储-算力协同建模、BSPDN/供电 RL 优化、DTCO/STCO 系统级协同（补「System Scaling」视角）。
-- **[已移除]**：Chiplet 互连标准（UCIe 等）、RISC-V PM 控制器（AI 加速器细粒度电源管理）RTL/IP 输入。
 
 ---
-*审计锚点*：本文件由 orchestrator 在 2026-08-27 全量调研 readsemi 后沉淀，供后续 [已移除] 任务直接引用，避免重复抓取。
+*审计锚点*：本文件由 orchestrator 在 2026-08-27 全量调研 readsemi 后沉淀，供后续 EDA 任务直接引用，避免重复抓取。

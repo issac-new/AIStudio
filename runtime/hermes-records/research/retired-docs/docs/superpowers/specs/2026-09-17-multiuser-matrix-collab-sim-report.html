@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.11" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>多用户 Matrix 协作交付模拟 · 测试报告</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="/dev/null" />
+<style>
+body { max-width: 980px; margin: 2rem auto; padding: 0 1.5rem; font-family: "PingFang SC", "Helvetica Neue", sans-serif; line-height: 1.7; }
+img { max-width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; margin: 0.5rem 0; }
+h1 { border-bottom: 2px solid #6366f1; padding-bottom: 0.4rem; }
+h2 { border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3rem; margin-top: 2rem; }
+code { background: #f3f4f6; padding: 0.1rem 0.35rem; border-radius: 4px; }
+pre code { display: block; padding: 0.8rem; overflow-x: auto; }
+table { border-collapse: collapse; } th, td { border: 1px solid #e5e7eb; padding: 0.4rem 0.7rem; } th { background: #f9fafb; }
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">多用户 Matrix 协作交付模拟 · 测试报告</h1>
+</header>
+<h1 id="多用户-matrix-协作交付模拟-测试报告">多用户 Matrix 协作交付模拟
+· 测试报告</h1>
+<p>日期：2026-09-17　　范围：ncwk-sim（本机 3 用户 × SwarmStudio +
+hermes 集群）　　结论：<strong>通过，验收门 35/35</strong></p>
+<h2 id="结论先行">0. 结论先行</h2>
+<p>在一台 mac 上模拟了 3 名成员（alice / bob / carol）各自部署 hermes
+agent 集群 + SwarmStudio，经本机 Synapse 协作完成了 stringops v0.1
+的真实交付全流程（需求 → 分解 → 并行实现 → 集成验证 → 审批 →
+发布）。<strong>35 项验收断言全部通过，零失败。</strong> 所有 agent
+动作均为真实 gateway + LLM 回合，导演脚本只扮演人类打字与审批。</p>
+<h2 id="测试对象与环境">1. 测试对象与环境</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>层</th>
+<th>配置</th>
+<th>实例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Matrix 服务</td>
+<td>synapse 容器 <code>matrix-synapse</code>，:8008，server
+<code>matrix.test</code></td>
+<td>共享 1 个</td>
+</tr>
+<tr>
+<td>Studio 后端</td>
+<td>生产构建 <code>dist/server/index.js</code>，端口 8701-8703</td>
+<td>每用户 1 个</td>
+</tr>
+<tr>
+<td>Gateway</td>
+<td>hermes v0.21.3 + mautrix 0.21.1，api_server 8721-8723</td>
+<td>每用户 1 个</td>
+</tr>
+<tr>
+<td>Agent 集群</td>
+<td>每用户 profile <code>&lt;u&gt;</code>，Matrix 平台插件接入</td>
+<td>3 个</td>
+</tr>
+<tr>
+<td>模型</td>
+<td>custom:cc-switch 本地代理（127.0.0.1:15721）</td>
+<td>共享</td>
+</tr>
+</tbody>
+</table>
+<p>隔离方式（模拟”独立电脑”）：<code>HERMES_HOME</code> /
+<code>HERMES_WEB_UI_HOME</code> / <code>PORT</code> /
+<code>GATEWAY_PORT</code> / <code>HERMES_AGENT_HEALTH_URL</code> /
+<code>HERMES_BIN</code> 六组环境变量，数据目录互不交叉。</p>
+<h2 id="测试方法">2. 测试方法</h2>
+<h3 id="全流程速览三张图">2.0 全流程速览（三张图）</h3>
+<p><strong>部署拓扑</strong> —— 三台”电脑”如何在一台 mac
+上互不干扰又彼此协作：</p>
+<figure>
+<img src="assets/sim-topology.png" alt="部署拓扑" />
+<figcaption aria-hidden="true">部署拓扑</figcaption>
+</figure>
+<p><strong>协作时序</strong> ——
+需求从发布到交付的八步流转，④步是真实并行：</p>
+<figure>
+<img src="assets/sim-sequence.png" alt="协作时序" />
+<figcaption aria-hidden="true">协作时序</figcaption>
+</figure>
+<p><strong>隔离机制</strong> —— 为什么不需要虚拟机：</p>
+<figure>
+<img src="assets/sim-isolation.png" alt="隔离机制" />
+<figcaption aria-hidden="true">隔离机制</figcaption>
+</figure>
+<p>导演脚本（<code>sim-scenario.sh</code>）按八步剧本驱动，全部等待采用<strong>地面真值轮询</strong>（直接查中央仓的分支/文件/tag），消息流仅作信号；agent
+触发的人机交互（<code>!approve</code> / clarify /
+<code>/retry</code>）由导演以对应人类身份<strong>线程内</strong>回复处理。</p>
+<h2 id="验收结果3535-通过">3. 验收结果（35/35 通过）</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>断言数</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Studio 实例健康 + 数据隔离</td>
+<td>6</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Gateway 集群 + 房间成员 + agent 在线</td>
+<td>9</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>房间协作轨迹（7 个关键消息标志）</td>
+<td>7</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>代码交付（tag v0.1 / 双分支 / 复跑 pytest / RELEASE.md）</td>
+<td>5</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Kanban 三卡终态 done</td>
+<td>3</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>证据文件完整</td>
+<td>5</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<h2 id="交付实测数据">4. 交付实测数据</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>指标</th>
+<th>数值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>房间消息总数</td>
+<td><strong>169 条</strong>（agent 146 / 人类 23）</td>
+</tr>
+<tr>
+<td>交付耗时</td>
+<td>首轮约 <strong>70 分钟</strong>（13:15 需求发布 → 14:05
+发布完成）</td>
+</tr>
+<tr>
+<td>测试</td>
+<td><strong>14 passed</strong>（slugify 7 + truncate 6 + smoke
+1），导演独立复跑一致</td>
+</tr>
+<tr>
+<td>中央仓</td>
+<td>3 分支（main + feat/slugify + feat/truncate）、tag v0.1、6
+个提交</td>
+</tr>
+<tr>
+<td>交付物</td>
+<td><code>stringops/slugify.py</code>（27 行）+
+<code>truncate.py</code>（13 行）+ <code>RELEASE.md</code></td>
+</tr>
+<tr>
+<td>资源占用</td>
+<td>每实例 Studio ≈ 60-84 MB RSS，gateway ≈ 56-61 MB RSS</td>
+</tr>
+<tr>
+<td>证据包</td>
+<td>144 KB，19 个文件（消息/git 图谱/kanban/各阶段回复/pytest
+输出）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="过程亮点agent-的真实工程判断">5. 过程亮点（agent
+的真实工程判断）</h2>
+<ul>
+<li><strong>carol-agent</strong>：对 bob
+已推进的交付不盲目重做，逐项核验现有状态后给出”不能凭旧状态报
+DONE”的核验清单——展示了真实的多会话去重意识。</li>
+<li><strong>bob-agent</strong>：发现早期提交误混入
+<code>__pycache__/*.pyc</code> 违反任务约束，主动向人类请求 force-push
+清理历史，获准后清理并复跑测试再报完成。</li>
+<li><strong>alice-agent</strong>：在集成阶段完成双分支合并、全量测试、推送
+main，发布阶段独立完成 RELEASE.md + tag v0.1。</li>
+</ul>
+<h2 id="已知瑕疵如实记录不影响验收结论">6.
+已知瑕疵（如实记录，不影响验收结论）</h2>
+<ol type="1">
+<li><strong>Kanban 重复建卡</strong>：房间看板上 T1/T2/T3 各出现 2
+张卡（共 6 张，均 done）。原因：第二轮全新运行时场景脚本对 state
+的读取在 evidence 目录被清空后失效，重新建了卡。幂等设计有缺口，后续应把
+state 移出 evidence 目录。</li>
+<li><strong>时间线显示偏差</strong>：synapse 容器时区为
+UTC，消息时间戳显示比本机 CST 晚 8 小时（05:15→06:24 UTC 即 13:15→14:24
+CST）。仅为展示层差异，不影响协作正确性。</li>
+<li><strong>模型代理并发上限</strong>：首轮 3 个并行回合曾把 cc-switch
+代理打满导致 alice 集成回合空流失败，经线程内 <code>/retry</code>
+恢复。串行化或提高代理并发可消除。</li>
+</ol>
+<h2 id="复跑与扩展">7. 复跑与扩展</h2>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> overlay <span class="kw">&amp;&amp;</span> <span class="fu">git</span> checkout main</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> scripts/sim/sim-setup.sh        <span class="co"># 幂等准备（账号/房间/目录/中央仓）</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> scripts/sim/sim-up.sh           <span class="co"># 拉起 3 实例</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> scripts/sim/sim-scenario.sh     <span class="co"># 全流程（支持 START_STEP= 断点续跑）</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> scripts/sim/sim-evidence.sh     <span class="co"># 取证 + 35 项验收门</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> scripts/sim/sim-down.sh         <span class="co"># 全停</span></span></code></pre></div>
+<p>浏览器入口：<code>http://127.0.0.1:8701</code>（alice）/
+<code>8702</code>（bob）/
+<code>8703</code>（carol），admin/123456。证据目录
+<code>/Volumes/nvme2230/lab/ncwk-sim/evidence/</code>。</p>
+<h2 id="遗留状态">8. 遗留状态</h2>
+<ul>
+<li>三组实例仍在运行；模拟数据与证据保留在
+<code>/Volumes/nvme2230/lab/ncwk-sim/</code>。</li>
+<li>overlay main 未推送 origin（按裁定等并行会话 matrix-teams
+收口后统一推）。</li>
+<li>Synapse 新增 6 个测试账号（密码
+<code>SimPass_&lt;name&gt;_2026</code>）与 1 个临时管理员
+simcleanup；两个旧探针账号已注销。</li>
+</ul>
+</body>
+</html>

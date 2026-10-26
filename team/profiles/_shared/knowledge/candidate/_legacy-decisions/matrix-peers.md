@@ -16,7 +16,7 @@
 
 | MXID | 显示名 | 性质 | 备注 |
 |------|--------|------|------|
-| `@cuishi:matrix.test` | Verify User | **人类（图爸）** | 管理员/验证用户，**不可加入黑名单** |
+| `@YOURNAME:matrix.test` | Verify User | **人类（图爸）** | 管理员/验证用户，**不可加入黑名单** |
 | `@testuser2:matrix.test` | testuser2 | **人类** | 测试账号，**不可加入黑名单** |
 
 ## 对端机器 bot（跨机协作对象，需黑名单屏蔽）

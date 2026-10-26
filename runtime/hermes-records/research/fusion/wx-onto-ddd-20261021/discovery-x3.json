@@ -1,0 +1,38 @@
+{
+ "page": "🐴 AI评测方法论连载",
+ "n": 8,
+ "items": [
+  {
+   "title": "你的 Agent 评测，通过率 100% 却不可信？",
+   "link": "http://mp.weixin.qq.com/s?__biz=MzU5NTc4MzA1Ng==&mid=2247483684&idx=1&sn=b978b14ce70a915fb15cbea9daad3dc1&chksm=fe6dfddbc91a74cd3539f62543c27e2c7b79c5fdc5df6200d92ea5abc550bcbb547cb3c12786#rd"
+  },
+  {
+   "title": "AIGC 智能体怎么测？一套四层全链路评测体系",
+   "link": "http://mp.weixin.qq.com/s?__biz=MzU5NTc4MzA1Ng==&mid=2247483709&idx=1&sn=c6675f53184c7f5f29277d066ee7fa7e&chksm=fe6dfdc2c91a74d4a560a53ec2620520462749f8f6ce97d9eb2a725716c73873933869966bfb#rd"
+  },
+  {
+   "title": "把 AI Agent 比作一个人，终于把智能体架构讲明白了",
+   "link": "http://mp.weixin.qq.com/s?__biz=MzU5NTc4MzA1Ng==&mid=2247483718&idx=1&sn=bdeed6729256680b637feeb493d8d1d2&chksm=fe6dfdb9c91a74afc5383bb48d4434be935a3be166d573722a65decd64a486baa3f6380d6fdf#rd"
+  },
+  {
+   "title": "文档都上传了，AI 为什么还在胡说八道？",
+   "link": "http://mp.weixin.qq.com/s?__biz=MzU5NTc4MzA1Ng==&mid=2247483745&idx=1&sn=8efb24fd05598e806a638318c38ec843&chksm=fe6dfd9ec91a748806ace936e88c625550908795734ec0b57fcdc446bde87e46618fee4aaace#rd"
+  },
+  {
+   "title": "特斯拉跑了 240 亿公里，为什么还不敢完全自动驾驶？",
+   "link": "http://mp.weixin.qq.com/s?__biz=MzU5NTc4MzA1Ng==&mid=2247483776&idx=1&sn=2569737fbebb9ad58a85d46e68874dab&chksm=fe6dfd7fc91a7469c2ab5abee111c5eef0af113b4786c468d7824c4707b74a1713e696deb0f5#rd"
+  },
+  {
+   "title": "LLM当裁判，到底靠不靠谱？",
+   "link": "http://mp.weixin.qq.com/s?__biz=MzU5NTc4MzA1Ng==&mid=2247483778&idx=1&sn=1d50d3f933dc65625a2d0d37f1d0704c&chksm=fe6dfd7dc91a746b5588af984dc893c1918dcf42115544601f0bfed34d73caf37c0174be7177#rd"
+  },
+  {
+   "title": "电商 Agent 评测技术拆解：淘宝落地实践",
+   "link": "http://mp.weixin.qq.com/s?__biz=MzU5NTc4MzA1Ng==&mid=2247484087&idx=1&sn=b00a8c355be660f12fbc862b8624cb5c&chksm=fe6dfe48c91a775e50186d22ad9ba84e3140ab522555b05bc3fdf9a733a1cae57d6f9af829f7#rd"
+  },
+  {
+   "title": "OpenAI Evals技术拆解：Agent评测的入门教科书",
+   "link": "http://mp.weixin.qq.com/s?__biz=MzU5NTc4MzA1Ng==&mid=2247484389&idx=1&sn=933d3d7a079d8554fc8a5e8d2e278827&chksm=fe6dff1ac91a760c5ea622ea4f8e7f00011b0e83849831e32ad9773602a333c9b3ea1e762da3#rd"
+  }
+ ]
+}

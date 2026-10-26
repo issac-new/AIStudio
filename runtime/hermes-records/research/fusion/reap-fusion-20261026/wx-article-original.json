@@ -1,0 +1,7 @@
+{
+  "url": "https://mp.weixin.qq.com/s/iGjicg_WqDaqyN_Srlisfg",
+  "title": "🔥 REA 已经够猛了，现在连逆向工程提示词大全都有人整理好了！",
+  "content_len": 777,
+  "content": "🔥 REA 已经够猛了，现在连逆向工程提示词大全都有人整理好了！\n\n最近发现一个 GitHub 项目：\n\nREA-Prompts（REAP） 🚀\n\n专门为 REA（Reverse Engineer Anything）准备的 AI 逆向工程提示词合集。\n\n把提示词交给 Codex、Claude Code 等编程 Agent，就能更系统地研究软件内部的工作原理！\n\n覆盖场景相当丰富：\n\n🔍 软件功能分析：追踪按钮、函数调用链、数据流\n\n🧩 功能复刻：提取行为规则，生成技术规格，再独立实现\n\n📱 Android APK：分析权限、组件、存储、网络请求\n\n💻 Electron 应用：分析 ASAR、IPC、JavaScript 逻辑\n\n🎮 游戏研究：分析游戏机制、引擎和资源加载\n\n⚙️ 固件与内核：分析驱动、系统调用、嵌入式程序\n\n🛡️ 安全研究：漏洞定位、补丁对比、崩溃分析\n\n📋 Clean-room 重建：生成 CLONE_SPEC.md，用行为规格指导重新开发\n\n💡 最值得关注的是它的工作方法：\n\n不是让 AI 猜程序怎么运行，而是要求每个结论都有文件、函数、地址或调用链证据。\n\n先调查 → 再提取规格 → 最后实现和验证。\n\n这比一句\"帮我复刻这个软件\"靠谱得多！\n\n⚠️ 仅用于自有软件、授权分析及合法研究，不代表可以随意复制商业软件。\n\n🔗 GitHub：\nhttps://github.com/JoasASantos/REA-Prompts\n\n⭐ 玩 REA、Codex、Claude Code、逆向工程的朋友，建议收藏！\n\n#REA #ReverseEngineering #Codex #ClaudeCode #AIAgent #开源项目",
+  "capture_method": "browser DOM innerText (js_content div), 2026-10-26"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "cling_stun_c2_2026-10",
+  "file": "cling_stun_c2_2026-10_ioc.jsonl",
+  "campaign": "Cling / ClingSTUN IoT botnet (STUN-masqueraded C2)",
+  "first_seen": "2026-09-05 (exploit spike), reported 2026-10-01",
+  "sources": [
+    "Nozomi Networks Labs 2026-10-01 (primary, hand-fetched)",
+    "Fortinet FortiGuard 2026-10-05 (ClingSTUN)",
+    "FreeBuf 504785 2026-10-05 (secondary, cross-validated)"
+  ],
+  "counts": {"sha1": 4, "stun_servers": 13, "operator_servers": 1, "loader_hosts": 4, "cves": 9, "ddos_targets": 4, "yara": 1},
+  "operator_server": "145.249.115.184:3478 (all-zero txid fingerprint + disjoint-port-set registration experiment)",
+  "spoofed_source": "74.125.250.129:19302 (stun.l.google.com) — legitimate Google infra, do NOT block; detect via TTL anomaly",
+  "detect_rules": "hack-team/stun-c2-detection R1-R6",
+  "gap_id": "gap-20261007-005",
+  "kanban_task": "t_d35e523f"
+}

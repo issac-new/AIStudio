@@ -26,13 +26,22 @@ interface KanbanTask {
   latest_summary: string | null
   parents: string[]
   children: string[]
+  // --- 可观测性横贯关联字段（OTel 桥接，2026-10-19 增，全部可选） ---
+  // 落库位置：tasks.metadata JSON（kanban.db 已含 metadata 列，不加 migration）。
+  // 上游来源：路径 A（cc-switch OTLP exporter）将 trace_id/span_id 从 OTLP
+  // Span 自身的 trace context（W3C trace_id/span_id 字段，SDK 生成）灌入此字段。
+  // 注意：trace_id/span_id 是 Span 身份字段而非 gen_ai.* 属性（GenAI semconv
+  // 不定义它们）；上线前保持 Optional 空，向后兼容既有调用方。
+  trace_id?: string        // OTel trace_id（16 字节 hex 32 字符，可选）
+  span_id?: string         // 当前 LLM 调用 span_id（8 字节 hex 16 字符，可选）
+  parent_span_id?: string  // 父 span_id（多层 agent 嵌套时填，可选）
 }
 ```
 
 ### 1.2 Tenant 解析规范（6 段式）
 ```
 格式：<群聊名称>:<话题摘要>:<user_id>:<room_id>:<session_id>:<platform>
-示例：跨团队协作群01:记忆服务讨论:@test-user:<matrix-room-id>:<event-id>:matrix
+示例：跨团队协作群01:记忆服务讨论:@testuser3:!jDhqiAernzgtADVwAw:$11wFK9rf3UlDS:matrix
 平台值：matrix | weixin | api | email | cli
 ```
 
@@ -53,7 +62,15 @@ interface TraceNode {
   durationMs?: number
   evidence: EvidenceTier
   children?: TraceTimelineItem[]
-  ref?: { sessionId?: string; runId?: string; toolCallId?: string; workflowNodeId?: string }
+  ref?: {
+    sessionId?: string;
+    runId?: string;
+    toolCallId?: string;
+    workflowNodeId?: string;
+    // --- 与 §1.1 KanbanTask 横贯关联字段同语义（2026-10-19 增，全部可选） ---
+    traceId?: string;        // 新增：OTel trace_id（与 KanbanTask.trace_id 同语义）
+    spanId?: string;         // 新增：当前 span_id（与 KanbanTask.span_id 同语义）
+  }
   cluster?: string          // 所属 kanban taskId
   profile?: string          // agent profile
   taskStatus?: string       // 仅 ingress/workflow
@@ -79,6 +96,16 @@ interface FleetSession {
   clarifies: Array<{ clarify_id: string; question: string }>
 }
 ```
+
+### 1.5 字段填法约定（OTel 桥接，2026-10-19 增）
+
+§1.1 / §1.3 中 `trace_id` / `span_id` / `parent_span_id` / `traceId` / `spanId` 五个字段的填法约束，向消费者约定：
+
+- `trace_id` / `span_id` 取自 OTLP Span 自身的 trace context 字段（W3C trace_id/span_id，SDK 生成，hex 字符串非 base64）——**非** `gen_ai.*` span 属性（GenAI semconv 不定义 trace_id/span_id；T9 蓝军 W2 订正 2026-10-19）
+- 与 kanban task_id 的关联键：同一 worker run 期间所有 LLM 调用共享同一 `trace_id`；`task_id` 在每次 `kanban_complete` 时 attach 到 trace 的 `latest_task_id` 属性
+- 落库位置：kanban `tasks.metadata` JSON（无 migration；现有 `metadata` 列已含，复用）
+- 路径 A（cc-switch OTLP exporter）上线后，此字段自动有数据流入；上线前保持 Optional 空（向后兼容既有调用方）
+- 字段均为可选（标 `?`），既有调用方不填也不报错；新版写入时新字段仅写入 `tasks.metadata` 的子键，TS 接口层向上对齐
 
 ---
 
@@ -141,7 +168,6 @@ interface FleetSession {
 | hack-exploit | [TLP:AMBER, TLP:GREEN, TLP:CLEAR] |
 | hack-auditor | [TLP:AMBER, TLP:GREEN, TLP:CLEAR] |
 | hack-forensics | [TLP:AMBER, TLP:GREEN, TLP:CLEAR] |
-| [已移除]-* | [TLP:GREEN, TLP:CLEAR] |
 
 ### 4.3 校验算法（orchestrator 路由时执行）
 ```python

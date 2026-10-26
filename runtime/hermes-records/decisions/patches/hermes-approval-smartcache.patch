@@ -1,0 +1,26 @@
+diff --git a/tools/approval.py b/tools/approval.py
+index 627c7c92c2..3d2d38b38d 100644
+--- a/tools/approval.py
++++ b/tools/approval.py
+@@ -773,6 +773,21 @@ def _smart_gate(spec: _GateSpec, command: str, description: str, pattern_key: st
+     verdict = _smart_verdict(command, description, pattern_key, pattern_keys, session_key)
+     if verdict == "approve":
+         _reset_denials(session_key)
++        # >>> swarm:smart-approve-session-cache >>>
++        # 2026-09-23 频率治理: smart APPROVE 后把 pattern 写入 session cache,
++        # 同一会话同一 pattern 只判决 1 次 (此前每条被 flag 命令都重发守门 LLM,
++        # 舰队夜间实测 ~4500 次/天微型请求)。DENY/ESCALATE 不缓存, 危险命令仍逐条审。
++        # 开关: approvals.smart_cache (默认开, 设 false 回到逐条判决)。
++        try:
++            from tools.approval_context import _get_approval_config
++            _sc = _get_approval_config().get("smart_cache", True)
++        except Exception:
++            _sc = True
++        if _sc:
++            approve_session(session_key, pattern_key)
++            logger.debug("Smart approval: cached APPROVE for pattern %s (session %s)",
++                         pattern_key, session_key)
++        # <<< swarm:smart-approve-session-cache <<<
+         logger.debug(spec.smart_log.format(command=command[:60], description=description, session_key=session_key))
+         return {"approved": True, "message": None, "smart_approved": True, "description": description}, False
+     if verdict != "deny":

@@ -54,56 +54,6 @@ nodes:
       skills_count: 7
       runs: {done: 7, failed: 28, timed_out: 2, crashed: 25}
       reliability: 0.2
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 5, failed: 18, timed_out: 1, crashed: 16}
-      reliability: 0.217
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
-      reliability: null
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 1, failed: 0, timed_out: 0, crashed: 0}
-      reliability: 1.0
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
-      reliability: null
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
-      reliability: null
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
-      reliability: null
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
-      reliability: null
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
-      reliability: null
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 8
-      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
-      reliability: null
-    - name: [已移除]
-      toolsets: [hermes-cli, acp, kanban, memory]
-      skills_count: 7
-      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
-      reliability: null
     - name: hack-auditor
       capabilities: [compliance-audit, iam-audit, vuln-management, supply-chain, zero-trust]
       substitutes: [ops-devops(partial)]
@@ -131,43 +81,6 @@ nodes:
       skills_count: 9
       runs: {done: 11, failed: 11, timed_out: 2, crashed: 9}
       reliability: 0.5
-    - name: [已移除]
-      toolsets: [hermes-cli, kanban, memory]
-      skills_count: 4
-      runs: {done: 3, failed: 0, timed_out: 0, crashed: 0}
-      reliability: 1.0
-    - name: [已移除]
-      toolsets: [hermes-cli, kanban, memory]
-      skills_count: 4
-      runs: {done: 15, failed: 4, timed_out: 0, crashed: 4}
-      reliability: 0.789
-    - name: [已移除]
-      toolsets: [hermes-cli, kanban, memory]
-      skills_count: 4
-      runs: {done: 3, failed: 0, timed_out: 0, crashed: 0}
-      reliability: 1.0
-    - name: [已移除]
-      toolsets: [hermes-cli, kanban, memory]
-      skills_count: 4
-      runs: {done: 3, failed: 0, timed_out: 0, crashed: 0}
-      reliability: 1.0
-    - name: [已移除]
-      toolsets: [hermes-cli, kanban, memory]
-      skills_count: 4
-      runs: {done: 4, failed: 0, timed_out: 0, crashed: 0}
-      reliability: 1.0
-    - name: [已移除]
-      toolsets: [hermes-cli, kanban, memory]
-      skills_count: 4
-      runs: {done: 2, failed: 0, timed_out: 0, crashed: 0}
-      reliability: 1.0
-    - name: [已移除]-orchestrator
-      capabilities: [[已移除], child-context, teacher-dispatch, parent-feedback, domain-gateway]
-      substitutes: [orchestrator(partial)]
-      toolsets: [hermes-cli, kanban, memory, messaging]
-      skills_count: 4
-      runs: {done: 48, failed: 17, timed_out: 2, crashed: 14}
-      reliability: 0.738
     - name: ops-devops
       capabilities: [ci-cd, container-orchestration, iac, deployment, infra-automation]
       substitutes: [worker-coder(partial)]
@@ -197,7 +110,6 @@ nodes:
       reliability: 0.524
     - name: orchestrator
       capabilities: [routing, decomposition, dispatch, priority-judgment, cross-board-coordination]
-      substitutes: [[已移除]-orchestrator(partial)]
       toolsets: [hermes-cli, kanban, memory, messaging]
       skills_count: 8
       runs: {done: 87, failed: 32, timed_out: 2, crashed: 26}

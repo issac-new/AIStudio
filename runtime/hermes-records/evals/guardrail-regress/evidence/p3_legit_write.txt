@@ -1,0 +1,8 @@
+### P3 合法 hermes 连接层写非敏感列应放行
+### captured 2026-10-26 10:03:26 runs=1 verdict=PASS
+rc=0
+stdout: rows_landed=1
+stderr: [HERMES_HOME fallback] HERMES_HOME is unset but active profile is 'orchestrator'. Falling back to /Users/YOURNAME/.hermes, which is the DEFAULT profile — not 'orchestrator'. Any data this process writes will land in the wrong profile. The subprocess spawner should pass HERMES_HOME explicitly (see issu
+row_landed_and_cleaned=True
+
+verdict=PASS

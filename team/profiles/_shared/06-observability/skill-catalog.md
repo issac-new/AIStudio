@@ -1,5 +1,7 @@
 # Skill Catalog — Hermes 集群技能目录
 
+> **地位声明（2026-10-19）**：本文件降级为只读参考件。"角色 → 技能"的机器可执行期望源已收敛至中央仓 `skill-provisioning.json`（供给对账/执行见 SwarmStudio /app/skillgov 供给对账页签；sim 侧由 mx-lib install_skills 消费）。本表不再被任何程序读取，新技能登记请改登记中央清单。
+
 > 版本：v1.0 (2026-09-07)
 > 定位：skill 库单一事实源。每 skill 一行：`skill-name | 架构层 | 触发场景 | 适用 profile | 状态`
 > 规则：新增 skill 必须先在此登记；归档 skill 标注 archived 并注明原因。
@@ -99,7 +101,6 @@
 ### 知识资产层（S5 融合产物）
 | Skill | 触发场景 | 适用 profile | 状态 |
 |-------|---------|-------------|------|
-| shidianguji-classics-access | 访问识典古籍平台查典籍元数据/接入路径 | worker-researcher / [已移除] | active（2026-09-08 新增，F5 红线首段；矩阵见 research/cluster-knowledge-fusion-20260907/） |
 
 ---
 
@@ -113,7 +114,7 @@
 | hermes-patch-watchdog | 单点 TUI patch 自愈 | hermes-source-patch-persistence | ✅ archived |
 | tui-patch-persistence | 单点 TUI 保护 | hermes-source-patch-persistence | ✅ archived |
 | moa-bigmodel-401-fix | 单点 401 修复 | hermes-moa-configuration | ✅ archived |
-| macos-home-disk-cleanup | 单点磁盘清理 | macos-disk-cleanup | ✅ archived |
+| macos-home-disk-REDACTED | 单点磁盘清理 | macos-disk-REDACTED | ✅ archived |
 | macos-default-app-management | 单点默认应用 | （低频，归档） | ✅ archived |
 | apikey-image-gen / grok-image-to-video / minimax-image-to-video | 按需恢复 | — | ⏸️ 保留主库（顶层独立目录，低频不碍事） |
 
@@ -131,7 +132,6 @@
 | hindsight-model-configuration | hindsight-backend-model-config | ✅ merged |
 | hindsight-fleet-operations | hindsight-cluster-audit, hindsight-fleet-audit, hindsight-fleet-cleanup | ✅ merged |
 | hermes-skill-installation | hermes-skill-bulk-install, hermes-skills-update-protection | ✅ merged |
-| [已移除]-observation-archiving | [已移除] | ✅ merged |
 | wechat-article-research | wechat-batch-discovery | ✅ merged |
 
 **执行摘要**：devops 分类 12 组合并 → 净减 16 个 skill；7 个单点修复归档。归档区含 README（恢复方式 + 主 skill 映射）。
@@ -152,7 +152,6 @@ cc-switch 家族 12→5（failover/monitoring/analytics/integration/codex-mgmt +
 | Profile | Skill 数 | 主要类别 |
 |---------|---------|---------|
 | orchestrator | 47 (主库) | 全域路由/编排/治理 |
-| [已移除]-orchestrator + 6 教师 | ~15 | 教学/育儿 |
 | worker-coder | ~10 | 编码/测试/调试 |
 | worker-researcher | ~12 | 调研/引用/开源融合 |
 | ops-devops | ~8 | 部署/运维/发布 |

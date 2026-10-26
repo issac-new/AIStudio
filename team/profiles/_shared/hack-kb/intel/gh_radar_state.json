@@ -42,11 +42,35 @@
    "repo": "mouseos/aquos-r6-ghostlock",
    "route": "cve"
   },
+  "01139342dccc6fc6": {
+   "first_seen": "2026-10-20T19:03:04.752305+00:00",
+   "keyword": "exploit",
+   "repo": "infarmor/Amnezia-Exploit-Free-Amnezia-Premium-",
+   "route": "tools"
+  },
   "01284834f924e18b": {
    "first_seen": "2026-09-17T10:18:33.256297+00:00",
    "keyword": "CVE-2026",
    "repo": "enchanter-ai/hydra",
    "route": "cve"
+  },
+  "012b817b0db6be02": {
+   "first_seen": "2026-10-20T19:03:04.752373+00:00",
+   "keyword": "0day",
+   "repo": "0day-1s/cdm---training---website-",
+   "route": "tools"
+  },
+  "013394bda143403b": {
+   "first_seen": "2026-10-19T18:48:24.437291+00:00",
+   "keyword": "exploit",
+   "repo": "Naveen-The-Exploit/Hotel-Inventory-Management",
+   "route": "tools"
+  },
+  "013e57b0c8eaf2f5": {
+   "first_seen": "2026-10-19T18:48:24.436817+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-84180",
+   "route": "tools"
   },
   "01664a8cb703aa69": {
    "first_seen": "2026-09-08T04:38:54.641615+00:00",
@@ -58,6 +82,12 @@
    "first_seen": "2026-09-09T01:55:53.036103+00:00",
    "keyword": "exploit",
    "repo": "JuliaRegistries/General",
+   "route": "cve"
+  },
+  "01f6aa8b2571132f": {
+   "first_seen": "2026-10-20T19:03:04.751950+00:00",
+   "keyword": "0day",
+   "repo": "mindie-agent/mindie-agent",
    "route": "cve"
   },
   "01fe96808cacc2fe": {
@@ -77,6 +107,12 @@
    "keyword": "CVE-2026",
    "repo": "cgfixit/CyClaw",
    "route": "cve"
+  },
+  "0235134927c2118e": {
+   "first_seen": "2026-10-20T19:03:04.752114+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Datxzzz/CVE-2026-93300",
+   "route": "tools"
   },
   "0247b1a0da439bf1": {
    "first_seen": "2026-09-21T16:33:12.516011+00:00",
@@ -312,6 +348,12 @@
    "repo": "shsi1309-gif/Web_API_vulneralable",
    "route": "cve"
   },
+  "061eabaf92462249": {
+   "first_seen": "2026-10-19T18:48:24.445035+00:00",
+   "keyword": "exploit+credential",
+   "repo": "DevCop95/pullgoscript",
+   "route": "leak"
+  },
   "062a3de4ab039a1f": {
    "first_seen": "2026-09-08T04:38:54.641432+00:00",
    "keyword": "CVE-2026+token",
@@ -336,11 +378,23 @@
    "repo": "kazuki-hanai/kazuki-hanai",
    "route": "cve"
   },
+  "06a1e80e6a2448d8": {
+   "first_seen": "2026-10-21T18:56:18.926096+00:00",
+   "keyword": "exploit",
+   "repo": "baka9moe/php2shell-exploit",
+   "route": "tools"
+  },
   "06a93aa380495ad1": {
    "first_seen": "2026-09-15T01:43:41.474477+00:00",
    "keyword": "CVE-2026",
    "repo": "Desireeontrial76/yellowkey-bitlocker",
    "route": "cve"
+  },
+  "06ab22afadfdf1b8": {
+   "first_seen": "2026-10-20T19:03:04.752274+00:00",
+   "keyword": "exploit",
+   "repo": "surrre4l/ExploitGPT",
+   "route": "tools"
   },
   "06cbe367f464660d": {
    "first_seen": "2026-09-30T16:48:05.682493+00:00",
@@ -371,6 +425,12 @@
    "keyword": "CVE-2026+token",
    "repo": "papageo75/CVE-2026-48908-PoC",
    "route": "leak"
+  },
+  "0815fb1eafe67e56": {
+   "first_seen": "2026-10-21T18:56:18.925555+00:00",
+   "keyword": "CVE-2026",
+   "repo": "litobro/php2mon",
+   "route": "cve"
   },
   "081673dad687b24e": {
    "first_seen": "2026-09-08T04:38:54.641641+00:00",
@@ -412,6 +472,12 @@
    "first_seen": "2026-09-08T04:38:54.641488+00:00",
    "keyword": "exploit+password",
    "repo": "aceaiartist-arch/boss-loot",
+   "route": "leak"
+  },
+  "09013b0ec46608ed": {
+   "first_seen": "2026-10-19T18:48:24.444702+00:00",
+   "keyword": "exploit+password",
+   "repo": "sterlouk/passman-security-hardening",
    "route": "leak"
   },
   "091dbbc47e980c17": {
@@ -456,6 +522,12 @@
    "repo": "mrnickrushing/coldcase",
    "route": "cve"
   },
+  "09a3e4206c2b070b": {
+   "first_seen": "2026-10-19T18:48:24.437141+00:00",
+   "keyword": "exploit",
+   "repo": "R-kill-9/Exploit-Automation",
+   "route": "tools"
+  },
   "09b4eedecd76f2ee": {
    "first_seen": "2026-09-08T04:38:54.641501+00:00",
    "keyword": "exploit+password",
@@ -486,10 +558,28 @@
    "repo": "s-arnav21/obsidian-recon-RECON",
    "route": "cve"
   },
+  "0a83d6b576a59600": {
+   "first_seen": "2026-10-20T19:03:04.751713+00:00",
+   "keyword": "exploit",
+   "repo": "RlM100always/Web-Security-Scanner",
+   "route": "cve"
+  },
+  "0a990069bdc40dfe": {
+   "first_seen": "2026-10-20T19:03:04.751314+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Prashasthi-18/Secure-Dynamic-Knowledge-Graph",
+   "route": "cve"
+  },
   "0a9f6f1d5cf6991c": {
    "first_seen": "2026-09-10T01:43:31.148438+00:00",
    "keyword": "CVE-2026",
    "repo": "mengbin92/micro-one-api",
+   "route": "cve"
+  },
+  "0aa88e426c483e99": {
+   "first_seen": "2026-10-21T18:56:18.925763+00:00",
+   "keyword": "exploit",
+   "repo": "0xMihirK/hercules-mcp",
    "route": "cve"
   },
   "0ad4f351f411535e": {
@@ -504,16 +594,34 @@
    "repo": "Felo2/solved-cs6035-binary-exploitation-scripts-extra-credit-100-fall2026",
    "route": "tools"
   },
+  "0b0ad3818f2c98de": {
+   "first_seen": "2026-10-21T18:56:18.925591+00:00",
+   "keyword": "CVE-2026",
+   "repo": "squiblyza/CVE-2026-109618-CVE-2026-109619",
+   "route": "cve"
+  },
   "0b3151f732d5665a": {
    "first_seen": "2026-09-14T01:43:33.540712+00:00",
    "keyword": "exploit+password",
    "repo": "zakariarachedi2001-cell/PHantom",
    "route": "leak"
   },
+  "0b53979f484fd069": {
+   "first_seen": "2026-10-20T19:03:04.752031+00:00",
+   "keyword": "nuclei-template",
+   "repo": "ss-nall/cve2risk",
+   "route": "cve"
+  },
   "0b72120218081527": {
    "first_seen": "2026-09-08T04:38:54.641214+00:00",
    "keyword": "0day",
    "repo": "gelusus/wxvl",
+   "route": "cve"
+  },
+  "0b861b05ed57b4f7": {
+   "first_seen": "2026-10-20T19:03:04.751882+00:00",
+   "keyword": "0day",
+   "repo": "torchtitan-npu/torchtitan-npu",
    "route": "cve"
   },
   "0bb39f5c52da1265": {
@@ -606,6 +714,12 @@
    "repo": "Cheurteenyt/BIOS-",
    "route": "cve"
   },
+  "0d7ee960216b270b": {
+   "first_seen": "2026-10-19T18:48:24.437000+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85245",
+   "route": "tools"
+  },
   "0d83ea5e76aba6e1": {
    "first_seen": "2026-09-08T04:38:54.641668+00:00",
    "keyword": "exploit+token",
@@ -616,6 +730,12 @@
    "first_seen": "2026-10-06T16:44:21.062756+00:00",
    "keyword": "exploit",
    "repo": "logtriage-cyber/security-log-samples",
+   "route": "cve"
+  },
+  "0db57b95bbdb3caf": {
+   "first_seen": "2026-10-20T19:03:04.752016+00:00",
+   "keyword": "nuclei-template",
+   "repo": "wr0x00/ai_bobao",
    "route": "cve"
   },
   "0dcd855b046d66f8": {
@@ -654,6 +774,12 @@
    "repo": "m-elmohands/simple-ReDos",
    "route": "leak"
   },
+  "0e4379d298b799f0": {
+   "first_seen": "2026-10-20T19:03:04.752076+00:00",
+   "keyword": "CVE-2026",
+   "repo": "ExDev994/CVE-2026-108097",
+   "route": "tools"
+  },
   "0e514682f3ed2c50": {
    "first_seen": "2026-09-17T10:18:33.256366+00:00",
    "keyword": "exploit",
@@ -664,6 +790,12 @@
    "first_seen": "2026-09-17T01:43:14.320588+00:00",
    "keyword": "exploit",
    "repo": "enhansome/enhansome-ai-cybersecurity",
+   "route": "cve"
+  },
+  "0e7a52208fc63bd2": {
+   "first_seen": "2026-10-21T18:56:18.925853+00:00",
+   "keyword": "nuclei-template",
+   "repo": "Tito0015/Tito0015",
    "route": "cve"
   },
   "0eae7f7ac2127263": {
@@ -684,6 +816,12 @@
    "repo": "blamejs/blamejs",
    "route": "cve"
   },
+  "0ef70feae6b5d24b": {
+   "first_seen": "2026-10-21T18:56:18.926077+00:00",
+   "keyword": "exploit",
+   "repo": "Guilhermefonseca2021/shell-exploit-cyber",
+   "route": "tools"
+  },
   "0f1d2705553a7310": {
    "first_seen": "2026-09-08T04:38:54.641071+00:00",
    "keyword": "CVE-2026",
@@ -695,6 +833,12 @@
    "keyword": "exploit",
    "repo": "masbrokemanaaja/reethink",
    "route": "cve"
+  },
+  "0f757ca35a591b12": {
+   "first_seen": "2026-10-19T18:48:24.437035+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85254",
+   "route": "tools"
   },
   "0f8e97d0e582f6b3": {
    "first_seen": "2026-09-08T04:38:54.641159+00:00",
@@ -719,6 +863,12 @@
    "keyword": "exploit",
    "repo": "Het28091/Cyber-scan",
    "route": "cve"
+  },
+  "0ff64885f9d2f9be": {
+   "first_seen": "2026-10-19T18:48:24.437239+00:00",
+   "keyword": "exploit",
+   "repo": "DanieleDellUomo/ps4-exploit-launcher",
+   "route": "tools"
   },
   "0ffc8325a06d4f94": {
    "first_seen": "2026-10-03T16:59:12.037031+00:00",
@@ -756,6 +906,12 @@
    "repo": "nirholas/sol-sweeper-bots",
    "route": "leak"
   },
+  "10da30a66d1b1c3b": {
+   "first_seen": "2026-10-21T18:56:18.925544+00:00",
+   "keyword": "CVE-2026",
+   "repo": "hussainweb/docker-drupal-base",
+   "route": "cve"
+  },
   "112e72d4629e9e76": {
    "first_seen": "2026-09-30T16:48:05.682645+00:00",
    "keyword": "exploit+credential",
@@ -773,6 +929,12 @@
    "keyword": "exploit",
    "repo": "lawrencewlcknight/fhp-ucv-escher-experiments",
    "route": "cve"
+  },
+  "115d98e390986cce": {
+   "first_seen": "2026-10-23T02:19:53.378185+00:00",
+   "keyword": "CVE-2026",
+   "repo": "duytien241/nodejs-CVE-2026-111497",
+   "route": "tools"
   },
   "1187b40f971cfdeb": {
    "first_seen": "2026-09-22T16:50:36.853253+00:00",
@@ -912,6 +1074,12 @@
    "repo": "sardonyx001/awesome-stars",
    "route": "cve"
   },
+  "151a5e50ab5eefd6": {
+   "first_seen": "2026-10-19T18:48:24.436343+00:00",
+   "keyword": "exploit",
+   "repo": "cp2k/dbcsr",
+   "route": "cve"
+  },
   "154290d946df507a": {
    "first_seen": "2026-09-21T16:33:12.516006+00:00",
    "keyword": "CVE-2026",
@@ -948,6 +1116,18 @@
    "repo": "ivuorinen/starred",
    "route": "cve"
   },
+  "1603774dad0f1d03": {
+   "first_seen": "2026-10-19T18:48:24.435858+00:00",
+   "keyword": "CVE-2026",
+   "repo": "pduggusa/dugganusa-scanner-core",
+   "route": "cve"
+  },
+  "1607d7bae908bb25": {
+   "first_seen": "2026-10-19T18:48:24.445047+00:00",
+   "keyword": "exploit+credential",
+   "repo": "owlsecx/OChain",
+   "route": "leak"
+  },
   "1619c95ba7338f46": {
    "first_seen": "2026-09-30T16:48:05.682640+00:00",
    "keyword": "exploit+credential",
@@ -971,6 +1151,12 @@
    "keyword": "exploit",
    "repo": "daks19/daks19",
    "route": "cve"
+  },
+  "16aa7f96a49fc753": {
+   "first_seen": "2026-10-19T18:48:24.437180+00:00",
+   "keyword": "exploit",
+   "repo": "CyberBass051/web-exploitation-toolkit",
+   "route": "tools"
   },
   "16d78bd788011d5e": {
    "first_seen": "2026-09-28T17:10:26.780870+00:00",
@@ -1026,10 +1212,28 @@
    "repo": "MalikHamza7/CVE-2026-22794-POC",
    "route": "leak"
   },
+  "1816e843444ba5a1": {
+   "first_seen": "2026-10-20T19:03:04.751675+00:00",
+   "keyword": "exploit",
+   "repo": "paulmann/Fail2Ban_AbuseIPDB",
+   "route": "cve"
+  },
+  "181bfcdcc21c40c9": {
+   "first_seen": "2026-10-21T18:56:18.926043+00:00",
+   "keyword": "exploit",
+   "repo": "27omkar/Exploit-Post-Exploitation",
+   "route": "tools"
+  },
   "18e4eb2e3e261689": {
    "first_seen": "2026-10-06T16:44:21.062810+00:00",
    "keyword": "0day",
    "repo": "realsandeep1271-ui/ThreatPulse-AI",
+   "route": "cve"
+  },
+  "18e83ed65cf5ef3b": {
+   "first_seen": "2026-10-21T18:56:18.925882+00:00",
+   "keyword": "nuclei-template",
+   "repo": "Fazmin/cve-intel",
    "route": "cve"
   },
   "18f8d40199b662e3": {
@@ -1140,11 +1344,23 @@
    "repo": "enhansome/enhansome-Awesome-OpenClaw",
    "route": "cve"
   },
+  "1b927c6a90ce0ac7": {
+   "first_seen": "2026-10-20T19:03:04.751382+00:00",
+   "keyword": "CVE-2026",
+   "repo": "realmpastai-web/clawscore-fleet",
+   "route": "cve"
+  },
   "1ba2348c9357046f": {
    "first_seen": "2026-09-11T01:43:52.415799+00:00",
    "keyword": "CVE-2026",
    "repo": "joemalcolm/oss-security-archive",
    "route": "cve"
+  },
+  "1bc5959d2535f239": {
+   "first_seen": "2026-10-19T18:48:24.436770+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Feng1586/CVE-2026-64560-public",
+   "route": "tools"
   },
   "1bd2cbb254464243": {
    "first_seen": "2026-09-17T01:43:14.320356+00:00",
@@ -1164,6 +1380,12 @@
    "repo": "yunis1de/Automated-Pentesting-Platform-",
    "route": "cve"
   },
+  "1cc97c6725d2cbd6": {
+   "first_seen": "2026-10-20T19:03:04.751832+00:00",
+   "keyword": "exploit",
+   "repo": "NycolazSec/tcpcat",
+   "route": "cve"
+  },
   "1cc9fe0704b054c2": {
    "first_seen": "2026-09-21T16:33:12.515976+00:00",
    "keyword": "CVE-2026",
@@ -1176,6 +1398,12 @@
    "repo": "Shivam1501singh/backend_lawyer_project",
    "route": "cve"
   },
+  "1d62a606e9e98326": {
+   "first_seen": "2026-10-19T18:48:24.437192+00:00",
+   "keyword": "exploit",
+   "repo": "Kelvinchuks/Who-Exploit-AI",
+   "route": "tools"
+  },
   "1d62be815ea4ef91": {
    "first_seen": "2026-09-09T01:55:53.036207+00:00",
    "keyword": "nuclei-template",
@@ -1187,6 +1415,12 @@
    "keyword": "exploit+credential",
    "repo": "sydneyspider/Funnel-Recon",
    "route": "leak"
+  },
+  "1d9958adfb9df99e": {
+   "first_seen": "2026-10-20T19:03:04.752364+00:00",
+   "keyword": "0day",
+   "repo": "SKALA-AI-meeting/0day_jungbeom",
+   "route": "tools"
   },
   "1d9dd52092a63e95": {
    "first_seen": "2026-09-14T01:43:33.540403+00:00",
@@ -1218,6 +1452,12 @@
    "repo": "nextco/wordpress-cve-2026-87902",
    "route": "tools"
   },
+  "1dd2de35b120dc4c": {
+   "first_seen": "2026-10-20T19:03:04.752087+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85296",
+   "route": "tools"
+  },
   "1dfac1da7eccf9dc": {
    "first_seen": "2026-10-13T17:02:46.820981+00:00",
    "keyword": "CVE-2026",
@@ -1236,6 +1476,12 @@
    "repo": "judgedbykira/CVE-2026-20896-Gitea-Authentication-Bypass",
    "route": "leak"
   },
+  "1e67164809bdf67c": {
+   "first_seen": "2026-10-19T18:48:24.437060+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-80344",
+   "route": "tools"
+  },
   "1e7f5566e3d400ef": {
    "first_seen": "2026-09-10T01:43:31.148801+00:00",
    "keyword": "exploit",
@@ -1252,6 +1498,12 @@
    "first_seen": "2026-10-06T16:44:21.062700+00:00",
    "keyword": "exploit",
    "repo": "DefiAudit0x/smart-contract-auditor",
+   "route": "cve"
+  },
+  "1f1a4489fd3167bf": {
+   "first_seen": "2026-10-19T18:48:24.436651+00:00",
+   "keyword": "nuclei-template",
+   "repo": "LILSYNNOFFICIAL/syn_launch",
    "route": "cve"
   },
   "1f3ba4180a1522cf": {
@@ -1272,10 +1524,22 @@
    "repo": "PenielMelaku/PenielMelaku",
    "route": "cve"
   },
+  "1f79cdd45526cd27": {
+   "first_seen": "2026-10-19T18:48:24.436205+00:00",
+   "keyword": "exploit",
+   "repo": "IamjustaOversizedKidddoo/cyberBLADE",
+   "route": "cve"
+  },
   "1f8b3e1666252f86": {
    "first_seen": "2026-09-09T01:55:53.036128+00:00",
    "keyword": "0day",
    "repo": "enhansome/enhansome-Awesome-Hacking-Resources",
+   "route": "cve"
+  },
+  "1f906839ef156992": {
+   "first_seen": "2026-10-21T18:56:18.925861+00:00",
+   "keyword": "nuclei-template",
+   "repo": "kushvinth/crowbar",
    "route": "cve"
   },
   "1f96a35fff85c171": {
@@ -1332,6 +1596,12 @@
    "repo": "fAIza-AU/AWS-infrastructure-with-ELB-and-CDN",
    "route": "cve"
   },
+  "1ffd668375d59f6b": {
+   "first_seen": "2026-10-20T19:03:04.751793+00:00",
+   "keyword": "exploit",
+   "repo": "aws/aws-advanced-ruby-driver-wrapper",
+   "route": "cve"
+  },
   "2018b574ebc37759": {
    "first_seen": "2026-09-08T04:38:54.641300+00:00",
    "keyword": "exploit",
@@ -1350,6 +1620,12 @@
    "repo": "timschneeb/changelog-awesome-shizuku",
    "route": "cve"
   },
+  "204beb64ab2b7d09": {
+   "first_seen": "2026-10-20T19:03:04.752108+00:00",
+   "keyword": "CVE-2026",
+   "repo": "yuwkaaa/CVE-2026-113468",
+   "route": "tools"
+  },
   "2055349687786918": {
    "first_seen": "2026-09-30T16:48:05.682519+00:00",
    "keyword": "exploit",
@@ -1361,6 +1637,18 @@
    "keyword": "exploit",
    "repo": "Ahmedsofteng/red-team-arsenal",
    "route": "cve"
+  },
+  "20a5278000fdc256": {
+   "first_seen": "2026-10-19T18:48:24.437047+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Mothra-1/CVE-2026-105105",
+   "route": "tools"
+  },
+  "20b87c1a847faa62": {
+   "first_seen": "2026-10-20T19:03:04.752287+00:00",
+   "keyword": "exploit",
+   "repo": "redataii6/Binary-Exploitation-Concepts",
+   "route": "tools"
   },
   "20e2a2bb3b18eedc": {
    "first_seen": "2026-09-26T16:48:22.840129+00:00",
@@ -1386,6 +1674,12 @@
    "repo": "iamshafayat/WordlistsAllTheThings",
    "route": "cve"
   },
+  "214474675489857a": {
+   "first_seen": "2026-10-19T18:48:24.437328+00:00",
+   "keyword": "CVE-2026+password",
+   "repo": "cybliminal/cve-2026-111283-bmc-helix-network-management-local-administrator-any-password",
+   "route": "leak"
+  },
   "21518438139093d6": {
    "first_seen": "2026-09-09T01:55:53.036144+00:00",
    "keyword": "0day",
@@ -1403,6 +1697,12 @@
    "keyword": "CVE-2026",
    "repo": "Meniben/redmi14c-pond-cve-2026-64560",
    "route": "tools"
+  },
+  "21aabe502c7cab19": {
+   "first_seen": "2026-10-21T18:56:18.925650+00:00",
+   "keyword": "CVE-2026",
+   "repo": "aprian1337/php2shell-lab",
+   "route": "cve"
   },
   "2230b03ef00d788c": {
    "first_seen": "2026-09-08T04:38:54.641328+00:00",
@@ -1446,6 +1746,12 @@
    "repo": "techupdate24/gitlab-ai-gateway-cve-2026-90970",
    "route": "tools"
   },
+  "22cd1b7f2e08f258": {
+   "first_seen": "2026-10-19T18:48:24.437278+00:00",
+   "keyword": "exploit",
+   "repo": "guilhem-/clic-par-clic-comfyui-07-exploitation",
+   "route": "tools"
+  },
   "22d49ae581a2cb25": {
    "first_seen": "2026-09-08T04:38:54.641480+00:00",
    "keyword": "exploit+password",
@@ -1468,6 +1774,12 @@
    "first_seen": "2026-09-08T04:38:54.641306+00:00",
    "keyword": "CVE-2026+password",
    "repo": "d-maggipinto/CVE-2026-72898-metabase-sqli",
+   "route": "leak"
+  },
+  "23b33c67c3ef6b9a": {
+   "first_seen": "2026-10-19T18:48:24.445223+00:00",
+   "keyword": "exploit+token",
+   "repo": "Pamblus/claude-cowork-sandbox",
    "route": "leak"
   },
   "23c26786d6fd3425": {
@@ -1584,16 +1896,34 @@
    "repo": "Noorkhalel/CVE-2026-34990-CUPS-LPE-PoC",
    "route": "leak"
   },
+  "2600bbc78468465b": {
+   "first_seen": "2026-10-21T18:56:18.926054+00:00",
+   "keyword": "exploit",
+   "repo": "xuntc/nexus-exploit",
+   "route": "tools"
+  },
   "2608a1c9db84259b": {
    "first_seen": "2026-09-28T17:10:26.781702+00:00",
    "keyword": "nuclei-template",
    "repo": "kx7m2qd/Pentelligence",
    "route": "cve"
   },
+  "2632e07c07a4d29e": {
+   "first_seen": "2026-10-19T18:48:24.436422+00:00",
+   "keyword": "0day",
+   "repo": "DriveAway500/Enchiridion",
+   "route": "cve"
+  },
   "2653f32f3747c20d": {
    "first_seen": "2026-09-08T04:38:54.641140+00:00",
    "keyword": "CVE-2026",
    "repo": "J-Dheeraj/Final-Year-Project",
+   "route": "cve"
+  },
+  "2677330f7181e575": {
+   "first_seen": "2026-10-20T19:03:04.751576+00:00",
+   "keyword": "CVE-2026",
+   "repo": "logusivam/tech-stack-aggregator",
    "route": "cve"
   },
   "2687a6f1db02e7b0": {
@@ -1613,6 +1943,18 @@
    "keyword": "exploit+credential",
    "repo": "NetSPI/gcpwn",
    "route": "leak"
+  },
+  "26eae551a83c8f33": {
+   "first_seen": "2026-10-19T18:48:24.436709+00:00",
+   "keyword": "nuclei-template",
+   "repo": "wogho/redex",
+   "route": "cve"
+  },
+  "26f2a4c574a4f5d1": {
+   "first_seen": "2026-10-21T18:56:18.925966+00:00",
+   "keyword": "CVE-2026",
+   "repo": "CaterMaoZi/CVE-2026-105482-POC",
+   "route": "tools"
   },
   "2726a812b2ce9a6a": {
    "first_seen": "2026-09-09T02:00:51.855098+00:00",
@@ -1680,6 +2022,12 @@
    "repo": "siyad01/agentbox",
    "route": "leak"
   },
+  "27e4f0cf717fa817": {
+   "first_seen": "2026-10-19T18:48:24.444897+00:00",
+   "keyword": "exploit+secret",
+   "repo": "tc4dy/CVE-2026-29000-PoC-Exploit",
+   "route": "leak"
+  },
   "27e7be10ee35e611": {
    "first_seen": "2026-09-20T01:44:37.573233+00:00",
    "keyword": "nuclei-template",
@@ -1728,6 +2076,12 @@
    "repo": "bluekite2000/burmakey",
    "route": "cve"
   },
+  "29956af4c38a006a": {
+   "first_seen": "2026-10-21T18:56:18.925681+00:00",
+   "keyword": "exploit",
+   "repo": "AI4Collaboration/swarmharm-page",
+   "route": "cve"
+  },
   "29a89c314a17c6ce": {
    "first_seen": "2026-09-08T04:38:54.641583+00:00",
    "keyword": "exploit+credential",
@@ -1764,6 +2118,12 @@
    "repo": "Farih123/CVE-2026-90817",
    "route": "tools"
   },
+  "2a22dbd361961c87": {
+   "first_seen": "2026-10-20T19:03:04.751895+00:00",
+   "keyword": "0day",
+   "repo": "Atlas-Ascend-Fork/cann-recipes-infer",
+   "route": "cve"
+  },
   "2a3d6245adb20272": {
    "first_seen": "2026-09-30T16:48:05.682441+00:00",
    "keyword": "nuclei-template",
@@ -1780,6 +2140,12 @@
    "first_seen": "2026-09-19T01:45:28.984866+00:00",
    "keyword": "exploit",
    "repo": "klonnist/Hasanwavebot",
+   "route": "cve"
+  },
+  "2abb9c8471242925": {
+   "first_seen": "2026-10-21T18:56:18.925843+00:00",
+   "keyword": "nuclei-template",
+   "repo": "omar00050/omar00050",
    "route": "cve"
   },
   "2abd9d1877d2ba8a": {
@@ -1848,6 +2214,18 @@
    "repo": "Mafifrizi/ARES",
    "route": "cve"
   },
+  "2c9ea89f2e9c66a2": {
+   "first_seen": "2026-10-19T18:48:24.435909+00:00",
+   "keyword": "CVE-2026",
+   "repo": "randomcontainers/7zip",
+   "route": "cve"
+  },
+  "2cd49fa7e90de90c": {
+   "first_seen": "2026-10-20T19:03:04.751597+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Lokitla/GKI_Anykernel3_susfs_for_lokitla",
+   "route": "cve"
+  },
   "2cdac134d49285fb": {
    "first_seen": "2026-10-04T16:45:51.422718+00:00",
    "keyword": "nuclei-template",
@@ -1859,6 +2237,12 @@
    "keyword": "CVE-2026",
    "repo": "jvidhan/cve-2026-28912",
    "route": "tools"
+  },
+  "2ce49f3222f7d588": {
+   "first_seen": "2026-10-21T18:56:18.925669+00:00",
+   "keyword": "exploit",
+   "repo": "printeefy1-commits/rondivou",
+   "route": "cve"
   },
   "2d087047d0ad4410": {
    "first_seen": "2026-09-30T16:48:05.682322+00:00",
@@ -1926,6 +2310,12 @@
    "repo": "JU9xpmv9/webshell_seo",
    "route": "cve"
   },
+  "2e89a0b7f1084979": {
+   "first_seen": "2026-10-20T19:03:04.751840+00:00",
+   "keyword": "exploit",
+   "repo": "ransomjack/ot-bulletin-newsletter",
+   "route": "cve"
+  },
   "2e9dc8a2ca0b7e62": {
    "first_seen": "2026-09-17T10:18:33.256329+00:00",
    "keyword": "exploit",
@@ -1956,10 +2346,22 @@
    "repo": "rainfantry/telegram-osint",
    "route": "cve"
   },
+  "2efc501516378c0e": {
+   "first_seen": "2026-10-19T18:48:24.436957+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-84178",
+   "route": "tools"
+  },
   "2f302c7bd8982e51": {
    "first_seen": "2026-09-08T04:38:54.641228+00:00",
    "keyword": "0day",
    "repo": "zulloper/cve-poc",
+   "route": "cve"
+  },
+  "2f33cae7ea13e881": {
+   "first_seen": "2026-10-19T18:48:24.435814+00:00",
+   "keyword": "CVE-2026",
+   "repo": "nsrg-fmlorg/kpatch-alma-cve-2026-99999",
    "route": "cve"
   },
   "2f3f38f13b10d963": {
@@ -1980,10 +2382,22 @@
    "repo": "bishara74/infraarchagent",
    "route": "cve"
   },
+  "2f9f487618f2801c": {
+   "first_seen": "2026-10-20T19:03:04.752293+00:00",
+   "keyword": "exploit",
+   "repo": "3ntrop1a/mon-exploit-csp",
+   "route": "tools"
+  },
   "2fcb3e3ccd98644e": {
    "first_seen": "2026-09-28T17:10:26.781870+00:00",
    "keyword": "CVE-2026",
    "repo": "OffensiveBias20/CVE-2026-34990-POC",
+   "route": "tools"
+  },
+  "2fcca07342a14b01": {
+   "first_seen": "2026-10-21T18:56:18.926149+00:00",
+   "keyword": "exploit",
+   "repo": "Zero4247/Book-Store-data-exploitation-analysis-using-SQL",
    "route": "tools"
   },
   "2fe165c2df8124f2": {
@@ -1991,6 +2405,18 @@
    "keyword": "exploit+token",
    "repo": "DawidTrochim/VulnSeek",
    "route": "leak"
+  },
+  "2ff373b513de3325": {
+   "first_seen": "2026-10-19T18:48:24.437303+00:00",
+   "keyword": "exploit",
+   "repo": "Exploit-parshwa/AI-Meeting-Minutes-Generator-main",
+   "route": "tools"
+  },
+  "2ffbf8e5d53ec76b": {
+   "first_seen": "2026-10-19T18:48:24.436331+00:00",
+   "keyword": "exploit",
+   "repo": "aarav911/chess-trainer",
+   "route": "cve"
   },
   "30124a7a71182c9a": {
    "first_seen": "2026-10-06T16:44:21.062730+00:00",
@@ -2034,6 +2460,12 @@
    "repo": "enhansome/enhansome-radar-perception",
    "route": "cve"
   },
+  "30f0eeb6a81cb1ce": {
+   "first_seen": "2026-10-19T18:48:24.437130+00:00",
+   "keyword": "exploit",
+   "repo": "sanjaymallya788-web/exploits",
+   "route": "tools"
+  },
   "31028aefe28d0347": {
    "first_seen": "2026-10-13T17:02:46.821372+00:00",
    "keyword": "exploit",
@@ -2050,6 +2482,18 @@
    "first_seen": "2026-09-20T01:44:37.573128+00:00",
    "keyword": "CVE-2026",
    "repo": "0xHami/Zeroday_Research",
+   "route": "cve"
+  },
+  "311df49a69749e1a": {
+   "first_seen": "2026-10-21T18:56:18.925977+00:00",
+   "keyword": "CVE-2026",
+   "repo": "AmpedWasTaken/PHP2Shell-CVE-2026-109618-CVE-2026-109619",
+   "route": "tools"
+  },
+  "3137cf4ffbe40dd0": {
+   "first_seen": "2026-10-20T19:03:04.751704+00:00",
+   "keyword": "exploit",
+   "repo": "lucasrguerra/guara",
    "route": "cve"
   },
   "316c8f6dd3954944": {
@@ -2160,6 +2604,12 @@
    "repo": "cplieger/docker-nut-upsd",
    "route": "cve"
   },
+  "32d0e8205c176d74": {
+   "first_seen": "2026-10-21T18:56:18.925606+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Cqsi/php2shell-atlas",
+   "route": "cve"
+  },
   "3327c8800c0fedce": {
    "first_seen": "2026-09-08T04:38:54.641758+00:00",
    "keyword": "nuclei-template+token",
@@ -2178,6 +2628,12 @@
    "repo": "maxprog-svg/CitrixBleedCVE-2026-8452-2025-5777",
    "route": "leak"
   },
+  "3343deedd9e569dc": {
+   "first_seen": "2026-10-20T19:03:04.751957+00:00",
+   "keyword": "nuclei-template",
+   "repo": "0xMihirK/hercules-mcp",
+   "route": "cve"
+  },
   "335bbce6bf2f1459": {
    "first_seen": "2026-09-29T16:42:59.122228+00:00",
    "keyword": "CVE-2026",
@@ -2189,6 +2645,12 @@
    "keyword": "exploit+credential",
    "repo": "sifatnotes/Buffer-Overflow-Ret2Libc-Microblog-Web-Recon-CTF-Labs",
    "route": "leak"
+  },
+  "33e137b63ad489a4": {
+   "first_seen": "2026-10-21T18:56:18.925597+00:00",
+   "keyword": "CVE-2026",
+   "repo": "The-DevOps-Daily/php2shell-check",
+   "route": "cve"
   },
   "33e91d3c0f025bfc": {
    "first_seen": "2026-09-08T04:38:54.641251+00:00",
@@ -2206,6 +2668,12 @@
    "first_seen": "2026-09-26T16:48:22.839805+00:00",
    "keyword": "CVE-2026",
    "repo": "bmdhodl/agent47",
+   "route": "cve"
+  },
+  "343ac65637cb715b": {
+   "first_seen": "2026-10-20T19:03:04.751459+00:00",
+   "keyword": "CVE-2026",
+   "repo": "RoshiniMlakshmana/Intel2Detection-MCP",
    "route": "cve"
   },
   "343e7555c2d226fb": {
@@ -2237,6 +2705,12 @@
    "keyword": "exploit",
    "repo": "CERTCC/Vultron",
    "route": "cve"
+  },
+  "34c2b8c6c7f20146": {
+   "first_seen": "2026-10-21T18:56:18.925943+00:00",
+   "keyword": "CVE-2026",
+   "repo": "xuehuolll/php2shell-CVE-2026-109618-109619",
+   "route": "tools"
   },
   "34c30b6eab761abf": {
    "first_seen": "2026-09-26T16:48:22.839955+00:00",
@@ -2370,6 +2844,18 @@
    "repo": "peeryamin17/busted",
    "route": "cve"
   },
+  "37d2dac361019931": {
+   "first_seen": "2026-10-19T18:48:24.437339+00:00",
+   "keyword": "CVE-2026+password",
+   "repo": "murrez/CVE-2026-89079",
+   "route": "leak"
+  },
+  "37eee05b0af032c3": {
+   "first_seen": "2026-10-21T18:56:18.925709+00:00",
+   "keyword": "exploit",
+   "repo": "picohook/akademik-platform",
+   "route": "cve"
+  },
   "382511d33cd98ff6": {
    "first_seen": "2026-09-08T04:41:55.647922+00:00",
    "keyword": "exploit",
@@ -2412,10 +2898,28 @@
    "repo": "AmpedWasTaken/BlueMoon-Windows-Exploit-Chain",
    "route": "tools"
   },
+  "38ce19176fc8f70a": {
+   "first_seen": "2026-10-21T18:56:18.925618+00:00",
+   "keyword": "CVE-2026",
+   "repo": "imsarah/php2shell-response-playbook",
+   "route": "cve"
+  },
   "3903e237426c9b3d": {
    "first_seen": "2026-09-13T01:44:14.165296+00:00",
    "keyword": "0day",
    "repo": "alicangnll/Spectra",
+   "route": "cve"
+  },
+  "39053c5a4e23219b": {
+   "first_seen": "2026-10-20T19:03:04.751938+00:00",
+   "keyword": "0day",
+   "repo": "LightYagami28/crxlauncher-threat-research",
+   "route": "cve"
+  },
+  "390b5a4cbce65ffb": {
+   "first_seen": "2026-10-21T18:56:18.925612+00:00",
+   "keyword": "CVE-2026",
+   "repo": "geevarghesekthomas84-sys/php-security-posture",
    "route": "cve"
   },
   "39163e859ef7cf3a": {
@@ -2447,6 +2951,12 @@
    "keyword": "exploit",
    "repo": "mikev-lab/eidolon",
    "route": "cve"
+  },
+  "39f3fbcdf72802a4": {
+   "first_seen": "2026-10-19T18:48:24.436900+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-84181",
+   "route": "tools"
   },
   "3a0d2aa66d9aa905": {
    "first_seen": "2026-09-14T01:43:33.540201+00:00",
@@ -2526,6 +3036,12 @@
    "repo": "Faceless0x7/CVE-2026-93453",
    "route": "leak"
   },
+  "3b61826f26a757f7": {
+   "first_seen": "2026-10-19T18:48:24.435790+00:00",
+   "keyword": "CVE-2026",
+   "repo": "StephenSook/reproof",
+   "route": "cve"
+  },
   "3b65e9eae360a9bb": {
    "first_seen": "2026-09-21T16:33:12.515521+00:00",
    "keyword": "CVE-2026",
@@ -2544,6 +3060,12 @@
    "repo": "shanukadulakshanaa-cmd/Devsecops-Nodegoat-Group",
    "route": "leak"
   },
+  "3b849f91bd9025c2": {
+   "first_seen": "2026-10-21T18:56:18.926065+00:00",
+   "keyword": "exploit",
+   "repo": "fahimalshihab/Browser-Exploitation",
+   "route": "tools"
+  },
   "3bad832c8bd3cb6d": {
    "first_seen": "2026-09-21T16:33:12.515677+00:00",
    "keyword": "exploit",
@@ -2561,6 +3083,12 @@
    "keyword": "exploit+credential",
    "repo": "MandingoMatt/cyberfjord-pentest-suite",
    "route": "leak"
+  },
+  "3bb6829848ed6595": {
+   "first_seen": "2026-10-21T18:56:18.925770+00:00",
+   "keyword": "exploit",
+   "repo": "0xMarcio/pocindex",
+   "route": "cve"
   },
   "3bbdb58287f9e783": {
    "first_seen": "2026-09-12T01:43:38.858847+00:00",
@@ -2598,6 +3126,12 @@
    "repo": "OppaAI/Aiko-Onmyoji",
    "route": "cve"
   },
+  "3bf99354a9ea340c": {
+   "first_seen": "2026-10-21T18:56:18.925675+00:00",
+   "keyword": "exploit",
+   "repo": "mejustbox-byte/CVE-2026-109618-CVE-2026-109619",
+   "route": "cve"
+  },
   "3c2925f3084c0fec": {
    "first_seen": "2026-09-23T16:40:27.681728+00:00",
    "keyword": "exploit",
@@ -2628,10 +3162,22 @@
    "repo": "whfhhgfh/Internal-Function-Atlas",
    "route": "cve"
   },
+  "3cd2cdd0d811a9b3": {
+   "first_seen": "2026-10-20T19:03:04.751802+00:00",
+   "keyword": "exploit",
+   "repo": "jmalfonsi/AGENT-L",
+   "route": "cve"
+  },
   "3ce6a26bdd3f451c": {
    "first_seen": "2026-10-04T16:45:51.422571+00:00",
    "keyword": "exploit",
    "repo": "deva-0909/super-seller-360",
+   "route": "cve"
+  },
+  "3ceacfeabdffa4bc": {
+   "first_seen": "2026-10-21T18:56:18.925563+00:00",
+   "keyword": "CVE-2026",
+   "repo": "imranulbari/php-security-update-helper",
    "route": "cve"
   },
   "3d753f5b435cd59b": {
@@ -2639,6 +3185,12 @@
    "keyword": "CVE-2026",
    "repo": "oferchen/rsync",
    "route": "cve"
+  },
+  "3e0c6561947c6373": {
+   "first_seen": "2026-10-19T18:48:24.437118+00:00",
+   "keyword": "exploit",
+   "repo": "pratapaher/ExploitX-CTF-Solver",
+   "route": "tools"
   },
   "3e753423d69e2b89": {
    "first_seen": "2026-09-08T04:41:55.647909+00:00",
@@ -2656,6 +3208,12 @@
    "first_seen": "2026-09-10T01:43:31.148900+00:00",
    "keyword": "0day",
    "repo": "mahmoudimus/feed",
+   "route": "cve"
+  },
+  "3ec080013fc70dab": {
+   "first_seen": "2026-10-21T18:56:18.925703+00:00",
+   "keyword": "exploit",
+   "repo": "chrisdfir/php2shell-detection",
    "route": "cve"
   },
   "3ec6dd85eb0dad79": {
@@ -2723,6 +3281,12 @@
    "keyword": "0day",
    "repo": "Ascend/MindSpeed-MM",
    "route": "cve"
+  },
+  "3f9ff125d479a3f8": {
+   "first_seen": "2026-10-21T18:56:18.926132+00:00",
+   "keyword": "exploit",
+   "repo": "jayy-hub1490/php2shell-detect-exploit-kit",
+   "route": "tools"
   },
   "3fc844fa085cf778": {
    "first_seen": "2026-09-08T04:38:54.641398+00:00",
@@ -2796,6 +3360,12 @@
    "repo": "2u1fuk4r/ReconX",
    "route": "cve"
   },
+  "40b852787c68c050": {
+   "first_seen": "2026-10-20T19:03:04.751773+00:00",
+   "keyword": "exploit",
+   "repo": "sakawatkabir13/Real-time-cyber-attack-monitoring-and-threat-intelligence-platform",
+   "route": "cve"
+  },
   "40bb0d7efff02f65": {
    "first_seen": "2026-10-03T16:59:12.037018+00:00",
    "keyword": "exploit",
@@ -2826,6 +3396,12 @@
    "repo": "Slxcky-1/Relapse-Exploit",
    "route": "tools"
   },
+  "415d928936a38886": {
+   "first_seen": "2026-10-21T18:56:18.925738+00:00",
+   "keyword": "exploit",
+   "repo": "onur-uyar-security/t1562-impair-defenses-detections",
+   "route": "cve"
+  },
   "417612663aad7fae": {
    "first_seen": "2026-09-29T16:42:59.122247+00:00",
    "keyword": "exploit",
@@ -2837,6 +3413,12 @@
    "keyword": "CVE-2026",
    "repo": "covepseng/cve-2026-102268-poc",
    "route": "cve"
+  },
+  "41b561742edba8d8": {
+   "first_seen": "2026-10-19T18:48:24.436805+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85251",
+   "route": "tools"
   },
   "41bd925d9aaa70d2": {
    "first_seen": "2026-10-02T16:49:09.248537+00:00",
@@ -2946,6 +3528,12 @@
    "repo": "lifeyou/Model-Inversion-Attacks-that-Exploit-Confidence-Information-and-Basic-Countermeasures",
    "route": "tools"
   },
+  "440ee95708f42c86": {
+   "first_seen": "2026-10-20T19:03:04.752261+00:00",
+   "keyword": "CVE-2026",
+   "repo": "01luyicheng/CVE-2026-99999-analysis",
+   "route": "tools"
+  },
   "4426fb8ad1019004": {
    "first_seen": "2026-09-23T16:40:27.681517+00:00",
    "keyword": "CVE-2026",
@@ -2957,6 +3545,12 @@
    "keyword": "CVE-2026",
    "repo": "JOGit91/sentinel",
    "route": "cve"
+  },
+  "448c162b58e192b9": {
+   "first_seen": "2026-10-21T18:56:18.926143+00:00",
+   "keyword": "exploit",
+   "repo": "xinguo1222pp/how-much-is-your-boss-exploiting-you",
+   "route": "tools"
   },
   "44a18ee2678def0c": {
    "first_seen": "2026-09-21T16:33:12.515663+00:00",
@@ -3084,6 +3678,12 @@
    "repo": "7megaumka7/FOSKiller",
    "route": "leak"
   },
+  "466dd6b5cef78f33": {
+   "first_seen": "2026-10-21T18:56:18.925528+00:00",
+   "keyword": "CVE-2026",
+   "repo": "chrisdfir/php2shell-detection",
+   "route": "cve"
+  },
   "467e50ccfb2d0926": {
    "first_seen": "2026-09-30T16:48:05.682354+00:00",
    "keyword": "exploit",
@@ -3124,6 +3724,12 @@
    "first_seen": "2026-09-15T01:43:41.474505+00:00",
    "keyword": "exploit",
    "repo": "Eswar5313/GraySentinel-DSOU-45Day-2026",
+   "route": "cve"
+  },
+  "4799025a3da2b53c": {
+   "first_seen": "2026-10-19T18:48:24.436692+00:00",
+   "keyword": "nuclei-template",
+   "repo": "26zl/cybersec-toolkit",
    "route": "cve"
   },
   "4810940179f7ef9e": {
@@ -3179,6 +3785,12 @@
    "keyword": "nuclei-template",
    "repo": "Squidyu/github-trending",
    "route": "cve"
+  },
+  "495aa550e94792c7": {
+   "first_seen": "2026-10-23T02:19:53.378212+00:00",
+   "keyword": "CVE-2026",
+   "repo": "SaiTeja-Erukude/CVE-2026-57845-hf-datasets-rce",
+   "route": "tools"
   },
   "4975330f6e2f596f": {
    "first_seen": "2026-10-04T16:45:51.422565+00:00",
@@ -3246,6 +3858,12 @@
    "repo": "freesurfer/petsurfer-bids",
    "route": "cve"
   },
+  "4a83265164eab635": {
+   "first_seen": "2026-10-19T18:48:24.436407+00:00",
+   "keyword": "0day",
+   "repo": "WeaveFTPd/WeaveFTPd",
+   "route": "cve"
+  },
   "4accd145bb6a7378": {
    "first_seen": "2026-09-08T04:38:54.641240+00:00",
    "keyword": "nuclei-template",
@@ -3262,6 +3880,18 @@
    "first_seen": "2026-09-17T01:43:14.320429+00:00",
    "keyword": "CVE-2026",
    "repo": "Tuhinzman/cloud-platform-reference",
+   "route": "cve"
+  },
+  "4b39e64f8c8e6dc1": {
+   "first_seen": "2026-10-21T18:56:18.925918+00:00",
+   "keyword": "CVE-2026",
+   "repo": "eness/php2shell-CVE-2026-109618-CVE-2026-109619-PoC",
+   "route": "tools"
+  },
+  "4b42126103201e38": {
+   "first_seen": "2026-10-20T19:03:04.751733+00:00",
+   "keyword": "exploit",
+   "repo": "Seed-001x/SEED-001x-Progress",
    "route": "cve"
   },
   "4b681b618e716a4e": {
@@ -3287,6 +3917,12 @@
    "keyword": "exploit",
    "repo": "noahfranklin/gideon",
    "route": "cve"
+  },
+  "4c46f28889531469": {
+   "first_seen": "2026-10-21T18:56:18.926049+00:00",
+   "keyword": "exploit",
+   "repo": "Yukeshj26/Exploitx",
+   "route": "tools"
   },
   "4cdedf34ad20ea85": {
    "first_seen": "2026-09-23T16:40:27.681772+00:00",
@@ -3347,6 +3983,12 @@
    "keyword": "nuclei-template",
    "repo": "angelikakasia/apache-nuclei-security-templates",
    "route": "tools"
+  },
+  "4e9448e992c64fed": {
+   "first_seen": "2026-10-21T18:56:18.925662+00:00",
+   "keyword": "exploit",
+   "repo": "abrar898/Index389",
+   "route": "cve"
   },
   "4eba48a5e7354f73": {
    "first_seen": "2026-09-26T16:48:22.839963+00:00",
@@ -3420,6 +4062,12 @@
    "repo": "puck-security/geiger-nuclei-templates",
    "route": "leak"
   },
+  "510491dd14e31823": {
+   "first_seen": "2026-10-19T18:48:24.444876+00:00",
+   "keyword": "exploit+secret",
+   "repo": "sifatnotes/Learn-SecByte-CTF-Labs-Collection-AI-Code-Security-SAST-Post-Exploitation-Analysis",
+   "route": "leak"
+  },
   "511fdc1a1e88484f": {
    "first_seen": "2026-09-26T16:48:22.839939+00:00",
    "keyword": "CVE-2026",
@@ -3430,6 +4078,12 @@
    "first_seen": "2026-09-08T04:38:54.641402+00:00",
    "keyword": "CVE-2026+credential",
    "repo": "CerberusMrXi/Flowise-CVE-2026-58057-exploit",
+   "route": "leak"
+  },
+  "51594774be745692": {
+   "first_seen": "2026-10-19T18:48:24.445441+00:00",
+   "keyword": "nuclei-template+password",
+   "repo": "MarcusProgram/manager-password-reset-302",
    "route": "leak"
   },
   "516d9c64cba9bfe4": {
@@ -3443,6 +4097,12 @@
    "keyword": "CVE-2026",
    "repo": "lukehebe/IBM-Langflow-CVE-2026-48519-poc",
    "route": "tools"
+  },
+  "51ddfffc339fa297": {
+   "first_seen": "2026-10-20T19:03:04.751853+00:00",
+   "keyword": "exploit",
+   "repo": "oto-now/oto-core",
+   "route": "cve"
   },
   "51f97a6624b561c9": {
    "first_seen": "2026-09-08T04:38:54.641330+00:00",
@@ -3486,6 +4146,12 @@
    "repo": "D7EAD/CVE-2026-102827",
    "route": "tools"
   },
+  "5275835cab5d81fe": {
+   "first_seen": "2026-10-19T18:48:24.435886+00:00",
+   "keyword": "CVE-2026",
+   "repo": "pduggusa/dugganusa-edge-shield",
+   "route": "cve"
+  },
   "5279caed39fd5a13": {
    "first_seen": "2026-09-18T01:43:53.757507+00:00",
    "keyword": "CVE-2026",
@@ -3503,6 +4169,12 @@
    "keyword": "CVE-2026+token",
    "repo": "murrez/CVE-2026-93399",
    "route": "leak"
+  },
+  "53121f2f5f7c7b44": {
+   "first_seen": "2026-10-19T18:48:24.435805+00:00",
+   "keyword": "CVE-2026",
+   "repo": "nsrg-fmlorg/kpatch-rocky-cve-2026-99999",
+   "route": "cve"
   },
   "5367f39e7a4541e9": {
    "first_seen": "2026-10-06T16:44:21.062880+00:00",
@@ -3552,6 +4224,12 @@
    "repo": "karollooool/CVE-2026-83991-writeup-and-poc",
    "route": "tools"
   },
+  "540a8b1bd182f3a7": {
+   "first_seen": "2026-10-19T18:48:24.435963+00:00",
+   "keyword": "exploit",
+   "repo": "SecPlusDev/verified-security-sweep",
+   "route": "cve"
+  },
   "544b585f5e0a1116": {
    "first_seen": "2026-09-12T01:43:38.859073+00:00",
    "keyword": "0day",
@@ -3569,6 +4247,18 @@
    "keyword": "exploit",
    "repo": "EarlySalty/Deadlock-Brain",
    "route": "cve"
+  },
+  "553371f337c01272": {
+   "first_seen": "2026-10-21T18:56:18.926002+00:00",
+   "keyword": "CVE-2026",
+   "repo": "AvaterXXX/CVE-2026-109618-CVE-2026-109619-",
+   "route": "tools"
+  },
+  "557334a28503f6da": {
+   "first_seen": "2026-10-20T19:03:04.752233+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85312",
+   "route": "tools"
   },
   "5576604a1ac0203e": {
    "first_seen": "2026-10-03T16:59:12.036976+00:00",
@@ -3648,6 +4338,12 @@
    "repo": "g17hubH4ck/CVE-2026-55781-poc",
    "route": "tools"
   },
+  "5731a69734fe7790": {
+   "first_seen": "2026-10-19T18:48:24.436829+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85247",
+   "route": "tools"
+  },
   "57470700a32e9509": {
    "first_seen": "2026-10-13T17:02:46.820755+00:00",
    "keyword": "nuclei-template",
@@ -3659,6 +4355,12 @@
    "keyword": "exploit",
    "repo": "aryancodesit/aryancodesit",
    "route": "cve"
+  },
+  "57698938f8dda8fb": {
+   "first_seen": "2026-10-19T18:48:24.444868+00:00",
+   "keyword": "exploit+secret",
+   "repo": "Asokydv-777/-Exploit-Patch-Secrets-Management",
+   "route": "leak"
   },
   "57ac95bdad181e39": {
    "first_seen": "2026-09-23T16:40:27.681693+00:00",
@@ -3717,7 +4419,7 @@
   "58e8c611db1ac8ac": {
    "first_seen": "2026-09-30T16:48:05.682427+00:00",
    "keyword": "nuclei-template",
-   "repo": "ilismal/cve-risk-analyzer",
+   "repo": "ilismal/cve-risk-REDACTED",
    "route": "cve"
   },
   "591a20d0aab7c5fc": {
@@ -3731,6 +4433,12 @@
    "keyword": "CVE-2026+credential",
    "repo": "MichaelAdamGroberman/CVE-2026-13768",
    "route": "leak"
+  },
+  "5939af5e86345a43": {
+   "first_seen": "2026-10-21T18:56:18.925744+00:00",
+   "keyword": "exploit",
+   "repo": "sarthax/FFXI-Mission-Toolkit",
+   "route": "cve"
   },
   "59f1ae63346253b7": {
    "first_seen": "2026-09-28T17:10:26.781927+00:00",
@@ -3816,6 +4524,12 @@
    "repo": "r00tVen0m/MariaDB-13.0.1-rce-No-CVE",
    "route": "cve"
   },
+  "5b5425840ea4d0e4": {
+   "first_seen": "2026-10-21T18:56:18.926091+00:00",
+   "keyword": "exploit",
+   "repo": "fg0x0/pia-web-exploitation-lab",
+   "route": "tools"
+  },
   "5b76f6bcdd4823ba": {
    "first_seen": "2026-09-23T16:40:27.681678+00:00",
    "keyword": "CVE-2026",
@@ -3882,6 +4596,12 @@
    "repo": "YashDahiwlikar914/BrokenVault",
    "route": "leak"
   },
+  "5d793d5f33eabcb5": {
+   "first_seen": "2026-10-19T18:48:24.437865+00:00",
+   "keyword": "CVE-2026+secret",
+   "repo": "oscerd/CVE-2026-78164",
+   "route": "leak"
+  },
   "5d9918952c906314": {
    "first_seen": "2026-09-08T04:38:54.641588+00:00",
    "keyword": "exploit+credential",
@@ -3941,6 +4661,12 @@
    "keyword": "exploit",
    "repo": "Automattic/jetpack-production",
    "route": "cve"
+  },
+  "5ef04bb9d0f599e2": {
+   "first_seen": "2026-10-21T18:56:18.926085+00:00",
+   "keyword": "exploit",
+   "repo": "Tim-xD/WebExploitSuggester",
+   "route": "tools"
   },
   "5f22393a2f5db50e": {
    "first_seen": "2026-09-23T16:40:27.681654+00:00",
@@ -4026,6 +4752,12 @@
    "repo": "cyberdudebivash/CYBERDUDEBIVASH-THREAT-INTEL-PLATFORM",
    "route": "cve"
   },
+  "60d936f3d53c1308": {
+   "first_seen": "2026-10-23T02:19:53.378205+00:00",
+   "keyword": "CVE-2026",
+   "repo": "pastelghost3/cve-2026-76504-nuclei",
+   "route": "tools"
+  },
   "60ed259ac37d7308": {
    "first_seen": "2026-09-19T01:45:28.984756+00:00",
    "keyword": "CVE-2026",
@@ -4068,11 +4800,23 @@
    "repo": "demining/Bit-flipping-attack-on-Wallet.dat",
    "route": "leak"
   },
+  "61a23006630ec8b0": {
+   "first_seen": "2026-10-20T19:03:04.752249+00:00",
+   "keyword": "CVE-2026",
+   "repo": "01luyicheng/CVE-2026-99999-exploit",
+   "route": "tools"
+  },
   "61f7da6ec34a9938": {
    "first_seen": "2026-09-21T16:33:12.515817+00:00",
    "keyword": "0day",
    "repo": "enhansome/enhansome-hacking-lists",
    "route": "cve"
+  },
+  "61ff58273c4080eb": {
+   "first_seen": "2026-10-21T18:56:18.926020+00:00",
+   "keyword": "CVE-2026",
+   "repo": "LeonelArrua/CVE-2026-109618_CVE-2026-109619_Mitigate",
+   "route": "tools"
   },
   "6201525b116aada9": {
    "first_seen": "2026-09-24T16:57:05.617386+00:00",
@@ -4092,11 +4836,29 @@
    "repo": "frangelbarrera/OSINT-BIBLE",
    "route": "cve"
   },
+  "62255ca8b733af8e": {
+   "first_seen": "2026-10-20T19:03:04.751966+00:00",
+   "keyword": "nuclei-template",
+   "repo": "rxerium/CISA-KEV",
+   "route": "cve"
+  },
+  "624e0f85c2232c2e": {
+   "first_seen": "2026-10-21T18:56:18.925578+00:00",
+   "keyword": "CVE-2026",
+   "repo": "5kr1pt/fix-to-php2shell",
+   "route": "cve"
+  },
   "629d9b37196dd0cf": {
    "first_seen": "2026-09-08T04:38:54.641727+00:00",
    "keyword": "0day+password",
    "repo": "0day-lakshman/Clipboard_Hijacker",
    "route": "leak"
+  },
+  "62a1b112ed5ed78c": {
+   "first_seen": "2026-10-23T02:19:53.378220+00:00",
+   "keyword": "exploit",
+   "repo": "luisgabryell587-alt/biel-exploits-menu",
+   "route": "tools"
   },
   "62a6a63db53b5efa": {
    "first_seen": "2026-09-15T01:43:41.474470+00:00",
@@ -4122,6 +4884,12 @@
    "repo": "mmoobbeeiidat-design/Hack-The-Box-Nexus-Findings-Report",
    "route": "leak"
   },
+  "630176f095557f3a": {
+   "first_seen": "2026-10-19T18:48:24.435893+00:00",
+   "keyword": "CVE-2026",
+   "repo": "pduggusa/dugganusa-cli",
+   "route": "cve"
+  },
   "6305a14201565c67": {
    "first_seen": "2026-09-15T01:43:41.474834+00:00",
    "keyword": "exploit",
@@ -4144,6 +4912,12 @@
    "first_seen": "2026-10-13T17:02:46.820576+00:00",
    "keyword": "exploit",
    "repo": "singhshreyash75-eng/The-Red-Team-Handbook",
+   "route": "cve"
+  },
+  "6395e125cee71717": {
+   "first_seen": "2026-10-19T18:48:24.435878+00:00",
+   "keyword": "CVE-2026",
+   "repo": "ZigZagBoi1/PS5-14.10-Research",
    "route": "cve"
   },
   "6398fadf8dc89a8d": {
@@ -4169,6 +4943,12 @@
    "keyword": "nuclei-template",
    "repo": "openctemio/sensor",
    "route": "cve"
+  },
+  "645160d3a1814d53": {
+   "first_seen": "2026-10-20T19:03:04.752352+00:00",
+   "keyword": "exploit",
+   "repo": "sifatnotes/Learn-SecByte-CTF-Labs-Collection-Active-Directory-PrivEsc-Post-Exploitation-Cloud-Sec",
+   "route": "tools"
   },
   "645c24eb3e4e08f2": {
    "first_seen": "2026-09-19T01:45:28.985046+00:00",
@@ -4206,10 +4986,22 @@
    "repo": "bao-jerry/LLM-Tamper-Detection",
    "route": "cve"
   },
+  "655daa30aa8180d4": {
+   "first_seen": "2026-10-19T18:48:24.437095+00:00",
+   "keyword": "exploit",
+   "repo": "Hemmy1417/ExploitGuard",
+   "route": "tools"
+  },
   "6562acb3f7309ace": {
    "first_seen": "2026-09-10T01:43:31.150087+00:00",
    "keyword": "exploit",
    "repo": "5h4d0wn1k/exploitcraft",
+   "route": "tools"
+  },
+  "65668f82835dd97d": {
+   "first_seen": "2026-10-20T19:03:04.752064+00:00",
+   "keyword": "CVE-2026",
+   "repo": "M0ud4/CVE-2026-105810",
    "route": "tools"
   },
   "659e8d8e64bee476": {
@@ -4223,6 +5015,12 @@
    "keyword": "exploit+token",
    "repo": "wxwreak/memchk",
    "route": "leak"
+  },
+  "660fbb446790856c": {
+   "first_seen": "2026-10-23T02:19:53.378006+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Scyrix-LLC/CVE-2026-109715",
+   "route": "tools"
   },
   "6618c6003b659f2c": {
    "first_seen": "2026-09-23T16:40:27.681674+00:00",
@@ -4296,11 +5094,23 @@
    "repo": "TheDarkknight2200/SunuRecolte",
    "route": "cve"
   },
+  "671357cca6bdeb69": {
+   "first_seen": "2026-10-19T18:48:24.444804+00:00",
+   "keyword": "exploit+password",
+   "repo": "murrez/CVE-2026-89079",
+   "route": "leak"
+  },
   "6745761f3f97fef1": {
    "first_seen": "2026-10-13T17:02:46.821821+00:00",
    "keyword": "exploit+token",
    "repo": "Cesusius/nvidia-overlay-exploit",
    "route": "leak"
+  },
+  "67523cebd0d99a88": {
+   "first_seen": "2026-10-21T18:56:18.925990+00:00",
+   "keyword": "CVE-2026",
+   "repo": "cloudducoeur/ansible-playbook-CVE-2026-109618",
+   "route": "tools"
   },
   "675c6de17951f506": {
    "first_seen": "2026-09-28T17:10:26.780806+00:00",
@@ -4344,6 +5154,12 @@
    "repo": "tk-ap/ledgato",
    "route": "cve"
   },
+  "67e2f7618740c0be": {
+   "first_seen": "2026-10-20T19:03:04.752326+00:00",
+   "keyword": "exploit",
+   "repo": "sifatnotes/Learn-SecByte-CTF-Labs-Collection-CMS-Security-Ivanti-VPN-Kernel-Exploits",
+   "route": "tools"
+  },
   "67fd81cc35639b26": {
    "first_seen": "2026-10-13T17:02:46.821313+00:00",
    "keyword": "CVE-2026",
@@ -4362,6 +5178,12 @@
    "repo": "samad162/Trustguard",
    "route": "cve"
   },
+  "6835600f7e0075bb": {
+   "first_seen": "2026-10-19T18:48:24.436613+00:00",
+   "keyword": "nuclei-template",
+   "repo": "Hellfire13666/rosieriot-overdrive-2026",
+   "route": "cve"
+  },
   "68696fe0a1d6f679": {
    "first_seen": "2026-09-28T17:10:26.781024+00:00",
    "keyword": "exploit",
@@ -4373,6 +5195,12 @@
    "keyword": "exploit+token",
    "repo": "cerberauth/jwtop",
    "route": "leak"
+  },
+  "68f3f478b830d369": {
+   "first_seen": "2026-10-21T18:56:18.925869+00:00",
+   "keyword": "nuclei-template",
+   "repo": "bangsmackpow/sitedig",
+   "route": "cve"
   },
   "6948416de2181c93": {
    "first_seen": "2026-09-10T01:43:31.148972+00:00",
@@ -4422,17 +5250,35 @@
    "repo": "dwisiswant0/nuclei-templates-dir",
    "route": "cve"
   },
+  "6a3e41f048fd925f": {
+   "first_seen": "2026-10-23T02:19:53.378192+00:00",
+   "keyword": "CVE-2026",
+   "repo": "santihabib/multer-CVE-2026-113872",
+   "route": "tools"
+  },
   "6a3f3b5f9b7792c5": {
    "first_seen": "2026-09-21T16:33:12.515622+00:00",
    "keyword": "CVE-2026",
    "repo": "1ndevelopment/ghostlock-s26",
    "route": "cve"
   },
+  "6a5c343fdb7fe549": {
+   "first_seen": "2026-10-20T19:03:04.752280+00:00",
+   "keyword": "exploit",
+   "repo": "Iniwura/exploit-arbiter",
+   "route": "tools"
+  },
   "6a9192b4b7806e83": {
    "first_seen": "2026-09-24T16:57:05.617566+00:00",
    "keyword": "exploit",
    "repo": "aloysiuspattath/splitbill",
    "route": "cve"
+  },
+  "6b22336848f9c2ae": {
+   "first_seen": "2026-10-21T18:56:18.926026+00:00",
+   "keyword": "CVE-2026",
+   "repo": "daffa001/php-CVE-2026-109618-CVE-2026-109619",
+   "route": "tools"
   },
   "6b432ab2b2ab87e4": {
    "first_seen": "2026-09-10T01:43:31.150107+00:00",
@@ -4452,6 +5298,18 @@
    "repo": "jashujeniya/SIEM-Threat-Detection-ELK",
    "route": "leak"
   },
+  "6b7465b754924166": {
+   "first_seen": "2026-10-19T18:48:24.436319+00:00",
+   "keyword": "exploit",
+   "repo": "reacher-z/Awesome-REA",
+   "route": "cve"
+  },
+  "6b7f25a1a52798f9": {
+   "first_seen": "2026-10-20T19:03:04.752120+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85300",
+   "route": "tools"
+  },
   "6b8cfa7fbc9d12eb": {
    "first_seen": "2026-10-03T16:59:12.037065+00:00",
    "keyword": "nuclei-template",
@@ -4463,6 +5321,12 @@
    "keyword": "exploit+password",
    "repo": "Mannemala-Bhaskar/apexplanet-task4-exploitation-system-security",
    "route": "leak"
+  },
+  "6bad94c45234aeca": {
+   "first_seen": "2026-10-19T18:48:24.436852+00:00",
+   "keyword": "CVE-2026",
+   "repo": "yakissa/CVE-2026-22747",
+   "route": "tools"
   },
   "6bc56e256cb6ccce": {
    "first_seen": "2026-09-24T16:57:05.619333+00:00",
@@ -4542,11 +5406,23 @@
    "repo": "swiftraccoon/simplestChat",
    "route": "cve"
   },
+  "6d63edae1b41bfd4": {
+   "first_seen": "2026-10-21T18:56:18.925955+00:00",
+   "keyword": "CVE-2026",
+   "repo": "WoYinDao/CVE-2026-109618-CVSS-9.2-Critical",
+   "route": "tools"
+  },
   "6d9da9853e890629": {
    "first_seen": "2026-09-15T01:43:41.474601+00:00",
    "keyword": "exploit",
    "repo": "sarvex/offensive-clean",
    "route": "cve"
+  },
+  "6daf7d50d062e6c6": {
+   "first_seen": "2026-10-20T19:03:04.752240+00:00",
+   "keyword": "CVE-2026",
+   "repo": "sqzer-x/cve-2026-99999-scanner",
+   "route": "tools"
   },
   "6db1357b4a162e69": {
    "first_seen": "2026-09-18T01:43:53.757575+00:00",
@@ -4571,6 +5447,12 @@
    "keyword": "CVE-2026",
    "repo": "Nebula-Consulting-Limited/CVE-2026-93616-PoC",
    "route": "tools"
+  },
+  "6e46c6a20387218b": {
+   "first_seen": "2026-10-19T18:48:24.436664+00:00",
+   "keyword": "nuclei-template",
+   "repo": "r4nd0mth1ngs/brainproxy",
+   "route": "cve"
   },
   "6e72bf46e2542ca1": {
    "first_seen": "2026-09-28T17:10:26.782054+00:00",
@@ -4602,6 +5484,12 @@
    "repo": "stefanhesselman/Nuclei-Template-Credential-Detection",
    "route": "leak"
   },
+  "6fe680bc7c01bfbb": {
+   "first_seen": "2026-10-19T18:48:24.436282+00:00",
+   "keyword": "exploit",
+   "repo": "sguzman/ocularium",
+   "route": "cve"
+  },
   "6ffcd3d5e973e12d": {
    "first_seen": "2026-09-10T01:43:31.148607+00:00",
    "keyword": "CVE-2026",
@@ -4619,6 +5507,12 @@
    "keyword": "exploit",
    "repo": "Sanjith1236/CVE-2026-8206-Kirki-Exploit-Analysis",
    "route": "tools"
+  },
+  "70c2e129fe1c8beb": {
+   "first_seen": "2026-10-20T19:03:04.751719+00:00",
+   "keyword": "exploit",
+   "repo": "subodhkc/common-repo-drive",
+   "route": "cve"
   },
   "70caefc9f93f5e48": {
    "first_seen": "2026-10-04T16:45:51.422559+00:00",
@@ -4643,6 +5537,12 @@
    "keyword": "CVE-2026",
    "repo": "alt3kx/alt3kx.github.io",
    "route": "cve"
+  },
+  "7103e24e8df27b66": {
+   "first_seen": "2026-10-20T19:03:04.752550+00:00",
+   "keyword": "CVE-2026+private-key",
+   "repo": "oscerd/CVE-2026-85300",
+   "route": "leak"
   },
   "7108021cabc12799": {
    "first_seen": "2026-10-03T16:59:12.037084+00:00",
@@ -4674,10 +5574,22 @@
    "repo": "fkie-cad/nvd-json-data-feeds",
    "route": "cve"
   },
+  "71c3b71a5d711c31": {
+   "first_seen": "2026-10-19T18:48:24.436218+00:00",
+   "keyword": "exploit",
+   "repo": "seguridadcero/nexora-shop",
+   "route": "cve"
+  },
   "71f68d6df889a072": {
    "first_seen": "2026-10-02T16:49:09.248316+00:00",
    "keyword": "0day",
    "repo": "Mel-SRK/My_config",
+   "route": "cve"
+  },
+  "720b6f13f0ea6135": {
+   "first_seen": "2026-10-20T19:03:04.751547+00:00",
+   "keyword": "CVE-2026",
+   "repo": "garcia-goncalves/dervs",
    "route": "cve"
   },
   "721aca912d32cd9c": {
@@ -4691,6 +5603,18 @@
    "keyword": "exploit+credential",
    "repo": "phantom-offensive/PhantomHarvest",
    "route": "leak"
+  },
+  "72815577f3093117": {
+   "first_seen": "2026-10-19T18:48:24.435844+00:00",
+   "keyword": "CVE-2026",
+   "repo": "randomcontainers/weasyprint",
+   "route": "cve"
+  },
+  "728a163802550a46": {
+   "first_seen": "2026-10-20T19:03:04.751605+00:00",
+   "keyword": "exploit",
+   "repo": "nikhillakra2007-tech/something",
+   "route": "cve"
   },
   "72d9dd2d692940ab": {
    "first_seen": "2026-09-23T16:40:27.681691+00:00",
@@ -4716,6 +5640,12 @@
    "repo": "KhitMinnyo/SocialHackAPI",
    "route": "cve"
   },
+  "738a8fc9becaccc9": {
+   "first_seen": "2026-10-20T19:03:04.751373+00:00",
+   "keyword": "CVE-2026",
+   "repo": "smashyalts/cve-scanner",
+   "route": "cve"
+  },
   "73bbe728fb02ab2c": {
    "first_seen": "2026-09-30T16:48:05.682266+00:00",
    "keyword": "CVE-2026",
@@ -4738,6 +5668,18 @@
    "first_seen": "2026-09-24T16:57:05.617497+00:00",
    "keyword": "CVE-2026",
    "repo": "WamboDNS/cve-reconstruction",
+   "route": "cve"
+  },
+  "744872e923690421": {
+   "first_seen": "2026-10-19T18:48:24.436360+00:00",
+   "keyword": "0day",
+   "repo": "hicann/cann-recipes-infer",
+   "route": "cve"
+  },
+  "744f42c40192038f": {
+   "first_seen": "2026-10-19T18:48:24.435977+00:00",
+   "keyword": "exploit",
+   "repo": "everestso/AI-Education",
    "route": "cve"
   },
   "7510289af2014556": {
@@ -4829,6 +5771,12 @@
    "keyword": "CVE-2026",
    "repo": "dtduc-git/mcplint",
    "route": "cve"
+  },
+  "7706c8dcdb6b66e5": {
+   "first_seen": "2026-10-21T18:56:18.926007+00:00",
+   "keyword": "CVE-2026",
+   "repo": "mejustbox-byte/CVE-2026-109618-CVE-2026-109619",
+   "route": "tools"
   },
   "771391ee26b5e13e": {
    "first_seen": "2026-09-11T01:43:52.416551+00:00",
@@ -4944,6 +5892,12 @@
    "repo": "Aitgray/Trending-Project-Recommendations",
    "route": "cve"
   },
+  "788e9afa28d1c894": {
+   "first_seen": "2026-10-21T18:56:18.925624+00:00",
+   "keyword": "CVE-2026",
+   "repo": "0xdeadbeefnetwork/PHP-HEAP-ASLR",
+   "route": "cve"
+  },
   "78979b36b9c74521": {
    "first_seen": "2026-09-12T01:43:38.858864+00:00",
    "keyword": "exploit",
@@ -4980,6 +5934,12 @@
    "repo": "Jee-Balangan/Jee-Balangan-MegaQuagga-Penetration-Test",
    "route": "leak"
   },
+  "78effb111ea89f9b": {
+   "first_seen": "2026-10-19T18:48:24.436986+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-84176",
+   "route": "tools"
+  },
   "78fa91884b404677": {
    "first_seen": "2026-09-29T16:42:59.122242+00:00",
    "keyword": "exploit",
@@ -4990,6 +5950,12 @@
    "first_seen": "2026-09-29T16:42:59.122238+00:00",
    "keyword": "CVE-2026",
    "repo": "vpxuser/CVE-2026-59310",
+   "route": "tools"
+  },
+  "7929062cd43d7491": {
+   "first_seen": "2026-10-21T18:56:18.926172+00:00",
+   "keyword": "nuclei-template",
+   "repo": "imbas007/nuclei_php2shell_template",
    "route": "tools"
   },
   "792ccd4c5eddec9d": {
@@ -5038,6 +6004,12 @@
    "first_seen": "2026-09-26T16:48:22.839853+00:00",
    "keyword": "exploit",
    "repo": "enhansome/enhansome-World-Simulator",
+   "route": "cve"
+  },
+  "7a066bc337e89a7f": {
+   "first_seen": "2026-10-21T18:56:18.925537+00:00",
+   "keyword": "CVE-2026",
+   "repo": "luivc1/php-vuln-responder",
    "route": "cve"
   },
   "7a0d7e388ed2cb06": {
@@ -5184,6 +6156,12 @@
    "repo": "giatient459-dotcom/GrimCompanion",
    "route": "cve"
   },
+  "7cf9d57b4f301cec": {
+   "first_seen": "2026-10-23T02:19:53.378803+00:00",
+   "keyword": "exploit+token",
+   "repo": "KingOfBugbounty/KingOfBugBountyTips",
+   "route": "leak"
+  },
   "7d11ce57eaef8b59": {
    "first_seen": "2026-09-26T16:48:22.839902+00:00",
    "keyword": "nuclei-template",
@@ -5232,6 +6210,12 @@
    "repo": "ChristalCain/Network-Security-Project",
    "route": "leak"
   },
+  "7dec359b8a3347e3": {
+   "first_seen": "2026-10-20T19:03:04.751846+00:00",
+   "keyword": "exploit",
+   "repo": "RaahulDhanasekaran/duo-connectivity-enabler",
+   "route": "cve"
+  },
   "7df7b975ffb29c5a": {
    "first_seen": "2026-09-23T16:40:27.681600+00:00",
    "keyword": "exploit",
@@ -5249,6 +6233,12 @@
    "keyword": "CVE-2026",
    "repo": "HORKimhab/CVE-2026-93485",
    "route": "tools"
+  },
+  "7e317bda3b81e83c": {
+   "first_seen": "2026-10-19T18:48:24.435917+00:00",
+   "keyword": "CVE-2026",
+   "repo": "randomcontainers/ffmpeg",
+   "route": "cve"
   },
   "7e60325befd1eff7": {
    "first_seen": "2026-09-08T04:38:54.641695+00:00",
@@ -5271,7 +6261,7 @@
   "7eaf4c88e7dab6d4": {
    "first_seen": "2026-09-08T04:38:54.641548+00:00",
    "keyword": "exploit+secret",
-   "repo": "satriak1/Enterprise-Auth-Security-Exploitation-Framework-Python-Flask-REST-API-JWT-and-SQLite-",
+   "repo": "satriak1/Enterprise-Auth-Security-Exploitation-Framework-Python-Flask-REDACTED",
    "route": "leak"
   },
   "7ed277fd3e97bee3": {
@@ -5308,6 +6298,12 @@
    "first_seen": "2026-09-08T04:38:54.641520+00:00",
    "keyword": "exploit+password",
    "repo": "kumarimanjusrimohantycse2024-art/Security-Enhancements-in-Python-Applications",
+   "route": "leak"
+  },
+  "7fe6664b8fddd486": {
+   "first_seen": "2026-10-19T18:48:24.444817+00:00",
+   "keyword": "exploit+password",
+   "repo": "Yazid-sec/Basic-Pentest-1",
    "route": "leak"
   },
   "7ffcb55d8d8e9cc0": {
@@ -5364,6 +6360,12 @@
    "repo": "sfewer-r7/CVE-2026-16232",
    "route": "leak"
   },
+  "818b6728aa7a30a5": {
+   "first_seen": "2026-10-20T19:03:04.752227+00:00",
+   "keyword": "CVE-2026",
+   "repo": "0xBlackash/CVE-2026-106173",
+   "route": "tools"
+  },
   "81b252d819a6751c": {
    "first_seen": "2026-09-08T04:38:54.641679+00:00",
    "keyword": "exploit+private-key",
@@ -5394,10 +6396,22 @@
    "repo": "coproduct-opensource/nucleus",
    "route": "cve"
   },
+  "826e843fb92d37b6": {
+   "first_seen": "2026-10-21T18:56:18.925716+00:00",
+   "keyword": "exploit",
+   "repo": "luivc1/php-vuln-responder",
+   "route": "cve"
+  },
   "826f6e0acae205d9": {
    "first_seen": "2026-09-29T16:42:59.122170+00:00",
    "keyword": "exploit",
    "repo": "glossycannon/Blox-Fruits-Mastery-Boss-Farm-Toolkit",
+   "route": "cve"
+  },
+  "8281a1c9ec670784": {
+   "first_seen": "2026-10-20T19:03:04.751974+00:00",
+   "keyword": "nuclei-template",
+   "repo": "TeamStarWolf/ATTACK-Navi",
    "route": "cve"
   },
   "8289458da5497efa": {
@@ -5442,10 +6456,22 @@
    "repo": "Nxploited/CVE-2026-96451",
    "route": "tools"
   },
+  "82e978ec5c29a59d": {
+   "first_seen": "2026-10-20T19:03:04.752346+00:00",
+   "keyword": "exploit",
+   "repo": "sifatnotes/Learn-SecByte-CTF-Labs-Collection-AI-Exploit-Dev-SOC-Automation-Detection-Engineering",
+   "route": "tools"
+  },
   "82f2976246dfec7f": {
    "first_seen": "2026-09-23T16:40:27.681559+00:00",
    "keyword": "CVE-2026",
    "repo": "matorolll/SOC-learing",
+   "route": "cve"
+  },
+  "8323958827dfc569": {
+   "first_seen": "2026-10-21T18:56:18.925817+00:00",
+   "keyword": "0day",
+   "repo": "zrf-rocket/openEDR",
    "route": "cve"
   },
   "834f093128a84894": {
@@ -5464,6 +6490,12 @@
    "first_seen": "2026-09-23T16:40:27.681717+00:00",
    "keyword": "exploit",
    "repo": "Salmak2003/SQL-Injection-Exploitation-Lab",
+   "route": "tools"
+  },
+  "842d0edcc5a4f19c": {
+   "first_seen": "2026-10-21T18:56:18.926108+00:00",
+   "keyword": "exploit",
+   "repo": "keodanic/web-sec-labs-and-exploits",
    "route": "tools"
   },
   "846b8c7abe30b62a": {
@@ -5550,6 +6582,18 @@
    "repo": "AnmolCEO123/soc-llm-guard",
    "route": "leak"
   },
+  "860a4aa4332184e2": {
+   "first_seen": "2026-10-19T18:48:24.437107+00:00",
+   "keyword": "exploit",
+   "repo": "Exploit-IQ/Exploit-IQ",
+   "route": "tools"
+  },
+  "862c34199749c42d": {
+   "first_seen": "2026-10-19T18:48:24.435756+00:00",
+   "keyword": "CVE-2026",
+   "repo": "vanditabyaa09/book-tracker-devops",
+   "route": "cve"
+  },
   "868b6675be105859": {
    "first_seen": "2026-09-30T16:48:05.682326+00:00",
    "keyword": "exploit",
@@ -5585,6 +6629,12 @@
    "keyword": "CVE-2026",
    "repo": "Ubaidullah05/PAS",
    "route": "cve"
+  },
+  "870a58f2643b418b": {
+   "first_seen": "2026-10-19T18:48:24.437215+00:00",
+   "keyword": "exploit",
+   "repo": "Prabhanjanvishwakarma/Exploits-Python-Host-Bot",
+   "route": "tools"
   },
   "87766a8ed0f29b1a": {
    "first_seen": "2026-10-02T16:49:09.248522+00:00",
@@ -5634,10 +6684,22 @@
    "repo": "Samuteg/Gofence",
    "route": "cve"
   },
+  "8845b1f97bb1bc70": {
+   "first_seen": "2026-10-19T18:48:24.445123+00:00",
+   "keyword": "exploit+token",
+   "repo": "sifatnotes/Learn-SecByte-CTF-Labs-Collection-AI-Assisted-Cloud-Security-API-Security-Assessment",
+   "route": "leak"
+  },
   "88576b712535c23d": {
    "first_seen": "2026-09-29T16:42:59.122225+00:00",
    "keyword": "CVE-2026",
    "repo": "BomboBombone/CVE-2026-96875",
+   "route": "tools"
+  },
+  "885a124fdb4a578c": {
+   "first_seen": "2026-10-21T18:56:18.926038+00:00",
+   "keyword": "exploit",
+   "repo": "junaire/CVE-2026-109618-exploit",
    "route": "tools"
   },
   "887313b33cdcaa65": {
@@ -5681,6 +6743,12 @@
    "keyword": "CVE-2026+password",
    "repo": "ErikDervishi03/CVE-2026-31024",
    "route": "leak"
+  },
+  "8922e8b39b1aaef6": {
+   "first_seen": "2026-10-21T18:56:18.925888+00:00",
+   "keyword": "nuclei-template",
+   "repo": "FacundesPedro/Wordpress-Recon-Tool",
+   "route": "cve"
   },
   "89a8e21a8c734bea": {
    "first_seen": "2026-10-03T16:59:12.036961+00:00",
@@ -5730,6 +6798,12 @@
    "repo": "JeanTaniban/Auto-DeepSeek",
    "route": "cve"
   },
+  "8a46bb4fbfeb98ac": {
+   "first_seen": "2026-10-23T02:19:53.378149+00:00",
+   "keyword": "CVE-2026",
+   "repo": "MsBodyBuilding/CVE-2026-109715",
+   "route": "tools"
+  },
   "8a4daa14aa1fe93a": {
    "first_seen": "2026-09-13T01:44:14.165315+00:00",
    "keyword": "nuclei-template",
@@ -5772,6 +6846,12 @@
    "repo": "assmaalibakir/foodtrack-groupe-d",
    "route": "cve"
   },
+  "8b1c50bf74b34ee4": {
+   "first_seen": "2026-10-23T02:19:53.378513+00:00",
+   "keyword": "CVE-2026+private-key",
+   "repo": "BlackthornYugen/tiny-key-s-server",
+   "route": "leak"
+  },
   "8b3cd9474fe3b260": {
    "first_seen": "2026-09-09T01:55:53.036179+00:00",
    "keyword": "0day",
@@ -5808,6 +6888,12 @@
    "repo": "botcanlearn/torchtitan-npu-upstream",
    "route": "cve"
   },
+  "8bd0b17d8a3bf1cc": {
+   "first_seen": "2026-10-21T18:56:18.925805+00:00",
+   "keyword": "0day",
+   "repo": "sanjibdevnathlabs/sanjibdevnathlabs",
+   "route": "cve"
+  },
   "8bda7d519ff50119": {
    "first_seen": "2026-10-06T16:44:21.062684+00:00",
    "keyword": "exploit",
@@ -5837,6 +6923,12 @@
    "keyword": "CVE-2026",
    "repo": "D7EAD/CVE-2026-86086",
    "route": "tools"
+  },
+  "8c1bd8965a9adb3b": {
+   "first_seen": "2026-10-21T18:56:18.926295+00:00",
+   "keyword": "CVE-2026+token",
+   "repo": "oscerd/CVE-2026-85317",
+   "route": "leak"
   },
   "8c2c34b5d04b9d18": {
    "first_seen": "2026-09-21T16:33:12.515584+00:00",
@@ -6072,6 +7164,12 @@
    "repo": "paul-fajfrowski/Partant",
    "route": "cve"
   },
+  "90a2808073753464": {
+   "first_seen": "2026-10-19T18:48:24.445112+00:00",
+   "keyword": "exploit+token",
+   "repo": "BrokenPorkMachine/cve-exploit-verification-portal",
+   "route": "leak"
+  },
   "90c00a6fff359d89": {
    "first_seen": "2026-09-21T16:33:12.515598+00:00",
    "keyword": "CVE-2026",
@@ -6125,6 +7223,12 @@
    "keyword": "exploit",
    "repo": "Nathan-NLB/vie-watcher",
    "route": "cve"
+  },
+  "91ff4f249a584f2f": {
+   "first_seen": "2026-10-20T19:03:04.752339+00:00",
+   "keyword": "exploit",
+   "repo": "sifatnotes/Learn-SecByte-CTF-Labs-Collection-Enterprise-CVE-Exploits-Windows-Linux-Core-Networking",
+   "route": "tools"
   },
   "9241fc2e33e0e3d4": {
    "first_seen": "2026-09-08T04:38:54.641600+00:00",
@@ -6252,6 +7356,12 @@
    "repo": "ajauch/whiterabbit",
    "route": "cve"
   },
+  "94ae745babe001ae": {
+   "first_seen": "2026-10-19T18:48:24.436758+00:00",
+   "keyword": "nuclei-template",
+   "repo": "oyesanyf/rfchunt",
+   "route": "cve"
+  },
   "94f4391955c2450d": {
    "first_seen": "2026-09-13T01:44:14.165203+00:00",
    "keyword": "exploit",
@@ -6335,6 +7445,12 @@
    "keyword": "exploit",
    "repo": "TurlaFSB/ASM-",
    "route": "cve"
+  },
+  "96bce470d024937e": {
+   "first_seen": "2026-10-21T18:56:18.926071+00:00",
+   "keyword": "exploit",
+   "repo": "finngerrekens236/explore-exploit-webots",
+   "route": "tools"
   },
   "96cc574c1bb17393": {
    "first_seen": "2026-09-21T16:33:12.515807+00:00",
@@ -6492,6 +7608,18 @@
    "repo": "qatration/qatration",
    "route": "cve"
   },
+  "993f5e3f99ecca5f": {
+   "first_seen": "2026-10-21T18:56:18.925936+00:00",
+   "keyword": "CVE-2026",
+   "repo": "0x4148/CVE-2026-109618-php2shell-lab",
+   "route": "tools"
+  },
+  "99660b9efc2c4244": {
+   "first_seen": "2026-10-23T02:19:53.378449+00:00",
+   "keyword": "CVE-2026+token",
+   "repo": "basesixtythree/B63-POC-CVE-2026-96652",
+   "route": "leak"
+  },
   "9972c35c609fbe88": {
    "first_seen": "2026-10-06T16:44:21.063038+00:00",
    "keyword": "exploit",
@@ -6588,6 +7716,12 @@
    "repo": "enhansome/enhansome-bugbounty-tools",
    "route": "cve"
   },
+  "9bcad14581233a7b": {
+   "first_seen": "2026-10-19T18:48:24.437072+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85243",
+   "route": "tools"
+  },
   "9bcd30fe02c1a9fe": {
    "first_seen": "2026-09-28T17:10:26.780983+00:00",
    "keyword": "exploit",
@@ -6599,6 +7733,12 @@
    "keyword": "exploit",
    "repo": "noteflowai/pai-design-workbench",
    "route": "cve"
+  },
+  "9c0d46e0f5fbf26e": {
+   "first_seen": "2026-10-21T18:56:18.926432+00:00",
+   "keyword": "exploit+credential",
+   "repo": "dntaskmehow/MEGALODON",
+   "route": "leak"
   },
   "9c184cd1f72c3f6d": {
    "first_seen": "2026-09-26T16:48:22.839894+00:00",
@@ -6653,6 +7793,12 @@
    "keyword": "exploit",
    "repo": "MatheusAgueda/MatheusAgueda",
    "route": "cve"
+  },
+  "9da270364888c62d": {
+   "first_seen": "2026-10-20T19:03:04.752299+00:00",
+   "keyword": "exploit",
+   "repo": "01luyicheng/CVE-2026-99999-exploit",
+   "route": "tools"
   },
   "9e1033b0340e793c": {
    "first_seen": "2026-10-02T16:49:09.248260+00:00",
@@ -6756,10 +7902,22 @@
    "repo": "pochunter/POC-EXPLOIT-CVE-2026-104711",
    "route": "tools"
   },
+  "9fcd4e9b6bac1f49": {
+   "first_seen": "2026-10-19T18:48:24.444244+00:00",
+   "keyword": "CVE-2026+credential",
+   "repo": "oscerd/CVE-2026-85251",
+   "route": "leak"
+  },
   "9fd793491175ba9d": {
    "first_seen": "2026-10-02T16:49:09.248434+00:00",
    "keyword": "nuclei-template",
    "repo": "Ti-hub668/SentinelAgent",
+   "route": "cve"
+  },
+  "9fd931ca770e858f": {
+   "first_seen": "2026-10-20T19:03:04.751888+00:00",
+   "keyword": "0day",
+   "repo": "Atlas-Ascend-Fork/cann-recipes-train",
    "route": "cve"
   },
   "a00d26c714f1abb2": {
@@ -6772,6 +7930,12 @@
    "first_seen": "2026-10-06T16:44:21.063079+00:00",
    "keyword": "exploit",
    "repo": "bsnl41249-ui/shadan-exploits-tempmail",
+   "route": "tools"
+  },
+  "a056ecd128054af7": {
+   "first_seen": "2026-10-19T18:48:24.436911+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85249",
    "route": "tools"
   },
   "a0b7ab08e35891d4": {
@@ -6852,6 +8016,12 @@
    "repo": "randombit/whats-my-name",
    "route": "cve"
   },
+  "a26980de7d2e2224": {
+   "first_seen": "2026-10-19T18:48:24.436175+00:00",
+   "keyword": "exploit",
+   "repo": "ccomkhj/skills",
+   "route": "cve"
+  },
   "a273b8c26abda340": {
    "first_seen": "2026-10-13T17:02:46.821246+00:00",
    "keyword": "CVE-2026",
@@ -6882,6 +8052,12 @@
    "repo": "nikrinksky/order-platform",
    "route": "cve"
   },
+  "a300736931ade5cb": {
+   "first_seen": "2026-10-19T18:48:24.444909+00:00",
+   "keyword": "exploit+secret",
+   "repo": "Jem0ris/dvwa-devsecops-pipeline",
+   "route": "leak"
+  },
   "a336e93dcd6f59e3": {
    "first_seen": "2026-09-28T17:10:26.781921+00:00",
    "keyword": "exploit",
@@ -6898,6 +8074,12 @@
    "first_seen": "2026-09-28T17:10:26.781967+00:00",
    "keyword": "exploit",
    "repo": "vrilz-bot-exploit/vrilzhub",
+   "route": "tools"
+  },
+  "a38beb99e33e0d44": {
+   "first_seen": "2026-10-20T19:03:04.752143+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85301",
    "route": "tools"
   },
   "a390bb65cfece28d": {
@@ -6978,6 +8160,12 @@
    "repo": "Krish-Chp/COST--SHIELD",
    "route": "leak"
   },
+  "a5b926d9d0ef70f3": {
+   "first_seen": "2026-10-21T18:56:18.926166+00:00",
+   "keyword": "nuclei-template",
+   "repo": "llt228/nucleic-acids-research-template",
+   "route": "tools"
+  },
   "a5e7dff68003e014": {
    "first_seen": "2026-09-17T01:43:14.320656+00:00",
    "keyword": "exploit",
@@ -7018,6 +8206,12 @@
    "first_seen": "2026-09-24T16:57:05.619179+00:00",
    "keyword": "exploit",
    "repo": "ThanDangS/DOM-BASED-XSS-EXPLOIT",
+   "route": "tools"
+  },
+  "a6e0506362defc79": {
+   "first_seen": "2026-10-20T19:03:04.752317+00:00",
+   "keyword": "exploit",
+   "repo": "Exploit-with-Harish/Click-Jacking",
    "route": "tools"
   },
   "a6fb81a485cfc33c": {
@@ -7086,6 +8280,12 @@
    "repo": "George0Papasotiriou/CVE-2026-21008-Kubernetes-Service-Account-Token-Mounted-in-HostPath",
    "route": "leak"
   },
+  "a894d0788425b455": {
+   "first_seen": "2026-10-21T18:56:18.925694+00:00",
+   "keyword": "exploit",
+   "repo": "zenneyy/zen-ai",
+   "route": "cve"
+  },
   "a89805d57a88328b": {
    "first_seen": "2026-09-08T04:41:55.647901+00:00",
    "keyword": "exploit",
@@ -7108,6 +8308,18 @@
    "first_seen": "2026-09-26T16:48:22.839957+00:00",
    "keyword": "CVE-2026",
    "repo": "rahulreddykarne/CVE-2026-65320-fastcore",
+   "route": "tools"
+  },
+  "a8bd7a9fe67573ea": {
+   "first_seen": "2026-10-21T18:56:18.925644+00:00",
+   "keyword": "CVE-2026",
+   "repo": "WoYinDao/CVE-2026-109618-CVSS-9.2-Critical",
+   "route": "cve"
+  },
+  "a8c211d7bda3efa0": {
+   "first_seen": "2026-10-20T19:03:04.752255+00:00",
+   "keyword": "CVE-2026",
+   "repo": "OFRPurpose/poc-cve-2026-64638",
    "route": "tools"
   },
   "a8cef83267258d63": {
@@ -7181,6 +8393,12 @@
    "keyword": "nuclei-template",
    "repo": "Sainathkeesara/DevSecOps-Kit",
    "route": "cve"
+  },
+  "aa90be6e1abf0726": {
+   "first_seen": "2026-10-19T18:48:24.437316+00:00",
+   "keyword": "CVE-2026+password",
+   "repo": "Primandito/CVE-2026-107081",
+   "route": "leak"
   },
   "aa933534252b0857": {
    "first_seen": "2026-09-28T17:10:26.781876+00:00",
@@ -7296,6 +8514,12 @@
    "repo": "arbadacarbaYK/gittr-mcp",
    "route": "cve"
   },
+  "acdda0ab367c1907": {
+   "first_seen": "2026-10-20T19:03:04.752024+00:00",
+   "keyword": "nuclei-template",
+   "repo": "enhansome/enhansome-WebHackersWeapons",
+   "route": "cve"
+  },
   "acf9263c497bb87b": {
    "first_seen": "2026-10-04T16:45:51.422729+00:00",
    "keyword": "CVE-2026",
@@ -7338,6 +8562,12 @@
    "repo": "naufalazhar65/AI-ASSISTANT",
    "route": "cve"
   },
+  "ada6b610e3819b60": {
+   "first_seen": "2026-10-19T18:48:24.435991+00:00",
+   "keyword": "exploit",
+   "repo": "Jonsueppel/Jonsueppel",
+   "route": "cve"
+  },
   "ae0b49b27b1f973f": {
    "first_seen": "2026-10-03T16:59:12.037021+00:00",
    "keyword": "exploit",
@@ -7355,6 +8585,12 @@
    "keyword": "CVE-2026+token",
    "repo": "abraxas/cve-2026-105221-gist-tls",
    "route": "leak"
+  },
+  "ae5ae303aae5e23d": {
+   "first_seen": "2026-10-20T19:03:04.751569+00:00",
+   "keyword": "CVE-2026",
+   "repo": "aminshil/devsecmlops-pfe",
+   "route": "cve"
   },
   "ae67c11907ff9913": {
    "first_seen": "2026-09-21T16:33:12.515685+00:00",
@@ -7374,11 +8610,29 @@
    "repo": "XandaoTP/exploit",
    "route": "tools"
   },
+  "aed7e7a52ac9c6bf": {
+   "first_seen": "2026-10-23T02:19:53.378176+00:00",
+   "keyword": "CVE-2026",
+   "repo": "quanlevan1207/cve-2026-34717-exploit",
+   "route": "tools"
+  },
   "aeea944523324acc": {
    "first_seen": "2026-09-14T01:43:33.540095+00:00",
    "keyword": "CVE-2026",
    "repo": "Liverwortenuresis371/copyfail-rs",
    "route": "cve"
+  },
+  "aeee7edf50e18b0c": {
+   "first_seen": "2026-10-20T19:03:04.752126+00:00",
+   "keyword": "CVE-2026",
+   "repo": "horizon3ai/CVE-2026-106173",
+   "route": "tools"
+  },
+  "af05006243bebc23": {
+   "first_seen": "2026-10-21T18:56:18.926478+00:00",
+   "keyword": "exploit+token",
+   "repo": "BrokenPorkMachine/PortalGun",
+   "route": "leak"
   },
   "af15eb553665e9ff": {
    "first_seen": "2026-09-19T01:45:28.984873+00:00",
@@ -7446,6 +8700,12 @@
    "repo": "firstdollarhq/sports-edge-lab",
    "route": "cve"
   },
+  "b01efa0f74291e53": {
+   "first_seen": "2026-10-19T18:48:24.436720+00:00",
+   "keyword": "nuclei-template",
+   "repo": "c1ayooo/4zrec",
+   "route": "cve"
+  },
   "b04e35e0d07512b9": {
    "first_seen": "2026-09-17T10:18:33.256306+00:00",
    "keyword": "exploit",
@@ -7462,6 +8722,12 @@
    "first_seen": "2026-09-08T04:38:54.641234+00:00",
    "keyword": "0day",
    "repo": "enhansome/enhansome-web-hacking",
+   "route": "cve"
+  },
+  "b09a2c9ecacf05bb": {
+   "first_seen": "2026-10-19T18:48:24.435944+00:00",
+   "keyword": "exploit",
+   "repo": "ConniptionFit/Ultimyr",
    "route": "cve"
   },
   "b0a20f59218250f3": {
@@ -7482,10 +8748,28 @@
    "repo": "covepseng/cve-2026-49352-poc",
    "route": "leak"
   },
+  "b0ee8e05ba25ceb8": {
+   "first_seen": "2026-10-21T18:56:18.925656+00:00",
+   "keyword": "exploit",
+   "repo": "Roman-Cuisset/miccamwatch",
+   "route": "cve"
+  },
   "b1032aeae27ea4cf": {
    "first_seen": "2026-09-17T01:43:14.320666+00:00",
    "keyword": "0day",
    "repo": "p1temax/Fishing-Platform",
+   "route": "cve"
+  },
+  "b188c3bccfda1a8f": {
+   "first_seen": "2026-10-20T19:03:04.752131+00:00",
+   "keyword": "CVE-2026",
+   "repo": "xiaobai718-ab/CVE-2026-105484",
+   "route": "tools"
+  },
+  "b1ab46e13df282b1": {
+   "first_seen": "2026-10-20T19:03:04.751945+00:00",
+   "keyword": "0day",
+   "repo": "mujtbabbas/the-book-of-secret-knowledge",
    "route": "cve"
   },
   "b1d10fb35cd5b901": {
@@ -7542,6 +8826,12 @@
    "repo": "t-hermanns/coercer",
    "route": "leak"
   },
+  "b331011735e837bf": {
+   "first_seen": "2026-10-19T18:48:24.437227+00:00",
+   "keyword": "exploit",
+   "repo": "yassinber/TP-SYSTEMES-D-EXPLOITION",
+   "route": "tools"
+  },
   "b355314a51b0d494": {
    "first_seen": "2026-09-10T01:43:31.148782+00:00",
    "keyword": "exploit",
@@ -7583,6 +8873,12 @@
    "keyword": "CVE-2026",
    "repo": "TheBoscoClub/Audiobook-Manager",
    "route": "cve"
+  },
+  "b3dc4f69b5c59616": {
+   "first_seen": "2026-10-20T19:03:04.752379+00:00",
+   "keyword": "0day",
+   "repo": "0day-1s/cdm-training-website",
+   "route": "tools"
   },
   "b3f8fff9b0820aa6": {
    "first_seen": "2026-09-08T04:38:54.641249+00:00",
@@ -7626,6 +8922,24 @@
    "repo": "murrez/CVE-2026-100752",
    "route": "tools"
   },
+  "b4bfb81a86a6c3fa": {
+   "first_seen": "2026-10-23T02:19:53.378235+00:00",
+   "keyword": "exploit",
+   "repo": "quanlevan1207/cve-2026-34717-exploit",
+   "route": "tools"
+  },
+  "b4dca3667c3464a5": {
+   "first_seen": "2026-10-19T18:48:24.436840+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-83531",
+   "route": "tools"
+  },
+  "b4e04cb43127a90b": {
+   "first_seen": "2026-10-19T18:48:24.435835+00:00",
+   "keyword": "CVE-2026",
+   "repo": "pduggusa/dugganusa-vscode",
+   "route": "cve"
+  },
   "b531bafc4bf945bb": {
    "first_seen": "2026-09-28T17:10:26.781210+00:00",
    "keyword": "exploit",
@@ -7637,6 +8951,18 @@
    "keyword": "exploit",
    "repo": "pewpew009/pewpew",
    "route": "cve"
+  },
+  "b53f975f8bc60c73": {
+   "first_seen": "2026-10-19T18:48:24.437251+00:00",
+   "keyword": "exploit",
+   "repo": "ant-oniazras0m-uck/SmmExploit-tandasat.go",
+   "route": "tools"
+  },
+  "b55d4520bc837b03": {
+   "first_seen": "2026-10-21T18:56:18.925972+00:00",
+   "keyword": "CVE-2026",
+   "repo": "slabbdev/php2shell-cve-2026-109618-109619",
+   "route": "tools"
   },
   "b567d95080c95b4c": {
    "first_seen": "2026-09-10T01:43:31.148843+00:00",
@@ -7702,6 +9028,12 @@
    "first_seen": "2026-09-11T01:43:52.415760+00:00",
    "keyword": "CVE-2026",
    "repo": "barmi/cve-patch-auditor",
+   "route": "cve"
+  },
+  "b7ca27a57ba325ee": {
+   "first_seen": "2026-10-21T18:56:18.925897+00:00",
+   "keyword": "nuclei-template",
+   "repo": "swoodby/php2shell",
    "route": "cve"
   },
   "b7cf271eae81d957": {
@@ -7806,6 +9138,12 @@
    "repo": "hamzashwater/Betcco",
    "route": "cve"
   },
+  "b917c46d2e6a1459": {
+   "first_seen": "2026-10-19T18:48:24.436793+00:00",
+   "keyword": "CVE-2026",
+   "repo": "gandli/CVE-2026-99999-pwnescape",
+   "route": "tools"
+  },
   "b920a87866e950af": {
    "first_seen": "2026-09-29T16:42:59.122259+00:00",
    "keyword": "exploit",
@@ -7858,6 +9196,12 @@
    "first_seen": "2026-09-18T01:43:53.758276+00:00",
    "keyword": "exploit",
    "repo": "jsboige/CoursIA",
+   "route": "cve"
+  },
+  "ba78d403b2edaaf4": {
+   "first_seen": "2026-10-20T19:03:04.751585+00:00",
+   "keyword": "CVE-2026",
+   "repo": "uptick-dev/bundler-audit-findings",
    "route": "cve"
   },
   "ba7dfc4799444635": {
@@ -7932,6 +9276,12 @@
    "repo": "ingo-eichhorst/factory",
    "route": "cve"
   },
+  "bbf87616b9aaa8e7": {
+   "first_seen": "2026-10-20T19:03:04.751872+00:00",
+   "keyword": "0day",
+   "repo": "superDMS/HsFreezer-Hidden-in-the-snow-",
+   "route": "cve"
+  },
   "bc0918b34533fea3": {
    "first_seen": "2026-10-04T16:45:51.422654+00:00",
    "keyword": "0day",
@@ -7962,6 +9312,12 @@
    "repo": "wardcrazy01894/TeeTimeBooker",
    "route": "cve"
   },
+  "bcb69fca82ce6e9e": {
+   "first_seen": "2026-10-21T18:56:18.926120+00:00",
+   "keyword": "exploit",
+   "repo": "jacobxspace-max/web3-security-exploit-auditor",
+   "route": "tools"
+  },
   "bcc9f5b718b59106": {
    "first_seen": "2026-09-08T04:38:54.641160+00:00",
    "keyword": "exploit",
@@ -7978,6 +9334,12 @@
    "first_seen": "2026-09-17T01:43:14.320784+00:00",
    "keyword": "nuclei-template",
    "repo": "Rifteo/skills",
+   "route": "cve"
+  },
+  "bd319abb631dd52a": {
+   "first_seen": "2026-10-21T18:56:18.925902+00:00",
+   "keyword": "nuclei-template",
+   "repo": "Aryma-f4/gulpsuite",
    "route": "cve"
   },
   "bd4003e8843eda10": {
@@ -8016,10 +9378,22 @@
    "repo": "murrez/CVE-2026-100721",
    "route": "tools"
   },
+  "be6ae4b8fe971b4e": {
+   "first_seen": "2026-10-19T18:48:24.435774+00:00",
+   "keyword": "CVE-2026",
+   "repo": "ibondarenko1/ibondarenko1",
+   "route": "cve"
+  },
   "be6b2b1155c5097f": {
    "first_seen": "2026-09-29T16:42:59.122213+00:00",
    "keyword": "CVE-2026",
    "repo": "MRdark-ops/CVE-2026-8065",
+   "route": "tools"
+  },
+  "be7856d0bd8ebdcd": {
+   "first_seen": "2026-10-19T18:48:24.437157+00:00",
+   "keyword": "exploit",
+   "repo": "LochanSharmaa/llm-exploitlab",
    "route": "tools"
   },
   "be9ddcd32d92169a": {
@@ -8100,6 +9474,12 @@
    "repo": "kojoedem/Dadiwo",
    "route": "cve"
   },
+  "c058f15b95b76e6a": {
+   "first_seen": "2026-10-20T19:03:04.752047+00:00",
+   "keyword": "nuclei-template",
+   "repo": "OuissemBrs/AutoPenTest",
+   "route": "cve"
+  },
   "c05949c3cc2b1bbe": {
    "first_seen": "2026-09-29T16:42:59.122209+00:00",
    "keyword": "CVE-2026",
@@ -8117,6 +9497,12 @@
    "keyword": "exploit+secret",
    "repo": "aalborz/AWS-Security-Assessor",
    "route": "leak"
+  },
+  "c0c3e79a5d4b8277": {
+   "first_seen": "2026-10-20T19:03:04.751623+00:00",
+   "keyword": "exploit",
+   "repo": "paulmann/Get-Windows-Security-Events-By-IP",
+   "route": "cve"
   },
   "c0d4aed4106f9519": {
    "first_seen": "2026-10-03T16:59:12.037115+00:00",
@@ -8214,6 +9600,12 @@
    "repo": "hackrange/forgerepo",
    "route": "cve"
   },
+  "c237cb4fe9db7778": {
+   "first_seen": "2026-10-20T19:03:04.751482+00:00",
+   "keyword": "CVE-2026",
+   "repo": "SundayC666/mergeworthy",
+   "route": "cve"
+  },
   "c254c7951fed53ec": {
    "first_seen": "2026-09-08T04:41:55.647928+00:00",
    "keyword": "exploit",
@@ -8280,6 +9672,12 @@
    "repo": "uziii2208/CVE-2026-96760",
    "route": "tools"
   },
+  "c336d4d56411cbec": {
+   "first_seen": "2026-10-20T19:03:04.752333+00:00",
+   "keyword": "exploit",
+   "repo": "sifatnotes/Learn-SecByte-CTF-Labs-Collection-Critical-CVEs-Kernel-Exploits-Container-Escapes",
+   "route": "tools"
+  },
   "c339bc657215a7df": {
    "first_seen": "2026-09-23T16:40:27.681621+00:00",
    "keyword": "exploit",
@@ -8296,6 +9694,12 @@
    "first_seen": "2026-10-04T16:45:51.422598+00:00",
    "keyword": "exploit",
    "repo": "anointedthedeveloper/Loan-Management-",
+   "route": "cve"
+  },
+  "c3ad3cfd7b03ded1": {
+   "first_seen": "2026-10-20T19:03:04.752053+00:00",
+   "keyword": "nuclei-template",
+   "repo": "TyrusRC/assay",
    "route": "cve"
   },
   "c3ce7a3dfa6bbaec": {
@@ -8448,6 +9852,12 @@
    "repo": "gongyijie85/bookrank",
    "route": "cve"
   },
+  "c6d9bbde3a595a28": {
+   "first_seen": "2026-10-21T18:56:18.925949+00:00",
+   "keyword": "CVE-2026",
+   "repo": "enactive-systems/CVE-2026-109618-poc",
+   "route": "tools"
+  },
   "c6fc52bd33d36c5a": {
    "first_seen": "2026-09-08T04:41:55.647916+00:00",
    "keyword": "exploit",
@@ -8477,6 +9887,12 @@
    "keyword": "exploit",
    "repo": "UnknownDev2018/Kov-Sec",
    "route": "cve"
+  },
+  "c75ed300c3272a4f": {
+   "first_seen": "2026-10-21T18:56:18.925924+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Zer061/CVE-2026-109618",
+   "route": "tools"
   },
   "c785fd424ba45177": {
    "first_seen": "2026-09-21T16:33:12.515849+00:00",
@@ -8568,6 +9984,18 @@
    "repo": "Spellskite-coding/Secrets_finder",
    "route": "leak"
   },
+  "c971e09ba39a00d2": {
+   "first_seen": "2026-10-21T18:56:18.926138+00:00",
+   "keyword": "exploit",
+   "repo": "BIBILZERODAY/CVE-2026-110372-MASS-EXPLOIT-WEBSHELL.STORE",
+   "route": "tools"
+  },
+  "c9e53fa0cb5f4f81": {
+   "first_seen": "2026-10-20T19:03:04.751988+00:00",
+   "keyword": "nuclei-template",
+   "repo": "undecimodia59/secbian-live",
+   "route": "cve"
+  },
   "c9f1a36ad609afa1": {
    "first_seen": "2026-09-24T16:57:05.619012+00:00",
    "keyword": "0day",
@@ -8598,6 +10026,12 @@
    "repo": "tailed-community/tech-new-grads-2025-2026",
    "route": "cve"
   },
+  "ca6a62e1f53fe056": {
+   "first_seen": "2026-10-21T18:56:18.925731+00:00",
+   "keyword": "exploit",
+   "repo": "riteshekbote/agicap-hunt",
+   "route": "cve"
+  },
   "ca7b3c22a30e6863": {
    "first_seen": "2026-09-30T16:48:05.682373+00:00",
    "keyword": "exploit",
@@ -8620,6 +10054,12 @@
    "first_seen": "2026-09-08T04:38:54.641326+00:00",
    "keyword": "CVE-2026+password",
    "repo": "user6400/cve-2026-39031-lansweeper-lsrunase2-lsencrypt2",
+   "route": "leak"
+  },
+  "cb42b30e97ce2bc6": {
+   "first_seen": "2026-10-19T18:48:24.444407+00:00",
+   "keyword": "CVE-2026+credential",
+   "repo": "oscerd/CVE-2026-80344",
    "route": "leak"
   },
   "cb444d808d6c9b2b": {
@@ -8802,6 +10242,18 @@
    "repo": "Jafx2/soc-ai-copilot",
    "route": "cve"
   },
+  "ceb7c2dde23e757f": {
+   "first_seen": "2026-10-21T18:56:18.925757+00:00",
+   "keyword": "exploit",
+   "repo": "litobro/php2mon",
+   "route": "cve"
+  },
+  "ced82972985f152f": {
+   "first_seen": "2026-10-21T18:56:18.925499+00:00",
+   "keyword": "CVE-2026",
+   "repo": "mejustbox-byte/CVE-2026-109618-CVE-2026-109619",
+   "route": "cve"
+  },
   "ced8927871a28a1f": {
    "first_seen": "2026-09-26T16:48:22.839954+00:00",
    "keyword": "CVE-2026",
@@ -8826,6 +10278,12 @@
    "repo": "MatijaT/bunn-maths-public",
    "route": "cve"
   },
+  "cf812a19378ab013": {
+   "first_seen": "2026-10-19T18:48:24.436094+00:00",
+   "keyword": "exploit",
+   "repo": "omobolajiadeyan/omobolajiadeyan",
+   "route": "cve"
+  },
   "cfab74ffb516ff83": {
    "first_seen": "2026-09-11T01:43:52.418002+00:00",
    "keyword": "CVE-2026+token",
@@ -8842,6 +10300,18 @@
    "first_seen": "2026-09-15T01:43:41.474455+00:00",
    "keyword": "CVE-2026",
    "repo": "kayw-geek/kayw-geek",
+   "route": "cve"
+  },
+  "d0376f88d120d0f4": {
+   "first_seen": "2026-10-19T18:48:24.436266+00:00",
+   "keyword": "exploit",
+   "repo": "jeonck/curasec",
+   "route": "cve"
+  },
+  "d03bd05b1254b5e2": {
+   "first_seen": "2026-10-21T18:56:18.925688+00:00",
+   "keyword": "exploit",
+   "repo": "oltun/cloud-resume",
    "route": "cve"
   },
   "d054719571b91d05": {
@@ -8867,6 +10337,12 @@
    "keyword": "CVE-2026",
    "repo": "HORKimhab/CVE-2026-19975",
    "route": "tools"
+  },
+  "d0990ebb1fc0bee2": {
+   "first_seen": "2026-10-19T18:48:24.436680+00:00",
+   "keyword": "nuclei-template",
+   "repo": "hackmate00800/AppSec-nexus",
+   "route": "cve"
   },
   "d0ac2012b4e999cd": {
    "first_seen": "2026-09-19T01:45:28.985016+00:00",
@@ -8916,16 +10392,40 @@
    "repo": "chrisns/govreposcrape",
    "route": "cve"
   },
+  "d17ef46f21046740": {
+   "first_seen": "2026-10-20T19:03:04.752311+00:00",
+   "keyword": "exploit",
+   "repo": "hs-rudra-05/Modeling-Directory-Traversal-and-Linux-Executable-Capability-Exploitation-in-Corporate-Endpoints",
+   "route": "tools"
+  },
   "d197f0bcf48df58e": {
    "first_seen": "2026-09-09T01:55:53.035981+00:00",
    "keyword": "CVE-2026",
    "repo": "abraxas/CVE-2026-19089-WooCommerce-Tyche",
    "route": "cve"
   },
+  "d1a35ab8acde46a2": {
+   "first_seen": "2026-10-19T18:48:24.436600+00:00",
+   "keyword": "nuclei-template",
+   "repo": "RanaKhan77/awesome-cyber-security-heaven",
+   "route": "cve"
+  },
+  "d1bd2613d770cc28": {
+   "first_seen": "2026-10-21T18:56:18.926114+00:00",
+   "keyword": "exploit",
+   "repo": "AxsDeny/Plex2Shell_Exploit_Audit",
+   "route": "tools"
+  },
   "d1c8ffa7ccc947e1": {
    "first_seen": "2026-09-20T01:44:37.573227+00:00",
    "keyword": "nuclei-template",
    "repo": "JinzoU-MwM/CVE-Lib",
+   "route": "cve"
+  },
+  "d1d0090c56ef5a1d": {
+   "first_seen": "2026-10-21T18:56:18.925751+00:00",
+   "keyword": "exploit",
+   "repo": "enhansome/enhansome-Awesome-Domain-Generalization",
    "route": "cve"
   },
   "d1e10b1c16071470": {
@@ -8957,6 +10457,18 @@
    "keyword": "nuclei-template",
    "repo": "BU1lDR/BU1lDR",
    "route": "cve"
+  },
+  "d22816ad643552db": {
+   "first_seen": "2026-10-20T19:03:04.751473+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Yael2603/EventsApplication",
+   "route": "cve"
+  },
+  "d29afabb0d6851b6": {
+   "first_seen": "2026-10-21T18:56:18.926060+00:00",
+   "keyword": "exploit",
+   "repo": "thunderf1nger/Binary-Exploitation",
+   "route": "tools"
   },
   "d328f85a3a71ecdf": {
    "first_seen": "2026-10-02T16:49:09.249175+00:00",
@@ -8994,6 +10506,12 @@
    "repo": "ucash-lab/UPAD",
    "route": "cve"
   },
+  "d38f2cda2c72feb4": {
+   "first_seen": "2026-10-19T18:48:24.445057+00:00",
+   "keyword": "exploit+credential",
+   "repo": "AngelcoreS/Threat-Hunt-JadePuffer",
+   "route": "leak"
+  },
   "d3f1c69fefcc4276": {
    "first_seen": "2026-09-28T17:10:26.782331+00:00",
    "keyword": "exploit+password",
@@ -9011,6 +10529,12 @@
    "keyword": "exploit",
    "repo": "juniorkyyop/BananaExploit",
    "route": "tools"
+  },
+  "d42802a8642fbdcf": {
+   "first_seen": "2026-10-20T19:03:04.751929+00:00",
+   "keyword": "0day",
+   "repo": "Fazmin/cve-intel",
+   "route": "cve"
   },
   "d431edfa3c894a83": {
    "first_seen": "2026-09-22T16:50:36.853826+00:00",
@@ -9036,10 +10560,28 @@
    "repo": "misfitxtm/ExploitToolkit",
    "route": "tools"
   },
+  "d48b5a90ab225062": {
+   "first_seen": "2026-10-19T18:48:24.435550+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Stonetenth2005/Devops-Capstone",
+   "route": "cve"
+  },
+  "d4a4b2071b61e5bd": {
+   "first_seen": "2026-10-19T18:48:24.436625+00:00",
+   "keyword": "nuclei-template",
+   "repo": "MUmer007/Senti_Intel_Scan",
+   "route": "cve"
+  },
   "d4ccaf30029eefc6": {
    "first_seen": "2026-10-02T16:49:09.248614+00:00",
    "keyword": "exploit",
    "repo": "mujtaba815/metasploitable2-php-cgi-exploit",
+   "route": "tools"
+  },
+  "d4e3bd9e0cc71ee3": {
+   "first_seen": "2026-10-19T18:48:24.437083+00:00",
+   "keyword": "exploit",
+   "repo": "4dorable/exploit",
    "route": "tools"
   },
   "d4e47c5ab2f5a84e": {
@@ -9150,6 +10692,12 @@
    "repo": "tc4dy/CVE-2026-82329-PoC-Exploit",
    "route": "leak"
   },
+  "d6dfdc255251b5a4": {
+   "first_seen": "2026-10-20T19:03:04.751908+00:00",
+   "keyword": "0day",
+   "repo": "Atlas-Ascend-Fork/torchtitan-npu",
+   "route": "cve"
+  },
   "d6f0427408ab0bd9": {
    "first_seen": "2026-09-08T04:41:55.647914+00:00",
    "keyword": "exploit",
@@ -9204,6 +10752,18 @@
    "repo": "shivamsharmarolla-ai/Bot-Host-Exploits",
    "route": "tools"
   },
+  "d7acd0eaf9a92f73": {
+   "first_seen": "2026-10-19T18:48:24.436560+00:00",
+   "keyword": "nuclei-template",
+   "repo": "iliya-bashrc/SubZer0",
+   "route": "cve"
+  },
+  "d8182276fcb9e101": {
+   "first_seen": "2026-10-23T02:19:53.378199+00:00",
+   "keyword": "CVE-2026",
+   "repo": "canmenzo/cve-2026-93687-braces",
+   "route": "tools"
+  },
   "d81bbe3fe2d7d825": {
    "first_seen": "2026-09-28T17:10:26.781673+00:00",
    "keyword": "nuclei-template",
@@ -9240,6 +10800,12 @@
    "repo": "jburgess-r7/CVE-2026-97229-PoC",
    "route": "tools"
   },
+  "d9257b0298a5c12e": {
+   "first_seen": "2026-10-20T19:03:04.752097+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85314",
+   "route": "tools"
+  },
   "d95c1ebd9db7a352": {
    "first_seen": "2026-09-15T01:43:41.474573+00:00",
    "keyword": "exploit",
@@ -9270,6 +10836,12 @@
    "repo": "Ironsail-llc/genus-os",
    "route": "cve"
   },
+  "d9e4a1e431957403": {
+   "first_seen": "2026-10-19T18:48:24.437204+00:00",
+   "keyword": "exploit",
+   "repo": "shivamsharmarolla-ai/Prabhanjan_Exploits_Numberinfo",
+   "route": "tools"
+  },
   "da2febeb7df2dc42": {
    "first_seen": "2026-09-29T16:42:59.122090+00:00",
    "keyword": "CVE-2026",
@@ -9292,6 +10864,12 @@
    "first_seen": "2026-09-09T02:00:51.854623+00:00",
    "keyword": "CVE-2026",
    "repo": "Deep-Sixed/ContextMesh",
+   "route": "cve"
+  },
+  "da7e3d17296dac4e": {
+   "first_seen": "2026-10-19T18:48:24.436587+00:00",
+   "keyword": "nuclei-template",
+   "repo": "RanaKhan77/Website-Vulnerability-Scanner",
    "route": "cve"
   },
   "dab10f8ea946a564": {
@@ -9329,6 +10907,12 @@
    "keyword": "exploit+secret",
    "repo": "vensas/oas-breach-audit",
    "route": "leak"
+  },
+  "dbccc152ecc4d724": {
+   "first_seen": "2026-10-19T18:48:24.436307+00:00",
+   "keyword": "exploit",
+   "repo": "Dicklesworthstone/franken_surveillance_system",
+   "route": "cve"
   },
   "dbd8b7073e8501b0": {
    "first_seen": "2026-09-28T17:10:26.782374+00:00",
@@ -9402,6 +10986,12 @@
    "repo": "brave/security-action",
    "route": "cve"
   },
+  "dd046d3bdecbf228": {
+   "first_seen": "2026-10-20T19:03:04.752081+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85260",
+   "route": "tools"
+  },
   "dd27ea95ef3ffaf7": {
    "first_seen": "2026-09-10T01:43:31.152323+00:00",
    "keyword": "exploit+credential",
@@ -9430,6 +11020,12 @@
    "first_seen": "2026-09-26T16:48:22.839980+00:00",
    "keyword": "exploit",
    "repo": "nico-robin89/Applied-LLMs-for-Autonomous-Vulnerability-Scanning-Exploitation",
+   "route": "tools"
+  },
+  "dda691ba3f0cfd8f": {
+   "first_seen": "2026-10-21T18:56:18.926160+00:00",
+   "keyword": "nuclei-template",
+   "repo": "Ademking/php2shell-nuclei-templates",
    "route": "tools"
   },
   "ddb43c84e147659d": {
@@ -9510,6 +11106,12 @@
    "repo": "Auraleaf/SharpDBeaver",
    "route": "leak"
   },
+  "df48495b9a5a8e09": {
+   "first_seen": "2026-10-21T18:56:18.925585+00:00",
+   "keyword": "CVE-2026",
+   "repo": "david-alvarez-rosa/php-rce",
+   "route": "cve"
+  },
   "dfb1e150e5cdd432": {
    "first_seen": "2026-10-13T17:02:46.821306+00:00",
    "keyword": "CVE-2026",
@@ -9538,6 +11140,12 @@
    "first_seen": "2026-09-30T16:48:05.682432+00:00",
    "keyword": "nuclei-template",
    "repo": "TFSID/micro_apis",
+   "route": "cve"
+  },
+  "e018284932679182": {
+   "first_seen": "2026-10-21T18:56:18.925572+00:00",
+   "keyword": "CVE-2026",
+   "repo": "Agent-Threat-Rule/agent-threat-rules",
    "route": "cve"
   },
   "e047696e54b78516": {
@@ -9592,6 +11200,12 @@
    "first_seen": "2026-09-23T16:40:27.681726+00:00",
    "keyword": "exploit",
    "repo": "sounthararajan2/DYNAMIC-DATA-UPDATES-AND-WEIGHT-OPTIMIZATION-FOR-PREDICTING-VULNERABILITY-EXPLOITABILITY",
+   "route": "tools"
+  },
+  "e1c3421b34f64d68": {
+   "first_seen": "2026-10-20T19:03:04.752385+00:00",
+   "keyword": "nuclei-template",
+   "repo": "SR-Chowdhury/Nuclei-LFI-Templates",
    "route": "tools"
   },
   "e1d04a82a35e2b21": {
@@ -9666,6 +11280,12 @@
    "repo": "diegueins680/trader",
    "route": "cve"
   },
+  "e3a422252b6b22f5": {
+   "first_seen": "2026-10-19T18:48:24.435629+00:00",
+   "keyword": "CVE-2026",
+   "repo": "AbhiGandhi02/inventrack-devops",
+   "route": "cve"
+  },
   "e3a4a5cc8a7f4858": {
    "first_seen": "2026-09-28T17:10:26.781817+00:00",
    "keyword": "CVE-2026",
@@ -9694,6 +11314,12 @@
    "first_seen": "2026-09-29T16:42:59.122109+00:00",
    "keyword": "CVE-2026",
    "repo": "renjianguojinqianfan/langgraph-agent",
+   "route": "cve"
+  },
+  "e3e3b5f60207fa73": {
+   "first_seen": "2026-10-19T18:48:24.436294+00:00",
+   "keyword": "exploit",
+   "repo": "TechTideOhio/techtide-harness-kit",
    "route": "cve"
   },
   "e3ffa17f724976c7": {
@@ -9785,6 +11411,12 @@
    "keyword": "exploit+token",
    "repo": "goku007xx/JWT-Exploit-Playground",
    "route": "leak"
+  },
+  "e529a8dfa3bab93d": {
+   "first_seen": "2026-10-20T19:03:04.752070+00:00",
+   "keyword": "CVE-2026",
+   "repo": "ExDev994/CVE-2026-111058-CVE-2026-111057-mercury-rce",
+   "route": "tools"
   },
   "e576bed0717ba27a": {
    "first_seen": "2026-10-03T16:59:12.037061+00:00",
@@ -9954,11 +11586,23 @@
    "repo": "rjwalters/safehouse",
    "route": "cve"
   },
+  "e97ced49c99b6b10": {
+   "first_seen": "2026-10-21T18:56:18.925960+00:00",
+   "keyword": "CVE-2026",
+   "repo": "wvverez/CVE-2026-23744",
+   "route": "tools"
+  },
   "e9a72798172aef04": {
    "first_seen": "2026-09-29T16:42:59.122135+00:00",
    "keyword": "exploit",
    "repo": "kshlsmac/ps5jb-backup",
    "route": "cve"
+  },
+  "e9cfe3e1e141d016": {
+   "first_seen": "2026-10-19T18:48:24.436781+00:00",
+   "keyword": "CVE-2026",
+   "repo": "kinokopio/CVE-2026-23111",
+   "route": "tools"
   },
   "e9f5cfb70dcb9aac": {
    "first_seen": "2026-09-11T01:43:52.421335+00:00",
@@ -10008,6 +11652,12 @@
    "repo": "jaschadub/compromised-packages-check",
    "route": "cve"
   },
+  "eb30802324f8252d": {
+   "first_seen": "2026-10-19T18:48:24.435970+00:00",
+   "keyword": "exploit",
+   "repo": "douglas-carmichael/metroSystem",
+   "route": "cve"
+  },
   "eb3b7695badde9e0": {
    "first_seen": "2026-09-08T04:38:54.641153+00:00",
    "keyword": "exploit",
@@ -10026,6 +11676,12 @@
    "repo": "aghdetngf/cybervault-cve-intel",
    "route": "cve"
   },
+  "eb8c2d59275d855d": {
+   "first_seen": "2026-10-19T18:48:24.436876+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85246",
+   "route": "tools"
+  },
   "eba20aebd175b6ae": {
    "first_seen": "2026-09-08T04:38:54.641540+00:00",
    "keyword": "exploit+secret",
@@ -10036,6 +11692,12 @@
    "first_seen": "2026-09-10T01:43:31.148544+00:00",
    "keyword": "CVE-2026",
    "repo": "rix4uni/medium-writeups",
+   "route": "cve"
+  },
+  "ec1c4a931ecb9382": {
+   "first_seen": "2026-10-20T19:03:04.751360+00:00",
+   "keyword": "CVE-2026",
+   "repo": "gmilen-sketch/vertex-resilient-acompletion",
    "route": "cve"
   },
   "ec1e64cc73eff56a": {
@@ -10049,6 +11711,12 @@
    "keyword": "CVE-2026",
    "repo": "0Asylum/CVE-2026-31857",
    "route": "tools"
+  },
+  "ec2b964b2c6fc3cb": {
+   "first_seen": "2026-10-21T18:56:18.925637+00:00",
+   "keyword": "CVE-2026",
+   "repo": "longdrache/coding-dev-lab",
+   "route": "cve"
   },
   "ec58311c8666ff1c": {
    "first_seen": "2026-09-08T04:38:54.641631+00:00",
@@ -10078,6 +11746,12 @@
    "first_seen": "2026-09-10T01:43:31.148700+00:00",
    "keyword": "exploit",
    "repo": "Cenzer0/Cenzer0",
+   "route": "cve"
+  },
+  "ed30aa9e6b47e428": {
+   "first_seen": "2026-10-21T18:56:18.925823+00:00",
+   "keyword": "0day",
+   "repo": "SKRT7-0day/Badge-MAX",
    "route": "cve"
   },
   "ed4bf3fa970fd4c7": {
@@ -10140,6 +11814,12 @@
    "repo": "CISOToolbox/surface",
    "route": "cve"
   },
+  "ede91f0cae045bde": {
+   "first_seen": "2026-10-20T19:03:04.751765+00:00",
+   "keyword": "exploit",
+   "repo": "kirkquasarlight0/Sword-Of-Convallaria-Full-Version",
+   "route": "cve"
+  },
   "edf3d0bc24ce0caf": {
    "first_seen": "2026-09-13T01:44:14.165360+00:00",
    "keyword": "nuclei-template",
@@ -10168,6 +11848,12 @@
    "first_seen": "2026-09-19T01:45:28.984693+00:00",
    "keyword": "CVE-2026",
    "repo": "mrhenrike/EmbedXPL-Forge",
+   "route": "cve"
+  },
+  "ee8961be3fc3b2a0": {
+   "first_seen": "2026-10-21T18:56:18.925794+00:00",
+   "keyword": "0day",
+   "repo": "LySnake/personalEnv",
    "route": "cve"
   },
   "eec64333a37a13ca": {
@@ -10284,6 +11970,12 @@
    "repo": "exploitation-ux/exploitatio.gestion",
    "route": "tools"
   },
+  "f236890f02c79622": {
+   "first_seen": "2026-10-21T18:56:18.926126+00:00",
+   "keyword": "exploit",
+   "repo": "thebringerofortune/exploits-f15c4",
+   "route": "tools"
+  },
   "f236c5502237dad6": {
    "first_seen": "2026-09-19T01:45:28.984902+00:00",
    "keyword": "exploit",
@@ -10344,6 +12036,18 @@
    "repo": "wqty123/dsh-browser",
    "route": "cve"
   },
+  "f35b858ad07f4f46": {
+   "first_seen": "2026-10-19T18:48:24.436864+00:00",
+   "keyword": "CVE-2026",
+   "repo": "alvaroguzmancode/CVE-2026-99999",
+   "route": "tools"
+  },
+  "f361fcbe03131b75": {
+   "first_seen": "2026-10-19T18:48:24.436434+00:00",
+   "keyword": "0day",
+   "repo": "dingding229/mediatool",
+   "route": "cve"
+  },
   "f3806afc6a380e72": {
    "first_seen": "2026-09-21T16:33:12.515749+00:00",
    "keyword": "0day",
@@ -10362,10 +12066,22 @@
    "repo": "QuantumInquisitor/universal-matrix",
    "route": "cve"
   },
+  "f3d789f1363a57f2": {
+   "first_seen": "2026-10-20T19:03:04.751344+00:00",
+   "keyword": "CVE-2026",
+   "repo": "kherrick/lobsters",
+   "route": "cve"
+  },
   "f3e9092f7db2a816": {
    "first_seen": "2026-09-24T16:57:05.617591+00:00",
    "keyword": "exploit",
    "repo": "brihat9135/ttv-experiment",
+   "route": "cve"
+  },
+  "f4178a2b8e326fe9": {
+   "first_seen": "2026-10-19T18:48:24.436746+00:00",
+   "keyword": "nuclei-template",
+   "repo": "projectdiscovery/vulnx",
    "route": "cve"
   },
   "f4231df951b1973d": {
@@ -10392,6 +12108,12 @@
    "repo": "junebug-junie/Orion-Sapienform",
    "route": "cve"
   },
+  "f4cc3da2cff4017d": {
+   "first_seen": "2026-10-21T18:56:18.925930+00:00",
+   "keyword": "CVE-2026",
+   "repo": "junaire/CVE-2026-109618-exploit",
+   "route": "tools"
+  },
   "f4ce64a6fbe2ee4b": {
    "first_seen": "2026-09-08T04:38:54.641461+00:00",
    "keyword": "CVE-2026+token",
@@ -10404,6 +12126,12 @@
    "repo": "WTCYJ/agentfence",
    "route": "cve"
   },
+  "f51956c82ee068a1": {
+   "first_seen": "2026-10-21T18:56:18.926155+00:00",
+   "keyword": "0day",
+   "repo": "mysukriramli/0day-agent-evals",
+   "route": "tools"
+  },
   "f55f6a444b2a3383": {
    "first_seen": "2026-09-29T16:42:59.122165+00:00",
    "keyword": "exploit",
@@ -10415,6 +12143,12 @@
    "keyword": "0day",
    "repo": "tamnd/hn-daily-index",
    "route": "cve"
+  },
+  "f5edd611897b7000": {
+   "first_seen": "2026-10-20T19:03:04.752103+00:00",
+   "keyword": "CVE-2026",
+   "repo": "yuwkaaa/CVE-2026-112071",
+   "route": "tools"
   },
   "f5f5a719c85aee9f": {
    "first_seen": "2026-10-03T16:59:12.037001+00:00",
@@ -10439,6 +12173,24 @@
    "keyword": "exploit",
    "repo": "iszhanjiawei/cover-song-Identification-arxiv-daily",
    "route": "cve"
+  },
+  "f613247f95f74e28": {
+   "first_seen": "2026-10-19T18:48:24.435936+00:00",
+   "keyword": "exploit",
+   "repo": "useofscript/Project-Guts-And-Bolts",
+   "route": "cve"
+  },
+  "f6482b012dc1c784": {
+   "first_seen": "2026-10-23T02:19:53.378521+00:00",
+   "keyword": "CVE-2026+private-key",
+   "repo": "phpc0de/CVE-2026-111943-Remediator",
+   "route": "leak"
+  },
+  "f68d869d1a00de22": {
+   "first_seen": "2026-10-21T18:56:18.925984+00:00",
+   "keyword": "CVE-2026",
+   "repo": "HackSpeak/CVE-2026-109618",
+   "route": "tools"
   },
   "f6f1aa1096214b13": {
    "first_seen": "2026-09-23T16:40:27.681699+00:00",
@@ -10512,6 +12264,12 @@
    "repo": "moke-cloud/threat-radar",
    "route": "cve"
   },
+  "f83457436e91929b": {
+   "first_seen": "2026-10-19T18:48:24.437012+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85250",
+   "route": "tools"
+  },
   "f87b59f05d18ee9a": {
    "first_seen": "2026-10-06T16:44:21.062695+00:00",
    "keyword": "exploit",
@@ -10529,6 +12287,12 @@
    "keyword": "exploit+token",
    "repo": "oletros-io/eCard-Registration-Bypass",
    "route": "leak"
+  },
+  "f8b4c3b889c88612": {
+   "first_seen": "2026-10-20T19:03:04.752041+00:00",
+   "keyword": "nuclei-template",
+   "repo": "ReverserID/reverserid-patches",
+   "route": "cve"
   },
   "f8c3d8cc63965803": {
    "first_seen": "2026-10-13T17:02:46.821281+00:00",
@@ -10590,6 +12354,12 @@
    "repo": "cyberdudebivash/CYBERDUDEBIVASH-THREAT-INTEL-PLATFORM",
    "route": "cve"
   },
+  "f9f97fce715d61e0": {
+   "first_seen": "2026-10-21T18:56:18.925996+00:00",
+   "keyword": "CVE-2026",
+   "repo": "unlimit0118/CVE-2026-109619-php2shell-poc",
+   "route": "tools"
+  },
   "fa05c7f2cd2facfe": {
    "first_seen": "2026-10-03T16:59:12.037079+00:00",
    "keyword": "CVE-2026",
@@ -10619,6 +12389,12 @@
    "keyword": "exploit+secret",
    "repo": "api-evangelist/qwiet",
    "route": "leak"
+  },
+  "fa2833acd1225677": {
+   "first_seen": "2026-10-19T18:48:24.436192+00:00",
+   "keyword": "exploit",
+   "repo": "Asayed36/trading-bot",
+   "route": "cve"
   },
   "fa51fc04eb5a09e0": {
    "first_seen": "2026-09-08T04:38:54.641572+00:00",
@@ -10656,6 +12432,18 @@
    "repo": "sergii-ziborov/hostwatch-ios",
    "route": "cve"
   },
+  "fb0c2c98537e9951": {
+   "first_seen": "2026-10-21T18:56:18.925832+00:00",
+   "keyword": "0day",
+   "repo": "EnriqueForte/EnriqueForte",
+   "route": "cve"
+  },
+  "fb5d6a8987e7288d": {
+   "first_seen": "2026-10-20T19:03:04.752268+00:00",
+   "keyword": "exploit",
+   "repo": "DevilRrrr/exploit",
+   "route": "tools"
+  },
   "fb5dbb2cd1c480a8": {
    "first_seen": "2026-09-09T01:55:53.035876+00:00",
    "keyword": "CVE-2026",
@@ -10680,11 +12468,29 @@
    "repo": "nouchix/PQC-Khepra-MCP",
    "route": "cve"
   },
+  "fbe430c8092c39d9": {
+   "first_seen": "2026-10-20T19:03:04.751901+00:00",
+   "keyword": "0day",
+   "repo": "enhansome/enhansome-loop-engineering",
+   "route": "cve"
+  },
   "fbf221a56d04a027": {
    "first_seen": "2026-09-30T16:48:05.682368+00:00",
    "keyword": "exploit",
    "repo": "noobhacker02/Agentic-dev-alpha",
    "route": "cve"
+  },
+  "fbfc2bb3d50019ac": {
+   "first_seen": "2026-10-21T18:56:18.925725+00:00",
+   "keyword": "exploit",
+   "repo": "owlmt/QML",
+   "route": "cve"
+  },
+  "fc171ef94484ee12": {
+   "first_seen": "2026-10-21T18:56:18.926103+00:00",
+   "keyword": "exploit",
+   "repo": "Lovaxcoding/Reverse_Engineering-Binary_exploitation_Notes",
+   "route": "tools"
   },
   "fc1bc9a1d642a223": {
    "first_seen": "2026-09-24T16:57:05.619152+00:00",
@@ -10770,6 +12576,24 @@
    "repo": "Keen-arere8666/FiveM-Executor-Lua-2026",
    "route": "cve"
   },
+  "fddb1d71c2e1ef31": {
+   "first_seen": "2026-10-23T02:19:53.378536+00:00",
+   "keyword": "exploit+password",
+   "repo": "ameerafandi/THREATS-VS-VULNERABILITIES-W2",
+   "route": "leak"
+  },
+  "fdec828c3f39be3e": {
+   "first_seen": "2026-10-21T18:56:18.926031+00:00",
+   "keyword": "CVE-2026",
+   "repo": "goodcoddeo/pterodactyl_PHP-CVE-2026-109618-CVE-2026-109619",
+   "route": "tools"
+  },
+  "fdee5a58d4e29207": {
+   "first_seen": "2026-10-21T18:56:18.926014+00:00",
+   "keyword": "CVE-2026",
+   "repo": "squiblyza/CVE-2026-109618-CVE-2026-109619",
+   "route": "tools"
+  },
   "fe08dc27772a303f": {
    "first_seen": "2026-10-06T16:44:21.062748+00:00",
    "keyword": "exploit",
@@ -10792,6 +12616,12 @@
    "first_seen": "2026-09-21T16:33:12.516038+00:00",
    "keyword": "exploit",
    "repo": "aayushrambo8/ExploitDB-Website",
+   "route": "tools"
+  },
+  "fe6588a4e9e0e977": {
+   "first_seen": "2026-10-20T19:03:04.752137+00:00",
+   "keyword": "CVE-2026",
+   "repo": "oscerd/CVE-2026-85313",
    "route": "tools"
   },
   "fe91a40accbb11ae": {
@@ -10848,6 +12678,12 @@
    "repo": "murrez/CVE-2026-19660",
    "route": "tools"
   },
+  "ff3bb7d566f779d2": {
+   "first_seen": "2026-10-19T18:48:24.435984+00:00",
+   "keyword": "exploit",
+   "repo": "enhansome/enhansome-Awesome-Dataset-Distillation",
+   "route": "cve"
+  },
   "ff3e0bf7db1cae83": {
    "first_seen": "2026-09-24T16:57:05.617536+00:00",
    "keyword": "exploit",
@@ -10891,5 +12727,5 @@
    "route": "cve"
   }
  },
- "updated_at": "2026-10-13T17:02:46.822215+00:00"
+ "updated_at": "2026-10-23T02:19:53.378946+00:00"
 }

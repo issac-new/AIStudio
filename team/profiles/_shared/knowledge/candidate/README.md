@@ -81,7 +81,7 @@ candidate 知识具有以下特征：
 ```yaml
 id: KB-CANDIDATE-<DOMAIN>-<SEQ>     # 唯一编号
 type: knowledge-candidate           # 类型（区分 knowledge / decision / finding / report / artifact）
-domain: <业务域>                     # hermes-cluster / [已移除] / [已移除] / hack / ...
+domain: <业务域>                     # hermes-cluster / [已移除] / eda / hack / ...
 status: CANDIDATE                    # DRAFT / CANDIDATE / OFFICIAL / DEPRECATED
 sourceType: ai-assisted             # official / ai-assisted / personal
 owner: <profile 名 或 人名>

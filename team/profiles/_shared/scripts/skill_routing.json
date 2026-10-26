@@ -2,7 +2,7 @@
   "meta": {
     "version": "1.0",
     "generated_at": "2026-10-13",
-    "source": "YunkunSec/VulnClaw 对标后的本机 hack-team 27 skills routing index + R2 ARTEX 8 项补全 (t_67b5186f)",
+    "source": "YunkunSec/VulnClaw 对标后的本机 hack-team 27 skills routing index + R2 ARTEX 8 项补全 (t_67b5186f) + rea-reverse-engineering REAP 条目 (t_1ece18b8, 2026-10-26)",
     "weights": {
       "W_TYPED": 3.0,
       "W_ALIAS": 1.0,
@@ -10,7 +10,7 @@
     },
     "support_threshold": 0.35,
     "max_supports": 2,
-    "skill_count": 34,
+    "skill_count": 36,
     "activation_note": "2026-10-13: 8 项 R2 技能由 orchestrator 人审 mark-active 全部激活"
   },
   "skills": {
@@ -884,7 +884,7 @@
         "exfil"
       ],
       "task_types": [
-        "risk-assessment",
+        "risk-REDACTED",
         "flow-analysis",
         "agent-audit"
       ],
@@ -1203,6 +1203,110 @@
         "approved_by": "orchestrator",
         "decision": "全部激活（R2 mark-active 人审裁决）"
       }
+    },
+    "stun-c2-detection": {
+      "name": "stun-c2-detection",
+      "description": "STUN 协议伪装 C2 检测基线（Cling 实证）：全零事务 ID Binding Request + 非标注册报文 + 不合规服务器指纹 + 高信誉源 TTL 伪装四维网络检测规则，附 UDP 9034 orf; 入口、IoT 主机工件与 YARA。",
+      "phase": [
+        "defense"
+      ],
+      "target_type": [
+        "network",
+        "iot"
+      ],
+      "technologies": [
+        "stun",
+        "rfc8489",
+        "realtek-jungle-sdk",
+        "busybox"
+      ],
+      "vuln_hints": [
+        "c2",
+        "covert-channel",
+        "protocol-masquerading",
+        "cve-2021-35394",
+        "command-injection"
+      ],
+      "task_types": [
+        "detection-baseline",
+        "hunt",
+        "siem-rule",
+        "ir",
+        "threat-intel"
+      ],
+      "aliases": [
+        "cling",
+        "clingstun",
+        "stun-c2",
+        "stun",
+        "c2",
+        "protocol-c2-detection",
+        "stun检测",
+        "协议伪装检测",
+        "网络检测基线",
+        "流量检测",
+        "僵尸网络检测",
+        "c2检测"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "pcap/traffic-jsonl",
+      "activation": {
+        "version": "1.0.0",
+        "state": "active",
+        "approved": "2026-10-20",
+        "approved_by": "hack-auditor",
+        "decision": "gap-20260925-003 ADOPT 同构先例：一手报告→检测规则蒸馏，夜间差距卡授权窗内自主激活"
+      }
+    },
+    "rea-reverse-engineering": {
+      "name": "rea-reverse-engineering",
+      "description": "REA 逆向执行引擎+REAP 提示词库：二进制/固件/内核/APK/Electron/网站结构分析与功能追踪，证据强制（file/function/address）+三桶分离。",
+      "phase": [
+        "recon",
+        "enum",
+        "audit"
+      ],
+      "target_type": [
+        "binary",
+        "mobile",
+        "web"
+      ],
+      "technologies": [
+        "ghidra",
+        "asar",
+        "apk",
+        "wasm",
+        "elf",
+        "mach-o",
+        "pe"
+      ],
+      "vuln_hints": [],
+      "task_types": [
+        "reverse-engineering",
+        "feature-tracing",
+        "binary-analysis",
+        "decompilation",
+        "malware-analysis",
+        "clean-room-cloning"
+      ],
+      "aliases": [
+        "rea",
+        "reap",
+        "逆向",
+        "逆向工程",
+        "逆向分析",
+        "反编译",
+        "decompile",
+        "decompilation",
+        "reverse-engineering",
+        "binary analysis",
+        "feature tracing",
+        "固件分析",
+        "firmware analysis",
+        "功能复刻"
+      ],
+      "is_broad_knowledge": false,
+      "input_format": "binary-or-app-path"
     }
   }
 }

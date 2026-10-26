@@ -1,0 +1,192 @@
+{
+ "run_at": "2026-10-23T02:19:53.378946+00:00",
+ "keywords": [
+  "CVE-2026",
+  "exploit",
+  "0day",
+  "nuclei-template"
+ ],
+ "total_new_alerts": 15,
+ "alerts": [
+  {
+   "route": "tools",
+   "repo_full_name": "Scyrix-LLC/CVE-2026-109715",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/Scyrix-LLC/CVE-2026-109715",
+   "description": "CVE-2026-109715",
+   "stars": 1,
+   "created_at": "2026-10-23T01:10:20Z",
+   "pushed_at": "2026-10-23T01:23:29Z",
+   "author": "Scyrix-LLC",
+   "fingerprint": "660fbb446790856c"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "MsBodyBuilding/CVE-2026-109715",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/MsBodyBuilding/CVE-2026-109715",
+   "description": "CVE-2026-109715",
+   "stars": 0,
+   "created_at": "2026-10-23T01:09:25Z",
+   "pushed_at": "2026-10-23T01:09:27Z",
+   "author": "MsBodyBuilding",
+   "fingerprint": "8a46bb4fbfeb98ac"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "quanlevan1207/cve-2026-34717-exploit",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/quanlevan1207/cve-2026-34717-exploit",
+   "description": "Boolean-based Blind SQLi exploit for CVE-2026-34717 (OpenProject 17.2.0)Boolean-based Blind SQLi exploit for CVE-2026-34717 (OpenProject 17.2.0)",
+   "stars": 0,
+   "created_at": "2026-10-23T01:52:18Z",
+   "pushed_at": "2026-10-23T01:57:47Z",
+   "author": "quanlevan1207",
+   "fingerprint": "aed7e7a52ac9c6bf"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "duytien241/nodejs-CVE-2026-111497",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/duytien241/nodejs-CVE-2026-111497",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-10-23T02:14:55Z",
+   "pushed_at": "2026-10-23T02:14:57Z",
+   "author": "duytien241",
+   "fingerprint": "115d98e390986cce"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "santihabib/multer-CVE-2026-113872",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/santihabib/multer-CVE-2026-113872",
+   "description": "Write-up and proof of concept for CVE-2026-113872: multer async fileFilter process crash (DoS)",
+   "stars": 0,
+   "created_at": "2026-10-23T01:24:55Z",
+   "pushed_at": "2026-10-23T01:25:01Z",
+   "author": "santihabib",
+   "fingerprint": "6a3e41f048fd925f"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "canmenzo/cve-2026-93687-braces",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/canmenzo/cve-2026-93687-braces",
+   "description": "Independent, measured check of CVE-2026-93687 (braces stack exhaustion): reproducible cold-process crash under the default 10000 maxLength, and what actually mi",
+   "stars": 0,
+   "created_at": "2026-10-23T00:57:42Z",
+   "pushed_at": "2026-10-23T01:36:30Z",
+   "author": "canmenzo",
+   "fingerprint": "d8182276fcb9e101"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "pastelghost3/cve-2026-76504-nuclei",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/pastelghost3/cve-2026-76504-nuclei",
+   "description": "Nuclei template for CVE-2026-76504 — Cisco vManage authentication bypass",
+   "stars": 0,
+   "created_at": "2026-10-23T02:00:51Z",
+   "pushed_at": "2026-10-23T02:00:53Z",
+   "author": "pastelghost3",
+   "fingerprint": "60d936f3d53c1308"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "SaiTeja-Erukude/CVE-2026-57845-hf-datasets-rce",
+   "matched_keyword": "CVE-2026",
+   "html_url": "https://github.com/SaiTeja-Erukude/CVE-2026-57845-hf-datasets-rce",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-10-23T00:44:29Z",
+   "pushed_at": "2026-10-23T01:28:41Z",
+   "author": "SaiTeja-Erukude",
+   "fingerprint": "495aa550e94792c7"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "luisgabryell587-alt/biel-exploits-menu",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/luisgabryell587-alt/biel-exploits-menu",
+   "description": "",
+   "stars": 0,
+   "created_at": "2026-10-23T00:32:10Z",
+   "pushed_at": "2026-10-23T00:32:11Z",
+   "author": "luisgabryell587-alt",
+   "fingerprint": "62a1b112ed5ed78c"
+  },
+  {
+   "route": "tools",
+   "repo_full_name": "quanlevan1207/cve-2026-34717-exploit",
+   "matched_keyword": "exploit",
+   "html_url": "https://github.com/quanlevan1207/cve-2026-34717-exploit",
+   "description": "Boolean-based Blind SQLi exploit for CVE-2026-34717 (OpenProject 17.2.0)Boolean-based Blind SQLi exploit for CVE-2026-34717 (OpenProject 17.2.0)",
+   "stars": 0,
+   "created_at": "2026-10-23T01:52:18Z",
+   "pushed_at": "2026-10-23T01:57:47Z",
+   "author": "quanlevan1207",
+   "fingerprint": "b4bfb81a86a6c3fa"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "basesixtythree/B63-POC-CVE-2026-96652",
+   "matched_keyword": "CVE-2026+token",
+   "html_url": "https://github.com/basesixtythree/B63-POC-CVE-2026-96652",
+   "description": "PoC and verification material for CVE-2026-96652 (Plex Media Server timeline SSRF, owner-token disclosure chain)",
+   "stars": 0,
+   "created_at": "2026-10-22T14:00:15Z",
+   "pushed_at": "2026-10-22T14:00:20Z",
+   "author": "basesixtythree",
+   "fingerprint": "99660b9efc2c4244"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "BlackthornYugen/tiny-key-s-server",
+   "matched_keyword": "CVE-2026+private-key",
+   "html_url": "https://github.com/BlackthornYugen/tiny-key-s-server",
+   "description": "OpenSSL s_server testing tool for tiny EC private keys for CVE-2026-111943 research.",
+   "stars": 0,
+   "created_at": "2026-10-22T11:26:51Z",
+   "pushed_at": "2026-10-22T19:13:01Z",
+   "author": "BlackthornYugen",
+   "fingerprint": "8b1c50bf74b34ee4"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "phpc0de/CVE-2026-111943-Remediator",
+   "matched_keyword": "CVE-2026+private-key",
+   "html_url": "https://github.com/phpc0de/CVE-2026-111943-Remediator",
+   "description": "针对 CVE-2026-111943（eMudhra / emSign 根证书密钥熵坍塌惨案）的突发供应链应急排查与修复工具：一键清洗 Kali、Python、Node.js、uv、Go、Java 与 Docker 中的致命弱私钥信任链。Emergency audit & remediation toolkit for",
+   "stars": 1,
+   "created_at": "2026-10-21T23:55:23Z",
+   "pushed_at": "2026-10-21T23:59:41Z",
+   "author": "phpc0de",
+   "fingerprint": "f6482b012dc1c784"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "ameerafandi/THREATS-VS-VULNERABILITIES-W2",
+   "matched_keyword": "exploit+password",
+   "html_url": "https://github.com/ameerafandi/THREATS-VS-VULNERABILITIES-W2",
+   "description": "A threat is anything that can harm a computer system, such as hackers, viruses, or phishing emails. A vulnerability is a weakness that attackers can exploit, su",
+   "stars": 0,
+   "created_at": "2026-10-22T12:15:04Z",
+   "pushed_at": "2026-10-22T12:15:06Z",
+   "author": "ameerafandi",
+   "fingerprint": "fddb1d71c2e1ef31"
+  },
+  {
+   "route": "leak",
+   "repo_full_name": "KingOfBugbounty/KingOfBugBountyTips",
+   "matched_keyword": "exploit+token",
+   "html_url": "https://github.com/KingOfBugbounty/KingOfBugBountyTips",
+   "description": "Our main goal is to share tips from some well-known bughunters. Using recon methodology, we are able to find subdomains, apis, and tokens that are already explo",
+   "stars": 5565,
+   "created_at": "2020-08-26T11:58:10Z",
+   "pushed_at": "2026-10-21T22:01:50Z",
+   "author": "KingOfBugbounty",
+   "fingerprint": "7cf9d57b4f301cec"
+  }
+ ]
+}

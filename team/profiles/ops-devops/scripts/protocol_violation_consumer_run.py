@@ -20,9 +20,15 @@ import subprocess
 import sys
 from datetime import datetime, timezone, timedelta
 
-WORKDIR = "/Volumes/YOURVOLUME/lab/hermes-docker-sandbox/workspace/remediation/F-1-protocol-violation-consumer"
+WORKDIR = "/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/remediation/F-1-protocol-violation-consumer"
+# 10-20: nvme 冻结卷常不挂载, 扫描器(唯一事实源,禁自写SQL)只在该盘——
+# 未挂载时 SKIP(exit 0)防每夜 rc1 噪音; 挂载后自动恢复实跑。对齐 skill-full-backup 的 SKIP 模式。
+import sys as _sys
+if not os.path.isdir(WORKDIR):
+    print("SKIP: scanner workspace not mounted (%s)" % WORKDIR)
+    _sys.exit(0)
 SCANNER = os.path.join(WORKDIR, "scan_protocol_violations.py")
-HERMES = os.path.expanduser("~/.hermes/hermes-agent/venv/bin/hermes")
+HERMES = os.path.expanduser("~/.hermes/hermes-agent/.hermes/bin/hermes")
 PARENT_TASK = "t_1c73540a"
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
 CST = timezone(timedelta(hours=8))

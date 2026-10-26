@@ -23,7 +23,6 @@ template_source: workspace/research/taobao-rd-harness/analysis-report.md
 |---|---|---|---|
 | `id` | string | 知识唯一编号，格式：`KB-<LAYER>-<DOMAIN>-<SEQ>` | `KB-APPLICATION-HACK-AUDITOR-001` |
 | `type` | enum | `knowledge-base` / `knowledge-candidate` / `application` / `decision` / `finding` / `report` / `artifact` | `application` |
-| `domain` | string | 业务域 | `hack` / `[已移除]` / `[已移除]` / `hermes-cluster` |
 | `status` | enum | `DRAFT` / `CANDIDATE` / `OFFICIAL` / `DEPRECATED` | `OFFICIAL` |
 | `sourceType` | enum | `official`（团队共识）/ `ai-assisted`（AI 提取后人工确认）/ `personal`（个人经验） | `ai-assisted` |
 | `owner` | string | 负责人（profile 名 或 人名） | `hack-auditor` |

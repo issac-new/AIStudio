@@ -21,7 +21,7 @@ QUEUE = [
     "nightly_radar_2026-09-05.pdf",
     "[已移除].pdf",
     "domain_hack_2026-09-05.pdf",
-    "domain_[已移除]_2026-09-05.pdf",
+    "domain_eda_2026-09-05.pdf",
     "domain_pay_2026-09-06.pdf",
     "domain_aiteam_2026-09-06.pdf",
     "domain_data_2026-09-06.pdf",
