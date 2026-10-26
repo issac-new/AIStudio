@@ -89,6 +89,7 @@ const EXPECTED_NAMES = [
   'ia2.simDelivery',
   'ia2.simDirectorRun',
   'ia2.simEvidence',
+  'ia2.simMap',
   'ia2.simOps',
   'ia2.simOrchestration',
   'ia2.simSettings',

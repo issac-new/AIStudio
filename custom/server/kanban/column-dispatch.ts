@@ -21,6 +21,7 @@ import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluati
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
+import { appendEvidence } from '../evidence/evidence-store'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
@@ -236,6 +237,27 @@ export async function dispatchColumnTransition(
           taskId: params.taskId,
           detail: o.detail?.slice(0, 200),
         })
+        // 泳道证据落账（挂账清偿批 B3）：lane_handoff+lane_session 双写——列流转即
+        // 泳道交接（from→to 列）、派发即泳道会话（sessionId 承接）。编码约定（spec D3）：
+        // artifactType=目标泳道、note=from→to、ref=commandId>sessionId 回落；
+        // evidenceId 确定性幂等（重放去重跳过的 step 天然不双写）。fail-soft 只 warn。
+        if (params.taskId) {
+          const laneRef = o.commandId ?? o.sessionId ?? `${step.provider}:${o.reason}`
+          const laneNote = params.from ? `${params.from} → ${trigger.column}` : `→ ${trigger.column}`
+          const laneId = `lane-${params.taskId}-${trigger.column}-${laneRef}`.replace(/[^A-Za-z0-9._:-]/g, '_').slice(0, 120)
+          const handoff = appendEvidence({
+            evidenceId: laneId, taskId: params.taskId, kind: 'lane_handoff', at: Date.now(),
+            artifactType: trigger.column, ref: laneRef.slice(0, 200), note: laneNote, actor: step.provider,
+          })
+          if (handoff.code) console.warn(`[column-dispatch] lane_handoff 落账 code=${handoff.code}（不阻断派发）`)
+          if (o.sessionId) {
+            const sess = appendEvidence({
+              evidenceId: `${laneId}-s`, taskId: params.taskId, kind: 'lane_session', at: Date.now(),
+              artifactType: trigger.column, ref: o.sessionId.slice(0, 200), note: `会话 ${o.sessionId}`, actor: step.provider,
+            })
+            if (sess.code) console.warn(`[column-dispatch] lane_session 落账 code=${sess.code}（不阻断派发）`)
+          }
+        }
         // 决策落账（乙4）：派发路由决策进 KG，fire-and-forget 不等不抛。
         recordDispatchDecision({
           column: trigger.column, specialist: step.specialist || undefined, role: step.role || undefined,

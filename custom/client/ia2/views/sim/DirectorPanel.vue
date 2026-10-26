@@ -14,10 +14,10 @@ import {
   fetchDirectorScenarios, planDirectorScenario, startDirectorScenario,
   fetchGraphRun, fetchGraphEvents, resumeGraphGate,
   fetchSimLaunchStatus, startSimLaunch, stopSimLaunch,
-  pendingGatesOf, recentEventRows, analyzeRequirementImpact,
+  pendingGatesOf, recentEventRows, analyzeRequirementImpact, suggestModules,
   type DirectorScenario, type DirectorInput, type DirectorPlan,
   type GraphEvent, type GraphRunState, type SimLaunchStatus, type DirectorNotifyStatus,
-  type RequirementImpactDto,
+  type RequirementImpactDto, type ModuleSuggestionDto,
 } from '../../api/sim-director'
 
 /** 事件通知回执文案（2026-10-21）：已发=房间留痕；未发=如实给原因，不装成功 */
@@ -133,6 +133,30 @@ const impacting = ref(false)
 const impactError = ref('')
 const IMPACT_SOURCE_LABEL: Record<string, string> = {
   'ontology-instance': '本体实例', 'board-kg': '板级图谱', 'fibo-term': 'FIBO 术语',
+}
+
+// AI 拆模块（挂账清偿批 B1）：clef 判定端拆解→回填模块输入框；离线回落词表
+// （modulesSource 如实提示，不装成功）。
+const suggesting = ref(false)
+const suggestMsg = ref('')
+const suggestError = ref('')
+async function aiSplitModules(): Promise<void> {
+  const input = buildInput()
+  if (!input.title || !input.description) { suggestError.value = '需求标题和描述不能为空。'; return }
+  suggesting.value = true
+  suggestMsg.value = ''
+  suggestError.value = ''
+  try {
+    const s: ModuleSuggestionDto = await suggestModules(input.title, input.description)
+    form.value.modules = s.modules.join(', ')
+    suggestMsg.value = s.modulesSource === 'llm'
+      ? `已拆 ${s.modules.length} 个模块（判定端拆解）。`
+      : `已拆 ${s.modules.length} 个模块（${s.reason ?? '判定端不可用，词表推导'}）。`
+  } catch (e) {
+    suggestError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    suggesting.value = false
+  }
 }
 async function previewImpact(): Promise<void> {
   const input = buildInput()
@@ -378,6 +402,9 @@ onBeforeUnmount(() => { stopPolling() })
       </div>
       <p v-if="scenarioFallback" class="dir__hint" data-testid="director-scenario-fallback">场景列表不可用——当前为内置默认场景</p>
       <div class="dir__actions">
+        <button type="button" class="dir__btn" :disabled="suggesting" data-testid="director-ai-modules" @click="aiSplitModules">
+          {{ suggesting ? '拆解中…' : 'AI 拆模块' }}
+        </button>
         <button type="button" class="dir__btn" :disabled="impacting" data-testid="director-impact" @click="previewImpact">
           {{ impacting ? '推演中…' : '影响推演' }}
         </button>
@@ -389,6 +416,8 @@ onBeforeUnmount(() => { stopPolling() })
         </button>
       </div>
       <p v-if="impactError" class="dir__error" data-testid="director-impact-error">{{ impactError }}</p>
+      <p v-if="suggestError" class="dir__error" data-testid="director-suggest-error">{{ suggestError }}</p>
+      <p v-if="suggestMsg" class="dir__ok" data-testid="director-suggest-msg">{{ suggestMsg }}</p>
 
       <!-- 影响推演卡（P5）：填模块/起跑前的参考面——词面命中可核对，边界如实声明 -->
       <div v-if="impact" class="dir__plan" data-testid="director-impact-card">

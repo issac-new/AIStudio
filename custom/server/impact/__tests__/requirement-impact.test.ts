@@ -49,6 +49,9 @@ describe('analyzeRequirementImpact（四路命中）', () => {
     const { analyzeRequirementImpact } = await import('../requirement-impact')
     const r = analyzeRequirementImpact('收银台改版', '小程序收银台支持微信支付，涉及支付流程与退款')
     expect(r.entities.some((e) => e.source === 'ontology-instance' && e.id === 'kb:b1:task:T-1')).toBe(true)
+    // B5：实体命中 spec 文档（共现边数据面）——本体任务命中词面「收银台」在历史 spec 出现
+    const t1 = r.entities.find((e) => e.id === 'kb:b1:task:T-1')!
+    expect(t1.docs).toContain('2026-03-01-cashier-design.md')
     expect(r.entities.some((e) => e.source === 'fibo-term' && e.id === 'Payment')).toBe(true)
     expect(r.relatedSpecs.some((h) => h.file === '2026-03-01-cashier-design.md')).toBe(true)
     // 建议模块与导演台 inferModules 同源（词面命中支付+微信+收银+小程序）

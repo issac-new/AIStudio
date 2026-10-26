@@ -15,6 +15,7 @@ import { judgeAttempt, type JudgeDeps } from './judge'
 import { sha1Of } from './clef'
 import { runOutcomeCheck, type OutcomeRunContext } from './outcome'
 import { appendRun, getSet, getSetRevision, sealedAttemptCount } from './store'
+import { autoReflowFailedSamples } from './auto-reflow'
 import { evidenceFromRows, inspectTrace, sampleSpanFromTrace, spanEvidenceFromRows } from './trace-sampler'
 import type { Attempt, Evidence, EvalConfig, EvalRun, EvalTask, ToolCallRecord } from './types'
 import { loadEvalConfig } from './types'
@@ -226,7 +227,7 @@ export interface RunnerDeps {
 }
 
 export type ReplayRunResult =
-  | { ok: true; run: EvalRun }
+  | { ok: true; run: EvalRun; autoReflow?: import('./auto-reflow').AutoReflowSummary }
   | { ok: false; problems: string[] }
 
 interface ResolvedSample extends SampleInput {
@@ -401,5 +402,8 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
   }
   aggregateRun(set, run, config)
   appendRun(run)
-  return { ok: true, run }
+  // run 完成自动回流（挂账清偿批 B4）：失败样本幂等回流回归库；结果只随 run
+  // 透出不改判（reflowTaskToSet 内部幂等+结构性自拒；env EVAL_AUTO_REFLOW_ON_RUN=0 关）。
+  const autoReflow = autoReflowFailedSamples(set, run)
+  return { ok: true, run, autoReflow }
 }

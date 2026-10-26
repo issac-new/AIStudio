@@ -13,7 +13,7 @@ import { readdirSync } from 'node:fs'
 import { loadInstances } from '../ontology/ontology-store'
 import { readBoardKgState, boardKgPath, boardKgDir } from '../knowledge/board-graph'
 import { fiboGlossary } from '../ontology/ontology-fibo-glossary'
-import { searchSpecs, type SpecHit } from '../specs/specs-index'
+import { searchSpecs, specMentionsTerm, type SpecHit } from '../specs/specs-index'
 import { inferModules } from '../graph/simulation-graph-template'
 
 export type ImpactSource = 'ontology-instance' | 'board-kg' | 'fibo-term'
@@ -27,6 +27,8 @@ export interface ImpactEntityHit {
   matchedTerm: string
   /** 补充定位（本体 taskRef / KG 板 slug）。 */
   detail?: string
+  /** 实体命中的 spec 文档名（挂账清偿批 B5：实体↔文档共现边的数据面，封顶 3）。 */
+  docs?: string[]
 }
 
 export interface RequirementImpact {
@@ -120,10 +122,22 @@ function hitFiboTerms(text: string): ImpactEntityHit[] {
   } catch { return [] }
 }
 
+/** 实体命中的 spec 文档（B5：共现边数据面；matchedTerm 全文提及，封顶 3 新优先）。 */
+function docsOfEntity(matchedTerm: string): string[] {
+  return specMentionsTerm(matchedTerm)
+    .sort((a, b) => b.file.localeCompare(a.file))
+    .slice(0, 3)
+    .map((h) => h.file)
+}
+
 /** 需求影响推演主入口（纯读侧，无写入面）。 */
 export function analyzeRequirementImpact(title: string, description: string): RequirementImpact {
   const text = `${title}\n${description}`
   const entities = [...hitOntologyInstances(text), ...hitBoardKg(text), ...hitFiboTerms(text)]
+    .map((e) => {
+      const docs = docsOfEntity(e.matchedTerm)
+      return docs.length ? { ...e, docs } : e
+    })
   // specs 路：用实体命中词面 + 标题做关键词（实体词面已是「需求里真实出现的领域词」）
   const keywords = [title, ...entities.map((e) => e.matchedTerm)].filter(termEligible)
   const relatedSpecs = searchSpecs(keywords, 8)
