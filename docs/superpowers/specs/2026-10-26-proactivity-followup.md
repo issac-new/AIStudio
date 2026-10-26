@@ -53,3 +53,10 @@ DESIGN_SYNC: touched
 
 - proactivity 策略的 UI 级灰度预设（按 profile 模板批量下发）。
 - SIM_ROOT 推演实例内两轴策略的推演场景化（判据零变化纪律下另轮）。
+
+### 收口补记（合并后实测，2026-10-26 深夜）
+
+- 8647 换装（注入态 main 61b1bdb9f，隔离 73 个历史未跟踪注入残留后全新重放 406 补丁；zcode 003/005/007 三条为 2026-10-19 以来既有漂移告警非本批引入，其产物文件已从隔离区放回）。
+- curl 带 JWT（空 dev 库经 HERMES_WEB_UI_DEV_BOOTSTRAP=1 首登建号）实测五面全绿：model（5×5 轴+L4 caps draft/irreversible_exec）、alignment 登记/确认（confirmations=1）、policy 配置（resolved.goalStatus=fresh）、assess（L4+契约但子任务失败代价 high → cappedAt=draft 拒——「授权跟子任务走」语义活体成立）。
+- 浏览器实物走查（8649 vite dev + IAB）：①搭建→环境与资产页签 ProactivitySection 在位，矩阵 5×5 与服务端 caps 一致（L5 全限/上限告知；L4 起草→不可逆执行）；②策略表呈现 curl 写入的 coding-agent L4 配置；③「重新确认」点击成功（消息+状态 chip 复位新鲜）；④演算器默认参数出「受限·上限=起草」+升仓建议。截图留档会话工件。
+- 服务终态：8647/8649 保持在线（走查栈留给用户复核）。

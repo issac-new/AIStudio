@@ -9,7 +9,7 @@
 | 产品面 | 路由/客户端目录/服务端域 | 89/19/149（+delivery/precedent/expertise/proactivity，2026-10-26 Qoder 吸收轮；proactivity 同域增执法策略存储不算新域） |
 | 产品面 | 补丁 studio/zcode（series 登记） | 406/8（2026-10-26 晚口径并 Qoder 双轮实测：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp、695 proactivity 挂载、696 agent 目标登记对齐台账＋zcode 009 claude-skills-compat） |
 | 产品面 | 用户决策/常设/纠正 | 148/30/27 |
-| 产品面 | 全量测试 | 滚动口径见各轮 spec 验证段（2026-10-26 注入态主树=6,366 过/4 败（并行 TDD 红测）/11 跳过；主树未注入时全量出假红，必须先 inject） |
+| 产品面 | 全量测试 | 滚动口径见各轮 spec 验证段（2026-10-26 挂账清偿批 worktree=6,420 过/0 败/11 跳过——并行 TDD 红测已由其归属轮修复；主树未注入时全量出假红，必须先 inject） |
 | 产品面 | 六闸/介入/检测器/prelaunch | 6/14/31/30 |
 | 产品面 | 净树重放 | clean+inject 全链通过（2026-10-26 worktree 实测；series 现量见上行随批对账） |
 | 产品面 | FIBO | 37/21/16 |
