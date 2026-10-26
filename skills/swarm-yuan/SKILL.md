@@ -111,13 +111,14 @@ SessionStart hook（lite 档由 AI 主动）跑 `scripts/project-fingerprint.sh 
   ① 需求理解  AI 复述需求 + 列影响面，用户确认或纠正
   ② 探查      先查 recipes 配方与 §A 同类功能，再按 reference-manual 组件库清单定位既有组件
               （"谁依赖 X"用 relations-query.sh 查 relations.jsonl 边集反查）
-  ③ spec      AI 写 spec（决策记录 + 影响范围 + 测试设计）→ 用户评审批准
+  ③ spec      AI 写 spec（决策记录 + 影响范围 + 测试设计 + 设计文档影响声明——DESIGN_SYNC_REQUIRED=1 时 touched/none）→ 用户评审批准
   ④ plan      AI 拆 tasks（.swarm-yuan/tasks.md）
   ⑤ 编码      先查再写：七层下探找可复用件，都落空才新增
               【无 spec 写源码】四层拦截：有 hook 宿主写时拒；其余提交时/门禁时拦；【违反 forbid 规则】hook deny + 替代方案
   ⑥ 测试      门禁序列执行，全绿进下一步
-  ⑦ 独立审查  review 门禁 + review-record 落盘；发现问题回 ⑤
-  ⑧ 合入      状态机核验 verify pass + 证据引用
+  ⑦ 独立审查  review 门禁 + review-record 落盘；核设计文档影响声明合理性（none 声明）；发现问题回 ⑤
+  ⑧ 合入      状态机核验 verify pass + 证据引用；设计文档随批（touched 兑现，L2 核验）；
+              合入序列=fetch → 本地 main ff-only 快进 → worktree rebase → merge --no-ff → push（防本地 main 滞后远端）
   ⑨ 发布      构建 + 发布门禁
 任一步被拦：提示给出原因与解除路径（补 spec / 调 conf / 留痕豁免），修复后重跑该步。
 ```

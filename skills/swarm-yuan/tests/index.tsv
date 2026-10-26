@@ -120,3 +120,4 @@ test-execution-surface-budget.sh	1	yes	general	2026-10-24
 test-r141-compendium-fullcheck.sh	2	yes	general	R141
 test-r141-upgrade-dryrun.sh	2	yes	general	R141
 test-r141-relocate.sh	2	yes	general	R141
+test-design-sync.sh	2	yes	general	2026-10-26

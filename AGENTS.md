@@ -5,7 +5,7 @@
 ## 工作规则
 
 1. 只改本仓；`vendor/**` 是钉版基线（台账 `vendor/VENDOR.md`），注入后的脏态是预期工作态、不入提交（pre-commit 自动撤出）；基线替换只走 `npm run vendor:sync` + `VENDOR_SYNC=1` 显式通道。`vendor/**` 内禁建 `.git`。
-2. 代码改动先写 `docs/superpowers/specs/YYYY-MM-DD-<slug>.md`，至少含「变更 / 决策记录 / 验证」三段；spec 是决策事实源，不是事后补记。
+2. 代码改动先写 `docs/superpowers/specs/YYYY-MM-DD-<slug>.md`，至少含「变更 / 决策记录 / 验证 / 设计文档影响」四段（设计文档影响=DESIGN_SYNC 声明：触及整合正本/数字总账须 touched 并同批修订，L2 钩子核验；纯内部变更 none 附理由）；spec 是决策事实源，不是事后补记。
 3. 分支 `feat|fix|refactor/<slug>`，从 `origin/main` 起；并行会话用 worktree；清理只走 `git worktree remove/prune`，禁止 `rm -rf`。
 4. 提交前跑目标测试 `npx vitest run <path>`；合并前 `npm test`；新增服务端模块跑 `npm run typecheck:harness`。
 5. 失败不隐瞒：测试红、步骤跳过、未验证项必须写进交付说明。

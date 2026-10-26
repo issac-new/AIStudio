@@ -67,14 +67,48 @@ _sg="${_sg:-docs/specs/*.md}"
 # R109-D8 spec-变更关联：特性分支上，治理 spec 须出现在变更集（staged ∪ 本分支 diff）——
 # 历史 spec（合入 main 前的）不再天然放行（R108 probe 实证护栏退化）。
 # 基分支（main/master/BASE_BRANCH）保留存在性：主干直提交归分支门管，合并后复查按宽口径。
+_ds_spec=""
 if spf_on_base_branch "$ROOT" "$CONF"; then
   _approved="$(spf_find_approved_spec "$ROOT" "$_sg" index)"
-  [[ -n "$_approved" ]] && exit 0
 else
   _governing="$(spf_find_governing_spec "$ROOT" "$_sg" 'staged branch' "$CONF" index)"
-  if [[ -n "$_governing" ]]; then
-    exit 0
+fi
+
+# DESIGN_SYNC 二段核验（spec 判定通过后才查——spec 缺失优先按主判据报）：
+# 1) 治理 spec 须含「设计文档影响」声明（touched/none）——选择器排除 DESIGN_DOCS
+#    （正本自身常含「## 决策记录」章，不排除会抢注 governing 选择，2026-10-26 立法轮实证）；
+# 2) touched 所列 DESIGN_DOCS 路径必须出现在本变更集（声明与兑现同一批）；
+# 3) 变更集触及 DESIGN_DOCS 但无治理 spec（排除后零候选）=正本修订无 spec 声明治理——拦。
+# none 放行——合理性归节点⑦审查。
+_ds_docs="$(spf_design_docs "$CONF")"
+_ds_req="$(spf_conf_val "$CONF" DESIGN_SYNC_REQUIRED)"
+if [[ "$_ds_req" == "1" && -n "$_ds_docs" ]]; then
+  _ds_spec="$(spf_find_governing_spec "$ROOT" "$_sg" 'staged branch' "$CONF" index $_ds_docs)"
+  if [[ -n "$_ds_spec" ]]; then
+    _ds_violation="$(spf_design_sync_check "$ROOT" "$CONF" "$_ds_spec" 'staged branch' index)"
+  else
+    _ds_violation=""
+    _ds_f=""
+    while IFS= read -r _ds_f; do
+      [[ -z "${_ds_f:-}" ]] && continue
+      for _d in $_ds_docs; do
+        [[ "$_ds_f" == "$_d" ]] && _ds_violation="unowned-doc-change: ${_ds_f} 设计文档修订无治理 spec（须有 spec 以「设计文档影响」段声明 DESIGN_SYNC: touched 治理本批修订——先 spec 再改正本）"
+      done
+    done <<< "$(spf_changed_files "$ROOT" 'staged branch' "$CONF")"
   fi
+  if [[ -n "$_ds_violation" ]]; then
+    _audit_dir="$ROOT/.swarm-yuan"
+    mkdir -p "$_audit_dir" 2>/dev/null || true
+    _ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    _e="$(printf '%s' "$_ds_violation" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr -d '\r\n')"
+    printf '{"ts":"%s","tool":"git-commit","target":"%s","gates":"design-sync"}\n' "$_ts" "$_e" >> "$_audit_dir/gate-deny.jsonl" 2>/dev/null || true
+    echo "✗ swarm-yuan design-sync（L2 提交时强拦）: ${_ds_violation}" >&2
+    echo "  解除方式: 1) 写治理 spec（含「## 决策记录」+「设计文档影响」段）随本批提交；2) 把声明触及的设计文档修订并入本批；3) 确属无需更新——spec 声明改 DESIGN_SYNC: none 附理由（节点⑦审查背书）；4) 逃生门: git commit --no-verify（L3 门禁兜底，deny 已落盘 gate-deny.jsonl）。" >&2
+    exit 1
+  fi
+fi
+if [[ -n "${_approved:-}${_governing:-}" ]]; then
+  exit 0
 fi
 
 # 拦截：落审计（与 fail-gate-hook 同 jsonl 格式，tool=git-commit）+ stderr 原因与解除路径

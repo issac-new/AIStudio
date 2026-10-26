@@ -880,6 +880,37 @@ check_spec_first() {
     _approved="$(spf_find_governing_spec "$_root" "$_sg" 'staged branch untracked' "$_CONF_PATH")"
   fi
   if [[ -n "$_approved" ]]; then
+    # DESIGN_SYNC 二段核验（与 L2 同判据 spec-first-lib；关联面=门禁态 staged∪branch∪untracked，worktree 视图）。
+    # 治理 spec 选择器排除 DESIGN_DOCS（正本自身常含「## 决策记录」章会抢注 governing 选择——
+    # 正本是被同步对象不是治理 spec，2026-10-26 立法轮实证）；无治理 spec 但变更集触及 DESIGN_DOCS
+    # =正本修订无声明治理，同拦（unowned-doc-change）。
+    if command -v spf_design_sync_check >/dev/null 2>&1; then
+      local _ds_violation _ds_docs _ds_req _ds_spec _ds_f _d
+      _ds_docs="$(spf_design_docs "$_CONF_PATH")"
+      _ds_req="$(spf_conf_val "$_CONF_PATH" DESIGN_SYNC_REQUIRED)"
+      if [[ "$_ds_req" == "1" && -n "$_ds_docs" ]]; then
+        if spf_on_base_branch "$_root" "$_CONF_PATH"; then
+          _ds_spec=""
+        else
+          _ds_spec="$(spf_find_governing_spec "$_root" "$_sg" 'staged branch untracked' "$_CONF_PATH" worktree $_ds_docs)"
+        fi
+        _ds_violation=""
+        if [[ -n "$_ds_spec" ]]; then
+          _ds_violation="$(spf_design_sync_check "$_root" "$_CONF_PATH" "$_ds_spec" 'staged branch untracked' worktree)"
+        else
+          while IFS= read -r _ds_f; do
+            [[ -z "${_ds_f:-}" ]] && continue
+            for _d in $_ds_docs; do
+              [[ "$_ds_f" == "$_d" ]] && _ds_violation="unowned-doc-change: ${_ds_f} 设计文档修订无治理 spec（须有 spec 以「设计文档影响」段声明 DESIGN_SYNC: touched 治理本批修订——先 spec 再改正本）"
+            done
+          done <<< "$(spf_changed_files "$_root" 'staged branch untracked' "$_CONF_PATH")"
+        fi
+        if [[ -n "$_ds_violation" ]]; then
+          fail "gate_design_sync: ${_ds_violation}——解除：写治理 spec 声明/并入设计文档修订/改声明 none 附理由（节点⑦审查背书）；开关 DESIGN_SYNC_REQUIRED/DESIGN_DOCS（precheck.conf）"
+          return 0
+        fi
+      fi
+    fi
     pass "spec-first: 可写区变更有变更集内已批准 spec（${_approved}）"
   else
     fail "gate_spec_first_missing: git 变更触及可写源码区（如 ${_hit}）但本变更集无已批准 spec（须含「## 决策记录」段且非占位；R109-D8 起=spec 须随本分支提交/staged/untracked 携带，历史 spec 不再放行）——先 spec 再编码；四层拦截同判据（L1 写时 hook/L2 提交时 pre-commit/本门/L4 状态机 build 准入）"
