@@ -952,3 +952,6 @@
 
 # 695（2026-10-26 Qoder 主动性文章吸收轮）：proactivity 域挂载——/api/hermes/proactivity/{model,assess,alignment} 两轴裁决（谁定义问题 L1-L5 × 做到哪一步五档）+长期目标漂移防线（确认台账+新鲜度），判定面 fail-soft；enforce-gate 执行面接线挂账见 spec=2026-10-26-proactivity-two-axis.md
 695-server-proactivity-routes.patch
+
+# 696（2026-10-26 Qoder 主动性文章吸收·挂账清偿批）：hermes /goal 目标创建/契约变更时 fail-soft 登记到 studio proactivity 对齐台账（同机共享 JSON，原子替换、保确认历史）；completion contract（验收规则）透传为 L4 升仓判据 acceptanceCriteria；HERMES_GOAL_ALIGNMENT_OFF=1 可关。spec=2026-10-26-proactivity-followup.md
+696-agent-goals-alignment-register.patch

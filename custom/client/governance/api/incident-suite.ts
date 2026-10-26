@@ -133,3 +133,93 @@ export function deleteLadder(target: string): Promise<{ ok: boolean }> {
     method: 'DELETE',
   })
 }
+
+// ---- H4. 主动性两轴（proactivity 域，Qoder 吸收轮+挂账清偿批） ----
+
+export type ProblemDefinerLevelDto = 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
+export type ActionTierDto = 'inform' | 'suggest' | 'draft' | 'reversible_exec' | 'irreversible_exec'
+
+export interface ProactivityModelDto {
+  axes: {
+    problemDefiner: Array<{ level: ProblemDefinerLevelDto; title: string; definer: string; example: string }>
+    actionTier: Array<{ tier: ActionTierDto; title: string }>
+  }
+  rules: string[]
+  alignmentPolicy: { maxConfirmAgeDays: number; neverConfirmedGraceDays: number }
+  caps: Array<{ level: ProblemDefinerLevelDto; noContract: ActionTierDto; withContract: ActionTierDto }>
+  executionFace: string
+}
+
+export interface PolicyEntryDto {
+  profile: string
+  level: ProblemDefinerLevelDto
+  contract?: { goalExplicit: boolean; acceptanceCriteria: boolean }
+  goalId?: string
+  updatedAt: number
+  updatedBy?: string
+  note?: string
+  resolved?: { level: ProblemDefinerLevelDto; contract?: { goalExplicit: boolean; acceptanceCriteria: boolean }; goalStatus?: 'fresh' | 'stale' | 'never-confirmed' }
+}
+
+export interface AlignmentEntryDto {
+  goalId: string
+  goalSummary: string
+  createdAt: number
+  confirmations: Array<{ at: number; by?: string; note?: string }>
+  contract?: { goalExplicit: boolean; acceptanceCriteria: boolean }
+  status: { status: 'fresh' | 'stale' | 'never-confirmed'; lastConfirmedAt: number | null; daysSinceConfirm: number | null; reason: string }
+}
+
+export function fetchProactivityModel(): Promise<ProactivityModelDto> {
+  return request<ProactivityModelDto>('/api/hermes/proactivity/model')
+}
+
+export function fetchProactivityPolicies(): Promise<{ ok: boolean; entries: PolicyEntryDto[] }> {
+  return request<{ ok: boolean; entries: PolicyEntryDto[] }>('/api/hermes/proactivity/policy')
+}
+
+export function putProactivityPolicy(profile: string, body: { level: ProblemDefinerLevelDto; contract?: { goalExplicit: boolean; acceptanceCriteria: boolean }; goalId?: string; note?: string }): Promise<{ ok: boolean; entry: PolicyEntryDto }> {
+  return request<{ ok: boolean; entry: PolicyEntryDto }>(`/api/hermes/proactivity/policy/${encodeURIComponent(profile)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
+}
+
+export function deleteProactivityPolicy(profile: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/api/hermes/proactivity/policy/${encodeURIComponent(profile)}`, { method: 'DELETE' })
+}
+
+export function fetchProactivityAlignments(): Promise<{ ok: boolean; entries: AlignmentEntryDto[] }> {
+  return request<{ ok: boolean; entries: AlignmentEntryDto[] }>('/api/hermes/proactivity/alignment')
+}
+
+export function confirmProactivityAlignment(goalId: string, note?: string): Promise<{ ok: boolean; entry: AlignmentEntryDto }> {
+  return request<{ ok: boolean; entry: AlignmentEntryDto }>(`/api/hermes/proactivity/alignment/${encodeURIComponent(goalId)}/confirm`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(note ? { note } : {}),
+  })
+}
+
+export function postProactivityAlignment(body: { goalId: string; goalSummary: string }): Promise<{ ok: boolean; entry: AlignmentEntryDto }> {
+  return request<{ ok: boolean; entry: AlignmentEntryDto }>('/api/hermes/proactivity/alignment', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
+}
+
+export interface AssessResultDto {
+  ok: boolean
+  assessment: { allowed: boolean; cappedAt: ActionTierDto; reasons: string[] }
+  upgrade: { note: string }
+  failureCostTier: string | null
+  goalStatus: { status: 'fresh' | 'stale' | 'never-confirmed'; reason: string } | null
+}
+
+export function assessProactivity(body: {
+  level: ProblemDefinerLevelDto
+  action: ActionTierDto
+  contract?: { goalExplicit: boolean; acceptanceCriteria: boolean }
+  failureCost?: { reversible: boolean; impactScope: 'self' | 'team' | 'external'; verifiable: boolean }
+  goalStatus?: 'fresh' | 'stale' | 'never-confirmed'
+}): Promise<AssessResultDto> {
+  return request<AssessResultDto>('/api/hermes/proactivity/assess', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
+}

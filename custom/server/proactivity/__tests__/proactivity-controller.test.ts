@@ -42,12 +42,40 @@ describe('proactivity REST（/api/hermes/proactivity）', () => {
       rules: string[]
       alignmentPolicy: { maxConfirmAgeDays: number }
       executionFace: string
+      caps: Array<{ level: string; noContract: string; withContract: string }>
     }
     expect(body.axes.problemDefiner).toHaveLength(5)
     expect(body.axes.actionTier).toHaveLength(5)
     expect(body.rules).toHaveLength(4)
     expect(body.alignmentPolicy.maxConfirmAgeDays).toBe(7)
-    expect(body.executionFace).toContain('advisory-only')
+    expect(body.executionFace).toContain('HERMES_PROACTIVITY_ENFORCE')
+    expect(body.caps!.find((c) => c.level === 'L5')!.noContract).toBe('inform')
+    expect(body.caps!.find((c) => c.level === 'L4')!.withContract).toBe('irreversible_exec')
+  })
+
+  it('policy REST：PUT 校验/保存/解析态、GET 列表、DELETE 404', async () => {
+    const bad = await fetch(`${base}/policy/bad profile`, {
+      method: 'PUT', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ level: 'L4' }),
+    })
+    expect(bad.status).toBe(400)
+
+    const put = await fetch(`${base}/policy/coding-agent`, {
+      method: 'PUT', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ level: 'L4', contract: { goalExplicit: true, acceptanceCriteria: true } }),
+    })
+    expect(put.status).toBe(200)
+    const entry = ((await put.json()) as { entry: { profile: string; resolved: { level: string } } }).entry
+    expect(entry.profile).toBe('coding-agent')
+    expect(entry.resolved.level).toBe('L4')
+
+    const list = await fetch(`${base}/policy`)
+    expect(((await list.json()) as { entries: unknown[] }).entries).toHaveLength(1)
+
+    const gone = await fetch(`${base}/policy/absent`, { method: 'DELETE' })
+    expect(gone.status).toBe(404)
+    const del = await fetch(`${base}/policy/coding-agent`, { method: 'DELETE' })
+    expect(del.status).toBe(200)
   })
 
   it('POST /assess：L4 无契约拒执行；有契约+low 放行；未知 goalId 对齐状态 fail-soft 为 null', async () => {
