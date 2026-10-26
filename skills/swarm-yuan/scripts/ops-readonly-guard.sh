@@ -91,6 +91,14 @@ classify_shell() {
   [[ -z "$cmd" ]] && { verdict "deny" "空命令（无法判定，fail-closed 拒绝）"; return 1; }
   first="${cmd%% *}"; low="$(printf '%s' "$first" | tr '[:upper:]' '[:lower:]')"
   last="${cmd##* }"
+  # -1) 输出重定向/写目标全串扫描（两步白名单制，审计实抓后根治）：
+  #     先剥掉无害丢弃形态（2>&1、>/dev/null、>/dev/zero 等），剩余串出现 >、>>、
+  #     curl -o、wget -O 即 deny——覆盖 >/abs 与 >file 全形态，无误伤。
+  _cmd_noredir="$(printf '%s' "$cmd" | LC_ALL=C sed -E 's/[0-9]?>[ ]*\/dev\/(null|zero|random|urandom|tty)([ ]|$)/ /g; s/>[ ]*&[0-9]+([ ]|$)/ /g')"
+  if printf '%s' "$_cmd_noredir" | LC_ALL=C grep -qE '>[>]?|(^|[[:space:]])(-o|--output)[[:space:]]+[^[:space:]]|(^|[[:space:]])-O([[:space:]]+[^[:space:]]|=)'; then
+    verdict "deny" "命令含输出重定向或下载写盘（> >> / curl -o / wget -O）——只读守卫不允许落盘" >&2
+    return 1
+  fi
   # 0) 全串写动词扫描（; & | 分隔的多命令与 ssh 远端串一并覆盖）
   if printf '%s' "$cmd" | grep -qiE "$_SH_WRITE_WORD"; then
     verdict "deny" "命令含写/破坏动词（rm/mv/dd/kill/chmod 等）"; return 1

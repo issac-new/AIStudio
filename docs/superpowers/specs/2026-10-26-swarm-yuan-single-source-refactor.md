@@ -134,3 +134,13 @@ DESIGN_SYNC: touched
 ### 最终回归（并入最新 main 后）
 
 `bash tests/run.sh --level all --jobs 6` → **122 通过 / 0 失败（共 122，独占串行 17）**，EXIT=0。
+
+## 终审修复补位（2026-10-26）
+
+摘取并行核心会话 `fbcc731f4` 中与当前 main 兼容的四个修复（不并入其独立可信性重构的 8 个新测试与 secure-fs/conf 内核）：
+
+- `assets/precheck.conf`：尾链补 `precheck.industry.conf`，并注明变量定义区必须在尾链 source 之前。
+- `assets/precheck.sh`：`--dump-conf` / `--gate-stats` 改为只 source `precheck.conf`（由其级联加载 arch/compliance/industry/patch），消除重复 source；`--gate-stats` 由此尊重 conf 中的 `GATE_RUNS_DIR`。
+- `install.sh`：外部符号链接目标改为 `return 3`，批量汇总单列“未变更外部链接”，不再计入成功。
+- `scripts/ops-readonly-guard.sh`：输出重定向改为两步白名单（先剥 `2>&1` / `/dev/null` 等无害丢弃，再匹配 `>`/`>>`/`curl -o`/`wget -O`）。
+- 预算：上述改动净增 3 行，通过压缩既有空行抵消，`FACT_SCRIPT_LOC` 9362 与引擎上限 7800 维持不变；self-check 全绿。

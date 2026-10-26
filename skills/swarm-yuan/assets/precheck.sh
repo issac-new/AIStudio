@@ -1062,13 +1062,10 @@ if [[ "$MODE" == "--dump-conf" ]]; then
     done < <(grep -E '^[A-Z_][A-Z0-9_]*=' "${_CONF_DIR}/$_dc_layer" 2>/dev/null)
   done | awk -F'\t' '{ src[$1] = $2 } END { for (v in src) print v "\t" src[v] }' > "$_dc_map"
   # 2) 按同一顺序 source（与运行时一致），再输出合成值 + 来源
-  for _dc_layer in precheck.conf precheck.arch.conf precheck.compliance.conf precheck.patch.conf; do
-    [[ -f "${_CONF_DIR}/$_dc_layer" ]] || continue
-    set +u
-    # shellcheck disable=SC1090
-    . "${_CONF_DIR}/$_dc_layer" || true
-    set -u
-  done
+  set +u
+  # shellcheck disable=SC1090
+  . "${_CONF_DIR}/precheck.conf" || true
+  set -u
   # 3) 按层序稳定输出（同层内按扫描序）
   for _dc_layer in precheck.conf precheck.arch.conf precheck.compliance.conf precheck.patch.conf; do
     while IFS=$'\t' read -r _dc_var _dc_line; do
@@ -1089,6 +1086,12 @@ fi
 # advisory 门连续 N 次（默认 10）零发现 → warn 提示降级；安全类 NEVER_GATE 豁免。
 # 仅提示不自动降级（用户决策）。不需 cd PROJECT_DIR（读 GATE_RUNS_DIR 或默认路径），cd 前拦截。
 if [[ "$MODE" == "--gate-stats" ]]; then
+  # Task 2：先按运行时同序 source conf 链，conf 内配置的 GATE_RUNS_DIR 同样生效
+  #（旧版只认环境变量与 cwd，conf 配置面被静默忽略）。
+  set +u
+  # shellcheck disable=SC1090
+  . "${_CONF_DIR}/precheck.conf" || true
+  set -u
   _stats_file="${GATE_RUNS_DIR:-${_ENV_GATE_RUNS_DIR:-${PROJECT_DIR:-$(pwd)}/.swarm-yuan/gate-runs}}/gate-runs.jsonl"
   if [[ ! -f "$_stats_file" ]]; then
     echo "⚠ 无 gate-runs.jsonl（${_stats_file}）——需配置 GATE_RUNS_DIR 并跑过门禁"
@@ -1586,9 +1589,6 @@ graphify_ensure_built() {
 
 # ===== DDD / 分层 / 拼装门禁（--layer / --stable-diff / --link-depth）=====
 # 防范：层级穿透 / 依赖倒置 / 循环依赖 / 领域层污染框架 / 稳定单元被篡改 / 调用链膨胀
-
-
-
 
 
 # 依赖版本提取（输出 name<TAB>version，跨平台 awk，兼容 5 类依赖文件）

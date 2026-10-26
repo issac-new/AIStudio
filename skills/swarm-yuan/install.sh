@@ -288,22 +288,26 @@ install_all_found() {  # stdin=detect_runtimes 输出（TSV）→ rc 0=全绿 1=
 trap 'rm -f "${_tally:-}"' EXIT
   local name dir cmd
   while IFS=$'\t' read -r name dir cmd; do
-    if install_to "$name" "$dir" "$cmd"; then
-      printf 'ok\t%s\n' "$name" >> "$_tally"
-    else
-      printf 'bad\t%s\n' "$name" >> "$_tally"
-      echo "  ✗ ${name} 安装失败——继续其余宿主（隔离不中断）" >&2
-    fi
+    _rc_inst=0
+    install_to "$name" "$dir" "$cmd" || _rc_inst=$?
+    case "$_rc_inst" in
+      0) printf 'ok\t%s\n' "$name" >> "$_tally" ;;
+      3) printf 'skip\t%s\t(unchanged external link)\n' "$name" >> "$_tally" ;;
+      *) printf 'bad\t%s\n' "$name" >> "$_tally"
+         echo "  ✗ ${name} 安装失败——继续其余宿主（隔离不中断）" >&2 ;;
+    esac
     echo ""
   done
-  local _ok_n _bad_n
+  local _ok_n _bad_n _skip_n
   _ok_n=$(grep -c '^ok' "$_tally" 2>/dev/null || true)
   _bad_n=$(grep -c '^bad' "$_tally" 2>/dev/null || true)
+  _skip_n=$(grep -c '^skip' "$_tally" 2>/dev/null || true)
+  [[ "${_skip_n:-0}" -gt 0 ]] && echo "  ⊘ ${_skip_n} 个宿主目标为外部符号链接，保持未变更（不计入成功）"
   if [[ "${_bad_n:-0}" -gt 0 ]]; then
     grep '^bad' "$_tally" | cut -f2 | while IFS= read -r name; do echo "  ✗ 失败宿主: $name" >&2; done
   fi
   rm -f "$_tally"
-  echo "=== 批量安装汇总：${_ok_n:-0} 成功 / ${_bad_n:-0} 失败 ==="
+  echo "=== 批量安装汇总：${_ok_n:-0} 成功 / ${_bad_n:-0} 失败 / 未变更外部链接 ${_skip_n:-0} ==="
   [[ "${_bad_n:-0}" -eq 0 ]]
 }
 
@@ -340,8 +344,8 @@ install_to() {
   # 目标已是符号链接（如由技能管理器统一维护的部署）：不穿透、不破坏链接——跳过拷贝并显式提示。
   # 实体安装请先移除该链接，或由管理方在链接源头更新。
   if [[ -L "$dest" ]]; then
-    echo "  ⚠ ${dest} 是符号链接（疑似由技能管理器维护）——跳过安装以防破坏链接；如需实体安装请先移除该链接"
-    return 0
+    echo "  ⚠ ${dest} 是符号链接（疑似由技能管理器维护）——保持未变更（rc=3）；如需实体安装请先移除该链接"
+    return 3
   fi
 
   # 备份旧版本 + 源已演进提示（八轮复盘：安装产物版本完全断联——旧版无版本记录，
@@ -503,9 +507,11 @@ trap 'rm -f "${_tally:-}"' EXIT
     fi
     echo ""
   done
-  local _ok_n _bad_n
+  local _ok_n _bad_n _skip_n
   _ok_n=$(grep -c '^ok' "$_tally" 2>/dev/null || true)
   _bad_n=$(grep -c '^bad' "$_tally" 2>/dev/null || true)
+  _skip_n=$(grep -c '^skip' "$_tally" 2>/dev/null || true)
+  [[ "${_skip_n:-0}" -gt 0 ]] && echo "  ⊘ ${_skip_n} 个宿主目标为外部符号链接，保持未变更（不计入成功）"
   if [[ "${_bad_n:-0}" -gt 0 ]]; then
     grep '^bad' "$_tally" | cut -f2 | while IFS= read -r name; do echo "  ✗ 失败宿主: $name" >&2; done
   fi
