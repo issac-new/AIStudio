@@ -135,6 +135,20 @@ describe('observer /observer/overview 端到端', () => {
       .toEqual(expect.arrayContaining(['t_fanfan-pm-plan', 't_chen-pay-core']))
   })
 
+  it('收官闸：state 含 retro_done（G6 终局）→ available=false，模拟卡不进日常观察面', async () => {
+    // run22 收官 4 天仍 available:true 供 81 张模拟卡淹没日常侧栏待办数的实录（2026-10-26）
+    const stateFile = join(root, 'var', 'current-state.env')
+    const { readFileSync } = await import('node:fs')
+    writeFileSync(stateFile, `${readFileSync(stateFile, 'utf8')}\nretro_done=1792600856\n`)
+    const res = await fetch(`${base}/api/hermes/sim/observer/overview`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.available).toBe(false)
+    expect(body.reason).toContain('已收官')
+    expect(body.boards).toBeUndefined()
+    expect(body.tasks).toBeUndefined()
+  })
+
   it('SIM 根缺席：available=false fail-soft，不抛 5xx', async () => {
     delete process.env.SIM_OBSERVER_ROOT
     process.cwd = () => join(root, 'var') // 约定位全部落空（var 下无 ncwk-sim-mux）

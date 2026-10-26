@@ -131,6 +131,14 @@ router.get('/observer/overview', async (ctx: Context) => {
     const state = run.stateFile && existsSync(run.stateFile)
       ? parseStateEnv(readFileSync(run.stateFile, 'utf8'))
       : {}
+    // 收官闸（2026-10-26 侧栏徽标准确性轮）：retro_done（G6 终局标记）已落 = 推演
+    // 收官，日常观察面关闭——已收官 run 的看板卡不再灌进日常工作台（run22 10-22
+    // 收官后仍以 available:true 供 81 张模拟卡，侧栏③④/看板/工作台待办数被模拟卡
+    // 淹没的实录）。历史查询走 run-state/evidence 族端点，不经过观察面。
+    if (state.retro_done) {
+      ctx.body = { available: false, reason: `推演 ${run.runId} 已收官（retro_done）——日常观察面关闭，历史见 run-state/evidence`, runId: run.runId }
+      return
+    }
     const rooms = simRoomKeysOf(state)
     const startedAtRaw = Number(state.run_started_at ?? 0)
     const overview = await simKanbanOverview(root).getOverview()

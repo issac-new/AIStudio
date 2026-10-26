@@ -28,7 +28,7 @@ const router = useRouter()
 const navLocale = useCenterNavLocale()
 const progress = useDailyStageProgress()
 const { run: simRun } = useRunContext('sim')
-const { badges: navBadges } = useSideNavBadges()
+const { badges: navBadges, blockedCount } = useSideNavBadges()
 
 /** 待办徽标：0=不渲染（''），>0 传数字；key 见 useSideNavBadges 口径表 */
 function navBadge(key: string): number | '' {
@@ -38,7 +38,7 @@ function navBadge(key: string): number | '' {
 
 /** 徽标项的悬停说明（有数才挂 title，说明数字口径；无徽标保持无 title 现状） */
 const BADGE_TITLES: Record<string, { zh: string; en: string }> = {
-  journey: { zh: '待办合计：需关注 + 待决策', en: 'Total pending: attention + decisions' },
+  journey: { zh: '待办合计：需关注 + 评审门（并集不重）', en: 'Total pending: attention + gate reviews (union)' },
   workbench: { zh: '需关注：阻塞任务 / 阻塞循环 / 等我 / 失败会话', en: 'Needs attention: blocked tasks/loops, waiting, failed sessions' },
   board: { zh: '受阻任务数（与注意力条同口径）', en: 'Blocked tasks (same scope as attention bar)' },
   inbox: { zh: '待决策：等我三源 + 评审门', en: 'Pending decisions: waiting + gate reviews' },
@@ -88,6 +88,25 @@ const commonItems: CommonItem[] = COMMON_NAVS.map(c => ({ ...c, match: COMMON_MA
  *  该阶段行才用底色高亮；其余页面（工作台/看板/工具页）只靠右侧状态点
  *  表示「当前阶段」，避免「当前页面 + 当前阶段」两行同时抢高亮。 */
 const activeStagePage = computed(() => /^ia2\.stage[1-6]$/.test(routeName.value) ? routeName.value : '')
+/** 阶段行右侧信号（2026-10-26 合一轮）：③④有在办数时计数章色=本阶段桶自身
+ *  状态（桶映射=STAGE_BOARD_STATUSES，与阶段页内嵌看板同源）——④桶含 blocked，
+ *  有阻塞卡=红、否则有卡=黄；③桶（triage/todo/scheduled/ready）无 blocked 恒黄。
+ *  无在办数（①②⑤⑥与空桶③④）保留生命周期状态点。终结徽标口径（阶段页映射）
+ *  与状态点口径（生命周期映射）两套映射同行双信号的矛盾形态（③行曾同显
+ *  done✓+11 张在办）。 */
+function stageChipStatus(no: 1 | 2 | 3 | 4 | 5 | 6): 'done' | 'current' | 'pending' | 'blocked' {
+  if (navBadge(`stage${no}`) === '') return progress.stageState(no)
+  if (no === 4) return blockedCount.value > 0 ? 'blocked' : 'current'
+  return 'current'
+}
+
+/** 合一章的悬停说明：计数口径 + 阻塞提示（黄章不必注明「进行中」——有数即进行中） */
+function stageRowTitle(no: 1 | 2 | 3 | 4 | 5 | 6): string | undefined {
+  const base = badgeTitle(`stage${no}`)
+  if (!base) return undefined
+  return stageChipStatus(no) === 'blocked' ? `${base}；本阶段有阻塞` : base
+}
+
 const stageItems = computed(() => STAGE_META.map((meta) => {
   const nav = CENTER_NAVS.find(c => c.key === `stage${meta.no}`)!
   return {
@@ -97,9 +116,9 @@ const stageItems = computed(() => STAGE_META.map((meta) => {
     lead: String(meta.no),
     label: zh.value ? meta.navLabel : meta.navLabelEn,
     active: activeStagePage.value === nav.name,
-    status: progress.stageState(meta.no),
+    status: stageChipStatus(meta.no),
     badge: navBadge(`stage${meta.no}`),
-    title: badgeTitle(`stage${meta.no}`),
+    title: stageRowTitle(meta.no),
   }
 }))
 

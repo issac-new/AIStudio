@@ -53,12 +53,15 @@ describe('徽标口径接线面（源一致性）', () => {
     expect(src).toContain('useSideNavBadges')
     expect(src, '审批徽标不得再内联 decisionRows').not.toContain("item.key === 'inbox' && decisionRows")
   })
-  it('IaSideNavItem 徽标与状态点共存（阶段③④数字与当前阶段点同显）', () => {
+  it('IaSideNavItem 徽标与状态点合一（③④计数章，单独形态保留）', () => {
     const src = readFileSync(resolve(__dirname, '../components/IaSideNavItem.vue'), 'utf8')
-    const badgeIdx = src.indexOf('v-if="badge !== \'\'"')
-    const statusIdx = src.indexOf('<span v-if="status" class="isn-item__status"')
-    const metaIdx = src.indexOf('v-if="badge === \'\' && !status"')
-    expect(badgeIdx).toBeGreaterThan(-1)
+    // 合一章：badge+status 同时在 → 单一 .isn-item__pill（内含灯胆/✓ + 数字）
+    const pillIdx = src.indexOf(`v-if="badge !== '' && status"`)
+    const badgeIdx = src.indexOf(`v-else-if="badge !== ''"`)
+    const statusIdx = src.indexOf('<span v-else-if="status" class="isn-item__status"')
+    const metaIdx = src.indexOf('v-else class="isn-item__meta"')
+    expect(pillIdx).toBeGreaterThan(-1)
+    expect(badgeIdx).toBeGreaterThan(pillIdx)
     expect(statusIdx).toBeGreaterThan(badgeIdx)
     expect(metaIdx).toBeGreaterThan(statusIdx)
     expect(src, '>99 封顶防撑爆行槽').toContain("99+")
