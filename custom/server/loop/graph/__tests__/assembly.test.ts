@@ -400,16 +400,20 @@ describe('graph REST run lifecycle', () => {
         if (state['__resume:approval:task/x'] !== undefined) return { goto: ['finish'] }
         return { interrupt: { id: 'approval:task/x', value: { contractId: 'task/x' } }, goto: ['gate'] }
       }))
-      .addNode(fnNode('finish', async (s) => ({ update: { steps: [String(s['__resume:approval:task/x'])] }, end: true })))
+      .addNode(fnNode('finish', async (s) => ({ update: { steps: [JSON.stringify(s['__resume:approval:task/x'])] }, end: true })))
       .setEntry('gate').addEdge('gate', 'finish').build())
     const { runId, instance } = await service.startRun('hitl')
     expect(instance.status).toBe('awaiting-input')
 
     const router = createGraphRunRouter({ graphService: service, eventLog })
-    const ctx = await invoke(router, 'post', `/api/graph/runs/${runId}/resume`, { interruptId: 'approval:task/x', value: 'approved' })
+    const ctx = await invoke(router, 'post', `/api/graph/runs/${runId}/resume`,
+      { interruptId: 'approval:task/x', value: 'approved' },
+      { state: { user: { id: 'alice', username: 'alice', role: 'user' } } })
     expect(ctx.status).toBe(200)
     expect((ctx.body as { instance: { status: string } }).instance.status).toBe('completed')
-    expect(((ctx.body as { instance: { state: { steps: string[] } } }).instance).state.steps).toEqual(['approved'])
+    expect(((ctx.body as { instance: { state: { steps: string[] } } }).instance).state.steps).toEqual([
+      JSON.stringify({ decision: 'approved', approver: 'alice' }),
+    ])
   })
 
   it('fork endpoint derives a new runId from the latest checkpoint', async () => {
@@ -452,6 +456,31 @@ describe('graph REST run lifecycle', () => {
     const decision = (service.getRun(runId)?.instance.state as { decision?: string }).decision ?? ''
     // 客户端自报的 mallory 被认证主体 alice 覆盖
     expect(JSON.parse(decision)).toEqual({ decision: 'approved', approver: 'alice' })
+  })
+
+  it('rejects an anonymous approval resume even when the body names an approver', async () => {
+    vi.stubEnv('AISTUDIO_LOCAL_OPERATOR', '')
+    try {
+      const eventLog = new InMemoryEventLogStore()
+      const service = new GraphService({ eventLog })
+      service.registerGraph(new GraphBuilder('hitl-anonymous', 'H')
+        .addNode(fnNode('gate', async (state) => {
+          if (state['__resume:approval:task/anon'] !== undefined) return { goto: ['finish'] }
+          return { interrupt: { id: 'approval:task/anon', value: {} }, goto: ['gate'] }
+        }))
+        .addNode(fnNode('finish', async () => ({ end: true })))
+        .setEntry('gate').addEdge('gate', 'finish').build())
+      const { runId } = await service.startRun('hitl-anonymous')
+      const router = createGraphRunRouter({ graphService: service, eventLog })
+      const ctx = await invoke(router, 'post', `/api/graph/runs/${runId}/resume`, {
+        interruptId: 'approval:task/anon',
+        value: { decision: 'approved', approver: 'mallory' },
+      })
+      expect(ctx.status).toBe(401)
+      expect(service.getRun(runId)?.instance.status).toBe('awaiting-input')
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 
   it('specs endpoints persist and list GraphSpecs (台账 i)', async () => {

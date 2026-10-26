@@ -15,6 +15,7 @@ const ENV_BEFORE = {
   GRACE: process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS,
   RATE: process.env.HERMES_APPROVALS_SPOTCHECK_RATE,
   ENABLE: process.env.HERMES_APPROVALS_AUTOPASS,
+  HUMAN_GATE: process.env.HUMAN_GATE_STORE,
 }
 
 async function fetchJson(base: string, path: string, init?: RequestInit) {
@@ -70,6 +71,7 @@ describe('抽检器 REST（V4.1 §七）：低风险自动放行 + 抽检处置'
     if (ENV_BEFORE.GRACE) process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS = ENV_BEFORE.GRACE; else delete process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS
     if (ENV_BEFORE.RATE) process.env.HERMES_APPROVALS_SPOTCHECK_RATE = ENV_BEFORE.RATE; else delete process.env.HERMES_APPROVALS_SPOTCHECK_RATE
     if (ENV_BEFORE.ENABLE) process.env.HERMES_APPROVALS_AUTOPASS = ENV_BEFORE.ENABLE; else delete process.env.HERMES_APPROVALS_AUTOPASS
+    if (ENV_BEFORE.HUMAN_GATE) process.env.HUMAN_GATE_STORE = ENV_BEFORE.HUMAN_GATE; else delete process.env.HUMAN_GATE_STORE
   })
 
   beforeEach(async () => {
@@ -80,6 +82,7 @@ describe('抽检器 REST（V4.1 §七）：低风险自动放行 + 抽检处置'
     process.env.HERMES_APPROVALS_SPOTCHECK_FILE = `/tmp/v41-autopass-spot-${uniq}.json`
     process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS = '0'
     process.env.HERMES_APPROVALS_SPOTCHECK_RATE = '1'
+    process.env.HUMAN_GATE_STORE = `/tmp/v41-human-gate-${uniq}.json`
     delete process.env.HERMES_APPROVALS_AUTOPASS
     mkdirSync(queueDir, { recursive: true })
     const { approvalsRoutes, _resetAutopassScanThrottleForTests } = await import('../pending-controller')

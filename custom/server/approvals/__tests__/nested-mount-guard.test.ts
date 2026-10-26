@@ -1,15 +1,19 @@
 // 2026-10-22 走查批守门：human-gate / pipeline 两簇嵌套挂载可达性。
 // 同 secaudit-nested-mount.test.ts 的根因——@koa/router 15.x 绝对前缀子路由被父
 // 路由嵌套 use 会拼双前缀整族 404（上线即死，端点对账审计实锚）。生产形态探活。
-import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import Koa from 'koa'
 import Router from '@koa/router'
-import { humanGateRouter } from '../human-gate'
+import { humanGateRouter, resetHumanGateForTests } from '../human-gate'
 
 describe('human-gate / pipeline 生产形态挂载守门', () => {
   it('approvals 父路由嵌套下 GET /api/approvals/human-gate 非 404', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'human-gate-mount-'))
+    vi.stubEnv('HUMAN_GATE_STORE', join(temp, 'store.json'))
+    resetHumanGateForTests()
     const parent = new Router({ prefix: '/api/approvals' })
     parent.use('/human-gate', humanGateRouter.routes(), humanGateRouter.allowedMethods())
     const app = new Koa()
@@ -23,6 +27,9 @@ describe('human-gate / pipeline 生产形态挂载守门', () => {
       expect(res.status).not.toBe(404)
     } finally {
       server.close()
+      resetHumanGateForTests()
+      vi.unstubAllEnvs()
+      rmSync(temp, { recursive: true, force: true })
     }
   })
 

@@ -18,7 +18,7 @@ const wizardFailed = computed(() => !!wizard.value?.result?.startsWith('失败')
 // 治理者守卫（2026-10-22）：admin 行变更 409 后的会签/紧急通道对话框 + 待会签块
 const guard = ref<null | { detail: string; markdown: string; message: string; reason: string }>(null)
 const pending = ref<OrgCosignPending | null>(null)
-const cosigner = ref(''); const cosignReason = ref('')
+const cosignReason = ref('')
 
 async function loadCosign() {
   try { pending.value = (await fetchOrgCosign()).pending } catch { pending.value = null }
@@ -75,11 +75,12 @@ async function startCosign() {
 async function resolveCosign(action: 'approve' | 'reject') {
   busy.value = true
   try {
-    const r = await resolveOrgCosign(action, cosigner.value, cosignReason.value)
+    // adminRegistry 旧签名中的 approver 由服务端忽略；身份仅取当前登录会话。
+    const r = await resolveOrgCosign(action, '', cosignReason.value)
     msg.value = action === 'approve'
       ? `会签落盘完成：org@${r.orgCommit ?? ''} 决议@${r.commit}（已审计留痕）`
       : `已驳回（决议@${r.commit}）`
-    cosigner.value = ''; cosignReason.value = ''
+    cosignReason.value = ''
     await load(); await loadCosign()
   } catch (e) { msg.value = `${action === 'approve' ? '批准' : '驳回'}失败：${String(e)}` } finally { busy.value = false }
 }
@@ -142,13 +143,12 @@ async function runWizard() {
     <div v-if="pending" class="oed__wiz" data-testid="org-cosign">
       <div class="oed__wiz-hd">待会签变更（{{ pending.initiator }} 发起 @{{ pending.created }}）</div>
       <p class="oed__guard-detail" v-for="d in pending.detail" :key="d">{{ d }}</p>
-      <p>批准人须编制在册治理岗（admin 或 审计）且不等于发起人 {{ pending.initiator }}。</p>
-      <input v-model="cosigner" placeholder="会签人账号（如 audit）" data-testid="org-cosign-approver" />
+      <p>批准人须为当前登录的编制在册治理岗（admin 或 审计），且不等于发起人 {{ pending.initiator }}。</p>
       <input v-model="cosignReason" placeholder="意见（批准可空，驳回必填）" data-testid="org-cosign-reason" />
-      <button data-testid="org-cosign-approve" :disabled="!cosigner.trim() || busy"
-        @click="resolveCosign('approve')">批准落盘</button>
-      <button data-testid="org-cosign-reject" :disabled="!cosigner.trim() || !cosignReason.trim() || busy"
-        @click="resolveCosign('reject')">驳回</button>
+      <button data-testid="org-cosign-approve" :disabled="busy"
+        @click="resolveCosign('approve')">以当前登录人批准落盘</button>
+      <button data-testid="org-cosign-reject" :disabled="!cosignReason.trim() || busy"
+        @click="resolveCosign('reject')">以当前登录人驳回</button>
     </div>
 
     <div v-if="wizard" class="oed__wiz" data-testid="offboard-wizard">

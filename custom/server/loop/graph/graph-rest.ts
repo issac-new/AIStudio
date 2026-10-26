@@ -14,6 +14,7 @@ import { validateGraphSpec, type GraphSpec } from './graph-spec'
 import { appendContractsById } from './phase-nodes'
 import { notifyDirectorEvent } from './director-notify'
 import { compileRequirementToGraph, DEFAULT_SIMULATION_SCENARIO, type RequirementInput } from '../../graph/simulation-graph-template'
+import { requireAuthenticatedActor } from '../../approvals/human-gate'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 
@@ -70,6 +71,28 @@ export function stampApproverIdentity(value: unknown, approver: string): unknown
     return value
   }
   return value
+}
+
+function isDecisionResume(interruptId: string, value: unknown): boolean {
+  if (interruptId.startsWith('approval:') || typeof value === 'boolean') return true
+  if (Array.isArray(value)) return value.some(v => isDecisionResume('', v))
+  if (value && typeof value === 'object') {
+    const src = value as Record<string, unknown>
+    return typeof src.decision === 'string' || typeof src.approved === 'boolean'
+      || (Array.isArray(src.decisions) && src.decisions.some(v => isDecisionResume('', v)))
+  }
+  return false
+}
+
+function approvalActor(ctx: { state?: unknown; status: number; body: unknown }): string | null {
+  try {
+    return requireAuthenticatedActor(ctx).username
+  } catch (error) {
+    const e = error as Error & { status?: number; code?: string }
+    ctx.status = e.status ?? 401
+    ctx.body = { ok: false, code: e.code ?? 'authenticated_actor_required', error: e.message }
+    return null
+  }
 }
 
 /** 台账 #11（顺延 P4 清偿）：旧 JSON 文件灌入的完成标记 id（specs 表内保留行，
@@ -226,9 +249,13 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     if (!body?.interruptId || !ID_RE.test(body.interruptId) && !body.interruptId.includes(':')) {
       ctx.status = 400; ctx.body = { error: 'interruptId required' }; return
     }
+    const needsHumanActor = isDecisionResume(body.interruptId, body.value)
+    const authenticatedUsername = needsHumanActor ? approvalActor(ctx) : undefined
+    if (needsHumanActor && !authenticatedUsername) return
     try {
       // 审批身份盖章：见 stampApproverIdentity 注释——决策者身份以认证主体为准
-      const username = (ctx.state as { user?: { username?: string } }).user?.username
+      const username = authenticatedUsername
+        ?? (ctx.state as { user?: { username?: string } }).user?.username
       const value = username !== undefined ? stampApproverIdentity(body.value, username) : body.value
       const instance = await deps.graphService.resumeRun(ctx.params.id, body.interruptId, value)
       // 导演台事件通知（2026-10-21）：批准/打回真实落痕到观察房间；未配置跳过。

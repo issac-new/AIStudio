@@ -9,6 +9,7 @@ import { join } from 'path'
 
 const LOG_FILE_BEFORE = process.env.HERMES_APPROVALS_LOG_FILE
 const REVIEW_DIR_BEFORE = process.env.HERMES_REVIEW_DIR
+const HUMAN_GATE_STORE_BEFORE = process.env.HUMAN_GATE_STORE
 
 async function fetchJson(base: string, path: string, init?: RequestInit) {
   const res = await fetch(`${base}${path}`, init)
@@ -25,12 +26,15 @@ describe('审批收件箱 REST（/api/approvals）', () => {
     else delete process.env.HERMES_APPROVALS_LOG_FILE
     if (REVIEW_DIR_BEFORE) process.env.HERMES_REVIEW_DIR = REVIEW_DIR_BEFORE
     else delete process.env.HERMES_REVIEW_DIR
+    if (HUMAN_GATE_STORE_BEFORE) process.env.HUMAN_GATE_STORE = HUMAN_GATE_STORE_BEFORE
+    else delete process.env.HUMAN_GATE_STORE
   })
 
   beforeEach(async () => {
     process.env.HERMES_APPROVALS_LOG_FILE = `/tmp/p1-approvals-log-${process.pid}-${Date.now()}.json`
     process.env.HERMES_REVIEW_DIR = `/tmp/p1-review-dir-${process.pid}-${Date.now()}`
     process.env.HERMES_APPROVALS_QUEUE_DIR = `/tmp/p1-approvals-queue-${process.pid}-${Date.now()}`
+    process.env.HUMAN_GATE_STORE = `/tmp/p1-human-gate-${process.pid}-${Date.now()}.json`
     mkdirSync(process.env.HERMES_APPROVALS_QUEUE_DIR, { recursive: true })
     const { approvalsRoutes } = await import('../pending-controller')
     const { openReview } = await import('../../review/review-store')
