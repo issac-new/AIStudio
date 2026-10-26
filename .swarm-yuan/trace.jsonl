@@ -143,3 +143,4 @@
 {"ts":"2026-10-24T15:47:00Z","node":"Step6 骨架","actor":"generate-skill.sh","tool":"创建 aistudio-dev 骨架（compliance 档）","status":"started","note":""}
 {"ts":"2026-10-24T16:42:28Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":".claude/skills/aistudio-dev"}
 {"ts":"2026-10-24T16:52:08Z","node":"生成","actor":"generate-skill","tool":"verify-completeness","status":"started","note":".claude/skills/aistudio-dev"}
+{"ts":"2026-10-26T13:01:18Z","node":"⑧合入","actor":"ZCode/main","tool":"npm test 全量","status":"done","note":"887 文件 6391 过/13 跳过/0 失败（worktree 实测）"}
