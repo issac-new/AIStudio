@@ -61,13 +61,17 @@
 
 ## 4、验证
 
-（实施后回填）
+1. **生成器测试族**：`test-design-sync.sh` 21 断言全绿（判定矩阵 1a-2h + L2 端到端 3a-3f + 静态锚 4a-4c）；回归 `test-r101-spec-first-universal`（36）/`test-r128-spec-first`（31）/`test-r109-debt-closure`（7）/`test-template-lexical-consistency`（6）/`test-workflow-methodology-ref`（3）/`test-spec-template-gating`（12）全 PASS。
+2. **self-check**：变量 199≤200、四脚本行数 9363=FACT_SCRIPT_LOC、引擎域源 7800≤7800（上限随批登记）、上下文表面 195,339B≤195,584B（第五次例外登记）、enforce-level 可逐字节再生——零本批新增失败（剩余 2 warn 与 main 基线持平：FACT 键零消费挂账+make-offline-bundle 文档引用，既有）。
+3. **test-doc-numbers**：60 项失败=main 基线持平（既有 ROOT 布局错位挂账，refactor/swarm-yuan-integration 分支在修）；本批数字断言（FACT_CONF_VARS 199/CORE 30）全过；facts.generated.conf 经 registry-render --facts 再生对齐。
+4. **L2 活体双实证**（真实仓，主仓实例刷新版脚本+worktree 分支态）：①文档批提交 70350ac00 放行（spec touched 两正本+staged 同批兑现=声明与兑现同一批走通）；②正向干跑（无关 docs 文件 staged）EXIT=0 放行；③修复前抓到真实缺陷——正本入分支后 governing 选择器被整合正本抢注（正本含「## 决策记录」章且落 SPEC_GLOB）误报 missing-declaration，修复=选择器排除表参数（$6），fixture 2h/3e/3f 三场景锁定。
+5. **L3 门禁**：`precheck.sh --spec-first` 对主仓态 EXIT=0（governing=存在性放行+design-sync 兜底空变更集放行）。已知边界：实例 conf PROJECT_DIR 硬编码主仓，worktree 分支态的 L3 完整路径由 L2 同判据（spec-first-lib 单源）+测试族覆盖，如实披露。
+6. **渲染回执**：`--render-tools` 重跑，~/.zcode/AGENTS.md swarm-yuan 块已更新（宣告≠生效回执）；安装副本同步本批 11 文件。
 
-1. 生成器测试族：swarm-yuan tests/ 相关（template-lexical-consistency / doc-numbers / 新增 design-sync）全绿。
-2. L2 双场景对拍：①spec 声明 touched 但变更集无设计文档 diff → pre-commit exit 1；②声明 none → 放行。
-3. 实例门禁：`precheck.sh --all` 过。
-4. 数字对账：facts.conf ↔ test-doc-numbers 断言一致；正本/总账/AGENTS.md 三方一致。
-5. 渲染回执：--render-tools 后 ~/.zcode/AGENTS.md 渲染块更新。
+### 4.1 修复回归面（相邻路径）
+
+- 域源改动走了生成通道（registry-render --gates + gen-enforce-level 再生聚合与 enforce 表），非手改聚合产物（首版直改 gates-warn.sh 被 self-check「过期」检查抓出后改正）——单一事实源纪律自证。
+- facts.generated.conf 覆盖链发现：facts.conf 末尾 source 生成文件覆盖 FACT_CONF_VARS 旧值 197——读侧对账必须经再生通道（registry-render --facts），手改 facts.conf 主值不生效，本批已再生对齐。
 
 ## 5、风险与回滚
 
