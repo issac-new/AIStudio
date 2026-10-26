@@ -1,9 +1,9 @@
-"""zcode-acp-delegate 引擎身份解析守门（九点对账轮 P0-2）。
+"""zcode-acp-delegate 引擎身份解析守门。
 
-resolve_engine_bin_env 的三级优先序是「ACP 调用的是 Ycode（本仓分叉）」的
-唯一开关：显式 env ZCODE_BIN > 部署位 ~/.hermes/ycode/zcode.cjs > 桥自兜底
-（PATH/官方 ZCode.app）。断言：部署位在位必须注入 env（否则 ACP 链悄悄跑在
-官方引擎上=身份漂移）；显式 env 不被覆盖。
+resolve_engine_bin_env 的四级优先序（2026-10-26 实测矩阵定谳后）：显式 env
+ZCODE_BIN > 官方捆绑（3.16.3，coding-plan 端点当前唯一可用客户端基座）>
+分叉部署位 ~/.hermes/ycode/zcode.cjs > 桥自兜底。断言：官方在位必须优先
+（公开 main 基底被端点全量 500）；显式 env 不被覆盖；缺位时按序回落。
 """
 
 from __future__ import annotations
@@ -30,19 +30,34 @@ class TestEngineBinEnv:
         assert mod.resolve_engine_bin_env() == "env"
         assert os.environ["ZCODE_BIN"] == "/opt/custom/zcode"
 
-    def test_deployed_fork_preferred(self, monkeypatch, tmp_path):
+    def test_official_bundle_preferred(self, monkeypatch, tmp_path):
+        mod = _load()
+        monkeypatch.delenv("ZCODE_BIN", raising=False)
+        official = tmp_path / "official.cjs"
+        fork = tmp_path / "zcode.cjs"
+        monkeypatch.setattr(mod, "OFFICIAL_BUNDLE_CLI", str(official))
+        monkeypatch.setattr(mod, "YCODE_FORK_CLI", str(fork))
+        official.write_text("// stub", encoding="utf-8")
+        fork.write_text("// stub", encoding="utf-8")
+        assert mod.resolve_engine_bin_env() == "official-bundle"
+        assert os.environ["ZCODE_BIN"] == str(official)
+        monkeypatch.delenv("ZCODE_BIN", raising=False)
+
+    def test_fork_when_official_absent(self, monkeypatch, tmp_path):
         mod = _load()
         monkeypatch.delenv("ZCODE_BIN", raising=False)
         fork = tmp_path / "zcode.cjs"
         fork.write_text("// stub", encoding="utf-8")
+        monkeypatch.setattr(mod, "OFFICIAL_BUNDLE_CLI", str(tmp_path / "absent.cjs"))
         monkeypatch.setattr(mod, "YCODE_FORK_CLI", str(fork))
         assert mod.resolve_engine_bin_env() == "ycode-fork"
         assert os.environ["ZCODE_BIN"] == str(fork)
         monkeypatch.delenv("ZCODE_BIN", raising=False)
 
-    def test_bridge_default_when_absent(self, monkeypatch, tmp_path):
+    def test_bridge_default_when_all_absent(self, monkeypatch, tmp_path):
         mod = _load()
         monkeypatch.delenv("ZCODE_BIN", raising=False)
-        monkeypatch.setattr(mod, "YCODE_FORK_CLI", str(tmp_path / "missing.cjs"))
+        monkeypatch.setattr(mod, "OFFICIAL_BUNDLE_CLI", str(tmp_path / "a.cjs"))
+        monkeypatch.setattr(mod, "YCODE_FORK_CLI", str(tmp_path / "b.cjs"))
         assert mod.resolve_engine_bin_env() == "bridge-default"
         assert "ZCODE_BIN" not in os.environ

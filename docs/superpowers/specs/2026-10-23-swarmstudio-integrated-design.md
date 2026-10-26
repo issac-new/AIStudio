@@ -180,7 +180,7 @@ spec 2026-10-24-swarm-eval-benchmark-absorption.md）：交付效能页第 ⑤ �
 
 五基础组件：AIStudio（产品面，驾驶舱）、hermes agent（自改进运行时）、Matrix（协作基座，消息即凭证）、Ycode（编码引擎：zcode 分叉、内置 computer-use 插件，IDE 工作区的本机编码执行底座）、swarm-yuan（能力层，生成器造项目技能）。四个跨地域分布的组件经 Matrix 协议与 git 制品协同，覆盖分布式需求分析、研发协作、实施交付、测试验证四条主线（§1.1 体系）。
 
-编码委托链（ACP，2026-10-26 现状）：执行者经 coding-delegate 技能以 `zcode-acp-server` stdio 桥调用 Ycode；桥按 `ZCODE_BIN` 环境解析引擎，本机默认指到 `~/.hermes/ycode/zcode.cjs`（分叉 CLI 构建产物，`scripts/zcode-engine.mjs install-cli` 构建并落位；环境未设且部署位缺席时桥回落 PATH/官方 zcode，委托日志记录 `engine_bin_source` 以供审计）。任务 workspace 即引擎会话项目根（dispatcher 注入 `HERMES_KANBAN_WORKSPACE`，驱动以 `--cwd` 传入 `session/new`）。
+编码委托链（ACP，2026-10-26 现状）：执行者经 coding-delegate 技能以 `zcode-acp-server` stdio 桥调用编码引擎；驱动按四级序注入 `ZCODE_BIN`——显式环境变量 > 官方捆绑（在位时默认；coding-plan 端点对公开 main 基底 3.16.1 系客户端全量 500，修复仅在未发布的私有 3.16.3 线）> 分叉部署位 `~/.hermes/ycode/zcode.cjs`（`scripts/zcode-engine.mjs install-cli` 构建落位；upstream main 追平 3.16.2+ 后一行回切为默认）> 桥自兜底。委托日志记录 `engine_bin_source` 供审计；`--model`/`ZCODE_ACP_MODEL` 按任务指定会话模型。任务 workspace 即引擎会话项目根（dispatcher 注入 `HERMES_KANBAN_WORKSPACE`，驱动以 `--cwd` 传入 `session/new`）。
 
 ### 3.3 产品面六层
 

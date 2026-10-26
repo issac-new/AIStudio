@@ -23,3 +23,4 @@
 {"ts":"2026-10-25T00:53:00Z","tool":"git-commit","target":"skills/swarm-yuan/docs/research/R142-runtime-refresh.md","gates":"spec-required"}
 {"ts":"2026-10-26T07:09:06Z","tool":"git-commit","target":"custom/server/matrix/__tests__/element-web-failsoft.test.ts","gates":"spec-required"}
 {"ts":"2026-10-26T08:45:18Z","tool":"git-commit","target":"missing-declaration: spec(docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md) 缺「设计文档影响」声明——须含 DESIGN_SYNC: touched（逐行列出 DESIGN_DOCS 路径与修订点）或 none（无需更新+理由）","gates":"design-sync"}
+{"ts":"2026-10-26T09:14:27Z","tool":"git-commit","target":"missing-declaration: spec(docs/superpowers/specs/2026-10-26-nine-point-reconciliation.md) 缺「设计文档影响」声明——须含 DESIGN_SYNC: touched（逐行列出 DESIGN_DOCS 路径与修订点）或 none（无需更新+理由）","gates":"design-sync"}

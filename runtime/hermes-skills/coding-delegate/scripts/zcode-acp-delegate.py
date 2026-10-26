@@ -58,20 +58,27 @@ def find_engine(override: str):
 
 
 YCODE_FORK_CLI = os.path.expanduser("~/.hermes/ycode/zcode.cjs")
+OFFICIAL_BUNDLE_CLI = "/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs"
 
 
 def resolve_engine_bin_env():
-    """ACP 桥拉起编码引擎的环境校正（九点对账轮 P0-2）。
+    """ACP 桥拉起编码引擎的环境校正。
 
     桥（zcode-acp-server）按 ZCODE_BIN > PATH zcode > 官方 ZCode.app 桌面捆绑
-    解析引擎（其 resolve.js）。为使「ACP 调用的是 Ycode（本仓 zcode 分叉）」
-    成立，spawn 桥前注入：显式 ZCODE_BIN（用户覆盖，不动） > 本机部署的分叉
-    CLI（~/.hermes/ycode/zcode.cjs，`scripts/zcode-engine.mjs install-cli` 落位）
-    > 桥自身兜底。桥以 [node, ZCODE_BIN, 'app-server', '--stdio'] 形式 spawn，
-    .cjs 路径即可。返回来源标记供日志断言引擎身份。
+    解析引擎（其 resolve.js）。2026-10-26 实测矩阵定谳：coding-plan anthropic
+    端点对公开 main 基底（3c5b2276=3.16.1 系列，含本仓分叉与无补丁纯净构建）
+    的请求一律 500（GLM-5.3 与 Flash 双模型皆然），仅私有发布线 3.16.3 客户端
+    通过（同凭据同提示词）。故解析序=显式 ZCODE_BIN（用户覆盖，不动）> 官方
+    捆绑（在位时）> 分叉部署位（~/.hermes/ycode/zcode.cjs，
+    `scripts/zcode-engine.mjs install-cli` 落位）> 桥自兜底。upstream main
+    追平 3.16.2+ 后把 OFFICIAL 分支下移一行即回切分叉。返回来源标记供日志
+    断言引擎身份。
     """
     if os.environ.get("ZCODE_BIN", "").strip():
         return "env"
+    if os.path.isfile(OFFICIAL_BUNDLE_CLI):
+        os.environ["ZCODE_BIN"] = OFFICIAL_BUNDLE_CLI
+        return "official-bundle"
     if os.path.isfile(YCODE_FORK_CLI):
         os.environ["ZCODE_BIN"] = YCODE_FORK_CLI
         return "ycode-fork"
@@ -123,6 +130,8 @@ def main() -> int:
                     help=f"prompt 阶段总超时秒数（默认 {DEFAULT_TIMEOUT}）")
     ap.add_argument("--engine", default=os.environ.get("ZCODE_ACP_BIN", ""),
                     help="引擎可执行文件（默认按 PATH 找 zcode-acp-server / zcode-acp）")
+    ap.add_argument("--model", default=os.environ.get("ZCODE_ACP_MODEL", ""),
+                    help="会话模型（如 GLM-5.3；空=引擎默认。经桥 session/setModel 在建会话后设置）")
     args = ap.parse_args()
 
     prompt = args.prompt
@@ -226,6 +235,20 @@ def main() -> int:
         return EXIT_ENGINE_MISSING
     session_id = sess["result"].get("sessionId")
     log(f"session 建立成功：{session_id}")
+
+    # ── 2.5 会话模型（可选；--model / ZCODE_ACP_MODEL）──
+    # 引擎默认模型取自机器配置——计划端点侧某模型失效时（2026-10-26 实例：
+    # coding-plan 的 GLM-5.3-Flash 全量 500、GLM-5.3 全量 200），委托方须能
+    # 按任务指定模型。显式指定的模型设置失败即终止：换默认模型偷跑=结果不真。
+    if args.model:
+        setm = rpc("session/setModel", {"sessionId": session_id, "modelId": args.model},
+                   min(deadline, time.time() + 30))
+        if not (isinstance(setm, dict) and "result" in setm and "error" not in setm):
+            log(f"session/setModel 失败（model={args.model}）：{str(setm)[:300]}")
+            log(f"RESULT exit={EXIT_PROTOCOL} stage=set_model")
+            proc.kill()
+            return EXIT_PROTOCOL
+        log(f"session 模型已设置：{args.model}")
 
     # ── 3. session/prompt（流式收 update）──
     send({"jsonrpc": "2.0", "id": 100, "method": "session/prompt",
