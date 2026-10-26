@@ -23,4 +23,4 @@
 
 - 服务端：observer.test.ts 新增收官用例（state 含 retro_done → available:false）+ 既有在跑用例不回归。
 - 客户端：side-nav.test.ts 断言改计数章（③黄章 11、④红章/黄章按 blockedCount、空桶阶段仍状态点）；side-nav-badges.test.ts 模板锚串同步；stage-status-traffic.test.ts 灯胆 CSS 不变不回归。
-- 活体：serve-main 换装后侧栏数字降为日常口径（预期 看板=7、④=7 红、③=1 黄、工作台/总览≈8），④ 计数章红色灯胆渲染，控制台零告警。
+- 活体（serve-main 换装+后端重启后实测）：总览/工作台/看板 21/21/20 → **7/7/7**（13 张模拟 blocked 清出）；③=合并黄章「1」（原 done✓+11 双信号）；④=合并红章「8」（日常 blocked7+running1，含阻塞红灯胆）；①②⑤⑥ 生命周期点不变；③④行不再有独立徽标/状态点；页面控制台零新增告警。
