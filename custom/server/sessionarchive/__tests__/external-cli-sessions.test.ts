@@ -217,4 +217,21 @@ describe('scanExternalSessions', () => {
     expect(r.sessions[0]?.title?.endsWith('…')).toBe(true)
     expect((r.sessions[0]?.title ?? '').length).toBeLessThanOrEqual(121)
   })
+
+  it('source 过滤下推：先过滤再截断（指定 codex 时不被 claude 挤掉）', () => {
+    const { claude, codex } = buildTree()
+    const onlyCodex = scanExternalSessions({ claudeRoot: claude, codexRoot: codex, source: 'codex', limit: 1 })
+    expect(onlyCodex.sessions.length).toBe(1)
+    expect(onlyCodex.sessions[0]?.source).toBe('codex')
+    const onlyClaude = scanExternalSessions({ claudeRoot: claude, codexRoot: codex, source: 'claude-code', limit: 5 })
+    expect(onlyClaude.sessions.every((x) => x.source === 'claude-code')).toBe(true)
+    expect(onlyClaude.sessions.length).toBeGreaterThan(0)
+  })
+
+  it('source 指定但该源缺席：available=false 且原因点名该源', () => {
+    const { claude } = buildTree()
+    const r = scanExternalSessions({ claudeRoot: claude, codexRoot: join(dir as string, 'missing'), source: 'codex' })
+    expect(r.available).toBe(false)
+    expect(r.reason).toContain('codex')
+  })
 })
