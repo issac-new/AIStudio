@@ -33,7 +33,7 @@ import { planResume } from '../resume/resume-planner'
 import { collectProcessQuality } from '../observability/process-quality'
 import { collectObsSignals } from '../obssignals/collect'
 import { collectObsAlerts } from '../obsalerts/collect'
-import { CallgateRegistry } from '../callgate/callgate'
+import { overlayCallgate, parseCallgateRule } from '../callgate/registry'
 import { ledgerPathForDisplay, listEntries, registerEntry } from '../taskledger/taskledger-store'
 import { summarizeLedger } from '../taskledger/taskledger'
 import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, type BudgetAction } from '../tokenbudget/budget-policy'
@@ -50,8 +50,8 @@ import trustRoutes from '../trust/controller'
 
 const router = new Router({ prefix: '/api/harness' })
 
-// 调用闸注册表（进程内单例；观测面只读，执法接线后续轮启用）
-const callgateRegistry = new CallgateRegistry()
+// 调用闸注册表＝执法钩子（toolpipeline 钩子链）共享单例（wx 挂账 #14 接线批）：
+// 观测端点看到的就是执法面真实流量；规则写面在下方 POST /callgate/rule。
 
 // Harness² 改进实验台（2026-10-19）：提案-探测-组合-冠军闭环，复用本路由前缀，
 // 不新增 bootstrap patch。子路由自带写面权限校验（super_admin）。
@@ -360,11 +360,31 @@ router.post('/taskledger', async (ctx) => {
   }
 })
 
-// LLM/MCP 调用闸（2026-10-21 三号调研）：限流/熔断/排队状态快照（只读；
-// 执法接线由调用方消费 callgate 域后启用，此处先给观测面）。
+// LLM/MCP 调用闸（2026-10-21 三号调研；2026-10-27 挂账 #14 接线）：限流/熔断/
+// 排队状态快照（只读）。执法在 toolpipeline 钩子链（HERMES_CALLGATE_ENFORCE=1），
+// 与本端点共享同一单例——这里看到的即执法面真实流量。
 router.get('/callgate', async (ctx) => {
   try {
-    ctx.body = { ok: true, statuses: callgateRegistry.listStatuses() }
+    ctx.body = { ok: true, statuses: overlayCallgate.listStatuses(), enforcing: process.env.HERMES_CALLGATE_ENFORCE === '1' }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 调用闸规则写面：登记/覆盖单资源规则（执法与缺省规则兜底共用）。fail-closed——
+// 字段非法整单拒绝，不做部分应用。
+router.post('/callgate/rule', async (ctx) => {
+  if (writeDenied(ctx)) return
+  try {
+    const parsed = parseCallgateRule(ctx.request.body)
+    if (!parsed.ok) {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: parsed.problems }
+      return
+    }
+    overlayCallgate.setRule(parsed.rule)
+    ctx.body = { ok: true, rule: parsed.rule, status: overlayCallgate.status(parsed.rule.resource) }
   } catch (e) {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
