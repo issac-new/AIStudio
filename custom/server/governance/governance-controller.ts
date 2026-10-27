@@ -24,6 +24,7 @@ import { join, resolve, dirname } from 'path'
 import { homedir } from 'os'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
+import { registerLifecycleRoutes } from './lifecycle/controller'
 import { queryApprovalLog } from '../approvals/approval-log'
 import { requireAuthenticatedActor, type AuthenticatedActor } from '../approvals/human-gate'
 import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts, loadStateModel } from './governance-ledger'
@@ -298,6 +299,9 @@ registerDomainAudit({
   approvalHistoryCount: () => { try { return queryApprovalLog(500).length } catch { return 0 } },
   router,
 })
+
+// 生命周期判定（融合批一）：判词/G1/UAT 判读/熔断——治理实现单源的 REST 面。
+registerLifecycleRoutes(router)
 
 // ---- 4A 治理层只读投影（spec 2026-09-29 §3.4；单一事实源 runtime/governance/*.yaml）----
 
