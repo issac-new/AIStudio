@@ -38,11 +38,31 @@
 - 影子对照：判词/G1/UAT/熔断/评测/指标新旧实现同输入一致后才删旧件。
 - 活体：隔离环境起服走查关键端点；整轮 26 步推演（受模型额度制约时如实申报缺口，不以 fixture 冒充）。
 
+## 实施实况（2026-10-27 收口）
+
+五批落分支 `feat/sim-governance-convergence`（未合 main，整轮活体验证待办见下）：
+- 批一 7edf991：lifecycle 判定内核（判词/G1/熔断纯函数+REST；G5/UAT 状态机上移治理域，simcenter 兼容再导出）；判词语料 28 例新旧影子一致。
+- 批二 e769aed：导演判定族薄客户端化（governance-client；awk/py 判定体退役）；G5 submit→approve(锚)→release 真实写链；UAT conditional pending/acknowledged 认可语义收紧（D9）。
+- 批三四 c23a7dc：run-metrics/run-surface（指标/工作台账/审计检查 REST）；驱动 gov_report/work_report_gen/audit_check 改 DTO 渲染壳；eval e2e-verdict 判据单源（汇总器降级组装器）；sim-launch 迁 simcenter。
+- 批五 425d76b：run-metrics.issuePairing 四变体归一；gov_report 落 governance-metrics.json 快照；tri-disp-backfill 改 DTO 取件；mx-interventions.py 死代码退役。
+
+残余（显式挂账，不装完成）：
+1. mx-report-gen.issues_stats 配对与 mx-report-audit 查5 仍持本地配对——切换需报告链整批+活体报告新旧对照（D8），列收尾批首项；产品单实现已在 run-metrics.pairing 备好。
+2. 整轮 26 步活体推演未跑（需约 20 小时+模型额度+SIM 栈独占；主树并行会话在途）——分支不合 main，验证判据见「验证」节，跑通后收口。
+3. 预检 ①（run-gates 全绿）被两处既有红阻挡（见下），与本批无关但按 prelaunch 纪律如实申报。
+
+既有红清单（origin/main 即红，非本批回归，均与并行 doc-harness-residual 会话在途修复面重叠）：
+- simharness/tests/qgate-executors.test.sh：`$CLI）`全角括号 unbound（bash 3.2 陷阱）+ `../overlay` 路径在单仓布局失效。
+- mux/tests/jargon-source-gate.test.sh：已提交方案正本 4 处 HARD（催办/守门/实锚×2）+ delegate-evidence-block.test.ts 注释 1 处。
+- custom/server/governance/__tests__/governance-contracts.test.ts 3 例：vendor 未注入态缺 kanban_gates.py 属主文件（主树注入态绿）。
+- harness-gate-integrity 7 例：PRODUCT=overlay 路径族同因。
+gongwen-lint：spec 属决策记录枚举文体，分号并列/锚点长句按机械首查豁免记录（情态项零标）。
+
 ## 设计文档影响
 
-DESIGN_SYNC: none
-本批为立项 spec（决策事实源先行），未触代码与设计文档。下列设计文档影响在实施收口批随代码修订同批兑现，届时本节改声明 touched 并列入变更集（L2 声明与兑现同批纪律）：
-- `docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md`——§3.6 契约 5"推演验证"与 §3.7 边界判据补"治理实现单源"层；版本行随批。
-- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`——端点/模块数字随批。
-- `docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md`——§1.5 产品范围声明的实现归属细化（判据语义零改动）。
-- `simharness/README.md`、根 `README.md`、`docs/USAGE.md`——职责面描述同步。
+DESIGN_SYNC: touched
+随本批同批修订（L2 声明与兑现同批）：
+- `docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md`——版本 R13；§3.7 增第四条边界判据「治理实现单源」；变更记录行随批。
+- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`——specs 357、治理单源面行入册、核实日随批。
+- `simharness/README.md`——判定正本归属声明（governance-client 调用面+fail-closed 语义）。
+- 未触项：`2026-10-05-mux-v8-fullflow-plan.md`（26 步/六闸判据零改动，实现归属已由整合正本承载）；根 README/USAGE（纯内部实现归属，用户可见流程零变化）。
