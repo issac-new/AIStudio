@@ -6,6 +6,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { NModal } from 'naive-ui'
 import { useSessionRows } from '../composables/useSessionRows'
+import { useChatStore } from '@/stores/hermes/chat'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useWorkspaceStore } from '../store/workspace'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
@@ -25,6 +27,8 @@ interface ResultRow {
   icon: string
   action: string
   open: () => void
+  /** 推演来源行：渲染紫色徽章（跨实例标识，用户裁定） */
+  sim?: boolean
 }
 
 const route = useRoute()
@@ -32,6 +36,8 @@ const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const { sessionRows, accounts } = useSessionRows()
+const chatStore = useChatStore()
+const groupChat = useGroupChatStore()
 const workspace = useWorkspaceStore()
 const cockpit = useCockpitStore()
 const matrixRoom = useMatrixRoomStore()
@@ -44,7 +50,7 @@ const q = computed({
   set: (value: string) => cockpit.runSearch(value),
 })
 const type = ref<SearchType>('all')
-const workspaceFilter = ref('')
+const boardFilter = ref('')
 const statusFilter = ref('')
 const assigneeFilter = ref('')
 const timeFilter = ref<'all' | '24h' | '7d' | '30d'>('all')
@@ -73,7 +79,7 @@ function normalizeTime(raw: unknown): 'all' | '24h' | '7d' | '30d' {
 function applyDeepLink(): void {
   cockpit.searchQuery = String(route.query.q ?? '')
   type.value = normalizeType(route.query.type)
-  workspaceFilter.value = String(route.query.ws ?? '')
+  boardFilter.value = String(route.query.board ?? '')
   statusFilter.value = String(route.query.status ?? '')
   assigneeFilter.value = String(route.query.assignee ?? '')
   timeFilter.value = normalizeTime(route.query.time)
@@ -91,7 +97,8 @@ watch(() => route.fullPath, (_next, prev) => {
   }
 }, { immediate: true })
 
-const SEARCH_QUERY_KEYS = ['search', 'q', 'type', 'ws', 'status', 'assignee', 'time'] as const
+// ws 为旧工作区筛选深链键：不再消费，关闭时一并清理防残留
+const SEARCH_QUERY_KEYS = ['search', 'q', 'type', 'board', 'ws', 'status', 'assignee', 'time'] as const
 function closeDialog(): void {
   workspace.closeSearch()
   if (route.query.search !== '1') return
@@ -109,6 +116,8 @@ watch(() => workspace.searchOpen, async (open) => {
   if (open) {
     returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     void loadDocs()
+    void workspace.loadSearchPeople?.()
+    loadSessionSources()
     await nextTick()
     searchInput.value?.focus()
     return
@@ -124,6 +133,13 @@ function loadDocs(): void {
   void workspace.loadSearchDocs()
 }
 
+// 会话两源（agent 单聊/群聊）只在各自聊天页访问后才有数据——弹窗打开时
+// 主动装载一次；store 请求序号守卫兜底重复装载，失败静默（fail-soft 读面）。
+function loadSessionSources(): void {
+  if (!chatStore.sessionsLoaded) void chatStore.loadSessions(chatStore.sessionProfileFilter).catch(() => undefined)
+  void groupChat.loadRooms().catch(() => undefined)
+}
+
 const STATUS_LABEL: Record<string, { zh: string; en: string }> = {
   triage: { zh: '分诊', en: 'Triage' }, todo: { zh: '待开始', en: 'To do' },
   scheduled: { zh: '已排期', en: 'Scheduled' }, ready: { zh: '就绪', en: 'Ready' },
@@ -137,13 +153,17 @@ const taskById = computed(() => {
   for (const task of workspace.tasks) map.set(task.id, task)
   return map
 })
-const workspaceOptions = computed(() => [...new Set(workspace.tasks.map(task => task.workspace).filter(Boolean))].sort())
+const boardNameOf = computed(() => {
+  const m = new Map<string, string>()
+  for (const b of (workspace.boards ?? [])) m.set(b.slug, b.name || b.slug)
+  for (const t of workspace.tasks) if (!m.has(t.boardSlug)) m.set(t.boardSlug, t.boardSlug)
+  return m
+})
+const boardOptions = computed(() => (workspace.boards ?? []).map(b => ({
+  slug: b.slug,
+  label: `${b.name || b.slug}${b.source === 'sim' ? '（推演）' : ''}`,
+})))
 const assigneeOptions = computed(() => [...new Set(workspace.tasks.map(task => task.assignee).filter(Boolean))].sort())
-
-function wsLabel(path: string): string {
-  const parts = String(path).split('/').filter(Boolean)
-  return parts.slice(-2).join('/') || path
-}
 
 function timeWithin(ts: number | null | undefined): boolean {
   if (timeFilter.value === 'all') return true
@@ -156,12 +176,13 @@ function hay(...parts: Array<string | null | undefined>): string {
   return parts.filter(Boolean).join(' ').toLowerCase()
 }
 
-function sessionWorkspace(taskIds: string[]): string {
+function sessionBoardSlugs(taskIds: string[]): Set<string> {
+  const slugs = new Set<string>()
   for (const id of taskIds) {
-    const value = taskById.value.get(id)?.workspace
-    if (value) return value
+    const slug = taskById.value.get(id)?.boardSlug
+    if (slug) slugs.add(slug)
   }
-  return ''
+  return slugs
 }
 
 function openSession(kind: string, id: string): void {
@@ -177,24 +198,26 @@ function openSession(kind: string, id: string): void {
 
 const sessionRowsResult = computed<ResultRow[]>(() => sessionRows.value
   .filter((session) => {
-    const ws = sessionWorkspace(session.taskIds)
-    if (workspaceFilter.value && ws !== workspaceFilter.value) return false
+    if (boardFilter.value && !sessionBoardSlugs(session.taskIds).has(boardFilter.value)) return false
     if (!timeWithin(session.lastActivityAt ?? null)) return false
-    return !q.value.trim() || hay(session.name, session.kind, ws, ...session.taskIds).includes(q.value.trim().toLowerCase())
+    return !q.value.trim() || hay(session.name, session.kind, ...session.taskIds).includes(q.value.trim().toLowerCase())
   })
-  .map((session) => ({
-    key: `s:${session.kind}:${session.id}`,
-    title: session.name,
-    meta: [session.kind === 'room' ? (zh.value ? '房间' : 'Room') : session.kind === 'group' ? (zh.value ? '群聊' : 'Group') : (zh.value ? '会话' : 'Chat'),
-      sessionWorkspace(session.taskIds) ? wsLabel(sessionWorkspace(session.taskIds)) : (zh.value ? '未关联工作区' : 'No workspace')].join(' · '),
-    icon: session.kind === 'room' ? '#' : session.kind === 'group' ? '👥' : '💬',
-    action: zh.value ? '打开' : 'Open',
-    open: () => openSession(session.kind, session.id),
-  })))
+  .map((session) => {
+    const boards = [...sessionBoardSlugs(session.taskIds)].map(slug => boardNameOf.value.get(slug) ?? slug)
+    return {
+      key: `s:${session.kind}:${session.id}`,
+      title: session.name,
+      meta: [session.kind === 'room' ? (zh.value ? '房间' : 'Room') : session.kind === 'group' ? (zh.value ? '群聊' : 'Group') : (zh.value ? '会话' : 'Chat'),
+        boards.length ? boards.join('/') : (zh.value ? '未挂看板' : 'No board')].join(' · '),
+      icon: session.kind === 'room' ? '#' : session.kind === 'group' ? '👥' : '💬',
+      action: zh.value ? '打开' : 'Open',
+      open: () => openSession(session.kind, session.id),
+    }
+  }))
 
 const taskRowsResult = computed<ResultRow[]>(() => workspace.tasks
   .filter((task) => {
-    if (workspaceFilter.value && task.workspace !== workspaceFilter.value) return false
+    if (boardFilter.value && task.boardSlug !== boardFilter.value) return false
     if (statusFilter.value && task.status !== statusFilter.value) return false
     if (assigneeFilter.value && task.assignee !== assigneeFilter.value) return false
     if (!timeWithin(task.createdAt)) return false
@@ -203,11 +226,31 @@ const taskRowsResult = computed<ResultRow[]>(() => workspace.tasks
   .map((task) => ({
     key: `t:${task.id}`,
     title: task.title,
-    meta: [task.id, task.workspace ? wsLabel(task.workspace) : (zh.value ? '未关联工作区' : 'No workspace'), STATUS_LABEL[task.status]?.[zh.value ? 'zh' : 'en'] ?? task.status, task.assignee].join(' · '),
+    meta: [task.id, boardNameOf.value.get(task.boardSlug) ?? task.boardSlug, STATUS_LABEL[task.status]?.[zh.value ? 'zh' : 'en'] ?? task.status, task.assignee].join(' · '),
     icon: '▦',
     action: zh.value ? '看板' : 'Board',
     open: () => void router.push({ name: 'ia2.board', query: { task: task.id } }),
   })))
+
+// SIM_STUDIO_URL（vite env 注入）配置时提供真跳转；缺席只提示不伪造深链
+const simStudioUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SIM_STUDIO_URL ?? ''
+const simSessionRowsResult = computed<ResultRow[]>(() => {
+  if (!workspace.searchSimAvailable || !q.value.trim()) return []
+  const needle = q.value.trim().toLowerCase()
+  return (workspace.searchSimSessions ?? [])
+    .filter((hit) => hit.displayName.toLowerCase().includes(needle) || hit.profile.toLowerCase().includes(needle) || hit.id.toLowerCase().includes(needle))
+    .map((hit) => ({
+      key: `sim:${hit.id}`,
+      title: hit.displayName || hit.id,
+      meta: [hit.profile, hit.chatType === 'group' ? (zh.value ? '群聊' : 'Group') : hit.chatType === 'dm' ? (zh.value ? '单聊' : 'DM') : hit.chatType, hit.id].join(' · '),
+      icon: '◎',
+      action: simStudioUrl ? (zh.value ? '推演实例' : 'Sim') : (zh.value ? '在推演实例中查看' : 'View in sim'),
+      sim: true,
+      open: () => {
+        if (simStudioUrl) window.open(simStudioUrl, '_blank', 'noopener')
+      },
+    }))
+})
 
 const runRowsResult = computed<ResultRow[]>(() => (runsStore.sortedRuns ?? [])
   .filter((run) => {
@@ -224,7 +267,7 @@ const runRowsResult = computed<ResultRow[]>(() => (runsStore.sortedRuns ?? [])
     open: () => void router.push({ name: 'ia2.sim', query: { run: run.runId } }),
   })))
 
-const docRowsResult = computed<ResultRow[]>(() => (workspaceFilter.value ? [] : (workspace.searchDocs ?? [])
+const docRowsResult = computed<ResultRow[]>(() => ((workspace.searchDocs ?? [])
   .filter((doc) => {
     const ts = doc.committedAt ? new Date(doc.committedAt).getTime() : null
     if (!timeWithin(ts)) return false
@@ -239,16 +282,43 @@ const docRowsResult = computed<ResultRow[]>(() => (workspaceFilter.value ? [] : 
     open: () => void router.push({ name: 'ia2.stage6', query: { tab: 'docs', doc: doc.kind } }),
   }))))
 
-const peopleRowsResult = computed<ResultRow[]>(() => (workspaceFilter.value ? [] : accounts.value
-  .filter((account) => !q.value.trim() || hay(account.displayName, account.userId).includes(q.value.trim().toLowerCase()))
-  .map((account) => ({
-    key: `p:${account.userId}`,
-    title: account.displayName || shortMxName(account.userId),
-    meta: [stripHomeserver(account.userId), account.isLeader ? (zh.value ? '团队领导' : 'Team lead') : (zh.value ? '成员' : 'Member')].join(' · '),
+const normalizeAccountId = (u: string): string => u.trim().toLowerCase().replace(/^@/, '').split(':')[0] ?? ''
+
+/** 人员=roster（主源）∪ 团队注册表账号，按归一化账号名去重 */
+const peopleEntries = computed<Array<{ userId: string; displayName: string; meta: string[] }>>(() => {
+  const out: Array<{ userId: string; displayName: string; meta: string[] }> = []
+  const seen = new Set<string>()
+  for (const row of (workspace.searchPeopleRows ?? [])) {
+    const userId = row[0] ?? ''
+    if (!userId) continue
+    const key = normalizeAccountId(userId)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    out.push({ userId, displayName: shortMxName(userId), meta: [row[2] ?? '', row[1] ?? ''].filter(Boolean) })
+  }
+  for (const account of accounts.value) {
+    const key = normalizeAccountId(String(account.userId ?? ''))
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    out.push({
+      userId: String(account.userId),
+      displayName: account.displayName || shortMxName(String(account.userId)),
+      meta: [account.isLeader ? (zh.value ? '团队领导' : 'Team lead') : (zh.value ? '成员' : 'Member')],
+    })
+  }
+  return out
+})
+
+const peopleRowsResult = computed<ResultRow[]>(() => peopleEntries.value
+  .filter((person) => !q.value.trim() || hay(person.displayName, person.userId, ...person.meta).includes(q.value.trim().toLowerCase()))
+  .map((person) => ({
+    key: `p:${person.userId}`,
+    title: person.displayName,
+    meta: [stripHomeserver(person.userId), ...person.meta].join(' · '),
     icon: '◉',
     action: zh.value ? '账号' : 'Account',
-    open: () => void router.push({ name: 'ia2.stage1', query: { tab: 'accounts', user: account.userId } }),
-  }))))
+    open: () => void router.push({ name: 'ia2.stage1', query: { tab: 'accounts', user: person.userId } }),
+  })))
 
 const COMMANDS = computed<Array<{ key: string; label: string; icon: string; to: { name: string; query?: Record<string, string> } }>>(() => [
   { key: 'overview', label: tx.value.cmdOverview, icon: '🏠', to: { name: 'ia2.dash' } },
@@ -281,7 +351,7 @@ const commandRowsResult = computed<ResultRow[]>(() => {
 })
 
 const GROUPS: ReadonlyArray<{ key: GroupKey; label: string; rows: () => ResultRow[] }> = [
-  { key: 'sessions', label: zh.value ? '会话与房间' : 'Chats & rooms', rows: () => sessionRowsResult.value },
+  { key: 'sessions', label: zh.value ? '会话与房间' : 'Chats & rooms', rows: () => [...sessionRowsResult.value, ...simSessionRowsResult.value] },
   { key: 'tasks', label: zh.value ? '看板任务' : 'Tasks', rows: () => taskRowsResult.value },
   { key: 'runs', label: zh.value ? '运行' : 'Runs', rows: () => runRowsResult.value },
   { key: 'docs', label: zh.value ? '治理文档' : 'Documents', rows: () => docRowsResult.value },
@@ -309,7 +379,9 @@ const keyboardRows = computed<ResultRow[]>(() => [
   ...visibleGroups.value.flatMap(group => group.rows.slice(0, 20)),
 ])
 const activeIndex = ref(0)
-watch([q, type, workspaceFilter, statusFilter, assigneeFilter, timeFilter], () => { activeIndex.value = 0 })
+watch([q, type, boardFilter, statusFilter, assigneeFilter, timeFilter], () => { activeIndex.value = 0 })
+// 跨实例推演会话：随检索词装载（服务端 60s 缓存挡连续击键）
+watch(q, (needle) => { void workspace.loadSimSessions?.(needle) }, { immediate: true })
 watch(() => keyboardRows.value.length, count => {
   if (activeIndex.value >= count) activeIndex.value = 0
 })
@@ -355,6 +427,11 @@ function onKeydown(event: KeyboardEvent): void {
   void nextTick(() => listRef.value?.querySelector('.srch__row--on')?.scrollIntoView({ block: 'nearest' }))
 }
 
+function gotoSim(): void {
+  closeDialog()
+  void router.push({ name: 'ia2.sim' })
+}
+
 function openDeepSearch(): void {
   closeDialog()
   openSessionSearch()
@@ -362,7 +439,7 @@ function openDeepSearch(): void {
 
 function reset(): void {
   cockpit.clearSearch()
-  workspaceFilter.value = ''
+  boardFilter.value = ''
   statusFilter.value = ''
   assigneeFilter.value = ''
   timeFilter.value = 'all'
@@ -410,15 +487,15 @@ function reset(): void {
           :aria-selected="type === tab"
           :data-testid="`search-type-${tab}`"
           @click="type = tab"
-        >{{ { all: zh ? '全部' : 'All', sessions: zh ? '会话' : 'Chats', tasks: zh ? '任务' : 'Tasks', runs: zh ? '运行' : 'Runs', docs: zh ? '文档' : 'Docs', people: zh ? '人员' : 'People' }[tab] }}<span v-if="counts[tab]" class="srch__tab-n" :data-testid="`search-count-${tab}`">{{ counts[tab] }}</span></button>
+        >{{ { all: zh ? '全部' : 'All', sessions: zh ? '会话' : 'Chats', tasks: zh ? '任务' : 'Tasks', runs: zh ? '运行' : 'Runs', docs: zh ? '文档' : 'Docs', people: zh ? '人员' : 'People' }[tab] }}<span v-if="counts[tab] || type === tab" class="srch__tab-n" :data-testid="`search-count-${tab}`">{{ counts[tab] }}</span></button>
       </nav>
 
       <div class="srch__filters">
         <label class="srch__filter">
-          <span>{{ zh ? '工作区' : 'Workspace' }}</span>
-          <select v-model="workspaceFilter" data-testid="search-filter-workspace">
+          <span>{{ zh ? '看板' : 'Board' }}</span>
+          <select v-model="boardFilter" data-testid="search-filter-board">
             <option value="">{{ zh ? '全部' : 'All' }}</option>
-            <option v-for="item in workspaceOptions" :key="item" :value="item" :title="item">{{ wsLabel(item) }}</option>
+            <option v-for="item in boardOptions" :key="item.slug" :value="item.slug">{{ item.label }}</option>
           </select>
         </label>
         <label class="srch__filter">
@@ -466,6 +543,24 @@ function reset(): void {
           </button>
         </section>
 
+        <section v-if="simSessionRowsResult.length && (type === 'all' || type === 'sessions')" class="srch__group srch__group--sim" data-testid="search-group-sim-sessions">
+          <h2 class="srch__gh">{{ zh ? '推演会话' : 'Simulation sessions' }}<span class="srch__gn">{{ simSessionRowsResult.length }}</span></h2>
+          <button
+            v-for="row in simSessionRowsResult.slice(0, 10)"
+            :key="row.key"
+            type="button"
+            class="srch__row"
+            :data-testid="`search-row-${row.key}`"
+            @click="row.open()"
+          >
+            <span class="srch__ico2" aria-hidden="true">{{ row.icon }}</span>
+            <span class="srch__body2"><strong class="srch__rt">{{ row.title }}</strong><span class="srch__rm">{{ row.meta }}</span></span>
+            <span class="srch__simbadge srch__simbadge--sim" data-testid="sim-badge">{{ zh ? '推演' : 'SIM' }}</span>
+            <span class="srch__go">{{ row.action }}</span>
+          </button>
+          <p v-if="simSessionRowsResult.length > 10" class="srch__more">{{ zh ? '仅显示前 10 条推演会话，输入更精确关键词收敛。' : 'Showing first 10 sim sessions.' }}</p>
+        </section>
+
         <section v-for="group in visibleGroups" :key="group.key" class="srch__group" :data-testid="`search-group-${group.key}`">
           <h2 class="srch__gh">{{ group.label }}<span class="srch__gn">{{ group.rows.length }}</span></h2>
           <button
@@ -486,9 +581,13 @@ function reset(): void {
         </section>
 
         <p v-if="docsError && (type === 'all' || type === 'docs')" class="srch__err">{{ docsError }}</p>
-        <UiEmptyState v-if="total === 0 && commandRowsResult.length === 0" data-testid="search-empty" icon="🔍" boxed
+        <div v-if="type === 'runs' && counts.runs === 0" class="srch__runsempty" data-testid="search-runs-empty">
+          <p>{{ zh ? '日常实例暂无运行记录，运行在全流程推演专区查看。' : 'No runs in the daily instance — runs live in full-run simulation.' }}</p>
+          <button type="button" class="srch__goto" data-testid="search-runs-goto-sim" @click="gotoSim">{{ zh ? '去全流程推演 →' : 'Open full-run simulation →' }}</button>
+        </div>
+        <UiEmptyState v-else-if="total === 0 && commandRowsResult.length === 0" data-testid="search-empty" icon="🔍" boxed
           :title="zh ? '没有匹配结果' : 'No results'"
-          :hint="zh ? '换个关键词，或放宽工作区 / 状态 / 时间过滤。' : 'Try another keyword or relax the workspace / status / time filters.'" />
+          :hint="zh ? '换个关键词，或放宽看板 / 状态 / 时间过滤。' : 'Try another keyword or relax the board / status / time filters.'" />
       </div>
 
       <footer class="srch__footer">
@@ -537,6 +636,14 @@ function reset(): void {
 .srch__go { font-size: 12px; color: var(--accent-primary); white-space: nowrap; }
 .srch__more { margin: 0; padding: 7px 14px; font-size: 11px; color: var(--text-muted); }
 .srch__err { margin: 0; font-size: 12px; color: var(--ia-stale); }
+.srch__simbadge { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: .02em; }
+.srch__simbadge--sim { color: var(--ia-sim-on, #fff); background: var(--ia-sim, #7c3aed); border: 1px solid rgba(255,255,255,.25); }
+.srch__group--sim { border-color: rgba(124, 58, 237, .45); }
+.srch__group--sim .srch__gh { color: var(--ia-sim-deep, #6d28d9); }
+.srch__runsempty { padding: 28px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.srch__runsempty p { margin: 0 0 10px; }
+.srch__goto { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--accent-primary); font-family: inherit; font-size: 12px; padding: 5px 14px; cursor: pointer; }
+.srch__goto:hover { background: var(--bg-secondary); }
 .srch__footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 10px; }
 .srch__deep { border: 0; background: transparent; color: var(--accent-primary); font-family: inherit; font-size: 12px; padding: 4px 0; cursor: pointer; }
 .srch__deep:hover { color: var(--text-primary); }

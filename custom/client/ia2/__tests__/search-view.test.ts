@@ -18,7 +18,11 @@ const rows = vi.hoisted(() => ({
   ],
   tasks: [
     { id: 't1', title: '收银台 BFF 重构', priority: 'P1', status: 'running', assignee: '陈', workspace: '/lab/pay', tenant: null, boardSlug: 'pay', createdAt: Date.now(), sessionId: '!a:matrix' },
-    { id: 't2', title: '退款对账', priority: 'P0', status: 'blocked', assignee: '林', workspace: '/lab/refund', tenant: null, boardSlug: 'pay', createdAt: Date.now(), sessionId: null },
+    { id: 't2', title: '退款对账', priority: 'P0', status: 'blocked', assignee: '林', workspace: '/lab/refund', tenant: null, boardSlug: 'refund', createdAt: Date.now(), sessionId: null },
+  ],
+  boards: [
+    { slug: 'pay', name: '支付看板', total: 1, source: 'daily' },
+    { slug: 'refund', name: '退款看板', total: 1, source: 'daily' },
   ],
   runs: [
     { runId: 'run21', status: 'running', stage: 'develop', iteration: 3, lastActivityAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
@@ -28,6 +32,19 @@ const rows = vi.hoisted(() => ({
   ],
 }))
 const govApi = vi.hoisted(() => ({ fetchGovernanceOverview: vi.fn(async () => ({ ok: true, docs: rows.docs })) }))
+const registryApi = vi.hoisted(() => ({
+  fetchRegistry: vi.fn(async () => ({
+    markdown: [
+      '# roster',
+      '',
+      '| 账号 | AI 助理账号 | 角色 |',
+      '| --- | --- | --- |',
+      '| @fanfan:matrix | @fanfan-agent:matrix | 产品经理 |',
+      '| @alice:matrix | @alice-agent:matrix | 研发 |',
+    ].join('\n'),
+    commit: 'abc123',
+  })),
+}))
 const matrixRoom = vi.hoisted(() => ({ selectRoom: vi.fn() }))
 const sessionSearch = vi.hoisted(() => ({ openSessionSearch: vi.fn() }))
 
@@ -36,16 +53,25 @@ vi.mock('../composables/useSessionRows', () => ({
 }))
 vi.mock('../store/workspace', async () => {
   const { reactive } = await import('vue')
+  const { parseFirstTable, setCellAlign } = await import('@/custom/governance/utils/registry-md')
   const state = reactive({
     tasks: rows.tasks,
     rawTasks: [],
+    boards: rows.boards,
     searchOpen: true,
     searchDocs: [] as Array<Record<string, unknown>>,
     searchDocsLoaded: false,
     searchDocsFailed: false,
+    searchPeopleRows: [] as string[][],
+    searchPeopleLoaded: false,
+    searchSimSessions: [] as Array<Record<string, string>>,
+    searchSimAvailable: false,
+    searchSimQuery: '',
+    loadSimSessions: vi.fn(),
     openSearch: vi.fn(),
     closeSearch: vi.fn(),
     loadSearchDocs: vi.fn(),
+    loadSearchPeople: vi.fn(),
   })
   state.openSearch.mockImplementation(() => { state.searchOpen = true })
   state.closeSearch.mockImplementation(() => { state.searchOpen = false })
@@ -58,6 +84,19 @@ vi.mock('../store/workspace', async () => {
     } catch {
       state.searchDocsFailed = true
     }
+  })
+  state.loadSimSessions.mockImplementation(async (q: string) => {
+    const res = await simSessionsApi.fetchObserverSessions(q)
+    state.searchSimAvailable = res.available
+    state.searchSimSessions = res.available ? (res.results ?? []) : []
+    state.searchSimQuery = q
+  })
+  state.loadSearchPeople.mockImplementation(async () => {
+    if (state.searchPeopleLoaded) return
+    const doc = await registryApi.fetchRegistry('roster')
+    const { table } = parseFirstTable(doc.markdown)
+    state.searchPeopleRows = setCellAlign(table.rows, 3)
+    state.searchPeopleLoaded = true
   })
   return { useWorkspaceStore: () => state }
 })
@@ -77,12 +116,29 @@ vi.mock('@/custom/loop/runcenter/store/runs', () => ({
   useRunCenterStore: () => ({ sortedRuns: rows.runs }),
 }))
 vi.mock('@/custom/governance/api/governance', () => govApi)
+vi.mock('@/custom/governance/api/adminRegistry', () => registryApi)
+const simSessionsApi = vi.hoisted(() => ({
+  fetchObserverSessions: vi.fn(async () => ({ available: false, results: [] as Array<Record<string, string>> })),
+}))
+vi.mock('../api/sim-observer-sessions', () => simSessionsApi)
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
   useMatrixRoomStore: () => matrixRoom,
 }))
 vi.mock('@/composables/useSessionSearch', () => ({
   useSessionSearch: () => sessionSearch,
 }))
+const chatStoreMock = vi.hoisted(() => ({
+  sessions: [] as Array<Record<string, unknown>>,
+  sessionsLoaded: false,
+  sessionProfileFilter: null,
+  loadSessions: vi.fn(async () => {}),
+}))
+const groupChatMock = vi.hoisted(() => ({
+  rooms: [] as Array<Record<string, unknown>>,
+  loadRooms: vi.fn(async () => {}),
+}))
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => chatStoreMock }))
+vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: () => groupChatMock }))
 vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   default: {
     props: ['show', 'taskId'],
@@ -127,25 +183,51 @@ beforeEach(() => {
   document.body.innerHTML = ''
   localStorage.clear()
   vi.clearAllMocks()
+  chatStoreMock.sessions = []
+  chatStoreMock.sessionsLoaded = false
+  chatStoreMock.sessionProfileFilter = null
+  groupChatMock.rooms = []
   const workspace = useWorkspaceStore() as any
   const cockpit = useCockpitStore() as any
   workspace.searchOpen = true
   workspace.searchDocs = []
   workspace.searchDocsLoaded = false
   workspace.searchDocsFailed = false
+  workspace.searchPeopleRows = []
+  workspace.searchPeopleLoaded = false
+  workspace.searchSimSessions = []
+  workspace.searchSimAvailable = false
+  workspace.searchSimQuery = ''
+  simSessionsApi.fetchObserverSessions.mockReset()
+  simSessionsApi.fetchObserverSessions.mockResolvedValue({ available: false, results: [] })
   cockpit.searchQuery = ''
   cockpit._sessionSearching = false
   govApi.fetchGovernanceOverview.mockResolvedValue({ ok: true, docs: rows.docs })
 })
 
 describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
-  it('默认显示五类对象，计数为 7', async () => {
+  it('默认显示五类对象，人员合并 roster 后计数为 8', async () => {
     const { w } = await mountSearch()
     expect(w.find('[data-testid="global-search-dialog"]').exists()).toBe(true)
     for (const key of ['sessions', 'tasks', 'runs', 'docs', 'people']) {
       expect(w.find(`[data-testid="search-group-${key}"]`).exists(), key).toBe(true)
     }
-    expect(w.find('[data-testid="search-count"]').text()).toBe('7')
+    expect(w.find('[data-testid="search-count"]').text()).toBe('8')
+    w.unmount()
+  })
+
+  it('弹窗打开即装载 agent 会话与群聊两源（各一次）', async () => {
+    const { w } = await mountSearch()
+    expect(chatStoreMock.loadSessions).toHaveBeenCalledTimes(1)
+    expect(groupChatMock.loadRooms).toHaveBeenCalledTimes(1)
+    w.unmount()
+  })
+
+  it('已装载的会话源不重复装载', async () => {
+    chatStoreMock.sessionsLoaded = true
+    const { w } = await mountSearch()
+    expect(chatStoreMock.loadSessions).not.toHaveBeenCalled()
+    expect(groupChatMock.loadRooms).toHaveBeenCalledTimes(1)
     w.unmount()
   })
 
@@ -173,14 +255,23 @@ describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
     w.unmount()
   })
 
-  it('工作区同时过滤任务和挂接会话', async () => {
+  it('看板筛选作用于任务与挂接会话，文档人员不受板筛选清零', async () => {
     const { w } = await mountSearch()
-    await w.find('[data-testid="search-filter-workspace"]').setValue('/lab/pay')
+    await w.find('[data-testid="search-filter-board"]').setValue('pay')
     await flushPromises()
     expect(w.find('[data-testid="search-row-t:t1"]').exists()).toBe(true)
     expect(w.find('[data-testid="search-row-t:t2"]').exists()).toBe(false)
     expect(w.find('[data-testid="search-row-s:room:!a:matrix"]').exists()).toBe(true)
     expect(w.find('[data-testid="search-row-s:chat:c1"]').exists()).toBe(false)
+    // 板不属于文档/人员的归属维度——不被清零
+    expect(w.find('[data-testid="search-row-d:rfd"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('板筛选深链恢复（board=refund）', async () => {
+    const { w } = await mountSearch('/app?search=1&board=refund')
+    expect(w.find('[data-testid="search-row-t:t2"]').exists()).toBe(true)
+    expect(w.find('[data-testid="search-row-t:t1"]').exists()).toBe(false)
     w.unmount()
   })
 
@@ -228,6 +319,71 @@ describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
     await w.find('[data-testid="search-input"]').trigger('keydown', { key: 'Escape' })
     await flushPromises()
     expect(workspace.searchOpen).toBe(false)
+    w.unmount()
+  })
+
+  it('人员源为 roster 与团队注册表合并去重', async () => {
+    const { w } = await mountSearch('/app?search=1&type=people')
+    // roster 两行（fanfan/alice）与团队注册表 alice 去重 → 2 行
+    expect(w.find('[data-testid="search-row-p:@fanfan:matrix"]').exists()).toBe(true)
+    expect(w.findAll('[data-testid^="search-row-p:"]').length).toBe(2)
+    w.unmount()
+  })
+
+  it('推演会话组：available 时渲染紫色徽章行并计入会话徽标', async () => {
+    simSessionsApi.fetchObserverSessions.mockResolvedValue({
+      available: true,
+      results: [
+        { id: 'sim-s1', profile: 'fanfan', chatType: 'group', displayName: '支付收银台需求分析讨论群' },
+        { id: 'sim-s2', profile: 'chen', chatType: 'dm', displayName: '支付对账沟通' },
+      ],
+    })
+    const { w, workspace, cockpit } = await mountSearch()
+    cockpit.runSearch('支付')
+    await workspace.loadSimSessions('支付')
+    await flushPromises()
+    expect(w.find('[data-testid="search-group-sim-sessions"]').exists()).toBe(true)
+    expect(w.find('[data-testid="search-row-sim:sim-s1"]').exists()).toBe(true)
+    const badge = w.find('[data-testid="search-row-sim:sim-s1"] [data-testid="sim-badge"]')
+    expect(badge.exists()).toBe(true)
+    expect(badge.classes()).toContain('srch__simbadge--sim')
+    // 关键词「支付」过滤：日常命中 1（支付讨论群）+ 推演 2 = 3
+    expect(w.find('[data-testid="search-count-sessions"]').text()).toBe('3')
+    w.unmount()
+  })
+
+  it('推演会话 fail-soft：available:false 不渲染组', async () => {
+    const { w } = await mountSearch()
+    await flushPromises()
+    expect(w.find('[data-testid="search-group-sim-sessions"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('推演会话点击两态：无 SIM_STUDIO_URL 只提示不跳', async () => {
+    simSessionsApi.fetchObserverSessions.mockResolvedValue({
+      available: true,
+      results: [{ id: 'sim-s1', profile: 'fanfan', chatType: 'group', displayName: 'X' }],
+    })
+    const { w, router, workspace, cockpit } = await mountSearch()
+    cockpit.runSearch('X')
+    await workspace.loadSimSessions('X')
+    await flushPromises()
+    await w.find('[data-testid="search-row-sim:sim-s1"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.journey')
+    w.unmount()
+  })
+
+  it('运行空态给出去向且 0 徽标在选中时呈现', async () => {
+    rows.runs.length = 0
+    const { w, router, workspace } = await mountSearch('/app?search=1&type=runs')
+    expect(w.find('[data-testid="search-count-runs"]').text()).toBe('0')
+    expect(w.text()).toContain('全流程推演')
+    await w.find('[data-testid="search-runs-goto-sim"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.sim')
+    expect(workspace.searchOpen).toBe(false)
+    rows.runs.push({ runId: 'run21', status: 'running', stage: 'develop', iteration: 3, lastActivityAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
     w.unmount()
   })
 
