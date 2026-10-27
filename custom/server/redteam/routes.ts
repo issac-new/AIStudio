@@ -8,7 +8,8 @@
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { CATEGORY_LABELS, attackSeeds, benignSeeds } from './corpus'
-import { DETECTOR_INFO, s1Evaluate, s1Unavailable } from './detector'
+import { DETECTOR_INFO, s1Evaluate } from './detector'
+import { summarizeS1Layer } from './s1-layer'
 import { DEFAULT_REDTEAM_CONFIG, REDTEAM_LIMITS, replaySurvivorTexts, runRedteam } from './engine'
 import { OPERATORS } from './mutate'
 import { appendRun, attachS1, getRun, listRuns } from './store'
@@ -106,8 +107,9 @@ export function mountRedteam(router: Router): void {
     }
     if (replay.survivors.length === 0) {
       const report: S1LayerReport = {
-        evaluatedAt: Date.now(), survivors: [], isolated: 0, confirmed: 0, passed: 0, failOpen: 0,
-        strictEscapeRate: null, softEscapeRate: null, available: true, unavailableReason: 'S0 无幸存者，S1 无可复评对象',
+        ...summarizeS1Layer([], Date.now()),
+        available: true,
+        unavailableReason: 'S0 无幸存者，S1 无可复评对象',
       }
       attachS1(run.id, report)
       ctx.body = { ok: true, s1: report }
@@ -120,25 +122,9 @@ export function mountRedteam(router: Router): void {
       }))
       return { id: s.id, preview: s.preview, via: d.via, verdict: d.verdict, attackP: d.attackP, category: d.category, severity: d.severity }
     }))
-    const isolated = verdicts.filter((v) => v.verdict === 'REWRITE' || v.verdict === 'BLOCK').length
-    const confirmed = verdicts.filter((v) => v.verdict === 'CONFIRM').length
-    const passed = verdicts.filter((v) => v.verdict === 'PASS').length
-    const failOpen = verdicts.filter((v) => s1Unavailable(v.via)).length
-    const usable = verdicts.length - failOpen
-    const rate = (part: number): number | null => (usable === 0 ? null : part / usable)
-    const available = usable > 0
-    const report: S1LayerReport = {
-      evaluatedAt: Date.now(),
-      survivors: verdicts,
-      isolated,
-      confirmed,
-      passed,
-      failOpen,
-      strictEscapeRate: rate(passed),
-      softEscapeRate: rate(passed + confirmed),
-      available,
-      ...(available ? {} : { unavailableReason: '判定端不可用（TRG_BASE_URL 未起或连续失败熔断），全部 fail-open 回 S0-only' }),
-    }
+    // 口径抽到纯函数 s1-layer.ts：fail-open 的 PASS 不算逃逸（否则两数相加超总数，
+    // 2026-10-27 活体走查实锤）。
+    const report = summarizeS1Layer(verdicts, Date.now())
     attachS1(run.id, report)
     ctx.body = { ok: true, s1: report, actor: actorOf(ctx) }
   })
