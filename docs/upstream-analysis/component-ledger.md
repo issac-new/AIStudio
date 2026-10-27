@@ -104,7 +104,7 @@
 1. **hermes-studio v0.7.40 升级轮**——仍阻塞：2026-10-27 两次复核最新 tag 均为 v0.7.39（main+28 未发版）。发版即启动，28 提交预研在 §2。
 2. **hermes-agent v0.22.6/v0.23.0 升级轮**——仍阻塞：最新稳定仍 v0.22.5（main+1852 未发版，仅每日 canary）。发版即启动，主题预研在 §2。
 3. **quality-gate v2.0.0 增量调研**——已完成（2026-10-27）：唯一功能增量 scope:event/AsyncAPI 3.0.x 子集核验（上游 172 行零依赖）；裁定**暂缓**（仓内无事件契约场景），出现场景再立项对译。
-4. **swarm-eval 数值 run**——执行中（2026-10-27 清偿轮）：SIM 实例起跑＋mixed-motive/消融/注入 run，数字回填 spec。
+4. **swarm-eval 数值 run**——轻链路三跑已执行（2026-10-27 清偿轮）：mixed-motive 首跑两轮（占位出价口径，welfare=480/gini=0.333/nashDev=0.667，指标链真实执行）＋消融旋钮真链路（mention 过滤＋台账留痕）＋拜占庭注入真链路（DM 实发＋events 锚）；主链级每角色消融 criticality 与 BCR 读数仍需专门 run 窗口（第五轮同口径挂账）。数字与证据锚点见 spec 2026-10-27-ledger-todos-clearance.md。
 5. **Anthropic-Cybersecurity-Skills 语料刷新**——**改判为无需刷新**：我方融合日 2026-10-12（git 2a5fa1cb7）晚于上游 main 最后提交 2026-08-31，571 净增数与 818 总数是同一快照的两口径；上游零移动，重扫无意义。（原待办系把两口径错对所致，如实修正。）
 6. **RELEASE-NOTES 2.x 补档**——已完成（2026-10-27）：v0.7.32/0.7.34/0.7.35 三轮按 tag 日期＋specs 锚点补记（构建物与补丁计数未随轮留档，补记不虚构）；2.x 线以 2.37 收线，正式版本转 RELEASE-MANIFEST 四模块对账。
 7. **semantica/pua/fibo pin 评估**——已完成（2026-10-27）：三 pin 全部零移动（semantica v0.7.0 最新 release/pua e6e6cd2 仍 main HEAD/fibo master_2026Q3 持平），维持现 pin。

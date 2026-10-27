@@ -131,29 +131,11 @@ index 0d2a832..d5d5da4 100644
 +                    logger.info("cont-guard: nudged %s (%d open cards, silent %ds)", pdir, len(cards), int(now - ts))
 +        except Exception:
 +            continue
-diff --git a/gateway/run.py b/gateway/run.py
-index 2db32d7..b950554 100644
---- a/gateway/run.py
-+++ b/gateway/run.py
-@@ -4495,6 +4495,15 @@ def _drain_restart_safe_cron_deliveries(adapters, loop, runner=None) -> None:
-             cron_scheduler.drain_delivery_queue(profile_adapters, loop)
- 
- 
-+def _continuation_pump_chore() -> None:
-+    """Housekeeping 薄包装：续作泵（实现见 gateway.kanban_watchers._continuation_guard_tick）。"""
-+    try:
-+        from gateway.kanban_watchers import _continuation_guard_tick
-+        _continuation_guard_tick(logger)
-+    except Exception:
-+        logger.debug("continuation pump chore failed", exc_info=True)
-+
-+
- def _start_gateway_housekeeping(
-     stop_event: threading.Event, adapters=None, loop=None, interval: int = 60, cron_provider=None, runner=None,
-     cron_thread=None,
-@@ -4518,7 +4527,9 @@ def _start_gateway_housekeeping(
-     chores += [
-         (5, "Channel directory refresh", lambda: adapters and _housekeeping_channel_directory(adapters, loop)),
+--- a/gateway/run.py	2026-10-27 17:40:06
++++ b/gateway/run.py	2026-10-27 17:40:06
+@@ -4551,7 +4551,9 @@
+         # run11 根治件：挂死 running 槽周期扫（无入站也扫，驱逐判定复用快路径）
+         (5, "Wedged running-agent sweep", lambda: _housekeeping_wedged_agent_sweep(runner, loop)),
          (60, "Media cache cleanup", housekeeping_media_caches),
 -        (60, "Paste sweep", _housekeeping_paste_sweep)]
 +        (60, "Paste sweep", _housekeeping_paste_sweep),
