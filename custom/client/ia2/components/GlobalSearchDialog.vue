@@ -6,6 +6,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { NModal } from 'naive-ui'
 import { useSessionRows } from '../composables/useSessionRows'
+import { useChatStore } from '@/stores/hermes/chat'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useWorkspaceStore } from '../store/workspace'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
@@ -32,6 +34,8 @@ const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const { sessionRows, accounts } = useSessionRows()
+const chatStore = useChatStore()
+const groupChat = useGroupChatStore()
 const workspace = useWorkspaceStore()
 const cockpit = useCockpitStore()
 const matrixRoom = useMatrixRoomStore()
@@ -109,6 +113,8 @@ watch(() => workspace.searchOpen, async (open) => {
   if (open) {
     returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     void loadDocs()
+    void workspace.loadSearchPeople?.()
+    loadSessionSources()
     await nextTick()
     searchInput.value?.focus()
     return
@@ -122,6 +128,13 @@ watch(() => workspace.searchOpen, async (open) => {
 function loadDocs(): void {
   if (workspace.searchDocsLoaded) return
   void workspace.loadSearchDocs()
+}
+
+// 会话两源（agent 单聊/群聊）只在各自聊天页访问后才有数据——弹窗打开时
+// 主动装载一次；store 请求序号守卫兜底重复装载，失败静默（fail-soft 读面）。
+function loadSessionSources(): void {
+  if (!chatStore.sessionsLoaded) void chatStore.loadSessions(chatStore.sessionProfileFilter).catch(() => undefined)
+  void groupChat.loadRooms().catch(() => undefined)
 }
 
 const STATUS_LABEL: Record<string, { zh: string; en: string }> = {
