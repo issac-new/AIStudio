@@ -20,7 +20,7 @@
 - 🟢 **16 条**：其余全部（含 RETIRED 4 条、laya/artex 退役线、完结线）。
 - 🔴 派卡优先级：**semantica（本机 runtime 常驻，过期风险实存）> OpenExecutive/agent-skills > x402 > Autopt/Cybermes**。
 - 修正记录：x402 原汇总误归 🟡，10-28 复测 ≥100c 封顶升 🔴；Cybermes commits 面波动（since 10-19=0）但 tags v3.5.0 在顶且当日 push，按版本轴维持 🔴。
-- 在跑依赖：hexstrike T1 t_632cbd94 / T2 t_20ad092c（空流根治后 10-28 恢复 running）；T3 t_58855791 随依赖自动 promote。
+- 在跑依赖：hexstrike T1 t_632cbd94 / T2 t_20ad092c 已 done（10-28，空流根治后跑通）；T3 融合卡 t_58855791 ready 待拾取。
 
 ## 三、分域总表
 
@@ -30,7 +30,7 @@
 |------|------------------|------------------|-----------|------------|
 | REA MCP（rea-agents） | 6.4.0（10-12 部署，170 工具） | **6.8.0**（npm 10-25） | 🟢 已升级到位 | ✅ 10-27 升级+冒烟通过（能力差异见 §4.1） |
 | Ghidra | 12.1.4（10-14 部署） | **12.2**（10-22 发布） | 🟡 待换绑 | 缺口登记：需 JDK 25（已确认在位）+ wrapper JAVA_HOME 换绑，未静默动（见 §4.2） |
-| HexStrikeAI (0x4m4) | v6.0 源码深读立项（10-22） | 末 push 2026-08-03，13116★ | 🟢 上游停滞 | T1 卡 t_632cbd94 在跑；**卡收口后退役**（静默 85 天，差 5 天到线；源码深读基线仍有效） |
+| HexStrikeAI (0x4m4) | v6.0 源码深读立项（10-22） | 末 push 2026-08-03，13116★ | 🟢 上游停滞 | **RETIRED 2026-10-28**（T1/T2 卡已收口 done，静默 85 天；T3 融合卡 t_58855791 ready 照常跑完，融合属内部工作不受退役影响） |
 | CyberStrikeAI (AIPentest) | 调研立项（10-22） | v1.7.24（10-16）+ 10-23 durable async runs 提交 | 🟡 release 密集 | T2 卡 t_20ad092c 在跑，源码深读按最新 HEAD（自动覆盖 10-23 增量） |
 | Autopt (shiyeshu) | 06c834e（08-18，fixture 已落地 G9） | 10-23 仍 push，+43c，tag arch-role-five | 🔴 疑架构演进（五角色→arch-role-five），原报告架构描述可能过期 | 派轻卡增量重读（对照 fixture 是否仍全绿） |
 | Cybermes (Zyrexnn) | v2.0.0（融合分析在案） | **v3.5.0**（tags 顶，10-27 push） | 🔴 跨 3 minor 未盘点 | 增量调研卡（hack 域价值面待裁决） |
@@ -113,7 +113,7 @@ breaking changes（已核对本机面）：`analyze_function` 默认 retained su
 | Ghidra 12.2 升级（JDK 25 换绑） | 缺口未动 | 需用户裁决后执行（涉 wrapper 变更） |
 | REAP 上游高频更新无自动同步 | 已知（10-26 登记） | 低优先；内容零漂移，机制面无增量 |
 | openagentontology 临线 | 观察中 | 2026-11-05 复查 pushed_at |
-| HexStrikeAI 退役触发 | 等卡收口 | t_632cbd94 done 后在本表改 RETIRED |
+| HexStrikeAI 退役触发 | ✅ 已执行 | T1/T2 done（10-28），本表已改 RETIRED；T3 融合卡照常收口 |
 
 ## 六、验证锚（重跑可复现）
 
@@ -139,5 +139,6 @@ gh api repos/mattpocock/skills/tags --jq '.[0].name'                            
 
 ## 八、变更日志
 
+- 2026-10-28 HexStrikeAI 正式 RETIRED（T1/T2 收口触发；T3 融合卡不受影响照常跑）。
 - 2026-10-28 整合为终态单文件；执行 3 个月退役裁决（RETIRED 4 静默线 + laya 决策线 + artex 已归档线；HexStrikeAI 等卡收口；openagentontology 临线观察）；🔴 面六仓复测并修正判级。三件分卷原件归档 `archive/`。
 - 2026-10-27 v1（动作验收）+ v2（历史 30 线差异）落盘，上游状态全量当日实测；REA 升 6.8.0、ATT&CK 刷 v20.0、rea-agents 冒烟通过。留痕卡 t_2bee444f。
