@@ -2,16 +2,37 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 index 0874a16fa..8c0c088bd 100644
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -772,6 +772,13 @@ export default {
+@@ -772,6 +772,34 @@ export default {
      systemGroup: '系统'
    },
    ide: {
 +    landing: {
 +      title: '从一个任务开始',
 +      sub: '选择一个最近任务带入简报与上下文，或直接进入会话工作区',
-+      empty: '暂无任务：从看板选一张卡带入工作区，或直接进入会话工作区',
++      empty: '尚未选择任务或会话：从看板选一张卡带入工作区，或直接进入会话工作区',
 +      board: '从看板选一张任务',
 +      enter: '进入会话工作区'
++    },
++    security: {
++      title: '安全扫描',
++      riskLow: '低危',
++      riskMedium: '中危',
++      riskHigh: '高危',
++      planPrefix: '计划：',
++      planSuffix: '（static 档真实执行；semantic/dataflow 引擎侧待接）',
++      run: '扫描',
++      running: '扫描中…',
++      noChanges: '未扫描到变更，不代表安全',
++      noFindings: '✓ 无 static 档发现',
++      untrackedNote: '{n} 个未跟踪文件不在 git diff 内，未扫描',
++      failIntro: '扫描不可用：',
++      scannedFiles: '已扫描 {n} 个文件的变更内容',
++      capNote: '（仅前 20 个文件）',
++      noWorkspace: '无工作区：先绑定任务工作区再扫描',
++      boostTitle: '多路并行推理（/boost 管线）',
++      boostPlaceholder: '要并行多路推理的问题',
++      boostSend: '发送',
++      boostCancel: '取消'
 +    },
      tools: {
        title: '工具时间线',
@@ -33,16 +54,37 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 index d406f5392..547703509 100644
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -773,6 +773,13 @@ export default {
+@@ -773,6 +773,34 @@ export default {
      systemGroup: 'System'
    },
    ide: {
 +    landing: {
 +      title: 'Start from a task',
 +      sub: 'Pick a recent task to bring in its brief and context, or jump straight into a session workspace',
-+      empty: 'No tasks yet: pick a card from the board to bring it into the workspace, or jump straight into a session workspace',
++      empty: 'No task or session selected yet: pick a card from the board to bring it into the workspace, or jump straight into a session workspace',
 +      board: 'Pick a task from the board',
 +      enter: 'Enter session workspace'
++    },
++    security: {
++      title: 'Security scan',
++      riskLow: 'Low',
++      riskMedium: 'Medium',
++      riskHigh: 'High',
++      planPrefix: 'Plan: ',
++      planSuffix: ' (static tier runs for real; semantic/dataflow pending engine side)',
++      run: 'Scan',
++      running: 'Scanning…',
++      noChanges: 'No changes scanned — that does not mean safe',
++      noFindings: '✓ No static-tier findings',
++      untrackedNote: '{n} untracked files are not in git diff and were not scanned',
++      failIntro: 'Scan unavailable: ',
++      scannedFiles: 'Scanned change content of {n} files',
++      capNote: ' (first 20 files only)',
++      noWorkspace: 'No workspace: bind a task workspace first',
++      boostTitle: 'Multi-path reasoning (/boost pipeline)',
++      boostPlaceholder: 'Question to run through parallel reasoning',
++      boostSend: 'Send',
++      boostCancel: 'Cancel'
 +    },
      tools: {
        title: 'Tools timeline',

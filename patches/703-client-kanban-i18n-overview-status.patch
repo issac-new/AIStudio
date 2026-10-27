@@ -1,0 +1,24 @@
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -3806,6 +3806,9 @@
+     noTasks: '暂无任务',
+     allStatuses: '全部状态',
+     allAssignees: '全部负责人',
++    overviewStale: '数据可能陈旧——刷新失败，当前展示旧数据',
++    overviewError: '看板数据加载失败',
++    overviewPartial: '部分看板数据不完整',
+     board: {
+       create: '新建看板',
+       archive: '归档看板',
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -3807,6 +3807,9 @@
+     noTasks: 'No tasks',
+     allStatuses: 'All Statuses',
+     allAssignees: 'All Assignees',
++    overviewStale: 'Data may be stale — refresh failed, showing last known data',
++    overviewError: 'Failed to load board data',
++    overviewPartial: 'Some board data is incomplete',
+     board: {
+       create: 'New Board',
+       archive: 'Archive Board',

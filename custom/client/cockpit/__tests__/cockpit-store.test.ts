@@ -111,7 +111,6 @@ vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
 }))
 
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
-import { saveUserTodos } from '@/custom/cockpit/store/cockpit-kv'
 
 // 内存 localStorage polyfill（vitest 3.x jsdom 默认 stub localStorage）
 class MemStorage {
@@ -659,7 +658,10 @@ describe('cockpit store 工作项标题/评论草稿', () => {
   })
 })
 
-describe('cockpit store 待办闹钟提醒', () => {
+// 待办闹钟提醒调度已随 Task 5（2026-10-27）整体退役：唯一正身 = ia2 workspace
+// store。调度/重载恢复/通知面板行为的守门移至 reminder-single-owner.test.ts（退役
+// 面）与 workspace-store.test.ts（正身面）；此处只保留 addUserTodo 纯数据契约。
+describe('cockpit store 待办数据函数（调度已退役，Task 5）', () => {
   it('addUserTodo 接受 remindAt 并持久化', () => {
     const s = useCockpitStore()
     s.openSchedule()
@@ -680,44 +682,15 @@ describe('cockpit store 待办闹钟提醒', () => {
     expect(todo.remindAt).toBeUndefined()
   })
 
-  it('T-15 窗口触发提醒并写入通知面板', () => {
+  it('提醒不在 cockpit 侧触发：到期待办不产生通知面板项（正身收敛守门）', () => {
     const s = useCockpitStore()
     s.openSchedule()
-    // remindAt = now + 10min → 落在 T-15 窗口 [t-15, t-5) 内
-    const remindAt = Date.now() + 10 * 60 * 1000
+    const remindAt = Date.now() + 10 * 60 * 1000 // T-15 窗口内
     s.addUserTodo('2026-06-25', '即将开始', undefined, remindAt)
-    // addUserTodo 内部已调用 checkReminders，应触发 T-15
+    // 旧实现在 addUserTodo 内扫描窗口并写入 reminder 通知——退役后不得再出现
+    expect(s.notifyItems.some(n => n.kind === 'reminder')).toBe(false)
     const todo = s.userTodos.find(t => t.title === '即将开始')!
-    expect(todo.reminded15).toBe(true)
-    // 通知面板应出现一条 reminder 项
-    const reminderItem = s.notifyItems.find(n => n.kind === 'reminder')
-    expect(reminderItem).toBeTruthy()
-    expect(reminderItem!.id).toContain(':15')
-  })
-
-  it('removeUserTodo 同步移除其提醒通知', () => {
-    const s = useCockpitStore()
-    s.openSchedule()
-    const remindAt = Date.now() + 10 * 60 * 1000
-    s.addUserTodo('2026-06-25', '待删提醒', undefined, remindAt)
-    const todo = s.userTodos.find(t => t.title === '待删提醒')!
-    expect(s.notifyItems.some(n => n.kind === 'reminder')).toBe(true)
-    s.removeUserTodo(todo.id)
-    expect(s.userTodos.find(t => t.id === todo.id)).toBeUndefined()
-    expect(s.notifyItems.some(n => n.id.startsWith(`reminder:${todo.id}:`))).toBe(false)
-  })
-
-  it('重载恢复：已过 remindAt 但标记缺失时补触发', () => {
-    // 模拟重载：直接写一个过期且未触发的待办到 localStorage
-    saveUserTodos([{
-      id: 'todo-stale', date: '2026-06-25', title: '遗留待办', createdAt: Date.now() - 3600_000,
-      remindAt: Date.now() - 600_000, reminded15: false, reminded5: false,
-    }])
-    const s = useCockpitStore()
-    s.openSchedule()   // 加载 todos + checkReminders
-    const todo = s.userTodos.find(t => t.id === 'todo-stale')!
-    expect(todo.reminded15).toBe(true)
-    expect(todo.reminded5).toBe(true)
+    expect(todo.reminded15).toBeUndefined()
   })
 })
 

@@ -7,10 +7,18 @@
 // 必须带 `VITE_` 前缀,否则 Vite 不会把该变量注入到客户端 bundle。
 export interface FeatureConfig {
   matrixChat: boolean;
+  /** reserved（2026-10-27 Task 10 开关盘点）：全仓无运行时消费者（grep 零命中）。
+   *  旗标与默认关语义保留，供 matrix 鉴权产品化时取用，不删能力。 */
   matrixAuth: boolean;
+  /** reserved（2026-10-27 Task 10 开关盘点）：同 matrixAuth，无运行时消费者。 */
   matrixAdmin: boolean;
+  /** reserved（2026-10-27 Task 10 开关盘点）：唯一运行时消费是 bootstrap 有条件
+   *  import 的空壳注册（registerKanbanEnhancements 仅 console.log）——能力与
+   *  开关保留，无产品面挂接。 */
   kanbanEnhancements: boolean;
   branding: boolean;
+  /** reserved（2026-10-27 Task 10 开关盘点）：词条直接写在上游 locale 文件
+   *  （patch 044-053 注入），无运行时注册消费（bootstrap 注释同口径）。 */
   extendedI18n: boolean;
   /** P4 用户裁决（2026-09-11）：原有 AI 协作中心（cockpit）保留功能、与新 /app
    *  六区域 IA 平行共存——不再退役，旗标回归默认开启。 */

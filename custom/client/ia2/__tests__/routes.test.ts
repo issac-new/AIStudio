@@ -13,8 +13,12 @@ vi.mock('../views/WorkbenchView.vue', () => ({
 vi.mock('../views/sim/SimCenterView.vue', () => ({
   default: { template: '<div class="sim-center-stub" />' },
 }))
+vi.mock('../views/LegacyLoopView.vue', () => ({
+  default: { template: '<div class="legacy-loop-stub" />' },
+}))
 import WorkbenchView from '../views/WorkbenchView.vue'
 import SimCenterView from '../views/sim/SimCenterView.vue'
+import LegacyLoopView from '../views/LegacyLoopView.vue'
 
 function makeRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes: buildIaRoutes() })
@@ -75,13 +79,16 @@ describe('ia2 路由树（v12 双视图）', () => {
     }
   })
 
-  it('V5 补遗⑤ M6：/app/l 画布入口退役——降为兼容重定向（组件退役，不触发懒加载）', () => {
+  it('Task 3（2026-10-27 分域）：/app/l/:loopId 恢复组件路由——Legacy Loop 薄详情（非丢参重定向）', async () => {
     const router = makeRouter()
     const resolved = router.resolve('/app/l/l1')
     const record = resolved.matched[resolved.matched.length - 1]
     expect(record?.name).toBe('ia2.loopCanvas')
-    expect(record?.components).toBeFalsy()
-    expect(typeof record?.redirect).toBe('function')
+    expect(record?.redirect, '/app/l 不得再是重定向（V5 M6 曾丢 loopId 断深链）').toBeFalsy()
+    const loader = record?.components?.default as unknown as () => Promise<{ default: unknown }>
+    expect(typeof loader).toBe('function')
+    const mod = await loader()
+    expect(mod.default).toBe(LegacyLoopView)
   })
 
   it('工作页：board 存在；runs 家族 B1 退役为重定向（推演中心）；sim 六签懒组件落 SimCenterView', async () => {

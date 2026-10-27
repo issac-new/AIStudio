@@ -1,9 +1,12 @@
 <!-- overlay/custom/client/ia2/views/sim/SimCenterView.vue
      全流程推演专区壳（2026-10-18 推演区批，原「仿真中心」改名）：
-     四签单层页签——导演台 / 监督面板 / 运行监控 / 证据库；运行编排与推演
-     设置的唯一入口在左侧栏（2026-10-21 双入口收敛）。导演 run 与 26 步
-     harness run 分流：legacy 三签在导演 run 下显示显式内联态并给「导演
-     详情」入口，不再静默改道。 -->
+     四签=四个兄弟路由（导演台 / 监督面板 / 运行监控 / 证据库），内容映射在本壳
+     （v-show 四面板）。2026-10-27 产品一致性 Task 9：中央页签条与左侧
+     IaSideNav SIM_NAVS 完全重复——中央页签条退役，推演左栏成为唯一导航
+     （run/from 上下文保留随之迁入左栏 go()）；页头签名保留当前面板名。
+     运行编排与推演设置的唯一入口在左侧栏（2026-10-21 双入口收敛）。导演 run
+     与 26 步 harness run 分流：legacy 三签在导演 run 下显示显式内联态并给
+     「导演详情」入口，不再静默改道。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -33,41 +36,24 @@ onMounted(() => { releaseBodyClass = retainBodyClass('ia-center-full') })
 onUnmounted(() => { releaseBodyClass?.(); releaseBodyClass = null })
 
 type TabKey = 'overview' | 'supervision' | 'ops' | 'evidence'
-interface SimTab { key: TabKey; name: string }
 
-const TABS: ReadonlyArray<SimTab> = [
-  { key: 'overview', name: 'ia2.sim' },
-  { key: 'supervision', name: 'ia2.simSupervision' },
-  { key: 'ops', name: 'ia2.simOps' },
-  { key: 'evidence', name: 'ia2.simEvidence' },
-]
+/** 四签=兄弟路由名映射（导航本体在左栏 SIM_NAVS；此处只做 内容映射与页头签名） */
+const TAB_NAME: Record<TabKey, string> = {
+  overview: 'ia2.sim', supervision: 'ia2.simSupervision', ops: 'ia2.simOps', evidence: 'ia2.simEvidence',
+}
 type TabTextKey = 'tabOverview' | 'tabSupervision' | 'tabOps' | 'tabEvidence'
 const TAB_LABEL_KEY: Record<TabKey, TabTextKey> = {
   overview: 'tabOverview', supervision: 'tabSupervision', ops: 'tabOps', evidence: 'tabEvidence',
 }
 
 const activeTab = computed<TabKey>(() =>
-  TABS.find(t => t.name === String(route.name))?.key || 'overview',
+  (Object.keys(TAB_NAME) as TabKey[]).find(k => TAB_NAME[k] === String(route.name)) ?? 'overview',
 )
 
-function labelOf(tab: SimTab): string {
-  return text.value[TAB_LABEL_KEY[tab.key]]
-}
-
-function contextQuery(): Record<string, string> | undefined {
-  const query: Record<string, string> = {}
-  for (const key of ['run', 'from'] as const) {
-    const v = route.query[key]
-    if (typeof v === 'string' && v) query[key] = v
-  }
-  return Object.keys(query).length ? query : undefined
-}
-
-/** 页签点击：四签各走兄弟路由；run/from 上下文随签保留 */
-function goTab(tab: SimTab): void {
-  if (tab.key === activeTab.value) return
-  void router.push({ name: tab.name, query: contextQuery() })
-}
+/** 页头签名（sim-tabs 单一事实源）。修复注记：旧实现 labelOf(activeTab) 把
+ *  TabKey 字符串传给收 SimTab 对象的函数，签名恒为空——页签条退役后签名成为
+ *  当前面板的唯一页内提示，此处按 key 直查词表。 */
+const activeLabel = computed(() => text.value[TAB_LABEL_KEY[activeTab.value]])
 
 /** 两体系分流（2026-10-21 遗留清偿）：导演 run 与 26 步 run 详情各归其位——
  *  导演 run 只在导演台/导演详情有效；legacy 三签显示显式内联态，不再静默改道。 */
@@ -101,10 +87,6 @@ function runsplitText(key: 'supervision' | 'ops' | 'evidence'): string {
   return navLocale.value === 'zh' ? RUNSPLIT_TEXT[key].zh : RUNSPLIT_TEXT[key].en
 }
 
-const INTRO_KEY: Record<string, string> = {
-  overview: 'sim-overview', supervision: 'sim-supervision', ops: 'sim-ops', evidence: 'sim-evidence',
-}
-
 </script>
 
 <template>
@@ -113,7 +95,7 @@ const INTRO_KEY: Record<string, string> = {
       <IaBreadcrumb />
       <h2 class="sim-center__title">
         <span class="sim-center__kicker">{{ navLocale === 'zh' ? '全流程推演' : 'Full-run Simulation' }}</span>
-        {{ labelOf(activeTab) }}
+        {{ activeLabel }}
       </h2>
       <RunSelector />
     </header>
@@ -123,20 +105,6 @@ const INTRO_KEY: Record<string, string> = {
         ? '本次运行 26 步怎么走、卡在哪、证据在哪。日常派活与沟通请切换顶部「日常工作台」。'
         : 'How this 26-step run is going, where it is stuck, and where the evidence is. Daily work lives in the top "Daily" mode.' }}
     </p>
-
-    <nav class="sim-center__tabs" role="tablist" aria-label="全流程推演">
-      <button
-        v-for="tab in TABS"
-        :key="tab.key"
-        type="button"
-        role="tab"
-        class="sim-center__tab"
-        :class="{ 'sim-center__tab--active': activeTab === tab.key }"
-        :aria-selected="activeTab === tab.key"
-        :data-testid="`ia-sim-tab-${tab.key}`"
-        @click="goTab(tab)"
-      >{{ labelOf(tab) }}</button>
-    </nav>
 
     <CockpitPanel />
     <SimFlowStrip />
@@ -202,25 +170,6 @@ const INTRO_KEY: Record<string, string> = {
 .sim-center__runsplit button:hover { background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
 .sim-center__runsplit button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 .sim-center__lead { margin: 0; max-width: 940px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
-.sim-center__tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); }
-.sim-center__tab {
-  padding: 9px 14px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 13px;
-  font-family: inherit;
-  transition: color 0.12s, border-color 0.12s;
-}
-.sim-center__tab:hover { color: var(--text-primary); }
-.sim-center__tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
-.sim-center__tab--active {
-  color: var(--accent-primary);
-  border-bottom-color: var(--accent-primary);
-  font-weight: 600;
-}
 .sim-center__body { flex: 1; min-height: 0; overflow-y: auto; }
 .sim-center__panel {
   display: flex;

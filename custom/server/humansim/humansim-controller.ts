@@ -90,8 +90,8 @@ export async function sendHumansimMessage(v: HumansimSendRequest): Promise<{ eve
 router.post('/send', async (ctx: Context) => {
   const dir = credsDir()
   if (!dir) { ctx.status = 503; ctx.body = { error: 'humansim 未配置（HUMANSIM_CREDS_DIR 缺席=fail-closed）' }; return }
-  const parsed = validateSend(ctx.request.body)
-  if (!parsed.ok) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
+  const parsed = validateSend((ctx.request as { body?: unknown }).body)
+  if (parsed.ok === false) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
   try {
     ctx.body = await sendHumansimMessage(parsed.value)
   } catch (err) {

@@ -18,8 +18,12 @@ const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'
 const workspace = useWorkspaceStore()
 const assigneeLabel = useAssigneeLabel()
 
-const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
-  .filter(r => r.task.status === 'review' || (r.task.status === 'done' && isRecentTask(r.task)))
+// 日常源投影（Task 2 移交，2026-10-27）：只读 dailyTasks ref——同 board 同
+// taskId 的 sim 行不混入（旧 rawTasks 遍历会同 ID 双行+行键 `${board}:${id}` 冲突）。
+type DailyRow = RawBoardTask & { key: string }
+const rows = computed<DailyRow[]>(() => workspace.dailyTasks
+  .filter(ref => ref.raw && (ref.raw.task.status === 'review' || (ref.raw.task.status === 'done' && isRecentTask(ref.raw.task))))
+  .map(ref => ({ ...ref.raw!, key: ref.key }))
   .sort((a, b) => (a.task.status === 'review' ? 0 : 1) - (b.task.status === 'review' ? 0 : 1)
     || (b.task.completed_at ?? b.task.created_at) - (a.task.completed_at ?? a.task.created_at))
   .slice(0, 30))
@@ -36,7 +40,7 @@ const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
     </header>
     <p v-if="!rows.length" class="dtp__empty">{{ zh ? '还没有进入验收或已完成的任务。' : 'No tasks in acceptance or done yet.' }}</p>
     <div v-else class="dtp__rows">
-      <button v-for="r in rows" :key="`${r.board}:${r.task.id}`" type="button" class="dtp__row" :data-testid="`daily-trace-${r.task.id}`" @click="emit('open-task', r.task.id)">
+      <button v-for="r in rows" :key="r.key" type="button" class="dtp__row" :data-testid="`daily-trace-${r.task.id}`" @click="emit('open-task', r.key)">
         <strong class="dtp__name">{{ r.task.title }}</strong>
         <span class="dtp__meta">{{ r.task.id }} · {{ r.board }} · {{ assigneeLabel(r.task.assignee) }} · {{ taskUpdatedLabel(r.task) }}</span>
         <span class="dtp__result">{{ taskResultLabel(r.task) }}</span>

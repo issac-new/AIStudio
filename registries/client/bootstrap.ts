@@ -57,21 +57,19 @@ export async function bootstrapClient(app: App): Promise<void> {
 
   // 技能安全扫描（Skill 三段治理第一段，2026-10-13 挂账清偿续批）：默认开，
   // VITE_CUSTOM_SKILLGOV=false 显式关。导航入口（FlowNavPanel 内 SkillgovNavEntry）。
-  if (features.skillgov) {
-    registrations.push(import('../../custom/client/skillgov').then(m => m.registerSkillgov(app)))
-  }
+  // 路由无条件注册（Task 10 统一 eval 的 2026-10-19 P1-5 口径）：关闭深链由
+  // IaFeatureShell 渲染「未启用」说明页而非 404/静默回首页；开关只管导航可见性。
+  registrations.push(import('../../custom/client/skillgov').then(m => m.registerSkillgov(app)))
 
   // 本体工作台（GB/T 48000.3 方法论产品化，spec 2026-10-10-ontology-studio-spec.md）：
   // 默认开，VITE_CUSTOM_ONTOLOGY=false 显式关。导航入口（FlowNavPanel 内 OntologyNavEntry）。
-  if (features.ontology) {
-    registrations.push(import('../../custom/client/ontology').then(m => m.registerOntology(app)))
-  }
+  // 路由无条件注册（口径同上，Task 10）。
+  registrations.push(import('../../custom/client/ontology').then(m => m.registerOntology(app)))
 
   // 流程架构工作台（企业级 BPA 方法论产品化，spec 2026-10-14-bpa-process-architecture-spec.md）：
   // 默认开，VITE_CUSTOM_BPA=false 显式关。导航入口（FlowNavPanel 内 BpaNavEntry）。
-  if (features.bpa) {
-    registrations.push(import('../../custom/client/bpa').then(m => m.registerBpa(app)))
-  }
+  // 路由无条件注册（口径同上，Task 10）。
+  registrations.push(import('../../custom/client/bpa').then(m => m.registerBpa(app)))
 
   await Promise.all(registrations)
 

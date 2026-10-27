@@ -119,7 +119,20 @@ async function mountStage(stage: number, query = '') {
     global: { plugins: [router], stubs },
   })
   await flushPromises()
+  // Task 8 注册合一后页签统一懒装载（meta.load → defineAsyncComponent）：真实
+  // import 跨 tick 完成，轮询等页签内容落地（断言不变，只补装载等待；
+  // 排除装载骨架自身的 testid，避免等在骨架上）。
+  await untilFound(w, '#stg-panel [data-testid]:not([data-testid="stg-tab-skeleton"])')
   return { w, router }
+}
+
+/** 轮询等待懒装载的页签内容出现（vite 动态 import 需多个 tick） */
+async function untilFound(w: ReturnType<typeof mount>, selector: string, tries = 60): Promise<void> {
+  for (let i = 0; i < tries; i++) {
+    if (w.find(selector).exists()) return
+    await flushPromises()
+    await new Promise((r) => setTimeout(r, 10))
+  }
 }
 
 beforeEach(() => { localStorage.clear() })
@@ -154,6 +167,7 @@ describe('StageShell — 单层页签', () => {
     const { w, router } = await mountStage(1)
     await w.find('[data-testid="stg-tab-org"]').trigger('click')
     await flushPromises()
+    await untilFound(w, '[data-testid="org-stub"]')
     expect(router.currentRoute.value.query.tab).toBe('org')
     expect(w.find('[data-testid="org-stub"]').exists()).toBe(true)
     expect(w.find('[data-testid="stg-tab-org"]').classes()).toContain('stg__tab--on')
@@ -170,6 +184,7 @@ describe('StageShell — 单层页签', () => {
     expect(w.find('[data-testid="requirements-stub"]').exists()).toBe(true)
     await w.find('[data-testid="stg-tab-g1"]').trigger('click')
     await flushPromises()
+    await untilFound(w, '[data-testid="gate-stub"]')
     expect(router.currentRoute.value.query.tab).toBe('g1')
     expect(w.find('[data-testid="gate-stub"]').attributes('data-gates')).toBe('G1')
     w.unmount()
@@ -197,6 +212,7 @@ describe('StageShell — 单层页签', () => {
       await w.find(`[data-testid="stg-tab-${key}"]`).trigger('click')
       await flushPromises()
     }
+    await untilFound(w, '[data-testid="daily-g5-stub"]')
     expect(router.currentRoute.value.query.tab).toBe('g5')
     expect(w.find('[data-testid="daily-trace-stub"]').exists()).toBe(false)
     expect(w.find('[data-testid="daily-delivery-stub"]').exists()).toBe(false)
@@ -221,9 +237,12 @@ describe('StageShell — 单层页签', () => {
 
   it('④开发主操作=页内打开看板（不跳整页）', async () => {
     const { w, router } = await mountStage(4)
+    // 默认签 today 懒装载：单文件隔离跑时冷缓存，须等 chunk 落地（同 ⑤⑥ untilFound 迁移）
+    await untilFound(w, '[data-testid="today-stub"]')
     expect(w.find('[data-testid="today-stub"]').exists()).toBe(true)
     await w.find('[data-testid="stg-primary"]').trigger('click')
     await flushPromises()
+    await untilFound(w, '[data-testid="kanban-stub"]')
     expect(router.currentRoute.value.query.tab).toBe('board')
     expect(w.find('[data-testid="stg-tab-board"]').classes()).toContain('stg__tab--on')
     w.unmount()

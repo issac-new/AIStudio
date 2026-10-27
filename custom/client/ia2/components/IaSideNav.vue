@@ -57,8 +57,9 @@ const routeName = computed(() => String(route?.name ?? ''))
 const routePath = computed(() => String(route?.path ?? ''))
 const isSimMode = computed(() => routePath.value === '/app/sim' || routePath.value.startsWith('/app/sim/'))
 
-/** 推演模式侧栏（与 SimCenterView 六签同序；文案自 nav-centers SIM_NAVS
- *  单一源——与最近轨迹标题解析共用，2026-10-23 迁入） */
+/** 推演模式侧栏（2026-10-27 产品一致性 Task 9：中央页签条退役，本组是推演域
+ *  唯一导航；文案自 nav-centers SIM_NAVS 单一源——与最近轨迹标题解析共用，
+ *  2026-10-23 迁入） */
 const simItems = SIM_NAVS
 
 /** 常用组：日常高频入口。静态定义自 nav-centers COMMON_NAVS（单一源），
@@ -90,11 +91,15 @@ const activeStagePage = computed(() => /^ia2\.stage[1-6]$/.test(routeName.value)
 /** 阶段行右侧信号（2026-10-26 合一轮）：③④有在办数时计数章色=本阶段桶自身
  *  状态（桶映射=STAGE_BOARD_STATUSES，与阶段页内嵌看板同源）——④桶含 blocked，
  *  有阻塞卡=红、否则有卡=黄；③桶（triage/todo/scheduled/ready）无 blocked 恒黄。
- *  无在办数（①②⑤⑥与空桶③④）保留生命周期状态点。终结徽标口径（阶段页映射）
- *  与状态点口径（生命周期映射）两套映射同行双信号的矛盾形态（③行曾同显
- *  done✓+11 张在办）。 */
-function stageChipStatus(no: 1 | 2 | 3 | 4 | 5 | 6): 'done' | 'current' | 'pending' | 'blocked' {
-  if (navBadge(`stage${no}`) === '') return progress.stageState(no)
+ *  无在办数（①②⑤⑥与空桶③④）保留生命周期状态点。
+ *  2026-10-27 日常阶段语义：dailyStageState 的 done=「已流转」（后续阶段有
+ *  工作）——映射为 flowed 中性 ○，不画绿✓「已完成」（IaSideNavItem 复用
+ *  pending 中性色，无第三套状态色）。 */
+function stageChipStatus(no: 1 | 2 | 3 | 4 | 5 | 6): 'flowed' | 'current' | 'pending' | 'blocked' {
+  if (navBadge(`stage${no}`) === '') {
+    const s = progress.stageState(no)
+    return s === 'done' ? 'flowed' : s
+  }
   if (no === 4) return blockedCount.value > 0 ? 'blocked' : 'current'
   return 'current'
 }
@@ -121,8 +126,8 @@ const stageItems = computed(() => STAGE_META.map((meta) => {
   }
 }))
 
-const stageStatusLabel = (status: 'done' | 'current' | 'pending' | 'blocked'): string =>
-  status === 'done' ? (zh.value ? '已完成' : 'Done')
+const stageStatusLabel = (status: 'flowed' | 'current' | 'pending' | 'blocked'): string =>
+  status === 'flowed' ? (zh.value ? '已流转：后续阶段有工作，本阶段未标记完成' : 'Moved on: work is in later stages')
     : status === 'current' ? (zh.value ? '当前阶段' : 'Current')
       : status === 'blocked' ? (zh.value ? '有阻塞' : 'Blocked')
         : (zh.value ? '未开始' : 'Not started')
@@ -183,9 +188,22 @@ function toggleCollapsed(): void {
   collapsed.value = !effectiveCollapsed.value
 }
 
+/** 推演域内互跳保留 run/from 上下文（2026-10-27 产品一致性 Task 9：中央页签条
+ *  退役后左栏是唯一推演导航，原 SimCenterView.goTab 的 contextQuery 白名单迁此）。
+ *  跳出推演域不携带——from 在日常域是阶段归属来路语义，带上会污染顶栏归属判定。 */
+function simContextQuery(): Record<string, string> | undefined {
+  const query: Record<string, string> = {}
+  for (const key of ['run', 'from'] as const) {
+    const v = route.query[key]
+    if (typeof v === 'string' && v) query[key] = v
+  }
+  return Object.keys(query).length ? query : undefined
+}
+
 function go(name: string): void {
   if (routeName.value === name) return
-  void router.push({ name })
+  const simToSim = isSimMode.value && String(name).startsWith('ia2.sim')
+  void router.push(simToSim ? { name, query: simContextQuery() } : { name })
 }
 
 // ── 最近轨迹（2026-10-23「常用 · 最近」）：记录页面访问轨迹，便于回溯 ──

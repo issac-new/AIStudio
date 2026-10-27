@@ -3,6 +3,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } from 'vue-router'
+import { NSelect } from 'naive-ui'
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: (k: string) => k, locale: { value: 'zh' } }),
@@ -257,7 +258,7 @@ describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
 
   it('看板筛选作用于任务与挂接会话，文档人员不受板筛选清零', async () => {
     const { w } = await mountSearch()
-    await w.find('[data-testid="search-filter-board"]').setValue('pay')
+    w.findComponent(NSelect).vm.$emit('update:value', 'pay')
     await flushPromises()
     expect(w.find('[data-testid="search-row-t:t1"]').exists()).toBe(true)
     expect(w.find('[data-testid="search-row-t:t2"]').exists()).toBe(false)

@@ -75,8 +75,21 @@ const TAB_LABEL: Record<TdpTab, { zh: string; en: string }> = {
 }
 const doneTasks = computed(() => props.linkedTasks.filter(t => t.status === 'done' || t.status === 'archived'))
 const activeTasks = computed(() => props.linkedTasks.filter(t => t.status !== 'done' && t.status !== 'archived'))
+
+// ── 待我处理按业务键去重（2026-10-27 Task 4）──
+// 等我队列（DecisionRow.id：task:/run:/fleet:/gate: 前缀）与需关注行
+// （AttentionRow.taskId=装配输入 id）可能指同一对象（如 review 任务既进
+// 队列又进注意力面）——同一业务键只计一次、只呈现一处；需关注节过滤掉
+// 队列已有项，兜底去重（Workbench 已传 includeWaitItems:false 的局部口径）。
+const waitKeys = computed(() => new Set(props.waitItems.map(r => r.id)))
+const visibleAttention = computed(() => (props.attentionRows ?? []).filter(r => !waitKeys.value.has(r.taskId)))
+const pendingCount = computed(() => new Set([
+  ...props.waitItems.map(r => r.id),
+  ...visibleAttention.value.map(r => r.taskId),
+]).size)
+
 const tabCount = computed<Record<TdpTab, number>>(() => ({
-  pending: props.waitItems.length + (props.attentionRows?.length ?? 0),
+  pending: pendingCount.value,
   all: activeTasks.value.length,
   done: doneTasks.value.length,
 }))
@@ -107,7 +120,7 @@ const tabCount = computed<Record<TdpTab, number>>(() => ({
         <div class="tdp__sec-head">
           <span class="tdp__sec-name">
             <svg class="tdp__sec-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
-            {{ t('ia2.tdp.pendingTitle') }}<span v-if="waitItems.length + (attentionRows?.length ?? 0)" class="tdp__n">{{ waitItems.length + (attentionRows?.length ?? 0) }}</span>
+            {{ t('ia2.tdp.pendingTitle') }}<span v-if="pendingCount" class="tdp__n">{{ pendingCount }}</span>
           </span>
           <button type="button" class="tdp__link" data-testid="tdp-wait-all" @click="emit('all-timeline')">
             {{ t('ia2.tdp.all') }} ›
@@ -122,8 +135,10 @@ const tabCount = computed<Record<TdpTab, number>>(() => ({
           @approve-fleet="item => emit('approve-fleet', item)"
           @reject-fleet="item => emit('reject-fleet', item)"
         />
-        <div v-if="attentionRows?.length" class="tdp__sub">
-          <AttentionList :rows="attentionRows" @open="row => emit('open-attention', row)" />
+        <!-- 分组空态只描述对应分组：需关注空=需关注自身空态（不因空消失，
+             也不冒充整个「待我处理」为空）——行已按业务键对队列去重 -->
+        <div class="tdp__sub">
+          <AttentionList :rows="visibleAttention" @open="row => emit('open-attention', row)" />
         </div>
       </section>
 

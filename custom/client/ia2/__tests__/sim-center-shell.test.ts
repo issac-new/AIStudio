@@ -2,8 +2,10 @@
 // 全流程推演专区壳守门（2026-10-18 推演区批，原仿真中心）：
 //   1) 四签路由可达：运行总览 / 监督面板 / 运行监控 / 证据库；
 //   2) 交付健康/需求追溯已迁⑤验收，旧 /app/sim/* 深链 redirect 到阶段页；
-//   3) 默认签=运行总览；页签文案来自 sim-tabs 单一事实源；
-//   4) 页面不再渲染「签 N」与「待实现/端点清单」占位；
+//   3) 默认签=运行总览；页头签名文案来自 sim-tabs 单一事实源；
+//   4) 2026-10-27 产品一致性 Task 9：中央四签页签条退役（与左栏 SIM_NAVS 重复），
+//      左栏是唯一推演导航（run/from 保留守门在 sim-shell-coherence.test.ts）；
+//      页面不再渲染「签 N」与「待实现/端点清单」占位；
 //   5) /app/runs 家族重定向与 V1 壳收敛规则保持不变。
 import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -39,6 +41,11 @@ vi.mock('../api/overview', () => ({
 /** 四签文案（zh）；运行编排/推演设置已归独立专区页（2026-10-21 IA 收口） */
 const FOUR_TAB_LABELS = ['导演台', '监督面板', '运行监控', '证据库'] as const
 const stubs = {}
+
+/** v-show 可见性（jsdom 下 v-show 摘 style.display） */
+function visible(el: { exists: () => boolean; element: HTMLElement }): boolean {
+  return el.exists() && el.element.style.display !== 'none'
+}
 
 const SIM_PATHS: ReadonlyArray<{ path: string; name: string }> = [
   { path: '/app/sim', name: 'ia2.sim' },
@@ -152,16 +159,30 @@ describe('全流程推演壳：/app/runs 家族重定向', () => {
 })
 
 describe('全流程推演壳：渲染', () => {
-  it('四签单层页签文案=词表；无二级页签行', async () => {
+  it('中央页签条已退役（2026-10-27 Task 9 与左栏去重）；无二级页签行', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
-    const tabs = wrapper.findAll('.sim-center__tab')
-    expect(tabs).toHaveLength(4)
-    expect(wrapper.findAll('[role="tab"]').length).toBe(4)
-    expect(tabs.map(x => x.text())).toEqual([...FOUR_TAB_LABELS])
+    expect(wrapper.findAll('[role="tab"]').length).toBe(0)
+    expect(wrapper.find('.sim-center__tabs').exists()).toBe(false)
     wrapper.unmount()
+  })
+
+  it('页头签名=当前面板名，文案出 sim-tabs 词表（单一事实源继续被消费）', async () => {
+    const router = makeSimRouter()
+    const cases = [
+      { path: '/app/sim', label: FOUR_TAB_LABELS[0] },
+      { path: '/app/sim/supervision', label: FOUR_TAB_LABELS[1] },
+      { path: '/app/sim/ops', label: FOUR_TAB_LABELS[2] },
+      { path: '/app/sim/evidence', label: FOUR_TAB_LABELS[3] },
+    ] as const
+    for (const { path, label } of cases) {
+      await router.push(path)
+      const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
+      expect(wrapper.find('.sim-center__title').text(), path).toContain(label)
+      wrapper.unmount()
+    }
   })
 
   it('默认签=导演台；页头不再有编排/设置重复按钮（2026-10-21 双入口收敛）', async () => {
@@ -169,15 +190,12 @@ describe('全流程推演壳：渲染', () => {
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
-    expect(wrapper.find('[data-testid="ia-sim-tab-overview"]').attributes('aria-selected')).toBe('true')
-    for (const key of ['supervision', 'ops', 'evidence']) {
-      expect(wrapper.find(`[data-testid="ia-sim-tab-${key}"]`).attributes('aria-selected')).toBe('false')
-    }
     // 入口唯一=左侧栏：页头两个动作按钮已删
     expect(wrapper.find('[data-testid="ia-sim-action-orchestration"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ia-sim-action-settings"]').exists()).toBe(false)
     const panel = wrapper.find('[data-testid="ia-sim-panel-overview"]')
     expect(panel.exists()).toBe(true)
+    expect(visible(panel)).toBe(true)
     expect(panel.find('[data-testid="director-panel"]').exists()).toBe(true)
     expect(panel.find('[data-testid="director-graph-boundary"]').text()).toContain('Matrix')
     expect(wrapper.text()).not.toContain('签 1')
@@ -207,19 +225,16 @@ describe('全流程推演壳：渲染', () => {
     wrapper.unmount()
   })
 
-  it('点击页签=路由切换，面板跟随；同签点击不导航', async () => {
+  it('换签=路由切换（左栏承接），面板跟随路由', async () => {
     const router = makeSimRouter()
     await router.push('/app/sim')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
-    await wrapper.find('[data-testid="ia-sim-tab-ops"]').trigger('click')
+    await router.push('/app/sim/ops')
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/app/sim/ops')
-    expect(wrapper.find('[data-testid="ia-sim-tab-ops"]').attributes('aria-selected')).toBe('true')
-    const before = router.currentRoute.value.fullPath
-    await wrapper.find('[data-testid="ia-sim-tab-ops"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe(before)
+    expect(visible(wrapper.find('[data-testid="ia-sim-panel-ops"]'))).toBe(true)
+    expect(visible(wrapper.find('[data-testid="ia-sim-panel-overview"]'))).toBe(false)
     wrapper.unmount()
   })
 
@@ -278,7 +293,7 @@ describe('全流程推演壳：渲染', () => {
     await router.push('/app/sim/evidence')
     await router.isReady()
     const wrapper = mount(SimCenterView, { global: { plugins: [router], stubs } })
-    expect(wrapper.find('[data-testid="ia-sim-tab-evidence"]').attributes('aria-selected')).toBe('true')
+    expect(visible(wrapper.find('[data-testid="ia-sim-panel-evidence"]'))).toBe(true)
     expect(wrapper.find('[data-testid="ia-sim-panel-evidence"]').find('[data-testid="ev-panel"]').exists()).toBe(true)
     wrapper.unmount()
   })

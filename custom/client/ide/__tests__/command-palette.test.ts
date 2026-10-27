@@ -109,7 +109,8 @@ describe('IdeCommandPalette', () => {
 
     await wrapper.findAll('.ide-palette__item').find((n) => n.text() === 'ide.links.settings')!.trigger('click')
     expect(ide.paletteOpen).toBe(false)
-    expect(push).toHaveBeenCalledWith({ name: 'hermes.settings' })
+    // 2026-10-27 Task 11：设置命令统一落设置目录 ia2.govSettings（Task 7 唯一入口）
+    expect(push).toHaveBeenCalledWith({ name: 'ia2.govSettings' })
   })
 
   it('键盘：Enter 执行首项（新会话），ArrowDown 移动激活项，Escape 关闭', async () => {

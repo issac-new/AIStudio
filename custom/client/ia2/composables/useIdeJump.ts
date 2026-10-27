@@ -6,12 +6,15 @@
 // （消费端 = IdeShell ?session= watch，A4 同轮落地）。调用方无感。
 import { useRouter } from 'vue-router'
 import { useIdeLinkageStore } from '@/custom/matrix-teams/stores/ide-linkage'
+import { features } from '../../../../config/features'
 
 export function useIdeJump() {
   const router = useRouter()
 
-  /** 跳 IDE 工作台（携带挂接任务进任务维度；无任务裸进；有会话绑定带 session） */
+  /** 跳 IDE 工作台（携带挂接任务进任务维度；无任务裸进；有会话绑定带 session）。
+   *  features.ide 关闭（Task 10）时 ide.shell 未注册、跳转必落空——直接不跳。 */
   function jumpIde(taskId?: string | null): void {
+    if (!features.ide) return
     let session: string | null = null
     if (taskId) {
       try {

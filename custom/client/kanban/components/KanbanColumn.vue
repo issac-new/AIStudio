@@ -31,6 +31,12 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+type KeyedKanbanTask = KanbanTask & { __taskKey?: string }
+/** 聚合看板传入 TaskRef.key；单板旧调用没有复合键时仍使用日常原 ID。 */
+function taskKey(task: KanbanTask): string {
+  return (task as KeyedKanbanTask).__taskKey ?? task.id
+}
+
 const count = computed(() => props.tasks.length)
 const showCreate = ref(!!props.autoOpenCreate)
 // ?new=1 深链二次唤起（同页 query 变化）也展开
@@ -61,7 +67,9 @@ function handleDrop(e: DragEvent) {
   emit('drop', props.status, e)
 }
 
-const allSelected = computed(() => props.tasks.length > 0 && props.tasks.every(t => props.selectedIds?.has(t.id)))
+const selectableTasks = computed(() => props.tasks.filter(task => !taskKey(task).startsWith('sim:')))
+const allSelected = computed(() => selectableTasks.value.length > 0
+  && selectableTasks.value.every(task => props.selectedIds?.has(taskKey(task))))
 
 const columnSubtitle = computed(() => {
   const subtitles: Record<string, string> = {
@@ -78,7 +86,7 @@ const columnSubtitle = computed(() => {
 })
 
 function handleSelectAll() {
-  const ids = props.tasks.map(t => t.id)
+  const ids = selectableTasks.value.map(taskKey)
   if (allSelected.value) {
     // Deselect all in this column
     for (const id of ids) {
@@ -131,7 +139,7 @@ function handleInlineCreateCancel() {
       <div class="column-title-row">
         <div class="column-title">
           <NCheckbox
-            v-if="tasks.length > 0"
+            v-if="selectableTasks.length > 0"
             size="small"
             :checked="allSelected"
             class="col-check"
@@ -173,36 +181,36 @@ function handleInlineCreateCancel() {
           </div>
           <KanbanTaskCard
             v-for="task in lane.tasks"
-            :key="task.id"
+            :key="taskKey(task)"
             :task="task"
-            :selected="selectedIds?.has(task.id)"
+            :selected="selectedIds?.has(taskKey(task))"
             :selected-count="selectedIds?.size"
             :comment-count="(task as any).comment_count"
             :link-counts="(task as any).link_counts"
             :progress="(task as any).progress"
             :warnings="(task as any).warnings"
-            @click="handleTaskClick"
-            @toggle-select="handleToggleSelect"
-            @drag-start="handleTaskDragStart"
-            @drag-end="handleTaskDragEnd"
+            @click="(_taskId, multi, range) => handleTaskClick(taskKey(task), multi, range)"
+            @toggle-select="handleToggleSelect(taskKey(task))"
+            @drag-start="(_taskId, event, count) => handleTaskDragStart(taskKey(task), event, count)"
+            @drag-end="(_taskId, event) => handleTaskDragEnd(taskKey(task), event)"
           />
         </div>
       </template>
       <template v-else-if="tasks.length > 0">
         <KanbanTaskCard
           v-for="task in tasks"
-          :key="task.id"
+          :key="taskKey(task)"
           :task="task"
-          :selected="selectedIds?.has(task.id)"
+          :selected="selectedIds?.has(taskKey(task))"
           :selected-count="selectedIds?.size"
           :comment-count="(task as any).comment_count"
           :link-counts="(task as any).link_counts"
           :progress="(task as any).progress"
           :warnings="(task as any).warnings"
-          @click="handleTaskClick"
-          @toggle-select="handleToggleSelect"
-          @drag-start="handleTaskDragStart"
-          @drag-end="handleTaskDragEnd"
+          @click="(_taskId, multi, range) => handleTaskClick(taskKey(task), multi, range)"
+          @toggle-select="handleToggleSelect(taskKey(task))"
+          @drag-start="(_taskId, event, count) => handleTaskDragStart(taskKey(task), event, count)"
+          @drag-end="(_taskId, event) => handleTaskDragEnd(taskKey(task), event)"
         />
       </template>
       <div v-else class="column-empty">

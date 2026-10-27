@@ -55,9 +55,11 @@ describe('TaskDecisionPanel — v13 需关注（并入「待我处理」节，UX
     expect(emitted![0][0]).toMatchObject({ id: 'run:r9', kind: 'run' })
   })
 
-  it('无行时子块整体隐藏（裁决 D：合并后不再单独出需关注空态）；缺省 attentionRows 不炸', () => {
+  it('无行时需关注分组出自身空态（2026-10-27 Task 4：分组空态独立，子块不再整体隐藏）；缺省 attentionRows 不炸', () => {
     const w = mount(TaskDecisionPanel, { props: BASE_PANEL_PROPS })
-    expect(w.find('[data-testid="att-empty"]').exists()).toBe(false)
+    // 需关注空=本分组空态（不冒充整个「待我处理」为空，也不静默消失）
+    expect(w.find('[data-testid="att-empty"]').exists()).toBe(true)
+    expect(w.find('[data-testid="att-empty"]').text()).toBe('ia2.att.empty')
     expect(w.find('.tdp__n--warn').exists()).toBe(false)
   })
 })

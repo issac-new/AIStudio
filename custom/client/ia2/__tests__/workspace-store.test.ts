@@ -282,3 +282,63 @@ describe('workspace store：看板聚合 WS 生命周期', () => {
     }
   })
 })
+
+// Task 5（2026-10-27 产品一致性）：overview 单次加载 + 异步状态四态。
+// 首屏 armShared 与 cockpit.bootstrap 双触发必须在途去重为一次请求；
+// 刷新失败保留旧数据时状态必须是 stale（可被看板提示「数据可能陈旧」），
+// 不得静默冒充成功；部分板失败是 partial；无数据失败是 error。
+describe('workspace store：overview 在途去重与异步状态四态（Task 5）', () => {
+  it('并发双触发在途去重：/kanban/overview 只请求一次，双方拿到同一结果', async () => {
+    let release!: (v: void) => void
+    const gate = new Promise<void>(r => { release = r })
+    teamsApi.fetchKanbanOverview.mockImplementation(async () => {
+      await gate
+      return { boards: [{ slug: 'swarm', name: 'Swarm', total: 1 }], tasks: [] }
+    })
+    const store = useWorkspaceStore()
+    const p1 = store.refreshAllBoards(true)
+    const p2 = store.refreshAllBoards() // 在途并入（armShared + cockpit.bootstrap 形态）
+    release()
+    await expect(p1).resolves.toBe(true)
+    await expect(p2).resolves.toBe(true)
+    expect(teamsApi.fetchKanbanOverview).toHaveBeenCalledTimes(1)
+    expect(store.overviewStatus).toBe('ok')
+  })
+
+  it('聚合失败且已有旧数据：保留旧数据、状态 stale、返回 false（不冒充成功）', async () => {
+    const store = useWorkspaceStore()
+    teamsApi.fetchKanbanOverview.mockResolvedValue({
+      boards: [{ slug: 'swarm', name: 'Swarm', total: 1 }],
+      tasks: [{ id: 't1', title: 't-t1', priority: 'P2', status: 'todo', assignee: 'a', workspace: '', tenant: null, boardSlug: 'swarm', createdAt: 1 }],
+    })
+    await store.refreshAllBoards(true)
+    expect(store.overviewStatus).toBe('ok')
+    // 之后聚合端点失效：旧任务保留，状态转 stale
+    teamsApi.fetchKanbanOverview.mockRejectedValue(new Error('endpoint down'))
+    await expect(store.refreshAllBoards(true)).resolves.toBe(false)
+    expect(store.overviewStatus).toBe('stale')
+    expect(store.tasks.map(t => t.id)).toEqual(['t1'])
+    expect(store.overviewError).toBeTruthy()
+  })
+
+  it('聚合失败回落 N+1 单板失败：状态 partial（部分数据不冒充完整）', async () => {
+    teamsApi.fetchKanbanOverview.mockRejectedValue(new Error('endpoint gone'))
+    kanbanApi.listBoards.mockResolvedValue([{ slug: 'swarm', name: 'Swarm' }, { slug: 'hack', name: 'Hack' }])
+    kanbanApi.listTasks.mockImplementation(async () => {
+      if (kanbanApi.listTasks.mock.calls.length === 1) return [{ id: 't1', created_at: 1 }]
+      throw new Error('board down')
+    })
+    const store = useWorkspaceStore()
+    await expect(store.refreshAllBoards(true)).resolves.toBe(true)
+    expect(store.overviewStatus).toBe('partial')
+  })
+
+  it('全部失败且无旧数据：状态 error（真空态不冒充成功）', async () => {
+    teamsApi.fetchKanbanOverview.mockRejectedValue(new Error('down'))
+    kanbanApi.listBoards.mockRejectedValue(new Error('down'))
+    const store = useWorkspaceStore()
+    await expect(store.refreshAllBoards(true)).resolves.toBe(false)
+    expect(store.overviewStatus).toBe('error')
+    expect(store.overviewError).toBeTruthy()
+  })
+})

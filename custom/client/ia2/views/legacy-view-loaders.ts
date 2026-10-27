@@ -2,6 +2,10 @@
  * 2026-10-16 走查三修：抽共享模块——侧栏悬停预取与壳空闲预热共用此表。 */
 export const VIEW_LOADERS: Record<string, () => Promise<unknown>> = {
   'hermes.settings': () => import('@/views/hermes/SettingsView.vue'),
+  // 设置目录两页（2026-10-27 产品一致性 Task 7 顶层 annex 进 IaLegacyShell——
+  // 目录与详情同壳，记录见 routes.ts ANNEXED_LEGACY）
+  'ia2.govSettings': () => import('./gov/GovSettingsView.vue'),
+  'ia2.modelProviders': () => import('./gov/GovModelProvidersView.vue'),
   // ChatView 族（页面内自持会话列/页签；路径不变 → ChatView 按 path 分派行为不变）
   'hermes.chat': () => import('@/views/hermes/ChatView.vue'),
   'hermes.session': () => import('@/views/hermes/ChatView.vue'),

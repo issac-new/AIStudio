@@ -176,10 +176,14 @@ describe('IaSideNav — 左侧常驻导航', () => {
     expect(stage4.classes()).toContain('isn-item--active')
     expect(stage4.attributes('aria-current')).toBe('page')
     expect(w.find('[data-testid="ia-side-nav-stage5"]').classes()).not.toContain('isn-item--active')
-    // ④有在办数 → 合一计数章（无独立状态点）；①无映射 → 生命周期 ✓ 点保留
+    // ④有在办数 → 合一计数章（无独立状态点）；①无映射 → 生命周期状态点保留。
+    // 2026-10-27 日常阶段语义：dailyStageState 的 done=「已流转」（本桩
+    // stage[1]='done' 即后续阶段有工作）→ 中性 ○，不再画绿✓「已完成」。
     expect(stage4.find('.isn-item__status').exists()).toBe(false)
     expect(stage4.find('.isn-item__pill').classes()).toContain('isn-item__pill--blocked')
-    expect(w.find('[data-testid="ia-side-nav-stage1"] .isn-item__status').text()).toBe('✓')
+    const s1 = w.find('[data-testid="ia-side-nav-stage1"] .isn-item__status')
+    expect(s1.text()).toBe('○')
+    expect(s1.classes()).toContain('isn-item__status--flowed')
     w.unmount()
   })
 

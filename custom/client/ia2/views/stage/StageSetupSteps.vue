@@ -2,7 +2,9 @@
      ①搭建·五步进度页签（2026-10-18 阶段页页签批）：
      只做一件事——把「建立组织→账号→团队→环境资产→智能体」五步的状态与下一步
      摆在一屏内；按钮切换本页页签，不再跳到别的整页。
-     状态读 useDailyStageProgress 共享缓存；无运行/无键的步骤如实显示「轮次内不跟踪」。 -->
+     状态读 useDailyStageProgress 共享缓存（2026-10-27 接线真实配置信号：
+     org/accounts/agents 可判，teams/env 无日常信号如实显示「未纳入跟踪」）；
+     计数分母只算可判步骤，三源全不可判时隐藏 0/N（无信号的 0/5 是伪进度）。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -18,7 +20,10 @@ const STEP_TAB: Record<string, string> = {
   org: 'org', accounts: 'accounts', teams: 'teams', env: 'assets', agents: 'agents',
 }
 
+/** 完成数/可判数（2026-10-27）：分母只数有真实信号的步骤（org/accounts/agents），
+ *  teams/env 未纳入跟踪不进分母；无可判步骤时模板隐藏计数。 */
 const doneCount = computed(() => SETUP_STEPS.filter(st => progress.stepState(st) === 'done').length)
+const trackedCount = computed(() => SETUP_STEPS.filter(st => progress.stepState(st) !== 'untracked').length)
 
 function stateText(st: (typeof SETUP_STEPS)[number]): string {
   const s = progress.stepState(st)
@@ -42,10 +47,10 @@ function actionText(st: (typeof SETUP_STEPS)[number]): string {
       <div>
         <h2 class="sst__title">{{ zh ? '五步把组织搭起来' : 'Set up the organization in five steps' }}</h2>
         <p class="sst__sub">{{ zh
-          ? '每一步都在本页签内完成；「未纳入跟踪」表示这一步没有运行状态键，不是已完成。'
-          : 'Each step is completed in this tab. “Not tracked” means no run-state key exists; it is not done.' }}</p>
+          ? '每一步都在本页签内完成；「未纳入跟踪」表示这一步没有可判的日常完成信号，不是已完成。'
+          : 'Each step is completed in this tab. “Not tracked” means no daily signal exists; it is not done.' }}</p>
       </div>
-      <span class="sst__count" data-testid="stg-setup-count">{{ doneCount }}/{{ SETUP_STEPS.length }}</span>
+      <span v-if="trackedCount" class="sst__count" data-testid="stg-setup-count">{{ doneCount }}/{{ trackedCount }}</span>
     </header>
 
     <ol class="sst__list">

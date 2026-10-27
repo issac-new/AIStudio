@@ -38,9 +38,14 @@ import { useNowTick } from '../composables/useNowTick'
 import { NModal } from 'naive-ui'
 import { changelog } from '@/data/changelog'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
+// 快搜 placeholder（Task 10）：与统一弹窗同口径、如实声明覆盖范围——旧词条
+// 「搜索 会话/任务/房间」（cockpit.searchPlaceholder）漏运行/文档/人员/命令，
+// 且顶部输入唤起的正是统一弹窗；本组件是该词条唯一消费者，改为本地字面量。
+const zh = computed(() => String(locale?.value ?? 'zh').startsWith('zh'))
+const searchPlaceholder = computed(() => zh.value ? '搜索会话、任务、运行、文档、人员或命令…' : 'Search chats, tasks, runs, docs, people, or commands…')
 /** 运行上下文 chip 只属于推演模式；日常顶栏不再出现运行目录/轮次。 */
 const isSimMode = computed(() => route.path === '/app/sim' || route.path.startsWith('/app/sim/'))
 // 层级批：品牌区旅程回家钮（旅程页是产品默认入口，此前顶栏无路可达）
@@ -53,8 +58,10 @@ const workspace = useWorkspaceStore()
 
 defineProps<{ userName?: string }>()
 
-/** 用户按钮 → 设置页 */
-function goSettings() { router.push({ name: 'hermes.settings' }) }
+/** 用户按钮 → 设置目录（2026-10-27 产品一致性 Task 7 单一设置入口：
+ *  页头与全局检索统一落 ia2.govSettings 目录页；hermes.settings 降为目录内
+ *  「通用设置」条目，不再是第二个设置主页） */
+function goSettings() { router.push({ name: 'ia2.govSettings' }) }
 
 // ── 更新日志弹窗（2026-10-01 上游自用批 A3）：上游 11 语言 changelog 数据
 //    （@/data/changelog）随版本维护，072 重写侧栏时入口丢失——页头账户区
@@ -119,10 +126,18 @@ const {
 const { sessionRows } = useSessionRows()
 const { approveTask, rejectTask, approveRun, rejectRun, approveFleet, rejectFleet } = useDecisionActions()
 
-/** 原始任务索引（id → {board, task}）：板名/优先级/挂接会话解析用 */
+/** 日常任务索引（id → {board, task}）：板名/优先级/挂接会话解析用。
+ *  Task 2 移交（2026-10-27）：dailyTasks ref 是身份正源；rawTasks 兜底时跳过
+ *  sim 行——同 board 同 taskId 不再被 sim 覆盖，onPanelJumpTask 按 daily 挂接解析。 */
 const rawById = computed(() => {
   const map = new Map<string, { board: string; task: any }>()
-  for (const e of workspace.rawTasks) map.set(e.task.id, e)
+  for (const ref of workspace.dailyTasks ?? []) {
+    if (ref.raw) map.set(ref.taskId, ref.raw)
+  }
+  for (const e of workspace.rawTasks ?? []) {
+    if (e.task?.source === 'sim') continue
+    if (!map.has(e.task.id)) map.set(e.task.id, e)
+  }
   return map
 })
 
@@ -183,7 +198,7 @@ function onPanelJumpTask(taskId: string): void {
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon"><CockpitIcon name="search" :size="12" /></span>
       <input type="text" class="cockpit-top__search-input" :value="store.searchQuery"
-        :placeholder="t('cockpit.searchPlaceholder')" data-testid="ia-header-search-input"
+        :placeholder="searchPlaceholder" data-testid="ia-header-search-input"
         @input="store.runSearch(($event.target as HTMLInputElement).value); workspace.openSearch()"
         @click="workspace.openSearch()" />
       <button v-if="store.searchQuery" type="button" class="cockpit-top__search-clear" @click="store.clearSearch()">×</button>

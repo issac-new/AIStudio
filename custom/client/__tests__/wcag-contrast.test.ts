@@ -40,19 +40,17 @@ describe('壳层文字 token 对比度（WCAG 2.2 AA 正文 4.5:1）', () => {
     }
   })
 
-  it('三个壳层源码都声明了浅/深两套修正 token（漏一个壳即红）', () => {
-    const files = [
-      resolve(__dirname, '../ia2/styles/ia2.scss'),
-      resolve(__dirname, '../ia2/views/IaLegacyShell.vue'),
-      resolve(__dirname, '../ide/views/IdeShell.vue'),
-    ]
-    for (const f of files) {
-      const src = readFileSync(f, 'utf8')
-      expect(src, `${f} light muted`).toContain('--text-muted: #666')
-      expect(src, `${f} dark muted`).toContain('--text-muted: #9a9a9a')
-      expect(src, `${f} light secondary`).toContain('--text-secondary: #555')
-      expect(src, `${f} dark secondary`).toContain('--text-secondary: #a0a0a0')
-    }
+  it('三壳共享 token 单源声明：shell-overrides.scss 浅/深两套齐备且覆盖三壳（漏一壳即红）', () => {
+    // 2026-10-27 Task 11 收敛：三壳（.ia-shell/.ide-shell/.ia-lshell）同值 token
+    // 从三个壳文件收敛到 shell-overrides.scss 单一定义处（bootstrap 顶层导入，
+    // 三壳冷启动都生效）；本守卫语义不变——值固定 + 浅深成对 + 三壳选择器组覆盖。
+    const src = readFileSync(resolve(__dirname, '../ia2/styles/shell-overrides.scss'), 'utf8')
+    expect(src, 'light 三壳选择器组').toContain('.ia-shell, .ide-shell, .ia-lshell')
+    expect(src, 'dark 三壳选择器组').toContain('.dark .ia-shell, .dark .ide-shell, .dark .ia-lshell')
+    expect(src, 'light muted').toContain('--text-muted: #666')
+    expect(src, 'dark muted').toContain('--text-muted: #9a9a9a')
+    expect(src, 'light secondary').toContain('--text-secondary: #555')
+    expect(src, 'dark secondary').toContain('--text-secondary: #a0a0a0')
   })
 
   it('五态状态色在常用背景与状态底色上达 AA（浅/深两套）', () => {
@@ -72,7 +70,7 @@ describe('壳层文字 token 对比度（WCAG 2.2 AA 正文 4.5:1）', () => {
     }
   })
 
-  it('表单控件边框 ≥3:1（WCAG 1.4.11 非文本）且三个壳层同步', () => {
+  it('表单控件边框 ≥3:1（WCAG 1.4.11 非文本）且三壳同规则（shell-overrides.scss 单源）', () => {
     const NON_TEXT_AA = 3
     for (const bg of ['#fafafa', '#f0f0f0', '#ffffff']) {
       expect(contrast('#8a8a8a', bg), `light control border on ${bg}`).toBeGreaterThanOrEqual(NON_TEXT_AA)
@@ -80,14 +78,12 @@ describe('壳层文字 token 对比度（WCAG 2.2 AA 正文 4.5:1）', () => {
     for (const bg of ['#1a1a1a', '#252525', '#2a2a2a']) {
       expect(contrast('#808080', bg), `dark control border on ${bg}`).toBeGreaterThanOrEqual(NON_TEXT_AA)
     }
-    for (const f of [
-      resolve(__dirname, '../ia2/styles/ia2.scss'),
-      resolve(__dirname, '../ia2/views/IaLegacyShell.vue'),
-      resolve(__dirname, '../ide/views/IdeShell.vue'),
-    ]) {
-      const src = readFileSync(f, 'utf8')
-      expect(src, `${f} light control border`).toContain('--ia-border-control: #8a8a8a')
-      expect(src, `${f} dark control border`).toContain('--ia-border-control: #808080')
+    const src = readFileSync(resolve(__dirname, '../ia2/styles/shell-overrides.scss'), 'utf8')
+    expect(src, 'light control border').toContain('--ia-border-control: #8a8a8a')
+    expect(src, 'dark control border').toContain('--ia-border-control: #808080')
+    // 三壳的 input/select/textarea 都吃到同一规则（选择器组显式列名）
+    for (const shell of ['.ia-shell input', '.ide-shell input', '.ia-lshell input']) {
+      expect(src, `${shell} 同步`).toContain(shell)
     }
   })
 

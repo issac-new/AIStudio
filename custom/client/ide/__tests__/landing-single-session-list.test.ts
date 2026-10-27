@@ -1,8 +1,12 @@
-// overlay/custom/client/ide/__tests__/landing-hero.test.ts
-// 守门：裸落地引导空态（run13 步18 错帧修复配套产品面）。
+// overlay/custom/client/ide/__tests__/landing-single-session-list.test.ts
+// 守门（产品一致性 Task 11 · 中央唯一会话列表）：
 // ① 判定纯函数 shouldShowLandingHero（IdeShell 组合与测试同源）
-// ② IdeLandingHero 渲染与交互（速选/进入/空板文案）
-// ③ patch 588（agents/status 轮询 403 静默降级，与 587 服务端 availability 方案互补）注册与内容守卫
+// ② IdeLandingHero 渲染与交互（速选/进入/空板文案——「尚未选择」语义，不把
+//    没有选中写成没有数据）
+// ③ 中央不重复 CLI 会话列表：IdeLandingHero 不再内嵌 IdeCliSessions（左侧
+//    任务栏已有同屏列表），侧栏 CLI 行动作（账单/终端继续/复制 ID）保留
+// ④ patch 588（agents/status 轮询 403 静默降级）注册与内容守卫
+// （landing-hero.test.ts 9 例契约等价迁移至此，2026-10-27）
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -10,11 +14,15 @@ import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { shouldShowLandingHero } from '../utils/landingHero'
 import IdeLandingHero from '../components/IdeLandingHero.vue'
+import { expectLocaleKeys } from '../../__tests__/helpers/locale-tree'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fallback?: string) => fallback ?? k }) }))
 
 const PATCH_FILE = resolve(__dirname, '../../../../patches/588-client-agent-status-forbidden-silent.patch')
 const SERIES = resolve(__dirname, '../../../../patches/series')
+const HERO_SRC = resolve(__dirname, '../components/IdeLandingHero.vue')
+const SIDEBAR_SRC = resolve(__dirname, '../views/IdeTaskSidebar.vue')
+const CLI_SRC = resolve(__dirname, '../components/IdeCliSessions.vue')
 
 describe('shouldShowLandingHero 判定（纯函数）', () => {
   const base = { activeTaskId: null, queryTask: null, querySession: null, engaged: false }
@@ -51,11 +59,13 @@ describe('IdeLandingHero 渲染与交互', () => {
     expect(w.emitted('pick')?.[0]).toEqual(['DEV-PAYCORE-S'])
   })
 
-  it('空板显示空态引导文案；进入按钮 emit enter', async () => {
+  it('空板显示「尚未选择」空态引导；进入按钮 emit enter', async () => {
     const w = mount(IdeLandingHero, { props: { tasks: [] } })
     expect(w.find('[data-testid="ide-landing-enter"]').exists()).toBe(true)
-    expect(w.text()).toContain('暂无任务')
+    // 「尚未选择任务或会话」语义：没有选中 ≠ 没有数据（设计契约）
+    expect(w.text()).toContain('尚未选择任务或会话')
     expect(w.text()).toContain('从看板选一张卡')
+    expect(w.text()).not.toContain('暂无任务')
     await w.find('[data-testid="ide-landing-enter"]').trigger('click')
     expect(w.emitted('enter')).toHaveLength(1)
   })
@@ -69,6 +79,30 @@ describe('IdeLandingHero 渲染与交互', () => {
     // 有最近任务时不显示该出口（速选已覆盖）
     const withTasks = mount(IdeLandingHero, { props: { tasks } })
     expect(withTasks.find('[data-testid="ide-landing-board"]').exists()).toBe(false)
+  })
+})
+
+describe('中央唯一 CLI 会话列表（Task 11 去重）', () => {
+  it('IdeLandingHero 不内嵌 CLI 会话列表（左侧任务栏已有同屏列表）', () => {
+    const w = mount(IdeLandingHero, { props: { tasks: [] } })
+    expect(w.find('[data-testid="ide-cli-sessions"]').exists()).toBe(false)
+    const src = readFileSync(HERO_SRC, 'utf8')
+    expect(src).not.toContain("from './IdeCliSessions.vue'")
+    expect(src).not.toContain('<IdeCliSessions')
+  })
+
+  it('侧栏 CLI 会话能力保留：混排行 + 账单/终端继续/复制 ID 三动作', () => {
+    const sidebar = readFileSync(SIDEBAR_SRC, 'utf8')
+    expect(sidebar).toContain("from '../components/IdeCliSessions.vue'")
+    expect(sidebar).toMatch(/<IdeCliSessions[^>]*:boxed="false"/)
+    const cli = readFileSync(CLI_SRC, 'utf8')
+    expect(cli).toContain('ide-cli-bill-')
+    expect(cli).toContain('ide-cli-resume-')
+    expect(cli).toContain('ide-cli-copy-')
+  })
+
+  it('landing 文案键 zh/en 成对（ide.landing 五键）', () => {
+    expectLocaleKeys('ide.landing', ['title', 'sub', 'empty', 'board', 'enter'])
   })
 })
 

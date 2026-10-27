@@ -53,7 +53,7 @@ const cockpitStubs = vi.hoisted(() => {
 vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
 
 // runcenter/loop store 桩：bootShared 序列断言（fetchRuns → syncVisibleRunIds →
-// fetchMetrics + fetchLoops）
+// fetchLoops；metrics 预取已随 Task 5 退场——生产零消费，见 shared-lifecycle.test）
 const runsStubs = vi.hoisted(() => {
   const state = {
     fetchRuns: vi.fn(async () => {}),
@@ -62,6 +62,7 @@ const runsStubs = vi.hoisted(() => {
     runs: [] as unknown[],
     syncVisibleRunIds: vi.fn(),
     fetchMetrics: vi.fn(async () => null),
+    disconnect: vi.fn(), // Task 5：宽限回收断开 graph 通道
     connection: 'disconnected',
   }
   return { state, useRunCenterStore: () => state }
@@ -198,7 +199,8 @@ describe('IaShell — 统一壳（页头 + 双视图场景条）', () => {
     // bootShared：fetchRuns 后按 awaiting+running 订阅（SUBSCRIBE_CAP=30 内）
     expect(runsStubs.state.fetchRuns).toHaveBeenCalled()
     expect(runsStubs.state.syncVisibleRunIds).toHaveBeenCalledWith(['r-await', 'r-run'])
-    expect(runsStubs.state.fetchMetrics).toHaveBeenCalled()
+    // Task 5：无消费者的 metrics 采集不再挂共享启动路径（守门细节在 shared-lifecycle.test）
+    expect(runsStubs.state.fetchMetrics).not.toHaveBeenCalled()
     expect(loopStubs.state.fetchLoops).toHaveBeenCalled()
     wrapper.unmount()
   })
