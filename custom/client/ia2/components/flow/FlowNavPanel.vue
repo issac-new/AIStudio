@@ -79,8 +79,11 @@ const platformInfoOf = (name: string) => {
 const wfRuns = ref<WorkflowRun[]>([])
 const wfError = ref(false)
 let wfTimer: ReturnType<typeof setInterval> | null = null
+let wfDisposed = false
 // Task 3（2026-10-27）：刷新完成后重排轮询——旧实现挂载即按空列表排 30s，
 // 首载有 running 也要等 30s；失败置错误态（不得伪装成空列表）。
+// fix round 1（卸载竞态）：fetch 在途时卸载（onUnmounted 已清旧 timer）后，
+// 在途 refreshWf 落地不得再新建 interval——wfDisposed 守卫在 scheduleWf 前拦截。
 async function refreshWf(): Promise<void> {
   try {
     wfRuns.value = await fetchWorkflowRuns()
@@ -88,14 +91,14 @@ async function refreshWf(): Promise<void> {
   } catch {
     wfError.value = true
   }
-  scheduleWf()
+  if (!wfDisposed) scheduleWf()
 }
 function scheduleWf(): void {
   if (wfTimer) clearInterval(wfTimer)
   wfTimer = setInterval(() => { void refreshWf() }, wfRuns.value.some(r => r.status === 'running') ? 4_000 : 30_000)
 }
 onMounted(() => { void refreshWf() })
-onUnmounted(() => { if (wfTimer) clearInterval(wfTimer) })
+onUnmounted(() => { wfDisposed = true; if (wfTimer) clearInterval(wfTimer) })
 const query = ref('')
 /** 栏底内联新建房间（Electron renderer 无 window.prompt，就地输入） */
 /** v14「＋新聊天」三分型菜单开合 */

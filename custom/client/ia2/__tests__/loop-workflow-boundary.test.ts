@@ -428,4 +428,56 @@ describe('WorkflowPanel — 错误/重试/轮询', () => {
     expect(w2.find('[data-testid="wf-nav-error"]').exists(), '左栏列表失败应显示错误提示').toBe(true)
     w2.unmount()
   })
+
+  // ── 卸载竞态（fix round 1）：fetch 在途时 unmount，落地后不得再新建轮询 ──
+  // 宿主 WorkbenchView 以 :key="wf:${wfRunId}" 强重挂本面板，离开 /app 壳也会卸载；
+  // 旧实现在途 refreshRuns 落地后无条件 schedule()，onUnmounted 已清过旧 timer，
+  // 新 interval 永无清理者（无限轮询泄漏）。
+
+  it('WorkflowPanel 卸载竞态：fetch 未 resolve 即 unmount，随后 resolve 不再新建轮询', async () => {
+    vi.useFakeTimers()
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval')
+    try {
+      let resolveFetch!: (runs: unknown[]) => void
+      wfApi.fetchWorkflowRuns.mockImplementation(() => new Promise(res => { resolveFetch = res }))
+      const w = mount(WorkflowPanel)
+      await flushPromises()
+      expect(wfApi.fetchWorkflowRuns).toHaveBeenCalledTimes(1)
+      intervalSpy.mockClear()
+      w.unmount() // fetch 仍在途：onUnmounted 只清已有 timer（此刻还没有）
+      resolveFetch([]) // 在途 fetch 落地——不得再 schedule()
+      await flushPromises()
+      expect(intervalSpy, '卸载后落地不得新建 interval').not.toHaveBeenCalled()
+      // 行为兜底：推进 60s（超过 30s 慢档）无任何后续拉取
+      vi.advanceTimersByTime(60_000)
+      await flushPromises()
+      expect(wfApi.fetchWorkflowRuns, '泄漏的 interval 会在 30s 处再次拉取').toHaveBeenCalledTimes(1)
+    } finally {
+      intervalSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it('FlowNavPanel 卸载竞态：fetch 未 resolve 即 unmount，随后 resolve 不再新建轮询', async () => {
+    vi.useFakeTimers()
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval')
+    try {
+      let resolveFetch!: (runs: unknown[]) => void
+      wfApi.fetchWorkflowRuns.mockImplementation(() => new Promise(res => { resolveFetch = res }))
+      const w = mount(FlowNavPanel, { props: { sessions: [], loops: [], selection: null } })
+      await flushPromises()
+      expect(wfApi.fetchWorkflowRuns).toHaveBeenCalledTimes(1)
+      intervalSpy.mockClear()
+      w.unmount()
+      resolveFetch([])
+      await flushPromises()
+      expect(intervalSpy, '卸载后落地不得新建 interval').not.toHaveBeenCalled()
+      vi.advanceTimersByTime(60_000)
+      await flushPromises()
+      expect(wfApi.fetchWorkflowRuns, '泄漏的 interval 会在 30s 处再次拉取').toHaveBeenCalledTimes(1)
+    } finally {
+      intervalSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
 })

@@ -36,7 +36,11 @@ const errMsg = ref('')
 // ── 列表轮询：running 存在时 4s，否则 30s ──
 // Task 3（2026-10-27）：刷新完成后重排——旧实现挂载即按空列表排 30s，
 // 首载明明有 running 也要等 30s 才第一次跟进；失败置错误态（不得伪装空列表）。
+// fix round 1（卸载竞态）：宿主以 :key="wf:${wfRunId}" 强重挂本面板，fetch 在途
+// 时卸载后 onUnmounted 已清旧 timer，在途 refreshRuns 落地不得再新建 interval
+// （否则永无清理者，无限轮询泄漏）——disposed 守卫在 schedule 前拦截。
 let timer: ReturnType<typeof setInterval> | null = null
+let disposed = false
 async function refreshRuns(): Promise<void> {
   try {
     runs.value = await fetchWorkflowRuns()
@@ -44,7 +48,7 @@ async function refreshRuns(): Promise<void> {
   } catch (e) {
     listError.value = (e as Error).message.slice(0, 160)
   }
-  schedule()
+  if (!disposed) schedule()
 }
 function schedule(): void {
   const hasRunning = runs.value.some(r => r.status === 'running')
@@ -55,7 +59,7 @@ function schedule(): void {
   }, hasRunning ? 4_000 : 30_000)
 }
 onMounted(() => { void refreshRuns(); void fetchIdentities().then(l => { identities.value = l }).catch(() => {}) })
-onUnmounted(() => { if (timer) clearInterval(timer) })
+onUnmounted(() => { disposed = true; if (timer) clearInterval(timer) })
 
 // ── 详情 ──
 async function removeRun(): Promise<void> {
