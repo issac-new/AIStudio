@@ -132,7 +132,15 @@ _tl_resolve_project_dir() {
   d="$(cd "$(dirname "$0")" && pwd)"
   p=""
   if [[ -f "$d/precheck.conf" ]]; then
-    p="$(grep -m1 '^PROJECT_DIR=' "$d/precheck.conf" 2>/dev/null | sed 's/^PROJECT_DIR=//; s/^"//; s/"$//; s/[[:space:]]*$//' | tr -d '\r')"
+    # 单源解析：优先 spec-first-lib 的 spf_conf_val（引号感知剪注释/自引用/占位符）——
+    # 旧内联 sed 不剥行内注释与 ${PROJECT_DIR:-...} 自引用，PROJECT_DIR 会连同注释成为
+    # 字面量路径（实测在仓根生成垃圾目录）。库缺失才走保守回退。
+    if [[ -f "$d/spec-first-lib.sh" ]]; then
+      p="$( ( . "$d/spec-first-lib.sh" >/dev/null 2>&1; spf_conf_val "$d/precheck.conf" PROJECT_DIR ) 2>/dev/null || true )"
+    else
+      p="$(grep -m1 '^PROJECT_DIR=' "$d/precheck.conf" 2>/dev/null | cut -d'#' -f1 | sed 's/^PROJECT_DIR=//; s/^"//; s/"$//; s/[[:space:]]*$//' | tr -d '\r')"
+      case "$p" in '${PROJECT_DIR:-'*'}') p="${p#\${PROJECT_DIR:-}"; p="${p%\}}" ;; esac
+    fi
     case "$p" in "<"*">"|"") p="" ;; esac
   fi
   if [[ -z "$p" ]]; then

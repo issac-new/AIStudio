@@ -148,3 +148,9 @@ DESIGN_SYNC: touched
 ### 终审修复后最终回归（main dbfc8446c）
 
 `bash tests/run.sh --level all --jobs 6` → **122 通过 / 0 失败（共 122，独占串行 17）**，EXIT=0。
+
+## PROJECT_DIR 解析单源补位（2026-10-26）
+
+- `assets/trace-log.sh` 的 `_tl_resolve_project_dir` 由内联 sed 改为优先复用 `spf_conf_val`（引号感知、剥行内注释与 `${PROJECT_DIR:-...}` 自引用、占位符判空）；库缺失时保留保守回退并补自引用剥离。
+- 成因：旧内联 sed 不剥行内注释/自引用，生产 `precheck.conf` 的自引用行会被当作字面量路径，测试在仓根生成“字面量垃圾目录”（project-knowledge 写错树的同族缺陷）。
+- 验证：`test-trace-reliability` / `test-state-machine` / `test-r129-tail-closure` 全绿；self-check / registry 全绿。
