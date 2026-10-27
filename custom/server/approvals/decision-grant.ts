@@ -73,7 +73,11 @@ function nullableText(value: unknown, field: string): string | null {
 }
 
 function nullableUpdatedAt(value: unknown): string | number | null {
-  if (value === null || value === undefined || typeof value === 'string') return value ?? null
+  if (value === null || value === undefined || typeof value === 'string') {
+    // 与原 `value ?? null` 运行时等价（此处 value 仅 null/undefined/string）；
+    // harness tsc --strict false 下 unknown 的 ?? 收窄不可用，改字面量分支
+    return typeof value === 'string' ? value : null
+  }
   if (typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value)) return value === 0 ? 0 : value
   throw new Error('任务修订字段 updated_at 必须为整数、字符串或 null')
 }

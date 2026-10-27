@@ -45,6 +45,48 @@ function externalRunStatus(events: GraphLogEvent[]): string {
   return status
 }
 
+/** Task 6 投影契约：列表（GET /api/graph/runs）与详情（GET /api/graph/runs/:id）
+ *  共用的 run 摘要。内存实例缺失的外部源 run（sim-*）也从事件日志推导
+ *  status/updatedAt——根治「列表 unknown/null、详情已推导」的状态分裂。 */
+export interface ProjectRunSummary {
+  runId: string
+  graphId: string
+  status: string
+  updatedAt: string | null
+}
+
+/** 外部源 run 摘要（纯函数，事件序=升序）：status 时序推导、updatedAt=末事件 ts；
+ *  空事件回退调用方给的 listRuns graphId + unknown/null。 */
+export function summarizeExternalRun(runId: string, events: GraphLogEvent[], fallbackGraphId: string): ProjectRunSummary {
+  if (!events.length) return { runId, graphId: fallbackGraphId, status: 'unknown', updatedAt: null }
+  return {
+    runId,
+    graphId: events[0].graphId,
+    status: externalRunStatus(events),
+    updatedAt: new Date(events[events.length - 1].ts).toISOString(),
+  }
+}
+
+/** 单 run 摘要投影：内存实例（引擎真值）优先；缺失时按事件日志骨架推导
+ *  （与详情页外部 run 骨架同语义，终态粘滞）。 */
+async function projectRunSummary(
+  deps: GraphRestDeps,
+  runId: string,
+  graphId: string,
+): Promise<ProjectRunSummary> {
+  const rec = deps.graphService.getRun(runId)
+  if (rec) {
+    return {
+      runId,
+      graphId: rec.graphId,
+      status: rec.instance.status ?? 'unknown',
+      updatedAt: rec.instance.updatedAt ?? null,
+    }
+  }
+  const events = await deps.eventLog.query(runId, { limit: EXTERNAL_RUN_EVENT_LIMIT })
+  return summarizeExternalRun(runId, events, graphId)
+}
+
 /**
  * 审批身份服务端盖章（2026-09-10 风险审查 #1）：把 resume 值中的 approver 覆写为认证主体
  * （ctx.state.user.username，由上游 requireUserJwt 写入；与前端 getStoredUsername 解码的
@@ -208,14 +250,11 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   // GET /api/graph/runs — 全部 run（含状态推导）
   router.get('/api/graph/runs', async (ctx) => {
     const runs = await deps.eventLog.listRuns()
-    const body = runs.map(({ runId, graphId }) => {
-      const rec = deps.graphService.getRun(runId)
-      return {
-        runId, graphId,
-        status: rec?.instance.status ?? 'unknown',
-        updatedAt: rec?.instance.updatedAt ?? null,
-      }
-    })
+    // 列表/详情共用 projectRunSummary 投影（Task 6）：外部源 run 缺内存实例时
+    // 同样从事件日志推导 status/updatedAt，不再报 unknown/null 半截态
+    const body = await Promise.all(
+      runs.map(({ runId, graphId }) => projectRunSummary(deps, runId, graphId)),
+    )
     ctx.body = { runs: body }
   })
 
@@ -229,12 +268,14 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     // 前端 RunDetailView 对 graphDefId 缺席有空图兜底（specMissing），时间轴直接吃事件。
     const events = await deps.eventLog.query(ctx.params.id, { limit: EXTERNAL_RUN_EVENT_LIMIT })
     if (!events.length) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
+    // status/updatedAt 经 summarizeExternalRun 与列表同源（Task 6：两端零分裂）
+    const summary = summarizeExternalRun(ctx.params.id, events, events[0].graphId)
     ctx.body = {
-      runId: ctx.params.id,
-      graphId: events[0].graphId,
+      runId: summary.runId,
+      graphId: summary.graphId,
       instance: {
-        status: externalRunStatus(events),
-        updatedAt: new Date(events[events.length - 1].ts).toISOString(),
+        status: summary.status,
+        updatedAt: summary.updatedAt,
         graphDefId: null,
         external: true,
         eventCount: events.length,
@@ -245,7 +286,7 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   // POST /api/graph/runs/:id/resume — HITL 闭环：应答 interrupt
   router.post('/api/graph/runs/:id/resume', async (ctx) => {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
-    const body = ctx.request.body as { interruptId?: string; value?: unknown }
+    const body = (ctx.request as { body?: unknown }).body as { interruptId?: string; value?: unknown }
     if (!body?.interruptId || !ID_RE.test(body.interruptId) && !body.interruptId.includes(':')) {
       ctx.status = 400; ctx.body = { error: 'interruptId required' }; return
     }
@@ -276,7 +317,7 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   // POST /api/graph/runs/:id/fork — 从检查点分叉（LangGraph 模式）
   router.post('/api/graph/runs/:id/fork', async (ctx) => {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
-    const body = ctx.request.body as { superStep?: number } | undefined
+    const body = (ctx.request as { body?: unknown }).body as { superStep?: number } | undefined
     let superStep = body?.superStep
     if (superStep === undefined) {
       const cp = await deps.eventLog.getLatestCheckpoint(ctx.params.id)
@@ -347,7 +388,7 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   router.post('/api/graph/runs/:id/deposit-template', async (ctx) => {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
     if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
-    const body = ctx.request.body as { name?: string; note?: string } | undefined
+    const body = (ctx.request as { body?: unknown }).body as { name?: string; note?: string } | undefined
     const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 80) : ''
     const note = typeof body?.note === 'string' ? body.note.trim().slice(0, 200) : ''
 
@@ -434,7 +475,9 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   // P4 深化：过 validateGraphSpec（结构化 400）；origin 缺省标 'editor'，
   // 显式 'template' 拒绝——模板只能由 loop 编译派生，不得从编辑器/导入伪装
   router.post('/api/graph/specs', async (ctx) => {
-    const spec = ctx.request.body as GraphSpec
+    // harness typecheck 门禁：@koa/bodyparser 的 Request.body 类型增强经 --ignoreConfig
+    // 不加载，按 secaudit/controller.ts:27 约定显式断言读取（运行时形状不变）
+    const spec = (ctx.request as { body?: unknown }).body as GraphSpec
     if (!spec || typeof spec.id !== 'string' || !Array.isArray(spec.nodes) || !Array.isArray(spec.edges)) {
       ctx.status = 400; ctx.body = { error: 'Invalid GraphSpec' }; return
     }
@@ -554,8 +597,8 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   })
 
   router.post('/api/graph/sim-director/plan', (ctx) => {
-    const parsed = readDirectorInput(ctx.request.body)
-    if (!parsed.ok) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
+    const parsed = readDirectorInput((ctx.request as { body?: unknown }).body)
+    if (parsed.ok === false) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
     try {
       const spec = compiledDirectorSpec(parsed.value)
       ctx.body = {
@@ -572,8 +615,8 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   })
 
   router.post('/api/graph/sim-director/start', async (ctx) => {
-    const parsed = readDirectorInput(ctx.request.body)
-    if (!parsed.ok) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
+    const parsed = readDirectorInput((ctx.request as { body?: unknown }).body)
+    if (parsed.ok === false) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
     if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
     if (!deps.directorRuntimeFactory) { ctx.status = 501; ctx.body = { error: 'Director runtime not configured' }; return }
     const auth = String(ctx.headers.authorization ?? '')

@@ -81,7 +81,10 @@ describe('useSitCounts.online 兜底口径（cockpit-online-zero）', () => {
       { profile: 'fanfan' }, { profile: 'chen' }, { profile: 'chen' }, { profile: 'default' },
     ]
     const { online } = useSitCounts()
-    expect(online.value.people).toBe(3) // profile 去重
+    // Task 6（2026-10-27）失真②修复：fleet 会话的 profile 是智能体档案而非人，
+    // 不再计入 people（原断言 people=3 即「单会话给人加一」失真本体）。
+    // 「不再恒 0」守门语义由 agents/machines 的 fleet 兜底继续承担。
+    expect(online.value.people).toBe(0)
     expect(online.value.agents).toBe(4) // 会话数
     expect(online.value.machines).toBe(4)
   })

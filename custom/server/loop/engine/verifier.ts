@@ -177,7 +177,7 @@ export class Verifier {
       remoteOk = false
     }
     const verdict = verifyPushResult(localHead, remoteRef, remoteOk)
-    return verdict.ok
+    return verdict.ok === true
       ? { ok: true, reason: null, detail: `remote refs/heads/${branch} @ ${verdict.sha.slice(0, 12)}` }
       : { ok: false, reason: verdict.reason, detail: `refs/heads/${branch}: ${verdict.detail}` }
   }

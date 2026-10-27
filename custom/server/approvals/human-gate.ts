@@ -323,7 +323,7 @@ export const humanGateRouter = new Router()
 humanGateRouter.post('/', async ctx => {
   const actor = actorOrReply(ctx)
   if (!actor) return
-  const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const b = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
   const runId = String(b.runId ?? '').trim()
   const cardId = String(b.cardId ?? '').trim()
   const title = String(b.title ?? '').trim()
@@ -347,7 +347,7 @@ humanGateRouter.post('/', async ctx => {
 humanGateRouter.post('/task', async ctx => {
   const actor = actorOrReply(ctx)
   if (!actor) return
-  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
   const taskId = String(body.taskId ?? '').trim()
   const board = normalizeDecisionBoard(String(body.board ?? 'default'))
   if (!taskId) {
@@ -393,7 +393,7 @@ humanGateRouter.get('/', async ctx => {
 humanGateRouter.post('/:id/decide', async ctx => {
   const actor = actorOrReply(ctx)
   if (!actor) return
-  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
   const decision = String(body.decision ?? '')
   if (decision !== 'approve' && decision !== 'reject') {
     ctx.status = 400; ctx.body = { ok: false, detail: 'decision 须为 approve|reject' }; return
