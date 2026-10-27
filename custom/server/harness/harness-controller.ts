@@ -408,12 +408,11 @@ router.get('/external-sessions', async (ctx) => {
     const rawLimit = typeof ctx.query.limit === 'string' ? Number(ctx.query.limit) : 30
     const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(Math.trunc(rawLimit), 200)) : 30
     const includeTitles = ctx.query.includeTitles === '1'
-    const source = typeof ctx.query.source === 'string' ? ctx.query.source.trim() : ''
-    const report = scanExternalSessions({ limit, includeTitles })
-    if (source === 'claude-code' || source === 'codex') {
-      ctx.body = { ok: true, report: { ...report, sessions: report.sessions.filter((s) => s.source === source) } }
-      return
-    }
+    const rawSource = typeof ctx.query.source === 'string' ? ctx.query.source.trim() : ''
+    const source = rawSource === 'claude-code' || rawSource === 'codex' ? rawSource : undefined
+    // source 必须下推到扫描层：事后过滤会先被 limit 截断另一源的额度，
+    // 出现「指定 codex 却返回空」（2026-10-27 活体走查实锤）。
+    const report = scanExternalSessions({ limit, includeTitles, ...(source ? { source } : {}) })
     ctx.body = { ok: true, report }
   } catch (e) {
     ctx.status = 500

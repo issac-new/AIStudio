@@ -265,6 +265,8 @@ export interface ScanOptions {
   includeTitles?: boolean
   /** 单文件字节上限（默认 32MB）；超限进 skipped 并标原因。 */
   maxFileBytes?: number
+  /** 只扫指定来源（缺省两源都扫）。必须在截断前生效，否则 limit 会先吃掉另一源的额度。 */
+  source?: ExternalCliSource
 }
 
 /**
@@ -292,11 +294,14 @@ export function scanExternalSessions(opts: ScanOptions = {}): ExternalSessionRep
     },
   ]
 
-  const usableRoots = roots.filter((r) => existsSync(r.root))
+  const scopedRoots = opts.source ? roots.filter((r) => r.source === opts.source) : roots
+  const usableRoots = scopedRoots.filter((r) => existsSync(r.root))
   if (usableRoots.length === 0) {
     return {
       available: false,
-      reason: `两源目录均不可读：${claudeRoot} / ${codexRoot}`,
+      reason: opts.source
+        ? `指定来源不可读：${opts.source}（${opts.source === 'claude-code' ? claudeRoot : codexRoot}）`
+        : `两源目录均不可读：${claudeRoot} / ${codexRoot}`,
       roots: { claude: claudeRoot, codex: codexRoot },
       sessions: [],
       skipped: [],
