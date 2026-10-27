@@ -4,7 +4,8 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { NModal } from 'naive-ui'
+import { NModal, NSelect } from 'naive-ui'
+import { features } from '../../../../config/features'
 import { useSessionRows } from '../composables/useSessionRows'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useGroupChatStore } from '@/stores/hermes/group-chat'
@@ -52,6 +53,9 @@ const q = computed({
 const type = ref<SearchType>('all')
 const boardFilter = ref('')
 const statusFilter = ref('')
+// 归档口径（产品一致性 Task 10）：默认排除 archived；「包含归档」开关放行
+// （深链 archived=1）；显式 status=archived 精确筛选优先于默认排除。
+const includeArchived = ref(false)
 const assigneeFilter = ref('')
 const timeFilter = ref<'all' | '24h' | '7d' | '30d'>('all')
 const searchInput = ref<HTMLInputElement | null>(null)
@@ -81,6 +85,7 @@ function applyDeepLink(): void {
   type.value = normalizeType(route.query.type)
   boardFilter.value = String(route.query.board ?? '')
   statusFilter.value = String(route.query.status ?? '')
+  includeArchived.value = route.query.archived === '1'
   assigneeFilter.value = String(route.query.assignee ?? '')
   timeFilter.value = normalizeTime(route.query.time)
 }
@@ -98,7 +103,13 @@ watch(() => route.fullPath, (_next, prev) => {
 }, { immediate: true })
 
 // ws 为旧工作区筛选深链键：不再消费，关闭时一并清理防残留
-const SEARCH_QUERY_KEYS = ['search', 'q', 'type', 'board', 'ws', 'status', 'assignee', 'time'] as const
+const SEARCH_QUERY_KEYS = ['search', 'q', 'type', 'board', 'ws', 'status', 'assignee', 'archived', 'time'] as const
+// 归档开关持久化：深链会话（search=1）内变更写回 URL（archived=1），可分享/后退
+watch(includeArchived, (on) => {
+  if (route.query.search !== '1') return
+  if ((route.query.archived === '1') === on) return
+  void router.replace({ query: { ...route.query, archived: on ? '1' : undefined } })
+})
 function closeDialog(): void {
   workspace.closeSearch()
   if (route.query.search !== '1') return
@@ -159,10 +170,20 @@ const boardNameOf = computed(() => {
   for (const t of workspace.tasks) if (!m.has(t.boardSlug)) m.set(t.boardSlug, t.boardSlug)
   return m
 })
-const boardOptions = computed(() => (workspace.boards ?? []).map(b => ({
-  slug: b.slug,
-  label: `${b.name || b.slug}${b.source === 'sim' ? '（推演）' : ''}`,
-})))
+// 板选项升可搜索 NSelect（产品一致性 Task 10 并入 main 看板轴）：slug 值不变
+// （过滤全等匹配），中文名与 slug 都可搜——板多时原生 select 无从下手。
+const boardOptions = computed<Array<{ label: string; value: string }>>(() => [
+  { label: zh.value ? '全部' : 'All', value: '' },
+  ...(workspace.boards ?? []).map(b => ({
+    label: `${b.name || b.slug}${b.source === 'sim' ? '（推演）' : ''}`,
+    value: b.slug,
+  })),
+])
+function filterBoardOption(pattern: string, option: { value?: string | number }): boolean {
+  const needle = pattern.trim().toLowerCase()
+  return String(option.value ?? '').toLowerCase().includes(needle)
+    || String((option as { label?: string }).label ?? '').toLowerCase().includes(needle)
+}
 const assigneeOptions = computed(() => [...new Set(workspace.tasks.map(task => task.assignee).filter(Boolean))].sort())
 
 function timeWithin(ts: number | null | undefined): boolean {
@@ -218,6 +239,7 @@ const sessionRowsResult = computed<ResultRow[]>(() => sessionRows.value
 const taskRowsResult = computed<ResultRow[]>(() => workspace.tasks
   .filter((task) => {
     if (boardFilter.value && task.boardSlug !== boardFilter.value) return false
+    if (task.status === 'archived' && !includeArchived.value && statusFilter.value !== 'archived') return false
     if (statusFilter.value && task.status !== statusFilter.value) return false
     if (assigneeFilter.value && task.assignee !== assigneeFilter.value) return false
     if (!timeWithin(task.createdAt)) return false
@@ -331,7 +353,8 @@ const COMMANDS = computed<Array<{ key: string; label: string; icon: string; to: 
   { key: 'gov', label: tx.value.cmdGov, icon: '🏛️', to: { name: 'ia2.governance' } },
   { key: 'gov-docs', label: '文档评审（②⑤⑥）', icon: '📄', to: { name: 'ia2.govDocs' } },
   { key: 'cases', label: tx.value.cmdCases, icon: '📦', to: { name: 'ia2.deliveryCases' } },
-  { key: 'ide', label: tx.value.cmdIde, icon: '⌨️', to: { name: 'ide.shell' } },
+  // features.ide=false 时 IDE 路由不注册——命令不出（无效果入口根治，Task 10）
+  ...(features.ide ? [{ key: 'ide', label: tx.value.cmdIde, icon: '⌨️', to: { name: 'ide.shell' } }] : []),
   // 设置命令统一落设置目录（Task 7 单一设置入口；与页头用户按钮同落点）
   { key: 'settings', label: tx.value.cmdSettings, icon: '🛠️', to: { name: 'ia2.govSettings' } },
 ])
@@ -380,7 +403,7 @@ const keyboardRows = computed<ResultRow[]>(() => [
   ...visibleGroups.value.flatMap(group => group.rows.slice(0, 20)),
 ])
 const activeIndex = ref(0)
-watch([q, type, boardFilter, statusFilter, assigneeFilter, timeFilter], () => { activeIndex.value = 0 })
+watch([q, type, boardFilter, statusFilter, assigneeFilter, includeArchived, timeFilter], () => { activeIndex.value = 0 })
 // 跨实例推演会话：随检索词装载（服务端 60s 缓存挡连续击键）
 watch(q, (needle) => { void workspace.loadSimSessions?.(needle) }, { immediate: true })
 watch(() => keyboardRows.value.length, count => {
@@ -442,6 +465,7 @@ function reset(): void {
   cockpit.clearSearch()
   boardFilter.value = ''
   statusFilter.value = ''
+  includeArchived.value = false
   assigneeFilter.value = ''
   timeFilter.value = 'all'
 }
@@ -494,10 +518,16 @@ function reset(): void {
       <div class="srch__filters">
         <label class="srch__filter">
           <span>{{ zh ? '看板' : 'Board' }}</span>
-          <select v-model="boardFilter" data-testid="search-filter-board">
-            <option value="">{{ zh ? '全部' : 'All' }}</option>
-            <option v-for="item in boardOptions" :key="item.slug" :value="item.slug">{{ item.label }}</option>
-          </select>
+          <NSelect
+            v-model:value="boardFilter"
+            class="srch__board"
+            data-testid="search-filter-board"
+            :options="boardOptions"
+            filterable
+            :filter="filterBoardOption"
+            size="small"
+            :consistent-menu-width="false"
+          />
         </label>
         <label class="srch__filter">
           <span>{{ zh ? '状态' : 'Status' }}</span>
@@ -521,6 +551,10 @@ function reset(): void {
             <option value="7d">{{ zh ? '7 天' : '7 days' }}</option>
             <option value="30d">{{ zh ? '30 天' : '30 days' }}</option>
           </select>
+        </label>
+        <label class="srch__arch" data-testid="search-include-archived">
+          <input v-model="includeArchived" type="checkbox" data-testid="search-archived-toggle">
+          <span>{{ zh ? '包含归档' : 'Include archived' }}</span>
         </label>
         <button type="button" class="srch__reset" data-testid="search-reset" @click="reset">{{ zh ? '重置过滤' : 'Reset' }}</button>
       </div>
@@ -620,6 +654,9 @@ function reset(): void {
 .srch__filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
 .srch__filter { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
 .srch__filter select { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); font-family: inherit; font-size: 12px; padding: 3px 8px; max-width: 200px; }
+.srch__board { min-width: 140px; }
+.srch__arch { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); cursor: pointer; }
+.srch__arch input { accent-color: var(--accent-primary, var(--color-primary)); }
 .srch__reset { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-muted); font-family: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer; }
 .srch__reset:hover { color: var(--text-primary); background: var(--bg-secondary); }
 .srch__body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 16px; }
