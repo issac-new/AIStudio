@@ -241,7 +241,7 @@ const routeSel = computed<StreamSelection | null>(() => {
     case 'ia2.commsRoom': return typeof route.params.roomId === 'string' ? { kind: 'room', id: route.params.roomId } : null
     case 'ia2.groupRoom': return typeof route.params.roomId === 'string' ? { kind: 'group', id: route.params.roomId } : null
     case 'ia2.collabSession': return typeof route.params.sessionId === 'string' ? { kind: 'chat', id: route.params.sessionId } : null
-    // V5 补遗⑤ M6：ia2.loopCanvas 已降为重定向（运行详情承接），此处不再分派
+    // /app/l/:loopId 是独立薄详情页（LegacyLoopView，Task 3 分域），不经本工作台分派
     default: return null
   }
 })
@@ -336,7 +336,10 @@ const loopActivity = computed<Record<string, LoopActivity>>(() => {
 const { attentionRows, sessionAttention } = useAttentionRows()
 
 /** 需关注行点击分派：任务→看板预选；运行→运行详情；会话→ide 会话；兜底全局时间线。
- *  统一装配行带 kind——先按 kind 直达，再走历史兜底。 */
+ *  统一装配行带 kind——先按 kind 直达，再走历史兜底。
+ *  Task 3（2026-10-27 分域）：kind=loop 的行是 /api/loop/loops 域的 blocked Loop
+ *  （taskId=loop:<loopId>）——落 /app/l/:loopId 薄详情；不得把 loopId 塞 ?wf=
+ *  查工作流 API（跨域裸 ID，必 404/假空态）。 */
 function onOpenAttention(row: AttentionRow): void {
   const base = row.id.replace(/^att-/, '')
   if (row.kind === 'session') {
@@ -344,8 +347,8 @@ function onOpenAttention(row: AttentionRow): void {
     return
   }
   if (row.kind === 'loop') {
-    // 五轮 H：左栏「循环」已换面「工作流」——行 id 即 workflow run id，直达详情
-    void router.push({ name: 'ia2.collab', query: { wf: row.id } })
+    const loopId = (row.taskId ?? '').replace(/^loop:/, '')
+    if (loopId) void router.push({ name: 'ia2.loopCanvas', params: { loopId } })
     return
   }
   if (row.taskId) {
@@ -513,14 +516,18 @@ function onCanvasInvite(): void {
   void router.push({ name: 'ia2.collabHistory' })
 }
 
-// ── 中栏 · 循环观测落点（V5 补遗⑤ M6：画布并入运行详情）──
+// ── 中栏 · 循环观测落点（Task 3 分域：Legacy Loop 详情在 /app/l/:loopId 薄页；
+//    本工作台左栏「工作流」区只承载 Workflow Run（?wf=<runId> 详情层））──
 
-/** 左栏循环行点击 → 该循环最新 run 的运行详情（RunCanvas 已内嵌详情页）；
- *  无 run（从未跑过）落运行列表页。run.graphId === `loop-<loopId>`（graph-compiler 约定） */
-function openLoopLatestRun(loopId: string): void {
-  const latest = (runsStore.sortedRuns ?? []).find(r => r.graphId === `loop-${loopId}`)
-  if (latest) void router.push({ name: 'ia2.runDetail', params: { runId: latest.runId } })
-  else void router.push({ name: 'ia2.runs' })
+/** 工作流详情取消/关闭：清除 ?wf= 深链（wf=new 取消不留半开 URL） */
+function onWfCancel(): void {
+  if (typeof route.query.wf === 'string') {
+    const query: Record<string, string> = {}
+    for (const [k, v] of Object.entries(route.query)) {
+      if (k !== 'wf' && typeof v === 'string') query[k] = v
+    }
+    void router.replace({ name: 'ia2.collab', query })
+  }
 }
 
 /** 中栏独立窗口：弹出当前对象路由（standalone=1 精简壳；合入在独立窗内） */
@@ -574,11 +581,13 @@ async function onCreateRoom(name: string): Promise<void> {
 const groupCreateOpen = ref(false)
 /** 2026-10-24 用户裁定「挂回」：场景化创建向导（LoopCreateWizard，两步
  *  scenario→config 自调 createLoop）回归——/hermes/loop 退役后失去唯一入口；
- *  入口放左栏循环区上方，创建成功深链进新循环。 */
+ *  入口放左栏循环区上方，创建成功深链进新循环。
+ *  Task 3（2026-10-27 分域）：按名跳 ia2.loopCanvas 薄详情（/app/l/:loopId）——
+ *  旧字符串 push 恰逢路由降级为丢参重定向，创建成功即断链；命名跳转保 loopId。 */
 const loopWizardOpen = ref(false)
 function onLoopCreated(loopId: string): void {
   loopWizardOpen.value = false
-  if (loopId) void router.push(`/app/l/${encodeURIComponent(loopId)}`)
+  if (loopId) void router.push({ name: 'ia2.loopCanvas', params: { loopId } })
 }
 /** 左栏建房/删房动作错误（2026-10-22 走查批：原静默失败） */
 const roomActionError = ref('')
@@ -691,6 +700,7 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         :key="`wf:${wfRunId}`"
         :run-id="wfRunId"
         @open-run="(id: string) => router.push({ name: 'ia2.collab', query: { wf: id } })"
+        @cancel="onWfCancel"
       />
       <IdentityChatCanvas
         v-else-if="isIdentityChat"

@@ -286,12 +286,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           meta: { standaloneEmbed: true },
         },
         {
-          // V5 补遗⑤ M6（R-C1 用户裁决合一）：循环运行画布并入运行中心详情页，
-          // /app/l 画布入口退役——本路由降为兼容重定向（旧直达链接/name 落运行列表，
-          // 详情页内嵌 RunCanvas 承接实时画布能力）
+          // Legacy Loop 薄详情（2026-10-27 产品一致性 Task 3）：/app/l/:loopId 恢复为
+          // 组件路由——V5 补遗⑤ M6 曾降为丢参重定向（创建向导成功深链与 blocked
+          // Loop 注意力行均落空）。分域契约：Loop（cron/自治/预算，/api/loop/loops）
+          // = 本页薄详情（复用 loopStore 与既有运行详情，不新建运行器）；
+          // Workflow Run（/api/ia2/workflow/runs）= 工作台 ?wf=<runId>，禁止跨 API 裸 ID。
           path: 'l/:loopId',
           name: 'ia2.loopCanvas',
-          redirect: () => ({ name: 'ia2.runs' }),
+          component: () => import('./views/LegacyLoopView.vue'),
         },
         {
           // 看板（工作页）

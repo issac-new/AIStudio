@@ -77,13 +77,24 @@ const platformInfoOf = (name: string) => {
 }
 
 const wfRuns = ref<WorkflowRun[]>([])
+const wfError = ref(false)
 let wfTimer: ReturnType<typeof setInterval> | null = null
-async function refreshWf(): Promise<void> { try { wfRuns.value = await fetchWorkflowRuns() } catch { /* 忽略 */ } }
+// Task 3（2026-10-27）：刷新完成后重排轮询——旧实现挂载即按空列表排 30s，
+// 首载有 running 也要等 30s；失败置错误态（不得伪装成空列表）。
+async function refreshWf(): Promise<void> {
+  try {
+    wfRuns.value = await fetchWorkflowRuns()
+    wfError.value = false
+  } catch {
+    wfError.value = true
+  }
+  scheduleWf()
+}
 function scheduleWf(): void {
   if (wfTimer) clearInterval(wfTimer)
   wfTimer = setInterval(() => { void refreshWf() }, wfRuns.value.some(r => r.status === 'running') ? 4_000 : 30_000)
 }
-onMounted(() => { void refreshWf(); scheduleWf() })
+onMounted(() => { void refreshWf() })
 onUnmounted(() => { if (wfTimer) clearInterval(wfTimer) })
 const query = ref('')
 /** 栏底内联新建房间（Electron renderer 无 window.prompt，就地输入） */
@@ -294,6 +305,8 @@ const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
           {{ t('ia2.flow.groupLoops') }}<span class="flow-nav__sec-n">{{ wfRuns.length }}</span>
           <button type="button" class="flow-nav__wf-add" data-testid="wf-add" title="新建工作流：向分布式 hermes agent / matrix 集群下发多步任务" @click="emit('select', { kind: 'loop', id: 'new' })">＋</button>
         </div>
+        <!-- Task 3：取数失败≠真空——错误提示行，不得伪装成空列表 -->
+        <p v-if="wfError && wfRuns.length === 0" class="flow-nav__wf-err" data-testid="wf-nav-error">工作流列表载入失败</p>
         <button
           v-for="r in wfRuns" :key="r.id" type="button" class="flow-nav__row"
           :data-testid="`wf-row-${r.id}`"
@@ -520,6 +533,7 @@ const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
 .flow-nav__cd-k { color: var(--text-muted); flex-shrink: 0; min-width: 34px; }
 .flow-nav__cd-hint { margin: 2px 0 0; font-size: 10px; color: var(--text-muted); line-height: 1.5; }
 .flow-nav__wf-add { margin-left: auto; border: 1px solid var(--accent-primary); border-radius: 50%; width: 16px; height: 16px; line-height: 1; font-size: 11px; color: var(--accent-primary); background: transparent; cursor: pointer; padding: 0; flex-shrink: 0; }
+.flow-nav__wf-err { margin: 2px 4px 6px; font-size: 11px; color: var(--error); }
 .flow-nav__wf-meta { font-size: 10px; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
 .flow-nav__kind {
   flex-shrink: 0; width: 14px; text-align: center;

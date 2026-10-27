@@ -369,8 +369,8 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
           { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
           { path: 's/group/:roomId', name: 'ia2.groupRoom', component: WorkbenchView },
-          // V5 补遗⑤ M6：循环画布路由退役为重定向；循环观测落运行详情
-          { path: 'l/:loopId', name: 'ia2.loopCanvas', redirect: () => ({ name: 'ia2.runs' }) },
+          // Task 3（2026-10-27 分域）：/app/l 是 Legacy Loop 薄详情组件路由（本地桩）
+          { path: 'l/:loopId', name: 'ia2.loopCanvas', component: { template: '<div loop-detail />' } },
           { path: 'runs', name: 'ia2.runs', component: { template: '<div runs />' } },
           { path: 'runs/:runId', name: 'ia2.runDetail', component: { template: '<div run-detail />' } },
           { path: 'eng', name: 'ia2.eng', redirect: () => ({ name: 'ia2.deliveryCases' }) },
@@ -560,8 +560,8 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
           { path: 's/chat', name: 'ia2.collabChat', component: WorkbenchView },
           { path: 's/chat/:sessionId', name: 'ia2.collabSession', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
-          // V5 补遗⑤ M6：循环画布路由退役为重定向；观测落运行详情
-          { path: 'l/:loopId', name: 'ia2.loopCanvas', redirect: () => ({ name: 'ia2.runs' }) },
+          // Task 3（2026-10-27 分域）：/app/l 是 Legacy Loop 薄详情组件路由（本地桩）
+          { path: 'l/:loopId', name: 'ia2.loopCanvas', component: { template: '<div loop-detail />' } },
           { path: 'runs', name: 'ia2.runs', component: { template: '<div runs />' } },
           { path: 'runs/:runId', name: 'ia2.runDetail', component: { template: '<div run-detail />' } },
           { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },
@@ -645,8 +645,8 @@ describe('WorkbenchView — v12.3 态势迁页头 + 三栏折叠（栏控）', (
         children: [
           { path: '', name: 'ia2.collab', component: WorkbenchView },
           { path: 's/room/:roomId', name: 'ia2.commsRoom', component: WorkbenchView },
-          // V5 补遗⑤ M6：循环画布路由退役为重定向；观测落运行详情
-          { path: 'l/:loopId', name: 'ia2.loopCanvas', redirect: () => ({ name: 'ia2.runs' }) },
+          // Task 3（2026-10-27 分域）：/app/l 是 Legacy Loop 薄详情组件路由（本地桩）
+          { path: 'l/:loopId', name: 'ia2.loopCanvas', component: { template: '<div loop-detail />' } },
           { path: 'runs', name: 'ia2.runs', component: { template: '<div runs />' } },
           { path: 'runs/:runId', name: 'ia2.runDetail', component: { template: '<div run-detail />' } },
           { path: 'board', name: 'ia2.board', component: { template: '<div board />' } },

@@ -138,12 +138,10 @@ describe('路由白名单单测（补遗⑤ §13.6-2：快照断言）', () => {
       expect(rec?.meta?.standaloneEmbed, `${name} 不得带 standaloneEmbed`).toBeUndefined()
     }
   })
-  it('兼容层全部为 redirect；退役名 ia2.eng / ia2.loopCanvas 不在可达名账本', () => {
+  it('兼容层全部为 redirect；退役名 ia2.eng 只能以重定向残留（ia2.loopCanvas 已恢复组件路由，Task 3 分域）', () => {
     for (const c of compat) expect(['string','function']).toContain(typeof c.redirect)
-    for (const gone of ['ia2.eng', 'ia2.loopCanvas']) {
-      const rec = all.find((r) => r.name === gone)
-      if (rec) expect(rec.redirect, `${gone} 只能以重定向残留`).toBeTruthy()
-    }
+    const rec = all.find((r) => r.name === 'ia2.eng')
+    if (rec) expect(rec.redirect, 'ia2.eng 只能以重定向残留').toBeTruthy()
   })
   it('旧检索深链重定向到流程总览并保留弹窗筛选参数', async () => {
     const router = createRouter({ history: createMemoryHistory(), routes: buildIaRoutes() })
