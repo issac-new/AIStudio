@@ -83,10 +83,10 @@ try {
   await page.waitForTimeout(300)
   record('命令面板 Esc 关闭', (await page.locator('.ide-palette').count()) === 0)
 
-  // 3. 21 辅助页签逐个点开
+  // 3. 23 辅助页签逐个点开（Task 12：main 侧沟通/Matrix 签并入后由 21→23，与 IdeSidePane 实态对齐）
   await page.locator('[data-testid="ide-sidepane-group-all"]').click().catch(() => {})
   await page.waitForTimeout(300)
-  const tabs = ['files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'tools', 'trajectory', 'workflow', 'kanban', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash', 'deliver', 'genui', 'remote', 'plugins']
+  const tabs = ['files', 'review', 'terminal', 'wiki', 'memory', 'ctxarchive', 'context', 'tools', 'trajectory', 'workflow', 'kanban', 'assistant', 'board', 'browser', 'storage', 'mcp', 'hooks', 'slash', 'deliver', 'genui', 'matrix', 'remote', 'plugins']
   const tabFailures = []
   for (const tab of tabs) {
     const loc = page.locator(`[data-testid="ide-sidepane-tab-${tab}"]`)
@@ -96,7 +96,7 @@ try {
     const text = await page.locator('.ide-sidepane__body').innerText().catch(() => '')
     if (!text.trim()) tabFailures.push(`${tab}:empty`)
   }
-  record('21 个辅助页签可打开', tabFailures.length === 0, tabFailures.join(','))
+  record('23 个辅助页签可打开', tabFailures.length === 0, tabFailures.join(','))
 
   // 4. 状态栏配置面板
   const slots = page.locator('[data-testid="ide-status-slots-btn"]')

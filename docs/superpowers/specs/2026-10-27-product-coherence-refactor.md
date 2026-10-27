@@ -1,7 +1,7 @@
 # AIStudio 产品一致性整合改造规格
 
-> 日期：2026-10-27
-> 状态：已评审，实施中
+> 日期：2026-10-27（终验同日）
+> 状态：已实施（12 任务完成，验收数字见「验证」节；残余挂账见下）
 > 关联：2026-10-26-cockpit-full-audit-refactor.md（在途审计草稿，不作为实现现状）
 
 ## 变更
@@ -111,6 +111,21 @@ daily/sim 同 ID 必须验证不写错对象。
 
 ## 验证
 
+## 验证
+
+实施结果（2026-10-27 终验）：
+
+- 全量测试：`npm test` 937 文件 6775 用例通过，0 失败，11 既有跳过。
+- `npm run typecheck:harness` 通过（清单 130 文件，graph-rest.ts 随 Task 6 并入）。
+- `OVERLAY_UPSTREAM_ROOT=$PWD/vendor npm run build` 与 `build:full` 均通过，verify-dist 出厂口令扫描零命中。
+- 动态 route manifest：117 路由名 / 37 阶段页签 / 40 重定向，全部唯一。
+- dev 全路由走查（隔离数据根，8651/8655）：198 项中 180 过，唯一缺陷为走查探针任务在隔离库不存在的环境性 500（notFound 探针）。
+- dist 全路由走查（8653，重生成 vite 配置后新鲜构建）：185 项中 183 过，2 项同上环境性 500。
+- IDE smoke：23 辅助页签全开（本任务把清单从 21 补齐到 23）。命令面板聚焦与冒烟脚本执行 2 项在隔离慢后端下不稳定（晚到异步渲染疑似抢焦点+模态遮罩拦截点击），快后端复核未做——真机 8647/8649 在合并换装后复核。
+- 每任务先失败测试再实现，独立审查全部通过；Task 3/7/11 各一轮修复后复验 addressed。
+
+环境实录与遗留：vite.config.overlay.ts 曾烙印已消失的临时目录 outDir 致 dist 陈旧——`inject.mjs --config-only` 在 worktree 重新生成后根治；隔离根需预置 sessions state.db（复制本机库后 sessions 接口 200）。
+
 每个任务先写失败测试，再实现并运行目标测试。
 子代理报告由主会话复核和复跑。
 合入前运行全量 `npm test`。
@@ -144,3 +159,11 @@ DESIGN_SYNC: touched
 ## 未验证项记录要求
 
 交付说明必须列出未运行的验证、失败测试、跳过的环境和残余风险。全路由到达不等于所有按钮已验证，单测全绿不等于活体功能可用。
+
+## 实施挂账（后续批次）
+
+1. IDE smoke 命令面板聚焦与冒烟脚本两项在慢后端不稳定——合并换装后在快后端复核定性。
+2. 未触及组件仍存 5 处 window.prompt（IdeInlineDiff/IdeTurnRail/IdeWhiteboardPane/KanbanDiagnostics/KanbanToolbar）——统一交互原语另立批次。
+3. RunSelector 列表加载失败态与「其他」措辞边界、graphMsg 原始 runId 回执、cockpit.searchPlaceholder 死键清理。
+4. decisions.jsonl 写侧 seq 分配含前导 legacy 行计数的漂移（链起点行号/序号失配为 main 既有状态）——trace-log.sh 写侧治理另立小批。
+5. 范围外发现：650 补丁 index 行 pre-image 声明与 524 post-image 不符（历史瑕疵，重放不受影响）。
