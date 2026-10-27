@@ -1,9 +1,9 @@
-# 附录 A：产品面全量 spec 索引（364 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（365 份设计/规格/决策文档）
 
-> 附件，非正本。供「AIStudio 完整设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-27 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 364 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
+> 覆盖与计数（2026-10-27 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 365 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
-## A.1 逐份索引（按文件名日期升序）
+## A.1 逐份索引（按文件归档序）
 
 | 文件名 | 主旨 | 结论要点 |
 |---|---|---|
@@ -371,6 +371,7 @@
 | 2026-10-27-joyai-annotations-rerank | JoyAI 清偿批二 | map-annotations 持久化＋LLM 重排＋mention 泳道；补丁 698 |
 | 2026-10-27-joyai-realtime-squad | JoyAI 清偿批三 | 标注实时协同（LWW+socket+presence）＋squad 链重排；补丁 699 |
 | 2026-10-27-swarm-yuan-branch-trunk-order | swarm-yuan 研发四阶段顺序立法（决策 57） | 分支开发→分支测试→主干合并→主干回归；九节点不变、⑤-⑦ 在分支 |
+| 2026-10-27-aistudio-final-design-consolidation | AIStudio 终态设计文档整合 | 正本去轮次化；历史 spec 留档；动态数字退出正文；导航与旧正本指针同步 |
 
 ### 角色/排除（非 spec 文档）
 
@@ -378,14 +379,14 @@
 
 | 文件名 | 角色/排除 | 说明 |
 |---|---|---|
-| 2026-10-21-ncwk-unified-product-design | 文档导航 | 自称「SwarmStudio 整体文档导航」，指向整合正本、配套档、A-D 与历史档案 |
+| 2026-10-21-ncwk-unified-product-design | 文档导航 | AIStudio 设计文档导航，指向终态正本、配套档、A-D 与历史档案 |
 | 2026-10-21-swarmstudio-appendix-a-spec-index | A 索引，本文件 | specs 根目录唯一文件级 spec 索引；索引自身不重复计入 A.1 |
 | 2026-10-21-swarmstudio-appendix-b-plans-research | B 索引 | 实施计划与研究/复盘档索引，覆盖范围不在 specs 根目录文件级集合内 |
 | 2026-10-21-swarmstudio-appendix-c-capability-corpus | C 索引 | swarm-yuan 方法论、决策文本与 research 的能力层全库索引 |
 | 2026-10-21-swarmstudio-appendix-d-lessons-rules | D 索引 | 历史教训、被证伪假设、明确不做与工作规则的汇编索引 |
-| 2026-10-23-ncwk-complete-design-compilation | 退役拼接指针 | 自述六部分拼接版已退役；全文留 git 历史，本页只指向整合正本 |
-| 2026-10-23-swarmstudio-design-ledger | 数字总账 | 全域数字唯一事实源与维护规则，不是专题设计或业务 spec |
-| 2026-10-23-swarmstudio-integrated-design | 当前整合正本 | 自述「当前唯一整合正本」；在索引中登记角色，不重复计入 A.1 |
+| 2026-10-23-ncwk-complete-design-compilation | 退役拼接指针 | 自述六部分拼接版已退役；全文留 git 历史，本页只指向终态正本 |
+| 2026-10-23-swarmstudio-design-ledger | 数字附录 | 稳定设计参数、参考部署与版本快照，不是专题设计或业务 spec |
+| 2026-10-23-swarmstudio-integrated-design | 当前终态正本 | AIStudio 唯一设计正本；在索引中登记角色，不重复计入 A.1 |
 | 2026-10-24-merged-projects-knowledge-compendium | 合并来源地图 | 自述只做映射与对账、不复制正文；登记并入项目、决策与会话来源 |
 
 ## A.2 按域聚类（13 域，2026-10-23 历史快照）
