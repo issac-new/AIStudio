@@ -409,6 +409,12 @@ router.get('/external-sessions', async (ctx) => {
     const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(Math.trunc(rawLimit), 200)) : 30
     const includeTitles = ctx.query.includeTitles === '1'
     const rawSource = typeof ctx.query.source === 'string' ? ctx.query.source.trim() : ''
+    // 未知来源显式 400：静默忽略会让人以为"筛过了"（与 callgate/rule 的严格校验同纪律）。
+    if (rawSource && rawSource !== 'claude-code' && rawSource !== 'codex') {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: [`source 只接受 claude-code | codex，收到：${rawSource}`] }
+      return
+    }
     const source = rawSource === 'claude-code' || rawSource === 'codex' ? rawSource : undefined
     // source 必须下推到扫描层：事后过滤会先被 limit 截断另一源的额度，
     // 出现「指定 codex 却返回空」（2026-10-27 活体走查实锤）。
