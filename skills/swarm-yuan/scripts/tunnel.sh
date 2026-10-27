@@ -48,7 +48,12 @@ source "$CONF_PATH"
 grep -q "（填入" "$CONF_PATH" && die "tunnel.conf 仍是占位模板（含（填入）标记）——先填 JUMP_HOST/TUNNELS 再用"
 [[ -n "${JUMP_HOST:-}" ]] || die "JUMP_HOST 未配置"
 [[ -n "${TUNNELS:-}" ]] || die "TUNNELS 未配置"
-BIND="${LOCAL_BIND:-127.0.0.1}"
+# 安全边界：本地绑定恒为回环——非回环地址会把 DB/JDWP 端口暴露到局域网。
+# 需要非回环绑定为 UserChallenge 级例外，须改本守卫并留决策痕，不接受 conf 值。
+BIND="127.0.0.1"
+if [[ -n "${LOCAL_BIND:-}" && "$LOCAL_BIND" != "127.0.0.1" && "$LOCAL_BIND" != "localhost" ]]; then
+  die "LOCAL_BIND=${LOCAL_BIND} 被拒绝：隧道本地绑定只允许回环地址（127.0.0.1/localhost）"
+fi
 SSH_BIN="${SSH_BIN:-ssh}"
 SSH_OPTS="${SSH_OPTS:--o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3}"
 

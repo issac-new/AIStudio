@@ -8,6 +8,9 @@ set -uo pipefail
 MW="$(cd "$(dirname "$0")/../.." && pwd)/assets/memory-writeback.sh"
 [[ -f "$MW" ]] || { echo "✗ memory-writeback.sh 不存在"; exit 1; }
 TMP="$(mktemp -d /tmp/mw-test.XXXXXX)"
+# 新契约（可信性重构）：正常写回场景须提供含 SKILL.md 的技能目录——
+# 空目录/无产物目录只允许「披露+跳过」，不得生成空知识。
+printf -- '---\nname: mw-fixture\n---\n# mw-fixture\n' > "$TMP/SKILL.md"
 PASS=0; FAIL=0
 pass(){ echo "  ✓ $1"; PASS=$((PASS+1)); }
 fail(){ echo "  ✗ $1"; FAIL=$((FAIL+1)); }
@@ -39,6 +42,7 @@ if [[ $? -eq 0 ]]; then pass "无效 PROJECT_DIR 仍 exit 0（best-effort 不阻
 # 测试 6：披露契约（适配层）——PATH 收窄遮蔽 claude-mem、无 .zcode 时：
 # 每个不可用后端恰好一行"跳过"披露 + 汇总行如实计数，不静默
 TMP2="$(mktemp -d /tmp/mw-test2.XXXXXX)"
+printf -- '---\nname: mw2\n---\n# mw2\n' > "$TMP2/SKILL.md"
 OUT6=$(PROJECT_DIR="$TMP2" PATH="/usr/bin:/bin" bash "$MW" 2>&1)
 rc6=$?
 skip_cnt=$(printf '%s\n' "$OUT6" | grep -c '跳过（未检测到')
@@ -64,6 +68,7 @@ fi
 
 # 测试 8：claude-mem double 正路径——假 CLI 记录 add 调用 + 适配层披露写入
 TMP3="$(mktemp -d /tmp/mw-test3.XXXXXX)"
+printf -- '---\nname: mw3\n---\n# mw3\n' > "$TMP3/SKILL.md"
 mkdir -p "$TMP3/bin" "$TMP3/.zcode/memories"
 CALLLOG="$TMP3/calls.log"
 export CALLLOG  # heredoc 带引号定界不展开变量，double 经环境变量在运行时取路径

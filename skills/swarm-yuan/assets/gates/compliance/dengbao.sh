@@ -142,5 +142,5 @@ check_dengbao() {
     # MAC 强制访问控制（9.1.4.2）：OS/DB 层
     warn "gate_dengbao4_mac: 等保四级 9.1.4.2 强制访问控制（MAC）是 OS/DB 层——人工核对 MAC 策略配置"
   fi
-  [[ $found -eq 0 ]] && pass "等保 ${level} 级控制点映射检查通过（GB/T 22239-2019）"
+  [[ $found -eq 0 ]] && { pass "等保 ${level} 级控制点映射检查通过（GB/T 22239-2019）"; return 0; }
 }

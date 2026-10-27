@@ -86,4 +86,26 @@ _tc=$( conf_var "$TMP/pyproj2/rendered.conf" TEST_CMD )
 [[ "$_tc" == "python3 -m pytest" ]] \
   && ok "态8 声明 pytest → python3 -m pytest detected" || bad "态8 TEST_CMD: ${_tc}"
 
-[[ $FAIL -eq 0 ]] && { echo "PASS test-conf-render"; exit 0; } || { echo "FAIL test-conf-render" >&2; exit 1; }
+
+# --- 态 9（Task 2/A06）：yarn 项目无 build/test scripts → 溯源必须 default ---
+# 修复前：检测到 yarn.lock 即标 detected，生成不存在的 yarn build/test 且谎称已确证。
+mkdir -p "$TMP/yarnproj"
+printf '{ "name": "bare" }\n' > "$TMP/yarnproj/package.json"
+touch "$TMP/yarnproj/yarn.lock"
+out="$(bash "$SH" "$TMP/yarnproj" --profile standard 2>/dev/null)"
+grep -qE "BUILD_CMD=.*# AUTO:default" <<<"$out" && ok "态9 yarn 无 scripts → BUILD_CMD default" || bad "态9 BUILD_CMD 溯源: $out"
+grep -qE "TEST_CMD=.*# AUTO:default" <<<"$out" && ok "态9 yarn 无 scripts → TEST_CMD default" || bad "态9 TEST_CMD 溯源"
+mkdir -p "$TMP/yarnproj2"
+printf '{ "name": "full", "scripts": { "build": "tsc", "test": "vitest" } }\n' > "$TMP/yarnproj2/package.json"
+touch "$TMP/yarnproj2/yarn.lock"
+out="$(bash "$SH" "$TMP/yarnproj2" --profile standard 2>/dev/null)"
+grep -qE "BUILD_CMD=.*# AUTO:detected" <<<"$out" && ok "态9b yarn 有 scripts → detected" || bad "态9b BUILD_CMD 溯源回退: $out"
+
+# --- 态 10（Task 2/A06）：--out 写盘失败必须非零退出 ---
+_ro="$(mktemp -d /tmp/cr-ro.XXXXXX)"; chmod 500 "$_ro"
+bash "$SH" "$TMP/proj" --profile standard --out "$_ro/sub" >/dev/null 2>&1
+rc=$?
+[[ $rc -ne 0 ]] && ok "态10 写盘失败 rc=${rc} 非零" || bad "态10 写盘失败仍 rc=0"
+chmod 700 "$_ro"; rm -rf "$_ro"
+
+[[ $FAIL -eq 0 ]] && echo "PASS test-conf-render" || { echo "FAIL test-conf-render" >&2; exit 1; }

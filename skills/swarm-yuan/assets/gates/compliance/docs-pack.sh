@@ -63,5 +63,5 @@ check_docs_pack() {
       fi
     fi
   done
-  [[ $found -eq 0 ]] && pass "文档包完备性检查通过（profile=${DOCS_PACK_PROFILE}）"
+  [[ $found -eq 0 ]] && { pass "文档包完备性检查通过（profile=${DOCS_PACK_PROFILE}）"; return 0; }
 }

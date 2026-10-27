@@ -100,12 +100,12 @@ c=$(bash -c "source '$NV'; _norm_ver '^0.3.20'" 2>/dev/null)
 [[ "$a" != "$c" ]] && ok "L4b _norm_ver 真差异保留（${a} ≠ ${c}）" || bad "L4b 归一过度（0.3 与 0.3.20 被判等价）"
 
 # ---- L5 源码锁：D2 注释锚在位（防归一逻辑被静默回退）----
-grep -q '原实现只剥 range 前缀后做字面字符串比较' assets/gates-warn.sh && ok "L5 R75-D2 修复锚在位" || bad "L5 R75-D2 修复锚丢失"
+grep -qF '原实现只剥 range 前缀后做字面字符串比较' assets/gates-warn.sh && ok "L5 R75-D2 修复锚在位" || bad "L5 R75-D2 修复锚丢失"
 grep -qF 'OFS=.' assets/gates-warn.sh && ok "L5b OFS=. 显式设置在位（BSD awk 字段重建防线）" || bad "L5b OFS=. 缺失"
 
 # ---- L6 源码锁：mark-active spec-first 联动校验（D3）----
-grep -q 'check_spec_first_wiring' scripts/generate-skill.sh && ok "L6 spec-first 联动校验函数在位" || bad "L6 联动校验缺失"
-grep -q 'WRITABLE_DIRS 为空——spec-first 前置门在运行时将静默放行' scripts/generate-skill.sh && ok "L6b 联动 fail 提示语义在位" || bad "L6b fail 提示缺失"
+grep -qF 'check_spec_first_wiring' scripts/generate-skill.sh scripts/generator/subcommands.sh && ok "L6 spec-first 联动校验函数在位" || bad "L6 联动校验缺失"
+grep -qF 'WRITABLE_DIRS 为空——spec-first 前置门在运行时将静默放行' scripts/generate-skill.sh scripts/generator/subcommands.sh && ok "L6b 联动 fail 提示语义在位" || bad "L6b fail 提示缺失"
 
 # ---- L7 行为锁：mark-active 拦 WRITABLE_DIRS 空 fixture（D3 行为面）----
 FX3=$(mktemp -d "${TMPDIR:-/tmp}/r75-fixture3.XXXXXX")
@@ -127,7 +127,7 @@ SPEC_REQUIRED="${SPEC_REQUIRED:-1}"
 WRITABLE_DIRS=()
 EOF
 out=$(bash scripts/generate-skill.sh --mark-active "$FX3" 2>&1 || true)
-printf '%s' "$out" | grep -q 'spec-first 联动检查失败' && ok "L7 mark-active 拦 WRITABLE_DIRS 空（SPEC_REQUIRED=1）" || bad "L7 mark-active 未拦：$out" 
+printf '%s' "$out" | grep -qF 'spec-first 联动检查失败' && ok "L7 mark-active 拦 WRITABLE_DIRS 空（SPEC_REQUIRED=1）" || bad "L7 mark-active 未拦：$out" 
 
 # ---- L8 源码锁：DIM 枚举器 NestJS 形态（D4）----
 grep -qF '@(Get|Post|Put|Delete|Patch|All|Head|Options)' assets/inventory-dimensions.conf && ok "L8 DIM 端点裸动词装饰器族在位" || bad "L8 端点 NestJS 形态缺失"

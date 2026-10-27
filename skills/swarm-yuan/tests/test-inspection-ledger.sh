@@ -126,7 +126,21 @@ printf '# mcp-tools\npsql -c "SELECT 1"  # 回归样本\n' > "$P/scripts/mcp-too
 [[ -f "$P/scripts/tunnel.conf" ]] && printf 'JUMP_HOST="e2e@bastion"\nTUNNELS="db:15432:db:5432"\n' > "$P/scripts/tunnel.conf"
 sed -i.bak 's/^COVERAGE_MIN=.*/COVERAGE_MIN=80/' "$P/scripts/precheck.conf" && rm -f "$P/scripts/precheck.conf.bak"
 printf '\nSPRINGBOOT_SRC_GLOBS=("src/main/java/**/*.java")\nSHARDING_KEY_COLUMNS=("user_id")\nLOMBOK_SRC_GLOBS=("src/main/java/**/*.java")\nMYBATIS_MAPPER_DIRS=("src/main/resources/mapper")\nWRITABLE_DIRS=("src")\n' >> "$P/scripts/precheck.conf"
-mkdir -p "$P/.swarm-yuan" && printf '{"type":"Taste","decision":"回归样本","ts":"2026-10-22T00:00:00Z"}\n' > "$P/.swarm-yuan/decisions.jsonl"
+mkdir -p "$P/.swarm-yuan" && printf '{"type":"Taste","ai_suggestion":"回归样本","user_action":"approved","ts":"2026-10-22T00:00:00Z"}\n' > "$P/.swarm-yuan/decisions.jsonl"
+# strict 激活需真实清单：非零枚举维度登记（§5 调度任务 / §9 数据模型与 mapper）
+cat > "$P/references/reference-manual.md" <<'EOF'
+# reference-manual.md
+## §5 调度与批处理任务
+| 任务 | 入口路径 |
+|------|------|
+| ReportJob | `src/main/java/com/demo/ReportJob.java` |
+| BatchJobConfig | `src/main/java/com/demo/BatchJobConfig.java` |
+## §9 数据模型与声明式映射
+| 单元 | 路径 |
+|------|------|
+| User | `src/main/java/com/demo/User.java` |
+| UserMapper.xml | `src/main/resources/mapper/UserMapper.xml` |
+EOF
 if bash "$G" --mark-active "$P" >/dev/null 2>&1; then
   ok "--mark-active 成功（填充配方闭环）"
   if bash "$P/scripts/inspection-ledger.sh" ledger --project-dir "$DEMOCP/demo" >/dev/null 2>&1; then
@@ -183,7 +197,7 @@ has references/capability-map.md "| compliance-checkpoints |" "capability-map �
 has references/capability-map.md "| regulatory-checkpoint-table |" "capability-map 登记主表"
 has references/task-methodology-router.md "迎检自查/强监管合规类" "task-router 迎检路由行"
 has SKILL.md "compliance-checkpoints（监管执法检查点库" "SKILL.md 路由表接知识件"
-has assets/facts.conf "FACT_UNIVERSAL_FILES=103" "facts FACT_UNIVERSAL_FILES=103"
+has assets/facts.conf "FACT_UNIVERSAL_FILES=104" "facts FACT_UNIVERSAL_FILES=104"
 has assets/facts.conf "FACT_REFERENCES=57" "facts FACT_REFERENCES=57"
 has assets/facts.conf "FACT_INSPECTION_CHECKPOINTS=173" "facts FACT_INSPECTION_CHECKPOINTS=173"
 has assets/facts.conf "FACT_PENALTY_CLAUSES=21" "facts FACT_PENALTY_CLAUSES=21"

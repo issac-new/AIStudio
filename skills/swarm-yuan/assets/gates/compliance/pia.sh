@@ -77,5 +77,5 @@ $(printf '%s\n' "$_tbd" | head -5 | sed 's/^/    /')"
       grep -qF "$_base" "$_inv" 2>/dev/null || warn "处理活动清单（${_inv}）未引用 PRIVACY_SCAN_DIRS 目录：${d}——请核对登记完整性"
     done
   fi
-  [[ $found -eq 0 ]] && pass "PIA 检查通过（评估文档+处理活动清单齐备，零待定项）"
+  [[ $found -eq 0 ]] && { pass "PIA 检查通过（评估文档+处理活动清单齐备，零待定项）"; return 0; }
 }

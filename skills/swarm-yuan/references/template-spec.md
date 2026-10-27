@@ -283,7 +283,7 @@ ECC 的 `agent.yaml` 是**导出 surface**（portability layer），不是**auth
 10. 发布后运营 —— **★运维左移运行态验证**：发布后验证健康检查端点可访问 + 告警阈值已设 + runbook 已更新 + 灰度观察期无异常（precheck `--operate`，warn 级 advisory）
 
 > 项目可能有额外节点（如"代码审查"、"部署验证"），或无发布环节。按项目实际裁剪。
-> **方法论整合：** 节点②③用 OpenSpec 的 proposal→spec(delta)→design→tasks 模式（specs as source of truth）；节点⑤用 superpowers 的 subagent 编排（见 subagent-orchestration.md）；节点间状态用 comet 风格脚本背书（state-machine.sh，非 prompt-only）；节点⑥含 gstack/OCR 审查维度（见 review-methodology.md）。**方法论分派（任务类型→档）单源见 task-methodology-router.md §文档路由表**。
+> **方法论整合：** 节点③④用 OpenSpec 的 proposal→spec(delta)→design→tasks 模式（specs as source of truth）；节点⑤用 superpowers 的 subagent 编排（见 subagent-orchestration.md）；节点间状态用 comet 风格脚本背书（state-machine.sh，非 prompt-only）；节点⑥含 gstack/OCR 审查维度（见 review-methodology.md）。**方法论分派（任务类型→档）单源见 task-methodology-router.md §文档路由表**。
 > **★调用追踪（设计理念 2 落地）：** 每个节点必须含第 ⑨ 要素——进入节点先公告（`→ [节点X] 调用 …`），节点级落盘 `.swarm-yuan/trace.jsonl`（`SWARM_YUAN_TRACE=verbose` 含每次具体调用）。机器执法：`generate-skill.sh --verify-completeness` 校验每节点段含「调用追踪」字样，缺则 exit 1。
 > **★左移原则（Shift-Left）：测试、变更影响、运维监控、设计文档同步不等到节点⑥⑦⑧才考虑，须在节点③④⑤就嵌入约束**——spec 阶段写测试设计+可观测性约束+设计文档影响声明，plan 阶段写变更影响+回滚预案，编码阶段先测试后实现，合入前确认回滚+迁移兼容+设计文档随批兑现，发布前先主干回归（main 全量回归全绿）再确认灰度+告警+runbook。precheck `--shift-left` 门禁校验各阶段左移产出物存在；设计文档同步由 L2 pre-commit 核验（DESIGN_SYNC 开关）。
 
@@ -416,9 +416,9 @@ ECC 的 `agent.yaml` 是**导出 surface**（portability layer），不是**auth
 - **★三平台兼容（swarm-yuan 自身的 .sh 脚本必须遵守，非目标技能强制）**：不用 declare -A / sed -i.bak+rm / grep -E / date -u / cd+pwd 替代 readlink -f / wc|xargs / ${var} 防 C-locale。详见 `references/security-spec.md` §六
 
 **★左移要求（Shift-Left，dev-guide.md §9 必须含 + spec-template.md §19/§20/§21 + precheck.sh `--shift-left`）：**
-- **测试左移**：spec 阶段（节点②）写测试设计段（测试策略/用例骨架/边界值/回归范围/契约测试）；编码阶段（节点⑤）每个 task 先写/更新测试再实现（TDD/BDD），test 与 impl 同分支提交，禁止"先实现后补测试"。precheck `--shift-left` 校验：spec 含测试设计段 + git diff 中 test 文件先于或同时于 impl 文件提交。**回归范围分级推导协议**（AI 判断引导不新增 check_*）：以 relations.jsonl 边集为反查底座，四路由窄到宽——①直接命中（diff 文件即测试文件或其被测锚点）→必跑；②接口命中（改动暴露为接口/导出——**实体字段改名若暴露于 API JSON 即属之**，反查引用方测试含前端调用点/fixtures）→应跑；③数据面命中（改实体字段/表列，沿 data-mapping/mapper-binding 边把 mapper/消费方测试拉进）→应跑；④链路扩散（命中构件可归入某业务链/配方，整链测试）→建议跑。分级写进回归范围字段（`必跑:/应跑:/建议跑:` 三行），防"全量回归"与"漏隐蔽影响面"两头
-- **变更左移**：plan 阶段（节点③）写变更影响范围段（消费方反查/回归范围/回滚预案/灰度策略/数据库迁移兼容窗口）；合入 main 前（节点⑦）确认回滚预案存在 + 迁移向前兼容。precheck `--shift-left` 校验：plan 含变更影响段 + spec 含回滚预案声明
-- **运维监控左移**：spec 阶段（节点②）写可观测性约束段（日志结构化规范/metrics 埋点清单/trace 透传链/告警阈值/健康检查端点）；验证阶段（节点⑥）确认 metrics/日志/trace 已埋点且可通过健康检查端点访问；发布阶段（节点⑧）确认灰度策略 + 告警阈值已设 + runbook 已更新。precheck `--shift-left` 校验：spec 含可观测性段 + 代码中 metrics/日志/trace 埋点存在 + 健康检查端点可访问
+- **测试左移**：spec 阶段（节点③）写测试设计段（测试策略/用例骨架/边界值/回归范围/契约测试）；编码阶段（节点⑤）每个 task 先写/更新测试再实现（TDD/BDD），test 与 impl 同分支提交，禁止"先实现后补测试"。precheck `--shift-left` 校验：spec 含测试设计段 + git diff 中 test 文件先于或同时于 impl 文件提交。**回归范围分级推导协议**（AI 判断引导不新增 check_*）：以 relations.jsonl 边集为反查底座，四路由窄到宽——①直接命中（diff 文件即测试文件或其被测锚点）→必跑；②接口命中（改动暴露为接口/导出——**实体字段改名若暴露于 API JSON 即属之**，反查引用方测试含前端调用点/fixtures）→应跑；③数据面命中（改实体字段/表列，沿 data-mapping/mapper-binding 边把 mapper/消费方测试拉进）→应跑；④链路扩散（命中构件可归入某业务链/配方，整链测试）→建议跑。分级写进回归范围字段（`必跑:/应跑:/建议跑:` 三行），防"全量回归"与"漏隐蔽影响面"两头
+- **变更左移**：plan 阶段（节点④）写变更影响范围段（消费方反查/回归范围/回滚预案/灰度策略/数据库迁移兼容窗口）；合入 main 前（节点⑧）确认回滚预案存在 + 迁移向前兼容。precheck `--shift-left` 校验：plan 含变更影响段 + spec 含回滚预案声明
+- **运维监控左移**：spec 阶段（节点③）写可观测性约束段（日志结构化规范/metrics 埋点清单/trace 透传链/告警阈值/健康检查端点）；验证阶段（节点⑥）确认 metrics/日志/trace 已埋点且可通过健康检查端点访问；发布阶段（节点⑨）确认灰度策略 + 告警阈值已设 + runbook 已更新。precheck `--shift-left` 校验：spec 含可观测性段 + 代码中 metrics/日志/trace 埋点存在 + 健康检查端点可访问
 - **左移三项的关系**：测试左移防缺陷流入后段；变更左移防变更爆炸半径失控；运维左移防线上故障不可观测。三者配套——不可只做一项
 
 **★框架适配（由 exploration-guide §D.0.5 探查结果激活 + dev-guide.md §10 框架约束 + precheck.conf ACTIVE_FRAMEWORKS + framework-knowledge.md 框架规则集）：**

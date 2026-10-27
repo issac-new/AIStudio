@@ -50,5 +50,5 @@ check_test_evidence() {
 $(printf '%s\n' "$_tbd" | head -5 | sed 's/^/    /')"
     found=1
   fi
-  [[ $found -eq 0 ]] && pass "测试证据链检查通过（计划+说明+报告齐备，含准出结论，零待定项）"
+  [[ $found -eq 0 ]] && { pass "测试证据链检查通过（计划+说明+报告齐备，含准出结论，零待定项）"; return 0; }
 }

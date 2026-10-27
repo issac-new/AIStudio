@@ -361,6 +361,25 @@ if bash "${PARADIGM}/scripts/generate-skill.sh" --profile standard m-dev "${DEMO
   for rf in codebase dev-guide release reference-manual; do
     printf '# %s.md\n真实内容（E2E 填充样本）\n' "$rf" > "${_mskill}/references/${rf}.md"
   done
+  # strict 激活的真实清单：非零枚举维度必须有登记行，且路径指向 java-demo 实体。
+  # 零枚举维度保留 NO_LIST 披露，不为通过检查而虚构组件。
+  cat > "${_mskill}/references/reference-manual.md" <<'EOF'
+# reference-manual.md
+
+## §5 调度与批处理任务
+
+| 任务 | 入口路径 |
+|------|------|
+| ReportJob | `src/main/java/com/demo/ReportJob.java` |
+| BatchJobConfig | `src/main/java/com/demo/BatchJobConfig.java` |
+
+## §9 数据模型与声明式映射
+
+| 单元 | 路径 |
+|------|------|
+| User | `src/main/java/com/demo/User.java` |
+| UserMapper.xml | `src/main/resources/mapper/UserMapper.xml` |
+EOF
   # R21-B：dev-guide 须保留「开发偏好」固定节（verify-completeness 节存在性执法；诚实降级写法）
   printf '# dev-guide.md\n真实内容（E2E 填充样本）\n\n## 开发偏好\n\n暂无已记录偏好\n' > "${_mskill}/references/dev-guide.md"
   # R21-A：recipes.md 按结构填充（§A/§B 节存在即过配方结构执法；示例配方省略——零配方段合法）
@@ -396,7 +415,7 @@ if bash "${PARADIGM}/scripts/generate-skill.sh" --profile standard m-dev "${DEMO
     && rm -f "${_mskill}/scripts/precheck.conf.bak"
   # decisions.jsonl 填 1 条（--mark-active 须 ≥1 条，SKILL.md 契约）
   mkdir -p "${_mskill}/.swarm-yuan"
-  printf '{"type":"Taste","decision":"E2E 样本决策","ts":"2026-08-04T00:00:00Z"}\n' > "${_mskill}/.swarm-yuan/decisions.jsonl"
+  printf '{"type":"Taste","ai_suggestion":"E2E 样本决策","user_action":"approved","ts":"2026-08-04T00:00:00Z"}\n' > "${_mskill}/.swarm-yuan/decisions.jsonl"
   # R33-F1 反向验证（2026-09-17 Java 栈执勤实证）：ACTIVE_FRAMEWORKS 非空但框架 glob 全空时
   # --mark-active 必须拒绝（框架门禁静默空转防线）——java-demo 检出 spring-boot 系，此刻 glob 仍空。
   if bash "${PARADIGM}/scripts/generate-skill.sh" --mark-active "${_mskill}" >/tmp/gene2e-ma-fwguard.log 2>&1; then

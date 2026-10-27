@@ -64,7 +64,7 @@ fi
 
 # 4) counts 关键计数（与 facts 闭合一的再断言）
 C=$(bash "$ROOT/scripts/registry-render.sh" --counts)
-for kv in REG_GATES_TOTAL=56 REG_REFERENCES=57 REG_UNIVERSAL_FILES=103 REG_UNIVERSAL_FILES_CORE=47 REG_RUNTIMES_WIRED=15; do
+for kv in REG_GATES_TOTAL=56 REG_REFERENCES=57 REG_UNIVERSAL_FILES=104 REG_UNIVERSAL_FILES_CORE=48 REG_RUNTIMES_WIRED=15; do
   if printf '%s\n' "$C" | grep -qx "$kv"; then ok "$kv"; else bad "缺 $kv"; fi
 done
 

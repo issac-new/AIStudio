@@ -46,6 +46,6 @@
 
 服务端开不了 JDWP（无运维配合窗口/版本不支持）时，退一级取证，并在 spec 里明示"未做断点级验证"：
 
-1. 日志加密度：按 traceId 拉全链路日志（[mcp-tools.md](../assets/mcp-tools.md) 的 ELK 段）。
+1. 日志加密度：按 traceId 拉全链路日志（[mcp-tools.md](../scripts/mcp-tools.md) 的 ELK 段）。
 2. JVM 现场三件（经 `ops-readonly-guard.sh` 判定后执行）：`jstack <pid>`（线程栈，定位死锁/阻塞）、`jstat -gcutil <pid> 1000`（GC 曲线，定位内存问题）、`jinfo -sysprops <pid>`（生效配置，定位配置未生效类缺陷）。
 3. 仍不足则写"复现路径推测+证据缺口清单"，请用户决策是否申请开 JDWP 窗口。

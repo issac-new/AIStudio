@@ -49,8 +49,8 @@ fi
 _lang="unknown"; _pm="unknown"; _build=""; _test=""; _build_confirmed=0; _test_confirmed=0; _frameworks=""
 if [[ -f "$PROJ/package.json" ]]; then
   _lang="typescript"
-  if [[ -f "$PROJ/yarn.lock" ]]; then _pm="yarn"; _build="yarn build"; _test="yarn test"; _build_confirmed=1; _test_confirmed=1
-  elif [[ -f "$PROJ/pnpm-lock.yaml" ]]; then _pm="pnpm"; _build="pnpm build"; _test="pnpm test"; _build_confirmed=1; _test_confirmed=1
+  if [[ -f "$PROJ/yarn.lock" ]]; then _pm="yarn"; _build="yarn build"; _test="yarn test"
+  elif [[ -f "$PROJ/pnpm-lock.yaml" ]]; then _pm="pnpm"; _build="pnpm build"; _test="pnpm test"
   else _pm="npm"
   # BUILD_CMD 自指防 fork bomb——scripts.build 内再调 npm run build（如 "cd frontend
   # && npm run build" 而 frontend 无独立 package.json）会向上寻包自递归（实测 820 进程）。
@@ -285,9 +285,14 @@ _render_var() { # $1=变量名 $2=模板行
 }
 
 # 渲染单份 conf：读模板，对 ^[A-Z_]+= 行替换，其余行原样
+# Task 2：模板缺失与写出失败 fail-closed——渲染是交付链一环，静默空产出会让
+# create 拿空 conf 继续生成（旧版模板缺失 return 0、写失败不传播、末尾恒 exit 0）。
 _render_conf() { # $1=模板相对路径
   local tpl="$BASE/$1"
-  [[ -f "$tpl" ]] || return 0
+  if [[ ! -f "$tpl" ]]; then
+    echo "✗ conf-render: 模板缺失: $tpl" >&2
+    return 1
+  fi
   local line vn
   while IFS= read -r line; do
     if [[ "$line" =~ ^[A-Z_]+= ]]; then
@@ -303,14 +308,17 @@ _render_conf() { # $1=模板相对路径
 # 输出：--out 模式每文件独立落盘；stdout 模式加分隔头合并
 _emit_section() { # $1=文件名 $2=内容
   if [[ -n "$OUT" ]]; then
-    printf '%s\n' "$2" > "$OUT/$1"
+    if ! printf '%s\n' "$2" > "$OUT/$1"; then
+      echo "✗ conf-render: 写出失败: $OUT/$1" >&2
+      exit 1
+    fi
   else
     printf '# ===== %s =====\n' "$1"
     printf '%s\n' "$2"
   fi
 }
 
-core=$(_render_conf "assets/precheck.conf")
+core=$(_render_conf "assets/precheck.conf") || exit 1
 # lite profile：不含 arch/compliance 兄弟文件，剔除 core 模板里「描述兄弟文件」的纯注释行。
 # 注意：保留 `[[ -f ... ]] && source ... || true` 功能行——lite 无兄弟时它是 no-op（|| true），
 # 且未来手动补 arch.conf 时能自动加载（升级路径与 standard/compliance 一致）。
@@ -367,7 +375,7 @@ fi
 _emit_section "precheck.conf" "$core"
 
 if [[ "$PROFILE" == "standard" || "$PROFILE" == "compliance" ]]; then
-  arch=$(_render_conf "assets/precheck.arch.conf")
+  arch=$(_render_conf "assets/precheck.arch.conf") || exit 1
   # arch.conf 模板把 79 框架的全部变量行（51+）整份渲染进
   # 骨架，与懒生成约定（骨架期只留激活框架变量）断裂——ACTIVE_FRAMEWORKS 只激活 N 个，
   # 骨架却带 51 个框架变量行（C 维死变量扫描 53 个实锤：48 个非激活框架占位 + 注释死变量）。
@@ -397,7 +405,7 @@ if [[ "$PROFILE" == "standard" || "$PROFILE" == "compliance" ]]; then
 fi
 
 if [[ "$PROFILE" == "compliance" ]]; then
-  comp=$(_render_conf "assets/precheck.compliance.conf")
+  comp=$(_render_conf "assets/precheck.compliance.conf") || exit 1
   _emit_section "precheck.compliance.conf" "$comp"
 fi
 
@@ -420,7 +428,10 @@ todo='# ===== # TODO:model 清单（须模型补实值）=====
 # （STORE_DIR / COMPONENT_DIR 为单目录标量，保留模板 "" 形态不列入数组 TODO 清单）
 # （标注 deprecated 的变量不列本清单——恢复时手工解开 arch.conf 对应注释行）'
 if [[ -n "$OUT" ]]; then
-  printf '%s\n' "$todo" > "$OUT/TODO-model.txt"
+  if ! printf '%s\n' "$todo" > "$OUT/TODO-model.txt"; then
+    echo "✗ conf-render: 写出失败: $OUT/TODO-model.txt" >&2
+    exit 1
+  fi
 else
   printf '%s\n' "$todo"
 fi

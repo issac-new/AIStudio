@@ -150,3 +150,25 @@ grep -q '^FACT_SPEC_WRITE_HOOK_HOSTS=3' assets/facts.conf && ok "5d 写时强拦
 
 if [[ $FAIL -eq 0 ]]; then echo "test-r101-spec-first-universal: PASS"; else echo "test-r101-spec-first-universal: FAIL" >&2; fi
 exit $FAIL
+
+# R101-D8b（挂账清偿批）：WRITABLE_DIRS 多层可见性——patch 覆盖层对 L1/L2 生效（末层胜出）
+_multi_test() {
+  local d="$1" 
+  printf '. "%s/lib.sh"
+wd="$(spf_writable_dirs "%s/conf")"
+[[ "$wd" == "docs extra" ]] && echo MULTI-OK || echo "wd=[$wd]"
+' "$d" "$d" > "$d/t.sh"
+  bash "$d/t.sh"
+}
+_mw="$(mktemp -d "${TMPDIR:-/tmp}/spf-multi.XXXXXX")"
+mkdir -p "$_mw"
+cp "$(dirname "$0")/../assets/spec-first-lib.sh" "$_mw/lib.sh"
+printf 'WRITABLE_DIRS=("src")
+' > "$_mw/conf"
+printf 'WRITABLE_DIRS=("docs" "extra")
+' > "$_mw/patch.tmp"
+# patch 层文件名须为 precheck.patch.conf（spf_writable_dirs 按层文件名扫描）
+mv "$_mw/patch.tmp" "$_mw/precheck.patch.conf"
+_out="$(_multi_test "$_mw")"
+[[ "$_out" == "MULTI-OK" ]] && echo "  ✓ WRITABLE_DIRS patch 层覆盖对 hook 判定库可见（末层胜出）" || echo "  ✗ 多层可见性失败: $_out"
+rm -rf "$_mw"

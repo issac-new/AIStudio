@@ -1974,7 +1974,7 @@ check_compliance() {
     fi
     [[ -z "$_bad_fmt" && -z "$_bad_conf" ]] && pass "标准映射表核验通过（${_smap}）"
   fi
-  [[ $found -eq 0 ]] && pass "标准合规矩阵校验通过（锚点齐备，无占位符）"
+  [[ $found -eq 0 ]] && { pass "标准合规矩阵校验通过（锚点齐备，无占位符）"; return 0; }
 }
 # gate: sbom
 # domain: security / enforce: strict / tier: compliance
@@ -2556,7 +2556,7 @@ check_dengbao() {
     # MAC 强制访问控制（9.1.4.2）：OS/DB 层
     warn "gate_dengbao4_mac: 等保四级 9.1.4.2 强制访问控制（MAC）是 OS/DB 层——人工核对 MAC 策略配置"
   fi
-  [[ $found -eq 0 ]] && pass "等保 ${level} 级控制点映射检查通过（GB/T 22239-2019）"
+  [[ $found -eq 0 ]] && { pass "等保 ${level} 级控制点映射检查通过（GB/T 22239-2019）"; return 0; }
 }
 # gate: pia
 # domain: compliance / enforce: strict / tier: compliance
@@ -2637,7 +2637,7 @@ $(printf '%s\n' "$_tbd" | head -5 | sed 's/^/    /')"
       grep -qF "$_base" "$_inv" 2>/dev/null || warn "处理活动清单（${_inv}）未引用 PRIVACY_SCAN_DIRS 目录：${d}——请核对登记完整性"
     done
   fi
-  [[ $found -eq 0 ]] && pass "PIA 检查通过（评估文档+处理活动清单齐备，零待定项）"
+  [[ $found -eq 0 ]] && { pass "PIA 检查通过（评估文档+处理活动清单齐备，零待定项）"; return 0; }
 }
 # gate: sast-deep
 # domain: security / enforce: strict / tier: compliance
@@ -2869,7 +2869,7 @@ check_oss_eval() {
       fi
     done
   fi
-  [[ $found -eq 0 ]] && pass "开源代码安全评价通过（成分清单在案，许可证未命中块名单）"
+  [[ $found -eq 0 ]] && { pass "开源代码安全评价通过（成分清单在案，许可证未命中块名单）"; return 0; }
 }
 # gate: quality-model
 # domain: compliance / enforce: strict / tier: compliance
@@ -2911,7 +2911,7 @@ check_quality_model() {
 $(printf '%s\n' "$_tbd" | head -5 | sed 's/^/    /')"
     found=1
   fi
-  [[ $found -eq 0 ]] && pass "质量特性剪裁核验通过（八特性+Safety 齐备，零待定项）"
+  [[ $found -eq 0 ]] && { pass "质量特性剪裁核验通过（八特性+Safety 齐备，零待定项）"; return 0; }
 }
 # gate: test-evidence
 # domain: compliance / enforce: strict / tier: compliance
@@ -2965,7 +2965,7 @@ check_test_evidence() {
 $(printf '%s\n' "$_tbd" | head -5 | sed 's/^/    /')"
     found=1
   fi
-  [[ $found -eq 0 ]] && pass "测试证据链检查通过（计划+说明+报告齐备，含准出结论，零待定项）"
+  [[ $found -eq 0 ]] && { pass "测试证据链检查通过（计划+说明+报告齐备，含准出结论，零待定项）"; return 0; }
 }
 # gate: review-record
 # domain: quality / enforce: strict / tier: compliance
@@ -3019,7 +3019,7 @@ check_review_record() {
     _hr=$(find "$dir" -type f -exec grep -lE '人工复核|human.*(review|verify)|人工审查' {} \; 2>/dev/null | head -1 || true)
     [[ -z "$_hr" ]] && warn "未见人工复核记录（AI_DISCLOSURE_REQUIRED=1 建议留存人工复核签字）"
   fi
-  [[ $found -eq 0 ]] && pass "评审记录检查通过（评审人/日期/结论齐备，零待定项）"
+  [[ $found -eq 0 ]] && { pass "评审记录检查通过（评审人/日期/结论齐备，零待定项）"; return 0; }
 }
 # gate: release-sign
 # domain: compliance / enforce: strict / tier: compliance
@@ -3168,5 +3168,5 @@ check_loop_oracle() {
     fi
   fi
 
-  [[ $found -eq 0 ]] && pass "Oracle Gate 循环状态核验通过"
+  [[ $found -eq 0 ]] && { pass "Oracle Gate 循环状态核验通过"; return 0; }
 }

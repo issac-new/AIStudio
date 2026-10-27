@@ -30,7 +30,17 @@ for rel in \
   verifier/v1/acceptance-criteria.md; do
   require_file "$rel"
 done
-for script in "$SWARM_YUAN_HOME"/verifier/v1/*.sh; do
+# 超报告恢复的 verifier 顶层与 v2 资产同属验证面，缺件即布局回退。
+for rel in \
+  verifier/README.md \
+  verifier/capture-baseline.sh \
+  verifier/v2/run-v2.sh \
+  verifier/v2/external-validity.md; do
+  require_file "$rel"
+done
+for script in "$SWARM_YUAN_HOME"/verifier/*.sh \
+              "$SWARM_YUAN_HOME"/verifier/v1/*.sh \
+              "$SWARM_YUAN_HOME"/verifier/v2/*.sh; do
   [[ -f "$script" ]] || continue
   if bash -n "$script"; then ok "$(basename "$script") 语法可读"; else bad "$(basename "$script") 语法错误"; fi
 done

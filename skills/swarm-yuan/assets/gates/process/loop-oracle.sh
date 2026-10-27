@@ -52,5 +52,5 @@ check_loop_oracle() {
     fi
   fi
 
-  [[ $found -eq 0 ]] && pass "Oracle Gate 循环状态核验通过"
+  [[ $found -eq 0 ]] && { pass "Oracle Gate 循环状态核验通过"; return 0; }
 }

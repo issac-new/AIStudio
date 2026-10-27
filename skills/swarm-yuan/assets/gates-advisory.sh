@@ -1281,7 +1281,7 @@ check_metrics() {
     fail "gate_metrics_trend_declining: strict 门禁通过率趋势恶化：${_declining}（窗口 ${window} 次；GB/T 25000.30 度量反馈——质量退化信号，须排查根因）"
     found=1
   fi
-  [[ $found -eq 0 ]] && pass "度量趋势检查通过（strict 门禁通过率无恶化，窗口 ${window} 次）"
+  [[ $found -eq 0 ]] && { pass "度量趋势检查通过（strict 门禁通过率无恶化，窗口 ${window} 次）"; return 0; }
 }
 # gate: method-size
 # domain: architecture / enforce: advisory / tier: arch
@@ -1725,7 +1725,7 @@ $(printf '%b\n' "$suspicious_files" | head -5 | sed 's/^/    /')"
     warn "Skills 目录有 ${total_skills} 个 skill 但仅 ${upstream_count} 个有 UPSTREAM.md/LICENSE——供应链溯源不完整"
     found=1
   fi
-  [[ $found -eq 0 ]] && pass "Skill 供应链安全审计通过（无恶意模式，溯源登记完整）"
+  [[ $found -eq 0 ]] && { pass "Skill 供应链安全审计通过（无恶意模式，溯源登记完整）"; return 0; }
 }
 # gate: state-phase
 # domain: process / enforce: advisory / tier: full_tail

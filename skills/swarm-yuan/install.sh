@@ -100,7 +100,6 @@ find_external_symlinks() {
     base="$(basename "$item")"
     case "$base" in
       research|.swarm-yuan|offline-cache|ci|vendor-knowledge|dist) continue ;;
-      verifier|CLAUDE.md|CONTRIBUTING.md|.gitattributes) continue ;;
     esac
     while IFS= read -r p; do
       [[ -n "$p" ]] || continue
@@ -341,7 +340,8 @@ install_to() {
     return 0
   fi
 
-  # 目标已是符号链接（如由技能管理器统一维护的部署）：不穿透、不破坏链接——跳过拷贝并显式提示。
+  # 目标已是符号链接（如由技能管理器统一维护的部署）：不穿透、不破坏链接——
+  # 返回独立结果码 3（未变更外部链接），绝不报告「已安装」。
   # 实体安装请先移除该链接，或由管理方在链接源头更新。
   if [[ -L "$dest" ]]; then
     echo "  ⚠ ${dest} 是符号链接（疑似由技能管理器维护）——保持未变更（rc=3）；如需实体安装请先移除该链接"
@@ -365,28 +365,38 @@ install_to() {
     mv "$dest" "$_bak"
   fi
 
-  # 复制（逐项 cp -R 覆盖隐藏文件，三平台兼容，无需 tar --exclude）
-  # 分发边界：以下项是仓库本地过程产物或生成器侧资产，不进入安装产物——
+  # staging→验证→发布：先复制到同目录暂存区，验证非空后原子发布；任一步失败恢复备份。
+  # 分发边界：以下四项是仓库本地过程产物，不进入安装产物——
   #   research/（上游调研原料，未跟踪入仓）、.swarm-yuan/（生成器自身运行留痕）、
   #   offline-cache/（历史遗留缓存，未跟踪入仓，溯源已迁 release 源码包体系）、
   #   ci/（生成器仓 CI 自举配置，仅 repo 布局消费——R102 补排除：self-check G4 的
-  #   「安装态无 ci/ 静默跳过」假设因未排除而失效，部署副本被 CI 三档对账误伤）、
-  #   verifier/（独立验证器，生成器侧司法层）、CLAUDE.md/CONTRIBUTING.md/.gitattributes
-  #   （仓库级治理与换行规则，目标技能不消费）
-  mkdir -p "$skill_dir" "$dest"
+  #   「安装态无 ci/ 静默跳过」假设因未排除而失效，部署副本被 CI 三档对账误伤）
+  local _stage; _stage="${dest}.staging.$$"
+  rm -rf "$_stage" 2>/dev/null || true
+  mkdir -p "$_stage"
   local item _item_base
   for item in "$SRC_DIR"/* "$SRC_DIR"/.[!.]* "$SRC_DIR"/..?*; do
     [[ -e "$item" ]] || continue
     _item_base="$(basename "$item")"
     case "$_item_base" in
       research|.swarm-yuan|offline-cache|ci|vendor-knowledge|dist) continue ;;
-      verifier|CLAUDE.md|CONTRIBUTING.md|.gitattributes) continue ;;
     esac
     # -P = 不解引用符号链接（GNU/BSD 均支持；外指链接已在前面拒绝）。源树内链接原样复制。
-    cp -R -P "$item" "$dest/"
+    cp -R -P "$item" "$_stage/" || { echo "  ✗ 复制到暂存区失败: $_stage" >&2; rm -rf "$_stage"; return 1; }
   done
-  rm -rf "$dest/docs" "$dest/.upgrade-backup-"* "$dest/.git" "$dest/.DS_Store" 2>/dev/null || true
-  find "$dest" -name '.DS_Store' -delete 2>/dev/null || true
+  rm -rf "$_stage/docs" "$_stage/.upgrade-backup-"* "$_stage/.git" "$_stage/.DS_Store" 2>/dev/null || true
+  find "$_stage" -name '.DS_Store' -delete 2>/dev/null || true
+  # 验证：暂存区须含 SKILL.md（空/半成品在此拦截，不发布）
+  if [[ ! -f "$_stage/SKILL.md" ]]; then
+    echo "  ✗ 暂存区缺少 SKILL.md（源树不完整？）——放弃发布，保留既有安装" >&2
+    rm -rf "$_stage"; return 1
+  fi
+  if ! mv "$_stage" "$dest"; then
+    echo "  ✗ 发布失败（mv 暂存区 → 目标）" >&2
+    rm -rf "$_stage"
+    [[ -d "$_bak" ]] && mv "$_bak" "$dest" && echo "  ↩ 已恢复备份" >&2
+    return 1
+  fi
   # R118 ⑤：只对普通文件 chmod——`chmod +x links/*.sh` 会跟随符号链接改到链接目标（可能源树外）。
   local _chmod_dir
   for _chmod_dir in "$dest/scripts" "$dest/assets" "$dest/assets/tool-adapters"; do

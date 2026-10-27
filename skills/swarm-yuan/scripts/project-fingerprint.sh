@@ -97,7 +97,8 @@ if [[ "$WRITE" -eq 1 ]]; then
   # 真实的项目重构场景由 --force 显式覆盖（UserChallenge 类决策，须决策落痕）。
   if [[ -f "$FP_FILE" && "$FORCE" -ne 1 ]]; then
     _old_total=$(LC_ALL=C sed -n 's/^total=\([0-9]*\).*/\1/p' "$FP_FILE" | head -1)
-    _new_total=$( _compute_fp "$PROJ" | LC_ALL=C sed -n 's/^total=\([0-9]*\).*/\1/p' | head -1 )
+    _new_fp_cached="$( _compute_fp "$PROJ" )"
+    _new_total=$( printf '%s\n' "$_new_fp_cached" | LC_ALL=C sed -n 's/^total=\([0-9]*\).*/\1/p' | head -1 )
     _old_total="${_old_total:-0}"; _new_total="${_new_total:-0}"
     # R126：new_total=0 必须触发红线——旧版守卫要求双正，项目被清空/git 切换中段/
     # find 失败（2>/dev/null 吞错）这种最恶劣的「骤降 100%」反而放行写新基线。
@@ -120,7 +121,16 @@ if [[ "$WRITE" -eq 1 ]]; then
     fi
   fi
   mkdir -p "$PROJ/.swarm-yuan"
-  _compute_fp "$PROJ" > "$FP_FILE"
+  # 单次计算 + 原子发布：守卫段已算过 total 时复用，不再二次扫描；
+  # 先写同目录候选再 mv，写中断保留旧基线（last-good 完整性）。
+  # 唯一候选名：并发 --write 互不截断，mv 原子发布（审计 M4）。
+  _fp_cand="$(mktemp "$PROJ/.swarm-yuan/.fingerprint.XXXXXX")"
+  if [[ -n "${_new_fp_cached:-}" ]]; then
+    printf '%s\n' "$_new_fp_cached" > "$_fp_cand"
+  else
+    _compute_fp "$PROJ" > "$_fp_cand"
+  fi
+  mv -f "$_fp_cand" "$FP_FILE"
   echo "✓ 已写入指纹: $FP_FILE"
   cat "$FP_FILE" | head -3
   exit 0

@@ -48,8 +48,8 @@ FLAG_FILE="$P/.swarm-yuan/.gate-fail-flag"
 printf 'const x = eval("1+1");\n' > "$P/src/app.js"
 out="$(bash "$P/scripts/precheck.sh" --security 2>&1)"; rc=$?
 [[ $rc -ne 0 ]] && ok "态1 单门禁 fail rc 非 0（实际 ${rc}）" || bad "态1 单门禁 fail rc=${rc}"
-if [[ -f "$FLAG_FILE" ]] && grep -q '不安全动态代码执行' "$FLAG_FILE"; then
-  ok "态1 单门禁 fail 写 flag 且含真实 fail id（内置门禁 id=检出消息本体）"
+if [[ -f "$FLAG_FILE" ]] && grep -q '^gate_security$' "$FLAG_FILE"; then
+  ok "态1 单门禁 fail 写 flag 且含稳定 fail id（gate_security，替代人读消息）"
 else
   bad "态1 flag 未写或缺 id（$(cat "$FLAG_FILE" 2>/dev/null)）"
 fi
@@ -70,8 +70,8 @@ out="$(bash "$P/scripts/precheck.sh" --all 2>&1)"; rc=$?
 # 态4：覆盖式红重写 flag（写侧对称）
 printf 'const x = eval("1+1");\n' > "$P/src/app.js"
 out="$(bash "$P/scripts/precheck.sh" --all 2>&1)"; rc=$?
-[[ $rc -ne 0 && -f "$FLAG_FILE" ]] && grep -q '不安全动态代码执行' "$FLAG_FILE" \
-  && ok "态4 覆盖式红写 flag" || bad "态4 --all fail rc=${rc} flag=$(cat "$FLAG_FILE" 2>/dev/null)"
+[[ $rc -ne 0 && -f "$FLAG_FILE" ]] && grep -q '^gate_security$' "$FLAG_FILE" \
+  && ok "态4 覆盖式红写 flag（稳定 id）" || bad "态4 --all fail rc=${rc} flag=$(cat "$FLAG_FILE" 2>/dev/null)"
 
 # 态5：flag 写入原子性（静态断言：tmp+mv 同目录原子替换，无截断直写）
 grep -q '\.gate-fail-flag\.tmp\.' "$BASE/assets/precheck.sh" \

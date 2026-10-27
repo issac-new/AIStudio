@@ -42,6 +42,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "$PROJ" && -d "$PROJ" ]] || { echo "✗ PROJECT_DIR 缺失或不存在: ${PROJ:-（空）}" >&2; exit 1; }
+# 参数先校验再动输出：非法上限不得覆盖既有边集。
+case "$MAXE" in ''|*[!0-9]*|0) echo "✗ --max-edges 须为正整数: ${MAXE}" >&2; exit 1 ;; esac
 PROJ=$(cd "$PROJ" && pwd)
 if [[ -z "$OUT" ]]; then
   [[ -n "$SKILL_DIR" ]] || { echo "✗ 需 --skill-dir 或 --out 之一" >&2; exit 1; }
@@ -128,8 +130,23 @@ _resolve() { # $1=规范化路径前缀（无扩展名） → stdout 命中路�
   return 1
 }
 
-_emit() { # $1=from $2=to $3=evidence → 追加到 TMPF
-  printf '{"from":"%s","to":"%s","kind":"import","evidence":"%s"}\n' "$1" "$2" "$3" >> "$TMPF"
+_jesc() {  # $1=字符串 → stdout JSON 转义（引号/反斜杠/控制字符）
+  local s="$1" i c out=""
+  for ((i=0; i<${#s}; i++)); do
+    c="${s:$i:1}"
+    case "$c" in
+      '"')  out+='\\"' ;;
+      '\\') out+='\\\\' ;;
+      $'\t') out+='\\t' ;;
+      $'\n') out+='\\n' ;;
+      $'\r') out+='\\r' ;;
+      *)    out+="$c" ;;
+    esac
+  done
+  printf '%s' "$out"
+}
+_emit() { # $1=from $2=to $3=evidence → 追加到 TMPF（路径经 JSON 转义）
+  printf '{"from":"%s","to":"%s","kind":"import","evidence":"%s"}\n' "$(_jesc "$1")" "$(_jesc "$2")" "$(_jesc "$3")" >> "$TMPF"
 }
 
 # Go module 清单（前后端同仓形态 go.mod 在 server/ 等子目录，原单点 "$PROJ/go.mod"
@@ -611,7 +628,10 @@ _n=$(LC_ALL=C grep -c . "$TMPF" 2>/dev/null || true); _n="${_n:-0}"
 if [[ "$_n" -gt "$MAXE" ]]; then
   echo "⚠ 边数 ${_n} 超上限 ${MAXE}，截断（大仓库建议分段提取或提高 --max-edges）" >&2
 fi
-LC_ALL=C sort -t'"' -k4,4 -k8,8 "$TMPF" | LC_ALL=C awk '!seen[$0]++' | LC_ALL=C awk -v max="$MAXE" 'NR <= max' > "$OUT"
+# 原子发布：先落同目录候选再 mv（写中断不破坏既有边集）。
+_out_dir="$(dirname "$OUT")"; mkdir -p "$_out_dir"
+_out_tmp="$(mktemp "${_out_dir}/.relations.jsonl.XXXXXX")"
+LC_ALL=C sort -t'"' -k4,4 -k8,8 "$TMPF" | LC_ALL=C awk '!seen[$0]++' | LC_ALL=C awk -v max="$MAXE" 'NR <= max' > "$_out_tmp" && mv -f "$_out_tmp" "$OUT" || { rm -f "$_out_tmp"; echo "✗ 边集落盘失败，保留旧文件: $OUT" >&2; exit 1; }
 _n_final=$(LC_ALL=C grep -c . "$OUT" 2>/dev/null || true); _n_final="${_n_final:-0}"
 _n_dm=$(grep -c '"kind":"data-mapping"' "$OUT" 2>/dev/null || true); _n_dm="${_n_dm:-0}"
 _n_mb=$(grep -c '"kind":"mapper-binding"' "$OUT" 2>/dev/null || true); _n_mb="${_n_mb:-0}"

@@ -69,5 +69,5 @@ $(printf '%b\n' "$suspicious_files" | head -5 | sed 's/^/    /')"
     warn "Skills 目录有 ${total_skills} 个 skill 但仅 ${upstream_count} 个有 UPSTREAM.md/LICENSE——供应链溯源不完整"
     found=1
   fi
-  [[ $found -eq 0 ]] && pass "Skill 供应链安全审计通过（无恶意模式，溯源登记完整）"
+  [[ $found -eq 0 ]] && { pass "Skill 供应链安全审计通过（无恶意模式，溯源登记完整）"; return 0; }
 }

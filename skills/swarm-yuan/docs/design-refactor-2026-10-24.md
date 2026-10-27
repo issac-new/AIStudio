@@ -1,6 +1,6 @@
 # swarm-yuan 全功能重构设计与优化方案（2026-10-24）
 
-> **定位**：本稿是对当前 R140 系统的全功能复盘、目标设计与重构实施记录。它取代 `docs/design-redesign-2026-10-21.md` 中尚未收口部分作为最新实施口径；系统终态机制以 `swarm-yuan/README.md` 为准（原 `docs/design-terminal.md` 已于 2026-10-26 合并归档），决策全文见 `docs/design-evolution.md` 决策 54。
+> **定位**：本稿是对当前 R140 系统的全功能复盘、目标设计与重构实施记录。它取代 `docs/design-redesign-2026-10-21.md` 中尚未收口部分作为最新实施口径；系统终态机制仍以 `docs/design-terminal.md` 与 `swarm-yuan/README.md` 为准，决策全文见 `docs/design-evolution.md` 决策 54。
 >
 > **证据基线**：main `93d2666`（R140 设计文档同步后）。本稿全部数字在 2026-10-24 当前工作树实测；验证命令见 §五。
 >

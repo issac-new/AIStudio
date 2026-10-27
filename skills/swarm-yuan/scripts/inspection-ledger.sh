@@ -147,16 +147,25 @@ parse_gate_json() {
 }
 
 # 运行 precheck（flags 透传）→ stdout：提取的 json 行（原始输出留档）
+_PRECHECK_RUN_SEQ=0
 run_precheck_json() {
+  # 证据独立化：每次 precheck 运行落独立 precheck-raw.<seq>.log/stderr——
+  # 多次调用（compliance-suite/sensitive/test）不再互相覆盖，证据链完整可溯。
+  _PRECHECK_RUN_SEQ=$((_PRECHECK_RUN_SEQ + 1))
+  local _seq="${_PRECHECK_RUN_SEQ}"
   local raw=""
   local json=""
-  raw="$( cd "$PROJECT_DIR" && bash "$SKILL_DIR/scripts/precheck.sh" "$@" --format json 2>"${OUT_DIR}/precheck-stderr.log" )" || true
-  printf '%s\n' "$raw" > "${OUT_DIR}/precheck-raw.log"
-  if grep -q '已禁用' "${OUT_DIR}/precheck-raw.log" "${OUT_DIR}/precheck-stderr.log" 2>/dev/null; then
-    die "门禁套件被状态门禁禁用（skill 仍为 draft）——完成填充并 --mark-active 后重跑（见 ${OUT_DIR}/precheck-raw.log）"
+  local _flagname="${1}"; _flagname="${_flagname#--}"
+  local _raw_f="${OUT_DIR}/precheck-raw.${_seq}-${_flagname}.log"
+  local _err_f="${OUT_DIR}/precheck-stderr.${_seq}-${_flagname}.log"
+  raw="$( cd "$PROJECT_DIR" && bash "$SKILL_DIR/scripts/precheck.sh" "$@" --format json 2>"$_err_f" )" || true
+  printf '%s\n' "$raw" > "$_raw_f"
+  ln -sf "precheck-raw.${_seq}-${_flagname}.log" "${OUT_DIR}/precheck-raw.log"
+  if grep -q '已禁用' "$_raw_f" "$_err_f" 2>/dev/null; then
+    die "门禁套件被状态门禁禁用（skill 仍为 draft）——完成填充并 --mark-active 后重跑（见 ${_raw_f}）"
   fi
   json="$(printf '%s\n' "$raw" | grep -o '{"version".*' | tail -1)"
-  [[ -n "$json" ]] || die "precheck $* --format json 未产出结构化结果（见 ${OUT_DIR}/precheck-raw.log）——门禁套件执行异常"
+  [[ -n "$json" ]] || die "precheck $* --format json 未产出结构化结果（见 ${_raw_f}）——门禁套件执行异常"
   printf '%s\n' "$json"
 }
 
@@ -247,8 +256,10 @@ do_agent_audit() {
   local d2="人工核查（审批门禁配置）"
   local e1="人工核查（操作日志五字段）"
   if [[ -f "$conf" ]]; then
+    # 脱敏：只落 位置:变量名，不落疑似凭证原值（原值留在 conf，由人核对——台账外发不携带密文）。
     b1_hits="$(grep -nEi '(password|passwd|secret[_a-z0-9-]*|api[_-]?key|access[_-]?key|token) *= *["'"'"'][A-Za-z0-9_./+=-]{12,}["'"'"']' \
-      "$SKILL_DIR"/scripts/*.conf 2>/dev/null | grep -v '（填入\|example\|sample\|xxxx\|CHANGE' || true)"
+      "$SKILL_DIR"/scripts/*.conf 2>/dev/null | grep -v '（填入\|example\|sample\|xxxx\|CHANGE' \
+      | awk -F: '{n=$1; sub(/=.*/,"",$3); print n": 疑似凭证变量 "$3}' || true)"
     b1_n="$(printf '%s\n' "$b1_hits" | grep -c . )" || true
     if [[ "$(grep -c '^WRITABLE_DIRS=(' "$conf" 2>/dev/null || true)" -gt 0 && "$(grep -c 'WRITABLE_DIRS=()$' "$conf" 2>/dev/null || true)" -eq 0 ]]; then
       c4="机检：WRITABLE_DIRS 已配置（边界仍需运行时验证）"

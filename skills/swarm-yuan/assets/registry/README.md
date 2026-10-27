@@ -19,18 +19,6 @@
 - 结构字段（id/path/fn/flag/计数）由初始机械导出；语义字段（`consumer_node`/`conf_vars`/`wiring`/`claim`/`family`）一次校准后，变更须评审。
 - `dist.tsv` 的 `bytes` 只对 `references/` 计量（上下文税）；脚本/资产记 `-`，执行税另计。
 - `claim` 只允许 M0–M4；M2+ 必须有对照证据；M3+ 必须有环境证据指针。
-
-### 证据分级（M0–M4）
-
-| 等级 | 含义 | 准入要求 |
-|---|---|---|
-| M0 | 已登记 | 注册表存在对应行，且有负责人 |
-| M1 | 已接入 | 存在真实消费点，不限于文档描述 |
-| M2 | 双态验证 | 违规与合规样例均通过，违规侧必须检出 |
-| M3 | 环境实证 | 在真实宿主或真实仓库执行通过，附证据指针 |
-| M4 | 持续回归 | 纳入每轮全量回归，失败即判定红 |
-
-等级即对外宣称上限，不得高报；逐项退役候选由 `registry-render.sh --lifecycle` 输出。
 - 不手改派生视图：`assets/facts.generated.conf`、`assets/gates-{strict,warn,advisory}.sh`（WP6 起）、`docs/upstream-baseline.md` 的 `registry:runtimes` 标记块（2026-10-24 起）。
 - `references/capability-map.md` 当前仍为人工维护的策展视图；G25 做双向对账，`--capability-map` 为预留生成入口，尚未接管。
 

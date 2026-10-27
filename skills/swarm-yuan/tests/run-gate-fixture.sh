@@ -105,7 +105,13 @@ run_one() {
   rm -f "$fx/.swarm-yuan/.gate-fail-flag"
   [[ "$ok" -eq 0 ]] || return 1
   if [[ "$expect" == "fail" ]]; then
-    [[ $rc -ne 0 ]] || { echo "  ✗ ${name}：期望退出非 0，实际 ${rc}"; ok=1; }
+    # 业务失败与测试基建异常分流：126/127/2 是命令/参数/解析层失败，
+    # 不能被 violating 侧当成预期业务红灯（否则缺件也假通过）。
+    if [[ $rc -eq 2 || $rc -eq 126 || $rc -eq 127 ]]; then
+      echo "  ✗ ${name}：基础设施异常 rc=${rc}（不是预期业务失败）"; ok=1
+    elif [[ $rc -ne 1 ]]; then
+      echo "  ✗ ${name}：期望业务失败 rc=1，实际 ${rc}"; ok=1
+    fi
   else
     [[ $rc -eq 0 ]] || { echo "  ✗ ${name}：期望退出 0，实际 ${rc}"; ok=1; }
   fi

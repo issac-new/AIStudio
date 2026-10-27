@@ -110,5 +110,5 @@ check_sensitive() {
       fi
     done
   done
-  [[ $found -eq 0 ]] && pass "未发现明显敏感信息"
+  [[ $found -eq 0 ]] && { pass "未发现明显敏感信息"; return 0; }
 }

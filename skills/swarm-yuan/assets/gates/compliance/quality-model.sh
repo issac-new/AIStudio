@@ -38,5 +38,5 @@ check_quality_model() {
 $(printf '%s\n' "$_tbd" | head -5 | sed 's/^/    /')"
     found=1
   fi
-  [[ $found -eq 0 ]] && pass "质量特性剪裁核验通过（八特性+Safety 齐备，零待定项）"
+  [[ $found -eq 0 ]] && { pass "质量特性剪裁核验通过（八特性+Safety 齐备，零待定项）"; return 0; }
 }
