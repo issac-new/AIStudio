@@ -10,7 +10,15 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useSitCounts } from './useSitCounts'
 import { mergeAttention, type AttentionRow, type AttentionInput } from '../adapters/overview'
 
-export function useAttentionRows() {
+export interface UseAttentionRowsOptions {
+  /** 是否把等我队列（waitItems：review 任务/中断运行/fleet 审批）并入注意力面。
+   *  默认 true=全量口径（注意力条/侧栏徽标不变）；Workbench 右栏传 false——
+   *  等我项已在「待我处理」队列节呈现，需关注节不再重复计数（2026-10-27 Task 4）。 */
+  includeWaitItems?: boolean
+}
+
+export function useAttentionRows(options: UseAttentionRowsOptions = {}) {
+  const { includeWaitItems = true } = options
   const workspace = useWorkspaceStore()
   const runsStore = useRunCenterStore()
   const chatStore = useChatStore()
@@ -42,6 +50,7 @@ export function useAttentionRows() {
       if (l.blocked) inputs.push({ id: `loop:${l.id}`, title: l.name, status: 'blocked', priority: 2, kind: 'loop' })
     }
     for (const w of waitItems.value) {
+      if (!includeWaitItems) continue // 局部口径：等我项归决策队列节，不重复进注意力
       const kind: AttentionInput['kind'] = w.id.startsWith('task:') ? 'task' : w.id.startsWith('run:') ? 'run' : w.id.startsWith('fleet:') ? 'fleet' : 'task'
       inputs.push({ id: w.id, title: w.title, status: w.kind === 'task-review' ? 'review' : 'triage', priority: 1, createdAt: w.ts, kind })
     }

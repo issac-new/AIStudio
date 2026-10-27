@@ -90,11 +90,15 @@ const activeStagePage = computed(() => /^ia2\.stage[1-6]$/.test(routeName.value)
 /** 阶段行右侧信号（2026-10-26 合一轮）：③④有在办数时计数章色=本阶段桶自身
  *  状态（桶映射=STAGE_BOARD_STATUSES，与阶段页内嵌看板同源）——④桶含 blocked，
  *  有阻塞卡=红、否则有卡=黄；③桶（triage/todo/scheduled/ready）无 blocked 恒黄。
- *  无在办数（①②⑤⑥与空桶③④）保留生命周期状态点。终结徽标口径（阶段页映射）
- *  与状态点口径（生命周期映射）两套映射同行双信号的矛盾形态（③行曾同显
- *  done✓+11 张在办）。 */
-function stageChipStatus(no: 1 | 2 | 3 | 4 | 5 | 6): 'done' | 'current' | 'pending' | 'blocked' {
-  if (navBadge(`stage${no}`) === '') return progress.stageState(no)
+ *  无在办数（①②⑤⑥与空桶③④）保留生命周期状态点。
+ *  2026-10-27 日常阶段语义：dailyStageState 的 done=「已流转」（后续阶段有
+ *  工作）——映射为 flowed 中性 ○，不画绿✓「已完成」（IaSideNavItem 复用
+ *  pending 中性色，无第三套状态色）。 */
+function stageChipStatus(no: 1 | 2 | 3 | 4 | 5 | 6): 'flowed' | 'current' | 'pending' | 'blocked' {
+  if (navBadge(`stage${no}`) === '') {
+    const s = progress.stageState(no)
+    return s === 'done' ? 'flowed' : s
+  }
   if (no === 4) return blockedCount.value > 0 ? 'blocked' : 'current'
   return 'current'
 }
@@ -121,8 +125,8 @@ const stageItems = computed(() => STAGE_META.map((meta) => {
   }
 }))
 
-const stageStatusLabel = (status: 'done' | 'current' | 'pending' | 'blocked'): string =>
-  status === 'done' ? (zh.value ? '已完成' : 'Done')
+const stageStatusLabel = (status: 'flowed' | 'current' | 'pending' | 'blocked'): string =>
+  status === 'flowed' ? (zh.value ? '已流转：后续阶段有工作，本阶段未标记完成' : 'Moved on: work is in later stages')
     : status === 'current' ? (zh.value ? '当前阶段' : 'Current')
       : status === 'blocked' ? (zh.value ? '有阻塞' : 'Blocked')
         : (zh.value ? '未开始' : 'Not started')

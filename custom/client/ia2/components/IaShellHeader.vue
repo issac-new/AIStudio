@@ -119,10 +119,18 @@ const {
 const { sessionRows } = useSessionRows()
 const { approveTask, rejectTask, approveRun, rejectRun, approveFleet, rejectFleet } = useDecisionActions()
 
-/** 原始任务索引（id → {board, task}）：板名/优先级/挂接会话解析用 */
+/** 日常任务索引（id → {board, task}）：板名/优先级/挂接会话解析用。
+ *  Task 2 移交（2026-10-27）：dailyTasks ref 是身份正源；rawTasks 兜底时跳过
+ *  sim 行——同 board 同 taskId 不再被 sim 覆盖，onPanelJumpTask 按 daily 挂接解析。 */
 const rawById = computed(() => {
   const map = new Map<string, { board: string; task: any }>()
-  for (const e of workspace.rawTasks) map.set(e.task.id, e)
+  for (const ref of workspace.dailyTasks ?? []) {
+    if (ref.raw) map.set(ref.taskId, ref.raw)
+  }
+  for (const e of workspace.rawTasks ?? []) {
+    if (e.task?.source === 'sim') continue
+    if (!map.has(e.task.id)) map.set(e.task.id, e)
+  }
   return map
 })
 

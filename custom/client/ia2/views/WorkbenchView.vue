@@ -2,8 +2,9 @@
 <!-- v12 沟通协作工作台（2026-09-19 统一视图）：三栏唯一职责——
      左=工作流导航（会话∪循环统一列表）；中=对象工作区（会话→对话画布；
      循环→运行画布[实时|历史]）；右=任务与决策（等我队列+挂接任务+动态）恒驻。
-     选择态经路由子路径承载（s/chat/:sessionId | s/room/:roomId | l/:loopId），
-     '' 无选择时自动选首个会话（不写 URL，刷新/直达链接不失真）。
+     选择态经路由子路径承载（s/chat/:sessionId | s/room/:roomId），路由是唯一
+     选择来源——'' 无选择时不再隐式选首会话（2026-10-27 Task 4：对象标题区
+     不得出现未选择过的房间/会话名），中栏保持中性空态，flow.select(null)。
      v12.3（2026-09-20 用户裁定）：六态势 chips 迁页头（SitlineBar + 内联面板
      在 IaShellHeader，本视图不再渲染态势行）；行装配/决策动作/态势计数并入
      composables（useSessionRows/useDecisionActions/useSitCounts 单一实现）。
@@ -246,13 +247,12 @@ const routeSel = computed<StreamSelection | null>(() => {
   }
 })
 
-// ── 默认选择与 store 同步（'' 无选择 → 首个会话，不写 URL）──
+// ── 选择与 store 同步（路由是唯一选择来源；无选择=中性空态，select(null)）──
 
-const defaultSel = computed<StreamSelection | null>(() => {
-  const first = sessionRows.value[0]
-  return first ? { kind: first.kind, id: first.id } : null
-})
-const activeSel = computed<StreamSelection | null>(() => routeSel.value ?? defaultSel.value)
+// 2026-10-27 Task 4：撤掉「'' 无选择 → 首个会话」的隐式选择——对象标题区曾
+// 因此显示用户从未打开过的房间名；保留 Task 3 的 wf/loop 分域行为（?wf= 与
+// /app/l/:loopId 均不经本选择轴，中栏分支各自路由驱动）。
+const activeSel = computed<StreamSelection | null>(() => routeSel.value)
 
 watch(activeSel, sel => flow.select(sel), { immediate: true })
 
@@ -333,7 +333,9 @@ const loopActivity = computed<Record<string, LoopActivity>>(() => {
 
 // UX 裁决 B（2026-10-03）：会话受阻/注意力装配统一到 useAttentionRows——
 // 与注意力条（IaGlobalTop）同源同口径，需关注徽标与条上 chip 数不再打架。
-const { attentionRows, sessionAttention } = useAttentionRows()
+// 2026-10-27 Task 4 局部口径：右栏排除已在「待我处理」决策队列的等我项
+// （includeWaitItems:false）；注意力条/侧栏徽标仍走默认全量口径。
+const { attentionRows, sessionAttention } = useAttentionRows({ includeWaitItems: false })
 
 /** 需关注行点击分派：任务→看板预选；运行→运行详情；会话→ide 会话；兜底全局时间线。
  *  统一装配行带 kind——先按 kind 直达，再走历史兜底。
@@ -740,8 +742,10 @@ async function onDeleteGroup(roomId: string): Promise<void> {
             </div>
           </template>
           <template v-else>
-            <p class="wb__canvas-ph-tit">未选择会话或循环</p>
-            <p class="wb__canvas-ph-sub">从左侧选择一个会话 / 循环开始工作；归档或无内容的条目也会落到这里。</p>
+            <!-- 中性空态（2026-10-27 Task 4）：无路由选择时不假装选中任何对象，
+                 标题区不带房间/会话名，只给中性说明与出路。 -->
+            <p class="wb__canvas-ph-tit" data-testid="wb-canvas-empty-title">未选择对象</p>
+            <p class="wb__canvas-ph-sub">从左侧选择会话、房间或工作流开始；没有合适条目时，也可以直接打开看板处理任务。</p>
             <div class="wb__canvas-ph-acts">
               <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-board" @click="router.push({ name: 'ia2.board' })">打开看板</button>
               <button type="button" class="wb__canvas-ph-btn" data-testid="wb-canvas-ph-tasks" @click="router.push({ name: 'ia2.board', query: { tab: 'board' } })">查看任务</button>

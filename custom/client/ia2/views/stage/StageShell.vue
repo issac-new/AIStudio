@@ -49,8 +49,10 @@ const tabs = computed(() => STAGE_TABS[props.stage])
 const activeTab = computed(() => resolveTab(props.stage, route.query.tab))
 const currentTab = computed(() => tabMeta(props.stage, activeTab.value) ?? tabs.value[0])
 
+// 2026-10-27 日常阶段语义：done=「已流转」（后续阶段已有工作），非已完成——
+// 阶段页不画绿✓/「已完成」，中性呈现（样式同 pending）。
 const STATE_LABEL = {
-  done: { zh: '本阶段完成', en: 'Stage complete' },
+  done: { zh: '已流转', en: 'Moved on' },
   current: { zh: '当前阶段', en: 'Current stage' },
   blocked: { zh: '有阻塞', en: 'Blocked' },
   pending: { zh: '未开始', en: 'Not started' },
@@ -304,11 +306,7 @@ const currentProps = computed(() => {
   font-size: 15px; font-weight: 700; color: var(--text-muted); flex-shrink: 0;
   background: var(--bg-card);
 }
-.stg__no--done {
-  color: var(--ia-fresh);
-  border-color: color-mix(in srgb, var(--ia-fresh) 40%, var(--border-color));
-  background: color-mix(in srgb, var(--ia-fresh) 9%, transparent);
-}
+/* 已流转（done）：中性呈现——回落 .stg__no 默认灰样式，不画绿/黄 */
 .stg__no--current {
   color: var(--ia-stale);
   border-color: color-mix(in srgb, var(--ia-stale) 40%, var(--border-color));
@@ -321,9 +319,6 @@ const currentProps = computed(() => {
   padding: 2px 9px; border-radius: 999px;
   background: var(--bg-secondary); color: var(--text-muted);
   font-size: 11px; font-weight: 500; white-space: nowrap;
-}
-.stg__no--done ~ .stg__heading .stg__state {
-  color: var(--ia-fresh); background: color-mix(in srgb, var(--ia-fresh) 12%, transparent);
 }
 .stg__no--current ~ .stg__heading .stg__state {
   color: var(--ia-stale); background: color-mix(in srgb, var(--ia-stale) 12%, transparent);

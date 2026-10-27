@@ -16,8 +16,10 @@ const props = withDefaults(defineProps<{
   /** 右侧数字徽标（如审批待办数） */
   badge?: number | string
   /** 右侧状态点（流程组）：红黄绿交通灯（2026-10-22 用户裁定，二轮去棕改灯胆）——
-   *  绿✓=已完成、黄灯胆=进行中、红灯胆=有阻塞、灰○=未开始 */
-  status?: 'done' | 'current' | 'pending' | 'blocked'
+   *  绿✓=已完成（真完成信号）、黄灯胆=进行中、红灯胆=有阻塞、灰○=未开始；
+   *  flowed=已流转（2026-10-27 日常阶段语义：后续阶段有工作，非已完成）——
+   *  呈现复用 pending 的中性灰○，不画绿✓、不新增第三套状态色 */
+  status?: 'done' | 'current' | 'pending' | 'blocked' | 'flowed'
   /** 状态点的可访问说明（随语言） */
   statusLabel?: string
   active?: boolean
@@ -45,14 +47,15 @@ const badgeText = computed(() => {
 
 const statusGlyph = computed(() => {
   if (props.status === 'done') return '✓'
-  if (props.status === 'pending') return '○'
+  if (props.status === 'pending' || props.status === 'flowed') return '○'
   // current/blocked＝实心灯胆：视觉由 CSS 提供（文字型黄色在浅底无合格对比度）
   return ''
 })
 const statusTone = computed(() =>
   props.status === 'done' ? 'done'
     : props.status === 'current' ? 'current'
-      : props.status === 'blocked' ? 'blocked' : 'pending')
+      : props.status === 'blocked' ? 'blocked'
+        : props.status === 'flowed' ? 'flowed' : 'pending')
 </script>
 
 <template>
@@ -211,6 +214,9 @@ const statusTone = computed(() =>
 .isn-item__pill--current { background: color-mix(in srgb, var(--ia-warn-lamp) 18%, transparent); color: var(--text-primary); }
 .isn-item__pill--current .isn-item__pill-lamp { background: var(--ia-warn-lamp); box-shadow: inset 0 0 0 1px rgba(66, 44, 0, 0.35); }
 .isn-item__pill--done { background: color-mix(in srgb, var(--ia-fresh) 14%, transparent); color: var(--ia-fresh); }
+/* 已流转章：中性呈现（复用边框/次级文本 token，不造第三套状态色）——
+   仅防御性兜底：计数章只出现在③④（有在办=current/blocked），flowed 日常不与计数同现 */
+.isn-item__pill--flowed { background: var(--bg-secondary); color: var(--text-secondary); }
 /* 交通灯（2026-10-22 用户两轮裁定：红黄绿＋「不要棕色」）：绿✓=完成（文本色，
    合格对比度）；黄/红＝实心圆灯胆（灯胆 token 单一源 ia2.scss，不随主题反转——
    自发光图形；内描环保证浅底可见）。黄色作文本色在浅底无 ≥4.5:1 合格值，
@@ -224,5 +230,6 @@ const statusTone = computed(() =>
 }
 .isn-item__status--current { background: var(--ia-warn-lamp); box-shadow: inset 0 0 0 1px rgba(66, 44, 0, 0.35); }
 .isn-item__status--blocked { background: var(--ia-fail-lamp); box-shadow: inset 0 0 0 1px rgba(82, 0, 0, 0.28); }
-.isn-item__status--pending { color: var(--text-muted); }
+.isn-item__status--pending,
+.isn-item__status--flowed { color: var(--text-muted); }
 </style>

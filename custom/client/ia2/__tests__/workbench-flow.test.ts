@@ -395,17 +395,23 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     return { wrapper, router }
   }
 
-  it('默认选择=最近活动会话（房间 rank 领先）→ flow store 同步；挂接/未读/duty 团队徽章', async () => {
-    const { wrapper } = await mountAt('/app')
+  it('无路由选择=中性空态（不隐式选首会话）；路由选中后 flow store 同步；挂接/未读/duty 团队徽章', async () => {
+    // 2026-10-27 Task 4：路由是唯一选择来源——'' 不再隐式选首会话
+    // （对象标题区曾显示用户从未打开过的房间名）。
+    const { wrapper, router } = await mountAt('/app')
     const flow = useFlowStore()
-    // 房间 rank = now - i*1000（now ≈ Date.now() ≫ 会话 updatedAt 3000），首房间居首
-    expect(flow.selected).toEqual({ kind: 'room', id: '!r1:host' })
-    // 挂接徽章：!r1 关联 t-402（tenant 六段式 roomId 段）
+    expect(flow.selected).toBeNull()
+    expect(wrapper.find('[data-testid="wb-canvas-none"]').exists()).toBe(true)
+    // 徽章与选择无关：房间 rank = now - i*1000（now ≈ Date.now() ≫ 会话 updatedAt 3000），首房间居首
     const row = wrapper.find('[data-testid="flow-session-!r1:host"]')
     expect(row.text()).toContain('📋1')
     expect(row.find('.flow-nav__unr').text()).toBe('2')
     // duty 团队标签：!r2 的值守 TL(@tl:host) → 其 agentTeam slug swarm
     expect(wrapper.find('[data-testid="flow-session-!r2:host"]').text()).toContain('swarm')
+    // 路由选中（同序首房间）→ flow store 同步
+    await router.push({ name: 'ia2.commsRoom', params: { roomId: '!r1:host' } })
+    await flushPromises()
+    expect(flow.selected).toEqual({ kind: 'room', id: '!r1:host' })
   })
 
   it('点击会话/循环行 → 路由子路径；循环行落运行详情（V5 ⑤ M6：画布并入详情页）', async () => {
@@ -611,8 +617,9 @@ describe('WorkbenchView — 右栏任务与决策（Task 5）', () => {
   })
 
   it('挂接任务随会话选择变化：tenant 挂接；改派开抽屉；⌨跳 IDE（V5 ⑤ M6：循环挂接迁运行详情页）', async () => {
-    const { wrapper, router } = await mountTdp('/app')
-    // 默认选择 !r1 → t-402（tenant 六段式挂接）；t-415 不在
+    // 2026-10-27 Task 4：无隐式默认选择——挂接任务断言须落在路由选中的房间上
+    const { wrapper, router } = await mountTdp('/app/s/room/!r1:host')
+    // 路由选中 !r1 → t-402（tenant 六段式挂接）；t-415 不在
     expect(wrapper.find('[data-testid="tdp-task-t-402"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="tdp-task-t-415"]').exists()).toBe(false)
     // 五轮 H：循环行点击已改道工作流详情（旧 runDetail 迁移断言退役）
