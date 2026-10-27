@@ -23,10 +23,21 @@
 
 ## 验证
 
-- 台账批：gongwen-lint.py 机械体检通过；条目证据锚点抽查可解析（file:line 实在）。
-- 升级批（若触发）：`npm run inject` 全量重放 studio 零 FAILED＋agent/zcode 零 WARN；`npm run typecheck:harness`；pytest 拼合树（vendor 补丁版＋runtime 覆盖层）；vitest 全量与基线背靠背；8647 /health 200 且 webui_version 对齐＋8649 走查；release:check；zcode 另跑 catalog-check --refresh＋8 条活跃补丁与 5 条 pnpm patch 逐条核对。
-- 吸收/挂账批：每项目标 vitest（`npx vitest run <path>`）＋typecheck:harness；合并前 `npm test` 全量；涉 UI 面浏览器实物走查；新服务端模块并入 typecheck 点名清单；总闸默认关旋钮配守卫测试（先例 HERMES_TOOL_ENFORCE）。
+- 台账批：gongwen-lint 机械体检——散文段清零；余 24 处硬违规全部位于表格单元格并列枚举（linter 自注「并列小标题的分号是合法格式」豁免类），如实声明。条目证据锚点抽查可解析（file:line 实在）。
+- 升级批（未触发，见 D8）：三棵树均无新稳定 tag——hermes-studio 最新 tag＝所钉 v0.7.39（main 领先 28 未发版提交）、hermes-agent 最新稳定＝v0.22.5（GitHub Latest 交叉确认，其后仅每日 canary，main 领先 1852 提交）、zcode 与 origin/main 持平。未发版移动已做主题级预研入台账 §2。
+- 挂账清偿批（四项落地）：
+  - callgate 执法接线：`npx vitest run custom/server/callgate` = 21/21（新增 callgate-hook 11 例：总闸默认零行为/限流/熔断/mcp 分键/fail-open/REST 校验）。
+  - taskledger 接线：`npx vitest run custom/server/taskledger custom/server/kanban custom/server/zcode custom/server/services` = 121/121（新增 mention 映射 1 例；dispatch-lane 走查确认登记在途）。
+  - 红队 S1：`npx vitest run custom/server/redteam custom/server/eval/__tests__/eval-baidu-http.test.ts` = 30/30（新增 redteam-s1 6 例；既有断言随 s1Wired=true 口径更新）。
+  - A2A 看板归属：`npx vitest run custom/server/a2a custom/server/harness/__tests__` = 89/89（新增 board-ownership 6 例）；真实正本活体投影 9 域验证（node strip-types）。
+- swarm-eval 残余 run（未执行数值 run，如实挂账）：结构面复验 `bash -n mx-scenario-lib.sh` 通过＋`npx vitest run tests/swarm-eval-followup.test.ts tests/swarm-collab-integration.test.ts`（simharness 自有配置）= 15/15。数值 run 需 SIM_ROOT 实例小时级窗口（连续三轮同口径挂账），执行配方入台账 §9 待办 4。
+- 版本核对副产品：upstream/ 参照树 5 棵已推进检出（claude-code v2.1.311、dsh-context v0.77.0、dsh-TUI/kimi-code/multica tip），全部 pristine。
 - 提交门禁：jargon 词表零新增；失败如实报告。
+
+## 决策记录（随批增补）
+
+- D8（批 2 落地裁定，2026-10-27）：三棵基线树 fetch 后均无新稳定发版——升级批条件不触发。用户 D2 裁决的「同批执行升级」按其前提「若发现上游有新版本」理解为新稳定发版；同步到未发版 main tip（agent 1852 提交）违反供应链钉版纪律（2026-10-24 立法：精确 pin、发布版基线），不采纳。两棵树的未发版移动已完成主题级预研（台账 §2），发版即启动升级轮。
+- D9（批 5e 落地裁定）：swarm-eval 数值 run 本轮不执行——需 SIM 实例与模型额度的小时级窗口，与本轮台账/落码主线争抢；结构面复验绿＋配方入台账待办。连续三轮同口径挂账，不静默丢弃。
 
 ## 设计文档影响
 
