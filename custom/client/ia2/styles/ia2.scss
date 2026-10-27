@@ -24,6 +24,10 @@
   --text-muted: #666;
   --text-muted-rgb: 102, 102, 102;
   --ia-border-control: #8a8a8a;
+  /* 推演来源标识色（2026-10-27 跨实例检索批）：紫色系，独立于红/黄/绿状态色 */
+  --ia-sim: #7c3aed;
+  --ia-sim-deep: #6d28d9;
+  --ia-sim-on: #ffffff;
 }
 .dark .ia-shell {
   --text-secondary: #a0a0a0;
