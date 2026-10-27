@@ -91,16 +91,35 @@ describe('发布清单结构', () => {
 })
 
 describe('版本载体对账（真源在 carrier，清单只抄录）', () => {
-  it('cockpit：版本串存在于 RELEASE-NOTES.md 版本节', () => {
+  it('cockpit：版本串存在于 RELEASE-NOTES.md 版本节，且大版本对齐 hermes-studio 底座', () => {
     const m = loadManifest()
     const carrier = readFileSync(join(ROOT, m.modules.cockpit.versionCarrier), 'utf8')
     expect(carrier).toContain(m.modules.cockpit.version)
+    const vendor = readFileSync(join(ROOT, 'vendor/VENDOR.md'), 'utf8')
+    const studio = /hermes-studio \| `[^`]+` \| v?(\d+\.\d+\.\d+)/.exec(vendor)?.[1]
+    const hit = /^(v?\d+\.\d+\.\d+)-studio\.([1-9]\d*)$/.exec(m.modules.cockpit.version)
+    expect(hit?.[1], 'cockpit 须=完整三位底座-studio.N').toBe(studio)
   })
 
-  it('agent-teams：版本串存在于 team/README_zh.md', () => {
+  it('agent-teams：VERSION 真源首行=清单版本，且完整三位底座对齐 hermes-agent（2026-10-27 裁定＋纠正）', () => {
     const m = loadManifest()
-    const carrier = readFileSync(join(ROOT, m.modules['agent-teams'].versionCarrier), 'utf8')
-    expect(carrier).toContain(m.modules['agent-teams'].version)
+    const first = readFileSync(join(ROOT, m.modules['agent-teams'].versionCarrier), 'utf8')
+      .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'))[0]
+    expect(first).toBe(m.modules['agent-teams'].version)
+    const vendor = readFileSync(join(ROOT, 'vendor/VENDOR.md'), 'utf8')
+    const agent = /hermes-agent \| `[^`]+` \| v?(\d+\.\d+\.\d+)/.exec(vendor)?.[1]
+    const hit = /^v(\d+\.\d+\.\d+)-team\.([1-9]\d*)$/.exec(m.modules['agent-teams'].version)
+    expect(hit?.[1], 'agent-teams 须=完整三位底座-team.N').toBe(agent)
+  })
+
+  it('版本漂移负例：篡改 team/VERSION 首行 → release:check 非零（fixture 隔离）', () => {
+    const m = loadManifest()
+    const tmp = mkdtempSync(join(tmpdir(), 'verchk-'))
+    const tampered = join(tmp, 'VERSION')
+    writeFileSync(tampered, 'v9.9.9\n', 'utf8')
+    const r = runCheck({ AIStudio_TestCarrierOverride: JSON.stringify({ [m.modules['agent-teams'].versionCarrier]: tampered }) })
+    expect(r.code).not.toBe(0)
+    expect(r.stdout + r.stderr).toContain('agent-teams')
   })
 
   it('ycode：底座版本=vendor/zcode/package.json 的 version 字段（JSON 真源）', () => {

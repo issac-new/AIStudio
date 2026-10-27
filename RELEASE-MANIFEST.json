@@ -12,7 +12,7 @@
         "simharness/（推演程序）",
         "vendor/hermes-studio（注入态基线源码）"
       ],
-      "version": "2.37",
+      "version": "0.7.39-studio.1",
       "versionCarrier": "RELEASE-NOTES.md",
       "buildCommand": "npm run build:dmg（产物 DMG/zip，desktop 内嵌上游 hermes-agent 运行时）",
       "artifacts": "vendor/hermes-studio/packages/desktop/release/",
@@ -33,7 +33,9 @@
         "vendor/VENDOR.md",
         "docs/USAGE.md",
         "docs/windows-x64-setup.md",
-        "AGENTS.md"
+        "AGENTS.md",
+        "RELEASE-NOTES.md",
+        "RELEASE-MANIFEST.json"
       ],
       "notes": "simharness/ 推演程序仅仓内运行、不随安装包（DMG）分发（用户裁定 2026-10-26）。源码包含 simharness。standalone 注意：patches/series 含 hermes-agent 路由补丁，独立源码包内 npm run inject 需搭配 agent-teams 源码包（或直接用整体包）——如实注记。驾驶舱 2.x 版本号线自 2.37 后未续，待补记轮对账。"
     },
@@ -44,8 +46,8 @@
         "runtime/（agent 运行时定制，manifest 通道部署到 ~/.hermes/hermes-agent）",
         "vendor/hermes-agent（上游基线源码，无法经 pip/npm 安装→随包）"
       ],
-      "version": "v3.3.0",
-      "versionCarrier": "team/README_zh.md",
+      "version": "v0.22.5-team.1",
+      "versionCarrier": "team/VERSION",
       "buildCommand": "team/skills/devops/public-repo-release 六步（白名单圈资产→secret 扫描→rsync 发布仓）",
       "artifacts": "公开 git 仓工作树（issac-new/SwarmTeam 归档态）＋本清单源码包 aistudio-agent-teams-<ver>-src.tar.gz",
       "install": "hermes profile install profiles/<name> --alias -y（Windows 离线见 install-windows.ps1）；runtime/ 经 npm run runtime:register 部署到 ~/.hermes/hermes-agent",
@@ -55,7 +57,7 @@
         "runtime-manifest.json",
         "vendor/hermes-agent/"
       ],
-      "notes": "版本 v3.3.0 为 README 散文载体（2026-10-14 增量），无 semver 真源文件——按裁定不新建，清单抄录。"
+      "notes": "版本方案（2026-10-27 用户裁定＋纠正）：完整底座版本 0.22.5 与 hermes-agent 对齐，`-team.N`=本仓扩展发布序；真源 team/VERSION，README 双语同步；v3.3.0 为旧方案末版。"
     },
     "ycode": {
       "name": "Ycode（zcode 受管分叉，编码引擎）",
@@ -106,5 +108,5 @@
     },
     "checksums": "SHA256SUMS（随 dist/release/ 目录）"
   },
-  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 底座 3.16.2 @3c5b2276——独立坐标系，与模块产品版本不互推）"
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 底座 3.16.2 @3c5b2276——模块大版本对齐基准，与产品扩展序不互推）"
 }

@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（361 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（362 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 完整设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 361 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 362 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -359,6 +359,7 @@
 | 2026-10-26-skill-roots-claude-compat | Ycode 技能根兼容与落点实证 | 补丁 009 加 .claude/skills 兼容根；项目技能落点 .agents/skills 三引擎通吃，软链方案并存 |
 | 2026-10-26-precommit-vendor-guard-restore | pre-commit vendor 挡护还原 | 模板、产物、守门三层同步；自动撤出暂存，VENDOR_SYNC=1 为显式逃生 |
 | 2026-10-26-release-manifest | 四模块发布清单 | RELEASE-MANIFEST+release:check 对账门禁；裁定=单仓清单/推演仅仓内/Ycode 以基线代版本 |
+| 2026-10-27-module-version-scheme | 模块版本对齐底座 | 三位底座＋-ext.N（teams=0.22.5-team.1/cockpit=0.7.39-studio.1）；standalone inject 缺树 SKIP；17 测绿 |
 | 2026-10-27-release-packages | 四模块 4+1 源码包发布 | git archive 打包＋SHA256SUMS；Ycode 版本=底座 3.16.2（JSON 真源）；干净环境安装验证挂账 |
 | 2026-10-26-rebrand-aistudio | 产品品牌统一 AIStudio | 用户可见品牌收敛，安装/协议/路径标识保留；历史文档不改写 |
 | 2026-10-26-shared-exclusion-leaks | _shared 排除面两漏补齐 | 巡检日志尾与能力上报统一滤 `_` 前缀；41 项测试过，上报 50→49 |

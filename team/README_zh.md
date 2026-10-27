@@ -153,6 +153,8 @@ Windows 见 [WINDOWS-INSTALL.md](WINDOWS-INSTALL.md) / [WINDOWS-OFFLINE-INSTALL.
 
 ## 版本
 
+**v0.22.5-team.1** — 2026-10-27 版本方案切换（完整底座版本 0.22.5 与 hermes-agent 对齐，`-team.1` 为本仓扩展发布序，真源 [VERSION](VERSION)；下述 v3.3.0 为旧方案最后一版）
+
 **v3.3.0** — 2026-10-14 增量更新
 
 - 同步 2026-10-14 融合批次：skillguard v1.2.0 供应链规则（SG-013/014/015 + 回环 fixtures）、`llm-redteam` 多轮对抗策略、`_shared` 四文件（hack-tool-registry AIG 登记、hack-knowledge-index 事实库节、output-contract Checklist 核对面、platform-skill-miner 准入门）
