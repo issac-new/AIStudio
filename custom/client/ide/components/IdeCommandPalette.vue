@@ -70,7 +70,9 @@ const NAV_TARGETS: Array<{ key: string; to: { name: string } | { path: string } 
   { key: 'skills', to: { path: '/hermes/skills' } },
   { key: 'logs', to: { name: 'hermes.logs' } },
   { key: 'usage', to: { name: 'hermes.usage' } },
-  { key: 'settings', to: { name: 'hermes.settings' } },
+  // 设置唯一入口=设置目录 ia2.govSettings（Task 7 裁定；hermes.settings 降为
+  // 目录内「通用设置」详情页，2026-10-27 Task 11 统一改指）
+  { key: 'settings', to: { name: 'ia2.govSettings' } },
 ]
 
 /** 命令区：布局开关 + 会话动作 + 导航（全量构建后按 query 过滤） */
@@ -342,20 +344,22 @@ onMounted(() => { void chatStore.loadSessions(chatStore.sessionProfileFilter) })
 
 .ide-palette__section-label {
   padding: 6px 14px 2px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
 
+/* 条目=主要动作面：正文 14px + 40px 命中区（视觉最小集，Task 11） */
 .ide-palette__item {
   display: flex;
   width: 100%;
+  min-height: 40px;
   align-items: center;
   padding: 7px 14px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
   background: transparent;
   border: none;

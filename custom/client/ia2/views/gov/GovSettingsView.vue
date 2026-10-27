@@ -1,12 +1,15 @@
 <!-- overlay/custom/client/ia2/views/gov/GovSettingsView.vue -->
-<!-- 系统设置页（2026-10-18 左侧栏批：原「治理·系统设置」收归管理组）：
-     既有设置页按域分区的导航层（同域同区合并呈现、来源只标注不分隔）；
-     表单本体在各设置页不复制。分区说明常驻；superAdmin 条目对非管理员不可见。 -->
+<!-- 设置目录页（2026-10-18 左侧栏批：原「治理·系统设置」收归管理组；2026-10-27
+     产品一致性 Task 7：顶层 annex 进 IaLegacyShell，与各设置详情同壳）：
+     条目/门控全部由 gov-settings-registry 派生（surface 含 catalog 才进目录），
+     同域同区合并呈现、来源只标注不分隔；表单本体在各设置页不复制。分区说明
+     常驻；superAdmin 条目对非管理员不可见。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { GOV_SETTINGS_DOMAINS, entryVisible, currentSuperAdmin } from './gov-settings-registry'
+import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
+import { GOV_SETTINGS_DOMAINS, entryVisible, onSurface, currentSuperAdmin } from './gov-settings-registry'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,7 +18,7 @@ const superAdmin = currentSuperAdmin()
 const domains = computed(() =>
   GOV_SETTINGS_DOMAINS.map(d => ({
     ...d,
-    entries: d.entries.filter(e => entryVisible(e, router, superAdmin)),
+    entries: d.entries.filter(e => onSurface(e, 'catalog') && entryVisible(e, router, superAdmin)),
   })).filter(d => d.entries.length > 0),
 )
 
@@ -46,6 +49,7 @@ function go(name: string): void {
       <ul class="gs__entries">
         <li v-for="e in d.entries" :key="e.name" class="gs__entry" :data-testid="`gs-entry-${e.name}`">
           <button class="gs__entry-btn" type="button" :class="{ 'gs__entry-btn--active': route.name === e.name }" @click="go(e.name)">
+            <CockpitIcon v-if="e.icon" :name="e.icon" :size="13" />
             <span class="gs__entry-label">{{ e.label }}</span>
             <span v-if="e.superAdmin" class="gs__entry-admin" title="仅管理员可见">管</span>
           </button>

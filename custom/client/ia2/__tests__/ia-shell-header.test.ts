@@ -12,8 +12,9 @@ vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ activeSessionId:
 // 循环/管理）；等我 = useDecisionRows 待我决策（任务及会话）；三栏栏控迁各栏
 // 顶部控制条（页头 IaWindowControls 退役）。
 // 2026-09-30 用户裁定：品牌位「驾驶舱」文案退役，IaViewSwitcher 迁入品牌位
-// （带目标视图图标 code/message + 切换图标 switch）；设置页并入 /app/settings
-//（用户按钮跳 hermes.settings 名不变，经路由并入落壳内）。
+// （带目标视图图标 code/message + 切换图标 switch）；设置页并入 /app/settings。
+// 2026-10-27 产品一致性 Task 7：用户按钮统一跳设置目录 ia2.govSettings
+//（hermes.settings 降为目录内「通用设置」条目）。
 // 重依赖桩化：composables（态势/决策聚合拉 chat/matrix/team 上游链）、
 // IaLocaleToggle（upstream switchLocale）；NotifyDropdownPanel
 // 用真组件——铃铛开合即本文件单测。fetch mock 写法参照 cockpit-topbar-health.test.ts；
@@ -180,19 +181,29 @@ describe('IaShellHeader — 统一壳页头', () => {
   })
 
 
-  it('用户按钮跳 hermes.settings（avatar = userName 首字符）', async () => {
+  it('用户按钮跳设置目录 ia2.govSettings（2026-10-27 Task 7 单一设置入口；avatar = userName 首字符）', async () => {
     const w = await mountHeader()
     const btn = w.find('[data-testid="ia-header-user"]')
     expect(btn.exists()).toBe(true)
     expect(btn.text()).toContain('tester')
     await btn.trigger('click')
-    expect(pushMock).toHaveBeenCalledWith({ name: 'hermes.settings' })
+    expect(pushMock).toHaveBeenCalledWith({ name: 'ia2.govSettings' })
     w.unmount()
   })
 
   it('V5 补遗⑤ S7：Gateway 探测区入口维持摘除（能力保留于 platforms store）', async () => {
     const w = await mountHeader()
     expect(w.find('.cockpit-top__grp').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('全局检索快搜 placeholder 声明覆盖范围（Task 10：与统一弹窗同口径，五类对象＋命令）', async () => {
+    const w = await mountHeader()
+    const input = w.find('[data-testid="ia-header-search-input"]')
+    expect(input.exists()).toBe(true)
+    // 旧文案「搜索 会话/任务/房间」漏运行/文档/人员/命令——顶部输入唤起的正是
+    // 统一弹窗，placeholder 必须如实声明范围
+    expect(input.attributes('placeholder')).toBe('搜索会话、任务、运行、文档、人员或命令…')
     w.unmount()
   })
 

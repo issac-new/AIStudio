@@ -18,6 +18,7 @@ import { join, resolve } from 'path'
 import { ekkoGuardHook } from '../toolresultguard'
 import { retrievalRelevanceHook } from '../toolresultguard/retrieval-relevance'
 import { ekkoEnforceGateHook } from './enforce-gate'
+import { callgateHook } from '../callgate/callgate-hook'
 import { sequenceGuardHook } from './sequence-guard'
 import { skillGuardHook } from '../skillgov/skill-guard-hook'
 import { reportLostSuspensionsOnBoot } from './enforce-approvals'
@@ -312,7 +313,10 @@ const auditHook = {
 // 敏感触碰后窗口内外发面被拒（HERMES_TOOL_SEQUENCE_GUARD=1 才生效）。
 // 检索相关性断言（2026-10-25 数据飞轮 round 2）：排结果围栏后——检索类工具结果
 // 过词面覆盖断言，低覆盖 CONFIRM 留痕不阻断（FLYWHEEL_RETRIEVAL_GUARD=1 才生效）。
-export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), retrievalRelevanceHook(), skillGuardHook(), ekkoEnforceGateHook(), sequenceGuardHook()]
+// 调用闸执法（2026-10-27 wx 挂账 #14 清偿）：preExecute 准入 + postExecute 回执，
+// 排执法门后、序列守卫前——限流/熔断/并发三态按资源分键裁决
+// （HERMES_CALLGATE_ENFORCE=1 才生效；kind llm 不在工具瀑布层，保持观测面）。
+export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), retrievalRelevanceHook(), skillGuardHook(), ekkoEnforceGateHook(), callgateHook(), sequenceGuardHook()]
 
 // H3 中间态（进程面边界缓解）：钩子装配=server 启动面，扫一遍重启遗留挂起单
 // （waitingAt 标记在案→govbus 提醒+清标记；幂等、fail-soft、fire-and-forget）。

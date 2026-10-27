@@ -7,7 +7,10 @@
      v12.5（2026-09-20 用户裁定）：任务行基本信息增强（板/优先级/指派人/创建），
      行点击经装配方跳转关联聊天会话或编码工作空间；在线段改可检索三级级联——
      matrix 账号 → 机器(IP/标题) + kanban 板名 → agent profile 清单。
-     纯展示组件：数据全经 props，动作全 emit，装配方聚合。 -->
+     Task 6（2026-10-27）：在线段主序改 useSitCounts.online.identities（与计数
+     同源）；registry 账号仅在命中在线人身份时进场挂级联（注册≠在线）。
+     纯展示组件：任务段数据全经 props，动作全 emit，装配方聚合；在线段计数
+     与身份直接消费 useSitCounts（同源单一事实源）。 -->
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -145,10 +148,17 @@ interface OnlineTreeRow {
   boards: OnlineNode[]
 }
 
-/** 账号 → {机器(fleet profile 命中), 看板(teams profiles↔boards 与账号 profiles 交集)} */
+/** 在线树（Task 6 计数/明细同源）：主序=useSitCounts.online.identities——与
+ *  态势条「在线 N」出自同一 computed，人/智能体/机器各成行；人身份命中 registry
+ *  账号（mxid 短名或 displayName）时挂既有三级级联（机器+看板+profile chips）。
+ *  旧主序（registry 全量注册账号）退役：注册≠在线，未在线账号不再以在线绿点
+ *  出现在明细里（明细行数与计数来源零割裂；D4「在线 N · 暂无内容」根治收口）。 */
 const onlineTree = computed<OnlineTreeRow[]>(() => {
+  const ids = sitCounts.online.value.identities
   const rows: OnlineTreeRow[] = []
-  for (const a of props.accounts) {
+  const normKey = (s: string): string => stripHomeserver(String(s)).toLowerCase()
+  const usedAccounts = new Set<string>()
+  const cascadeRow = (a: typeof props.accounts[number]): OnlineTreeRow => {
     const profiles: string[] = []
     for (const at of a.agentTeams) for (const p of at.profiles) profiles.push(String(p))
     const profileSet = new Set(profiles)
@@ -170,19 +180,16 @@ const onlineTree = computed<OnlineTreeRow[]>(() => {
         }
         return { key: `b:${b.slug}`, kind: 'board' as const, label: b.name, count: b.open, profiles: [...profs] }
       })
-    rows.push({
-      account: { userId: a.userId, displayName: a.displayName, isLeader: a.isLeader ?? false, profiles },
-      machines, boards,
-    })
+    return { account: { userId: a.userId, displayName: a.displayName, isLeader: a.isLeader ?? false, profiles }, machines, boards }
   }
-  if (rows.length === 0) {
-    // 名册为空而在线计数 >0 时的同源兜底（D4「在线 3 · 暂无内容」割裂根治，2026-10-03
-    // 回归复现）：直接按 useSitCounts.online.identities 建行，列表与计数同源同口径。
-    const ids = sitCounts.online.value.identities
-    for (const p of ids.people) rows.push({ account: { userId: p, displayName: p, isLeader: false, profiles: [] }, machines: [], boards: [] })
-    for (const ag of ids.agents) rows.push({ account: { userId: `agent:${ag}`, displayName: ag, isLeader: false, profiles: [ag] }, machines: [], boards: [] })
-    for (const m of ids.machines) rows.push({ account: { userId: `machine:${m.id}`, displayName: m.label, isLeader: false, profiles: [m.profile] }, machines: [], boards: [] })
+  for (const person of ids.people) {
+    const acct = props.accounts.find(a =>
+      !usedAccounts.has(a.userId) && (normKey(a.userId) === normKey(person) || (!!a.displayName && a.displayName === person)))
+    if (acct) { usedAccounts.add(acct.userId); rows.push(cascadeRow(acct)) }
+    else rows.push({ account: { userId: person, displayName: person, isLeader: false, profiles: [] }, machines: [], boards: [] })
   }
+  for (const ag of ids.agents) rows.push({ account: { userId: `agent:${ag}`, displayName: ag, isLeader: false, profiles: [ag] }, machines: [], boards: [] })
+  for (const m of ids.machines) rows.push({ account: { userId: `machine:${m.id}`, displayName: m.label, isLeader: false, profiles: [m.profile] }, machines: [], boards: [] })
   return rows
 })
 

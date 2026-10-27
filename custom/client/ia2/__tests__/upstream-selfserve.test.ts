@@ -23,10 +23,13 @@ describe('A1 Web 终端收编三段链（routes → VIEW_LOADERS → 侧栏条�
     expect(shell).toContain("'hermes.terminal': () => import('@/views/hermes/TerminalView.vue')")
   })
 
-  it('IaSettingsSidebar 员工导航已移除 terminal（2026-10-20 导航收敛）', () => {
+  it('IaSettingsSidebar 员工导航已移除 terminal（2026-10-20 导航收敛；2026-10-27 Task 7 起侧栏条目派生自注册表）', () => {
     const sidebar = readOverlay('custom/client/ia2/components/IaSettingsSidebar.vue')
     expect(sidebar).not.toContain("name: 'hermes.terminal'")
-    expect(sidebar).toContain("name: 'ia2.govSettings'")
+    // 目录入口随条目表迁入注册表（surface 派生单一事实源）
+    const registry = readOverlay('custom/client/ia2/views/gov/gov-settings-registry.ts')
+    expect(registry).toContain("name: 'ia2.govSettings'")
+    expect(sidebar).toContain('gov-settings-registry')
   })
 })
 
@@ -55,10 +58,14 @@ describe('A3 页头 changelog 弹窗（上游 11 语言 changelog 数据接线�
 })
 
 describe('A4 门控一致性（S3 既定语义补消费方）', () => {
-  it('petdex/agentManager 侧栏条目随 features 门控', () => {
+  it('petdex/agentManager 条目随 features 门控（2026-10-27 Task 7 起判定集中在 gov-settings-registry.entryVisible）', () => {
+    const registry = readOverlay('custom/client/ia2/views/gov/gov-settings-registry.ts')
+    expect(registry).toContain("entry.featureGate === 'pet' && !features.pet")
+    expect(registry).toContain("entry.featureGate === 'agentManager' && !features.agentManager")
+    // 侧栏不得再私设门控（单源派生，防两套可见性账）
     const sidebar = readOverlay('custom/client/ia2/components/IaSettingsSidebar.vue')
-    expect(sidebar).toContain("e.name === 'hermes.petdex' && !features.pet")
-    expect(sidebar).toContain("e.name === 'hermes.agentManager' && !features.agentManager")
+    expect(sidebar).not.toContain('features.pet')
+    expect(sidebar).not.toContain('features.agentManager')
   })
 
   it('agentManager 收编路由随 features.agentManager 条件进树', () => {

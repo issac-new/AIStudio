@@ -172,12 +172,16 @@ eval_collect() { # <runId> [redteamRunId]：落证据文件（缺项跳过，不
   return 0
 }
 
-eval_summary() { # 生成摘要并输出判定行；返回 python 的 0/1/2
+eval_summary() { # 组装摘要+合并产品判定（融合批三：PASS/GAP/FAIL 判据正本=产品 e2e-verdict）
   local d; d=$(eval_dir)
-  python3 "$SCRIPT_DIR/mux/mx-eval-summary.py" --dir "$d" \
+  local _rc=0 _line
+  _line=$(gov_eval_verdict "$d") || _rc=$?
+  note "[评测] ${_line}"
+  MX_EVAL_VERDICT_JSON="$d/verdict.json" python3 "$SCRIPT_DIR/mux/mx-eval-summary.py" --dir "$d" \
     --max-unknown "${EVAL_MAX_UNKNOWN:-0.10}" \
     --max-redteam-fp "${EVAL_REDTEAM_FP_MAX:-0.20}" \
-    --out "$d/eval-summary.json"
+    --out "$d/eval-summary.json" >/dev/null || _rc=$?
+  return $_rc
 }
 
 eval_live_evidence() { # <runId> [probe-jsonl]：把 mx-load-probe 实测回填到线上证据（B7）

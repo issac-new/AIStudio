@@ -1,6 +1,6 @@
 // overlay/custom/client/ia2/composables/useSitCounts.ts
 // v12.3 态势计数单一聚合（自 WorkbenchView.vue 抽出，页头 chips 与工作台共用）。
-// 数据源全走既有 store：workspace.tasks / buildWaiting / loopStore.loops /
+// 数据源全走既有 store：workspace.dailyTasks / buildWaiting / loopStore.loops /
 // chatStore.sessions ∪ matrixRoom.sortedRooms / teamRegistry.accounts /
 // cockpit.fleetSessions。pinia 单例——多处 useStore 无重复成本。
 import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue'
@@ -63,8 +63,14 @@ export function useSitCounts() {
     return out
   }
 
+  /** 日常态势只读 daily ref；旧 workspace 适配器仅回退到非 sim 投影，不把同 ID 的 sim 再算一次。 */
+  const dailyTaskModels = computed(() => {
+    if (Array.isArray(workspace.dailyTasks)) return workspace.dailyTasks.map(ref => ref.task)
+    return (workspace.tasks ?? []).filter(task => task.source !== 'sim')
+  })
+
   const waitItems = computed(() => buildWaiting(
-    workspace.tasks.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })),
+    dailyTaskModels.value.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })),
     runsStore.runs ?? [],
     cockpit.fleetSessions ?? [],
     now.value,
@@ -72,7 +78,7 @@ export function useSitCounts() {
 
   /** 跨板开放态任务（未完成未归档）——v12.4 任务 chip/面板口径单一来源 */
   const openTasks = computed(() =>
-    workspace.tasks.filter(x => x.status !== 'done' && x.status !== 'archived'))
+    dailyTaskModels.value.filter(x => x.status !== 'done' && x.status !== 'archived'))
 
   /** 任务统计：开放态总数 + 分状态计数（9 值词表按序呈现，零计数不进） */
   const tasks = computed(() => {
@@ -115,8 +121,9 @@ export function useSitCounts() {
   const boardRows = computed(() => {
     const openByBoard = new Map<string, number>()
     for (const t of openTasks.value) openByBoard.set(t.boardSlug, (openByBoard.get(t.boardSlug) ?? 0) + 1)
-    const known = new Set((workspace.boards ?? []).map(b => b.slug))
-    const rows = (workspace.boards ?? []).map(b => ({ slug: b.slug, name: b.name, open: openByBoard.get(b.slug) ?? 0 }))
+    const dailyBoards = (workspace.boards ?? []).filter(b => b.source !== 'sim')
+    const known = new Set(dailyBoards.map(b => b.slug))
+    const rows = dailyBoards.map(b => ({ slug: b.slug, name: b.name, open: openByBoard.get(b.slug) ?? 0 }))
     for (const [slug, open] of openByBoard) {
       if (!known.has(slug)) rows.push({ slug, name: slug, open })
     }
@@ -127,13 +134,18 @@ export function useSitCounts() {
     name: t.name, profiles: t.profiles ?? [], boards: t.boards ?? [],
   })))
 
-  /** v12.5 在线级联。口径（aipaydev 推演实锤 cockpit-online-zero；2026-09-23
-   *  用户裁决：动态探测优先，不依赖静态注册表）：
-   *  - machines：fleetSessions 快照数（跨 profile 活跃会话，1.5s tick，永远反映真实在线）。
-   *  - people：registry（注册面权威）→ Matrix presence（活跃房间 joined 成员
-   *    presence=online 的账号去重，随连接动态维护）→ fleetSessions profile 去重兜底。
-   *  - agents：registry → max(fleetSessions 会话数, 看板 running 任务 assignee 去重
-   *    （看板运行态真值，覆盖 gateway 跑任务但非 studio 会话的场景）。
+  /** v12.5 在线级联 → Task 6 收敛（2026-10-27 产品一致性）。口径沿用户裁决链
+   *  （2026-09-23 动态探测优先 / cockpit-online-zero 兜底 / 2026-09-30 网关真值）：
+   *  - people = Matrix presence 在线集 ∪ 登录本人（union：本人不在 presence 集时
+   *    不被 max 吞掉）。presence 可观测（client 建连且有房间）时注册面不顶替真值
+   *    ——注册≠在线；不可观测时以注册账号数兜底取大（全零比错报更糟）。
+   *    fleet 会话的 profile 是智能体档案而非人，不进 people（Task 6 失真②：单个
+   *    FleetSession 不再给人/智能体/机器各加一）。
+   *  - agents = max(网关连通 channel 去重档案, 看板 running assignee 去重, fleet
+   *    会话数；presence 不可观测时并入注册档案兜底)。计数=各源量级取大（裁决
+   *    口径），identities=同源身份并集（明细不隐藏任一真实在线来源）。
+   *  - machines = max(fleet 会话数, 网关 running?1:0)；identities=fleet 会话行
+   *    +网关伪实例（fleet 空而网关在跑时），与计数同长。
    *  presence 读取经 now tick 驱动重算（matrix-sdk 内部状态非响应式）。 */
   const online = computed(() => {
     void now.value
@@ -144,47 +156,67 @@ export function useSitCounts() {
     const gwState = platformsStore.gatewayState
     const gw = (gwState?.value ?? gwState) === 'running'  // mock 工厂可能返回 ref 未解包，双态兼容
     const gwPlatforms = (platformsStore.platforms?.value ?? platformsStore.platforms ?? []) as Array<{ state?: string; profile?: string }>
-    const gwAgents = new Set(
-      gwPlatforms
-        .filter(p => p.state === 'connected' && p.profile)
-        .map(p => p.profile as string),
-    ).size
+    const gwAgentProfiles = gwPlatforms
+      .filter(p => p.state === 'connected' && p.profile)
+      .map(p => String(p.profile))
+    const gwAgents = new Set(gwAgentProfiles).size
+
+    // presence 可观测性：client 建连且有已加入房间 → presence 是「人在线」真值；
+    // 否则探测面缺失（未建连/无房间），注册面兜底（注册≠在线的观测边界）
+    let clientOnline = false
+    try { clientOnline = !!useMatrixClientStore().client } catch { /* store 未就绪按不可观测 */ }
+    const presenceKnown = clientOnline && (matrixRoom.sortedRooms ?? []).length > 0
+    const presencePeople = presenceKnown ? collectPresencePeople() : new Set<string>()
+    // 本人已登录即在线（人≥登录本人底线）：matrix client 只在聊天视图 initClient
+    // 建连，工作台首屏 client 未起时仅认 isLoggedIn 会把已登录本人漏成 0——补
+    // cockpit 会话名兜底（有会话名=已登录本人在场）。本人已在 presence 集（mxid
+    // 短名同源比对）则不重复计。
+    const selfOnline = matrixConnected() || !!cockpit.currentUserName
+    const selfName = cockpit.currentUserName || 'self'
+    const samePerson = (a: string, b: string): boolean =>
+      stripHomeserver(a).toLowerCase() === stripHomeserver(b).toLowerCase()
+    const peopleSet = new Set(presencePeople)
+    if (selfOnline && ![...peopleSet].some(p => samePerson(p, selfName))) peopleSet.add(selfName)
     const registryPeople = accounts.value.length
-    const registryAgents = accounts.value.reduce((n, a) => n + (a.agentTeams?.reduce((m, at) => m + at.profiles.length, 0) ?? 0), 0)
-    if (registryPeople > 0 || registryAgents > 0) {
-      return {
-        people: registryPeople,
-        agents: Math.max(registryAgents, gwAgents),
-        machines: Math.max(fleet.length, gw ? 1 : 0),
-        // 身份清单与计数同源（SitDetailPanel 在线树消费；计数与列表零割裂）
-        identities: {
-          // displayName 空时兜底短显（@user:matrix.test → @user；agent:/machine: 内部键原样）
-          people: accounts.value.map(a => a.displayName || (String(a.userId ?? '').startsWith('@') ? stripHomeserver(a.userId) : String(a.userId ?? ''))),
-          agents: accounts.value.flatMap(a => (a.agentTeams ?? []).flatMap(at => at.profiles.map(String))),
-          machines: fleet.map(s => ({ id: s.id, label: s.title || s.profile || s.id, profile: s.profile || 'default', status: s.status })),
-        },
-      }
-    }
-    const profiles = new Set(fleet.map(s => s.profile || 'default'))
-    const people = collectPresencePeople()
-    const runningAssignees = new Set(
+    const registryAgentProfiles = [...new Set(
+      accounts.value.flatMap(a => (a.agentTeams ?? []).flatMap(at => at.profiles.map(String))))]
+    const people = Math.max(peopleSet.size, presenceKnown ? 0 : registryPeople)
+
+    const runningAssignees = [...new Set(
       (kanbanStore.tasks ?? [])
         .filter((t: { status: string; assignee?: string | null }) => t.status === 'running' && t.assignee)
         .map((t: { assignee?: string | null }) => t.assignee as string),
+    )]
+    const agents = Math.max(
+      gwAgents, runningAssignees.length, fleet.length,
+      presenceKnown ? 0 : registryAgentProfiles.length,
     )
-    // 本人已登录即在线（人≥登录本人，run5 口径补齐）：matrix client 只在聊天视图
-    // initClient 建连，工作台首屏 client 未起时仅认 isLoggedIn 会把已登录本人漏成 0
-    // ——补 cockpit 会话名兜底（有会话名=已登录本人在场）。
-    const selfOnline = matrixConnected() || !!cockpit.currentUserName ? 1 : 0
+
+    // identities 与计数同源（SitDetailPanel 在线树消费；计数与列表零割裂）：
+    // people 取大基面为注册兜底时列注册账号（displayName 空时兜底短显），否则列
+    // presence∪本人；agents=各源档案并集（计数是取大口径，明细不隐藏在线者）；
+    // machines=fleet 会话行+网关伪实例，长度与计数一致。
+    const peopleIdentities = !presenceKnown && registryPeople > peopleSet.size
+      ? accounts.value.map(a => a.displayName || (String(a.userId ?? '').startsWith('@') ? stripHomeserver(a.userId) : String(a.userId ?? '')))
+      : [...peopleSet]
+    const agentIdentities: string[] = []
+    const seenAgent = new Set<string>()
+    for (const p of [
+      ...gwAgentProfiles, ...runningAssignees,
+      ...fleet.map(s => String(s.profile || 'default')),
+      ...(presenceKnown ? [] : registryAgentProfiles),
+    ]) {
+      if (p && !seenAgent.has(p)) { seenAgent.add(p); agentIdentities.push(p) }
+    }
+    const machineIdentities: Array<{ id: string; label: string; profile: string; status: string }> =
+      fleet.map(s => ({ id: s.id, label: s.title || s.profile || s.id, profile: s.profile || 'default', status: s.status }))
+    if (gw && fleet.length === 0) {
+      machineIdentities.push({ id: 'gateway', label: 'gateway', profile: 'gateway', status: 'running' })
+    }
     return {
-      people: Math.max(people.size, profiles.size, selfOnline),
-      agents: Math.max(fleet.length, runningAssignees.size, gwAgents),
+      people, agents,
       machines: Math.max(fleet.length, gw ? 1 : 0),
-      identities: {
-        people: [...(people.size ? people : selfOnline ? [cockpit.currentUserName || 'self'] : [])],
-        agents: [...runningAssignees, ...gwPlatforms.filter(p => p.state === 'connected' && p.profile).map(p => String(p.profile))],
-        machines: fleet.map(s => ({ id: s.id, label: s.title || s.profile || s.id, profile: s.profile || 'default', status: s.status })),
-      },
+      identities: { people: peopleIdentities, agents: agentIdentities, machines: machineIdentities },
     }
   })
 

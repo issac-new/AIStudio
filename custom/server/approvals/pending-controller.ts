@@ -409,7 +409,7 @@ router.get('/pending-summary', async (ctx) => {
 const FLEET_CHOICES = new Set(['once', 'session', 'always', 'deny'])
 
 router.post('/:id/decide', async (ctx) => {
-  const body = (ctx.request.body ?? {}) as { decision?: unknown; note?: unknown; title?: unknown }
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as { decision?: unknown; note?: unknown; title?: unknown }
   const decision = String(body.decision ?? '')
   const note = typeof body.note === 'string' ? body.note.slice(0, 500) : undefined
   const actor = actorOf(ctx as never)
@@ -601,7 +601,7 @@ router.get('/history/chain', async (ctx) => {
 // ── 2026-10-04 影响面预览（Blast Radius）：任意命令的破坏性影响面解析 ──
 // pending 聚合已内嵌 impact；本端点供聊天侧审批卡等消费方按需取（纯解析无 IO）。
 router.post('/impact-preview', async (ctx) => {
-  const body = (ctx.request.body ?? {}) as { command?: unknown }
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as { command?: unknown }
   const command = typeof body.command === 'string' ? body.command.slice(0, 2000) : ''
   if (!command.trim()) {
     ctx.status = 400
@@ -620,7 +620,7 @@ router.get('/spotcheck', async (ctx) => {
 })
 
 router.post('/spotcheck/:id/resolve', async (ctx) => {
-  const body = (ctx.request.body ?? {}) as { verdict?: unknown; note?: unknown }
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as { verdict?: unknown; note?: unknown }
   const verdict = String(body.verdict ?? '')
   const note = typeof body.note === 'string' ? body.note.slice(0, 500) : undefined
   if (verdict !== 'confirm' && verdict !== 'veto') {

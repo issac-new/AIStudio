@@ -90,6 +90,13 @@ const annex = (path: string, name: string, opts: { superAdmin?: boolean; embed?:
 export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   // 设置页（路径沿用并入批已迁的 /app/settings；旧路径重定向见树尾记录）
   annex('/app/settings', 'hermes.settings'),
+  // 设置目录与详情同壳（2026-10-27 产品一致性 Task 7）：目录页（原 C9 治理·系统
+  // 设置）与模型服务商页原挂 /app children（IaShell+IaSideNav），与收编详情
+  // （IaLegacyShell+IaSettingsSidebar）形成双壳——改顶层 annex 同壳呈现。
+  // 路径/route name/fullscreen 原样保留（深链零断链）；组件装载补
+  // VIEW_LOADERS（ia2.govSettings / ia2.modelProviders）。
+  annex('/app/gov/settings', 'ia2.govSettings'),
+  annex('/app/gov/model-providers', 'ia2.modelProviders'),
   // ChatView 族（standaloneEmbed 隐自带会话列；路径不变 → 页内按 path 分派行为不变）
   annex('/hermes/chat', 'hermes.chat', { embed: true }),
   annex('/hermes/session/:sessionId', 'hermes.session', { embed: true }),
@@ -286,12 +293,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           meta: { standaloneEmbed: true },
         },
         {
-          // V5 补遗⑤ M6（R-C1 用户裁决合一）：循环运行画布并入运行中心详情页，
-          // /app/l 画布入口退役——本路由降为兼容重定向（旧直达链接/name 落运行列表，
-          // 详情页内嵌 RunCanvas 承接实时画布能力）
+          // Legacy Loop 薄详情（2026-10-27 产品一致性 Task 3）：/app/l/:loopId 恢复为
+          // 组件路由——V5 补遗⑤ M6 曾降为丢参重定向（创建向导成功深链与 blocked
+          // Loop 注意力行均落空）。分域契约：Loop（cron/自治/预算，/api/loop/loops）
+          // = 本页薄详情（复用 loopStore 与既有运行详情，不新建运行器）；
+          // Workflow Run（/api/ia2/workflow/runs）= 工作台 ?wf=<runId>，禁止跨 API 裸 ID。
           path: 'l/:loopId',
           name: 'ia2.loopCanvas',
-          redirect: () => ({ name: 'ia2.runs' }),
+          component: () => import('./views/LegacyLoopView.vue'),
         },
         {
           // 看板（工作页）
@@ -343,12 +352,9 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           name: 'ia2.govMetrics',
           redirect: to => ({ name: 'ia2.stage6', query: { ...to.query, tab: 'metrics' } }),
         },
-        {
-          // C9 治理·系统设置页（R9：既有设置页按治理域分区的导航层，E/F/G 合账）
-          path: 'gov/settings',
-          name: 'ia2.govSettings',
-          component: () => import('./views/gov/GovSettingsView.vue'),
-        },
+        // C9 治理·系统设置页已改顶层 annex（Task 7 设置目录与壳合一）：记录迁至
+        // ANNEXED_LEGACY（/app/gov/settings，IaLegacyShell 壳），路径与 route name
+        // 原样，深链零断链。D20 模型服务商页（gov/model-providers）同理迁移。
         {
           // 独立整页收敛到①搭建页签，避免团队管理出现双 URL 双入口。
           path: 'teams',
@@ -360,13 +366,6 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           path: 'agents',
           name: 'ia2.agents',
           redirect: to => ({ name: 'ia2.stage1', query: { ...to.query, tab: 'agents' } }),
-        },
-        {
-          // D20 模型服务商统一入口（治理·系统设置 资产域）：IDE 引擎模型目录
-          // 的组织级平铺面（与 IDE 弹窗同源端点，合并铁律不复制表单逻辑）。
-          path: 'gov/model-providers',
-          name: 'ia2.modelProviders',
-          component: () => import('./views/gov/GovModelProvidersView.vue'),
         },
         {
           // 独立整页收敛到①搭建·账户管理签。

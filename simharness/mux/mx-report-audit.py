@@ -333,28 +333,24 @@ if _main_repo.exists():
         if _ff.returncode != 0:
             fails.append(f'R4 发布基线非快进重建：{_old[:8]}→{_m.group(1)[:8]}（丢线事故，须回补重验）')
 
-# R5 问题单 100% DISP：issues.log 中 ISSUE 唯一键全有 DISP
-# 连接键=类型段（2026-10-07 与生成器 issues_stats 同源修复：ISSUE/DISP 主体措辞差
-# 曾致 join 全断——「harness/网关」vs"harness/审计会话"；处置按类型记账，类型段为准）。
-_ilog = EVID / 'issues.log'
-if _ilog.exists():
-    _iss, _disp = [], set()
-    for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
-        if _l.startswith('ISSUE|'):
-            _p = _l.split('|', 3)
-            if f'{_p[1]}·{_p[2]}' not in _iss:
-                _iss.append(f'{_p[1]}·{_p[2]}')
-        elif _l.startswith('DISP|'):
-            _p = _l.split('|', 3)
-            _disp.add(_p[1])
-    _open = [k for k in _iss if k.split('·')[0] not in _disp]
-    if _open:
-        fails.append(f'R5 问题单缺 DISP（{len(_open)}/{len(_iss)} 待处置）：{_open[:6]}——违反第 24 步合格线')
-    # 悬挂 DISP（DISP 类型无对应 ISSUE）=台账卫生 WARN（补账须先有 ISSUE 在案）
-    _iss_types = {k.split('·')[0] for k in _iss}
-    _hanging = sorted(t for t in _disp if t not in _iss_types)
-    if _hanging:
-        warns.append(f'R5b 悬挂 DISP（有处置无登记，台账卫生）：{_hanging}——补记 ISSUE 或标注别名归属')
+# R5 问题单 100% DISP（融合批六：判定正本=治理服务 run-metrics.pairing，经
+# evidence/governance-metrics.json 快照取件——待处置键/悬挂类型不再本地复算；
+# 快照缺席=报告生成链断裂 FAIL，不放行）。
+_snap = EVID / 'governance-metrics.json'
+if not _snap.exists():
+    fails.append('R5 治理指标快照缺席（governance-metrics.json）——配对正本未到位，问题单处置核验无法执行（先跑 gov_report）')
+else:
+    try:
+        _dto = json.loads(_snap.read_text(encoding='utf-8'))
+        _pairing = _dto.get('pairing') or []
+        _open = sorted(r['key'] for r in _pairing if r['bucket'] == '待处置')
+        if _open:
+            fails.append(f'R5 问题单缺 DISP（{len(_open)}/{len(_pairing)} 待处置）：{_open[:6]}——违反第 24 步合格线')
+        _hanging = sorted(_dto.get('danglingDispTypes') or [])
+        if _hanging:
+            warns.append(f'R5b 悬挂 DISP（有处置无登记，台账卫生）：{_hanging}——补记 ISSUE 或标注别名归属')
+    except json.JSONDecodeError as e:
+        fails.append(f'R5 治理指标快照不可读：{e}——处置核验无法执行')
 
 # R6 证据锚点密度：每个已完成步块至少 1 个可反查锚点（event_id $xxx / 短 hash / t_ 卡号 /
 # matrix 房间 ID——synapse state 可直查；run15 前置复盘完善扩展）。结构性无三源锚的步

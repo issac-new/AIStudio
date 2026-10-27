@@ -163,6 +163,95 @@ function gateClosed(ctx: Context): void {
   ctx.body = { error: 'simcenter 未配置（OBS_SIM_ROOT 缺席=fail-closed）' }
 }
 
+// ── 12b. observer/sessions：跨实例只读检索推演会话（2026-10-27 立项）──
+// 数据面=SIM 根 hermes/profiles/<profile>/state.db 的 sessions 表（node:sqlite
+// readOnly 直读，与推演网关并发写共存——kanban 快道同款先例）。SIM 根缺席
+// fail-soft available:false（弹窗不显示推演组，日常面不受影响）。60s 结果缓存
+// +single-flight 挡连续击键；空关键词不返回全量（防倾倒）。
+export interface ObserverSessionHit {
+  id: string
+  profile: string
+  chatType: string
+  displayName: string
+}
+
+const OBSERVER_SESSIONS_LIMIT_DEFAULT = 50
+const OBSERVER_SESSIONS_LIMIT_MAX = 200
+const OBSERVER_SESSIONS_CACHE_TTL_MS = 60_000
+const observerSessionsCache = new Map<string, { fetchedAt: number; results: ObserverSessionHit[] }>()
+
+/** 测试面：清空检索缓存（避免用例间缓存串扰）。 */
+export function __resetObserverSessionsCache(): void {
+  observerSessionsCache.clear()
+}
+
+function readObserverSessions(root: string, q: string, limit: number): ObserverSessionHit[] {
+  // node:sqlite 按需加载（node ≥22.5；老版本 node 直接空回落）
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { DatabaseSync } = require('node:sqlite')
+  const profilesDir = resolve(root, 'hermes', 'profiles')
+  const needle = `%${q.toLowerCase()}%`
+  const out: ObserverSessionHit[] = []
+  let profileNames: string[] = []
+  try {
+    profileNames = readdirSync(profilesDir).filter(d => !d.startsWith('.') && !d.startsWith('_'))
+  } catch {
+    return out
+  }
+  for (const profile of profileNames) {
+    if (out.length >= limit) break
+    const dbPath = resolve(profilesDir, profile, 'state.db')
+    if (!existsSync(dbPath)) continue
+    let db: any = null
+    try {
+      db = new DatabaseSync(dbPath, { readOnly: true })
+      const rows = db.prepare(
+        'select id, chat_type, display_name, session_key from sessions'
+        + ' where lower(coalesce(display_name,\'\')) like ? or lower(coalesce(session_key,\'\')) like ? or lower(id) like ?'
+        + ' order by rowid desc limit ?',
+      ).all(needle, needle, needle, limit - out.length) as any[]
+      for (const r of rows) {
+        out.push({
+          id: String(r.id ?? ''),
+          profile,
+          chatType: String(r.chat_type ?? ''),
+          displayName: String(r.display_name ?? r.session_key ?? r.id ?? ''),
+        })
+      }
+    } catch {
+      // 单 profile 库缺席/损坏/表缺失：跳过该 profile（fail-soft 局部降级）
+    } finally {
+      try { db?.close() } catch { /* 已关 */ }
+    }
+  }
+  return out
+}
+
+router.get('/observer/sessions', (ctx: Context) => {
+  const root = observerSimRootOrNull()
+  if (!root) {
+    ctx.body = { available: false, reason: '未找到推演根：SIM_OBSERVER_ROOT/OBS_SIM_ROOT 未配置且默认位置不存在' }
+    return
+  }
+  const q = String(ctx.query.q ?? '').trim().toLowerCase()
+  const limitRaw = Number(ctx.query.limit ?? OBSERVER_SESSIONS_LIMIT_DEFAULT)
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0
+    ? Math.min(Math.floor(limitRaw), OBSERVER_SESSIONS_LIMIT_MAX)
+    : OBSERVER_SESSIONS_LIMIT_DEFAULT
+  if (!q) {
+    ctx.body = { available: true, results: [], fetchedAt: Date.now(), cached: false }
+    return
+  }
+  const hit = observerSessionsCache.get(q)
+  if (hit && Date.now() - hit.fetchedAt < OBSERVER_SESSIONS_CACHE_TTL_MS) {
+    ctx.body = { available: true, results: hit.results.slice(0, limit), fetchedAt: hit.fetchedAt, cached: true }
+    return
+  }
+  const results = readObserverSessions(root, q, limit)
+  observerSessionsCache.set(q, { fetchedAt: Date.now(), results })
+  ctx.body = { available: true, results, fetchedAt: Date.now(), cached: false }
+})
+
 /** fetch 带超时（AbortController；超时/网络错误按 fail-soft 抛出由调用方统一处理）。 */
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
   const ac = new AbortController()
@@ -665,15 +754,20 @@ router.get('/trace', (ctx: Context) => {
 export { UAT_VERDICT_LABEL }
 export type { UatVerdictKey, UatVerdictRecord }
 
-/** UAT 判定入参强校验（纯函数）：run 校验 + uat-state 字段校验（conditional 需 note+ack；reject 需 note）。 */
+/** UAT 判定入参强校验（纯函数）：run 校验 + uat-state 字段校验（conditional 需 note + acknowledged|pending 二选一；reject 需 note）。 */
 export function validateUatVerdict(body: unknown):
-  { ok: true; run: string; ac: string; verdict: UatVerdictKey; note?: string; acknowledged?: boolean } | { ok: false; error: string } {
+  { ok: true; run: string; ac: string; verdict: UatVerdictKey; note?: string; acknowledged?: boolean; pending?: boolean } | { ok: false; error: string } {
   const b = body as { run?: unknown } | undefined
   const run = typeof b?.run === 'string' ? b.run : ''
   if (!isValidRun(run)) return { ok: false, error: 'run 参数非法' }
   const fields = validateUatVerdictFields(body)
   if (!fields.ok) return fields
-  return { ok: true, run, ac: fields.ac, verdict: fields.verdict, ...(fields.note ? { note: fields.note } : {}), ...(fields.acknowledged ? { acknowledged: true } : {}) }
+  return {
+    ok: true, run, ac: fields.ac, verdict: fields.verdict,
+    ...(fields.note ? { note: fields.note } : {}),
+    ...(fields.acknowledged ? { acknowledged: true } : {}),
+    ...(fields.pending ? { pending: true } : {}),
+  }
 }
 
 /** 台账落位（穿越防护同 evidence/mark）：runs/<run>/evidence/uat-verdicts.jsonl。 */
@@ -782,6 +876,7 @@ router.post('/uat-verdict', (ctx: Context) => {
     verdict: v.verdict,
     ...(v.note ? { note: v.note } : {}),
     ...(v.acknowledged ? { acknowledged: true } : {}),
+    ...(v.pending ? { pending: true } : {}),
   }
   appendFileSync(file, `${JSON.stringify(rec)}\n`, 'utf-8')
   ctx.body = { ok: true, record: rec, anchor: `evidence/uat-verdicts.jsonl#${v.ac}` }

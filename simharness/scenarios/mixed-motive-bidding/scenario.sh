@@ -31,8 +31,10 @@ while (( r <= ${MM_ROUNDS:-3} )); do
   # 让结算链路可走通——首跑轮以真实回执为准（回执缺失=如实记占位口径）。
   for u in unit_a unit_b unit_c; do
     line=$(grep -h "BID round=$r bidder=$u" "$EV"/*.log 2>/dev/null | tail -1 || true)
-    bid=$(printf '%s' "$line" | grep -oE 'bid=[0-9]+' | cut -d= -f2); bid="${bid:-$(( r * 10 ))}"
-    quota=$(printf '%s' "$line" | grep -oE 'quota=[0-9]+' | cut -d= -f2); quota="${quota:-50}"
+    # run14 A1 同型陷阱根治（首跑实锤）：pipefail 下 grep 空命中 rc=1 经管道反传杀驱动
+    # ——提取行内联 || true 归零，保底出价兜底逻辑才能接住。
+    bid=$(printf '%s' "$line" | grep -oE 'bid=[0-9]+' | cut -d= -f2 || true); bid="${bid:-$(( r * 10 ))}"
+    quota=$(printf '%s' "$line" | grep -oE 'quota=[0-9]+' | cut -d= -f2 || true); quota="${quota:-50}"
     printf '{"round":%s,"bidder":"%s","bid":%s,"quota":%s}\n' "$r" "$u" "$bid" "$quota" >> "$BIDS"
   done
   r=$(( r + 1 ))

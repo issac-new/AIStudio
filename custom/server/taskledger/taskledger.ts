@@ -28,7 +28,7 @@ export type LedgerSource = 'kanban' | 'a2a' | 'pipeline' | 'matrix' | 'mention' 
 export function mapKanbanColumn(column: string): InstructionLifecycle | null {
   const c = column.trim().toLowerCase()
   if (['triage', 'todo', 'scheduled', 'ready', 'backlog'].includes(c)) return 'pending'
-  if (['in_progress', 'inprogress', 'running', 'blocked', 'wip'].includes(c)) return 'executing'
+  if (['in_progress', 'inprogress', 'running', 'blocked', 'wip', 'doing'].includes(c)) return 'executing'
   if (['review', 'verify', 'verifying', 'uat'].includes(c)) return 'verifying'
   if (['done', 'closed', 'complete', 'completed'].includes(c)) return 'done'
   if (['rejected', 'failed', 'blocked-fail', 'redo'].includes(c)) return 'rejected'
@@ -70,6 +70,18 @@ export function mapMatrixPhase(phase: string): InstructionLifecycle | null {
   return null
 }
 
+/**
+ * mention 派发结果（dispatch-reasons 成功路径）→ 生命周期（挂账 #7 接线批）。
+ * 只登记成功路径：queued/coalesced=已派发或并入活跃 run（executing）、
+ * deferred=有意暂缓（pending）；reject 类 reason 未产生指令实例，不登记（null）。
+ */
+export function mapMentionReason(reason: string): InstructionLifecycle | null {
+  const r = reason.trim().toLowerCase()
+  if (r === 'queued' || r === 'coalesced') return 'executing'
+  if (r === 'deferred') return 'pending'
+  return null
+}
+
 /** 各源统一入口。 */
 export function mapExternalStatus(source: LedgerSource, externalStatus: string): InstructionLifecycle | null {
   switch (source) {
@@ -77,6 +89,7 @@ export function mapExternalStatus(source: LedgerSource, externalStatus: string):
     case 'a2a': return mapA2aState(externalStatus)
     case 'pipeline': return mapPipelineStage(externalStatus)
     case 'matrix': return mapMatrixPhase(externalStatus)
+    case 'mention': return mapMentionReason(externalStatus)
     default: return null
   }
 }

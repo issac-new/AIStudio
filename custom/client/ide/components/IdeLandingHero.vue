@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import IdeCliSessions from './IdeCliSessions.vue'
 // overlay/custom/client/ide/components/IdeLandingHero.vue
 // IDE 工作台裸落地引导空态（run13 步18 错帧修复配套产品面）：
 // 登录默认落点 /app/ide 不带任务上下文，此前直接落会话栏自动恢复——新用户
 // 零引导。此组件承接裸落地：最近任务速选（点击即带任务上下文+展开简报，
 // 与 ?task 深链同款体验）或一键进入会话工作区（本次访问不再打扰）。
+// 2026-10-27 产品一致性 Task 11：中央不再内嵌 zcode CLI 会话列表——左侧任务栏
+// （IdeTaskSidebar）已有同屏列表与全部行动作，中央只做「尚未选择」引导。
 import { useI18n } from 'vue-i18n'
 
 export interface LandingTask {
@@ -36,15 +37,15 @@ const { t } = useI18n()
         </button>
       </li>
     </ul>
-    <p v-else class="ui-empty-state">{{ t('ide.landing.empty', '暂无任务：从看板选一张卡带入工作区，或直接进入会话工作区') }}</p>
+    <!-- 空态语义=「尚未选择」而非「没有数据」：当前板没有任务时工作区里仍有
+         他板任务与 CLI 会话可选（设计契约：不得把没有选中写成没有数据）。 -->
+    <p v-else class="ui-empty-state">{{ t('ide.landing.empty', '尚未选择任务或会话：从看板选一张卡带入工作区，或直接进入会话工作区') }}</p>
     <button v-if="!tasks.length" type="button" class="ide-landing__board" data-testid="ide-landing-board" @click="$emit('board')">
       {{ t('ide.landing.board', '从看板选一张任务') }}
     </button>
     <button type="button" class="ide-landing__enter" data-testid="ide-landing-enter" @click="$emit('enter')">
       {{ t('ide.landing.enter', '进入会话工作区') }}
     </button>
-    <!-- zcode CLI 会话兼容展示（2026-10-19 用户需求批）：与 IDE 会话同屏 -->
-    <IdeCliSessions />
   </div>
 </template>
 
@@ -73,6 +74,7 @@ const { t } = useI18n()
   display: flex;
   flex-direction: column;
   gap: 6px;
+  font-size: 14px;
 }
 .ide-landing__task {
   display: flex;
@@ -80,6 +82,7 @@ const { t } = useI18n()
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  min-height: 40px; /* 主要动作命中区（视觉最小集） */
   padding: 8px 12px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -95,31 +98,33 @@ const { t } = useI18n()
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 14px;
 }
 .ide-landing__task-status {
   flex-shrink: 0;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .ide-landing__board {
   margin-top: 10px;
-  padding: 6px 14px;
+  min-height: 40px;
+  padding: 8px 16px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-tertiary);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 .ide-landing__enter {
   margin-top: 10px;
-  padding: 6px 18px;
+  min-height: 40px;
+  padding: 8px 20px;
   border: none;
   border-radius: 8px;
   background: var(--primary-color);
   color: var(--text-on-accent);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 </style>

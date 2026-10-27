@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/hermes/chat'
+import { features } from '../../../../config/features'
 
 const route = useRoute()
 const router = useRouter()
@@ -49,7 +50,10 @@ function goSim(): void {
       :aria-pressed="isCollab"
       @click="goCollab"
     >{{ collabLabel }}</button>
+    <!-- features.ide 关闭（Task 10）：ide.shell 路由未注册（bootstrap 只挂重定向
+         兜底），按钮同步隐藏，不留点了没反应的入口。 -->
     <button
+      v-if="features.ide"
       type="button"
       class="iws__btn"
       :class="{ 'iws__btn--on': isIde }"

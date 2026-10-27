@@ -932,7 +932,7 @@
 # 688: 容量泵内省 sidecar 补丁化（2ce5333a0 纯运行时热修在 0.22.4 镜像刷新被抹，pytest 守门复红；补丁通道保证刷新不可再抹）——run_busy 四路径写 <HERMES_HOME>/runtime/capacity_retry.json（限频 2s），cluster-inspector 免改 api_server 可观测容量泵。
 688-agent-capacity-sidecar.patch
 
-# 689（2026-10-26 重启走查轮）：i18n 两族缺键清偿——① ia2.flow 六键全族（chatSection/newChat/newAgentChat/newGroupChat/newMatrixRoom/deleteGroup，zh/en 成对）：508 被临时跳过后「末批迁移」欠账整体清偿，FlowNavPanel/WorkbenchView 现用三处（chatSection/deleteGroup/newGroupChat）无内联兜底属裸键隐患；② ide.landing 五键族（title/sub/empty/board/enter，zh/en）：IdeLandingHero 全部五处 t() 调用从未注册。有兜底处文案逐字取兜底（newChat=新建聊天），无兜底处取 508 原文。
+# 689（2026-10-26 重启走查轮）：i18n 两族缺键清偿——① ia2.flow 六键全族（chatSection/newChat/newAgentChat/newGroupChat/newMatrixRoom/deleteGroup，zh/en 成对）：508 被临时跳过后「末批迁移」欠账整体清偿，FlowNavPanel/WorkbenchView 现用三处（chatSection/deleteGroup/newGroupChat）无内联兜底属裸键隐患；② ide.landing 五键族（title/sub/empty/board/enter，zh/en）：IdeLandingHero 全部五处 t() 调用从未注册。有兜底处文案逐字取兜底（newChat=新建聊天），无兜底处取 508 原文。；2026-10-27 产品一致性 Task 11 追加：ide.security 19 键族（zh/en 成对，IdeSecurityBoostBar 安全面/boost 内联文案）＋ ide.landing.empty 改「尚未选择任务或会话」语义（没有选中≠没有数据）。
 689-client-i18n-walkthrough-keys.patch
 
 # 690（2026-10-26 产品名统一轮，用户指示）：SwarmStudio→AIStudio 品牌面收敛（62 文件）——zh/en locale 42 处、client title/manifest/兜底标题/下载面板显示名、desktop tray/通知/错误页/10 语言 i18n/cli-shim 文案/README/协议显示名与麦克风权限描述、server 推送模板 13 语言×3+live-activity+全模块提示语+coding-agents 展示名回流、ekko-agent 归因头与 skills 文档、agent-bridge 测试断言。保留清单（安装身份/wire 协议/已装设备标识，spec 定性）：apk URL、appId/artifactName/productName/package name、setName（数据目录锚点）、swarmstudio:// 深链、cli-shim PATH MARKER、SwarmStudio-updater、com.swarmstudio.* 事件类型、esp32 固件 SSID、icon.json。历史补丁与带日期文档不改写。
@@ -970,3 +970,18 @@
 # user_profiles ACL；不改 680/681/685 历史补丁正文，super_admin 与无鉴权本地语义由
 # custom 控制器保留。
 700-server-identity-chat-acl.patch
+701-client-locale-member-names.patch
+
+# 702（2026-10-27 产品一致性 Task 10）：connections 面板关闭态根治——650 的
+# isSuperAdmin 放行在 extras 关且无 remote 设备时渲染零页签空条；改为 NTabs
+# 渲染条件 features.connectionsExtras || hasRemoteDevices（至少一个可用 pane 才
+# 出页签条，全隐藏统一 connections-empty 空态，superadmin 不再例外），且
+# normalizeTab 在 extras 关闭时归一 remote（app/mcu 深链与缺省不落隐藏页签）。
+702-client-connections-tab-normalize.patch
+
+
+# 703（2026-10-27 产品一致性 Task 5，原批内 701 与 main 侧 locale-member-names 撞号改 703）：
+# kanban 聚合面状态三键（overviewStale/overviewError/overviewPartial，zh/en 成对）——
+# SwarmKanbanView 板条新增刷新失败/数据不完整提示（workspace.overviewStatus 四态消费面），
+# kanban-i18n-coverage 守门红清偿；zh 值逐字取视图内联兜底（同 689 补丁做法）。
+703-client-kanban-i18n-overview-status.patch

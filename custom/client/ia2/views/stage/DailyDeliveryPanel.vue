@@ -19,8 +19,11 @@ const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'
 const workspace = useWorkspaceStore()
 const assigneeLabel = useAssigneeLabel()
 
-const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
-  .filter(r => r.task.status === 'review' || (r.task.status === 'done' && isRecentTask(r.task)))
+// 日常源投影（Task 2 移交，2026-10-27）：只读 dailyTasks ref，同 ID 的 sim 行不混入
+type DailyRow = RawBoardTask & { key: string }
+const rows = computed<DailyRow[]>(() => workspace.dailyTasks
+  .filter(ref => ref.raw && (ref.raw.task.status === 'review' || (ref.raw.task.status === 'done' && isRecentTask(ref.raw.task))))
+  .map(ref => ({ ...ref.raw!, key: ref.key }))
   .sort((a, b) => (b.task.last_heartbeat_at ?? b.task.created_at) - (a.task.last_heartbeat_at ?? a.task.created_at))
   .slice(0, 30))
 const missingBranch = computed(() => rows.value.filter(r => !r.task.branch_name).length)
@@ -45,7 +48,7 @@ const missingResult = computed(() => rows.value.filter(r => !String(r.task.resul
       <table class="ddp__table">
         <thead><tr><th>任务</th><th>负责人</th><th>状态</th><th>分支</th><th>工作区</th><th>更新</th></tr></thead>
         <tbody>
-          <tr v-for="r in rows" :key="`${r.board}:${r.task.id}`" class="ddp__row" :data-testid="`daily-delivery-${r.task.id}`" @click="emit('open-task', r.task.id)">
+          <tr v-for="r in rows" :key="r.key" class="ddp__row" :data-testid="`daily-delivery-${r.task.id}`" @click="emit('open-task', r.key)">
             <td class="ddp__task">
               <strong>{{ r.task.title }}</strong>
               <span>{{ taskResultLabel(r.task) }}</span>

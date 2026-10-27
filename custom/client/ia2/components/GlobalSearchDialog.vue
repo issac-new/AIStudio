@@ -4,8 +4,11 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { NModal } from 'naive-ui'
+import { NModal, NSelect } from 'naive-ui'
+import { features } from '../../../../config/features'
 import { useSessionRows } from '../composables/useSessionRows'
+import { useChatStore } from '@/stores/hermes/chat'
+import { useGroupChatStore } from '@/stores/hermes/group-chat'
 import { useWorkspaceStore } from '../store/workspace'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
@@ -25,6 +28,8 @@ interface ResultRow {
   icon: string
   action: string
   open: () => void
+  /** 推演来源行：渲染紫色徽章（跨实例标识，用户裁定） */
+  sim?: boolean
 }
 
 const route = useRoute()
@@ -32,6 +37,8 @@ const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const { sessionRows, accounts } = useSessionRows()
+const chatStore = useChatStore()
+const groupChat = useGroupChatStore()
 const workspace = useWorkspaceStore()
 const cockpit = useCockpitStore()
 const matrixRoom = useMatrixRoomStore()
@@ -46,6 +53,9 @@ const q = computed({
 const type = ref<SearchType>('all')
 const boardFilter = ref('')
 const statusFilter = ref('')
+// 归档口径（产品一致性 Task 10）：默认排除 archived；「包含归档」开关放行
+// （深链 archived=1）；显式 status=archived 精确筛选优先于默认排除。
+const includeArchived = ref(false)
 const assigneeFilter = ref('')
 const timeFilter = ref<'all' | '24h' | '7d' | '30d'>('all')
 const searchInput = ref<HTMLInputElement | null>(null)
@@ -75,6 +85,7 @@ function applyDeepLink(): void {
   type.value = normalizeType(route.query.type)
   boardFilter.value = String(route.query.board ?? '')
   statusFilter.value = String(route.query.status ?? '')
+  includeArchived.value = route.query.archived === '1'
   assigneeFilter.value = String(route.query.assignee ?? '')
   timeFilter.value = normalizeTime(route.query.time)
 }
@@ -92,7 +103,13 @@ watch(() => route.fullPath, (_next, prev) => {
 }, { immediate: true })
 
 // ws 为旧工作区筛选深链键：不再消费，关闭时一并清理防残留
-const SEARCH_QUERY_KEYS = ['search', 'q', 'type', 'board', 'ws', 'status', 'assignee', 'time'] as const
+const SEARCH_QUERY_KEYS = ['search', 'q', 'type', 'board', 'ws', 'status', 'assignee', 'archived', 'time'] as const
+// 归档开关持久化：深链会话（search=1）内变更写回 URL（archived=1），可分享/后退
+watch(includeArchived, (on) => {
+  if (route.query.search !== '1') return
+  if ((route.query.archived === '1') === on) return
+  void router.replace({ query: { ...route.query, archived: on ? '1' : undefined } })
+})
 function closeDialog(): void {
   workspace.closeSearch()
   if (route.query.search !== '1') return
@@ -111,6 +128,7 @@ watch(() => workspace.searchOpen, async (open) => {
     returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     void loadDocs()
     void workspace.loadSearchPeople?.()
+    loadSessionSources()
     await nextTick()
     searchInput.value?.focus()
     return
@@ -124,6 +142,13 @@ watch(() => workspace.searchOpen, async (open) => {
 function loadDocs(): void {
   if (workspace.searchDocsLoaded) return
   void workspace.loadSearchDocs()
+}
+
+// 会话两源（agent 单聊/群聊）只在各自聊天页访问后才有数据——弹窗打开时
+// 主动装载一次；store 请求序号守卫兜底重复装载，失败静默（fail-soft 读面）。
+function loadSessionSources(): void {
+  if (!chatStore.sessionsLoaded) void chatStore.loadSessions(chatStore.sessionProfileFilter).catch(() => undefined)
+  void groupChat.loadRooms().catch(() => undefined)
 }
 
 const STATUS_LABEL: Record<string, { zh: string; en: string }> = {
@@ -145,10 +170,20 @@ const boardNameOf = computed(() => {
   for (const t of workspace.tasks) if (!m.has(t.boardSlug)) m.set(t.boardSlug, t.boardSlug)
   return m
 })
-const boardOptions = computed(() => (workspace.boards ?? []).map(b => ({
-  slug: b.slug,
-  label: `${b.name || b.slug}${b.source === 'sim' ? '（推演）' : ''}`,
-})))
+// 板选项升可搜索 NSelect（产品一致性 Task 10 并入 main 看板轴）：slug 值不变
+// （过滤全等匹配），中文名与 slug 都可搜——板多时原生 select 无从下手。
+const boardOptions = computed<Array<{ label: string; value: string }>>(() => [
+  { label: zh.value ? '全部' : 'All', value: '' },
+  ...(workspace.boards ?? []).map(b => ({
+    label: `${b.name || b.slug}${b.source === 'sim' ? '（推演）' : ''}`,
+    value: b.slug,
+  })),
+])
+function filterBoardOption(pattern: string, option: { value?: string | number }): boolean {
+  const needle = pattern.trim().toLowerCase()
+  return String(option.value ?? '').toLowerCase().includes(needle)
+    || String((option as { label?: string }).label ?? '').toLowerCase().includes(needle)
+}
 const assigneeOptions = computed(() => [...new Set(workspace.tasks.map(task => task.assignee).filter(Boolean))].sort())
 
 function timeWithin(ts: number | null | undefined): boolean {
@@ -204,6 +239,7 @@ const sessionRowsResult = computed<ResultRow[]>(() => sessionRows.value
 const taskRowsResult = computed<ResultRow[]>(() => workspace.tasks
   .filter((task) => {
     if (boardFilter.value && task.boardSlug !== boardFilter.value) return false
+    if (task.status === 'archived' && !includeArchived.value && statusFilter.value !== 'archived') return false
     if (statusFilter.value && task.status !== statusFilter.value) return false
     if (assigneeFilter.value && task.assignee !== assigneeFilter.value) return false
     if (!timeWithin(task.createdAt)) return false
@@ -217,6 +253,26 @@ const taskRowsResult = computed<ResultRow[]>(() => workspace.tasks
     action: zh.value ? '看板' : 'Board',
     open: () => void router.push({ name: 'ia2.board', query: { task: task.id } }),
   })))
+
+// SIM_STUDIO_URL（vite env 注入）配置时提供真跳转；缺席只提示不伪造深链
+const simStudioUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SIM_STUDIO_URL ?? ''
+const simSessionRowsResult = computed<ResultRow[]>(() => {
+  if (!workspace.searchSimAvailable || !q.value.trim()) return []
+  const needle = q.value.trim().toLowerCase()
+  return (workspace.searchSimSessions ?? [])
+    .filter((hit) => hit.displayName.toLowerCase().includes(needle) || hit.profile.toLowerCase().includes(needle) || hit.id.toLowerCase().includes(needle))
+    .map((hit) => ({
+      key: `sim:${hit.id}`,
+      title: hit.displayName || hit.id,
+      meta: [hit.profile, hit.chatType === 'group' ? (zh.value ? '群聊' : 'Group') : hit.chatType === 'dm' ? (zh.value ? '单聊' : 'DM') : hit.chatType, hit.id].join(' · '),
+      icon: '◎',
+      action: simStudioUrl ? (zh.value ? '推演实例' : 'Sim') : (zh.value ? '在推演实例中查看' : 'View in sim'),
+      sim: true,
+      open: () => {
+        if (simStudioUrl) window.open(simStudioUrl, '_blank', 'noopener')
+      },
+    }))
+})
 
 const runRowsResult = computed<ResultRow[]>(() => (runsStore.sortedRuns ?? [])
   .filter((run) => {
@@ -297,8 +353,10 @@ const COMMANDS = computed<Array<{ key: string; label: string; icon: string; to: 
   { key: 'gov', label: tx.value.cmdGov, icon: '🏛️', to: { name: 'ia2.governance' } },
   { key: 'gov-docs', label: '文档评审（②⑤⑥）', icon: '📄', to: { name: 'ia2.govDocs' } },
   { key: 'cases', label: tx.value.cmdCases, icon: '📦', to: { name: 'ia2.deliveryCases' } },
-  { key: 'ide', label: tx.value.cmdIde, icon: '⌨️', to: { name: 'ide.shell' } },
-  { key: 'settings', label: tx.value.cmdSettings, icon: '🛠️', to: { name: 'hermes.settings' } },
+  // features.ide=false 时 IDE 路由不注册——命令不出（无效果入口根治，Task 10）
+  ...(features.ide ? [{ key: 'ide', label: tx.value.cmdIde, icon: '⌨️', to: { name: 'ide.shell' } }] : []),
+  // 设置命令统一落设置目录（Task 7 单一设置入口；与页头用户按钮同落点）
+  { key: 'settings', label: tx.value.cmdSettings, icon: '🛠️', to: { name: 'ia2.govSettings' } },
 ])
 
 const commandRowsResult = computed<ResultRow[]>(() => {
@@ -317,7 +375,7 @@ const commandRowsResult = computed<ResultRow[]>(() => {
 })
 
 const GROUPS: ReadonlyArray<{ key: GroupKey; label: string; rows: () => ResultRow[] }> = [
-  { key: 'sessions', label: zh.value ? '会话与房间' : 'Chats & rooms', rows: () => sessionRowsResult.value },
+  { key: 'sessions', label: zh.value ? '会话与房间' : 'Chats & rooms', rows: () => [...sessionRowsResult.value, ...simSessionRowsResult.value] },
   { key: 'tasks', label: zh.value ? '看板任务' : 'Tasks', rows: () => taskRowsResult.value },
   { key: 'runs', label: zh.value ? '运行' : 'Runs', rows: () => runRowsResult.value },
   { key: 'docs', label: zh.value ? '治理文档' : 'Documents', rows: () => docRowsResult.value },
@@ -345,7 +403,9 @@ const keyboardRows = computed<ResultRow[]>(() => [
   ...visibleGroups.value.flatMap(group => group.rows.slice(0, 20)),
 ])
 const activeIndex = ref(0)
-watch([q, type, boardFilter, statusFilter, assigneeFilter, timeFilter], () => { activeIndex.value = 0 })
+watch([q, type, boardFilter, statusFilter, assigneeFilter, includeArchived, timeFilter], () => { activeIndex.value = 0 })
+// 跨实例推演会话：随检索词装载（服务端 60s 缓存挡连续击键）
+watch(q, (needle) => { void workspace.loadSimSessions?.(needle) }, { immediate: true })
 watch(() => keyboardRows.value.length, count => {
   if (activeIndex.value >= count) activeIndex.value = 0
 })
@@ -405,6 +465,7 @@ function reset(): void {
   cockpit.clearSearch()
   boardFilter.value = ''
   statusFilter.value = ''
+  includeArchived.value = false
   assigneeFilter.value = ''
   timeFilter.value = 'all'
 }
@@ -457,10 +518,16 @@ function reset(): void {
       <div class="srch__filters">
         <label class="srch__filter">
           <span>{{ zh ? '看板' : 'Board' }}</span>
-          <select v-model="boardFilter" data-testid="search-filter-board">
-            <option value="">{{ zh ? '全部' : 'All' }}</option>
-            <option v-for="item in boardOptions" :key="item.slug" :value="item.slug">{{ item.label }}</option>
-          </select>
+          <NSelect
+            v-model:value="boardFilter"
+            class="srch__board"
+            data-testid="search-filter-board"
+            :options="boardOptions"
+            filterable
+            :filter="filterBoardOption"
+            size="small"
+            :consistent-menu-width="false"
+          />
         </label>
         <label class="srch__filter">
           <span>{{ zh ? '状态' : 'Status' }}</span>
@@ -485,6 +552,10 @@ function reset(): void {
             <option value="30d">{{ zh ? '30 天' : '30 days' }}</option>
           </select>
         </label>
+        <label class="srch__arch" data-testid="search-include-archived">
+          <input v-model="includeArchived" type="checkbox" data-testid="search-archived-toggle">
+          <span>{{ zh ? '包含归档' : 'Include archived' }}</span>
+        </label>
         <button type="button" class="srch__reset" data-testid="search-reset" @click="reset">{{ zh ? '重置过滤' : 'Reset' }}</button>
       </div>
 
@@ -505,6 +576,24 @@ function reset(): void {
             <span class="srch__body2"><strong class="srch__rt">{{ row.title }}</strong><span class="srch__rm">{{ row.meta }}</span></span>
             <span class="srch__go">{{ row.action }} →</span>
           </button>
+        </section>
+
+        <section v-if="simSessionRowsResult.length && (type === 'all' || type === 'sessions')" class="srch__group srch__group--sim" data-testid="search-group-sim-sessions">
+          <h2 class="srch__gh">{{ zh ? '推演会话' : 'Simulation sessions' }}<span class="srch__gn">{{ simSessionRowsResult.length }}</span></h2>
+          <button
+            v-for="row in simSessionRowsResult.slice(0, 10)"
+            :key="row.key"
+            type="button"
+            class="srch__row"
+            :data-testid="`search-row-${row.key}`"
+            @click="row.open()"
+          >
+            <span class="srch__ico2" aria-hidden="true">{{ row.icon }}</span>
+            <span class="srch__body2"><strong class="srch__rt">{{ row.title }}</strong><span class="srch__rm">{{ row.meta }}</span></span>
+            <span class="srch__simbadge srch__simbadge--sim" data-testid="sim-badge">{{ zh ? '推演' : 'SIM' }}</span>
+            <span class="srch__go">{{ row.action }}</span>
+          </button>
+          <p v-if="simSessionRowsResult.length > 10" class="srch__more">{{ zh ? '仅显示前 10 条推演会话，输入更精确关键词收敛。' : 'Showing first 10 sim sessions.' }}</p>
         </section>
 
         <section v-for="group in visibleGroups" :key="group.key" class="srch__group" :data-testid="`search-group-${group.key}`">
@@ -565,6 +654,9 @@ function reset(): void {
 .srch__filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
 .srch__filter { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
 .srch__filter select { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); font-family: inherit; font-size: 12px; padding: 3px 8px; max-width: 200px; }
+.srch__board { min-width: 140px; }
+.srch__arch { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); cursor: pointer; }
+.srch__arch input { accent-color: var(--accent-primary, var(--color-primary)); }
 .srch__reset { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-muted); font-family: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer; }
 .srch__reset:hover { color: var(--text-primary); background: var(--bg-secondary); }
 .srch__body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 16px; }
@@ -582,6 +674,10 @@ function reset(): void {
 .srch__go { font-size: 12px; color: var(--accent-primary); white-space: nowrap; }
 .srch__more { margin: 0; padding: 7px 14px; font-size: 11px; color: var(--text-muted); }
 .srch__err { margin: 0; font-size: 12px; color: var(--ia-stale); }
+.srch__simbadge { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: .02em; }
+.srch__simbadge--sim { color: var(--ia-sim-on, #fff); background: var(--ia-sim, #7c3aed); border: 1px solid rgba(255,255,255,.25); }
+.srch__group--sim { border-color: rgba(124, 58, 237, .45); }
+.srch__group--sim .srch__gh { color: var(--ia-sim-deep, #6d28d9); }
 .srch__runsempty { padding: 28px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
 .srch__runsempty p { margin: 0 0 10px; }
 .srch__goto { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--accent-primary); font-family: inherit; font-size: 12px; padding: 5px 14px; cursor: pointer; }

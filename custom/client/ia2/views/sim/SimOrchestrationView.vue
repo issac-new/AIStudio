@@ -1,4 +1,5 @@
-<!-- 全流程推演·运行编排（只读）：场景规格与图运行清单来自 graph 事件源；
+<!-- 全流程推演·运行编排：图运行清单来自 graph 事件源（只读），场景规格经画布
+     编辑器可编辑（2026-10-24 挂回，2026-10-27 Task 9 文案校准只读范围）；
      日常看板协同图保留在 /app/board，两个导航域不互相改写。 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
@@ -60,14 +61,14 @@ onMounted(() => { void refresh() })
   <div class="sro" data-testid="orc-page">
     <IaBreadcrumb />
     <header class="sro__head">
-      <h2 class="sro__title">运行编排（只读）</h2>
+      <h2 class="sro__title">运行编排</h2>
       <div class="sro__actions">
         <button type="button" class="sro__button" data-testid="orc-refresh" :disabled="loading" @click="refresh">{{ loading ? '读取中…' : '刷新' }}</button>
         <button type="button" class="sro__button" data-testid="orc-editor" @click="openEditor">打开画布编辑器</button>
         <button type="button" class="sro__button" data-testid="orc-back" @click="void router.push({ name: 'ia2.sim', query: backQuery })">返回全流程推演</button>
       </div>
     </header>
-    <p class="sro__note">这里只列出推演图规格与图运行；启动、续跑和人工闸在导演台处理。日常任务协同图请回到日常工作台的看板。</p>
+    <p class="sro__note">图运行清单只读，场景规格可编辑——启动、续跑和人工闸在导演台处理。日常任务协同图请回到日常工作台的看板。</p>
     <p v-if="loadError && !editorMode" class="sro__error" data-testid="orc-error" :title="loadError">运行编排数据暂不可用。</p>
 
     <div v-if="editorMode" class="sro__editor" data-testid="orc-editor-mode">

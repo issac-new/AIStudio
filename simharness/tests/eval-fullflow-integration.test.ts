@@ -132,54 +132,73 @@ function writeFixture(dir: string, patch: (f: typeof base) => void): void {
   writeFileSync(join(dir, 'redteam-runs.json'), JSON.stringify({ runs: [] }), 'utf8')
 }
 
+function writeVerdict(dir: string, v: { verdict: string; fails?: string[]; gaps?: string[]; line?: string }): void {
+  writeFileSync(join(dir, 'verdict.json'), JSON.stringify({
+    ok: true, verdict: v.verdict, fails: v.fails ?? [], gaps: v.gaps ?? [],
+    line: v.line ?? `EVAL-GATE-${v.verdict.toUpperCase()} 测试判定件`,
+  }), 'utf8')
+}
+
 function runSummary(dir: string): { status: number; stdout: string; out: any } {
   const out = join(dir, 'eval-summary.json')
   const r = spawnSync('python3', [
     join(HARNESS, 'mux', 'mx-eval-summary.py'), '--dir', dir, '--out', out,
+    '--verdict-file', join(dir, 'verdict.json'),
   ], { encoding: 'utf8' })
   let parsed: any = null
   try { parsed = JSON.parse(readFileSync(out, 'utf8')) } catch { /* noop */ }
   return { status: r.status ?? -1, stdout: r.stdout || '', out: parsed }
 }
 
-describe('V8.45 评测子门判据', () => {
-  it('PASS：全部门禁项通过', () => {
+describe('V8.45 评测子门判据（融合批三：判定正本=产品 e2e-verdict.ts；此处钉组装与判定件合并）', () => {
+  it('PASS 判定件 → status 0；读数组装完整', () => {
     const dir = mkdtempSync(join(tmpdir(), 'mx-eval-pass-'))
     try {
       writeFixture(dir, () => undefined)
+      writeVerdict(dir, { verdict: 'pass' })
       const r = runSummary(dir)
       expect(r.status).toBe(0)
       expect(r.stdout).toContain('EVAL-GATE-PASS')
       expect(r.out.verdict).toBe('pass')
+      expect(r.out.run.passAt1).toBe(1)
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
   })
 
-  it('FAIL：红线命中/unknown 超限/锚点漂移', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'mx-eval-fail-'))
+  it('FAIL/GAP 判定件 → 退出码 1/2（映射面不动）；判定项原文透传', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mx-eval-map-'))
     try {
-      writeFixture(dir, (f) => { f.run.run.aggregates.riskVeto = true })
+      writeFixture(dir, () => undefined)
+      writeVerdict(dir, { verdict: 'fail', fails: ['红线一票否决命中（riskVeto=true）'] })
       let r = runSummary(dir)
       expect(r.status).toBe(1)
-      expect(r.out.verdict).toBe('fail')
       expect(r.out.fails.join()).toContain('红线')
 
-      writeFixture(dir, (f) => { f.run.run.aggregates.unknownRatio = 0.5 })
+      writeVerdict(dir, { verdict: 'gap', gaps: ['能力维度覆盖 0/7（评测任务未显式标注 dimension）', '红队运行缺席（安全证据不可得）'] })
       r = runSummary(dir)
-      expect(r.status).toBe(1)
-      expect(r.out.fails.join()).toContain('unknown')
-
-      writeFixture(dir, (f) => { f.set.set.contentHash = 'drifted' })
-      r = runSummary(dir)
-      expect(r.status).toBe(1)
-      expect(r.out.fails.join()).toContain('集已改版')
+      expect(r.status).toBe(2)
+      expect(r.out.gaps.join()).toContain('能力维度覆盖 0/7')
+      expect(r.out.gaps.join()).toContain('红队运行缺席')
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
   })
 
-  it('V8.48：新读数透传且不改判（带新读数 PASS；全缺席也 PASS）', () => {
+  it('判定件缺席 = FAIL fail-closed（判据不复算——产品判定缺席不装绿）', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mx-eval-nov-'))
+    try {
+      writeFixture(dir, () => undefined)
+      const r = runSummary(dir)
+      expect(r.status).toBe(1)
+      expect(r.out.verdict).toBe('fail')
+      expect(r.out.fails.join()).toContain('判定件')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('V8.48：新读数透传且不改判（判定件为准；全缺席读数字段 null）', () => {
     const dir = mkdtempSync(join(tmpdir(), 'mx-eval-v848-'))
     try {
       writeFixture(dir, (f) => {
@@ -187,6 +206,7 @@ describe('V8.45 评测子门判据', () => {
         f.run.run.aggregates.byRole = [{ role: 'implementer', taskCount: 2, passed: 2, passAtK: 1 }, { role: 'reviewer', taskCount: 1, passed: 1, passAtK: 1 }]
         f.run.run.aggregates.outputStability = { rounds: 3, checked: 6, flips: 0, flipRate: 0 }
       })
+      writeVerdict(dir, { verdict: 'pass' })
       writeFileSync(join(dir, 'behavior-signals.json'), JSON.stringify({ ok: true, available: true, signals: { days: 7, hasUsage: true, rows: [{ key: 'llm_error_rate', value: 0.01, samples: 200, sufficient: true }] } }), 'utf8')
       writeFileSync(join(dir, 'business-summary.json'), JSON.stringify({ ok: true, summary: { verdict: 'releasable', verdictKey: 'all_gates_pass', facts: [{ key: 'quality', params: { pass: 100, tasks: 3, unknownPct: 0 } }] } }), 'utf8')
       let r = runSummary(dir)
@@ -197,7 +217,6 @@ describe('V8.45 评测子门判据', () => {
       expect(r.out.behaviorSignals.rows[0].key).toBe('llm_error_rate')
       expect(r.out.businessSummary.verdict).toBe('releasable')
 
-      // 全缺席（旧证据目录形态）：读数字段为 null 且判据不受影响
       rmSync(join(dir, 'behavior-signals.json'), { force: true })
       rmSync(join(dir, 'business-summary.json'), { force: true })
       writeFixture(dir, (f) => { delete (f.run.run.aggregates as any).byDifficulty })
@@ -210,21 +229,10 @@ describe('V8.45 评测子门判据', () => {
     }
   })
 
-  it('GAP：覆盖 0/7、红队缺席、线上证据未回填（非阻断）', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'mx-eval-gap-'))
-    try {
-      writeFixture(dir, (f) => {
-        f.registry.coverage.covered = 0
-        delete (f.run.run as any).liveEvidence
-      })
-      rmSync(join(dir, 'redteam-run.json'), { force: true })
-      const r = runSummary(dir)
-      expect(r.status).toBe(2)
-      expect(r.stdout).toContain('EVAL-GATE-GAP')
-      expect(r.out.gaps.join()).toContain('能力维度覆盖 0/7')
-      expect(r.out.gaps.join()).toContain('红队运行缺席')
-    } finally {
-      rmSync(dir, { recursive: true, force: true })
-    }
+  it('融合批三接线：eval_summary 走治理服务判定（gov_eval_verdict 单源）', () => {
+    const lib = read('mux/mx-eval-lib.sh')
+    expect(lib).toContain('gov_eval_verdict "$d"')
+    expect(lib).toContain('MX_EVAL_VERDICT_JSON="$d/verdict.json"')
   })
 })
+

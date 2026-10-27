@@ -85,7 +85,7 @@ describe('红队 HTTP', () => {
     const { status, body } = await get('/api/hermes/eval/redteam/corpus')
     expect(status).toBe(200)
     expect(body.detector.id).toBe('s0-rules')
-    expect(body.detector.s1Wired).toBe(false)
+    expect(body.detector.s1Wired).toBe(true)
     expect(body.operators).toHaveLength(12)
     expect(body.categories.length).toBe(8)
     expect(body.benignCount).toBeGreaterThanOrEqual(4)
@@ -95,7 +95,7 @@ describe('红队 HTTP', () => {
     const created = await post('/api/hermes/eval/redteam/runs', { generations: 1, population: 4, threshold: 3, seed: 7 })
     expect(created.status).toBe(201)
     expect(created.body.run.totals.evaluated).toBeGreaterThan(0)
-    expect(created.body.run.s1Wired).toBe(false)
+    expect(created.body.run.s1Wired).toBe(true)
     const id = created.body.run.id
     const list = await get('/api/hermes/eval/redteam/runs?limit=5')
     expect(list.status).toBe(200)

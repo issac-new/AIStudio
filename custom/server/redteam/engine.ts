@@ -67,27 +67,18 @@ function variantOf(seed: AttackSeed, text: string, config: RedteamConfig, genera
   }
 }
 
-function rate(part: number, total: number): number | null {
-  return total === 0 ? null : part / total
-}
-
-/** 主入口：跑一次红队体检（纯计算 + 无 IO；调用方负责落库）。 */
-export function runRedteam(input: Partial<RedteamConfig> = {}, now = Date.now): { ok: true; run: RedteamRun } | { ok: false; problems: string[] } {
-  const normalized = normalizeConfig(input)
-  if ('problems' in normalized) return { ok: false, problems: normalized.problems }
-  const config = normalized.config
+/**
+ * 进化核（纯函数、确定性）：第 0 代语料本体 + 逐代变异（父代=S0 存活池中可疑分
+ * 最低者）。runRedteam 与 replaySurvivorTexts 共用——同 config 必产出同批变异文本
+ * （S1 分层复评据此在不落原文的前提下确定性复放幸存者）。
+ */
+function evolve(config: RedteamConfig): VariantWithText[] {
   const rand = mulberry32(config.seed)
-
   const seeds = attackSeeds()
-  const benign = benignSeeds()
   const all: VariantWithText[] = []
-
-  // 第 0 代：语料本体
   for (const seed of seeds) {
     all.push(variantOf(seed, seed.text, config, 0, null, null, []))
   }
-
-  // 逐代进化：父代=当前存活池中可疑分最低者（逃逸优先），子代按算子轮转变异
   const seen = new Set(all.map((v) => v.sha))
   for (let generation = 1; generation <= config.generations; generation += 1) {
     const ranked = [...all].sort((a, b) => (a.score - b.score) || (b.text.length - a.text.length) || a.sha.localeCompare(b.sha))
@@ -108,6 +99,38 @@ export function runRedteam(input: Partial<RedteamConfig> = {}, now = Date.now): 
       produced += 1
     }
   }
+  return all
+}
+
+/**
+ * 确定性复放 S0 幸存者文本（S1 分层复评入口，挂账清偿批）：同 config 复现同批
+ * 幸存者（排序与 runRedteam.survivors 同序，取前 8）。原文不落库——只在复评
+ * 请求内即取即用，账本只留 preview 指纹。
+ */
+export function replaySurvivorTexts(input: Partial<RedteamConfig> = {}): { ok: true; survivors: Array<{ id: string; preview: string; text: string }> } | { ok: false; problems: string[] } {
+  const normalized = normalizeConfig(input)
+  if ('problems' in normalized) return { ok: false, problems: normalized.problems }
+  const all = evolve(normalized.config)
+  const survivors = all
+    .filter((v) => !v.detected)
+    .sort((a, b) => (a.score - b.score) || (b.text.length - a.text.length) || a.sha.localeCompare(b.sha))
+    .slice(0, 8)
+    .map(({ id, preview, text }) => ({ id, preview, text }))
+  return { ok: true, survivors }
+}
+
+function rate(part: number, total: number): number | null {
+  return total === 0 ? null : part / total
+}
+
+/** 主入口：跑一次红队体检（纯计算 + 无 IO；调用方负责落库）。 */
+export function runRedteam(input: Partial<RedteamConfig> = {}, now = Date.now): { ok: true; run: RedteamRun } | { ok: false; problems: string[] } {
+  const normalized = normalizeConfig(input)
+  if ('problems' in normalized) return { ok: false, problems: normalized.problems }
+  const config = normalized.config
+  const seeds = attackSeeds()
+  const benign = benignSeeds()
+  const all = evolve(config)
 
   const totals = {
     evaluated: all.length,
@@ -156,7 +179,8 @@ export function runRedteam(input: Partial<RedteamConfig> = {}, now = Date.now): 
     .map(({ text: _text, ...rest }) => rest)
 
   const notes: string[] = [
-    'v1 检测器=S0 规则层，S1 裁判未接线——逃逸率只代表规则层拦截能力，不等于完整护栏效果。',
+    'v1 检测器=S0 规则层；S1 裁判已接线为分层复评（POST /runs/:id/s1，judge 不可用 fail-open 回 S0-only）——'
+      + '本体逃逸率只代表规则层拦截能力，S0+S1 联合逃逸率看 s1 分层报告。',
     '进化选择的是低可疑分个体，不代表语义上仍可执行；幸存样本需人工复核，不能直接当有效攻击。',
     '良性难负例只跑语料本体（不参与变异），误报率用于评估规则灵敏度代价。',
   ]
@@ -174,7 +198,7 @@ export function runRedteam(input: Partial<RedteamConfig> = {}, now = Date.now): 
       createdAt: now(),
       config,
       detector: DETECTOR_INFO.id,
-      s1Wired: false,
+      s1Wired: DETECTOR_INFO.s1Wired,
       totals,
       benign: {
         total: benign.length,

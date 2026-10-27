@@ -10,9 +10,19 @@ import { deleteWorkflowRun, fetchWorkflowRun, fetchWorkflowRuns, startWorkflow, 
 
 const props = defineProps<{ runId?: string | null }>()
 
+const emit = defineEmits<{
+  /** 行点击/创建成功 → 宿主更新 ?wf=<runId> 深链 */
+  (e: 'open-run', id: string): void
+  /** 新建取消（URL 态 ?wf=new）→ 宿主清除 wf query */
+  (e: 'cancel'): void
+}>()
+
 const runs = ref<WorkflowRun[]>([])
 const detail = ref<WorkflowRun | null>(null)
 const identities = ref<IdentityInfo[]>([])
+const listError = ref('')
+const detailError = ref('')
+const detailLoading = ref(false)
 
 // matrix 集群房间下拉（批 2 ①）：与左栏聊天列表同一数据源（matrix-room store），
 // 不再手填 roomId——实测手填易错且无从发现房间。
@@ -24,9 +34,21 @@ const busy = ref(false)
 const errMsg = ref('')
 
 // ── 列表轮询：running 存在时 4s，否则 30s ──
+// Task 3（2026-10-27）：刷新完成后重排——旧实现挂载即按空列表排 30s，
+// 首载明明有 running 也要等 30s 才第一次跟进；失败置错误态（不得伪装空列表）。
+// fix round 1（卸载竞态）：宿主以 :key="wf:${wfRunId}" 强重挂本面板，fetch 在途
+// 时卸载后 onUnmounted 已清旧 timer，在途 refreshRuns 落地不得再新建 interval
+// （否则永无清理者，无限轮询泄漏）——disposed 守卫在 schedule 前拦截。
 let timer: ReturnType<typeof setInterval> | null = null
+let disposed = false
 async function refreshRuns(): Promise<void> {
-  try { runs.value = await fetchWorkflowRuns() } catch { /* 网关外错误忽略 */ }
+  try {
+    runs.value = await fetchWorkflowRuns()
+    listError.value = ''
+  } catch (e) {
+    listError.value = (e as Error).message.slice(0, 160)
+  }
+  if (!disposed) schedule()
 }
 function schedule(): void {
   const hasRunning = runs.value.some(r => r.status === 'running')
@@ -36,8 +58,8 @@ function schedule(): void {
     if (detail.value) void loadDetail(detail.value.id)
   }, hasRunning ? 4_000 : 30_000)
 }
-onMounted(() => { void refreshRuns(); schedule(); void fetchIdentities().then(l => { identities.value = l }).catch(() => {}) })
-onUnmounted(() => { if (timer) clearInterval(timer) })
+onMounted(() => { void refreshRuns(); void fetchIdentities().then(l => { identities.value = l }).catch(() => {}) })
+onUnmounted(() => { disposed = true; if (timer) clearInterval(timer) })
 
 // ── 详情 ──
 async function removeRun(): Promise<void> {
@@ -51,9 +73,36 @@ async function removeRun(): Promise<void> {
 }
 
 async function loadDetail(id: string): Promise<void> {
-  try { detail.value = await fetchWorkflowRun(id) } catch { /* 保持旧态 */ }
+  detailLoading.value = !detail.value
+  try {
+    detail.value = await fetchWorkflowRun(id)
+    detailError.value = ''
+  } catch (e) {
+    // 轮询刷新失败保旧态（既有语义）；首载失败必须给错误+重试出口，不得永久 loading
+    if (!detail.value) detailError.value = (e as Error).message.slice(0, 160)
+  } finally {
+    detailLoading.value = false
+  }
 }
-watch(() => props.runId, id => { detail.value = null; composerOpen.value = id === 'new'; if (id && id !== 'new') void loadDetail(id) }, { immediate: true })
+
+async function retryDetail(): Promise<void> {
+  if (!props.runId || props.runId === 'new') return
+  detailError.value = ''
+  await loadDetail(props.runId)
+}
+
+/** 新建取消：关弹层；URL 态（?wf=new）通知宿主清 query */
+function cancelComposer(): void {
+  composerOpen.value = false
+  if (props.runId === 'new') emit('cancel')
+}
+
+watch(() => props.runId, id => {
+  detail.value = null
+  detailError.value = ''
+  composerOpen.value = id === 'new'
+  if (id && id !== 'new') void loadDetail(id)
+}, { immediate: true })
 
 const shown = computed(() => (props.runId ? [] : runs.value))
 const stepBadge = (s: WorkflowRun['steps'][number]): string =>
@@ -82,7 +131,8 @@ async function run(): Promise<void> {
     form.value = { name: '', mode: 'parallel', steps: [{ targetKind: 'identity', ref: '', instructions: '' }] }
     await refreshRuns()
     detail.value = r
-    schedule()
+    // Task 3（2026-10-27）：创建成功把 URL 从 wf=new 换成真实运行 ID（刷新/分享不失真）
+    emit('open-run', r.id)
   } catch (e) {
     errMsg.value = (e as Error).message.slice(0, 200)
   } finally {
@@ -99,16 +149,21 @@ async function run(): Promise<void> {
         <span class="wfp__title">工作流<span class="wfp__n">{{ runs.length }}</span></span>
         <button type="button" class="wfp__new" data-testid="wf-new" @click="composerOpen = true">＋ 运行工作流</button>
       </div>
-      <p v-if="runs.length === 0" class="wfp__empty">还没有工作流——「＋ 运行工作流」向分布式 agent / matrix 集群下发多步任务</p>
+      <!-- Task 3：取数失败≠真空——错误态 + 重试，不得伪装成「还没有工作流」空态 -->
+      <div v-if="listError && runs.length === 0" class="wfp__listerr" data-testid="wf-list-error">
+        <span class="wfp__step-err">工作流列表载入失败：{{ listError }}（稍后自动重试）</span>
+        <button type="button" class="wfp__retry" data-testid="wf-list-retry" @click="refreshRuns">立即重试</button>
+      </div>
+      <p v-else-if="runs.length === 0" class="wfp__empty">还没有工作流——「＋ 运行工作流」向分布式 agent / matrix 集群下发多步任务</p>
       <button v-for="r in shown" :key="r.id" type="button" class="wfp__row" :data-testid="`wf-row-${r.id}`"
-        @click="$emit('open-run', r.id)">
+        @click="emit('open-run', r.id)">
         <span class="wfp__dot" :class="`wfp__dot--${statusTone(r.status)}`" />
         <span class="wfp__name">{{ r.name }}</span>
         <span class="wfp__meta">{{ r.mode === 'parallel' ? '并行' : '串行' }} · {{ r.steps.filter(s => s.status === 'ok' || s.status === 'queued').length }}/{{ r.steps.length }}</span>
       </button>
     </template>
 
-    <!-- 详情层（runId 时） -->
+    <!-- 详情层（runId 时）：载入/错误/内容三态分明，失败可重试 -->
     <template v-else>
       <div v-if="detail" class="wfp__detail" data-testid="wf-detail">
         <header class="wfp__dhead">
@@ -127,11 +182,16 @@ async function run(): Promise<void> {
           <p v-if="s.error" class="wfp__step-err">{{ s.error }}</p>
         </div>
       </div>
-      <p v-else class="wfp__empty">载入运行详情…</p>
+      <p v-else-if="detailLoading" class="wfp__empty">载入运行详情…</p>
+      <div v-else-if="detailError" class="wfp__detailerr" data-testid="wf-detail-error">
+        <p class="wfp__step-err">运行详情载入失败：{{ detailError }}</p>
+        <button type="button" class="wfp__retry" data-testid="wf-detail-retry" @click="retryDetail">重试</button>
+      </div>
+      <p v-else class="wfp__empty">{{ props.runId === 'new' ? '新建工作流…' : '载入运行详情…' }}</p>
     </template>
 
     <!-- 新建弹层 -->
-    <div v-if="composerOpen" class="wfp__modal" data-testid="wf-composer" @click.self="composerOpen = false">
+    <div v-if="composerOpen" class="wfp__modal" data-testid="wf-composer" @click.self="cancelComposer">
       <div class="wfp__sheet">
         <h3>运行工作流</h3>
         <p class="wfp__hint">每步=对一个目标下达指令（zcode workflow 的 agent().ask() 范式）：身份=本机网关分布式 hermes agent；Matrix=向集群房间投递（远程网关成员原生处理）。</p>
@@ -160,6 +220,7 @@ async function run(): Promise<void> {
         </div>
         <div class="wfp__acts">
           <button type="button" class="wfp__ghost" data-testid="wf-add-step" @click="addStep">＋ 加一步</button>
+          <button type="button" class="wfp__ghost" data-testid="wf-cancel" @click="cancelComposer">取消</button>
           <button type="button" class="wfp__primary" data-testid="wf-run-btn" :disabled="busy" @click="run">{{ busy ? '启动中…' : '运行' }}</button>
         </div>
         <p v-if="errMsg" class="wfp__step-err">{{ errMsg }}</p>
@@ -175,6 +236,12 @@ async function run(): Promise<void> {
 .wfp__n { margin-left: 4px; font-weight: 400; }
 .wfp__new { margin-left: auto; font-size: 11px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--accent-primary); color: var(--accent-primary); background: transparent; cursor: pointer; &:hover { background: color-mix(in srgb, var(--accent-primary) 10%, transparent); } }
 .wfp__empty { margin: 8px 2px; font-size: 12px; color: var(--text-muted); }
+.wfp__listerr, .wfp__detailerr { display: flex; align-items: center; gap: 8px; margin: 8px 2px; font-size: 12px; }
+.wfp__retry {
+  font-size: 11px; padding: 3px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--accent-primary); color: var(--accent-primary); background: transparent;
+  &:hover { background: color-mix(in srgb, var(--accent-primary) 10%, transparent); }
+}
 .wfp__row { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border: none; border-radius: 6px; background: transparent; cursor: pointer; text-align: left;
   &:hover { background: var(--bg-secondary); } }
 .wfp__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-primary); }

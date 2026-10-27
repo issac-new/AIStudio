@@ -1,4 +1,6 @@
-// overlay/custom/server/harness/sim-launch.ts
+// overlay/custom/server/simcenter/sim-launch.ts
+// 融合批四（D7）：启动器归属回推演运行域（harness=治理读模型域，启动推演是推演运行面
+// 职责）；路由前缀 /api/harness/sim-launch/* 冻结不变（消费面零改动）。
 // 受控 harness 推演启动器（2026-10-20 方案 2）：
 //   GET  /api/harness/sim-launch/status
 //   POST /api/harness/sim-launch/start   { runId }

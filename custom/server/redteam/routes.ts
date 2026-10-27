@@ -4,18 +4,20 @@
 // POST /api/hermes/eval/redteam/runs         跑一次红队体检 {generations?,population?,threshold?,seed?}
 // GET  /api/hermes/eval/redteam/runs         最近运行摘要
 // GET  /api/hermes/eval/redteam/runs/:id     完整报告
+// POST /api/hermes/eval/redteam/runs/:id/s1  S0 幸存者 S1 裁判分层复评（挂账清偿批）
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { CATEGORY_LABELS, attackSeeds, benignSeeds } from './corpus'
-import { DETECTOR_INFO } from './detector'
-import { DEFAULT_REDTEAM_CONFIG, REDTEAM_LIMITS, runRedteam } from './engine'
+import { DETECTOR_INFO, s1Evaluate } from './detector'
+import { summarizeS1Layer } from './s1-layer'
+import { DEFAULT_REDTEAM_CONFIG, REDTEAM_LIMITS, replaySurvivorTexts, runRedteam } from './engine'
 import { OPERATORS } from './mutate'
-import { appendRun, getRun, listRuns } from './store'
+import { appendRun, attachS1, getRun, listRuns } from './store'
 import { runExecRedteam } from './exec-probe'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { RedteamConfig } from './types'
+import type { RedteamConfig, S1LayerReport, S1SurvivorVerdict } from './types'
 
 function actorOf(ctx: Context): string | undefined {
   const user = (ctx.state as { user?: { id?: number | string; username?: string } } | undefined)?.user
@@ -85,5 +87,45 @@ export function mountRedteam(router: Router): void {
       return
     }
     ctx.body = { ok: true, run }
+  })
+
+  // S1 分层复评（挂账清偿批，2026-10-27）：按 run.config 确定性复放 S0 幸存者原文
+  // （账本不落原文），逐条过 toolresultguard 同源判定链；judge 不可用 fail-open
+  // 如实入不可用桶（available:false），不冒充检出。幂等覆盖式落账。
+  router.post('/redteam/runs/:id/s1', async (ctx) => {
+    const run = getRun(ctx.params.id)
+    if (!run) {
+      ctx.status = 404
+      ctx.body = { ok: false, problems: [`红队运行不存在：${ctx.params.id}`] }
+      return
+    }
+    const replay = replaySurvivorTexts(run.config)
+    if (!replay.ok) {
+      ctx.status = 400
+      ctx.body = { ok: false, problems: replay.problems }
+      return
+    }
+    if (replay.survivors.length === 0) {
+      const report: S1LayerReport = {
+        ...summarizeS1Layer([], Date.now()),
+        available: true,
+        unavailableReason: 'S0 无幸存者，S1 无可复评对象',
+      }
+      attachS1(run.id, report)
+      ctx.body = { ok: true, s1: report }
+      return
+    }
+    const verdicts: S1SurvivorVerdict[] = await Promise.all(replay.survivors.map(async (s) => {
+      const d = await s1Evaluate(s.text).catch((e: unknown) => ({
+        via: `fail-open-error: ${e instanceof Error ? e.message : String(e)}`,
+        verdict: null, attackP: null, category: null, severity: null,
+      }))
+      return { id: s.id, preview: s.preview, via: d.via, verdict: d.verdict, attackP: d.attackP, category: d.category, severity: d.severity }
+    }))
+    // 口径抽到纯函数 s1-layer.ts：fail-open 的 PASS 不算逃逸（否则两数相加超总数，
+    // 2026-10-27 活体走查实锤）。
+    const report = summarizeS1Layer(verdicts, Date.now())
+    attachS1(run.id, report)
+    ctx.body = { ok: true, s1: report, actor: actorOf(ctx) }
   })
 }

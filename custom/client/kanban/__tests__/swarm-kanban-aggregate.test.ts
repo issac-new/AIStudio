@@ -14,21 +14,35 @@ vi.mock('naive-ui', () => ({
 }))
 
 const workspaceStubs = vi.hoisted(() => {
+  const rawTasks = [
+    { board: 'swarm', task: { id: 't-1', title: '发布', status: 'review', assignee: 'worker', priority: 2, created_at: 300, tenant: null, session_id: null, body: null, result: null } },
+    { board: 'swarm', task: { id: 't-2', title: '联调', status: 'running', assignee: '你', priority: 1, created_at: 200, tenant: null, session_id: null, body: null, result: null } },
+    { board: '[已移除]', task: { id: 't-3', title: '原理图', status: 'todo', assignee: null, priority: 0, created_at: 100, tenant: null, session_id: null, body: null, result: null } },
+  ]
   const state = {
     boards: [
       { slug: 'swarm', name: 'Swarm 主板', total: 2 },
       { slug: '[已移除]', name: '[已移除]', total: 1 },
     ],
-    rawTasks: [
-      { board: 'swarm', task: { id: 't-1', title: '发布', status: 'review', assignee: 'worker', priority: 2, created_at: 300, tenant: null, session_id: null, body: null, result: null } },
-      { board: 'swarm', task: { id: 't-2', title: '联调', status: 'running', assignee: '你', priority: 1, created_at: 200, tenant: null, session_id: null, body: null, result: null } },
-      { board: '[已移除]', task: { id: 't-3', title: '原理图', status: 'todo', assignee: null, priority: 0, created_at: 100, tenant: null, session_id: null, body: null, result: null } },
-    ],
+    rawTasks,
+    dailyTasks: rawTasks.map(raw => ({
+      key: `daily:${raw.board}:${raw.task.id}`,
+      taskId: raw.task.id,
+      board: raw.board,
+      source: 'daily' as const,
+      runId: null,
+      task: { ...raw.task, boardSlug: raw.board, createdAt: raw.task.created_at * 1000 },
+      raw,
+    })),
+    simTasks: [],
     refreshAllBoards: vi.fn(async () => true),
   }
   return { state, useWorkspaceStore: () => state }
 })
-vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
+vi.mock('@/custom/ia2/store/workspace', () => ({
+  useWorkspaceStore: workspaceStubs.useWorkspaceStore,
+  isWritableTask: (ref: { source?: string } | null | undefined) => ref?.source === 'daily',
+}))
 
 const kanbanStoreStubs = vi.hoisted(() => {
   const state = {
@@ -63,7 +77,7 @@ vi.mock('@/stores/hermes/kanban', () => ({ useKanbanStore: kanbanStoreStubs.useK
 
 // 重组件桩：KanbanBoard 暴露任务数；其余纯壳
 vi.mock('../components/KanbanBoard.vue', () => ({
-  default: { name: 'KanbanBoard', props: ['tasks', 'selectedIds', 'includeArchived', 'laneByProfile', 'loading', 'parentTasks'], emits: ['taskClick', 'inlineCreate', 'columnDrop'], template: '<div class="kb-stub" :data-count="tasks.length" data-testid="kanban-board-stub" @click="$emit(\'taskClick\', tasks[0]?.id, false, false)" />' },
+  default: { name: 'KanbanBoard', props: ['tasks', 'selectedIds', 'includeArchived', 'laneByProfile', 'loading', 'parentTasks'], emits: ['taskClick', 'inlineCreate', 'columnDrop'], template: '<div class="kb-stub" :data-count="tasks.length" data-testid="kanban-board-stub" @click="$emit(\'taskClick\', tasks[0]?.__taskKey, false, false)" />' },
 }))
 vi.mock('../components/KanbanToolbar.vue', () => ({
   default: { name: 'KanbanToolbar', props: { hideBoardSelect: { type: Boolean, default: false }, taskCount: Number, boards: Array, currentBoard: String, assignees: Array, tenants: Array }, template: '<div class="kt-stub" :data-hide-board="hideBoardSelect ? \'1\' : \'0\'" :data-count="taskCount" data-testid="kanban-toolbar-stub" />' },

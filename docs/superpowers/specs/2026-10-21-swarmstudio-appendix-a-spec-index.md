@@ -1,7 +1,8 @@
-# 附录 A：产品面全量 spec 索引（365 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（374 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-27 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 365 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-27 合并后复核：main 三流并入＋产品整合批登记）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 374 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-27 三流合并复核＋产品一致性批登记：main 372＋本批 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 373 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -342,6 +343,7 @@
 | 2026-10-26-delegate-evidence-wiring | V8.54 编码委托证据位接线 | G3 查 engine_bin_source 身份行＋采集进 evidence；与九段批双证判据互补 |
 | 2026-10-26-joyai-closed-loop-absorption | JoyAI 闭环吸收轮 | 统一上下文 ID 串联知识→推演→执行→回流；workitem 全景/impact 需求命中 |
 | 2026-10-26-joyai-debts-clearance | JoyAI 闭环挂账清偿 | 未做五件收口（细节见 spec 验证段） |
+| 2026-10-27-sim-governance-convergence | 推演×研发治理融合 | 治理实现单源（判词/G1/UAT/熔断/配对/台账阈值/评测判据/指标正本入产品治理域）；D1-D9；五批落分支+残余挂账 |
 | 2026-10-26-nine-point-docs-sync | 九点对账三正本同步 | fullflow V8.54/整合正本 R12/总账随批；词表 Ycode 四级解析序＋§5.4.3 证据位 |
 | 2026-10-26-proactivity-two-axis | 主动性两轴模型 | 谁定义问题 L1-L5×做到哪一步五档裁决＋目标漂移防线；补丁 695 |
 | 2026-10-26-proactivity-followup | 主动性两轴挂账清偿 | /goal 契约变更登记对齐台账＋L4 升仓判据；补丁 696 |
@@ -368,9 +370,17 @@
 | 2026-10-26-walkthrough-debts-clearance | 走查未做项清偿 | 用量探针改取完备样本；clean 补 tracked 残留兜底并做半注入/全净双验 |
 | 2026-10-27-global-search-consolidation | 全局检索合并至顶部弹窗 | 左侧独立检索退役，五类对象/命令/组合筛选合一，旧深链兼容唤起 |
 | 2026-10-27-search-dialog-truthiness | 检索弹窗真值修复 | 人员 roster 主源/运行空态去向/筛选换看板轴/0 徽标如实 |
+| 2026-10-27-search-session-source-load | 检索弹窗会话源装载 | 弹窗打开即装载 agent 会话与群聊源，fail-soft |
+| 2026-10-27-search-sim-sessions | 跨实例只读检索推演会话 | 只读扫 SIM 库+紫色徽章+诚实点击降级 |
+| 2026-10-27-state-event-member-names | 状态事件成员文案补账号名 | zh/en 词条占位符根治（补丁 701） |
 | 2026-10-27-joyai-annotations-rerank | JoyAI 清偿批二 | map-annotations 持久化＋LLM 重排＋mention 泳道；补丁 698 |
 | 2026-10-27-joyai-realtime-squad | JoyAI 清偿批三 | 标注实时协同（LWW+socket+presence）＋squad 链重排；补丁 699 |
 | 2026-10-27-swarm-yuan-branch-trunk-order | swarm-yuan 研发四阶段顺序立法（决策 57） | 分支开发→分支测试→主干合并→主干回归；九节点不变、⑤-⑦ 在分支 |
+| 2026-10-27-tech-component-ledger-refresh | 技术组件台账整理·差异补齐·挂账清偿 | 46 项台账正本立账（component-ledger.md）；三基线树无新稳定版升级不触发；callgate/taskledger/红队 S1/A2A 四挂账清偿 |
+| 2026-10-27-ledger-todos-clearance | 台账 §9 七项待办清偿＋技能域补录 | 待办终态改判（3/5/6/7 完成、1/2 上游阻塞）＋swarm-eval 轻链路三跑＋mx-up/骨架 6 处根治 |
+| 2026-10-27-component-ledger-cleanup | 技术组件调研台账结构整理 | 当前状态/待办/主账/技能来源/历史索引分层；保真改写并修正两处物化清单路径 |
+| 2026-10-27-version-diff-absorption | 版本差异吸收第一批 | 外部 CLI 会话索引（kimi 2.3.3 #4342 只读版）落地＋其余 8 项差异逐项裁定；修 --strict false 布尔判别不窄化陷阱 |
+| 2026-10-27-product-coherence-refactor | AIStudio 产品一致性整合 | 复合任务身份、分域运行引用、设置与页面解析合一、视觉密度与真实状态 |
 | 2026-10-27-aistudio-final-design-consolidation | AIStudio 终态设计文档整合 | 正本去轮次化；历史 spec 留档；动态数字退出正文；导航与旧正本指针同步 |
 
 ### 角色/排除（非 spec 文档）

@@ -86,8 +86,8 @@ describe('进化引擎', () => {
     expect(run.benign.flaggedSamples.length).toBe(run.benign.flagged)
     expect(run.survivors.every((s) => !s.detected)).toBe(true)
     expect(run.survivors.length).toBeLessThanOrEqual(8)
-    expect(run.s1Wired).toBe(false)
-    expect(run.notes.some((n) => n.includes('S1 裁判未接线'))).toBe(true)
+    expect(run.s1Wired).toBe(true)
+    expect(run.notes.some((n) => n.includes('S1 裁判已接线'))).toBe(true)
   })
 
   it('阈值 1 时语料本体全拦（变异体仍可逃逸）、阈值 12 全逃', () => {

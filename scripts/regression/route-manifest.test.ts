@@ -21,7 +21,8 @@ describe('全功能路由清单生成器', () => {
       'matrix.client', 'matrix.clientRoom', 'ide.shell',
       'ia2.eval', 'ia2.bpa', 'ia2.ontology', 'ia2.skillgov',
     ]))
-    // 37=36+sim/map 业务地图页签（挂账清偿批二 C1 前端入口；注册链自动发现）
+    // 37 个阶段页签=STAGE_TABS 实数（分布 ①6/②4/③4/④5/⑤6/⑥12；第 37 项=⑥proactivity，
+    // 2026-10-26 主动性治理页签批）；sim/map 是推演壳层独立页路由，不占阶段页签位
     expect(manifest.stageTabs).toHaveLength(37)
     expect(new Set(names.filter(Boolean)).size).toBe(names.filter(Boolean).length)
     expect(manifest.routes.every((r: any) => r.visitPath && !r.visitPath.includes('/:'))).toBe(true)

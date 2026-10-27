@@ -42,10 +42,15 @@ function armShared(): void {
 
 function disarmShared(): void {
   const workspace = useWorkspaceStore()
+  const runsStore = useRunCenterStore()
   shellDisposed = true
   workspace.unwatchKanbanTasks()
   workspace.stopFleetStream()
   workspace.stopReminderScheduler()
+  // graph 通道释放（Task 5 2026-10-27）：runs store 的 disconnect 此前无调用方，
+  // 离壳后 /graph socket 与订阅整会话常驻——宽限回收时关闭；重入由
+  // armShared → fetchRuns → ensureSocket 重建（断线重连机制自动补订可见页）。
+  runsStore.disconnect()
   const cockpit = useCockpitStore()
   cockpit.disconnectOnUnmount()
   usePlatformsStore().release()
@@ -82,7 +87,9 @@ async function bootShared(runsStore: ReturnType<typeof useRunCenterStore>, loopS
   const awaiting = runsStore.awaitingRuns.map(r => r.runId)
   const running = runsStore.sortedRuns.filter(r => r.status === 'running').map(r => r.runId)
   runsStore.syncVisibleRunIds([...awaiting, ...running].slice(0, SUBSCRIBE_CAP))
-  void runsStore.fetchMetrics()
+  // metrics 预取已退场（Task 5 2026-10-27）：fetchMetrics 是 1 次 listRuns + ≤20 次
+  // replay 的昂贵采集，aggregateMetrics/metricsRaw 生产零消费方——不得挂在共享
+  // 启动路径；store 保留该 API 供总览类视图显式调用。
   void loopStore.fetchLoops()
 }
 

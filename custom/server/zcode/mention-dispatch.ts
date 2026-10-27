@@ -26,6 +26,7 @@ import { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
 import { fewshotRerank, rerankInjectLine } from '../eval/fewshot-rerank'
 import { listLedger } from '../eval/flywheel'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
+import { registerEntry } from '../taskledger/taskledger-store'
 import {
   resolveSquad, isSelfTrigger, buildSquadBriefing, recordEvaluation,
   type SquadDefinition,
@@ -230,6 +231,7 @@ export class MentionDispatchService {
   /**
    * 派单入口：逐 mention 产出 outcome（multica 语义：每个 mention 一条，
    * 部分失败不影响其余）。无 mention 返回空数组。
+   * 成功路径同步登记统一任务生命周期账本（wx 挂账 #7 接线；fail-soft 不阻断派发）。
    */
   async dispatch(params: DispatchParams): Promise<MentionOutcome[]> {
     const tokens = parseMentions(params.text)
@@ -237,6 +239,7 @@ export class MentionDispatchService {
     for (const token of tokens) {
       outcomes.push(await this.dispatchOne(params, token))
     }
+    for (const o of outcomes) registerMentionLedger(o)
     return outcomes
   }
 
@@ -467,4 +470,27 @@ export function uuidV7Like(): string {
   const ts = Date.now().toString(16).padStart(12, '0')
   const rand = randomUUID().replace(/-/g, '').slice(0, 20)
   return `${ts.slice(0, 8)}-${ts.slice(8, 12)}-${rand.slice(0, 4)}-${rand.slice(4, 8)}-${rand.slice(8, 20)}`
+}
+
+/**
+ * 统一任务生命周期账本接线（wx 挂账 #7，2026-10-27 清偿批）：派发成功的指令登记
+ * 进 taskledger（source=mention）。只登记成功路径 reason（queued/coalesced/deferred，
+ * 映射见 taskledger.mapMentionReason）——reject 类未产生指令实例不登记。fail-soft：
+ * 账本不可用只 warn，绝不阻断派发（lane_handoff 落账同款纪律）。
+ */
+function registerMentionLedger(o: MentionOutcome): void {
+  if (!['queued', 'coalesced', 'deferred'].includes(o.reason)) return
+  try {
+    const r = registerEntry({
+      source: 'mention',
+      sourceKey: o.taskId ?? `${o.workspaceId}:${o.target}`,
+      externalStatus: o.reason,
+      title: `@${o.target}${o.leader ? `（leader ${o.leader}）` : ''}`,
+      assignee: o.leader ?? (o.mentionKind === 'agent' ? o.target : undefined),
+      ...(o.taskId ? { instructionId: `mention:${o.taskId}:${o.target}` } : {}),
+    })
+    if (!r.ok) console.warn(`[mention-dispatch] taskledger 登记 code=${r.problem}（不阻断派发）`)
+  } catch (e) {
+    console.warn('[mention-dispatch] taskledger 登记异常（不阻断派发）', e)
+  }
 }

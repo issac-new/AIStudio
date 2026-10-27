@@ -47,8 +47,10 @@ ck "纪律39 驱动调用观察器" aipay-scenario.sh 'contract-observe'
 # §2.6-5 首过三态信号（补过键两落点+metrics 三态）
 ck "首过口径 G1 退回计补过" aipay-scenario.sh 'sset g1_supplement 1'
 ck "首过口径 G5 GAP 残留检测" aipay-scenario.sh 'sset_once g5_supplement 1'
-ck "首过口径 metrics 三态" mux/mx-scenario-lib.sh '首过\+补过\+打回=6'
-ck "首过口径 补过键读取" mux/mx-scenario-lib.sh 'g\$\{_n\}_supplement'
+# 融合批三：三态/补过键计算正本=产品 run-metrics.ts（驱动渲染壳消费 DTO）
+GOVMETRICS=../custom/server/governance/run-metrics.ts
+ck "首过口径 metrics 三态" "$GOVMETRICS" "打回.*补过.*首过|首过.*补过.*打回"
+ck "首过口径 补过键读取" "$GOVMETRICS" 'g\$\{n\}_supplement|g.\{n\}_supplement|supplement'
 
 # 推演 UI 中文断言（2026-10-12 用户指令「推演时 UI 始终中文」）：双采集器 locale 双保险
 ck "UI中文 r18-frames 浏览器级 locale" mux/r18-frames.mjs "locale: 'zh-CN'"
@@ -104,7 +106,10 @@ ck "收口 安全评审 fail-closed 不放行" aipay-scenario.sh '涉敏轮安�
 ck "收口 G3 硬校验在 testpass" aipay-scenario.sh 'gate_blocked g3_code_pass testpass'
 ck "收口 UAT 有条件通过落 uat_conditional" aipay-scenario.sh 'sset_once uat_conditional'
 ck "收口 UAT 有条件通过不落 uat_done" aipay-scenario.sh '放行权归 bella，落 uat_conditional（uat_done 不落）'
-ck "收口 UAT bella 批准事件留痕" aipay-scenario.sh 'UAT-COND-APPROVED bella-human'
+# 融合批二（D9 认可语义收紧）：bella 批准事件仍必留痕——strict 等真人写入、
+# standard 驱动代发但 actor 如实标 director-proxy（不再冒名 bella-human）。
+ck "收口 UAT 批准事件留痕" aipay-scenario.sh 'UAT-COND-APPROVED'
+ck "收口 代发认可如实标 director-proxy" aipay-scenario.sh 'UAT-COND-APPROVED director-proxy'
 ck "收口 复盘门 uat_done/uat_conditional 双键" aipay-scenario.sh '硬闸 uat_done/uat_conditional 未过'
 ck "收口 G6 闸键统一 retro_done" aipay-scenario.sh 'sset_once retro_done'
 
