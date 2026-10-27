@@ -144,3 +144,7 @@ DESIGN_SYNC: touched
 - `install.sh`：外部符号链接目标改为 `return 3`，批量汇总单列“未变更外部链接”，不再计入成功。
 - `scripts/ops-readonly-guard.sh`：输出重定向改为两步白名单（先剥 `2>&1` / `/dev/null` 等无害丢弃，再匹配 `>`/`>>`/`curl -o`/`wget -O`）。
 - 预算：上述改动净增 3 行，通过压缩既有空行抵消，`FACT_SCRIPT_LOC` 9362 与引擎上限 7800 维持不变；self-check 全绿。
+
+### 终审修复后最终回归（main dbfc8446c）
+
+`bash tests/run.sh --level all --jobs 6` → **122 通过 / 0 失败（共 122，独占串行 17）**，EXIT=0。
