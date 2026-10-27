@@ -59,6 +59,23 @@ export async function openReadonly(dbPath: string) {
   return new DatabaseSync(dbPath, { open: true, readOnly: true })
 }
 
+/** 按 taskId 跨板取任务标题（批三 D2 自 kanban/column-dispatch 搬迁——中立域无环：
+ *  column-dispatch import zcode/mention-dispatch，zcode 侧原址反向 import 即成环；
+ *  本函数依赖仅 kanbanDbFiles/openReadonly，语义即 governance 数据面只读查询）。
+ *  消费方：列编排派发 fewshot 召回语境 + squad 委托链重排预取。 */
+export async function fetchTaskTitleByTaskId(taskId: string, homeDir?: string): Promise<string | null> {
+  for (const dbPath of kanbanDbFiles(homeDir)) {
+    let db: Awaited<ReturnType<typeof openReadonly>> | undefined
+    try {
+      db = await openReadonly(dbPath)
+      const row = db.prepare('SELECT title FROM tasks WHERE id = ?').get(taskId) as { title?: string | null } | undefined
+      if (row?.title?.trim()) return row.title.trim()
+    } catch { /* 单板读失败换下一板（fail-soft，语境缺席不阻断调用方） */ }
+    finally { try { db?.close() } catch { /* 已关 */ } }
+  }
+  return null
+}
+
 export async function collectAssigneeStats(homeDir?: string): Promise<Map<string, AssigneeStat>> {
   const stats = new Map<string, AssigneeStat>()
   for (const file of kanbanDbFiles(homeDir)) {

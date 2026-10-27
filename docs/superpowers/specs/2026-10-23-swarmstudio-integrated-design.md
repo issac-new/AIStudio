@@ -188,6 +188,14 @@ fail-open 回落词面序；FLYWHEEL_FEWSHOT_RERANK=1 选通，重排行独立�
 coalesced 送达两收口，确定性幂等；command_rejected 不落）。残余挂账仅实时多人协同（OT/CRDT）
 与 squad 委托链重排注入。
 
+挂账清偿批三（2026-10-27，spec 2026-10-27-joyai-realtime-squad.md）两项全落，批二降维决策翻案：
+**标注实时协同**=LWW-Register 合并协议（标注条目带 rev 写方时钟，(rev,by) 全序比较，旧写拒绝
+返回现存条目——合法 CRDT 收敛性可证，零外部依赖）+ `/mapnotes` socket 房间实时广播（他人变更
+不刷新即时落画布角标）+ presence 在线感知（「N 人正在看」，数据源=房间成员）——补丁 699；
+**squad 链重排注入**=leader 简报尾部注入历史教训重排行（与列编排面同款 fail-soft 预取；
+fetchTaskTitleByTaskId 搬迁 governance 域解 zcode↔kanban 模块环，re-export 保兼容）。
+至此 JoyAI 吸收系列四轮挂账全部清偿归零。
+
 ## 3、设计：架构总览
 
 ### 3.1 三层结构
@@ -520,6 +528,7 @@ A 类导出可抽出→全归定制层；重写看板视图→独立路由；三
 
 | 日期 | 版本 | 变更 | 依据 |
 |---|---|---|---|
+| 2026-10-27 | 整合 R15 | §2.11 补批三段（LWW 实时协同翻案+presence+squad 重排，补丁 699）；数字随总账（补丁 409/全量 6,466）；JoyAI 吸收系列四轮挂账归零 | 用户指令「完成残余挂账两项」；spec: 2026-10-27-joyai-realtime-squad.md |
 | 2026-10-27 | 整合 R14 | §2.11 补挂账清偿批二段（画布标注/AI 重排档/mention 泳道源，补丁 698）；数字随总账（补丁 408/端点 +map-annotations/全量 6,460） | 用户指令「继续完成：新挂账三项」；spec: 2026-10-27-joyai-annotations-rerank.md |
 | 2026-10-26 | 整合 R13 | §2.11 补挂账清偿段（业务地图/AI 拆模块/向量召回/泳道摄取/回流自动触发五件，零新补丁）；数字随总账（路由 +sim/map、测试 6,448） | 用户指令「完成未做」；spec: 2026-10-26-joyai-debts-clearance.md |
 | 2026-10-26 | 整合 R12 | 新增 §2.11 研发闭环串联面（JoyAI 吸收轮四处断链修复：fewshot 语境接线/术语→关联文档/工作项全景串联/需求影响推演）；数字随总账（补丁 407/服务端域 152/specs 354） | 用户指令「深入调研微信文章完善 AIStudio」；spec: 2026-10-26-joyai-closed-loop-absorption.md；源文=AI早餐汇《京东零售技术架构负责人贺岩：企业级AI研发闭环体系的搭建与实战》 |

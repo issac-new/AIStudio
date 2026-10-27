@@ -1,0 +1,19 @@
+diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+--- a/packages/server/src/bootstrap/http.ts
++++ b/packages/server/src/bootstrap/http.ts
+@@ -28,6 +28,7 @@
+ import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
+ // overlay[zcode-projection]: zcode 会话投影 Socket.IO namespace（R4-P2）
+ import { setupZcodeProjectionSocket } from '../custom/zcode/projection-socket'
++import { setupMapnotesSocket } from '../custom/mapnotes/mapnotes-socket'
+ // overlay[matrix-server-info]: element-web config.json 的 homeserver 口径=server-info 单一事实源
+ import { getMatrixServerInfo } from '../custom/matrix/server-info'
+ import { setChatRunServer } from '../modules/studio/public/chat-run'
+@@ -791,6 +792,7 @@
+ 
+   // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.
+   setupLoopSocketNamespace(activeGroupChatServer.getIO())
++  setupMapnotesSocket(activeGroupChatServer.getIO()) // 业务地图标注实时协同：/mapnotes 房间广播+presence（JoyAI 清偿批三 D1）
+   // overlay[zcode-projection]: register /zcode Socket.IO namespace on the shared IO.
+   setupZcodeProjectionSocket(activeGroupChatServer.getIO())
+ 

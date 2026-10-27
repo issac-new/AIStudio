@@ -21,10 +21,11 @@ afterEach(() => {
 })
 
 describe('mapnotes-store', () => {
-  it('upsert 同 nodeId 覆盖（最后写胜出）；list/delete 语义；截断防线', () => {
-    upsertAnnotation('a1b2c3d4e5', { nodeId: 'ent-fibo-term-Payment', note: '首条', checked: false, by: 'u1' })
-    const saved = upsertAnnotation('a1b2c3d4e5', { nodeId: 'ent-fibo-term-Payment', note: '覆盖后的备注', checked: true, by: 'u2' })
-    expect(saved.checked).toBe(true)
+  it('upsert 同 nodeId 覆盖（批三 LWW：rev 更高胜出）；list/delete 语义；截断防线', () => {
+    upsertAnnotation('a1b2c3d4e5', { nodeId: 'ent-fibo-term-Payment', note: '首条', checked: false, by: 'u1', rev: 1 })
+    const saved = upsertAnnotation('a1b2c3d4e5', { nodeId: 'ent-fibo-term-Payment', note: '覆盖后的备注', checked: true, by: 'u2', rev: 2 })
+    expect(saved.applied).toBe(true)
+    expect(saved.annotation.checked).toBe(true)
     const list = listAnnotations('a1b2c3d4e5')
     expect(list.length).toBe(1)
     expect(list[0].note).toBe('覆盖后的备注')

@@ -55,7 +55,8 @@ export async function fewshotRerank(
 ): Promise<RerankOutcome> {
   const base = recallFewshot(query, distills, { limit: RERANK_POOL })
   if (!rerankEnabled()) return { recall: base, source: 'off' }
-  if (base.recalled.length < 2) return { recall: base, source: 'off', reason: '候选不足 2 条无需重排' }
+  // 候选不足 2 条：无需重排但档已开——按 fallback 直通（词面召回行照注入，reason 如实）
+  if (base.recalled.length < 2) return { recall: base, source: 'fallback', reason: '候选不足 2 条——按词面召回直通' }
 
   const config = loadEvalConfig()
   const lines = base.recalled.map((t, i) => `${i + 1}. ${t.trigger.slice(0, 160)}`)

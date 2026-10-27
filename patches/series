@@ -961,3 +961,6 @@
 
 # 698（2026-10-27 JoyAI 挂账清偿批二）：mapnotes 域挂载——/api/hermes/map-annotations（GET/POST/DELETE）：业务地图节点标注按需求指纹（sha1(title+description)，impact 响应下发）持久化，多用户异步协同。spec=2026-10-27-joyai-annotations-rerank.md
 698-server-mapnotes-routes.patch
+
+# 699（2026-10-27 JoyAI 挂账清偿批三）：mapnotes socket namespace 注册——/mapnotes 房间（mapnotes:<指纹>）标注变更实时广播+presence 在线数；标注存储升 LWW-Register（rev+by 全序，旧写拒绝）。spec=2026-10-27-joyai-realtime-squad.md
+699-server-mapnotes-socket-namespace.patch

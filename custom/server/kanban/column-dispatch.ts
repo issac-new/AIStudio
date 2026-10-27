@@ -24,23 +24,14 @@ import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
 import { listLedger } from '../eval/flywheel'
 import { appendEvidence } from '../evidence/evidence-store'
 import { fewshotRerank, rerankInjectLine, type RerankOutcome } from '../eval/fewshot-rerank'
-import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+import { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
  * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
  * 只读各板 SQLite 主键查询（毫秒级）；查不到返回 null，调用方回落无语境现状。 */
-export async function fetchTaskTitleByTaskId(taskId: string, homeDir?: string): Promise<string | null> {
-  for (const dbPath of kanbanDbFiles(homeDir)) {
-    let db: Awaited<ReturnType<typeof openReadonly>> | undefined
-    try {
-      db = await openReadonly(dbPath)
-      const row = db.prepare('SELECT title FROM tasks WHERE id = ?').get(taskId) as { title?: string | null } | undefined
-      if (row?.title?.trim()) return row.title.trim()
-    } catch { /* 单板读失败换下一板（fail-soft，语境缺席不阻断派发） */ }
-    finally { try { db?.close() } catch { /* 已关 */ } }
-  }
-  return null
-}
+// 批三 D2：fetchTaskTitleByTaskId 已搬迁 governance/governance-analytics（zcode 域
+// 需复用而 column-dispatch↔mention-dispatch 存在 import 环）——re-export 保兼容。
+export { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
 
 export interface ColumnDispatchResult {
   triggers: ColumnTransitionTrigger[]
