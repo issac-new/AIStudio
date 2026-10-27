@@ -66,6 +66,7 @@ test-r128-install-uninstall.sh	3	no	general	-
 test-r128-selfcheck-cache.sh	3	no	general	-
 test-r128-spec-first.sh	3	no	general	-
 test-r129-tail-closure.sh	3	yes	general	-
+test-r142-branch-trunk-order.sh	3	yes	general	R142
 test-r58-knowledge-drill-locks.sh	2	yes	general	-
 test-r60-django-drill-locks.sh	2	yes	general	-
 test-r62-php-drill-locks.sh	2	yes	general	-

@@ -2650,6 +2650,7 @@ _fg_emit_workflow() {
 
 > 填充规范：九节点全流程，每节点 4 要素（入口/参与方/门禁/产出物与调用追踪）+ ⑨调用追踪/⑩方法论引用机器校验要素（verify-completeness 逐节点断言），4-Phase SOP。
 > 节点的标准结构定义在生成器仓 references/template-spec.md §2（该文件不随技能分发）；⑥测试验证与⑦独立审查是两个独立节点（审查记录落 review-record）；整个流程可按项目实际裁剪。
+> **研发过程四阶段顺序（2026-10-27 立法）**：分支开发（⑤）→ 分支测试（⑥⑦，均在 feature 分支完成）→ 主干合并（⑧）→ 主干回归（⑨）。⑤-⑦ 在 feature 分支上进行（自 origin/main 起，禁直接在 main 开发）；⑧ 合入 main；⑨ 合入后在 main 复跑全量回归、全绿才构建发布——主干不做"合后再测"（分支测试全绿是合入前提，主干回归验证的是分支覆盖不了的集成面）。
 > **交付形态 DoD（2026-10-11 平台根治）**：本仓嗅探到运行面交付形态（见 SKILL.md 认知表）时，⑤编码/⑥测试/⑨构建发布三节点的「产出物」要素必须按形态写运行证据（mini-program=真开发者工具 runtime-proof；web-frontend=浏览器走查帧；backend-service=启动冒烟+跨模块契约测试；mobile-app=模拟器启动证据）与结论行 RUNTIME-OK/RUNTIME-FAIL——单测全绿不等于可运行（run14 教训，QGate delivery.runtime-evidence 门在 task_close 拦截）。
 
 ## 流程总览
@@ -2658,7 +2659,7 @@ _fg_emit_workflow() {
 
 > **编号体系消歧**：本 workflow 的 ①-⑨ 是**开发工作流节点**；生成器侧 SKILL.md 的 Step 1-13 是**生成流程步骤**——两套编号独立，不同义。
 > **state-machine 六阶段 ↔ 九节点对照**（粗粒度状态桶 ↔ 细粒度执行流，`scripts/state-machine.sh` 按阶段守产出物）：
-> open=①需求理解+②探查 ｜ design=③设计 spec+④实施 plan ｜ build=⑤编码实现 ｜ verify=⑥测试验证+⑦独立审查 ｜ archive=⑧合入 main ｜ operate=⑨构建发布
+> open=①需求理解+②探查 ｜ design=③设计 spec+④实施 plan ｜ build=⑤编码实现（分支开发） ｜ verify=⑥测试验证+⑦独立审查（分支测试） ｜ archive=⑧合入 main（主干合并） ｜ operate=⑨主干回归+构建发布
 
 > **回复纪律（全节点通用）**：向用户汇报的每一段话遵守受控语言——结论先行、一词一义、术语首现定义、短句不跳跃、情态不升降级；黑话替代表与报告格式见 `references/controlled-language-methodology.md`。机器账本（trace.jsonl/decisions.jsonl）不受此约束。
 
@@ -2771,7 +2772,7 @@ _fg_emit_workflow() {
 
 **① 流程入口（顺序/并行）：** 前序=节点④；互不依赖的文件可并行实施（按文件归属切分子代理，禁止两个执行者写同一文件）；复杂变更（>3 文件/跨模块）用 Dynamic Workflows 并行扇出；写码前按 `references/lazy-generation-methodology.md` 七层阶梯先查再写（层 2 查 recipes/reference-manual，层 7 才新增）
 
-**④ 质量门禁：** ★测试左移（每个 task 先写/更新测试再实现，TDD/BDD；precheck \`--shift-left\` 核验本次变更集是否同时含 test 与 impl 文件——跨栈测试命名均识别，但“先写后写”的时序仍靠任务纪律）
+**④ 质量门禁：** ★分支开发（编码在 feature 分支进行——自 origin/main 起 \`<type>/<slug>\` 命名，测试与实现同分支提交；禁直接在 main 开发，主干合并是节点⑧的事）+ ★测试左移（每个 task 先写/更新测试再实现，TDD/BDD；precheck \`--shift-left\` 核验本次变更集是否同时含 test 与 impl 文件——跨栈测试命名均识别，但“先写后写”的时序仍靠任务纪律）
 
 **⑥ 产出物与调用追踪：** 代码提交 + 测试提交
 
@@ -2783,7 +2784,7 @@ _fg_emit_workflow() {
 
 ## 节点⑥：测试验证
 
-**① 流程入口（顺序/并行）：** 前序=节点⑤；长测试/全量回归起后台任务跑，主会话同时推进其他工作
+**① 流程入口（顺序/并行）：** 前序=节点⑤；本节点是**分支测试**——测试与门禁序列在 feature 分支上执行，全绿才进节点⑦⑧（主干不做"合后再测"）；长测试/全量回归起后台任务跑，主会话同时推进其他工作
 
 **④ 质量门禁：** gstack/OCR 5 审查维度 + AUTO-FIX/ASK；★运维左移（验证 metrics/日志/trace 已埋点）；独立跑单元/接口/集成测试 + `check_test` 第二层（覆盖率阈值 / 零断言 / 断言密度 / 负向用例 / 聚焦测试；配置 `MUTATION_CMD` 时追加变异分数）+ `--api` 接口测试覆盖（端点 × 测试映射 + 状态码断言）。
 
@@ -2816,6 +2817,7 @@ _fg_emit_workflow() {
 **① 流程入口（顺序/并行）：** 前序=节点⑦
 
 **④ 质量门禁：**
+- 前序分支测试全绿（节点⑥⑦已在 feature 分支完成：gate-runs.jsonl 当次留痕 + review-record 落盘）——**主干合并**准入
 - ★变更左移（回滚预案存在 + 数据库变更兼容：向前兼容/双写期）
 - ★文档左移（设计文档随批——DESIGN_SYNC_REQUIRED=1 时）：spec「设计文档影响」声明 touched 的 DESIGN_DOCS 修订须在本变更集内（L2 pre-commit 机械核验，与 spec 变更关联模型同构——声明与兑现必须同一批）；声明 none 以节点⑦审查背书为准
 - 合入序列（多人协作防本地 main 滞后远端，2026-10-26 立法）：主工作区 `git fetch origin` → 本地 main `git merge --ff-only origin/main`（不可快进=远端历史被改写，停下对账勿强推）→ worktree 分支 `git rebase <main>`（冲突在 worktree 内解决，不在 main 改）→ `git merge --no-ff <branch>`（保留任务边界）→ `git push origin main`
@@ -2830,9 +2832,9 @@ _fg_emit_workflow() {
 
 ## 节点⑨：构建发布
 
-**① 流程入口（顺序/并行）：** 前序=节点⑧（合入 main 后方可发布）
+**① 流程入口（顺序/并行）：** 前序=节点⑧（主干合并完成）；**主干回归在先**——合入后在 main 复跑全量回归，全绿才进构建发布
 
-**④ 质量门禁：** ★运维左移（灰度/金丝雀策略 + 监控告警阈值 + 运维 runbook）
+**④ 质量门禁：** ★主干回归（2026-10-27 立法）：合入后在 main 复跑全量测试（项目全量命令/`--all-full` 门禁序列）全绿才构建发布——验证分支测试覆盖不了的集成面（并行合入交互、合并语义本身）；失败处置=本批引入则回退 merge 后回分支重入节点⑤，主干既有问题另开分支修，不在 main 直接改。★运维左移（灰度/金丝雀策略 + 监控告警阈值 + 运维 runbook）
 
 **⑥ 产出物与调用追踪：** 发布产物 + release notes——发布规则/构建命令/产物位置填入并消费 \`references/release.md\`（六段式正式成员，本节点消费方）
 
@@ -2849,11 +2851,11 @@ _fg_emit_workflow() {
 - [ ] 节点②探查：组件库清单全量 + 调用链
 - [ ] 节点③设计 spec：§19 测试设计 + §21 可观测性 + 设计文档影响声明（DESIGN_SYNC_REQUIRED=1 时 touched/none）
 - [ ] 节点④实施 plan：§20 变更影响范围
-- [ ] 节点⑤编码实现：测试与实现同分支提交
-- [ ] 节点⑥测试验证：check_test 通过（覆盖率阈值/断言质量/负向用例）+ --api 接口测试覆盖通过（5 维度审查属节点⑦）
+- [ ] 节点⑤编码实现：分支开发（feature 分支自 origin/main 起）+ 测试与实现同分支提交
+- [ ] 节点⑥测试验证：分支测试（门禁序列在分支执行全绿）——check_test 通过（覆盖率阈值/断言质量/负向用例）+ --api 接口测试覆盖通过（5 维度审查属节点⑦）
 - [ ] 节点⑦独立审查：review-record.md 留痕 + check_review 门禁 + 设计文档影响声明合理性背书（none 声明）
-- [ ] 节点⑧合入 main：回滚预案 + 迁移兼容 + 设计文档随批兑现（touched 声明）+ 本地 main 已 fetch 快进（ff-only）后合入
-- [ ] 节点⑨构建发布：灰度 + 告警 + runbook
+- [ ] 节点⑧合入 main：主干合并——前序分支测试全绿 + 回滚预案 + 迁移兼容 + 设计文档随批兑现（touched 声明）+ 本地 main 已 fetch 快进（ff-only）后合入
+- [ ] 节点⑨构建发布：主干回归（main 全量回归全绿）+ 灰度 + 告警 + runbook
 WFEOF
 }
 

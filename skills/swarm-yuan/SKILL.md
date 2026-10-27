@@ -1,6 +1,6 @@
 ---
 name: swarm-yuan
-description: "元技能生成器：为任意代码仓库生成项目专属开发技能（六段目录：SKILL.md + workflow + references + assets + 门禁配置 + scripts）。生成流程 Step 1-13：探查（组件库清单 + 调用链 + 关系边集 + 任务配方）→ 特征卡 → 骨架 → 填充 → 门禁与 hooks → 验证审查 → 激活；目标技能按开发工作流九节点运行（需求 → 探查 → spec → plan → 编码 → 测试 → 审查 → 合入 → 发布）；项目变化由指纹感知并局部更新技能。何时用：用户说'为某项目生成开发技能'、'create a dev skill'。数字口径以 assets/facts.conf 为准。"
+description: "元技能生成器：为任意代码仓库生成项目专属开发技能（六段目录：SKILL.md + workflow + references + assets + 门禁配置 + scripts）。生成流程 Step 1-13：探查（组件库清单 + 调用链 + 关系边集 + 任务配方）→ 特征卡 → 骨架 → 填充 → 门禁与 hooks → 验证审查 → 激活；目标技能按开发工作流九节点运行（需求 → 探查 → spec → plan → 编码 → 测试 → 审查 → 合入 → 发布；研发四阶段＝分支开发→分支测试→主干合并→主干回归——⑤-⑦ 在分支、⑨ 发布前主干全量回归）；项目变化由指纹感知并局部更新技能。何时用：用户说'为某项目生成开发技能'、'create a dev skill'。数字口径以 assets/facts.conf 为准。"
 ---
 
 # swarm-yuan — 项目开发技能生成器
@@ -82,7 +82,7 @@ swarm-yuan 是一个生成器。对任意代码仓库跑一次生成流程，产
 
 ## 目标技能使用（开发工作流九节点）
 
-需求理解 → 探查 → spec → plan → 编码 → 测试 → 独立审查 → 合入 → 发布。六阶段状态机逐段守卫前序产出物：design 需 proposal、build 需批准的 spec、verify 需 tasks 全勾、archive 需 verify pass 与证据。
+需求理解 → 探查 → spec → plan → 编码 → 测试 → 独立审查 → 合入 → 发布。**研发过程四阶段顺序＝分支开发（⑤编码，feature 分支自 origin/main 起，禁主干直开发）→ 分支测试（⑥测试+⑦审查，均在分支完成、全绿才合入）→ 主干合并（⑧）→ 主干回归（⑨发布前在 main 复跑全量回归，全绿才构建发布）**。六阶段状态机逐段守卫前序产出物：design 需 proposal、build 需批准的 spec、verify 需 tasks 全勾、archive 需 verify pass 与证据。
 
 守卫实物：
 
@@ -113,13 +113,13 @@ SessionStart hook（lite 档由 AI 主动）跑 `scripts/project-fingerprint.sh 
               （"谁依赖 X"用 relations-query.sh 查 relations.jsonl 边集反查）
   ③ spec      AI 写 spec（决策记录 + 影响范围 + 测试设计 + 设计文档影响声明——DESIGN_SYNC_REQUIRED=1 时 touched/none）→ 用户评审批准
   ④ plan      AI 拆 tasks（.swarm-yuan/tasks.md）
-  ⑤ 编码      先查再写：七层下探找可复用件，都落空才新增
+  ⑤ 编码      分支开发：feature 分支（自 origin/main 起）上先查再写：七层下探找可复用件，都落空才新增
               【无 spec 写源码】四层拦截：有 hook 宿主写时拒；其余提交时/门禁时拦；【违反 forbid 规则】hook deny + 替代方案
-  ⑥ 测试      门禁序列执行，全绿进下一步
+  ⑥ 测试      分支测试：门禁序列在分支上执行，全绿进下一步（主干不做"合后再测"）
   ⑦ 独立审查  review 门禁 + review-record 落盘；核设计文档影响声明合理性（none 声明）；发现问题回 ⑤
-  ⑧ 合入      状态机核验 verify pass + 证据引用；设计文档随批（touched 兑现，L2 核验）；
+  ⑧ 合入      主干合并：前序分支测试全绿；状态机核验 verify pass + 证据引用；设计文档随批（touched 兑现，L2 核验）；
               合入序列=fetch → 本地 main ff-only 快进 → worktree rebase → merge --no-ff → push（防本地 main 滞后远端）
-  ⑨ 发布      构建 + 发布门禁
+  ⑨ 发布      主干回归（main 上复跑全量回归，全绿才构建；失败回退 merge 或分支重入 ⑤）+ 构建 + 发布门禁
 任一步被拦：提示给出原因与解除路径（补 spec / 调 conf / 留痕豁免），修复后重跑该步。
 ```
 

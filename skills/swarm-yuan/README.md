@@ -305,7 +305,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 目标技能预算 | SKILL.md ≤11392B（≈11KiB 锚，硬顶 20000B——宿主压缩重挂载截断防线，预算可再登记、硬顶不可越）、组件库清单 ≤32KiB、上下文预算 ≤614400B（600KiB，例外逐例登记于 docs/budget-exception-ledger.md 台账）、概念体系 ≤5 |
 | 外部运行时 | 15 个整合（深度 4 + CLI 6 + 方法论 5；CLI 第 5/6 项 mattpocock-skills/diagram-design 为仓内物化运行时）。登记 22（含图谱备选 codegraph、两宿主、机制源 pua/semantica/pi 等）。自动检测 11 |
 | 类型目录 | 实体 17 / 关系 10 / 动作 11（assets/ontology/ 三份） |
-| 生成流程 | 13 步（唯一编号口径在 generation-flow.md）。目标技能工作流九节点 × 4 要素 |
+| 生成流程 | 13 步（唯一编号口径在 generation-flow.md）。目标技能工作流九节点 × 4 要素；研发四阶段＝分支开发→分支测试→主干合并→主干回归（⑤-⑦ 在 feature 分支、⑧ 合 main、⑨ 发布前主干全量回归） |
 | 领域知识库 / 行业档 | 32 / 8 |
 | 注册表平面 | 六张权威表（gates / frameworks / references / runtimes / hosts / dist）+ facts.conf 手写预算段与生成段；表 ↔ 代码 ↔ 夹具三向一致由 self-check 对账，门禁聚合文件与分发清单是渲染器再生视图 |
 
