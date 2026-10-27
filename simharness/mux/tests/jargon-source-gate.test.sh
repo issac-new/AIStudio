@@ -54,9 +54,12 @@ rc=$?
 # 本体，TS 层缺席不阻断推演侧守门）。同样只查提交态。
 if [ -d "$OV/custom/server/report" ]; then
   TS_DIR="$TMP_PLAN_DIR/ts"; mkdir -p "$TS_DIR"
+  # 分支感知（同 _ov_committed：worktree 内 main 是他人快照，按 HEAD 提交态查）
+  _ts_ref="main"
+  if ! git -C "$OV" merge-base --is-ancestor main HEAD 2>/dev/null; then _ts_ref="HEAD"; fi
   for f in "$OV"/custom/server/report/*.ts "$OV"/custom/server/report/__tests__/*.ts; do
     rel=${f#"$OV"/}
-    git -C "$OV" show "main:$rel" > "$TS_DIR/$(basename "$rel")" 2>/dev/null || cp "$f" "$TS_DIR/"
+    git -C "$OV" show "${_ts_ref}:$rel" > "$TS_DIR/$(basename "$rel")" 2>/dev/null || cp "$f" "$TS_DIR/"
   done
   python3 "$JC" "$TS_DIR"/*.ts
   rc2=$?

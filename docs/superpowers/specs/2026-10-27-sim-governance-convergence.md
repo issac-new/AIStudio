@@ -49,15 +49,14 @@
 > rebase 注记（2026-10-27）：本批随后 rebase 至 origin/main（并行八提交并入，正本版本行合成为 R17、总账对齐并行盘点口径），上文批次哈希为 rebase 前写作时点快照；分支现哈希以 `git log origin/main..feat/sim-governance-convergence` 为准。
 
 残余（显式挂账，不装完成）：
-1. mx-report-gen.issues_stats 配对与 mx-report-audit 查5 仍持本地配对——切换需报告链整批+活体报告新旧对照（D8），列收尾批首项；产品单实现已在 run-metrics.pairing 备好。
-2. 整轮 26 步活体推演未跑（需约 20 小时+模型额度+SIM 栈独占；主树并行会话在途）——分支不合 main，验证判据见「验证」节，跑通后收口。
-3. 预检 ①（run-gates 全绿）被两处既有红阻挡（见下），与本批无关但按 prelaunch 纪律如实申报。
+1. ~~报告链配对本地实现~~ 已清偿（融合批六 ac836f5）：issues_stats/R5/R5b 切 governance-metrics.json 快照单源；run15 真实形态夹具新旧 9 元组影子对照一致（stat/表格/七项计数逐字同，note 差=单源声明增句）。
+2. 整轮 26 步活体推演未跑（需约 20 小时+模型额度+SIM 栈独占；主树并行会话在途）——分支不合 main，验证判据见「验证」节，跑通后收口。批六后 sh 守门 39 文件+推演 vitest 216/216+产品全量 6603/0 已在本 worktree 全绿（原 12 例基线红同步根治：qgate-executors CLI 解析序+自愈构建 9/9、harness-gate-integrity PRODUCT 仓根位 0 败、jargon 门分支感知+方案正本/测试注释 5 处词面人话化——语义红线零触碰）。
+3. jargon 门「查提交态」语义修订为分支感知（worktree 内 main 是他人快照，按 HEAD 提交态查；合并回 main 后两者归一，语义不变）。
 
-既有红清单（origin/main 即红，非本批回归，均与并行 doc-harness-residual 会话在途修复面重叠）：
-- simharness/tests/qgate-executors.test.sh：`$CLI）`全角括号 unbound（bash 3.2 陷阱）+ `../overlay` 路径在单仓布局失效。
-- mux/tests/jargon-source-gate.test.sh：已提交方案正本 4 处 HARD（催办/守门/实锚×2）+ delegate-evidence-block.test.ts 注释 1 处。
-- custom/server/governance/__tests__/governance-contracts.test.ts 3 例：vendor 未注入态缺 kanban_gates.py 属主文件（主树注入态绿）。
-- harness-gate-integrity 7 例：PRODUCT=overlay 路径族同因。
+既有红清单（origin/main 即红）处置记录：
+- qgate-executors / harness-gate-integrity 12 例：单仓整合后 `../overlay` 路径失效族——本批根治（解析序加仓根位+CLI 缺席自愈构建），worktree 内首绿。
+- jargon-source-gate 5 处 HARD：方案正本与测试注释的词面问题——本批人话化根治（催办→提醒跟进、守门→把关、实锚→实测锚定/实证）。
+- governance-contracts 3 例：vendor 未注入态环境差（kanban_gates.py 属主文件）——注入态全量 6603/0 已含其绿，非代码缺陷，不改。
 gongwen-lint：spec 属决策记录枚举文体，分号并列/锚点长句按机械首查豁免记录（情态项零标）。
 
 ## 设计文档影响
