@@ -28,9 +28,24 @@
 - DESIGN_SYNC: touched
   - docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md —— §3.2 补发布视角段（四模块＋版本对齐原则＋机器真源指向）。
 
+## 决策记录（补）
+
+| # | 决策 | 理由 | 否决的备选 | 可逆 |
+|---|---|---|---|---|
+| D6 | pretest 挂 ensure-injected（与 predev 同款） | 首轮干净环境实锤：inject 先于 npm install 时 node_modules 链不落，npm test 直跑必炸；幂等补链是既有设计（dev/build 已挂） | 只改测试脚本绕（否决：用户照 README 仍会踩） | 是 |
+
 ## 验证
 
 - `npm run release:check` → ✓ 全绿（cockpit=0.7.39-studio.1 agent-teams=v0.22.5-team.1 ycode=3.16.2 yuan-skill=v2.95.0）。
 - `npx vitest run scripts/__tests__/verify-release-manifest.test.ts scripts/__tests__/inject-absent-tree.test.ts` → **17/17**（含：双底座对齐断言、VERSION 漂移负例、standalone 实跑=纯净基线 336 studio 补丁全应用＋74 agent 补丁 SKIP＋汇总行＋rc=0；HOME 隔离下真实 `~/.hermes/hermes-agent/hermes_cli/kanban_db_dispatch.py` 与仓内 md5 一致=零改动实证）。
 - 手动 standalone 复现（bash，HOME 隔离）：rc=0、336 应用、74 SKIP、"共 74 个补丁因 hermes-agent 树缺席跳过"。
 - 未验证项：整体包干净环境安装测试（进行中，见下）；agent-teams/ycode 模块包 standalone 安装链（team 经 hermes profile install 天然独立，ycode pnpm 闭包构建独立——均未在本轮实跑）。
+
+## 补录（13:1x）：干净环境安装测试首轮发现与根治
+
+首轮四步实跑：解包✓→inject✓（410 应用/0 SKIP）→npm install✓→vitest ✗（`Cannot find package 'vitest'`）。根因＝fresh 环境次序坑：inject 先于 npm install 运行时，`ensureNodeModulesSymlink` 因上游 node_modules 尚不存在而只告警不落链；npm install 后链再无人补（dev/build 有 predev/prebuild 钩子，`npm test` 没有）。根治＝package.json 增 `"pretest": "node scripts/ensure-injected.mjs"`（与 predev 同款幂等补链），非脚本侧绕。复验见下。
+
+## 验证（补录）
+
+- 修复后干净环境四步重跑：`npm test -- custom/__tests__/docs-ssot-guard.test.ts scripts/__tests__/verify-release-manifest.test.ts custom/server/loop/graph/__tests__/assembly.test.ts` → 36/36 全绿（含 17 发布面＋graph 组装＋附录守门），**干净环境安装测试 PASS**。
+- pip 侧未跑（hermes-agent Python 依赖在目标部署机安装；本测验证 npm+源码链）——如实记录。
