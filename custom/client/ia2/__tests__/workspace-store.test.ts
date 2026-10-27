@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
-const { teamsApi, fleetAdapter, kanbanApi, kv, taskAdapter, govApi } = vi.hoisted(() => ({
+const { teamsApi, fleetAdapter, kanbanApi, kv, taskAdapter, govApi, registryApi } = vi.hoisted(() => ({
   teamsApi: {
     fetchKanbanOverview: vi.fn(),
   },
@@ -41,6 +41,9 @@ const { teamsApi, fleetAdapter, kanbanApi, kv, taskAdapter, govApi } = vi.hoiste
   govApi: {
     fetchGovernanceOverview: vi.fn(),
   },
+  registryApi: {
+    fetchRegistry: vi.fn(),
+  },
 }))
 
 vi.mock('@/custom/cockpit/adapters/teams-adapter', () => teamsApi)
@@ -54,6 +57,7 @@ vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({
 }))
 vi.mock('@/custom/cockpit/adapters/task-adapter', () => taskAdapter)
 vi.mock('@/custom/governance/api/governance', () => govApi)
+vi.mock('@/custom/governance/api/adminRegistry', () => registryApi)
 
 import { useWorkspaceStore } from '../store/workspace'
 
@@ -63,6 +67,7 @@ beforeEach(() => {
   teamsApi.fetchKanbanOverview.mockResolvedValue({ boards: [], tasks: [] })
   kv.loadUserTodos.mockReturnValue([])
   govApi.fetchGovernanceOverview.mockResolvedValue({ ok: true, docs: [] })
+  registryApi.fetchRegistry.mockResolvedValue({ markdown: '| 账号 | AI 助理账号 | 角色 |\n| --- | --- | --- |\n| @fanfan:matrix | @fanfan-agent:matrix | 产品经理 |', commit: 'c1' })
 })
 
 describe('workspace store：跨 board 任务聚合', () => {
@@ -176,6 +181,14 @@ describe('workspace store：全局检索弹窗状态', () => {
     await store.loadSearchDocs()
     expect(govApi.fetchGovernanceOverview).toHaveBeenCalledTimes(1)
     expect(store.searchDocsLoaded).toBe(true)
+  })
+  it('人员 roster 在 store 层解析并缓存', async () => {
+    const store = useWorkspaceStore()
+    await store.loadSearchPeople()
+    await store.loadSearchPeople()
+    expect(registryApi.fetchRegistry).toHaveBeenCalledTimes(1)
+    expect(store.searchPeopleLoaded).toBe(true)
+    expect(store.searchPeopleRows).toEqual([['@fanfan:matrix', '@fanfan-agent:matrix', '产品经理']])
   })
 })
 

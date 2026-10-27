@@ -336,6 +336,27 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     }
   }
 
+  // 人员主源=治理仓 roster（账号权威清单；团队房间注册表在无团队房间环境恒空）。
+  // 失败时置空并视为已装载：人员回落注册表账号，不重试风暴、不猜数。
+  const searchPeopleRows = ref<string[][]>([])
+  const searchPeopleLoaded = ref(false)
+  async function loadSearchPeople(): Promise<void> {
+    if (searchPeopleLoaded.value) return
+    try {
+      const [{ fetchRegistry }, { parseFirstTable, setCellAlign }] = await Promise.all([
+        import('@/custom/governance/api/adminRegistry'),
+        import('@/custom/governance/utils/registry-md'),
+      ])
+      const doc = await fetchRegistry('roster')
+      const { table } = parseFirstTable(doc.markdown)
+      searchPeopleRows.value = setCellAlign(table.rows, 3)
+      searchPeopleLoaded.value = true
+    } catch {
+      searchPeopleRows.value = []
+      searchPeopleLoaded.value = true
+    }
+  }
+
   function setScheduleDate(d: string): void {
     scheduleSelectedDate.value = d
   }
@@ -466,6 +487,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     openSchedule, closeSchedule, setScheduleDate,
     searchOpen, openSearch, closeSearch,
     searchDocs, searchDocsLoaded, searchDocsFailed, loadSearchDocs,
+    searchPeopleRows, searchPeopleLoaded, loadSearchPeople,
     scheduleEvents, scheduleEventsForSelectedSorted, scheduleCountsByDate, scheduleTopPriorityByDate,
     // ④ WS 生命周期
     initFleetStream, stopFleetStream, watchKanbanTasks, unwatchKanbanTasks,
