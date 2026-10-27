@@ -123,6 +123,24 @@
 | FIBO | master_2026Q3 @2d73435a；37 概念/21 属性/16 公理，ontology-fibo.ts 单一事实源 | 已吸收 |
 | WCAG 对比度 | muted 对比度门（`2026-10-18-wcag-muted-contrast.md`） | 已吸收 |
 
+### 3.7 差异吸收裁定（2026-10-27 逐项）
+
+对 §3 里本轮有版本移动的组件逐项裁定：能落码的吸收，不能落码的写明理由与触发条件，避免"只了解不处置"。
+
+| 差异 | 裁定 | 理由与触发条件 |
+|---|---|---|
+| kimi-code 2.3.3 导入 Claude Code/Codex 会话（#4342） | **已吸收（只读版）** | 新增 `custom/server/sessionarchive/external-cli-sessions.ts` 与 `GET /api/harness/external-sessions`：扫两源会话目录归一成索引，不搬正文、不写源目录。上游是内容导入，本仓只做索引，差异已声明。spec `2026-10-27-version-diff-absorption.md` |
+| dsh-context 0.77 Fleet 通信驾驶舱与四道会话台账 | 暂缓 | 数据面已有（`tokens/fleet-tree.ts` 子树聚合、`tokens/context-trend.ts` 四桶趋势），缺的是界面形态。触发条件：Fleet/Context 页面改版时一并做 |
+| mimo-code 0.1.16 `/compose-next` 六段流 | 不落码 | 与仓内 spec-first 九节点同构，属方法论参考；硬做会造第二套流程 |
+| qgate v2.0 `scope:event`（AsyncAPI 3.0.x 子集核验） | 暂缓 | 仓内无事件契约消费者，无验收面。触发条件：出现 AsyncAPI/事件契约场景时对译上游 172 行零依赖实现 |
+| claude-code 2.1.311（自动压缩续跑、MCP 迟连接、停滞修复） | 不适用 | 属 CLI 运行时行为，overlay 无接线点；随上游升级轮跟进 |
+| codex 0.164（presets、安全阻断申诉、审批模板） | 不适用（记录在案） | 同上；`/presets` 若后续要做，先确认有 UI 承载再立项，不先造死端点 |
+| kimi 2.3.3 其余（会话导入之外：MCP 重连、TUI 状态、子代理部分输出） | 不适用 | 运行时与 TUI 面 |
+| multica 0.7.0（移动端适配、Gantt 分页全量） | 不适用 | 仓内无移动端与 Gantt 视图 |
+| diagram-design 2.6.131 | 不升级 | 21 个 patch 全为修复类，无新机制；物化镜像版本口径单列在 §4.1 |
+| hermes-studio main 未发版（浏览器工具族等） | 等发版 | 属基线升级轮内容，见 §2 第一行 |
+| hermes-agent main 未发版（A2A 加固、unbroker lane） | 等发版 | 同上，见 §2 第二行 |
+
 ## 4. 技能与知识来源
 
 本节是清单层，保证 swarm-yuan 调研来源可检索。实施对账仍以 `capability-map.md` 为准。证据分级沿用其口径：A=本机实测，B=官方一手，C=二手转述（不进基线）。
@@ -212,6 +230,7 @@
 - 版本核对与四挂账清偿：callgate 执法、taskledger 接线、红队 S1、A2A 看板归属端点。spec `2026-10-27-tech-component-ledger-refresh.md`。
 - 七项待办终态：qgate v2.0 调研完成并暂缓，CyberSec 改判无需刷新。RELEASE-NOTES 三轮补记及 2.x 收线，semantica/pua/fibo pin 零移动。
 - swarm-eval 轻链路三跑完成。两个升级轮仍按 §2 等待稳定发版。spec `2026-10-27-ledger-todos-clearance.md`。
+- 版本差异吸收第一批：外部 CLI 会话索引（kimi 2.3.3 #4342 的只读版）落地，其余 8 项差异逐项裁定入 §3.7。spec `2026-10-27-version-diff-absorption.md`。
 - swarm-eval 轻链路实测：mixed-motive 两轮（welfare=480/gini=0.333/nashDev=0.667，保底出价口径）。消融 mention 过滤留痕，拜占庭 noise DM 实发留痕。主链级数字仍在 §2。
 
 ### 6.2 关联文档

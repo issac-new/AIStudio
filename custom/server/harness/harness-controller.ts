@@ -35,6 +35,7 @@ import { collectObsSignals } from '../obssignals/collect'
 import { collectObsAlerts } from '../obsalerts/collect'
 import { overlayCallgate, parseCallgateRule } from '../callgate/registry'
 import { loadBoardOwnership } from '../a2a/board-ownership'
+import { scanExternalSessions } from '../sessionarchive/external-cli-sessions'
 import { ledgerPathForDisplay, listEntries, registerEntry } from '../taskledger/taskledger-store'
 import { summarizeLedger } from '../taskledger/taskledger'
 import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, type BudgetAction } from '../tokenbudget/budget-policy'
@@ -397,6 +398,27 @@ router.post('/callgate/rule', async (ctx) => {
 // fail-soft 缺席 available:false；账号原值不透出，只报环境变量名与已配置与否）。
 router.get('/board-ownership', async (ctx) => {
   ctx.body = { ok: true, ownership: loadBoardOwnership() }
+})
+
+// 外部 CLI 会话索引（2026-10-27 版本差异吸收：kimi-code 2.3.3「导入 Claude Code 与
+// Codex 会话」的只读版）：扫本机两源会话目录归一成索引，不复制正文、不写源目录。
+// includeTitles=1 才回首条用户消息预览（默认关）；source 可按来源过滤。
+router.get('/external-sessions', async (ctx) => {
+  try {
+    const rawLimit = typeof ctx.query.limit === 'string' ? Number(ctx.query.limit) : 30
+    const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(Math.trunc(rawLimit), 200)) : 30
+    const includeTitles = ctx.query.includeTitles === '1'
+    const source = typeof ctx.query.source === 'string' ? ctx.query.source.trim() : ''
+    const report = scanExternalSessions({ limit, includeTitles })
+    if (source === 'claude-code' || source === 'codex') {
+      ctx.body = { ok: true, report: { ...report, sessions: report.sessions.filter((s) => s.source === source) } }
+      return
+    }
+    ctx.body = { ok: true, report }
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 })
 
 // 预算状态（残余项⑤）：只读；策略写面在下方 POST。
