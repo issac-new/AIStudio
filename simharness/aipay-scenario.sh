@@ -2917,6 +2917,9 @@ PAYSPECS
   python3 "$SCRIPT_DIR/mux/tri-disp-backfill.py" --run "${RUN_ID}" 2>/dev/null \
     && note "[报告] DISP 三态归桶收尾件已执行（表外词键补观察桶，纪律 28）" \
     || note "[观察] DISP 三态归桶件无产出（台账缺席或零表外词——非阻断）"
+  # 融合批六：报告生成前刷新治理指标快照（归桶件已追加 DISP 行，快照须含终态台账
+  # ——issues_stats/R5 配对取件正源；快照过期=报告配对缺归桶行）
+  gov_report >/dev/null 2>&1 || issue_once governance-snapshot-stale step26 "报告前快照刷新失败（gov_report）——报告配对可能缺归桶行，如实记录"
   # lite 审计口径（2026-10-13 C 方案）：lite 轮的夹具步（G1/G2/群等）真值沿用源轮，
   # UI 帧不在 lite 采集面；报告步自身页收尾后生成无法当轮自拍；G5 判词复用形态无当轮
   # 评审面；payload 族（对话/操作帧/门禁灯）在 lite 的夹具步与采集 403 步不在采集面。

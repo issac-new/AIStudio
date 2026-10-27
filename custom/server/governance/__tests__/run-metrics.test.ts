@@ -119,6 +119,7 @@ describe('computeRunMetrics', () => {
       'DISP|r18-collection-missing|monitor|观察 统一处置',
       'DISP|gw-restart|director|观察 恢复',
       'DISP|uat-cond|fanfan-agent|延后 归 bella',
+      'DISP|security-gate-unlock-chain|chen,secops|安全闸 FAIL 解锁链：修复令+复审令已发',
     ].join('\n')
     const m = computeRunMetrics({
       run: 'r', rfd: 'R', issuesLog: `${issues}\n${disps}`, stateEnv: '', today: '2026-10-27',
@@ -131,6 +132,8 @@ describe('computeRunMetrics', () => {
     expect(by('gw-restart·director')).toMatchObject({ mode: 'generic', bucket: '观察' })
     expect(by('uat-cond·fanfan')).toMatchObject({ mode: 'single', bucket: '延后' })
     expect(by('legacy·x')).toMatchObject({ mode: 'none', bucket: '待处置' })
+    // 悬挂 DISP：处置类型段无对应 ISSUE 类型（夹具 security-gate-unlock-chain）
+    expect(m.danglingDispTypes).toContain('security-gate-unlock-chain')
     expect(by('g1-review·bella').freq).toBe(1)
   })
 })

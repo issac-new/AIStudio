@@ -67,6 +67,11 @@ cat > "$EV/r18-steps.json" <<'EOF'
 }
 EOF
 
+# 融合批六：治理指标快照（issues_stats/R5 配对取件正源——夹具预置，零 ISSUE 零 DISP 空快照）
+cat > "$EV/governance-metrics.json" <<'EOF'
+{"ok": true, "run": "fixture", "rfd": "", "issuesTotal": 0, "dispTotal": 0, "pairing": [], "danglingDispTypes": []}
+EOF
+
 # ── ① 生成器渲染断言 ───────────────────────────────────
 OUT_HTML="$EV/simulation-report.html"
 AIPAY_SIM_ROOT="$FX" python3 "$HERE/mx-report-gen.py" --run "$RUN" >/dev/null

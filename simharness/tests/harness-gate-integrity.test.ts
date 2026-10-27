@@ -19,7 +19,10 @@ import { describe, expect, it, afterAll } from 'vitest'
 // 隔离轮迁址（2026-10-03）：测试随 harness 仓走，MX=本仓 mux/；vitest 借道 overlay 的 node_modules（run-gates.sh --root）
 const HARNESS = join(__dirname, '..')
 const MX = join(HARNESS, 'mux')
-const PRODUCT = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay')  // 产品仓只读消费位（patches/探针；worktree 内相对位失效，用 MX_OVERLAY_ROOT 指向主树 overlay）
+// 产品仓只读消费位（单仓整合后）：解析序=MX_OVERLAY_ROOT > 仓根（patches/ 与 runtime/ 在位即认）> 旧 overlay 位兜底
+const repoRoot = join(HARNESS, '..')
+const PRODUCT = process.env.MX_OVERLAY_ROOT
+  || (existsSync(join(repoRoot, 'patches')) && existsSync(join(repoRoot, 'runtime')) ? repoRoot : join(HARNESS, '..', 'overlay'))
 
 const roots: string[] = []
 afterAll(() => roots.forEach((d) => rmSync(d, { recursive: true, force: true })))
@@ -522,10 +525,8 @@ uat_evidence_body 1790930955`, root)
 
   it('㉓：网关挂死槽周期扫（run11 容量饥饿根治补口，patch 586——撞号清理 577→586 后引用同步）', () => {
     const lib = read(join(MX, 'mx-lib.sh'))
-    // overlay 仓路径走 MX_OVERLAY_ROOT 逃生门（与 run-gates.sh 同源）：worktree 内跑套件时
-    // `../overlay` 兄弟路径不存在（2026-10-10 实锤：report-three-elements 轮全套件在此挂）
-    const OVERLAY = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay')
-    const patchPath = join(OVERLAY, 'patches', '586-agent-gateway-wedged-agent-sweep.patch')
+    // 产品仓路径走 PRODUCT 解析序（融合批六：单仓整合后 patches/ 在仓根；MX_OVERLAY_ROOT 逃生门保留）
+    const patchPath = join(PRODUCT, 'patches', '586-agent-gateway-wedged-agent-sweep.patch')
     // ①patch 文件在位且含核心语义件
     const patch577 = read(patchPath)
     expect(patch577).toContain('_housekeeping_wedged_agent_sweep')
@@ -781,8 +782,7 @@ describe('⑭ V8.2 四段式切换（生成器配套六件落位守门）', () =
   // 降附录 ⑤叙事骨架生成器 ⑥本守门+审计器双格式断言。④字段级核对此前已在位。
   const MX_DIR = join(MX)
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
-  const PLAN = join(process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay'),
-    'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md')
+  const PLAN = join(PRODUCT, 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md')
 
   it('正本=V8.3 两段式（步条 `**步 N｜`+两段标记；历史层在工程档案，2026-10-08 终态剥离）', () => {
     const plan = read(PLAN)
@@ -1268,8 +1268,14 @@ describe('⑤⑥⑦ 判定委托与退役绊线（融合批二）', () => {
     expect(scenLib).not.toContain('_fail_rounds')
     expect(scenLib).not.toContain('uat_verdict.py')
     expect(existsSync(join(MX, 'uat_verdict.py'))).toBe(false)
+    // 报告链配对单源（融合批六）：生成器/审计器取 governance-metrics.json 快照，本地配对构建不得回流
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('governance-metrics.json')
+    expect(gen).not.toContain('disp_exact')
+    expect(read(join(MX, 'mx-report-audit.py'))).not.toContain('_disp.add(')
     // 主驱动接线客户端（判据单源声明）
     expect(read(join(HARNESS, 'aipay-scenario.sh'))).toContain('source "$SCRIPT_DIR/mux/governance-client.sh"')
+    expect(read(join(HARNESS, 'aipay-scenario.sh'))).toContain('gov_report >/dev/null 2>&1 || issue_once governance-snapshot-stale')
     expect(read(join(MX, 'governance-client.sh'))).toContain('单一事实源=custom/server/governance/lifecycle')
   })
 })

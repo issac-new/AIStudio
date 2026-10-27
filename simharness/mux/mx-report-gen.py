@@ -2948,81 +2948,59 @@ def _issue_level(t):
 
 
 def issues_stats():
-    """问题单台账：唯一键口径（类型·主体去重），如实标注与复盘文档事件流口径差异。
+    """问题单台账组装（融合批六：配对/分桶/计数正本=治理服务 run-metrics.pairing，
+    经 evidence/governance-metrics.json 快照取件；本函数只做呈现组装——唯一键原文
+    摘要与频次随行呈现，判定零本地复算）。快照缺席=报告生成链断裂，拒出报告。
 
-    DISP 连接键=类型段+主体精确优先（run13 复盘 A3/C1 修订：原「DISP 按类型归属到该
-    类型全部唯一键」在多主体同类型时错挂——r18-collection-missing 五主体全显示 step-23
-    的处置、PAYCORE-C 显示 CHWX 的处置）。配对次序：
-      ① type·subject 精确命中；
-      ② 同类型 DISP 主体为泛指（director/monitor/harness）→ 广播到该类型全部键；
-      ③ 该类型仅一个唯一键 → 容主体措辞差（2026-10-07 修复原意保留）；
-      ④ 其余=待处置。
-    三态计数（run13 复盘 A4/F6）：DISP 首词非三态分桶词（已修/观察/延后）的键计入
-    「表外词」单列——四桶+表外词求和=唯一键数，禁凭空消失。
-    频次列（2026-10-10 三要素改造）：同一唯一键在事件流中的出现次数——run12 的
-    gate-breaker-tripped 单键 227 行被压成一行无频次，读者无法知道它刷了多少次。
+    旧本地配对（exact/generic/single/none 四变体）已于本批退役；口径漂移把关=
+    tests/run-metrics-parity（run15 真实台账新旧 9 元组影子一致）。
     """
-    lines = (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines() if (EVID / 'issues.log').exists() else []
-    iss, disp_exact, disp_generic, order = {}, {}, {}, []
-    freq = {}
-    raw_i = raw_d = 0
-    for l in lines:
-        if l.startswith('ISSUE|'):
-            raw_i += 1
-            p = l.split('|', 3)
-            key = f'{p[1]}·{p[2]}'
-            freq[key] = freq.get(key, 0) + 1
-            if key not in iss:
-                iss[key] = p[3] if len(p) > 3 else ''
-                order.append(key)
-        elif l.startswith('DISP|'):
-            raw_d += 1
-            p = l.split('|', 4)
-            if len(p) > 3:
-                if p[2] in ('director', 'monitor', 'harness', '导演', '监控'):
-                    disp_generic[p[1]] = p[3]
-                else:
-                    disp_exact[(p[1], p[2])] = p[3]
-    types_of = {}
-    for k in order:
-        types_of.setdefault(k.split('·')[0], []).append(k)
+    snap_path = EVID / 'governance-metrics.json'
+    if not snap_path.exists():
+        sys.exit('[report-gen] 治理指标快照缺席（governance-metrics.json）——先跑 gov_report 落快照再生成报告（配对正本在治理服务，禁止本地复算）')
+    try:
+        dto = json.loads(snap_path.read_text(encoding='utf-8'))
+    except json.JSONDecodeError as e:
+        sys.exit(f'[report-gen] 治理指标快照不可读：{e}')
+    pairing = dto.get('pairing')
+    if not isinstance(pairing, list):
+        sys.exit('[report-gen] 治理指标快照 pairing 缺席——配对正本未到位，拒出报告（空数组=零台账合法形态）')
 
-    def _disp_for(key):
-        t, s = key.split('·', 1)
-        if (t, s) in disp_exact:
-            return disp_exact[(t, s)]
-        if t in disp_generic:
-            return disp_generic[t]
-        if len(types_of.get(t, [])) == 1:
-            for (dt, ds), dv in disp_exact.items():
-                if dt == t:
-                    return dv
-        return None
+    # 呈现层：唯一键原文摘要自 issues.log 读（原文呈现，非判定）
+    desc = {}
+    ilog = EVID / 'issues.log'
+    if ilog.exists():
+        for l in ilog.read_text(encoding='utf-8', errors='replace').splitlines():
+            if l.startswith('ISSUE|'):
+                p4 = l.split('|', 3)
+                k = f'{p4[1]}·{p4[2]}'
+                if k not in desc:
+                    desc[k] = p4[3] if len(p4) > 3 else ''
 
-    disp_of = {k: _disp_for(k) for k in order}
-    closed = [k for k in order if disp_of[k] and disp_of[k].startswith('已修')]
-    observed = [k for k in order if disp_of[k] and disp_of[k].startswith('观察')]
-    deferred = [k for k in order if disp_of[k] and disp_of[k].startswith('延后')]
-    nonstd = [k for k in order if disp_of[k] and not disp_of[k].startswith(('已修', '观察', '延后'))]
-    open_k = [k for k in order if not disp_of[k]]
-    # 配对口径披露（run16 复盘，fix/run16-report-truth）：hero「n/n 已完整循环」的 n 取自
-    # 纪律 28 阶梯配对（①精确+②泛指广播+③单键容差），不披露口径会让读者误当逐键精确
-    # 处置（run16 实锤：hero 75/75 而精确配对仅 7 键，32 DISP 悬挂无 ISSUE——审计 WARN
-    # 台账卫生）。三数并呈，广播占比高的台账一眼可辨。
-    _exact_paired = sum(1 for k in order if disp_of[k] and tuple(k.split('·', 1)) in disp_exact)
-    _bcast_paired = (len(closed) + len(observed) + len(deferred) + len(nonstd)) - _exact_paired
-    _iss_key_set = set(order)
-    _dangling = sum(1 for (dt, ds) in disp_exact if f'{dt}·{ds}' not in _iss_key_set)
+    order = [r['key'] for r in pairing]
+    by_mode = lambda m: [r for r in pairing if r['mode'] == m]
+    by_bucket = lambda b: [r for r in pairing if r['bucket'] == b]
+    closed = [r['key'] for r in by_bucket('已修')]
+    observed = [r['key'] for r in by_bucket('观察')]
+    deferred = [r['key'] for r in by_bucket('延后')]
+    nonstd = [r['key'] for r in by_bucket('表外词')]
+    open_k = [r['key'] for r in by_bucket('待处置')]
+    exact_paired = len(by_mode('exact'))
+    bcast_paired = len(by_mode('generic')) + len(by_mode('single'))
+    dangling = len(dto.get('danglingDispTypes') or [])
+    raw_i = dto.get('issuesTotal') or 0
+    raw_d = dto.get('dispTotal') or 0
+
     rows = []
-    for k in order:
-        d = disp_of[k]
+    for r in pairing:
+        d = r.get('disposition')
         if not d:
             continue
-        t = k.split('·')[0]
-        cls = 'd-ok' if d.startswith('已修') else 'd-warn'
-        rows.append(f'<tr><td>{H.escape(k)}</td><td style="white-space:nowrap">{freq.get(k, 1)} 次</td>'
-                    f'<td style="white-space:nowrap">{_issue_level(t)}</td>'
-                    f'<td>{H.escape(iss[k][:100])}</td><td class="{cls}">{H.escape(d[:130])}</td></tr>')
+        cls = 'd-ok' if r['bucket'] == '已修' else 'd-warn'
+        k = r['key']
+        rows.append(f'<tr><td>{H.escape(k)}</td><td style="white-space:nowrap">{r.get("freq", 1)} 次</td>'
+                    f'<td style="white-space:nowrap">{_issue_level(r["type"])}</td>'
+                    f'<td>{H.escape(desc.get(k, "")[:100])}</td><td class="{cls}">{H.escape(d[:130])}</td></tr>')
     if not rows:
         rows.append('<tr><td colspan="5" class="d-warn">本轮零处置记账（如实呈现——DISP 回写缺口见 retro-open-items 记入问题清单）</td></tr>')
     stat = (f'唯一键 {len(order)}：已修 {len(closed)} · 观察 {len(observed)} · 延后 {len(deferred)}'
@@ -3030,11 +3008,11 @@ def issues_stats():
     if nonstd:
         stat += '（表外词=DISP 首词非三态分桶词——台账卫生缺陷，§4.3-28；收尾链补记三态 DISP 行后归桶）'
     note = (f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑），复盘文档按事件流全表列出；本节按唯一键去重收尾。'
-            '级别按类型码族派生（闸门级/采集级/过程级），闸门族正则与审计器闸键判定同源。')
+            '级别按类型码族派生（闸门级/采集级/过程级），闸门族正则与审计器闸键判定同源。配对/分桶判定=治理服务 run-metrics（快照取件）。')
     if open_k:
         stat += f'（{", ".join(open_k[:3])} 属下轮跟进项）'
     return (stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order),
-            len(open_k), len(nonstd), _exact_paired, _bcast_paired, _dangling)
+            len(open_k), len(nonstd), exact_paired, bcast_paired, dangling)
 
 def main_head():
     try:

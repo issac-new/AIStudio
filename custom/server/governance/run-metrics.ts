@@ -58,6 +58,8 @@ export interface RunMetrics {
   dispBuckets: Array<{ tag: string; n: number }>
   uniqueKeys: string[]
   pairing: IssuePairingRow[]
+  /** 悬挂 DISP（处置的类型段无对应 ISSUE 类型——台账卫生观察位，R5b 口径）。 */
+  danglingDispTypes: string[]
   gateKeyLines: Array<{ key: string; value: string }>
   metricsRows: MetricsRow[]
   baseline: { prevRun: string; line: string } | null
@@ -76,6 +78,10 @@ export function parseStateEnvKeys(text: string): Record<string, string> {
 
 function round3(n: number): string {
   return (Math.round(n * 1000) / 1000).toFixed(3)
+}
+
+function sortedUnique(xs: string[]): string[] {
+  return [...new Set(xs)].sort()
 }
 
 export interface RunMetricsInput {
@@ -201,6 +207,11 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     }
   })
 
+  const danglingDispTypes = sortedUnique(
+    [...new Set([...[...dispExact.keys()].map((k) => k.split('·')[0]), ...dispGeneric.keys()])]
+      .filter((ty) => !keysByType.has(ty)),
+  )
+
   const gateKeyLines = [
     ...Object.values(GATE_STATE_KEYS), 'uat_done',
   ].map((key) => ({ key, value: state[key] ?? '未落' }))
@@ -261,7 +272,7 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     rejectCount, humanInterventions,
     alertFamily: { count: alertKeys.length, keys: alertKeys },
     defectDensity,
-    dispBuckets, uniqueKeys, pairing, gateKeyLines, metricsRows, baseline, trend,
+    dispBuckets, uniqueKeys, pairing, danglingDispTypes, gateKeyLines, metricsRows, baseline, trend,
   }
 }
 
