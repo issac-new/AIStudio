@@ -660,7 +660,7 @@ swarm-yuan 的 `state-machine.sh` 采用 `sanitize_input` 白名单字符集过�
 
 - **合成派发结果必须披露**（#4456）：swarm 合成（synthetic）的 worker 派发结果显式披露，不与真实执行结果混排——「结果从哪来」是结果的一部分，合成物冒充实测即虚假成功族的对外形态。
 - **running-worker 取消置终态**（#4457）：已跑 worker 的取消是终态动作，不再允许取消后复活续跑——取消语义要有终态性，半取消态=双跑温床。
-- **headless cancel 落定执行**（#4463/#4466）：cancel 落定执行、deadline 计时器清理、escalation 以 exit 为键——取消路径的三项要求：动作落定/资源回收/升级判据锚定真实退出。
+- **headless cancel 落定执行**（#4463/#4466）：cancel 落定执行、deadline 计时器清理、escalation 以 exit 为键——取消路径的三项保障：动作落定、资源回收、升级判据锚定真实退出。
 - **守护参数显式值压过持久化 state**（#4462/#4465）：daemon 的显式 maxConcurrent/workerTimeoutMs 覆盖已存 daemon-state——命令行显式参数与持久化配置冲突时，显式者赢（与「锁活性看进程不看锁龄」同族：活的事实优先于记录的事实）。
 - 其余：ai-team 列表最新优先+证据全量审计+诚实版本号 0.3.4（#4467）；x-gateway 无参 tools/call 与 bare-host POST、拒绝带诊断 0.9.1（#4468）；ruRE CUDA kernel 静态占用规划 rure_cuda_launch_plan（ADR-500/501，#4464/#4461——纯静态分析扩容，延续「只解析不执行」边界）；browser doctor 从无关工作目录也能定位（#4454）。来源：`docs/research/R142-runtime-refresh.md`。
 

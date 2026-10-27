@@ -35,6 +35,7 @@ scripts/integrity-guard.sh	target	lite	copy	hook	yes	yes	-	-
 scripts/fail-gate-hook.sh	target	lite	copy	hook	yes	yes	-	-
 scripts/install.sh	target	lite	copy	assets	yes	yes	-	-
 scripts/generate-skill.sh	target	lite	copy	assets	yes	yes	-	-
+scripts/generator/subcommands.sh	target	lite	copy	assets	yes	yes	-	-
 scripts/codex-gate-wrapper.sh	target	standard	copy	hook	yes	yes	-	-
 scripts/setup-loop.sh	target	standard	copy	hook	yes	yes	-	-
 scripts/loop-hook.sh	target	standard	copy	hook	yes	yes	-	-
@@ -63,7 +64,7 @@ scripts/task-scale.sh	target	lite	copy	gen	yes	yes	-	-
 scripts/ops-readonly-guard.sh	target	standard	copy	gen	yes	yes	-	-
 scripts/tunnel.sh	target	standard	copy	gen	yes	yes	-	-
 scripts/tunnel.conf	target	standard	copy	assets	yes	yes	-	-
-references/subagent-orchestration.md	target	standard	copy	refd	yes	yes	subagent-orchestration	66575
+references/subagent-orchestration.md	target	standard	copy	refd	yes	yes	subagent-orchestration	66579
 references/governance-agents.md	target	compliance	copy	ref	yes	yes	governance-agents	28769
 references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	15878
 references/canary-monitoring.md	target	standard	copy	ref	yes	yes	canary-monitoring	1725
@@ -99,8 +100,8 @@ references/codex-security-methodology.md	target	standard	distill	refd	yes	yes	co
 references/mcp-governance.md	target	standard	copy	ref	yes	yes	mcp-governance	7303
 references/controlled-language-methodology.md	target	lite	copy	ref	yes	yes	controlled-language-methodology	4684
 references/crypto-spec.md	target	compliance	copy	ref	yes	yes	crypto-spec	4838
-references/bugfix-runbook.md	target	standard	copy	ref	yes	yes	bugfix-runbook	4940
-references/remote-debug-jvm.md	target	standard	copy	ref	yes	yes	remote-debug-jvm	4323
+references/bugfix-runbook.md	target	standard	copy	ref	yes	yes	bugfix-runbook	4942
+references/remote-debug-jvm.md	target	standard	copy	ref	yes	yes	remote-debug-jvm	4324
 scripts/inspection-ledger.sh	target	compliance	copy	gen	yes	yes	-	-
 references/compliance-checkpoints.md	target	compliance	copy	ref	yes	yes	compliance-checkpoints	35380
 references/regulatory-checkpoint-table.md	target	compliance	copy	ref	yes	yes	regulatory-checkpoint-table	55197

@@ -85,5 +85,5 @@ check_compliance() {
     fi
     [[ -z "$_bad_fmt" && -z "$_bad_conf" ]] && pass "标准映射表核验通过（${_smap}）"
   fi
-  [[ $found -eq 0 ]] && pass "标准合规矩阵校验通过（锚点齐备，无占位符）"
+  [[ $found -eq 0 ]] && { pass "标准合规矩阵校验通过（锚点齐备，无占位符）"; return 0; }
 }

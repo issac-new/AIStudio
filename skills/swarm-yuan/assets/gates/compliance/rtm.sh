@@ -55,5 +55,5 @@ check_rtm() {
   done <<< "$reqs"
   local pct=$((traced*100/total))
   echo "  ⓘ 追溯率：${pct}%（${traced}/${total}，矩阵：${matrix}）"
-  [[ $found -eq 0 ]] && pass "需求追溯矩阵检查通过（全部 ${total} 个 REQ 已追溯，追溯率 ${pct}%）"
+  [[ $found -eq 0 ]] && { pass "需求追溯矩阵检查通过（全部 ${total} 个 REQ 已追溯，追溯率 ${pct}%）"; return 0; }
 }

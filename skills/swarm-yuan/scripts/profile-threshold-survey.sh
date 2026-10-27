@@ -13,7 +13,7 @@
 set -u
 
 BASE="$(cd "$(dirname "${0}")/.." && pwd)"
-OUT_CSV="${BASE}/docs/profile-threshold-survey.csv"
+OUT_CSV="${BASE}/../docs/profile-threshold-survey.csv"
 OUT_CONF="${BASE}/assets/profile-thresholds.conf"
 
 # 样本仓库清单（owner/repo 格式，按分层组织）

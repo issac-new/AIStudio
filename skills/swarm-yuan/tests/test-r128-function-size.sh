@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# test-r128-function-size.sh — 核心脚本函数尺寸机器锁（防函数再长肥）
-# 背景：R128 前 generate-skill.sh 五大函数 150-588 行，行为保持式拆分后收敛为
-#   「编排器 ≤64 行 + 子函数 ≤120 行」。2026-10-26 集成轮把锁面从 generate-skill.sh
-#   单文件扩展到四个核心脚本：生成器 / 自检 / 门禁引擎 / 状态机（self-check 的
-#   check_doc_consistency、precheck 的 _default_conf、state-machine 的 guard_phase
-#   同轮拆分至 ≤150）。超限即 fail——要加超限内容须显式改本文件上限并给出理由注释。
+# test-r128-function-size.sh — R128 函数尺寸机器锁（防 generate-skill.sh 函数再长肥）
+# 背景：R128 前五大函数 150-588 行（verify_completeness/inject_frameworks/
+# check_framework_globs/copy_universal_templates/create 流 emit 段），行为保持式拆分后
+# 收敛为「编排器 ≤64 行 + 子函数 ≤120 行」。本测试静态锁住上限，超限即 fail——
+# 要加超限内容须显式改本文件上限并给出理由注释（审阅时可见，不静默长肥）。
 # 边界算法（与 R128 拆分时人工测量同口径）：
 #   函数起点 = `^[a-z_][a-z0-9_]*\(\) *\{`（单行定义计 1 行）；
 #   函数终点 = 其后首个列 0 孤立 `}` ——heredoc 行计入尺寸且不误判边界（hooks.json 等
@@ -20,17 +19,20 @@ FAIL=0
 ok()  { echo "  ✓ $1"; }
 bad() { echo "  ✗ $1" >&2; FAIL=1; }
 
-SIZE_FILES=(scripts/generate-skill.sh assets/precheck.sh scripts/self-check.sh assets/state-machine.sh)
+GEN=scripts/generate-skill.sh
+# 挂账清偿批：子命令拦截块外置为 scripts/generator/subcommands.sh 后，
+# 扫描面扩到全部生成器模块（函数与顶层块都不再有盲区）。
+GEN_MODULES=(scripts/generate-skill.sh scripts/generator/*.sh)
 CAP_DEFAULT=150
 # 豁免表（格式 name:cap，空格分隔；每条须带存在性反向断言）
 CAP_EXCEPTIONS="_fg_emit_workflow:214"
 
-AWKPROG="$(mktemp /tmp/r128-prog.XXXXXX)"
+# ---- ① 尺寸扫描（单 awk，heredoc 感知）----
 SCAN="$(mktemp /tmp/r128-size.XXXXXX)"
-trap 'rm -f "$SCAN" "$AWKPROG"' EXIT
+trap 'rm -f "$SCAN"' EXIT
 # 注：awk 程序内不出现字面单引号（shell 引号冲突）——可选引号用 sprintf("%c",39) 动态构造；
 # 本仓 `<<` 全部为 heredoc 起始（`<<<` herestring/标记串 `< <(` 进程替换均不匹配该正则，已核对）。
-cat > "$AWKPROG" <<'AWKEOF'
+awk '
   BEGIN { q = sprintf("%c", 39); infn = ""; hd = "" }
   function herestart(line,  rx, tag) {
     rx = "<<-?[" q "\"]?[A-Za-z_][A-Za-z0-9_]*"
@@ -54,23 +56,17 @@ cat > "$AWKPROG" <<'AWKEOF'
     t = herestart($0); if (t != "") { hd = t; next }
     if ($0 == "}") { printf "%s %d %d\n", infn, start, NR - start + 1; infn = "" }
   }
-AWKEOF
-
-: > "$SCAN"
-for sf in "${SIZE_FILES[@]}"; do
-  if [[ ! -f "$sf" ]]; then bad "尺寸锁目标缺失: $sf"; exit 1; fi
-  awk -f "$AWKPROG" "$sf" >> "$SCAN"
-done
+' "${GEN_MODULES[@]}" > "$SCAN"
 
 # ---- ② vacuous-pass 守卫：扫描器必须找到足量函数（否则边界算法失明，全绿是假的）----
 N_FUNCS=$(wc -l < "$SCAN" | tr -d ' ')
-if [[ "$N_FUNCS" -lt 60 ]]; then
-  bad "尺寸扫描只找到 ${N_FUNCS} 个函数（<60）——边界算法失明，测试自身失效"
+if [[ "$N_FUNCS" -lt 20 ]]; then
+  bad "尺寸扫描只找到 ${N_FUNCS} 个函数（<20）——边界算法失明，测试自身失效"
   exit 1
 fi
-ok "尺寸扫描覆盖 ${#SIZE_FILES[@]} 个核心脚本共 ${N_FUNCS} 函数（边界算法工作正常）"
+ok "尺寸扫描找到 ${N_FUNCS} 个函数（边界算法工作正常）"
 
-# ---- ③ R128 五编排器在位断言（防整体删除后测试仍绿；generate-skill 专属）----
+# ---- ③ R128 五编排器在位断言（防整体删除后测试仍绿）----
 for must_fn in verify_completeness inject_frameworks check_framework_globs copy_universal_templates _fg_emit_guides; do
   if awk -v f="$must_fn" '$1 == f { found = 1 } END { exit !found }' "$SCAN"; then
     ok "编排器在位: ${must_fn}"

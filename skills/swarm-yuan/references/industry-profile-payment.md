@@ -180,7 +180,7 @@
 
 > 知识库实体已镜像入仓 `vendor-knowledge/pay-team/references/`（本目录相对本文件：`../vendor-knowledge/pay-team/references/`），迁移到其它机器后随仓可达。**引用任何限额/阈值/费率/版本数据前，先查 `standards/known-conflicts.md` 的冲突裁决**。
 >
-> **降级链（诚实降级）**：`standards/` `books/` `fulltext/` 三目录为版权材料——AIStudio 镜像按普通 git 对象入库（未启用 LFS 对象库，随仓克隆即可读，但不入公开仓分发）；若未来外置为 LFS，克隆机须 `git lfs pull` 取回实体，未取回时降级为知识地图，深读材料需另行获取（原始来源：本机 hermes 运行时 `~/.hermes/profiles/pay-orchestrator/references/`）。顶层自研内核（索引/内核框架/监管梳理/known-conflicts 裁决）同为普通 git 对象。
+> **降级链（诚实降级）**：`standards/` `books/` `fulltext/` 三目录为版权材料、走 git LFS——克隆机须 `git lfs pull` 取回实体；未拉取或仓为公开仓分发（版权材料不入公开仓）时，LFS 指针降级为知识地图，深读材料需另行获取（原始来源：本机 hermes 运行时 `~/.hermes/profiles/pay-orchestrator/references/`）。顶层自研内核（索引/内核框架/监管梳理/known-conflicts 裁决）为普通 git 对象，随仓克隆即可读。
 
 - **总索引**：`pay-knowledge-index.md`（引用路由总入口）
 - **知识内核框架**：`chentianyu-kernel-frameworks.md`（123457 口诀/46 图内核/二清七步）

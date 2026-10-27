@@ -31,6 +31,12 @@ done
 # 缺省 skill-dir：猜测 .swarm-yuan/skill 或当前目录
 [[ -z "$SKILL_DIR" ]] && SKILL_DIR="${PROJECT_DIR}/.swarm-yuan/skill"
 [[ -d "$SKILL_DIR" ]] || SKILL_DIR="${PROJECT_DIR}"
+# 真实技能目录须含 SKILL.md——目录存在但无产物时写「空知识」是污染（实测 "." 目录级联）。
+# best-effort 契约不破：披露 + 零写入 + exit 0。
+if [[ ! -f "${SKILL_DIR}/SKILL.md" ]]; then
+  echo "⚠ memory-writeback: ${SKILL_DIR} 无 SKILL.md（非目标技能目录）——跳过写回（拒绝空知识）；请显式传 --skill-dir 指向技能根" >&2
+  exit 0
+fi
 
 # 适配层随技能分发于同目录（生成器侧 assets/，目标技能侧 scripts/）
 _MB_SH="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/memory-backends.sh"

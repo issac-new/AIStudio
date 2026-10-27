@@ -819,7 +819,7 @@ check_scope() {
       warn "非 git 仓库，只读目录 $rd 无法自动检测改动"
     done
   fi
-  [[ $readonly_violation -eq 0 ]] && pass "只读目录无改动"
+  [[ $readonly_violation -eq 0 ]] && { pass "只读目录无改动"; return 0; }
 }
 # gate: spec-first
 # domain: process / enforce: warn / tier: core
@@ -1051,7 +1051,7 @@ check_sensitive() {
       fi
     done
   done
-  [[ $found -eq 0 ]] && pass "未发现明显敏感信息"
+  [[ $found -eq 0 ]] && { pass "未发现明显敏感信息"; return 0; }
 }
 # gate: deps
 # domain: process / enforce: warn / tier: core
@@ -2010,7 +2010,7 @@ check_docs_pack() {
       fi
     fi
   done
-  [[ $found -eq 0 ]] && pass "文档包完备性检查通过（profile=${DOCS_PACK_PROFILE}）"
+  [[ $found -eq 0 ]] && { pass "文档包完备性检查通过（profile=${DOCS_PACK_PROFILE}）"; return 0; }
 }
 # gate: requirements
 # domain: compliance / enforce: warn / tier: compliance
@@ -2169,5 +2169,5 @@ check_rtm() {
   done <<< "$reqs"
   local pct=$((traced*100/total))
   echo "  ⓘ 追溯率：${pct}%（${traced}/${total}，矩阵：${matrix}）"
-  [[ $found -eq 0 ]] && pass "需求追溯矩阵检查通过（全部 ${total} 个 REQ 已追溯，追溯率 ${pct}%）"
+  [[ $found -eq 0 ]] && { pass "需求追溯矩阵检查通过（全部 ${total} 个 REQ 已追溯，追溯率 ${pct}%）"; return 0; }
 }

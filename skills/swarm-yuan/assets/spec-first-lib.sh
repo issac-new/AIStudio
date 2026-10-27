@@ -87,10 +87,17 @@ spf_conf_val() {  # $1=conf 文件路径 $2=变量名 → stdout 值（文件缺
 # 历史缺陷见 fail-gate-hook 注记，勿回退为行尾锚定写法；R128 起注释剥离引号感知，
 # 目录名含 # 不再被腰斩，引号由 s/"//g 统一去）。
 spf_writable_dirs() {  # $1=conf 文件路径 → stdout 空格分隔目录表（未配置=空）
-  local _v=""
-  if [[ -f "$1" ]]; then
-    _v=$(grep '^WRITABLE_DIRS=' "$1" 2>/dev/null | tail -1 | spf_strip_comment | sed -e 's/^WRITABLE_DIRS=(//' -e 's/[[:space:]]*)[[:space:]]*$//' -e 's/"//g' || true)
-  fi
+  # 多层可见性：用户把 WRITABLE_DIRS 挪进 patch 覆盖层时，L1/L2 须读到末层胜出值
+  #（与运行时链同语义；旧版只读主 conf 单文件，patch 覆盖对 hook 不可见）。
+  # 覆盖语义=后层赋值替换前层（数组整体替换），非并集。
+  local _c="$1" _v="" _layer
+  local _base_dir; _base_dir="$(dirname "$_c")"
+  for _layer in precheck.conf precheck.arch.conf precheck.compliance.conf precheck.industry.conf precheck.patch.conf; do
+    [[ -f "${_base_dir}/${_layer}" ]] || continue
+    if grep -q '^WRITABLE_DIRS=' "${_base_dir}/${_layer}" 2>/dev/null; then
+      _v=$(grep '^WRITABLE_DIRS=' "${_base_dir}/${_layer}" | tail -1 | spf_strip_comment | sed -e 's/^WRITABLE_DIRS=(//' -e 's/[[:space:]]*)[[:space:]]*$//' -e 's/"//g' || true)
+    fi
+  done
   printf '%s' "$_v"
   return 0
 }

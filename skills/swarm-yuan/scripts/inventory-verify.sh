@@ -25,7 +25,7 @@
 set -uo pipefail
 BASE=$(cd "$(dirname "${0}")/.." && pwd)
 
-PROJ=""; SKILL_DIR=""; FORM=""; TSV=0; PATH_CHECK=0; STAB_AUDIT=0
+PROJ=""; SKILL_DIR=""; FORM=""; TSV=0; PATH_CHECK=0; STAB_AUDIT=0; STRICT=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skill-dir) SKILL_DIR="${2:?--skill-dir 需要路径}"; shift 2 ;;
@@ -33,12 +33,17 @@ while [[ $# -gt 0 ]]; do
     --tsv)       TSV=1; shift ;;
     --path-check) PATH_CHECK=1; shift ;;
     --stability-audit) STAB_AUDIT=1; shift ;;
+    --strict) STRICT=1; shift ;;
     -h|--help)   sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) [[ -z "$PROJ" ]] && PROJ="$1" || { echo "未知参数: $1" >&2; exit 1; }; shift ;;
   esac
 done
 [[ -n "$PROJ" && -d "$PROJ" ]] || { echo "✗ PROJECT_DIR 缺失或不存在: ${PROJ:-（空）}" >&2; exit 1; }
 PROJ=$(cd "$PROJ" && pwd)
+if [[ "$STRICT" -eq 1 && -n "$SKILL_DIR" && ! -f "$SKILL_DIR/references/reference-manual.md" ]]; then
+  echo "✗ strict 清单核验缺少 references/reference-manual.md——不能把无对象可查当合格" >&2
+  exit 2
+fi
 
 # 形态：--form > skill conf PROJECT_FORM > 全维度（all）
 if [[ -z "$FORM" && -n "$SKILL_DIR" ]]; then
@@ -97,10 +102,14 @@ _enum_count() { # $1=CMD模板
   # R118：项目路径先 %q 再替换——旧版 sed 直插后 eval，路径含 $(...)/反引号即命令执行。
   _proj_q=$(printf '%q' "$PROJ")
   _cmd="${cmd//'${PROJECT_DIR}'/$_proj_q}"
-  local _n
-  _n=$(eval "$_cmd" 2>/dev/null | LC_ALL=C grep -c .)
+  local _out _rc _n
+  _out=$(eval "$_cmd" 2>/dev/null); _rc=$?
+  # grep 无匹配返回 1，属于真实零枚举而非执行失败；grep 语法/路径错误为 2，仍须 SCAN_ERROR。
+  if [[ "$cmd" == grep\ * && "$_rc" -eq 1 ]]; then _rc=0; fi
+  _n=$(printf '%s\n' "$_out" | LC_ALL=C grep -c . || true)
   [[ -n "$_n" ]] || _n=0
-  echo "$_n"
+  # 输出计数与执行状态两列，调用方不得把扫描失败折叠成真实零枚举。
+  printf '%s|%s\n' "$_n" "$_rc"
 }
 
 # 数 reference-manual.md 对应表行数：定位 §<n> 标题到下一个同级/更高级 ## 之间，数表格数据行（| 开头非分隔/表头）
@@ -147,7 +156,7 @@ _list_count() { # $1=RM文件 $2=锚（§<n>[.<sub>]，空格分隔多锚）
           # A7 后态漏排除模板自家两列表头「| 路径 | 说明与约束 |」（说明在第二格）→ 表头被计成
           # 数据行 → 清单计数虚高（每表 +1，实测 §6 双表 6 行计成 8）。
           # 数据行以反引号路径开头，不会以关键词开头——首格开头锚定是数据行/表头的可靠判别。
-          if (line !~ /^\|[-:|]+\|$/ && line !~ /^\|[-]+/ && line !~ /^\|(维度|端点|构件|方法|说明|路径|业务名|单元名|文件)/) c++
+          if (line !~ /^\|[-:|]+\|$/ && line !~ /^\|[-]+/ && line !~ /^\|(维度|端点|构件|方法|说明|路径|业务名|单元名|文件)/ && !seen[line]++) c++
         }
       }
       END { print c+0 }
@@ -167,7 +176,7 @@ _notice_rm_missing() {
   fi
 }
 
-rows=""; mismatches=""; enum_zero=""
+rows=""; mismatches=""; enum_zero=""; strict_bad=""
 # shellcheck disable=SC2154  # title/ref/dfs/cmd 经 eval 间接赋值，shellcheck 静态分析识别不到
 for d in $_dims; do
   eval "title=\${DIM_${d}_TITLE:-}"
@@ -177,6 +186,7 @@ for d in $_dims; do
   [[ -n "$cmd" ]] || continue
   _form_applicable "$dfs" || continue
   enum=$(_enum_count "$cmd")
+  _enum_rc="${enum##*|}"; enum="${enum%%|*}"
   list=0
   if [[ -n "$SKILL_DIR" ]]; then
     rm="$SKILL_DIR/references/reference-manual.md"
@@ -186,12 +196,17 @@ for d in $_dims; do
       _notice_rm_missing
     fi
   fi
-  if [[ "$list" -gt 0 ]]; then
+  if [[ "$_enum_rc" -ne 0 ]]; then
+    ratio="-"; st="SCAN_ERROR"
+  elif [[ "$list" -gt 0 ]]; then
     # 比率定义：清单覆盖枚举的比例 = min(1, list/enum)；spec 原意「清单计数 ≥ 枚举×0.95」
     ratio=$(awk -v e="$enum" -v l="$list" 'BEGIN{ if(e==0) print "1.00"; else { r=l/e; if(r>1) r=1; printf "%.2f", r } }')
     if awk -v r="$ratio" 'BEGIN{ exit !(r+0 >= 0.95) }'; then st="PASS"; else st="FAIL"; fi
   else
     ratio="-"; st="NO_LIST"
+  fi
+  if [[ "$_enum_rc" -ne 0 || "$st" == "FAIL" || ( "$st" == "NO_LIST" && "$enum" -gt 0 ) ]]; then
+    strict_bad=1
   fi
   rows="${rows}${title}	${enum}	${list}	${ratio}	${st}
 "
@@ -227,8 +242,11 @@ if [[ -z "$_forms_multi" || "$FORM" == "$_forms_multi" ]]; then
 if [[ "$FORM" == "backend" ]]; then
   eval "fcmd=\${DIM_FRONTEND_UI_CMD:-}"
   if [[ -n "$fcmd" ]]; then
-    fenum=$(_enum_count "$fcmd")
-    if [[ "${fenum:-0}" -gt 0 ]]; then
+    fenum=$(_enum_count "$fcmd"); _fenum_rc="${fenum##*|}"; fenum="${fenum%%|*}"
+    if [[ "${_fenum_rc:-0}" -ne 0 ]]; then
+      mismatches="${mismatches}SCAN_ERROR	FRONTEND_UI 枚举命令失败（rc=${_fenum_rc}）
+"
+    elif [[ "${fenum:-0}" -gt 0 ]]; then
       mismatches="${mismatches}DIM_MISMATCH	声明形态=backend 但检出前端 UI 组件 ${fenum} 个（回 §D.0 重判形态）
 "
     fi
@@ -236,8 +254,11 @@ if [[ "$FORM" == "backend" ]]; then
 elif [[ "$FORM" == "frontend" ]]; then
   eval "bcmd=\${DIM_BACKEND_CONTROLLER_CMD:-}"
   if [[ -n "$bcmd" ]]; then
-    benum=$(_enum_count "$bcmd")
-    if [[ "${benum:-0}" -gt 0 ]]; then
+    benum=$(_enum_count "$bcmd"); _benum_rc="${benum##*|}"; benum="${benum%%|*}"
+    if [[ "${_benum_rc:-0}" -ne 0 ]]; then
+      mismatches="${mismatches}SCAN_ERROR	BACKEND_CONTROLLER 枚举命令失败（rc=${_benum_rc}）
+"
+    elif [[ "${benum:-0}" -gt 0 ]]; then
       mismatches="${mismatches}DIM_MISMATCH	声明形态=frontend 但检出后端 controller ${benum} 个（回 §D.0 重判形态）
 "
     fi
@@ -409,5 +430,11 @@ if [[ -n "$stabwarns" ]]; then
 fi
 if [[ -n "$enum_zero" ]]; then
   printf '%s' "$enum_zero" | LC_ALL=C sort
+fi
+if [[ "$STRICT" -eq 1 ]]; then
+  # NO_LIST 仅在 enum>0 时阻断：零对象维度允许诚实的空清单披露，不强迫造行。
+  if [[ -n "$strict_bad" || -n "$mismatches" || -n "$hallus" ]]; then
+    exit 1
+  fi
 fi
 exit 0

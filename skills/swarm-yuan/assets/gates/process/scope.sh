@@ -39,5 +39,5 @@ check_scope() {
       warn "非 git 仓库，只读目录 $rd 无法自动检测改动"
     done
   fi
-  [[ $readonly_violation -eq 0 ]] && pass "只读目录无改动"
+  [[ $readonly_violation -eq 0 ]] && { pass "只读目录无改动"; return 0; }
 }

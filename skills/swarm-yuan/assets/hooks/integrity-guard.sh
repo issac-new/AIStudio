@@ -73,6 +73,9 @@ verifier/v1/
 self-precheck\.conf
 rules\.d/.*\.rules
 gate-rules\.sh
+hooks/(fail-gate-hook|integrity-guard|spec-first-bridge|failure-detector)\.sh
+assets/precheck\.sh
+scripts/gates-(strict|warn|advisory)\.sh
 hidden_solution|gold_patch|golden_patch|benchmark_answer|answer_key|official_solution
 '
 # rules.d/*.rules 与 gate-rules.sh（规则自身）入 deny（audit-2026-08-25，DESIGN §5.2"规则自身不被 AI 篡改"）：
@@ -88,6 +91,23 @@ decisions\.jsonl
 trace\.jsonl
 state\.yaml
 '
+
+# JSON 协议转义（与 fail-gate-hook.sh 同款：引号/反斜杠/控制字符保真）。
+_json_escape() {
+  local _j="$1" _code _char _escaped
+  _j="${_j//\\/\\\\}"
+  _j="${_j//\"/\\\"}"
+  for ((_code=1; _code<32; _code++)); do
+    printf -v _escaped '%03o' "$_code"
+    printf -v _char '%b' "\\$_escaped"
+    case "$_code" in
+      9) _escaped='\t' ;; 10) _escaped='\n' ;; 13) _escaped='\r' ;;
+      *) printf -v _escaped '\\u%04x' "$_code" ;;
+    esac
+    _j="${_j//$_char/$_escaped}"
+  done
+  printf '%s' "$_j"
+}
 
 # ===== 从 tool_input 提取路径 =====
 _extract_paths() {
@@ -177,6 +197,16 @@ if [[ "$TOOL_NAME" == "Write" || "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Mult
     HIT=$(_check_path "$p")
     [[ -n "$HIT" ]] && break
   done < <(_extract_paths "$TOOL_INPUT_JSON")
+elif [[ "$TOOL_NAME" == "Read" || "$TOOL_NAME" == "NotebookRead" ]]; then
+  # 头注声明的 hidden_solution 读取拦截：基准答案文件对解题 AI 不可见。
+  while IFS= read -r p; do
+    [[ -z "$p" ]] && continue
+    case "$p" in
+      *hidden_solution*|*gold_patch*|*golden_patch*|*answer_key*|*official_solution*)
+        HIT="deny|solution contamination 风险：读取 benchmark/hidden 答案会污染任务|$p"
+        break ;;
+    esac
+  done < <(_extract_paths "$TOOL_INPUT_JSON")
 elif [[ "$TOOL_NAME" == "Bash" ]]; then
   # 提取 command
   CMD=$(_extract_paths "$TOOL_INPUT_JSON" | head -1)
@@ -213,18 +243,20 @@ DECISION=$(echo "$HIT" | cut -d'|' -f1)
 REASON=$(echo "$HIT" | cut -d'|' -f2)
 TARGET=$(echo "$HIT" | cut -d'|' -f3-)
 
-MESSAGE="swarm-yuan integrity-guard: ${REASON}。四权分离生效：行动权/自评权/评分权/环境修改权须分离。目标: ${TARGET}"
+_REASON_J="$(_json_escape "$REASON")"
+_TARGET_J="$(_json_escape "$TARGET")"
+MESSAGE="swarm-yuan integrity-guard: ${_REASON_J}。四权分离生效：行动权/自评权/评分权/环境修改权须分离。目标: ${_TARGET_J}"
 
 # 输出 hookSpecificOutput（Claude Code PreToolUse 协议）
 if [[ "$DECISION" == "deny" ]]; then
   # deny：硬阻塞
   cat << EOF
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"${MESSAGE}","additionalContext":"swarm-yuan integrity-guard: DENY — ${REASON}。目标: ${TARGET}。如需修改此资产：1) 走 policy-guardian agent 审查（references/governance-agents.md）；2) 改 facts.conf 须同步全文档数字并重跑 self-check；3) 改注入区须走 --inject-frameworks（机器维护，禁手改）；4) 改 verifier/v1 须用户确认。"}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"${MESSAGE}","additionalContext":"swarm-yuan integrity-guard: DENY — ${_REASON_J}。目标: ${_TARGET_J}。如需修改此资产：1) 走 policy-guardian agent 审查（references/governance-agents.md）；2) 改 facts.conf 须同步全文档数字并重跑 self-check；3) 改注入区须走 --inject-frameworks（机器维护，禁手改）；4) 改 verifier/v1 须用户确认。"}}
 EOF
 else
   # advisory：不阻塞，仅注入提醒
   cat << EOF
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"swarm-yuan integrity-guard: ADVISORY — ${REASON}。目标: ${TARGET}。改完须：1) 重跑 bash scripts/self-check.sh --check-only 验证数字漂移；2) 重跑相关门禁（--all-full 或 --compliance-suite）确认断言仍通过；3) 决策落痕 bash scripts/trace-log.sh --decision --type UserChallenge --suggestion '改 ${TARGET}' --user-action approved --rationale '<填理由>'。"}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"swarm-yuan integrity-guard: ADVISORY — ${_REASON_J}。目标: ${_TARGET_J}。改完须：1) 重跑 bash scripts/self-check.sh --check-only 验证数字漂移；2) 重跑相关门禁（--all-full 或 --compliance-suite）确认断言仍通过；3) 决策落痕 bash scripts/trace-log.sh --decision --type UserChallenge --suggestion '改 ${TARGET}' --user-action approved --rationale '<填理由>'。"}}
 EOF
 fi
 

@@ -106,12 +106,8 @@ echo "[1] .gitattributes 换行规则 + CRLF 自检"
 if grep -qx '\* text=auto' "$BASE/.gitattributes"; then ok "1a * text=auto"; else bad "1a 缺 * text=auto"; fi
 if grep -qx '\*.sh text eol=lf' "$BASE/.gitattributes"; then ok "1b *.sh eol=lf"; else bad "1b 缺 *.sh eol=lf"; fi
 if grep -qx '\*.bat text eol=crlf' "$BASE/.gitattributes"; then ok "1c *.bat eol=crlf"; else bad "1c 缺 *.bat eol=crlf"; fi
-# 8cc5b03 起 LFS 规则收敛为一条宽匹配（vendor-knowledge/**）；2026-10-26 集成轮改判：
-# AIStudio 镜像是普通 blob 且未建 LFS 对象库，挂 filter=lfs 会在 git add 时把普通 blob 静默
-# 转成指针（数据雷）。守门改为：字节保真 -text 在位 + filter=lfs 不得回归。
-if grep -qxF 'vendor-knowledge/** -text' "$BASE/.gitattributes" \
-   && ! grep -qF 'vendor-knowledge/** filter=lfs' "$BASE/.gitattributes"; then
-  ok "1d vendor 字节保真在位且未挂 LFS 指针转换"; else bad "1d vendor 规则应为 -text 且禁 filter=lfs"; fi
+# 8cc5b03 起 LFS 规则收敛为一条宽匹配（vendor-knowledge/**）；旧断言"恰 3 条"未随收敛同步。
+if grep -q '^vendor-knowledge/\*\* filter=lfs' "$BASE/.gitattributes"; then ok "1d 既有 vendor LFS 规则保留"; else bad "1d LFS 规则被破坏"; fi
 
 # 混合 CR（bash 可解析的形态）：脚本应显式报 CRLF 错误而非继续执行
 awk 'NR==1 { printf "%s\r\n", $0; next } { print }' "$INSTALL" > "$TMP/install-crlf-mixed.sh"
@@ -126,6 +122,7 @@ echo "[2] --version 源树版本"
 mkdir -p "$TMP/notgit"
 out2="$(cd "$TMP/notgit" && HOME="$FH1" bash "$INSTALL" --version 2>&1)"; rc2=$?
 expected_ver="$(git -C "$BASE" describe --tags --always 2>/dev/null || echo unknown)"
+expected_ver="${expected_ver#swarm-yuan-}" # AIStudio 单仓 tag 前缀：install.sh 展示口径统一剥除，期望值同步
 if [[ $rc2 -eq 0 && "$expected_ver" != "unknown" && "$out2" == *"installer ${expected_ver}"* ]]; then
   ok "2a 非 git cwd 下仍输出源树版本 ${expected_ver}"
 else
@@ -465,3 +462,18 @@ else
   echo "test-r118-install-hardening: FAIL" >&2
 fi
 exit $FAIL
+
+# staging→验证→发布（挂账清偿批）：缺 SKILL.md 的源树必须放弃发布且不破坏既有安装
+_stage_t="$(mktemp -d "${TMPDIR:-/tmp}/inst-stage.XXXXXX")"
+mkdir -p "${_stage_t}/src" "${_stage_t}/home/.claude/skills/swarm-yuan"
+printf 'existing-install\n' > "${_stage_t}/home/.claude/skills/swarm-yuan/SKILL.md"
+touch "${_stage_t}/src/x.md"
+_end=$(awk 'NR>=312 && /^}$/{print NR; exit}' "$(dirname "$0")/../install.sh")
+awk -v e="${_end}" 'NR>=312 && NR<=e' "$(dirname "$0")/../install.sh" > "${_stage_t}/func.sh"
+if bash -c "SRC_DIR='${_stage_t}/src'; find_external_symlinks(){ :; }; prune_old_backups(){ :; }; render_native_rules(){ :; }; skip_self_install(){ :; }; source '${_stage_t}/func.sh'; install_to test '${_stage_t}/home/.claude/skills' '${_stage_t}/home/.claude/commands'" >"${_stage_t}/out.log" 2>&1; then
+  bad "staging：缺 SKILL.md 源树仍返回成功"
+else
+  grep -q '暂存区缺少 SKILL.md' "${_stage_t}/out.log" && ok "staging：空源树拦截并提示" || bad "staging：拦截信息缺失"
+fi
+grep -q 'existing-install' "${_stage_t}/home/.claude/skills/swarm-yuan/SKILL.md" && ok "staging：失败不破坏既有安装" || bad "staging：既有安装被破坏"
+rm -rf "${_stage_t}"

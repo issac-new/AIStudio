@@ -16,6 +16,7 @@ test-cross-stack-monorepo.sh	2	yes	general	-
 test-detect-frameworks.sh	2	yes	general	-
 test-detect-spec-scale.sh	2	yes	general	-
 test-doc-numbers.sh	1	yes	general	-
+test-effective-conf.sh	2	yes	general	-
 test-fail-gate-hook.sh	2	yes	general	-
 test-failure-detector.sh	2	yes	general	-
 test-framework-conf-consistency.sh	2	yes	general	-
@@ -123,3 +124,10 @@ test-r141-compendium-fullcheck.sh	2	yes	general	R141
 test-r141-upgrade-dryrun.sh	2	yes	general	R141
 test-r141-relocate.sh	2	yes	general	R141
 test-design-sync.sh	2	yes	general	2026-10-26
+test-gate-result-contract.sh	2	yes	general	-
+test-gate-deny-integration.sh	2	yes	general	-
+test-activation-contract.sh	2	yes	general	-
+test-secure-fs.sh	2	yes	general	-
+test-growth-transactions.sh	2	yes	general	-
+test-framework-lifecycle.sh	2	no	general	-
+test-integrity-guard.sh	2	yes	general	-

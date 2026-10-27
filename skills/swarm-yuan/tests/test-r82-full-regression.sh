@@ -44,7 +44,7 @@ printf '%s\n' '{"type":"Mechanical","suggestion":"fixture decision","user-action
 #    决策在项目侧 + skill_dir 上三级≠项目根：回退必须读技能 conf 才能命中账本。
 #    断言聚焦「缺少决策记录」不出现（draft 骨架其余占位符 hits 属预期，不在本锁语义内）。
 out="$(env -u PROJECT_DIR bash scripts/generate-skill.sh --verify-completeness "$FXSK/fx-dev" --strict 2>&1)"; rc=$?
-if printf '%s' "$out" | grep -q '缺少决策记录'; then
+if printf '%s' "$out" | grep -qF '缺少决策记录'; then
   bad "D2 复发：项目侧账本在 conf 真值下仍失明（回退未读技能 conf / 未剥尾注）"
 else
   ok "决策账本回退命中项目侧（conf PROJECT_DIR 三级解析 + 尾注剥除）"
@@ -58,34 +58,34 @@ cat > "$FXPROJ2/package.json" <<'EOF'
 EOF
 bash scripts/generate-skill.sh fx2-dev "$FXPROJ2" "$FXSK2" >/dev/null 2>&1
 out2="$(env -u PROJECT_DIR bash scripts/generate-skill.sh --verify-completeness "$FXSK2/fx2-dev" --strict 2>&1)"; rc2=$?
-printf '%s' "$out2" | grep -q '缺少决策记录' \
+printf '%s' "$out2" | grep -qF '缺少决策记录' \
   && ok "无账本形态如实报缺（fail 方向保持，不放行）" \
   || bad "无账本形态未报缺——C2 strict 契约被误改"
 
 # ---- 源码锁：D2 修复形态在位 ----
-grep -q '不剥则路径拼接失明' scripts/generate-skill.sh \
-  && ok "verify-completeness 回退 R82-D2 注记在位" \
-  || bad "generate-skill.sh R82-D2 注记丢失（同族溯源断裂）"
-grep -q "cut -d'#' -f1" scripts/generate-skill.sh && grep -q '去尾空格 + 去引号' scripts/generate-skill.sh \
-  && ok "generate-skill.sh 回退剥法（cut # 尾注）在位" \
-  || bad "generate-skill.sh 剥法形态丢失（尾注垃圾复发面）"
+grep -qE 'conf_items ACTIVE_FRAMEWORKS "' scripts/generate-skill.sh scripts/generator/subcommands.sh && grep -qF '_vc_proj_root() {' scripts/generate-skill.sh scripts/generator/subcommands.sh \
+  && ok "verify-completeness 项目根解析在位（Task 2 conf_* 链式实现承接 R82-D2 语义）" \
+  || bad "generate-skill.sh 项目根解析丢失（同族溯源断裂）"
+grep -qE 'conf_value PROJECT_DIR "' scripts/generate-skill.sh scripts/generator/subcommands.sh \
+  && ok "PROJECT_DIR 取值经 conf_value（source 求值，尾注/引号/%q 由 shell 本身消化）" \
+  || bad "PROJECT_DIR 回退到 grep 剥串形态（尾注垃圾复发面）"
 # 顺序锁：尾空格必须先于闭引号剥离（值与 # 尾注间的对齐空格使 s/"$// 失配、引号残留路径尾，
 # 项目侧决策账本回退失明 → strict 误报缺决策记录；task-forge 全栈样例实证）
-grep -q "s/\[\[:space:\]\]\*\$//;s/^\"//;s/\"\$//" scripts/generate-skill.sh \
-  && ok "剥引号顺序正确（尾空格先剥，防引号残留）" \
-  || bad "剥引号顺序回退（闭引号先于尾空格剥——R93 实证缺陷形态复发）"
-grep -q '同族剥法' scripts/detect-profile-drift.sh && grep -q "cut -d'#' -f1" scripts/detect-profile-drift.sh \
+grep -qF 'conf_quote() {' assets/lib/conf.sh && grep -q "printf '%q'" assets/lib/conf.sh \
+  && ok "路径引号化单源 conf_quote（%q——R93 剥序缺陷的根治形态）" \
+  || bad "引号化实现缺失（R93 剥序缺陷复发面）"
+grep -qF '同族剥法' scripts/detect-profile-drift.sh && grep -q "cut -d'#' -f1" scripts/detect-profile-drift.sh \
   && ok "detect-profile-drift ②级同族剥法在位" \
   || bad "detect-profile-drift 同族修复丢失（静默跳过复发面）"
 
 # ---- 行为锁 3：D1 骨架填充行带版本表语义（真生成器输出面）----
 gline="$(grep -m1 '^    codebase.md)' scripts/generate-skill.sh)"
-printf '%s' "$gline" | grep -q 'manifest 声明值' && printf '%s' "$gline" | grep -q 'R82-D1' \
+printf '%s' "$gline" | grep -qF 'manifest 声明值' && printf '%s' "$gline" | grep -qF 'R82-D1' \
   && ok "codebase.md 填充行钉版本表语义（manifest 声明值+实装写说明列）" \
   || bad "填充行版本语义丢失（check_deps 假阳性复发面）"
 
 # ---- 源码锁：template-spec 版本语义单一约定在位 ----
-grep -q '版本语义单一约定' references/template-spec.md \
+grep -qF '版本语义单一约定' references/template-spec.md \
   && ok "template-spec ★版本锁定原则语义钉死" \
   || bad "template-spec 版本语义句丢失（文档侧契约断裂）"
 

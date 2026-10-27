@@ -50,5 +50,5 @@ check_review_record() {
     _hr=$(find "$dir" -type f -exec grep -lE '人工复核|human.*(review|verify)|人工审查' {} \; 2>/dev/null | head -1 || true)
     [[ -z "$_hr" ]] && warn "未见人工复核记录（AI_DISCLOSURE_REQUIRED=1 建议留存人工复核签字）"
   fi
-  [[ $found -eq 0 ]] && pass "评审记录检查通过（评审人/日期/结论齐备，零待定项）"
+  [[ $found -eq 0 ]] && { pass "评审记录检查通过（评审人/日期/结论齐备，零待定项）"; return 0; }
 }

@@ -221,54 +221,6 @@ _resolve_rel_imports() {
 # 注：框架适配变量（JAVA_BUILD_FILES/MYBATIS_* 等）由注入的 framework-gates 片段消费，
 #     本文件内看似未使用，故关闭 SC2034。
 # shellcheck disable=SC2034
-_default_conf_compliance() {
-  COMPLIANCE_MATRIX_FILE=""
-  COMPLIANCE_REQUIRED_SECTIONS=()
-  DOCS_PACK_PROFILE=""
-  DOCS_PACK_DIR=""
-  DOCS_PACK_REQUIRED=()
-  DOCS_PACK_ALLOW_TBD=0
-  SBOM_REQUIRED=0
-  SBOM_OUTPUT_DIR=""
-  SBOM_FORMAT=""
-  SBOM_TOOL=""
-  SBOM_LICENSE_BLOCKLIST=()
-  SBOM_LICENSE_EXEMPTIONS=()
-  # 安全门禁豁免变量（显式豁免须填理由，否则 fail-closed）
-  SBOM_EXEMPT_REASON=""
-  DENGBAO_EXEMPT_REASON=""
-  PIA_EXEMPT_REASON=""
-  CRYPTO_EXEMPT_REASON=""
-  SAST_DEEP_EXEMPT_REASON=""
-  RELEASE_SIGN_EXEMPT_REASON=""
-  OSS_EVAL_EXEMPT_REASON=""
-  PRIVACY_SCAN_DIRS=()
-  PRIVACY_EXTRA_PATTERNS=()
-  PRIVACY_SENSITIVE_KEYWORDS=()
-  PRIVACY_EXEMPTIONS=()
-  # 三个 *_TOOL 用 ${VAR:-默认} 保留环境变量：_default_conf 在 source conf 前执行，写死赋值会覆盖 conf 里的 ${VAR:-auto}。
-  SENSITIVE_TOOL="${SENSITIVE_TOOL:-auto}"
-  SENSITIVE_EXCLUDE_GLOBS=()
-  SECURITY_TOOL="${SECURITY_TOOL:-auto}"
-  AUTHZ_SCAN_DIRS=()
-  AUTHZ_EXTRA_PATTERNS=()
-  REQUIREMENTS_STRICT=0
-  REQUIREMENTS_ID_REQUIRED=0
-  # 需求术语同义词对（ISO/IEC/IEEE 29148 §5.2.7.2 术语一致性检查）
-  # 格式: ("术语A|术语B" "同义词A|同义词B")，如 ("用户|客户" "系统|平台")
-  REQUIREMENTS_SYNONYM_PAIRS=()
-  CRYPTO_PROFILE=""
-  CRYPTO_SCAN_DIRS=()
-  # 长期清单收口（P3）：需求追溯矩阵（--rtm）+ 发布签名（--release-sign，SLSA Build L2）
-  RTM_REQUIRED=0
-  RTM_MATRIX_FILE=""
-  RTM_MATRIX_REQUIRED=0
-  RELEASE_SIGN_REQUIRED=0
-  RELEASE_ARTIFACTS_GLOB=""
-  RELEASE_SIGN_TOOL=""
-  RELEASE_PROVENANCE_REQUIRED=0
-  RELEASE_PROVENANCE_FILE=""
-}
 _default_conf() {
   # 基础配置
   PROJECT_DIR="."
@@ -377,7 +329,56 @@ _default_conf() {
   SHARDED_TABLES=()
   SHARDING_BROADCAST_TABLES=()
   SPRING_BATCH_JOB_DIRS=()
-  _default_conf_compliance
+  # 标准合规
+  COMPLIANCE_MATRIX_FILE=""
+  COMPLIANCE_REQUIRED_SECTIONS=()
+  DOCS_PACK_PROFILE=""
+  DOCS_PACK_DIR=""
+  DOCS_PACK_REQUIRED=()
+  DOCS_PACK_ALLOW_TBD=0
+  SBOM_REQUIRED=0
+  SBOM_OUTPUT_DIR=""
+  SBOM_FORMAT=""
+  SBOM_TOOL=""
+  SBOM_LICENSE_BLOCKLIST=()
+  SBOM_LICENSE_EXEMPTIONS=()
+  # 安全门禁豁免变量（显式豁免须填理由，否则 fail-closed）
+  SBOM_EXEMPT_REASON=""
+  DENGBAO_EXEMPT_REASON=""
+  PIA_EXEMPT_REASON=""
+  CRYPTO_EXEMPT_REASON=""
+  SAST_DEEP_EXEMPT_REASON=""
+  RELEASE_SIGN_EXEMPT_REASON=""
+  OSS_EVAL_EXEMPT_REASON=""
+  PRIVACY_SCAN_DIRS=()
+  PRIVACY_EXTRA_PATTERNS=()
+  PRIVACY_SENSITIVE_KEYWORDS=()
+  PRIVACY_EXEMPTIONS=()
+  # 安全门禁族深化（P1-3/P1-9）：工具链降级 + 授权/需求/密码门禁
+  # 六轮复盘：三个 *_TOOL 用 ${VAR:-默认} 保留环境变量（_default_conf 在 source conf 前执行，
+  # 写死赋值会先覆盖环境变量，使 conf 里的 ${VAR:-auto} 也读到被重置的值 →
+  # `SECURITY_TOOL=builtin bash precheck.sh --security` 失效）。便于排障临时切工具链。
+  SENSITIVE_TOOL="${SENSITIVE_TOOL:-auto}"
+  SENSITIVE_EXCLUDE_GLOBS=()
+  SECURITY_TOOL="${SECURITY_TOOL:-auto}"
+  AUTHZ_SCAN_DIRS=()
+  AUTHZ_EXTRA_PATTERNS=()
+  REQUIREMENTS_STRICT=0
+  REQUIREMENTS_ID_REQUIRED=0
+  # 需求术语同义词对（ISO/IEC/IEEE 29148 §5.2.7.2 术语一致性检查）
+  # 格式: ("术语A|术语B" "同义词A|同义词B")，如 ("用户|客户" "系统|平台")
+  REQUIREMENTS_SYNONYM_PAIRS=()
+  CRYPTO_PROFILE=""
+  CRYPTO_SCAN_DIRS=()
+  # 长期清单收口（P3）：需求追溯矩阵（--rtm）+ 发布签名（--release-sign，SLSA Build L2）
+  RTM_REQUIRED=0
+  RTM_MATRIX_FILE=""
+  RTM_MATRIX_REQUIRED=0
+  RELEASE_SIGN_REQUIRED=0
+  RELEASE_ARTIFACTS_GLOB=""
+  RELEASE_SIGN_TOOL=""
+  RELEASE_PROVENANCE_REQUIRED=0
+  RELEASE_PROVENANCE_FILE=""
   # 门禁工具化（P1-4/P1-5）：gate-runs 证据落盘目录（空=关闭，不影响任何既有输出）
   GATE_RUNS_DIR=""
 }
@@ -618,6 +619,7 @@ SKIP_COUNT=0
 SKIP_LIST=""
 WARN_COUNT=0
 FAIL_COUNT=0
+ERROR_COUNT=0
 ADVISORY_COUNT=0
 # FAIL_IDS 收集 fail id（fail 首参数含 gate_xxx/fw_xxx id），供 fail 汇总段输出修复建议。
 # 兼容 bash 3.2：用换行分隔的字符串累积（不用 declare -A），去重靠 grep -F。
@@ -634,12 +636,33 @@ pass() { echo "  ✓ $1"; }
 # 首参数形如 "gate_requirements_tbd:12: spec 含 TBD" 或 "fw_vue_script_setup: ..."——取首个 : 前或整串。
 fail() {
   echo "  ✗ $1"; FAIL=1; FAIL_COUNT=$((FAIL_COUNT+1));
-  local _id="${1%%:*}"
-  [[ "$_id" == "$1" ]] && _id="$1"
+  local _id
+  case "$1" in
+    gate_*|fw_*) _id="${1%%:*}" ;;
+    *)
+      # 人读消息不再充当机器 id：从当前门禁函数派生稳定 gate_<名>，
+      # hook 白名单按字面交集即可消费，test/build/security 等全闭合。
+      if [[ -n "$_CURRENT_GATE" ]]; then
+        _id="gate_${_CURRENT_GATE#check_}"
+      else
+        _id="$1"
+      fi ;;
+  esac
   # 去重累积
   if [[ -z "$FAIL_IDS" ]] || ! printf '%s\n' "$FAIL_IDS" | grep -qxF "$_id"; then
     FAIL_IDS="${FAIL_IDS}${FAIL_IDS:+$'\n'}${_id}"
   fi
+}
+
+# 门禁自身异常与业务 fail 分离：非零返回且无 fail() 增量时进入 error。
+# error 同样置 FAIL 并合成稳定 id——宁可保守拦截，不让崩溃解除 deny 链。
+_record_gate_error() { # $1=门禁函数名 $2=返回码 $3=错误消息（可空）
+  local _gid="gate_${1#check_}"
+  ERROR_COUNT=$((ERROR_COUNT+1)); FAIL=1; FAIL_COUNT=$((FAIL_COUNT+1))
+  if [[ -z "$FAIL_IDS" ]] || ! printf '%s\n' "$FAIL_IDS" | grep -qxF "$_gid"; then
+    FAIL_IDS="${FAIL_IDS}${FAIL_IDS:+$'\n'}${_gid}"
+  fi
+  return 0
 }
 warn() { WARN_COUNT=$((WARN_COUNT+1)); if [[ $SILENT -eq 0 ]]; then echo "  ⚠ $1"; fi; }
 # skip_if_unconfigured: 未配置时静默跳过（--all-full/--compliance-suite）或 SKIPPED 单列提示（显式调用）
@@ -1051,11 +1074,11 @@ fi
 # --dump-conf（F3，dsh 吸收·分层 patch）：按运行时同一加载顺序合成 conf 视图并标注每变量来源层。
 # 离线视图与运行时同一条合成路径（对齐 dsh --dump-config 关键设计）——所见即门禁所读。
 if [[ "$MODE" == "--dump-conf" ]]; then
-  echo "=== conf 合成视图（加载顺序: core → arch → compliance → patch）==="
+  echo "=== conf 合成视图（加载顺序: core → arch → compliance → industry → patch）==="
   _dc_layer=""; _dc_var=""; _dc_line=""; _dc_map=""; _dc_val=""
   _dc_map="$(mktemp "${TMPDIR:-/tmp}/swarm-yuan.XXXXXX")"
   # 1) 逐层扫描 ^VAR= 定义，记录每变量最后定义层（后见胜出 = 覆盖语义）
-  for _dc_layer in precheck.conf precheck.arch.conf precheck.compliance.conf precheck.patch.conf; do
+  for _dc_layer in precheck.conf precheck.arch.conf precheck.compliance.conf precheck.industry.conf precheck.patch.conf; do
     [[ -f "${_CONF_DIR}/$_dc_layer" ]] || continue
     while IFS= read -r _dc_line; do
       printf '%s\t%s\n' "${_dc_line%%=*}" "$_dc_layer"
@@ -1067,7 +1090,7 @@ if [[ "$MODE" == "--dump-conf" ]]; then
   . "${_CONF_DIR}/precheck.conf" || true
   set -u
   # 3) 按层序稳定输出（同层内按扫描序）
-  for _dc_layer in precheck.conf precheck.arch.conf precheck.compliance.conf precheck.patch.conf; do
+  for _dc_layer in precheck.conf precheck.arch.conf precheck.compliance.conf precheck.industry.conf precheck.patch.conf; do
     while IFS=$'\t' read -r _dc_var _dc_line; do
       [[ "$_dc_line" == "$_dc_layer" ]] || continue
       _dc_val=""
@@ -1297,10 +1320,8 @@ _gate_evidence() { # $1=gate $2=status $3=ids(空格分隔) $4=duration_s
     >> "$GATE_RUNS_DIR/gate-runs.jsonl"
 }
 
-# SARIF 2.1.0 子集输出：version/runs/results（每门禁 {gate,status,ids[]}）
 _emit_json() {
   local _out _sk_json="" _g
-  # skipped 数组披露未配置跳过的门禁（绿≠合规在 JSON 侧同样显式化）
   for _g in $SKIP_LIST; do _sk_json="${_sk_json}${_sk_json:+,}\"${_g}\""; done
   _out="{\"version\":\"2.1.0\",\"runs\":[{\"tool\":{\"driver\":{\"name\":\"swarm-yuan precheck.sh\",\"properties\":{\"skipped\":[${_sk_json}]}}},\"results\":[${_JSON_RESULTS}]}]}"
   _JSON_EMITTED=1
@@ -1314,35 +1335,24 @@ _emit_json() {
   fi
 }
 
-# 门禁执行包装：$1=门禁函数名 $2=容错标志（1=--all 循环 `|| true` 语义；0=单门禁原样直通）
+# 分发契约：业务 fail 与执行 error 分离；error 也写稳定 id 并保持 deny 状态。
 _gate_exec() {
-  # R118 P0 纵深：注册表/分发与实现不一致时硬失败，不再让 127 被 `|| true` 吞掉。
   if ! declare -F "$1" >/dev/null 2>&1; then
     echo "✗ 门禁实现缺失：$1（注册表与 gates-*.sh 不一致）" >&2
     exit 2
   fi
   _CURRENT_GATE="$1"
   INVOKE_COUNT=$((INVOKE_COUNT+1))
-  # 门禁级 trace-log（设计理念 2：全链路追踪）——每门禁调用前/后向 stderr 输出追踪行 + 落盘 trace.jsonl
   if [[ -f "${TRACE_LOG_SH:-}" ]]; then
     bash "$TRACE_LOG_SH" --node "门禁" --tool "$1" --status started >&2 2>/dev/null || true
   fi
   local _trace_bf=$FAIL_COUNT _trace_bw=$WARN_COUNT _trace_bs=$SKIP_COUNT
-  # WP-Q1（决策 19）：门禁分层 enforce_level 分流——advisory 门禁永不 fail/warn 计数。
-  # 在子 shell 内重定义 fail()/warn()/pass() 为纯 echo，advisory 门禁的 fail/warn 调用变成纯输出行，
-  # 不进 FAIL_COUNT/WARN_COUNT——"advisory 是观测类门禁，不阻断交付"语义机器化。
-  # strict/warn 门禁走原路径（fail/warn 正常计数），行为不变。
-  # audit-2026-08-25 修复：skip 仍须计数披露（WP-F"跳过≠通过"对 advisory 同样成立）——
-  # 子 shell 内的 skip_if_unconfigured 自增会随子 shell 退出丢失，改为落临时文件由父 shell 归并。
   local _enforce
   _enforce=$(_enforce_of "$1")
   if [[ "$_enforce" == "advisory" ]]; then
     local _ad_skip="${TMPDIR:-/tmp}/precheck-adv-skip.$$"
     : > "$_ad_skip"
-    # 非证据模式：子 shell 内重定义 fail/warn/pass/skip，原样调用门禁
     if [[ "$_EVIDENCE_ON" -eq 0 ]]; then
-      # advisory 发现单独计数：advisory 不阻断交付，但“warn 0”会让读者误以为零发现
-      # （审计实证：crypto 命中 MD5 时汇总仍 warn 0）。落盘计数由父 shell 归并。
       local _ad_adv="${TMPDIR:-/tmp}/precheck-adv-count.$$"
       : > "$_ad_adv"
       (
@@ -1373,8 +1383,6 @@ _gate_exec() {
       fi
       return 0
     fi
-    # 证据模式：子 shell 内捕获输出（advisory 门禁状态恒为 advisory，不进 fail/warn/skip 计数）
-    # C6 注：date +%s 取 epoch 秒用于耗时计算，macOS/BSD/Linux 均支持（与 security-spec.md:237 的 date -u 格式化时间戳约定不冲突，后者用于 ISO 8601 字符串）
     _t0=$(date +%s)
     (
       fail() { echo "  ⚠ advisory: $1"; }
@@ -1407,22 +1415,16 @@ _gate_exec() {
     if [[ -f "${TRACE_LOG_SH:-}" ]]; then
       bash "$TRACE_LOG_SH" --node "门禁" --tool "$1" --status advisory >&2 2>/dev/null || true
     fi
-    # advisory 永不 fail（子shell 内重定义保证），容错标志 1 时直接返回 0
     [[ "$2" == "1" ]] && return 0
     return 0
   fi
-  # strict/warn 门禁：走原分发路径（fail/warn 正常计数）
-  # R126-G5：单门禁模式（$2 != 1）旧实现裸调用 "$1"，set -e 下门禁函数返回非零
-  # （check_scope/sensitive 末句 `[[ ]] && pass`、check_requirements 显式 return 1）
-  # 即整脚本提前退出——汇总/修复建议/.gate-fail-flag 写入（末段）全部被跳过，
-  # 单门禁 fail 永远接不上 fail-gate-hook 的 L1 拦截链（--all 模式才写 flag）。
-  # 修复：与序列模式同款容错 `|| true`——失败记账由 fail()/计数器承载，rc 由末段
-  # FAIL_COUNT 判定，不依赖门禁函数自身的返回值。
   if [[ "$_EVIDENCE_ON" -eq 0 ]]; then
-    "$1" || true
-    # 门禁级 trace-log done/fail/skip/warn（按计数器增量判定；R36-D5：非证据模式补 skip 态——
-    # 原实现只看 fail/warn 增量，skip 门禁（如无 spec 的 check_reuse）trace 记 done，与
-    # 汇总的 SKIP_LIST 分裂、与证据模式五态（fail>skip>warn>pass）不一致）
+    local _grc=0
+    "$1" || _grc=$?
+    if [[ "$_grc" -ne 0 && "$FAIL_COUNT" -le "$_trace_bf" ]]; then
+      echo "  ✗ ERROR 门禁自身异常（rc=${_grc}）——与业务违规分离，修复工具链后重跑"
+      _record_gate_error "$1" "$_grc"
+    fi
     if [[ -f "${TRACE_LOG_SH:-}" ]]; then
       local _tst="done"
       [[ $FAIL_COUNT -gt $_trace_bf ]] && _tst="fail"
@@ -1433,17 +1435,24 @@ _gate_exec() {
     return
   fi
   # 证据模式：捕获输出→回放→按计数器增量判定状态→登记 json/jsonl
-  local _bf=$FAIL_COUNT _bw=$WARN_COUNT _bs=$SKIP_COUNT _rc=0 _t0 _t1 _st _ids
+  local _bf=$FAIL_COUNT _bw=$WARN_COUNT _bs=$SKIP_COUNT _rc=0 _ge=0 _t0 _t1 _st _ids
   _t0=$(date +%s)
   if [[ "$2" == "1" ]]; then
-    "$1" > "$_GATE_TMP" || true
+    "$1" > "$_GATE_TMP" || _rc=$?
   else
     "$1" > "$_GATE_TMP" || _rc=$?
   fi
+  # 异常返回且无业务 fail：把 ERROR 行并入捕获输出，并登记 error（rc 保持可区分）。
+  if [[ "$_rc" -ne 0 && "$FAIL_COUNT" -le "$_bf" ]]; then
+    printf '  ✗ ERROR 门禁自身异常（rc=%s）——与业务违规分离，修复工具链后重跑\n' "$_rc" >> "$_GATE_TMP"
+    _record_gate_error "$1" "$_rc"
+    _ge=1
+  fi
   _t1=$(date +%s)
   cat "$_GATE_TMP"
-  # 状态优先级 fail > skip > warn > pass（fail 最严；skip 只进 SKIP_COUNT 绝不计 warn——WP-F 语义）
-  if [[ $FAIL_COUNT -gt $_bf ]]; then _st="fail"
+  # 状态优先级 fail > error > skip > warn > pass（fail 最严；skip 只进 SKIP_COUNT 绝不计 warn）
+  if [[ "$_ge" -eq 1 ]]; then _st="error"
+  elif [[ $FAIL_COUNT -gt $_bf ]]; then _st="fail"
   elif [[ $SKIP_COUNT -gt $_bs ]]; then _st="skip"
   elif [[ $WARN_COUNT -gt $_bw ]]; then _st="warn"
   else _st="pass"; fi
@@ -2015,31 +2024,22 @@ _fix_suggest() {
     *)                              suggest="运行 precheck.sh <对应门禁> --doctor 查看详情，或参考 references/ 对应方法论文档";;
   esac
   echo "  • ${id}: ${suggest}"
-  # G1：决策留痕提示（不改变 fail 语义，只增强诊断输出）
   echo "    （决策留痕：若涉及多方案/依赖升级/安全冲突，须按 references/decision-governance.md §User Challenge 记录到 decisions.jsonl）"
 }
 
-# R140 G-D5：SILENT 模式 warn() 只计数不输出——汇总与日志不可对账（--all-full 实证
-# 28 warn 日志零 ⚠ 行）。与 WP-S1 跳过披露同款：压缩明细在汇总段显式披露计数与查看路径。
 if [[ $SILENT -eq 1 && ${WARN_COUNT:-0} -gt 0 ]]; then
   echo "⚠ 压缩明细：${WARN_COUNT} 条 warn 未逐条显示（--all-full/--compliance-suite 静默模式；单跑该门禁或 --all 可见明细）"
 fi
-# WP-S1 跳过透明化（R1-G5）：SILENT 模式被抑制的未配置跳过在汇总段显式披露——绿≠合规
 if [[ $SKIP_COUNT -gt 0 ]]; then
   echo "⊘ 跳过 ${SKIP_COUNT} 个门禁（未配置；逐门禁详情见 --doctor 或单跑该门禁）："
   for _sk in $SKIP_LIST; do echo "    - ${_sk#check_}"; done
 fi
 
+# flag 只由覆盖式绿清除；error 与局部运行保留旧状态。
 if [[ $FAIL -eq 0 ]]; then
-  # 回归发现#13：修复后解锁——清除 fail flag（fail-gate-hook 据此放行 Write/Edit/推进态命令）
-  # R126：仅覆盖式运行（_COVERING_RUN=1，整族门禁全跑且 FAIL==0）才清除。
-  # 单门禁/局部模式绿 ≠ 白名单门禁集合已修复——局部绿灯抹全局标记会把 deny 链静默降级。
   if [[ "$_COVERING_RUN" -eq 1 ]]; then
     rm -f "${PROJECT_DIR:-$(pwd)}/.swarm-yuan/.gate-fail-flag" 2>/dev/null || true
   fi
-  # WP-CogAudit：--strict-skip 模式下，SKIP>0 时在"✓ 通过"行加前缀 + 返回 rc=2（确认偏误防治）
-  # 默认 STRICT_SKIP=0：输出 "✓ 门禁检查通过" + rc=0（保 cli-ab 逐字节等价与 CI/自举不破坏）
-  # opt-in STRICT_SKIP=1：输出 "✓ 门禁检查通过 [部分跳过 N 个未配置]" + rc=2（区分"全通过"与"部分跳过"）
   if [[ $STRICT_SKIP -eq 1 && $SKIP_COUNT -gt 0 ]]; then
     echo "✓ 门禁检查通过 [部分跳过 ${SKIP_COUNT} 个未配置]"
     _final_rc=2
@@ -2047,12 +2047,6 @@ if [[ $FAIL -eq 0 ]]; then
     echo "✓ 门禁检查通过"
     _final_rc=0
   fi
-  # 五轮复盘：draft 期"✓ 通过"语义诚实化。
-  # draft = 骨架未填充，SCAN_DIRS/WRITABLE_DIRS 等语义型变量仍是 # TODO:model 空值，
-  # 依赖它们的门禁（--sensitive 敏感信息扫描 / --scope 范围检查 / --stable-diff）实际不生效。
-  # 此时输出无保留的"✓ 门禁检查通过"会让用户以为门禁背书了代码质量——技术上没说错但会被误读。
-  # 追加披露行撤回背书（不改既有"✓"行，保 cli-ab 逐字节等价；不改 rc，保 Step ⑥ 生成流程不阻断），
-  # 与上方 "⊘ 跳过 N 个门禁" 披露同模式（绿≠合规的既有诚实化传统）。
   if [[ -f "$_skill_md" ]] && grep -q '^status: draft' "$_skill_md" 2>/dev/null; then
     echo "⚠ 注意：所属 skill 仍为 draft（骨架填充未完成）——语义型 conf 变量（SCAN_DIRS/WRITABLE_DIRS/READONLY_DIRS 等）"
     echo "  可能仍是 # TODO:model 空值，依赖它们的门禁（敏感信息扫描/范围检查/稳定层保护）未实际执行。"
@@ -2061,7 +2055,6 @@ if [[ $FAIL -eq 0 ]]; then
   fi
 else
   echo "✗ 门禁检查未通过，请修复上述问题"
-  # fail 修复建议（设计理念 1：连贯动作——fail 后自动给修复建议，非让用户猜）
   if [[ -n "$FAIL_IDS" ]]; then
     echo "—— 修复建议（${FAIL_COUNT} 项 fail，按 id 去重后 $(printf '%s\n' "$FAIL_IDS" | grep -c .) 项）——"
     local_id=""

@@ -47,5 +47,5 @@ check_oss_eval() {
       fi
     done
   fi
-  [[ $found -eq 0 ]] && pass "开源代码安全评价通过（成分清单在案，许可证未命中块名单）"
+  [[ $found -eq 0 ]] && { pass "开源代码安全评价通过（成分清单在案，许可证未命中块名单）"; return 0; }
 }

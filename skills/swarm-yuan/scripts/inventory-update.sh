@@ -102,7 +102,7 @@ if [[ -z "$APPEND" ]]; then
 fi
 
 # 原子替换：写临时文件 + mv（遵循 last-good：写失败不破坏原文件）
-_tmp=$(mktemp "${TMPDIR:-/tmp}/swarm-yuan.XXXXXX")
+_tmp=$(mktemp "$(dirname "$RM")/.inv-upd.XXXXXX")
 trap 'rm -f "$_tmp"' EXIT
 
 if [[ -n "$APPEND" ]]; then

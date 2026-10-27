@@ -158,7 +158,7 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 | 要找什么 | 看哪里 |
 |---|---|
 | 设计论证（What/Why/How 五层） | `swarm-yuan/README.md`（自述「唯一设计文档」，六章 + 附录 A–E） |
-| 终态设计说明（机制/不变量/失效模式/验收；已归档，规范源见 README） | `docs/reviews/design-terminal-2026-10-26-archived.md` |
+| 终态设计说明（机制/不变量/失效模式/验收） | `docs/design-terminal.md` |
 | 决策全文（编号见该文件） | `docs/design-evolution.md`；索引在技能 README 附录 C |
 | 上游运行时台账（22 项） | `docs/upstream-baseline.md`；历史在 `docs/research/upstream-changelog.md` |
 | 历轮细节 | `docs/research/R*.md`（份数以目录实测为准）+ `docs/reviews/`（复审类） |
@@ -191,9 +191,7 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 
 ## 文档边界与读法
 
-本文是 swarm-yuan 的唯一规范设计文档，回答四个问题：系统是什么、为什么这样设计、怎么落地、凭什么有效。操作命令查 `docs/usage-manual.md`。演化过程与决策史查 `docs/design-evolution.md`。上游运行时基线查 `docs/upstream-baseline.md`。全部数字的真值在 `swarm-yuan/assets/facts.conf`，self-check 做机器对账。
-
-文档角色：本文为规范源；终态设计摘要已于 2026-10-26 合并进本文并归档到 `docs/reviews/design-terminal-2026-10-26-archived.md`；带日期的设计文档是历史记录，不作为规范源。证据分级 M0–M4 的定义在 `assets/registry/README.md`，验收指标见附录 D。
+本文是 swarm-yuan 的唯一设计文档，回答四个问题：系统是什么、为什么这样设计、怎么落地、凭什么有效。操作命令查 `docs/usage-manual.md`。演化过程与决策史查 `docs/design-evolution.md`。上游运行时基线查 `docs/upstream-baseline.md`。全部数字的真值在 `swarm-yuan/assets/facts.conf`，self-check 做机器对账。
 
 读法：第一、二章给判断依据（要不要用、为什么需要）。第三章是主体，讲每层机制与检查。第四章把机制映射到文件。第五章给适用边界。第六章收口。数字、来源、验收明细收在附录，正文不罗列。
 
@@ -577,34 +575,6 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 全功能复盘与重构实施记录 | `docs/design-refactor-2026-10-24.md` | 能力盘点、真实缺口、目标设计与工作包（决策 54 的实施记录） |
 | 调研证据链 | `docs/research/` | 各轮调研报告（决策史引用的外部项目调研过程档案） |
 | 对外汇报案例 | `references/case-studies/articulation-orchestration.md` | 关节编排汇报场景的论据映射 |
-
-## 附录 F：治理不变量
-
-合并自终态设计摘要。五条治理原则：
-
-| 原则 | 含义 | 机器锚 |
-|---|---|---|
-| 事实单源 | 有两处以上引用的事实只保留一个权威源，其余由脚本生成 | 注册表三向对账，纳入自检与 CI |
-| 清单即数据 | 分发、装载、安装与宿主范围由表驱动，代码中不出现第二份清单 | 分发表与宿主表，代码只读表 |
-| 历史与状态分离 | 注册表只存当前值与最近一次修改，过程史进入修改记录 | 表行不携带版本史，记录追加 |
-| 宣称与证据绑定 | 对外的支持、整合与实证表述须对应五级记分与证据指针 | 表内等级列与术语校验 |
-| 能力有生命周期 | 分为进入、激活、验证、观察、退役五态，无退役条件不得新增 | 框架表与运行时表有 `status` 列；`registry-render.sh --lifecycle` 输出候选 |
-
-九条不变量：
-
-| 不变量 | 执法方式 | 强度 |
-|---|---|---|
-| 门禁预算 56 | 自检复杂度预算断言 | 强制 |
-| 配置变量预算 200 | 自检同上 | 强制 |
-| 四项体积上限 | 自检断言与生成链路断言 | 强制 |
-| 入口文件 20000 字符硬顶 | 生成链路断言 | 强制 |
-| 注册表与代码、样例三向一致 | 注册表对账 | 强制 |
-| 零消费事实键须登记例外 | 对账与例外表 | 强制 |
-| 每项能力具备证据等级 | 记分表与宣称矩阵 | 强制 |
-| 激活三项条件 | 激活命令 | 强制 |
-| 行为保持式拆分 | 基线产物逐字节比对 | 强制 |
-
-证据分级 M0–M4 定义见 `assets/registry/README.md`；验收指标见附录 D；能力退役候选由 `registry-render.sh --lifecycle` 输出。
 
 ## 离线分发设计（2026-10-22 终口径）
 
@@ -4183,9 +4153,6 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 #   2. 跑 `bash scripts/self-check.sh` 验证文档口径一致（漂移检测会列出未同步的文档）
 #   3. 按提示同步文档叙事层的数字
 #
-# 双段契约：本文件手写段服务安装态；facts.generated.conf 服务仓库态并在末尾 source 覆盖。
-# 两段重叠键必须等值（registry-render.sh --check 断言）——同键禁止双值。
-#
 # 真值来源（机械计数，不写死）：
 #   - 门禁数 = precheck.sh + gates-strict/warn/advisory.sh 四文件 ^check_[a-z_]+\(\) 合计计数
 #     （WP-Q1.3 三档拆分后 check_* 函数在 gates-*.sh 三文件，不在 precheck.sh 主文件；
@@ -4276,7 +4243,7 @@ FACT_ENFORCE_EFFECTIVE_ADVISORY=18   # 有效分层：静态 15 + override 3（s
 # ===== profile 三档 =====
 
 # ===== 生成器骨架文件 =====
-FACT_UNIVERSAL_FILES=103       # generate-skill.sh UNIVERSAL_FILES 清单条目数（C1 机械计数；R13 45 → +memory-writeback+cost-report 等账本族 → R14/R15 +gate-plan+audit-closure → R16 +ontology 三份+ontology-verify → field-feedback +review-record-template = 59 → 全局一致性二轮 +standards-map.conf/framework-globs.rules 随发补齐 = 65（agents-md-audit-round 2026-09-10 补记：5170a0a 改值未改链）→ v2.14.2 自包含轮 +relations-extract/inventory-verify/inventory-dimensions.conf = 68 → v2.14.3 排查 A3 +relations-query.sh = 69 → 功能点估算轮（2026-09-15）+cost-estimation-methodology.md 随发 = 70 → R37（2026-09-18）+lazy-generation-methodology.md 随发 = 71 → R52（2026-09-25）随发补缺 +12（分派表引用的方法论/行为档：knowledge-lifecycle/decision-governance/ai-process-records/agent-skills/codex/mea-loop/togaf/cordis/frontend-design/codex-security/mcp-governance/crypto-spec——分派目标侧可达）= 83 → R72 全量回归轮（2026-09-29）+mine-habits.sh 随发（D6 修复三处引用悬空，v2.14.2 自包含先例对齐）= 84 → R86 新运行时吸收轮（2026-10-03）+mattpocock-skills-methodology.md 随技能分发（feature/fix 路由行分派对齐 G25 ⑥）= 85 → R88（2026-10-04）+rsi-evidence-methodology.md 随发（此前键值 86 已先于链更新，R100 补链）= 86 → R100 受控语言轮（2026-10-09）+controlled-language-methodology.md 随发（人面输出纪律全档适用）= 87 → R98 记忆后端适配轮（2026-10-09）+memory-backends.sh 随发（记忆后端契约单一事实源）= 88 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite，判定单一事实源）+spec-first-pre-commit.sh（standard，L2 提交时强拦）= 90 → R103 五宿主 hooks 整合轮（2026-10-09）+spec-first-bridge.sh（standard，五宿主 L1 写时拦截桥）= 91 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh 随发（目标技能侧结构自检，lite 全档）= 92 → 本体轮（2026-10-22）+business-ontology-methodology.md +fibo-financial-ontology.md 随发（standard 档）= 94 → 运维排障底座轮（2026-10-22）+ops-readonly-guard.sh +tunnel.sh +tunnel.conf（用户可填充）+bugfix-runbook.md +remote-debug-jvm.md 随发（standard 档，存量项目 fix 任务连研发环境取证底座）= 99 → R138（2026-10-22）+assets/lib/files.sh 随发（产物侧 detect-frameworks 运行库）# 100 → 合规检查能力轮（2026-10-22）+compliance-checkpoints.md +regulatory-checkpoint-table.md +inspection-ledger.sh 随发（compliance 档，执法检查知识层+迎检台账）= 103）
+FACT_UNIVERSAL_FILES=104       # generate-skill.sh UNIVERSAL_FILES 清单条目数（C1 机械计数；R13 45 → +memory-writeback+cost-report 等账本族 → R14/R15 +gate-plan+audit-closure → R16 +ontology 三份+ontology-verify → field-feedback +review-record-template = 59 → 全局一致性二轮 +standards-map.conf/framework-globs.rules 随发补齐 = 65（agents-md-audit-round 2026-09-10 补记：5170a0a 改值未改链）→ v2.14.2 自包含轮 +relations-extract/inventory-verify/inventory-dimensions.conf = 68 → v2.14.3 排查 A3 +relations-query.sh = 69 → 功能点估算轮（2026-09-15）+cost-estimation-methodology.md 随发 = 70 → R37（2026-09-18）+lazy-generation-methodology.md 随发 = 71 → R52（2026-09-25）随发补缺 +12（分派表引用的方法论/行为档：knowledge-lifecycle/decision-governance/ai-process-records/agent-skills/codex/mea-loop/togaf/cordis/frontend-design/codex-security/mcp-governance/crypto-spec——分派目标侧可达）= 83 → R72 全量回归轮（2026-09-29）+mine-habits.sh 随发（D6 修复三处引用悬空，v2.14.2 自包含先例对齐）= 84 → R86 新运行时吸收轮（2026-10-03）+mattpocock-skills-methodology.md 随技能分发（feature/fix 路由行分派对齐 G25 ⑥）= 85 → R88（2026-10-04）+rsi-evidence-methodology.md 随发（此前键值 86 已先于链更新，R100 补链）= 86 → R100 受控语言轮（2026-10-09）+controlled-language-methodology.md 随发（人面输出纪律全档适用）= 87 → R98 记忆后端适配轮（2026-10-09）+memory-backends.sh 随发（记忆后端契约单一事实源）= 88 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite，判定单一事实源）+spec-first-pre-commit.sh（standard，L2 提交时强拦）= 90 → R103 五宿主 hooks 整合轮（2026-10-09）+spec-first-bridge.sh（standard，五宿主 L1 写时拦截桥）= 91 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh 随发（目标技能侧结构自检，lite 全档）= 92 → 本体轮（2026-10-22）+business-ontology-methodology.md +fibo-financial-ontology.md 随发（standard 档）= 94 → 运维排障底座轮（2026-10-22）+ops-readonly-guard.sh +tunnel.sh +tunnel.conf（用户可填充）+bugfix-runbook.md +remote-debug-jvm.md 随发（standard 档，存量项目 fix 任务连研发环境取证底座）= 99 → R138（2026-10-22）+assets/lib/files.sh 随发（产物侧 detect-frameworks 运行库）# 100 → 合规检查能力轮（2026-10-22）+compliance-checkpoints.md +regulatory-checkpoint-table.md +inspection-ledger.sh 随发（compliance 档，执法检查知识层+迎检台账）= 103）
 
 # ===== Oracle Gate 循环（WP-loop，借鉴 tanweai/pua pua-loop + autoresearch Oracle Isolation）=====
 FACT_LOOP_ORACLE=1                   # 1=启用 Stop hook Oracle Gate（verify_command 独立验证 <promise>）
@@ -4333,7 +4300,7 @@ FACT_MEASURE_METADATA_REQUIRED=1   # 1=fail（十一轮复盘：核心 13/13 全
 # ===== 生成管线工具化（WP-P2~P5）=====
 FACT_FRAMEWORK_EVIDENCE=1               # framework-evidence.sh 产出（1=启用，台账 TSV）
 FACT_CONF_RENDER_PROFILES=3             # conf-render.sh profile 档（lite/standard/compliance）
-FACT_UNIVERSAL_FILES_CORE=47            # UNIVERSAL_FILES 标 lite 档的条目数（三 profile 都拷）（C1 机械计数，含带尾注释条目；audit-2026-08-25 修正：30 是行尾锚定 grep 的盲区读数；v2.14.2 自包含轮 +3 边集/核验工具随发=40；v2.14.3 排查 A3 +relations-query.sh=41；R72 全量回归轮 +mine-habits.sh 随发=42；R100 受控语言轮 +controlled-language-methodology.md（lite 档）=43；R98 记忆后端适配轮 +memory-backends.sh 随发（lite 档）=44 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite 档，fail-gate-hook lite 依赖判定库）=45 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh（lite 档，目标技能侧结构自检）=46；2026-10-26 双段对账修正为 47（生成段与 dist.tsv lite 行实测一致））
+FACT_UNIVERSAL_FILES_CORE=48            # UNIVERSAL_FILES 标 lite 档的条目数（三 profile 都拷）（C1 机械计数，含带尾注释条目；audit-2026-08-25 修正：30 是行尾锚定 grep 的盲区读数；v2.14.2 自包含轮 +3 边集/核验工具随发=40；v2.14.3 排查 A3 +relations-query.sh=41；R72 全量回归轮 +mine-habits.sh 随发=42；R100 受控语言轮 +controlled-language-methodology.md（lite 档）=43；R98 记忆后端适配轮 +memory-backends.sh 随发（lite 档）=44 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite 档，fail-gate-hook lite 依赖判定库）=45 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh（lite 档，目标技能侧结构自检）=46）
 
 # ===== 复杂度负向预算（决策 26，WP-rhetoric-honesty）=====
 # 范式声称帮项目降复杂度，自身复杂度不可逆上升（门禁 27->52->54）会证伪范式可信度。
@@ -4361,7 +4328,7 @@ FACT_CONTEXT_SURFACE_BUDGET=197632          # 生成期必读三件套字节上�
 # 三轮复盘状态记录（防僵尸开关）：warn-only 长期保持——理由：LOC 增删属正常开发活动，
 # 本 key 的用途是"改脚本后提示同步文档口径"，非"限制脚本规模"（规模由 FACT_GATES_BUDGET 管）。
 # 不设推进条件（无需翻 fail）。
-FACT_SCRIPT_LOC=9362            # 四脚本（assets/precheck+gates-strict/warn/advisory）合计行数（self-check 机械计数；改脚本后同步本值；R141 实测对齐；设计文档同步轮 +9=check_spec_first 域源 design-sync 核验再生；2026-10-26 函数拆分净 0）
+FACT_SCRIPT_LOC=9355            # 四脚本（assets/precheck+gates-strict/warn/advisory）合计行数（self-check 机械计数；改脚本后同步本值；R141 实测对齐；设计文档同步轮 +9=check_spec_first 域源 design-sync 核验再生；2026-10-26 函数拆分净 0）；2026-10-27 收口合并批（core 尾批并入）后实测 9355
 
 # ===== 执行面复杂度预算（2026-10-24 重构轮，决策 54）=====
 # 事实：门禁/变量有预算，但门禁代码与框架注入代码的行数长期无上限（终态设计 §十已登记为风险）。

@@ -54,10 +54,6 @@ OUT_ROOT="${OUT_ROOT:-$SWARM_YUAN_SOURCE_ROOT/dist}"
 VER="$(git -C "$SKILL_ROOT" describe --tags --always 2>/dev/null || echo unknown)"
 VER="${VER#swarm-yuan-}"   # AIStudio tag 形如 swarm-yuan-v2.95.0，包名与版本文件只留 v 前缀
 VER="${VER//\//-}"
-if [[ ! "$VER" =~ ^v[0-9] ]]; then
-  _cv=$(sed -nE 's/^## \[(v[0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' "$SKILL_ROOT/CHANGELOG.md" 2>/dev/null | head -1 || true)
-  [[ -n "$_cv" ]] && VER="$_cv"   # 无 tag 历史（浅克隆/重写主线）回退到 CHANGELOG 版本
-fi
 BUNDLE_NAME="swarm-yuan-offline-$VER"
 if [[ "$WITH_DOCS" -eq 1 && "$WITH_GH_SRC" -eq 1 && "$WITH_VENDOR" -eq 1 ]]; then
   BUNDLE_NAME="${BUNDLE_NAME}-everything"   # 零降级件（npm/pip 走源）——后缀不与 -novendor 叠用
@@ -107,6 +103,8 @@ cp "$SELF_DIR/make-offline-bundle.sh" "$SELF_DIR/offline-manifest.conf" "$BUNDLE
 _bv_ver="$(git -C "$SKILL_ROOT" describe --tags --always 2>/dev/null || true)"
 _bv_ver="${_bv_ver#swarm-yuan-}"
 _bv_sha="$(git -C "$SKILL_ROOT" rev-parse --short HEAD 2>/dev/null || true)"
+# 重写后 main 摸不到 swarm-yuan-* tag（describe 落 --always SHA）——CHANGELOG 首版本行兜底，
+# 与 tag 可达时同格式 v<N>-g<sha>（main 侧 R133 既有机制，core 血统 tag 可达故无此块）
 if [[ ! "$_bv_ver" =~ ^v[0-9] ]]; then
   _cv=$(sed -nE 's/^## \[(v[0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' "$SKILL_ROOT/CHANGELOG.md" 2>/dev/null | head -1 || true)
   [[ -n "$_cv" ]] && _bv_ver="${_cv}${_bv_sha:+-g$_bv_sha}"

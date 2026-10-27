@@ -116,7 +116,7 @@ classify_shell() {
     curl)
       printf '%s' "$cmd" | grep -qE '(^|[[:space:]])(-X[[:space:]]*(POST|PUT|DELETE|PATCH)|--data(-raw|-binary|-urlencode)?([[:space:]]|=)|-d[[:space:]=]|-T[[:space:]]|--upload-file)' && { verdict "deny" "curl 非读方法/带请求体（可能写远端）"; return 1; } ;;
     wget)
-      printf '%s' "$cmd" | grep -qE '(^|[[:space:]])-O[[:space:]]+[^/[:space:]]' && { verdict "deny" "wget -O 指向具体文件（覆盖写）"; return 1; } ;;
+      printf '%s' "$cmd" | grep -qE '(^|[[:space:]])-O([[:space:]]+[^[:space:]]|=)' && { verdict "deny" "wget -O 指向具体文件（覆盖写）"; return 1; } ;;
     git)
       printf '%s' "$cmd" | grep -qiE '(^|[[:space:]])(push|commit|checkout|reset|rebase|merge|cherry-pick|revert|clean|restore|switch|tag([[:space:]]+-[dfs])|stash([[:space:]]+(drop|pop|clear))?)($|[[:space:]])' && { verdict "deny" "git 写/变更分支状态子命令（push/commit/checkout 等）"; return 1; } ;;
     kubectl)

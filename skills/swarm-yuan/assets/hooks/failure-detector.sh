@@ -261,7 +261,8 @@ if [[ "$COUNT" -ge 3 ]]; then
   fi
 fi
 
-# 跟踪峰值压力
+# 跟踪峰值压力：持久化到 PEAK_LEVEL_FILE 供突破检测（COUNT>=3 且 PEAK>=2），
+# 旧版只算不存，PEAK 恒 0，突破分支不可达（死代码）。
 CURRENT_LEVEL=0
 if [[ "$COUNT" -ge 5 ]]; then
   CURRENT_LEVEL=4
@@ -271,6 +272,19 @@ elif [[ "$COUNT" -eq 3 ]]; then
   CURRENT_LEVEL=2
 elif [[ "$COUNT" -eq 2 ]]; then
   CURRENT_LEVEL=1
+fi
+if [[ "$CURRENT_LEVEL" -gt "$PEAK_LEVEL" ]]; then
+  PEAK_LEVEL="$CURRENT_LEVEL"
+  echo "$PEAK_LEVEL" > "$PEAK_LEVEL_FILE" 2>/dev/null || true
+fi
+# 三态分析消费：SPINNING/EXPLORING/MIXED 注入决策上下文（PATTERN_ANALYSIS 旧版零消费）。
+if [[ -n "$PATTERN_ANALYSIS" ]]; then
+  _pa_mode="${PATTERN_ANALYSIS%%|*}"
+  case "$_pa_mode" in
+    SPINNING)  echo "[swarm-yuan 模式分析] SPINNING——同签名 3 连：换方法而非重试（同参数重试大概率同错）" ;;
+    EXPLORING) echo "[swarm-yuan 模式分析] EXPLORING——签名全不同：聚焦假设验证，收敛探索面" ;;
+    MIXED)     echo "[swarm-yuan 模式分析] MIXED——签名部分重复：保留有效路径，剔除已证伪分支" ;;
+  esac
 fi
 
 # 同签名 3+ 次 → 仅一行 brief（完整诊断已在 L2 给出，此处不重复）
