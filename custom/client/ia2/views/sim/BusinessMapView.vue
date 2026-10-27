@@ -101,11 +101,14 @@ async function saveAnnotation(): Promise<void> {
   try {
     // rev=写方时钟自增（LWW：本端每次保存+1；被他人更高 rev 压过时 applied:false 如实回显）
     myRev += 1
-    const saved = await saveMapAnnotation(fingerprint.value, { nodeId: selectedNodeId.value, note: draftNote.value, checked: draftChecked.value, rev: myRev })
+    const result = await saveMapAnnotation(fingerprint.value, { nodeId: selectedNodeId.value, note: draftNote.value, checked: draftChecked.value, rev: myRev })
+    const saved = result.annotation
+    // 旧写被拒时 annotation 是服务端现存条目；同步其 rev 供下次写入，草稿保留给用户确认后重试。
+    myRev = Math.max(myRev, saved.rev)
     const idx = annotations.value.findIndex((a) => a.nodeId === saved.nodeId)
     if (idx >= 0) annotations.value[idx] = saved
     else annotations.value.push(saved)
-    noteMsg.value = '标注已保存。'
+    noteMsg.value = result.applied ? '标注已保存。' : '存在更新版本，本次未覆盖。'
   } catch (e) {
     noteMsg.value = e instanceof Error ? e.message : String(e)
   } finally {

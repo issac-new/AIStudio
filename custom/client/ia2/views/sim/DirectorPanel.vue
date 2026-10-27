@@ -164,7 +164,8 @@ async function previewImpact(): Promise<void> {
   impacting.value = true
   impactError.value = ''
   try {
-    impact.value = await analyzeRequirementImpact(input.title, input.description)
+    const res = await analyzeRequirementImpact(input.title, input.description)
+    impact.value = res.impact
   } catch (e) {
     impact.value = null
     impactError.value = e instanceof Error ? e.message : String(e)
