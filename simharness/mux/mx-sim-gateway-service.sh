@@ -24,7 +24,7 @@ set -uo pipefail
 LABEL="ai.hermes.gateway-sim"
 PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
 SIM="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
-HAR="${MX_HARNESS_ROOT:-/Users/cuishi/lab/ncwk/simharness}"
+HAR="${MX_HARNESS_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 LOGS="$SIM/logs"
 PIDS="$SIM/pids"
 HERMES_BIN="${HERMES_BIN:-$SIM/bin/hermes-sim}"

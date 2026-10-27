@@ -81,7 +81,12 @@
     {
       "source": "hermes_cli/kanban_db_dispatch.py",
       "dest": "hermes_cli/kanban_db_dispatch.py",
-      "note": "478: dispatcher 预算闸遥信（budget_capped/per_profile_capped 进 suppression——满载忙不再误报卡死）"
+      "note": "478: dispatcher 预算闸遥信（budget_capped/per_profile_capped 进 suppression——满载忙不再误报卡死）；板级围栏读 profiles/profile_scope 双键"
+    },
+    {
+      "source": "hermes_cli/board_team_keys.py",
+      "dest": "hermes_cli/board_team_keys.py",
+      "note": "板级团队键选择单一源：profiles 优先、profile_scope 回落（live board.json 实测键）"
     },
     {
       "source": "gateway/run_busy.py",
@@ -237,6 +242,11 @@
       "source": "plugins/studio-file-approval/__init__.py",
       "dest": "plugins/studio-file-approval/__init__.py",
       "note": "studio 文件审批插件主体，manifest 曾缺席"
+    },
+    {
+      "source": "hermes-skills/coding-delegate/SKILL.md",
+      "dest": "hermes-skills/coding-delegate/SKILL.md",
+      "note": "coding-delegate 技能卡：缺它部署树只剩脚本，skill_view 装不到技能"
     },
     {
       "source": "hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py",

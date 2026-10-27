@@ -144,6 +144,9 @@ class DispatchResult:
     """``(task_id, reason)`` skipped by the respawn guard: ``"blocker_auth"``
     (quota/auth error — also auto-blocked), ``"recent_success"`` (completed run
     within guard window), ``"active_pr"`` (GitHub PR URL in a recent comment)."""
+    needs_decision: list[tuple[str, str]] = field(default_factory=list)
+    """``(task_id, reason)`` refused before claim/spawn because a T2/T3 HumanGate
+    grant is missing, expired, incomplete, unreadable, or bound to another task revision."""
     rate_limited: list[str] = field(default_factory=list)
     """Task ids whose workers bailed on a provider rate-limit / quota wall
     (EX_TEMPFAIL sentinel exit) and were released to ``ready`` WITHOUT counting
@@ -184,6 +187,9 @@ def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
             continue
         for _task_id, reason in res.respawn_guarded:
             counts[reason] = counts.get(reason, 0) + 1
+        for _task_id, reason in res.needs_decision:
+            key = f"needs_decision({reason})"
+            counts[key] = counts.get(key, 0) + 1
         if res.rate_limited:
             counts["rate_limited"] = counts.get("rate_limited", 0) + len(res.rate_limited)
         if res.skipped_locked:
@@ -1730,15 +1736,16 @@ def _board_json_unreadable(board: str) -> bool:
 
 def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optional[frozenset]:
     """HERMES_CUSTOM[board-team-fence]: per-board team allowlist from the board's
-    ``board.json`` ``profiles`` key. ``None`` = key absent (no fence, upstream
-    behavior). A present value is fail-closed: an empty list or unreadable
-    board.json claims nothing — a corrupt/misconfigured board must never widen
-    this dispatcher's claim scope.
+    ``board.json`` team key. Accepts ``profiles`` (fence contract) and
+    ``profile_scope`` (board lifecycle UI / board.json writer). ``None`` = key
+    absent (no fence, upstream behavior). A present value is fail-closed: an empty
+    list or unreadable board.json claims nothing — a corrupt/misconfigured board
+    must never widen this dispatcher's claim scope.
 
     ``read_board_metadata`` swallows every read error, so the ``except`` below is
     only a last resort; the corrupt case is settled by probing the raw file via
     :func:`_board_json_unreadable`: 存在但读不出 → ``frozenset()`` fail-closed
-    并 log；文件不存在或合法空配置（无 ``profiles`` 键）→ ``None`` 无围栏。"""
+    并 log；文件不存在或合法空配置（无团队键）→ ``None`` 无围栏。"""
     if not board:
         return None
     try:
@@ -1749,7 +1756,10 @@ def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optio
             board, exc,
         )
         return frozenset()
-    raw = meta.get("profiles") if isinstance(meta, dict) else None
+    raw = None
+    if isinstance(meta, dict):
+        from hermes_cli.board_team_keys import team_raw
+        raw = team_raw(meta)
     if raw is None:
         if _board_json_unreadable(board):
             _kb._log.warning(
@@ -2136,6 +2146,34 @@ def _call_spawn_fn(spawn_fn, task: Task, workspace: str, board: Optional[str]) -
         return spawn_fn(task, workspace)
 
 
+def _decision_row_value(row: sqlite3.Row, key: str) -> Any:
+    try:
+        return row[key]
+    except (IndexError, KeyError):
+        return None
+
+
+def _authorize_decision_row(row: sqlite3.Row, board: Optional[str]) -> tuple[str, bool, str]:
+    """Compute the revision from the current DB row, never from worker-supplied text."""
+    from tools.kanban_tools import authorize_task_execution, decision_tier_for_task
+
+    task = {
+        "id": _decision_row_value(row, "id"),
+        "board": _kb._slug_or_default(board),
+        "title": _decision_row_value(row, "title"),
+        "body": _decision_row_value(row, "body"),
+        "assignee": _decision_row_value(row, "assignee"),
+        "status": _decision_row_value(row, "status"),
+        "updated_at": _decision_row_value(row, "updated_at"),
+        "workspace_kind": _decision_row_value(row, "workspace_kind"),
+        "workspace_path": _decision_row_value(row, "workspace_path"),
+        "branch_name": _decision_row_value(row, "branch_name"),
+    }
+    tier = decision_tier_for_task(task)
+    allowed, reason = authorize_task_execution(task, tier)
+    return tier, allowed, reason
+
+
 def _dispatch_lane_task(
     conn: sqlite3.Connection,
     row: sqlite3.Row,
@@ -2229,6 +2267,23 @@ def _dispatch_lane_task(
                             kind="needs_input",
                         ):
                             result.auto_blocked.append(task_id)
+        return False
+
+    # HumanGate 执行硬门：T1 直通；T2/T3 在 claim/workspace/spawn 之前验证同一
+    # 持久化 grant 与当前任务修订。拒绝只产生可见 needs_decision，不消耗重试预算。
+    decision_row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if decision_row is None:
+        return False
+    tier, decision_allowed, decision_reason = _authorize_decision_row(decision_row, board)
+    if not decision_allowed:
+        result.needs_decision.append((task_id, decision_reason))
+        if not dry_run:
+            with _kb.write_txn(conn):
+                _kb._append_event(conn, task_id, "needs_decision", {
+                    "tier": tier,
+                    "reason": decision_reason,
+                    "board": _kb._slug_or_default(board),
+                })
         return False
 
     def _count_spawn(name: str) -> None:

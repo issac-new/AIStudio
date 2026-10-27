@@ -7,7 +7,7 @@ import { join } from 'node:path'
 // G6 键统一 / 发布门与 UAT 台账 / 评测处置链 / 证据九 / 预检 ㉔-㉚ / 模板同步。
 // 任一环只改产品不接驱动、或只改报告不接审计，本套件当场失败。
 const HARNESS = join(__dirname, '..')
-const OVERLAY = process.env.MX_OVERLAY_ROOT || '/Users/cuishi/lab/ncwk/overlay'
+const OVERLAY = process.env.MX_OVERLAY_ROOT || join(__dirname, '..', '..')
 
 function read(rel: string): string {
   return readFileSync(join(HARNESS, rel), 'utf8')

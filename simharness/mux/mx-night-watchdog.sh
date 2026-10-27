@@ -24,14 +24,14 @@ echo "[$(ts)] ⚠ 监督断档 ${AGE}s——机械看守代行" >> "$LOG"
 # 驱动链
 if ! pgrep -f "aipay-scenario.sh" >/dev/null 2>&1; then
   rm -f "$SIM/var/20261015-v8-run20-supervisor.stop"
-  ( cd /Users/cuishi/lab/ncwk/simharness && nohup bash mux/run-driver-supervisor.sh \
+  ( cd "$(dirname "$0")/.." && nohup bash mux/run-driver-supervisor.sh \
       --run 20261015-v8-run20 --start-step archgate >> "$SIM/logs/driver-relaunch-2249.log" 2>&1 & )
   echo "[$(ts)] 已重启驱动监督器" >> "$LOG"
 fi
 # 网关
 GWPID=$(cat "$SIM/pids/gateway.pid" 2>/dev/null || true)
 if [ -z "$GWPID" ] || ! ps -p "$GWPID" >/dev/null 2>&1; then
-  ( cd /Users/cuishi/lab/ncwk/simharness && bash mux/mx-up.sh >> "$LOG" 2>&1 )
+  ( cd "$(dirname "$0")/.." && bash mux/mx-up.sh >> "$LOG" 2>&1 )
   echo "[$(ts)] 已 mx-up 重拉网关" >> "$LOG"
 fi
 # 防睡

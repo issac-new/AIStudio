@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "product": "AIStudio",
+  "modules": {
+    "cockpit": {
+      "name": "驾驶舱（含推演程序）",
+      "includes": [
+        "custom/",
+        "patches/",
+        "registries/",
+        "config/",
+        "simharness/（推演程序）",
+        "vendor/hermes-studio（注入态基线源码）"
+      ],
+      "version": "2.37",
+      "versionCarrier": "RELEASE-NOTES.md",
+      "buildCommand": "npm run build:dmg（产物 DMG/zip，desktop 内嵌上游 hermes-agent 运行时）",
+      "artifacts": "vendor/hermes-studio/packages/desktop/release/",
+      "install": "源码包解包后 npm install（vendor/hermes-studio 内）＋npm run inject＋npm run dev／build:dmg；DMG/zip 安装（mac arm64 / win x64）",
+      "packageIncludes": [
+        "package.json",
+        "package-lock.json",
+        "tsconfig.json",
+        "vite.config.iso.ts",
+        "vitest.config.ts",
+        "scripts/",
+        "custom/",
+        "patches/",
+        "registries/",
+        "config/",
+        "simharness/",
+        "vendor/hermes-studio/",
+        "vendor/VENDOR.md",
+        "docs/USAGE.md",
+        "docs/windows-x64-setup.md",
+        "AGENTS.md"
+      ],
+      "notes": "simharness/ 推演程序仅仓内运行、不随安装包（DMG）分发（用户裁定 2026-10-26）。源码包含 simharness。standalone 注意：patches/series 含 hermes-agent 路由补丁，独立源码包内 npm run inject 需搭配 agent-teams 源码包（或直接用整体包）——如实注记。驾驶舱 2.x 版本号线自 2.37 后未续，待补记轮对账。"
+    },
+    "agent-teams": {
+      "name": "agent teams（多 profile 智能体团队）",
+      "includes": [
+        "team/（profiles+skills+shared+patches）",
+        "runtime/（agent 运行时定制，manifest 通道部署到 ~/.hermes/hermes-agent）",
+        "vendor/hermes-agent（上游基线源码，无法经 pip/npm 安装→随包）"
+      ],
+      "version": "v3.3.0",
+      "versionCarrier": "team/README_zh.md",
+      "buildCommand": "team/skills/devops/public-repo-release 六步（白名单圈资产→secret 扫描→rsync 发布仓）",
+      "artifacts": "公开 git 仓工作树（issac-new/SwarmTeam 归档态）＋本清单源码包 aistudio-agent-teams-<ver>-src.tar.gz",
+      "install": "hermes profile install profiles/<name> --alias -y（Windows 离线见 install-windows.ps1）；runtime/ 经 npm run runtime:register 部署到 ~/.hermes/hermes-agent",
+      "packageIncludes": [
+        "team/",
+        "runtime/",
+        "runtime-manifest.json",
+        "vendor/hermes-agent/"
+      ],
+      "notes": "版本 v3.3.0 为 README 散文载体（2026-10-14 增量），无 semver 真源文件——按裁定不新建，清单抄录。"
+    },
+    "ycode": {
+      "name": "Ycode（zcode 受管分叉，编码引擎）",
+      "includes": [
+        "vendor/zcode（钉版基线源码，无法经 npm 安装→随包）",
+        "zcode-patches/（分叉增量，series 登记）"
+      ],
+      "version": "3.16.2",
+      "versionCarrier": "vendor/zcode/package.json",
+      "carrierFormat": "json:version",
+      "carrierPattern": "8",
+      "buildCommand": "npm run zcode:ensure（pnpm 闭包构建）＋node scripts/zcode-engine.mjs install-cli（→ ~/.hermes/ycode/zcode.cjs）",
+      "artifacts": "~/.hermes/ycode/zcode.cjs（单文件部署位）＋本清单源码包 aistudio-ycode-<ver>-src.tar.gz",
+      "install": "源码包解包后 zcode-patches 依序 git apply → pnpm install → build；ACP 桥以 ZCODE_BIN 指向部署位（解析序=显式 env＞官方捆绑＞分叉＞桥兜底）",
+      "packageIncludes": [
+        "vendor/zcode/",
+        "zcode-patches/"
+      ],
+      "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（3.16.2）；基线 commit 3c5b2276（v3.16.1 系列）见 zcode-patches/series 头，carrierPattern=活跃补丁数（当前 8：002-009）。",
+      "baselineCommit": "3c5b2276"
+    },
+    "yuan-skill": {
+      "name": "yuan skill（swarm-yuan 项目技能生成器）",
+      "includes": [
+        "skills/swarm-yuan/（六段目录本体）"
+      ],
+      "version": "v2.95.0",
+      "versionCarrier": "skills/swarm-yuan/CHANGELOG.md",
+      "buildCommand": "bash skills/swarm-yuan/scripts/make-offline-bundle.sh（脚本在 skills/swarm-yuan/scripts/；三档：novendor 5M / 全量 ~52M / everything ~71M）",
+      "artifacts": "skills/swarm-yuan/dist/swarm-yuan-offline-<ver>.zip（SHA256SUMS 随包）＋本清单源码包 aistudio-yuan-skill-<ver>-src.tar.gz",
+      "install": "install.sh 多宿主（hermes → ~/.hermes/skills）／install-offline.sh；GitHub release tag 同版本",
+      "packageIncludes": [
+        "skills/swarm-yuan/"
+      ],
+      "notes": "四模块中发布链最成熟：CHANGELOG semver＋.bundle-version 溯源＋体积预算门禁齐备。"
+    }
+  },
+  "packaging": {
+    "format": "tar.gz",
+    "outputDir": "dist/release/",
+    "command": "npm run release:packages（node scripts/make-release-packages.mjs，按 packageIncludes 逐模块 git archive＋整体包全仓）",
+    "depSourcePolicy": "第三方依赖源码随包（用户裁定 2026-10-27）：vendor/ 三树为无法经 pip/npm 安装的上游源码，随所属模块整树入包（git archive 只取跟踪文件，node_modules/dist 等产物天然不入）；可经 pip/npm 在线安装的依赖不随包，安装时解析",
+    "fullPackage": {
+      "name": "aistudio-full",
+      "version": "1.0.0-overlay",
+      "includes": "全仓跟踪源码（git archive HEAD）＝4 模块＋仓级基建（scripts/config/docs/evidence 等）",
+      "note": "整体包可仅凭源码＋pip＋npm 完成本项目安装与测试（vendor 依赖源码随包，registry 依赖在线装）"
+    },
+    "checksums": "SHA256SUMS（随 dist/release/ 目录）"
+  },
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 底座 3.16.2 @3c5b2276——独立坐标系，与模块产品版本不互推）"
+}

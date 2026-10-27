@@ -1,18 +1,17 @@
 // custom/server/matrix/chat-bridge.ts
-// v14 统一聊天 P2B/P2C/P2D（2026-09-29）：matrix 房间 ↔ 本地 hermes 群聊桥。
+// v14 统一聊天 P2B/P2C/P2D（2026-09-29）；2026-10-26 九段校正 Task 3 入向投影化。
 //
-// 架构定位（v14 文档裁决 D1）：matrix = 传输与身份层（远端在场），本地
-// GroupChatServer 内核 = 编排器（mention 路由/handoff/队列/审批/summary 全留本地）。
-// 本桥双挂两侧：
+// 架构定位（v14 文档裁决 D1＋九段校正）：matrix = 传输与身份层；本桥只做
+// 「矩阵 ↔ 本地群聊」的双向投影，不再当第二套 agent 编排器——agent turn 的
+// 唯一入口=本机 hermes gateway（Matrix 原生链）。本桥双挂两侧：
 //   入向：bot 账号 /sync long-poll → 桥内映射房的 m.text → gcs.publishBridgeMemberMessage
-//         （patch 509 注入 API：持久化+广播+processMentions 编排），@mention 由
-//         上游 resolveMentionTargets 从正文解析（user 角色 0 mention 亦按上游策略派发）。
+//         （patch 509 注入 API：仅持久化+广播投影，不触发 agentClients 编排）。
 //   出向：轮询本地房消息（storage.getMessagesForContext），agent 终态消息以
 //         `@<bridge-bot>` 身份发 m.text + agent.message 徽章事件（P2D，类型见 task-protocol）。
 //         流式不出网（裁决 D2：本地流式、matrix 终态）。
-//   P2C：消费 task.assign 协议事件（成员 Studio 客户端不在线也可执行）——
-//         注入映射群房驱动本地 agent 编排，回执 task.receipt 协议事件
-//         （created/failed）。审批请求（gcs.bridgeEvents）远端通知到房。
+//   P2C：task.assign 协议事件投影进映射群房（远端在场可见），回执 task.receipt
+//         status=observed（已投影，执行由成员本机 gateway 承接——桥不代为编排）。
+//         审批请求（gcs.bridgeEvents）远端通知到房。
 //   P2D：启动时对映射房发 agent.profile state 声明（能力面）。
 //
 // 配置（env）：CHAT_BRIDGE_ENABLED=1 开启；凭据 CHAT_BRIDGE_MATRIX_HOMESERVER/
@@ -340,9 +339,9 @@ export class ChatBridge {
     }
     const issuedBy = ev.content.issuedBy ? matrixLocalPart(String(ev.content.issuedBy)) : '远端'
     const prompt = [
-      `【任务派发】${ev.content.title ?? taskId}`,
+      `【任务派发·投影】${ev.content.title ?? taskId}`,
       ev.content.body ?? '',
-      `(经 matrix 桥转派，来源 ${issuedBy}；任务号 ${taskId})`,
+      `(经 matrix 桥投影，来源 ${issuedBy}；任务号 ${taskId}；执行由本机 gateway 承接)`,
     ].filter(Boolean).join('\n')
     const injected = this.opts.gcs.publishBridgeMemberMessage({
       roomId: mapping.gcRoomId,
@@ -353,8 +352,10 @@ export class ChatBridge {
     try {
       await matrixSend(this.opts.env, mapping.matrixRoomId, TASK_RECEIPT_EVENT_TYPE, {
         taskId,
-        status: injected ? 'created' : 'failed',
-        reason: injected ? 'injected-to-local-orchestration' : 'local-room-missing',
+        // 投影化（2026-10-26 九段校正）：桥不再代为编排——回执 observed=已投影
+        // 进本地房，执行归成员本机 gateway（Matrix 原生链），桥不声称接单。
+        status: injected ? 'observed' : 'failed',
+        reason: injected ? 'projected-execution-belongs-to-gateway' : 'local-room-missing',
         by: this.opts.env.userId,
         at: this.opts.now(),
       }, this.opts.fetchImpl, `receipt-${taskId.slice(0, 12)}`)

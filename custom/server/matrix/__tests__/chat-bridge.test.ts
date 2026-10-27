@@ -112,7 +112,7 @@ describe('ChatBridge 入向（matrix → 本地群房注入）', () => {
     bridge.stop()
   })
 
-  it('P2C assign：注入本地编排 + receipt created；房不在 → receipt failed', async () => {
+  it('P2C assign：投影进本地房 + receipt observed（执行归 gateway，桥不代编排）；房不在 → failed', async () => {
     const sends: Array<{ type: string; content: Record<string, unknown> }> = []
     const home = mkdtempSync(join(tmpdir(), 'v14-bridge-'))
     const fake = makeGcs()
@@ -130,7 +130,7 @@ describe('ChatBridge 入向（matrix → 本地群房注入）', () => {
     expect(fake.published[0]?.content).toContain('修复登录')
     expect(fake.published[0]?.senderName).toBe('派发-leader')
     expect(sends[0].type).toBe('com.swarmstudio.task.receipt')
-    expect(sends[0].content).toMatchObject({ taskId: 't1', status: 'created' })
+    expect(sends[0].content).toMatchObject({ taskId: 't1', status: 'observed', reason: 'projected-execution-belongs-to-gateway' })
     // 同 taskId 防重入
     await bridge.handleAssignEvent(MAP, { eventId: '$t1', content: { taskId: 't1', title: '修复登录' } })
     expect(fake.published).toHaveLength(1)
@@ -140,6 +140,7 @@ describe('ChatBridge 入向（matrix → 本地群房注入）', () => {
     expect(sends[1].content).toMatchObject({ taskId: 't2', status: 'failed', reason: 'local-room-missing' })
     bridge.stop()
   })
+
 })
 
 describe('ChatBridge 出向（本地 agent 终态 → matrix）', () => {

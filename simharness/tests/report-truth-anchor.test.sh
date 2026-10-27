@@ -10,7 +10,9 @@
 # 判据源=mux/report_truth.py（生成器/审计器/驱动三处共用，禁两套正则）。
 set -u
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
-LIB="$HERE/mux/mx-scenario-lib.sh"
+MUX="$HERE/mux"
+export HARNESS_MUX="$MUX"
+LIB="$MUX/mx-scenario-lib.sh"
 TMP="$(mktemp -d /tmp/report-truth-test.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 _rc=0
@@ -20,7 +22,7 @@ fail() { echo "FAIL: $*"; _rc=1; }
 python3 - "$TMP" <<'PY' || fail "① stale 判定用例失败"
 import sys
 sys.path.insert(0, __import__('os').environ.get('HARNESS_MUX', '.') or '.')
-sys.path.insert(0, '/Users/cuishi/lab/ncwk/simharness/mux')
+sys.path.insert(0, __import__('os').environ.get('HARNESS_MUX', '.'))
 import report_truth as rt
 
 RUN = '20261015-v8-run20'
@@ -59,7 +61,7 @@ git -C "$WT" remote add origin "$BARE"; git -C "$WT" push -q origin main
 CLONE="$TMP/clone"; git clone -q "$BARE" "$CLONE" 2>/dev/null
 python3 - "$BARE" <<'PY' || fail "② 锚点活性用例失败"
 import sys
-sys.path.insert(0, '/Users/cuishi/lab/ncwk/simharness/mux')
+sys.path.insert(0, __import__('os').environ.get('HARNESS_MUX', '.'))
 import report_truth as rt
 bare = sys.argv[1]
 import os
@@ -132,7 +134,7 @@ for f in g1_frozen-op1-before g1_frozen-op1-after 19-op1-before 19-op1-action 19
 done
 python3 - "$SD" <<'PY' || fail "⑤ 孤儿帧匹配用例失败"
 import sys
-sys.path.insert(0, '/Users/cuishi/lab/ncwk/simharness/mux')
+sys.path.insert(0, __import__('os').environ.get('HARNESS_MUX', '.'))
 import report_truth as rt
 sd = sys.argv[1]
 r19 = rt.orphan_frames_for(['defect_done', 'testpass_done'], 19, sd)
@@ -155,7 +157,7 @@ import sys, json, subprocess, os
 rsim = sys.argv[1]
 run = '20261015-v8-run20'
 ev = os.path.join(rsim, 'runs', run, 'evidence')
-COLL = '/Users/cuishi/lab/ncwk/simharness/mux/r18-collect.py'
+COLL = __import__('os').path.join(__import__('os').environ.get('HARNESS_MUX', '.'), 'r18-collect.py')
 env = dict(os.environ, AIPAY_SIM_ROOT=rsim)  # 隔离树（教训：漏设即写生产载荷——本测试首版实锤污染过一次，已外科清除）
 def call(*args):
     r = subprocess.run(['python3', COLL, '--run', run] + list(args),

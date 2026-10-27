@@ -64,6 +64,20 @@ class TestBoardTeamAllowlistFailClosed:
         _write_board_json("team-d", '{"profiles": []}')
         assert _board_team_allowlist(normalize_profile_name, "team-d") == frozenset()
 
+    def test_profile_scope_key_builds_allowlist(self, tmp_path, monkeypatch):
+        # 板生命周期写入的是 profile_scope（live board.json 实测键）；围栏必须认它，
+        # 否则 board 的 team 配置形同虚设。
+        _prepare_home(tmp_path, monkeypatch)
+        _write_board_json("team-s", '{"profile_scope": ["Sage", "ops", ""]}')
+        assert _board_team_allowlist(normalize_profile_name, "team-s") == frozenset({"sage", "ops"})
+        _write_board_json("team-s", '{"profile_scope": []}')
+        assert _board_team_allowlist(normalize_profile_name, "team-s") == frozenset()
+
+    def test_profiles_wins_over_profile_scope(self, tmp_path, monkeypatch):
+        _prepare_home(tmp_path, monkeypatch)
+        _write_board_json("team-p", '{"profiles": ["sage"], "profile_scope": ["ops"]}')
+        assert _board_team_allowlist(normalize_profile_name, "team-p") == frozenset({"sage"})
+
     def test_corrupt_board_fences_the_spawn_gate(self, tmp_path, monkeypatch):
         # 接线面：坏 board.json 下 _profile_exists_fn 谁都不认（claim scope 不被放宽）。
         _prepare_home(tmp_path, monkeypatch)

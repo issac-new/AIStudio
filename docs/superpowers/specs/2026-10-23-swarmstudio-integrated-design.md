@@ -271,6 +271,8 @@ fetchTaskTitleByTaskId 搬迁 governance 域解 zcode↔kanban 模块环，re-ex
 
 人把活派到某个人，卡进入他的看板，AI 助理认领并执行。并发上限 30；一轮里可按模块并行（系分 4 路、编码 6 路、测试+集成 3 路）。派活有里程碑（开发按节点报进度、测试首个用例就要提交、报告先出首片）；卡住会被催（先唤醒，再要验证账本，再按 1→2→3 重催，三次不交付建议换人）；完成后要交证据（提交号＋卡号）。
 
+**编码链（2026-10-26 对齐）**：kanban 派发把任务根写入 `HERMES_KANBAN_WORKSPACE`；worker-coder 的 acp-client 按「显式参数 > `HERMES_ACP_PROVIDER` > config 默认」选引擎、按「显式 `cwd` > 任务工作区 > 默认」定根目录，默认引擎为 Ycode（zcode provider）。委托前先生成/加载项目技能 `<项目>-dev`（`.claude/skills/<name>`，并软链到 `~/.zcode/skills/<name>` 供 Ycode 装载），首轮 prompt 要求引擎先读技能；编码验证通过后 `--upgrade` 并用 `--verify-completeness` 校验。长任务走 coding-delegate 后台驱动（`runtime/hermes-skills`，经 `skills.external_dirs` 只读挂载，不复制第二份）。
+
 ### 4.3 审批与人机边界
 
 14 个人工介入点全部进审批收件箱，批准/打回留痕。推演里的模拟审批与真实审批是两条有意保留的通道，互为兜底。程序不能替人做决定：代做的人类动作要记代偿台账，净额单独呈现。
@@ -319,6 +321,8 @@ Matrix 传协调、git 传制品、本机管执行；中央 bare 仓；每日 06
 ### 5.3 目标技能与九节点
 
 六段目录（SKILL.md＋workflow＋references＋assets＋门禁配置＋scripts），92 随发文件（lite 46）。九节点：需求理解→探查→spec→plan→编码→测试→审查→合入→发布；六阶段状态机（open/design/build/verify/archive/operate）带守卫。spec 四要素（变更/决策记录/验证/设计文档影响，2026-10-26 立法）：触及本正本/数字总账的变更在 spec 声明 DESIGN_SYNC touched 并同批修订，L2 提交钩子机械核验兑现；合入序列强制 fetch→本地 main ff-only 快进→rebase→merge --no-ff（防多人协作本地 main 滞后）。
+
+目标技能命名约定 `<项目目录名>-dev`（字符集归一到 `[A-Za-z0-9._-]`），落项目内 `.claude/skills/<name>`，并软链到 `~/.zcode/skills/<name>` 供 Ycode 装载；skillgov 生成端点缺省按此派生与建链，worker-coder 与产品面共用同一规则。
 
 ### 5.4 门禁四层
 
@@ -523,6 +527,7 @@ A 类导出可抽出→全归定制层；重写看板视图→独立路由；三
 | I9 | 五件挂账以「机制先行、数字待 run」清账：消融/拜占庭旋钮挂 dispatch_in_room 单点（默认关=零行为，D15 守卫锁定）；混合动机独立成场景不触主链；全文保真与 profile 分桶只补数据面 | 实验数字必须来自真实 run（每消融角色一轮），无 run 不造数；26 步主链与判据是稳定资产 | 直接跑消融 run 冒充完成（否决：成本与真实性）；把旋钮写进主链默认路径（否决：违背 D15 零行为） | 是 |
 
 | I10 | 章节按「理念→产品→设计→实施→使用」五层重组：产品面升 §2、架构总览降 §3（四组件扩为五组件，纳入 Ycode 编码引擎）、运行面/能力层挂实施（§4/§5）、新增 §6 使用章（指向 docs/USAGE.md）；变更记录历史行的节号按新章号换算 | 用户指令「要从 理念、产品、设计、实施、使用分层阐述（swarm studio、matrix、hermes agent、Ycode、swarm yuan skill 所形成的完整体系）」与「重构并完善整合项目产品、设计、使用文档等，更新 GitHub 项目介绍及 README」 | 维持 R8 章序（否决：不满足分层指令）；另开一份分层文档（否决：违反唯一正本纪律，I1） | 是 |
+| I11 | 编码链按「任务工作区 → 项目技能 → ACP(Ycode) → 升级」顺序固化：provider/cwd 由环境变量注入，技能名 `<项目>-dev`、落项目内 `.claude/skills` 并软链到 `~/.zcode/skills` | 用户给定的系统逻辑第 7/8 段；勘察实证现状为「默认 claude + 沙箱 cwd + 编码后才生成技能」，与描述相反；Ycode 扫 `.zcode/skills` 而非 `.claude/skills`，软链沿用既有 `aistudio-dev` 布局 | 改 live `config.yaml`（否决：gitignored 且含机器路径）；直接生成进项目 `.zcode/skills`（否决：多数项目未忽略该目录，会脏化工作区）；双写 `.hermes/skills`（否决：第二真值） | 是 |
 
 ## 文档变更记录
 
@@ -533,7 +538,7 @@ A 类导出可抽出→全归定制层；重写看板视图→独立路由；三
 | 2026-10-26 | 整合 R13 | §2.11 补挂账清偿段（业务地图/AI 拆模块/向量召回/泳道摄取/回流自动触发五件，零新补丁）；数字随总账（路由 +sim/map、测试 6,448） | 用户指令「完成未做」；spec: 2026-10-26-joyai-debts-clearance.md |
 | 2026-10-26 | 整合 R12 | 新增 §2.11 研发闭环串联面（JoyAI 吸收轮四处断链修复：fewshot 语境接线/术语→关联文档/工作项全景串联/需求影响推演）；数字随总账（补丁 407/服务端域 152/specs 354） | 用户指令「深入调研微信文章完善 AIStudio」；spec: 2026-10-26-joyai-closed-loop-absorption.md；源文=AI早餐汇《京东零售技术架构负责人贺岩：企业级AI研发闭环体系的搭建与实战》 |
 | 2026-10-26 | 整合 R11 | 设计文档同步机制立法：§5.3 补 spec 四要素+DESIGN_SYNC 声明+合入序列；维护规则随批同步机制化（规则 2/3/4 改写）；§0.1 全量测试 5,906→6,336 对齐总账（漂移修复）；§5.5 变量数 197→199 | spec: 2026-10-26-dev-skill-design-doc-sync.md（用户三项裁定：声明式+机械核验/双层落点/技能层） |
-| 2026-10-26 | 整合 R10 | 九点产品逻辑对账批：多仓旧路径勘正、网关互调双通道入册、Ycode-ACP 现状入册、数字随总账（本行 2026-10-26 R11 批补录——R10 批变更记录行缺失，随批对账机制首例修复） | spec: 九点产品逻辑对账校正轮（fix/nine-point-reconciliation，main d48a79300） |
+| 2026-10-26 | 整合 R10 | 九点产品逻辑对账批：多仓旧路径勘正、网关互调双通道入册、Ycode-ACP 现状入册、数字随总账；编码链补任务工作区→项目技能→ACP(Ycode)→升级与 `<项目>-dev` 命名、`.claude/skills`+`~/.zcode/skills` 软链落点；决策 I11 | specs: 2026-10-26-nine-point-reconciliation.md / 2026-10-26-core-coding-chain-alignment.md |
 | 2026-10-24 | 整合 R9 | 章节五层重组（理念→产品→设计→实施→使用）；§1.1 补五件套体系段；§3.2 四组件扩五组件（Ycode）；新增 §6 使用章；README 重写与 docs/USAGE.md 新建同批；§7.5 方案版本 V8.47→V8.52、纪律 70-86；§7.7 去重复段并恢复细节（挂账清单指针/trust 域 20/20/测试 3,735→5,906+）；参考文献方案指针 V8.52；决策 I10 | 用户指令（见 I10）；spec: 2026-10-24-docs-five-layer-refactor.md |
 | 2026-10-24 | 整合 R8 | §2.10 补清账批段（消融/拜占庭旋钮+对比端点+混合动机场景+全文保真+byProfile 分桶）；决策 I9 | 用户指令「完成所有挂账」；spec: 2026-10-24-swarm-eval-followup-batch.md |
 | 2026-10-24 | 整合 R7 | §2.10 群体协作评测基准吸收面（四维度读数端点＋交付效能第⑤区＋红队种子库 v2）；决策 I8 | 用户指令「深入调研…完善 swarm studio」；spec: 2026-10-24-swarm-eval-benchmark-absorption.md；源文=银翼AI评测室《多 Agent 群体协作的评测基准设计方法》 |

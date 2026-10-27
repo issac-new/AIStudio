@@ -1,0 +1,28 @@
+{
+ "taskId": "t_8878b1cc",
+ "board": "default",
+ "taskTitle": "E2E 委托探针",
+ "taskStatus": "ready",
+ "assignee": "worker-coder",
+ "branch": null,
+ "sessionId": "b46280e5-8318-4f06-87d3-999ac3ab1e68",
+ "cwd": "/tmp/e2e-delegate-task/proj",
+ "engineBin": "/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs",
+ "engineBinSource": "official-bundle",
+ "model": "GLM-5.3",
+ "stopReason": "end_turn",
+ "stage": null,
+ "exit": 0,
+ "promptSha256": "c032171fcdcb0c165a256fd8026978698988f86c3c30a81e5c541778272b7e7d",
+ "promptChars": 268,
+ "usage": {
+  "totalTokens": 71997,
+  "inputTokens": 71533,
+  "outputTokens": 464,
+  "thoughtTokens": 0,
+  "cachedReadTokens": 46272,
+  "cachedWriteTokens": 0
+ },
+ "startedAt": 1793064992,
+ "endedAt": 1793065020
+}

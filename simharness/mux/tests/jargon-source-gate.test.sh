@@ -6,15 +6,16 @@
 # 词表文件缺失=fail-closed 不静默跳过。方案正本一并入闸（报告解析源单一）。
 set -u
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
+OV="${MX_OVERLAY_ROOT:-$(cd "$HERE/.." && pwd)}"
 JC="${MX_JARGON_CHECK:-}"
 if [ -z "$JC" ] || [ ! -f "$JC" ]; then
-  JC="/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py"
+  JC="$OV/scripts/plan-html/jargon-check.py"
 fi
 if [ ! -f "$JC" ]; then
   echo 'FAIL jargon-source-gate: jargon-check.py not found (main tree absent; set MX_JARGON_CHECK)'
   exit 1
 fi
-PLAN="/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
+PLAN="$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
 if [ ! -f "$PLAN" ]; then
   echo 'FAIL jargon-source-gate: plan not found (main tree absent)'
   exit 1
@@ -22,7 +23,6 @@ fi
 # 方案正本与 TS 层读「已提交内容」（git show main:path）——主树工作副本可能承载并行
 # 会话的在途草稿（run14 实锤：16:0x 他人未提交方案稿带 4 处 HARD 把全仓守门拦红）。
 # 门禁语义=「HARD=0 才提交」：查提交态，工作副本与提交态不一致时 WARN 提示作者提交前重跑。
-OV="/Users/cuishi/lab/ncwk/overlay"
 _ov_committed() { # <repo> <path> → 临时文件路径（已提交内容），失败回退工作副本
   git -C "$1" show "main:$2" > "$TMP_PLAN_DIR/$(basename "$2")" 2>/dev/null && \
     { [ "$1" != "$OV" ] || ! cmp -s "$TMP_PLAN_DIR/$(basename "$2")" "$1/$2" && \

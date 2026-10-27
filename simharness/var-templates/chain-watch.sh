@@ -71,7 +71,7 @@ while true; do
     fi
     if [ "$dark_for" -ge 300 ] && [ "$mxup_used" -eq 0 ]; then
       log "true outage 5min, nobody recovered -> one mx-up (posture)"
-      ( cd /Users/cuishi/lab/ncwk/simharness && LC_ALL=C bash mux/mx-up.sh ) >> $SR/var/chain-mxup.log 2>&1 &
+      ( cd "${MX_HARNESS_ROOT:-$HOME/lab/AIStudio/simharness}" && LC_ALL=C bash mux/mx-up.sh ) >> $SR/var/chain-mxup.log 2>&1 &
       mxup_used=1
     fi
   fi

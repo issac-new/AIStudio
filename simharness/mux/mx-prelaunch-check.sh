@@ -7,8 +7,8 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 SR="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 # overlay 根：worktree 场景由 MX_OVERLAY_ROOT 显式指定（memory: worktree 跑守门须设它）；
 # 缺省=主仓同级，再回落绝对路径（防 worktree 的 ../overlay 解析到 .claude/worktrees/overlay）。
-OV="${MX_OVERLAY_ROOT:-$HERE/../overlay}"
-[ -d "$OV" ] || OV="/Users/cuishi/lab/ncwk/overlay"
+OV="${MX_OVERLAY_ROOT:-$HERE/..}"
+[ -d "$OV" ] || OV="$HERE/.."
 source "$HERE/mux/mx-platform.sh"   # 独立进程：pgrep/sqlite 走平台层（Git Bash 兼容）
 PASS=0; FAIL=0
 ck() { # <名> <命令串> <失败指引>

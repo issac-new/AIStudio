@@ -13,9 +13,10 @@ let port: number
 let app: import('koa').default
 let user: { role: string; username: string } | null = null
 
-async function boot(envEnabled: boolean): Promise<void> {
+async function boot(envEnabled: boolean, opts: { harnessDir?: string | null } = {}): Promise<void> {
   process.env.SIM_HARNESS_LAUNCH = envEnabled ? '1' : '0'
-  process.env.SIM_HARNESS_DIR = join(dir, 'simharness')
+  if (opts.harnessDir === null) delete process.env.SIM_HARNESS_DIR
+  else process.env.SIM_HARNESS_DIR = opts.harnessDir ?? join(dir, 'simharness')
   process.env.SIM_ROOT = root
   vi.resetModules()
   const Koa = (await import('koa')).default
@@ -74,6 +75,14 @@ describe('受控 harness 启动器', () => {
     const start = await post('/start', { runId: 'r1' })
     expect(start.status).toBe(403)
     expect(String(start.body.error)).toContain('SIM_HARNESS_LAUNCH=1')
+  })
+
+  it('未设 SIM_HARNESS_DIR 时默认解析到仓内 simharness（单仓布局）', async () => {
+    await boot(false, { harnessDir: null })
+    const st = await get('/status')
+    const script = String(st.body.script)
+    expect(script.endsWith(join('simharness', 'aipay-scenario.sh'))).toBe(true)
+    expect(script).not.toContain(join(dir, 'simharness'))
   })
 
   it('启用后：非 super_admin 403；非法 runId 400', async () => {

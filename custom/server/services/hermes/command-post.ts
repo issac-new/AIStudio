@@ -121,6 +121,7 @@ export function setupCommandPostWebSockets(
     current.overview.attachWebSocket(httpServers, {
       isAuthEnabled: authDeps.isAuthEnabled,
       authenticateUserToken: authDeps.authenticateUserToken,
+      userCanAccessProfile: authDeps.userCanAccessProfile,
     })
   }
   return {

@@ -1419,9 +1419,28 @@ DEVSPECS
       fi
     fi
     if [[ "${MX_ACP_BACKEND:-0}" == "1" ]]; then
-      if repo_branch_has "feat/$b" "materials/delegate-log.txt"; then
-        # V8.54 编码委托证据位：日志在位须含引擎身份行（engine_bin_source=）——
-        # 「ACP 调用的是谁」可审计；身份/终态/模型行采集进 evidence 供报告透传。
+      # 编码委托双证＋引擎身份（V8.54 §5.4.3 证据位消费，双批合并）：人读日志＋机器回执
+      # delegate-result.json（exit=0 且 stopReason=end_turn 才算承载面成立——缺任一/非零/
+      # 非 end_turn 都进 _g3_miss）；日志在位另查引擎身份行（engine_bin_source=，缺=观察单
+      # 不拦闸），身份/终态/模型行采集进 evidence 供报告透传。
+      if ! repo_branch_has "feat/$b" "materials/delegate-log.txt"; then
+        note "[观察] $b 缺 ACP 委托日志（编码后端承载面，记问题单）"
+        echo "ISSUE|acp-backend-delegate-log-missing|$b|分支缺 materials/delegate-log.txt（未走编码后端）" >> "$EVID_DIR/issues.log"
+        _g3_miss="${_g3_miss} $b"
+      elif ! repo_branch_has "feat/$b" "materials/delegate-result.json"; then
+        note "[观察] $b 缺 delegate-result.json 机器回执（编码后端证据位，记问题单）"
+        echo "ISSUE|acp-backend-result-missing|$b|分支缺 materials/delegate-result.json（无机器可读委托回执）" >> "$EVID_DIR/issues.log"
+        _g3_miss="${_g3_miss} $b"
+      elif ! repo_branch_grep "feat/$b" "materials/delegate-result.json" '"exit": 0'; then
+        note "[观察] $b 委托回执非零退出（G3 承载面，记问题单）"
+        echo "ISSUE|acp-backend-exit-nonzero|$b|delegate-result.json exit≠0（委托未成功收工）" >> "$EVID_DIR/issues.log"
+        _g3_miss="${_g3_miss} $b"
+      elif ! repo_branch_grep "feat/$b" "materials/delegate-result.json" '"stopReason": "end_turn"'; then
+        note "[观察] $b 委托回执 stopReason≠end_turn（G3 承载面，记问题单）"
+        echo "ISSUE|acp-backend-stop-reason|$b|delegate-result.json stopReason≠end_turn" >> "$EVID_DIR/issues.log"
+        _g3_miss="${_g3_miss} $b"
+      else
+        # V8.54 引擎身份行（观察面）：缺身份行记单不拦闸——「ACP 调用的是谁」可审计。
         if ! repo_branch_grep "feat/$b" "materials/delegate-log.txt" 'engine_bin_source='; then
           note "[观察] $b 委托日志缺引擎身份行（V8.54 证据位，记问题单）"
           echo "ISSUE|delegate-identity-missing|$b|materials/delegate-log.txt 缺 engine_bin_source= 身份行（引擎身份不可审计）" >> "$EVID_DIR/issues.log"
@@ -1430,9 +1449,6 @@ DEVSPECS
         git -C "$DIRECTOR_CLONE" show "refs/remotes/origin/feat/$b:materials/delegate-log.txt" 2>/dev/null \
           | grep -E 'engine_bin_source=|RESULT exit=|session 模型已设置' \
           | sed "s/^/[$b] /" >> "$EVID_DIR/delegate-identity.txt"
-      else
-        note "[观察] $b 缺 ACP 委托日志（编码后端承载面，记问题单）"
-        echo "ISSUE|acp-backend-delegate-log-missing|$b|分支缺 materials/delegate-log.txt（未走编码后端）" >> "$EVID_DIR/issues.log"
       fi
     fi
   done
@@ -1948,21 +1964,36 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
 if [ "$(posture)" = "strict" ]; then
       echo "ISSUE|walk-done-strict|fanfan|G5 评审卡 ${RGID} strict 姿态不代走 done（待收紧面：等 fanfan 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
       note "[姿态] strict：fanfan G5 卡 ${RGID} 不代走 done——记录（闸键仍置：判词真值在房）"
-      sset_once g5_ready "$(date +%s)"
+      kanban_walk_done fanfan "$RGID" || true
+      # strict 人工门（2026-10-26 九段校正）：驱动不代写批准——等待产品 HumanGate
+      # （审批收件箱真人裁决，HUMAN_GATE_EVENTS 写 approved.events 的
+      # humangate:<card> HUMAN-GATE-APPROVED 行）或人工向 approved.events 追加
+      # humangate:<card> 行。超时未决=如实记问题单且不置 g5_ready（release 步
+      # 将按缺闸失败，不装绿）。
+      _hg_log="${APPROVED_LOG:-$EVID_DIR/approved.events}"
+      g5_humangate_decided() { grep -q "humangate:${RGID} " "$_hg_log" 2>/dev/null; }
+      if wait_truth "G5 strict 真实 HumanGate（card ${RGID}）" "${MX_G5_HUMANGATE_WAIT:-900}" g5_humangate_decided; then
+        sset_once g5_ready "$(date +%s)"
+        note "[G5] strict：真实 HumanGate 批准在案（card ${RGID}，approved.events 可反查）"
+      else
+        echo "ISSUE|g5-humangate-timeout|${RGID}|strict 姿态 ${MX_G5_HUMANGATE_WAIT:-900}s 内无真实 HumanGate 批准——g5_ready 不置（等待人工，不代批）" >> "$EVID_DIR/issues.log"
+        note "[G5] strict：真实 HumanGate 未决——g5_ready 保持未置（人工批准后重跑 ready 步收口）"
+        return 1
+      fi
     else
       kanban_walk_done fanfan "$RGID"
       sset_once g5_ready "$(date +%s)"
+      # standard/demo：代批如实记 proxy（净额口径：代偿行，不计真人批准）；行文与
+      # strict 的真实批准行同键可 grep，但 actor 明示 director-proxy。
+      echo "ISSUE|g5-humangate-proxy|${RGID}|standard 姿态由驱动代批（director-proxy）——净额口径扣除，不计真人批准" >> "$EVID_DIR/issues.log"
+      echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-proxy $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
     fi
-    # HumanGate 批准留痕（独立审计意见 #6）：批准事件入 approved.events 可反查，
-    # 不再只有口头 note；"审批人即推演操作者"的独立性局限如实记档（ISSUES 记账）。
-    echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
-    note "[G5] 发布准出通过（评审卡 ${RGID} → done；HumanGate=导演批准，事件入 approved.events）"
     # V8.46 发布门台账（append-only）：产品端点 POST /api/hermes/sim/release-gate。
     # 与 approved.events 并行留痕——前者可被产品 UI/报告按 run 直读，后者是驱动侧文本账。
     # 写失败只记录不阻断（台账是证据增强，不改 G5 判据；报告证据九如实呈现缺席）。
     _rel_tok=$(studio_login 2>/dev/null || true)
     if [[ -n "$_rel_tok" ]] && studio POST /api/hermes/sim/release-gate "$_rel_tok" \
-         "$(jq -n --arg r "$RUN_ID" --arg n "G5 发布准出七项过（评审卡 ${RGID}；HumanGate=导演批准）" '{run:$r,decision:"approve",note:$n}')" >/dev/null 2>&1; then
+         "$(jq -n --arg r "$RUN_ID" --arg n "G5 发布准出七项过（评审卡 ${RGID}；HumanGate=$(posture) 姿态：strict=真人批准/standard=director-proxy 代批）" '{run:$r,decision:"approve",note:$n}')" >/dev/null 2>&1; then
       note "[G5] 发布门台账已落（evidence/release-gate.jsonl：approve）"
     else
       issue_once release-gate-ledger step20 "发布门台账写入失败（POST /api/hermes/sim/release-gate）——报告证据九按缺席呈现"

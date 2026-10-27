@@ -964,3 +964,9 @@
 
 # 699（2026-10-27 JoyAI 挂账清偿批三）：mapnotes socket namespace 注册——/mapnotes 房间（mapnotes:<指纹>）标注变更实时广播+presence 在线数；标注存储升 LWW-Register（rev+by 全序，旧写拒绝）。spec=2026-10-27-joyai-realtime-squad.md
 699-server-mapnotes-socket-namespace.patch
+
+# 700（2026-10-26 九段架构执行校正 Task 1，撞号 693→695→700 两度让位）：identity-chat 复用
+# routes.ts 既有 userCanAccessProfileForCommandPost 注入，身份清单/历史/聊天统一
+# user_profiles ACL；不改 680/681/685 历史补丁正文，super_admin 与无鉴权本地语义由
+# custom 控制器保留。
+700-server-identity-chat-acl.patch

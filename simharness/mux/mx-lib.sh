@@ -24,6 +24,10 @@ HARNESS_ROOT="$(cd "$MX_SCRIPT_DIR/.." && pwd)"
 _mx_root_walk() {
   local d="$1"
   while [[ "$d" != "/" ]]; do
+    # 单仓布局（2026-10-24 起）：custom/ + patches/ + vendor/ 同根
+    if [[ -d "$d/custom/server" && -d "$d/patches" && -d "$d/vendor/hermes-studio" ]]; then
+      echo "$d"; return 0
+    fi
     if [[ -d "$d/upstream/hermes-studio" && ! -L "$d/upstream" ]]; then
       echo "$d"; return 0
     fi
@@ -42,7 +46,12 @@ _mx_yaml_py() {
   return 1
 }
 NCWK_ROOT="${MX_NCWK_ROOT:-$(_mx_root_walk "$MX_SCRIPT_DIR" || echo "$(cd "$HARNESS_ROOT/.." && pwd)")}"
-OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$NCWK_ROOT/overlay}"
+# 单仓布局产品根=仓根（custom/patches/runtime 同根）；旧 overlay 布局回落到 <root>/overlay。
+if [[ -d "$NCWK_ROOT/custom" && -d "$NCWK_ROOT/patches" ]]; then
+  OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$NCWK_ROOT}"
+else
+  OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$NCWK_ROOT/overlay}"
+fi
 PATCH_DIR="$OVERLAY_ROOT/patches"
 SKILLS_SRC="$HARNESS_ROOT/skills"
 # 受控写作条款真源（2026-10-09 全局文风根治轮：模型回复黑话多、思路跳跃、

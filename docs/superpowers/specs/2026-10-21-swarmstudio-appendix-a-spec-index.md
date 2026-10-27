@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（260 份业务 spec）
+# 附录 A：产品面全量 spec 索引（360 份设计/规格/决策文档）
 
-> 附件，非正本。供「SwarmStudio 完整设计文档」检索与审计；每条给主旨与结论要点。
-> 覆盖：`overlay/docs/superpowers/specs/*.md` 业务 spec 共 260 份（2026-10-23 复测；不含产品正本、设计正本、导航页与四份附录附件，不含 archive/ 与 assets/）。核实日 2026-10-23。
+> 附件，非正本。供「AIStudio 完整设计文档」检索与审计；每条给主旨与结论或状态要点。
+> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 360 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -37,6 +37,9 @@
 | 2026-06-27-observability-landing-analysis | 驾驶舱升级证据平面 | 补工具证据、运行图、证据卷宗三步 |
 | 2026-06-27-run-trace-view-design | 运行 L1 证据图 | 纯前端 Socket 事件重构 Node/Edge |
 | 2026-07-11-loop-engineering-design | 五阶段循环工程 | 单体引擎加 State Store，首期个人层 |
+| 2026-07-16-framework-gates-domain-knowledge-design | 技术框架门禁与领域知识闭环 | ACTIVE_FRAMEWORKS 驱动 --framework，七框架知识带代码证据 |
+| 2026-07-24-hermes-agent-019-kanban-migration-design | agent 0.19 看板能力迁移 | 已批准方案 A 四阶段；补字段、wrapper、事件/运行面与 URL 附件 |
+| 2026-08-04-hermes-agent-020-kanban-migration-design | agent 0.20 看板能力迁移 | 迁移五项功能，补 reasoning/project/estimate CLI；repair 不做 |
 | 2026-08-27-cockpit-terminal-multi-tool-design | 终端多编码工具 | 注册表 claude 优先，服务端探测 |
 | 2026-08-28-terminal-pty-leak-postmortem | 终端 PTY 泄漏 P0 复盘 | WS 生命周期修复，patch 192-194 |
 | 2026-09-09-loop-graph-aihub-redesign-design | Loop Graph 重构协作中心 | 图中心、事件日志唯一源、四层终止 |
@@ -48,23 +51,38 @@
 | 2026-09-15-loop-mind-3d-ontology-plan | 3D 思维图谱规划 | 实体/关系/维度通道/语义缩放 |
 | 2026-09-16-ide-main-page-design | /ide 主页面 | 三列加顶栏状态栏 |
 | 2026-09-16-loop-graph-multiview-design | 壳加四场景 | 总览/管理/Code/运维，零后端 |
+| 2026-09-17-matrix-teams-management-design | Matrix 与 hermes teams 分布式管理 | 设计已确认、当时待实施；房间事件单源，任务落本机 kanban 回执 |
+| 2026-09-17-multiuser-matrix-collab-sim-design | 三用户 Matrix 协作模拟设计 | 已定稿；同机三隔离实例，真实 Matrix/LLM/git 与证据验收门 |
 | 2026-09-17-multiuser-matrix-collab-sim-report | 三用户 Matrix 协作模拟 | 35/35 通过，真实 gateway 与 LLM |
 | 2026-09-17-zcode-3112-parity-analysis | ZCode 3.11.2 对照 | 5005 键/80 ns，三态裁决 |
+| 2026-09-18-rsi-kernel-design | 任务驱动 RSI 工作内核 | 单机内核已实施；五步主循环加三边界，跨机广播待后续 M2 |
+| 2026-09-18-unified-navigation-design | 双壳统一导航 | 已获批驾驶舱六场景加 IDE；旧路由直删，附窗口四态 |
 | 2026-09-18-distributed-delivery-network-design | 多机分布式交付网络 | Matrix 协调、git 制品、本机执行 |
 | 2026-09-18-matrix-fleet-deploy-design | 桌面应用多用户部署 | 共享应用加独立 HOME，45 项验收 |
 | 2026-09-18-matrix-fleet-deploy-report | Fleet 三实例报告 | 45/45，119 条消息 |
 | 2026-09-18-zcode-3123-parity-analysis | ZCode 3.12.3 增量 | 5446 键/87 ns |
+| 2026-09-19-agent-ui-landscape-research | 编码 Agent UI 四产品调研 | 一手源码与 changelog 对照，给 /ide 25 个吸收点及 vela 参照 |
 | 2026-09-19-swarm-cockpit-architecture-design | 驾驶舱架构裁决 | 任务状态以房间事件为准，集群按用户 |
 | 2026-09-20-stats-metrics | 驾驶舱统计口径 | 事件流单一源，纯函数投影 |
 | 2026-09-20-swarm-cockpit-prd | 驾驶舱 PRD v1 | 五旅程九模块，三方对账 |
+| 2026-09-22-aipaydev-full-sim-spec | aipaydev 全流程七缺口实现设计 | RACI、规则熔断、重试、冲突、简报、九用户与沙箱，目标 20 步闭环 |
+| 2026-09-22-aipaydev-implementation-plan | aipaydev 七缺口实施计划 | 文档状态=待批准；规划 patch 361-369 与 custom/compose 落点 |
+| 2026-09-22-aipaydev-multiuser-sim-design | aipaydev 多用户 Matrix 全流程设计 | 20 步业务流以本文为准；实例拓扑由 09-24 V2 接替 |
 | 2026-09-22-aipaydev-fullchain-sim-report | 支付全流程推演报告 | 20 步走通，6 缺陷闭环，12 缺口 |
+| 2026-09-23-base-runtimes-design | semantica 与 pua 基础运行时 | 已实施；MCP 目录与技能外目录双 pin，doctor 防浮动和双源漂移 |
 | 2026-09-23-gateway-host-ownership | Gateway host 归属判读 | 两类锁语义，patch 373 |
 | 2026-09-23-gateway-multiplex-design | 多 profile 共存终态 | port-per-profile 加门闸，不做 multiplex |
 | 2026-09-23-llm-dual-channel-failover-design | LLM 双通道塌方 | 编排层可见加 fail-fast，不改上游 |
 | 2026-09-23-per-agent-node-modules-design | 每 agent 独立依赖 store | 独立 store 加链接注入，根治互删 |
 | 2026-09-23-qgate-universal-delivery-gate-design | QGate 通用交付门禁 v0.2 | 六态 verdict、证据 exercised、四档 |
 | 2026-09-23-zcode-foundation-design | 引擎切 zcode 源码底座 | 受管 fork，WS 引擎为主，双栈过渡 |
+| 2026-09-24-goal-judge-and-ngram-loop-guard | goal 冷裁判与 ngram 防循环 | 本文立项态=待批；先接 loop，ngram 只发失控信号不自动终止 |
+| 2026-09-24-mimo-code-coding-tools-research | MiMo 工具层与运行时吸收 | 转 Ycode 源码底座路线；P2/P5/P6/P7/P9 等落地，P3 原生已有，P4 另轮 |
+| 2026-09-24-multiplex-multiuser-feasibility-and-plan-v2 | 单 gateway 多路复用推演 V2 | 可行性成立；单 gateway+单 studio，三补丁补板/团队/授权缺口，20 步不变 |
+| 2026-09-24-session-checkpoint-writer | 会话进展 checkpoint 写手 | 结束/中断/预算触顶写五节 checkpoint；校验后供续跑，不自动改任务态 |
 | 2026-09-24-aipaydev-flow-review | 推演全流程审查 | A1-A5 已修，B1-B4 架构债 |
+| 2026-09-25-capability-boundaries-design | 三系统能力边界与写者归属 | 已实施；四干系人加三层事实源，双写台账与后续工单逐项收口 |
+| 2026-09-25-loop-cron-bridge-design | loop 调度 hermes cron 桥接 | 已实施、默认关闭；cron 唯一 timer，token 与 loopback 双重限制 |
 | 2026-09-25-scheduled-loads-registry | 定时负载登记 | 巡检 60 秒，可关闭 |
 | 2026-09-25-ycode-absorption-matrix | Ycode 全量吸收矩阵 | 全仓对账，五批裁决，孤儿三态 |
 | 2026-09-26-prefix-reuse-design | 长会话前缀复用 | 指纹链加增量校验，分层接线 |
@@ -72,6 +90,7 @@
 | 2026-09-28-aipaydev-v4-roadshow-refactor-v4.1-final | V4.1 整合终版 | 26 步六闸加七域映射，并入 V5 |
 | 2026-09-28-aipaydev-v4-roadshow-refactor | V4 路演重构 | 七问题域乘能力矩阵 |
 | 2026-09-28-fleet-command-approval-gap | Fleet 命令审批缺口 | patch 490 文件审批传输 |
+| 2026-09-29-agent-4a-governance-layer-design | 智能体协作 4A 治理层 | 五期已落地；四注册表、守门、只读投影、预算闸与派发台账 |
 | 2026-09-29-ui-visual-audit-run1-run2 | 两轮截图视觉审计 | 19 项 UI 缺陷加 15 处图证不一致 |
 | 2026-09-29-x62-orphan-triage-final | 62 件孤儿终局 | 吸收 20、挂起 6、归档 36 |
 | 2026-10-01-qgate-upstream-v1.24-research | QGate 上游调研 | 37 门、四态 fail-closed、16 ADR |
@@ -239,7 +258,8 @@
 | 2026-10-21-ia-projection-sim-subpage-canonicalization | 阶段路径单投影 | 路径单函数，推演单 URL |
 | 2026-10-21-ide-devtools-zcode-dsh | IDE 工具打开 zcode/dsh | 受管 fork CLI，dsh app 按钮 |
 | 2026-10-21-logout-entry-fix | 设置面板补登出 | 侧栏底部加手动登出闸门 |
-| 2026-10-21-ncwk-unified-product-design | 三域合一整体正本 | 三层结构、五纪律、终态、缺口 |
+| 2026-10-21-ncwk-design-spec | NCWK 三域设计正本 R6 | 三层结构与跨域契约；文档自述 2026-10-23 并入整合正本，保留历史档案 |
+| 2026-10-21-ncwk-product-spec | NCWK 三域产品正本 R5 | 三模式、团队编制与知识生成；文档自述 2026-10-23 并入整合正本，保留历史档案 |
 | 2026-10-21-secaudit-pipeline-and-eval-judging-discipline | 安全审计与判分纪律 | 六阶段、自证 409、S0 轨迹 |
 | 2026-10-21-sequence-guard | 会话级数据流护栏 | 敏感读到外发拦截 |
 | 2026-10-21-sim-visibility-and-ide-task-surface | 推演可见性与 IDE 任务面 | 口径收口，IDE 只读任务段 |
@@ -268,8 +288,103 @@
 | 2026-10-22-stage-status-traffic-light | 阶段状态点交通灯化 | 红=阻塞/黄=进行中/绿=完成；--ia-warn 新 token |
 | 2026-10-22-tab-brand-swarm | 标签品牌收尾 | Ekko Studio→SwarmStudio＋data-URI SVG 图标（patch 675 免二进制补丁） |
 | 2026-10-22-upgrade-agent-0224 | hermes-agent v0.22.4 升级轮 | 72 agent 补丁 12 个手工移植全绿；镜像 40→44；607 写闸接线；宿主网关换血 |
+| 2026-10-23-cockpit-p1-residual | 驾驶舱 P1 残项清偿 | 建板异常定为旧后端载体态；patch 682 修假开关，板 slug 补格式说明 |
+| 2026-10-23-column-controls-unify | 工作台栏控窗口语义统一 | 三栏折叠位派生独占态，单钮切换；页面导览整族退役 |
+| 2026-10-23-common-recent-trail | 侧栏常用与最近访问轨迹 | fullPath 去重留 20 条并持久化；Teleport 修滚动裁剪，键盘路径留账 |
+| 2026-10-23-eval-biz-signals | 行为评测信号与经营摘要 | 已落地；六信号低样本降级，摘要按红线/门禁/证据三态输出 |
+| 2026-10-23-fullpage-walkthrough-polish | 全页面走查与效果优化 D23 | 12 项反馈四项证伪、五项修复；态势主显收敛与空态基元落地 |
+| 2026-10-23-gateway-profile-provider-prompt-fix | Provider 提示按网关 profile 判定 | patch 678 已落地；读 resolved profile，辅助端点失败回落原行为 |
+| 2026-10-23-harnesspro-harness-pitfalls-absorption | HarnessPro 与十一坑双文吸收 | 七机制分域落地；帕累托、阶段阶梯、输出折叠、裁判校准与经验保鲜 |
+| 2026-10-23-hp-debt-clearance | HarnessPro 吸收挂账清偿 | G1-G5 全做；S0 草稿人工采纳、事实五档路由、三轴种子与退役建议 |
+| 2026-10-23-hygiene-gates-round | 守门卫生批 | patch 677 补催办双语词条，收件箱裸 hex 换 token；两守门回绿 |
+| 2026-10-23-ide-conflict-marker-hotfix | IDE 四文件冲突标记热修 | 恢复坏提交父版本；IDE 家族 777 测试与页面渲染通过 |
+| 2026-10-23-jd-eval-absorption | 京东评测体系吸收 | 稳定复测、难度/角色分桶与 secrets 采集落地；四项后续挂账 |
+| 2026-10-23-loop-to-workflow | 循环改工作流与分布式调度 | 取声明式步骤范式不搬 TS 沙箱；identity 走 peer，Matrix 走房间指令 |
+| 2026-10-23-probe-stream-json | 自动探测证据通道根治 | stream-json 优先、trace 后备；单测 110/110，live 复验在当时留后续 |
+| 2026-10-23-room-page-audit | 房间页全面排查与修复 | 邀请按语境分流并修 eventId；后续统一新建聊天、通道命名与文字排序 |
+| 2026-10-23-rrsi-followup-batch | RRSI 跟进批 | held-out 并排读数加 AI 起草；只产 draft，不审批、不探测 |
+| 2026-10-23-rrsi-gap-closure | RRSI 挂账清偿 | spawn 带 stderr 并重试一次；追加段起草；仅无审计线索 draft 可删 |
+| 2026-10-23-rrsi-regularized-workbench | RRSI 改进实验台正则化 | 七机制落地；四类 blocker 加四类 warning，噪声 δ 不调参 |
+| 2026-10-23-tmall-digital-worker-absorption | 天猫数字员工两文吸收 | 交付效能与协作画像四件套；缺失数据降档，只读 fail-soft |
+| 2026-10-23-ui-mxid-short-display | UI 账号去 homeserver 后缀 | 短显逻辑收为单一源；显示短形，协议、路由与注册表仍用全形 |
+| 2026-10-23-unified-identity-chat | 统一身份聊天窗口 | @身份统一路由；本机走 peer dm、远程走原生 mention，远程发现与 SSE 留批 2 |
+| 2026-10-23-walkthrough-debt-clearance | 走查挂账清偿 D24 | 用量字号、技能对比度与十二板折叠落地；紫菱形主诉经复核证伪 |
+| 2026-10-24-aistudio-dev-regen | aistudio-dev 全量重生成 | 单技能覆盖单仓并激活；check_test 66 个预存失败如实另立修复轮 |
+| 2026-10-24-aistudio-single-repo-integration | AIStudio 单仓整合 | vendor 基线入库并保留注入链；403 项重放与全新克隆通过，遗留构建/脚本挂账 |
+| 2026-10-24-deps-supply-chain-unify | 依赖供应链统一治理 | 八项治理落地；锁文件、registry 与 team 钉版统一，patch 687 专收锁缺口 |
+| 2026-10-24-docs-five-layer-refactor | 文档五层重构 | README、USAGE、整合正本 R9 与 GitHub 页统一分层；不另开设计正本 |
+| 2026-10-24-func-audit-consolidation | 功能层排查与整合 D25 | 假功能分三档处置，方案孤儿挂回或删除；三个待裁定项交 D26 |
+| 2026-10-24-intro-interactive-page | 交互式项目介绍页 | 独立离线 HTML 只借叙事形式；主名 AIStudio，零外部依赖与真实数字 |
+| 2026-10-24-kanban-estimate-workload-impl | 看板估算落库与负载重排 | 估算双列、审计事件与 ready 层内重排落地；拼合树 pytest 22 通过 |
+| 2026-10-24-page-visual-polish | 全页面视觉走查与优化 | 47 路由走查后修层级、密度、空态与人话；Electron 与未改上游页未验 |
+| 2026-10-24-repo-integration-cleanup | 仓库终态整合清理 | 散落正身入库、18 个版本变体删除；spec 台账全保留，估算实现挂账 |
+| 2026-10-24-swarm-bench-leaderboard | 群体协作拓扑与跨轮评测榜 | 七指标名次、均位与帕累托；拓扑和节拍只描述不排名，四项挂账 |
+| 2026-10-24-swarm-eval-benchmark-absorption | 多 Agent 群体协作评测吸收 | 四维读数加两个红队向量；字符/观察口径如实降档，只透传不进判据 |
+| 2026-10-24-swarm-eval-followup-batch | 群体协作评测清账批 | 五项机制落地；消融与拜占庭待真实 run，混合动机独立场景且默认关 |
+| 2026-10-24-swarm-task-latency | 群体协作任务锚点时延 | 榜单补第八指标；明确不等于端到端时延，精确 token 与专项首跑仍挂账 |
+| 2026-10-24-swarm-yuan-v2.95.0 | swarm-yuan v2.95.0 同步 | 33 文件同步；原仓回归通过，本仓 self-check 有布局受限且 npm test 未跑 |
+| 2026-10-24-swarmstudio-stale-refs-cleanup | 单仓与 AIStudio 过期描述清理 | 活文档改新布局、历史正文不改；Windows 单仓流程未重验 |
+| 2026-10-24-verdict-restore-batch | 功能并入挂回与呈现恢复 D26 | 三裁定落地；六闸展开和报告入口受无活跃 run 限制，仅源码守门未活体全验 |
+| 2026-10-24-workspace-dirs-tidy | 工作区目录整理 | 根层 34 目录逐项定性；清运行垃圾、补导航与三轨忽略规则 |
+| 2026-10-25-agent-data-flywheel-absorption | Agent 数据飞轮吸收 | 坏例提炼、五维变体与通过率退化门落地；活体未做，五项后续挂账 |
+| 2026-10-25-disable-vendor-announcements | 厂商公告通道关闭 | 默认拦空、env 可恢复；11 项守门与双端实测确认零弹窗 |
+| 2026-10-25-flywheel-debts-round2 | 数据飞轮挂账清偿 round 2 | 五项挂账落地并经独立端口走查；embedding 与 canonical 换装仍挂账 |
+| 2026-10-25-local-artifacts-ignore-rules | 本地产物忽略规则补齐 | 新增两条通用规则，vendor 69 个注入产物不遮掩；全量测试 6334 过、0 失败 |
+| 2026-10-25-r142-followup-routa-codex | R142 routa/codex 裁决补记 | routa main 快进且保留分叉 tag；codex 本地私货判定更正为误报 |
+| 2026-10-25-skill-r142-runtime-refresh | swarm-yuan R142 基线刷新 | 22 项核验仅两项升级；注册表路径修复，两个异常转后续裁决 |
+| 2026-10-25-upgrade-studio-0739-agent-0225 | studio 0.7.39 与 agent 0.22.5 升级 | 397 补丁重放、pytest 44 通过；规范位残 5 个失败文件逐项定性，未记作全绿 |
+| 2026-10-26-acp-client-hardening | ACP 客户端加固 | 权限只允许一次、按工作区分池、env 注入、setModel fail-closed、写界=会话根；真实回合未验 |
+| 2026-10-26-delegate-task-context | delegate --task 上下文装配 | build_worker_context 程序注入+delegate-result.json 全路径机器回执；拼合树 46/46 |
+| 2026-10-26-g3-g5-hard-gates | G3 委托双证与 G5 真人门 | G3 消费 result.json（exit=0+end_turn）；strict 等真实 HumanGate、standard 记 director-proxy |
+| 2026-10-26-chatbridge-projection-only | ChatBridge 入向投影化 | 撤 processMentions 旁路、task.assign 回执 observed；gateway 承接挂独立批 |
+| 2026-10-26-a2a-board-harness-alignment | A2A、看板归属与 harness 单仓化校正 | A2A 默认本机、板团队键单源、闸键对齐；真实跨机与合并树行为未验 |
+| 2026-10-26-aistudio-architecture-execution-alignment | AIStudio 九段架构执行校正 | 聚焦授权、人工门、任务上下文与技能实证；完整推演、真人会签和多机未验 |
+| 2026-10-26-delegate-evidence-wiring | V8.54 编码委托证据位接线 | G3 查 engine_bin_source 身份行＋采集进 evidence；与九段批双证判据互补 |
+| 2026-10-26-joyai-closed-loop-absorption | JoyAI 闭环吸收轮 | 统一上下文 ID 串联知识→推演→执行→回流；workitem 全景/impact 需求命中 |
+| 2026-10-26-joyai-debts-clearance | JoyAI 闭环挂账清偿 | 未做五件收口（细节见 spec 验证段） |
+| 2026-10-26-nine-point-docs-sync | 九点对账三正本同步 | fullflow V8.54/整合正本 R12/总账随批；词表 Ycode 四级解析序＋§5.4.3 证据位 |
+| 2026-10-26-proactivity-two-axis | 主动性两轴模型 | 谁定义问题 L1-L5×做到哪一步五档裁决＋目标漂移防线；补丁 695 |
+| 2026-10-26-proactivity-followup | 主动性两轴挂账清偿 | /goal 契约变更登记对齐台账＋L4 升仓判据；补丁 696 |
+| 2026-10-26-proactivity-govern-tab | 主动性面板加治理页签 | 两轴面板挂⑥治理页签（微轮） |
+| 2026-10-26-swarm-yuan-core-refactor | swarm-yuan 可信性重构 | 门禁异常判 pass/激活 fail-open 等结构根治（详见 spec） |
+| 2026-10-26-swarm-yuan-single-source-refactor | swarm-yuan 单源与迁移补位 | 与 core 分支零重叠的 P1 项（设计层/源码层） |
+| 2026-10-26-cockpit-debt-completion | 驾驶舱挂账清偿 | 恢复 REAP 26 包与两技能、element-web 官方构建与 ELEMENT_WEB_DIR、serve-main 换装 |
+| 2026-10-26-cockpit-followup | 驾驶舱未做项清偿 | 生产走查与写流补验，patch 692 修 running 静默；REAP 26 包留原会话处理 |
+| 2026-10-26-cockpit-source-design-refactor | 驾驶舱功能设计与源码盘点重构 | 保留 IA，修审批/注意力/轨迹/日程；152 个只读态走查，写流与生产包交后续批 |
+| 2026-10-26-core-coding-chain-alignment | ACP→Ycode→项目技能→任务工作区 | provider/cwd 与技能先行接线；定向测试过，live 部署和真实 ACP 回合未验 |
+| 2026-10-26-design-sync-followup | 设计文档同步尾部清偿 | PROJECT_DIR 可由 env 覆盖，L3 分支态拦/放双场景固化为 23 项断言 |
+| 2026-10-26-dev-skill-design-doc-sync | XXX-DEV 设计文档同步机制 | 四要素声明由 L2/L3 机械核验，合入序列入技能；doc-numbers 基线失败另列 |
+| 2026-10-26-element-web-csp | element-web CSP wasm 放行 | 补丁 694 窄放行 wasm-unsafe-eval 根治登录后会话死锁；真实账号双端收发终验 |
+| 2026-10-26-nine-point-reconciliation | 九点产品逻辑对账校正 | 该轮裁定 ACP 官方捆绑默认、element fail-soft、done 人闸 opt-in；分叉与 run 级未验 |
+| 2026-10-26-skill-roots-claude-compat | Ycode 技能根兼容与落点实证 | 补丁 009 加 .claude/skills 兼容根；项目技能落点 .agents/skills 三引擎通吃，软链方案并存 |
+| 2026-10-26-precommit-vendor-guard-restore | pre-commit vendor 挡护还原 | 模板、产物、守门三层同步；自动撤出暂存，VENDOR_SYNC=1 为显式逃生 |
+| 2026-10-26-release-manifest | 四模块发布清单 | RELEASE-MANIFEST+release:check 对账门禁；裁定=单仓清单/推演仅仓内/Ycode 以基线代版本 |
+| 2026-10-27-release-packages | 四模块 4+1 源码包发布 | git archive 打包＋SHA256SUMS；Ycode 版本=底座 3.16.2（JSON 真源）；干净环境安装验证挂账 |
+| 2026-10-26-rebrand-aistudio | 产品品牌统一 AIStudio | 用户可见品牌收敛，安装/协议/路径标识保留；历史文档不改写 |
+| 2026-10-26-shared-exclusion-leaks | _shared 排除面两漏补齐 | 巡检日志尾与能力上报统一滤 `_` 前缀；41 项测试过，上报 50→49 |
+| 2026-10-26-sidenav-badge-dot-merge | 侧栏徽标准确性与状态合一 | 收官 SIM 不再污染日常口径；徽标/状态点合一，三处读数 21/21/20→7/7/7 |
+| 2026-10-26-walkthrough-bugs-fix | 重启走查三缺陷修复 | 两族 i18n 缺键与归档目录噪音修复；clean 残留问题转后续批 |
+| 2026-10-26-walkthrough-debts-clearance | 走查未做项清偿 | 用量探针改取完备样本；clean 补 tracked 残留兜底并做半注入/全净双验 |
+| 2026-10-27-joyai-annotations-rerank | JoyAI 清偿批二 | map-annotations 持久化＋LLM 重排＋mention 泳道；补丁 698 |
+| 2026-10-27-joyai-realtime-squad | JoyAI 清偿批三 | 标注实时协同（LWW+socket+presence）＋squad 链重排；补丁 699 |
 
-## A.2 按域聚类（13 域）
+### 角色/排除（非 spec 文档）
+
+以下文件保留在 specs 根目录，但不是 A.1 的专题设计、规格或决策文档；排除是角色分类，不是删除或按日期作废。
+
+| 文件名 | 角色/排除 | 说明 |
+|---|---|---|
+| 2026-10-21-ncwk-unified-product-design | 文档导航 | 自称「SwarmStudio 整体文档导航」，指向整合正本、配套档、A-D 与历史档案 |
+| 2026-10-21-swarmstudio-appendix-a-spec-index | A 索引，本文件 | specs 根目录唯一文件级 spec 索引；索引自身不重复计入 A.1 |
+| 2026-10-21-swarmstudio-appendix-b-plans-research | B 索引 | 实施计划与研究/复盘档索引，覆盖范围不在 specs 根目录文件级集合内 |
+| 2026-10-21-swarmstudio-appendix-c-capability-corpus | C 索引 | swarm-yuan 方法论、决策文本与 research 的能力层全库索引 |
+| 2026-10-21-swarmstudio-appendix-d-lessons-rules | D 索引 | 历史教训、被证伪假设、明确不做与工作规则的汇编索引 |
+| 2026-10-23-ncwk-complete-design-compilation | 退役拼接指针 | 自述六部分拼接版已退役；全文留 git 历史，本页只指向整合正本 |
+| 2026-10-23-swarmstudio-design-ledger | 数字总账 | 全域数字唯一事实源与维护规则，不是专题设计或业务 spec |
+| 2026-10-23-swarmstudio-integrated-design | 当前整合正本 | 自述「当前唯一整合正本」；在索引中登记角色，不重复计入 A.1 |
+| 2026-10-24-merged-projects-knowledge-compendium | 合并来源地图 | 自述只做映射与对账、不复制正文；登记并入项目、决策与会话来源 |
+
+## A.2 按域聚类（13 域，2026-10-23 历史快照）
 
 | 域 | 份数 | 演化主线（摘要） | 当前终态 | 被推翻/废弃 |
 |---|---:|---|---|---|
@@ -287,7 +402,7 @@
 | D12 UI/UX/无障碍/术语 | 13 | Pure Ink → V1-V3 → token 收敛 → WCAG → 步显示名 | ia2.scss 单一 token；三壳同步；name/displayName 分层 | UI 框架、双主题、全量 WCAG 重校、三套抽屉合一 |
 | D13 正本/需求/验收 | 6 | 需求冻结 → 三中心定稿 → 完整设计 → 三域合一 | 三层结构；冲突裁决顺序；146 决策 | 三份并行事实源、旧决策计数、独立档案件、角色镜头波次 |
 
-> 2026-10-23 新增 10 份业务 spec 已入 A.1 逐份索引；本节域聚合计数（D1-D13 份数）待下次专题修订重算。
+> 本节保留 2026-10-23 的域聚类快照，份数与「当前终态」均按该日期理解，本轮不重算；不得用本节份数充当当前全量总数。当前文件级覆盖只以 A.1 与「角色/排除」表为准（2026-10-26 复核）。
 
 ## A.3 跨域单一事实源清单（节选）
 

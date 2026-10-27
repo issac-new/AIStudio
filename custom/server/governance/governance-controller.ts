@@ -25,6 +25,7 @@ import { homedir } from 'os'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { queryApprovalLog } from '../approvals/approval-log'
+import { requireAuthenticatedActor, type AuthenticatedActor } from '../approvals/human-gate'
 import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts, loadStateModel } from './governance-ledger'
 import { collectGovernancePosture } from './posture'
 import { emergencyStopAll } from './emergency-stop'
@@ -81,6 +82,18 @@ function superAdminDenied(ctx: { state?: unknown; status: number; body: unknown 
   ctx.status = 403
   ctx.body = { ok: false, error: '管理维护端点仅 super_admin 可操作' }
   return true
+}
+
+/** 决策写统一人责边界；请求体 actor/approver 不作为身份来源。 */
+function decisionActor(ctx: { state?: unknown; status: number; body: unknown }): AuthenticatedActor | null {
+  try {
+    return requireAuthenticatedActor(ctx)
+  } catch (error) {
+    const e = error as Error & { status?: number; code?: string }
+    ctx.status = e.status ?? 401
+    ctx.body = { ok: false, code: e.code ?? 'authenticated_actor_required', error: e.message }
+    return null
+  }
 }
 
 /** 治理工件登记表：kind → 仓内路径 + 界面标题 + 所属闸。单一事实源（client 只消费）。 */
@@ -589,9 +602,11 @@ router.put('/registry/:kind', async (ctx) => {
     if (det.changed) {
       if (b.breakGlass) {
         if (!b.breakGlassReason?.trim()) { ctx.status = 400; ctx.body = { error: '紧急通道必须填理由（事后强制审计留痕）' }; return }
+        const actor = decisionActor(ctx)
+        if (!actor) return
         const r = await writeOrgBreakGlass({
           markdown: b.markdown, message: b.message || '更新 org',
-          actor: b.actor || 'studio-ui', reason: b.breakGlassReason.trim(),
+          actor: actor.username, reason: b.breakGlassReason.trim(),
         })
         ctx.body = { ...r, breakGlass: true }
         return
@@ -615,6 +630,8 @@ router.get('/registry/org/cosign', async (ctx) => {
 
 router.post('/registry/org/cosign', async (ctx) => {
   if (superAdminDenied(ctx)) return
+  const actor = decisionActor(ctx)
+  if (!actor) return
   const b = ctx.request.body as { markdown?: string; message?: string; actor?: string }
   if (typeof b.markdown !== 'string' || !b.markdown.trim()) { ctx.status = 400; ctx.body = { error: 'markdown 必填' }; return }
   let before = ''
@@ -622,7 +639,7 @@ router.post('/registry/org/cosign', async (ctx) => {
   const det = detectAdminRowChange(before, b.markdown)
   if (!det.changed) { ctx.status = 400; ctx.body = { error: '本次变更未触及 admin 行——普通保存即可，无需会签' }; return }
   try {
-    ctx.body = await openOrgCosign({ initiator: b.actor || 'studio-ui', message: b.message || 'org 变更', detail: det.detail, markdown: b.markdown })
+    ctx.body = await openOrgCosign({ initiator: actor.username, message: b.message || 'org 变更', detail: det.detail, markdown: b.markdown })
   } catch (e) {
     ctx.status = 409; ctx.body = { error: String(e instanceof Error ? e.message : e) }
   }
@@ -631,11 +648,12 @@ router.post('/registry/org/cosign', async (ctx) => {
 // 会签决议共用 handler（approve/reject 两个显式路由——@koa/router 新版不支持
 // 参数内联正则 :action(approve|reject)）。
 async function resolveCosignHandler(ctx: any, action: 'approve' | 'reject') {
-  if (superAdminDenied(ctx)) return
+  // 决议允许任何登录用户进入资格检查；registry-admin 负责治理岗与异人约束。
+  const actor = decisionActor(ctx)
+  if (!actor) return
   const b = ctx.request.body as { approver?: string; reason?: string }
-  if (!b.approver?.trim()) { ctx.status = 400; ctx.body = { error: '缺 approver（会签人账号）' }; return }
   try {
-    ctx.body = await resolveOrgCosign({ action, approver: b.approver, reason: b.reason })
+    ctx.body = await resolveOrgCosign({ action, approver: actor.username, reason: b.reason })
   } catch (e) {
     const msg = String(e instanceof Error ? e.message : e)
     ctx.status = /无待会签/.test(msg) ? 404 : /资格|自签|理由|不再触及/.test(msg) ? 403 : 500

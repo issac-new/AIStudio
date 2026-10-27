@@ -20,8 +20,9 @@ stage-tabs.ts,routes.ts,sim-tabs.ts}）：
   ② reqs/docs/g1/preflight/launch；③ tasks/analysis/g2/schedule；
   ④ today/board/approvals/risk/quality；⑤ overview/trace/delivery/uat/g5/cases；
   ⑥ clearance/issues/audit/metrics/docs/gateLog。
-- 全流程推演（/app/sim，原仿真中心）六签：运行总览/监督面板/运行监控/证据库/
-  运行编排/推演设置；交付健康与需求追溯已迁⑤验收。
+- 全流程推演（/app/sim，原仿真中心）四签兄弟路由：运行总览/监督面板/运行监控/证据库；
+  运行编排/推演设置为左侧栏独立入口（旧 ?tab=orchestration|settings 兼容重定向）；
+  交付健康与需求追溯已迁⑤验收。
 - 治理中心壳已解体：/app/gov 与 /app/gov/* 全部 redirect 到阶段页并带 ?tab=；
   旧 /app/runs、/app/eng、/app/journey、?tab=trace/accounts/observatory 等
   经 routes 重定向可达（零断链兜底），但入口表以阶段页规范路径为准。
@@ -63,12 +64,12 @@ STEP_ENTRIES = {
         '四稿齐后汇总复核（消歧/消冲突/理层次）→ 概设入仓 → 评审任务卡登记'),
     15: ('系统架构师A（架构治理）', '③分析设计 → 任务分解（#/app/stage/design?tab=tasks）arch-governance 板评审卡',
         'G2 五项检查（设计五要素/影响面排查/验证计划/备选方案/历史踩坑记录硬拦）→ 结论行回房+评审卡判词同步'),
-    16: ('产品经理A（PM）', '③分析设计 → 任务分解（#/app/stage/design?tab=tasks）',
-        'SMART 任务排期入卡（任务卡具体到人+人日，编号随本轮 tasklist）'),
-    17: ('AI · 研发智能体', '③分析设计 → 排期（#/app/stage/design?tab=schedule）',
-        '创建 feat/DEV-* 分支 → 编码提交（每条 AC 对应用例）'),
+    16: ('产品经理A（PM）', '③分析设计 → 任务分解（#/app/stage/design?tab=tasks）RFD-001 主卡',
+        '四稿/AN-*.md/tasklist/概设路径与 commit 汇总登记主卡 → 主卡标记 done（结论行 CLOSE-DONE 开头，测试工作量按 0.3 系数写入）'),
+    17: ('产品经理A（PM）', '③分析设计 → 排期（#/app/stage/design?tab=schedule）',
+        'SMART 任务排期入卡（任务卡具体到人+人日，编号随本轮 tasklist；测试工作量=开发×0.3 独立成项）'),
     18: ('AI · 研发智能体', 'IDE 工作区（#/app/ide；任务右栏或页面切换进入；任务简报含任务工作区/任务会话）',
-        '编码+单测（pay-core≥8/其余≥6 全绿）→ testlog 随分支提交 → 运行证据可看全流程推演·运行总览（#/app/sim）'),
+        '创建 feat/DEV-* 分支 → 按概设实现（每条 AC 对应用例）→ 单测全绿（pay-core≥8/其余≥6）→ testlog+runtime-proof 随分支提交 → G3 落键 g3_code_pass'),
     19: ('测试工程师A/测试工程师B（测试，≠写码者）', '④开发 → 看板（#/app/stage/build?tab=board）qi 板；质量与测试签',
         '按 AC 全量用例执行 → 缺陷报告→修复→复验全过关（一条不落）→ 测试报告六要素入仓'),
     20: ('PM+评审卡（HumanGate）', '⑤验收 → G5 审批（#/app/stage/accept?tab=g5）',

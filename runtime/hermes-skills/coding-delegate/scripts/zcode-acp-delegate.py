@@ -27,6 +27,7 @@ import sys
 import threading
 import time
 import queue
+from pathlib import Path
 
 EXIT_OK = 0
 EXIT_ENGINE_MISSING = 2
@@ -37,10 +38,78 @@ EXIT_EARLY_EXIT = 5
 DEFAULT_ENGINE_BINS = ("zcode-acp-server", "zcode-acp")
 DEFAULT_TIMEOUT = 900
 
+INSTRUCTION_HEADER = "## 本轮实现指令"
+
 
 def log(msg: str) -> None:
     stamp = time.strftime("%H:%M:%S")
     print(f"[{stamp}] {msg}", flush=True)
+
+
+class TaskContextError(Exception):
+    """--task 装配失败（任务不存在/工作区未物化/路径逃逸）——exit 2 语义。"""
+
+
+def resolve_task_workspace(task, board: str | None):
+    """任务 workspace 规范化：绝对直用；相对锚定板 workspaces 根（/../ 逃逸拒绝）；
+    scratch 空路径按 <root>/<task-id> 预测。返回 (绝对路径, 是否已物化)。"""
+    from hermes_cli import kanban_db as kb
+
+    raw = (getattr(task, "workspace_path", None) or "").strip()
+    root = kb.workspaces_root(board=board)
+    if not raw:
+        kind = getattr(task, "workspace_kind", None) or "scratch"
+        if kind in ("scratch",):
+            p = root / task.id
+        else:
+            raise TaskContextError(f"workspace_kind={kind} 且无 workspace_path，无法定位工作区")
+    else:
+        import os as _os
+        from pathlib import PurePath
+        if _os.path.isabs(raw):
+            p = Path(raw)
+        else:
+            rel = PurePath(raw)
+            if rel.is_absolute() or ".." in rel.parts:
+                raise TaskContextError(f"相对 workspace_path 逃逸拒绝：{raw}")
+            p = root / raw
+    return p.expanduser(), p.expanduser().is_dir()
+
+
+def load_task_context(task_id: str, board: str | None = None):
+    """taskId → (worker_context 全文, 规范 cwd)。修订/正文/handoff/评论由程序
+    装配（build_worker_context 与 spawn 同源），不依赖调用方抄写。"""
+    from hermes_cli import kanban_db as kb
+    from hermes_cli import kanban_db_connect as kbc
+
+    with kbc.connect(board=board) as conn:
+        task = kb.get_task(conn, task_id)
+        if task is None:
+            raise TaskContextError(f"任务不存在：task={task_id} board={board or 'default'}")
+        context = kb.build_worker_context(conn, task_id)
+    cwd, materialized = resolve_task_workspace(task, board)
+    if not materialized:
+        raise TaskContextError(f"任务工作区未物化：{cwd}")
+    return context, task, cwd
+
+
+def compose_task_prompt(context: str, instruction: str) -> str:
+    return f"{context.rstrip()}\n\n{INSTRUCTION_HEADER}\n{instruction.strip()}\n"
+
+
+def write_delegate_result(cwd: Path, payload: dict) -> Path | None:
+    """materials/delegate-result.json 原子落盘（tmp+rename）；失败不掩盖主结果。"""
+    try:
+        d = cwd / "materials"
+        d.mkdir(parents=True, exist_ok=True)
+        out = d / "delegate-result.json"
+        tmp = d / f".delegate-result.{os.getpid()}.tmp"
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf8")
+        tmp.replace(out)
+        return out
+    except OSError as exc:
+        log(f"delegate-result.json 落盘失败（不掩盖主结果）：{exc}")
+        return None
 
 
 def find_engine(override: str):
@@ -132,6 +201,11 @@ def main() -> int:
                     help="引擎可执行文件（默认按 PATH 找 zcode-acp-server / zcode-acp）")
     ap.add_argument("--model", default=os.environ.get("ZCODE_ACP_MODEL", ""),
                     help="会话模型（如 GLM-5.3；空=引擎默认。经桥 session/setModel 在建会话后设置）")
+    ap.add_argument("--task", default="",
+                    help="kanban 任务 id：装配 build_worker_context 全文注入 prompt，"
+                         "cwd 取任务规范 workspace（覆盖 --cwd）")
+    ap.add_argument("--board", default="",
+                    help="任务所在板 slug（--task 时使用，缺省 default）")
     args = ap.parse_args()
 
     prompt = args.prompt
@@ -139,15 +213,60 @@ def main() -> int:
         with open(prompt[1:], encoding="utf-8") as fh:
             prompt = fh.read()
 
+    task_mode = bool(args.task.strip())
+    task_meta: dict = {"taskId": args.task.strip() or None, "board": (args.board.strip() or "default") if task_mode else None}
+    cwd_override: str | None = None
+    if task_mode:
+        try:
+            context, task, ws = load_task_context(args.task.strip(), args.board.strip() or None)
+        except TaskContextError as exc:
+            log(f"RESULT exit={EXIT_ENGINE_MISSING} stage=task_context error={exc}")
+            return EXIT_ENGINE_MISSING
+        prompt = compose_task_prompt(context, prompt)
+        cwd_override = str(ws)
+        task_meta.update({
+            "taskTitle": getattr(task, "title", None),
+            "taskStatus": getattr(task, "status", None),
+            "assignee": getattr(task, "assignee", None),
+            "branch": getattr(task, "branch_name", None),
+        })
+        log(f"task 上下文装配：task={args.task.strip()} workspace={ws} prompt_chars={len(prompt)}")
+
     cmd = find_engine(args.engine)
     if not cmd:
         log(f"RESULT exit={EXIT_ENGINE_MISSING} engine=NOT_FOUND（PATH 无 zcode-acp-server/zcode-acp）")
+        if task_mode and cwd_override:
+            write_delegate_result(Path(cwd_override), {**task_meta, "exit": EXIT_ENGINE_MISSING,
+                                                       "stage": "engine_not_found", "prompt_sha256": __import__("hashlib").sha256(prompt.encode()).hexdigest()})
         return EXIT_ENGINE_MISSING
 
-    cwd = os.path.abspath(args.cwd)
+    cwd = os.path.abspath(cwd_override or args.cwd)
     engine_src = resolve_engine_bin_env()
     engine_bin = os.environ.get("ZCODE_BIN", "(桥自解析)")
+    prompt_sha = __import__("hashlib").sha256(prompt.encode()).hexdigest()
+    t_start = int(time.time())
     log(f"engine={' '.join(cmd)} engine_bin_source={engine_src} engine_bin={engine_bin} cwd={cwd} timeout={args.timeout}s prompt_chars={len(prompt)}")
+
+    def finish(exit_code: int, stage_or_stop: str, session_id=None, usage=None) -> int:
+        """统一收口：RESULT 行 + 任务模式落 delegate-result.json（机器可读证据）。"""
+        if task_mode:
+            write_delegate_result(Path(cwd), {
+                **task_meta,
+                "sessionId": session_id,
+                "cwd": cwd,
+                "engineBin": engine_bin,
+                "engineBinSource": engine_src,
+                "model": args.model or None,
+                "stopReason": stage_or_stop if stage_or_stop in ("end_turn", "timeout", "cancelled", "error") else None,
+                "stage": None if stage_or_stop in ("end_turn",) else stage_or_stop,
+                "exit": exit_code,
+                "promptSha256": prompt_sha,
+                "promptChars": len(prompt),
+                "usage": usage or {},
+                "startedAt": t_start,
+                "endedAt": int(time.time()),
+            })
+        return exit_code
 
     try:
         proc = subprocess.Popen(
@@ -155,7 +274,7 @@ def main() -> int:
             stderr=subprocess.PIPE, text=True, bufsize=1, cwd=cwd)
     except OSError as exc:
         log(f"RESULT exit={EXIT_ENGINE_MISSING} spawn_error={exc}")
-        return EXIT_ENGINE_MISSING
+        return finish(EXIT_ENGINE_MISSING, "spawn_error")
 
     lines = queue.Queue()
 
@@ -220,7 +339,7 @@ def main() -> int:
         log(f"initialize 失败：{str(init)[:300]}")
         log(f"RESULT exit={EXIT_ENGINE_MISSING} stage=initialize")
         proc.kill()
-        return EXIT_ENGINE_MISSING
+        return finish(EXIT_ENGINE_MISSING, "initialize")
     agent_info = init["result"].get("agentInfo", {})
     log(f"initialized 握手 OK：{agent_info.get('name')} {agent_info.get('version')}")
 
@@ -232,7 +351,7 @@ def main() -> int:
         log(f"session/new 失败：{str(sess)[:300]}")
         log(f"RESULT exit={EXIT_ENGINE_MISSING} stage=session_new")
         proc.kill()
-        return EXIT_ENGINE_MISSING
+        return finish(EXIT_ENGINE_MISSING, "session_new")
     session_id = sess["result"].get("sessionId")
     log(f"session 建立成功：{session_id}")
 
@@ -247,7 +366,7 @@ def main() -> int:
             log(f"session/setModel 失败（model={args.model}）：{str(setm)[:300]}")
             log(f"RESULT exit={EXIT_PROTOCOL} stage=set_model")
             proc.kill()
-            return EXIT_PROTOCOL
+            return finish(EXIT_PROTOCOL, "set_model", session_id)
         log(f"session 模型已设置：{args.model}")
 
     # ── 3. session/prompt（流式收 update）──
@@ -263,7 +382,7 @@ def main() -> int:
         if msg is None:
             log(f"RESULT exit={EXIT_TIMEOUT} stage=prompt elapsed={int(time.time()-t0)}s")
             proc.kill()
-            return EXIT_TIMEOUT
+            return finish(EXIT_TIMEOUT, "timeout", session_id)
         if msg == "EOF":
             eof = True
             break
@@ -290,13 +409,13 @@ def main() -> int:
     if eof or final is None:
         log(f"RESULT exit={EXIT_EARLY_EXIT} stage=prompt updates={updates}")
         proc.kill()
-        return EXIT_EARLY_EXIT
+        return finish(EXIT_EARLY_EXIT, "early_exit", session_id)
 
     if "error" in final:
         log(f"prompt 返回错误：{str(final['error'])[:300]}")
         log(f"RESULT exit={EXIT_PROTOCOL} stage=prompt updates={updates}")
         proc.kill()
-        return EXIT_PROTOCOL
+        return finish(EXIT_PROTOCOL, "prompt_error", session_id)
 
     result = final.get("result", {})
     stop = result.get("stopReason")
@@ -314,7 +433,7 @@ def main() -> int:
         proc.wait(timeout=5)
     except Exception:
         proc.kill()
-    return 0 if ok else EXIT_PROTOCOL
+    return finish(0 if ok else EXIT_PROTOCOL, stop, session_id, usage)
 
 
 if __name__ == "__main__":

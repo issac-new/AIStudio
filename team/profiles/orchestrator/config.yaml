@@ -167,6 +167,13 @@ platforms:
       port: 8650
   matrix:
     enabled: true
+  # 跨用户 bot agent 互调入口（A2A v1.0）。默认无 token 时适配器只绑 127.0.0.1；
+  # 跨机开放须在 profile .env 配 A2A_PEER_TOKENS（或 A2A_BEARER_TOKEN）+ A2A_HOST=0.0.0.0
+  # + A2A_TRUSTED_PEERS，否则远端 dispatch fail-closed。
+  a2a:
+    enabled: true
+    extra:
+      port: 9900
   email:
     enabled: false
 plugins:

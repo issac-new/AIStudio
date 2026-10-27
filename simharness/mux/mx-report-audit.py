@@ -47,10 +47,11 @@ R18F = EVID / 'r18-steps.json'
 # 验收线（正本 §5.5 反凑数·方案解析源单一）：方案解析源与生成器同链（MX_PLAN_PATH 覆盖 → 主工作树 V8 → MX_OVERLAY_ROOT 定位，
 # 默认同主树；NVMe 镜像树 2026-10-16 已整树删除，镜像兜底随之退役），
 # 勿再硬编码旧版路径——正本与审计源分叉即验收缺陷（V3 分叉实录见结构排查 §二.1）。
+_REPO = Path(__file__).resolve().parents[2]
 _plan_candidates = [
     os.environ.get('MX_PLAN_PATH', ''),
-    '/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
-    os.environ.get('MX_OVERLAY_ROOT', '/Users/cuishi/lab/ncwk/overlay')+'/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
+    str(_REPO / 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'),
+    os.environ.get('MX_OVERLAY_ROOT', str(_REPO)) + '/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md',
 ]
 PLAN = next((Path(p) for p in _plan_candidates if p and Path(p).exists()),
             Path(_plan_candidates[1]))
@@ -268,7 +269,7 @@ if _frames_dir.exists():
             fails.append(f'同帧步结构性红线：单一像素帧组被 {_max_share}/{_total_keys}'
                          f'={_max_share/_total_keys:.0%} 帧位步键共用（md5 分组实测>10%）'
                          f'——登录壳页/复读帧形态（run16 实锤：词面签名被措辞绕过，自此结构性锚定）')
-GATE_KEYS = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'devimpl_done',
+GATE_KEYS = {'G1': 'g1_frozen', 'G2': 'g2_arch_pass', 'G3': 'g3_code_pass',
              'G4': 'g4_pass', 'G5': 'g5_ready', 'G6': 'retro_done'}
 for g, k in GATE_KEYS.items():
     in_state = bool(state_keys.get(k))
@@ -866,7 +867,7 @@ _vis = _re10.sub(r'<[^>]+>', '\n', _vis)
 import html as _html10
 _vis = _html10.unescape(_vis)
 _JC10 = os.environ.get('MX_JARGON_CHECK') or next(
-    (p9 for p9 in ['/Users/cuishi/lab/ncwk/overlay/scripts/plan-html/jargon-check.py'] if os.path.exists(p9)), '')
+    (p9 for p9 in [str(_REPO / 'scripts/plan-html/jargon-check.py')] if os.path.exists(p9)), '')
 if _JC10:
     import subprocess as _sp10
     _tf10 = os.path.join(tempfile.gettempdir(), f'audit-visible-{RUN_ID}.txt')

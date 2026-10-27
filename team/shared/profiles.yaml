@@ -800,6 +800,9 @@ profiles:
       enabled: false
     env_extra:
       API_SERVER_ENABLED: 'false'
+      # 编码引擎默认走 Ycode 的 ACP 桥（zcode-acp-server）；acp-client 解析顺序
+      # 显式参数 > 本 env > config.default_provider，见 plugin _resolve_provider_name。
+      HERMES_ACP_PROVIDER: zcode
     environment_hint: ~/.hermes/profiles/worker-coder/SOUL.md
     kanban:
       default_assignee: worker-coder
