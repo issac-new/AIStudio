@@ -637,9 +637,9 @@ function reset(): void {
 .srch__more { margin: 0; padding: 7px 14px; font-size: 11px; color: var(--text-muted); }
 .srch__err { margin: 0; font-size: 12px; color: var(--ia-stale); }
 .srch__simbadge { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: .02em; }
-.srch__simbadge--sim { color: var(--ia-sim-on); background: var(--ia-sim); border: 1px solid rgba(255,255,255,.25); }
+.srch__simbadge--sim { color: var(--ia-sim-on, #fff); background: var(--ia-sim, #7c3aed); border: 1px solid rgba(255,255,255,.25); }
 .srch__group--sim { border-color: rgba(124, 58, 237, .45); }
-.srch__group--sim .srch__gh { color: var(--ia-sim-deep); }
+.srch__group--sim .srch__gh { color: var(--ia-sim-deep, #6d28d9); }
 .srch__runsempty { padding: 28px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
 .srch__runsempty p { margin: 0 0 10px; }
 .srch__goto { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--accent-primary); font-family: inherit; font-size: 12px; padding: 5px 14px; cursor: pointer; }
