@@ -25,7 +25,7 @@ function injectAt(upstreamRoot: string, cwd = ROOT): { code: number; out: string
 }
 
 describe('inject 缺目标树跳过（standalone cockpit 包形态）', () => {
-  it.skipIf(!existsSync(join(ROOT, 'vendor/hermes-studio/package.json')))(
+  it.skipIf(!existsSync(join(ROOT, '.git')) || !existsSync(join(ROOT, 'vendor/hermes-studio/package.json')))(
     '仅含 hermes-studio 的临时根：agent 补丁 SKIP 汇总、studio 补丁全应用、rc=0',
     () => {
       const tmp = mkdtempSync(join(tmpdir(), 'standalone-cockpit-'))

@@ -160,7 +160,11 @@ function healZcodePatches() {
   if (series.length === 0) return;
   let status;
   const zcCtx = treeGitCtx(zcodeRoot);
-  if (!zcCtx.relPrefix && !existsSync(resolve(zcodeRoot, '.git'))) {
+  const zcodeInRepo = (zcCtx.relPrefix && existsSync(resolve(zcCtx.gitCwd, '.git'))) || existsSync(resolve(zcodeRoot, '.git'));
+  // 无 git 上下文（源码包解包树=无 .git 且不在任何仓内）＝状态不可判：
+  // inject 已应用过的补丁在这里 status 恒 ''，重放必"patch does not apply"假红。
+  // 此形态跳过自愈（补丁是否在位由 inject 当时负责），不猜。
+  if (!zcodeInRepo) {
     console.warn('[ensure-injected] zcode 树不可读(非 git 仓且不在仓内 vendor/),跳过 zcode 补丁自愈。');
     return;
   }
