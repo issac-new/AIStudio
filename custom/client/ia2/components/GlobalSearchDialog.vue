@@ -27,6 +27,8 @@ interface ResultRow {
   icon: string
   action: string
   open: () => void
+  /** 推演来源行：渲染紫色徽章（跨实例标识，用户裁定） */
+  sim?: boolean
 }
 
 const route = useRoute()
@@ -230,6 +232,26 @@ const taskRowsResult = computed<ResultRow[]>(() => workspace.tasks
     open: () => void router.push({ name: 'ia2.board', query: { task: task.id } }),
   })))
 
+// SIM_STUDIO_URL（vite env 注入）配置时提供真跳转；缺席只提示不伪造深链
+const simStudioUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SIM_STUDIO_URL ?? ''
+const simSessionRowsResult = computed<ResultRow[]>(() => {
+  if (!workspace.searchSimAvailable || !q.value.trim()) return []
+  const needle = q.value.trim().toLowerCase()
+  return (workspace.searchSimSessions ?? [])
+    .filter((hit) => hit.displayName.toLowerCase().includes(needle) || hit.profile.toLowerCase().includes(needle) || hit.id.toLowerCase().includes(needle))
+    .map((hit) => ({
+      key: `sim:${hit.id}`,
+      title: hit.displayName || hit.id,
+      meta: [hit.profile, hit.chatType === 'group' ? (zh.value ? '群聊' : 'Group') : hit.chatType === 'dm' ? (zh.value ? '单聊' : 'DM') : hit.chatType, hit.id].join(' · '),
+      icon: '◎',
+      action: simStudioUrl ? (zh.value ? '推演实例' : 'Sim') : (zh.value ? '在推演实例中查看' : 'View in sim'),
+      sim: true,
+      open: () => {
+        if (simStudioUrl) window.open(simStudioUrl, '_blank', 'noopener')
+      },
+    }))
+})
+
 const runRowsResult = computed<ResultRow[]>(() => (runsStore.sortedRuns ?? [])
   .filter((run) => {
     const ts = run.lastActivityAt ? new Date(run.lastActivityAt).getTime() : run.updatedAt ? new Date(run.updatedAt).getTime() : null
@@ -329,7 +351,7 @@ const commandRowsResult = computed<ResultRow[]>(() => {
 })
 
 const GROUPS: ReadonlyArray<{ key: GroupKey; label: string; rows: () => ResultRow[] }> = [
-  { key: 'sessions', label: zh.value ? '会话与房间' : 'Chats & rooms', rows: () => sessionRowsResult.value },
+  { key: 'sessions', label: zh.value ? '会话与房间' : 'Chats & rooms', rows: () => [...sessionRowsResult.value, ...simSessionRowsResult.value] },
   { key: 'tasks', label: zh.value ? '看板任务' : 'Tasks', rows: () => taskRowsResult.value },
   { key: 'runs', label: zh.value ? '运行' : 'Runs', rows: () => runRowsResult.value },
   { key: 'docs', label: zh.value ? '治理文档' : 'Documents', rows: () => docRowsResult.value },
@@ -358,6 +380,8 @@ const keyboardRows = computed<ResultRow[]>(() => [
 ])
 const activeIndex = ref(0)
 watch([q, type, boardFilter, statusFilter, assigneeFilter, timeFilter], () => { activeIndex.value = 0 })
+// 跨实例推演会话：随检索词装载（服务端 60s 缓存挡连续击键）
+watch(q, (needle) => { void workspace.loadSimSessions?.(needle) }, { immediate: true })
 watch(() => keyboardRows.value.length, count => {
   if (activeIndex.value >= count) activeIndex.value = 0
 })
@@ -519,6 +543,24 @@ function reset(): void {
           </button>
         </section>
 
+        <section v-if="simSessionRowsResult.length && (type === 'all' || type === 'sessions')" class="srch__group srch__group--sim" data-testid="search-group-sim-sessions">
+          <h2 class="srch__gh">{{ zh ? '推演会话' : 'Simulation sessions' }}<span class="srch__gn">{{ simSessionRowsResult.length }}</span></h2>
+          <button
+            v-for="row in simSessionRowsResult.slice(0, 10)"
+            :key="row.key"
+            type="button"
+            class="srch__row"
+            :data-testid="`search-row-${row.key}`"
+            @click="row.open()"
+          >
+            <span class="srch__ico2" aria-hidden="true">{{ row.icon }}</span>
+            <span class="srch__body2"><strong class="srch__rt">{{ row.title }}</strong><span class="srch__rm">{{ row.meta }}</span></span>
+            <span class="srch__simbadge srch__simbadge--sim" data-testid="sim-badge">{{ zh ? '推演' : 'SIM' }}</span>
+            <span class="srch__go">{{ row.action }}</span>
+          </button>
+          <p v-if="simSessionRowsResult.length > 10" class="srch__more">{{ zh ? '仅显示前 10 条推演会话，输入更精确关键词收敛。' : 'Showing first 10 sim sessions.' }}</p>
+        </section>
+
         <section v-for="group in visibleGroups" :key="group.key" class="srch__group" :data-testid="`search-group-${group.key}`">
           <h2 class="srch__gh">{{ group.label }}<span class="srch__gn">{{ group.rows.length }}</span></h2>
           <button
@@ -594,6 +636,10 @@ function reset(): void {
 .srch__go { font-size: 12px; color: var(--accent-primary); white-space: nowrap; }
 .srch__more { margin: 0; padding: 7px 14px; font-size: 11px; color: var(--text-muted); }
 .srch__err { margin: 0; font-size: 12px; color: var(--ia-stale); }
+.srch__simbadge { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: .02em; }
+.srch__simbadge--sim { color: var(--ia-sim-on); background: var(--ia-sim); border: 1px solid rgba(255,255,255,.25); }
+.srch__group--sim { border-color: rgba(124, 58, 237, .45); }
+.srch__group--sim .srch__gh { color: var(--ia-sim-deep); }
 .srch__runsempty { padding: 28px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
 .srch__runsempty p { margin: 0 0 10px; }
 .srch__goto { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--accent-primary); font-family: inherit; font-size: 12px; padding: 5px 14px; cursor: pointer; }

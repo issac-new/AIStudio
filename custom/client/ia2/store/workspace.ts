@@ -336,6 +336,33 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     }
   }
 
+  // 跨实例推演会话检索（2026-10-27 立项）：只读查 SIM 各 profile state.db；
+  // available:false 时弹窗不显示推演组。lastQuery 守卫防慢响应回填旧词。
+  const searchSimSessions = ref<Array<{ id: string; profile: string; chatType: string; displayName: string }>>([])
+  const searchSimAvailable = ref(false)
+  const searchSimQuery = ref('')
+  async function loadSimSessions(q: string): Promise<void> {
+    const needle = q.trim()
+    if (!needle) {
+      searchSimSessions.value = []
+      searchSimAvailable.value = false
+      searchSimQuery.value = ''
+      return
+    }
+    searchSimQuery.value = needle
+    try {
+      const { fetchObserverSessions } = await import('../api/sim-observer-sessions')
+      const res = await fetchObserverSessions(needle)
+      if (searchSimQuery.value !== needle) return
+      searchSimAvailable.value = res.available
+      searchSimSessions.value = res.available ? (res.results ?? []) : []
+    } catch {
+      if (searchSimQuery.value !== needle) return
+      searchSimAvailable.value = false
+      searchSimSessions.value = []
+    }
+  }
+
   // 人员主源=治理仓 roster（账号权威清单；团队房间注册表在无团队房间环境恒空）。
   // 失败时置空并视为已装载：人员回落注册表账号，不重试风暴、不猜数。
   const searchPeopleRows = ref<string[][]>([])
@@ -488,6 +515,7 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     searchOpen, openSearch, closeSearch,
     searchDocs, searchDocsLoaded, searchDocsFailed, loadSearchDocs,
     searchPeopleRows, searchPeopleLoaded, loadSearchPeople,
+    searchSimSessions, searchSimAvailable, searchSimQuery, loadSimSessions,
     scheduleEvents, scheduleEventsForSelectedSorted, scheduleCountsByDate, scheduleTopPriorityByDate,
     // ④ WS 生命周期
     initFleetStream, stopFleetStream, watchKanbanTasks, unwatchKanbanTasks,
