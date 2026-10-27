@@ -18,7 +18,11 @@ const rows = vi.hoisted(() => ({
   ],
   tasks: [
     { id: 't1', title: '收银台 BFF 重构', priority: 'P1', status: 'running', assignee: '陈', workspace: '/lab/pay', tenant: null, boardSlug: 'pay', createdAt: Date.now(), sessionId: '!a:matrix' },
-    { id: 't2', title: '退款对账', priority: 'P0', status: 'blocked', assignee: '林', workspace: '/lab/refund', tenant: null, boardSlug: 'pay', createdAt: Date.now(), sessionId: null },
+    { id: 't2', title: '退款对账', priority: 'P0', status: 'blocked', assignee: '林', workspace: '/lab/refund', tenant: null, boardSlug: 'refund', createdAt: Date.now(), sessionId: null },
+  ],
+  boards: [
+    { slug: 'pay', name: '支付看板', total: 1, source: 'daily' },
+    { slug: 'refund', name: '退款看板', total: 1, source: 'daily' },
   ],
   runs: [
     { runId: 'run21', status: 'running', stage: 'develop', iteration: 3, lastActivityAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
@@ -28,6 +32,19 @@ const rows = vi.hoisted(() => ({
   ],
 }))
 const govApi = vi.hoisted(() => ({ fetchGovernanceOverview: vi.fn(async () => ({ ok: true, docs: rows.docs })) }))
+const registryApi = vi.hoisted(() => ({
+  fetchRegistry: vi.fn(async () => ({
+    markdown: [
+      '# roster',
+      '',
+      '| 账号 | AI 助理账号 | 角色 |',
+      '| --- | --- | --- |',
+      '| @fanfan:matrix | @fanfan-agent:matrix | 产品经理 |',
+      '| @alice:matrix | @alice-agent:matrix | 研发 |',
+    ].join('\n'),
+    commit: 'abc123',
+  })),
+}))
 const matrixRoom = vi.hoisted(() => ({ selectRoom: vi.fn() }))
 const sessionSearch = vi.hoisted(() => ({ openSessionSearch: vi.fn() }))
 
@@ -36,16 +53,21 @@ vi.mock('../composables/useSessionRows', () => ({
 }))
 vi.mock('../store/workspace', async () => {
   const { reactive } = await import('vue')
+  const { parseFirstTable, setCellAlign } = await import('@/custom/governance/utils/registry-md')
   const state = reactive({
     tasks: rows.tasks,
     rawTasks: [],
+    boards: rows.boards,
     searchOpen: true,
     searchDocs: [] as Array<Record<string, unknown>>,
     searchDocsLoaded: false,
     searchDocsFailed: false,
+    searchPeopleRows: [] as string[][],
+    searchPeopleLoaded: false,
     openSearch: vi.fn(),
     closeSearch: vi.fn(),
     loadSearchDocs: vi.fn(),
+    loadSearchPeople: vi.fn(),
   })
   state.openSearch.mockImplementation(() => { state.searchOpen = true })
   state.closeSearch.mockImplementation(() => { state.searchOpen = false })
@@ -58,6 +80,13 @@ vi.mock('../store/workspace', async () => {
     } catch {
       state.searchDocsFailed = true
     }
+  })
+  state.loadSearchPeople.mockImplementation(async () => {
+    if (state.searchPeopleLoaded) return
+    const doc = await registryApi.fetchRegistry('roster')
+    const { table } = parseFirstTable(doc.markdown)
+    state.searchPeopleRows = setCellAlign(table.rows, 3)
+    state.searchPeopleLoaded = true
   })
   return { useWorkspaceStore: () => state }
 })
@@ -77,6 +106,7 @@ vi.mock('@/custom/loop/runcenter/store/runs', () => ({
   useRunCenterStore: () => ({ sortedRuns: rows.runs }),
 }))
 vi.mock('@/custom/governance/api/governance', () => govApi)
+vi.mock('@/custom/governance/api/adminRegistry', () => registryApi)
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
   useMatrixRoomStore: () => matrixRoom,
 }))
@@ -133,19 +163,21 @@ beforeEach(() => {
   workspace.searchDocs = []
   workspace.searchDocsLoaded = false
   workspace.searchDocsFailed = false
+  workspace.searchPeopleRows = []
+  workspace.searchPeopleLoaded = false
   cockpit.searchQuery = ''
   cockpit._sessionSearching = false
   govApi.fetchGovernanceOverview.mockResolvedValue({ ok: true, docs: rows.docs })
 })
 
 describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
-  it('默认显示五类对象，计数为 7', async () => {
+  it('默认显示五类对象，人员合并 roster 后计数为 8', async () => {
     const { w } = await mountSearch()
     expect(w.find('[data-testid="global-search-dialog"]').exists()).toBe(true)
     for (const key of ['sessions', 'tasks', 'runs', 'docs', 'people']) {
       expect(w.find(`[data-testid="search-group-${key}"]`).exists(), key).toBe(true)
     }
-    expect(w.find('[data-testid="search-count"]').text()).toBe('7')
+    expect(w.find('[data-testid="search-count"]').text()).toBe('8')
     w.unmount()
   })
 
@@ -173,14 +205,23 @@ describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
     w.unmount()
   })
 
-  it('工作区同时过滤任务和挂接会话', async () => {
+  it('看板筛选作用于任务与挂接会话，文档人员不受板筛选清零', async () => {
     const { w } = await mountSearch()
-    await w.find('[data-testid="search-filter-workspace"]').setValue('/lab/pay')
+    await w.find('[data-testid="search-filter-board"]').setValue('pay')
     await flushPromises()
     expect(w.find('[data-testid="search-row-t:t1"]').exists()).toBe(true)
     expect(w.find('[data-testid="search-row-t:t2"]').exists()).toBe(false)
     expect(w.find('[data-testid="search-row-s:room:!a:matrix"]').exists()).toBe(true)
     expect(w.find('[data-testid="search-row-s:chat:c1"]').exists()).toBe(false)
+    // 板不属于文档/人员的归属维度——不被清零
+    expect(w.find('[data-testid="search-row-d:rfd"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('板筛选深链恢复（board=refund）', async () => {
+    const { w } = await mountSearch('/app?search=1&board=refund')
+    expect(w.find('[data-testid="search-row-t:t2"]').exists()).toBe(true)
+    expect(w.find('[data-testid="search-row-t:t1"]').exists()).toBe(false)
     w.unmount()
   })
 
@@ -228,6 +269,27 @@ describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
     await w.find('[data-testid="search-input"]').trigger('keydown', { key: 'Escape' })
     await flushPromises()
     expect(workspace.searchOpen).toBe(false)
+    w.unmount()
+  })
+
+  it('人员源为 roster 与团队注册表合并去重', async () => {
+    const { w } = await mountSearch('/app?search=1&type=people')
+    // roster 两行（fanfan/alice）与团队注册表 alice 去重 → 2 行
+    expect(w.find('[data-testid="search-row-p:@fanfan:matrix"]').exists()).toBe(true)
+    expect(w.findAll('[data-testid^="search-row-p:"]').length).toBe(2)
+    w.unmount()
+  })
+
+  it('运行空态给出去向且 0 徽标在选中时呈现', async () => {
+    rows.runs.length = 0
+    const { w, router, workspace } = await mountSearch('/app?search=1&type=runs')
+    expect(w.find('[data-testid="search-count-runs"]').text()).toBe('0')
+    expect(w.text()).toContain('全流程推演')
+    await w.find('[data-testid="search-runs-goto-sim"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.sim')
+    expect(workspace.searchOpen).toBe(false)
+    rows.runs.push({ runId: 'run21', status: 'running', stage: 'develop', iteration: 3, lastActivityAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
     w.unmount()
   })
 
