@@ -30,6 +30,9 @@ source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 # V8.45：评测接线（评测运行/红队/三角/覆盖/锚点/线上证据 → G4 子门）
 source "$SCRIPT_DIR/mux/mx-eval-lib.sh"
+# 融合批二：治理服务客户端——判词/G1/UAT 判读/熔断经产品 lifecycle 端点（判据单源，
+# 语义正本=custom/server/governance/lifecycle；本驱动不再持有第二套判读实现）
+source "$SCRIPT_DIR/mux/governance-client.sh"
 # N4（run15 复盘，V8.17）：静默 rc=1 断根诊断——ERR trap。
 # set -e 下未受 if/||/&& 保护的失败命令先触发本 trap 再退出（受保护上下文不触发，
 # 与 set -e 判定同源；-E 令 trap 穿透函数体）。崩溃点从「日志尾部无 FAIL 行」变为
@@ -1989,14 +1992,25 @@ if [ "$(posture)" = "strict" ]; then
       echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-proxy $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
     fi
     # V8.46 发布门台账（append-only）：产品端点 POST /api/hermes/sim/release-gate。
-    # 与 approved.events 并行留痕——前者可被产品 UI/报告按 run 直读，后者是驱动侧文本账。
-    # 写失败只记录不阻断（台账是证据增强，不改 G5 判据；报告证据九如实呈现缺席）。
+    # 融合批二修真实断点：原 decision=approve 无锚必 400（release-state approve 必填
+    # anchor），失败被「只记问题单」吞掉=台账从未真实落过。改 canonical 链
+    # submit→approve(锚=HumanGate 批准行 approved.events#humangate:<card>)，幂等
+    # 重放按状态机语义（已 pending 的 submit=幂等 200；已 approved 的 approve=幂等）。
     _rel_tok=$(studio_login 2>/dev/null || true)
-    if [[ -n "$_rel_tok" ]] && studio POST /api/hermes/sim/release-gate "$_rel_tok" \
-         "$(jq -n --arg r "$RUN_ID" --arg n "G5 发布准出七项过（评审卡 ${RGID}；HumanGate=$(posture) 姿态：strict=真人批准/standard=director-proxy 代批）" '{run:$r,decision:"approve",note:$n}')" >/dev/null 2>&1; then
-      note "[G5] 发布门台账已落（evidence/release-gate.jsonl：approve）"
+    if [[ -n "$_rel_tok" ]]; then
+      studio POST /api/hermes/sim/release-gate "$_rel_tok" \
+        "$(jq -n --arg r "$RUN_ID" '{run:$r,action:"submit"}')" >/dev/null 2>&1 \
+        || note "[G5] 发布门 submit 非首提（幂等/已过 pending，状态机语义内）"
+      if studio POST /api/hermes/sim/release-gate "$_rel_tok" \
+           "$(jq -n --arg r "$RUN_ID" --arg a "approved.events#humangate:${RGID}" \
+             --arg n "G5 发布准出七项过（评审卡 ${RGID}；HumanGate=$(posture) 姿态：strict=真人批准/standard=director-proxy 代批）" \
+             '{run:$r,action:"approve",anchor:$a,note:$n}')" >/dev/null 2>&1; then
+        note "[G5] 发布门台账已落（evidence/release-gate.jsonl：submit→approve，锚=approved.events#humangate:${RGID}）"
+      else
+        issue_once release-gate-ledger step20 "发布门台账写入失败（POST /api/hermes/sim/release-gate approve 带锚）——报告证据九按缺席呈现"
+      fi
     else
-      issue_once release-gate-ledger step20 "发布门台账写入失败（POST /api/hermes/sim/release-gate）——报告证据九按缺席呈现"
+      issue_once release-gate-ledger step20 "发布门台账写入失败（studio token 不可得）——报告证据九按缺席呈现"
     fi
     # §4.4-4 QGate 证据接线（v1.31.1 条款：来源分布随行，禁手抄全绿）：G5 过闸即对
     # 中央仓跑 release-report，原文落 evidence。门未绑执行器=INCONCLUSIVE 全列（无信号桶），
@@ -2262,6 +2276,15 @@ if step_reached release && [[ -z "$(sget release_done)" ]]; then
     note "[fanfan] 发布记录 $k → 卡 $ID"
   done
   gate_review fanfan "G5-发布闸"
+  # 融合批二：发布动作入台账（approved→released，G5 approve 的下游闭环；锚=REL 三卡）。
+  # G5 未真实 approve 时此处 409=如实缺口（不装绿）；幂等重放按状态机语义 200。
+  _rel_tok=$(studio_login 2>/dev/null || true)
+  if [[ -n "$_rel_tok" ]] && studio POST /api/hermes/sim/release-gate "$_rel_tok" \
+       "$(jq -n --arg r "$RUN_ID" --arg a "cards=REL-MERGE,REL-TAG,REL-DELIVER" '{run:$r,action:"release",anchor:$a}')" >/dev/null 2>&1; then
+    note "[release] 发布门 release 已落（evidence/release-gate.jsonl：approved→released）"
+  else
+    issue_once release-gate-release step21 "发布动作台账写入失败（action=release；G5 未真实 approve 时为 409 如实缺口）"
+  fi
   sset release_done 1
   capture_step "release_done" "/app/stage/accept?tab=g5"   # 步20 承载面
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 20 --text "G5 过闸+REL 三卡记录" --ev "cards=REL-MERGE,REL-TAG,REL-DELIVER" >/dev/null 2>&1 || true
@@ -2338,15 +2361,18 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       UAT_VERDICTS="${UAT_VERDICTS}${ac}=${v} "
       [[ "$v" == "通过" ]] || UAT_ALL_PASS=0
       # V8.46 UAT 判定台账（append-only）：产品端点 POST /api/hermes/sim/uat-verdict。
-      # 三态映射=通过→pass／有条件通过→conditional／不通过|未见→reject；写失败记录不阻断。
+      # 三态映射=通过→pass／有条件通过→conditional（pending:true，机器评估未经真人
+      # 认可，融合批二 D9：导演不得自动补 acknowledged）／不通过|未见→reject；
+      # 写失败记录不阻断。真实认可事件落地后由收口段补 acknowledged:true。
       if [[ -n "$_uat_tok" ]]; then
         case "$v" in
-          通过) _uv=pass ;;
-          有条件通过) _uv=conditional ;;
-          *) _uv=reject ;;
+          通过) _uv=pass; _pend=0 ;;
+          有条件通过) _uv=conditional; _pend=1 ;;
+          *) _uv=reject; _pend=0 ;;
         esac
         studio POST /api/hermes/sim/uat-verdict "$_uat_tok" \
-          "$(jq -n --arg r "$RUN_ID" --arg ac "$ac" --arg v "$_uv" --arg n "UAT 逐条判词：${v}" '{run:$r,ac:$ac,verdict:$v,note:$n}')" >/dev/null 2>&1 \
+          "$(jq -n --arg r "$RUN_ID" --arg ac "$ac" --arg v "$_uv" --arg n "UAT 逐条判词：${v}" --argjson p "$_pend" \
+            '{run:$r,ac:$ac,verdict:$v,note:$n,pending:($p==1)}')" >/dev/null 2>&1 \
           || issue_once uat-verdict-ledger step21 "UAT 判定台账写入失败（${ac} → ${_uv}；POST /api/hermes/sim/uat-verdict）"
       fi
     done
@@ -2394,7 +2420,35 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
       note "[UAT] ${RFD_ID} 业务验收通过（AC=$(echo "$AC_LIST" | wc -w | tr -d ' ') 条全过）"
     else
       sset_once uat_conditional "$(date +%s)"
-      echo "uat:${RFD_ID} UAT-COND-APPROVED bella-human $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+      # 融合批二（D9 认可语义收紧）：conditional 的真人认可不代演——
+      #   strict：等真实认可事件（approved.events 的 uat:<RFD> UAT-COND-APPROVED 行，
+      #           真人写入），落地后把条件 AC 判定补 acknowledged:true（note 引事件）；
+      #           超时=条件 AC 保持 pending 并记问题单（不装绿）。
+      #   standard/demo：驱动代发认可事件如实标 director-proxy（净额口径扣除）；
+      #           条件 AC 判定保持 pending（未经真人认可，治理聚合分列 pendingAck）。
+      if [ "$(posture)" = "strict" ]; then
+        _uag_log="${APPROVED_LOG:-$EVID_DIR/approved.events}"
+        uat_cond_decided() { grep -q "uat:${RFD_ID} UAT-COND-APPROVED" "$_uag_log" 2>/dev/null; }
+        if wait_truth "UAT 条件验收真实认可（bella，approved.events 可反查）" "${MX_UAT_COND_WAIT:-900}" uat_cond_decided; then
+          _uat_tok2=$(studio_login 2>/dev/null || true)
+          if [[ -n "$_uat_tok2" ]]; then
+            for ac in $AC_LIST; do
+              if [[ "$(uat_ac_verdict "$UAT_BODY" "$ac")" == "有条件通过" ]]; then
+                studio POST /api/hermes/sim/uat-verdict "$_uat_tok2" \
+                  "$(jq -n --arg r "$RUN_ID" --arg ac "$ac" \
+                    --arg n "条件验收经真实认可（approved.events UAT-COND-APPROVED 可反查）" \
+                    '{run:$r,ac:$ac,verdict:"conditional",note:$n,acknowledged:true}')" >/dev/null 2>&1 || true
+              fi
+            done
+            note "[UAT] strict：真实认可在案——条件 AC 判定补 acknowledged（台账可反查）"
+          fi
+        else
+          echo "ISSUE|uat-cond-timeout|${RFD_ID}|strict 姿态 ${MX_UAT_COND_WAIT:-900}s 内无真实认可事件——条件 AC 判定保持 pending（不代认可）" >> "$EVID_DIR/issues.log"
+        fi
+      else
+        echo "ISSUE|uat-cond-proxy|${RFD_ID}|standard 姿态由驱动代发认可事件（director-proxy）——净额口径扣除；条件 AC 判定保持 pending（未经真人认可）" >> "$EVID_DIR/issues.log"
+        echo "uat:${RFD_ID} UAT-COND-APPROVED director-proxy $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+      fi
       note "[UAT] ${RFD_ID} 验收有条件（${UAT_VERDICTS}）——放行权归 bella，落 uat_conditional（uat_done 不落）"
     fi
     capture_step "uat_done" "/app/stage/accept?tab=trace"   # 步21 承载面

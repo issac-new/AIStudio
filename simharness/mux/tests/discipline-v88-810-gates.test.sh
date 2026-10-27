@@ -104,7 +104,10 @@ ck "收口 安全评审 fail-closed 不放行" aipay-scenario.sh '涉敏轮安�
 ck "收口 G3 硬校验在 testpass" aipay-scenario.sh 'gate_blocked g3_code_pass testpass'
 ck "收口 UAT 有条件通过落 uat_conditional" aipay-scenario.sh 'sset_once uat_conditional'
 ck "收口 UAT 有条件通过不落 uat_done" aipay-scenario.sh '放行权归 bella，落 uat_conditional（uat_done 不落）'
-ck "收口 UAT bella 批准事件留痕" aipay-scenario.sh 'UAT-COND-APPROVED bella-human'
+# 融合批二（D9 认可语义收紧）：bella 批准事件仍必留痕——strict 等真人写入、
+# standard 驱动代发但 actor 如实标 director-proxy（不再冒名 bella-human）。
+ck "收口 UAT 批准事件留痕" aipay-scenario.sh 'UAT-COND-APPROVED'
+ck "收口 代发认可如实标 director-proxy" aipay-scenario.sh 'UAT-COND-APPROVED director-proxy'
 ck "收口 复盘门 uat_done/uat_conditional 双键" aipay-scenario.sh '硬闸 uat_done/uat_conditional 未过'
 ck "收口 G6 闸键统一 retro_done" aipay-scenario.sh 'sset_once retro_done'
 

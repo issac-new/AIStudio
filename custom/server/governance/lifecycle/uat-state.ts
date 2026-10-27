@@ -1,10 +1,15 @@
 /**
- * overlay/custom/server/simcenter/uat-state.ts
- * UAT 逐 AC 判定最小状态机（spec 2026-10-21-g5-uat-state-machine §2）：
+ * overlay/custom/server/governance/lifecycle/uat-state.ts
+ * UAT 逐 AC 判定最小状态机（spec 2026-10-21-g5-uat-state-machine §2；
+ * 融合批二自 simcenter 上移治理域，simcenter 留兼容再导出）：
  *
  *   pending --pass--> pass
- *   pending --conditional（必填 note + 显式 acknowledged）--> conditional
+ *   pending --conditional（必填 note + acknowledged|pending 二选一）--> conditional
  *   pending --reject（必填 note）--> reject（阻断该 AC）
+ *
+ * conditional 认可语义（融合批二 D9）：机器评估写 pending:true（未经真人认可，
+ * 聚合分列 pendingAck）；真人认可事件落地后另写 acknowledged:true 记录——两者
+ * 互斥，导演不得为过校验自动补 acknowledged。
  *
  * 允许改判：append-only 台账，最新记录胜出，历史全量可查；没有 409 迁移限制。
  * 读模型按 AC 聚合：latest + history + blocked。非法 verdict/ac 由校验层 400。
@@ -26,6 +31,8 @@ export interface UatVerdictRecord {
   note?: string
   /** conditional 的显式认可事件标记（写入时必填 true） */
   acknowledged?: boolean
+  /** conditional 的机器评估标记（D9：未经真人认可；与 acknowledged 互斥） */
+  pending?: boolean
 }
 
 export interface UatAcAggregate {
@@ -35,11 +42,13 @@ export interface UatAcAggregate {
   history: UatVerdictRecord[]
   /** 最新判定为 reject：阻断该 AC（不参与通过统计） */
   blocked: boolean
+  /** conditional 且最新记录为 pending（未经真人认可）——如实分列不冒充已认可 */
+  pendingAck: boolean
 }
 
 export interface UatAggregate {
   byAc: UatAcAggregate[]
-  summary: { acCount: number; pass: number; conditional: number; reject: number; blocked: number }
+  summary: { acCount: number; pass: number; conditional: number; reject: number; blocked: number; pendingAck: number }
 }
 
 export interface UatVerdictFields {
@@ -47,6 +56,7 @@ export interface UatVerdictFields {
   verdict: UatVerdictKey
   note?: string
   acknowledged?: boolean
+  pending?: boolean
 }
 
 /** AC 编号归一（纯函数）：接受 "3"/"AC-3"/"ac 3"，输出 AC-N；其他 null。 */
@@ -59,12 +69,12 @@ export function normalizeUatAc(raw: unknown): string | null {
 /**
  * 判定字段校验（纯函数；run 由控制器统一校验）：
  * - verdict ∈ pass|conditional|reject
- * - conditional：note 必填 + acknowledged=true（显式认可事件）
+ * - conditional：note 必填 + acknowledged:true（真人认可）或 pending:true（机器评估）二选一
  * - reject：note 必填（理由）
- * - note ≤200
+ * - note ≤200；acknowledged 与 pending 互斥（同时给=口径不清拒绝）
  */
 export function validateUatVerdictFields(body: unknown):
-  { ok: true; ac: string; verdict: UatVerdictKey; note?: string; acknowledged?: boolean } | { ok: false; error: string } {
+  { ok: true; ac: string; verdict: UatVerdictKey; note?: string; acknowledged?: boolean; pending?: boolean } | { ok: false; error: string } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return { ok: false, error: '请求体须为对象' }
   }
@@ -78,11 +88,15 @@ export function validateUatVerdictFields(body: unknown):
   const note = typeof b.note === 'string' ? b.note.trim() : ''
   if (note.length > 200) return { ok: false, error: 'note 超长（≤200 字符）' }
   const acknowledged = b.acknowledged === true || b.ack === true
+  const pending = b.pending === true
   if (verdict === 'conditional' && !note) {
     return { ok: false, error: '有条件通过必须填写说明（note 必填）' }
   }
-  if (verdict === 'conditional' && !acknowledged) {
-    return { ok: false, error: '有条件通过需显式认可（acknowledged:true）' }
+  if (verdict === 'conditional' && !acknowledged && !pending) {
+    return { ok: false, error: '有条件通过需二选一：acknowledged:true（真人认可）或 pending:true（机器评估待认可）' }
+  }
+  if (acknowledged && pending) {
+    return { ok: false, error: 'acknowledged 与 pending 互斥（真人认可与机器评估不得同时声明）' }
   }
   if (verdict === 'reject' && !note) {
     return { ok: false, error: '不通过必须填写理由（note 必填）' }
@@ -93,6 +107,7 @@ export function validateUatVerdictFields(body: unknown):
     verdict,
     ...(note ? { note } : {}),
     ...(acknowledged ? { acknowledged: true } : {}),
+    ...(pending ? { pending: true } : {}),
   }
 }
 
@@ -119,6 +134,7 @@ export function aggregateUatByAc(records: UatVerdictRecord[]): UatAggregate {
       latest,
       history,
       blocked: latest?.verdict === 'reject',
+      pendingAck: latest?.verdict === 'conditional' && latest.pending === true && latest.acknowledged !== true,
     }
   }).sort((a, b) => Number(a.ac.replace(/^AC-/i, '')) - Number(b.ac.replace(/^AC-/i, '')))
   const count = (key: UatVerdictKey) => byAc.filter(a => a.state === key).length
@@ -130,6 +146,7 @@ export function aggregateUatByAc(records: UatVerdictRecord[]): UatAggregate {
       conditional: count('conditional'),
       reject: count('reject'),
       blocked: byAc.filter(a => a.blocked).length,
+      pendingAck: byAc.filter(a => a.pendingAck).length,
     },
   }
 }

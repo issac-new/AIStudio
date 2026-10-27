@@ -32,8 +32,10 @@ function acceptanceSection(doc: string): string {
 export function judgeRequirementFreeze(doc: string): RequirementJudgeResult {
   const missing: string[] = []
   const section = acceptanceSection(doc)
-  if (!/^## .*验收标准/m.test(doc) || !/AC-\d/.test(doc)) {
-    missing.push('验收标准段缺失或无 AC 编号')
+  const acCount = section.split('\n').filter((l) => AC_ITEM_RE.test(l)).length
+  // 方案 §5.3 G1：逐条 AC ≥3（禁空话）。只认 AC 条目行，不扫规则说明行。
+  if (acCount < 3) {
+    missing.push(`验收标准段缺失或 AC 少于 3 条（实测 ${acCount}）`)
   }
   const acItems = section.split('\n').filter((l) => AC_ITEM_RE.test(l))
   if (acItems.some((l) => FUZZY_RE.test(l))) {

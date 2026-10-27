@@ -665,15 +665,20 @@ router.get('/trace', (ctx: Context) => {
 export { UAT_VERDICT_LABEL }
 export type { UatVerdictKey, UatVerdictRecord }
 
-/** UAT 判定入参强校验（纯函数）：run 校验 + uat-state 字段校验（conditional 需 note+ack；reject 需 note）。 */
+/** UAT 判定入参强校验（纯函数）：run 校验 + uat-state 字段校验（conditional 需 note + acknowledged|pending 二选一；reject 需 note）。 */
 export function validateUatVerdict(body: unknown):
-  { ok: true; run: string; ac: string; verdict: UatVerdictKey; note?: string; acknowledged?: boolean } | { ok: false; error: string } {
+  { ok: true; run: string; ac: string; verdict: UatVerdictKey; note?: string; acknowledged?: boolean; pending?: boolean } | { ok: false; error: string } {
   const b = body as { run?: unknown } | undefined
   const run = typeof b?.run === 'string' ? b.run : ''
   if (!isValidRun(run)) return { ok: false, error: 'run 参数非法' }
   const fields = validateUatVerdictFields(body)
   if (!fields.ok) return fields
-  return { ok: true, run, ac: fields.ac, verdict: fields.verdict, ...(fields.note ? { note: fields.note } : {}), ...(fields.acknowledged ? { acknowledged: true } : {}) }
+  return {
+    ok: true, run, ac: fields.ac, verdict: fields.verdict,
+    ...(fields.note ? { note: fields.note } : {}),
+    ...(fields.acknowledged ? { acknowledged: true } : {}),
+    ...(fields.pending ? { pending: true } : {}),
+  }
 }
 
 /** 台账落位（穿越防护同 evidence/mark）：runs/<run>/evidence/uat-verdicts.jsonl。 */
@@ -782,6 +787,7 @@ router.post('/uat-verdict', (ctx: Context) => {
     verdict: v.verdict,
     ...(v.note ? { note: v.note } : {}),
     ...(v.acknowledged ? { acknowledged: true } : {}),
+    ...(v.pending ? { pending: true } : {}),
   }
   appendFileSync(file, `${JSON.stringify(rec)}\n`, 'utf-8')
   ctx.body = { ok: true, record: rec, anchor: `evidence/uat-verdicts.jsonl#${v.ac}` }

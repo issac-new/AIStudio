@@ -1,6 +1,7 @@
 // G1 需求四要素判读守门（融合批一）：语义正本自 simharness reqgate_judge
-// （mx-scenario-lib.sh:2160）逐字移植。模糊词只扫 AC 条目行（行首 "- **AC-N"），
-// 不扫段落说明行——规则说明行自身引用模糊词示例，扫全段必自指误报（v3 实测 bug）。
+// （mx-scenario-lib.sh:2160，origin/main 版含 AC≥3 口径）逐字移植。模糊词只扫
+// AC 条目行（行首 "- **AC-N"），不扫段落说明行——规则说明行自身引用模糊词示例，
+// 扫全段必自指误报（v3 实测 bug）。
 import { describe, expect, it } from 'vitest'
 import { judgeRequirementFreeze } from '../lifecycle/requirements'
 
@@ -8,6 +9,7 @@ const DOC_OK = `# RFD-001 需求书
 ## 一、验收标准
 - **AC-1** 下单幂等：同一订单号重复提交只产生一笔支付单（可机械化判定）
 - **AC-2** 状态机全转移覆盖
+- **AC-3** 金额分 int64
 ## 二、Scope-Out
 - 不做多需求并行
 ## 三、影响面
@@ -27,20 +29,26 @@ const DOC_NO_AC_SECTION = `# RFD-001
 涉敏
 `
 
+const DOC_TWO_AC = DOC_OK.replace('- **AC-3** 金额分 int64\n', '')
+
 const DOC_FUZZY = DOC_OK.replace(
   '- **AC-2** 状态机全转移覆盖',
   '- **AC-2** 界面性能良好、体验优秀',
 )
 
 describe('judgeRequirementFreeze（G1 四要素）', () => {
-  it('四要素齐 → ok', () => {
+  it('AC≥3 且四要素齐 → ok', () => {
     expect(judgeRequirementFreeze(DOC_OK)).toEqual({ ok: true, missing: [] })
   })
 
-  it('缺验收标准段或无 AC 编号 → 对应缺失项', () => {
+  it('AC<3 → 缺失项带实测条数（方案 §5.3 逐条 AC ≥3）', () => {
+    expect(judgeRequirementFreeze(DOC_TWO_AC)).toEqual({
+      ok: false,
+      missing: ['验收标准段缺失或 AC 少于 3 条（实测 2）'],
+    })
     expect(judgeRequirementFreeze(DOC_NO_AC_SECTION)).toEqual({
       ok: false,
-      missing: ['验收标准段缺失或无 AC 编号'],
+      missing: ['验收标准段缺失或 AC 少于 3 条（实测 0）'],
     })
   })
 
@@ -58,7 +66,7 @@ describe('judgeRequirementFreeze（G1 四要素）', () => {
   it('各缺失项并列返回', () => {
     const r = judgeRequirementFreeze('# 只有标题\n正文无节')
     expect(r.missing).toEqual([
-      '验收标准段缺失或无 AC 编号',
+      '验收标准段缺失或 AC 少于 3 条（实测 0）',
       'Scope-Out 缺失',
       '影响面缺失',
       '涉敏判定缺失',
