@@ -806,7 +806,11 @@ mx_apply_agent_patches() {
            || grep -rql --include='*.py' --exclude-dir=venv --exclude-dir=site-packages "$_m" "$HERMES_ROOT/installs/" 2>/dev/null; then
           _found=1; _marker="$_m"; break
         fi
-      done < <(grep -oE '^\+[[:space:]]*(def|class) [A-Za-z_0-9]+' "$pf" | sed -E 's/^\+[[:space:]]*(def|class) //' | grep -v '^test_' | sort -u)
+      # marker 候选双形态：def/class 符号＋模块级常量赋值（609 实锤：整补丁只有
+      # _BLOCKER_AUTH_DEGRADE_SEC/MIN 常量无 def/class，旧启发式抓不到 marker →
+      # 语义已在位却误报 fail 挡 mx-up）。常量取 ^+NAME= 顶层形态，函数/类原样。
+      done < <({ grep -oE '^\+[[:space:]]*(def|class) [A-Za-z_0-9]+' "$pf" | sed -E 's/^\+[[:space:]]*(def|class) //' | grep -v '^test_';
+                grep -oE '^\+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=' "$pf" | sed -E 's/^\+//; s/[[:space:]]*=$//'; } | sort -u)
       if [ "$_found" = 1 ]; then
         log "运行时 patch 语义已在位（安装环境或源码树，内容副本同步渠道）：${p}（marker=${_marker}）"
         continue

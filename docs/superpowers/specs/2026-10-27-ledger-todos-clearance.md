@@ -19,6 +19,11 @@
 - D3（用户指令）：台账补录 swarm-yuan 技能域调研面——产品面组件账（本台账）与技能域吸收账（capability-map）互链不合并的分界维持，但组件/技能**清单层**须在本台账可见（新增分节），capability-map 仍是技能域实施对账正本。
 - D4：worktree 上限延续放宽（在途 6 个均为并行会话保护中；用户已指令完成待办，开工为隐含授权）。
 
+## 中间发现与决策（随批增补）
+
+- D5（mx-up 两处根治，2026-10-27 实锤）：①运行时补丁语义 marker 提取只认 def/class，609 补丁全部新符号为模块级常量（_BLOCKER_AUTH_DEGRAde_SEC/MIN）→ 语义在位却误报 fail；修＝marker 候选补 `^+NAME=` 顶层常量形态（mx-lib.sh mx_apply_agent_patches）。②mx-up 从不刷新 agent 源码快照（provision 只在 mx-setup 调）——宿主升 0.22.5 后旧快照（@135e609a1，10-21 供）缺 hermes_dir_acl/base_log_safety 等 24 个新模块，网关 import 连环崩；修＝mx-up 在补丁自愈前调 `mx_provision_agent_src`（键同跳过幂等，键异全量重照）。曾试把 hermes_dir_acl.py 搬入 runtime 覆盖层＋manifest，判定为双源真相（24K 模块须随上游维护）已撤——正路是快照新鲜度而非搬运。
+- D6（worktree 跑 mx-up 的路径失真）：mx-sim-mautrix-ensure 的 SIM 回落推导 `dirname $0/../../..＋/ncwk-sim-mux` 在 worktree 下失真；显式 `AIPAY_SIM_ROOT`＋`MX_NCWK_ROOT` 两 env 后正常（不改代码——主树运行本就正确，属 worktree 用法注记）。
+
 ## 验证
 
 - 台账批：gongwen-lint 散文段清零；条目锚点可解析。
