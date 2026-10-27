@@ -14,7 +14,7 @@
       ],
       "version": "0.7.39-studio.1",
       "versionCarrier": "RELEASE-NOTES.md",
-      "buildCommand": "npm run build:dmg（产物 DMG/zip，desktop 内嵌上游 hermes-agent 运行时）",
+      "buildCommand": "npm run build:dmg（需将 OVERLAY_UPSTREAM_ROOT 指向仓根 vendor；产物 DMG/zip，desktop 管理独立 hermes runtime）",
       "artifacts": "vendor/hermes-studio/packages/desktop/release/",
       "install": "源码包解包后 npm install（vendor/hermes-studio 内）＋npm run inject＋npm run dev／build:dmg；DMG/zip 安装（mac arm64 / win x64）",
       "packageIncludes": [
@@ -108,5 +108,5 @@
     },
     "checksums": "SHA256SUMS（随 dist/release/ 目录）"
   },
-  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 底座 3.16.2 @3c5b2276——模块大版本对齐基准，与产品扩展序不互推）"
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 基线谱系 v3.16.1 系列 @3c5b2276；Ycode 包版本 3.16.2。模块大版本对齐基准，与产品扩展序不互推）"
 }
