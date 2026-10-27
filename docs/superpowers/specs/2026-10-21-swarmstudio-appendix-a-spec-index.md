@@ -371,6 +371,7 @@
 | 2026-10-27-search-dialog-truthiness | 检索弹窗真值修复 | 人员 roster 主源/运行空态去向/筛选换看板轴/0 徽标如实 |
 | 2026-10-27-search-session-source-load | 检索弹窗会话源装载 | 弹窗打开即装载 agent 会话与群聊源，fail-soft |
 | 2026-10-27-search-sim-sessions | 跨实例只读检索推演会话 | 只读扫 SIM 库+紫色徽章+诚实点击降级 |
+| 2026-10-27-state-event-member-names | 状态事件成员文案补账号名 | zh/en 词条占位符根治（补丁 701） |
 | 2026-10-27-joyai-annotations-rerank | JoyAI 清偿批二 | map-annotations 持久化＋LLM 重排＋mention 泳道；补丁 698 |
 | 2026-10-27-joyai-realtime-squad | JoyAI 清偿批三 | 标注实时协同（LWW+socket+presence）＋squad 链重排；补丁 699 |
 | 2026-10-27-swarm-yuan-branch-trunk-order | swarm-yuan 研发四阶段顺序立法（决策 57） | 分支开发→分支测试→主干合并→主干回归；九节点不变、⑤-⑦ 在分支 |
