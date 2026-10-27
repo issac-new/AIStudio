@@ -103,6 +103,36 @@ describe('computeRunMetrics', () => {
     const noPrev = mk({ runDirs: [], readPrevReport: () => null })
     expect(noPrev.baseline).toBeNull()
   })
+
+  it('DISP 配对四变体归一（exact/generic 广播/single 容差/none；表外词不消失）', () => {
+    const issues = [
+      'ISSUE|g1-review|bella|缺要素',
+      'ISSUE|r18-collection-missing|step-23|A 处置',
+      'ISSUE|r18-collection-missing|PAYCORE-C|B 处置',
+      'ISSUE|r18-collection-missing|CHWX-C|C 处置',
+      'ISSUE|gw-restart|director|网关重启',
+      'ISSUE|uat-cond|fanfan|有条件',
+      'ISSUE|legacy|x|老键',
+    ].join('\n')
+    const disps = [
+      'DISP|g1-review|bella|已修 补齐后过',
+      'DISP|r18-collection-missing|monitor|观察 统一处置',
+      'DISP|gw-restart|director|观察 恢复',
+      'DISP|uat-cond|fanfan-agent|延后 归 bella',
+    ].join('\n')
+    const m = computeRunMetrics({
+      run: 'r', rfd: 'R', issuesLog: `${issues}\n${disps}`, stateEnv: '', today: '2026-10-27',
+      runDirs: [], readPrevReport: () => null,
+    })
+    const by = (k: string) => m.pairing.find((r) => r.key === k)!
+    expect(by('g1-review·bella')).toMatchObject({ mode: 'exact', bucket: '已修' })
+    expect(by('r18-collection-missing·step-23')).toMatchObject({ mode: 'generic', bucket: '观察' })
+    expect(by('r18-collection-missing·PAYCORE-C')).toMatchObject({ mode: 'generic', bucket: '观察' })
+    expect(by('gw-restart·director')).toMatchObject({ mode: 'generic', bucket: '观察' })
+    expect(by('uat-cond·fanfan')).toMatchObject({ mode: 'single', bucket: '延后' })
+    expect(by('legacy·x')).toMatchObject({ mode: 'none', bucket: '待处置' })
+    expect(by('g1-review·bella').freq).toBe(1)
+  })
 })
 
 describe('parseStateEnvKeys（首行胜出）', () => {

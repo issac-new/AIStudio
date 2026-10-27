@@ -2058,6 +2058,8 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三
     { echo "# ${RFD_ID:-RFD-001} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T'))"; echo; echo "- 治理指标服务不可达——本报告数字缺席（fail-soft，不编造）。"; } > "$out"
     mask_env_paths "$out"; echo "$out"; return 0
   fi
+  # DTO 快照（报告链/归桶件消费位：配对与指标单源取件，禁止本地复算）
+  printf '%s' "$dto" | jq . > "$EVID_DIR/governance-metrics.json" 2>/dev/null || true
   local _m="$out.tmp.$$"
   {
     echo "# ${RFD_ID:-RFD-001} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T')）"

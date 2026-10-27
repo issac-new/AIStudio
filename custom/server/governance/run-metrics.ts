@@ -30,6 +30,17 @@ const RUN_DIR_RE = /^\d{8}-v\d+-run\d+$/
 export interface GateStat { gate: GateId; state: GatePassState; supplement: boolean; segmentIssues: number }
 export interface MetricsRow { id: 'M1' | 'M3' | 'M4' | 'M5'; csv: string }
 
+/** DISP 配对行（四变体归一：exact 精确 / generic 泛指广播 / single 单键容差 / none 待处置）。 */
+export interface IssuePairingRow {
+  key: string
+  type: string
+  subject: string
+  freq: number
+  mode: 'exact' | 'generic' | 'single' | 'none'
+  disposition: string | null
+  bucket: '已修' | '已闭环' | '观察' | '延后' | '表外词' | '待处置'
+}
+
 export interface RunMetrics {
   run: string
   rfd: string
@@ -46,6 +57,7 @@ export interface RunMetrics {
   defectDensity: string
   dispBuckets: Array<{ tag: string; n: number }>
   uniqueKeys: string[]
+  pairing: IssuePairingRow[]
   gateKeyLines: Array<{ key: string; value: string }>
   metricsRows: MetricsRow[]
   baseline: { prevRun: string; line: string } | null
@@ -137,14 +149,57 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     if (n > 0) dispBuckets.push({ tag, n })
   }
 
-  // 问题唯一键（type·subject，保序去重）
+  // 问题唯一键（type·subject，保序去重）+ 频次
   const seen = new Set<string>()
   const uniqueKeys: string[] = []
+  const freq = new Map<string, number>()
   for (const l of issueLines) {
     const [, code, subject] = l.split('|')
     const k = `${code}·${subject}`
+    freq.set(k, (freq.get(k) ?? 0) + 1)
     if (!seen.has(k)) { seen.add(k); uniqueKeys.push(k) }
   }
+
+  // DISP 配对（run13 复盘 A3/C1 修订口径——四变体归一的单实现）：
+  //   ① type·subject 精确命中；② 同类型 DISP 主体为泛指（director/monitor/harness/
+  //   导演/监控）→ 广播到该类型全部键；③ 该类型仅一个唯一键 → 容主体措辞差；
+  //   ④ 其余=待处置（none）。三态+已闭环分桶，首词非桶词=表外词（四桶+表外
+  //   求和=唯一键数，禁凭空消失）。
+  const dispExact = new Map<string, string>()
+  const dispGeneric = new Map<string, string>()
+  const GENERIC_SUBJECTS = ['director', 'monitor', 'harness', '导演', '监控']
+  for (const l of dispLines) {
+    const p = l.split('|')
+    if (p.length > 3) {
+      if (GENERIC_SUBJECTS.includes(p[2])) dispGeneric.set(p[1], p[3])
+      else dispExact.set(`${p[1]}·${p[2]}`, p[3])
+    }
+  }
+  const keysByType = new Map<string, string[]>()
+  for (const k of uniqueKeys) {
+    const ty = k.split('·')[0]
+    keysByType.set(ty, [...(keysByType.get(ty) ?? []), k])
+  }
+  const BUCKET_WORDS = ['已修', '已闭环', '观察', '延后']
+  const bucketOfDisp = (d: string): IssuePairingRow['bucket'] => (BUCKET_WORDS.find((w) => d.startsWith(w)) ?? '表外词') as IssuePairingRow['bucket']
+  const pairing: IssuePairingRow[] = uniqueKeys.map((key): IssuePairingRow => {
+    const [type, subject] = key.split('·')
+    const exact = dispExact.get(key)
+    const sameTypeExact = [...dispExact.keys()].filter((k) => k.startsWith(`${type}·`))
+    const mode: IssuePairingRow['mode'] = exact != null ? 'exact'
+      : dispGeneric.has(type) ? 'generic'
+      : sameTypeExact.length > 0 && keysByType.get(type)!.length === 1 ? 'single'
+      : 'none'
+    const singleDisp = mode === 'single' ? dispExact.get(sameTypeExact[0]) ?? '' : ''
+    const disp = exact ?? dispGeneric.get(type) ?? singleDisp
+    return {
+      key, type, subject,
+      freq: freq.get(key) ?? 1,
+      mode,
+      disposition: disp || null,
+      bucket: disp ? bucketOfDisp(disp) : ('待处置' as const),
+    }
+  })
 
   const gateKeyLines = [
     ...Object.values(GATE_STATE_KEYS), 'uat_done',
@@ -206,7 +261,7 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     rejectCount, humanInterventions,
     alertFamily: { count: alertKeys.length, keys: alertKeys },
     defectDensity,
-    dispBuckets, uniqueKeys, gateKeyLines, metricsRows, baseline, trend,
+    dispBuckets, uniqueKeys, pairing, gateKeyLines, metricsRows, baseline, trend,
   }
 }
 
