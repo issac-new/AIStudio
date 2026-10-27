@@ -64,7 +64,13 @@ for (const key of REQUIRED_MODULES) {
     fail(key, e.message)
     continue
   }
-  if (mod.carrierFormat === 'json:version') {
+  if (key === 'agent-teams' && mod.versionCarrier === 'team/VERSION') {
+    // 新真源：VERSION 文件首个非注释行；大版本须与 VENDOR.md hermes-agent 线对齐
+    const first = carrierText.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'))[0] ?? ''
+    if (first !== mod.version) {
+      fail(key, `VERSION 文件首行 "${first}" ≠ 清单 ${mod.version}`)
+    }
+  } else if (mod.carrierFormat === 'json:version') {
     try {
       const parsed = JSON.parse(carrierText)
       if (parsed.version !== mod.version) {
@@ -75,6 +81,29 @@ for (const key of REQUIRED_MODULES) {
     }
   } else if (!carrierText.includes(mod.version)) {
     fail(key, `版本串 "${mod.version}" 未见于载体 ${mod.versionCarrier}（漂移：改载体或同步清单）`)
+  }
+}
+
+// ── 模块大版本与底座对齐（2026-10-27 用户裁定：major.minor=底座线，patch=扩展序） ──
+{
+  let vendorText
+  try { vendorText = readCarrier('vendor/VENDOR.md') } catch { vendorText = '' }
+  const line = (label) => new RegExp(label + ' \\| `[^`]+` \\| v?(\\d+\\.\\d+\\.\\d+)').exec(vendorText)?.[2]
+  const studioLine = line('hermes-studio')
+  const agentLine = line('hermes-agent')
+  // 完整三位底座版本对齐（2026-10-27 用户纠正）：版本=底座段＋"-<ext>.N" 扩展段
+  const splitBase = (v, ext) => {
+    const m = /^(v?\d+\.\d+\.\d+)-(.+)\.(\d+)$/.exec(String(v))
+    if (!m) return null
+    return { base: m[1].replace(/^v/, ''), extName: m[2], extN: m[3] }
+  }
+  const cockpitV = splitBase(manifest.modules?.cockpit?.version ?? '', 'studio')
+  const teamsV = splitBase(manifest.modules?.['agent-teams']?.version ?? '', 'team')
+  if (studioLine && (!cockpitV || cockpitV.base !== studioLine || cockpitV.extName !== 'studio' || !/^[1-9]\d*$/.test(cockpitV.extN))) {
+    fail('cockpit', `版本须=底座 ${studioLine}-studio.N（完整三位对齐＋扩展序），清单=${manifest.modules.cockpit.version}`)
+  }
+  if (agentLine && (!teamsV || teamsV.base !== agentLine || teamsV.extName !== 'team' || !/^[1-9]\d*$/.test(teamsV.extN))) {
+    fail('agent-teams', `版本须=底座 ${agentLine}-team.N（完整三位对齐＋扩展序），清单=${manifest.modules['agent-teams'].version}`)
   }
 }
 

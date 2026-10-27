@@ -201,6 +201,8 @@ function applyPatches() {
     console.log('[inject] 无 B 类 patch(空跑或尚未迁移)');
     return patches;
   }
+  // 目标树缺席跳过计数（standalone 模块包用，见循环内注释）
+  let skippedAbsentTree = 0;
   for (const p of patches) {
     const patchPath = resolve(patchDir, p);
     if (!existsSync(patchPath)) {
@@ -213,6 +215,17 @@ function applyPatches() {
 	      const patchText = readFileSync(patchPath, 'utf8');
 	      targetRoot = resolvePatchTargetRoot(patchText);
 	    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
+
+    // 目标树缺席跳过（2026-10-27 standalone 模块包挂账清偿）：模块源码包只含自己的
+    // vendor 树（如 cockpit 包无 vendor/hermes-agent），路由到缺席树的补丁明确跳过，
+    // 不再硬死——部分检出/模块独立包可独立 inject；全仓检出两树俱在、零行为变化。
+    if (targetRoot === hermesAgentRoot
+        && !existsSync(resolve(hermesAgentRoot, 'hermes_cli'))
+        && !existsSync(resolve(hermesAgentRoot, 'pyproject.toml'))) {
+      skippedAbsentTree++;
+      console.warn(`[inject] SKIP (hermes-agent tree absent, standalone/partial checkout): ${p}`);
+      continue;
+    }
 
     try {
       applyPatchAtRoot(patchPath, targetRoot);
@@ -231,6 +244,9 @@ function applyPatches() {
       console.error('  用 git apply --reject 手动排查,修复后重跑');
       process.exit(1);
     }
+  }
+  if (skippedAbsentTree > 0) {
+    console.warn(`[inject] 共 ${skippedAbsentTree} 个补丁因 hermes-agent 树缺席跳过（standalone/partial checkout 形态；全仓检出无此现象）`);
   }
   return patches;
 }

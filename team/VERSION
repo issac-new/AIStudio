@@ -1,0 +1,4 @@
+# agent teams 版本真源（2026-10-27 用户裁定）
+# 方案：完整底座版本（三位，与 vendor/VENDOR.md 的 hermes-agent 一致）＋ "-team.N" 扩展发布序。
+# 底座升级（如 0.22.5→0.22.6）时底座段跟进、扩展序归 1；release:check 校验两段对齐。
+v0.22.5-team.1

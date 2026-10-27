@@ -9,7 +9,11 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 
 **41 profiles** · **10 teams** · **10 Kanban boards** · persistent worktree workspaces
 
-### What changed in this release (v3.3)
+### Version
+
+Current: **v0.22.5-team.1** (scheme changed 2026-10-27: full 3-segment base tracks hermes-agent in vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v3.3.0.
+
+### What changed in this release (v0.22.5-team.1)
 
 - **Incremental refresh**: 2026-10-14 fusion batch synced — skillguard v1.2.0 supply-chain rules (SG-013 embedded-instruction / SG-014 tool-description-code consistency / SG-015 rug-pull, with round-trip test fixtures), `llm-redteam` multi-turn adversarial strategies, AIG registration + 3 gaps in `_shared/hack-tool-registry.md`, DSH-style structured finding store in `_shared/hack-knowledge-index.md`, skill admission gate (G-A4) in `platform-skill-miner`, Checklist reflection verification in `_shared/03-evolution-memory/output-contract.md`
 - **17 root skills refreshed** to live state (cost-ledger, weixin ops series, public-repo-release v1.2.0, etc.)
