@@ -36,27 +36,27 @@ await page.evaluate(t => {
 await page.goto(BASE + '/#/app')
 await page.waitForSelector('[data-testid="ia-shell-header"]', { timeout: 20000 })
 
-// ① Spotlight：聚焦弹面板（空查询=命令组）
+// ① 统一检索弹窗：聚焦弹面板（空查询=命令组）
 {
   const input = page.locator('[data-testid="ia-header-search-input"]')
   await input.click()
-  await page.waitForSelector('[data-testid="spotlight-panel"]', { timeout: 5000 })
-  const cmdRows = await page.locator('.spot__row').count()
-  ok('Spotlight 聚焦弹命令组', cmdRows >= 8, `rows=${cmdRows}`)
+  await page.waitForSelector('[data-testid="global-search-dialog"]', { timeout: 5000 })
+  const cmdRows = await page.locator('[data-testid^="search-command-c:"]').count()
+  ok('统一检索聚焦弹命令组', cmdRows >= 8, `rows=${cmdRows}`)
   await page.screenshot({ path: shots + '/01-spotlight-commands.png' })
 }
 
-// ② Spotlight：查询过滤（会话名命中或空态皆可，断言不炸+结果数收敛）
+// ② 统一检索弹窗：查询过滤（无匹配时显示真实空态）
 {
   await page.fill('[data-testid="ia-header-search-input"]', 'zzz不存在的查询')
   await page.waitForTimeout(600)
-  const empty = await page.locator('.spot__empty').count()
-  const rows = await page.locator('.spot__row').count()
-  ok('Spotlight 无匹配空态', empty === 1 && rows === 0, `empty=${empty} rows=${rows}`)
+  const empty = await page.locator('[data-testid="search-empty"]').count()
+  const rows = await page.locator('.srch__row').count()
+  ok('统一检索无匹配空态', empty === 1 && rows === 0, `empty=${empty} rows=${rows}`)
   await page.screenshot({ path: shots + '/02-spotlight-empty.png' })
 }
 
-// ③ Spotlight：命令行点击直达精确路由（看板命令 → /app/board）
+// ③ 统一检索弹窗：命令行点击直达精确路由（看板命令 → /app/board）
 {
   // n-modal-mask 拦截点击（版本通知等弹层）——Esc×3 + 物理移除（走查工具箱先例）
   for (let i = 0; i < 3; i++) { await page.keyboard.press('Escape').catch(() => {}); await page.waitForTimeout(250) }
@@ -64,11 +64,11 @@ await page.waitForSelector('[data-testid="ia-shell-header"]', { timeout: 20000 }
   await page.click('[data-testid="ia-header-search-input"]')
   await page.fill('[data-testid="ia-header-search-input"]', '')
   await page.waitForTimeout(600)
-  const boardRow = page.locator('[data-testid="spotlight-row-c:board"]')
+  const boardRow = page.locator('[data-testid="search-command-c:board"]')
   await boardRow.waitFor({ state: 'visible', timeout: 5000 })
   await boardRow.click()
   await page.waitForTimeout(1500)
-  ok('Spotlight 命令直达看板', page.url().includes('/app/board'), `url=${page.url().slice(-24)}`)
+  ok('统一检索命令直达看板', page.url().includes('/app/board'), `url=${page.url().slice(-24)}`)
   await page.screenshot({ path: shots + '/02b-spotlight-nav-board.png' })
   // 回驾驶舱继续后续走查
   await page.goto(BASE + '/#/app')

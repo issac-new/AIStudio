@@ -84,14 +84,14 @@ async function fresh(hash = 'app') {
     await page.locator('input[placeholder*="搜索"]').first().fill('mini-site')
     await page.waitForTimeout(1800)
     const results = await page.evaluate(() => {
-      const panel = [...document.querySelectorAll('[class*=spotlight], [class*=search]')].filter(e => e.offsetParent !== null && e.innerText.includes('mini-site'))
+      const panel = [...document.querySelectorAll('[data-testid=global-search-dialog]')].filter(e => e.offsetParent !== null && e.innerText.includes('mini-site'))
       return panel.map(e => e.innerText.replace(/\s+/g, ' ').slice(0, 120)).slice(0, 2)
     })
     led.record('搜索出结果并可辨识分组', results.length > 0, JSON.stringify(results))
     await led.shot(page, 'search-results')
     // 点第一个结果看落点
     await page.evaluate(() => {
-      const panel = [...document.querySelectorAll('[class*=spotlight], [class*=search]')].find(e => e.offsetParent !== null && e.innerText.includes('mini-site'))
+      const panel = [...document.querySelectorAll('[data-testid=global-search-dialog]')].find(e => e.offsetParent !== null && e.innerText.includes('mini-site'))
       const row = panel ? [...panel.querySelectorAll('li, [class*=row], [class*=item], button')].filter(e => /mini-site/.test(e.textContent || ''))[0] : null
       row?.click()
     })

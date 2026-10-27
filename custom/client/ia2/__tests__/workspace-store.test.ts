@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
-const { teamsApi, fleetAdapter, kanbanApi, kv, taskAdapter } = vi.hoisted(() => ({
+const { teamsApi, fleetAdapter, kanbanApi, kv, taskAdapter, govApi } = vi.hoisted(() => ({
   teamsApi: {
     fetchKanbanOverview: vi.fn(),
   },
@@ -38,6 +38,9 @@ const { teamsApi, fleetAdapter, kanbanApi, kv, taskAdapter } = vi.hoisted(() => 
       createdAt: t.created_at ? t.created_at * 1000 : 0,
     })),
   },
+  govApi: {
+    fetchGovernanceOverview: vi.fn(),
+  },
 }))
 
 vi.mock('@/custom/cockpit/adapters/teams-adapter', () => teamsApi)
@@ -50,6 +53,7 @@ vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({
   loadTemplates: vi.fn(() => []),
 }))
 vi.mock('@/custom/cockpit/adapters/task-adapter', () => taskAdapter)
+vi.mock('@/custom/governance/api/governance', () => govApi)
 
 import { useWorkspaceStore } from '../store/workspace'
 
@@ -58,6 +62,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   teamsApi.fetchKanbanOverview.mockResolvedValue({ boards: [], tasks: [] })
   kv.loadUserTodos.mockReturnValue([])
+  govApi.fetchGovernanceOverview.mockResolvedValue({ ok: true, docs: [] })
 })
 
 describe('workspace store：跨 board 任务聚合', () => {
@@ -151,6 +156,26 @@ describe('workspace store：待办与提醒调度', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('workspace store：全局检索弹窗状态', () => {
+  it('openSearch 与 closeSearch 幂等切换共享可见态', () => {
+    const store = useWorkspaceStore()
+    expect(store.searchOpen).toBe(false)
+    store.openSearch()
+    store.openSearch()
+    expect(store.searchOpen).toBe(true)
+    store.closeSearch()
+    store.closeSearch()
+    expect(store.searchOpen).toBe(false)
+  })
+  it('文档索引在 store 层去重并缓存', async () => {
+    const store = useWorkspaceStore()
+    await store.loadSearchDocs()
+    await store.loadSearchDocs()
+    expect(govApi.fetchGovernanceOverview).toHaveBeenCalledTimes(1)
+    expect(store.searchDocsLoaded).toBe(true)
   })
 })
 

@@ -100,6 +100,9 @@ vi.mock('@/custom/cockpit/components/CockpitScheduleModal.vue', () => ({
 vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({
   default: { name: 'CockpitRunTraceModal', template: '<div class="runtrace-modal-stub" />' },
 }))
+vi.mock('@/custom/ia2/components/GlobalSearchDialog.vue', () => ({
+  default: { name: 'GlobalSearchDialog', template: '<div data-testid="global-search-dialog-host" />' },
+}))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 // 注意力条单独有守门；此间桩化隔离（其数据源与壳同构）。
 // v12.3 R2：空态不消失（条即管理入口）——桩去掉 v-if 并补 open-gov 事件
@@ -168,6 +171,7 @@ describe('IaShell — 统一壳（页头 + 双视图场景条）', () => {
     expect(wrapper.find('.ia-shell__main').exists()).toBe(true)
     // 切换器已移入 IaShellHeader（本测试页头为桩）——壳层不得再渲染场景条
     expect(wrapper.find('[data-testid="ia-scenes"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="global-search-dialog-host"]').length).toBe(1)
   })
 
   it('featureView 模式：内容区渲染专题视图而非 router-view（专题统一壳）', async () => {
@@ -219,6 +223,7 @@ describe('IaShell — 窗口管理三态（/goal 追加）', () => {
     expect(wrapper.find('.ia-shell-header-stub').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ia-wm-dock"]').exists()).toBe(false)
     expect(wrapper.find('.ia-shell__main').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="global-search-dialog-host"]').length).toBe(1)
   })
 
   it('独立窗口内跳转保持 standalone 标记（query 不随路由传播，壳自动补回）', async () => {

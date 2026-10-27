@@ -40,6 +40,8 @@ export function useRecentTrail() {
 
   /** 记一次导航：标题按当时 locale 解析固化；去重/置顶/截断在纯函数核 */
   function record(route: RecentRouteLike, locale: RecentLocale): void {
+    // 弹窗深链不是新页面；背景页仍按不含检索参数的地址记录。
+    if (route.query?.search === '1') return
     entries.value = pushRecent(entries.value, {
       fullPath: route.fullPath,
       routeName: String(route.name ?? ''),

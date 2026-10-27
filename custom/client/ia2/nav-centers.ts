@@ -138,7 +138,6 @@ export const COMMON_NAVS: readonly CommonNavMeta[] = [
   { key: 'workbench', lead: '▤', zh: '工作台', en: 'Workbench', name: 'ia2.collab', testid: 'ia-side-nav-workbench' },
   { key: 'board', lead: '▦', zh: '看板', en: 'Board', name: 'ia2.board', testid: 'ia-side-nav-board' },
   { key: 'inbox', lead: '◷', zh: '审批收件箱', en: 'Approvals Inbox', name: 'ia2.inbox', testid: 'ia-side-nav-inbox' },
-  { key: 'search', lead: '⌕', zh: '检索', en: 'Search', name: 'ia2.search', testid: 'ia-side-nav-search' },
 ]
 
 /** 工作台兄弟路由（会话/房间/群聊都算工作台；侧栏高亮与轨迹标题共用同一集合） */

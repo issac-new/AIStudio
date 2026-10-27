@@ -10,6 +10,7 @@
 // vitest 无 VITE_CUSTOM_AGENT_MANAGER → 并入记录默认不进树）。
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import { buildIaRoutes } from '../routes'
 import { buildIdeRoutes } from '../../ide/routes'
 
@@ -143,6 +144,14 @@ describe('路由白名单单测（补遗⑤ §13.6-2：快照断言）', () => {
       const rec = all.find((r) => r.name === gone)
       if (rec) expect(rec.redirect, `${gone} 只能以重定向残留`).toBeTruthy()
     }
+  })
+  it('旧检索深链重定向到流程总览并保留弹窗筛选参数', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: buildIaRoutes() })
+    await router.push('/app/search?q=Alice&type=people&ws=%2Flab&status=running&assignee=a&time=7d&standalone=1')
+    expect(router.currentRoute.value.name).toBe('ia2.journey')
+    expect(router.currentRoute.value.query).toEqual({
+      q: 'Alice', type: 'people', ws: '/lab', status: 'running', assignee: 'a', time: '7d', standalone: '1', search: '1',
+    })
   })
   it('M2：旧 /ide 壳重定向 → /app/ide（驾驶舱子路由）', () => {
     const legacy = buildIdeRoutes().find((r) => String(r.path) === '/ide')

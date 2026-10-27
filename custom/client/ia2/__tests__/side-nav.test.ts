@@ -90,12 +90,13 @@ beforeEach(() => {
 })
 
 describe('IaSideNav — 左侧常驻导航', () => {
-  it('常用组五个入口 + 六阶段 + 专题 + 设置都在位（推演已移出日常侧栏）', async () => {
+  it('常用组四个入口 + 六阶段 + 专题 + 设置都在位（检索已并入顶部弹窗）', async () => {
     const { w } = await mountAt('/app/stage/build')
     expect(w.find('[data-testid="ia-side-nav"]').exists()).toBe(true)
-    for (const id of ['journey', 'workbench', 'board', 'inbox', 'search']) {
+    for (const id of ['journey', 'workbench', 'board', 'inbox']) {
       expect(w.find(`[data-testid="ia-side-nav-${id}"]`).exists(), id).toBe(true)
     }
+    expect(w.find('[data-testid="ia-side-nav-search"]').exists()).toBe(false)
     for (let n = 1; n <= 6; n++) {
       expect(w.find(`[data-testid="ia-side-nav-stage${n}"]`).exists(), `stage${n}`).toBe(true)
     }
@@ -137,15 +138,15 @@ describe('IaSideNav — 左侧常驻导航', () => {
     w.unmount()
   })
 
-  it('待办徽标：常用四项与阶段③④出数，检索/①②⑤⑥不出；③④徽标与状态点合一为计数章', async () => {
+  it('待办徽标：常用四项与阶段③④出数，①②⑤⑥不出；③④徽标与状态点合一为计数章', async () => {
     const { w } = await mountAt('/app/stage/build')
     const badgeOf = (sel: string) => w.find(`${sel} .isn-item__badge`).text()
     expect(badgeOf('[data-testid="ia-side-nav-journey"]')).toBe('15')
     expect(badgeOf('[data-testid="ia-side-nav-workbench"]')).toBe('15')
     expect(badgeOf('[data-testid="ia-side-nav-board"]')).toBe('14')
     expect(badgeOf('[data-testid="ia-side-nav-inbox"]')).toBe('2')
-    // 检索与无看板态映射的阶段①②⑤⑥不造数字也不出章（保留生命周期状态点）
-    for (const id of ['search', 'stage1', 'stage2', 'stage5', 'stage6']) {
+    // 无看板态映射的阶段①②⑤⑥不造数字也不出章（保留生命周期状态点）
+    for (const id of ['stage1', 'stage2', 'stage5', 'stage6']) {
       expect(w.find(`[data-testid="ia-side-nav-${id}"] .isn-item__badge`).exists(), id).toBe(false)
       expect(w.find(`[data-testid="ia-side-nav-${id}"] .isn-item__pill`).exists(), id).toBe(false)
     }
@@ -166,7 +167,6 @@ describe('IaSideNav — 左侧常驻导航', () => {
     expect(s4.find('.isn-item__status').exists()).toBe(false)
     // 徽标项挂口径说明 title，无徽标项保持无 title
     expect(w.find('[data-testid="ia-side-nav-board"]').attributes('title')).toContain('受阻')
-    expect(w.find('[data-testid="ia-side-nav-search"]').attributes('title')).toBeUndefined()
     w.unmount()
   })
 

@@ -73,13 +73,13 @@ await dismissModals()
   await dismissModals()
 }
 
-// ② A2：Spotlight 深搜升级行 → SessionSearchModal
+// ② A2：统一检索弹窗深搜升级行 → SessionSearchModal
 {
   const input = page.locator('[data-testid="ia-header-search-input"]')
   await input.click()
-  await page.waitForSelector('[data-testid="spotlight-panel"]', { timeout: 5000 })
+  await page.waitForSelector('[data-testid="global-search-dialog"]', { timeout: 5000 })
   const foot = page.locator('[data-testid="spotlight-deep-search"]')
-  ok('A2 Spotlight 深搜升级行存在', await foot.count() === 1)
+  ok('A2 统一检索深搜升级行存在', await foot.count() === 1)
   await foot.click()
   await page.waitForTimeout(600)
   ok('A2 SessionSearchModal 打开', await page.locator('.session-search-modal').count() === 1)

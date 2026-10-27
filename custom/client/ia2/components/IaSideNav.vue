@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/ia2/components/IaSideNav.vue
      工作台左侧常驻导航（2026-10-20 日常/推演拆分）：
-     日常模式 = 常用（流程总览/工作台/看板/审批收件箱/检索 + 最近轨迹面板开关）
+     日常模式 = 常用（流程总览/工作台/看板/审批收件箱 + 最近轨迹面板开关）
      + 流程六阶段 + 专题 + 系统设置；全流程推演改为顶栏独立模式，不再作为日常
      侧栏「整轮」组。推演模式 = 推演专区六签 + 返回日常工作台，侧栏不出现日常
      阶段与专题。三组子项共用 IaSideNavItem 一套行式（18px 前导槽 + 标签 + 右侧槽）。
@@ -79,7 +79,6 @@ const COMMON_MATCH: Record<string, () => boolean> = {
   workbench: () => WORKBENCH_ROUTE_NAMES.has(routeName.value),
   board: () => routeName.value === 'ia2.board',
   inbox: () => routeName.value === 'ia2.inbox',
-  search: () => routeName.value === 'ia2.search',
 }
 
 const commonItems: CommonItem[] = COMMON_NAVS.map(c => ({ ...c, match: COMMON_MATCH[c.key] }))

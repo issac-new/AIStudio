@@ -15,6 +15,7 @@ import { useSharedArm } from '../composables/useSharedArm'
 import { useWorkspaceStore } from '../store/workspace'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 import IaGlobalTop from '../components/IaGlobalTop.vue'
+import GlobalSearchDialog from '../components/GlobalSearchDialog.vue'
 import IaSideNav from '../components/IaSideNav.vue'
 import IaPopoutBar from '../components/IaPopoutBar.vue'
 import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
@@ -101,6 +102,8 @@ onUnmounted(() => {
     <!-- v12 性能收敛：仅打开时挂载。曾无条件挂载，其内部 watch(needsSessionSelect,
          immediate) 会在冷启动即跨全 profile 扫会话（数十请求），即使弹窗从未打开。 -->
     <CockpitRunTraceModal v-if="cockpit.runTraceOpen" />
+    <!-- 独立窗口没有共享顶区，旧 /app/search 深链仍需同一弹窗宿主。 -->
+    <GlobalSearchDialog v-if="isStandalone" />
   </div>
 </template>
 
