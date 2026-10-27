@@ -43,8 +43,8 @@ interface RegistryDomain {
   owner_account_env?: unknown
 }
 
-/** 纯解析：yaml 文本 → 归属条目（fields 宽容缺省；domains 非数组＝解析失败）。 */
-export function parseBoardOwnership(text: string): { ok: true; entries: BoardOwnershipEntry[]; updated?: string | null } | { ok: false; reason: string } {
+/** 纯解析：yaml 文本 → 归属条目（fields 宽容缺省；domains 非数组＝解析失败）。返回型走推断（判别联合窄化与 taskledger-store 同款）。 */
+export function parseBoardOwnership(text: string) {
   let parsed: { updated?: unknown; domains?: unknown }
   try {
     // require('yaml') 惰性加载——与 governance-ledger/squad-protocol 同款先例
@@ -85,8 +85,10 @@ export function loadBoardOwnership(): BoardOwnershipReport {
   }
   try {
     const parsed = parseBoardOwnership(readFileSync(path, 'utf8'))
-    if (!parsed.ok) return { available: false, reason: parsed.reason, source: path }
-    return { available: true, source: path, updated: parsed.updated, entries: parsed.entries }
+    if (parsed.ok) {
+      return { available: true, source: path, updated: parsed.updated, entries: parsed.entries }
+    }
+    return { available: false, reason: parsed.reason, source: path }
   } catch (e) {
     return { available: false, reason: `正本读取失败：${e instanceof Error ? e.message : String(e)}`, source: path }
   }
