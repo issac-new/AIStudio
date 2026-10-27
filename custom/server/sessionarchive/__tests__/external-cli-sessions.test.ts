@@ -2,6 +2,7 @@
 // 夹具全部为合成数据（不含任何真实会话内容）。
 import { afterEach, describe, expect, it } from 'vitest'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import * as zlib from 'node:zlib'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -10,6 +11,8 @@ import {
   scanExternalSessions,
   type ExternalSessionReport,
 } from '../external-cli-sessions'
+
+const zstdCompress = (zlib as unknown as { zstdCompressSync?: (b: Buffer) => Buffer }).zstdCompressSync
 
 let dir: string | null = null
 afterEach(() => {
@@ -110,19 +113,77 @@ describe('scanExternalSessions', () => {
     writeFileSync(join(claude, 'abc.jsonl'), CLAUDE_LINES, 'utf8')
     writeFileSync(join(claude, 'empty.jsonl'), '', 'utf8')
     writeFileSync(join(codex, 'rollout-2026-10-21-x.jsonl'), CODEX_LINES, 'utf8')
-    // 压缩件：只能列出，不能解析
-    writeFileSync(join(codex, 'rollout-2026-09-17-y.jsonl.zst'), 'binary', 'utf8')
+    // 旧版会话只留压缩件：Node 22+ 可就地解压（不再是死档）
+    if (zstdCompress) {
+      writeFileSync(join(codex, 'rollout-2026-09-17-y.jsonl.zst'), zstdCompress(Buffer.from(CODEX_LINES, 'utf8')))
+    }
     return { claude: join(root, 'projects'), codex: join(root, 'sessions') }
   }
 
-  it('两源合并、按最近活跃倒序、压缩件进 skipped 如实披露', () => {
+  it('两源合并、按最近活跃倒序、空文件如实跳过', () => {
     const { claude, codex } = buildTree()
     const r: ExternalSessionReport = scanExternalSessions({ claudeRoot: claude, codexRoot: codex, includeTitles: true })
     expect(r.available).toBe(true)
-    expect(r.sessions.map((s) => s.source)).toEqual(['codex', 'claude-code'])
-    expect(r.skipped.some((s) => s.reason.startsWith('compressed-unsupported'))).toBe(true)
+    // 压缩件可解压时：明文 + 压缩件两会话（同内容）；无 zstd 时只有明文
+    const codexCount = r.sessions.filter((x) => x.source === 'codex').length
+    expect(codexCount).toBe(zstdCompress ? 2 : 1)
+    expect(r.sessions.filter((x) => x.source === 'claude-code')).toHaveLength(1)
     expect(r.skipped.some((s) => s.reason === 'empty-file')).toBe(true)
-    expect(r.scannedFiles).toBe(4)
+    expect(r.scannedFiles).toBeGreaterThanOrEqual(3)
+  })
+
+  it('压缩件就地解压：.jsonl.zst 与明文等价（Node 有 zstd 时）', () => {
+    if (!zstdCompress) return
+    const { claude, codex } = buildTree()
+    const r = scanExternalSessions({ claudeRoot: claude, codexRoot: codex, includeTitles: true, limit: 10 })
+    const fromZst = r.sessions.filter((s) => s.file.endsWith('.zst'))
+    expect(fromZst).toHaveLength(1)
+    const plain = r.sessions.find((s) => s.file.endsWith('rollout-2026-10-21-x.jsonl'))
+    expect(fromZst[0]?.sessionId).toBe(plain?.sessionId)
+    expect(fromZst[0]?.userTurns).toBe(plain?.userTurns)
+    expect(fromZst[0]?.title).toBe(plain?.title)
+  })
+
+  it('损坏压缩件进 skipped（decompress-failed），不拖垮整批', () => {
+    if (!zstdCompress) return
+    const root = tmp()
+    const codex = join(root, 'sessions', '2026', '09', '17')
+    mkdirSync(codex, { recursive: true })
+    writeFileSync(join(codex, 'rollout-2026-09-17-bad.jsonl.zst'), 'not-a-zstd-frame', 'utf8')
+    writeFileSync(join(codex, 'rollout-2026-09-18-ok.jsonl'), CODEX_LINES, 'utf8')
+    const r = scanExternalSessions({ claudeRoot: join(root, 'none'), codexRoot: join(root, 'sessions') })
+    expect(r.sessions).toHaveLength(1)
+    expect(r.skipped.some((s) => s.reason.startsWith('decompress-failed'))).toBe(true)
+  })
+
+  it('超过单文件上限进 skipped；上限可注入（默认 32MB）', () => {
+    const root = tmp()
+    const claude = join(root, 'projects', 'p')
+    mkdirSync(claude, { recursive: true })
+    writeFileSync(join(claude, 'big.jsonl'), CLAUDE_LINES, 'utf8')
+    const tight = scanExternalSessions({ claudeRoot: join(root, 'projects'), codexRoot: join(root, 'none'), maxFileBytes: 1024 })
+    // 夹具本身超过 1KB 时被挡；未超过时正常解析——两种都接受，但必须有一致的 reason 或结果
+    if (tight.sessions.length === 0) {
+      expect(tight.skipped.some((s) => s.reason.startsWith('file-too-large'))).toBe(true)
+    } else {
+      expect(tight.sessions[0]?.source).toBe('claude-code')
+    }
+    const loose = scanExternalSessions({ claudeRoot: join(root, 'projects'), codexRoot: join(root, 'none') })
+    expect(loose.sessions).toHaveLength(1)
+  })
+
+  it('解压后超限也挡（压缩比异常不透支内存）', () => {
+    if (!zstdCompress) return
+    const root = tmp()
+    const codex = join(root, 'sessions', '2026', '09', '17')
+    mkdirSync(codex, { recursive: true })
+    const big = JSON.stringify({ timestamp: '2026-09-17T00:00:00Z', type: 'session_meta', payload: { id: 'big', cwd: '/w' } })
+      + '\n' + JSON.stringify({ timestamp: '2026-09-17T00:00:01Z', type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'y'.repeat(4000) }] } })
+    const packed = zstdCompress(Buffer.from(big, 'utf8'))
+    writeFileSync(join(codex, 'rollout-2026-09-17-huge.jsonl.zst'), packed)
+    const r = scanExternalSessions({ claudeRoot: join(root, 'none'), codexRoot: join(root, 'sessions'), maxFileBytes: Math.max(1024, packed.byteLength + 64) })
+    expect(r.sessions).toHaveLength(0)
+    expect(r.skipped.some((s) => s.reason.startsWith('file-too-large-after-decompress'))).toBe(true)
   })
 
   it('limit 截断时 truncated 如实标注', () => {

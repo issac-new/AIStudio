@@ -77,9 +77,19 @@
   先剔不可用再分档，修复后实测 `isolated 0 + confirmed 0 + passed 1 + failOpen 7 = 8`。
   守门用例 `redteam/__tests__/s1-layer.test.ts` 4 例锁住该口径。
 - 全量：`npm test` = 928 文件 6,660 过 0 败 11 跳过（rc=0）。
-- 未验证：Codex 压缩件解压后的解析（本批有意不做）；超大会话（>8MB）的内容索引。
+- 后续补充（同日，边界闭合后）：见下节「补充：压缩件与大会话」。
 
 ## 设计文档影响
 
 DESIGN_SYNC: none（新增只读端点与索引模块，未改变整合正本的机制描述、路由与端点计数以外的事实；
 端点计数随总账下一轮对账，不在本批改动正本）
+
+## 补充：压缩件与大会话（同日第二批）
+
+原第一版把两件事列为"有意不做"，实现后发现两者都不需要新依赖，遂闭合。
+
+- **压缩件就地解压**：`node:zlib` 自 Node 22+ 提供 `zstdDecompressSync`，本机 Node 24 具备。改为能力探测：有则解压 `.jsonl.zst` 再解析，无则进 skipped 标 `compressed-unsupported（当前 Node 无 zstd API）`，不假装支持。解压失败标 `decompress-failed`，不拖垮整批。
+- **单文件上限 8MB→32MB，且可注入**：原上限把本机一个 8.8MB 真实会话挡在门外。上限通过 `maxFileBytes` 传入（默认 32MB，夹 1KB-256MB），解压后再判一次（`file-too-large-after-decompress`），压缩比异常不透支内存。
+- 验证：`external-cli-sessions` 17/17（新增压缩件等价、损坏压缩件、超限、解压后超限四类）；`typecheck:harness` 0 错；真实数据复核——Codex 单源 65 个 `.zst` 全部解析；8.8MB 会话直接解析成功（轮数/工作区/时间可读），且它已不再出现在 skipped 里。
+
+- D7：这两个边界用运行时内置能力关闭，不引入第三方解压库。理由：新增依赖与"零依赖纪律"冲突，而 Node 22+ 的 zstd 已够用；老 Node 走如实降级。
