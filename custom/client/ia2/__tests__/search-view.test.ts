@@ -113,6 +113,18 @@ vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
 vi.mock('@/composables/useSessionSearch', () => ({
   useSessionSearch: () => sessionSearch,
 }))
+const chatStoreMock = vi.hoisted(() => ({
+  sessions: [] as Array<Record<string, unknown>>,
+  sessionsLoaded: false,
+  sessionProfileFilter: null,
+  loadSessions: vi.fn(async () => {}),
+}))
+const groupChatMock = vi.hoisted(() => ({
+  rooms: [] as Array<Record<string, unknown>>,
+  loadRooms: vi.fn(async () => {}),
+}))
+vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => chatStoreMock }))
+vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: () => groupChatMock }))
 vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   default: {
     props: ['show', 'taskId'],
@@ -157,6 +169,10 @@ beforeEach(() => {
   document.body.innerHTML = ''
   localStorage.clear()
   vi.clearAllMocks()
+  chatStoreMock.sessions = []
+  chatStoreMock.sessionsLoaded = false
+  chatStoreMock.sessionProfileFilter = null
+  groupChatMock.rooms = []
   const workspace = useWorkspaceStore() as any
   const cockpit = useCockpitStore() as any
   workspace.searchOpen = true
@@ -178,6 +194,21 @@ describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
       expect(w.find(`[data-testid="search-group-${key}"]`).exists(), key).toBe(true)
     }
     expect(w.find('[data-testid="search-count"]').text()).toBe('8')
+    w.unmount()
+  })
+
+  it('弹窗打开即装载 agent 会话与群聊两源（各一次）', async () => {
+    const { w } = await mountSearch()
+    expect(chatStoreMock.loadSessions).toHaveBeenCalledTimes(1)
+    expect(groupChatMock.loadRooms).toHaveBeenCalledTimes(1)
+    w.unmount()
+  })
+
+  it('已装载的会话源不重复装载', async () => {
+    chatStoreMock.sessionsLoaded = true
+    const { w } = await mountSearch()
+    expect(chatStoreMock.loadSessions).not.toHaveBeenCalled()
+    expect(groupChatMock.loadRooms).toHaveBeenCalledTimes(1)
     w.unmount()
   })
 
