@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "product": "AIStudio",
+  "modules": {
+    "cockpit": {
+      "name": "驾驶舱（含推演程序）",
+      "includes": ["custom/", "patches/", "registries/", "config/", "simharness/（推演程序）", "vendor/hermes-studio（注入态基线）"],
+      "version": "2.37",
+      "versionCarrier": "RELEASE-NOTES.md",
+      "buildCommand": "npm run build:dmg（产物 DMG/zip，desktop 内嵌上游 hermes-agent 运行时）",
+      "artifacts": "vendor/hermes-studio/packages/desktop/release/",
+      "install": "DMG/zip 安装（mac arm64 / win x64）；日常验证走浏览器 web 版 npm run dev",
+      "notes": "simharness/ 推演程序仅仓内运行、不随安装包分发（用户裁定 2026-10-26）；装机包不含推演。驾驶舱 2.x 版本号线自 2.37 后未续（RELEASE-NOTES 自记），待补记轮统一对账——本清单如实引用。"
+    },
+    "agent-teams": {
+      "name": "agent teams（多 profile 智能体团队）",
+      "includes": ["team/（profiles+skills+shared+patches）", "runtime/（agent 运行时定制，manifest 通道部署到 ~/.hermes/hermes-agent）"],
+      "version": "v3.3.0",
+      "versionCarrier": "team/README_zh.md",
+      "buildCommand": "team/skills/devops/public-repo-release 六步（白名单圈资产→secret 扫描→rsync 发布仓）",
+      "artifacts": "公开 git 仓工作树（issac-new/SwarmTeam 归档态）",
+      "install": "hermes profile install profiles/<name> --alias -y（Windows 离线见 install-windows.ps1）；runtime/ 经 npm run runtime:register 部署",
+      "notes": "版本 v3.3.0 为 README 散文载体（2026-10-14 增量），无 semver 真源文件——按裁定不新建，清单抄录。"
+    },
+    "ycode": {
+      "name": "Ycode（zcode 受管分叉，编码引擎）",
+      "includes": ["vendor/zcode（钉版基线）", "zcode-patches/（分叉增量，series 登记）"],
+      "version": "3c5b2276",
+      "versionCarrier": "zcode-patches/series",
+      "carrierPattern": "8",
+      "buildCommand": "npm run zcode:ensure（pnpm 闭包构建）＋node scripts/zcode-engine.mjs install-cli（→ ~/.hermes/ycode/zcode.cjs）",
+      "artifacts": "~/.hermes/ycode/zcode.cjs（单文件部署位）",
+      "install": "ACP 桥以 ZCODE_BIN 指向部署位；解析序=显式 env＞官方捆绑＞分叉＞桥兜底",
+      "notes": "以基线代版本（用户裁定 2026-10-26）：版本=series 头 origin/main@3c5b2276（v3.16.1 系列），carrierPattern=活跃补丁数（当前 8：002-009）。不新建 VERSION 文件。"
+    },
+    "yuan-skill": {
+      "name": "yuan skill（swarm-yuan 项目技能生成器）",
+      "includes": ["skills/swarm-yuan/（六段目录本体）"],
+      "version": "v2.95.0",
+      "versionCarrier": "skills/swarm-yuan/CHANGELOG.md",
+      "buildCommand": "bash skills/swarm-yuan/scripts/make-offline-bundle.sh（脚本在 skills/swarm-yuan/scripts/；三档：novendor 5M / 全量 ~52M / everything ~71M）",
+      "artifacts": "skills/swarm-yuan/dist/swarm-yuan-offline-<ver>.zip（SHA256SUMS 随包）",
+      "install": "install.sh 多宿主（hermes → ~/.hermes/skills）／install-offline.sh；GitHub release tag 同版本",
+      "notes": "四模块中发布链最成熟：CHANGELOG semver＋.bundle-version 溯源＋体积预算门禁齐备。"
+    }
+  },
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode @3c5b2276——独立坐标系，与模块产品版本不互推）"
+}
