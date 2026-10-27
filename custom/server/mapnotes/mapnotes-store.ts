@@ -1,8 +1,9 @@
 // overlay[mapnotes] 业务地图标注存储（挂账清偿批二 C1，2026-10-27）。
 //
-// 范式来源：JoyAI ONE 协同推演的「在线标注」半环——画布节点的人工修正（备注/
-// 勾选确认）持久化，跨会话保留、多用户可读=异步协同（最后写胜出）。实时多人
-// 协同（OT/CRDT）明确不做（spec D1）。
+// 范式来源：JoyAI ONE 协同推演的「在线标注」——画布节点人工修正持久化+实时协同。
+// 批三翻批二 D1 降维案：LWW-Register 合并协议（合法 CRDT，收敛性可证）——条目带
+// rev（写方 lamport 计数）+by，按 (rev,by) 字典序比较，旧写拒绝返回现存条目，
+// 并发写自动合并不丢更新；实时通道=socket.io /mapnotes 房间广播（mapnotes-socket.ts）。
 // 形态照抄 ctxnotes（notes-store.ts）：env 重定向+原子写+坏文件诚实空态；
 // key=需求指纹（impact 响应下发的 sha1(title+description)）。
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
@@ -18,6 +19,14 @@ export interface MapAnnotation {
   checked: boolean
   by: string
   at: number
+  /** 写方 lamport 计数（批三 LWW）：每写+1；同 nodeId 按 (rev,by) 全序比较取胜者。 */
+  rev: number
+}
+
+/** (rev,by) 全序比较：rev 主序，同 rev 以 by 字典序破平——LWW-Register 的比较器。 */
+function lwwWins(candidate: MapAnnotation, existing: MapAnnotation): boolean {
+  if (candidate.rev !== existing.rev) return candidate.rev > existing.rev
+  return candidate.by > existing.by
 }
 
 export interface MapAnnotationsFile {
@@ -48,7 +57,8 @@ function readAnnotationsFile(key: string): MapAnnotationsFile {
     return {
       key,
       annotations: Array.isArray(raw.annotations)
-        ? raw.annotations.filter((a) => a && typeof a.nodeId === 'string' && typeof a.note === 'string' && typeof a.checked === 'boolean')
+        ? raw.annotations.filter((a) => a && typeof a.nodeId === 'string' && typeof a.note === 'string' && typeof a.checked === 'boolean'
+            && typeof a.by === 'string' && typeof a.at === 'number')
         : [],
     }
   } catch {
@@ -72,8 +82,14 @@ export function listAnnotations(key: string): MapAnnotation[] {
   return readAnnotationsFile(key).annotations
 }
 
-/** upsert 单节点标注（同 nodeId 覆盖——最后写胜出的异步协同语义）。 */
-export function upsertAnnotation(key: string, input: Omit<MapAnnotation, 'at'> & { at?: number }): MapAnnotation {
+export interface UpsertOutcome {
+  annotation: MapAnnotation
+  /** true=本写胜出已落盘；false=旧写被 LWW 拒绝（annotation=现存条目，调用方如实回显）。 */
+  applied: boolean
+}
+
+/** upsert 单节点标注（LWW-Register：同 nodeId 按 (rev,by) 全序比较；旧写拒绝）。 */
+export function upsertAnnotation(key: string, input: Omit<MapAnnotation, 'at' | 'rev'> & { at?: number; rev?: number }): UpsertOutcome {
   assertKey(key)
   const file = readAnnotationsFile(key)
   const entry: MapAnnotation = {
@@ -82,12 +98,18 @@ export function upsertAnnotation(key: string, input: Omit<MapAnnotation, 'at'> &
     checked: input.checked,
     by: (input.by || 'anonymous').slice(0, 64),
     at: input.at ?? Date.now(),
+    rev: input.rev ?? 1,
   }
   const idx = file.annotations.findIndex((a) => a.nodeId === entry.nodeId)
-  if (idx >= 0) file.annotations[idx] = entry
-  else file.annotations.push(entry)
+  if (idx >= 0) {
+    const existing = file.annotations[idx]
+    if (!lwwWins(entry, existing)) return { annotation: existing, applied: false }
+    file.annotations[idx] = entry
+  } else {
+    file.annotations.push(entry)
+  }
   writeAnnotationsFile(file)
-  return entry
+  return { annotation: entry, applied: true }
 }
 
 export function deleteAnnotation(key: string, nodeId: string): boolean {

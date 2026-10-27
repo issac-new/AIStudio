@@ -107,6 +107,8 @@ export interface MapAnnotationDto {
   checked: boolean
   by: string
   at: number
+  /** 写方 lamport 计数（LWW-Register 比较键）。 */
+  rev: number
 }
 
 export async function fetchMapAnnotations(key: string): Promise<MapAnnotationDto[]> {
@@ -114,14 +116,20 @@ export async function fetchMapAnnotations(key: string): Promise<MapAnnotationDto
   return r.annotations ?? []
 }
 
-export async function saveMapAnnotation(key: string, annotation: { nodeId: string; note: string; checked: boolean }): Promise<MapAnnotationDto> {
-  const r = await json<{ ok: boolean; annotation?: MapAnnotationDto }>('/api/hermes/map-annotations', {
+export interface SaveMapAnnotationResult {
+  annotation: MapAnnotationDto
+  /** false=旧写被 LWW 拒绝（annotation=现存条目，如实回显）。 */
+  applied: boolean
+}
+
+export async function saveMapAnnotation(key: string, annotation: { nodeId: string; note: string; checked: boolean; rev?: number }): Promise<SaveMapAnnotationResult> {
+  const r = await json<{ ok: boolean; applied?: boolean; annotation?: MapAnnotationDto }>('/api/hermes/map-annotations', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key, by: 'map-editor', ...annotation }),
   })
   if (!r.annotation) throw new Error('标注保存失败')
-  return r.annotation
+  return { annotation: r.annotation, applied: r.applied !== false }
 }
 
 export async function deleteMapAnnotation(key: string, nodeId: string): Promise<void> {

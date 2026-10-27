@@ -4,7 +4,7 @@
      实体↔spec 共现边（docs 字段）。C1 标注：节点点击弹标注面板（备注/确认勾选）
      按需求指纹持久化——多用户读写同一存储=异步协同（最后写胜出，实时协议不做）。 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { VueFlow, type Edge, type Node } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -13,6 +13,7 @@ import {
   analyzeRequirementImpact, fetchMapAnnotations, saveMapAnnotation, deleteMapAnnotation,
   type RequirementImpactDto, type MapAnnotationDto,
 } from '../../api/sim-director'
+import { subscribeMapnotes } from '../../api/mapnotes-socket'
 
 const title = ref('')
 const description = ref('')
@@ -23,11 +24,17 @@ const loadError = ref('')
 // —— 标注（C1）：指纹 key + 节点标注清单 + 选中节点的编辑面板态 ——
 const fingerprint = ref('')
 const annotations = ref<MapAnnotationDto[]>([])
+// 实时协同（批三 D1）：房间在线数提示条 + 订阅清理句柄 + 本端 rev 计数（LWW 写方时钟）
+const watchers = ref(0)
+let unsubMapnotes: (() => void) | null = null
+let myRev = 0
 const selectedNodeId = ref('')
 const draftNote = ref('')
 const draftChecked = ref(false)
 const savingNote = ref(false)
 const noteMsg = ref('')
+
+onUnmounted(() => { unsubMapnotes?.(); unsubMapnotes = null })
 
 const annotationOf = (nodeId: string): MapAnnotationDto | undefined =>
   annotations.value.find((a) => a.nodeId === nodeId)
@@ -44,6 +51,23 @@ async function analyze(): Promise<void> {
     noteMsg.value = ''
     // 同一需求（同指纹）拉回历史标注——人工修正跨会话保留
     try { annotations.value = await fetchMapAnnotations(res.fingerprint) } catch { annotations.value = [] }
+    // 订阅指纹房间（换指纹先退旧房；他人变更实时落画布+presence 提示条）
+    unsubMapnotes?.()
+    unsubMapnotes = subscribeMapnotes(
+      res.fingerprint,
+      (ev) => {
+        if (ev.kind === 'upsert' && ev.annotation) {
+          const a = ev.annotation
+          const i = annotations.value.findIndex((x) => x.nodeId === a.nodeId)
+          if (i >= 0) annotations.value[i] = a
+          else annotations.value.push(a)
+          if (a.by !== 'map-editor') noteMsg.value = `${a.by} 更新了「${a.nodeId.slice(0, 24)}」的标注`
+        } else if (ev.kind === 'delete' && ev.nodeId) {
+          annotations.value = annotations.value.filter((x) => x.nodeId !== ev.nodeId)
+        }
+      },
+      (ev) => { watchers.value = ev.watchers },
+    )
   } catch (e) {
     impact.value = null
     loadError.value = e instanceof Error ? e.message : String(e)
@@ -75,7 +99,9 @@ async function saveAnnotation(): Promise<void> {
   savingNote.value = true
   noteMsg.value = ''
   try {
-    const saved = await saveMapAnnotation(fingerprint.value, { nodeId: selectedNodeId.value, note: draftNote.value, checked: draftChecked.value })
+    // rev=写方时钟自增（LWW：本端每次保存+1；被他人更高 rev 压过时 applied:false 如实回显）
+    myRev += 1
+    const saved = await saveMapAnnotation(fingerprint.value, { nodeId: selectedNodeId.value, note: draftNote.value, checked: draftChecked.value, rev: myRev })
     const idx = annotations.value.findIndex((a) => a.nodeId === saved.nodeId)
     if (idx >= 0) annotations.value[idx] = saved
     else annotations.value.push(saved)
@@ -230,7 +256,7 @@ const graphEdges = computed<Edge[]>(() => {
           @click="layers[m.key] = !layers[m.key]"
         >{{ m.label }}</button>
       </div>
-      <p class="bmap__hint">{{ impact.boundary }}</p>
+      <p class="bmap__hint">{{ impact.boundary }}<span v-if="watchers > 1" class="bmap__watchers" data-testid="sim-map-watchers"> · {{ watchers }} 人正在看</span></p>
       <div class="bmap__body">
         <div class="bmap__canvas" data-testid="sim-map-canvas" @click.capture="onCanvasClick">
           <VueFlow :nodes="graphNodes" :edges="graphEdges" :fit-view-on-init="true" :zoom-on-scroll="true" :pan-on-scroll="true" :elements-selectable="true" :nodes-draggable="false" @node-click="onNodeClick" />
@@ -280,6 +306,7 @@ const graphEdges = computed<Edge[]>(() => {
 }
 .bmap__layer.is-on { opacity: 1; color: var(--text-primary); }
 .bmap__hint { margin: 0; font-size: 11.5px; color: var(--text-muted); }
+.bmap__watchers { color: var(--ia-fresh, #2e9e5b); }
 .bmap__error { color: var(--ia-fail); font-size: 12px; margin: 0; }
 .bmap__empty { border: 1px dashed var(--border-color); border-radius: 8px; padding: 24px; text-align: center; font-size: 12.5px; color: var(--text-muted); margin: 0; }
 .bmap__canvas { height: 520px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }

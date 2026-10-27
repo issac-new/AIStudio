@@ -1,13 +1,13 @@
 # SwarmStudio 设计数字总账
 
 > 全域数字唯一事实源（2026-10-23 自整合正本 R1 附录 B 独立成档，整合 R2 决策 I5）。
-> 核实日：2026-10-26（九点对账轮全量复测；设计文档同步机制立法批随批更新：变量 199/specs 342；Qoder 主动性吸收轮刷新三行：补丁 405/服务端域 149/specs 350 实测；挂账清偿批：补丁 406/specs 351；JoyAI 闭环吸收轮：补丁 407/服务端域 152/specs 354；挂账清偿批：路由 +sim/map/specs 355/全量 6,448；清偿批二：补丁 408/全量 6,460/端点 +map-annotations）。任何文档引用数字以本表为准；本表只增改不并列双口径，历史口径见各档案。
+> 核实日：2026-10-26（九点对账轮全量复测；设计文档同步机制立法批随批更新：变量 199/specs 342；Qoder 主动性吸收轮刷新三行：补丁 405/服务端域 149/specs 350 实测；挂账清偿批：补丁 406/specs 351；JoyAI 闭环吸收轮：补丁 407/服务端域 152/specs 354；挂账清偿批：路由 +sim/map/specs 355/全量 6,448；清偿批二：补丁 408/端点 +map-annotations；批三：补丁 409/全量 6,466）。任何文档引用数字以本表为准；本表只增改不并列双口径，历史口径见各档案。
 
 | 域 | 项 | 数字 |
 |---|---|---|
 | 产品面 | 模式/页签/入口/岛 | 3/34/6/4（2026-10-26 加挂微轮 +⑥治理·主动性两轴页签） |
 | 产品面 | 路由/客户端目录/服务端域 | 90/19/152（+delivery/precedent/expertise/proactivity，2026-10-26 Qoder 吸收轮；2026-10-26 JoyAI 闭环吸收轮 +specs/workitem/impact 三域；挂账清偿批路由 +sim/map） |
-| 产品面 | 补丁 studio/zcode（series 登记） | 408/8（清偿批二 698 mapnotes 挂载；2026-10-26 晚口径并 Qoder 双轮实测：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp、695 proactivity 挂载、696 agent 目标登记对齐台账；JoyAI 闭环吸收轮 697 workitem+impact 挂载；zcode 009 claude-skills-compat） |
+| 产品面 | 补丁 studio/zcode（series 登记） | 409/8（批三 699 mapnotes socket namespace；清偿批二 698 mapnotes 挂载；2026-10-26 晚口径并 Qoder 双轮实测：691 fail-soft、692 kanban-patch-running、693 element-web-dir-override、694 element-web-wasm-csp、695 proactivity 挂载、696 agent 目标登记对齐台账；JoyAI 闭环吸收轮 697 workitem+impact 挂载；zcode 009 claude-skills-compat） |
 | 产品面 | 用户决策/常设/纠正 | 148/30/27 |
 | 产品面 | 全量测试 | 滚动口径见各轮 spec 验证段（2026-10-26 JoyAI 挂账清偿批 worktree=6,448 过/0 败/11 跳过；吸收轮 6,438 两轮；主树未注入时全量出假红，必须先 inject） |
 | 产品面 | 六闸/介入/检测器/prelaunch | 6/14/31/30 |
@@ -15,7 +15,7 @@
 | 产品面 | FIBO | 37/21/16 |
 | 产品面 | 天猫吸收面（2026-10-23） | 端点 7（delivery 4+expertise 2+precedent 1）；介入六类/两层（run22=98/85+13）；画像 14 人 455 证据；C 档补数 81/81；判例=run 单元 |
 | 产品面 | 群体协作读数面（2026-10-24 含清账批） | 端点 1（delivery swarm-collab＋?compare= 消融对比）；四维度读数＋全文保真双口径＋拜占庭 BCR/暴露窗；红队种子库 v2=36 任务 6 向量；交付效能第⑤区；消融/拜占庭旋钮（默认关）＋mixed-motive-bidding 场景＋welfare/gini/nash 指标器；obs-signals byProfile 分桶；simharness 采集透传（判据零变化） |
-| 产品面 | 研发闭环串联面（2026-10-26 含挂账清偿批） | 端点 4（workitem panorama＋impact requirement＋suggest-modules＋ontology fibo/related-docs）；fewshot 派发语境接线＋bigram 向量双口径召回；泳道证据摄取（lane_handoff/lane_session）＋全景面板泳道履历面；run 完成失败样本自动回流（EVAL_AUTO_REFLOW_ON_RUN）；业务地图页 sim/map（多图层画布）；IDE 任务侧栏⌗全景面板＋导演台影响推演卡/AI 拆模块＋FIBO 关联 spec 列；批二：画布标注（map-annotations 端点+节点角标+指纹持久化）＋fewshot LLM 重排档（FLYWHEEL_FEWSHOT_RERANK 选通）＋mention 通道 lane_session 源 |
+| 产品面 | 研发闭环串联面（2026-10-26 含挂账清偿批） | 端点 4（workitem panorama＋impact requirement＋suggest-modules＋ontology fibo/related-docs）；fewshot 派发语境接线＋bigram 向量双口径召回；泳道证据摄取（lane_handoff/lane_session）＋全景面板泳道履历面；run 完成失败样本自动回流（EVAL_AUTO_REFLOW_ON_RUN）；业务地图页 sim/map（多图层画布）；IDE 任务侧栏⌗全景面板＋导演台影响推演卡/AI 拆模块＋FIBO 关联 spec 列；批二：画布标注（map-annotations 端点+节点角标+指纹持久化）＋fewshot LLM 重排档（FLYWHEEL_FEWSHOT_RERANK 选通）＋mention 通道 lane_session 源；批三：标注实时协同（LWW-Register+socket 房间广播+presence，补丁 699）＋squad 委托链重排注入（fetchTaskTitle 迁 governance 解环） |
 | 产品面 | 推演/方案/纪律 | 22 轮（run22 六闸全过）/V8.54/86 条正文（编号至 86） |
 | 运行面 | 编制/账号/profile/板 | 15/30/42/28 |
 | 运行面 | 宿主/sim profile | 49-50/45 |

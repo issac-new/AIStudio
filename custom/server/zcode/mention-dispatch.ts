@@ -22,6 +22,9 @@ import { sessionModeOf } from '../permmodes/session-mode-store'
 import { ENGINE_MODE_MAP } from '../permmodes/permission-modes'
 import { randomUUID } from 'crypto'
 import { appendEvidence } from '../evidence/evidence-store'
+import { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
+import { fewshotRerank, rerankInjectLine } from '../eval/fewshot-rerank'
+import { listLedger } from '../eval/flywheel'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
 import {
   resolveSquad, isSelfTrigger, buildSquadBriefing, recordEvaluation,
@@ -325,8 +328,17 @@ export class MentionDispatchService {
 
     // squad 委托：发给 leader 的文本是简报（规则在前 + 任务数据栅栏，P-C(c)）；
     // 简报里的 @成员名 是给 leader 的指引，token 直传不再重解析文本。
+    // 批三 D2：squad 链 fewshot 重排注入（与列编排面同款）——taskId→标题→fewshotRerank
+    // →重排行 append 简报尾部（栅栏外：系统拼的检索增强非用户输入）；fail-soft 全链零阻断。
+    let squadRerankLine: string | null = null
+    if (plan.squad && params.taskId) {
+      squadRerankLine = await fetchTaskTitleByTaskId(params.taskId)
+        .then((t) => (t ? fewshotRerank(t, listLedger().distills) : null))
+        .then((r) => (r ? rerankInjectLine(r) : null))
+        .catch(() => null)
+    }
     const sendText = plan.squad
-      ? buildSquadBriefing(plan.squad.name, plan.squad, params.text).prompt
+      ? buildSquadBriefing(plan.squad.name, plan.squad, params.text).prompt + (squadRerankLine ? `\n${squadRerankLine}` : '')
       : params.text
 
     const key = this.slotKey(params.workspacePath, plan.runsFor)
