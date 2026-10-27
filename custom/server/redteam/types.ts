@@ -68,12 +68,44 @@ export interface RedteamVariant {
   detected: boolean
 }
 
+/** S1 分层复评：单条 S0 幸存者过 S1 裁判的结论（原文不入账，preview 指纹即可复核）。 */
+export interface S1SurvivorVerdict {
+  id: string
+  preview: string
+  via: string
+  verdict: 'PASS' | 'REWRITE' | 'CONFIRM' | 'BLOCK' | null
+  attackP: number | null
+  category: string | null
+  severity: number | null
+}
+
+/**
+ * S1 分层报告（挂账清偿：红队 S1 裁判接线）。
+ * 口径：isolated=REWRITE/BLOCK（重处置拦截）；confirmed=CONFIRM（灰区放行+警示）；
+ * passed=PASS（完全逃逸）；failOpen=判定端不可用（不计入逃逸率分母，如实披露）。
+ * strictEscapeRate=passed/可用；softEscapeRate=(passed+confirmed)/可用。
+ */
+export interface S1LayerReport {
+  evaluatedAt: number
+  survivors: S1SurvivorVerdict[]
+  isolated: number
+  confirmed: number
+  passed: number
+  failOpen: number
+  strictEscapeRate: number | null
+  softEscapeRate: number | null
+  available: boolean
+  unavailableReason?: string
+}
+
 export interface RedteamRun {
   id: string
   createdAt: number
   config: RedteamConfig
   detector: 's0-rules'
-  s1Wired: false
+  s1Wired: boolean
+  /** S1 分层复评（POST /runs/:id/s1 按需附上；未复评的旧 run 无此字段）。 */
+  s1?: S1LayerReport
   totals: {
     evaluated: number
     detected: number

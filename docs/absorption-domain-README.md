@@ -3,12 +3,19 @@
 > 给后续会话与 agent 的单页入口（2026-10-01 吸收批 10 落地 #27）：本目录是
 > AIStudio 吸收上游组件的全部设计与实施事实的单一事实源索引。
 > 人读也一样用——点开主文档即全景。
+>
+> 组件版本与最新核对（上次调研→最新版→能力差异→仓内现状→后续动作）自
+> 2026-10-27 起以 [upstream-analysis/component-ledger.md](./upstream-analysis/component-ledger.md)
+> 台账正本为准；本 README 只索引吸收实施事实。
 
 ## 主文档（必读）
 
+- [upstream-analysis/component-ledger.md](./upstream-analysis/component-ledger.md) —
+  技术组件调研台账正本（2026-10-27 立账）：全量组件的版本核对、能力差异与后续动作。
 - [2026-10-01-upstream-absorption-analysis.md](./2026-10-01-upstream-absorption-analysis.md)
   12 组件源码盘点 + 贴合判断 + 27 项吸收清单 + **附录 27 项执行对账表**（实施终态）。
   逐项终态判定（已落地/核实已存在/记档待环境）与合 main 锚点都在对账表里。
+  （组件计数为 2026-10-01 口径；当前参照树 14 棵＋外部组件，以台账正本为准。）
 - [2026-10-01-upstream-absorption-round2-exhaustive.md](./2026-10-01-upstream-absorption-round2-exhaustive.md)
   **补全版（第二轮，穷尽盘点）**：首轮未展开面全部展开（hermes-agent web dashboard 19 页逐页/
   ui-tui/127 RPC/290 端点；zcode 三端逐件；element-web 补 80 项+Labs 26 全清单；编码四家+dsh 补漏）+

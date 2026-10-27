@@ -31,4 +31,4 @@
 {"ts":"2026-10-26T13:14:14Z","tool":"git-commit","target":"team/patches/acp-client-codex-fix__init__.py","gates":"spec-required"}
 {"ts":"2026-10-26T13:37:18Z","tool":"git-commit","target":"docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md","gates":"spec-required"}
 {"ts":"2026-10-26T14:12:16Z","tool":"git-commit","target":"unfulfilled: docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md、docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md 声明 touched 但变更集未含其修订（声明与兑现须同一批——把设计文档修订并入本批或改声明 none 附理由）","gates":"design-sync"}
-{"ts":"2026-10-27T04:58:25Z","tool":"git-commit","target":"unfulfilled: docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md、docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md 声明 touched 但变更集未含其修订（声明与兑现须同一批——把设计文档修订并入本批或改声明 none 附理由）","gates":"design-sync"}
+{"ts":"2026-10-27T05:17:30Z","tool":"git-commit","target":"unfulfilled: docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md 声明 touched 但变更集未含其修订（声明与兑现须同一批——把设计文档修订并入本批或改声明 none 附理由）","gates":"design-sync"}

@@ -142,9 +142,10 @@ describe('钩子接线', () => {
     await expect(hook.preExecute('browser_click', { url: 'https://x.test/.env' }, {})).resolves.toBeUndefined()
   })
 
-  it('挂在瀑布链尾（执法门之后；数据飞轮 round 2 增检索相关性钩子后共 6 节）', async () => {
+  it('挂在瀑布链尾（执法门之后；挂账 #14 接线后共 7 节）', async () => {
     const { ekkoToolExecuteHooks } = await import('../tool-hooks')
-    expect(ekkoToolExecuteHooks.length).toBe(6)
-    expect(typeof ekkoToolExecuteHooks[5]?.preExecute).toBe('function')
+    expect(ekkoToolExecuteHooks.length).toBe(7)
+    expect(typeof ekkoToolExecuteHooks[5]?.preExecute).toBe('function') // callgate 执法钩子（挂账 #14 接线）
+    expect(typeof ekkoToolExecuteHooks[6]?.preExecute).toBe('function') // 序列守卫=链尾
   })
 })

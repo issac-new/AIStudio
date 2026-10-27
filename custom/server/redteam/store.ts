@@ -5,7 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
-import type { RedteamRun, RedteamRunSummary } from './types'
+import type { RedteamRun, RedteamRunSummary, S1LayerReport } from './types'
 
 interface StoreShape {
   runs: RedteamRun[]
@@ -68,6 +68,16 @@ export function listRuns(limit = 20): RedteamRunSummary[] {
 
 export function getRun(id: string): RedteamRun | undefined {
   return readStore().runs.find((r) => r.id === id)
+}
+
+/** 附加 S1 分层复评报告（挂账清偿批）：幂等覆盖（复评一次 run 只留最新一份）。 */
+export function attachS1(id: string, report: S1LayerReport): boolean {
+  const store = readStore()
+  const run = store.runs.find((r) => r.id === id)
+  if (!run) return false
+  run.s1 = report
+  writeStore(store)
+  return true
 }
 
 export function latestRun(): RedteamRun | undefined {
