@@ -26,8 +26,8 @@ describe('群体协作读数接线结构', () => {
     const py = read('mux/mx-eval-summary.py')
     expect(py).toContain('swarm-collab.json')
     expect(py).toContain('"swarmCollab": swarm.get("readout")')
-    // 判据面零新增：fails/gaps 组装段不得出现 swarm 字样
-    const judgeZone = py.slice(py.indexOf('fails, gaps = []'), py.indexOf('verdict = "fail"'))
+    // 判据面零新增（融合批三：判定正本=产品 e2e-verdict.ts）——判定件段不得出现 swarm 字样
+    const judgeZone = py.slice(py.indexOf('判定取产品判定件'), py.indexOf('evals_layer = None'))
     expect(judgeZone).not.toContain('swarm')
   })
 
@@ -60,12 +60,13 @@ const baseDir = () => {
     writeFileSync(join(dir, name), JSON.stringify((passFixture as any)[key], null, 2), 'utf8')
   }
   writeFileSync(join(dir, 'redteam-runs.json'), JSON.stringify({ runs: [] }), 'utf8')
+  writeFileSync(join(dir, 'verdict.json'), JSON.stringify({ ok: true, verdict: 'pass', fails: [], gaps: [], line: 'EVAL-GATE-PASS 测试判定件' }), 'utf8')
   return dir
 }
 
 function runSummary(dir: string): { status: number; out: any } {
   const out = join(dir, 'eval-summary.json')
-  const r = spawnSync('python3', [join(HARNESS, 'mux', 'mx-eval-summary.py'), '--dir', dir, '--out', out], { encoding: 'utf8' })
+  const r = spawnSync('python3', [join(HARNESS, 'mux', 'mx-eval-summary.py'), '--dir', dir, '--out', out, '--verdict-file', join(dir, 'verdict.json')], { encoding: 'utf8' })
   let parsed: any = null
   try { parsed = JSON.parse(readFileSync(out, 'utf8')) } catch { /* noop */ }
   return { status: r.status ?? -1, out: parsed }

@@ -42,7 +42,8 @@ import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 import { PROFILE_PRESETS, presetsValid, routeTaskProfile, type TaskFacts } from '../goalbudget/task-router'
 import { workbenchRoutes } from './workbench/controller'
-import { simLaunchRoutes } from './sim-launch'
+// 融合批四（D7）：启动器上移 simcenter（推演运行域）；路由前缀冻结——本域只保留装配位。
+import { simLaunchRoutes } from '../simcenter/sim-launch'
 // 长程任务可信执行层（2026-10-22）：逐条主张审计、完成态双准入、完整性栅栏、原子断点。
 // 子路由自带写面权限校验（super_admin），不新增 bootstrap 补丁。
 import trustRoutes from '../trust/controller'

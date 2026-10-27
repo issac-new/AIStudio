@@ -103,3 +103,44 @@ gov_lc_breaker_check() { # <gate> <sig> [label] → 0 放行/复位/复议 / 1 b
       return 1 ;;
   esac
 }
+
+# ── run 级治理面（融合批三：指标/工作台账/审计检查——数字与判定单源在产品）──
+
+_gov_get() { # <path> → stdout JSON（失败 rc=1）
+  local tok
+  tok=$(_gov_tok) || return 1
+  studio GET "/api/governance$path" "$tok" 2>/dev/null || return 1
+}
+
+gov_run_metrics() { # <rfd> → 指标 DTO JSON（失败 rc=1；渲染壳在 mx-scenario-lib gov_report）
+  _gov_get "/run/$(printf '%s' "$RUN_ID" | jq -sRr @uri)/metrics?rfd=$(printf '%s' "${1:-}" | jq -sRr @uri)"
+}
+
+gov_work_report() { # <accounts-json> → 工作台账 DTO JSON（失败 rc=1）
+  _gov_lc_post "/run/$(printf '%s' "$RUN_ID" | jq -sRr @uri)/work-report" --argjson accounts "$1" '{accounts:$accounts}'
+}
+
+gov_audit_check() { # <rfd> → 审计检查 DTO JSON（失败 rc=1）
+  _gov_get "/run/$(printf '%s' "$RUN_ID" | jq -sRr @uri)/audit-check?rfd=$(printf '%s' "${1:-}" | jq -sRr @uri)"
+}
+
+gov_eval_verdict() { # <eval-dir> → stdout 判定行；同目录落 verdict.json（0/2/1；服务不可达按 fail=1）
+  local d="$1" body resp
+  [ -s "$d/eval-run.json" ] || { printf 'EVAL-GATE-FAIL 评测运行缺席（eval-run.json 不可读）\n'; return 1; }
+  body=$(jq -n \
+    --slurpfile reg "$d/metric-registry.json" \
+    --slurpfile run "$d/eval-run.json" \
+    --slurpfile setf "$d/eval-set.json" \
+    --slurpfile evs "$d/evaluators.json" \
+    --slurpfile rt "$d/redteam-run.json" \
+    '{metricRegistry:($reg[0]//null),evalRun:($run[0]//null),evalSet:($setf[0]//null),evaluators:($evs[0]//null),redteamRun:($rt[0]//null)}' 2>/dev/null) || {
+    printf 'EVAL-GATE-FAIL 判定入参组装失败\n'; return 1; }
+  resp=$(studio POST /api/hermes/eval/e2e-verdict "$(_gov_tok)" "$body" 2>/dev/null) || {
+    printf 'EVAL-GATE-FAIL 判定服务不可达（POST /api/hermes/eval/e2e-verdict——fail-closed）\n'; return 1; }
+  printf '%s' "$resp" | jq . > "$d/verdict.json" 2>/dev/null || true
+  local verdict line
+  verdict=$(printf '%s' "$resp" | jq -r '.verdict // "fail"')
+  line=$(printf '%s' "$resp" | jq -r '.line // "EVAL-GATE-FAIL 判定行缺席"')
+  printf '%s\n' "$line"
+  case "$verdict" in pass) return 0 ;; gap) return 2 ;; *) return 1 ;; esac
+}

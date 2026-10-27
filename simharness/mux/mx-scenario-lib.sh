@@ -1971,84 +1971,57 @@ people_reconcile() { # 对账：org 生成源（编制表）↔ fleet-manifest �
 }
 
 # ── M3 工作管理：跨板台账 + WIP/stale 治理（work-report 生成）────
-work_report_gen() { # → evidence/work-report.md（导演侧全量扫描 14 账号板）
-  local out="$EVID_DIR/work-report.md" u slug st total wip_warn="" zero_deliver=0
+work_report_gen() { # → evidence/work-report.md（融合批三：聚合与阈值判定正本=治理服务 work-report DTO，本函数只渲染）
+  local out="$EVID_DIR/work-report.md" accounts dto _row
+  accounts=$(for u in "${INSTANCED_USERS[@]}"; do
+    jq -cn --arg u "$u" --arg boards "$(account_boards "$u" | tr '\n' ' ')" \
+      '{user:$u,boards:($boards|split(" ")|map(select(length>0)))}'
+  done | paste -sd, -)
+  dto=$(gov_work_report "[$accounts]") || dto=""
+  if [[ -z "$dto" ]] || ! printf '%s' "$dto" | jq -e '.ok == true' >/dev/null 2>&1; then
+    echo "ISSUE|lifecycle-service-unreachable|work-report|工作台账服务不可达（POST /api/governance/run/:run/work-report）——台账按缺席呈现（fail-soft，不假数字）" >> "$EVID_DIR/issues.log"
+    { echo "# 工作管理台账（work-report，$(date '+%F %T'))"; echo; echo "- 工作台账服务不可达——数字缺席（fail-soft，不编造）。"; } > "$out"
+    mask_env_paths "$out"; echo "$out"; return 0
+  fi
+  local _m="$out.tmp.$$"
   {
     echo "# 工作管理台账（work-report，$(date '+%F %T')）"
     echo
-    echo "## 按人 × 状态分布（跨全部账号板）"
+    echo "## 按人 × 状态分布（跨全部账号板；聚合/阈值=WIP>2、72h 卡壳、零交付=治理服务判定）"
     echo "| 账号 | todo | running | review | done | 其他 | WIP(running) | 卡壳72h |"
     echo "|---|---|---|---|---|---|---|---|"
-    for u in "${INSTANCED_USERS[@]}"; do
-      local todo=0 run=0 rev=0 done=0 other=0 stale=0
-      for slug in $(account_boards "$u"); do
-        local db="$HERMES_ROOT/kanban/boards/$slug/kanban.db"
-        [[ -f "$db" ]] || continue
-        stale=$((stale + $(sqlite3 "$db" "select count(*) from tasks where status not in ('done','archived') and ifnull(created_at,0) < strftime('%s','now') - 259200" 2>/dev/null || echo 0)))
-        while IFS='|' read -r st n; do
-          case "$st" in
-            todo) todo=$((todo+n)) ;; running) run=$((run+n)) ;;
-            review) rev=$((rev+n)) ;; done) done=$((done+n)) ;;
-            *) other=$((other+n)) ;;
-          esac
-        done < <(sqlite3 "$db" "select status, count(*) from tasks where status != 'archived' group by status" 2>/dev/null)
-      done
-      local flag=""
-      if (( run > 2 )); then flag="⚠ 超 WIP 上限"; wip_warn=1; fi
-      if (( stale > 0 )); then flag="$flag ⏳卡壳"; fi
-      echo "| $u | $todo | $run | $rev | $done | $other | $run ${flag} | $stale |"
-    done
+    printf '%s' "$dto" | jq -r '.rows[] | "| \(.user) | \(.todo) | \(.running) | \(.review) | \(.done) | \(.other) | \(.running)\(if .wipOver then " ⚠ 超 WIP 上限" else "" end) | \(.stale) |"'
     echo
     echo "## 治理口径"
-    echo "- WIP 上限：每人 running 并行 ≤2，超限记问题单（容量过载信号）。"
-    echo "- stale 卡：非 done 且 updated_at 超 72h 的卡清点（本轮 $(date +%s) 为基准）。"
-    echo "- 跨轮衔接：retro 后未完结卡由 PM（产品经理A）决定挂起/移交下轮。"
-    # ④零交付遥测：done 卡 body 无任何 commit= 锚=零交付形态（标记完成但无代码证据）
-    local zd_n=0
-    for u in "${INSTANCED_USERS[@]}"; do
-      for slug in $(account_boards "$u"); do
-        local db2="$HERMES_ROOT/kanban/boards/$slug/kanban.db"
-        [[ -f "$db2" ]] || continue
-        zd_n=$((zd_n + $(sqlite3 "$db2" "select count(*) from tasks where status='done' and ifnull(body,'') not like '%commit=%'" 2>/dev/null || echo 0)))
-      done
-    done
-    if (( zd_n > 0 )); then
+    echo "- WIP 上限：每人 running 并行 ≤2，超限=过载信号（治理服务判定，驱动只呈现）。"
+    echo "- stale 卡：非 done 且 created_at 超 72h 清点。"
+    echo "- 零交付遥测：done 卡 body 无 commit= 锚（治理服务判定：治理/台账类卡属合法无锚，研发交付类卡=零交付形态）。"
+    if printf '%s' "$dto" | jq -e '.zeroDeliverTotal > 0' >/dev/null 2>&1; then
       echo
       echo "## 零交付遥测"
-      echo "- done 状态但卡 body 无 commit= 锚的卡：${zd_n} 张（标记完成却无代码证据——逐张人工判定：治理/台账类卡属合法无锚，研发交付类卡=零交付形态）。"
-      zero_deliver=$zd_n
+      echo "- done 状态但卡 body 无 commit= 锚的卡：$(printf '%s' "$dto" | jq -r '.zeroDeliverTotal') 张（逐张人工判定：治理/台账类卡属合法无锚，研发交付类卡=零交付形态）。"
     fi
-  } > "$out"
+  } > "$_m"
+  mv "$_m" "$out"
   mask_env_paths "$out"
-  [[ -n "$wip_warn" ]] && echo "WIP_OVERLOAD"
-  [[ "${zero_deliver:-0}" -gt 0 ]] && echo "ZERO_DELIVER:${zero_deliver}"
+  printf '%s' "$dto" | jq -e '.wipWarn' >/dev/null 2>&1 && echo "WIP_OVERLOAD"
+  local _zd; _zd=$(printf '%s' "$dto" | jq -r '.zeroDeliverTotal')
+  (( _zd > 0 )) && echo "ZERO_DELIVER:${_zd}"
   echo "$out"
 }
 
 # ── 合规及审计（审计师A）：门禁留痕完整性 + 凭证抽检 + 合规意见书 ──
-audit_check() { # → 0 合规 / 1 有缺陷（输出审计发现）
-  local bad=0
-  # 门禁留痕：state 硬闸键已落的必须有对应仓内凭证
-  if [[ -n "$(sget g1_frozen)" ]] && ! repo_has "$(freeze_doc)"; then
-    echo "G1 已落键但 freeze 文件不在 origin/main"; bad=1
+audit_check() { # → 0 合规 / 1 有缺陷（融合批三：检查正本=治理服务 audit-check，本函数只取发现）
+  local dto rc=0
+  dto=$(gov_audit_check "${RFD_ID:-}") || rc=$?
+  if (( rc != 0 )) || ! printf '%s' "$dto" | jq -e '.ok == true' >/dev/null 2>&1; then
+    echo "审计检查服务不可达（fail-soft——检查缺席如实呈现，不装合规）"
+    echo "ISSUE|lifecycle-service-unreachable|audit|审计检查服务不可达（GET /api/governance/run/:run/audit-check）——合规意见按缺口呈现" >> "$EVID_DIR/issues.log"
+    return 1
   fi
-  # 问题单台账格式完整（ISSUE|类型|主体|描述 四段）；无台账≠缺陷（修假阳性）
-  if [[ -f "$EVID_DIR/issues.log" ]]; then
-    awk -F'|' '/^ISSUE\|/ && NF < 4 {exit 1}' "$EVID_DIR/issues.log" 2>/dev/null \
-      || { echo "issues.log 存在字段缺失条目"; bad=1; }
-  fi
-  # 取证目录在位
-  [[ -d "$EVID_DIR" ]] || { echo "取证目录缺失"; bad=1; }
-  # 交付物对账（run8 复盘根治：商户接入文档全程缺席但零记录，直到 8.6 矩阵才暴露
-  # ——REL-DELIVER 在册交付物缺件必须进台账；版本号与报告侧 ARTIFACT_VIEWS 同源硬编
-  # v1.0.0-cashier，改版处两处同步）。release 已在册才查，防部分轮误报。
-  if [[ -n "$(sget release_done)" && -n "${RFD_ID:-}" ]]; then
-    repo_has "docs/delivery/merchant-onboarding-v1.0.0-cashier.md" \
-      || { echo "REL-DELIVER 交付物缺件：docs/delivery/merchant-onboarding-v1.0.0-cashier.md 不在 origin/main"; bad=1; }
-    repo_has "docs/delivery/${RFD_ID}-completeness-check.md" \
-      || { echo "完备性检查缺件：docs/delivery/${RFD_ID}-completeness-check.md 不在 origin/main"; bad=1; }
-  fi
-  return $bad
+  if printf '%s' "$dto" | jq -e '.verdict == "pass"' >/dev/null 2>&1; then return 0; fi
+  printf '%s\n' "$(printf '%s' "$dto" | jq -r '.findings[]')"
+  return 1
 }
 
 rfd_doc_snapshot() { # 需求书判读/提取用快照路径：origin/main 优先，工作树兜底 → 打印路径
@@ -2077,148 +2050,57 @@ mask_env_paths() { # <file...>
   perl -pi -e 's{/Users/[A-Za-z0-9_.-]+}{[宿主家目录]}g; s{/Volumes/[A-Za-z0-9_.-]+}{[宿主卷]}g' "$@"
 }
 
-gov_report() { # 生成治理报告 evidence/governance-report.md（对齐 metrics-log 口径）
-  local out="$EVID_DIR/governance-report.md" total fixed observed deferred
-  total=$({ grep -c "^ISSUE|" "$EVID_DIR/issues.log" 2>/dev/null || true; })
-  # 首过率实算（09-26）：组外预计算，set -euo pipefail 安全（grep -q && v=1 || true）
-  # 口径=六闸全计（2026-10-06 差距审计 P5→R26：G3/G6 为落键型闸、无对应记录即首过；
-  # 原 metrics 行按评审型四闸 4 分母，与 PART1「六闸全首过」口径分裂——run10 起统一六分母）
-  # run13 复盘 C3 修订：打回只认判词 FAIL/显式打回语义行（fail/打回/拒收/熔断/退回），
-  # 闸段其余问题单（如 testlog 缺件/重启循环事故）另列「闸段问题单 N 起」不计打回——
-  # 否则 G5 一轮过会被同段事故单计成打回，治理报告与报告叙事两套口径打架。
-  local _g1f=0 _g2f=0 _g3f=0 _g4f=0 _g5f=0 _g6f=0 _gseg=0 _n
-  local _g1s=0 _g2s=0 _g3s=0 _g4s=0 _g5s=0 _g6s=0 _gsup _supp=0
-  local _segcnt
-  for _n in 1 2 3 4 5 6; do
-    _segcnt=$({ grep -cE "^ISSUE\\|g${_n}-" "$EVID_DIR/issues.log" 2>/dev/null || true; })
-    [ "$_segcnt" -gt 0 ] 2>/dev/null && _gseg=$((_gseg+_segcnt)) || true
-    { grep -E "^ISSUE\\|g${_n}-" "$EVID_DIR/issues.log" 2>/dev/null | grep -qE '(fail|FAIL|打回|拒收|熔断|退回)'; } && eval "_g${_n}f=1" || true
-    # 补过键（方案 §2.6-5 首过基准）：无 FAIL 判词但闸前有补交动作
-    # （G1 准入退回补齐 / G5 分节 GAP 边评边补）——驱动落点 g1/g5，余闸预留。
-    _gs=$(sget "g${_n}_supplement" 2>/dev/null || true)
-    if [[ "$_gs" == 1 ]]; then eval "_g${_n}s=1"; [[ $(eval "echo \$_g${_n}f") = 1 ]] || _supp=$((_supp+1)); fi
-  done
-  local _fp=$((6-_g1f-_g2f-_g3f-_g4f-_g5f-_g6f-_supp))
-  _gstate() { # <打回flag> <补过flag> → 首过|补过|打回
-    if [[ "$1" = 1 ]]; then echo 打回
-    elif [[ "$2" = 1 ]]; then echo 补过
-    else echo 首过; fi }
-  local _gate_detail="G1$(_gstate $_g1f $_g1s) G2$(_gstate $_g2f $_g2s) G3$(_gstate $_g3f $_g3s) G4$(_gstate $_g4f $_g4s) G5$(_gstate $_g5f $_g5s) G6$(_gstate $_g6f $_g6s)"
-  [ "$_supp" -gt 0 ] && _gate_detail="${_gate_detail}（补过 ${_supp}，拆分/补交形态不计首过）" || true
-  [ "$_gseg" -gt 0 ] && _gate_detail="${_gate_detail}（闸段问题单 ${_gseg} 起，不计打回）" || true
-  # 证据一次通过率：凭证族记录（回执/派发/系分文档/凭证缺件）与完成任务环节键对账
-  local _done_keys _evmiss _evrate
-  _done_keys=$({ grep -cE '^[a-z0-9_]+_done=' "$STATE" 2>/dev/null || true; })
-  _evmiss=$({ grep -cE '^ISSUE\|(receipt-missing|raci-dispatch-missing|anexec-missing|evidence-missing|credential)' "$EVID_DIR/issues.log" 2>/dev/null || true; })
-  if [ "$_done_keys" -gt 0 ] 2>/dev/null; then
-    _evrate="$((_done_keys-_evmiss))/${_done_keys}（凭证族记录 ${_evmiss} 起）"
-  else
-    _evrate="⬜（state.env 完成环节键=0，分母缺席如实留空）"
+gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三：数字取治理服务 DTO，本函数只渲染）
+  local out="$EVID_DIR/governance-report.md" dto rc=0
+  dto=$(gov_run_metrics "${RFD_ID:-RFD-001}") || rc=$?
+  if (( rc != 0 )) || ! printf '%s' "$dto" | jq -e '.ok == true' >/dev/null 2>&1; then
+    echo "ISSUE|lifecycle-service-unreachable|gov-report|治理指标服务不可达（GET /api/governance/run/:run/metrics）——治理报告按缺席呈现（fail-soft，不假数字）" >> "$EVID_DIR/issues.log"
+    { echo "# ${RFD_ID:-RFD-001} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T'))"; echo; echo "- 治理指标服务不可达——本报告数字缺席（fail-soft，不编造）。"; } > "$out"
+    mask_env_paths "$out"; echo "$out"; return 0
   fi
-  # 打回次数：ISSUE 行含打回/拒收/熔断实算（闸门打回与凭证打回合并口径）
-  local _reject
-  _reject=$({ grep -cE '^ISSUE\|.*(打回|拒收|熔断)' "$EVID_DIR/issues.log" 2>/dev/null || true; })
-  # 人工介入：DISP 行注明导演（补账/代投/补推）实算；AI 主理回合占比=⬜（回合级留痕未结构化）
-  local _human
-  _human=$({ grep -cE '^DISP\|.*导演' "$EVID_DIR/issues.log" 2>/dev/null || true; })
-  # 缺陷密度+打回率实算（run15 前置 P2-5）：缺陷/用例真值取 quality-summary.env
-  # 双源口径；env 缺席如实 ⬜ 不编造。密度单位=缺陷/千用例。
-  local _poenv _def _nt _dens _rejrate
-  _poenv="$EVID_DIR/product-outcome/quality-summary.env"
-  if [ -f "$_poenv" ] && grep -q '^defects_total=' "$_poenv" && grep -q '^n_tests=' "$_poenv"; then
-    _def=$({ grep '^defects_total=' "$_poenv" | head -1 | cut -d= -f2 | tr -d ' '; })
-    _nt=$({ grep '^n_tests=' "$_poenv" | head -1 | cut -d= -f2 | tr -d ' '; })
-    if [ "$_nt" -gt 0 ] 2>/dev/null; then
-      _dens=$(awk -v d="$_def" -v t="$_nt" 'BEGIN{printf "%.1f", d*1000/t}')
-      _dens="$_def 缺陷 / $_nt 用例 = ${_dens}/千用例"
-    else
-      _dens="⬜（n_tests=0 分母缺席）"
-    fi
-  else
-    _dens="⬜（quality-summary.env 缺席——产品成效数字未采集，如实留空）"
-  fi
-  # ⑤告警差分：基础设施/容量/网关族键聚合一行（新增键单列在治理报告正文）
-  local _alert_fam _alert_n=0 _alert_k
-  for _alert_k in $(grep -E '^ISSUE\|' "$EVID_DIR/issues.log" 2>/dev/null | cut -d'|' -f2 | sort -u); do
-    case "$_alert_k" in
-      gw-*|capacity-*|gateway-*|wip-overload|load-*|mx-load-*) _alert_n=$((_alert_n+1)) ;;
-    esac
-  done
-  _alertline="${_alert_n} 键（族内聚合）"
-  _rejrate=$((6-_fp-_supp))
-  local METRICS_CSV="$(date +%F),${RFD_ID},G1-G6,首过率,${_fp}/6（${_gate_detail}）,$(date +%F)..$(date +%F),issues.log 实算,口径=六闸全计（G3/G6 落键型无记录即首过）；首过基准=任务书首次完整派发（方案 §2.6-5）：显式打回即非首过；PASS 前拆分/补交形态的采集信号 run15 接线后计「补过」
-$(date +%F),${RFD_ID},G1-G6,打回率,${_rejrate}/6（$(( _rejrate * 100 / 6 ))%）,$(date +%F)..$(date +%F),issues.log 实算,口径=打回数/6（三态：首过+补过+打回=6）；判词 FAIL/打回/拒收/熔断/退回语义行
-$(date +%F),${RFD_ID},全程,证据一次通过率,${_evrate},$(date +%F)..$(date +%F),issues.log+state.env 实算,口径=1-凭证缺件记录/完成环节键
-$(date +%F),${RFD_ID},全程,缺陷密度,${_dens},$(date +%F)..$(date +%F),quality-summary.env 实算,口径=测试报告缺陷清单/用例计数（双源，run14 复盘 A2）
-$(date +%F),${RFD_ID},全程,打回次数,${_reject},$(date +%F)..$(date +%F),issues.log 实算,打回/拒收/熔断行计数
-$(date +%F),${RFD_ID},全程,告警类问题单,${_alertline},$(date +%F)..$(date +%F),issues.log 实算,口径=基础设施/容量/网关族键按类型段聚合差分呈现（同族 N 键一行，新增键才单列——防告警刷屏淹没新信号）
-$(date +%F),${RFD_ID},全程,人工介入,${_human} 次（AI 主理回合占比 ⬜）,$(date +%F)..$(date +%F),issues.log 实算,DISP 注明导演计数；占比待 MX_DELIVERY=1 协议事件结构化"
-  # 基线对比行（读上轮治理报告首过率行——「下次基线+1」机制化，§2.6-5）
-  local _runs_dir _prev _baseline
-  _runs_dir="$(dirname "$(dirname "$EVID_DIR")")"
-  _prev=""
-  _baseline=""
-  if [ -n "${RUN_ID:-}" ]; then
-    # run13 复盘 A14：runs/ 下非轮次目录（_wtest 等）字典序排后会顶掉真实上轮——只认轮次命名目录
-    _prev=$(ls -1d "$_runs_dir"/*/ 2>/dev/null | grep -E '/[0-9]{8}-v[0-9]+-run[0-9]+/$' | grep -v "/${RUN_ID}/" | sort | tail -1 || true)
-  fi
-  if [ -n "$_prev" ] && [ -f "${_prev}evidence/governance-report.md" ]; then
-    _baseline=$({ grep -E '首过率' "${_prev}evidence/governance-report.md" 2>/dev/null || true; } | tail -1)
-  fi
+  local _m="$out.tmp.$$"
   {
-    echo "# ${RFD_ID} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T')）"
+    echo "# ${RFD_ID:-RFD-001} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T')）"
     echo
     echo "## 硬闸状态"
-    # G1-G6 全闸落键（独立审计意见 R-A4：G3 曾只有 devimpl_done 无 g3_ 硬闸键，
-    # 治理报告"门禁链"跳过 G3/G6 无说明）；retro_done 即 G6 复盘闸。
-    for k in g1_frozen g2_arch_pass g3_code_pass g4_pass g5_ready uat_done retro_done; do
-      echo "- $k: $(sget "$k" || echo 未落)"
-    done
+    printf '%s' "$dto" | jq -r '.gateKeyLines[] | "- \(.key): \(.value)"'
     echo
-    echo "## 问题单台账（共 ${total} 条；处置记账 $({ grep -c '^DISP|' "$EVID_DIR/issues.log" 2>/dev/null || true; }) 条 DISP——键=类型·主体，缺行=待处置）"
+    echo "## 六闸三态（治理服务判定：首过/补过/打回）"
+    printf '%s' "$dto" | jq -r '[.gateStats[] | .gate + .state] | join(" ")'
+    printf '%s' "$dto" | jq -r 'if .supplementCount > 0 then "（补过 \(.supplementCount)，拆分/补交形态不计首过）" else empty end'
+    printf '%s' "$dto" | jq -r 'if ([.gateStats[].segmentIssues] | add // 0) > 0 then "（闸段问题单 \([.gateStats[].segmentIssues] | add) 起，不计打回）" else empty end'
+    echo
+    echo "## 问题单台账（共 $(printf '%s' "$dto" | jq -r '.issuesTotal') 条；DISP $(printf '%s' "$dto" | jq -r '.dispTotal') 条——键=类型·主体，缺行=待处置）"
     awk -F'|' '/^ISSUE\|/{print "- ["$2"] "$3"："$4}' "$EVID_DIR/issues.log" 2>/dev/null | sort | uniq -c | sort -rn
     echo
     echo "## 凭证与回灌"
-    echo "- state 闸门键：$({ grep -cE "^(jwt_|room_|card_|.*_done|g1_|g2_|g4_|g5_|uat_|retro_)" "$STATE" 2>/dev/null || true; }) 条"
+    echo "- 证据一次通过率：$(printf '%s' "$dto" | jq -r '.evidenceRate.text')"
     echo
     echo "## metrics 回写（metrics-log 口径：date,change,gate,score,ratio,window,source,note）"
-    echo "\`\`\`csv"
-    echo "$METRICS_CSV"
-    echo "\`\`\`"
+    echo '```csv'
+    printf '%s' "$dto" | jq -r '.metricsRows[].csv'
+    echo '```'
+    echo
+    echo "## 缺陷密度与告警"
+    echo "- 缺陷密度：$(printf '%s' "$dto" | jq -r '.defectDensity')"
+    echo "- 打回次数：$(printf '%s' "$dto" | jq -r '.rejectCount')"
+    echo "- 人工介入：$(printf '%s' "$dto" | jq -r '.humanInterventions') 次（AI 主理回合占比 ⬜）"
+    echo "- 告警类问题单：$(printf '%s' "$dto" | jq -r '.alertFamily.count') 键（族内聚合：$(printf '%s' "$dto" | jq -r '.alertFamily.keys | join("、") | if length > 0 then . else "无" end')）"
     echo
     echo "## 基线对比（§2.6-5 上次基线+1 机制）"
-    if [ -n "$_baseline" ]; then
-      echo "- 上轮（$(basename "$_prev")）：${_baseline}"
-      echo "- 本轮（${RUN_ID}）：首过率 ${_fp}/6（${_gate_detail}）"
+    if printf '%s' "$dto" | jq -e '.baseline != null' >/dev/null 2>&1; then
+      echo "- 上轮（$(printf '%s' "$dto" | jq -r '.baseline.prevRun')）：$(printf '%s' "$dto" | jq -r '.baseline.line')"
+      echo "- 本轮（${RUN_ID}）：首过率 $(printf '%s' "$dto" | jq -r '.firstPass')/6"
     else
       echo "- 无上轮基线（首轮或上轮治理报告缺席）——如实留空"
     fi
     echo
-    # 跨轮趋势（近 5 轮）——质量 A 补件（2026-10-16）：单轮基线只答「比上轮好吗」，
-    # 趋势答「质量在变好吗」。口径=metrics-log 同源（各轮 governance-report.md 的
-    # metrics CSV 第 5 域）；本轮取刚实算值，历史轮读文件；文件缺席=⬜ 不编造。
     echo "## 跨轮趋势（近 5 轮，metrics 口径同源）"
     echo "| 轮次 | 首过率 | 打回率 | 缺陷密度 |"
     echo "|---|---|---|---|"
-    local _tr _trn _tg _tfp _trej _tdens
-    for _tr in $(ls -1d "$_runs_dir"/*/ 2>/dev/null | grep -E '/[0-9]{8}-v[0-9]+-run[0-9]+/$' | sort | tail -5); do
-      _trn=$(basename "$_tr")
-      if [ "$_trn" = "${RUN_ID:-}" ]; then
-        _tfp="${_fp}/6"; _trej="${_rejrate}/6"; _tdens="${_dens}"
-      else
-        _tg="${_tr}evidence/governance-report.md"
-        if [ -f "$_tg" ]; then
-          # 裁到比值（门细节在该轮自己的报告里，趋势表只带比值防单元格爆宽）
-          _tfp=$( { grep -E ',首过率,' "$_tg" 2>/dev/null || true; } | tail -1 | cut -d, -f5 | sed 's/（.*//' )
-          _trej=$( { grep -E ',打回率,' "$_tg" 2>/dev/null || true; } | tail -1 | cut -d, -f5 | cut -d, -f1)
-          _tdens=$( { grep -E ',缺陷密度,' "$_tg" 2>/dev/null || true; } | tail -1 | cut -d, -f5 | cut -d, -f1)
-        else
-          _tfp=""; _trej=""; _tdens=""
-        fi
-      fi
-      echo "| ${_trn} | ${_tfp:-⬜} | ${_trej:-⬜} | ${_tdens:-⬜} |"
-    done
-   } > "$out"
+    printf '%s' "$dto" | jq -r '.trend[] | "| \(.run) | \(.firstPass) | \(.rejectRate) | \(.density) |"'
+   } > "$_m"
+  mv "$_m" "$out"
   mask_env_paths "$out"
   echo "$out"
 }
@@ -2232,29 +2114,15 @@ gov_archive_commit() { # 治理归档落账原子化（P14→R26：metrics-log+I
   local _ilog="$EVID_DIR/issues.log"
   [ -f "$_ilog" ] || { echo "[gov_archive] issues.log 缺席，跳过落账" >&2; return 0; }
   gov_report >/dev/null || true   # 先刷新治理报告，metrics 取终态
-  # metrics 实算（与 gov_report 同口径；score 须数值——R-A5 metrics-log schema 先例）
-  local _g1f=0 _g2f=0 _g3f=0 _g4f=0 _g5f=0 _g6f=0
-  grep -qE '^ISSUE\|g1-(review|freeze|gate)' "$_ilog" 2>/dev/null && _g1f=1 || true
-  grep -qE '^ISSUE\|g2-' "$_ilog" 2>/dev/null && _g2f=1 || true
-  grep -qE '^ISSUE\|g3-' "$_ilog" 2>/dev/null && _g3f=1 || true
-  grep -qE '^ISSUE\|g4-' "$_ilog" 2>/dev/null && _g4f=1 || true
-  grep -qE '^ISSUE\|g5-' "$_ilog" 2>/dev/null && _g5f=1 || true
-  grep -qE '^ISSUE\|g6-' "$_ilog" 2>/dev/null && _g6f=1 || true
-  local _fp=$((6-_g1f-_g2f-_g3f-_g4f-_g5f-_g6f))
-  local _done_keys _evmiss _reject _human _today
-  _done_keys=$({ grep -cE '^[a-z0-9_]+_done=' "$STATE" 2>/dev/null || true; })
-  _evmiss=$({ grep -cE '^ISSUE\|(receipt-missing|raci-dispatch-missing|anexec-missing|evidence-missing|credential)' "$_ilog" 2>/dev/null || true; })
-  _reject=$({ grep -cE '^ISSUE\|.*(打回|拒收|熔断)' "$_ilog" 2>/dev/null || true; })
-  _human=$({ grep -cE '^DISP\|.*导演' "$_ilog" 2>/dev/null || true; })
-  _today=$(date +%F)
-  local _m1 _m3 _m4 _m5
-  _m1="${_today},${rfd},M1,$(awk "BEGIN{printf \"%.3f\", ${_fp}/6}"),${_fp}/6,${_today}..${_today},state.env 落键实算,六闸全计（G3/G6 落键型无记录即首过；gov_archive_commit 机制化落账）"
-  _m3=""
-  if [ "$_done_keys" -gt 0 ] 2>/dev/null; then
-    _m3="${_today},${rfd},M3,$(awk "BEGIN{printf \"%.3f\", (${_done_keys}-${_evmiss})/${_done_keys}}"),$((_done_keys-_evmiss))/${_done_keys},${_today}..${_today},issues.log+state.env 实算,证据一次通过率=1-凭证缺件记录/完成环节键"
+  # metrics 行取治理服务 DTO（融合批三：与 gov_report 同源单实现——本地复算退役）
+  local _dto _rows
+  _dto=$(gov_run_metrics "$rfd") || _dto=""
+  if [[ -z "$_dto" ]] || ! printf '%s' "$_dto" | jq -e '.ok == true' >/dev/null 2>&1; then
+    echo "ISSUE|archive-metrics-unavailable|director|治理指标服务不可达——metrics 行未落账（缺账如实可见）" >> "$_ilog"
+    _rows=""
+  else
+    _rows=$(printf '%s' "$_dto" | jq -r '.metricsRows[].csv')
   fi
-  _m4="${_today},${rfd},M4,${_reject},${_reject},${_today}..${_today},issues.log 实算,打回次数=打回/拒收/熔断行计数"
-  _m5="${_today},${rfd},M5,${_human},${_human},${_today}..${_today},issues.log 实算,人工介入=DISP 注明导演计数（AI 主理占比 ⬜ 待协议事件结构化）"
   # ── 临时 worktree（origin/main detached）内落账，不碰 DIRECTOR_CLONE 工作区 ──
   # 作业形态与 repo_commit_main 同构：固定 wt 路径+EXIT trap 拆区，不留注册残留
   local _wt="$SIM_ROOT/var/main-archive-wt" _rc=0
@@ -2272,10 +2140,10 @@ gov_archive_commit() { # 治理归档落账原子化（P14→R26：metrics-log+I
   local _mlog="$_wt/docs/governance/metrics-log.csv" _row
   mkdir -p "$(dirname "$_mlog")"
   [ -f "$_mlog" ] || printf 'date,change,gate,score,ratio,window,source,note\n' > "$_mlog"
-  for _row in "$_m1" "$_m3" "$_m4" "$_m5"; do
+  while IFS= read -r _row; do
     [ -z "$_row" ] && continue
     grep -qF "$_row" "$_mlog" 2>/dev/null || printf '%s\n' "$_row" >> "$_mlog"
-  done
+  done <<< "$_rows"
   # ISSUES-LOG run 段 upsert（段在=替换，段缺=追加；台账计数实算）
   python3 - "$_wt/docs/issues/ISSUES-LOG.md" "$run" "$_ilog" <<'PYEOF'
 import re, sys, collections

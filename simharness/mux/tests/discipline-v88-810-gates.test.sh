@@ -47,8 +47,10 @@ ck "纪律39 驱动调用观察器" aipay-scenario.sh 'contract-observe'
 # §2.6-5 首过三态信号（补过键两落点+metrics 三态）
 ck "首过口径 G1 退回计补过" aipay-scenario.sh 'sset g1_supplement 1'
 ck "首过口径 G5 GAP 残留检测" aipay-scenario.sh 'sset_once g5_supplement 1'
-ck "首过口径 metrics 三态" mux/mx-scenario-lib.sh '首过\+补过\+打回=6'
-ck "首过口径 补过键读取" mux/mx-scenario-lib.sh 'g\$\{_n\}_supplement'
+# 融合批三：三态/补过键计算正本=产品 run-metrics.ts（驱动渲染壳消费 DTO）
+GOVMETRICS=../custom/server/governance/run-metrics.ts
+ck "首过口径 metrics 三态" "$GOVMETRICS" "打回.*补过.*首过|首过.*补过.*打回"
+ck "首过口径 补过键读取" "$GOVMETRICS" 'g\$\{n\}_supplement|g.\{n\}_supplement|supplement'
 
 # 推演 UI 中文断言（2026-10-12 用户指令「推演时 UI 始终中文」）：双采集器 locale 双保险
 ck "UI中文 r18-frames 浏览器级 locale" mux/r18-frames.mjs "locale: 'zh-CN'"

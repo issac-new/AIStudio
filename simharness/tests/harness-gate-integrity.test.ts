@@ -693,19 +693,26 @@ describe('⑫b 治理度量五项+承载面审计（差距审计 P5/P8 → run10
   // 或 product-surface-degraded 合规降级记单，二者皆缺 WARN（P8：P1/P3/P4 曾全漏网）。
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
 
-  it('gov_report 五项度量齐（首过率/证据一次通过率/缺陷密度/打回次数/人工介入）+首过率六闸全计', () => {
+  it('gov_report 五项度量齐（融合批三：数字正本=产品 run-metrics.ts，驱动只渲染 DTO）', () => {
     const lib = read(join(MX, 'mx-scenario-lib.sh'))
-    for (const k of ['首过率', '证据一次通过率', '缺陷密度', '打回次数', '人工介入']) {
+    // 渲染壳消费 DTO 五项
+    for (const k of ['firstPass', 'evidenceRate', 'defectDensity', 'rejectCount', 'humanInterventions']) {
       expect(lib).toContain(k)
     }
-    expect(lib).toContain('六闸全计')
+    expect(lib).toContain('gov_run_metrics')
     expect(lib).not.toContain('${_fp}/4')
+    // 计算正本在产品模块（六闸全计口径）
+    const metrics = read(join(HARNESS, '..', 'custom', 'server', 'governance', 'run-metrics.ts'))
+    expect(metrics).toContain('六闸全计')
+    expect(metrics).toContain("failed ? '打回' : supplement ? '补过' : '首过'")
   })
 
-  it('gov_report 基线对比行（§2.6.5 上次基线+1：读上轮治理报告首过率）', () => {
+  it('gov_report 基线对比行（§2.6.5：基线/趋势计算正本=产品 run-metrics，驱动渲染）', () => {
     const lib = read(join(MX, 'mx-scenario-lib.sh'))
     expect(lib).toContain('基线对比')
-    expect(lib).toContain('governance-report.md')
+    expect(lib).toContain('.baseline.prevRun')
+    const metrics = read(join(HARNESS, '..', 'custom', 'server', 'governance', 'run-metrics.ts'))
+    expect(metrics).toContain('governance-report.md')
   })
 
   it('审计器查 9 承载面符合性（§2.5 步集解析 × product-surface-degraded 降级口径）', () => {
