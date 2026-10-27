@@ -46,6 +46,8 @@
 - 批三四 c23a7dc：run-metrics/run-surface（指标/工作台账/审计检查 REST）；驱动 gov_report/work_report_gen/audit_check 改 DTO 渲染壳；eval e2e-verdict 判据单源（汇总器降级组装器）；sim-launch 迁 simcenter。
 - 批五 425d76b：run-metrics.issuePairing 四变体归一；gov_report 落 governance-metrics.json 快照；tri-disp-backfill 改 DTO 取件；mx-interventions.py 死代码退役。
 
+> rebase 注记（2026-10-27）：本批随后 rebase 至 origin/main（并行八提交并入，正本版本行合成为 R17、总账对齐并行盘点口径），上文批次哈希为 rebase 前写作时点快照；分支现哈希以 `git log origin/main..feat/sim-governance-convergence` 为准。
+
 残余（显式挂账，不装完成）：
 1. mx-report-gen.issues_stats 配对与 mx-report-audit 查5 仍持本地配对——切换需报告链整批+活体报告新旧对照（D8），列收尾批首项；产品单实现已在 run-metrics.pairing 备好。
 2. 整轮 26 步活体推演未跑（需约 20 小时+模型额度+SIM 栈独占；主树并行会话在途）——分支不合 main，验证判据见「验证」节，跑通后收口。
