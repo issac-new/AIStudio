@@ -59,12 +59,13 @@ const baseDir = () => {
     writeFileSync(join(dir, name), JSON.stringify((passFixture as any)[key], null, 2), 'utf8')
   }
   writeFileSync(join(dir, 'redteam-runs.json'), JSON.stringify({ runs: [] }), 'utf8')
+  writeFileSync(join(dir, 'verdict.json'), JSON.stringify({ ok: true, verdict: 'pass', fails: [], gaps: [], line: 'EVAL-GATE-PASS 测试判定件' }), 'utf8')
   return dir
 }
 
 function runSummary(dir: string): { status: number; out: any } {
   const out = join(dir, 'eval-summary.json')
-  const r = spawnSync('python3', [join(HARNESS, 'mux', 'mx-eval-summary.py'), '--dir', dir, '--out', out], { encoding: 'utf8' })
+  const r = spawnSync('python3', [join(HARNESS, 'mux', 'mx-eval-summary.py'), '--dir', dir, '--out', out, '--verdict-file', join(dir, 'verdict.json')], { encoding: 'utf8' })
   let parsed: any = null
   try { parsed = JSON.parse(readFileSync(out, 'utf8')) } catch { /* noop */ }
   return { status: r.status ?? -1, out: parsed }

@@ -36,6 +36,7 @@ import { judgeHumanAgreement } from './human-agreement'
 import { buildRegistryView, summarizeConsumption } from './metric-registry'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from './outcome'
 import { runReplayEval, type SampleInput } from './runner'
+import { computeE2eVerdict, e2eVerdictLine } from './e2e-verdict'
 import { sampleFromTrace, sampleSpanFromTrace } from './trace-sampler'
 import { reflowTraceToSet } from './trace-reflow'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
@@ -1320,6 +1321,34 @@ router.get('/runs/:id/business-summary', async (ctx) => {
 
 // 红队路由挂在同一前缀下（/api/hermes/eval/redteam/*），零新增 patch。
 mountRedteam(router)
+
+// 全流程推演评测门禁判据（融合批三）：EVAL-GATE PASS/GAP/FAIL 的单一实现——
+// simharness mx-eval-summary.py 判据面退役，驱动只送采集件+映射退出码（0/2/1）。
+// 输入=驱动已采集的产品端点响应件（metric-registry/eval-run/eval-set/evaluators/
+// redteam-run），阈值 env 同源（EVAL_MAX_UNKNOWN/EVAL_REDTEAM_FP_MAX 可覆盖）。
+router.post('/e2e-verdict', (ctx) => {
+  const b = ctx.request.body as {
+    metricRegistry?: unknown; evalRun?: unknown; evalSet?: unknown
+    evaluators?: unknown; redteamRun?: unknown
+    maxUnknown?: unknown; maxRedteamFp?: unknown
+  } | undefined
+  const obj = (v: unknown) => (v && typeof v === 'object' && Object.keys(v as object).length > 0 ? v as Record<string, unknown> : null)
+  if (!obj(b?.evalRun)) {
+    ctx.status = 400
+    ctx.body = { ok: false, error: 'evalRun 必填（/api/hermes/eval/runs/:id 响应件）' }
+    return
+  }
+  const r = computeE2eVerdict({
+    registry: obj(b?.metricRegistry),
+    runBody: obj(b?.evalRun),
+    setBody: obj(b?.evalSet),
+    evaluators: obj(b?.evaluators),
+    redteamRun: obj(b?.redteamRun),
+    maxUnknown: typeof b?.maxUnknown === 'number' ? b.maxUnknown : Number(process.env.EVAL_MAX_UNKNOWN ?? 0.10),
+    maxRedteamFp: typeof b?.maxRedteamFp === 'number' ? b.maxRedteamFp : Number(process.env.EVAL_REDTEAM_FP_MAX ?? 0.20),
+  })
+  ctx.body = { ok: true, ...r, line: e2eVerdictLine(r) }
+})
 
 
 export const evalRoutes = router

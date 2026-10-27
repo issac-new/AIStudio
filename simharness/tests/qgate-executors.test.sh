@@ -15,7 +15,14 @@ _rc=0
 fail() { echo "FAIL: $*"; _rc=1; }
 
 OV="$HERE/mux/qgate-overrides"
-CLI="${MX_OVERLAY_ROOT:-$(cd "$HERE/../overlay" 2>/dev/null && pwd)}/custom/qgate/dist/cli.js"
+# CLI 解析序（单仓整合后）：MX_OVERLAY_ROOT > 仓根（$HERE/..，存在 custom/qgate/dist 即认）> 旧 overlay 位兜底
+_ov="${MX_OVERLAY_ROOT:-}"
+if [ -z "$_ov" ] && [ ! -f "$HERE/../custom/qgate/dist/cli.js" ]; then
+  ( cd "$HERE/../custom/qgate" && npm run build >/dev/null 2>&1 ) || true   # 干净环境自愈构建（dist 不入库）
+fi
+if [ -z "$_ov" ] && [ -f "$HERE/../custom/qgate/dist/cli.js" ]; then _ov="$HERE/.."; fi
+if [ -z "$_ov" ]; then _ov="$(cd "$HERE/../overlay" 2>/dev/null && pwd)"; fi
+CLI="$_ov/custom/qgate/dist/cli.js"
 
 # ── 合成中央仓 fixture ──
 CEN="$TMP/aipaydev"

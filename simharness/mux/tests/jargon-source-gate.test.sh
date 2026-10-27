@@ -24,9 +24,17 @@ fi
 # 会话的在途草稿（run14 实锤：16:0x 他人未提交方案稿带 4 处 HARD 把全仓守门拦红）。
 # 门禁语义=「HARD=0 才提交」：查提交态，工作副本与提交态不一致时 WARN 提示作者提交前重跑。
 _ov_committed() { # <repo> <path> → 临时文件路径（已提交内容），失败回退工作副本
-  git -C "$1" show "main:$2" > "$TMP_PLAN_DIR/$(basename "$2")" 2>/dev/null && \
+  # 基线引用=本 worktree 所在分支（融合批六：worktree 内跑守门时 main 是别人的快照，
+  # 读 main 会把本分支已修词误报红——HEAD 即本分支提交态，语义仍是「查提交态非草稿」）
+  local _ref="main"
+  if ! git -C "$1" rev-parse --verify -q "main:$2" >/dev/null 2>&1; then
+    _ref="HEAD"
+  elif ! git -C "$1" merge-base --is-ancestor main HEAD 2>/dev/null; then
+    _ref="HEAD"   # 本分支领先 main（未合并）——按本分支提交态查
+  fi
+  git -C "$1" show "${_ref}:$2" > "$TMP_PLAN_DIR/$(basename "$2")" 2>/dev/null && \
     { [ "$1" != "$OV" ] || ! cmp -s "$TMP_PLAN_DIR/$(basename "$2")" "$1/$2" && \
-      echo "WARN jargon-source-gate: $2 工作副本与 main 提交态不一致（在途草稿？）——提交前请重跑本守门" >&2; }
+      echo "WARN jargon-source-gate: $2 工作副本与 ${_ref} 提交态不一致（在途草稿？）——提交前请重跑本守门" >&2; }
   echo "$TMP_PLAN_DIR/$(basename "$2")"
 }
 TMP_PLAN_DIR=$(mktemp -d)
@@ -46,9 +54,12 @@ rc=$?
 # 本体，TS 层缺席不阻断推演侧守门）。同样只查提交态。
 if [ -d "$OV/custom/server/report" ]; then
   TS_DIR="$TMP_PLAN_DIR/ts"; mkdir -p "$TS_DIR"
+  # 分支感知（同 _ov_committed：worktree 内 main 是他人快照，按 HEAD 提交态查）
+  _ts_ref="main"
+  if ! git -C "$OV" merge-base --is-ancestor main HEAD 2>/dev/null; then _ts_ref="HEAD"; fi
   for f in "$OV"/custom/server/report/*.ts "$OV"/custom/server/report/__tests__/*.ts; do
     rel=${f#"$OV"/}
-    git -C "$OV" show "main:$rel" > "$TS_DIR/$(basename "$rel")" 2>/dev/null || cp "$f" "$TS_DIR/"
+    git -C "$OV" show "${_ts_ref}:$rel" > "$TS_DIR/$(basename "$rel")" 2>/dev/null || cp "$f" "$TS_DIR/"
   done
   python3 "$JC" "$TS_DIR"/*.ts
   rc2=$?

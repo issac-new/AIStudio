@@ -99,6 +99,17 @@ describe('UAT 判定', () => {
     expect(validateUatVerdictFields({ ac: '1', verdict: 'pass' })).toMatchObject({ ok: true, ac: 'AC-1' })
   })
 
+  it('conditional 认可语义（融合批二 D9）：pending 机器评估合法；acknowledged 与 pending 互斥', () => {
+    expect(validateUatVerdictFields({ ac: '1', verdict: 'conditional', note: '机器评估', pending: true }))
+      .toMatchObject({ ok: true, pending: true })
+    expect(validateUatVerdictFields({ ac: '1', verdict: 'conditional', note: 'x', acknowledged: true, pending: true }))
+      .toMatchObject({ ok: false })
+    expect(aggregateUatByAc([
+      { ts: '2026-10-27T01:00:00Z', actor: 'a', run: 'r1', ac: 'AC-1', verdict: 'conditional', note: 'x', pending: true },
+      { ts: '2026-10-27T02:00:00Z', actor: 'a', run: 'r1', ac: 'AC-2', verdict: 'conditional', note: 'y', acknowledged: true },
+    ]).summary).toMatchObject({ conditional: 2, pendingAck: 1 })
+  })
+
   it('聚合：最新胜出（同 ts 取后出现者）、blocked=最新为 reject、按编号排序', () => {
     const mk = (ac: string, verdict: UatVerdictRecord['verdict'], ts: string): UatVerdictRecord =>
       ({ ts, actor: 'a', run: 'r1', ac, verdict })
@@ -110,7 +121,7 @@ describe('UAT 判定', () => {
     ])
     expect(agg.byAc.map((a) => a.ac)).toEqual(['AC-1', 'AC-2', 'AC-10'])
     expect(agg.byAc.find((a) => a.ac === 'AC-2')).toMatchObject({ state: 'reject', blocked: true })
-    expect(agg.summary).toEqual({ acCount: 3, pass: 1, conditional: 1, reject: 1, blocked: 1 })
+    expect(agg.summary).toEqual({ acCount: 3, pass: 1, conditional: 1, reject: 1, blocked: 1, pendingAck: 0 })
   })
 })
 

@@ -2,7 +2,7 @@
 
 让 15 个 AI 员工组成一家虚拟软件公司，从拿到需求单到功能上线全程自动跑一遍，中途采集证据，最后产出一份第三方可反查的 HTML 报告。本目录是这场"考试"的驱动与工具链，原为独立仓，2026-10-24 并入 AIStudio 单仓。主驱动脚本按 26 步推进，六道强制关卡（G1 需求冻结到 G6 复盘）不过不放行，全部结论带代码提交号+任务卡号双凭证。
 
-与产品本体的关系：产品源码在本仓根，`vendor/` 是钉版基线，`custom/` 与 `patches/` 是 AIStudio 二次开发。本目录只消费产品、不改动产品，隔离边界由 `tests/isolation-boundary.test.sh` 三断言看守。推演方案唯一正本=[《AIStudio 全流程推演方案》](../docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)，26 步主链、六道关卡、验收标准都在那里，本 README 不重复。
+与产品本体的关系（2026-10-27 融合批）：六闸判读/判词/熔断/UAT/配对/台账阈值/评测判据/治理指标的计算正本在产品治理域（`custom/server/governance/lifecycle|run-metrics`、`custom/server/eval/e2e-verdict`），本目录经 `mux/governance-client.sh` 调用并落证据（fail-closed：服务不可达=空判词/缺件/阻断，不假过）；启动/脚手架自监测/导演串接/截屏/集群视野/报告撰写保留在此。产品源码在本仓根，`vendor/` 是钉版基线，`custom/` 与 `patches/` 是 AIStudio 二次开发。本目录只消费产品、不改动产品，隔离边界由 `tests/isolation-boundary.test.sh` 三断言看守。推演方案唯一正本=[《AIStudio 全流程推演方案》](../docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)，26 步主链、六道关卡、验收标准都在那里，本 README 不重复。
 
 ## 前置
 

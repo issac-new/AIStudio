@@ -19,7 +19,10 @@ import { describe, expect, it, afterAll } from 'vitest'
 // 隔离轮迁址（2026-10-03）：测试随 harness 仓走，MX=本仓 mux/；vitest 借道 overlay 的 node_modules（run-gates.sh --root）
 const HARNESS = join(__dirname, '..')
 const MX = join(HARNESS, 'mux')
-const PRODUCT = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay')  // 产品仓只读消费位（patches/探针；worktree 内相对位失效，用 MX_OVERLAY_ROOT 指向主树 overlay）
+// 产品仓只读消费位（单仓整合后）：解析序=MX_OVERLAY_ROOT > 仓根（patches/ 与 runtime/ 在位即认）> 旧 overlay 位兜底
+const repoRoot = join(HARNESS, '..')
+const PRODUCT = process.env.MX_OVERLAY_ROOT
+  || (existsSync(join(repoRoot, 'patches')) && existsSync(join(repoRoot, 'runtime')) ? repoRoot : join(HARNESS, '..', 'overlay'))
 
 const roots: string[] = []
 afterAll(() => roots.forEach((d) => rmSync(d, { recursive: true, force: true })))
@@ -93,40 +96,28 @@ echo "rc=$_mx_rc new=$(mx_lock_holder_pid "$AIPAY_SIM_ROOT/.driver.lock.d/info")
   })
 })
 
-describe('② 硬闸打回熔断（跨调用持久 + 人工放行留痕）', () => {
-  it('两轮未过后新调用拒绝执行；GATE_BREAKER_OVERRIDE=1 + GATE_BREAKER_REASON 复议放行并留痕（方案纪律 8 复议语义）', () => {
+describe('② 硬闸打回熔断（融合批二：判定与持久化正本=治理服务 lifecycle/breaker.ts；行为守门=custom/server/governance/__tests__/lifecycle-{breaker,rest}.test.ts）', () => {
+  it('trip/check 委托治理客户端：gate 键升大写、证据签名随行、阻断即 fail 语义', () => {
     const root = sandbox()
     const out = sh(`
+gov_lc_breaker_trip() { printf 'TRIP|%s|%s|%s\\n' "$1" "$2" "$3" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; echo '{"state":{"failRounds":2}}'; }
+gov_lc_breaker_check() { printf 'CHECK|%s|%s\\n' "$1" "$3" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; return 1; }
 mx_gate_breaker_trip g5 "G5 发布准出" 1
-mx_gate_breaker_trip g5 "G5 发布准出" 1
-_mx_rc=0; ( mx_gate_breaker_check g5 "G5 发布准出" ) >/dev/null 2>&1 || _mx_rc=$?
-echo "blocked=$_mx_rc"
-_mx_rc=0; GATE_BREAKER_OVERRIDE=1 GATE_BREAKER_REASON='复核确认缺项已闭环（测试复议）' mx_gate_breaker_check g5 "G5 发布准出" >/dev/null 2>&1 || _mx_rc=$?
-echo "override=$_mx_rc"
-grep -c 'gate-breaker-tripped' "$EVID_DIR/issues.log"
-grep -c 'gate-breaker-override' "$EVID_DIR/issues.log"`, root)
-    expect(out).toContain('blocked=1')
-    expect(out).toContain('override=0')
-    expect(out).toMatch(/blocked=1[\s\S]*override=0[\s\S]*\n1\n1\s*$/)
-  })
-
-  it('未达阈值不拦截（首轮打回仍可走第二轮）', () => {
-    const root = sandbox()
-    const out = sh(`
-mx_gate_breaker_trip g2 "G2 架构治理评审" 1
-_mx_rc=0; mx_gate_breaker_check g2 "G2 架构治理评审" >/dev/null 2>&1 || _mx_rc=$?
-echo "rc=$_mx_rc"`, root)
-    expect(out).toContain('rc=0')
-  })
-
-  it('熔断计数按 RUN 的 state.env 持久（跨调用语义：换 bash 进程仍在）', () => {
-    const root = sandbox()
-    const out = sh(`mx_gate_breaker_trip g5 "G5 发布准出" 2`, root)
+( mx_gate_breaker_check g5 "G5 发布准出" ) 2>&1 | tail -1 || true
+cat "$AIPAY_SIM_ROOT/gov-calls.txt"`, root)
     expect(out).toContain('累计 2 轮未过')
-    const out2 = sh(`
-_mx_rc=0; ( mx_gate_breaker_check g5 "G5 发布准出" ) >/dev/null 2>&1 || _mx_rc=$?
-echo "rc=$_mx_rc"`, root)
-    expect(out2.trim()).toBe('rc=1')
+    expect(out).toContain('打回熔断（治理服务判定阻断）')
+    expect(out).toContain('TRIP|G5|1|')
+    expect(out).toContain('CHECK|G5|G5 发布准出')
+  })
+
+  it('check 放行 rc=0（服务 allow/reset/override 族）', () => {
+    const root = sandbox()
+    const out = sh(`
+gov_lc_breaker_check() { return 0; }
+mx_gate_breaker_check g2 "G2 架构治理评审"
+echo "rc=$?"`, root)
+    expect(out.trim()).toBe('rc=0')
   })
 })
 
@@ -255,123 +246,65 @@ describe('⑥ 报告路由（H7：无 RUN_ID 落全局目录出旧轮假报告�
   })
 })
 
-describe('⑦ 闸门判词语义（H8/R-A2：转述 stub 不得当结论行）', () => {
-  it('协议转述行（判词成对出现）整行不作判词——既不假过也不自毒（f1979781）', () => {
-    const root = sandbox()
-    const out = sh(`mx_text_gate_verdict READY-GATE 'False alarm — the stub itself says "结论行 READY-GATE-PASS 或 READY-GATE-FAIL", tripping my check.'`, root)
-    // 成对判词=协议转述（如卡面引用本判词契约原文）：按判词处理必自毒（f1979781 G2 根治）。
-    // 代价面：真结论行若回引前次判词（"前次 FAIL 已解决，结论 PASS"）也会被整行丢弃，
-    // 表现为门禁未结、等待复审重发单判词结论行——保守方向，不产生假过。
-    expect(out.trim()).toBe('')
-  })
-
-  it('真实结论行（判词居中/居末）正确取判词', () => {
+describe('⑦ 闸门判词（融合批二：判词语义正本=产品 lifecycle/verdict.ts；语料守门=tests/lifecycle-parity.test.ts；此处钉委托面与 relay 行为）', () => {
+  it('mx_text_gate_verdict 委托治理客户端（gate+文本透传，verdict 取首列）', () => {
     const root = sandbox()
     const out = sh(`
-echo "$(mx_text_gate_verdict ARCH-GATE '技能已修补。评审卡 t_11e182b3 落卡复核通过，结论 **ARCH-GATE-PASS**，缺项清单已指名到人。')"
-echo "$(mx_text_gate_verdict READY-GATE 'conclusion: READY-GATE-FAIL')"
-echo "[$(mx_text_gate_verdict READY-GATE '无判词消息')]"`, root)
-    const lines = out.trim().split('\n')
-    expect(lines[0]).toBe('PASS')
-    expect(lines[1]).toBe('FAIL')
-    expect(lines[2]).toBe('[]')
+gov_lc_verdict() { printf 'ARG|%s|%s|%s\\n' "$1" "$2" "$3" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; echo 'FAIL|PASS|FAIL'; }
+_v=$(mx_text_gate_verdict READY-GATE '结论行：READY-GATE-PASS')
+echo "v=$_v"
+cat "$AIPAY_SIM_ROOT/gov-calls.txt"`, root)
+    expect(out).toContain('v=FAIL')
+    expect(out).toContain('ARG|READY-GATE|结论行：READY-GATE-PASS|')
   })
 
-  it('房间判词取时间最新一条（打回后复审 PASS 盖过前次 FAIL）', () => {
+  it('combined：房间/卡面双源一次送判（卡 FAIL 压过房 PASS 由服务合并返回）', () => {
     const root = sandbox()
     const out = sh(`
-mx_messages() {
-  cat <<'JSON'
-[
- {"sender":"@a:matrix.test","origin_server_ts":100,"content":{"body":"结论 READY-GATE-FAIL（缺项）"}},
- {"sender":"@a:matrix.test","origin_server_ts":200,"content":{"body":"复审完成，结论 READY-GATE-PASS"}}
-]
-JSON
-}
-mx_messages_deep() { mx_messages "$@"; }
+gov_lc_verdict() { printf 'ARG|%s|%s|%s\\n' "$1" "$2" "$3" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; echo 'FAIL|PASS|FAIL'; }
+mx_messages_deep() { echo '[{"sender":"@a:matrix.test","origin_server_ts":100,"content":{"body":"结论 READY-GATE-PASS"}}]'; }
 load_token() { echo tok; }
-mx_room_gate_verdict room "@a:matrix.test" READY-GATE 0`, root)
-    expect(out.trim()).toBe('PASS')
+kanban_list() { echo '[{"title":"RFD-001 发布准出评审（G5）","body":"conclusion: READY-GATE-FAIL"}]'; }
+sset room_analysis '!room1'
+echo "combined=$(mx_gate_verdict_combined room '@a:matrix.test' READY-GATE 0 fanfan '发布准出评审')"
+cat "$AIPAY_SIM_ROOT/gov-calls.txt"`, root)
+    expect(out).toContain('combined=FAIL')
+    expect(out).toMatch(/ARG\|READY-GATE\|结论 READY-GATE-PASS\|.*conclusion: READY-GATE-FAIL/)
   })
 
-  it('卡面 FAIL 优先于房间 PASS（双源合并保守不放行）', () => {
+  it('卡面 PASS、房间空 → relay 代发对照行一次；重查不重发（导演域消息动作留本地）', () => {
     const root = sandbox()
     const out = sh(`
-mx_messages() {
-  cat <<'JSON'
-[{"sender":"@a:matrix.test","origin_server_ts":100,"content":{"body":"结论 READY-GATE-PASS"}}]
-JSON
-}
+gov_lc_verdict() { echo 'PASS||PASS'; }
+mx_messages_deep() { echo '[]'; }
 load_token() { echo tok; }
-kanban_list() { echo '{"tasks":[{"title":"RFD-001 发布准出评审（G5）","body":"七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL。\\n\\nconclusion: READY-GATE-FAIL"}]}'; }
-mx_gate_verdict_combined room "@a:matrix.test" READY-GATE 0 fanfan "发布准出评审"`, root)
-    expect(out.trim()).toBe('FAIL')
-  })
-
-  it('run2 实锤消息原文不构成 PASS 结论', () => {
-    const root = sandbox()
-    const out = sh(`
-mx_messages() {
-  cat <<'JSON'
-[{"sender":"@fanfan-agent:matrix.test","origin_server_ts":100,"content":{"body":"False alarm — the stub itself says \\"结论行 READY-GATE-PASS 或 READY-GATE-FAIL\\", tripping my check. Refining the collision test."}}]
-JSON
-}
-load_token() { echo tok; }
-_v=$(mx_room_gate_verdict room "@fanfan-agent:matrix.test" READY-GATE 0)
-echo "verdict=$_v"
-_mx=0; mx_gate_verdict_pass room "@fanfan-agent:matrix.test" READY-GATE 0 || _mx=$?
-echo "pass_rc=$_mx"`, root)
-    // 新语义（方案纪律 8）：转述引用一律不作判词（空）——旧 jq 词面匹配会误判 FAIL
-    // 并点燃熔断（run12 空转帮凶）；'' 与 FAIL 同为不放行，'' 不误触发熔断
-    expect(out).toContain('verdict=')
-    expect(out).toContain('pass_rc=1')
-    expect(out).not.toContain('verdict=PASS')
+kanban_list() { echo '[{"title":"G5 评审","body":"READY-GATE-PASS（七项齐备）"}]'; }
+mx_send() { echo "$3" >> "$EVID_DIR/relay.log"; echo sent; }
+sset room_analysis '!room1'
+_v1=$(mx_gate_verdict_combined room '@a:matrix.test' READY-GATE 0 fanfan 'G5')
+_v2=$(mx_gate_verdict_combined room '@a:matrix.test' READY-GATE 0 fanfan 'G5')
+echo "v1=$_v1 v2=$_v2 sends=$(wc -l < "$EVID_DIR/relay.log" | tr -d ' ')"`, root)
+    const m = out.match(/v1=(\S+) v2=(\S+) sends=(\d+)/)
+    expect(m).not.toBeNull()
+    expect(m![1]).toBe('PASS')
+    expect(m![2]).toBe('PASS')
+    expect(Number(m![3])).toBe(1)
   })
 })
 
-describe('⑧ UAT 逐条判词（H9：有条件通过不得写成全部通过）', () => {
-  it('判词按证据行取：通过/有条件通过/不通过/未见', () => {
+describe('⑧ UAT 逐条判词（融合批二：语义正本=产品 lifecycle/verdict.ts；语料守门=tests/lifecycle-parity.test.ts；此处钉委托面）', () => {
+  it('uat_ac_verdict/covered 委托治理客户端（body+AC 透传；AC 整词匹配在服务端）', () => {
     const root = sandbox()
     const out = sh(`
-BODY='逐条证据已按冻结清单核出。结论先行：**AC-1/AC-2/AC-3/AC-5/AC-6 通过；AC-4、AC-7 有条件通过**（历史缺陷修复未合入 integration 基线，放行权归 bella）。'
-for ac in AC-1 AC-4 AC-7 AC-9; do echo "$ac=$(uat_ac_verdict "$BODY" "$ac")"; done
-echo "AC-2x=$(uat_ac_verdict 'AC-2 未通过：断言不成立' AC-2)"`, root)
-    const lines = out.trim().split('\n')
-    expect(lines[0]).toBe('AC-1=通过')
-    expect(lines[1]).toBe('AC-4=有条件通过')
-    expect(lines[2]).toBe('AC-7=有条件通过')
-    expect(lines[3]).toBe('AC-9=未见')
-    expect(lines[4]).toBe('AC-2x=不通过')
-  })
-
-  it('判词耐受括号注（run6 实锤：AC 编号与判词隔全角注不得判"未见"）', () => {
-    const root = sandbox()
-    const out = sh(`
-BODY='UAT-EVIDENCE RUN=20261001-v5-run6（G1 冻结清单逐条证据；派单 AC 编号=冻结 RFD-001.freeze.md AC-1/4/5/6/7，冻结条款与首冻逐字一致）
-UAT-EVIDENCE AC-1（统一下单幂等=冻结AC-1 L5）通过 — 分支 origin/integration/RFD-001 @ 8dbf5bf（被测 8ec13c3）：①用例 L38
-UAT-EVIDENCE AC-2（双渠道调起参数=冻结AC-4 L8 渠道适配）通过 — 同基线：①微信 5 文件
-UAT-EVIDENCE AC-3（回调验签拒绝+重复回调幂等=冻结AC-5 L9）通过 — 同基线
-UAT-EVIDENCE AC-4（超时关单=冻结AC-6 L10）通过 — 同基线
-UAT-EVIDENCE AC-5（收银台双端结果三态=冻结AC-7 L11 前半）通过 — 同基线
-UAT-EVIDENCE AC-6（失败重试不重复下单=冻结AC-7 L11 后半）通过 — 同基线
-UAT-EVIDENCE AC-7（测试报告全绿）通过 — ①报告 194/194
-依据链：G1 冻结 origin/main 3191c11；派单 AC 编号映射——派单AC-1=冻结AC-1、派单AC-2/AC-3=冻结AC-4 双渠道四方法、派单AC-7=报告全绿总检。
-[导演代投注记 RUN=20261001-v5-run6] 本结论行原文由 @fanfan-agent 于 DM 线程发出。'
-for ac in AC-1 AC-2 AC-3 AC-4 AC-5 AC-6 AC-7; do echo "$ac=$(uat_ac_verdict "$BODY" "$ac")"; done`, root)
-    const lines = out.trim().split('\n')
-    expect(lines).toHaveLength(7)
-    for (const l of lines) expect(l).toMatch(/^AC-[1-7]=通过$/)
-  })
-
-  it('判词含映射归属（run6 实锤：括注冻结AC-M 映射时判词同时归属映射目标）', () => {
-    const root = sandbox()
-    const out = sh(`
-BODY='UAT-EVIDENCE AC-2（双渠道调起参数=冻结AC-4 L8 渠道适配）不通过 — 断言不成立'
-for ac in AC-2 AC-4 AC-5; do echo "$ac=$(uat_ac_verdict "$BODY" "$ac")"; done`, root)
-    const lines = out.trim().split('\n')
-    expect(lines[0]).toBe('AC-2=不通过')
-    expect(lines[1]).toBe('AC-4=不通过')
-    expect(lines[2]).toBe('AC-5=未见')
+gov_lc_uat_verdict() { printf 'V|%s|%s\\n' "$1" "$2" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; printf '通过'; }
+gov_lc_uat_coverage() { printf 'C|%s|%s\\n' "$1" "$2" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; printf 'AC-1 '; }
+printf 'v=%s\\n' "$(uat_ac_verdict 'AC-1 通过' AC-1)"
+printf 'miss=[%s]\\n' "$(uat_ac_covered 'AC-1 AC-10' 'AC-10 通过')"
+cat "$AIPAY_SIM_ROOT/gov-calls.txt"`, root)
+    expect(out).toContain('v=通过')
+    expect(out).toContain('miss=[AC-1 ]')
+    expect(out).toContain('V|AC-1 通过|AC-1')
+    expect(out).toContain('C|AC-1 AC-10|AC-10 通过')
   })
 })
 
@@ -592,10 +525,8 @@ uat_evidence_body 1790930955`, root)
 
   it('㉓：网关挂死槽周期扫（run11 容量饥饿根治补口，patch 586——撞号清理 577→586 后引用同步）', () => {
     const lib = read(join(MX, 'mx-lib.sh'))
-    // overlay 仓路径走 MX_OVERLAY_ROOT 逃生门（与 run-gates.sh 同源）：worktree 内跑套件时
-    // `../overlay` 兄弟路径不存在（2026-10-10 实锤：report-three-elements 轮全套件在此挂）
-    const OVERLAY = process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay')
-    const patchPath = join(OVERLAY, 'patches', '586-agent-gateway-wedged-agent-sweep.patch')
+    // 产品仓路径走 PRODUCT 解析序（融合批六：单仓整合后 patches/ 在仓根；MX_OVERLAY_ROOT 逃生门保留）
+    const patchPath = join(PRODUCT, 'patches', '586-agent-gateway-wedged-agent-sweep.patch')
     // ①patch 文件在位且含核心语义件
     const patch577 = read(patchPath)
     expect(patch577).toContain('_housekeeping_wedged_agent_sweep')
@@ -763,19 +694,26 @@ describe('⑫b 治理度量五项+承载面审计（差距审计 P5/P8 → run10
   // 或 product-surface-degraded 合规降级记单，二者皆缺 WARN（P8：P1/P3/P4 曾全漏网）。
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
 
-  it('gov_report 五项度量齐（首过率/证据一次通过率/缺陷密度/打回次数/人工介入）+首过率六闸全计', () => {
+  it('gov_report 五项度量齐（融合批三：数字正本=产品 run-metrics.ts，驱动只渲染 DTO）', () => {
     const lib = read(join(MX, 'mx-scenario-lib.sh'))
-    for (const k of ['首过率', '证据一次通过率', '缺陷密度', '打回次数', '人工介入']) {
+    // 渲染壳消费 DTO 五项
+    for (const k of ['firstPass', 'evidenceRate', 'defectDensity', 'rejectCount', 'humanInterventions']) {
       expect(lib).toContain(k)
     }
-    expect(lib).toContain('六闸全计')
+    expect(lib).toContain('gov_run_metrics')
     expect(lib).not.toContain('${_fp}/4')
+    // 计算正本在产品模块（六闸全计口径）
+    const metrics = read(join(HARNESS, '..', 'custom', 'server', 'governance', 'run-metrics.ts'))
+    expect(metrics).toContain('六闸全计')
+    expect(metrics).toContain("failed ? '打回' : supplement ? '补过' : '首过'")
   })
 
-  it('gov_report 基线对比行（§2.6.5 上次基线+1：读上轮治理报告首过率）', () => {
+  it('gov_report 基线对比行（§2.6.5：基线/趋势计算正本=产品 run-metrics，驱动渲染）', () => {
     const lib = read(join(MX, 'mx-scenario-lib.sh'))
     expect(lib).toContain('基线对比')
-    expect(lib).toContain('governance-report.md')
+    expect(lib).toContain('.baseline.prevRun')
+    const metrics = read(join(HARNESS, '..', 'custom', 'server', 'governance', 'run-metrics.ts'))
+    expect(metrics).toContain('governance-report.md')
   })
 
   it('审计器查 9 承载面符合性（§2.5 步集解析 × product-surface-degraded 降级口径）', () => {
@@ -844,8 +782,7 @@ describe('⑭ V8.2 四段式切换（生成器配套六件落位守门）', () =
   // 降附录 ⑤叙事骨架生成器 ⑥本守门+审计器双格式断言。④字段级核对此前已在位。
   const MX_DIR = join(MX)
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf-8' })
-  const PLAN = join(process.env.MX_OVERLAY_ROOT || join(HARNESS, '..', 'overlay'),
-    'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md')
+  const PLAN = join(PRODUCT, 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md')
 
   it('正本=V8.3 两段式（步条 `**步 N｜`+两段标记；历史层在工程档案，2026-10-08 终态剥离）', () => {
     const plan = read(PLAN)
@@ -1060,7 +997,8 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
     // 解析失败分支（记单不删）入函数后实测函数体 4648 字符，窗口随体增长上调；
     // 2026-10-16 C4 九门执行器注入（覆盖注入+先 run 后 report）入函数后 5592 字符；
     // 2026-10-19 V8.46 发布门台账接线入函数后超 6000，窗口上调到 8000（判据不变）
-    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,8000}?\n  \}/)
+    // 2026-10-27 融合批二 submit→approve(带锚) canonical 写链入函数后超 8000，窗口上调到 9200（判据不变）
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,9200}?\n  \}/)
     expect(fin).toBeTruthy()
     expect(fin![0]).toContain('dlv_gate')
     // V8.23 纪律46：finalize 前置评审卡 body 非空校验（run18 复盘 F1：空 body=无评审实物禁收口）
@@ -1303,152 +1241,42 @@ describe('㉔ 干预点四件（2026-10-09：拆卡巡检/PROGRESS 中间锚/骨
   })
 })
 
-// ── ⑤ 判词提取结构锚定（方案纪律 8；三案归一回归面：run2 转述污染/f1979781
-// 卡面自毒/run12 模板字面污染——判词 token 必须行首，指令/转述/模板一律不算）──
-describe('⑤ 判词提取结构锚定（三案归一回归面）', () => {
-  const verdict = (body: string, gate = 'READY-GATE') => {
-    const root = sandbox()
-    return sh(`mx_text_gate_verdict "${gate}" "${body.replace(/"/g, '\\"')}"`, root).trim()
-  }
+// ── ⑤⑥⑦（融合批二重锚）：判词/熔断语料行为守门=tests/lifecycle-parity.test.ts
+// （引产品模块跑同一语料）+ 产品 lifecycle-{verdict,breaker,rest}.test.ts；
+// 此处钉"委托在位、旧实现不回流"的退役绊线。
+describe('⑤⑥⑦ 判定委托与退役绊线（融合批二）', () => {
+  const LIB = join(MX, 'mx-scenario-lib.sh')
+  const read = (p: string) => readFileSync(p, 'utf8')
 
-  it('run12 模板字面不作判词（真病例 t_c560939f 首行）：「或」式二选一模板/转述整行弃', () => {
-    expect(verdict('七项检查单见派单。结论行 READY-GATE-PASS 或 READY-GATE-FAIL(附缺项)。')).toBe('')
-  })
-
-  it('run12 过渡叙述取末判词（真病例 t_c560939f conclusion 行）：旧判词 → 复审改判 新判词', () => {
-    expect(verdict('conclusion: READY-GATE-FAIL → 复审改判 READY-GATE-PASS')).toBe('PASS')
-    expect(verdict('conclusion: READY-GATE-PASS → 复审改判 READY-GATE-FAIL（回归失败）')).toBe('FAIL')
-  })
-
-  it('run2 转述引用不作判词：转述 stub 原文含判词词面', () => {
-    expect(verdict('fanfan 转述派单原文「结论行 READY-GATE-PASS 或 READY-GATE-FAIL」后讨论了半小时')).toBe('')
-  })
-
-  it('指令文本单 token 不作判词：判词词面非行首一律不算', () => {
-    expect(verdict('请注意结论行要写 READY-GATE-PASS 开头，缺项时写 FAIL')).toBe('')
-  })
-
-  it('f1979781 卡面自毒：同行成对（PASS…FAIL）整行不作判词', () => {
-    expect(verdict('本卡引用判词契约原文 READY-GATE-PASS 或 READY-GATE-FAIL 作为说明')).toBe('')
-  })
-
-  it('行首结论行判 PASS/FAIL（含尾注括号）', () => {
-    expect(verdict('READY-GATE-PASS（七项齐备）')).toBe('PASS')
-    expect(verdict('READY-GATE-FAIL（附缺项：回滚阈值/灰度）')).toBe('FAIL')
-    expect(verdict('ARCH-GATE-PASS', 'ARCH-GATE')).toBe('PASS')
-  })
-
-  it('列表符号/编号/加粗前导容忍', () => {
-    expect(verdict('- **READY-GATE-PASS** 缺项已补')).toBe('PASS')
-    expect(verdict('1) ARCH-GATE-PASS 五要素齐备', 'ARCH-GATE')).toBe('PASS')
-  })
-
-  it('末判词赢：打回后复审结论居末盖过前次', () => {
-    expect(verdict('上一轮结论行\nREADY-GATE-FAIL（缺三项）\n补齐后复审结论行\nREADY-GATE-PASS（齐备）')).toBe('PASS')
-    expect(verdict('READY-GATE-PASS（首过）\n复审结论行\nREADY-GATE-FAIL（回归失败）')).toBe('FAIL')
-  })
-
-  it('mx_room_gate_verdict 与卡面共用同一提取语义（单一事实源）', () => {
-    const root = sandbox()
-    const out = sh(`
-mx_messages() {
-  cat <<'JSON'
-[
- {"sender":"@a:matrix.test","origin_server_ts":1000,"content":{"body":"派单原文说结论行 READY-GATE-PASS 或 READY-GATE-FAIL"}},
- {"sender":"@a:matrix.test","origin_server_ts":2000,"content":{"body":"复审结论行\\nREADY-GATE-PASS（齐备）"}}
-]
-JSON
-}
-mx_messages_deep() { mx_messages "$@"; }
-load_token() { echo tok; }
-_mx_v=$(mx_room_gate_verdict room "@a:matrix.test" READY-GATE 0)
-echo "verdict=$_mx_v"`, root)
-    expect(out.trim()).toBe('verdict=PASS')
-  })
-})
-
-// ── ⑥ 熔断复位语义（方案纪律 8：幂等记单/证据变化自动复位/人工复议须带原因）──
-describe('⑥ 熔断复位语义（幂等/证据变化/复议留痕）', () => {
-  it('熔断记单幂等：重复 check 不刷单（run12 214 条重复记单回归面）', () => {
-    const root = sandbox()
-    sh(`
-mkdir -p "$EVID_DIR"
-mx_gate_breaker_trip g5 "G5 发布准出" 2`, root)
-    for (let i = 0; i < 3; i++) {
-      try {
-        sh(`mkdir -p "$EVID_DIR"; ( mx_gate_breaker_check g5 "G5 发布准出" ) >/dev/null 2>&1 || true`, root)
-      } catch { /* fail 退出码 */ }
+  it('判词/熔断/G1/UAT 判读全部委托 governance-client（无本地第二实现）', () => {
+    const scenLib = read(LIB)
+    for (const sym of [
+      'gov_lc_verdict "$1" "$2" ""',
+      'gov_lc_breaker_trip',
+      'gov_lc_breaker_check',
+      'gov_lc_reqjudge',
+      'gov_lc_uat_verdict',
+      'gov_lc_uat_coverage',
+    ]) {
+      expect(scenLib).toContain(sym)
     }
-    const issues = readFileSync(join(root, 'evidence', 'issues.log'), 'utf8')
-    const tripped = issues.split('\n').filter((l) => l.includes('gate-breaker-tripped'))
-    expect(tripped.length).toBe(1)
   })
 
-  it('证据变化自动复位：trip 后出现新派发/判词证据 → 新尝试放行', () => {
-    const root = sandbox()
-    const out = sh(`
-mkdir -p "$EVID_DIR"
-mx_gate_breaker_trip g5 "G5 发布准出" 2
-_mx_sig1=$(sget g5_trip_sig)
-echo "[mux] [fanfan] 派发：G5 发布准出评审补齐后重报" >> "$EVID_DIR/scenario.log"
-_mx_rc=0; ( mx_gate_breaker_check g5 "G5 发布准出" ) >/dev/null 2>&1 || _mx_rc=$?
-echo "sig=$_mx_sig1 rounds=$(sget g5_fail_rounds) rc=$_mx_rc"`, root)
-    // 签名自 13b5739 全口径化为复合格式（c:itip:x）——正则取非空白串，不锁数字形态
-    const m = out.trim().match(/sig=(\S+) rounds=(\d+) rc=(\d+)/)
-    expect(m).not.toBeNull()
-    expect(Number(m![2])).toBe(0)   // fail_rounds 复位
-    expect(m![3]).toBe('0')          // check 放行
-  })
-
-  it('人工复议须带原因：OVERRIDE 无 GATE_BREAKER_REASON 拒绝', () => {
-    const root = sandbox()
-    sh(`mkdir -p "$EVID_DIR"; mx_gate_breaker_trip g5 "G5 发布准出" 2`, root)
-    let threw = false
-    try {
-      sh(`( mx_gate_breaker_check g5 "G5 发布准出" ) >/dev/null 2>&1 || true`, root, { GATE_BREAKER_OVERRIDE: '1' })
-    } catch { threw = true }
-    const issues = readFileSync(join(root, 'evidence', 'issues.log'), 'utf8')
-    expect(issues).toContain('gate-breaker-override-refused')
-  })
-
-  it('人工复议带原因 → 放行并落 approved.events（与 HumanGate 同审计面）', () => {
-    const root = sandbox()
-    const out = sh(`
-mkdir -p "$EVID_DIR"
-mx_gate_breaker_trip g5 "G5 发布准出" 2
-_mx_rc=0; ( mx_gate_breaker_check g5 "G5 发布准出" ) >/dev/null 2>&1 || _mx_rc=$?
-echo "rc=$_mx_rc rounds=$(sget g5_fail_rounds)"`, root, {
-      GATE_BREAKER_OVERRIDE: '1',
-      GATE_BREAKER_REASON: '卡面终判词与复审 PASS 已核实，对照事件锚',
-    })
-    expect(out).toMatch(/rc=0 rounds=0/)
-    const approved = readFileSync(join(root, 'evidence', 'approved.events'), 'utf8')
-    expect(approved).toContain('GATE-BREAKER-REVIEW')
-    expect(approved).toContain('GATE-BREAKER-REVIEW')
-    const issues = readFileSync(join(root, 'evidence', 'issues.log'), 'utf8')
-    expect(issues).toContain('gate-breaker-override|director|')
-  })
-})
-
-// ── ⑦ 判词送达确认（卡面有判词房间哑火 → 代发对照行；每闸至多一次）──
-describe('⑦ 判词送达确认（卡面→房间代发对照行）', () => {
-  it('卡面 PASS、房间空 → 判 PASS 且代发对照行一次；重查不重发', () => {
-    const root = sandbox()
-    const out = sh(`
-mkdir -p "$EVID_DIR"
-sset room_analysis "!room1"
-mx_messages() { echo '[]'; }
-load_token() { echo tok; }
-kanban_list() { echo '[{"title":"G5 评审","body":"背景/方案略\\nREADY-GATE-PASS（七项齐备）"}]'; }
-mx_send() { echo "$3" >> "$EVID_DIR/relay.log"; echo sent; }
-_v1=$(mx_gate_verdict_combined room "@a:matrix.test" READY-GATE 0 fanfan "G5")
-_v2=$(mx_gate_verdict_combined room "@a:matrix.test" READY-GATE 0 fanfan "G5")
-echo "v1=$_v1 v2=$_v2 sends=$(wc -l < "$EVID_DIR/relay.log" | tr -d ' ')"`, root)
-    const m = out.match(/v1=(\S+) v2=(\S+) sends=(\d+)/)
-    expect(m).not.toBeNull()
-    expect(m![1]).toBe('PASS')
-    expect(m![2]).toBe('PASS')
-    expect(Number(m![3])).toBe(1)
+  it('旧实现退役绊线：awk 判词体/本地熔断 state 键/py 判词器不得回流', () => {
+    const scenLib = read(LIB)
+    expect(scenLib).not.toContain('awk -v g="$1"')
+    expect(scenLib).not.toContain('_fail_rounds')
+    expect(scenLib).not.toContain('uat_verdict.py')
+    expect(existsSync(join(MX, 'uat_verdict.py'))).toBe(false)
+    // 报告链配对单源（融合批六）：生成器/审计器取 governance-metrics.json 快照，本地配对构建不得回流
+    const gen = read(join(MX, 'mx-report-gen.py'))
+    expect(gen).toContain('governance-metrics.json')
+    expect(gen).not.toContain('disp_exact')
+    expect(read(join(MX, 'mx-report-audit.py'))).not.toContain('_disp.add(')
+    // 主驱动接线客户端（判据单源声明）
+    expect(read(join(HARNESS, 'aipay-scenario.sh'))).toContain('source "$SCRIPT_DIR/mux/governance-client.sh"')
+    expect(read(join(HARNESS, 'aipay-scenario.sh'))).toContain('gov_report >/dev/null 2>&1 || issue_once governance-snapshot-stale')
+    expect(read(join(MX, 'governance-client.sh'))).toContain('单一事实源=custom/server/governance/lifecycle')
   })
 })
 

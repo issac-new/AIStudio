@@ -14,11 +14,15 @@ ck() { # <描述> <grep 式>
   fi
 }
 
-# freeze 判读（reqgate_judge）：AC 编号/Scope-Out 节名/影响面/涉敏——方案 §2.7 freeze 行
-ck "freeze AC 可判定"            'AC-?[0-9N]|AC 编号'
-ck "freeze Scope-Out 节名"        '\^## \.\*Scope-Out'
-ck "freeze 影响面"                '影响面'
-ck "freeze 涉敏"                  '涉敏'
+# freeze 判读（融合批二：判定正本=产品 governance/lifecycle/requirements.ts）
+GOVMOD=../custom/server/governance/lifecycle/requirements.ts
+[ -f "$GOVMOD" ] || GOVMOD="$MX_OVERLAY_ROOT/custom/server/governance/lifecycle/requirements.ts"
+ckg() { grep -qE "$2" "$GOVMOD" 2>/dev/null && echo "PASS ① $1" || { echo "FAIL ① $1（$GOVMOD 缺锚：$2）"; FAILS=$((FAILS+1)); }; }
+ckg "freeze AC 条目行"            'AC_ITEM_RE'
+ckg "freeze AC ≥3"                '少于 3'
+ckg "freeze Scope-Out 节名"        'Scope-Out'
+ckg "freeze 影响面"                '影响面'
+ckg "freeze 涉敏"                  '涉敏'
 
 # org 模板（org_gen）：六列对账/权限矩阵/三流程/能力矩阵——方案 §2.7 org 行
 ck "org 编制六列"                 '\| 账号 \| 角色 \| 汇报线'

@@ -12,8 +12,10 @@ run15 实证：80 条 DISP 的处置文本全部缺三态分桶词前缀（已�
      处置一律降为观察或待处置」，已修判定须人工带锚点补记，禁脚本自动升桶；
   3) 幂等：该键已存在任一三态前缀 DISP 行则跳过（重放不重复追加）。
 
-配对口径与 mx-report-gen.issues_stats() 保持同源；两侧漂移由守门测试
-tests/tri-disp-backfill.test.sh（run15 真实台账夹具）咬住。
+配对口径单一正本（融合批三起）=治理服务 run-metrics.pairing（经 gov_report 落
+的 evidence/governance-metrics.json 快照取件——本脚本不再本地复算配对）；
+写桶策略保留原纪律：一律降不升（观察/结构性延后），已修须人工带锚点补记。
+快照缺席=幂等安静退出（报告步前 gov_report 未跑过/服务不可达——不盲写）。
 """
 import argparse
 import os
@@ -50,53 +52,39 @@ if not ilog.exists():
     sys.exit(0)  # 无台账=无事可做（幂等安静退出，非阻断）
 
 lines = ilog.read_text(encoding='utf-8').splitlines()
-iss_keys, order = {}, []
-for l in lines:
-    if l.startswith('ISSUE|'):
-        p = l.split('|', 3)
-        key = f'{p[1]}·{p[2]}'
-        if key not in iss_keys:
-            iss_keys[key] = True
-            order.append(key)
 
-disp_exact, disp_generic = {}, {}
+# 配对取产品 DTO 快照（gov_report 落件；缺席=安静退出不盲写）
+dto_path = EVID / 'governance-metrics.json'
+if not dto_path.exists():
+    print('[tri-disp] 治理指标快照缺席（governance-metrics.json）——配对正本未到位，本轮跳过归桶（不盲写）')
+    sys.exit(0)
+import json
+try:
+    pairing = json.loads(dto_path.read_text(encoding='utf-8')).get('pairing') or []
+except json.JSONDecodeError:
+    print('[tri-disp] 治理指标快照不可读——跳过归桶（不盲写）')
+    sys.exit(0)
+
+# 幂等基底：同键已有任一三态前缀 DISP 行则跳过（重放不重复追加）
+disp_seen = set()
 for l in lines:
     if l.startswith('DISP|'):
-        p = l.split('|', 4)
-        if len(p) > 3:
-            if p[2] in GENERIC:
-                disp_generic[p[1]] = p[3]
-            else:
-                disp_exact[(p[1], p[2])] = p[3]
-
-types_of = {}
-for k in order:
-    types_of.setdefault(k.split('·')[0], []).append(k)
-
-
-def disp_for(key):
-    t, s = key.split('·', 1)
-    if (t, s) in disp_exact:
-        return disp_exact[(t, s)]
-    if t in disp_generic:
-        return disp_generic[t]
-    if len(types_of.get(t, [])) == 1:
-        for (dt, ds), dv in disp_exact.items():
-            if dt == t:
-                return dv
-    return None
-
+        p = l.split('|', 3)
+        if len(p) > 3 and p[3].startswith(TRI):
+            disp_seen.add(f'{p[1]}·{p[2]}')
 
 appendix = []
 n_fixed = n_ok = 0
 n_created = 0
-for k in order:
-    d = disp_for(k)
-    if d is None:
-        # 2026-10-13 扩展：该 ISSUE 键完全无 DISP 行——补桶行（纪律 28 降不升；
-        # 幂等由 disp_for 为 None 时的本分支保证：已有行即不走此处）。
-        # run18 复盘 F10：结构性类型归「延后」（下轮前置人工处置），其余归「观察」。
+for row in pairing:
+    k = row['key']
+    d = row.get('disposition')
+    mode = row.get('mode')
+    if d is None or mode == 'none':
         t, s = k.split('·', 1)
+        if k in disp_seen:
+            n_ok += 1
+            continue
         if t in STRUCTURAL_TYPES:
             appendix.append(
                 f'DISP|{t}|{s}|延后（结构性缺陷类别禁自动观察归桶——须下轮开跑前人工处置并带锚点回写，纪律 28/46）')
@@ -106,6 +94,10 @@ for k in order:
         n_created += 1
         continue
     if d.startswith(TRI):
+        n_ok += 1
+        continue
+    if k in disp_seen:
+        # 快照是静态件：首轮已补的三态归桶行以当前台账为准跳过（幂等不依赖快照新鲜度）
         n_ok += 1
         continue
     t, s = k.split('·', 1)
@@ -118,4 +110,4 @@ for k in order:
 if appendix:
     with open(ilog, 'a', encoding='utf-8') as f:
         f.write('\n'.join(appendix) + '\n')
-print(f'[tri-disp] 归桶 {n_fixed} 键（全部观察桶）；补建 {n_created} 键（无 DISP 行→观察桶）；已合规 {n_ok} 键；唯一键总数 {len(order)}')
+print(f'[tri-disp] 归桶 {n_fixed} 键（全部观察桶）；补建 {n_created} 键（无 DISP 行→观察桶）；已合规 {n_ok} 键；唯一键总数 {len(pairing)}')
