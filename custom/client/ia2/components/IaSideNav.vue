@@ -57,8 +57,9 @@ const routeName = computed(() => String(route?.name ?? ''))
 const routePath = computed(() => String(route?.path ?? ''))
 const isSimMode = computed(() => routePath.value === '/app/sim' || routePath.value.startsWith('/app/sim/'))
 
-/** 推演模式侧栏（与 SimCenterView 六签同序；文案自 nav-centers SIM_NAVS
- *  单一源——与最近轨迹标题解析共用，2026-10-23 迁入） */
+/** 推演模式侧栏（2026-10-27 产品一致性 Task 9：中央页签条退役，本组是推演域
+ *  唯一导航；文案自 nav-centers SIM_NAVS 单一源——与最近轨迹标题解析共用，
+ *  2026-10-23 迁入） */
 const simItems = SIM_NAVS
 
 /** 常用组：日常高频入口。静态定义自 nav-centers COMMON_NAVS（单一源），
@@ -187,9 +188,22 @@ function toggleCollapsed(): void {
   collapsed.value = !effectiveCollapsed.value
 }
 
+/** 推演域内互跳保留 run/from 上下文（2026-10-27 产品一致性 Task 9：中央页签条
+ *  退役后左栏是唯一推演导航，原 SimCenterView.goTab 的 contextQuery 白名单迁此）。
+ *  跳出推演域不携带——from 在日常域是阶段归属来路语义，带上会污染顶栏归属判定。 */
+function simContextQuery(): Record<string, string> | undefined {
+  const query: Record<string, string> = {}
+  for (const key of ['run', 'from'] as const) {
+    const v = route.query[key]
+    if (typeof v === 'string' && v) query[key] = v
+  }
+  return Object.keys(query).length ? query : undefined
+}
+
 function go(name: string): void {
   if (routeName.value === name) return
-  void router.push({ name })
+  const simToSim = isSimMode.value && String(name).startsWith('ia2.sim')
+  void router.push(simToSim ? { name, query: simContextQuery() } : { name })
 }
 
 // ── 最近轨迹（2026-10-23「常用 · 最近」）：记录页面访问轨迹，便于回溯 ──

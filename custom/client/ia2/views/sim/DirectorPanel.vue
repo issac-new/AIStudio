@@ -9,6 +9,7 @@ import { useRouter } from 'vue-router'
 import { fetchRunState, type RunStateResponse } from '../../api/overview'
 import { ACTS_7, countStepsDone, resolveGateRows, resolveStepRows } from './steps-registry'
 import { useRunContext } from '../../composables/useRunContext'
+import { runDisplayName } from '../../run-display'
 import OverviewPanel from './OverviewPanel.vue'
 import {
   fetchDirectorScenarios, planDirectorScenario, startDirectorScenario,
@@ -368,6 +369,19 @@ const interventions = computed(() => pendingGates.value.map(g => ({
 })))
 const openLedger = computed(() => state.value?.ledger.open ?? 0)
 
+// ── 统计卡口径标注（2026-10-27 产品一致性 Task 9）──────────────────────
+// 同屏数字不同源：步骤/门是本轮 run-state 里的历史标记，遗留是清算台账——
+// 满额绿灯不得被读成「证据齐备」的完成语义（该词由 sim-shell-coherence 守门禁用）。
+// 口径词入卡面，完整说明入 title。
+const KPI_SCOPE = {
+  steps: '口径：本轮 harness 运行 26 步的执行标记（run-state 完成键），不含历史运行，也不等于证据核验',
+  gates: '口径：六道质量门在运行期写下的判定记录（键在即通过）；不是对当前证据的重新核验',
+  wait: '口径：当前等待人工处理的导演闸（图事件流未应答 interrupt）',
+  ledger: '口径：清算台账未清项；未清时不能启动新运行（去⑥治理·遗留项清算处理）',
+} as const
+// 运行模式枚举的可读名（原始值如 standard 是内部参数；未登记值照录不猜）
+const POSTURE_LABEL: Record<string, string> = { strict: '严格', standard: '标准', demo: '演示' }
+
 function goOrchestration(): void { void router.push({ name: 'ia2.simOrchestration' }) }
 function goDaily(): void { void router.push({ name: 'ia2.collab' }) }
 
@@ -461,7 +475,8 @@ onBeforeUnmount(() => { stopPolling() })
 
       <section v-if="graphRunId" class="dir__run" data-testid="director-graph-run">
         <header class="dir__run-head">
-          <h4 class="dir__h">图运行 <span class="dir__h-n">{{ graphRunId }}</span></h4>
+          <!-- 导演 run 首屏只给域名称，完整 runId 收进 title（run-display 口径） -->
+          <h4 class="dir__h">图运行 <span class="dir__h-n" :title="graphRunId">{{ runDisplayName(graphRunId) }}</span></h4>
           <span class="dir__status" :class="`dir__status--${graphStatus}`">{{ graphStatusLabel }}</span>
           <button type="button" class="dir__link" :disabled="graphLoading" @click="refreshGraph">刷新</button>
         </header>
@@ -511,7 +526,7 @@ onBeforeUnmount(() => { stopPolling() })
         </p>
         <template v-else-if="launch">
           <div v-if="launch.running" class="dir__launch-run">
-            <span>运行中 <b>{{ launch.process?.runId }}</b> · PID {{ launch.process?.pid ?? '—' }} · {{ launch.process?.startedAt }}</span>
+            <span>运行中 <b>{{ launch.process?.runId }}</b></span>
             <button type="button" class="dir__btn" :disabled="launchLoading" @click="stopLaunch">停止</button>
           </div>
           <div v-else class="dir__launch-start">
@@ -519,7 +534,12 @@ onBeforeUnmount(() => { stopPolling() })
             <button type="button" class="dir__btn dir__btn--primary" :disabled="launchLoading || launch.driverLock" @click="startLaunch">启动 harness 推演</button>
           </div>
           <p v-if="launch.driverLock" class="dir__hint">检测到驱动锁 {{ launch.simRoot }}/.driver.lock.d —— 拒绝双开。</p>
-          <p v-if="launch.lastExit" class="dir__hint">上次结束：{{ launch.lastExit.runId }} · code={{ launch.lastExit.code ?? '—' }} · {{ launch.lastExit.endedAt }}</p>
+          <!-- 进程原始参数（PID/时间戳/上次退出码）收进折叠详情，不占首屏（2026-10-27 Task 9） -->
+          <details v-if="launch.running || launch.lastExit" class="dir__events" data-testid="director-launch-process">
+            <summary>进程详情</summary>
+            <p v-if="launch.running" class="dir__hint">PID {{ launch.process?.pid ?? '—' }} · 启动于 {{ launch.process?.startedAt }}</p>
+            <p v-if="launch.lastExit" class="dir__hint">上次结束：{{ launch.lastExit.runId }} · code={{ launch.lastExit.code ?? '—' }} · {{ launch.lastExit.endedAt }}</p>
+          </details>
           <details v-if="launch.logTail" class="dir__events"><summary>日志尾部</summary><pre class="dir__log">{{ launch.logTail }}</pre></details>
         </template>
         <p v-if="launchError" class="dir__error" data-testid="director-launch-error">{{ launchError }}</p>
@@ -539,7 +559,8 @@ onBeforeUnmount(() => { stopPolling() })
       <template v-else>
         <header class="dir__head" data-testid="director-head">
           <div>
-            <p class="dir__sub">当前运行 <b>{{ state.run }}</b> · 模式 {{ state.posture }} · 启动/续跑由 harness 执行</p>
+            <!-- 运行名走可读日期（目录名是内部锚，收进 title 供反查，2026-10-27 Task 9） -->
+            <p class="dir__sub">当前运行 <b :title="state.run">{{ runDisplayName(state.run) }}</b> · 模式 {{ POSTURE_LABEL[state.posture] ?? state.posture }} · 启动/续跑由 harness 执行</p>
           </div>
           <div class="dir__actions">
             <button type="button" class="dir__btn dir__btn--primary" data-testid="director-orchestrate" @click="goOrchestration">查看运行编排 →</button>
@@ -548,10 +569,10 @@ onBeforeUnmount(() => { stopPolling() })
         </header>
 
         <div class="dir__kpis">
-          <div class="dir__kpi" data-testid="director-kpi-steps"><span class="dir__kpi-n">{{ stepsDone }}<em>/26</em></span><span class="dir__kpi-l">步骤完成</span></div>
-          <div class="dir__kpi" data-testid="director-kpi-gates"><span class="dir__kpi-n">{{ gatesPassed }}<em>/6</em></span><span class="dir__kpi-l">质量门通过</span></div>
-          <div class="dir__kpi" :class="{ 'dir__kpi--warn': interventions.length }" data-testid="director-kpi-wait"><span class="dir__kpi-n">{{ interventions.length }}</span><span class="dir__kpi-l">待人介入</span></div>
-          <div class="dir__kpi" :class="{ 'dir__kpi--warn': openLedger > 0 }" data-testid="director-kpi-ledger"><span class="dir__kpi-n">{{ openLedger }}</span><span class="dir__kpi-l">未清遗留项</span></div>
+          <div class="dir__kpi" data-testid="director-kpi-steps" :title="KPI_SCOPE.steps"><span class="dir__kpi-n">{{ stepsDone }}<em>/26</em></span><span class="dir__kpi-l">步骤完成（本轮运行）</span></div>
+          <div class="dir__kpi" data-testid="director-kpi-gates" :title="KPI_SCOPE.gates"><span class="dir__kpi-n">{{ gatesPassed }}<em>/6</em></span><span class="dir__kpi-l">质量门通过（历史门判定）</span></div>
+          <div class="dir__kpi" :class="{ 'dir__kpi--warn': interventions.length }" data-testid="director-kpi-wait" :title="KPI_SCOPE.wait"><span class="dir__kpi-n">{{ interventions.length }}</span><span class="dir__kpi-l">待人介入</span></div>
+          <div class="dir__kpi" :class="{ 'dir__kpi--warn': openLedger > 0 }" data-testid="director-kpi-ledger" :title="KPI_SCOPE.ledger"><span class="dir__kpi-n">{{ openLedger }}</span><span class="dir__kpi-l">未清遗留项（清算台账）</span></div>
         </div>
 
         <section class="dir__card" data-testid="director-acts">

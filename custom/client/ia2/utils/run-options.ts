@@ -26,3 +26,17 @@ export function buildRunOptions(
 export function normalizeRunId(id: string): string {
   return id.startsWith('sim-') ? id.slice(4) : id
 }
+
+/** 历史运行清单（2026-10-27 产品一致性 Task 9 分区）：只列「当前运行之外」的
+ *  其他运行——当前运行由调用方单独分区呈现（当前查看对象），不混进切换清单，
+ *  杜绝「已选运行」与「暂无历史运行」并存的自相矛盾。归一/去重/上限同
+ *  buildRunOptions；加载窗口的空清单由调用方按 loading 态另行提示。 */
+export function buildHistoryOptions(
+  runIds: readonly string[],
+  current: string,
+  limit = 40,
+): string[] {
+  const cur = normalizeRunId(current)
+  const list = Array.from(new Set(runIds.map(normalizeRunId).filter(Boolean)))
+  return list.filter(id => id !== cur).slice(0, limit)
+}

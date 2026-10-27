@@ -315,7 +315,9 @@ function goSupervision(): void {
               <span v-else-if="d.status === 'uncovered'" class="ov__dl-note">暂无对应核对标准</span>
             </li>
           </ul>
-          <p v-if="deliverables" class="ov__hint">已扫描 evidence 目录 {{ deliverables.scanned }} 个文件；核实 {{ deliverables.deliverables.filter(d => d.status === 'present').length }}/13 类。</p>
+          <!-- 口径标注（2026-10-27 Task 9）：按当前 evidence 目录在场文件核对——
+               缺类不计为已交付，不得与 26 步/六闸的历史标记混读成完成语义 -->
+          <p v-if="deliverables" class="ov__hint" data-testid="ov-deliverables-scope">已扫描 evidence 目录 {{ deliverables.scanned }} 个文件；当前证据核验 {{ deliverables.deliverables.filter(d => d.status === 'present').length }}/13 类（在场核对，缺类不计为已交付）。</p>
         </section>
 
         <aside class="ov__side">

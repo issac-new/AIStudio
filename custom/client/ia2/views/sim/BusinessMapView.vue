@@ -237,7 +237,7 @@ const graphEdges = computed<Edge[]>(() => {
     <header class="bmap__head">
       <div>
         <h2 class="bmap__title">业务地图</h2>
-        <p class="bmap__sub">需求 × 知识面多图层叠加——词面命中画布化（只读）；改造范围须人工确认。</p>
+        <p class="bmap__sub">需求 × 知识面多图层叠加——图谱只读，标注可协同编辑；改造范围须人工确认。</p>
       </div>
     </header>
 

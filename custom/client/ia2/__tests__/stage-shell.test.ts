@@ -237,6 +237,8 @@ describe('StageShell — 单层页签', () => {
 
   it('④开发主操作=页内打开看板（不跳整页）', async () => {
     const { w, router } = await mountStage(4)
+    // 默认签 today 懒装载：单文件隔离跑时冷缓存，须等 chunk 落地（同 ⑤⑥ untilFound 迁移）
+    await untilFound(w, '[data-testid="today-stub"]')
     expect(w.find('[data-testid="today-stub"]').exists()).toBe(true)
     await w.find('[data-testid="stg-primary"]').trigger('click')
     await flushPromises()
