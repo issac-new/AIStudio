@@ -977,3 +977,11 @@
 # SwarmKanbanView 板条新增刷新失败/数据不完整提示（workspace.overviewStatus 四态消费面），
 # kanban-i18n-coverage 守门红清偿；zh 值逐字取视图内联兜底（同 689 补丁做法）。
 703-client-kanban-i18n-overview-status.patch
+
+# 702（2026-10-27 产品一致性 Task 10）：connections 面板关闭态根治——650 的
+# isSuperAdmin 放行在 extras 关且无 remote 设备时渲染零页签空条；改为 NTabs
+# 渲染条件 features.connectionsExtras || hasRemoteDevices（至少一个可用 pane 才
+# 出页签条，全隐藏统一 connections-empty 空态，superadmin 不再例外），且
+# normalizeTab 在 extras 关闭时归一 remote（app/mcu 深链与缺省不落隐藏页签）。
+702-client-connections-tab-normalize.patch
+>>>>>>> 8f47277da (fix(search): 统一过滤口径与特性关闭态)

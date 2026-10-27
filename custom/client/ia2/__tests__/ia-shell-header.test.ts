@@ -197,6 +197,16 @@ describe('IaShellHeader — 统一壳页头', () => {
     w.unmount()
   })
 
+  it('全局检索快搜 placeholder 声明覆盖范围（Task 10：与统一弹窗同口径，五类对象＋命令）', async () => {
+    const w = await mountHeader()
+    const input = w.find('[data-testid="ia-header-search-input"]')
+    expect(input.exists()).toBe(true)
+    // 旧文案「搜索 会话/任务/房间」漏运行/文档/人员/命令——顶部输入唤起的正是
+    // 统一弹窗，placeholder 必须如实声明范围
+    expect(input.attributes('placeholder')).toBe('搜索会话、任务、运行、文档、人员或命令…')
+    w.unmount()
+  })
+
   it('日程按钮（2026-10-01 用户裁定还原 S7 摘除）：渲染/当日事件亮徽章/点击开弹窗', async () => {
     cockpitStubs.state.scheduleDatesWithEvents = new Set()
     const w = await mountHeader()

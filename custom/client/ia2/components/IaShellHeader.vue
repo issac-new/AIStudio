@@ -38,9 +38,14 @@ import { useNowTick } from '../composables/useNowTick'
 import { NModal } from 'naive-ui'
 import { changelog } from '@/data/changelog'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
+// 快搜 placeholder（Task 10）：与统一弹窗同口径、如实声明覆盖范围——旧词条
+// 「搜索 会话/任务/房间」（cockpit.searchPlaceholder）漏运行/文档/人员/命令，
+// 且顶部输入唤起的正是统一弹窗；本组件是该词条唯一消费者，改为本地字面量。
+const zh = computed(() => String(locale?.value ?? 'zh').startsWith('zh'))
+const searchPlaceholder = computed(() => zh.value ? '搜索会话、任务、运行、文档、人员或命令…' : 'Search chats, tasks, runs, docs, people, or commands…')
 /** 运行上下文 chip 只属于推演模式；日常顶栏不再出现运行目录/轮次。 */
 const isSimMode = computed(() => route.path === '/app/sim' || route.path.startsWith('/app/sim/'))
 // 层级批：品牌区旅程回家钮（旅程页是产品默认入口，此前顶栏无路可达）
@@ -193,7 +198,7 @@ function onPanelJumpTask(taskId: string): void {
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon"><CockpitIcon name="search" :size="12" /></span>
       <input type="text" class="cockpit-top__search-input" :value="store.searchQuery"
-        :placeholder="t('cockpit.searchPlaceholder')" data-testid="ia-header-search-input"
+        :placeholder="searchPlaceholder" data-testid="ia-header-search-input"
         @input="store.runSearch(($event.target as HTMLInputElement).value); workspace.openSearch()"
         @click="workspace.openSearch()" />
       <button v-if="store.searchQuery" type="button" class="cockpit-top__search-clear" @click="store.clearSearch()">×</button>
