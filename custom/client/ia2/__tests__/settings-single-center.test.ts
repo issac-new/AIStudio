@@ -41,7 +41,7 @@ import { VIEW_LOADERS } from '../views/legacy-view-loaders'
 import IaLegacyShell from '../views/IaLegacyShell.vue'
 import GovSettingsView from '../views/gov/GovSettingsView.vue'
 import GovModelProvidersView from '../views/gov/GovModelProvidersView.vue'
-import { GOV_SETTINGS_DOMAINS, entryVisible } from '../views/gov/gov-settings-registry'
+import { GOV_SETTINGS_DOMAINS, entryVisible, settingsSidebarEntries, SIDEBAR_GROUPS } from '../views/gov/gov-settings-registry'
 
 /** 全部注册表条目（域序拉平） */
 const ALL_ENTRIES = GOV_SETTINGS_DOMAINS.flatMap(d => d.entries.map(e => ({ ...e, domain: d.key })))
@@ -264,5 +264,23 @@ describe('Task 7-7 侧栏从注册表派生（入口保留 + 不重新暴露）'
     expect(catalogNames).not.toContain('hermes.theme')
     expect(catalogNames).not.toContain('ekko.settings')
     expect(catalogNames).toContain('hermes.settings')
+  })
+
+  it('fix round 1 序列锚定：三组侧栏条目完整快照（与改造前自持条目表逐条等价，重排即红）', () => {
+    // 组序=SIDEBAR_GROUPS（tools→hermes→system）；组内=sidebarOrder。
+    // 完整序列非抽样：注册表任何增删/改序/surface 变更导致侧栏重排，本断言当场报警
+    // ——Task 7 迁移时的「组内顺序逐条保序」人工核对自此落成守门。
+    expect(SIDEBAR_GROUPS.map(g => g.key)).toEqual(['tools', 'hermes', 'system'])
+    expect(settingsSidebarEntries().map(e => e.name)).toEqual([
+      // tools（原 PageSidebarNav 面）
+      'hermes.models', 'hermes.workflow',
+      // hermes（原 HermesConfigSidebar 面）
+      'hermes.agentManager', 'hermes.skills', 'hermes.plugins', 'hermes.mcp',
+      'hermes.memory', 'hermes.channels', 'hermes.jobs', 'ekko.settings',
+      // system（原 AppSidebar 系统组面）
+      'ia2.govSettings', 'hermes.settings', 'hermes.profiles', 'hermes.theme',
+      'hermes.skillsUsage', 'hermes.logs', 'hermes.usage', 'hermes.performance',
+      'hermes.versionPreview',
+    ])
   })
 })
