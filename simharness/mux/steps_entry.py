@@ -12,10 +12,12 @@
 当前产品事实（单一事实源=overlay custom/client/ia2/{IaSideNav.vue,stage-meta.ts,
 stage-tabs.ts,routes.ts,sim-tabs.ts}）：
 - 左侧导航五组：常用（流程总览 /app、工作台 /app/collab、看板 /app/board、
-  审批收件箱 /app/inbox、检索 /app/search）＋流程（①搭建 /app/stage/setup、
+  审批收件箱 /app/inbox）＋流程（①搭建 /app/stage/setup、
   ②需求 /app/stage/reqs、③分析设计 /app/stage/design、④开发 /app/stage/build、
   ⑤验收 /app/stage/accept、⑥治理 /app/stage/govern）＋整轮（全流程推演 /app/sim）
   ＋专题（流程架构/本体/评测/技能治理）＋管理（系统设置）。
+- 检索统一在顶部搜索框及其弹窗（Cmd/Ctrl+K）：五类对象+命令+组合筛选；
+  /app/search 为兼容深链，自动打开同一弹窗，不再是独立页面。
 - 六阶段页单层页签（?tab=，共 29 签）：① steps/org/accounts/teams/assets/agents；
   ② reqs/docs/g1/preflight/launch；③ tasks/analysis/g2/schedule；
   ④ today/board/approvals/risk/quality；⑤ overview/trace/delivery/uat/g5/cases；

@@ -132,6 +132,23 @@ async function dismissPopups() {
     if (await btn.isVisible().catch(() => false)) { await btn.click().catch(() => {}); await page.waitForTimeout(300) }
   }
 }
+
+// /app/search 已是弹窗深链。通用清场会把它一并关闭，拍帧前必须重开并
+// 断言统一弹窗真实可见；standalone 没有顶部入口时重回旧深链恢复。
+async function ensurePlannedSearchDialog() {
+  if (!PLAN_URL.includes('/app/search')) return
+  const dialog = page.locator('[data-testid="global-search-dialog"]')
+  if (!await dialog.isVisible().catch(() => false)) {
+    const trigger = page.locator('[data-testid="ia-header-search-input"]')
+    if (await trigger.isVisible().catch(() => false)) await trigger.click()
+    else {
+      await page.goto(BASE + PLAN_URL)
+      await waitSpaReady()
+    }
+  }
+  await dialog.waitFor({ state: 'visible', timeout: 5000 })
+}
+
 // 拍后自检（run11 实锤：多帧拍到"没有权限/群聊升级说明"页）：读到坏页即强关弹窗
 // 重载重拍一次；仍坏则写 .bad.txt 侧车留证并继续（不阻断，如实可查）。
 async function pageLooksBad() {
@@ -146,6 +163,7 @@ async function pageLooksBad() {
 // 实锤：固定 SETTLE 等 4s 拍到的是未挂载路由的壳）。就绪=目标 hash 已挂 AND 正文有实
 // 内容；cap 内轮询，超 cap 仍拍（如实留证，配合 pageLooksBad 自检面）。
 const ROUTE_ASSERT = (() => {
+  if (PLAN_URL.includes('/app/search')) return 'app'
   const h = PLAN_URL.split('#')[1] || ''
   return h.replace(/^\//, '')   // '/#/app/board' → 'app/board'
 })()
@@ -188,6 +206,7 @@ await page.goto(BASE + PLAN_URL)
 await waitSpaReady()
 await page.waitForTimeout(SETTLE)
 await dismissPopups()
+await ensurePlannedSearchDialog()
 if (await pageLooksBad()) {
   await dismissPopups()
   await relaunchLogin()
@@ -195,6 +214,7 @@ if (await pageLooksBad()) {
   await waitSpaReady()
   await page.waitForTimeout(SETTLE)
   await dismissPopups()
+  await ensurePlannedSearchDialog()
   const bad = await pageLooksBad()
   if (bad) writeFileSync(join(OUT, `${pre}.bad.txt`), bad.slice(0, 500), 'utf8')
 }
@@ -217,6 +237,7 @@ if (ACTION) {
   } catch (e) { console.error(`action 帧失败（before/after 仍有效）：${e.message}`) }
   await page.waitForTimeout(SETTLE)
   await dismissPopups()
+  await ensurePlannedSearchDialog()
   await page.screenshot({ path: `${OUT}/${pre}-after.png` })
   console.log(`shot: ${pre}-after`)
 } else {

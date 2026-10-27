@@ -20,6 +20,7 @@ import { useAttentionRows } from '../composables/useAttentionRows'
 import type { AttentionRow } from '../adapters/overview'
 import { useSharedArm } from '../composables/useSharedArm'
 import IaShellHeader from './IaShellHeader.vue'
+import GlobalSearchDialog from './GlobalSearchDialog.vue'
 import AttentionStrip from './AttentionStrip.vue'
 
 const router = useRouter()
@@ -83,6 +84,7 @@ function onOpenBoard(): void {
       @open-board="onOpenBoard"
     />
     <IaShellHeader :user-name="cockpit.currentUserName" />
+    <GlobalSearchDialog />
   </div>
 </template>
 

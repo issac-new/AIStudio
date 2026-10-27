@@ -30,9 +30,9 @@ describe('A1 Web 终端收编三段链（routes → VIEW_LOADERS → 侧栏条�
   })
 })
 
-describe('A2 Spotlight 会话全文深搜升级行（上游 SessionSearchModal 接线）', () => {
-  it('SpotlightPanel 调 openSessionSearch 且带升级行 testid', () => {
-    const panel = readOverlay('custom/client/ia2/components/SpotlightPanel.vue')
+describe('A2 统一检索弹窗的会话全文深搜入口（上游 SessionSearchModal 接线）', () => {
+  it('GlobalSearchDialog 调 openSessionSearch 且带升级行 testid', () => {
+    const panel = readOverlay('custom/client/ia2/components/GlobalSearchDialog.vue')
     expect(panel).toContain("import { useSessionSearch } from '@/composables/useSessionSearch'")
     expect(panel).toContain('openSessionSearch()')
     expect(panel).toContain('data-testid="spotlight-deep-search"')

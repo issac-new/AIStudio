@@ -45,9 +45,9 @@ bash mux/mx-harness-snapshot.sh --out <run>/evidence/harness/harness-summary.jso
 快照写 `harness-summary.json` + `harness-summary.md`，报告第 9 章「证据七：Harness 运行面」
 引用；端点缺席如实标 ⬜ 并记问题单，不阻断主链。prelaunch ⑳ 检查生效 dist 是否含六个新端点。
 
-## 工作台 IA 与采集位（V8.44）
+## 工作台 IA 与采集位（V8.44/V8.55）
 
-产品 2026-10-18 把工作台改为「左侧导航五组（常用/流程/整轮/专题/管理）＋六阶段页单层页签（29 签）＋全流程推演独立专区（6 签）＋检索页」，治理中心壳解体、`/app/gov/*` 全部 redirect 到阶段页，IDE 任务工作区让文件树/终端/记忆/新会话跟随 kanban 任务根。推演侧同步：
+产品 2026-10-18 把工作台改为「左侧导航五组（常用/流程/整轮/专题/管理）＋六阶段页单层页签（29 签）＋全流程推演独立专区（6 签）＋检索页」，治理中心壳解体、`/app/gov/*` 全部 redirect 到阶段页，IDE 任务工作区让文件树/终端/记忆/新会话跟随 kanban 任务根。2026-10-27 检索并入顶部统一弹窗，左侧常用组不再保留独立检索项；`/app/search` 只作兼容唤起，`r18-frames` 拍检索帧时会重开并断言弹窗可见。推演侧同步：
 
 - `mux/capture-plan.env` 26 步拍摄位迁到阶段页规范 URL（`/app/stage/<阶段>?tab=<页签>`）；旧路由只作 redirect 兜底。
 - `mux/steps_entry.py` 26 步入口表按左侧导航＋阶段页签重写。

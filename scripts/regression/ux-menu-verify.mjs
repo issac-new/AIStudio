@@ -69,8 +69,8 @@ async function fresh(hash = 'app') {
     await page.keyboard.press('Meta+k')
     await page.waitForTimeout(800)
     const open = await page.evaluate(() => {
-      const panel = document.querySelector('[data-testid=spotlight-panel]')
-      return { spot: !!panel && panel.offsetParent !== null, focused: document.activeElement?.getAttribute('data-testid') === 'ia-header-search-input' }
+      const panel = document.querySelector('[data-testid=global-search-dialog]')
+      return { spot: !!panel && panel.offsetParent !== null, focused: document.activeElement?.getAttribute('data-testid') === 'search-input' }
     })
     led.record('F ⌘K 唤起命令面板且焦点入搜索框', open.spot && open.focused, JSON.stringify(open))
     await led.shot(page, 'f-palette')

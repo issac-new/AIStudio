@@ -300,6 +300,16 @@ describe('IaSideNav 最近轨迹接线', () => {
     w.unmount()
   })
 
+  it('检索弹窗深链参数不写入最近轨迹', async () => {
+    const { w, router } = await mountAt('/app/stage/build')
+    await router.push('/app?search=1&q=Alice&type=people')
+    await flushPromises()
+    await openRecent(w)
+    expect(elText(q('[data-testid="recent-panel"]'))).not.toContain('search=1')
+    expect(localStorage.getItem(RECENT_TRAIL_STORAGE_KEY) ?? '').not.toContain('search=1')
+    w.unmount()
+  })
+
   it('行点击回跳该 fullPath（含 query）并关面板；当前页行只关面板', async () => {
     const { w, router } = await mountAt('/app/stage/build')
     await router.push('/app/board')

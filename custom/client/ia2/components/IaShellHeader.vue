@@ -14,7 +14,7 @@
      历史搬运（v12.3）：📅 日程按钮/通知下拉双页签；v12.1/2：品牌/全局搜索/
      Gateway 探测组/ThemeSwitch/用户。 -->
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
@@ -28,7 +28,6 @@ import IaLocaleToggle from './IaLocaleToggle.vue'
 import IaWorkspaceSwitch from './IaWorkspaceSwitch.vue'
 import IaRunContextChip from './IaRunContextChip.vue'
 import NotifyDropdownPanel from './NotifyDropdownPanel.vue'
-import SpotlightPanel from './SpotlightPanel.vue'
 import SitlineBar from './SitlineBar.vue'
 import SitDetailPanel, { type SitSegment, type SitTaskRow } from './SitDetailPanel.vue'
 import { useSitCounts } from '../composables/useSitCounts'
@@ -62,46 +61,20 @@ function goSettings() { router.push({ name: 'hermes.settings' }) }
 //    挂版本号按钮补回，交互同上游 SidebarAccountControls.openChangelog ──
 const showChangelog = ref(false)
 
-// ── Spotlight 混合搜索（2026-10-01 消息面批 #3，element-web Spotlight 吸收）──
-// 既有行为全保留：输入仍写 store.searchQuery（左栏过滤）+ hermes 全文搜索缓存；
-// 增量=聚焦/输入时弹混合结果面板（会话与房间/看板任务/命令三组，键盘可达）。
-const spotOpen = ref(false)
-const spotRef = ref<InstanceType<typeof SpotlightPanel> | null>(null)
-const searchInputEl = ref<HTMLInputElement | null>(null)
+// ── 全局检索（2026-10-27 合并）：顶部只负责输入与唤起，完整结果统一由
+//    GlobalSearchDialog 呈现。关键词仍写 cockpit store，兼容既有消费者。 ──
 
-// UX 裁决 F（2026-10-03）：协作侧命令面板快捷键——⌘K/Ctrl+K 唤起混合搜索（命令/会话/任务），
-// 与 IDE 壳 ⌘K 命令面板对称。焦点进输入框，Spotlight 键盘导航即刻可用。
-// 对称的另一半（2026-10-10 wiki 回归 D6 实锤）：IDE 路由下本壳仍挂载，两处
-// window keydown 同抢 ⌘K，协作侧聚焦搜索框会掠走 IDE 面板 input 的焦点，
-// 回车执行不了面板命令——IDE 工作台路由（ide.shell，含 /ide 旧直达链接）让位。
+// ⌘K/Ctrl+K 唤起统一检索；IDE 路由让位给 IDE 命令面板，避免双监听抢焦点。
 function onGlobalPaletteKey(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
     const route = router.currentRoute.value
     if (route.name === 'ide.shell' || route.path === '/app/ide' || route.path.startsWith('/ide')) return
     e.preventDefault()
-    spotOpen.value = true
-    nextTick(() => searchInputEl.value?.focus())
+    workspace.openSearch()
   }
 }
 onMounted(() => window.addEventListener('keydown', onGlobalPaletteKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalPaletteKey))
-
-function onSpotKeydown(e: KeyboardEvent) {
-  spotRef.value?.onKeydown(e)
-}
-
-function closeSpot() { spotOpen.value = false }
-
-// 2026-10-03 走查 L1：外点关闭——点搜索容器外任意处收起 Spotlight（此前仅
-// 选行/Escape/清空可退，失焦后面板悬挂遮挡）。mask 方案会挡输入框继续输入，
-// 故走 document mousedown + 容器包含性判定。
-function onDocMousedown(e: MouseEvent) {
-  if (!spotOpen.value) return
-  const root = (e.target as HTMLElement | null)?.closest?.('.cockpit-top__search')
-  if (!root) spotOpen.value = false
-}
-document.addEventListener('mousedown', onDocMousedown)
-onUnmounted(() => document.removeEventListener('mousedown', onDocMousedown))
 
 // ── V5 补遗⑤ S7（仅 Gateway 段维持摘除）：platforms store 与轮询能力保留，
 //    引用计数由 GovTeamSection/WorkbenchView 各自 retain ──
@@ -209,14 +182,12 @@ function onPanelJumpTask(taskId: string): void {
     <div class="cockpit-top__div" />
     <div class="cockpit-top__search">
       <span class="cockpit-top__search-icon"><CockpitIcon name="search" :size="12" /></span>
-      <input ref="searchInputEl" type="text" class="cockpit-top__search-input" :value="store.searchQuery"
+      <input type="text" class="cockpit-top__search-input" :value="store.searchQuery"
         :placeholder="t('cockpit.searchPlaceholder')" data-testid="ia-header-search-input"
-        @input="store.runSearch(($event.target as HTMLInputElement).value); spotOpen = true"
-        @focus="spotOpen = true"
-        @keydown="onSpotKeydown" />
+        @input="store.runSearch(($event.target as HTMLInputElement).value); workspace.openSearch()"
+        @click="workspace.openSearch()" />
       <button v-if="store.searchQuery" type="button" class="cockpit-top__search-clear" @click="store.clearSearch()">×</button>
       <span v-if="store._sessionSearching" class="cockpit-top__search-spinner" />
-      <SpotlightPanel v-if="spotOpen" ref="spotRef" :query="store.searchQuery" @close="closeSpot" />
     </div>
     <div class="cockpit-top__spacer" />
     <div class="cockpit-top__sit">

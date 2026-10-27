@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（362 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（363 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 完整设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 362 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-27 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 363 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -366,6 +366,7 @@
 | 2026-10-26-sidenav-badge-dot-merge | 侧栏徽标准确性与状态合一 | 收官 SIM 不再污染日常口径；徽标/状态点合一，三处读数 21/21/20→7/7/7 |
 | 2026-10-26-walkthrough-bugs-fix | 重启走查三缺陷修复 | 两族 i18n 缺键与归档目录噪音修复；clean 残留问题转后续批 |
 | 2026-10-26-walkthrough-debts-clearance | 走查未做项清偿 | 用量探针改取完备样本；clean 补 tracked 残留兜底并做半注入/全净双验 |
+| 2026-10-27-global-search-consolidation | 全局检索合并至顶部弹窗 | 左侧独立检索退役，五类对象/命令/组合筛选合一，旧深链兼容唤起 |
 | 2026-10-27-joyai-annotations-rerank | JoyAI 清偿批二 | map-annotations 持久化＋LLM 重排＋mention 泳道；补丁 698 |
 | 2026-10-27-joyai-realtime-squad | JoyAI 清偿批三 | 标注实时协同（LWW+socket+presence）＋squad 链重排；补丁 699 |
 | 2026-10-27-swarm-yuan-branch-trunk-order | swarm-yuan 研发四阶段顺序立法（决策 57） | 分支开发→分支测试→主干合并→主干回归；九节点不变、⑤-⑦ 在分支 |

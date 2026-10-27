@@ -96,7 +96,7 @@ printf '# 测试报告\n结论行 TEST-PASS cases=37 passed=37 failed=0\n' > "$C
 echo "①b 缺件九类全 fail + 值错/报告红/未知 kind 三路 fail"
 
 # ── ② 端到端：注入覆盖→真 cli release-report ──
-[ -f "$CLI" ] || fail "② cli.js 缺席（$CLI）——overlay 构建态未就绪"
+[ -f "$CLI" ] || fail "② cli.js 缺席（${CLI}）——overlay 构建态未就绪"
 mkdir -p "$CEN/.qgate/gates" "$CEN/scripts/qgate-checks"
 cp "$OV"/gates/*.yaml "$CEN/.qgate/gates/"
 cp "$OV"/scripts/qgate-checks/*.mjs "$CEN/scripts/qgate-checks/"

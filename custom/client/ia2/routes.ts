@@ -218,11 +218,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('./views/NotFoundView.vue'),
         },
         {
-          // 全站检索（2026-10-18 左侧栏批）：会话/任务/运行/文档/人员五类对象，
-          // 支持工作区/状态/负责人/时间过滤；顶栏快搜回车也落这里。
+          // 独立检索页已并入顶部完整弹窗。旧深链保留原筛选参数，
+          // 由共享弹窗宿主读取 search=1 并就地打开，不再渲染第二个检索页面。
           path: 'search',
           name: 'ia2.search',
-          component: () => import('./views/SearchView.vue'),
+          redirect: (loc: RouteLocationNormalized) => ({
+            name: 'ia2.journey',
+            query: { ...loc.query, search: '1' },
+          }),
         },
         {
           path: 'stage/setup',
@@ -450,7 +453,7 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         {
           // 全部运行 → 全流程推演（B1，2026-10-16）：RunCenter 整页退役为重定向，
           // 保留一个版本周期（A13 升格=运行列表能力并入全流程推演后移除本记录）；
-          // 按名跳的既有调用面（IaGlobalTop/SpotlightPanel 等）随
+          // 按名跳的既有调用面（IaGlobalTop/GlobalSearchDialog 等）随
           // 重定向链落全流程推演，零改动。?tab=runs/?loop= 等 RunCenter 专属
           // query 无消费者（loop 预填随整页退役；vue-router redirect 会把
           // 原 query 并入目标 URL，落点路由不受影响）

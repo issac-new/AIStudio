@@ -1,9 +1,5 @@
 // @vitest-environment jsdom
-// 全站检索页守门（2026-10-18 左侧栏批）：
-//   1) 五类对象分组（会话/任务/运行/文档/人员）；
-//   2) 关键词过滤 + 类型页签收敛；
-//   3) 工作区过滤同时作用于会话（经挂接任务反查）与任务；
-//   4) 行点击直达对象（任务→看板预选）。
+// 统一全局检索弹窗守门：五类对象、命令、键盘、深链与懒加载必须共用一条动线。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } from 'vue-router'
@@ -31,20 +27,62 @@ const rows = vi.hoisted(() => ({
     { kind: 'rfd', title: 'RFD-001 结算需求', path: 'docs/rfd-001.md', gate: 'G1', group: 'gate', exists: true, commit: 'abc', committedAt: new Date().toISOString(), lines: 20 },
   ],
 }))
+const govApi = vi.hoisted(() => ({ fetchGovernanceOverview: vi.fn(async () => ({ ok: true, docs: rows.docs })) }))
+const matrixRoom = vi.hoisted(() => ({ selectRoom: vi.fn() }))
+const sessionSearch = vi.hoisted(() => ({ openSessionSearch: vi.fn() }))
 
 vi.mock('../composables/useSessionRows', () => ({
   useSessionRows: () => ({ sessionRows: { value: rows.sessionRows }, accounts: { value: rows.accounts } }),
 }))
-vi.mock('../store/workspace', () => ({
-  useWorkspaceStore: () => ({ tasks: rows.tasks, rawTasks: [] }),
-}))
+vi.mock('../store/workspace', async () => {
+  const { reactive } = await import('vue')
+  const state = reactive({
+    tasks: rows.tasks,
+    rawTasks: [],
+    searchOpen: true,
+    searchDocs: [] as Array<Record<string, unknown>>,
+    searchDocsLoaded: false,
+    searchDocsFailed: false,
+    openSearch: vi.fn(),
+    closeSearch: vi.fn(),
+    loadSearchDocs: vi.fn(),
+  })
+  state.openSearch.mockImplementation(() => { state.searchOpen = true })
+  state.closeSearch.mockImplementation(() => { state.searchOpen = false })
+  state.loadSearchDocs.mockImplementation(async () => {
+    if (state.searchDocsLoaded) return
+    try {
+      const res = await govApi.fetchGovernanceOverview()
+      state.searchDocs = res.docs ?? []
+      state.searchDocsLoaded = true
+    } catch {
+      state.searchDocsFailed = true
+    }
+  })
+  return { useWorkspaceStore: () => state }
+})
+vi.mock('@/custom/cockpit/store/cockpit', async () => {
+  const { reactive } = await import('vue')
+  const state = reactive({
+    searchQuery: '',
+    _sessionSearching: false,
+    runSearch: vi.fn(),
+    clearSearch: vi.fn(),
+  })
+  state.runSearch.mockImplementation((q: string) => { state.searchQuery = q })
+  state.clearSearch.mockImplementation(() => { state.searchQuery = '' })
+  return { useCockpitStore: () => state }
+})
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({
   useRunCenterStore: () => ({ sortedRuns: rows.runs }),
 }))
-vi.mock('@/custom/governance/api/governance', () => ({
-  fetchGovernanceOverview: vi.fn(async () => ({ ok: true, docs: rows.docs })),
+vi.mock('@/custom/governance/api/governance', () => govApi)
+vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
+  useMatrixRoomStore: () => matrixRoom,
 }))
-
+vi.mock('@/composables/useSessionSearch', () => ({
+  useSessionSearch: () => sessionSearch,
+}))
 vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   default: {
     props: ['show', 'taskId'],
@@ -52,11 +90,14 @@ vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
   },
 }))
 
-import SearchView from '../views/SearchView.vue'
+import GlobalSearchDialog from '../components/GlobalSearchDialog.vue'
+import { useWorkspaceStore } from '../store/workspace'
+import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
 
-function makeRouter(initial = '/app/search'): Router {
+function makeRouter(): Router {
   const routes: RouteRecordRaw[] = [
-    { path: '/app/search', name: 'ia2.search', component: SearchView },
+    { path: '/app', name: 'ia2.journey', component: { template: '<div />' } },
+    { path: '/app/dash', name: 'ia2.dash', component: { template: '<div />' } },
     { path: '/app/board', name: 'ia2.board', component: { template: '<div />' } },
     { path: '/app/sim', name: 'ia2.sim', component: { template: '<div />' } },
     { path: '/app/s/room/:roomId', name: 'ia2.commsRoom', component: { template: '<div />' } },
@@ -67,20 +108,40 @@ function makeRouter(initial = '/app/search'): Router {
   return createRouter({ history: createMemoryHistory(), routes })
 }
 
-async function mountSearch(initial = '/app/search') {
-  const router = makeRouter(initial)
+async function mountSearch(initial = '/app', open = true) {
+  const workspace = useWorkspaceStore() as any
+  const cockpit = useCockpitStore() as any
+  workspace.searchOpen = open
+  const router = makeRouter()
   await router.push(initial)
   await router.isReady()
-  const w = mount(SearchView, { global: { plugins: [router] } })
+  const w = mount(GlobalSearchDialog, {
+    attachTo: document.body,
+    global: { plugins: [router], stubs: { teleport: true } },
+  })
   await flushPromises()
-  return { w, router }
+  return { w, router, workspace, cockpit }
 }
 
-beforeEach(() => { localStorage.clear() })
+beforeEach(() => {
+  document.body.innerHTML = ''
+  localStorage.clear()
+  vi.clearAllMocks()
+  const workspace = useWorkspaceStore() as any
+  const cockpit = useCockpitStore() as any
+  workspace.searchOpen = true
+  workspace.searchDocs = []
+  workspace.searchDocsLoaded = false
+  workspace.searchDocsFailed = false
+  cockpit.searchQuery = ''
+  cockpit._sessionSearching = false
+  govApi.fetchGovernanceOverview.mockResolvedValue({ ok: true, docs: rows.docs })
+})
 
-describe('SearchView — 全站检索', () => {
-  it('默认全部：五类对象分组齐，计数=7', async () => {
+describe('GlobalSearchDialog — 统一全局检索弹窗', () => {
+  it('默认显示五类对象，计数为 7', async () => {
     const { w } = await mountSearch()
+    expect(w.find('[data-testid="global-search-dialog"]').exists()).toBe(true)
     for (const key of ['sessions', 'tasks', 'runs', 'docs', 'people']) {
       expect(w.find(`[data-testid="search-group-${key}"]`).exists(), key).toBe(true)
     }
@@ -88,7 +149,21 @@ describe('SearchView — 全站检索', () => {
     w.unmount()
   })
 
-  it('类型页签收敛：只看任务', async () => {
+  it('空查询显示命令组', async () => {
+    const { w } = await mountSearch()
+    expect(w.find('[data-testid="search-command-c:board"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('Enter 激活当前命令', async () => {
+    const { w, router } = await mountSearch()
+    await w.find('[data-testid="search-input"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.dash')
+    w.unmount()
+  })
+
+  it('类型页签收敛为任务', async () => {
     const { w } = await mountSearch()
     await w.find('[data-testid="search-type-tasks"]').trigger('click')
     await flushPromises()
@@ -98,7 +173,7 @@ describe('SearchView — 全站检索', () => {
     w.unmount()
   })
 
-  it('工作区过滤同时作用于任务与会话（会话经挂接任务反查）', async () => {
+  it('工作区同时过滤任务和挂接会话', async () => {
     const { w } = await mountSearch()
     await w.find('[data-testid="search-filter-workspace"]').setValue('/lab/pay')
     await flushPromises()
@@ -109,17 +184,123 @@ describe('SearchView — 全站检索', () => {
     w.unmount()
   })
 
-  it('关键词 + 人员类型：Alice 命中', async () => {
-    const { w } = await mountSearch('/app/search?q=Alice&type=people')
+  it('旧深链恢复人员关键词和类型', async () => {
+    const { w } = await mountSearch('/app?search=1&q=Alice&type=people')
     expect(w.find('[data-testid="search-row-p:@alice:matrix"]').exists()).toBe(true)
     w.unmount()
   })
 
-  it('任务行点击就地打开抽屉（不再跳看板）', async () => {
-    const { w } = await mountSearch()
+  it('弹窗关键词写入共享 cockpit 状态', async () => {
+    const { w, cockpit } = await mountSearch()
+    await w.find('[data-testid="search-input"]').setValue('Alice')
+    expect(cockpit.searchQuery).toBe('Alice')
+    w.unmount()
+  })
+
+  it('任务结果走看板深链', async () => {
+    const { w, router } = await mountSearch()
     await w.find('[data-testid="search-row-t:t1"]').trigger('click')
     await flushPromises()
-    expect(w.find('[data-testid="task-drawer-stub"]').attributes('data-task')).toBe('t1')
+    expect(router.currentRoute.value.name).toBe('ia2.board')
+    expect(router.currentRoute.value.query.task).toBe('t1')
+    w.unmount()
+  })
+
+  it('房间结果保留 selectRoom 后跳转', async () => {
+    const { w, router } = await mountSearch()
+    await w.find('[data-testid="search-row-s:room:!a:matrix"]').trigger('click')
+    await flushPromises()
+    expect(matrixRoom.selectRoom).toHaveBeenCalledWith('!a:matrix')
+    expect(router.currentRoute.value.name).toBe('ia2.commsRoom')
+    w.unmount()
+  })
+
+  it('会话全文入口关闭统一弹窗并调用现有深搜', async () => {
+    const { w, workspace } = await mountSearch()
+    await w.find('[data-testid="spotlight-deep-search"]').trigger('click')
+    expect(sessionSearch.openSessionSearch).toHaveBeenCalledTimes(1)
+    expect(workspace.searchOpen).toBe(false)
+    w.unmount()
+  })
+
+  it('Escape 关闭弹窗', async () => {
+    const { w, workspace } = await mountSearch()
+    await w.find('[data-testid="search-input"]').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
+    expect(workspace.searchOpen).toBe(false)
+    w.unmount()
+  })
+
+  it('关闭深链弹窗只清理检索参数', async () => {
+    const { w, router, workspace } = await mountSearch('/app?search=1&q=Alice&type=people&standalone=1&keep=yes')
+    await w.find('[data-testid="global-search-close"]').trigger('click')
+    await flushPromises()
+    expect(workspace.searchOpen).toBe(false)
+    expect(router.currentRoute.value.query).toEqual({ standalone: '1', keep: 'yes' })
+    w.unmount()
+  })
+
+  it('正常打开不改变当前路由', async () => {
+    const { w, router, workspace } = await mountSearch('/app/board?keep=yes', false)
+    workspace.openSearch()
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/app/board?keep=yes')
+    w.unmount()
+  })
+
+  it('深链后退离开检索参数时关闭弹窗', async () => {
+    const { w, router, workspace } = await mountSearch('/app?search=1')
+    expect(workspace.searchOpen).toBe(true)
+    await router.push('/app/board')
+    await flushPromises()
+    expect(workspace.searchOpen).toBe(false)
+    w.unmount()
+  })
+
+  it('按钮上的 Enter 不执行当前高亮命令', async () => {
+    const { w, router } = await mountSearch()
+    await w.find('[data-testid="global-search-close"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('ia2.journey')
+    w.unmount()
+  })
+
+  it('Escape 只发起一次深链参数清理', async () => {
+    const { w, router } = await mountSearch('/app?search=1')
+    const replace = vi.spyOn(router, 'replace')
+    await w.find('[data-testid="search-input"]').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
+    expect(replace).toHaveBeenCalledTimes(1)
+    w.unmount()
+  })
+
+  it('文档索引只在首次打开时加载', async () => {
+    const { w, workspace } = await mountSearch('/app', false)
+    expect(govApi.fetchGovernanceOverview).not.toHaveBeenCalled()
+    workspace.openSearch()
+    await flushPromises()
+    expect(govApi.fetchGovernanceOverview).toHaveBeenCalledTimes(1)
+    workspace.closeSearch()
+    await flushPromises()
+    workspace.openSearch()
+    await flushPromises()
+    expect(govApi.fetchGovernanceOverview).toHaveBeenCalledTimes(1)
+    w.unmount()
+  })
+
+  it('文档缓存跨弹窗宿主实例复用', async () => {
+    const first = await mountSearch()
+    first.w.unmount()
+    const second = await mountSearch()
+    second.w.unmount()
+    expect(govApi.fetchGovernanceOverview).toHaveBeenCalledTimes(1)
+  })
+
+  it('文档索引失败显示真实错误', async () => {
+    govApi.fetchGovernanceOverview.mockRejectedValueOnce(new Error('down'))
+    const { w } = await mountSearch()
+    await flushPromises()
+    expect(w.find('.srch__err').text()).toContain('文档索引暂不可达')
     w.unmount()
   })
 })

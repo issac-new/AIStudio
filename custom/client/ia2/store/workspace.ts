@@ -26,6 +26,7 @@ import * as taskAdapter from '@/custom/cockpit/adapters/task-adapter'
 import type { CockpitTask, CockpitPriority } from '@/custom/cockpit/adapters/task-adapter'
 import * as fleetAdapter from '@/custom/cockpit/adapters/fleet-adapter'
 import * as teamsApi from '@/custom/cockpit/adapters/teams-adapter'
+import type { GovernanceDocMeta } from '@/custom/governance/api/governance'
 import { fetchSimObserverOverview, type SimObserverRoom } from '../api/sim-observer'
 
 /** 日程事件（任务/待办两源；kind=timeline 随 cockpit 历史面板退役不再产出） */
@@ -310,6 +311,31 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     scheduleOpen.value = false
   }
 
+  // 全局检索与日程同属跨壳 UI 状态；关键词仍由 cockpit store 单一持有。
+  const searchOpen = ref(false)
+  function openSearch(): void { searchOpen.value = true }
+  function closeSearch(): void { searchOpen.value = false }
+
+  // 检索文档索引缓存：弹窗宿主随三壳各自挂载/卸载，组件局部缓存会跨壳重复
+  // 请求；store 层缓存保证一次会话只取一次，失败置位不猜数（fail-soft）。
+  const searchDocs = ref<GovernanceDocMeta[]>([])
+  const searchDocsLoaded = ref(false)
+  const searchDocsFailed = ref(false)
+  async function loadSearchDocs(): Promise<void> {
+    if (searchDocsLoaded.value) return
+    searchDocsFailed.value = false
+    try {
+      // 动态引入：governance API 带上游 api/client→真实 router 模块链，
+      // node 环境测试（无 location/vue-router mock）只在真正取索引时才加载。
+      const { fetchGovernanceOverview } = await import('@/custom/governance/api/governance')
+      const res = await fetchGovernanceOverview()
+      searchDocs.value = res.docs ?? []
+      searchDocsLoaded.value = true
+    } catch {
+      searchDocsFailed.value = true
+    }
+  }
+
   function setScheduleDate(d: string): void {
     scheduleSelectedDate.value = d
   }
@@ -438,6 +464,8 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     // ③ 日程
     scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth,
     openSchedule, closeSchedule, setScheduleDate,
+    searchOpen, openSearch, closeSearch,
+    searchDocs, searchDocsLoaded, searchDocsFailed, loadSearchDocs,
     scheduleEvents, scheduleEventsForSelectedSorted, scheduleCountsByDate, scheduleTopPriorityByDate,
     // ④ WS 生命周期
     initFleetStream, stopFleetStream, watchKanbanTasks, unwatchKanbanTasks,
