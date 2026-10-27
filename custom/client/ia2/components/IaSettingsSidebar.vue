@@ -1,19 +1,17 @@
 <!-- overlay/custom/client/ia2/components/IaSettingsSidebar.vue -->
 <!-- 设置页侧栏（2026-09-30 用户裁定：位于注意力条下方、壳内左侧；功能面恢复）。
-     功能面 = 原 hermes-studio 三侧栏并集：
-       · PageSidebarNav（协作域）——模型/工作流/连接/文件（聊天/群聊/历史由
-         工作台自持，不重复挂）；
-       · HermesConfigSidebar（配置域）——Agent 管理/技能/插件/MCP/记忆/频道/
-         任务/看板/学习轨迹（configSettings 经设置页页签流转直达，不重复挂）；
-       · AppSidebar（系统域）——系统组全集，主题/宠物/技能用量等统一导航与
-         P10 收缩批摘除项全量恢复（路由与页面本就在）。
-     守卫：全部条目 router.hasRoute() 门控（退役/桌面专属路由自动隐，防死链）；
-     superadmin 项随权限显隐（authStore 响应式 + localStorage 快照回退，与
-     AppSidebar 同款）；版本预览随 VITE_HERMES_PREVIEW（同 AppSidebar）。
+     2026-10-27 产品一致性 Task 7：条目单一事实源=设置目录注册表
+     （gov-settings-registry）——surface 声明条目是否进侧栏，superAdmin/
+     featureGate/版本预览开关统一在 entryVisible 一处判定；本组件不再自持
+     条目表与门控（此前 pet/agentManager/ekko/preview 四处私判是两套可见性
+     账的漂移源头）。历史功能面来源：
+       · PageSidebarNav（协作域）——模型/工作流（设备互联/文件 2026-10-20 走查移出）；
+       · HermesConfigSidebar（配置域）——Agent 管理/技能/插件/MCP/记忆/频道/任务；
+       · AppSidebar（系统域）——系统组（主题/技能用量/用量/性能/日志等）+ 目录入口。
+     守卫：全部条目 router.hasRoute() 门控（退役/桌面专属路由自动隐，防死链）。
      分组标签全用既有词表键（sidebar.groupTools/groupSystem）+ 品牌名直书
      Hermes——零新增 i18n、零上游补丁。
-     视图双入口（工作台/IDE 工作台）退役：与页头品牌位切换器重复
-     （2026-09-30 用户裁定保留页面顶部即可）。 -->
+     悬停/聚焦单页预取保留（prefetchLegacyView，冷首访分片提前拉热）。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -24,86 +22,19 @@ import { useAuthStore } from '@/stores/hermes/auth'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
 import { prefetchLegacyView } from '../views/legacy-view-loaders'
 import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
-import { features } from '../../../../config/features'
-
-interface NavEntry {
-  name: string
-  icon: string
-  labelKey?: string
-  /** 直书文案（品牌名/无词表键时用，与分组 label 同规——走 t() 会触发 intlify 缺键告警） */
-  label?: string
-  superAdmin?: boolean
-}
+import { SIDEBAR_GROUPS, settingsSidebarEntries, entryVisible, type GovSettingEntry } from '../views/gov/gov-settings-registry'
 
 const router = useRouter()
 const { t } = useI18n()
 const authStore = useAuthStore()
 
 const isSuperAdmin = computed(() => authStore.isSuperAdmin ?? isStoredSuperAdmin())
-const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === '1'
 
-/** 三域分组；labelKey 用既有词表键，label 为直书文案（Hermes 是品牌名，词表
- *  无该键——走 t() 会触发 intlify 缺键告警并渲染裸键名） */
-const GROUPS: Array<{ labelKey?: string; label?: string; entries: NavEntry[] }> = [
-  {
-    labelKey: 'sidebar.groupTools',
-    entries: [
-      { name: 'hermes.models', icon: 'cpu', labelKey: 'sidebar.models' },
-      { name: 'hermes.workflow', icon: 'fork', labelKey: 'sidebar.workflow' },
-      // 2026-10-20 走查：设备互联/文件为空白页与裸文件系统浏览器，移出员工导航
-    ],
-  },
-  {
-    label: 'Hermes',
-    entries: [
-      { name: 'hermes.agentManager', icon: 'users', labelKey: 'sidebar.agentManager', superAdmin: true },
-      { name: 'hermes.skills', icon: 'decompose', labelKey: 'sidebar.skills' },
-      { name: 'hermes.plugins', icon: 'plug', labelKey: 'sidebar.plugins' },
-      { name: 'hermes.mcp', icon: 'terminal', labelKey: 'sidebar.mcp' },
-      { name: 'hermes.memory', icon: 'archive', labelKey: 'sidebar.memory' },
-      { name: 'hermes.channels', icon: 'mail', labelKey: 'sidebar.channels' },
-      { name: 'hermes.jobs', icon: 'clock', labelKey: 'sidebar.jobs' },
-      // 看板配置与主界面「看板」重复且是旧版横向列，移出设置导航
-      // 学习轨迹页实测空白（仅加载图标），移出导航
-      // ekko 运维面（2026-10-02 用户裁定开门）：上游 /ekko/* 四页（memory/skills/
-      // mcp/settings）入口；superadmin+features.ekko 双门控，页面自带 ekkoConfig
-      // meta 守卫（patch 523）——四页经 URL 直达，本入口落配置页
-      { name: 'ekko.settings', icon: 'grid', label: 'ekko 运维', superAdmin: true },
-    ],
-  },
-  {
-    labelKey: 'sidebar.groupSystem',
-    entries: [
-      // 日常设置统一入口（原生系统设置页）；以下为并入的高级设置页
-      { name: 'ia2.govSettings', icon: 'settings', label: '系统设置导航' },
-      { name: 'hermes.settings', icon: 'settings', labelKey: 'sidebar.settings' },
-      { name: 'hermes.profiles', icon: 'user', labelKey: 'sidebar.profiles', superAdmin: true },
-      { name: 'hermes.theme', icon: 'palette', labelKey: 'sidebar.theme' },
-      { name: 'hermes.skillsUsage', icon: 'specify', labelKey: 'sidebar.skillsUsage' },
-      { name: 'hermes.logs', icon: 'file', labelKey: 'sidebar.logs' },
-      { name: 'hermes.usage', icon: 'chart', labelKey: 'sidebar.usage' },
-      { name: 'hermes.performance', icon: 'activity', labelKey: 'sidebar.performance', superAdmin: true },
-      { name: 'hermes.versionPreview', icon: 'refresh', labelKey: 'sidebar.versionPreview' },
-      // 终端/浏览器/宠物图鉴为开发者或娱乐入口，移出员工导航
-    ],
-  },
-]
-
-function visible(e: NavEntry): boolean {
-  if (e.superAdmin && !isSuperAdmin.value) return false
-  if (e.name === 'hermes.versionPreview' && !isVersionPreview) return false
-  // 门控一致性（2026-10-01 上游自用批 A4）：petdex 条目随 features.pet（S3 既定
-  // 语义——pet 三件套默认关，此前侧栏条目漏接开关线）；agentManager 条目随
-  // features.agentManager（收编路由同门控，见 routes.ts ANNEXED_LEGACY）。
-  if (e.name === 'hermes.petdex' && !features.pet) return false
-  if (e.name === 'hermes.agentManager' && !features.agentManager) return false
-  // ekko 开门（2026-10-02 用户裁定）：条目随 features.ekko（默认开，false 可关）
-  if (e.name === 'ekko.settings' && !features.ekko) return false
-  return router.hasRoute(e.name)
-}
-
-const groupVisible = computed(() =>
-  GROUPS.map(g => ({ ...g, entries: g.entries.filter(visible) })))
+/** 分组投影=注册表派生（分组定义/条目/门控全部单一事实源，见注册表头注） */
+const groupVisible = computed(() => {
+  const visible = settingsSidebarEntries().filter(e => entryVisible(e, router, isSuperAdmin.value))
+  return SIDEBAR_GROUPS.map(g => ({ ...g, entries: visible.filter((e: GovSettingEntry) => e.sidebarGroup === g.key) }))
+})
 
 /** 登出（2026-10-21 修复：旧 SidebarAccountControls 的挂载页脚随早年补丁退役后
  *  全 UI 无可达登出入口）。语义与原实现一致：清主题背景缓存→设手动登出闸门
@@ -128,8 +59,8 @@ async function handleLogout(): Promise<void> {
           @mouseenter="prefetchLegacyView(e.name)"
           @focusin="prefetchLegacyView(e.name)"
         >
-          <CockpitIcon :name="e.icon" :size="14" />
-          <span>{{ e.labelKey ? t(e.labelKey) : e.label }}</span>
+          <CockpitIcon :name="e.icon ?? 'grid'" :size="14" />
+          <span>{{ e.sidebarLabelKey ? t(e.sidebarLabelKey) : e.sidebarLabel }}</span>
         </RouteLinkItem>
         <p v-if="g.entries.length === 0" class="ui-empty-state ui-empty-state--compact">—</p>
       </section>

@@ -332,7 +332,8 @@ const COMMANDS = computed<Array<{ key: string; label: string; icon: string; to: 
   { key: 'gov-docs', label: '文档评审（②⑤⑥）', icon: '📄', to: { name: 'ia2.govDocs' } },
   { key: 'cases', label: tx.value.cmdCases, icon: '📦', to: { name: 'ia2.deliveryCases' } },
   { key: 'ide', label: tx.value.cmdIde, icon: '⌨️', to: { name: 'ide.shell' } },
-  { key: 'settings', label: tx.value.cmdSettings, icon: '🛠️', to: { name: 'hermes.settings' } },
+  // 设置命令统一落设置目录（Task 7 单一设置入口；与页头用户按钮同落点）
+  { key: 'settings', label: tx.value.cmdSettings, icon: '🛠️', to: { name: 'ia2.govSettings' } },
 ])
 
 const commandRowsResult = computed<ResultRow[]>(() => {

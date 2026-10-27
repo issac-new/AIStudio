@@ -53,8 +53,10 @@ const workspace = useWorkspaceStore()
 
 defineProps<{ userName?: string }>()
 
-/** 用户按钮 → 设置页 */
-function goSettings() { router.push({ name: 'hermes.settings' }) }
+/** 用户按钮 → 设置目录（2026-10-27 产品一致性 Task 7 单一设置入口：
+ *  页头与全局检索统一落 ia2.govSettings 目录页；hermes.settings 降为目录内
+ *  「通用设置」条目，不再是第二个设置主页） */
+function goSettings() { router.push({ name: 'ia2.govSettings' }) }
 
 // ── 更新日志弹窗（2026-10-01 上游自用批 A3）：上游 11 语言 changelog 数据
 //    （@/data/changelog）随版本维护，072 重写侧栏时入口丢失——页头账户区

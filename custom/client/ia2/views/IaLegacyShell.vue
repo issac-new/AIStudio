@@ -25,8 +25,10 @@ const route = useRoute()
 // 一样挂弹窗，否则收编页点 📅 只置 store 状态、无任何 UI 出现（24h 审查 P2）
 const workspace = useWorkspaceStore()
 
-// 走查三修：空闲预热全表——后台把设置页分片逐个拉热（错峰 200ms）
-warmAllLegacyViews()
+// 空闲预热全表仅 dev（2026-10-27 产品一致性 Task 7）：生产取消全表拉热——
+// 首屏带宽优先，避免进壳即拉几十个设置分片；悬停/聚焦单页预取保留
+// （IaSettingsSidebar 既有），点击路径仍热。
+if (import.meta.env.DEV) warmAllLegacyViews()
 
 const pageComp = shallowRef<Component | null>(null)
 
