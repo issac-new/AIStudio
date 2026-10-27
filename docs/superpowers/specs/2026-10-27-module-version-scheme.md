@@ -49,3 +49,12 @@
 
 - 修复后干净环境四步重跑：`npm test -- custom/__tests__/docs-ssot-guard.test.ts scripts/__tests__/verify-release-manifest.test.ts custom/server/loop/graph/__tests__/assembly.test.ts` → 36/36 全绿（含 17 发布面＋graph 组装＋附录守门），**干净环境安装测试 PASS**。
 - pip 侧未跑（hermes-agent Python 依赖在目标部署机安装；本测验证 npm+源码链）——如实记录。
+
+## 补录（13:3x）：干净环境安装测试二轮——两个次序坑根治，PASS
+
+二轮复验（同包解包树）：`npm test` 直跑先卡 ensure-injected 的 zcode 自愈假红——解包树无 .git，vendor 模式下 `treeStatus` 失败恒返 '' 被当"干净树"重放已应用补丁必炸。两修：
+
+- `ensure-injected.mjs`：zcode 自愈前置"gitCwd 真为 git 仓"校验（relPrefix 模式查 overlayRoot/.git）——非 git 解包树明确跳过自愈（补丁在位性由 inject 当时负责），不猜状态。
+- `verify-release-manifest.test.ts`/`inject-absent-tree.test.ts`：依赖 `git archive HEAD` 的用例加 `.git` 存在守卫（解包树自动跳过）。
+
+**终验：解包树四步（tar→inject 410 应用/0 SKIP→npm install→`npm test` 子集）＝64 过/1 跳/0 败，rc=0——干净环境安装测试 PASS**（唯一跳过=git-archive 干跑用例，环境使然）。pip 侧未跑（Python 依赖属部署机安装面），如实记录。

@@ -177,7 +177,7 @@ describe('release:check 门禁（fail-fast）', () => {
     }
   })
 
-  it('四模块 packageIncludes 均能被 git archive 按 pathspec 取到跟踪文件（空集=红）', () => {
+  it.skipIf(!existsSync(join(ROOT, '.git')))('四模块 packageIncludes 均能被 git archive 按 pathspec 取到跟踪文件（空集=红；源码包解包树无 .git 自动跳过）', () => {
     const m = loadManifest()
     for (const [key, mod] of Object.entries(m.modules)) {
       const args = ['archive', '--format=tar', '--output=/dev/null', 'HEAD', '--', ...(mod.packageIncludes ?? [])]
