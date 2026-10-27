@@ -40,3 +40,7 @@ swarm-yuan 目标技能的开发工作流九节点保持 9 个不变，在其上
 ## 设计文档影响
 
 DESIGN_SYNC: none——本批不触及 DESIGN_DOCS（整合正本 2026-10-23-swarmstudio-integrated-design.md 与数字总账 2026-10-23-swarmstudio-design-ledger.md）；swarm-yuan 自身设计文档（README.md 数字口径行、docs/design-evolution.md 决策 57）的修订属本批变更本体、由本 spec 治理，随批提交。
+
+## 随批补记（2026-10-27 全量 npm test 后）
+
+本 spec 的附录 A.1 索引行随批补登记（2026-10-21-swarmstudio-appendix-a-spec-index.md，360→361）——首并入批漏了"索引行随批"惯例，全量 vitest docs-ssot-guard 守门抓出；本节即该补登记的治理载体。同轮守门另报 2026-10-26-cockpit-full-audit-refactor 未登记，属并行会话未提交的工作区文件，不在本批范围。
