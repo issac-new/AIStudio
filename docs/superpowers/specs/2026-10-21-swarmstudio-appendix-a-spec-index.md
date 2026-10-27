@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（349 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（360 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 完整设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 349 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-26 复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 360 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -339,6 +339,15 @@
 | 2026-10-26-chatbridge-projection-only | ChatBridge 入向投影化 | 撤 processMentions 旁路、task.assign 回执 observed；gateway 承接挂独立批 |
 | 2026-10-26-a2a-board-harness-alignment | A2A、看板归属与 harness 单仓化校正 | A2A 默认本机、板团队键单源、闸键对齐；真实跨机与合并树行为未验 |
 | 2026-10-26-aistudio-architecture-execution-alignment | AIStudio 九段架构执行校正 | 聚焦授权、人工门、任务上下文与技能实证；完整推演、真人会签和多机未验 |
+| 2026-10-26-delegate-evidence-wiring | V8.54 编码委托证据位接线 | G3 查 engine_bin_source 身份行＋采集进 evidence；与九段批双证判据互补 |
+| 2026-10-26-joyai-closed-loop-absorption | JoyAI 闭环吸收轮 | 统一上下文 ID 串联知识→推演→执行→回流；workitem 全景/impact 需求命中 |
+| 2026-10-26-joyai-debts-clearance | JoyAI 闭环挂账清偿 | 未做五件收口（细节见 spec 验证段） |
+| 2026-10-26-nine-point-docs-sync | 九点对账三正本同步 | fullflow V8.54/整合正本 R12/总账随批；词表 Ycode 四级解析序＋§5.4.3 证据位 |
+| 2026-10-26-proactivity-two-axis | 主动性两轴模型 | 谁定义问题 L1-L5×做到哪一步五档裁决＋目标漂移防线；补丁 695 |
+| 2026-10-26-proactivity-followup | 主动性两轴挂账清偿 | /goal 契约变更登记对齐台账＋L4 升仓判据；补丁 696 |
+| 2026-10-26-proactivity-govern-tab | 主动性面板加治理页签 | 两轴面板挂⑥治理页签（微轮） |
+| 2026-10-26-swarm-yuan-core-refactor | swarm-yuan 可信性重构 | 门禁异常判 pass/激活 fail-open 等结构根治（详见 spec） |
+| 2026-10-26-swarm-yuan-single-source-refactor | swarm-yuan 单源与迁移补位 | 与 core 分支零重叠的 P1 项（设计层/源码层） |
 | 2026-10-26-cockpit-debt-completion | 驾驶舱挂账清偿 | 恢复 REAP 26 包与两技能、element-web 官方构建与 ELEMENT_WEB_DIR、serve-main 换装 |
 | 2026-10-26-cockpit-followup | 驾驶舱未做项清偿 | 生产走查与写流补验，patch 692 修 running 静默；REAP 26 包留原会话处理 |
 | 2026-10-26-cockpit-source-design-refactor | 驾驶舱功能设计与源码盘点重构 | 保留 IA，修审批/注意力/轨迹/日程；152 个只读态走查，写流与生产包交后续批 |
@@ -356,6 +365,8 @@
 | 2026-10-26-sidenav-badge-dot-merge | 侧栏徽标准确性与状态合一 | 收官 SIM 不再污染日常口径；徽标/状态点合一，三处读数 21/21/20→7/7/7 |
 | 2026-10-26-walkthrough-bugs-fix | 重启走查三缺陷修复 | 两族 i18n 缺键与归档目录噪音修复；clean 残留问题转后续批 |
 | 2026-10-26-walkthrough-debts-clearance | 走查未做项清偿 | 用量探针改取完备样本；clean 补 tracked 残留兜底并做半注入/全净双验 |
+| 2026-10-27-joyai-annotations-rerank | JoyAI 清偿批二 | map-annotations 持久化＋LLM 重排＋mention 泳道；补丁 698 |
+| 2026-10-27-joyai-realtime-squad | JoyAI 清偿批三 | 标注实时协同（LWW+socket+presence）＋squad 链重排；补丁 699 |
 
 ### 角色/排除（非 spec 文档）
 
