@@ -231,6 +231,7 @@
 - 七项待办终态：qgate v2.0 调研完成并暂缓，CyberSec 改判无需刷新。RELEASE-NOTES 三轮补记及 2.x 收线，semantica/pua/fibo pin 零移动。
 - swarm-eval 轻链路三跑完成。两个升级轮仍按 §2 等待稳定发版。spec `2026-10-27-ledger-todos-clearance.md`。
 - 版本差异吸收第一批：外部 CLI 会话索引（kimi 2.3.3 #4342 的只读版）落地，其余 8 项差异逐项裁定入 §3.7。spec `2026-10-27-version-diff-absorption.md`。
+- 会话索引边界闭合（同日第二批）：Codex `.jsonl.zst` 就地解压（Node 22+ 内置 zstd，缺失时如实降级）；单文件上限 8MB→32MB 且可注入，解压后二次限流。
 - swarm-eval 轻链路实测：mixed-motive 两轮（welfare=480/gini=0.333/nashDev=0.667，保底出价口径）。消融 mention 过滤留痕，拜占庭 noise DM 实发留痕。主链级数字仍在 §2。
 
 ### 6.2 关联文档

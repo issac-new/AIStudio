@@ -11,6 +11,7 @@
 // fail-soft：目录缺席→available:false 带原因；单文件解析失败→进 skipped 如实披露；
 // 压缩文件（.jsonl.zst）不解析，标 compressed-unsupported（不假装读到）。
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import * as zlib from 'node:zlib'
 import { basename, join } from 'node:path'
 import { homedir } from 'node:os'
 
@@ -47,7 +48,15 @@ export interface ExternalSessionReport {
 }
 
 const TITLE_LIMIT = 120
-const MAX_FILE_BYTES = 8 * 1024 * 1024
+// 2026-10-27 边界闭合：原 8MB 上限把本机 8.8MB 的真实会话挡在门外；node:zlib 自 Node 22+
+// 提供 zstd，压缩件改为就地解压（上限同源），不再整类跳过。上限可注入以便测试边界。
+const DEFAULT_MAX_FILE_BYTES = 32 * 1024 * 1024
+
+/** zstd 解压能力探测：老 Node 无该 API 时如实降级，不假装支持。 */
+const zstdDecompress: ((buf: Buffer) => Buffer) | null = (() => {
+  const candidate = (zlib as unknown as { zstdDecompressSync?: (buf: Buffer) => Buffer }).zstdDecompressSync
+  return typeof candidate === 'function' ? candidate.bind(zlib) : null
+})()
 
 function collapse(text: string): string {
   return text.replace(/\s+/g, ' ').trim()
@@ -254,6 +263,8 @@ export interface ScanOptions {
   limit?: number
   maxFiles?: number
   includeTitles?: boolean
+  /** 单文件字节上限（默认 32MB）；超限进 skipped 并标原因。 */
+  maxFileBytes?: number
 }
 
 /**
@@ -265,6 +276,7 @@ export function scanExternalSessions(opts: ScanOptions = {}): ExternalSessionRep
   const codexRoot = opts.codexRoot?.trim() || join(homedir(), '.codex', 'sessions')
   const limit = Math.max(1, Math.min(opts.limit ?? 30, 200))
   const maxFiles = Math.max(1, Math.min(opts.maxFiles ?? 600, 5000))
+  const maxFileBytes = Math.max(1024, Math.min(opts.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES, 256 * 1024 * 1024))
   const sessions: ExternalSessionRow[] = []
   const skipped: ExternalSessionSkip[] = []
   let scannedFiles = 0
@@ -298,10 +310,6 @@ export function scanExternalSessions(opts: ScanOptions = {}): ExternalSessionRep
     collectFiles(r.root, r.match, r.depth, files, maxFiles)
     for (const file of files) {
       scannedFiles += 1
-      if (file.endsWith('.zst')) {
-        skipped.push({ file, reason: 'compressed-unsupported（.zst 需外部解压，未解析）' })
-        continue
-      }
       let size = 0
       try {
         size = statSync(file).size
@@ -313,15 +321,31 @@ export function scanExternalSessions(opts: ScanOptions = {}): ExternalSessionRep
         skipped.push({ file, reason: 'empty-file' })
         continue
       }
-      if (size > MAX_FILE_BYTES) {
-        skipped.push({ file, reason: `file-too-large（${size} > ${MAX_FILE_BYTES}）` })
+      if (size > maxFileBytes) {
+        skipped.push({ file, reason: `file-too-large（${size} > ${maxFileBytes}）` })
         continue
       }
       let text = ''
       try {
-        text = readFileSync(file, 'utf8')
+        if (file.endsWith('.zst')) {
+          if (!zstdDecompress) {
+            skipped.push({ file, reason: 'compressed-unsupported（当前 Node 无 zstd API）' })
+            continue
+          }
+          const raw = readFileSync(file)
+          const inflated = zstdDecompress(raw)
+          // 解压后同样受上限约束：压缩比异常的文件不透支内存
+          if (inflated.byteLength > maxFileBytes) {
+            skipped.push({ file, reason: `file-too-large-after-decompress（${inflated.byteLength} > ${maxFileBytes}）` })
+            continue
+          }
+          text = inflated.toString('utf8')
+        } else {
+          text = readFileSync(file, 'utf8')
+        }
       } catch (e) {
-        skipped.push({ file, reason: `read-failed: ${e instanceof Error ? e.message : String(e)}` })
+        const kind = file.endsWith('.zst') ? 'decompress-failed' : 'read-failed'
+        skipped.push({ file, reason: `${kind}: ${e instanceof Error ? e.message : String(e)}` })
         continue
       }
       const parsed = parseExternalSession(r.source, text, file, { includeTitles: opts.includeTitles })
