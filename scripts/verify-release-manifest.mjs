@@ -64,7 +64,16 @@ for (const key of REQUIRED_MODULES) {
     fail(key, e.message)
     continue
   }
-  if (!carrierText.includes(mod.version)) {
+  if (mod.carrierFormat === 'json:version') {
+    try {
+      const parsed = JSON.parse(carrierText)
+      if (parsed.version !== mod.version) {
+        fail(key, `底座版本不符：清单=${mod.version} 载体 JSON version=${parsed.version}`)
+      }
+    } catch (e) {
+      fail(key, `载体 ${mod.versionCarrier} 不可按 JSON 解析：${e.message}`)
+    }
+  } else if (!carrierText.includes(mod.version)) {
     fail(key, `版本串 "${mod.version}" 未见于载体 ${mod.versionCarrier}（漂移：改载体或同步清单）`)
   }
 }
@@ -88,6 +97,26 @@ for (const key of REQUIRED_MODULES) {
   if (!notes.includes('simharness') || !notes.includes('不随安装包')) {
     fail('cockpit', 'notes 须如实标注 simharness 不随安装包分发（用户裁定 2026-10-26）')
   }
+}
+
+// ── packageIncludes 路径实在 + packaging 节（2026-10-27 修订裁定） ──
+for (const key of REQUIRED_MODULES) {
+  const mod = manifest.modules?.[key]
+  const includes = mod?.packageIncludes ?? []
+  if (includes.length === 0) { fail(key, 'packageIncludes 不得为空'); continue }
+  for (const inc of includes) {
+    if (!existsSync(resolve(ROOT, inc))) fail(key, `packageIncludes 路径不存在：${inc}`)
+  }
+}
+{
+  const p = manifest.packaging
+  if (!p || p.format !== 'tar.gz') fail('packaging', 'format 必须=tar.gz')
+  if (p.outputDir !== 'dist/release/') fail('packaging', 'outputDir 须=dist/release/')
+  if (!/pip/.test(String(p.depSourcePolicy ?? '')) || !/npm/.test(String(p.depSourcePolicy ?? ''))) {
+    fail('packaging', 'depSourcePolicy 须声明 pip/npm 口径（依赖源码随包策略）')
+  }
+  if (p.fullPackage?.name !== 'aistudio-full' || !p.fullPackage?.version) fail('packaging', 'fullPackage（整体包）须有 name/version')
+  if (!existsSync(resolve(ROOT, 'scripts/make-release-packages.mjs'))) fail('packaging', '打包脚本缺失：scripts/make-release-packages.mjs')
 }
 
 // ── buildCommand 脚本在位（不执行构建） ──

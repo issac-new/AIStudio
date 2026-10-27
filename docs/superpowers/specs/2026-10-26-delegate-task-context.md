@@ -42,3 +42,9 @@ DESIGN_SYNC: none —— 全流程方案 V8.54 §5.4.3 已立"编码委托证据
 - **机器回执** ✓：delegate-result.json 全字段（taskId/sessionId/cwd/engine/model/stage=prompt_error/exit=4/promptSha256/起止时间）。
 
 证据：`evidence/2026-10-26-nine-segment/delegate-task-e2e-{run.log,result.json}`。待额度重置后补模型回合（口令：同命令重跑，断言 RESULT exit=0 且引擎答复含 E2E-SKILL-ECHO-OK＝Skill 真实调用闭环）。
+
+## 真实模型回合闭环（2026-10-27 09:36，额度重置后复验收绿）
+
+同口令复跑（--task t_8878b1cc --model GLM-5.3）：**RESULT exit=0 stopReason=end_turn（27s，in=71533/out=464）**——引擎经 `Skill` 工具真实加载 `echo-dev`（update 流可见 `Skill: {"skill":"echo-dev"}` pending→completed），答复含 **E2E-SKILL-ECHO-OK** 标记并引用技能路径。result.json：stopReason=end_turn / stage=null / exit=0 / cwd=任务 workspace / model=GLM-5.3。
+
+九段 5/7/8 三段的真实引擎证据链自此闭环：任务上下文程序装配 ✓→Ycode 会话（任务 workspace 为根）✓→项目技能真实调用 ✓→机器回执 ✓。证据：`evidence/2026-10-26-nine-segment/delegate-task-e2e-{run2-success.log,result-success.json}`。

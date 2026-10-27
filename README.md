@@ -146,7 +146,7 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 - [AIStudio 完整设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施、使用五层正本。
 - [全流程推演方案](docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步六闸推演唯一正本（V8.52）。
 - [设计数字总账](docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)：全域数字唯一事实源。
-- [发布清单 RELEASE-MANIFEST.json](RELEASE-MANIFEST.json)：发布视角=四个独立模块（驾驶舱含推演程序 / agent teams / Ycode / yuan skill）的版本、产物与安装通道；`npm run release:check` 对账门禁。
+- [发布清单 RELEASE-MANIFEST.json](RELEASE-MANIFEST.json)：发布视角=四个独立模块（驾驶舱含推演程序 / agent teams / Ycode / yuan skill）的版本、产物与安装通道；`npm run release:check` 对账门禁。发布物=4 个独立源码包＋1 份整体包（`npm run release:packages`，vendor 依赖源码随包、registry 依赖在线装，SHA256SUMS 随目录）。
 - 历史 spec 索引见[附录 A](docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)。
 
 ## 已知注意点

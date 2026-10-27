@@ -67,6 +67,27 @@ describe('发布清单结构', () => {
     expect(notes).toContain('simharness')
     expect(notes).toContain('不随安装包')
   })
+
+  it('packaging 节：4+1 源码包形态、依赖源码策略声明 pip/npm 口径', () => {
+    const p = loadManifest().packaging
+    expect(p?.format).toBe('tar.gz')
+    expect(p?.outputDir).toBe('dist/release/')
+    expect(p?.fullPackage?.name).toBe('aistudio-full')
+    expect(String(p?.depSourcePolicy)).toContain('pip')
+    expect(String(p?.depSourcePolicy)).toContain('npm')
+    expect(String(p?.fullPackage?.note ?? '')).toContain('pip')
+  })
+
+  it('每模块 packageIncludes 非空且路径实在（防清单指向幻影目录）', () => {
+    const m = loadManifest()
+    for (const [key, mod] of Object.entries(m.modules)) {
+      const includes: string[] = mod.packageIncludes ?? []
+      expect(includes.length, `${key}.packageIncludes 不得为空`).toBeGreaterThan(0)
+      for (const inc of includes) {
+        expect(existsSync(join(ROOT, inc)), `${key} include 不存在：${inc}`).toBe(true)
+      }
+    }
+  })
 })
 
 describe('版本载体对账（真源在 carrier，清单只抄录）', () => {
@@ -82,10 +103,17 @@ describe('版本载体对账（真源在 carrier，清单只抄录）', () => {
     expect(carrier).toContain(m.modules['agent-teams'].version)
   })
 
-  it('ycode：基线 commit 串存在于 zcode-patches/series 头，且活跃补丁数与 series 一致', () => {
+  it('ycode：底座版本=vendor/zcode/package.json 的 version 字段（JSON 真源）', () => {
+    const m = loadManifest()
+    expect(m.modules.ycode.carrierFormat).toBe('json:version')
+    const pkg = JSON.parse(readFileSync(join(ROOT, m.modules.ycode.versionCarrier), 'utf8')) as { version: string }
+    expect(pkg.version).toBe(m.modules.ycode.version)
+  })
+
+  it('ycode：基线 commit 仍见于 series 头，且活跃补丁数与 series 一致', () => {
     const m = loadManifest()
     const series = readFileSync(join(ROOT, 'zcode-patches/series'), 'utf8')
-    expect(series).toContain(m.modules.ycode.version) // 基线 commit 即版本
+    expect(series).toContain(m.modules.ycode.baselineCommit ?? '') // 基线 commit 在 series 头可反查
     const declared = m.modules.ycode.carrierPattern ? Number(/(\d+)/.exec(m.modules.ycode.carrierPattern)?.[1] ?? 0) : 0
     const active = series.split('\n').filter(l => /^\d{3}-/.test(l.trim())).length
     expect(declared, '清单声明的活跃补丁数须等于 series 实际数').toBe(active)
@@ -127,6 +155,14 @@ describe('release:check 门禁（fail-fast）', () => {
       if (script && !script.startsWith('vendor/')) {
         expect(existsSync(join(ROOT, script)), `${script} 应存在`).toBe(true)
       }
+    }
+  })
+
+  it('四模块 packageIncludes 均能被 git archive 按 pathspec 取到跟踪文件（空集=红）', () => {
+    const m = loadManifest()
+    for (const [key, mod] of Object.entries(m.modules)) {
+      const args = ['archive', '--format=tar', '--output=/dev/null', 'HEAD', '--', ...(mod.packageIncludes ?? [])]
+      expect(() => execFileSync('git', args, { cwd: ROOT }), `${key} pathspec 应命中跟踪文件`).not.toThrow()
     }
   })
 })
