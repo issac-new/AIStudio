@@ -4,8 +4,8 @@
 
 更新纪律：每轮调研、升级、吸收随批修订对应行。版本号必须来自官方页面或本地 git 实测（fetch 后 describe），不得推断。日期一律绝对日期。
 
-- 本轮全面核对：2026-10-27（本地 14 棵 upstream 树 fetch 实测＋16 项官方源 web 核对）
-- 总条目：46（基线 3＋参照 11＋运行时镜像 2＋开源组件 7＋闭源产品 6＋文章系列 17 行压缩计入）
+- 本轮全面核对：2026-10-27（本地 14 棵 upstream 树 fetch 实测＋16 项官方源 web 核对）；同日二次复核（待办清偿轮：三基线树与三 pin 重核，结论未变）
+- 总条目：46＋技能域补录（§10：swarm-yuan 技能域第三方运行时/组件/标准/方法论源，2026-10-27 用户指令补录）
 
 ## 1. 结论速览
 
@@ -54,7 +54,7 @@
 
 | 组件 | 上次调研 | 本轮最新 | 差异要点 | 仓内现状与后续 |
 |---|---|---|---|---|
-| quality-gate（lazyzhsh） | v1.31.1（2026-10-06/08 两轮） | **v2.0.0**（2026-10-08/09，commit 86f5e8d） | v2.0 需求终审（ADR-0017，L3.5 按现有边界达成）；alignment 新增 scope:event，直接核验 AsyncAPI 3.0.x JSON 子集（消息方向/通道/载荷约束，越界报 ERROR）；全量回归 692/692（较 1.31.1 新增 14 项） | custom/qgate 本地 0.1.0 分叉线；**v2.0 增量调研轮列入待办**（scope:event 是否入本地分叉） |
+| quality-gate（lazyzhsh） | v1.31.1（2026-10-06/08 两轮） | **v2.0.0**（2026-10-08/09，commit 86f5e8d） | v2.0 需求终审（ADR-0017，L3.5 按现有边界达成）；alignment 新增 scope:event，直接核验 AsyncAPI 3.0.x JSON 子集（消息方向/通道/载荷约束，越界报 ERROR）；全量回归 692/692（较 1.31.1 新增 14 项） | custom/qgate 本地 0.1.0 分叉线；v2.0 增量调研已完成（2026-10-27，源码级）：唯一功能增量=scope:event（AsyncAPI 3.0.x 子集核验，上游 172 行零依赖实现）；**裁定暂缓**——仓内无 AsyncAPI 事件契约场景，无消费方即无验收面，出现场景再立项对译；交付工具链加固（build_delivery）属上游私有流程不并入 |
 | HarnessPro（pzs19） | main@2026-10-19（单 commit 仓） | 持平（仍单 commit 8ae622e） | 无 | 已吸收（十一坑双文轮） |
 | REA-Prompts（JoasASantos） | 2026-10-25（23 场景/26 技能包） | main@ccb02b8（2026-10-26 新增 MIT License） | 授权明确化；结构未变 | 已吸收（rea-reverse-engineering v1.2.0 全 fleet 生效） |
 | diagram-design（cathrynlavery） | v2.6.110 @550fd66（2026-10-19） | 2.6.131（2026-10-26，无 tag 以 commit bump 为准） | 21 个 patch 全为修复类：mermaid-import 系列（autonumber/edge ID/config 计数）、import/export 边缘（draw.io 尖括号、Excalidraw 外层组、svg-only 排除规则） | 技能已吸收 v2.6.110；修复类无新机制，不升级技能 |
@@ -99,15 +99,57 @@
 - 仍挂账三项。swarm-eval 数值 run（消融每角色一轮、注入 run、mixed-motive 首跑）需 SIM 实例小时级窗口。wx 系列其余编号项（Action 执行运行时、权限即上下文注入、独立 BadCase 库、判据突变验证门禁等）处置见正本 §9.2。五文轮 P1b/P3-P6 中，P4 依赖远程 embedding，与零依赖纪律冲突，需先裁定。
 - 明确不做（正本否决清单）：音视频、spaces、Tauri、容器沙箱、主会话 append-only、Jev-Omni。tmall 首响 P90 属 hermes-agent 运行时，overlay 不可达。
 
-## 9. 待办与升级建议（编号菜单）
+## 9. 待办与升级建议（2026-10-27 清偿轮终态）
 
-1. **hermes-studio v0.7.40 升级轮**——tag 发布后启动。28 提交已预研（§2），浏览器工具族增强优先吸收。
-2. **hermes-agent v0.22.6/v0.23.0 升级轮**——稳定版发布后启动。1852 提交流已主题抽样，A2A 加固与 unbroker lane 是两大主题。
-3. **quality-gate v2.0.0 增量调研轮**——评估 scope:event/AsyncAPI 3.0.x 契约核验是否并入本地 custom/qgate 分叉。我们尚无 AsyncAPI 面，倾向暂缓，待有事件契约场景再立项。
-4. **swarm-eval 数值 run**——需 SIM_ROOT 实例与模型额度窗口。机制与旋钮已就绪并复验（MX_ABLATE_ROLES/MX_BYZANTINE_SPEC，结构断言 15/15）。
-5. **Anthropic-Cybersecurity-Skills 语料刷新**——571→817/818，索引技能与 hack-team 消费面择期重扫。
-6. **RELEASE-NOTES 2.x 历史记账补档**——v0.7.32/0.7.34/0.7.35 三轮缺档，2.x 版本线未续（notes 内自述「记账滞后」），归发布对账轮。
-7. **semantica/pua/fibo pin 评估**——本轮全部零移动，无紧迫性。下轮台账核对时顺查。
+1. **hermes-studio v0.7.40 升级轮**——仍阻塞：2026-10-27 两次复核最新 tag 均为 v0.7.39（main+28 未发版）。发版即启动，28 提交预研在 §2。
+2. **hermes-agent v0.22.6/v0.23.0 升级轮**——仍阻塞：最新稳定仍 v0.22.5（main+1852 未发版，仅每日 canary）。发版即启动，主题预研在 §2。
+3. **quality-gate v2.0.0 增量调研**——已完成（2026-10-27）：唯一功能增量 scope:event/AsyncAPI 3.0.x 子集核验（上游 172 行零依赖）；裁定**暂缓**（仓内无事件契约场景），出现场景再立项对译。
+4. **swarm-eval 数值 run**——轻链路三跑已执行（2026-10-27 清偿轮）：mixed-motive 首跑两轮（占位出价口径，welfare=480/gini=0.333/nashDev=0.667，指标链真实执行）＋消融旋钮真链路（mention 过滤＋台账留痕）＋拜占庭注入真链路（DM 实发＋events 锚）；主链级每角色消融 criticality 与 BCR 读数仍需专门 run 窗口（第五轮同口径挂账）。数字与证据锚点见 spec 2026-10-27-ledger-todos-clearance.md。
+5. **Anthropic-Cybersecurity-Skills 语料刷新**——**改判为无需刷新**：我方融合日 2026-10-12（git 2a5fa1cb7）晚于上游 main 最后提交 2026-08-31，571 净增数与 818 总数是同一快照的两口径；上游零移动，重扫无意义。（原待办系把两口径错对所致，如实修正。）
+6. **RELEASE-NOTES 2.x 补档**——已完成（2026-10-27）：v0.7.32/0.7.34/0.7.35 三轮按 tag 日期＋specs 锚点补记（构建物与补丁计数未随轮留档，补记不虚构）；2.x 线以 2.37 收线，正式版本转 RELEASE-MANIFEST 四模块对账。
+7. **semantica/pua/fibo pin 评估**——已完成（2026-10-27）：三 pin 全部零移动（semantica v0.7.0 最新 release/pua e6e6cd2 仍 main HEAD/fibo master_2026Q3 持平），维持现 pin。
+
+## 10. swarm-yuan 技能域第三方组件与技能（2026-10-27 用户指令补录）
+
+分界：本节是**清单层**——技能域调研的全部第三方来源在此可见；实施对账正本仍是 `skills/swarm-yuan/references/capability-map.md`（56 档文档＋22 上游运行时，G25 双向一致性机器执法），两表互链不合并。来源证据分级 A/B/C 沿用 capability-map 口径（A=本机实测；B=官方一手；C=二手转述不进基线）。
+
+### 10.1 深度/物化运行时（capability-map §三，净新增 12 项）
+
+| 组件 | 上游 | 集成形态 | 用途 | 证据 |
+|---|---|---|---|---|
+| GitNexus | github.com/Aleksiori/GitNexus（B） | 深度×4 运行时 | 探查图谱优先（code-graph-tools 三选型之一） | capability-map.md §三 |
+| graphify | 本仓 skills/swarm-yuan 域内（A） | 深度×4 运行时 | 同上（图谱工具族） | 同上 |
+| codegraph | 调研选型（A） | watch 备选 | 图谱工具第三候选（未装降级静态扫描） | 同上 |
+| claude-mem | github.com/dingjan/claude-mem（A） | 深度×4 运行时 | Step 12 记忆写回后端（memory-backends.sh 适配层注册） | 同上 |
+| ocr | 本地 OCR 工具（A） | 深度×4 运行时 | ⑥ 测试验证第 5 审查维度（未装降 4 维） | 同上 |
+| OpenSpec | github.com/Fission-AI/OpenSpec（B） | CLI×6 | 节点②③ spec proposal/tasks 格式 | 同上 |
+| comet | 本仓 comet 技能族（A） | CLI×6 | 工作流骨架仪式/resume-probe（未装降 state-machine.sh） | 同上 |
+| gsd-core | gsd 系列（A） | CLI×6 | 计划验证/STATE 戳模式 | 同上 |
+| codex-security | github.com/openai/codex-security（A） | CLI×6 | 安全扫描门禁子进程 | 同上 |
+| mattpocock-skills | github.com/mattpocock/skills **v1.2.3**（A） | 物化镜像（runtime/mattpocock-skills/ 27 技能整镜像） | 探查访谈/领域建模/调研/原型/retro 直调 | capability-map.md §二＋§三 |
+| ponytail | 蒸馏源（A） | 机制源×7 | lazy-generation 档（编码七层下探） | capability-map.md §二来源列 |
+| pi | Pi 1.0（九源调研，B） | 机制源×7 | 机制参考 | 同上 |
+
+物化镜像版本真值：diagram-design=**v2.6.120**（runtime/diagram-design/MANIFEST.md；facts.conf `FACT_DIAGRAM_DESIGN_VERSION=2.6.120`，R140 零差异升锚/R141 刷新）——比产品面技能吸收的 v2.6.110 新一档（修复类，无新机制，不触发技能升级）。superpowers/gstack/ECC/Ruflo/impeccable（pbakaus/impeccable，B）为方法论引用型（纯文档，无运行时依赖）。
+
+### 10.2 team/skills 融合技能的第三方源（净新增 6 项）
+
+| 技能 | 上游源 | 用途 | 证据 |
+|---|---|---|---|
+| computer-use | github.com/trycua/cua（cua-driver） | 计算机操作底座（studio 依赖 @trycua/cua-driver 0.35.4 同源） | team/skills/computer-use/SKILL.md |
+| skill-self-evolution-fusion | github.com/openJiuwen-ai/jiuwenswarm（Apache-2.0，Symphony 引擎） | 动态 overlay＋experience bank＋5D 评估 | team/skills/skill-self-evolution-fusion/SKILL.md |
+| remotion | Remotion（经 skills-sh/google-labs-code/stitch-skills 渠道） | HTML 合成视频技能 | team/skills/remotion/SKILL.md |
+| prompt-as-model-adapter | 微信公众号「Vibe编码」《Opus 4.8 删掉了 73% 的提示词…》（2026-07-27） | 提示词即模型适配器方法论 | team/skills/prompt-as-model-adapter/SKILL.md |
+| minimax-image-to-video / grok-image-to-video | MiniMax / Grok 模型 API | 图生视频通道技能 | team/skills/ 对应目录 |
+| wechat-article-search / extractor | 微信公众平台通道（自研封装） | 公众号语料检索/提取（多轮调研的取数通道） | team/skills/ 对应目录 |
+
+### 10.3 标准与规范（capability-map 族⑤＋来源列，净新增 14 组）
+
+GB/T 42588（AI 服务成本度量，cost-estimation 档）；GB/T 39786（密码应用，crypto 门禁）；GB/T 8566（软件生存周期，trace/decisions 留痕口径）；GB/T 25000 系列（SQuaRE 合规矩阵）；ISO 9001/CMMI（质量认证映射）；OWASP＋STRIDE＋CWE 视图 799（security 门禁与 cwe_audit）；等级保护＋PCI-DSS 等（security-certification-profiles）；ASD-STE100 受控语言规范（controlled-language 档，gongwen-bifa 保真契约同源）；TOGAF BDAT 元模型（The Open Group，架构探查四层视角）；行业法规七档（金融/政务/医疗/电信/汽车/能源/工控/支付，--industry 立法）；执法检查底稿（主表 173 条经原文核实，inspection-ledger 数据正本）。证据锚点：capability-map.md 族⑤各行。
+
+### 10.4 方法论/论文/文章源（净新增 11 项）
+
+addyosmani/agent-skills（反借口/Prove-It，B）；Kahneman 认知偏差框架（cognitive-bias 档）；工程控制论等四源（four-theories 档，R17/R18 轮深读）；AMAP LongHorizon-Harness（mea-loop 长任务审计）；京东海博知识管理文章＋OKF 核验（knowledge-lifecycle 档）；行者明灵文章（lazy-generation 联合来源）；Anthropic 官方文档（context-engineering 分层）；清华 RSI 404 篇综述＋D2I-ai＋字节三论文（rsi-evidence 档）；Palantir 映射（R11 轮档）；HarnessEval（R15 吸收轮）；better-harness（R14 吸收轮）。另：用户级 `~/.zcode/AGENTS.md` §5 验证门禁七条源自 **agentpay 项目** 69 轮回归实践（外部项目经验迁移，非仓内调研）。轮档全集＝skills/swarm-yuan/docs/research/ 103 份（R1-R142）。
 
 ## 维护说明
 

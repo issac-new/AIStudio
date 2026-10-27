@@ -87,6 +87,26 @@ issue_once() { # issue_once <type> <subject> <desc>
 mx_cleanup() { rm -f "/tmp/mx-api.$$" "$STATE.tmp" "$STATE.rfd.tmp"; }
 note() { log "$*" | tee -a "$SCEN_LOG"; }
 
+# 场景步执行器（2026-10-27 mixed-motive 首跑实锤补齐：场景骨架此前引用 step() 但
+# 该助手从未存在——首跑才暴露）。幂等：sset step_ok_<key> 在案即跳过（重放安全）；
+# 命令失败如实记 rc 并透传（不中断场景——场景层自行判定后续步依赖）。
+step() { # <key> <desc> <command...>
+  local _key="$1" _desc="$2"; shift 2
+  if [[ -n "$(sget "step_ok_${_key}")" ]]; then
+    note "[step] ${_key} 已完成（$(sget "step_ok_${_key}")），跳过"
+    return 0
+  fi
+  note "[step] ${_key} ${_desc} 开跑"
+  if "$@"; then
+    sset "step_ok_${_key}" "$(date -Iseconds)"
+    note "[step] ${_key} 完成"
+  else
+    local _rc=$?
+    note "[step] ${_key} 失败 rc=${_rc}（如实透传）"
+    return $_rc
+  fi
+}
+
 # ── 步骤机（V3 生命周期 21 步：六阶段 L0-L5 × G1-G6 门禁，方案见
 #    2026-09-25-mux-v3-lifecycle-plan.md；templates 并入 ready）────────
 STEPS="smoke appinit people ba reqgate room dispatch register analysis triage anexec review archgate close plan devimpl defect testpass ready release uat workmgr audit retro ide report"
@@ -468,7 +488,10 @@ approve_is_critical() { # <body> → 0=关键(挂真人) 1=过程性
 }
 
 dm_room_agent() { # <fromUser> <agentOwner> → room_id（人类 from 邀 agentOwner 的 agent；agent 侧 _on_invite 自动加入）
-  local a="$1" b="$2" key="dma_${a}_${b}" cached rid
+  # bash 陷阱（2026-10-27 独立点火实锤）：local 同句 key=${a} 展开先于 a 赋值，
+  # set -u 下独立调用即 unbound（主链历史被驱动全局 a/b 掩盖）——拆两行声明。
+  local a="$1" b="$2" cached rid
+  local key="dma_${a}_${b}"
   cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
   rid=$(mx "$(load_token "$a")" POST createRoom "$(jq -n --arg t "$(agent_mxid "$b")" \
     '{is_direct:true, preset:"trusted_private_chat", invite:[$t]}')" | jq -r '.room_id')
@@ -841,6 +864,12 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
 capture_step() { # <step> <url> [action] [user]
   local step="$1" url="$2" action="${3:-}" user="${4:-fanfan}"
   local rc=0
+  # 独立场景跑（mixed-motive 等）无主链驱动上下文——SCRIPT_DIR 未设时帧采集
+  # 跳过不崩（2026-10-27 首跑实锤 unbound variable 击杀收尾）。
+  if [[ -z "${SCRIPT_DIR:-}" ]]; then
+    note "[帧采集] 步 ${step} 跳过（独立场景无驱动 SCRIPT_DIR）"
+    return 0
+  fi
   # 重放幂等（run22 复盘根治③）：本 run 已拍且帧文件在盘即跳过——run22 实锤
   # smoke/register/analysis/triage 段重放每轮无条件重拍（smoke 段无 done 键守卫，
   # register/analysis 段 wait 快通后照样 capture），帧 mtime 持续晚于报告 =

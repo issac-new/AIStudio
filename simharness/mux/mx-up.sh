@@ -33,6 +33,12 @@ source "$SCRIPT_DIR/mx-lib.sh"
 if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
   ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" )     || log "runtime manifest 自愈告警（deploy-agent-runtime 失败，需人工复核）"
 fi
+# 快照新鲜度自愈（2026-10-27 实锤根治）：mx_provision_agent_src 原只在 mx-setup 调，
+# mx-up 从不重建——宿主升级（0.22.2→0.22.5）后旧快照缺 hermes_dir_acl/
+# base_log_safety 等 24 个新模块，网关 import 即崩（ModuleNotFoundError 连环）。
+# 键不同才全量重照（幂等：同键跳过，秒回）；必须先于 mx_apply_agent_patches
+# （新快照自带宿主工作态补丁，反向检查自然"已在位"）。
+mx_provision_agent_src || log "agent 快照刷新告警（provision 失败——旧快照可能缺新模块，网关有崩失风险）"
 mx_apply_agent_patches || log "运行时 patch 自愈告警（533/534 可能缺位——并发闸拒收风险）"
 
 # ── 诊断抑制配置收敛（run15 复盘 S3：No home channel 噪音根治）────────────
