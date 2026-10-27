@@ -49,7 +49,7 @@ vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
   }),
 }))
 vi.mock('../store/workspace', () => ({
-  useWorkspaceStore: () => ({ tasks: [], boards: [] }),
+  useWorkspaceStore: () => ({ tasks: [], dailyTasks: [], simTasks: [], boards: [] }),
 }))
 vi.mock('../store/platforms', () => ({
   usePlatformsStore: () => ({

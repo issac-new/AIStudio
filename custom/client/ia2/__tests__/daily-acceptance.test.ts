@@ -11,6 +11,18 @@ vi.mock('../store/workspace', () => ({
   useWorkspaceStore: () => ({
     rawTasks: rawTasks,
     tasks: rawTasks.map(r => r.task),
+    get dailyTasks() {
+      return rawTasks.filter(raw => raw.task.source !== 'sim').map(raw => ({
+        key: `daily:${raw.board}:${raw.task.id}`,
+        taskId: raw.task.id,
+        board: raw.board,
+        source: 'daily',
+        runId: null,
+        task: raw.task,
+        raw,
+      }))
+    },
+    simTasks: [],
     refreshAllBoards: vi.fn(async () => true),
   }),
 }))
@@ -55,7 +67,7 @@ describe('daily acceptance panels', () => {
     expect(w.find('[data-testid="daily-uat-t1"]').exists()).toBe(true)
     expect(w.find('[data-testid="daily-uat-t2"]').exists()).toBe(false)
     w.find('[data-testid="daily-uat-t1"] button').trigger('click')
-    expect(w.emitted('open-task')?.[0]).toEqual(['t1'])
+    expect(w.emitted('open-task')?.[0]).toEqual(['daily:main:t1'])
     w.unmount()
   })
 

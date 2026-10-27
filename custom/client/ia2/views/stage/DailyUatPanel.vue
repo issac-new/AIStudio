@@ -9,14 +9,16 @@ import { taskPathLabel, taskResultLabel, taskUpdatedLabel, type RawBoardTask } f
 import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'
 
-const emit = defineEmits<{ (e: 'open-task', id: string): void }>()
+const emit = defineEmits<{ (e: 'open-task', key: string): void }>()
 const router = useRouter()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
 const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'))
 const workspace = useWorkspaceStore()
 const assigneeLabel = useAssigneeLabel()
-const rows = computed<RawBoardTask[]>(() => [...(workspace.rawTasks ?? [])]
-  .filter(r => r.task.status === 'review')
+type DailyUatRow = RawBoardTask & { key: string }
+const rows = computed<DailyUatRow[]>(() => workspace.dailyTasks
+  .filter(ref => ref.raw && ref.task.status === 'review')
+  .map(ref => ({ ...ref.raw!, key: ref.key }))
   .sort((a, b) => (b.task.last_heartbeat_at ?? b.task.created_at) - (a.task.last_heartbeat_at ?? a.task.created_at)))
 
 function openInbox(): void { void router.push({ name: 'ia2.inbox' }) }
@@ -33,11 +35,11 @@ function openInbox(): void { void router.push({ name: 'ia2.inbox' }) }
     </header>
     <p v-if="!rows.length" class="dup__empty">{{ zh ? '没有等待 UAT 判定的任务。' : 'No tasks waiting for UAT.' }}</p>
     <div v-else class="dup__rows">
-      <article v-for="r in rows" :key="`${r.board}:${r.task.id}`" class="dup__row" :data-testid="`daily-uat-${r.task.id}`">
+      <article v-for="r in rows" :key="r.key" class="dup__row" :data-testid="`daily-uat-${r.task.id}`">
         <strong class="dup__name">{{ r.task.title }}</strong>
         <span class="dup__meta">{{ assigneeLabel(r.task.assignee) }} · {{ taskUpdatedLabel(r.task) }} · {{ taskPathLabel(r.task) }}</span>
         <span class="dup__result">{{ taskResultLabel(r.task) }}</span>
-        <button type="button" class="dup__btn" @click="emit('open-task', r.task.id)">打开任务判定</button>
+        <button type="button" class="dup__btn" @click="emit('open-task', r.key)">打开任务判定</button>
       </article>
     </div>
     <DailySimReference what="UAT 判定台账" />

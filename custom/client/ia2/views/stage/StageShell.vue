@@ -35,6 +35,7 @@ import { STAGE_META, SETUP_STEPS, type StageMeta } from '../../stage-meta'
 import { STAGE_TABS, resolveTab, tabMeta } from '../../stage-tabs'
 import { useDailyStageProgress } from '../../composables/useDailyStageProgress'
 import { stageBoardStatuses, stageBoardStatusLabel } from '../../stage-task-filter'
+import { isWritableTask, useWorkspaceStore } from '../../store/workspace'
 
 const route = useRoute()
 const router = useRouter()
@@ -103,11 +104,23 @@ function syncTabsEnd(): void {
 }
 onMounted(() => syncTabsEnd())
 
-// 任务抽屉：今日工作/排期页签点行就地打开，不整页跳看板
+// 任务抽屉：阶段内只传 TaskRef.key；进入日常 Kanban 抽屉时才还原原 taskId。
+const drawerTaskKey = ref<string | null>(null)
 const drawerTaskId = ref<string | null>(null)
 const drawerOpen = ref(false)
-function openTask(taskId: string): void {
-  drawerTaskId.value = taskId
+function openTask(taskKey: string): void {
+  const workspace = useWorkspaceStore()
+  const ref = [...workspace.dailyTasks, ...workspace.simTasks].find(task => task.key === taskKey)
+    // 既有日常面板的裸 ID 深链只允许回落到 daily，绝不猜测 sim 对象。
+    ?? workspace.dailyTasks.find(task => task.taskId === taskKey)
+  if (!isWritableTask(ref)) {
+    drawerTaskKey.value = null
+    drawerTaskId.value = null
+    drawerOpen.value = false
+    return
+  }
+  drawerTaskKey.value = ref.key
+  drawerTaskId.value = ref.taskId
   drawerOpen.value = true
 }
 function openInbox(): void {
@@ -270,7 +283,7 @@ const currentProps = computed(() => {
       />
     </div>
 
-    <KanbanTaskDrawer v-if="drawerOpen" v-model:show="drawerOpen" :task-id="drawerTaskId" />
+    <KanbanTaskDrawer v-if="drawerOpen" :key="drawerTaskKey" v-model:show="drawerOpen" :task-id="drawerTaskId" />
   </div>
 </template>
 

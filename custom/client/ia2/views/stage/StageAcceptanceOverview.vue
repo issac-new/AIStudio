@@ -13,7 +13,7 @@ const zh = computed(() => String(i18nCtx?.locale?.value ?? 'zh').startsWith('zh'
 const workspace = useWorkspaceStore()
 
 const counts = computed(() => {
-  const tasks = workspace.tasks ?? []
+  const tasks = workspace.dailyTasks.map(ref => ref.task)
   return {
     review: tasks.filter(t => t.status === 'review').length,
     done: tasks.filter(t => t.status === 'done').length,

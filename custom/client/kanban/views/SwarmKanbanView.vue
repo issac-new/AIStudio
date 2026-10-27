@@ -15,7 +15,7 @@ import { needsMyAction } from '../utils/raci'
 import { nudgeRoute } from '../../ia2/api/gatekeeper'
 import { taskMatchesQuery } from '../utils/task-search'
 import { filterTasksByStatuses } from '../utils/task-status-filter'
-import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
+import { isWritableTask, useWorkspaceStore, type TaskRef } from '@/custom/ia2/store/workspace'
 import KanbanBoard from '@/custom/kanban/components/KanbanBoard.vue'
 import KanbanToolbar from '@/custom/kanban/components/KanbanToolbar.vue'
 import KanbanBulkBar from '@/custom/kanban/components/KanbanBulkBar.vue'
@@ -29,21 +29,29 @@ const router = useRouter()
 const store = useKanbanStore()
 const workspace = useWorkspaceStore()
 
-// ── 推演并入（2026-10-21 用户裁定）：sim 卡只读呈现 ──
-// 点击/深链走「在推演中查看」（跨模式跳转显式化）；写操作（抽屉/拖拽/批量）前拦截。
-const simTaskIds = computed(() =>
-  new Set(workspace.rawTasks.filter(e => e.task?.source === 'sim').map(e => e.task.id)))
-function simRunOf(taskId: string): string | null {
-  const hit = workspace.rawTasks.find(e => e.task?.id === taskId)
-  return (hit?.task?.runId ?? workspace.simRunId) || null
+// ── 推演并入：daily/sim 以 TaskRef.key 隔离，原 taskId 只在日常 API 边界使用 ──
+const taskRefs = computed<TaskRef[]>(() => [...workspace.dailyTasks, ...workspace.simTasks])
+const taskRefByKey = computed(() => new Map(taskRefs.value.map(ref => [ref.key, ref])))
+function refForKey(key: string): TaskRef | undefined {
+  return taskRefByKey.value.get(key)
 }
-function openInSim(taskId: string): void {
-  const run = simRunOf(taskId)
+function dailyRefForTaskId(taskId: string): TaskRef | undefined {
+  return workspace.dailyTasks.find(ref => ref.taskId === taskId)
+}
+function resolveDailyRef(key: string): TaskRef | undefined {
+  // 旧深链/诊断事件只携带裸 ID；此边界只回落 daily，不把同 ID 的 sim 当日常任务。
+  return refForKey(key) ?? dailyRefForTaskId(key)
+}
+function openInSim(ref: TaskRef): void {
   message.info(t('kanban.simTask.readonlyJump', '推演任务只读——已切到推演模式查看'))
-  void router.push({ name: 'ia2.sim', query: run ? { run } : {} })
+  void router.push({ name: 'ia2.sim', query: ref.runId ? { run: ref.runId } : {} })
 }
 
-const selectedTaskId = ref<string | null>(null)
+const selectedTaskKey = ref<string | null>(null)
+const selectedTaskId = computed(() => {
+  const ref = selectedTaskKey.value ? refForKey(selectedTaskKey.value) : undefined
+  return isWritableTask(ref) ? ref.taskId : null
+})
 const showTaskDrawer = ref(false)
 const includeArchived = ref(false)
 /** P2 等您操作过滤（当前登录人的待做 R / 待审 A 卡） */
@@ -101,26 +109,21 @@ function checkAllBoards(): void {
   excludedBoards.value = hasChecked ? new Set(boardList.value.map(b => b.slug)) : new Set()
 }
 
-/** 任务 → 来源板（全量 raw 索引，不限筛选态） */
-const taskBoard = computed(() => {
-  const map = new Map<string, string>()
-  for (const e of workspace.rawTasks) map.set(e.task.id, e.board)
-  return map
-})
+/** 合并任务 ref（排除未勾选板）；raw 缺省时不下发伪造卡片。 */
+const mergedRefs = computed(() =>
+  taskRefs.value.filter(ref => ref.raw && !excludedBoards.value.has(ref.board)))
 
-function boardOf(taskId: string): string {
-  return taskBoard.value.get(taskId) ?? 'default'
+type KeyedKanbanTask = KanbanTask & { __taskKey: string }
+function keyedTask(ref: TaskRef): KeyedKanbanTask {
+  return { ...ref.raw!.task, __taskKey: ref.key }
 }
 
-/** 合并任务（排除未勾选板）→ 原始 KanbanTask 形状（KanbanBoard 卡片直接吃） */
-const mergedEntries = computed(() =>
-  workspace.rawTasks.filter(e => !excludedBoards.value.has(e.board)))
-
+const dailyBoardList = computed(() => boardList.value.filter(board => board.source !== 'sim'))
 const checkedBoardCount = computed(() =>
-  boardList.value.filter(b => boardChecked(b.slug)).length)
+  dailyBoardList.value.filter(b => boardChecked(b.slug)).length)
 
 const filteredTasks = computed(() => {
-  let tasks: KanbanTask[] = mergedEntries.value.map(e => e.task)
+  let tasks: KeyedKanbanTask[] = mergedRefs.value.map(keyedTask)
   if (store.filterStatus) {
     tasks = tasks.filter((t: KanbanTask) => t.status === store.filterStatus)
   }
@@ -152,28 +155,31 @@ const viewTasks = computed(() => filterTasksByStatuses(filteredTasks.value, prop
 
 const selectedIds = computed(() => store.selectedIds)
 
-/** 写操作板定位：先把 store 切到任务所在板（抽屉/诊断/估算等 store 域调用
- *  全部随 selectedBoard 走板参数），再执行动作，最后刷新聚合面 */
-function withBoard<T>(taskId: string, fn: () => Promise<T>): Promise<T> {
-  // sim 卡写口拦截：抽屉编辑/拖拽换列/批量动作都会打到本实例 kanban API，
-  // 对推演实例任务必然 404/错板——只读守卫 + 指路推演模式。
-  if (simTaskIds.value.has(taskId)) {
+/** 日常写操作统一边界：先验证 daily ref、切所属板，再把原 taskId 交给 API。 */
+async function withBoard(taskKey: string, fn: (taskId: string) => Promise<unknown>): Promise<boolean> {
+  const ref = refForKey(taskKey)
+  if (!isWritableTask(ref)) {
     message.warning(t('kanban.simTask.readonlyGuard', '推演任务请在推演实例处理——日常侧只读'))
-    return Promise.resolve()
+    return false
   }
-  const board = boardOf(taskId)
-  if (board && board !== store.selectedBoard) store.setBoard(board)
-  return fn().finally(() => { void workspace.refreshAllBoards(true) })
+  if (ref.board && ref.board !== store.selectedBoard) store.setBoard(ref.board)
+  try {
+    await fn(ref.taskId)
+    return true
+  } finally {
+    void workspace.refreshAllBoards(true)
+  }
 }
 
 /** 批量动作分板执行：store 批量接口按 selectedBoard 一次一板 → 按板分组循环 */
-function groupIdsByBoard(ids: string[]): Array<{ board: string; ids: string[] }> {
+function groupIdsByBoard(keys: string[]): Array<{ board: string; ids: string[] }> {
   const groups = new Map<string, string[]>()
-  for (const id of ids) {
-    const board = boardOf(id)
-    const list = groups.get(board)
-    if (list) list.push(id)
-    else groups.set(board, [id])
+  for (const key of keys) {
+    const ref = resolveDailyRef(key)
+    if (!isWritableTask(ref)) continue
+    const list = groups.get(ref.board)
+    if (list) list.push(ref.taskId)
+    else groups.set(ref.board, [ref.taskId])
   }
   return [...groups.entries()].map(([board, groupIds]) => ({ board, ids: groupIds }))
 }
@@ -206,65 +212,68 @@ watch(() => store.selectedBoard, () => {
   store.fetchOrchestration()
 })
 
-function handleTaskClick(taskId: string, multiSelect: boolean, rangeSelect: boolean) {
-  // sim 卡在日常侧只读：不进多选/范围/抽屉（批量与拖拽写口对 sim 无效）
-  if (simTaskIds.value.has(taskId)) {
-    openInSim(taskId)
+function handleTaskClick(taskKey: string, multiSelect: boolean, rangeSelect: boolean) {
+  const ref = refForKey(taskKey)
+  if (!ref) return
+  if (!isWritableTask(ref)) {
+    openInSim(ref)
     return
   }
   if (multiSelect) {
-    store.toggleSelection(taskId)
+    store.toggleSelection(ref.key)
     return
   }
   if (rangeSelect) {
-    // Shift+click: select range from last selected to clicked task
-    const ids = viewTasks.value.map(t => t.id)
-    const clickedIndex = ids.indexOf(taskId)
+    const keys = viewTasks.value.map(task => task.__taskKey)
+    const clickedIndex = keys.indexOf(ref.key)
     if (clickedIndex === -1) return
 
-    // Find the last selected task index
     let lastSelectedIndex = -1
-    for (let i = ids.length - 1; i >= 0; i--) {
-      if (store.selectedIds.has(ids[i])) {
+    for (let i = keys.length - 1; i >= 0; i--) {
+      if (store.selectedIds.has(keys[i])) {
         lastSelectedIndex = i
         break
       }
     }
 
     if (lastSelectedIndex === -1) {
-      // No previous selection, just select this task
-      store.selectedIds.add(taskId)
+      store.selectedIds.add(ref.key)
     } else {
-      // Select range between lastSelectedIndex and clickedIndex
       const start = Math.min(lastSelectedIndex, clickedIndex)
       const end = Math.max(lastSelectedIndex, clickedIndex)
       for (let i = start; i <= end; i++) {
-        store.selectedIds.add(ids[i])
+        const selectedRef = refForKey(keys[i])
+        if (isWritableTask(selectedRef)) store.selectedIds.add(selectedRef.key)
       }
     }
     return
   }
-  // Normal click: 抽屉前先切到任务所在板（详情/诊断/估算全部板感知）
-  const board = boardOf(taskId)
-  if (board && board !== store.selectedBoard) store.setBoard(board)
-  selectedTaskId.value = taskId
+  if (ref.board && ref.board !== store.selectedBoard) store.setBoard(ref.board)
+  selectedTaskKey.value = ref.key
   showTaskDrawer.value = true
 }
 
-function handleSelectAll(taskIds: string[]) {
-  for (const id of taskIds) {
-    store.selectedIds.add(id)
+function handleSelectAll(taskKeys: string[]) {
+  for (const key of taskKeys) {
+    const ref = refForKey(key)
+    if (isWritableTask(ref)) store.selectedIds.add(ref.key)
   }
 }
 
 function handleTaskDrawerClose() {
   showTaskDrawer.value = false
-  selectedTaskId.value = null
+  selectedTaskKey.value = null
 }
 
-function handleTaskDragStart(taskId: string, e: DragEvent, _selectedCount: number) {
-  e.dataTransfer?.setData('text/plain', taskId)
-  e.dataTransfer?.setData('text/x-hermes-task', taskId)
+function handleTaskDragStart(taskKey: string, e: DragEvent, _selectedCount: number) {
+  const ref = refForKey(taskKey)
+  if (!isWritableTask(ref)) {
+    e.preventDefault()
+    message.warning(t('kanban.simTask.readonlyGuard', '推演任务请在推演实例处理——日常侧只读'))
+    return
+  }
+  e.dataTransfer?.setData('text/plain', ref.key)
+  e.dataTransfer?.setData('text/x-hermes-task', ref.key)
 }
 
 function handleTaskDragEnd(_taskId: string, _e: DragEvent) {
@@ -272,12 +281,14 @@ function handleTaskDragEnd(_taskId: string, _e: DragEvent) {
 }
 
 async function handleColumnDrop(status: KanbanTaskStatus | 'trash', e: DragEvent) {
-  const taskId = e.dataTransfer?.getData('text/x-hermes-task') || e.dataTransfer?.getData('text/plain')
-  if (!taskId) return
+  const taskKey = e.dataTransfer?.getData('text/x-hermes-task') || e.dataTransfer?.getData('text/plain')
+  if (!taskKey) return
+  const ref = refForKey(taskKey)
+  if (!ref) return
 
   if (status === 'trash') {
     try {
-      await withBoard(taskId, () => store.deleteTask(taskId))
+      if (!await withBoard(taskKey, taskId => store.deleteTask(taskId))) return
       message.success(t('kanban.message.taskDeleted'))
     } catch (err) {
       message.error(t('kanban.message.deleteFailed'))
@@ -285,14 +296,13 @@ async function handleColumnDrop(status: KanbanTaskStatus | 'trash', e: DragEvent
     return
   }
 
-  const entry = mergedEntries.value.find(x => x.task.id === taskId)
-  if (!entry || entry.task.status === status) return
-  const fromStatus = entry.task.status
+  if (!ref.raw || ref.task.status === status) return
+  const fromStatus = ref.task.status
 
   try {
-    await withBoard(taskId, () => store.moveTask(taskId, status))
+    if (!await withBoard(taskKey, taskId => store.moveTask(taskId, status))) return
     message.success(t('kanban.message.taskMoved'))
-    fireColumnAutomation(taskId, fromStatus, status, entry.task.workspace_path)
+    fireColumnAutomation(ref.taskId, fromStatus, status, ref.raw.task.workspace_path)
   } catch (err) {
     message.error(t('kanban.message.moveFailed'))
   }
@@ -325,7 +335,7 @@ async function handleInlineCreate(_status: KanbanTaskStatus, data: any) {
     message.warning(t('kanban.message.aggregateCreateHint'))
     return
   }
-  const board = boardList.value.find(b => boardChecked(b.slug))?.slug
+  const board = dailyBoardList.value.find(b => boardChecked(b.slug))?.slug
   if (!board) return
   try {
     if (board !== store.selectedBoard) store.setBoard(board)
@@ -356,9 +366,10 @@ function handleRefresh() {
 }
 
 function handleAttentionOpen(taskId: string) {
-  const board = boardOf(taskId)
-  if (board && board !== store.selectedBoard) store.setBoard(board)
-  selectedTaskId.value = taskId
+  const ref = dailyRefForTaskId(taskId)
+  if (!isWritableTask(ref)) return
+  if (ref.board && ref.board !== store.selectedBoard) store.setBoard(ref.board)
+  selectedTaskKey.value = ref.key
   showTaskDrawer.value = true
 }
 
@@ -366,21 +377,23 @@ function handleAttentionOpen(taskId: string) {
  *  切到任务所在板再开抽屉；同一 ID 只自动打开一次，用户关掉后不被 watch 重放。 */
 const externallyOpenedTask = ref<string | null>(null)
 watch(
-  [() => props.openTaskId, () => workspace.rawTasks],
-  ([taskId]) => {
-    if (!taskId || taskId === externallyOpenedTask.value) return
-    const entry = workspace.rawTasks.find(x => x.task.id === taskId)
-    if (!entry) return
-    if (entry.task?.source === 'sim') {
-      // sim 卡深链不进抽屉（本实例 API 查不到详情）——显式跨模式查看
-      externallyOpenedTask.value = taskId
-      openInSim(taskId)
+  [() => props.openTaskId, () => taskRefs.value],
+  ([taskKey]) => {
+    if (!taskKey || taskKey === externallyOpenedTask.value) return
+    const ref = refForKey(taskKey)
+      ?? dailyRefForTaskId(taskKey)
+      ?? workspace.simTasks.find(task => task.taskId === taskKey)
+    if (!ref) return
+    if (!isWritableTask(ref)) {
+      // sim 深链不进日常抽屉；复合 key 可精确直达，裸 ID 只在无 daily 时回落 sim。
+      externallyOpenedTask.value = taskKey
+      openInSim(ref)
       return
     }
-    if (entry.board && entry.board !== store.selectedBoard) store.setBoard(entry.board)
-    selectedTaskId.value = taskId
+    if (ref.board && ref.board !== store.selectedBoard) store.setBoard(ref.board)
+    selectedTaskKey.value = ref.key
     showTaskDrawer.value = true
-    externallyOpenedTask.value = taskId
+    externallyOpenedTask.value = taskKey
   },
   { immediate: true },
 )
@@ -391,8 +404,9 @@ function handleBulkClear() {
 
 function handleBulkSelectAllVisible() {
   for (const task of viewTasks.value) {
-    if (!store.selectedIds.has(task.id)) {
-      store.selectedIds.add(task.id)
+    const ref = refForKey(task.__taskKey)
+    if (isWritableTask(ref) && !store.selectedIds.has(ref.key)) {
+      store.selectedIds.add(ref.key)
     }
   }
 }
@@ -400,18 +414,25 @@ function handleBulkSelectAllVisible() {
 /** 批量动作通用执行器：按板分组 → 逐组切板执行 → 刷新聚合 */
 async function runBulk(
   action: (ids: string[]) => Promise<unknown>,
-  ids: string[],
-): Promise<void> {
-  for (const group of groupIdsByBoard(ids)) {
+  keys: string[],
+): Promise<boolean> {
+  if (!keys.length) return false
+  const refs = keys.map(resolveDailyRef)
+  if (refs.some(ref => !isWritableTask(ref))) {
+    message.warning(t('kanban.simTask.readonlyGuard', '推演任务请在推演实例处理——日常侧只读'))
+    return false
+  }
+  for (const group of groupIdsByBoard(keys)) {
     if (group.board && group.board !== store.selectedBoard) store.setBoard(group.board)
     await action(group.ids)
   }
   await workspace.refreshAllBoards(true)
+  return true
 }
 
 async function handleBulkComplete() {
   try {
-    await runBulk(ids => store.bulkComplete(ids), Array.from(selectedIds.value))
+    if (!await runBulk(ids => store.bulkComplete(ids), Array.from(selectedIds.value))) return
     message.success(t('kanban.message.taskCompleted'))
   } catch (err) {
     message.error(t('kanban.message.bulkFailed'))
@@ -420,7 +441,7 @@ async function handleBulkComplete() {
 
 async function handleBulkBlock() {
   try {
-    await runBulk(ids => store.bulkBlock(ids), Array.from(selectedIds.value))
+    if (!await runBulk(ids => store.bulkBlock(ids), Array.from(selectedIds.value))) return
     message.success(t('kanban.message.taskBlocked'))
   } catch (err) {
     message.error(t('kanban.message.bulkFailed'))
@@ -429,7 +450,7 @@ async function handleBulkBlock() {
 
 async function handleBulkUnblock() {
   try {
-    await runBulk(ids => store.bulkUnblock(ids), Array.from(selectedIds.value))
+    if (!await runBulk(ids => store.bulkUnblock(ids), Array.from(selectedIds.value))) return
     message.success(t('kanban.message.taskUnblocked'))
   } catch (err) {
     message.error(t('kanban.message.bulkFailed'))
@@ -439,11 +460,18 @@ async function handleBulkUnblock() {
 /** 催办 owner 动态路由（2026-10-22 P0 接线批）：对选中卡逐张解析催办对象——
  *  assignee 优先、板 team 回落、双空显式无人态（run21/22 错侧催办产品化①）。 */
 async function handleNudge() {
-  const ids = Array.from(selectedIds.value)
-  if (!ids.length) return
+  const keys = Array.from(selectedIds.value)
+  if (!keys.length) return
+  const refs = keys.map(resolveDailyRef)
+  if (refs.some(ref => !isWritableTask(ref))) {
+    message.warning(t('kanban.simTask.readonlyGuard', '推演任务请在推演实例处理——日常侧只读'))
+    return
+  }
   let routed = 0
   let unassigned = 0
-  for (const cardId of ids) {
+  for (const ref of refs) {
+    if (!isWritableTask(ref)) continue
+    const cardId = ref.taskId
     try {
       const d = await nudgeRoute(cardId)
       if (d.route === 'unassigned') unassigned += 1
@@ -458,7 +486,7 @@ async function handleNudge() {
 
 async function handleBulkArchive() {
   try {
-    await runBulk(ids => store.bulkArchive(ids), Array.from(selectedIds.value))
+    if (!await runBulk(ids => store.bulkArchive(ids), Array.from(selectedIds.value))) return
     message.success(t('kanban.message.taskArchived'))
   } catch (err) {
     message.error(t('kanban.message.bulkFailed'))
@@ -468,9 +496,9 @@ async function handleBulkArchive() {
 async function handleBulkDelete() {
   try {
     const ids = Array.from(selectedIds.value)
-    await runBulk(async groupIds => {
+    if (!await runBulk(async groupIds => {
       for (const id of groupIds) await store.deleteTask(id)
-    }, ids)
+    }, ids)) return
     message.success(t('kanban.message.deleteSuccess'))
   } catch (err) {
     message.error(t('kanban.message.deleteFailed'))
@@ -480,9 +508,9 @@ async function handleBulkDelete() {
 async function handleBulkSetPriority(priority: number) {
   try {
     const ids = Array.from(selectedIds.value)
-    await runBulk(async groupIds => {
+    if (!await runBulk(async groupIds => {
       for (const id of groupIds) await store.patchTask(id, { priority })
-    }, ids)
+    }, ids)) return
     message.success(t('kanban.message.taskUpdated'))
   } catch (err) {
     message.error(t('kanban.message.updateFailed'))
@@ -492,7 +520,7 @@ async function handleBulkSetPriority(priority: number) {
 async function handleBulkAssign(profile: string, reclaimFirst: boolean) {
   try {
     const ids = Array.from(selectedIds.value)
-    await runBulk(async groupIds => {
+    if (!await runBulk(async groupIds => {
       for (const id of groupIds) {
         if (reclaimFirst) {
           await store.reassignTask(id, profile || 'none', { reclaim: true })
@@ -500,7 +528,7 @@ async function handleBulkAssign(profile: string, reclaimFirst: boolean) {
           await store.assignTask(id, profile || 'none')
         }
       }
-    }, ids)
+    }, ids)) return
     message.success(t('kanban.message.taskAssigned'))
   } catch (err) {
     message.error(t('kanban.message.bulkFailed'))
@@ -510,9 +538,9 @@ async function handleBulkAssign(profile: string, reclaimFirst: boolean) {
 async function handleBulkMoveToTodo() {
   try {
     const ids = Array.from(selectedIds.value)
-    await runBulk(async groupIds => {
+    if (!await runBulk(async groupIds => {
       for (const id of groupIds) await store.moveTask(id, 'todo')
-    }, ids)
+    }, ids)) return
     message.success(t('kanban.message.taskMoved'))
   } catch (err) {
     message.error(t('kanban.message.moveFailed'))
@@ -522,9 +550,9 @@ async function handleBulkMoveToTodo() {
 async function handleBulkMoveToReady() {
   try {
     const ids = Array.from(selectedIds.value)
-    await runBulk(async groupIds => {
+    if (!await runBulk(async groupIds => {
       for (const id of groupIds) await store.moveTask(id, 'ready')
-    }, ids)
+    }, ids)) return
     message.success(t('kanban.message.taskMoved'))
   } catch (err) {
     message.error(t('kanban.message.moveFailed'))
@@ -624,7 +652,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
         @click="checkAllBoards"
       >{{ t('kanban.board.filterAll') }}</button>
       <button
-        v-for="b in visibleBoards" :key="b.slug"
+        v-for="b in visibleBoards" :key="`${b.source ?? 'daily'}:${b.slug}`"
         type="button"
         class="kanban-boardbar__chip"
         :class="{ 'is-on': boardChecked(b.slug) }"
@@ -712,6 +740,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
         :lane-by-profile="laneByProfile"
         :parent-tasks="viewTasks.map(t => ({ id: t.id, title: t.title }))"
         @task-click="handleTaskClick"
+        @toggle-select="handleTaskClick($event, true, false)"
         @select-all="handleSelectAll"
         @task-drag-start="handleTaskDragStart"
         @task-drag-end="handleTaskDragEnd"
@@ -724,6 +753,7 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
     <!-- Task detail drawer -->
     <KanbanTaskDrawer
       v-model:show="showTaskDrawer"
+      :key="selectedTaskKey"
       :task-id="selectedTaskId"
       @close="handleTaskDrawerClose"
     />

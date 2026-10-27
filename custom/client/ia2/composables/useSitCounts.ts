@@ -1,6 +1,6 @@
 // overlay/custom/client/ia2/composables/useSitCounts.ts
 // v12.3 态势计数单一聚合（自 WorkbenchView.vue 抽出，页头 chips 与工作台共用）。
-// 数据源全走既有 store：workspace.tasks / buildWaiting / loopStore.loops /
+// 数据源全走既有 store：workspace.dailyTasks / buildWaiting / loopStore.loops /
 // chatStore.sessions ∪ matrixRoom.sortedRooms / teamRegistry.accounts /
 // cockpit.fleetSessions。pinia 单例——多处 useStore 无重复成本。
 import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue'
@@ -63,8 +63,14 @@ export function useSitCounts() {
     return out
   }
 
+  /** 日常态势只读 daily ref；旧 workspace 适配器仅回退到非 sim 投影，不把同 ID 的 sim 再算一次。 */
+  const dailyTaskModels = computed(() => {
+    if (Array.isArray(workspace.dailyTasks)) return workspace.dailyTasks.map(ref => ref.task)
+    return (workspace.tasks ?? []).filter(task => task.source !== 'sim')
+  })
+
   const waitItems = computed(() => buildWaiting(
-    workspace.tasks.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })),
+    dailyTaskModels.value.map(x => ({ id: x.id, title: x.title, status: x.status, assignee: x.assignee, createdAt: x.createdAt })),
     runsStore.runs ?? [],
     cockpit.fleetSessions ?? [],
     now.value,
@@ -72,7 +78,7 @@ export function useSitCounts() {
 
   /** 跨板开放态任务（未完成未归档）——v12.4 任务 chip/面板口径单一来源 */
   const openTasks = computed(() =>
-    workspace.tasks.filter(x => x.status !== 'done' && x.status !== 'archived'))
+    dailyTaskModels.value.filter(x => x.status !== 'done' && x.status !== 'archived'))
 
   /** 任务统计：开放态总数 + 分状态计数（9 值词表按序呈现，零计数不进） */
   const tasks = computed(() => {
@@ -115,8 +121,9 @@ export function useSitCounts() {
   const boardRows = computed(() => {
     const openByBoard = new Map<string, number>()
     for (const t of openTasks.value) openByBoard.set(t.boardSlug, (openByBoard.get(t.boardSlug) ?? 0) + 1)
-    const known = new Set((workspace.boards ?? []).map(b => b.slug))
-    const rows = (workspace.boards ?? []).map(b => ({ slug: b.slug, name: b.name, open: openByBoard.get(b.slug) ?? 0 }))
+    const dailyBoards = (workspace.boards ?? []).filter(b => b.source !== 'sim')
+    const known = new Set(dailyBoards.map(b => b.slug))
+    const rows = dailyBoards.map(b => ({ slug: b.slug, name: b.name, open: openByBoard.get(b.slug) ?? 0 }))
     for (const [slug, open] of openByBoard) {
       if (!known.has(slug)) rows.push({ slug, name: slug, open })
     }

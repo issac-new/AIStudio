@@ -44,6 +44,52 @@ export interface ScheduleEvent {
   archived?: boolean
 }
 
+export interface WorkspaceRawTask {
+  board: string
+  task: any
+}
+
+/**
+ * UI 任务身份：key 只用于界面定位，taskId 只用于所属 API。
+ * raw 保留看板展示字段；聚合响应缺少 rawTasks 的旧适配器返回 null，不伪造原始任务。
+ */
+export interface TaskRef {
+  key: string
+  taskId: string
+  board: string
+  source: 'daily' | 'sim'
+  runId: string | null
+  task: CockpitTask
+  raw: WorkspaceRawTask | null
+}
+
+function createTaskRef(
+  task: CockpitTask,
+  raw: WorkspaceRawTask | null,
+  source: 'daily' | 'sim',
+  runId: string | null,
+): TaskRef {
+  const board = raw?.board || task.boardSlug
+  const taskId = task.id
+  return {
+    key: source === 'daily' ? `daily:${board}:${taskId}` : `sim:${runId ?? ''}:${board}:${taskId}`,
+    taskId,
+    board,
+    source,
+    runId: source === 'daily' ? null : runId,
+    task,
+    raw,
+  }
+}
+
+/** 写入口只接受结构自洽的 daily ref，不能只信调用方传入的 source 标记。 */
+export function isWritableTask(ref: TaskRef | null | undefined): ref is TaskRef {
+  return !!ref
+    && ref.source === 'daily'
+    && ref.runId === null
+    && ref.key === `daily:${ref.board}:${ref.taskId}`
+}
+
 const PRIORITY_ORDER: Record<CockpitPriority, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
 const pad2 = (n: number) => String(n).padStart(2, '0')
 const dateToStr = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
@@ -57,6 +103,8 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   // 2026-10-21 推演并入轮（用户裁定）：观察面任务直接并入日常任务面并带
   // source='sim'/runId 标记；写入口不并入（看板侧对 sim 卡只读守卫）。
   const tasks = ref<CockpitTask[]>([])
+  const dailyTasks = ref<TaskRef[]>([])
+  const simTasks = ref<TaskRef[]>([])
   const boards = ref<Array<{ slug: string; name: string; total: number; source?: 'daily' | 'sim' }>>([])
   /** 原始跨板任务（v12.5）：{board, 原始 KanbanTask} 对——聚合看板渲染与任务
    *  跳转需要 session_id/workspace_path/priority 数值等映射层丢掉的字段 */
@@ -98,6 +146,10 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
     const fp = taskFingerprint(nextTasks)
     if (fp === _tasksFp) return
     _tasksFp = fp
+    dailyTasks.value = _hostTasks.value.map((task, index) =>
+      createTaskRef(task, _hostRaw.value[index] ?? null, 'daily', null))
+    simTasks.value = _simTasks.value.map((task, index) =>
+      createTaskRef(task, _simRaw.value[index] ?? null, 'sim', task.runId ?? simObserver.value.runId))
     tasks.value = nextTasks
     rawTasks.value = nextRaw
   }
@@ -504,8 +556,8 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
 
   return {
     // ① 聚合（双源：日常 + 推演观察）
-    tasks, boards, rawTasks, refreshAllBoards,
-    simObserver, simRunId, simRoomIds, isSimTask,
+    tasks, dailyTasks, simTasks, boards, rawTasks, refreshAllBoards,
+    simObserver, simRunId, simRoomIds, isSimTask, isWritableTask,
     // ② 待办/提醒
     userTodos, loadTodos, addUserTodo, removeUserTodo,
     startReminderScheduler, stopReminderScheduler,
