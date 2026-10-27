@@ -43,7 +43,9 @@ function scanDiffText(file: string, diffText: string, out: SecurityFinding[]): v
   for (const raw of diffText.split('\n')) {
     const hunk = raw.match(/^@@ [^+]*\+(\d+)/)
     if (hunk) { line = Number(hunk[1]) - 1; continue }
-    if (raw.startsWith('+++') || raw.startsWith('---')) continue
+    // 只跳 diff 文件头（'+++ b/x' 带/path；fix round 1：裸 '+++' 会误跳
+    // 「新增行内容本身以 ++ 开头」的合法扫描行，如 '++++i' 类字符画/标记）
+    if (raw.startsWith('+++ ') || raw.startsWith('--- ')) continue
     if (raw.startsWith('+')) {
       line += 1
       // 只报类别与位置，不回显命中的原值（安全约束：不输出敏感原值）
@@ -63,6 +65,9 @@ async function runScan(): Promise<void> {
   scanError.value = ''
   scannedFiles.value = 0
   capped.value = false
+  // 入口全量重置（fix round 1）：上一轮的未跟踪注记不得跨轮残留——下一轮
+  // status 失败进 error 态时，陈旧注记会与错误原因同屏误导。
+  skippedUntracked.value = 0
   const ws = root.value
   if (!ws) {
     scanError.value = t('ide.security.noWorkspace', '无工作区：先绑定任务工作区再扫描')
@@ -73,7 +78,6 @@ async function runScan(): Promise<void> {
     const st = await ideGitApi.status(ws)
     const changes = st.changes ?? []
     capped.value = changes.length > SCAN_FILE_CAP
-    skippedUntracked.value = 0
     // untracked 文件 git diff 无内容可读（不读文件系统旁路），跳过并如实计数
     // ——既不冒充已扫描，也不假装没有变更。
     skippedUntracked.value = changes.filter((c) => c.kind === 'untracked').length
@@ -165,8 +169,10 @@ function runBoost(): void {
       <p v-else-if="scanState === 'untrackedOnly'" class="ide-secbar__clean" data-testid="ide-scan-clean">
         {{ t('ide.security.untrackedNote', '{n} 个未跟踪文件不在 git diff 内，未扫描').replace('{n}', String(skippedUntracked)) }}
       </p>
-      <!-- 混合场景（已扫若干 + 还有未跟踪）同样如实标注未扫描面 -->
-      <p v-else-if="skippedUntracked" class="ide-secbar__meta">
+      <!-- 混合场景（已扫若干 + 还有未跟踪）同样如实标注未扫描面。独立 v-if 不进
+           上链（fix round 1）：clean 分支命中会终止 v-else-if 链，注记被吞——
+           排除 untrackedOnly 态防同文案双渲染。 -->
+      <p v-if="skippedUntracked && scanState !== 'untrackedOnly'" class="ide-secbar__meta" data-testid="ide-scan-untracked">
         {{ t('ide.security.untrackedNote', '{n} 个未跟踪文件不在 git diff 内，未扫描').replace('{n}', String(skippedUntracked)) }}
       </p>
       <p v-if="scanError" class="ide-secbar__error" data-testid="ide-scan-error">

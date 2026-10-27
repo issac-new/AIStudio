@@ -127,6 +127,40 @@ describe('扫描真实变更内容（ideGitApi.status + diff）', () => {
     w.unmount()
   })
 
+  it('混合态（已扫若干+无发现+存在未跟踪）：clean 行渲染且未跟踪注记同时渲染（fix round 1）', async () => {
+    status.mockResolvedValue(gitStatus([
+      change('src/clean.ts'),
+      change('draft.md', { kind: 'untracked', indexStatus: '?', worktreeStatus: '?' }),
+    ]))
+    diff.mockResolvedValue({ file: 'src/clean.ts', staged: false, diff: ['@@ -1,2 +1,2 @@', '+const ok = 1'].join('\n') })
+    const w = await mountAndScan()
+    // clean 行命中后 v-if 链不得吞掉未跟踪注记——用户须知道还有文件未扫
+    const clean = w.find('[data-testid="ide-scan-clean"]')
+    expect(clean.exists()).toBe(true)
+    expect(clean.text()).toContain('无 static 档发现')
+    const untracked = w.find('[data-testid="ide-scan-untracked"]')
+    expect(untracked.exists()).toBe(true)
+    expect(untracked.text()).toContain('未跟踪')
+    w.unmount()
+  })
+
+  it('重扫描竞态：上一轮有未跟踪、下一轮 status 失败时不残留陈旧未跟踪注记（fix round 1）', async () => {
+    // 第一轮：全未跟踪 → 注记渲染
+    status.mockResolvedValue(gitStatus([change('draft.md', { kind: 'untracked', indexStatus: '?', worktreeStatus: '?' })]))
+    const w = await mountAndScan()
+    expect(w.find('[data-testid="ide-scan-clean"]').text()).toContain('未跟踪')
+    // 第二轮：status 失败 → 只显示错误原因，不残留上一轮注记
+    vi.mocked(status).mockReset()
+    status.mockRejectedValue(new Error('第二轮 git 不可用'))
+    await w.find('[data-testid="ide-scan-run"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="ide-scan-error"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-scan-error"]').text()).toContain('第二轮 git 不可用')
+    expect(w.find('[data-testid="ide-scan-untracked"]').exists()).toBe(false)
+    expect(w.text()).not.toContain('未跟踪')
+    w.unmount()
+  })
+
   it('status 失败：显示失败原因，不伪装成无发现', async () => {
     status.mockRejectedValue(new Error('git 不可用'))
     const w = await mountAndScan()
