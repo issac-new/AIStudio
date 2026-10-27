@@ -1,0 +1,71 @@
+# 701（2026-10-27 状态事件成员文案）：zh/en matrixChat member 族词条补占位符——
+# 用户实报「被邀请/加入了不显示账号名」：formatStateEvent 代码层已传
+# {sender}/{target}/{user} 插值，词条漏占位符致 vue-i18n 静默丢弃。
+# 语义对齐 element-web 完整句子（A invited B / B joined）；同文件
+# stateNameSet 族即占位符范式。守门=custom/client/matrix-chat/__tests__/
+# state-event-member-names.test.ts（词条占位符+端到端名字双面）。
+# 前序依赖：473 locales 基线（member 词条由其引入）；新 hunk 追加在 series 尾。
+diff --git aa/packages/client/src/i18n/locales/en.ts bb/packages/client/src/i18n/locales/en.ts
+index 6b1a1478f..ce5dd14c2 100644
+--- aa/packages/client/src/i18n/locales/en.ts
++++ bb/packages/client/src/i18n/locales/en.ts
+@@ -6931,19 +6931,19 @@ export default {
+     showLess: 'Show Less',
+     shareRoom: 'Share Room',
+     startChat: 'Start Chat',
+-    stateBanned: 'banned',
++    stateBanned: '{sender} banned {target}{reason}',
+     stateChangedName: 'changed display name',
+-    stateInvited: 'was invited',
+-    stateJoined: 'joined',
+-    stateKicked: 'was kicked',
+-    stateLeft: 'left',
++    stateInvited: '{sender} invited {target}',
++    stateJoined: '{user} joined',
++    stateKicked: '{sender} kicked {target}{reason}',
++    stateLeft: '{user} left{reason}',
+     stateLoadingOlder: 'Loading older messages...',
+     stateNoMoreHistory: 'No more history',
+     stateReason: 'Reason',
+-    stateRejectedInvite: 'rejected the invitation',
++    stateRejectedInvite: '{user} rejected the invitation',
+     stateRoomCreated: 'Room created',
+-    stateUnbanned: 'was unbanned',
+-    stateWithdrewInvite: 'withdrew invitation',
++    stateUnbanned: '{sender} unbanned {target}',
++    stateWithdrewInvite: '{sender} withdrew {target}\'s invitation',
+     stateNameSet: '{sender} set the room name to "{name}"',
+     stateNameChanged: '{sender} changed the room name from "{oldName}" to "{newName}"',
+     stateNameRemoved: '{sender} removed the room name "{oldName}"',
+diff --git aa/packages/client/src/i18n/locales/zh.ts bb/packages/client/src/i18n/locales/zh.ts
+index 7e3f951b7..0ada6f5af 100644
+--- aa/packages/client/src/i18n/locales/zh.ts
++++ bb/packages/client/src/i18n/locales/zh.ts
+@@ -6740,19 +6740,19 @@ export default {
+     showLess: '收起',
+     shareRoom: '分享房间',
+     startChat: '开始聊天',
+-    stateBanned: '被封禁',
++    stateBanned: '{sender} 封禁了 {target}{reason}',
+     stateChangedName: '修改了显示名称',
+-    stateInvited: '被邀请',
+-    stateJoined: '加入了',
+-    stateKicked: '被踢出',
+-    stateLeft: '离开了',
++    stateInvited: '{sender} 邀请了 {target}',
++    stateJoined: '{user} 加入了',
++    stateKicked: '{sender} 踢出了 {target}{reason}',
++    stateLeft: '{user} 离开了{reason}',
+     stateLoadingOlder: '加载更早的消息...',
+     stateNoMoreHistory: '没有更多历史',
+     stateReason: '原因',
+-    stateRejectedInvite: '拒绝了邀请',
++    stateRejectedInvite: '{user} 拒绝了邀请',
+     stateRoomCreated: '房间已创建',
+-    stateUnbanned: '被解封',
+-    stateWithdrewInvite: '撤销了邀请',
++    stateUnbanned: '{sender} 解封了 {target}',
++    stateWithdrewInvite: '{sender} 撤销了对 {target} 的邀请',
+     stateNameSet: '{sender} 将房间名称设置为「{name}」',
+     stateNameChanged: '{sender} 将房间名称从「{oldName}」改为「{newName}」',
+     stateNameRemoved: '{sender} 移除了房间名称「{oldName}」',

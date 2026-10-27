@@ -970,3 +970,4 @@
 # user_profiles ACL；不改 680/681/685 历史补丁正文，super_admin 与无鉴权本地语义由
 # custom 控制器保留。
 700-server-identity-chat-acl.patch
+701-client-locale-member-names.patch

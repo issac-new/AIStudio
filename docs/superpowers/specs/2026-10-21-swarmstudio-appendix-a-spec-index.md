@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（367 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（368 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 完整设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-27 双流合并复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 367 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-27 双流合并复核）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 368 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件名日期升序）
 
@@ -371,6 +371,7 @@
 | 2026-10-27-search-dialog-truthiness | 检索弹窗真值修复 | 人员 roster 主源/运行空态去向/筛选换看板轴/0 徽标如实 |
 | 2026-10-27-search-session-source-load | 检索弹窗会话源装载 | 弹窗打开即装载 agent 会话与群聊源，fail-soft |
 | 2026-10-27-search-sim-sessions | 跨实例只读检索推演会话 | 只读扫 SIM 库+紫色徽章+诚实点击降级 |
+| 2026-10-27-state-event-member-names | 状态事件成员文案补账号名 | zh/en 词条占位符根治（补丁 701） |
 | 2026-10-27-joyai-annotations-rerank | JoyAI 清偿批二 | map-annotations 持久化＋LLM 重排＋mention 泳道；补丁 698 |
 | 2026-10-27-joyai-realtime-squad | JoyAI 清偿批三 | 标注实时协同（LWW+socket+presence）＋squad 链重排；补丁 699 |
 | 2026-10-27-swarm-yuan-branch-trunk-order | swarm-yuan 研发四阶段顺序立法（决策 57） | 分支开发→分支测试→主干合并→主干回归；九节点不变、⑤-⑦ 在分支 |
