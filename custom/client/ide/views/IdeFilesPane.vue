@@ -81,7 +81,7 @@ async function openEntry(entry: FileEntry): Promise<void> {
         <button v-if="permissionDenied" type="button" class="ide-files__retry" data-testid="ide-files-pick-workspace" @click="router.push({ name: 'ia2.board' })">
           {{ zhUi ? '选择任务工作区' : 'Pick task workspace' }}
         </button>
-        <button v-if="permissionDenied" type="button" class="ide-files__retry" data-testid="ide-files-view-role" @click="router.push({ name: 'hermes.settings' })">
+        <button v-if="permissionDenied" type="button" class="ide-files__retry" data-testid="ide-files-view-role" @click="router.push({ name: 'ia2.govSettings' })">
           {{ zhUi ? '查看账号角色' : 'View account role' }}
         </button>
       </div>

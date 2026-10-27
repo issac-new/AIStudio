@@ -7,3 +7,33 @@
 .studio-navigation-rail {
   display: none !important;
 }
+
+// ── 三壳共享 token（2026-10-27 产品一致性 Task 11 收敛）──
+// 正身 = 原 ia2.scss .ia-shell 定义（2026-10-18 WCAG AA 修正灰）：
+// 上游浅色 muted 对常用浅底、深色 muted 对常用深底低于 4.5:1，只在本产品壳层
+// 覆盖为通过 AA 的中性灰并同步加深一档 secondary 保留主次层级，不改上游
+// variables.scss。三壳（IaShell/.ia-shell、IDE/.ide-shell、收编壳/.ia-lshell）
+// 同值此前重复三处，现只此一处；壳组件内不得再各自定义覆盖块
+// （__tests__/visual-coherence.test.ts 守门）。
+.ia-shell, .ide-shell, .ia-lshell {
+  --text-secondary: #555;
+  --text-secondary-rgb: 85, 85, 85;
+  --text-muted: #666;
+  --text-muted-rgb: 102, 102, 102;
+  --ia-border-control: #8a8a8a;
+}
+.dark .ia-shell, .dark .ide-shell, .dark .ia-lshell {
+  --text-secondary: #a0a0a0;
+  --text-secondary-rgb: 160, 160, 160;
+  --text-muted: #9a9a9a;
+  --text-muted-rgb: 154, 154, 154;
+  --ia-border-control: #808080;
+}
+/* WCAG 1.4.11：表单控件边框是识别输入区的必要视觉信息，需 ≥3:1（2026-10-18
+ * 实测旧 --border-color 仅 1.26-1.53；按钮由文字标识，不在此列）。三壳同规则。 */
+.ia-shell input, .ia-shell select, .ia-shell textarea,
+.ide-shell input, .ide-shell select, .ide-shell textarea,
+.ia-lshell input, .ia-lshell select, .ia-lshell textarea {
+  --border-color: var(--ia-border-control);
+  border-color: var(--ia-border-control);
+}
