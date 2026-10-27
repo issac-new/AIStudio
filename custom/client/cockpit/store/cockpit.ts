@@ -219,9 +219,6 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const userTodos = ref<UserTodo[]>([])
 
   const scheduleAnchorLeft = ref<number | null>(null)   // 下拉横向定位（「日程」按钮 left）
-  // 待办闹钟触发的应用内通知（合并进 notifyItems）
-  const reminderNotifications = ref<NotifyItem[]>([])
-  let _reminderTimer: ReturnType<typeof setInterval> | undefined
 
   // ── 懒加载态 ──
   const _detailCache = ref<Record<string, KanbanTaskDetail>>({})
@@ -425,7 +422,8 @@ export const useCockpitStore = defineStore('cockpit', () => {
   })
 
   const notifyItems = computed<NotifyItem[]>(() => {
-    const items: NotifyItem[] = [...reminderNotifications.value, ...chatUnreadItems.value]
+    // 待办提醒通知随 Task 5 提醒单正身收敛归 workspace 调度（cockpit 不再产出）
+    const items: NotifyItem[] = [...chatUnreadItems.value]
     for (const room of (matrixRoom as any).sortedRooms ?? []) {
       const item = notifyAdapter.fromMatrixRoom(room, (r: any) => (matrixRoom as any).getRoomUnreadCount(r))
       if (item) items.push(item)
@@ -825,28 +823,48 @@ export const useCockpitStore = defineStore('cockpit', () => {
 	  // kanban.startEventStream 均非幂等。disconnectOnUnmount 复位守卫：离开 /app
 	  // 再进入时允许重新 bootstrap（重连 fleet/MCP/group 等被回收的资源）。
 	  let _bootstrapped = false
-	  async function bootstrap() {
-	    if (_bootstrapped) return
-	    _bootstrapped = true
-	    // 设置默认日期筛选（近 2 周）
-	    const dr = defaultDateRange()
-	    filters.value = { ...filters.value, dateRange: { from: dr.from, to: dr.to } }
-	    // 加载用户待办并启动闹钟提醒调度（应用启动即生效，无需打开日程面板）
-	    userTodos.value = kv.loadUserTodos()
-	    startReminderScheduler()
-	    await Promise.allSettled([
-	      loadAllBoards(),
-	      kanban.fetchAssignees(),
-	      chatStore.loadSessions(),
-	      groupStore.connect().then(() => groupStore.loadRooms()).catch(() => {}),
-	      matrixClient.initClient(),
-	      loadTeams(),
-	    ])
-	    initFleetStream()
-	    initMcpHealthPoll()
-	    if (cockpitTasks.value.length) await selectTask(cockpitTasks.value[0].id)
-	    kanban.startEventStream?.()
+	  // overview 单次加载（Task 5 2026-10-27）：workspace 聚合是唯一正身——复用
+	  // useSharedArm 已发出的在途请求（workspace store 内在途去重），成功即就地
+	  // 采纳（不再自拉 /kanban/overview，首屏只打一次）；仅 workspace 不可用
+	  // （纯单测/未武装回落）时走 cockpit 自聚合旧路径 loadAllBoards。
+	  async function adoptOverviewOrFallback() {
+		    let ok = false
+		    try { ok = await workspaceAggregate.refreshAllBoards() } catch { ok = false }
+		    if (ok && (workspaceAggregate.overviewStatus === 'ok' || workspaceAggregate.overviewStatus === 'partial')) {
+		      // cockpitTasks 是 boardSlugOf/detail 状态回写等内部消费面的快照副本；
+		      // 对外派生（tasks computed）仍优先 workspace 实时数据。板清单排除
+		      // sim 源（与旧自聚合口径一致：cockpit 过滤面只认识日常板）。
+		      cockpitTasks.value = [...workspaceAggregate.tasks]
+		      boards.value = workspaceAggregate.boards
+		        .filter(b => b.source !== 'sim')
+		        .map(b => ({ slug: b.slug, name: b.name, total: b.total }))
+		      _lastRefreshTs = Date.now()
+		    } else {
+		      await loadAllBoards()
+		    }
 	  }
+	  async function bootstrap() {
+		    if (_bootstrapped) return
+		    _bootstrapped = true
+		    // 设置默认日期筛选（近 2 周）
+		    const dr = defaultDateRange()
+		    filters.value = { ...filters.value, dateRange: { from: dr.from, to: dr.to } }
+		    // 用户待办与闹钟提醒调度归 ia2 workspace store 唯一正身（Task 5）：
+		    // cockpit 不再装载 kv 副本、不再每分钟扫描——双调度重复触发与
+		    // 旧副本整份回写复活已删待办两类缺陷自此根除。
+		    await Promise.allSettled([
+		      adoptOverviewOrFallback(),
+		      kanban.fetchAssignees(),
+		      chatStore.loadSessions(),
+		      groupStore.connect().then(() => groupStore.loadRooms()).catch(() => {}),
+		      matrixClient.initClient(),
+		      loadTeams(),
+		    ])
+		    initFleetStream()
+		    initMcpHealthPoll()
+		    if (tasks.value.length) await selectTask(tasks.value[0].id)
+		    kanban.startEventStream?.()
+		  }
 
   async function selectTask(id: string | null) {
     autoSaveDraft() // 保存当前草稿
@@ -1241,6 +1259,9 @@ export const useCockpitStore = defineStore('cockpit', () => {
     try { groupStore.disconnect?.() } catch { /* ignore */ }
     stopFleetStream()
     stopMcpHealthPoll()
+    // bootstrap 武装的 kanban 单板事件流随壳回收（Task 5）：此前只启不停，
+    // 离壳后 WS 与重连退避定时器整会话泄漏（看板视图自启的流由其 onUnmounted 自停）
+    kanban.stopEventStream?.()
     _bootstrapped = false // 复位幂等守卫：再次进入 /app 时允许重新 bootstrap
   }
 
@@ -1504,8 +1525,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
       const maxLeft = Math.max(16, window.innerWidth - 680 - 16)
       scheduleAnchorLeft.value = Math.min(rect.left, maxLeft)
     }
-    userTodos.value = kv.loadUserTodos()
-    startReminderScheduler()
+    // 待办装载与提醒调度归 workspace 正身（Task 5）：此处不再触碰 kv 副本
   }
   function closeSchedule() { scheduleOpen.value = false }
   function setScheduleDate(d: string) { scheduleSelectedDate.value = d }
@@ -1526,88 +1546,18 @@ export const useCockpitStore = defineStore('cockpit', () => {
     }
     userTodos.value.push(todo)
     kv.saveUserTodos(userTodos.value)
-    // 立即检查一次，应对临近提醒
-    checkReminders()
   }
   function removeUserTodo(id: string) {
     userTodos.value = userTodos.value.filter(t => t.id !== id)
     kv.saveUserTodos(userTodos.value)
-    // 同步移除其应用内提醒通知
-    reminderNotifications.value = reminderNotifications.value.filter(n => !n.id.startsWith(`reminder:${id}:`))
   }
 
-  // ── 待办闹钟提醒调度 ──
-  const MIN15 = 15 * 60 * 1000
-  const MIN5 = 5 * 60 * 1000
-
-  // 触发一次提醒：浏览器系统通知 + 应用内通知面板
-  function fireReminder(todo: UserTodo, stage: 15 | 5) {
-    // 浏览器系统通知
-    try {
-      if (typeof Notification !== 'undefined') {
-        if (Notification.permission === 'granted') {
-          new Notification(`⏰ ${todo.title}`, {
-            body: stage === 15 ? '15 分钟后开始' : '5 分钟后开始',
-            tag: `reminder:${todo.id}:${stage}`,
-          })
-        } else if (Notification.permission !== 'denied') {
-          Notification.requestPermission().then(p => {
-            if (p === 'granted') {
-              new Notification(`⏰ ${todo.title}`, {
-                body: stage === 15 ? '15 分钟后开始' : '5 分钟后开始',
-                tag: `reminder:${todo.id}:${stage}`,
-              })
-            }
-          })
-        }
-      }
-    } catch { /* SSR/无权限环境静默 */ }
-    // 应用内通知面板
-    const item = notifyAdapter.fromReminder(todo, stage)
-    // 去重：同 stage 仅保留最新一条
-    reminderNotifications.value = [
-      ...reminderNotifications.value.filter(n => n.id !== item.id),
-      item,
-    ]
-  }
-
-  // 检查所有待办的提醒窗口，按需触发并持久化触发标记
-  function checkReminders() {
-    let changed = false
-    for (const todo of userTodos.value) {
-      if (!todo.remindAt) continue
-      const now = Date.now()
-      const t = todo.remindAt
-      // T-15 窗口：[t-15min, t-5min)
-      if (!todo.reminded15 && now >= t - MIN15 && now < t - MIN5) {
-        fireReminder(todo, 15)
-        todo.reminded15 = true
-        changed = true
-      }
-      // T-5 窗口：[t-5min, t)
-      else if (!todo.reminded5 && now >= t - MIN5 && now < t) {
-        fireReminder(todo, 5)
-        todo.reminded5 = true
-        changed = true
-      }
-      // 重载恢复：已过 remindAt 但 T-15/T-5 标记仍缺 → 补触发（仅一次，靠标记防重复）
-      else if (now >= t) {
-        if (!todo.reminded15) { fireReminder(todo, 15); todo.reminded15 = true; changed = true }
-        if (!todo.reminded5) { fireReminder(todo, 5); todo.reminded5 = true; changed = true }
-      }
-    }
-    if (changed) kv.saveUserTodos(userTodos.value)
-  }
-
-	  // 启动每分钟调度器（幂等：已启动则跳过）
-	  function startReminderScheduler() {
-	    if (_reminderTimer) return
-	    checkReminders()   // 启动时立即检查一次（重载恢复）
-	    _reminderTimer = setInterval(checkReminders, 60_000)
-	  }
-	  function stopReminderScheduler() {
-	    if (_reminderTimer) { clearInterval(_reminderTimer); _reminderTimer = undefined }
-	  }
+  // ── 待办闹钟提醒调度：已整体退役（Task 5 2026-10-27）──
+  // 唯一正身 = ia2 workspace store（useSharedArm 武装其每分钟调度器）。
+  // 旧实现在 bootstrap/openSchedule 各自装载 kv 副本并双开 60s 定时器：
+  // ① 与 workspace 调度重复触发提醒；② cockpit 旧副本的窗口扫描会把
+  // 已被 workspace 删除的待办整份回写 localStorage 复活。addUserTodo/
+  // removeUserTodo 保留为纯 kv 数据函数（无生产调用方，测试契约沿用）。
 
 	  // ── 定时轮询所有 board（兜底刷新；主力是 2.13 聚合 WS 推送）──
 	  let _pollTimer: ReturnType<typeof setInterval> | undefined
@@ -1702,13 +1652,13 @@ export const useCockpitStore = defineStore('cockpit', () => {
     // 生命周期仪表盘数据源（TaskLifecycleView 用，只读透传）
     cockpitTasksAny: cockpitTasks,
     detailCacheAny: _detailCache,
-    // 日程
+    // 日程（提醒调度已退役归 workspace 正身，Task 5；数据函数保留纯 kv 契约）
     scheduleOpen, scheduleSelectedDate, scheduleViewYear, scheduleViewMonth, userTodos,
-    scheduleAnchorLeft, reminderNotifications,
+    scheduleAnchorLeft,
     scheduleEvents, scheduleEventsForSelected, scheduleEventsForSelectedSorted,
     scheduleDatesWithEvents, scheduleCountsByDate, scheduleTopPriorityByDate,
     openSchedule, closeSchedule, setScheduleDate, navigateScheduleMonth,
-    addUserTodo, removeUserTodo, startReminderScheduler, stopReminderScheduler,
+    addUserTodo, removeUserTodo,
     startCockpitPolling, stopCockpitPolling, refreshAllBoards,
 
   }

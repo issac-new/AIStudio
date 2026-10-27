@@ -4,7 +4,7 @@
 // statuses：视图级状态过滤（阶段页用；空=全量）。不改 store，避免污染常用看板。
 // openTaskId：任务直达（?task=）——数据就绪后直接打开抽屉，不再只填搜索框。
 const props = defineProps<{ autoOpenCreate?: boolean; statuses?: readonly string[]; openTaskId?: string | null }>()
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { NSpin, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -90,6 +90,16 @@ const boardList = computed(() => {
     ? workspace.boards
     : [{ slug: 'default', name: 'default', total: 0 }]
   return list
+})
+
+/** 聚合面状态提示（Task 5）：stale=保留旧数据但刷新失败、error=无数据、
+ *  partial=部分板失败——四态真实呈现，不冒充成功也不静默空态。 */
+const overviewNotice = computed<string | null>(() => {
+  const status = (workspace.overviewStatus as string | undefined) ?? 'ok'
+  if (status === 'stale') return t('kanban.overviewStale', '数据可能陈旧——刷新失败，当前展示旧数据')
+  if (status === 'error') return t('kanban.overviewError', '看板数据加载失败')
+  if (status === 'partial') return t('kanban.overviewPartial', '部分看板数据不完整')
+  return null
 })
 
 function boardChecked(slug: string): boolean {
@@ -195,6 +205,13 @@ onMounted(async () => {
   store.connectEvents()
   // 聚合数据面（v12.5 主数据源；WS 看板事件驱动 500ms 去抖刷新）
   void workspace.refreshAllBoards(true)
+})
+
+// 单板 kanban 事件流归本视图所有（Task 5 2026-10-27）：挂载连接、卸载停止——
+// 旧实现只启不停，离开看板页后 WS 与重连退避定时器整会话泄漏（壳层武装的
+// 流由 cockpit.disconnectOnUnmount 自行回收）。
+onUnmounted(() => {
+  store.stopEventStream?.()
 })
 
 // diagnostics 能力缺失的后端上，store.fetchDiagnostics 的断言在自身 try/catch 之外抛出，
@@ -668,6 +685,12 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
         :aria-expanded="boardExpanded"
         @click="boardExpanded = !boardExpanded"
       >{{ boardExpanded ? '收起 ∧' : `+${hiddenBoardCount} 板 ▾` }}</button>
+      <!-- Task 5：聚合面异步状态提示（陈旧/失败/部分），一处轻提示不重做看板 UI -->
+      <span
+        v-if="overviewNotice"
+        class="kanban-boardbar__notice"
+        data-testid="kanban-overview-notice"
+      >{{ overviewNotice }}</span>
     </div>
 
     <KanbanToolbar
@@ -780,6 +803,14 @@ const mergedAssignees = computed(() => assigneeNames.value.map(name => ({ name }
   flex-shrink: 0;
 }
 .kanban-boardbar__label { font-size: 11px; color: var(--text-muted); flex-shrink: 0; margin-right: 2px; }
+
+/* 聚合面状态提示（Task 5）：弱警示形态——不抢筛选 chip 视觉 */
+.kanban-boardbar__notice {
+  font-size: 11px;
+  color: var(--warning-color, #d48806);
+  flex-shrink: 0;
+  margin-left: auto;
+}
 
 /* 折叠入口（2026-10-23 挂账批）：弱化形态——虚线描边无底色，语义是「还有更多」
  * 而非筛选项，与板 chip 实线形成区分 */

@@ -32,7 +32,7 @@ const cockpitStubs = vi.hoisted(() => ({
 vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
 
 const runsStubs = vi.hoisted(() => ({
-  state: { runs: [] as unknown[], sortedRuns: [], awaitingRuns: [], syncVisibleRunIds: vi.fn(), fetchRuns: vi.fn(async () => {}), fetchMetrics: vi.fn(async () => null) },
+  state: { runs: [] as unknown[], sortedRuns: [], awaitingRuns: [], syncVisibleRunIds: vi.fn(), fetchRuns: vi.fn(async () => {}), fetchMetrics: vi.fn(async () => null), disconnect: vi.fn() },
   useRunCenterStore: () => runsStubs.state,
 }))
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: runsStubs.useRunCenterStore }))

@@ -124,6 +124,14 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   })
 
   let _lastRefreshTs = 0
+  // ── overview 异步状态（Task 5 2026-10-27）：空/错/部分/陈旧四态真实呈现 ──
+  // ok=本次刷新成功；partial=回落 N+1 后仍有单板失败（数据不完整）；
+  // stale=刷新失败但保留旧数据（看板提示「数据可能陈旧」，不冒充成功）；
+  // error=刷新失败且无数据（真空态，不冒充空成功）。
+  const overviewStatus = ref<'idle' | 'loading' | 'ok' | 'partial' | 'stale' | 'error'>('idle')
+  const overviewError = ref<string | null>(null)
+  /** 在途请求句柄（首屏并发去重）：armShared 首拉与 cockpit.bootstrap 双触发并入同一请求 */
+  let _overviewInflight: Promise<boolean> | null = null
   // 任务指纹守卫（v12 性能收敛 2026-09-21）：刷新响应总是新数组新身份，直接赋值会令
   // sessionRows/feedRows/waitItems/boardRows/decisionRows 等全量重算重渲染（身份抖动）。
   // 关键字段指纹不变时跳过 tasks/rawTasks 赋值（boards 很小，恒更新）。
@@ -199,42 +207,73 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   }
 
   async function refreshAllBoards(force = false): Promise<boolean> {
+    // 在途去重优先于防抖（Task 5）：并发双触发（armShared 首拉 + cockpit.bootstrap /
+    // 看板挂载 force 刷新）并入同一在途请求——首屏 /kanban/overview 只打一次。
+    if (_overviewInflight) return _overviewInflight
     const now = Date.now()
     if (!force && now - _lastRefreshTs < 2000) return true // 2s 防抖，视为成功（不重复刷新）
     _lastRefreshTs = now
+    const p = doRefreshOverview()
+    _overviewInflight = p
+    try {
+      return await p
+    } finally {
+      if (_overviewInflight === p) _overviewInflight = null
+    }
+  }
+
+  async function doRefreshOverview(): Promise<boolean> {
+    overviewStatus.value = 'loading'
+    overviewError.value = null
     let ok = true
+    let partial = false
+    let viaAggregate = false
     try {
       // 优先走服务端聚合端点（一次请求全 board；失败回落 N+1 旧路径）
       try {
         const overview = await teamsApi.fetchKanbanOverview()
         const boardList = overview.boards.length ? overview.boards : [{ slug: 'default', name: 'default', total: 0 }]
         setHostAggregate(overview.tasks, overview.rawTasks, boardList)
+        viaAggregate = true
       } catch { /* 聚合端点不可用 → 回落 */ }
-      if (!_hostBoards.value.length) {
-        const boardList = await kanbanApi.listBoards({ includeArchived: false })
-        const active = (boardList || []).filter((b: any) => !b.archived)
-        const results = await Promise.allSettled(
-          active.map((b: any) =>
-            kanbanApi.listTasks({ board: b.slug, includeArchived: true }).then(
-              list => list.map((t: any) => ({ board: b.slug, raw: t, mapped: taskAdapter.toCockpitTask(t, b.slug) })),
+      if (!viaAggregate) {
+        if (!_hostBoards.value.length) {
+          const boardList = await kanbanApi.listBoards({ includeArchived: false })
+          const active = (boardList || []).filter((b: any) => !b.archived)
+          const results = await Promise.allSettled(
+            active.map((b: any) =>
+              kanbanApi.listTasks({ board: b.slug, includeArchived: true }).then(
+                list => list.map((t: any) => ({ board: b.slug, raw: t, mapped: taskAdapter.toCockpitTask(t, b.slug) })),
+              ),
             ),
-          ),
-        )
-        const all: CockpitTask[] = []
-        const raw: Array<{ board: string; task: any }> = []
-        for (const r of results) {
-          if (r.status === 'fulfilled') {
-            for (const item of r.value) {
-              all.push(item.mapped)
-              raw.push({ board: item.board, task: item.raw })
+          )
+          const all: CockpitTask[] = []
+          const raw: Array<{ board: string; task: any }> = []
+          for (const r of results) {
+            if (r.status === 'fulfilled') {
+              for (const item of r.value) {
+                all.push(item.mapped)
+                raw.push({ board: item.board, task: item.raw })
+              }
+            } else {
+              partial = true // 单板失败：如实标注部分数据，不冒充完整
             }
           }
+          setHostAggregate(all, raw, active.map((b: any) => ({ slug: b.slug, name: b.name, total: (b as any).total ?? 0 })))
+        } else {
+          // 聚合失败但已有旧数据：保留旧数据不回落（回落也只会得到同源旧数据），
+          // 返回失败并转 stale——由消费面提示「数据可能陈旧」，不冒充成功
+          ok = false
         }
-        setHostAggregate(all, raw, active.map((b: any) => ({ slug: b.slug, name: b.name, total: (b as any).total ?? 0 })))
       }
-    } catch {
+    } catch (e) {
       ok = false
+      overviewError.value = e instanceof Error ? e.message : String(e)
     }
+    if (!ok && !overviewError.value) overviewError.value = 'aggregate endpoint unavailable'
+    overviewStatus.value = ok
+      ? (partial ? 'partial' : 'ok')
+      : (_hostTasks.value.length ? 'stale' : 'error')
     await loadSimObserver()
     return ok
   }
@@ -555,8 +594,9 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
   }
 
   return {
-    // ① 聚合（双源：日常 + 推演观察）
+    // ① 聚合（双源：日常 + 推演观察）——含异步状态四态（Task 5）
     tasks, dailyTasks, simTasks, boards, rawTasks, refreshAllBoards,
+    overviewStatus, overviewError,
     simObserver, simRunId, simRoomIds, isSimTask, isWritableTask,
     // ② 待办/提醒
     userTodos, loadTodos, addUserTodo, removeUserTodo,

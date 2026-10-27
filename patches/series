@@ -971,3 +971,9 @@
 # custom 控制器保留。
 700-server-identity-chat-acl.patch
 701-client-locale-member-names.patch
+
+# 703（2026-10-27 产品一致性 Task 5，原批内 701 与 main 侧 locale-member-names 撞号改 703）：
+# kanban 聚合面状态三键（overviewStale/overviewError/overviewPartial，zh/en 成对）——
+# SwarmKanbanView 板条新增刷新失败/数据不完整提示（workspace.overviewStatus 四态消费面），
+# kanban-i18n-coverage 守门红清偿；zh 值逐字取视图内联兜底（同 689 补丁做法）。
+703-client-kanban-i18n-overview-status.patch
