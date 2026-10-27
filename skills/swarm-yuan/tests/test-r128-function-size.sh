@@ -11,9 +11,9 @@
 #   JSON heredoc 内含列 0 `}`，扫描器带 heredoc 态跳过内容直到终止符行）；
 #   函数与函数之间的顶级子命令拦截块（--mark-active/--refresh 等中段 exit 布局）
 #   不属于任何函数，不计入。
-# 上限：默认 150 行。唯一豁免 _fg_emit_workflow=212——其 heredoc 本体 208 行（design-sync 轮 +3）
-#   （workflow.md 九节点骨架，内容逐字节锁定不可拆），函数壳 4 行；该豁免条目同时
-#   被反向断言（函数不存在时 fail），防止豁免名单变死条目。
+# 上限：默认 150 行。唯一豁免 _fg_emit_workflow=214——其 heredoc 本体 210 行（design-sync 轮 +3；
+#   2026-10-27 四阶段轮 +2：总览四阶段声明 + 节点⑧准入行）（workflow.md 九节点骨架，内容逐字节
+#   锁定不可拆），函数壳 4 行；该豁免条目同时被反向断言（函数不存在时 fail），防止豁免名单变死条目。
 set -uo pipefail
 cd "$(dirname "${0}")/.." || exit 1
 FAIL=0
@@ -23,7 +23,7 @@ bad() { echo "  ✗ $1" >&2; FAIL=1; }
 SIZE_FILES=(scripts/generate-skill.sh assets/precheck.sh scripts/self-check.sh assets/state-machine.sh)
 CAP_DEFAULT=150
 # 豁免表（格式 name:cap，空格分隔；每条须带存在性反向断言）
-CAP_EXCEPTIONS="_fg_emit_workflow:212"
+CAP_EXCEPTIONS="_fg_emit_workflow:214"
 
 AWKPROG="$(mktemp /tmp/r128-prog.XXXXXX)"
 SCAN="$(mktemp /tmp/r128-size.XXXXXX)"

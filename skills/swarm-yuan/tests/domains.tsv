@@ -130,3 +130,4 @@ test-r80-full-regression.sh	regression
 test-r82-full-regression.sh	regression
 test-r83-full-regression.sh	regression
 test-r87-full-regression.sh	regression
+test-r142-branch-trunk-order.sh	generation

@@ -2877,3 +2877,9 @@ Claude Code / Codex / Cursor / Windsurf / OpenCode / Gemini CLI / Kimi——自�
 
 - **账本落点四级解析**（trace-log/state-machine，D1 trade-forge 实证）：独立调用且 CWD 在技能目录内时，决策/trace 账本曾逐字落 pwd 写进技能侧 `.swarm-yuan/` 碎片（正本在项目侧，全新生成技能时碎片被清=证据链断；D-140-01 三条决策实证）。根治=PROJECT_DIR 四级解析（`--project-dir` 显式 > 环境变量 > 同目录 precheck.conf > CWD 在技能目录内上溯项目根 > 逐字 pwd 兜底），state-machine 同条带（R126 两侧一致契约延续）。
 - 依据：R141 实栈回归两任务九节点全流程（后端 49/49、门禁终态 fail 0）+ test-r141 14 断言；证据链 docs/research/R141-runtime-refresh.md。
+
+### 决策 57：研发过程四阶段顺序立法——分支开发→分支测试→主干合并→主干回归（2026-10-27，用户指令）
+
+- **四阶段顺序立法**（用户指令"研发过程是分支开发、分支测试、主干合并、主干回归的顺序"）：九节点不变（FACT_FLOW_NODES=9），四阶段是节点上的顺序语义——⑤编码=分支开发（feature 分支自 origin/main 起，禁主干直开发）；⑥测试+⑦审查=分支测试（门禁序列在分支全绿才合入，主干不做"合后再测"）；⑧=主干合并（准入=⑥⑦分支全绿）；⑨=主干回归在先（合入后在 main 复跑全量回归，全绿才构建发布；失败回退 merge 或分支重入⑤，不在 main 直接改）。主干回归验证的是分支测试覆盖不了的集成面（并行合入交互、合并语义本身）。
+- **落点**：generate-skill.sh `_fg_emit_workflow`（总览声明+⑤⑥⑧⑨节点+终检表+state-machine 对照 operate=⑨主干回归+构建发布）、template-spec.md §2（权威节点表+详述+左移段）、SKILL.md（description+九节点行+使用块）、README 口径行；锁测试 test-r142-branch-trunk-order.sh（三处口径+顺序断言+节点数不回退）。
+- **与既有决策的关系**：决策合入序列（2026-10-26 立法，⑧节点）不变，四阶段是其外层的时序框架；节点数与状态机六阶段均不动，避免 facts/状态机/测试连锁改写。依据：本仓治理 spec docs/superpowers/specs/2026-10-27-swarm-yuan-branch-trunk-order.md。
