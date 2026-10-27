@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   LIFECYCLE_ORDER, isTerminal, mapA2aState, mapExternalStatus, mapKanbanColumn,
-  mapMatrixPhase, mapPipelineStage, summarizeLedger,
+  mapMatrixPhase, mapMentionReason, mapPipelineStage, summarizeLedger,
 } from '../taskledger'
 import { getEntry, listEntries, registerEntry, setStorePathForTests } from '../taskledger-store'
 
@@ -23,6 +23,16 @@ function freshStore(): string {
 }
 
 describe('源状态映射（纯函数）', () => {
+  it('mention 派发 reason（挂账 #7 接线）：成功路径映射、reject 类不登记', () => {
+    expect(mapMentionReason('queued')).toBe('executing')
+    expect(mapMentionReason('coalesced')).toBe('executing')
+    expect(mapMentionReason('deferred')).toBe('pending')
+    expect(mapMentionReason('target_unavailable')).toBeNull()
+    expect(mapMentionReason('runtime_offline')).toBeNull()
+    expect(mapMentionReason('self_trigger_suppressed')).toBeNull()
+    expect(mapExternalStatus('mention', 'queued')).toBe('executing')
+  })
+
   it('kanban 列：③段→pending、④段→executing、review→verifying、done/failed/cancelled 终态', () => {
     expect(mapKanbanColumn('triage')).toBe('pending')
     expect(mapKanbanColumn('todo')).toBe('pending')

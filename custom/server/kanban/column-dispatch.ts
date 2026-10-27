@@ -25,6 +25,7 @@ import { listLedger } from '../eval/flywheel'
 import { appendEvidence } from '../evidence/evidence-store'
 import { fewshotRerank, rerankInjectLine, type RerankOutcome } from '../eval/fewshot-rerank'
 import { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
+import { registerEntry } from '../taskledger/taskledger-store'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
  * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
@@ -201,6 +202,10 @@ export async function dispatchColumnTransition(
   const inflight = new Set<string>()
   for (const trigger of triggers) {
     delegation.push(...delegationCompleteness(trigger.steps))
+    // 统一任务生命周期账本接线（wx 挂账 #7，2026-10-27 清偿批）：列流转即任务生命
+    // 周期跃迁（source=kanban，sourceKey=taskId）。映射不上的自定义列名不登记只
+    // warn——口径缺口如实可见；fail-soft 不阻断派发（lane_handoff 同款纪律）。
+    if (params.taskId) registerKanbanLedger(params.taskId, trigger.column, taskTitle ?? undefined)
     for (const [index, step] of trigger.steps.entries()) {
       // 规则闸求值随结果返回（enforce 已在预检抛出；这里收集 warn 档命中供 REST 透出）。
       ruleEvals.push(evaluateDecisionRules({ specialist: step.specialist || undefined, column: trigger.column }))
@@ -269,3 +274,17 @@ export async function dispatchColumnTransition(
   return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null }
 }
 
+
+/**
+ * 统一任务生命周期账本接线（wx 挂账 #7）：看板列流转登记进 taskledger
+ * （source=kanban）。映射不上的列名 registerEntry 返回 ok:false（口径缺口不猜）；
+ * fail-soft：账本异常只 warn，不阻断派发。
+ */
+function registerKanbanLedger(taskId: string, column: string, title: string | undefined): void {
+  try {
+    const r = registerEntry({ source: 'kanban', sourceKey: taskId, externalStatus: column, title })
+    if (!r.ok) console.warn(`[column-dispatch] taskledger 登记 code=${r.problem}（不阻断派发）`)
+  } catch (e) {
+    console.warn('[column-dispatch] taskledger 登记异常（不阻断派发）', e)
+  }
+}
