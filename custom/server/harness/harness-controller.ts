@@ -34,6 +34,7 @@ import { collectProcessQuality } from '../observability/process-quality'
 import { collectObsSignals } from '../obssignals/collect'
 import { collectObsAlerts } from '../obsalerts/collect'
 import { overlayCallgate, parseCallgateRule } from '../callgate/registry'
+import { loadBoardOwnership } from '../a2a/board-ownership'
 import { ledgerPathForDisplay, listEntries, registerEntry } from '../taskledger/taskledger-store'
 import { summarizeLedger } from '../taskledger/taskledger'
 import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, type BudgetAction } from '../tokenbudget/budget-policy'
@@ -389,6 +390,13 @@ router.post('/callgate/rule', async (ctx) => {
     ctx.status = 500
     ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
+})
+
+// A2A 看板归属读模型（a2a-board-harness-alignment 挂账，2026-10-27 清偿）：
+// 板→团队 profiles→负责人岗位标签＋账号环境变量名（domain-registry.yaml 正本投影；
+// fail-soft 缺席 available:false；账号原值不透出，只报环境变量名与已配置与否）。
+router.get('/board-ownership', async (ctx) => {
+  ctx.body = { ok: true, ownership: loadBoardOwnership() }
 })
 
 // 预算状态（残余项⑤）：只读；策略写面在下方 POST。
