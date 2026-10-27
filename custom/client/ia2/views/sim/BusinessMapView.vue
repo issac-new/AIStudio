@@ -232,7 +232,8 @@ const graphEdges = computed<Edge[]>(() => {
 
 <template>
   <div class="bmap" data-testid="sim-map-page">
-    <IaBreadcrumb :items="[{ label: '全流程推演' }, { label: '业务地图' }]" />
+    <!-- 层级标签由共享解析器按路由解析（Task 8 解析合一：不再传被忽略的 items） -->
+    <IaBreadcrumb />
     <header class="bmap__head">
       <div>
         <h2 class="bmap__title">业务地图</h2>

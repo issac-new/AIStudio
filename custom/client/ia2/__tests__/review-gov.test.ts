@@ -143,16 +143,20 @@ describe('阶段页签注册', () => {
     expect(STAGE_TABS[6].map((t) => t.key)).toContain('reviewGov')
   })
 
-  it('STAGE_TABS 的每个 component 都能在 StageShell 的 TAB_COMPONENTS 找到映射', async () => {
-    const { readFileSync } = await import('node:fs')
-    const { resolve } = await import('node:path')
-    const src = readFileSync(resolve(__dirname, '../views/stage/StageShell.vue'), 'utf8')
-    const start = src.indexOf('const TAB_COMPONENTS')
-    const block = src.slice(start, src.indexOf('}', start))
+  it('STAGE_TABS 每个 component 都能装载（Task 8 注册合一：装载登记=meta.load）', async () => {
+    // 契约等价迁移：旧测试扫 StageShell 的 TAB_COMPONENTS 源码块（三重登记
+    // 的影子检查）；合并后装载单点=meta.load thunk，结构上不可能再「登记缺映射」，
+    // 守门改为断言每个页签可真实装载出组件。
     const missing: string[] = []
     for (const stage of [1, 2, 3, 4, 5, 6] as const) {
       for (const tab of STAGE_TABS[stage]) {
-        if (!new RegExp(`\\b${tab.component}\\s*:`).test(block)) missing.push(`${stage}/${tab.key} → ${tab.component}`)
+        if (typeof tab.load !== 'function') { missing.push(`${stage}/${tab.key} → ${tab.component}（load 缺席）`); continue }
+        try {
+          const mod = await tab.load() as { default?: unknown }
+          if (!mod.default) missing.push(`${stage}/${tab.key} → ${tab.component}（模块无 default 组件）`)
+        } catch (e) {
+          missing.push(`${stage}/${tab.key} → ${tab.component}（装载抛错：${e instanceof Error ? e.message : String(e)}）`)
+        }
       }
     }
     expect(missing).toEqual([])

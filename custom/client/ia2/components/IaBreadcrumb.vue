@@ -1,16 +1,15 @@
 <!-- overlay/custom/client/ia2/components/IaBreadcrumb.vue -->
-<!-- 面包屑（2026-10-17 驾驶舱层级批）：全站此前零 breadcrumb，末端页回上级只能靠
-     页签条常驻或顶栏重选，「层级深乱/不知道自己在哪」是用户实报痛点。位置感知=
-     流程总览＞阶段＞页签；标签取单一事实源（sim-tabs/stage-tabs/STAGE_META），
-     当前段 aria-current；旅程页自身与未知名不渲染。 -->
+<!-- 面包屑（2026-10-17 驾驶舱层级批；2026-10-27 产品一致性 Task 8 解析合一）：
+     位置感知=根＞阶段＞页签/页面；层级解析与文案单一事实源=page-presentation.ts
+     共享解析器（最近轨迹/浏览器标签页同源），本组件只做层级呈现——保留
+     「流程总览＞阶段＞页签」层级不抹平；推演域（/app/sim* 六签+业务地图+导演
+     详情）根=全流程推演；工具页归属段读 query.from 来路（从②进文档评审回②
+     仍亮②）；旅程页自身与未知名不渲染；当前段 aria-current。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { SIM_TABS_TEXT } from '../views/sim/sim-tabs'
-import { STAGE_META } from '../stage-meta'
-import { resolveTab, tabForLegacyRoute, tabMeta } from '../stage-tabs'
-import { hasStageAttribution, stageCircles, stageOwnersForRouteName } from '../stage-attribution'
+import { resolvePagePresentation, attributionChipLabel } from '../page-presentation'
 
 interface Crumb { label: string; to?: { name: string; query?: Record<string, string> }; title?: string }
 
@@ -25,84 +24,29 @@ const lang = computed(() => (String(i18nCtx?.locale?.value ?? 'zh').startsWith('
 function go(c: Crumb): void {
   if (c.to) void router?.push(c.to)
 }
-const sim = computed(() => SIM_TABS_TEXT[lang.value])
-const simShellTitle = computed(() => lang.value === 'zh' ? '全流程推演' : 'Full-run Simulation')
 
-const PAGE_LABEL: Record<string, { zh: string; en: string }> = {
-  // 键=去 ia2. 前缀的路由名（i18n 覆盖守门只豁免 name:/case 语境，对象键会被
-  // 误判为文案键——去前缀后查表统一 slice，字面量不再落在扫描面）
-  board: { zh: '看板', en: 'Board' },
-  inbox: { zh: '审批收件箱', en: 'Approvals Inbox' },
-  collab: { zh: '工作台', en: 'Workbench' },
-  dash: { zh: '工作台概览', en: 'Workbench Overview' },
-  teams: { zh: '团队', en: 'Teams' },
-  agents: { zh: '智能体', en: 'Agents' },
-  accounts: { zh: '账户管理', en: 'Accounts' },
-  deliveryCases: { zh: '交付案例', en: 'Delivery Cases' },
-  search: { zh: '检索', en: 'Search' },
-  simOrchestration: { zh: '运行编排', en: 'Orchestration' },
-  simSettings: { zh: '推演设置', en: 'Simulation Settings' },
-  govSettings: { zh: '系统设置', en: 'System Settings' },
-  modelProviders: { zh: '模型服务商', en: 'Model Providers' },
-}
-const SIM_TAB_LABEL: Record<string, keyof typeof SIM_TABS_TEXT.zh> = {
-  'ia2.sim': 'tabOverview',
-  'ia2.simSupervision': 'tabSupervision',
-  'ia2.simOps': 'tabOps',
-  'ia2.simEvidence': 'tabEvidence',
-}
-
-const crumbs = computed<Crumb[]>(() => {  const name = String(route?.name ?? '')
-  const short = name.replace(/^ia2\./, '')
-  const zh = lang.value === 'zh'
-  const simKey = SIM_TAB_LABEL[name]
-  const isSimPage = Boolean(simKey || short === 'simOrchestration' || short === 'simSettings')
-  // 推演是独立模式：面包屑根=全流程推演，不再挂在日常「流程总览」下。
-  const out: Crumb[] = isSimPage
-    ? [{ label: simShellTitle.value, to: { name: 'ia2.sim' } }]
-    : [{ label: zh ? '流程总览' : 'Process Overview', to: { name: 'ia2.journey' } }]
-
-  // 来路阶段随中心层级链保留：从②需求进文档评审，点面包屑回②需求仍亮②
-  const stage = STAGE_META.find(m => `ia2.stage${m.no}` === name)
-  if (stage) {
-    out.push({ label: `${'①②③④⑤⑥'[stage.no - 1]} ${zh ? stage.navLabel : stage.navLabelEn}` })
-    const tm = tabMeta(stage.no, resolveTab(stage.no, route?.query?.tab))
-    if (tm) out.push({ label: zh ? tm.zh : tm.en })
-    return out
+const crumbs = computed<Crumb[]>(() => {
+  // 层级解析全部委托共享解析器（page-presentation）：根/阶段/页签/推演子页/
+  // 归属/页面段，来路 query.from 在解析器内优先于表内归属。
+  const p = resolvePagePresentation({
+    fullPath: String(route?.fullPath ?? ''),
+    name: route?.name,
+    query: route?.query as Record<string, unknown> | undefined,
+    params: route?.params as Record<string, unknown> | undefined,
+  }, lang.value)
+  if (!p.root) return []
+  const out: Crumb[] = [{ label: p.root.label, to: p.root.to }]
+  // 阶段段/页签段（阶段页与旧 gov 深链）：非链接中段=归属 chip（aria 同旧）
+  if (p.stage) out.push({ label: p.stage.label })
+  if (p.tab) out.push({ label: p.tab.label })
+  // 推演域子页段（监督面板/运行监控/证据库/编排/设置/业务地图/导演详情）
+  if (p.simPage) out.push({ label: p.simPage.label })
+  // 工具页归属段：单归属/多归属/全程，来路优先（见解析器）
+  if (p.attribution) {
+    const chip = attributionChipLabel(p.attribution, lang.value)
+    out.push({ label: chip.label, title: chip.title })
   }
-  // 旧 gov 深链（路由本身已 redirect；此分支覆盖未跳转的嵌入/测试态）
-  const legacy = tabForLegacyRoute(name)
-  if (legacy) {
-    const m = STAGE_META[legacy.stage - 1]
-    out.push({ label: `${'①②③④⑤⑥'[legacy.stage - 1]} ${zh ? m.navLabel : m.navLabelEn}` })
-    const tm = tabMeta(legacy.stage, legacy.tab)
-    if (tm) out.push({ label: zh ? tm.zh : tm.en })
-    return out
-  }
-  if (isSimPage) {
-    // 根路径不再追加默认签段；签级才加第二段
-    if (name !== 'ia2.sim') out.push({ label: simKey ? String(sim.value[simKey]) : (PAGE_LABEL[short]?.[lang.value] ?? '') })
-    return out
-  }
-  // 页签级归属（2026-10-17）：单归属→①搭建；多归属→③④；表内空→全程工具。
-  // 这一段非链接、非当前页（面包屑末段才是当前页），只在层级链里回答「这页归哪站」。
-  if (hasStageAttribution(name)) {
-    const owners = stageOwnersForRouteName(name)
-    if (owners.length === 0) {
-      out.push({ label: zh ? '全程' : 'All stages', title: zh ? '跨阶段工具：不隶属单一阶段' : 'All-stage tool: not tied to a single stage' })
-    } else if (owners.length === 1) {
-      const m = STAGE_META.find(s => s.no === owners[0])!
-      out.push({ label: `${'①②③④⑤⑥'[owners[0] - 1]}${zh ? m.navLabel : m.navLabelEn}`, title: zh ? m.title : m.titleEn })
-    } else {
-      const names = owners.map(no => {
-        const m = STAGE_META.find(s => s.no === no)!
-        return `${'①②③④⑤⑥'[no - 1]}${zh ? m.navLabel : m.navLabelEn}`
-      }).join('、')
-      out.push({ label: stageCircles(owners), title: zh ? `所属阶段：${names}` : names })
-    }
-  }
-  const page = PAGE_LABEL[short]
-  if (page) out.push({ label: page[lang.value] })
+  if (p.page) out.push({ label: p.page.label })
   return out
 })
 </script>

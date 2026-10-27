@@ -1,8 +1,10 @@
 <!-- overlay/custom/client/ia2/views/stage/StageShell.vue
-     六阶段工作页（2026-10-18 阶段页页签批）：
-     每个阶段只保留一层页签，页签直接挂可操作组件；页面高度固定，只有当前
-     页签内容区滚动。页签键与文案单一事实源=stage-tabs.ts；阶段文案与完成键
-     单一事实源=stage-meta.ts；运行进度/步骤进度单一读面=useDailyStageProgress。
+     六阶段工作页（2026-10-18 阶段页页签批；2026-10-27 产品一致性 Task 8
+     注册合一）：每个阶段只保留一层页签，页签直接挂可操作组件；页面高度固定，
+     只有当前页签内容区滚动。页签键/文案/组件装载/专属 props/（仅⑥）展示
+     分组单一事实源=stage-tabs.ts（本组件不再维护 TAB_COMPONENTS/TAB_PROPS
+     映射表）；阶段文案与完成键单一事实源=stage-meta.ts；运行进度/步骤进度
+     单一读面=useDailyStageProgress。
      旧 /app/gov/* 深链由 routes 重定向到本页并带 ?tab=，页面不再有「治理中心」壳。
      日常与整轮推演分离：本页不内嵌运行监控/证据/交付等推演面板；②启动准备
      只核对条件并跳转「全流程推演·运行编排」。 -->
@@ -12,27 +14,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
-import ProactivitySection from '@/custom/governance/components/ProactivitySection.vue'
-import OrgEditor from '../../components/gov/OrgEditor.vue'
-import ClearancePanel from '../gov/ClearancePanel.vue'
-import GovIssuesPanel from '../gov/GovIssuesPanel.vue'
-import DailyTracePanel from './DailyTracePanel.vue'
-import DailyDeliveryPanel from './DailyDeliveryPanel.vue'
-import DailyUatPanel from './DailyUatPanel.vue'
-import DailyG5Panel from './DailyG5Panel.vue'
-import StageSetupSteps from './StageSetupSteps.vue'
-import StageRequirementsOverview from './StageRequirementsOverview.vue'
-import StagePreflight from './StagePreflight.vue'
-import StageAcceptanceOverview from './StageAcceptanceOverview.vue'
-import StageDevToday from './StageDevToday.vue'
-import StageSchedulePanel from './StageSchedulePanel.vue'
-import StageGatePanel from './StageGatePanel.vue'
-import StageRiskPanel from './StageRiskPanel.vue'
-import StageMetricsPanel from './StageMetricsPanel.vue'
-import StageAssetsPanel from './StageAssetsPanel.vue'
-import StageDevApprovals from './StageDevApprovals.vue'
 import { STAGE_META, SETUP_STEPS, type StageMeta } from '../../stage-meta'
-import { STAGE_TABS, resolveTab, tabMeta } from '../../stage-tabs'
+import {
+  STAGE_TABS, STAGE_TAB_GROUP_LABELS, resolveTab, stageTabGroups, tabMeta,
+  type StageTabGroupKey, type StageTabMeta,
+} from '../../stage-tabs'
 import { useDailyStageProgress } from '../../composables/useDailyStageProgress'
 import { stageBoardStatuses, stageBoardStatusLabel } from '../../stage-task-filter'
 import { isWritableTask, useWorkspaceStore } from '../../store/workspace'
@@ -46,8 +32,14 @@ const props = defineProps<{ stage: 1 | 2 | 3 | 4 | 5 | 6 }>()
 const progress = useDailyStageProgress()
 const meta = computed<StageMeta>(() => STAGE_META[props.stage - 1])
 const tabs = computed(() => STAGE_TABS[props.stage])
+/** 页签条展示聚类（仅⑥治理三组；组内序=注册序，键序与深链语义不变） */
+const tabClusters = computed(() => stageTabGroups(props.stage))
 const activeTab = computed(() => resolveTab(props.stage, route.query.tab))
 const currentTab = computed(() => tabMeta(props.stage, activeTab.value) ?? tabs.value[0])
+function groupLabel(group: StageTabGroupKey): string {
+  const label = STAGE_TAB_GROUP_LABELS[group]
+  return zh.value ? label.zh : label.en
+}
 
 // 2026-10-27 日常阶段语义：done=「已流转」（后续阶段已有工作），非已完成——
 // 阶段页不画绿✓/「已完成」，中性呈现（样式同 pending）。
@@ -132,8 +124,9 @@ function openInbox(): void {
   void router.push({ name: 'ia2.inbox' })
 }
 
-// 重组件按需加载：避免任一阶段页把看板/文档/审计/案例全部打进首屏。
-// P2（2026-10-19）：统一挂加载骨架（延迟 200ms 防闪现）与错误重试面，异步页签不再白屏等待。
+// 页签组件按需加载：装载 thunk 登记在 stage-tabs 注册表上，本组件统一包
+// 加载骨架（延迟 200ms 防闪现）与错误重试面，异步页签不白屏等待。
+// P2（2026-10-19）骨架/重试面原样保留；Task 8 注册合一后 37 签装载单点=meta.load。
 const TabSkeleton = {
   name: 'TabSkeleton',
   template: `<div class="stg__skeleton" data-testid="stg-tab-skeleton"><span></span><span></span><span></span></div>`,
@@ -156,68 +149,25 @@ function lazyTab(loader: () => Promise<unknown>): Component {
     timeout: 30_000,
   })
 }
-const AsyncKanban = lazyTab(() => import('@/custom/kanban/views/SwarmKanbanView.vue'))
-const AsyncAccounts = lazyTab(() => import('../AccountAdminView.vue'))
-const AsyncTeams = lazyTab(() => import('../TeamsView.vue'))
-const AsyncAgents = lazyTab(() => import('../agents/AgentsView.vue'))
-const AsyncDocs = lazyTab(() => import('../gov/GovDocsReviewView.vue'))
-const AsyncAudit = lazyTab(() => import('../gov/GovAuditChangeView.vue'))
-const AsyncReviewGov = lazyTab(() => import('../gov/ReviewGovPanel.vue'))
-const AsyncImprove = lazyTab(() => import('../gov/HarnessImprovePanel.vue'))
-const AsyncPosture = lazyTab(() => import('../gov/GovPostureView.vue'))
-const AsyncSecAudit = lazyTab(() => import('../gov/SecAuditPanel.vue'))
-const AsyncTrust = lazyTab(() => import('../gov/LongHorizonTrustPanel.vue'))
-const AsyncCases = lazyTab(() => import('@custom/matrix-teams/views/DeliveryCasesView.vue'))
-
-const TAB_COMPONENTS: Record<string, Component> = {
-  setupSteps: StageSetupSteps,
-  org: OrgEditor,
-  accounts: AsyncAccounts,
-  teams: AsyncTeams,
-  assets: StageAssetsPanel,
-  agents: AsyncAgents,
-  requirements: StageRequirementsOverview,
-  docs: AsyncDocs,
-  g1: StageGatePanel,
-  g2: StageGatePanel,
-  preflight: StagePreflight,
-  board: AsyncKanban,
-  schedule: StageSchedulePanel,
-  today: StageDevToday,
-  approvals: StageDevApprovals,
-  risk: StageRiskPanel,
-  quality: StageGatePanel,
-  acceptance: StageAcceptanceOverview,
-  trace: DailyTracePanel,
-  delivery: DailyDeliveryPanel,
-  uat: DailyUatPanel,
-  g5: DailyG5Panel,
-  cases: AsyncCases,
-  clearance: ClearancePanel,
-  issues: GovIssuesPanel,
-  posture: AsyncPosture,
-  secAudit: AsyncSecAudit,
-  audit: AsyncAudit,
-  trust: AsyncTrust,
-  reviewGov: AsyncReviewGov,
-  improve: AsyncImprove,
-  metrics: StageMetricsPanel,
-  gateLog: StageGatePanel,
-  proactivity: ProactivitySection,
+/** 组件缓存：同一页签 meta 只包一次 defineAsyncComponent（装载结果跨签切换复用） */
+const tabComponentCache = new Map<StageTabMeta, Component>()
+function tabComponent(meta: StageTabMeta): Component {
+  let cached = tabComponentCache.get(meta)
+  if (!cached) {
+    cached = lazyTab(meta.load)
+    tabComponentCache.set(meta, cached)
+  }
+  return cached
 }
+const currentTabComponent = computed(() => tabComponent(currentTab.value))
 
-const TAB_PROPS: Record<string, Record<string, unknown>> = {
-  g1: { gates: ['G1'] },
-  g2: { gates: ['G2'] },
-  analysis: { scope: 'g2' },
-  quality: { gates: ['G3', 'G4'] },
-}
 /** ③④阶段页内嵌看板只显示本阶段在办的卡（映射单一事实源=stage-task-filter.ts）；
- *  其他阶段页签不传 statuses，行为与全量看板一致。 */
+ *  其他阶段页签不传 statuses，行为与全量看板一致（component 锚=stage-tabs 注册键）。 */
 const boardStatuses = computed(() => currentTab.value.component === 'board' ? stageBoardStatuses(props.stage) : [])
 const boardStatusLabel = computed(() => stageBoardStatusLabel(props.stage, zh.value))
+/** 页签专属 props 自注册表（防串参：门禁/系分/⑥只读投影按签配置） */
 const currentProps = computed(() => {
-  const base = TAB_PROPS[activeTab.value] ?? {}
+  const base = currentTab.value.props ?? {}
   return boardStatuses.value.length ? { ...base, statuses: boardStatuses.value } : base
 })
 </script>
@@ -253,17 +203,20 @@ const currentProps = computed(() => {
     </nav>
 
     <nav ref="tabsEl" class="stg__tabs" :class="{ 'stg__tabs--end': tabsAtEnd }" role="tablist" :aria-label="meta.title" data-testid="stage-tabs-scroll" @scroll="syncTabsEnd">
-      <button
-        v-for="t in tabs"
-        :key="t.key"
-        type="button"
-        role="tab"
-        class="stg__tab"
-        :class="{ 'stg__tab--on': activeTab === t.key }"
-        :aria-selected="activeTab === t.key"
-        :data-testid="`stg-tab-${t.key}`"
-        @click="openTab(t.key)"
-      >{{ zh ? t.zh : t.en }}</button>
+      <template v-for="cluster in tabClusters" :key="cluster.group ?? 'all'">
+        <span v-if="cluster.group" class="stg__tabgroup" aria-hidden="true">{{ groupLabel(cluster.group) }}</span>
+        <button
+          v-for="t in cluster.tabs"
+          :key="t.key"
+          type="button"
+          role="tab"
+          class="stg__tab"
+          :class="{ 'stg__tab--on': activeTab === t.key }"
+          :aria-selected="activeTab === t.key"
+          :data-testid="`stg-tab-${t.key}`"
+          @click="openTab(t.key)"
+        >{{ zh ? t.zh : t.en }}</button>
+      </template>
     </nav>
 
     <div id="stg-panel" class="stg__body" role="tabpanel" :aria-label="zh ? currentTab.zh : currentTab.en">
@@ -276,7 +229,7 @@ const currentProps = computed(() => {
         <button type="button" data-testid="stg-open-full-board" @click="router.push({ name: 'ia2.board' })">{{ zh ? '在全量看板打开 →' : 'Open full board →' }}</button>
       </div>
       <component
-        :is="TAB_COMPONENTS[currentTab.component]"
+        :is="currentTabComponent"
         v-bind="currentProps"
         @open-tab="openTab"
         @open-task="openTask"
@@ -352,6 +305,17 @@ const currentProps = computed(() => {
 }
 .stg__tool:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 .stg__tabs { position: relative; display: flex; gap: 2px; border-bottom: 1px solid var(--border-color); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+/* ⑥治理展示分组标签（仅呈现聚类，不参与 tablist 语义） */
+.stg__tabgroup {
+  align-self: center;
+  flex-shrink: 0;
+  padding: 0 8px 0 4px;
+  margin-right: 6px;
+  border-right: 1px solid var(--border-color);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 .stg__tab {
   border: 0; border-bottom: 2px solid transparent; background: transparent;
   padding: 9px 14px; font-family: inherit; font-size: 13px;

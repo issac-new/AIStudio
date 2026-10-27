@@ -145,6 +145,7 @@ const i18nInstalled = i18nReady.then(async (i18n) => {
   // mergeLocaleMessage。深合并不动其余键；en 侧本就是标准词不动。
   const { applyIa2TermOverrides } = await import('@/custom/ia2/i18n-term-overrides')
   applyIa2TermOverrides(i18n)
+  return i18n
 })
 const registrationsDone = import('./bootstrap')
   .then(({ bootstrapClient }) => bootstrapClient(app))
@@ -160,8 +161,22 @@ const registrationsDone = import('./bootstrap')
     return devAutoLogin()
   })
 Promise.all([i18nInstalled, registrationsDone])
-  .then(() => {
+  .then(async ([i18n]) => {
     app.use(router)
+    // 浏览器标签页标题随路由变（2026-10-27 产品一致性 Task 8）：页面级标题由
+    // page-presentation 共享解析器解析（与最近轨迹/面包屑同源）；对象级标题路由
+    // （IDE 会话/Matrix 聊天自写 document.title）让位。挂点在 app.use(router)
+    // 之后——afterEach 需路由就绪才收得到导航；i18n 实例用于按当前语言取词。
+    const { installPageTitle } = await import('@/custom/ia2/page-presentation')
+    installPageTitle(router, {
+      getLocale: () => {
+        const loc = (i18n as unknown as { global?: { locale?: unknown } })?.global?.locale
+        const value = typeof loc === 'object' && loc !== null && 'value' in loc
+          ? String((loc as { value: unknown }).value)
+          : String(loc ?? 'zh')
+        return value.startsWith('zh') ? 'zh' : 'en'
+      },
+    })
   })
   .then(() => router.isReady())
   .then(() => {

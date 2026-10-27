@@ -2,11 +2,9 @@
 // 最近轨迹纯逻辑核（2026-10-23 用户需求：「常用」里加「最近」，保留页面操作
 // 轨迹便于回溯）。状态与 localStorage 持久化在 composables/useRecentTrail，
 // 这里只放可单测的无副作用操作：入栈去重/置顶/截断、持久化编解码容错、
-// 页面名解析（标签全部引用既有单一事实源——nav-centers/stage-meta/stage-tabs，
-// 不复制字符串）、相对时间格式化。不 import vue/vue-router，node 环境可直跑。
-import { COMMON_NAVS, ISLAND_NAVS, SIM_NAVS, WORKBENCH_ROUTE_NAMES } from './nav-centers'
-import { STAGE_META } from './stage-meta'
-import { tabMeta } from './stage-tabs'
+// 页面名解析（2026-10-27 Task 8 起委托 page-presentation 共享解析器——与
+// 面包屑/浏览器标签页同源，回落链语义不变）、相对时间格式化。
+import { pageTitle } from './page-presentation'
 
 /** 轨迹上限：超过丢最旧（用户可感知的回溯窗口，再长成噪音） */
 export const RECENT_TRAIL_LIMIT = 20
@@ -71,38 +69,12 @@ export function parseRecentTrail(raw: string | null): RecentEntry[] {
 }
 
 /**
- * 页面名解析（尽力而为，不猜）：推演六签 → 常用五入口及其工作台兄弟路由 →
- * 六阶段页（?tab= 命中页签元数据时拼「阶段 · 页签」，未知/缺失不拼）→ 专题
- * 岛屿；全部未命中回落路由名，再回落 fullPath。
+ * 页面名解析（尽力而为，不猜）：2026-10-27 Task 8 起薄委托共享解析器
+ * page-presentation.pageTitle（推演签/常用入口/工作台兄弟/阶段·页签/旧深链/
+ * 岛屿/末端词典 → 路由名 → fullPath，回落链与标签源逐字不变）。
  */
 export function recentTitle(route: RecentRouteLike, locale: RecentLocale): string {
-  const name = String(route.name ?? '')
-  const pick = (zh: string, en: string): string => (locale === 'zh' ? zh : en)
-
-  const sim = SIM_NAVS.find(n => n.name === name)
-  if (sim) return pick(sim.zh, sim.en)
-
-  const common = COMMON_NAVS.find(n => n.name === name)
-  if (common) return pick(common.zh, common.en)
-  if (WORKBENCH_ROUTE_NAMES.has(name)) {
-    const workbench = COMMON_NAVS.find(n => n.key === 'workbench')!
-    return pick(workbench.zh, workbench.en)
-  }
-
-  const stageMatch = /^ia2\.stage([1-6])$/.exec(name)
-  if (stageMatch) {
-    const meta = STAGE_META[Number(stageMatch[1]) - 1]
-    const base = pick(meta.navLabel, meta.navLabelEn)
-    const rawTab = route.query?.tab
-    const tabKey = String((Array.isArray(rawTab) ? rawTab[0] : rawTab) ?? '')
-    const tab = tabKey ? tabMeta(meta.no, tabKey) : null
-    return tab ? `${base} · ${pick(tab.zh, tab.en)}` : base
-  }
-
-  const island = ISLAND_NAVS.find(n => n.name === name)
-  if (island) return pick(island.labelZh, island.labelEn)
-
-  return name || route.fullPath
+  return pageTitle(route, locale)
 }
 
 /** 相对时间：<1 分钟（含时钟偏移的未来值）刚刚；<1 小时 N 分钟前；<24 小时
