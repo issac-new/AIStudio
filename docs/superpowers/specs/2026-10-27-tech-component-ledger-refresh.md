@@ -32,6 +32,7 @@
   - A2A 看板归属：`npx vitest run custom/server/a2a custom/server/harness/__tests__` = 89/89（新增 board-ownership 6 例）；真实正本活体投影 9 域验证（node strip-types）。
 - swarm-eval 残余 run（未执行数值 run，如实挂账）：结构面复验 `bash -n mx-scenario-lib.sh` 通过＋`npx vitest run tests/swarm-eval-followup.test.ts tests/swarm-collab-integration.test.ts`（simharness 自有配置）= 15/15。数值 run 需 SIM_ROOT 实例小时级窗口（连续三轮同口径挂账），执行配方入台账 §9 待办 4。
 - 版本核对副产品：upstream/ 参照树 5 棵已推进检出（claude-code v2.1.311、dsh-context v0.77.0、dsh-TUI/kimi-code/multica tip），全部 pristine。
+- 全量（收口批）：`npm test` = 918 文件 6,573 过/0 败/11 跳过（rc=0，第三跑；第一跑 2 处失败＝sequence-guard 链长断言随 7 节链更新＋docs-ssot 新 spec 未登记附录 A 索引——本批补登 363→364；第二跑另见 simulation-node-executors 1ms 时间戳与 secaudit 20s 超时两处负载抖动，隔离复跑均过、与本次改动无代码路径交集）。`npm run typecheck:harness` 0 错（三新模块已入点名清单）。
 - 提交门禁：jargon 词表零新增；失败如实报告。
 
 ## 决策记录（随批增补）
@@ -41,4 +42,7 @@
 
 ## 设计文档影响
 
-DESIGN_SYNC: none（本提交仅立总纲，尚无实际数字与结论可入正本；整合正本 §7.7 增行与数字总账随批对账在收口批同批兑现——届时本 spec 此段翻回 touched 并与修订同一提交，节点⑦审查背书）
+DESIGN_SYNC: touched（本提交随批兑现）
+- 整合正本 `docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md`：§7.7 增「调研台账正本」段（含四挂账清偿与三基线树核对结论）；版本行 R18→R19（并行检索四批已取 R18，rebase 顺延）；文档变更记录表落 R19 行。
+- 数字总账 `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`：核实日头增台账立账批口径（端点 +3/specs 377 磁盘实测/全量 6,584=6,573 过）；文档行 specs 377。
+- 附录 A 索引 `docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md`：本 spec 登记（A.1 并行双流 367＋本批 1=368 份）。
