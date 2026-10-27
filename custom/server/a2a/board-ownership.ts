@@ -86,9 +86,10 @@ export function loadBoardOwnership(): BoardOwnershipReport {
   try {
     const parsed = parseBoardOwnership(readFileSync(path, 'utf8'))
     if (parsed.ok) {
-      return { available: true, source: path, updated: parsed.updated, entries: parsed.entries }
+      const ok = parsed as { ok: true; entries: BoardOwnershipEntry[]; updated?: string | null }
+      return { available: true, source: path, updated: ok.updated ?? null, entries: ok.entries }
     }
-    return { available: false, reason: parsed.reason, source: path }
+    return { available: false, reason: parsed.reason ?? 'domain-registry.yaml 结构不符', source: path }
   } catch (e) {
     return { available: false, reason: `正本读取失败：${e instanceof Error ? e.message : String(e)}`, source: path }
   }

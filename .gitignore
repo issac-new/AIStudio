@@ -2,6 +2,7 @@
 .overlay-injected.json
 vite.config.overlay.ts
 *.log
+.env.local
 node_modules
 node_modules/
 # inject 在仓库根生成的上游派生文件/目录（根锚定：不得误伤 vendor/ 基线同名目录——

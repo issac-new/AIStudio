@@ -94,7 +94,7 @@ export function registerLifecycleRoutes(router: Router): void {
   router.post('/lifecycle/requirement-judge', (ctx) => {
     const b = ctx.request.body as { doc?: unknown } | undefined
     if (typeof b?.doc !== 'string' || !b.doc.trim()) return badRequest(ctx, 'doc 必填（需求书全文）')
-    ctx.body = { ok: true, ...judgeRequirementFreeze(b.doc) }
+    ctx.body = judgeRequirementFreeze(b.doc)
   })
 
   router.post('/lifecycle/uat-verdict', (ctx) => {

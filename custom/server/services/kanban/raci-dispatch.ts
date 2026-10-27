@@ -127,7 +127,7 @@ export class RACIDispatchService {
       // 统一任务生命周期账本接线（wx 挂账 #7，2026-10-27 清偿批）：matrix 派发成功
       // 按 body phase（缺省 assigned=pending）登记进 taskledger。fail-soft 不阻断。
       try {
-        const phase = RaciDispatchService.parseRaciMeta(task).phase ?? 'assigned'
+        const phase = RACIDispatchService.parseRaciMeta(task).phase ?? 'assigned'
         const r = registerEntry({ source: 'matrix', sourceKey: task.id, externalStatus: phase, title: task.title })
         if (!r.ok) console.warn(`[raci-dispatch] taskledger 登记 code=${r.problem}（不阻断派发）`)
       } catch { /* 账本异常不阻断派发 */ }
