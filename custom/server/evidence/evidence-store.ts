@@ -19,6 +19,7 @@
 // 任意台账，写入只留 actor 痕。多租户任务归属待接（routa Task.workspaceId 是 routa 内部 id
 // 而非文件系统路径，与 workspace-access.ts canUseWorkspace 的 workspacePath 判据不同源，
 // 现状硬接闸=臆造归属模型）。属主判定语义定下来后再接。
+import { atomicWriteJson } from '../lib/fs-store'
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
@@ -129,14 +130,8 @@ function legacyEvidenceFile(taskId: string): string {
  *  断电最坏丢最后一次写（证据可由上游重放），换来永不落半截 JSON（截断→读侧归零→
  *  下条以小账覆写→全史蒸发的链条从源头断掉）。 */
 function writeJsonAtomic(file: string, data: unknown): void {
-  const tmp = `${file}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`
-  try {
-    writeFileSync(tmp, JSON.stringify(data, null, 2))
-    renameSync(tmp, file)
-  } catch (err) {
-    try { unlinkSync(tmp) } catch { /* 无残留 */ }
-    throw err
-  }
+  // 2026-10-28 收敛：原子写单一实现（custom/server/lib/fs-store）
+  atomicWriteJson(file, data)
 }
 
 /** 坏文件隔离（S-B）：改名 .corrupt.<ts> 留档 + warn，不再静默当空账续写（续写=小账覆写全史）。

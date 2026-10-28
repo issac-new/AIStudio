@@ -10,13 +10,15 @@ import { createHash } from 'crypto'
 import { existsSync, readdirSync, realpathSync, statSync, type Dirent } from 'fs'
 import { homedir } from 'os'
 import { relative, resolve, sep } from 'path'
+import { hermesHome as resolveHermesHome } from '../../lib/paths'
 import type { ApplyMode, EditableSurface, RiskTier, SurfaceKey, SurfaceSource } from './types'
 
 const MAX_ARTIFACTS = 400
 const MAX_SAMPLES = 5
 
 export function hermesHome(): string {
-  return process.env.HERMES_HOME?.trim() || joinHome('.hermes')
+  // 2026-10-28 收敛：家目录解析单一实现（lib/paths）
+  return resolveHermesHome()
 }
 
 function joinHome(p: string): string {

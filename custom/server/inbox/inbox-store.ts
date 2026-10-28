@@ -13,6 +13,7 @@
 // 旧清洗名读侧兼容迁移（按条目自带 recipient 分账认领）。
 // 落盘 = tmp+rename 原子写；坏文件改名 .corrupt.<ts> 留档（G7 时间戳防二次损坏覆盖现场），
 // 不再静默当空桶续写。
+import { atomicWriteJson } from '../lib/fs-store'
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
@@ -84,14 +85,8 @@ function legacyInboxFile(recipientKind: string, recipient: string): string {
 /** 原子写（S-B）：tmp+rename，tmp 名带随机后缀防并发同名；rename 前不做 fsync——
  *  断电最坏丢最后一次写，换来永不落半截 JSON（截断→读侧归零→下条小账覆写→全史蒸发）。 */
 function writeJsonAtomic(file: string, data: unknown): void {
-  const tmp = `${file}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`
-  try {
-    writeFileSync(tmp, JSON.stringify(data, null, 2))
-    renameSync(tmp, file)
-  } catch (err) {
-    try { unlinkSync(tmp) } catch { /* 无残留 */ }
-    throw err
-  }
+  // 2026-10-28 收敛：原子写单一实现（custom/server/lib/fs-store）
+  atomicWriteJson(file, data)
 }
 
 /** 坏文件隔离（S-B）：改名 .corrupt.<ts> 留档 + warn，不再静默当空桶续写。

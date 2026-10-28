@@ -12,6 +12,7 @@
 
 import { readFileSync } from 'fs'
 import { homedir } from 'os'
+import { hermesHome } from '../lib/paths'
 import { join } from 'path'
 
 /** gateway dotenv 解析出的 Matrix 相关键（可选键缺省 undefined） */
@@ -54,8 +55,8 @@ export function parseDotenv(text: string): Record<string, string> {
 
 /** hermes home：HERMES_HOME 覆盖，缺省 ~/.hermes（与 gateway 同源） */
 export function hermesHomePath(env: Record<string, string | undefined> = process.env): string {
-  const home = env.HERMES_HOME?.trim()
-  return home ? join(home) : join(homedir(), '.hermes')
+  // 2026-10-28 收敛：语义（trim + 缺省 ~/.hermes）与 lib/paths 一致，join 仅做归一
+  return join(hermesHome(env))
 }
 
 /** gateway profile：LOOP_MATRIX_PROFILE 显式覆盖 → active_profile 文件内容 → 'orchestrator' */
