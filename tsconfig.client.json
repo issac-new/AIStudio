@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": false,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowJs": false,
+    "jsx": "preserve",
+    "types": [
+      "node",
+      "vite/client"
+    ],
+    "paths": {
+      "@/custom/*": [
+        "./custom/client/*"
+      ],
+      "@custom/*": [
+        "./custom/client/*"
+      ],
+      "@/*": [
+        "./vendor/hermes-studio/packages/client/src/*"
+      ]
+    }
+  },
+  "include": [
+    "custom/client/**/*.ts",
+    "custom/client/**/*.vue"
+  ],
+  "exclude": [
+    "custom/client/**/__tests__/**",
+    "custom/client/**/*.test.ts"
+  ]
+}
