@@ -21,6 +21,7 @@
 // upstream 模块经 lazy require 取（projection-socket.ts loadUpstreamAuth 同款：custom
 // 不做静态 import upstream——symlink 真实路径陷阱）；测试注入 stub。
 import { resolve } from 'path'
+import { loadUpstreamModule } from '../lib/upstream'
 
 /** 会话注册表行的最小消费面（upstream HermesSessionRow 的子集）。 */
 export interface WorkspaceAccessRow {
@@ -54,13 +55,17 @@ export function normalizeWorkspacePath(p: string): string {
  */
 function loadUpstreamWorkspaceAccess(): WorkspaceAccessDeps | null {
   try {
-    // 字面量 require 供构建期打包（esbuild）；运行期 ts-node CJS 走盘上相对解析。
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const sessions = require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/sessions') as {
+    // 字面量 require 供构建期打包；dev 回退见 lib/upstream。
+    const sessions = loadUpstreamModule(
+      () => require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/sessions'),
+      'hermes-studio', 'packages', 'server', 'src', 'modules', 'studio', 'public', 'sessions',
+    ) as {
       listSessions?: (profile?: string, source?: string, limit?: number) => WorkspaceAccessRow[]
     }
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const users = require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/users') as {
+    const users = loadUpstreamModule(
+      () => require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/users'),
+      'hermes-studio', 'packages', 'server', 'src', 'modules', 'studio', 'public', 'users',
+    ) as {
       userCanAccessProfile?: (userId: number | string, profile: string) => boolean
     }
     if (typeof sessions.listSessions !== 'function' || typeof users.userCanAccessProfile !== 'function') return null

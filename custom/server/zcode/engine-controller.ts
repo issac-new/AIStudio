@@ -31,6 +31,7 @@ import { MentionDispatchService } from '../zcode/mention-dispatch'
 import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
 import { canUseWorkspace, type WorkspaceCaller } from '../zcode/workspace-access'
+import { loadUpstreamModule } from '../lib/upstream'
 
 const router = new Router({ prefix: '/api/zcode-engine' })
 const CHECKPOINT_MODES_JOIN = CHECKPOINT_RECOVERY_MODES.join('/')
@@ -63,9 +64,11 @@ export function setAuthEnabledProbeForTests(fn: (() => Promise<boolean>) | null)
 async function isAuthEnabled(): Promise<boolean> {
   if (testAuthEnabled) return testAuthEnabled()
   try {
-    // 字面量 require 供构建期打包（workspace-access.ts 同款）；上游不可达按未启用鉴权处理。
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const auth = require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/auth') as {
+    // 字面量 require 供构建期打包；dev 下字面量解析不到时由 lib/upstream 按 env→vendor→upstream 回退。
+    const auth = loadUpstreamModule(
+      () => require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/auth'),
+      'hermes-studio', 'packages', 'server', 'src', 'modules', 'studio', 'public', 'auth',
+    ) as {
       isAuthEnabled?: () => Promise<boolean>
     }
     return typeof auth.isAuthEnabled === 'function' ? await auth.isAuthEnabled() : false

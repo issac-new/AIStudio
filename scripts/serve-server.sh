@@ -41,4 +41,6 @@ echo "[serve-server] TS_NODE_PROJECT=$TS_NODE_PROJECT"
 echo "[serve-server] TS_NODE_FILES=$TS_NODE_FILES"
 echo "[serve-server] starting: node -r ts-node/register $UPSTREAM_DIR/packages/server/src/index.ts"
 
+# 子进程 cwd=upstream 树；上游模块解析以模块位置为锚，须显式下发根目录（2026-10-28 K17）
+export OVERLAY_UPSTREAM_ROOT="${OVERLAY_UPSTREAM_ROOT:-$(cd "$UPSTREAM_DIR/.." && pwd)}"
 cd "$UPSTREAM_DIR" && exec node -r ts-node/register packages/server/src/index.ts
