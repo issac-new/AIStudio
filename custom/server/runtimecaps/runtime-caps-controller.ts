@@ -15,6 +15,7 @@
  *   - 全部只读命令；approvals suggest 不带 --apply（永不在代理里落盘）。
  */
 import Router from '@koa/router'
+import { hermesHome, underHermes } from '../lib/paths'
 import { spawn } from 'child_process'
 import { existsSync, readFileSync } from 'fs'
 import { homedir } from 'os'
@@ -27,7 +28,7 @@ const CLI_TIMEOUT_MS = 45_000
 function resolveHermesBin(): string | null {
   const envBin = process.env.HERMES_BIN?.trim()
   if (envBin && existsSync(envBin)) return envBin
-  const installTree = join(homedir(), '.hermes', 'hermes-agent', 'venv', 'bin', 'hermes')
+  const installTree = underHermes('hermes-agent', 'venv', 'bin', 'hermes')
   if (existsSync(installTree)) return installTree
   return null
 }
@@ -55,7 +56,7 @@ function runCli(args: string[], ttlMs: number, key: string, timeoutMs = CLI_TIME
     }
     return await new Promise<CachedOut>((resolve) => {
       const child = spawn(bin, args, {
-        env: { ...process.env, HERMES_HOME: join(homedir(), '.hermes'), HERMES_SKIP_UPDATE: '1' },
+        env: { ...process.env, HERMES_HOME: hermesHome(), HERMES_SKIP_UPDATE: '1' },
         timeout: timeoutMs,
       })
       let out = ''
@@ -130,12 +131,12 @@ function readGatewayConfig(): GatewayConfig | null {
   if (gwCfgCache && Date.now() - gwCfgCache.at < 60_000) return gwCfgCache.cfg
   let cfg: GatewayConfig | null = null
   try {
-    const envText = readFileSync(join(homedir(), '.hermes', '.env'), 'utf-8')
+    const envText = readFileSync(underHermes('.env'), 'utf-8')
     const key = envText.split('\n').map(l => l.trim())
       .find(l => l.startsWith('API_SERVER_KEY='))?.slice('API_SERVER_KEY='.length).trim() ?? ''
     let port = 8650
     try {
-      const yaml = readFileSync(join(homedir(), '.hermes', 'config.yaml'), 'utf-8')
+      const yaml = readFileSync(underHermes('config.yaml'), 'utf-8')
       const m = /api_server:[\s\S]{0,400}?port:\s*(\d+)/.exec(yaml)
       if (m) port = Number(m[1])
     } catch { /* 端口探测失败按默认 */ }
@@ -188,7 +189,7 @@ router.get('/gateway/status', async (ctx) => {
  *  在 api_server 端口——python 导入是零新进程常驻的等价通道。 */
 const PY_BLUEPRINT_DUMP = `
 import sys, json, dataclasses
-sys.path.insert(0, ${JSON.stringify(join(homedir(), '.hermes', 'hermes-agent'))})
+sys.path.insert(0, ${JSON.stringify(underHermes('hermes-agent'))})
 from cron.blueprint_catalog import CATALOG
 items = []
 for bp in CATALOG:
@@ -203,7 +204,7 @@ print(json.dumps({'ok': True, 'blueprints': items}, ensure_ascii=False))
 `
 
 function runPython(code: string, timeoutMs: number): Promise<{ status: number; body: unknown }> {
-  const py = join(homedir(), '.hermes', 'hermes-agent', 'venv', 'bin', 'python3')
+  const py = underHermes('hermes-agent', 'venv', 'bin', 'python3')
   if (!existsSync(py)) return Promise.resolve({ status: 409, body: { ok: false, error: '运行时 venv 缺席（hermes runtime 未安装）' } })
   return new Promise((resolve) => {
     const child = spawn(py, ['-c', code], { timeout: timeoutMs, env: { ...process.env, HERMES_SKIP_UPDATE: '1' } })
@@ -239,7 +240,7 @@ router.post('/gateway/blueprints/instantiate', async (ctx) => {
   if (!key) { ctx.status = 400; ctx.body = { ok: false, error: 'key 必填' }; return }
   const code = `
 import sys, json
-sys.path.insert(0, ${JSON.stringify(join(homedir(), '.hermes', 'hermes-agent'))})
+sys.path.insert(0, ${JSON.stringify(underHermes('hermes-agent'))})
 from cron.blueprint_catalog import get_blueprint, fill_blueprint, BlueprintFillError
 bp = get_blueprint(${JSON.stringify(key)})
 if bp is None:

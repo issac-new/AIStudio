@@ -18,6 +18,8 @@
 import { existsSync, readdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { hermesHome as resolveHermesHome } from '../lib/paths'
+import { underWebUi } from '../lib/paths'
 
 export type PostureLamp = 'governed' | 'partial' | 'bare'
 
