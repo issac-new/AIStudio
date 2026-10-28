@@ -1378,6 +1378,12 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     expect(pre).toContain('prelaunch 三十项')  // V8.46 加 ㉔-㉚ 治理闭环；此前二十三项=V8.45 ㉓ 评测接线
     expect(pre).toContain('⑫ 账号板供给在位')
   })
+
+  it('prelaunch ④：单仓形态判据——vendor 注入脏态豁免（2026-10-28 适配）', () => {
+    const pre = read(join(MX, 'mx-prelaunch-check.sh'))
+    expect(pre).toContain(':(top,exclude)vendor')  // AGENTS.md：vendor 注入脏态=预期工作态不入提交
+    expect(pre).toContain('④ 工作区干净（单仓')
+  })
 })
 
 describe('⑱ 技能执勤账（V8.18 能力层叙事配套：第 9 章证据四四件实清点）', () => {
