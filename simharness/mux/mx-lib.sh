@@ -47,6 +47,19 @@ _mx_yaml_py() {
 }
 NCWK_ROOT="${MX_NCWK_ROOT:-$(_mx_root_walk "$MX_SCRIPT_DIR" || echo "$(cd "$HARNESS_ROOT/.." && pwd)")}"
 # 单仓布局产品根=仓根（custom/patches/runtime 同根）；旧 overlay 布局回落到 <root>/overlay。
+# 构建产物上游树解析（2026-10-28 单仓对齐，AGENTS.md §9 同序）：显式 env →
+# 仓内 vendor/hermes-studio → 旧兄弟 upstream/hermes-studio。供给链曾直读旧布局
+# $NCWK_ROOT/upstream/hermes-studio（升级源缓存）——单仓 build:full 落 vendor 树后
+# 快照永远读到缓存旧 dist，修复不随构建进 SIM（run23 采集链首暴露）。
+_mx_upstream_studio() {
+  if [[ -n "${OVERLAY_UPSTREAM_ROOT:-}" && -d "${OVERLAY_UPSTREAM_ROOT%/}/hermes-studio" ]]; then
+    echo "${OVERLAY_UPSTREAM_ROOT%/}/hermes-studio"; return 0
+  fi
+  if [[ -d "$NCWK_ROOT/vendor/hermes-studio" ]]; then
+    echo "$NCWK_ROOT/vendor/hermes-studio"; return 0
+  fi
+  echo "$NCWK_ROOT/upstream/hermes-studio"
+}
 if [[ -d "$NCWK_ROOT/custom" && -d "$NCWK_ROOT/patches" ]]; then
   OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$NCWK_ROOT}"
 else
@@ -84,10 +97,16 @@ HERMES_ROOT="$SIM_ROOT/hermes"            # 单 hermes root（gateway 的 HERMES
 AGENT_SRC="$SIM_ROOT/hermes-agent-src"    # SIM 自有 agent 源码快照（隔离轮；mx-setup 供给）
 PRODUCT_DIST="$SIM_ROOT/product-dist"     # SIM 自有 studio 构建快照（隔离轮；mx-setup 供给）
 
+# playwright 浏览器定址（2026-10-28 磁盘水位清扫实测根治）：默认缓存
+# ~/Library/Caches/ms-playwright 当日被宿主水位清扫两次整目录抹除，采集链
+# （r18-frames/capture-ui 族）随之断供。统一锚到 SIM_ROOT 盘外路径（npx
+# playwright install 亦须带同值安装），清扫免疫、跨会话确定性。
+export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-$SIM_ROOT/pw-browsers}"
+
 # ── 执行面三参（SIM 自有快照缺省；缺位回落宿主/活树并大声告警——先跑 mx-setup）──
 STUDIO_DIST="${MX_STUDIO_DIST:-$PRODUCT_DIST}"
 if [[ ! -d "$STUDIO_DIST/server" ]]; then
-  STUDIO_DIST="$NCWK_ROOT/upstream/hermes-studio/dist"
+  STUDIO_DIST="$(_mx_upstream_studio)/dist"
   echo "[mx-lib] ⚠ product-dist 快照缺位，studio 回落活注入树（产品 clean/inject 将与推演互踩——mx-setup 供给快照可根治）" >&2
 fi
 HERMES_BIN="${HERMES_BIN:-$SIM_ROOT/bin/hermes-sim}"
@@ -742,7 +761,7 @@ WRAP
 }
 mx_provision_product_dist() {
   [[ "${MX_SKIP_SNAPSHOT:-}" = 1 ]] && { log "MX_SKIP_SNAPSHOT=1——跳过 product-dist 快照（studio 将服务活注入树）"; return 0; }
-  local live="$NCWK_ROOT/upstream/hermes-studio/dist"
+  local live="$(_mx_upstream_studio)/dist"
   [[ -f "$live/server/index.js" ]] || { log "⚠ 活注入树无构建产物（${live}）——跳过 dist 快照"; return 0; }
   local ovl; ovl=$(git -C "$OVERLAY_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
   # dist mtime 跨端取法收敛进平台层（BSD/GNU/python 三兜底；Git Bash 的 stat 是
@@ -766,12 +785,39 @@ mx_provision_product_dist() {
   # 解析——快照目录链上没有（iso4 实锤：studio 300s 未就绪=Cannot find module 'socket.io'）。
   # node_modules 全量镜像进快照（1.4G 一次落，后续 rsync 增量秒级；不用 --delete——
   # 活树 npm 卸载残留包对启动无害，镜像删反而会在活树 npm install 半程撞脏态）。
-  local live_nm="$NCWK_ROOT/upstream/hermes-studio/node_modules"
+  local live_nm="$(_mx_upstream_studio)/node_modules"
   if [[ -d "$live_nm" && ! -d "$PRODUCT_DIST/node_modules/socket.io" ]]; then
     log "供给 node_modules 镜像：${live_nm} → $PRODUCT_DIST/node_modules（约 1.4G，一次性）"
     mxp_sync_dir "$live_nm/" "$PRODUCT_DIST/node_modules/" || fail "node_modules 镜像同步失败"
   fi
   log "✓ product-dist 快照就绪"
+}
+
+# ── 漂移守卫（2026-10-28 run23 实锤根治）───────────────────────────
+# 「语义已在位」跳过曾按「marker 在树内任一文件出现」判放行——补丁多文件触及时
+# 半应用态（605 实锤：guard 带 marker、supervisor 缺接线）整个漏过，网关带旧码
+# 起跑。收紧：跳过路径追加逐文件审计——补丁触及且树内存在的文件，若该文件在
+# 补丁里有 ≥10 字符的新增行，则树内该文件至少须含其中一条；缺=半应用漂移，
+# fail 大声拦（收敛法：deploy-agent-runtime --apply --force 或回灌 runtime/
+# 模板后重跑本检查）。
+mx_drift_audit() { # <patchname> <patchfile> <tree> —— 只在「语义已在位」跳过路径调用
+  local pname="$1" pf="$2" tree="$3" tf line found
+  while IFS=$'\t' read -r _ _ tf; do
+    [ -n "$tf" ] || continue
+    [ -f "$tree/$tf" ] || continue
+    found=0
+    while IFS= read -r line; do
+      [ "${#line}" -ge 10 ] || continue
+      if grep -qF -- "$line" "$tree/$tf" 2>/dev/null; then found=1; break; fi
+    done < <(awk -v f="$tf" '
+      index($0, "diff --git a/" f " ") == 1 { inf = 1; next }
+      /^diff --git / { inf = 0 }
+      inf && /^\+/ { print substr($0, 2) }
+    ' "$pf")
+    if [ "$found" = 0 ]; then
+      fail "漂移守卫：${pname} 半应用态（$tf 缺补丁新增内容）——deploy-agent-runtime --apply --force 收敛或回灌 runtime/ 模板后重跑"
+    fi
+  done < <(git -C "$tree" apply --numstat "$pf" 2>/dev/null)
 }
 
 mx_apply_agent_patches() {
@@ -813,6 +859,7 @@ mx_apply_agent_patches() {
                 grep -oE '^\+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=' "$pf" | sed -E 's/^\+//; s/[[:space:]]*=$//'; } | sort -u)
       if [ "$_found" = 1 ]; then
         log "运行时 patch 语义已在位（安装环境或源码树，内容副本同步渠道）：${p}（marker=${_marker}）"
+        mx_drift_audit "$p" "$pf" "$tree"
         continue
       fi
       fail "$p 与安装树冲突且语义未在位（marker=${_marker:-无}）——人工处置后重跑"
@@ -1419,9 +1466,10 @@ name = m.get("default") or ""
 if not url:
     prov = (m.get("provider") or "").strip()
     if prov.startswith("custom:"):
-        pname = prov[len("custom:"):]
+        prov = prov[len("custom:"):]
+    if prov:
         for p in (cfg.get("custom_providers") or []):
-            if isinstance(p, dict) and p.get("name") == pname:
+            if isinstance(p, dict) and p.get("name") == prov:
                 url = (p.get("base_url") or "").rstrip("/")
                 key = key or (p.get("api_key") or "")
                 name = name or (p.get("model") or "")

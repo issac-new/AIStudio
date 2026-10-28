@@ -202,6 +202,11 @@ export function buildIaRoutes(): RouteRecordRaw[] {
     }
   })
   return [
+    // /login 别名重定向（2026-10-28 防冻结环）：应用登录页=根路径 '/'（上游
+    // router 的 login 记录），'/login' 从来不是有效路径——采集链（r18-frames
+    // 先落 /login 注入凭证）与历史深链按习惯 URL 撞未知路径，被诚实 404 链
+    // 改道（未登录时曾成守卫环）。别名到根路径使该 URL 恢复直达登录页。
+    { path: '/login', name: 'ia2.loginAlias', redirect: '/' },
     {
       path: '/app',
       name: 'ia2.shell',
@@ -220,9 +225,14 @@ export function buildIaRoutes(): RouteRecordRaw[] {
         {
           // 诚实 404（2026-10-21 战线A）：未知路径不再被上游 catch-all 静默送回首页；
           // 全局守卫 ia2NotFoundGuard 把兜底重定向改写到本页，保留原始 from 路径。
+          // public（2026-10-28 防冻结环）：本页原走登录弹回链——未登录撞未知路径时
+          // catch-all→notFound→主守卫弹 login→login 解析回根→再触发改道，守卫重定向
+          // 环饿死主线程（run23 采集链预检实锤，渲染线程冻结 load 事件永不触发）。
+          // 404 页对未登录可见是通行做法，环在此处断开。
           path: 'not-found',
           name: 'ia2.notFound',
           component: () => import('./views/NotFoundView.vue'),
+          meta: { public: true },
         },
         {
           // 独立检索页已并入顶部完整弹窗。旧深链保留原筛选参数，
