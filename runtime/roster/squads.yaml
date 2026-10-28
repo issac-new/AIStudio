@@ -4,7 +4,7 @@
 # （自触发抑制，防循环）；每轮派单必录评估（action/no_action/failed+reason）。
 # 评估台账：派单交付到 leader run 先记 pending 占位；leader verdict 摄入链路待接
 # （输入面未定），实评接入前查询面按 placeholder 区分占位/实评。
-# 维护：squad 名与成员 id 对齐 agent 名册（agent-roster.yaml）与 mention 白名单。
+# 维护：squad 名与成员 id 对齐 agent 名册（运行时 `$HERMES_HOME/agent-roster.yaml`，本仓无该文件）与 mention 白名单。
 squads:
   core:
     leader: zcode
