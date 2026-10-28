@@ -6,7 +6,7 @@
      数据面=useWorkspaceStore().rawTasks（/api/hermes/kanban/overview 聚合 + WS 自动更新
      ——即"口径统一、数据源打通+自动更新"的现有底座）；纯函数=utils/accounts.ts。
      词条=i18n-accounts.ts 模块内小事实源（不动 473）。设计文档
-     docs/2026-09-29-change-gov-three-accounts-research.md §4.2。 -->
+     docs/reports/2026-09-29-change-gov-three-accounts-research.md §4.2。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

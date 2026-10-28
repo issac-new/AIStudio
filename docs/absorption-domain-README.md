@@ -12,11 +12,11 @@
 
 - [技术组件台账终态单文件](../team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md) —
   全量组件的版本核对、能力差异、判级与后续动作（旧 `upstream-analysis/component-ledger.md` 已降为历史档案）。
-- [2026-10-01-upstream-absorption-analysis.md](./2026-10-01-upstream-absorption-analysis.md)
+- [2026-10-01-upstream-absorption-analysis.md](./reports/2026-10-01-upstream-absorption-analysis.md)
   12 组件源码盘点 + 贴合判断 + 27 项吸收清单 + **附录 27 项执行对账表**（实施终态）。
   逐项终态判定（已落地/核实已存在/记档待环境）与合 main 锚点都在对账表里。
   （组件计数为 2026-10-01 口径；当前参照树 14 棵＋外部组件，以台账正本为准。）
-- [2026-10-01-upstream-absorption-round2-exhaustive.md](./2026-10-01-upstream-absorption-round2-exhaustive.md)
+- [2026-10-01-upstream-absorption-round2-exhaustive.md](./reports/2026-10-01-upstream-absorption-round2-exhaustive.md)
   **补全版（第二轮，穷尽盘点）**：首轮未展开面全部展开（hermes-agent web dashboard 19 页逐页/
   ui-tui/127 RPC/290 端点；zcode 三端逐件；element-web 补 80 项+Labs 26 全清单；编码四家+dsh 补漏）+
   两个新视角——**hermes-studio 上游暴露面 diff**（六个"有而没用"面+门控不一致）与
@@ -24,9 +24,9 @@
 
 ## 吸收实施轮的验证资产
 
-- 走查脚本：`overlay/scripts/absorb-msg-surface-walkthrough.mjs`（消息面 5/5）、
-  `overlay/scripts/absorb-run-observatory-walkthrough.mjs`（运行观测 6/6）、
-  `overlay/scripts/absorb-runtime-caps-walkthrough.mjs`（暗能力 6/6）。
+- 走查脚本：`scripts/regression/absorb-msg-surface-walkthrough.mjs`（消息面 5/5）、
+  `scripts/regression/absorb-run-observatory-walkthrough.mjs`（运行观测 6/6）、
+  `scripts/regression/absorb-runtime-caps-walkthrough.mjs`（暗能力 6/6）。
 - 守门：`custom/client/ia2/__tests__/msg-surface-absorption.test.ts`、
   `custom/client/matrix-chat/__tests__/top-unread-bar.test.ts`、
   `custom/client/ide/__tests__/trajectory-pane.test.ts`（含 trace 路由双路径静态断言）、

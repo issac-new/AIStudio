@@ -1,4 +1,4 @@
-// 管理三账纯函数守门（docs/2026-09-29-change-gov-three-accounts-research.md §4.2）：
+// 管理三账纯函数守门（docs/reports/2026-09-29-change-gov-three-accounts-research.md §4.2）：
 // ① 停滞分级与 KanbanTaskCard 阈值同源（ready/blocked 1h·24h，running 10m·1h，todo 7d·30d）
 // ② 绿灯率/最劣偏差天数；空数据 null 不做除零假数据
 // ③ 风险 Pareto：头部 20% 占偏差天数比例（集中度口径）

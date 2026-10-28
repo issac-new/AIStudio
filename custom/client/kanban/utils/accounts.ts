@@ -8,7 +8,7 @@
 // 阈值与 KanbanTaskCard 停滞分级同源（ready/blocked 1h 琥珀·24h 红、running
 // 10m·1h、todo 7d·30d）——本模块是这三组阈值的单一事实源，卡片组件的口径注释
 // 指向这里；"关键路径偏差天数"取最劣任务偏差天数（无依赖图算法，界面标注推算口径）。
-// 设计文档：docs/2026-09-29-change-gov-three-accounts-research.md §4.2。
+// 设计文档：docs/reports/2026-09-29-change-gov-three-accounts-research.md §4.2。
 
 /** 停滞阈值（秒；amber=琥珀阈值，red=红阈值）——与看板卡停滞环同源 */
 export const STALE_THRESHOLDS: Readonly<Record<string, { amber: number; red: number }>> = {
