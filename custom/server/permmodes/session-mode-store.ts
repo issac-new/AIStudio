@@ -6,6 +6,7 @@
 //   服务端瀑布拦截已生效，本存储补的是"档位从哪来、谁能切"。
 // 存储：env HERMES_SESSION_MODES_DIR 下 JSON（原子写，autonomyladder 同范式）。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { atomicWriteJson } from '../lib/fs-store'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import type { PermissionMode } from './permission-modes'

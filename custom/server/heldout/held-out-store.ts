@@ -12,6 +12,7 @@
 //   3. 每调用方每集尝试上限（默认 3 次）：二分探测预期值的通道在限次内不可行；
 //   4. 越界 index / 空 answers 拒绝；答案按 index 对齐不回显。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
+import { atomicWriteJson } from '../lib/fs-store'
 import { homedir } from 'os'
 import { join } from 'path'
 
