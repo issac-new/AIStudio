@@ -23,6 +23,7 @@ import { isValidRun, safeRunDir, simRootOrNull } from '../../simcenter/observer-
 import { checkBreaker, initialBreaker, tripBreaker, type GateBreakerState } from './breaker'
 import { judgeRequirementFreeze } from './requirements'
 import { combinedGateVerdict, coveredAcs, gateVerdictOfText, uatVerdictFor, type GateVerdict } from './verdict'
+import { atomicWriteJson } from '../../lib/fs-store'
 
 const GATE_RE = /^[A-Z][A-Z0-9-]{1,30}$/
 

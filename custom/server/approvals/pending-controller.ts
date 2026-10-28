@@ -33,6 +33,7 @@ import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotcheck
 import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
 import { decideEnforceApproval, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
 import { listHumanGatePending, humanGateRouter } from './human-gate'
+import { atomicWriteJson } from '../lib/fs-store'
 
 const router = new Router({ prefix: '/api/approvals' })
 

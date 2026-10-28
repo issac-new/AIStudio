@@ -11,6 +11,7 @@ import {
   type DecisionGrant, type DecisionTask, type DecisionTier,
 } from './decision-grant'
 import type { PendingItem } from './pending-controller'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface AuthenticatedActor {
   id: string
@@ -137,14 +138,8 @@ function ensureLoaded(): void {
 function persist(rows: HumanGateRequest[]): void {
   const file = humanGateStoreFile()
   mkdirSync(dirname(file), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`
-  try {
-    writeFileSync(tmp, JSON.stringify(rows, null, 1), 'utf8')
-    renameSync(tmp, file)
-  } catch (error) {
-    try { rmSync(tmp, { force: true }) } catch { /* 保留原始写盘异常 */ }
-    throw error
-  }
+  // 2026-10-28 收敛：原子写单一实现（lib/fs-store，失败时内部已清理 tmp）
+  atomicWriteJson(file, rows, { indent: 1 })
 }
 
 /** 仅测试使用：丢弃进程内加载标记；各测试负责提供独立临时 store。 */

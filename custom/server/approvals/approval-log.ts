@@ -8,6 +8,7 @@ import { homedir } from 'os'
 import { dirname, join } from 'path'
 import type { ApprovalRiskTier } from './risk-tier'
 import { GENESIS, chainHashOfEntry, verifyForwardChain, type ChainVerifyResult } from '../auditchain/forward-chain'
+import { atomicWriteJson } from '../lib/fs-store'
 
 // 决策图谱落账（乙4，2026-09-30 调研落地）：appendApprovalLog 是全部审批裁决的单一
 // 收口点（autopass/pending-controller 六调用面共经），在此挂 fire-and-forget 钩子。

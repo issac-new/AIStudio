@@ -918,6 +918,7 @@ router.put('/tool-policies', (ctx) => {
 // 同款）。原绝对前缀写法在 @koa/router 嵌套下拼出双前缀 → 整族 404 上线即死；
 // secaudit-http.test.ts 已改生产同款嵌套拓扑，此形态受运行时守门。
 import { secAuditRoutes } from '../secaudit/controller'
+import { atomicWriteJson } from '../lib/fs-store'
 router.use('/secaudit', secAuditRoutes.routes(), secAuditRoutes.allowedMethods())
 
 // ── MCP 注册面安全扫描（2026-10-21 AGT 调研轮三）：只读形态扫描，与 mcp-drift 互补 ──
