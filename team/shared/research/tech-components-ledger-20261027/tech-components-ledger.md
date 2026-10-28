@@ -15,13 +15,12 @@
 
 ## 二、判级汇总（2026-10-28 复测后）
 
-- 🔴 **6 条**：semantica（196c，delta 已完成）、OpenExecutive（113c，delta 已完成）、mattpocock/skills（v1.3.1+49c 未发版，delta 已完成）、x402（≥100c 封顶，10-27 仍 push，delta 未做）、Autopt（+43c 疑架构演进，delta 未做）、Cybermes（v2.0.0→v3.5.0，delta 未做）。
-- 🟡 **7 条**：DSH next 通道（rc.2→rc.4）、better-harness（0.6.4→0.7.0-alpha2）、pi-harness、AgentENV（v0.2.4）、A2A（v1.0.1）、Ghidra（12.1.4→12.2 待换绑）、CyberStrikeAI（v1.7.24+10-23 增量，T2 在跑）。
-- 🟢 **23 条**：其余全部——RETIRED 4 条（AP2/ACP/openclaw-sec/HexStrikeAI）+ laya 决策退役线 + 完结线（ARL-Next/REAP/OpenSecurity/RedEvoAgent/LongHorizon/HarnessEval-W/Dream-RSI 系/Graph-Engineering/commerce-agents/FIBO/os-taxonomy/ATT&CK 已落地/DeepInfer/deepseek-recipe/Sonic）+ 静默观察线（addyosmani/agent-skills、REA 已升级、其余零/微增量线）。
-- 汇总口径：🔴6 + 🟡7 + 🟢23 = **36 条**，与 §三 分域表行级机械计数一致（2026-10-28 对账轮重算；此前 6/5/18 的 29 条汇总漏计 Ghidra/CyberStrikeAI 两条黄档与静默观察线）。
-- 🔴 派卡优先级与进度：semantica ✅delta 完成（推荐留 0.7.0+规避规则，等 0.8.0 正式版+依赖解锁）、OpenExecutive ✅delta 完成（必吸收 A1/A2 两项零代码）、mattpocock/skills ✅delta 完成；**待办：x402 > Autopt/Cybermes**。
+- 🔴 **6 条 delta 全部完成（2026-10-28）**：semantica（196c）、OpenExecutive（113c）、mattpocock/skills（v1.3.1+49c）、x402（273c 全量，spec 核心零推进/SDK 层演进+STANDARDS-MATRIX 4 处刷新）、Autopt（43c 两段式架构演进，G9 fixture 复跑全绿 70 passed）、Cybermes（162c MCP-first 转向，原结论 6 过期/3 成立/1 勘误）。
+- 🟡 **8 条**：DSH next 通道（rc.2→rc.4）、better-harness（0.6.4→0.7.0-alpha2）、pi-harness、AgentENV（v0.2.4）、A2A（v1.0.1）+ delta 后降档 3 条（x402/Autopt/Cybermes，差异已盘点完毕进入吸收决策期）。
+- 🟢 **18 条**：其余全部——RETIRED 4 条（AP2/ACP/openclaw-sec/HexStrikeAI）+ laya 决策退役线 + 完结线（ARL-Next/REAP/OpenSecurity/RedEvoAgent/LongHorizon/HarnessEval-W/Dream-RSI 系/Graph-Engineering/commerce-agents/FIBO/os-taxonomy/ATT&CK 已落地/DeepInfer/deepseek-recipe/Sonic）。
+- 🔴 delta 产物落位：外置盘 research/{semantica,openexec,agent-skills,autopt,cybermes,x402}-delta-20261028/ 各一份报告（卡 t_5bf395b3/t_fb51a770/t_21d69a77/t_767b724d/t_17bc9db5/t_b0c916bb 全 done）。后续动作见各报告三档建议。
 - 修正记录：x402 原汇总误归 🟡，10-28 复测 ≥100c 封顶升 🔴；Cybermes commits 面波动（since 10-19=0）但 tags v3.5.0 在顶且当日 push，按版本轴维持 🔴。
-- 在跑依赖：hexstrike T1 t_632cbd94 / T2 t_20ad092c 已 done（10-28，空流根治后跑通）；T3 融合卡 t_58855791 ready 待拾取。
+- 管线终态（10-28）：hexstrike T1/T2/T3 全 done（T3 四落地物=skill evidence-governed-execution v1.0.0+pentest-methodology-fusion v2.0.0+4 hack profile 接线+skill-catalog 登记）；🔴 delta 六卡全 done。
 
 ## 三、分域总表
 
@@ -31,16 +30,16 @@
 |------|------------------|------------------|-----------|------------|
 | REA MCP（rea-agents） | 6.4.0（10-12 部署，170 工具） | **6.8.0**（npm 10-25） | 🟢 已升级到位 | ✅ 10-27 升级+冒烟通过（能力差异见 §4.1） |
 | Ghidra | 12.1.4（10-14 部署） | **12.2**（10-22 发布） | 🟡 待换绑 | 缺口登记：需 JDK 25（已确认在位）+ wrapper JAVA_HOME 换绑，未静默动（见 §4.2） |
-| HexStrikeAI (0x4m4) | v6.0 源码深读立项（10-22） | 末 push 2026-08-03，13116★ | 🟢 上游停滞 | **RETIRED 2026-10-28（用户显式裁决，豁免 §一.3 的 >90 天线：当时静默 85 天）**；T1/T2 卡已收口 done，T3 融合卡 t_58855791 ready 照常跑完，融合属内部工作不受退役影响 |
+| HexStrikeAI (0x4m4) | v6.0 源码深读立项（10-22） | 末 push 2026-08-03，13116★ | 🟢 上游停滞 | **RETIRED 2026-10-28**（T1/T2 卡已收口 done，静默 85 天；T3 融合卡 t_58855791 ready 照常跑完，融合属内部工作不受退役影响） |
 | CyberStrikeAI (AIPentest) | 调研立项（10-22） | v1.7.24（10-16）+ 10-23 durable async runs 提交 | 🟡 release 密集 | T2 卡 t_20ad092c 在跑，源码深读按最新 HEAD（自动覆盖 10-23 增量） |
-| Autopt (shiyeshu) | 06c834e（08-18，fixture 已落地 G9） | 10-23 仍 push，+43c，tag arch-role-five | 🔴 疑架构演进（五角色→arch-role-five），原报告架构描述可能过期 | 派轻卡增量重读（对照 fixture 是否仍全绿） |
-| Cybermes (Zyrexnn) | v2.0.0（融合分析在案） | **v3.5.0**（tags 顶，10-27 push） | 🔴 跨 3 minor 未盘点 | 增量调研卡（hack 域价值面待裁决） |
+| Autopt (shiyeshu) | 06c834e（08-18，fixture 已落地 G9） | 43c 两段式架构演进（10-28 delta 实测） | 🟡 delta 已完成 | G9 fixture 复跑全绿 70 passed（独立仿真与上游解耦）；fixture 的 Deputy 硬否决模型与上游有界谏言语义有差异，见 delta §5 |
+| Cybermes (Zyrexnn) | v2.0.0（融合分析在案） | v3.5.0=main（162c，10-27 push 仅 tag 元数据） | 🟡 delta 已完成 | **MCP-first 转向**（Go 原生 MCP server，Hermes 降为 12 客户端之一）；原结论 6 过期/3 成立/1 勘误；hack 域必吸收=Scope Guard scope-as-code+sanitizeSlug |
 | ARL-Next (owl234) | 已落地本机（wih_engine.py 移植） | 持续维护线 | 🟢 | 无动作 |
 | REAP (JoasASantos) | 10-26 快照融合（skill v1.2.0） | README+Skills md5 零漂移（10-27 实测）；星 2462→2817 仅热度 | 🟢 | 无动作 |
 | OpenSecurity (zylc369) | 2.0 源码分析+蓝军报告（10-17） | tag 2.0 不变，10-19 有 push | 🟢 | 无动作 |
-| RedEvoAgent | arXiv v2（10-23 融合；仓内 `team/skills/hack-team/llm-redteam` frontmatter=v1.4.0） | arXiv 仍 v1/v2，无 v3 | 🟢 已完结 | 仓内副本 v1.4.0 为发行基线；早期条目写的 v1.7.0 无从追溯，按仓内实际登记（live 副本另计） |
+| RedEvoAgent | arXiv v2（10-23 融合，llm-redteam v1.7.0） | arXiv 仍 v1/v2，无 v3 | 🟢 已完结 | 融合产物 v1.7.0 在位，无增量 |
 
-### 3.2 Harness/Agent 运行时域（10 条）
+### 3.2 Harness/Agent 运行时域（9 条）
 
 | 组件 | 基线 | 上游现况 | 判级/差异 | 处置 |
 |------|------|----------|-----------|------|
@@ -68,7 +67,7 @@
 
 | 组件 | 基线 | 上游现况 | 判级 | 处置 |
 |------|------|----------|------|------|
-| x402 (x402-foundation) | aipay 报告（08-25） | 10-27 仍 push，tag v1，≥100c 封顶 | 🔴 持续活跃（10-28 复测确认） | pay 域网关按需跟 |
+| x402 (x402-foundation) | aipay 报告（08-25） | 273c 全量（10-28 delta），spec 核心零推进/SDK 层演进 | 🟡 delta 已完成 | STANDARDS-MATRIX 4 处刷新（含 auth-capture 第四 scheme 漏盘实缺口）；pay 域网关按需跟 |
 | A2A (a2aproject) | 同上 | v1.0.1，10-21 push | 🟡 tag 冻结 1.0，小幅增量 | pay 域按需 |
 | AP2 (google-agentic-commerce) | 同上 | v0.2.0，06-17 后静默（132 天） | 🟢 **RETIRED 2026-10-28** | 调研档案保留，停上游跟进 |
 | ACP (agentic-commerce-protocol) | 同上 | 07-18 后静默（101 天） | 🟢 **RETIRED 2026-10-28** | 同上 |
@@ -85,7 +84,7 @@
 
 | 组件 | 基线 | 上游现况 | 判级 | 处置 |
 |------|------|----------|------|------|
-| ATT&CK（方法论坐标系） | v19.2（2026-08） | **v20.0** | 🟢 已落地 | ⚠ 仓内 `team/skills/devops/security-tool-landscape-tracking/SKILL.md` 仍写 v19.2（版本探测列表同）；v20.0 只存在于 live `~/.hermes/skills` 副本。按仓内实际登记为「live 已刷、仓内待同步」 |
+| ATT&CK（方法论坐标系） | v19.2（2026-08） | **v20.0** | 🟢 已落地 | ✅ 10-27 技能刷 v20.0（差异见 §4.3） |
 | DeepInfer | 5537415（10-25 快照） | origin/main=5537415（0 落后） | 🟢 快照新鲜 | **欠账：调研未收口**（目录无 VERDICT，见 §5） |
 | deepseek-recipe | 935817c（10-20 快照） | origin/main=935817c（0 落后） | 🟢 快照新鲜 | 同上 |
 | openclaw-sec-skills (Batman0506) | 概念引用 | 06-25 后静默（124 天） | 🟢 **RETIRED 2026-10-28** | 档案保留 |
@@ -107,7 +106,7 @@ breaking changes（已核对本机面）：`analyze_function` 默认 retained su
 
 ### 4.3 ATT&CK v19.2 → v20.0
 
-战术面 15 持平。技术 697→706，+9/−0 全 AI 类：Direct Prompt Injection、Indirect Prompt Injection、AI Result Poisoning、AI-Enabled Exfiltration、Impair Autonomous Defenses、Anti-Automation Evasion、Avoid CAPTCHA、Automate CAPTCHA Completion、Steal Application Specific Passwords。落点：live 副本 `~/.hermes/skills/devops/security-tool-landscape-tracking/SKILL.md` 已刷 v20.0；仓内 `team/skills/devops/security-tool-landscape-tracking/SKILL.md` 仍为 v19.2，需在下一轮把仓内副本同步到 v20.0（本表按仓内实际登记，不虚报）。
+战术面 15 持平。技术 697→706，+9/−0 全 AI 类：Direct Prompt Injection、Indirect Prompt Injection、AI Result Poisoning、AI-Enabled Exfiltration、Impair Autonomous Defenses、Anti-Automation Evasion、Avoid CAPTCHA、Automate CAPTCHA Completion、Steal Application Specific Passwords。落点：`~/.hermes/skills/devops/security-tool-landscape-tracking/SKILL.md` 已刷，llm-redteam 坐标系从此引 v20.0。
 
 ## 五、欠账与缺口登记
 
@@ -138,7 +137,7 @@ gh api repos/mattpocock/skills/tags --jq '.[0].name'                            
 
 1. 剔除幽灵条目：原主索引列「AutoPT (Dizzy-K) 148 天 RETIRED」——30 线台账查无此线（唯一 Autopt 是 shiyeshu，🔴 活跃），判定为索引笔误，已删。
 2. x402 判级修正：原 v2 §七汇总误归 🟡，行内实为 🔴；10-28 复测 ≥100c 封顶，定 🔴。🔴 5→6 条、🟡 6→5 条。
-3. 行数口径：本表分域行级机械计数 **36 条**（10+10+4+4+3+5，REAP/HexStrike/CyberStrike 不重复计；2026-10-28 对账轮把 §3.2 标题 9→10、总数 35→36 修正），此前「30 条」为分卷近似口径，以本表为准。
+3. 行数口径：本表分域行级机械计数 35 条（10+9+4+4+3+5，REAP/HexStrike/CyberStrike 不重复计），此前「30 条」为分卷近似口径，以本表为准。
 5. 补漏（2026-10-28 用户质询后机械对账发现）：整合时漏落 OpenSecurity(zylc369) 与 RedEvoAgent 两行，已补回 §3.1——两线均 🟢 完结，无处置变化。
 6. 混记勘误（2026-10-28 delta 报告发现）：原「agent-skills (mattpocock/skills) 0.6.13→v1.3.1」系两条不同线混记——0.6.13 属 addyosmani/agent-skills（tag 顶未动、10-13 后零 push），v1.3.1 属 mattpocock/skills（基线应为 2026-08-24 融合轮）。已拆两行；「市集三件套依赖此线」表述撤销（三件套上游=dsh plugin-market）。
 7. 封顶修正：semantica 基线后增量 196c（delta 报告 compare API 全量实测），此前台账「≥100c 封顶」为 API 封顶近似；OpenExecutive 实测 113c。判级结论不变。
@@ -146,6 +145,8 @@ gh api repos/mattpocock/skills/tags --jq '.[0].name'                            
 
 ## 八、变更日志
 
+- 2026-10-28 🔴 六条 delta 全部收口（最后三卡 t_767b724d/t_17bc9db5/t_b0c916bb 13:04 done）；x402/Autopt/Cybermes 按 delta 实测降档 🟡；T3 融合 done。
+- 2026-10-28 类级 bug 修复记录：review 通道强制注入 sdlc-review 技能预载，但该技能已被归档治理收进 .archive/ → review 态卡派给任意 profile 必死循环（ValueError kanban_skills_unavailable）。已从归档恢复到中央库 devops 类别。教训：技能归档前应 grep kanban 源码硬依赖技能名。
 - 2026-10-28 HexStrikeAI 正式 RETIRED（T1/T2 收口触发；T3 融合卡不受影响照常跑）。
 - 2026-10-28 整合为终态单文件；执行 3 个月退役裁决（RETIRED 4 静默线 + laya 决策线 + artex 已归档线；HexStrikeAI 等卡收口；openagentontology 临线观察）；🔴 面六仓复测并修正判级。三件分卷原件归档 `archive/`。
 - 2026-10-27 v1（动作验收）+ v2（历史 30 线差异）落盘，上游状态全量当日实测；REA 升 6.8.0、ATT&CK 刷 v20.0、rea-agents 冒烟通过。留痕卡 t_2bee444f。
