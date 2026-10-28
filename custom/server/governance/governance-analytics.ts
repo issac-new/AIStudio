@@ -16,6 +16,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import type { LedgerDoc, MetricsDoc } from './governance-ledger'
 import type { DispatchLedgerEntry } from './dispatch-ledger'
+import { hermesHome, underWebUi } from '../lib/paths'
 
 // ---------- kanban 实耗 ----------
 
@@ -39,7 +40,7 @@ interface KanbanTaskRow {
 }
 
 export function kanbanDbFiles(homeDir?: string): string[] {
-  const home = homeDir?.trim() || process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  const home = homeDir?.trim() || process.env.HERMES_HOME?.trim() || hermesHome()
   const files: string[] = []
   const root = join(home, 'kanban.db')
   if (existsSync(root)) files.push(root)
@@ -123,7 +124,7 @@ export interface SquadStat {
 
 export function collectSquadStats(dir?: string): Map<string, SquadStat> {
   const stats = new Map<string, SquadStat>()
-  const root = dir?.trim() || join(homedir(), '.hermes-web-ui', 'squad')
+  const root = dir?.trim() || underWebUi('squad')
   let entries: string[] = []
   try {
     entries = readdirSync(root)
