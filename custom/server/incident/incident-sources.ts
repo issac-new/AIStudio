@@ -15,9 +15,9 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 // （2026-10-17 实测 Cannot find module，catch 静默吞=身份面恒 absent）。
 import * as agentIdentity from '../agentidentity/agent-identity'
 import * as approvalLog from '../approvals/approval-log'
-import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describeToolCall, type ToolSemantic } from './tool-semantics'
+import { underHermes, underWebUi } from '../lib/paths'
 
 // ---------- DB 路径候选 ----------
 
@@ -34,7 +34,7 @@ export function studioDbCandidates(explicit?: string): string[] {
   push(resolve(process.cwd(), 'packages/server/data/hermes-web-ui.db'))
   push(resolve(__dirname, '../../../data/hermes-web-ui.db'))
   push(resolve(__dirname, '../../../../data/hermes-web-ui.db'))
-  push(join(homedir(), '.hermes-web-ui', 'hermes-web-ui.db'))
+  push(underWebUi('hermes-web-ui.db'))
   return out
 }
 
@@ -168,7 +168,7 @@ export function profileRootCandidates(explicit?: string, webuiDb?: string | null
   const hermesHome = process.env.HERMES_HOME?.trim()
   if (hermesHome) push(join(hermesHome, 'profiles'))
   if (webuiDb) push(resolve(webuiDb, '..', '..', 'hermes', 'profiles'))
-  push(join(homedir(), '.hermes', 'profiles'))
+  push(underHermes('profiles'))
   return out
 }
 
@@ -314,7 +314,7 @@ export function traceDirCandidates(explicit?: string): string[] {
   const out: string[] = []
   const push = (p: string | undefined) => { if (p && !out.includes(p)) out.push(p) }
   push(explicit?.trim() || process.env.HERMES_INCIDENT_TRACE_DIR?.trim())
-  push(join(homedir(), '.hermes', 'traces'))
+  push(underHermes('traces'))
   return out
 }
 
@@ -514,8 +514,8 @@ export function ekkoDbCandidates(explicit?: string): string[] {
   // 推演隔离树（2026-10-17 A7）：HERMES_HOME 派生两形态（hermes/.ekko 与根 .ekko）
   const hh = process.env.HERMES_HOME?.trim()
   if (hh) { push(join(hh, '.ekko', 'ekko.db')); push(join(hh, 'ekko', 'ekko.db')) }
-  push(join(homedir(), '.hermes-web-ui', 'ekko.db'))
-  push(join(homedir(), '.hermes', 'ekko', 'ekko.db'))
+  push(underWebUi('ekko.db'))
+  push(underHermes('ekko', 'ekko.db'))
   return out
 }
 
