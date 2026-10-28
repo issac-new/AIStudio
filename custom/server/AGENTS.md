@@ -4,6 +4,8 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 
 ## 关键约定
 
+- **域名规约（2026-10-28 K22 立规）**：**新域一律 kebab-case**（如 `delivery-contract/`、`approval-rules/`）。历史存量 151 个域为连写（`agentidentity/`、`toolresultguard/`），不批量改名——改名会打穿 `typecheck:harness` 点名清单、补丁文本与 503 个测试的相对 import；存量按需渐进。
+- **域索引**：本文件只列「关键域」子集（入口/高风险/易混），不是全量清单。全量以 `ls custom/server/` 为准；新增域须在本文件登记一行「路径 | 职责」，否则视为未建档。近义域必须写清边界，先例：`approval-rules/`（规则与决策，patch 402）与 `approval-inbox/`（收件箱与历史，patch 488）；`delivery/` 与 `delivery-contract/` 属不同层，勿合并。
 - **路由挂载**：新路由优先加进已挂载的 controller（如 `harness/harness-controller.ts` 已由 patch 543 挂载）；新建独立路由必须在 `patches/` 加挂载补丁并登记 series。
 - **存储**：JSON/JSONL 走 `mkdir` + 原子写（tmp → rename）；SQLite 用 `node:sqlite`；测试用 env 指向 tmpdir，绝不写真实 home。
 - **失败语义**：读模型 fail-soft（源缺席标 `available:false` / `null`）；执法链失败关闭（fail-closed）。两者不可混用。
