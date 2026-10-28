@@ -117,12 +117,12 @@
 | K3 | `docker-compose` 路线 | 已下线（2026-10-28 挂账清偿轮）；补齐容器化是新项目 | 产品裁决 |
 | K4 | agent-teams 底座无机器载体 | 引入 `team/version.json` 需与 VENDOR.md、测试三方同步，属跨模块契约变更 | 版本机制轮 |
 | K5 | `carrierPattern` 字段名语义过载 | 改名需同步校验器 + 单测 + 清单，收益小于风险；已在清单注释固化语义 | 校验器重构轮 |
-| K6 | `eda` 域只有 orchestrator | 补 EDA worker 或改 retired 是组织决策，不是文档修正 | 组织编制轮 |
+| K6 | ~~`eda` 域只有 orchestrator~~ **已退役（2026-10-28 用户裁决）** | 注册表 `status: retired` + 历史锚注记；活跃板 9→8，`test_board_ownership.py` 改为「活跃 8 / 含退役 9」双断言，README 双语同步 | 已入库 |
 | K7 | ~~三类 roster 命名混用~~ **已立名（2026-10-28）** | 正本给出三个全称并禁用单说 roster：治理人员名册 / 推演编制 / agent 角色目录；`runtime/roster/squads.yaml` 注释改为真实的 `$HERMES_HOME/agent-roster.yaml`（本仓无该文件） | 已入库 |
 | K8 | ~~15 人枚举缺团队负责人 A/B~~ **已补（2026-10-28）** | 以 `simharness/mux/mx-lib.sh:145` 的 USERS 为唯一真源（15 人含 wei·mei），三处枚举补齐并标注真源位置 | 已入库 |
 | K9 | ~~「admin 不设助理」与实现矛盾~~ **已对齐（2026-10-28）** | 实现按 15×2 生成（含 `admin-agent`），报告叙事改为「含 admin-agent，合计 30」，不再与代码矛盾 | 已入库 |
-| K10 | features 能力开关 vs 导航开关 | 改名 `*Nav` 牵连注册表、bootstrap 与测试 | 前端治理轮 |
-| K11 | 三范式无 `paradigm` 字段 | 注册表 schema + 测试 + 30 profile 数据同批改 | 组织建模轮 |
+| K10 | ~~features 开关语义混~~ **已定口径（2026-10-28 用户裁决：保留现名）** | `config/features.ts` 与 `registries/client/bootstrap.ts` 写明：eval/skillgov/ontology/bpa 只门控导航与页面注册、不卸载能力；改名属 breaking change，明确否决 | 已入库 |
+| K11 | 三范式无 `paradigm` 字段 | 用户裁决：先出 30 行映射表供审，审后落库（见 §八） | 待用户审表 |
 | K12 | ~~12 个 profile 缺 `profile.yaml`~~ **已补（2026-10-28）** | 从各 profile 的 `SOUL.md` 标题与身份句派生 `description`（`description_auto: true` 标注派生来源），不新增未经确认的职责描述；30 份 YAML 全部可解析、team pytest 18 例通过 | 已入库 |
 | K13 | 历史 spec 内的旧路径 | 代表当时仓内位置，按仓规「历史归 git」不改写 | 永久保留 |
 
@@ -176,3 +176,42 @@
 - **模板已与产物同步**：L2 钩子模板（S12）与 spec 模板（S13）本轮修正后，生成器产物与本仓实例行为一致；`custom/__tests__/precommit-vendor-guard.test.ts` 锁住「模板↔产物」两侧。
 - **文档层级已收敛**：`AGENTS.md`（工作规则+导航）→ `docs/README.md`（文档索引+档案分轨）→ `scripts/README.md`（脚本归位）→ 各目录 `AGENTS.md`（域约定），四层各有单一职责，无重复口径。
 - **模板类规范缺口**（记 K 档）：`team/profiles/*/profile.yaml` 缺 12 份（K12）、`runtime/README` 目录树未覆盖 20 个子目录（本轮只修条数）。
+
+## 八、K11 三范式映射表（草案，待用户审）
+
+口径：三范式取自整合正本 §4.3（基座岗位/领域岗位/治理岗位）。下表**由各 profile 的 SOUL 职责与目录前缀派生**，标注 `派生`；用户审阅批准或改判后才写入 `team/shared/domain-registry.yaml` 并加守门测试。判据：治理=只做路由/判据/资产守门不承接执行；基座=通用方法不挂领域知识；领域=挂本域知识与判据。
+
+| profile | 范式（派生） | 依据 |
+|---|---|---|
+| `orchestrator` | 治理 | 顶层调度路由器：只路由不执行，属治理面 |
+| `aiteam-orchestrator` | 治理 | 领域网关，只路由 |
+| `data-orchestrator` | 治理 | 领域调度路由器 |
+| `pay-orchestrator` | 治理 | 领域调度路由器 |
+| `ops-eval` | 治理 | 工作流度量与六维评估，属治理判据面 |
+| `platform-ontology-curator` | 治理 | 本体与语义层守门，治理资产 |
+| `platform-skill-miner` | 治理 | 技能供给治理（扫描/提炼/准入） |
+| `hack-auditor` | 治理 | 审计岗（只读复核，不产出执行） |
+| `worker-coder` | 基座 | 通用工程方法，不挂领域知识 |
+| `worker-researcher` | 基座 | 通用调研方法 |
+| `worker-tester` | 基座 | 通用独立验证方法 |
+| `product-manager` | 基座 | 通用产品方法（PRD/RICE） |
+| `product-researcher` | 基座 | 通用市场调研方法 |
+| `ops-sre` | 领域 | SRE 领域知识与判据 |
+| `ops-devops` | 领域 | DevOps/IaC 领域 |
+| `ops-incident-commander` | 领域 | 事件响应领域（高风险协调） |
+| `pay-fintech` | 领域 | 支付合规领域 |
+| `pay-clearing` | 领域 | 清算结算领域 |
+| `pay-infra` | 领域 | 支付基础设施领域 |
+| `data-arch` | 领域 | 数据架构领域 |
+| `data-flink` | 领域 | 流式计算领域 |
+| `data-infra` | 领域 | 数据基础设施领域 |
+| `aiteam-architecture` | 领域 | 模型架构研究 |
+| `aiteam-multimodal` | 领域 | 多模态研究 |
+| `aiteam-embodied` | 领域 | 具身智能研究 |
+| `aiteam-training` | 领域 | 训练与推理工程 |
+| `aiteam-scout` | 领域 | 情报侦察 |
+| `hack-recon` | 领域 | 授权侦察 |
+| `hack-exploit` | 领域 | 授权利用验证 |
+| `hack-forensics` | 领域 | 取证分析 |
+
+> 待你确认的点：① `hack-auditor` 归治理是否同意（它同时产出审计报告，边界模糊）；② `ops-eval` 归治理是否同意（也可视为领域度量岗）；③ 上表 30 行是否与你的组织口径一致。批准后我按此写字段 + 测试。

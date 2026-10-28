@@ -8,7 +8,7 @@
 
 This repository distributes a multi-agent team configuration for Hermes Agent. Each profile has its own SOUL.md personality, config.yaml, and role-specific rules. The orchestrator is the single entry point for all Gateway messages (Matrix/Weixin/API Server/Email) and routes tasks to specialist profiles via Kanban boards.
 
-**30 profiles** · **8 teams** · **9 Kanban boards** · persistent worktree workspaces
+**30 profiles** · **8 teams** · **8 Kanban boards** · persistent worktree workspaces
 
 ### Version
 
@@ -135,7 +135,7 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
    (4)    (2)    (4)   (2)    (6)    (4)  (4)  (11)
 ```
 
-**9 Kanban Boards**（与 `team/shared/domain-registry.yaml` 逐条对应）: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `eda` (IC design，保留为 active 但当前仅有 orchestrator 成员), `hack` (authorized security testing).
+**8 Kanban Boards**（与 `team/shared/domain-registry.yaml` 的活跃条目逐条对应）: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `hack` (authorized security testing). `eda`（IC design）已于 2026-10-28 标 retired（仅剩 orchestrator 成员，无领域执行者），条目保留作历史锚。
 
 ## Key Features / 核心特性
 

@@ -8,7 +8,7 @@
 
 本仓库分发 Hermes Agent 多智能体团队配置。每个 profile 有独立的 SOUL.md 人格、config.yaml 配置和角色专属规则。Orchestrator 是所有 Gateway 消息（Matrix/Weixin/API Server/Email）的唯一入口，通过看板将任务路由到专家 profile。
 
-**30 个 profile** · **8 个团队** · **9 个看板** · 全量 skills + 六层 _shared 共享规则
+**30 个 profile** · **8 个团队** · **8 个看板**（eda 域 2026-10-28 退役）· 全量 skills + 六层 _shared 共享规则
 
 ## Profile 名册
 

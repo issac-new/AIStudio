@@ -53,6 +53,7 @@ export async function bootstrapClient(app: App): Promise<void> {
   // VITE_CUSTOM_EVAL=true 再开。路由无条件注册（2026-10-19 P1-5）：关闭时由
   // IaFeatureShell 渲染「未启用」说明页，深链不再被路由兜底静默送回 /app；
   // 导航入口仍由 FlowNavPanel 内的 features.eval 门控隐藏。
+  // 注意（2026-10-28 K10）：该开关只关导航入口，不关服务端能力与端点——不要当能力开关用。
   registrations.push(import('../../custom/client/eval').then(m => m.registerEval(app)))
 
   // 技能安全扫描（Skill 三段治理第一段，2026-10-13 挂账清偿续批）：默认开，

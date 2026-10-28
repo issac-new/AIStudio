@@ -109,8 +109,8 @@ domains:
   - orchestrator
   knowledge: []
   target_skill: null
-  status: active
-  note: 在整体设计文档中不体现（用户口径），运行态活跃
+  status: retired
+  note: 2026-10-28 退役（用户裁决）：原 EDA 11 个 profile 已不在 team/profiles，本域仅剩 orchestrator 成员、无领域执行者；保留条目作历史锚，不再作为活跃看板。整体设计文档不体现该域（用户口径）。
   owner_of_domain: orchestrator
   owner_label: EDA 负责人
   owner_account_env: BOARD_OWNER_EDA
