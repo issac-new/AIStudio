@@ -204,7 +204,7 @@ def dn(acc: str) -> str:
 # 报告读者必须能一眼区分「产品长什么样」与"证据是什么"，杜绝工件冒充 UI。
 STEPS_META_RUN2 = {
     1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
-            narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（admin 不设助理），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账（本轮 30 账号 token 真值核验 02:14:30 有效）。',
+            narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（含 admin-agent，合计 30），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账（本轮 30 账号 token 真值核验 02:14:30 有效）。',
             imgs=[
                   ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（清单入仓可对账）', 'ui'),]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',
@@ -457,7 +457,7 @@ STEPS_META_RUN4 = {
 }
 STEPS_META_RUN1 = {
     1: dict(keys=['smoke_done'], actor='human', actorText='人 · 主管A（admin）',
-            narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（admin 不设助理），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账。',
+            narrative='管理员签发账号清单：15 人编制每人人类账号+AI 助理账号（含 admin-agent，合计 30），matrix 地址/token/密码经安全渠道下发，清单入仓可逐项对账。',
             imgs=[
                   ('ui-gov-roster', '治理中心·管理档案：账号清单——15 人×双账号×角色（commit 锚点）', 'ui'),]),
     2: dict(keys=['smoke_done'], actor='ai', actorText='AI · 装配脚本',

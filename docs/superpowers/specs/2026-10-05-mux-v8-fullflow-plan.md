@@ -217,7 +217,7 @@ flowchart TB
 |---|---|---|
 | 流程 | 26 步 | 从分账号到出报告的固定主链（§2.4） |
 | 关卡 | 6 道（G1-G6） | 强制检查点，不过不放行（§5.3） |
-| 编制 | 15 人 | 主管/业务分析/产品/架构/研发×4/测试×2/安全/运维/审计（§2.2） |
+| 编制 | 15 人 | 主管/业务分析/产品/团队负责人×2/架构/研发×4/测试×2/安全/运维/审计（§2.2；人数与角色以 `simharness/mux/mx-lib.sh:145` 的 USERS 为唯一真源） |
 | 账号 | 30 个 matrix 账号 | 每人一个人类账号+一个 AI 助理账号 |
 | 智能体 | 42 个配置 | 14 个调度器+28 个执行 agent，共用一个网关 |
 | 界面 | 左侧导航 5 组＋阶段页 29 签 | 常用/流程/整轮/专题/管理（IaSideNav）；①搭建/②需求/③分析设计/④开发/⑤验收/⑥治理（/app/stage/*，页签见 stage-tabs.ts）；全流程推演 /app/sim 独立专区 |
@@ -1478,7 +1478,7 @@ benchmark-absorption.md》（D1-D9 决策在彼处）。
 | 项 | 值 |
 |---|---|
 | 需求 | 收单商户多端小程序支付收银台（依据财付通/支付宝公开技术手册，兼容微信/支付宝双渠道） |
-| 编制 | 15 人：主管A（admin）、需求分析师A（bella）、产品经理A（fanfan）、研发工程师A/B/C/D（chen·hu·lin·xiao，分承支付核心/微信渠道/支付宝渠道/收银台前端）、测试工程师A/B（qi·fei）、系统架构师A（arch）、安全工程师A（secops）、运维工程师A（ops）、审计师A（audit），各配 AI 助理，共 30 个 matrix 账号 |
+| 编制 | 15 人：主管A（admin）、需求分析师A（bella）、产品经理A（fanfan）、团队负责人A/B（wei·mei）、研发工程师A/B/C/D（chen·hu·lin·xiao，分承支付核心/微信渠道/支付宝渠道/收银台前端）、测试工程师A/B（qi·fei）、系统架构师A（arch）、安全工程师A（secops）、运维工程师A（ops）、审计师A（audit），各配 AI 助理（含 admin），共 30 个 matrix 账号 |
 | 中央仓 | https://github.com/issac-new/aipaydev（0→1 轮启动=远端仅 main、九目录零文件〔admin 三张注册表除外〕） |
 | 应用模块 | csw-pay-core（支付核心）/csw-channel-wechat/csw-channel-alipay/csw-cashier-mp |
 | 环境拓扑 | 单 gateway :8801（42 profile 多路复用）+ studio :8802 + synapse :8008 + hindsight :8888；每人 2 块看板挂专职 agent 团队；分组记忆库按「用户名+MAC」分仓 |

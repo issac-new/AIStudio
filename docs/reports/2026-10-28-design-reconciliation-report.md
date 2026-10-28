@@ -119,8 +119,8 @@
 | K5 | `carrierPattern` 字段名语义过载 | 改名需同步校验器 + 单测 + 清单，收益小于风险；已在清单注释固化语义 | 校验器重构轮 |
 | K6 | `eda` 域只有 orchestrator | 补 EDA worker 或改 retired 是组织决策，不是文档修正 | 组织编制轮 |
 | K7 | 三类 roster 命名混用 | 需先确定 15 人编制的权威载体（治理仓 / 推演数据 / agent 角色目录） | 组织建模轮 |
-| K8 | 15 人枚举缺团队负责人 A/B | 两岗职责未在任何文档定义，凭空补写会造假 | 推演编制轮 |
-| K9 | 「admin 不设助理」话术与实现矛盾 | 涉及 30 账号口径与报告叙事，需与推演轮同批改 | 推演轮 |
+| K8 | ~~15 人枚举缺团队负责人 A/B~~ **已补（2026-10-28）** | 以 `simharness/mux/mx-lib.sh:145` 的 USERS 为唯一真源（15 人含 wei·mei），三处枚举补齐并标注真源位置 | 已入库 |
+| K9 | ~~「admin 不设助理」与实现矛盾~~ **已对齐（2026-10-28）** | 实现按 15×2 生成（含 `admin-agent`），报告叙事改为「含 admin-agent，合计 30」，不再与代码矛盾 | 已入库 |
 | K10 | features 能力开关 vs 导航开关 | 改名 `*Nav` 牵连注册表、bootstrap 与测试 | 前端治理轮 |
 | K11 | 三范式无 `paradigm` 字段 | 注册表 schema + 测试 + 30 profile 数据同批改 | 组织建模轮 |
 | K12 | ~~12 个 profile 缺 `profile.yaml`~~ **已补（2026-10-28）** | 从各 profile 的 `SOUL.md` 标题与身份句派生 `description`（`description_auto: true` 标注派生来源），不新增未经确认的职责描述；30 份 YAML 全部可解析、team pytest 18 例通过 | 已入库 |
