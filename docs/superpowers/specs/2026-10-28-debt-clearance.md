@@ -39,7 +39,8 @@
 - `node scripts/deploy-agent-runtime.mjs`（dry-run 对真实宿主）：清单 50 ｜ 相同 50 ｜ 保留目标 0 ｜ 差异 0；临时目录三态实测：无 `--force` 时保留并报告、`--force` 时备份后覆盖。
 - `bash scripts/sync-upstream.sh --dry-run`：worktree 形态（无检出）与 `OVERLAY_UPSTREAM_ROOT` 指向主检出两种形态均输出正确解析。
 - `bash -n` / `node --check` 覆盖本批改动的脚本。
-- 全量 `npx vitest run` 结果见交付说明。
+- 全量 `npx vitest run`（本工作树已注入）：946 个测试文件通过、6 跳过；**6836 用例通过、11 跳过、0 失败**（总计 6847），退出码 0。
+- 真实 `npm run inject` 复跑：exit 0，运行时部署汇总「清单 50 ｜ 相同 50 ｜ 已同步 0 ｜ 差异 0」，宿主 `kanban_db_connect.py` 的 guardrail 标记仍为 2 处——新默认值在真实链路里不再剥离宿主修复。
 
 ## 设计文档影响
 
