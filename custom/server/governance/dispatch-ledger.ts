@@ -14,6 +14,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { atomicWriteText } from '../lib/fs-store'
 
 export interface DispatchLedgerEntry {
   ts: number

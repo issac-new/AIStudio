@@ -17,6 +17,7 @@ import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { appendApprovalLog } from './approval-log'
 import type { ApprovalRiskTier } from './risk-tier'
+import { atomicWriteJson } from '../lib/fs-store'
 
 /** FNV-1a 32 位：短、稳、无依赖（抽检确定性只需稳定不需加密）。 */
 export function stableHash(s: string): number {
