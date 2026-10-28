@@ -1,8 +1,8 @@
 {
-  "version": "v0.22.5-team.2",
+  "version": "v0.22.5-team.3",
   "base": "0.22.5",
   "extension": "team",
-  "extN": 2,
+  "extN": 3,
   "upstreamCommit": "bf0203a794",
   "carrierOf": "agent-teams 模块",
   "note": "机器可读载体（2026-10-28 K4）：与 team/VERSION 首行、vendor/VENDOR.md 的 hermes-agent 行互为对账；release:check 三方交叉校验。真源仍是 team/VERSION，本文件供程序读取。"
