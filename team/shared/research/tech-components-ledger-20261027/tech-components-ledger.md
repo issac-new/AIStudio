@@ -17,14 +17,14 @@
 
 - 🔴 **6 条**：semantica（≥100c 封顶，10-27 仍 push）、OpenExecutive（≥100c，0.6.1→0.6.6）、agent-skills（0.6.13→v1.3.1 跨大版本）、x402（≥100c 封顶，10-27 仍 push）、Autopt（+43c，tag arch-role-five 疑架构演进）、Cybermes（v2.0.0→v3.5.0 跨 3 minor）。
 - 🟡 **5 条**：DSH next 通道（rc.2→rc.4）、better-harness（0.6.4→0.7.0-alpha2）、pi-harness、AgentENV（v0.2.4）、A2A（v1.0.1）。
-- 🟢 **16 条**：其余全部（含 RETIRED 4 条、laya/artex 退役线、完结线）。
+- 🟢 **18 条**：其余全部——RETIRED 4 条（AP2/ACP/openclaw-sec/HexStrikeAI）+ laya 决策退役线 + 完结线（ARL-Next/REAP/OpenSecurity/RedEvoAgent/LongHorizon/HarnessEval-W/Dream-RSI 系/Graph-Engineering/commerce-agents/FIBO/os-taxonomy/ATT&CK 已落地/DeepInfer/deepseek-recipe/Sonic）。
 - 🔴 派卡优先级：**semantica（本机 runtime 常驻，过期风险实存）> OpenExecutive/agent-skills > x402 > Autopt/Cybermes**。
 - 修正记录：x402 原汇总误归 🟡，10-28 复测 ≥100c 封顶升 🔴；Cybermes commits 面波动（since 10-19=0）但 tags v3.5.0 在顶且当日 push，按版本轴维持 🔴。
 - 在跑依赖：hexstrike T1 t_632cbd94 / T2 t_20ad092c 已 done（10-28，空流根治后跑通）；T3 融合卡 t_58855791 ready 待拾取。
 
 ## 三、分域总表
 
-### 3.1 hack/安全域（8 条）
+### 3.1 hack/安全域（10 条）
 
 | 组件 | 基线（上次调研） | 上游现况（实测） | 判级/差异 | 处置与去向 |
 |------|------------------|------------------|-----------|------------|
@@ -36,6 +36,8 @@
 | Cybermes (Zyrexnn) | v2.0.0（融合分析在案） | **v3.5.0**（tags 顶，10-27 push） | 🔴 跨 3 minor 未盘点 | 增量调研卡（hack 域价值面待裁决） |
 | ARL-Next (owl234) | 已落地本机（wih_engine.py 移植） | 持续维护线 | 🟢 | 无动作 |
 | REAP (JoasASantos) | 10-26 快照融合（skill v1.2.0） | README+Skills md5 零漂移（10-27 实测）；星 2462→2817 仅热度 | 🟢 | 无动作 |
+| OpenSecurity (zylc369) | 2.0 源码分析+蓝军报告（10-17） | tag 2.0 不变，10-19 有 push | 🟢 | 无动作 |
+| RedEvoAgent | arXiv v2（10-23 融合，llm-redteam v1.7.0） | arXiv 仍 v1/v2，无 v3 | 🟢 已完结 | 融合产物 v1.7.0 在位，无增量 |
 
 ### 3.2 Harness/Agent 运行时域（9 条）
 
@@ -134,7 +136,8 @@ gh api repos/mattpocock/skills/tags --jq '.[0].name'                            
 
 1. 剔除幽灵条目：原主索引列「AutoPT (Dizzy-K) 148 天 RETIRED」——30 线台账查无此线（唯一 Autopt 是 shiyeshu，🔴 活跃），判定为索引笔误，已删。
 2. x402 判级修正：原 v2 §七汇总误归 🟡，行内实为 🔴；10-28 复测 ≥100c 封顶，定 🔴。🔴 5→6 条、🟡 6→5 条。
-3. 行数口径：本表分域行级机械计数 33 条（8+9+4+4+3+5，REAP/HexStrike/CyberStrike 不重复计），此前「30 条」为分卷近似口径，以本表为准。
+3. 行数口径：本表分域行级机械计数 35 条（10+9+4+4+3+5，REAP/HexStrike/CyberStrike 不重复计），此前「30 条」为分卷近似口径，以本表为准。
+5. 补漏（2026-10-28 用户质询后机械对账发现）：整合时漏落 OpenSecurity(zylc369) 与 RedEvoAgent 两行，已补回 §3.1——两线均 🟢 完结，无处置变化。
 4. 银翼评测系（v1 表 #11）为方法论类无版本轴，按口径移出组件表，落地状态归设计文档附录 B。
 
 ## 八、变更日志
