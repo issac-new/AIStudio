@@ -55,6 +55,17 @@
 
 **本批未验证项如实登记**：`npm run sync` 的端到端执行未跑（需外部 upstream 远端、clean 后重装依赖，破坏当前注入态），只做 `bash -n` 与路径解析静态核对；`docs/reports/` 内的历史文档不做链接存活审计（其正文引用的上游源码路径本就指向当时的树）。
 
+## 实测结果（2026-10-28）
+
+- 目标守门：`docs-ssot-guard`、`patches-series-guard`、`zcode-patches-guard`、`zcode-3140-snapshot`、`precommit-vendor-guard`、`verify-release-manifest`、`inject-absent-tree`、`diagram-skill` 共 8 文件 46 用例全绿（工作树先跑 `npm run inject` 补齐注入态；纯 pristine 工作树下 `zcode-patches-guard` 的注入态断言会红，属环境态不属代码）。
+- `npm run release:check`：四模块对账全绿（cockpit 0.7.39-studio.1／agent-teams v0.22.5-team.1／ycode 3.16.2／yuan-skill v2.95.0）。
+- 语法面：本批改动的 shell 脚本过 `bash -n`；`.mjs` 过 `node --check`。
+- `plan-html/render.sh` 标题提取实测输出「AIStudio 全流程推演方案 V8.55」（原实现因正本改用加粗写法恒落兜底标题，随本次一并修正）。
+- 全量 `npx vitest run`（工作树注入态）：944 个测试文件通过、6 跳过；6831 用例通过、11 跳过、**0 失败**，退出码 0。
+- 构建面：`npm run build:full` 退出码 0（openapi → vite client → server tsc → server 打包 → 运行时资源 → decisiongraph 桥），尾部 `verify-dist` 放行（`index.html 4904B`、`assets/js 6 个`、默认口令扫描零命中）。
+- 打包预算：`node scripts/check-bundle-budget.mjs` 输出 `total=21.01MB budget=25MB`，OK。
+- 上述两项构建门禁是本批 G4 的直接验证：修复前 `verify-dist` 与 `check-bundle` 默认指向仓外 `../upstream`，在单仓检出下必然误判。
+
 ## 设计文档影响
 
 DESIGN_SYNC: none
@@ -67,6 +78,8 @@ DESIGN_SYNC: none
 2. **孤儿目录 `.claude/worktrees/upstream`**：无 git worktree 注册，按仓规不自行 `rm -rf`，待用户裁决移入隔离区或删除。
 3. **`custom/server/governance/repo-root.ts:10` 的 `/Volumes/nvme2230` 兜底**：属同族旧机路径，但位于治理仓解析链尾，改它需先确认生产部署面，留下轮。
 4. **`docker-compose.yml` 与它的三个 Dockerfile**：compose 在根、`Dockerfile.server`/`.ide`/`.leader` 全缺，`docs/windows-x64-setup.md:110-113` 已如实记为「任何平台都 up 不起来」。补齐或下线是路线决策，不是整理动作，需产品裁决后另起一轮；本轮保留原状。
+5. **宿主 runtime 与仓内模板漂移（`inject` 会静默覆盖宿主）**：本批在工作树跑 `npm run inject` 校验注入态时，`deploy-agent-runtime` 把仓内 `runtime/` 同步到 `~/.hermes/hermes-agent`；其中 `hermes_cli/kanban_db_connect.py` 与 `tools/kanban_tools.py` 与宿主实况不同——宿主持有仓内模板缺失的 `kanban-guardrail-envgate` 段（`HERMES_KANBAN_WRITE_GUARDRAIL=1` 时装载 sanctioned-writer 触发器），被覆盖后已从自动备份 `.bak.1793153802627` 恢复，恢复后与部署前字节一致。根因是仓内 `runtime/` 模板落后于宿主演进态（与仓规 D3 记的事故同族），需单独对账轮把宿主实况回写模板，并让 deploy 在目标差异时拒绝覆盖或要求显式 `--force`。
+6. **`inject-absent-tree.test.ts` 会污染仓根派生配置**：该测试以临时树作 `OVERLAY_UPSTREAM_ROOT` 跑真实 inject，而 inject 按脚本所在位置写 `vite.config.overlay.ts`，于是仓根的生成配置被烙印 `/tmp/standalone-cockpit-*` 路径。后果是随后 `npm run build:full` 把产物写进已删除的临时树，再在 `verify-dist` 处失败。本批验证时命中，用 `node scripts/inject.mjs --config-only` 重生成后构建转绿。修法=测试把生成配置写到临时目录（或测后重生成），属测试隔离缺陷，另行修复。
 
 ## 死件恢复命令
 
