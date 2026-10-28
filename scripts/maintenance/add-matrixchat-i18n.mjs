@@ -162,5 +162,5 @@ function addMatrixChat(filePath) {
   console.log(`Added matrixChat section (${Object.keys(matrixChatKeys).length} keys) to ${filePath}`);
 }
 
-const enPath = resolve(import.meta.dirname, '../../upstream/hermes-studio/packages/client/src/i18n/locales/en.ts');
+const enPath = resolve(import.meta.dirname, '../../vendor/hermes-studio/packages/client/src/i18n/locales/en.ts');
 addMatrixChat(enPath);

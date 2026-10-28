@@ -12,6 +12,7 @@
 6. 安全纪律：审计不落敏感原值；密钥只存 env 名；不削弱既有安全边界。
 7. 注释用中文，标识符用英文；注释只写约束与来源，不复述代码。
 8. 本仓只存源码/脚本/文档/依赖清单；中间产物（node_modules、dist、runs、截图、离线包、evidence 二进制）不入库（.gitignore 立法，2026-10-24 用户指示）。
+9. 访问上游树用统一解析序：显式 env（`OVERLAY_UPSTREAM_ROOT`）→ 仓内 `vendor/` → 旧兄弟 `upstream/`（先例 `scripts/build.mjs`、`scripts/serve-server.mjs`）。不要写死 `../upstream` 的层级假设——单仓检出没有兄弟 upstream，写死必坏。
 
 ## 目录导航
 
@@ -25,8 +26,9 @@
 | `simharness/` | 全流程推演 harness（mx-* 脚本/场景/守门测试；SIM_ROOT 等运行态在仓外） |
 | `skills/swarm-yuan/` | swarm-yuan 技能本体源码（六段目录；dist 离线包不入库） |
 | `runtime/` | agent 运行时扩展（Python/TS 工具与检查器；部署到 ~/.hermes/hermes-agent） |
-| `scripts/` | inject / build / serve / verify / vendor-sync 脚本 |
-| `docs/superpowers/specs/` | 设计规格与决策记录（单一事实源） |
+| `scripts/` | 构建/注入/验证入口（根只放被 package.json、CI、qgate、源码或测试调用的脚本与共享库；归位规则见 `scripts/README.md`）；`regression/` 走查探针、`maintenance/` 迁移对账 |
+| `docs/` | 文档入口见 `docs/README.md`（现行入口、目录职责、命名与归档规则）；历史报告在 `docs/reports/` |
+| `docs/superpowers/specs/` | 设计规格与决策记录（单一事实源；新增 spec 一律落此） |
 | `registries/` | 客户端/服务端路由与功能注册表 |
 | `team/` | SwarmTeam 多 profile 部署包（脱敏正本；安装指南见目录内 README） |
 | `zcode-patches/` | Ycode（zcode 分叉）编辑器补丁 series |

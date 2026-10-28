@@ -11,7 +11,7 @@
 //   - 系统浏览器：channel:'chrome'（隔离链 playwright 浏览器未下载）
 //   - naive-ui 遮罩：跨 hash 导航残留弹窗拦点击——clearMasks（Escape×3）
 //   - 复用表单场景：第二次开表单前整页 reload（组件内 showForm 状态残留会让点击失灵）
-// 用法：node scripts/change-gov-walkthrough.mjs
+// 用法：node scripts/regression/change-gov-walkthrough.mjs
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'fs'
 

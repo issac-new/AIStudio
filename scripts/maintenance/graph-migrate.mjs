@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process'
 const here = dirname(fileURLToPath(import.meta.url))
 // vite-node 的 node 可执行入口:Windows 下 .bin/vite-node 是 sh shim,
 // spawnSync 直跑 ENOENT;统一经 process.execPath 跑包内 .mjs。
-const viteNodeEntry = resolve(here, '../node_modules/vite-node/vite-node.mjs')
+const viteNodeEntry = resolve(here, '../../node_modules/vite-node/vite-node.mjs')
 const entry = resolve(here, 'graph-migrate-cli.ts')
 
 const r = spawnSync(process.execPath, [viteNodeEntry, entry, ...process.argv.slice(2)], { stdio: 'inherit' })

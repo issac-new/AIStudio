@@ -4,7 +4,7 @@
      →决议(冻结窗口 409 拦截)→实施(返工工时)）+ 三级冻结窗口管理。
      数据面 /api/change-gov/*（server change-governance-controller，挂载=patch 506）。
      词条=governance/i18n.ts changeGov 子树（zh/en 双侧）；设计文档
-     docs/2026-09-29-change-gov-three-accounts-research.md §4.1。 -->
+     docs/reports/2026-09-29-change-gov-three-accounts-research.md §4.1。 -->
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

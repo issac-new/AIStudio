@@ -120,5 +120,5 @@ function addKeys(filePath) {
   console.log(`Updated: ${filePath}`);
 }
 
-const enPath = resolve(import.meta.dirname, '../../upstream/hermes-studio/packages/client/src/i18n/locales/en.ts');
+const enPath = resolve(import.meta.dirname, '../../vendor/hermes-studio/packages/client/src/i18n/locales/en.ts');
 addKeys(enPath);

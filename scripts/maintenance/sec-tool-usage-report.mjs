@@ -11,9 +11,9 @@
 // 完成量口径另出（两个口径对不上本身就是异常信号）。
 //
 // 用法：
-//   node scripts/sec-tool-usage-report.mjs                    # 默认 7 天，全部 profile
-//   node scripts/sec-tool-usage-report.mjs --days 30 --profile aiteam-scout
-//   TOOL_USAGE_REPORT_DIR=/path node scripts/sec-tool-usage-report.mjs
+//   node scripts/maintenance/sec-tool-usage-report.mjs                    # 默认 7 天，全部 profile
+//   node scripts/maintenance/sec-tool-usage-report.mjs --days 30 --profile aiteam-scout
+//   TOOL_USAGE_REPORT_DIR=/path node scripts/maintenance/sec-tool-usage-report.mjs
 //
 // 只读：不写 profile 任何文件；报告落 <reportDir>/sec-tool-usage-YYYY-MM-DD.md。
 import { existsSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs'

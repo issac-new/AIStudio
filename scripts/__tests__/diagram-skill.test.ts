@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-const overlayRoot = resolve(__dirname, '..')
+const overlayRoot = resolve(__dirname, '..', '..')
 const SKILL_DIR = join(overlayRoot, 'assets', 'skills', 'diagram-design')
 const BRAND_FILE = join(overlayRoot, 'assets', 'skills', 'diagram-design-brand', 'swarmstudio.profile.md')
 const SYNC_SCRIPT = join(overlayRoot, 'scripts', 'sync-diagram-skill.mjs')

@@ -1,7 +1,7 @@
 // overlay/custom/client/governance/api/changeGov.ts
 // 变更治理数据面（/api/change-gov/*，调研落地轮 2026-09-29）。
 // 类型与 server change-governance-store 契约对齐；请求走 @/api/client 的 request
-// （与 governance api 同款）。设计文档：docs/2026-09-29-change-gov-three-accounts-research.md。
+// （与 governance api 同款）。设计文档：docs/reports/2026-09-29-change-gov-three-accounts-research.md。
 import { request } from '@/api/client'
 
 export interface ChangeLevelDef {

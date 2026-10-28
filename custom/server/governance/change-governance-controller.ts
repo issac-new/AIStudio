@@ -14,7 +14,7 @@
  *   POST /api/change-gov/freeze-windows      新建窗口（三级）
  *   PATCH /api/change-gov/freeze-windows/:id 启停
  *
- * 方法论与设计：docs/2026-09-29-change-gov-three-accounts-research.md。
+ * 方法论与设计：docs/reports/2026-09-29-change-gov-three-accounts-research.md。
  * 存储：change-governance-store（node:sqlite，CHANGE_GOV_DB 可覆写）。
  * 挂载：patch 506 在 bootstrap/routes.ts（与 490 同款两行）——控制面独立成文件，
  * series 台账在案惯例：已挂控制器追加端点在活进程不生效，端点组独立文件+独立挂载。

@@ -6,12 +6,14 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="${1:-/tmp/plan-view}"
 SRC="$ROOT/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
 # 标题自动自正本提版（run16 复盘：硬编码 V8.20 滞后实锤——改这里必须无硬编码版本）
-TITLE="${2:-$(python3 -c "
-import re
-s = open('/Users/cuishi/lab/ncwk/overlay/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md', encoding='utf-8').read()
-m = re.search(r'现行版本 (V8\.\d+)', s)
+# 路径经 argv 传入，不写死本机目录（2026-10-28 修正：原内联绝对路径指向已退役的多仓树）。
+TITLE="${2:-$(python3 - "$SRC" <<'PY'
+import re, sys
+s = open(sys.argv[1], encoding='utf-8').read()
+m = re.search(r'现行版本\s*\**\s*(V8\.\d+)', s)
 print(f'AIStudio 全流程推演方案 {m.group(1)}' if m else 'AIStudio 全流程推演方案')
-")}"
+PY
+)}"
 mkdir -p "$OUT"
 # 皮肤与增强脚本一律用仓库版（单一事实源），PLAN_VIEW_DIR 穿透 OUT——修掉
 # 「enhance 读死 /tmp/plan-view 误碰别的输出目录」的坑（2026-10-10 实锤摸到活页 mtime）

@@ -1,4 +1,4 @@
-// 变更治理 API 守门（调研落地轮 2026-09-29，docs/2026-09-29-change-gov-three-accounts-research.md §4.1）：
+// 变更治理 API 守门（调研落地轮 2026-09-29，docs/reports/2026-09-29-change-gov-three-accounts-research.md §4.1）：
 // ① meta：L1-L4 分级/SLA/五维词表/管控基准单一事实源
 // ② 全生命周期：create(draft)→submit(落 SLA deadline)→decide approve/reject→implement(rework_hours)
 // ③ 冻结窗口闸门：窗口生效期提交 → freeze_violation=1；L2 批准无 override → 409 freeze_gate；override 后放行

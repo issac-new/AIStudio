@@ -9,7 +9,7 @@
  *
  * 存储：node:sqlite DatabaseSync（CJS 惰性 require，与 kanban-overview 同款）。
  * 库路径 CHANGE_GOV_DB 可覆写（测试/隔离走查用）；缺省 ~/.hermes-web-ui/change-governance.db。
- * 设计文档：docs/2026-09-29-change-gov-three-accounts-research.md §4.1。
+ * 设计文档：docs/reports/2026-09-29-change-gov-three-accounts-research.md §4.1。
  */
 import { mkdirSync } from 'fs'
 import { homedir } from 'os'

@@ -20,7 +20,7 @@ for (let i = 0; i < 3; i++) {
   const btn = page.locator('.n-modal .n-base-close').first()
   if (await btn.count()) { await btn.click({ timeout: 2000 }).catch(() => undefined); await page.waitForTimeout(500) } else { await page.keyboard.press('Escape'); await page.waitForTimeout(500) }
 }
-// patch 540 收养链验证 → 独立脚本 scripts/kanban-adoption-walkthrough.mjs
+// patch 540 收养链验证 → 独立脚本 scripts/regression/kanban-adoption-walkthrough.mjs
 // （本脚本主 context 的 store 已初始化，同会话不会重跑 adopt；独立浏览器实例才实证）
 
 

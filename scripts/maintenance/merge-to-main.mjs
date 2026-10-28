@@ -3,12 +3,12 @@
 // 安全合入 main：自动定位 main 所在的 worktree（本仓 main 常被 main-live 占用），
 // 拒绝把 main 当特性分支切来切去；main 工作树有代码改动时拒绝合并。
 //
-// 用法：node scripts/merge-to-main.mjs [--message "merge: ..."]
+// 用法：node scripts/maintenance/merge-to-main.mjs [--message "merge: ..."]
 import { execFileSync } from 'node:child_process'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '..')
+const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '..')
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
 
 const branch = git('branch', '--show-current')

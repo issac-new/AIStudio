@@ -3,14 +3,20 @@
 # 策略(遵循 upstream 目录更新规则):优先取最新 stable release tag,
 # 无 release/tag 时 fallback 到 origin/main 最新提交。始终以远端强制覆盖本地。
 set -e
-cd "$(dirname "$0")/.."
+# 单仓布局（2026-10-28 对齐）：本脚本升级的是仓内 upstream/ 检出（本地基建，不入库），
+# 不是 vendor/ 钉版基线——vendor 无 .git，升级经由 vendor:sync 从 upstream 同步。
+# OVERLAY_UPSTREAM_ROOT 可指向隔离副本（worktree/沙箱）。
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+UPSTREAM_ROOT="${OVERLAY_UPSTREAM_ROOT:-$ROOT/upstream}"
+UPSTREAM_DIR="$UPSTREAM_ROOT/hermes-studio"
 HERMES_REPO="EKKOLearnAI/hermes-studio"
+cd "$ROOT"
 
 echo "[sync] 1. clean(撤销 B 类 patch)"
 npm run clean
 
 echo "[sync] 2. fetch + 取最新 stable release tag(无 tag 则 fallback origin/main)"
-cd ../upstream/hermes-studio
+cd "$UPSTREAM_DIR"
 git fetch origin --tags --force
 
 # 优先取最新非预发布 release tag;失败则 fallback 到 origin/main
@@ -41,19 +47,19 @@ else
   git reset --hard origin/main
   git clean -fdx
 fi
-cd ../../overlay
+cd "$ROOT"
 
 echo "[sync] 3. re-inject(应用 patch + 建 node_modules 符号链接 + server/src/custom 链接)"
 npm run inject
 
 echo "[sync] 3b. install deps(git clean -fdx 清了 node_modules,需重装)"
-cd ../upstream/hermes-studio && npm install --no-audit --no-fund --ignore-scripts && cd ../../overlay
+cd "$UPSTREAM_DIR" && npm install --no-audit --no-fund --ignore-scripts && cd "$ROOT"
 
 echo "[sync] 4. 校验上游工作树状态(直接 git status,绕开 verify-clean 路径错配)"
-cd ../upstream/hermes-studio
+cd "$UPSTREAM_DIR"
 echo "  HEAD: $(git log --oneline -1)"
 echo "  dirty files (非 inject 产物应排查): $(git status --porcelain | wc -l | tr -d ' ')"
-cd ../../overlay
+cd "$ROOT"
 
 echo "[sync] 完成。若 inject 失败,按 docs/superpowers/specs 中 overlay 架构 §3.5 修复 patch。"
 echo "[sync] 接下来:npm run build:full && npm run test"

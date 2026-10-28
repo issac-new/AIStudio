@@ -21,7 +21,16 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-UPSTREAM_DIR="$(cd "$SCRIPT_DIR/../../upstream/hermes-studio" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# 上游根解析序与 serve-server.mjs / build.mjs 一致：显式 env ＞ 仓内 vendor ＞ 旧兄弟 upstream。
+# 单仓检出没有 ../upstream，旧写法在此必坏（2026-10-28 对齐）。
+if [ -n "${OVERLAY_UPSTREAM_ROOT:-}" ]; then
+  UPSTREAM_DIR="$OVERLAY_UPSTREAM_ROOT/hermes-studio"
+elif [ -d "$REPO_ROOT/vendor/hermes-studio" ]; then
+  UPSTREAM_DIR="$REPO_ROOT/vendor/hermes-studio"
+else
+  UPSTREAM_DIR="$(cd "$REPO_ROOT/../upstream/hermes-studio" && pwd)"
+fi
 
 export TS_NODE_PROJECT=packages/server/tsconfig.json
 export TS_NODE_FILES=1

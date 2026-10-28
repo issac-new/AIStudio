@@ -2,7 +2,7 @@
 // P1 Task 8 — 旧 LoopInstance 数据迁移为 GraphSpec 表（GraphSpecStore 持久化）
 //
 // 幂等：按 spec id（`loop-<loopId>`）检测已迁移；dry-run（默认）只打印清单不落盘。
-// CLI 包装：scripts/graph-migrate.mjs（node ≥22.18 类型剥离直引本文件）。
+// CLI 包装：scripts/maintenance/graph-migrate.mjs（node ≥22.18 类型剥离直引本文件）。
 
 import type { LoopInstance } from '../types'
 import type { LoopStateStore } from '../store/state-store'
