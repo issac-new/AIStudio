@@ -115,8 +115,8 @@
 | K1 | ~~`npm run sync` 端到端未跑~~ **已补跑（2026-10-28）** | 在隔离检出实跑：一次性 worktree + 本地 clone 上游（origin 指向仓内 upstream，不出网），`SYNC_EXIT=0`、补丁 applied 339 条 / FAILED 0 条、checkout tag v0.7.39、install 走离线缓存 | 证据 `evidence/2026-10-28-sync-e2e/sync-run.log` |
 | K2 | ~~整合正本两处「截图不入库」绝对句~~ **已修（2026-10-28）** | 正文两处补 `evidence/` 冻结白名单例外，与 `AGENTS.md` 规则 8 / `docs/README.md` 的分轨表对齐 | 已入库 |
 | K3 | `docker-compose` 路线 | 已下线（2026-10-28 挂账清偿轮）；补齐容器化是新项目 | 产品裁决 |
-| K4 | agent-teams 底座无机器载体 | 引入 `team/version.json` 需与 VENDOR.md、测试三方同步，属跨模块契约变更 | 版本机制轮 |
-| K5 | `carrierPattern` 字段名语义过载 | 改名需同步校验器 + 单测 + 清单，收益小于风险；已在清单注释固化语义 | 校验器重构轮 |
+| K4 | ~~agent-teams 底座无机器载体~~ **已补（2026-10-28）** | 新增 `team/version.json`（version/base/extension/extN/upstreamCommit）；`release:check` 三方对账（载体 ↔ team/VERSION ↔ VENDOR.md），正负例各一（篡改载体即红） | 已入库 |
+| K5 | ~~`carrierPattern` 字段名语义过载~~ **已更名（2026-10-28）** | 改为 `activePatchCount`（语义即名），清单 notes、校验器、单测同批改；值仍为 8（002-009） | 已入库 |
 | K6 | ~~`eda` 域只有 orchestrator~~ **已退役（2026-10-28 用户裁决）** | 注册表 `status: retired` + 历史锚注记；活跃板 9→8，`test_board_ownership.py` 改为「活跃 8 / 含退役 9」双断言，README 双语同步 | 已入库 |
 | K7 | ~~三类 roster 命名混用~~ **已立名（2026-10-28）** | 正本给出三个全称并禁用单说 roster：治理人员名册 / 推演编制 / agent 角色目录；`runtime/roster/squads.yaml` 注释改为真实的 `$HERMES_HOME/agent-roster.yaml`（本仓无该文件） | 已入库 |
 | K8 | ~~15 人枚举缺团队负责人 A/B~~ **已补（2026-10-28）** | 以 `simharness/mux/mx-lib.sh:145` 的 USERS 为唯一真源（15 人含 wei·mei），三处枚举补齐并标注真源位置 | 已入库 |

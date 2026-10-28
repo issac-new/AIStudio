@@ -70,6 +70,24 @@ for (const key of REQUIRED_MODULES) {
     if (first !== mod.version) {
       fail(key, `VERSION 文件首行 "${first}" ≠ 清单 ${mod.version}`)
     }
+    // K4（2026-10-28）：机器载体 team/version.json 必须与 VERSION 首行、清单、VENDOR.md 一致
+    if (mod.machineCarrier) {
+      try {
+        const j = JSON.parse(readCarrier(mod.machineCarrier))
+        if (j.version !== mod.version) fail(key, `机器载体 ${mod.machineCarrier} version=${j.version} ≠ 清单 ${mod.version}`)
+        let baseV = ''
+        try {
+          const vt = readCarrier('vendor/VENDOR.md')
+          baseV = new RegExp('hermes-agent \\| `[^`]+` \\| v?(\\d+\\.\\d+\\.\\d+)').exec(vt)?.[1] ?? ''
+        } catch { /* VENDOR.md 缺失由后面的基线块单独报 */ }
+        if (baseV && String(j.base) !== baseV) fail(key, `机器载体 base=${j.base} ≠ VENDOR.md hermes-agent ${baseV}`)
+        if (`${j.base}-${j.extension}.${j.extN}` !== mod.version.replace(/^v/, '')) {
+          fail(key, `机器载体三段(${j.base}-${j.extension}.${j.extN}) 与清单版本 ${mod.version} 不一致`)
+        }
+      } catch (e) {
+        fail(key, `机器载体 ${mod.machineCarrier} 不可解析：${e.message}`)
+      }
+    }
   } else if (key === 'cockpit' && mod.versionCarrier === 'RELEASE-NOTES.md') {
     // 严格口径（2026-10-28 对账）：取「## 版本」节首个非空行比对，不用全文 includes——
     // 全文判断在「新条目已加、清单忘改」时仍绿（旧版本串仍在正文里）。
@@ -127,9 +145,9 @@ for (const key of REQUIRED_MODULES) {
   if (mod) {
     const series = readCarrier('zcode-patches/series')
     const active = series.split('\n').filter(l => /^\d{3}-/.test(l.trim())).length
-    const declared = Number(mod.carrierPattern ?? NaN)
+    const declared = Number(mod.activePatchCount ?? NaN)
     if (!Number.isInteger(declared) || declared !== active) {
-      fail('ycode', `活跃补丁数不符：清单=${mod.carrierPattern} series 实际=${active}`)
+      fail('ycode', `活跃补丁数不符：清单=${mod.activePatchCount} series 实际=${active}`)
     }
   }
 }
