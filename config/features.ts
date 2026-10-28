@@ -5,6 +5,11 @@
 // 唯一通道。早先版本用 `process.env.*`,而 `process` 在浏览器中未定义,会在
 // bootstrap 阶段抛 ReferenceError("process is not defined")。同时所有 key 都
 // 必须带 `VITE_` 前缀,否则 Vite 不会把该变量注入到客户端 bundle。
+// 开关语义（2026-10-28 K10 立规，用户裁决保留现名）：
+//   `eval` / `skillgov` / `ontology` / `bpa` 四个开关**只门控导航项与页面注册**，不门控服务端能力、
+//   不卸载对应路由与端点——关掉只是"入口不显示"，能力仍在，直接访问 URL 仍可用。
+//   需要真正关闭能力时改服务端特性或撤补丁，不要依赖这四个 env。命名保留 `VITE_CUSTOM_<域>` 以免
+//   破坏既有部署（改名 *Nav 属 breaking change，用户明确否决）。
 export interface FeatureConfig {
   matrixChat: boolean;
   /** reserved（2026-10-27 Task 10 开关盘点）：全仓无运行时消费者（grep 零命中）。

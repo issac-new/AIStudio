@@ -23,9 +23,12 @@ def _blocks(text: str) -> list[str]:
 
 def test_every_board_has_team_and_human_owner() -> None:
     blocks = _blocks(REGISTRY.read_text(encoding="utf-8"))
-    assert len(blocks) == 9, f"领域/板数量异常：{len(blocks)}"
+    # 2026-10-28：eda 域标 retired（用户裁决），活跃板 9 → 8；退役块仍校验结构完整性
+    active = [b for b in blocks if "status: retired" not in b]
+    assert len(active) == 8, f"活跃领域/板数量异常：{len(active)}"
+    assert len(blocks) == 9, f"领域条目总数异常（含退役）：{len(blocks)}"
     boards = []
-    for block in blocks:
+    for block in active:
         board = re.search(r"(?m)^  board:\s*(\S+)", block)
         profiles = re.search(r"(?m)^  profiles:\n((?:  - .+\n)+)", block)
         owner_label = re.search(r"(?m)^  owner_label:\s*(\S+)", block)
