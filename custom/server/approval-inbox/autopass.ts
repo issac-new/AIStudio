@@ -1,4 +1,4 @@
-// overlay/custom/server/approvals/autopass.ts
+// overlay/custom/server/approval-inbox/autopass.ts
 // V4.1 §七 backlog ③：低风险自动通过抽检器（2026-09-29 重构轮）。
 // 设计（方案 V4.1 §三 人机分工域"低风险自动通过的抽检器"落地）：
 //   - low 档（纯只读命令，risk-tier 服务端权威分类）超过宽限期后自动放行

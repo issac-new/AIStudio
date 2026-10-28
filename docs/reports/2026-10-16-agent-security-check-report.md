@@ -104,7 +104,7 @@
 
 **C1 工具操作分级 — 部分符合**
 
-- 机制：上游三级分级 `upstream/hermes-agent/tools/approval_detection.py:107-146,228-362`；overlay 七档矩阵 `custom/server/permmodes/permission-modes.ts:19-31`；风险三档 `custom/server/approvals/risk-tier.ts:23-53`。
+- 机制：上游三级分级 `upstream/hermes-agent/tools/approval_detection.py:107-146,228-362`；overlay 七档矩阵 `custom/server/permmodes/permission-modes.ts:19-31`；风险三档 `custom/server/approval-inbox/risk-tier.ts:23-53`。
 - 缺口：上游对高危档的设计是「需审批」，不是「默认禁用」。
 - 部署面分裂：默认 profile 的根配置 mode off（`~/.hermes/config.yaml:399`）；命名 team 未设 approvals，生效上游默认 smart；overlay 执法门总闸默认 0 `custom/server/toolpipeline/enforce-gate.ts:123`。
 
@@ -140,7 +140,7 @@
 
 **D2 高危操作审批门禁 — 部分符合**
 
-- 机制三层齐全：上游 approvals `hermes_cli/config_defaults.py:1665-1692`；overlay 人审收件箱 `custom/server/approvals/pending-controller.ts:47-49`；执法门票据 `custom/server/toolpipeline/enforce-approvals.ts`。
+- 机制三层齐全：上游 approvals `hermes_cli/config_defaults.py:1665-1692`；overlay 人审收件箱 `custom/server/approval-inbox/pending-controller.ts:47-49`；执法门票据 `custom/server/toolpipeline/enforce-approvals.ts`。
 - 部署面分裂，三处生效值不一样。默认 profile 的根配置 mode off（`~/.hermes/config.yaml:399`）。
 - 49 个命名 team 的 config.yaml 无 approvals 段，生效上游默认 smart。
 - sim 树只设 timeout_action: escalate，同样生效 smart。

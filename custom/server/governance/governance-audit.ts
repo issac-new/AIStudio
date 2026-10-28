@@ -12,7 +12,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { queryApprovalLog } from '../approvals/approval-log'
+import { queryApprovalLog } from '../approval-inbox/approval-log'
 import { governanceRepoRoot } from './repo-root'
 import { hermesHome } from '../lib/paths'
 

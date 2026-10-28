@@ -49,7 +49,7 @@
 
 ### 2.2 扩展面与治理面（对照源4/9）
 
-已有：审批三档风险分级+抽检回看（`custom/server/approvals/risk-tier.ts`、`autopass.ts`）；逐文件 diff 查看+undo（`ToolChangeCard`、`IdeRunResultCard`）；OutboundNoticeGuard 出站限流（Tahiti 问题的本仓解）；run-trace JSONL+Run Observatory；治理三账+change-gov+QGate；settings-layers 四层偏好+状态栏槽位+键位映射。
+已有：审批三档风险分级+抽检回看（`custom/server/approval-inbox/risk-tier.ts`、`autopass.ts`）；逐文件 diff 查看+undo（`ToolChangeCard`、`IdeRunResultCard`）；OutboundNoticeGuard 出站限流（Tahiti 问题的本仓解）；run-trace JSONL+Run Observatory；治理三账+change-gov+QGate；settings-layers 四层偏好+状态栏槽位+键位映射。
 
 缺：
 6. **TS/UI 侧运行时插件系统**——全部经 patch+inject 静态注入（dsh "Everything is a Plugin" 的对照极差）；Python agent 侧有 plugin.yaml 钩子系统（run-trace 等 2 个在用）。
@@ -71,7 +71,7 @@
 
 ### 落地①：副作用影响面预览（Blast Radius）——源4 + 源9 tool.call 持有模式
 
-- 域（纯函数无 IO）：`custom/server/approvals/impact-preview.ts`——`analyzeCommandImpact(command)` 解析 rm/rmdir、git clean -f/-d、git reset --hard、git checkout|restore --、find -delete、`>` 覆盖重定向、truncate；引号感知分段（&&/||/;/|）；组合命令取最保守段（unbounded 优先）；变量/根路径/宽域通配如实标 `unbounded` 不猜数。
+- 域（纯函数无 IO）：`custom/server/approval-inbox/impact-preview.ts`——`analyzeCommandImpact(command)` 解析 rm/rmdir、git clean -f/-d、git reset --hard、git checkout|restore --、find -delete、`>` 覆盖重定向、truncate；引号感知分段（&&/||/;/|）；组合命令取最保守段（unbounded 优先）；变量/根路径/宽域通配如实标 `unbounded` 不猜数。
 - 接线：`pending-controller.ts` 两源（fleetfile 队列+fleet 快照）聚合时内嵌 `impact`；新端点 `POST /api/approvals/impact-preview`（聊天侧审批卡等按需取）。
 - UI：`ApprovalPanel.vue` 待审命令行内可展开块（危险类型徽章+目标数+unbounded 警示+目标清单截 50 条），词条走 `i18n-approvals.ts` 本地字典（不动注入词表 473）。
 - 测试：`impact-preview.test.ts` 25 用例（25 passed）；`approval-panel.test.ts`+`approvals-dedupe.test.ts` 回归 10 passed。
@@ -138,7 +138,7 @@
 
 ## 六、验证记录
 
-- `npx vitest run custom/server/approvals/__tests__/impact-preview.test.ts` → 25 passed
+- `npx vitest run custom/server/approval-inbox/__tests__/impact-preview.test.ts` → 25 passed
 - `npx vitest run custom/client/cockpit/__tests__/approval-panel.test.ts custom/client/cockpit/__tests__/approvals-dedupe.test.ts` → 10 passed
 - `npx vitest run custom/client/governance/__tests__/ custom/server/harness/__tests__/` → 54 passed（10 文件）
 - 全量回归与热更新走查见 §七补记

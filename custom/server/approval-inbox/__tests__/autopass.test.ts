@@ -1,4 +1,4 @@
-// overlay/custom/server/approvals/__tests__/autopass.test.ts
+// overlay/custom/server/approval-inbox/__tests__/autopass.test.ts
 // V4.1 §七 抽检器守门：纯函数（确定性抽检/候选判定）+ REST 集成
 // （低风险自动放行 → 台账 auto_pass → 抽检处置 confirm/veto）。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'

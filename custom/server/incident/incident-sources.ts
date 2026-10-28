@@ -14,7 +14,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 // 身份册（A7）：静态 import——相对 require 在 vitest/vite 转换态失解析
 // （2026-10-17 实测 Cannot find module，catch 静默吞=身份面恒 absent）。
 import * as agentIdentity from '../agentidentity/agent-identity'
-import * as approvalLog from '../approvals/approval-log'
+import * as approvalLog from '../approval-inbox/approval-log'
 import { join, resolve } from 'node:path'
 import { describeToolCall, type ToolSemantic } from './tool-semantics'
 import { underHermes, underWebUi } from '../lib/paths'

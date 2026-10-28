@@ -121,7 +121,7 @@ export const COST_ACCOUNT_DEFS: Record<AccountKey, CostAccountDef> = {
   humanIntervention: {
     title: '人工干预成本',
     definition: 'governance-audit 四源归一事件中人工干预类计数：approvals 源全部（审批决策本体）+ action 命中 /escalat|override|decide|review|裁决|升级|approve|reject/i。采样上限 500 条/次（approval-log CAP）',
-    sources: ['custom/server/governance/governance-audit.ts auditLog', 'custom/server/approvals/approval-log.ts queryApprovalLog'],
+    sources: ['custom/server/governance/governance-audit.ts auditLog', 'custom/server/approval-inbox/approval-log.ts queryApprovalLog'],
   },
   toolExecution: {
     title: '工具执行成本',

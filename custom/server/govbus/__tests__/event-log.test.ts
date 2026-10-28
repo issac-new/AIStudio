@@ -73,7 +73,7 @@ describe('govbus 双桥（真实事件入口）', () => {
   it('桥1：appendApprovalLog → approval 域事件（deny → high）', async () => {
     process.env.HERMES_APPROVALS_LOG_FILE = join(dir, 'approvals-history.json')
     try {
-      const { appendApprovalLog } = await import('../../approvals/approval-log')
+      const { appendApprovalLog } = await import('../../approval-inbox/approval-log')
       appendApprovalLog({ id: 'b1', actor: 'wei', targetKind: 'command', targetId: 'cmd-1', targetTitle: '危险命令', decision: 'deny' })
       await settle()
       const ev = queryGovEvents({ typePrefix: 'approval.' })[0]

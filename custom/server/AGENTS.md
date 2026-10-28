@@ -18,7 +18,8 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 | `toolpipeline/` | 工具执行瀑布：审计 → 结果围栏 → 技能治理 → 执法门 |
 | `harness/` | 治理读模型（能力目录/成本账/成熟度/九层体检） |
 | `loop/graph/` | 图执行器、检查点、重试与停滞检测 |
-| `approvals/` | 审批规则、收件箱、审批历史 |
+| `approval-rules/` | 审批规则与决策（candidates/evaluate/decide/rules；patch 402 挂载） |
+| `approval-inbox/` | 审批收件箱与历史（pending 聚合/就地裁决/history；patch 488 挂载） |
 | `eval/` | 评测集、回放判定、发布门 |
 | `govbus/` | 治理事件总线（append-only JSONL） |
 | `evidence/` | 任务证据台账（hash 链防篡改） |

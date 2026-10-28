@@ -1,4 +1,4 @@
-// overlay/custom/server/approvals/__tests__/pending-controller.test.ts
+// overlay/custom/server/approval-inbox/__tests__/pending-controller.test.ts
 // P1 审批收件箱守门：pending 聚合形状 + decide 前缀路由 + 历史落账 + 参数校验。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createServer } from 'http'

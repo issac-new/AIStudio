@@ -25,7 +25,7 @@
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { ladderForProfile, type AutonomyLadderEntry } from '../autonomyladder/autonomy-ladder'
-import { classifyApprovalRisk, type ApprovalRiskTier } from '../approvals/risk-tier'
+import { classifyApprovalRisk, type ApprovalRiskTier } from '../approval-inbox/risk-tier'
 import { browserVerdict } from '../browsersec/browser-security'
 import { modeDecision, type PermissionMode, type ToolCategory } from '../permmodes/permission-modes'
 import { sessionModeOf } from '../permmodes/session-mode-store'

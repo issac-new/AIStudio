@@ -3,9 +3,9 @@ index f413fb3a3..1cbe578c9 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -89,6 +89,7 @@ import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
- import { approvalRoutes } from '../custom/approval/approval-controller'
+ import { approvalRoutes } from '../custom/approval-rules/approval-controller'
  // overlay[approvals]: P1 人工审批收件箱——待审聚合/就地裁决/决策历史（2026-09-28 产品 UI 缺陷修复 §二）
- import { approvalsRoutes } from '../custom/approvals/pending-controller'
+ import { approvalsRoutes } from '../custom/approval-inbox/pending-controller'
 +import { governanceRoutes } from '../custom/governance/governance-controller'
  // overlay[tokens]: token-meter 三投影互校（第一批吸收 #9）
  import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'

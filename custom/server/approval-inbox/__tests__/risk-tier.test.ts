@@ -1,4 +1,4 @@
-// overlay/custom/server/approvals/__tests__/risk-tier.test.ts
+// overlay/custom/server/approval-inbox/__tests__/risk-tier.test.ts
 // V4-N1 审批风险分级守门：三档分类矩阵（高危不可逆/可逆常规/低风险只读）+
 // 保守性（拿不准=medium）+ 语义关键词（发布/准出/release）。
 import { describe, it, expect } from 'vitest'

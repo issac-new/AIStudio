@@ -1,4 +1,4 @@
-// custom/server/approvals/human-gate.ts
+// custom/server/approval-inbox/human-gate.ts
 // HumanGate 发布批准前置请求：store 是审批权威，审计/事件只是可告警投影。
 // 任务 grant 在同一 store 上以 additive scope 扩展；既有 runId/cardId 发布接口不变。
 import Router from '@koa/router'

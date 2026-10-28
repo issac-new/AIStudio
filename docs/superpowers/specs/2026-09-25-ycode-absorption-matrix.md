@@ -16,7 +16,7 @@
 | 1 | dispatch reason code 词表 | multica MUL-4525 | ✅ 398 | `custom/server/zcode/dispatch-reasons.ts`（18→21 枚举，引擎通道扩展档） |
 | 2 | 认领四围栏 SQL | multica agent.sql:743 | 🧬+✅ | hermes 认领已有 per-profile cap/claim_lock/优先级序；399 补同人双跑拦截验收测试 |
 | 3 | compact 六段交接 | kimi 吸收表 1 | ✅ 400 | context_compressor TRUE INTENT/新两段/[UNVERIFIED] 标注（既有段强于 kimi 部分不重造） |
-| 4 | 审批五档宽度+八态 | minimax types.ts:170-195 | ✅ 402 | `custom/server/approval/`（candidates[0] 恒窄默认；deny→ask→allow） |
+| 4 | 审批五档宽度+八态 | minimax types.ts:170-195 | ✅ 402 | `custom/server/approval-rules/`（candidates[0] 恒窄默认；deny→ask→allow） |
 | 5 | checkpoint 四恢复选项 | claude-code 概念 | ✅ 组合层 | `custom/server/zcode/checkpoint-options.ts`（zcode v4 原语组合；POST /checkpoint/recover） |
 | 6 | runaway-guard 六信号 | minimax contracts.ts:3-10 | ✅ 401+405 | 工具侧六信号+HMAC 指纹；文本侧 ngram（mimo max-mode 原语） |
 | 7 | @mention A2A 派单 | multica §3.1 | ✅ | `mention-dispatch.ts`（逐 mention outcome+单 pending 槽 coalesced+可追溯 run） |

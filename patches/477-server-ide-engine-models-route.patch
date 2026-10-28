@@ -9,7 +9,7 @@ index 083002afd..ff80071e8 100644
 +import ideEngineModelsRouter from '../custom/controllers/ide/engine-models'
  import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
  // overlay[approval]: 审批宽度候选五档+决策八态+规则三列表（第一批吸收 #4）
- import { approvalRoutes } from '../custom/approval/approval-controller'
+ import { approvalRoutes } from '../custom/approval-rules/approval-controller'
 @@ -319,6 +320,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(ideWorktreeRouter.routes())               // IDE worktree 编排（R5 任务级隔离：create/remove/list + 会话绑定）
    app.use(ideRetryCountRoutes.routes())              // IDE 简报打回计数（aipaydev 缺口 3 可视化；与 patch 363 计数链同源）

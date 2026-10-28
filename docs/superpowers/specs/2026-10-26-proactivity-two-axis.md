@@ -8,7 +8,7 @@
 
 **对账结论（文章要素 → 既有锚点）**：
 
-- 已覆盖：时机两来源（定时=cron/autosched；事件=`custom/server/automations/automation-rules.ts:19` 四源 file/kanban/git/webhook——文章 §1.1「数据源变化即事件」）；独立身份（agentidentity 域+48 profile）；执行自主度阶梯（`custom/server/autonomyladder/`（BCG 三档 insight/assist/auto）+ 执行面 `custom/server/toolpipeline/enforce-gate.ts:27` 消费）；风险三档与影响面（`custom/server/approvals/risk-tier.ts:10`、`impact-preview.ts`）；停点判定（`custom/server/goalautonomy/goal-autonomy.ts`）；任务级验收规则（vendor hermes goals.py completion contract：Verification criterion）。
+- 已覆盖：时机两来源（定时=cron/autosched；事件=`custom/server/automations/automation-rules.ts:19` 四源 file/kanban/git/webhook——文章 §1.1「数据源变化即事件」）；独立身份（agentidentity 域+48 profile）；执行自主度阶梯（`custom/server/autonomyladder/`（BCG 三档 insight/assist/auto）+ 执行面 `custom/server/toolpipeline/enforce-gate.ts:27` 消费）；风险三档与影响面（`custom/server/approval-inbox/risk-tier.ts:10`、`impact-preview.ts`）；停点判定（`custom/server/goalautonomy/goal-autonomy.ts`）；任务级验收规则（vendor hermes goals.py completion contract：Verification criterion）。
 - **净缺口（本轮落地）**：①「谁定义问题」横轴（L1 指令/L2 时间规则/L3 事件触发/L4 用户目标-Agent 算差距/L5 Agent 推断目标）与「做到哪一步」纵轴（告知/建议/起草待确认/可逆执行/不可逆对外执行）的**两轴组合裁决**——既有阶梯是执行自主度单轴，无「问题定义权」维度；②**长期目标漂移防线**——全仓无「目标关键节点重新确认」机制（仅有 MCP 配置漂移 mcpcatalog/mcp-drift），文章定性「拿着错位目标用力推进」为长期主动最危险的失败方式；③**失败代价三要素结构化**（可撤回/影响谁/可验证）——既有 risk-tier 按命令破坏力分档，无三要素判定通道。
 
 本轮新增（A 类纯新增域 + B 类两行挂载补丁）：

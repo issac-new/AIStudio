@@ -1,4 +1,4 @@
-// overlay/custom/server/approvals/approval-log.ts
+// overlay/custom/server/approval-inbox/approval-log.ts
 // 人工审批决策历史（P1 §二 2026-09-28）：append-only JSON 日志。
 // 记录：时间 + 操作人 + 操作对象（kind/id/title）+ 决策 + 备注 + 来源端点。
 // 路径解析与 approval-store 同约定：环境变量显式 > ~/.hermes-web-ui/approvals/。
