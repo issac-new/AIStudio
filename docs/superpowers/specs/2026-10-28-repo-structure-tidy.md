@@ -61,7 +61,9 @@
 - `npm run release:check`：四模块对账全绿（cockpit 0.7.39-studio.1／agent-teams v0.22.5-team.1／ycode 3.16.2／yuan-skill v2.95.0）。
 - 语法面：本批改动的 shell 脚本过 `bash -n`；`.mjs` 过 `node --check`。
 - `plan-html/render.sh` 标题提取实测输出「AIStudio 全流程推演方案 V8.55」（原实现因正本改用加粗写法恒落兜底标题，随本次一并修正）。
-- 全量 `npx vitest run`（工作树注入态）：944 个测试文件通过、6 跳过；6831 用例通过、11 跳过、**0 失败**，退出码 0。
+- 全量 `npx vitest run`（工作树注入态，分支侧）：944 个测试文件通过、6 跳过；**6831 用例通过、11 跳过、0 失败**（总计 6842），退出码 0。
+- 主干回归（合入 main 后，同一全量命令跑两轮）：首轮 1 失败——`custom/server/graph/__tests__/simulation-node-executors.test.ts > agent-task：建卡→等卡→通道写入完成信号`，单文件复跑 9/9 通过；第二轮 944 文件通过、**6831 用例通过、11 跳过、0 失败**，退出码 0。结论=该用例在并发下抖动（本批未触碰该文件与 graph 域代码），非本批回归；抖动本身另待观察，不在本批修复。
+- 口径勘误：合并提交 `bba9ea0b1` 的信息里把用例总数写成「6838」，实际为 6842（6831 通过 + 11 跳过 + 0 失败）。按「不改写历史」原则不改提交信息，准确口径以本节为准。
 - 构建面：`npm run build:full` 退出码 0（openapi → vite client → server tsc → server 打包 → 运行时资源 → decisiongraph 桥），尾部 `verify-dist` 放行（`index.html 4904B`、`assets/js 6 个`、默认口令扫描零命中）。
 - 打包预算：`node scripts/check-bundle-budget.mjs` 输出 `total=21.01MB budget=25MB`，OK。
 - 上述两项构建门禁是本批 G4 的直接验证：修复前 `verify-dist` 与 `check-bundle` 默认指向仓外 `../upstream`，在单仓检出下必然误判。
