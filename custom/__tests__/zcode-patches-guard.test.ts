@@ -8,7 +8,11 @@ import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 const OVERLAY_ROOT = resolve(__dirname, '../..')
-const ZCODE_ROOT = resolve(OVERLAY_ROOT, '..', 'upstream', 'zcode')
+// 底座源码解析序与 inject/build 一致：仓内 vendor/zcode 优先，旧兄弟 upstream 仅作回落
+// （单仓检出没有 ../upstream，旧写法会让本守门读到不存在的树）。
+const ZCODE_ROOT = existsSync(resolve(OVERLAY_ROOT, 'vendor', 'zcode'))
+  ? resolve(OVERLAY_ROOT, 'vendor', 'zcode')
+  : resolve(OVERLAY_ROOT, '..', 'upstream', 'zcode')
 
 function readOverlay(rel: string): string {
   return readFileSync(resolve(OVERLAY_ROOT, rel), 'utf8')

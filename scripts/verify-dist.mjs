@@ -15,9 +15,12 @@ import { resolve } from 'path';
 
 // OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/build.mjs 同一基建）——
 // worktree/沙箱布局下兄弟 upstream 不存在，显式指向隔离注入副本。
+// 单仓默认取仓内 vendor（构建产物落在 vendor/hermes-studio/dist），旧兄弟 upstream 仅作最后回落。
 const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim())
-  : resolve(import.meta.dirname, '..', '..', 'upstream');
+  : existsSync(resolve(import.meta.dirname, '..', 'vendor', 'hermes-studio'))
+    ? resolve(import.meta.dirname, '..', 'vendor')
+    : resolve(import.meta.dirname, '..', '..', 'upstream');
 const distClient = resolve(upstreamRoot, 'hermes-studio', 'dist', 'client');
 
 const fail = (msg) => {
