@@ -12,6 +12,7 @@ import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import { chainHashOfEntry, canonicalJson, GENESIS, verifyForwardChain } from '../auditchain/forward-chain'
 import type { IntegrityManifest, TrustCase, TrustCaseSummary, TrustLedgerEvent } from './types'
+import { atomicWriteJson } from '../lib/fs-store'
 
 const MAX_LEDGER_EVENTS = 5_000
 const KEEP_LEDGER_EVENTS = 4_500
@@ -43,25 +44,9 @@ function stemOf(id: string): string {
 }
 
 /** 原子写：写临时文件并 fsync，再 rename 覆盖。失败时清理临时文件并抛出。 */
-export function writeJsonAtomic(path: string, value: unknown): void {
-  ensureDir(dirname(path))
-  const tmp = `${path}.tmp.${process.pid}.${randomBytes(5).toString('hex')}`
-  const fd = openSync(tmp, 'w')
-  try {
-    writeFileSync(fd, JSON.stringify(value, null, 2))
-    fsyncSync(fd)
-  } catch (e) {
-    closeSync(fd)
-    try { unlinkSync(tmp) } catch { /* 临时文件可能已被清理 */ }
-    throw e
-  }
-  closeSync(fd)
-  try {
-    renameSync(tmp, path)
-  } catch (e) {
-    try { unlinkSync(tmp) } catch { /* 同上 */ }
-    throw e
-  }
+function writeJsonAtomic(path: string, value: unknown) {
+  // 2026-10-28 收敛：原子写单一实现（custom/server/lib/fs-store）
+  atomicWriteJson(path, value, { fsync: true })
 }
 
 function readJson<T>(path: string): T | null {

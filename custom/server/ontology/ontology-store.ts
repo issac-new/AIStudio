@@ -18,6 +18,7 @@ import { join, resolve } from 'node:path'
 import { hasErrors, validateInstances, validateSpec } from './ontology-validate'
 import { seedInstances, seedSpec } from './ontology-seed'
 import { versionIriOf, type OntologyInstance, type OntologySpec, type Violation } from './ontology-types'
+import { atomicWriteText } from '../lib/fs-store'
 
 export const SNAP_MAX = 50
 
@@ -36,11 +37,9 @@ function snapMax(): number {
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : SNAP_MAX
 }
 
-function writeAtomic(file: string, text: string): void {
-  mkdirSync(join(file, '..'), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}`
-  writeFileSync(tmp, text)
-  renameSync(tmp, file)
+function writeAtomic(file: string, text: string) {
+  // 2026-10-28 收敛：原子写单一实现（custom/server/lib/fs-store）
+  atomicWriteText(file, text)
 }
 
 function readJson<T>(file: string): T | null {

@@ -25,6 +25,7 @@ import {
   type ReviewSignal,
   type SignalKind,
 } from './types'
+import { atomicWriteJson } from '../lib/fs-store'
 
 const SIGNAL_CAP = 2000
 const EVAL_CASE_CAP = 500
@@ -53,15 +54,9 @@ export function caseFile(caseId: string): string {
   return join(casesDir(), `${stemOf(caseId)}.json`)
 }
 
-function writeJsonAtomic(file: string, data: unknown): void {
-  const tmp = `${file}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`
-  try {
-    writeFileSync(tmp, JSON.stringify(data, null, 2))
-    renameSync(tmp, file)
-  } catch (err) {
-    try { unlinkSync(tmp) } catch { /* 无残留 */ }
-    throw err
-  }
+function writeJsonAtomic(file: string, data: unknown) {
+  // 2026-10-28 收敛：原子写单一实现（custom/server/lib/fs-store）
+  atomicWriteJson(file, data)
 }
 
 function quarantine(file: string, err: unknown): void {
