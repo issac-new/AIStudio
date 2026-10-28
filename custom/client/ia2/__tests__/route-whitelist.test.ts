@@ -76,6 +76,8 @@ const EXPECTED_NAMES = [
   'ia2.groupRoom',
   'ia2.inbox',
   'ia2.journey',
+  // 2026-10-28 防冻结环：/login 别名重定向（登录页=根路径，习惯 URL 直达）
+  'ia2.loginAlias',
   'ia2.loopCanvas',
   'ia2.modelProviders',
   'ia2.notFound',
