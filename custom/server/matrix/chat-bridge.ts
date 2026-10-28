@@ -28,6 +28,7 @@ import {
   TASK_ASSIGN_EVENT_TYPE, TASK_RECEIPT_EVENT_TYPE,
   AGENT_MESSAGE_EVENT_TYPE, AGENT_PROFILE_EVENT_TYPE, SWARM_EVENT_PREFIX,
 } from './task-protocol'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface BridgeMatrixEnv { homeserverUrl: string; accessToken: string; userId: string }
 export interface BridgeMapping { matrixRoomId: string; gcRoomId: string }
@@ -208,10 +209,7 @@ function loadState(file: string): BridgeState {
 function saveState(file: string, st: BridgeState): void {
   const dir = path.dirname(file)
   mkdirSync(dir, { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(st), { encoding: 'utf-8', mode: 0o600 })
-  chmodSync(tmp, 0o600)
-  renameSync(tmp, file)
+  atomicWriteJson(file, st, { mode: 0o600 })
 }
 
 export interface ChatBridgeOptions {

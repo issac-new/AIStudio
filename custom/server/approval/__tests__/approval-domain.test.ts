@@ -214,7 +214,7 @@ describe('规则存储（rules.json）', () => {
     const src = readFileSync(join(OVERLAY_ROOT, 'custom/server/approval/approval-store.ts'), 'utf8')
     expect(src).toContain('dirname(this.path)') // 不用 lastIndexOf('/') 切目录（Windows 反斜杠路径会切出垃圾串）
     expect(src).not.toContain("lastIndexOf('/')")
-    expect(src).toContain('renameSync(tmp') // 临时文件 + rename 原子替换，不直接覆盖写
+    expect(src).toContain('atomicWriteJson(') // 2026-10-28 起原子写委托 lib/fs-store（tmp+rename 单源）
     expect(src).toContain('.corrupt') // 坏文件留档
     expect(src).toContain('console.warn') // 解析失败可观测，不静默
   })

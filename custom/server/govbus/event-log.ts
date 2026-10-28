@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { randomBytes } from 'crypto'
+import { atomicWriteText } from '../lib/fs-store'
 
 export type GovEventDomain = 'quality' | 'security' | 'cost' | 'approval' | 'autonomy' | 'system'
 export type GovEventSeverity = 'info' | 'warn' | 'high'
@@ -156,10 +157,7 @@ export function compactGovEvents(): { before: number; after: number } {
   if (lines.length <= CAP) return { before: lines.length, after: lines.length }
   const kept = lines.slice(lines.length - CAP)
   try {
-    const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-    const { writeFileSync, renameSync } = require('fs') as typeof import('fs')
-    writeFileSync(tmp, kept.join('\n') + '\n')
-    renameSync(tmp, file)
+    atomicWriteText(file, kept.join('\n') + '\n')
   } catch { /* 裁剪失败不炸（下次重试） */ }
   return { before: lines.length, after: kept.length }
 }

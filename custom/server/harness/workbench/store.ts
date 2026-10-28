@@ -7,6 +7,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSy
 import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import type { WorkbenchStore } from './types'
+import { atomicWriteJson } from '../../lib/fs-store'
 
 export function storeDir(): string {
   const env = process.env.HARNESS2_STORE?.trim()
@@ -48,10 +49,7 @@ export function readStore(): WorkbenchStore {
 export function writeStore(store: WorkbenchStore): void {
   const file = storeFile()
   mkdirSync(dirname(file), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(store, null, 2), { encoding: 'utf8', mode: 0o600 })
-  chmodSync(tmp, 0o600)
-  renameSync(tmp, file)
+  atomicWriteJson(file, store, { mode: 0o600 })
 }
 
 /** 进程内串行化读-改-写，避免并发请求互相覆盖。 */

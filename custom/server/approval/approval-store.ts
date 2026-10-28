@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkS
 import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import type { ApprovalDecision, ApprovalRule, DefaultMode } from './approval-domain'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface ApprovalRulesFile {
   defaultMode: DefaultMode
@@ -109,14 +110,7 @@ export class ApprovalRuleStore {
     mkdirSync(dirname(this.path), { recursive: true })
     // 写临时文件 + rename 原子替换：直接覆盖写在进程被杀/磁盘满时会留下半截 JSON，
     // 下次 load 解析失败即规则全丢。
-    const tmp = `${this.path}.${process.pid}.tmp`
-    try {
-      writeFileSync(tmp, JSON.stringify(next, null, 2))
-      renameSync(tmp, this.path)
-    } catch (err) {
-      try { unlinkSync(tmp) } catch { /* 无残留 */ }
-      throw err
-    }
+    atomicWriteJson(this.path, next)
     this.file = next
   }
 
