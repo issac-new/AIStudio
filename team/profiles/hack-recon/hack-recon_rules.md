@@ -21,3 +21,11 @@
 - **知识先查双路**：动手前先 `hindsight_recall` 查同类记录——目标/题目特征词一轮 + 技法/机制词（中英标识符原样，如 `cookie jar overflow`）一轮，单路无命中换另一路；题目名不是好召回键。
 
 > 违反以上任何红线 → 立即 `kanban_block(kind='needs_input', reason='红线违反：<具体条目>')` 并退出，不得继续操作。
+
+## 4. 证据门控执行（2026-10-28 三源融合，hexstrike+CyberStrikeAI+Sonic）
+
+> 机制细节单一事实源在 skill，此处只列触发红线。`skill_view('evidence-governed-execution')`
+
+- **toolEvidence 证据门（验收防虚报）**：完成声明每条「已执行/已验证」必须钉在真实执行留痕上（命令输出/grep 实数/文件）；引用不存在的执行=虚报整条丢弃。侦察成果**边渗透边记录**（确认即落库，不等收尾）。
+- **治理门**：危险动作七类（KillProc/Upload/SelfDelete/PortFwd/SocksStart/LoadAssembly/Persist）强制审批；目标域过 scope-gate（含百分号解码防绕过）。
+- **长程纪律（无 ask）**：长程卡禁 ask/clarify 拖延，遇阻 `blocked_reason` 说清后 block 退出。

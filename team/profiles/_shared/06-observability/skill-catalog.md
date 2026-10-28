@@ -67,6 +67,8 @@
 | requesting-code-review | 提交前审查 | coder | active |
 | security-architecture-evaluation | 安全架构评估 | hack-auditor | active |
 | agentic-soc-defense | AI SOC/智能体系统防御编排方法论（六层架构/置信度双轨/六道防线/记忆投毒防御） | hack 团队 4 worker | active（2026-10-03 新增，源：微信 AI安全推进计划 AI SOC 深度报告，卡 t_d5a9af57） |
+| evidence-governed-execution | 证据门控执行：验收防虚报（toolEvidence 证据门）+治理门（Jev 四问/C2 危险七类）+长程纪律（无 ask/三落盘）+验收器四策略 | hack 团队 4 worker + 验收 reviewer | active（2026-10-28 新增 v1.0.0，三源融合：CyberStrikeAI 源码+Sonic 转述+VulnHouse，卡 t_58855791，裁决矩阵见 shared/research/hexstrike-cyberstrike-20261022/fusion/FUSION-REPORT.md） |
+| pentest-methodology-fusion | 渗透方法论：10 playbook+coverage+finding protocol | hack 团队 4 worker | active（2026-10-28 升级 v2.0.0：HexStrike 概念级→源码级 upgrade（决策引擎/攻击链/工具口径 151 实测）+新增 CVE 情报链 §10+错误恢复三级 §11，卡 t_58855791） |
 | docx / pdf / powerpoint / xlsx | Office 文档生产 | 通用 | active |
 | executive-summary | SCQA 高管摘要 | 通用 | active |
 

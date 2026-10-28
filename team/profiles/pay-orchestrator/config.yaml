@@ -12,6 +12,20 @@ custom_providers:
     glm-5.3:
       context_length: 1048576
   model: glm-5.3
+- name: cc-switch
+  base_url: http://127.0.0.1:15721
+  api_key: PROXY_MANAGED
+  api_mode: anthropic_messages
+  context_length: 1048576
+  models:
+    aim:
+      name: aim
+    glm-5.3:
+      name: glm-5.3
+    glm-5.3-flash:
+      name: glm-5.3-flash
+    claude-opus-5:
+      name: claude-opus-5
 toolsets:
   - hermes-cli
   - kanban
@@ -47,7 +61,7 @@ kanban:
   max_in_progress: 8
   max_in_progress_per_profile: 5
   orchestrator_profile: orchestrator
-  default_assignee: ""
+  default_assignee: ''
 display:
   language: zh
   skin: daylight
@@ -108,6 +122,9 @@ extra:
     - devops-rd
   skills_pinned:
     - skill-recall
+skills:
+  disabled:
+    - ui-craft
 mcp_servers:
   ekko-studio-api:
     args:
@@ -121,6 +138,7 @@ mcp_servers:
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_MANAGED_MCP: "1"
+      HERMES_WEB_UI_PROFILE: pay-orchestrator
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
   ekko-studio-browser:
     args:
@@ -134,6 +152,7 @@ mcp_servers:
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_MANAGED_MCP: "1"
+      HERMES_WEB_UI_PROFILE: pay-orchestrator
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
   ekko-studio-use:
     args:
@@ -147,6 +166,7 @@ mcp_servers:
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_MANAGED_MCP: "1"
+      HERMES_WEB_UI_PROFILE: pay-orchestrator
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
     timeout: 1860
 onboarding:

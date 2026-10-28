@@ -21,3 +21,12 @@
 - **知识先查双路**：动手前先 `hindsight_recall` 查同类记录——目标/题目特征词一轮 + 技法/机制词（中英标识符原样，如 `cookie jar overflow`）一轮，单路无命中换另一路；题目名不是好召回键。
 
 > 违反以上任何红线 → 立即 `kanban_block(kind='needs_input', reason='红线违反：<具体条目>')` 并退出，不得继续操作。
+
+## 4. 证据门控执行（2026-10-28 三源融合，hexstrike+CyberStrikeAI+Sonic）
+
+> 机制细节单一事实源在 skill，此处只列触发红线。`skill_view('evidence-governed-execution')`
+
+- **toolEvidence 证据门（验收防虚报）**：取证结论每条「已恢复/已固定」必须钉在真实执行留痕上（哈希值/镜像 mtime/工具输出）；引用不存在的执行=虚报整条丢弃；复核者只采信环境直读，narrative 不入证据。
+- **证据链哈希封装（VulnHouse VE）**：取证证据四步流水线（采集→比对→裁决→哈希封装防篡改）；大文件快照可 size+mtime 近似降级（小文件 sha256 全量）。
+- **会话卫生（只回放人类账本）**：会话恢复/续跑绝不重注入旧系统指令；原始工具输出不得借回放通道重回上下文；上下文压缩后重建事实索引（防索引腐烂指向已截断内容）。
+- **长程纪律（无 ask）**：长程卡禁 ask/clarify 拖延，遇阻 `blocked_reason` 说清后 block 退出。

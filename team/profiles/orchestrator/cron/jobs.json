@@ -22,15 +22,15 @@
       "schedule_display": "every 30m",
       "repeat": {
         "times": null,
-        "completed": 2817
+        "completed": 2921
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-07-23T15:45:07.277110+08:00",
-      "next_run_at": "2026-10-26T10:58:50.572937+08:00",
-      "last_run_at": "2026-10-26T10:28:50.572937+08:00",
+      "next_run_at": "2026-10-28T17:12:40.684248+08:00",
+      "last_run_at": "2026-10-28T16:42:40.684248+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -44,13 +44,13 @@
       "fire_claim": null,
       "failure_streak": 0,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T10:27:51.167931+08:00",
-        "dispatched_at": "2026-10-26T10:28:49.351534+08:00",
-        "lateness_seconds": 58.2,
+        "scheduled_at": "2026-10-28T16:42:21.247193+08:00",
+        "dispatched_at": "2026-10-28T16:42:38.764864+08:00",
+        "lateness_seconds": 17.5,
         "kind": "on_time"
       },
       "last_failure": {
-        "at": "2026-10-25T23:01:23.029293+08:00",
+        "at": "2026-10-27T16:05:02.308953+08:00",
         "detail": "Script exited with code 1\nstdout:\nERROR: agently-cli message +list failed (exit 0)"
       }
     },
@@ -76,15 +76,15 @@
       "schedule_display": "* * * * *",
       "repeat": {
         "times": null,
-        "completed": 85550
+        "completed": 88496
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-04T16:24:06.919309+08:00",
-      "next_run_at": "2026-10-26T10:42:00+08:00",
-      "last_run_at": "2026-10-26T10:41:49.506608+08:00",
+      "next_run_at": "2026-10-28T16:46:00+08:00",
+      "last_run_at": "2026-10-28T16:45:39.547411+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -95,9 +95,9 @@
       "fire_claim": null,
       "failure_streak": 0,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T10:41:00+08:00",
-        "dispatched_at": "2026-10-26T10:41:49.357141+08:00",
-        "lateness_seconds": 49.4,
+        "scheduled_at": "2026-10-28T16:45:00+08:00",
+        "dispatched_at": "2026-10-28T16:45:39.232077+08:00",
+        "lateness_seconds": 39.2,
         "kind": "on_time"
       },
       "last_failure": {
@@ -108,7 +108,7 @@
     {
       "id": "0ccf161ff8ad",
       "name": "skill-mining-weekly",
-      "prompt": "扫描各 board 最近完成的 kanban 任务卡（status=done），识别反复出现的操作模式（frequency≥3 才提议）。窗口规则：每月 1 日所在周扫近 14 天（兼作半月全量窗口，覆盖 board 全量：swarm hack product ops eda platform [已移除]），其余周一扫近 7 天。产出 SkillProposal 到 ~/.hermes/profiles/_shared/skill-proposals/（四段式骨架+task_id 证据链），与既有 skill 库去重。只提议不落地（不调 skill_manage）。同时在本 job 内承担评审通道：对 skill-proposals/ 目录中尚未归档（不在 archived/）的存量提案给出评审意见（批准/合并/拒绝+理由），写入提案文件头部「评审意见」段，评审后移入 archived/pending-decision/ 等图爸最终裁决。挖掘结果摘要写入 ~/.hermes/evals/skill-mining-$(date +%Y%m%d).md（含：扫描任务数/识别模式数/已覆盖数/新提案数/提案名称列表/评审意见数）。若无新模式且无存量提案，静默退出不产文件。sqlite 只读 immutable=1。详细作业循环见 platform-skill-miner SOUL.md。",
+      "prompt": "扫描各 board 最近完成的 kanban 任务卡（status=done），识别反复出现的操作模式（frequency≥3 才提议）。窗口规则：每月 1 日所在周扫近 14 天（兼作半月全量窗口，覆盖 board 全量：swarm hack product ops eda platform [已移除]），其余周一扫近 7 天。产出 SkillProposal 到 ~/.hermes/profiles/_shared/skill-proposals/（四段式骨架+task_id 证据链），与既有 skill 库去重。只提议不落地（不调 skill_manage）。同时在本 job 内承担评审通道：对 skill-proposals/ 目录中尚未归档（不在 archived/）的存量提案给出评审意见（批准/合并/拒绝+理由），写入提案文件头部「评审意见」段，评审后移入 archived/pending-decision/ 等用户最终裁决。挖掘结果摘要写入 ~/.hermes/evals/skill-mining-$(date +%Y%m%d).md（含：扫描任务数/识别模式数/已覆盖数/新提案数/提案名称列表/评审意见数）。若无新模式且无存量提案，静默退出不产文件。sqlite 只读 immutable=1。详细作业循环见 platform-skill-miner SOUL.md。",
       "skills": [
         "skill-library-maintenance"
       ],
@@ -228,32 +228,32 @@
       "schedule_display": "7,37 * * * *",
       "repeat": {
         "times": null,
-        "completed": 2681
+        "completed": 2789
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-27T23:48:41.914561+08:00",
-      "next_run_at": "2026-10-26T11:07:00+08:00",
-      "last_run_at": "2026-10-26T10:37:49.645225+08:00",
+      "next_run_at": "2026-10-28T17:07:00+08:00",
+      "last_run_at": "2026-10-28T16:37:39.146116+08:00",
       "last_status": "error",
-      "last_error": "<redacted>",
+      "last_error": "Script exited with code 1\nstdout:\n🚨 worldmonitor-intel 失踪且恢复失败，需人工介入",
       "last_delivery_error": null,
-      "failure_streak": 79,
+      "failure_streak": 187,
       "deliver": "local",
       "origin": null,
       "enabled_toolsets": null,
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T10:37:00+08:00",
-        "dispatched_at": "2026-10-26T10:37:49.431407+08:00",
-        "lateness_seconds": 49.4,
+        "scheduled_at": "2026-10-28T16:37:00+08:00",
+        "dispatched_at": "2026-10-28T16:37:38.893734+08:00",
+        "lateness_seconds": 38.9,
         "kind": "on_time"
       },
       "last_failure": {
-        "at": "2026-10-26T10:37:49.645225+08:00",
+        "at": "2026-10-28T16:37:39.146116+08:00",
         "detail": "Script exited with code 1\nstdout:\n🚨 worldmonitor-intel 失踪且恢复失败，需人工介入"
       }
     },
@@ -282,15 +282,15 @@
       "schedule_display": "0 8-23/6 * * *",
       "repeat": {
         "times": null,
-        "completed": 155
+        "completed": 162
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-04T15:46:14.608305+08:00",
-      "next_run_at": "2026-10-26T14:00:00+08:00",
-      "last_run_at": "2026-10-26T08:00:58.433267+08:00",
+      "next_run_at": "2026-10-28T20:00:00+08:00",
+      "last_run_at": "2026-10-28T14:00:10.456990+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -301,9 +301,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T08:00:00+08:00",
-        "dispatched_at": "2026-10-26T08:00:56.681887+08:00",
-        "lateness_seconds": 56.7,
+        "scheduled_at": "2026-10-28T14:00:00+08:00",
+        "dispatched_at": "2026-10-28T14:00:08.244075+08:00",
+        "lateness_seconds": 8.2,
         "kind": "on_time"
       },
       "fire_claim": null
@@ -333,15 +333,15 @@
       "schedule_display": "*/30 * * * *",
       "repeat": {
         "times": null,
-        "completed": 2327
+        "completed": 2435
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-04T16:01:38.604440+08:00",
-      "next_run_at": "2026-10-26T11:00:00+08:00",
-      "last_run_at": "2026-10-26T10:30:49.873972+08:00",
+      "next_run_at": "2026-10-28T17:00:00+08:00",
+      "last_run_at": "2026-10-28T16:30:39.385685+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -352,9 +352,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T10:30:00+08:00",
-        "dispatched_at": "2026-10-26T10:30:49.287609+08:00",
-        "lateness_seconds": 49.3,
+        "scheduled_at": "2026-10-28T16:30:00+08:00",
+        "dispatched_at": "2026-10-28T16:30:38.830416+08:00",
+        "lateness_seconds": 38.8,
         "kind": "on_time"
       },
       "fire_claim": null,
@@ -388,15 +388,15 @@
       "schedule_display": "*/5 * * * *",
       "repeat": {
         "times": null,
-        "completed": 12895
+        "completed": 13522
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-05T16:26:11.338971+08:00",
-      "next_run_at": "2026-10-26T10:45:00+08:00",
-      "last_run_at": "2026-10-26T10:40:53.544353+08:00",
+      "next_run_at": "2026-10-28T16:50:00+08:00",
+      "last_run_at": "2026-10-28T16:45:39.604548+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -407,9 +407,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T10:40:00+08:00",
-        "dispatched_at": "2026-10-26T10:40:53.226159+08:00",
-        "lateness_seconds": 53.2,
+        "scheduled_at": "2026-10-28T16:45:00+08:00",
+        "dispatched_at": "2026-10-28T16:45:39.232077+08:00",
+        "lateness_seconds": 39.2,
         "kind": "on_time"
       },
       "fire_claim": null,
@@ -494,15 +494,15 @@
       "schedule_display": "every 360m",
       "repeat": {
         "times": null,
-        "completed": 191
+        "completed": 200
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-07T14:49:30.406605+08:00",
-      "next_run_at": "2026-10-26T11:58:56.855911+08:00",
-      "last_run_at": "2026-10-26T05:58:56.855911+08:00",
+      "next_run_at": "2026-10-28T18:03:08.634389+08:00",
+      "last_run_at": "2026-10-28T12:03:08.634389+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -513,9 +513,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T05:58:53.073120+08:00",
-        "dispatched_at": "2026-10-26T05:58:56.644893+08:00",
-        "lateness_seconds": 3.6,
+        "scheduled_at": "2026-10-28T12:02:15.851079+08:00",
+        "dispatched_at": "2026-10-28T12:03:08.327882+08:00",
+        "lateness_seconds": 52.5,
         "kind": "on_time"
       },
       "fire_claim": null
@@ -545,15 +545,15 @@
       "schedule_display": "every 60m",
       "repeat": {
         "times": null,
-        "completed": 876
+        "completed": 929
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-17T12:59:17.452300+08:00",
-      "next_run_at": "2026-10-26T10:57:49.624434+08:00",
-      "last_run_at": "2026-10-26T09:57:49.624434+08:00",
+      "next_run_at": "2026-10-28T17:21:19.732328+08:00",
+      "last_run_at": "2026-10-28T16:21:19.732328+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -564,9 +564,9 @@
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T09:56:49.521694+08:00",
-        "dispatched_at": "2026-10-26T09:57:49.277386+08:00",
-        "lateness_seconds": 59.8,
+        "scheduled_at": "2026-10-28T16:20:26.554509+08:00",
+        "dispatched_at": "2026-10-28T16:21:19.320655+08:00",
+        "lateness_seconds": 52.8,
         "kind": "on_time"
       },
       "fire_claim": null
@@ -596,15 +596,15 @@
       "schedule_display": "every 60m",
       "repeat": {
         "times": null,
-        "completed": 850
+        "completed": 903
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-09-18T14:16:18.224041+08:00",
-      "next_run_at": "2026-10-26T10:57:49.631986+08:00",
-      "last_run_at": "2026-10-26T09:57:49.631986+08:00",
+      "next_run_at": "2026-10-28T17:21:19.764679+08:00",
+      "last_run_at": "2026-10-28T16:21:19.764679+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -616,14 +616,14 @@
       "workdir": null,
       "fire_claim": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T09:56:49.524179+08:00",
-        "dispatched_at": "2026-10-26T09:57:49.277386+08:00",
-        "lateness_seconds": 59.8,
+        "scheduled_at": "2026-10-28T16:20:26.719911+08:00",
+        "dispatched_at": "2026-10-28T16:21:19.320655+08:00",
+        "lateness_seconds": 52.6,
         "kind": "on_time"
       },
       "last_failure": {
         "at": "2026-10-16T01:56:27.859420+08:00",
-        "detail": "Script exited with code 1\nstderr:\nTraceback (most recent call last):\n  File \"/Users/YOURNAME/.hermes/bin/capability-gap-watchdog.py\", line 243, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/YOURNAME/.hermes/bin/capability-gap-watchdog.py\", line 227, in main\n    created = _create_remediation(item, subs, args.dry_run)\n  File \"/Users/YOURNAME/.hermes/bin/capability-gap-watchdog.py\", line 184, in _create_remediation\n    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=90)\n  File \"/Users/YOURNAME/.hermes/tools/python-3.14.7+202****0901-darwin-arm64/lib/python3.14/subprocess.py\", line 557, in run\n    stdout, stderr = process.communicate(input, timeout=timeout)\n                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/YOURNAME/.hermes/tools/python-3.14.7+202****0901-darwin-arm64/lib/python3.14/subprocess.py\", line 1221, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/YOURNAME/.hermes/tools/python-3.14.7+202****0901-darwin-arm64/lib/python3.14/subprocess.py\", line 2154, in _communicate\n    self._check_timeout(endtime, orig_timeout, stdout, stderr)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/YOURNAME/.hermes/tools/python-3.14.7+202****0901-darwin-arm64/lib/python3.14/subprocess.py\", line 1268, in _check_timeout\n    raise TimeoutExpired(\n    ...<2 lines>...\n            stderr=b''.join(stderr_seq) if stderr_seq else None)\nsubprocess.TimeoutExpired: Command '['hermes', 'kanban', '--board', 'platform', 'create', '[rsi] R2 for eda:t_a28d6918 [夜间差距] 落地 Evidence-Driven 验证管线：形式等价+PPA ', '--body', 'rsi:src=eda:t_a28d6918 rung=R2 attempt=1\\n\\n来源：capability-gap-watchdog 巡检发现能力缺口卡。\\n缺口卡：eda 板 t_a28d6918「[夜间差距] 落地 Evidence-Driven 验证管线：形式等价+PPA 回归+审计日志三件套」（assignee=[已移除]，block_kind=capability）\\n\\nR0 首选借调：（capability-graph 无替代岗登记）。orchestrator 确认借调则关闭本卡并换人派单。\\nR1 挂载：先查 _shared/06-observability/skill-catalog.md 是否已有现成 skill 可挂载。\\nR2 生成：确无现成，走 swarm-yuan 流A 为目标仓库生成目标技能；mark-active 激活须人审（staged 提案）。\\n\\n完成定义：按 capability-ladder §6 回流——gap_register 置 done（附修复方案）、 orchestrator 对原卡 unblock 重派、原任务验收命令重跑退出码 0。\\nmarkings: TLP:GREEN/CLEAR', '--assignee', 'platform-skill-miner', '--idempotency-key', 'rsi:eda:t_a28d6918:R2', '--created-by', 'capability-gap-watchdog', '--json']' timed out after 90 seconds"
+        "detail": "Script exited with code 1\nstderr:\nTraceback (most recent call last):\n  File \"/Users/YOURNAME/.hermes/bin/capability-gap-watchdog.py\", line 243, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/YOURNAME/.hermes/bin/capability-gap-watchdog.py\", line 227, in main\n    created = _create_remediation(item, subs, args.dry_run)\n  File \"/Users/YOURNAME/.hermes/bin/capability-gap-watchdog.py\", line 184, in _create_remediation\n    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=90)\n  File \"/Users/YOURNAME/.hermes/tools/python-3.14.7+202****0901-darwin-arm64/lib/python3.14/subprocess.py\", line 557, in run\n    stdout, stderr = process.communicate(input, timeout=timeout)\n                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/YOURNAME/.hermes/tools/python-3.14.7+202****0901-darwin-arm64/lib/python3.14/subprocess.py\", line 1221, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/YOURNAME/.hermes/tools/python-3.14.7+202****0901-darwin-arm64/lib/python3.14/subprocess.py\", line 2154, in _communicate\n    self._check_timeout(endtime, orig_timeout, stdout, stderr)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/YOURNAME/.hermes/tools/python-3.14.7+202****0901-darwin-arm64/lib/python3.14/subprocess.py\", line 1268, in _check_timeout\n    raise TimeoutExpired(\n    ...<2 lines>...\n            stderr=b''.join(stderr_seq) if stderr_seq else None)\nsubprocess.TimeoutExpired: Command '['hermes', 'kanban', '--board', 'platform', 'create', '[rsi] R2 for eda:t_a28d6918 [夜间差距] 落地 Evidence-Driven 验证管线：形式等价+PPA ', '--body', 'rsi:src=eda:t_a28d6918 rung=R2 attempt=1\\n\\n来源：capability-gap-watchdog 巡检发现能力缺口卡。\\n缺口卡：eda 板 t_a28d6918「[夜间差距] 落地 Evidence-Driven 验证管线：形式等价+PPA 回归+审计日志三件套」（assignee=eda-ai，block_kind=capability）\\n\\nR0 首选借调：（capability-graph 无替代岗登记）。orchestrator 确认借调则关闭本卡并换人派单。\\nR1 挂载：先查 _shared/06-observability/skill-catalog.md 是否已有现成 skill 可挂载。\\nR2 生成：确无现成，走 swarm-yuan 流A 为目标仓库生成目标技能；mark-active 激活须人审（staged 提案）。\\n\\n完成定义：按 capability-ladder §6 回流——gap_register 置 done（附修复方案）、 orchestrator 对原卡 unblock 重派、原任务验收命令重跑退出码 0。\\nmarkings: TLP:GREEN/CLEAR', '--assignee', 'platform-skill-miner', '--idempotency-key', 'rsi:eda:t_a28d6918:R2', '--created-by', 'capability-gap-watchdog', '--json']' timed out after 90 seconds"
       }
     },
     {
@@ -702,15 +702,15 @@
       "schedule_display": "30 6 * * *",
       "repeat": {
         "times": null,
-        "completed": 13
+        "completed": 15
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-10-07T05:11:37.119785+08:00",
-      "next_run_at": "2026-10-27T06:30:00+08:00",
-      "last_run_at": "2026-10-26T06:30:59.626618+08:00",
+      "next_run_at": "2026-10-29T06:30:00+08:00",
+      "last_run_at": "2026-10-28T06:30:18.485314+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -726,13 +726,13 @@
       "workdir": null,
       "failure_deliver": "local",
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T06:30:00+08:00",
-        "dispatched_at": "2026-10-26T06:30:56.638166+08:00",
-        "lateness_seconds": 56.6,
+        "scheduled_at": "2026-10-28T06:30:00+08:00",
+        "dispatched_at": "2026-10-28T06:30:15.694882+08:00",
+        "lateness_seconds": 15.7,
         "kind": "on_time"
       },
       "fire_claim": null
     }
   ],
-  "updated_at": "2026-10-26T10:41:49.507199+08:00"
+  "updated_at": "2026-10-28T16:45:39.606651+08:00"
 }

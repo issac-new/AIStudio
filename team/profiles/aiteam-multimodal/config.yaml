@@ -12,6 +12,20 @@ custom_providers:
     glm-5.3:
       context_length: 1048576
   model: glm-5.3
+- name: cc-switch
+  base_url: http://127.0.0.1:15721
+  api_key: PROXY_MANAGED
+  api_mode: anthropic_messages
+  context_length: 1048576
+  models:
+    aim:
+      name: aim
+    glm-5.3:
+      name: glm-5.3
+    glm-5.3-flash:
+      name: glm-5.3-flash
+    claude-opus-5:
+      name: claude-opus-5
 toolsets:
   - hermes-cli
   - kanban
@@ -108,6 +122,7 @@ skills:
   disabled:
     - aiteam-jev-route
     - hermes-agent-precommit-hygiene
+    - ui-craft
 mcp_servers:
   ekko-studio-api:
     command: /usr/local/bin/node
@@ -115,14 +130,14 @@ mcp_servers:
       - /Users/YOURNAME/lab/AIStudio/vendor/hermes-studio/bin/ekko-studio-mcp.mjs
       - api
     env:
-      ELECTRON_RUN_AS_NODE: "1"
+      ELECTRON_RUN_AS_NODE: '1'
       HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: aiteam-multimodal
       HERMES_MCP_SERVER_NAME: ekko-studio-api
       HERMES_MCP_TOOLSET: api
-      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_MCP_USER_CLARIFICATION: '0'
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-browser:
@@ -131,14 +146,14 @@ mcp_servers:
       - /Users/YOURNAME/lab/AIStudio/vendor/hermes-studio/bin/ekko-studio-mcp.mjs
       - browser
     env:
-      ELECTRON_RUN_AS_NODE: "1"
+      ELECTRON_RUN_AS_NODE: '1'
       HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: aiteam-multimodal
       HERMES_MCP_SERVER_NAME: ekko-studio-browser
       HERMES_MCP_TOOLSET: browser
-      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_MCP_USER_CLARIFICATION: '0'
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-use:
@@ -148,14 +163,14 @@ mcp_servers:
       - use
     timeout: 1860
     env:
-      ELECTRON_RUN_AS_NODE: "1"
+      ELECTRON_RUN_AS_NODE: '1'
       HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: aiteam-multimodal
       HERMES_MCP_SERVER_NAME: ekko-studio-use
       HERMES_MCP_TOOLSET: use
-      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_MCP_USER_CLARIFICATION: '0'
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
   ekko-studio-interaction:
@@ -164,14 +179,14 @@ mcp_servers:
       - /Users/YOURNAME/lab/AIStudio/vendor/hermes-studio/bin/ekko-studio-mcp.mjs
       - plan
     env:
-      ELECTRON_RUN_AS_NODE: "1"
+      ELECTRON_RUN_AS_NODE: '1'
       HERMES_WEB_UI_URL: http://127.0.0.1:8647
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_PROFILE: aiteam-multimodal
       HERMES_MCP_SERVER_NAME: ekko-studio-interaction
       HERMES_MCP_TOOLSET: plan
-      HERMES_MCP_USER_CLARIFICATION: "0"
+      HERMES_MCP_USER_CLARIFICATION: '0'
       HERMES_WEB_UI_MANAGED_MCP: "1"
     enabled: true
 onboarding:

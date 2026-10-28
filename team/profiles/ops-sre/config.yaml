@@ -12,6 +12,20 @@ custom_providers:
     glm-5.3:
       context_length: 1048576
   model: glm-5.3
+- name: cc-switch
+  base_url: http://127.0.0.1:15721
+  api_key: PROXY_MANAGED
+  api_mode: anthropic_messages
+  context_length: 1048576
+  models:
+    aim:
+      name: aim
+    glm-5.3:
+      name: glm-5.3
+    glm-5.3-flash:
+      name: glm-5.3-flash
+    claude-opus-5:
+      name: claude-opus-5
 toolsets:
   - hermes-cli
   - acp
@@ -110,6 +124,7 @@ extra:
     - skill-recall
 skills:
   disabled:
+    - ui-craft
     - worldmonitor-intel
 mcp_servers:
   ekko-studio-api:

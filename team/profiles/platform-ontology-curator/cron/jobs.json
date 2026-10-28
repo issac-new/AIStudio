@@ -23,36 +23,36 @@
       "schedule_display": "17 2 * * *",
       "repeat": {
         "times": null,
-        "completed": 24
+        "completed": 26
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-10-03T01:15:48.491705+08:00",
-      "next_run_at": "2026-10-27T02:17:00+08:00",
-      "last_run_at": "2026-10-26T02:17:57.010431+08:00",
+      "next_run_at": "2026-10-29T02:17:00+08:00",
+      "last_run_at": "2026-10-28T02:17:16.183801+08:00",
       "last_status": "error",
-      "last_error": "<redacted>",
+      "last_error": "Script exited with code 2\nstdout:\nGATE BLOCKED: context 工件漂移被拦，基线未重建；详情 /Users/YOURNAME/.hermes/logs/context-gate.log 与 context-baseline/reports/ 最新报告",
       "last_delivery_error": null,
       "last_delivery_unverified": null,
-      "failure_streak": 5,
+      "failure_streak": 7,
       "deliver": "local",
       "origin": null,
       "enabled_toolsets": null,
       "workdir": null,
       "last_dispatch": {
-        "scheduled_at": "2026-10-26T02:17:00+08:00",
-        "dispatched_at": "2026-10-26T02:17:56.721599+08:00",
-        "lateness_seconds": 56.7,
+        "scheduled_at": "2026-10-28T02:17:00+08:00",
+        "dispatched_at": "2026-10-28T02:17:15.771629+08:00",
+        "lateness_seconds": 15.8,
         "kind": "on_time"
       },
       "fire_claim": null,
       "last_failure": {
-        "at": "2026-10-26T02:17:57.010431+08:00",
+        "at": "2026-10-28T02:17:16.183801+08:00",
         "detail": "Script exited with code 2\nstdout:\nGATE BLOCKED: context 工件漂移被拦，基线未重建；详情 /Users/YOURNAME/.hermes/logs/context-gate.log 与 context-baseline/reports/ 最新报告"
       }
     }
   ],
-  "updated_at": "2026-10-26T02:17:57.012638+08:00"
+  "updated_at": "2026-10-28T02:17:16.184698+08:00"
 }

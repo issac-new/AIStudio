@@ -1,51 +1,6 @@
 {
   "jobs": [
     {
-      "id": "704e5a7ef177",
-      "name": "wakeup-t_a6b4127b-xhs-morning-check",
-      "prompt": "",
-      "skills": [],
-      "skill": null,
-      "model": null,
-      "provider": null,
-      "base_url": null,
-      "script": "wakeup_t_a6b4127b.sh",
-      "no_agent": true,
-      "monitor_script": null,
-      "monitor_url": null,
-      "monitor_state": null,
-      "context_from": null,
-      "schedule": {
-        "kind": "once",
-        "run_at": "2026-10-21T09:05:00+08:00",
-        "display": "once at 2026-10-21 09:05"
-      },
-      "schedule_display": "once at 2026-10-21 09:05",
-      "repeat": {
-        "times": 1,
-        "completed": 1
-      },
-      "enabled": false,
-      "state": "completed",
-      "paused_at": null,
-      "paused_reason": null,
-      "created_at": "2026-10-20T10:39:16.758928+08:00",
-      "next_run_at": null,
-      "last_run_at": "2026-10-21T09:05:57.161726+08:00",
-      "last_status": "ok",
-      "last_error": null,
-      "last_delivery_error": null,
-      "last_delivery_unverified": null,
-      "last_failure": null,
-      "failure_streak": 0,
-      "deliver": "local",
-      "origin": null,
-      "enabled_toolsets": null,
-      "workdir": null,
-      "run_claim": null,
-      "fire_claim": null
-    },
-    {
       "id": "e98d336330fc",
       "name": "wakeup_t_03a3d0a9 (轮2 晨检 2026-10-22 09:05 一次性)",
       "prompt": "",
@@ -134,7 +89,50 @@
       "workdir": null,
       "run_claim": null,
       "fire_claim": null
+    },
+    {
+      "id": "1bd148682563",
+      "name": "wakeup_t_f7e75988_轮3晨检唤醒_1029",
+      "prompt": "",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": "wakeup_t_f7e75988.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "once",
+        "run_at": "2026-10-29T09:05:00+08:00",
+        "display": "once at 2026-10-29 09:05"
+      },
+      "schedule_display": "once at 2026-10-29 09:05",
+      "repeat": {
+        "times": 1,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-10-28T14:11:18.852040+08:00",
+      "next_run_at": "2026-10-29T09:05:00+08:00",
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "last_delivery_unverified": null,
+      "last_failure": null,
+      "failure_streak": 0,
+      "deliver": "local",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null
     }
   ],
-  "updated_at": "2026-10-23T09:05:22.429033+08:00"
+  "updated_at": "2026-10-28T14:11:18.915387+08:00"
 }

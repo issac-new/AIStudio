@@ -195,7 +195,8 @@ PROFILES_DIR = HERMES_HOME / "profiles"
 # config.yaml 中自动管理的段，生成器保留不动
 # 使用 list 而非 set 以保证输出顺序一致
 PRESERVE_KEYS = ["mcp_servers", "platform_toolsets", "known_plugin_toolsets",
-                 "onboarding", "updates", "_config_version", "clearances", "moa"]
+                 "onboarding", "updates", "_config_version", "clearances", "moa",
+                 "_left_core_installed", "_left_core_scoped"]
 
 
 def load_env_common(path: Path) -> dict[str, str]:

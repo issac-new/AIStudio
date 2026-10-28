@@ -489,14 +489,14 @@ profiles:
       WEIXIN_TOKEN: ${WEIXIN_TOKEN}
       MATRIX_PASSWORD: ${MATRIX_PASSWORD}
       MATRIX_HOMESERVER: http://localhost:8008
-      MATRIX_HOME_ROOM: '<matrix-room-id>'
+      MATRIX_HOME_ROOM: <matrix-room-id>
       MATRIX_HOME_ROOM_THREAD_ID: ''
       MATRIX_USER_ID: '@swarm:matrix.test'
       MATRIX_DEVICE_ID: 6FAD0F
     environment_hint: ~/.hermes/profiles/orchestrator/SOUL.md
     gateway_extra:
-      multiplex_profile_allowlist:
-            multiplex_profiles: true
+      multiplex_profile_allowlist: []
+      multiplex_profiles: true
     kanban:
       default_assignee: ''
     matrix:
@@ -800,9 +800,6 @@ profiles:
       enabled: false
     env_extra:
       API_SERVER_ENABLED: 'false'
-      # 编码引擎默认走 Ycode 的 ACP 桥（zcode-acp-server）；acp-client 解析顺序
-      # 显式参数 > 本 env > config.default_provider，见 plugin _resolve_provider_name。
-      HERMES_ACP_PROVIDER: zcode
     environment_hint: ~/.hermes/profiles/worker-coder/SOUL.md
     kanban:
       default_assignee: worker-coder
@@ -911,18 +908,18 @@ profiles:
     - kanban
     - memory
   data-orchestrator:
-    api_server: &id001
+    api_server:
       enabled: false
-    env_extra: &id002
+    env_extra:
       API_SERVER_ENABLED: 'false'
     kanban:
       default_assignee: ''
-    matrix: &id003
+    matrix:
       enabled: false
-    plugins: &id004
+    plugins:
     - hindsight
     - run-trace
-    skills_pinned: &id005
+    skills_pinned:
     - skill-recall
     environment_hint: ~/.hermes/profiles/data-orchestrator/SOUL.md
     skills_enabled:
@@ -943,15 +940,21 @@ profiles:
     - memory
     - messaging
   data-arch:
-    api_server: *id001
-    env_extra: *id002
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
     kanban:
       default_assignee: data-arch
-    matrix: *id003
-    plugins: *id004
-    skills_pinned: *id005
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_pinned:
+    - skill-recall
     environment_hint: ~/.hermes/profiles/data-arch/SOUL.md
-    skills_enabled: &id006
+    skills_enabled:
     - software-development
     - devops
     - research
@@ -963,41 +966,75 @@ profiles:
     - provider: custom:cc-switch
       model: aim
       api_mode: anthropic_messages
-    toolsets: &id007
+    toolsets:
     - hermes-cli
     - acp
     - kanban
     - memory
   data-flink:
-    api_server: *id001
-    env_extra: *id002
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
     kanban:
       default_assignee: data-flink
-    matrix: *id003
-    plugins: *id004
-    skills_pinned: *id005
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_pinned:
+    - skill-recall
     environment_hint: ~/.hermes/profiles/data-flink/SOUL.md
-    skills_enabled: *id006
+    skills_enabled:
+    - software-development
+    - devops
+    - research
+    - note-taking
+    - productivity
+    - devops-rd
+    - autonomous-ai-agents
     fallback_providers:
     - provider: custom:cc-switch
       model: aim
       api_mode: anthropic_messages
-    toolsets: *id007
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
   data-infra:
-    api_server: *id001
-    env_extra: *id002
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
     kanban:
       default_assignee: data-infra
-    matrix: *id003
-    plugins: *id004
-    skills_pinned: *id005
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_pinned:
+    - skill-recall
     environment_hint: ~/.hermes/profiles/data-infra/SOUL.md
-    skills_enabled: *id006
+    skills_enabled:
+    - software-development
+    - devops
+    - research
+    - note-taking
+    - productivity
+    - devops-rd
+    - autonomous-ai-agents
     fallback_providers:
     - provider: custom:cc-switch
       model: aim
       api_mode: anthropic_messages
-    toolsets: *id007
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
 shared_config:
   agent:
     environment_probe: false
@@ -1007,60 +1044,39 @@ shared_config:
     task_completion_guidance: true
     tool_use_enforcement: auto
   approvals:
-    mode: 'off'
+    mode: "off"
   auxiliary:
     approval:
-      model: glm-5.3-flash
-      provider: custom:cc-switch
+      provider: auto
     background_review:
-      provider: custom:cc-switch
-      model: glm-5.3-flash
+      provider: auto
     compression:
-      model: claude-opus-5
-      provider: custom:cc-switch
+      provider: auto
     goal_judge:
-      provider: custom:cc-switch
-      model: glm-5.3-flash
+      provider: auto
     kanban_decomposer:
-      provider: custom:cc-switch
-      model: glm-5.3-flash
+      provider: auto
     moa_aggregator:
-      provider: custom:cc-switch
-      model: glm-5.3-flash
+      provider: auto
     moa_reference:
-      provider: custom:cc-switch
-      model: glm-5.3-flash
+      provider: auto
     profile_describer:
-      provider: custom:cc-switch
-      model: glm-5.3-flash
+      provider: auto
     session_search:
-      model: glm-5.3-flash
-      provider: custom:cc-switch
+      provider: auto
     title_generation:
-      model: glm-5.3-flash
-      provider: custom:cc-switch
+      provider: auto
     triage_specifier:
-      provider: custom:cc-switch
-      model: glm-5.3-flash
+      provider: auto
     vision:
-      model: glm-5.3-flash
-      provider: custom:cc-switch
+      provider: auto
     web_extract:
-      model: glm-5.3-flash
-      provider: custom:cc-switch
+      provider: auto
   compression:
     enabled: true
     target_ratio: 0.15
     threshold: 0.35
   custom_providers:
-  - api_key: PROXY_MANAGED
-    api_mode: anthropic_messages
-    base_url: http://127.0.0.1:15721
-    context_length: 1048576
-    models:
-      glm-5.3-flash:
-        name: glm-5.3-flash
-    name: cc-switch
   - api_key: ${BIGMODEL_API_KEY}
     api_mode: anthropic_messages
     base_url: https://open.bigmodel.cn/api/anthropic
@@ -1071,7 +1087,7 @@ shared_config:
       glm-5.3-flash:
         name: glm-5.3-flash
     name: moa-mglm
-  - api_key: sk-REDACTED
+  - api_key: ${KIMI_API_KEY}
     api_mode: anthropic_messages
     base_url: https://api.kimi.com/coding
     context_length: 1048576
@@ -1100,7 +1116,7 @@ shared_config:
         effort: high
   - name: moa-minimax
     base_url: https://api.minimax.cn/anthropic
-    api_key: sk-REDACTED
+    api_key: ${MINIMAX_API_KEY}
     api_mode: anthropic_messages
     context_length: 1048576
     models:
@@ -1111,7 +1127,7 @@ shared_config:
         type: adaptive
   - name: moa-deepseek
     base_url: https://api.deepseek.com/anthropic
-    api_key: sk-REDACTED
+    api_key: ${DEEPSEEK_API_KEY}
     api_mode: anthropic_messages
     context_length: 128000
     models:
@@ -1120,12 +1136,36 @@ shared_config:
     extra_body:
       output_config:
         effort: max
+  - name: cc-switch-route
+    base_url: http://127.0.0.1:15721/hermes/v1
+    api_key: PROXY_MANAGED
+    api_mode: codex_responses
+    session_affinity_header: session_id
+    models:
+      glm-5.3:
+        context_length: 1048576
+    model: glm-5.3
+  - name: cc-switch
+    base_url: http://127.0.0.1:15721
+    api_key: PROXY_MANAGED
+    api_mode: anthropic_messages
+    context_length: 1048576
+    models:
+      aim:
+        name: aim
+      glm-5.3:
+        name: glm-5.3
+      glm-5.3-flash:
+        name: glm-5.3-flash
+      claude-opus-5:
+        name: claude-opus-5
   display:
     language: zh
     skin: daylight
   fallback_providers:
-  - model: glm-5.3-flash
-    provider: custom:cc-switch
+  - provider: custom:cc-switch
+    model: aim
+    api_mode: anthropic_messages
   kanban:
     auto_decompose: false
     board_concurrency: 5
@@ -1140,8 +1180,8 @@ shared_config:
     provider: hindsight
     user_profile_enabled: true
   model:
-    default: aim
-    provider: custom:cc-switch
+    default: glm-5.3
+    provider: cc-switch-route
   privacy:
     redact_pii: true
   security:

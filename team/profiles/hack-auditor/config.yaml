@@ -12,10 +12,24 @@ custom_providers:
     glm-5.3:
       context_length: 1048576
   model: glm-5.3
+- name: cc-switch
+  base_url: http://127.0.0.1:15721
+  api_key: PROXY_MANAGED
+  api_mode: anthropic_messages
+  context_length: 1048576
+  models:
+    aim:
+      name: aim
+    glm-5.3:
+      name: glm-5.3
+    glm-5.3-flash:
+      name: glm-5.3-flash
+    claude-opus-5:
+      name: claude-opus-5
 toolsets:
-- hermes-cli
-- kanban
-- memory
+  - hermes-cli
+  - kanban
+  - memory
 agent:
   environment_probe: false
   max_turns: 90
@@ -56,7 +70,7 @@ security:
 privacy:
   redact_pii: true
 approvals:
-  mode: 'off'
+  mode: "off"
 auxiliary:
   approval:
     provider: auto
@@ -93,33 +107,36 @@ platforms:
 plugins:
   disabled: []
   enabled:
-  - acp-client
-  - hindsight
-  - observability/langfuse
-  - run-trace
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
 extra:
   skills_enabled_by_category:
-  - software-development
-  - devops
-  - github
-  - research
-  - cybersecurity
-  - autonomous-ai-agents
-  - note-taking
-  - productivity
-  - hack-team
+    - software-development
+    - devops
+    - github
+    - research
+    - cybersecurity
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - hack-team
   skills_pinned:
-  - skill-recall
-  - cognition-lattice
-  - computer-use
-  - wechat-article-extractor
-  - wechat-article-search
-  - hack-team
+    - skill-recall
+    - cognition-lattice
+    - computer-use
+    - wechat-article-extractor
+    - wechat-article-search
+    - hack-team
+skills:
+  disabled:
+    - ui-craft
 mcp_servers:
   ekko-studio-api:
     args:
-    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-    - api
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - api
     command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     enabled: false
     env:
@@ -127,13 +144,13 @@ mcp_servers:
       HERMES_MCP_TOOLSET: api
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_MANAGED_MCP: "1"
       HERMES_WEB_UI_PROFILE: hack-auditor
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
   ekko-studio-browser:
     args:
-    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-    - browser
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - browser
     command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     enabled: false
     env:
@@ -141,13 +158,13 @@ mcp_servers:
       HERMES_MCP_TOOLSET: browser
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_MANAGED_MCP: "1"
       HERMES_WEB_UI_PROFILE: hack-auditor
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
   ekko-studio-use:
     args:
-    - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
-    - use
+      - /Applications/SwarmStudio.app/Contents/Resources/webui/bin/hermes-studio-mcp.mjs
+      - use
     command: /Users/YOURNAME/.hermes-web-ui/desktop-runtime/hermes/0.20.4/mac-arm64/node/bin/node
     enabled: false
     env:
@@ -155,14 +172,14 @@ mcp_servers:
       HERMES_MCP_TOOLSET: use
       HERMES_WEBUI_STATE_DIR: /Users/YOURNAME/.hermes-web-ui
       HERMES_WEB_UI_HOME: /Users/YOURNAME/.hermes-web-ui
-      HERMES_WEB_UI_MANAGED_MCP: '1'
+      HERMES_WEB_UI_MANAGED_MCP: "1"
       HERMES_WEB_UI_PROFILE: hack-auditor
       HERMES_WEB_UI_URL: http://127.0.0.1:8748
     timeout: 1860
   rea:
     command: /Users/YOURNAME/lab/tools/rea-mcp-wrapper.sh
     args:
-    - mcp
+      - mcp
     enabled: true
     env:
       GHIDRA_INSTALL_DIR: /Users/YOURNAME/lab/tools/ghidra_12.1.4_PUBLIC
@@ -172,8 +189,8 @@ onboarding:
     tool_progress_prompt: true
 _config_version: 51
 clearances:
-- TLP:AMBER
-- TLP:GREEN
-- TLP:CLEAR
+  - TLP:AMBER
+  - TLP:GREEN
+  - TLP:CLEAR
 _left_core_installed:
-- langfuse
+  - langfuse
