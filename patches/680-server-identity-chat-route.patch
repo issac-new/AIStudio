@@ -7,7 +7,7 @@
  import { ideNativeRoutes } from '../custom/controllers/ide/native-routes'
  import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
  // overlay[approval]: 审批宽度候选五档+决策八态+规则三列表（第一批吸收 #4）
- import { approvalRoutes } from '../custom/approval/approval-controller'
+ import { approvalRoutes } from '../custom/approval-rules/approval-controller'
 @@ -479,6 +479,7 @@
    app.use(ideVideoFramesRouter.routes())                // IDE 视频抽帧（层 2 独立文件模式）
    // 404 缺陷修复：新增非 GET koa-router 路由真进程不生效——原生中间件直挂两端点

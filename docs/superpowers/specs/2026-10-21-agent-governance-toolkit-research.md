@@ -43,13 +43,13 @@ AGT 立论于三个问题：这个动作允许执行吗？是哪个 agent 干的
 | 能力 | Studio 现状 | 对 AGT 的优势 |
 |---|---|---|
 | 审计的尝试与结果 | tool-audit pre/post 成对记录（`custom/server/toolpipeline/tool-hooks.ts:35-67`），post 记 ok/error/durationMs/errorCategory | AGT 只记尝试不记结果，官方承认的缺口 |
-| 审批工作流 | 双层。hermes 运行时三模式（`upstream/hermes-agent/tools/approval_context.py:213-253`，旁路默认拒绝）加 overlay 收件箱（`custom/server/approvals/pending-controller.ts:359-606`，风险三档、一单一执行） | AGT 的 require_approval 只是 verdict 态，无完整收件箱 |
+| 审批工作流 | 双层。hermes 运行时三模式（`upstream/hermes-agent/tools/approval_context.py:213-253`，旁路默认拒绝）加 overlay 收件箱（`custom/server/approval-inbox/pending-controller.ts:359-606`，风险三档、一单一执行） | AGT 的 require_approval 只是 verdict 态，无完整收件箱 |
 | 证据导出 | evidence hash 链加 verify（`custom/server/evidence/evidence-store.ts:209-231`）、eval 密封集、incident report.md、qgate verdicts | 多源可导出 |
 
 ### 有对应物但有实质差距（本方案要补）
 
 1. **治理状态真实性：弱**。执法链存在，含身份白名单、沙箱硬边界、自治阶梯、权限模式（`custom/server/toolpipeline/enforce-gate.ts:272-386`）。但总闸 `HERMES_TOOL_ENFORCE` 默认关，无配置即放行，内部异常也放行（:543-545）。产品面无常驻端点显示每 profile 的实际审批模式、执法闸状态、已加载规则数。与配置期望值的偏差不可见。该问题即 AGT 红队批评的「governed 假信号」。
-2. **审计防篡改：弱**。仅 evidence 一处有前向 hash 链。执法决策账（`custom/server/toolpipeline/policy-decisions.ts`，放行与拒绝都落账）、审批决策日志（`custom/server/approvals/approval-log.ts`）、治理事件总线（`custom/server/govbus/event-log.ts`）都是 append-only 但文件可改，无链无签名。
+2. **审计防篡改：弱**。仅 evidence 一处有前向 hash 链。执法决策账（`custom/server/toolpipeline/policy-decisions.ts`，放行与拒绝都落账）、审批决策日志（`custom/server/approval-inbox/approval-log.ts`）、治理事件总线（`custom/server/govbus/event-log.ts`）都是 append-only 但文件可改，无链无签名。
 3. **未注册 agent 发现：弱**。仅有 D2 槽位膨胀检测（网关 active_agents 与注册表差值，`custom/server/clusterinspector/detectors.ts:187-199`），无进程扫描。多机环境里「这台机器上跑着几个 agent」没有权威答案。
 4. **MCP 配置漂移检测：缺**。MCP 目录化与工具级禁用存在（`custom/server/mcpcatalog/mcp-catalog.ts`），skill 三段扫描（密钥、反弹 shell、供应链规则）也存在。但工具清单与描述的变更无快照比对，工具描述投毒不可见。
 5. **kill switch 语义：弱-中**。会话中止是合作式 abort，有 abort.completed 确认事件（`upstream/hermes-studio/packages/server/src/modules/studio/sockets/chat-run.ts:1273`）。但无跨 profile 一键停止，无停后独立活性复核。预算 block 只拦下一次工具调用，不杀正在跑的 run。这是设计而非缺陷，但产品面没把该语义讲清楚。

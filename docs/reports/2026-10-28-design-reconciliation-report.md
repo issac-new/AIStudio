@@ -161,7 +161,7 @@
 
 | # | 事项 | 不修理由 | 后续入口 |
 |---|---|---|---|
-| K14 | `custom/server/approval/` 与 `approvals/` 单复数两名一域 | 合并要动路由挂载与补丁（402/488），需产品确认语义边界 | 域合并轮 |
+| K14 | `custom/server/approval-rules/` 与 `approvals/` 单复数两名一域 | 合并要动路由挂载与补丁（402/488），需产品确认语义边界 | 域合并轮 |
 | K15 | `writeJsonAtomic`/`writeAtomic` 9 份、`renameSync` 40+ 处、`bodyOf` 8 份、`writeDenied` 4 份 | 抽共享层要先统一 fsync/隔离语义，属跨域重构，风险中高 | 服务端基础库轮 |
 | K16 | `.hermes`/`.hermes-web-ui` 解析 20+ 处内联、3 个不同 helper | 同上；且 Windows 路径语义需一起测 | 服务端基础库轮 |
 | K17 | 服务端 8 处 `require('../../../../upstream/...')` | 属构建期注入路径，替换需覆盖 ACP/ACP 桥/RPC 多入口，本批不动 | 注入层轮 |

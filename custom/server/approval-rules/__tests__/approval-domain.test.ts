@@ -1,4 +1,4 @@
-// overlay/custom/server/approval/__tests__/approval-domain.test.ts
+// overlay/custom/server/approval-rules/__tests__/approval-domain.test.ts
 // R5-#4 守门：五档宽度候选（candidates[0] 窄默认）+ 八态决策冻结 + 求值序
 // deny→ask→allow→default + 批准即学习落规则 + 存储幂等 + 控制器接线（patch 402）。
 // X2 收口：规则读删归属——list/decide 回包按归属过滤，delete 下标按可见集（删对行）、
@@ -211,7 +211,7 @@ describe('规则存储（rules.json）', () => {
   })
 
   it('存储机制源级守门：path.dirname 切目录、rename 原子替换、坏文件 .corrupt 留档', () => {
-    const src = readFileSync(join(OVERLAY_ROOT, 'custom/server/approval/approval-store.ts'), 'utf8')
+    const src = readFileSync(join(OVERLAY_ROOT, 'custom/server/approval-rules/approval-store.ts'), 'utf8')
     expect(src).toContain('dirname(this.path)') // 不用 lastIndexOf('/') 切目录（Windows 反斜杠路径会切出垃圾串）
     expect(src).not.toContain("lastIndexOf('/')")
     expect(src).toContain('atomicWriteJson(') // 2026-10-28 起原子写委托 lib/fs-store（tmp+rename 单源）
@@ -244,7 +244,7 @@ describe('规则文件路径解析（不落 cwd）', () => {
 
 describe('控制器接线（patch 402）', () => {
   it('approval-controller 挂五端点；routes.ts 注入态含挂载', () => {
-    const src = readFileSync(join(OVERLAY_ROOT, 'custom/server/approval/approval-controller.ts'), 'utf8')
+    const src = readFileSync(join(OVERLAY_ROOT, 'custom/server/approval-rules/approval-controller.ts'), 'utf8')
     for (const route of ["router.get('/rules'", "router.post('/candidates'", "router.post('/evaluate'", "router.post('/decide'", "router.delete('/rules/:index'"]) {
       expect(src).toContain(route)
     }
@@ -252,7 +252,7 @@ describe('控制器接线（patch 402）', () => {
     expect(series).toMatch(/^402-server-approval-routes-mount\.patch$/m)
     const routesPath = upstreamPath('hermes-studio/packages/server/src/bootstrap/routes.ts')
     if (existsSync(routesPath)) {
-      expect(readFileSync(routesPath, 'utf8')).toContain("import { approvalRoutes } from '../custom/approval/approval-controller'")
+      expect(readFileSync(routesPath, 'utf8')).toContain("import { approvalRoutes } from '../custom/approval-rules/approval-controller'")
     }
   })
 })

@@ -49,10 +49,10 @@
 ### Task 2: 认证人工门与授权 grant
 
 **Files:**
-- Create: `custom/server/approvals/decision-grant.ts`、`custom/server/approvals/__tests__/decision-grant.test.ts`
-- Modify: `custom/server/approvals/human-gate.ts`、`custom/server/governance/governance-controller.ts`、`custom/server/loop/graph/graph-rest.ts`、`custom/client/ia2/components/gov/OrgEditor.vue`
+- Create: `custom/server/approval-inbox/decision-grant.ts`、`custom/server/approval-inbox/__tests__/decision-grant.test.ts`
+- Modify: `custom/server/approval-inbox/human-gate.ts`、`custom/server/governance/governance-controller.ts`、`custom/server/loop/graph/graph-rest.ts`、`custom/client/ia2/components/gov/OrgEditor.vue`
 - Modify: `runtime/hermes_cli/kanban_db_dispatch.py`、`runtime/tools/kanban_tools.py`
-- Test: `custom/server/approvals/__tests__/`、`custom/server/governance/__tests__/org-cosign-guard.test.ts`、`runtime/tests/hermes_cli/`
+- Test: `custom/server/approval-inbox/__tests__/`、`custom/server/governance/__tests__/org-cosign-guard.test.ts`、`runtime/tests/hermes_cli/`
 
 **Interfaces:**
 - `requireAuthenticatedActor(ctx): { id: string; username: string; role: string }`：需要人责证据时拒绝匿名和请求体代报。

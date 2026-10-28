@@ -9,7 +9,7 @@ index 70af3c70d..87a262151 100644
 +import ideCompactionTraceRouter from '../custom/controllers/ide/compaction-trace'
  import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
  // overlay[approval]: 审批宽度候选五档+决策八态+规则三列表（第一批吸收 #4）
- import { approvalRoutes } from '../custom/approval/approval-controller'
+ import { approvalRoutes } from '../custom/approval-rules/approval-controller'
 @@ -323,6 +324,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(ideSessionShareRouter.routes())            // IDE 共享会话（R6：invite token 四档模式 + prompt 审批，multica 人机共驾）
    app.use(ideEngineModelsRouter.routes())             // IDE 编码引擎独立模型配置（2026-09-26 用户指令：与 hermes agent 模型独立设置）

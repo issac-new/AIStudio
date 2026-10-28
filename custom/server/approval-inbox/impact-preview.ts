@@ -1,4 +1,4 @@
-// overlay/custom/server/approvals/impact-preview.ts
+// overlay/custom/server/approval-inbox/impact-preview.ts
 // 副作用影响面预览（Blast Radius，2026-10-04 九源调研落地项①）。
 //
 // 出处：Claude Code Mods 官方 Blast Radius 模组（删除/重置操作先摆出受影响

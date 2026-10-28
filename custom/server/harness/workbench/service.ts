@@ -3,7 +3,7 @@
 // 所有对外的写操作都走 mutateStore 串行化；错误抛 ServiceError（带 HTTP 状态）。
 import { execFile } from 'child_process'
 import { readFileSync } from 'fs'
-import { appendApprovalLog } from '../../approvals/approval-log'
+import { appendApprovalLog } from '../../approval-inbox/approval-log'
 import { listCandidates } from '../../expcandidates/exp-store'
 import type { ExpCandidate } from '../../expcandidates/exp-types'
 import { applyEnabled, applyProposalFile, fileDigest, rollbackProposalFile } from './apply'

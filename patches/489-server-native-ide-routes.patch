@@ -9,7 +9,7 @@ index b2fecbfdb..21bf44c1b 100644
 +import { ideNativeRoutes } from '../custom/controllers/ide/native-routes'
  import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
  // overlay[approval]: 审批宽度候选五档+决策八态+规则三列表（第一批吸收 #4）
- import { approvalRoutes } from '../custom/approval/approval-controller'
+ import { approvalRoutes } from '../custom/approval-rules/approval-controller'
 @@ -330,6 +331,9 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(ideRunUndoRouter.routes())                   // IDE run 逐文件 Undo（UI 融合 UI-5：patch 反向应用）
    app.use(ideCompactionTraceRouter.routes())            // IDE compaction 留痕卡数据面（UI-2 v1）

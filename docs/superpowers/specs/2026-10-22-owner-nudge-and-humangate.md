@@ -15,7 +15,7 @@ run21 与 run22 两轮同族立案复现：催办/派单发往固定接收方而
    四态决策：assignee 在位直投 → 空置回落板 team（注记「建卡未认领」派单断环
    可见性）→ 双空显式 unassigned（**绝不改投固定接收方**——两轮错侧催办的防复发
    锚）→ 卡不存在。4/4 测试。
-2. **`custom/server/approvals/human-gate.ts`**：HumanGate 发布批准前置请求——
+2. **`custom/server/approval-inbox/human-gate.ts`**：HumanGate 发布批准前置请求——
    评审员（或任何持卡角色）可**先于判词**发起人工批准请求（POST
    /api/approvals/human-gate），进入审批收件箱（与命令/评审审批同一聚合管线，
    kind=review/risk=high），人工批准落决策链并可回写 harness 事件账本

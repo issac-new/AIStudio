@@ -27,7 +27,7 @@ import {
   type ApprovalCaller, type ApprovalDecision, type ApprovalRule, type ScopeCandidate, type ToolCallRequest,
 } from './approval-domain'
 import { getApprovalRuleStore } from './approval-store'
-import { appendApprovalLog } from '../approvals/approval-log'
+import { appendApprovalLog } from '../approval-inbox/approval-log'
 
 const router = new Router({ prefix: '/api/approval' })
 

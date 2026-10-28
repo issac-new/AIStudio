@@ -1,4 +1,4 @@
-// overlay/custom/server/approvals/risk-tier.ts
+// overlay/custom/server/approval-inbox/risk-tier.ts
 // V4-N1 审批风险分级（2026-09-28 V4 路演重构方案 §一 域1）：
 // 按"可逆性 × 风险"把待审项分三档——
 //   high   不可逆/对外可见（push、rm、发布、删库、杀进程…）：红色强制逐条裁决

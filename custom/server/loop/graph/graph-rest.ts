@@ -14,7 +14,7 @@ import { validateGraphSpec, type GraphSpec } from './graph-spec'
 import { appendContractsById } from './phase-nodes'
 import { notifyDirectorEvent } from './director-notify'
 import { compileRequirementToGraph, DEFAULT_SIMULATION_SCENARIO, type RequirementInput } from '../../graph/simulation-graph-template'
-import { requireAuthenticatedActor } from '../../approvals/human-gate'
+import { requireAuthenticatedActor } from '../../approval-inbox/human-gate'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 

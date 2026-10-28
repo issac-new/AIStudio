@@ -16,7 +16,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { auditLog } from '../governance/governance-audit'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
-import { resolveApprovalRulesPath } from '../approval/approval-store'
+import { resolveApprovalRulesPath } from '../approval-rules/approval-store'
 import { collectCapabilityCatalog } from './capability-catalog'
 import { resolveStudioDb } from './cost-accounts'
 
@@ -165,8 +165,8 @@ export const HARNESS_PRIMITIVES: readonly PrimitiveDef[] = [
     lifecycle: ['added', 'effective', 'removed（无生效时间窗/灰度）'],
     auditHook: '审批决策有 history.json（approvals 审计源）；规则本身的增删改无审计',
     anchors: [
-      'custom/server/approval/approval-store.ts ApprovalRulesFile（schema 单一事实源）',
-      'custom/server/approvals/approval-log.ts queryApprovalLog（决策留痕面）',
+      'custom/server/approval-rules/approval-store.ts ApprovalRulesFile（schema 单一事实源）',
+      'custom/server/approval-inbox/approval-log.ts queryApprovalLog（决策留痕面）',
     ],
     coverage: { identity: '有', version: '缺', lifecycle: '部分', audit: '部分' },
     coverageNotes: { audit: '决策留痕在档，规则变更本体无审计' },
@@ -194,7 +194,7 @@ export const HARNESS_PRIMITIVES: readonly PrimitiveDef[] = [
     auditHook: '自身即审计原语（四源归一单一读取面 auditLog）',
     anchors: [
       'custom/server/governance/governance-audit.ts auditLog（四源归一）',
-      'custom/server/approvals/approval-log.ts CAP（截尾口径）',
+      'custom/server/approval-inbox/approval-log.ts CAP（截尾口径）',
     ],
     coverage: { identity: '部分', version: '缺', lifecycle: '有', audit: '有' },
     coverageNotes: { identity: '多数源行无显式 id，按时间+源归一' },

@@ -15,7 +15,7 @@
 import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { delimiter as pathDelimiter, join } from 'path'
-import { queryApprovalLog } from '../approvals/approval-log'
+import { queryApprovalLog } from '../approval-inbox/approval-log'
 import { resolveLoopBaseDir } from '../loop/paths'
 
 // node:sqlite 与 run-undo/change-governance-store 等同款惰性加载：守门环境无该

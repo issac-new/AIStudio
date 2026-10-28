@@ -7,7 +7,7 @@
 import { mcpSecurityReport } from '../mcpcatalog/mcp-security-scan'
 import { collectMcpDrift } from '../mcpcatalog/mcp-drift'
 import { runSkillScan } from '../skillgov/skill-scan'
-import { verifyApprovalChain } from '../approvals/approval-log'
+import { verifyApprovalChain } from '../approval-inbox/approval-log'
 import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
 import { collectGovernancePosture } from '../governance/posture'
 import { collectProcessScan } from '../clusterinspector/process-scan'

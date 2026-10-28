@@ -2,7 +2,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
 index 3694d4cde..01ac931d3 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -85,6 +85,8 @@ import { approvalRoutes } from '../custom/approval/approval-controller'
+@@ -85,6 +85,8 @@ import { approvalRoutes } from '../custom/approval-rules/approval-controller'
  import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'
  // overlay[evidence]: 任务证据台账（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）
  import { evidenceRoutes } from '../custom/evidence/evidence-controller'

@@ -3,7 +3,7 @@ index b143b17d5..3694d4cde 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
 @@ -83,6 +83,8 @@ import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
- import { approvalRoutes } from '../custom/approval/approval-controller'
+ import { approvalRoutes } from '../custom/approval-rules/approval-controller'
  // overlay[tokens]: token-meter 三投影互校（第一批吸收 #9）
  import { tokenMeterRoutes } from '../custom/tokens/token-meter-controller'
 +// overlay[evidence]: 任务证据台账（routa §七#3 + antigravity A1 合并域，矩阵 §3.6 P0）
