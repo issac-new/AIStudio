@@ -15,8 +15,9 @@ const ROOT = resolve(__dirname, '../..')
 
 function grepCount(pattern: string, paths: string[]): number {
   try {
-    // 路径已限定在 custom/server（纯 .ts），不再用 --include（git grep 不支持该 GUN grep 选项）
-    const out = execFileSync('git', ['grep', '-rn', pattern, '--', ...paths], { cwd: ROOT, encoding: 'utf8' })
+    // 路径已限定在 custom/server（纯 .ts），不再用 --include（git grep 不支持该 GNU grep 选项）。
+    // 排除统一出口 lib/http.ts 自身——它的实现里必然有 ctx.body / ok:false，属白名单。
+    const out = execFileSync('git', ['grep', '-rn', pattern, '--', ...paths, ':(exclude)custom/server/lib/http.ts'], { cwd: ROOT, encoding: 'utf8' })
     return out.split('\n').filter(Boolean).length
   } catch {
     return 0
