@@ -118,7 +118,7 @@
 | K4 | agent-teams 底座无机器载体 | 引入 `team/version.json` 需与 VENDOR.md、测试三方同步，属跨模块契约变更 | 版本机制轮 |
 | K5 | `carrierPattern` 字段名语义过载 | 改名需同步校验器 + 单测 + 清单，收益小于风险；已在清单注释固化语义 | 校验器重构轮 |
 | K6 | `eda` 域只有 orchestrator | 补 EDA worker 或改 retired 是组织决策，不是文档修正 | 组织编制轮 |
-| K7 | 三类 roster 命名混用 | 需先确定 15 人编制的权威载体（治理仓 / 推演数据 / agent 角色目录） | 组织建模轮 |
+| K7 | ~~三类 roster 命名混用~~ **已立名（2026-10-28）** | 正本给出三个全称并禁用单说 roster：治理人员名册 / 推演编制 / agent 角色目录；`runtime/roster/squads.yaml` 注释改为真实的 `$HERMES_HOME/agent-roster.yaml`（本仓无该文件） | 已入库 |
 | K8 | ~~15 人枚举缺团队负责人 A/B~~ **已补（2026-10-28）** | 以 `simharness/mux/mx-lib.sh:145` 的 USERS 为唯一真源（15 人含 wei·mei），三处枚举补齐并标注真源位置 | 已入库 |
 | K9 | ~~「admin 不设助理」与实现矛盾~~ **已对齐（2026-10-28）** | 实现按 15×2 生成（含 `admin-agent`），报告叙事改为「含 admin-agent，合计 30」，不再与代码矛盾 | 已入库 |
 | K10 | features 能力开关 vs 导航开关 | 改名 `*Nav` 牵连注册表、bootstrap 与测试 | 前端治理轮 |
