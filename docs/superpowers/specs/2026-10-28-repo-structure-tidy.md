@@ -18,7 +18,7 @@
 | G2 | `scripts/diagram-skill.test.ts` | 迁入 `scripts/__tests__/`，`__dirname` 回根层级由 `..` 改 `../..` |
 | G2 | `scripts/` 根文件数 | 60 → 25（余项为 package.json/CI/qgate/代码/测试显式调用的入口与共享库） |
 | G3 | 根 `vite.config.iso.ts` | 删除；同批从 `RELEASE-MANIFEST.json` cockpit `packageIncludes` 移除 |
-| G3 | 根 `docker-compose.yml` | 删除（引用不存在的 `Dockerfile.server`/`Dockerfile.ide`） |
+| G3 | 根 `docker-compose.yml` | **保留**：`docs/windows-x64-setup.md:110-113` 已把它作为「已知边界」如实披露（YAML 合法，但引用的 Dockerfile 不存在、任何平台都起不来），删除会同时抹掉这段披露；改列挂账 4 |
 | G3 | `patches/028-client-kanbanview-enh.patch` | 删除（与 `.archived-patches/028-*` 字节相同，series 未登记，inject 不消费） |
 | G4 | `scripts/sync-upstream.sh`、`serve-server.sh`、`check-bundle-budget.mjs`、`verify-dist.mjs` | 上游根解析统一为 env → `vendor/hermes-studio` → 旧 `../upstream` |
 | G4 | `scripts/plan-html/render.sh:11` | 硬编码 `/Users/cuishi/lab/ncwk/...` 改 `$ROOT` 变量 |
@@ -33,7 +33,7 @@
 - **D2 docs 判据取日期前缀，判定不了的不搬**：`docs/` 根 28 个 md 全部以 `2026-` 开头，是历史复盘/审计/调研的稳定命名；非日期文件（`USAGE.md`、`windows-x64-setup.md`、`intro.html`、`absorption-domain-README.md`、`comm-collab-v13/v14`）留在原处，`comm-collab-*` 两篇是否属现行入口无法机械判定，按「判定不了留原处」处理并在索引标注，不做猜谜式搬迁。
 - **D3 scripts 判据取引用方扫描，不按文件名猜**：对 `scripts/` 根每个文件做全仓引用扫描（排除 `vendor/`），被 package.json、CI、qgate、源码、测试、其他脚本引用的留在根；零引用且属走查/探针的进 `regression/`，属迁移/重生成/对账的进 `maintenance/`。该判据可复算，后续新增脚本照此归位。
 - **D4 历史档案内的旧路径不改写**：已迁入 `docs/reports/` 的文档正文里出现的 `docs/2026-*` 或 `scripts/xxx` 字样是当时事实的记录，按「历史归 git」不改写；只更新活体入口（`docs/absorption-domain-README.md`、根 `README.md`、`AGENTS.md`）与被移动文件内会立即失效的相对链接。同理，历史 spec（`docs/superpowers/specs/`）中对旧路径的引用保持原样，代码注释属活体说明故同批更新。
-- **D5 根级死件直接删除而非归档**：`vite.config.iso.ts` 全部路径指向 `/Volumes/nvme2230`，无任何脚本引用，仅被发布清单列为包内文件；`docker-compose.yml` 引用两个不存在的 Dockerfile，自述「未经验证不得宣称可 up」。二者保留会持续误导读者。删除前归档于 git 历史，恢复命令记于本文末节，满足「先存档再删、可回滚优先」。
+- **D5 根级死件按「是否仍有活体引用」逐个判定**：`vite.config.iso.ts` 13 处路径全部指向 `/Volumes/nvme2230`，无任何脚本引用，仅被发布清单列为包内文件，故删除并同步清单，恢复命令记于本文末节（满足「先存档再删、可回滚优先」）。`docker-compose.yml` 初判同类，执行时发现 `docs/windows-x64-setup.md:110-113` 正以「已知边界」条目如实披露它不可 up——删文件会让该披露指向空气，属删掉证据而非清理杂物，故保留原状并转为挂账 4。
 - **D6 怪名目录只清产物，根因另行挂账**：`skills/swarm-yuan/${PROJECT_DIR...}` 的成因是 `skills/swarm-yuan/assets/precheck.conf:11` 占位符行尾带 `# MEASURE:` 行内注释，生成器按整行取值后当作 `PROJECT_DIR` 建目录。`skills/` 不在 spec-first 可写区（`WRITABLE_DIRS` 八面不含 skills），且技能本体是发布模块（`RELEASE-MANIFEST.json` yuan-skill），修解析器需配 1589 个技能测试与版本记录——独立一轮处理，本轮只删本地产物并落挂账。
 - **D7 不合并证据与档案多轨**：`evidence/`（37 跟踪文件，34 个二进制）、`custom/qgate/evidence/`、`archive/`、`.archived-patches/`、`patches/_skip-*`、`runtime/hermes-records/research/retired-docs/` 分属不同契约（交付证据、qgate 独立子项目、退役补丁、脱敏记录镜像），合并会打断可追溯性与打包边界，本轮明确不做。
 - **D8 上游根解析统一为单仓序**：以 `env → vendor/hermes-studio → 旧 ../upstream` 为准（`scripts/build.mjs:14-18`、`scripts/serve-server.mjs:50-54` 已有先例）。旧多仓布局的兄弟 `upstream/` 只在本地存在，纯本仓检出下 `npm run sync`、`postbuild`、`check:bundle` 必坏，属单仓整合遗留债，与本轮目录整理同族故同批修。
@@ -53,7 +53,7 @@
 
 构建面：`npm run build:full`（内含 `postbuild` → `verify-dist.mjs`）后跑 `node scripts/check-bundle-budget.mjs`，用于证明 D8 的产物路径解析真的生效。
 
-**本批未验证项如实登记**：`npm run sync` 的端到端执行未跑（需外部 upstream 远端、clean 后重装依赖，破坏当前注入态），只做 `bash -n` 与路径解析静态核对；`docker-compose.yml` 在删除前即不可运行，删除不减少任何可用能力；`docs/reports/` 内的历史文档不做链接存活审计（其正文引用的上游源码路径本就指向当时的树）。
+**本批未验证项如实登记**：`npm run sync` 的端到端执行未跑（需外部 upstream 远端、clean 后重装依赖，破坏当前注入态），只做 `bash -n` 与路径解析静态核对；`docs/reports/` 内的历史文档不做链接存活审计（其正文引用的上游源码路径本就指向当时的树）。
 
 ## 设计文档影响
 
@@ -66,12 +66,13 @@ DESIGN_SYNC: none
 1. **swarm-yuan 生成器把带行内注释的占位符当目录名**（D6）：修 `skills/swarm-yuan/assets/precheck.conf:11` 与解析器（`skills/swarm-yuan/scripts/generator/subcommands.sh`、`skills/swarm-yuan/assets/precheck.sh`），补「带注释占位符不产生目录」守门测试，另起一轮。
 2. **孤儿目录 `.claude/worktrees/upstream`**：无 git worktree 注册，按仓规不自行 `rm -rf`，待用户裁决移入隔离区或删除。
 3. **`custom/server/governance/repo-root.ts:10` 的 `/Volumes/nvme2230` 兜底**：属同族旧机路径，但位于治理仓解析链尾，改它需先确认生产部署面，留下轮。
+4. **`docker-compose.yml` 与它的三个 Dockerfile**：compose 在根、`Dockerfile.server`/`.ide`/`.leader` 全缺，`docs/windows-x64-setup.md:110-113` 已如实记为「任何平台都 up 不起来」。补齐或下线是路线决策，不是整理动作，需产品裁决后另起一轮；本轮保留原状。
 
 ## 死件恢复命令
 
 ```bash
-# e3a058a14 = 本分支基点（origin/main），三个文件在该提交完整存在
-git checkout e3a058a14 -- vite.config.iso.ts docker-compose.yml
+# e3a058a14 = 本分支基点（origin/main），两个文件在该提交完整存在
+git checkout e3a058a14 -- vite.config.iso.ts
 git checkout e3a058a14 -- patches/028-client-kanbanview-enh.patch
 ```
 
