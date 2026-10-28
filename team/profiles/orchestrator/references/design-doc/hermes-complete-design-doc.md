@@ -2729,6 +2729,43 @@ flowchart LR
 
 ---
 
+### 4.40 技术组件台账与上游增量闭环（2026-10-28）
+
+> 来源：技术组件台账全链（外置盘历史基线 20260925 + 20261016 增量 → v1/v2 分卷 → 终态单文件整合）。执行卡：t_2bee444f（台账留痕）、t_632cbd94/t_20ad092c/t_58855791（hexstrike T1/T2/T3）、t_5bf395b3/t_fb51a770/t_21d69a77/t_767b724d/t_17bc9db5/t_b0c916bb（六条 delta）、t_87adf8cb/t_f304f7b4（吸收落地）。验收：上游状态全部当日 gh api/npm/PyPI 实测锚，吸收项 5 组机械 grep 验收。
+
+**机制核心：集群调研过的全部技术组件（38 线）以单一台账文件统管「基线→上游现版→差异→判级→处置」，配季度重跑与 3 个月退役线；判级 🔴 的大增量线自动进入 delta 调研→吸收落地管线。** 替换的缺口：此前调研结论散在三调研区（外置盘/shared/workspace），「上次调研后上游变了什么」无系统答案。
+
+**落地内容**：
+
+| 项 | 载体 | 补了什么缺口 | 证据 |
+|---|---|---|---|
+| 终态台账（38 线五域） | `~/.hermes/shared/research/tech-components-ledger-20261027/tech-components-ledger.md`（AIStudio 同步件 team/shared/research/ 同目录） | 全组件线单一事实源：判级 🔴0/🟡8/🟢18、退役裁决、验证锚 | commit c12a831f6 等 6 个台账 commit |
+| 刷新程序 | skill `tech-component-ledger-refresh-orch`（v1.2.0，单文件契约） | 四步程序：组件面扫描→基线锚→上游实测→判级落盘；坑清单（gh api 限流/封顶近似/产物异位） | SKILL.md 于 devops 类目 |
+| delta 派发模板 | skill `delta-research-dispatch` | 🔴 线转增量调研卡的验收模板（commit 全量禁封顶近似/三档建议/sha 锚） | 六卡全 done 实证 |
+| 退役线（用户裁决） | 台账 §一维护契约 | 上游静默 >90 天→RETIRED 保留轨迹停跟进；复活条款 | RETIRED 4 条+临线观察 1 条 |
+| hexstrike 三源融合 | skill `evidence-governed-execution` v1.0.0 + `pentest-methodology-fusion` v2.0.0 + 4 hack profile 接线 | 40 条机制裁决（keep 6/new 22/downgrade 1/drop 11），证据门控执行 | FUSION-REPORT.md，t_58855791 done |
+
+**守门规则**：判级口径（🔴 >20 commits 或跨 minor；🟡 轻跟；🟢 零增量/死水）；上游状态禁记忆引用必须当日实测；退役 ≠ 删除（档案原位保留）。单一事实源在台账文件与 refresh skill，此处只写指针。
+
+**与既有机制对位**：
+
+1. §4.33 调研成果三层验证体系——本节是其「上游版本轴」分轴（另两轴落地对账/内容重校正在 default 侧 research-ledger-reconciliation）。
+2. §5 回流表——delta 报告的必吸收项经两卡（t_87adf8cb/t_f304f7b4）落地 5 组：semantica-runtime 两条 0.7.0 地雷规避、prompt-injection-guard 反 padding 三关+八分类、skill-fleet-consistency-audit 第五层 unattended 分类、security-domain-delegation v1.4.0 两节（scope-as-code+sanitizeSlug）、pay-orchestrator STANDARDS-MATRIX 4 处刷新。
+3. §4.36 hack 团队 OS2——evidence-governed-execution 是其执行纪律面的技能载体。
+
+**显式不吸收/登记待建**：
+
+1. semantica 0.8.0-dev 不升级（pillow 13 与 hermes-agent 依赖锁互斥）——等正式发版+依赖解锁再评估，触发条件写入 runtime 技能。
+2. OpenExecutive 产品面功能群（briefing/goals 等 8 项）不吸收——Gmail/M365 产品面无本侧对应物，判据在 delta 报告。
+3. DeepInfer/deepseek-recipe 调研欠收口（目录无 VERDICT）——两仓 0 落后快照新鲜，按需派裁决卡。
+4. Ghidra 12.2 升级待裁决（JDK 25 已在位，仅缺 wrapper JAVA_HOME 换绑）。
+
+**边界声明**：上游活跃度数据有时效（实测锚 2026-10-27/28）；台账判级随季度重跑漂移。回滚路径：三件分卷原件归档台账目录 archive/，git 历史可回溯。
+
+- **落点**：终态台账 `shared/research/tech-components-ledger-20261027/tech-components-ledger.md`；程序 skill `tech-component-ledger-refresh-orch`；delta 模板 skill `delta-research-dispatch`；同步件 AIStudio `team/shared/research/` 同目录。
+
+---
+
 ## 5、运转链、迭代闭环与环境阶段纪律
 
 第 3 章定义机制，第 4 章把机制接到载体；本章验证这条链是否真正闭合。它不再新增机制或配置，而是沿着「输入 → 执行 → 证据 → 判定 → 回流」观察系统：先看七域如何共同运转，再看失败如何生成改进任务，最后说明建设期的改动纪律。其输出只有两类：继续运行的反馈，或回写 §3/§4 的修复任务。
@@ -2936,6 +2973,7 @@ flowchart LR
 
 | 条目 id | 主题 |
 |---|---|
+| `gap-20261028-tech-components-ledger` | 技术组件台账全链与上游增量闭环（38 线终态+退役线+delta 吸收），2026-10-28 |
 | `gap-20261020-doc-restructure-r5` | 规模复测 + 机制域四要素补齐 + 文风基线门禁 + R4 漏报修复 |
 | `gap-20261020-doc-restructure-r4` | 安全族抽离 §4.7 + 健全性清单 + 标题去流程化 |
 | `gap-20261019-doc-restructure` | 整体设计文档结构重构：导航层 + 载体总表 + 台账拆卷 |
