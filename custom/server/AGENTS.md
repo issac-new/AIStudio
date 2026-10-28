@@ -7,6 +7,12 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 - **路由挂载**：新路由优先加进已挂载的 controller（如 `harness/harness-controller.ts` 已由 patch 543 挂载）；新建独立路由必须在 `patches/` 加挂载补丁并登记 series。
 - **存储**：JSON/JSONL 走 `mkdir` + 原子写（tmp → rename）；SQLite 用 `node:sqlite`；测试用 env 指向 tmpdir，绝不写真实 home。
 - **失败语义**：读模型 fail-soft（源缺席标 `available:false` / `null`）；执法链失败关闭（fail-closed）。两者不可混用。
+- **HTTP 响应形状（2026-10-28 K19 立规）**：
+  - 统一出口 `custom/server/lib/http.ts`——`ok()` / `created()` / `fail()` / `unavailable()` / `bodyOf()` / `writeDenied()`。新端点一律用它，不再手写 `ctx.body = { ok: false, ... }`。
+  - 失败体固定 `{ ok: false, error: <一句话>, code?, problems? }`；`error` 是唯一的「失败原因文案」键。
+  - **写操作与命令类失败必须非 2xx**（400/403/404/409/422/5xx）；**读模型的降级或业务拒绝允许 200 + `ok:false`**（客户端据 `ok` 分支），这类站点在架构棘轮里计数、只许减少。
+  - `detail` / `problems` 作为**结构化载荷**（数组、字段细节）可以与 `error` 并存，不属重复键；不要把它们当文案别名合并。
+  - 计数棘轮：`custom/__tests__/architecture-ratchet.test.ts` 锁 `ctx.body=` 与 `ok:false` 总量，只许下降。
 - **身份**：工具上下文含 `userId/sessionId/profileId/runId`；审计可落身份标识，不可落敏感参数原值。
 - **审计**：`toolpipeline/tool-hooks.ts` 是工具执行审计唯一出口；新增字段先扩展 `ToolExecAuditEntry`，再补查询面与测试。
 
