@@ -15,6 +15,7 @@ import { execFile } from 'child_process'
 import { existsSync, readdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'node:path'
+import { hermesHome as resolveHermesHome } from '../lib/paths'
 
 export interface HermesProcessInfo {
   pid: number

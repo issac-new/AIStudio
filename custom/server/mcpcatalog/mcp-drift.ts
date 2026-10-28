@@ -15,6 +15,7 @@ import { createHash } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { hermesHome as resolveHermesHome } from '../lib/paths'
 
 export interface DriftItem {
   face: 'mcp-server' | 'plugin'
