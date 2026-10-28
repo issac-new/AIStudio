@@ -13,6 +13,11 @@
 #   state*/cron）、服务器房间数=0（admin rooms 复核）、中央仓远端 main 九目录零文件且仅剩
 #   main 分支；--reset-memory 加验：模拟 bank 按 14 精确 ID 各表计数=0；可反复跑。
 set -euo pipefail
+# bash 3.2 UTF-8 locale 陷阱自免疫（2026-10-28 实锤根治）：中文 say 文案在默认
+# UTF-8 locale 下被 bash 3.2 误解析出畸形变量名（line 178 `_ed` unbound 两复现，
+# LC_ALL=C 一击即过）——与驱动侧 prelude 统一 LC_ALL=C 同源；固化进脚本本体，
+# 任何调用姿势不再依赖外部 env。
+export LC_ALL=C
 SIM_ROOT="${SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 # 防呆（2026-10-16 事故）：--apply 清空是真破坏性操作；SIM_ROOT 未显式传入（走
 # 默认生产路径）时要求 MX_CLEAN_CONFIRM_PROD=1 显式确认——防测试/脚本漏传 env
