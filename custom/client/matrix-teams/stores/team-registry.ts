@@ -4,7 +4,7 @@
 // 注意：不占用 matrixEventBus（单槽 ref，属 matrix-chat 模块内部），自挂 SDK 监听。
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { RoomEvent, type MatrixClient, type Room } from 'matrix-js-sdk'
+import { RoomEvent, Visibility, type MatrixClient, type Room, type RoomState } from 'matrix-js-sdk'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import {
   TEAM_EVENT_TYPES, REGISTRY_ACCOUNT_DATA_TYPE, REGISTRY_ROOM_POWER_LEVELS,
@@ -12,7 +12,7 @@ import {
   type AgentTeam, type DutyContent, type AdmissionAnswers,
 } from '../protocol'
 import { projectAccounts, undeclaredMembers, type TeamAccountView, type RawStateEvent } from '../adapters/accounts'
-import { unwrapRef } from '../utils'
+import { unwrapRef, getCustomAccountData, getCustomStateEvents, setCustomAccountData, sendCustomStateEvent } from '../utils'
 
 /** 需要从房间 state 枚举的团队事件类型（协议中全部 state 型事件）。
  *  真实 SDK（v41 实测）RoomState.getStateEvents 必须带 eventType，无参调用恒返回 []；
@@ -24,10 +24,10 @@ const TEAM_STATE_QUERY_TYPES: readonly string[] = [
 /** 房间 state 事件归一化为 RawStateEvent。
  *  兼容两种形态：SDK MatrixEvent（getType/getStateKey/getContent + sender.userId）
  *  与测试 mock 的裸对象（type/stateKey/sender/content）。缺字段或 sender 缺失的条目丢弃。 */
-function extractStateEvents(room: { currentState: { getStateEvents(type?: string): unknown[] } }): RawStateEvent[] {
+function extractStateEvents(room: { currentState: RoomState }): RawStateEvent[] {
   const out: RawStateEvent[] = []
   for (const type of TEAM_STATE_QUERY_TYPES) {
-    for (const ev of room.currentState.getStateEvents(type) as Array<Record<string, unknown>>) {
+    for (const ev of getCustomStateEvents(room.currentState, type) as unknown as Array<Record<string, unknown>>) {
       let stateKey: unknown
       let sender: unknown
       let content: unknown
@@ -111,7 +111,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
   async function detectRegistry(): Promise<void> {
     const client = clientRef.value
     if (!client) return
-    const event = client.getAccountData(REGISTRY_ACCOUNT_DATA_TYPE) as unknown
+    const event = getCustomAccountData(client, REGISTRY_ACCOUNT_DATA_TYPE) as unknown
     // 真实 matrix-js-sdk 返回 MatrixEvent：内容只能经 getContent() 取。旧代码按
     // { content } 读取，account_data 明明已在 SDK store 里却永远读不到——重载后
     // 回退「未配置」的根因。两种形状都兼容（测试 mock 与旧数据）。
@@ -146,7 +146,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     const client = clientRef.value
     if (!client) return
     registryRoomId.value = roomId
-    await client.setAccountData(REGISTRY_ACCOUNT_DATA_TYPE, { roomId })
+    await setCustomAccountData(client, REGISTRY_ACCOUNT_DATA_TYPE, { roomId })
     await rebuild()
   }
 
@@ -156,15 +156,15 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     if (!client) { lastError.value = 'matrix offline'; return null }
     try {
       const result = await client.createRoom({
-        visibility: 'private',
+        visibility: Visibility.Private,
         name,
         invite: invitees,
         power_level_content_override: REGISTRY_ROOM_POWER_LEVELS,
       })
       registryRoomId.value = result.room_id
-      await client.setAccountData(REGISTRY_ACCOUNT_DATA_TYPE, { roomId: result.room_id })
+      await setCustomAccountData(client, REGISTRY_ACCOUNT_DATA_TYPE, { roomId: result.room_id })
       const selfId = userIdRef.value ?? client.getUserId() ?? ''
-      await client.sendStateEvent(result.room_id, TEAM_EVENT_TYPES.leaders, { leaders: [selfId] }, '')
+      await sendCustomStateEvent(client, result.room_id, TEAM_EVENT_TYPES.leaders, { leaders: [selfId] })
       await rebuild()
       return result.room_id
     } catch (err) {
@@ -192,8 +192,8 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     const displayName = selfId.split(':')[0].replace(/^@/, '')
     try {
       lastError.value = null // 成功路径清旧错：失败后重试成功不应再显示旧错误
-      await client.sendStateEvent(
-        registryRoomId.value, TEAM_EVENT_TYPES.account,
+      await sendCustomStateEvent(
+        client, registryRoomId.value, TEAM_EVENT_TYPES.account,
         { displayName, agentTeams, updatedAt: Date.now(), admission: carried }, selfId,
       )
       await rebuild()
@@ -209,7 +209,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     if (!client || !registryRoomId.value) return false
     try {
       lastError.value = null // 成功路径清旧错（同 writeSelfAccount）
-      await client.sendStateEvent(registryRoomId.value, TEAM_EVENT_TYPES.leaders, { leaders: list }, '')
+      await sendCustomStateEvent(client, registryRoomId.value, TEAM_EVENT_TYPES.leaders, { leaders: list })
       await rebuild()
       return true
     } catch (err) {
@@ -238,7 +238,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     if (!client || !registryRoomId.value || !isLeader.value) return false
     try {
       lastError.value = null // 成功路径清旧错（同 writeSelfAccount）
-      await client.sendStateEvent(registryRoomId.value, TEAM_EVENT_TYPES.duty, {
+      await sendCustomStateEvent(client, registryRoomId.value, TEAM_EVENT_TYPES.duty, {
         assigneeKind: duty.assigneeKind, assigneeId: duty.assigneeId, roomName: duty.roomName,
         updatedBy: userIdRef.value ?? '', updatedAt: Date.now(),
       }, roomId)
@@ -256,7 +256,7 @@ export const useTeamRegistryStore = defineStore('matrix-team-registry', () => {
     if (!client || !registryRoomId.value || !isLeader.value) return false
     try {
       lastError.value = null // 成功路径清旧错（同 writeSelfAccount）
-      await client.sendStateEvent(registryRoomId.value, TEAM_EVENT_TYPES.duty, {}, roomId)
+      await sendCustomStateEvent(client, registryRoomId.value, TEAM_EVENT_TYPES.duty, {}, roomId)
       await rebuild()
       return true
     } catch (err) {

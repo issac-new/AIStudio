@@ -86,7 +86,7 @@ function diffLines(detail: string): string[] {
 }
 
 const rows = computed<ToolRow[]>(() => {
-  const msgs = (chat.activeSession?.messages ?? chat.messages ?? []) as Array<Record<string, unknown>>
+  const msgs = (chat.activeSession?.messages ?? chat.messages ?? []) as unknown as Array<Record<string, unknown>>
   return msgs
     .filter((m) => m.role === 'tool')
     .slice(-80)

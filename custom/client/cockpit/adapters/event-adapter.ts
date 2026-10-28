@@ -121,7 +121,7 @@ function fromMessage(taskId: string, assignee: string | null, m: KanbanTaskMessa
 }
 
 // 评论 → CockpitEvent
-function fromComment(taskId: string, c: { id: number; author: string; body: string; created_at: number }): CockpitEvent {
+function fromComment(taskId: string, c: { id: number | string; author: string; body: string; created_at: number }): CockpitEvent {
   return {
     id: `evt-comment-${c.id}`,
     taskId, actor: c.author || 'unknown', kind: 'A2H',

@@ -4,6 +4,7 @@
  * POST /api/ide/video-frames { videoPath, frames, widthPx }
  */
 import Router from '@koa/router'
+import { fail } from '../../lib/http'
 
 const router = new Router({ prefix: '/api/ide' })
 
@@ -13,14 +14,12 @@ router.post('/video-frames', async (ctx) => {
   const frames = Number(body.frames ?? 8)
   const widthPx = Number(body.widthPx ?? 1280)
   if (!videoPath || !Number.isFinite(frames) || frames <= 0 || frames > 32) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'videoPath 必填；frames 1-32' }
+    fail(ctx, 400, 'videoPath 必填；frames 1-32', { extra: { detail: 'videoPath 必填；frames 1-32' } })
     return
   }
   const { existsSync: exists } = await import('fs')
   if (!exists(videoPath)) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: '视频文件不存在' }
+    fail(ctx, 404, '视频文件不存在', { extra: { detail: '视频文件不存在' } })
     return
   }
   try {
@@ -28,8 +27,8 @@ router.post('/video-frames', async (ctx) => {
     const out = await extractFramesBase64(videoPath, { frames, widthPx })
     ctx.body = { ok: true, count: out.length, frames: out }
   } catch (err) {
-    ctx.status = 422
-    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
+    fail(ctx, 422, detail, { extra: { detail } })
   }
 })
 
@@ -50,8 +49,7 @@ router.post('/engine-models-put', async (ctx) => {
   } as never
   const validation = validateEngineModelConfig(config)
   if (!validation.ok) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: validation.problems }
+    fail(ctx, 400, '引擎模型配置不合法', { problems: validation.problems })
     return
   }
   const { writeThroughToEngine } = await import('./engine-models')

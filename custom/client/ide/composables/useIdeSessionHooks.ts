@@ -113,7 +113,8 @@ export function useIdeSessionHooks() {
     if (!sid) return map
     for (const [key, stream] of chatStore.subagentStreams) {
       if (!key.startsWith(`${sid}:`)) continue
-      if (stream.status === 'running' || stream.status === 'started') continue
+      // status 词表里无 'started'（运行时该分支恒不命中）；按 string 比较保留原判定形态。
+      if (stream.status === 'running' || (stream.status as string) === 'started') continue
       const texts: string[] = []
       if (stream.summary) texts.push(stream.summary)
       const lastText = [...stream.entries].reverse().find((e) => e.kind === 'text' && e.text)

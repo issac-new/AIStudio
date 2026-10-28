@@ -195,7 +195,10 @@ export const useWorkspaceStore = defineStore('ia2-workspace', () => {
         .map(e => ({ board: e.board || 'default', task: Object.assign({}, e.task, { source: 'sim', runId }) }))
       _simRaw.value = raw
       _simTasks.value = raw.map(e => {
-        const mapped = taskAdapter.toCockpitTask(e.task, e.board)
+        // overview 的 task 是宽松 JSON（Record<string, unknown> + id?）；toCockpitTask 要 KanbanTask 形状，
+        // 运行期字段同源，仅类型层对齐（不做字段转换）。
+        const mapped = taskAdapter.toCockpitTask(
+          e.task as unknown as Parameters<typeof taskAdapter.toCockpitTask>[0], e.board)
         mapped.source = 'sim'
         mapped.runId = runId
         return mapped

@@ -20,6 +20,7 @@ import {
   type PolicyStatement,
 } from '../../enginemodels/provider-policy'
 import { atomicWriteJson } from '../../lib/fs-store'
+import { fail } from '../../lib/http'
 
 const engineModelsRouter = new Router({ prefix: '/api/ide/engine-models' })
 
@@ -92,8 +93,7 @@ engineModelsRouter.put('/', (ctx) => {
   }
   const validation = validateEngineModelConfig(config)
   if (!validation.ok) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: validation.problems }
+    fail(ctx, 400, '引擎模型配置不合法', { problems: validation.problems })
     return
   }
   writeAtomic(config)

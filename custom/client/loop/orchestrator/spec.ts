@@ -20,7 +20,9 @@ export type {
   SpecContainer,
   SpecWarning,
 } from '../../../server/loop/graph/graph-spec'
-export type { PredicateExpr, LoopGuard } from '../../../server/loop/graph/predicate'
+export type { PredicateExpr } from '../../../server/loop/graph/predicate'
+// LoopGuard 定义在 types.ts（predicate.ts 不导出它；此前路径写错，构建期无碍、类型检查报缺）。
+export type { LoopGuard } from '../../../server/loop/graph/types'
 
 /** plan 节点三通道（append planResult / overwrite planDecision / overwrite planMode）。
  *  事实源：custom/server/loop/graph/spec-runtime.ts 的 PLAN_CHANNELS。

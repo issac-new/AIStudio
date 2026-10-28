@@ -13,6 +13,7 @@ import { execFileSync } from 'child_process'
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, isAbsolute, resolve } from 'path'
+import { fail } from '../../lib/http'
 
 
 /** studio db 多候选探测：symlink/物理两种 __dirname 形态 + cwd 兜底（真进程修复）。 */
@@ -90,19 +91,16 @@ router.post('/run-undo', (ctx) => {
   const fileId = Number(body.fileId)
   const workspace = String(body.workspace ?? '')
   if (!sessionId || !changeId || !Number.isFinite(fileId) || fileId <= 0) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'sessionId/changeId/fileId 必填' }
+    fail(ctx, 400, 'sessionId/changeId/fileId 必填', { extra: { detail: 'sessionId/changeId/fileId 必填' } })
     return
   }
   if (!isAbsolute(workspace) || !existsSync(workspace)) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'workspace 须为存在的绝对路径' }
+    fail(ctx, 400, 'workspace 须为存在的绝对路径', { extra: { detail: 'workspace 须为存在的绝对路径' } })
     return
   }
   const db = openDb()
   if (!db) {
-    ctx.status = 503
-    ctx.body = { ok: false, detail: 'undo 数据面不可用（db 缺失或 node:sqlite 不可用）' }
+    fail(ctx, 503, 'undo 数据面不可用（db 缺失或 node:sqlite 不可用）', { extra: { detail: 'undo 数据面不可用（db 缺失或 node:sqlite 不可用）' } })
     return
   }
   const rows = db.query(
@@ -111,13 +109,11 @@ router.post('/run-undo', (ctx) => {
   )
   const row = rows[0] as unknown as FileRow | undefined
   if (!row) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: 'change file 行不存在' }
+    fail(ctx, 404, 'change file 行不存在', { extra: { detail: 'change file 行不存在' } })
     return
   }
   if (row.patch === null) {
-    ctx.status = 422
-    ctx.body = { ok: false, detail: '该文件无 patch（二进制/截断），不可 undo' }
+    fail(ctx, 422, '该文件无 patch（二进制/截断），不可 undo', { extra: { detail: '该文件无 patch（二进制/截断），不可 undo' } })
     return
   }
   // 可选 hunkIndexes：只反向应用选中 hunk（IdeInlineDiff 逐处拒绝的写通道）。
@@ -126,14 +122,12 @@ router.post('/run-undo', (ctx) => {
   if (body.hunkIndexes !== undefined) {
     const raw = body.hunkIndexes
     if (!Array.isArray(raw) || raw.length === 0 || !raw.every((n) => Number.isInteger(n) && (n as number) >= 0)) {
-      ctx.status = 400
-      ctx.body = { ok: false, detail: 'hunkIndexes 须为非空非负整数数组' }
+      fail(ctx, 400, 'hunkIndexes 须为非空非负整数数组', { extra: { detail: 'hunkIndexes 须为非空非负整数数组' } })
       return
     }
     patchText = filterPatchHunks(row.patch, new Set(raw as number[]))
     if (!patchText) {
-      ctx.status = 422
-      ctx.body = { ok: false, detail: '选中 hunk 序号越界（patch 无对应 hunk）' }
+      fail(ctx, 422, '选中 hunk 序号越界（patch 无对应 hunk）', { extra: { detail: '选中 hunk 序号越界（patch 无对应 hunk）' } })
       return
     }
     hunkMode = true
@@ -147,11 +141,8 @@ router.post('/run-undo', (ctx) => {
     execFileSync('git', args, { cwd: workspace })
     ctx.body = { ok: true, restoredPath: row.path, changeType: row.change_type }
   } catch (err) {
-    ctx.status = 422
-    ctx.body = {
-      ok: false,
-      detail: `反向应用失败（文件可能已被后续修改）：${err instanceof Error ? err.message.slice(0, 300) : String(err)}`,
-    }
+    const detail = `反向应用失败（文件可能已被后续修改）：${err instanceof Error ? err.message.slice(0, 300) : String(err)}`
+    fail(ctx, 422, detail, { extra: { detail } })
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

@@ -82,7 +82,8 @@ function retryLast(): void {
 }
 
 function newSession(): void {
-  void chat.newSession?.()
+  // chat store 未导出 newSession（类型缺失；运行时为 undefined → 无动作）。类型层按可选声明，口径不变。
+  ;(chat as unknown as { newSession?: () => unknown }).newSession?.()
   dismissedAt.value = Date.now()
 }
 

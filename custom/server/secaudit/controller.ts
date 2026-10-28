@@ -1,11 +1,13 @@
 // overlay/secaudit 域：REST 控制器（挂 /api/governance/secaudit，零新 patch）。
 import Router from '@koa/router'
+import type { Context } from 'koa'
 import type { RuleResult } from './types'
 import { ruleProblems } from './types'
 import {
   createProject, finalizeRun, getProjectOrFail, listAllProjects, reviewRecord, runLedger, startRun, submitCandidate, verifyCandidate,
 } from './engine'
 import { surfaceCatalogForApi } from './exposed'
+import { fail } from '../lib/http'
 
 // 挂载契约（2026-10-22 走查批修正）：子路由**不带前缀**，由 governance-controller
 // router.use('/secaudit') 嵌套挂载（sim-launch 同款先例）——@koa/router 嵌套下
@@ -13,8 +15,10 @@ import { surfaceCatalogForApi } from './exposed'
 // 测试面（secaudit-http.test.ts）已改为生产同款嵌套拓扑守护。
 export const secAuditRoutes = new Router()
 
-function problemsBody(problems: Array<{ code: string; detail: string }>) {
-  return { ok: false, problems }
+// 问题清单是对象数组（fail 的 problems 选项只接 string[]），经 extra 原样透传保形；
+// error 取首条 detail，供只读文案的调用方直接用。
+function failProblems(ctx: Context, status: number, problems: Array<{ code: string; detail: string }>): void {
+  fail(ctx, status, problems[0]?.detail ?? '请求未通过校验', { extra: { problems } })
 }
 
 /** 取失败分支的问题清单（TS 窄化助手：调用点已判 !result.ok）。 */
@@ -45,8 +49,7 @@ secAuditRoutes.post('/projects', (ctx) => {
     ...(typeof b.createdBy === 'string' ? { createdBy: b.createdBy } : {}),
   })
   if (!result.ok) {
-    ctx.status = 400
-    ctx.body = problemsBody(problemsOf(result))
+    failProblems(ctx, 400, problemsOf(result))
     return
   }
   ctx.status = 201
@@ -56,8 +59,7 @@ secAuditRoutes.post('/projects', (ctx) => {
 secAuditRoutes.get('/projects/:id', (ctx) => {
   const result = getProjectOrFail(String(ctx.params.id ?? ''))
   if (!result.ok) {
-    ctx.status = 404
-    ctx.body = problemsBody(problemsOf(result))
+    failProblems(ctx, 404, problemsOf(result))
     return
   }
   ctx.body = { ok: true, project: result.value }
@@ -66,8 +68,7 @@ secAuditRoutes.get('/projects/:id', (ctx) => {
 secAuditRoutes.post('/projects/:id/runs', async (ctx) => {
   const result = await startRun(String(ctx.params.id ?? ''))
   if (!result.ok) {
-    ctx.status = 400
-    ctx.body = problemsBody(problemsOf(result))
+    failProblems(ctx, 400, problemsOf(result))
     return
   }
   ctx.status = 201
@@ -77,8 +78,7 @@ secAuditRoutes.post('/projects/:id/runs', async (ctx) => {
 secAuditRoutes.get('/projects/:id/runs/:runId', (ctx) => {
   const result = runLedger(String(ctx.params.id ?? ''), String(ctx.params.runId ?? ''))
   if (!result.ok) {
-    ctx.status = 404
-    ctx.body = problemsBody(problemsOf(result))
+    failProblems(ctx, 404, problemsOf(result))
     return
   }
   ctx.body = { ok: true, run: result.value }
@@ -95,8 +95,7 @@ secAuditRoutes.post('/projects/:id/candidates', (ctx) => {
     author: typeof b.author === 'string' ? b.author : '',
   })
   if (!result.ok) {
-    ctx.status = 400
-    ctx.body = problemsBody(problemsOf(result))
+    failProblems(ctx, 400, problemsOf(result))
     return
   }
   ctx.status = 201
@@ -116,8 +115,7 @@ secAuditRoutes.post('/projects/:id/findings/:fid/verify', (ctx) => {
   if (!result.ok) {
     const problems = problemsOf(result)
     const self = problems.find((p) => p.code === 'self_verification_forbidden')
-    ctx.status = self ? 409 : 400
-    ctx.body = problemsBody(problems)
+    failProblems(ctx, self ? 409 : 400, problems)
     return
   }
   ctx.body = { ok: true, finding: result.value }
@@ -132,8 +130,7 @@ secAuditRoutes.post('/projects/:id/findings/:fid/record-review', (ctx) => {
   if (!result.ok) {
     const problems = problemsOf(result)
     const self = problems.find((p) => p.code === 'self_review_forbidden')
-    ctx.status = self ? 409 : 400
-    ctx.body = problemsBody(problems)
+    failProblems(ctx, self ? 409 : 400, problems)
     return
   }
   ctx.body = { ok: true, finding: result.value }
@@ -144,8 +141,7 @@ secAuditRoutes.post('/projects/:id/runs/:runId/finalize', (ctx) => {
   if (!result.ok) {
     const problems = problemsOf(result)
     const gate = problems.find((p) => p.code === 'record_review_incomplete')
-    ctx.status = gate ? 409 : 400
-    ctx.body = problemsBody(problems)
+    failProblems(ctx, gate ? 409 : 400, problems)
     return
   }
   ctx.body = { ok: true, ...result.value }
@@ -154,14 +150,12 @@ secAuditRoutes.post('/projects/:id/runs/:runId/finalize', (ctx) => {
 secAuditRoutes.get('/projects/:id/runs/:runId/report', (ctx) => {
   const got = getProjectOrFail(String(ctx.params.id ?? ''))
   if (!got.ok) {
-    ctx.status = 404
-    ctx.body = problemsBody(problemsOf(got))
+    failProblems(ctx, 404, problemsOf(got))
     return
   }
   const run = got.value.runs.find((r) => r.runId === String(ctx.params.runId ?? ''))
   if (!run?.report) {
-    ctx.status = 404
-    ctx.body = { ok: false, problems: [{ code: 'report_not_found', detail: '该运行未出报告' }] }
+    failProblems(ctx, 404, [{ code: 'report_not_found', detail: '该运行未出报告' }])
     return
   }
   ctx.body = { ok: true, report: run.report }

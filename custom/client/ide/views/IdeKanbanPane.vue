@@ -89,7 +89,7 @@ function prio(p: number): string {
 
 /** 列桶（board 视图）：status 分组，组内优先级升序。 */
 const byColumn = computed(() => {
-  const map = new Map<string, KanbanTask[]>()
+  const map = new Map<string, IdeTask[]>()
   for (const task of tasks.value) {
     const list = map.get(task.status) ?? []
     list.push(task)
@@ -101,7 +101,7 @@ const byColumn = computed(() => {
 
 /** 泳道（swimlane 视图）：assignee 分道。 */
 const bySwimlane = computed(() => {
-  const map = new Map<string, KanbanTask[]>()
+  const map = new Map<string, IdeTask[]>()
   for (const task of tasks.value) {
     const key = task.assignee ?? '—'
     const list = map.get(key) ?? []

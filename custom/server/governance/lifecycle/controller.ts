@@ -17,9 +17,11 @@
  * SIM_ROOT 解析正身=simcenter/observer-root（delivery 等消费域同款装配）。
  */
 import type Router from '@koa/router'
+import type { Context } from 'koa'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isValidRun, safeRunDir, simRootOrNull } from '../../simcenter/observer-root'
+import { fail } from '../../lib/http'
 import { checkBreaker, initialBreaker, tripBreaker, type GateBreakerState } from './breaker'
 import { judgeRequirementFreeze } from './requirements'
 import { combinedGateVerdict, coveredAcs, gateVerdictOfText, uatVerdictFor, type GateVerdict } from './verdict'
@@ -72,9 +74,8 @@ function recordEffects(run: string, lines: { issues?: string[]; approved?: strin
   }
 }
 
-function badRequest(ctx: { status: number; body: unknown }, error: string): void {
-  ctx.status = 400
-  ctx.body = { ok: false, error }
+function badRequest(ctx: Context, error: string): void {
+  fail(ctx, 400, error)
 }
 
 export function registerLifecycleRoutes(router: Router): void {
@@ -117,7 +118,7 @@ export function registerLifecycleRoutes(router: Router): void {
     const gate = String(ctx.query.gate ?? '')
     if (!isValidRun(run)) return badRequest(ctx, 'run 参数非法')
     if (!GATE_RE.test(gate)) return badRequest(ctx, 'gate 参数非法')
-    if (!simRootOrNull()) { ctx.status = 503; ctx.body = { ok: false, error: 'SIM_ROOT 未配置（fail-closed）' }; return }
+    if (!simRootOrNull()) { fail(ctx, 503, 'SIM_ROOT 未配置（fail-closed）'); return }
     const r = readBreaker(run, gate)
     ctx.body = { ok: true, run, gate, state: r?.state ?? initialBreaker(), exists: r != null }
   })
@@ -138,8 +139,7 @@ export function registerLifecycleRoutes(router: Router): void {
       writeBreaker(run, gate, state)
       ctx.body = { ok: true, run, gate, state }
     } catch (e) {
-      ctx.status = 503
-      ctx.body = { ok: false, error: (e as Error).message }
+      fail(ctx, 503, (e as Error).message)
     }
   })
 
@@ -180,8 +180,7 @@ export function registerLifecycleRoutes(router: Router): void {
       }
       ctx.body = { ok: true, run, gate, ...decision, effects: { issues, approved } }
     } catch (e) {
-      ctx.status = 503
-      ctx.body = { ok: false, error: (e as Error).message }
+      fail(ctx, 503, (e as Error).message)
     }
   })
 }

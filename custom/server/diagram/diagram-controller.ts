@@ -6,6 +6,7 @@ import { assertDiagramPath, runSelfCheck } from './self-check'
 import { runExportPng } from './export-png'
 import { runMermaidExtract } from './mermaid-extract'
 import { renderBrandedHtml } from './mermaid-branded'
+import { fail } from '../lib/http'
 
 export const diagramRoutes = new Router({ prefix: '/api/hermes/diagram' })
 
@@ -16,8 +17,7 @@ diagramRoutes.post('/check', async (ctx) => {
     safePath = assertDiagramPath(body?.path)
   } catch (e) {
     const err = e as Error & { code?: string }
-    ctx.status = err.code === 'not_found' ? 404 : err.code === 'outside_sandbox' ? 403 : 400
-    ctx.body = { ok: false, error: err.message, code: err.code ?? 'invalid_path' }
+    fail(ctx, err.code === 'not_found' ? 404 : err.code === 'outside_sandbox' ? 403 : 400, err.message, { code: err.code ?? 'invalid_path' })
     return
   }
   const result = await runSelfCheck([safePath], { offline: body?.offline === true })
@@ -31,14 +31,12 @@ diagramRoutes.post('/export-png', async (ctx) => {
     safePath = assertDiagramPath(body?.path)
   } catch (e) {
     const err = e as Error & { code?: string }
-    ctx.status = err.code === 'not_found' ? 404 : err.code === 'outside_sandbox' ? 403 : 400
-    ctx.body = { ok: false, error: err.message, code: err.code ?? 'invalid_path' }
+    fail(ctx, err.code === 'not_found' ? 404 : err.code === 'outside_sandbox' ? 403 : 400, err.message, { code: err.code ?? 'invalid_path' })
     return
   }
   const scale = body?.scale === undefined ? undefined : Number(body.scale)
   if (scale !== undefined && (!Number.isFinite(scale) || scale < 1 || scale > 4)) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'scale 必须是 1–4 的数字', code: 'invalid_scale' }
+    fail(ctx, 400, 'scale 必须是 1–4 的数字', { code: 'invalid_scale' })
     return
   }
   const result = await runExportPng(safePath, { scale })
@@ -54,8 +52,7 @@ diagramRoutes.post('/mermaid-brand', async (ctx) => {
     diagram?: unknown
   } | undefined
   if (typeof body?.source !== 'string') {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'source 必填且必须是字符串', code: 'invalid_source' }
+    fail(ctx, 400, 'source 必填且必须是字符串', { code: 'invalid_source' })
     return
   }
   const extracted = await runMermaidExtract(body.source, {

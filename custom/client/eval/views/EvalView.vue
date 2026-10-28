@@ -73,9 +73,9 @@ onMounted(() => void refresh())
 
 async function createSet(): Promise<void> {
   createError.value = ''
-  let tasks: unknown
+  let tasks: unknown[]
   try {
-    tasks = JSON.parse(createTasksJson.value)
+    tasks = JSON.parse(createTasksJson.value) as unknown[]
   } catch {
     createError.value = 'tasks JSON 解析失败'
     return

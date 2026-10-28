@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { EventType } from 'matrix-js-sdk'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
@@ -40,8 +41,10 @@ const powerLevel = computed(() => {
 // ─── Presense (enhanced with last active) ─────────────────
 
 const presence = computed(() => {
-  if (!memberUserId.value) return { status: 'offline', lastActiveAgo: undefined, currentlyActive: false }
-  const p = roomStore.getUserPresence(memberUserId.value)
+  // store.getUserPresence 实际返回 { status, lastActive }；组件按 lastActiveAgo/currentlyActive 读取，
+  // 这两字段恒缺失（现渲染口径＝不显示 last active、视为非活跃）。只在类型层声明为可选，不改读取口径。
+  if (!memberUserId.value) return { status: 'offline', lastActiveAgo: undefined as number | undefined, currentlyActive: false }
+  const p = roomStore.getUserPresence(memberUserId.value) as { status: string; lastActiveAgo?: number; currentlyActive?: boolean }
   return p
 })
 
@@ -110,11 +113,11 @@ async function savePower() {
   if (!room.value || !memberUserId.value) return
   powerSaving.value = true
   try {
-    const powerLevelsEvent = room.value.currentState.getStateEvents('m.room.power_levels', '')
+    const powerLevelsEvent = room.value.currentState.getStateEvents(EventType.RoomPowerLevels, '')
     const content = JSON.parse(JSON.stringify(powerLevelsEvent?.getContent() ?? {}))
     if (!content.users) content.users = {}
     content.users[memberUserId.value] = selectedPower.value
-    await clientStore.client?.sendStateEvent(room.value.roomId, 'm.room.power_levels', content, '')
+    await clientStore.client?.sendStateEvent(room.value.roomId, EventType.RoomPowerLevels, content, '')
     editingPower.value = false
     roomStore.bumpRoomVersion()
   } catch {

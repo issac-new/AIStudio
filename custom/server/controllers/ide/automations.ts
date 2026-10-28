@@ -18,6 +18,7 @@ import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { AutomationEngine, type AutomationDispatchPort } from '../../automations/automation-engine'
 import { isAbsoluteWorkspacePath, type AutomationEvent } from '../../automations/automation-rules'
+import { fail } from '../../lib/http'
 
 const automationsRouter = new Router({ prefix: '/api/ide/automations' })
 
@@ -80,8 +81,7 @@ automationsRouter.post('/rules', async (ctx) => {
   const engine = getAutomationEngine()
   const res = engine.addRule(ctx.request?.body)
   if ('errors' in res) {
-    ctx.status = 400
-    ctx.body = { ok: false, errors: res.errors }
+    fail(ctx, 400, '规则校验失败', { extra: { errors: res.errors } })
     return
   }
   ctx.status = 201
@@ -92,8 +92,7 @@ automationsRouter.patch('/rules/:id', (ctx) => {
   const engine = getAutomationEngine()
   const updated = engine.updateRule(String(ctx.params?.id ?? ''), (ctx.request?.body ?? {}) as Record<string, never>)
   if (!updated) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: 'rule_not_found' }
+    fail(ctx, 404, 'rule_not_found', { extra: { detail: 'rule_not_found' } })
     return
   }
   ctx.body = { ok: true, rule: updated }
@@ -102,8 +101,7 @@ automationsRouter.patch('/rules/:id', (ctx) => {
 automationsRouter.delete('/rules/:id', (ctx) => {
   const engine = getAutomationEngine()
   if (!engine.removeRule(String(ctx.params?.id ?? ''))) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: 'rule_not_found' }
+    fail(ctx, 404, 'rule_not_found', { extra: { detail: 'rule_not_found' } })
     return
   }
   ctx.body = { ok: true }
@@ -117,8 +115,7 @@ automationsRouter.post('/events', (ctx) => {
   const workspacePath = typeof body?.workspacePath === 'string' ? body.workspacePath : ''
   const known = ['file', 'kanban', 'git', 'webhook']
   if (!type || !known.includes(type) || !workspacePath || !isAbsoluteWorkspacePath(workspacePath)) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: '事件须含 type（file/kanban/git/webhook）与绝对 workspacePath' }
+    fail(ctx, 400, '事件须含 type（file/kanban/git/webhook）与绝对 workspacePath', { extra: { detail: '事件须含 type（file/kanban/git/webhook）与绝对 workspacePath' } })
     return
   }
   const event = body as unknown as AutomationEvent

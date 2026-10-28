@@ -75,7 +75,10 @@ export function useTaskProgress() {
   }
   if (getCurrentScope()) onScopeDispose(release)
   return {
-    progressMap: readonly(byTask),
+    // readonly() 运行时仍是只读代理；其 DeepReadonly 类型会把 phases 变成 readonly 数组，
+    // 与消费侧 taskProgressOf(Record<string, TaskProgressInfo>) 不兼容——类型层按 Readonly<Ref> 暴露，
+    // 只读语义不变、调用方无需逐个断言。
+    progressMap: readonly(byTask) as unknown as Readonly<typeof byTask>,
     activeTaskIds: readonly(activeTaskIds),
     releaseTaskProgress: release,
   }

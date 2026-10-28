@@ -62,6 +62,7 @@ import { evaluateReleaseHold } from './release-hold'
 import { buildBehaviorSignals } from './behavior-signals'
 import { businessSummaryOf } from './business-summary'
 import { collectObsSignals } from '../obssignals/collect'
+import { fail } from '../lib/http'
 
 const router = new Router({ prefix: '/api/hermes/eval' })
 
@@ -1334,8 +1335,7 @@ router.post('/e2e-verdict', (ctx) => {
   } | undefined
   const obj = (v: unknown) => (v && typeof v === 'object' && Object.keys(v as object).length > 0 ? v as Record<string, unknown> : null)
   if (!obj(b?.evalRun)) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'evalRun 必填（/api/hermes/eval/runs/:id 响应件）' }
+    fail(ctx, 400, 'evalRun 必填（/api/hermes/eval/runs/:id 响应件）')
     return
   }
   const r = computeE2eVerdict({

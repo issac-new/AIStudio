@@ -40,7 +40,8 @@ async function syncQgateVerdicts(c: DeliveryCaseView) {
       syncResult.value = { ...syncResult.value, [c.caseId]: zh.value ? '无 QGate 判定在档（先跑 qgate run）' : 'no qgate runs on record' }
       return
     }
-    const res = await bridge.syncVerdictsToCase(c.caseId, verdicts)
+    // governance 侧 verdict 是 string（服务端词表），bridge 侧是收窄联合；运行期按同一字符串查表，仅类型层对齐。
+    const res = await bridge.syncVerdictsToCase(c.caseId, verdicts as Parameters<typeof bridge.syncVerdictsToCase>[1])
     if (res.error === 'no-client') syncResult.value = { ...syncResult.value, [c.caseId]: zh.value ? 'Matrix 未连接' : 'matrix client not connected' }
     else if (res.error === 'no-room') syncResult.value = { ...syncResult.value, [c.caseId]: zh.value ? '无可上报房间（案例房/注册房缺失）' : 'no room to report to' }
     else syncResult.value = { ...syncResult.value, [c.caseId]: zh.value ? `已上报 ${res.sent} 门${res.failed > 0 ? `，失败 ${res.failed}` : ''}` : `reported ${res.sent} gates${res.failed > 0 ? `, ${res.failed} failed` : ''}` }

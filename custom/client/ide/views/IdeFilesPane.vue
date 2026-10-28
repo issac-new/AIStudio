@@ -18,10 +18,14 @@ const { t, locale } = useI18n()
 const router = useRouter()
 const invalidTx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].filesInvalid)
 const zhUi = computed(() => String(locale.value ?? 'zh').startsWith('zh'))
+// validation 是 ComputedRef（模板自动解包、脚本内不解包）；下方两处按 validation.message 读取，
+// 运行时恒为 undefined（permissionDenied 恒 false、标题走 fallback 文案）。类型层按可选字段读取，不改口径。
+const validationLoose = (v: unknown) => v as { message?: string }
 const permissionDenied = computed(() =>
-  /super administrator|super admin|permission|forbidden|not authorized/i.test(validation.message || ''))
+  /super administrator|super admin|permission|forbidden|not authorized/i.test(validationLoose(validation).message || ''))
 const invalidTitle = computed(() => {
-  if (!permissionDenied.value) return invalidTx.value.title(validation.message || invalidTx.value.fallback)
+  const message = validationLoose(validation).message
+  if (!permissionDenied.value) return invalidTx.value.title(message || invalidTx.value.fallback)
   return zhUi.value
     ? '当前工作区根目录需要管理员权限；当前账号只能打开自己的任务工作区。'
     : 'This workspace root requires administrator privileges; this account can only open its own task workspace.'

@@ -83,7 +83,8 @@ function selectNode(nodeId: string): void {
   draftChecked.value = existing?.checked ?? false
   noteMsg.value = ''
 }
-function onNodeClick(_: unknown, node: Node): void { selectNode(node.id) }
+/** 同 OrchestrationView：node-click 单参；第二参可选 + 短路，保持现行为（选中主要由 onCanvasClick 兜底）。 */
+function onNodeClick(_: unknown, node?: Node): void { if (node) selectNode(node.id) }
 
 // 兜底：vue-flow click 钩子受 d3 拖拽链阈值影响（nodeDragThreshold=1 且快照对齐时
 // 零位移点击被 distance!==0 条件吞掉）——容器级原生监听，closest 找节点取 data-id。

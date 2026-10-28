@@ -35,9 +35,10 @@ import { usePlatformsStore } from '../store/platforms'
 import { buildAgentRoster } from '../adapters/agents'
 import {
   linkedTaskIdsOfSession, mergeFeed,
-  type StreamSelection,
+  type StreamSelection, type SessionKind,
 } from '../adapters/flow'
-import { loopRunActivity, type AttentionRow, type LoopActivity } from '../adapters/activity'
+import { loopRunActivity, type LoopActivity } from '../adapters/activity'
+import type { AttentionRow } from '../adapters/overview'
 import { useAttentionRows } from '../composables/useAttentionRows'
 import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
 import FlowNavPanel from '../components/flow/FlowNavPanel.vue'
@@ -222,9 +223,14 @@ const workspaceBySession = computed<Record<string, string>>(() => {
 // R7-C agent 名册统一面：在线/忙闲/在跑（multica roster 语义）——
 // 三源合并：platforms 在线探针 + kanban assignee 在跑 + 会话挂靠。
 const agentRoster = computed(() => {
-  const tasks = (tasksForLink.value ?? []).map(t => ({
-    id: t.id, title: t.title, assignee: t.assignee ?? null, status: t.status,
-  }))
+  // tasksForLink 只投影 {id, tenant, session_id}（会话挂接判定所需）；roster 另需 title/assignee/status，
+  // 当前取值恒为 undefined（口径不变）。类型层按可选字段读取，不把缺失字段谎报为必有。
+  const tasks = (tasksForLink.value ?? []).map(t => {
+    const extra = t as { title?: string; assignee?: string | null; status?: string }
+    return {
+      id: t.id, title: extra.title, assignee: extra.assignee ?? null, status: extra.status,
+    }
+  })
   const sessions = (chatStore.sessions ?? []).map(s => ({
     id: s.id, agent: (s as { agent?: string | null }).agent ?? null,
   }))
@@ -267,7 +273,9 @@ const tasksForShow = computed(() => workspace.tasks)
 const linkedTasks = computed<CockpitTask[]>(() => {
   const sel = activeSel.value
   if (!sel) return recentOpenTasks.value
-  const ids = new Set(linkedTaskIdsOfSession(sel, tasksForLink.value))
+  // 选择可能是 'loop'（StreamKind）；linkedTaskIdsOfSession 只定义会话三类，loop 走其"非 room"分支
+  // 按 session id 精确匹配（运行时行为不变），故此处只在类型层按 SessionKind 传入。
+  const ids = new Set(linkedTaskIdsOfSession(sel as { kind: SessionKind; id: string }, tasksForLink.value))
   return tasksForShow.value.filter(x => ids.has(x.id))
 })
 
@@ -342,7 +350,11 @@ const { attentionRows, sessionAttention } = useAttentionRows({ includeWaitItems:
  *  Task 3（2026-10-27 分域）：kind=loop 的行是 /api/loop/loops 域的 blocked Loop
  *  （taskId=loop:<loopId>）——落 /app/l/:loopId 薄详情；不得把 loopId 塞 ?wf=
  *  查工作流 API（跨域裸 ID，必 404/假空态）。 */
-function onOpenAttention(row: AttentionRow): void {
+type AttentionRowWithLegacyIds = AttentionRow & { sessionId?: string; runId?: string }
+
+/** 旧 activity 版行曾带 sessionId/runId；现 overview 版行不含这两字段（恒 undefined，
+ *  末尾两条兜底分支因此不生效）。类型层按可选字段声明，保留原分派顺序与分支。 */
+function onOpenAttention(row: AttentionRowWithLegacyIds): void {
   const base = row.id.replace(/^att-/, '')
   if (row.kind === 'session') {
     void router.push({ name: 'ide.shell', query: { session: base } })

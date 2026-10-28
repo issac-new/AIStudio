@@ -46,7 +46,7 @@ watch(
     doneLog.value = [
       {
         id: `done-${finishedAt}-${Math.random().toString(36).slice(2, 6)}`,
-        state: 'done',
+        state: 'done' as ActivityState,
         label: t('ide.inbox.runDone'),
         at: finishedAt,
         durationSeconds: duration,

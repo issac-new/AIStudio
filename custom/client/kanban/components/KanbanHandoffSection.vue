@@ -15,7 +15,7 @@ import {
 
 const props = defineProps<{
   taskId: string
-  comments: Array<{ id: number | string; body?: string | null; created_at?: string }>
+  comments: Array<{ id: number | string; body?: string | null; created_at?: string | number }>
 }>()
 const emit = defineEmits<{ (e: 'submitted'): void }>()
 

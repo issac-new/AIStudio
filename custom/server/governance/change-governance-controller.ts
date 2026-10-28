@@ -20,6 +20,8 @@
  * series 台账在案惯例：已挂控制器追加端点在活进程不生效，端点组独立文件+独立挂载。
  */
 import Router from '@koa/router'
+import type { Context } from 'koa'
+import { fail as httpFail } from '../lib/http'
 import {
   CHANGE_LEVELS, FreezeGateError, type CreateChangeInput,
   changeGovMeta, computeMetrics, createFreezeWindow, createRequest, decideRequest,
@@ -29,9 +31,9 @@ import {
 
 const router = new Router({ prefix: '/api/change-gov' })
 
-function fail(ctx: { status: number; body: unknown }, status: number, error: unknown): void {
-  ctx.status = status
-  ctx.body = { ok: false, error: error instanceof Error ? error.message : String(error) }
+// 域内错误统一走 lib/http 的 fail（Error 对象在此收窄为文案，其余调用点签名不变）
+function fail(ctx: Context, status: number, error: unknown): void {
+  httpFail(ctx, status, error instanceof Error ? error.message : String(error))
 }
 
 router.get('/meta', (ctx) => {
@@ -82,8 +84,10 @@ router.post('/requests/:id/decide', (ctx) => {
     ctx.body = { ok: true, item }
   } catch (e) {
     if (e instanceof FreezeGateError) {
-      ctx.status = 409
-      ctx.body = { ok: false, error: e.message, code: 'freeze_gate', window: e.windowName, tier: e.tierName }
+      httpFail(ctx, 409, e.message, {
+        code: 'freeze_gate',
+        extra: { window: e.windowName, tier: e.tierName },
+      })
       return
     }
     fail(ctx, 400, e)

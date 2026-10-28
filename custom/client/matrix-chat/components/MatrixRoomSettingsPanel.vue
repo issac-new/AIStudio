@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { EventType, PushRuleActionName } from 'matrix-js-sdk'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
@@ -61,7 +62,7 @@ async function onAvatarPicked(e: Event) {
     }).uploadContent(file, { type: file.type, name: file.name })
     const mxc = typeof uploaded === 'string' ? uploaded : uploaded?.content_uri
     if (!mxc) throw new Error('upload returned no content_uri')
-    await clientStore.client.sendStateEvent(room.value.roomId, 'm.room.avatar', { url: mxc }, '')
+    await clientStore.client.sendStateEvent(room.value.roomId, EventType.RoomAvatar, { url: mxc }, '')
     roomStore.bumpRoomVersion()
   } catch (err: unknown) {
     avatarError.value = (err as { message?: string })?.message || t('matrixChat.avatarUploadFailed')
@@ -96,9 +97,9 @@ watch(room, () => {
   if (!room.value || !clientStore.client) return
   try {
     const pushRules = clientStore.client.getRoomPushRule?.('global', room.value.roomId)
-    if (pushRules?.actions?.includes?.('dont_notify')) {
+    if (pushRules?.actions?.includes?.(PushRuleActionName.DontNotify)) {
       notificationLevel.value = 'none'
-    } else if (pushRules?.actions?.includes?.('notify')) {
+    } else if (pushRules?.actions?.includes?.(PushRuleActionName.Notify)) {
       notificationLevel.value = 'all'
     } else {
       notificationLevel.value = 'mentions'
@@ -169,16 +170,23 @@ async function setNotifications(level: 'all' | 'mentions' | 'none') {
   notificationSaving.value = true
   try {
     const ruleId = `.m.rule.room.${roomId.value}`
+    // 推送规则 API 的参数形态随 SDK 版本变动（setRoomMutePushRule/setRoomPushRule/deletePushRule
+    // 在 v41 的签名与既往调用不一致）。此处保留既有调用形态不变，仅在类型层放宽签名。
+    const pushApi = clientStore.client as unknown as {
+      setRoomMutePushRule?: (...args: unknown[]) => Promise<unknown> | undefined
+      setRoomPushRule?: (...args: unknown[]) => Promise<unknown> | undefined
+      deletePushRule?: (...args: unknown[]) => Promise<unknown> | undefined
+    }
     if (level === 'none') {
       // Mute: push rule with dont_notify
-      await clientStore.client.setRoomMutePushRule?.('global', ruleId, roomId.value)
+      await pushApi.setRoomMutePushRule?.('global', ruleId, roomId.value)
     } else if (level === 'all') {
       // Notify all: delete mute rule and set notify
-      await clientStore.client.deletePushRule?.('global', ruleId)
-      await clientStore.client.setRoomPushRule?.('global', roomId.value, { actions: ['notify'] })
+      await pushApi.deletePushRule?.('global', ruleId)
+      await pushApi.setRoomPushRule?.('global', roomId.value, { actions: ['notify'] })
     } else {
       // Mentions only (default): delete any room-specific rules
-      await clientStore.client.deletePushRule?.('global', ruleId)
+      await pushApi.deletePushRule?.('global', ruleId)
     }
     notificationLevel.value = level
     roomStore.bumpRoomVersion()

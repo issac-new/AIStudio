@@ -56,7 +56,10 @@ export function useSitCounts() {
       for (const room of matrixRoom.sortedRooms ?? []) {
         const members = client.getRoom(room.roomId)?.getJoinedMembers() ?? []
         for (const member of members) {
-          if (member.presence === 'online' && member.userId) out.add(member.userId)
+          // RoomMember 无 presence（presence 属 User）；此处读取恒 undefined（该分支不命中）——
+          // 类型层按可选字段读，不改判定口径。
+          const presence = (member as { presence?: string }).presence
+          if (presence === 'online' && member.userId) out.add(member.userId)
         }
       }
     } catch { /* presence 探测失败按 0 处理 */ }
@@ -154,8 +157,10 @@ export function useSitCounts() {
     // agent 走网关通道时不在此列——机器/智能体以 ia2-platforms 网关探测为准：
     // 机器=网关实例（running 即 ≥1），智能体=网关连通通道的去重档案数。
     const gwState = platformsStore.gatewayState
-    const gw = (gwState?.value ?? gwState) === 'running'  // mock 工厂可能返回 ref 未解包，双态兼容
-    const gwPlatforms = (platformsStore.platforms?.value ?? platformsStore.platforms ?? []) as Array<{ state?: string; profile?: string }>
+    // mock 工厂可能返回 ref 未解包（双态兼容）：按 unknown 读可选 .value，运行时形态不变。
+    const gw = ((gwState as unknown as { value?: unknown })?.value ?? gwState) === 'running'
+    const gwPlatforms = ((platformsStore.platforms as unknown as { value?: unknown })?.value
+      ?? platformsStore.platforms ?? []) as Array<{ state?: string; profile?: string }>
     const gwAgentProfiles = gwPlatforms
       .filter(p => p.state === 'connected' && p.profile)
       .map(p => String(p.profile))

@@ -33,6 +33,7 @@ import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
 import { decideEnforceApproval, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
 import { listHumanGatePending, humanGateRouter } from './human-gate'
 import { atomicWriteJson } from '../lib/fs-store'
+import { fail } from '../lib/http'
 import { hermesHome } from '../lib/paths'
 
 const router = new Router({ prefix: '/api/approvals' })
@@ -590,8 +591,7 @@ router.get('/history/chain', async (ctx) => {
   try {
     ctx.body = { ok: true, ...verifyApprovalChain() }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 

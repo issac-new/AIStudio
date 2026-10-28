@@ -1023,7 +1023,11 @@ export const useCockpitStore = defineStore('cockpit', () => {
     // 新数组赋值（确保 Vue 响应式触发 computed 重算）
     timelineActorFilter.value = i >= 0 ? cur.filter(a => a !== actor) : [...cur, actor]
   }
-  function toggleFilter<K extends keyof CockpitFilters>(key: K, value: CockpitFilters[K][number]) {
+  // 只对数组型筛选键开放（dateRange 是对象，不参与多选切换）——类型层收窄键集合，运行时同原实现。
+  type ArrayFilterKey = {
+    [K in keyof CockpitFilters]: CockpitFilters[K] extends readonly unknown[] ? K : never
+  }[keyof CockpitFilters]
+  function toggleFilter<K extends ArrayFilterKey>(key: K, value: CockpitFilters[K][number]) {
     const arr = filters.value[key] as CockpitFilters[K][number][]
     const i = arr.indexOf(value)
     if (i >= 0) {

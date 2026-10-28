@@ -29,7 +29,8 @@ onMounted(async () => {
 const delegateCounts = computed<Record<string, number>>(() => {
   const counts: Record<string, number> = {}
   for (const [, s] of chat.subagentStreams) {
-    if (s.status === 'running' || s.status === 'pending') {
+    // status 词表里无 'pending'（运行时该分支恒不命中）；按 string 比较保留原判定形态。
+    if (s.status === 'running' || (s.status as string) === 'pending') {
       // 成员名匹配：stream 的 goal/subagentId 含成员名即计入（粗粒度，标注估算）。
       for (const members of Object.values(squads.value)) {
         for (const m of members.members) {

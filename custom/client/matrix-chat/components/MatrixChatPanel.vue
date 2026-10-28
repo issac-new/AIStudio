@@ -30,6 +30,9 @@ const route = useRoute()
 const { t } = useI18n()
 
 const productTitle = 'AIStudio'
+// PageSidebarNav（上游组件）的 ActiveSection 词表未收录自定义 'matrix' 分区；该 prop 仅用于高亮比较，
+// 运行时传的仍是 'matrix'，仅类型层放宽（不改上游声明）。
+const matrixSection = 'matrix' as never
 const tabTitle = computed(() => `${t('sidebar.matrixChat')} - ${productTitle}`)
 
 watch(tabTitle, (value) => {
@@ -117,7 +120,7 @@ onUnmounted(() => {
     <div v-if="showSidebar" class="room-sidebar">
       <div class="sidebar-header">
         <PageSidebarNav
-          active="matrix"
+          :active="matrixSection"
           :primary-label="t('matrixChat.createRoom')"
           :hide-mode-switch="false"
           @primary="showCreateRoom = true"

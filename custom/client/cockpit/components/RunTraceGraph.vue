@@ -108,9 +108,10 @@ onPaneReady(() => {
   fitView({ padding: 0.2 })
 })
 
-function onNodeClick(payload: { node?: Node } & Node) {
-  // vue-flow node-click 事件参数为 { node: GraphNode, event }；兼容直接传 Node 的情况
-  const node = (payload as { node?: Node }).node ?? payload
+function onNodeClick(payload: unknown) {
+  // vue-flow node-click 事件参数为 { node: GraphNode, event }；兼容直接传 Node 的情况。
+  // 参数收宽到 unknown 以匹配单参 NodeMouseEvent 处理器签名（读取逻辑不变）。
+  const node = (payload as { node?: Node })?.node ?? (payload as Node)
   emit('focus-node', node.id)
 }
 </script>

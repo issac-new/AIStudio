@@ -238,7 +238,8 @@ function handleOpenPollHistory() {
   rightPanelStore.openPollHistory()
 }
 
-async function handleLeaveRoom(_force = false) {
+// 该处理常作 @click 直接绑定（实参是 MouseEvent）且内部不使用 _force——参数类型放宽到两者，运行时不变。
+async function handleLeaveRoom(_force: boolean | MouseEvent = false) {
   showLeaveDialog.value = true
 }
 

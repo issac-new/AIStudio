@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { EventType } from 'matrix-js-sdk'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
@@ -83,7 +84,7 @@ async function handleUnpin(eventId: string) {
     const updated = ids.filter(id => id !== eventId)
     await clientStore.client.sendStateEvent(
       room.value.roomId,
-      'm.room.pinned_events',
+      EventType.RoomPinnedEvents,
       { pinned: updated },
       '',
     )
@@ -100,7 +101,7 @@ async function handleUnpinAll() {
   try {
     await clientStore.client.sendStateEvent(
       room.value.roomId,
-      'm.room.pinned_events',
+      EventType.RoomPinnedEvents,
       { pinned: [] },
       '',
     )

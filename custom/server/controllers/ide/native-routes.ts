@@ -27,6 +27,7 @@ import { handleCliSessions, handleDevtoolsLaunch, handleDevtoolsList } from './d
 import { handleUsageContext, handleUsageRounds, handleUsageSessions, handleUsageSummary, handleUsageTools, matchZcodeUsageRoute } from './zcode-usage'
 import { atomicWriteJson } from '../../lib/fs-store'
 import { underHermes } from '../../lib/paths'
+import { fail } from '../../lib/http'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -184,11 +185,10 @@ async function handleComputerUsePut(ctx: Context): Promise<void> {
     // 回读引擎真值作为应答（不 echo 请求值——写失败/被引擎改判都能照实返回）
     ctx.body = await readComputerUseState(workspacePath)
   } catch (e) {
-    ctx.status = 503
-    ctx.body = {
-      ok: false, supported: false, enabled: false, pluginId: CUA_PLUGIN_ID,
-      detail: e instanceof Error ? e.message.slice(0, 200) : String(e),
-    }
+    const detail = e instanceof Error ? e.message.slice(0, 200) : String(e)
+    fail(ctx, 503, detail, {
+      extra: { supported: false, enabled: false, pluginId: CUA_PLUGIN_ID, detail },
+    })
   }
 }
 
@@ -205,11 +205,11 @@ function slashCommandStorePath(): string {
 async function handleReplayGet(ctx: Context, sessionId: string): Promise<void> {
   const { listTurnSnapshots, buildReplayTimeline } = await import('../../filehistory/replay-theater')
   try {
-    if (!sessionId.trim()) { ctx.status = 400; ctx.body = { ok: false, detail: 'sessionId 必填' }; return }
+    if (!sessionId.trim()) { fail(ctx, 400, 'sessionId 必填', { extra: { detail: 'sessionId 必填' } }); return }
     ctx.body = { ok: true, ...buildReplayTimeline(sessionId, listTurnSnapshots(sessionId)) }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, detail: e instanceof Error ? e.message : String(e) }
+    const detail = e instanceof Error ? e.message : String(e)
+    fail(ctx, 500, detail, { extra: { detail } })
   }
 }
 
@@ -236,8 +236,7 @@ async function handleSlashCommandsSave(ctx: Context): Promise<void> {
   const commands = normalizeSlashCommands(stripBuiltins(Array.isArray(body.commands) ? body.commands : []))
   const problems = validateSlashCommands(commands)
   if (problems.length) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems }
+    fail(ctx, 400, 'slash 命令校验失败', { problems })
     return
   }
   const store = slashCommandStorePath()
@@ -256,8 +255,7 @@ async function handleEngineModelsPut(ctx: Context): Promise<void> {
   }
   const validation = validateEngineModelConfig(config)
   if (!validation.ok) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: validation.problems }
+    fail(ctx, 400, '引擎模型配置不合法', { problems: validation.problems })
     return
   }
   // overlay 独立存储（物理路径锚=本文件 overlay 侧——与 controller 同型）。
@@ -275,13 +273,11 @@ async function handleVideoFrames(ctx: Context): Promise<void> {
   const frames = Number(body.frames ?? 8)
   const widthPx = Number(body.widthPx ?? 1280)
   if (!videoPath || !Number.isFinite(frames) || frames <= 0 || frames > 32) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'videoPath 必填；frames 1-32' }
+    fail(ctx, 400, 'videoPath 必填；frames 1-32', { extra: { detail: 'videoPath 必填；frames 1-32' } })
     return
   }
   if (!existsSync(videoPath)) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: '视频文件不存在' }
+    fail(ctx, 404, '视频文件不存在', { extra: { detail: '视频文件不存在' } })
     return
   }
   try {
@@ -289,8 +285,8 @@ async function handleVideoFrames(ctx: Context): Promise<void> {
     const out = await extractFramesBase64(videoPath, { frames, widthPx })
     ctx.body = { ok: true, count: out.length, frames: out }
   } catch (err) {
-    ctx.status = 422
-    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
+    fail(ctx, 422, detail, { extra: { detail } })
   }
 }
 
@@ -335,8 +331,8 @@ async function handleCacheAttribution(ctx: Context): Promise<void> {
     }
   } catch (err) {
     try { db?.close() } catch { /* 已闭 */ }
-    ctx.status = 503
-    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 200) : String(err)
+    fail(ctx, 503, detail, { extra: { detail } })
   }
 }
 
@@ -352,8 +348,8 @@ async function handleSemanticaStatus(ctx: Context): Promise<void> {
     const venvOk = existsSync(underHermes('hermes-agent', 'venv', process.platform === 'win32' ? 'Scripts' : 'lib'))
     ctx.body = { ok: true, configured, kgPath, venvOk, note: configured ? '工具在 agent 会话启动时装载（15 只知识工具）' : '未配置（hermes mcp install semantica）' }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 200) : String(err)
+    fail(ctx, 503, detail, { extra: { detail } })
   }
 }
 
@@ -481,8 +477,7 @@ async function handleCuaSessionPut(ctx: Context, sessionId: string): Promise<voi
   ctx.set('Cache-Control', 'no-store')
   const body = ctx.request.body as { enabled?: unknown } | undefined
   if (typeof body?.enabled !== 'boolean') {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'enabled (boolean) is required' }
+    fail(ctx, 400, 'enabled (boolean) is required', { extra: { detail: 'enabled (boolean) is required' } })
     return
   }
   const { setSessionCua, setBrokerTransport } = await import('../../cua/policy')

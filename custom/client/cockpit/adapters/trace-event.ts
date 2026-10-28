@@ -196,7 +196,7 @@ export function normalizeRunEvent(raw: RunEvent): TraceEvent {
 
     case 'subagent.progress':
     case 'subagent.tool':
-      return { ...base, type: 'SUBAGENT_PROGRESS', label: raw.name || raw.tool || raw.preview || raw.event, preview: raw.preview, tasksContext: raw.tasks_context as SubagentProgressEvent['tasksContext'] }
+      return { ...base, type: 'SUBAGENT_PROGRESS', label: raw.name || raw.tool || raw.preview || raw.event, preview: raw.preview, tasksContext: (raw as { tasks_context?: unknown }).tasks_context as SubagentProgressEvent['tasksContext'] }
 
     default:
       // 未知事件归一化为 TEXT_BLOCK_DELTA（保持向后兼容）

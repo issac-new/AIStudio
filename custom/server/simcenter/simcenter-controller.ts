@@ -55,6 +55,7 @@ import {
   type UatVerdictKey, type UatVerdictRecord,
 } from './uat-state'
 import { createKanbanOverview } from '../services/hermes/kanban-overview'
+import { fail } from '../lib/http'
 
 const execFileP = promisify(execFile)
 const router = new Router({ prefix: '/api/hermes/sim' })
@@ -980,8 +981,7 @@ router.post('/release-gate', (ctx: Context) => {
   const caller = callerOf(ctx)
   const can = releasePermissions(caller.role, caller.authenticated)
   if (!can[action]) {
-    ctx.status = 403
-    ctx.body = { ok: false, code: 'forbidden', error: '发布审批动作仅 super_admin 或 release 角色可执行' }
+    fail(ctx, 403, '发布审批动作仅 super_admin 或 release 角色可执行', { code: 'forbidden' })
     return
   }
   const runDir = safeRunDir(root, run)
@@ -993,14 +993,10 @@ router.post('/release-gate', (ctx: Context) => {
   const derived = deriveReleaseState(records)
   const next = applyReleaseAction(derived.state, action)
   if (next === null) {
-    ctx.status = 409
-    ctx.body = {
-      ok: false,
+    fail(ctx, 409, `当前状态 ${derived.state} 不允许动作 ${action}`, {
       code: 'invalid_transition',
-      error: `当前状态 ${derived.state} 不允许动作 ${action}`,
-      state: derived.state,
-      action,
-    }
+      extra: { state: derived.state, action },
+    })
     return
   }
   // 同态重复（重复提交/批准/驳回/发布）：不追加重复事件，回当前状态。

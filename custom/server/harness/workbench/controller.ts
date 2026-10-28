@@ -2,6 +2,8 @@
 // Harness² 改进实验台 REST（挂在既有 /api/harness 之下，路径 /api/harness/workbench/*）。
 // 写面沿用治理面约定：有认证主体时须 super_admin；单用户无鉴权部署放行。
 import Router from '@koa/router'
+import type { Context } from 'koa'
+import { fail as httpFail } from '../../lib/http'
 import { collectSurfaces } from './surface-registry'
 import {
   ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
@@ -23,11 +25,10 @@ type Ctx = {
   request: any
 }
 
-function writeDenied(ctx: Ctx): boolean {
+function writeDenied(ctx: Context): boolean {
   const user = (ctx.state as { user?: { role?: string } } | undefined)?.user
   if (user && user.role !== 'super_admin') {
-    ctx.status = 403
-    ctx.body = { ok: false, detail: '治理写面须 super_admin 权限' }
+    httpFail(ctx, 403, '治理写面须 super_admin 权限')
     return true
   }
   return false
@@ -46,14 +47,12 @@ function actorOf(ctx: Ctx, body: Record<string, unknown>): string {
   return fromUser || 'operator'
 }
 
-function fail(ctx: Ctx, e: unknown): void {
+function fail(ctx: Context, e: unknown): void {
   if (e instanceof ServiceError) {
-    ctx.status = e.status
-    ctx.body = { ok: false, error: e.message, ...(e.detail != null ? { blockers: e.detail } : {}) }
+    httpFail(ctx, e.status, e.message, { extra: e.detail != null ? { blockers: e.detail } : {} })
     return
   }
-  ctx.status = 500
-  ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+  httpFail(ctx, 500, e instanceof Error ? e.message : String(e))
 }
 
 router.get('/overview', async (ctx) => {
@@ -180,8 +179,7 @@ router.post('/proposals/:id/decide', async (ctx) => {
   const b = bodyOf(ctx)
   const decision = b.decision === 'approve' || b.decision === 'reject' ? b.decision : null
   if (!decision) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'decision 须为 approve|reject' }
+    httpFail(ctx, 400, 'decision 须为 approve|reject')
     return
   }
   try {

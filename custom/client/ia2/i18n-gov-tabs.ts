@@ -26,7 +26,9 @@ const GOV_TABS_TEXT = {
   },
 } as const
 
-export type GovTabsText = typeof GOV_TABS_TEXT.zh
+// 字典是 as const（值被收窄成字面量），en 与 zh 文案各异 → 直接取 typeof zh 会拒绝 en。
+// 按键集合固定、值放宽为 string：键奇偶校验仍由守门测试兜住，取值处不依赖字面量。
+export type GovTabsText = { [K in keyof typeof GOV_TABS_TEXT.zh]: string }
 
 /** 页签词条（locale 响应式跟随；不读 473 locale 树） */
 export function useGovTabsText() {

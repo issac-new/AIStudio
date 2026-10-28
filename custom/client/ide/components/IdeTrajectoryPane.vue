@@ -11,6 +11,8 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '@/stores/hermes/chat'
 import { authFetch } from '../utils/auth-fetch'
+import { friendlyIdeError } from '../utils/ideErrors'
+import { ideLocaleOf } from '../i18n'
 import { useRunSurfaceText } from '@/custom/ia2/i18n-observatory'
 import TraceCaseComposer from '@/custom/eval/components/TraceCaseComposer.vue'
 

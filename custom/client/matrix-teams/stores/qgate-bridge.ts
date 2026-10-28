@@ -15,7 +15,7 @@ import {
   parseCaseContent,
   type GateContent, type DeliveryGate,
 } from '../delivery-protocol'
-import { unwrapRef } from '../utils'
+import { unwrapRef, sendCustomEvent } from '../utils'
 // 注：bridge-state 离线持久化助手在 ./qgate-bridge-state.node.ts（node:fs 依赖
 // 不得进浏览器 bundle——本 store 被视图引用后曾把 node:path 顶层 import 带进
 // 页面，vite externalize 在 import 绑定即抛错，2026-10-08 吸收轮走查逮住）。
@@ -134,7 +134,7 @@ export const useQGateBridgeStore = defineStore('matrix-qgate-bridge', () => {
     const content = toDeliveryGateContent(input)
     if (!content) return { ok: false, error: 'no-room' }
     try {
-      await client.sendEvent(roomId, DELIVERY_EVENT_TYPES.gate, content)
+      await sendCustomEvent(client, roomId, DELIVERY_EVENT_TYPES.gate, content)
       return { ok: true }
     } catch {
       return { ok: false }

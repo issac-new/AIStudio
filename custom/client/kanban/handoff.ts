@@ -33,7 +33,8 @@ export interface HandoffCard {
   type: HandoffType
   state: HandoffState
   body: string
-  requestedAt: string
+  /** 来源评论 created_at：上游 KanbanComment 是 number（秒/毫秒），老 mock 是 string；本字段只存不读。 */
+  requestedAt: string | number
   /** 最近一次推进备注（可空） */
   lastNote: string
 }
@@ -52,7 +53,7 @@ export function serializeHandoffAdvance(id: string, state: HandoffState, note = 
 }
 
 /** 从任务评论折叠交接单（同 id 最新态为准；无法解析的评论原样忽略——不吞不炸）。 */
-export function buildHandoffCards(comments: readonly { id: number | string; body?: string | null; created_at?: string }[]): HandoffCard[] {
+export function buildHandoffCards(comments: readonly { id: number | string; body?: string | null; created_at?: string | number }[]): HandoffCard[] {
   const cards = new Map<string, HandoffCard>()
   for (const c of comments) {
     const text = (c.body ?? '').trim()

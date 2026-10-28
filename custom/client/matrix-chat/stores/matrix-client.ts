@@ -99,7 +99,9 @@ export const useMatrixClientStore = defineStore('matrix-client', () => {
     }
     serverMoved.value = null
 
-    const opts: ICreateClientOpts = {
+    // threadSupport 在当前 SDK 的 IStartClientOpts 上（createClient 侧类型未收录）；
+    // 运行时仍随 opts 透传（旧版 SDK 读 createClient opts），故按交叉类型声明，不改传参。
+    const opts: ICreateClientOpts & { threadSupport?: boolean } = {
       baseUrl: creds.homeserverUrl,
       accessToken: creds.accessToken,
       userId: creds.userId,
@@ -175,7 +177,9 @@ export const useMatrixClientStore = defineStore('matrix-client', () => {
     // SDK 在 /sync 带回 notification_count、或收到 receipt 时会触发此事件。
     // 之前没监听它,导致 roomList 的未读 badge 不响应 SDK 的更新(表现为
     // 已读房间仍显示旧未读数,如"始终 2 条")。
-    matrixClient.on(RoomEvent.UnreadNotifications, () => {
+    // 注：UnreadNotifications 属 Room 侧事件，v41 的客户端 EmittedEvents 不含它（注册后不会触发）；
+    // 保留原注册形态（运行时同一字符串），仅类型层放宽到客户端事件签名。
+    matrixClient.on(RoomEvent.UnreadNotifications as unknown as ClientEvent, () => {
       matrixEventBus.onRoomListChange.value?.()
     })
 

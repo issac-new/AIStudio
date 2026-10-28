@@ -17,7 +17,7 @@ import { resolveTargetProfile, mapKanbanStatusToReceipt } from '../adapters/disp
 import { loadDispatchIndex, saveDispatchIndex, type DispatchIndexEntry } from '../store/dispatch-kv'
 import { selectAgent, isLoadOccupying } from '../agent-router'
 import { buildSubtaskAssigns, type SubtaskSpec } from '../task-tree'
-import { unwrapRef } from '../utils'
+import { unwrapRef, sendCustomEvent } from '../utils'
 
 export interface DispatchView {
   assign: AssignContent
@@ -52,7 +52,7 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     if (!client || !roomId) return false
     const selfId = userIdRef.value ?? ''
     try {
-      await client.sendEvent(roomId, TASK_EVENT_TYPES.assign, {
+      await sendCustomEvent(client, roomId, TASK_EVENT_TYPES.assign, {
         taskId: crypto.randomUUID(),
         title: input.title,
         body: input.body,
@@ -85,7 +85,7 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     let sent = 0
     for (const content of contents) {
       try {
-        await client.sendEvent(roomId, TASK_EVENT_TYPES.assign, content)
+        await sendCustomEvent(client, roomId, TASK_EVENT_TYPES.assign, content)
         sent++
       } catch { /* 单张失败跳过，返回已发计数 */ }
     }
@@ -122,7 +122,7 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     if (!client || !roomId) return false
     const selfId = userIdRef.value ?? ''
     try {
-      await client.sendEvent(roomId, TASK_EVENT_TYPES.receipt, {
+      await sendCustomEvent(client, roomId, TASK_EVENT_TYPES.receipt, {
         taskId, status, localTaskId: extra?.localTaskId, reason: extra?.reason,
         reportedBy: selfId, reportedAt: Date.now(),
       } as ReceiptContent)
@@ -133,7 +133,7 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
   // in-flight 去重（终审 backlog）：同一 taskId 的并发 receiveAssign（增量监听与历史回填
   // 重叠、消息重发）在 kv 落盘前的窗口内会重复建卡。taskId → Promise，首个调用建卡，
   // 并发者复用同一 Promise；完成（含失败回执路径）即清槽，不阻塞后续重试。
-  const inFlightReceives = new Map<string, Promise<void>>()
+  const inFlightReceives = new Map<string, Promise<ReceiveOutcome>>()
 
   // ── M-B 能力路由状态 ──
   // 本机 agent.profile 投影：注册房的 agent.profile state 事件经 timeline 监听与历史回填
@@ -160,7 +160,9 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
   }
 
   /** 落地结果：created 建卡成功 / failed 终态回执 / queued 无槽位留队 / skipped 防重跳过。 */
-  async function doReceiveAssign(assign: AssignContent): Promise<'created' | 'failed' | 'queued' | 'skipped'> {
+  type ReceiveOutcome = 'created' | 'failed' | 'queued' | 'skipped'
+
+  async function doReceiveAssign(assign: AssignContent): Promise<ReceiveOutcome> {
     const index = loadDispatchIndex()
     if (index[assign.taskId]) return 'skipped' // kv 防重（spec §6.2）
     // 准入五问执行端强制（4A 第五期 ⑤）：跨域派发（target.account 与本机不同
@@ -218,7 +220,7 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
     }
   }
 
-  function receiveAssign(assign: AssignContent): Promise<void> {
+  function receiveAssign(assign: AssignContent): Promise<ReceiveOutcome> {
     const existing = inFlightReceives.get(assign.taskId)
     if (existing) return existing
     const p = doReceiveAssign(assign).finally(() => { inFlightReceives.delete(assign.taskId) })
@@ -331,7 +333,10 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
       let status: string
       try {
         const task = await getTask(entry.localTaskId)
-        status = task.status
+        // getTask 返回 { task, latest_summary, ... }（KanbanTaskDetail，任务本体在 .task 下）。
+        // 原实现读顶层 status，运行时恒 undefined → mapKanbanStatusToReceipt 兜底成 'running'。
+        // 保留原读取形态（行为不变），改法待人工裁定。
+        status = (task as { status?: string }).status as string
       } catch { continue } // 单条失败静默，下轮重试
       const mapped = mapKanbanStatusToReceipt(status)
       if (mapped === entry.lastStatus) continue

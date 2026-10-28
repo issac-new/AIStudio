@@ -54,6 +54,9 @@ const router = useRouter()
 const ide = useIdeStore()
 const { root } = useIdeWorkspace()
 const cockpitStore = useCockpitStore()
+// v12.3 通知居中模态退役，openNotify 已从 cockpit store 移除；IaGlobalTop 的 @notify 上升链路也一并退役
+// （该绑定不会触发）。保留原调用形态，仅在类型层放宽，行为不变。
+const cockpitNotify = cockpitStore as unknown as { openNotify: () => void }
 const workspaceStore = useWorkspaceStore()
 const chatStore = useChatStore()
 const kanbanStore = useKanbanStore()
@@ -565,7 +568,7 @@ onUnmounted(() => {
   <div class="ide-shell">
     <!-- v12.1 全局顶区常驻双视图；v12.6 维度条（工作空间行）退役——与三栏
          功能重叠（任务/会话在侧栏与会话列直达，辅助面板页签自持） -->
-    <IaGlobalTop @notify="cockpitStore.openNotify()" />
+    <IaGlobalTop @notify="cockpitNotify.openNotify()" />
     <button v-if="anyMax" type="button" class="ide-shell__unmax" data-testid="ide-unmax-restore" :title="t('ide.pane.unmaxAll')" @click="unmaximizeAll">⤢ {{ t('ide.pane.unmaxAll') }}</button>
     <IdeTaskContextBar />
     <div class="ide-shell__main" :class="mainClass">

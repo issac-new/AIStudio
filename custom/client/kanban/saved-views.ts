@@ -29,8 +29,13 @@ function load(): SavedKanbanView[] {
     adoptLegacySetting('kanban.savedViews', KEY)
     const raw = readSetting<unknown[]>('kanban.savedViews', []).value
     if (!Array.isArray(raw)) return []
-    return raw.filter((v): v is SavedKanbanView =>
-      v && typeof v === 'object' && typeof v.id === 'string' && typeof v.name === 'string' && v.snapshot && typeof v.snapshot === 'object')
+    return raw.filter((v): v is SavedKanbanView => {
+      if (!v || typeof v !== 'object') return false
+      // 形状守卫按 Record 逐字段读（object 类型无索引签名）；判定口径与原先逐字一致。
+      const o = v as Record<string, unknown>
+      return typeof o.id === 'string' && typeof o.name === 'string'
+        && !!o.snapshot && typeof o.snapshot === 'object'
+    })
   } catch { return [] }
 }
 

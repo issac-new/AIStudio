@@ -17,6 +17,7 @@ import Router from '@koa/router'
 import { spawn, type ChildProcess } from 'child_process'
 import { closeSync, existsSync, openSync, readFileSync, statSync } from 'fs'
 import { resolve } from 'path'
+import { fail } from '../lib/http'
 
 const RUN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/
 const HERE = typeof __dirname !== 'undefined'
@@ -91,39 +92,30 @@ simLaunchRoutes.get('/status', (ctx) => {
 
 simLaunchRoutes.post('/start', (ctx) => {
   if (!enabled()) {
-    ctx.status = 403
-    ctx.body = {
-      ok: false,
-      error: 'harness 启动未启用（后端需以 SIM_HARNESS_LAUNCH=1 启动）——默认关闭是安全边界',
-    }
+    fail(ctx, 403, 'harness 启动未启用（后端需以 SIM_HARNESS_LAUNCH=1 启动）——默认关闭是安全边界')
     return
   }
   if (writeDenied(ctx)) return
   if (child) {
-    ctx.status = 409
-    ctx.body = { ok: false, error: `已有 harness 推演在跑：${running?.runId ?? 'unknown'}` }
+    fail(ctx, 409, `已有 harness 推演在跑：${running?.runId ?? 'unknown'}`)
     return
   }
   const body = ctx.request.body as { runId?: unknown } | undefined
   const runId = String(body?.runId ?? '').trim()
   if (!RUN_ID_RE.test(runId)) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'runId 必须为字母/数字/._-（1-80 字符）' }
+    fail(ctx, 400, 'runId 必须为字母/数字/._-（1-80 字符）')
     return
   }
   if (!existsSync(SCRIPT)) {
-    ctx.status = 503
-    ctx.body = { ok: false, error: `harness 脚本不存在：${SCRIPT}` }
+    fail(ctx, 503, `harness 脚本不存在：${SCRIPT}`)
     return
   }
   if (!existsSync(SIM_ROOT)) {
-    ctx.status = 503
-    ctx.body = { ok: false, error: `SIM_ROOT 不存在：${SIM_ROOT}` }
+    fail(ctx, 503, `SIM_ROOT 不存在：${SIM_ROOT}`)
     return
   }
   if (existsSync(DRIVER_LOCK)) {
-    ctx.status = 409
-    ctx.body = { ok: false, error: `已有 harness 驱动锁：${DRIVER_LOCK}（拒绝双开）` }
+    fail(ctx, 409, `已有 harness 驱动锁：${DRIVER_LOCK}（拒绝双开）`)
     return
   }
   const logFile = resolve(SIM_ROOT, 'logs', `${runId}-driver.log`)
@@ -145,8 +137,7 @@ simLaunchRoutes.post('/start', (ctx) => {
       detached: false,
     })
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
     return
   } finally {
     if (fd !== null) { try { closeSync(fd) } catch { /* 已关闭 */ } }
@@ -167,14 +158,12 @@ simLaunchRoutes.post('/start', (ctx) => {
 
 simLaunchRoutes.post('/stop', (ctx) => {
   if (!enabled()) {
-    ctx.status = 403
-    ctx.body = { ok: false, error: 'harness 启动未启用（SIM_HARNESS_LAUNCH=1）' }
+    fail(ctx, 403, 'harness 启动未启用（SIM_HARNESS_LAUNCH=1）')
     return
   }
   if (writeDenied(ctx)) return
   if (!child) {
-    ctx.status = 409
-    ctx.body = { ok: false, error: '当前没有本进程拉起的 harness 推演' }
+    fail(ctx, 409, '当前没有本进程拉起的 harness 推演')
     return
   }
   const pid = child.pid ?? null

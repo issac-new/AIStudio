@@ -13,6 +13,7 @@ import type Router from '@koa/router'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { isValidRun, safeRunDir, simRootOrNull } from '../simcenter/observer-root'
+import { fail } from '../lib/http'
 import { computeRunMetrics, loadRunMetricsInput } from './run-metrics'
 
 export interface RunSurfaceDeps {
@@ -140,41 +141,40 @@ export function registerRunSurfaceRoutes(router: Router, deps: RunSurfaceDeps): 
   router.get('/run/:run/metrics', (ctx) => {
     const run = String(ctx.params.run ?? '')
     const rfd = String(ctx.query.rfd ?? '')
-    if (!isValidRun(run)) { ctx.status = 400; ctx.body = { ok: false, error: 'run 参数非法' }; return }
+    if (!isValidRun(run)) { fail(ctx, 400, 'run 参数非法'); return }
     const root = simRootOrNull()
-    if (!root) { ctx.status = 503; ctx.body = { ok: false, error: 'SIM_ROOT 未配置（fail-closed）' }; return }
+    if (!root) { fail(ctx, 503, 'SIM_ROOT 未配置（fail-closed）'); return }
     const input = loadRunMetricsInput(root, run, rfd)
-    if (!input) { ctx.status = 404; ctx.body = { ok: false, error: `run ${run} 不存在` }; return }
+    if (!input) { fail(ctx, 404, `run ${run} 不存在`); return }
     ctx.body = { ok: true, ...computeRunMetrics(input) }
   })
 
   router.post('/run/:run/work-report', (ctx) => {
     const run = String(ctx.params.run ?? '')
-    if (!isValidRun(run)) { ctx.status = 400; ctx.body = { ok: false, error: 'run 参数非法' }; return }
+    if (!isValidRun(run)) { fail(ctx, 400, 'run 参数非法'); return }
     const root = simRootOrNull()
-    if (!root) { ctx.status = 503; ctx.body = { ok: false, error: 'SIM_ROOT 未配置（fail-closed）' }; return }
+    if (!root) { fail(ctx, 503, 'SIM_ROOT 未配置（fail-closed）'); return }
     const b = ctx.request.body as { accounts?: unknown } | undefined
     if (!Array.isArray(b?.accounts) || b.accounts.length === 0) {
-      ctx.status = 400
-      ctx.body = { ok: false, error: 'accounts 必填（[{user, boards:[slug...]}]，编制映射由导演侧传入）' }
+      fail(ctx, 400, 'accounts 必填（[{user, boards:[slug...]}]，编制映射由导演侧传入）')
       return
     }
     const accounts = (b!.accounts as Array<Record<string, unknown>>).map((a) => ({
       user: String(a.user ?? ''),
       boards: Array.isArray(a.boards) ? (a.boards as unknown[]).map(String) : [],
     })).filter((a) => a.user && a.boards.length > 0)
-    if (accounts.length === 0) { ctx.status = 400; ctx.body = { ok: false, error: 'accounts 条目须含 user 与非空 boards' }; return }
+    if (accounts.length === 0) { fail(ctx, 400, 'accounts 条目须含 user 与非空 boards'); return }
     ctx.body = { ok: true, ...computeWorkReport(resolve(root, 'hermes', 'kanban', 'boards'), accounts) }
   })
 
   router.get('/run/:run/audit-check', async (ctx) => {
     const run = String(ctx.params.run ?? '')
     const rfd = String(ctx.query.rfd ?? '')
-    if (!isValidRun(run)) { ctx.status = 400; ctx.body = { ok: false, error: 'run 参数非法' }; return }
+    if (!isValidRun(run)) { fail(ctx, 400, 'run 参数非法'); return }
     const root = simRootOrNull()
-    if (!root) { ctx.status = 503; ctx.body = { ok: false, error: 'SIM_ROOT 未配置（fail-closed）' }; return }
+    if (!root) { fail(ctx, 503, 'SIM_ROOT 未配置（fail-closed）'); return }
     const runDir = safeRunDir(root, run)
-    if (!runDir || !existsSync(runDir)) { ctx.status = 404; ctx.body = { ok: false, error: `run ${run} 不存在` }; return }
+    if (!runDir || !existsSync(runDir)) { fail(ctx, 404, `run ${run} 不存在`); return }
     const issuesPath = [resolve(runDir, 'evidence', 'issues.log'), resolve(runDir, 'issues.log')].find(existsSync)
     const issuesLog = issuesPath ? readFileSync(issuesPath, 'utf8') : ''
     const stateText = existsSync(resolve(runDir, 'state.env')) ? readFileSync(resolve(runDir, 'state.env'), 'utf8') : ''

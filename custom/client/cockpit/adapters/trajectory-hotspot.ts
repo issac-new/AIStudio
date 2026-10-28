@@ -27,7 +27,7 @@ export interface HotspotReport {
   byPhase: HotspotEntry[]
 }
 
-function rank(entries: Iterable<[string, { ms: number; n: number }]>, top: number): HotspotEntry[] {
+function rank(entries: ReadonlyMap<string, { ms: number; n: number }>, top: number): HotspotEntry[] {
   return [...entries.entries()]
     .map(([key, v]) => ({ key, totalMs: v.ms, count: v.n, avgMs: Math.round(v.ms / Math.max(1, v.n)) }))
     .sort((a, b) => b.totalMs - a.totalMs)
