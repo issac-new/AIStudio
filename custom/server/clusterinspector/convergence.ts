@@ -13,6 +13,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { hermesHome } from '../lib/paths'
 
 export type ConvergenceTrend = 'watching' | 'converging' | 'diverging' | 'resolved'
 
@@ -126,7 +127,7 @@ export class ConvergenceTracker {
   private dirty = false
 
   constructor(homeDir?: string) {
-    const home = homeDir ?? process.env.HERMES_HOME ?? join(homedir(), '.hermes')
+    const home = homeDir ?? process.env.HERMES_HOME ?? hermesHome()
     this.file = join(home, 'runtime', 'cluster-inspector-convergence.json')
     try {
       if (existsSync(this.file)) {

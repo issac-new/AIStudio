@@ -10,6 +10,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
+import { hermesHome } from '../lib/paths'
 
 export interface BoardStatusEntry {
   slug: string
@@ -76,7 +77,7 @@ function entryOf(slug: string, name: string, dbPath: string | null): BoardStatus
   return { slug, name, available: true, total, statuses, wip, updatedAt }
 }
 
-export function collectBoardStatus(homeDir = process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')): BoardStatusResult {
+export function collectBoardStatus(homeDir = process.env.HERMES_HOME?.trim() || hermesHome()): BoardStatusResult {
   const boards: BoardStatusEntry[] = []
   const main = mainDb(homeDir)
   if (main) boards.push(entryOf('default', 'Default', main))

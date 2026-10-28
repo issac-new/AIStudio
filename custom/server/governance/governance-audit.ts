@@ -14,6 +14,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { queryApprovalLog } from '../approvals/approval-log'
 import { governanceRepoRoot } from './repo-root'
+import { hermesHome } from '../lib/paths'
 
 export interface NormalizedEvent {
   ts: number
@@ -127,7 +128,7 @@ async function providerEvents(limit: number): Promise<{ events: NormalizedEvent[
 }
 
 async function kanbanEvents(limit: number): Promise<{ events: NormalizedEvent[]; info: AuditSourceInfo }> {
-  const home = process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  const home = process.env.HERMES_HOME?.trim() || hermesHome()
   const files: string[] = []
   const root = join(home, 'kanban.db')
   if (existsSync(root)) files.push(root)

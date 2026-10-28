@@ -201,7 +201,7 @@ export interface CollectorDeps {
 }
 
 export function hermesHomeDefault(): string {
-  // 2026-10-28 收敛：家目录解析单一实现（lib/paths），不再各域 join(homedir(), '.hermes')
+  // 2026-10-28 收敛：家目录解析单一实现（lib/paths），不再各域 hermesHome()
   return hermesHome()
 }
 

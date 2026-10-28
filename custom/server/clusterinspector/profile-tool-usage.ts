@@ -16,6 +16,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { hermesHome } from '../lib/paths'
 
 /** 高危工具集（Python 侧与 ekko 侧两种拼写都收）——detectors.ts 的黑名单与
  *  时段高危判定共用此单一事实源（同域 import，不跨域） */
@@ -147,7 +148,7 @@ function readProfileDb(dbPath: string, nowMs: number): ToolCallRow[] {
 /** 采集面：逐 profile 只读聚合近 24 小时工具调用（含 1 小时窗口与高危/时段/敏感路径计数）。
  *  路径规律：<home>/profiles/<name>/state.db；根库 <home>/state.db 记为 default。 */
 export function collectProfileToolUsage(deps: { hermesHome?: string; maxProfiles?: number; now?: () => number } = {}): ProfileToolUsageFace {
-  const home = deps.hermesHome || process.env.HERMES_HOME || join(homedir(), '.hermes')
+  const home = deps.hermesHome || process.env.HERMES_HOME || hermesHome()
   const nowMs = deps.now?.() ?? Date.now()
   const cap = deps.maxProfiles ?? 60
   const face: ProfileToolUsageFace = { ok: false, nowMs, entries: [] }
