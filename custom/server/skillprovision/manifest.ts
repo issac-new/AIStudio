@@ -9,6 +9,7 @@ import { dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import type { ManifestLoad, ManifestRole, ProvisionManifest } from './types'
 import { atomicWriteText } from '../lib/fs-store'
+import { underHermes, underWebUi } from '../lib/paths'
 
 const SAFE_SKILL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 
@@ -40,7 +41,7 @@ export function manifestPath(): string {
 function sharedProfilesRoot(): string {
   const env = process.env.HERMES_PROFILES_ROOT?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes', 'profiles')
+  return underHermes('profiles')
 }
 
 /**
@@ -50,7 +51,7 @@ function sharedProfilesRoot(): string {
 export function manifestCandidates(): string[] {
   const env = process.env.SKILL_PROVISION_MANIFEST?.trim()
   const central = join(sharedProfilesRoot(), '_shared', 'skill-provisioning.json')
-  const local = join(homedir(), '.hermes-web-ui', 'overlay', 'skill-provisioning.json')
+  const local = underWebUi('overlay', 'skill-provisioning.json')
   return env ? [resolve(env.replace(/^~/, homedir())), central, local] : [central, local]
 }
 

@@ -7,7 +7,6 @@
 // （符号链接路径陷阱，见 controllers/hermes/trace.ts 文件头）。也接受调用方内联证据
 // （测试/导入场景）。Efficiency 从 trace usage/trailer 同源取数，不另起口径。
 import { readFile } from 'fs/promises'
-import { homedir } from 'os'
 import { join } from 'path'
 import { estimateCost } from '../tokens/pricing'
 import { aggregateRun } from './aggregate'
@@ -19,6 +18,7 @@ import { autoReflowFailedSamples } from './auto-reflow'
 import { evidenceFromRows, inspectTrace, sampleSpanFromTrace, spanEvidenceFromRows } from './trace-sampler'
 import type { Attempt, Evidence, EvalConfig, EvalRun, EvalTask, ToolCallRecord } from './types'
 import { loadEvalConfig } from './types'
+import { underHermes } from '../lib/paths'
 
 // ---------- L2 trace 证据提供者 ----------
 
@@ -46,7 +46,7 @@ interface TraceLine {
 }
 
 function traceDir(): string {
-  return process.env.EVAL_TRACE_DIR?.trim() || join(homedir(), '.hermes', 'traces')
+  return process.env.EVAL_TRACE_DIR?.trim() || underHermes('traces')
 }
 
 function stringifyFragment(value: unknown, max = 200): string {

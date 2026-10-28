@@ -16,10 +16,10 @@
  * 测试环境不炸主链路。
  */
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { randomBytes } from 'crypto'
 import { atomicWriteText } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export type GovEventDomain = 'quality' | 'security' | 'cost' | 'approval' | 'autonomy' | 'system'
 export type GovEventSeverity = 'info' | 'warn' | 'high'
@@ -49,7 +49,7 @@ const CAP = 2000
 export function govEventDir(): string {
   const env = process.env.HERMES_GOV_EVENT_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'governance-events')
+  return underWebUi('governance-events')
 }
 
 function eventFile(): string {

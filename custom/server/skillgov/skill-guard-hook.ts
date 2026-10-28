@@ -19,6 +19,7 @@ import { join, resolve, dirname } from 'node:path'
 import { homedir } from 'node:os'
 import { latestVerdictOf, INLINE_SHELL_RE } from './skill-scan'
 import { atomicWriteText } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 interface PreExecuteVerdict { allow: false; error: string }
 
@@ -36,7 +37,7 @@ const AUDIT_CAP = 500
 function auditFile(): string {
   return process.env.SKILLGOV_GUARD_LEDGER?.trim()
     ? resolve(process.env.SKILLGOV_GUARD_LEDGER.replace(/^~/, homedir()))
-    : join(homedir(), '.hermes-web-ui', 'skillgov', 'skill-guard.jsonl')
+    : underWebUi('skillgov', 'skill-guard.jsonl')
 }
 
 function appendGuardAudit(entry: SkillGuardAuditEntry): void {

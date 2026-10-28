@@ -6,13 +6,13 @@
 // 且本存储有条目才执法——只收紧不放宽）。裁决本体复用 proactivity-model.assess()
 // 单一事实源，本文件只做存储与事实装配（level/contract/goalStatus）。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import type { GoalContract, ProblemDefinerLevel, AlignmentStatusName } from './proactivity-model'
 import { PROBLEM_DEFINER_LEVELS } from './proactivity-model'
 import { getAlignment, alignmentStatus, _useAlignmentDirForTests, _resetAlignmentDirForTests } from './goal-alignment'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface ProactivityPolicyEntry {
   /** 配置对象：profile 名（对齐 ladder target 语义）。 */
@@ -38,7 +38,7 @@ interface StoreShape { entries: ProactivityPolicyEntry[] }
 function storeDir(): string {
   const env = process.env.HERMES_GOAL_ALIGNMENT_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'proactivity')
+  return underWebUi('proactivity')
 }
 
 function storePath(): string {

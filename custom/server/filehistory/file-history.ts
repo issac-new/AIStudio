@@ -5,8 +5,8 @@
 // （checkpoint-options 四恢复选项）：file-history 是逐文件粒度的恢复数据面。
 // 存储：每回合一份 JSON（taskId+turnIndex 双键），HERMES_FILE_HISTORY_DIR 降级同款。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, rmSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export interface FileSnapshot {
   path: string
@@ -38,7 +38,7 @@ export function historyDir(): string {
   if (env) return resolve(env)
   const cwd = process.cwd()
   if (writable(cwd)) return resolve(cwd, '.file-history')
-  return join(homedir(), '.hermes-web-ui', 'file-history')
+  return underWebUi('file-history')
 }
 
 function snapFile(taskId: string, turnIndex: number): string {

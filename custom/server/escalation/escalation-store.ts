@@ -12,10 +12,10 @@
 // （addRule），实现 routa "批准可附带沙箱约束并实时改写策略"。
 // 存储：每升级请求一份 JSON（幂等 escalationId），HERMES_ESCALATION_DIR 降级同款。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { createHash } from 'crypto'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export const ESCALATION_URGENCIES = ['normal', 'urgent', 'critical'] as const
 export type EscalationUrgency = (typeof ESCALATION_URGENCIES)[number]
@@ -86,7 +86,7 @@ export function escalationDir(): string {
   if (env) return resolve(env)
   const cwd = process.cwd()
   if (writable(cwd)) return resolve(cwd, '.escalation')
-  return join(homedir(), '.hermes-web-ui', 'escalation')
+  return underWebUi('escalation')
 }
 
 export function isEscalationUrgency(v: unknown): v is EscalationUrgency {

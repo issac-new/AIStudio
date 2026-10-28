@@ -9,8 +9,8 @@
 // 优先级:HERMES_LOOP_DIR 显式覆盖 > cwd 可写(cwd/.loop,dev 语义不变)
 // > ~/.hermes-web-ui/loop 降级(打一次 warn)。
 import { unlinkSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export const DEFAULT_LOOP_DIRNAME = '.loop'
 
@@ -38,7 +38,7 @@ export function resolveLoopBaseDir(probe: WritableProbe = defaultWritableProbe):
   if (envDir) return resolve(envDir)
   const cwd = process.cwd()
   if (probe(cwd)) return resolve(cwd, DEFAULT_LOOP_DIRNAME)
-  const fallback = join(homedir(), '.hermes-web-ui', 'loop')
+  const fallback = underWebUi('loop')
   if (!warnedFallback) {
     warnedFallback = true
     console.warn(

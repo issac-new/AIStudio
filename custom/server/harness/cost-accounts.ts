@@ -19,6 +19,7 @@ import { join, resolve } from 'node:path'
 import { auditLog, type NormalizedEvent } from '../governance/governance-audit'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 import { listFreezeWindows, listRequests } from '../governance/change-governance-store'
+import { underHermes } from '../lib/paths'
 
 // ── 类型 ───────────────────────────────────────────────────────────
 
@@ -285,7 +286,7 @@ export function buildHumanInterventionAccount(win: Awaited<ReturnType<typeof col
 export async function collectToolExecutionAccount(win: Awaited<ReturnType<typeof collectAuditEventsWindow>>): Promise<CostAccount> {
   const traceDir = process.env.HERMES_TRACES_DIR?.trim()
     ? resolve(process.env.HERMES_TRACES_DIR.trim().replace(/^~/, homedir()))
-    : join(homedir(), '.hermes', 'traces')
+    : underHermes('traces')
   let traceFiles = 0
   let traceSpanCount = 0
   let traceAvailable = false

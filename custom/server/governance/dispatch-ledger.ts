@@ -15,6 +15,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeF
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { atomicWriteText } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface DispatchLedgerEntry {
   ts: number
@@ -42,7 +43,7 @@ const CAP = 2000
 export function dispatchLedgerPath(): string {
   const env = process.env.GOVERNANCE_DISPATCH_LEDGER?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes-web-ui', 'overlay', 'dispatch-ledger.jsonl')
+  return underWebUi('overlay', 'dispatch-ledger.jsonl')
 }
 
 /** 追加一条派发结果（fail-soft：任何异常仅告警不抛，不影响派发主链路）。 */

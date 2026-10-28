@@ -4,13 +4,13 @@
 // 任务 id 全局唯一，完成态不复零无副作用；reset 供测试与人工清零。
 
 import { mkdir, readFile, rename, writeFile } from 'fs/promises'
-import { homedir } from 'os'
-import { dirname, join } from 'path'
+import { dirname } from 'path'
+import { underWebUi } from '../../lib/paths'
 
 type RetryCounts = Record<string, number>
 
 function defaultPath(): string {
-  return join(homedir(), '.hermes-web-ui', 'overlay', 'aipaydev-retry.json')
+  return underWebUi('overlay', 'aipaydev-retry.json')
 }
 
 async function readCounts(path: string): Promise<RetryCounts> {

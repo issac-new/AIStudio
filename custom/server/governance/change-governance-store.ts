@@ -12,8 +12,8 @@
  * 设计文档：docs/reports/2026-09-29-change-gov-three-accounts-research.md §4.1。
  */
 import { mkdirSync } from 'fs'
-import { homedir } from 'os'
 import { dirname, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 // ── 领域常量（client 经 GET /api/change-gov/meta 消费，不复制第二份）──
 
@@ -117,7 +117,7 @@ let _dbError = ''
 function dbPath(): string {
   const override = process.env.CHANGE_GOV_DB?.trim()
   if (override) return resolve(override)
-  return resolve(homedir(), '.hermes-web-ui', 'change-governance.db')
+  return underWebUi('change-governance.db')
 }
 
 function getDb(): any {

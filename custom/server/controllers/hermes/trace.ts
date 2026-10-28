@@ -6,11 +6,11 @@
  */
 import Router from '@koa/router'
 import { readFile, access } from 'fs/promises'
-import { homedir } from 'os'
-import { join, resolve, isAbsolute, relative } from 'path'
+import { resolve, isAbsolute, relative } from 'path'
 import * as pathWin32 from 'path/win32'
 import { constants } from 'fs'
 import { isOTelSpanRow, otelRowToLegacy } from '../../eval/trace-sampler'
+import { underHermes } from '../../lib/paths'
 // HERMES_CUSTOM[SecTraceSandbox] BEGIN: 路径遍历防护
 // 内联 isPathWithin（含 Windows 兼容），避免通过符号链接路径解析 import upstream
 // 模块（esbuild/ts-node 用真实路径解析，符号链接 custom/ → server/src/custom 会导致
@@ -46,7 +46,7 @@ function isPathWithin(targetPath: string, basePath: string): boolean {
 const router = new Router()
 
 // Default trace directory
-const TRACE_DIR = join(homedir(), '.hermes', 'traces')
+const TRACE_DIR = underHermes('traces')
 
 // Types matching frontend adapter
 type EvidenceTier = 'L1' | 'L2' | 'L3'

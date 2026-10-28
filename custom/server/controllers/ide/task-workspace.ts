@@ -18,9 +18,9 @@
 // （custom 控制器经符号链接挂载，不可相对 import upstream modules——软链真实
 // 路径解析不到 src/modules，HTTP 自请求是唯一干净通道，worktree.ts 同款）。
 import Router from '@koa/router'
-import { homedir } from 'os'
 import { isAbsolute, normalize, resolve } from 'path'
 import { statSync } from 'fs'
+import { underHermes } from '../../lib/paths'
 
 export interface TaskWorkspaceInput {
   taskId: string
@@ -101,7 +101,7 @@ export function resolveTaskWorkspace(
 }
 
 function kanbanHomeDir(): string {
-  return resolve(homedir(), '.hermes', 'kanban')
+  return underHermes('kanban')
 }
 
 interface TaskDetailShape {

@@ -4,11 +4,11 @@
 // ③ 棘轮：本地重复实现数量不得超过当前基线（只许减少，禁新增）
 import { describe, expect, it, afterEach } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { hermesHome, hermesWebUiHome, underHermes } from '../paths'
-import { appendJsonl, atomicWriteJson, readJsonl } from '../fs-store'
+import { appendJsonl, atomicCopyDir, atomicCopyFile, atomicWriteJson, readJsonl } from '../fs-store'
 
 const ROOT = resolve(__dirname, '../../../..')
 const tmpDirs: string[] = []
@@ -49,6 +49,25 @@ describe('fs-store：原子写与 JSONL', () => {
     const f = join(dir, 'ledger.json')
     atomicWriteJson(f, { ok: true }, { fsync: true })
     expect(JSON.parse(readFileSync(f, 'utf8'))).toEqual({ ok: true })
+  })
+
+  it('atomicCopyFile 复制文件且不残留 tmp', () => {
+    const dir = mkTmp()
+    const src = join(dir, 'src.json'); writeFileSync(src, '{"a":1}')
+    const out = join(dir, 'sub', 'out.json')
+    atomicCopyFile(src, out)
+    expect(readFileSync(out, 'utf8')).toBe('{"a":1}')
+    expect(readdirSync(dir).filter((n) => n.endsWith('.tmp'))).toEqual([])
+  })
+
+  it('atomicCopyDir 递归复制目录且不残留 tmpd', () => {
+    const dir = mkTmp()
+    const src = join(dir, 'src'); mkdirSync(join(src, 'nested'), { recursive: true })
+    writeFileSync(join(src, 'a.txt'), 'A'); writeFileSync(join(src, 'nested', 'b.txt'), 'B')
+    const out = join(dir, 'dst')
+    atomicCopyDir(src, out)
+    expect(readFileSync(join(out, 'a.txt'), 'utf8')).toBe('A')
+    expect(readFileSync(join(out, 'nested', 'b.txt'), 'utf8')).toBe('B')
   })
 
   it('readJsonl 跳过坏行并计数；文件缺失返回 missing', () => {

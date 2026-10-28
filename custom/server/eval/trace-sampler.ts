@@ -9,6 +9,7 @@ import { homedir } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import { summarizeArgs } from '../toolcontract/contract'
 import type { Evidence, ToolCallRecord } from './types'
+import { underHermes } from '../lib/paths'
 
 interface TraceLine {
   type?: string
@@ -63,7 +64,7 @@ function tracesDir(): string {
   const evalEnv = process.env.EVAL_TRACE_DIR?.trim()
   if (evalEnv) return resolve(evalEnv.replace(/^~/, homedir()))
   const env = process.env.HERMES_TRACES_DIR?.trim()
-  return env ? resolve(env.replace(/^~/, homedir())) : join(homedir(), '.hermes', 'traces')
+  return env ? resolve(env.replace(/^~/, homedir())) : underHermes('traces')
 }
 
 function safeSessionId(id: string): boolean {

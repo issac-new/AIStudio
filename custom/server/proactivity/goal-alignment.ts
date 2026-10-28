@@ -5,11 +5,11 @@
 // 在关键节点重新确认「目标还是这个吗」。本文件=确认台账（append-only，每次确认留痕不覆盖）
 // + 新鲜度判定（纯函数）+ 落盘（autonomy-ladder 同款原子写/坏档隔离先例）。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import type { AlignmentStatusName } from './proactivity-model'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface GoalConfirmation {
   at: number
@@ -104,7 +104,7 @@ interface StoreShape { entries: GoalAlignmentEntry[] }
 function storeDir(): string {
   const env = process.env.HERMES_GOAL_ALIGNMENT_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'proactivity')
+  return underWebUi('proactivity')
 }
 
 function storePath(): string {

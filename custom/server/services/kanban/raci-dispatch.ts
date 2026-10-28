@@ -10,7 +10,6 @@
 //       custom/server/matrix/simulation.ts（无凭据回落的内存模拟）。
 
 import { mkdir, readFile, rename, writeFile } from 'fs/promises'
-import { homedir } from 'os'
 import { dirname, join } from 'path'
 import {
   type RACITuple,
@@ -34,6 +33,7 @@ import {
   type MatrixDispatchEnv,
 } from '../../matrix/raci-matrix'
 import { TASK_ASSIGN_EVENT_TYPE, buildAssignContent } from '../../matrix/task-protocol'
+import { underWebUi } from '../../lib/paths'
 
 /** 派发所需的最小任务结构（KanbanTask 的结构化子集） */
 export interface RaciDispatchTask {
@@ -54,7 +54,7 @@ interface DispatchRecord {
 type DedupeMap = Record<string, DispatchRecord>
 
 function defaultDedupePath(): string {
-  return join(homedir(), '.hermes-web-ui', 'overlay', 'aipaydev-raci-dispatch.json')
+  return underWebUi('overlay', 'aipaydev-raci-dispatch.json')
 }
 
 async function readDedupe(path: string): Promise<DedupeMap> {

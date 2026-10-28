@@ -1,10 +1,10 @@
 // overlay[constraints] 约束卡 JSON store（eval store 同模式：tmp+rename 原子写、
 // 仅 ENOENT 按空账、_useStoreDirForTests 隔离）。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import type { ConstraintCard, ConstraintScope, ConstraintStoreShape } from './constraint-types'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 const EMPTY: ConstraintStoreShape = { cards: [], nextSeq: 1 }
 
@@ -13,7 +13,7 @@ export function storeDir(): string {
   if (env) return env
   // 隔离环境（SIM 推演）随 HERMES_WEB_UI_HOME 走，不写宿主 home（token-auth appHome 同链）
   const webuiHome = process.env.HERMES_WEB_UI_HOME?.trim() || process.env.HERMES_WEBUI_STATE_DIR?.trim()
-  return webuiHome ? join(webuiHome, 'constraints') : join(homedir(), '.hermes-web-ui', 'constraints')
+  return webuiHome ? join(webuiHome, 'constraints') : underWebUi('constraints')
 }
 
 function storePath(): string {

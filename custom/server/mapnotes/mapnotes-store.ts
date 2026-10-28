@@ -7,9 +7,9 @@
 // 形态照抄 ctxnotes（notes-store.ts）：env 重定向+原子写+坏文件诚实空态；
 // key=需求指纹（impact 响应下发的 sha1(title+description)）。
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface MapAnnotation {
   /** 画布节点 id（ent-…/spec-…/mod-…/req-center；条目内原样存，文件名只承载 hex 指纹）。 */
@@ -40,7 +40,7 @@ const KEY_RE = /^[a-f0-9]{6,64}$/
 function mapNotesDir(): string {
   const env = process.env.MAP_NOTES_DIR?.trim()
   if (env) return env
-  return join(homedir(), '.hermes-web-ui', 'overlay', 'map-notes')
+  return underWebUi('overlay', 'map-notes')
 }
 
 /** 指纹 key 净化（sha1 hex 白名单——非十六进制直接拒，防路径穿越）。 */

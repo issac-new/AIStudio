@@ -13,11 +13,11 @@
 //   HERMES_APPROVALS_SPOTCHECK_RATE        抽检比例 0..1（默认 0.2）
 //   HERMES_APPROVALS_SPOTCHECK_FILE        抽检队列文件（默认 ~/.hermes-web-ui/approvals/spotcheck.json）
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
-import { homedir } from 'os'
-import { dirname, join } from 'path'
+import { dirname } from 'path'
 import { appendApprovalLog } from './approval-log'
 import type { ApprovalRiskTier } from './risk-tier'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 /** FNV-1a 32 位：短、稳、无依赖（抽检确定性只需稳定不需加密）。 */
 export function stableHash(s: string): number {
@@ -70,7 +70,7 @@ export interface SpotCheckItem {
 
 export function resolveSpotcheckPath(): string {
   if (process.env.HERMES_APPROVALS_SPOTCHECK_FILE) return process.env.HERMES_APPROVALS_SPOTCHECK_FILE
-  return join(homedir(), '.hermes-web-ui', 'approvals', 'spotcheck.json')
+  return underWebUi('approvals', 'spotcheck.json')
 }
 
 function loadSpotchecks(): SpotCheckItem[] {

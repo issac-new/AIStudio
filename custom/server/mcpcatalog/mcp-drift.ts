@@ -13,9 +13,8 @@
 // 「描述投毒」需要理解描述内容，v1 不做（AGT 也只做模式检测）。
 import { createHash } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
-import { hermesHome as resolveHermesHome } from '../lib/paths'
+import { hermesHome as resolveHermesHome, underWebUi } from '../lib/paths'
 
 export interface DriftItem {
   face: 'mcp-server' | 'plugin'
@@ -37,7 +36,7 @@ export interface McpDriftFace {
 export function mcpDriftDir(): string {
   const env = process.env.HERMES_MCP_DRIFT_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'mcp-drift')
+  return underWebUi('mcp-drift')
 }
 
 function hashContent(text: string): string {
@@ -139,7 +138,7 @@ export function collectMcpDrift(deps: McpDriftDeps = {}): McpDriftFace {
   const now = deps.now ?? (() => Date.now())
   const mcpConfigDir = deps.mcpConfigDir
     ?? (process.env.HERMES_MCP_CONFIG_DIR?.trim() ? resolve(process.env.HERMES_MCP_CONFIG_DIR) : join(process.cwd(), '.mcp-config'))
-  const hermesHome = deps.hermesHome || process.env.HERMES_HOME || join(homedir(), '.hermes')
+  const hermesHome = deps.hermesHome || resolveHermesHome()
   try {
     const baseline = loadBaseline()
     const current = currentFaceEntries(mcpConfigDir, hermesHome)
@@ -161,7 +160,7 @@ export function snapshotMcpDrift(deps: McpDriftDeps = {}): { ok: boolean; at: nu
   try {
     const mcpConfigDir = deps.mcpConfigDir
       ?? (process.env.HERMES_MCP_CONFIG_DIR?.trim() ? resolve(process.env.HERMES_MCP_CONFIG_DIR) : join(process.cwd(), '.mcp-config'))
-    const hermesHome = deps.hermesHome || process.env.HERMES_HOME || join(homedir(), '.hermes')
+    const hermesHome = deps.hermesHome || resolveHermesHome()
     const entries = currentFaceEntries(mcpConfigDir, hermesHome)
     mkdirSync(mcpDriftDir(), { recursive: true })
     writeFileSync(snapshotFile(), JSON.stringify({ at: now(), entries }, null, 1), { mode: 0o600 })

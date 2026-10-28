@@ -7,6 +7,7 @@ import { join, dirname, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import Router from '@koa/router'
 import { attachSkillProvisionRoutes } from '../skillprovision/controller'
+import { underWebUi, underHermes } from '../lib/paths'
 
 export interface RoleMapping {
   /** profile 名后缀模式（如 "-tester"） */
@@ -21,13 +22,13 @@ const STORE_KEY = 'skillgov:role-mappings'
 function storeFile(): string {
   return process.env.SKILLGOV_STORE?.trim()
     ? resolve(process.env.SKILLGOV_STORE.replace(/^~/, homedir()))
-    : join(homedir(), '.hermes-web-ui', 'overlay', 'skill-role-mappings.json')
+    : underWebUi('overlay', 'skill-role-mappings.json')
 }
 
 export function profilesRoot(): string {
   return process.env.HERMES_PROFILES_ROOT?.trim()
     ? resolve(process.env.HERMES_PROFILES_ROOT.replace(/^~/, homedir()))
-    : join(homedir(), '.hermes', 'profiles')
+    : underHermes('profiles')
 }
 
 export function readRoleMappings(): RoleMapping[] {

@@ -12,9 +12,9 @@
  * 纯函数与 IO 分离：advanceTick/shouldTrigger 不碰 fs，守门测试直接驱动。
  */
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export const DEFAULT_BATCH_SIZE = 3
 export const DEFAULT_BATCH_WINDOW_MS = 30_000
@@ -125,7 +125,7 @@ export function markSyncSuccess(state: TriggerState, now: number): TriggerState 
 export function kgTriggerStatePath(): string {
   const env = process.env.KG_TRIGGER_STATE?.trim()
   if (env) return resolve(env)
-  return resolve(homedir(), '.hermes-web-ui', 'overlay', 'kg-trigger-state.json')
+  return underWebUi('overlay', 'kg-trigger-state.json')
 }
 
 export function readTriggerState(): TriggerState {

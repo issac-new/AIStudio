@@ -11,9 +11,10 @@
 //   block 在 `HERMES_BUDGET_ENFORCE=1` 时由执法门拒绝工具调用。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
-import { dirname, join, resolve } from 'path'
+import { dirname, resolve } from 'path'
 import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export type BudgetAction = 'warn' | 'downgrade' | 'block'
 
@@ -47,7 +48,7 @@ export interface BudgetStatus {
 function policyPath(): string {
   const env = process.env.BUDGET_POLICY_FILE?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes-web-ui', 'budget-policies.json')
+  return underWebUi('budget-policies.json')
 }
 
 function readPolicies(): BudgetPolicy[] {

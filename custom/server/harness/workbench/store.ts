@@ -4,10 +4,10 @@
 // 其次 HERMES_WEB_UI_HOME / HERMES_WEBUI_STATE_DIR，最后 ~/.hermes-web-ui。
 // 读取只把 ENOENT 当空库；解析失败抛出（由 upper layer 报错），绝不静默覆写。
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import type { WorkbenchStore } from './types'
 import { atomicWriteJson } from '../../lib/fs-store'
+import { underWebUi } from '../../lib/paths'
 
 export function storeDir(): string {
   const env = process.env.HARNESS2_STORE?.trim()
@@ -16,7 +16,7 @@ export function storeDir(): string {
     return env.endsWith('.json') ? dirname(resolve(env)) : resolve(env)
   }
   const webuiHome = process.env.HERMES_WEB_UI_HOME?.trim() || process.env.HERMES_WEBUI_STATE_DIR?.trim()
-  return webuiHome ? join(webuiHome, 'harness-workbench') : join(homedir(), '.hermes-web-ui', 'harness-workbench')
+  return webuiHome ? join(webuiHome, 'harness-workbench') : underWebUi('harness-workbench')
 }
 
 export function storeFile(): string {

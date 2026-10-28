@@ -16,8 +16,8 @@
 import { atomicWriteJson } from '../lib/fs-store'
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export const INBOX_SEVERITIES = ['action_required', 'attention', 'info'] as const
 export type InboxSeverity = (typeof INBOX_SEVERITIES)[number]
@@ -62,7 +62,7 @@ function bucketOf(recipientKind: string, recipient: string): string {
 export function inboxDir(): string {
   const env = process.env.HERMES_INBOX_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'inbox')
+  return underWebUi('inbox')
 }
 
 export function isInboxSeverity(v: unknown): v is InboxSeverity {

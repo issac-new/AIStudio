@@ -13,10 +13,10 @@
 // 写入只记 actor 痕（opener/评论者/裁决者各留一道）。多租户任务归属待接（同 evidence-store）。
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { appendEvidence } from '../evidence/evidence-store'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export const REVIEW_VERDICTS = ['approve', 'request_changes', 'comment'] as const
 export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number]
@@ -74,7 +74,7 @@ function stemOf(id: string): string {
 export function reviewDir(): string {
   const env = process.env.HERMES_REVIEW_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'review')
+  return underWebUi('review')
 }
 
 export function isReviewVerdict(v: unknown): v is ReviewVerdict {

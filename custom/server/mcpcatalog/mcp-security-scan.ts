@@ -6,8 +6,8 @@
 // 远程外联面、仿名（typosquat）。只读只报，不阻断不处置（执法属策略引擎职权）。
 // 敏感纪律：embedded-secret 只落键名与形态类别，绝不回显值。
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { underHermes } from '../lib/paths'
 
 export interface McpServerFact {
   profile: string
@@ -188,7 +188,7 @@ export function scanMcpServers(facts: McpServerFact[]): { findings: McpSecurityF
 export function profilesDir(): string {
   const env = process.env.HERMES_PROFILES_DIR?.trim()
   if (env) return env
-  return join(homedir(), '.hermes', 'profiles')
+  return underHermes('profiles')
 }
 
 export function collectMcpServerFacts(): { facts: McpServerFact[]; problems: string[]; profilesScanned: number } {

@@ -16,9 +16,9 @@
 // 原子写 + 哈希文件名 + 坏文件隔离，重启不丢。
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export const SQUAD_EVALUATION_VERDICTS = ['action', 'no_action', 'failed'] as const
 export type SquadEvaluationVerdict = (typeof SQUAD_EVALUATION_VERDICTS)[number]
@@ -182,7 +182,7 @@ let cachedEvaluations: SquadEvaluationRecord[] | null = null
 export function squadLedgerDir(): string {
   const env = process.env.HERMES_SQUAD_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'squad')
+  return underWebUi('squad')
 }
 
 /** 哈希文件名：squad 名不直接进路径（注入/非法字符风险），sha256 前 16 hex。 */

@@ -9,8 +9,8 @@
 // 存储：每 server 一份 JSON（幂等 name），HERMES_MCP_CONFIG_DIR 降级同款。
 // 衔接：hermes mcp-manager（运行面）读本域配置；IdeMcpPane（旧账已核在）消费展示。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export const MCP_SCOPES = ['project', 'global', 'session'] as const
 export type McpScope = (typeof MCP_SCOPES)[number]
@@ -46,7 +46,7 @@ export function mcpConfigDir(): string {
   if (env) return resolve(env)
   const cwd = process.cwd()
   if (writable(cwd)) return resolve(cwd, '.mcp-config')
-  return join(homedir(), '.hermes-web-ui', 'mcp-config')
+  return underWebUi('mcp-config')
 }
 
 export function isMcpScope(v: unknown): v is McpScope {

@@ -5,8 +5,9 @@
  * 纯文件面 fail-soft（bpa-store 同款纪律）。env：BPA_TASK_LINK_STORE 覆盖。
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { join, dirname, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { homedir } from 'node:os'
+import { underWebUi } from '../lib/paths'
 
 export interface TaskLink {
   /** 看板任务 id（上游 kanban-service 的任务锚） */
@@ -21,7 +22,7 @@ export interface TaskLink {
 export function taskLinkFile(): string {
   return process.env.BPA_TASK_LINK_STORE?.trim()
     ? resolve(process.env.BPA_TASK_LINK_STORE.replace(/^~/, homedir()))
-    : join(homedir(), '.hermes-web-ui', 'overlay', 'bpa-task-links.json')
+    : underWebUi('overlay', 'bpa-task-links.json')
 }
 
 export function readTaskLinks(): TaskLink[] {

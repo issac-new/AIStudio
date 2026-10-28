@@ -3,7 +3,6 @@
 // 任务 grant 在同一 store 上以 additive scope 扩展；既有 runId/cardId 发布接口不变。
 import Router from '@koa/router'
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, appendFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { appendApprovalLog } from './approval-log'
 import {
@@ -12,6 +11,7 @@ import {
 } from './decision-grant'
 import type { PendingItem } from './pending-controller'
 import { atomicWriteJson } from '../lib/fs-store'
+import { hermesHome } from '../lib/paths'
 
 export interface AuthenticatedActor {
   id: string
@@ -95,7 +95,7 @@ let loadedStoreFile: string | null = null
 export function humanGateStoreFile(): string {
   const override = process.env.HUMAN_GATE_STORE?.trim()
   if (override) return resolve(override)
-  const home = process.env.HERMES_HOME?.trim() || resolve(homedir(), '.hermes')
+  const home = process.env.HERMES_HOME?.trim() || hermesHome()
   return resolve(home, 'approvals', 'human-gate.json')
 }
 

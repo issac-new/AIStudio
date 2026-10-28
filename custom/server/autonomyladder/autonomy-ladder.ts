@@ -13,9 +13,9 @@
  *   - govbus：配置变更发 autonomy 域事件（审计面）。
  */
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 /** BCG 阶梯：insight=只出洞察（人决策）；assist=辅助执行（人确认关键步）；auto=流程内端到端。 */
 export type LadderLevel = 'insight' | 'assist' | 'auto'
@@ -46,7 +46,7 @@ interface StoreShape { entries: AutonomyLadderEntry[] }
 function storeDir(): string {
   const env = process.env.HERMES_AUTONOMY_LADDER_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'autonomy-ladder')
+  return underWebUi('autonomy-ladder')
 }
 
 function storePath(): string {
