@@ -17,6 +17,7 @@ import type { Server, Socket } from 'socket.io'
 import type { ProjectionEvent } from './session-projection'
 import type { MentionOutcome } from './mention-dispatch'
 import { canUseWorkspace, type WorkspaceCaller } from './workspace-access'
+import { loadUpstreamModule } from '../lib/upstream'
 
 /** /zcode 房间可承载的事件面（投影事件 + 派单 outcome；共同约束是 workspaceId 键）。 */
 export type ZcodeSocketEvent = ProjectionEvent | MentionOutcome
@@ -36,9 +37,11 @@ export interface ZcodeNamespaceAuth {
  * 构建期会把该字面量打进 bundle（打包产物同样可用），ts-node 运行期走盘上相对解析。
  */
 function loadUpstreamAuth(): ZcodeNamespaceAuth {
-  // 字面量 require 供构建期打包；try/catch 供布局异常时给出可读失败而不是启动即崩。
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const mod = require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/auth') as Partial<ZcodeNamespaceAuth>
+  // 字面量 require 供构建期打包；dev 回退见 lib/upstream。
+  const mod = loadUpstreamModule(
+    () => require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/auth'),
+    'hermes-studio', 'packages', 'server', 'src', 'modules', 'studio', 'public', 'auth',
+  ) as Partial<ZcodeNamespaceAuth>
   if (typeof mod?.isAuthEnabled !== 'function' || typeof mod?.authenticateUserToken !== 'function') {
     throw new Error('upstream auth 模块缺少 isAuthEnabled/authenticateUserToken')
   }

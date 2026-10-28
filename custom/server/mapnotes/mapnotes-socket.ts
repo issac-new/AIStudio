@@ -6,6 +6,7 @@
 //   mapnotes:presence —— join/leave 在线协作者数（房间成员数，presence 数据源即房间）。
 import type { Server, Socket } from 'socket.io'
 import type { MapAnnotation } from './mapnotes-store'
+import { loadUpstreamModule } from '../lib/upstream'
 
 export interface MapnotesNamespaceAuth {
   isAuthEnabled(): Promise<boolean> | boolean
@@ -14,8 +15,10 @@ export interface MapnotesNamespaceAuth {
 
 /** 懒加载 upstream auth（zcode projection-socket 同款：不做静态 import，symlink realpath 陷阱）。 */
 function loadUpstreamAuth(): MapnotesNamespaceAuth {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const mod = require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/auth') as Partial<MapnotesNamespaceAuth>
+  const mod = loadUpstreamModule(
+    () => require('../../../../upstream/hermes-studio/packages/server/src/modules/studio/public/auth'),
+    'hermes-studio', 'packages', 'server', 'src', 'modules', 'studio', 'public', 'auth',
+  ) as Partial<MapnotesNamespaceAuth>
   if (typeof mod?.isAuthEnabled !== 'function' || typeof mod?.authenticateUserToken !== 'function') {
     throw new Error('upstream auth 模块缺少 isAuthEnabled/authenticateUserToken')
   }

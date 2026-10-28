@@ -107,10 +107,16 @@ if (!existsSync(resolve(upstream, 'packages', 'server', 'src', 'index.ts'))) {
 }
 
 // 与 .sh 版 exec 语义对齐:子进程替换自身stdio,Ctrl+C 传导,退出码透传。
+// OVERLAY_UPSTREAM_ROOT 必须下发：子进程 cwd=upstream 树，服务端以模块位置为锚解析上游
+// （custom/server/lib/upstream.ts），缺该 env 时 cwd 基准会解析到 vendor/vendor（2026-10-28 K17）。
+const childEnv = {
+  ...process.env,
+  OVERLAY_UPSTREAM_ROOT: process.env.OVERLAY_UPSTREAM_ROOT?.trim() || resolve(upstream, '..'),
+}
 const child = spawn(
   process.execPath,
   ['-r', 'ts-node/register', 'packages/server/src/index.ts'],
-  { cwd: upstream, stdio: 'inherit', env: process.env, windowsHide: true },
+  { cwd: upstream, stdio: 'inherit', env: childEnv, windowsHide: true },
 );
 
 // spawn 失败(如 ts-node 缺失)默认发 unhandled 'error' 裸栈崩溃,给可读指引

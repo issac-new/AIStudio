@@ -12,6 +12,7 @@ import { collectMcpDrift } from '../mcpcatalog/mcp-drift'
 import { anomalyKey, convergenceEnabled, type ConvergenceItem, type ConvergenceReport, ConvergenceTracker } from './convergence'
 import { detectAll, type Anomaly } from './detectors'
 import { routeHintForDetector } from './route-hint'
+import { loadUpstreamModule } from '../lib/upstream'
 type TimedAnomaly = Anomaly & { ts?: number }
 
 export type RunOutcome = {
@@ -407,11 +408,12 @@ export class ClusterInspector {
         try { require('node:fs').writeFileSync(join(dir, 'responses', `${eid}.ci-acted.json`), JSON.stringify({ ts: Date.now() })) } catch { /* fail-soft */ }
         if (String(decision.decision ?? '').toLowerCase().startsWith('approve')) {
           const restart = this.deps.restartGateway ?? (async (pf: string) => {
-            // 兄弟布局字面量 require（patch 525 build-escape 同款前缀，任意布局经
-            // build-server.mjs 的 overlay-upstream-escape 插件重锚到本仓根解析）；
+            // 字面量 require 供 build-escape 插件重锚打包；dev 回退见 lib/upstream。
             // vitest 下由 deps.restartGateway 注入不触此路径
-            const { restartGatewayForProfile } =
-            require('../../../../upstream/hermes-studio/packages/server/src/modules/hermes/services/gateway/autostart')
+            const { restartGatewayForProfile } = loadUpstreamModule(
+              () => require('../../../../upstream/hermes-studio/packages/server/src/modules/hermes/services/gateway/autostart'),
+              'hermes-studio', 'packages', 'server', 'src', 'modules', 'hermes', 'services', 'gateway', 'autostart',
+            )
             return restartGatewayForProfile(pf)
           })
           try {
