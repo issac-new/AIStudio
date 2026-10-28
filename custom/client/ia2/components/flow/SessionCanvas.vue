@@ -6,7 +6,7 @@
      参数绑定）；chat → 上游 ChatView（hermes agent 会话，路由参数绑定）。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 import SessionWorkbenchPanel, { type ParticipantBadge } from './SessionWorkbenchPanel.vue'
 import MatrixRoomCanvas from '@/custom/matrix-chat/components/MatrixRoomCanvas.vue'
 import GroupChatView from '@/views/hermes/GroupChatView.vue'

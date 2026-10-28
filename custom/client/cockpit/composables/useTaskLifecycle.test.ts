@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
 import { useTaskLifecycle, fmtDwell, STATUS_FLOW } from './useTaskLifecycle'
-import type { CockpitTask } from '../adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 function mkTask(partial: Partial<CockpitTask>): CockpitTask {
   return {

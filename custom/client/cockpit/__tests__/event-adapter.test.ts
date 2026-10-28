@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeDetail, formatWhen, kindToWhat, fromLog } from '@/custom/cockpit/adapters/event-adapter'
+import { mergeDetail, formatWhen, kindToWhat, fromLog } from '@/custom/shared/adapters/event-adapter'
 import type { KanbanTaskDetail } from '@/api/hermes/kanban'
 
 const today = new Date()

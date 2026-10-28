@@ -5,7 +5,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { PATTERN_TEMPLATES, type LoopPattern } from '@/custom/loop/types'
-import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
+import CockpitIcon from '@/custom/shared/components/CockpitIcon.vue'
 
 const store = useLoopStore()
 const { t } = useI18n()

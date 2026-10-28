@@ -9,10 +9,10 @@
 // 4-6s，实测设置页→模型页墙钟 6s）。末个卸载改为 DISPOSE_GRACE_MS 延迟回收：
 // 宽限期内重新挂载即取消回收、免重拉；真正闲置超时才断流。
 import { onMounted, onUnmounted } from 'vue'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useLoopStore } from '@/custom/loop/store/loop'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 import { usePlatformsStore } from '../store/platforms'
 
 const SUBSCRIBE_CAP = 30

@@ -41,7 +41,7 @@ const workspaceStubs = vi.hoisted(() => {
   }
   return { state, useWorkspaceStore: () => state }
 })
-vi.mock('@/custom/ia2/store/workspace', () => ({
+vi.mock('@/custom/shared/store/workspace', () => ({
   useWorkspaceStore: workspaceStubs.useWorkspaceStore,
   isWritableTask: (ref: { source?: string } | null | undefined) => ref?.source === 'daily',
 }))
@@ -51,7 +51,7 @@ const cockpitStubs = vi.hoisted(() => {
   const state = { bootstrap: vi.fn(async () => {}), disconnectOnUnmount: vi.fn() }
   return { state, useCockpitStore: () => state }
 })
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
+vi.mock('@/custom/shared/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
 
 const runsStubs = vi.hoisted(() => {
   const state = {

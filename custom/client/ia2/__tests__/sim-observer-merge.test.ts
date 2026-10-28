@@ -11,17 +11,17 @@ const hostTask = { id: 't_daily', title: '日常卡', assignee: 'me', status: 'r
 const simTask = { id: 't_sim', title: '推演卡', assignee: 'fanfan', status: 'todo', priority: 3, created_at: 1792000100, session_id: null, workspace_path: null, tenant: null }
 
 const { fetchKanbanOverview } = vi.hoisted(() => ({ fetchKanbanOverview: vi.fn() }))
-vi.mock('@/custom/cockpit/adapters/teams-adapter', () => ({ fetchKanbanOverview }))
+vi.mock('@/custom/shared/adapters/teams-adapter', () => ({ fetchKanbanOverview }))
 const { fetchSimObserverOverview } = vi.hoisted(() => ({ fetchSimObserverOverview: vi.fn() }))
-vi.mock('../api/sim-observer', () => ({ fetchSimObserverOverview }))
+vi.mock('@/custom/shared/api/sim-observer', () => ({ fetchSimObserverOverview }))
 vi.mock('@/api/hermes/kanban', () => ({ listBoards: vi.fn(), listTasks: vi.fn() }))
-vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({
+vi.mock('@/custom/shared/store/cockpit-kv', () => ({
   loadUserTodos: () => [],
   saveUserTodos: () => {},
 }))
-vi.mock('@/custom/cockpit/adapters/fleet-adapter', () => ({ connectOverviewStream: () => ({ close: () => {} }) }))
+vi.mock('@/custom/shared/adapters/fleet-adapter', () => ({ connectOverviewStream: () => ({ close: () => {} }) }))
 
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useDailyStageProgress } from '../composables/useDailyStageProgress'
 
 function hostOverview() {

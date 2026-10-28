@@ -2,7 +2,7 @@
 // 审批域统一计数契约（spec 2026-10-19-studio-p2 §2.3）：approvals 计数面来自
 // 服务端单端点 /api/approvals/pending-summary；orgloop 介入点/清偿计数在客户端
 // 并入同一类型——所有计数面（概览、④审批、收件箱）从此一处取数，口径不再漂移。
-import { fetchPendingSummary, type PendingSummary } from '@/custom/cockpit/api/approvals'
+import { fetchPendingSummary, type PendingSummary } from '@/custom/shared/api/approvals'
 import { fetchInterventionsPending, fetchClearanceLedger } from './gatekeeper'
 
 export interface ApprovalSummary {

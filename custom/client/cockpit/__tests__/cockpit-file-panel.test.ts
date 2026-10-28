@@ -21,7 +21,7 @@ const { searchSessions, listWorkspaceFiles, getTimeline } = vi.hoisted(() => ({
   listWorkspaceFiles: vi.fn(async () => []),
   getTimeline: vi.fn(async () => ({ items: [], total: 0 })),
 }))
-vi.mock('@/custom/cockpit/api/kanban-extras', () => ({ searchSessions, listWorkspaceFiles, getTimeline }))
+vi.mock('@/custom/shared/api/kanban-extras', () => ({ searchSessions, listWorkspaceFiles, getTimeline }))
 const { getTask } = vi.hoisted(() => ({
   getTask: vi.fn(async () => null),
 }))
@@ -53,7 +53,7 @@ vi.mock('@/components/hermes/chat/FilesPanel.vue', () => ({
 }))
 
 import CockpitFilePanel from '@/custom/cockpit/components/CockpitFilePanel.vue'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 
 const kt = (over: Record<string, any> = {}) => ({
   id: 't1', title: 'T', body: null, assignee: 'alice', status: 'todo',

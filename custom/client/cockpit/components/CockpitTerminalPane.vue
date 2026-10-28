@@ -21,7 +21,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 import { useI18n } from 'vue-i18n'
 import { getApiKey, getBaseUrlValue } from '@/api/client'
 import { useTheme } from '@/composables/useTheme'
@@ -32,8 +32,8 @@ import {
   isTerminalToolId,
   pickDefaultTool,
   type TerminalToolId,
-} from '@/custom/cockpit/terminal/terminal-tools'
-import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/cockpit/api/terminal-tools'
+} from '@/custom/shared/terminal/terminal-tools'
+import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/shared/api/terminal-tools'
 
 const store = useCockpitStore()
 

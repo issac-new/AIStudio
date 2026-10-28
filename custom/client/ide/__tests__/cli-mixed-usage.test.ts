@@ -133,7 +133,7 @@ vi.mock('../composables/useIdeKanbanOverview', async () => {
     }),
   }
 })
-vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({
+vi.mock('@/custom/shared/adapters/task-adapter', () => ({
   bucketPriority: () => 'P3',
 }))
 vi.mock('../views/IdeGitPane.vue', () => ({ default: { name: 'IdeGitPane', template: '<div class="stub-gitpane" />' } }))

@@ -10,7 +10,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { computeAccounts, UNASSIGNED_BUCKET, type AccountsTask, type AssigneeLoad } from '../utils/accounts'
 import { accountsMessages } from '../i18n-accounts'
 

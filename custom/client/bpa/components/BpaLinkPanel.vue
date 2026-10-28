@@ -5,7 +5,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import { bpaApi, type BpaArchitectureDto, type E2eReport } from '@/custom/bpa/api'
-import { resolveNeutrals } from '@/custom/cockpit/styles/status-colors'
+import { resolveNeutrals } from '@/custom/shared/styles/status-colors'
 import type { BpaMessages } from '@/custom/bpa/i18n'
 
 const props = defineProps<{ L: BpaMessages; dto: BpaArchitectureDto }>()

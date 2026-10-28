@@ -4,7 +4,7 @@
 // 注意力条同源（单一聚合，两处消费）。排序：task-review > run-approval >
 // fleet-approval，同权按时间倒序。
 import type { RunSummary } from '@/custom/loop/runcenter/types'
-import type { FleetSession } from '@/custom/cockpit/adapters/fleet-adapter'
+import type { FleetSession } from '@/custom/shared/adapters/fleet-adapter'
 
 export type WaitKind = 'task-review' | 'run-approval' | 'fleet-approval'
 

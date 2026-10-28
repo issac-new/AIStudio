@@ -1,6 +1,6 @@
 // RunTrace timing overview 守门（dsh T6：llm/tool 分解/TTFT 不伪造/own-duration 防双计）。
 import { describe, it, expect } from 'vitest'
-import { buildTimingOverview, outputTps, type TimingEvent } from '../adapters/run-trace-timing'
+import { buildTimingOverview, outputTps, type TimingEvent } from '@/custom/shared/adapters/run-trace-timing'
 
 const ev = (over: Partial<TimingEvent> & { kind: 'llm' | 'tool' }): TimingEvent => ({
   name: 'x', at: 0, durationMs: 100, ...over,

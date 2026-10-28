@@ -12,8 +12,8 @@ import {
   replayMessagesIntoState,
   type TraceNode,
   type TraceState,
-} from '../adapters/run-trace-adapter'
-import { extractKanbanTaskId, matchSessionTaskId } from './sessionTaskId'
+} from '@/custom/shared/adapters/run-trace-adapter'
+import { extractKanbanTaskId, matchSessionTaskId } from '@/custom/shared/composables/sessionTaskId'
 import type { RunEvent } from '@/api/studio/chat'
 
 export interface OverviewSessionMeta {

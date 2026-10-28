@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fromMatrixRoom, fromChatSession, fromGroupRoom } from '@/custom/cockpit/adapters/notify-adapter'
+import { fromMatrixRoom, fromChatSession, fromGroupRoom } from '@/custom/shared/adapters/notify-adapter'
 
 const mkRoom = (over: Record<string, any> = {}) => ({
   roomId: '!abc:server',

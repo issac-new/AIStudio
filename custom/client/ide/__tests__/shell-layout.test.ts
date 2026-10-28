@@ -25,7 +25,7 @@ vi.mock('@/stores/hermes/chat', () => ({
     sendMessage: chatSendMessage,
   }),
 }))
-vi.mock('@/custom/cockpit/store/cockpit', () => ({
+vi.mock('@/custom/shared/store/cockpit', () => ({
   useCockpitStore: () => ({ openRunTrace: vi.fn() }),
 }))
 // aipaydev 缺口 5：IdeShell 新增 kanban store 依赖（简报抽屉任务源）+ 简报面板子组件桩
@@ -53,7 +53,7 @@ vi.mock('../views/IdeSidePane.vue', () => ({ default: { name: 'IdeSidePane', tem
 vi.mock('../views/IdeStatusBar.vue', () => ({ default: { name: 'IdeStatusBar', template: '<div />' } }))
 vi.mock('../components/IdeCommandPalette.vue', () => ({ default: { name: 'IdeCommandPalette', template: '<div />' } }))
 vi.mock('../components/IdeTaskContextBar.vue', () => ({ default: { name: 'IdeTaskContextBar', template: '<div class="ide-taskctx-stub" />' } }))
-vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({ default: { name: 'CockpitRunTraceModal', template: '<div />' } }))
+vi.mock('@/custom/shared/components/CockpitRunTraceModal.vue', () => ({ default: { name: 'CockpitRunTraceModal', template: '<div />' } }))
 // v12.1 全局顶区（页头+注意力+切换器）单测外置（ia-shell/global-top 守门），
 // 此间桩化隔离其探测/武装重图依赖
 vi.mock('@/custom/ia2/components/IaGlobalTop.vue', () => ({ default: { name: 'IaGlobalTop', template: '<div class="ia-gtop-stub" />' } }))

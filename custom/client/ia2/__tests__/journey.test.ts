@@ -19,11 +19,11 @@ const adapters = vi.hoisted(() => ({
   adminRegistry: { fetchRegistry: vi.fn(async () => ({ markdown: '', commit: 'c1' })), saveRegistry: vi.fn() },
   profiles: { fetchProfiles: vi.fn(async () => []) },
 }))
-vi.mock('@/custom/cockpit/adapters/teams-adapter', () => adapters.teams)
-vi.mock('../api/sim-observer', () => adapters.simObserver)
+vi.mock('@/custom/shared/adapters/teams-adapter', () => adapters.teams)
+vi.mock('@/custom/shared/api/sim-observer', () => adapters.simObserver)
 vi.mock('@/custom/governance/api/adminRegistry', () => adapters.adminRegistry)
 vi.mock('@/api/hermes/profiles', () => adapters.profiles)
-vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({
+vi.mock('@/custom/shared/adapters/task-adapter', () => ({
   toCockpitTask: vi.fn((task: { id: string; title: string; status: string; assignee: string | null; workspace_path: string | null; tenant: string | null; created_at: number }, board: string) => ({
     id: task.id, title: task.title, priority: 'P2' as const, status: task.status,
     assignee: task.assignee, workspace: task.workspace_path, tenant: task.tenant,
@@ -32,13 +32,13 @@ vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({
 }))
 vi.mock('@/api/hermes/kanban', () => ({ listBoards: vi.fn(async () => []), listTasks: vi.fn(async () => []) })
 )
-vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({ loadUserTodos: vi.fn(() => []), saveUserTodos: vi.fn() }))
-vi.mock('@/custom/cockpit/adapters/fleet-adapter', () => ({ connectOverviewStream: vi.fn(() => ({ close: vi.fn() })) }))
+vi.mock('@/custom/shared/store/cockpit-kv', () => ({ loadUserTodos: vi.fn(() => []), saveUserTodos: vi.fn() }))
+vi.mock('@/custom/shared/adapters/fleet-adapter', () => ({ connectOverviewStream: vi.fn(() => ({ close: vi.fn() })) }))
 
 import { authFetch } from '../../ide/utils/auth-fetch'
 import { createPinia, setActivePinia } from 'pinia'
 import JourneyView from '../views/journey/JourneyView.vue'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { __resetDailySetupSignalsForTest } from '../composables/daily-setup-signals'
 
 const mockedFetch = vi.mocked(authFetch)

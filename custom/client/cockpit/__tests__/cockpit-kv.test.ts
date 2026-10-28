@@ -4,7 +4,7 @@ import {
   loadDraft, saveDraft, clearDraft, loadTemplates, saveTemplates,
   loadUserTodos, saveUserTodos,
   type DraftWorkItem, type A2uiTemplate, type UserTodo,
-} from '@/custom/cockpit/store/cockpit-kv'
+} from '@/custom/shared/store/cockpit-kv'
 
 // 内存 storage polyfill：vitest 3.x jsdom 默认 stub localStorage，手动装回
 class MemStorage {

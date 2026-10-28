@@ -12,7 +12,7 @@
 // （各域待办面需逐岛接 API，本轮不做，见 spec 决策记录）不挂徽标——徽标只在
 // 有真实待办语义的项上出现，0 一律不渲染，不造噪音数字。
 import { computed } from 'vue'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useAttentionRows } from './useAttentionRows'
 import { useDecisionRows } from './useDecisionRows'
 import { stageTaskCount, blockedTaskCount } from '../badge-count'

@@ -6,7 +6,7 @@
      装配方（WorkbenchView）聚合。ChainBar 保留供 RunCanvas（循环面）。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 export interface ParticipantBadge {
   kind: 'human' | 'agent'

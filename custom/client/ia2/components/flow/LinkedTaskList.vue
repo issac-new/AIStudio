@@ -3,7 +3,7 @@
      （改派=任务抽屉 / ⌨=IDE 任务空间 / 去处理=看板深链）。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 defineProps<{ tasks: CockpitTask[] }>()
 

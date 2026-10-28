@@ -23,7 +23,7 @@ function scriptSection(relPath: string): string {
 
 describe('ECharts canvas 色域守门（option 禁 var()）', () => {
   const ECHARTS_COMPONENTS = [
-    '../../cockpit/components/RunTraceTopology.vue',
+    '../../shared/components/RunTraceTopology.vue',
     '../../bpa/components/BpaLinkPanel.vue',
   ]
 
@@ -36,7 +36,7 @@ describe('ECharts canvas 色域守门（option 禁 var()）', () => {
   })
 
   it('resolveNeutrals 暴露 onAccent（拓扑/BPA 标签前景色单一事实源）', async () => {
-    const mod = await import('../styles/status-colors')
+    const mod = await import('@/custom/shared/styles/status-colors')
     expect(typeof mod.resolveNeutrals).toBe('function')
   })
 })

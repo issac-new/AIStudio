@@ -22,10 +22,10 @@ vi.mock('vue-router', () => ({
   useRoute: vi.fn(() => ({ params: {}, query: {} })),
 }))
 
-import { normalizeSnapshot, type FleetSnapshot } from '../adapters/fleet-adapter'
+import { normalizeSnapshot, type FleetSnapshot } from '@/custom/shared/adapters/fleet-adapter'
 import { parseTenant, type ParsedTenant } from '../../kanban/utils/tenant-parser'
-import type { TraceNode, TraceEdge } from '../adapters/run-trace-adapter'
-import type { TeamRecord } from '../adapters/teams-adapter'
+import type { TraceNode, TraceEdge } from '@/custom/shared/adapters/run-trace-adapter'
+import type { TeamRecord } from '@/custom/shared/adapters/teams-adapter'
 
 // ── §8 新 IA 信息架构契约（2026-09-19 v12 统一视图：六场景 → 双视图）──
 // /app 收敛单视图 collab（沟通协作工作台）；IDE 侧独立壳。品牌与 ⇄ IDE 双壳互跳

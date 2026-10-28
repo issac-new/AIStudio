@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeTimeline, deriveAction } from '@/custom/cockpit/adapters/history-adapter'
+import { mergeTimeline, deriveAction } from '@/custom/shared/adapters/history-adapter'
 
 describe('deriveAction', () => {
   it('status_changed to done → 决策', () => {

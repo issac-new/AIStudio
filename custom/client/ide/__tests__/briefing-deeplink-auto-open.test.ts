@@ -48,8 +48,8 @@ vi.mock('@/api/hermes/kanban', () => ({
   listTasks: (...a: unknown[]) => listTasksMock(...a),
   getTask: (...a: unknown[]) => getTaskMock(...a),
 }))
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: () => ({}) }))
-vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: () => ({ scheduleOpen: false, openSchedule: () => {}, closeSchedule: () => {} }) }))
+vi.mock('@/custom/shared/store/cockpit', () => ({ useCockpitStore: () => ({}) }))
+vi.mock('@/custom/shared/store/workspace', () => ({ useWorkspaceStore: () => ({ scheduleOpen: false, openSchedule: () => {}, closeSchedule: () => {} }) }))
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ sessions: [], setRuntimeMode: vi.fn(), loadSessions: vi.fn(async () => {}) }) }))
 vi.mock('@/stores/hermes/files', () => ({ useFilesStore: () => ({ openEditor: vi.fn() }) }))
 vi.mock('@/api/studio/files', () => ({ listFiles: vi.fn(async () => ({ entries: [], path: '' })) }))

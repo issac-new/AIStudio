@@ -5,7 +5,7 @@
 // 原始任务（带 session_id），退化 workspace 聚合行；群聊无挂接通道（tenant/
 // session_id 均不指向群聊房间，taskIds 自然为空）。
 import { computed } from 'vue'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'

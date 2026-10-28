@@ -34,18 +34,18 @@ const { teamsApi, fleetAdapter, kanbanApi, kv, taskAdapter } = vi.hoisted(() => 
   },
 }))
 
-vi.mock('@/custom/cockpit/adapters/teams-adapter', () => teamsApi)
-vi.mock('@/custom/cockpit/adapters/fleet-adapter', () => fleetAdapter)
+vi.mock('@/custom/shared/adapters/teams-adapter', () => teamsApi)
+vi.mock('@/custom/shared/adapters/fleet-adapter', () => fleetAdapter)
 vi.mock('@/api/hermes/kanban', () => kanbanApi)
-vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({
+vi.mock('@/custom/shared/store/cockpit-kv', () => ({
   ...kv,
   loadDraft: vi.fn(() => null),
   saveDraft: vi.fn(),
   loadTemplates: vi.fn(() => []),
 }))
-vi.mock('@/custom/cockpit/adapters/task-adapter', () => taskAdapter)
+vi.mock('@/custom/shared/adapters/task-adapter', () => taskAdapter)
 
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 
 beforeEach(() => {
   setActivePinia(createPinia())

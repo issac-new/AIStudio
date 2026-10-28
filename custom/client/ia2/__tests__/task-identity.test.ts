@@ -62,12 +62,12 @@ const ctx = vi.hoisted(() => {
   }
 })
 
-vi.mock('@/custom/cockpit/adapters/teams-adapter', () => ctx.teams)
-vi.mock('@/custom/cockpit/adapters/fleet-adapter', () => ctx.fleet)
-vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({ toCockpitTask: ctx.toCockpitTask }))
+vi.mock('@/custom/shared/adapters/teams-adapter', () => ctx.teams)
+vi.mock('@/custom/shared/adapters/fleet-adapter', () => ctx.fleet)
+vi.mock('@/custom/shared/adapters/task-adapter', () => ({ toCockpitTask: ctx.toCockpitTask }))
 vi.mock('@/api/hermes/kanban', () => ctx.kanbanApi)
-vi.mock('../api/sim-observer', () => ctx.simObserver)
-vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({
+vi.mock('@/custom/shared/api/sim-observer', () => ctx.simObserver)
+vi.mock('@/custom/shared/store/cockpit-kv', () => ({
   loadUserTodos: vi.fn(() => []), saveUserTodos: vi.fn(),
 }))
 vi.mock('@/stores/hermes/kanban', () => ({ useKanbanStore: () => ctx.kanban }))
@@ -84,7 +84,7 @@ vi.mock('naive-ui', () => ({
 }))
 
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({ useRunCenterStore: () => ({ runs: [] }) }))
-vi.mock('@/custom/cockpit/store/cockpit', () => ({
+vi.mock('@/custom/shared/store/cockpit', () => ({
   useCockpitStore: () => ({ fleetSessions: [], teams: [], currentUserName: '' }),
 }))
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: () => ({ loops: [] }) }))
@@ -121,7 +121,7 @@ vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
 vi.mock('@/custom/kanban/components/KanbanOrchestrationPanel.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/custom/kanban/components/KanbanAttentionStrip.vue', () => ({ default: { template: '<div />' } }))
 
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useSitCounts } from '../composables/useSitCounts'
 import KanbanColumn from '../../kanban/components/KanbanColumn.vue'
 import SwarmKanbanView from '../../kanban/views/SwarmKanbanView.vue'

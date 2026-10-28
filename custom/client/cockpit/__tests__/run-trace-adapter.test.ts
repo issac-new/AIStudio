@@ -16,9 +16,9 @@ import {
   mergeTraceStates,
   buildCrossSessionEdges,
   type TraceState,
-} from '../adapters/run-trace-adapter'
+} from '@/custom/shared/adapters/run-trace-adapter'
 
-import * as traceAdapter from '../adapters/run-trace-adapter'
+import * as traceAdapter from '@/custom/shared/adapters/run-trace-adapter'
 
 const evt = (over: Record<string, any> = {}) => ({
   event: 'run.started',

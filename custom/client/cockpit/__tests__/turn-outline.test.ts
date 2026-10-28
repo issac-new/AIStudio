@@ -1,6 +1,6 @@
 // 轮导航 rail 投影守门（dsh TurnNavigator：user 起轮/锚点截断/系统轮合成/时长/摘要）。
 import { describe, it, expect } from 'vitest'
-import { buildTurnOutline, outlineSummary, type OutlineEvent } from '../adapters/turn-outline'
+import { buildTurnOutline, outlineSummary, type OutlineEvent } from '@/custom/shared/adapters/turn-outline'
 
 const e = (kind: 'user' | 'assistant' | 'tool', at: number, over: Partial<OutlineEvent> = {}): OutlineEvent => ({ kind, at, ...over })
 

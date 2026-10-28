@@ -15,8 +15,8 @@ import { defineAsyncComponent, markRaw, type Component } from 'vue'
 import { VIEW_LOADERS, warmAllLegacyViews } from './legacy-view-loaders'
 import IaGlobalTop from '../components/IaGlobalTop.vue'
 import IaSettingsSidebar from '../components/IaSettingsSidebar.vue'
-import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
-import { useWorkspaceStore } from '../store/workspace'
+import CockpitScheduleModal from '@/custom/shared/components/CockpitScheduleModal.vue'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { retainBodyClass } from '../composables/useBodyClass'
 
 

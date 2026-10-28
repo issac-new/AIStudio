@@ -1,6 +1,6 @@
 // compaction 留痕卡守门（dsh P1-11：压缩不静默/影响范围/防复燃边界提示）。
 import { describe, it, expect } from 'vitest'
-import { buildCompactionCards, compactionSummary } from '../adapters/compaction-trace'
+import { buildCompactionCards, compactionSummary } from '@/custom/shared/adapters/compaction-trace'
 
 describe('compaction 留痕卡（压缩不静默）', () => {
   it('标记→卡序列：原因/影响范围/防复燃边界', () => {

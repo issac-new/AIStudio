@@ -3,8 +3,8 @@
 // 同 taskId 只留最新；不同对象互不干扰；无 taskId 回退 title 键。
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { dedupePending } from '../api/approvals'
-import type { PendingApprovalItem } from '../api/approvals'
+import { dedupePending } from '@/custom/shared/api/approvals'
+import type { PendingApprovalItem } from '@/custom/shared/api/approvals'
 
 const mk = (id: string, taskId: string | undefined, createdAt: number, title = id): PendingApprovalItem =>
   ({ id, kind: 'review', title, detail: '', taskId, createdAt }) as PendingApprovalItem

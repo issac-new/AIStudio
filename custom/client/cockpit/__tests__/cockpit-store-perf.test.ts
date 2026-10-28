@@ -48,8 +48,8 @@ const teamsMock = vi.hoisted(() => ({
   error: null as unknown,
   listTeams: vi.fn(async () => []),
 }))
-vi.mock('@/custom/cockpit/adapters/teams-adapter', async () => {
-  const actual = await vi.importActual<any>('@/custom/cockpit/adapters/teams-adapter')
+vi.mock('@/custom/shared/adapters/teams-adapter', async () => {
+  const actual = await vi.importActual<any>('@/custom/shared/adapters/teams-adapter')
   return {
     ...actual,
     listTeams: teamsMock.listTeams,
@@ -65,8 +65,8 @@ vi.mock('@/custom/cockpit/adapters/teams-adapter', async () => {
 const fleetMock = vi.hoisted(() => ({
   handlers: null as null | { onSnapshot: (s: any) => void; onStatus?: (c: boolean) => void },
 }))
-vi.mock('@/custom/cockpit/adapters/fleet-adapter', async () => {
-  const actual = await vi.importActual<any>('@/custom/cockpit/adapters/fleet-adapter')
+vi.mock('@/custom/shared/adapters/fleet-adapter', async () => {
+  const actual = await vi.importActual<any>('@/custom/shared/adapters/fleet-adapter')
   return {
     ...actual,
     connectFleetStream: vi.fn((handlers: any) => {
@@ -86,7 +86,7 @@ vi.mock('@/api/hermes/kanban', async () => {
   const actual = await vi.importActual<any>('@/api/hermes/kanban')
   return { ...actual, getTask, listWorkspaceFiles }
 })
-vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
+vi.mock('@/custom/shared/api/kanban-extras', () => ({
   searchSessions: vi.fn(async () => []),
   listWorkspaceFiles: vi.fn(async () => []),
   getTimeline: vi.fn(async () => ({ items: [], total: 0 })),
@@ -119,7 +119,7 @@ vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
   useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }),
 }))
 
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 
 const cockpitTask = (over: Record<string, any> = {}) => ({
   id: 't1', title: 'T1', body: null, assignee: null, status: 'todo',
@@ -196,7 +196,7 @@ describe('fleet 快照指纹守卫（身份抖动守门）', () => {
   })
 
   it('不再开第二条看板聚合 overview WS（双连接=双份强制刷新）', async () => {
-    const fleetAdapter = await import('@/custom/cockpit/adapters/fleet-adapter')
+    const fleetAdapter = await import('@/custom/shared/adapters/fleet-adapter')
     const s = useCockpitStore()
     await s.bootstrap()
     expect((fleetAdapter.connectOverviewStream as any).mock.calls.length).toBe(0)

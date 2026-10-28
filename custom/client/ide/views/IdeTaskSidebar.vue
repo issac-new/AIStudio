@@ -28,7 +28,7 @@ import {
   exportSession,
   type SessionCategory,
 } from '@/api/studio/sessions'
-import { bucketPriority } from '@/custom/cockpit/adapters/task-adapter'
+import { bucketPriority } from '@/custom/shared/adapters/task-adapter'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useIdeKanbanOverview } from '../composables/useIdeKanbanOverview'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'

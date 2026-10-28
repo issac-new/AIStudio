@@ -43,7 +43,7 @@ const cockpitStubs = vi.hoisted(() => {
   }
   return { state, useCockpitStore: () => state }
 })
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
+vi.mock('@/custom/shared/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
 // workspace store 桩：真 store 会拉上游 router 链（登录守卫），此间只验页头
 const workspaceStubs = vi.hoisted(() => {
   const state = {
@@ -60,7 +60,7 @@ const workspaceStubs = vi.hoisted(() => {
     }),
   }
 })
-vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
+vi.mock('@/custom/shared/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
 vi.mock('@/stores/hermes/app', () => ({ useAppStore: () => ({ connected: true }) }))
 vi.mock('@/components/layout/ThemeSwitch.vue', () => ({ default: { name: 'ThemeSwitch', template: '<span class="theme-stub" />' } }))
 vi.mock('../components/IaLocaleToggle.vue', () => ({

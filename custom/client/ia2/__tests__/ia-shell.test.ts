@@ -32,7 +32,7 @@ const workspaceStubs = vi.hoisted(() => {
   return { state, useWorkspaceStore: () => state }
 })
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ activeSessionId: null }) }))
-vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
+vi.mock('@/custom/shared/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
 
 // cockpit store 桩：壳级 bootstrap/disconnect + 页头/弹窗状态供给
 const cockpitStubs = vi.hoisted(() => {
@@ -50,7 +50,7 @@ const cockpitStubs = vi.hoisted(() => {
   }
   return { state, useCockpitStore: () => state }
 })
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
+vi.mock('@/custom/shared/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
 
 // runcenter/loop store 桩：bootShared 序列断言（fetchRuns → syncVisibleRunIds →
 // fetchLoops；metrics 预取已随 Task 5 退场——生产零消费，见 shared-lifecycle.test）
@@ -95,10 +95,10 @@ vi.mock('@/custom/ia2/composables/useSitCounts', () => ({
 vi.mock('@/custom/ia2/components/IaShellHeader.vue', () => ({
   default: { name: 'IaShellHeader', template: '<div class="ia-shell-header-stub" />' },
 }))
-vi.mock('@/custom/cockpit/components/CockpitScheduleModal.vue', () => ({
+vi.mock('@/custom/shared/components/CockpitScheduleModal.vue', () => ({
   default: { name: 'CockpitScheduleModal', template: '<div class="schedule-modal-stub" />' },
 }))
-vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({
+vi.mock('@/custom/shared/components/CockpitRunTraceModal.vue', () => ({
   default: { name: 'CockpitRunTraceModal', template: '<div class="runtrace-modal-stub" />' },
 }))
 vi.mock('@/custom/ia2/components/GlobalSearchDialog.vue', () => ({

@@ -8,7 +8,7 @@ const mkMatrixEvent = (over: Partial<{ id: string; sender: string; content: { bo
   getTs: () => over.ts ?? 1000,
 })
 
-import { fromMatrix, fromChat, fromGroup } from '@/custom/cockpit/adapters/chat-adapter'
+import { fromMatrix, fromChat, fromGroup } from '@/custom/shared/adapters/chat-adapter'
 
 describe('fromMatrix', () => {
   it('maps SDK event via methods; isMe by currentUserId', () => {

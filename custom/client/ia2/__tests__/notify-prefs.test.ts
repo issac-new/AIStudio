@@ -8,7 +8,7 @@ import {
   NOTIFY_PREF_GROUPS, filterInboxByPrefs, kindEnabled, prefEnabled, setPref,
   __resetNotifyPrefsForTest,
 } from '../store/notify-prefs'
-import type { InboxKind } from '@/custom/cockpit/adapters/inbox-adapter'
+import type { InboxKind } from '@/custom/shared/adapters/inbox-adapter'
 
 function item(kind: InboxKind, id = kind): { id: string; kind: InboxKind; count: number } {
   return { id, kind, count: 1 }

@@ -108,7 +108,7 @@ vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
 }))
 
 // ── mock kanban-extras ──
-vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
+vi.mock('@/custom/shared/api/kanban-extras', () => ({
   searchSessions: vi.fn(async () => []),
   listWorkspaceFiles: vi.fn(async () => []),
   getTimeline: vi.fn(async () => ({ items: [], total: 0 })),
@@ -207,7 +207,7 @@ vi.mock('d3-force', () => {
   }
 })
 
-vi.mock('../composables/useRunTrace', () => ({
+vi.mock('@/custom/shared/composables/useRunTrace', () => ({
   extractKanbanTaskId: (title: string) => {
     const m = title?.match(/work kanban task (t_\w+)/i)
     return m ? m[1] : null
@@ -244,8 +244,8 @@ vi.mock('../composables/useRunTrace', () => ({
   }),
 }))
 
-import CockpitRunTraceModal from '../components/CockpitRunTraceModal.vue'
-import { useCockpitStore } from '../store/cockpit'
+import CockpitRunTraceModal from '@/custom/shared/components/CockpitRunTraceModal.vue'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 
 // 内存 localStorage polyfill
 class MemStorage {

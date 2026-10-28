@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildInboxItems, fleetAttentionToInbox, INBOX_KIND_WEIGHT } from '../adapters/inbox-adapter'
-import type { FleetSession } from '../adapters/fleet-adapter'
+import { buildInboxItems, fleetAttentionToInbox, INBOX_KIND_WEIGHT } from '@/custom/shared/adapters/inbox-adapter'
+import type { FleetSession } from '@/custom/shared/adapters/fleet-adapter'
 
 function fleet(overrides: Partial<FleetSession>): FleetSession {
   return {

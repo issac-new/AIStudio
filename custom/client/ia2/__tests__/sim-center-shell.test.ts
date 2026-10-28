@@ -26,7 +26,7 @@ vi.mock('../composables/useRunContext', async () => {
   const { ref } = await import('vue')
   return { useRunContext: () => ({ run: ref(simRunState.value) }) }
 })
-vi.mock('../store/workspace', () => ({ useWorkspaceStore: () => ({ rawTasks: [] }) }))
+vi.mock('@/custom/shared/store/workspace', () => ({ useWorkspaceStore: () => ({ rawTasks: [] }) }))
 vi.mock('../composables/useDecisionRows', async () => {
   const { ref } = await import('vue')
   return { useDecisionRows: () => ({ decisionRows: ref([]) }) }

@@ -3,8 +3,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
-import { useWorkspaceStore } from '../../store/workspace'
+import ApprovalPanel from '@/custom/shared/components/ApprovalPanel.vue'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { isRecentTask, taskStatusLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
 import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'

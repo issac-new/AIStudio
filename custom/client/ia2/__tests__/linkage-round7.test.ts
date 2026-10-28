@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest'
 import { expectLocaleKeys } from '../../__tests__/helpers/locale-tree'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
-import { toCockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import { toCockpitTask } from '@/custom/shared/adapters/task-adapter'
 import { buildAttention, type SessionAttentionInput } from '../adapters/activity'
 import type { KanbanTask } from '@/api/hermes/kanban'
 

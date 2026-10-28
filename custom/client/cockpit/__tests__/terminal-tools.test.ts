@@ -5,7 +5,7 @@ import {
   isTerminalToolId,
   buildToolInitCommand,
   pickDefaultTool,
-} from '@/custom/cockpit/terminal/terminal-tools'
+} from '@/custom/shared/terminal/terminal-tools'
 
 describe('terminal-tools registry', () => {
   it('lists tools in priority order: claude-code > codex > deepseek-harness', () => {

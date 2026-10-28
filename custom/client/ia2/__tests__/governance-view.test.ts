@@ -14,7 +14,7 @@ import { createI18n } from 'vue-i18n'
 
 const { governanceMessages } = await import('@/custom/governance/i18n')
 const api = await import('@/custom/governance/api/governance')
-const approvals = await import('@/custom/cockpit/api/approvals')
+const approvals = await import('@/custom/shared/api/approvals')
 
 vi.mock('@/custom/governance/api/governance', () => ({
   fetchGovernanceOverview: vi.fn(),
@@ -90,7 +90,7 @@ vi.mock('@/custom/governance/api/changeGov', () => ({
   createFreezeWindow: vi.fn(async () => ({ ok: true })),
   setFreezeWindowActive: vi.fn(async () => ({ ok: true })),
 }))
-vi.mock('@/custom/cockpit/api/approvals', () => ({
+vi.mock('@/custom/shared/api/approvals', () => ({
   fetchPendingApprovals: vi.fn(),
   decideApproval: vi.fn(),
   dedupePending: (items: unknown[]) => items,

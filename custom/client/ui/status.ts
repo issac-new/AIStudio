@@ -5,7 +5,7 @@
 // 本模块把两轨合一：语义态仍以 cockpit/styles/status-colors.ts 为正本（再导出），
 // 流水线五态映射到 --ia-* token；组件层（UiStatusPill）经 toneColor 取色，
 // 禁止再散点手写状态色值。
-import { STATUS_COLORS, STATUS_BG, resolveStatusColors, type SemanticStatus } from '../cockpit/styles/status-colors'
+import { STATUS_COLORS, STATUS_BG, resolveStatusColors, type SemanticStatus } from '@/custom/shared/styles/status-colors'
 
 export { STATUS_COLORS, STATUS_BG, resolveStatusColors }
 export type { SemanticStatus }

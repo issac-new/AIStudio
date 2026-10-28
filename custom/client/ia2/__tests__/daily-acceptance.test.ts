@@ -7,7 +7,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'zh' } }) }))
 
 const rawTasks = vi.hoisted(() => [])
-vi.mock('../store/workspace', () => ({
+vi.mock('@/custom/shared/store/workspace', () => ({
   useWorkspaceStore: () => ({
     rawTasks: rawTasks,
     tasks: rawTasks.map(r => r.task),
@@ -26,7 +26,7 @@ vi.mock('../store/workspace', () => ({
     refreshAllBoards: vi.fn(async () => true),
   }),
 }))
-vi.mock('@/custom/cockpit/components/ApprovalPanel.vue', () => ({
+vi.mock('@/custom/shared/components/ApprovalPanel.vue', () => ({
   default: { name: 'ApprovalPanel', template: '<div data-testid="approval-panel-stub" />' },
 }))
 const registryAccounts = vi.hoisted(() => ([

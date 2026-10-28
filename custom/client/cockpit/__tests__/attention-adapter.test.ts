@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { toAttention } from '@/custom/cockpit/adapters/attention-adapter'
+import { toAttention } from '@/custom/shared/adapters/attention-adapter'
 import type { KanbanTask } from '@/api/hermes/kanban'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 const t = (over: Partial<KanbanTask> = {}): KanbanTask => ({
   id: 't1', title: 'T', body: null, assignee: null, status: 'todo',

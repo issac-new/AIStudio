@@ -18,7 +18,7 @@ const { fleetSessionsRef, accountsRef, kanbanTasksRef, matrixRoomsRef, joinedMem
   currentUserNameRef: { value: '' as string },
 }))
 
-vi.mock('@/custom/cockpit/store/cockpit', () => ({
+vi.mock('@/custom/shared/store/cockpit', () => ({
   useCockpitStore: () => ({ fleetSessions: fleetSessionsRef.value, teams: [], currentUserName: currentUserNameRef.value }),
 }))
 vi.mock('@/custom/matrix-teams/stores/team-registry', () => ({
@@ -53,7 +53,7 @@ vi.mock('@/custom/matrix-chat/stores/matrix-client', () => ({
     },
   }),
 }))
-vi.mock('../store/workspace', () => ({
+vi.mock('@/custom/shared/store/workspace', () => ({
   useWorkspaceStore: () => ({ tasks: [], dailyTasks: [], simTasks: [], boards: [] }),
 }))
 vi.mock('../store/platforms', () => ({

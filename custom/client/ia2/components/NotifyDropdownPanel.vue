@@ -9,7 +9,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useNotifyReadStore } from '../store/notify-read'
 import { useReviewCenterStore } from '@/custom/matrix-teams/stores/review-center'

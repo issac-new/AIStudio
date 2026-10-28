@@ -18,7 +18,7 @@ const H = 3600
 const fixture = ref<Array<{ board: string; task: Record<string, unknown> }>>([])
 const refreshMock = vi.fn(async () => true)
 
-vi.mock('@/custom/ia2/store/workspace', () => ({
+vi.mock('@/custom/shared/store/workspace', () => ({
   // 真 pinia store 会自动解包 ref；裸对象 mock 不会——用 getter 等价解包
   useWorkspaceStore: () => ({
     get rawTasks() { return fixture.value },

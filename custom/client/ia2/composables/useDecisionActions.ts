@@ -6,9 +6,9 @@
 //   - 动作成功后刷新跨板聚合（workspace.refreshAllBoards(true)）
 import { useI18n } from 'vue-i18n'
 import * as kanbanApi from '@/api/hermes/kanban'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 import type { WaitItem } from '../adapters/waiting'
 
 export function useDecisionActions() {

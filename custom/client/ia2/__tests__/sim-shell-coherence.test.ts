@@ -32,7 +32,7 @@ const deliverablesValue = vi.hoisted(() => ({ value: null as null | Record<strin
 vi.mock('@/custom/loop/runcenter/store/runs', () => ({
   useRunCenterStore: () => runsStoreStub,
 }))
-vi.mock('../store/workspace', () => ({ useWorkspaceStore: () => ({ rawTasks: [] }) }))
+vi.mock('@/custom/shared/store/workspace', () => ({ useWorkspaceStore: () => ({ rawTasks: [] }) }))
 vi.mock('../composables/useDecisionRows', async () => {
   const { ref } = await import('vue')
   return { useDecisionRows: () => ({ decisionRows: ref([]) }) }

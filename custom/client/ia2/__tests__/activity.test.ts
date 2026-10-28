@@ -7,7 +7,7 @@ import {
   loopRunActivity, buildAttention, classifyRunEvent, semanticCounts, SEMANTIC_ORDER,
 } from '../adapters/activity'
 import type { RunSummary } from '@/custom/loop/runcenter/types'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 const NOW = Date.parse('2026-09-21T12:00:00Z')
 

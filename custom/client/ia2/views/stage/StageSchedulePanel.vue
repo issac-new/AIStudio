@@ -3,7 +3,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useWorkspaceStore } from '../../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 
 const emit = defineEmits<{
   (e: 'open-task', taskId: string): void

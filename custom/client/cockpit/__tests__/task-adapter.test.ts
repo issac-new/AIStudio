@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bucketPriority, bucketStatus, toCockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import { bucketPriority, bucketStatus, toCockpitTask } from '@/custom/shared/adapters/task-adapter'
 import type { KanbanTask } from '@/api/hermes/kanban'
 
 const baseTask = (over: Partial<KanbanTask> = {}): KanbanTask => ({
