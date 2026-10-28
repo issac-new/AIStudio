@@ -8,12 +8,12 @@
 // 登记在册，读数全派生、无数据 null 不造数（fail-soft）。存储与 eval-store
 // 同目录同原子写模式（EVAL_STORE env → 测试隔离共享）。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import type { BadCaseRootCause } from './badcase-distill'
 import { ROOT_CAUSE_LABELS } from './badcase-distill'
 import type { EvalRun, EvalSet, RemediationRecord } from './types'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 // ---------- 台账 ----------
 
@@ -65,7 +65,7 @@ interface LedgerShape {
 
 function ledgerDir(): string {
   const env = process.env.EVAL_STORE?.trim()
-  return env || join(homedir(), '.hermes-web-ui', 'eval')
+  return env || underWebUi('eval')
 }
 
 function ledgerPath(): string {

@@ -4,7 +4,6 @@
 // 原子写（tmp → rename）；读侧 mtime 缓存 1s（工具调用高频，策略变更最多延迟
 // 一秒生效）；损坏文件 fail-closed（fatal=true，由执行面拒绝），不静默当空策略。
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import {
   lintPolicyDoc,
@@ -13,6 +12,7 @@ import {
   type ToolPolicyDoc,
 } from './tool-policy'
 import { atomicWriteText } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 const CACHE_TTL_MS = 1_000
 
@@ -21,7 +21,7 @@ let cache: { file: string; at: number; mtimeMs: number; size: number; snap: Poli
 export function toolPolicyDir(): string {
   const env = process.env.HERMES_TOOL_POLICY_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'tool-policies')
+  return underWebUi('tool-policies')
 }
 
 export function toolPolicyFile(): string {

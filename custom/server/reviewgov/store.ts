@@ -11,7 +11,6 @@
 // .corrupt.<ts> 留档，不静默当"不存在"续写。
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { createCase, type OpenCaseInput } from './convergence'
 import {
@@ -26,6 +25,7 @@ import {
   type SignalKind,
 } from './types'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 const SIGNAL_CAP = 2000
 const EVAL_CASE_CAP = 500
@@ -36,7 +36,7 @@ const CASE_LIST_CAP = 500
 export function reviewGovDir(): string {
   const env = process.env.HERMES_REVIEW_GOV_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'review-gov')
+  return underWebUi('review-gov')
 }
 
 function casesDir(): string { return join(reviewGovDir(), 'cases') }

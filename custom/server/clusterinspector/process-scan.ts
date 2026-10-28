@@ -13,7 +13,6 @@
 //   - 扫描只读（ps 子进程），不杀不写。
 import { execFile } from 'child_process'
 import { existsSync, readdirSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'node:path'
 import { hermesHome as resolveHermesHome } from '../lib/paths'
 
@@ -83,7 +82,7 @@ export interface ProcessScanDeps {
 /** 采集本机 hermes 形态进程（fail-soft：ps 失败=ok:false，缺面不缺轮）。 */
 export async function collectProcessScan(deps: ProcessScanDeps = {}): Promise<ProcessScanFace> {
   const now = deps.now ?? (() => Date.now())
-  const hermesHome = deps.hermesHome || process.env.HERMES_HOME || join(homedir(), '.hermes')
+  const hermesHome = deps.hermesHome || process.env.HERMES_HOME || resolveHermesHome()
   const face: ProcessScanFace = { ok: true, at: now(), procs: [], registered: registeredProfiles(hermesHome), scanned: false }
   const exec = deps.execImpl ?? ((cmd: string, args: string[]) =>
     new Promise<{ stdout: string }>((resolve, reject) => {

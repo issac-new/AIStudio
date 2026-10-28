@@ -14,10 +14,11 @@
 // 安全：文件内容含 accessToken，权限文件 0600 / 目录 0700（已存在文件也归一）；
 // 写入走临时文件 + rename 原子替换，进程中途被杀不留半份 JSON。
 
-import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeSync } from 'fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import { hermesWebUiHome } from '../lib/paths'
+import { atomicWriteText } from '../lib/fs-store'
 
 /** matrix-session.json 单条会话记录（矩阵客户端登录态最小集） */
 export interface MatrixSessionRecord {
@@ -97,19 +98,9 @@ export function saveMatrixSession(input: MatrixSessionInput, env: Record<string,
     ...(input.deviceId ? { deviceId: input.deviceId } : {}),
     updatedAt: new Date().toISOString(),
   }
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  // open 时即 0600，杜绝宽松权限窗口；write/rename 任一失败都清理临时文件不留残渣
-  //（rename 成功后 tmp 已不存在，catch 内 unlink 为无害兜底）
-  const fd = openSync(tmp, 'w', 0o600)
-  try {
-    writeSync(fd, JSON.stringify(record, null, 2) + '\n')
-    closeSync(fd)
-    renameSync(tmp, file)
-  } catch (err) {
-    try { closeSync(fd) } catch { /* 已关 */ }
-    try { unlinkSync(tmp) } catch { /* 尽力清理 */ }
-    throw err
-  }
+  // 写入走同目录随机 tmp + rename（fs-store 共享实现）；0600 在 tmp 创建时即生效，
+  // 失败由实现清理 tmp 后原错上抛
+  atomicWriteText(file, JSON.stringify(record, null, 2) + '\n', { mode: 0o600 })
   // rename 后目标归一 0600（open 时已设，此处兜底归一外部遗留的宽松态）
   try { if (existsSync(file)) chmodSync(file, 0o600) } catch { /* 尽力而为 */ }
 }

@@ -8,9 +8,9 @@
 // （CAP 2000）会冲掉真正的安全事件；独立账本可查询、可按天轮转、可聚合。
 // 只记结论与规则，不记参数原值。fail-soft：写失败不阻断工具执行，计数可见。
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { GENESIS, chainHashOfEntry, verifyForwardChain, type ChainVerifyResult } from '../auditchain/forward-chain'
+import { underWebUi } from '../lib/paths'
 
 export interface PolicyDecisionEntry {
   ts: number
@@ -40,7 +40,7 @@ let writeFailures = 0
 export function policyDecisionDir(): string {
   const env = process.env.POLICY_DECISION_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'tool-policy-decisions')
+  return underWebUi('tool-policy-decisions')
 }
 
 function dayStamp(ms = Date.now()): string {

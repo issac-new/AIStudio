@@ -6,12 +6,13 @@
  * 类事后复盘（"当时图谱里有什么决策"）。如实边界：快照粒度=节流间隔，at 与快照
  * 时点之间的增量不可见（返回 snapshotTs 供判断精度）。
  */
-import { existsSync, readdirSync, renameSync, mkdirSync, copyFileSync, rmSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, mkdirSync, rmSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { listDecisions, semanticaPython, studioKgPath } from './semantica-client'
 import { spawn } from 'node:child_process'
 import { bridgeScript } from './semantica-client'
+import { atomicCopyFile } from '../lib/fs-store'
 
 export const SNAP_MAX = 50
 const SNAPSHOT_THROTTLE_MS = 5 * 60 * 1000
@@ -40,9 +41,7 @@ async function snapshotNow(): Promise<string | null> {
     mkdirSync(dir, { recursive: true })
     // kg 写入是 tmp+rename 原子（bridge save_atomic），直接 copy 读到的一定是完整文件
     const out = join(dir, `kg-${Date.now()}.json`)
-    const tmp = `${out}.tmp`
-    copyFileSync(kg, tmp)
-    renameSync(tmp, out)
+    atomicCopyFile(kg, out)
     pruneSnapshots()
     return out
   } catch {

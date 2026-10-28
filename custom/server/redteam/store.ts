@@ -3,10 +3,10 @@
 // 纪律同 eval/heldout store：tmp+rename 原子写、仅 ENOENT 按空账、
 // 保留最近 50 次运行（旧报告可随时用同种子复现，无需无限堆积）。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import type { RedteamRun, RedteamRunSummary, S1LayerReport } from './types'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 interface StoreShape {
   runs: RedteamRun[]
@@ -17,7 +17,7 @@ const KEEP_RUNS = 50
 
 function storeDir(): string {
   const env = process.env.REDTEAM_STORE?.trim()
-  return env || join(homedir(), '.hermes-web-ui', 'redteam')
+  return env || underWebUi('redteam')
 }
 
 function storePath(): string {

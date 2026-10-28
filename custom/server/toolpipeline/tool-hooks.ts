@@ -13,7 +13,6 @@
 // 约 2.5 分钟历史，撑不起频次类告警）。本版零行为变化：只加字段、改轮转、
 // 加计数，不动任何裁决路径。
 import { existsSync, mkdirSync, appendFileSync, readFileSync, statSync, renameSync, unlinkSync, readdirSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { ekkoGuardHook } from '../toolresultguard'
 import { retrievalRelevanceHook } from '../toolresultguard/retrieval-relevance'
@@ -34,6 +33,7 @@ import {
   type ToolSideEffect,
 } from '../toolcontract/contract'
 import { IdempotencyStore, idempotencyKeyFor } from '../toolcontract/idempotency-store'
+import { underWebUi } from '../lib/paths'
 
 export interface ToolExecAuditEntry {
   ts: number
@@ -80,7 +80,7 @@ let writeFailures = 0
 function auditDir(): string {
   const env = process.env.TOOL_EXEC_AUDIT_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'tool-exec-audit')
+  return underWebUi('tool-exec-audit')
 }
 
 /** 当日账本文件（本地时区日期，与 governance/change-governance-store.ts 的日期切分同款） */

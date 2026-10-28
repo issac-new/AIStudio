@@ -1,9 +1,10 @@
 // overlay/secaudit 域：存储（单文件 JSON，原子写；env 可覆写供测试）。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import type { AuditProject } from './types'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 interface SecAuditStoreShape {
   projects: AuditProject[]
@@ -14,7 +15,7 @@ const EMPTY: SecAuditStoreShape = { projects: [] }
 export function secAuditStorePath(): string {
   const env = process.env.SECAUDIT_STORE?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes-web-ui', 'secaudit', 'secaudit-store.json')
+  return underWebUi('secaudit', 'secaudit-store.json')
 }
 
 export function readSecAuditStore(): SecAuditStoreShape {

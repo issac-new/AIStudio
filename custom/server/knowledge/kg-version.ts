@@ -17,11 +17,12 @@
  * 每板一个子目录 board-<slug>/；保留 KG_SNAPSHOT_MAX（默认 50，SNAP_MAX）份，
  * kg-* 与 pre-rollback-* 各自按上限裁剪。全部 fail-soft 不抛。
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { boardKgPath } from './board-graph'
 import { underHermes } from '../lib/paths'
+import { atomicCopyFile } from '../lib/fs-store'
 
 export const SNAP_MAX = 50
 
@@ -52,9 +53,7 @@ export function snapshotBoardKg(slug: string, now = Date.now(), label: SnapshotL
     mkdirSync(dir, { recursive: true })
     // KG 写入是 tmp+rename 原子（bridge save_atomic），copy 读到的一定是完整文件
     const out = join(dir, `kg-${now}.json`)
-    const tmp = `${out}.tmp-${process.pid}`
-    copyFileSync(kg, tmp)
-    renameSync(tmp, out)
+    atomicCopyFile(kg, out)
     // 元数据边车（A4 校准 2026-10-03，源文③：快照带 label/原因可审计）；
     // 写失败不阻塞快照本身（缺边车=列表显示 auto 缺省）
     try {
@@ -141,13 +140,9 @@ export function rollbackBoardKg(slug: string, ts: number, now = Date.now()): Rol
     const dir = boardKgVersionDir(slug)
     mkdirSync(dir, { recursive: true })
     const pre = join(dir, `pre-rollback-${now}.json`)
-    const preTmp = `${pre}.tmp-${process.pid}`
-    copyFileSync(kg, preTmp)
-    renameSync(preTmp, pre)
+    atomicCopyFile(kg, pre)
     try { writeFileSync(join(dir, `pre-rollback-${now}.meta.json`), JSON.stringify({ ts: now, label: 'rollback' })) } catch { /* 缺省可接受 */ }
-    const tmp = `${kg}.tmp-${process.pid}`
-    copyFileSync(hit.file, tmp)
-    renameSync(tmp, kg)
+    atomicCopyFile(hit.file, kg)
     pruneBoardSnapshots(slug)
     return { ok: true, snapshot: hit.file, preRollback: pre }
   } catch (err) {

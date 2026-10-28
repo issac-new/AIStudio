@@ -8,10 +8,10 @@
 //   new_session —— 无检查点 / 文件损坏 / run 与 session 不匹配。
 // 只给建议与证据，不自动执行恢复（自动续跑可能重复副作用）。
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import { createEventLogStore, type EventLogStore } from '../loop/graph/event-log-store'
 import { resolveLoopBaseDir } from '../loop/paths'
+import { underHermes } from '../lib/paths'
 
 export type ResumeDecision = 'auto_resume' | 'manual_gate' | 'new_session'
 
@@ -56,12 +56,12 @@ export function resumeMaxAgeMs(): number {
 
 function sessionCheckpointsDir(): string {
   return process.env.HERMES_SESSION_CHECKPOINTS_DIR?.trim()
-    || join(homedir(), '.hermes', 'session-checkpoints')
+    || underHermes('session-checkpoints')
 }
 
 function progressCheckpointsDir(): string {
   return process.env.HERMES_PROGRESS_CHECKPOINTS_DIR?.trim()
-    || join(homedir(), '.hermes', 'memories', 'checkpoints')
+    || underHermes('memories', 'checkpoints')
 }
 
 function readJson<T>(path: string): T | null {

@@ -8,8 +8,8 @@
 // 纪律（与 402 审批域同族）：契约校验是纯函数；问卷状态机（pending→answered）
 // 存储轻量 JSON；答案回流到调用方（子代理拿到选中 optionId 继续），人机边界清晰。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export const MAX_STEPS = 4
 export const MIN_OPTIONS = 2
@@ -109,7 +109,7 @@ export function askDir(): string {
   if (env) return resolve(env)
   const cwd = process.cwd()
   if (writable(cwd)) return resolve(cwd, '.ask')
-  return join(homedir(), '.hermes-web-ui', 'ask')
+  return underWebUi('ask')
 }
 
 function askFile(askId: string): string {

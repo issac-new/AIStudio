@@ -5,8 +5,9 @@
 // 符号链接不跟随（lstat 判定），避免借链接删到根外。
 import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
-import { dirname, isAbsolute, join, relative, resolve } from 'path'
+import { dirname, isAbsolute, relative, resolve } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface SandboxLease {
   id: string
@@ -30,7 +31,7 @@ export interface SweepResult {
 function leasePath(): string {
   const env = process.env.SANDBOX_LEASE_FILE?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes-web-ui', 'sandbox-leases.json')
+  return underWebUi('sandbox-leases.json')
 }
 
 export function sandboxRoot(): string | null {

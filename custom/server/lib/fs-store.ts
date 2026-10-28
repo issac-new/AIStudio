@@ -8,7 +8,7 @@
 //   - appendJsonl：mkdir -p → 追加一行（带换行），不做 fsync（调用方可自行 flush）
 // 需要「落盘持久性」的台账（如 trust）显式传 fsync: true。
 import { createHash } from 'node:crypto'
-import { appendFileSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeSync } from 'node:fs'
+import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 export interface AtomicWriteOptions {
@@ -41,9 +41,39 @@ export function atomicWriteText(file: string, text: string, opts: AtomicWriteOpt
   }
 }
 
+/** 原子拷贝目录（递归）：同目录随机 tmp → rename，失败清理 tmp；用于技能供给等目录级部署 */
+export function atomicCopyDir(src: string, dest: string): void {
+  const dir = dirname(dest)
+  mkdirSync(dir, { recursive: true })
+  const tag = createHash('sha1').update(`${process.pid}:${Date.now()}:${Math.random()}`).digest('hex').slice(0, 12)
+  const tmp = join(dir, `.${process.pid}-${tag}.tmpd`)
+  try {
+    cpSync(src, tmp, { recursive: true, dereference: true })
+    renameSync(tmp, dest)
+  } catch (e) {
+    if (existsSync(tmp)) { try { rmSync(tmp, { recursive: true, force: true }) } catch { /* 清理失败不掩盖原错 */ } }
+    throw e
+  }
+}
+
 /** 原子写 JSON：序列化后走 atomicWriteText */
 export function atomicWriteJson(file: string, value: unknown, opts: AtomicWriteOptions = {}): void {
   atomicWriteText(file, JSON.stringify(value, null, opts.indent ?? 2), opts)
+}
+
+/** 原子拷贝：同目录随机 tmp → rename，失败清理 tmp；用于快照/回滚场景 */
+export function atomicCopyFile(src: string, dest: string): void {
+  const dir = dirname(dest)
+  mkdirSync(dir, { recursive: true })
+  const tag = createHash('sha1').update(`${process.pid}:${Date.now()}:${Math.random()}`).digest('hex').slice(0, 12)
+  const tmp = join(dir, `.${process.pid}-${tag}.tmp`)
+  try {
+    copyFileSync(src, tmp)
+    renameSync(tmp, dest)
+  } catch (e) {
+    if (existsSync(tmp)) { try { rmSync(tmp) } catch { /* tmp 清理失败不掩盖原错 */ } }
+    throw e
+  }
 }
 
 export interface JsonlReadResult<T> {

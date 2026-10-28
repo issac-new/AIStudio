@@ -7,7 +7,6 @@
 //   3. 密封集每调用方尝试上限（默认 3）：二分探测通道在限次内不可行；
 //   4. 密封集不可改题——改题必须先落 RubricIterationLog（"改题凑分"结构性阻断）。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import type {
   EvalRun, EvalSet, EvalSetMeta, EvalSetRevision, EvalTask, RemediationRecord, RubricAssertion, RubricIterationLog,
@@ -17,6 +16,7 @@ import { isEvalDimension } from './coverage'
 import type { OracleCase, OracleRunRecord } from './uioracle'
 import { contentFingerprint } from './fingerprint'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 interface StoreShape {
   sets: EvalSet[]
@@ -33,7 +33,7 @@ interface StoreShape {
 
 function storeDir(): string {
   const env = process.env.EVAL_STORE?.trim()
-  return env || join(homedir(), '.hermes-web-ui', 'eval')
+  return env || underWebUi('eval')
 }
 
 function storePath(): string {

@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface CtxNote {
   id: string
@@ -30,7 +31,7 @@ interface SessionNotesFile {
 export function ctxNotesDir(): string {
   const env = process.env.CTX_NOTES_DIR?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return resolve(homedir(), '.hermes-web-ui', 'overlay', 'ctx-notes')
+  return underWebUi('overlay', 'ctx-notes')
 }
 
 /** sessionId 路径净化（archive-store safeSessionId 同款）：防路径穿越。 */

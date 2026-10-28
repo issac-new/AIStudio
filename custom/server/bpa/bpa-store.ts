@@ -8,9 +8,10 @@ import { join, dirname, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import type { BpaConfig, BpaNode, PemmAssessment } from './bpa-types'
 import { BPA_DEFAULT_CONFIG } from './bpa-types'
+import { underWebUi } from '../lib/paths'
 
 function storeDir(): string {
-  return join(homedir(), '.hermes-web-ui', 'overlay')
+  return underWebUi('overlay')
 }
 
 export function architectureFile(): string {

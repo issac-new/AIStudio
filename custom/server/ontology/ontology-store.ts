@@ -19,13 +19,14 @@ import { hasErrors, validateInstances, validateSpec } from './ontology-validate'
 import { seedInstances, seedSpec } from './ontology-seed'
 import { versionIriOf, type OntologyInstance, type OntologySpec, type Violation } from './ontology-types'
 import { atomicWriteText } from '../lib/fs-store'
+import { underHermes } from '../lib/paths'
 
 export const SNAP_MAX = 50
 
 function ontologyDir(): string {
   const env = process.env.ONTOLOGY_DIR?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes', 'semantica', 'ontology')
+  return underHermes('semantica', 'ontology')
 }
 
 function specPath(): string { return join(ontologyDir(), 'ontology.json') }

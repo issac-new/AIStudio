@@ -5,9 +5,10 @@
  * 纯文件面 fail-soft（skillgov/bpa-store 同款纪律）。env：BPA_AUDIT_STORE 覆盖。
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { join, dirname, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import type { BpaValidationReport } from './bpa-types'
+import { underWebUi } from '../lib/paths'
 
 export interface BpaAuditEntry {
   at: number
@@ -26,7 +27,7 @@ const HISTORY_LIMIT = 50
 export function auditFile(): string {
   return process.env.BPA_AUDIT_STORE?.trim()
     ? resolve(process.env.BPA_AUDIT_STORE.replace(/^~/, homedir()))
-    : join(homedir(), '.hermes-web-ui', 'overlay', 'bpa-audit.json')
+    : underWebUi('overlay', 'bpa-audit.json')
 }
 
 export function readAudit(): BpaAuditEntry[] {

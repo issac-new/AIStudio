@@ -14,6 +14,7 @@ import { maybeSnapshot } from './replay'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { underHermes } from '../lib/paths'
 
 export interface BridgeDecision {
   id: string
@@ -29,14 +30,14 @@ export interface BridgeDecision {
 export function studioKgPath(): string {
   const env = process.env.SEMANTICA_STUDIO_KG?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes', 'semantica', 'studio-decisions.json')
+  return underHermes('semantica', 'studio-decisions.json')
 }
 
 export function semanticaPython(): string | null {
   const env = process.env.SEMANTICA_PYTHON?.trim()
   if (env) return existsSync(env) ? env : null
   // POSIX（venv/bin/python）与 Windows（venv/Scripts/python.exe）双布局探测，缺席降级
-  const venv = join(homedir(), '.hermes', 'hermes-agent', 'venv')
+  const venv = underHermes('hermes-agent', 'venv')
   for (const cand of [join(venv, 'bin', 'python'), join(venv, 'scripts', 'python.exe')]) {
     if (existsSync(cand)) return cand
   }

@@ -22,8 +22,8 @@
 import { atomicWriteJson } from '../lib/fs-store'
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export const EVIDENCE_KINDS = ['artifact', 'delivery_snapshot', 'verification', 'lane_session', 'lane_handoff'] as const
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number]
@@ -107,7 +107,7 @@ function legacyStemOf(id: string): string {
 export function evidenceDir(): string {
   const env = process.env.HERMES_EVIDENCE_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'evidence')
+  return underWebUi('evidence')
 }
 
 export function isEvidenceKind(v: unknown): v is EvidenceKind {

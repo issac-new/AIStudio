@@ -6,9 +6,9 @@
 // - **恢复**：按 (workspace,slot) 取回草稿（会话/输入框两槽）。
 // 粘贴附件本版不落（附件走 evidence/media 域，职责分界）。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, rmSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 const MAX_DRAFT_BYTES = 2 * 1024 * 1024
 
@@ -35,7 +35,7 @@ export function draftDir(): string {
   if (env) return resolve(env)
   const cwd = process.cwd()
   if (writable(cwd)) return resolve(cwd, '.draft')
-  return join(homedir(), '.hermes-web-ui', 'draft')
+  return underWebUi('draft')
 }
 
 function draftFile(workspacePath: string, slot: string): string {

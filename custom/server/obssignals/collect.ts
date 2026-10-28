@@ -9,6 +9,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { isOTelSpanRow, otelRowToLegacy } from '../eval/trace-sampler'
 import { buildObsSignals, type ObsSignalsReport, type ObsSpanRow } from './signals'
+import { underHermes } from '../lib/paths'
 
 /** 采集上限：单文件行数与总行数双闸，超限采样口径如实标注。 */
 const MAX_ROWS_PER_FILE = 20_000
@@ -35,7 +36,7 @@ export function tracesDir(): string {
   if (runDir) return resolve(runDir.replace(/^~/, homedir()))
   const env = process.env.HERMES_TRACES_DIR?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes', 'traces')
+  return underHermes('traces')
 }
 
 /** 行级采集：窗口内 legacy 格式行全量（受双闸上限），供信号聚合与告警共用。 */

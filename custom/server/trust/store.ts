@@ -8,18 +8,18 @@
 //   - 台账有长度上限，裁剪后链首变成断锚（anchor_dangling），按既有约定不算篡改。
 import { createHash, randomBytes } from 'crypto'
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import { chainHashOfEntry, canonicalJson, GENESIS, verifyForwardChain } from '../auditchain/forward-chain'
 import type { IntegrityManifest, TrustCase, TrustCaseSummary, TrustLedgerEvent } from './types'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 const MAX_LEDGER_EVENTS = 5_000
 const KEEP_LEDGER_EVENTS = 4_500
 
 export function trustDir(): string {
   const env = process.env.HERMES_TRUST_DIR?.trim()
-  return env ? resolve(env) : join(homedir(), '.hermes-web-ui', 'trust')
+  return env ? resolve(env) : underWebUi('trust')
 }
 
 function casesDir(): string {

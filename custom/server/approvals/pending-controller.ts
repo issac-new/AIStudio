@@ -22,7 +22,6 @@
  */
 import Router from '@koa/router'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import { buildFleetSnapshotFromTap, respondFleetApproval } from '../services/hermes/fleet-tap'
 import { loadReview, setVerdict, listReviews } from '../review/review-store'
@@ -34,6 +33,7 @@ import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
 import { decideEnforceApproval, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
 import { listHumanGatePending, humanGateRouter } from './human-gate'
 import { atomicWriteJson } from '../lib/fs-store'
+import { hermesHome } from '../lib/paths'
 
 const router = new Router({ prefix: '/api/approvals' })
 
@@ -79,7 +79,7 @@ function approvalsDirs(): string[] {
   // 是 profile home，传输按其入队——studio 侧全扫聚合，decide 回写同目录）。
   const env = process.env.HERMES_APPROVALS_QUEUE_DIR?.trim()
   if (env) return [env]
-  const home = process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  const home = process.env.HERMES_HOME?.trim() || hermesHome()
   const dirs = [join(home, 'approvals')]
   try {
     for (const name of readdirSync(join(home, 'profiles'))) {

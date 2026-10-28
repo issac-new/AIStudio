@@ -16,6 +16,7 @@ import { join, resolve } from 'path'
 import { TOOL_CONTRACT_VERSION } from '../toolcontract/contract'
 import { estimateCost } from '../tokens/pricing'
 import type { TokenUsage } from '../tokens/meter-projections'
+import { underWebUi, underHermes } from '../lib/paths'
 
 export interface RunManifest {
   runId: string
@@ -44,7 +45,7 @@ export function runManifestDir(): string {
   const env = process.env.RUN_MANIFEST_DIR?.trim()
   if (env) return resolve(env)
   const webuiHome = process.env.HERMES_WEB_UI_HOME?.trim() || process.env.HERMES_WEBUI_STATE_DIR?.trim()
-  return webuiHome ? join(webuiHome, 'run-manifests') : join(homedir(), '.hermes-web-ui', 'run-manifests')
+  return webuiHome ? join(webuiHome, 'run-manifests') : underWebUi('run-manifests')
 }
 
 function dayStamp(ms = Date.now()): string {
@@ -175,7 +176,7 @@ export interface RunCostOptions {
 function tracesDirOf(opts: RunCostOptions = {}): string {
   if (opts.tracesDir) return resolve(opts.tracesDir)
   const env = process.env.HERMES_TRACES_DIR?.trim()
-  return env ? resolve(env.replace(/^~/, homedir())) : join(homedir(), '.hermes', 'traces')
+  return env ? resolve(env.replace(/^~/, homedir())) : underHermes('traces')
 }
 
 interface TraceLine {

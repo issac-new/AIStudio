@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFile
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 /** messages 表 verbatim 行（列清单=schemas.ts MESSAGES_SCHEMA 全列，逐字段保真，
  * 不做任何摘要/截断——红线）。 */
@@ -98,7 +99,7 @@ export interface SessionArchiveIndex {
 export function contextArchiveDir(): string {
   const env = process.env.CONTEXT_ARCHIVE_DIR?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return resolve(homedir(), '.hermes-web-ui', 'overlay', 'context-archive')
+  return underWebUi('overlay', 'context-archive')
 }
 
 /** sessionId 路径净化（board-graph boardKgPath 同款）：防路径穿越，异 id 撞同

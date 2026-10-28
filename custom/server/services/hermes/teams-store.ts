@@ -10,9 +10,9 @@
 
 import { mkdir, readFile, rename, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
-import { homedir } from 'os'
-import { dirname, join } from 'path'
+import { dirname } from 'path'
 import { randomUUID } from 'crypto'
+import { underWebUi } from '../../lib/paths'
 
 // Windows 杀软/索引器短暂占用目标文件时 rename 抛 EPERM/EACCES(libuv
 // MoveFileExW 的锁语义差异),带退避重试;POSIX 首次即成功,零额外等待。
@@ -60,7 +60,7 @@ export interface TeamsStore {
 const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#ef4444', '#6366f1']
 
 function defaultTeamsPath(): string {
-  return join(homedir(), '.hermes-web-ui', 'overlay', 'teams.json')
+  return underWebUi('overlay', 'teams.json')
 }
 
 function toStringArray(value: unknown): string[] {

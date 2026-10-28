@@ -15,6 +15,7 @@ import { readdirSync, readFileSync, statSync, readlinkSync, existsSync, mkdirSyn
 import { join, resolve, dirname, relative, sep } from 'node:path'
 import { homedir } from 'node:os'
 import { atomicWriteText } from '../lib/fs-store'
+import { underHermes, underWebUi } from '../lib/paths'
 
 export type SkillScanVerdict = 'safe' | 'caution' | 'dangerous'
 export type SkillFindingSeverity = 'high' | 'medium' | 'low'
@@ -209,10 +210,10 @@ export function scanSkillDir(dir: string, now: () => number = Date.now): SkillSc
 export function defaultScanRoots(): string[] {
   const env = process.env.SKILLGOV_SCAN_ROOTS?.trim()
   if (env) return env.split(':').map((s) => resolve(s.replace(/^~/, homedir()))).filter(Boolean)
-  const roots = [join(homedir(), '.hermes', 'skills'), join(homedir(), '.agents', 'skills')]
+  const roots = [underHermes('skills'), join(homedir(), '.agents', 'skills')]
   const profilesRoot = process.env.HERMES_PROFILES_ROOT?.trim()
     ? resolve(process.env.HERMES_PROFILES_ROOT.replace(/^~/, homedir()))
-    : join(homedir(), '.hermes', 'profiles')
+    : underHermes('profiles')
   try {
     for (const p of readdirSync(profilesRoot).filter((d) => !d.startsWith('.')).slice(0, MAX_PROFILES)) {
       roots.push(join(profilesRoot, p, 'skills'))
@@ -265,7 +266,7 @@ export interface SkillScanSummary {
 function ledgerFile(): string {
   return process.env.SKILLGOV_SCAN_LEDGER?.trim()
     ? resolve(process.env.SKILLGOV_SCAN_LEDGER.replace(/^~/, homedir()))
-    : join(homedir(), '.hermes-web-ui', 'skillgov', 'skill-scan.jsonl')
+    : underWebUi('skillgov', 'skill-scan.jsonl')
 }
 
 const LEDGER_CAP = 500

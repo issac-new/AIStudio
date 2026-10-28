@@ -3,10 +3,10 @@
 // append-only JSONL（模式同 toolpipeline/tool-hooks.ts）：每次判定全字段留痕、
 // 不落原文（只落 sha1，脱敏纪律），超 2×CAP 粗截断保后半。
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
 import type { GuardDecision } from './types'
 import { atomicWriteText } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface GuardAuditEntry extends GuardDecision {
   ts: number
@@ -20,7 +20,7 @@ const CAP = 1000
 function auditDir(): string {
   const env = process.env.TOOLRESULTGUARD_AUDIT_DIR?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'toolresultguard-audit')
+  return underWebUi('toolresultguard-audit')
 }
 
 function auditFile(): string {

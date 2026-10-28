@@ -8,8 +8,8 @@
 //    衔接 414 评审域语义）。
 // 存储：每 plan 一份 JSON（幂等 planId），HERMES_PLAN_DIR 降级同款。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export type PlanState = 'requested' | 'confirmed' | 'auto-approved' | 'rejected' | 'executing'
 
@@ -39,7 +39,7 @@ export function planDir(): string {
   if (env) return resolve(env)
   const cwd = process.cwd()
   if (writable(cwd)) return resolve(cwd, '.plan-mode')
-  return join(homedir(), '.hermes-web-ui', 'plan-mode')
+  return underWebUi('plan-mode')
 }
 
 function planFile(planId: string): string {

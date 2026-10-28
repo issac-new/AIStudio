@@ -23,6 +23,7 @@ import { promisify } from 'node:util'
 import { mcpConfigDir } from '../mcpconfig/mcp-config'
 import { REGISTRY_KINDS, readRegistry, type RegistryKind } from '../governance/registry-admin'
 import { repoRoot } from '../governance/governance-controller'
+import { underHermes } from '../lib/paths'
 
 const exec = promisify(execFile)
 
@@ -254,7 +255,7 @@ export function collectMcpRecords(): { records: RawCapabilityRecord[]; info: Cat
 export function skillsDir(): string {
   const env = process.env.HERMES_SKILLS_DIR?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes', 'skills')
+  return underHermes('skills')
 }
 
 /** SKILL.md frontmatter 的 version 字段（yaml 头内 /^version:/；缺席返 null） */

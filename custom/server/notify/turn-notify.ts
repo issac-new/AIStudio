@@ -6,8 +6,8 @@
 // 配置：HERMES_TURN_NOTIFY_CMD（命令模板；{turn}/{status} 占位替换）；
 // HERMES_TURN_NOTIFY=off 关；触发条件=轮终态（completed|failed|interrupted）。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
-import { homedir } from 'os'
-import { join, resolve } from 'path'
+import { join } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export type TurnStatus = 'completed' | 'failed' | 'interrupted'
 
@@ -52,7 +52,7 @@ export interface NotifyRecord {
 }
 
 function notifyDir(): string {
-  return join(homedir(), '.hermes-web-ui', 'turn-notify')
+  return underWebUi('turn-notify')
 }
 
 export function recordNotify(rec: NotifyRecord): void {
@@ -69,7 +69,7 @@ export function recordNotify(rec: NotifyRecord): void {
 
 export function listNotifies(limit = 20): NotifyRecord[] {
   try {
-    const f = join(join(homedir(), '.hermes-web-ui', 'turn-notify'), 'log.json')
+    const f = join(underWebUi('turn-notify'), 'log.json')
     const log: NotifyRecord[] = JSON.parse(readFileSync(f, 'utf8'))
     return log.slice(-limit).reverse()
   } catch {

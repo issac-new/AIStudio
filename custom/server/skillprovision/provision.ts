@@ -15,6 +15,7 @@ import type {
   ApplyAction, ApplyProfileResult, ApplyResult, RollbackProfileResult, RollbackResult, SkillEntry,
 } from './types'
 import { atomicWriteText } from '../lib/fs-store'
+import { atomicCopyDir } from '../lib/fs-store'
 
 const LEDGER = '.skill-provisioning.json'
 const SAFE_PROFILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
@@ -148,14 +149,8 @@ function pickSource(entries: SkillEntry[] | undefined): { source?: SkillEntry; r
 function copySkillDir(source: string, target: string): void {
   const parent = dirname(target)
   mkdirSync(parent, { recursive: true })
-  const tmp = join(parent, `.${target.slice(target.lastIndexOf(sep) + 1)}.tmp-${process.pid}-${Date.now()}`)
-  try {
-    cpSync(source, tmp, { recursive: true, dereference: true })
-    renameSync(tmp, target)
-  } catch (e) {
-    try { rmSync(tmp, { recursive: true, force: true }) } catch { /* ignore */ }
-    throw e
-  }
+  // 2026-10-28 收敛：目录级原子拷贝单一实现（lib/fs-store）
+  atomicCopyDir(source, target)
 }
 
 function emptyApply(dryRun: boolean, reason: string): ApplyResult {

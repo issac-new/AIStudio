@@ -7,10 +7,10 @@
 // 审计与 govbus 可见（跨进程重启仍然有效）。真正把命中变成「跳过执行」需要
 // 执行器返回缓存结果，属后续执行器改造；在此之前不改变工具执行语义。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
-import { dirname, join, resolve } from 'path'
+import { dirname, resolve } from 'path'
 import { computeIdempotencyKey } from './contract'
 import { atomicWriteText } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface IdempotencyRecord {
   key: string
@@ -40,7 +40,7 @@ export interface IdempotencyStoreOptions {
 function defaultPath(): string {
   const env = process.env.TOOL_IDEMPOTENCY_STORE?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'tool-idempotency.json')
+  return underWebUi('tool-idempotency.json')
 }
 
 /**

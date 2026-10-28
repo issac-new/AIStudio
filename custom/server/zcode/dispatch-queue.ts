@@ -12,8 +12,8 @@
 // - 出队语义：pending 项按入队序出队（origin 决定优先：user 先于 autonomy）。
 // 执行面（真派发）复用 P3 派单链；本域只管排队/让位/出队顺序——单一职责。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
-import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { underWebUi } from '../lib/paths'
 
 export type QueueOrigin = 'user' | 'autonomy'
 export type QueueState = 'pending' | 'yielded' | 'dispatched' | 'cancelled'
@@ -48,7 +48,7 @@ export function queueDir(): string {
   if (env) return resolve(env)
   const cwd = process.cwd()
   if (writable(cwd)) return resolve(cwd, '.dispatch-queue')
-  return join(homedir(), '.hermes-web-ui', 'dispatch-queue')
+  return underWebUi('dispatch-queue')
 }
 
 function queueFile(workspacePath: string): string {

@@ -7,10 +7,10 @@
 // 审批在各 profile 的 command_allowlist（tools/approval.py），两平面分域、互不写入
 // 属设计而非缺陷。跨机人工裁决（HumanGate）以 Matrix 房间事件为准，不入本库。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync } from 'fs'
-import { homedir } from 'os'
-import { dirname, join, resolve } from 'path'
+import { dirname, resolve } from 'path'
 import type { ApprovalDecision, ApprovalRule, DefaultMode } from './approval-domain'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export interface ApprovalRulesFile {
   defaultMode: DefaultMode
@@ -31,7 +31,7 @@ function normalizeRuleIdentity(rule: ApprovalRule): ApprovalRule {
 export function resolveApprovalRulesPath(): string {
   const env = process.env.HERMES_APPROVAL_RULES_FILE?.trim()
   if (env) return resolve(env)
-  return join(homedir(), '.hermes-web-ui', 'approval', 'rules.json')
+  return underWebUi('approval', 'rules.json')
 }
 
 /** S2 路径收编前的旧档（cwd/.approval/rules.json）：仅作 G6 一次性迁移源。 */

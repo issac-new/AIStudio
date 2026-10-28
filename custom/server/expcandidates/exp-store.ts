@@ -1,19 +1,19 @@
 // overlay[expcandidates] 经验候选 store（eval store 同模式）+ 提取执行面。
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import type { ExpCandidate, ExpStoreShape } from './exp-types'
 import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract'
 import { extractQgateRunCandidates, readQgateRunRows, resolveQgateRunsDir } from './qgate-ingest'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 import { atomicWriteJson } from '../lib/fs-store'
+import { underWebUi } from '../lib/paths'
 
 export function storeDir(): string {
   const env = process.env.EXP_STORE?.trim()
   if (env) return env
   // 隔离环境（SIM 推演）随 HERMES_WEB_UI_HOME 走，不写宿主 home（token-auth appHome 同链）
   const webuiHome = process.env.HERMES_WEB_UI_HOME?.trim() || process.env.HERMES_WEBUI_STATE_DIR?.trim()
-  return webuiHome ? join(webuiHome, 'expcandidates') : join(homedir(), '.hermes-web-ui', 'expcandidates')
+  return webuiHome ? join(webuiHome, 'expcandidates') : underWebUi('expcandidates')
 }
 
 function storePath(): string {

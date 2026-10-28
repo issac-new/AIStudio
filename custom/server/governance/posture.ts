@@ -16,7 +16,6 @@
 // 期望值：~/.hermes-web-ui/posture-expectations.json（运维手编；缺省=未声明，
 // 偏差面只报「实际 vs 已声明期望」，不编造期望）。
 import { existsSync, readdirSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import { hermesHome as resolveHermesHome } from '../lib/paths'
 import { underWebUi } from '../lib/paths'
@@ -71,7 +70,7 @@ export interface GovernancePosture {
 export function postureExpectationsPath(): string {
   const env = process.env.HERMES_POSTURE_EXPECTATIONS?.trim()
   if (env) return env
-  return join(homedir(), '.hermes-web-ui', 'posture-expectations.json')
+  return underWebUi('posture-expectations.json')
 }
 
 interface ExpectationsDoc {
@@ -146,7 +145,7 @@ export interface PostureDeps {
 /** 采集治理姿态（全只读；fail-soft 到面粒度）。 */
 export function collectGovernancePosture(deps: PostureDeps = {}): GovernancePosture {
   const env = deps.env ?? process.env
-  const hermesHome = deps.hermesHome || env.HERMES_HOME || join(homedir(), '.hermes')
+  const hermesHome = deps.hermesHome || env.HERMES_HOME || resolveHermesHome()
   const now = deps.now?.() ?? Date.now()
 
   const global: PostureGlobal = {

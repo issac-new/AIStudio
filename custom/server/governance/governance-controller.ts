@@ -21,7 +21,6 @@ import { execFile } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'fs'
 import { mkdir, readFile, writeFile, rename } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
-import { homedir } from 'os'
 import { listReviews } from '../review/review-store'
 import { registerDomainAudit } from './domain-audit'
 import { registerLifecycleRoutes } from './lifecycle/controller'
@@ -50,6 +49,7 @@ import {
 } from '../knowledge/board-graph'
 import { readDispatchLedger } from './dispatch-ledger'
 import { collectBoardStatus } from './board-status'
+import { underWebUi } from '../lib/paths'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -57,7 +57,7 @@ const router = new Router({ prefix: '/api/governance' })
 function gateSyncMarkerPath(): string {
   const env = process.env.GOVERNANCE_GATE_SYNC_MARKER?.trim()
   if (env) return resolve(env)
-  return resolve(homedir(), '.hermes-web-ui', 'overlay', 'gate-sync-marker.json')
+  return underWebUi('overlay', 'gate-sync-marker.json')
 }
 
 function readGateSyncMarker(): Set<string> {
