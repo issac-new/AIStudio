@@ -38,6 +38,18 @@
 4. **活体入口必须同步**：本文件、根 `README.md`、根 `AGENTS.md` 中指向文档的链接，在文件迁移时必须同批更新。
 5. **判定不了的不搬**：来源或用途不明确的文档留在原位并在本文件登记，不按猜测归档。
 
+## 证据与档案分轨（禁止合并）
+
+仓内有五类「证据/档案」目录，各自服务不同契约，合并会打断可追溯性或打包边界：
+
+| 轨 | 位置 | 契约 |
+|---|---|---|
+| 交付证据（本仓走查） | `evidence/` | 2026-10-28 起冻结存量截图，**禁新增二进制**（守门 `custom/__tests__/evidence-binary-freeze.test.ts`）；新截图落本地不入库 |
+| 门禁框架自证 | `custom/qgate/evidence/` | qgate 子项目自己的实证材料，随该子项目打包与发布 |
+| 门禁运行态 | `.qgate/` | 可再生（junit、hooks.log、cache），不入库 |
+| 退役与移存补丁 | `.archived-patches/`（整族退役）、`patches/_skip-*`（升级轮移存） | 只作历史锚，inject 不消费 |
+| 记录镜像 | `runtime/hermes-records/research/retired-docs/` | 脱敏同步副本，可能与现行 specs 同名，**不得按 docs 去重** |
+
 ## 2026-10-28 目录整理说明
 
 - `docs/` 根 30 个日期前缀文件（28 篇 md 与 1 份 docx、1 份 pdf）迁入 `reports/`；`docs/` 根只余现行入口与本索引。

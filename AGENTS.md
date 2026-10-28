@@ -11,8 +11,9 @@
 5. 失败不隐瞒：测试红、步骤跳过、未验证项必须写进交付说明。
 6. 安全纪律：审计不落敏感原值；密钥只存 env 名；不削弱既有安全边界。
 7. 注释用中文，标识符用英文；注释只写约束与来源，不复述代码。
-8. 本仓只存源码/脚本/文档/依赖清单；中间产物（node_modules、dist、runs、截图、离线包、evidence 二进制）不入库（.gitignore 立法，2026-10-24 用户指示）。
+8. 本仓只存源码/脚本/文档/依赖清单；中间产物（node_modules、dist、runs、截图、离线包、evidence 二进制）不入库（.gitignore 立法，2026-10-24 用户指示）。`evidence/` 内 2026-10-28 之前的历史截图按冻结白名单保留、禁新增（守门 `custom/__tests__/evidence-binary-freeze.test.ts`）。
 9. 访问上游树用统一解析序：显式 env（`OVERLAY_UPSTREAM_ROOT`）→ 仓内 `vendor/` → 旧兄弟 `upstream/`（先例 `scripts/build.mjs`、`scripts/serve-server.mjs`）。不要写死 `../upstream` 的层级假设——单仓检出没有兄弟 upstream，写死必坏。
+10. 运行时部署（`scripts/deploy-agent-runtime.mjs`）默认**保留安装树里与模板不同的文件**并报告；确需以模板覆盖时显式 `--force`。模板落后于宿主时应把宿主已知良好态回灌 `runtime/`，不要强推覆盖。
 
 ## 目录导航
 

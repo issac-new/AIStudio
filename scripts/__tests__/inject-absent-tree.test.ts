@@ -10,18 +10,22 @@ import { join, resolve } from 'node:path'
 
 const ROOT = resolve(__dirname, '../..')
 
-function injectAt(upstreamRoot: string, cwd = ROOT): { code: number; out: string } {
+function injectAt(upstreamRoot: string, cwd = ROOT): { code: number; out: string; stateDir: string } {
   const fakeHome = mkdtempSync(join(tmpdir(), 'sa-home-'))
+  const stateDir = join(fakeHome, 'state')
   // HOME 隔离：inject 出口的 deploy-agent-runtime 会写 ~/.hermes/hermes-agent
   // （B1 双树同步），测试绝不碰真实 home——homedir() 跟随 $HOME。
   // stdout＋stderr 合并采集：SKIP 走 console.warn（stderr）。
   const r = spawnSync('node', [join(ROOT, 'scripts/inject.mjs')], {
-    env: { ...process.env, OVERLAY_UPSTREAM_ROOT: upstreamRoot, HOME: fakeHome },
+    // OVERLAY_STATE_OUT：派生 config 与注入清单落临时目录——真实 inject 会按脚本位置
+    // 写仓根，测试若落仓根会把临时树路径烙进 vite.config.overlay.ts（2026-10-28 实录：
+    // 随后 build:full 的产物因此写进已删除的临时树）。
+    env: { ...process.env, OVERLAY_UPSTREAM_ROOT: upstreamRoot, HOME: fakeHome, OVERLAY_STATE_OUT: stateDir },
     encoding: 'utf8',
     cwd,
     maxBuffer: 16 * 1024 * 1024,
   })
-  return { code: r.status ?? 1, out: (r.stdout ?? '') + (r.stderr ?? '') }
+  return { code: r.status ?? 1, out: (r.stdout ?? '') + (r.stderr ?? ''), stateDir }
 }
 
 describe('inject 缺目标树跳过（standalone cockpit 包形态）', () => {
@@ -37,6 +41,8 @@ describe('inject 缺目标树跳过（standalone cockpit 包形态）', () => {
       expect(existsSync(join(tmp, 'hermes-studio/package.json'))).toBe(true)
       expect(existsSync(join(tmp, 'hermes-agent'))).toBe(false)
 
+      const repoConfig = join(ROOT, 'vite.config.overlay.ts')
+      const before = existsSync(repoConfig) ? readFileSync(repoConfig, 'utf8') : null
       const r = injectAt(tmp, tmp)
       expect(r.code, `standalone inject 应成功：\n${r.out.slice(-600)}`).toBe(0)
       expect(r.out).toContain('(hermes-agent tree absent, standalone/partial checkout)')
@@ -44,6 +50,10 @@ describe('inject 缺目标树跳过（standalone cockpit 包形态）', () => {
       // studio 全量应用（约 336 个）且无 zcode 报错（zcodeRoot 缺席=容错空集）
       const applied = (r.out.match(/applied patch/g) ?? []).length
       expect(applied, 'studio 补丁应全量应用').toBeGreaterThan(300)
+      // 隔离锚：派生 config 落 OVERLAY_STATE_OUT，仓根同名文件不得被创建或改写
+      expect(existsSync(join(r.stateDir, 'vite.config.overlay.ts')), '派生 config 应落 OVERLAY_STATE_OUT').toBe(true)
+      const after = existsSync(repoConfig) ? readFileSync(repoConfig, 'utf8') : null
+      expect(after, '仓根 vite.config.overlay.ts 被测试污染').toBe(before)
     }, 300_000)
 
   it('缺席判定锚与汇总行在源码在位（防漂移）', () => {

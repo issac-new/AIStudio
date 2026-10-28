@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import os
 import random
 import re
 import secrets
@@ -82,6 +83,8 @@ def _sqlite_connect(path: Path) -> sqlite3.Connection:
     # 旧板上残留的 kanban_guard_* 触发器在 WHEN 子句引用该函数，未注册的连接首个写
     # 即 "no such function: kanban_write_sanctioned"（2026-10-22 升级轮 aiteam/[已移除] 等
     # 四板 500 实锤）。委托子进程上下文由 guard_fn 判 0 拒写，fail-closed 语义不变。
+    # UDF 常量 GUARDRAIL_UDF_NAME（= "kanban_write_sanctioned"）与注册实现
+    # register_write_sanction_udf 定义于 kanban_db.py（上游 10-23 收编 UDF 层后的定义位）。
     _kb.register_write_sanction_udf(conn)
     return conn
 
@@ -782,6 +785,15 @@ def connect(db_path: Optional[Path] = None, *, board: Optional[str] = None) -> s
             # threads can't race the ALTER TABLE pass with stale PRAGMA snapshots.
             if resolved not in _INITIALIZED_PATHS:
                 conn.executescript(_kb.SCHEMA_SQL)
+                # >>> swarm:kanban-guardrail-envgate >>>
+                # Opt-in deployment gate (t_d37428d2, restored 2026-10-23 after
+                # upstream moved _init_if_needed out of kanban_db.py and the old
+                # hunk lost its anchor): arm the sanctioned-writer triggers on
+                # first init when HERMES_KANBAN_WRITE_GUARDRAIL=1. Guardrail-regress
+                # P6 verifies both the =1 and =0 sides.
+                if os.environ.get("HERMES_KANBAN_WRITE_GUARDRAIL") == "1":
+                    _kb.install_guardrail_triggers(conn)
+                # <<< swarm:kanban-guardrail-envgate <<<
                 _migrate_add_optional_columns(conn)
                 _INITIALIZED_PATHS.add(resolved)
 
