@@ -8,6 +8,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { ingestRunProgress } from './run-ingest'
+import { hermesHome } from '../../lib/paths'
 
 export interface SimRunProgress {
   runId: string
@@ -36,7 +37,7 @@ export function parseRunProgress(raw: string): SimRunProgress | null {
   return { runId, done, total, doneSteps, updatedTs, ...(scope ? { scope } : {}), ...(fixturesFrom ? { fixturesFrom } : {}) }
 }
 
-export function runProgressPath(homeDir = process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')): string {
+export function runProgressPath(homeDir = process.env.HERMES_HOME?.trim() || hermesHome()): string {
   return join(homeDir, 'run-progress.json')
 }
 

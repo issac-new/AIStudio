@@ -15,6 +15,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { readdirSync } from 'node:fs'
+import { hermesHome, underHermes } from '../../lib/paths'
 
 /** 大脑思想核（kanban task 投影） */
 export interface MindThought {
@@ -94,7 +95,7 @@ function toIso(epochSec: number | null | undefined): string | null {
  * 单库入口保留（测试/单库部署兼容）；装配面改走 projectMindAggregated。
  */
 export function projectMindFromKanban(dbPath?: string): MindProjection {
-  const file = dbPath ?? join(homedir(), '.hermes', 'kanban.db')
+  const file = dbPath ?? underHermes('kanban.db')
   const single = projectMindFromDbFile(file, null)
   if (!single) return { thoughts: [], runs: [], relations: [], available: false }
   return { ...single, available: true }
@@ -165,7 +166,7 @@ function projectMindFromDbFile(file: string, boardSlug: string | null): DbProjec
  * 任一源可开即 available:true；分板 runId 以 `<slug>:<id>` 限定防跨板撞键。
  */
 export function projectMindAggregated(homeDir?: string): MindProjection {
-  const home = homeDir?.trim() || process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  const home = homeDir?.trim() || process.env.HERMES_HOME?.trim() || hermesHome()
   const sources: Array<{ file: string; slug: string | null }> = [
     { file: join(home, 'kanban.db'), slug: null },
   ]

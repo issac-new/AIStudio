@@ -5,6 +5,7 @@ import { execFile } from 'child_process'
 import { existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { promisify } from 'util'
+import { hermesHome, hermesWebUiHome } from '../../lib/paths'
 
 /**
  * 任务 workspace_path 放行缓存。
@@ -62,14 +63,14 @@ function isPathWithin(targetPath: string, basePath: string): boolean {
 
 // hermes base：default profile 时 ~/.hermes，其它 profile 时 ~/.hermes（detectHermesRootHome 等价）
 function getHermesBaseDir(): string {
-  return resolve(homedir(), '.hermes')
+  return hermesHome()
 }
 
 // WebUI 状态根：与 custom/server 其他域同序（HERMES_WEB_UI_HOME → HERMES_WEBUI_STATE_DIR → ~/.hermes-web-ui）
 function getWebUiHome(): string {
   return process.env.HERMES_WEB_UI_HOME?.trim()
     || process.env.HERMES_WEBUI_STATE_DIR?.trim()
-    || resolve(homedir(), '.hermes-web-ui')
+    || hermesWebUiHome()
 }
 
 /**

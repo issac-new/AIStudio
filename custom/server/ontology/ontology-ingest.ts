@@ -22,6 +22,7 @@ import { getEventLogStore } from '../loop/graph/event-log-registry'
 import { loadInstances, loadSpec, replaceIngested } from './ontology-store'
 import { validateInstances } from './ontology-validate'
 import type { OntologyInstance, Violation } from './ontology-types'
+import { hermesHome } from '../lib/paths'
 
 export const INGEST_PREFIX = 'kb:'
 
@@ -206,5 +207,5 @@ export function kanbanSourceOverview(homeDir?: string): Array<{ slug: string; pa
 }
 
 export function defaultHome(): string {
-  return process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  return process.env.HERMES_HOME?.trim() || hermesHome()
 }

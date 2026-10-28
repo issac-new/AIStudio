@@ -29,6 +29,7 @@ import { aliasCapFromEnv, checkQualityGate, evaluateKgQuality, qualityGateEnable
 // ---- bridge 操作（复用 decisiongraph 客户端的执行器注入） ----
 import { semanticaPython, setBridgeRunnerForTests, bridgeScript, type BridgeRunner } from '../decisiongraph/semantica-client'
 import { spawn } from 'node:child_process'
+import { hermesHome, underHermes, underWebUi } from '../lib/paths'
 
 export interface EntityConflict {
   entityId: string
@@ -90,7 +91,7 @@ async function runKgOp<T>(op: string, kgPath: string, input: Record<string, unkn
 export function boardKgDir(): string {
   const env = process.env.SEMANTICA_BOARD_KG_DIR?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes', 'semantica')
+  return underHermes('semantica')
 }
 
 export function boardKgPath(slug: string): string {
@@ -100,7 +101,7 @@ export function boardKgPath(slug: string): string {
 
 function markerPath(slug: string): string {
   const base = process.env.GOVERNANCE_BOARD_SYNC_MARKER_DIR?.trim()
-  const dir = base ? resolve(base) : resolve(homedir(), '.hermes-web-ui', 'overlay')
+  const dir = base ? resolve(base) : underWebUi('overlay')
   return join(dir, `board-sync-${slug.replace(/[^A-Za-z0-9._-]/g, '_')}.json`)
 }
 
@@ -111,7 +112,7 @@ export interface AdjudicationRecord { action: 'keep-existing' | 'take-incoming';
 
 function adjudicatedPath(slug: string): string {
   const base = process.env.GOVERNANCE_BOARD_ADJUDICATED_DIR?.trim() ?? process.env.GOVERNANCE_BOARD_SYNC_MARKER_DIR?.trim()
-  const dir = base ? resolve(base) : resolve(homedir(), '.hermes-web-ui', 'overlay')
+  const dir = base ? resolve(base) : underWebUi('overlay')
   return join(dir, `board-adjudicated-${slug.replace(/[^A-Za-z0-9._-]/g, '_')}.json`)
 }
 
@@ -133,7 +134,7 @@ function writeAdjudicated(slug: string, map: Record<string, AdjudicationRecord>)
 
 function inboxPath(): string {
   const env = process.env.GOVERNANCE_CONFLICT_INBOX?.trim()
-  return env ? resolve(env) : resolve(homedir(), '.hermes-web-ui', 'overlay', 'conflict-inbox.jsonl')
+  return env ? resolve(env) : underWebUi('overlay', 'conflict-inbox.jsonl')
 }
 
 // ---- 冲突收件箱（append-only JSONL） ----
@@ -293,7 +294,7 @@ function writeMarker(slug: string, seen: Set<string>): void {
 /** 单板同步：结案（done/archived）任务→实体+关系；conflicts 进收件箱。 */
 export async function syncBoardGraph(slug: string, boardDb?: string): Promise<BoardSyncResult> {
   const res: BoardSyncResult = { board: slug, scanned: 0, ingested: 0, relations: 0, conflicts: [], kgAvailable: semanticaPython() !== null }
-  const home = process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  const home = process.env.HERMES_HOME?.trim() || hermesHome()
   const dbPath = boardDb ?? join(home, 'kanban', 'boards', slug, 'kanban.db')
   if (!existsSync(dbPath)) return res
   let rows: TaskRow[] = []

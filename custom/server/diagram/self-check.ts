@@ -9,6 +9,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 import { isWithinKnownTaskWorkspace } from '../services/hermes/task-workspace-cache'
+import { hermesHome } from '../lib/paths'
 
 export interface DiagramCheckFinding {
   file: string
@@ -42,7 +43,7 @@ export function selfCheckScriptPath(root: string = overlayRoot()): string {
 export function hermesBaseDir(): string {
   const env = process.env.HERMES_HOME?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes')
+  return hermesHome()
 }
 
 /** 内联 isPathWithin（custom 模块不经 symlink import upstream，task-workspace-cache 同例） */

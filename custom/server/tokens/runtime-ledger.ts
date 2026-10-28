@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { hermesHome } from '../lib/paths'
 
 export interface LedgerEvent {
   ts: number
@@ -51,7 +52,7 @@ export interface RuntimeLedgerSummary {
 
 /** 候选账本文件：默认 home + 多路 profile home（get_hermes_home 的 profile 覆盖形态）。 */
 export function ledgerCandidateFiles(): string[] {
-  const root = join(homedir(), '.hermes')
+  const root = hermesHome()
   const files = [join(root, 'efficiency', 'ledger.jsonl')]
   try {
     for (const dir of [join(root, 'profiles'), join(root, 'hermes-agent', 'profiles')]) {
