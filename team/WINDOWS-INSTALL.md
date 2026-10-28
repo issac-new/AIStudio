@@ -202,7 +202,7 @@ hermes profile update worker-coder
 
 ---
 
-## Profile Roster (41 profiles / 10 teams)
+## Profile Roster（本仓 30 profiles / 8 teams；41/10 为 2026-10 公开分发包历史口径）
 
 | Team | Profiles | Purpose |
 |------|----------|---------|

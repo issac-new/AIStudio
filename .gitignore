@@ -46,10 +46,14 @@ vite.config.overlay.wt.ts
 
 # swarm-yuan 门禁运行态工件（fail 捕获旗标，2026-10-24 aistudio-dev 重生成轮补法）
 .swarm-yuan/.gate-fail-flag
-# 生成器 create/mark-active 期占位符串被当 PROJECT_DIR 消费的 bug 产物目录（已挂账生成器维护轮）
-/<项目根绝对路径>*
 
 # vendor/ 基线整树入库（含上游跟踪的 plugins/*/dashboard/dist 等资产），只挡本地
 # 构建垃圾；vendor 变更走 VENDOR_SYNC=1 显式通道（pre-commit 钩子挡护）
 vendor/**/.turbo/
 vendor/**/*.tsbuildinfo
+
+# vendor 注入态衍生物（2026-10-28 工程复查）：loop 本地库与 inject 建的 src/custom 符号链
+/vendor/**/.loop/
+/vendor/hermes-studio/packages/server/src/custom
+# 宿主工具缓存（本机生成）
+/.gstack/

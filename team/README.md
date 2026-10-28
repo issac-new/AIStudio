@@ -1,13 +1,14 @@
 # SwarmTeam — Hermes Agent Multi-Profile Distribution
 
 > A production-grade multi-agent system built on [Hermes Agent](https://hermes-agent.nousresearch.com).
-> **41 profiles** across 10 domain teams (swarm / product / ops / platform / aiteam / pay / data / [已移除] / hack / worker), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
+> **30 profiles** in this repo across 8 domain teams (swarm / product / ops / platform / aiteam / pay / data / hack), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
+> 口径：本仓 `team/profiles` 实况=30 profile / 8 团队 / 9 看板（`team/shared/domain-registry.yaml` + `tests/test_board_ownership.py` 机械校验）。下文表格与历史段落里的 41 是 2026-10 公开分发包口径（含已退役的 IC 设计团队 11 个 profile），保留作历史记录，不代表本仓现状。
 
 ## Overview / 概览
 
 This repository distributes a multi-agent team configuration for Hermes Agent. Each profile has its own SOUL.md personality, config.yaml, and role-specific rules. The orchestrator is the single entry point for all Gateway messages (Matrix/Weixin/API Server/Email) and routes tasks to specialist profiles via Kanban boards.
 
-**41 profiles** · **10 teams** · **10 Kanban boards** · persistent worktree workspaces
+**30 profiles** · **8 teams** · **9 Kanban boards** · persistent worktree workspaces
 
 ### Version
 
@@ -22,39 +23,39 @@ Current: **v0.22.5-team.1** (scheme changed 2026-10-27: full 3-segment base trac
 
 ## Profile Roster / Profile 名册
 
-> 本次发布 41 个 profile，横跨 10 个领域团队（本次新增 [已移除] 软件逆向）。[已移除] 家庭团队因家庭隐私不在此仓库。
+> 本仓 30 个 profile，横跨 8 个领域团队。历史分发包曾含 41 个（其中 IC 设计团队 11 个已退役，家庭团队因隐私从不入库）——历史口径保留在下方名册表。
 
 ### Swarm Team (4 profiles) — Software Engineering
 
 | Profile | Title | Role Identity | Core Capabilities | SOUL Lines |
 |---------|-------|---------------|-------------------|------------|
-| `orchestrator` | Orchestrator（调度路由器） | Router, not executor | Smart routing; task decomposition; worker assignment | 274 |
-| `worker-coder` | 开发工程师 (Worker-Coder) | 实现者，不是决策者 | ACP Claude Code delegation; architecture; deployment; code review (absorbed architect/deployer/reviewer) | 220 |
-| `worker-researcher` | 研究分析工程师 (Worker-Researcher) | 调研者，不是决策者 | Multi-source research; information synthesis; report writing | 180 |
-| `worker-tester` | 测试工程师 (Worker-Tester) | 独立验证者 | Independent verification; test design; quality gates | 153 |
+| `orchestrator` | Orchestrator（调度路由器） | Router, not executor | Smart routing; task decomposition; worker assignment | 340 |
+| `worker-coder` | 开发工程师 (Worker-Coder) | 实现者，不是决策者 | ACP Claude Code delegation; architecture; deployment; code review (absorbed architect/deployer/reviewer) | 515 |
+| `worker-researcher` | 研究分析工程师 (Worker-Researcher) | 调研者，不是决策者 | Multi-source research; information synthesis; report writing | 364 |
+| `worker-tester` | 测试工程师 (Worker-Tester) | 独立验证者 | Independent verification; test design; quality gates | 310 |
 
 ### Product Team (2 profiles) — Product Management
 
 | Profile | Title | Role Identity | Core Capabilities | SOUL Lines |
 |---------|-------|---------------|-------------------|------------|
-| `product-manager` | 产品经理 (Product Manager) | 产品领导者，不是功能搬运工 | Problem definition; PRD; RICE prioritization; feedback analysis (absorbed prioritizer/feedback) | 143 |
-| `product-researcher` | 产品研究员 (Product Researcher) | 市场情报专家，不是泛泛调研员 | Competitive analysis; TAM/SAM/SOM; user research; trend identification | 145 |
+| `product-manager` | 产品经理 (Product Manager) | 产品领导者，不是功能搬运工 | Problem definition; PRD; RICE prioritization; feedback analysis (absorbed prioritizer/feedback) | 329 |
+| `product-researcher` | 产品研究员 (Product Researcher) | 市场情报专家，不是泛泛调研员 | Competitive analysis; TAM/SAM/SOM; user research; trend identification | 275 |
 
 ### Ops Team (4 profiles) — DevOps & SRE
 
 | Profile | Title | Role Identity | Core Capabilities | SOUL Lines |
 |---------|-------|---------------|-------------------|------------|
-| `ops-sre` | 站点可靠性工程师 (SRE) | 可靠性守护者 | SLO definition; observability; error budgets; chaos engineering | 142 |
-| `ops-incident-commander` | 事件响应指挥官 (Incident Commander) | 压力下的锚点 | Severity classification; response coordination; post-mortem | 184 |
-| `ops-devops` | DevOps自动化工程师 (DevOps Automator) | 基础设施即代码践行者 | IaC; CI/CD pipelines; K8s; zero-downtime deploy | 151 |
-| `ops-eval` | Agent评估工程师 (Workflow Evaluator) | 工作流度量工程师 | Weekly metrics; 6-dimension assessment; continuous improvement | 205 |
+| `ops-sre` | 站点可靠性工程师 (SRE) | 可靠性守护者 | SLO definition; observability; error budgets; chaos engineering | 239 |
+| `ops-incident-commander` | 事件响应指挥官 (Incident Commander) | 压力下的锚点 | Severity classification; response coordination; post-mortem | 293 |
+| `ops-devops` | DevOps自动化工程师 (DevOps Automator) | 基础设施即代码践行者 | IaC; CI/CD pipelines; K8s; zero-downtime deploy | 340 |
+| `ops-eval` | Agent评估工程师 (Workflow Evaluator) | 工作流度量工程师 | Weekly metrics; 6-dimension assessment; continuous improvement | 417 |
 
 ### Platform Team (2 profiles) — Self-Improving System
 
 | Profile | Title | Role Identity | Core Capabilities | SOUL Lines |
 |---------|-------|---------------|-------------------|------------|
-| `platform-skill-miner` | 平台技能挖掘师 (Skill Miner) | 模式识别者 | Scan completed tasks; pattern clustering; skill extraction | 197 |
-| `platform-ontology-curator` | 本体策展师 (Ontology Curator) | 语义层守门人 | ontology.md maintenance; semantic layer evolution; marking propagation | 203 |
+| `platform-skill-miner` | 平台技能挖掘师 (Skill Miner) | 模式识别者 | Scan completed tasks; pattern clustering; skill extraction | 334 |
+| `platform-ontology-curator` | 本体策展师 (Ontology Curator) | 语义层守门人 | ontology.md maintenance; semantic layer evolution; marking propagation | 334 |
 
 ### AI Team (6 profiles) — AI 研究
 
@@ -134,7 +135,7 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
    (4)    (2)    (4)   (2)    (6)    (4)  (4)  (11)
 ```
 
-**10 Kanban Boards**: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `[已移除]` (IC design), `hack` (authorized security testing), `worker` (general).
+**9 Kanban Boards**（与 `team/shared/domain-registry.yaml` 逐条对应）: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `eda` (IC design，保留为 active 但当前仅有 orchestrator 成员), `hack` (authorized security testing).
 
 ## Key Features / 核心特性
 

@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 # swarm-yuan L2 pre-commit 垫片：spec-first 强拦委托 + vendor 挡护（由 generate-skill.sh 装配，勿手改；
 # 卸载: git config --unset core.hooksPath && rm -rf .swarm-yuan/hooks）
-SF="/Users/cuishi/lab/AIStudio/.claude/skills/aistudio-dev/scripts/spec-first-pre-commit.sh"
-if [ -f "$SF" ]; then
+# 委托脚本按检出根定位（不写死绝对路径）：本地安装态优先 .claude/，其次 .zcode/，
+# 再退到随身携带的 generator 副本；三处皆无则按「未装配」降级（L1/L3 仍生效）。
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+SF=""
+for _c in "$ROOT/.claude/skills/aistudio-dev/scripts/spec-first-pre-commit.sh" \
+          "$ROOT/.zcode/skills/aistudio-dev/scripts/spec-first-pre-commit.sh" \
+          "$ROOT/.swarm-yuan/hooks/spec-first-pre-commit.sh"; do
+  [ -f "$_c" ] && { SF="$_c"; break; }
+done
+if [ -n "$SF" ]; then
   bash "$SF" "$@" || exit $?
 else
   echo "[pre-commit] spec-first 工作区脚本缺席（全新克隆形态），L2 降级跳过；L1/L3 门禁不变。"

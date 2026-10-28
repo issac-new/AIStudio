@@ -9,10 +9,13 @@
         "patches/",
         "registries/",
         "config/",
-        "simharness/（推演程序）",
-        "vendor/hermes-studio（注入态基线源码）"
+        "simharness/",
+        "scripts/",
+        "runtime/pricing/",
+        "runtime/roster/",
+        "vendor/hermes-studio/"
       ],
-      "version": "0.7.39-studio.1",
+      "version": "0.7.39-studio.2",
       "versionCarrier": "RELEASE-NOTES.md",
       "buildCommand": "npm run build:dmg（需将 OVERLAY_UPSTREAM_ROOT 指向仓根 vendor；产物 DMG/zip，desktop 管理独立 hermes runtime）",
       "artifacts": "vendor/hermes-studio/packages/desktop/release/",
@@ -28,6 +31,9 @@
         "registries/",
         "config/",
         "simharness/",
+        "runtime/pricing/",
+        "runtime/roster/",
+        "runtime-manifest.json",
         "vendor/hermes-studio/",
         "vendor/VENDOR.md",
         "docs/USAGE.md",
@@ -36,20 +42,20 @@
         "RELEASE-NOTES.md",
         "RELEASE-MANIFEST.json"
       ],
-      "notes": "simharness/ 推演程序仅仓内运行、不随安装包（DMG）分发（用户裁定 2026-10-26）。源码包含 simharness。standalone 注意：patches/series 含 hermes-agent 路由补丁，独立源码包内 npm run inject 需搭配 agent-teams 源码包（或直接用整体包）——如实注记。驾驶舱 2.x 版本号线自 2.37 后未续，待补记轮对账。"
+      "notes": "simharness/ 推演程序仅仓内运行、不随安装包（DMG）分发（用户裁定 2026-10-26），源码包含 simharness。runtime/pricing 与 runtime/roster 是 build.mjs 强制拷贝进 dist/server/runtime 的资源树，故本模块须自带（与 agent-teams 模块重复声明是有意的：两包都要能独立构建）。standalone 注意：patches/series 含 hermes-agent 路由补丁，独立源码包内 npm run inject 需搭配 agent-teams 源码包（或直接用整体包）——如实注记。2.x 版本线已于 2026-10-27 补记收线，现行线为 0.7.39-studio.N。"
     },
     "agent-teams": {
       "name": "agent teams（多 profile 智能体团队）",
       "includes": [
-        "team/（profiles+skills+shared+patches）",
-        "runtime/（agent 运行时定制，manifest 通道部署到 ~/.hermes/hermes-agent）",
-        "vendor/hermes-agent（上游基线源码，无法经 pip/npm 安装→随包）"
+        "team/",
+        "runtime/",
+        "vendor/hermes-agent/"
       ],
-      "version": "v0.22.5-team.1",
+      "version": "v0.22.5-team.2",
       "versionCarrier": "team/VERSION",
       "buildCommand": "team/skills/devops/public-repo-release 六步（白名单圈资产→secret 扫描→rsync 发布仓）",
       "artifacts": "公开 git 仓工作树（issac-new/SwarmTeam 归档态）＋本清单源码包 aistudio-agent-teams-<ver>-src.tar.gz",
-      "install": "hermes profile install profiles/<name> --alias -y（Windows 离线见 install-windows.ps1）；runtime/ 经 npm run runtime:register 部署到 ~/.hermes/hermes-agent",
+      "install": "hermes profile install profiles/<name> --alias -y（Windows 离线见 install-windows.ps1）；runtime/ 经 npm run runtime:register 部署到 ~/.hermes/hermes-agent——注意本包不含根 package.json 与 scripts/，该命令须在整体包或 cockpit 源码包根执行，或直接 node <整体包>/scripts/runtime/register-runtime.mjs",
       "packageIncludes": [
         "team/",
         "runtime/",
@@ -61,14 +67,14 @@
     "ycode": {
       "name": "Ycode（zcode 受管分叉，编码引擎）",
       "includes": [
-        "vendor/zcode（钉版基线源码，无法经 npm 安装→随包）",
-        "zcode-patches/（分叉增量，series 登记）"
+        "vendor/zcode/",
+        "zcode-patches/"
       ],
       "version": "3.16.2",
       "versionCarrier": "vendor/zcode/package.json",
       "carrierFormat": "json:version",
       "carrierPattern": "8",
-      "buildCommand": "npm run zcode:ensure（pnpm 闭包构建）＋node scripts/zcode-engine.mjs install-cli（→ ~/.hermes/ycode/zcode.cjs）",
+      "buildCommand": "以仓根为 CWD：npm run zcode:ensure（pnpm 闭包构建）＋node scripts/zcode-engine.mjs install-cli（→ ~/.hermes/ycode/zcode.cjs）；本模块包内不含 scripts/，解包后需在整体包/cockpit 包根执行",
       "artifacts": "~/.hermes/ycode/zcode.cjs（单文件部署位）＋本清单源码包 aistudio-ycode-<ver>-src.tar.gz",
       "install": "源码包解包后 zcode-patches 依序 git apply → pnpm install → build；ACP 桥以 ZCODE_BIN 指向部署位（解析序=显式 env＞官方捆绑＞分叉＞桥兜底）",
       "packageIncludes": [
@@ -81,13 +87,13 @@
     "yuan-skill": {
       "name": "yuan skill（swarm-yuan 项目技能生成器）",
       "includes": [
-        "skills/swarm-yuan/（六段目录本体）"
+        "skills/swarm-yuan/"
       ],
-      "version": "v2.95.0",
+      "version": "v2.96.0",
       "versionCarrier": "skills/swarm-yuan/CHANGELOG.md",
       "buildCommand": "bash skills/swarm-yuan/scripts/make-offline-bundle.sh（脚本在 skills/swarm-yuan/scripts/；三档：novendor 5M / 全量 ~52M / everything ~71M）",
       "artifacts": "skills/swarm-yuan/dist/swarm-yuan-offline-<ver>.zip（SHA256SUMS 随包）＋本清单源码包 aistudio-yuan-skill-<ver>-src.tar.gz",
-      "install": "install.sh 多宿主（hermes → ~/.hermes/skills）／install-offline.sh；GitHub release tag 同版本",
+      "install": "install.sh 多宿主（hermes → ~/.hermes/skills）；install-offline.sh 由 make-offline-bundle.sh 生成、只存在于离线包根，源码树内没有该文件；GitHub release tag 同版本",
       "packageIncludes": [
         "skills/swarm-yuan/"
       ],
@@ -101,11 +107,27 @@
     "depSourcePolicy": "第三方依赖源码随包（用户裁定 2026-10-27）：vendor/ 三树为无法经 pip/npm 安装的上游源码，随所属模块整树入包（git archive 只取跟踪文件，node_modules/dist 等产物天然不入）；可经 pip/npm 在线安装的依赖不随包，安装时解析",
     "fullPackage": {
       "name": "aistudio-full",
-      "version": "1.0.0-overlay",
-      "includes": "全仓跟踪源码（git archive HEAD）＝4 模块＋仓级基建（scripts/config/docs/evidence 等）",
-      "note": "整体包可仅凭源码＋pip＋npm 完成本项目安装与测试（vendor 依赖源码随包，registry 依赖在线装）"
+      "version": "1.0.1-overlay",
+      "tag": "v1.0.1-overlay",
+      "includes": "全仓跟踪源码（git archive HEAD）＝4 模块＋仓级基建（scripts/config/docs/reports/evidence 等）",
+      "note": "整体包可仅凭源码＋pip＋npm 完成本项目安装与测试（vendor 依赖源码随包，registry 依赖在线装）。tag 必须指向实际打包的 commit；同版本号不得复用于不同内容。"
     },
+    "repoLevelPaths": [
+      "README.md",
+      "AGENTS.md",
+      "docs/",
+      "assets/",
+      "evidence/",
+      ".github/",
+      ".qgate/",
+      ".swarm-yuan/",
+      "team/",
+      "skills/",
+      "simharness/",
+      "runtime/"
+    ],
+    "repoLevelNote": "repoLevelPaths 是仓级基建/资产，只随整体包分发，不单独成模块包；四条模块包按各自 packageIncludes 圈定。新增顶层目录时须在此登记或归入某模块，否则只出现在整体包且无归属声明。",
     "checksums": "SHA256SUMS（随 dist/release/ 目录）"
   },
-  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 基线谱系 v3.16.1 系列 @3c5b2276；Ycode 包版本 3.16.2。模块大版本对齐基准，与产品扩展序不互推）"
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 包版本 3.16.2、基线谱系 v3.16.1 系列 @3c5b2276。模块大版本对齐基准，与产品扩展序不互推）"
 }

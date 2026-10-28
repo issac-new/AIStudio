@@ -6,11 +6,11 @@
 
 | 位置 | 内容 | 事实源边界 |
 |---|---|---|
-| `~/.hermes/shared/profiles.yaml` | 47 个 profile 的差异清单（toolsets/plugins/skills/端口/assignee） | profile 差异唯一事实源 |
+| `team/shared/profiles.yaml` | 本仓 30 个 profile 的差异清单（toolsets/plugins/skills/端口/assignee）；47 是某次 live 舰队快照口径，非本仓数 | profile 差异唯一事实源 |
 | `~/.hermes/shared/generate-configs.py` | 由 profiles.yaml 生成各 profile 的 config.yaml + .env（精简 override 模式） | 生成器，不要手改产物 |
 | `~/.hermes/shared/.env.common` | 共享密钥/通用变量（`${VAR}` 引用注入 config.yaml） | 密钥唯一事实源 |
-| `~/.hermes/shared/domain-registry.yaml` | 11 个域 → 看板 → profile 成员 → owner 映射 | 域划分事实源 |
-| `~/.hermes/shared/owner-registry.yaml` | 模块级 ownership + matrix 号 + backup | 职责事实源 |
+| `team/shared/domain-registry.yaml` | 9 个域 → 看板 → profile 成员 → owner 映射（`tests/test_board_ownership.py` 断言 9 板） | 域划分事实源 |
+| `team/shared/owner-registry.yaml` | 模块级 ownership + matrix 号 + backup；当前覆盖 12/30 profile（`scope: legacy-partial`），未覆盖者按 orchestrator 兜底 | 职责事实源（部分覆盖，见文件头） |
 | `~/.hermes/shared/capability-graph.yaml` | 各 profile 能力/可靠度（done/(done+failed) 自动聚合） | 自动生成区勿手改 |
 | `~/.hermes/profiles/<name>/` | 每 profile：`SOUL.md`（身份，运行时自动注入，不可改名挪位）+ config.yaml + .env | 角色细则事实源 |
 | `~/.hermes/profiles/_shared/` | 跨角色规则六层（调度/组织/进化/评审/执行/观测）+ templates/ + workflows/ | 过程规则事实源；索引在 `shared-rules-reference.md` |

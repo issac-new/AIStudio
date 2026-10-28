@@ -46,7 +46,7 @@ The installer runs 7 steps automatically:
 | 1 | Check Python 3.11+ / pip / git | System check |
 | 2 | `pip install hermes-agent[all]` | **pip** (internet) |
 | 3 | `hermes setup` (init `~/.hermes/`) | Local |
-| 4 | Install 36 profiles via `hermes profile install` | Local (bundled) |
+| 4 | Install 全部 profile via `hermes profile install`（离线包快照曾为 36；本仓当前 30） | Local (bundled) |
 | 5 | Copy 44 skill packages to `~/.hermes/skills/` | Local (bundled) |
 | 6 | Copy protocols + plugins + patches | Local (bundled) |
 | 7 | Init workspace repo + apply patches | Local |
@@ -138,7 +138,7 @@ SwarmTeam/
 ├── requirements.txt           ← pip dependencies
 ├── ui-tui-package.json        ← npm dependencies (optional TUI)
 ├── WINDOWS-OFFLINE-INSTALL.md ← This file
-├── profiles/                  36 profiles + _shared protocols (6-layer)
+├── profiles/                  profiles + _shared protocols (6-layer)（快照 36；本仓当前 30）
 │   ├── _shared/               ontology, gates, ACP rules
 │   └── orchestrator/plugins/  5 plugins
 ├── skills/                    44 skill packages (700+ SKILL.md)

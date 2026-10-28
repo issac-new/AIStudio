@@ -19,5 +19,7 @@ Vue 3 + TypeScript 客户端扩展层。按功能区目录：`ide/`、`ia2/`、`
 | `ide/` | IDE 页签、会话、模型切换、自检面板 |
 | `cockpit/` | 早期工作台聚合（trace/协作/审批组件仍被复用） |
 | `governance/` | 治理组件与 API 客户端 |
+| `kanban/` | 看板域（公告板、泳道、甘特、列自动化、管理三账） |
+| `matrix-chat/` | Matrix 聊天与统一身份会话（消息面、线程、通知） |
 | `ui/` | 基础控件与设计原语 |
 | `test/setup.ts` | vitest 全局 setup |

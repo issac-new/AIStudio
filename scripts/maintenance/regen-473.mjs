@@ -1,10 +1,15 @@
 // 473 重生成：0.7.26 基线 locale × stash 注入态 locale 深合并 → 写入 ISO 树
 // 语义：overlay 词条（叶子）覆盖，0.7.26 新增词条（base 独有）保留——rebaseline 本义
 import { build } from 'esbuild'
-import { mkdirSync, writeFileSync, readFileSync } from 'fs'
-import { resolve } from 'path'
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
-const ISO = '/Volumes/nvme2230/lab/.wxwork/upstream-iso-20261001/hermes-studio'
+// 发布隔离树：显式 env 优先，其次仓内 vendor（单仓布局），最后回落历史外机路径
+const HERE = dirname(fileURLToPath(import.meta.url))
+const VENDOR_STUDIO = resolve(HERE, '../../vendor/hermes-studio')
+const ISO = process.env.REGEN473_ISO_ROOT?.trim()
+  || (existsSync(VENDOR_STUDIO) ? VENDOR_STUDIO : '/Volumes/nvme2230/lab/.wxwork/upstream-iso-20261001/hermes-studio')
 const STASH = '/tmp/473-regen'
 const TMP = '/tmp/473-regen-bundle'
 mkdirSync(TMP, { recursive: true })

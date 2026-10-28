@@ -3,7 +3,7 @@
 # NOTE: Some tools may need system dependencies (ffmpeg, poppler, etc.)
 #
 # 治理口径（2026-10-24 供应链治理轮）：
-#   - 钉版区＝宿主基线 venv（~/.hermes/hermes-agent，v0.22.4）实测已安装的工具，== 钉版；
+#   - 钉版区＝宿主基线 venv（~/.hermes/hermes-agent，v0.22.5）实测已安装的工具，== 钉版；
 #   - 参考区＝未随基线安装的按需工具（GPU/专用栈等），装前先 `pip index versions <name>`
 #     确认版本并回填 == 后移入钉版区——禁止新增裸名行。
 

@@ -1,4 +1,9 @@
+# scope: legacy-partial —— 本表只覆盖 30 个 profile 中的 12 个（含 worker 三名、ops 四名、
+# pay 三名、data 一名、platform 一名）。未覆盖者按 orchestrator 兜底，不是「无主」。
+# 2026-10-28 对账轮实测：30 个 profile 中 18 个缺 ownership/backup 条目；补全需逐 profile
+# 指定 owner 与 backup（组织决策），故先显式声明覆盖范围，避免被读成全量事实源。
 version: 1
+scope: legacy-partial
 updated: '2026-09-11'
 registry:
 - profile: worker-researcher

@@ -30,7 +30,7 @@ export interface FeatureConfig {
    *  设置语音区 stt/tts tab）。VITE_CUSTOM_VOICE=true 再开。组件与 API 全保留。 */
   voice: boolean;
   /** S3：桌面宠物三件（desktop.pet 路由 + WebPet 浮层 + petdex 商店入口）。
-   *  VITE_CUSTOM_PET=true 再开。 */
+   *  VITE_CUSTOM_PETS=true 再开（env 名为复数；默认关）。 */
   pet: boolean;
   /** S3：connections 的社媒 app tab + ESP32 mcu tab。
    *  VITE_CUSTOM_CONNECTIONS_EXTRAS=true 再开。 */

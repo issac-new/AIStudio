@@ -29,11 +29,12 @@
 | `check-bundle-budget.mjs` | `npm run check:bundle` |
 | `forge-benchmark.mjs` | `npm run bench:expert` |
 | `verify-release-manifest.mjs` / `make-release-packages.mjs` | `npm run release:check` / `npm run release:packages` |
-| `deploy-agent-runtime.mjs` | 由 `inject.mjs`、`build.mjs` 调用（按 `runtime-manifest.json` 同步运行时） |
+| `deploy-agent-runtime.mjs` | 由 `inject.mjs` 在注入出口调用（按 `runtime-manifest.json` 同步运行时）；`build.mjs` 不调用它，只复用同一套上游根解析约定。目标与模板不同默认保留，`--force` 才覆盖 |
 
 ## 根目录其余常驻项
 
-- `diagram-export-png.mjs`、`diagram-self-check.sh`、`sync-diagram-skill.mjs`、`ts-resolve.mjs`、`serve-server.sh`、`archive-agent-patches.sh`、`classify-agent-patch.py`、`loop-migrate.mjs`、`loop-migrate-saas.mjs`：被源码、测试或同族脚本按路径引用，位置即契约。
+- `diagram-export-png.mjs`、`diagram-self-check.sh`、`sync-diagram-skill.mjs`、`ts-resolve.mjs`、`archive-agent-patches.sh`、`classify-agent-patch.py`、`loop-migrate.mjs`、`loop-migrate-saas.mjs`：被源码、测试或同族脚本按路径引用，位置即契约。
+- `serve-server.sh`：POSIX 兼容的旧包装器（`npm run serve` 走 `serve-server.mjs`）；无 package.json/CI/测试调用，保留仅为手工排障通道。
 - 移动上述任一文件前，先 `git grep -F <basename>` 确认调用方，并同批改调用方。
 
 ## 子目录
