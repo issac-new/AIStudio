@@ -17,6 +17,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 /** messages 表 verbatim 行（列清单=schemas.ts MESSAGES_SCHEMA 全列，逐字段保真，
  * 不做任何摘要/截断——红线）。 */
@@ -119,11 +120,9 @@ function indexPath(sessionId: string): string {
 }
 
 /** tmp+rename 写 JSON（board-graph writeMarker 同款纪律）。 */
-function writeJsonAtomic(file: string, data: unknown): void {
-  mkdirSync(join(file, '..'), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}`
-  writeFileSync(tmp, JSON.stringify(data, null, 2))
-  renameSync(tmp, file)
+function writeJsonAtomic(file: string, data: unknown) {
+  // 2026-10-28 收敛：原子写单一实现（custom/server/lib/fs-store）
+  atomicWriteJson(file, data)
 }
 
 function readJson<T>(file: string): T | null {

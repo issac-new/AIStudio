@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSyn
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { appendEvidence } from '../evidence/evidence-store'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export const REVIEW_VERDICTS = ['approve', 'request_changes', 'comment'] as const
 export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number]
@@ -91,15 +92,9 @@ function legacyReviewFile(reviewId: string): string {
 
 /** 原子写（S-B）：tmp+rename，tmp 名带随机后缀防并发同名；rename 前不做 fsync——
  *  断电最坏丢最后一次写，换来永不落半截 JSON（截断→读侧归零→下条小账覆写→全史蒸发）。 */
-function writeJsonAtomic(file: string, data: unknown): void {
-  const tmp = `${file}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`
-  try {
-    writeFileSync(tmp, JSON.stringify(data, null, 2))
-    renameSync(tmp, file)
-  } catch (err) {
-    try { unlinkSync(tmp) } catch { /* 无残留 */ }
-    throw err
-  }
+function writeJsonAtomic(file: string, data: unknown) {
+  // 2026-10-28 收敛：原子写单一实现（custom/server/lib/fs-store）
+  atomicWriteJson(file, data)
 }
 
 /** 坏文件隔离（S-B）：改名 .corrupt.<ts> 留档 + warn，不再静默当"评审不存在"续写。

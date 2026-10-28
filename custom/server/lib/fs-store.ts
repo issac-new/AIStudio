@@ -18,33 +18,30 @@ export interface AtomicWriteOptions {
   indent?: number
 }
 
-/** 原子写 JSON：同目录 tmp → rename，失败清理 tmp */
-export function atomicWriteJson(file: string, value: unknown, opts: AtomicWriteOptions = {}): void {
+/** 原子写文本：同目录随机 tmp → （可选）fsync → rename，失败清理 tmp */
+export function atomicWriteText(file: string, text: string, opts: AtomicWriteOptions = {}): void {
   const dir = dirname(file)
   mkdirSync(dir, { recursive: true })
   const tag = createHash('sha1').update(`${process.pid}:${Date.now()}:${Math.random()}`).digest('hex').slice(0, 12)
   const tmp = join(dir, `.${process.pid}-${tag}.tmp`)
-  const payload = JSON.stringify(value, null, opts.indent ?? 2)
   try {
-    if (opts.fsync) {
-      const fd = openSync(tmp, 'w')
-      try {
-        writeSync(fd, payload)
-        fsyncSync(fd)
-      } finally {
-        closeSync(fd)
-      }
-    } else {
-      mkdirSync(dir, { recursive: true })
-      // 用 writeFileSync 之外的路径以免与上面的 fd 分支重复 import
-      const fd = openSync(tmp, 'w')
-      try { writeSync(fd, payload) } finally { closeSync(fd) }
+    const fd = openSync(tmp, 'w')
+    try {
+      writeSync(fd, text)
+      if (opts.fsync) fsyncSync(fd)
+    } finally {
+      closeSync(fd)
     }
     renameSync(tmp, file)
   } catch (e) {
     if (existsSync(tmp)) { try { rmSync(tmp) } catch { /* tmp 清理失败不掩盖原错 */ } }
     throw e
   }
+}
+
+/** 原子写 JSON：序列化后走 atomicWriteText */
+export function atomicWriteJson(file: string, value: unknown, opts: AtomicWriteOptions = {}): void {
+  atomicWriteText(file, JSON.stringify(value, null, opts.indent ?? 2), opts)
 }
 
 export interface JsonlReadResult<T> {
