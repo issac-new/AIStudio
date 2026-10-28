@@ -5,13 +5,13 @@
 > 人读也一样用——点开主文档即全景。
 >
 > 组件版本与最新核对（上次调研→最新版→能力差异→仓内现状→后续动作）自
-> 2026-10-27 起以 [upstream-analysis/component-ledger.md](./upstream-analysis/component-ledger.md)
-> 台账正本为准；本 README 只索引吸收实施事实。
+> 2026-10-28 起以 [技术组件台账终态单文件](../team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md)
+> 为准；本 README 只索引吸收实施事实。
 
 ## 主文档（必读）
 
-- [upstream-analysis/component-ledger.md](./upstream-analysis/component-ledger.md) —
-  技术组件调研台账正本（2026-10-27 立账）：全量组件的版本核对、能力差异与后续动作。
+- [技术组件台账终态单文件](../team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md) —
+  全量组件的版本核对、能力差异、判级与后续动作（旧 `upstream-analysis/component-ledger.md` 已降为历史档案）。
 - [2026-10-01-upstream-absorption-analysis.md](./2026-10-01-upstream-absorption-analysis.md)
   12 组件源码盘点 + 贴合判断 + 27 项吸收清单 + **附录 27 项执行对账表**（实施终态）。
   逐项终态判定（已落地/核实已存在/记档待环境）与合 main 锚点都在对账表里。

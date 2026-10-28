@@ -1405,7 +1405,7 @@ hermes、swarm-yuan 和全流程推演保留各自的专题事实源与 ADR。
 | 推演步骤与质量门 | [全流程推演方案](2026-10-05-mux-v8-fullflow-plan.md) |
 | 稳定数字与版本 | [设计事实与容量基线](2026-10-23-swarmstudio-design-ledger.md) |
 | 上游版本与升级 | [vendor 基线台账](../../../vendor/VENDOR.md) |
-| 技术组件调研与版本核对 | [组件台账正本](../../upstream-analysis/component-ledger.md) |
+| 技术组件调研与版本核对 | [组件台账终态单文件](../../../team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md) |
 | 发布模块与版本 | [发布清单](../../../RELEASE-MANIFEST.json) |
 | 单项目设计、规格与决策 | [spec 全量索引（外部附件 A）](2026-10-21-swarmstudio-appendix-a-spec-index.md) |
 | 实施计划与研究复盘 | [计划与研究索引（外部附件 B）](2026-10-21-swarmstudio-appendix-b-plans-research.md) |
