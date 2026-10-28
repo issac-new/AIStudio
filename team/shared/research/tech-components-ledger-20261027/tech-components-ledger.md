@@ -18,7 +18,8 @@
 - 🔴 **6 条 delta 全部完成（2026-10-28）**：semantica（196c）、OpenExecutive（113c）、mattpocock/skills（v1.3.1+49c）、x402（273c 全量，spec 核心零推进/SDK 层演进+STANDARDS-MATRIX 4 处刷新）、Autopt（43c 两段式架构演进，G9 fixture 复跑全绿 70 passed）、Cybermes（162c MCP-first 转向，原结论 6 过期/3 成立/1 勘误）。
 - 🟡 **8 条**：DSH next 通道（rc.2→rc.4）、better-harness（0.6.4→0.7.0-alpha2）、pi-harness、AgentENV（v0.2.4）、A2A（v1.0.1）+ delta 后降档 3 条（x402/Autopt/Cybermes，差异已盘点完毕进入吸收决策期）。
 - 🟢 **18 条**：其余全部——RETIRED 4 条（AP2/ACP/openclaw-sec/HexStrikeAI）+ laya 决策退役线 + 完结线（ARL-Next/REAP/OpenSecurity/RedEvoAgent/LongHorizon/HarnessEval-W/Dream-RSI 系/Graph-Engineering/commerce-agents/FIBO/os-taxonomy/ATT&CK 已落地/DeepInfer/deepseek-recipe/Sonic）。
-- 🔴 delta 产物落位：外置盘 research/{semantica,openexec,agent-skills,autopt,cybermes,x402}-delta-20261028/ 各一份报告（卡 t_5bf395b3/t_fb51a770/t_21d69a77/t_767b724d/t_17bc9db5/t_b0c916bb 全 done）。后续动作见各报告三档建议。
+- 🔴 delta 产物落位：外置盘 research/{semantica,openexec,agent-skills,autopt,cybermes,x402}-delta-20261028/ 各一份报告（卡 t_5bf395b3/t_fb51a770/t_21d69a77/t_767b724d/t_17bc9db5/t_b0c916bb 全 done）。
+- **必吸收项已全部落地（13:38 收口，卡 t_87adf8cb/t_f304f7b4 done）**：semantica-runtime 两条 0.7.0 地雷规避+锚点刷新；prompt-injection-guard 反 padding 三关+八分类；skill-fleet-consistency-audit 第五层 unattended 分类；security-domain-delegation v1.4.0 两节（scope-as-code 四字段+out-of-scope 优先+max_requests 熔断 / sanitizeSlug 防穿越红线）；pay-orchestrator STANDARDS-MATRIX 4 处刷新（auth-capture 第四 scheme/§42 upfront 已实现/§43 SDK spendControls 纵深/双周 SOP rev-list>50 触发器）。agent-skills/Autopt 无必吸收项（结论性收口）。
 - 修正记录：x402 原汇总误归 🟡，10-28 复测 ≥100c 封顶升 🔴；Cybermes commits 面波动（since 10-19=0）但 tags v3.5.0 在顶且当日 push，按版本轴维持 🔴。
 - 管线终态（10-28）：hexstrike T1/T2/T3 全 done（T3 四落地物=skill evidence-governed-execution v1.0.0+pentest-methodology-fusion v2.0.0+4 hack profile 接线+skill-catalog 登记）；🔴 delta 六卡全 done。
 
@@ -145,6 +146,7 @@ gh api repos/mattpocock/skills/tags --jq '.[0].name'                            
 
 ## 八、变更日志
 
+- 2026-10-28 13:38 必吸收项全部落地（两张吸收卡 done+机械验收 5 组全过）；台账任务全链完结。
 - 2026-10-28 🔴 六条 delta 全部收口（最后三卡 t_767b724d/t_17bc9db5/t_b0c916bb 13:04 done）；x402/Autopt/Cybermes 按 delta 实测降档 🟡；T3 融合 done。
 - 2026-10-28 类级 bug 修复记录：review 通道强制注入 sdlc-review 技能预载，但该技能已被归档治理收进 .archive/ → review 态卡派给任意 profile 必死循环（ValueError kanban_skills_unavailable）。已从归档恢复到中央库 devops 类别。教训：技能归档前应 grep kanban 源码硬依赖技能名。
 - 2026-10-28 HexStrikeAI 正式 RETIRED（T1/T2 收口触发；T3 融合卡不受影响照常跑）。
