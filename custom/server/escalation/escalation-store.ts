@@ -15,6 +15,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, unlinkS
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { createHash } from 'crypto'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export const ESCALATION_URGENCIES = ['normal', 'urgent', 'critical'] as const
 export type EscalationUrgency = (typeof ESCALATION_URGENCIES)[number]
@@ -113,9 +114,7 @@ function save(req: EscalationRequest): void {
   // tmp+rename 原子写：裸 writeFileSync 半写会产出坏 JSON，被 loadEscalation 的
   // fail-soft 吞掉=该升级无声离开 pending 队列
   const file = escFile(req.escalationId)
-  const tmp = `${file}.tmp-${process.pid}`
-  writeFileSync(tmp, JSON.stringify(req, null, 2))
-  renameSync(tmp, file)
+  atomicWriteJson(file, req)
 }
 
 /** 发起升级（幂等 escalationId）。enforce 模式下同 scope 有未归因前科即拒（甲2 复发纪律）。 */

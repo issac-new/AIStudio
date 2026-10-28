@@ -14,6 +14,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export const DEFAULT_BATCH_SIZE = 3
 export const DEFAULT_BATCH_WINDOW_MS = 30_000
@@ -143,9 +144,7 @@ export function writeTriggerState(state: TriggerState): void {
   try {
     const file = kgTriggerStatePath()
     mkdirSync(join(file, '..'), { recursive: true })
-    const tmp = `${file}.tmp-${process.pid}`
-    writeFileSync(tmp, JSON.stringify(state))
-    renameSync(tmp, file)
+  atomicWriteJson(file, state)
   } catch (err) {
     console.warn(`[kg-trigger] 状态文件写入失败（fail-soft）：${err instanceof Error ? err.message : String(err)}`)
   }

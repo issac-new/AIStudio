@@ -8,6 +8,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFil
 import { dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import type { ManifestLoad, ManifestRole, ProvisionManifest } from './types'
+import { atomicWriteText } from '../lib/fs-store'
 
 const SAFE_SKILL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 
@@ -127,9 +128,7 @@ export function writeManifest(raw: unknown, path: string = manifestPath()): { pa
     backup = `${path}.bak-${new Date().toISOString().replace(/[:.]/g, '-')}`
     copyFileSync(path, backup)
   }
-  const tmp = `${path}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(manifest, null, 2) + '\n', 'utf8')
-  renameSync(tmp, path)
+  atomicWriteText(path, JSON.stringify(manifest, null, 2) + '\n')
   return { path, backup, manifest }
 }
 

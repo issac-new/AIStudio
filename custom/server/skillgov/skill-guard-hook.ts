@@ -18,6 +18,7 @@ import { mkdirSync, appendFileSync, readFileSync } from 'node:fs'
 import { join, resolve, dirname } from 'node:path'
 import { homedir } from 'node:os'
 import { latestVerdictOf, INLINE_SHELL_RE } from './skill-scan'
+import { atomicWriteText } from '../lib/fs-store'
 
 interface PreExecuteVerdict { allow: false; error: string }
 
@@ -46,9 +47,7 @@ function appendGuardAudit(entry: SkillGuardAuditEntry): void {
     const lines = readFileSync(file, 'utf8').split('\n').filter(Boolean)
     if (lines.length > AUDIT_CAP * 2) {
       const { writeFileSync, renameSync } = require('node:fs') as typeof import('node:fs')
-      const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-      writeFileSync(tmp, lines.slice(-AUDIT_CAP).join('\n') + '\n', 'utf8')
-      renameSync(tmp, file)
+  atomicWriteText(file, lines.slice(-AUDIT_CAP).join('\n') + '\n')
     }
   } catch { /* 审计失败 fail-open */ }
 }

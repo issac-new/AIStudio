@@ -153,9 +153,7 @@ export function appendApprovalLog(entry: Omit<ApprovalLogEntry, 'ts'> & { ts?: n
   const trimmed = list.length > CAP ? list.slice(list.length - CAP) : list
   const file = resolveApprovalLogPath()
   mkdirSync(dirname(file), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(trimmed, null, 1), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, trimmed, { indent: 1 })
   return full
 }
 

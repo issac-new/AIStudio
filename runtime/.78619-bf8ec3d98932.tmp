@@ -1,0 +1,44 @@
+[
+  {
+    "id": "wf-mvrowcwx-mlt8",
+    "name": "集群投递",
+    "mode": "serial",
+    "status": "done",
+    "steps": [
+      {
+        "targetKind": "matrix",
+        "ref": "!room1:matrix.test",
+        "instructions": "巡检",
+        "status": "ok",
+        "eventId": "$evt-room1",
+        "reply": "已投递 matrix 房间 !room1:matrix.test（事件 $evt-room1…）——成员网关将原生处理，回复落该房"
+      }
+    ],
+    "createdAt": 1793166269793,
+    "finishedAt": 1793166269794
+  },
+  {
+    "id": "wf-mvrowcvb-j9l6",
+    "name": "双身份并行",
+    "mode": "parallel",
+    "status": "done",
+    "steps": [
+      {
+        "targetKind": "identity",
+        "ref": "worker-coder",
+        "instructions": "a",
+        "status": "ok",
+        "reply": "回执@worker-coder"
+      },
+      {
+        "targetKind": "identity",
+        "ref": "data-arch",
+        "instructions": "b",
+        "status": "ok",
+        "reply": "回执@data-arch"
+      }
+    ],
+    "createdAt": 1793166269735,
+    "finishedAt": 1793166269737
+  }
+]

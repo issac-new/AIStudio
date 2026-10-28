@@ -6,6 +6,7 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { dirname, isAbsolute, join, relative, resolve } from 'path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface SandboxLease {
   id: string
@@ -50,9 +51,7 @@ function readLeases(): SandboxLease[] {
 function writeLeases(leases: SandboxLease[]): void {
   const file = leasePath()
   mkdirSync(dirname(file), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify({ version: 1, leases } satisfies LeaseFile, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, { version: 1, leases } satisfies LeaseFile)
 }
 
 function within(root: string, target: string): boolean {

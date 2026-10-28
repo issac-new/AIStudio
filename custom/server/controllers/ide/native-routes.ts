@@ -25,6 +25,7 @@ import { handleCliSessions, handleDevtoolsLaunch, handleDevtoolsList } from './d
 // 本机 zcode 用量账本与全链路追踪（2026-10-21 dsh-context 数据面吸收轮）：
 // 只读消费 ~/.zcode/cli/db 三张用量表，逻辑全在 zcode-usage.ts，此处只挂分支。
 import { handleUsageContext, handleUsageRounds, handleUsageSessions, handleUsageSummary, handleUsageTools, matchZcodeUsageRoute } from './zcode-usage'
+import { atomicWriteJson } from '../../lib/fs-store'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -240,9 +241,7 @@ async function handleSlashCommandsSave(ctx: Context): Promise<void> {
   }
   const store = slashCommandStorePath()
   // pid+时间戳限定 tmp（对齐 handleEngineModelsPut）：dev 与打包版双进程并发保存时固定名互相截断
-  const tmp = `${store}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify({ commands }, null, 2), 'utf8')
-  renameSync(tmp, store)
+  atomicWriteJson(store, { commands })
   ctx.body = { ok: true, commands }
 }
 
@@ -262,9 +261,7 @@ async function handleEngineModelsPut(ctx: Context): Promise<void> {
   }
   // overlay 独立存储（物理路径锚=本文件 overlay 侧——与 controller 同型）。
   const store = resolve(__dirname, '../../../../runtime/ide-engine-models.json')
-  const tmp = `${store}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(config, null, 2), 'utf8')
-  renameSync(tmp, store)
+  atomicWriteJson(store, config)
   // 层 2 写穿 ~/.zcode/v2/config.json（ide-engine: 前缀隔离）——复用 engine-models
   // 的 writeThroughToEngine（此前本地手抄副本已现漂移面，单一事实源收敛）。
   const passthrough = writeThroughToEngine(config)

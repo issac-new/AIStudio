@@ -1,10 +1,10 @@
 // overlay[constraints] 约束卡 JSON store（eval store 同模式：tmp+rename 原子写、
 // 仅 ENOENT 按空账、_useStoreDirForTests 隔离）。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { atomicWriteJson } from '../lib/fs-store'
 import { homedir } from 'os'
 import { join } from 'path'
 import type { ConstraintCard, ConstraintScope, ConstraintStoreShape } from './constraint-types'
+import { atomicWriteJson } from '../lib/fs-store'
 
 const EMPTY: ConstraintStoreShape = { cards: [], nextSeq: 1 }
 
@@ -38,9 +38,7 @@ export function readConstraintStore(): ConstraintStoreShape {
 export function writeConstraintStore(store: ConstraintStoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
   const file = storePath()
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, store)
 }
 
 // ---------- 校验 ----------

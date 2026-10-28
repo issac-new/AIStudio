@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path'
 import {
   type InstructionLifecycle, type LedgerEntry, type LedgerSource, isTerminal, mapExternalStatus,
 } from './taskledger'
+import { atomicWriteJson } from '../lib/fs-store'
 
 const MAX_ENTRIES = 5_000
 
@@ -34,9 +35,7 @@ function readLedger(): LedgerFile {
 function writeLedger(file: LedgerFile): void {
   const path = ledgerPath()
   mkdirSync(dirname(path), { recursive: true })
-  const tmp = `${path}.tmp`
-  writeFileSync(tmp, JSON.stringify(file, null, 2), 'utf8')
-  renameSync(tmp, path)
+  atomicWriteJson(path, file)
 }
 
 export interface RegisterInput {

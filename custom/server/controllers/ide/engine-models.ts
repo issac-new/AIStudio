@@ -19,6 +19,7 @@ import {
   deniedProviderIds, loadGovernancePolicyStatements, mergePolicyStatements,
   type PolicyStatement,
 } from '../../enginemodels/provider-policy'
+import { atomicWriteJson } from '../../lib/fs-store'
 
 const engineModelsRouter = new Router({ prefix: '/api/ide/engine-models' })
 
@@ -60,9 +61,7 @@ function effectivePolicySnapshot(config: EngineModelConfig) {
 }
 
 function writeAtomic(config: EngineModelConfig): void {
-  const tmp = `${STORE_PATH}.tmp`
-  writeFileSync(tmp, JSON.stringify(config, null, 2), 'utf8')
-  renameSync(tmp, STORE_PATH)
+  atomicWriteJson(STORE_PATH, config)
 }
 
 engineModelsRouter.get('/', (ctx) => {
@@ -510,9 +509,7 @@ export function writeThroughToEngine(config: EngineModelConfig): EnginePassthrou
       }
       keys.push(key)
     }
-    const tmp = `${path}.tmp`
-    writeFileSync(tmp, JSON.stringify(engine, null, 2), 'utf8')
-    renameSync(tmp, path)
+  atomicWriteJson(path, engine)
     const deniedNote = skipped.length > 0 ? `；策略拒配跳过 ${skipped.length} 项` : ''
     return { wrote: true, providerKeys: keys, note: `已写穿 ~/.zcode/v2/config.json（ide-engine: 前缀条目；引擎重载/新会话生效）${deniedNote}` }
   } catch (err) {

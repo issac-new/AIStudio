@@ -6,6 +6,7 @@ import type { ExpCandidate, ExpStoreShape } from './exp-types'
 import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract'
 import { extractQgateRunCandidates, readQgateRunRows, resolveQgateRunsDir } from './qgate-ingest'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export function storeDir(): string {
   const env = process.env.EXP_STORE?.trim()
@@ -36,9 +37,7 @@ export function readExpStore(): ExpStoreShape {
 export function writeExpStore(store: ExpStoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
   const file = storePath()
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, store)
 }
 
 export function listCandidates(): ExpCandidate[] {

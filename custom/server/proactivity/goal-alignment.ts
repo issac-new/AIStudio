@@ -9,6 +9,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import type { AlignmentStatusName } from './proactivity-model'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface GoalConfirmation {
   at: number
@@ -147,9 +148,7 @@ function load(): StoreShape {
 
 function save(s: StoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
-  const tmp = `${storePath()}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(s, null, 2))
-  renameSync(tmp, storePath())
+  atomicWriteJson(storePath(), s)
 }
 
 export function listAlignments(): GoalAlignmentEntry[] {

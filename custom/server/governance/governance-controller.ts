@@ -70,9 +70,7 @@ function writeGateSyncMarker(seen: Set<string>): void {
   try {
     const file = gateSyncMarkerPath()
     mkdirSync(resolve(file, '..'), { recursive: true })
-    const tmp = `${file}.tmp-${process.pid}`
-    writeFileSync(tmp, JSON.stringify([...seen], null, 1))
-    renameSync(tmp, file)
+  atomicWriteJson(file, [...seen], { indent: 1 })
   } catch { /* marker 写失败=下次重复摄取，图谱冗余节点可接受（fail-soft） */ }
 }
 

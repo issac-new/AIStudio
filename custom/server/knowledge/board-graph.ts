@@ -30,6 +30,7 @@ import { aliasCapFromEnv, checkQualityGate, evaluateKgQuality, qualityGateEnable
 import { semanticaPython, setBridgeRunnerForTests, bridgeScript, type BridgeRunner } from '../decisiongraph/semantica-client'
 import { spawn } from 'node:child_process'
 import { hermesHome, underHermes, underWebUi } from '../lib/paths'
+import { atomicWriteJson, atomicWriteText } from '../lib/fs-store'
 
 export interface EntityConflict {
   entityId: string
@@ -126,9 +127,7 @@ function writeAdjudicated(slug: string, map: Record<string, AdjudicationRecord>)
   try {
     const file = adjudicatedPath(slug)
     mkdirSync(join(file, '..'), { recursive: true })
-    const tmp = `${file}.tmp-${process.pid}`
-    writeFileSync(tmp, JSON.stringify(map))
-    renameSync(tmp, file)
+  atomicWriteJson(file, map)
   } catch { /* 台账写失败=裁决不持久（重新评审一次），同步语义不受影响 */ }
 }
 
@@ -199,9 +198,7 @@ export function resolveConflictInbox(inboxId: string, action: 'keep-existing' | 
   }
   hit.resolved = { action, at: Date.now() }
   try {
-    const tmp = `${file}.tmp-${process.pid}`
-    writeFileSync(tmp, entries.map((e) => JSON.stringify(e)).join('\n') + '\n')
-    renameSync(tmp, file)
+  atomicWriteText(file, entries.map((e) => JSON.stringify(e)).join('\n') + '\n')
   } catch { /* 持久化失败仅影响下次读取仍为未决，可接受 */ }
   return hit
 }
@@ -285,9 +282,7 @@ function writeMarker(slug: string, seen: Set<string>): void {
   try {
     const file = markerPath(slug)
     mkdirSync(join(file, '..'), { recursive: true })
-    const tmp = `${file}.tmp-${process.pid}`
-    writeFileSync(tmp, JSON.stringify([...seen]))
-    renameSync(tmp, file)
+  atomicWriteJson(file, [...seen])
   } catch { /* marker 失败=下次重摄取，图谱幂等可接受 */ }
 }
 

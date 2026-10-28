@@ -23,6 +23,7 @@ import { loadInstances, loadSpec, replaceIngested } from './ontology-store'
 import { validateInstances } from './ontology-validate'
 import type { OntologyInstance, Violation } from './ontology-types'
 import { hermesHome, underWebUi } from '../lib/paths'
+import { atomicWriteJson } from '../lib/fs-store'
 
 interface TaskRow {
   id: string
@@ -186,9 +187,7 @@ function writeLastEventId(id: number): void {
   try {
     const file = watchStateFile()
     mkdirSync(join(file, '..'), { recursive: true })
-    const tmp = `${file}.tmp-${process.pid}`
-    writeFileSync(tmp, JSON.stringify({ lastEventId: id, updatedAt: Date.now() }))
-    renameSync(tmp, file)
+  atomicWriteJson(file, { lastEventId: id, updatedAt: Date.now() })
   } catch { /* 断点丢失=重扫一轮（幂等），可接受 */ }
 }
 

@@ -18,6 +18,7 @@ import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export const SQUAD_EVALUATION_VERDICTS = ['action', 'no_action', 'failed'] as const
 export type SquadEvaluationVerdict = (typeof SQUAD_EVALUATION_VERDICTS)[number]
@@ -233,9 +234,7 @@ function persistSquad(squad: string, rows: SquadEvaluationRecord[]): void {
     const dir = squadLedgerDir()
     mkdirSync(dir, { recursive: true })
     const file = ledgerFile(squad)
-    const tmp = `${file}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`
-    writeFileSync(tmp, JSON.stringify({ squad, records: rows }, null, 2))
-    renameSync(tmp, file) // 原子替换：读方不会看到半截文件
+  atomicWriteJson(file, { squad, records: rows }) // 原子替换：读方不会看到半截文件
   } catch (err) {
     // 落盘失败不阻断派单（内存台账仍在），但如实 warn 不隐瞒。
     console.warn(`[squad-eval] 台账落盘失败（${squad}）：${err instanceof Error ? err.message : err}`)

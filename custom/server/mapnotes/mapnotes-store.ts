@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface MapAnnotation {
   /** 画布节点 id（ent-…/spec-…/mod-…/req-center；条目内原样存，文件名只承载 hex 指纹）。 */
@@ -72,9 +73,7 @@ function writeAnnotationsFile(file: MapAnnotationsFile): void {
   const dir = mapNotesDir()
   mkdirSync(dir, { recursive: true })
   const target = fileOf(file.key)
-  const tmp = `${target}.tmp-${process.pid}`
-  writeFileSync(tmp, JSON.stringify(file, null, 2), 'utf8')
-  renameSync(tmp, target)
+  atomicWriteJson(target, file)
 }
 
 export function listAnnotations(key: string): MapAnnotation[] {

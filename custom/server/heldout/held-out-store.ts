@@ -12,9 +12,9 @@
 //   3. 每调用方每集尝试上限（默认 3 次）：二分探测预期值的通道在限次内不可行；
 //   4. 越界 index / 空 answers 拒绝；答案按 index 对齐不回显。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
-import { atomicWriteJson } from '../lib/fs-store'
 import { homedir } from 'os'
 import { join } from 'path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface HeldOutItem {
   /** 题干（如"该策略适用于哪类任务"）——永不出库 */
@@ -72,9 +72,7 @@ function readStore(): StoreShape {
 function writeStore(store: StoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
   const file = storePath()
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, store)
 }
 
 export interface SetMeta {

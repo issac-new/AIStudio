@@ -12,6 +12,7 @@ import {
   type PolicySnapshot,
   type ToolPolicyDoc,
 } from './tool-policy'
+import { atomicWriteText } from '../lib/fs-store'
 
 const CACHE_TTL_MS = 1_000
 
@@ -111,9 +112,7 @@ export function savePolicyDoc(raw: unknown, actor?: string): PolicySaveResult {
   }
   const file = toolPolicyFile()
   mkdirSync(resolve(file, '..'), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(doc, null, 2), { mode: 0o600 })
-  renameSync(tmp, file)
+  atomicWriteText(file, JSON.stringify(doc, null, 2), { mode: 0o600 })
   cache = null
 
   import('../govbus/event-log')
