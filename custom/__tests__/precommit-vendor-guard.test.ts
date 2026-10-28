@@ -18,9 +18,12 @@ const GUARD_ESCAPE_NE = '"1"'
 
 describe('pre-commit 垫片 vendor 挡护（模板↔产物双向同步）', () => {
   it('垫片：spec-first 委托带缺席 fail-open（全新克隆不死锁）', () => {
-    expect(SHIM).toContain('if [ -f "$SF" ]; then')
+    // 2026-10-28 对账轮：委托脚本改为按检出根三级候选定位（不再写死不入库的 .claude 绝对路径）
+    expect(SHIM).toContain('git rev-parse --show-toplevel')
+    expect(SHIM).toContain('if [ -n "$SF" ]; then')
     expect(SHIM).toContain('bash "$SF" "$@" || exit $?')
     expect(SHIM).toContain('L2 降级跳过')
+    expect(SHIM).not.toContain('/Users/') // 禁写死作者机器路径
   })
 
   it('垫片：vendor 注入态自动撤出 + VENDOR_SYNC=1 逃生通道', () => {

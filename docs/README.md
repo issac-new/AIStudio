@@ -21,7 +21,8 @@
 |---|---|
 | `superpowers/specs/` | 设计正本、专题规格、实施决策档案。**新增 spec 一律落这里**，命名 `YYYY-MM-DD-<slug>.md` |
 | `superpowers/plans/` | 实施计划与分步方案 |
-| `superpowers/assets/` | 文档引用的截图与配图（按批次建子目录） |
+| `superpowers/assets/` | 文档引用的截图与配图（按批次建子目录）；另有 `superpowers/specs/assets/` 是 spec 专属资产位（服务端 eval 等代码按路径引用，两者不合一） |
+| `superpowers/specs/archive/` | 历史 spec 归档（不作为现行事实源；入口见附录 A） |
 | `superpowers/notes/` | 版本快照与工作笔记；其中 `zcode-3123/3140/3162` 被测试与目录检查脚本按路径读取，**不可移动** |
 | `reports/` | 历史报告归档位：复盘、回归、审计、安全与调研报告（2026-10-28 起） |
 | `manuals/` | 面向人的手册与规范 |

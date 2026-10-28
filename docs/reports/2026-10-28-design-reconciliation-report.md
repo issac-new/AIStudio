@@ -129,3 +129,50 @@
 ## 六、验证
 
 见本轮 spec（`docs/superpowers/specs/2026-10-28-design-reconcile-release.md`）的「验证」节：`release:check` 绿、目标守门测试通过、全量测试零失败、五件包与 SHA256SUMS 对账、GitHub release 资产与正文一致。
+
+## 七、工程结构与规范复查（第二轮，用户补充要求）
+
+对工程结构、目录规范、架构规范、组件规范与文档/模板规范做了两路独立复查，共 40 条。**本轮修 18 条低风险项**，其余按「改动面/风险」记已知限制（K14-K22）。与第一节的文档口径修正分开记账，避免混淆。
+
+### 7.1 已修（结构/规范）
+
+| # | 位置 | 问题 | 处置 |
+|---|---|---|---|
+| S1 | `.gitignore:50` | 字面量 `/<项目根绝对路径>*` 是无效规则（占位符残留） | 删除 |
+| S2 | `.gitignore` | `vendor/**/.loop/` 与 inject 建的 `vendor/hermes-studio/packages/server/src/custom` 未忽略，污染 git status | 补两条根锚定规则 |
+| S3 | `skills/swarm-yuan/.gitignore` | `dist/` 未根锚定，误伤 `tests/**/dist` 夹具 | 改 `/dist/` |
+| S4 | `custom/qgate/examples/*/.qgate/` | 28 个运行产物被跟踪且含死机器路径，重跑即脏 | `git rm -r --cached`（源码保留） |
+| S5 | `team/profiles/orchestrator/.restart_pending.json` | 运行时状态文件入库 | 取消跟踪 |
+| S6 | `skills/swarm-yuan/scripts/inventory-verify.sh.bak` | 唯一 .bak 备份入库 | 删除（正式版在位） |
+| S7 | `config/bootstrap.ts`、`config/loop-config.ts` | 零导入的死配置，且各自维护一套与 inject 分叉的上游根解析 | 删除，AGENTS 导航同步 |
+| S8 | `scripts/maintenance/dev-regression-chain.sh`、`dev-ux-chain.sh`、`scripts/regression/obs-window-watch.mjs` | 三条零引用脚本，路径指向已删除的本机 worktree | 删除（git 历史可恢复） |
+| S9 | `scripts/maintenance/regen-473.mjs:7` | ISO 树写死 `/Volumes/nvme2230` | 改 env 优先 → 仓内 vendor → 旧路径 |
+| S10 | `scripts/plan-html/enhance2.py:71` | mermaid 首选指向已退役多仓绝对路径 | 首选改仓内固化件，次选仓根 node_modules |
+| S11 | `.swarm-yuan/hooks/pre-commit` | 委托脚本写死不入库的绝对路径 | 改按检出根三级候选（同 A2） |
+| S12 | `skills/swarm-yuan/scripts/generate-skill.sh:2215` | 生成器把技能绝对路径写进目标仓库钩子（换机即静默降级） | 改为运行时按 `.claude/skills/*` → `.zcode/skills/*` → 钩子旁副本定位（**模板↔产物双向同步**） |
+| S13 | `skills/swarm-yuan/assets/spec-template.md` | 四段必需章节散落在 §2/§4/§11/§20.4，读者易漏 | 增「19.5 四段速用形态」映射表 |
+| S14 | `runtime/README.md:8` | manifest 条数写 48，实际 50 | 校正 |
+| S15 | `docs/README.md` | `superpowers/specs/assets/`、`specs/archive/` 未登记 | 补两行 |
+| S16 | `config/features.ts:33` | 注释 env 名 `VITE_CUSTOM_PET` 与代码 `VITE_CUSTOM_PETS` 不符 | 校正注释与默认值说明 |
+| S17 | `runtime/roster/lane-specialists/README.md`、`custom/server/kanban/column-automation-controller.ts` | 挂载补丁写 415（不存在），实为 455 | 两处改 455 |
+| S18 | `custom/__tests__/precommit-vendor-guard.test.ts` | 断言锁死旧钩子文本，S11 后失效 | 改断言新语义（含「禁写死 /Users/」） |
+
+### 7.2 记为已知限制（结构/架构）
+
+| # | 事项 | 不修理由 | 后续入口 |
+|---|---|---|---|
+| K14 | `custom/server/approval/` 与 `approvals/` 单复数两名一域 | 合并要动路由挂载与补丁（402/488），需产品确认语义边界 | 域合并轮 |
+| K15 | `writeJsonAtomic`/`writeAtomic` 9 份、`renameSync` 40+ 处、`bodyOf` 8 份、`writeDenied` 4 份 | 抽共享层要先统一 fsync/隔离语义，属跨域重构，风险中高 | 服务端基础库轮 |
+| K16 | `.hermes`/`.hermes-web-ui` 解析 20+ 处内联、3 个不同 helper | 同上；且 Windows 路径语义需一起测 | 服务端基础库轮 |
+| K17 | 服务端 8 处 `require('../../../../upstream/...')` | 属构建期注入路径，替换需覆盖 ACP/ACP 桥/RPC 多入口，本批不动 | 注入层轮 |
+| K18 | 客户端 `authFetch` 不读 baseUrl/profile 头、116 处调用 | 修它要回归远程服务器、桌面壳、Matrix 401 三条路径 | 前端基础库轮 |
+| K19 | 200+`ok:false` 与 4xx 混用；响应体键名 `detail/error/problems` 并存 | 统一 HTTP 语义是 breaking change，需客户端同批 | API 规范轮 |
+| K20 | `typecheck:harness` 硬编码 135 文件、`strict:false`、客户端无 `vue-tsc` | 改 glob 会一次性暴露存量类型错；需要先建基线 | 类型门禁轮 |
+| K21 | `ia2` ↔ `cockpit` 双向依赖、feature flag 管不住模块图 | 需先抽 `client/shared` 内核，改动面大 | 前端架构轮 |
+| K22 | 153 个服务端域中 151 个连写命名（仅 2 个 kebab） | 批量改名会打穿 typecheck 清单、补丁文本与 503 个测试；只立「新域一律 kebab」规约 | 长期规约 |
+
+### 7.3 模板与文档规范结论
+
+- **模板已与产物同步**：L2 钩子模板（S12）与 spec 模板（S13）本轮修正后，生成器产物与本仓实例行为一致；`custom/__tests__/precommit-vendor-guard.test.ts` 锁住「模板↔产物」两侧。
+- **文档层级已收敛**：`AGENTS.md`（工作规则+导航）→ `docs/README.md`（文档索引+档案分轨）→ `scripts/README.md`（脚本归位）→ 各目录 `AGENTS.md`（域约定），四层各有单一职责，无重复口径。
+- **模板类规范缺口**（记 K 档）：`team/profiles/*/profile.yaml` 缺 12 份（K12）、`runtime/README` 目录树未覆盖 20 个子目录（本轮只修条数）。

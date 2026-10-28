@@ -35,7 +35,7 @@
 | `zcode-patches/` | Ycode（zcode 分叉，编码引擎）补丁 series：ACP/RPC/CUA/技能根兼容，不是编辑器专属面 |
 | `evidence/` | 验证证据留档；2026-10-28 前 34 张历史截图为冻结白名单（禁新增二进制，守门 `custom/__tests__/evidence-binary-freeze.test.ts`） |
 | `assets/` | 静态资产与技能品牌配置 |
-| `config/` | 特性开关与回路配置（bootstrap/features/loop-config；features.cockpit 等门控在此） |
+| `config/` | 特性开关单一读取点（`config/features.ts`，`import.meta.env.VITE_*`）；`features.cockpit/eval/...` 等门控在此 |
 
 ### 隐藏目录（入库但易漏）
 

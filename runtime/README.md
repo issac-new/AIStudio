@@ -5,7 +5,7 @@
 **① hermes-agent 运行时覆盖层(主体)**。`runtime/` 内的 `hermes_cli/`、`gateway/`、
 `agent/`、`tools/`、`plugins/`、`hermes-skills/`、`tests/` 等是 hermes-agent 钉版基线
 (`vendor/hermes-agent`)之上的部分覆盖:修复与增强先落这里,经
-`runtime-manifest.json`(48 条,单一事实源)由 `node scripts/deploy-agent-runtime.mjs
+`runtime-manifest.json`(50 条,单一事实源)由 `node scripts/deploy-agent-runtime.mjs
 --apply` 部署到 `~/.hermes/hermes-agent/`(默认 dry-run,幂等,覆盖前留 .bak)。
 文件族:kanban 域(kanban_db/dispatch/gates/boards 等)、gateway 域(容量排队/出站
 守卫/看板 watcher/会话遥测)、agent 守卫(runaway/交接检查点/规则心跳)、

@@ -67,9 +67,11 @@ else:
 # 引擎来源链（自持优先，防 node_modules 漂移）：overlay node_modules → 本仓 vendor 固化件。
 # 2026-10-13 实锤：overlay node_modules 整体缺席（并行会话/升级冲掉），旧逻辑静默跳过注入，
 # 方案页 4 张图裸代码块直出——渲染依赖不得随产品仓 node_modules 漂移（同 run-gates 自持教训）。
+# 候选顺序（2026-10-28 工程复查）：仓内固化件最先（唯一可复现源），
+# 仓根 node_modules 次之（开发机可能装过），不再引用已退役的多仓绝对路径。
 _MERMAID_CANDIDATES = [
-    Path('/Users/cuishi/lab/ncwk/overlay/node_modules/mermaid/dist/mermaid.min.js'),
     Path(__file__).resolve().parent / 'vendor' / 'mermaid.min.js',
+    Path(__file__).resolve().parents[2] / 'node_modules' / 'mermaid' / 'dist' / 'mermaid.min.js',
 ]
 MERMAID_SRC = next((p for p in _MERMAID_CANDIDATES if p.exists()), None)
 MERMAID_JS = VIEW / 'mermaid.min.js'

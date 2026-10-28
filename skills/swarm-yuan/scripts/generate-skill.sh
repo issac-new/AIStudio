@@ -2197,9 +2197,9 @@ MEOF
 # R101 L2 提交时强拦装配：git pre-commit 垫片 + core.hooksPath（宿主无关拦截点——
 # L1 未覆盖宿主（Cursor/Windsurf/OpenCode/Gemini/Kimi，hook 通道在册、本生成链未整合）此前只有 advisory 规则文件，
 # git pre-commit 是它们唯一的真强制点；有 hook 宿主（Claude Code/Codex/ZCode）则
-# 与 L1 写时拦截构成纵深）。垫片两条职责：①委托技能内 scripts/spec-first-pre-commit.sh
-# 绝对路径（用户级安装技能目录不在仓库内，相对路径不可达——与 codex hooks.json 同款
-# 取舍；缺席 fail-open 降级，全新克隆不因路径缺失打死提交，L1/L3 仍在）；
+# 与 L1 写时拦截构成纵深）。垫片两条职责：①委托技能内 scripts/spec-first-pre-commit.sh——
+# 2026-10-28 起按检出根运行时定位（`.claude/skills/*/` → `.zcode/skills/*/` → 钩子旁副本），
+# 不再写死生成机绝对路径（否则换机/换检出即静默降级）；三者皆无则 fail-open 降级，L1/L3 仍在；
 # ②vendor/** 挡护——inject 注入脏态是预期工作态不入提交，普通提交自动撤出暂存区，
 # 基线替换走 VENDOR_SYNC=1 显式通道（AIStudio 仓规；2026-10-24 b7aef6874 首装、
 # 2026-10-26 修复重生成丢失后回移本模板，custom/__tests__/precommit-vendor-guard.test.ts 锁同步）。
@@ -2212,8 +2212,14 @@ if [[ "$MODE" != "upgrade" && "$PROFILE" != "lite" ]] && git -C "$PROJECT_DIR" r
 #!/usr/bin/env bash
 # swarm-yuan L2 pre-commit 垫片：spec-first 强拦委托 + vendor 挡护（由 generate-skill.sh 装配，勿手改；
 # 卸载: git config --unset core.hooksPath && rm -rf .swarm-yuan/hooks）
-SF="${SKILL_DIR}/scripts/spec-first-pre-commit.sh"
-if [ -f "\$SF" ]; then
+ROOT="\$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+SF=""
+for _c in "\$ROOT"/.claude/skills/*/scripts/spec-first-pre-commit.sh \
+          "\$ROOT"/.zcode/skills/*/scripts/spec-first-pre-commit.sh \
+          "\$ROOT/.swarm-yuan/hooks/spec-first-pre-commit.sh"; do
+  [ -f "\$_c" ] && { SF="\$_c"; break; }
+done
+if [ -n "\$SF" ]; then
   bash "\$SF" "\$@" || exit \$?
 else
   echo "[pre-commit] spec-first 工作区脚本缺席（全新克隆形态），L2 降级跳过；L1/L3 门禁不变。"
