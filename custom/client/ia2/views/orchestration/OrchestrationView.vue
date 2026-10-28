@@ -7,7 +7,7 @@
      未估算卡不折算；任务工厂模板沉淀为 Phase 2 占位说明。 -->
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { VueFlow, MarkerType, useVueFlow, type Node, type Edge } from '@vue-flow/core'
+import { VueFlow, MarkerType, useVueFlow, type Node, type Edge, type NodeMouseEvent } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import { useWorkspaceStore } from '../../store/workspace'
@@ -131,11 +131,9 @@ async function refresh(): Promise<void> {
 
 onMounted(() => { void refresh() })
 
-/** vue-flow v1 的 node-click 只传一个 NodeMouseEvent（无第二参）；原双参签名运行时取不到 node。
- *  这里把第二参声明为可选并短路，保持"不改选中结果"的现行为，接线修正待人工裁定。 */
-function onNodeClick(_: unknown, node?: Node): void {
-  if (!node) return
-  selectedRootId.value = node.id
+/** vue-flow v1 的 node-click 只传一个 NodeMouseEvent，节点在事件对象的 .node 上。 */
+function onNodeClick(e: NodeMouseEvent): void {
+  selectedRootId.value = e.node.id
 }
 
 const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', unassigned: '未指派' }

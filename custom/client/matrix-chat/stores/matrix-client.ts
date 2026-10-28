@@ -8,6 +8,7 @@ import {
   KnownMembership,
   type MatrixClient,
   type ICreateClientOpts,
+  type Room,
 } from 'matrix-js-sdk'
 import {
   getMatrixCredentials,
@@ -174,14 +175,22 @@ export const useMatrixClientStore = defineStore('matrix-client', () => {
     })
 
     // ★ 未读通知数变化时刷新 roomList。
-    // SDK 在 /sync 带回 notification_count、或收到 receipt 时会触发此事件。
+    // SDK 在 /sync 带回 notification_count、或收到 receipt 时会更新未读计数。
     // 之前没监听它,导致 roomList 的未读 badge 不响应 SDK 的更新(表现为
     // 已读房间仍显示旧未读数,如"始终 2 条")。
-    // 注：UnreadNotifications 属 Room 侧事件，v41 的客户端 EmittedEvents 不含它（注册后不会触发）；
-    // 保留原注册形态（运行时同一字符串），仅类型层放宽到客户端事件签名。
-    matrixClient.on(RoomEvent.UnreadNotifications as unknown as ClientEvent, () => {
-      matrixEventBus.onRoomListChange.value?.()
-    })
+    // UnreadNotifications 是 Room 侧事件（v41 的客户端 EmittedEvents 不含它，挂在
+    // client 上永不触发）——按房间挂载：首同步已建房间立即补挂，后续新房间经
+    // ClientEvent.Room 挂载；WeakSet 防重复，房间生命周期随 client 一起丢弃。
+    const unreadListened = new WeakSet<Room>()
+    const listenRoomUnread = (room: Room): void => {
+      if (unreadListened.has(room)) return
+      unreadListened.add(room)
+      room.on(RoomEvent.UnreadNotifications, () => {
+        matrixEventBus.onRoomListChange.value?.()
+      })
+    }
+    matrixClient.getRooms().forEach(listenRoomUnread)
+    matrixClient.on(ClientEvent.Room, (room: Room) => listenRoomUnread(room))
 
     matrixClient.on(RoomEvent.Receipt, () => {
       matrixEventBus.onRoomListChange.value?.()

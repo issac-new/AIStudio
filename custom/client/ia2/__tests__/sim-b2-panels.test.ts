@@ -116,6 +116,16 @@ describe('SupervisionPanel — S2 监督面板', () => {
 describe('EvidencePanel — S3 证据库', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
+  it('报告链接用运行 id（run 是 ref<string>，href 不得落 .../undefined）', async () => {
+    localStorage.setItem('ia2.lastRun', '20261017-v8-run21')
+    const w = mount(EvidencePanel)
+    await flushPromises()
+    const link = w.find('[data-testid="ev-report-link"]')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe('/api/hermes/sim/report/20261017-v8-run21')
+    w.unmount()
+  })
+
   it('锚反查命中：抽屉开+类型与锚号传递+原文进抽屉', async () => {
     mockedFetchAnchor.mockResolvedValue({ type: 'commit', data: { stat: 'd197be6c\nplusprimer\n2026-10-16\ndocs: freeze' } })
     const w = mount(EvidencePanel)

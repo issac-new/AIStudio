@@ -9,7 +9,9 @@ import { TASK_EVENT_TYPES, type AssignContent, type ReceiptContent } from '../pr
 
 // ── 轮询回执 ──
 const sentEvents: Array<{ type: string; content: Record<string, unknown> }> = []
-let taskRow: { id: string; status: string } | null = null
+// getTask 返回 KanbanTaskDetail（任务本体在 .task 下）——夹具必须与接口契约同形，
+// 否则「读顶层 status」的缺陷会被夹具掩盖。
+let taskRow: { task: { id: string; status: string } } | null = null
 const kanbanApi = vi.hoisted(() => ({
   createTask: vi.fn(async () => ({ id: 'kb-9', status: 'ready' })),
   getTask: vi.fn(async () => taskRow),
@@ -60,13 +62,13 @@ describe('pollAndReport', () => {
       t1: { localTaskId: 'kb-1', lastStatus: 'created', lastSyncedAt: 1 },
     }))
     const store = useTaskDispatchStore()
-    taskRow = { id: 'kb-1', status: 'running' }
+    taskRow = { task: { id: 'kb-1', status: 'running' } }
     await store.pollAndReport()
     expect(sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt)).toHaveLength(1)
     expect(sentEvents[0].content).toMatchObject({ taskId: 't1', status: 'running', localTaskId: 'kb-1' })
     await store.pollAndReport() // 同状态重跑 → 不再发
     expect(sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt)).toHaveLength(1)
-    taskRow = { id: 'kb-1', status: 'done' }
+    taskRow = { task: { id: 'kb-1', status: 'done' } }
     await store.pollAndReport()
     const rs = sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt)
     expect(rs).toHaveLength(2)
@@ -80,7 +82,7 @@ describe('pollAndReport', () => {
     const store = useTaskDispatchStore()
     await expect(store.pollAndReport()).resolves.toBeUndefined()
     expect(sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt)).toHaveLength(0)
-    taskRow = { id: 'kb-1', status: 'running' } // 下轮恢复 → 正常上报
+    taskRow = { task: { id: 'kb-1', status: 'running' } } // 下轮恢复 → 正常上报
     await store.pollAndReport()
     expect(sentEvents.filter(e => e.type === TASK_EVENT_TYPES.receipt)).toHaveLength(1)
   })

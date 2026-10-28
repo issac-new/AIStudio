@@ -19,9 +19,8 @@ const roomId = computed(() => room.value?.roomId ?? '')
 const totalMemberCount = computed(() => {
   void roomStore.roomVersion
   if (!room.value) return 0
-  // getInvitedMembers 不在 v41 的 Room 类型上（运行时存在与否按可选调用，保持原逻辑）。
-  const invited = (room.value as unknown as { getInvitedMembers?: () => unknown[] }).getInvitedMembers?.()
-  return room.value.getJoinedMemberCount() + (invited?.length ?? 0)
+  // v41 的 Room 无 getInvitedMembers；该类语义由 getInvitedAndJoinedMemberCount 提供（join+invite 合计）。
+  return room.value.getInvitedAndJoinedMemberCount()
 })
 
 const canInvite = computed(() => {

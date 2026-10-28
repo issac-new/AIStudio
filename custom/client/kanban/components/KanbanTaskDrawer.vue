@@ -60,10 +60,9 @@ async function refreshMatchedRoom(): Promise<void> {
   try {
     const { useMatrixRoomStore } = await import('@/custom/matrix-chat/stores/matrix-room')
     const rooms = useMatrixRoomStore().sortedRooms as RoomLike[]
-    // detail 形状是 { task, latest_summary, comments, ... }，无顶层 body（该读取恒 undefined）；
-    // 保留原锚点扫描形态，仅类型层按可选字段读，是否改读 detail.task.body 待人工裁定。
+    // detail 形状是 { task, latest_summary, comments, ... }；正文在 detail.task.body。
     const mAnchor = /(?:^|\n)room:\s*(![A-Za-z0-9._=+-]+:[A-Za-z0-9.-]+)/.exec(
-      (detail.value as { body?: string } | null)?.body ?? '')
+      task.value?.body ?? '')
     if (mAnchor) {
       const hit = rooms.find(r => r.roomId === mAnchor[1])
       matchedRoom.value = hit ?? { roomId: mAnchor[1], name: undefined } as RoomLike

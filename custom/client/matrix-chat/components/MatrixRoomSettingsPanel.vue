@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { EventType, PushRuleActionName } from 'matrix-js-sdk'
+import { EventType, PushRuleActionName, PushRuleKind } from 'matrix-js-sdk'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
@@ -166,27 +166,31 @@ function cancelEditTopic() {
 // ─── Notifications ───────────────────────────────────────
 
 async function setNotifications(level: 'all' | 'mentions' | 'none') {
-  if (!clientStore.client || !roomId.value) return
+  const client = clientStore.client
+  if (!client || !roomId.value) return
   notificationSaving.value = true
   try {
-    const ruleId = `.m.rule.room.${roomId.value}`
-    // 推送规则 API 的参数形态随 SDK 版本变动（setRoomMutePushRule/setRoomPushRule/deletePushRule
-    // 在 v41 的签名与既往调用不一致）。此处保留既有调用形态不变，仅在类型层放宽签名。
-    const pushApi = clientStore.client as unknown as {
-      setRoomMutePushRule?: (...args: unknown[]) => Promise<unknown> | undefined
-      setRoomPushRule?: (...args: unknown[]) => Promise<unknown> | undefined
-      deletePushRule?: (...args: unknown[]) => Promise<unknown> | undefined
-    }
+    // SDK v41 签名：room-kind 推送规则的 rule_id 就是房间 id（getRoomPushRule 按 roomId 查）；
+    // 静音走 setRoomMutePushRule(scope, roomId, mute:boolean)，删除走 deletePushRule(scope, kind, ruleId)。
+    // 原实现把 ruleId 当第三参传 mute、并在 deletePushRule 少传 kind，服务端 400 → 档位不落库。
     if (level === 'none') {
-      // Mute: push rule with dont_notify
-      await pushApi.setRoomMutePushRule?.('global', ruleId, roomId.value)
-    } else if (level === 'all') {
-      // Notify all: delete mute rule and set notify
-      await pushApi.deletePushRule?.('global', ruleId)
-      await pushApi.setRoomPushRule?.('global', roomId.value, { actions: ['notify'] })
+      await client.setRoomMutePushRule('global', roomId.value, true)
     } else {
-      // Mentions only (default): delete any room-specific rules
-      await pushApi.deletePushRule?.('global', ruleId)
+      // 先摘掉静音规则（SDK 仅在该规则确为 dont_notify 时删除）
+      await client.setRoomMutePushRule('global', roomId.value, false)
+      // 以服务端真值判定现有 room-kind 规则：add/deletePushRule 不刷新客户端 pushRules 缓存，
+      // 直接读缓存会在「全部 → 仅提及」等连续切换时判空而漏删。
+      const rules = await client.getPushRules().catch(() => null)
+      const existing = rules?.global?.room?.find(rule => rule.rule_id === roomId.value)
+      if (level === 'all') {
+        if (existing) {
+          await client.setPushRuleActions('global', PushRuleKind.RoomSpecific, roomId.value, [PushRuleActionName.Notify])
+        } else {
+          await client.addPushRule('global', PushRuleKind.RoomSpecific, roomId.value, { actions: [PushRuleActionName.Notify] })
+        }
+      } else if (existing) {
+        await client.deletePushRule('global', PushRuleKind.RoomSpecific, roomId.value)
+      }
     }
     notificationLevel.value = level
     roomStore.bumpRoomVersion()

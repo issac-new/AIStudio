@@ -95,7 +95,7 @@ const kanbanApi = vi.hoisted(() => ({
     created.push(data)
     return { id: `kb-${created.length}`, status: 'ready', title: String(data.title) }
   }),
-  getTask: vi.fn(async (id: string) => ({ id, status: 'running' })),
+  getTask: vi.fn(async (id: string) => ({ task: { id, status: 'running' } })),
 }))
 vi.mock('@/api/hermes/kanban', () => kanbanApi)
 const historyRoom = {

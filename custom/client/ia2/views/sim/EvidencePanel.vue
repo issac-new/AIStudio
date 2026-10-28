@@ -193,13 +193,13 @@ onMounted(() => {
   <div class="ev" data-testid="ev-panel">
     <!-- 2026-10-24 用户裁定「恢复」（方案 F32）：步 26 报告产品内查看入口
          （此前只有帧图廊；报告本体经服务端 /api/hermes/sim/report 透传，新窗打开） -->
-    <!-- run 来自 useRunContext（ref<string> 运行 id，模板自动解包为字符串），无 .id 字段；
-         此读法运行时得 undefined（href 落成 .../undefined）。保留原读取形态，改法待人工裁定。 -->
+    <!-- run 来自 useRunContext（ref<string> 运行 id，模板自动解包为字符串）；
+         服务端 /sim/report/:runId 收的就是这个 id（simcenter-controller.ts report 路由）。 -->
     <a
       v-if="run"
       class="ev__report-link"
       data-testid="ev-report-link"
-      :href="`/api/hermes/sim/report/${encodeURIComponent((run as unknown as { id?: string }).id as string)}`"
+      :href="`/api/hermes/sim/report/${encodeURIComponent(run)}`"
       target="_blank"
       rel="noopener"
     >📄 打开完整推演报告（final-report.html，新窗）</a>

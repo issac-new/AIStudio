@@ -333,10 +333,9 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
       let status: string
       try {
         const task = await getTask(entry.localTaskId)
-        // getTask 返回 { task, latest_summary, ... }（KanbanTaskDetail，任务本体在 .task 下）。
-        // 原实现读顶层 status，运行时恒 undefined → mapKanbanStatusToReceipt 兜底成 'running'。
-        // 保留原读取形态（行为不变），改法待人工裁定。
-        status = (task as { status?: string }).status as string
+        // getTask 返回 KanbanTaskDetail（{ task, latest_summary, ... }），任务本体在 .task 下；
+        // 读顶层 status 恒 undefined → 兜底 'running'，回执状态永不推进。
+        status = task.task.status
       } catch { continue } // 单条失败静默，下轮重试
       const mapped = mapKanbanStatusToReceipt(status)
       if (mapped === entry.lastStatus) continue

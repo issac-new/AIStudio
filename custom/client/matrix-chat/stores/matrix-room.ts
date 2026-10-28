@@ -8,6 +8,7 @@ import {
   RelationType,
   EventType,
   Visibility,
+  DeviceVerification,
 } from 'matrix-js-sdk'
 import { matrixEventBus } from './matrix-events'
 import { useMatrixClientStore } from './matrix-client'
@@ -871,43 +872,54 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
    * Get E2E trust status for a room.
    * 'warning' = room is encrypted but there are unverified devices.
    * 'normal'  = OK or not encrypted.
+   *
+   * SDK v41 的设备信息 API 全异步（getUserDeviceInfo(userIds: string[]) →
+   * Promise<DeviceMap>；旧版「单 userId 同步返回 Map」形态已不存在），而消费方
+   * （RoomSummaryCard / MemberInfo）是同步 computed——采用「读缓存 + 后台刷新」：
+   * 首读触发一次异步探测，结果变化时 bumpRoomVersion 驱动消费方重算；
+   * in-flight 去重 + 10s 冷却，防 roomVersion 回环与重复探测。
    */
+  const e2eStatusCache = ref<Record<string, 'normal' | 'warning'>>({})
+  const e2eRefreshing = new Set<string>()
+  const e2eCheckedAt: Record<string, number> = {}
+
   function getE2EStatus(roomId: string): 'normal' | 'warning' {
-    if (!clientStore.client) return 'normal'
-    const room = clientStore.client.getRoom(roomId)
-    if (!room) return 'normal'
-    if (!room.hasEncryptionStateEvent()) return 'normal'
-    // Check if crypto is available and has untrusted devices
+    if (Date.now() - (e2eCheckedAt[roomId] ?? 0) > 10_000) {
+      e2eCheckedAt[roomId] = Date.now()
+      void refreshE2EStatus(roomId)
+    }
+    return e2eStatusCache.value[roomId] ?? 'normal'
+  }
+
+  async function refreshE2EStatus(roomId: string): Promise<void> {
+    if (e2eRefreshing.has(roomId)) return
+    e2eRefreshing.add(roomId)
     try {
-      const crypto = clientStore.client.getCrypto?.()
-      if (!crypto) return 'normal'
-      // Check device trust status via cross-signing / device list
-      const myUserId = clientStore.client.getUserId()
-      if (!myUserId) return 'normal'
-      const members = room.getJoinedMembers()
-      for (const member of members) {
-        if (member.userId === myUserId) continue
-        try {
-          // getUserDeviceInfo 在部分 SDK 版本接受单 userId、部分只收数组；类型层按宽松签名调用，运行时形态不变。
-          const getUserDeviceInfo = crypto.getUserDeviceInfo as unknown as
-            ((arg: string | string[]) => unknown) | undefined
-          const deviceMap: any = getUserDeviceInfo?.(member.userId)
-            ?? getUserDeviceInfo?.([member.userId])
-          if (deviceMap instanceof Map) {
-            for (const [, device] of deviceMap) {
-              // Check various trust indicators across SDK versions
-              if (typeof device?.isUnverified === 'function' && device.isUnverified()) return 'warning'
-              if (typeof device?.isVerified === 'function' && !device.isVerified()) return 'warning'
-              if (device?.verified === false) return 'warning'
-            }
-          }
-        } catch {
-          // skip this member if device lookup fails
+      const client = clientStore.client
+      const room = client?.getRoom(roomId)
+      if (!client || !room || !room.hasEncryptionStateEvent()) return
+      const crypto = client.getCrypto?.()
+      if (!crypto) return
+      const myUserId = client.getUserId()
+      const others = room.getJoinedMembers().map(m => m.userId).filter(id => id !== myUserId)
+      if (others.length === 0) return
+      const deviceMap = await crypto.getUserDeviceInfo(others)
+      let warning = false
+      for (const devices of deviceMap.values()) {
+        for (const device of devices.values()) {
+          if (device.verified === DeviceVerification.Unverified) { warning = true; break }
         }
+        if (warning) break
       }
-      return 'normal'
+      const next: 'normal' | 'warning' = warning ? 'warning' : 'normal'
+      if (e2eStatusCache.value[roomId] !== next) {
+        e2eStatusCache.value = { ...e2eStatusCache.value, [roomId]: next }
+        bumpRoomVersion()
+      }
     } catch {
-      return 'normal'
+      // 设备列表不可用（无 cross-signing / 请求失败 / 房间未就绪）：保持上次结果，不猜
+    } finally {
+      e2eRefreshing.delete(roomId)
     }
   }
 

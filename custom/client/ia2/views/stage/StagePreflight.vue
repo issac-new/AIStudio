@@ -56,8 +56,9 @@ function openRun(): void {
 
 onMounted(() => {
   void workspace.refreshAllBoards()
-  void fetchGateRepairs('open').then(res => {
-    g1Open.value = res.records.filter(r => r.gate === 'G1').length
+  // 服务端只认 all/状态词；未结=非 pass/waived，取 all 后在客户端筛。
+  void fetchGateRepairs('all').then(res => {
+    g1Open.value = res.records.filter(r => r.gate === 'G1' && r.state !== 'pass' && r.state !== 'waived').length
   }).catch(e => { gateError.value = (e as Error).message })
 })
 </script>
