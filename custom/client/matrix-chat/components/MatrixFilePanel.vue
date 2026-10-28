@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
-import type { MatrixEvent, Room } from 'matrix-js-sdk'
+import { EventTimeline, type MatrixEvent } from 'matrix-js-sdk'
 
 const roomStore = useMatrixRoomStore()
 const rightPanelStore = useMatrixRightPanelStore()
@@ -23,19 +23,19 @@ const isLoadingMore = ref(false)
 
 const fileMsgTypes = ['m.file', 'm.image', 'm.video', 'm.audio']
 
-/** 分页读数的可选能力：canPaginate/paginate 在 matrix-js-sdk 上属 TimelineWindow，
- *  EventTimeline 无此方法（v41 实测）。保留既有调用形态（运行时缺失即抛，由调用方 catch），
- *  仅在类型层声明为可选，不改分支行为。 */
-type PaginatableTimeline = {
-  canPaginate?: (direction: 'b' | 'f') => boolean
-  paginate?: (direction: 'b' | 'f', limit: number) => Promise<boolean>
+/** 分页能力在 SDK 侧：canPaginate/paginate 属 TimelineWindow，EventTimeline 只有
+ *  getPaginationToken（v41 实测）——能否向上翻页由「时间线起点是否还有分页令牌」判定，
+ *  翻页走 MatrixClient.paginateEventTimeline(liveTimeline, { backwards: true })。
+ *  原实现调 EventTimeline 上不存在的 canPaginate/paginate，运行时恒不进分页分支。 */
+function canPaginateBack(timeline: EventTimeline): boolean {
+  return !!timeline.getPaginationToken(EventTimeline.BACKWARDS)
 }
 
 function loadFiles(reset = true) {
   if (!room.value || !clientStore.client) return
   isLoading.value = true
   try {
-    const timeline = room.value.getLiveTimeline() as unknown as PaginatableTimeline & { getEvents: () => MatrixEvent[] }
+    const timeline = room.value.getLiveTimeline()
     const events: MatrixEvent[] = []
     const tlEvents = timeline.getEvents()
     for (const ev of tlEvents) {
@@ -49,7 +49,7 @@ function loadFiles(reset = true) {
     events.sort((a, b) => (b.getTs() ?? 0) - (a.getTs() ?? 0))
     fileEvents.value = events
     // Check if there are more events to paginate
-    hasMoreFiles.value = timeline.canPaginate?.('b') ?? false
+    hasMoreFiles.value = canPaginateBack(timeline)
   } catch {
     // ignore
   } finally {
@@ -58,12 +58,13 @@ function loadFiles(reset = true) {
 }
 
 async function loadMoreFiles() {
-  if (!room.value || isLoadingMore.value) return
+  const client = clientStore.client
+  if (!room.value || !client || isLoadingMore.value) return
   isLoadingMore.value = true
   try {
-    const timeline = room.value.getLiveTimeline() as unknown as PaginatableTimeline
-    if (timeline.canPaginate?.('b')) {
-      await timeline.paginate('b', 30)
+    const timeline = room.value.getLiveTimeline()
+    if (canPaginateBack(timeline)) {
+      await client.paginateEventTimeline(timeline, { backwards: true, limit: 30 })
       loadFiles(false)
     } else {
       hasMoreFiles.value = false

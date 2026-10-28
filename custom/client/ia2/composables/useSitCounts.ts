@@ -56,10 +56,10 @@ export function useSitCounts() {
       for (const room of matrixRoom.sortedRooms ?? []) {
         const members = client.getRoom(room.roomId)?.getJoinedMembers() ?? []
         for (const member of members) {
-          // RoomMember 无 presence（presence 属 User）；此处读取恒 undefined（该分支不命中）——
-          // 类型层按可选字段读，不改判定口径。
-          const presence = (member as { presence?: string }).presence
-          if (presence === 'online' && member.userId) out.add(member.userId)
+          // presence 属 SDK User（RoomMember 上没有）；统一走 store 的 getUserPresence
+          // 读取（User.presence，缺档案按 offline）。原实现读 member.presence 恒 undefined
+          // ⇒ 在线人数分支永不命中。
+          if (member.userId && matrixRoom.getUserPresence(member.userId).status === 'online') out.add(member.userId)
         }
       }
     } catch { /* presence 探测失败按 0 处理 */ }

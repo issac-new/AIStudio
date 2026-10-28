@@ -8,7 +8,7 @@
 <script setup lang="ts">
 import { ref, watch, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { VueFlow, MarkerType, Handle, Position, type Node, type Edge, type EdgeMouseEvent } from '@vue-flow/core'
+import { VueFlow, MarkerType, Handle, Position, type Node, type Edge, type EdgeMouseEvent, type NodeDragEvent } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import { edgeId, type CanvasDoc } from '../adapters/editor'
@@ -100,10 +100,9 @@ function onConnect(pair: { source: string; target: string }): void {
   emit('connect', { from: pair.source, to: pair.target })
 }
 
-function onDragStop(payload: unknown): void {
-  // vue-flow v1 的 node-drag-stop 传 { event, node, nodes }（无顶层 id/position）；
-  // 原实现按顶层读，运行时 position 为 undefined。保留原读取形态（行为不变），修正待人工裁定。
-  const node = payload as { id: string; position: { x: number; y: number } }
+function onDragStop(payload: NodeDragEvent): void {
+  // vue-flow v1 的 node-drag-stop 传 { event, node, nodes }，落位坐标在 payload.node.position。
+  const { node } = payload
   emit('move-node', { id: node.id, x: node.position.x, y: node.position.y })
 }
 
@@ -162,7 +161,7 @@ function onDrop(ev: DragEvent): void {
       :default-edge-options="{ markerEnd: MarkerType.ArrowClosed }"
       @connect="onConnect"
       @node-drag-stop="onDragStop"
-      @edge-click="(e: EdgeMouseEvent) => emit('edge-click', String((e as unknown as Edge).id))"
+      @edge-click="(e: EdgeMouseEvent) => emit('edge-click', String(e.edge.id))"
     >
       <template #node-editor-node="nodeProps">
         <div

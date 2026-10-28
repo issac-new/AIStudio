@@ -5,7 +5,7 @@
      按需求指纹持久化——多用户读写同一存储=异步协同（最后写胜出，实时协议不做）。 -->
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
-import { VueFlow, type Edge, type Node } from '@vue-flow/core'
+import { VueFlow, type Edge, type Node, type NodeMouseEvent } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
@@ -83,8 +83,8 @@ function selectNode(nodeId: string): void {
   draftChecked.value = existing?.checked ?? false
   noteMsg.value = ''
 }
-/** 同 OrchestrationView：node-click 单参；第二参可选 + 短路，保持现行为（选中主要由 onCanvasClick 兜底）。 */
-function onNodeClick(_: unknown, node?: Node): void { if (node) selectNode(node.id) }
+/** 同 OrchestrationView：node-click 单参 NodeMouseEvent，节点在 .node 上。 */
+function onNodeClick(e: NodeMouseEvent): void { selectNode(e.node.id) }
 
 // 兜底：vue-flow click 钩子受 d3 拖拽链阈值影响（nodeDragThreshold=1 且快照对齐时
 // 零位移点击被 distance!==0 条件吞掉）——容器级原生监听，closest 找节点取 data-id。

@@ -223,14 +223,10 @@ const workspaceBySession = computed<Record<string, string>>(() => {
 // R7-C agent 名册统一面：在线/忙闲/在跑（multica roster 语义）——
 // 三源合并：platforms 在线探针 + kanban assignee 在跑 + 会话挂靠。
 const agentRoster = computed(() => {
-  // tasksForLink 只投影 {id, tenant, session_id}（会话挂接判定所需）；roster 另需 title/assignee/status，
-  // 当前取值恒为 undefined（口径不变）。类型层按可选字段读取，不把缺失字段谎报为必有。
-  const tasks = (tasksForLink.value ?? []).map(t => {
-    const extra = t as { title?: string; assignee?: string | null; status?: string }
-    return {
-      id: t.id, title: extra.title, assignee: extra.assignee ?? null, status: extra.status,
-    }
-  })
+  // tasksForLink 投影已带 title/assignee/status（useSessionRows 单一投影面）。
+  const tasks = (tasksForLink.value ?? []).map(t => ({
+    id: t.id, title: t.title, assignee: t.assignee, status: t.status,
+  }))
   const sessions = (chatStore.sessions ?? []).map(s => ({
     id: s.id, agent: (s as { agent?: string | null }).agent ?? null,
   }))
@@ -349,12 +345,9 @@ const { attentionRows, sessionAttention } = useAttentionRows({ includeWaitItems:
  *  统一装配行带 kind——先按 kind 直达，再走历史兜底。
  *  Task 3（2026-10-27 分域）：kind=loop 的行是 /api/loop/loops 域的 blocked Loop
  *  （taskId=loop:<loopId>）——落 /app/l/:loopId 薄详情；不得把 loopId 塞 ?wf=
- *  查工作流 API（跨域裸 ID，必 404/假空态）。 */
-type AttentionRowWithLegacyIds = AttentionRow & { sessionId?: string; runId?: string }
-
-/** 旧 activity 版行曾带 sessionId/runId；现 overview 版行不含这两字段（恒 undefined，
- *  末尾两条兜底分支因此不生效）。类型层按可选字段声明，保留原分派顺序与分支。 */
-function onOpenAttention(row: AttentionRowWithLegacyIds): void {
+ *  查工作流 API（跨域裸 ID，必 404/假空态）。
+ *  overview 版行没有 sessionId/runId 字段；两类 id 只存在于 id/taskId 的前缀约定里。 */
+function onOpenAttention(row: AttentionRow): void {
   const base = row.id.replace(/^att-/, '')
   if (row.kind === 'session') {
     void router.push({ name: 'ide.shell', query: { session: base } })
@@ -365,18 +358,14 @@ function onOpenAttention(row: AttentionRowWithLegacyIds): void {
     if (loopId) void router.push({ name: 'ia2.loopCanvas', params: { loopId } })
     return
   }
-  if (row.taskId) {
+  if (row.kind === 'run') {
+    // buildWaiting 的 run 行 taskId=run:<runId>（V5 补遗⑤ M6：运行行直落运行详情）。
+    const runId = (row.taskId ?? '').replace(/^run:/, '')
+    if (runId) void router.push({ name: 'ia2.runDetail', params: { runId } })
+    return
+  }
+  if (row.kind === 'task' && row.taskId) {
     void router.push({ name: 'ia2.board', query: { task: row.taskId } })
-    return
-  }
-  // R7-B：会话失败/受阻 → ide 会话（开发产出回喂的反向跳）
-  if (row.sessionId) {
-    void router.push({ name: 'ide.shell', query: { session: row.sessionId } })
-    return
-  }
-  if (row.runId) {
-    // V5 补遗⑤ M6：运行行直落运行详情（原经循环画布中转，画布已并入详情页）
-    void router.push({ name: 'ia2.runDetail', params: { runId: row.runId } })
     return
   }
   cockpit.openRunTraceGlobal()

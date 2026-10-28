@@ -108,12 +108,9 @@ async function runPreview(): Promise<void> {
 
 function scopeText(c: ConstraintCardDto): string {
   const parts: string[] = []
-  // 字典里只有 phColumns/phSpecialists/phKeywords（占位文案），没有 colColumns/colSpecialists/colKeywords 三个列标签；
-  // 三处读取运行时恒 undefined（渲染成 "undefined: a/b"）。暂按可选字段直读保持原渲染，补键与否待人工裁定。
-  const labels = L.value as unknown as { colColumns?: string; colSpecialists?: string; colKeywords?: string }
-  if (c.scope.columns?.length) parts.push(`${labels.colColumns}: ${c.scope.columns.join('/')}`)
-  if (c.scope.specialists?.length) parts.push(`${labels.colSpecialists}: ${c.scope.specialists.join('/')}`)
-  if (c.scope.keywords?.length) parts.push(`${labels.colKeywords}: ${c.scope.keywords.join('/')}`)
+  if (c.scope.columns?.length) parts.push(`${L.value.colColumns}: ${c.scope.columns.join('/')}`)
+  if (c.scope.specialists?.length) parts.push(`${L.value.colSpecialists}: ${c.scope.specialists.join('/')}`)
+  if (c.scope.keywords?.length) parts.push(`${L.value.colKeywords}: ${c.scope.keywords.join('/')}`)
   return parts.join(' · ')
 }
 </script>

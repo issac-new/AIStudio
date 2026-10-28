@@ -34,8 +34,13 @@ vi.mock('@/custom/loop/api/loop-rest', () => ({
   loopRest: { getContracts: vi.fn(async () => []) },
 }))
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => ({ sessions: [] }) }))
+// 成员 presence 真值来源＝store.getUserPresence（内部读 SDK User.presence）；
+// 夹具里由 joinedMembersRef 提供「服务端看到的成员表」。
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
-  useMatrixRoomStore: () => ({ sortedRooms: matrixRoomsRef.value }),
+  useMatrixRoomStore: () => ({
+    sortedRooms: matrixRoomsRef.value,
+    getUserPresence: (id: string) => ({ status: joinedMembersRef.value.find(m => m.userId === id)?.presence ?? 'offline' }),
+  }),
 }))
 vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: () => ({ rooms: [] }) }))
 vi.mock('@/custom/loop/store/loop', () => ({ useLoopStore: () => ({ loops: [] }) }))

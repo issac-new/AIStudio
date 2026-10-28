@@ -38,18 +38,17 @@ const powerLevel = computed(() => {
   return member.value?.powerLevel ?? 0
 })
 
-// ─── Presense (enhanced with last active) ─────────────────
+// ─── Presence (enhanced with last active) ─────────────────
 
 const presence = computed(() => {
-  // store.getUserPresence 实际返回 { status, lastActive }；组件按 lastActiveAgo/currentlyActive 读取，
-  // 这两字段恒缺失（现渲染口径＝不显示 last active、视为非活跃）。只在类型层声明为可选，不改读取口径。
-  if (!memberUserId.value) return { status: 'offline', lastActiveAgo: undefined as number | undefined, currentlyActive: false }
-  const p = roomStore.getUserPresence(memberUserId.value) as { status: string; lastActiveAgo?: number; currentlyActive?: boolean }
-  return p
+  // store.getUserPresence 返回 { status, lastActive }（User.presence + lastActiveAgo 折算出的
+  // 绝对时间戳）。原实现按 lastActiveAgo / currentlyActive 读取，两个字段都不存在：
+  // 上次活跃恒不显示、presenceLabel 的「当前活跃」分支恒不命中。
+  if (!memberUserId.value) return { status: 'offline', lastActive: undefined as number | undefined }
+  return roomStore.getUserPresence(memberUserId.value)
 })
 
 const presenceLabel = computed(() => {
-  if (presence.value.currentlyActive) return t('matrixChat.online')
   switch (presence.value.status) {
     case 'online': return t('matrixChat.online')
     case 'unavailable': return t('matrixChat.unavailable')
@@ -66,8 +65,9 @@ const presenceClass = computed(() => {
 })
 
 const lastActiveText = computed(() => {
-  const ago = presence.value.lastActiveAgo
-  if (!ago) return ''
+  const lastActive = presence.value.lastActive
+  if (!lastActive) return ''
+  const ago = Math.max(0, Date.now() - lastActive)
   const mins = Math.round(ago / 60000)
   if (mins < 1) return t('matrixChat.justNow')
   if (mins < 60) return t('matrixChat.minutesAgo', { n: mins })
@@ -238,7 +238,7 @@ async function copyMxid() {
       <div :class="['mi-presence-label', presenceClass]">
         <span class="mi-presence-icon" />
         {{ presenceLabel }}
-        <span v-if="lastActiveText && !presence.currentlyActive" class="mi-last-active"> · {{ lastActiveText }}</span>
+        <span v-if="lastActiveText && presence.status !== 'online'" class="mi-last-active"> · {{ lastActiveText }}</span>
       </div>
 
       <!-- Copyable MXID：显示短形（去 :域名），复制仍得全形 -->

@@ -26,8 +26,11 @@ const busy = ref(false)
 const actionMsg = ref('')
 const filter = ref<'open' | 'all'>('open')
 
+// 「未结」= 非终态（fail_registered/repair_dispatched/re_review），服务端没有该聚合词；
+// 一律取 all，未结过滤在客户端做。
 const shown = computed(() => (records.value ?? [])
-  .filter(r => props.gates.length === 0 || props.gates.includes(r.gate)))
+  .filter(r => (props.gates.length === 0 || props.gates.includes(r.gate))
+    && (filter.value === 'all' || (r.state !== 'pass' && r.state !== 'waived'))))
 const openShown = computed(() => props.gates.length === 0
   ? open.value
   : shown.value.filter(r => r.state !== 'pass' && r.state !== 'waived').length)
@@ -38,7 +41,7 @@ async function refresh(): Promise<void> {
   loadError.value = ''
   actionMsg.value = ''
   try {
-    const res = await fetchGateRepairs(filter.value)
+    const res = await fetchGateRepairs('all')
     records.value = res.records
     open.value = res.open
   } catch (e) {

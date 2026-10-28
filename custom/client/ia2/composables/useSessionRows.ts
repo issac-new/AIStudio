@@ -44,12 +44,20 @@ export function useSessionRows() {
     return [...roomRows, ...groupRows, ...chatRowList]
   })
 
+  // 投影给两处消费：linkedTaskIdsOfSession（只读 id/tenant/session_id）与工作台
+  // agent 名册（另读 title/assignee/status，缺了名册恒空）——一次投影带全。
   const tasksForLink = computed(() => {
     const raw = kanban.tasks ?? []
     if (raw.length) {
-      return raw.map(t => ({ id: t.id, tenant: t.tenant ?? null, session_id: t.session_id ?? null }))
+      return raw.map(t => ({
+        id: t.id, tenant: t.tenant ?? null, session_id: t.session_id ?? null,
+        title: t.title, assignee: t.assignee ?? null, status: t.status,
+      }))
     }
-    return workspace.tasks.map(t => ({ id: t.id, tenant: t.tenant ?? null, session_id: null }))
+    return workspace.tasks.map(t => ({
+      id: t.id, tenant: t.tenant ?? null, session_id: null,
+      title: t.title, assignee: t.assignee || null, status: t.status,
+    }))
   })
 
   const duties = computed(() => teamRegistry.duties ?? {})

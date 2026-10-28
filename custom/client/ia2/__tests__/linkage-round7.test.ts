@@ -73,8 +73,10 @@ describe('R7 接线锚点（源码存在性守门）', () => {
   it('WorkbenchView 会话事件源 + ide 会话跳（sessionAttention + ide.shell?session）', () => {
     const wb = readFileSync(resolve(overlayRoot, 'custom/client/ia2/views/WorkbenchView.vue'), 'utf8')
     expect(wb).toContain('sessionAttention')
-    expect(wb).toContain("name: 'ide.shell', query: { session: row.sessionId }")
-    expect(wb).toContain('row.sessionId')
+    // overview 版行无 sessionId 字段，会话 id 从行 id 的 att- 前缀还原
+    expect(wb).toContain("const base = row.id.replace(/^att-/, '')")
+    expect(wb).toContain("name: 'ide.shell', query: { session: base }")
+    expect(wb).not.toContain('row.sessionId')
     // 会话副文键在 AttentionList 词表（2026-10-10 迁移后 kind=session × status 派生；
     // 点击分派走 id 前缀，不依赖旧模型 sessionId 字段）
     const att = readFileSync(resolve(overlayRoot, 'custom/client/ia2/components/flow/AttentionList.vue'), 'utf8')
