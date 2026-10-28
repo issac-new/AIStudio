@@ -16,6 +16,8 @@ export interface AtomicWriteOptions {
   fsync?: boolean
   /** JSON 缩进，默认 2 */
   indent?: number
+  /** 文件权限（如 0o600）；缺省沿用 umask */
+  mode?: number
 }
 
 /** 原子写文本：同目录随机 tmp → （可选）fsync → rename，失败清理 tmp */
@@ -25,7 +27,7 @@ export function atomicWriteText(file: string, text: string, opts: AtomicWriteOpt
   const tag = createHash('sha1').update(`${process.pid}:${Date.now()}:${Math.random()}`).digest('hex').slice(0, 12)
   const tmp = join(dir, `.${process.pid}-${tag}.tmp`)
   try {
-    const fd = openSync(tmp, 'w')
+    const fd = openSync(tmp, 'w', opts.mode ?? 0o666)
     try {
       writeSync(fd, text)
       if (opts.fsync) fsyncSync(fd)

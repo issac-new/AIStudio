@@ -8,6 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, rmSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 const MAX_DRAFT_BYTES = 2 * 1024 * 1024
 
@@ -50,14 +51,12 @@ export function saveDraft(workspacePath: string, slot: string, text: string): { 
   }
   const dir = draftDir()
   const target = draftFile(workspacePath, slot)
-  const tmp = `${target}.tmp-${process.pid}`
   try {
     mkdirSync(dir, { recursive: true })
-    writeFileSync(tmp, JSON.stringify({ workspacePath, slot, text, savedAt: Date.now() }), 'utf8')
-    renameSync(tmp, target)  // 原子替换
+    atomicWriteJson(target, { workspacePath, slot, text, savedAt: Date.now() })
     return { ok: true }
   } catch (err) {
-    try { rmSync(tmp, { force: true }) } catch { /* 清理失败忽略 */ }
+    // 原子写失败时 lib/fs-store 已清理临时文件
     return { ok: false, reason: `落盘失败：${err instanceof Error ? err.message : String(err)}` }
   }
 }

@@ -7,6 +7,7 @@ import { sha256, treeDigest } from './loop'
 import { backupDir } from './store'
 import { hermesHome, resolveManagedTarget } from './surface-registry'
 import type { Proposal, VariantFile } from './types'
+import { atomicWriteText } from '../../lib/fs-store'
 
 export interface ApplyResult {
   ok: boolean
@@ -30,10 +31,7 @@ export function applyEnabled(): boolean {
 function atomicWrite(abs: string, content: string): void {
   // 新文件用 0600；已存在文件保留原权限。
   const mode = existsSync(abs) ? statSync(abs).mode : 0o600
-  const tmp = `${abs}.harness2-tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, content, 'utf8')
-  chmodSync(tmp, mode)
-  renameSync(tmp, abs)
+  atomicWriteText(abs, content, { mode })
 }
 
 /** 写入 proposal 的选中内容；调用方必须先过晋级门禁。 */

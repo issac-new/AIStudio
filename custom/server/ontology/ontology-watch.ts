@@ -16,7 +16,6 @@
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
 import { openReadonly } from '../governance/governance-analytics'
 import { appendConflictInbox, listConflictInbox } from '../knowledge/board-graph'
 import { loadInstances, loadSpec, replaceIngested } from './ontology-store'
@@ -39,7 +38,7 @@ function slugOfDb(dbPath: string): string {
 }
 
 function defaultHome(): string {
-  return process.env.HERMES_HOME?.trim() || hermesHome()
+  return hermesHome()
 }
 
 function boardDbPath(slug: string, homeDir?: string): string {

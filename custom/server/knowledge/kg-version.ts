@@ -21,13 +21,14 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameS
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { boardKgPath } from './board-graph'
+import { underHermes } from '../lib/paths'
 
 export const SNAP_MAX = 50
 
 function versionRoot(): string {
   const env = process.env.KG_VERSION_DIR?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
-  return join(homedir(), '.hermes', 'semantica', 'board-snapshots')
+  return underHermes('semantica', 'board-snapshots')
 }
 
 function snapMax(): number {
