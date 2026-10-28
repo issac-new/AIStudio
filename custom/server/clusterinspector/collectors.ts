@@ -6,6 +6,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { hermesHome } from '../lib/paths'
 import { compactThreshold } from '../compactthreshold/compact-threshold'
 import type { ProfileToolUsageFace } from './profile-tool-usage'
 import type { ProcessScanFace } from './process-scan'
@@ -200,7 +201,8 @@ export interface CollectorDeps {
 }
 
 export function hermesHomeDefault(): string {
-  return process.env.HERMES_HOME || join(homedir(), '.hermes')
+  // 2026-10-28 收敛：家目录解析单一实现（lib/paths），不再各域 join(homedir(), '.hermes')
+  return hermesHome()
 }
 
 /** 压缩三档投影参数：输出预算缺省（602 sidecar 不带逐模型输出上限；保守 8K 并在 UI 披露）。
