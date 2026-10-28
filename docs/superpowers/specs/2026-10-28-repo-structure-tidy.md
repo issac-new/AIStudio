@@ -76,6 +76,8 @@ DESIGN_SYNC: none
 
 ## 挂账
 
+> 本节六项已于同日清偿，处置与验证见 `2026-10-28-debt-clearance.md`（原文保留，作当时的挂账记录）。
+
 1. **swarm-yuan 生成器把带行内注释的占位符当目录名**（D6）：修 `skills/swarm-yuan/assets/precheck.conf:11` 与解析器（`skills/swarm-yuan/scripts/generator/subcommands.sh`、`skills/swarm-yuan/assets/precheck.sh`），补「带注释占位符不产生目录」守门测试，另起一轮。
 2. **孤儿目录 `.claude/worktrees/upstream`**：无 git worktree 注册，按仓规不自行 `rm -rf`，待用户裁决移入隔离区或删除。
 3. **`custom/server/governance/repo-root.ts:10` 的 `/Volumes/nvme2230` 兜底**：属同族旧机路径，但位于治理仓解析链尾，改它需先确认生产部署面，留下轮。

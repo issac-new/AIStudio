@@ -2,6 +2,9 @@
 # overlay/scripts/sync-upstream.sh — 升级 hermes-studio 上游
 # 策略(遵循 upstream 目录更新规则):优先取最新 stable release tag,
 # 无 release/tag 时 fallback 到 origin/main 最新提交。始终以远端强制覆盖本地。
+# 用法：bash scripts/sync-upstream.sh [--dry-run]
+#   --dry-run 只解析并打印目标树/步骤，不 clean、不 fetch、不 inject、不 install——
+#   用于在纯本仓检出或隔离环境核对路径假设（本脚本需要 upstream 是带 .git 的检出）。
 set -e
 # 单仓布局（2026-10-28 对齐）：本脚本升级的是仓内 upstream/ 检出（本地基建，不入库），
 # 不是 vendor/ 钉版基线——vendor 无 .git，升级经由 vendor:sync 从 upstream 同步。
@@ -10,6 +13,24 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 UPSTREAM_ROOT="${OVERLAY_UPSTREAM_ROOT:-$ROOT/upstream}"
 UPSTREAM_DIR="$UPSTREAM_ROOT/hermes-studio"
 HERMES_REPO="EKKOLearnAI/hermes-studio"
+
+DRY_RUN=0
+case "${1:-}" in
+  --dry-run) DRY_RUN=1 ;;
+  "") ;;
+  *) echo "[sync] 未知参数: $1（支持 --dry-run）" >&2; exit 1 ;;
+esac
+if [ "$DRY_RUN" = 1 ]; then
+  echo "[sync] DRY-RUN 解析（不执行任何写操作）"
+  echo "  ROOT=$ROOT"
+  echo "  UPSTREAM_ROOT=$UPSTREAM_ROOT"
+  echo "  UPSTREAM_DIR=$UPSTREAM_DIR"
+  echo "  upstream 目录存在=$([ -d "$UPSTREAM_DIR" ] && echo yes || echo no)"
+  echo "  upstream 是 git 检出=$([ -d "$UPSTREAM_DIR/.git" ] && echo yes || echo no)"
+  echo "  步骤：npm run clean → git fetch/checkout(tag 或 origin/main) → npm run inject → npm install → git status"
+  [ -d "$UPSTREAM_DIR/.git" ] || echo "  ⚠ 目标不是 git 检出：真跑会在 fetch 步失败（先准备 upstream 检出或设 OVERLAY_UPSTREAM_ROOT）"
+  exit 0
+fi
 cd "$ROOT"
 
 echo "[sync] 1. clean(撤销 B 类 patch)"

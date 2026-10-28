@@ -107,10 +107,12 @@ README 有加白名单指引。
 
 1. **loop 数据落点**:dev 态 loop 数据(`.loop/`)落 server cwd;打包态 cwd 只读时
    自动降级 `~/.hermes-web-ui/loop`(带告警),可用 `HERMES_LOOP_DIR` 显式指定。
-2. **Docker 路线**:overlay 根的 `docker-compose.yml`(Matrix 六服务编排)YAML
-   已合法化(895aa5f,`config -q` 校验过),但引用的 Dockerfile.* 仍不存在,
-   任何平台都 up 不起来;如需容器跑 agent 网关,用 hermes-agent 官方
-   `docker-compose.windows.yml`(Docker Desktop)。
+2. **Docker 路线**:本仓不提供可运行的容器编排。历史上根的 `docker-compose.yml`
+   只是旧多仓 aipaydev 推演期的占位声明(网络名仍是 `ncwk-network`,引用的
+   `Dockerfile.server`/`.ide`/`.leader` 从未存在,任何平台都 up 不起来),
+   2026-10-28 已下线;如需容器跑 agent 网关,用 hermes-agent 官方
+   `docker-compose.windows.yml`(Docker Desktop)。需要恢复旧文件时:
+   `git checkout 77abb0de2 -- docker-compose.yml`。
 3. **Element Web 参考仓**与 `scripts/sim|fleet|aipay` 多用户推演脚本为 macOS
    本机工具,不在 Windows 部署面内。
 4. **runtime pin 0.21.4 未发布**是发布流程事项(需构建上传 runtime release),

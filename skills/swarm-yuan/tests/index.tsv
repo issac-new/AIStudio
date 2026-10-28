@@ -41,6 +41,7 @@ test-ontology-verify.sh	2	yes	general	-
 test-ontology-knowledge.sh	1	yes	general	2026-10-22
 test-ops-readonly-guard.sh	2	yes	general	2026-10-22
 test-project-fingerprint.sh	2	yes	general	-
+test-precheck-conf-project-dir.sh	1	yes	general	2026-10-28
 test-r100-controlled-language.sh	2	yes	general	-
 test-r101-spec-first-universal.sh	2	yes	general	-
 test-r102-legacy-items.sh	2	yes	general	-

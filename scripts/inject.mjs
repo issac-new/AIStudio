@@ -10,7 +10,7 @@
 //
 // 注意:本脚本用 node 直跑(.mjs),不依赖 ts 加载器,因此路径在此内联计算,
 // 与 config/bootstrap.ts 保持一致(如需改路径,两处同步)。
-import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, realpathSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, realpathSync, mkdirSync } from 'fs';
 import { execSync } from 'child_process';
 import { resolve, relative } from 'path';
 import { pathToFileURL } from 'url';
@@ -50,6 +50,15 @@ const overlayServerCustom = resolve(overlayRoot, 'custom/server');
 const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
 const patchDir = resolve(overlayRoot, 'patches');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
+// 派生状态输出目录：默认仓根；测试/沙箱可经 OVERLAY_STATE_OUT 重定向。
+// 背景（2026-10-28）：inject-absent-tree 测试以临时树作 OVERLAY_UPSTREAM_ROOT 跑真实 inject，
+// 而派生 config 按脚本位置写到仓根，把 /tmp/standalone-cockpit-* 烙进 vite.config.overlay.ts，
+// 令随后 build:full 的产物写进已删除的临时树。重定向后测试不再污染检出。
+const stateOutDir = process.env.OVERLAY_STATE_OUT?.trim()
+  ? resolve(process.env.OVERLAY_STATE_OUT.trim())
+  : overlayRoot;
+// 清单随派生状态一起重定向（两者同源：注入态指纹与派生 config 必须落同一棵树）
+const stateManifestPath = resolve(stateOutDir, '.overlay-injected.json');
 
 const mode = process.argv.includes('--clean') ? 'clean' : 'inject';
 
@@ -502,8 +511,9 @@ export default mergeConfig(
   })
 );
 `;
-  writeFileSync(resolve(overlayRoot, 'vite.config.overlay.ts'), cfg);
-  console.log('[inject] generated vite.config.overlay.ts (@/@custom/@registries alias + entry input)');
+  mkdirSync(stateOutDir, { recursive: true });
+  writeFileSync(resolve(stateOutDir, 'vite.config.overlay.ts'), cfg);
+  console.log(`[inject] generated ${resolve(stateOutDir, 'vite.config.overlay.ts')} (@/@custom/@registries alias + entry input)`);
 }
 
 // vendor 模式下 worktree 检出的 vendor/hermes-studio/node_modules 不存在(产物
@@ -784,7 +794,7 @@ function main() {
     execSync('node scripts/deploy-agent-runtime.mjs --apply', { cwd: overlayRoot, stdio: 'inherit' });
     // 5. 写清单
     writeFileSync(
-      manifestPath,
+      stateManifestPath,
       JSON.stringify(
         { appliedPatches: applied, appliedZcodePatches: appliedZcode, generatedAt: new Date().toISOString() },
         null,
