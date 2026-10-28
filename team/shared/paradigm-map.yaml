@@ -1,0 +1,44 @@
+# 三范式归属（整合正本 §4.3：基座岗位 / 领域岗位 / 治理岗位）
+#
+# 来源：2026-10-28 由各 profile 的 SOUL 职责与目录前缀派生（用户裁决：先出表→审→落库）。
+# 判据：
+#   governance = 只做路由、判据、资产守门，不承接执行（orchestrator/度量/本体/技能供给/审计复核）
+#   base       = 通用方法岗，不挂特定领域知识（编码/调研/测试/产品方法）
+#   domain     = 挂本域知识与判据的交付岗（ops/pay/data/aiteam/hack 各域）
+# 改判只改本文件 + team/tests/test_paradigm_map.py 的期望计数，不要散改到别处。
+version: 1
+updated: '2026-10-28'
+mapping:
+  # ── 治理（8）──
+  orchestrator: governance            # 顶层调度，只路由不执行
+  aiteam-orchestrator: governance     # 领域网关，只路由
+  data-orchestrator: governance       # 领域调度路由器
+  pay-orchestrator: governance        # 领域调度路由器
+  ops-eval: governance                # 工作流度量与六维评估＝判据面（2026-10-28 定为治理）
+  platform-ontology-curator: governance  # 本体与语义层守门
+  platform-skill-miner: governance    # 技能供给治理（扫描/提炼/准入）
+  hack-auditor: governance            # 只读复核产出审计判词，不承接利用执行（2026-10-28 定为治理）
+  # ── 基座（5）──
+  worker-coder: base                  # 通用工程方法
+  worker-researcher: base             # 通用调研方法
+  worker-tester: base                 # 通用独立验证方法
+  product-manager: base               # 通用产品方法
+  product-researcher: base            # 通用市场调研方法
+  # ── 领域（17）──
+  ops-sre: domain
+  ops-devops: domain
+  ops-incident-commander: domain
+  pay-fintech: domain
+  pay-clearing: domain
+  pay-infra: domain
+  data-arch: domain
+  data-flink: domain
+  data-infra: domain
+  aiteam-architecture: domain
+  aiteam-multimodal: domain
+  aiteam-embodied: domain
+  aiteam-training: domain
+  aiteam-scout: domain
+  hack-recon: domain                  # 授权侦察＝攻防域知识（2026-10-28 定为领域，非基座方法岗）
+  hack-exploit: domain                # 授权利用验证＝攻防域知识
+  hack-forensics: domain              # 取证分析＝攻防域知识
