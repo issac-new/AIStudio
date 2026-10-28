@@ -2,7 +2,7 @@
 
 > 附件，非正本。保存方法论、早期决策与研究轮次的检索入口。
 > 当前根目录：`skills/swarm-yuan/`。
-> 当前数字以 `assets/facts.conf` 为准，决策全文以 `docs/design-evolution.md` 为准。
+> 当前数字以 `skills/swarm-yuan/assets/facts.conf` 为准，决策全文以 `skills/swarm-yuan/docs/design-evolution.md` 为准（两处均为技能根相对路径，仓库根的 `docs/` 下没有这两个文件）。
 > C.1-C.4 保留 2026-10-23 的历史索引，不用其中的旧计数描述当前状态。
 
 ## C.1 57 份方法论清单

@@ -8,7 +8,7 @@
  * to 为空（卡片离开看板的纯离场）不触发任何编排（含 from 侧 exit）——缺 to 的纯离场
  * 没有目标列可推进，matchColumnTransition 有意回空，此语义在 /match 文档注明。
  *
- * 挂载：B 类 patch 415 在 bootstrap/routes.ts。
+ * 挂载：B 类 patch 455-server-p1-routes-mounts 在 bootstrap/routes.ts。
  */
 import Router from '@koa/router'
 import { loadColumnAutomations, matchColumnTransition } from './column-automation'

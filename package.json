@@ -1,6 +1,6 @@
 {
   "name": "aistudio",
-  "version": "1.0.0-overlay",
+  "version": "1.0.1-overlay",
   "private": true,
   "type": "module",
   "description": "AIStudio：单一完整项目仓（产品面+Matrix+hermes agent+Ycode+swarm-yuan 技能+simharness）；vendor/ 钉版基线经构建期注入",
@@ -37,7 +37,7 @@
     "zcode:ensure": "node scripts/zcode-engine.mjs ensure",
     "zcode:serve": "node scripts/zcode-engine.mjs serve",
     "release:check": "node scripts/verify-release-manifest.mjs",
-    "release:packages": "node scripts/make-release-packages.mjs",
+    "release:packages": "npm run release:check && node scripts/make-release-packages.mjs",
     "postbuild": "node scripts/verify-dist.mjs",
     "fibo:sync": "npx -y tsx scripts/fibo/sync-qgate-index.ts"
   },

@@ -1168,7 +1168,7 @@ hermes-agent 基线已经随仓保存。
 运行时扩展通过 `runtime-manifest.json` 和注册脚本部署。
 Ycode 通过受管构建与安装脚本落到部署位。
 基线升级只由上游稳定发版触发；未发版时保持钉版，
-不追逐上游 main 分支漂移，版本核对结论见组件台账正本。
+不追逐上游 main 分支漂移。**例外：zcode** 按上游 main 同步、不看版本 tag（2026-10-25 用户裁定，见 `vendor/VENDOR.md`）。版本核对结论以 `vendor/VENDOR.md` 与 `RELEASE-MANIFEST.json` 为准；技术组件台账只收外部组件型调研线，不含仓内四大基线。
 
 ### 7.4 发布与版本
 
@@ -1420,7 +1420,7 @@ hermes、swarm-yuan 和全流程推演保留各自的专题事实源与 ADR。
 | Matrix 对端过滤原则 | [OFFICIAL 台账](../../../team/profiles/_shared/knowledge/candidate/matrix-peers.md) |
 | 决策分层 | [decision-tiers.yaml](../../../runtime/hermes-records/decisions/registries/decision-tiers.yaml) |
 | 模型阶段路由 | [model-routing.yaml](../../../runtime/hermes-records/decisions/registries/model-routing.yaml) |
-| 领域与岗位归属 | [domain-registry.yaml](../../../runtime/hermes-records/decisions/registries/domain-registry.yaml)、[owner-registry.yaml](../../../runtime/hermes-records/decisions/registries/owner-registry.yaml) |
+| 领域与岗位归属 | [team/shared/domain-registry.yaml](../../../team/shared/domain-registry.yaml)、[team/shared/owner-registry.yaml](../../../team/shared/owner-registry.yaml)（权威在本仓 `team/shared/`；`runtime/hermes-records/decisions/registries/` 下是 2026-09-17 脱敏镜像，缺 owner 字段，仅作记录副本） |
 | 能力与可靠性数据 | [capability-graph.yaml](../../../runtime/hermes-records/decisions/registries/capability-graph.yaml) |
 | 运行面记录映射 | [runtime 同步副本与源位置说明](../../../runtime/hermes-records/MANIFEST.md) |
 | 历史用户决策与演进 | [SwarmStudio 完整设计历史证据库](2026-10-21-swarmstudio-complete-design.md) |

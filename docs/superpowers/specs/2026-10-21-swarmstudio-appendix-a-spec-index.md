@@ -1,8 +1,7 @@
-# 附录 A：产品面全量 spec 索引（379 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（382 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 挂账清偿批后复核：main 376＋目录整理批 1＋预检单仓批 1＋清偿批 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 379 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
-> 覆盖与计数（2026-10-27 三流合并复核＋产品一致性批登记：main 372＋本批 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 373 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 对账发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 382 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -387,6 +386,9 @@
 | 2026-10-28-repo-structure-tidy | 仓库目录结构整理 | scripts 根 60→25 分 regression/maintenance；docs 根 30 个日期文件迁 reports/；根级死件退役；旧多仓路径对齐 vendor 优先 |
 | 2026-10-28-sim-prelaunch-check4-single-repo | 预检④单仓适配 | 判据排除 vendor/** 注入脏态（AGENTS.md 立法态）；预检轨迹与守门断言跟随 |
 | 2026-10-28-debt-clearance | 挂账清偿轮 | 部署默认保留目标+--force；inject 增 OVERLAY_STATE_OUT 隔离测试；runtime 模板回灌 guardrail；repo-root 去外机兜底；compose 下线；evidence 二进制冻结 |
+| 2026-10-28-sim-gates-audit-run23-redfixes | run23 前置红项根治（审计器/守门入口） | R8 悬空引用单源化、R5 时代分支、run-gates 单仓回落解析 |
+| 2026-10-28-run23-prelude-path-refresh | run23 前置正本路径勘误 | 起跑命令改单仓新址（docs/reports、scripts 子目录） |
+| 2026-10-28-design-reconcile-release | 设计与发布对账轮 | 六域 65 条发现（修 52/限制 13）；四模块升版并发布 v1.0.1-overlay |
 
 ### 角色/排除（非 spec 文档）
 

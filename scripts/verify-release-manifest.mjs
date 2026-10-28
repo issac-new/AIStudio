@@ -70,6 +70,20 @@ for (const key of REQUIRED_MODULES) {
     if (first !== mod.version) {
       fail(key, `VERSION 文件首行 "${first}" ≠ 清单 ${mod.version}`)
     }
+  } else if (key === 'cockpit' && mod.versionCarrier === 'RELEASE-NOTES.md') {
+    // 严格口径（2026-10-28 对账）：取「## 版本」节首个非空行比对，不用全文 includes——
+    // 全文判断在「新条目已加、清单忘改」时仍绿（旧版本串仍在正文里）。
+    const sec = carrierText.split(/^##\s*版本\s*$/m)[1] ?? ''
+    const first = sec.split('\n').map(l => l.trim()).find(Boolean) ?? ''
+    if (!first.includes(mod.version)) {
+      fail(key, `「## 版本」节首行未声明 ${mod.version}（首行="${first.slice(0, 80)}"）`)
+    }
+  } else if (key === 'yuan-skill' && mod.versionCarrier.endsWith('CHANGELOG.md')) {
+    // 严格口径：CHANGELOG 首个版本标题必须等于清单版本（`## [vX.Y.Z]`）
+    const first = /^##\s*\[(v[0-9]+\.[0-9]+\.[0-9]+)\]/m.exec(carrierText)?.[1] ?? ''
+    if (first !== mod.version) {
+      fail(key, `CHANGELOG 首个版本标题 "${first}" ≠ 清单 ${mod.version}`)
+    }
   } else if (mod.carrierFormat === 'json:version') {
     try {
       const parsed = JSON.parse(carrierText)
@@ -136,6 +150,11 @@ for (const key of REQUIRED_MODULES) {
   for (const inc of includes) {
     if (!existsSync(resolve(ROOT, inc))) fail(key, `packageIncludes 路径不存在：${inc}`)
   }
+  // includes 是「模块覆盖面」声明：必须是纯路径且真实存在（注释/中文说明应进 notes）
+  for (const inc of mod?.includes ?? []) {
+    if (/[（）()\u4e00-\u9fa5]/.test(String(inc))) fail(key, `includes 含非路径内容：${inc}`)
+    else if (!existsSync(resolve(ROOT, inc))) fail(key, `includes 路径不存在：${inc}`)
+  }
 }
 {
   const p = manifest.packaging
@@ -148,13 +167,21 @@ for (const key of REQUIRED_MODULES) {
   if (!existsSync(resolve(ROOT, 'scripts/make-release-packages.mjs'))) fail('packaging', '打包脚本缺失：scripts/make-release-packages.mjs')
 }
 
-// ── buildCommand 脚本在位（不执行构建） ──
+// ── buildCommand 脚本在位（不执行构建）＋ npm script 名存在 ──
+let pkgScripts = {}
+try { pkgScripts = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8')).scripts ?? {} } catch { pkgScripts = {} }
 for (const key of REQUIRED_MODULES) {
   const cmd = String(manifest.modules?.[key]?.buildCommand ?? '')
   const m = /node (scripts\/[\w./-]+)/.exec(cmd)
   if (m && !existsSync(resolve(ROOT, m[1]))) fail(key, `buildCommand 引用脚本不存在：${m[1]}`)
   const sh = /([\w./-]*scripts\/[\w./-]+\.(?:sh|mjs))/.exec(cmd)
   if (sh && !existsSync(resolve(ROOT, sh[1]))) fail(key, `buildCommand 引用脚本不存在：${sh[1]}`)
+  // npm run <name> 必须在 package.json 里有定义（删脚本或拼错名当场红）
+  for (const mm of cmd.matchAll(/npm run ([\w:.-]+)/g)) {
+    if (!Object.prototype.hasOwnProperty.call(pkgScripts, mm[1])) {
+      fail(key, `buildCommand 引用的 npm script 不存在于 package.json：npm run ${mm[1]}`)
+    }
+  }
 }
 
 if (problems.length > 0) {

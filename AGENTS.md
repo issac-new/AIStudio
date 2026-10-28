@@ -32,8 +32,8 @@
 | `docs/superpowers/specs/` | 设计规格与决策记录（单一事实源；新增 spec 一律落此） |
 | `registries/` | 客户端/服务端路由与功能注册表 |
 | `team/` | SwarmTeam 多 profile 部署包（脱敏正本；安装指南见目录内 README） |
-| `zcode-patches/` | Ycode（zcode 分叉）编辑器补丁 series |
-| `evidence/` | 验证证据留档（文本类；二进制中间产物不入库） |
+| `zcode-patches/` | Ycode（zcode 分叉，编码引擎）补丁 series：ACP/RPC/CUA/技能根兼容，不是编辑器专属面 |
+| `evidence/` | 验证证据留档；2026-10-28 前 34 张历史截图为冻结白名单（禁新增二进制，守门 `custom/__tests__/evidence-binary-freeze.test.ts`） |
 | `assets/` | 静态资产与技能品牌配置 |
 | `config/` | 特性开关与回路配置（bootstrap/features/loop-config；features.cockpit 等门控在此） |
 
@@ -42,9 +42,9 @@
 | 路径 | 作用 |
 |---|---|
 | `.swarm-yuan/` | 本仓自身的 swarm-yuan 项目状态：`hooks/pre-commit`（`core.hooksPath` 指向的 L2 钩子）+ decisions/trace 台账——**有意入库**，fresh clone 即得钩子与留痕 |
-| `.qgate/` | qgate 门禁运行面（`gates/` 项目覆盖门 + `cache/` 运行证据） |
+| `.qgate/` | 入库仅 `qgate.yaml` 与 `gates/*.yaml`（项目覆盖门）；`cache/ evidence/ runs/ junit-report.xml hooks.log` 等运行态由目录内 `.gitignore` 排除、不入库 |
 | `.archived-patches/` | 退役补丁族档案（旧 matrix 系列 018-061 等） |
-| `.github/` | CI（`workflows/qgate.yml`） |
+| `.github/` | CI：`workflows/qgate.yml`（门禁）与 `workflows/swarm-yuan.yml`（技能本体回归） |
 
 ### 本地基建（不入库；.gitignore / info/exclude / 自忽略兜底）
 

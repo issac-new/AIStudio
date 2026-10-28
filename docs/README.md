@@ -29,6 +29,7 @@
 | `upstream-analysis/` | 上游组件分析；`component-ledger.md` 已降级为历史指针，现行台账见 `team/shared/research/` |
 | `wx-research-20261021-digests/` | 三公众号调研的逐篇精读笔记（语料） |
 | `2026-10-02-4articles-sources/`、`2026-10-04-nine-sources-sources/` | 调研原文语料 |
+| `comm-collab-v13-research.md`、`comm-collab-v14-unified-chat.md` | 协作/统一聊天专题调研（未判定是否现行入口，按规则 5 留在 `docs/` 根并在此登记；确认过期后移入 `reports/`） |
 
 ## 归档与命名规则
 

@@ -112,7 +112,7 @@ assignee 用工人档案名+ready+@；群令 ≤4 步极简单步令；判静默
 10. 全员静默先查监督器+驱动双活；判活看工具计数/API 行/产物，不看 mtime。
 11. SIM 快照必须 `build:full`→provision→重启 studio。
 12. 服务载体三处同钉：custom 符号链接、vite config、cwd 全指 serve-main。
-13. 端口拓扑固定：8801 网关/8802 studio/8647 后端/8649 前端/8008 synapse/15721 cc-switch。
+13. 端口拓扑（两套环境，勿混用）：宿主日常=8647 后端 / 8649 前端 / 8650 真机网关 / 8008 synapse / 15721 cc-switch；SIM 推演栈=8801 网关 / 8802 studio（由 `simharness/mux/mx-up.sh` 拉起）。
 14. 凭据 0600 放仓外；CLI 实测隔离 HERMES_WEB_UI_HOME。
 15. 一切输出说人话、结论先行；文档终稿态。
 16. 收尾给编号决策清单（事项+建议+保守选项）。

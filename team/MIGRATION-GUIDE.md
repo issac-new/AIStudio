@@ -46,7 +46,7 @@ cd SwarmTeam
 # Make installer executable
 chmod +x install-windows.ps1
 
-# Install all 23 profiles
+# 安装全部 profile（笔记写作时快照为 23；本仓当前 30，以 team/shared/profiles.yaml 为准）
 powershell -ExecutionPolicy Bypass -File install-windows.ps1
 
 # Or install a specific team
@@ -232,8 +232,8 @@ hermes model
 
 | Component | Count | Description |
 |-----------|-------|-------------|
-| Profiles | 23 | Full agent distributions with distribution.yaml |
-| Global skills | ~30 categories | Shared skill library |
+| Profiles | 30（本仓当前；旧笔记快照 23） | Full agent distributions with distribution.yaml |
+| Global skills | 44 类（`ls team/skills`） | Shared skill library |
 | Per-profile skills | 15-30 categories each | Specialized per role |
 | Plugins | acp-client, run-trace, etc. | Per-profile plugin configs |
 | Configs | config.yaml per profile | Sanitized (api_key: "") |

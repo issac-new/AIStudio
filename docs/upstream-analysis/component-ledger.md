@@ -14,7 +14,7 @@
 | 账本 | 管什么 | 本台账的关系 |
 |---|---|---|
 | `vendor/VENDOR.md` | 三棵 vendor 树的钉版 commit、升级流程 | 本台账记录调研与差异；钉版以它为准 |
-| 本文件 | 组件版本、能力差异、AIStudio 用途、未决事项 | 长期维护入口 |
+| 本文件 | 组件版本、能力差异、AIStudio 用途、未决事项 | **历史反查，不再维护**（终态单文件见 `team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md`） |
 | `skills/swarm-yuan/references/capability-map.md` | 技能域 56 档文档与 22 个运行时的实施对账 | 技能域清单在本台账可见；实施对账以它为准（G25 机器执法） |
 
 ### 维护规则
