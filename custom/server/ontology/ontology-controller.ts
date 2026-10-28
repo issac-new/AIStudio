@@ -191,7 +191,8 @@ router.post('/rollback', (ctx) => {
   }
   const r = rollbackSpec(ts)
   if (!r.ok) {
-    fail(ctx, 404, r.error, { extra: { detail: r.error } })
+    const reason = r.error ?? '快照回滚失败'
+    fail(ctx, 404, reason, { extra: { detail: reason } })
     return
   }
   ctx.body = { ok: true, ts, preRollback: r.preRollback, restoredVersion: r.restoredVersion }
