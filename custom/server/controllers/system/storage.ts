@@ -20,11 +20,11 @@
  */
 import Router from '@koa/router'
 import { spawn } from 'child_process'
-import { homedir } from 'os'
 import { join } from 'path'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { readdir, stat, rm } from 'fs/promises'
 import { atomicWriteJson } from '../../lib/fs-store'
+import { underHermes } from '../../lib/paths'
 
 /** 分类定义（对标 zcode resourceManager.storage.category 11 类的本地子集） */
 const CATEGORIES: Array<{
@@ -33,15 +33,15 @@ const CATEGORIES: Array<{
   cleanable: boolean
   hint: string
 }> = [
-  { key: 'logs', dir: join(homedir(), '.hermes', 'logs'), cleanable: true, hint: '日志与运行记录' },
-  { key: 'backups', dir: join(homedir(), '.hermes', 'backups'), cleanable: true, hint: '备份' },
-  { key: 'backup', dir: join(homedir(), '.hermes', 'backup'), cleanable: true, hint: '备份（旧目录）' },
-  { key: 'trash', dir: join(homedir(), '.hermes', '_trash_20260829_entity_resolution'), cleanable: true, hint: '历史清理暂存' },
-  { key: 'audioCache', dir: join(homedir(), '.hermes', 'audio_cache'), cleanable: true, hint: '语音缓存' },
-  { key: 'cache', dir: join(homedir(), '.hermes', 'cache'), cleanable: true, hint: '通用缓存' },
-  { key: 'sessionStore', dir: join(homedir(), '.hermes', 'db'), cleanable: false, hint: '会话数据库（只读展示）' },
-  { key: 'runtimes', dir: join(homedir(), '.hermes', 'hermes-agent'), cleanable: false, hint: 'Agent 运行时（只读展示）' },
-  { key: 'assets', dir: join(homedir(), '.hermes', 'assets'), cleanable: false, hint: '静态资产（只读展示）' },
+  { key: 'logs', dir: underHermes('logs'), cleanable: true, hint: '日志与运行记录' },
+  { key: 'backups', dir: underHermes('backups'), cleanable: true, hint: '备份' },
+  { key: 'backup', dir: underHermes('backup'), cleanable: true, hint: '备份（旧目录）' },
+  { key: 'trash', dir: underHermes('_trash_20260829_entity_resolution'), cleanable: true, hint: '历史清理暂存' },
+  { key: 'audioCache', dir: underHermes('audio_cache'), cleanable: true, hint: '语音缓存' },
+  { key: 'cache', dir: underHermes('cache'), cleanable: true, hint: '通用缓存' },
+  { key: 'sessionStore', dir: underHermes('db'), cleanable: false, hint: '会话数据库（只读展示）' },
+  { key: 'runtimes', dir: underHermes('hermes-agent'), cleanable: false, hint: 'Agent 运行时（只读展示）' },
+  { key: 'assets', dir: underHermes('assets'), cleanable: false, hint: '静态资产（只读展示）' },
 ]
 
 /** 单分类扫描的文件数软上限：异常巨大的树（坏挂载/符号环）不至于拖死扫描 */
@@ -107,7 +107,7 @@ let snapshotInFlight: Promise<unknown> | null = null
 
 /** 磁盘缓存：面板热开读它，后台刷新写它；避免每次 4s 扫描 */
 const DISK_CACHE_PATH = process.env.IDE_STORAGE_CACHE_PATH?.trim()
-  || join(homedir(), '.hermes', 'ide-storage-snapshot.json')
+  || underHermes('ide-storage-snapshot.json')
 const DISK_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000
 
 interface DiskCache { at: number; body: Record<string, unknown> }

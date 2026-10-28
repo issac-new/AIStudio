@@ -26,6 +26,7 @@ import { handleCliSessions, handleDevtoolsLaunch, handleDevtoolsList } from './d
 // 只读消费 ~/.zcode/cli/db 三张用量表，逻辑全在 zcode-usage.ts，此处只挂分支。
 import { handleUsageContext, handleUsageRounds, handleUsageSessions, handleUsageSummary, handleUsageTools, matchZcodeUsageRoute } from './zcode-usage'
 import { atomicWriteJson } from '../../lib/fs-store'
+import { underHermes } from '../../lib/paths'
 
 interface EngineModelEntry { modelId: string; reasoningLevels?: string[] }
 interface EngineProviderEntry { providerId: string; baseURL: string; apiKeyEnv?: string; models: EngineModelEntry[] }
@@ -343,14 +344,12 @@ async function handleCacheAttribution(ctx: Context): Promise<void> {
 // 装载在 agent 会话启动时（studio MCP 面板列的是另一层，判不到它）。
 async function handleSemanticaStatus(ctx: Context): Promise<void> {
   const { readFileSync } = await import('fs')
-  const { join } = await import('path')
-  const { homedir } = await import('os')
   try {
-    const cfg = readFileSync(join(homedir(), '.hermes', 'config.yaml'), 'utf8')
+    const cfg = readFileSync(underHermes('config.yaml'), 'utf8')
     const configured = /mcp_servers:[\s\S]*?\n\s{2,}semantica:/.test(cfg)
     const kgPath = cfg.match(/SEMANTICA_KG_PATH:\s*(\S+)/)?.[1] ?? null
     // venv 布局平台差异：win32 是 Scripts\（含 python.exe），POSIX 是 lib/——固定探测 lib 在 Windows 恒 false
-    const venvOk = existsSync(join(homedir(), '.hermes', 'hermes-agent', 'venv', process.platform === 'win32' ? 'Scripts' : 'lib'))
+    const venvOk = existsSync(underHermes('hermes-agent', 'venv', process.platform === 'win32' ? 'Scripts' : 'lib'))
     ctx.body = { ok: true, configured, kgPath, venvOk, note: configured ? '工具在 agent 会话启动时装载（15 只知识工具）' : '未配置（hermes mcp install semantica）' }
   } catch (err) {
     ctx.status = 503

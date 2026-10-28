@@ -17,9 +17,9 @@
  * 覆盖），多 profile 走 /p/<profile>/ 前缀。挂载：patch 678（477 同款两行）。
  */
 import { readFileSync, readdirSync, statSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import { canUserAccessProfile, type ProfileAccessDeps } from '../../services/hermes/profile-access'
+import { underHermes } from '../../lib/paths'
 
 // 注：真进程 koa-router 新增路由不生效（routes.ts 404 缺陷注释同源，engine-models
 // 先例）——出口用原生中间件精确匹配（identityChatNativeRoutes），router 定义退役。
@@ -48,7 +48,7 @@ function apiKey(): string {
   const fromEnv = process.env.API_SERVER_KEY?.trim()
   if (fromEnv) return fromEnv
   try {
-    const m = readFileSync(join(homedir(), '.hermes', '.env'), 'utf8').match(/^API_SERVER_KEY=(.+)$/m)
+    const m = readFileSync(underHermes('.env'), 'utf8').match(/^API_SERVER_KEY=(.+)$/m)
     return m?.[1]?.trim() ?? ''
   } catch {
     return ''
@@ -125,7 +125,7 @@ async function ensureBotChat(profile: string): Promise<string> {
 async function handleIdentities(ctx: Ctx, deps?: ProfileAccessDeps): Promise<void> {
   ctx.set('Cache-Control', 'no-store')
   try {
-    const profileDir = join(homedir(), '.hermes', 'profiles')
+    const profileDir = underHermes('profiles')
     let served: string[] = []
     try {
       served = readdirSync(profileDir)
