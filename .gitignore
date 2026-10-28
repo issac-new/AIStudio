@@ -57,3 +57,8 @@ vendor/**/*.tsbuildinfo
 /vendor/hermes-studio/packages/server/src/custom
 # 宿主工具缓存（本机生成）
 /.gstack/
+
+# 原子写临时文件（lib/fs-store 生成；异常中断残留不入库）
+**/.*-*.tmp
+**/*.tmp-*
+**/*.tmp.*
