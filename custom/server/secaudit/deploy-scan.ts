@@ -10,6 +10,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { SECRET_RULES, type RepoEvidence } from './repo-scan'
+import { hermesHome } from '../lib/paths'
 
 /** 数据目录不扫：traces/db/sessions 是运行时产物，尺寸大且命中多为业务数据误报。 */
 const SKIP_DIRS = new Set(['node_modules', '.git', 'traces', 'db', 'sessions', 'dist', 'coverage', 'cache'])
@@ -22,7 +23,7 @@ const MAX_DEPTH = 3
 function deployRoot(): string {
   const env = process.env.SECAUDIT_DEPLOY_ROOT?.trim()
   if (env) return env
-  return join(homedir(), '.hermes')
+  return hermesHome()
 }
 
 /**

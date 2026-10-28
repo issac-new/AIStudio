@@ -22,6 +22,7 @@ import { appendConflictInbox, listConflictInbox } from '../knowledge/board-graph
 import { loadInstances, loadSpec, replaceIngested } from './ontology-store'
 import { validateInstances } from './ontology-validate'
 import type { OntologyInstance, Violation } from './ontology-types'
+import { hermesHome, underWebUi } from '../lib/paths'
 
 interface TaskRow {
   id: string
@@ -37,7 +38,7 @@ function slugOfDb(dbPath: string): string {
 }
 
 function defaultHome(): string {
-  return process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  return process.env.HERMES_HOME?.trim() || hermesHome()
 }
 
 function boardDbPath(slug: string, homeDir?: string): string {
@@ -172,7 +173,7 @@ export interface WatchTickResult {
 function watchStateFile(): string {
   const base = process.env.ONTOLOGY_WATCH_STATE?.trim()
   if (base) return base
-  return join(homedir(), '.hermes-web-ui', 'overlay', 'ontology-watch.json')
+  return underWebUi('overlay', 'ontology-watch.json')
 }
 
 function readLastEventId(): number {

@@ -17,6 +17,7 @@
 import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { hermesWebUiHome } from '../lib/paths'
 
 /** matrix-session.json 单条会话记录（矩阵客户端登录态最小集） */
 export interface MatrixSessionRecord {
@@ -37,7 +38,7 @@ export type MatrixSessionInput = Omit<MatrixSessionRecord, 'updatedAt'>
  */
 export function resolveAppHome(env: Record<string, string | undefined> = process.env): string {
   const appHome = env.HERMES_WEB_UI_HOME?.trim() || env.HERMES_WEBUI_STATE_DIR?.trim()
-  return appHome ? join(appHome) : join(homedir(), '.hermes-web-ui')
+  return appHome ? join(appHome) : hermesWebUiHome()
 }
 
 /** 会话文件绝对路径：`<appHome>/matrix-session.json` */

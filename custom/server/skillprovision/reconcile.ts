@@ -10,6 +10,7 @@ import { catalogAppliesTo, defaultCatalogPath, parseCatalog } from './catalog'
 import { loadManifest, matchRole, resolveManifestPath } from './manifest'
 import { indexSkills, listProfiles, scanProfileSkills, scanSkillRoot, skillNames } from './scan'
 import type { ProfileReconcileRow, ProvisionReport } from './types'
+import { hermesHome } from '../lib/paths'
 
 export interface BuildReportOptions {
   hostRoot?: string
@@ -21,7 +22,7 @@ export interface BuildReportOptions {
 export function defaultHostRoot(): string {
   const profiles = process.env.HERMES_PROFILES_ROOT?.trim()
   if (profiles) return resolve(profiles.replace(/^~/, homedir()), '..')
-  return join(homedir(), '.hermes')
+  return hermesHome()
 }
 
 export function defaultSimRoot(): string {

@@ -20,6 +20,7 @@ import { execFile } from 'child_process'
 import { chmodSync, mkdirSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { hermesHome } from '../../lib/paths'
 
 /** 桥接开关：LOOP_SCHEDULER=cron 时启用（缺省关闭，行为不变）。 */
 export function isCronBridgeEnabled(env: Record<string, string | undefined> = process.env): boolean {
@@ -83,7 +84,7 @@ export interface CronBridgeOpts {
  */
 export async function ensureLoopTickCronJob(opts: CronBridgeOpts): Promise<boolean> {
   const log = opts.log ?? (() => {})
-  const home = opts.hermesHome ?? join(homedir(), '.hermes')
+  const home = opts.hermesHome ?? hermesHome()
   // 真 CLI 合同（冒烟实测，issue #18594）：不显式钉 HERMES_HOME 时 CLI 会落到
   // "活动 profile" 的 home 找 scripts/，脚本写错家即失败——与写脚本的家保持一致。
   const exec = opts.exec ?? ((args) => new Promise((resolve, reject) => {

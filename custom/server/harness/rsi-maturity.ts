@@ -9,6 +9,7 @@
 import { existsSync, readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { hermesHome } from '../lib/paths'
 
 export type RsiLevelKey = 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
 
@@ -47,7 +48,7 @@ export interface RsiMaturityReport {
 }
 
 function hermesPath(rel: string): string {
-  const home = process.env.HERMES_HOME?.trim() || join(homedir(), '.hermes')
+  const home = process.env.HERMES_HOME?.trim() || hermesHome()
   return join(home, rel)
 }
 
