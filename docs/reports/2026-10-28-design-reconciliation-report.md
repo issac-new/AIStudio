@@ -112,8 +112,8 @@
 
 | # | 事项 | 不修理由 | 后续入口 |
 |---|---|---|---|
-| K1 | `npm run sync` 端到端未跑 | 需外部 upstream 远端与依赖重装，且会撤销当前注入态；已用 `--dry-run` 覆盖唯一改动面（路径解析） | 隔离环境演练轮 |
-| K2 | 整合正本两处「截图不入库」绝对句 | 与 A9 同源，改正文需连带修订 §8 边界表；本轮已在 AGENTS/docs README 立例外，避免一次改三处 | 下轮正本修订随批 |
+| K1 | ~~`npm run sync` 端到端未跑~~ **已补跑（2026-10-28）** | 在隔离检出实跑：一次性 worktree + 本地 clone 上游（origin 指向仓内 upstream，不出网），`SYNC_EXIT=0`、补丁 applied 339 条 / FAILED 0 条、checkout tag v0.7.39、install 走离线缓存 | 证据 `evidence/2026-10-28-sync-e2e/sync-run.log` |
+| K2 | ~~整合正本两处「截图不入库」绝对句~~ **已修（2026-10-28）** | 正文两处补 `evidence/` 冻结白名单例外，与 `AGENTS.md` 规则 8 / `docs/README.md` 的分轨表对齐 | 已入库 |
 | K3 | `docker-compose` 路线 | 已下线（2026-10-28 挂账清偿轮）；补齐容器化是新项目 | 产品裁决 |
 | K4 | agent-teams 底座无机器载体 | 引入 `team/version.json` 需与 VENDOR.md、测试三方同步，属跨模块契约变更 | 版本机制轮 |
 | K5 | `carrierPattern` 字段名语义过载 | 改名需同步校验器 + 单测 + 清单，收益小于风险；已在清单注释固化语义 | 校验器重构轮 |
@@ -169,7 +169,7 @@
 | K19 | 200+`ok:false` 与 4xx 混用；响应体键名 `detail/error/problems` 并存 | 统一 HTTP 语义是 breaking change，需客户端同批 | API 规范轮 |
 | K20 | `typecheck:harness` 硬编码 135 文件、`strict:false`、客户端无 `vue-tsc` | 改 glob 会一次性暴露存量类型错；需要先建基线 | 类型门禁轮 |
 | K21 | `ia2` ↔ `cockpit` 双向依赖、feature flag 管不住模块图 | 需先抽 `client/shared` 内核，改动面大 | 前端架构轮 |
-| K22 | 153 个服务端域中 151 个连写命名（仅 2 个 kebab） | 批量改名会打穿 typecheck 清单、补丁文本与 503 个测试；只立「新域一律 kebab」规约 | 长期规约 |
+| K22 | ~~153 个域命名不统一~~ **已立规（2026-10-28）** | 批量改名收益低于风险，改为写入 `custom/server/AGENTS.md`：新域一律 kebab-case、存量不批量改名（写明代价）、域索引口径与近义域边界先例（approval-rules/approval-inbox） | 规约已入库 |
 
 ### 7.3 模板与文档规范结论
 
