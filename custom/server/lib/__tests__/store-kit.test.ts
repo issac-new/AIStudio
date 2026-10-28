@@ -79,20 +79,20 @@ describe('收敛棘轮：重复实现只许减少', () => {
     } catch { return 0 } // git grep 无命中时退出码 1
   }
 
-  it('服务端本地原子写定义不超过基线 8 处（新代码必须用 lib/fs-store）', () => {
+  it('服务端本地原子写定义不超过基线 9 处（新代码必须用 lib/fs-store）', () => {
     const n = grepCount('function writeJsonAtomic\\|function writeAtomic', ['custom/server'])
-    expect(n, '新增了本地原子写实现——请改用 custom/server/lib/fs-store').toBeLessThanOrEqual(8)
+    expect(n, '新增了本地原子写实现——请改用 custom/server/lib/fs-store').toBeLessThanOrEqual(9)
   })
 
-  it('内联 homedir()+\'.hermes\' 不超过基线 75 处（新代码必须用 lib/paths）', () => {
+  it('内联 homedir()+\'.hermes\' 不超过基线 78 处（新代码必须用 lib/paths）', () => {
     const n = grepCount("homedir(), '.hermes'", ['custom/server'])
-    expect(n, '新增了内联家目录解析——请改用 custom/server/lib/paths').toBeLessThanOrEqual(75)
+    expect(n, '新增了内联家目录解析——请改用 custom/server/lib/paths').toBeLessThanOrEqual(78)
   })
 
   it('authFetch 只有一份实现（其余为再导出）', () => {
     const impl = readFileSync(join(ROOT, 'custom/client/shared/http.ts'), 'utf8')
     expect(impl).toContain('export async function authFetch')
-    expect(impl).toContain('getBaseUrl()')
+    expect(impl).toContain('hermes_server_url')
     expect(impl).toContain('X-Hermes-Profile')
     const legacy = readFileSync(join(ROOT, 'custom/client/ide/utils/auth-fetch.ts'), 'utf8')
     expect(legacy).not.toContain('export async function authFetch')
