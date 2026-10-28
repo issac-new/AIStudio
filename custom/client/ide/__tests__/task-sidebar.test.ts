@@ -112,7 +112,7 @@ vi.mock('../composables/useIdeKanbanOverview', async () => {
     }),
   }
 })
-vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({
+vi.mock('@/custom/shared/adapters/task-adapter', () => ({
   bucketPriority: (p: number | null | undefined): string =>
     (p == null || p <= 0 ? 'P3' : p === 1 ? 'P2' : p === 2 ? 'P1' : 'P0'),
 }))

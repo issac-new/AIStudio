@@ -5,7 +5,7 @@
 // 持久化=localStorage（客户端偏好，per-user 语义诚实）；默认全开（零行为变化）。
 // 分组→InboxKind 映射对齐 cockpit inbox-adapter 词表（单一事实源）。
 import { reactive } from 'vue'
-import type { InboxKind } from '@/custom/cockpit/adapters/inbox-adapter'
+import type { InboxKind } from '@/custom/shared/adapters/inbox-adapter'
 import { readSetting, writeSetting, adoptLegacySetting } from '@/custom/settings-layers'
 
 export interface NotifyPrefGroup {

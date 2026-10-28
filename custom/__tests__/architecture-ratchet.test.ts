@@ -34,14 +34,19 @@ describe('架构棘轮：只许减少', () => {
     expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(874)
   })
 
-  it('K21 ia2 依赖 cockpit 的 import 不超过 45 处', () => {
+  it('K21 ia2 依赖 cockpit 的 import 必须为 0（数据层已下沉 shared）', () => {
     const n = execFileSync('bash', ['-c', "grep -rn \"from '@/custom/cockpit\" custom/client/ia2 | wc -l"], { cwd: ROOT, encoding: 'utf8' }).trim()
-    expect(Number(n), 'ia2 又新增了对 cockpit 的依赖——请下沉到 custom/client/shared').toBeLessThanOrEqual(45)
+    expect(Number(n), 'ia2 又新增了对 cockpit 的依赖——请下沉到 custom/client/shared').toBe(0)
   })
 
-  it('K21 cockpit 依赖 ia2 的 import 不超过 6 处（该方向禁止增长）', () => {
+  it('K21 cockpit 依赖 ia2 的 import 必须为 0（workspace 已下沉 shared）', () => {
     const n = execFileSync('bash', ['-c', "grep -rn \"from '@/custom/ia2\" custom/client/cockpit | wc -l"], { cwd: ROOT, encoding: 'utf8' }).trim()
-    expect(Number(n), 'cockpit 又新增了对 ia2 的依赖（反向环）——请下沉到 custom/client/shared').toBeLessThanOrEqual(6)
+    expect(Number(n), 'cockpit 又新增了对 ia2 的依赖（反向环）——请下沉到 custom/client/shared').toBe(0)
+  })
+
+  it('K21 shared 内核不得反向依赖 ia2/cockpit（下沉层单向）', () => {
+    const n = execFileSync('bash', ['-c', "grep -rn \"from '@/custom/\\(ia2\\|cockpit\\)\" custom/client/shared | wc -l"], { cwd: ROOT, encoding: 'utf8' }).trim()
+    expect(Number(n), 'shared 出现对域的反向依赖——共享层必须保持自底向上').toBe(0)
   })
 
   it('K20 客户端类型基线存在且可读（typecheck:client 生成）', () => {

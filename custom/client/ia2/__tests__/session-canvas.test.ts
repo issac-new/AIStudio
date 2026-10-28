@@ -21,7 +21,7 @@ vi.mock('@/views/hermes/ChatView.vue', () => ({
 
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import SessionWorkbenchPanel from '../components/flow/SessionWorkbenchPanel.vue'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 const TASK = (id: string, title: string, status = 'review'): CockpitTask =>
   ({ id, title, priority: 'P1', status, assignee: 'worker-coder', workspace: '', tenant: null, boardSlug: 'swarm', createdAt: 0 })

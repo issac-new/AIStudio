@@ -4,7 +4,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useWorkspaceStore } from '../../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { taskPathLabel, taskResultLabel, taskUpdatedLabel, type RawBoardTask } from './daily-task-display'
 import { useAssigneeLabel } from './assignee-display'
 import DailySimReference from './DailySimReference.vue'

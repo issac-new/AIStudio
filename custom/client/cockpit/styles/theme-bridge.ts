@@ -6,7 +6,7 @@
 // （useTheme.ts:178），但亮暗/comic 切换只翻转 documentElement class 不派事件，
 // 故双通道：事件监听 + MutationObserver 盯 class。双落点幂等（ia2/cockpit 两入口
 // 都 import 本模块，ES 模块单例 + wired 旗保证只接一次）。
-import { invalidateStatusColorCache } from './status-colors'
+import { invalidateStatusColorCache } from '@/custom/shared/styles/status-colors'
 
 let wired = false
 

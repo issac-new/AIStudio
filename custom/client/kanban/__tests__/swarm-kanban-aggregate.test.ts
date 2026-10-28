@@ -39,7 +39,7 @@ const workspaceStubs = vi.hoisted(() => {
   }
   return { state, useWorkspaceStore: () => state }
 })
-vi.mock('@/custom/ia2/store/workspace', () => ({
+vi.mock('@/custom/shared/store/workspace', () => ({
   useWorkspaceStore: workspaceStubs.useWorkspaceStore,
   isWritableTask: (ref: { source?: string } | null | undefined) => ref?.source === 'daily',
 }))

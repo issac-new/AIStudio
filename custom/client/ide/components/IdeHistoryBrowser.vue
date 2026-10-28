@@ -17,7 +17,7 @@ import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { authFetch } from '../utils/auth-fetch'
 import { useMsgSurfaceText } from '@/custom/ia2/i18n-msg-surface'
-import { forkGatewaySession } from '@/custom/ia2/api/runtime-caps'
+import { forkGatewaySession } from '@/custom/shared/api/runtime-caps'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 

@@ -4,7 +4,7 @@
 // →MessageList.scrollToMessage 既有链（不新造滚动机制）。悬停展开该轮锚点与工具数。
 import { computed } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
-import { buildTurnOutline, type OutlineEvent } from '../../cockpit/adapters/turn-outline'
+import { buildTurnOutline, type OutlineEvent } from '@/custom/shared/adapters/turn-outline'
 import { fetchEngineRows, findForkAnchor, forkAtAnchor } from '../utils/zcode-fork'
 import { useIdeStore } from '../store/ide'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'

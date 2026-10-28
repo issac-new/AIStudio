@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref, nextTick, effectScope } from 'vue'
-import { useRunTrace } from '../composables/useRunTrace'
+import { useRunTrace } from '@/custom/shared/composables/useRunTrace'
 
 const mocks = vi.hoisted(() => {
   const socket = {
@@ -345,7 +345,7 @@ describe('useRunTrace', () => {
   })
 
   it('(匹配C) 精确标题匹配，宽泛标题不误匹配', async () => {
-    const { matchSessionTaskId, extractKanbanTaskId } = await import('../composables/useRunTrace')
+    const { matchSessionTaskId, extractKanbanTaskId } = await import('@/custom/shared/composables/useRunTrace')
     // 精确匹配
     expect(matchSessionTaskId('work kanban task t_342327f6')).toBe('t_342327f6')
     expect(matchSessionTaskId('  Work Kanban Task t_abc  ')).toBe('t_abc')

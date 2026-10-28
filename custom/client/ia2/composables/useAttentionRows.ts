@@ -4,7 +4,7 @@
 // 同屏计数打架。统一为本组合式：blocked 任务 + blocked 循环 + 等我（useSitCounts）
 // + 会话受阻/失败（abortStates 投影）四源 → mergeAttention 归并，行带 kind 供分派。
 import { computed } from 'vue'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useSitCounts } from './useSitCounts'

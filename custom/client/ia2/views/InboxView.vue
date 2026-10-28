@@ -6,7 +6,7 @@
 import IaBreadcrumb from '../components/IaBreadcrumb.vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
+import ApprovalPanel from '@/custom/shared/components/ApprovalPanel.vue'
 import GatekeeperSection from '../components/inbox/GatekeeperSection.vue'
 
 const { t } = useI18n()

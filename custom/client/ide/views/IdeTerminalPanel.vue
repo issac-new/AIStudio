@@ -22,8 +22,8 @@ import {
   isTerminalToolId,
   pickDefaultTool,
   type TerminalToolId,
-} from '@/custom/cockpit/terminal/terminal-tools'
-import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/cockpit/api/terminal-tools'
+} from '@/custom/shared/terminal/terminal-tools'
+import { fetchTerminalTools, type TerminalToolStatus } from '@/custom/shared/api/terminal-tools'
 import { detachShell } from '../../../server/shelldetach/shell-detach'
 
 const ide = useIdeStore()

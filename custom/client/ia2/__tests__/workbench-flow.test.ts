@@ -99,7 +99,7 @@ const workspaceStubs = vi.hoisted(() => ({
   },
   useWorkspaceStore: () => workspaceStubs.state,
 }))
-vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
+vi.mock('@/custom/shared/store/workspace', () => ({ useWorkspaceStore: workspaceStubs.useWorkspaceStore }))
 
 const runsStubs = vi.hoisted(() => {
   const state = {
@@ -120,7 +120,7 @@ const cockpitStubs = vi.hoisted(() => {
   }
   return { state, useCockpitStore: () => state }
 })
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
+vi.mock('@/custom/shared/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
 
 const kanbanApiStubs = vi.hoisted(() => ({
   completeTasks: vi.fn(async () => ({ results: [] })),

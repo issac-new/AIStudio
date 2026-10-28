@@ -51,7 +51,7 @@ vi.mock('@/stores/hermes/chat', () => ({
     sendMessage: vi.fn(async () => {}),
   }),
 }))
-vi.mock('@/custom/cockpit/store/cockpit', () => ({
+vi.mock('@/custom/shared/store/cockpit', () => ({
   useCockpitStore: () => ({ openRunTrace: vi.fn() }),
 }))
 vi.mock('@/stores/hermes/kanban', () => ({
@@ -82,7 +82,7 @@ vi.mock('../views/IdeSidePane.vue', () => ({ default: { name: 'IdeSidePane', tem
 vi.mock('../views/IdeStatusBar.vue', () => ({ default: { name: 'IdeStatusBar', template: '<div />' } }))
 vi.mock('../components/IdeCommandPalette.vue', () => ({ default: { name: 'IdeCommandPalette', template: '<div />' } }))
 vi.mock('../components/IdeTaskContextBar.vue', () => ({ default: { name: 'IdeTaskContextBar', template: '<div class="ide-taskctx-stub" />' } }))
-vi.mock('@/custom/cockpit/components/CockpitRunTraceModal.vue', () => ({ default: { name: 'CockpitRunTraceModal', template: '<div />' } }))
+vi.mock('@/custom/shared/components/CockpitRunTraceModal.vue', () => ({ default: { name: 'CockpitRunTraceModal', template: '<div />' } }))
 vi.mock('@/custom/ia2/components/IaGlobalTop.vue', () => ({ default: { name: 'IaGlobalTop', template: '<div class="ia-gtop-stub" />' } }))
 
 import IdeShell from '../views/IdeShell.vue'

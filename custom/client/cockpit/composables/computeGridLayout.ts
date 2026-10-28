@@ -4,7 +4,7 @@
 //   X 轴（列）：按 cluster（任务）最早 startedAt 升序，每列一个任务聚类
 //   Y 轴（行）：按下钻维度 ingress→workflow→agent→skill→tool 自上而下
 // 同列同行多节点按 startedAt 在列内水平排开，避免重叠。
-import type { TraceNode } from '../adapters/run-trace-adapter'
+import type { TraceNode } from '@/custom/shared/adapters/run-trace-adapter'
 
 /** 下钻维度层级：行索引（从上到下） */
 export const KIND_ROWS: Array<{ kind: TraceNode['kind']; label: string }> = [

@@ -21,7 +21,7 @@ import {
 } from '../../stage-tabs'
 import { useDailyStageProgress } from '../../composables/useDailyStageProgress'
 import { stageBoardStatuses, stageBoardStatusLabel } from '../../stage-task-filter'
-import { isWritableTask, useWorkspaceStore } from '../../store/workspace'
+import { isWritableTask, useWorkspaceStore } from '@/custom/shared/store/workspace'
 
 const route = useRoute()
 const router = useRouter()

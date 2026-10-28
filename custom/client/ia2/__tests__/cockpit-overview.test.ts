@@ -9,7 +9,7 @@ import { setActivePinia, createPinia } from 'pinia'
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, p?: Record<string, unknown>) => p ? `${k}:${JSON.stringify(p)}` : k }) }))
 
 import CockpitOverview from '../components/flow/CockpitOverview.vue'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 function task(id: string, status: string, raci?: unknown): CockpitTask {
   return { id, title: `任务 ${id}`, status, raci } as unknown as CockpitTask

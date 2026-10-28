@@ -9,7 +9,7 @@ import {
   fetchUsage, fetchSlo, fetchCostSummary,
   type UsageReport, type SloReport, type CostSummary,
 } from '@/custom/governance/api/governance'
-import { fetchCredentialProviders, fetchCronRuns, fetchGatewayStatus, type CredentialProviderRow, type CronRunRow, type GatewayStatus } from '@/custom/ia2/api/runtime-caps'
+import { fetchCredentialProviders, fetchCronRuns, fetchGatewayStatus, type CredentialProviderRow, type CronRunRow, type GatewayStatus } from '@/custom/shared/api/runtime-caps'
 import { governanceMessages } from '@/custom/governance/i18n'
 
 const i18nCtx = useI18n()

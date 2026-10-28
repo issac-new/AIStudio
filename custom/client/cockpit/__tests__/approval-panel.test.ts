@@ -4,8 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
-import ApprovalPanel from '../components/ApprovalPanel.vue'
-import * as approvalsApi from '../api/approvals'
+import ApprovalPanel from '@/custom/shared/components/ApprovalPanel.vue'
+import * as approvalsApi from '@/custom/shared/api/approvals'
 
 
 // UX 裁决 C（2026-10-03）：审批一键直通改确认制——点击动作后须在离散 dialog 确认
@@ -22,8 +22,8 @@ async function confirmDecision(): Promise<void> {
 // U2 改版（locale 时间随界面语言）：mock 需带 locale ref，否则 fmtTime 读 locale.value 炸挂载
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, named?: Record<string, unknown>) => (named ? `${k}:${JSON.stringify(named)}` : k), locale: ref('zh-CN') }) }))
 // mock 整个 approvals API 模块：经 @/api/client 会连锁拉入上游 router（node 环境无 location）
-vi.mock('../api/approvals', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../api/approvals')>()
+vi.mock('@/custom/shared/api/approvals', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/custom/shared/api/approvals')>()
   const state = {
     pending: { items: [] as unknown[] }, history: { entries: [] as unknown[] },
     spotcheck: { items: [] as unknown[], resolved: [] as unknown[] },

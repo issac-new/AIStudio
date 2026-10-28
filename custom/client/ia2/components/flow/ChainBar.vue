@@ -4,7 +4,7 @@
      打开。动线①↔②↔⑤ 的互跳锚点。 -->
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 const props = defineProps<{
   objectName: string

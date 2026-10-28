@@ -25,7 +25,7 @@ const { searchSessions, listWorkspaceFiles, getTimeline } = vi.hoisted(() => ({
   listWorkspaceFiles: vi.fn(async () => []),
   getTimeline: vi.fn(async () => ({ items: [], total: 0 })),
 }))
-vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
+vi.mock('@/custom/shared/api/kanban-extras', () => ({
   searchSessions, listWorkspaceFiles, getTimeline,
 }))
 
@@ -110,7 +110,7 @@ vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
   useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }),
 }))
 
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 
 // 内存 localStorage polyfill（vitest 3.x jsdom 默认 stub localStorage）
 class MemStorage {

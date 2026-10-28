@@ -4,7 +4,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useWorkspaceStore } from '../../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { fetchGateRepairs } from '../../api/gov'
 
 const i18nCtx = useI18n() as { locale?: { value?: string } }

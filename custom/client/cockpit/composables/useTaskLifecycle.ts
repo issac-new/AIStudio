@@ -10,7 +10,7 @@
 // 数据源：cockpit store 的 cockpitTasks（跨 board 聚合，已含时间戳）
 // 纯前端聚合，无新增后端 API。
 import { computed, type Ref } from 'vue'
-import type { CockpitTask } from '../adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 export type LifecycleStatus =
   | 'triage' | 'todo' | 'scheduled' | 'ready' | 'running'

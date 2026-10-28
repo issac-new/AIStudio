@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const requestMock = vi.fn()
 vi.mock('@/api/client', () => ({ request: (...args: unknown[]) => requestMock(...args) }))
 
-import { searchSessions, listWorkspaceFiles, getTimeline } from '@/custom/cockpit/api/kanban-extras'
+import { searchSessions, listWorkspaceFiles, getTimeline } from '@/custom/shared/api/kanban-extras'
 
 beforeEach(() => requestMock.mockReset())
 

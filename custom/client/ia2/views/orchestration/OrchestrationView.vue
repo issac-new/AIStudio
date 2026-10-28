@@ -10,7 +10,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { VueFlow, MarkerType, useVueFlow, type Node, type Edge, type NodeMouseEvent } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
-import { useWorkspaceStore } from '../../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { shortMxName } from '@/custom/ui/mxid-display'
 import {
   type OrchTaskRaw, type AutonomyEntry, type EscalationRecord, type StoredSpecSummary,

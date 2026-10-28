@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseTenant } from '@/custom/cockpit/adapters/collab-adapter'
+import { parseTenant } from '@/custom/shared/adapters/collab-adapter'
 
 describe('parseTenant', () => {
   it('null/undefined/empty → null', () => {

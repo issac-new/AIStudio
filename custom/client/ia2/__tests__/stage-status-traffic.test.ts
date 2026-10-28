@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 // store 静默拉 @/api/client → router → location（node 环境炸）；
 // 纯函数判定不依赖 store，按 side-nav.test.ts 先例整模块桩掉（vi.mock 提升生效）。
-vi.mock('../store/workspace', () => ({
+vi.mock('@/custom/shared/store/workspace', () => ({
   useWorkspaceStore: () => ({ tasks: [], refreshAllBoards: async () => {} }),
 }))
 import { dailyStageState } from '../composables/useDailyStageProgress'

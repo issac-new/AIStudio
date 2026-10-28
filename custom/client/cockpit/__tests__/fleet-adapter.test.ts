@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { normalizeSnapshot } from '../adapters/fleet-adapter'
+import { normalizeSnapshot } from '@/custom/shared/adapters/fleet-adapter'
 
 describe('normalizeSnapshot', () => {
   it('normalizes a healthy server snapshot', () => {

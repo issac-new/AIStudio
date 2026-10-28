@@ -6,7 +6,7 @@ import { useMatrixClientStore } from '@/custom/matrix-chat/stores/matrix-client'
 import { useTeamRegistryStore } from '@/custom/matrix-teams/stores/team-registry'
 import { onDutyRoomIds } from '@/custom/matrix-teams/adapters/accounts'
 import { duplicateNames as collectDuplicateNames, shortRoomId } from '@/custom/matrix-chat/utils/room-disambig'
-import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 
 const roomStore = useMatrixRoomStore()
 const clientStore = useMatrixClientStore()

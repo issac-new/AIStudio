@@ -4,9 +4,9 @@
 // chatStore.sessions ∪ matrixRoom.sortedRooms / teamRegistry.accounts /
 // cockpit.fleetSessions。pinia 单例——多处 useStore 无重复成本。
 import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useRunCenterStore } from '@/custom/loop/runcenter/store/runs'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 import { useLoopStore } from '@/custom/loop/store/loop'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'

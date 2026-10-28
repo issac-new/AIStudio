@@ -26,7 +26,7 @@ describe('驾驶舱性能收敛守门（源码级）', () => {
   })
 
   it('cockpit store：不再开第二条看板聚合 WS（connectOverviewStream 不在 initFleetStream）', () => {
-    const src = readFileSync(resolve(clientRoot, 'cockpit/store/cockpit.ts'), 'utf8')
+    const src = readFileSync(resolve(clientRoot, 'shared/store/cockpit.ts'), 'utf8')
     expect(src).not.toContain('fleetAdapter.connectOverviewStream')
   })
 })

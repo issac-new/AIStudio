@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import GatekeeperSection from '../../components/inbox/GatekeeperSection.vue'
-import ApprovalPanel from '@/custom/cockpit/components/ApprovalPanel.vue'
+import ApprovalPanel from '@/custom/shared/components/ApprovalPanel.vue'
 import { fetchApprovalSummary, type ApprovalSummary } from '../../api/approval-summary'
 
 const emit = defineEmits<{ 'open-all': [] }>()

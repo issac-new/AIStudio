@@ -15,7 +15,7 @@ const { searchSessions, listWorkspaceFiles, getTimeline } = vi.hoisted(() => ({
   listWorkspaceFiles: vi.fn(async () => []),
   getTimeline: vi.fn(async () => ({ items: [], total: 0 })),
 }))
-vi.mock('@/custom/cockpit/api/kanban-extras', () => ({ searchSessions, listWorkspaceFiles, getTimeline }))
+vi.mock('@/custom/shared/api/kanban-extras', () => ({ searchSessions, listWorkspaceFiles, getTimeline }))
 const { getTask, addComment } = vi.hoisted(() => ({
   getTask: vi.fn(async () => null),
   addComment: vi.fn(async () => ({ ok: true })),
@@ -39,7 +39,7 @@ const { fetchTerminalTools } = vi.hoisted(() => ({
     { id: 'deepseek-harness', installed: false, path: null },
   ]),
 }))
-vi.mock('@/custom/cockpit/api/terminal-tools', () => ({ fetchTerminalTools }))
+vi.mock('@/custom/shared/api/terminal-tools', () => ({ fetchTerminalTools }))
 
 // Mock xterm.js 及其 addons（jsdom 环境不支持 canvas/终端渲染）。
 // vitest 5 起 spy 不可 new，凡被 new 的 mock 一律用 class。
@@ -95,8 +95,8 @@ const mockWebSockets: MockWebSocket[] = []
 vi.stubGlobal('WebSocket', MockWebSocket)
 
 import CockpitTerminalPane from '@/custom/cockpit/components/CockpitTerminalPane.vue'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
-import { TERMINAL_TOOL_STORAGE_KEY } from '@/custom/cockpit/terminal/terminal-tools'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
+import { TERMINAL_TOOL_STORAGE_KEY } from '@/custom/shared/terminal/terminal-tools'
 
 const kt = (over: Record<string, any> = {}) => ({
   id: 't1', title: 'T', body: null, assignee: 'alice', status: 'todo',

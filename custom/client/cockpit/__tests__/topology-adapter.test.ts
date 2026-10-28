@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from 'vitest'
 
 // mock parseTenant：matrix → 有 routeTarget；其他 → null
-vi.mock('@/custom/cockpit/adapters/collab-adapter', () => ({
+vi.mock('@/custom/shared/adapters/collab-adapter', () => ({
   parseTenant: (t: string | null) => t && t.startsWith('matrix:')
     ? { kind: 'matrix', label: t.split(':').slice(-1)[0], routeTarget: { name: 'ia2.commsRoom', params: { roomId: '!r' } }, raw: t }
     : null,
 }))
 
-import { buildTopology, MAX_NODES, isHumanActionStatus, type TaskLinksMap } from '@/custom/cockpit/adapters/topology-adapter'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import { buildTopology, MAX_NODES, isHumanActionStatus, type TaskLinksMap } from '@/custom/shared/adapters/topology-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 const task = (over: Partial<CockpitTask> = {}): CockpitTask => ({
   id: 't1', title: '中心任务', priority: 'P1', status: 'todo',

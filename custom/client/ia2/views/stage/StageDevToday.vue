@@ -6,9 +6,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useWorkspaceStore } from '../../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useDecisionRows } from '../../composables/useDecisionRows'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 
 const emit = defineEmits<{
   (e: 'open-task', taskId: string): void

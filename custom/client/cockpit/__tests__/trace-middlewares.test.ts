@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { applyTraceEvent, defaultMiddlewares, runLifecycleMiddleware, toolTraceMiddleware, thinkingTraceMiddleware, usageMiddleware, stateChangeMiddleware, type TraceMiddleware } from '../adapters/trace-middlewares'
-import { createTraceState } from '../adapters/run-trace-adapter'
-import type { TraceEvent, ReplyStartEvent, ReplyEndEvent, ToolCallStartEvent, ToolCallEndEvent, ThinkingBlockDeltaEvent, TextBlockDeltaEvent, UsageUpdatedEvent, StateUpdatedEvent } from '../adapters/trace-event'
+import { applyTraceEvent, defaultMiddlewares, runLifecycleMiddleware, toolTraceMiddleware, thinkingTraceMiddleware, usageMiddleware, stateChangeMiddleware, type TraceMiddleware } from '@/custom/shared/adapters/trace-middlewares'
+import { createTraceState } from '@/custom/shared/adapters/run-trace-adapter'
+import type { TraceEvent, ReplyStartEvent, ReplyEndEvent, ToolCallStartEvent, ToolCallEndEvent, ThinkingBlockDeltaEvent, TextBlockDeltaEvent, UsageUpdatedEvent, StateUpdatedEvent } from '@/custom/shared/adapters/trace-event'
 
 function makeEvent<T extends TraceEvent>(partial: Partial<T> & { type: T['type']; session_id?: string; timestamp?: number }): T {
   return {

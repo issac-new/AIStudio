@@ -27,7 +27,7 @@ vi.mock('@/stores/hermes/chat', () => ({
   }),
 }))
 const { openRunTrace } = vi.hoisted(() => ({ openRunTrace: vi.fn() }))
-vi.mock('@/custom/cockpit/store/cockpit', () => ({
+vi.mock('@/custom/shared/store/cockpit', () => ({
   useCockpitStore: () => ({ openRunTrace }),
 }))
 const { push } = vi.hoisted(() => ({ push: vi.fn() }))

@@ -8,7 +8,7 @@
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
+import CockpitIcon from '@/custom/shared/components/CockpitIcon.vue'
 import { GOV_SETTINGS_DOMAINS, entryVisible, onSurface, currentSuperAdmin } from './gov-settings-registry'
 
 const router = useRouter()

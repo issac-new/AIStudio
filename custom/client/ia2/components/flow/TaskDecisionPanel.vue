@@ -10,7 +10,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DecisionRow } from '../../composables/useDecisionRows'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 import type { FeedRow } from '../../adapters/flow'
 import type { AttentionRow } from '../../adapters/overview'
 import WaitQueue from './WaitQueue.vue'

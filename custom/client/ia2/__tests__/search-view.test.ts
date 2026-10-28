@@ -52,7 +52,7 @@ const sessionSearch = vi.hoisted(() => ({ openSessionSearch: vi.fn() }))
 vi.mock('../composables/useSessionRows', () => ({
   useSessionRows: () => ({ sessionRows: { value: rows.sessionRows }, accounts: { value: rows.accounts } }),
 }))
-vi.mock('../store/workspace', async () => {
+vi.mock('@/custom/shared/store/workspace', async () => {
   const { reactive } = await import('vue')
   const { parseFirstTable, setCellAlign } = await import('@/custom/governance/utils/registry-md')
   const state = reactive({
@@ -101,7 +101,7 @@ vi.mock('../store/workspace', async () => {
   })
   return { useWorkspaceStore: () => state }
 })
-vi.mock('@/custom/cockpit/store/cockpit', async () => {
+vi.mock('@/custom/shared/store/cockpit', async () => {
   const { reactive } = await import('vue')
   const state = reactive({
     searchQuery: '',
@@ -121,7 +121,7 @@ vi.mock('@/custom/governance/api/adminRegistry', () => registryApi)
 const simSessionsApi = vi.hoisted(() => ({
   fetchObserverSessions: vi.fn(async () => ({ available: false, results: [] as Array<Record<string, string>> })),
 }))
-vi.mock('../api/sim-observer-sessions', () => simSessionsApi)
+vi.mock('@/custom/shared/api/sim-observer-sessions', () => simSessionsApi)
 vi.mock('@/custom/matrix-chat/stores/matrix-room', () => ({
   useMatrixRoomStore: () => matrixRoom,
 }))
@@ -148,8 +148,8 @@ vi.mock('@/custom/kanban/components/KanbanTaskDrawer.vue', () => ({
 }))
 
 import GlobalSearchDialog from '../components/GlobalSearchDialog.vue'
-import { useWorkspaceStore } from '../store/workspace'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 
 function makeRouter(): Router {
   const routes: RouteRecordRaw[] = [

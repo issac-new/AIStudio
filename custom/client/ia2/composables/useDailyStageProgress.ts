@@ -6,7 +6,7 @@
 // 工作），不是「已完成」——侧栏/阶段页/首页按已流转呈现，不画绿✓；五步状态
 // 接线 daily-setup-signals 真实配置信号（org/accounts/agents），无信号=untracked。
 import { computed, onMounted } from 'vue'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { dailySetupSignals, dailySetupStepState, ensureDailySetupSignals } from './daily-setup-signals'
 import type { SetupStep, SetupStepState, StageState } from './useStageProgress'
 

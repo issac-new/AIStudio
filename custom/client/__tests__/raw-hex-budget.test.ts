@@ -33,6 +33,8 @@ const BUDGET: Record<string, number> = {
   loop: 0,
   eval: 0,
   cockpit: 72,
+  // 2026-10-28 K21：cockpit 数据层（adapters/store/api/部分组件）迁入 shared，裸 hex 随文件搬走
+  shared: 38,
   ide: 27,
   bpa: 8,
   ontology: 7,

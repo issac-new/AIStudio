@@ -5,7 +5,7 @@
 // statusKey/key + params），适配器不产中文。
 import { parseTenant } from '@/custom/kanban/utils/tenant-parser'
 import type { LoopInstance, TaskContract } from '@/custom/loop/types'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 /** 会话三类（v12.3 R4b 三聊天合一）：matrix 房间 / hermes 群聊 / agent 会话 */
 export type SessionKind = 'room' | 'group' | 'chat'

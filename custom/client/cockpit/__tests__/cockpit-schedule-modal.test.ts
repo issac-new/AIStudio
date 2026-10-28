@@ -11,8 +11,8 @@ import { nextTick } from 'vue'
 vi.stubGlobal('__APP_VERSION__', '0.0.0-test')
 
 // ── mock cockpit-kv（待办持久层，workspace store extract-shared 同源）──
-vi.mock('@/custom/cockpit/store/cockpit-kv', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/custom/cockpit/store/cockpit-kv')>()
+vi.mock('@/custom/shared/store/cockpit-kv', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/custom/shared/store/cockpit-kv')>()
   return {
     ...actual,
     loadUserTodos: vi.fn(() => []),
@@ -35,17 +35,17 @@ vi.mock('@/api/hermes/kanban', () => ({
   listBoards: vi.fn(async () => []),
   listTasks: vi.fn(async () => []),
 }))
-vi.mock('@/custom/cockpit/adapters/teams-adapter', () => ({
+vi.mock('@/custom/shared/adapters/teams-adapter', () => ({
   fetchKanbanOverview: vi.fn(async () => ({ boards: [], tasks: [] })),
 }))
-vi.mock('@/custom/cockpit/adapters/fleet-adapter', () => ({
+vi.mock('@/custom/shared/adapters/fleet-adapter', () => ({
   connectOverviewStream: vi.fn(() => ({ close: vi.fn() })),
   connectFleetStream: vi.fn(() => ({ close: vi.fn() })),
 }))
 
-import CockpitScheduleModal from '@/custom/cockpit/components/CockpitScheduleModal.vue'
-import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import CockpitScheduleModal from '@/custom/shared/components/CockpitScheduleModal.vue'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 // CockpitTask 工厂（原用例经 kanban fallback 映射；现直接注入聚合形状）
 const ct = (over: Record<string, any> = {}): CockpitTask => ({

@@ -67,7 +67,7 @@ vi.mock('@/stores/hermes/profiles', () => ({ useProfilesStore: () => ({ fetchPro
 vi.mock('@/stores/hermes/settings', () => ({ useSettingsStore: () => ({ fetchSettings: vi.fn(async () => {}) }) }))
 vi.mock('@/stores/hermes/files', () => ({ useFilesStore: () => ({ previewFile: null, closePreview: vi.fn() }) }))
 vi.mock('@/stores/hermes/tool-panel', () => ({ useToolPanelStore: () => ({ workspaceDiff: null, closeWorkspaceDiff: vi.fn() }) }))
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: () => ({ openRunTrace: vi.fn() }) }))
+vi.mock('@/custom/shared/store/cockpit', () => ({ useCockpitStore: () => ({ openRunTrace: vi.fn() }) }))
 vi.mock('@/utils/chat-agent-avatar', () => ({ chatSessionAgentAvatar: () => ({ name: 'x' }) }))
 
 // 上游重组件挡为轻桩（隔离 MessageList 全图依赖）

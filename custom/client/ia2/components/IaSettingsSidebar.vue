@@ -21,7 +21,7 @@ import { clearThemeBackgroundCache } from '@/api/studio/theme'
 import { useAuthStore } from '@/stores/hermes/auth'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
 import { prefetchLegacyView } from '../views/legacy-view-loaders'
-import CockpitIcon from '@/custom/cockpit/components/CockpitIcon.vue'
+import CockpitIcon from '@/custom/shared/components/CockpitIcon.vue'
 import { SIDEBAR_GROUPS, settingsSidebarEntries, entryVisible, type GovSettingEntry } from '../views/gov/gov-settings-registry'
 
 const router = useRouter()

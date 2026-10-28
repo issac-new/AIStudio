@@ -1,6 +1,6 @@
 // hotspot 聚合守门（dsh：工具/阶段排名/own-duration 防重复计数）。
 import { describe, it, expect } from 'vitest'
-import { buildHotspots, type HotspotEvent } from '../adapters/trajectory-hotspot'
+import { buildHotspots, type HotspotEvent } from '@/custom/shared/adapters/trajectory-hotspot'
 
 const ev = (kind: 'tool' | 'llm', name: string, durationMs: number, over: Partial<HotspotEvent> = {}): HotspotEvent => ({ kind, name, durationMs, ...over })
 

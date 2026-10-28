@@ -15,7 +15,7 @@
  *   6. 目录不存在时显示友好错误信息
  */
 import { watch, onMounted, computed, ref } from 'vue'
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
 import { useFilesStore } from '@/stores/hermes/files'
 import FilesPanel from '@/components/hermes/chat/FilesPanel.vue'
 import { useI18n } from 'vue-i18n'

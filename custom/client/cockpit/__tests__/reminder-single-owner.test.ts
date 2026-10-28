@@ -38,14 +38,14 @@ const { fetchKanbanOverview, listTeams } = vi.hoisted(() => ({
   fetchKanbanOverview: vi.fn(),
   listTeams: vi.fn(async () => []),
 }))
-vi.mock('@/custom/cockpit/adapters/teams-adapter', () => ({ fetchKanbanOverview, listTeams }))
+vi.mock('@/custom/shared/adapters/teams-adapter', () => ({ fetchKanbanOverview, listTeams }))
 
 // ── fleet-adapter 桩（cockpit fleet 流 + workspace 聚合流）──
 const { connectFleetStream, connectOverviewStream } = vi.hoisted(() => ({
   connectFleetStream: vi.fn(() => ({ close: vi.fn() })),
   connectOverviewStream: vi.fn(() => ({ close: vi.fn() })),
 }))
-vi.mock('@/custom/cockpit/adapters/fleet-adapter', () => ({ connectFleetStream, connectOverviewStream }))
+vi.mock('@/custom/shared/adapters/fleet-adapter', () => ({ connectFleetStream, connectOverviewStream }))
 
 // ── workspace 外部 IO 桩（真实 workspace store 参跑：单拉/采纳断言需要）──
 const { toCockpitTask, bucketPriority, listBoards, listTasks, getTask, getTaskLog, listAttachments } = vi.hoisted(() => ({
@@ -60,14 +60,14 @@ const { toCockpitTask, bucketPriority, listBoards, listTasks, getTask, getTaskLo
   getTaskLog: vi.fn(async () => ({ exists: false })),
   listAttachments: vi.fn(async () => []),
 }))
-vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({ toCockpitTask, bucketPriority }))
+vi.mock('@/custom/shared/adapters/task-adapter', () => ({ toCockpitTask, bucketPriority }))
 vi.mock('@/api/hermes/kanban', () => ({ listBoards, listTasks, getTask, getTaskLog, listAttachments }))
-vi.mock('@/custom/ia2/api/sim-observer', () => ({
+vi.mock('@/custom/shared/api/sim-observer', () => ({
   fetchSimObserverOverview: vi.fn(async () => ({ available: false })),
 }))
 
 // ── 其余依赖桩（cockpit-store.test.ts 同款收窄）──
-vi.mock('@/custom/cockpit/api/kanban-extras', () => ({
+vi.mock('@/custom/shared/api/kanban-extras', () => ({
   searchSessions: vi.fn(async () => []),
   listWorkspaceFiles: vi.fn(async () => []),
   getTimeline: vi.fn(async () => ({ items: [], total: 0 })),
@@ -100,8 +100,8 @@ vi.mock('@/custom/matrix-chat/stores/matrix-composer', () => ({
   useMatrixComposerStore: () => ({ sendMessage: vi.fn(async () => {}) }),
 }))
 
-import { useCockpitStore } from '@/custom/cockpit/store/cockpit'
-import { useWorkspaceStore } from '@/custom/ia2/store/workspace'
+import { useCockpitStore } from '@/custom/shared/store/cockpit'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 
 // ── 内存 localStorage polyfill + Notification 构造探针（cockpit-kv 走真实模块）──
 class MemStorage {
@@ -176,7 +176,7 @@ describe('Task 5 — 提醒单正身：cockpit 第二调度退役', () => {
     const s = useCockpitStore()
     expect((s as any).startReminderScheduler, '调度 API 必须整体退役').toBeUndefined()
     expect((s as any).stopReminderScheduler).toBeUndefined()
-    const src = readFileSync(resolve(__dirname, '../store/cockpit.ts'), 'utf-8')
+    const src = readFileSync(resolve(__dirname, '../../shared/store/cockpit.ts'), 'utf-8')
     expect(src.includes('startReminderScheduler'), 'cockpit 源内不得再定义第二调度').toBe(false)
   })
 

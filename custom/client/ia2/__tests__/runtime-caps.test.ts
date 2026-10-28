@@ -3,7 +3,7 @@
 // 守门：吸收批 9（#7/#17/#10 剩余 fork 直通）——runtime-caps 文本解析纯函数 +
 // History 浏览器 fork 剪贴板通道。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { parseCredentials, parseCronRuns } from '../api/runtime-caps'
+import { parseCredentials, parseCronRuns } from '@/custom/shared/api/runtime-caps'
 
 const CRED_SAMPLE = `alibaba (1 credentials):
   #1  DASHSCOPE_API_KEY    api_key id=60cae9 priority=0 env:DASHSCOPE_API_KEY auth failed invalid_api_key (401) (re-auth may be required) ←

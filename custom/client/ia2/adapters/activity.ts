@@ -11,7 +11,7 @@
 //      事件编年按语义类着色过滤（read/write/terminal 的图词汇对位：
 //      节点/步进/介入/阶段/生命周期/成本）。
 import type { RunSummary } from '@/custom/loop/runcenter/types'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
 
 // ── ① 循环活动（左栏存在感）──────────────────────────────────────────
 

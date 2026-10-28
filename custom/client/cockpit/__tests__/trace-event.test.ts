@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { normalizeRunEvent, type TraceEvent } from '../adapters/trace-event'
+import { normalizeRunEvent, type TraceEvent } from '@/custom/shared/adapters/trace-event'
 import type { RunEvent } from '@/api/studio/chat'
 
 describe('normalizeRunEvent', () => {

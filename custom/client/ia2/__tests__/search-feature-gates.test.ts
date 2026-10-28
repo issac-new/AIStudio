@@ -31,12 +31,12 @@ const searchStubs = vi.hoisted(() => ({
   },
   useWorkspaceStore: () => searchStubs.state,
 }))
-vi.mock('@/custom/ia2/store/workspace', () => ({ useWorkspaceStore: searchStubs.useWorkspaceStore }))
+vi.mock('@/custom/shared/store/workspace', () => ({ useWorkspaceStore: searchStubs.useWorkspaceStore }))
 
 const cockpitStub = vi.hoisted(() => ({
   state: { keyword: '', commandRows: [], commandOpen: false },
 }))
-vi.mock('@/custom/cockpit/store/cockpit', () => ({
+vi.mock('@/custom/shared/store/cockpit', () => ({
   useCockpitStore: () => ({
     ...cockpitStub.state,
     runSearch: (v: string) => { cockpitStub.state.keyword = v },

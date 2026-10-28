@@ -8,8 +8,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { CockpitTask } from '@/custom/cockpit/adapters/task-adapter'
-import type { PendingApprovalItem, ApprovalHistoryEntry } from '@/custom/cockpit/api/approvals'
+import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
+import type { PendingApprovalItem, ApprovalHistoryEntry } from '@/custom/shared/api/approvals'
 import { needsMyAction, parseTaskRaci } from '@/custom/kanban/utils/raci'
 import type { KanbanTask } from '@/api/hermes/kanban'
 

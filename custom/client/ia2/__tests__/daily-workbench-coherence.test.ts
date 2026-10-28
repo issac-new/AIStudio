@@ -50,12 +50,12 @@ const ctx = vi.hoisted(() => {
     profiles: { fetchProfiles: vi.fn() },
   }
 })
-vi.mock('@/custom/cockpit/adapters/teams-adapter', () => ctx.teams)
-vi.mock('@/custom/cockpit/adapters/fleet-adapter', () => ctx.fleet)
-vi.mock('@/custom/cockpit/adapters/task-adapter', () => ({ toCockpitTask: ctx.toCockpitTask }))
+vi.mock('@/custom/shared/adapters/teams-adapter', () => ctx.teams)
+vi.mock('@/custom/shared/adapters/fleet-adapter', () => ctx.fleet)
+vi.mock('@/custom/shared/adapters/task-adapter', () => ({ toCockpitTask: ctx.toCockpitTask }))
 vi.mock('@/api/hermes/kanban', () => ctx.kanbanApi)
-vi.mock('../api/sim-observer', () => ctx.simObserver)
-vi.mock('@/custom/cockpit/store/cockpit-kv', () => ({
+vi.mock('@/custom/shared/api/sim-observer', () => ctx.simObserver)
+vi.mock('@/custom/shared/store/cockpit-kv', () => ({
   loadUserTodos: vi.fn(() => []), saveUserTodos: vi.fn(),
 }))
 // 日常搭建信号两源（daily-setup-signals 动态 import，同样被拦截）
@@ -115,7 +115,7 @@ const cockpitStubs = vi.hoisted(() => {
   }
   return { state, useCockpitStore: () => cockpitStubs.state }
 })
-vi.mock('@/custom/cockpit/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
+vi.mock('@/custom/shared/store/cockpit', () => ({ useCockpitStore: cockpitStubs.useCockpitStore }))
 const loopStubs = vi.hoisted(() => {
   const state = {
     loops: [] as Array<Record<string, unknown>>,
@@ -168,7 +168,7 @@ vi.mock('../components/IaLocaleToggle.vue', () => ({ default: { name: 'IaLocaleT
 vi.mock('@/custom/ia2/api/gatekeeper', () => ({ nudgeRoute: vi.fn() }))
 
 import { authFetch } from '../../ide/utils/auth-fetch'
-import { useWorkspaceStore } from '../store/workspace'
+import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { useFlowStore } from '../store/flow'
 import { useAttentionRows } from '../composables/useAttentionRows'
 import { useDailyStageProgress } from '../composables/useDailyStageProgress'

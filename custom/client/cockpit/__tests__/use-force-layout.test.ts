@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeForceLayout } from '../composables/useForceLayout'
+import { computeForceLayout } from '@/custom/shared/composables/useForceLayout'
 
 describe('useForceLayout / computeForceLayout', () => {
   it('returns empty map for no nodes', () => {

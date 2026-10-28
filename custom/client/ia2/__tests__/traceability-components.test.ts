@@ -43,7 +43,7 @@ vi.mock('@/custom/kanban/views/SwarmKanbanView.vue', () => ({
 }))
 // 全链路追踪页签（2026-10-01）：RunTraceOverview 打桩（useKanbanTaskGraph 数据面
 // 与弹窗态链重；页签接线守门在此，面板实体由 cockpit 域测试覆盖）
-vi.mock('@/custom/cockpit/components/RunTraceOverview.vue', () => ({
+vi.mock('@/custom/shared/components/RunTraceOverview.vue', () => ({
   default: {
     name: 'RunTraceOverview',
     template: '<div class="rto-stub" data-testid="rto-stub" @click="$emit(\'select-session\', \'sess-1\'); $emit(\'close\')" />',
@@ -52,7 +52,7 @@ vi.mock('@/custom/cockpit/components/RunTraceOverview.vue', () => ({
 }))
 // cockpit store 桩（历史挂载面已退役；桩保留避免 import 链回潮）
 const cockpitOpenTrace = vi.hoisted(() => vi.fn())
-vi.mock('@/custom/cockpit/store/cockpit', () => ({
+vi.mock('@/custom/shared/store/cockpit', () => ({
   useCockpitStore: () => ({ openRunTrace: cockpitOpenTrace }),
 }))
 
