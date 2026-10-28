@@ -123,7 +123,7 @@
 | K9 | 「admin 不设助理」话术与实现矛盾 | 涉及 30 账号口径与报告叙事，需与推演轮同批改 | 推演轮 |
 | K10 | features 能力开关 vs 导航开关 | 改名 `*Nav` 牵连注册表、bootstrap 与测试 | 前端治理轮 |
 | K11 | 三范式无 `paradigm` 字段 | 注册表 schema + 测试 + 30 profile 数据同批改 | 组织建模轮 |
-| K12 | 12 个 profile 缺 `profile.yaml` | 补写角色描述是内容创作，需按岗位逐份确认 | 团队资产轮 |
+| K12 | ~~12 个 profile 缺 `profile.yaml`~~ **已补（2026-10-28）** | 从各 profile 的 `SOUL.md` 标题与身份句派生 `description`（`description_auto: true` 标注派生来源），不新增未经确认的职责描述；30 份 YAML 全部可解析、team pytest 18 例通过 | 已入库 |
 | K13 | 历史 spec 内的旧路径 | 代表当时仓内位置，按仓规「历史归 git」不改写 | 永久保留 |
 
 ## 六、验证

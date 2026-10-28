@@ -1,0 +1,5 @@
+description: 支付团队调度路由器 (Pay-Orchestrator)：payteam（金融支付清算团队）的调度路由器，负责将用户关于支付、清算、金融科技的需求路由到正确的领域专家。
+description_auto: true
+ui_meta:
+  hermes-bots:
+    chat: null
