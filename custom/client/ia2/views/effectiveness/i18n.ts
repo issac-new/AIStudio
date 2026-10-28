@@ -102,7 +102,9 @@ const EFFECTIVENESS_TEXT = {
   },
 } as const
 
-export type EffectivenessText = typeof EFFECTIVENESS_TEXT.zh
+// 字典是 as const（值被收窄成字面量），en 与 zh 文案各异 → 直接取 typeof zh 会拒绝 en。
+// 按键集合固定、值放宽为 string：键奇偶校验仍由守门测试兜住，取值处不依赖字面量。
+export type EffectivenessText = { [K in keyof typeof EFFECTIVENESS_TEXT.zh]: string }
 
 export function useEffectivenessText() {
   const i18nCtx = useI18n()

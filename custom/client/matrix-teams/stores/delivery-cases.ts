@@ -17,6 +17,7 @@ import {
   DELIVERY_SCHEMA_VERSION, DELIVERY_STAGES,
   parseCaseContent, parseGateContent, parseIndexContent, parseStageContent,
 } from '../delivery-protocol'
+import { getCustomStateEvents, getCustomAccountDataFromServer, setCustomAccountData, sendCustomStateEvent } from '../utils'
 
 export interface GateLight { gate: string; verdict: 'pass' | 'conditional' | 'reject'; decidedBy: string; at: number; reason?: string; evidence?: string }
 export interface DeliveryCaseView {
@@ -34,8 +35,10 @@ export interface DeliveryCaseView {
 
 function projectRoom(room: Room): DeliveryCaseView | null {
   // 真实 SDK 先例（v41/team-registry）：getStateEvents 必须带 eventType
-  const caseEvents = (room.currentState.getStateEvents(DELIVERY_EVENT_TYPES.case) ?? []) as Array<Record<string, unknown>>
-  const raw = caseEvents[0]?.getContent?.() ?? (caseEvents[0] as unknown as { content?: unknown })?.content
+  // 双形态读取：真实 SDK MatrixEvent（getContent 方法）与测试 mock 裸对象（content 字段）。
+  type DualShapeStateEvent = { getContent?: () => unknown; content?: unknown }
+  const caseEvents = getCustomStateEvents(room.currentState, DELIVERY_EVENT_TYPES.case) as unknown as DualShapeStateEvent[]
+  const raw = caseEvents[0]?.getContent?.() ?? caseEvents[0]?.content
   const head = parseCaseContent(raw)
   if (!head) return null
   const stagesDone = new Set<string>()
@@ -85,7 +88,7 @@ export const useDeliveryCasesStore = defineStore('matrix-teams-delivery-cases', 
     const rooms: Room[] = []
     // 发现机制：index account data（读失败回落=空，面板只显示可投影房间）
     try {
-      const idxRaw = await client.getAccountDataFromServer(DELIVERY_INDEX_ACCOUNT_DATA_TYPE)
+      const idxRaw = await getCustomAccountDataFromServer(client, DELIVERY_INDEX_ACCOUNT_DATA_TYPE)
       const idx = parseIndexContent(idxRaw)
       if (idx) for (const rid of idx.roomIds) {
         const r = client.getRoom(rid)
@@ -171,19 +174,19 @@ export const useDeliveryCasesStore = defineStore('matrix-teams-delivery-cases', 
       is_direct: false,
     }) as unknown as { room_id: string }
     const now = Date.now()
-    await client.sendStateEvent(result.room_id, DELIVERY_EVENT_TYPES.case, {
+    await sendCustomStateEvent(client, result.room_id, DELIVERY_EVENT_TYPES.case, {
       schemaVersion: DELIVERY_SCHEMA_VERSION,
       caseId, title: input.title, repoUrl: input.repoUrl, tier: input.tier,
       stage: 'P1', ownerAccount: self,
       createdAt: now, updatedAt: now, updatedBy: self,
-    }, '')
+    })
     // index 幂等并入（发现机制；读失败视为空表重建）
     let roomIds: string[] = []
     try {
-      const idx = parseIndexContent(await client.getAccountDataFromServer(DELIVERY_INDEX_ACCOUNT_DATA_TYPE))
+      const idx = parseIndexContent(await getCustomAccountDataFromServer(client, DELIVERY_INDEX_ACCOUNT_DATA_TYPE))
       if (idx) roomIds = idx.roomIds
     } catch { /* 首例无 index */ }
-    await client.setAccountData(DELIVERY_INDEX_ACCOUNT_DATA_TYPE, {
+    await setCustomAccountData(client, DELIVERY_INDEX_ACCOUNT_DATA_TYPE, {
       schemaVersion: DELIVERY_SCHEMA_VERSION,
       roomIds: [...new Set([...roomIds, result.room_id])],
       updatedBy: self, updatedAt: now,

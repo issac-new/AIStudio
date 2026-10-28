@@ -222,7 +222,8 @@ onMounted(() => {
         <div v-for="c in visibleConflicts" :key="c.inboxId" class="kg__conflict" :data-testid="`kg-conflict-${c.inboxId}`">
         <div class="kg__conflict-main">
           <span v-if="c.kind === 'merge-review'" class="kg__kind-tag" data-testid="kg-merge-review-tag">{{ L?.mergeReviewTag }}<template v-if="typeof c.similarity === 'number'"> {{ c.similarity.toFixed(2) }}</template></span>
-          <span v-else-if="c.kind === 'ontology'" class="kg__kind-tag kg__kind-tag--onto" data-testid="kg-ontology-tag">{{ L?.ontologyTag ?? '语义契约' }}</span>
+          <!-- kind 词表当前只有 field-conflict（无 ontology）；按字符串比较保留原判定形态。 -->
+          <span v-else-if="(c.kind as string) === 'ontology'" class="kg__kind-tag kg__kind-tag--onto" data-testid="kg-ontology-tag">{{ L?.ontologyTag ?? '语义契约' }}</span>
           <b>{{ c.entityId }}</b> · {{ c.field }}：<code>{{ JSON.stringify(c.existing) }}</code> → <code>{{ JSON.stringify(c.incoming) }}</code>
           <span class="kg__conflict-board">（{{ c.board }}）</span>
         </div>

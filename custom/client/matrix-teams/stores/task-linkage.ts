@@ -13,7 +13,7 @@ import {
   type AssignContent, type ReceiptContent,
 } from '../protocol'
 import { buildTaskFromMessage, buildOpReceipt, buildReassign, type CardOp } from '../task-card'
-import { unwrapRef } from '../utils'
+import { unwrapRef, sendCustomEvent } from '../utils'
 
 export const useTaskLinkageStore = defineStore('matrix-task-linkage', () => {
   const matrixClientStore = useMatrixClientStore()
@@ -87,7 +87,7 @@ export const useTaskLinkageStore = defineStore('matrix-task-linkage', () => {
     const selfId = userIdRef.value ?? ''
     const content = buildTaskFromMessage({ ...input, issuedBy: selfId })
     try {
-      await client.sendEvent(roomId, TASK_EVENT_TYPES.assign, content)
+      await sendCustomEvent(client, roomId, TASK_EVENT_TYPES.assign, content)
       return { ok: true, taskId: content.taskId }
     } catch {
       return { ok: false }
@@ -102,7 +102,7 @@ export const useTaskLinkageStore = defineStore('matrix-task-linkage', () => {
     const selfId = userIdRef.value ?? ''
     const local = cards.value.find(c => c.assign.taskId === taskId)?.receipt?.localTaskId
     try {
-      await client.sendEvent(roomId, TASK_EVENT_TYPES.receipt, buildOpReceipt(op, taskId, local, selfId))
+      await sendCustomEvent(client, roomId, TASK_EVENT_TYPES.receipt, buildOpReceipt(op, taskId, local, selfId))
       return true
     } catch {
       return false
@@ -117,7 +117,7 @@ export const useTaskLinkageStore = defineStore('matrix-task-linkage', () => {
     if (!client || !roomId || !current) return false
     const selfId = userIdRef.value ?? ''
     try {
-      await client.sendEvent(roomId, TASK_EVENT_TYPES.assign, buildReassign(taskId, current, newTarget, selfId))
+      await sendCustomEvent(client, roomId, TASK_EVENT_TYPES.assign, buildReassign(taskId, current, newTarget, selfId))
       return true
     } catch {
       return false

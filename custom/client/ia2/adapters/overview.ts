@@ -88,7 +88,9 @@ export function mergeAttention(tasks: AttentionInput[]): AttentionRow[] {
         createdAt: typeof t.createdAt === 'number' ? t.createdAt : -1,
       }
     })
-    .filter((x): x is AttentionRow => x !== null)
+    // 泛型谓词（x is AttentionRow）在 strictNullChecks=false 下会因 kind 必选/可选差异报 TS2677；
+    // 元素类型本身可赋值给 AttentionRow，按值过滤即可（运行时同一判定）。
+    .filter(x => x !== null)
     .sort((a, b) =>
       ATTENTION_TIER[a.status] - ATTENTION_TIER[b.status]
       || a.priority - b.priority

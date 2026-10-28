@@ -94,7 +94,7 @@ export function clearLayer(layer: SettingsLayer): void {
  *  引号）包成 JSON 字符串。不解析校验——消费方读端自有 valid 化，脏值搬入后
  *  走读端容错等效未设。幂等：收养过（任一层已设）即空转。 */
 export function adoptLegacySetting(key: string, legacyKey: string): void {
-  const layered = ['user', 'workspace', 'session'].some(
+  const layered = (['user', 'workspace', 'session'] as const).some(
     l => localStorage.getItem(storageKey(l, key)) !== null)
   if (layered) return
   const raw = localStorage.getItem(legacyKey)

@@ -91,7 +91,8 @@ async function forkSession(): Promise<void> {
   forkErr.value = ''
   try {
     const res = await forkGatewaySession(String(sid))
-    if (res.ok) {
+    // strictNullChecks=false 下 `if (res.ok)` 不收窄布尔字面量判别式；显式 === true 才能收到 false 分支。
+    if (res.ok === true) {
       forkMsg.value = `${tx.value.historyForkDone}（${res.session.title ?? res.session.id}）`
       const s = chatStore as unknown as { switchSession?: (id: string) => Promise<void> }
       await s.switchSession?.(res.session.id)

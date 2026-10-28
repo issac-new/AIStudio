@@ -7,7 +7,7 @@
 // 完成键口径=views/sim/steps-registry.ts 的 26 步键空间；步 1-4 四合一段共用
 // smoke_done；步 16 系分收尾用 close_done，故治理阶段键集不含 close_done
 // （修 D13 遗留的双键误判：系分一收尾治理阶段曾显示完成）。
-import type { RouteNamedRaw } from 'vue-router'
+import type { RouteLocationNamedRaw } from 'vue-router'
 
 /** 阶段工具卡：key 是稳定机器锚（testid 拼 key 不拼 label，改名零 churn） */
 export interface StageTool {
@@ -114,7 +114,7 @@ export interface SetupStep {
   purpose: string
   criteria: string
   /** 进入入口（路由名） */
-  target: RouteNamedRaw
+  target: RouteLocationNamedRaw
   /** run-state 完成键；空数组=轮次内不跟踪本步 */
   keys: string[]
   /** 口径或挂账注脚（诚实呈现：不假装有能力） */
@@ -165,6 +165,6 @@ export const SETUP_STEPS: readonly SetupStep[] = [
 ]
 
 /** 交付区旅程卡目标：与顶栏②-⑥同序同名 */
-export function stageRoute(no: number): RouteNamedRaw {
+export function stageRoute(no: number): RouteLocationNamedRaw {
   return { name: `ia2.stage${no}` as 'ia2.stage1' }
 }

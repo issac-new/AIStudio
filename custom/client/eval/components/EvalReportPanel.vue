@@ -519,12 +519,12 @@ function durationText(ms: number | null): string {
     <!-- 稳定性读数（京东吸收轮：同输入重复判定 + 参照答案锚定检验） -->
     <div v-if="run.aggregates.outputStability || run.aggregates.judgeStability" class="eval-report__seg" data-testid="eval-report-stability">
       <span class="seg__title">{{ L.runs.stabTitle }}</span>
-      <span v-if="run.aggregates.outputStability" class="seg__chip" :data-testid="eval-stab-output">
+      <span v-if="run.aggregates.outputStability" class="seg__chip" data-testid="eval-stab-output">
         {{ L.runs.stabOutput }}：
         {{ L.runs.stabFlipRate }} {{ pct(run.aggregates.outputStability.flipRate) }}
         <em class="muted">({{ run.aggregates.outputStability.flips }}/{{ run.aggregates.outputStability.checked }}，{{ L.runs.stabRounds }} {{ run.aggregates.outputStability.rounds }})</em>
       </span>
-      <span v-if="run.aggregates.judgeStability" class="seg__chip" :data-testid="eval-stab-refleak">
+      <span v-if="run.aggregates.judgeStability" class="seg__chip" data-testid="eval-stab-refleak">
         {{ L.runs.stabRefLeak }}：
         {{ L.runs.stabFlipRate }} {{ pct(run.aggregates.judgeStability.flipRate) }}
         <em class="muted">({{ run.aggregates.judgeStability.flips }}/{{ run.aggregates.judgeStability.checked }})</em>

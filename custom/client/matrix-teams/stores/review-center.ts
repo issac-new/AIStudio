@@ -12,7 +12,7 @@ import {
   parseGateContent, aggregateSignoffs, HUMAN_GATES,
   type GateContent, type GateAggregate, type DeliveryGate,
 } from '../delivery-protocol'
-import { unwrapRef } from '../utils'
+import { unwrapRef, sendCustomEvent } from '../utils'
 
 export interface ReviewItem extends GateAggregate {
   /** 人工门（G1/G5/R1-R4）：签核动作仅对人类账号开放（UI 据此显隐操作）。 */
@@ -95,7 +95,7 @@ export const useReviewCenterStore = defineStore('matrix-review-center', () => {
     const selfId = userIdRef.value ?? ''
     const at = Date.now()
     try {
-      await client.sendEvent(roomId, DELIVERY_EVENT_TYPES.gate, {
+      await sendCustomEvent(client, roomId, DELIVERY_EVENT_TYPES.gate, {
         schemaVersion: DELIVERY_SCHEMA_VERSION,
         caseId: input.caseId,
         gate: input.gate,

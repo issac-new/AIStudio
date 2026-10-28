@@ -184,7 +184,8 @@ export const runRest = {
    * （结构非法 400 {error}，message 可直显）；origin 缺省自动标 'editor'——
    * 编辑器序列化时已显式写 'editor'，此处原样提交。
    */
-  saveSpec: async (spec: Record<string, unknown>): Promise<{ ok: boolean; id: string }> => {
+  // 入参只被 JSON.stringify 序列化；GraphSpec 是具名接口（无索引签名），故按 object 声明而非 Record。
+  saveSpec: async (spec: object): Promise<{ ok: boolean; id: string }> => {
     return request('/api/graph/specs', {
       method: 'POST',
       body: JSON.stringify(spec),

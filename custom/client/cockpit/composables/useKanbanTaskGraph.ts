@@ -412,7 +412,7 @@ export function useKanbanTaskGraph() {
       //    首载第二瓶颈；traceStates 收集序与 merge 无序依赖，语义不变）
       const traceStates: TraceState[] = []
       const sessionSet = new Set<string>()
-      for (const m of metas) sessionSet.add(...m.sessionIds)
+      for (const m of metas) for (const sid of m.sessionIds) sessionSet.add(sid)
 
       const sessionIds = [...sessionSet].filter(sid => sessionTaskMap.has(sid))
       const BATCH = 10

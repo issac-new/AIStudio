@@ -11,6 +11,7 @@ import { existsSync } from 'fs'
 import { resolve } from 'path'
 import { foldContextTrend, type TrendMessage, type TrendUsageRow } from '../../tokens/context-trend'
 import { foldFleetTree, type FleetSessionRow } from '../../tokens/fleet-tree'
+import { fail } from '../../lib/http'
 
 
 /** studio db 多候选探测（symlink/物理 __dirname 双形态+cwd 兜底）。 */
@@ -30,8 +31,7 @@ const router = new Router({ prefix: '/api/ide' })
 router.get('/compaction-trace/:sessionId', (ctx) => {
   const sessionId = String(ctx.params.sessionId ?? '')
   if (!sessionId) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'sessionId 必填' }
+    fail(ctx, 400, 'sessionId 必填', { extra: { detail: 'sessionId 必填' } })
     return
   }
   const dbPath = resolveStudioDb()
@@ -61,16 +61,15 @@ router.get('/compaction-trace/:sessionId', (ctx) => {
       },
     }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 200) : String(err)
+    fail(ctx, 503, detail, { extra: { detail } })
   }
 })
 
 router.get('/context-trend/:sessionId', (ctx) => {
   const sessionId = String(ctx.params.sessionId ?? '')
   if (!sessionId) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'sessionId 必填' }
+    fail(ctx, 400, 'sessionId 必填', { extra: { detail: 'sessionId 必填' } })
     return
   }
   const dbPath = resolveStudioDb()
@@ -110,16 +109,15 @@ router.get('/context-trend/:sessionId', (ctx) => {
       ...result,
     }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 200) : String(err)
+    fail(ctx, 503, detail, { extra: { detail } })
   }
 })
 
 router.get('/fleet/:sessionId', (ctx) => {
   const sessionId = String(ctx.params.sessionId ?? '')
   if (!sessionId) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'sessionId 必填' }
+    fail(ctx, 400, 'sessionId 必填', { extra: { detail: 'sessionId 必填' } })
     return
   }
   const dbPath = resolveStudioDb()
@@ -145,8 +143,8 @@ router.get('/fleet/:sessionId', (ctx) => {
     }
     ctx.body = { ok: true, available: true, sessionId, ...fleet }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 200) : String(err)
+    fail(ctx, 503, detail, { extra: { detail } })
   }
 })
 
@@ -189,8 +187,8 @@ router.get('/usage-insights/sessions', (ctx) => {
     })
     ctx.body = { ok: true, available: true, cards }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, detail: err instanceof Error ? err.message.slice(0, 200) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 200) : String(err)
+    fail(ctx, 503, detail, { extra: { detail } })
   }
 })
 

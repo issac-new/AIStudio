@@ -21,7 +21,8 @@ const data = ref<{ levels: Level[]; elements: Element[]; meta: { note: string; s
 const error = ref('')
 const busy = ref(false)
 
-const LEVEL_NAMES = computed(() => String(L.value.rsiLevelNames ?? '').split('|'))
+// harness 词表未收录 rsiLevelNames（键缺失时按空串处理=不显示等级名，保持现渲染口径）。
+const LEVEL_NAMES = computed(() => String((L.value as { rsiLevelNames?: string }).rsiLevelNames ?? '').split('|'))
 
 async function refresh(): Promise<void> {
   busy.value = true

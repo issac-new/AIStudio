@@ -54,7 +54,9 @@ function loadWidgets() {
     }
 
     // Also check account data widgets
-    const userWidgets = clientStore.client.getAccountData('m.widgets')
+    // 'm.widgets' 不在当前 SDK 的 AccountDataEvents 键联合里；运行时按任意字符串读取，仅类型层放宽。
+    const userWidgets = (clientStore.client.getAccountData as unknown as
+      (t: string) => { getContent: () => unknown } | undefined)('m.widgets')
     if (userWidgets) {
       const content = userWidgets.getContent()
       if (content && typeof content === 'object') {

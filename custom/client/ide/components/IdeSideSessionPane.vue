@@ -35,7 +35,7 @@ async function load(): Promise<void> {
   try {
     const page = await fetchSessionMessagesPage(sid, 0, 120)
     if (seq !== mySeq) return // 旧响应弃用
-    messages.value = (page?.messages ?? []) as typeof messages.value
+    messages.value = (page?.messages ?? []) as unknown as typeof messages.value
     state.value = messages.value.length ? 'ok' : 'empty'
   } catch {
     if (seq !== mySeq) return

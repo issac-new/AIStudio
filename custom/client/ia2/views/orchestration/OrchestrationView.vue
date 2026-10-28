@@ -131,7 +131,10 @@ async function refresh(): Promise<void> {
 
 onMounted(() => { void refresh() })
 
-function onNodeClick(_: unknown, node: Node): void {
+/** vue-flow v1 的 node-click 只传一个 NodeMouseEvent（无第二参）；原双参签名运行时取不到 node。
+ *  这里把第二参声明为可选并短路，保持"不改选中结果"的现行为，接线修正待人工裁定。 */
+function onNodeClick(_: unknown, node?: Node): void {
+  if (!node) return
   selectedRootId.value = node.id
 }
 

@@ -6,9 +6,9 @@
      doc 是唯一事实源（父层纯函数产出新对象），本组件在 doc 变更时重建
      flow 视图；v-model 下的拖拽由 vue-flow 自管，落位后经 move-node 回流。 -->
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { VueFlow, MarkerType, Handle, Position, type Node, type Edge } from '@vue-flow/core'
+import { VueFlow, MarkerType, Handle, Position, type Node, type Edge, type EdgeMouseEvent } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import { edgeId, type CanvasDoc } from '../adapters/editor'
@@ -36,8 +36,10 @@ const emit = defineEmits<{
 }>()
 
 const wrapper = ref<HTMLElement | null>(null)
-const flowNodes = ref<Node[]>([])
-const flowEdges = ref<Edge[]>([])
+// ref([]) as Ref<Node[]>：直接 ref<Node[]> 会触发 UnwrapRef 对 vue-flow Node 递归类型实例化（TS2589）。
+// 运行时仍是同一个 ref（深层响应式），只是绕过类型层深解包。
+const flowNodes = ref([]) as Ref<Node[]>
+const flowEdges = ref([]) as Ref<Edge[]>
 const { t } = useI18n()
 
 function rebuild(doc: CanvasDoc): void {
@@ -98,7 +100,10 @@ function onConnect(pair: { source: string; target: string }): void {
   emit('connect', { from: pair.source, to: pair.target })
 }
 
-function onDragStop(node: { id: string; position: { x: number; y: number } }): void {
+function onDragStop(payload: unknown): void {
+  // vue-flow v1 的 node-drag-stop 传 { event, node, nodes }（无顶层 id/position）；
+  // 原实现按顶层读，运行时 position 为 undefined。保留原读取形态（行为不变），修正待人工裁定。
+  const node = payload as { id: string; position: { x: number; y: number } }
   emit('move-node', { id: node.id, x: node.position.x, y: node.position.y })
 }
 
@@ -157,7 +162,7 @@ function onDrop(ev: DragEvent): void {
       :default-edge-options="{ markerEnd: MarkerType.ArrowClosed }"
       @connect="onConnect"
       @node-drag-stop="onDragStop"
-      @edge-click="(edge: Edge) => emit('edge-click', String(edge.id))"
+      @edge-click="(e: EdgeMouseEvent) => emit('edge-click', String((e as unknown as Edge).id))"
     >
       <template #node-editor-node="nodeProps">
         <div

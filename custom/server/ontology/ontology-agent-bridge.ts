@@ -26,6 +26,7 @@ import { fiboMappings } from './ontology-fibo-mapping'
 import { fiboOpsSnapshot } from './ontology-fibo-ops'
 import { loadInstances, loadSpec } from './ontology-store'
 import { ingestSingleTask } from './ontology-watch'
+import { fail } from '../lib/http'
 
 export const ONTOLOGY_AGENT_BRIDGE_PATH = '/api/ontology/agent-bridge/validate-task'
 export const ONTOLOGY_AGENT_BRIDGE_FIBO_PATH = '/api/ontology/agent-bridge/fibo'
@@ -42,14 +43,12 @@ function isLoopback(ip: string | undefined): boolean {
 /** 回环 + 可选令牌闸；返回 false 时已写好 403/401 响应。 */
 function bridgeGuard(ctx: Context, env: Record<string, string | undefined>): boolean {
   if (!isLoopback(ctx.ip)) {
-    ctx.status = 403
-    ctx.body = { ok: false, error: 'loopback only' }
+    fail(ctx, 403, 'loopback only')
     return false
   }
   const token = env.ONTOLOGY_BRIDGE_TOKEN?.trim()
   if (token && ctx.get('x-ontology-bridge-token') !== token) {
-    ctx.status = 401
-    ctx.body = { ok: false, error: 'bad bridge token' }
+    fail(ctx, 401, 'bad bridge token')
     return false
   }
   return true
@@ -65,8 +64,8 @@ export function registerOntologyAgentBridgeRoutes(app: {
     const board = typeof body.board === 'string' && body.board ? body.board : 'main'
     const taskId = typeof body.taskId === 'string' && body.taskId ? body.taskId : ''
     if (!taskId) {
-      ctx.status = 400
-      ctx.body = { ok: false, detail: 'taskId 必填；board 缺省 main' }
+      // detail 键由 runtime/hermes_cli/kanban_gates.py 读取（无 violations 时的失败文案）
+      fail(ctx, 400, 'taskId 必填；board 缺省 main', { extra: { detail: 'taskId 必填；board 缺省 main' } })
       return
     }
     const r = await ingestSingleTask(board, taskId)

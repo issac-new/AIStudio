@@ -17,6 +17,7 @@
  * 挂载：patch 490 在 bootstrap/routes.ts（与 477/482/488 同款两行）。
  */
 import Router from '@koa/router'
+import type { Context } from 'koa'
 import { execFile } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'fs'
 import { mkdir, readFile, writeFile, rename } from 'fs/promises'
@@ -50,6 +51,7 @@ import {
 import { readDispatchLedger } from './dispatch-ledger'
 import { collectBoardStatus } from './board-status'
 import { underWebUi } from '../lib/paths'
+import { fail } from '../lib/http'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -76,22 +78,20 @@ function writeGateSyncMarker(seen: Set<string>): void {
 
 /** P6-P8 管理维护角色闸（fleet.ts:54 同判据）：启用鉴权的部署仅 super_admin 可写
  * 注册表/matrix 账号面；未启用鉴权（单用户部署）放行。返回 true=已写 403，调用侧直接 return。 */
-function superAdminDenied(ctx: { state?: unknown; status: number; body: unknown }): boolean {
+function superAdminDenied(ctx: Context): boolean {
   const user = (ctx.state as { user?: { role?: string } | undefined } | undefined)?.user
   if (!user || user.role === 'super_admin') return false
-  ctx.status = 403
-  ctx.body = { ok: false, error: '管理维护端点仅 super_admin 可操作' }
+  fail(ctx, 403, '管理维护端点仅 super_admin 可操作')
   return true
 }
 
 /** 决策写统一人责边界；请求体 actor/approver 不作为身份来源。 */
-function decisionActor(ctx: { state?: unknown; status: number; body: unknown }): AuthenticatedActor | null {
+function decisionActor(ctx: Context): AuthenticatedActor | null {
   try {
     return requireAuthenticatedActor(ctx)
   } catch (error) {
     const e = error as Error & { status?: number; code?: string }
-    ctx.status = e.status ?? 401
-    ctx.body = { ok: false, code: e.code ?? 'authenticated_actor_required', error: e.message }
+    fail(ctx, e.status ?? 401, e.message, { code: e.code ?? 'authenticated_actor_required' })
     return null
   }
 }
@@ -204,14 +204,12 @@ router.get('/doc', async (ctx) => {
   const kind = String(ctx.query.kind ?? '')
   const entry = GOVERNANCE_DOCS.find((d) => d.kind === kind)
   if (!entry) {
-    ctx.status = 404
-    ctx.body = { ok: false, error: `unknown kind: ${kind}` }
+    fail(ctx, 404, `unknown kind: ${kind}`)
     return
   }
   const meta = await docMeta(entry)
   if (!meta.exists) {
-    ctx.status = 404
-    ctx.body = { ok: false, error: `doc not in repo: ${entry.path}` }
+    fail(ctx, 404, `doc not in repo: ${entry.path}`)
     return
   }
   // 无 ref 工件优先读工作树（编辑链本地提交后工作树领先 origin/main；与 registry
@@ -243,23 +241,19 @@ router.put('/doc', async (ctx) => {
   const { kind, markdown, message, actor } = ctx.request.body as { kind?: string; markdown?: string; message?: string; actor?: string }
   const entry = GOVERNANCE_DOCS.find((d) => d.kind === kind)
   if (!entry) {
-    ctx.status = 404
-    ctx.body = { ok: false, error: `unknown kind: ${kind}` }
+    fail(ctx, 404, `unknown kind: ${kind}`)
     return
   }
   if (entry.ref) {
-    ctx.status = 409
-    ctx.body = { ok: false, error: '分支证据件只读（ref 工件不可编辑）' }
+    fail(ctx, 409, '分支证据件只读（ref 工件不可编辑）')
     return
   }
   if (typeof markdown !== 'string' || !markdown.trim()) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'markdown 必填' }
+    fail(ctx, 400, 'markdown 必填')
     return
   }
   if (!repoReady()) {
-    ctx.status = 503
-    ctx.body = { ok: false, error: 'repo 不可用' }
+    fail(ctx, 503, 'repo 不可用')
     return
   }
   const abs = resolve(repoRoot(), entry.path)
@@ -272,8 +266,7 @@ router.put('/doc', async (ctx) => {
     await git(['add', entry.path])
     await git(['commit', '--allow-empty', '-m', String(message || `更新 ${entry.title}`), '-m', `actor=${actor || 'studio-ui'} via studio 治理工件编辑`])
   } catch (e) {
-    ctx.status = 502
-    ctx.body = { ok: false, error: `文件已原子保存但 git 提交失败：${(e as Error).message}（工作树留有未提交改动，重试保存即可再提交）` }
+    fail(ctx, 502, `文件已原子保存但 git 提交失败：${(e as Error).message}（工作树留有未提交改动，重试保存即可再提交）`)
     return
   }
   const meta = await docMeta(entry)
@@ -314,8 +307,7 @@ router.get('/posture', async (ctx) => {
   try {
     ctx.body = { ok: true, ...collectGovernancePosture() }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -324,8 +316,7 @@ router.get('/posture', async (ctx) => {
 router.post('/emergency-stop', async (ctx) => {
   const body = (ctx.request.body ?? {}) as { confirm?: unknown; reason?: unknown; recheckMs?: unknown }
   if (body.confirm !== 'STOP-ALL') {
-    ctx.status = 400
-    ctx.body = { ok: false, error: "确认闸：body.confirm 必须字面 'STOP-ALL'（防误触）" }
+    fail(ctx, 400, "确认闸：body.confirm 必须字面 'STOP-ALL'（防误触）")
     return
   }
   const recheckMs = Number(body.recheckMs)
@@ -336,16 +327,14 @@ router.post('/emergency-stop', async (ctx) => {
     })
     ctx.body = { ok: true, report }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
 router.get('/ledger', async (ctx) => {
   const res = loadCapabilityLedger()
   if (!res.exists) {
-    ctx.status = 404
-    ctx.body = { ok: false, exists: false, error: 'capability-ledger.yaml 未找到（runtime/governance/）' }
+    fail(ctx, 404, 'capability-ledger.yaml 未找到（runtime/governance/）', { extra: { exists: false } })
     return
   }
   ctx.body = {
@@ -361,8 +350,7 @@ router.get('/ledger', async (ctx) => {
 router.get('/metrics-defs', async (ctx) => {
   const res = loadMetricsDefs()
   if (!res.exists) {
-    ctx.status = 404
-    ctx.body = { ok: false, exists: false, error: 'metrics.yaml 未找到（runtime/governance/）' }
+    fail(ctx, 404, 'metrics.yaml 未找到（runtime/governance/）', { extra: { exists: false } })
     return
   }
   ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
@@ -373,8 +361,7 @@ router.get('/metrics-defs', async (ctx) => {
 router.get('/usage', async (ctx) => {
   const res = loadCapabilityLedger()
   if (!res.exists || !res.doc) {
-    ctx.status = 404
-    ctx.body = { ok: false, error: 'capability-ledger.yaml 未找到' }
+    fail(ctx, 404, 'capability-ledger.yaml 未找到')
     return
   }
   const [assigneeStats, squadStats] = [await collectAssigneeStats(), collectSquadStats()]
@@ -392,8 +379,7 @@ router.get('/usage', async (ctx) => {
 router.get('/slo', async (ctx) => {
   const ledgerRes = loadCapabilityLedger()
   if (!ledgerRes.exists || !ledgerRes.doc) {
-    ctx.status = 404
-    ctx.body = { ok: false, error: 'capability-ledger.yaml 未找到' }
+    fail(ctx, 404, 'capability-ledger.yaml 未找到')
     return
   }
   const metricsRes = loadMetricsDefs()
@@ -420,8 +406,7 @@ router.get('/audit-log', async (ctx) => {
 router.get('/contracts', async (ctx) => {
   const res = loadActionContracts()
   if (!res.exists) {
-    ctx.status = 404
-    ctx.body = { ok: false, exists: false, error: 'action-contracts.yaml 未找到（runtime/governance/）' }
+    fail(ctx, 404, 'action-contracts.yaml 未找到（runtime/governance/）', { extra: { exists: false } })
     return
   }
   ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
@@ -432,8 +417,7 @@ router.get('/contracts', async (ctx) => {
 router.get('/state-model', async (ctx) => {
   const res = loadStateModel()
   if (!res.exists) {
-    ctx.status = 404
-    ctx.body = { ok: false, exists: false, error: 'state-model.yaml 未找到（runtime/governance/）' }
+    fail(ctx, 404, 'state-model.yaml 未找到（runtime/governance/）', { extra: { exists: false } })
     return
   }
   ctx.body = { ok: true, exists: true, path: res.path, problems: res.problems, doc: res.doc }
@@ -442,8 +426,7 @@ router.get('/state-model', async (ctx) => {
 router.get('/impact', async (ctx) => {
   const target = String(ctx.query.target ?? '').trim()
   if (!target) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'target 必填（形如 unit.<id> / contract.<id> / metric.<id> / verdicts / sloTargets / state-model）' }
+    fail(ctx, 400, 'target 必填（形如 unit.<id> / contract.<id> / metric.<id> / verdicts / sloTargets / state-model）')
     return
   }
   ctx.body = { ok: true, ...queryImpact(target) }
@@ -467,8 +450,7 @@ router.get('/decision-graph/decisions', async (ctx) => {
 router.get('/decision-graph/chain', async (ctx) => {
   const id = String(ctx.query.id ?? '').trim()
   if (!id) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'id 必填（decision uuid）' }
+    fail(ctx, 400, 'id 必填（decision uuid）')
     return
   }
   ctx.body = { ok: true, chain: await causalChain(id) }
@@ -512,8 +494,7 @@ router.post('/decision-graph/sync-gates', async (ctx) => {
 router.get('/decision-graph/replay', async (ctx) => {
   const at = Number(ctx.query.at)
   if (!Number.isFinite(at) || at <= 0) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'at 必填（unix 毫秒）' }
+    fail(ctx, 400, 'at 必填（unix 毫秒）')
     return
   }
   ctx.body = { ok: true, ...(await replayDecisions(at)) }
@@ -550,14 +531,12 @@ router.post('/knowledge-graph/conflicts/resolve', async (ctx) => {
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
   const { inboxId, action } = body as { inboxId?: unknown; action?: unknown }
   if (typeof inboxId !== 'string' || !inboxId || (action !== 'keep-existing' && action !== 'take-incoming')) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'inboxId 必填；action 须为 keep-existing|take-incoming' }
+    fail(ctx, 400, 'inboxId 必填；action 须为 keep-existing|take-incoming')
     return
   }
   const hit = resolveConflictInbox(inboxId, action)
   if (!hit) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: '收件箱条目不存在' }
+    fail(ctx, 404, '收件箱条目不存在')
     return
   }
   ctx.body = { ok: true, entry: hit }
@@ -567,8 +546,7 @@ router.post('/knowledge-graph/conflicts/resolve', async (ctx) => {
 router.get('/decision-rules', async (ctx) => {
   const res = loadDecisionRules()
   if (!res.exists) {
-    ctx.status = 404
-    ctx.body = { ok: false, exists: false, error: 'decision-rules.yaml 未找到（runtime/governance/）' }
+    fail(ctx, 404, 'decision-rules.yaml 未找到（runtime/governance/）', { extra: { exists: false } })
     return
   }
   ctx.body = { ok: true, exists: true, doc: res.doc, problems: res.problems }
@@ -617,12 +595,12 @@ router.put('/registry/:kind', async (ctx) => {
         ctx.body = { ...r, breakGlass: true }
         return
       }
-      ctx.status = 409
-      ctx.body = {
-        ok: false, code: 'org_needs_cosign', needsCoSign: true,
-        error: `编制 admin 行变更需双人会签或紧急通道。${det.detail.join('；')}`,
-        detail: det.detail,
-      }
+      // detail 以数组形态单独保留：org-cosign-guard.test.ts 与 ia2 OrgEditor 的明细渲染
+      // 都读该键，error 只承载合并后的一句话文案。
+      fail(ctx, 409, `编制 admin 行变更需双人会签或紧急通道。${det.detail.join('；')}`, {
+        code: 'org_needs_cosign',
+        extra: { needsCoSign: true, detail: det.detail },
+      })
       return
     }
   }

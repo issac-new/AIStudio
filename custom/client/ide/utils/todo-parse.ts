@@ -12,7 +12,7 @@ export function parseTodoContent(content: string): TodoItem[] {
     const arr = Array.isArray(parsed) ? parsed : parsed?.todos
     if (Array.isArray(arr) && arr.length) {
       return arr.map((t) => ({
-        status: (t.status === 'completed' || t.status === 'in_progress') ? t.status : 'pending',
+        status: ((t.status === 'completed' || t.status === 'in_progress') ? t.status : 'pending') as TodoStatus,
         text: String(t.content ?? t.text ?? '').trim(),
       })).filter((t) => t.text)
     }

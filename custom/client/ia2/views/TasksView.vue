@@ -131,8 +131,9 @@ function applyQuery(q: Record<string, unknown>): void {
       tab.value = 'board'
     }
   }
-  if (typeof q.status === 'string' && KANBAN_STATUSES.has(q.status)) {
-    kanban.setStatusFilter(q.status)
+  // Set.has 只收 KanbanTaskStatus（不收 string）→ 命中判定与后续 setStatusFilter 均按同一合法断言。
+  if (typeof q.status === 'string' && KANBAN_STATUSES.has(q.status as KanbanTaskStatus)) {
+    kanban.setStatusFilter(q.status as KanbanTaskStatus)
   }
   openTaskId.value = typeof q.task === 'string' && q.task ? q.task : null
 }

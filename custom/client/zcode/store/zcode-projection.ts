@@ -167,7 +167,10 @@ export function handleZcodeEvent(e: ZcodeSocketEvent): void {
     return
   }
   if (e.type === 'conversation.branch' && e.sessionId) {
-    state.lastBranch = { sessionId: e.sessionId, fromRowId: e.fromRowId, removedRows: e.removedRows, at: e.at }
+    // ZcodeSocketEvent 未声明分支字段（fromRowId/removedRows 由服务端 branch 事件携带）；
+    // 原实现按事件直读，运行时形态不变，仅类型层补声明。
+    const branch = e as ZcodeSocketEvent & { fromRowId?: number; removedRows?: number }
+    state.lastBranch = { sessionId: e.sessionId, fromRowId: branch.fromRowId, removedRows: branch.removedRows, at: e.at }
     return
   }
   if (e.type === 'projection.status' || e.type === 'mention.outcome') {

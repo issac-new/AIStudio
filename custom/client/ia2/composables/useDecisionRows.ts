@@ -35,7 +35,8 @@ export function useDecisionRows() {
     caseId: g.caseId,
     gate: g.gate,
     title: `${g.caseId} · ${g.gate}`,
-    ts: Math.max(...g.signoffs.map(s => s.at), g.at ?? 0, 0),
+    // ReviewItem 无顶层 at（签核时刻在 signoffs[]）；此处读取恒 undefined（Math.max 恒取 signoffs/0）。
+    ts: Math.max(...g.signoffs.map(s => s.at), (g as { at?: number }).at ?? 0, 0),
   })))
 
   const decisionRows = computed<DecisionRow[]>(() => {

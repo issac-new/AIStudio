@@ -90,6 +90,14 @@ export interface AggregatesDto {
   judgeOnline: boolean
   byLink?: Partial<Record<string, { total: number; passed: number; unknown: number; passRate: number | null }>>
   byException?: Array<{ type: string; taskCount: number; passAtK: number | null }>
+  /** 难度分桶（服务端 RunAggregates.byDifficulty）：显式标注 P0-P3 才分桶，全未标注缺省。 */
+  byDifficulty?: Array<{ tier: 'P0' | 'P1' | 'P2' | 'P3' | 'untagged'; taskCount: number; passAtK: number | null }>
+  /** 责任角色分桶（服务端 RunAggregates.byRole）：失败按标注角色归因。 */
+  byRole?: Array<{ role: string; taskCount: number; passed: number; passAtK: number | null }>
+  /** 判分稳定性（参照答案锚定检验）：未开启检验时缺省。 */
+  judgeStability?: { checked: number; flips: number; flipRate: number | null }
+  /** 输出稳定性（同输入重复判定）：未开启 retest 时缺省。 */
+  outputStability?: { rounds: number; checked: number; flips: number; flipRate: number | null }
   processMetrics?: { toolHeadAccuracy: number | null; trajectoryMatchScore: number | null; attemptsCompared: number }
   sixDimensions?: Array<{ dim: string; value: number | null; basis: string; instrumented: boolean }>
   releaseGate?: {

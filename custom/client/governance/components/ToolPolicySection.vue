@@ -42,7 +42,7 @@ const CATEGORY_OPTIONS: { key: PolicyCategoryDto; label: string }[] = [
   { key: 'exec', label: 'exec' },
   { key: 'network', label: 'network' },
 ]
-const ACTION_OPTIONS: { key: PolicyActionDto; labelKey: keyof ReturnType<typeof L.value> }[] = [
+const ACTION_OPTIONS: { key: PolicyActionDto; labelKey: keyof typeof L.value }[] = [
   { key: 'deny', labelKey: 'actionDeny' },
   { key: 'require_approval', labelKey: 'actionApproval' },
   { key: 'allow', labelKey: 'actionAllow' },

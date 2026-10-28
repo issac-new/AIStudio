@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import {
   Room,
   MatrixEvent,
@@ -23,7 +23,8 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
   // array reference — Vue can't see mutations. We re-snapshot on SDK events.
   const roomList = ref<any[]>([])
   const activeRoomId = ref<string | null>(null)
-  const messageList = ref<MatrixEvent[]>([])
+  // shallowRef：SDK 类实例不做深层响应式代理（避免 Vue 深解包剥离 getId 等方法，也防代理破坏 SDK 内部身份）。
+  const messageList = shallowRef<MatrixEvent[]>([])
   /** Search term from RoomSummaryCard search bar — consumed by MatrixMessagePanel */
   const roomSearchTerm = ref('')
   /** Inline room search state (element-web TimelineRenderingType.Search equivalent) */
@@ -887,9 +888,11 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
       for (const member of members) {
         if (member.userId === myUserId) continue
         try {
-          // getUserDeviceInfo may take a single userId or array depending on SDK version
-          const deviceMap: any = crypto.getUserDeviceInfo?.(member.userId)
-            ?? crypto.getUserDeviceInfo?.([member.userId])
+          // getUserDeviceInfo 在部分 SDK 版本接受单 userId、部分只收数组；类型层按宽松签名调用，运行时形态不变。
+          const getUserDeviceInfo = crypto.getUserDeviceInfo as unknown as
+            ((arg: string | string[]) => unknown) | undefined
+          const deviceMap: any = getUserDeviceInfo?.(member.userId)
+            ?? getUserDeviceInfo?.([member.userId])
           if (deviceMap instanceof Map) {
             for (const [, device] of deviceMap) {
               // Check various trust indicators across SDK versions
@@ -913,7 +916,7 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     if (!room || !clientStore.client) return false
     try {
       // Check m.direct account data first (authoritative)
-      const directEvent = clientStore.client.getAccountData('m.direct')
+      const directEvent = clientStore.client.getAccountData(EventType.Direct)
       if (directEvent) {
         const content = directEvent.getContent() as Record<string, string[]>
         for (const [, roomIds] of Object.entries(content)) {

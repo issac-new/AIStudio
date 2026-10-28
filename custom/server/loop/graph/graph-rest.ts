@@ -6,6 +6,7 @@
 // POST /api/graph/runs/:id/resume 是审批/中断的真人恢复入口。
 
 import Router from '@koa/router'
+import type { Context } from 'koa'
 import { promises as fs } from 'fs'
 import type { GraphService } from './graph-service'
 import type { EventLogStore, GraphLogEvent } from './event-log-store'
@@ -15,6 +16,7 @@ import { appendContractsById } from './phase-nodes'
 import { notifyDirectorEvent } from './director-notify'
 import { compileRequirementToGraph, DEFAULT_SIMULATION_SCENARIO, type RequirementInput } from '../../graph/simulation-graph-template'
 import { requireAuthenticatedActor } from '../../approval-inbox/human-gate'
+import { fail } from '../../lib/http'
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 
@@ -126,13 +128,12 @@ function isDecisionResume(interruptId: string, value: unknown): boolean {
   return false
 }
 
-function approvalActor(ctx: { state?: unknown; status: number; body: unknown }): string | null {
+function approvalActor(ctx: Context): string | null {
   try {
     return requireAuthenticatedActor(ctx).username
   } catch (error) {
     const e = error as Error & { status?: number; code?: string }
-    ctx.status = e.status ?? 401
-    ctx.body = { ok: false, code: e.code ?? 'authenticated_actor_required', error: e.message }
+    fail(ctx, e.status ?? 401, e.message, { code: e.code ?? 'authenticated_actor_required' })
     return null
   }
 }

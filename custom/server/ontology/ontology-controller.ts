@@ -22,6 +22,7 @@
  * 挂载：patch 590 在 bootstrap/routes.ts（import + app.use 两 hunk，582 同款范式）。
  */
 import Router from '@koa/router'
+import type { Context } from 'koa'
 import { specStats, type OntologyInstance, type OntologySpec, type Violation } from './ontology-types'
 import { violationSummary } from './ontology-validate'
 import {
@@ -43,15 +44,15 @@ export { startOntologyWatchIfEnabled } from './ontology-watch'
 export { registerOntologyAgentBridgeRoutes } from './ontology-agent-bridge'
 import { exportOntology, type ExportFormat } from './ontology-export'
 import { validateInstances, validateSpec } from './ontology-validate'
+import { fail } from '../lib/http'
 
 const router = new Router({ prefix: '/api/hermes/ontology' })
 
 /** 写闸（kg-evolution-controller superAdminDenied 同语义）。 */
-function superAdminDenied(ctx: { state?: unknown; status: number; body: unknown }): boolean {
+function superAdminDenied(ctx: Context): boolean {
   const user = (ctx.state as { user?: { role?: string } | undefined } | undefined)?.user
   if (!user || user.role === 'super_admin') return false
-  ctx.status = 403
-  ctx.body = { ok: false, error: '管理维护端点仅 super_admin 可操作' }
+  fail(ctx, 403, '管理维护端点仅 super_admin 可操作')
   return true
 }
 
@@ -80,14 +81,14 @@ router.put('/spec', (ctx) => {
   if (superAdminDenied(ctx)) return
   const next = asSpec(ctx.request.body)
   if (!next) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'spec 结构不完整（须含 namespace/entityTypes/objectProperties/axioms）' }
+    fail(ctx, 400, 'spec 结构不完整（须含 namespace/entityTypes/objectProperties/axioms）', { extra: { detail: 'spec 结构不完整（须含 namespace/entityTypes/objectProperties/axioms）' } })
     return
   }
   const r = saveSpec(next, (ctx.state as { user?: { username?: string } } | undefined)?.user?.username)
   if (!r.ok) {
-    ctx.status = 422
-    ctx.body = { ok: false, detail: '本体自检未通过（error 级违规拒写——模式层也有数据契约）', violations: r.violations }
+    fail(ctx, 422, '本体自检未通过（error 级违规拒写——模式层也有数据契约）', {
+      extra: { detail: '本体自检未通过（error 级违规拒写——模式层也有数据契约）', violations: r.violations },
+    })
     return
   }
   ctx.body = { ok: true, spec: r.spec, snapshot: r.snapshot }
@@ -112,14 +113,14 @@ router.get('/instances', (ctx) => {
 router.post('/instances', (ctx) => {
   const inst = asInstance(ctx.request.body)
   if (!inst) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: '实例结构不完整（须含 id/type/label）' }
+    fail(ctx, 400, '实例结构不完整（须含 id/type/label）', { extra: { detail: '实例结构不完整（须含 id/type/label）' } })
     return
   }
   const r = upsertInstance(inst)
   if (!r.ok) {
-    ctx.status = 422
-    ctx.body = { ok: false, detail: '写入即校验未通过（error 级违规——数据契约是事前准入，不是事后说明）', violations: r.violations }
+    fail(ctx, 422, '写入即校验未通过（error 级违规——数据契约是事前准入，不是事后说明）', {
+      extra: { detail: '写入即校验未通过（error 级违规——数据契约是事前准入，不是事后说明）', violations: r.violations },
+    })
     return
   }
   ctx.body = { ok: true, saved: r.saved, violations: r.violations.filter((v) => v.severity !== 'error') }
@@ -130,14 +131,12 @@ router.put('/instances/:id', (ctx) => {
   const id = ctx.params.id
   const inst = asInstance(ctx.request.body)
   if (!inst || inst.id !== id) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: `body.id 须与路径 :id 一致（${id}）` }
+    fail(ctx, 400, `body.id 须与路径 :id 一致（${id}）`, { extra: { detail: `body.id 须与路径 :id 一致（${id}）` } })
     return
   }
   const r = upsertInstance(inst, id)
   if (!r.ok) {
-    ctx.status = 422
-    ctx.body = { ok: false, detail: '写入即校验未通过（error 级违规拒写）', violations: r.violations }
+    fail(ctx, 422, '写入即校验未通过（error 级违规拒写）', { extra: { detail: '写入即校验未通过（error 级违规拒写）', violations: r.violations } })
     return
   }
   ctx.body = { ok: true, saved: r.saved, violations: r.violations.filter((v) => v.severity !== 'error') }
@@ -147,8 +146,7 @@ router.delete('/instances/:id', (ctx) => {
   if (superAdminDenied(ctx)) return
   const ok = deleteInstance(ctx.params.id)
   if (!ok) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: `实例不存在：${ctx.params.id}` }
+    fail(ctx, 404, `实例不存在：${ctx.params.id}`, { extra: { detail: `实例不存在：${ctx.params.id}` } })
     return
   }
   ctx.body = { ok: true }
@@ -171,8 +169,7 @@ router.post('/validate', (ctx) => {
 router.get('/export', (ctx) => {
   const fmt = String(ctx.query.format ?? 'jsonld') as ExportFormat
   if (fmt !== 'jsonld' && fmt !== 'shacl' && fmt !== 'turtle') {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'format 须为 jsonld | shacl | turtle' }
+    fail(ctx, 400, 'format 须为 jsonld | shacl | turtle', { extra: { detail: 'format 须为 jsonld | shacl | turtle' } })
     return
   }
   const { body, contentType } = exportOntology(loadSpec(), loadInstances(), fmt)
@@ -189,14 +186,12 @@ router.post('/rollback', (ctx) => {
   const body = (ctx.request.body ?? {}) as { ts?: unknown }
   const ts = Number(body.ts)
   if (!Number.isFinite(ts) || ts <= 0) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'ts 必填（快照 unix 毫秒，见 GET /versions）' }
+    fail(ctx, 400, 'ts 必填（快照 unix 毫秒，见 GET /versions）', { extra: { detail: 'ts 必填（快照 unix 毫秒，见 GET /versions）' } })
     return
   }
   const r = rollbackSpec(ts)
   if (!r.ok) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: r.error }
+    fail(ctx, 404, r.error, { extra: { detail: r.error } })
     return
   }
   ctx.body = { ok: true, ts, preRollback: r.preRollback, restoredVersion: r.restoredVersion }
@@ -224,8 +219,8 @@ router.post('/ingest', async (ctx) => {
     const r = await ingestFromKanban(board ? { board } : undefined)
     ctx.body = { ok: r.ok, ingest: r }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, detail: `摄取失败：${e instanceof Error ? e.message : String(e)}` }
+    const detail = `摄取失败：${e instanceof Error ? e.message : String(e)}`
+    fail(ctx, 500, detail, { extra: { detail } })
   }
 })
 
@@ -237,8 +232,7 @@ router.post('/validate-task', async (ctx) => {
   const board = typeof body.board === 'string' && body.board ? body.board : 'main'
   const taskId = typeof body.taskId === 'string' && body.taskId ? body.taskId : ''
   if (!taskId) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'taskId 必填；board 缺省 main' }
+    fail(ctx, 400, 'taskId 必填；board 缺省 main', { extra: { detail: 'taskId 必填；board 缺省 main' } })
     return
   }
   const r = await ingestSingleTask(board, taskId)
@@ -312,26 +306,26 @@ router.post('/fibo/import', (ctx) => {
   const current = loadSpec()
   const merged = mergeFiboPack(current)
   if (!merged.ok || !merged.spec) {
-    ctx.status = 409
-    ctx.body = {
-      ok: false,
-      detail: 'FIBO 导入冲突：本地已有同 id 但 IRI 不同的术语，整批未写入（不做静默覆盖）',
-      collisions: merged.collisions,
-      added: merged.added,
-      skipped: merged.skipped,
-    }
+    fail(ctx, 409, 'FIBO 导入冲突：本地已有同 id 但 IRI 不同的术语，整批未写入（不做静默覆盖）', {
+      extra: {
+        detail: 'FIBO 导入冲突：本地已有同 id 但 IRI 不同的术语，整批未写入（不做静默覆盖）',
+        collisions: merged.collisions,
+        added: merged.added,
+        skipped: merged.skipped,
+      },
+    })
     return
   }
   const r = saveSpec(merged.spec, (ctx.state as { user?: { username?: string } } | undefined)?.user?.username)
   if (!r.ok || !r.spec) {
-    ctx.status = 422
-    ctx.body = {
-      ok: false,
-      detail: 'FIBO 包合并后本体自检未通过（error 级违规拒写）',
-      violations: r.violations,
-      added: merged.added,
-      skipped: merged.skipped,
-    }
+    fail(ctx, 422, 'FIBO 包合并后本体自检未通过（error 级违规拒写）', {
+      extra: {
+        detail: 'FIBO 包合并后本体自检未通过（error 级违规拒写）',
+        violations: r.violations,
+        added: merged.added,
+        skipped: merged.skipped,
+      },
+    })
     return
   }
   ctx.body = {
@@ -358,8 +352,8 @@ router.post('/fibo/ingest-demo', (ctx) => {
   if (superAdminDenied(ctx)) return
   const r = ingestFiboDemo()
   if (!r.ok) {
-    ctx.status = 422
-    ctx.body = { ...r, ok: false, detail: r.detail ?? '支付样例未写入' }
+    const detail = r.detail ?? '支付样例未写入'
+    fail(ctx, 422, detail, { extra: { ...r, detail } })
     return
   }
   ctx.body = { ...r, ok: true }

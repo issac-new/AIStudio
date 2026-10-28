@@ -66,7 +66,9 @@ async function forwardTo(roomId: string) {
   try {
     const content = transformContent(props.event)
     // Preserve body; use original msgtype and content structure
-    await clientStore.client.sendEvent(roomId, props.event.getType(), content)
+    // 转发按事件自身 type 原样发送（自定义/上游新事件类型不在 TimelineEvents 键联合）；运行时同一字符串。
+    await (clientStore.client.sendEvent as unknown as
+      (roomId: string, eventType: string, content: unknown) => Promise<unknown>)(roomId, props.event.getType(), content)
     sendStates[roomId] = 'sent'
   } catch {
     sendStates[roomId] = 'failed'

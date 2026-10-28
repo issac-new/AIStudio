@@ -24,14 +24,14 @@ function grepCount(pattern: string, paths: string[]): number {
 }
 
 describe('架构棘轮：只许减少', () => {
-  it('K19 服务端仍手写 ctx.body 的地方不超过 1376 处（新增请用 lib/http.ts）', () => {
+  it('K19 服务端仍手写 ctx.body 的地方不超过 1193 处（新增请用 lib/http.ts）', () => {
     const n = grepCount('ctx\\.body\\s*=', ['custom/server'])
-    expect(n, `新增了直接 ctx.body 赋值——请改用 custom/server/lib/http.ts（当前 ${n}）`).toBeLessThanOrEqual(1376)
+    expect(n, `新增了直接 ctx.body 赋值——请改用 custom/server/lib/http.ts（当前 ${n}）`).toBeLessThanOrEqual(1193)
   })
 
-  it('K19 `ok: false` 字面量不超过 1048 处（新失败体请用 fail()）', () => {
+  it('K19 `ok: false` 字面量不超过 874 处（新失败体请用 fail()）', () => {
     const n = grepCount('ok:\\s*false', ['custom/server'])
-    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(1048)
+    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(874)
   })
 
   it('K21 ia2 依赖 cockpit 的 import 不超过 45 处', () => {

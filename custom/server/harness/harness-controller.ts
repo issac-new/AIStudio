@@ -19,6 +19,7 @@
  * 挂载：patch 543 在 bootstrap/routes.ts（与 403 同款两行，series 台账惯例）。
  */
 import Router from '@koa/router'
+import type { Context } from 'koa'
 import { collectCapabilityCatalog, parseCapabilitySource } from './capability-catalog'
 import { collectCostAccounts, type CostAccountsReport } from './cost-accounts'
 import { assessMaturity, collectMaturityInputs, type MaturityReport } from './maturity'
@@ -44,6 +45,7 @@ import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 import { PROFILE_PRESETS, presetsValid, routeTaskProfile, type TaskFacts } from '../goalbudget/task-router'
 import { workbenchRoutes } from './workbench/controller'
+import { fail } from '../lib/http'
 // 融合批四（D7）：启动器上移 simcenter（推演运行域）；路由前缀冻结——本域只保留装配位。
 import { simLaunchRoutes } from '../simcenter/sim-launch'
 // 长程任务可信执行层（2026-10-22）：逐条主张审计、完成态双准入、完整性栅栏、原子断点。
@@ -69,11 +71,10 @@ function daysOf(v: unknown): number {
 }
 
 /** 治理写面（预算/沙箱）：有认证主体时须 super_admin；单用户无鉴权部署放行。 */
-function writeDenied(ctx: { state?: unknown; status?: number; body?: unknown }): boolean {
+function writeDenied(ctx: Context): boolean {
   const user = (ctx.state as { user?: { role?: string } } | undefined)?.user
   if (user && user.role !== 'super_admin') {
-    ctx.status = 403
-    ctx.body = { ok: false, detail: '治理写面须 super_admin 权限' }
+    fail(ctx, 403, '治理写面须 super_admin 权限')
     return true
   }
   return false
@@ -85,8 +86,7 @@ router.get('/capability-catalog', async (ctx) => {
     const res = await collectCapabilityCatalog(source)
     ctx.body = { ...res, ok: true, source: source ?? 'all' }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -95,8 +95,7 @@ router.get('/cost-accounts', async (ctx) => {
     const report: CostAccountsReport = await collectCostAccounts({ days: daysOf(ctx.query.days) })
     ctx.body = { ...report, ok: true }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -106,8 +105,7 @@ router.get('/maturity', async (ctx) => {
     const report: MaturityReport = assessMaturity(inputs)
     ctx.body = { ...report, ok: true }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -117,8 +115,7 @@ router.get('/primitives', async (ctx) => {
     const report: PrimitivesReport = buildPrimitivesReport(counts, notes)
     ctx.body = { ...report, ok: true }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -130,8 +127,7 @@ router.get('/eval-layers', async (ctx) => {
     const report: EvalLayersReport = buildEvalLayers(inputs)
     ctx.body = { ...report, ok: true, days: inputs.days }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -141,8 +137,7 @@ router.get('/rsi-maturity', async (ctx) => {
     const report: RsiMaturityReport = collectRsiMaturity()
     ctx.body = { ...report, ok: true }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -171,8 +166,7 @@ router.get('/tool-audit', async (ctx) => {
     })
     ctx.body = { ...result, ok: true }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -193,8 +187,7 @@ router.get('/policy-decisions', async (ctx) => {
     })
     ctx.body = { ...result, ok: true }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -204,8 +197,7 @@ router.get('/policy-decisions/chain', async (ctx) => {
   try {
     ctx.body = { ok: true, ...verifyPolicyDecisionChain({ days: daysOf(ctx.query.days) }) }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -216,8 +208,7 @@ router.get('/mcp-drift', async (ctx) => {
     // collectMcpDrift 自带 ok/error 语义（内部 fail-soft），直接透传
     ctx.body = collectMcpDrift()
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -225,8 +216,7 @@ router.post('/mcp-drift/snapshot', async (ctx) => {
   try {
     ctx.body = snapshotMcpDrift()
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -247,8 +237,7 @@ router.get('/run-manifests', async (ctx) => {
       : result.entries
     ctx.body = { ...result, entries, ok: true }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -258,14 +247,12 @@ router.get('/resume-plan', async (ctx) => {
     const runId = typeof ctx.query.runId === 'string' && ctx.query.runId ? ctx.query.runId : undefined
     const sessionId = typeof ctx.query.sessionId === 'string' && ctx.query.sessionId ? ctx.query.sessionId : undefined
     if (!runId && !sessionId) {
-      ctx.status = 400
-      ctx.body = { ok: false, detail: 'runId 或 sessionId 至少提供一个' }
+      fail(ctx, 400, 'runId 或 sessionId 至少提供一个')
       return
     }
     ctx.body = { ok: true, plan: await planResume({ runId, sessionId }) }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -274,8 +261,7 @@ router.get('/process-quality', async (ctx) => {
   try {
     ctx.body = { ok: true, ...collectProcessQuality(daysOf(ctx.query.days)) }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -286,8 +272,7 @@ router.get('/obs-signals', async (ctx) => {
     const { report, files, rows } = collectObsSignals(daysOf(ctx.query.days))
     ctx.body = { ok: true, ...report, sources: { traceFiles: files, traceRows: rows } }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -297,8 +282,7 @@ router.get('/obs-alerts', async (ctx) => {
   try {
     ctx.body = collectObsAlerts(daysOf(ctx.query.days))
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -332,8 +316,7 @@ router.get('/taskledger', async (ctx) => {
     const entries = listEntries({ source, lifecycle } as Parameters<typeof listEntries>[0])
     ctx.body = { ok: true, summary: summarizeLedger(entries), entries, store: ledgerPathForDisplay() }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -357,8 +340,7 @@ router.post('/taskledger', async (ctx) => {
     }
     ctx.body = { ok: true, entry: result.entry, transition: result.transition }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -369,8 +351,7 @@ router.get('/callgate', async (ctx) => {
   try {
     ctx.body = { ok: true, statuses: overlayCallgate.listStatuses(), enforcing: process.env.HERMES_CALLGATE_ENFORCE === '1' }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -388,8 +369,7 @@ router.post('/callgate/rule', async (ctx) => {
     overlayCallgate.setRule(parsed.rule)
     ctx.body = { ok: true, rule: parsed.rule, status: overlayCallgate.status(parsed.rule.resource) }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -421,8 +401,7 @@ router.get('/external-sessions', async (ctx) => {
     const report = scanExternalSessions({ limit, includeTitles, ...(source ? { source } : {}) })
     ctx.body = { ok: true, report }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -433,8 +412,7 @@ router.get('/budget-status', async (ctx) => {
     const profileId = typeof ctx.query.profileId === 'string' && ctx.query.profileId ? ctx.query.profileId : undefined
     ctx.body = { ok: true, status: budgetStatus({ userId, profileId }) }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -450,15 +428,13 @@ router.post('/budget-policy', async (ctx) => {
   const userId = typeof b.userId === 'string' && b.userId ? b.userId : undefined
   const profileId = typeof b.profileId === 'string' && b.profileId ? b.profileId : undefined
   if ((!userId && !profileId) || !action || !Number.isFinite(dailyUsd) || dailyUsd < 0) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: '须提供 userId 或 profileId、dailyUsd≥0、action=warn|downgrade|block' }
+    fail(ctx, 400, '须提供 userId 或 profileId、dailyUsd≥0、action=warn|downgrade|block')
     return
   }
   try {
     ctx.body = { ok: true, policy: setBudgetPolicy({ userId, profileId, dailyUsd, action }) }
   } catch (e) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 400, e instanceof Error ? e.message : String(e))
   }
 })
 
@@ -499,8 +475,10 @@ router.post('/sandbox/sweep', async (ctx) => {
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
   const result = sweepExpiredLeases({ dryRun: b.dryRun === true })
   if (!result.root) {
-    ctx.status = 409
-    ctx.body = { ok: false, detail: '未配置 HERMES_SANDBOX_WORKSPACES_ROOT，拒绝清扫', ...result }
+    // detail 与 error 同文但分键保留：harness-controller.test.ts 断言 sweep.body.detail，
+    // 旧客户端也读该键；error 是统一出口的规范键（过渡期双键）。
+    const detail = '未配置 HERMES_SANDBOX_WORKSPACES_ROOT，拒绝清扫'
+    fail(ctx, 409, detail, { extra: { detail, ...result } })
     return
   }
   ctx.body = { ok: true, ...result }
@@ -521,8 +499,7 @@ router.get('/nine-layers', async (ctx) => {
     }
     ctx.body = { ...nineLayersCache.report, ok: true, cachedAt: nineLayersCache.at }
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, error: e instanceof Error ? e.message : String(e) }
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
 })
 

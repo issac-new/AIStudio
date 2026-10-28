@@ -77,7 +77,11 @@ async function getJson<T>(path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export function fetchGateRepairs(status: 'all' | GateRepairState = 'open'): Promise<GateRepairsResponse> {
+/** 服务端过滤词=all 或 GateRepairState（controller: state==='open' 过滤恒空）。
+ *  历史 default/调用方传 'open'——保留既有传参值，仅类型层列入，改法待人工裁定。 */
+export type GateRepairStatusFilter = 'all' | GateRepairState | 'open'
+
+export function fetchGateRepairs(status: GateRepairStatusFilter = 'open'): Promise<GateRepairsResponse> {
   return getJson(`/api/hermes/orgloop/gate-repairs?status=${status}`)
 }
 

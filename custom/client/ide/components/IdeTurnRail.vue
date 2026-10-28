@@ -65,16 +65,21 @@ const rows = computed<TurnRow[]>(() => {
   const events: Array<OutlineEvent & { messageId: string }> = []
   for (const m of messages) {
     const role = m.role
+    // 兼容读取：Message 类型无 created_at / tool_calls（时间字段是 timestamp，工具调用以 toolName 表达）。
+    // 既有实现读这两字段 ⇒ 运行时恒 undefined（at=0、toolCalls=0）；此处只在类型层放宽，不改投影口径。
+    const createdAt = (m as { created_at?: unknown }).created_at
+    const at = Date.parse(String(createdAt ?? '')) || 0
+    const toolCallsOf = (m as { tool_calls?: unknown }).tool_calls
     if (role === 'user') {
-      events.push({ kind: 'user', at: Date.parse(String(m.created_at ?? '')) || 0, text: typeof m.content === 'string' ? m.content : '', messageId: String(m.id) })
+      events.push({ kind: 'user', at, text: typeof m.content === 'string' ? m.content : '', messageId: String(m.id) })
     } else if (role === 'assistant') {
-      const toolCalls = Array.isArray((m as { tool_calls?: unknown }).tool_calls) ? (m as { tool_calls: unknown[] }).tool_calls.length : 0
+      const toolCalls = Array.isArray(toolCallsOf) ? toolCallsOf.length : 0
       if (toolCalls > 0) {
         for (let i = 0; i < toolCalls; i += 1) {
-          events.push({ kind: 'tool', at: Date.parse(String(m.created_at ?? '')) || 0, toolName: 'call', messageId: String(m.id) })
+          events.push({ kind: 'tool', at, toolName: 'call', messageId: String(m.id) })
         }
       } else {
-        events.push({ kind: 'assistant', at: Date.parse(String(m.created_at ?? '')) || 0, messageId: String(m.id) })
+        events.push({ kind: 'assistant', at, messageId: String(m.id) })
       }
     }
   }

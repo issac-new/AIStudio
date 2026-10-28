@@ -25,6 +25,7 @@
  * 投影事件经 /zcode socket.io 命名空间扇出（projection-socket.ts，patch 398 注册）。
  */
 import Router from '@koa/router'
+import type { Context } from 'koa'
 import { probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 import { MentionDispatchService } from '../zcode/mention-dispatch'
@@ -32,16 +33,16 @@ import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
 import { canUseWorkspace, type WorkspaceCaller } from '../zcode/workspace-access'
 import { loadUpstreamModule } from '../lib/upstream'
+import { fail } from '../lib/http'
 
 const router = new Router({ prefix: '/api/zcode-engine' })
 const CHECKPOINT_MODES_JOIN = CHECKPOINT_RECOVERY_MODES.join('/')
 
 /** X1 归属闸（引擎 run / 编排 run 入口共用）：拒绝时已写 403 + invocation_not_allowed，调用侧直接 return。 */
-export function workspaceAccessDenied(ctx: { state?: unknown; status: number; body: unknown }, workspacePath: string): boolean {
+export function workspaceAccessDenied(ctx: Context, workspacePath: string): boolean {
   const caller = (ctx.state as { user?: WorkspaceCaller } | undefined)?.user
   if (canUseWorkspace(caller, workspacePath)) return false
-  ctx.status = 403
-  ctx.body = { ok: false, reason: 'invocation_not_allowed', detail: 'workspace 未注册或当前用户无权访问' }
+  fail(ctx, 403, 'workspace 未注册或当前用户无权访问', { extra: { reason: 'invocation_not_allowed', detail: 'workspace 未注册或当前用户无权访问' } })
   return true
 }
 
@@ -128,8 +129,7 @@ router.get('/health', async (ctx) => {
 router.post('/projection/watch', async (ctx) => {
   const { workspacePath, sessionId } = (ctx.request.body ?? {}) as { workspacePath?: string; sessionId?: string }
   if (typeof workspacePath !== 'string' || workspacePath.length === 0) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
+    fail(ctx, 400, 'workspacePath 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath 必填' } })
     return
   }
   // X1 归属闸：watch 即把该 workspace 的会话活动投影给调用方（并触发引擎连接），
@@ -146,23 +146,22 @@ router.post('/projection/watch', async (ctx) => {
     ctx.body = { ok: true, connected: runtime.connected, watching: runtime.watching }
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err)
-    ctx.status = 503
-    ctx.body = {
-      ok: false,
-      reason: /handshake|protocolVersion/i.test(detail) ? 'handshake_failed' : 'engine_unreachable',
-      detail,
-      // retained 按实际意图状态回报（意图已登记才保留、引擎上线后重放），不再无条件 true。
-      retained: runtime.hasWatchIntent(workspacePath),
-      watching: runtime.watching,
-    }
+    fail(ctx, 503, detail, {
+      extra: {
+        reason: /handshake|protocolVersion/i.test(detail) ? 'handshake_failed' : 'engine_unreachable',
+        detail,
+        // retained 按实际意图状态回报（意图已登记才保留、引擎上线后重放），不再无条件 true。
+        retained: runtime.hasWatchIntent(workspacePath),
+        watching: runtime.watching,
+      },
+    })
   }
 })
 
 router.post('/projection/unwatch', async (ctx) => {
   const { workspacePath } = (ctx.request.body ?? {}) as { workspacePath?: string }
   if (typeof workspacePath !== 'string' || workspacePath.length === 0) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
+    fail(ctx, 400, 'workspacePath 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath 必填' } })
     return
   }
   // X1 归属闸：拆除投影同判据（与 watch 对称——不可见的 workspace 调用方本就不该持有投影意图）。
@@ -175,8 +174,7 @@ router.post('/projection/unwatch', async (ctx) => {
 router.post('/mention', async (ctx) => {
   const { workspacePath, text, taskId } = (ctx.request.body ?? {}) as { workspacePath?: string; text?: string; taskId?: string }
   if (typeof workspacePath !== 'string' || workspacePath.length === 0 || typeof text !== 'string' || text.length === 0) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 与 text 必填' }
+    fail(ctx, 400, 'workspacePath 与 text 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath 与 text 必填' } })
     return
   }
   // X1 归属闸：派单即引擎 run，未注册/不可见的 workspace 不得触发。
@@ -200,8 +198,7 @@ router.post('/mention', async (ctx) => {
 router.get('/rows', async (ctx) => {
   const { workspacePath, sessionId } = ctx.query as { workspacePath?: string; sessionId?: string }
   if (typeof workspacePath !== 'string' || typeof sessionId !== 'string' || !workspacePath || !sessionId) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId 必填' }
+    fail(ctx, 400, 'workspacePath/sessionId 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath/sessionId 必填' } })
     return
   }
   if (workspaceAccessDenied(ctx, workspacePath)) return
@@ -226,8 +223,7 @@ function positiveIntParam(raw: unknown, fallback?: number): number | undefined {
 router.get('/workflow/runs', async (ctx) => {
   const { workspacePath, sessionId } = ctx.query as { workspacePath?: string; sessionId?: string }
   if (typeof workspacePath !== 'string' || typeof sessionId !== 'string' || !workspacePath || !sessionId) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId 必填' }
+    fail(ctx, 400, 'workspacePath/sessionId 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath/sessionId 必填' } })
     return
   }
   if (workspaceAccessDenied(ctx, workspacePath)) return
@@ -237,16 +233,15 @@ router.get('/workflow/runs', async (ctx) => {
     const result = await runtime.withAgent((agent) => agent.conversationWorkflowRunsV4({ workspacePath, sessionId, limit }))
     ctx.body = { ok: true, sessionId, ...result }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
+    fail(ctx, 503, detail, { extra: { reason: 'engine_unreachable', detail } })
   }
 })
 
 router.get('/workflow/run-events', async (ctx) => {
   const { workspacePath, sessionId, runId } = ctx.query as { workspacePath?: string; sessionId?: string; runId?: string }
   if (typeof workspacePath !== 'string' || typeof sessionId !== 'string' || typeof runId !== 'string' || !workspacePath || !sessionId || !runId) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId/runId 必填' }
+    fail(ctx, 400, 'workspacePath/sessionId/runId 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath/sessionId/runId 必填' } })
     return
   }
   if (workspaceAccessDenied(ctx, workspacePath)) return
@@ -259,22 +254,20 @@ router.get('/workflow/run-events', async (ctx) => {
     const result = await runtime.withAgent((agent) => agent.conversationWorkflowRunEventsV4({ workspacePath, sessionId, runId, afterSequence, limit }))
     ctx.body = { ok: true, sessionId, runId, ...result }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
+    fail(ctx, 503, detail, { extra: { reason: 'engine_unreachable', detail } })
   }
 })
 
 router.get('/workflow/saved', async (ctx) => {
   const { workspacePath, scope } = ctx.query as { workspacePath?: string; scope?: string }
   if (typeof workspacePath !== 'string' || !workspacePath) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
+    fail(ctx, 400, 'workspacePath 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath 必填' } })
     return
   }
   if (workspaceAccessDenied(ctx, workspacePath)) return
   if (scope !== undefined && scope !== 'project' && scope !== 'global') {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'scope 仅 project/global' }
+    fail(ctx, 400, 'scope 仅 project/global', { extra: { reason: 'target_unavailable', detail: 'scope 仅 project/global' } })
     return
   }
   try {
@@ -282,22 +275,20 @@ router.get('/workflow/saved', async (ctx) => {
     const result = await runtime.withAgent((agent) => agent.listSavedWorkflows({ workspacePath, ...(scope ? { scope } : {}) }))
     ctx.body = { ok: true, ...result }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
+    fail(ctx, 503, detail, { extra: { reason: 'engine_unreachable', detail } })
   }
 })
 
 router.get('/workflow/saved-runs', async (ctx) => {
   const { workspacePath, name, scope } = ctx.query as { workspacePath?: string; name?: string; scope?: string }
   if (typeof workspacePath !== 'string' || !workspacePath) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath 必填' }
+    fail(ctx, 400, 'workspacePath 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath 必填' } })
     return
   }
   if (workspaceAccessDenied(ctx, workspacePath)) return
   if (scope !== undefined && scope !== 'project' && scope !== 'global') {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'scope 仅 project/global' }
+    fail(ctx, 400, 'scope 仅 project/global', { extra: { reason: 'target_unavailable', detail: 'scope 仅 project/global' } })
     return
   }
   const limit = positiveIntParam(ctx.query.limit, 20) ?? 20
@@ -306,8 +297,8 @@ router.get('/workflow/saved-runs', async (ctx) => {
     const result = await runtime.withAgent((agent) => agent.listSavedWorkflowRuns({ workspacePath, ...(name ? { name } : {}), limit, ...(scope ? { scope } : {}) }))
     ctx.body = { ok: true, ...result }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message.slice(0, 300) : String(err) }
+    const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
+    fail(ctx, 503, detail, { extra: { reason: 'engine_unreachable', detail } })
   }
 })
 
@@ -318,8 +309,7 @@ router.post('/fork', async (ctx) => {
   const { workspacePath, sessionId, rowId, entityId } = body
   if (typeof workspacePath !== 'string' || typeof sessionId !== 'string'
       || typeof rowId !== 'number' || typeof entityId !== 'string') {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId/rowId/entityId 必填' }
+    fail(ctx, 400, 'workspacePath/sessionId/rowId/entityId 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath/sessionId/rowId/entityId 必填' } })
     return
   }
   if (workspaceAccessDenied(ctx, workspacePath)) return
@@ -336,8 +326,8 @@ router.post('/fork', async (ctx) => {
     const r = await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope: envelope as unknown as Record<string, unknown> }))
     ctx.body = { ok: r?.status === 'accepted', status: r?.status ?? 'unknown', reasonCode: r?.reasonCode }
   } catch (err) {
-    ctx.status = 503
-    ctx.body = { ok: false, reason: 'engine_unreachable', detail: err instanceof Error ? err.message : String(err) }
+    const detail = err instanceof Error ? err.message : String(err)
+    fail(ctx, 503, detail, { extra: { reason: 'engine_unreachable', detail } })
   }
 })
 
@@ -346,13 +336,12 @@ router.post('/checkpoint/recover', async (ctx) => {
   const { mode, workspacePath, sessionId, rowId, entityId, originalQueryText } = body as Record<string, unknown>
   if (typeof workspacePath !== 'string' || typeof sessionId !== 'string'
       || typeof rowId !== 'number' || typeof entityId !== 'string') {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: 'workspacePath/sessionId/rowId/entityId 必填' }
+    fail(ctx, 400, 'workspacePath/sessionId/rowId/entityId 必填', { extra: { reason: 'target_unavailable', detail: 'workspacePath/sessionId/rowId/entityId 必填' } })
     return
   }
   if (!isCheckpointRecoveryMode(mode)) {
-    ctx.status = 400
-    ctx.body = { ok: false, reason: 'target_unavailable', detail: `mode 须为四档之一（${CHECKPOINT_MODES_JOIN}）` }
+    const detail = `mode 须为四档之一（${CHECKPOINT_MODES_JOIN}）`
+    fail(ctx, 400, detail, { extra: { reason: 'target_unavailable', detail } })
     return
   }
   // X1 归属闸：checkpoint 恢复即向引擎发命令，未注册/不可见的 workspace 不得触发。
@@ -406,8 +395,7 @@ router.post('/mention/preview', async (ctx) => {
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
   const { workspacePath, text } = body as Record<string, unknown>
   if (typeof workspacePath !== 'string' || !workspacePath || typeof text !== 'string' || !text) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'workspacePath 与 text 必填' }
+    fail(ctx, 400, 'workspacePath 与 text 必填', { extra: { detail: 'workspacePath 与 text 必填' } })
     return
   }
   // X1 归属闸（P-C(a)）：与 /mention 同闸——未注册/不可见的 workspace 不得窥探派单判定。
@@ -431,8 +419,7 @@ router.post('/queue/enqueue', async (ctx) => {
   const { itemId, workspacePath, origin, text, source } = body as Record<string, unknown>
   if (typeof itemId !== 'string' || !itemId || typeof workspacePath !== 'string' || !workspacePath
       || (origin !== 'user' && origin !== 'autonomy') || typeof text !== 'string' || !text) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'itemId/workspacePath/origin(user|autonomy)/text 必填' }
+    fail(ctx, 400, 'itemId/workspacePath/origin(user|autonomy)/text 必填', { extra: { detail: 'itemId/workspacePath/origin(user|autonomy)/text 必填' } })
     return
   }
   const { enqueue } = await import('../zcode/dispatch-queue')
@@ -444,8 +431,7 @@ router.post('/queue/yield', async (ctx) => {
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
   const { workspacePath } = body as Record<string, unknown>
   if (typeof workspacePath !== 'string' || !workspacePath) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'workspacePath 必填' }
+    fail(ctx, 400, 'workspacePath 必填', { extra: { detail: 'workspacePath 必填' } })
     return
   }
   const { yieldToUser } = await import('../zcode/dispatch-queue')
@@ -456,8 +442,7 @@ router.post('/queue/drain', async (ctx) => {
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
   const { workspacePath } = body as Record<string, unknown>
   if (typeof workspacePath !== 'string' || !workspacePath) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'workspacePath 必填' }
+    fail(ctx, 400, 'workspacePath 必填', { extra: { detail: 'workspacePath 必填' } })
     return
   }
   const dq = await import('../zcode/dispatch-queue')
@@ -475,13 +460,11 @@ router.get('/queue/:workspacePath', async (ctx) => {
 router.get('/import/history-preview', async (ctx) => {
   const { source, ref } = ctx.query as { source?: string; ref?: string }
   if (source !== 'codex' && source !== 'kimi' && source !== 'claude') {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'source ∈ codex|kimi|claude' }
+    fail(ctx, 400, 'source ∈ codex|kimi|claude', { extra: { detail: 'source ∈ codex|kimi|claude' } })
     return
   }
   if (typeof ref !== 'string' || !ref) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'ref 必填（JSONL 文件服务器路径）' }
+    fail(ctx, 400, 'ref 必填（JSONL 文件服务器路径）', { extra: { detail: 'ref 必填（JSONL 文件服务器路径）' } })
     return
   }
   // 只读服务器本地文件（导入方上传落盘后的路径；无上传面时 curl/CLI 供路径）。
@@ -492,8 +475,8 @@ router.get('/import/history-preview', async (ctx) => {
   try {
     lines = readFileSync(filePath, 'utf8').split('\n').filter((l) => l.trim())
   } catch (err) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: `读取失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}` }
+    const detail = `读取失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}`
+    fail(ctx, 404, detail, { extra: { detail } })
     return
   }
   const { parseSessionHistory } = await import('../importer/session-importer')
@@ -517,8 +500,7 @@ router.post('/import/history', async (ctx) => {
   const source = body.source
   const ref = typeof body.ref === 'string' ? body.ref : ''
   if (!workspacePath || (source !== 'codex' && source !== 'kimi' && source !== 'claude') || !ref) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'workspacePath/source(codex|kimi|claude)/ref 必填' }
+    fail(ctx, 400, 'workspacePath/source(codex|kimi|claude)/ref 必填', { extra: { detail: 'workspacePath/source(codex|kimi|claude)/ref 必填' } })
     return
   }
   if (workspaceAccessDenied(ctx, workspacePath)) return
@@ -528,15 +510,14 @@ router.post('/import/history', async (ctx) => {
   try {
     lines = readFileSync(resolve(ref), 'utf8').split('\n').filter((l) => l.trim())
   } catch (err) {
-    ctx.status = 404
-    ctx.body = { ok: false, detail: `读取失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}` }
+    const detail = `读取失败：${err instanceof Error ? err.message.slice(0, 200) : String(err)}`
+    fail(ctx, 404, detail, { extra: { detail } })
     return
   }
   const { parseSessionHistory } = await import('../importer/session-importer')
   const parsed = parseSessionHistory(source, resolve(ref), lines)
   if (!parsed.rows.length) {
-    ctx.status = 422
-    ctx.body = { ok: false, detail: '无可导入行（全部坏行）' }
+    fail(ctx, 422, '无可导入行（全部坏行）', { extra: { detail: '无可导入行（全部坏行）' } })
     return
   }
   try {
@@ -550,8 +531,10 @@ router.post('/import/history', async (ctx) => {
     ctx.body = { ok: true, ...result, skippedRows: parsed.skippedRows }
   } catch (err) {
     const detail = err instanceof Error ? err.message.slice(0, 300) : String(err)
-    ctx.status = 503
-    ctx.body = { ok: false, reason: /method|unknown|no such|not a function/i.test(detail) ? 'engine_rpc_not_loaded' : 'engine_unreachable', detail: `引擎写入面失败（旧引擎进程未载 zcode-patch 002 时重启引擎后生效）：${detail}` }
+    const message = `引擎写入面失败（旧引擎进程未载 zcode-patch 002 时重启引擎后生效）：${detail}`
+    fail(ctx, 503, message, {
+      extra: { reason: /method|unknown|no such|not a function/i.test(detail) ? 'engine_rpc_not_loaded' : 'engine_unreachable', detail: message },
+    })
   }
 })
 
@@ -560,8 +543,7 @@ router.get('/squad/roster', async (ctx) => {
   // 登录校验同 /squad/evaluations；delegateCounts 由客户端从 subagentStreams 聚合。
   const caller = callerOf(ctx)
   if (!caller && (await isAuthEnabled())) {
-    ctx.status = 401
-    ctx.body = { ok: false, reason: 'invocation_not_allowed', detail: '未登录' }
+    fail(ctx, 401, '未登录', { extra: { reason: 'invocation_not_allowed', detail: '未登录' } })
     return
   }
   const { loadSquads } = await import('../zcode/squad-protocol')
@@ -573,8 +555,7 @@ router.get('/squad/evaluations', async (ctx) => {
   // 登录校验（P-C(a)）：启用鉴权的部署，未登录（ctx.state.user 缺席）不得读台账；
   // 未启用鉴权的单用户部署放行（fleet.ts / workspace-access.ts 先例）。
   if (!caller && (await isAuthEnabled())) {
-    ctx.status = 401
-    ctx.body = { ok: false, reason: 'invocation_not_allowed', detail: '未登录' }
+    fail(ctx, 401, '未登录', { extra: { reason: 'invocation_not_allowed', detail: '未登录' } })
     return
   }
   const { listEvaluations, maskSessionId } = await import('../zcode/squad-protocol')

@@ -13,7 +13,7 @@ import {
   type AssignContent, type ReceiptContent,
 } from '../protocol'
 import { DELIVERY_EVENT_TYPES, DELIVERY_SCHEMA_VERSION, type GateContent } from '../delivery-protocol'
-import { unwrapRef } from '../utils'
+import { unwrapRef, sendCustomEvent } from '../utils'
 
 /** 任务上下文：关联文档指针（git 路径/URL）与聊天锚点（sourceEventId）。 */
 export interface TaskBinding {
@@ -114,7 +114,7 @@ export const useIdeLinkageStore = defineStore('matrix-ide-linkage', () => {
       at,
     }
     try {
-      await client.sendEvent(roomId, DELIVERY_EVENT_TYPES.gate, content)
+      await sendCustomEvent(client, roomId, DELIVERY_EVENT_TYPES.gate, content)
       return { ok: true }
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -130,7 +130,7 @@ export const useIdeLinkageStore = defineStore('matrix-ide-linkage', () => {
     if (!client || !roomId) return false
     const selfId = userIdRef.value ?? ''
     try {
-      await client.sendEvent(roomId, TASK_EVENT_TYPES.receipt, {
+      await sendCustomEvent(client, roomId, TASK_EVENT_TYPES.receipt, {
         taskId, status: 'done', localTaskId,
         reportedBy: selfId, reportedAt: Date.now(),
       } as ReceiptContent)

@@ -107,7 +107,8 @@ const openCluster = ref<string | null>(null)
 
 const shownSessions = computed(() =>
   filterStreams(props.sessions, { kind: filterKind.value === 'loop' ? 'loop' : filterKind.value, query: query.value })
-    .filter(r => r.kind !== 'loop') as FlowSessionRow[])
+    // FlowSessionRow 的 kind 词表不含 'loop'（该判定恒真）；按 string 比较保留原过滤形态。
+    .filter(r => (r.kind as string) !== 'loop') as FlowSessionRow[])
 const shownLoops = computed(() =>
   filterStreams(props.loops, { kind: filterKind.value === 'session' ? 'session' : filterKind.value, query: query.value })
     .filter(r => r.kind === 'loop') as FlowLoopRow[])

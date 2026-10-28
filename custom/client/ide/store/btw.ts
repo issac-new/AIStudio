@@ -8,7 +8,9 @@ import { reactive } from 'vue'
 import { mergeBtwNote, type BtwExchange } from '../../../server/btw/btw-sidebar'
 
 export interface BtwDeps {
-  newChat: (opts: Record<string, unknown>) => Promise<unknown>
+  // newChat 返回形态随实现而异（本仓 chat store 同步返回 Session，测试替身返回 Promise）；
+  // 调用方一律 await，故按 unknown 声明，不强制 Promise。
+  newChat: (opts: Record<string, unknown>) => unknown
   switchSession: (id: string) => Promise<unknown>
   sendMessage: (content: string) => Promise<unknown>
   fetchMessages: (sessionId: string) => Promise<Array<{ role?: string; content?: unknown; createdAt?: number }>>

@@ -177,25 +177,27 @@ export function applyTraceEventToState(state: TraceState, event: TraceEvent, mid
  * Returns null if L2 data is not available (plugin not installed or file not found).
  * Uses request helper for proper auth headers and base URL handling.
  */
+export interface TraceMeta {
+  started_at?: number
+  ended_at?: number
+  duration_ms?: number
+  model?: string
+  provider?: string
+  outcome?: string
+  /** L2 llm_span 用量汇总（hermes-agent 0.21.1 usage anchor 语义：跨运行累计） */
+  usage?: { input_tokens: number; output_tokens: number; api_calls: number }
+}
+
 export async function fetchLayer2Trace(sessionId: string, profile?: string | null): Promise<{
   nodes: TraceNode[]
   edges: TraceEdge[]
-  meta?: {
-    started_at?: number
-    ended_at?: number
-    duration_ms?: number
-    model?: string
-    provider?: string
-    outcome?: string
-    /** L2 llm_span 用量汇总（hermes-agent 0.21.1 usage anchor 语义：跨运行累计） */
-    usage?: { input_tokens: number; output_tokens: number; api_calls: number }
-  }
+  meta?: TraceMeta
 } | null> {
   try {
     const params = new URLSearchParams()
     if (profile) params.set('profile', profile)
     const query = params.toString()
-    const data = await request<{ nodes: TraceNode[]; edges: TraceEdge[]; meta?: TraceNode['meta'] }>(
+    const data = await request<{ nodes: TraceNode[]; edges: TraceEdge[]; meta?: TraceMeta }>(
       `/api/hermes/sessions/${encodeURIComponent(sessionId)}/trace${query ? `?${query}` : ''}`
     )
     if (!data.nodes || !Array.isArray(data.nodes)) return null
