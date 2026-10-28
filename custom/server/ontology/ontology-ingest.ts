@@ -14,7 +14,6 @@
  * 呈现给人，不静默吞），两轮内收敛。数据源只读（openReadonly 同款）。
  */
 import { join } from 'node:path'
-import { homedir } from 'node:os'
 import { existsSync } from 'node:fs'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 import { appendConflictInbox, listConflictInbox } from '../knowledge/board-graph'
@@ -207,5 +206,5 @@ export function kanbanSourceOverview(homeDir?: string): Array<{ slug: string; pa
 }
 
 export function defaultHome(): string {
-  return process.env.HERMES_HOME?.trim() || hermesHome()
+  return hermesHome()
 }

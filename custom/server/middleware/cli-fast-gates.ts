@@ -15,7 +15,6 @@
 import type { Context, Next } from 'koa'
 import { existsSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
-import { homedir } from 'node:os'
 import { hermesHome } from '../lib/paths'
 
 /** agent CLI 的 kanban 根（kanban_db.py kanban_home() 同序）：与
@@ -23,9 +22,7 @@ import { hermesHome } from '../lib/paths'
 export function defaultKanbanCliRoot(): string {
   const kanbanOverride = process.env.HERMES_KANBAN_HOME?.trim()
   if (kanbanOverride) return resolve(kanbanOverride)
-  const hermesOverride = process.env.HERMES_HOME?.trim()
-  if (hermesOverride) return resolve(hermesOverride)
-  return hermesHome()
+  return resolve(hermesHome())
 }
 
 /** 主库/分板库布局探测（kanban-overview fastMainDb/fastBoardsDir 同款）。 */

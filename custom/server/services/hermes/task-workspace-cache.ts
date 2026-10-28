@@ -1,6 +1,5 @@
 import { resolve, isAbsolute, relative } from 'path'
 import * as pathWin32 from 'path/win32'
-import { homedir } from 'os'
 import { execFile } from 'child_process'
 import { existsSync } from 'fs'
 import { basename, dirname } from 'path'

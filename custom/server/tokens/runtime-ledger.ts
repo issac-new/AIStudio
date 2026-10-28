@@ -5,7 +5,6 @@
 //   action_fusion 写后即验（then_run）、evidence_reduce 日志精简（收据制）。
 // 本层只做读取与聚合投影；写侧在运行时，读侧在 studio——单一事实源=账本文件。
 import { readdirSync, readFileSync, statSync } from 'fs'
-import { homedir } from 'os'
 import { join } from 'path'
 import { hermesHome } from '../lib/paths'
 

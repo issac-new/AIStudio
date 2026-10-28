@@ -7,7 +7,6 @@
 // 纪律：只读、fail-soft；命中≠已泄露——count 是"需人工复核的形态命中数"，
 // 三态裁决（confirmed/needs_validation/rejected）仍归 engine/verify。
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { SECRET_RULES, type RepoEvidence } from './repo-scan'
 import { hermesHome } from '../lib/paths'
