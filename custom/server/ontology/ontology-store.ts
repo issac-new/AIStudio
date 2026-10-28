@@ -20,6 +20,7 @@ import { seedInstances, seedSpec } from './ontology-seed'
 import { versionIriOf, type OntologyInstance, type OntologySpec, type Violation } from './ontology-types'
 import { atomicWriteText } from '../lib/fs-store'
 import { underHermes } from '../lib/paths'
+import { atomicCopyFile } from '../lib/fs-store'
 
 export const SNAP_MAX = 50
 
@@ -241,9 +242,8 @@ export function rollbackSpec(ts: number, now = Date.now()): RollbackResult {
   try {
     mkdirSync(snapDir(), { recursive: true })
     const pre = join(snapDir(), `pre-rollback-${now}.json`)
-    const preTmp = `${pre}.tmp-${process.pid}`
-    copyFileSync(specPath(), preTmp)
-    renameSync(preTmp, pre)
+    // 2026-10-28 收敛：原子拷贝单一实现（lib/fs-store）
+    atomicCopyFile(specPath(), pre)
     try { writeFileSync(join(snapDir(), `pre-rollback-${now}.meta.json`), JSON.stringify({ ts: now, label: 'rollback-restore', version: current.version })) } catch { /* 缺省可接受 */ }
     writeAtomic(specPath(), JSON.stringify(snap, null, 2))
     return { ok: true, preRollback: pre, restoredVersion: snap.version }
