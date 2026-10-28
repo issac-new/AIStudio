@@ -31,8 +31,12 @@ ck "② 驱动主脚本语法" "bash -n '$HERE/aipay-scenario.sh'" "定位最近
 # ③ 新接线静态断言（三段卡/缺陷环/预检/安全前置/采集告警在驱动源内）
 ck "③ V8.8/V8.9 新接线在位" "grep -q 'uc_dispatched' '$HERE/aipay-scenario.sh' && grep -q 'int_dispatched' '$HERE/aipay-scenario.sh' && grep -q 'quality_dispatched' '$HERE/aipay-scenario.sh' && grep -q 'defect_cards_assignee_check' '$HERE/aipay-scenario.sh' && grep -q 'capture_preflight_ok' '$HERE/aipay-scenario.sh' && grep -q 'security_review_done' '$HERE/aipay-scenario.sh' && grep -q 'domains/run' '$HERE/aipay-scenario.sh' && grep -q 'npm audit --omit=dev' '$HERE/aipay-scenario.sh'" "grep 对应符号确认接线在 aipay-scenario.sh"
 
-# ④ 双仓干净（simharness+overlay 无已跟踪未提交改动；未跟踪目录如 scratch/ 不计）
-ck "④ 双仓工作区干净" "[ -z \"\$(git -C '$HERE' status --porcelain --untracked-files=no | head -1)\" ] && [ -z \"\$(git -C '$HERE/../overlay' status --porcelain --untracked-files=no 2>/dev/null | head -1)\" ]" "提交或暂存未提交改动"
+# ④ 工作区干净（单仓整合 2026-10-24 起：simharness/overlay 已并入 AIStudio 单仓。
+#    vendor/** 是钉版基线的注入脏态=预期工作态、不入提交（AGENTS.md/VENDOR.md 立法，
+#    pre-commit 自动撤出），从判据排除；其余已跟踪面须零未提交改动。
+#    pathspec 用 top 魔术前缀锚仓库根，$HERE 子目录下相对解析不失位；
+#    旧布局（simharness 独立仓）无顶层 vendor，豁免面自然为空、语义不变。）
+ck "④ 工作区干净（单仓；vendor 注入态豁免）" "[ -z \"\$(git -C '$HERE' status --porcelain --untracked-files=no -- ':(top,exclude)vendor' | head -1)\" ]" "提交或暂存未提交改动（vendor/** 注入态除外）"
 
 # ⑤ 网关+studio 健康
 ck "⑤ 服务健康（8801+8802，studio 带 OBS_SIM_ROOT）" "curl -sf -m 5 http://127.0.0.1:8801/health >/dev/null && curl -sf -m 5 http://127.0.0.1:8802/health/ready >/dev/null && _pid=\$(lsof -nP -tiTCP:8802 -sTCP:LISTEN | head -1) && ps eww -p \"\$_pid\" | grep -q 'OBS_SIM_ROOT='" "bash mux/mx-up.sh 拉起；若 studio 已在跑但无 OBS_SIM_ROOT（推演端点会 503），先 bash mux/mx-down.sh 再 mx-up"
