@@ -75,6 +75,10 @@ agent 面向型工具（CLI/MCP 给 coding agent 用）追加三类高信号目�
 挑战 gap 分析公允性（是否夸大缺失/贬低已有能力）。FAIL 项修正后再交付。
 delegate 带 output_schema 强制结构化回执：references_checked[{claim,result,spot_evidence}]、gap_fairness、verdict。
 
+### 5. 行号引用必须 grep 定位后写入；蓝军回执写进报告头
+
+从 `sed -n '500,780p'` 这类区间 dump 里看到的代码，写报告时容易把「区间内的相对印象」当成精确行号（实例：harness2 调研中 retain 引用写成 708-710，grep 实际在 701，被蓝军抓出）。纪律：报告中每一处 file:line 引用，写入前先用 `grep -n "<符号>" <file>` 确认真实行号；从 read_file（自带 1-indexed 行号）读到的可直接引用。能力契约表述以源码强制检查为准（实例：「四字段缺一不入库」实为三字段强制、confidence 可选——all() 检查列表里没有的字段不能写成强制）。蓝军回执（PASS/FAIL 明细 + 修正记录）写进报告头部一行，交付物自带审计链。
+
 ## Pitfalls
 
 ### 1. 大 monorepo 平推陷阱

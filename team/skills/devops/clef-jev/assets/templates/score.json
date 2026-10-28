@@ -1,0 +1,20 @@
+{
+  "model": "clef-flash-4bit",
+  "state": {
+    "subject": "Disposition plan for 19 blocked kanban cards.",
+    "evidence": "Each card dispositioned with direct DB evidence and file checks. 2 cards had no artifact on disk.",
+    "policy": "Plans touching card outcomes need review proportional to how much of the plan rests on unverified claims."
+  },
+  "questions": {
+    "review_need": {
+      "type": "score",
+      "instructions": "Rate how much human review this plan needs, from the evidence. Do not infer unobserved impact.",
+      "criteria": [
+        "No review needed; every claim is backed by observed evidence.",
+        "Light review; claims are consistent but a few need a second look.",
+        "Full review; material claims rest on inference rather than observation.",
+        "Blocking review; the evidence contradicts the plan or is missing."
+      ]
+    }
+  }
+}

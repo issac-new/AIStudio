@@ -12,7 +12,7 @@ metadata:
 
 The machine's CLI toolset is **curated by team workflow**, same philosophy as
 skill-board-scoping: a tool earns its install by serving the agent cluster
-(orchestrator/hack/worker/[已移除]/[已移除]/ops), not by being generally useful.
+(orchestrator/hack/worker/[已移除]/eda/ops), not by being generally useful.
 Backup snapshots live at `~/.hermes/tool-prune-backup-20260805/`
 (`*.before.txt` / `*.after.txt` for brew/npm/pipx/uv/conda).
 

@@ -30,7 +30,7 @@ with `$defs.__schemaN` alias nodes carrying a sibling `type` next to `$ref`.
 Moonshot's strict validator forbids `$ref` + sibling keywords. The plain
 `/v1/chat/completions` path is unaffected.
 
-Key files (source repo `/Volumes/YOURVOLUME/lab/cc-switch`):
+Key files (source repo `/Volumes/nvme2230/lab/cc-switch`):
 
 - `src-tauri/src/proxy/forwarder.rs` — native passthrough gate (only fires
   for xAI upstreams by default)
@@ -70,7 +70,7 @@ EOF
 ## Rebuilding cc-switch with the fix
 
 ```bash
-cd /Volumes/YOURVOLUME/lab/cc-switch
+cd /Volumes/nvme2230/lab/cc-switch
 pnpm install --frozen-lockfile
 pnpm run build:renderer        # produces dist/ — REQUIRED
 pnpm tauri build --bundles app # codegen embeds dist into the binary

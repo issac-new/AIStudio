@@ -49,7 +49,7 @@ metadata:
 
 **Step 1 分层**：不按"全部补齐"一刀切，按规则重要性分 Tier：
 - Tier 1 全员强制（基础治理四件套：verification/output-contract/ontology/shared-rules）
-- Tier 2 安全敏感团队（banned-command/defensive-patterns/mandatory-privacy → hack/ops/worker/[已移除]）
+- Tier 2 安全敏感团队（banned-command/defensive-patterns/mandatory-privacy → hack/ops/worker/eda）
 - Tier 3 领域特定（marking-rules → orchestrator/platform；kanban-advanced → worker/orchestrator）
 
 **Step 2 锚点优先级**：27 个 profile 的 SOUL.md 结构不统一，按优先级序列找插入锚点：

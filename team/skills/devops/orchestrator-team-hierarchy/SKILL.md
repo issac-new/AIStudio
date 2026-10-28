@@ -15,12 +15,12 @@ metadata:
 
 Pattern for the relationship between the main orchestrator (Hermes cluster
 routing entry) and a domain team's own orchestrator profile (e.g.
-`[已移除]-orchestrator`) that runs on a dedicated gateway (second WeChat,
+`[已移除]`) that runs on a dedicated gateway (second WeChat,
 own api_server port).
 
 ## When to Use
 
-- User asks: "[已移除]-orchestrator 必须要和 orchestrator 独立么?" /
+- User asks: "[已移除] 必须要和 orchestrator 独立么?" /
   "所有 team 都可以被 orchestrator 调度吧? 它应该在所有 team 的 scope 里"
 - A domain team ([已移除], or any future team) has its own orchestrator
   profile + own gateway, and you must decide/encode who schedules what.
@@ -36,7 +36,7 @@ own api_server port).
 | Domain context (child profile, location, family rules, team-specific skills) | team-orchestrator SOUL / references | ✅ Should stay independent — don't bloat the main orchestrator's SOUL with domain logic. |
 | **Scheduling authority (kanban boards)** | **main orchestrator** | ❌ NOT independent — the main orchestrator's scope covers ALL teams. It can cross-board `kanban_create(board="[已移除]", assignee="[已移除]")` for any domain. |
 
-So the answer to "must [已移除]-orchestrator be independent?" is: **the
+So the answer to "must [已移除] be independent?" is: **the
 gateway must be independent, the scheduling must NOT be**. The team
 orchestrator is a **领域网关延伸 (domain gateway extension)**, not a
 parallel independent body.

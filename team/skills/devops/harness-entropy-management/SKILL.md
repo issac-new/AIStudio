@@ -62,7 +62,7 @@ Agent 会复制现有模式，包括坏的模式。没有清理机制时：
 - ❌ 归档时不留恢复路径
 - ❌ 一次性批量清理 >100 个（分批，每批后跑 skills list 验证索引器无异常——历史教训：索引器对目录结构变化敏感，Errno 62 自指环事故）
 
-**季度清理节奏**：每季度第一个周一，skill-health-audit 周报附分级清单 → 图爸勾选归档/合并项 → 分批执行（≤100/批）。
+**季度清理节奏**：每季度第一个周一，skill-health-audit 周报附分级清单 → 用户勾选归档/合并项 → 分批执行（≤100/批）。
 
 ### 组件级剪枝（Lasso/L1 式，RRSI 融合 2026-10-08）
 
@@ -158,7 +158,7 @@ hermes kanban list --status running --limit 50 2>/dev/null
 1. 扫描全部 profile SOUL/rules 中的 `skill_view('...')` 引用
 2. 对照 `hermes skills list` 的 enabled 清单
 3. 标记**零引用 skill**：enabled 但无任何 SOUL/rules 引用（可能是建了没人用的"样子货"）
-4. 输出能力过时清单（不自动删除，只报告——删除决策由图爸拍板）
+4. 输出能力过时清单（不自动删除，只报告——删除决策由用户拍板）
 
 **与 rules_audit_watchdog 的关系**：D7 检测引用-禁用矛盾（即时错误），本项检测零引用（渐进腐化），互补。
 

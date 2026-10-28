@@ -24,7 +24,7 @@ metadata:
 
 End-to-end workflow for multi-source deep research tasks: article
 extraction → industry survey → technical deep-dive → structured reports.
-Covers the patterns discovered during the [已移除] platform research session
+Covers the patterns discovered during the EDA platform research session
 (3 WeChat articles + 194 GitHub repos + Wikipedia + arXiv, producing
 90KB across 3 report files).
 
@@ -132,7 +132,7 @@ from hermes_tools import terminal
 import json
 
 queries = [
-    ('[已移除] tools', 'topic:[已移除]'),
+    ('EDA tools', 'topic:eda'),
     ('FDTD electromagnetic', 'FDTD electromagnetic in:name,description'),
     # ... 15-20 queries covering all domains
 ]

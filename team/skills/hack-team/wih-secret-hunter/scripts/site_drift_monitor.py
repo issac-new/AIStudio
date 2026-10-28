@@ -50,8 +50,10 @@ except ImportError:
     print("[!] 缺少 simhash: pip install simhash", file=sys.stderr)
     sys.exit(2)
 
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+# 自报 bot 身份（kanban t_1ce4cdf7）：按授权任务调用、目标为纳入监控的站点，
+# 无隐匿需求，对齐 Wikimedia UA 政策 <name>/<version> (<contact>)。
+# 集中策略清单：life-workbench/scripts/ua_policy.py + ua-disposition.md（部署树隔离，自持副本）。
+UA = "wih-drift-monitor/1.0 (authorized site-drift monitoring; hack-team wih-secret-hunter)"
 FETCH_TIMEOUT = (5.0, 15.0)
 
 

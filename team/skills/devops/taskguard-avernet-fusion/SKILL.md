@@ -32,8 +32,8 @@ metadata:
 ```bash
 # 升级部署（从 GitHub tarball 重建）
 cd /tmp && curl -sL -o avernet.tar.gz https://codeload.github.com/inclusionAI/Avernet/tar.gz/refs/heads/dev \
-  && tar xzf avernet.tar.gz Avernet-dev/src/evolverun/taskguard \
-  && rsync -a --exclude node_modules /tmp/Avernet-dev/src/evolverun/taskguard/ ~/.hermes/services/taskguard/ \
+  && tar xzf avernet.tar.gz Avernet-dev/apps/evolverun/taskguard \
+  && rsync -a --exclude node_modules /tmp/Avernet-dev/apps/evolverun/taskguard/ ~/.hermes/services/taskguard/ \
   && cd ~/.hermes/services/taskguard && npm install --include=dev --no-audit --no-fund && npm run build
 # 升级后三件事：核对 configs diff（勿丢 sqlite 补丁）、核对 run-log-repository.ts 的 ?? null 补丁是否被冲掉、grep 内网端点残留
 
@@ -50,7 +50,8 @@ MCP 工具面（注册名 `mcp_taskguard_*`）：`workflow_engine_dispatch`（�
 
 ## 运行语义（源码实证，勿按 README 想当然）
 
-- **TaskFlow 运行态是进程内 Map**（`database-taskflow.ts` in-memory mode）：MCP/stdio 形态下流程运行状态**不跨进程重启**；sqlite 只存 run_logs 归档/facade bindings/workflow specs。要跨重启断点续跑需 API 模式（clawweb 端点，本机无）。
+- **TaskFlow 运行态是进程内 Map**（`database-taskflow.ts:186` `private static flows = new Map<string, InMemoryFlow>()`）：MCP/stdio 形态下流程运行状态**不跨进程重启**；sqlite 只存 run_logs 归档/facade bindings/workflow specs。要跨重启断点续跑需 API 模式（clawweb 端点，本机无）。
+- **flow-level abort 双函数已部署**（dev@aecd2a286，来自 b660c2bb0/#2330）：`controller.ts:639` `abortAsyncExecutionsForSession(sessionKey): number` 按会话清剿全部流；`controller.ts:663` `abortAsyncExecutionForFlow(flowId): boolean` 按 flowId 单点中止（供 flow-timeout watchdog 用，不误杀同会话兄弟流）。中止传导链：abort → runEmbeddedPiAgent per-flow AbortController → LLM/tool call reject AbortError → node failed → executeLoop finalizes。部署锚与定制清单见 `~/.hermes/services/taskguard/DEPLOYMENT.md`。
 - **节点执行双通道**：embedded-agent 优先 Claude Agent SDK（自动探测 `@anthropic-ai/claude-agent-sdk`），env 配了 `LLM_BASE_URL` 时走 OpenAI 兼容 API；MCP 宿主下 sampling 兜底。
 - **outputContract**：节点间 JSON schema 强契约（`required`+`schema`），不满足节点失败可 retry——微信文章说「输出契约未落地」指的是 BCS 内置工作流，taskguard 已实现，两别混。
 - **pack 结构**：`packs/<id>/workflow.pack.yaml`（manifest+facades）+ `workflows/*.yaml`（DAG：phase/dependsOn/executor/outputContract）；facade 生成 slash 命令 skill。

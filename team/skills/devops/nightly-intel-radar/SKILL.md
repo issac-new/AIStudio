@@ -53,6 +53,19 @@ radar_fetch → **mcp_guard**（MCP 护栏 all；rc 0/1/2=业务事实写 mcp_gu
 夜间任务的浏览器操作（computer_use）**仅限 23:00-09:00**，且仅允许 Chrome 与微信客户端内公众号/服务号内容，
 禁聊天与支付。wrapper 内置小时守卫：窗口外运行记日志警告。当前 HTTP/RSS 通道不受限，此纪律为浏览器扩展预留。
 
+## Evidence scoring via jev-documents（2026-10-15，P1-C，kanban t_d7aafd45）
+
+报告 markdown「原文」列每条引用已带 `answer_confidence=<0-1>` 标签，便于审阅者一眼
+识别高/低置信度条目：
+
+- 高置信（≥0.4）通常对应 domain 关键词 ≥2 命中（agent/memory/self-improv/...）
+- 低置信（<0.4）通常对应无关条目（PayPal、Kubernetes release notes 等）
+
+实现：`life-workbench/scripts/evidence_scoring.py` 暴露 `score_evidence_confidence(items)`，
+JEV_PROVIDER=clef 时先调 jev-documents (path A env-var) 取基线阈值，剩余条目复用；
+clef 不可达（超时/无 mod/网络）→ 全量回退启发式，主流程 0 侵入。
+用法：见 `references/jev-hermes-adaptation.md` 路径 A 章节。
+
 ## 新增渠道流程
 
 1. 查 `references/radar-channel-playbook.md` 渠道矩阵（已实测 ✅/🔄/❌），避免重复踩坑
@@ -71,7 +84,7 @@ radar_fetch → **mcp_guard**（MCP 护栏 all；rc 0/1/2=业务事实写 mcp_gu
 | 域 | 原→新 | 新增源 |
 |---|---|---|
 | hack | 2→5 | HackerNews(krebsonsecurity 那份是 feedburner 的 TheHackersNews)、Krebs on Security、Trail of Bits |
-| [已移除] | 2→5 | EDN、EE Times、AnySilicon |
+| eda | 2→5 | EDN、EE Times、AnySilicon |
 | pay | 1→4 | PYMNTS、Ledger Insights(区块链/CBDC)、Cointelegraph |
 | data | 3→5 | DevClass、InfoQ EN |
 | ops | 2→4 | r/sre RSS、dev.to sre tag |
@@ -111,7 +124,7 @@ radar_fetch → **mcp_guard**（MCP 护栏 all；rc 0/1/2=业务事实写 mcp_gu
   实证：修复后同域重跑，why 引用摘要具体数据（21 家机构/1.55 亿美元），
   「标题判断」0 条。**教训：原料层缺陷会伪装成「LLM 能力不行」——先看喂进去的是什么再怪模型。**
 - **RC8 伴生**：`ask_llm_json` prompt 原料 220→400 字（build_domain_report /
-  build_[已移除] / radar_llm_brief 三处）；prompt 加「至多 1 条标题判断、
+  build_[已移除]_report / radar_llm_brief 三处）；prompt 加「至多 1 条标题判断、
   空摘要条目跳过宁缺毋滥」硬约束。
 - **邮件质量升级**（send_report_email.py 重写）：标题带类型+领域（原「深度调研日报
   2026-09-07」不分报告）；正文从 llm_advice_<prefix>_<date>.json（新增落盘）提取
@@ -135,7 +148,7 @@ RC1（字段错位）、RC7（截断过薄）、RC8（HTML 穿透）全是这一
 ## 09-05 报告质量事故根因（RC1-RC7，修复已落地）
 
 用户判「夜间深度调研报告质量普遍很差」，解剖出 7 个叠加根因：
-- **RC1 字段名错位**：`build_domain_report.py`/`build_[已移除].py` 读 `it.get('summary')`，
+- **RC1 字段名错位**：`build_domain_report.py`/`build_[已移除]_report.py` 读 `it.get('summary')`，
   但 `make_item()`（radar_fetch.py:153）产出的字段是 `snippet` → LLM 原料全空，深度分析退化成看标题猜。
   改报告生成器时**必须先核实上游字段名**，别信记忆。
 - **RC2 LLM 调用无重试**：单次 hermes -z，夜间限流窗一次失败=整份报告静默降级「纯雷达模式」。

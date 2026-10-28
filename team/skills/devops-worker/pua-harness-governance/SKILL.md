@@ -259,3 +259,4 @@ python3 ~/.hermes/bin/pua-upstream-check.py --json   # 机器可读输出
 - 所有可访问的高风险漏洞已修复或明确披露
 - 没有修改评分器/隐藏测试/verifier/CI 来制造通过
 - 最终完成权由验证门或用户确认，不由执行 agent 自封
+- 姊妹技能 `constraint-contract`：本技能管「谁来验证」（四权分离），它管「验证什么标准」（CONSTRAINTS.md 质量底线 + floor-guard diff 守卫），常组合使用。

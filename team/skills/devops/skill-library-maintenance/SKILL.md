@@ -34,7 +34,7 @@ symlink loops, and lost custom skills.
 
 ### Mode 1: Physical-Copy Redundancy
 
-Non-orchestrator profiles (product-*, ops-*, [已移除]-*, hack-*) accumulate **physical
+Non-orchestrator profiles (product-*, ops-*, eda-*, hack-*) accumulate **physical
 copies** of the same skill categories. Orchestrator uses symlinks correctly; other
 profiles don't. Each profile wastes 5–15 MB; 11 profiles = 73–114 MB total.
 
@@ -165,6 +165,30 @@ while the categorized original already existed; the two copies then drift.
    `skill_view` resolves unambiguously and a re-view returns `dedup: true`.
 5. `cp -RL` (dereference) when archiving — skill dirs often contain symlinks
    into shared; a plain `cp -R` archives broken relative links.
+
+## Mode 7: Lost Main-Library Content Survives as Profile Physical Copies (主库丢失≠全丢)
+
+A skill reported "lost from `~/.hermes/skills`" may still exist as a
+**physical copy under `profiles/<p>/skills/<cat>/<name>/`** — profiles that
+were NOT converted to symlinks (Mode 1's population) keep real dirs. A search
+scoped to the central library alone concludes "nothing exists anywhere" and
+triggers an unnecessary rebuild; the rebuild then competes with the surviving
+original, which is often NEWER/more complete (fused and accepted later).
+
+**Before rebuilding a "lost" skill, sweep every profile's skills tree**:
+
+```bash
+find ~/.hermes/profiles/*/skills -maxdepth 3 -name SKILL.md \
+  -path "*<name>*" -exec shasum {} \; | sort
+```
+
+- If a survivor exists: **restore main library from the survivor** (`cp -a`),
+  delete the in-flight rebuild, and align to the canonical shape (main-lib
+  real dir + profile identical copies/symlinks).
+- Diff sizes before trusting either copy — byte counts and reference line
+  counts separate the stale draft from the accepted original.
+- The deeper lesson: "entity gone" claims must be verified against the full
+  disk surface (central lib + every profile + archive), not one search root.
 
 ## Category Classification
 

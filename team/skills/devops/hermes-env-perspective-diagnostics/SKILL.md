@@ -86,6 +86,16 @@ test -s ~/.hermes/profiles/<profile>/scripts/foo.py && echo OK
 For scripts with ARGUMENTS, use wrapper scripts instead (see
 default-profile skill `cron-script-wrapper-pattern`).
 
+## Global assets (kanban boards, logs) live in MAIN home, never profile home
+
+A script that builds paths as `$HERMES_HOME/kanban/boards/<slug>/...` fails **silently** when HERMES_HOME resolves to a profile dir (`~/.hermes/profiles/<p>/`): the kanban board DBs exist only in the main home (`~/.hermes/kanban/boards/`), never replicated under profiles. SQLite opens a missing path as a new empty DB, so SELECTs return **zero rows with no error** — the classic "no such table" on first query and "task not found" on every real id.
+
+Rules for any script touching kanban state:
+
+1. Resolve boards from the **main** home: `Path.home()/".hermes/kanban/boards"`, or read the env with a main-home fallback (`boards_dir = Path(os.environ.get("HERMES_HOME", ""))/... if exists else Path.home()/...`).
+2. **Never hardcode a board list** — boards are added over time (`aiteam`, `pay`, `data`, `default`…). Discover at runtime with `sorted(p.name for p in boards_dir.iterdir() if (p/"kanban.db").exists())`.
+3. Verify a fix with a deliberately wrong value: `HERMES_HOME=/nonexistent python3 script.py` must still find the boards.
+
 ## Skill-library scans must resolve symlinks by realpath
 
 Profile `skills/<group>` dirs are typically symlinks into

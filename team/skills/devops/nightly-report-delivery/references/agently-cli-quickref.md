@@ -1,4 +1,4 @@
-# agently-cli 发信速查（agent mail = your-bot@example.com）
+# agently-cli 发信速查（agent mail = swarmstudio@agent.qq.com）
 
 ## 账户与限额
 
@@ -10,10 +10,10 @@
 
 ```bash
 cd <报告所在目录>   # --body-file / --attachment 只收 cwd 子树内相对路径
-agently-cli message +send --to <dad-wechat-id>@im.wechat \
+agently-cli message +send --to __ROTATED-20261014__ \
   --subject "…" --body-file report.md --body-format plain
 # 首调返回 data.confirmation_required=true + confirmation_token
-agently-cli message +send --to <dad-wechat-id>@im.wechat \
+agently-cli message +send --to __ROTATED-20261014__ \
   --subject "…" --body-file report.md --body-format plain \
   --confirmation-token <token>
 ```
@@ -29,7 +29,7 @@ agently-cli message +send --to <dad-wechat-id>@im.wechat \
 agently-cli message +list --dir sent --limit 3
 ```
 
-查 `from`=your-bot@example.com、`subject`、`has_attachments`。收件箱侧用 `--dir inbox --is-unread`。
+查 `from`=swarmstudio@agent.qq.com、`subject`、`has_attachments`。收件箱侧用 `--dir inbox --is-unread`。
 
 ## JSON 解析纪律（避坑）
 

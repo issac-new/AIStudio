@@ -26,4 +26,4 @@ Funnel 把本机一个端口发布为 `https://<tailnet-host>/`，**任何互联
 
 ## 参考实现
 
-- [已移除] 邀请服务双端口模式：`~/.hermes/bin/[已移除].py`（8660 公网仅页面+QR / 8661 仅 127.0.0.1 admin，公网 admin 实测 404）。配套 skill：`[已移除]-multitenant-family`。
+- [已移除] 邀请服务双端口模式：`~/.hermes/bin/[已移除].py`（8660 公网仅页面+QR / 8661 仅 127.0.0.1 admin，公网 admin 实测 404）。配套 skill：`[已移除]`。

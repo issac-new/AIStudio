@@ -99,6 +99,7 @@ metadata:
 - **单点事实源冲突**：给终态文档/规则补内容时，先查该事实是否已在别处定义（卡字段/共享规则），重复定义违反单一事实源——宁可加指针不加复制。
 - **版本号堆积**：终态文档不要带 v1.0→v1.1→v1.2 修订史正文；一行"Final + 日期"即可，修订史归 git log。
 - **数字口径必须注明**：平均值的分母口径（哪些 profile、简单还是加权）、计数口径（find 的波动范围）写进表格备注，否则评审必抓。
+- **🔴 状态行/状态段升级前必先 snapshot + 命名约定**（2026-10-15 P1-RootCap done 实战）：当一个状态从「在跑」升级到「ADOPTED」（或其他终态字）需要改设计文档**多处落点**（表格行 + 段落状态字 + 「已知边界」段 + §末段状态行 = 常见 4 处），**改前必先 snapshot**——命名约定为 `<filename>.stale-pre-<事件名>-<YYYYMMDD-HHMM>`（如 `hermes-complete-design-doc.md.stale-pre-rootcap-done-20261015-2213`）。**多轮升级就多 snapshot**：v1 → v2 → current（v1 抓「P1 段前」、v2 抓「RootCap done 前」、current 是终态）——三件齐全才能从任何一档回退。**判据**：升级落点 ≥ 3 处 + 文件 size > 200KB 时强制 snapshot，单点 + 小文件可以省。**不要依赖 git**——auto-backup cron 可能在长会话中已收走部分改动，git 看不到你"刚才"的中间态；stale snapshot 是文件级锚点，回退精度比 git 细。
 
 ## 跨文档一致性审计（本次实战新增，最高频漏点）
 

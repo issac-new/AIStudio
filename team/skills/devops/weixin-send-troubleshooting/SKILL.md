@@ -74,7 +74,15 @@ curl -sS -X POST "https://ilinkai.weixin.qq.com/ilink/bot/sendmessage" \
 |----------|---------|-----|
 | `{"errcode":-14,"errmsg":"session timeout"}` | Token expired server-side | §1a below |
 | `{"errcode":-2,"errmsg":"prepare failed"}` | Server-side delivery block for THAT chat | §1c below |
+| `{"errcode":-2,"errmsg":"invalid arguments"}` | **Your payload is malformed** — wrong field names or nesting | §1d below |
+| `{"errcode":-2,"errmsg":"<ilink_user_id required>"}` | Auth PASSED, only a required param is missing — healthy-account signature | fix your payload, not the token |
 | `{"errcode":-2,...}` (other errmsg) | Genuine rate limit | §1b below |
+
+**`-2` is not a diagnosis — it is iLink's generic "request rejected" code.** Its meaning
+lives entirely in `errmsg`, and four unrelated situations share it: missing param,
+malformed payload, frequency limit, per-chat server block. Never branch on `-2` alone.
+Treating "any other errmsg" as a rate limit sends you waiting out a throttle that does
+not exist while the real cause is one mistyped field name.
 
 ### §1a Session timeout fix (errcode -14)
 
@@ -146,6 +154,36 @@ sendmessage limiter):
 
 Either way, **keep the email channel as the delivery bottom line** — it is
 unaffected by iLink throttling.
+
+### §1d `invalid arguments` — a hand-rolled payload, not a throttle
+
+`-2 "invalid arguments"` means iLink parsed your JSON and rejected its shape: you
+invented a field name or nested the text wrongly. Nothing to do with throttling or
+expiry — no amount of waiting or retrying clears it.
+
+**Read the shape off the adapter instead of from memory.** The authoritative form is
+`_send_items()` / `_send_message()` in `gateway/platforms/weixin.py`:
+
+```json
+{"msg": {"from_user_id": "", "to_user_id": "<target_chat_id>",
+         "client_id": "<unique hex>", "message_type": 2, "message_state": 2,
+         "context_token": "<optional>",
+         "item_list": [{"type": 1, "text_item": {"text": "..."}}]}}
+```
+
+- The text lives in `item_list[].text_item.text`. Inventing `item_type`,
+  `text.content`, or a bare `text` string is the top cause of `invalid arguments`.
+- `message_type` / `message_state` must be the adapter's `MSG_TYPE_BOT` /
+  `MSG_STATE_FINISH` constants, not guessed ints; `client_id` unique per send.
+- **Success returns `{"message_id": <id>}` with NO `ret`/`errcode` keys at all.**
+  Accepted = `message_id` present and `ret`/`errcode` absent-or-zero. An absent `ret`
+  is not a failure — record that id as the receipt.
+- **Omitting `context_token` is legal**: iLink accepts tokenless sends as the
+  degraded path that keeps cron pushes working. Send without it when no inbound
+  refreshed the peer token; the message still lands.
+- Prefer `send_weixin_direct` for real sends (owns long-text splitting, rate-limit
+  gating, retry ladder). Hand-rolled HTTP is for read-side diagnostics and for
+  re-sends when the gateway path is unavailable.
 
 ## §2 "No home channel set for weixin"
 

@@ -1,6 +1,6 @@
 ---
 name: hermes-profile-config-regression-recovery
-version: 1.0.0
+version: 1.1.0
 description: Use when profile config 自定义字段被批量操作静默洗掉后需恢复或审计.
 triggers:
   - "hermes update 之后复查 profile config"
@@ -29,12 +29,15 @@ triggers:
 
 **洗回的指纹**：多个 profile config 与 `profiles.yaml` **同一秒 mtime 被改**（`stat -f '%Sm'`），或 `profiles.yaml` 与产物同步变化——这是「生成管线跑了一遍」的信号，不是有人手动改。找触发者看同刻活跃的 cron/脚本日志（`onboard-worker.log`、`*_drift_audit`、批量生成/迁移脚本）。
 
+**备份本身也会被洗（key 轮换占位符）**：key 轮换类批量脚本会**原地重写备份文件**，把敏感值替换成 `__ROTATED-YYYYMMDD__` 占位符——备份文件存在 ≠ 值可恢复。指纹同上：多个备份 mtime 同一秒。恢复时先 grep 占位符再信任备份；profile config 与备份双洗时，去**旁路存储**找同值——cc-switch DB 中 type=`hermes` 的 provider 行在 cc-switch 掩码自家条目后仍留完整明文 key，是实测可用的旁路。
+
 **验证修复真落地**（不是只看文件改对）：①`grep -rl '<坏值>' ~/.hermes/profiles/*/config.yaml ~/.hermes/shared/profiles.yaml ~/.hermes/config.yaml` 应为 0 ②重跑 `generate-configs.py` 后再 grep，仍为 0（源已清，生成器不会写回）③对**运行中的 agent**，personality 等配置在 agent 构造时定格进 `ephemeral_system_prompt`（`chat_completion_helpers.py` 拼接 `agent._cached_system_prompt + ephemeral_system_prompt`），文件改对 ≠ 活进程用上——必须重启 agent/网关进程才刷新（重启时序见 hermes-gateway-operations）。
 
 ## 回归签名（实测：context_length、clearances、fallback api_mode）
 - 被重建的 config 明显变短（~198-296 行 vs 完好 ~663 行）
 - 自定义顶层字段消失但标准字段全在 → YAML 合法、启动无报错，**纯静默丢失**
 - 丢失集合常与"某次批量修复的第 1 批文件"精确吻合 → 定位根因：批量工具整体重写了那批文件
+- 整个自定义段可与配套 custom_providers 同批消失（`moa:` 段 + 全部 moa-* provider 一次全丢）→ 检测信号是段所属 CLI 退化到代码默认值：`hermes moa list` 显示一个 config 里不存在的 default preset = moa 段缺失，不是配置生效
 
 ## 恢复流程（2026-08-17 验证，一次恢复 19 个）
 1. `session_search` 找回历史批准值表（搜「clearances 批量 修复」）；权威值表见 `references/team-clearance-value-table.md`
@@ -55,7 +58,7 @@ triggers:
 ## 陷阱
 - **os.walk 符号链接**：profile 的 `skills/<category>` 多为指向 `~/.hermes/skills`（default profile）的符号链接，`os.walk` 默认不跟进 → 索引只剩 ~87 个，技能引用对账大量误报"不存在"。必须 `followlinks=True` 且并入 `~/.hermes/skills` 与 `~/.hermes/hermes-agent/skills` 两处
 - **插件 enabled≠installed**：config `plugins.enabled` 含 acp-client 但 `plugins/acp-client/` 目录缺失 = 运行时 `acp_send` 不可用。对账后从有实体的兄弟 profile `copytree`
-- **跨 profile 路径依赖**：SOUL 硬编码 `~/.hermes/profiles/<他profile>/skills/.../xx.py` 是脆弱依赖。合理例外：[已移除] 教师→[已移除]-orchestrator/references 共享档案、orchestrator 诊断命令。修法=改指本 profile 符号链接技能路径
+- **跨 profile 路径依赖**：SOUL 硬编码 `~/.hermes/profiles/<他profile>/skills/.../xx.py` 是脆弱依赖。合理例外：[已移除] 教师→[已移除]/references 共享档案、orchestrator 诊断命令。修法=改指本 profile 符号链接技能路径
 - **terminal 系统 python3 无 yaml**：探针走 execute_code（hermes venv）或落盘 .py 再跑
 - **"缺 block 合理"误判**：侦察/总是有产出的角色也需要 kanban_block（授权缺失/信息不足/工具被阻时的退出路径），complete+block 必须双全
 - **protocol_violation 卡 blocked 的恢复**：worker 干完活但没调 terminal call → 调度器记违规并 block。恢复模式=先机械验证产物真实存在（文件+cron+DB）→ kanban_comment 留审计痕 → kanban_complete（metadata 带 followup）——不是重跑任务

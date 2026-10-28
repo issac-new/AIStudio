@@ -24,7 +24,7 @@ metadata:
 ### 1. 定位上次导出边界
 
 ```bash
-cd /Volumes/YOURVOLUME/lab/ollamalinux/ollama   # ModelScope 本地工作目录
+cd /Volumes/nvme2230/lab/ollamalinux/ollama   # ModelScope 本地工作目录
 git log --oneline -10 --date=short --pretty='%h %ad %s'
 git ls-files | grep -E "\.zip$|\.tar\.gz$"      # 现有离线包，确认上次增量包名（如 increment-20260806.zip）
 ```
@@ -52,10 +52,10 @@ cp ~/.hermes/profiles/_shared/{marking-rules,shared-rules-reference}.md inc-new/
 
 ### 4. 脱敏（增量包也要全量扫描）
 
-增量包中的 rules 常含真实邮箱/路径（orchestrator_rules.md 里写死了 `<dad-wechat-id>@im.wechat`）。**扫描模式必须包含邮箱与用户路径，不能只扫 API key**：
+增量包中的 rules 常含真实邮箱/路径（orchestrator_rules.md 里写死了 `__ROTATED-20261014__`）。**扫描模式必须包含邮箱与用户路径，不能只扫 API key**：
 
 ```bash
-grep -rnE "sk-[a-zA-Z0-9]{20,}|syt_[a-zA-Z0-9_]{20,}|/Users/YOURNAME|<redacted-email>@|swarmstudio@|<main-bot-account-id>" <pkg-dir>
+grep -rnE "sk-[a-zA-Z0-9]{20,}|syt_[a-zA-Z0-9_]{20,}|/Users/YOURNAME|plusprimer@|swarmstudio@|<bot-account-id>" <pkg-dir>
 # 命中邮箱 → sed 替换为 your@email.com 后重新打包
 ```
 
@@ -69,7 +69,7 @@ cd inc-new && zip -r /tmp/increment-<date>.zip . -x '*.DS_Store'
 ### 6. 上传 ModelScope
 
 ```bash
-cd /Volumes/YOURVOLUME/lab/ollamalinux/ollama
+cd /Volumes/nvme2230/lab/ollamalinux/ollama
 cp /tmp/increment-<date>.zip .
 git add increment-<date>.zip && git commit -m "update: <描述>" && git push origin master
 # LFS 自动上传；等待 remote Validation passed

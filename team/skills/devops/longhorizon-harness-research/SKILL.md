@@ -20,7 +20,7 @@ metadata:
 - 设计 kanban 审查协议、goal_mode 判官输出格式时借鉴三行控制头与验收反查
 
 > 调研日期：2026-08-16。来源：PaperAgent 公众号文章《DeepSeek Harness刚开源，阿里长程Harness也来了》+ arXiv:2608.01964 + GitHub 源码全读（codeload tarball，1450 文件）。
-> 状态：**P0-P3 已执行并经蓝军对抗审查（4 WARNING 全部闭环）+ 端到端 smoke test 通过（2026-08-16）**。产物：`_shared/task-contract-guard.md` + adversarial-review-lens v1.1.0（含 workspace_audit.py）+ delegation-brief-format v1.1.0 + orchestrator_rules §0.5.2bis + shared-rules-reference 索引登记。smoke test：leaf 子代理凭任务卡指引独立走完 读协议→快照→只读审查→diff→三行控制头+反查 全流程，/tmp/lhh 1712 records 快照 diff clean（exit 0），七项验收约束逐项 verified。可见性：P0 协议 27/27 profile 经 shared-rules-reference 可达；两个 patched skill 按角色补链（worker-coder/worker-researcher/[已移除]/[已移除]-orchestrator→delegation-brief-format，product-manager→adversarial-review-lens）。
+> 状态：**P0-P3 已执行并经蓝军对抗审查（4 WARNING 全部闭环）+ 端到端 smoke test 通过（2026-08-16）**。产物：`_shared/task-contract-guard.md` + adversarial-review-lens v1.1.0（含 workspace_audit.py）+ delegation-brief-format v1.1.0 + orchestrator_rules §0.5.2bis + shared-rules-reference 索引登记。smoke test：leaf 子代理凭任务卡指引独立走完 读协议→快照→只读审查→diff→三行控制头+反查 全流程，/tmp/lhh 1712 records 快照 diff clean（exit 0），七项验收约束逐项 verified。可见性：P0 协议 27/27 profile 经 shared-rules-reference 可达；两个 patched skill 按角色补链（worker-coder/worker-researcher/[已移除]/[已移除]→delegation-brief-format，product-manager→adversarial-review-lens）。
 
 ## 转译忠实性 pitfalls（蓝军审查抓到的，写协议文档时必读）
 

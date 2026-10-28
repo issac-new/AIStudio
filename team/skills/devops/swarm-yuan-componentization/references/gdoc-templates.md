@@ -1,8 +1,9 @@
-# G-doc 代码知识图谱模板（G1/G2/G5/G6）
+# G-doc 代码知识图谱模板（G1/G2/G5/G6/G7）
 
 > **何时产出**：对 10+ 仓库 / 微服务级代码调研（swarm-yuan 阶段 1 Survey 的超集场景）时，在 `survey.md` 之外补齐本模板族的标准化图谱文档。小型单仓调研不需要 G-doc，survey.md + file:line 锚点即可。
 > **来源**：蒸馏自 Tencent/teamai-cli v0.22.0 源码快照（本地路径 `workspace/research/teamai-cli-src/`），转译而非照抄——teamai CLI 命令、`teamwiki/` 目录结构、Tree-sitter 提取运行时不适用于 Hermes 集群，已剥离。锚点行号以快照版本为准。
 > **口径声明**：上游存在两套 G 编号且不一致——方法论（phase2 §Type-9）G6=知识图谱三元组、G3=数据流存储；引擎（deep-enrich.ts）G6=多跳传递依赖、G3=接口清单。**本文采用引擎口径**（与集群既有调研报告 §3.3 一致）：G1 组件关系 / G2 数据流 / G5 场景序列 / G6 多跳路径。引用外部 TeamAI 材料时注意核对口径。
+> **G7 编号注记（2026-10）**：本模板族 G7=知识新鲜度四态，编号承接 v0.27 增量调研的融合裁决命名（引擎 v0.27 已实现 Source freshness）。与 phase2 方法论 §Type-9 的 G7（架构风险，引擎无实现）无关，处置见文末「待扩展」。
 
 ---
 
@@ -18,10 +19,11 @@
 5. **图谱不替代组件文档**：G-doc 只提供跨模块**关系视角**的结构化索引；单模块细节仍在各模块调研笔记。（依据: phase2 T9-R10）
 6. **不虚构**：数据不足时写"（暂无数据）"并说明可能原因，禁止编造关系填充表格。（依据: deep-enrich.ts:246-252 空数据兜底模式）
 7. **mermaid 规范**：时序图用 `sequenceDiagram`；状态机用 `stateDiagram-v2`；决策树用 `graph TD`。（依据: phase2 T9-R04/R05、graph-rag-agent.md:341-343）
+8. **source_anchor 登记**：每份 G-doc 生成时在 frontmatter 或首节落 `source_anchor:` 源码锚（git 仓库用 commit SHA+行号，非 git 目录用 mtime+sha256 前 8 位）；引用该 G-doc 结论前按 G7 节四态规则核验。
 
 ---
 
-## 一、G1 组件依赖关系矩阵
+## G1 组件依赖关系矩阵
 
 **适用问题**：「谁依赖 X？X 依赖谁？」——变更影响评估、服务依赖梳理、架构重构规划。
 （路由锚点: templates.ts:42「谁依赖谁 / 模块关系 → G1」）
@@ -74,7 +76,7 @@
 
 ---
 
-## 二、G2 数据流（调用链 / 请求路径）
+## G2 数据流（调用链 / 请求路径）
 
 **适用问题**：「请求/任务从入口到终点经过哪些模块？」——调用链追踪、路径断点定位。
 （路由锚点: templates.ts:43「调用链 / 数据流 → G2」）
@@ -116,7 +118,7 @@ dispatcher 内部排序算法未见源码）
 
 ---
 
-## 三、G5 场景序列（完整业务流程）
+## G5 场景序列（完整业务流程）
 
 **适用问题**：「{完整业务流程}是怎么走完的？」——跨模块交互的时序视角，含异常分支。
 （路由锚点: templates.ts:44「完整业务流程 → G5」）
@@ -167,7 +169,7 @@ sequenceDiagram
 
 ---
 
-## 四、G6 多跳路径（爆炸半径 / 传递依赖）
+## G6 多跳路径（爆炸半径 / 传递依赖）
 
 **适用问题**：「如果 X 挂了/改了会影响什么？A 间接依赖谁？」——多跳传递影响分析。
 （路由锚点: templates.ts:45「传递依赖 / 爆炸半径 → G6」）
@@ -209,6 +211,53 @@ sequenceDiagram
 
 ---
 
+## G7 知识新鲜度四态（source_anchor 与 freshness）
+
+**适用问题**：「这条 G-doc 结论还新鲜吗？锚点漂没漂？」——引用任何 G-doc 结论前的强制核验动作。
+（机制源: src/codebase-freshness.ts:15 四态类型、:281 current/stale 哈希比对、:259 missing、:302/:322/:325 unknown 兜底；用户文档源: docs/guide/knowledge.md:47、:147）
+
+### 结构骨架（每份 G-doc 生成时登记）
+
+```markdown
+source_anchor:                              # 放 frontmatter 或首节；通用纪律第 8 条
+  repo: {仓库路径或 slug}
+  commit: {commit SHA}                      # git 仓库必填；非 git 目录用 mtime 替代
+  files:
+    - path: {相对路径}
+      hash: {sha256 前 8 位}                # 与 mtime 同记或二选一
+      lines: "{起-止}"                      # 结论引用的行号区间
+```
+
+### 四态判定规则（查询/消费时对照现状执行）
+
+| 状态 | 判定条件 | 处置 |
+|------|---------|------|
+| `current` | 锚与现状一致（内容哈希与登记值相同，行号区间未漂移） | 正常引用 |
+| `stale` | 锚处已变更（文件仍在但内容哈希不符） | 降级：引用前回源复核，标注「锚点已漂移」 |
+| `missing` | 锚目标消失（文件被删/路径不存在） | 失效：不得再引用该结论，标「待重调研」 |
+| `unknown` | 无法核验（无锚/锚不完整/仓库不可达/非代码文件） | 按「推断」档对待，引用时标「未核验」 |
+
+（转译自 codebase-freshness.ts checkOneSource：current/stale 走 actualHash===expectedHash 哈希比对，missing 走 realpath ENOENT 且确认不在忽略区，unknown 是身份不符/路径越界/非代码文件等一切不可核验的兜底）
+
+### 警示句（照抄源码语义，禁止省略）
+
+> `current` 不代表知识内容正确，只代表锚点未漂移。
+> （源码原文: "current does not mean the written knowledge is correct." — docs/guide/knowledge.md:147）
+
+### 填写示例（以本模板引用的 codebase-freshness.ts 为例）
+
+```markdown
+source_anchor:
+  repo: Tencent/teamai-cli 快照 workspace/research/teamai-cli-src/（main@2026-10-18）
+  files:
+    - path: src/codebase-freshness.ts
+      hash: 89009714  # 2026-10-19 生成时实算
+      lines: "15"
+freshness: current（2026-10-18 生成时核验）
+```
+
+---
+
 ## 五、图谱目录索引（README）
 
 多份 G-doc 共存时必须有目录索引，含「按问题类型查找」路由表（依据: templates.ts:169-190 graphReadmeTemplate、phase2 T9-R03）：
@@ -223,11 +272,12 @@ sequenceDiagram
 | 调用链/数据流/请求路径 | graph-g2-dataflow.md | 入口→数据层调用链 |
 | 流程/场景/sequence | graph-g5-scenarios.md | 核心业务场景序列图 |
 | 传递依赖/影响范围/blast | graph-g6-multihop.md | 多跳传递依赖分析 |
+| 新鲜度/锚点漂移/freshness | （模板 §G7，逐文档 source_anchor） | 知识新鲜度四态核验 |
 ```
 
 ## 六、生成流程（三步法，转译自 TeamAI）
 
-1. **关系抽取**：从既有模块调研笔记/源码扫描中提取——调用关系、数据依赖、消息拓扑、状态流转。以已归档调研笔记为主要输入源，保持与既有结论一致（TeamAI 纪律"以组件文档为唯一来源"的转译：依据: graph-rag-agent.md:334）。
+1. **关系抽取**：从既有模块调研笔记/源码扫描中提取——调用关系、数据依赖、消息拓扑、状态流转。以已归档调研笔记为主要输入源，保持与既有结论一致（TeamAI 纪律"以组件文档为唯一来源"的转译：依据: graph-rag-agent.md:334）。抽取同时在每份文档登记 source_anchor 锚（G7）。
 2. **结构化建模**：依赖→G1 表格；链路→G2 文本链+时序图；场景→G5 序列图；依赖边→G6 BFS 表。
 3. **索引织网**：写 README 路由表；每份 G-doc 交叉引用相关 G-doc；标注置信度统计。
 
@@ -239,7 +289,8 @@ sequenceDiagram
 - [ ] G5 场景数真实（不足不凑），每场景有异常处理
 - [ ] G6 爆炸半径数字可由 G1 边表复算
 - [ ] 无空占位章节；无数据的小节写"（暂无数据）"+原因
+- [ ] 每份 G-doc 含 source_anchor 登记；引用结论前按 G7 四态（current/stale/missing/unknown）核验并标注
 
 ## 八、待扩展
 
-G4/G7-G9（错误码映射/架构风险/配置索引/规则约束矩阵/三元组）上游引擎无实现（grep 实测 exit=1），仅方法论有骨架（phase2 §Type-9 G4/G7/G8/G9、graph-rag-agent.md:119-257），**本文档暂不收录，待后续按需扩展**。G3（接口清单）引擎有最小实现（deep-enrich.ts:349-355 `buildG3InterfacesDoc`，:507 写盘 graph-g3-interfaces.md），但其方法论骨架（存储依赖矩阵/MQ 拓扑/缓存策略，phase2 §Type-9 G3=数据流存储口径）未被引擎展开——同属待扩展，需要时可参照方法论骨架+本文通用纪律手工组织，但不得声称为本技能标准模板。
+G4/G8-G9（错误码映射/配置索引/规则约束矩阵/三元组）上游引擎无实现（grep 实测 exit=1），仅方法论有骨架（phase2 §Type-9 G4/G7/G8/G9、graph-rag-agent.md:119-257），**本文档暂不收录，待后续按需扩展**。**G7 编号已于 2026-10 起被本模板族征用为知识新鲜度四态（见顶部编号注记）**；phase2 方法论 G7=架构风险仍未收录，后续若落地改用 G8+ 顺延编号避免撞号。G3（接口清单）引擎有最小实现（deep-enrich.ts:349-355 `buildG3InterfacesDoc`，:507 写盘 graph-g3-interfaces.md），但其方法论骨架（存储依赖矩阵/MQ 拓扑/缓存策略，phase2 §Type-9 G3=数据流存储口径）未被引擎展开——同属待扩展，需要时可参照方法论骨架+本文通用纪律手工组织，但不得声称为本技能标准模板。

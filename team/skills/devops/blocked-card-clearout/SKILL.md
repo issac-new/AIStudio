@@ -26,6 +26,16 @@ metadata:
 | 补完成撞活 claim | kanban_complete 会拒 | `kb.complete_task` 报 LiveClaimError 同理 |
 | 归档 | — | `kb.archive_task(conn, tid)`（无 actor 参数，会终止 running worker） |
 
+## sanctioned 写入器五要素（2026-10-16 实测，缺一即败）
+
+1. **解释器**：必须用带 ruamel 的工具链 python（`~/.hermes/tools/python-3.14.7+20260901-*/bin/python3`，注意 `tools/` 下有字面星号幽灵目录，glob 展开需甄别）。hermes update 半途中断会清空 site-packages（只剩 pip），症状=worker 秒死报 `No module named 'hermes_cli'` 或本层 import 崩 `No module named 'ruamel'`；修复=补装 ruamel/pyyaml/requests/httpx 四件套。
+2. **路径注入**：`sys.path.insert(0, '/Users/YOURNAME/.hermes/hermes-agent')` + `from hermes_cli import kanban_db as kb`。
+3. **Row factory**：连接必须 `conn.row_factory = sqlite3.Row`（缺了 complete_task 内部 `Task.from_row` 对 tuple 调 `.keys()` 直接 AttributeError）。
+4. **守卫 UDF**：`kb.register_write_sanction_udf(conn)`（缺了触发器在 prepare 阶段拒写：`no such function: kanban_write_sanctioned`——这是 fail-closed 设计而非 bug，勿绕）。
+5. **triage 态出口**：`kb.specify_triage_task(conn, tid, author=...)` 一步 triage→ready（不经过 todo），随后 complete_task；`promote_task` 只吃 todo/blocked，对 triage 无效。
+
+**unblock 重派的副作用要预期**：unblock 后 dispatcher 约 60s tick 内即派新 worker；处于半完成态的卡（侦察已做完差收尾）务必在 unblock 前把交接 comment 先落库（add_comment 先行、unblock 后行），否则新 worker 拿不到上下文会重做。
+
 **补完成撞 LiveClaimError 的正解=交接而非 force**：unblock 后 dispatcher 一个 tick 内派出新 worker；在卡上留交接 comment（代已完成什么+worker 只需核验的命令+直接 complete+禁改禁重做），让 worker 自己收口——多一层独立核验且零重试成本。
 
 ## 归档卡留痕三要素

@@ -27,7 +27,7 @@ metadata:
 
 ### 机制（file:line 锚点，已核实）
 
-- cron job 由 **gateway 进程**承载调度执行。gateway 重启/被 `--replace` 替换（AIStudio 拉起新会话、重启服务）时，正在跑的 cron 子进程被一起杀掉。
+- cron job 由 **gateway 进程**承载调度执行。gateway 重启/被 `--replace` 替换（SwarmStudio 拉起新会话、重启服务）时，正在跑的 cron 子进程被一起杀掉。
 - 恢复机制 `cron/executions.py:271 recover_interrupted_executions()` **只把被打断的执行标成 `unknown`，docstring 明确 `without scheduling retries`——不自动重跑**（file:line 已读）。
 - 结果：长任务在 gateway 重启时段被撞上 → 静默丢一天，**只能等下一次 24h 后的 cron 触发**，没有任何自动补跑。
 
@@ -109,6 +109,28 @@ cronjob action=run job_id=<id>
   防后续会话把管道静默当故障。
 - 跨 profile 的 job 也要扫：nightly-radar 三件套在 ops-devops 的 jobs.json 里。
   那边 schedule 是 dict（{kind,expr}），字符串正则扫描会静默漏掉。
+
+## 双入口双跑判例（2026-10-20 实锤）
+
+停役入口 job 必须同步把它从复活看门狗 WHITELIST 移除——否则看门狗每 6h resume 回来，
+与 launchd 入口每夜双跑（同日 2 行 full-done 即实证）。改启动方式时 grep 三消费者：
+复活看门狗 WHITELIST、存活看门狗 alert 里写死的 `hermes cron run <id>` 处置命令、BANNED 名单。
+
+## v4.0 收敛架构（2026-10-20 用户裁决，当前态）
+
+- 夜间 Loop 唯一入口 = launchd `ai.hermes.unified-nightly-loop`（02:15）；cron 入口 3e1690d29660
+  已删并入 BANNED。存活看门狗 922320a901e3 改 06:30（原 01:30 落在 02:15+3600s 窗口内会误报）。
+- 保留独立 cron 仅四类：①高频看门狗（分钟/小时级）②weixin 告警通道类（no_agent stdout=
+  告警直推，折 Loop 杀告警：egress-audit/stale-backup/DR演练/update-safe）③k12edu 推送类
+  （妈妈工作台×3 改 08:00 档、孩子记忆留 9 点单次）④context-gate（真告警）+载体 job
+  （skill-mining/ttvv 排程永不触发，Loop 频次门 `cron run` 驱动）+有效一次性 wakeup。
+- 折入判定红线：deliver=local 留档型可折；deliver=weixin/告警语义型必留；agent 型折入用
+  「载体 job 排程永不触发 + Loop 内 `HERMES_HOME=<profile> hermes cron run <id>`」，保留
+  prompt/模型路由不双跑。
+- 僵尸判定三信号：last_error=Script not found（本体消失）/监视对象全 done/引擎工作区在
+  未挂载外置盘——直接 remove，不折入不修复。
+- tools/python-3.14* 有两个同名掩码目录（真代际 2026xxxx + 字面 `****` 垃圾目录）：脚本里
+  `ls -d python-3.14*|head -1` 会选中死目录——必须逐候选测 `bin/python3 -c 1` 存活再选。
 
 ## 单 job 并入统一夜间 Loop（整合流程）
 

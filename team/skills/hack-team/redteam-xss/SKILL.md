@@ -38,6 +38,13 @@ description: "Use when testing for cross-site scripting (reflected/stored/DOM/mX
 - XSStrike 上下文分析；Burp Scanner；nuclei xss 模板。
 - CSP 评估：Google CSP Evaluator（csp-evaluator.withgoogle.com）。
 
+### 实证验证（执行级：反射 ≠ 可利用）
+反射级判定（payload 出现在响应里）只是 Candidate；升级到 Confirmed 必须有**脚本真实执行**证据。流程对齐 Google PageBreak（2026-10 披露，500+ XSS 误报率近零的来源）：
+1. 注入带唯一标记的探测 payload（如 `alert('xss7q')` / 写全局变量 `window.__xss_poc=1`）。
+2. 用浏览器环境真实打开目标页：`browser_exec` 的 `js()` 执行后读取 `window.__xss_poc`/console 输出，或本地 headless（`python3 -m playwright ... --headless`）截图 alert。
+3. 仅当执行证据存在（console 输出/全局标记/截图）才标 Confirmed；反射但未执行 → 标 Candidate 并记录阻断原因（CSP/sanitizer/编码）。
+4. 注意：`_shared/scripts/verify_finding.py` 的 XSS 模板是反射级 grep（"payload原样反射"），不能作为执行级证据；其 VERIFIED 只代表反射确认。
+
 ## 利用技术（按难度分级）
 
 - **L1 基础**：`<script>alert(1)</script>`、`<img src=x onerror=alert(1)>`、`<svg onload=alert(1)>`。
@@ -53,6 +60,16 @@ description: "Use when testing for cross-site scripting (reflected/stored/DOM/mX
 - **拆分混淆**：`<scr<script>ipt>`（递归过滤失效）、属性无引号、`/onload` 前用 `/` 代替空格。
 - **解析差异（mXSS）**：利用 sanitizer 与浏览器 innerHTML 解析不一致，如 `<noscript><p title="</noscript><img src=x onerror=alert(1)>">`。
 - **协议**：`javascript:` 伪协议换行/Tab 混淆 `java\tscript:`、`<a href="jAvAsCrIpT:...">`。
+
+## 组合利用链（多缺陷拼接成可利用 XSS）
+
+单点缺陷常被纵深防护（CSP/签名/编码）挡住，可利用 XSS 往往来自**跨端点、跨组件组合**。三类 PageBreak 实证过的模式（2026-10 公开报告）：
+
+- **缓存投毒链（cache poisoning → stored XSS）**：服务端把未校验的 URL 路径段直接插入返回的 JS 代码，且该路径段**不参与缓存键计算**。PoC 形态：请求 `/js/"-alert(1)-"/api.js`，响应体含注入代码并被 CDN 缓存，同区域后续访问者命中投毒条目。检测：对比 unkeyed 输入（路径/头）变化时缓存响应是否复用；工具 Param Miner（Burp 插件）。修复：路径段入缓存键或服务端规范化+编码。
+- **签名授权链（redirect → 签名端点 → XSS）**：未校验跳转值传入 `window.location`，但直接利用被加密签名挡住；寻找**独立授权端点**为 `javascript:` URI 签名（如 `/authorize` 类端点接受任意值并返回有效签名），拼成受保护端点的可利用 XSS。检测：audit 全站"为输入签发凭证"的端点，确认其是否白名单校验待签内容。
+- **浏览器扩展链（弱校验连接 + 可获取 nonce + 不安全消息转发）**：扩展对外部连接来源校验弱，攻击者可取得一次性 nonce 并通过不安全消息转发把脚本内容传入正在调试的页面；若扩展支持 `data:` URL（如 `data:text/javascript,alert(1)`）即成通用 XSS。检测面：扩展 manifest 的 `externally_connectable`/`web_accessible_resources`、消息通道是否验 origin、nonce 是否可被第三方页面获取。
+
+链式判定纪律：每个环节单独只有 Candidate 价值；必须拼通全链并拿到执行级证据（见"实证验证"节）才报 Confirmed，并标注链条各环节 file/endpoint。
 
 ## 修复建议
 
@@ -90,6 +107,8 @@ Negative exit：达到最小尝试次数，记录已尝试路径与原因；只�
 ## 参考资源
 
 - PortSwigger XSS Cheat Sheet: https://portswigger.net/web-security/cross-site-scripting/cheat-sheet
+- PortSwigger Web Cache Poisoning: https://portswigger.net/research/practical-web-cache-poisoning
+- Google PageBreak 报道（FreeBuf 转述, 2026-10-05）: https://www.freebuf.com/articles/ai-security/504737.html
 - PayloadsAllTheThings XSS: https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XSS%20Injection
 - Dalfox: https://github.com/hahwul/dalfox / DOMPurify: https://github.com/cure53/DOMPurify
 - CSP Evaluator: https://csp-evaluator.withgoogle.com

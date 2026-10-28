@@ -15,6 +15,7 @@ metadata:
 
 ## 铁律（always-on）
 
+0. **广播前先判目录拓扑**：`readlink ~/.hermes/profiles/<p>/skills/<类目>` 指向 `~/.hermes/skills/<类目>` = 软链共享单物理副本——写物理副本一处即全 fleet 生效，**禁逐处 cp/rm+ln**（会把软链替换成独立副本，打破写一处广播）。验收用全 profile 路径 md5 `sort -u | wc -l == 1` + `os.path.samefile()` 同 inode 双证；例外：个别 profile 是 REAL-DIR 不挂共享（如 product-*），对它们才走逐处同步。
 1. **验收对象是落盘产物，不是部署输出**——部署脚本 rc=0 / 打印 success 不算数。
    每次同步后机械验收：
    ```bash

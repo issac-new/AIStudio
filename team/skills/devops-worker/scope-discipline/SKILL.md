@@ -117,14 +117,14 @@ Add to the cognition-lattice §七A.2 high-frequency error scenarios:
   "是否现在开始创建？"的追问
 ```
 
-## Case Study: [已移除] Platform Research (2026-07-25)
+## Case Study: EDA Platform Research (2026-07-25)
 
 ### What happened
 
 User provided 3 WeChat article URLs and asked "深入调研分析". The agent:
 1. Fetched articles via curl ✓
 2. Wrote analysis to [已移除].md ✓
-3. Immediately proposed a 7-profile [已移除] team with role table ✗
+3. Immediately proposed a 7-profile EDA team with role table ✗
 4. Asked "是否现在就开始创建看板+profile+任务分解？" ✗
 
 User corrected: "为什么会违反之前设置的全局规则！！，必须修正该问题"

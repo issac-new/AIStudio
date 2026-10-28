@@ -34,8 +34,8 @@ REQUIRED_CASE_KEYS = {
 }
 REQUIRED_PAYLOAD_KEYS = {"carrier_type", "carrier_filename", "hiding_technique", "hidden_instruction"}
 SEVERITIES = {"critical", "high", "medium", "low"}
-CASE_ID_RE = re.compile(r"^CTXINJ-C[1-5]-[A-Z]+-\d{3}$")
-CANARY_RE = re.compile(r"CTXINJ-CANARY-C[1-5]-\d{3}")
+CASE_ID_RE = re.compile(r"^CTXINJ-C[1-9]-[A-Z]+-\d{3}$")
+CANARY_RE = re.compile(r"CTXINJ-CANARY-C[1-9]-\d{3}")
 
 try:
     import yaml  # type: ignore
@@ -199,7 +199,7 @@ def main() -> int:
     channels = []
     all_cases = []
     load_errors = []
-    for f in sorted(TEMPLATES_DIR.glob("C[1-5]-*.yaml")):
+    for f in sorted(TEMPLATES_DIR.glob("C[1-9]-*.yaml")):
         try:
             data = load_channel_file(f)
         except Exception as e:  # noqa: BLE001
@@ -254,9 +254,10 @@ def selftest_main() -> int:
     print("== selftest: context-injection-testcase-library ==")
     failures = 0
 
-    files = sorted(TEMPLATES_DIR.glob("C[1-5]-*.yaml"))
+    files = sorted(TEMPLATES_DIR.glob("C[1-9]-*.yaml"))
     expect = ["C1-decoy-file.yaml", "C2-log-poisoning.yaml", "C3-web-content-poisoning.yaml",
-              "C4-compaction-injection.yaml", "C5-decoy-canary-bomb.yaml"]
+              "C4-compaction-injection.yaml", "C5-decoy-canary-bomb.yaml",
+              "C6-functional-camouflage.yaml"]
     names = [f.name for f in files]
     for e in expect:
         if e not in names:
@@ -288,13 +289,14 @@ def selftest_main() -> int:
     print(f"  cases total={total} per-channel={per_ch}")
     print(f"  severity={sev}")
     expect_counts = {"C1-decoy-file": 8, "C2-log-poisoning": 7, "C3-web-content-poisoning": 8,
-                     "C4-compaction-injection": 5, "C5-decoy-canary-bomb": 6}
+                     "C4-compaction-injection": 5, "C5-decoy-canary-bomb": 6,
+                     "C6-functional-camouflage-recruitment": 6}
     for ch, n in expect_counts.items():
         if per_ch.get(ch) != n:
             print(f"  [FAIL] {ch} 用例数 {per_ch.get(ch)} != 承诺 {n}")
             failures += 1
-    if total != 34:
-        print(f"  [FAIL] 总用例数 {total} != 34 (SKILL.md 承诺)")
+    if total != 40:
+        print(f"  [FAIL] 总用例数 {total} != 40 (SKILL.md 承诺)")
         failures += 1
 
     # 回环: build_carrier 物化 + 金丝雀保留

@@ -1,7 +1,7 @@
 ---
 name: llm-redteam
 description: "OWASP LLM Top 10 红队测试 — 对 LLM 应用进行主动攻击性安全测试，覆盖 prompt injection/jailbreak/data leakage/agentic 攻击面。参考 LLMrecon 设计。"
-version: 1.4.0
+version: 1.7.0
 author: Hermes Agent (inspired by LLMrecon)
 license: MIT
 platforms: [linux, macos]
@@ -24,6 +24,7 @@ metadata:
 - 测试 agentic 系统的工具滥用/供应链攻击面
 - 评估 RAG 系统的注入攻击面与跨租户检索隔离
 - 评估 agentic 平台面（MLOps/云身份/CI-CD/Mesh/MCP）时，按 377 条平台级清单切片派卡（v1.5，见「Agentic 平台级测试面」节）
+- 攻击目标为「模型 × 执行 harness」配对（Claude Code/Codex 类产品级环境）时，按二元组定目标并做攻击技术效能画像（v1.7，见「经验进化红队与执行环境测试面」节）
 
 ## 测试规则（RoE）与金丝雀纪律
 
@@ -283,6 +284,130 @@ PY
 
 派卡纪律：平台面测试按四阶段切片派给 hack-recon（阶段1）/ hack-exploit（阶段2-4），Checker 合并沿用 `security-domain-delegation` 的 Diamond 结构；Critical 测试（凭证窃取/RCE/跨租户读）破坏性真实存在，授权书必须显式点名、部分只能在 staging 执行；白盒 6 条（AI-WBX）需本地权重访问，黑盒 API-only 目标标 N/A。
 
+## OWASP ASI Top 10 官方框架审计清单（v1.6）
+
+> 一手源：OWASP GenAI Security Project《OWASP Top 10 for Agentic Applications 2026》（2025-12 发布，100+ 专家评审）https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/
+> 转载源（本节全部转述的出处）：《Agentic AI 专项安全：OWASP Top 10 for Agentic Applications 2026 完全指南》，2026-10-14 抓取，全文存档 `wechat-research/20261014-hack-article/research/article-fulltext.md`（17,095 B）。
+> 定位补齐：v1.5 节收的是**平台级测试面**（377 条执行清单）；本节收的是**官方风险分类坐标系**（ASI01-10 风险本体）。三者并列、不替代：官方 ASI 编号 = 风险分类轴，LLM01-10 = 单次模型交互轴，Ravi 清单 = 执行切片轴。
+
+### 官方十项定义与本机载体对位表
+
+下表每行「三态」列的判定口径：**覆盖** = 找到实际载体且该载体确实执行了控制（证据锚 = 文件路径 + 节名）；**部分覆盖** = 载体存在但控制不完整或只覆盖该风险的一部分；**缺口** = 本机无对应载体，不编造对位。缺口行须在报告期转成待办，不得当作已缓解。
+
+| ASI | 官方名称 | 官方风险要点（转述源） | 本机载体对位 | 三态 |
+|---|---|---|---|---|
+| ASI01 | Agent Goal Hijack | 攻击内容改变目标、计划或决策路径；控制=锁定目标、校验意图、高风险动作审批 | `~/.hermes/skills/hack-team/scope-gate/SKILL.md`（§强制规则：Scope Gate 前置校验、§检测的网络工具）+ `_shared/constraint-policy.md` §一五维约束/§三 Phase 门 | 部分覆盖（授权范围与阶段门在位；**「目标漂移 vs 原意图」的机械比对无独立载体**——本机只能判 scope 是否越界，判不了「仍在 scope 内但目标已被改写」，见报告 §2 ASI01 行的收敛建议） |
+| ASI02 | Tool Misuse and Exploitation | Agent 在已有权限内错误或恶意使用合法工具；控制=工具级最小权限、参数校验、调用预算 | `_shared/hack-tool-registry.md`（§一工具分类注册表/§四 Staged Action Proposal）+ `security-domain-delegation` §8 Preflight + `_shared/action-contracts.yaml`（经 `action_gate.py` 逐动作校验）+ `_shared/03-evolution-memory/action-risk.md`（高危命令黑名单） | 覆盖（工具注册+契约门+高危黑名单三层齐备；「调用预算/费用上限」无机械载体 → 记为该行下的次级缺口，不降本行三态） |
+| ASI03 | Identity and Privilege Abuse | 委托、身份继承或凭据复用导致越权；控制=独立 Agent 身份、短期令牌、逐动作授权 | profile `config.yaml` 的 `clearances` 字段（如 hack-auditor `config.yaml:194` = TLP:AMBER/GREEN/CLEAR）+ `_shared/02-org-orchestration/marking-rules.md`（§三机械校验点、§四Marking 值定义、§六标记沿调用链传播）+ `security-domain-delegation` §8 Preflight 授权门 | 覆盖（markings 分级 + 传播义务 + 机械校验点均在位；「短期令牌」按 Hermes 模型不适用，非缺口） |
+| ASI04 | Agentic Supply Chain Vulnerabilities | 工具、Skills、MCP、Agent Card、模型或更新链被污染；控制=来源证明、版本固定、AIBOM、运行时复核 | `~/.hermes/skills/hack-team/skillguard/`（SKILL.md 15 条检测规则 SG-001..015，OCI 镜像元数据）+ `skill_manage` create 前置扫描（SKILL.md §Integration with Hermes）+ `_shared/hack-knowledge-index.md` §四（事实台账） | 部分覆盖（**Skills/MCP 侧有**：SG 规则集 + 准入门 + 运行时自检；**「版本固定/内容哈希/签名证明」无全量载体**——llm-redteam references 存档有 MANIFEST sha256，但仅限单个清单资产，非全局 SBOM/AIBOM） |
+| ASI05 | Unexpected Code Execution (RCE) | 文本、工具链或反序列化最终变成非预期代码执行；控制=隔离执行、禁用危险解释器、生成与运行分离 | `~/.hermes/skills/devops/hermes-docker-sandbox/`（§Architecture: Multi-Instance Pattern、§Dockerfile Essentials、§Entrypoint Pattern）+ `_shared/03-evolution-memory/action-risk.md`（黑名单/任意脚本执行拦截）+ action-gate fail-closed（实测见本卡报告 §3，gate 自身异常→全工具阻断） | 部分覆盖（**隔离执行与门禁有**：docker sandbox + action-risk 黑名单 + gate fail-closed；**「容器不以 root 运行/外网默认关闭白名单」无逐容器强制机械校验**——skill 提供 Dockerfile 要点，属文档级控制而非强制门） |
+| ASI06 | Memory & Context Poisoning | 恶意内容持久进入记忆、RAG、摘要或共享状态；控制=写入审查、租户隔离、来源追踪、版本回滚 | `_shared/03-evolution-memory/memory-governance.md`（§2写侧门/§3读侧门/§4遗忘阶梯/§5标签词表/§6可追溯可撤回）+ `memory.write_approval`（默认关，`write_approval.py:45`）+ memory 通道 strict 扫描双闸（`memory_tool_store.py:281/:142`）+ `hindsight-bank-strategy` §Three Sharing Models（按团队隔离） | 覆盖（六要素逐项有锚，见本卡报告 §4「记忆治理审计对照」；write_approval 默认关=「写入前无人工门」，但 strict 扫描双闸为机械强制，已在 gap-20260924-005 实测拦截注入载荷，故判覆盖） |
+| ASI07 | Insecure Inter-Agent Communication | Agent 消息被伪造、篡改、重放或错误路由；控制=双向认证、签名、时间戳、类型化消息 | `_shared/02-org-orchestration/ontology.md` §三 Interface Types（CompletionHandoff 类型化交接）+ `_shared/01-scheduling-bus/forward-deployed-protocol.md` + `inter-agent-communication-architecture` §Security boundary note（三区/数据出域）+ kanban SQLite 单机同库 | **缺口**（**全链无消息签名/nonce/时间戳/重放防护的机械载体**；现状=单机 SQLite + 契约字段校验，类型化有、**防伪造与防重放无**。对照：Matrix 跨机协作走外部 homeserver，本机未部署） |
+| ASI08 | Cascading Failures | 单点错误在 Agent、工具和工作流之间快速放大；控制=熔断、限流、传播上限、独立策略引擎 | `~/.hermes/skills/devops/kanban-blocked-card-disposition/`（§第一步定性/§第二步三分处置）+ `kanban-batch-closeout`（§settle 对账/canary/限流尾批）+ `agentic-soc-defense` §状态机 + action-gate **fail-closed 自身故障即全锁**（实测本卡报告 §3） | 部分覆盖（**传播控制有**：kanban 父子依赖门 + unblock-loop 自动升级 triage + retry 上限；**熔断器与「传播深度上限」无独立机械载体**，另发现反面样本：单点 yaml 缺失放大为全工具锁死 ~2h） |
+| ASI09 | Human-Agent Trust Exploitation | 利用用户对 Agent 的权威感和解释产生错误审批；控制=风险提示、独立证据、预览与执行分离 | `protected-file-approval-handling` §3（挂接半边走审批门：锚点定稿→留痕→申请→停）+ `_shared/action-risk.md`（高危命令 Guardian 二审）+ `_shared/04-pro-capability/committee-review.md`（3-reviewer 并行批判）+ Staged Action 协议（SOUL 强制块） | 覆盖（**预览与执行分离有实证**：Staged Action 协议要求先 `kanban_comment` 提案、按 forward-deployed-protocol §三 等待确认后才执行不可逆动作；committee 三审独立于被审实现者） |
+| ASI10 | Rogue Agents | Agent 偏离授权范围并形成持续、欺骗或自我扩散行为；控制=行为基线、隔离、吊销、Kill Switch | `agent-profile-lifecycle` §Deleting a Profile（凭据吊销/服务残留清理）+ `cron-job-management` §整批停役与恢复（复活看门狗优先）+ `constraint-policy.md` §四 Qualification 门 + `scope-gate`（目标漂移） | 部分覆盖（**吊销与停役能力有**：profile 删除流程 + cron 整批停役 + Qualification 硬墙；**「一键 Kill Switch」无单一机械总闸**——停役能力分散在 3 个 skill/脚本，无统一入口；`owasp-security` SKILL.md 提及 kill-switch 但为方法论文本非执行体） |
+
+**读表纪律**：本表的「三态」是**2026-10-14 实机快照**，不是永久结论。载体改名/迁移/删除后本表即失效，复用前必须按同一口径重跑 `ls`/`grep` 复核。缺口行（当前 ASI07）在做本机红队报告时不得因「有 kanban 契约」而降级为中低危——契约校验与消息防伪造是两个不同控制，OWASP 原文明示「连接问题不等于信任问题」。
+
+### 官方新增维度：Least Agency 最小自主性
+
+OWASP 官方在十大风险之外提出 **Least Agency（最小自主性）**原则：比「最小权限」多问一步——这个场景真的需要 Agent 自主执行吗？只需要检索和建议的场景，不应默认赋予修改、发送、删除、付款能力；无业务价值的自主性只增加攻击面。
+
+本机对位：`_shared/constraint-policy.md` §四 Qualification 门（能力圈硬墙，实质动作前逐维过）+ 各 profile `config.yaml` 的 ACP 权限分级（orchestrator/researcher/[已移除]/product=dontAsk，coder/tester/ops/eda/platform=acceptEdits，hack=bypassPermissions+Guardian 强制二审）。红队含义：测试前先判定目标场景「是否本应自主」，一个本该只读的系统被授予写权限时，其工具滥用 finding 的根因是设计而非实现缺陷。
+
+### 官方最小动作策略门（审计用基准，非本机代码）
+
+转载源给出 Python 示例（`authorize(ActionRequest, expected_intent_id)`，校验 token 过期、intent 匹配、动作白名单、destination 白名单、high/critical 需人工审批）。**这不是本机代码，不作为对位载体引用**；其价值是本卡 action-gate 审计的对照基准（见报告 §3：本机 `_shared/action-contracts.yaml` + `action_gate.py` 覆盖其中 intent/动作/风险审批三维，缺 destination 与 token 过期两维）。
+
+### 三个官方框架的边界（防混用）
+
+| 框架 | 回答的问题 | 不负责 |
+|---|---|---|
+| OWASP ASI01-10（本节） | Agent 的**行动链**哪一环被攻破（跨多步运行的目标/权限/隔离/传播/审计） | 单次模型输入输出的内容合规 |
+| OWASP LLM01-10（本 skill 既有节） | 一次模型交互的输入输出是否被操纵 | 多步运行的权限与隔离 |
+| Ravi 377 条清单（v1.5 节） | 具体执行哪条测试、用什么 Detection_Mode 取证 | 风险分类轴（按 Framework_Mapping 列切片） |
+
+编号纪律：本节一律用 ASI01..ASI10；skillguard 用 SG-001..015；agentic-rt-checklist 用 AI-xxx/ARC；两者**不与 ASI 混写**，也不把三个框架的编号互相当作同义词（任务书强制项 4）。
+
+### ASI01 收敛判据：目标漂移三问（补本机缺失的机械比对）
+
+本机现有门只能判「是否越出 scope」，判不了「仍在 scope 内但目标已被改写」。OWASP 转述源给出的可观测信号（转述源 §ASI01）是判据来源，本机把它落成三个可在报告期机械核对的问题：
+
+1. 执行计划是否出现与原始请求无关的外发、删除或付款步骤？（比对 kanban 卡 body 的验收项 vs 实际工具调用序列）
+2. Agent 是否在没有新用户指令时改变目标？（比对卡 `created_by`/`body` 与 worker 实际动作序列）
+3. 检索内容是否开始主导系统规则？（检索结果进入 tool 参数或 action-contracts 判定的路径，即为可疑链）
+
+三问任一为「是」→ 判 ASI01 命中，severity 按 OWASP 原文中「高风险动作审批是否存在」调整；存在有效人工审批且审批界面显示了变更对比 → 降级为 ASI09 命中而非 ASI01。
+
+### ASI05/ASI08 实机判据：action-gate 的两条边界（2026-10-14 实测）
+
+本卡同日实测 action-gate 因依赖缺失全局锁死 ~2h（详见报告 §3）。两条判据供后续 ASI05/ASI08 审计复用：
+
+- **ASI05 命中判据（门禁自身成为 RCE 面）**：当「校验器可执行体」与「被校验对象」共享同一解释器依赖，且该依赖未在主依赖清单声明时，一次依赖缺失即从「校验器不可用」放大为「全工具不可用」。此时 RCE 面不是「模型输出变成代码」，而是「控制面与业务面同生共死」。
+- **ASI08 命中判据（fail-closed 的放大面）**：fail-closed 把单点错误放大为全量阻断是**设计正确**，但放大量级 = 被该门覆盖的动作总数。本节建议给门禁自身设独立故障域（门禁依赖独立于业务依赖），使「门坏了」退化为「门放行/门关闭」二选一而非「全工具拒绝」。
+
+## 经验进化红队与执行环境测试面（v1.7）
+
+> 一手源：Zhang et al.《RedEvoAgent: Automatic Red-Teaming Agent with Experience-Driven Skill Evolution》arXiv 2608.27439（2026-08 提交，v2 2026-09-06 修订），论文全文存档 `references/redevoagent-20261023/arxiv-paper-v2.txt`（sha256 见同目录 MANIFEST.json）。触发源：蜜罐先生转述文（同目录 `wechat-article.md`，高保真导读，关键数字已逐一对表核对）。配套仓库：yechao-zhang/red-team-agent-skills（同目录 gh-*.md 8 件）。裁决矩阵（20 行判定与显式不吸收清单）：`~/.hermes/shared/research/redevoagent-fusion-20261023/FUSION-VERDICT-20261023.md`。
+> RoE 不变：本节全部纪律仅在 `scope-gate` 授权门内使用。
+
+### 执行环境配对目标观
+
+论文把攻击目标定义为二元组 **(目标模型, 执行 harness)**，不是单个模型：同一目标模型换 harness，抗性谱不同——ASB/MiniMax 上无技能基线 Claude Code 77.5 vs Codex 80.8（论文 Table 2），逐工具排序也不同。红队作业含义：
+
+- 派卡与报告中的目标描述必须写全「模型 + harness/执行环境」两维，只写模型名 = 目标不完整；
+- 历史攻击经验（含本 skill 模板库命中记录）迁移到新目标前必须重测，不得按「同模型所以同抗性」沿用；
+- jailbreak 后果评估到状态变更层（命令执行/数据外传/持久化篡改），不停留在「输出了不安全文本」（与 LLM06 过度代理、Phase 4 验证衔接）。
+
+### 混合工具箱四类覆盖
+
+论文实证单一技术跨目标不稳定：ASB/MiniMax/Claude Code 上 GCG 63.6 反而低于不攻击的 72.5——白盒迁移来的对抗后缀在产品级 harness 里更异常、抬高拒绝率；同环境 FlipAttack 91.8。防御有效性的最低评估门槛是**工具箱覆盖四类技术**：
+
+| 类别 | 论文锚定工具 | 本 skill 对位 |
+|---|---|---|
+| 梯度/搜索优化 | GCG、AutoDAN、AmpleGCG（白盒代理 Qwen2.5-7B） | 无实现（显式不吸收：需白盒代理模型基础设施）；有此类目标时在报告覆盖声明中写明缺口 |
+| 模板包装 | Template | 攻击模板库 YAML（llm01 系列包装类） |
+| 语义伪装/改写 | FlipAttack；Prompt Substitution（论文自提出：辅助 LLM 意图保持改写，作第五类技术命名） | llm01 语义类模板 + 测试中人工/半自动意图保持改写 |
+| 角色扮演 | RolePlay | llm01-roleplay-api-disclosure.yaml 等 roleplay 系列 |
+
+只跑一两种固定攻击即下「防御有效」结论 = 评估无效；GCG 类低于不攻击基线的反例说明「迁移后缀异常性」必须进报告解读。
+
+### 工具效能画像 preflight
+
+campaign 开打前，先在**小样本训练集**上孤立测量每类攻击技术对该目标的命中效能，得出经验排序再正式作业。消融实证去掉此步影响最大：ASR 93.2 → 76.9（-16.3，论文 Table 4）——没有画像的技能进化等于盲选工具。与 §10 攻击者模型证据选型的分工：§10 选「用哪个攻击者模型」（一次性选型），本节测「每类攻击技术对该目标的孤立效能」（逐 campaign 按目标重测，不可照搬通用经验）。产物写入攻击技能文档的「工具优先级」段。
+
+### 攻击技能文档
+
+攻击经验蒸馏为**人类可读的 Markdown 技能文档**（工具效能排序 + 编排启发式），不堆原始轨迹。论文实证：技能文档优于轨迹检索（同场景 RedCodeAgent HarmScore 37.5 vs 技能文档 74.3），且每例攻击工具调用 3.0 → 1.8/2.2 次。落地纪律：
+
+- 载体：`attack-skill-<target>.md`（登记入 `_shared/hack-knowledge-index.md` §六），内容 = 工具优先级 + 编排启发式 + 失败方向记录；禁贴原始调用流水；
+- 交付纪律：红队报告必须附策略级技能摘要，供审计方判断攻击策略是否合理、是否已塌缩成单一套路；只交工具调用记录 = 交付不完整。
+
+### 决定工具归因
+
+成功归因只记**紧邻成功查询之前的那次技术调用**（论文 Deciding-Tool Attribution），禁共现频次归因：攻击者模型有自身工具偏好，某工具频繁出现在成功轨迹 ≠ 有贡献；错误归因经技能文档写回会自强化，最终策略塌缩（只会反复调用少数技术）。消融实证去掉后 ASR 93.2 → 87.5 且调用次数上升。接线：报告 `attack_chain` 字段的成功步骤归因、`failure-trace-index` 的留痕口径，均按「紧邻成功步骤」记。
+
+### 验证棘轮：更新准入与深度边界
+
+**更新准入纪律**（人工/半自动可执行）：对攻击技能文档的任何修订，先在**独立验证样本**（非本次作战样本）上严格超过在位版本才接受替换；被拒候选与失败方向记入拒绝上下文，指导下轮修订避开已失败方向。不建自动进化循环——论文的 Reflect/Rewrite/minibatch 管线需要攻击者 harness 与基准判定器，本集群无此基础设施（显式不吸收，防后续重复提议同一机制）。
+
+**棘轮深度边界**：更新轮数不是越多越好。论文反例（AgentHarm/MiniMax）：第 4 轮验证分 18.5→28.1，测试分反而 28.8→20.8——技能塌缩为反复采样 FlipAttack/RolePlay，验证集过拟合。纪律：验证样本必须多样化；连续接受多轮更新后抽测冷样本；技能文档出现「反复只推荐同一两种技术」即塌缩信号，回退上一版。
+
+### 迁移生命周期与收益区判断
+
+- **迁移作初筛**：技能文档零样本迁移保留大部分效果（论文 Table 4：跨攻击者模型 +5.6/+7.3pp，跨 harness +9.7pp），但一律低于针对性进化（迁移 90.5 vs 直进化 92.8）。换目标模型/harness 时可由既有技能文档起步，**终评必须在目标环境重测**；高风险目标不得以迁移结果替代终评。
+- **收益区判断**（campaign 前防空烧）：目标对各技术抗性不均且技术互补 → 技能文档收益大；单一技术已近饱和（如 ASB/DeepSeek 首轮即 99.3）→ 无进化空间，直接作业。
+
+### 配套仓库产物索引（按需取用）
+
+`references/redevoagent-20261023/`（原件存档，MANIFEST sha256 校验；使用说明 `how-to-use.txt`）：
+
+- `gh-payload_patterns.md` — agent 内部提取 payload 8 模式 + 按目标类型自适应选择表（LLM07 内部提取专项）
+- `gh-success_criteria.md` — 提取质量四级判据（FULL=系统提示词原文/PARTIAL=schema 或执行轨迹/FAILURE=无关）+ 机器可判指标；定位为「三态判定与变异触发」在提取类攻击的质量分级特化，不另立判分体系
+- `gh-nested-delegation-attack.md` — 嵌套委托（套娃）攻击：编排者→子代理委托链 + 文件系统环境泄露绕过响应过滤；与 `security-domain-delegation` §7 智能体链权限纪律攻防对偶
+- `gh-dual-approval-bypass.md` — 双审批绕过：plan 审批 + 代码执行审批两道人审闸的浏览器自动化点击；防御启示 = 审批一致性 + 频次异常检测（LLM06 审批关卡绕过执行面）
+- `gh-SKILL.md` §Step 2 — 多 agent 目标先探测子代理清单、再动态生成载荷，禁硬编码 agent 名（Phase 1 侦察在多 agent 目标的特化）
+
 ## Source
 
 Inspired by: https://github.com/perplext/LLMrecon
@@ -319,6 +444,23 @@ v1.5 增量蒸馏自（orchestrator t_e8f79ae4，2026-10-13）：
 - 交叉映射：OWASP Agentic Security Initiative（ASI01-10）与 OWASP MCP Top 10（MCP01-10）为本 skill 首次引入的映射维度
 - 显式不吸收：ARC PI 149 条注入枚举不逐条移植（按需切片）；CVE 硬编码（作者刻意省略，报告期现查 NVD）
 - 存档：references/agentic-rt-checklist-20261013/（xlsx 原件+全量 JSON+博客全文+MANIFEST sha256）
+
+v1.6 增量蒸馏自（hack 看板 t_526fcda7，2026-10-14）：
+- 一手源：OWASP GenAI Security Project《OWASP Top 10 for Agentic Applications 2026》（2025-12 发布，100+ 专家评审）https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/
+- 转载源（本节全部转述的出处）：《Agentic AI 专项安全：OWASP Top 10 for Agentic Applications 2026 完全指南》（2026-10-14 抓取），全文存档 wechat-research/20261014-hack-article/research/article-fulltext.md
+- 新增「OWASP ASI Top 10 官方框架审计清单」节：ASI01-10 十项官方定义 + 本机载体对位表（逐行三态标记：覆盖/部分覆盖/缺口，证据锚=文件路径+节名）+ Least Agency 最小自主性 + 官方最小动作策略门（作审计基准，非本机代码）+ 三框架边界防混用表
+- 本卡同批实测：action-gate 因未声明 pyyaml 依赖全局锁死 ~2h（fail-closed 放大面，ASI05/ASI08 实机样本）；落 ASI01 目标漂移三问、ASI05/ASI08 命中判据两节
+- 本机唯一对位缺口：ASI07（Agent 间消息无签名/nonce/时间戳/重放防护）；另 ASI01/04/05/08/10 判部分覆盖（缺机械强制：意图比对/全量 SBOM 签名/容器 root 与外网强制/熔断与传播上限/统一 Kill Switch）
+- 版本号修正：frontmatter 此前为 1.4.0 而正文已含 v1.5 节（版本漂移），本次一并对齐至 1.6.0
+- 显式不吸收：转载源的四组工程化分组与五层纵深防御全文（属架构评审读物，与本 skill 的执行清单职责不重叠）；官方 Python 示例代码（不作本机载体）
+
+v1.7 增量蒸馏自（orchestrator TUI 直执行，2026-10-23/24，裁决 `~/.hermes/shared/research/redevoagent-fusion-20261023/FUSION-VERDICT-20261023.md`）：
+- 一手源：Zhang et al.《RedEvoAgent: Automatic Red-Teaming Agent with Experience-Driven Skill Evolution》arXiv 2608.27439（v2），全文存档 references/redevoagent-20261023/arxiv-paper-v2.txt；配套仓库 yechao-zhang/red-team-agent-skills 8 件同目录存档
+- 触发源：蜜罐先生转述文 https://mp.weixin.qq.com/s/lm4J3hEqDFgAdMwFy026tQ （高保真导读：关键数字与论文 Table 1-4 逐一核对一致）
+- 新增「经验进化红队与执行环境测试面」节：执行环境配对目标观（模型×harness 二元组）/ 混合工具箱四类覆盖（GCG 63.6 < 不攻击 72.5 的反例锚定）/ 工具效能画像 preflight（消融 -16.3）/ 攻击技能文档（37.5 vs 74.3，调用 3.0→1.8）/ 决定工具归因（禁共现频次归因）/ 验证棘轮准入与深度边界（R4 过拟合反例 18.5→28.1 vs 28.8→20.8）/ 迁移生命周期与收益区判断（+5.6/+7.3/+9.7pp，迁移只作初筛）
+- 收缩吸收：验证棘轮只收更新准入纪律，不建自动进化循环（集群无攻击者 harness 与基准判定器）；Prompt Substitution 作第五类技术命名并入工具箱表
+- 显式不吸收：GCG/AutoDAN/AmpleGCG 白盒实现（需代理模型基础设施）、经典越狱 prompt 库（既有模板已覆盖）、transport 自动检测执行代码（集群已有等价工具链）、ASB/AgentHarm 评测管线（无此评测场景）
+- 存档：references/redevoagent-20261023/（论文全文+转述文+仓库产物 8 件+MANIFEST sha256+how-to-use.txt）
 
 ## Related Skills
 

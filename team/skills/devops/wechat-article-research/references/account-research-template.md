@@ -1,6 +1,6 @@
 # Account-level WeChat Research — Report Skeleton
 
-Use this skeleton when the user asks to "research all articles from account X and apply to domain Y" (e.g. readsemi → improve [已移除] team). Verified on a 43-result / 41-article account (readsemi, 2026-08-27).
+Use this skeleton when the user asks to "research all articles from account X and apply to domain Y" (e.g. readsemi → improve EDA team). Verified on a 43-result / 41-article account (readsemi, 2026-08-27).
 
 ## Front-matter (always state, never fake)
 

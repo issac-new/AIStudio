@@ -9,7 +9,7 @@ metadata:
 
 # domain-nightly-ops — 域夜间深度调研管线运维
 
-管辖区：`life-workbench/scripts/domain_nightly.sh <domain>`×N 域（hack/[已移除]/pay/[已移除]/aiteam/data/ops/platform/product），各自 cron no_agent 独立调度，无 supervisor。产物落 `reports/domain_<domain>_<date>.{pdf,md}`，日志 `cache/radar/domain_<domain>.log`。
+管辖区：`life-workbench/scripts/domain_nightly.sh <domain>`×N 域（hack/eda/pay/[已移除]/aiteam/data/ops/platform/product），各自 cron no_agent 独立调度，无 supervisor。产物落 `reports/domain_<domain>_<date>.{pdf,md}`，日志 `cache/radar/domain_<domain>.log`。
 
 ## 产物三态判定（动手前必做）
 
@@ -37,7 +37,7 @@ metadata:
 - **cron `--script` 传参坑**：`--script "x.py tick --max 3"` 整串被当文件路径找不到（"Script not found"）。带参数的调用必须包一层 .sh wrapper（`weixin_backlog_tick.sh`），cron script 只写文件名。edit 后若连续失败 2 次会自动 paused，修完要 `cron resume`。
 - 全部投递点已改入队（2026-09-07）：domain_nightly.sh / [已移除].sh / nightly_radar.sh / nightly_radar_supervisor.sh / nightly_radar.py（PDF enqueue；文字摘要仍直投）。新加投递点一律 enqueue，禁止直投 `hermes send -t weixin`。
 - `hermes send` 只收单个消息位置参数；附件用 `MEDIA:<绝对路径>` 内联在消息文本里，不要拆成第二个参数。
-- 邮件通道（<dad-wechat-id>@im.wechat）不受限流影响，微信限流期用户仍能收到全部报告——补投不紧急，等 tick 自然消化。
+- 邮件通道（__ROTATED-20261014__）不受限流影响，微信限流期用户仍能收到全部报告——补投不紧急，等 tick 自然消化。
 
 ## 与主库 runbook 的关系
 

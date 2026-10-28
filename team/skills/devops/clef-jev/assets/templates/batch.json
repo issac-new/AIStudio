@@ -1,0 +1,115 @@
+{
+  "model": "clef-flash-4bit",
+  "state": {
+    "goal": "Classify each support record and prioritize a review queue; do not send replies or change accounts.",
+    "policy": {
+      "categories": {
+        "billing": "Charges, invoices and refunds, including resolved payment questions.",
+        "bug": "Product failures, including sign-in errors when identity is already verified.",
+        "how_to": "Requests for instructions when no product failure is reported.",
+        "unknown": "No category fits or the supplied record is insufficient."
+      },
+      "urgency_levels": [
+        "Routine or resolved; no current blocked work is reported.",
+        "An active issue remains, but a usable workaround lets work continue.",
+        "Current work is blocked with no known workaround, requiring immediate investigation."
+      ],
+      "account_review": "Account-specific checks are needed to resolve an open issue; a closed issue with an observed resolution does not need another check."
+    },
+    "records": {
+      "ticket_104": {
+        "thread": [
+          {
+            "role": "customer",
+            "text": "My invoice seems to show two charges. Please investigate."
+          },
+          {
+            "role": "support",
+            "text": "We checked the payment receipt: one captured charge and one temporary authorization. The authorization was released."
+          },
+          {
+            "role": "customer",
+            "text": "Confirmed, the duplicate has disappeared. Thank you."
+          }
+        ],
+        "observations": {
+          "status": "resolved",
+          "source": "synthetic payment receipt and customer confirmation"
+        },
+        "missing_evidence": []
+      },
+      "ticket_105": {
+        "thread": [
+          {
+            "role": "customer",
+            "text": "Our whole team gets a server error signing in, so we cannot open the project needed for today's workshop."
+          },
+          {
+            "role": "support",
+            "text": "Identity is verified. Try the alternative sign-in page while we investigate."
+          },
+          {
+            "role": "customer",
+            "text": "Still not working. The alternative page has the same error for everyone."
+          }
+        ],
+        "observations": {
+          "status": "open",
+          "error": "HTTP 500 from both sign-in pages",
+          "workaround": "The suggested alternative failed."
+        },
+        "missing_evidence": [
+          "Server-side cause has not been investigated."
+        ]
+      }
+    }
+  },
+  "questions": {
+    "ticket_104_category": {
+      "type": "choice",
+      "instructions": "Evaluate only state.records.ticket_104, including its full thread and observations; use state.policy, not facts from another record. Which category describes this record?",
+      "criteria": {
+        "billing": "Charges, invoices and refunds, including resolved payment questions.",
+        "bug": "Product failures, including sign-in errors when identity is already verified.",
+        "how_to": "Requests for instructions when no product failure is reported.",
+        "unknown": "No category fits or the supplied record is insufficient."
+      }
+    },
+    "ticket_104_account_review": {
+      "type": "noul",
+      "instructions": "Evaluate only state.records.ticket_104, including its full thread and observations; use state.policy, not facts from another record. Does resolving the current issue still require account-specific evidence checks under state.policy.account_review?"
+    },
+    "ticket_104_urgency": {
+      "type": "score",
+      "instructions": "Evaluate only state.records.ticket_104, including its full thread and observations; use state.policy, not facts from another record. Rate current urgency, accounting for resolution and failed workarounds. Do not infer unobserved impact.",
+      "criteria": [
+        "Routine or resolved; no current blocked work is reported.",
+        "An active issue remains, but a usable workaround lets work continue.",
+        "Current work is blocked with no known workaround, requiring immediate investigation."
+      ]
+    },
+    "ticket_105_category": {
+      "type": "choice",
+      "instructions": "Evaluate only state.records.ticket_105, including its full thread and observations; use state.policy, not facts from another record. Which category describes this record?",
+      "criteria": {
+        "billing": "Charges, invoices and refunds, including resolved payment questions.",
+        "bug": "Product failures, including sign-in errors when identity is already verified.",
+        "how_to": "Requests for instructions when no product failure is reported.",
+        "unknown": "No category fits or the supplied record is insufficient."
+      }
+    },
+    "ticket_105_account_review": {
+      "type": "noul",
+      "instructions": "Evaluate only state.records.ticket_105, including its full thread and observations; use state.policy, not facts from another record. Does resolving the current issue still require account-specific evidence checks under state.policy.account_review?"
+    },
+    "ticket_105_urgency": {
+      "type": "score",
+      "instructions": "Evaluate only state.records.ticket_105, including its full thread and observations; use state.policy, not facts from another record. Rate current urgency, accounting for resolution and failed workarounds. Do not infer unobserved impact.",
+      "criteria": [
+        "Routine or resolved; no current blocked work is reported.",
+        "An active issue remains, but a usable workaround lets work continue.",
+        "Current work is blocked with no known workaround, requiring immediate investigation."
+      ]
+    }
+  }
+}

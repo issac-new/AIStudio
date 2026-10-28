@@ -37,7 +37,7 @@ metadata:
 | **swarm** (架构) | design/architecture/decide/架构/方案 | 🔶 Amazon：Working Backwards | 从用户倒推 + 6-Pager + Bar Raiser |
 | **product** | 产品/市场/用户研究/需求 | 🟧 小米：参与感三三法则 | 和用户交朋友 + 专注极致口碑快 |
 | **ops** | deploy/config/ci/部署/上线/运维 | 🟠 阿里：闭环方法论 | 定目标→追过程→拿结果 + 复盘四步法 |
-| **[已移除]** | [已移除]/物理场/仿真/芯片设计 | 🔶 Amazon：Working Backwards + 🟡 字节 A/B Test | 从设计目标倒推 + 数据驱动验证 |
+| **eda** | EDA/物理场/仿真/芯片设计 | 🔶 Amazon：Working Backwards + 🟡 字节 A/B Test | 从设计目标倒推 + 数据驱动验证 |
 | **通用/模糊** | 无明确类型 | 🟠 阿里：通用闭环（默认） | 最通用的闭环方法论 |
 
 ### 通用任务类型路由表
@@ -111,7 +111,7 @@ metadata:
 
 ## 与 Hermes 的集成
 
-orchestrator 在路由任务时，除了按 §0.5 判定看板（swarm/hack/product/ops/[已移除]），还应：
+orchestrator 在路由任务时，除了按 §0.5 判定看板（swarm/hack/product/ops/eda），还应：
 
 1. **在任务 body 中附带方法论建议**：`> [方法论路由 🧭] 推荐使用 🔴 华为（RCA 根因分析），因为任务是 Debug 类型`
 2. **worker 加载 skill**：worker profile 执行任务前 `skill_view('pua-methodology-router')` 加载方法论

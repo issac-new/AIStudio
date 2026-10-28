@@ -19,7 +19,7 @@ cd /workspace
 ### 2. 本机真实状态直查（禁推断）
 ```bash
 # 逐项 sqlite/文件/grep 实测
-for b in swarm hack product ops [已移除] platform [已移除]; do
+for b in swarm hack product ops eda platform [已移除]; do
   sqlite3 ~/.hermes/kanban/boards/$b/kanban.db "SELECT count(*) FROM tasks WHERE markings LIKE '%AMBER%'"
 done
 # markings 零实战：7 board 各 1 task 且全 TLP:GREEN，0 个 AMBER/RED/PII

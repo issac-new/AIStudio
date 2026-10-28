@@ -1,7 +1,7 @@
 ---
 name: security-domain-delegation
-description: "派工安全/情报/渗透类任务给hack团队时用：授权门判定+红线入卡+被动源playbook。"
-version: 1.3.0
+description: "派工安全/情报/渗透类任务给hack团队时用：授权门判定+红线入卡+被动源playbook+scope-as-code运行时校验+MCP handler防穿越红线。"
+version: 1.4.0
 metadata:
   hermes:
     tags: [security, delegation, kanban, hack-team, authorization-gate, passive-recon]
@@ -99,6 +99,54 @@ delegate→worker→subagent、跨板派卡、ACP 调用构成事实上的智能
 规则：①「复现链：不完整」必须写明缺件（如缺 Burp 报文/缺响应截图），禁静默略过——复现链断裂的 finding 按「待验证线索」降权呈现，不得与完整 finding 混排；②证据文件落 workspace 持久层（禁 /tmp），路径在报告内可直接打开；③命令/报文须脱敏（凭据保留前 8 字符，对齐 hack-knowledge-index 脱敏口径）；④ Checker 验收按本表逐条独立复跑可复现项，复现失败=finding 退回；⑤现场截图与工具生成摘录分开标注（DSH 报告纪律），同一得分点/finding 取代表证据不堆量。
 
 **并发密度**：同一靶标的主动面子卡同时不超过 3 张（对齐 DSH「同靶标最多 3 并发」）；被动源卡不计入。超并发须 kanban_comment 说明理由留痕。
+
+### 10. Scope Guard：scope-as-code 运行时逐目标校验（2026-10-28 Cybermes delta A1 融合，按模式重写非 vendor）
+
+> 来源：Cybermes v3.0.0 Scope Guard（a84b0b0；`pkg/scope/scope.go:16-22` ScopeConfig 四字段、`:145` out-of-scope 优先 Strict Exclusion），delta 报告 research/cybermes-delta-20261028/ 必吸收 A1（t_87adf8cb 吸收）。
+
+授权门（§1）是**派卡时判定**；本节把授权边界落成 scope.yaml 代码文件，worker **运行时逐目标校验**——不靠人记清单。适用：hack 域任何逐个触碰多目标（域名/IP/URL/路径）的执行环节（worker 脚本、批量探测循环、MCP handler）。
+
+scope.yaml 四字段结构：
+
+```yaml
+in_scope:              # 允许面：精确值 + wildcard（*.example.com）+ CIDR（203.0.113.0/24）
+  - "client.example.com"
+  - "*.corp.example.com"
+  - "203.0.113.0/24"
+out_of_scope:          # 禁止面：同语法；判定优先于 in_scope（严格排除）
+  - "mail.corp.example.com"
+allow_ips: []          # 出口约束（可选）：允许连接的对端 IP 集
+max_requests: 200      # 运行时预算：每目标请求上限，逐目标计数熔断
+```
+
+判定规则：
+1. **out_of_scope 优先**：目标同时命中 in 与 out → 判 out（严格排除，不做「更具体者胜」的模糊裁决）。
+2. **逐目标校验**：每个实际触碰的具体目标（wildcard/CIDR 展开后的每个 IP/域名/URL）在动作前单独过判定，禁「清单整体批过、成员免检」。
+3. **无 scope 文件回退授权文档**：缺 scope.yaml 时回退 Direct Operator Authorization（上游=AGENTS.md；本侧=§1 授权门判定留痕）；两者皆无 = 不执行，禁回退成全放行。
+4. **max_requests 逐目标熔断**：预算按单个目标计数，触顶即停该目标；禁换目标续跑绕过总量意图。
+
+落法：主动项解锁后，orchestrator 派卡时生成 scope.yaml 随卡传播（与 §2 红线契约同层），红线契约段加一行「运行时按 scope.yaml 逐目标校验」；worker 越界即停并 kanban_comment 留痕；执行日志记录每目标判定结果（in/out/预算触顶），报告边界声明节引用该日志。上游另有 MCP 工具 cybermes_validate_scope 可直接校验（若按 B2 判定接入，默认仅开被动/只读工具）。
+
+### 11. sanitizeSlug 防路径穿越红线（2026-10-28 Cybermes delta A2 融合）
+
+> 来源：Cybermes v3.5.0 sanitizeSlug（31583c2，+16/-1 覆盖 8 个 MCP handler：aggregate/list_findings/validate_scope/http_probe/recon_crawl/subdomain/fuzz/nuclei）。判例：**MCP server 即攻击面**——slug 参数是未认证调用者可控的路径注入点。
+
+**红线**：凡 handler/脚本/工具入口接受 `target_slug` 类参数（任何会被拼进文件系统路径/workspace 路径的标识：slug/name/id/path 段），必须先归一净化再拼路径：
+
+```python
+import re
+def sanitize_slug(s: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", s.strip().lower()).strip("-")
+    if not s:
+        raise ValueError("empty slug after sanitize")
+    return s
+```
+
+规则：①白名单归一是根——`[^a-z0-9]+` 连续段折叠为单个 `-`，`../`、URL 编码变体（%2e%2e%2f）、Unicode 同形穿越在归一中直接消灭，**不依赖黑名单枚举攻击串**；②净化后仍须 `os.path.realpath` 前缀校验落在预期目录内（双保险）；③净化得空串 = 拒绝调用，禁回退原值；④上游 8 个 handler 一次补齐 = 系统性遗漏而非个例——审计 MCP/工具面时把「参数→路径」全链当 checklist 过一遍。
+
+### 12. 可选接线登记：cybermes-mcp filter_stream（2026-10-28 Cybermes delta A3，仅登记不接线）
+
+Cybermes v3.3.0 已把 smart_pipe 能力 MCP 化为 `cybermes_filter_stream`（4119c37；v3.5.0 再补 slug 净化+大小写不敏感去重 55262f4）。原「vendor smart_pipe」若因维护成本搁置，替代路径 = 直接消费 cybermes-mcp 的 filter_stream 工具（与 §10/§11 同源同仓库，一次接线全得）。**本节仅登记为可选项，当前不接**。未来接线前置条件：过 §1 授权门 + B2 判定（默认只开被动/只读工具：search_knowledge/list_skills/scan_secrets/validate_scope/check_environment）。
 
 ## Pitfalls
 

@@ -1,6 +1,6 @@
 ---
 name: hermes-skill-installation
-version: 1.0.0
+version: 1.1.0
 description: Install skills from hub or taps. Use for tap-add issues.
 ---
 
@@ -73,6 +73,32 @@ Large taps can hold 100+ skills (e.g. `K-Dense-AI/scientific-agent-skills` has 1
 1. Ask the user for their goal (paper writing? genomics? data viz?).
 2. Pick the 5-10 most relevant skills from the search results.
 3. Install only those.
+
+## engines.hermes 兼容校验（安装前声明门）
+
+第三方 skill 的 frontmatter 可声明 `engines.hermes` 兼容区间（SemVer 子集：
+`>= <= > < = ^ ~ *`、空格 AND、`||` OR，如 `>=0.22.0 <0.23.0`）。语义沿用
+dsh engines.dsh 规则：
+
+- **已声明且满足**当前 `hermes --version` → 放行安装。
+- **已声明且不满足** → 拒绝安装，回复两侧版本号，不要强装。
+- **区间语法非法**（如 `workspace:*`）→ 拒绝安装。
+- **未声明 engines.hermes** → 警告不拒绝，沿用旧规则继续装（旧 skill
+  存量普遍未声明，硬拒会把整个生态挡在门外）。
+
+```bash
+# 声明位置：SKILL.md frontmatter
+# engines:
+#   hermes: "^0.22"        # 或平铺 engines.hermes: ^0.22
+
+# 机械校验（技能市集索引工具，index 由 build_skill_index.py 生成）：
+python3 ~/.hermes/skills/devops/skill-market-index/scripts/query_skill_index.py \
+  --index <index.json> --check-engines <skill-name>
+# 退出码 0=ok/未声明(打 warning)，1=不兼容或未收录
+```
+
+安装 hub/tap 来源的第三方 skill 前，先看 trust 档（official/community）
+再做此校验；community 级还需人工过一遍 SKILL.md 内容（见上文 Trust levels）。
 
 ## Related skills
 - `skill-library-maintenance` — audit/dedup/repair an already-installed multi-profile library.

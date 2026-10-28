@@ -50,13 +50,13 @@ for i, line in enumerate(lines):
 关键词检测会大量误报，只有一条铁律：
 **任务执行者缺 `kanban_complete`+`kanban_block` 才是真缺陷**。
 - [已移除] 教师缺 `cd_workspace` → 合理（不写代码）
-- [已移除]-orchestrator 缺 `kanban_show` → 合理（路由器）
+- [已移除] 缺 `kanban_show` → 合理（路由器）
 - hack-recon 缺 `kanban_block` → 合理（侦察总是产出）
 - [已移除] 用词不同 → 人工确认非缺陷
 
 ## 修复执行
 
-- **clearances 批量**：27 profile 按 team 差异化。`yaml.dump(sort_keys=False)` 保留字段顺序。hack=+TLP:AMBER，[已移除]=EYES-ONLY:[已移除]，platform=EYES-ONLY:platform（已有者跳过）
+- **clearances 批量**：27 profile 按 team 差异化。`yaml.dump(sort_keys=False)` 保留字段顺序。hack=+TLP:AMBER，eda=EYES-ONLY:eda，platform=EYES-ONLY:platform（已有者跳过）
 - **命令手册补缺**：并发 delegate_task 编辑同一文件会互相覆盖 → 保留质量更高的版本，用 Python str.find 精确插入，完成后统一 grep 去重（`## 具体操作命令手册` 出现次数=1）
 - **退出协议补丁**：[已移除] 追加 成功→complete / 缺信息→block needs_input / 故障→block dependency
 

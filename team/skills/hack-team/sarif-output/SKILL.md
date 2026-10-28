@@ -353,3 +353,10 @@ merged = {
 - GitHub SARIF support: <https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning>
 - skillguard sarif.py: `~/.hermes/skills/hack-team/skillguard/scripts/skillguard/sarif.py`
 - scope_gate: `~/.hermes/skills/hack-team/scope-gate/scripts/scope_gate.py`
+
+## Strix 等效印证（strix-fusion-20261023, M6）
+
+本 skill 与 usestrix/strix 的 SARIF 输出（strix/report/sarif.py, 1185 行, Apache-2.0）等效。可借鉴细节：
+- **五级严重度→SARIF 三级映射**（sarif.py:21）：critical/high→error, medium→warning, low/info→note。
+- **fix_before/fix_after→SARIF fixes 块**（sarif.py:32）：让 code-scanning 直接给修复建议。
+- **降级路径**（sarif.py:14）：SARIF 生成失败不阻塞 CSV+markdown+run-record 主产出。

@@ -87,9 +87,16 @@ was removed and split into two NEW tactics:
 - **"Defense Impairment"** — 主动破坏/禁用安全工具
 - **"Stealth"** — 规避检测、隐藏痕迹
 
-Tactic count 14 → 15; techniques ~624 → 697. Current version **v19.2**
-(released 2026-04-28). Version list + release dates at
-`attack.mitre.org/resources/versions/`.
+Tactic count 14 → 15; techniques ~624 → 697 (v19.2, released 2026-04-28).
+
+**Refreshed 2026-10-27 (ledger t_2bee444f)**: ATT&CK **v20.0** is current.
+v19.2→v20.0 STIX-diff verified: tactics hold at 15; techniques 697→706
+(+9 / −0), all nine AI-era: Direct Prompt Injection, Indirect Prompt
+Injection, AI Result Poisoning, AI-Enabled Exfiltration, Impair Autonomous
+Defenses, Anti-Automation Evasion, Avoid CAPTCHA, Automate CAPTCHA
+Completion, Steal Application Specific Passwords. Prompt injection now has
+official ATT&CK technique IDs — cite v20.0 in red-team reports (llm-redteam
+锚点). Version list + release dates at `attack.mitre.org/resources/versions/`.
 
 ### OWASP / PTES
 

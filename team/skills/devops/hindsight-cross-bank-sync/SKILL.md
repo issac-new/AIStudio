@@ -27,7 +27,7 @@ this skill implements the topic bridge on top of it).
 
 ## Verified case (production)
 
-Orchestrator (swarm bank, 4692 nodes) vs [已移除]-orchestrator ([已移除] bank,
+Orchestrator (swarm bank, 4692 nodes) vs [已移除] ([已移除] bank,
 20 nodes). Mom-side teachers could not recall any child-analysis memories
 written on the dad side. Fixed with bidirectional topic-filtered sync:
 570-item backfill (20→1557 nodes) + 9:00/21:00 cron + per-retain trigger.

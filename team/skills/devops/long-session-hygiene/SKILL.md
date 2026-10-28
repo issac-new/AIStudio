@@ -43,6 +43,30 @@ sqlite3 file:$HOME/.hermes/state.db?immutable=1 \
   "SELECT id, parent_session_id FROM sessions ORDER BY started_at DESC LIMIT 10"
 ```
 
+## Restartable Session Boundaries 两小节（agent-skills A3 融合 2026-10-19）
+
+> 来源：anthropics/agent-skills `context-engineering/SKILL.md:123-137`（v0.6.13）。上游主张：新会话安全的重启点是「完成任务边界」而非任意 token 数；离开前持久化 5 项，新鲜会话按固定顺序读。与上面「状态外置落盘」互补：落盘管**写什么**，本节管**恢复时怎么读、批准能不能沿用**。
+
+### ① 批准推断禁令
+
+**不从先前对话推断用户已批准，除非持久工件记录了它。** 持久工件 = kanban 卡 body（frozen 验收标准）、经确认的规则文件、用户显式消息留痕。会话记忆里的「用户上次好像同意了」不构成批准——压缩有损，且批准绑定的是当时的上下文，不是当前的卡。
+
+- 合法批准来源：卡 body 明文验收标准 / comment 中用户显式回复 / 规则文件明文授权。
+- 灰区（「上次说了随便你」）→ 当作未批准，走 `kanban_block(kind="needs_input")` 问一次。
+- 与 steps_fingerprint（dynamic-workflow-protocol.md §六-2）同族：暂停期改动不透明 = 偷换；批准不落盘 = 推断。两道都过才算恢复合法。
+
+### ② 新鲜会话读序（固定顺序，不跳步）
+
+新会话/压缩后恢复/跨 run 接卡，按此顺序读，读完再动手：
+
+1. **规则**：SOUL 注入的强制规则 + `_shared/` 相关节选
+2. **spec**：卡 body 全文（验收标准逐条）+ 上游 handoff
+3. **计划**：workspace 的 plan.md / task-state.md
+4. **任务状态**：kanban_show 的 comments/events（历史尝试、留痕假设）
+5. **git status**：工作区真实状态——以文件系统为准，不以摘要记忆为准
+
+任何一步缺失（如 task-state.md 不存在）→ 先补齐该层再继续；早期约束被遗忘是退化第一症状（见上「收卡加严」）。
+
 ## Related
 
 - `context-degradation-ops` — 运行时机制速查（压缩器源码事实、决策顺序）

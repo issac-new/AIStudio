@@ -86,3 +86,21 @@ sqlite3 ~/.hermes/kanban/boards/<board>/kanban.db \
 ```
 
 Expected after a clean run: trace card `done` (or `triage` + explanatory comment), children `todo`/`ready` with correct `parents`.
+
+## Dispatch-worthiness pre-check (optional clef-jev gate, 2026-10-16 C-4)
+
+Before `kanban_create` fans out a **heavy** card (goal_mode, multi-worker decomposition, or anything whose body took real design effort), you can ask the local clef service whether the body is dispatch-ready. The card still gets created by you — clef only returns a candidate label plus confidence.
+
+```bash
+JEVDIR=~/.hermes/skills/devops/clef-jev
+curl -s -m 5 http://127.0.0.1:8000/health                              # must be 200
+python3 "$JEVDIR/scripts/clef_jev.py" decide <request.json>             # choice: dispatch / defer / ask_user
+python3 "$JEVDIR/scripts/clef_jev.py" decide <request.json> --dry-run   # validate the body offline first
+```
+
+Boundaries:
+
+- **Selection is not permission.** A `dispatch` label does not release the card; a `defer` label does not block it. You own the decision and the card.
+- Put the body's acceptance criteria, prerequisites, and known blockers in `state`. Do not paste the decision you already made — that turns the check into an echo chamber.
+- If health is not 200 or the CLI returns rc=1, proceed on your original path. Never substitute main-LLM self-assessment and call it a clef result.
+- Receipts are appended automatically to `~/.hermes/logs/clef-decisions.jsonl`. Once enough accumulate, run `devops/eval-calibration` for an ECE/Brier/NLL check. The local clef has no calibration run of its own — do not cite upstream Jev's 85% accuracy as if it were clef's.

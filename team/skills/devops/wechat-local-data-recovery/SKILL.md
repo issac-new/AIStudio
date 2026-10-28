@@ -44,7 +44,7 @@ triggers:
 
 3. **验证内容真实性**：用 `read_file` 或 pymupdf 提取 PDF 文本，确认恢复的文件确实是丢失任务的产物（对比任务标题/日期/内容）。
 
-4. **存档到持久位置**：恢复到 workspace 后 `git commit`（如 [已移除]-archive 恢复案例 commit b05398c）。
+4. **存档到持久位置**：恢复到 workspace 后 `git commit`（如 [已移除] 恢复案例 commit b05398c）。
 
 ## 不可行路径（诚实声明）
 
@@ -57,7 +57,7 @@ triggers:
 [已移除] 两个 scratch 任务（亲子互动游戏、情绪社交）产物被清理后，从 `msg/file/2026-08/` 恢复 16 个文件：
 - `mom-game-lessons*.pdf`（9 版本）→ 亲子互动游戏教案集
 - `child-dialogue-analysis*.pdf` + `activity-analysis-0805*.pdf` → 情绪社交分析
-- `[已移除]-team-ppt*.pdf` → 团队 PPT
+- `[已移除]*.pdf` → 团队 PPT
 恢复后 git commit 存档，密文副本进 `enc-archive/`。
 
 ## 配合技能

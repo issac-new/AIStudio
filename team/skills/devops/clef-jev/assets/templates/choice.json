@@ -1,0 +1,20 @@
+{
+  "model": "clef-flash-4bit",
+  "state": {
+    "task": "Dispose of four kanban cards blocked by a gateway outage that has since recovered.",
+    "observations": "Gateway healthy since 14:40. Sibling done cards already delivered the underlying work. No card holds unpublished output.",
+    "constraints": "Disposition must not discard evidence, and must not re-dispatch work that is already done."
+  },
+  "questions": {
+    "disposition": {
+      "type": "choice",
+      "instructions": "Choose the disposition supported by the state evidence. Do not infer capability or work that was not observed.",
+      "criteria": {
+        "archive": "No further work needed; evidence and outcomes already recorded.",
+        "reverify": "Re-run the verification before deciding anything.",
+        "dispatch": "Send to a worker to perform the work again.",
+        "ask_user": "A material decision needs authority or information not present in the state."
+      }
+    }
+  }
+}

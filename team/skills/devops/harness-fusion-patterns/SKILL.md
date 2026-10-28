@@ -1,7 +1,7 @@
 ---
 name: harness-fusion-patterns
 description: "调研吸收外部Harness(BetterHarness等)优化Hermes时的机制速查与落地模式。"
-version: 1.3.0
+version: 1.4.0
 metadata:
   hermes:
     tags: [devops, research, agent-behavior, fusion, harness, governance]
@@ -16,6 +16,7 @@ metadata:
 > 增补（2026-09-11）：Harness Playbook（Can Bölük/omp 作者，经微信文章转引）五推论+五问评估地图，见 `references/harness-playbook-patterns.md`。
 > 增补（2026-09-11）：openJiuwen 双维度 RSI 框架（华为 2012 实验室，源码 clone 验证 + arXiv:2607.15524 交叉），见下「RSI 速查」与存档 `research/rsi-fusion-20260911/REPORT.md`。
 > 增补（2026-10-12）：SoL-Pi 四机制裁决矩阵 + 效率优化红线与三阶段（arXiv:2609.20519，调研存档 `/Users/YOURNAME/.hermes/profiles/worker-researcher/research/sol-pi/REPORT.md`），见下「SoL-Pi 四机制裁决矩阵」与「效率优化红线与三阶段」。裁决矩阵先行，实际写码接线另派子卡，本 skill 只记裁决不预建。
+> 增补（2026-10-23）：HarnessPro 裁决（吸收 4 / 等效 9，零代码全落 skill 文本）+ Harness 落地 11 坑对照，见下「HarnessPro 速查与裁决」；存档 `~/workspace/research/harnesspro-fusion-20261023/`。
 
 ## SoL-Pi 四机制裁决矩阵（2026-10-12，裁决先行，未写码）
 
@@ -100,9 +101,45 @@ scan 声称 evidence_strength 覆盖 11/27(40%)，实测严格字段名 grep 仅
 
 方案引用文件前先 `find` 验证存在——skill/文档自述「已落地」的文件可能被 update 事故洗掉（实例：task-contract-guard.md、shared-rules-reference.md 双双仅存于引用）。根治=重建真实载体（如 shared-rules-reference 索引从 `_shared/` 全目录回填）或改指现存等价载体（如 12 项契约原文在 longhorizon-harness-research 附录），不是删引用了事。
 
+### 8. file:line 引用写报告前必 grep 确认真实行号（2026-10-19）
+
+调研抓的源码 dump 是 `sed -n '500,780p'` 这类区间输出——行号在区间内连续但写入报告时容易把「相对印象」当成精确行号（实例：harness2 经验 retain 写入 708-710，grep 实际在 701，蓝军抓出）。纪律：报告中每处 file:line 写入前 `grep -n "<符号>" <file>` 确认真实位置；从 read_file（自带 1-indexed 行号）读到的可直引。蓝军核查要准备 `references_checked` 的 grep 证据，单看原报告对照不算机械验证。
+
+### 9. 能力契约以源码强制检查为准，不靠文档自述（2026-10-19）
+
+写"四字段缺一不入库"这种契约断言前必须打开强制检查（如 `all(...)` / `assert ... in tree`）数字段。实例：harness2 EXPERIENCE.md 契约被原报初稿写"四字段强制"（cue/lesson/evidence/confidence），蓝军实测 confidence 不在 `all()` 检查列表里——实为三强制一可选。任何"严格"字样的契约断言都要 grep 源码确认有强制门，否则降级表述（"三字段必有，confidence 推荐"），不要把"建议填"升格为"必须填"。
+
 ## Related Skills
 
 - **open-source-skill-fusion** — 融合主流程方法论（位于 default profile，orchestrator 侧只读）
 - **codex-harness-patterns** — Codex Guardian/execpolicy 模式知识库（default profile）
 - **wechat-article-research** — 微信文章抓取（curl+regex 零依赖）
 - **adversarial-review-lens** — 蓝军 5-lens 评审纪律
+
+## Harness² 速查（Google Cloud AI Research，2026-10-09 开源）
+
+> 调研存档：`~/workspace/research/rsi-harness-20261019/`
+> 论文：arXiv 2610.14224（v0.1.0，commit 1cfe254）。仓库 github.com/google-research/harness2。
+> 8 组件可编辑面：system prompt / guardrails / memory / skills / tool guidance / scripts / subagents / middleware plugin。
+> 核心循环：Propose → Probe（4k rollouts + 3k stages）→ Compose 三步递归。
+
+**正面数据（论文本体）**：GLM-5+OpenCode 基线 64.2 → Harness² 75.7（+11.5）；步数 13.5→13.7 基本持平；案例 43.1→77.8。**反方数据（arXiv 2610.04433 "What Does a Harness Buy? Tokens, Mostly."）**：同模型换 harness pass@rate 差异在噪声内（±13% 翻转率），成本差 3×。**调和**：分数增益伴随成本放大，harness 选型应从分数视角换成本视角（缓存命中率差 94-99% vs 49-77%）。
+
+**成熟度判定（自检六条）**：v0.1.0 / 零第三方复现 / 每任务 4× 推理成本 / demo 跑通 / pytest 5/5 / 预算账本恒等式成立 / 防作弊三道门真实存在。结论：「论文可信、工程能跑、生产没验证」。
+
+**调研价值**：Harness² 8 组件可编辑面对账自家 SOUL/skill 结构的 P1-7（结构对账）；三道防作弊门（`core/context.py:399-518`）可零依赖 port 落本集群 evals，已落盘 `~/.hermes/evals/eval_grader_guard.py`（12 项标记、零依赖、8/8 PASS），后续接 run_probes.py / skill_manage 写入门。
+
+## HarnessPro 速查与裁决（2026-10-23，吸收 4 / 等效 9）
+
+> 智谱/清华唐杰团队 label-free RSI（arXiv:2610.26770，github.com/pzs19/HarnessPro，MIT）。集群第四波 RSI 系输入，与同日 RRSI 二轮正交（那边管 evo 管线本体，这边管派工卡与验收门）。完整裁决矩阵 + 硬数字锚（防转述漂移）：`~/workspace/research/harnesspro-fusion-20261023/FUSION-REPORT.md`。
+> 配套输入：Harness 落地 11 坑（腾讯云开发者，茹炳晟原创=正典）——9/11 等效印证（记忆三要点/生成评估分离/可观测性/三失败模式/迭代论/人侧/企业约束/框架≠Harness/≠高级Prompt），2 项吸收进验收门。11 坑文中转引的第三方数字未回源，引用前须回源。
+
+**四机制速记（全部零代码落 delegation-brief-format v1.9.0）**：
+
+1. **三段工具预算**（吸收→§5）：economy/strict/finalize 三阈值 + worker 自律运行时契约（Hermes 无 PreToolUse hook 的零代码等效）；standard 档 14/26/44 锚 TB2-medium `policy.json`。
+2. **五档配对 rubric**（吸收→§5.1）：compact/lean/standard/deep/research 按可观察特征选档；铁律=未描述验收器是质量未知非弱、未知证据默认 standard、数可分辨假设数不数文件数。
+3. **帕累托三档输出**（吸收→§5.2）：方案类卡可选 Lite/Medium/Heavy 三档交付（Medium -53% 成本近持平性能，转述级数字引用前回源论文）。
+4. **过程判据 + Requirement Ledger**（吸收→§2.1）：三态台账 implemented/unchanged-with-reason/blocked-with-evidence + 逐字符名比对 + 顺序/禁项检查；无现成验收命令先合成可执行测试（LLM 裁判失败召回 41.7%→合成测试 83.3%）。
+
+等效不吸收：RTK 日志折叠（terminal 已有截断，折叠手法并入 §5）、消融协同论、11 坑中 9 项（对照关系见 FUSION-REPORT 矩阵 B 行）。
+**消融警示**（HarnessPro 论文）：单抄一个机制（如只给 RHO 塞动态路由）省钱但掉点，机制协同才推帕累托前沿——本集群四机制同期落地即按此设计。

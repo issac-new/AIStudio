@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clef-jev-skill"
+version = "1.0.0"
+description = "Typed decisions through the local clef-flash service; merged from jev-skill"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/wuyoscar/jev-skill"
+
+# Hermes skill loader discovers SKILL.md, not console scripts. The project-scripts
+# entry exists only so the package shape matches the upstream jev-skill pyproject.
+[project.scripts]
+clef-decide = "clef_jev:main"
+
+[tool.setuptools]
+py-modules = ["clef_jev", "prepare"]
+package-dir = {"" = "scripts"}

@@ -55,7 +55,7 @@ metadata:
 ```
 
 - `profile_scope`：本板成员名册。**未声明 = 不过滤**（向后兼容，旧板零影响）
-- `dispatcher_bypass`：跨板调度白名单。总调度入口（orchestrator）可跨板派单由各板显式授权；不在名册的域编排者（[已移除]-orchestrator/aiteam-orchestrator）越域同样被拒
+- `dispatcher_bypass`：跨板调度白名单。总调度入口（orchestrator）可跨板派单由各板显式授权；不在名册的域编排者（[已移除]/aiteam-orchestrator）越域同样被拒
 - 改前快照：`board.json.bak-pre-<change>`
 
 ### 门禁 1：调度层（kanban_db.py）

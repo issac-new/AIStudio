@@ -1,0 +1,15 @@
+RedEvoAgent 参考库使用说明（2026-10-23 融合）
+
+定位：agent 内部提取专项参考库——对 LLM 应用/多 agent 系统做系统提示词与内部结构提取测试（LLM07/LLM06/多 Agent 攻击面）时的 payload 模式与判据来源。
+
+何时用：
+- Phase 1 侦察多 agent 目标 → gh-SKILL.md §Step 2 probe 阶段（先探测子代理清单再动态生成载荷，禁硬编码 agent 名）
+- Phase 3 攻击内部提取 → gh-payload_patterns.md 8 模式按目标类型自适应选择（多 agent+file agent=Pattern 1/2/8；单 agent=Pattern 3/4/6；有代码执行=Pattern 7；强防护=Pattern 8 嵌套委托）
+- Phase 4 验证 → gh-success_criteria.md 四级判据（FULL=系统提示词原文/PARTIAL=pydantic schema 或执行轨迹/FAILURE=无关内容），机器可判指标见该文 §How to Judge
+- 多 agent 委托链绕过 → gh-nested-delegation-attack.md（套娃攻击：委托链+文件系统环境泄露）
+- 审批关卡绕过 → gh-dual-approval-bypass.md（plan+代码执行双闸自动化；防御启示：审批一致性+频次异常检测）
+
+RoE 不变：本库全部攻击知识仅限 scope-gate 授权目标使用（consent.txt 落盘+危险操作单独放行+dangerous.log 登记）。
+与 llm-redteam SKILL.md 的接口：判定走 §7 三态判定+§9 误报复核；报告按「报告与回归纪律」输出 attack_chain+复现链；经验归因按「决定工具归因」（紧邻成功步骤归因，禁共现频次归因）。
+
+一手源与裁决：FUSION-VERDICT 见 ~/.hermes/shared/research/redevoagent-fusion-20261023/FUSION-VERDICT-20261023.md

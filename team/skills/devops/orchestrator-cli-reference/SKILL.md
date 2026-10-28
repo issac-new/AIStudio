@@ -110,11 +110,27 @@ curl -sS http://127.0.0.1:8650/health 2>/dev/null | head -5
 ps aux | grep -E 'hermes.*gateway|hermes.*agent' | grep -v grep | head -10
 
 # 查看 9 板任务总数
-for b in swarm hack product ops [已移除] platform [已移除] aiteam pay data; do
+for b in swarm hack product ops eda platform [已移除] aiteam pay data; do
   cnt=$(sqlite3 ~/.hermes/kanban/boards/$b/kanban.db "SELECT count(*) FROM tasks;" 2>/dev/null)
   echo "$b: $cnt tasks"
 done
+
+# 9 板状态分组（看哪块板有 done 卡堆积/ready 排队）
+for b in swarm hack product ops eda platform [已移除] aiteam pay data; do
+  echo "== $b =="
+  sqlite3 ~/.hermes/kanban/boards/$b/kanban.db \
+    "SELECT status, count(*) FROM tasks GROUP BY status" 2>/dev/null
+done
+
+# 单板近 10 done（验收链路复核 / 时点取证）
+sqlite3 ~/.hermes/kanban/boards/<board>/kanban.db \
+  "SELECT id, status, worker_pid, datetime(completed_at,'unixepoch','localtime') AS done
+   FROM tasks WHERE status='done' ORDER BY completed_at DESC LIMIT 10"
 ```
+
+**Pitfall: `sqlite3 ... "kanban.db?immutable=1"` 会落盘空 lock 文件 + SELECT 静默返回 0 行**。这是 SQLite 自己的 `file:...?immutable=1` query parameter URI 形式——本应在 `sqlite3.connect(..., uri=True)` Python 形式下用，**CLI 直查把 `?immutable=1` 拼到路径后会被当成字面文件名**：sqlite3 看不到 DB 就**创建**一个空 `kanban.db?immutable=1` 文件，后续 SELECT 全返回空，**不报任何错**。三件反模式同时出现：① 污染目录；② 静默空返回；③ 让人误以为 DB 真的空。**修法三选一**：① 直查去掉 `?immutable=1`（绝大多数场景）；② 脚本用 `sqlite3.connect("file:...?immutable=1", uri=True)` 规范形式；③ 写脚本时检测行数 + 文件存在性，**空返回 ≠ DB 空，是路径错了**。**判据**：批量 sqlite3 验证后看到 0 行，先 `ls -la ~/.hermes/kanban/boards/<slug>/kanban.db*` 看有没有多出 `kanban.db?immutable=1` 空文件——有就清掉改直查。
+
+**Pitfall: kanban 板库正库 = `boards/<slug>/kanban.db`，同目录的 board.db / `<slug>.db` 多为历史空文件红鲱鱼**。WAL 文件（`kanban.db-wal` + `kanban.db-shm`）是 SQLite 写前日志——只读 `.db` 看不全最新数据，要么 `PRAGMA wal_checkpoint(TRUNCATE)` 强制 checkpoint，要么走 `kanban_show` / `kanban_list` 工具层（自管 WAL）。多个变体并存时**先 `ls -la` 看 inode 大小排序**——最大那个才是真库，其余多为空 placeholder 文件。
 
 ## 板级 watcher(daemon)在不在岗——ready 卡零拾取的诊断与根治
 
@@ -259,8 +275,46 @@ hermes kanban --board data archive t_xxx    # 归档（同族合一处置、终�
 sqlite3 ~/.hermes/kanban/boards/<slug>/kanban.db "SELECT id,status,claim_lock FROM task_runs WHERE task_id='t_xxx' ORDER BY id DESC LIMIT 1;"
 
 # 板库定位：正库 = boards/<slug>/kanban.db；同目录 board.db / <slug>.db 可能是空文件红鲱鱼；收完 sqlite 验终态 done
+
+# kanban_* 工具层（kanban_comment/kanban_show/kanban_complete）只收 task_id、无 board 参数——
+# 卡不在默认解析板时一律报 "unknown task/id"，这是板路由错位、不是卡不存在。先扫板定位再走 CLI：
+for b in swarm hack product ops eda platform [已移除] aiteam pay data; do
+  r=$(sqlite3 $HOME/.hermes/kanban/boards/$b/kanban.db "SELECT id,status FROM tasks WHERE id='<tid>'" 2>/dev/null)
+  [ -n "$r" ] && echo "$b: $r"
+done
+# 命中后：hermes kanban --board <slug> comment/complete ...（或子命令前 export HERMES_KANBAN_BOARD=<slug>）
+
+# 留痕卡竞态：板上有活跃 watcher 时，kanban_create 建的卡数秒内即被拾取（ready→running），
+# 随后 complete 工具/CLI 都拒（无 run 或 live claim 非本会话）。正确动作不是等 worker 重做任务，
+# 而是 comment「验收证据包」给在跑 worker：验收命令实跑结果 + 产物绝对路径锚点 + 「抽验 1-2 项即 complete」指令。
+# 留痕卡本就该秒收——证据包让 worker 不空跑一轮完整任务。
+
+# complete 生效判定看 task_events 不看即时状态读：CLI 报 Completed 后立刻 sqlite 查
+# 仍显示旧状态（blocked/running）是写路径缓存延迟；查 task_events 最新 kind 是否已出
+# completed 再下结论。对 blocked 卡的第二次 complete/unblock 报 "not blocked" 恰是
+# 第一次已生效的旁证，勿连环重试。
+sqlite3 file:$HOME/.hermes/kanban/boards/<slug>/kanban.db \
+  "SELECT kind, datetime(created_at,'unixepoch','localtime') FROM task_events WHERE task_id='<tid>' ORDER BY id DESC LIMIT 2;"
 ```
 
 ---
 
 > **注意**：此 skill 仅含命令速查。路由规则、认知自检、Hack 看板路由等业务逻辑见 orchestrator SOUL.md。
+
+---
+
+## clarify 工具调用纪律
+
+**Pitfall: clarify 的 `choices` 字段期望 `List[str]`，禁止 `List[Dict]`**。传 `[{"value": "x"}, ...]` 嵌套对象时工具层静默回 `questions[0].choices must be a list of strings`；4 次同错，schema 校验发生在元素层而非嵌套层。修法：
+
+```python
+# ✗ 失败（嵌套对象）
+{"choices": [{"value": "research-only"}, {"value": "research-design-pilot"}]}
+
+# ✓ 通过（扁平字符串数组）
+{"choices": ["research-only", "research-and-fusion-design", "research-design-pilot", "pilot-only"]}
+```
+
+**推荐首发不传 choices**——除非明确要给用户可点击行。open-ended 只填 `question`（不带 choices），response 保留 free-text，调用零失败。choices 仅在已经知道要给单选/多选按钮时再用，且**每个元素必须是字符串**，value/label/score 都不行。多问题并行用同一次 `clarify` 调用（一个 form 比 N 次 chain 强）；questions 之间有依赖关系时拆成两次串行。
+
+**判级**：澄清交互在 orchestrator 调度层属轻量（≤2 tool call）——按 SOUL §智能路由走直接回复即可，**不写 kanban 留痕**；只有澄清后接重型派工，才在派卡时把澄清结论写进卡 body。

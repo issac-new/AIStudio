@@ -241,7 +241,7 @@ grep -oE '# [0-9]+\.' SOUL.md | sort | uniq -c | awk '$1>1'
 
 夜间 loop 报告生成后到人看到之间有 8-24h 窗口，期间并发 enricher 可能已补齐部分缺口。直接按报告动手会：(a) 重复插入已补齐的块，(b) 漏掉报告未覆盖的新缺口。正确顺序：**找到报告生成器的判定函数 → 原样复跑拿实时缺口清单 → 按实时清单批量补**。
 
-实例：evo 晨报报 7 profile 缺三节+ontology；复跑 `evo_nightly.py::_soul_check()` 发现三节已 47/47 齐但 **20 个 profile** 缺 ontology 引用（含报告漏报的 [已移除] 6 个）——报告既过期又不完整，两个方向都会误导。
+实例：evo 晨报报 7 profile 缺三节+ontology；复跑 `evo_nightly.py::_soul_check()` 发现三节已 47/47 齐但 **20 个 profile** 缺 ontology 引用（含报告漏报的 eda 6 个）——报告既过期又不完整，两个方向都会误导。
 
 ### 扫描器的精确子串匹配对装饰前缀标题误报
 

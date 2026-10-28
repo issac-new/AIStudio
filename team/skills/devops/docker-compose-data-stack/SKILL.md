@@ -11,7 +11,7 @@ metadata:
 # 数据栈 Docker 部署运维（docker-compose-data-stack）
 
 > 来源：2026-09-04 全天三轮实战（团队组建→Dinky 补齐→存储层统一 S3→设计文档同步）。
-> 部署根：`/Volumes/YOURVOLUME/lab/data-stack/`（compose + .env + scripts/ + jars/ + flink-plugins/s3/ + volumes/）。
+> 部署根：`/Volumes/nvme2230/lab/data-stack/`（compose + .env + scripts/ + jars/ + flink-plugins/s3/ + volumes/）。
 
 ## 版本锁定（唯一事实源：`~/.hermes/profiles/data-infra/references/version-lock.md`）
 
@@ -63,12 +63,19 @@ curl -s http://localhost:8081/overview
 docker compose --env-file .env config --quiet
 ```
 
-## 镜像拉取通道（限流时的决策树）
+### RustFS（10-01 后主存储）
+- **rustfs 镜像不带 mc**（旧版 `docker exec minio mc` 已失效）：用宿主机 `mc`（/opt/homebrew/bin/mc）`mc alias set p http://127.0.0.1:9000 $RUSTFS_ACCESS_KEY $RUSTFS_SECRET_KEY` 直连验桶。
 
-1. 官方源 `docker pull --platform linux/arm64 <img>`（主通道，强制正确 manifest）
-2. aityp 华为云 SWR：`swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/<org>/<img>:<tag>`（查 https://docker.aityp.com/ ，仅 amd64）
-3. xuanyuan/daocloud 免费源对部分 org 限流/白名单外（"免费节点当前繁忙"），失败属常态勿重试
+### amd64 转译铁律（10-26 实测崩溃样本）
+- **aityp SWR 只有 amd64，而 `UseVirtualizationFrameworkRosetta=false` 时 amd64 落 qemu 模拟**：静态二进制（alpine uname）能跑，但 dinky 的 JVM/bash 混合启动链在 `config_parser_script` 阶段 SIGSEGV 崩溃循环（日志签名 `qemu: uncaught target signal 11`）。结论：dinky/flink 类 Java 栈禁用 amd64 镜像，必须等 arm64。
+
+### 镜像拉取通道（限流时的决策树）
+
+1. 官方源 `docker pull --platform linux/arm64 <img>`（主通道，强制正确 manifest；mirror 限流时 daemon 会自动回落官方——10-26 实测 flink/mysql/redis/zk/fluss 全部回落成功）
+2. aityp 华为云 SWR：`swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/<org>/<img>:<tag>`（查 https://docker.aityp.com/ ，仅 amd64——**Java 栈禁用**，见 amd64 转译铁律；拉完 `docker tag` 回原名）
+3. 轩辕限流是**间歇性 org 维度**：dinkydocker org 曾连续限流 ~40min 后自动恢复（重试即可），勿轻易换通道；daocloud 免费源有**白名单**（dinkydocker 不在）；1panel.live 不稳定（断流 EOF 后转 403）
 4. compose pull 前先 `docker images` 对账——已拉过的镜像重复 pull 是无效功（digest 未变时零效果）
+5. `registry-1.docker.io` 显式前缀会绕过 mirror 直连官方（本机被墙必超时），勿用
 
 ## 文档同步联动
 

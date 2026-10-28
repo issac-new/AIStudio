@@ -67,7 +67,7 @@ WAL 需写 shm）。正确：`sqlite3 "file:$db?immutable=1" "SELECT ..."`。
 ＝静默失效**（比路径错更隐蔽——命令跑通了，报告是空的）。正确：
 `created_at >= strftime('%s','now','-7 days')`。
 另有：`~/.hermes/kanban/current` 是**文件**（内容=board 名）非目录；全集群任务几乎都在
-swarm 库（37 条），ops/product/[已移除] 等 board 库常为 0——评估类 SQL 应 for 循环遍历
+swarm 库（37 条），ops/product/eda 等 board 库常为 0——评估类 SQL 应 for 循环遍历
 `boards/*/kanban.db`。
 
 ### 6. 扫描器自身的坑

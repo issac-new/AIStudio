@@ -1,7 +1,7 @@
 ---
 name: cc-switch-integration
 description: "Query cc-switch to show upstream provider and usage in TUI."
-version: 1.0.0
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [macos, linux]
@@ -38,7 +38,7 @@ Query the local cc-switch proxy (127.0.0.1:15721) to discover the **actual** ups
 
 ## Data Sources
 
-1. **`GET http://127.0.0.1:15721/status`** — proxy health, `current_provider`, `current_provider_id`, success rate, failover count.
+1. **`GET http://127.0.0.1:15721/status`** — proxy health, `current_provider`, `current_provider_id`, success rate, failover count. Note: `current_provider` is the global latest across ALL app_type groups, not your session's group.
 2. **`sqlite3 ~/.cc-switch/cc-switch.db`** — provider `settings_config` JSON (model, token, effort), `meta` JSON (usage_script with accessKeyId/secretAccessKey), `proxy_request_logs` (last request model/latency/status, today's usage).
 3. **Provider-specific APIs** — each provider has a different balance/usage endpoint. See `references/cc-switch-apis.md` for the full table.
 
@@ -71,6 +71,7 @@ See `references/cc-switch-apis.md#volcengine-v4-signing` for the complete Node.j
 - **Kimi field mapping**: `usage` object = 7-day window (NOT total). `limits[0].detail` = 5-hour window. cc-switch source confirms: `usage` → weekly, `limits` → five_hour.
 - **Volcengine signing fails with GET**: The API returns 401 SignatureDoesNotMatch if you use GET. Must use POST with empty body.
 - **cc-switch has no HTTP API for balance queries**: The Tauri app queries provider APIs directly via Rust. You must replicate the signing in your widget. The GitHub repo is `farion1231/cc-switch`.
+- **`current_provider` cannot attribute a session to a group**: the port serves multiple app_type groups (claude/codex/hermes/...), each with its own `proxy_config` row and `load_balance_mode` (`off`/`session`). A widget or answer that reports the group/strategy from `/status` alone misattributes whenever several clients are active. Map the client's `base_url` path segment to its `proxy_config` row — full procedure in the cc-switch-monitoring skill (Multi-group routing).
 
 ## Verification
 

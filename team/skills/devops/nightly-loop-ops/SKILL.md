@@ -100,6 +100,39 @@ pinning, no_agent conversion, weixin delivery triage) stay there too.
   from the CLI output — that value reflects live scheduler memory, unlike
   the file.
 
+## v3.9 fin-sentinel 金融舆情态势步（2026-10-19，全链 7 卡交付）
+
+- **新增步**：`run_step fin-sentinel "$REP/fin_sentinel_$D.pdf" bash ~/.hermes/scripts/fin_sentinel_cron.sh`（8 域后）；另有 `graph-shape` 步（看板 DAG 宽度巡检，kanban_graph_shape_check.py，根治「构图过度串行」——规则见 kanban-orchestrator skill「拆卡第一刀切在依赖边界」）。
+- **管道**：40 源 watchlist（research/fin-sentinel-recon-20261019/watchlist.yaml，T1×8/T2×32/零T3，五类机构×五事件轴中英），fin_sentinel.py（fetch 含 cninfo POST 型/hkexnews 双重 JSON 解码型/sec-edgar-fts/sina JSON 等特殊 fetcher）→ build_fs_report.py（五轴分布+重点关注+机构分桶，LLM 研判段走 radar_llm 链）→ pandoc+Chrome PDF → 微信 stdout 摘要。
+- **哑源判据**：fetch_one 的 SILENT_SOURCE——ok=True 且 items=0 必须显式告警，防「名义达标实际空采」（D2 蓝军 2026-10-19 实证：JSON API 被错映射到 RSS 解析器静默产 0 条）。
+- **LLM 限额坑**：zcode/direct 撞 1310 周月限时，管道降级规则研判版（非静默——报告头明示）；限额重置后自动恢复 LLM「今日态势」段。radar_llm 的 hermes 计费兜底有总量闸，不会无限烧。
+- **root cause 存档**：10-19 雷达链 rc=126/127 断裂＝10-17 13:10 用户批准的内置盘清理把 workspace 8.4G 整体归档至 nvme（含 .git 与 .venv），先存档再删协议生效、恢复无损——但恢复前 loop 断链两夜。教训：批准整目录清理前 grep 引用面（loop 硬编码 $R/scripts 路径的全量清单）。
+
+## v3.12 loop-graph render 连败三层修复（2026-10-23，commit b414d0ed3）
+
+- **模板 col 硬上限 5**：archify workflow schema `nodes[].col` maximum=5（generated-validators.mjs 实锤）。10-19 融合收尾给 IR 模板加 fin-sentinel 节点用了 col=6 → 10-20 起 deliver 每晚 schema 拒收，HTML 冻结在 10-19（用户观察=「每天内容重复」）。修法=加第三泳道 `fs-lane`（lanes 无数量上限）安置 fin-sentinel col=4。**改 IR 模板必须先数 col≤5**；溢出时加泳道，不加列。
+- **第二道坎 desktop-readability**：col 修好后 deliver 仍挂 composition/desktop-readability——三泳道拉宽 viewBox(1041)，scale 降到 0.893，最长 sublabel `step-fs fin_sentinel_cron` 投影 5.45px < 6px 下限。修法=缩短文案+width 118。**改版图几何后最长文案是 readability 检查第一嫌疑人**。
+- **judge_render 假绿盲区**：旧判据=「最新 loop_graph_status_*.json mtime≤30h」。render 失败路径异常上抛不落快照 → 三夜连败零痕迹；失败快照一旦写入又假绿（t_b989b4f3 自证悖论镜像）。根治=判据改盯 **OUT_HTML mtime**（deliver+visual-check 双过才刷新，唯一诚实信号）+ **deliver 失败也落快照**（visual=`fail:<类型>`）。
+- **xhs 浏览器预采挂死链**：10-23 02:49 Chrome goto 超时后 wedged，`page.screenshot()` 无限挂起 7h，loop 卡死 fin-sentinel 步（render/digest/heartbeat 全灭）。双层修复：脚本内两处 screenshot 加 `timeout=10000`；wrapper 层 600s perl alarm 墙钟帽（reclaim 同款 rc=142）。**playwright timeout 只保护显式带参调用，screenshot/content 默认无界**。
+- **杀在跑 wrapper 前查 inode**：bash 边读边执行，patch 若原地改写同 inode，在跑进程从字节偏移恢复会错位读。stat 确认 patch 产生新 inode 才安全 kill。
+- **陈尸 index.lock**：workspace 仓 0 字节 index.lock（lsof 无持有）挡 commit 3 天，确认后直接 rm。
+
+## v3.11 3600s 墙钟根治 + 心跳口径对齐（2026-10-20，卡 t_5ce6cf31）
+
+- **超时三落点已配 7200s，全部实证**：cron script timeout 解析链（`cron/scheduler_script.py _get_script_timeout`）= `_SCRIPT_TIMEOUT`（测试用）→ env `HERMES_CRON_SCRIPT_TIMEOUT` → config `cron.script_timeout_seconds`（**在 DEFAULT_CONFIG 里，默认 3600**）→ 3600。fire 路径走 external worker：`set_hermes_home_override(属主 home)` 后 env 读属主 `.env`、config 读属主 `config.yaml`（`scheduler.py:3905` 实锤）。落点：①orchestrator/.env `HERMES_CRON_SCRIPT_TIMEOUT=7200`（最高优先）；②orchestrator/config.yaml `cron.script_timeout_seconds: 7200`（config 兜底）；③default ~/.hermes/config.yaml 同键（独立 gateway 兜底）。三处均以 PM selected venv 实测 `_get_script_timeout()=7200` 收口。
+- **心跳「0/8 域」根因**：nightly_heartbeat.sh 的 `DOM_OK/DOM_ALL` 只数 8 域 PDF，但标签写「radar/[已移除]/8域」——10-19 夜（.venv 断链全灭）心跳显 0/8，读者以为 10 报告全缺。已改为 radar+[已移除]+8域=10 分母（10-20 实测 10/10，10-19 实测 1/10=dom-pay，双极性验证过）。
+- **快照目录 mkdir 补丁**：loop 状态快照写 `cache/radar/unified_loop_$D.json` 前 mkdir（10-19 err.log 实锤：目录缺失时 `|| true` 静默吞错，次日判色缺快照）。
+- **launchd 孤儿 02:15 裁决：保留作安全网**。7200s 后 cron 侧最迟 02:02 终止，孤儿 02:15 起跑无重叠；它近 5 夜救了 2 夜（10-19 cron 未触发、10-20 cron 被超时杀，全靠 02:15 收尾）。摘除收益仅省一次 33min 幂等 SKIP 空跑。未来摘除条件：cron 入口连续 ≥5 夜自然满跑且无超时/未触发记录，方可 bootout。
+- **10-15/10-19 digest 不补**（operator 裁决 2026-10-20）：10-15 在停役窗内无产物、10-19 断链夜仅 domain_pay/fin_sentinel 两个 PDF，拼不出 digest（跑了也是 `no report PDFs; abort`）。10-20 已补发（marker `.digest_sent_2026-10-20.json` sha1 92e0869e…，10 parts+evo，agent mail msg_5ocw6qeS 实锤）。
+- **agently OAuth 恢复**：`agently-cli auth login` 设备流（用户交互）后 +me/`message +list` ok:true。keychain 存 token，config.json 仅 app_id（`cli_002e8cd148c14ad8`）无敏感字段。CLI 1.0.11→1.0.18 更新提示不影响功能。
+
+## v3.10 双通道断信夜复盘（2026-10-20，用户问「为何没收到昨日 digest 邮件」）
+
+- **bash `$(date)` 重置 `$?` 陷阱**：`echo "[$(date)] step rc=$?"` 中命令替换先执行，rc 恒被记 0——10-20 夜 digest 双通道失败被记 `digest rc=0`，铁证=10-19 夜 `.venv/bin/python: No such file or directory`（必然非0）也记 rc=0。修法=先 `drc=$?` 再 echo，且 `STEP_RC+=("digest:rc$drc")` 进 full-done 行。全脚本 grep `rc=\$?` 防同类。已修（loop 脚本 210-213 行）。
+- **邮件双通道自 10-14 起无有效回退**：10-14 凭据轮换把 `~/.hermes/.env` 的 EMAIL_* 换成 `__ROTATED-20261014__` 占位符（连各 bak 备份同占位），SMTP 回退连得上 smtp.qq.com 但 AUTH 被拒；agent mail 成独通道。10-17 20:11 agently-cli 自更新后 refresh token `invalid_grant` → 独通道也死。digest/watchdog 告警/evo 晨报全走此通道，一损俱损且 rc 被吞 → 连告警都没有。恢复=`agently-cli auth login`（交互式，只能人做）→ 补发 `.venv/bin/python scripts/nightly_digest.py <date>`（marker 未写会重发）。10-20 已把假 EMAIL_* 键从 .env 撤销（从 10-04 bak 恢复后实测 AUTH 拒，备份同占位，回退不可用）。
+- **幽灵 02:15 第二跑 = launchd 孤儿 `ai.hermes.unified-nightly-loop.plist`**（birth 10-15 22:09，v3.8 恢复期残留，未登记任何文档）：每夜 02:15 直接 bash 拉起同一脚本，绕过调度器（cron output 无记录）。**近 5 夜它反而是救命的**——10-19 cron 未触发、10-20 cron 00:02 跑在 01:02 被 3600s 超时杀（dom-data 单步 10min 拖爆墙钟），全靠 02:15 重跑收尾（幂等 SKIP 掉已完成步）。裁决：暂留作安全网，已在此登记；根治 3600s 超时（拆卡或裁步）前不得摘除。
+- **cron 入口 3600s 墙钟已临界**：全链自然时长 55-75min（域步 2-10min/个 + radar 重试），超时杀会复发。两个入口并存时 02:15 跑因 SKIP 而快——单入口恢复后需重估时长。
+
 ## Topology contract (mutable — update on restructure)
 
 Entry `3e1690d29660`「统一夜间Loop Graph入口」@ `2 0 * * *`; loop script
@@ -252,3 +285,15 @@ HERMES_HOME-scoped).
   gap_register.yaml → `6329563f`); artifacts and `.bak` stay ignored for
   auto-backup. `.venv/` is already ignore-covered (check-ignore ✓) — no
   auto-backup swallow risk after the rebuild.
+
+## v3.8 update-venv 断裂链与 PATH 断供（2026-10-16 恢复排程实录）
+
+- **`hermes update` 半途中断留三种雷，全部要查**：① `hermes-agent/venv` 被清空重建后只剩 certifi（`venv/bin/python` 不存在）——loop 链条 21 个脚本硬编码该路径，整夜 rc=127/FileNotFoundError；② `.git/hermes-update.lock` 持有进程变僵尸（无 git 子进程、stdout 进死 pipe），之后每个 CLI 都报 "an update is still running"——杀僵尸+删锁才恢复；③ update 把 dirty 文件误报 "half-written"，先 `git diff` 看改动是否有意义再判损坏（本次 kanban_tools.py 的 G2 真伪校验是完整本地改动，非半写）。
+- **`hermes update` 不补建 venv 依赖**：git 树修好后 PM 仍报 venv current，但 `venv/bin/python` 依然不存在。官方路径只在 git 层收尾，Python 依赖层要另修。
+- **PM 正式运行环境不在 `hermes-agent/venv`**：在 `~/.hermes/installs/<store>/environments/<selected>/venv`（facts.json 的 `packages.venv.environment` 字段指认，editable finder 的 MAPPING 指向该 env 的 `workspace/` 副本）。验证入口=`$SELVENV/bin/python -c "import sys;sys.path.insert(0,'/Users/YOURNAME/.hermes/hermes-agent');import pm;print(pm.activate())"`——用系统 python 跑必然 ModuleNotFoundError（缺 ruamel），别误判 PM 坏了。
+- **loop 可用的全依赖解释器 = life-workbench/.venv**（yaml+feedparser+pymupdf+markdown 实测 OK）；`hermes-agent/venv.py311` 缺 feedparser 不全；PM selected venv 有 ruamel 但无 pyyaml/feedparser，不能替代。
+- **hermes CLI 引用改 `~/.hermes/hermes-agent/.hermes/bin/hermes`**：由 tools-python 直驱（`/Users/YOURNAME/.hermes/tools/python-3.14.7*/bin/python3`），不依赖任何 venv，cron/worker spawn 全走它。
+- **cron 环境 PATH 只有 /usr/bin:/bin**（`launchctl print gui/$(id -u)/<label>` 实测）：node(~/.local/bin)、pandoc(/opt/homebrew/bin) 均不可达 → radar 的 llm_brief（env: node 找不到）与 md_to_html（pandoc 找不到）整夜失败。修法=入口脚本统一 `export PATH="/Users/YOURNAME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"`，子脚本全继承。
+- **判色双落点口径**：session_friction_scan.py 的 RADAR_DIR 解析到 `~/.hermes/cache/radar/`，而 render_loop_graph.py 旧读 `life-workbench/cache/radar/` → friction 节点永远误报 RED。判色侧改双候选目录都查，比改写入点安全（写入侧有其他消费者）。
+- **恢复排程完整动作链**（顶部恢复程序已不够，以此为准）：杀 update 僵尸+删锁 → `hermes update` 收尾 → 修脚本 venv/PATH → friction/watchdog 实测 → 看门狗白名单加回两条 entry（**entry 名不能含空格**，"统一夜间Loop Graph入口" 会被 for 循环分词拆碎产出「状态未知」误报，改 `统一夜间Loop入口`）→ BANNED_EXTRA 清空 → resume → 双极性测试 → `gateway restart` 等 api_server connected 行（**restart 后 api_server 要 1-2 分钟才连上**，drain 阶段 "still draining" 是正常的，别反复重启）。
+- **render cron `aaad7e8586aa` 永久保持停役**：09-21 已折入 loop 的 render 步且在 BANNED，恢复=双跑+看门狗告警。loop 内 render 步失败时看 `nightly-loop-graph.visual-check.json` 的 Chrome Target.getTargets 超时（机器刚唤醒的瞬时故障，已自动回滚 .bak，无损坏）。

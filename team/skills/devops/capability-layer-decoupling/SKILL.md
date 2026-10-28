@@ -11,7 +11,7 @@ metadata:
 
 共享能力层文件（教学工具包/框架/知识索引/调度台工具卡/教师 rules）出现具体孩子锚定
 （名字、档案 file:line、作息、兴趣、单家庭事件）时的迁移程序。架构不变量与多租户
-边界见 default profile 的 `[已移除]-multitenant-family`（本 skill 只管迁移执行与验收）。
+边界见 default profile 的 `[已移除]`（本 skill 只管迁移执行与验收）。
 
 ## 迁移顺序（判例先行，禁先删后建）
 

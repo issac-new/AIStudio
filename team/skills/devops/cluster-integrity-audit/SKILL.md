@@ -33,7 +33,7 @@ metadata:
 | 6 | per-profile skill 不可加载（**master 在 ≠ 该 profile 能加载**） | 跑 `scripts/check-profile-skill-loadability.py` | 缺口补 symlink（单一事实源）；孤立 master 分类整链接到需要的 profile |
 | 7 | skill 库结构病灶（垃圾目录名/三级嵌套/容器-skill 同名冲突） | `find skills -maxdepth 1` 找字面异常名；`-mindepth 3 -name SKILL.md` 找嵌套 | 归档垃圾（可逆路径）；嵌套提升二级；同名冲突改名或提升 |
 | 8 | 审计工具自病（治理工具自身失效 = 治理空转） | 跑之前先冒烟：小样本+超时上限+`test -f` 验证落盘；查 cron `failure_streak` | 重写修复（见 Pitfalls 的两个实例） |
-| 9 | profiles/ 点前缀目录（幽灵 profile / 备份残留） | `ls -d ~/.hermes/profiles/.*`；所有 profiles/ 扫描器必须过滤点前缀，否则备份/幽灵目录被当 profile 计数 | AIStudio 幽灵键：备份后 pop ekko config 死键再归档目录（Pitfall 0）；纯备份目录：归档 profiles-archive/ |
+| 9 | profiles/ 点前缀目录（幽灵 profile / 备份残留） | `ls -d ~/.hermes/profiles/.*`；所有 profiles/ 扫描器必须过滤点前缀，否则备份/幽灵目录被当 profile 计数 | SwarmStudio 幽灵键：备份后 pop ekko config 死键再归档目录（Pitfall 0）；纯备份目录：归档 profiles-archive/ |
 
 ## 核心纪律
 
@@ -45,7 +45,7 @@ metadata:
 
 ## Pitfalls
 
-0. **AIStudio 幽灵 profile 键**：桌面端 ekko config（`~/.hermes-web-ui/.ekko/config/config.json`）的 `mcp.profiles` 可出现死键（如 `.deleted`），每次桌面启动都往 `profiles/<死键>/` 重写托管 MCP config——`profiles/` 下出现点开头目录且 config.yaml 是刚写入的 AIStudio MCP 段即此病。修法：备份后 pop 死键 + 归档目录（2026-09-09 实修）。
+0. **SwarmStudio 幽灵 profile 键**：桌面端 ekko config（`~/.hermes-web-ui/.ekko/config/config.json`）的 `mcp.profiles` 可出现死键（如 `.deleted`），每次桌面启动都往 `profiles/<死键>/` 重写托管 MCP config——`profiles/` 下出现点开头目录且 config.yaml 是刚写入的 SwarmStudio MCP 段即此病。修法：备份后 pop 死键 + 归档目录（2026-09-09 实修）。
 0a. **watchdog 提示的修复命令含危险后缀**：inventory_watchdog 输出的 Fix 命令自带 `--with-configs`，该后缀会重建漂移 profile 的 config（洗自定义字段前科）。执行 fence 时永远剥掉该后缀。
 
 1. **mv-into-symlink 数据丢失**：对 symlink 位置 `mv 实体 链接路径` 的 POSIX 语义是移入目标目录（等价移回原处），随后 rm 链接再 mv 报源不存在——实体悄然丢失。**移动前必查 `ls -la` 确认目标是真目录**。恢复源：`~/.cc-switch/skills/`（cognition-lattice 案例）、`~/.hermes/skills-archive/_backup_*/`（worldmonitor 案例）。

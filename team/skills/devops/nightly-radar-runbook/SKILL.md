@@ -14,7 +14,7 @@ metadata:
 
 ## LLM 调用层通道路由（v3：恒 zcode，不判窗）
 
-`radar_llm.py ask_llm_json`（全管线唯一 LLM 咽喉：主雷达研判段/8域报告/[已移除]报告）通道顺序：
+`radar_llm.py ask_llm_json`（全管线唯一 LLM 咽喉：主雷达研判段/8域报告/[已移除]）通道顺序：
 - 主通道**恒走** acp-client 插件 `provider="zcode"`（GLM-5.3-Flash）——**不再判免费窗**
   （用户裁决：免费/计费时段一律 zcode）。日志出现 `ok via=zcode` 即主通道生效。
 - zcode 一次失败 → 本进程禁用 zcode，剩余尝试回退 anthropic-direct（官方套餐凭据）。
@@ -159,6 +159,13 @@ note；supervisor 心跳两分支通道状态行；send_report_email argv[3] not
 - **邮件正文 ≠ PDF 复制品**：同源 llm_advice 原样拷进正文会被判「和 PDF 完全一样」。正文只放一句话版信号（标题+why 首 80 字）与建议本体+成本；完整论证/三问评估只在 PDF。分型实现已落 send_report_email.py build_body（域/主雷达/[已移除] 三型）。
 - **能力改进建议必须带三问评估**（build_domain_report prompt 已内置）：actions 为 dict{what,gap,gain,cost}——现状缺口（具体，勿臆测已有能力）/提升路径+**验证信号**（可验证真提升）/成本（人日/周/月级+值不值）；空泛到无法验证的建议直接丢弃宁缺毋滥。PDF 渲染 .eval 蓝框区分建议黄框；**LLM 字段嵌 HTML 前必须 _esc() 转义**（原代码直嵌有注入面）。渲染层兼容旧 str 格式。
 - gap 闭环占位符治理：proposed_fix 若仍是「待领域团队分析」占位即派工质量缺陷，能力评估应回填后才能进 done。
+
+## 报告数字回查（verify_numbers.py，2026-10-18 融合 t_d6129454）
+
+投递前可跑 `~/.hermes/scripts/verify_numbers.py <report.md> <summary.json> <llm_advice.json>`：
+抽报告数字样态在源 JSON 值集找等值（$1.2M≈1,234,567 缩写精度归一），未命中=警示
+不阻塞（fail-open，exit 1 不拦投递，exit 2=检查器自身故障放行）。规则红线与
+判读顺序见 radar-quality-control「数字回查红线」。脚本独立于管线，未接 cron。
 
 ## 信息源纳管准入清单（融合万事网联《生产监控机制和流程》V0.1 附录一，2026-09-11）
 

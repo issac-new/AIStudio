@@ -1,12 +1,12 @@
 ---
 name: redteam-ai-serving
-description: "AI 推理服务层红队测试 — SGLang/vLLM/Ollama/Langflow 等 model server 控制平面 + LiteLLM 等 AI 网关层：fail-open 鉴权矩阵、默认主密钥(sk-1234)、pickle/dill 反序列化端点狩猎、SafeUnpickler 式 denylist 绕过、配置泄露、云元数据窃取与分布式权重面。授权安全测试使用。"
-version: 1.2.0
-author: "Hermes Agent (gap-20260914-hack-7e8f3c; sources: VicOne / Apoorv Dayal / Antiproof / CERT-CC VU#281278 VU#777338 公开披露; v1.1 gap-20260916-hack-b1620b 增补部署面: FreeBuf 500602 / NSFOCUS CNVD-2025-04094 / CSA 2026-05; v1.2 gap-20260910-hack-c2377c 增补 AI 网关层: Wiz Research《Off Guard》2026-09-09 / The Hacker News 2026-09-10 / CISA KEV CVE-2026-59822)"
+description: "AI 推理服务层红队测试 — SGLang/vLLM/Ollama/Langflow 等 model server 控制平面 + LiteLLM 等 AI 网关层：fail-open 鉴权矩阵、默认主密钥(sk-1234)、pickle/dill 反序列化端点狩猎、Langflow validate 端点无认证 exec() RCE(CVE-2026-0768)、SafeUnpickler 式 denylist 绕过、配置泄露、云元数据窃取与分布式权重面。授权安全测试使用。"
+version: 1.3.0
+author: "Hermes Agent (gap-20260914-hack-7e8f3c; sources: VicOne / Apoorv Dayal / Antiproof / CERT-CC VU#281278 VU#777338 公开披露; v1.1 gap-20260916-hack-b1620b 增补部署面: FreeBuf 500602 / NSFOCUS CNVD-2025-04094 / CSA 2026-05; v1.2 gap-20260910-hack-c2377c 增补 AI 网关层: Wiz Research《Off Guard》2026-09-09 / The Hacker News 2026-09-10 / CISA KEV CVE-2026-59822; v1.3 gap-20261007-004 增补 Langflow validate 端点波次: ZDI-26-034 / VulnCheck 2026-08-30 在野利用 / FreeBuf 504894 / pruva REPRO-2026-00342)"
 license: MIT
 metadata:
   hermes:
-    tags: [ai-serving-security, ai-gateway, inference-server, pickle-deserialization, sglang, vllm, ollama, langflow, litellm, default-credential, fail-open-auth, CWE-502, CWE-798]
+    tags: [ai-serving-security, ai-gateway, inference-server, pickle-deserialization, sglang, vllm, ollama, langflow, litellm, default-credential, fail-open-auth, CWE-502, CWE-798, CWE-94]
 ---
 
 # AI 推理服务层红队测试（Inference Serving Layer）
@@ -49,6 +49,7 @@ if endpoint_is_admin_optional:
 | SGLang | generation 端点 `custom_logit_processor` 字段（hex 编码 dill） | `dill.loads(bytes.fromhex(...))` | 7304 |
 | SGLang | `/update_weights_from_disk` 模型加载 | `torch.load` 的 `weights_only=False` 回退（legacy tar/.bin） | 15976 |
 | Langflow | graph 构建 / lfx CodeParser | 返回类型注解源码直接 `eval()` | 81204 |
+| Langflow | 自定义组件编辑器 `POST /api/v1/validate/code`（`code` 字段） | `validate_code()` 对顶层 FunctionDef `compile+exec`；默认参数/decorator 在 def 时求值即触发 | 0768（详见攻击面五） |
 | Ollama 生态 | 管理 API（Host 头校验缺失 + DNS rebinding） | 间接控制 | 65105 |
 
 ### SafeUnpickler 式过滤器审计法（denylist 绕过）
@@ -184,6 +185,59 @@ RoE 约束：步骤 5-6 只证明「路由可达 + 响应结构确认」即止�
 - MCP 认证 fallback（合法 OAuth2 token 与垃圾 token 不区分、401 被吞、空 auth 对象放行）= fail-open 家族新形态，与攻击面一矩阵同源
 - 链式结论：默认凭据/无认证 → guardrails RCE（root）→ IMDS 云凭据 → 云环境接管，「AI 网关当 Tier-0 secrets store 防」（Microsoft 语，经 Wiz 引述）
 
+## 部署面攻击：Langflow validate 端点无认证 exec()（CVE-2026-0768 波次，v1.3 增补，gap-20261007-004）
+
+Langflow（拖拽式 AI 应用/Agent 工作流构建平台）是 AI 低代码层样本量最大的实例：2026 年内已有 12 个 CVE 被在野利用（此前历年合计仅 1 个），其中 4 个（3248/33017/5027/0768）分布在四个不同子系统但共享「无认证 + 代码注入 + 凭据窃取」同一模式——CSA 判读为系统性工程缺口而非孤立缺陷。
+
+### 事实基线（一手核实，引用时勿以转述覆盖）
+
+- **CVE-2026-0768**（CVSS 9.8，CWE-94，AV:N/AC:L/PR:N/UI:N）：`POST /api/v1/validate/code` 的 `code` 参数未经验证直接进入 Python 执行路径，root 上下文执行，无需认证无需交互。出处：ZDI-26-034 一手通告（2026-01-09 发布，2025-07-18 报告厂商，0Day 公开）。
+- **NVD 记录只列 1.4.2 一个受影响版本、无修复版本号、无厂商公告**；Langflow 自家 GitHub Security Advisories 库（10 条 GHSA）不含此 CVE（Severity Daily 核查）。引用时不得编造官方 fixed 版本。
+- **执行行为分版本**（pruva REPRO-2026-00342 实测 + 源码核对）：≤1.2.x 端点完全无认证（1.2.0 源码 `api/v1/validate.py` 路由无任何 auth 依赖）；1.3.0（commit faac4db）起路由加 `CurrentActiveUser`（1.5.0 源码已见），但 **`LANGFLOW_AUTO_LOGIN=true` 是默认值**，请求被自动认证——默认 1.3.0+ 部署等效无认证；显式 `AUTO_LOGIN=false` 才返回 403「An API key must be passed as query or header」。认证用户在 1.3.0+ 仍保 RCE。
+- **`exec()` 到 1.10.1 才移除**（insecure-by-design 转述分析团队结论「exec() was removed in the patch (1.10.1)」）；二手源普遍写「1.3.0 修复」或「仅 ≤1.4.2 受影响」，均与源码不符——1.4.1 tag 的 `utils/validate.py` 仍含 `exec(code_obj)`（本卡直读 GitHub tag 核实）。运维侧建议统一升 1.11.6+（覆盖全部已知）。
+- **在野利用**：VulnCheck 蜜罐 2026-08-30 首波（数小时 50+ 次），09-01 累计 360+ 次，流量主要来自俄罗斯，目标为英国蜜罐；无公开 PoC 时的攻击者已自带利用链——补丁发布到扫描窗口仅数小时。
+- **同端点二次沦陷判例**：CVE-2025-3248（同 `validate/code` 端点，2025 披露）修复后，0768 于约 4 个月后再次在同一功能区出现——修复只切断了原攻击向量（函数体调用路径），保留 def 时 `exec(code_obj)`，残缺修复被新向量重新击穿。
+
+### 根因链（源码级）
+
+1. 路由 `POST /api/v1/validate/code`（≤1.2.x 无认证依赖）接收 `{"code": "<python 源码>"}`。
+2. `langflow/utils/validate.py::validate_code()` 对 `ast.parse` 结果中每个顶层 `ast.FunctionDef`：`compile(ast.Module(body=[node]))` 后 **`exec(code_obj)`**——「验证」即执行。
+3. Python 语义陷阱：**默认参数表达式与 decorator 在 `def` 语句执行时求值**，函数体永不调用也触发。payload 嵌在默认参数：`def exploit(cd=exec('raise Exception(...)')) : pass`。
+4. 非盲回显通道：`validate_code` 捕获执行异常把 `str(e)` 写进 `errors["function"]["errors"]` 并随 200 响应返回（`detail.function.errors[0]`）——命令输出经异常文本外泄，单请求完成执行+取回。
+5. 1.3.0+ 路由认证被默认 `LANGFLOW_AUTO_LOGIN=true` 击穿（auto-login 家族与攻击面一 fail-open 矩阵同源）。
+
+### 攻击链（授权测试 SOP，curl-first）
+
+```
+1. 探活     GET  /health                          → {"status": true}（Langflow 指纹）
+2. 可达性   POST /api/v1/validate/code
+            {"code":"def probe(): pass"}          → 200=可达; 403=认证生效(1.3.0+ 且 AUTO_LOGIN=false)
+3. marker   POST /api/v1/validate/code
+            {"code":"def e(cd=exec('raise Exception(__import__(\"subprocess\").check_output(\"touch /tmp/<eng>_RCE_CONFIRMED\", shell=True))')): pass"}
+            → marker 文件生成 + detail.function.errors[0] 回显命令输出（非盲）
+4. 认证矩阵 同一 payload 三态：无头 / 默认部署(AUTO_LOGIN=true) / AUTO_LOGIN=false
+            → 记录各态 200/403，落地为部署面 finding
+```
+
+RoE 约束：只跑 marker 命令；VulnCheck 观测到的真实攻击者后续动作（读 `LANGFLOW_SUPERUSER`/`OPENAI_API*`/`AWS_ACCESS*`/`AWS_SECRET*` 环境变量、`/root/.cache/langflow/secret_key`、`.ssh`、`.bash_history`）仅作**检测特征**引用，授权测试不实际窃取。
+
+### 加固 checklist（报告修复段模板，按优先级）
+
+| 层 | 措施 | 验证方法 |
+|---|---|---|
+| P0 版本 | 升级 ≥1.10.1（exec 移除），建议 1.11.6+（覆盖全部已知 CVE） | 版本端点/镜像 tag 核对 |
+| P0 凭据 | **补丁不轮换已窃取的密钥**：曾暴露实例的 OpenAI/AWS/Langflow superuser 凭据全部视为已泄露并轮换 + 云侧访问日志核查 | 云商 IAM/usage 日志审查 |
+| P0 网络 | Langflow 永不裸露公网（VPN/反代认证后）；`LANGFLOW_AUTO_LOGIN=false` + API key 认证 | 外部无凭据 POST validate/code 必须 401/403 |
+| P1 边界 | 反代封禁或限流 `/api/v1/validate/code`（开发工具端点不应生产可达） | 反代规则 + 未带凭据探测 |
+| P2 检测 | SIEM：validate/code 请求体含 `exec(`/`eval(`/`__import__(`/`subprocess` 模式；EDR：langflow 进程派生 shell 子进程 | 规则演练 + 蜜罐请求样本回放 |
+
+### 判读要点（白盒视角）
+
+- **认证不是修复**：1.3.0 路由加 auth 后 `exec()` 存活至 1.10.1，且默认 AUTO_LOGIN 把 auth 效果归零——「已加认证」≠「已修复」，审计必须落到 sink 移除。
+- **错误回显即外泄通道**：异常文本随响应返回的设计，把盲 RCE 变成单请求非盲 RCE；同类「校验/预览」端点审计必查错误处理路径的回显面。
+- **AI 低代码平台 = 凭据聚合器**：平台为集成 LLM/云服务而持有其凭据，RCE 落点天然是 Tier-0 secrets（与 LiteLLM「网关当 secrets store 防」同判）；凭据轮换与补丁是两条独立止损线，缺一不可。
+- **残缺修复判例**：3248→0768 同端点二次沦陷，与 SGLang 15969→86793「denylist 修复=打地鼠」并列——修复是否关闭**行为类**（exec 用户代码）而非**单个向量**，是复审重点。
+
 ## 邻近模式速查（同窗口另三框架）
 
 | 模式 | 机制 | 实例 |
@@ -193,6 +247,7 @@ RoE 约束：步骤 5-6 只证明「路由可达 + 响应结构确认」即止�
 | eval() 伪沙箱 | `eval(expr, {"__builtins__": {}}, ns)` 仍可经字面量→`__class__`→`__subclasses__` 图恢复模块引用；`bool()` 包裹只使其变盲，不阻止副作用 | Langflow CodeParser / SGLang dumper（需 DUMPER_SERVER_PORT） |
 | 文档示例密钥当真凭据 | setup guide 印 `sk-1234`，运维复制粘贴进产线；master key 兼任鉴权开关，无 key 启动即全员 PROXY_ADMIN | LiteLLM（9.6% 暴露实例，Wiz 2026-09） |
 | 认证 fallback 吞 401 | MCP 端点双认证路径：LiteLLM key 校验失败回退 OAuth2 透传，垃圾 token 与合法 token 不区分，返回空 auth 对象 | LiteLLM CVE-2026-59822（CISA KEV，CVSS 8.8） |
+| 默认 auto-login 击穿路由认证 | 1.3.0+ 路由已加 `CurrentActiveUser`，但 `LANGFLOW_AUTO_LOGIN=true` 默认值使请求自动认证——认证检查存在但被部署默认值短路 | Langflow CVE-2026-0768（1.3.0~1.10.0 间默认部署） |
 
 ## 防护与检测清单（报告修复段模板）
 
@@ -215,6 +270,7 @@ RoE 约束：步骤 5-6 只证明「路由可达 + 响应结构确认」即止�
 | CVE-2026-59822 | 09-09 | MCP 认证 fallback 吞 401 返回空 auth 对象 → 任意 Bearer 串建会话；**已入 CISA KEV + 蜜罐观测在野利用** | Wiz Research（DEF CON 34） |
 | CVE-2026-42271 | 06 前 | 两个 MCP test 端点任意认证用户命令执行（CVSS 8.7）；与 CVE-2026-48710（Starlette host-header）链成无凭据 RCE，在野装挖矿 | Horizon3.ai / Microsoft 案例 |
 | CVE-2026-40217 | 05 | 沙箱字节码逃逸，代码运行于 proxy 进程（默认镜像 root）；影响 1.81.8~1.83.10 | LiteLLM 官方通告 |
+| CVE-2026-0768 | 01 披露 / 08-30 在野 | validate 端点无认证 exec() RCE（CVSS 9.8，CWE-94）：≤1.2.x 全裸，1.3.0+ 被 AUTO_LOGIN 默认值击穿，exec 存活至 1.10.1；VulnCheck 蜜罐 360+ 次利用，目标 OpenAI/AWS 凭据与 secret_key | Trend Research 三人组（ZDI-26-034）/ VulnCheck 观测 |
 
 教训锚点：同一 gadget 类六周内两次独立披露（15969 → 86793），实证「denylist 修复 = 打地鼠」。
 
@@ -227,3 +283,4 @@ RoE 约束：步骤 5-6 只证明「路由可达 + 响应结构确认」即止�
 - 部署面（v1.1）：NSFOCUS CNVD-2025-04094 公告（2025-03，确认默认绑 127.0.0.1）；Cisco《Detecting Exposed LLM Servers: A Shodan Case Study on Ollama》（1,139 实例实测）；CSA《Exposed AI Infrastructure》research note（2026-05，31% 未授权推理率）；ollama/ollama#16236（官方确认默认 bind + 545 实例 Shodan 实证）
 - AI 网关面（v1.2）：Wiz Research《Off Guard: Breaking LiteLLM from authentication bypass to cloud compromise》2026-09-09（DEF CON 34 报告；294/3,074=9.6% 默认密钥率、CVE-2026-59821/59822、PR #22095、IMDS x-pass- 穿透）；The Hacker News 2026-09-10《Nearly 1 in 10 Exposed LiteLLM Gateways Accepted the Example "sk-1234" Admin Key》（2026-08 复扫 8.5 万多为蜜罐的口径警告）；CISA KEV CVE-2026-59822（2026-09-02 入库，联邦修复截止 09-16，蜜罐观测自 07-07）；BerriAI/litellm PR #22095（commit e50b4486）；THN 全文镜像 news.lavx.hu（CVE-2026-42271+48710 挖矿链 / Microsoft Tier-0 案例 / 1.84.0 修复基线 / salt key 轮换告警 / 升级不清除持久化 guardrail）
 - 关联技能：`llm-redteam`（应用层）、`redteam-ssrf`（多模态 URL 抓取面）、`redteam-auth`（通用认证）、`fp-check`（finding 六门复核）、`target-scoped-workspace`（产物落盘规范）
+- Langflow validate 波次（v1.3）：ZDI-26-034 一手通告 https://www.zerodayinitiative.com/advisories/ZDI-26-034/（CVSS 9.8 描述、时间线、root 执行）；pruva REPRO-2026-00342 https://pruva.dev/reproductions/REPRO-2026-00342（容器实测复现：1.1.1 非盲 RCE、1.3.0 faac4db 路由认证、AUTO_LOGIN 默认值击穿、payload 与 detail.function.errors[0] 回显链）；源码直读 GitHub tag 1.2.0/1.4.1/1.5.0（路由认证与 exec 存活核对，本卡完成）；VulnCheck/BleepingComputer/CSA 2026-09（在野利用 360+ 次、12 CVE 年、攻击者凭据侦察特征：LANGFLOW_SUPERUSER/OPENAI_API*/AWS_ACCESS* 环境变量、/root/.cache/langflow/secret_key）；FreeBuf 504894（本卡证据源）

@@ -6,7 +6,7 @@ description: >
   /Users/YOURNAME/.hermes/semantica/kg.json, and upstream sync anchors. Use when
   a task needs to inspect, query, or extend the semantica KG, or check
   semantica MCP tool availability/health.
-version: 1.0.1
+version: 1.1.0
 ---
 
 # semantica-runtime
@@ -27,15 +27,29 @@ checks, MCP access, common graph operations, and upstream sync anchors.
 | Anchor | Value | Source |
 |---|---|---|
 | Pinned version | 0.7.0 | pip install semantica==0.7.0 |
-| Upstream main at research | b14a2b8d2f989c8c3deca107a21d1da93ee2a506 | git ls-remote 2026-09-23 |
-| Release tag | v0.7.0 (commit 2a9afec6) | semantica CHANGELOG.md:12 |
+| Upstream main at delta | 91858bebe1d1b9eda359c4a5eef9017803d5dbfc | gh api commits/main 2026-10-27（delta 报告 research/semantica-delta-20261028/，t_5bf395b3） |
+| Upstream unreleased dev | 0.8.0（pyproject + semantica/__init__.py:13，196 commits ahead of v0.7.0，未上 PyPI） | delta 报告 §0 |
+| Release tag | v0.7.0 (commit 2a9afec6) | semantica CHANGELOG.md:12（截至 2026-10-28 无 0.8.0 tag） |
+| Next breaking (0.8.0) | requires-python >=3.11 + pillow>=13.0.0（07f0f6ae2，#2103）——升级前必须先解决 hermes-agent 的 Pillow==12.3.0 / requests==2.33.0 锁定 | delta 报告 §1/§2.3 |
 | Tarball sha256 at research | 275af1c2c145624c5b433b834d024d9c5390730d23199f6dbcf2fc4fb95d5bcd | shasum -a 256 |
 | Research report | research/2026-09-23-semantica-source-analysis.md (t_af789076) | file:line refs 37 |
 | Requests constraint | venv pins requests==2.33.0 (hermes-agent requirement); semantica wants >=2.34.2 — network-ingest features NOT verified; graph/memory/MCP chain verified on 2.33.0 | t_8292467f landing report |
 
 0.x upstream evolves fast with breaking changes (v0.7.0 had 4). Before any
 upgrade, diff the CHANGELOG breaking section; bump the anchors above in the
-same change.
+same change. Caveat (delta 2026-10-28): upstream CHANGELOG Unreleased is
+aggregate-only (13 entries vs 196 commits) — track increments via the
+compare API, never via CHANGELOG alone.
+
+**0.8.0 upgrade gate (delta 报告 research/semantica-delta-20261028/ §2.3/§5,
+t_5bf395b3)**: when 0.8.0 ships, do NOT `pip install -U semantica` directly.
+Run `$VENV/bin/pip install --dry-run semantica==0.8.0` first; if the
+resolution would move pillow or requests — hermes-agent 0.21.4 installed
+metadata pins `Pillow==12.3.0` / `requests==2.33.0` unconditionally, and
+gradio 6.17.3 locks `pillow<13` — STOP and stay on 0.7.0; escalate to a
+dedicated upgrade-evaluation card (unblock = hermes-agent relaxes the pins,
+or semantica moves to its own venv). Baseline note: `pip check` is already
+red on requests under 0.7.0 — pre-existing landing debt, not from this delta.
 
 ## Runtime Layout
 
@@ -67,6 +81,8 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 python3 -c "import json; g=json.load(open('/Users/YOURNAME/.hermes/semantica/kg.json')); print('nodes:', len(g.get('nodes',[])))"
 
 # 4. Upgrade (after CHANGELOG breaking-section diff + anchor bump)
+#    0.8.0 gate: if dry-run would move pillow/requests -> STOP, stay on 0.7.0
+#    (hermes-agent pins Pillow==12.3.0/requests==2.33.0; gradio locks pillow<13)
 $VENV/bin/pip install --dry-run semantica  # check delta first
 $VENV/bin/pip install semantica==<new-version>
 ```
@@ -92,6 +108,19 @@ $VENV/bin/pip install semantica==<new-version>
 
 ## Known Frictions (from C1 report §6.d, verified at landing)
 
+- **0.7.0 mine — record_decision metadata reserved words** (delta 报告
+  research/semantica-delta-20261028/ §4.1, fixed upstream 8fec65d51/#1871):
+  on 0.7.0, if the `metadata` dict contains any reserved key — `id`,
+  `entities`, `valid_from`, `valid_until`, `content`, `recorded_at` —
+  add_node raises a TypeError that is silently swallowed: the caller gets
+  an id back, but the node never lands in the graph and `save_to_file`
+  writes an empty graph. Until the fix ships in a release,
+  record_decision metadata keys must be self-coined names only — never
+  the six reserved words above.
+- **0.7.0 mine — retrieve_context ignores max_results** (delta 报告 §4.1,
+  fixed upstream a06aef920/#1826): on 0.7.0, `max_results` is silently
+  ignored (tool always returns the default 5). Call retrieve_context with
+  `top_k` only — do not pass `max_results`.
 - Full-snapshot persistence: write amplification grows with graph size;
   before scaling past tens of thousands of nodes, evaluate Neo4j backend.
 - **Cross-batch entity id stability (dynamic-ontology fusion, 2026-10-02)**:

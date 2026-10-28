@@ -13,7 +13,7 @@ blocked 卡先分类再动手。三分依据 = 产物实证 + crash 根因是否
 
 ## 第一步：定性（读证据，不猜）
 
-0. **先盘全量再定性：blocked 清单必须同时查两个库**——中央根库 `~/.hermes/kanban.db`（`kanban_*` 工具与驾驶舱/AIStudio 的默认展示源）+ 旧布局 `boards/<slug>/kanban.db`。只扫一个库就宣布「全部处置完成」，用户面板上的 blocked 必然对不上，结论当场被证伪；两库视图差本身就是「kanban 上大量阻塞」误报的最常见来源。
+0. **先盘全量再定性：blocked 清单必须同时查两个库**——中央根库 `~/.hermes/kanban.db`（`kanban_*` 工具与驾驶舱/SwarmStudio 的默认展示源）+ 旧布局 `boards/<slug>/kanban.db`。只扫一个库就宣布「全部处置完成」，用户面板上的 blocked 必然对不上，结论当场被证伪；两库视图差本身就是「kanban 上大量阻塞」误报的最常见来源。
 1. `gave_up` 事件 payload 的 `"pid N not alive"` 只说明 worker 进程死了，**不代表任务本身有问题**。真实死因看 `task_runs.error` 原文——区分三类：供应商熔断窗（外部瞬态）/ 协议违规 rc=0 无 terminal call（工作可能已做完）/ 任务自身报错（真失败）。
 2. **独立核验产物，不信卡面状态**：
    - 文件存在 + 有效性实测（PDF 用 pymupdf 数页数、读首页文本；register 用 grep 查对应条目的 status/resolved_fix 是否已回填）。

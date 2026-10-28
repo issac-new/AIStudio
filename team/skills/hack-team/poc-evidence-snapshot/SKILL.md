@@ -83,3 +83,7 @@ python3 ~/.hermes/skills/hack-team/poc-evidence-snapshot/scripts/accept_poc_evid
 ## staged 状态
 
 ⚠️ **staged 提案态，未激活**：待晨报呈现 + mark-active 三关人审。请勿在未获批前作为既定流程引用。
+
+## Strix 等效印证（strix-fusion-20261023, M2）
+
+本 skill 与 usestrix/strix 的强制 PoC 报告契约等效（strix/tools/reporting/tool.py, 2602 行）：无 poc_script_code 直接拒收（:164「PoC script/code is REQUIRED」）、CVSS 合法值字典校验（:30,_CVSS_VALID）、路径安全防穿越（:53,_validate_file_path）。增量借鉴见 skill strix-agent-orchestration §三：duplicate_of 错误码显式教 LLM 不重试（reporting/tool.py:1051）。

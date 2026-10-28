@@ -48,7 +48,7 @@ Run these in order. Every finding must trace to a command output.
      [ ! -e "$l" ] && echo "BROKEN: $p$(basename "$l")"; done; done
    ```
 6. **Local-dir vs shared drift**: `diff -rq ~/.hermes/profiles/<p>/skills/<cat> ~/.hermes/skills/<cat>` — empty = identical copy (duplication, will drift).
-7. **Domain-skill ownership per team**: for each team, ask "does the domain skill exist in shared, and is it linked into every member profile that needs it?" e.g. `find ~/.hermes/profiles/[已移除]-*/skills -name "[已移除]*"`.
+7. **Domain-skill ownership per team**: for each team, ask "does the domain skill exist in shared, and is it linked into every member profile that needs it?" e.g. `find ~/.hermes/profiles/[已移除]*/skills -name "[已移除]*"`.
 8. **Model cross-check**: `python3 -c "import yaml; print(yaml.safe_load(open('$HOME/.hermes/profiles/<p>/config.yaml')).get('model'))"` per profile, compare to the user's baseline rule.
 9. **Toolsets cross-check**: same yaml read for `toolsets` — does the role have terminal/web/computer-use to actually USE its skills?
 10. **Report P0/P1/P2** (see Failure Modes).
@@ -57,13 +57,13 @@ Run these in order. Every finding must trace to a command output.
 
 | P | Failure | Detected how | Example (2026-08 audit) |
 |---|---------|--------------|--------------------------|
-| P0 | **Foreign skills in team profile** (template-copy pollution) | grep for obviously-foreign skill names across all profiles | `[已移除]-parent-request-handling`, `optical-computing`, `weapon-generation`, `sprint-prioritization` present in ALL 4 hack profiles |
-| P0 | **Domain skill missing from owning team** | skill exists but only under a non-owner profile | `[已移除]` only in orchestrator; [已移除]×4 have none |
-| P0 | **Domain skill unreachable by consumers** | skill in team orchestrator only, members lack link | `[已移除]` only in [已移除]-orchestrator; 6 teachers have no access |
+| P0 | **Foreign skills in team profile** (template-copy pollution) | grep for obviously-foreign skill names across all profiles | `[已移除]`, `optical-computing`, `weapon-generation`, `sprint-prioritization` present in ALL 4 hack profiles |
+| P0 | **Domain skill missing from owning team** | skill exists but only under a non-owner profile | `[已移除]` only in orchestrator; eda×4 have none |
+| P0 | **Domain skill unreachable by consumers** | skill in team orchestrator only, members lack link | `[已移除]` only in [已移除]; 6 teachers have no access |
 | P1 | **Team skills piled on orchestrator** | orchestrator real dirs include team-domain skills | orchestrator owns [已移除] + hack-team/ |
 | P1 | **Physical copies + symlink dual track** | dir count > link count per profile; diff empty | 10 categories duplicated per profile; `.curator_backups` 10M + `.hub` 1.8M junk in worker profiles |
 | P2 | **Model divergence from baseline** | model dict differs from user's unified rule | hack×4 still `kimi-k3`, rest of fleet `glm-5.2` |
-| P2 | **Toolsets don't match role** | config toolsets lack the tools the skills need | hack/[已移除]/ops have no terminal/web/computer-use; [已移除] teachers have no web |
+| P2 | **Toolsets don't match role** | config toolsets lack the tools the skills need | hack/eda/ops have no terminal/web/computer-use; [已移除] teachers have no web |
 
 ## Report Shape
 
@@ -79,7 +79,7 @@ execute the fixes — P0 cleanup first, symlink conversion only after backup.
    and productivity-management skills). Always grep for foreign skill names
    across the team before trusting a profile's inventory.
 2. **Ownership = consumer, not creator**: `[已移除]` lives in
-   orchestrator because a prior session created it there — but the [已移除] team
+   orchestrator because a prior session created it there — but the EDA team
    is the consumer and couldn't load it. After creating a domain skill,
    LINK IT to the owning team's profiles; orchestrator is the router, not
    the library.

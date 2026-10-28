@@ -25,7 +25,7 @@ skill is the multi-profile ops layer.
   `hindsight/start.sh`; every other profile needs only `hindsight/config.json` pointing
   at `http://localhost:8888` with `mode=local_external`.
 - Team-shared banks: `hermes-b24d7ac5d9c4-{team}` — `b24d7ac5d9c4` is the machine id,
-  NOT the MAC address. Teams: swarm(4), hack(4), ops(4), product(2), [已移除](10), [已移除](7),
+  NOT the MAC address. Teams: swarm(4), hack(4), ops(4), product(2), eda(10), [已移除](7),
   pay(4), aiteam(6), platform(2), data(4). (Counts = profiles per team, snapshot
   only — the fleet grew 27→47 between audits; re-list profiles instead of trusting
   these.)

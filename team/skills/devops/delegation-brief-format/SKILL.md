@@ -1,7 +1,7 @@
 ---
 name: delegation-brief-format
 description: "委派任务书格式规范：kanban_create body 模板（任务ID/验收标准/必读context清单/WHAT-not-HOW/交付格式）。用于 orchestrator 分解任务与 worker 派生子任务。"
-version: 1.7.0
+version: 1.9.0
 metadata:
   hermes:
     tags: [devops, delegation, kanban, brief-format, maestro-fusion]
@@ -15,7 +15,7 @@ metadata:
 > 增补（2026-09-17）：`## 交付格式` 段升级 Node Contract 双路径 schema 纪律（Graph Engineering with Claude 融合，存档 `research/wechat-fusion-20260917/`）。
 > 增补（2026-10-10）：`### 7` 新增任务协同图五问前置（麦肯锡 Orchestration Chart 融合，存档 `research/article-fusion-20261010/`）。
 > 定位：**执行前防线**——保证下游 worker 拿到自包含、可验收、不越界的任务卡。
-> 版本：1.7.0（1.3.0 Node Contract 双路径 schema；1.4.0 任务协同图五问前置；1.5.0 增补 Pitfalls §6/§7：上游方案混档范围圈定 + SOUL/config 改造卡三防线；1.6.0 增补 §8：审批门硬隔离——需人审项降档草稿 + 反向验收 grep + 并行卡范围互斥；1.7.0 增补 §2.2：调研类卡可数验收结构；**1.8.0 增补 §8.1：人机协同交接——用户裁决变更的落点**）
+> 版本：1.7.0（1.3.0 Node Contract 双路径 schema；1.4.0 任务协同图五问前置；1.5.0 增补 Pitfalls §6/§7：上游方案混档范围圈定 + SOUL/config 改造卡三防线；1.6.0 增补 §8：审批门硬隔离——需人审项降档草稿 + 反向验收 grep + 并行卡范围互斥；1.7.0 增补 §2.2：调研类卡可数验收结构；**1.8.0 增补 §8.1：人机协同交接——用户裁决变更的落点**；1.8.1 增补 §7.1：派工侧 Problem Framing 五判据——数据/频率/Action/确认人/异常探针；**1.9.0 增补 §5 工具预算三段化 + §5.1 五档配对 rubric + §5.2 三档输出 + §2.1 过程判据与合成测试（HarnessPro 融合，存档 `research/harnesspro-fusion-20261023/`）**）
 
 ## 触发条件 / When to Use
 
@@ -100,6 +100,8 @@ metadata:
 | ❌ 0 信息量 | `质量要高` / `完善 X 流程` / `符合最佳实践` / `尽可能快` | **禁入 frozen 区**——改写为可观察判据或删除 |
 | ⚠️ 探索型豁免 | 调研/spike 类允许终点模糊，但必须给**代理判据**（覆盖 N 个来源 / 产出对比矩阵 / 结论带置信度分级） | 代理判据本身须过二分检查 |
 
+**过程判据与合成测试（v1.9.0，a2 误区7 + HarnessPro contract-verification 融合）**：结果判据（测试绿/文件在位）之外，涉规约类任务验收加过程判据——①**顺序性检查**：如「先备份再修改」验备份文件 mtime 早于改动 commit；②**禁项 grep**：禁词用真实敏感值（同 §7 防线 3 原则）；③**Requirement Ledger 三态台账**：每条要求标 `implemented` / `intentionally-unchanged-with-reason` / `blocked-with-evidence`，接口/路径/字段名**逐字符比对原文**（测试常按精确标识符编译，禁凭记忆复写）。判据依据：仅看二元结果会漏过程违规（OctoCodingBench 实测最强模型 2/3 任务代码对但过程错，转述级数字引用前回源）。**合成测试**：无现成验收命令时，先按任务描述合成可执行测试（pytest/脚本）再开工——LLM 自评裁判对失败案例召回仅 41.7%，合成可执行测试提至 83.3%（HarnessPro 测试合成器）。
+
 **回测纪律**：对近 10 张卡的验收项抽 3 条做回测——若当年按此验收项打回，worker 能否明确知道自己哪里不合格？答否=该项不合格。
 
 **第一轮纪律**：契约初版的环境事实（文件存在性/服务状态）标"待验证"，审计确认后才可写"已验证"。
@@ -162,6 +164,20 @@ orchestrator **禁止**在任务卡中擅自指定：
 
 **触发判据**：同批 ≥3 张子卡、或跨 ≥2 个 profile、或含人审门的重型任务必须过五问；单卡轻任务跳过。
 
+### 7.1 派工侧 Problem Framing 五判据（2026-10-21 增补，三账号调研融合）
+
+> 来源：三账号调研融合 FUSION-REPORT.md B2（FDE07/08/10 Problem Framing 派工判据），存档 `research/wx-onto-ddd-20261021/`。与 §7 五问的分工：五问答「协同图完整吗」，五判据答「这个场景是真需求还是伪场景」——先过五判据再过五问，伪场景在派卡前拦停。
+
+**建卡前五判据**（派工侧 5 分钟自检，全过才派卡）：
+
+1. **数据/上下文存在吗**：worker 开工所需的输入（文件/上下文/凭据/上游产物）已存在且可访问？缺输入的卡 = 伪场景，先补输入或 block，不派。
+2. **频率 ≥1 且可验证吗**：这个场景真实发生过（≥1 次实例）且产出可验证？纯想象场景（「以后可能有用」）不派。
+3. **有可执行 Action（验收命令）吗**：能写出一条机械验收命令（测试/构建/grep）吗？写不出验收命令 = 目标不可检验，回 §2.1 验收项二分门改写，改不动不派。
+4. **谁最终确认**：验收由谁拍板（人审门/Checker 卡/上游 orchestrator）？无确认人的卡验收悬空，禁派。
+5. **异常探针——「什么时候你会不按预期做？」**：预演 worker 何时会偏离预期路径（缺输入时？验收模糊时？越界诱惑时？），每个偏离点配预置处置（§Harness 拆分要求的失败预期两字段）。答不出偏离点 = 场景理解不足，回炉。
+
+**落地形态**：五判据答案不新建文件——①写入卡 body「必读 context」与「依赖」节，②③并入验收项（§2.1 二分门），④写进验收项 Owner（§7 五问 Q1），⑤写进「失败预期」节。均在既有节承载，不重复开节。
+
 ## Pitfalls
 
 ### 1. delegate_task 目标文本禁止 `<placeholder>` 标记（2026-08-24 实证）
@@ -202,17 +218,38 @@ orchestrator **禁止**在任务卡中擅自指定：
 
 > 依据：The Harness Playbook「有界工作」——工具调用、子 Agent、后台任务都是可取消的流，有中心限额和可观测性。Hermes 零代码等效：把预算声明写进任务卡 body，让 worker 自带终止判据。
 
-重型任务卡的 `## 约束与非功能需求` 段补三个预算字段：
+重型任务卡的 `## 约束与非功能需求` 段补四个预算字段（v1.9.0 三段化，HarnessPro 融合）：
 
 ```markdown
 - 预算轮次：<预估 agent 轮次，如 ~40 轮（3 文件 patch + pytest 验证）>
-- 预算超限处置：<达上限时 block 并交回 / 拆子卡续做>
+- 工具预算三段：<economy=N1 合并检查、停复读机行为 / strict=N2 停止广泛探索、专注收尾验证 / finalize=N3 预算耗尽、保留当前文件、凭现有证据交卷>（N 按 §5.1 档位定，standard 默认 14/26/44）
+- 预算超限处置：<达 finalize 后 block 并交回 / 拆子卡续做>
 - 禁止无界操作：<禁 while 重试 / 禁超过 N 次的同参重试（3 次后换法）>
 ```
+
+**运行时行为契约（零代码等效）**：Hermes 无 PreToolUse 钩子，三段预算由 worker 自律执行——卡 body 写入后，worker 核对自身工具调用数（工具结果条数即计数），到 economy 阈值切换合并检查模式，到 strict 阈值收敛收尾，超 finalize 立即按现有证据收卷、不再发起新探索性调用。语义锚 HarnessPro TB2-medium `runtime/hook.py`（PreToolUse 计数→deny "预算耗尽，保留当前文件，基于现有证据交卷"）。长输出整理：连续重复行折叠为 `[previous line repeated N more times]`、超长只留头尾关键信息（terminal 工具已有 50KB 截断+落盘，折叠用于 worker 中间产物与引用整理）。
 
 判定口径：goal_mode 卡用 goal_max_turns（工具层硬限额）；单发卡 body 写预估轮次（软限额，供 judge 与打回时引用）。**预估轮次必须给推导依据**（改动文件数×验证步骤），拍脑袋数字比不写更糟——它会让「超额」判定失去公信力。
 
 规模估算依据：重型编码卡 body 须含 boundary 三要素（counting_scope / system_boundary / users），并可选跑 agent-task-size/v1 估算（`python3 /Users/YOURNAME/hermes-docker-sandbox/workspace/research/fpa-fusion-20260915/impl/agent_task_size.py <input.json>`）作为预算轮次推导依据；契约细节见 `~/.hermes/profiles/_shared/06-observability/agent-task-size-v1.md`（只引用，不抄公式）；收尾闭环见 budget_deviation.py（偏差回写，口径同上）。
+
+### 5.1 任务复杂度五档配对 rubric（2026-10-23 HarnessPro 融合）
+
+按**可观察任务特征**选档、优化期望成功/成本，禁用历史结果记忆选档（锚 HarnessPro `profile_rubric.md`，阈值锚 TB2-medium `policy.json`）：
+
+| 档 | 语义 | 收敛/停止工具数 | Hermes 预算映射 |
+|---|---|---|---|
+| compact | 低推理，最小判别探针即答 | ≈4 / 8 | ≤10 轮，单发卡 |
+| lean | 低推理，窄域直改 | ≈10 / 16 | ≤20 轮，单发卡 |
+| standard | 中推理，常规编码/调研 | ≈26 / 38 | goal_max_turns 默认档 |
+| deep | 高推理，多假设需分辨 | ≈30 / 48 | goal_mode + 提高预算 |
+| research | 高推理，源码/系统重构级考古 | ≈40 | goal_mode 专项卡 |
+
+选档证据规则：①未描述的验收器 = 质量未知，不是质量弱；②未知决定性证据默认 standard——**缺信息本身不能成为升档理由**；③数「可分辨假设数」，不数文件/命令/重试数——迭代有价值仅当描述过的探针能区分假设并改变计划；④把看门狗时限与单次探针成本计入迭代价值——只有几次全量评估能跑时，精确 oracle 也不值 deep。
+
+### 5.2 方案类卡三档交付（帕累托输出，可选）
+
+方案/架构/迁移类卡可要求一次产出 **Lite（省钱）/ Medium（均衡）/ Heavy（高性能）** 三档方案表——各档含成本估计与适用前提，派工方按部署预算就近选择，不再反复重跑调优。锚 HarnessPro 帕累托三档输出（Medium 档 -53% 成本近持平性能，Lite 全线超基线省钱 17.7-57.4%，转述级数字引用前回源论文）。
 
 ### 6. 上游方案混档：执行卡必须显式圈定范围
 

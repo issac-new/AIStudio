@@ -215,6 +215,88 @@ diagnosing-bugs）——盲 patch 会产生重复块（本会话注入 37 行后
 **验证口径**：`os.path.isfile(profiles/<p>/skills/<cat>/<name>/SKILL.md)` 逐 profile 穿透检查，
 别只看 symlink 存在与否。
 
+### 22. 派工前实时 cap + 路径冲突自检（2026-10-19 wechat-fusion-20261019-observability 实测）
+
+派 5+ 张卡前**必须**先查两件事——`max_in_progress_per_profile=5` 是天花板而非并行触发器，撞了 card 排队不报错；不同卡指向同一文件路径会相互 git conflict。
+
+```bash
+# 1. 实时 in-flight 计数（每 profile）
+for b in swarm hack ops; do
+  sqlite3 file:$HOME/.hermes/kanban/boards/$b/kanban.db \
+    "SELECT assignee, count(*) FROM tasks WHERE status IN ('running','ready','todo') GROUP BY assignee"
+done
+```
+
+派工原则：
+
+- 同 profile in-flight + 新派 ≤ 5：直接派
+- 6-7：分波（每波 ≤3），波间留 worker spawn 间隙
+- ≥8：先 unblock / 排空再派，**不要**连发 8 张同 profile 卡
+
+```bash
+# 2. 路径冲突自检：所有 workspace_path 互斥
+sqlite3 file:$HOME/.hermes/kanban/boards/swarm/kanban.db \
+  "SELECT DISTINCT workspace_path FROM tasks WHERE status IN ('running','ready','todo') AND workspace_path != ''"
+```
+
+多条卡**禁止**指向同一 `workspace_path`（dir/worktree 模式）。即便 tier 不同，落地 worker 在同目录并行 patch 会出 mtime 漂移。**冲突时改 `workspace_path` 为该路径下的子目录**（如 `<workspace>/<task-id>`），不要让 worker 自己协调。
+
+**派工前 30 秒纪律**（实测避免 3 次返工）：
+
+- ls 一次所有派工卡要改的目标文件，**确认文件存在**（不要"报告里写存在"就当存在）
+- grep 一次 `~/.hermes/profiles/_shared/06-observability/risk-register.md` 的 14 行表格末尾，**确认 R-XX 编号不重复**
+- 一次 `git -C <外部仓> status` 看是否有未 commit 改动（如 cc-switch 仓 user 可能正在改）
+
+### 23. 外部仓源码改动必走 T3 triage（2026-10-19 wechat-fusion-20261019-observability 实测）
+
+**红线**：调研报告落地路径若涉及**外部仓源码改动**（如 cc-switch 仓 `src-tauri/`、其它 GitHub 上游），**绝不**派 worker 直接实施——必须 T3 triage 走单卡人审通过后再实施。
+
+触发条件（任一命中即走 T3 triage）：
+
+- 目标文件在 `~/.hermes/` 树**外**（外部仓副本 = `lab/<x>/`、`/Users/<u>/projects/<x>/` 等）
+- 上游有 CLAUDE.md/AGENTS.md/CONTRIBUTING.md 显式红线条目（cargo fmt -D warnings / i18n 四语言 / Conventional Commits / 测试树闭集）
+- 上游为强健壮性项目（issue 数量 > 100 / 维护活跃 / 不接受直接 fork PR）
+
+T3 triage 卡 body **必含** 5 段：
+
+```markdown
+routed:heavy:tier=T3 src=<融合报告相对路径>
+
+## wytbb 前置假设（≥2 条）
+1. 假设 1：<具体可达性假设，例：拦截点 <X> 的输入/输出结构允许无侵入>
+2. 假设 2：<具体兼容性假设，例：<某 crate vN> 编译期与 Tauri 2 兼容>
+
+## 必读 context（强制读完）
+- 融合报告 §五.1 + 上游 CLAUDE.md + 拦截点源码 + CHANGELOG 最近 N 行
+
+## 实现目标（仅设计，非实际改）
+1. 设计文档：落 <hermes 内研究路径>，含拦截点选择分析 + 5 类 span 映射 + 必选/可选属性 + 双发策略 + 三层采样 + 不回写红线
+2. 拦截代码样例：<L> 行 Rust/Python/TypeScript，含环境变量触发，零配置默认不开
+3. PR 描述草稿：Conventional Commits 格式，**不实际开 PR**
+4. PoC 验证方案：含 <docker run> 命令或 <pnpm tauri dev> 流程，**不在本卡实施**
+
+## 验收标准（frozen: true）
+- [ ] 设计文档落盘，路径 = `research/...`
+- [ ] 设计文档含 wytbb 节 ≥2 条
+- [ ] 拦截代码样例 ≥ L 行，含环境变量触发
+- [ ] PR 描述按 Conventional Commits
+- [ ] **不实际改外部仓任何文件**（验收时 `git -C <外部仓> status` 必须干净）
+- [ ] **不实际开 GitHub PR**（仅生成描述文本）
+
+## 收尾契约
+- triage 卡必人审通过（kanban_request_review 而非 kanban_complete）
+- review handoff summary 必含「设计文档路径 + 拦截点 + PoC 命令 + 待审事项」
+- 用户裁决后由 orchestrator 再派 T3 实施卡（独立新卡，不再 triage）
+```
+
+**why**：SOUL 红线说"~/.hermes/ 树外不自动改"是抽象原则，缺"如何安全地把外部仓源码改动登记成可派工卡"的落地模板。T3 triage 是把这条红线变成可执行卡设计——既不阻塞融合进度（仍可派工），也不越过用户授权（人审通过才实施）。
+
+**后续**：T3 实施卡派工前，orchestrator 必须**重新**实勘该外部仓当前状态（pitfall #22 同款 ls/git status），确认 triage 假设未被外部仓更新打破——若外部仓已合入类似改动，triage 设计可作废或简化，避免重叠 patch。
+
+### 21. `~/.hermes` 树不在 git 仓——改动保护用备份快照替代 commit（2026-10-17 实测）
+
+`~/.hermes/skills/` 与 `~/.hermes/profiles/` 均为裸目录（`git rev-parse` fatal not a git repository），「skill 改动后 commit」惯例在本机布局下不可执行。回滚保护形态：改动前 `cp <file> <profile>/backups/<file>.bak-<tag>-<ts>`，备份在位列入验收；事后不提 commit。若未来该树入仓，此条作废。
+
 ### 14. 「调研分析 GitHub 项目」禁止止步于网页碎片（2026-09-03 OpenExecutive 实测）
 
 用户说「调研 https://github.com/X/Y」时，**禁止只用 web_extract 抓 README/docs 页就出报告**——
@@ -228,6 +310,72 @@ GitHub 页面抓取给的是碎片（README 截断、docs 目录页只有文件�
 - 报告关键声明必须 file:line 可追溯（如 `committee.py:38-66`），禁「文档说有」式转述。
 - 网页抓取只用于 Step 0a 消歧和 LICENSE/README 元数据，不用于机制分析。
 - 分析完清理 /tmp clone，核心内容落 `references/<project>-source-analysis.md` 持久化。
+
+### 19. 测试树 = 契约（融合报告/plan-mode 派工前必过，2026-10-15 jev-skill 实测）
+
+README 与 examples/asset 描述的「开放 provider 列表」是**宣传态**，仓库实际契约写在 tests/。
+改造方案派工前**必须**先全量 grep 测试树：
+
+- 找 `APPROVED_PROVIDERS` / `ALLOWED_*` / `assertIn(... , _*_SET)` / `choices=[...]` 类硬闭集
+- 找 `re.findall(r"--provider[ =]([a-z]+)", text)` 类**正扫描 SKILL.md 资产**的测试
+- 找 `assertEqual(list(provider.choices), ...)` 类**精确匹配**断言（闭集是字面值）
+- 找 `assertIn(host(url), APPROVED_API_HOSTS)` 类 endpoints host 白名单
+
+**闭集类测试不允许新增 provider**——若 plan 写「在 CLI choices 加 clef」，实际撞：
+- `test_provider_policy.py:21` `APPROVED_PROVIDERS = ["openrouter","typesafe"]`
+- `test_provider_policy.py:64` `assertEqual(list(provider.choices), APPROVED_PROVIDERS)`
+- `test_provider_policy.py:80` `assertIn(host(url), APPROVED_API_HOSTS)`
+- `test_provider_policy.py:105` `re.findall(r"--provider[ =]([a-z]+)", text)` + `assertIn(provider, APPROVED_PROVIDERS)`
+四条件**同时**满足才 pass——CLAUDE.md 红线 6「不得弱化 tests/」意味只能改 `--provider` 调用形态。
+
+**派工前自检（orchestrator 写 plan 时）**：
+- 「add X to choices」类目标 → grep 测试树找闭集；命中即必须改 plan 为环境变量触发形态（见 pitfall #20）
+- 「add X to endpoints dict」类目标 → grep 测试树找 host 白名单；命中同上
+- 「改 SKILL.md 文档加 X」类目标 → grep 测试树找文档扫描断言；命中即必须禁出现 `--provider X` 字面量
+任一命中且 plan 没说如何处理闭集，**派工即翻车**——worker 会撞红线而 block（实测 worker-coder 撞后正确选择 block 而非 crash）。把它写进 §2.1「验收清晰性门」上游：plan 阶段的对外承诺（"X 可配置"）必须经测试树反向验证。
+
+### 20. 「Path A」最低破坏接入：环境变量触发上游已硬化项目（2026-10-15 jev-skill 实测）
+
+当上游项目 CLAUDE.md 红线 + 测试树闭集都禁止新增 provider/endpoints 时，
+**不要在 plan 阶段就放弃适配**——改为「环境变量触发」形态，对原 API 用户零影响、对红线零冲击：
+
+- **不挂 clef 到 `--provider` CLI choices**（闭合上游 CLI 接口）
+- **不写 X 到 endpoints dict**（闭合上游 URL 映射）
+- **scripts/X.py 改动**：在 `request_*` 函数顶部加 `effective_provider = os.environ.get("JEV_PROVIDER") or provider`；`http_json` 加 clef 分支读 `CLEF_BASE_URL` 环境变量走独立 URL；`validate_request`/`build_report` 不动
+- **5 SKILL.md 改 provider 段**：「Use safely」段加「Local clef transport」说明，示例用 `JEV_PROVIDER=clef CLEF_BASE_URL=... python3 jev.py decide ...`——**禁出现 `--provider clef` 字面量**（pitfall #19 文档扫描会命中）
+- **assets/*.json 改 model 字段不改 provider 字段**——provider 字段是 dict 引用，model 是自由字符串
+- **留给上游 PR 空间**：保留原 OpenRouter/TypeSafe 端点不动，未来给上游 maintainer 提 PR 时即正式加入新 provider（届时由 maintainer 决策闭集是否扩展）
+
+**派工卡 body 验收**必须含反向 grep（防 path A worker 误用 `--provider clef` 字面量）：
+```markdown
+- [ ] SKILL.md `grep -c "provider clef"` 返回 = 0（撞 test_provider_policy 文档扫描会失败）
+- [ ] SKILL.md `grep -c "JEV_PROVIDER"` 返回 ≥1（正向证据 env var 形式）
+- [ ] SKILL.md `grep -c "CLEF_BASE_URL"` 返回 ≥1
+```
+
+**plan 阶段如何决策 A vs B**：
+- A（环境变量触发）适用：上游有 CLAUDE.md 红线 + 测试树闭集硬约束
+- B（fork + patch tests/）适用：上游无红线且接受测试变更
+- C（写新 transport wrapper）适用：上游为纯库无 CLI（直接调 API）
+默认从 A 起——A 失败再退 B/C。
+
+**T9 蓝军审查卡 body 必写「doc-only WARNING 不修代码」处置纪律（2026-10-15 jev-skill 实测）**。路径 A 实战发现：T9 蓝军审查 PASS 后给 2 个 WARNING（都是 doc-only——「T2 spec body 文本过期」+ 「4 sibling SKILL.md 资产引用差异」），**蓝军正确**（这些是文档抛光建议不是代码缺陷）。但**易被误读**——下一轮接手的 orchestrator 可能派「WARNING 修复卡」给 worker-coder，结果是浪费一轮 worker 跑 git 改 spec 文本。**派工时固化**——T9 蓝军审查卡 body 末段写：
+```markdown
+[WARNING 处置纪律] 蓝军审查给 WARNING 时分类:
+- BLOCKER: 必派修复卡
+- WARNING (代码层): 必派修复卡
+- WARNING (doc-only, 涉及 spec body 文本/兄弟文档样式): 由 orchestrator 收口时判断,不修代码,
+  在收口卡 handoff comment 写「W<n> reviewed: no change needed, [具体理由]」
+- WARNING (上游契约/CLAUDE.md 红线): 必须派修复卡,禁留痕跳过
+蓝军卡**不修代码**——蓝军的职责是报告,不是修复。修复由 orchestrator 派工链控制。
+```
+**理由**: WARNING 处置边界一旦在派工卡没固化,orchestrator 收口时按印象处理(实测我没派修复卡,是「随机应变」对的,但这是脆弱的)。把「doc-only 不修代码」写进 T9 卡 body,**下游 orchestrator 接管时直接按卡内纪律走,不必再判断**。
+
+**T10 终合卡合并三件套：doc-polish + 终合报告 + commit draft（2026-10-15 jev-skill 实测）**。T9 蓝军审查给 doc-only WARNING 后,**不该**再单派 N 张「WARNING 修复卡」给 worker-coder——浪费 worker 生命周期且 git commit history 被碎化。正确模式是**单张 T10 终合卡合并三件套**:
+1. **doc-polish**——T9 WARNING 处置 (harness 评审而非实际改代码)
+2. **终合报告**——`research/<project>-fusion-final-report.md` (300-500 行,7 章节:执行摘要/路径 A 设计/调度时间线/file:line 索引/模式提炼/PR 准备清单/不吸收清单)
+3. **commit message draft**——不实际 commit,准备就绪等用户推送
+**单卡合并的好处**:worker 一轮生命周期内能完成全部 3 件,git history 干净,跨板 comment 一致。**不**给「先派 WARNING 卡, 再派报告卡, 再派 commit 卡」三段式——那是 per-step 安全但浪费 3 个 worker spawn。判据: T9 蓝军卡 + 6+ 张 done 实施卡后, 单派 T10 合并三件套, 验收 = 「WARNING 处置+ final-report 落盘+ commit draft 在 final-report 末尾」三项全过。
 
 ### 17. 融合后留「显式不吸收清单」防重复评估
 裁决矩阵（keep/new/downgrade/drop 逐机制判定）落进融合报告，**DROP 项必须连理由一起写明**（例：「AB/影子/巡检——batch=1 单人集群无线上流量，语境不适」）。否则后续会话拿到同一上游资料，会从零重评一遍已被否决的机制。吸收项落点遵循单一事实源：机制细节写进资产文件（如 evals baseline），设计文档正文只放一句增量摘要+文件锚，不双写。

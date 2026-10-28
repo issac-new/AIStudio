@@ -1,7 +1,7 @@
 ---
 name: failure-mode-playbook
 description: 任务失败/阻塞时的模式识别与对策速查。触发：kanban_block/kanban_request_changes 前，或连败压力升级 L2+ 时查表定模式、选对策、打标签。
-version: 1.2.0
+version: 1.3.0
 metadata:
   hermes:
     tags: [kanban, failure-mode, playbook, pmo-fusion]
@@ -62,6 +62,40 @@ severity: critical|major|minor
 - kanban_block/request_changes 定 FM 模式后，**有对应案例时引用案例路径**（如 `_shared/failures/2026-09-01-evals-incident.md`）
 - 新事故复盘后：先定模式入本表 → 再写案例入 `_shared/failures/`
 - 案例检索：`grep -rl "fm_modes.*FM-P1" ~/.hermes/profiles/_shared/failures/`
+- 新案例登记须过下方「BadCase 五要素模板」（2026-10-21 起）：五字段缺失 = 案例不可复跑，退回补齐后再入库
+
+### BadCase 五要素登记模板（2026-10-21 增补，三账号调研融合）
+
+> 来源：银翼AI评测室连载08（淘系把 badcase 当原料采买，进回归集的每条必须含五要素）+ 连载10 理论支撑（评测资产不是用例总数，是临界场景密度——kanban 卡失败/打回记录就是「生产环境写的测试用例」，不模板化就浪费了），存档 `research/wx-onto-ddd-20261021/reports/account3-silverwing-verdict.md` X1。
+> 与上方五段式案例格式的关系：五段式管**复盘叙事**（Situation→Lessons），五要素管**可回放性**（每条案例能机械复跑）——两者并存，新案例两种结构都写，frontmatter 不变。
+
+**登记模板**（`_shared/failures/` 新案例必含，五字段缺一 = 不可复跑，退回补齐）：
+
+```markdown
+## BadCase 五要素
+
+1. **原始意图**：<用户/上游当初想要什么——原话或原始卡 body 目标句，不转述>
+2. **变化字段**：<哪个字段/状态/文件与预期不一致——精确到字段名与期望值 vs 实际值>
+3. **第一处错误工具调用**：<时间线上第一次偏离正确路径的工具调用——工具名+参数+所在文件/轮次，即「首次偏离位置」>
+4. **实际副作用**：<这处错误实际造成了什么——写坏的文件/污染的状态/浪费的轮次，可观察>
+5. **正确处置**：<当时应该怎么做——一步可执行的替代动作，供下次同型场景直接套用>
+```
+
+**配套原则**：每条案例遵循「最小失败证据 + 相邻合法样本」——保留最小可复现失败证据（日志切片/最小输入），并附一个只差关键步骤的合法对照样本，保证案例可判、可复跑；登记人不确定第 3 字段时按会话日志回放定位，禁止凭记忆填写。
+
+### 案例晋级探针门（guardrail-regress 晋级通道，2026-10-23 京东融合 Y2）
+
+> 来源：京东评测体系拆解「红队 200+ 攻击手法沉淀进平台资产 / badcase 当原料采买」——`_shared/failures/` 案例入库不能是终点，可机械化复放的向量要能晋级成护栏探针。裁决 `research/jd-agent-eval-20261023/VERDICT.md` Y2。
+> 先例：P1/P2 探针源自 2026-09-01 事故，但当时无标准无留痕（derived_from 空）；本节把该人肉先例定成标准通道。
+
+**晋级门四条件**（全过才入 manifest.probes，缺一登记为观察项不晋级）：
+
+1. **机械可复跑**：案例含最小失败证据 + 相邻合法样本（BadCase 五要素第 3/5 字段可直接翻译成探针 expected_rc 与判分逻辑）；
+2. **向量仍在现役**：攻击/故障面当前真实存在（过时向量不晋级，如已退役平台）；
+3. **登记留痕**：manifest 探针条目必填 `derived_from`（来源案例/上线卡）+ 案例晋级时加 `promoted_from`（案例路径）——runner 对缺 derived_from 的探针打 warn（2026-10-23 起）；
+4. **探针实现代码**：PROBES dict 逐条实现（manifest 加行不等于可跑）——这一步仍人写，写完跑 `run_probes.py --probe <id>` 实测判分。
+
+**巡检入口**：`python3 ~/.hermes/evals/guardrail-regress/run_probes.py --promoted-only`（只跑案例晋级面）；复盘产出新案例后，收尾 checklist 加一问「本案例可否晋级探针」。
 
 ### 已有案例
 
@@ -85,6 +119,7 @@ severity: critical|major|minor
 | FM-R2 | 并发上限排队（Kimi 并发=4） | 并行子任务>4 时延迟陡增 | 派工控制并行度 ≤4；重型分解按波次派发 | risk-register R-02 |
 | FM-R3 | 上下文溢出（SOUL 超限被截断） | profile 行为异常丢纪律；orchestrator SOUL 22,457>20,000 实测 | `orchestrator-soul-slimming` 瘦身；共享块外置 `_shared/` 引用化 | 设计文档 §四待裁决 |
 | FM-R4 | tool_output 截断丢失关键数据 | stdout 超 50KB 被 head/tail 截断 | spill 文件路径落盘，`read_file(offset=...)` 分页读；不依赖 inline 全文 | execute_code spill 机制 |
+| FM-R5 | **timeout 恢复轮语义缺失**：goal_mode 卡单轮超时被当成终态失败直接 block 人工（超时 ≠ provider 终态失败） | goal_mode 判官二值判定（完成/未完成）；单轮超时即记 block；kanban 无 timeout-kind 轮记录（kanban_tools grep timeout 零轮级处理） | **超时记 invalid 轮不记终态**：单轮超时→kanban_comment 留痕「invalid 轮（timeout），保留部分产物轨迹」+ 下轮 worker 从**真实 workspace 状态**自恢复继续（re-read task-state.md/产物文件，不凭摘要记忆），不升格 provider 终态失败；**连续超时 ≥3 轮触发人工门**（repeated_failure 规则） | LHH 0.1.7 delta A2（manager.py:427-444 recoverable_timeout，2026-10-18 调研实读；`grep -c recoverable_timeout manager.py`=11） |
 | FM-R6 | 工具链故障误判为 capability 缺口（半更新致模块缺失，收尾被拒后转 capability blocker，触发 R2 补全卡空转 + gap_register 污染） | blocked reason 含指纹 `No module named` / `cannot import name` / `partially-updated`；4 例实锤（09-26×3 + 10-03×1，同一次 update 半更新事故） | 先 import 冒烟核验工具链现状再定性；已修复则记「缺口不存在+时间线」不建卡；capability-gap-watchdog `_scan_blocked` 已带指纹过滤（.bak-20261003） | capability-gap-r2-handoff 提案裁决 t_64052c03 2026-10-03 |
 
 ## 三、流程类（Process）
@@ -108,6 +143,7 @@ severity: critical|major|minor
 | FM-E2 | 空口完成未验证 | 「已完成」但无 baseline-diff/sqlite 验证 | D4 证据强度纪律：sqlite 查行数/grep 查引用/文件实读；不信任自述 | worker-completion-independence-verification |
 | FM-E3 | 规则入库≠机制生效 | 文档齐全但执行率 0%（GAP-0 病灶） | 停止堆规则→先量后治；protocol-adoption-audit.sh 月报；连续 2 月 0 执行即降级 | FDE GAP-0 实锤 |
 | FM-E4 | 备份存在但覆盖盲区 | 恢复时发现备份缺失关键对象 | 备份必须演练（D7）；全量 tar -L 落外部盘 | 回滚演练事故 |
+| FM-E5 | 空跑伪成功（200-OK 流内错误） | worker 自述完成但产物痕迹过薄/覆盖记录全空；API 瞬断在 200 响应流内返回错误文本，被当成功记录（Cloudflare harness 实证：「看起来干净完成的任务」实为依赖 crash） | 验收先查**覆盖证据**（audit 卡查 coverage-ledger 是否全空，调研卡查来源文件数/字数）再信结论；工具调用返回须对响应文本显式分类异常，不只信异常类型 | cloudflare/security-audit-skill 融合 2026-10-21（CF14+Shallow 检测）；裁决矩阵 `workspace/research/wechat-swarm-teams-20261021/FUSION-VERDICT.md` |
 
 ## 五、切换链（连败时按序尝试，不回头）
 
@@ -155,3 +191,33 @@ severity: critical|major|minor
 - **逐条判据**：该模式当初的触发条件是否仍存在？（如 FM-R2 并发=4 的 provider 是否已扩容；FM-P1 触发器是否已迁移）条件已消失的模式标 `[stale?]`，连续 2 月无复发且条件消失 → 移入归档段（不删，保留考古价值）
 - **输出**：复核结论追加到当月 failure-pattern 月报尾部（"排除表复核"节），不单独出报告
 - **禁止**：复核轮次不新增模式（新增只走"复盘确认后增补"正门）
+
+## 七-2、归因前先调 clef-jev 标类型（可选，2026-10-16 C-4 接入）
+
+本节给「查表定模式」加一道结构化复核：模式编号由你从 §一~§四 的表里选，
+归因是否成立交给本地 clef-flash 判。**它不是对策的来源，对策仍以本表为准。**
+
+触发（满足任一才调，默认不调）：
+
+- 信号跨两个模式域（如同时像 FM-R1 资源类与 FM-Q1 需求类），切换链第 2 步「换模式归因」卡住
+- 准备 `kanban_block` / `kanban_request_changes` 打标签，但对标签正确性没有把握
+- 连败 L2+ 已列 ≥2 个候选根因假设，需要第二意见排序
+
+调用（请求契约、退出码、阈值口径见 skill `devops/clef-jev`）：
+
+```bash
+JEVDIR=~/.hermes/skills/devops/clef-jev
+curl -s -m 5 http://127.0.0.1:8000/health                        # 必须 200
+python3 "$JEVDIR/scripts/clef_jev.py" decide <request.json>       # choice 问模式归类
+python3 "$JEVDIR/scripts/clef_jev.py" decide <request.json> --dry-run   # 先离线校验请求体
+```
+
+`state` 只放信号原文与候选模式描述，不放你的结论——把结论写进 state 会让复核变成回声。
+判定结果与你的选择不一致时：两者都写进 `kanban_comment`，按 §五 切换链继续，不静默采纳任一方。
+
+边界：
+
+- clef 只产候选与置信，**不替代本表的对策与实锤锚点**；本表只收实锤模式，clef 标的新模式不入表。
+- health 非 200 或 CLI rc=1 时按原路径继续，不得静默改成主 LLM 自评冒充 clef 结果。
+- 决策回执自动落 `~/.hermes/logs/clef-decisions.jsonl`；积累后用 `devops/eval-calibration`
+  做 ECE/Brier/NLL 体检，本机 clef 暂无自有校准跑数。

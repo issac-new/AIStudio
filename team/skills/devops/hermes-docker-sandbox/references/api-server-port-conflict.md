@@ -50,7 +50,7 @@ docker port hermes-design
 # 3. See what's actually on the port
 lsof -i :8644
 # → COMMAND      PID    USER   ... NODE NAME
-#   com.docke   10350  YOURNAME ...      *:8644 (LISTEN)
+#   com.docke   10350  cuishi ...      *:8644 (LISTEN)
 
 # 4. Check the full range Docker Desktop reserves
 lsof -i -P | grep "com.docke.*LISTEN" | awk '{print $9}' | sort -u

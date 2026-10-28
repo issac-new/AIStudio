@@ -76,6 +76,27 @@ metadata:
 
 **纪律**：update 进行中（`.hermes-update-in-progress` 锁存在）勿手工补源码——工作树会被反复重置，补 4 次被冲 4 次；等锁释放再补。补完后 `py_compile` + 真实 import 冒烟 + `git apply --check -R` 逆向验证三连。
 
+## 六、pre-commit 钩子配置与本机二进制版本错配：先定性问题面再决定是否绕过
+
+**症状**：`git commit` 在 lefthook pre-commit 阶段被拦下，输出 `ruff failed / Failed to parse <file> / Unknown rule selector: <RULE>`，**且 exit 2 来源是 hook 命令本身，不是 staged 的代码**。
+
+**根因**：仓库的 `ruff.pre-commit.toml`（或同等 hook 配置）启用了一个本机 `ruff` 二进制不认识的规则——典型模式：上游迁到 ruff 0.7+ 引入的 DTZ 系列，本机仍是 ruff 0.6.x；或新规则集随 ruff 0.12+ 才发布。配置侧更新，运行时侧没跟上——**与 staged 文件内容完全无关**。
+
+**判别（先定性再动手）**：
+
+1. **脱离 staged_files 单跑 hook 命令**——`ruff check --config ./<cfg> hermes_cli/__init__.py`（或 `lefthook run pre-commit --files <staged>`），看错误是不是来自「配置解析」而非「代码检查」。配置解析错误 = repo-wide 阻断所有 python 改动。
+2. **比对 ruff 版本与规则名**：`which ruff && ruff --version`；错误里的 `Unknown rule selector: <RULE>` 是配置漂移的指纹。
+3. **用同一命令对一份 pristine HEAD 内容重跑**（`git show HEAD:<file> | 写临时文件再 ruff check`）——同样失败 = 配置问题，与你的改动无关。
+
+**处置两路，向用户拍板**：
+
+- **A. 单次绕过 `git commit --no-verify`**：把当前改动落仓，钩子不跑。**适用**：改动本身已经过人手 review、CI 不依赖此钩子、或仅做小显示修复。**必同步**：告知用户「pre-commit 已坏，不修下次 python 改动仍会撞同一面墙」+ 提议另立跟踪事项修配置。
+- **B. 修钩子配置**：删/改未知规则名，或升本机 ruff 到匹配版本。**这是 repo-wide 工程**，影响所有开发者工作流，不该单卡临时决策。
+
+**不要做**：① 不要把钩子失败当 transient 重试 commit 5 次——配置错误每次必同败；② 不要为绕过钩子就 `chmod -x` hook 文件（下次仍要修）；③ 不要在没告知用户的情况下静默 `--no-verify` 落仓——用户偏好是「提示 commit + 附 message 预览」，连绕钩子都要先报。
+
+**黄金锁坑的误报**：`git commit` 报 `Unable to create .git/index.lock` 但 `ls .git/index.lock` 已经不存在 = 上一进程已释放锁，文件句柄竞争。**判别**：`ps -ef | grep -i 'git (commit|add)'` 看是否有真正在跑的 git；无 = 直接重跑 commit。锁文件存在才需要排谁持有。
+
 ## Related
 
 - 母本原则：orchestrator-lessons（patch 生命周期）、hermes-source-patch-persistence（三件套流程）、kanban-db-guarded-writes（认证连接写法）、as-is-design-doc（文档纪律）

@@ -20,11 +20,11 @@ profile×skills audit on a 30-profile Hermes deployment.
 | _shared | (6 skills) | real dirs: apikey-image-gen, bailian-image-gen, grok-image-to-video, hyperframes, markdown-viewer, remotion |
 | orchestrator | 1 | 56 real dirs + 19 shared symlinks (54M, biggest) |
 | hack | auditor/exploit/forensics/recon | 61 SKILL.md each: 10 local dirs + 11–13 symlinks (6.1M ×4) |
-| [已移除] | ai/ipcore/physics/toolchain | 8 local dirs + 5 symlinks (NO domain skills) |
+| eda | ai/ipcore/physics/toolchain | 8 local dirs + 5 symlinks (NO domain skills) |
 | ops | devops/eval/incident-commander/sre | 8 local dirs + 5 symlinks |
 | platform | ontology-curator/skill-miner | 8–9 local dirs + 4 symlinks |
 | product | manager/researcher | 8 local dirs + 4 symlinks |
-| [已移除] | orchestrator + 6 teachers | 9 symlinks; only [已移除]-orchestrator has [已移除] |
+| [已移除] | orchestrator + 6 teachers | 9 symlinks; only [已移除] has [已移除] |
 | worker | coder/researcher/tester | 8 symlinks + .hub (1.8M) + .curator_backups (10M) |
 
 116 symlinks total, **zero broken** (verified with the broken-symlink loop).
@@ -58,7 +58,7 @@ ls ~/.hermes/skills/devops/ | grep -E 'api-server-third-party-clients(-v2)?'
 ## Findings (severity-ordered)
 
 ### P0 — Foreign skills in hack profiles (template-copy pollution)
-`[已移除]-parent-request-handling`, `optical-computing`, `weapon-generation`,
+`[已移除]`, `optical-computing`, `weapon-generation`,
 `sprint-prioritization`, `requirement-analysis`, `mission-coordination`
 all present in the LOCAL productivity/ dir of ALL 4 hack profiles
 (auditor/exploit/forensics/recon) and NOWHERE else. Not in shared. A prior
@@ -66,8 +66,8 @@ batch copy dragged a sibling profile's skills into the security team.
 
 ### P0 — Domain skills missing from owning teams
 - `[已移除]` (with SKILL.md) exists ONLY in orchestrator's
-  skills; [已移除]×4 have no domain skills at all. Creator ≠ consumer.
-- `[已移除]` exists only in [已移除]-orchestrator; the 6 teachers
+  skills; eda×4 have no domain skills at all. Creator ≠ consumer.
+- `[已移除]` exists only in [已移除]; the 6 teachers
   ([已移除]/character/chinese/language/physical/stem) have NO domain skills
   and no link to it. Shared layer has zero [已移除] skills.
 
@@ -86,7 +86,7 @@ User baseline: ALL profiles glm-5.2 (custom:cc-switch). hack×4 still
 kimi-k3 — the only team not migrated. All other 25 profiles glm-5.2.
 
 ### P2 — Toolsets don't match role
-- hack/[已移除]/ops/worker: `['hermes-cli','acp','kanban','memory']` — no
+- hack/eda/ops/worker: `['hermes-cli','acp','kanban','memory']` — no
   terminal/web/computer-use, yet hack claims security execution.
 - [已移除] teachers: no web — research symlink is a dead capability for
   lesson research.
@@ -97,6 +97,6 @@ kimi-k3 — the only team not migrated. All other 25 profiles glm-5.2.
 
 ## Recommended fix order
 1. Remove the 6 foreign skills from hack×4 (or move to the owning team).
-2. Symlink [已移除] → [已移除]×4; [已移除] → teachers×6.
+2. Symlink [已移除] → eda×4; [已移除] → teachers×6.
 3. Convert duplicated local dirs to shared symlinks; clean .curator_backups/.hub.
 4. Align hack models to glm-5.2; calibrate toolsets per role.

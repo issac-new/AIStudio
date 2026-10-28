@@ -205,11 +205,15 @@ grep -n -E 'pull_request_target|workflow_run|head_branch|head_sha|head_ref' .git
 #### 检查点 3 — zizmor 结果定级（工具信任边界 + 盲区 + 误报控制）
 
 ```bash
-zizmor --no-online-audits --format json .github/workflows/ > zizmor.json   # 基线
+zizmor --no-online-audits --pedantic --format json .github/workflows/ > zizmor.json   # 基线（--pedantic 必须：否则漏报 High 级 excessive-permissions，见下）
 zizmor --no-online-audits --format sarif .github/workflows/ > zizmor.sarif # → hack-team/sarif-output
 ```
 
+**模式陷阱（2026-10-22 实测，gap-20261014-002 fixture 回归）**：默认模式只报「隐式提升」（default token 之外多出的权限），**漏报显式 `permissions: write-all` 与显式写权限声明**——fixture 中 pwn.yml（`contents: write`+`pull-requests: write`）与 supply.yml（`write-all`）的 High 级 excessive-permissions 仅在 `--pedantic` 下报出（e001 默认 0 条 vs e002 pedantic 3 条 High）。所有 zizmor 审计命令必须带 `--pedantic`（上述基线命令已加），报告需注明模式。附带收益：pedantic 额外检出 anonymous-definition/concurrency-limits/undocumented-permissions（Info/Low 卫生类）。
+
 - **盲区冒烟（先于采信）**：YAML anchor 跨 job 别名 + `if: 0` + `timeout-minutes: 0.5` + `secrets: inherit` 四类边界用例先跑一遍，解析崩溃/漏报则本次结果不可信。史实：ToB 披露 4 类 YAML anchor 解析缺陷（#1557/#1562/#1575/#1732）v1.23.0+ 修复；本机 2026-09-18 与 2026-10-04 两轮实测 v1.30.1 均正常。zizmor 升级后重跑冒烟。
+- **cache-poisoning 触发条件（2026-10-22 实测钉死）**：该规则**只盯两类形态**——①release 工作流（`on: release` / tag push 类触发）内的 cache 读（sink 侧）；②危险 trigger + 显式 `cache-mode: write/write-only` 的 cache 写（v1.31.0+ 才有，本机 v1.30.1 无）。普通 `push`+`pull_request` 双触发的 `actions/cache` 读写混用（PR 写→main 读的经典投毒面）**不报**——需按 §3.5 检查点 2 的人工 gate 判定补位。fixture 实证：cache-classic.yml（普通双触发）0 报，cache-release.yml（release 触发+setup-node cache）报 High。
+- **平台边界**：zizmor 只收集 GitHub Actions 工作流（`no inputs collected` 对 `.gitlab-ci.yml`）；GitLab CI/Jenkins 需 grep 人工面（`image:` tag 未 digest pin、`variables:` 明文凭据）或走 CICDSecScan 类工具，zizmor 结果不能当作「全 CI 面已扫」的证据。
 - **定级规则**：`unpinned-uses` 第三方 action > GitHub 官方（tag 重定向风险不对称）；`dangerous-triggers` 仅是入口提示，必须走检查点 2 三步人工判定；`template-injection` 查 `${{ github.event.* }}` 是否进 `run:` 且 event 字段攻击者可控（PR title/body 可控，bot 触发字段不可控）。
 - coverage 纪律：每次审计记录 `(repo, workflow, 检查点类, 状态)` 三元组；未跑检查点的类显式标 skipped。
 
@@ -248,7 +252,7 @@ osv-scanner scan -r . ; pip-audit ; npm audit --production
 
 # GHA workflow 审计（zizmor，2026-09-18 本机 v1.30.1 实测）
 pipx install zizmor
-zizmor --no-online-audits .github/workflows/        # 离线人工审计
+zizmor --no-online-audits --pedantic .github/workflows/  # 离线人工审计（--pedantic 必须，否则漏 High 级 excessive-permissions）
 zizmor --no-online-audits --format sarif .github/workflows/ > zizmor.sarif  # 喂 Code Scanning（经 hack-team/sarif-output）
 
 # AI agent 工具链审计（→ §3.5 三类检查点清单；脚本化批量路径）

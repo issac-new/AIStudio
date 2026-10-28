@@ -16,8 +16,9 @@ metadata:
 
 ## 症状处置（先通再治）
 
-1. `git worktree list` 找目标卡的 worktree；若标 `locked`（reason: initializing）→ `git worktree unlock <path>` → `git worktree remove --force <path>` → `git worktree prune`。
-2. 卡会因 workspace 失败 spawn_failed/crashed——修完环境后 kanban_comment 注入恢复包（根因已修勿重复排查 + 写入目标是 ~/.hermes 绝对路径与 worktree 无关 + 纪律重申），等 dispatcher 重派。
+1. **先看 `.git/index.lock`（主仓根 / 子仓 .git）**：`ls -la <workspace>/.git/index.lock` — size=0 + mtime 新鲜（与 spawn_failed 时点对齐）就是上一轮 worktree add 卡死的副产物，git 异常退出未清。`pgrep -f 'git.*<workspace>' || true`（应为空）后 `rm -f <workspace>/.git/index.lock`。**这是首要根因**——残留 lock 阻塞新 worktree add 走 main repo 索引，与工作目录内 worktree 自身状态独立。子仓 lock（harnesseval-w / auto-dev / Threatswarm 等的 `.git/index.lock`）也按同法清，但只清 size=0 + mtime 与事故时点对齐的，不要清活跃 lock。
+2. `git worktree list` 找目标卡的 worktree；若标 `locked`（reason: initializing）→ `git worktree unlock <path>` → `git worktree remove --force <path>` → `git worktree prune`。
+3. 卡会因 workspace 失败 spawn_failed/crashed——修完环境后 kanban_comment 注入恢复包（根因已修勿重复排查 + 写入目标是 ~/.hermes 绝对路径与 worktree 无关 + 纪律重申），等 dispatcher 重派。
 
 ## 周期性对账清理（一次脚本化流程）
 
@@ -33,7 +34,7 @@ status=$(sqlite3 "file:$HOME/.hermes/kanban/boards/<board>/kanban.db?immutable=1
 
 | 三元组读数 | 处置 |
 |---|---|
-| done/archived + dirty=0 + unmerged=0 | 直接回收：`git worktree remove --force` + `git branch -D wt/<tid>` |
+| done/archived + dirty=0 + unmerged=0 | 先过 artifacts 闸门保全交付物，再回收：`git worktree remove --force` + `git branch -D wt/<tid>` |
 | done + unmerged>0 | **先合并**（`git merge <tip>`）或审内容后转 `archive/<tid>-<desc>` 分支，再回收 worktree |
 | NO-CARD（卡已归档不可查）+ dirty 仅有临时脚本/生成物 | 内容打包进 `archive/<tid>-*` 分支后回收 |
 | dirty 有未审视产物 | 单独列出待裁决，勿批量删 |
@@ -69,5 +70,6 @@ mkdir -p <archive>/$tid
 - **半成品 checkout 里禁用裸 `git add`**：worktree add 超时被打断后，目录可能留下「index 引用 2100+ 文件但盘上只 checkout 了部分」的半成品状态（status 显示大量未暂存 ` D` 删除）。此时任何裸 `git add` 都会触发全索引刷新，把全部缺失文件登记为 staged 删除——一次 commit 就能制造百万行假删除。只提交自己的文件用底层管道命令：`git update-index --add --cacheinfo 100644,$(git hash-object <file>),<path>`（不刷新其他条目），并在 commit 前用 `git diff --cached --numstat` 门禁校验（staged 文件数正确且删除列全为 0；注意用 `awk '$2 != 0'` 判删除列，`grep -cv '^4\t0'` 这类字面模式会误报）。万一已提交假删除：`git reset --soft HEAD~1` + `git reset -q`（mixed 清 index，缺失文件回到未暂存 ` D` 原状）+ update-index 重来；soft/mixed reset 不触碰工作区文件，历史遗留的 ` D` 原样保留。
 - **归档去重（防归档本身成磁盘大户）**：批量回收半成品 worktree 时，同一大产物常被每份 worktree 各拷一遍（如 7G 加密档案 × 24 份 = 147G）。入档前对每个未追踪文件先与主仓同名文件 `cmp`，**主仓已有且内容相同就跳过**，仅主仓没有或内容不同的才写档；档内跨 tid 再 `diff -rq` 去一次重。否则「先存档再删」的保险网反成新的空间黑洞。
 - **locked "initializing" 是超时残留**：正常锁有任务理由，这个锁是 worktree add 被杀时留下的；unlock+remove-force 是唯一出路，勿绕过。
+- **`.git/index.lock` 与 `locked initializing` 是双胞胎根因**：spawn worker 走 `git worktree add -b wt/<tid> <workspace>/.worktrees/<tid> HEAD`，60s timeout 触发后两件残留同时存在——主仓 `.git/index.lock` size=0 mtime 新鲜 + `.git/worktrees/<tid>/locked` content="initializing\n"。**两个都要清**，只清一个救不回卡（next spawn 再撞同款）。判据：spawn_failed 错误信息含 "Command '['git', ..., 'worktree', 'add', ...] timed out after 60 seconds" → 必跑两件套（`rm -f .git/index.lock` + `git worktree unlock <path>`），不要凭印象选其中一个。
 - **分支名≠目录名**：remediation/ 下的 worktree 目录名是功能名（F-2-xxx）而分支名是 wt/<task-id>——对账脚本要按 worktree list 实际路径遍历，不能拼目录名。
 - **回归预防**：定期（如每月）跑一次对账，或推动 done 卡自动 prune——等 spawn 超时再清说明已影响派工。（2026-09-21 起已并入统一夜间 Loop Graph v3.2 每日 02:02：`sweep` 步=workspace ≥100MB 大文件出库（engine `~/.hermes/scripts/workspace_bigfile_sweep.py`，gitignore 托管块防回吸）→ 紧随 `reclaim` 步=本 skill 对账三分法的正典实现 `~/.hermes/profiles/orchestrator/scripts/worktree-daily-reclaim.sh`（归档分支保留/僵尸 tar/保留期清理）。历史独立排程已退役：bigfile 专用 launchd 09:23 删除；reclaim 原 04:00 cron 从 jobs.json 删除（定义备份 .bak）并列入 cron_paused_watchdog BANNED 黑名单（BANNED 语义=已删除 tripwire——未删仅禁用的 job 仍在 cron list 输出里，进 BANNED 会每轮巡检误报）。日志：`~/.hermes/logs/bigfile-sweep.log` + `~/.hermes/logs/worktree-reclaim.log`，步状态入 `unified_loop_YYYYMM.log` 快照。）

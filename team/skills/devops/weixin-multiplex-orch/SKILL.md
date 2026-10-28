@@ -29,18 +29,18 @@ metadata:
 用 importlib 从 `plugins/hindsight/settings.py` 加载真实模块 + 真实
 `config.json`，按 `resolve_bank_aliases → _resolve_bank_id_template`
 顺序算 bank id。**勿**拿一个不在 `bank_aliases` 表里的合成“第二微信号”
-去断言共享 bank——未映射 id 按设计走独立 per-user bank（`[已移除]-<id>`），
+去断言共享 bank——未映射 id 按设计走独立 per-user bank（`[已移除]<id>`），
 合成 id 必然“失败”但机制无损；共享断言只对表内 id 成立。
 
 ## default 侧失真警告（读到即纠正，勿照做）
 
 - `weixin-multi-account-delivery`：Architecture 节仍是退役的 8651 双网关
-  布局 + 已废弃账号 `<[已移除]-bot-account-id>@im.bot` + per-profile `weixin/accounts/`
+  布局 + 已废弃账号 `<bot-account-id>@im.bot` + per-profile `weixin/accounts/`
   路径。现行架构 = 单 8650 multiplex 网关，双账号经 `profiles.yaml`
   `env_extra` 注入，账号文件统一在 `~/.hermes/weixin/accounts/`。
 - `hindsight-bank-strategy`：Bank ID Resolution 节缺 bank_aliases 折叠步
   （fold 在 template 渲染前跑）；且 Model C「全集群静态 per-team bank」
-  已被细化——[已移除] 用 `bank_id_template: [已移除]-{user}` + aliases 做
+  已被细化——[已移除] 用 `bank_id_template: [已移除]{user}` + aliases 做
   per-member 隔离，空 user（cron/CLI）回落静态 `bank_id`，其余 team 仍 Model C。
 
 ## 跨 profile 写入边界（本件存在的原因）

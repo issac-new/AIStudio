@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "date": "2026-10-23",
+    "fusion": "RedEvoAgent (arXiv 2608.27439) + yechao-zhang/red-team-agent-skills",
+    "source_urls": [
+      "https://arxiv.org/abs/2608.27439",
+      "https://arxiv.org/html/2608.27439v2",
+      "https://github.com/yechao-zhang/red-team-agent-skills",
+      "https://mp.weixin.qq.com/s/lm4J3hEqDFgAdMwFy026tQ"
+    ],
+    "verdict": "~/.hermes/shared/research/redevoagent-fusion-20261023/FUSION-VERDICT-20261023.md",
+    "roE": "scope-gate 授权门内使用；详见 how-to-use.txt"
+  },
+  "files": [
+    {
+      "name": "arxiv-paper-v2.txt",
+      "desc": "arXiv 2608.27439v2 论文全文（LaTeXML 转文本）",
+      "bytes": 54904,
+      "sha256": "cddc11bdaa5e0607e62e3ac50984dadb41742f35cb0390dbeaa2218098b95f6d"
+    },
+    {
+      "name": "wechat-article.md",
+      "desc": "蜜罐先生转述文全文（导读源）",
+      "bytes": 13896,
+      "sha256": "147da847e30fe635ef5eab3dcabbe48c50fad947be75193502a4bd6f552f76e8"
+    },
+    {
+      "name": "github-readme.md",
+      "desc": "配套仓库 README",
+      "bytes": 18418,
+      "sha256": "8bfe47d6c2d11e77f0d5fbc3941896153d397c2aa041fcff8c7fee33bb1629c4"
+    },
+    {
+      "name": "gh-SKILL.md",
+      "desc": "仓库 red-team SKILL.md（架构/transport/probe/攻击循环）",
+      "bytes": 15344,
+      "sha256": "48ceb2eb92bb77c1c60bc701953c24316291ae0fbcd41c46ba9e04957f17ba51"
+    },
+    {
+      "name": "gh-payload_patterns.md",
+      "desc": "payload 8 模式库（原理/期望输出/后处理+自适应选择）",
+      "bytes": 10969,
+      "sha256": "8509613dd4c97e31c8ee6c8be7f0e642e7b347e89a6763dbec2d1351b20d8346"
+    },
+    {
+      "name": "gh-success_criteria.md",
+      "desc": "提取质量四级判据（FULL/PARTIAL/FAILURE+机器可判指标）",
+      "bytes": 5415,
+      "sha256": "0d40d68bdfe21d922f4dddfa8b18c569c305d00fc77656e9b29e0ea8fd5452ec"
+    },
+    {
+      "name": "gh-nested-delegation-attack.md",
+      "desc": "嵌套委托攻击（套娃）：原理/成功案例/场景/防御/变种/检测",
+      "bytes": 7043,
+      "sha256": "6c07a895b6b30e348b66208c82cfff1af901ea62788698a797d2d44c752938bc"
+    },
+    {
+      "name": "gh-dual-approval-bypass.md",
+      "desc": "双审批绕过：两道人审闸的浏览器自动化绕过+防御建议",
+      "bytes": 6604,
+      "sha256": "222e01372b43faa34720e43cd6c4b218e4101934d490d9e6fd64cc7915566fd3"
+    },
+    {
+      "name": "gh-jailbreak_library.md",
+      "desc": "经典越狱库（AIM/DAN/DevMode 等——本 skill 模板已覆盖同类，仅存档）",
+      "bytes": 5279,
+      "sha256": "09bb3a619f1a568322e5fde2c197b2121abf38ca68c4995b996ae178039605ed"
+    },
+    {
+      "name": "gh-IMPROVEMENTS.md",
+      "desc": "仓库自改进记录（多阶段攻击/覆盖率 30%→100% 实证）",
+      "bytes": 6747,
+      "sha256": "a854ec4c9693c7b7ba6829a2470f879ebff68fd5c723e34e0a3b719080c6c97e"
+    }
+  ]
+}

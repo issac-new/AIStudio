@@ -4,7 +4,7 @@ description: >-
   Connect OpenAI-compatible third-party clients (Cherry Studio, Open WebUI,
   LobeChat, etc.) to the Hermes API Server on port 8650 with multi-model
   routing. Covers API_SERVER_KEY auth, model_routes config, provider
-  resolution, the AIStudio bundled-version model_routes gap and its
+  resolution, the SwarmStudio bundled-version model_routes gap and its
   monkey-patch fix, gateway restart, and per-model verification. Use when
   setting up Cherry Studio or any external LLM client to talk to Hermes.
 version: 2.0.0
@@ -62,12 +62,12 @@ the API Server routes each request to the configured backend provider+model.
 
 ### Step 1: Edit BOTH config.yaml files
 
-When AIStudio manages the gateway (`multiplex_profiles: true`), it runs the
+When SwarmStudio manages the gateway (`multiplex_profiles: true`), it runs the
 **orchestrator profile's** config.yaml, not the global one. You must add
 `model_routes` to **both** files:
 
-1. `~/.hermes/config.yaml` (global — read by non-AIStudio gateways)
-2. `~/.hermes/profiles/orchestrator/config.yaml` (profile — read by AIStudio)
+1. `~/.hermes/config.yaml` (global — read by non-SwarmStudio gateways)
+2. `~/.hermes/profiles/orchestrator/config.yaml` (profile — read by SwarmStudio)
 
 In both files, add `model_routes` under `platforms.api_server.extra`:
 
@@ -134,7 +134,7 @@ custom_providers:
 `model_routes` is parsed at `__init__` time, not per-request. After editing:
 
 ```bash
-# Kill current gateway (AIStudio auto-restarts it within ~10s)
+# Kill current gateway (SwarmStudio auto-restarts it within ~10s)
 kill $(python3 -c "import json; print(json.load(open('$HOME/.hermes/profiles/orchestrator/gateway.pid'))['pid'])")
 sleep 10
 curl -s http://127.0.0.1:8650/health  # verify restart
@@ -148,7 +148,7 @@ curl -s -H "Authorization: Bearer $KEY" http://127.0.0.1:8650/v1/models | python
 ```
 
 You should see the default profile name PLUS all route aliases. If you only
-see the profile name, see the **AIStudio bundled-version gap** pitfall below.
+see the profile name, see the **SwarmStudio bundled-version gap** pitfall below.
 
 ### Step 4: Verify each route works
 
@@ -206,9 +206,9 @@ curl -s http://127.0.0.1:8650/health
   Set it in `~/.hermes/.env` as `API_SERVER_KEY=<value>`.
 
 - **Config changes need gateway restart** — `model_routes` is parsed once at
-  startup. Kill the gateway PID; AIStudio respawns within ~10s.
+  startup. Kill the gateway PID; SwarmStudio respawns within ~10s.
 
-- **CRITICAL: AIStudio bundled-version model_routes gap** — AIStudio
+- **CRITICAL: SwarmStudio bundled-version model_routes gap** — SwarmStudio
   ships a bundled Hermes (e.g. v0.19.0 at
   `~/.hermes-web-ui/desktop-runtime/hermes/0.18.0/mac-arm64/python/`) whose
   `api_server.py` does NOT support `model_routes`. The config is silently
@@ -217,9 +217,9 @@ curl -s http://127.0.0.1:8650/health
   work (the `model` field is passed through to the agent), but model
   discovery fails. See `references/swarmstudio-model-routes-patch.md` for the
   3-point monkey-patch that backports `model_routes` support to the bundled
-  version. Re-patch after every AIStudio update.
+  version. Re-patch after every SwarmStudio update.
 
-- **Config must be in BOTH global and profile config.yaml** — AIStudio's
+- **Config must be in BOTH global and profile config.yaml** — SwarmStudio's
   gateway reads the orchestrator profile's `config.yaml`
   (`~/.hermes/profiles/orchestrator/config.yaml`), not the global
   `~/.hermes/config.yaml`. Add `model_routes` to both to cover all gateway
@@ -260,5 +260,5 @@ curl -s http://127.0.0.1:8650/health
 ## Support Files
 
 - `references/swarmstudio-model-routes-patch.md` — the 3-point monkey-patch
-  that backports `model_routes` support to AIStudio's bundled Hermes
+  that backports `model_routes` support to SwarmStudio's bundled Hermes
   (adds `_parse_model_routes` + patches `__init__` + rewrites `_handle_models`)

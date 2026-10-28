@@ -1,16 +1,17 @@
 ---
 name: skill-fleet-consistency-audit
-description: "技能库四层对账：SOUL引用↔board声明↔symlink↔运行时。触发：集群skill体检、fence前后."
-version: 1.0.0
+description: "技能库五层对账：SOUL引用↔board声明↔symlink↔运行时↔unattended适行标注。触发：集群skill体检、fence前后."
+version: 1.1.0
 metadata:
   hermes:
     tags: [devops, audit, skills, multi-profile, reconciliation]
     related_skills: [cluster-rules-audit, rules-effectiveness-audit, skill-board-scoping]
 ---
 
-# Skill Fleet Consistency Audit（技能舰队四层一致性对账）
+# Skill Fleet Consistency Audit（技能舰队五层一致性对账）
 
 > 2026-08-27 全集群两轮体检实战提炼（27 profile / 709 skill master / 7 board）。
+> 2026-10-28 增第五层「unattended 适行分类」（OpenExecutive chat_tools ACCESS 机械门融合，#599@18449b7，delta 报告 research/openexec-delta-20261028/ 必吸收 A2，t_87adf8cb）。
 > 核心发现：**单层检查全绿 ≠ 集群健康**——SOUL 引用、board 声明、文件系统 symlink、运行时索引四层各自独立演化，断裂只出现在跨层对账时（本轮 10 处断裂全部是"某层单独看正常"）。
 
 ## 触发条件 / When to Use
@@ -20,7 +21,7 @@ metadata:
 - 新增/移动 master skill、修改 profiles.yaml 之后
 - cron watchdog（inventory-drift / master-integrity）报警时的人工诊断
 
-## 四层模型与对账链
+## 对账模型（L1-L4 存在性对账 + L5 unattended 适行分类）
 
 | 层 | 事实源 | 检查命令 |
 |----|--------|----------|
@@ -28,8 +29,26 @@ metadata:
 | L2 board 声明 | `~/.hermes/shared/profiles.yaml` 的 `skills_enabled` ∪ `skills_pinned` | yaml.safe_load（禁手写行解析，见 Pitfall 2） |
 | L3 文件系统 | `profiles/<p>/skills/<cat>/<name>/SKILL.md` isfile（**穿透 symlink**） | glob + os.path.isfile |
 | L4 运行时 | `hermes -z "hi" --skills <name> --profile <p>` 输出无 "Unknown skill" | **唯一权威**（`.skills_prompt_snapshot.json` 刷新滞后，不可作准） |
+| L5 unattended 标注 | 每个 skill 的 SKILL.md frontmatter `metadata.hermes.unattended` | frontmatter/yaml 解析抽取（未标注=红，见下节） |
 
-**判定规则**：L1 引用 ⊆ L2 声明（引用未声明 = fence 会剪掉它）；L2 声明 ⊆ L3 可达；L3 ⊆ L4 实际加载。任何一环断裂 = 该 profile 的 skill 对该任务实际不可用，即使 SOUL 写了强制引用。
+**判定规则（L1-L4）**：L1 引用 ⊆ L2 声明（引用未声明 = fence 会剪掉它）；L2 声明 ⊆ L3 可达；L3 ⊆ L4 实际加载。任何一环断裂 = 该 profile 的 skill 对该任务实际不可用，即使 SOUL 写了强制引用。
+**判定规则（L5）**：技能未带 unattended 标注 = 审计红（补标待办，不阻断当下 L1-L4 对账）。
+
+## L5 unattended 适行分类（第五层，2026-10-28 OpenExecutive delta 融合）
+
+> 来源：OpenExecutive `workflows/chat_tools.py` ACCESS 标签 + 「未分类=测试红」机械门（#599@18449b7；delta 报告 research/openexec-delta-20261028/ 必吸收 A2，t_87adf8cb 吸收）。上游规则：聊天工具新增而无 ACCESS 标签时**单元测试失败**（"a tool added to the chat is always decided for workflows too"）；CHAT_ONLY 类 = 需本人在场/改认知/改 roster，**无人值守不得静默改记忆**。
+
+**标注字段**：SKILL.md frontmatter `metadata.hermes.unattended`，三值闭集：
+
+| 值 | 含义 | 派工规则 |
+|---|---|---|
+| `ok` | 可无人值守 | cron/夜间 loop/headless kanban 可直接跑 |
+| `confirm` | 需交互确认 | 执行含决策点/审批门；headless 下须 block(kind=needs_input) 转人工，禁自行代答 |
+| `interactive` | 仅交互 | 依赖在场用户输入/桌面操作；无人值守链路禁派 |
+
+**机械门**：审计对**未标注**项报红——复刻上游「新增必被决策」：先要求**有**标注，再要求值正确。存量技能初始全未分类属预期，红名单 = 补标待办清单（不是审计失败，是待办输出）。消费场景：cron/夜间 loop 派工前把 L5 红名单当排除表；`confirm`/`interactive` 技能出现在无人值守链路 = 该链路审计红。
+
+**零代码约束**：本层只定义字段与判定规则；对账用现有 frontmatter/yaml 解析即可，不新增脚本（脚本化另卡）。
 
 对账脚本：`scripts/check_profile_skill_loadability.py`（L1×L3，含顶层单例支持）；master 完整性对账：`~/.hermes/profiles/orchestrator/scripts/master_integrity_check.py`（断链/数量骤降/引用无实体三检，快照对比）。
 
@@ -60,7 +79,7 @@ metadata:
 
 ## 输出契约
 
-报告模式同 cluster-rules-audit（范围→结论表→逐项修复明细→健康不修项→总账），追加一列"层"（L1-L4 断在哪层）。修复后必须给出四层对账 + watchdog + `master_integrity_check.py` 三件套归零证据，禁自评打分。
+报告模式同 cluster-rules-audit（范围→结论表→逐项修复明细→健康不修项→总账），追加一列"层"（L1-L5 断在哪层；L5 缺标注单列红名单）。修复后必须给出四层对账 + watchdog + `master_integrity_check.py` 三件套归零证据，禁自评打分。
 
 ## References
 

@@ -36,8 +36,14 @@ moa:
 | moa-mglm | MGLM bigmodel | https://open.bigmodel.cn/api/anthropic | anthropic_messages | glm-5.3, glm-5.3-flash (aggregator) |
 | moa-mk256 | MK256 kimi coding | https://api.kimi.com/coding | anthropic_messages | k3 |
 | moa-mimo | MiMo token-plan | https://token-plan-cn.xiaomimimo.com/anthropic | anthropic_messages | mimo-v2.6-pro |
+| moa-stepfun | StepFun step_plan | https://api.stepfun.com/step_plan | anthropic_messages | step-5-preview |
+| moa-minimax | MiniMax anthropic | https://api.minimax.cn/anthropic | anthropic_messages | MiniMax-M3 |
 
 Keys are NOT stored in this reference (secrets stay in config.yaml only; this file is documentation).
+
+## Pending additions (wires token-verified direct; preset slots NOT yet applied)
+
+StepFun and MiniMax rows above are 200-verified direct wires (StepFun returned a thinking block; MiniMax-M3 a direct answer — M3 thinking defaults OFF without `adaptive`). The 5-slot heavy preset (both as references) was prepared but the config write had NOT landed when this was captured: the whole `moa:` section had been washed out of the profile config and restore was in progress. After applying, re-verify with `hermes moa list` + `参考 N/5` E2E, then update this file to drop the pending note.
 
 ## E2E verification (2026-09-30, all-anthropic direct ruling)
 

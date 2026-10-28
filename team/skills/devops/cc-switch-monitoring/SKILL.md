@@ -1,7 +1,7 @@
 ---
 name: cc-switch-monitoring
 description: "Use for cc-switch proxy monitoring or TUI widgets."
-version: 1.0.0
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [macos, linux]
@@ -45,6 +45,8 @@ The DB at `~/.cc-switch/cc-switch.db` has these key tables:
 - `usage_daily_rollups` - daily aggregated usage per provider/model
 - `provider_health` - health status, consecutive failures
 - `model_pricing` - pricing per model (for cost calculation)
+- `proxy_config` - per-app_type routing row: `load_balance_mode`, `auto_failover_enabled`, `max_retries`, circuit-breaker params, `updated_at` (when routing last changed)
+- `provider_endpoints` / `endpoints` - candidate upstream URLs per provider and named endpoint registry
 
 Key query - current provider's actual model:
 
@@ -54,6 +56,29 @@ SELECT json_extract(p.settings_config, '$.env.ANTHROPIC_MODEL') as model,
        json_extract(p.settings_config, '$.env.ANTHROPIC_AUTH_TOKEN') as token
 FROM providers p
 WHERE p.app_type='claude' AND p.is_current=1;
+```
+
+### 2b. Multi-group routing — which group/strategy handles a session
+
+The proxy serves several app_type groups (`claude` / `codex` / `gemini` / `grokbuild` / `hermes`) on ONE port. The group is selected by the client's URL path (`http://127.0.0.1:15721/hermes/v1` → hermes group), never by port. Each group has its own `proxy_config` row, its own provider set and failover queue in `providers`.
+
+```sql
+SELECT app_type, load_balance_mode, auto_failover_enabled, max_retries, enabled, updated_at FROM proxy_config;
+```
+
+`load_balance_mode` values: `off` = no LB — serve the current provider, fall through the `in_failover_queue` order on error. `session` = session-sticky — each client session pins one provider from the queue (alternating providers for the same model in `proxy_request_logs` = multiple sessions, one provider each); failover still applies on error. Session-sticky needs the client to send a session id: Hermes `cc-switch-route` custom providers set `session_affinity_header: session_id` for this.
+
+To answer "which group and strategy does THIS session use" (never from `/status` alone):
+
+1. Find the session's proxy endpoint in the profile's `config.yaml`: `model.provider` names a `custom_providers` entry; its `base_url` path segment (`/hermes/v1`, ...) names the group.
+2. Read that group's `proxy_config` row for the mode and its `providers` rows (`in_failover_queue`, `sort_index`) for the pool/failover order.
+3. Confirm with real traffic — `provider_id` alone is ambiguous across groups, join it:
+
+```sql
+SELECT p.name AS provider, p.app_type AS app_group, l.request_model, l.model AS served_model,
+       l.status_code, datetime(l.created_at,'unixepoch','localtime') AS t
+FROM proxy_request_logs l LEFT JOIN providers p ON p.id = l.provider_id
+ORDER BY l.created_at DESC LIMIT 30;
 ```
 
 ### 3. Provider balance APIs (per-provider)
@@ -98,7 +123,7 @@ After placing the widget file, run `/widgets-reload` in the TUI, then `/<widget-
 
 ## Procedure
 
-1. Query `/status` for the current provider name and proxy health.
+1. Query `/status` for proxy health. Its `current_provider` is the GLOBAL latest across all groups — to attribute a session to a group, use the Multi-group routing section.
 2. Query the SQLite DB for the current provider's actual model and API token.
 3. Query the provider's balance API (if supported) using the token from step 2.
 4. If no balance API: query `proxy_request_logs` for 5h/7d/monthly usage windows.
@@ -110,3 +135,6 @@ After placing the widget file, run `/widgets-reload` in the TUI, then `/<widget-
 - **Model name mismatch**: Hermes declares `glm-5.2` but cc-switch may route to `k3[1M]` (Kimi) or `glm-5.2[1M]` (huoshan). Always read the actual model from the DB, not from Hermes config.
 - **DeepSeek balance can be negative**: DeepSeek returns `total_balance: "-0.50"` when overdrawn. Check `is_available` field, not just the balance number.
 - **cc-switch DB path**: Always use `~/.cc-switch/cc-switch.db`. The `HERMES_HOME` env var does NOT affect cc-switch's DB location.
+- **`/status` `current_provider` is global-latest, not per-session**: one port serves all app_type groups, and the value flips as different clients (Claude Code, Hermes, Codex) hit different groups. Answering "which group/strategy am I on" from `/status` alone misattributes the session — map the client's `base_url` path to its `proxy_config` row (see Multi-group routing).
+- **Forwarder log tags are protocol branches, not groups**: `cc-switch.log` tags like `[Claude]`/`[Codex]` reflect the wire-format branch — a Hermes session with `api_mode: codex_responses` on `/hermes/v1` logs as `[Codex]` while landing on hermes-group providers. `proxy_request_logs.provider_id` joined to `providers.app_type` is authoritative for group membership.
+- **`liveConfigManaged` providers bypass `is_current`**: a provider with `meta.liveConfigManaged=true` is runtime-injected (live takeover) and can be the serving provider while the DB shows `is_current=0`. When DB and `/status` disagree about the current provider, the request log is the ground truth.

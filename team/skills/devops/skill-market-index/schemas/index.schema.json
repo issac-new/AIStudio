@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hermes-skill-market-index/format1.schema.json",
+  "title": "Hermes skill market index (format 1)",
+  "description": "Localized translation of dsh MarketIndex format 1: one static JSON document describing every skill under a root tree. Upstream anchor: packages/util/plugin-market-index/src/types.ts.",
+  "type": "object",
+  "required": ["format", "title", "generated_at", "root", "skills"],
+  "properties": {
+    "format": { "const": 1 },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "root": { "type": "string", "description": "Absolute scanned root directory." },
+    "generator": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 },
+        "missing_frontmatter": { "type": "integer", "minimum": 0 },
+        "without_engines": { "type": "integer", "minimum": 0 },
+        "trust": { "type": "object", "additionalProperties": { "type": "integer" } }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string" },
+          "reason": { "type": "string", "enum": ["missing-frontmatter", "unparsable-frontmatter", "missing-name", "duplicate-name"] }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "tags", "category", "source", "trust", "installed_at"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "version": { "type": "string" },
+          "description": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "category": { "type": "string" },
+          "skill_file": { "type": "string", "description": "Absolute path of the SKILL.md this entry was read from." },
+          "source": {
+            "type": "object",
+            "required": ["type", "path"],
+            "properties": {
+              "type": { "const": "local" },
+              "path": { "type": "string", "description": "Absolute directory of the skill; a git URL form is reserved for future extension." }
+            }
+          },
+          "compat": {
+            "oneOf": [
+              { "type": "null", "description": "engines.hermes not declared: trust gate warns but does not refuse (upstream engines.dsh absent semantics)." },
+              {
+                "type": "object",
+                "required": ["engines"],
+                "properties": {
+                  "engines": {
+                    "type": "object",
+                    "required": ["hermes"],
+                    "properties": {
+                      "hermes": { "type": "string", "description": "SemVer-style range subset: >= <= > < = ^ ~ *, space-AND, ||-OR." }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "trust": {
+            "type": "object",
+            "required": ["level", "basis"],
+            "properties": {
+              "level": { "enum": ["L0-Trusted", "L1-Reviewed", "unclassified"] },
+              "basis": { "type": "string", "description": "official-bundled | local-managed | unclassified" }
+            }
+          },
+          "installed_at": { "type": "string", "format": "date-time", "description": "SKILL.md mtime (UTC) as an install-time approximation." }
+        }
+      }
+    }
+  }
+}

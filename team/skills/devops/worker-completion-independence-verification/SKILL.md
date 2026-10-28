@@ -1,7 +1,7 @@
 ---
 name: worker-completion-independence-verification
 description: "验收 worker 自述完成时独立核验：不信自报，逐项机械验证。触发：kanban_complete 验收。"
-version: 1.7.0
+version: 1.8.1
 platforms: [macos, linux]
 metadata:
   hermes:
@@ -43,6 +43,7 @@ worker `kanban_complete` 的 summary/metadata 中含以下任一声明：
 
 1. **列出 worker 声明清单**：从 summary+metadata 提取所有可证伪声明（文件、测试、产物、外部副作用）
 2. **逐项机械验证**（不走 worker 自报通道）：
+   - **🔴 先锚定 cwd 再核验（2026-10-16 实证，t_a53d18a7）**：terminal `command` 默认 cwd 在用户 home（`/Users/YOURNAME`），主仓 `~/.hermes/hermes-agent/` 是非 cwd 路径。任何"在仓库内 grep 签名/跑 git apply"类核验前必先 `cd <真实仓库根>` 并 `git rev-parse --show-toplevel` 确认已落仓根（输出含绝对路径才走），否则会在 `$HOME` 上跑出"fatal: not a git repository"假阴性、被误读为「worker 没改源码」。**核验脚本必须前置 `set -e` + `cd` + 显式仓库根断言**，单行 inline grep 拼到默认 cwd 上没有意义。
    - 文件存在：`ls -la <path>` 且 size>0
    - 语法有效：`python -m py_compile` / `yaml.safe_load` / `bash -n`
    - 测试真实通过：`pytest <path>` 亲自跑，对比 worker 声称的 pass/fail 数
@@ -71,7 +72,7 @@ worker `kanban_complete` 的 summary/metadata 中含以下任一声明：
 3. **回归基线对比**（worker 声称「无关改动导致既有失败」时）：
    - 改动前全量测试基线 → 改动后全量测试 → diff 失败集合
    - worker 声明的「无关失败」必须能在基线中复现，否则即 worker 引入
-4. **超范围改动检查**：`git diff --stat` 对照任务 body 声明的改动文件清单，发现清单外文件 → 要求 worker revert 或另建任务；清单外脏文件先做**运行时归属判定**再定性——被进程持续追加的运行时数据（影子日志 jsonl/缓存/台账，mtime 落在卡运行窗内、内容为追加式日志行）属正常自写不算越界；mtime 早于卡创建或内容是源码/配置改动才按越界处置
+4. **超范围改动检查**：`git diff --stat` 对照任务 body 声明的改动文件清单，发现清单外文件 → 要求 worker revert 或另建任务；清单外脏文件先做**运行时归属判定**再定性——被进程持续追加的运行时数据（影子日志 jsonl/缓存/台账，mtime 落在卡运行窗内、内容为追加式日志行）属正常自写不算越界；mtime 早于卡创建或内容是源码/配置改动才按越界处置。**git diff 只覆盖 workspace 仓内**——共享配置面（skills 库装机、provisioning 清单、SOUL、cron）在仓外，须按陷阱 Y 单独扫描；卡 body 写了「禁改/禁装 X」红线的，X 的发生面必须出现在验收命令清单里，红线声明面 = 验收扫描面
 5. **验证结论写 kanban_comment**：每项声明标注 ✅真实 / ⚠️误导 / ❌虚假，含证据命令与输出
 
 ## 3. 陷阱
@@ -92,6 +93,10 @@ worker 改源码类任务（含 hermes-agent 主仓、F1/F2/F3/F4 这类）的�
 git log --oneline -5
 # 验收卡里标注的「commit 已落」必须能在 git log 里 grep 到 commit message 的卡号
 ```
+
+### C1. 「worker 报 dist 已重建 3.8MB」≠「源码侧已生效」——worker 的「已应用态指纹」是反向诱因（2026-10-16 实证，t_a53d18a7）
+
+`hermes-source-patch-persistence` 把"reverse check 通过 = 已应用"写得很清楚，但 worker 在 metadata 里把这条指纹**翻成正向叙事**时（"已 apply-clean，dist 已 3.8MB rebuild，typecheck 0 错"），orchestrator 容易把它当作三重核验都通过的隐性背书。**这是诱因不是结论**：dist 体积/文件 mtime 只能证明"npm run build 跑过"，不能证明 build 时 src 里有 patch 的探针（dist 与 src 错位的典型 case：23:14 build → 23:16 patch 才 apply → dist 是无 patch 版）。核验必须独立从 src 抓 6 个签名 + 抓 dist 同 6 个签名 + 抓 patch 文件还在 SPECS，对三层单独 grep——**不能拿 worker 的"已 rebuild"声明当 src 已生效的证据**。这与已有陷阱 A 同源（自述不可信），但场景是"具体技术领域的自述指纹"，专项点出。
 
 ### C. 「局部测试过」≠「无回归」
 
@@ -242,7 +247,10 @@ worker 自述「分诊已定案、逐条清单已备好」但清单无落盘载�
 kanban_complete 静默未执行，而叙述文字里已经写下「已办结」。两条纪律：
 1. `kanban_complete` 返回 ok 只当「调用成功」；卡真正进入终态必须 sqlite 直读
    tasks.status 确认后才对外宣称 done，补的对账评论按 comment id 查回原文确认
-   在卡上——「代码里发了评论」不是已留痕的证据；
+   在卡上——「代码里发了评论」不是已留痕的证据。**直读连接用 `mode=ro` 不用
+   `immutable=1`**（2026-10-23 实证，t_5079644b）：immutable 连接走缓存快照，
+   complete 后立即读仍返回旧状态（done 卡读到 running），会误判「未生效」并
+   触发无谓的重复收口；mode=ro 每次拿到当前页；
 2. 「不信自报」适用于自己——本轮早前的结论会随会话推移变陈旧，甚至本来就基于
    后来被推翻的前提（如产物存在性误判）。重复任何「done/办结」声明前，一律从
    事实源重新取证（卡态直读、评论查原文、登记册回读），不以「上一轮已说过」为据。
@@ -255,7 +263,18 @@ kanban_complete 静默未执行，而叙述文字里已经写下「已办结」�
 2. **字节/字符/行数口径不混用，跨文件比对走共同前缀逐字节**：中文 UTF-8 每字 3 字节，`len(str)` 与 `os.path.getsize` 天然不等；「改动范围是否为纯增量」不能拿两个文件的总长度相减（总长含各自附录/尾部），要比对**到插入点为止的共同前缀**是否逐字节一致——范围口径错会把「零改动」误判成「§1-§7 被改动」，反过来也可能把改动误判为纯追加。
 3. **聚合布尔必须显式携带每一子项，失败项不能被吞**：`allok = allok and ok` 收尾只打一行总判时，早前失败会被后续 ✓ 流水淹没；复核汇总至少显式列出 `[PASS, FAIL, ...]` 数组并打印全部 FAIL 标签，让「几项过、几项挂」在输出里可见。且比对类脚本的**区间定义本身要先自证**：打印两侧比对的起止锚点（小节标题/偏移+长度）供肉眼核对，再信比对结论——区间口径写错时，逐字节比对会「精确地」验一个错误的问题，聚合真值照样掩盖它。
 
-**收尾自问**：结论是「ALL PASS」时，问一句「这个 PASS 里每一项都是按正确口径验出来的吗」——聚合结果为真不等于每个子验证有效。
+4. **退出码必须取被验脚本自己的，管道与缺参都会把失败伪装成通过**：验收守护脚本/校验器时三条硬规则——
+   - `<script> ... | tail -5; echo "rc=$?"` 取的是管道**末命令**（tail）的退出码，被验脚本的失败码已被丢弃。正确写法：`<script> ... > /tmp/out 2>&1; rc=$?; cat /tmp/out`。
+   - **脚本无参运行打 usage 文本时 rc 常为 0**：usage 与成功摘要同屏时极易误读成「跑通了」。必须显式传入其声明的必填参数（仓库根、扫描目录等）再复跑。
+   - 「打印了预期文字」≠「判定逻辑成立」：必须读判定**结论字段**（如 `FAIL ... 未声明 import` 那几行），不是读它打印的任意一行。
+
+**收尾自问**：结论是「ALL PASS」时问两句——「每一项都是按正确口径验出来的吗」（聚合结果为真不等于每个子验证有效）、「这个 rc 是被验脚本自己吐的吗」。
+
+4. **复验覆盖面必须 ≥ worker 声称的覆盖面，否则「零命中」会误判虚报**：自己的快速复验（两层 glob、浅 grep）返回「零问题」而 worker 报「N 处问题」时，零命中有两解——worker 虚报，或自己扫描深度不够（嵌套目录、递归层、同义键形未覆盖）。先升级扫描深度到与 worker 声称的覆盖面同级（递归遍历、放宽 glob、补字段变体）再下结论；浅扫零命中就判虚报、深扫后实证数十处的同型案已发生过。与 S.1 互为镜像：S.1 是搜索根写错，本条是搜索深度不够。
+
+5. **四栏判定类汇总交付，先验分栏再验总数**：KEEP/CORRECT/FLAG/STALE 这类分类汇总卡，验收分两步——① 逐单元判定行数 ≥ 单元清单数（跨版本链补充行会多不会少）；② 分栏数字加总 = 单元数。分栏之间口径可能不一致（附标 FLAG 计入 KEEP 还是单列），跨表对账时先归一口径，否则合计行两跑不可比。
+
+6. **FLAG/问题类声明逐个独立复跑锚命令**：worker 报的每个 FLAG 必须附可独立复跑的命令锚（grep 模式、文件路径、版本号、API 回源）。无锚 FLAG 不可验收；有锚的逐个复跑，误报与漏报都在这步现形。
 
 ### T. 数据治理类交付的验收三件套——备份差集 + 台账全覆盖 + 内嵌抽读
 
@@ -276,6 +295,27 @@ worker 卡 started_at 早于 created_at（或间隔 <10s）属时间线异常，
 2. **run 语义**：部分 dispatcher 实现的 run 从派工时起算（worker 接单前的侦察阶段已计 started），秒级「完成」可能是 run 只含 comment+complete、实质侦察已在此前的 comment 中自述完成——此时读全量事件流（`SELECT * FROM task_events WHERE task_id=?`）看侦察 comment 是否先于 run，有则时间线不矛盾。
 两解都排除仍解释不通时，按虚报定级并追产出物。**时间线核查三件套**：① epoch 差值与相邻卡对比；② 全量事件流定性 run 起点语义；③ 产物 mtime 与 completed_at 差值（mtime 远早于 completed_at 是「产物早于开工」铁证）。
 
+### X. 判分器产物不能进入 worker 上下文——防「按判分器口味改行为」的作弊回路（2026-10-19 jev-skill 实测）
+
+本 skill 防止「worker 自述虚假」，但**还有一类风险：判分器/judge 自身的输出物进入 worker 上下文后污染其后续行为**——DGM 论文的实测目标作弊（agent 删除检测自身幻觉的标记骗满分）就是这一类。本集群等价场景：worker 跑完任务 → guardrail-regress / okt 判定 / clef 回执等 evals 产物落盘 → 同一 worker 或兄弟 worker 读回这些产物当作证据 → 形成「按判分器口味改行为」的作弊回路，且污染后续任务的证据面。
+
+**三条防线**（harness2 `core/context.py:399-518` port 来的判分器防回流三门，**已落盘** `~/.hermes/evals/eval_grader_guard.py`，12 项标记零依赖 8/8 PASS）：
+1. `assert_no_leak_paths(root, patterns)`：基准答案/判分产物路径进入 worker 上下文前拒绝。
+2. `assert_no_grader_verdicts(root)`：目录树内文件名+正文含判分器标记即拒（标记含 `passed_count` / `pass_rate` / `probes PASS/FAIL` 等 12 项）。
+3. `assert_tree_has_no_grader_verdicts(tree)`：agent 产树（rel→body）入库/入 skill 前扫描——防「agent 把判分器输出写进 skill 当后续证据读」。
+
+**验收侧纪律**：(a) 任何派 worker 的卡，body 必须显式要求 worker 上下文装配时调 `assert_no_grader_verdicts(workspace)`，否则视为派卡缺陷；(b) 验收 worker 的判定报告时，先 grep 报告里 `passed_count`/`pass_rate` 等标记是否被 worker 抄进了交付正文——若有，工作区必含判分产物污染，拒收并要求清理；(c) 绊线触发语义继承原版：「Find the read path that produced it, do not widen the marker list」——不靠扩标记表消音，去查读路径。
+
+### Y. 卡外副作用扫描——卡内干净不代表系统干净，否定性声明必须扫发生面
+
+worker 自述「未落地任何融合 / 未改任何配置」类否定性声明时，验收只查卡内产物（报告存在、metadata、蓝军回执）会把「看板干净」误当「系统干净」——安装类副作用落在共享配置面（全局 skills 库、各 profile 的 skills 分发目录、provisioning 清单、SOUL、cron），全部在 worker workspace 的 git 之外，`git diff` 永远看不到。规则：卡 body 写了「禁改/禁装 X」红线的，验收必须对 X 的发生面独立扫描后才能转述否认句：
+
+- **skills 库装机面**：`find ~/.hermes/skills -maxdepth 1 -newermt '<卡开工时刻>'` 列出窗口内新增/变动的 skill 目录；`cat ~/.hermes/profiles/<验收方>/skills/.skill-provisioning.json` 看 `at` 时间戳是否落在卡窗口内——profile 侧被动分发与全局库同时出现时，装机时间戳比目录 mtime 更难被无关操作覆盖。
+- **「原味正本/零改动」类随件声明用 diff 验**：PROVENANCE/manifest 自述「内容零改动」时，与上游副本 `diff -rq` 逐文件核对——换皮单个文件（如 style-guide 被品牌色板覆盖）不改变目录结构，不 diff 不现形。随件声明文档本身也是自述，不是证据。
+- **归因不抢跑**：装机主体未定（worker 顺手 / 并行工程线 / 自动同步机制都可能）时，验收结论只写「窗口内发生、主体未定」，不把责任钉死在 worker——但「验收方未发现」的责任不因此豁免。
+
+**转述纪律**：对用户汇报「X 未发生」前，必须对 X 的发生面做过扫描；只扫过卡内时说「卡内未见 X，卡外未验证」——把 worker 的否定性自述原句转述成系统事实，等于用 worker 的嘴替你验收。
+
 ### U. complete 回执的 metadata 字段是承诺不是机制——缺字段先补验实体再定性
 
 冻结验收项要求 complete 的 metadata 附结构化字段（report_path / 关键布尔 / 计数）时，工具层无 schema 强制，worker 会整段漏附。处置次序：
@@ -283,6 +323,16 @@ worker 卡 started_at 早于 created_at（或间隔 <10s）属时间线异常，
 1. 缺字段 ≠ 交付失败：先对实体产物做独立机械验证（文件在位/小节计数/红线词 grep）——实体全真时由验收方在 kanban_comment 补记验收结论并注明 metadata 缺口，不打回重做；
 2. 打回只在实体产物缺失或与声明矛盾时成立；
 3. 派卡侧缓解：metadata 字段清单逐键写进 body 的收尾契约段（显式字段清单），不依赖验收标准里的括号注——写「metadata 必含 X」时把 X 列全。
+
+### U2. 「skill 归位 / SOUL 增补」类验收项——提案制是合法满足方式，验提案实体不验目标实体
+
+验收项写「skill X 已建且 skill_view 可读 / SOUL 新增 Y 节」而卡的红线又禁止 worker 直接改 SOUL/共享层时，**提案制（草案入评审通道，批准后由对应域审者建）与直接建同权重**——验错实体会得到假阴性：worker 按红线正确走了提案制，验收却 grep 目标 skill 目录找不到，误判「未达成」。三条：
+
+1. **先 grep REPORT 里的归位决定**：归位说明（新建/归并二选一+理由）在 REPORT.md 在场即满足验收的「归位说明」项；
+2. **提案实体亲验**：`ls`/`grep` 提案文件路径（如 `~/.hermes/profiles/_shared/skill-proposals/<name>-skill-proposal.md`）确认非空在盘，必要时抽读内容与 REPORT 声明一致——提案在场 ≠ 内容合格，归并理由须排查过候选对象而非一句话带过；
+3. **metadata 报的产物与盘上实体逐一对应**：验收实体清单 = 卡 body 冻结验收项里点名的每个路径，通知/自述多报的实体（如 worker 自带的 verify 脚本）是加分项不计入验收基线。
+
+判据：目标实体缺失 + 提案在场 + 红线禁止直接建 = 验收通过；目标实体缺失 + 提案也缺失 = 未达成。SOUL patch 类同理——worker 产 patch 文本留 orchestrator 域审合入，验收验 patch 文本可 apply（锚点在目标文件中唯一），不验 SOUL 已改。
 
 ## 4. 核对任务树状态（fan-in 卡的必检项目）
 

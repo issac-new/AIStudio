@@ -48,7 +48,7 @@ The `setup-hindsight-banks.py` script at `~/.hermes/shared/` auto-detects the
 machine MAC and sets `bank_id_template`. **2026-09-02 定稿：本集群采用
 Per-Team (Model C)** — `bank_id = hermes-<MAC>-<team>`（静态，template 置空），
 同 team 内多 profile 共享一个 bank。当前 8 team 8 bank：
-swarm/hack/product/ops/[已移除]/platform/[已移除]/aiteam。
+swarm/hack/product/ops/eda/platform/[已移除]/aiteam。
 
 ## Three Sharing Models
 

@@ -31,8 +31,8 @@ ACCOUNT SELECTION and account-scoped blocks.
 
 | Gateway | Port | Account | Binds to |
 |---------|------|---------|----------|
-| main (multiplex) | 8650 | `<main-bot-account-id>@im.bot` | 爸爸 WeChat `<dad-wechat-id>@im.wechat` |
-| [已移除] (launchd) | 8651 | `<[已移除]-bot-account-id>@im.bot` | 妈妈 WeChat `<mom-wechat-id>@im.wechat` |
+| main (multiplex) | 8650 | `<bot-account-id>@im.bot` | 爸爸 WeChat `__ROTATED-20261014__` |
+| [已移除] (launchd) | 8651 | `<bot-account-id>@im.bot` | 妈妈 WeChat `o9cq80wFMJzzqphQ1ww-1jao0SaI@im.wechat` |
 
 - Account credentials: main under `~/.hermes/weixin/accounts/<id>.json`;
   secondary under `~/.hermes/profiles/<profile>/weixin/accounts/<id>.json`
@@ -51,7 +51,7 @@ ACCOUNT SELECTION and account-scoped blocks.
 - It reads WEIXIN_TOKEN / WEIXIN_ACCOUNT_ID from the MAIN .env.
 - It resolves the chat against main home-channel discovery; a secondary
   user id fails with `Could not resolve '<id>' on weixin`.
-- Observed 2026-08: `hermes -p [已移除]-orchestrator send --to
+- Observed 2026-08: `hermes -p [已移除] send --to
   weixin:<妈妈id> "..."` printed "Sent to weixin home channel" with the
   DAD's chat_id — silently wrong target. Always check the returned chat_id.
 
@@ -107,7 +107,7 @@ What works / doesn't:
   accepts delivery via that channel. Fastest unblock.
 - ✅ **Restart the gateway to restore the poll heartbeat**:
   `launchctl kickstart -k "gui/$(id -u)/ai.hermes.gateway-<profile>"`
-  (launchd-managed gateways; main is AIStudio-managed, [已移除] is
+  (launchd-managed gateways; main is SwarmStudio-managed, [已移除] is
   launchd). Log confirms `✓ weixin connected account=...`. This did NOT
   lift the server-side -2 in the 2026-08 case, but is the right hygiene.
 - ❌ Clearing `_LIVE_ADAPTERS`, retrying after 30s/2min/5min, toggling
@@ -115,16 +115,50 @@ What works / doesn't:
 - ⏳ Server-side safety blocks typically lift in hours to a day; plan a
   later retry instead of fighting it.
 
-**Distinguish the TWO meanings of -2:**
+**Distinguish the MEANINGS of -2 — `-2` alone is a diagnosis trap:**
+`ret/errcode -2` is iLink's generic "request rejected" code; four unrelated situations
+share it. The `errmsg` is the only signal:
 - `errmsg: "unknown error"` → stale session (same as -14; fix via gateway
   restart + inbound message).
-- `errmsg: "prepare failed"` → genuine server-side send block.
-The adapter wraps BOTH as `"rate limited; cooldown active for 30.0s"`, so
-always curl the iLink API directly (see `weixin-send-troubleshooting` §1)
+- `errmsg: "prepare failed"` → genuine server-side send block (section above).
+- `errmsg: "invalid arguments"` → your hand-rolled payload has the wrong shape.
+- `errmsg: "<ilink_user_id required>"` → auth PASSED, a param is missing; healthy
+  account signature. Fix the payload, not the token.
+
+The adapter wraps BOTH rate-limit variants as `"rate limited; cooldown active for
+30.0s"`, so always curl the iLink API directly (see `weixin-send-troubleshooting` §1)
 to see the real errmsg. Include `base_info`, `X-WECHAT-UIN`,
 `iLink-App-Id: bot`, `iLink-App-ClientVersion: 131584`,
 `Authorization: Bearer <token>` headers or you get auth failures instead
 of the real error.
+
+## Hand-rolled sendmessage payloads: read the shape off the adapter
+
+`ret -2 "invalid arguments"` is a MALFORMED REQUEST, not a throttle or expiry — no
+waiting or retrying clears it, and no amount of backoff fixes a wrong key name.
+Authoritative shape is `_send_items()` / `_send_message()` in
+`gateway/platforms/weixin.py`:
+
+```json
+{"msg": {"from_user_id": "", "to_user_id": "<target_chat_id>",
+         "client_id": "<unique hex>", "message_type": 2, "message_state": 2,
+         "context_token": "<optional>",
+         "item_list": [{"type": 1, "text_item": {"text": "..."}}]}}
+```
+
+- Text lives in `item_list[].text_item.text`. Inventing `item_type`,
+  `text.content`, or a bare `text` string is the top cause of `invalid arguments`.
+- `message_type` / `message_state` must be the adapter's `MSG_TYPE_BOT` /
+  `MSG_STATE_FINISH` constants; `client_id` unique per send.
+- **Success returns `{"message_id": <id>}` with NO `ret`/`errcode` keys.** Accepted =
+  `message_id` present and `ret`/`errcode` absent-or-zero. Record that id as the
+  receipt — it is the only positive evidence the peer got it.
+- **Omitting `context_token` is legal**: iLink accepts tokenless sends as the
+  degraded path that keeps cron pushes working. Send without it when no inbound
+  refreshed the peer token.
+- Prefer `send_weixin_direct` for real sends (owns text splitting, rate-limit
+  gating, retry ladder). Hand-rolled HTTP is for read-side diagnostics and for
+  re-sends when the gateway path is unavailable.
 
 ## Pitfalls
 

@@ -20,10 +20,10 @@ deployment with dashboard, multi-board Kanban, and bulk cleanup.
 
 ## launchd「坏掉」误判与 host-gateway 兜底实测（2026-09-27）
 
-`gateway.error.log` 满屏 `execution error: non-zero status (75)` + `launchctl print` 显示 `last exit code=1` **不等于 launchd 路径坏了**。真实机制：host-gateway 架构下（`One gateway per host serves every profile`），launchd 服务起 `gateway run` 时若检测到别的进程已在服务全部 profile，会让位退出（KeepAlive `SuccessfulExit=false` 正确停放）；75 刷屏是它与 AIStudio 手拉进程打架的历史产物。**判性必须实测**：kill 当前网关进程，launchd 会在 ~30-60s（ThrottleInterval）内自动拉起并重连全部平台（实测 api_server/matrix/weixin/[已移除]-weixin 全绿）。
+`gateway.error.log` 满屏 `execution error: non-zero status (75)` + `launchctl print` 显示 `last exit code=1` **不等于 launchd 路径坏了**。真实机制：host-gateway 架构下（`One gateway per host serves every profile`），launchd 服务起 `gateway run` 时若检测到别的进程已在服务全部 profile，会让位退出（KeepAlive `SuccessfulExit=false` 正确停放）；75 刷屏是它与 SwarmStudio 手拉进程打架的历史产物。**判性必须实测**：kill 当前网关进程，launchd 会在 ~30-60s（ThrottleInterval）内自动拉起并重连全部平台（实测 api_server/matrix/weixin/[已移除] 全绿）。
 
 重启姿势（按官方指引实测）：
-1. `hermes gateway run --force` — 起新宿主接管（`--replace` 只接管「服务同一 profile」的 owner，对 AIStudio 拉的宿主无效）
+1. `hermes gateway run --force` — 起新宿主接管（`--replace` 只接管「服务同一 profile」的 owner，对 SwarmStudio 拉的宿主无效）
 2. 停老进程：`kill -TERM <old_pid>`，新进程自动绑 8650
 3. 若 api_server 报 `address already in use` 被 park（老进程退干净前抢绑），端口释放后再起一次即恢复
 4. 注意：从 TUI 会话 `gateway run --force` 起的进程父链挂在 TUI 进程下（TUI 关闭可能连带死亡）；launchd 服务是持久兜底，两者并存时 launchd 让位、TUI 进程死后 launchd 接管
@@ -187,6 +187,20 @@ Deleting sessions without deleting their messages leaves orphan rows in the
 deletion to reclaim disk space (e.g. 68MB DB with 874 orphan messages →
 significant shrinkage after VACUUM).
 
+## Desktop App 错误链速判（ticket 失同步 / 会话索引悬空）
+
+App 报 `Operation interrupted: waiting for model response` → 先 `curl localhost:8650/health`；
+网关 ok 而 desktop.log 刷 `Gateway ticket bootstrap failed` = App 侧 ticket 与网关失同步
+（网关重启后 App 不自动重 bootstrap），完全退出并重开 App 即愈，不要归因模型/供应商。
+
+App 报 `恢复失败 not_found` → 查 `sessions.json` 索引与磁盘会话文件是否脱钩：
+索引有条目、磁盘无文件 = 悬空条目，删索引条目（sessions.json + state.db gateway_routing
+同 key 行）解；session_key 前缀自带归属 profile（`agent:<profile>:<platform>:...`），
+先解码 key 再定位，别猜。删前逐条核对——索引混着在用通道的活条目，盲删会断活会话。
+
+深度排障步骤与 desktop.log 消毒读法（裸 grep 会静默返回空）：
+`references/desktop-app-gateway-errors.md`；一次性探针：`scripts/diagnose-desktop-gateway.sh [session_id]`。
+
 ## Pitfalls
 
 ### skill_manage cross_profile=True doesn't work for patched skills
@@ -207,26 +221,26 @@ absolute file path, or create a new skill in the active profile.
 
 ---
 
-## 重启 gateway 的正确姿势（multiplex 宿主 + AIStudio 管控，2026-09 实测）
+## 重启 gateway 的正确姿势（multiplex 宿主 + SwarmStudio 管控，2026-09 实测）
 
-本集群是 **multiplex 单宿主网关**：一个 `hermes gateway run` 进程服务全部 47 个 profile（不是每 profile 一个网关）。且它常由 **AIStudio 拉起**（父进程是 AIStudio，非 launchd），launchd plist 走 `osascript → exec hermes gateway run` 那层可能 `error 75` 反复重试（坏着），`launchctl kickstart` 挂起不生效。此时正确路径：
+本集群是 **multiplex 单宿主网关**：一个 `hermes gateway run` 进程服务全部 47 个 profile（不是每 profile 一个网关）。且它常由 **SwarmStudio 拉起**（父进程是 SwarmStudio，非 launchd），launchd plist 走 `osascript → exec hermes gateway run` 那层可能 `error 75` 反复重试（坏着），`launchctl kickstart` 挂起不生效。此时正确路径：
 
 ```bash
-# 1. 起新宿主实例（--force 让它接管「服务全部 profile」的宿主；--replace 只接管服务同一 profile 的 owner，对 AIStudio 起的宿主无效）
+# 1. 起新宿主实例（--force 让它接管「服务全部 profile」的宿主；--replace 只接管服务同一 profile 的 owner，对 SwarmStudio 起的宿主无效）
 exec hermes gateway run --force >> <日志> 2>&1 &     # 后台长驻
 # 2. 等它绑端口（8650 是 api_server），再 SIGTERM 停老的宿主进程 → 新的接管
 # 3. 就绪验证（写在 orchestrator/logs/gateway.log，不是别的日志文件）
 grep -E 'Cron scheduler will tick 47 profile|api_server connected|holding singleton dispatcher lock' \
   ~/.hermes/profiles/orchestrator/logs/gateway.log | tail
 lsof -nP -iTCP:8650 -sTCP:LISTEN        # api_server 已绑
-tail ~/.hermes/profiles/[已移除]-orchestrator/logs/gateway.log | grep -i 'weixin.*Connected'  # 妈妈微信通道
+tail ~/.hermes/profiles/[已移除]/logs/gateway.log | grep -i 'weixin.*Connected'  # 妈妈微信通道
 ```
 
 **坑：8650 抢绑失败 → api_server 被 park**。新实例启动时若老进程还占着 8650，`api_server` 报 `address already in use` 被 park、网关 DEGRADED（其余平台照常服务，如微信）。端口释放后它**不会自动重绑**——需再跑一次 `hermes gateway run --force` 或网关自检 `hermes gateway restart`。判断谁占着：`lsof -nP -iTCP:8650 -sTCP:LISTEN`。
 
 **坑：`hermes gateway restart` 前台阻塞**（drain 期可达数百秒）会触发 terminal 180s 超时；超时 ≠ 失败，但可能打断重启。multiplex 宿主场景优先用 `gateway run --force` 后台 + 轮询，别用阻塞式 restart。
 
-**坑：`--replace` vs `--force`**。`--replace` 只接管「服务同一 profile」的旧 owner；`--force` 才抢宿主（服务全部 profile 的那个）。AIStudio 拉起的全 profile 宿主进程用 `--replace` 接管不了。
+**坑：`--replace` vs `--force`**。`--replace` 只接管「服务同一 profile」的旧 owner；`--force` 才抢宿主（服务全部 profile 的那个）。SwarmStudio 拉起的全 profile 宿主进程用 `--replace` 接管不了。
 
 ### 为什么必须重启才让配置改动生效（agent 构造时定格）
 
@@ -246,7 +260,7 @@ tail ~/.hermes/profiles/[已移除]-orchestrator/logs/gateway.log | grep -i 'wei
 重启前**必须**先查全集群 running 任务，空窗才动手：
 
 ```bash
-for b in swarm hack product ops [已移除] platform [已移除]; do
+for b in swarm hack product ops eda platform [已移除]; do
   db=~/.hermes/kanban/boards/$b/kanban.db
   [ -f "$db" ] && sqlite3 "$db" \
     "SELECT '$b', id, assignee FROM tasks WHERE status='running';" 2>/dev/null
@@ -257,9 +271,9 @@ done
 **坑**：新建的 kanban 任务会被 dispatcher **秒拾取**进 running。所以"建任务"和"重启 gateway"
 不能在同一拍做——先把要建的卡建完、等它们全 done，再重启。边建边重启会反复打断新 worker。
 
-### 非 launchd 环境（AIStudio 管控）的主端口诊断与恢复
+### 非 launchd 环境（SwarmStudio 管控）的主端口诊断与恢复
 
-本集群 gateway 归 **AIStudio** 管（非 launchd，profile 下有 `.gateway-launchd-unsupported`
+本集群 gateway 归 **SwarmStudio** 管（非 launchd，profile 下有 `.gateway-launchd-unsupported`
 标记）。launchctl 那套不适用。主 orchestrator gateway 挂掉（如 8650 无监听）时的诊断：
 
 ```bash
@@ -278,14 +292,14 @@ tail -30 ~/.hermes/profiles/orchestrator/logs/gateway.log
 
 # 4. 确认期望启动命令（gateway_state.json 的 argv）
 cat ~/.hermes/profiles/orchestrator/gateway_state.json | python3 -m json.tool | grep -A5 argv
-# 参照 [已移除]: hermes_cli.main --profile [已移除]-orchestrator gateway run --replace --force
+# 参照 [已移除]: hermes_cli.main --profile [已移除] gateway run --replace --force
 ```
 
 **恢复**：主 gateway 重启命令形如
 `hermes_cli.main --profile orchestrator gateway run --replace`
-（前台进程，归 AIStudio 管）。**这属 HumanGate 高级操作**（长期驻留进程 + 影响
-Matrix/Weixin 渠道收发 + 第三方管控），不要让 agent 盲目自主执行——应给图爸出方案，
-确认时机（worker 空窗）与执行方（agent 重启 vs 图爸经 AIStudio 重启）后再动。
+（前台进程，归 SwarmStudio 管）。**这属 HumanGate 高级操作**（长期驻留进程 + 影响
+Matrix/Weixin 渠道收发 + 第三方管控），不要让 agent 盲目自主执行——应给用户出方案，
+确认时机（worker 空窗）与执行方（agent 重启 vs 用户经 SwarmStudio 重启）后再动。
 
 **顺带收益**：若本次重启是为了让某个源码 patch（如新增 DB 列）生效，可在同一重启里
 一并恢复挂掉的主 gateway——一次重启解决两件事。
@@ -333,7 +347,7 @@ venv/bin/pip install mautrix==0.21.1 aiosqlite==0.22.1 asyncpg==0.31.0 aiohttp-s
 ## Gateway lifecycle 通知抑制（gateway_restart_notification，2026-08-28 实例）
 
 > 实例：邮箱被 `Gateway online` / `shutting down` 类 home-channel 通知刷屏。
-> 同一收件箱（<dad-wechat-id>@im.wechat）被 orchestrator + [已移除]-orchestrator 两个网关进程
+> 同一收件箱（__ROTATED-20261014__）被 orchestrator + [已移除] 两个网关进程
 > 各发一次，造成重复噪声。抑制后日志落 `Shutdown notification suppressed ...`。
 
 ### 机制
@@ -355,7 +369,7 @@ hermes config set platforms.email.gateway_restart_notification false
 hermes config set platforms.matrix.gateway_restart_notification false
 
 # 针对非 active 的 secondary/profile（用 HERMES_HOME 覆盖写入目标 profile 的 config.yaml）
-env HERMES_HOME=/Users/YOURNAME/.hermes/profiles/[已移除]-orchestrator \
+env HERMES_HOME=/Users/YOURNAME/.hermes/profiles/[已移除] \
   hermes config set platforms.email.gateway_restart_notification false
 ```
 
@@ -385,7 +399,7 @@ grep -h "Shutdown notification suppressed\|Sent home-channel startup" \
 config.yaml，但 `EMAIL_HOME_ADDRESS` 通常指向**同一收件箱**。只给 orchestrator 置
 false，[已移除] 进程仍会发那条通知——必须对所有启用 email 平台的 profile 都置 false，
 噪声才彻底消失。本集群实测：两 profile 的 `EMAIL_ADDRESS` / `EMAIL_HOME_ADDRESS`
-均为 `<dad-wechat-id>@im.wechat`（账号相同，非不同账号）。
+均为 `__ROTATED-20261014__`（账号相同，非不同账号）。
 
 ### 坑：hermes gateway restart 可能前台超时
 

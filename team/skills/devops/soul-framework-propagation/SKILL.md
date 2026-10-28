@@ -6,7 +6,7 @@ platforms: [macos, linux]
 metadata:
   hermes:
     tags: [soul-design, patch-techniques, framework-propagation, context-to-execution, cross-profile]
-    related_skills: [agent-soul-patching, soul-md-privacy-section-patching, [已移除]-team-deployment]
+    related_skills: [agent-soul-patching, soul-md-privacy-section-patching, [已移除]]
 ---
 
 # SOUL.md Framework Propagation
@@ -99,7 +99,7 @@ NOT appended at file end (which lands it after privacy boilerplate).
 
 ### cross_profile=true is mandatory
 
-Target files under a different profile (e.g. `~/.hermes/profiles/[已移除]-*/`)
+Target files under a different profile (e.g. `~/.hermes/profiles/[已移除]*/`)
 require `cross_profile=true` on the `patch` tool. **The `patch` tool
 honors this flag correctly for agent SOUL.md files** — this is the
 recommended path.
@@ -201,5 +201,5 @@ pattern. Title each section with specific provenance (e.g. "8.10范式转移",
   tool-section appends; the mechanical counterpart to this semantic skill
 - **soul-md-privacy-section-patching** (orchestrator) — the two-copy
   privacy-section trap; read before appending near file ends
-- **[已移除]-team-deployment** (default profile) — initial [已移除] team setup;
+- **[已移除]** (default profile) — initial [已移除] team setup;
   this skill covers the ongoing framework-propagation phase that follows

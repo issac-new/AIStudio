@@ -35,8 +35,8 @@ Shared categories live in `~/.hermes/skills/`. Profiles symlink subsets:
 NOTE: `dogfood` ships inside `software-development/dogfood` — do NOT also link the top-level `dogfood` category into a profile that already links `software-development` (duplicate index entry, removed 2026-08-05). Same for `computer-use` vs `autonomous-ai-agents/computer-use`: link ONE of the two.
 | **hack-forensics** | above + cybersecurity-forensics + cybersecurity-detection |
 | **worker-*** (coder/researcher/tester) | autonomous-ai-agents data-science devops-worker github mlops productivity research software-development |
-| **[已移除]-*** + [已移除]-orchestrator | apikey-image-gen creative github grok-image-to-video [已移除]* markdown-viewer media productivity research software-development |
-| **[已移除]-*** | github mlops productivity research software-development |
+| **[已移除]*** + [已移除] | apikey-image-gen creative github grok-image-to-video [已移除]* markdown-viewer media productivity research software-development |
+| **eda-*** | github mlops productivity research software-development |
 | **ops-*** | github mcp productivity research software-development |
 | **product-*** | github productivity research software-development |
 | **platform-*** | devops github productivity software-development |
@@ -104,7 +104,7 @@ done
 ```
 
 **Baselines (2026-08-05, post round-7)**: orchestrator 311, hack-forensics 325, hack-* 136,
-worker-* 103, [已移除]-* ~104, [已移除]/ops 84, product 82, platform 192. A profile
+worker-* 103, [已移除]* ~104, eda/ops 84, product 82, platform 192. A profile
 suddenly showing ~1000 means the 全家桶 regression — re-apply its board.
 
 ## Structural fixes applied 2026-08-05 (round 7)
