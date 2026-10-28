@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // overlay/scripts/graph-shadow-report.mjs
 // P1 Task 7 — shadow 双跑对比报告 CLI：
-//   node scripts/graph-shadow-report.mjs --db .loop/graph-shadow.db [--run <runId>]
+//   node scripts/maintenance/graph-shadow-report.mjs --db .loop/graph-shadow.db [--run <runId>]
 // 读 shadow 事件日志（node:sqlite），按可比词汇表（run.started / node.completed:<nodeId> /
 // run.completed）输出事件序列摘要与相邻对齐率（完整一致率以 vitest e2e 的
 // compareEventSequences 为准——legacy 侧事件在 store 里，脚本只报告 shadow 侧）。

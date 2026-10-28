@@ -24,7 +24,7 @@ import { resolve } from 'path';
 
 const overlayRoot = process.env.MIGRATE_OVERLAY_ROOT
   ? resolve(process.env.MIGRATE_OVERLAY_ROOT)
-  : resolve(import.meta.dirname, '..');
+  : resolve(import.meta.dirname, '..', '..');
 // MIGRATE_STUDIO_ROOT 允许把上游树换成独立 worktree 副本——默认口径保持
 // 运行中的共享树不被碰(run16/17 在飞进程锚定共享树,checkout --force/clean
 // 会摧毁它;三目标轮⑮实证)。
@@ -123,7 +123,7 @@ function main() {
   if (!st.baseTag) {
     st.baseTag = baseTag || process.env.MIGRATE_BASE_TAG;
     if (!st.baseTag) {
-      console.error('[migrate] 需要旧 base tag:node scripts/migrate-patches.mjs v0.7.29(或环境变量 MIGRATE_BASE_TAG)');
+      console.error('[migrate] 需要旧 base tag:node scripts/maintenance/migrate-patches.mjs v0.7.29(或环境变量 MIGRATE_BASE_TAG)');
       process.exit(1);
     }
     saveState(st);
@@ -266,7 +266,7 @@ function main() {
     !skipPatch(readFileSync(resolve(patchDir, p), 'utf8')));
   if (remaining.length > 0) { console.error(`[migrate] 未完成: ${remaining.join(', ')}`); process.exit(2); }
   console.log(`[migrate] 全部 studio patch 迁移完成。退役 ${retired.length} 个。`);
-  console.log('[migrate] 验证:npm run clean 不需要;直接 node scripts/migrate-patches.mjs --finish,然后 npm run inject');
+  console.log('[migrate] 验证:npm run clean 不需要;直接 node scripts/maintenance/migrate-patches.mjs --finish,然后 npm run inject');
 }
 
 main();

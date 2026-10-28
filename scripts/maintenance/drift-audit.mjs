@@ -4,9 +4,9 @@ import { readFileSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
-import { isHermesAgentPatchPath } from './inject.mjs'
+import { isHermesAgentPatchPath } from '../inject.mjs'
 
-const overlayRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const overlayRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const patchDir = resolve(overlayRoot, 'patches')
 const upstreamBase = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
   ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim())
