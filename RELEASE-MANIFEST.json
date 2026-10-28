@@ -62,7 +62,8 @@
         "runtime-manifest.json",
         "vendor/hermes-agent/"
       ],
-      "notes": "版本方案（2026-10-27 用户裁定＋纠正）：完整底座版本 0.22.5 与 hermes-agent 对齐，`-team.N`=本仓扩展发布序；真源 team/VERSION，README 双语同步；v3.3.0 为旧方案末版。"
+      "notes": "版本方案（2026-10-27 用户裁定＋纠正）：完整底座版本 0.22.5 与 hermes-agent 对齐，`-team.N`=本仓扩展发布序；真源 team/VERSION，README 双语同步；v3.3.0 为旧方案末版。",
+      "machineCarrier": "team/version.json"
     },
     "ycode": {
       "name": "Ycode（zcode 受管分叉，编码引擎）",
@@ -73,7 +74,6 @@
       "version": "3.16.2",
       "versionCarrier": "vendor/zcode/package.json",
       "carrierFormat": "json:version",
-      "carrierPattern": "8",
       "buildCommand": "以仓根为 CWD：npm run zcode:ensure（pnpm 闭包构建）＋node scripts/zcode-engine.mjs install-cli（→ ~/.hermes/ycode/zcode.cjs）；本模块包内不含 scripts/，解包后需在整体包/cockpit 包根执行",
       "artifacts": "~/.hermes/ycode/zcode.cjs（单文件部署位）＋本清单源码包 aistudio-ycode-<ver>-src.tar.gz",
       "install": "源码包解包后 zcode-patches 依序 git apply → pnpm install → build；ACP 桥以 ZCODE_BIN 指向部署位（解析序=显式 env＞官方捆绑＞分叉＞桥兜底）",
@@ -81,8 +81,9 @@
         "vendor/zcode/",
         "zcode-patches/"
       ],
-      "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（3.16.2）；基线 commit 3c5b2276（v3.16.1 系列）见 zcode-patches/series 头，carrierPattern=活跃补丁数（当前 8：002-009）。",
-      "baselineCommit": "3c5b2276"
+      "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（3.16.2）；基线 commit 3c5b2276（v3.16.1 系列）见 zcode-patches/series 头，activePatchCount=活跃补丁数（当前 8：002-009；字段 2026-10-28 由 carrierPattern 更名，语义不变）。",
+      "baselineCommit": "3c5b2276",
+      "activePatchCount": "8"
     },
     "yuan-skill": {
       "name": "yuan skill（swarm-yuan 项目技能生成器）",

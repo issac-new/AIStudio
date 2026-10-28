@@ -14,7 +14,7 @@ type ModuleEntry = {
   name: string
   version: string
   versionCarrier: string
-  carrierPattern?: string
+  activePatchCount?: number
   buildCommand: string
   artifacts: string
   install: string
@@ -122,6 +122,26 @@ describe('版本载体对账（真源在 carrier，清单只抄录）', () => {
     expect(r.stdout + r.stderr).toContain('agent-teams')
   })
 
+  it('K4：机器载体 team/version.json 与 VERSION/清单/VENDOR.md 三方一致', () => {
+    const m = loadManifest()
+    const carrier = m.modules['agent-teams'].machineCarrier
+    expect(carrier, 'agent-teams 须声明 machineCarrier').toBe('team/version.json')
+    const j = JSON.parse(readFileSync(join(ROOT, carrier), 'utf8'))
+    expect(j.version).toBe(m.modules['agent-teams'].version)
+    expect(`${j.base}-${j.extension}.${j.extN}`).toBe(m.modules['agent-teams'].version.replace(/^v/, ''))
+  })
+
+  it('K4 负例：篡改机器载体 version → release:check 非零（fixture 隔离）', () => {
+    const m = loadManifest()
+    const carrier = m.modules['agent-teams'].machineCarrier
+    const tmp = mkdtempSync(join(tmpdir(), 'verchk-k4-'))
+    const tampered = join(tmp, 'version.json')
+    writeFileSync(tampered, JSON.stringify({ version: 'v9.9.9-team.9', base: '9.9.9', extension: 'team', extN: 9 }), 'utf8')
+    const r = runCheck({ AIStudio_TestCarrierOverride: JSON.stringify({ [carrier]: tampered }) })
+    expect(r.code).not.toBe(0)
+    expect(r.stdout + r.stderr).toContain('agent-teams')
+  })
+
   it('ycode：底座版本=vendor/zcode/package.json 的 version 字段（JSON 真源）', () => {
     const m = loadManifest()
     expect(m.modules.ycode.carrierFormat).toBe('json:version')
@@ -133,7 +153,7 @@ describe('版本载体对账（真源在 carrier，清单只抄录）', () => {
     const m = loadManifest()
     const series = readFileSync(join(ROOT, 'zcode-patches/series'), 'utf8')
     expect(series).toContain(m.modules.ycode.baselineCommit ?? '') // 基线 commit 在 series 头可反查
-    const declared = m.modules.ycode.carrierPattern ? Number(/(\d+)/.exec(m.modules.ycode.carrierPattern)?.[1] ?? 0) : 0
+    const declared = Number(m.modules.ycode.activePatchCount ?? 0)
     const active = series.split('\n').filter(l => /^\d{3}-/.test(l.trim())).length
     expect(declared, '清单声明的活跃补丁数须等于 series 实际数').toBe(active)
   })
