@@ -86,9 +86,7 @@ function trimIfNeeded(file: string): void {
   try {
     const stat = readFileSync(file, 'utf8').split('\n').filter(Boolean)
     if (stat.length <= CAP * 2) return
-    const tmp = file + '.tmp'
-    writeFileSync(tmp, stat.slice(-CAP).join('\n') + '\n')
-    renameSync(tmp, file)
+  atomicWriteText(file, stat.slice(-CAP).join('\n') + '\n')
   } catch { /* 截尾失败下次再试（append 已成功，不回滚） */ }
 }
 

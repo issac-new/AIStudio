@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { homedir } from 'os'
 import { join } from 'path'
 import type { RedteamRun, RedteamRunSummary, S1LayerReport } from './types'
+import { atomicWriteJson } from '../lib/fs-store'
 
 interface StoreShape {
   runs: RedteamRun[]
@@ -39,9 +40,7 @@ function readStore(): StoreShape {
 function writeStore(store: StoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
   const file = storePath()
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, store)
 }
 
 export function appendRun(run: RedteamRun): void {

@@ -14,6 +14,7 @@
 import { readdirSync, readFileSync, statSync, readlinkSync, existsSync, mkdirSync, appendFileSync, writeFileSync, renameSync } from 'node:fs'
 import { join, resolve, dirname, relative, sep } from 'node:path'
 import { homedir } from 'node:os'
+import { atomicWriteText } from '../lib/fs-store'
 
 export type SkillScanVerdict = 'safe' | 'caution' | 'dangerous'
 export type SkillFindingSeverity = 'high' | 'medium' | 'low'
@@ -299,9 +300,7 @@ function appendScanLedger(summary: SkillScanSummary): void {
     appendFileSync(file, JSON.stringify(summary) + '\n', 'utf8')
     const lines = readFileSync(file, 'utf8').split('\n').filter(Boolean)
     if (lines.length > LEDGER_CAP * 2) {
-      const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-      writeFileSync(tmp, lines.slice(-LEDGER_CAP).join('\n') + '\n', 'utf8')
-      renameSync(tmp, file)
+  atomicWriteText(file, lines.slice(-LEDGER_CAP).join('\n') + '\n')
     }
   } catch { /* 账本失败不阻断扫描 */ }
 }

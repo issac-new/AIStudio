@@ -10,9 +10,9 @@
 // 存储并进 approval-log 同款 append-only 事件流；**不接线鉴权**（现有
 // 网关/JWT 鉴权面不动），凭证状态只是记录不是 enforcement。接线属后续轮。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
-import { atomicWriteJson } from '../lib/fs-store'
 import { homedir } from 'os'
 import { join } from 'path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export type IdentityKind = 'human' | 'agent' | 'bot' | 'service'
 export type CredentialStatus = 'active' | 'revoked'
@@ -107,9 +107,7 @@ function readStore(): StoreShape {
 function writeStore(store: StoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
   const file = storePath()
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, store)
 }
 
 function appendEvent(event: Omit<IdentityEvent, 'ts'> & { ts?: number }): void {

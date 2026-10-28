@@ -10,10 +10,10 @@
 // - 动作：warn 只提示；downgrade 返回建议（模型切换属上游路由，裁决层不改模型）；
 //   block 在 `HERMES_BUDGET_ENFORCE=1` 时由执法门拒绝工具调用。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { atomicWriteJson } from '../lib/fs-store'
 import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export type BudgetAction = 'warn' | 'downgrade' | 'block'
 
@@ -71,9 +71,7 @@ function isPolicy(v: unknown): v is BudgetPolicy {
 function writePolicies(policies: BudgetPolicy[]): void {
   const file = policyPath()
   mkdirSync(dirname(file), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify({ version: 1, policies } satisfies PolicyFile, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, { version: 1, policies } satisfies PolicyFile)
 }
 
 export function listBudgetPolicies(): BudgetPolicy[] {

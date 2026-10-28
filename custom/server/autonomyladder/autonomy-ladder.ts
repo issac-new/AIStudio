@@ -15,6 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 /** BCG 阶梯：insight=只出洞察（人决策）；assist=辅助执行（人确认关键步）；auto=流程内端到端。 */
 export type LadderLevel = 'insight' | 'assist' | 'auto'
@@ -67,9 +68,7 @@ function load(): StoreShape {
 
 function save(s: StoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
-  const tmp = `${storePath()}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(s, null, 2))
-  renameSync(tmp, storePath())
+  atomicWriteJson(storePath(), s)
 }
 
 export function listLadder(): AutonomyLadderEntry[] {

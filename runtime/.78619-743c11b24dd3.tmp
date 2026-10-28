@@ -1,0 +1,25 @@
+[
+  {
+    "id": "wf-mvrowcvb-j9l6",
+    "name": "双身份并行",
+    "mode": "parallel",
+    "status": "running",
+    "steps": [
+      {
+        "targetKind": "identity",
+        "ref": "worker-coder",
+        "instructions": "a",
+        "status": "ok",
+        "reply": "回执@worker-coder"
+      },
+      {
+        "targetKind": "identity",
+        "ref": "data-arch",
+        "instructions": "b",
+        "status": "ok",
+        "reply": "回执@data-arch"
+      }
+    ],
+    "createdAt": 1793166269735
+  }
+]

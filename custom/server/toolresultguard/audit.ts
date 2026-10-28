@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import type { GuardDecision } from './types'
+import { atomicWriteText } from '../lib/fs-store'
 
 export interface GuardAuditEntry extends GuardDecision {
   ts: number
@@ -34,9 +35,7 @@ export function appendAudit(entry: GuardAuditEntry): void {
       const lines = readFileSync(auditFile(), 'utf8').split('\n').filter(Boolean)
       if (lines.length > CAP * 2) {
         const { writeFileSync, renameSync } = require('fs') as typeof import('fs')
-        const tmp = `${auditFile()}.tmp-${process.pid}-${Date.now()}`
-        writeFileSync(tmp, lines.slice(-CAP).join('\n') + '\n')
-        renameSync(tmp, auditFile())
+  atomicWriteText(auditFile(), lines.slice(-CAP).join('\n') + '\n')
       }
     } catch { /* 截断失败不阻断 */ }
   } catch { /* 留痕失败 fail-open：不影响判定路径 */ }

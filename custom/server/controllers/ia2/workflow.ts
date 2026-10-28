@@ -22,6 +22,7 @@ import { join } from 'path'
 import { ensureBotChat, gatewayJson, profileBase } from './identity-chat'
 import { resolveMatrixDispatchEnv } from '../../matrix/raci-matrix'
 import { matrixSend } from '../../matrix/chat-bridge'
+import { atomicWriteJson } from '../../lib/fs-store'
 
 type Ctx = { method?: string; path?: string; params?: Record<string, string>; request?: { body?: unknown }; status?: number; body?: unknown; set(k: string, v: string): void }
 type Next = () => Promise<void>
@@ -69,9 +70,7 @@ function loadRuns(): WorkflowRun[] {
 function saveRuns(runs: WorkflowRun[]): void {
   try {
     mkdirSync(join(STORE_PATH, '..'), { recursive: true })
-    const tmp = `${STORE_PATH}.tmp`
-    writeFileSync(tmp, JSON.stringify(runs.slice(0, MAX_RUNS), null, 2), 'utf-8')
-    renameSync(tmp, STORE_PATH)
+  atomicWriteJson(STORE_PATH, runs.slice(0, MAX_RUNS))
   } catch { /* 落盘失败不阻断运行态 */ }
 }
 let runs: WorkflowRun[] = loadRuns()

@@ -53,9 +53,7 @@ function writeBreaker(run: string, gate: string, state: GateBreakerState): void 
   let doc: Record<string, GateBreakerState> = {}
   try { doc = JSON.parse(readFileSync(file, 'utf8')) } catch { /* 首写/坏档重建 */ }
   doc[gate] = state
-  const tmp = `${file}.tmp-${process.pid}`
-  writeFileSync(tmp, JSON.stringify(doc, null, 1))
-  renameSync(tmp, file)
+  atomicWriteJson(file, doc, { indent: 1 })
 }
 
 /** 留痕副作用落 run 证据面（issues.log 幂等面由判定语义保证：tripped 只 firstLog 落一次）。 */

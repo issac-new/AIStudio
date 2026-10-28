@@ -12,6 +12,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface CtxNote {
   id: string
@@ -52,9 +53,7 @@ function readNotesFile(sessionId: string): SessionNotesFile {
 function writeNotesFile(file: SessionNotesFile): void {
   const path = notesFilePath(file.session)
   mkdirSync(join(path, '..'), { recursive: true })
-  const tmp = `${path}.tmp-${process.pid}`
-  writeFileSync(tmp, JSON.stringify(file, null, 2))
-  renameSync(tmp, path)
+  atomicWriteJson(path, file)
 }
 
 function newNoteId(): string {

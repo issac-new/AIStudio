@@ -14,6 +14,7 @@ import { indexSkills, scanSkillRoot } from './scan'
 import type {
   ApplyAction, ApplyProfileResult, ApplyResult, RollbackProfileResult, RollbackResult, SkillEntry,
 } from './types'
+import { atomicWriteText } from '../lib/fs-store'
 
 const LEDGER = '.skill-provisioning.json'
 const SAFE_PROFILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
@@ -99,9 +100,7 @@ function readLedger(profileSkills: string): Ledger {
 function writeLedger(profileSkills: string, ledger: Ledger): void {
   mkdirSync(profileSkills, { recursive: true })
   const path = join(profileSkills, LEDGER)
-  const tmp = `${path}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(ledger, null, 2) + '\n', 'utf8')
-  renameSync(tmp, path)
+  atomicWriteText(path, JSON.stringify(ledger, null, 2) + '\n')
 }
 
 function sameContent(a: SkillEntry, b: SkillEntry): boolean {

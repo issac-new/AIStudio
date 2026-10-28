@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { homedir } from 'os'
 import { dirname, join, resolve } from 'path'
 import { computeIdempotencyKey } from './contract'
+import { atomicWriteText } from '../lib/fs-store'
 
 export interface IdempotencyRecord {
   key: string
@@ -165,9 +166,7 @@ export class IdempotencyStore {
     try {
       mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
       const payload: StoreFile = { version: 1, records: [...this.records.values()] }
-      const tmp = `${path}.${process.pid}.tmp`
-      writeFileSync(tmp, JSON.stringify(payload), { mode: 0o600 })
-      renameSync(tmp, path)
+  atomicWriteText(path, JSON.stringify(payload), { mode: 0o600 })
     } catch { /* 写失败不阻断工具执行；幂等命中率会下降但审计仍有记录 */ }
   }
 }

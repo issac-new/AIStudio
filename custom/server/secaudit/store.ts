@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import type { AuditProject } from './types'
+import { atomicWriteJson } from '../lib/fs-store'
 
 interface SecAuditStoreShape {
   projects: AuditProject[]
@@ -30,9 +31,7 @@ export function readSecAuditStore(): SecAuditStoreShape {
 export function writeSecAuditStore(store: SecAuditStoreShape): void {
   const file = secAuditStorePath()
   mkdirSync(dirname(file), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(store, null, 1), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, store, { indent: 1 })
 }
 
 export function getProject(projectId: string): AuditProject | undefined {

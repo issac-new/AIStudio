@@ -15,6 +15,7 @@ import {
   matchEvent, renderBriefing, validateRuleInput,
   type AutomationEvent, type AutomationRule, type RuleValidationErrors,
 } from './automation-rules'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface AutomationDispatchPort {
   /** 返回 outcome 数组（mention 总线语义；空数组=无 mention 可派发=配置错）。 */
@@ -84,9 +85,7 @@ export class AutomationEngine {
   private writeJsonAtomic(path: string, value: unknown): void {
     mkdirSync(dirname(path), { recursive: true })
     // pid+时间戳限定 tmp：dev 与打包版双进程并发写同一 store 时固定名会互相截断
-    const tmp = `${path}.tmp-${process.pid}-${Date.now()}`
-    writeFileSync(tmp, JSON.stringify(value, null, 2), 'utf8')
-    renameSync(tmp, path)
+  atomicWriteJson(path, value)
   }
 
   private persistRules(): void { this.writeJsonAtomic(this.opts.storePath, this.rules) }

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "wf-mvrowcwx-mlt8",
+    "name": "集群投递",
+    "mode": "serial",
+    "status": "running",
+    "steps": [
+      {
+        "targetKind": "matrix",
+        "ref": "!room1:matrix.test",
+        "instructions": "巡检",
+        "status": "running"
+      }
+    ],
+    "createdAt": 1793166269793
+  },
+  {
+    "id": "wf-mvrowcvb-j9l6",
+    "name": "双身份并行",
+    "mode": "parallel",
+    "status": "done",
+    "steps": [
+      {
+        "targetKind": "identity",
+        "ref": "worker-coder",
+        "instructions": "a",
+        "status": "ok",
+        "reply": "回执@worker-coder"
+      },
+      {
+        "targetKind": "identity",
+        "ref": "data-arch",
+        "instructions": "b",
+        "status": "ok",
+        "reply": "回执@data-arch"
+      }
+    ],
+    "createdAt": 1793166269735,
+    "finishedAt": 1793166269737
+  }
+]

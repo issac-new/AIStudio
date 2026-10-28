@@ -24,6 +24,7 @@ import { homedir } from 'os'
 import { join } from 'path'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { readdir, stat, rm } from 'fs/promises'
+import { atomicWriteJson } from '../../lib/fs-store'
 
 /** 分类定义（对标 zcode resourceManager.storage.category 11 类的本地子集） */
 const CATEGORIES: Array<{
@@ -126,9 +127,7 @@ function readDiskCache(): DiskCache | null {
 function writeDiskCache(body: Record<string, unknown>): void {
   try {
     mkdirSync(join(DISK_CACHE_PATH, '..'), { recursive: true })
-    const tmp = `${DISK_CACHE_PATH}.tmp`
-    writeFileSync(tmp, JSON.stringify({ at: Date.now(), body }), 'utf8')
-    renameSync(tmp, DISK_CACHE_PATH)
+  atomicWriteJson(DISK_CACHE_PATH, { at: Date.now(), body })
   } catch { /* 缓存写失败不影响响应 */ }
 }
 

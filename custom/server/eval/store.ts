@@ -16,6 +16,7 @@ import { loadEvalConfig } from './types'
 import { isEvalDimension } from './coverage'
 import type { OracleCase, OracleRunRecord } from './uioracle'
 import { contentFingerprint } from './fingerprint'
+import { atomicWriteJson } from '../lib/fs-store'
 
 interface StoreShape {
   sets: EvalSet[]
@@ -97,9 +98,7 @@ function bumpSetAsset(store: StoreShape, set: EvalSet): void {
 function writeStore(store: StoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
   const file = storePath()
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, store)
 }
 
 // ---------- 校验 ----------

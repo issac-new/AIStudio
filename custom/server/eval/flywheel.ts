@@ -13,6 +13,7 @@ import { join } from 'path'
 import type { BadCaseRootCause } from './badcase-distill'
 import { ROOT_CAUSE_LABELS } from './badcase-distill'
 import type { EvalRun, EvalSet, RemediationRecord } from './types'
+import { atomicWriteJson } from '../lib/fs-store'
 
 // ---------- 台账 ----------
 
@@ -92,9 +93,7 @@ function readLedger(): LedgerShape {
 function writeLedger(ledger: LedgerShape): void {
   mkdirSync(ledgerDir(), { recursive: true })
   const file = ledgerPath()
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(ledger, null, 2), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, ledger)
 }
 
 /** 登记一次提炼（幂等：同 sourceRunId+sourceTaskId+sampleIdx 已在册则跳过；重复提交可补快照/归因复核）。 */

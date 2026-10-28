@@ -88,9 +88,7 @@ function loadSpotchecks(): SpotCheckItem[] {
 function saveSpotchecks(list: SpotCheckItem[]): void {
   const file = resolveSpotcheckPath()
   mkdirSync(dirname(file), { recursive: true })
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(list, null, 1), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, list, { indent: 1 })
 }
 
 /** 待抽检清单（新→旧，只列未处置；limit 上限 100）。 */

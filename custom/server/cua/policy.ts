@@ -13,6 +13,7 @@
 // 写入原子（tmp+rename）。IDE_CUA_POLICY_FILE 覆盖路径供测试注入。
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
+import { atomicWriteJson } from '../lib/fs-store'
 
 /** fail-closed 哨兵 env：zcode-cua 侧识别并整体禁用运行时 */
 export const CUA_DISABLE_ENV = 'ZCODE_CUA_DISABLE' as const
@@ -69,9 +70,7 @@ export function brokerTransport(): CuaBrokerSection | null {
 function writePolicy(policy: CuaPolicyFile): void {
   const path = policyPath()
   mkdirSync(dirname(path), { recursive: true })
-  const tmp = join(dirname(path), `.ide-cua.${process.pid}.tmp`)
-  writeFileSync(tmp, JSON.stringify(policy, null, 2))
-  renameSync(tmp, path)
+  atomicWriteJson(path, policy)
 }
 
 /** 会话是否显式开启 CUA（默认 false = fail-closed） */

@@ -12,6 +12,7 @@ import { join, resolve } from 'node:path'
 import type { GoalContract, ProblemDefinerLevel, AlignmentStatusName } from './proactivity-model'
 import { PROBLEM_DEFINER_LEVELS } from './proactivity-model'
 import { getAlignment, alignmentStatus, _useAlignmentDirForTests, _resetAlignmentDirForTests } from './goal-alignment'
+import { atomicWriteJson } from '../lib/fs-store'
 
 export interface ProactivityPolicyEntry {
   /** 配置对象：profile 名（对齐 ladder target 语义）。 */
@@ -78,9 +79,7 @@ function load(): StoreShape {
 
 function save(s: StoreShape): void {
   mkdirSync(storeDir(), { recursive: true })
-  const tmp = `${storePath()}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify(s, null, 2))
-  renameSync(tmp, storePath())
+  atomicWriteJson(storePath(), s)
 }
 
 export function validatePolicyInput(v: {

@@ -253,9 +253,7 @@ function writeFleetFileResponse(requestId: string, choice: string, actor: string
   const respDir = join(dir, 'responses')
   mkdirSync(respDir, { recursive: true })
   const file = join(respDir, `${requestId}.json`)
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`
-  writeFileSync(tmp, JSON.stringify({ request_id: requestId, digest, choice, decided_at: Date.now(), actor }), 'utf8')
-  renameSync(tmp, file)
+  atomicWriteJson(file, { request_id: requestId, digest, choice, decided_at: Date.now(), actor })
   return { ok: true }
 }
 
@@ -500,9 +498,7 @@ router.post('/:id/decide', async (ctx) => {
       return
     }
     mkdirSync(join(dir, 'mx-responses'), { recursive: true })
-    const tmp = `${respFile}.tmp-${process.pid}-${Date.now()}`
-    writeFileSync(tmp, JSON.stringify({ request_id: eid, decision, decided_at: Date.now(), actor, channel: 'inbox' }), 'utf8')
-    renameSync(tmp, respFile)
+  atomicWriteJson(respFile, { request_id: eid, decision, decided_at: Date.now(), actor, channel: 'inbox' })
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: eid,
       targetTitle: note || eid, decision, note,
