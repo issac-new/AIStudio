@@ -337,8 +337,16 @@ if _main_repo.exists():
 # evidence/governance-metrics.json 快照取件——待处置键/悬挂类型不再本地复算；
 # 快照缺席=报告生成链断裂 FAIL，不放行）。
 _snap = EVID / 'governance-metrics.json'
+# 时代判定（2026-10-28 修，run23 前置 ⑧ 解锁）：配对快照能力随融合批六（ac836f5c9，
+# 2026-10-27）上线——此前收尾的轮次（RUN_ID 日期前缀 < 20261027）证据面天然无此产物，
+# 缺席降级 WARN 如实标注（当轮处置核验以收尾时审计记录为准，不追溯补造）；其后新轮
+# 缺席照旧 FAIL 不放行（链断裂检测不松）。无产物级时代锚（harness 快照不含 commit 字段，
+# 实查 harness-baseline/summary.json），RUN_ID 日期前缀即轮次时代锚（YYYYMMDD-v8-runNN）。
 if not _snap.exists():
-    fails.append('R5 治理指标快照缺席（governance-metrics.json）——配对正本未到位，问题单处置核验无法执行（先跑 gov_report）')
+    if RUN_ID[:8] < '20261027':
+        warns.append('R5 治理指标快照缺席（governance-metrics.json）——本轮早于配对单源能力（融合批六 2026-10-27 上线），处置核验以当轮收尾审计记录为准，不追溯补造')
+    else:
+        fails.append('R5 治理指标快照缺席（governance-metrics.json）——配对正本未到位，问题单处置核验无法执行（先跑 gov_report）')
 else:
     try:
         _dto = json.loads(_snap.read_text(encoding='utf-8'))
@@ -379,8 +387,13 @@ if _done_blocks and _ui_cnt == 0:
     warns.append('R7 完成步无一帧「界面实拍」角标——疑文档/CLI 凑数，须人工视觉复核')
 
 # R8 数字实测：报告内计数类字样与 issues.log 一致（问题单唯一键数）
+# _iss_lines 在此单源定义（R8 与 A3a/A3b 共用同一次解析与同一唯一键口径 kind·key）。
+# 2026-10-28 修：融合批六（ac836f5c9）把预解析瘦身为配对单源时删掉了 R8 依赖的 _iss
+# 赋值，审计任何含「问题单终态」的报告必 NameError——run23 前置 ⑧ 审 run22 实锤。
+if _ilog.exists():
+    _iss_lines = [l for l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines() if l.startswith('ISSUE|')]
 if _ilog.exists() and '问题单终态' in rep:
-    _uniq = len(set(_iss))
+    _uniq = len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines})
     _m3 = re.search(rf'唯一键\s*(\d+)', rep)
     # run20 收尾实录：审计 FAIL→驱动追加降级 DISP 行→issues 涨→上轮报告数字固化→
     # 永远差 3 的自增死循环。容差 5（降级行属过程追加非计数失实）；超容差仍 FAIL。
@@ -401,7 +414,6 @@ else:
 # A3 三源计数：复盘文档成文数 × issues.log 事件流 × 报告唯一键（P18/R29 承诺兑现——
 # 方案声称「复盘三源计数一致性入审计断言已落地」但无代码，本断言即补位）。
 if _ilog.exists():
-    _iss_lines = [l for l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines() if l.startswith('ISSUE|')]
     _m_rep = re.search(r'唯一键\s*(\d+)', rep)
     if _m_rep and int(_m_rep.group(1)) != len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines}):
         fails.append(f'A3a 报告问题单唯一键计数（{_m_rep.group(1)}）≠ issues.log 实测（{len({l.split("|")[1] + "·" + l.split("|")[2] for l in _iss_lines})}）——计数三源不一致')

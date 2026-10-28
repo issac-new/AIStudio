@@ -42,7 +42,20 @@ if [ -x "$HERE/node_modules/.bin/vitest" ]; then
   printf '%s\n' "$_vt_out"
   exit $_vt_rc
 fi
-MX_OVERLAY_ROOT="${MX_OVERLAY_ROOT:-$(cd "$HERE/../overlay" 2>/dev/null && pwd)}"
-cd "$MX_OVERLAY_ROOT"
-export NODE_PATH="$MX_OVERLAY_ROOT/node_modules"
-npx vitest run --root "$HERE" "$@"
+# 单仓整合（2026-10-24）起回落解析序与 harness-gate-integrity.test.ts 同源：
+# env MX_OVERLAY_ROOT ＞ 仓根（patches/+runtime/ 在位即认）＞ 旧 overlay 位兜底。
+# 旧版裸 `cd "$MX_OVERLAY_ROOT"`：单仓下 $HERE/../overlay 不存在 → 空串 cd 在
+# set -e 下静默退 1——sh 段全过、vitest 段零输出即此形（run23 前置 ① 红真因）。
+_ovr="${MX_OVERLAY_ROOT:-}"
+if [ -z "$_ovr" ]; then
+  if [ -d "$HERE/../patches" ] && [ -d "$HERE/../runtime" ]; then
+    _ovr="$(cd "$HERE/.." && pwd)"
+  elif [ -d "$HERE/../overlay" ]; then
+    _ovr="$(cd "$HERE/../overlay" && pwd)"
+  fi
+fi
+if [ -n "$_ovr" ] && [ -x "$_ovr/node_modules/.bin/vitest" ]; then
+  exec "$_ovr/node_modules/.bin/vitest" run --root "$HERE" "$@"
+fi
+echo "run-gates: 本仓 node_modules/vitest 缺席且产品根（$_ovr）无可执行 vitest——cd simharness && npm install 后重跑"
+exit 1
