@@ -127,7 +127,8 @@
       "runtime/"
     ],
     "repoLevelNote": "repoLevelPaths 是仓级基建/资产，只随整体包分发，不单独成模块包；四条模块包按各自 packageIncludes 圈定。新增顶层目录时须在此登记或归入某模块，否则只出现在整体包且无归属声明。",
-    "checksums": "SHA256SUMS（随 dist/release/ 目录）"
+    "checksums": "SHA256SUMS（随 dist/release/ 目录）",
+    "artifactDistribution": "local-only（2026-10-28 用户裁定：构建产物只在本机构建留存，不上传 GitHub Release / 任何远端；除非用户明确要求。）发布动作=打 tag + 写 Release 说明，不含资产。"
   },
   "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 包版本 3.16.2、基线谱系 v3.16.1 系列 @3c5b2276。模块大版本对齐基准，与产品扩展序不互推）"
 }
