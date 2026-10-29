@@ -889,7 +889,7 @@ if [ "$(posture)" = "strict" ]; then
               note "[安全] 复审基线锚定 origin/main=$(sget security_fail_main_head)"
             fi
             git -C "$DIRECTOR_CLONE" fetch origin main >/dev/null 2>&1 || true
-            local _rr_head; _rr_head="$(git -C "$DIRECTOR_CLONE" rev-parse --short=9 origin/main 2>/dev/null || echo unknown)"
+            _rr_head="$(git -C "$DIRECTOR_CLONE" rev-parse --short=9 origin/main 2>/dev/null || echo unknown)"
             if [[ "$_rr_head" != "$(sget security_fail_main_head)" && "$(sget security_rereview_for_head)" != "$_rr_head" ]]; then
               sset security_rereview_for_head "$_rr_head"
               # 新复审周期：双侧催办预算清零 + 上游耐心钟重置（修正①②配套）
@@ -909,13 +909,13 @@ if [ "$(posture)" = "strict" ]; then
 #   错把含断棒的 4h 墙钟当工时——用户 23:2x 点名修正）；
               # ③第三声后升级不沉默：high 记录 + 房间点名主管A 介入（球在哪侧点名
               #   哪侧负责人）。
-              local _rr_result; _rr_result="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board secops-audit-trail show "$SGID" 2>/dev/null | awk '/^Result:/{flag=1;next}/^Comments/{flag=0}flag' | head -1 || echo "")"
-              local _now; _now=$(date +%s)
+              _rr_result="$(HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board secops-audit-trail show "$SGID" 2>/dev/null | awk '/^Result:/{flag=1;next}/^Comments/{flag=0}flag' | head -1 || echo "")"
+              _now=$(date +%s)
               if [[ "$_rr_result" == *"FAIL"* ]]; then
                 # 球在上游（组织 r_n+1 修订）——催产品经理A，带 30min 耐心间隔
                 if [[ -z "$(sget security_up_ball_ts)" ]]; then sset security_up_ball_ts "$_now"; fi
-                local _up_n; _up_n="$(sget security_nudge_up)"; _up_n="${_up_n:-0}"
-                local _up_last; _up_last="$(sget security_up_last_ts)"; _up_last="${_up_last:-$(sget security_up_ball_ts)}"
+                _up_n="$(sget security_nudge_up)"; _up_n="${_up_n:-0}"
+                _up_last="$(sget security_up_last_ts)"; _up_last="${_up_last:-$(sget security_up_ball_ts)}"
                 # DEAD 块（迁移到 G2 总闸入口 920 行，详见那块注释）
                 if [[ "$_up_n" -lt 3 && $(( _now - _up_last )) -ge 1800 ]]; then
                   sset security_nudge_up $((_up_n + 1))
@@ -929,7 +929,7 @@ if [ "$(posture)" = "strict" ]; then
                 fi
               else
                 # 球在评审侧（复审未出结论）——催安全工程师AI，等待钟级节奏
-                local _rev_n; _rev_n="$(sget security_nudge_rev)"; _rev_n="${_rev_n:-0}"
+                _rev_n="$(sget security_nudge_rev)"; _rev_n="${_rev_n:-0}"
                 if [[ "$_rev_n" -lt 3 ]]; then
                   sset security_nudge_rev $((_rev_n + 1))
                   dispatch_in_room secops "@secops-agent:matrix.test 复审催办（第 $((_rev_n + 1))/3 次）：修订 $(sget security_rereview_for_head) 的复审仍未回结论行 SECURITY-GATE。请继续复审卡 ${SGID} 并回结论；复审 PASS 前 G2 不放行。" "$(agent_mxid secops)" || true
@@ -2128,7 +2128,7 @@ if [ "$(posture)" = "strict" ]; then
         sset "${rkey}" "$(date +%s)"
         sent=$((sent+1))
       done
-    done < <(printf '%s' "${body}" | grep -E 'R-[0-9]+ *=' | head -6)
+    done < <(printf '%s' "${body}" | grep -E 'R-[0-9]+ *=' | awk 'NR<=6')
     note "[G5] 退回自动分派 ${sent} 条单步令（翻绿路径 owner 直派；组织者令不替代）"
   }
 
