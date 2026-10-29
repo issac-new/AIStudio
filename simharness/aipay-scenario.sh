@@ -2185,7 +2185,9 @@ if [ "$(posture)" = "strict" ]; then
         fi
         G5_RETRY_TS=$(( $(date +%s) * 1000 ))
         dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 真实缺项（${_G5GAPS}）补齐后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行；卡面已补项勿重做——如认为缺项不成立请按卡面证据改判）。" "$(agent_mxid fanfan)"
-        g5_gap_fanout "${RGID}"   # run22 复盘根治：缺项 owner 直派（组织者令之外，防分派断环）
+        # 2026-10-29 值守兜底：卡面 0 条 R-n 行时 grep 无匹配退出码会击穿错误管道杀驱动
+        # （两实录）——分派 0 是合法结果；函数任何内部非零在此吞掉并如实记 0 条。
+        g5_gap_fanout "${RGID}" || note "[G5] 退回自动分派跳过（fanout 内部异常，按 0 条如实记；run 后修复批根治）"
         if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
           # 补齐轮与复用/首轮同一收口（2026-10-07 本路径曾内联收口漏发
           # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，记录 delivery-g5-gate-event-missing）
