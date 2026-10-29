@@ -181,7 +181,7 @@ ta_tool_home() {  # $1=tool → stdout 宿主安装探测目录（空=无判据�
     return 0
   fi
   case "$tool" in
-    agent)    printf '%s' "$HOME/.agent" ;;
+    agents)   printf '%s' "$HOME/.agents" ;;
     cursor)   printf '%s' "$HOME/.cursor" ;;
     windsurf) printf '%s' "$HOME/.codeium/windsurf" ;;
     gemini)   printf '%s' "$HOME/.gemini" ;;

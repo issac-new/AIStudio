@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（386 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（387 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 386 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 387 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -386,6 +386,7 @@
 | 2026-10-28-repo-structure-tidy | 仓库目录结构整理 | scripts 根 60→25 分 regression/maintenance；docs 根 30 个日期文件迁 reports/；根级死件退役；旧多仓路径对齐 vendor 优先 |
 | 2026-10-28-login-unknown-path-freeze | 登录路径×诚实404 未登录守卫环冻结修复 | /login 非法路径撞 404 改道成守卫重定向环饿死渲染线程；notFound 设 public＋/login 别名直达登录页（run23 采集链首暴露） |
 | 2026-10-29-swarm-yuan-agent-skills-dirs | swarm-yuan 安装/落盘目录对齐 Agent Skills 开放标准默认路径 | 自身安装默认 ~/.agent/skills（--agent 通道＋auto 兜底）；生成技能默认项目内 .agent/skills（存量复用不迁移）；产物内部引用随落点自动改写 |
+| 2026-10-29-swarm-yuan-agents-dir-rename | swarm-yuan 默认目录校正 .agent→.agents（用户裁定） | zcode 发现根硬编码 .zcode/.agents（roots.ts:10-11），改 .agents 即原生发现；旗标 --agents、宿主 key agents、生成落点/豁免/垫片/守门全量同步；v2.96.2 |
 | 2026-10-29-agent-self-reflection | Agent 自我觉察与反省能力立项（长会话治理 B 层） | 自我效能遥测/反省触发/自纠走既有通道＋留痕入证据；舰队层增补：利用率遥测＋跨闸预写（run23 G5 段六工位闲置实录触发，用户批准） |
 | 2026-10-28-sim-prelaunch-check4-single-repo | 预检④单仓适配 | 判据排除 vendor/** 注入脏态（AGENTS.md 立法态）；预检轨迹与守门断言跟随 |
 | 2026-10-28-debt-clearance | 挂账清偿轮 | 部署默认保留目标+--force；inject 增 OVERLAY_STATE_OUT 隔离测试；runtime 模板回灌 guardrail；repo-root 去外机兜底；compose 下线；evidence 二进制冻结 |

@@ -789,9 +789,9 @@ check_scope() {
     # 两类工具链自有路径不属项目只读语义（列只读即每轮自干扰永久红）——
     # ① 运行时账本 .swarm-yuan/**：门禁与 hook 自写（trace/审计/flag/指纹/记忆写回），
     #    防篡改靠链式锚定与审计兜底，不靠 scope 门；
-    # ② 技能资产 .agent/skills/**（含 .claude/skills/.codex/skills）：create/upgrade/--persist 的合法写入面，
+    # ② 技能资产 .agents/skills/**（含 .claude/skills/.codex/skills）：create/upgrade/--persist 的合法写入面，
     #    防手改由 integrity-guard（deny/advisory）与升级机制守卫——分层执法，scope 不重复兜。
-    changed=$(printf '%s\n' "$changed" | grep -vE '^(\.agent/skills/|\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
+    changed=$(printf '%s\n' "$changed" | grep -vE '^(\.agents/skills/|\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
     if [[ -n "$changed" ]]; then
       for rd in ${READONLY_DIRS[@]+"${READONLY_DIRS[@]}"}; do
         [[ -z "$rd" ]] && continue
@@ -848,9 +848,9 @@ check_spec_first() {
   local _root="${PROJECT_DIR:-$(pwd)}"
   local _changed _hit=""
   _changed=$(_git_changed_files)
-  # 与 check_scope 同款豁免过滤：工具链自有路径（.swarm-yuan/.agent/skills/.claude/skills/.codex/skills）
+  # 与 check_scope 同款豁免过滤：工具链自有路径（.swarm-yuan/.agents/skills/.claude/skills/.codex/skills）
   # 是门禁/hook/技能升级的合法写入面，不属"无 spec 写源码"语义——分层执法，不重复兜。
-  _changed=$(printf '%s\n' "$_changed" | grep -vE '^(\.agent/skills/|\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
+  _changed=$(printf '%s\n' "$_changed" | grep -vE '^(\.agents/skills/|\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
   local _f
   while IFS= read -r _f; do
     [[ -z "${_f:-}" ]] && continue

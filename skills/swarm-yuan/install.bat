@@ -1,8 +1,8 @@
 @echo off
 REM install.bat - Windows 包装器，自动查找 bash 并运行 install.sh
 REM 用法:
-REM   install.bat                  自动检测环境 + 安装（未检测到宿主时默认 ~/.agent/skills/）
-REM   install.bat --agent          强制安装到 ~/.agent/skills/
+REM   install.bat                  自动检测环境 + 安装（未检测到宿主时默认 ~/.agents/skills/）
+REM   install.bat --agents         强制安装到 ~/.agents/skills/
 REM   install.bat --claude         强制安装到 ~/.claude/skills/
 REM   install.bat --list           仅列出检测到的环境
 REM   install.bat --all            安装到所有已检测到的环境
