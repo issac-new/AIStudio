@@ -28,7 +28,8 @@ mkproj() {  # $1=dir
 }
 
 A="$TMP/old-place/reloc-proj"; mkproj "$A"
-bash "$GEN" --profile lite reloc "$A" >/dev/null 2>&1 || { bad "前置: 生成失败"; exit 1; }
+# target-dir 显式钉住 .claude/skills（测试聚焦迁移语义，不随默认落点变化；2026-10-29 起默认 .agent/skills）
+bash "$GEN" --profile lite reloc "$A" "$A/.claude/skills" >/dev/null 2>&1 || { bad "前置: 生成失败"; exit 1; }
 SD_A="$A/.claude/skills/reloc"
 [[ -f "$SD_A/scripts/precheck.conf" ]] && ok "前置: 技能就位" || { bad "前置: 缺 precheck.conf"; exit 1; }
 grep -q "^PROJECT_DIR=$A" "$SD_A/scripts/precheck.conf" && ok "前置: PROJECT_DIR=旧路径" || bad "前置: PROJECT_DIR 非预期"

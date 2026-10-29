@@ -19,6 +19,7 @@ trap 'rm -rf "$SB"' EXIT
 mkdir -p "$SB/goproj"
 printf 'module t\n\ngo 1.24\n' > "$SB/goproj/go.mod"
 printf 'package main\nfunc main(){}\n' > "$SB/goproj/main.go"
+mkdir -p "$SB/goproj/.claude/skills" "$SB/djproj/.claude/skills" "$SB/feproj/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 bash scripts/generate-skill.sh d9-probe "$SB/goproj" > "$SB/d9.log" 2>&1
 if grep -q 'backend-service' "$SB/goproj/.claude/skills/d9-probe/SKILL.md" 2>/dev/null; then
   ok "1a Go 后端（go.mod+main.go）嗅出 backend-service"

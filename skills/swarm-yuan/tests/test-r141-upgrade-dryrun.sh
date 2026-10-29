@@ -16,7 +16,8 @@ trap 'rm -rf "${TMP}"' EXIT
 PROJ="${TMP}/proj"; mkdir -p "${PROJ}/src"
 printf '[package]\nname = "svc141"\nversion = "0.1.0"\nedition = "2021"\n' > "${PROJ}/Cargo.toml"
 printf 'fn main() { println!("hi"); }\n' > "${PROJ}/src/main.rs"
-bash "${GEN}" --profile lite svc141 "${PROJ}" >/dev/null 2>&1
+# target-dir 显式钉住 .claude/skills（测试聚焦 dry-run 语义，不随默认落点变化）
+bash "${GEN}" --profile lite svc141 "${PROJ}" "${PROJ}/.claude/skills" >/dev/null 2>&1
 SKDIR="${PROJ}/.claude/skills/svc141"
 [[ -f "${SKDIR}/SKILL.md" ]] && ok "前置: lite 技能生成就位" || { bad "前置: 生成失败"; exit 1; }
 

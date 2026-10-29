@@ -17,6 +17,7 @@ bad() { echo "  ✗ $1" >&2; FAIL=1; }
 
 PROJ="$TMP/demo-api"
 mkdir -p "$PROJ/src" && printf '{ "name": "demo-api", "version": "1.0.0" }\n' > "$PROJ/package.json"
+mkdir -p "$PROJ/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 bash "$GEN" demo-api "$PROJ" >/dev/null 2>&1
 SKILL_DIR="$PROJ/.claude/skills/demo-api"
 [[ -d "$SKILL_DIR" ]] && ok "create 完成" || bad "create 失败"

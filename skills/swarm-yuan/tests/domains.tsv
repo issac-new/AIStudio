@@ -3,6 +3,7 @@
 # domain: generation
 test-conf-render.sh	generation
 test-context-surface.sh	generation
+test-default-skill-dir.sh	generation
 test-detect-spec-scale.sh	generation
 test-gen-fixture-readme.sh	generation
 test-generator-reliability.sh	generation

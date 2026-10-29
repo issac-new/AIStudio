@@ -19,6 +19,7 @@ cp -R "$SRC_FIX" "$FIX"
 
 # 态 1：lite profile 生成的 skill 的 spec-template 无 §14-§18
 # 注：--profile 必须置于位置参数之前（generate-skill.sh 仅在前导 --* 上消费 flag）
+mkdir -p "$FIX/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 bash scripts/generate-skill.sh --profile lite demolite "$FIX" >/dev/null 2>&1
 tpl="$FIX/.claude/skills/demolite/assets/spec-template.md"
 [[ -f "$tpl" ]] && ok "lite spec-template 落盘" || bad "lite spec-template 缺失"

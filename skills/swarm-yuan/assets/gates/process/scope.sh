@@ -9,9 +9,9 @@ check_scope() {
     # 两类工具链自有路径不属项目只读语义（列只读即每轮自干扰永久红）——
     # ① 运行时账本 .swarm-yuan/**：门禁与 hook 自写（trace/审计/flag/指纹/记忆写回），
     #    防篡改靠链式锚定与审计兜底，不靠 scope 门；
-    # ② 技能资产 .claude/skills/**（含 .codex/skills）：create/upgrade/--persist 的合法写入面，
+    # ② 技能资产 .agent/skills/**（含 .claude/skills/.codex/skills）：create/upgrade/--persist 的合法写入面，
     #    防手改由 integrity-guard（deny/advisory）与升级机制守卫——分层执法，scope 不重复兜。
-    changed=$(printf '%s\n' "$changed" | grep -vE '^(\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
+    changed=$(printf '%s\n' "$changed" | grep -vE '^(\.agent/skills/|\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
     if [[ -n "$changed" ]]; then
       for rd in ${READONLY_DIRS[@]+"${READONLY_DIRS[@]}"}; do
         [[ -z "$rd" ]] && continue

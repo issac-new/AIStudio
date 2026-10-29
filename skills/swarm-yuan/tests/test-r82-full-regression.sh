@@ -74,9 +74,9 @@ grep -qE 'conf_value PROJECT_DIR "' scripts/generate-skill.sh scripts/generator/
 grep -qF 'conf_quote() {' assets/lib/conf.sh && grep -q "printf '%q'" assets/lib/conf.sh \
   && ok "路径引号化单源 conf_quote（%q——R93 剥序缺陷的根治形态）" \
   || bad "引号化实现缺失（R93 剥序缺陷复发面）"
-grep -qF '同族剥法' scripts/detect-profile-drift.sh && grep -q "cut -d'#' -f1" scripts/detect-profile-drift.sh \
-  && ok "detect-profile-drift ②级同族剥法在位" \
-  || bad "detect-profile-drift 同族修复丢失（静默跳过复发面）"
+grep -qF 'spf_conf_val' scripts/detect-profile-drift.sh && grep -qF '单一解析器' scripts/detect-profile-drift.sh \
+  && ok "detect-profile-drift 走 spf_conf_val 单一解析器（v2.96.0 根治形态；旧「同族剥法」字面剥串已被取代）" \
+  || bad "detect-profile-drift 解析器根治形态丢失（字面量垃圾目录复发面）"
 
 # ---- 行为锁 3：D1 骨架填充行带版本表语义（真生成器输出面）----
 gline="$(grep -m1 '^    codebase.md)' scripts/generate-skill.sh)"

@@ -227,7 +227,7 @@ echo "③ 离线安装器…"
 cat > "$BUNDLE/install-offline.sh" <<'IOF'
 #!/usr/bin/env bash
 # install-offline.sh — swarm-yuan 离线安装器（Windows 经 Git Bash 运行；同伴 .bat 为入口）
-# 用法：bash install-offline.sh [--claude|--zcode|--codex|--cursor|--windsurf|--opencode|--gemini|--kimi|--hermes|--dsh|--ccswitch|--all]
+# 用法：bash install-offline.sh [--agent|--claude|--zcode|--codex|--cursor|--windsurf|--opencode|--gemini|--kimi|--hermes|--dsh|--ccswitch|--all]
 #                 [--with-npm] [--with-pip]   # 默认只装技能本体；带旗标才装 vendor 运行时
 #                 [--with-github] [--with-knowledge]
 #   --with-github    装 vendor/github 内嵌源码包（gstack→~/.claude/skills + ./setup --no-browser；
@@ -255,7 +255,7 @@ while [[ $# -gt 0 ]]; do
     --minimal) WITH_NPM=0; WITH_PIP=0; WITH_GH=0; WITH_KNOW=0; DEFAULT_HOSTS=0; shift ;;  # 关闭一键默认（只装技能本体/显式旗标）
     --with-knowledge) WITH_KNOW=1; shift ;;
     --all) WANT_ALL=1; shift ;;
-    --claude|--zcode|--codex|--cursor|--windsurf|--opencode|--gemini|--kimi|--hermes|--dsh|--ccswitch) HOSTS="$HOSTS $1"; shift ;;
+    --agent|--claude|--zcode|--codex|--cursor|--windsurf|--opencode|--gemini|--kimi|--hermes|--dsh|--ccswitch) HOSTS="$HOSTS $1"; shift ;;
     *) echo "未知参数: $1" >&2; exit 1 ;;
   esac
 done
@@ -315,10 +315,10 @@ elif [[ -z "$HOSTS" && "$DEFAULT_HOSTS" -eq 1 ]]; then
   # install.sh 直接 exit 1，技能本体一行没装就整包中止，与「诚实降级」承诺相悖。
   # （--all 显式旗标仍保持空检测即失败的严格语义，不放宽。）
   if bash "$SKILL_DIR/install.sh" --list </dev/null 2>/dev/null | grep -q '✅'; then
-    echo "（一键默认（Windows .bat / macOS / Linux 同构）：自动检测本机全部已装 AI 工具安装；运行时走 npm/pip 源 + github 源码 + 知识资产自动装载——单宿主 --claude/--zcode/--hermes/--dsh/--ccswitch 等，或 --minimal 只装本体）"
+    echo "（一键默认（Windows .bat / macOS / Linux 同构）：自动检测本机全部已装 AI 工具安装；运行时走 npm/pip 源 + github 源码 + 知识资产自动装载——单宿主 --agent/--claude/--zcode/--hermes/--dsh/--ccswitch 等，或 --minimal 只装本体）"
     install_one --all
   else
-    echo "（一键默认：未检测到已装 AI 工具——回落通用安装到 ~/.claude/skills/；单宿主 --claude/--zcode/--hermes 等可显式指定）"
+    echo "（一键默认：未检测到已装 AI 工具——回落通用安装到 ~/.agent/skills/；单宿主 --agent/--claude/--hermes 等可显式指定）"
     install_one
   fi
 elif [[ -n "$HOSTS" ]]; then
