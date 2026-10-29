@@ -8,5 +8,7 @@ export { default as SimDisciplineNote } from './SimDisciplineNote.vue'
 export { default as SimStepBadge } from './SimStepBadge.vue'
 export { default as SimGateBadge } from './SimGateBadge.vue'
 export { default as SimRaciBadge } from './SimRaciBadge.vue'
+// 舰队利用率条（自我觉察 spec §4 舰队层，非原子件——自带数据拉取的呈现条）
+export { default as SimFleetBar } from './SimFleetBar.vue'
 export type { VerdictProvenance } from './SimVerdictField.vue'
 export type { InterventionSource } from './SimInterventionCard.vue'

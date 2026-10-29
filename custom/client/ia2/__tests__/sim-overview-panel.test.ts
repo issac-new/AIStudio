@@ -23,6 +23,12 @@ vi.mock('../api/overview', async (importOriginal) => {
   }
 })
 
+// 舰队利用率条（spec §4 舰队层）已嵌入 OverviewPanel——mock 掉其数据面保持本套件封闭：
+// 默认按「端点缺席」处理（隐藏条，不影响本套件既有断言）。
+vi.mock('../api/fleet-utilization', () => ({
+  fetchFleetUtilization: vi.fn().mockRejectedValue(new Error('/api/sim/fleet-utilization → 404')),
+}))
+
 import { fetchRunState, fetchDeliverables, fetchIssues, fetchBranches } from '../api/overview'
 import OverviewPanel from '../views/sim/OverviewPanel.vue'
 import {

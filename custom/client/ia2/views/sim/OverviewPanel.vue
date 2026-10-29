@@ -19,6 +19,7 @@ import SimDualCredential from '../../components/sim/SimDualCredential.vue'
 import SimGateBadge from '../../components/sim/SimGateBadge.vue'
 import SimCompensatedTag from '../../components/sim/SimCompensatedTag.vue'
 import SimAnchorDrawer from '../../components/sim/SimAnchorDrawer.vue'
+import SimFleetBar from '../../components/sim/SimFleetBar.vue'
 import { useRunContext } from '../../composables/useRunContext'
 import { compensationLabel } from '../../compensation-labels'
 
@@ -177,6 +178,10 @@ function goSupervision(): void {
     <div class="ov__bar">
       <span class="ov__src" data-testid="ov-endpoints">数据来源：运行状态、交付物、问题清单与分支交付（自动汇总）· 运行记录在页头选择</span>
     </div>
+
+    <!-- 舰队利用率条（自我觉察 spec §4 舰队层）：run 无关的当下舰队面——端点缺席/未配
+         推演根时整条隐藏，不占布局、不影响下方 run 引导态 -->
+    <SimFleetBar />
 
     <!-- N1/N2：run 缺席=引导不造假；主端点失败=如实报错 -->
     <p v-if="loadError" class="ov__error" data-testid="ov-error" :title="loadError">运行数据暂不可用，请重新选择运行或稍后刷新。</p>

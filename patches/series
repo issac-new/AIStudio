@@ -985,3 +985,9 @@
 # SwarmKanbanView 板条新增刷新失败/数据不完整提示（workspace.overviewStatus 四态消费面），
 # kanban-i18n-coverage 守门红清偿；zh 值逐字取视图内联兜底（同 689 补丁做法）。
 703-client-kanban-i18n-overview-status.patch
+
+# 704（2026-10-29 自我觉察 spec §4 舰队层，feat/fleet-api）：
+# 挂载 GET /api/sim/fleet-utilization（custom/server/controllers/sim/fleet-utilization.ts）——
+# SIM 根（OBS_SIM_ROOT/SIM_ROOT）hermes/profiles/*/logs/agent.log 的 'API call #' 有界尾扫，
+# 按九角色域聚合在编×活跃(15min)×近期(1h)×饱和度+闲置容量；env 缺席 fail-soft available:false。
+704-server-sim-fleet-utilization-route.patch
