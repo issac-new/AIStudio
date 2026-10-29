@@ -1,5 +1,9 @@
 # Changelog
 
+## [v2.96.2] - 2026-10-29
+
+默认目录校正轮（patch）：用户裁定 `.agent/skills` → `.agents/skills`（zcode 技能发现根硬编码 `.zcode/skills`＋`.agents/skills`，源码锚 vendor/zcode `apps/zcode-cli/packages/adapters/src/skills/roots.ts:10-11`；装 `.agents` 即被原生发现，零配置零软链）。昨日 v2.96.1 引入的全部单数引用机械替换：安装旗标 `--agent`→`--agents`、宿主 key `agent`→`agents`、探测判据 `~/.agent`→`~/.agents`、生成默认落点/探测序/兜底、门禁豁免集、pre-commit 垫片探测序、文档与守门测试同步；措辞校正：`.agents` 定位为「跨工具通用技能目录（zcode 原生发现根）」，不再宣称开放标准默认路径（开放标准推荐单数 `.agent`，本机仅 openspec 在用）。v2.96.1 未对外分发（main 未推送），无迁移存量。spec：docs/superpowers/specs/2026-10-29-swarm-yuan-agents-dir-rename.md。
+
 ## [v2.96.1] - 2026-10-29
 
 安装/落盘目录对齐 Agent Skills 开放标准默认路径（patch：默认值调整 + 显式通道，无行为面新增）。两层：swarm-yuan 自身安装默认 `~/.agent/skills/`（新增 `--agent` 旗标与卸载对偶；auto 未检测到宿主的兜底从 `~/.claude/skills` 迁移；`~/.agent` 存在即进 detect_runtimes 分发通道，skills-dir 型无原生规则面）；生成研发技能默认落项目内 `.agent/skills/`（`detect_skill_dir` 探测序首位 + 新建兜底；存量项目已有其他 skills 目录则复用不迁移）。产物内部引用一致性：落盘目录非 `.claude/skills` 时自动推导 `SKILLS_PATH_REWRITE` 按实际目录统一改写（显式设置优先），pre-commit 垫片挂载点探测序加 `.agent/skills/*/`，spec-first/scope 门禁豁免集加 `.agent/skills/`。离线安装器模板旗标与回落文案同步。spec：docs/superpowers/specs/2026-10-29-swarm-yuan-agent-skills-dirs.md。

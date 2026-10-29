@@ -1166,7 +1166,7 @@ fi
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 mkdir -p "$TARGET_DIR"
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
-# 2026-10-29 起 detect_skill_dir 默认落 .agent/skills——随发模板内 .claude/skills 字面量
+# 2026-10-29 起 detect_skill_dir 默认落 .agents/skills——随发模板内 .claude/skills 字面量
 # 与实际落盘位置不一致（挂载点定位/豁免正则等）。复用复制后 sed 通道自动推导重写：
 # 未显式设置且 TARGET_DIR 是项目内非 .claude/skills 的 */skills 目录时，按相对目录名
 # 统一改写；显式 SKILLS_PATH_REWRITE 永远优先；项目外自定义目录不推导（保持旧行为）。
@@ -2211,7 +2211,7 @@ MEOF
 # L1 未覆盖宿主（Cursor/Windsurf/OpenCode/Gemini/Kimi，hook 通道在册、本生成链未整合）此前只有 advisory 规则文件，
 # git pre-commit 是它们唯一的真强制点；有 hook 宿主（Claude Code/Codex/ZCode）则
 # 与 L1 写时拦截构成纵深）。垫片两条职责：①委托技能内 scripts/spec-first-pre-commit.sh——
-# 2026-10-28 起按检出根运行时定位（`.agent/skills/*/` → `.claude/skills/*/` → `.zcode/skills/*/` → 钩子旁副本），
+# 2026-10-28 起按检出根运行时定位（`.agents/skills/*/` → `.claude/skills/*/` → `.zcode/skills/*/` → 钩子旁副本），
 # 不再写死生成机绝对路径（否则换机/换检出即静默降级）；三者皆无则 fail-open 降级，L1/L3 仍在；
 # ②vendor/** 挡护——inject 注入脏态是预期工作态不入提交，普通提交自动撤出暂存区，
 # 基线替换走 VENDOR_SYNC=1 显式通道（AIStudio 仓规；2026-10-24 b7aef6874 首装、
@@ -2227,7 +2227,7 @@ if [[ "$MODE" != "upgrade" && "$PROFILE" != "lite" ]] && git -C "$PROJECT_DIR" r
 # 卸载: git config --unset core.hooksPath && rm -rf .swarm-yuan/hooks）
 ROOT="\$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 SF=""
-for _c in "\$ROOT"/.agent/skills/*/scripts/spec-first-pre-commit.sh \
+for _c in "\$ROOT"/.agents/skills/*/scripts/spec-first-pre-commit.sh \
           "\$ROOT"/.claude/skills/*/scripts/spec-first-pre-commit.sh \
           "\$ROOT"/.zcode/skills/*/scripts/spec-first-pre-commit.sh \
           "\$ROOT/.swarm-yuan/hooks/spec-first-pre-commit.sh"; do
