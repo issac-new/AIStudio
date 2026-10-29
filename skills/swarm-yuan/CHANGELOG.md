@@ -1,5 +1,9 @@
 # Changelog
 
+## [v2.96.1] - 2026-10-29
+
+安装/落盘目录对齐 Agent Skills 开放标准默认路径（patch：默认值调整 + 显式通道，无行为面新增）。两层：swarm-yuan 自身安装默认 `~/.agent/skills/`（新增 `--agent` 旗标与卸载对偶；auto 未检测到宿主的兜底从 `~/.claude/skills` 迁移；`~/.agent` 存在即进 detect_runtimes 分发通道，skills-dir 型无原生规则面）；生成研发技能默认落项目内 `.agent/skills/`（`detect_skill_dir` 探测序首位 + 新建兜底；存量项目已有其他 skills 目录则复用不迁移）。产物内部引用一致性：落盘目录非 `.claude/skills` 时自动推导 `SKILLS_PATH_REWRITE` 按实际目录统一改写（显式设置优先），pre-commit 垫片挂载点探测序加 `.agent/skills/*/`，spec-first/scope 门禁豁免集加 `.agent/skills/`。离线安装器模板旗标与回落文案同步。spec：docs/superpowers/specs/2026-10-29-swarm-yuan-agent-skills-dirs.md。
+
 ## [v2.96.0] - 2026-10-28
 
 设计与发布对账轮（minor：上游能力线合入 + 取值面根治）。两分支收口合入（core 尾批与九段残余对账，计数机械重算 9355/104/199）；conf 取值面收口——`detect-profile-drift.sh` 的 PROJECT_DIR 改走 `spf_conf_val`（引号感知剥注释、`${PROJECT_DIR:-...}` 剥壳、占位符判据），库缺席回退同步补齐，杜绝字面量垃圾目录（新增 `tests/test-preconf-placeholder` 守门，见 `tests/test-precheck-conf-project-dir.sh`）；测试隔离缺陷修复（生成器派生配置污染仓根）。门禁预算 56 不变。

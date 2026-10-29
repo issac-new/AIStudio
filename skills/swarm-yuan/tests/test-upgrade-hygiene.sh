@@ -31,7 +31,8 @@ git -C "$PROJ" add -A
 git -C "$PROJ" commit -qm init
 
 # --- 1. create：.gitignore 随骨架生成 ---
-out=$(bash "$GEN" demo-proj "$PROJ" 2>&1); rc=$?
+# target-dir 显式钉住 .claude/skills（测试聚焦升级卫生，不随默认落点变化）
+out=$(bash "$GEN" demo-proj "$PROJ" "$PROJ/.claude/skills" 2>&1); rc=$?
 [[ $rc -eq 0 ]] && ok "create exit 0" || bad "create exit=$rc: $(echo "$out" | tail -3)"
 SKILL_DIR="$PROJ/.claude/skills/demo-proj"
 [[ -f "$SKILL_DIR/.gitignore" ]] && ok "create 后 .gitignore 存在" || bad "create 后缺 .gitignore"
@@ -65,7 +66,7 @@ grep -qF 'custom-artifact/' "$SKILL_DIR/.gitignore" && ok "用户自有条目保
 PYPROJ="$TMP/demo-flask"
 mkdir -p "$PYPROJ"
 printf 'flask>=3.0\n' > "$PYPROJ/requirements.txt"
-out=$(bash "$GEN" demo-flask "$PYPROJ" 2>&1); rc=$?
+out=$(bash "$GEN" demo-flask "$PYPROJ" "$PYPROJ/.claude/skills" 2>&1); rc=$?
 [[ $rc -eq 0 ]] && ok "态5 create（flask 声明）exit 0" || bad "态5 create exit=$rc"
 PYSKILL="$PYPROJ/.claude/skills/demo-flask"
 grep -q '_fw_flask_check()' "$PYSKILL/scripts/precheck.sh" \
@@ -83,7 +84,7 @@ mkdir -p "$PYPROJ2" "$PYPROJ2/src" "$PYPROJ2/tests"
 printf 'flask>=3.0\n' > "$PYPROJ2/requirements.txt"
 for i in $(seq 1 90); do echo "x" > "$PYPROJ2/src/m$i.py"; done
 printf 'def test_x():\n    assert True\n' > "$PYPROJ2/tests/test_x.py"
-out=$(bash "$GEN" --profile standard demo-flask-std "$PYPROJ2" 2>&1); rc=$?
+out=$(bash "$GEN" --profile standard demo-flask-std "$PYPROJ2" "$PYPROJ2/.claude/skills" 2>&1); rc=$?
 [[ $rc -eq 0 ]] && ok "态6 standard create exit 0" || bad "态6 create exit=$rc"
 grep -q '_fw_flask_check()' "$PYPROJ2/.claude/skills/demo-flask-std/scripts/precheck.sh" \
   && ok "态6 standard create 后 _fw_flask_check 已注入" \

@@ -25,9 +25,9 @@ check_spec_first() {
   local _root="${PROJECT_DIR:-$(pwd)}"
   local _changed _hit=""
   _changed=$(_git_changed_files)
-  # 与 check_scope 同款豁免过滤：工具链自有路径（.swarm-yuan/.claude/skills/.codex/skills）
+  # 与 check_scope 同款豁免过滤：工具链自有路径（.swarm-yuan/.agent/skills/.claude/skills/.codex/skills）
   # 是门禁/hook/技能升级的合法写入面，不属"无 spec 写源码"语义——分层执法，不重复兜。
-  _changed=$(printf '%s\n' "$_changed" | grep -vE '^(\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
+  _changed=$(printf '%s\n' "$_changed" | grep -vE '^(\.agent/skills/|\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
   local _f
   while IFS= read -r _f; do
     [[ -z "${_f:-}" ]] && continue

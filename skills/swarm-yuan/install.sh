@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # install.sh — swarm-yuan 安装脚本（自动检测运行环境，安装到对应 skill 默认目录）
 # 用法:
-#   bash install.sh                    # 自动检测环境 + 安装
+#   bash install.sh                    # 自动检测环境 + 安装（未检测到宿主时默认 ~/.agent/skills/）
+#   bash install.sh --agent            # 强制安装到 ~/.agent/skills/（Agent Skills 开放标准默认路径）
 #   bash install.sh --claude           # 强制安装到 ~/.claude/skills/
 #   bash install.sh --cursor           # 强制安装到 ~/.cursor/skills/
 #   bash install.sh --codex            # 强制安装到 ~/.codex/skills/
@@ -68,6 +69,7 @@ if [[ -f "$TA_DIR/common.sh" ]]; then
 else
   ta_host_installed() {  # 降级版：仅家目录存在判据
     case "$1" in
+      agent)    [[ -d "$HOME/.agent" ]] ;;
       claude)   [[ -d "$HOME/.claude" ]] ;;
       cursor)   [[ -d "$HOME/.cursor" ]] ;;
       codex)    [[ -d "$HOME/.codex" ]] ;;
@@ -182,6 +184,9 @@ prune_old_backups() {  # <dest>
 # ~/.claude 或 claude。安装目标仍是各自 skills 子目录（install_to 内 mkdir -p 兜底创建）。
 # --list 输出格式不变（名称<TAB>目录）。
 detect_runtimes() {
+  # Agent 通用（Agent Skills 开放标准默认路径 ~/.agent/skills；skills-dir 型宿主——
+  # 无原生规则渲染面，同 hermes/dsh/ccswitch。~/.agent 存在即列出，进 auto/--all/卸载通道）
+  if ta_host_installed agent; then printf 'Agent 通用\t%s\t\n' "$HOME/.agent/skills"; fi
   # Claude Code
   if ta_host_installed claude; then printf 'Claude Code\t%s\t%s\n' "$HOME/.claude/skills" "$HOME/.claude/commands"; fi
   # Codex
@@ -215,6 +220,7 @@ tool_key_of() {  # $1=显示名 → stdout 适配器 key（空=未知）
   # R139：补 Hermes/DSH/CC-Switch——uninstall_all_found 以非空 key 为「已知宿主」，
   # 缺映射时 --uninstall --all 对这三家打印「未知宿主」跳过卸载且整体 rc=1。
   case "$1" in
+    "Agent 通用")  printf 'agent' ;;
     "Claude Code"|"通用") printf 'claude' ;;
     "Cursor")      printf 'cursor' ;;
     "Codex")       printf 'codex' ;;
@@ -234,7 +240,7 @@ tool_key_of() {  # $1=显示名 → stdout 适配器 key（空=未知）
 # （assets/tool-adapters/skills-dir.sh 的设计选择）——渲染/注销双通道跳过，
 # 不触「适配器缺失」告警。
 _skills_dir_key() {  # $1=key → rc 0=skills-dir 型（跳过原生规则） 1=须渲染
-  case "$1" in hermes|dsh|ccswitch) return 0 ;; esac
+  case "$1" in agent|hermes|dsh|ccswitch) return 0 ;; esac
   return 1
 }
 
@@ -598,6 +604,10 @@ case "$MODE" in
       install_to "Kimi" "$HOME/.kimi/skills" ""
     fi
     ;;
+  --agent)
+    # Agent Skills 开放标准默认路径（skills-dir 型：目录复制即用，无原生规则面/slash command）
+    install_to "Agent 通用" "$HOME/.agent/skills" ""
+    ;;
   --zcode)
     install_to "ZCode" "$HOME/.zcode/skills" ""
     ;;
@@ -626,6 +636,9 @@ case "$MODE" in
     # 保持安装分支计数口径单一）。
     target="${2:-}"
     case "${target#--}" in
+      agent)
+        uninstall_to "Agent 通用" "$HOME/.agent/skills" "" agent
+        ;;
       claude)
         uninstall_to "Claude Code" "$HOME/.claude/skills" "$HOME/.claude/commands" claude
         ;;
@@ -673,7 +686,7 @@ case "$MODE" in
         printf '%s\n' "$found" | uninstall_all_found
         ;;
       *)
-        echo "Usage: bash install.sh --uninstall [--claude|--cursor|--codex|--opencode|--windsurf|--gemini|--kimi|--zcode|--hermes|--dsh|--ccswitch|--all]"
+        echo "Usage: bash install.sh --uninstall [--agent|--claude|--cursor|--codex|--opencode|--windsurf|--gemini|--kimi|--zcode|--hermes|--dsh|--ccswitch|--all]"
         if [[ -z "$target" ]]; then
           echo "  未指定卸载目标——请从上面任选一个（--all = 所有已检测到的环境）"
         else
@@ -691,8 +704,8 @@ case "$MODE" in
     echo "=== 自动检测运行环境 ==="
     found="$(detect_runtimes)"
     if [[ -z "$found" ]]; then
-      echo "  未检测到已安装的 AI 工具，默认安装到 ~/.claude/skills/"
-      install_to "通用" "$HOME/.claude/skills" "$HOME/.claude/commands"
+      echo "  未检测到已安装的 AI 工具，默认安装到 ~/.agent/skills/"
+      install_to "Agent 通用" "$HOME/.agent/skills" ""
     else
       count=$(echo "$found" | wc -l | xargs)
       if [[ "$count" -eq 1 ]]; then
@@ -712,7 +725,7 @@ case "$MODE" in
         # 终止为 rc=1 且无任何解释。改为明确报错并给出可执行替代（--all / 单个目标）。
         if [[ ! -t 0 ]]; then
           echo "ERROR: 检测到多个运行环境，但 stdin 不是交互终端，无法选择安装目标。" >&2
-          echo "  请显式指定：bash install.sh --all（全部安装），或 --claude/--cursor/--codex/--zcode/--hermes/--dsh/--ccswitch 等单个目标。" >&2
+          echo "  请显式指定：bash install.sh --all（全部安装），或 --agent/--claude/--cursor/--codex/--zcode/--hermes/--dsh/--ccswitch 等单个目标。" >&2
           echo "  仅查看环境：bash install.sh --list" >&2
           exit 2
         fi
@@ -752,8 +765,8 @@ case "$MODE" in
     fi
     ;;
   *)
-    echo "Usage: bash install.sh [--claude|--cursor|--codex|--opencode|--windsurf|--gemini|--kimi|--zcode|--hermes|--dsh|--ccswitch|--all|--list|--version]"
-    echo "       bash install.sh --uninstall [--claude|--cursor|--codex|--opencode|--windsurf|--gemini|--kimi|--zcode|--all]"
+    echo "Usage: bash install.sh [--agent|--claude|--cursor|--codex|--opencode|--windsurf|--gemini|--kimi|--zcode|--hermes|--dsh|--ccswitch|--all|--list|--version]"
+    echo "       bash install.sh --uninstall [--agent|--claude|--cursor|--codex|--opencode|--windsurf|--gemini|--kimi|--zcode|--all]"
     exit 1
     ;;
 esac

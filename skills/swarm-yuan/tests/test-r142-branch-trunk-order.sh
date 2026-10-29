@@ -83,6 +83,7 @@ fi
 PROJ="${TMP}/proj"; mkdir -p "${PROJ}/src"
 printf '[package]\nname = "svc142"\nversion = "0.1.0"\nedition = "2021"\n' > "${PROJ}/Cargo.toml"
 printf 'fn main() { println!("hi"); }\n' > "${PROJ}/src/main.rs"
+mkdir -p "${PROJ}/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 if bash "${GEN}" --profile standard svc142 "${PROJ}" >/dev/null 2>&1; then
   ok "②a standard 技能生成成功"
 else

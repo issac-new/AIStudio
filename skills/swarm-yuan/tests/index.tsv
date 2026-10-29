@@ -64,6 +64,7 @@ test-r126-generator-hardening.sh	3	no	general	-
 test-r126-lifecycle-hardening.sh	3	no	general	-
 test-r128-function-size.sh	3	no	general	-
 test-r128-gate-hardening.sh	3	no	general	-
+test-default-skill-dir.sh	3	no	generation	2026-10-29
 test-r128-install-uninstall.sh	3	no	general	-
 test-r128-selfcheck-cache.sh	3	no	general	-
 test-r128-spec-first.sh	3	no	general	-

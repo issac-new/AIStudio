@@ -36,6 +36,7 @@ TMP="$(mktemp -d /tmp/tlc.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/app/src"
 printf '{"name":"tlc-app","version":"0.0.0","scripts":{"build":"echo b","test":"echo t"}}\n' > "$TMP/app/package.json"
+mkdir -p "$TMP/app/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 out=$(bash "$G" tlc-dev "$TMP/app" 2>&1)
 if [[ ! -d "$TMP/app/.claude/skills/tlc-dev" ]]; then
   bad "② lite 生成失败（无 .claude/skills/tlc-dev）: $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"

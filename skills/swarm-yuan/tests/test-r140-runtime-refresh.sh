@@ -28,6 +28,7 @@ grep -q 'facts_eq FACT_SKILLMD_BYTES_HARD_CAP 20000' tests/test-doc-numbers.sh \
 PROJ="${TMP}/proj"; mkdir -p "${PROJ}/src"
 printf '[package]\nname = "svc140"\nversion = "0.1.0"\nedition = "2021"\n' > "${PROJ}/Cargo.toml"
 printf 'fn main() { println!("hi"); }\n' > "${PROJ}/src/main.rs"
+mkdir -p "${PROJ}/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 bash "${GEN}" --profile lite r140-svc "${PROJ}" >/dev/null 2>&1
 SKMD="${PROJ}/.claude/skills/r140-svc/SKILL.md"
 [[ -f "${SKMD}" ]] && ok "②a lite 技能生成就位" || { bad "②a 生成失败（SKILL.md 缺失）"; exit 1; }

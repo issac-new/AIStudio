@@ -952,26 +952,29 @@ if [[ "${1:-}" == "--refresh" ]]; then
 fi
 
 # ---- 检测运行环境 ----
-# 默认目标：项目内 .claude/skills/（"为目标项目生成 skill"名副其实）。
+# 默认目标：项目内 .agent/skills/（Agent Skills 开放标准默认路径；2026-10-29 起，原 .claude/skills）。
 # 历史行为（2026-07-21 前）：项目内无 .claude/skills 时 fallback 到 $HOME/.claude/skills 全局目录，
 # 导致 generate-skill.sh <name> <project> 把骨架生成到用户全局 skills 目录、项目目录内却什么都没有，
-# 与 README/SKILL.md 宣称的"为某项目生成开发技能"不符。改为默认在项目内创建 .claude/skills/。
+# 与 README/SKILL.md 宣称的"为某项目生成开发技能"不符。改为默认在项目内创建（当时选 .claude/skills，
+# 2026-10-29 对齐开放标准改 .agent/skills）。
 # 全局安装走 install.sh；用户仍可用第 3 参数 target-dir 显式指定任意目录。
 detect_skill_dir() {
   local project="$1"
-  # 1) 项目内已有 skills 目录（任意受支持运行时）→ 优先复用
+  # 1) 项目内已有 skills 目录（任意受支持运行时）→ 优先复用；.agent/skills 探测最前
+  #    （默认路径优先），单目录存量项目不受影响（无 .agent/skills 时命中既有目录）。
   local rt
-  for rt in .claude/skills .codex/skills .cursor/skills .codeium/windsurf/skills .config/opencode/skills .gemini/skills .kimi/skills .zcode/skills; do
+  for rt in .agent/skills .claude/skills .codex/skills .cursor/skills .codeium/windsurf/skills .config/opencode/skills .gemini/skills .kimi/skills .zcode/skills; do
     if [[ -d "$project/$rt" ]]; then echo "$project/$rt"; return; fi
   done
-  # 2) 项目内无 skills 目录 → 默认在项目内创建 .claude/skills/
-  echo "$project/.claude/skills"
+  # 2) 项目内无 skills 目录 → 默认在项目内创建 .agent/skills/
+  echo "$project/.agent/skills"
 }
 
 detect_runtime_name() {
   local project="$1"
   # 仅按项目内已有的 skills 目录判定运行时；不再因 $HOME 下有全局 skills 目录就误报。
-  if [[ -d "$project/.claude/skills" ]]; then echo "Claude Code"
+  if [[ -d "$project/.agent/skills" ]]; then echo "Agent 通用"
+  elif [[ -d "$project/.claude/skills" ]]; then echo "Claude Code"
   elif [[ -d "$project/.codex/skills" ]]; then echo "Codex"
   elif [[ -d "$project/.cursor/skills" ]]; then echo "Cursor"
   elif [[ -d "$project/.codeium/windsurf/skills" ]]; then echo "Windsurf"
@@ -979,7 +982,7 @@ detect_runtime_name() {
   elif [[ -d "$project/.gemini/skills" ]]; then echo "Gemini CLI"
   elif [[ -d "$project/.kimi/skills" ]]; then echo "Kimi"
   elif [[ -d "$project/.zcode/skills" ]]; then echo "ZCode"
-  else echo "通用（将在项目内创建 .claude/skills/）"
+  else echo "通用（将在项目内创建 .agent/skills/）"
   fi
 }
 

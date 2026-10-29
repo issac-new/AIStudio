@@ -24,6 +24,7 @@ echo "── R108 Rust 族防复发锁（5 项）──"
 fx1="${TMP}/d1"; mkdir -p "${fx1}/src"
 printf '[package]\nname = "svc"\nversion = "0.1.0"\nedition = "2021"\n' > "${fx1}/Cargo.toml"
 printf 'fn main() { println!("hi"); }\n' > "${fx1}/src/main.rs"
+mkdir -p "${fx1}/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 bash "${GEN}" --profile lite d1-probe "${fx1}" >/dev/null 2>&1
 out1=$(grep -F "交付形态" "${fx1}/.claude/skills/d1-probe/SKILL.md" 2>/dev/null || true)
 if printf '%s' "${out1}" | grep -q 'backend-service'; then
@@ -38,6 +39,7 @@ fx2="${TMP}/d2a"; mkdir -p "${fx2}/src" "${fx2}/target/debug"
 printf '[package]\nname = "tiny"\nversion = "0.1.0"\n' > "${fx2}/Cargo.toml"
 printf 'fn main() {}\n' > "${fx2}/src/main.rs"
 for i in $(seq 1 300); do : > "${fx2}/target/debug/artifact-${i}.o"; done
+mkdir -p "${fx2}/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 out2=$(bash "${GEN}" --profile auto d2a-probe "${fx2}" 2>&1 | grep -E 'profile auto 判定|规模信号' || true)
 if printf '%s' "${out2}" | grep -q '文件数 2'; then
   ok "D2a 文件数计数排除 target/（300 产物不入数）"
@@ -52,6 +54,7 @@ fx3="${TMP}/d2b"; mkdir -p "${fx3}/src" "${fx3}/web"
   printf 'axum = "0.8"\ntokio = "1"\nserde = "1"\nserde_json = "1"\ntower = "0.5"\n'; } > "${fx3}/Cargo.toml"
 printf 'pub fn hello() {}\n' > "${fx3}/src/lib.rs"
 printf '{"name":"w","dependencies":{"react":"^18.3.1"},"devDependencies":{"vite":"^5.4.11","vitest":"^2.1.8"}}\n' > "${fx3}/web/package.json"
+mkdir -p "${fx3}/.claude/skills"  # 显式 .claude 布局（不随默认落点变化）
 out3=$(bash "${GEN}" --profile auto d2b-probe "${fx3}" 2>&1 | grep -E 'profile auto 判定' || true)
 printf '%s' "${out3}" | grep -q 'standard' && ok "D2b 子目录依赖计入（web/package.json 驱动升 standard）" \
   || bad "D2b 子目录依赖未计入：${out3:-（无输出）}"

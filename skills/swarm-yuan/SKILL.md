@@ -102,7 +102,7 @@ SessionStart hook（lite 档由 AI 主动）跑 `scripts/project-fingerprint.sh 
 
 ## 用户使用
 
-**首次部署（一次）**：`bash install.sh`（自动检测 Claude Code/Codex/Cursor/Windsurf/OpenCode/Gemini/Kimi/ZCode，`--list` 查看）→ 对 AI 说"为 /path/to/project 生成开发技能" → 终检后激活。
+**首次部署（一次）**：`bash install.sh`（自动检测 Agent 通用 ~/.agent/skills/Claude Code/Codex/Cursor/Windsurf/OpenCode/Gemini/Kimi/ZCode，`--list` 查看；未检测到宿主默认装 `~/.agent/skills/`，显式 `--agent` 可强制）→ 对 AI 说"为 /path/to/project 生成开发技能"（默认落项目内 `.agent/skills/`；项目内已有其他 skills 目录则复用）→ 终检后激活。
 
 **之后每个需求**（AI 与用户协作，门禁全程把关）：
 

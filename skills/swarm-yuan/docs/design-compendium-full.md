@@ -184,7 +184,7 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 
 > 对任意代码仓库跑一次，生成一个项目专属的开发技能。此后 AI 在这个项目里写代码，先查组件、依赖和规矩，再动手。
 
-[![Release](https://img.shields.io/badge/release-v2.95.0-blue)](https://github.com/issac-new/Swarm-yuan/releases/tag/v2.95.0)
+[![Release](https://img.shields.io/badge/release-v2.96.0-blue)](https://github.com/issac-new/Swarm-yuan/releases/tag/v2.96.0)
 [![License](https://img.shields.io/badge/license-Apache--2.0-lightgrey)]()
 
 ---
