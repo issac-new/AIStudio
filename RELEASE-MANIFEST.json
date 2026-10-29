@@ -90,7 +90,7 @@
       "includes": [
         "skills/swarm-yuan/"
       ],
-      "version": "v2.96.0",
+      "version": "v2.96.1",
       "versionCarrier": "skills/swarm-yuan/CHANGELOG.md",
       "buildCommand": "bash skills/swarm-yuan/scripts/make-offline-bundle.sh（脚本在 skills/swarm-yuan/scripts/；三档：novendor 5M / 全量 ~52M / everything ~71M）",
       "artifacts": "skills/swarm-yuan/dist/swarm-yuan-offline-<ver>.zip（SHA256SUMS 随包）＋本清单源码包 aistudio-yuan-skill-<ver>-src.tar.gz",
