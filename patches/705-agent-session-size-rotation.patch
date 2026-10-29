@@ -1,0 +1,87 @@
+diff --git a/gateway/session_rotation.py b/gateway/session_rotation.py
+--- a/gateway/session_rotation.py
++++ b/gateway/session_rotation.py
+@@ -7,6 +7,12 @@
+   "压完仍高"的轮换信号）；
+ - ``empty_streak`` 连续 N 回合（默认 8）有 API 调用但零工具零产出——空转停滞。
+ 
++第四类（705，run23 实证）：``last_prompt_tokens`` 回合末上下文绝对尺寸超
++``soft_rotate_tokens``（默认 60000）——上下文涨到 76K-241K 后上游流截断（out=8
++秒死），水位百分比判据在长上限模型上永不咬合（76K/400K=19%），只有绝对尺寸
++对得上实测中毒形态；回合末（603 既有检查点）命中即轮换，env
++``HERMES_SESSION_SOFT_ROTATE_TOKENS`` 可覆盖阈值。
++
+ 两档执行（默认 report，推演轮验证后翻 auto）：
+ - **report**：只追加一条建议通知 + 记轮换计数（602 sidecar 可见），不动会话——
+   影子验证档；
+@@ -42,6 +48,8 @@
+     "watermark_streak": 2,
+     "empty_streak_limit": 8,
+     "cooldown_turns": 5,
++    # 705（run23 实证）：回合末上下文绝对尺寸软轮换阈值（tokens）——见模块 docstring 第四类
++    "soft_rotate_tokens": 60000,
+ }
+ 
+ # 进程内轮换簿记：session_key -> {"last_watermarks": [...], "last_rotation_turn": int}
+@@ -71,7 +79,7 @@
+         data = _load_gateway_config() or {}
+         section = data.get("session_rotation")
+         if isinstance(section, dict):
+-            for key in ("max_session_api_calls", "watermark_streak", "empty_streak_limit", "cooldown_turns"):
++            for key in ("max_session_api_calls", "watermark_streak", "empty_streak_limit", "cooldown_turns", "soft_rotate_tokens"):
+                 with suppress(TypeError, ValueError):
+                     value = int(section.get(key, cfg[key]))
+                     if value > 0:
+@@ -86,6 +94,11 @@
+     env_mode = os.environ.get("HERMES_SESSION_ROTATION", "").strip().lower()
+     if env_mode in VALID_MODES:
+         cfg["mode"] = env_mode
++    # 705：尺寸阈值 env 覆盖（与 mode 覆盖同位；>0 才收，坏值回落默认）
++    with suppress(TypeError, ValueError):
++        env_tokens = int(os.environ.get("HERMES_SESSION_SOFT_ROTATE_TOKENS", "").strip())
++        if env_tokens > 0:
++            cfg["soft_rotate_tokens"] = env_tokens
+     return cfg
+ 
+ 
+@@ -107,6 +120,13 @@
+     if _int(entry.get("cum_api_calls")) >= settings["max_session_api_calls"]:
+         reason = "cumulative-api-calls"
+ 
++    # 705（run23 实证）：回合末上下文绝对尺寸超阈——上游流截断的中毒形态只有
++    # 绝对尺寸对得上（水位百分比在长上限模型上永不咬合，76K/400K=19%）。数据源
++    # last_prompt_tokens=本回合最后一次 API 调用的 prompt 尺寸（回合内单调增长，
++    # 末值即峰值；602 遥测回合后已写入 entry）。
++    if not reason and _int(entry.get("last_prompt_tokens")) >= settings["soft_rotate_tokens"]:
++        reason = "context-size"
++
+     watermark = entry.get("watermark_pct")
+     last_marks = book.setdefault("last_watermarks", [])
+     if isinstance(watermark, (int, float)) and watermark >= settings["watermark_pct"] * 100:
+
+diff --git a/tests/gateway/test_session_rotation.py b/tests/gateway/test_session_rotation.py
+--- a/tests/gateway/test_session_rotation.py
++++ b/tests/gateway/test_session_rotation.py
+@@ -14,6 +14,7 @@
+ def _isolate(tmp_path, monkeypatch):
+     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+     monkeypatch.delenv("HERMES_SESSION_ROTATION", raising=False)
++    monkeypatch.delenv("HERMES_SESSION_SOFT_ROTATE_TOKENS", raising=False)  # 705 尺寸阈值 env 隔离
+     sr.reset_book()
+     from gateway import session_telemetry as st
+     st.reset_state()
+@@ -54,6 +55,14 @@
+     assert d.rotate and d.reason == "empty-streak"
+ 
+ 
++def test_reason_context_size():
++    # 705（run23 实证）：76K 中毒会话——水位仅 19% 时三判据全不咬，尺寸判据兜底命中
++    d = should_rotate(_entry(last_prompt_tokens=76000, watermark_pct=19.0), DEFAULTS, {})
++    assert d.rotate and d.reason == "context-size"
++    # 低于阈值（默认 60000）不转
++    assert should_rotate(_entry(last_prompt_tokens=59999), DEFAULTS, {}).rotate is False
++
++
+ def test_cooldown_window_suppresses():
+     book = {"last_rotation_turn": 10}
+     # turns=11 与上次轮换同冷却窗内（cooldown 5）——即使判据命中也不轮换

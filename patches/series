@@ -991,3 +991,19 @@
 # SIM 根（OBS_SIM_ROOT/SIM_ROOT）hermes/profiles/*/logs/agent.log 的 'API call #' 有界尾扫，
 # 按九角色域聚合在编×活跃(15min)×近期(1h)×饱和度+闲置容量；env 缺席 fail-soft available:false。
 704-server-sim-fleet-utilization-route.patch
+
+# 705（2026-10-29 run23 实锤根治案二，feat/run23-systemic-cure）：
+# 会话轮换尺寸触发（603 族第四判据）：回合末上下文绝对尺寸（last_prompt_tokens，
+# 602 遥测回合后写入）≥ soft_rotate_tokens（默认 60000）即轮换——run23 实录上下文
+# 涨到 76K-241K 后上游流截断（out=8 秒死、27 次人工删会话），水位百分比判据在长
+# 上限模型上永不咬合（76K/400K=19%），只有绝对尺寸对得上中毒形态。env
+# HERMES_SESSION_SOFT_ROTATE_TOKENS 覆盖阈值；随既有 mode 漏斗（report/auto），
+# 回合末检查点（run_turn.py 603 调用位）零改动。
+705-agent-session-size-rotation.patch
+
+# 706（2026-10-29 run23 实锤根治案一，feat/run23-systemic-cure）：
+# 挂载 GET /api/sim/board-staleness（custom/server/controllers/sim/board-staleness.ts）——
+# 检出「blocked 超阈值（默认 2h）且仍有在途子卡」的父卡（run23 T06 阻塞 26h、缺陷卡
+# 结卡被依赖守卫锁死无人告警）；fail-soft 只读，cron 消费面
+# scripts/board-staleness-watchdog.mjs（npm run watch:board-staleness）。
+706-server-sim-board-staleness-route.patch
