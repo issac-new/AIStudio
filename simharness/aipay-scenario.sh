@@ -2128,7 +2128,7 @@ if [ "$(posture)" = "strict" ]; then
         sset "${rkey}" "$(date +%s)"
         sent=$((sent+1))
       done
-    done < <(printf '%s' "${body}" | grep -E 'R-[0-9]+ *=' | awk 'NR<=6')
+    done < <({ printf '%s' "${body}" | grep -E 'R-[0-9]+ *=' || true; } | awk 'NR<=6')
     note "[G5] 退回自动分派 ${sent} 条单步令（翻绿路径 owner 直派；组织者令不替代）"
   }
 
