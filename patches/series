@@ -1019,3 +1019,4 @@
 # 一律拒收，不完整响应不得提交）。
 707-agent-codex-terminal-incomplete-retry.patch
 708-client-filetree-workspaceroot-seq-guard.patch
+709-server-kanban-task-detail-fast-path.patch

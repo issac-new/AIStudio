@@ -232,6 +232,9 @@ const candidateTasksForChild = computed(() => {
   return allTasks.value.filter(tk => !exclude.has(tk.id))
 })
 
+// 2026-10-31 回归清偿：immediate——板页在抽屉挂载前已设好选中任务时（恢复态竞态，
+// 走查 4 开 2 败交替复现），非 immediate watch 错过 show/taskId 翻转→loadDetail
+// 从不执行→抽屉停在「加载任务失败」NEmpty 兜底（loading=false/detail=null 假象）。
 watch(() => [props.show, props.taskId], async ([show, taskId]) => {
   if (show && taskId && typeof taskId === 'string') {
     await loadDetail(taskId)
@@ -255,7 +258,7 @@ watch(() => [props.show, props.taskId], async ([show, taskId]) => {
     homeChannels.value = []
     homeBusy.value = {}
   }
-})
+}, { immediate: true })
 
 function resetEditors() {
   editingTitle.value = false
@@ -375,7 +378,12 @@ async function executePatch(patch: kanbanApi.KanbanTaskPatch) {
   if (!task.value) return
   patchErr.value = null
   try {
-    await store.patchTask(task.value.id, patch)
+    const updated = await store.patchTask(task.value.id, patch)
+    // 2026-10-31 回归清偿：PATCH 响应即回填（乐观同步）——loadDetail 回包慢时
+    // 状态标签滞后肉眼可见；先落响应态，loadDetail 回包再补全其余面。
+    if (detail.value && updated?.id === detail.value.task?.id) {
+      detail.value = { ...detail.value, task: { ...detail.value.task, ...updated } }
+    }
     message.success(t('kanban.message.taskUpdated'))
     await loadDetail(task.value.id)
     emit('refresh')

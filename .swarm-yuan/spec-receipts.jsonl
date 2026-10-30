@@ -7,3 +7,4 @@
 {"at":"2026-10-30T11:26:23Z","spec":"docs/superpowers/specs/2026-06-21-overlay-architecture-design.md","receipt":"33905a2269f04b3d898f66ec8e8a39bdde07e57f","commit":"d23118751"}
 {"at":"2026-10-30T16:12:23Z","spec":"docs/superpowers/specs/2026-10-31-ide-workspace-regression-fixes.md","receipt":"eabf9487e3b39e28f138969c5214024c31fc2fd1","commit":"cef650b77"}
 {"at":"2026-10-30T16:45:16Z","spec":"docs/superpowers/specs/2026-10-31-run23-plan-report-retro-revision.md","receipt":"b1fc79cae6970c3337881db8b4b4be4bff232e16","commit":"cef650b77"}
+{"at":"2026-10-30T17:28:57Z","spec":"docs/superpowers/specs/2026-10-31-kanban-detail-fast-path.md","receipt":"3bae65e6ca93399e8a283eae12438850d380292d","commit":"0a83fb67e"}
