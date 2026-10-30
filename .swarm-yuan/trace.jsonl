@@ -871,3 +871,6 @@
 {"ts":"2026-10-30T07:01:11Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/tmp/fce2e.Ms6mK9/skill/.claude/skills/demo-java"}
 {"ts":"2026-10-30T07:01:17Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/tmp/metrics-assert.rvHKkU/skill"}
 {"ts":"2026-10-30T05:09:36Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/tmp/fwe2e.9ZnDCF"}
+{"ts":"2026-10-30T07:54:08Z","node":"生成","actor":"generate-skill","tool":"upgrade","status":"started","note":"/Users/cuishi/lab/AIStudio/.claude/skills/aistudio-dev"}
+{"ts":"2026-10-30T07:54:10Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/Users/cuishi/lab/AIStudio/.claude/skills/.swarm-yuan-upgrade.fXJQYD/skill"}
+{"ts":"2026-10-30T07:54:10Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/Users/cuishi/lab/AIStudio/.claude/skills/.swarm-yuan-upgrade.fXJQYD/skill"}
