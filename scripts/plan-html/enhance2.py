@@ -36,7 +36,7 @@ if 'class="step-card"' not in s:
                     f'<div class="step-sec"><div class="step-sec-hd">{disp}</div>'
                     f'<p>{content}</p></div>')
         gate = GATE_MAP.get(num)
-        gate_chip = f'<span class="gate-chip">硬闸 {gate}</span>' if gate else ''
+        gate_chip = f'<span class="gate-chip">关卡 {gate}</span>' if gate else ''
         return (f'<div class="step-card" data-step="{num}"{" data-gate=" + gate if gate else ""}>'
                 f'<div class="step-hd"><span class="step-no">{num}</span>'
                 f'<span class="step-title">{title}</span>{gate_chip}</div>'
@@ -139,7 +139,7 @@ else:
 #      md 首行 h1 又渲染一次裸标题，且 TOC 首条重复指向它）——删正文 h1；TOC 的 h1 li
 #      内嵌全部 h2 子条目（pandoc 嵌套结构），只删其锚点链接保留子树（TOC 无圆点样式，
 #      空壳 li 渲染干净），TOC 首条目视觉上变为「总述」──
-_body_h1 = re.search(r'<h1 id="swarm-studio-[^"]*">.*?</h1>\s*', s)
+_body_h1 = re.search(r'<h1 id="(?!title-block-header)[^"]+">.*?</h1>\s*', s)
 if _body_h1 and 'id="title-block-header"' in s:
     _hid = re.search(r'<h1 id="([^"]+)"', _body_h1.group(0)).group(1)
     s = s.replace(_body_h1.group(0), '', 1)
