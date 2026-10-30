@@ -155,8 +155,8 @@ has references/capability-map.md "| bugfix-runbook |" "capability-map 登记 run
 has references/capability-map.md "| remote-debug-jvm |" "capability-map 登记 JDWP 档"
 has references/task-methodology-router.md "bugfix-runbook（六步流水线" "task-router fix 分派接 runbook"
 has SKILL.md "bugfix-runbook（fix 任务连研发环境排障六步流水线）" "SKILL.md 路由表接 runbook"
-has assets/facts.conf "FACT_REFERENCES=57" "facts FACT_REFERENCES=57"
-has assets/facts.conf "FACT_UNIVERSAL_FILES=104" "facts FACT_UNIVERSAL_FILES=104"
+has assets/facts.conf "FACT_REFERENCES=58" "facts FACT_REFERENCES=58"
+has assets/facts.conf "FACT_UNIVERSAL_FILES=105" "facts FACT_UNIVERSAL_FILES=105"
 has assets/env-setup.sh "tunnel.sh\" doctor" "env-setup 隧道体检示例"
 
 echo "▶ 分发面纪律（目标技能 --verify-completeness 兼容）"

@@ -43,16 +43,16 @@ swarm-yuan 的 13 步生成流程是线性的（Step 1-13，唯一编号口径�
 
 ## 文档路由表（任务开工该读什么）
 
-> 本表与文档索引（capability-map.md，生成器仓维护）配套：那张表从**文档**查"它在哪里被使用"，本表从**任务**查"开工该读什么"——55 份参考文档由此全部可达。表内序号（②⑤⑦…）是开发工作流（目标技能 references/workflow.md）的节点号；【必】=该任务必读，【按】=命中条件才读。覆盖纪律：`*-methodology.md` 每份必须能从本表查到（生成器自检的 G25 断言把关）。
+> 本表与文档索引（capability-map.md，生成器仓维护）配套：那张表从**文档**查"它在哪里被使用"，本表从**任务**查"开工该读什么"——references 全档由此全部可达（档数以 `assets/facts.conf` 的 `FACT_REFERENCES` 为准）。表内序号（②⑤⑦…）是开发工作流（目标技能 references/workflow.md）的节点号；【必】=该任务必读，【按】=命中条件才读。覆盖纪律：`*-methodology.md` 每份必须能从本表查到（生成器自检的 G25 断言把关）。
 > **可及性**：本表引用的文档都随目标技能分发（在生成器 UNIVERSAL_FILES 分发清单里，拷进目标技能 references/ 直接可读）；标【生成器侧】的文档只在生成器仓里存在——引用它的任务在生成器里做，不会进目标技能。同样由 G25 断言把关。
 > **运行时原语可及性**：mattpocock-skills-methodology 引用的上游技能原语（grilling 访谈/诊断回路/retro/handoff/triage 等 27 技能）全文物化在生成器 `runtime/mattpocock-skills/`（CLI 层第 14 个运行时）——生成器侧会话按需读原文直调；目标技能侧不随技能分发，消费走该方法论的机制改写。diagram-production-methodology 同理：上游 45 类型技能全文物化在 `runtime/diagram-design/`（CLI 层第 15 个运行时）；目标技能侧随技能分发 `scripts/diagram-check.sh` 做结构自检，完整深检在运行时可达时自动启用。
 
 | 任务类型 | 触发信号 | 该读的参考文档（按开发工作流节点序） |
 |---------|---------|---------------------------|
-| **feature（新功能）** | 分支 feat/*、用户开发需求 | ①【按·需求模糊】mattpocock-skills-methodology（访谈协议 §一）→ ②【必】knowledge-lifecycle（读法六步）+【按】mattpocock-skills-methodology（spec 测试缝/防腐 §二）→ ③【按】mattpocock-skills-methodology（纵切拆分 §三）+ cost-estimation-methodology（§25 估算）→ ⑤【必】lazy-generation（先查再写）；复杂变更加 subagent-orchestration（任务图并行实现）、长任务加 mea-loop-methodology；⑦【必】review-methodology → ⑧ decision-governance（用户确认点）；全程 ai-process-records |
+| **feature（新功能）** | 分支 feat/*、用户开发需求 | ①【按·需求模糊】mattpocock-skills-methodology（访谈协议 §一）→ ②【必】knowledge-lifecycle（读法六步）+【按】mattpocock-skills-methodology（spec 测试缝/防腐 §二）→ ③【按】mattpocock-skills-methodology（纵切拆分 §三）+ cost-estimation-methodology（§25 估算）→ ⑤【必】lazy-generation（先查再写）+【按·配了 COMPLEXITY_MAX/DUPLICATION_MIN_BLOCK】clean-code-metrics-methodology（复杂度与重复度的口径/阈值标定）；复杂变更加 subagent-orchestration（任务图并行实现）、长任务加 mea-loop-methodology；⑦【必】review-methodology → ⑧ decision-governance（用户确认点）；全程 ai-process-records |
 | **fix（缺陷修复）** | 分支 fix/*、报障 | ②【必】knowledge-lifecycle（影响面查法）+【按·连研发环境取证】bugfix-runbook（六步流水线；需断点级取证加 remote-debug-jvm）→ ⑤【必】lazy-generation +【按·硬 bug】mattpocock-skills-methodology（诊断回路 §四：反馈回路先行/red-capable/可证伪假设）→ ⑦【必】review-methodology（回归面=修复点+相邻路径）；全程 codex-methodology（执行纪律）+ ai-process-records |
-| **refactor（重构）** | 分支 refactor/* | ②【必】knowledge-lifecycle（影响面）→ ③【按·架构类】togaf-metamodel-methodology（§24）/ cordis-composability-methodology（可组合性）→ ⑤ lazy-generation → ⑦【必】review-methodology |
-| **test（测试）** | 分支 test/* | ⑦【必】review-methodology（测试有效性判定）+ 回归分级（template-spec §19【生成器侧】，目标技能侧载体是 spec §19 本身）；长测试计划 mea-loop-methodology |
+| **refactor（重构）** | 分支 refactor/* | ②【必】knowledge-lifecycle（影响面）→ ③【按·架构类】togaf-metamodel-methodology（§24）/ cordis-composability-methodology（可组合性）→ ⑤ lazy-generation +【按】clean-code-metrics-methodology（重构后复杂度是否真降）→ ⑦【必】review-methodology |
+| **test（测试）** | 分支 test/* | ⑦【必】review-methodology（测试有效性判定）+【按·判测试是否有效】clean-code-metrics-methodology（复杂度/重复度/变异口径）+ 回归分级（template-spec §19【生成器侧】，目标技能侧载体是 spec §19 本身）；长测试计划 mea-loop-methodology |
 | **docs（文档）** | 分支 docs/* | ②【必】knowledge-lifecycle（知识四阶段协议，文档即知识）→ ⑦ review-methodology（三方一致核对） |
 | **chore（杂务/依赖）** | 分支 chore/* | ⑤【必】codex-methodology（版本锁定例外四条件）；全程 ai-process-records |
 | **exp（实验）** | 分支 exp/* | 全程【必】ai-process-records（实验不入 main 须留痕）；长实验 mea-loop-methodology |

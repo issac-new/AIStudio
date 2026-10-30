@@ -169,7 +169,7 @@ bash install.sh
 | `--sensitive` | 敏感信息脱敏 | 密码/密钥/token 明文 | 第 7 项 |
 | `--consistency` | 业务规则 + 数据勾稽 | 人工核对项（提示性） | 第 12 项 |
 | `--review` | 代码审查（5 维度） | ocr 检测到 High 级问题 | — |
-| `--reuse` | 复用合规（拼装式开发） | spec 缺 §5.5 / 新增单元与既有重名 | **第 11 项** |
+| `--reuse` | 复用合规（拼装式开发） | spec 缺 §5.5 / 新增单元与既有重名；可选重复代码维度（`DUPLICATION_MIN_BLOCK` 默认 0=关，建议 8 行；外部工具 `DUPLICATION_CMD` + `DUPLICATION_MAX_PCT`，只配命令不配阈值报未标定） | **第 11 项** |
 | `--deps` | 依赖版本锁定 | 依赖版本变更但 spec 未声明 | 第 4 项 |
 | `--security` | 安全规范（OWASP Top 10） | 注入/eval/XSS/硬编码密钥/TLS 关闭 | 第 7 项 |
 | `--test` | 测试通过 | 测试失败 | 第 5/9 项 |
@@ -189,7 +189,7 @@ bash install.sh
 | `--api` | API 契约与幂等 | 第 10 项 |
 | `--state` | 前端状态管理（巨型 store/prop drilling） | **第 11 项** |
 | `--frontend` | 前端组件架构（层级/props/循环依赖/CSS 污染） | **第 11 项** |
-| `--method-size` | 方法粒度（单方法行数超 METHOD_MAX_LINES 默认 60 warn——语言无关启发式，只抓"物理太大"） | 第 3 项 |
+| `--method-size` | 方法粒度（单方法行数超 `METHOD_MAX_LINES` 默认 60 warn）；可选圈复杂度维度（`COMPLEXITY_MAX` 默认 0=关，建议 15，决策点启发式计数，Python 的 and/or 不计） | 第 3 项 |
 | `--cognition` | 认知递进体检（六阶+六维+五层总分） | 第 13 项 |
 | `--domain` | 领域知识违规检测 | **第 14 项** |
 | `--knowledge` | 项目知识复用（AGENTS.md/CLAUDE.md/记忆 → skill 引用） | — |

@@ -184,7 +184,7 @@ fi
 echo "⑥ 文档注册与口径"
 grep -q '^FACT_RUNTIMES=15' "$BASE/assets/facts.conf" && ok "facts FACT_RUNTIMES=15" || bad "FACT_RUNTIMES≠15"
 grep -q '^FACT_RUNTIMES_CLI=6' "$BASE/assets/facts.conf" && ok "facts FACT_RUNTIMES_CLI=6" || bad "FACT_RUNTIMES_CLI≠6"
-grep -q '^FACT_REFERENCES=57' "$BASE/assets/facts.conf" && ok "facts FACT_REFERENCES=57" || bad "FACT_REFERENCES≠57"
+grep -q '^FACT_REFERENCES=58' "$BASE/assets/facts.conf" && ok "facts FACT_REFERENCES=58" || bad "FACT_REFERENCES≠58"
 grep -q '^FACT_DIAGRAM_DESIGN_VERSION=2.6.120' "$BASE/assets/facts.conf" \
   && ok "facts FACT_DIAGRAM_DESIGN_VERSION=2.6.120" || bad "FACT_DIAGRAM_DESIGN_VERSION 漂移"
 

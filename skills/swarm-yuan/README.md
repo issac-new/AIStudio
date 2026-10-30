@@ -2,7 +2,7 @@
 
 > 对任意代码仓库跑一次，生成一个项目专属的开发技能。此后 AI 在这个项目里写代码，先查组件、依赖和规矩，再动手。
 
-[![Release](https://img.shields.io/badge/release-v2.96.0-blue)](https://github.com/issac-new/Swarm-yuan/releases/tag/v2.96.0)
+[![Release](https://img.shields.io/badge/release-v2.97.0-blue)](https://github.com/issac-new/Swarm-yuan/releases/tag/v2.97.0)
 [![License](https://img.shields.io/badge/license-Apache--2.0-lightgrey)]()
 
 ---
@@ -300,7 +300,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 框架规则集 | 81（规则文档与门禁片段 1:1 配对） |
 | 配置变量 / 上限 | 197 / 200 |
 | 执行面代码行数 / 上限 | 引擎域源 7769 / 7769；框架门禁注入 18469 / 18469（2026-10-24 冻结 18464；sharding 聚合外包检测 +5 行登记上调；超限须等额删减或逐例登记） |
-| 目标技能预算 | SKILL.md ≤11392B（≈11KiB 锚，硬顶 20000B——宿主压缩重挂载截断防线，预算可再登记、硬顶不可越）、组件库清单 ≤32KiB、上下文预算 ≤614400B（600KiB，例外逐例登记于 docs/budget-exception-ledger.md 台账）、概念体系 ≤5 |
+| 目标技能预算 | SKILL.md ≤11392B（≈11KiB 锚，硬顶 20000B——宿主压缩重挂载截断防线，预算可再登记、硬顶不可越）、组件库清单 ≤32KiB、上下文预算 ≤618496B（604KiB，例外逐例登记于 docs/budget-exception-ledger.md 台账）、概念体系 ≤5 |
 | 外部运行时 | 15 个整合（深度 4 + CLI 6 + 方法论 5；CLI 第 5/6 项 mattpocock-skills/diagram-design 为仓内物化运行时）。登记 22（含图谱备选 codegraph、两宿主、机制源 pua/semantica/pi 等）。自动检测 11 |
 | 类型目录 | 实体 17 / 关系 10 / 动作 11（assets/ontology/ 三份） |
 | 生成流程 | 13 步（唯一编号口径在 generation-flow.md）。目标技能工作流九节点 × 4 要素；研发四阶段＝分支开发→分支测试→主干合并→主干回归（⑤-⑦ 在 feature 分支、⑧ 合 main、⑨ 发布前主干全量回归） |

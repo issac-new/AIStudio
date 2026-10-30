@@ -4,6 +4,27 @@ check_reuse() {
   echo "=== 复用合规检查（拼装式开发：禁止重复造轮子）==="
   local found=0
 
+  # ---- 0. 重复代码维度（决策 58）：默认关闭（DUPLICATION_MIN_BLOCK=0 且 DUPLICATION_CMD 空）----
+  # 放在 §5.5 spec 门禁之前：复制粘贴与 spec 是否存在无关，无 spec 的纯工具仓库同样该查。
+  # §1 的重名检测查「该复用却另起单元」，查不出「同一段逻辑被复制粘贴到第二个文件」——
+  # 后者同样是复用合规的破坏形态，也是 ub-mode 用 dryer 专门拦的形态。
+  local _dup_min="${DUPLICATION_MIN_BLOCK:-0}"
+  case "$_dup_min" in ''|*[!0-9]*) _dup_min=0 ;; esac
+  if [[ "$_dup_min" -ge 2 ]]; then
+    local _dup_hits _dup_n
+    _dup_hits=$(_duplication_scan "$_dup_min")
+    _dup_n=$(printf '%s\n' "$_dup_hits" | grep -c . || true)
+    if [[ "${_dup_n:-0}" -gt 0 ]]; then
+      printf '%s\n' "$_dup_hits" | head -5 | while IFS= read -r _l; do warn "$_l"; done
+      warn "检出 ${_dup_n} 处重复窗口（连续 ${_dup_min} 行以上 Type-1 精确重复，同一段重复可能命中多个窗口）——抽公共逻辑或删掉复制块；改名式近似重复用 DUPLICATION_CMD"
+    else
+      pass "未检出连续 ${_dup_min} 行以上的精确重复块"
+    fi
+  else
+    echo "  (跳过：DUPLICATION_MIN_BLOCK=0，内置重复检测未启用；建议 8)"
+  fi
+  _duplication_cmd_check
+
   # ---- 1. 硬门禁：spec-template.md §5.5 复用约束段必须已填写 ----
   # 找到最近一份 spec（项目内 specs/ 或当前目录）。
   # 注意：排除 *-template.md 模板文件——模板的 §5.5 checkbox 本就该是 [ ] 待用户复制后勾选，

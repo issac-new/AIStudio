@@ -776,3 +776,122 @@ _ai_hint() { # $1=门禁名 $2=AI 自查要点
   echo "  → 提示：完成后可 echo 简单结论到 .swarm-yuan/notes/$(echo "$1" | tr '[:upper:]' '[:lower:]' | tr ' ' '-').md"
   pass "$1 已转 AI 自觉判断（advisory，不计 fail）"
 }
+_gate_src_files() { # stdout=待扫描源码清单（WRITABLE_DIRS 展开，统一排除构建/依赖面；上限 200 文件同其他门禁）
+  # 用 [*] + 分词而非 [@]：conf 里既可能是数组 WRITABLE_DIRS=("a" "b")，也可能是标量 "a b"，
+  # 取 [*] 后按空白切分两种形态都成立（与 check_method_size 既有取法一致）。
+  local dir dirs="${WRITABLE_DIRS[*]:-}"
+  for dir in $dirs; do
+    [[ -n "$dir" && -d "${PROJECT_DIR:-.}/${dir}" ]] || continue
+    find "${PROJECT_DIR:-.}/${dir}" -type f \( -name '*.java' -o -name '*.py' -o -name '*.go' -o -name '*.js' -o -name '*.ts' -o -name '*.kt' -o -name '*.vue' \) \
+      -not -path '*/node_modules/*' -not -path '*/target/*' -not -path '*/dist/*' -not -path '*/build/*' \
+      -not -path '*/vendor/*' -not -path '*/.venv/*' -not -path '*/venv/*' -not -path '*/coverage/*' 2>/dev/null | head -200
+  done
+}
+_complexity_scan() { # $1=决策点上限；stdout=「file:line 决策点 N > 上限 M（启发式）」
+  # 决策 58：与 ub-mode crapper 对齐的「复杂度可见化」维度，只做可算准的近似——
+  # 决策点=控制关键字（边界匹配）+ && / || / ? 的出现次数；纯注释行跳过，行内尾注释不剥离。
+  # 单 awk 进程扫完整批文件（逐行起 grep 在 200 文件量级会拖垮门禁）；FNR==1 重置函数状态。
+  local max="$1"
+  [[ "${max:-0}" -gt 0 ]] || return 0
+  local _files=() _f
+  while IFS= read -r _f; do
+    [[ -n "$_f" && -f "$_f" ]] && _files+=("$_f")
+  done <<< "$(_gate_src_files)"
+  [[ ${#_files[@]} -gt 0 ]] || return 0
+  awk -v max="$max" '
+    function kwc(s, k,   t) { t = " " s " "; return gsub("[^A-Za-z0-9_]" k "[^A-Za-z0-9_]", "", t) }
+    function dec(s,   n, t) {
+      n = kwc(s, "if") + kwc(s, "elif") + kwc(s, "for") + kwc(s, "while") \
+        + kwc(s, "case") + kwc(s, "when") + kwc(s, "catch") + kwc(s, "except")
+      t = s; n += gsub(/&&/, "", t)
+      t = s; n += gsub(/[|][|]/, "", t)
+      t = s; n += gsub(/[?]/, "", t)
+      return n
+    }
+    function flush() {
+      if (in_fn && n > max) printf "%s:%d 决策点 %d > 上限 %d（启发式）\n", cur, start, n, max
+    }
+    FNR == 1 { flush(); cur = FILENAME; in_fn = 0; n = 0; start = 0 }   # 先按旧文件名冲刷上一文件的末函数，再切到新文件
+    # 函数起始三条：①修饰符开头（public/private/protected/static/def/func/function）
+    # ②控制关键字开头的行（if(/for( 等）只算决策点，不算起始——否则函数被切碎
+    # ③裸标识符开头：仅当行尾为 { 或 : 才算声明（排除 log(...) 这类调用语句把函数切断）
+    /^[[:space:]]*(public |private |protected |static |def |func |function )/ { flush(); in_fn=1; start=FNR; n=0; next }
+    /^[[:space:]]*(if|for|while|switch|catch|else|elif|when|case|return|new|print|puts|console)[[:space:]]*\(/ { if (in_fn) n += dec($0); next }
+    /^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\(/ {
+      if ($0 ~ /[{:]$/) { flush(); in_fn=1; start=FNR; n=0; next }
+      if (in_fn) n += dec($0)
+      next
+    }
+    { if (!in_fn) next
+      if ($0 ~ /^[[:space:]]*(#|\/\/|\/\*|\*|--)/) next
+      n += dec($0) }
+    END { flush() }
+  ' "${_files[@]}" 2>/dev/null
+}
+_duplication_scan() { # $1=最小重复块行数；stdout=「a:b 与 c:d 连续 N 行归一化后完全相同」
+  # 决策 58：Type-1 精确重复块粗筛（忽略空白/纯注释行后的逐行精确相同），只抓复制粘贴；
+  # 改名/改结构的 Type-2/3 相似重复须外部 DUPLICATION_CMD（jscpd/CPD/dupl 等）。
+  # 单 awk 进程跨全部文件建立首现表——跨文件复制才检测得到（逐文件起进程会漏跨文件）。
+  local minb="${1:-0}"
+  [[ "${minb:-0}" -ge 2 ]] || return 0
+  local _files=() _f
+  while IFS= read -r _f; do
+    [[ -n "$_f" && -f "$_f" ]] && _files+=("$_f")
+  done <<< "$(_gate_src_files)"
+  [[ ${#_files[@]} -gt 0 ]] || return 0
+  awk -v n="$minb" '
+    FNR == 1 { cnt = 0 }
+    {
+      line = $0
+      if (line ~ /^[[:space:]]*$/) next
+      if (line ~ /^[[:space:]]*(#|\/\/|\/\*|\*|--)/) next
+      sub(/^[[:space:]]+/, "", line); sub(/[[:space:]]+$/, "", line); gsub(/[[:space:]]+/, " ", line)
+      if (length(line) == 0) next
+      slot = cnt % (n - 1)
+      buf[slot] = line
+      ln[slot] = FNR
+      cnt++
+      if (cnt < n) next
+      key = ""
+      for (j = 0; j < n - 1; j++) { idx = (cnt - (n - 1) + j) % (n - 1); key = key "\034" buf[idx] }
+      key = key "\034" line
+      if (length(key) < n * 4) next
+      sline = ln[(cnt - (n - 1)) % (n - 1)]
+      if (key in first_f) {
+        # 同一段重复的滑动窗口只报一次：与上一次命中同文件且相距不足 n 行则不再报（冷却），
+        # 否则 7 行重复块会按窗口逐条复报（实测 2 条同一处）
+        if (!(first_f[key] == FILENAME && first_l[key] == sline) \
+            && (FILENAME != hit_f || FNR - hit_end >= n)) {
+          printf "%s:%d 与 %s:%d 连续 %d 行归一化后完全相同\n", first_f[key], first_l[key], FILENAME, sline, n
+          hit_f = FILENAME; hit_end = FNR
+        }
+      } else { first_f[key] = FILENAME; first_l[key] = sline }
+    }
+  ' "${_files[@]}" 2>/dev/null
+}
+_duplication_cmd_check() { # 外部重复检测工具：百分比与阈值都到位才判定；只配命令不配阈值→未标定 warn
+  local cmd="${DUPLICATION_CMD:-}" maxpct="${DUPLICATION_MAX_PCT:-0}"
+  [[ -n "$cmd" ]] || return 0
+  case "$maxpct" in ''|*[!0-9]*) maxpct=0 ;; esac
+  if [[ "$maxpct" -le 0 ]]; then
+    warn "gate_reuse_duplication: DUPLICATION_CMD 已配置但 DUPLICATION_MAX_PCT 未标定（=0）——工具默认阈值不能当规则值（ub-mode 的 dryer 默认 0.82、规则要求 0.8 同类坑），请显式标定后再启用判定"
+    return 0
+  fi
+  local out rc pct
+  out=$(eval "$cmd" 2>&1 | tail -40) && rc=0 || rc=1
+  printf '%s\n' "$out"
+  if [[ "$rc" -ne 0 ]]; then
+    warn "gate_reuse_duplication: DUPLICATION_CMD 执行失败（rc=${rc}）——修复工具链，或清空 DUPLICATION_CMD 并在 spec 留痕"
+    return 0
+  fi
+  pct=$(printf '%s\n' "$out" | grep -oE '[0-9]+([.][0-9]+)?[[:space:]]*%' | tail -1 | grep -oE '[0-9]+([.][0-9]+)?' || true)
+  if [[ -z "$pct" ]]; then
+    warn "gate_reuse_duplication: 未从 DUPLICATION_CMD 输出解析到重复率百分比（阈值 ${maxpct}%）——确认报告格式（jscpd/CPD/dupl 均支持百分比输出）"
+    return 0
+  fi
+  if awk -v p="$pct" -v m="$maxpct" 'BEGIN{exit !(p>m)}'; then
+    warn "gate_reuse_duplication: 重复率 ${pct}% > 阈值 ${maxpct}%——抽公共逻辑或删掉复制块（相似度阈值口径见 clean-code-metrics-methodology §四）"
+  else
+    pass "重复率 ${pct}% ≤ 阈值 ${maxpct}%"
+  fi
+}

@@ -1,4 +1,4 @@
-# dist.tsv — authoritative distribution manifest (99 rows + R138 +1 -> 100；合规检查能力轮 +3 -> 103).
+# dist.tsv — authoritative distribution manifest (103 rows；ub-mode 吸收轮 +1 -> 104).
 # path	audience	tier	mode	cat	offline	src_pkg	requires	bytes
 # cat: source category (assets/gen/hook/rules/onto/ref/refd); bytes: references source bytes (context tax); - for scripts/assets.
 assets/spec-template.md	target	lite	copy	assets	yes	yes	-	-
@@ -66,7 +66,7 @@ scripts/tunnel.sh	target	standard	copy	gen	yes	yes	-	-
 scripts/tunnel.conf	target	standard	copy	assets	yes	yes	-	-
 references/subagent-orchestration.md	target	standard	copy	refd	yes	yes	subagent-orchestration	66579
 references/governance-agents.md	target	compliance	copy	ref	yes	yes	governance-agents	28769
-references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	15878
+references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	16252
 references/canary-monitoring.md	target	standard	copy	ref	yes	yes	canary-monitoring	1725
 references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	60429
 references/code-graph-tools.md	target	standard	copy	refd	yes	yes	code-graph-tools	45651
@@ -81,6 +81,7 @@ references/business-ontology-methodology.md	target	standard	copy	ref	yes	yes	bus
 references/fibo-financial-ontology.md	target	standard	copy	ref	yes	yes	fibo-financial-ontology	34769
 references/cost-estimation-methodology.md	target	standard	copy	ref	yes	yes	cost-estimation-methodology	16241
 references/lazy-generation-methodology.md	target	standard	copy	ref	yes	yes	lazy-generation-methodology	4540
+references/clean-code-metrics-methodology.md	target	standard	copy	ref	yes	yes	clean-code-metrics-methodology	4539
 references/claude-code-capabilities.md	target	standard	distill	refd	yes	yes	claude-code-capabilities	93960
 references/standards-compliance.md	target	compliance	copy	ref	yes	yes	standards-compliance	45691
 references/cwe-database.md	target	compliance	copy	ref	yes	yes	cwe-database	10559
