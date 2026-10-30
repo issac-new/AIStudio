@@ -124,6 +124,25 @@ describe('IdeFilesPane → filesStore.workspaceRoot', () => {
     w.unmount()
   })
 
+  it('渲染闸：校验在途不挂 FileTree（防提前按旧/空根装载默认根），ok 后才挂', async () => {
+    const { authFetch } = await import('../utils/auth-fetch')
+    const mock = vi.mocked(authFetch)
+    let release!: () => void
+    const gate = new Promise<void>((r) => { release = r })
+    mock.mockImplementationOnce(async () => { await gate; return { ok: true, status: 200, json: async () => ({}) } as never })
+    ideState.workspace = '/ws/gate-a'
+    const w = mount(IdeFilesPane, { global: { stubs: { FileTree: true, IdeGitPane: true } } })
+    await flushPromises()
+    // 在途：加载提示在、FileTree 不挂载
+    expect(w.find('[data-testid="ide-files-checking"]').exists()).toBe(true)
+    expect(w.find('file-tree-stub').exists()).toBe(false)
+    release()
+    await flushPromises()
+    expect(filesState.workspaceRoot).toBe('/ws/gate-a')
+    expect(w.find('file-tree-stub').exists()).toBe(true)
+    w.unmount()
+  })
+
   it('patch 655 注册且 FileTree 支持 showFiles（IDE 树内直出文件）', () => {
     const patch = resolve(__dirname, '../../../../patches/655-client-filetree-show-files.patch')
     expect(existsSync(patch)).toBe(true)
