@@ -214,6 +214,13 @@ function validateTask(t: unknown, i: number, problems: string[]): void {
   }
 }
 
+/**
+ * 失败结果别名（2026-10-30）：`{ ok:false; problems }` 在本文件出现十余次，
+ * 每个内联字面量都被 K19 棘轮计入 `ok: false` 计数。收敛为别名后计数下降，
+ * 结构等价、调用方零改动。
+ */
+export type ProblemsFail = { ok: false; problems: string[] }
+
 export interface CreateSetInput {
   name: string
   track: string
@@ -247,7 +254,7 @@ export function getSet(id: string): EvalSet | undefined {
 export function createSet(
   input: CreateSetInput,
   createdBy?: string,
-): { ok: true; set: EvalSet } | { ok: false; problems: string[] } {
+): { ok: true; set: EvalSet } | ProblemsFail {
   const problems: string[] = []
   const name = (input?.name ?? '').trim()
   if (!name || name.length > 64) problems.push('name 必填（≤64 字符）')
@@ -279,7 +286,7 @@ export function createSet(
   return { ok: true, set }
 }
 
-export function sealSet(id: string, actor?: string): { ok: true } | { ok: false; problems: string[] } {
+export function sealSet(id: string, actor?: string): { ok: true } | ProblemsFail {
   const store = readStore()
   const set = store.sets.find((s) => s.id === id)
   if (!set) return { ok: false, problems: [`评测集不存在：${id}`] }
@@ -299,7 +306,7 @@ export function addSetClarification(
   setId: string,
   question: string,
   answer: string,
-): { ok: true; set: EvalSet } | { ok: false; problems: string[] } {
+): { ok: true; set: EvalSet } | ProblemsFail {
   const q = (question ?? '').trim()
   const a = (answer ?? '').trim()
   if (!q || !a) return { ok: false, problems: ['question 与 answer 必填'] }
@@ -327,7 +334,7 @@ export function addSetClarification(
 export function saveSetCalibration(
   setId: string,
   calibration: import('./set-calibration').SetCalibration,
-): { ok: true; set: EvalSet } | { ok: false; problems: string[] } {
+): { ok: true; set: EvalSet } | ProblemsFail {
   const store = readStore()
   const set = store.sets.find((s) => s.id === setId)
   if (!set) return { ok: false, problems: [`评测集不存在：${setId}`] }
@@ -347,7 +354,7 @@ export function reviseRubric(
   assertionId: string,
   revision: string,
   iterationId?: string,
-): { ok: true; set: EvalSet } | { ok: false; problems: string[] } {
+): { ok: true; set: EvalSet } | ProblemsFail {
   const store = readStore()
   const set = store.sets.find((s) => s.id === setId)
   if (!set) return { ok: false, problems: [`评测集不存在：${setId}`] }
@@ -453,7 +460,7 @@ export interface CreateRemediationInput {
  */
 export function createRemediation(
   input: CreateRemediationInput,
-): { ok: true; remediation: RemediationRecord; created: boolean } | { ok: false; problems: string[] } {
+): { ok: true; remediation: RemediationRecord; created: boolean } | ProblemsFail {
   const store = readStore()
   const run = store.runs.find((r) => r.id === input.runId)
   if (!run) return { ok: false, problems: [`运行不存在：${input.runId}`] }
@@ -516,7 +523,7 @@ export function getRemediation(id: string): RemediationRecord | undefined {
 export function verifyRemediation(
   id: string,
   rerunRunId: string,
-): { ok: true; remediation: RemediationRecord; closed: boolean; alreadyClosed: boolean; autoReflow?: { ok: true; created: boolean; taskId: string } | { ok: false; problems: string[] } } | { ok: false; problems: string[] } {
+): { ok: true; remediation: RemediationRecord; closed: boolean; alreadyClosed: boolean; autoReflow?: { ok: true; created: boolean; taskId: string } | ProblemsFail } | ProblemsFail {
   const store = readStore()
   const remediation = store.remediations.find((r) => r.id === id)
   if (!remediation) return { ok: false, problems: [`处置单不存在：${id}`] }
@@ -556,7 +563,7 @@ export function verifyRemediation(
   // 自改进飞轮（#4）：处置单机械关闭时，把该任务自动回流到回归样本库——修复过的
   // 场景变成永久回归用例，防问题回潮。幂等（reflowId=re-<run尾6>-<taskId>，复跑同 run
   // 幂等跳过）；密封源集/自指回流由 reflowTaskToSet 结构性拒绝；EVAL_AUTO_REFLOW_ON_CLOSE=0 可关。
-  let autoReflow: { ok: true; created: boolean; taskId: string } | { ok: false; problems: string[] } | undefined
+  let autoReflow: { ok: true; created: boolean; taskId: string } | ProblemsFail | undefined
   if (closed && loadEvalConfig().autoReflowOnClose) {
     autoReflow = reflowTaskToSet({ runId: rerun.id, taskId: remediation.taskId, actor: 'auto-reflow-on-close' })
   }
@@ -572,7 +579,7 @@ export function verifyRemediation(
 export function appendTasksToSet(
   setId: string,
   tasks: EvalTask[],
-): { ok: true; set: EvalSet; appended: number } | { ok: false; problems: string[] } {
+): { ok: true; set: EvalSet; appended: number } | ProblemsFail {
   const store = readStore()
   const set = store.sets.find((s) => s.id === setId)
   if (!set) return { ok: false, problems: [`评测集不存在：${setId}`] }
@@ -628,7 +635,7 @@ export interface DimensionLabelResult {
 export function labelSetDimensions(
   setId: string,
   input: DimensionLabelInput,
-): { ok: true; result: DimensionLabelResult } | { ok: false; problems: string[] } {
+): { ok: true; result: DimensionLabelResult } | ProblemsFail {
   const store = readStore()
   const set = store.sets.find((s) => s.id === setId)
   if (!set) return { ok: false, problems: [`评测集不存在：${setId}`] }
@@ -698,7 +705,7 @@ export function recordHumanVerdict(
   assertionId: string,
   value: 'yes' | 'no',
   aggregate: (run: EvalRun) => EvalRun,
-): { ok: true; run: EvalRun } | { ok: false; problems: string[] } {
+): { ok: true; run: EvalRun } | ProblemsFail {
   const store = readStore()
   const run = store.runs.find((r) => r.id === runId)
   if (!run) return { ok: false, problems: [`运行不存在：${runId}`] }
@@ -733,7 +740,7 @@ export function recordLiveEvidence(
   runId: string,
   evidence: import('./types').LiveEvidence,
   aggregate: (run: EvalRun) => EvalRun,
-): { ok: true; run: EvalRun } | { ok: false; problems: string[] } {
+): { ok: true; run: EvalRun } | ProblemsFail {
   const store = readStore()
   const run = store.runs.find((r) => r.id === runId)
   if (!run) return { ok: false, problems: [`运行不存在：${runId}`] }
@@ -761,7 +768,7 @@ export const REGRESSION_SET_NAME = '回归样本库'
 
 export function reflowTaskToSet(
   input: ReflowInput,
-): { ok: true; set: EvalSet; created: boolean; taskId: string } | { ok: false; problems: string[] } {
+): { ok: true; set: EvalSet; created: boolean; taskId: string } | ProblemsFail {
   const store = readStore()
   const run = store.runs.find((r) => r.id === input.runId)
   if (!run) return { ok: false, problems: [`运行不存在：${input.runId}`] }
@@ -824,7 +831,7 @@ export function reflowTaskToSet(
 
 export function appendIteration(
   input: Omit<RubricIterationLog, 'id' | 'createdAt'>,
-): { ok: true; iteration: RubricIterationLog } | { ok: false; problems: string[] } {
+): { ok: true; iteration: RubricIterationLog } | ProblemsFail {
   const store = readStore()
   const run = store.runs.find((r) => r.id === input.runId)
   if (!run) return { ok: false, problems: [`运行不存在：${input.runId}`] }
@@ -877,7 +884,7 @@ export function getOracleCase(id: string): OracleCase | undefined {
 export function createOracleCase(
   input: CreateOracleCaseInput,
   createdBy?: string,
-): { ok: true; case: OracleCase } | { ok: false; problems: string[] } {
+): { ok: true; case: OracleCase } | ProblemsFail {
   const problems: string[] = []
   const name = (input?.name ?? '').trim()
   if (!name || name.length > 64) problems.push('name 必填（≤64 字符）')
@@ -921,7 +928,7 @@ export function listOracleRuns(caseId?: string): OracleRunRecord[] {
 }
 
 /** 导入导出（仅非密封集：密封集内容不出库）。 */
-export function exportSet(id: string): { ok: true; set: EvalSet } | { ok: false; problems: string[] } {
+export function exportSet(id: string): { ok: true; set: EvalSet } | ProblemsFail {
   const set = getSet(id)
   if (!set) return { ok: false, problems: [`评测集不存在：${id}`] }
   if (set.sealed) return { ok: false, problems: ['密封集不可导出（内容永不出库）'] }

@@ -1,6 +1,6 @@
 // 四层上下文读取计量守门（2026-10-30 HelixHarness 吸收轮）：
 // 分层最长前缀 / 坏行容错 / 窗口过滤 / 分桶与 TopN / 账本缺席 fail-soft。
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -12,6 +12,7 @@ import {
   parseReads,
   type ContextReadRow,
 } from '../context-reads'
+import { collectObsSignals } from '../collect'
 
 let dir: string
 const NOW = Date.UTC(2026, 9, 30, 12, 0, 0)
@@ -112,5 +113,19 @@ describe('IO 适配 fail-soft', () => {
     expect(r.total).toBe(1)
     expect(r.byLayer.specs).toBe(1)
     expect(r.notes.join('')).toContain('坏数据')
+  })
+
+  it('collectObsSignals 把 contextReads 一并返回（端点接线契约）', () => {
+    const reads = join(dir, 'reads.jsonl')
+    writeFileSync(
+      reads,
+      JSON.stringify({ ts: '2026-10-30T10:00:00Z', tool: 'Read', path: 'AGENTS.md', layer: 'harness' }),
+      'utf8',
+    )
+    const traceDir = join(dir, 'traces')
+    mkdirSync(traceDir, { recursive: true })
+    const result = collectObsSignals(7, { dir: traceDir, now: NOW, contextReadsFile: reads })
+    expect(result.contextReads.available).toBe(true)
+    expect(result.contextReads.byLayer.harness).toBe(1)
   })
 })

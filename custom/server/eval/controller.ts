@@ -51,6 +51,7 @@ import {
 import { calibrateSet, type CalibrationSample } from './set-calibration'
 import { judgeAttempt } from './judge'
 import { publicSetView, publicTaskView } from './rubric-visibility'
+import { fail, ok } from '../lib/http'
 import { countRuns as countRedteamRuns } from '../redteam/store'
 import { mountRedteam } from '../redteam/routes'
 import { loadEvalConfig } from './types'
@@ -294,7 +295,7 @@ router.get('/sets/:id', async (ctx) => {
     return
   }
   // 隐藏断言不出 API 面（2026-10-30）：只暴露条数，内容仅在服务端判分时使用。
-  ctx.body = { ok: true, set: publicSetView(set) }
+  ok(ctx, { set: publicSetView(set) })
 })
 
 router.post('/sets/:id/seal', async (ctx) => {
@@ -316,15 +317,13 @@ router.post('/sets/:id/seal', async (ctx) => {
 router.post('/sets/:id/calibrate', async (ctx) => {
   const set = getSet(ctx.params.id)
   if (!set) {
-    ctx.status = 404
-    ctx.body = { ok: false, problems: ['评测集不存在'] }
+    fail(ctx, 404, '评测集不存在')
     return
   }
   const body = (ctx.request.body ?? {}) as { samples?: CalibrationSample[] }
   const samples = Array.isArray(body.samples) ? body.samples : []
   if (samples.length === 0) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: ['samples 必填：至少 1 条「基线失败→解法通过」样本'] }
+    fail(ctx, 400, 'samples 必填', { problems: ['至少 1 条「基线失败→解法通过」样本'] })
     return
   }
   const config = loadEvalConfig()
@@ -343,11 +342,10 @@ router.post('/sets/:id/calibrate', async (ctx) => {
   })
   const saved = saveSetCalibration(set.id, calibration)
   if (!saved.ok) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: saved.problems }
+    fail(ctx, 400, '校准落库失败', { problems: saved.problems })
     return
   }
-  ctx.body = { ok: true, calibration, sealed: set.sealed }
+  ok(ctx, { calibration, sealed: set.sealed })
 })
 
 /**
@@ -359,11 +357,10 @@ router.post('/sets/:id/clarifications', async (ctx) => {
   const body = (ctx.request.body ?? {}) as { question?: string; answer?: string }
   const result = addSetClarification(ctx.params.id, String(body.question ?? ''), String(body.answer ?? ''))
   if (!result.ok) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: result.problems }
+    fail(ctx, 400, '澄清事实写入失败', { problems: result.problems })
     return
   }
-  ctx.body = { ok: true, clarifications: result.set.clarifications ?? [] }
+  ok(ctx, { clarifications: result.set.clarifications ?? [] })
 })
 
 router.get('/sets/:id/export', async (ctx) => {
@@ -374,7 +371,7 @@ router.get('/sets/:id/export', async (ctx) => {
     return
   }
   // 隐藏断言不可导出（2026-10-30）：导出面与详情面同一投影。
-  ctx.body = { ok: true, set: publicSetView(result.set) }
+  ok(ctx, { set: publicSetView(result.set) })
 })
 
 // 能力维度标注通道（2026-10-30 run23 复盘）：批量给集内任务打七维或显式 'unclassified'。
