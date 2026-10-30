@@ -3965,6 +3965,13 @@ def artifact_panorama():
             f'行内锚=origin/main@{main_sha or "?"}（实查）· 生成时工作树 HEAD@{CEN_ANCHOR or "?"}')
     return html_tbl, stat, note_g5
 
+# 取帧单一事实源（显式注册 ∪ 按步键自动挂接）——章节构建与图数统计共用，须先定义
+def _effective_step_imgs(_n, _m):
+    _reg = [pre for pre, _c, _k in _m.get('imgs', [])]
+    if _reg:
+        return _reg
+    return report_truth.orphan_frames_for(_m.get('keys') or [], _n, STEPS_DIR)
+
 # 叙事层（V4 §四：终版报告=叙事层+旅程层单文件；失败显式降级不阻断）
 _narrative_html = ''
 _ch0_html = _ch1_html = _ch2_html = _ch3_html = _ch4_html = ''
@@ -4143,8 +4150,16 @@ try:
     # 会五面全空误报（步 22 拍位规划轮实锤）；沿用带步（步 4/6/9/15 等）当轮无帧
     # 自然不计——回归轮承载范围以当轮执行带为准，口径如实。
     def _face_step(ns):
-        return [f'{n}:{pre}' for n in ns for (pre, _c, _k) in STEPS_META[n].get('imgs', [])
-                if (STEPS_DIR / f'{pre}.png').exists()]
+        # 取帧口径=与正文同源（run23 复盘：旧实现只读叙事 imgs，而按轮叙事常不写 imgs、
+        # 靠按步键自动挂接——承载率因此被误判成 1/5，盘上其实有帧）。改为
+        # 显式注册 ∪ 自动挂接（_effective_step_imgs，前面已定义）。
+        _out = []
+        for _n in ns:
+            _m = STEPS_META.get(_n) or {}
+            for _pre in _effective_step_imgs(_n, _m):
+                if (STEPS_DIR / f'{_pre}.png').exists():
+                    _out.append(f'{_n}:{_pre}')
+        return _out
     _faces = []
     _faces.append(('沟通', bool(_face_step([8, 9, 19, 21])), '房间/会话帧'))
     _faces.append(('任务', bool(_face_step([10, 12, 13, 17, 20, 22])), '看板帧'))
@@ -4403,12 +4418,6 @@ def gov_final_rows():
 # 轮（未注册叙事）没注册、帧全靠按状态键自动挂接，于是页头报「0 图次/本轮未拍摄」而
 # 正文实际嵌了 53 张。改为与渲染器同一判据：显式注册 ∪ 自动挂接（report_truth.
 # orphan_frames_for，键/步号匹配），两处不再各算一套。
-def _effective_step_imgs(_n, _m):
-    _reg = [pre for pre, _c, _k in _m.get('imgs', [])]
-    if _reg:
-        return _reg
-    return report_truth.orphan_frames_for(_m.get('keys') or [], _n, STEPS_DIR)
-
 _effective = {}
 for _n, _t, _g, _m in STEPS:
     for _pre in _effective_step_imgs(_n, _m):
