@@ -97,6 +97,10 @@ const HARNESS_REST_WHITELIST = [
   'mux/mx-node-heartbeat.sh', // 节点心跳（跨机活性探测）
   'scenarios/_template/scenario-skeleton.sh', // 场景模板（骨架示例含 REST 原语示范）
   'tests/multi-owner-stall.test.sh', // 多主停滞测试（断言读回）
+  // DM 送达守门 stub 测试（2026-10-30 登记并定性）：自建 mx_send/mx_messages/mx_join
+  // 假体（函数名与生产原语同名故命中正则），全文无真实 REST URL/curl——与上行
+  // multi-owner-stall 同款「测试文件 stub 原语≠直连」先例；正则本身不放宽。
+  'tests/dm-send-tracked.test.sh',
 ]
 
 function walk(dir: string, exts: string[], out: string[] = []): string[] {

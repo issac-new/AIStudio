@@ -2,7 +2,7 @@
 // 分层最长前缀 / 坏行容错 / 窗口过滤 / 分桶与 TopN / 账本缺席 fail-soft。
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   DEFAULT_LAYERS,
@@ -11,6 +11,7 @@ import {
   collectContextReads,
   parseReads,
   type ContextReadRow,
+  readsFile,
 } from '../context-reads'
 import { collectObsSignals } from '../collect'
 
@@ -113,6 +114,19 @@ describe('IO 适配 fail-soft', () => {
     expect(r.total).toBe(1)
     expect(r.byLayer.specs).toBe(1)
     expect(r.notes.join('')).toContain('坏数据')
+  })
+
+  it('默认账本路径解析到仓根而非 cwd（服务进程 cwd=vendor 树，K17 同族陷阱）', () => {
+    // repoRoot() 上溯到 name=aistudio 的仓根；测试 cwd 已在仓内子目录，两者须一致地
+    // 指向 <repoRoot>/.qgate/reads.jsonl——绝不落在 process.cwd() 的相对位置上。
+    const f = readsFile()
+    expect(f).toBe(join(resolve(__dirname, '../../../..'), '.qgate', 'reads.jsonl'))
+    process.env.HERMES_CONTEXT_READS_FILE = '/tmp/alt-reads.jsonl'
+    try {
+      expect(readsFile()).toBe('/tmp/alt-reads.jsonl')
+    } finally {
+      delete process.env.HERMES_CONTEXT_READS_FILE
+    }
   })
 
   it('collectObsSignals 把 contextReads 一并返回（端点接线契约）', () => {

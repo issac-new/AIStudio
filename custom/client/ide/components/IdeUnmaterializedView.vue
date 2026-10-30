@@ -276,7 +276,7 @@ watch([showTree, hasTaskTree], ([tree, hasTask]) => {
   background: var(--bg-tertiary);
   color: var(--accent-primary);
   font-size: 10px;
-  font-family: var(--font-sans, inherit);
+  font-family: var(--font-ui, inherit);
 }
 .mono { font-family: var(--font-mono, monospace); }
 </style>

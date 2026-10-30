@@ -68,7 +68,6 @@ import { evaluateReleaseHold } from './release-hold'
 import { buildBehaviorSignals } from './behavior-signals'
 import { businessSummaryOf } from './business-summary'
 import { collectObsSignals } from '../obssignals/collect'
-import { fail } from '../lib/http'
 
 const router = new Router({ prefix: '/api/hermes/eval' })
 

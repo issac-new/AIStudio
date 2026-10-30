@@ -35,7 +35,10 @@ const BUDGET: Record<string, number> = {
   cockpit: 72,
   // 2026-10-28 K21：cockpit 数据层（adapters/store/api/部分组件）迁入 shared，裸 hex 随文件搬走
   shared: 38,
-  ide: 27,
+  // 2026-10-30 +5：38e2481ee 终端黑底可读性修复（用户实报缺陷）xterm 双主题色板
+  // 与 IdeWhiteboardPane canvas 画笔色——JS 运行时取色吃不到 var()，与上文
+  // cockpit「终端 ANSI/图表 canvas 常量」同一性质，调档可追溯。
+  ide: 32,
   bpa: 8,
   ontology: 7,
   kanban: 3,
