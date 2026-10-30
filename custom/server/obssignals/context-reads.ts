@@ -11,6 +11,7 @@
 // 分层表单一事实源：.qgate/context-layers.json（与钩子共用；见该文件 _comment）。
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { repoRoot } from '../lib/upstream'
 
 export const LAYERS = ['knowledge', 'harness', 'specs', 'hooks'] as const
 export type ContextLayer = (typeof LAYERS)[number]
@@ -75,11 +76,16 @@ export interface ContextReadsReport {
   notes: string[]
 }
 
-/** 默认账本路径：<cwd>/.qgate/reads.jsonl，可用 HERMES_CONTEXT_READS_FILE 覆盖（测试/多仓）。 */
+/**
+ * 默认账本路径：检出根 .qgate/reads.jsonl，可用 HERMES_CONTEXT_READS_FILE 覆盖（测试/多仓）。
+ * 必须走 repoRoot() 而非 process.cwd()：服务进程以 vendor/hermes-studio 为 cwd 启动
+ * （serve-server.mjs spawn cwd=upstream），cwd 基准会把账本解析到上游树里永远读不到
+ * （2026-10-30 活体验证轮预判修复，与 K17 同族 cwd 陷阱）。
+ */
 export function readsFile(): string {
   const env = process.env.HERMES_CONTEXT_READS_FILE?.trim()
   if (env) return resolve(env.replace(/^~/, process.env.HOME ?? '~'))
-  return join(process.cwd(), '.qgate', 'reads.jsonl')
+  return join(repoRoot(), '.qgate', 'reads.jsonl')
 }
 
 /** JSONL 解析：坏行/坏时间戳跳过并计数，不炸聚合。 */
@@ -180,7 +186,7 @@ export function collectContextReads(
   const file = opts.file ?? readsFile()
   const notes: string[] = []
   let cfg = DEFAULT_LAYERS
-  const cfgPath = opts.config ?? join(process.cwd(), '.qgate', 'context-layers.json')
+  const cfgPath = opts.config ?? join(repoRoot(), '.qgate', 'context-layers.json')
   if (existsSync(cfgPath)) {
     try {
       const parsed = JSON.parse(readFileSync(cfgPath, 'utf8')) as { layers?: LayerConfig['layers'] }
