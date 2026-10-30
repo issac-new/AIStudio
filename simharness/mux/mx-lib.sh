@@ -732,7 +732,12 @@ mx_provision_agent_src() {
   # 网关卡 MCP 连接环）。快照源=git 跟踪文件的工作态（含未提交改动，天然排除
   # venv/node_modules 等非跟踪重物）。
   local dirty; dirty=$( { git -C "$host_tree" diff HEAD; git -C "$host_tree" status --porcelain; } 2>/dev/null | shasum | cut -c1-12)
-  local key="${head:0:9}+${dirty}"
+  # 快照键=宿主 HEAD+工作树脏态指纹 + **补丁清单指纹**（2026-10-30 run23 复盘补）：
+  # 宿主树没变而 patches/ 或 series 变了（新增 705/707 这类）时，旧键会误判「已同步」
+  # 而跳过供给——run23 实录 705 因此从未进 SIM 树，只能手工 git apply。清单指纹取
+  # series 内容 + 清单内每个补丁文件的 mtime/大小（够抓增删改，零解析成本）。
+  local _plist_fp; _plist_fp=$( { cat "$PATCH_DIR/series" 2>/dev/null; ls -l "$PATCH_DIR"/*.patch 2>/dev/null | awk '{print $5, $9}'; } | shasum | cut -c1-12)
+  local key="${head:0:9}+${dirty}+p${_plist_fp}"
   local cur; cur=$(_mx_provenance "$AGENT_SRC.provenance.json" --read | sed -n 's/.*"snapshot_key": "\([^"]*\)".*/\1/p')
   if [[ "$cur" == "$key" && -x "$SIM_ROOT/bin/hermes-sim" && -d "$AGENT_SRC/gateway" ]]; then
     log "agent 源码快照已在位且同步（key=${key}）——跳过"

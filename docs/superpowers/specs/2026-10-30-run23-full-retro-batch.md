@@ -13,6 +13,7 @@
 5. **`simharness/mux/run-driver-supervisor.sh`**——确定性失败硬停：连续 N 次（缺省 5，`MX_STORM_SAME_MAX` 可调）退出且**失败指纹**（驱动日志新增段末的 FAIL/条款行哈希）不变，判定确定性失败，记 `ISSUE|driver-deterministic-fail` 并退出（rc=3），指纹变化才继续自愈。run23 实录：报告步审计在同一批缺口上必然复现 FAIL，30s 重启只是把同一份 FAIL 再算一遍，连续 11 次、65 分钟零新增信息。
 6. **`simharness/tests/roster-account-count.test.sh`（新增）**——三断言守门：计数口径（14 人类 +1 admin=15，含服务令牌会得 16）、源码口径锁定（改回 `^jwt_` 即红）、`issue_once` 去重语义（同 key+subject 吞、不同 subject 各记）。
 7. **`simharness/mux/mx-report-audit.py`**——R18「载荷全缺」判据按 `_STAGE_ALIAS_STEPS` 做同段别名折算。步 2/4 是冒烟段的子步（账号配置/功能就绪），产品面无独立操作位，实拍帧与载荷天然挂在同段兄弟步（1=smoke、3=登录）上；此前只对「采集失败凭证」做别名折算，载荷判据没折算，导致 2/4 恒报载荷全缺（run23 只得靠降级登记转录）。同段任一步有载荷即视为该段已覆盖，兄弟步一样空才报（不假全过）。
+8. **`simharness/mux/mx-lib.sh`（供给指纹）**——`mx_provision_agent_src` 的快照键并入**补丁清单指纹**（`patches/series` 内容 + 各补丁文件大小/路径摘要）。原键只看宿主树 `HEAD`+脏态：宿主不变而补丁清单变了（新增 705/707 这类）时误判「已同步」直接跳过供给——run23 实录 705 因此从未进 SIM 树、只能手工 `git apply`。新键形如 `bf0203a79+3319805da957+p<hash>`，清单一变即触发重供给。
 
 ## 决策记录
 
