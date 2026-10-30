@@ -46,7 +46,7 @@ SwarmStudio 是一个让 AI 像一家软件公司一样干活的桌面工作台�
 | 推演 / 一轮（run） | 一次从需求到上线的完整模拟 |
 | AI 员工 / 编制 | 15 个角色各由 AI 扮演，人只在关卡把关 |
 | 工作台（旧称驾驶舱） | SwarmStudio 的操作界面：左侧常驻导航五组（常用/流程/整轮/专题/管理）＋顶部上下文栏＋页内单层页签；/app 默认入口=流程总览；IDE=集成开发环境（写代码、看代码的工具界面） |
-| Ycode | 本体系的编码引擎统称＝zcode 分叉（vendor/zcode＋zcode-patches，内置 computer-use 插件）；分叉引擎服务 IDE 工作台（:3030 WS）与 ACP 编码委托两条通道（zcode-acp-server 桥）。委托引擎按四级序注入 ZCODE_BIN：显式 env＞官方捆绑（过渡默认——coding-plan 端点对公开 main 基底客户端全量 500，修复在未发布的私有 3.16.3 线；upstream 追平后回切分叉）＞分叉部署位 `~/.hermes/ycode/zcode.cjs`＞桥兜底，委托日志记 `engine_bin_source` 可审计；产品 UI 与标识符仍用 zcode 命名（2026-10-26 裁定） |
+| Ycode | 本体系的编码引擎统称（zcode 分叉，内置 computer-use 插件）；同一引擎服务 IDE 工作台与 ACP 编码委托两条通道。委托引擎按「显式配置＞捆绑默认＞分叉部署位＞桥兜底」四级解析，委托日志记引擎来源可审计；产品 UI 与标识符仍用 zcode 命名 |
 | 时序六阶段 | 左侧「流程」组按交付时序分的六个阶段：搭建→需求→分析设计→开发→验收→治理（/app/stage/* 六条路由） |
 | 左侧导航 | 工作台左侧常驻导航：常用（流程总览/工作台/看板/审批收件箱）、流程（六阶段）、整轮（全流程推演）、专题（流程架构/本体/评测/技能治理）、管理（系统设置）；可折叠。检索已并入顶部弹窗 |
 | 阶段页签 | 每个阶段页只保留一层页签（`?tab=` 可刷新可分享），页签内就地操作、不跳新页；六阶段共 31 个页签 |
@@ -88,20 +88,12 @@ SwarmStudio 是一个让 AI 像一家软件公司一样干活的桌面工作台�
 按身份取径：一、方案目标（要什么）和五、验收标准（怎么算成）是主干，所有人读；二、方案设计是机制设计，给实现和评审的人；三、四部分是实例与操作细节，给执行的人。换需求单只换第三部分（三、推演场景设计），其余不变。演示视频素材与本章的对应关系见 §5.4.6。
 
 
-> **文档定位**：全流程推演唯一正本，现行版本 **V8.56**（run23 复盘运行口径批——三件入册：①外部依赖不具备条件时的绕过/缓期三段式（识别→人批准→首页显形，缓期≠已完成）；②带缺口放行（G3/G4 `*_evidence_gap`）在报告首页必须写「✅ 通过（带缺口）」；③报告叙事/六域结论/按轮注记必须按轮注册，禁复用旧轮文本与数字，交付物路径允许变体命中；26 步或六闸判据零改动，spec=《2026-10-30-run23-divergence-retro.md》）；前版 **V8.55**（全局检索合并批——左侧独立检索项退役＋顶部统一弹窗承载五类对象/命令/组合筛选＋/app/search 改兼容唤起＋R18 射手重开并断言弹窗可见＋26 步/六闸/判据零改动，spec=《2026-10-27-global-search-consolidation.md》），前版 **V8.54**（编码委托证据位批——词表 Ycode 词条更新为四级解析序（官方捆绑过渡默认）＋步 25 措辞同步＋§5.4.3 呈现底线增「编码委托证据位」（delegate-log 引擎身份行/终态行/技能装载位声明）；26 步/六闸/判据零改动，不动冻结面故不需整轮推演；＋IA 事实校正：全流程推演页签统一为「四签兄弟路由＋左侧栏运行编排/推演设置」，§2.4/§2.5 口径对齐；specs=《2026-10-26-nine-point-docs-sync.md》《2026-10-26-a2a-board-harness-alignment.md》）；前版 **V8.53**（九点对账术语批——词表 Ycode 入册＋步 25 编码链措辞对齐「经 ACP 调用 Ycode」；26 步/六闸/判据零改动，不动冻结面故不需整轮推演；spec=《2026-10-26-nine-point-reconciliation.md》）；前版 **V8.52**（群体协作清账批——五件挂账机制全落地：消融旋钮 MX_ABLATE_ROLES＋对比端点（实验性 LOO，D10）、拜占庭三模式注入旋钮＋BCR/暴露窗读数（D11）、混合动机竞标市场场景＋welfare/gini/nash 指标器（D12）、意图保真度升 dialog 全文相似度口径（D13）、run-trace profile 字段＋obs-signals byProfile token 分桶（D14）；实验数字待消融/注入 run 执行；spec=《2026-10-24-swarm-eval-followup-batch.md》）；前版 V8.51（群体协作四维度读数面入册——§2.6.11：通信拓扑 MOR 字符口径/锚点保真度/等待信号＋信用分配观察口径 criticality/Shapley 近似＋帕累托前沿＋社会动力学回音壁读数；度量单一事实源=产品端 delivery/swarm-collab 端点，本仓只采集透传（D1）；只透传不进判据（D2）；红队种子库 v2 社会病理两向量；spec=《2026-10-24-swarm-eval-benchmark-absorption.md》；26 步/六闸/判据零改动）；前版 V8.50（改进实验台 RRSI 正则化入册＋采证纪律 85/86：§2.6.8 改进实验读数面升级——噪声带接受地板（δ=基线重复实测半极差，增益≤δ 不晋级）＋泄漏批评者＋退火编辑预算，证据九「改进实验」行增正则化读数（进化面/采纳轮次/停滞/未探索，simharness mx-report-gen 已同步）；纪律 85=CLI 单查采证必须 --format stream-json（hermes CLI 0.22.4 起单查不再落 jsonl trace，实锚 2026-10-23 探测根治轮）＋纪律 86=超一分钟子进程链须防宿主收割（detached＋落盘轮询，三轮 live 失败实录）；26 步/六闸/判据零改动；多会话并行注记=V8.48 推演呈现面回补批与设计正本 R5（D26）已落 origin，V8.49 天猫介入节（§2.6.9）落地中，版本行由 V8.47 直接跳 V8.50 系并行批次序所致，以本行与各节版本注为准；V8.47=run22 收官根治批：判词锚点认 round 注记族＋UAT 报告双路径契约＋帧窗口终点=审计执行时刻＋复位指纹三源＋派发词去环形＋R18 孤儿帧补挂与读态见证＋capture 重放幂等；纪律 81-84 入册，六闸名称零改动，判据按 §5.3 增补；根治实录=《simharness/docs/2026-10-22-run22-retro.md》，收口=simharness main 9fd1024；V8.46=治理结果层入全流程：G6 闸键统一为 retro_done + 评测处置链/线上证据回填 + G5 发布门与 UAT 判定台账 + 观测信号/基线告警/评审治理/改进实验读数接入 + 报告证据九 + prelaunch 三十项；26 步与六闸名称零改动，判据按 §5.3 增补；机制=§2.6.8，变更正本=《2026-10-19-fullflow-v846-studio-latest.md》；V8.45=评测治理层入全流程：G4 评测子门 G4-E + 指标注册表/动作绑定 + 评估器三角 + 安全红队 + 能力维度覆盖 + 集锚点 + EvalOps + 报告证据八；26 步与六闸名称零改动，判据按 §5.3 增补；机制=§2.6.7；V8.44=工作台 IA 第二次重构：左侧导航五组＋六阶段页单层页签＋全流程推演专区＋检索页＋IDE 任务工作区；26 步/六闸/STEPS 键零改动——§2.4/§2.5/§2.5.1/§5.5/§5.6 与词表重锚，纪律 75 五方对账见《2026-10-18-fullflow-v844-workbench-refactor.md》；V8.43=run21 收官归档批：首个全流程轮终局入册——全程 22.7h、26 步全执行、六闸 6/6 含 G5 四轮真实打回；提速三杠杆与任务契约里程碑族当轮生效；纪律 76/77/78 入册（bash 崩溃环两族＋重启环境差异族三员立法），六道关卡判据零变化；V8.42=Harness 运行支撑层入册：九层能力/审计 v3/身份与委托/审批凭证/运行清单/预算/沙箱/恢复判定/过程质量——§2.6.6 新增；V8.41=内容减负、术语分层、WCAG 双主题、环境遗留关闭与团队页持久化批；V8.37=时序六阶段 IA＋旅程首页（今流程总览）＋D18 术语定稿）。
-> - 组织方式：全文按本体论六要素组织（总述「本体论六要素」一节=章节语法与场景对象的统一索引；本体视图实现锚=§2.6.1）。
-> - 机器消费面：同时是报告生成器与审计器的解析源；其中 26 步主链、六道关卡、治理机制、交付物模板字段语义为冻结面，变更须整轮推演验证。
-> - 编号纪律：纪律条款编号为稳定标识，只增不改（§4.3 编号说明）。
-> - 版本锚纪律：条款与机制只携带一个版本锚，即末次实质变更版本（形如「VX.YY，来源/裁定」）；版本沿革链（立→改→重写）、「新增/升级」升版腔与升版说明文件指针一律入档案，不入正文。规则适用边界（自 runN 起执行、已结束轮次不改判）是治理语义，不属沿革。
-> - 历史入口：历次版本的入列内容、修订明细与事故背景，一律见《[推演历史与工程档案](2026-10-05-mux-history-and-engineering-archive.md)》；各专项设计的概念与代码锚另见同目录 specs/ 下对应设计文档。
-> - 文风验收线（2026-10-11 用户裁定）：正文散文长句清零（保留主句+必要参数括注形态），表格枚举与冻结面步条为公文合法保留形态。
-
-**V8.45 新增术语**：指标注册表（指标→动作的绑定表）｜装饰指标（只报告不驱动动作）｜评估器三角（规则/裁判/人工互证）｜误杀候选（机判 no/unknown→人工 yes）｜红队逃逸率（攻击变体未被 S0 拦截的比例）｜良性误报（良性难负例被拦的比例）｜能力维度（任务显式标注的七类能力）｜未标注（untagged，不计入覆盖）｜EvalOps（评测运营读数）｜内容指纹/setHash/锚点漂移（评测集版本与 run 锚点不一致）｜四层指标金字塔（模型/应用/Agent/线上）｜动作驱动清单（运行级下一步动作）｜线上证据回填（QPS/响应分档）。
-
-**V8.46 新增术语**：治理结果（能力—读数—台账—报告—审计五段可反查）｜发布门台账（G5 批准/打回的 append-only 记录）｜UAT 判定台账（逐条 AC 的三态判定记录）｜评测处置链（失败样本→处置单→同卷复评→机械关闭）｜基线漂移告警（最近 24h 与前 N 天基线的成本/延迟/错误率/质量比率）｜改进实验（提案→探测→组合→冠军/回滚的受控回路）｜评审治理（风险分档/审批绑定提交/轮次收敛/度量熔断）｜证据九（报告第 9 章的治理结果读数面）。
-
-**V8.47 新增术语**：round 注记族（判词行「（roundN，改判/维持）」前缀的合法形态集，解析器须剥离后取锚）｜UAT 契约路径（`docs/test/<RFD>-test-report.md`，汇总路径 `docs/reports/TEST-<RFD>.md` 为兼容第二路径，任一满足即真）｜帧窗口终点（陈旧帧拦截的窗上界=审计执行时刻而非报告 mtime；run 起点 t0 拦截不放松）｜复位指纹三源（评审卡 body＋结论行卡键＋房间最新判词行原文哈希）｜读态见证（每次审计落 issues.log 实读指纹 sha256+行数+mtime，供双态振荡定诊）｜孤儿帧补挂（r18 ops 渲染为空时按步键 glob 盘上帧挂接并标注来源）。
-**V8.50 新增术语**：stream-json 证据通道（hermes CLI 单查的机器可读输出，result 事件带终文本/session_id/tokens/duration_ms；jsonl trace 通道在 CLI 0.22.4 已缺席）｜宿主收割（宿主对后台进程链的外部 SIGTERM/挂起：磁盘水位门禁与并行会话管理动作；>1min 子进程链高危）｜噪声带 δ（未改动基线重复实测 passAt1 半极差；增益≤δ 不得晋级，δ 不设调参）｜进化面（改进实验台已有提案或冠军的可编辑面；与未探索面相对）。
+> **文档定位**：全流程推演唯一正本。26 步主链、六道关卡、治理机制、交付物模板字段语义为冻结面，变更须整轮推演验证。
+> - 组织方式：全文按本体论六要素组织（总述「本体论六要素」一节＝章节语法与场景对象的统一索引；本体视图实现锚＝§2.6.1）。
+> - 机器消费面：同时是报告生成器与审计器的解析源。
+> - 编号纪律：纪律条款编号为稳定标识，只增不改（§4.3 编号说明），正文引用一律按编号。
+> - 术语：产品面与推演域术语以总述词表为单一事实源。
+> - 文风验收线：正文散文长句清零（保留主句+必要参数括注形态），表格枚举与冻结面步条为公文合法保留形态。
 
 ## 一、方案目标
 
@@ -117,20 +109,20 @@ SwarmStudio 是一个让 AI 像一家软件公司一样干活的桌面工作台�
 
 ### 1.1.1 推演的终极形态：图执行
 
-当前推演=aipay-scenario.sh 线性 bash 脚本（26 步顺序执行+并行补丁）。终极形态=**用 SwarmStudio 自己的 loop graph 引擎跑推演**。推演方案定义成 GraphSpec（JSON 图），事件驱动执行器按依赖关系调度节点，数据满足即触发（不等前一步全完）：
+推演的终极形态是**用 SwarmStudio 自己的 loop graph 引擎跑推演**：推演方案定义成 GraphSpec（JSON 图），事件驱动执行器按依赖关系调度节点，数据满足即触发（不等前一步全完）。
 
-**一图看全流程**：图下段=执行面——26 步线性主链转译为 DAG（每模块独立流水，不等齐再走）；图上段=生成面——这条图链由 AI 读需求单自动生成，需求单即图的输入。两段相接的锚=「任务图 GraphSpec JSON」：
+**一图看全流程**：图下段＝执行面——26 步线性主链转译为 DAG（每模块独立流水，不等齐再走）；图上段＝生成面——这条图链由 AI 读需求单自动生成，需求单即图的输入。两段相接的锚＝「任务图 GraphSpec JSON」：
 
 ```mermaid
 flowchart TB
-    subgraph GEN["生成面（北极星目标形态）"]
+    subgraph GEN["生成面"]
         REQ["需求单（自然语言，如 RFD-001 收银台）"]
-        COMP["需求→图编译器（AI：分析需求→识别模块→拆任务）<br/>【待建缺口①】"]
-        SPEC["任务图 GraphSpec JSON（节点=任务 · 边=依赖 · 关卡=join 屏障）<br/>模板库已有预设图，需求生成=填参实例化"]
+        COMP["需求→图编译器（AI：分析需求→识别模块→拆任务）"]
+        SPEC["任务图 GraphSpec JSON（节点=任务 · 边=依赖 · 关卡=join 屏障）<br/>模板库预设图，需求生成=填参实例化"]
         REQ --> COMP --> SPEC
     end
-    subgraph DAG["执行面（当前推演即此形态的线性近似）"]
-        SPEC -->|"图引擎调度（已有）"| G1["G1 需求锁定"]
+    subgraph DAG["执行面"]
+        SPEC -->|"图引擎调度"| G1["G1 需求锁定"]
         G1 --> D["派发（@需求分析AI）"]
         D --> A["模块A·支付核心<br/>分析→评审→编码→测试"]
         D --> B["模块B·微信渠道<br/>分析→评审→编码→测试"]
@@ -154,23 +146,7 @@ flowchart TB
 - 转译正确性以与 §2.4 步语义逐行一致的门禁测试保证。
 - checkpoint/resume 与断点续跑（START_STEP/UNTIL_STEP）语义一致。
 
-**生成面现状**：AI 编译器（读需求→出任务图 JSON）是最大缺口；图模板（P4 预设图）、图引擎、工作台呈现面已在产品侧建成——即上图「已有/待建」标注的对应实物：
-
-已有件（产品侧已建）：
-- 图引擎：GraphSpec 格式+事件驱动执行器+join 屏障+守卫回边+checkpoint/resume+人工介入中断（HITL）+编排器画布+运行总览+P4 模板库+每日简报模板（系统内置 GraphSpec 实例）。
-- 图节点执行：六个图节点执行器+KanbanBridge（DryRun/HTTP 真实桥接 GRAPH_KANBAN_BASE，26 步图模板可实例化跑通）。
-- 加权派发：工作量估计写入数据库，派发时给任务多的执行者优先派活。
-- 角色边界注册表：图派发时自动给每个角色注入「只做什么、不做什么」。
-- 能力声明注册表：角色能做什么写成清单，不该做的写明不做什么。
-- REST 接口校验。
-- 图执行影子模式（shadow）：跟着驱动一启动但不接管主流程，影子双跑验证等价后切主执行通道。
-- **任务模板资产回路（原任务工厂，D18 更名）**：完成 run 一键「沉淀为模板」（origin=factory，来源 run 可溯，复用计数随模板启动累加，mission-templates 台账保存即提交）。图执行从「每轮手写 GraphSpec」走向「跑过即资产、下轮以模板派生」，为 26 步标准图模板的入库与复用提供产品支撑。
-待建件（缺口）：
-- ①**需求→GraphSpec 编译器**：AI 读需求→输出任务图 JSON。本质是把需求分析的输出格式从 markdown 换成 GraphSpec。
-- ②推演 26 步转译为标准图模板并转正为主执行通道：先影子模式与驱动双跑验证结果等价，确认后 `MX_GRAPH_ENGINE=on` 切图引擎接管调度。
-- ③图执行器↔agent 派发对接的实战完善。
-
-分期路线见 2026-10-08-team-parallel-dev-capability.md。并行能力的需求正本=《2026-10-09-parallel-capability-foundation-spec.md》（五类工作都要「先估工作量、再拆小、并行做、最后合并成一份」，机制条款见 §4.2）。run12 已有第一个全流程并行实例：G5 整改测试分给三人同时做（matrix event $LlZZQ4HX，经验教训随轮次结束回填该 spec）。
+**图执行的产品支撑面**：图引擎（GraphSpec 格式＋事件驱动执行器＋join 屏障＋守卫回边＋checkpoint/resume＋人工介入中断 HITL＋编排器画布＋运行总览＋模板库）；六个图节点执行器＋看板桥接；工作量加权派发；角色边界与能力声明注册表；REST 接口校验；影子模式（跟随驱动启动但不接管主流程，双跑验证等价后切主执行通道）；任务模板资产回路（完成轮一键存为模板，来源可溯、复用计数累加）。图执行由此从「每轮手写 GraphSpec」走向「跑过即资产、下轮以模板派生」。
 
 ### 1.1.2 全新环境独立回归
 
@@ -209,7 +185,7 @@ flowchart TB
 3. **过程可完整重现给第三方**：一份自包含的 HTML 报告让不熟悉本项目的人看懂「一张需求单怎么变成上线功能」，且每个结论可按锚点反查。
    **证伪判据**：未接触本项目的人按报告反查任一结论失败（锚点断链/凭证不存在），且无对应问题单——即证伪。
 
-**净额口径（V8.29 增补）**：三条判据的满足面一律扣除代演/代偿通过的项——关卡由代批环放行不计「过」、看板卡由驱动补建/代走 done 不计「交付」、集成由驱动代合并不计「组织完成合并」。净额数据源=代偿台账（§2.6.5）。含代偿与净额两行并列呈现，只呈含代偿行即虚报。
+**净额口径**：三条判据的满足面一律扣除代演/代偿通过的项——关卡由代批环放行不计「过」、看板卡由驱动补建/代走 done 不计「交付」、集成由驱动代合并不计「组织完成合并」。净额数据源=代偿台账（§2.6.5）。含代偿与净额两行并列呈现，只呈含代偿行即虚报。
 
 这场考试的规模，一组数字看全：
 
@@ -239,17 +215,17 @@ flowchart TB
 - 开发分支全部合入集成分支，基线可追溯（只许快进或 merge 增量）。
 - 并行度实测：六路同刻派发的重叠工作时间占比（口径与历轮基线见 §5.7；实测行入步 18 报告块，段界锚缺失时如实记口径回退）。
 
-**评测与质量度量（V8.22 腾讯评测体系轮，机制条款=§2.6.3）**：
+**评测与质量度量（腾讯评测体系轮，机制条款=§2.6.3）**：
 - 评测集带异常场景类目（模糊意图/缺参数/权限不足/工具超时/知识冲突/用户改口六类），报告按类目分桶；用例标注「期望行为」而非「期望答案」。
 - 六环节分段报告：意图/工具/参数/证据/状态/表达各环节独立通过率，任一环单独报警。
 - 过程双指标：工具选择正确率（抓「碰巧答对」）与轨迹绕路比（编辑距离/最优路径长度）——结果分之外的第二道闸。
 - 发布门禁机械执行：工具调用成功率 ≥99%、P99 ≤2×均值、降级率 <0.5% 照抄腾讯 ADP 公开阈值（env 可调）；回放证据覆盖不到的项（TTFT/响应分档/QPS 压测）如实列证据缺口，禁硬凑代理值。
 - 坏例回流：失败任务一键转回归样本库（带溯源、幂等），防问题回潮。
 - A/B 对比：同评测集两 run（换模型/Prompt/版本）逐任务翻转表+读数变化。
-- 技能安全治理：技能装载面注册扫描（高危项清单可反查）、四个进入通路（生成器/hermes 导入/ekko 导入/内置注入器）全接线、/app/skillgov 扫描工作台、高危技能装载拦截与内联执行段警示（SKILLGOV_ENFORCE=1 生效）。
+- 技能安全治理：技能装载面注册扫描（高危项清单可反查）、四个进入通路（生成器/hermes 导入/ekko 导入/内置注入器）全部生效、/app/skillgov 扫描工作台、高危技能装载拦截与内联执行段警示（SKILLGOV_ENFORCE=1 生效）。
 - 验收锚点=Eval Studio 运行报告（/app/eval）+测试报告评测节（§5.4.4 成效口径三·评测治理面）+skillgov 扫描账本。
 
-**Harness 运行支撑层（V8.42，机制=§2.6.6）**：
+**Harness 运行支撑层（机制=§2.6.6）**：
 - 九层能力证据面：工具契约/审计 v3/身份与委托/审批凭证/运行清单/预算/沙箱/恢复判定/过程质量；推演在 smoke 与审计时点各采一次快照，报告第 9 章「证据七」引用，端点缺席如实标未采集。
 
 **交付与协作（过程资产）**：
@@ -287,7 +263,7 @@ flowchart TB
 - **演进目标＝自组织形态**：人类只保留审批类干预（需求提交、关卡审批/退回、发布批准、UAT 验收），派发、拆分、排期、合并回归组织侧（AI 员工与产品流水线）。
 - **两态之间的旋钮＝推演姿态（posture）**：每轮开跑声明，写入 state.env 的 `posture` 键，报告按姿态分带呈现。`strict`＝零代偿，测自组织真力，停滞即如实登记问题单；`standard`＝现状动作保留但每笔代偿落台账（§2.6.5，净额对账数据源）；`demo`＝里程碑演示，允许幕后调度编排且全程显著标注「演示」。姿态与轮次规模正交（lite/full 是规模，姿态是政策）。
 - **收紧路径**：产品缺陷按代偿清偿门逐项根治（§2.6.5），根治一项拆一项代偿，直至 strict 姿态可作为全量轮缺省——彼时本节改写为单态声明。
-- **产品范围声明（2026-10-15 用户裁定）：推演程序是 SwarmStudio 产品能力的一环**——SwarmStudio 的产品范围＝人机协同工作台（左侧导航五组＋阶段页页签 IA）＋**推演引擎（全流程推演：场景编排/姿态体系/代偿台账/证据采集/报告链）＋研发治理（关卡/问题单/复盘/清偿门）**。产品需求基线=《2026-10-16-swarmstudio-requirements-analysis.md》（14 FR＋8 NFR）与《2026-10-17-journey-ia-terminology-redesign.md》（J1-J12/JN1-JN7，旅程式 IA）。据此：①simharness 升格为产品推演引擎仓（与 overlay 同级的产品组件，而非外部测试工具），其自身缺陷（如 branch_fresh 崩溃类）按产品缺陷进同一清偿体系；②PR-0~7 通道面（humansim/observability/orgloop/autosched）＝推演引擎产品化的首批件，后续按「harness 能力逐件迁 overlay 产品面、bash 原件退役」的收敛路线推进；③推演报告＝产品的研发治理报告功能（输出物定位），非外部测试报告。
+- **产品范围声明（2026-10-15 用户裁定）：推演程序是 SwarmStudio 产品能力的一环**——SwarmStudio 的产品范围＝人机协同工作台（左侧导航五组＋阶段页页签 IA）＋**推演引擎（全流程推演：场景编排/姿态体系/代偿台账/证据采集/报告链）＋研发治理（关卡/问题单/复盘/清偿门）**。其自身缺陷按产品缺陷进同一清偿体系；推演引擎的能力逐步以产品面承载为主；推演报告＝产品的研发治理报告功能，非外部测试报告。
 
 ## 二、方案设计
 
@@ -316,12 +292,10 @@ flowchart TB
 
 | 组件 | 是什么 | 设计初衷 | 在 26 步中的角色 |
 |---|---|---|---|
-| Swarm Studio（产品面） | 桌面应用（Electron+Vue），左侧导航五组（常用/流程/整轮/专题/管理）＋六阶段页单层页签（/app/stage/setup|reqs|design|build|accept|govern）＋流程总览（/app 默认入口，搭建五步＋交付五阶段）；六阶段之外保留看板/审批收件箱/全流程推演（/app/sim 六签）/专题页/IDE 工作区等工作页。服务端治理域（变更治理/知识图谱治理/驾驭工程/会话无损切换/看板/审批/运行监控）工件保存即提交 git。Delivery Cases 交付案例面板（/app/cases）承载六道关卡协议事件投影 | 把「为可监督性设计」做成产品功能；工件必须真实可编辑，禁只读摆设件 | 层①人机入口：全流程唯一操作面；⑥治理承载六道关卡工件与复盘度量；IDE 工作台承载第 25 步 |
+| Swarm Studio（产品面） | 桌面应用（Electron+Vue），左侧导航五组（常用/流程/整轮/专题/管理）＋六阶段页单层页签（/app/stage/setup\|reqs\|design\|build\|accept\|govern）＋流程总览（/app 默认入口，搭建五步＋交付五阶段）；六阶段之外保留看板/审批收件箱/全流程推演（/app/sim 六签）/专题页/IDE 工作区等工作页。服务端治理域（变更治理/知识图谱治理/驾驭工程/会话无损切换/看板/审批/运行监控）工件保存即提交 git。Delivery Cases 交付案例面板（/app/cases）承载六道关卡协议事件投影 | 把「为可监督性设计」做成产品功能；工件必须真实可编辑，禁只读摆设件 | 层①人机入口：全流程唯一操作面；⑥治理承载六道关卡工件与复盘度量；IDE 工作台承载第 25 步 |
 | hermes agent（运行时） | 自改进个人 agent 运行时，单网关进程多平台接入（一机一网关服务全部 profile）。kanban 引擎（约 20 CLI 模块+watchers/dispatcher，认领即 spawn）；skills 引擎（slash 命令体系）；审批传输（once/session/always/deny 四态，超时 fail-closed）；矩阵集成（反应审批/`!` 命令路由/线程） | 两大不变量：逐会话前缀缓存神圣（中途变更历史/工具集/记忆=毁缓存翻倍成本，唯一例外压缩）；核心是窄腰架构（核心精简、能力外挂） | 层③调度与看板：认领即 spawn、消息即指令的执行基础设施；层⑥记忆归档宿主 |
 | Matrix（协作基础设施） | docker matrix-synapse 承载全部账号的房间/线程/反应/DM 协作语义。element-web 交互模式按需吸收（Spotlight 混合搜索/跳未读条/permalink 内链等） | 指令通道与数据通道分离；消息/反应/线程都是可反查凭证；群聊=分布式协作一等现场 | 层②分布式协作层：步 8-19 的派发/回执/审批/缺陷对话现场 |
 | swarm yuan skill（能力层） | 元技能生成器：对任意代码仓库跑一次，产出项目专属研发能力技能。五步研发能力内建（①认知地图②规格先行③代码纪律④知识池⑤质量门禁）；xxx-dev 定制技能生成机制（auto/lite/standard/compliance 四档六段式骨架，两级关系见下方「能力层展开」） | AI 瓶颈在「懂不懂项目」：不懂规矩交给门禁、想错逻辑交给验证；宿主管循环与沙箱，技能只管项目上下文 | 层④能力层：步 13 系分与步 18 编码五步能力的内建来源 |
-
-（各组件工程锚点谱系见《推演历史与工程档案》工程附录 A。）
 
 #### 2.1.1 能力层展开：swarm yuan 生成器与 xxx-dev 项目技能
 
@@ -333,7 +307,7 @@ flowchart TB
 
 **在岗技能的实物形态**（以本轮中央仓 aipaydev-dev 为例，profile=standard）：
 - **骨架六件**：SKILL.md（五层导航+项目认知摘要+自成长链）｜assets（spec/plan/审查三模板+任务门禁映射+档位阈值）｜references（开发指引/框架知识/受控语言/九节点流程/配方）｜rules.d（门禁规则）｜hooks（spec-first 拦截钩）｜scripts（precheck 门禁入口/指纹感知/清单核验/边集重建）。
-- **工作链**：九节点工作流（需求理解→探查→spec→plan→编码→测试→独立审查→合入→发布），守卫链四层——spec-first hook（无 spec 写码即拦）→状态机阶段守卫→56 门禁四族（核心/架构/合规/补丁）→拦截落 gate-deny.jsonl 账本。决策三分法（Mechanical 机械判/Taste 判断/UserChallenge 挑战）落 decisions.jsonl，事后逐条可复。
+- **工作链**：九节点工作流（需求理解→探查→spec→plan→编码→测试→独立审查→合入→发布），守卫链四层——spec-first hook（无 spec 写码即拦）→状态机阶段守卫→56 门禁四族→拦截落 gate-deny.jsonl 账本。决策三分法（Mechanical 机械判/Taste 判断/UserChallenge 挑战）落 decisions.jsonl，事后逐条可复。
 - **自成长**：项目指纹秒级感知源码变化→工具链 refresh+按变化 scope 局部重探查（不整树重造）→清单核验（≥枚举×0.95+路径存在性防幻觉，骤降>50% 保留旧清单）→边集重建→新问题三选一留存归档（入清单/入配方/入门禁规则）并留痕。
 
 本方案他处的「五步能力」（①认知地图②规格先行③代码纪律④知识池⑤质量门禁）是九节点的能力浓缩：五步讲「技能里有什么」，九节点讲「技能怎么干活」。生成档位四档：auto（按项目自适应，默认）/lite/standard/compliance，本推演中央仓技能为 standard 档。报告第 9 章设「技能执勤账」小节，按磁盘实存文件记录技能清单、生成链、执勤留痕与缺席项（§5.4）。
@@ -353,7 +327,7 @@ flowchart TB
 | ⑤ 数据源映射 | §2.5 证据覆盖清单与本体证据面 | 看板一键摄取（四计数回执、替换幂等）；REST 五端点（spec/ingest/validate/watch/export）；run 证据文件域 |
 | ⑥ 动作与工作流 | §2.4 二十六步主链与七幕旅程；§5.6 收尾判据 | 认领即 spawn、判词驱动推进、两轮打回熔断、违规聚合推送治理收件箱（主动找人）、监控代行留痕 |
 
-覆盖度判语：⑥最完整（多轮实证可审计）；③④强在约束校验、缺在规则入册可查；②骨架在位、基数约束只到局部字段；①⑤是 2026-10-12 本体论透镜分析指认的薄弱点，①已按 P0-1 落五字段词表，⑤待立映射注册表（分析文档《2026-10-12-ontology-lens-analysis.md》第六节）。
+覆盖度判语：⑥最完整（多轮实证可审计）；③④强在约束校验、缺在规则入册可查；②骨架在位、基数约束只到局部字段；①⑤为薄弱环节：①已落五字段词表，⑤待立映射注册表。
 
 ### 2.2 AI 员工编制
 
@@ -423,15 +397,15 @@ graph TB
 - **共享与隔离并行**：网关、通道、技能、模型、中央仓、记忆服务全编制共用一套。但每人的配置、看板、记忆库、权限、状态互相看不见。
 - 四道关卡横切主链，凭证核验、问题台账、退回重报、治理报告贯穿全程。
 
-> **2026-10-21 可见性补批（正本=`2026-10-21-sim-visibility-and-ide-task-surface.md`）**：上条「看板互相看不见」是 agent/账号 API 的认领围栏（单板 `filterTasksByVisibleProfiles`），不等于 studio 工作台看板。推演实例 `:8802` 的日常工作台/看板走 `/api/hermes/kanban/overview` 聚合该实例全部账号板；宿主 `:8647` 与 SIM 实例按 `HERMES_HOME` 隔离。IDE 看板/侧栏任务段用同一聚合数据源；导演台只建卡与人工闸，不发 Matrix。宿主日常若以同一 `@admin` 登录，会看到 harness 观察员房间——严格隔离需独立观察员账号/独立 homeserver 或房间标记（跨仓后续）。`mux/capture-plan.env` 的「每人只看本账号板」注释为旧口径，待 simharness 下次变更时同步（本仓只读消费 simharness）。
+> **可见性口径**：上条「看板互相看不见」是 agent/账号 API 的认领围栏（单板 `filterTasksByVisibleProfiles`），不等于 studio 工作台看板。推演实例 `:8802` 的日常工作台/看板走 `/api/hermes/kanban/overview` 聚合该实例全部账号板；宿主 `:8647` 与 SIM 实例按 `HERMES_HOME` 隔离。IDE 看板/侧栏任务段用同一聚合数据源；导演台只建卡与人工闸，不发 Matrix。宿主日常若以同一 `@admin` 登录，会看到观察员房间——严格隔离需独立观察员账号、独立 homeserver 或房间标记。
 >
-> **同日下午挂账实施轮修订**：用户裁定推翻当日三条挂账——①推演任务经宿主观察面（`/api/hermes/sim/observer/overview`）**直接并入**日常工作台/看板/IDE（「推演」徽标 + runId，日常侧只读、点击走「在推演中查看」）；②IDE 右辅助栏新增「沟通」完整 Matrix 页签；③simharness 建房即打 `com.swarmstudio.sim` 房间标（跨仓 `feat/sim-room-tag`，用户授权），产品端双源识别显示「推演」徽标；④导演台启动/人工闸事件向 `SIM_DIRECTOR_NOTIFY_ROOM` 发真实通知。写入口仍隔离；日常阶段完成度不计推演卡。
+> **观察面并入日常口径（用户裁定）**：①推演任务经宿主观察面（`/api/hermes/sim/observer/overview`）**直接并入**日常工作台/看板/IDE（「推演」徽标 + runId，日常侧只读、点击走「在推演中查看」）；②IDE 右辅助栏新增「沟通」完整 Matrix 页签；③建房即打 `com.swarmstudio.sim` 房间标，产品端双源识别显示「推演」徽标；④导演台启动/人工闸事件向 `SIM_DIRECTOR_NOTIFY_ROOM` 发真实通知。写入口仍隔离；日常阶段完成度不计推演卡。
 
 ### 2.4 26 步主链
 > **事实源分层（本节与 §2.5-2.9 的分工，每条事实只在一处说全）**：
 > - 本节=步链语义主线（每步「这步做什么」+跨步边界与关卡线）；操作指引（六字段表）=驱动脚本真实执行细节，源=aipay-scenario.sh 为执行事实源，本节照录（报告步块①段与其同构渲染）。
 > - 其余事实各归其节：交付物字段=§2.7、逐条合格线=§5.2、界面支撑=§2.5、治理机制=§2.6、交接链=§2.8、责任分工=§2.9、执行参数=§4.4、场景映射=§3.3。
-> - 本节的任何一处不得与后八节重复陈述同一事实，冲突以本部分各节自身为准并记勘误。历轮已知问题与改进项不入正本，台账见《推演历史与工程档案》「方案步条历史层」章。
+> - 本节的任何一处不得与后八节重复陈述同一事实，冲突以本部分各节自身为准并记勘误。历轮已知问题与改进项不入正本。
 >
 > **七幕主线**（演示视频同款组织方式，§5.4.6；幕=叙事单元，驱动段位映射另见 §3.3）：序幕·搭台（步 1-4）→ 第一幕·需求上锁（步 5-8，G1）→ 第二幕·需求分析（步 9-14）→ 第三幕·设计与排期（步 15-17，G2）→ 第四幕·并行生产（步 18-19，G3/G4）→ 第五幕·发布与验收（步 20-21，G5/UAT）→ 尾声·治理与复盘（步 22-26，G6）。每幕幕导三行：AI 产出主力 / 人拍板点 / 这一幕的拦截线（挂 §4.3 纪律组与 §5.3 关卡）。
 
@@ -687,7 +661,7 @@ graph TB
 
 **交付物及质量判据**：交付物=四份系分稿 `docs/analysis/AN-<模块>.md`（字段见 §2.7）；合格线=概设含接口签名/数据模型/错误码/幂等键、工作量评估有人日、完成回执双通道齐全。**四路并行**
 
-> **V8.46 增量**：skill 过程帧（gen≥3/invoke≥2）没有产品拍摄位——技能治理页只有目录/供给/能力发现，不拿同一组页面帧冒充「生成/调用」两类过程。如实登记 `r18-collection-missing|step-13`；技能使用读数走 `GET /api/harness/tool-audit`，报告证据九呈现。R18 必采分母 15 不变，步 13 该项如实标缺口。
+> skill 过程帧（gen≥3/invoke≥2）没有产品拍摄位——技能治理页只有目录/供给/能力发现，不拿同一组页面帧冒充「生成/调用」两类过程。如实登记 `r18-collection-missing|step-13`；技能使用读数走 `GET /api/harness/tool-audit`，报告证据九呈现。R18 必采分母 15 不变，步 13 该项如实标缺口。
 
 **步 14｜汇总复核定稿**
 **这步做什么**：产品经理A汇总四方系分稿，复核消歧后定稿，走评审关卡。
@@ -783,16 +757,16 @@ graph TB
 |---|---|
 | 操作者 | 研发工程师A（3 路）/研发工程师D/研发工程师B/研发工程师C 各自人类账号六路同刻派发；测试工程师A/测试工程师B 测试预备轮 |
 | 通道 | 群消息 dispatch_in_room×6+测试预备×2 |
-| 动作序列 | ①先查 `g2_arch_pass` ②六路同时派发（废除分批）：研发工程师A 的 DEV-PAYCORE-C（接口先行件，≤0.5 人日）/-S/-N 三件+研发工程师D 的 DEV-MP 为 d1 批；研发工程师B/研发工程师C 渠道双路为 d2 批。派发词骨架："执行开发任务 DEV-X：1) 工作区 git pull 后 `git checkout -b feat/DEV-X` 2) 按概设契约实现（金额分 int64、渠道请求本地 mock） 3) vitest 全绿+`docs/evidence/DEV-X-testlog.txt` 随分支提交 4) push origin feat/DEV-X；结论行 `DEV-DONE-DEV-X`。「渠道词自含对接指令：」先做独立部分…待 origin/feat/DEV-PAYCORE-C 出现后 `git fetch && git rebase origin/feat/DEV-PAYCORE-C` 补对接，冲突以契约为准。" ③>1 人日腿强制拆 2-3 子件：每子件独立 commit+`PROGRESS-<任务>-<子件>` 进度锚+首 commit=骨架评审 **④【纪律 66】完成定义四步前置（V8.32，派发词完成定义段已内嵌五处）：本地 commit+push origin+群内回执+监督确认，缺一不得 Turn ended；拆分沿用 16b 子件纪律（>1 人日拆 2-3 子件）；单子件复杂度数值上限不预设，run21 按真做/嘴炮 session 全量采样定标后入档。** ⑤测试预备轮派 测试工程师A/测试工程师B 起草用例（只起草不执行） |
+| 动作序列 | ①先查 `g2_arch_pass` ②六路同时派发：研发工程师A 的 DEV-PAYCORE-C（接口先行件，≤0.5 人日）/-S/-N 三件+研发工程师D 的 DEV-MP 为 d1 批；研发工程师B/研发工程师C 渠道双路为 d2 批。派发词骨架："执行开发任务 DEV-X：1) 工作区 git pull 后 `git checkout -b feat/DEV-X` 2) 按概设契约实现（金额分 int64、渠道请求本地 mock） 3) vitest 全绿+`docs/evidence/DEV-X-testlog.txt` 随分支提交 4) push origin feat/DEV-X；结论行 `DEV-DONE-DEV-X`。「渠道词自含对接指令：」先做独立部分…待 origin/feat/DEV-PAYCORE-C 出现后 `git fetch && git rebase origin/feat/DEV-PAYCORE-C` 补对接，冲突以契约为准。" ③>1 人日腿强制拆 2-3 子件：每子件独立 commit+`PROGRESS-<任务>-<子件>` 进度锚+首 commit=骨架评审 **④【纪律 66】完成定义四步前置（派发词完成定义段已内嵌五处）：本地 commit+push origin+群内回执+监督确认，缺一不得 Turn ended；拆分沿用 16b 子件纪律（>1 人日拆 2-3 子件）；单子件复杂度数值上限不预设，run21 按真做/嘴炮 session 全量采样定标后入档。** ⑤测试预备轮派 测试工程师A/测试工程师B 起草用例（只起草不执行） |
 | 等待信号 | 接口先行件锚 `branch_fresh feat/DEV-PAYCORE-C`；多锚并发等待 `wait_alive_truth_multi`（锚过即记 ✓）；180s 节流出分支 commit 计数+PROGRESS 锚进 scenario.log |
 | 超时与失败 | 接口先行件 1800s；两批多锚各 1800s；分支未达记 `dev-branch-missing` 继续；拆分证据（<2 commit）巡检记问题单；testlog 缺件记问题单 |
 | 产出 | 六条 feat 分支入 origin；`devimpl_done`+`g3_code_pass`；截图 `/app/ide` |
 
 **交付物及质量判据**：交付物=六条开发分支入 origin（各限时）+testlog（`docs/evidence/＜任务＞-testlog.txt` 随分支提交，脚本逐分支实际核验）；合格线=无设计不编码、pay-core 单测≥8/其余≥6 且全绿、金额分 int64、渠道请求本地 mock、G3 写入关卡标志 g3_code_pass。**编码六路并行**（渠道双路同时派出、独立部分先行、接口先行件分支落地后 rebase 对接）。
 
-> **【纪律 66】devimpl 任务完成定义与拆分（V8.34 重写，2026-10-15 用户裁定；数值参数版已废——采样不充分不立参数）**：
+> **【纪律 66】devimpl 任务完成定义与拆分（2026-10-15 用户裁定；数值参数版已废——采样不充分不立参数）**：
 > - **病根（run20 实录锚）**：跨档案「干完不交卷」——xiao 4.5h 拖推、chen 本地 commit 后不 push、hu 写 7 个工具调用后自了断（18:30 三例实证）。根因=模型自了断时机停在「实现完」（最易判定的步骤），最易漏的是 push 与回执（需额外动作）——派发词把交付动作列为步骤序列不构成行为约束。
-> - **完成定义四步前置（V8.32，aipay-scenario.sh 派发词五处内嵌）**：本地 commit＋push origin（ls-remote 可查）＋群内一行回执 MICRO-DEV-X-COMPLETE＋监督确认回执 PUSH-CONFIRMED——四步未齐不得 Turn ended；网络异常如实报 BLOCKED，禁静默。
+> - **完成定义四步前置（aipay-scenario.sh 派发词五处内嵌）**：本地 commit＋push origin（ls-remote 可查）＋群内一行回执 MICRO-DEV-X-COMPLETE＋监督确认回执 PUSH-CONFIRMED——四步未齐不得 Turn ended；网络异常如实报 BLOCKED，禁静默。
 > - **拆分纪律**：沿用 16b 子件纪律（>1 人日强制拆 2-3 子件、每子件独立 commit+进度锚、首 commit=骨架评审）。单子件 token/步骤数值上限**不预设**——run20 尝试「1.5 万/5 步」「3 万/3 调用」两版均无充分采样支撑（9 个 session 且多为轮转历史，已 revert）；run21 按真做/嘴炮 session 全量采样定标后入档。
 > - **巡检门禁**：D7 真做判据＋work.expected-silent 期望对账（run20 上线）＋NUDGE 重催链 1→2→3 次仍无真做升级换档案（run20 17:44 上线）。
 > - **监督哨补救路径创例（run20）**：嘴炮档案由监督哨代发「极简单步令」（显式枚举 4 步，不依赖 worker 理解整段任务书）——19:29/19:45 两发实证有效（hu 复发第 3 声 2 分钟交付）。
@@ -806,7 +780,7 @@ graph TB
 
 | 项 | 内容 |
 |---|---|
-| 操作者 | V8.30 职责归位（2026-10-15 用户裁定）：后端 lead（wei）/前端 lead（mei）做评审+集成合并（git）——评审与合并为同一责任链；产品经理不合并不评审代码；驱动只做真值验收（git 祖先链反查，lead 自报不算）与超时补棒兜底；测试工程师A/测试工程师B 派发测试 |
+| 操作者 | 职责归位（2026-10-15 用户裁定）：后端 lead（wei）/前端 lead（mei）做评审+集成合并（git）——评审与合并为同一责任链；产品经理不合并不评审代码；驱动只做真值验收（git 祖先链反查，lead 自报不算）与超时补棒兜底；测试工程师A/测试工程师B 派发测试 |
 | 通道 | lead 工作区 git 集成分支+群派发+缺陷对话 |
 | 动作序列 | ①lead 集成（串行防推挤：wei 后端五支 DEV-PAYCORE-C/S/N+DEV-CHWX+DEV-CHALI → mei 前端 DEV-MP）：派发 INT-MERGE-BE/FE，lead 评审后增量 merge 进 `integration/RFD-001`（续建禁强推，testlog 冲突取 ours 解决，缺席分支登记问题单后跳过）；驱动以祖先链反查验收，lead 超时（45min 时限硬上限+活性早判）→由驱动补位代行并登记代偿单 ②派测试工程师A（TEST-BE 后端集成测试）："若 test-drafts 已有草稿核对后补齐执行，否则从零写（两态均正常）：1) 按概设契约编 vitest 用例（放 apps/test-integration/：下单幂等/双渠道参数/回调验签拒绝/重复回调幂等/超时关单） 2) 执行全量；缺陷走 defect-loop：本群发【缺陷】消息 @对应研发（P 级/复现/期望实际/分支 commit） 3) 结论行 `TEST-PASS-TEST-BE` 或 `TEST-FAIL（附用例数）`。「测试工程师B 同构（前端） ③缺陷修复计数：群内【缺陷】数 vs FIX-DONE 数 ④测试过→派测试报告：」汇总结果写 docs/test/RFD-001-test-report.md→push integration 分支→通过的 commit id 回填全部关联卡。结论行 REPORT-DONE。" |
 | 等待信号 | `defect_done`（缺陷数=修复数且双结论行在）；`testpass_done`+`g4_pass`（报告在 integration 分支可查） |
@@ -815,9 +789,9 @@ graph TB
 
 **交付物及质量判据**：交付物=测试报告入仓（范围/用例数/通过数/缺陷清单/结论/通过 commit id）+commit id 回填关联卡；合格线=测试者≠写码者、缺陷报→修→验全关且只认本轮记录、执行输出摘要证明实际执行过（「有测试代码」不算）、实跑 commit 与发布基线同祖。
 
-> **V8.46 增量**：G4-E 判分后自动回填线上证据（`mx-load-probe.py --json` 产物 → `POST /runs/:id/live-evidence`，QPS 即时转真判；响应分档无源如实 no_data）；失败样本进入处置链（建处置单→同卷复评→机械关闭，落 `evidence/evals/remediations.json`）。未关项只记问题单，不改 G4-E 的 PASS/GAP/FAIL 判据。
+> G4-E 判分后自动回填线上证据（`mx-load-probe.py --json` 产物 → `POST /runs/:id/live-evidence`，QPS 即时转真判；响应分档无源如实 no_data）；失败样本进入处置链（建处置单→同卷复评→机械关闭，落 `evidence/evals/remediations.json`）。未关项只记问题单，不改 G4-E 的 PASS/GAP/FAIL 判据。
 
-> **V8.48 增量**：G4-E 判分后补采新读数（§2.6.10）——评测集带难度/角色标注（集名 -v2）、`GET /eval/behavior-signals` 与 `GET /runs/:id/business-summary` 落 `evidence/evals/{behavior-signals,business-summary}.json`，报告证据八增「难度/角色分桶」「稳定性/行为信号/经营摘要」两行。判据零变化（先观察）。
+> G4-E 判分后补采新读数（§2.6.10）——评测集带难度/角色标注（集名 -v2）、`GET /eval/behavior-signals` 与 `GET /runs/:id/business-summary` 落 `evidence/evals/{behavior-signals,business-summary}.json`，报告证据八增「难度/角色分桶」「稳定性/行为信号/经营摘要」两行。判据零变化（先观察）。
 
 #### 2.4.6 第五幕·发布与验收
 
@@ -847,7 +821,7 @@ graph TB
 
 **交付物及质量判据**：交付物=七项结论入群+准出卡关闭+完备性检查报告入仓；合格线=缺项打回一轮，两轮不过不得上线；HumanGate 批准事件入 approved.events 可反查。
 
-> **V8.46 增量**：G5 通过同时写发布门台账 `evidence/release-gate.jsonl`（run/decision/actor/ts，append-only），与 approved.events 并行留痕。台账写失败只记问题单，不改变 G5 判据；报告证据九与审计查 16 按台账如实呈现，缺席写「缺口」不写「通过」。
+> G5 通过同时写发布门台账 `evidence/release-gate.jsonl`（run/decision/actor/ts，append-only），与 approved.events 并行留痕。台账写失败只记问题单，不改变 G5 判据；报告证据九与审计查 16 按台账如实呈现，缺席写「缺口」不写「通过」。
 
 **步 21｜UAT 验收**
 **这步做什么**：用户验收测试（UAT）对账。
@@ -868,7 +842,7 @@ graph TB
 
 **交付物及质量判据**：交付物=验收报告入仓（字段见 §2.7）；合格线=助理结论行逐条列出 AC 编号与证据锚点（脚本逐条覆盖核验，缺条即不通过）、每条证据可反向核验；UAT 启动前自检 freeze 在 origin/main、测试报告在 origin/integration。
 
-> **V8.46 增量**：逐条 AC 判词同步写 UAT 判定台账 `evidence/uat-verdicts.jsonl`（通过→pass／有条件通过→conditional／不通过|未见→reject，append-only）。验收书与台账不一致时以验收书为准并记问题单；台账写失败只记问题单，不改变 UAT 判据。
+> 逐条 AC 判词同步写 UAT 判定台账 `evidence/uat-verdicts.jsonl`（通过→pass／有条件通过→conditional／不通过|未见→reject，append-only）。验收书与台账不一致时以验收书为准并记问题单；台账写失败只记问题单，不改变 UAT 判据。
 
 #### 2.4.7 尾声·治理与复盘
 
@@ -903,14 +877,14 @@ graph TB
 |---|---|
 | 操作者 | 驱动脚本（机械化审计）+审计AI 独立复核（fire-and-forget 不等待） |
 | 通道 | studio REST（事故报告汇编导出）+群派发+git 入仓 |
-| 动作序列 | ①导出事故报告汇编（`GET /api/incident/sessions/<RUN>/report.md?since=<run_started_at>&until=<now>`——推演轮窗口参数供 profile 聚合面取窗，V8.23） ②机械化审计三查（门禁留痕对账/问题单四段格式/交付物缺件） ③派发：「合规及审计请求：门禁留痕已由驱动侧机械化审计（意见书将入仓），请独立复核并回 `AUDIT-OPINION-PASS` 或 `AUDIT-OPINION-CONCERNS（附清单）`。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人。判罚口径提示：G5 早于 UAT 是 §2.4 冻结面既定序非时序倒挂，判『放行无效』须以缺评审实物/证据链断裂为准（V8.23，run18 复盘 F2 误判防复发）。」 ④意见书入仓（独立性声明/抽检 3 条 AI 结论反核/关切清单/分层签名线——独立复核未回执留空不代签） ⑤免等窗终态复核：对回执类缺口追加 DISP 收尾行 |
+| 动作序列 | ①导出事故报告汇编（`GET /api/incident/sessions/<RUN>/report.md?since=<run_started_at>&until=<now>`——推演轮窗口参数供 profile 聚合面取窗） ②机械化审计三查（门禁留痕对账/问题单四段格式/交付物缺件） ③派发：「合规及审计请求：门禁留痕已由驱动侧机械化审计（意见书将入仓），请独立复核并回 `AUDIT-OPINION-PASS` 或 `AUDIT-OPINION-CONCERNS（附清单）`。范围：门禁留痕完整性/凭证抽检/问题单处置合规/复盘对事不对人。判罚口径提示：G5 早于 UAT 是 §2.4 冻结面既定序非时序倒挂，判『放行无效』须以缺评审实物/证据链断裂为准（run18 复盘 F2 误判防复发）。」 ④意见书入仓（独立性声明/抽检 3 条 AI 结论反核/关切清单/分层签名线——独立复核未回执留空不代签） ⑤免等窗终态复核：对回执类缺口追加 DISP 收尾行 |
 | 等待信号 | `audit_done`（不等待 审计AI 回执） |
 | 超时与失败 | 导出失败/发现→记问题单继续；推送失败记问题单 |
 | 产出 | `evidence/incident-report.md`；审计意见书入仓；delivery 面板灯截图（`/app/cases`） |
 
 **交付物及质量判据**：交付物=合规意见书入仓（独立性声明/抽检记录 3 条/关切清单/分层签名线字段齐，见 §2.7）；合格线=发现 100% 记问题单；独立复核未回执如实留空不代签。
 
-> **V8.46 增量**：delivery 门禁灯帧改按 `r18-collect.py deliver --step 23` 登记（run21 错登为 `op`，导致 R18 矩阵步 23 恒缺）；skill 过程帧在步 13 已按明确排除登记降级。步 23 不采集治理结果快照（该动作在步 24，避免审计步承担复盘证据面）。
+> delivery 门禁灯帧改按 `r18-collect.py deliver --step 23` 登记（run21 错登为 `op`，导致 R18 矩阵步 23 恒缺）；skill 过程帧在步 13 已按明确排除登记降级。步 23 不采集治理结果快照（该动作在步 24，避免审计步承担复盘证据面）。
 
 **步 24｜复盘（G6）**
 **这步做什么**：三段式复盘+治理报告+台账清点。
@@ -931,7 +905,7 @@ graph TB
 
 **交付物及质量判据**：交付物=复盘文档+治理报告入仓；合格线=问题单 100% 有处置记账（未处置如实标「待处置」并计数入问题单）、行动项四要素齐、度量实测。
 
-> **V8.46 增量**：复盘段先跑 `mx-closure-snapshot.sh`，落 `evidence/governance-closure/summary.json` 与九个端点原文（观测信号/基线告警/工具审计/评审治理/改进实验/发布门/UAT/处置链）；单端点失败只进 `summary.failed`，报告证据九按缺口呈现，禁止写成「全部通过」。复盘模板同步增治理结果读数表（判据 12）。
+> 复盘段先跑 `mx-closure-snapshot.sh`，落 `evidence/governance-closure/summary.json` 与九个端点原文（观测信号/基线告警/工具审计/评审治理/改进实验/发布门/UAT/处置链）；单端点失败只进 `summary.failed`，报告证据九按缺口呈现，禁止写成「全部通过」。复盘模板同步增治理结果读数表（判据 12）。
 
 **步 25｜IDE 工作台全程介入**
 **这步做什么**：IDE 工作台全程介入。
@@ -969,10 +943,10 @@ graph TB
 
 **交付物及质量判据**：交付物=`final-report.html`（人读正本）+`simulation-report.html`（机器档案）+txt 三件套落 runs/＜RUN_ID＞/evidence/；合格线=26 步状态真实（执行过✅、未执行⬜，不作假）、报告验收=§5.5 全线、本步状态以产物存在性与生成时间回填。报告结构规范：
 
-> **V8.46 增量**：第 9 章新增「证据九：治理结果」（`closure_evidence_html`），读 `evidence/governance-closure/summary.json` 与发布门/UAT 台账、评测处置链；端点失败逐项写缺口。审计在合并前后各跑一次，合并后那次以 R15 第 0 章与证据九为真断言。
+> 第 9 章新增「证据九：治理结果」（`closure_evidence_html`），读 `evidence/governance-closure/summary.json` 与发布门/UAT 台账、评测处置链；端点失败逐项写缺口。审计在合并前后各跑一次，合并后那次以 R15 第 0 章与证据九为真断言。
 - **末三章递进**：六域审计（「过关了吗」）→问题终态（「出了什么、怎么处理」）→闭环治理终态（报告第九章章名；「治理系统工作了吗」，三件证据支撑结论：处置完成+经验归档+度量对比）。
 - **G1-G6 仪表盘在「六道关卡」节**（3 列 2 行卡片，含关卡名/状态/时间/把关人）；闭环治理终态节不再重复。
-- **旅程地图**渲染在 hero 后（六阶段分区色块＋工具舱链条胶囊＋箭头；V8.37 起六阶段口径，生成器同步）。
+- **旅程地图**渲染在 hero 后（六阶段分区色块＋工具舱链条胶囊＋箭头；起六阶段口径，生成器同步）。
 - **四段式步块**（这步做什么/交付物及质量判据/已知问题/处置与改进）+术语首现自动释义（词表=mux/glossary.txt 单一事实源）。
 - **模板字段值可见**（字段名+命中值摘录，不只 ✅/缺）。
 - **产品成效块**（第 4 章固定呈现：下单/幂等功能实证+质量数字表+交付完整度，见 §5.4）。
@@ -989,13 +963,13 @@ graph TB
 
 > **§2.4 尾部报告结构规范清单=§5.4 报告规范的导读索引**（报告结构的唯一事实源在第五部分（五、验收标准），本节清单只列步块形态与本步关键呈现约束，判据冲突以 §5.4/§5.5 为准）。
 
-**操作者姿态分档（V8.29 增补）**：26 步「操作者」列按三档归类，界定各动作在姿态间的去留——
+**操作者姿态分档**：26 步「操作者」列按三档归类，界定各动作在姿态间的去留——
 
 | 档 | 步 | 政策 |
 |---|---|---|
 | 启动/结束面 | 1-6（搭台上锁）、22-26（收尾报告） | 全姿态保留，不属代偿 |
 | 审批模拟面 | 7（G1 判读退回）、12（分诊确认）、20（G5 人工批准）、21（UAT 判词与验收） | 全姿态保留，但必须**按判据**批或退（G1 式），禁无判据通批；判词带 provenance |
-| 待收紧面 | 9/13/18（预写派发词）、10/11（补登/核验回灌）、14（汇总代走板）、15（代建评审卡）、17（排期）——原 19（驱动 git 集成合并）已于 **V8.30 职责归位**（2026-10-15 用户裁定）清偿：主路径移交域 lead（wei/mei）评审+合并，驱动仅真值验收+超时兜底 | standard 保留+逐笔记台账；strict 禁用并启用替代（派发改需求+期限交产品经理自主拆分、合并交产品流水线面，见产品方案 PR-6/PR-7；lead 集成已先行落地） |
+| 待收紧面 | 9/13/18（预写派发词）、10/11（补登/核验回灌）、14（汇总代走板）、15（代建评审卡）、17（排期）——原 19（驱动 git 集成合并）已归位（2026-10-15 用户裁定）：主路径移交域 lead（wei/mei）评审+合并，驱动仅真值验收+超时兜底 | standard 保留+逐笔记台账；strict 禁用并启用替代（派发改需求+期限交产品经理自主拆分、合并交产品流水线面；lead 集成已先行落地） |
 
 ### 2.5 产品界面支撑清单
 
@@ -1025,15 +999,15 @@ graph TB
 | 21 | ⑤验收·需求追溯（/app/stage/accept?tab=trace）：AC 逐条判定链与验收书 |
 | 22 | ⑤验收·交付健康（/app/stage/accept?tab=delivery）：容量分析节、跨账号板状态分布、WIP/停滞 |
 | 23 | ⑥治理·审计与变更（/app/stage/govern?tab=audit）审计意见书；交付门禁灯在⑤验收·交付案例（/app/stage/accept?tab=cases） |
-| 24 | ⑥治理·度量检查（/app/stage/govern?tab=metrics）：六类成本账/L1-L5/九层运行体检/过程质量/预算/恢复判定（V8.42） |
+| 24 | ⑥治理·度量检查（/app/stage/govern?tab=metrics）：六类成本账/L1-L5/九层运行体检/过程质量/预算/恢复判定 |
 | 25 | IDE 工作区（/app/ide?task=:id）：任务简报六区块+git 图谱；Cua 可选桌面 UI 验证证据 |
 | 26 | 流程总览（/app）/看板/IDE 三界面走查；报告查看=全流程推演·运行总览（/app/sim?run=:runId）；IA 面帧见 §5.6 |
 
-> **评测面（V8.45）**：/app/eval 六页签（评测集/运行记录/指标治理/安全红队/UI Oracle/优化建议；评测集页含红队种子库、变体扩产与留出题库）；运行报告含四层指标金字塔/动作清单/评估器三角/证据抽屉/线上证据回填；⑥治理·度量检查含 EvalOps 评测运营卡。评测工作台作为 G4-E 证据面，不并入 §5.5 五面分母。V8.48 增读数：运行报告难度/角色分桶与稳定性区块、报告头经营语言摘要卡、指标治理页行为信号区块（产品端京东吸收轮）。
+> **评测面**：/app/eval 六页签（评测集/运行记录/指标治理/安全红队/UI Oracle/优化建议；评测集页含红队种子库、变体扩产与留出题库）；运行报告含四层指标金字塔/动作清单/评估器三角/证据抽屉/线上证据回填；⑥治理·度量检查含 EvalOps 评测运营卡。评测工作台作为 G4-E 证据面，不并入 §5.5 五面分母。读数面另含：运行报告难度/角色分桶与稳定性区块、报告头经营语言摘要卡、指标治理页行为信号区块（产品端京东吸收轮）。
 
 > **截图拍摄位可执行正本**：本表是语义正本。每步实际拍哪个页面/页签/账号由 simharness `mux/capture-plan.env` 注册表单一供源，采集射手（r18-frames）按步覆盖执行并留痕。禁止以非本表页面顶替。已知错位先例：交付门禁灯拍成运行中心、工作台账拍成沟通页。旧 `?tab=accounts` 键经重定向落⑤验收·交付健康（/app/stage/accept?tab=delivery），非账户管理页（/app/stage/setup?tab=accounts）；旧键与新路由的完整映射见注册表头注与对账总表（§2.5.1）。
 
-> **路由与页签事实**（V8.44 按左侧导航＋阶段页签重锚；锚点=overlay/custom/client/ia2/{IaSideNav.vue,stage-meta.ts,stage-tabs.ts,routes.ts,sim-tabs.ts}；启动前实际访问校验见 §4.1 前置⑤）：
+> **路由与页签事实**（启动前按 §4.1 前置⑤ 实际访问校验）：
 > - 左侧导航五组：常用（流程总览 /app、工作台 /app/collab、看板 /app/board、审批收件箱 /app/inbox）＋流程（六阶段 /app/stage/*）＋整轮（全流程推演 /app/sim）＋专题（流程架构 /app/bpa、本体 /app/ontology、评测 /app/eval、技能治理 /app/skillgov）＋管理（系统设置 /app/gov/settings）。检索在顶部搜索框及统一弹窗，/app/search 仅作兼容唤起。
 > - 六阶段页单层页签（`?tab=`）：①搭建 steps/org/accounts/teams/assets/agents；②需求 reqs/docs/g1/preflight/launch；③分析设计 tasks/analysis/g2/schedule；④开发 today/board/approvals/risk/quality；⑤验收 overview/trace/delivery/uat/g5/cases；⑥治理 clearance/issues/audit/metrics/docs/gateLog。页签注册表单一事实源=stage-tabs.ts。
 > - 全流程推演（/app/sim）六签：运行总览/监督面板/运行监控/证据库（兄弟路由）＋运行编排/推演设置（`?tab=orchestration|settings`）。交付健康与需求追溯已迁⑤验收，旧 /app/sim/delivery、/app/sim/trace 保留 redirect。
@@ -1043,7 +1017,6 @@ graph TB
 > **QGate 判定流产品面（两处）**：
 > - ①交付案例卡「同步 QGate 判定」（#/app/cases）：governance `GET /api/governance/qgate-verdicts`（逐门最新判定，六态→交付三态，带来源桶）→ qgate-bridge 逐门 delivery.gate 事件入案例房。空档/Matrix 未连/无房间三态如实提示。
 > - ②治理健康页「机器门禁实况」条（GovHealthSection，旧 ?tab=accounts 键经重定向可达）：G1-G6 按 qgate 域映射（L0→G1、L1→G3、L2/L3→G4、L4/L5→G5）chip+来源分布行（核验/声明/降级/无信号）。G2/G6 为人工域，灰态"—"不编造。
-> - 锚点=custom/server/governance/governance-controller.ts（/qgate-verdicts）、custom/client/matrix-teams/stores/qgate-bridge.ts、custom/client/ia2/views/gov/GovHealthSection.vue。
 >
 > **治理证据端点与推演侧消费**（步 23/24 证据可引用，不键控步骤）：
 > - 事故报告汇编器 `/api/incident/sessions/:id/report[.md]`（三类 17 要素、七源只读实取、缺席要素如实标 absent）。
@@ -1055,12 +1028,11 @@ graph TB
 >
 > 消费约定：步 23 可附事故报告汇编导出件（evidence/incident-report.md）；步 24 可附自治度对账+虚拟损益表导出件（evidence/autonomy-reconcile.txt、evidence/virtual-pl.txt）。生成器在位即透传。
 >
-> **事故报告推演轮聚合形态（V8.23，run18 复盘根治）**：推演环境 agent（hermes CLI profile）会话落 `hermes/profiles/*/state.db` 而非 webui 主库——sessionId 为 RUN_ID 形态且主库无果时，汇编器按时间窗聚合各 profile 的 sessions/messages（byProfile+合并视图），要素标注「推演轮聚合：N 账号 × M 会话」不冒充单会话；窗口取 `since`/`until` query（驱动传 run_started_at/当前时刻），缺省按 RUN_ID 日期全天；db 候选链含 HERMES_WEB_UI_HOME（与 studio 写入面同一环境变量，防读到宿主库）。
+> **事故报告推演轮聚合形态（run18 复盘根治）**：推演环境 agent（hermes CLI profile）会话落 `hermes/profiles/*/state.db` 而非 webui 主库——sessionId 为 RUN_ID 形态且主库无果时，汇编器按时间窗聚合各 profile 的 sessions/messages（byProfile+合并视图），要素标注「推演轮聚合：N 账号 × M 会话」不冒充单会话；窗口取 `since`/`until` query（驱动传 run_started_at/当前时刻），缺省按 RUN_ID 日期全天；db 候选链含 HERMES_WEB_UI_HOME（与 studio 写入面同一环境变量，防读到宿主库）。
 >
 > **人机协同组织层证据面**：
 > - 容量分析 `GET /api/governance/capacity/overview?days=N`（SQLite 只读全库聚合：按人估算人日/已交付人日/实际人日/在途卡数+覆盖率汇总，口径注脚随响应下发）。步 22 可附导出件 evidence/capacity-overview.txt（估算覆盖率为 0 时如实呈现，是任务拆解采纳度的诚实信号而非缺陷）。
 > - 任务模板入库 `POST /api/graph/runs/:id/deposit-template`（完成 run 转存为 origin=factory 模板，原任务工厂）+ 台账 `docs/admin/mission-templates.md`（治理注册表新 kind，保存即 git 提交）+ 协同图数据组合面（任务卡列表 parents/children/estimate_days 随列表带出，/api/hermes/autonomy-ladder + /api/escalation/pending + /api/graph/specs 三源客户端聚合）——步 24 复盘可引台账提交号佐证「跑过即资产」。
-> 锚点=custom/server/governance/capacity-analytics.ts、custom/server/loop/graph/graph-rest.ts（deposit-template）、custom/client/ia2/views/orchestration/OrchestrationView.vue。概念映射总正本=《2026-10-10-orchestration-capability-spec.md》。
 
 > **本体语义层证据面**：
 > - 本体正本与统计 `GET /api/hermes/ontology/spec`（五要素+IRI/版本+全量健康度）。
@@ -1069,38 +1041,37 @@ graph TB
 > - 结卡轮询环状态 `GET /api/hermes/ontology/watch/status`（lastTick=checked/ingested/violations/inboxPushed）。
 > - 机器可读导出 `GET /api/hermes/ontology/export?format=jsonld|shacl|turtle`（SHACL shapes 可被外部 pyshacl 消费）。
 >
-> 步 24 复盘可附导出件 evidence/ontology-health.txt（spec 端点输出）与 evidence/ontology-export.ttl（turtle 导出）佐证「语义资产可校验可流转」。结卡拦截实锤以 task_events 的 gate_blocked/column_transition 事件留痕（payload 含 validatorExec 结果与违规明细）。违规聚合推送进治理冲突收件箱（kind=ontology，待裁决徽标抬升=主动找人）。锚点=custom/server/ontology/（六件+watch+agent-bridge）、custom/client/ia2/views/gov/GovOntologySection.vue。方法论正本=《2026-10-10-ontology-studio-spec.md》（GB/T 48000.3 抄骨架不抄内容）。
+> 步 24 复盘可附导出件 evidence/ontology-health.txt（spec 端点输出）与 evidence/ontology-export.ttl（turtle 导出）佐证「语义资产可校验可流转」。结卡拦截实锤以 task_events 的 gate_blocked/column_transition 事件留痕（payload 含 validatorExec 结果与违规明细）。违规聚合推送进治理冲突收件箱（kind=ontology，待裁决徽标抬升=主动找人）。产品面＝本体工作台（建模/校验/导出/治理冲突收件箱）。
 
-> **集群巡检官证据面（V8.26，纪律 51「同类风险收敛性判定」的产品执法面）**：
+> **集群巡检官证据面（纪律 51「同类风险收敛性判定」的产品执法面）**：
 > - 巡检快照与手动巡检 `GET|POST /api/hermes/cluster-inspector/{snapshot,run}`（16 检测器+三档处置：notify 必发/safe-act 开关/destructive 人工审批）。
 > - 收敛性面 `snapshot.convergence`（items/degradedProfiles/summary）：同类风险复发账——每个异常指纹每过冷却窗再发记一次复发，趋势四态=收敛中（间隔放宽≥1.5 倍）/熵增（复发≥3 次且间隔不放宽，或≥8 次持久）/观察中/已收敛（消失超 1 小时）。
 > - 熵增三联动：①升级（复发异常再上报即升 high，事件带复发账）②熔断（该指纹自动处置停发——提醒/回收/直派反复无效即副作用风暴；risk.diverging 一次性人闸事件走 non_convergent 失败路由）③降级（负责人进降级档案，领卡督办抑制=先收敛存量再扩量）。
 > - 步 24 复盘可附 `evidence/cluster-convergence.txt`（snapshot convergence 面导出）佐证 §2.7 复盘行「同类风险收敛性对账」。
-> 锚点=custom/server/clusterinspector/（convergence.ts 复发账本，状态落 `<home>/runtime/cluster-inspector-convergence.json` 重启不失账；CLUSTER_INSPECTOR_CONVERGENCE=off 关闭）、custom/client/ia2/views/gov/GovClusterSection.vue（集群健康页「风险收敛性」卡+未收敛明细表）。
+> 状态账落 `runtime/cluster-inspector-convergence.json` 重启不失账；`CLUSTER_INSPECTOR_CONVERGENCE=off` 可关；产品面＝集群健康页「风险收敛性」卡+未收敛明细表。
 
-**产品能力×采集面×产出物对照（V8.29 增补，2026-10-15 产品功能盘点轮；V8.37 按产品重规划终态刷新）**：以产品实存路由与组件（/app 家族+overlay custom server 面）为底，核对采集与产出物挂钩——缺口位启用条件与产品缺陷编号对照《2026-10-15-swarmstudio-resilience-and-humansim-design.md》§三：
+**产品能力×采集面×产出物对照**：以产品实存路由与组件为底，核对采集与产出物挂钩。
 
-| 产品面 | 路由/组件 | 采集位现状 | 产出物挂钩（§2.7 同步） |
+| 产品面 | 路由/组件 | 采集位 | 产出物 |
 |---|---|---|---|
-| 看板 3 页签/流程总览/六阶段页/账户/案例/全流程推演/IDE | /app/board、/app、/app/stage/* 等 | 已覆盖（步 1-26 既有位＋V8.44 新增 IA 面帧） | 任务卡/追溯/交付健康帧（既有）＋IA 终态证据帧 |
-| 审批收件箱 | /app/inbox（InboxView，B3 审批待办已落地） | 产品面已落地；采集位维持 release 段帧命名锚预留 | 审批留痕（与 approved.events 同源） |
-| 运行编排（autosched） | /app/sim/orchestration（/app/eng 重定向落点） | 产品面已落地；采集位维持 plan 段帧预留 | 排期产物产品源化 |
-| 会话历史 | /app/history(/session) | **缺口**：anexec 段可加会话证据帧（下一全量轮启用） | 会话轨迹锚 |
-| 业务流程架构（BPA）工作台 | /app/bpa | **缺口**：analysis 段加流程分级清单帧 | 流程分级清单 |
-| 本体/评测/技能治理 | /app/ontology、/app/eval、/app/skillgov | 既有锚（验收锚=端点实测，非全量轮固定帧） | 语义快照/评测报告/扫描账本 |
-| 群沟通直达链接 | /app/s/room/:id | 三态 none 在案（采集环境同步未修；事件锚 ?event= 未实现=产品缺口另记） | matrix event_id 文字锚 |
-| 派发健康/审批队列 | PR-1/PR-2 落地后 | 预留：defect/release 段帧命名锚 | 健康端点/队列 TTL 轨迹 |
+| 看板/流程总览/六阶段页/账户/案例/全流程推演/IDE | /app/board、/app、/app/stage/* 等 | 步 1-26 逐位实拍 | 任务卡/追溯/交付健康帧 |
+| 审批收件箱 | /app/inbox（InboxView） | release 段帧 | 审批留痕（与 approved.events 同源） |
+| 运行编排 | /app/sim/orchestration | plan 段帧 | 排期产物 |
+| 会话历史 | /app/history(/session) | anexec 段帧 | 会话轨迹锚 |
+| 业务流程架构（BPA）工作台 | /app/bpa | analysis 段帧 | 流程分级清单 |
+| 本体/评测/技能治理 | /app/ontology、/app/eval、/app/skillgov | 端点实测锚 | 语义快照/评测报告/扫描账本 |
+| 群沟通直达链接 | /app/s/room/:id | 事件锚 | matrix event_id 文字锚 |
+| 派发健康/审批队列 | defect/release 段帧 | 帧命名锚 | 健康端点/队列轨迹 |
 
-采集位增补纪律：单步单 URL 语义不变，新增面经帧命名锚（op1-before/after 通道）进 r18-frames；预留位在对应 PR 合入后随下一全量轮启用，禁提前占位空拍。产出物产品源标注（§2.7 同步）：排期=autosched、审批留痕=approvals 队列、案例=delivery-contract、运行注册=runs、语义快照=ontology、评测报告=eval、扫描账本=skillgov、经验注入=expcandidates——各交付物「主导者字段」与产品源双标注，代偿台账按此对账。
+采集位纪律：单步单 URL 语义不变，新增采集面经帧命名锚（op1-before/after 通道）进帧注册表；产出物按产品源标注，代偿台账按此核对。
 
+#### 2.5.1 工作台信息架构现状
 
-#### 2.5.1 工作台 IA 沿革（V8.37 时序六阶段 → V8.44 左侧导航；当前事实见 V8.44 段）
+一级导航为左侧常驻五组：常用（流程总览 /app、工作台 /app/collab、看板 /app/board、审批收件箱 /app/inbox）、流程（六阶段 /app/stage/*）、整轮（全流程推演 /app/sim）、专题（流程架构 /app/bpa、本体 /app/ontology、评测 /app/eval、技能治理 /app/skillgov）、管理（系统设置 /app/gov/settings）；顶部保留注意力条、页头（品牌/主题/语言/连接、沟通协作｜IDE 切换、运行上下文、统一检索、通知、账户）。
 
-工作台 IA 第二次重构（V8.44，2026-10-18 合入 main）：用户实报「六阶段与 IDE 切换穿插、阶段页残留中心、页面不闭环、信息偏多」，产品把一级导航从顶栏移到左侧常驻导航（五组：常用/流程/整轮/专题/管理），把六阶段页改为单层页签（`?tab=`，共 29 签），并把「仿真中心/治理中心」拆解为「⑥治理并入阶段页签＋全流程推演独立专区（6 签）」。顶栏只保留注意力条、页头（品牌/主题/语言/连接、沟通协作|IDE 切换、运行上下文、搜索、通知、账户）；`/app/gov/*` 七条深链全部 redirect 到阶段页；新增 `/app/search` 五类对象检索；IDE 任务工作区（`GET /api/ide/task-workspace`）让文件树/终端/记忆/新会话跟随 kanban 任务根。对推演的影响：26 步主链、六闸、STEPS 键、§3.3 完成键零改动；操作面与拍摄位按新 IA 重锚（明细=《2026-10-18-fullflow-v844-workbench-refactor.md》§三），旧路由只作兜底。产品侧残留：`stage-meta.ts` 工具卡仍写旧路由，全部 redirect 可达，登记为产品欠账。
+六阶段与 run-state 完成键（任一命中即完成）：
 
-**V8.37 历史层（已被 V8.44 取代，保留以便追溯）**：前端一级导航从「三中心」重构为**时序六阶段**（与 26 步主链七幕同构），旅程首页立为默认入口。六阶段定义（标签单一事实源=overlay `custom/client/ia2/stage-meta.ts`，D18 收敛三处双轨）：
-
-| 阶段 | 名称 | 路由 | run-state 完成键（任一命中即完成） |
+| 阶段 | 名称 | 路由 | 完成键 |
 |---|---|---|---|
 | ① | 搭建 | /app/stage/setup | smoke_done / appinit_done / people_done |
 | ② | 需求 | /app/stage/reqs | g1_frozen |
@@ -1109,15 +1080,9 @@ graph TB
 | ⑤ | 验收 | /app/stage/accept | g5_ready / release_done / uat_done |
 | ⑥ | 治理 | /app/stage/govern | workmgr_done / audit_done / retro_done / report_done |
 
-旅程首页（/app 默认入口，今流程总览）两区十卡：搭建五步（建立组织/建立账号/建立团队与协调关系/准备环境与资产/准备智能体）＋交付五阶段（②-⑥）；状态读 `GET /api/hermes/sim/run-state` 步键推导，无轮次显示引导态。每阶段=阶段页（内嵌核心操作：密钥台账/质量门修复单/协作诊断/审批待办/AC 判定链/遗留项清算）＋工具直达卡。旧三中心数据页保留为工具舱，路由全保留零断链（重定向矩阵见上方「路由与页签事实」；26 步拍摄位迁移明细=对账总表《2026-10-17-fullflow-plan-harness-ia-reconciliation.md》§五）。
+六阶段页只保留一层页签（`?tab=`，可刷新可分享），页签内就地操作、不跳新页；每阶段内嵌该阶段高频工作件（运行态势/证据反查/交付健康/问题清单对账），工具卡保留作全量入口。旧 `/app/gov/*` 深链全部重定向到对应阶段页签；旧 `/app/search` 仅作兼容唤起。
 
-术语边界：产品面文字用 D18 标准词（搭建/开发/仿真中心〔V8.44 更名全流程推演〕/运行总览/质量门/遗留项清算/审批待办/IDE 工作区等 33 项，正本=《2026-10-17-journey-ia-terminology-redesign.md》§5.5，V8.44 增量=《2026-10-18-fullflow-v844-workbench-refactor.md》§二 D-6）；本方案七幕叙事名（序幕·搭台/第四幕·并行生产）与 26 步步名属推演域词汇，不改——「并行生产」即产品「④开发」阶段的推演叙事名。实施级正本=`2026-10-16-frontend-visual-redesign.md`（决策 D1-D19）。
-
-前端质量层现状（V8.38 增记，2026-10-17 两批合入）：①UX 一致性重构批（overlay `c9e1a989`＋`495a52cd`，批 A-D＋观察项 O1-O4）——设计 token 单一事实源落地为 CSS 变量层，五域 raw hex 清至预算 117 只降不升（守门=`custom/client/__tests__/raw-hex-budget.test.ts`）；ECharts 图表主题跟随产品主题（`cockpit/styles/theme-bridge.ts` 事件＋MutationObserver 双通道）；空态/状态色收敛为共享 UI 基元（UiEmptyState/UiStatusPill）。②GUI 回归修复批（`6a036117`，40 点走查产物）——登出闭环（补丁 644 一次性闸门：登出不再被自动登录拉回，步 2「抽查密码登录路径」由此可用）、ledger 503 裸端点呈现、sitpanel 无障碍语义补齐。对推演面的影响：无路由/页签/术语变化（纪律 75 四面对账未触发），采集注册表与 26 步拍摄位零改动；采集帧、视觉抽检与走查复核按此质量基线执行；产品 dist 重建与 prelaunch ⑲ 标记复验照 run21 预备清单。增记正本=`2026-10-17-frontend-ux-consolidation-redesign.md`。
-
-导航层现状（V8.40 增记，2026-10-17 夜四批合入）：用户实报工作台四痛点（层次结构与组织关系不清晰、层级太深太乱、往返动线不合理、末端功能页不直观），当晚以四个批次整改——①壳层面包屑（旅程＞中心/阶段＞页签三级，旅程页双入口：左栏+品牌位）与 run 跨签贯通（`useRunContext`：query 优先+localStorage 记忆回落，四面板与阶段页同源）；②常用入口常驻条（审批收件箱/看板/运行总览/监督面板四目的地，页头下方单一挂载）+来源阶段上下文（阶段页工具卡跳转带 `?from=`，顶栏按来路高亮）+中心归属回链（中心页头「← 阶段」动态生成）；③页签级阶段归属表（`custom/client/ia2/stage-attribution.ts`，多归属如实列多阶段、全程工具不高亮；顶栏高亮、面包屑徽标、中心回链三处同源），取代此前的中心级粗粒度改判；④阶段页工作台化（②④⑤⑥各内嵌一块高频件：运行态势/证据反查/交付健康/问题清单对账，阶段页从跳板变为该阶段工作台，工具卡保留作全量入口）+导语首访自动展开（逐页签记忆）。四批均为导航层与呈现层整改：**路由/页签文案/术语零变化**（路由树 diff 仅投影函数两行；约 70 个路由名台账测试未改即过），采集位与直达链接不受影响，纪律 75 四面对账见《2026-10-17-ia-navigation-closure-reconciliation.md》；各批 spec 与决策记录见 `2026-10-17-cockpit-nav-flatten-endpage-usability.md`、`2026-10-17-cockpit-quick-nav-context-stage.md`、`2026-10-17-stage-attribution-wiring.md`、`2026-10-17-stage-page-workbench.md`。遗留：SIM 产品快照待 run21 结束后刷新（执行面不动）。
-
-呈现层减负与术语残留清理（V8.41 增记，2026-10-17 夜）：8649 实机逐页走查发现五类用户可见问题并修复——①③分析设计页整块组织与知识视图常挂，正文约 12.3 万字符，首屏被参考内容占满；改为按需展开（默认不挂载，展开才读取，收起即卸载）。②④开发页交接类型与状态词典占半屏；改为原生 details 默认收起，容量灯与审批待办留在首屏。③全流程推演三段导览卡压缩为单行「启动准备→运行监控→运行复盘」。④审批待办原 `Promise.all` 使遗留项台账 fail-closed 503 拖死人工介入队列；改为两路独立读取，台账错误改为可读提示并在 title 保留原始错误供排查。⑤0→1 第 1 步「建立组织」进入组织与资产页，整页约 13.3 万字符，首屏被断点诊断/知识图谱/决策图谱占满；将分析块默认收起，首屏回到组织登记、密钥台账与资产规则（收起态正文 7,879 字符，展开后仍为全量）。术语按 2026-10-17 映射表补齐残留：注意力条 swarm kanban→看板、旅程→流程总览、驾驶舱概览→工作台概览、A/B 区→准备/交付阶段、开轮→启动运行、姿态→运行模式、清偿门→遗留项清算、六闸→六道质量门、机器执法实况→机器门禁实况、语义体检→本体校验、工程效能→研发效能、任务工厂模板→任务模板、评审闸口→待审评审、判词→判定。术语覆盖同时修复首次启动竞态：无语言偏好且系统语言非 zh 时，启动 `switchLocale('zh')` 会重建词表并抹掉先合并的覆盖；入口记录 `localeReady`，等待切换完成后再应用覆盖。路由/页签/API 零变化，采集位与直达链接不受影响；26 步登记表保持方案原文以维持追溯。验证=全量 vitest 4861 通过（默认 20s 超时）、`npm run build` 通过（顺带修复 cockpit `fromLog` 未导出导致的 IMPORT_IS_UNDEFINED 运行时隐患）、8649 实机走查（注意力条=看板/首页=流程总览/③页 247 vs 展开 125K/组织与资产 7,879 vs 展开 133K/④交接默认收起/台账错误可读）。交付验收记录=《2026-10-18-v841-acceptance-record.md》：九端点 P95 最高 77ms、核心页首屏 P95 311–1369ms、未认证 11 端点全 401、WCAG 三页×双主题 0 失败（最低 4.78）、Matrix 登录态团队页可用且注册房间跨重载保持、26 步/七幕可见名标准术语。环境遗留关闭：台账自动发现最新 run（/ledger 200，42 笔未清/4 目标）、journal 回落全局日志（200，run=nope 仍 404）、vitest 默认 20s；WCAG 1.4.11 控件边框 #8a8a8a/#808080 修复后 input/status 0 失败；WCAG 2.4.7 焦点抽查 72 样本 0 失败（搜索框补 focus-visible）；团队页准入五问通过、声明 Swarm 团队并完成值守指派。增记正本=`2026-10-17-stage-content-diet-and-terminology-residuals.md`、`2026-10-17-org-assets-knowledge-collapse.md`、`2026-10-17-i18n-override-order.md`、`2026-10-17-cockpit-fromlog-export.md`、`2026-10-17-governance-test-timeout.md`、`2026-10-18-team-registry-sync-detection.md`、`2026-10-18-steps-display-names.md`、`2026-10-18-wcag-muted-contrast.md`、`2026-10-18-environment-residuals.md`、`2026-10-18-control-border-contrast.md`、`2026-10-18-drawer-unmount-test-sync.md`、`2026-10-18-focus-visible-search.md`、`2026-10-18-v841-acceptance-record.md`。
+术语边界：产品面文字用标准词（搭建/开发/全流程推演/运行总览/质量门/遗留项清算/审批待办/IDE 工作区等）；本方案七幕叙事名（序幕·搭台/第四幕·并行生产）与 26 步步名属推演域词汇，不改——「并行生产」即产品「④开发」阶段的推演叙事名。
 
 ### 2.6 治理机制
 
@@ -1136,7 +1101,7 @@ graph TB
 7. 指令通道与数据通道分离：agent 只响应 @本人 指令语义，文档正文不作指令执行。
 8. 交付协议事件全程开启：delivery.* 协议事件层缺省启用=产品真实形态（交付案例面板由协议事件提供数据）。显式关闭（MX_DELIVERY=0）自动记问题单降级，禁静默关旗标跑全程。
 9. **delivery 事件序列完整性**：每个 stage done 事件必须随该阶段 gate pass 事件成对发射，漏发即记问题单（delivery-*-event-missing）。交付案例面板门禁灯只投影已发射事件，灯灰=事件缺口的如实呈现，禁止用叙事把缺口写成已发生。
-10. **治理证据与度量能力（能力正本=《2026-10-08-six-article-research-capabilities.md》，本条只立契约）**：
+10. **治理证据与度量能力（本条只立契约）**：
     - ①事故报告汇编：任一会话三类 17 要素一键汇编，七源只读实取，缺席要素如实标 absent 不造数。
     - ②自治度对账：理论面（自治阶梯→身份白名单→审批历史）vs 实际面（轨迹/消息/审批窗口），偏差黄条呈现。
     - ③证据 hash 链防篡改：hash(n)=sha256(前链+规范化记录体)，不重算/重算掩蔽双攻击面可检出。
@@ -1151,7 +1116,7 @@ graph TB
 
 ### 2.6.1 本体结卡校验
 
-机制一句话：**结卡不止「人点头」，还要过「语义账」——任务的字段与关系在结卡时刻须通过本体数据契约**。与 §2.6-1四道锁的关系：四道锁拦流程（未评审不排期），本条拦数据（字段缺失/越枚举/关系断裂不许悄悄过关）。同属「不指望自觉、靠机制卡住」一族，但执法对象是数据形状而非流程次序。三路线各司其职（设计评估与落地实录见《2026-10-10-ontology-studio-spec.md》四阶段）：
+机制一句话：**结卡不止「人点头」，还要过「语义账」——任务的字段与关系在结卡时刻须通过本体数据契约**。与 §2.6-1四道锁的关系：四道锁拦流程（未评审不排期），本条拦数据（字段缺失/越枚举/关系断裂不许悄悄过关）。同属「不指望自觉、靠机制卡住」一族，但执法对象是数据形状而非流程次序。三路线各司其职：
 
 1. **轮询环（事后报告半环，默认开）**：studio 侧 30s 周期扫各板 task_events 的 column_transition 增量（断点状态文件续跑），status=done 即单任务增量摄取+校验。error 违规**按 code 聚合**推治理冲突收件箱（同码未决不重复刷；975 条实锤→聚合 1 条——逐条刷屏是治理反模式）。ONTOLOGY_WATCH=off 关。覆盖一切结卡路径（UI/CLI/agent），延迟≤轮询间隔。
 2. **执行式门（当场拦截半环，板级 opt-in）**：gates.json 给目标列声明 `validatorExec`，结卡事务内实际运行 studio 单任务校验（agent 桥 `/api/ontology/agent-bridge/validate-task`，限本机回环+可选 ONTOLOGY_BRIDGE_TOKEN，cron-bridge 同款安全形态）。blocking 档违规即拦（gate_blocked 事件含违规明细），工具缺席 fail-open 放行并留痕（工具故障不是数据违规）。reason 复用 frozen 词表 validator_failed（UI 零改动）。
@@ -1161,7 +1126,7 @@ graph TB
 
 ### 2.6.2 交付形态感知治理
 
-> 根因（run14 严重缺陷复盘，实录见档案 §三 2.6-2）：场景技能（aipaydev-dev）只是实例——生成它的平台层（swarm yuan 骨架/Swarm Studio 治理面/hermes 任务协议）没有「交付形态」概念，导致「单测全绿=可运行」的错觉在新场景复刻。本条把交付形态感知立为**平台约束**，单一事实源=产品侧 `custom/server/delivery-contract`（交付六型×每型运行证据），四方消费、任一漂移即缺陷：
+> 根因（run14 严重缺陷复盘）：场景技能（aipaydev-dev）只是实例——生成它的平台层（swarm yuan 骨架/Swarm Studio 治理面/hermes 任务协议）没有「交付形态」概念，导致「单测全绿=可运行」的错觉在新场景复刻。本条把交付形态感知立为**平台约束**，单一事实源＝产品侧交付形态契约（交付六型×每型运行证据），四方消费、任一漂移即缺陷：
 
 - **交付六型清单**：backend-service（启动冒烟+跨模块契约测试）｜web-frontend（浏览器走查帧）｜mini-program（真开发者工具 runtime-proof：编译+启动+首帧）｜mobile-app（模拟器/真机启动证据）｜library-sdk（幂等执行输出件+消费方契约）｜governance-doc（模板字段核对即证据面）。运行面四型一律声明「单测全绿不等于可运行」。
 - **swarm yuan 生成器**：生成任何项目技能时嗅探交付形态写入认知表（AUTO:detected，AI 核正），骨架 checklist 含 delivery 项（每型运行证据+RUNTIME-OK/RUNTIME-FAIL 结论行），workflow ⑤编码/⑥测试/⑨发布节点按形态写 DoD；激活校验对「嗅探到运行面形态而 workflow 无交付形态段」留痕拒绝。
@@ -1172,34 +1137,31 @@ graph TB
 
 ### 2.6.3 评测体系
 
-机制一句话：**评测是 Harness 自身的一层，与 trace/replay 共享同一份执行轨迹**——推演质量结论从「过程治理口径」（关卡留痕/计数一致）扩展为「过程治理+运行时评测」双口径。设计正本=《2026-10-13-eval-tencent-metrics-design.md》，产品面=Eval Studio（/app/eval，custom/server/eval/），范式来源=《腾讯 Agent 评测体系技术拆解》（原文存档 specs/assets/wx-articles-2026-10-13/）。七条机制：
+机制一句话：**评测是 Harness 自身的一层，与 trace/replay 共享同一份执行轨迹**——推演质量结论从「过程治理口径」（关卡留痕/计数一致）扩展为「过程治理+运行时评测」双口径。产品面=Eval Studio（/app/eval），范式来源=《腾讯 Agent 评测体系技术拆解》。七条机制：
 
 1. **六环节独立门禁**：断言可选标注环节归属（意图/工具/参数/证据/状态/表达），聚合按环节分段出独立通过率——任何一环出问题单独报警，不必等到端到端失败。
 2. **过程双指标第二道闸**：任务声明期望工具序列后，工具选择正确率（LCS/期望长度，抓「碰巧答对」）与轨迹绕路比（编辑距离/最优路径长度，抓「绕冤枉路」）随运行实测。任务未声明期望序列=未测（不是零分），如实缺席。
 3. **异常场景覆盖**：评测集任务带异常类目（六类枚举），报告按类目分桶；只放理想问题的评测集视为覆盖不足。
-4. **期望行为替代期望答案**：用例必填期望行为字段（权限不足时正确行为是拒绝并解释，不是努力绕过）——M1 既定，本条重申为评测集准入检查项。
+4. **期望行为替代期望答案**：用例必填期望行为字段（权限不足时正确行为是拒绝并解释，不是努力绕过）——本条作为评测集准入检查项。
 5. **发布门禁阈值化**：工具调用成功率 ≥99%、P99 ≤2×均值、降级率 <0.5%（口径=判定端离线 fail-open 样本占比）机械执行；TTFT/响应分档/QPS 压测在回放证据无数据时如实列证据缺口——缺口清单本身是评测覆盖度的呈现面，禁硬凑代理值。阈值环境变量可调（表见 §4.4 表三）。
 6. **坏例回流**：失败任务一键转「回归样本库」评测集（任务带 run/attempt 溯源、重复回流幂等跳过、密封源集拒绝出库）——线上坏例转回归样本，防问题回潮。
 7. **A/B 对比**：同评测集两 run（换模型/Prompt/版本）出逐任务翻转表（改善/回归/持平/缺席）与关键读数变化（pass@k/双指标/unknown 率）；跨集与密封集拒绝对比。
 
-8. **Skill 三段安全治理**（2026-10-13 挂账清偿两批落地）：
-    - ①注册扫描段：S0 静态规则 16 条（内联 shell/管道执行/密钥明文/链接逃逸=高危）+frontmatter 四检，扫 hermes 全部装载面并落 JSONL 账本（POST /api/skillgov/scan）。四个进入通路全接线：技能生成器产物、hermes 导入（zip/文件夹，scan 块随响应，patch 618）、ekko 导入（patch 618）、内置技能注入器（patch 618，仅 hash 变化时）。产品面 /app/skillgov 扫描工作台（概览卡/结果表/明细展开，默认开）。
+8. **Skill 三段安全治理**：
+    - ①注册扫描段：S0 静态规则 16 条（内联 shell/管道执行/密钥明文/链接逃逸=高危）+frontmatter 四检，扫 hermes 全部装载面并落 JSONL 账本（POST /api/skillgov/scan）。四个进入通路全部生效：技能生成器产物、hermes 导入（zip/文件夹，scan 块随响应）、ekko 导入、内置技能注入器（仅 hash 变化时）。产品面 /app/skillgov 扫描工作台（概览卡/结果表/明细展开，默认开）。
     - ②执行拦截与 ③输出审核段：挂工具瀑布（skill_view/skill_manage）。SKILLGOV_ENFORCE=1 时按扫描判定拒高危技能、装载内容含内联 shell 执行段插警示横幅；观测审计恒开 fail-open；缺省零行为变化。
     - 执法顺序契约=先扫描后拦截（无扫描记录=未测不猜，放行）。
 
-9. **固定七维回归集与 L1 门（V8.42）**：内置回归集扩到八任务，覆盖任务完成、工具参数、失败恢复、长任务状态、越权/注入、成本与无效循环、人工升级正确性；新增 L1 门 `engineering.harness-eval`（`npm run test:eval`，failure=block），`vibe-fast` 由 7 门变 8 门。守的是“评测引擎对七维都能判定”，不是“某个 agent 七维达标”。
-10. **轨迹采样与过程质量（V8.42）**：`POST /api/hermes/eval/sample-from-trace` 把 L2 trace 转成 Evidence（工具序列/tokens/脱敏，不自动建集）；`GET /api/harness/process-quality` 出重复调用率/工具失败率/长链占比/首过成功率/规范符合率五项代理指标，报告第 9 章「Harness 运行面」引用。
-11. **评测治理层（V8.45，机制=§2.6.7）**：在腾讯轮七面之上补百度轮七件——指标注册表与动作绑定、评估器三角互证、安全红队、评测集指纹/锚点、能力维度覆盖、证据一次点击、EvalOps；配套 B1-B7（相似度规则/四层金字塔/运行级动作清单/红队种子与变体/线上证据回填）。G4 新增评测子门 G4-E，判据见 §5.3。
+9. **固定七维回归集与 L1 门**：内置回归集扩到八任务，覆盖任务完成、工具参数、失败恢复、长任务状态、越权/注入、成本与无效循环、人工升级正确性；新增 L1 门 `engineering.harness-eval`（`npm run test:eval`，failure=block），`vibe-fast` 由 7 门变 8 门。守的是“评测引擎对七维都能判定”，不是“某个 agent 七维达标”。
+10. **轨迹采样与过程质量**：`POST /api/hermes/eval/sample-from-trace` 把 L2 trace 转成 Evidence（工具序列/tokens/脱敏，不自动建集）；`GET /api/harness/process-quality` 出重复调用率/工具失败率/长链占比/首过成功率/规范符合率五项代理指标，报告第 9 章「Harness 运行面」引用。
+11. **评测治理层（机制=§2.6.7）**：在 §2.6.3 七条机制之上补七件——指标注册表与动作绑定、评估器三角互证、安全红队、评测集指纹/锚点、能力维度覆盖、证据一次点击、EvalOps；配套七件（相似度规则/四层金字塔/运行级动作清单/红队种子与变体/线上证据回填）。G4 新增评测子门 G4-E，判据见 §5.3。
 
-边界（如实登记）：本条为运行时评测口径的机制契约，计入测试报告评测节与产品成效呈现（§5.4.4 成效口径三，V8.45 扩为评测治理面）。V8.45 前不改动六道关卡判据；V8.45 起 G4/G5 按 §5.3 增补评测子门，六闸名称不变。进展三件如实登记：
-- Skill 三段治理全链已落（第 8 条：扫描/拦截/审核+四通路+UI）。
-- agent 侧 TTFT 打点已修：run-trace 插件消费上游 0.21.7 既有 first_chunk_at 落 first_token_ms/ttft_ms，并修复 span 会话键错配丢失缺陷，五份部署副本已同步。剩余缺口=studio 驱动真实会话的落盘确认（插件单元级验证过、一次性 CLI 不发会话钩子已实锤，待下轮真实推演出带 span 轨迹即确认达成），不虚报完成。
-- QPS 容量压测工具已在库（simharness mux/mx-load-probe.py，判据=峰值×2 持续 ≥30s 错误率 <1%＋达成 ≥90%＋p99 ≤2×p50，实测已验证判别力）；执行属部署验收轮次。
+边界（如实登记）：本条为运行时评测口径的机制契约，计入测试报告评测节与产品成效呈现（§5.4.4 成效口径三）。六道关卡判据不变；G4/G5 按 §5.3 增补评测子门，六闸名称不变。QPS 压测判据=峰值×2 持续 ≥30s 错误率 <1%＋达成 ≥90%＋p99 ≤2×p50；TTFT 未采到真实会话首 token 时延即如实列证据缺口。
 
 
 ### 2.6.4 运行优化面（三挡调优与经验受控注入）
 
-机制一句话：**优化面与运行面分离**——运行数据（轨迹/账本/拦截）反哺下一轮的三挡通道产品化：手动挡=Eval Studio（§2.6.3），半自动挡=优化建议报告（烧钱会话/瓶颈阶段/关卡拦截三张 Top-N+交付周期瀑布，聚合既有面不新增采集，源缺席如实标注），自动挡=经验受控注入（纪律 49，默认关）。设计正本=《2026-10-14-ali-15agent-squad-research.md》，范式来源=阿里云云原生《15 个 Agent 组成研发小队》（原文存档 specs/assets/wx-articles-2026-10-14/）。五件产品面：
+机制一句话：**优化面与运行面分离**——运行数据（轨迹/账本/拦截）反哺下一轮的三挡通道产品化：手动挡=Eval Studio（§2.6.3），半自动挡=优化建议报告（烧钱会话/瓶颈阶段/关卡拦截三张 Top-N+交付周期瀑布，聚合既有面不新增采集，源缺席如实标注），自动挡=经验受控注入（纪律 49，默认关）。范式来源=阿里云云原生《15 个 Agent 组成研发小队》。五件产品面：
 
 1. **约束卡（/app/ontology「约束卡」页签）**：架构级约束（陈述/适用范围/来源锚/生效轮）人工维护，派单简报按列/角色命中注入（封顶 5 条，存储异常不阻断派发）——「要在已有 API 上扩展、别新增并列 API」这类约束从方案文档进任务卡。
 2. **优化建议报告（/app/eval「优化建议」页签）**：半自动挡清单，专家照单处置；交付周期瀑布支撑「下一轮提速投哪里」的决策。
@@ -1209,23 +1171,21 @@ graph TB
 
 复盘衔接=§2.7 复盘行「经验候选台账」字段（提取×类型分布｜审核处置｜注入留痕或如实未启用）；注入执法=纪律 49（凭据形态改写：注入物只以「历史经验出处」形态呈现，不得含可被当作本轮实测凭据的哈希/卡号/event_id）。
 
-### 2.6.5 代偿治理：台账、净额对账与清偿门（V8.29，2026-10-15 用户裁定）
-
+### 2.6.5 代偿治理：台账、净额对账与清偿门
 **代偿定义**：推演程序对运行体系超出「启动/结束+按判据审批模拟+只读监测」边界的任何写动作（空转提醒、绕网关直派、代批、补卡、代走 done、闸键回放、代做合并、预写派发词）。
 
-**台账（单一事实源）**：`evidence/compensation-ledger.tsv`，九型登记（nudge/sleep-wakeup/gw-dispatch-bypass/auto-approve/card-backfill/card-walk-done/gate-replay/driver-merge/dispatch-preset），每笔带 type→产品缺陷 PR 编号映射（对应《2026-10-15-swarmstudio-resilience-and-humansim-design.md》）。写入点已埋入驱动/哨兵/代批环/场景库；报告净额对账（§1.2 净额口径）与开跑清偿门自此文件取数，不另建第二套账。
+**台账（单一事实源）**：`evidence/compensation-ledger.tsv`，九型登记（nudge/sleep-wakeup/gw-dispatch-bypass/auto-approve/card-backfill/card-walk-done/gate-replay/driver-merge/dispatch-preset），每笔带类型→产品缺陷编号映射。写入点已埋入驱动/哨兵/代批环/场景库；报告净额对账（§1.2 净额口径）与开跑清偿门自此文件取数，不另建第二套账。
 
 **净额对账（报告固定章节）**：每轮报告列「代偿净额对账表」（类型×笔数×对应缺陷编号），能力声明双行呈现——含代偿表现/净额表现。台账空时如实写「零代偿」或按姿态声明缺省，禁省略本节。
 
-**清偿门（用户裁定原文口径）**：**代偿在下一轮推演开跑前必须根治后合入 SwarmStudio 产品能力**。机械执法：开跑前置检查读上一轮台账 `check-clearance`——存在 open 笔且未显式 waive（waive 须带用户批准理由）即拒开新轮。resolve 判据=对应 PR 缺陷在 overlay 落码合入 main（带 commit 锚），不是「记了单」。
+**清偿门（用户裁定原文口径）**：**代偿在下一轮推演开跑前必须根治后合入 SwarmStudio 产品能力**。机械执法：开跑前置检查读上一轮台账 `check-clearance`——存在 open 笔且未显式 waive（waive 须带用户批准理由）即拒开新轮。resolve 判据=对应缺陷在产品侧修复合入 main（带 commit 锚），不是「记了单」。
 
 **闸键语义补则**：闸键只能随组织侧动作写入（agent 判词、人类角色审批）；驱动/哨兵只读闸态。每条关卡判词带 provenance 字段（agent 判 / 人类角色模拟判 / 代偿代判），报告按 provenance 分带，代偿代判的闸在净额口径下不计通过。
 
 **成功标准（激励反转）**：一轮推演的有效性判据=本轮新发现并完成根治的产品缺陷数与证据链完整性；中途停滞但如实登记问题单、根因可查的轮是**有效轮**。完整交卷（26 步全走完+六闸全绿+报告齐）仅是 demo 姿态的验收线，不再是 standard/strict 姿态的成功定义。
 
-### 2.6.6 Harness 运行支撑层（V8.42，2026-10-18 产品九层能力入册）
-
-机制一句话：**推演不只考 15 个 AI 会不会写代码，也考它们脚下的运行支撑层是否可审计、可恢复、可限额**。产品侧 2026-10-18 两轮落地九层能力（工具契约/审计 v3/身份与委托/审批凭证/运行清单/预算/沙箱/恢复判定/评测），本节只立推演消费契约，产品实现与边界见《2026-10-18-harness-research-gap-analysis.md》。
+### 2.6.6 Harness 运行支撑层
+机制一句话：**推演不只考 15 个 AI 会不会写代码，也考它们脚下的运行支撑层是否可审计、可恢复、可限额**。产品侧九层能力（工具契约/审计 v3/身份与委托/审批凭证/运行清单/预算/沙箱/恢复判定/评测），本节只立推演消费契约。
 
 九层与推演用法：
 
@@ -1246,13 +1206,12 @@ graph TB
 1. 证据快照由 `mux/mx-harness-snapshot.sh` 在 smoke 步（基线）与步 23 合规审计（审计时点）各采一次，写 `evidence/harness/harness-baseline.json` 与 `harness-summary.json`；端点缺席如实标 `ok=false` 并记问题单（`harness-snapshot-*`），不阻断主链。
 2. 报告第 9 章新增「证据七：Harness 运行面」：九层体检计数、过程质量五项、执法放行/拒绝计数、运行清单条数与成本、预算状态、沙箱租约；数字取自快照 JSON，不手抄；快照缺席如实标「未采集」。
 3. 不改变六道关卡判据（§5.3 不变）；本节证据用于复盘与产品缺陷归因，产品缺陷按 §2.6.5 台账登记。
-4. 预检⑳：生效 product-dist 必须包含六个新端点（nine-layers/process-quality/resume-plan/policy-decisions/run-manifests/budget-status）；旧 dist 启动即红，修复=`npm run inject && npm run build` 后刷新 SIM 快照。
+4. 预检⑳：生效产品产物必须包含六个端点（nine-layers/process-quality/resume-plan/policy-decisions/run-manifests/budget-status），缺一即拒启动并记问题单。
 
 边界（如实登记）：恢复判定只给三档建议不自动执行；预算 `downgrade` 只给建议、`block` 需 `HERMES_BUDGET_ENFORCE=1`；沙箱路径/域名/ulimit 均 opt-in，未配置即不检查；macOS 不支持 `ulimit -v`，内存限额仅 Linux；快照鉴权用调用方 JWT（驱动 `jwt_of fanfan`），取不到时端点按不可用登记问题单。
 
-### 2.6.7 评测治理层（V8.45，2026-10-19 百度评测轮）
-
-机制一句话：**评测不仅打分，还要回答「下一步往哪调」，并把证据链闭合到可反查**。产品面=Eval Studio（/app/eval，默认开）与⑥治理·度量检查的评测运营卡；设计正本=《2026-10-19-eval-baidu-reward-design.md》《2026-10-19-eval-baidu-paradigm-design.md》《2026-10-19-eval-baidu-followup-design.md》。七件机制与 §2.6.3 腾讯轮并存，不取代：
+### 2.6.7 评测治理层
+机制一句话：**评测不仅打分，还要回答「下一步往哪调」，并把证据链闭合到可反查**。产品面=Eval Studio（/app/eval，默认开）与⑥治理·度量检查的评测运营卡；七件机制与 §2.6.3 并存，不取代：
 
 | # | 机制 | 契约（产品单一事实源） | 全流程消费位 |
 |---|---|---|---|
@@ -1264,7 +1223,7 @@ graph TB
 | 6 | 归因一次点击 | GET /runs/:id/evidence 按 sessionId 重读 L2 trace；密封集 403 防探测；内联证据如实「不可回溯」 | G4-E 审计、报告失败样本 |
 | 7 | AgentOps/EvalOps | 评测运营卡：集数/运行数/最近 pass@k/门禁/unknown/维度覆盖/红队逃逸与误报；只读聚合，不复制业务逻辑 | 步 24、报告证据八 |
 
-配套 B1-B7：S0 similarity（ROUGE-L F1，停用词默认清洁，`stopwords: []` 可关）、四层指标金字塔（模型/应用/Agent/线上，no_data 如实）、运行级动作清单（指标×条件→动作，纯函数派生）、红队种子 24 题+114 变体、线上证据回填（QPS/响应分档，经 `POST /runs/:id/live-evidence` 才转真判）。命名边界（三处防混）：四层指标金字塔 ≠ 四层结果/轨迹/风险；七维能力覆盖 ≠ 七维引擎回归集 ≠ 六维度量分面；评测 S0 规则层 ≠ skillgov S0 扫描规则。
+配套七件：S0 similarity（ROUGE-L F1，停用词默认清洁，`stopwords: []` 可关）、四层指标金字塔（模型/应用/Agent/线上，no_data 如实）、运行级动作清单（指标×条件→动作，纯函数派生）、红队种子 24 题+114 变体、线上证据回填（QPS/响应分档，经 `POST /runs/:id/live-evidence` 才转真判）。命名边界（三处防混）：四层指标金字塔 ≠ 四层结果/轨迹/风险；七维能力覆盖 ≠ 七维引擎回归集 ≠ 六维度量分面；评测 S0 规则层 ≠ skillgov S0 扫描规则。
 
 消费纪律：
 
@@ -1273,9 +1232,8 @@ graph TB
 3. **报告**：第 9 章证据八 + PART1 评测行；数字只读 `evidence/evals/eval-summary.json`，缺席如实 ⬜，禁手抄。
 4. **边界**：不改 G1/G2/G3/G6 判据；G4/G5 判据按 §5.3 增补。红队逃逸率、维度覆盖、装饰指标数只作审计/复盘观测，不设硬阈值。
 
-### 2.6.8 治理结果层（V8.46，2026-10-19 产品治理能力汇总）
-
-机制一句话：**产品侧的治理能力必须被推演消费成一串可反查的证据，而不是只存在于 UI**。设计正本=《2026-10-19-fullflow-v846-studio-latest.md》；产品能力来源=评审治理/观测信号/改进实验/评测结果登记/发布门与 UAT 台账六份 2026-10-19 spec。
+### 2.6.8 治理结果层
+机制一句话：**产品侧的治理能力必须被推演消费成一串可反查的证据，而不是只存在于 UI**。产品能力来源=评审治理/观测信号/改进实验/评测结果登记/发布门与 UAT 台账。
 
 | # | 机制 | 契约（产品单一事实源） | 全流程消费位 |
 |---|---|---|---|
@@ -1287,13 +1245,13 @@ graph TB
 | 6 | 观测信号与基线告警 | `GET /api/harness/obs-signals` 与 `/api/harness/obs-alerts`（请求量/token/TTFT/429/工具失败；四类漂移） | 步 24 快照；报告证据九；复盘读数表 |
 | 7 | 评审治理与改进实验 | `GET /api/review/gov/metrics`；`GET /api/harness/workbench/overview` 与 `/experiences` | 步 24 快照；报告证据九；只作治理读数 |
 
-> **V8.50 增量**：改进实验读数面升级为 RRSI 正则化读数——overview 新增 `evolution` 段（按面轮次/提案去向/停滞/剪枝/未探索面），证据九「改进实验」行由 mx-report-gen 呈现「进化面 N（采纳 X 轮·停滞 Y·未探索 Z）——涨分落在噪声带内不晋级」；evolution 段缺席渲染回退旧读数（向前兼容不造数）。不改变 G6 判据，仍只作治理读数。
+> 改进实验读数面升级为 RRSI 正则化读数——overview 新增 `evolution` 段（按面轮次/提案去向/停滞/剪枝/未探索面），证据九「改进实验」行由 mx-report-gen 呈现「进化面 N（采纳 X 轮·停滞 Y·未探索 Z）——涨分落在噪声带内不晋级」；evolution 段缺席渲染回退旧读数（向前兼容不造数）。不改变 G6 判据，仍只作治理读数。
 
 消费纪律：
 
 1. **台账只 append**：发布门与 UAT 台账由驱动在步 20/21 写入，Agent 不得改写；报告与产品 UI 读同一份文件。
 2. **端点失败如实呈现**：`mx-closure-snapshot.sh` 单端点失败只进 `summary.failed`，报告写「缺口」不写「全部通过」；run22 起快照缺席=审计查 16 FAIL（接线缺口），端点失败=WARN（环境缺口）。
-3. **不改判据**：观测告警、评审治理、改进实验只作读数；G1-G5 判据不变，G6 键按本版统一。
+3. **不改判据**：观测告警、评审治理、改进实验只作读数；G1-G5 判据不变，G6 键按 §2.6.8 统一。
 4. **单一读数源**：评测读数只读 `evidence/evals/eval-summary.json` 与 `remediations.json`；治理结果读数只读 `evidence/governance-closure/summary.json` 与两份台账；禁手抄。
 5. **审计时点**：报告生成后审计一次，`final-report-merge.py` 后再审计一次；R15 第 0 章以合并后为准。
 
@@ -1319,10 +1277,10 @@ graph TB
 | 验收（21） | `docs/acceptance/` 验收报告 | 每条 AC×判词三态×证据锚点｜结论=判词汇总（禁矛盾总括）｜SLA 登记 |
 | 工作台账（22） | `work-report.md`（中央仓根） | 每人状态分布｜WIP 清点（≤2）｜72h 未动任务清点与处置 |
 | 审计（23） | `docs/retro/` 合规意见书 | 留痕完整性核对｜台账格式核对｜取证目录在位｜抽检记录（含 3 条 AI 结论反核）｜独立性声明｜关切清单｜分层签名线 |
-| 复盘治理（24/G6） | 复盘文档+治理报告 | 三段式｜行动项四要素｜治理度量实测｜问题单 DISP 三态全表（回写 issues.log）｜同类风险收敛性对账（风险族×上轮/本轮复发×趋势×熵增处置，V8.26 纪律 51）｜经验候选台账（提取 N 候选×类型分布｜审核处置｜注入留痕或如实未启用，V8.27 §2.6.4/纪律 49）｜记忆库归档记录 |
+| 复盘治理（24/G6） | 复盘文档+治理报告 | 三段式｜行动项四要素｜治理度量实测｜问题单 DISP 三态全表（回写 issues.log）｜同类风险收敛性对账（风险族×上轮/本轮复发×趋势×熵增处置，纪律 51）｜经验候选台账（提取 N 候选×类型分布｜审核处置｜注入留痕或如实未启用，§2.6.4/纪律 49）｜记忆库归档记录 |
 
 > 模板写法规范：上表「模板字段」的说明性文字用判断句（字段是什么、判什么）。「缺一打回」的判据必须是可机械化核对的条件（存在性/正则/计数/时间锚点），不写「完善/合理/清晰」类无法判定的虚词。交付物模板实体=harness 内嵌模板（mx-scenario-lib.sh 生成函数）+中央仓 templates/（design.md 等）。模板修订走步 20 约定（不满足实际需要直接完善再用，改后随轮验证），harness 侧改动门禁测试同批更新。
-> **字段两层关系**：本表=模板骨架字段（基础层）；§5.8.2「准出·交付物字段」=环节质量字段（增厚层，run≥17 生效）。打回依据=两层并集；模板实体（freeze/design/schedule/test-report/release-plan/acceptance/audit-opinion/retrospective 八张）已按增厚层补字段并晋升中央仓 templates/（origin/main 314d669，harness 契约与中央仓双落地），与本表骨架不冲突。
+> **字段两层关系**：本表=模板骨架字段（基础层）；§5.8.2「准出·交付物字段」=环节质量字段（增厚层，run≥17 生效）。打回依据=两层并集；模板实体（freeze/design/schedule/test-report/release-plan/acceptance/audit-opinion/retrospective 八张）已按增厚层补字段并晋升中央仓 templates/（护栏契约与中央仓双落地），与本表骨架不冲突。
 
 ### 2.8 agent 组织关系与流程衔接
 
@@ -1391,18 +1349,16 @@ sequenceDiagram
 
 **读法**：任何一步出问题，先看「人把关」列找责任人，再看「AI 产出」列追工件锚点。AI 对产出负责（内容真实、锚点可反查），人对结果负责（判词、批准、复核、签名）——这是全流程推演的组织公理，也是演示视频要讲的一句话（§5.4.6）。
 
-**代理把关边界（V8.29 收窄，2026-10-15 用户裁定）**：推演程序模拟人类角色的合法面＝**仅审批类动作，且必须按判据批或退、走人类账号通道**（需求提交、关卡审批/退回、分诊确认、发布批准、UAT 判词）。超出此范围的代演（派发词预写、汇总代走板、代建评审卡、代做集成合并等）不再是「常规把关」，一律归入**代偿**：standard 姿态保留但逐笔记台账（§2.6.5），strict 姿态禁用（§2.4 操作者姿态分档），在清偿门根治后逐项拆除。**「代做集成合并」已于 V8.30 职责归位（2026-10-15 用户裁定）拆除主路径：评审+合并归域 lead（wei/mei），驱动仅真值验收与超时兜底（兜底触发时照记代偿单）。** 事故复议（熔断 OVERRIDE 带原因）与复盘整改始终为真人决策。生产形态下同一通道由真人执行。本表验证的是责任通道与机制在位，不冒充推演中有真人全程把关。
+**代理把关边界（2026-10-15 用户裁定）**：推演程序模拟人类角色的合法面＝**仅审批类动作，且必须按判据批或退、走人类账号通道**（需求提交、关卡审批/退回、分诊确认、发布批准、UAT 判词）。超出此范围的代演（派发词预写、汇总代走板、代建评审卡、代做集成合并等）不再是「常规把关」，一律归入**代偿**：standard 姿态保留但逐笔记台账（§2.6.5），strict 姿态禁用（§2.4 操作者姿态分档），在清偿门根治后逐项拆除。**「代做集成合并」已于 职责归位（2026-10-15 用户裁定）拆除主路径：评审+合并归域 lead（wei/mei），驱动仅真值验收与超时兜底（兜底触发时照记代偿单）。** 事故复议（熔断 OVERRIDE 带原因）与复盘整改始终为真人决策。生产形态下同一通道由真人执行。本表验证的是责任通道与机制在位，不冒充推演中有真人全程把关。
 
-### 2.6.9 介入归因与协作资产消费（V8.49，2026-10-23 天猫数字员工两文吸收轮）
-
+### 2.6.9 介入归因与协作资产消费
 天猫实践篇的两个度量主张（介入归因分账、C×L 效能画像）与协作篇的资产主张（判例库/谁懂什么）
-落成 SwarmStudio 产品面后，推演侧的对应消费位（V8.48 为京东评测读数批，本节顺延 V8.49）：
+落成 SwarmStudio 产品面后，推演侧的对应消费位：
 
 1. **介入归因账本（G6 复盘机械读数）**：run 复盘「现象」段新增机械数据源——工具
    `simharness mux/mx-interventions.py`（自包含解析台账/G5 判词/UAT 判词；六类打标+排活/干活
    两层分账+风险信号；auto-approve 不计介入）。口径与 8647 `GET /api/hermes/delivery/interventions`
-   同源对账（spec 2026-10-23-tmall-digital-worker-absorption.md D1-D3/D7；run22 实测
-   total 98 / 排活 85 + 干活 13 两侧一致）。工具不 import overlay——离线可重放优先
+   同源对账（run22 实测 total 98 / 排活 85 + 干活 13 两侧一致）。工具不依赖产品服务——离线可重放优先
    （run 归档后端点不保证在）；复盘贴档用 `--md`，程序消费用 `--json`。
 2. **协作成熟度读数**：`mx-interventions.py` 输出含排活沟通占比/机器自动过审占比两读数，
    复盘「协作形态」叙述以此为据（三级定义见产品面交付效能页签；判定为启发式读数非结论）。
@@ -1414,11 +1370,8 @@ sequenceDiagram
 
 G6 验收判据不变（本节是消费面增量，不是新闸）；从 run23 起复盘贴档建议带介入账本读数行。
 
-### 2.6.10 评测读数面（V8.48，2026-10-23 京东评测体系吸收轮）
-
-京东拆解文七条实践的推演侧消费位（产品面已落：overlay 79c39a42/c208952d——
-stabilityRetest 复测、难度/角色分桶、secrets 部署面采集器、行为信号面、经营语言摘要；
-spec=《2026-10-23-jd-eval-absorption.md》《2026-10-23-eval-biz-signals.md》）：
+### 2.6.10 评测读数面
+京东评测七条实践的推演侧消费位（产品面已落：stabilityRetest 复测、难度/角色分桶、secrets 部署面采集器、行为信号面、经营语言摘要）：
 
 1. **难度/角色标注进全流程评测集**：simharness `mx-eval-lib.sh` 三任务补
    difficulty/role（t1/t2=P1+implementer，t3=P0+reviewer——报告产出责任在执行者、
@@ -1434,37 +1387,32 @@ spec=《2026-10-23-jd-eval-absorption.md》《2026-10-23-eval-biz-signals.md》�
    S0 规则断言，S1 不参与判定，开启复测只烧判定费不产读数（outputStability 结构性
    缺席，报告如实呈现「未开启」）。若后续评测集引入无 S0 断言任务，再评估开启。
 
-**判据零变化**：G4-E 的 PASS/GAP/FAIL 判定面本批不动（新增读数先观察——与 V8.46
-处置链同款纪律）；是否把分桶/稳定性纳入判据，留待 run23 实测后裁定。
-变更正本=《simharness/docs/2026-10-24-eval-v848-jd-readouts.md》（D1-D4）。
+**判据零变化**：G4-E 的 PASS/GAP/FAIL 判定面不动（新增读数先观察——与处置链同款纪律）；是否把分桶/稳定性纳入判据，留待 run23 实测后裁定。
 
-### 2.6.11 群体协作四维度读数（V8.51，2026-10-24 多 Agent 群体协作评测基准吸收轮）
-
+### 2.6.11 群体协作四维度读数
 银翼AI评测室《多 Agent 群体协作的评测基准设计方法》四维度（通信拓扑与信息流效能／混合动机
-场景／信用分配与帕累托／社会动力学与拜占庭容错）的推演侧读数面。spec=《2026-10-24-swarm-eval-
-benchmark-absorption.md》（D1-D9 决策在彼处）。
+场景／信用分配与帕累托／社会动力学与拜占庭容错）的推演侧读数面。
 
-1. **度量单一事实源在产品端**：`GET /api/hermes/delivery/swarm-collab?run=`（overlay
-   `custom/server/delivery/swarm-collab.ts` 纯函数，对既有证据离线换算——scenario.log 派发行/
-   真值行、compensation-ledger、issues.log、uat-verdicts、release-gate；零新增埋点）。本仓
-   `eval_collect` 只调端点落 `evidence/evals/swarm-collab.json`（D1，同 V8.48 分工纪律）。
+1. **度量单一事实源在产品端**：`GET /api/hermes/delivery/swarm-collab?run=`（产品端纯函数，对既有证据离线换算——scenario.log 派发行/
+   真值行、compensation-ledger、issues.log、uat-verdicts、release-gate；零新增埋点）。本方案
+   的采集组件只调端点落 `evidence/evals/swarm-collab.json`（D1，同 分工纪律）。
 2. **四组读数**：通信拓扑（MOR 字符口径／锚点保真度=任务 ID+模块跨跳保持率／回灌代偿与回执
    缺席等待信号）、信用分配（per-agent 贡献分解＋观察口径 criticality＋任务粒度 Shapley 近似）、
    帕累托（消息字符成本×完成锚收益的非支配前沿）、社会动力学（UAT 无条件通过率／G5 打回类
-   问题单＝批判性证据／拦截面；拜占庭注入如实 no_data 挂账）。口径诚实降档：字符代理非 token
-   （span 采集率挂账）、观察性归因非实验性消融（D3-D8）。
+   问题单＝批判性证据／拦截面；拜占庭注入如实 no_data 待采）。口径诚实降档：字符代理非 token
+   （span 采集率待采）、观察性归因非实验性消融（D3-D8）。
 3. **只透传不进判据**：`mx-eval-summary.py` payload 增 `swarmCollab` 键，报告证据八增「群体协作
    读数」行；退出码/G4-E 判据/六闸/26 步零改动（D2，先观察纪律；把关测试锁判据面无 swarm 字样）。
 4. **产品面同步**：红队种子库 v1→v2 增社会病理两向量（互批合谋/迎合上位，24→36 任务）；
    交付效能页第 ⑤ 区「群体协作读数」（api `fetchSwarmCollab`＋四维度卡）。
-5. **清账批（2026-10-24 五件挂账机制全落地，判据仍零变化）**：①实验性 LOO——`MX_ABLATE_ROLES`
+5. **扩展读数（判据零变化）**：①实验性 LOO——`MX_ABLATE_ROLES`
    旋钮（被消融角色「无耳」＋ablation-skip 台账留痕）＋ `GET /swarm-collab?run=&compare=` 基线/消融
    完成率差分=实验性 criticality；②拜占庭——`MX_BYZANTINE_SPEC` 三模式 DM 注入（标记可回查）＋
    BCR/暴露派发窗读数；③混合动机——`scenarios/mixed-motive-bidding/` 竞标市场场景＋
    `mx-mixed-motive.py`（welfare/基尼/纳什偏离=相对离差代理）；④意图保真升 dialog 全文相似度口径
    （r18 步 9/11 采集已在，消费面补齐，缺席回退锚点）；⑤per-profile token 分桶（run-trace profile
    字段＋obs-signals byProfile）。实验数字待专门 run 执行（spec 残余节）。
-6. **挂账（残余）**：实验性消融/注入 run 与混合动机首跑的执行；消息全文采集在更早 run 的回填（旧 run 无 dialogs 属实）
+6. **待跑项**：实验性消融/注入 run 与混合动机首跑；更早轮次的消息全文回填（旧 run 无对话全文）。
    
 
 ## 三、推演场景设计
@@ -1507,7 +1455,7 @@ benchmark-absorption.md》（D1-D9 决策在彼处）。
 
 场景驱动（aipay-scenario.sh）的执行段（stage）与 §2.4 方案步号不是一一对应（一段可覆盖多步、一步可由两段合承）。本表是唯一映射事实源：报告生成器的叙事表（STEPS_META）、操作路径表（steps_entry）、交付物表（ARTIFACT_VIEWS）与审计器的步骤状态断言必须自本表派生或逐行一致，并配门禁测试——改任一端，测试当场失败。
 
-**keys 一致性（V8.21，run16 复盘增补）**：叙事注册表每步的 keys 字段必须逐行誊写本表「state.env 状态标志」列；生成器对空 keys 自动回落本表默认键并 stderr 警示，审计器断言「state 键在位而报告步 ⬜」FAIL（纪律 45，先例见档案 §三 4.3-45）。
+**keys 一致性（run16 复盘增补）**：叙事注册表每步的 keys 字段必须逐行誊写本表「state.env 状态标志」列；生成器对空 keys 自动回落本表默认键并 stderr 警示，审计器断言「state 键在位而报告步 ⬜」FAIL（纪律 45）。
 
 | 方案步 | 场景 stage | state.env 状态标志 | 备注 |
 |---|---|---|---|
@@ -1535,9 +1483,9 @@ benchmark-absorption.md》（D1-D9 决策在彼处）。
 | 25 | ide | ide_done | IDE 工作台 |
 | 26 | report | report_done | HTML 报告 |
 
-**V8.45 评测键（不新增步）**：`eval_set_id / eval_run_id / eval_redteam_run_id / g4_eval_pass / g4_eval_gap / g4_eval_blocked` 挂步 19-20；`g4_pass` 以 `g4_eval_pass` 或显式 `g4_eval_gap` 为前置；EvalOps 读数在步 24 复盘与步 26 报告前刷新（原「步 22」笔误，V8.46 统一为步 24/26），步 26 生成报告前确保 `evidence/evals/eval-summary.json` 在案。
+**评测键（不新增步）**：`eval_set_id / eval_run_id / eval_redteam_run_id / g4_eval_pass / g4_eval_gap / g4_eval_blocked` 挂步 19-20；`g4_pass` 以 `g4_eval_pass` 或显式 `g4_eval_gap` 为前置；EvalOps 读数在步 24 复盘与步 26 报告前刷新（原「步 22」笔误，统一为步 24/26），步 26 生成报告前确保 `evidence/evals/eval-summary.json` 在案。
 
-**V8.46 治理结果键与工件（不新增步）**：`eval_rerun_run_id`（同卷复评）挂步 19；`evidence/evals/remediations.json` 落步 19；`evidence/release-gate.jsonl` 落步 20；`evidence/uat-verdicts.jsonl` 落步 21 且逐条 AC 记录；`evidence/governance-closure/summary.json` 落步 24；报告证据九在步 26 消费。G6 闸键=`retro_done`（步 24），`report_done` 只作步 26 完成键。
+**治理结果键与工件（不新增步）**：`eval_rerun_run_id`（同卷复评）挂步 19；`evidence/evals/remediations.json` 落步 19；`evidence/release-gate.jsonl` 落步 20；`evidence/uat-verdicts.jsonl` 落步 21 且逐条 AC 记录；`evidence/governance-closure/summary.json` 落步 24；报告证据九在步 26 消费。G6 闸键=`retro_done`（步 24），`report_done` 只作步 26 完成键。
 
 ## 四、执行注意事项
 
@@ -1553,10 +1501,10 @@ benchmark-absorption.md》（D1-D9 决策在彼处）。
 ### 4.1 运行手册
 
 ```bash
-cd simharness                         # 推演 harness 独立仓（运维规范见工程档案附录 C）
+cd simharness                         # 推演 harness 工作目录
 bash mux/mx-setup.sh                  # 环境供给（账号/看板/团队/记忆库/中央仓，可反复跑）
 bash mux/mx-up.sh                     # 起单 gateway + 单 studio
-bash mux/mx-prelaunch-check.sh         # 开跑前三十项核验（门禁全绿/主脚本语法/新接线/双仓干净/服务健康/中央仓谱系/采集链/上轮四查/无在途进程/叙事注册/账号板/审批环/评测三方同步/write_file/清偿门/监督器/真值三件套/IA 版本/Harness 运行支持/IDE 工作区/阶段页签/评测接线/V8.46 治理结果七项——全绿才开跑）
+bash mux/mx-prelaunch-check.sh         # 开跑前三十项核验（门禁全绿/主脚本语法/新接线/双仓干净/服务健康/中央仓谱系/采集链/上轮四查/无在途进程/叙事注册/账号板/审批环/评测三方同步/write_file/清偿门/监督器/真值三件套/IA 版本/Harness 运行支持/IDE 工作区/阶段页签/评测接线/治理结果七项——全绿才开跑）
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 # 断点续跑 START_STEP=<步名>。区间上界 UNTIL_STEP=<步名>。换需求轮 RFD_ID=RFD-00X
 # delivery 协议事件缺省启用=产品真实形态
@@ -1579,8 +1527,8 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 - ①磁盘低水位：系统盘 <20GB 先清理。
 - ②hindsight :8888 须先在（mx-setup 前置检查拒绝启动；冷启走 `~/.hermes/profiles/orchestrator/hindsight/start.sh`）。
 - ③mx-up 收尾后显式断言 gateway/studio 双 health 再启动。
-- ④vite dev server 假死状态（模块 504 而根 200）重启即愈，走查前先存活探测。
-- ⑤界面路由锚点版本校验：§2.5 引用的每条路由/入口在预检时实际访问校验（HTTP 可达+目标组件非空渲染）。失效记问题单并按纪律 40⑩ 降级口径处理，禁静默改拍近似页冒充。
+- ④前端开发服务假死状态（模块 504 而根 200）重启即愈，走查前先存活探测。
+- ⑤界面路由锚点校验：§2.5 引用的每条路由/入口在预检时实际访问校验（HTTP 可达+目标组件非空渲染）。失效记问题单并按纪律 40⑩ 降级口径处理，禁静默改拍近似页冒充。
 - ⑥delivery 冒烟自检：冒烟段自动开案例房+stage/gate 事件落房读回（协议面健康自证）。
 - ⑦判定服务存活探测：判定后端 GET /health，在线则快照版本三元组入 evidence。离线记问题单（type=decision-backend-degraded）不阻断（fail-open）。
 - ⑧容量与负载预检：mx-up 启动前断言并发容量 ≥13 且容量重试队列去重时间戳标记在位，不过拒绝启动。系统负载告警 MX_LOAD_WARN（默认 200）。
@@ -1592,7 +1540,7 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 
 1. **峰值预算表**：系分执行四路并行=4。编码六路并行=6（渠道双路同时派出，瞬态超额由容量重试队列兜底）。测试双线+集成=3。**全阶段全量并发**。
 2. **容量拒绝语义**：容量拒绝一律进容量重试队列静默重试（不回声防通知风暴、不丢弃、槽腾自动重派）。网关缺此能力时该步不得四路并发。容量重试队列去重时间戳=事件首见时间（依据键 event_id，重入不重置），20min 过期必然生效。
-3. **补丁纳入**：容量排队属运行时行为补丁，必须纳入 runtime manifest（工程档案附录 B）才算部署，只在工作区不算。
+3. **运行时行为纳入**：容量排队属运行时行为，必须纳入 runtime manifest 才算部署，只在工作区不算。
 4. **网关重启前置**：任何计划内重启前确认无 in-flight turn（判据见 §4.3-2）。
 5. **快速模式**（`MX_FAST=1`，缺省开）：
    - 所有 wait 轮询间隔 15s→5s。
@@ -1609,7 +1557,7 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 3. **并行执行**：子任务同时派发（图驱动派发；同时运行的任务数不超容量上限，并行上限=容量上限减正在运行的任务数）。先共享材料再各做各的（如用例文件先推送到共享分支，再分头跑）。
 4. **合并**：R 收齐各子任务的结果，合并成唯一的最终产物（一份概要设计契约、一个集成分支、一份测试报告、一份报告正本）。并行不改变「结论只有一行」「不许谎报」的纪律。
 
-工作量估计写入数据库、派发按任务量加权，这两件是计算基础（overlay main 418fe874）。不变的边界：RACI 责任唯一、结论行唯一、证据完整（每个并行结果都能追溯到谁做的、执行了什么命令）。拆分有成本：工作量低于阈值或任务间强耦合的不硬拆，拆分开销大于收益时不拆，并如实记录。第一个全流程实例=run12 G5 整改测试分三人并行（7 个整改项的分工与矩阵事件锚见档案 §三 4.2-并行）。
+工作量估计写入数据库、派发按任务量加权，这两件是计算基础。不变的边界：RACI 责任唯一、结论行唯一、证据完整（每个并行结果都能追溯到谁做的、执行了什么命令）。拆分有成本：工作量低于阈值或任务间强耦合的不硬拆，拆分开销大于收益时不拆，并如实记录。第一个全流程实例=run12 G5 整改测试分三人并行（7 个整改项的分工与矩阵事件）。
 
 **流式流水线架构**：
 
@@ -1679,13 +1627,13 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | 轮询间隔缩短（15s→5s）+关卡等待窗口动态校准 | ~10 分钟 |
 | **合计预期省时** | **~4.2 小时** |
 
-时长目标与实测对账：全量轮现行净目标 ≤4 小时（快速模式+全并发+上述措施叠加）。流式流水线（模块就绪即触发，纪律 27⑥）完全落地后净目标 ≤3 小时。回归轮（lite 夹具）实测 3.1 小时（§5.7 基线引用；明细=工程档案 §八）。**目标↔实测衔接**：当前实测水位与摩擦归因见 §5.7「时长实测」行（run16 净约 9.4h，两段摩擦根修后执行面约 5h——达标判读以该行为准，不在本节重复记账）。
+时长目标与实测对账：全量轮现行净目标 ≤4 小时（快速模式+全并发+上述措施叠加）。流式流水线（模块就绪即触发，纪律 27⑥）完全落地后净目标 ≤3 小时。回归轮（lite 夹具）实测 3.1 小时（§5.7 基线引用）。**目标↔实测衔接**：当前实测水位与摩擦归因见 §5.7「时长实测」行（run16 净约 9.4h，两段摩擦根修后执行面约 5h——达标判读以该行为准，不在本节重复记账）。
 
 ### 4.3 执行纪律
 
 > **导读**：54 条纪律（编号 1-51 含 25a/b/c；48 曾撞号两次，300 秒时限顺延为 50 后各号唯一）按执行逻辑分九组：怎么判停摆（等待与活性）→怎么送到位（派发与投递）→怎么认结论（判词与关卡）→怎么记问题（台账与处置）→怎么算证据真（仓库与凭证）→程序自身怎么跑（驱动工程）→证据怎么采（采集与回归）→怎么又快又不出界（并行与边界）→运行态的四块补充面。
 >
-> **编号是稳定 ID**：按历史入列序固定（25a/25b/25c 为 25 的批次补充、28 立法晚于 27 系时序），与展示位置无关——正文/报告/代码注释/测试断言引用一律按编号，**重排编号=制造悬空引用，禁止**。引用形一律 §X.Y-N（如 §4.3-25a、§2.6-5），不用形似章节号的 §X.Y.N 写法（与 2.6.1 这类真子节撞形）。新增条款顺延尾号，**且同批声明测试状态**（有测试锚/待首验配套），登记于 simharness mux/discipline-test-coverage.md 对照表——防立法即遗忘。撞号先例：截图采集十条（2026-10-11 自 §5.6 迁入）与全阶段饱和并行（V8.16 增列）曾同号 40，后者已顺延为 48，代码注释中的「纪律 40⑥/⑩」均指截图十条。
+> **编号是稳定 ID**：按历史入列序固定（25a/25b/25c 为 25 的补充号、28 立法晚于 27 系时序），与展示位置无关——正文/报告/代码注释/测试断言引用一律按编号，**重排编号=制造悬空引用，禁止**。引用形一律 §X.Y-N（如 §4.3-25a、§2.6-5），不用形似章节号的 §X.Y.N 写法（与 2.6.1 这类真子节撞形）。新增条款顺延尾号，**且同批登记对应测试**（simharness 纪律测试覆盖表）——防立法即遗忘。撞号先例：截图采集十条（2026-10-11 自 §5.6 迁入）与全阶段饱和并行（增列）曾同号 40，后者已顺延为 48，代码注释中的「纪律 40⑥/⑩」均指截图十条。
 
 > **挂站视图**（演示视频「拦截高光」的方案侧索引：每一幕会被哪些纪律拦住）：
 > - 序幕/全程：等待与活性判据组、驱动工程组、采集与回归组。
@@ -1733,7 +1681,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 8. 关卡结论只认评审卡/结构化结论字段（末判词赢/多行取最新/卡面与消息双源合并 FAIL 优先）。消息词面与转述不作凭据。FAIL 不将卡标记 done、不写标志、强制中止。分项：
     - ①**等待窗口是等待上限，不是判词有效期**：窗口超时后必须终态复核一次判词；复核时判词已存在则按末判词重判放行，确无判词才判超时。
-    - ②**判词提取只认结论行结构**：仅「结论行」格式（行首判词语义行）作判词；判词词面出现在任务书、卡 body 指令文本、转述引用中一律不作判词——词面过滤逐案打补丁堵不住语境变体，结构性锚定一次根治。
+    - ②**判词提取只认结论行结构**：仅「结论行」格式（行首判词语义行）作判词；判词词面出现在任务书、卡 body 指令文本、转述引用中一律不作判词——词面过滤逐案修补堵不住语境变体，结构性锚定一次根治。
     - ③**判词送达确认**：判词结论行发送后须回读房间确认到达，哑火自动重发（与派发可达性校验同构）。
     - ④**熔断复位=证据变化**：熔断拦截的对象是「证据零变化的重复尝试」，不是「失败过就禁入」——自上次失败后出现新提交、新判词或卡 body 更新即新尝试，自动放行；证据无变化的重复尝试继续拦截。
     - ⑤**人工 OVERRIDE 语义是复议**：作为最后手段保留；须记录闸名+原因+变化证据并入 approved.events（与 HumanGate 同审计面）；复议后关卡仍走正常判词、不得直接放行；范围限单闸单轮。
@@ -1746,9 +1694,9 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 17. 独立审计可对已通过的关卡判回滚：state 标志保留原值作执行流水不改写，判定以报告与处置台账为准。发布类关卡判回滚即发布冻结（关联卡标记 blocked），解冻=缺项补齐+复审 PASS（书面化带期限）。
 
 
-38. **涉敏安全评审卡前置**：G1 冻结件涉敏段为非「无/否」时，G2 放行前置=secops 安全评审卡+结论行 SECURITY-GATE-PASS（裁决背景见档案 §三 4.3-38）。
+38. **涉敏安全评审卡前置**：G1 冻结件涉敏段为非「无/否」时，G2 放行前置=secops 安全评审卡+结论行 SECURITY-GATE-PASS。
     - ①评审四项检查：密钥管理/验签通路/数据存储字段/回调来源校验。
-    - ②**评审口径=设计面四查**：四项对着概设与系分稿判设计完备性——设计缺失/矛盾才构成 FAIL 缺项。代码级问题（含概设 §9 挂账项）不计入 FAIL 判词，改为逐条落 SECURITY-COND-<n> 条目（问题+位置+归属），随 G5 发布准出第 8 项逐条复核（已修复附 commit 锚，未解决标 GAP:COND-<n> 如实呈现不掩盖）。
+    - ②**评审口径=设计面四查**：四项对着概设与系分稿判设计完备性——设计缺失/矛盾才构成 FAIL 缺项。代码级问题（含概设 §9 未决项）不计入 FAIL 判词，改为逐条落 SECURITY-COND-<n> 条目（问题+位置+归属），随 G5 发布准出第 8 项逐条复核（已修复附 commit 锚，未解决标 GAP:COND-<n> 如实呈现不掩盖）。
     - ③结论行为行首判词语义，判词纪律与六闸同构——末判词赢/FAIL 不放行/窗口超时须终态复核一次。评审 FAIL 或结论超时即拦 G2（缺项补齐并复审 PASS 后放行）。
     - ④非涉敏轮直接豁免（免检键落 1，零开销）。安全面自此从「secops 有编制无产出」变为强制前置。
 
@@ -1766,7 +1714,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
     - ⑤**登记幂等**：ISSUE 登记点必须同类型+同主体去重；重启循环重放不得刷单；刷单=台账卫生缺陷。
     - ⑥**降级逐步键**：r18-collection-missing 类降级登记按 ISSUE 第三段 step-N 精确匹配该步，禁一键全局豁免。系统性采集事故族也须逐步登记（每步一行），文件级整体缺失才保留全局降级语义。
     - ⑦**闸键首过保护**：闸类状态键（g1_frozen/g2_arch_pass/g3_code_pass/g4_pass/g5_ready/uat_done/retro_done）首写后，重启循环不得覆写——首过时刻是唯一权威过闸时刻。
-    - ⑧**结构性类别禁自动观察归桶（V8.23；来历见档案 §三 4.3-28）**：收尾归桶件对闸键合规类（g3-local-gate-missing/test-report-missing/gate-* 族）、审计发现类（audit-finding）、推送失败类（uat-push/qgate-*）、结论行与合并冲突类（conclusion-gap/merge-conflict）一律归「延后」桶，并显式要求下轮开跑前人工处置带锚点回写——自动「观察」桶把 F1-F4 级问题与琐碎观察同桶，复盘「待处置」信号被抹平。
+    - ⑧**结构性类别禁自动观察归桶**：收尾归桶件对闸键合规类（g3-local-gate-missing/test-report-missing/gate-* 族）、审计发现类（audit-finding）、推送失败类（uat-push/qgate-*）、结论行与合并冲突类（conclusion-gap/merge-conflict）一律归「延后」桶，并显式要求下轮开跑前人工处置带锚点回写——自动「观察」桶把 F1-F4 级问题与琐碎观察同桶，复盘「待处置」信号被抹平。
 
 
 **仓库与凭证**
@@ -1783,10 +1731,10 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 34. **缺陷回流纪律**：
     - ①建卡即派发——测试员建缺陷卡（标题【缺陷】+DEF-X+复现步骤+指派研发档案）群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>，研发收到即开工不等提醒。
-    - ②结卡前推送核验——修复结论行 FIX-DONE-<DEF-X> commit=<id> branch=<名>。commit 必须真实存在于远端（本地未推送=未完成，结卡打回；来历见档案 §三 4.3-34）。
+    - ②结卡前推送核验——修复结论行 FIX-DONE-<DEF-X> commit=<id> branch=<名>。commit 必须真实存在于远端。
     - ③复测自动触发与字段流转——FIXED 结论行落房→缺陷卡 assignee 翻转为验证档案+移验证列（建卡测试员翻转，驱动核验）→测试员拉取复测，回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因。
     - ④环内禁静默——任一段等待超 15 分钟群内重发提醒，两次无回应如实报 LOOP-BLOCKED，禁静默退出。
-    - ⑤建卡真伪校验——缺陷卡 assignee 必须填编制档案实名（占位值 default 过必填校验也无人能领；先例见档案 §三 4.3-34）。驱动在缺陷等待环机械核验（defect_cards_assignee_check），违规记问题单打回重填。
+    - ⑤建卡真伪校验——缺陷卡 assignee 必须填编制档案实名。驱动在缺陷等待环机械核验（defect_cards_assignee_check），违规记问题单打回重填。
     - ⑥复测并行拆解——复测 ≥2 张缺陷卡时默认按卡分工作区并行（wt-verify-<缺陷号>）+集成套件独立一路+测试档案间分摊（保测试≠写码）。结论行无论几路**只由主测试员统一汇集发出**（分摊者结果发主测试员不直接发结论行，防多源判词）；主测试员汇集的分摊结论，驱动抽 ≥1 条做锚点级复验（分摊者所引证据锚点真实存在），防照单全收；驱动等待侧用多锚点并行等待（纪律 29 的 wait_alive_truth_multi），各路锚点独立提醒不等最慢者。
     - **卡的责任一律以 assignee 为准，板只是视图**（卡落在谁的板上不构成责任归属——§2.8 单锚条款）。
 
@@ -1816,7 +1764,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 37. **采集链开跑预检 fail-closed**：开跑时先做采集链健康冒烟（r18-frames 试拍 1 帧），失败=拒绝带病开跑（修复后再来）；两连败=正常退出停跑（防监督器自愈环空转）。预检通过键持久化（续跑不重检）。运行中 capture_step 连续失败 ≥3 步=采集链整体故障告警（frame-capture-chain-down 单+显著 note），供监控侧即刻介入。凡「跑完才知道坏」的环节一律前移到开跑预检。
 
-40. **截图采集纪律十条**（自 §5.6 迁入，测试锚=帧四断言+门禁⑰）：
+40. **截图采集纪律十条**（判据=帧四断言+门禁⑰）：
     - ①截图前断言目标组件非空，空态/加载中重试或记缺陷不照拍。
     - ②拍前去噪（关 toast/收下拉/防末行裁切）。
     - ③文件名-内容一致校验。
@@ -1862,85 +1810,85 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 39. **契约执行观察影子模式**：概设接口契约（types.ts 冻结接口方法集）与渠道实现导出面的机械 diff（contract-observe.mjs）在 defect 段集成合并后执行，观察文件落 evidence（qgate contract executor mode=breaking 同构语义：mode=live/checked/breaking 清单）。**影子语义**：产物落 evidence+报告步 19 透传+breaking=0 记 PASS note，但不进 G4 强制线——run15 实测一轮后转正（换 CLI 单门跑+G4 合格线增「契约执行零失败」）；breaking>0 如实呈现不阻断（影子期）。
 48. **全阶段饱和并行（工位纪律）**：每个阶段的可并行工位一律同刻派发，等待面用多锚并发等待（本条原编号 40，因与截图十条撞号顺延为 48）。
-    - ①并行宽度按工位数定，不受档案数上界——单档案可多会话并行（实证先例见档案 §三 4.3-48）。
+    - ①并行宽度按工位数定，不受档案数上界——单档案可多会话并行。
     - ②分班口径：测试段按片分工（后端三片+前端两片；分片结论行按片唯一计数，重发不虚增；分片测试日志分片落盘、驱动侧聚合单文件）；系分四稿并发等待；G2 架构评审与涉敏安全评审同刻启动。
     - ③缺陷修复按缺陷并行、同文件串行（缺陷消息附 affected= 文件域）。
     - ④饱和度验收：每小时在线工位数/应在线工位数 ≥80%，且任一时段消耗不低于该阶段基准小时的 50%（进度锚每 3 分钟输出在线工位数供本条核验）。
 41. **派单新鲜度声明**：凡等待产物/交付的派单任务书必须带新鲜度声明句——「交付 commit 须晚于本轮开跑时刻，上轮遗留分支/同名产物不计数，须本轮新提交（内容未变也以本轮复核记录行刷新）」。驱动以 FRESH_NOTE 常量统一注入全部交付类派单。repo_has/branch_fresh 门禁早有该语义；单面不声明则 agent 以 blob 级证据合理主张旧产物有效，与驱动新鲜度闸对峙（先例见档案 §三 4.3-41）。
 42. **结论行完备三要素**：交付/修复类结论行=行首判词+关键证据（commit 哈希/卡号）+复审人 @ 占位（无 A 角复审人则 @ 上游责任人），三件齐备才算交卷。
     - ①分支已达而结论行缺（分支 tip 静默超 600 秒）→ 驱动定向交卷令（点名分支 tip 证据+结论行格式，禁重做已完成工作）。
-    - ②修复类结论行未 @ 复审人=复审方无触发（先例见档案 §三 4.3-42）。
+    - ②修复类结论行未 @ 复审人=复审方无触发。
     - ③凭证谎报防线：卡 ID 须为板面实存 ID（kanban list 可自查），反向核验拒收→回灌→重验三步机制已在案。
 43. **载荷采集可观测**：
     - ①r18-collect 采集失败必须登记问题单（r18-collect-failed 类型，含步键）禁静默；驱动重放对已登记锚的对话步重放补采（r18-collect 幂等拒重，重启重入即补）；报告步生成前跑载荷清扫补采面。
     - ②呈现红线见 §5.5 采集三红线——「步完成但载荷全缺」必采步维持红徽章、非必采完成步黄标（区分「实质达标」与「降级在案」）。台账三态归桶收尾件（表外词键补观察桶行，已修禁自动升桶须人工带锚）在报告生成前执行，纪律 28 四桶计数由此归位。
-    - ③采集失败登记幂等：r18-collect 中心化登记按（步键+错误指纹）去重，驱动重启循环重放不得每轮刷单（先例见档案 §三 4.3-43）。
+    - ③采集失败登记幂等：r18-collect 中心化登记按（步键+错误指纹）去重，驱动重启循环重放不得每轮刷单。
     - ④载荷锚点单一事实源：凡把 state marker 值当采集锚传递，必须经 marker_eventid 提取纯 event_id（marker 存在两种写入形态：mx_send 纯 id / dispatch_in_room 整行 note；裸传键名或整行 note 必 404）。
     - ⑤r18-collect 锚形态预检：锚非 `$` 开头即报「调用方参数错」而非透传服务端 404，参数错与故障当场可分。
-44. **报告链收尾稳定性**：报告链（净化→清扫→生成→审计→合并）是收尾唯一关键路径；其输入（issues.log/state.env）由全程多源写入，任何坏字节都会让消费方逐一崩溃形成重启循环（先例见档案 §三 4.3-44）。三道防线：
+44. **报告链收尾稳定性**：报告链（净化→清扫→生成→审计→合并）是收尾唯一关键路径；其输入（issues.log/state.env）由全程多源写入，任何坏字节都会让消费方逐一崩溃形成重启循环。三道防线：
     - ①报告链头部台账净化（坏行按字节隔离 .badbytes+替换 U+FFFD，常态零开销）。
     - ②全部报告链读文件必须容错解码（errors='replace'），写入侧登记问题单函数一律显式 UTF-8。
     - ③监督器重启风暴护栏：驱动连续 ≥3 次非熔断 rc≠0 退出即登记问题单 driver-restart-storm（监控介入信号，幂等一次）；≥10 次退避 120s 防刷单与负载；rc=0 复位。自愈能力保留，护栏把「跑完才知道坏」前移为「第 3 次失败就知道」。
-45. **叙事注册与步骤状态一致性**：按轮叙事注册表的 keys 字段是步骤完成态渲染的唯一驱动，空数组=该步恒 ⬜+帧零挂接（先例见档案 §三 4.3-45）。三重防线：
+45. **叙事注册与步骤状态一致性**：按轮叙事注册表的 keys 字段是步骤完成态渲染的唯一驱动，空数组=该步恒 ⬜+帧零挂接。三重防线：
     - ①生成器兜底：注册 keys 为空即回落 §3.3 默认映射并 stderr 警示。
     - ②审计器断言：全量轮 state §3.3 键在位而报告该步 ⬜=FAIL（lite 轮按 lite_fixtures_from 豁免，夹具步「不在本轮执行范围」属合规声明态）。
     - ③注册纪律：收尾链补注册叙事时 keys 必须照 §3.3 映射逐行誊写，配门禁测试（改任一端测试当场失败）。
     hero 区问题单处置计数必须披露配对口径（纪律 28 阶梯：精确 n 键+广播/单键 m 键+悬挂 DISP k 键），禁裸报「n/n 已完整循环」。
-46. **闸键-证据耦合（V8.23）**：闸类状态键的落下必须以本轮证据在案为前置；「登记问题单即写闸键」是结构病（run18 三表现先例见档案 §三 4.3-46）。
+46. **闸键-证据耦合**：闸类状态键的落下必须以本轮证据在案为前置；「登记问题单即写闸键」是结构病。
     - ①证据新鲜度基线=单一事实源函数 evidence_baseline（本轮 run_started_at；lite 轮回落夹具源轮开跑时刻——「不早于夹具源轮」才是夹具语义下的真新鲜）。
     - ②G3 缺分支 testlog→派补证单+固定窗等待，超时 sset g3_evidence_gap 显形（治理报告计「缺证过闸」，首过率不虚高），禁静默写闸键。
     - ③G4 测试报告判定=存在性×新鲜度双查（origin/integration 上最后提交 ≥ 基线，旧件不满足即走派单等待）；缺报告超时同款落 g4_evidence_gap。
     - ④G5 评审卡判词带 created_at 时间窗（<基线的卡不参与判词合并；lite 传夹具源基线保复用语义）；finalize 前置评审卡 body 非空校验（空 body=无评审实物，禁收口，等 review-record 落卡）。
-    - ⑤审计口径：G5 发布准出早于 UAT 是 §2.4 冻结面既定序（准出→发布→上线后用户对账），非时序倒挂——判「放行无效」须以缺评审实物/证据链断裂为准（防复发先例见档案 §三 4.3-46，派单词携带口径提示）。
-47. **报告引用产物新鲜度与计数实测（V8.23；来历见档案 §三 4.3-47）**：报告收录/引用的产物证据与计数必须当轮实取。
+    - ⑤审计口径：G5 发布准出早于 UAT 是 §2.4 冻结面既定序（准出→发布→上线后用户对账），非时序倒挂——判「放行无效」须以缺评审实物/证据链断裂为准（派单词携带口径提示）。
+47. **报告引用产物新鲜度与计数实测**：报告收录/引用的产物证据与计数必须当轮实取。
     - ①QGate 证据包：收录前校验产物正文 generated 时间戳 ≥ 证据基线，旧件禁收录并清中央仓旧产物。
     - ②交付物全景矩阵：锚核验须先 fetch origin 再判定，命中 blob 还须过最后提交 ≥ 基线的窗口校验；不新鲜降级标「在仓·旧版」禁标「模版符合」（本地 remote-tracking ref 无 fetch 核验=推送时序差下旧值虚标）。
     - ③复盘表计数：标题数以 issues.log 实测为准，自指单（retro-open-items）追加后必须重取计数；叙事注册文案禁手填问题单计数。
 
 
-50. **异常响应 300 秒时限（V8.23，用户 2026-10-14 裁定：任何异常行为及事件须在 300 秒内识别并推进，禁死等；本条立法时误占已用编号 48，按「编号是稳定 ID」规则顺延为 50）**：监控与等待体系的全部异常发现面按「发现≤240s、动作≤300s」收紧——①监督器熔断证据等待：指纹持续不变 300s 即首次自动提醒评审卡 owner（matrix 点名+登记问题单 breaker-wait-nudge），此后每 300s 再提醒，连续 10 次无响应升级登记问题单 breaker-wait-escalated（人工介入信号），永不静默死等也永不弃守熔断语义；②监控哨节奏：推演在跑期间巡检周期 5 分钟一拍，任一日志（supervisor/scenario/agent）最后时间戳距今超 5 分钟即触发诊断；③驱动内等待环的空转判定与提醒节奏（idle_half 等）在下一轮复盘按同限统一定标（本条立规，阈值迁移分轮兑现）。既有教训：run19 熔断死等 14400s+ 零动作、run16 重启风暴 67 分钟零告警——「慢发现+慢动作」的代价都已实测在案。
+50. **异常响应 300 秒时限（用户 2026-10-14 裁定：任何异常行为及事件须在 300 秒内识别并推进，禁死等；本条立法时误占已用编号 48，按「编号是稳定 ID」规则顺延为 50）**：监控与等待体系的全部异常发现面按「发现≤240s、动作≤300s」收紧——①监督器熔断证据等待：指纹持续不变 300s 即首次自动提醒评审卡 owner（matrix 点名+登记问题单 breaker-wait-nudge），此后每 300s 再提醒，连续 10 次无响应升级登记问题单 breaker-wait-escalated（人工介入信号），永不静默死等也永不弃守熔断语义；②监控哨节奏：推演在跑期间巡检周期 5 分钟一拍，任一日志（supervisor/scenario/agent）最后时间戳距今超 5 分钟即触发诊断；③驱动内等待环的空转判定与提醒节奏（idle_half 等）在下一轮复盘按同限统一定标（本条立规，阈值迁移分轮兑现）。既有教训：run19 熔断死等 14400s+ 零动作、run16 重启风暴 67 分钟零告警——「慢发现+慢动作」的代价都已实测在案。
 
-49. **经验受控注入（V8.25，2026-10-14 阿里调研轮 B2；来历=specs/2026-10-14-ali-15agent-squad-research.md 提案 B）**：跨轮经验复用走「候选→审核→受控注入」半环，默认关闭（EXPERIENCE_INJECT=1 显式开启才注入）。
+49. **经验受控注入（2026-10-14 阿里调研轮 B2；来历=specs/2026-10-14-ali-15agent-squad-research.md 提案 B）**：跨轮经验复用走「候选→审核→受控注入」半环，默认关闭（EXPERIENCE_INJECT=1 显式开启才注入）。
     - ①三前提缺一不可：经审核（expcandidates curate approved）＋版本化带出处（指纹/源轨迹锚）＋注入留痕（injectedRuns 追加制，幂等）。
     - ②凭据形态改写：注入文本只以「历史经验出处」形态呈现，不得含可被当作本轮实测凭据的 commit 哈希/卡号/event_id——§4.2 污染防线（各维度清零、禁前序轮凭据冒充本轮实测）不受影响，清零断言照常成立。
-    - ③注入通道单一：派单简报历史经验行（column-dispatch stepBrief，封顶 3 条 fail-soft，存储异常不阻断派发）。测试锚=exp-inject.test.ts＋column-dispatch-brief.test.ts（已绿；推演实跑首验待下轮开启注入的专项轮）。
+    - ③注入通道单一：派单简报历史经验行（column-dispatch stepBrief，封顶 3 条 fail-soft，存储异常不阻断派发）。
 
-51. **同类风险收敛性判定（V8.26，用户 2026-10-14 裁定：同类或同一事件的风险和问题是否持续收敛，是多轮工作的有效判定标准；熵增应熔断或降级，并升级风险项）**：同类/同一事件风险的处置有效性以「是否持续收敛」为判定标准，机械口径=复发间隔走势——间隔放宽≥1.5 倍=收敛中（复发在变疏）；复发≥3 次且间隔不放宽、或≥8 次持久=**熵增**（不收敛）。熵增即三联动处置：①**升级**（复发异常升 high，事件带复发账）②**熔断**（该指纹的自动处置停发——反复提醒/回收无效还在原路径重复=副作用风暴，改走人闸升级）③**降级**（负责人暂停喂新活，先收敛存量再扩量）。产品执法面=集群巡检官收敛性追踪（§2.5 集群巡检官证据面；CLUSTER_INSPECTOR_CONVERGENCE=off 可关，状态账跨重启）；复盘义务=§2.7 复盘行「同类风险收敛性对账」（风险族×上轮/本轮复发×趋势×熵增处置；熵增族无处置=复盘打回）。既有教训：run14 回灌轰炸（同类提醒反复无效仍持续发送）、run19 熔断死等（同一指纹停滞 14400 秒零升级）——「不收敛还在原路径上重复」的代价已实测在案。测试锚=overlay custom/server/clusterinspector/__tests__/convergence.test.ts（13 用例：趋势分类/账本持久化/生命周期重置/巡检环三联动/旁路开关）＋simharness retro-convergence-gate.test.sh（模板↔生成器同步门）；推演实跑首验待下轮复盘对账节。
+51. **同类风险收敛性判定（用户 2026-10-14 裁定：同类或同一事件的风险和问题是否持续收敛，是多轮工作的有效判定标准；熵增应熔断或降级，并升级风险项）**：同类/同一事件风险的处置有效性以「是否持续收敛」为判定标准，机械口径=复发间隔走势——间隔放宽≥1.5 倍=收敛中（复发在变疏）；复发≥3 次且间隔不放宽、或≥8 次持久=**熵增**（不收敛）。熵增即三联动处置：①**升级**（复发异常升 high，事件带复发账）②**熔断**（该指纹的自动处置停发——反复提醒/回收无效还在原路径重复=副作用风暴，改走人闸升级）③**降级**（负责人暂停喂新活，先收敛存量再扩量）。产品执法面=集群巡检官收敛性追踪（§2.5 集群巡检官证据面；CLUSTER_INSPECTOR_CONVERGENCE=off 可关，状态账跨重启）；复盘义务=§2.7 复盘行「同类风险收敛性对账」（风险族×上轮/本轮复发×趋势×熵增处置；熵增族无处置=复盘打回）。既有教训：run14 回灌轰炸（同类提醒反复无效仍持续发送）、run19 熔断死等（同一指纹停滞 14400 秒零升级）——「不收敛还在原路径上重复」的代价已实测在案。
 
-52. **测试报告 PASS 结论行强约束（V8.28，run19 复盘根治）**：G4/G5 门禁读取测试报告 / 发布评审稿时，必须见到结构化 `PASS`/`READY-GATE-PASS`/`TEST-PASS` 关键词行（行首匹配）才算过闸——文件存在不等于结论合格，无结论行=打回。`final-report-merge.py` / `mx-report-audit.py` 同步落地门禁测试；测试锚=已固。首验：run20 收尾批。
+52. **测试报告 PASS 结论行强约束（run19 复盘根治）**：G4/G5 门禁读取测试报告 / 发布评审稿时，必须见到结构化 `PASS`/`READY-GATE-PASS`/`TEST-PASS` 关键词行（行首匹配）才算过闸——文件存在不等于结论合格，无结论行=打回。`final-report-merge.py` / `mx-report-audit.py` 同步落地门禁测试。
 
-53. **采集端登录态漂移强约束（V8.28，run19 复盘根治）**：`studio` 换装（含 dist 重建、`STUDIO_DIST_DEFERRED=0` 或上游升级）后，第一轮推演的采集面必须先实拍 capture-precheck（login 适配）后才允许进入下一步；任何步位的采集若登录态未在位则整步降级为 frames-degraded/ 而非冒充实时。测试锚=`mx-report-audit.py` md5 分组 + `mx-report-gen.py` 步骤级认证词（已固）。首验：run20 收尾批 + capture-precheck 实证。
+53. **采集端登录态漂移强约束（run19 复盘根治）**：`studio` 产品构建产物更新或上游升级后，第一轮推演的采集面必须先实拍 capture-precheck（登录适配）后才允许进入下一步；任何步位的采集若登录态未在位则整步降级为 frames-degraded/ 而非冒充实时。审计按 `mx-report-audit.py` md5 分组与 `mx-report-gen.py` 步骤级认证词判定。
 
-54. **驱动被宿主清理的断点续跑标准（V8.28，run19 复盘吸收）**：监督器（mx-relay / supervisor）在驱动被宿主会话压缩或 OOM Killer 杀死后必须 30 秒内断点续跑，并以日志面 `driver-restart-storm` 为键登记问题单；连续 ≥3 次非熔断 rc≠0 即升级 `driver-restart-storm` issue，幂等一次不在 cluster inspector 同期重复。测试锚=`mux/run-driver-supervisor.sh` 自愈脚本（已固）。
+54. **驱动被宿主清理的断点续跑标准（run19 复盘吸收）**：监督器（mx-relay / supervisor）在驱动被宿主会话压缩或 OOM Killer 杀死后必须 30 秒内断点续跑，并以日志面 `driver-restart-storm` 为键登记问题单；连续 ≥3 次非熔断 rc≠0 即升级 `driver-restart-storm` issue，幂等一次不在 cluster inspector 同期重复。监督器由 `mux/run-driver-supervisor.sh` 自愈脚本承担。
 
-55. **中文截断按字符非字节（V8.28，run19/run16 复盘根治）**：所有 bash/heredoc/Python 文本处理时 `head -c`/`tail -c` 改为 `cut -c`（字符级）——head -c 误用按字节切中文产生 0xEF/0xBF 等孤立坏字节写入 scenario.log/issues.log，触发 `mx-log-sanitize.py` 净化阻断。测试锚=`mux/tests/` 字符级 vs 字节级断言。
+55. **中文截断按字符非字节（run19/run16 复盘根治）**：所有 bash/heredoc/Python 文本处理时 `head -c`/`tail -c` 改为 `cut -c`（字符级）——head -c 误用按字节切中文产生 0xEF/0xBF 等孤立坏字节写入 scenario.log/issues.log，触发 `mx-log-sanitize.py` 净化阻断。字符级处理的断言在采集与报告两链各一条。
 
-56. **结构性延后下轮开跑前带锚点回写（V8.28，run19 复盘扩展）**：纪律 28「结构性类别禁自动观察归桶」的补完——结构性延后（闸键合规类/审计发现类/推送失败类/结论行与合并冲突类）在每轮开跑前必须由人工处置并带 `file:line` 锚回写到 issues.log；下轮开跑时的 prelaunch check 必须断言这些延后 key 在本轮 prelaunch 段消失。测试锚=`mux/mx-prelaunch-check.sh` ⑯+ `mux/discipline-test-coverage.md` 锚定。
-57. **禁止拆闸式解锁（V8.29，run20 用户 21:02 裁定）**：闸 FAIL 的唯一出口=缺项清单真派上游修订+复审 PASS 写入闸键。以打破死循环为名人工置闸键/跳过 gate_blocked=拆闸，一律无效并回滚（回滚配方：stop 文件+撤闸键+真派修+重启）。死循环要修的是派修流程断裂，不是把闸放掉。
-58. **判词检索锚持久化（V8.29，run20 G2 悬置 12h 根因）**：闸判词的时间锚（G2_TS/SEC_TS 类）必须跨重启持久（state 键 sset_once 语义）；每次重启重锚=把历史判词全排出检索窗=闸永悬。判词读取面=卡 body **并** result 字段（评审员写 result 是合法形态）；卡 JSON 消费前必须剔控制字符（jq parse error=整源致盲）。
-59. **state.env 并发写纪律（V8.29，run20 幂等键两度丢失实录）**：外部工具写 state 键一律经 `sset`（同进程语义毫秒窗）并写后核验；整文件读改写会被驱动循环的 sset 竞态吃掉。sset 依赖 RUN_ID/SIM_ROOT 环境完备，缺则写进幽灵路径假成功。
-60. **派单三件套与板名解析（V8.29，run20 派单断棒第二刀）**：派单卡必须 ready+完整正文（任务/结论行契约/评审锚）+群内 @工人档案 触发；assignee=工人档案名（`*-csw-*` 族），板名只是容器——跨板复制时板名从 `kanban boards list` 解析，禁硬编。agent 执行走看板派发器，与 gateway 常驻无关。
-61. **平台配置变更连带重启+适配器活性探测（V8.29，run20 矩阵断档 2.8h 实录）**：改平台配置（.env/config）后必须重启网关并验证适配器装载（mx-up 已内建 90s 活性探测 fail-fast）；/health 活性探测不覆盖消息面。派单后必须验证送达（agent 回执/工作痕迹），未达即重发。
-62. **夜间停滞六层防线（V8.29，run20 隔夜 7h 停滞终修）**：工人连通性冒烟（启动前真打模型往返，import 检查抓不住 httpx2 版本冲突类）｜网关 pid+适配器双探活｜synapse/cc-switch 探活｜15min 智能监督（13 步 SOP v2）｜launchd 机械看守人（监督断档代行，不依赖会话存活）｜磁盘水位。venv 重建必须按 pyproject 钉版补 extras（anthropic==0.87.0 锚，未钉版装最新=httpx2 分叉冲突工人必崩）。
-63. **巡检官采集面健壮性（V8.29，run20 卡面三小时盲区实录）**：采集垫片（无板聚合器）缓存写必须 pid 唯一 tmp+fsync+读校验（并发截断=静默空串=假绿）；无板子命令逐个归一（diagnostics 空串炸轮）；巡检官轮失败要在快照可观测（runs 冻结=轮崩）。守卫链：巡检官→驱动自愈联动（anomalies 映射派单/催办）。
-64. **期望对账（V8.29，run20 hu 份额 5 项无卡实录）**：「应存在而不存在」类（期望的派单卡/提交缺失）对一切存在性检测器原理性不可见——关键派单（评审缺项清单/任务分解）必须跑期望对账（`mx_audit_dispatch`：期望清单×全板卡×main 稿，两缺即补派），对账结果落 evidence。
-65. **集成合并职责归位（V8.30，2026-10-15 用户裁定）**：代码评审与集成合并＝域 lead 职权（后端 wei／前端 mei，评审与合并为同一责任链，双域串行防同分支推挤）；产品经理不合并不评审代码；推演程序（驱动）只做 git 祖先链真值验收（`_integration_truth`：origin/integration 须包含各在场 feat 分支 tip，lead 自报不算）与超时补棒兜底（45min 时限硬上限+活性早判，兜底触发记代偿单 §2.6.5）。派发词、角色边界注册表（reviewer 增合并本职＋integration-authority=own-domain；wei/mei 能力声明补位）、16b 场景代码三面同步；演进目标「合并回归组织侧」（§2）由此落地。
-66. **devimpl 任务完成定义与拆分（V8.34 重写，run20 实测锚定）**：完成定义四步前置——本地 commit＋push origin＋群内回执＋监督确认，缺一不得 Turn ended（run20 18:30 跨档案「干完不交卷」三例实证：模型自了断停在「实现完」，派发词步骤序列不构成行为约束；V8.32 完成定义段已内嵌 aipay-scenario.sh 派发词五处）。拆分沿用 16b 子件纪律；单子件复杂度数值上限不预设拍脑袋参数（「1.5 万/5 步」「3 万/3 调用」两版均采样不充分已废），run21 按真做/嘴炮 session 全量采样定标。监督哨「极简单步令」补救路径创例（run20 19:29/19:45 两发实证有效）。
-67. **持续流水线（V8.33，2026-10-15 用户裁定「持续交付/集成/改进/测试要滚动起来」）**：四持续——①持续集成：单分支落地即触发域负责人评审合并，不等全齐（run20 反例：6 分支 15:54-18:32 陆续落地，wei 直至 19:25 驱动重入才被派单，瀑布损失 1h+）；②持续测试：单分支 testlog 落地即派对应测试，不等 devimpl_done；③持续交付：测试过一条进 staging 一条，里程碑推进；④持续改进：派发词携带上次评审关注点（dev_signal）。run21 开跑前 aipay-scenario.sh 落增量派发；巡检官 delivery.pushed 检测器（分支落地可见性）配套。
-68. **产品改动三件套验收（V8.34，run20 实录立法）**：任何「根治/产品化」完成定义=①部署产物命中（bundle/构建物含该改动）＋②部署实例在跑＋③字面触发事件（govbus/日志至少 1 条实证）——三证齐才算完成；「合入 main」单证不算。run20 delivery.pushed 虚报实录：合 main 未构建未部署、检测器消费的数据源未接线=死件，复盘时才识破。同理适用于方案条款：写入正本须带实测锚点（文件行号/事件 id/命令输出），无锚不立参数。
-69. **supervisor 进程监控（V8.34，run20 实录立法）**：监控面必须盯 supervisor 进程存活本身，不只驱动日志年龄——run20 supervisor 15:31 死亡后 5 小时无人察觉（监控哨只查日志新鲜度，孤儿期全队零派单、驱动 18:40 死后无人接管）。落地：监控哨巡检项增 supervisor＋驱动双进程存在性检查；supervisor 自身死亡属最高优先级告警（全队失能前兆）。
-70. **交付物轮次一致性（V8.36，run20 复盘立法）**：进入本轮交付物面的任何工件，文件头声明轮（「轮次」/「派发标识」字段）必须等于本轮 RUN——声明轮≠本轮即往轮产物，报告判词「往轮产物」且交付物矩阵计缺件，G3 闸证同径记 g3-testlog-stale-run 派补证。run20 实锤：系分稿 PAYCORE/MP 分别为 run16/run14 文档、G3 测试日志 PAYCORE-C/N 为 run19/run16 证据，经 integration 合并兜底路径（无共同祖先改 cherry-pick 独有文件，central 64dff9e）混入本轮，报告按「模版符合/不符」呈现、门禁计「6/6 在案」放行。根因=「ref 上路径最后 touch ≥ 轮起点」的新鲜度判据被合并刷新蒙过——路径被碰过≠产物是本轮的，存在性判据不得替代产物归属判据。判据单一源=simharness mux/report_truth.py（生成器渲染/审计器查 14a/驱动 G3 三处共用，禁两套正则）；机械检查=tests/report-truth-anchor.test.sh①④；prelaunch ⑱。
-71. **交付物锚点保留（V8.36，run20 复盘立法）**：报告交付物锚引用的 ref 必须存在于远端（ls-remote 可查）；集成分支（integration/＜RFD＞）保留至报告四格式持久化完成后才可清理，清理前打保留 tag。run20 实锤：13 件交付物锚 origin/integration/RFD-001@658971a，远端赛后已无该分支、658971a 无分支包含（游离提交）——「双凭证可反查」集体失效。审计查 14b FAIL 级；锚活性查询失败（网络）fail-open 不判失效，死锚由渲染层标注+审计器双确认。机械检查=tests/report-truth-anchor.test.sh②。
-72. **逐步问题单注册检查（V8.36，run20 复盘立法）**：叙事注册（STEPS_META）每步必须带 issue_keys；台账命中该步注册键的问题单行必须渲染进该步 ③ 段（明细入折叠区，可见层留人话摘要）；注册键有台账行而逐步零渲染=审计查 14c FAIL；台账键未注册到任何步=生成器 stderr 清单+审计 WARN，收尾链补注册前先跑「台账键×步归属」盘点（本条为注册完整性的机械检查条款）。run20 实锤：26 步 issue_keys 全空→27 处「已知问题：无（本步零问题单）」与台账 139 行 ISSUE 并存，审计四查全过照放。数据通道=生成器侧柜 evidence/report-truth-findings.json（审计器禁解析 HTML 猜）。
-73. **净额闸判机械判据（V8.36，§5.9 第 2 线补完）**：六道关卡仪表盘的「✓ 已通过」必须带判词 provenance；人类角色模拟判的闸（G1/G5），其放行须在 approved.events 中有对应人工裁决记录，由 approval-proxy 代批放行的闸在净额行不计通过——判据=该闸 gate 事件的 actor 字段非 proxy。run20 实锤：G5 存在 approval-proxy 代批记录，仪表盘仍显 ✓、净额口径只落脚注，§5.9「代偿代判的闸在净额行不计通过」无机械执行面。auto-approve 类代偿单轮超 50 笔触发产品缺陷升级（PR 编号强制关联清偿门）。测试锚=待首验（run21 审计器接线配套）。
-74. **采集降级上限（V8.36，§5.6 采集纪律⑩补完）**：§5.6 采集纪律⑩ 的合规降级登记是单步口径，单轮降级步数超过必采清单的 1/3（R18 口径 5 项）时，该轮结论必须带「采集降级超限」红徽章，报告头部口径卡与第 9 章治理终态同时标注；产品面承载率低于验收线（4/5）的轮，净额行不计「全流程验证通过」。run20 实锤：17 步 frame-capture-failed+product-surface-degraded 全以「重启轮」单标签降级观察，R18 必采降到 10/15、承载率 1/5，均不阻断收尾且报告无整轮级标注——单步合规降级无上限=整轮采集面可静默清零。测试锚=待首验（run21 审计器接线配套）。
+56. **结构性延后下轮开跑前带锚点回写（run19 复盘扩展）**：纪律 28「结构性类别禁自动观察归桶」的补完——结构性延后（闸键合规类/审计发现类/推送失败类/结论行与合并冲突类）在每轮开跑前必须由人工处置并带 `file:line` 锚回写到 issues.log；下轮开跑时的 prelaunch check 必须断言这些延后 key 在本轮 prelaunch 段消失。prelaunch check ⑯ 断言这些延后 key 消失。
+57. **禁止拆闸式解锁（run20 用户 21:02 裁定）**：闸 FAIL 的唯一出口=缺项清单真派上游修订+复审 PASS 写入闸键。以打破死循环为名人工置闸键/跳过 gate_blocked=拆闸，一律无效并回滚（回滚配方：stop 文件+撤闸键+真派修+重启）。死循环要修的是派修流程断裂，不是把闸放掉。
+58. **判词检索锚持久化（run20 G2 悬置 12h 根因）**：闸判词的时间锚（G2_TS/SEC_TS 类）必须跨重启持久（state 键 sset_once 语义）；每次重启重锚=把历史判词全排出检索窗=闸永悬。判词读取面=卡 body **并** result 字段（评审员写 result 是合法形态）；卡 JSON 消费前必须剔控制字符（jq parse error=整源致盲）。
+59. **state.env 并发写纪律（run20 幂等键两度丢失实录）**：外部工具写 state 键一律经 `sset`（同进程语义毫秒窗）并写后核验；整文件读改写会被驱动循环的 sset 竞态吃掉。sset 依赖 RUN_ID/SIM_ROOT 环境完备，缺则写进幽灵路径假成功。
+60. **派单三件套与板名解析（run20 派单断棒第二刀）**：派单卡必须 ready+完整正文（任务/结论行契约/评审锚）+群内 @工人档案 触发；assignee=工人档案名（`*-csw-*` 族），板名只是容器——跨板复制时板名从 `kanban boards list` 解析，禁硬编。agent 执行走看板派发器，与 gateway 常驻无关。
+61. **平台配置变更连带重启+适配器活性探测（run20 矩阵断档 2.8h 实录）**：改平台配置（.env/config）后必须重启网关并验证适配器装载（mx-up 已内建 90s 活性探测 fail-fast）；/health 活性探测不覆盖消息面。派单后必须验证送达（agent 回执/工作痕迹），未达即重发。
+62. **夜间停滞六层防线（run20 隔夜 7h 停滞终修）**：工人连通性冒烟（启动前真打模型往返，import 检查抓不住 httpx2 版本冲突类）｜网关 pid+适配器双探活｜synapse/cc-switch 探活｜15min 智能监督（13 步 SOP v2）｜launchd 机械看守人（监督断档代行，不依赖会话存活）｜磁盘水位。venv 重建必须按 pyproject 钉版补 extras（anthropic==0.87.0 锚，未钉版装最新=httpx2 分叉冲突工人必崩）。
+63. **巡检官采集面健壮性（run20 卡面三小时盲区实录）**：采集垫片（无板聚合器）缓存写必须 pid 唯一 tmp+fsync+读校验（并发截断=静默空串=假绿）；无板子命令逐个归一（diagnostics 空串炸轮）；巡检官轮失败要在快照可观测（runs 冻结=轮崩）。守卫链：巡检官→驱动自愈联动（anomalies 映射派单/催办）。
+64. **期望对账（run20 hu 份额 5 项无卡实录）**：「应存在而不存在」类（期望的派单卡/提交缺失）对一切存在性检测器原理性不可见——关键派单（评审缺项清单/任务分解）必须跑期望对账（`mx_audit_dispatch`：期望清单×全板卡×main 稿，两缺即补派），对账结果落 evidence。
+65. **集成合并职责归位（2026-10-15 用户裁定）**：代码评审与集成合并＝域 lead 职权（后端 wei／前端 mei，评审与合并为同一责任链，双域串行防同分支推挤）；产品经理不合并不评审代码；推演程序（驱动）只做 git 祖先链真值验收（`_integration_truth`：origin/integration 须包含各在场 feat 分支 tip，lead 自报不算）与超时补棒兜底（45min 时限硬上限+活性早判，兜底触发记代偿单 §2.6.5）。派发词、角色边界注册表（reviewer 增合并本职＋integration-authority=own-domain；wei/mei 能力声明补位）、16b 场景代码三面同步；演进目标「合并回归组织侧」（§2）由此落地。
+66. **devimpl 任务完成定义与拆分（run20 实测锚定）**：完成定义四步前置——本地 commit＋push origin＋群内回执＋监督确认，缺一不得 Turn ended（run20 18:30 跨档案「干完不交卷」三例实证：模型自了断停在「实现完」，派发词步骤序列不构成行为约束；完成定义段已内嵌 aipay-scenario.sh 派发词五处）。拆分沿用 16b 子件纪律；单子件复杂度数值上限不预设拍脑袋参数（「1.5 万/5 步」「3 万/3 调用」两版均采样不充分已废），run21 按真做/嘴炮 session 全量采样定标。监督哨「极简单步令」补救路径创例（run20 19:29/19:45 两发实证有效）。
+67. **持续流水线（2026-10-15 用户裁定「持续交付/集成/改进/测试要滚动起来」）**：四持续——①持续集成：单分支落地即触发域负责人评审合并，不等全齐（run20 反例：6 分支 15:54-18:32 陆续落地，wei 直至 19:25 驱动重入才被派单，瀑布损失 1h+）；②持续测试：单分支 testlog 落地即派对应测试，不等 devimpl_done；③持续交付：测试过一条进 staging 一条，里程碑推进；④持续改进：派发词携带上次评审关注点（dev_signal）。run21 开跑前 aipay-scenario.sh 落增量派发；巡检官 delivery.pushed 检测器（分支落地可见性）配套。
+68. **产品改动三件套验收（run20 实录立法）**：任何「根治/产品化」完成定义=①生效产品产物可查（含该改动）＋②部署实例在运行＋③字面触发事件（govbus/日志至少 1 条实证）——三证齐才算完成；「合入 main」单证不算。run20 delivery.pushed 虚报实录：合 main 未构建未部署、检测器消费的数据源未接线=死件，复盘时才识破。同理适用于方案条款：写入正本须带实测锚点（文件行号/事件 id/命令输出），无锚不立参数。
+69. **supervisor 进程监控（run20 实录立法）**：监控面必须盯 supervisor 进程存活本身，不只驱动日志年龄——run20 supervisor 15:31 死亡后 5 小时无人察觉（监控哨只查日志新鲜度，孤儿期全队零派单、驱动 18:40 死后无人接管）。落地：监控哨巡检项增 supervisor＋驱动双进程存在性检查；supervisor 自身死亡属最高优先级告警（全队失能前兆）。
+70. **交付物轮次一致性（run20 复盘立法）**：进入本轮交付物面的任何工件，文件头声明轮（「轮次」/「派发标识」字段）必须等于本轮 RUN——声明轮≠本轮即往轮产物，报告判词「往轮产物」且交付物矩阵计缺件，G3 闸证同径记 g3-testlog-stale-run 派补证。run20 实锤：系分稿 PAYCORE/MP 分别为 run16/run14 文档、G3 测试日志 PAYCORE-C/N 为 run19/run16 证据，经 integration 合并兜底路径（无共同祖先改 cherry-pick 独有文件）混入本轮，报告按「模版符合/不符」呈现、门禁计「6/6 在案」放行。根因=「ref 上路径最后 touch ≥ 轮起点」的新鲜度判据被合并刷新蒙过——路径被碰过≠产物是本轮的，存在性判据不得替代产物归属判据。判据单一源=simharness mux/report_truth.py（生成器渲染/审计器查 14a/驱动 G3 三处共用，禁两套正则）；机械检查=tests/report-truth-anchor.test.sh①④；prelaunch ⑱。
+71. **交付物锚点保留（run20 复盘立法）**：报告交付物锚引用的 ref 必须存在于远端（ls-remote 可查）；集成分支（integration/＜RFD＞）保留至报告四格式持久化完成后才可清理，清理前打保留 tag。run20 实锤：13 件交付物锚 origin/integration/RFD-001，远端赛后已无该分支、提交无分支包含（游离提交）——「双凭证可反查」集体失效。审计查 14b FAIL 级；锚活性查询失败（网络）fail-open 不判失效，死锚由渲染层标注+审计器双确认。机械检查=tests/report-truth-anchor.test.sh②。
+72. **逐步问题单注册检查（run20 复盘立法）**：叙事注册（STEPS_META）每步必须带 issue_keys；台账命中该步注册键的问题单行必须渲染进该步 ③ 段（明细入折叠区，可见层留人话摘要）；注册键有台账行而逐步零渲染=审计查 14c FAIL；台账键未注册到任何步=生成器 stderr 清单+审计 WARN，收尾链补注册前先跑「台账键×步归属」盘点（本条为注册完整性的机械检查条款）。run20 实锤：26 步 issue_keys 全空→27 处「已知问题：无（本步零问题单）」与台账 139 行 ISSUE 并存，审计四查全过照放。数据通道=生成器侧柜 evidence/report-truth-findings.json（审计器禁解析 HTML 猜）。
+73. **净额闸判机械判据（§5.9 第 2 线补完）**：六道关卡仪表盘的「✓ 已通过」必须带判词 provenance；人类角色模拟判的闸（G1/G5），其放行须在 approved.events 中有对应人工裁决记录，由 approval-proxy 代批放行的闸在净额行不计通过——判据=该闸 gate 事件的 actor 字段非 proxy。run20 实锤：G5 存在 approval-proxy 代批记录，仪表盘仍显 ✓、净额口径只落脚注，§5.9「代偿代判的闸在净额行不计通过」无机械执行面。auto-approve 类代偿单轮超 50 笔触发产品缺陷升级（PR 编号强制关联清偿门）。
+74. **采集降级上限（§5.6 采集纪律⑩补完）**：§5.6 采集纪律⑩ 的合规降级登记是单步口径，单轮降级步数超过必采清单的 1/3（R18 口径 5 项）时，该轮结论必须带「采集降级超限」红徽章，报告头部口径卡与第 9 章治理终态同时标注；产品面承载率低于验收线（4/5）的轮，净额行不计「全流程验证通过」。run20 实锤：17 步 frame-capture-failed+product-surface-degraded 全以「重启轮」单标签降级观察，R18 必采降到 10/15、承载率 1/5，均不阻断收尾且报告无整轮级标注——单步合规降级无上限=整轮采集面可静默清零。
 
-79. **评测回报与指标治理（V8.45，百度评测轮）**：任何评测指标必须声明驱动动作（drives）；`report_only` 单独出现=装饰指标并在报告显式告警；新增聚合指标未登记注册表=门禁测试红；消费证据只认真实账本，全零=未接线；报告/EvalOps 必须呈现 total/wired/unwired/decoration，禁手抄评测数字。
-80. **评测证据与安全边界（V8.45）**：setHash 漂移阻断跨轮直接对比；能力维度未标注如实计数、不猜；三角审计严格口径与保守反事实必须分栏标注，保守不作门禁；红队 v1 只接 S0 并如实声明，逃逸率只作观测；证据端点密封集 403、内联证据写「不可回溯」；线上证据只经回填且带 source，禁把 no_data 写成通过。
-81. **判词锚点认 round 注记族（V8.47，run22 复盘根治②）**：G5/UAT 判词行的机器锚须剥离「（roundN，改判/改判重报/维持）」注记后取行首 token 或「结论：X」；指令回显、转述或引述行、非 round 括注一律仍拒。依据：run22 评审 11 轮判词全被拒、PASS 终态读成 FAIL，9h 死锁主根因。
-82. **UAT 报告契约双路径（V8.47，run22 复盘根治①）**：UAT 前置谓词认契约路径 `docs/test/<RFD>-test-report.md` 与汇总路径 `docs/reports/TEST-<RFD>.md` 任一满足即真，判据逐项同款；派发词须显式给出契约路径，不留隐性沿革口径。依据：run22 UAT fail-fast 永假，靠人工归位令解。
-83. **帧窗口与重放幂等（V8.47，run22 复盘根治③/⑤）**：陈旧帧拦截的窗上界=审计执行时刻（非报告 mtime——报告生成与审计之间的后触帧恒红是误报）；run 起点 t0 拦截不放松、补拍标注豁免不变；capture_step 重放幂等（已拍且帧在盘即跳过），杜绝采集重试造成的帧集合轮转红。
-84. **采集-挂接-审计三链完整（V8.47，run22 复盘根治④/⑦）**：R18 采集 op 注册缺席时按步键 glob 盘上帧补挂并标注来源（孤儿帧不静默降级）；每次审计把 issues.log 实读指纹（sha256+行数+mtime）落读态见证日志供双态振荡定诊；复位指纹取三源（评审卡 body＋结论行卡键＋房间最新判词行原文哈希，任一源缺席 fail-soft 退化）；HumanGate 批准记录由导演通道在判词 PASS 后自动记录，评审不得把「批准记录未落卡」计为缺项（R-5 环形依赖立法）。
+79. **评测回报与指标治理（百度评测轮）**：任何评测指标必须声明驱动动作（drives）；`report_only` 单独出现=装饰指标并在报告显式告警；新增聚合指标未登记注册表=门禁测试红；消费证据只认真实账本，全零=未接线；报告/EvalOps 必须呈现 total/wired/unwired/decoration，禁手抄评测数字。
+80. **评测证据与安全边界**：setHash 漂移阻断跨轮直接对比；能力维度未标注如实计数、不猜；三角审计严格口径与保守反事实必须分栏标注，保守不作门禁；红队 v1 只接 S0 并如实声明，逃逸率只作观测；证据端点密封集 403、内联证据写「不可回溯」；线上证据只经回填且带 source，禁把 no_data 写成通过。
+81. **判词锚点认 round 注记族（run22 复盘根治②）**：G5/UAT 判词行的机器锚须剥离「（roundN，改判/改判重报/维持）」注记后取行首 token 或「结论：X」；指令回显、转述或引述行、非 round 括注一律仍拒。依据：run22 评审 11 轮判词全被拒、PASS 终态读成 FAIL，9h 死锁主根因。
+82. **UAT 报告契约双路径（run22 复盘根治①）**：UAT 前置谓词认契约路径 `docs/test/<RFD>-test-report.md` 与汇总路径 `docs/reports/TEST-<RFD>.md` 任一满足即真，判据逐项同款；派发词须显式给出契约路径，不留隐性沿革口径。依据：run22 UAT fail-fast 永假，靠人工归位令解。
+83. **帧窗口与重放幂等（run22 复盘根治③/⑤）**：陈旧帧拦截的窗上界=审计执行时刻（非报告 mtime——报告生成与审计之间的后触帧恒红是误报）；run 起点 t0 拦截不放松、补拍标注豁免不变；capture_step 重放幂等（已拍且帧在盘即跳过），杜绝采集重试造成的帧集合轮转红。
+84. **采集-挂接-审计三链完整（run22 复盘根治④/⑦）**：R18 采集 op 注册缺席时按步键 glob 盘上帧补挂并标注来源（孤儿帧不静默降级）；每次审计把 issues.log 实读指纹（sha256+行数+mtime）落读态见证日志供双态振荡定诊；复位指纹取三源（评审卡 body＋结论行卡键＋房间最新判词行原文哈希，任一源缺席 fail-soft 退化）；HumanGate 批准记录由导演通道在判词 PASS 后自动记录，评审不得把「批准记录未落卡」计为缺项（R-5 环形依赖立法）。
 
 ### 4.4 关键技术规范总表
 
@@ -2011,7 +1959,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | 任务粒度 | 单卡 ≤1 人日（单会话可吞上限实测 ≈2 人日）；>1 人日腿须 ≥2 commit 拆分证据 |
 | 测试配比 | 测试=开发 ×0.3 独立成项；整体 +15% 缓冲 |
 
-**表五：环境变量一览**（harness 侧其余变量见工程档案附录 C 运维规范）
+**表五：环境变量一览**
 
 | 变量 | 作用 | 缺省 |
 |---|---|---|
@@ -2061,25 +2009,25 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 ### 4.5 风险登记表
 
-风险管不管用，先看认没认账。本表把六轮推演真实发生过的事故归并成十五类机制级风险，每类一行：触发是什么、已垫了什么护垫（补丁/门禁测试/条款，带锚）、在哪些轮实发。与工程档案的分工：档案记逐轮细节与改进项历史层（正本），本表只做机制检索。新事故先归档、再回填本表一行。缓解未产品化的标「观察」。
+风险管不管用，先看认没认账。本表把历轮推演真实发生过的事故归并成机制级风险，每类一行：触发是什么、已落了什么缓解（机制/门禁测试/条款）、在哪些轮实发。本表只做机制检索；新事故先记问题单、再回填本表一行。缓解未产品化的标「观察」。
 
 | # | 风险 | 触发与现象 | 已落缓解（锚） | 实发轮次 |
 |---|---|---|---|---|
-| R1 | 驱动进程死亡或被连带清杀 | 会话结束连带清理进程树、监督器与人工双拉驱动互杀、静默死亡无失败行 | 自愈监督器+驱动锁（674ca53/2f9408a）；驱动静态扫描门禁（D21）；「判轮终止须查监督器在场」入复盘红线 | run8/run11/run12 |
-| R2 | 容量体系失配 | 并发上限 1 对流水线 13 路扇出——派发石沉大海、队列满丢件 400 余次、审批回声重丢 302 次 | 并发定标 30（39fc9c8）+队列去重键改 event_id（120ba522+门禁 4 断言）；派发可达性校验自动重递（3a92ed7） | run11（单轮三轮风暴） |
-| R3 | G5 发布准出多轮打回 | 七项一次产出缺一整轮打回、会话卡死无早检、证据链滞后 | PAYCORE 三拆+分节落卡（61576dc）；G5 窗宽 3600；repo_has 新鲜度按回归轮取夹具源轮（6959a2b） | run8/run11/run12/run13 |
-| R4 | 帧采集错页或补拍冒充 | SPA 哈希路由冷启动回落壳页整批废拍、补拍帧冒充实拍、13 小时零实时帧；采集上下文登录态丢失→整路恒拍登录壳页+采集 worker 中途停滞 | 采集内置于驱动 16 步+零帧拒出报告+门禁⑰（94aa2fc）；拍摄位注册表 capture-plan.env（651a091）；截图红线四断言（§5.5；317204e 等）；V8.21 壳页红线 md5 结构性锚定（simharness 59a444f） | run9/run10/run12/run13/run16（22/48 登录壳页+17:55 后停滞） |
-| R5 | 报告链收尾阻塞与叙事失实 | 按轮注册缺失被强制关卡拦、人工润色把未发生写成已发生、审计 FAIL 被绕行；台账坏字节令报告链连环崩（驱动重启循环 67 分钟）；注册 keys 全空令 25 步误 ⬜ 帧零挂接 | 按轮注册强制关卡 R17；收尾判据②审计熔断接线（4bec9eb 门禁⑱）；叙事锚点实测条款 §5.5；台账净化+监督器风暴护栏+keys 兜底与 state↔report 断言（纪律 44/45，simharness 59a444f） | run8/run10/run11/run12/run16 |
-| R6 | 网关事故族（挂死槽/重启器堆叠/依赖缺失） | 会话挂起无失败信号、三家重启程序并存互杀、适配器缺依赖全员聋哑 40 分钟 | patch 586 挂死槽周期扫（门禁㉓）；网关重启权单一所有；在跑轮激活器 idle 窗（abd0870） | run11（hindsight 三卡死）/run12（四起连环） |
-| R7 | 活性判定误诊 | 日志 mtime 被网关噪音恒刷（假活）、工具刷屏计入工作行、真挂起被误判成死循环 | 活性判定真化=真实工作行时间戳（3a92ed7）；mtime 禁用+卡死早检（dd5aa14/79c91eb）；§4.3 纪律 2/3 | run8（五起）/run11/run12 |
-| R8 | 判词被模板文字污染 | 评审卡残留派单模板字面「FAIL」被结论合并规则捡走、判词发送哑火 | 判词四案归一+末判词赢+送达回读确认（697c644/f3d7bb9）；§4.3 纪律 8「只认结论行结构」 | run2/run12 |
-| R9 | 部署通道静默回退补丁 | deploy 把已修补丁覆盖回旧版（.bak 链取证）、自更新擦运行时补丁——差点验证一个未运行的修复 | runtime 清单内副本同步（overlay a1f3a75）+门禁⑬「副本须含补丁行」（addd840）；每次 mx-up dry-run 对账（工程档案附录 B.5） | run6/run7/run9（启动前拦截） |
-| R10 | 静默吞错与假成功 | 建号误用旧端点必 400 却照写 roster、限流下预邀静默缺员、清空提交落错分支报成功 | 建号改 v2 PUT+失败拒写（01045c39）；检错退避重试件+缺员记问题单（c39d520）；§4.3 纪律 23/24；R28 三方对账（71f7ca5） | run7/run9/run11 |
-| R11 | 静态注册表真空报喜 | 按轮注册表未注册时默认渲染「一次通过」旧账、六域表回退旧轮数据 | 默认分支一律 ⬜/拒绝渲染（fb07c6a）；§5.5 静态注册表兜底条款 | run6/run10 |
-| R12 | locale 与全角标点致 bash 驱动崩溃 | UTF-8 locale 下全角标点首字节并入变量名，`set -u` 驱动当场打断 | LC_ALL=C 入头注+花括号纵深防御（a91af20）；fail-visible 静态扫描门禁 | run8（六型）/run12 |
-| R13 | 治理落账最后一公里断链 | 度量未回写、声明记问题单漏账、驱动日志称已记问题单而台账无行、报告口径行声称登记而台账无键 | gov_archive_commit 落账原子化（71f7ca5）；「已记问题单须台账键可反查」条款；报告「记入问题清单」声称条件化=查台账再写 | run9/run13（监控侧补记+报告声称与台账不符两型） |
-| R14 | 驱动运行中被编辑、并行会话互踩 | bash 边执行边读脚本致随机错位；未提交改动被并行会话提交卷入 | §4.3 纪律 25「运行中禁改主脚本」；库文件 source 进内存可改；提交卫生先例锚（工程档案） | run10/2026-10-06 |
-| R15 | agent 噪音拥塞网关 | 收尾后碎聊刷屏占满事件循环、健康端点间歇 000 五十分钟 | 共享线程提及门（087d2b9）；启动前静场处置（静默令+重启）入运行手册；网关健康两步复探 | run11/run12→run13 间隙 |
+| R1 | 驱动进程死亡或被连带清杀 | 会话结束连带清理进程树、监督器与人工双拉驱动互杀、静默死亡无失败行 | 自愈监督器+驱动锁；驱动静态扫描门禁（D21）；「判轮终止须查监督器在场」入复盘红线 | run8/run11/run12 |
+| R2 | 容量体系失配 | 并发上限 1 对流水线 13 路扇出——派发石沉大海、队列满丢件 400 余次、审批回声重丢 302 次 | 并发定标 30+队列去重键改 event_id（120ba522+门禁 4 断言）；派发可达性校验自动重递 | run11（单轮三轮风暴） |
+| R3 | G5 发布准出多轮打回 | 七项一次产出缺一整轮打回、会话卡死无早检、证据链滞后 | PAYCORE 三拆+分节落卡；G5 窗宽 3600；repo_has 新鲜度按回归轮取夹具源轮 | run8/run11/run12/run13 |
+| R4 | 帧采集错页或补拍冒充 | SPA 哈希路由冷启动回落壳页整批废拍、补拍帧冒充实拍、13 小时零实时帧；采集上下文登录态丢失→整路恒拍登录壳页+采集 worker 中途停滞 | 采集内置于驱动 16 步+零帧拒出报告+门禁⑰；拍摄位注册表 capture-plan.env；截图红线四断言（§5.5）；壳页红线 md5 结构性锚定（simharness 59a444f） | run9/run10/run12/run13/run16（22/48 登录壳页+17:55 后停滞） |
+| R5 | 报告链收尾阻塞与叙事失实 | 按轮注册缺失被强制关卡拦、人工润色把未发生写成已发生、审计 FAIL 被绕行；台账坏字节令报告链连环崩（驱动重启循环 67 分钟）；注册 keys 全空令 25 步误 ⬜ 帧零挂接 | 按轮注册强制关卡 R17；收尾判据②审计熔断接线（门禁⑱）；叙事锚点实测条款 §5.5；台账净化+监督器风暴护栏+keys 兜底与 state↔report 断言（纪律 44/45） | run8/run10/run11/run12/run16 |
+| R6 | 网关事故族（挂死槽/重启器堆叠/依赖缺失） | 会话挂起无失败信号、三家重启程序并存互杀、适配器缺依赖全员聋哑 40 分钟 | 挂死槽周期扫（门禁㉓）；网关重启权单一所有；在跑轮激活器 idle 窗 | run11（hindsight 三卡死）/run12（四起连环） |
+| R7 | 活性判定误诊 | 日志 mtime 被网关噪音恒刷（假活）、工具刷屏计入工作行、真挂起被误判成死循环 | 活性判定真化=真实工作行时间戳；mtime 禁用+卡死早检；§4.3 纪律 2/3 | run8（五起）/run11/run12 |
+| R8 | 判词被模板文字污染 | 评审卡残留派单模板字面「FAIL」被结论合并规则捡走、判词发送哑火 | 判词四案归一+末判词赢+送达回读确认；§4.3 纪律 8「只认结论行结构」 | run2/run12 |
+| R9 | 部署通道静默回退变更 | deploy 把已修改变更覆盖回旧版（.bak 链取证）、自更新擦运行时改动——差点验证一个未运行的修复 | runtime 清单内副本同步+门禁⑬「副本须含变更行」；每次 mx-up dry-run 对账 | run6/run7/run9（启动前拦截） |
+| R10 | 静默吞错与假成功 | 建号误用旧端点必 400 却照写 roster、限流下预邀静默缺员、清空提交落错分支报成功 | 建号改 v2 PUT+失败拒写；检错退避重试件+缺员记问题单；§4.3 纪律 23/24；R28 三方对账 | run7/run9/run11 |
+| R11 | 静态注册表真空报喜 | 按轮注册表未注册时默认渲染「一次通过」旧账、六域表回退旧轮数据 | 默认分支一律 ⬜/拒绝渲染；§5.5 静态注册表兜底条款 | run6/run10 |
+| R12 | locale 与全角标点致 bash 驱动崩溃 | UTF-8 locale 下全角标点首字节并入变量名，`set -u` 驱动当场打断 | LC_ALL=C 入头注+花括号纵深防御；fail-visible 静态扫描门禁 | run8（六型）/run12 |
+| R13 | 治理落账最后一公里断链 | 度量未回写、声明记问题单漏账、驱动日志称已记问题单而台账无行、报告口径行声称登记而台账无键 | gov_archive_commit 落账原子化；「已记问题单须台账键可反查」条款；报告「记入问题清单」声称条件化=查台账再写 | run9/run13（监控侧补记+报告声称与台账不符两型） |
+| R14 | 驱动运行中被编辑、并行会话互踩 | bash 边执行边读脚本致随机错位；未提交改动被并行会话提交卷入 | §4.3 纪律 25「运行中禁改主脚本」；库文件 source 进内存可改 | run10/2026-10-06 |
+| R15 | agent 噪音拥塞网关 | 收尾后碎聊刷屏占满事件循环、健康端点间歇 000 五十分钟 | 共享线程提及门；启动前静场处置（静默令+重启）入运行手册；网关健康两步复探 | run11/run12→run13 间隙 |
 
 | R16 | 报告事实面单点数据缺陷 | 单点手工数据（叙事注册 keys）缺一处→完成态/帧挂接/审计口径整链失真；多源写入的台账混入 1 个坏字节→报告链消费方连环崩+监督器循环重启 | keys 兜底回落+state↔report 一致性 FAIL 断言（纪律 45）；报告链头部台账净化（.badbytes 隔离+U+FFFD）；监督器重启风暴护栏（≥3 次登记问题单/≥10 次退避，纪律 44）；DISP 配对口径披露（精确/广播/悬挂三数并呈） | run16（keys 全空+0xbc 坏字节 20 轮循环） |
 
@@ -2122,14 +2070,14 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | 16 | 主任务卡标记完成（限时） | 档案汇总可回溯；0.3 系数口径写入 |
 | 17 | 排期文档入仓库（限时）+父子任务卡齐+逐条派发消息存档 | 测试=开发×0.3 独立成项；整体+15% 缓冲；每任务有时间窗口与依赖 |
 | 18 | 六条开发分支入 origin（各限时）+testlog 随分支提交（脚本逐分支实际核验，缺件记问题单） | 无设计不编码；pay-core≥8/其余≥6 且全绿；金额分 int64；渠道请求本地 mock；前端工程类附 runtime-proof（真工具编译+启动+首帧，§5.3 G3⑦）；G3 关卡标志可反查 |
-| 19 | 测试报告入仓库+commit id 回填全部关联卡；评测运行+红队+评估器三角+维度覆盖+集锚点落 `evidence/evals/eval-summary.json`；V8.46 增线上证据回填与处置链读数（`remediations.json`） | 测试者≠写码者；缺陷报→修→验全关且只认本轮记录；跨模块契约测试在案（§5.3 G4⑦，服务应用无依赖环境先装再跑，未执行即记入问题清单）；执行输出摘要证明实际执行过；实跑 commit 与发布基线同祖（merge-base --is-ancestor 可验）；G4-E 判定 PASS/GAP/FAIL（FAIL 不置 g4_pass）；处置未关项只记问题单不改判据 |
-| 20 | 七项结论入群+准出卡关闭+完备性检查报告入仓库；G4-E 已过或 gap 已登记（g4_eval_pass/g4_eval_gap 二选一）；V8.46 增发布门台账 `release-gate.jsonl`；V8.47 判词锚点认 round 注记族、批准记录由导演通道 PASS 后自动记录（纪律 81/84） | 判词只认评审卡结构化字段；HumanGate 批准事件入 approved.events 可反查（PASS 后自动落，评审不等不算缺项）；FAIL 即发布冻结；台账与评审卡不一致以评审卡为准并记问题单 |
-| 21 | 验收报告入仓库且锁定标准全过（限时）；V8.46 增 UAT 判定台账 `uat-verdicts.jsonl`（逐条 AC 三态）；V8.47 增报告契约双路径（纪律 82） | AC 逐条判词三态+证据锚点（脚本逐条覆盖核验，缺条即不通过）；**判词证据含运行实证帧**（真工具形态，§5.4.4——禁只认仓内测试报告当验收）；结论=判词汇总禁矛盾总括；UAT 启动前自检：freeze 在 origin/main、测试报告在 origin/integration（发布基线口径；契约路径 `docs/test/<RFD>-test-report.md` 与汇总路径 `docs/reports/TEST-<RFD>.md` 任一满足，纪律 82）；台账与验收书不一致以验收书为准并记问题单 |
+| 19 | 测试报告入仓库+commit id 回填全部关联卡；评测运行+红队+评估器三角+维度覆盖+集锚点落 `evidence/evals/eval-summary.json`；增线上证据回填与处置链读数（`remediations.json`） | 测试者≠写码者；缺陷报→修→验全关且只认本轮记录；跨模块契约测试在案（§5.3 G4⑦，服务应用无依赖环境先装再跑，未执行即记入问题清单）；执行输出摘要证明实际执行过；实跑 commit 与发布基线同祖（merge-base --is-ancestor 可验）；G4-E 判定 PASS/GAP/FAIL（FAIL 不置 g4_pass）；处置未关项只记问题单不改判据 |
+| 20 | 七项结论入群+准出卡关闭+完备性检查报告入仓库；G4-E 已过或 gap 已登记（g4_eval_pass/g4_eval_gap 二选一）；增发布门台账 `release-gate.jsonl`；判词锚点认 round 注记族、批准记录由导演通道 PASS 后自动记录（纪律 81/84） | 判词只认评审卡结构化字段；HumanGate 批准事件入 approved.events 可反查（PASS 后自动落，评审不等不算缺项）；FAIL 即发布冻结；台账与评审卡不一致以评审卡为准并记问题单 |
+| 21 | 验收报告入仓库且锁定标准全过（限时）；增 UAT 判定台账 `uat-verdicts.jsonl`（逐条 AC 三态）；增报告契约双路径（纪律 82） | AC 逐条判词三态+证据锚点（脚本逐条覆盖核验，缺条即不通过）；**判词证据含运行实证帧**（真工具形态，§5.4.4——禁只认仓内测试报告当验收）；结论=判词汇总禁矛盾总括；UAT 启动前自检：freeze 在 origin/main、测试报告在 origin/integration（发布基线口径；契约路径 `docs/test/<RFD>-test-report.md` 与汇总路径 `docs/reports/TEST-<RFD>.md` 任一满足，纪律 82）；台账与验收书不一致以验收书为准并记问题单 |
 | 22 | work-report.md 存档中央仓（每人状态分布/WIP/停滞 72h 均实际核验数据） | 超负载记问题单；停滞任务 100% 有处置意见 |
-| 23 | 合规意见书入仓库（独立性声明/抽检记录 3 条实查/关切清单/分层签名线字段齐）；V8.46 修正 delivery 灯帧按 `deliver` 载荷登记 | 发现 100% 记问题单；独立复核未回执如实留空不代签 |
-| 24 | 复盘文档+治理报告入仓库；EvalOps 读数（集/运行/pass@k/门禁/unknown/覆盖/红队）随治理报告在案；V8.46 增治理结果快照 `governance-closure/summary.json` | 问题单 100% DISP 回写台账本体；未处置如实标「待处置」并计数；行动项四要素齐；度量实测；端点失败按 `summary.failed` 如实呈现 |
+| 23 | 合规意见书入仓库（独立性声明/抽检记录 3 条实查/关切清单/分层签名线字段齐）；修正 delivery 灯帧按 `deliver` 载荷登记 | 发现 100% 记问题单；独立复核未回执如实留空不代签 |
+| 24 | 复盘文档+治理报告入仓库；EvalOps 读数（集/运行/pass@k/门禁/unknown/覆盖/红队）随治理报告在案；增治理结果快照 `governance-closure/summary.json` | 问题单 100% DISP 回写台账本体；未处置如实标「待处置」并计数；行动项四要素齐；度量实测；端点失败按 `summary.failed` 如实呈现 |
 | 25 | IDE 核验记录存档（任务跳转/简报生成/界面组件在位） | 可从任务一键跳进工作台并出简报 |
-| 26 | simulation-report.html 生成（状态以产物存在性与生成时间回填，禁自标）；第 9 章含证据八（评测治理面）与证据九（治理结果，V8.46） | 26 步状态真实不作假；报告验收=§5.5 全线；合并后复跑审计 R15/证据九为真断言 |
+| 26 | simulation-report.html 生成（状态以产物存在性与生成时间回填，禁自标）；第 9 章含证据八（评测治理面）与证据九（治理结果） | 26 步状态真实不作假；报告验收=§5.5 全线；合并后复跑审计 R15/证据九为真断言 |
 
 ### 5.3 六道关卡判据
 
@@ -2140,9 +2088,9 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | G1 需求上锁 | ①逐条 AC 可机械化判定（≥3，禁空话）②范围外清单③影响面（模块/接口/数据）④涉敏评估（涉敏出 ISO27001 摘要）⑤两轮不齐不得开工 | freeze 文件四要素+AC 编号清单 |
 | G2 架构治理评审 | ①设计五要素（背景/方案/接口/数据/风险）②爆炸半径排查（对照三清单）③验证计划前移④备选方案≥2 且有取舍⑤历史偏差硬性拦截（命中项已显式回应） | 评审记录结构化留痕+检索结论 |
 | G3 编码门禁 | ①无设计不编码②需求-代码-测试一一对应③pay-core≥8/其余≥6 全绿④金额分 int64⑤渠道本地 mock⑥testlog 随分支脚本实际核验⑦**前端工程类交付目标运行时可运行**：真实开发者工具自动化通道编译+启动+首帧，runtime-proof（launchOk/screenshot/checkedAt）随分支提交，产品能力=POST /api/hermes/runtime-verify/miniprogram（单测全绿不等于可运行——run14 教训：小程序网络层无基址注入，单测测不到）⑧写入关卡标志 g3_code_pass | DEV 分支+testlog+runtime-proof+标志写入时间戳 |
-| G4 独立验证 | ①测试者≠写码者②缺陷报→修→验全关③只认本轮记录④测试报告六要素⑤执行输出证明实际执行⑥实跑 commit 与基线同祖⑦**跨模块契约测试**：服务应用↔核心模块接口双向实测（方法名/参数形态/返回形状；被消费接口逐条契约用例；测试未执行=缺陷非声明态——run14 实锤 merchant-api↔pay-core 漂移漏网）⑧前端工程类运行冒烟（真工具首帧，与 runtime-proof 同源）⑨**评测子门 G4-E**：评测运行+红队（良性误报 ≤20%）+评估器三角（裁判离线不得有 S1 判词）+能力维度覆盖（0/7 记 gap）+集锚点（漂移判 FAIL）；PASS 置 g4_eval_pass，GAP 记录缺口并放行，FAIL 不置 g4_pass；⑩V8.46 增线上证据回填与失败样本处置链（未关项只记问题单，不改 G4-E 三态） | 测试报告+契约用例清单+commit 回填关联卡+eval-summary.json+remediations.json |
-| G5 发布准出 | ①测试证据挂卡②构建同 commit 可复现③依赖无新增④回滚具体化（数字阈值+命令级+72h 观察窗）⑤灰度三档各档观察期⑥发布说明面向用户收益⑦HumanGate 批准可反查；⑧G4-E 已过或 gap 已登记（g4_eval_pass/g4_eval_gap 二选一）；判词只认评审卡结构化字段；FAIL 即冻结；⑨V8.46 发布门台账 append-only（台账与评审卡不一致以评审卡为准） | 七项结论行+评审卡 body+批准事件+eval-summary.json+release-gate.jsonl |
-| G6 复盘 | ①三段式②行动项四要素③治理度量实测④问题单 100% DISP 回写⑤经验入分组记忆库；⑥V8.46 闸键=`retro_done`（步 24），`report_done` 只作步 26 完成键 | 复盘文档+治理报告+台账+gate 键 retro_done |
+| G4 独立验证 | ①测试者≠写码者②缺陷报→修→验全关③只认本轮记录④测试报告六要素⑤执行输出证明实际执行⑥实跑 commit 与基线同祖⑦**跨模块契约测试**：服务应用↔核心模块接口双向实测（方法名/参数形态/返回形状；被消费接口逐条契约用例；测试未执行=缺陷非声明态——run14 实锤 merchant-api↔pay-core 漂移漏网）⑧前端工程类运行冒烟（真工具首帧，与 runtime-proof 同源）⑨**评测子门 G4-E**：评测运行+红队（良性误报 ≤20%）+评估器三角（裁判离线不得有 S1 判词）+能力维度覆盖（0/7 记 gap）+集锚点（漂移判 FAIL）；PASS 置 g4_eval_pass，GAP 记录缺口并放行，FAIL 不置 g4_pass；⑩增线上证据回填与失败样本处置链（未关项只记问题单，不改 G4-E 三态） | 测试报告+契约用例清单+commit 回填关联卡+eval-summary.json+remediations.json |
+| G5 发布准出 | ①测试证据挂卡②构建同 commit 可复现③依赖无新增④回滚具体化（数字阈值+命令级+72h 观察窗）⑤灰度三档各档观察期⑥发布说明面向用户收益⑦HumanGate 批准可反查；⑧G4-E 已过或 gap 已登记（g4_eval_pass/g4_eval_gap 二选一）；判词只认评审卡结构化字段；FAIL 即冻结；⑨发布门台账 append-only（台账与评审卡不一致以评审卡为准） | 七项结论行+评审卡 body+批准事件+eval-summary.json+release-gate.jsonl |
+| G6 复盘 | ①三段式②行动项四要素③治理度量实测④问题单 100% DISP 回写⑤经验入分组记忆库；⑥闸键=`retro_done`（步 24），`report_done` 只作步 26 完成键 | 复盘文档+治理报告+台账+gate 键 retro_done |
 
 ### 5.4 报告规范
 
@@ -2154,7 +2102,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 - `final-report.html`=唯一人读正本：导读层+机器报告正文嵌入。问题单台账全量、原始事件流等机器明细折叠为附录区，默认收起、可检索可反查——折叠≠裁剪，全量数据在位，正文主线为人读层。
 - `simulation-report.html`=机器档案：生成器直出全文，重生成后重嵌入正本。
 - 生成器=mx-report-gen.py（`--run` 必带，方案解析源=本文件）。合并=final-report-merge.py。
-- **报告能力正本=overlay 产品侧 `custom/server/report/`**（验收断言 acceptance/证据透传 evidence-blocks/PART1 骨架 part1-skeleton，含测试）。simharness 生成器/审计器为推演期兼容消费壳，两侧判定语义必须一致（差异即缺陷）。判据块（合格线全文+判定证据行）、成效帧功能标注（report-language.ts 三断言：正文黑话/判据双要素/图注功能语义——词表单一事实源=jargon-check.py，两侧同频）同受本条约束。
+- **报告能力正本＝产品侧报告模块**（验收断言、证据透传、PART1 骨架三件）。simharness 生成器/审计器为推演期兼容消费壳，两侧判定语义必须一致（差异即缺陷）。判据块（合格线全文+判定证据行）、成效帧功能标注（report-language.ts 三断言：正文黑话/判据双要素/图注功能语义——词表单一事实源=jargon-check.py，两侧同频）同受本条约束。
 - 元信息（标题/RUN_ID/生成时间/基线 commit/计数）全部从 RUN 数据派生，禁硬编码。图 base64 内嵌自包含。页内锚点 #step1-26 与 #cp-g1..g6 互链。
 - **二合一报告层（叠加后处理）**：`unified-report-layer.py --run` 只读叠加三层人读面。受众卡层=产品/需求分析/架构设计/研发设计/代码开发/测试/研发管理/平台八个视角各 4-6 张问答卡，数字实测。完整审阅层=内嵌报告正本。路演素材层=roadshow-outline 每块 headline/points/anchor 三字段 ≥10 块。不动报告正本与审计断言面，缺项如实标「本轮未见该数据」。
 - 本节与 §5.5/§5.6 的断言均须在生成器与审计器接线完成，未接线即出报告=违例。
@@ -2169,7 +2117,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
    - **字段级模板核对**：§2.7 该步字段清单逐字段断言，字段在位=✅、缺=红，禁关键词包含命中充数。内嵌渲染可截断为结构化摘录，但必须带全文锚点（路径@commit），禁一句「已入仓」带过。
    - 对照 §5.2 该步合格线逐项判定（过/不过/部分过），六道关卡步附关卡判据逐项表。
    - 无交付物的步明示「本步无文件域交付物」及其实际产出在哪（卡/消息/事件）。
-3. **已知问题**：该步的 ISSUE/DISP 行（自 issues.log 按步过滤）内嵌呈现。方案层历轮实锤与改进台账见工程档案「方案步条历史层」章（正本不含）。无问题则明示「本步零问题单」。
+3. **已知问题**：该步的 ISSUE/DISP 行（自 issues.log 按步过滤）内嵌呈现。方案层历轮实锤与改进台账不入正本。无问题则明示「本步零问题单」。
 4. **处置与改进**：该步问题单的 DISP 处置结论（已修带锚点/观察/延后）与档案台账中关联到本步的改进项落地状态。无则明示「无」。
 
 四段之外的内容（产品路径参考、术语脚注等）一律进步块折叠区或附录《产品操作手册》，不作默认展开。
@@ -2182,7 +2130,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 - 第 18/19/21 步附测试证据三件（案例清单/数据/执行输出）。
 - 派发→分诊→系分→评审→排期→开发→提测→发布→验收各环节流转现场截图 ≥1 张截图，报告按时间线把交付物视图与流转现场交替串联。
 - skill 过程位：xxx-dev 生成 ≥3 张截图+开发调用 ≥2 张截图。
-- 编码委托证据位（V8.54）：走 coding-delegate 的编码步（G3 承载面），`materials/delegate-log.txt` 须呈现引擎身份行（`engine_bin_source=`/`engine_bin=`；指定模型时含 `session 模型已设置`）与终态行（`RESULT exit=`）——引擎身份可审计是「ACP 调用的是谁」的报告证据，缺身份行=证据不全记问题单（type=delegate-identity-missing）。技能装载位声明随 G3 证据呈现：项目技能落 `.agents/skills`（项目级直读）或 `.claude/skills`＋用户级 `~/.zcode/skills` 软链，两方案之一并注明所选；落点与 `skills list` 实证（发现面截图或输出摘录）同批呈现。
+- 编码委托证据位：走 coding-delegate 的编码步（G3 承载面），`materials/delegate-log.txt` 须呈现引擎身份行（`engine_bin_source=`/`engine_bin=`；指定模型时含 `session 模型已设置`）与终态行（`RESULT exit=`）——引擎身份可审计是「ACP 调用的是谁」的报告证据，缺身份行=证据不全记问题单（type=delegate-identity-missing）。技能装载位声明随 G3 证据呈现：项目技能落 `.agents/skills`（项目级直读）或 `.claude/skills`＋用户级 `~/.zcode/skills` 软链，两方案之一并注明所选；落点与 `skills list` 实证（发现面截图或输出摘录）同批呈现。
 - 图执行轮另附图执行证据三件并计入交付物视图：GraphSpec 图模板原文（26 步→节点/边/关卡 join 屏障的 JSON）、全流程推演运行总览图执行实况截图、时间轴回放截图。
 - 引用 QGate 门禁判定的证据一律引用其 release-report/status 输出原文（含来源分布行、声明关联与未验证声明、advisory 面），禁手抄结论为「全绿」。来源分布含降级/声明/无信号桶或存在未验证声明时必须随行呈现（证据写入文件=evidence/qgate-release-report.txt，生成器透传、审计断言随行）。
 
@@ -2206,7 +2154,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
   - a. **承载形态=真实小程序开发者工具模拟器实拍**（微信开发者工具/支付宝小程序开发者工具，simharness mux/cashier-devtools 自动化通道）：交付小程序工程原样加载（运行副本仅许改工程配置的 appid/urlCheck 两项并随帧声明），页面渲染/组件/页面流转全部为交付代码在真模拟器真实运行；网络层经自动化接管路由到本地薄 BFF（前端支撑层；交付 pay-core 真实执行，渠道=本地 mock），支付面板经宿主 API 模拟确认。图注与 provenance 必须同款声明载体与补拍时点（纪律 40⑩）。
   - b. **禁以浏览器预览冒充小程序运行效果**：浏览器预览壳（mux/cashier-preview）仅为开发者工具不可用环境下的登记降级形态，采用时须按降级登记并在图注明示。
   - c. **系列完整性**：功能页全状态覆盖——P1 收银台首页+P2 结果页三态（支付成功/支付失败可重试/订单超时关闭不可重试，三态视图=交付 status-mapper 契约驱动）+幂等实证，双渠道主状态各 ≥1 程；一律整页截图（fullPage）保证布局完整，禁截半屏冒充全貌。报告版面=四分之一宽四列缩略网格（点击全屏放大，窄屏两列），系列帧不占正文篇幅。
-  - d. 交付 BFF/服务层与核心层接口漂移未集成时如实记交付缺陷（run14 实例见档案 §三 5.4.4-①），缺陷记档不改交付件。
+  - d. 交付 BFF/服务层与核心层接口漂移未集成时如实记交付缺陷（run14 实例），缺陷记档不改交付件。
 - ② **质量成效数字表**：单测条数与全绿数、AC 覆盖（每条验收标准有对应用例）、缺陷统计与归因分布、UAT 判词三态分布——全部实测。数据源=evidence/product-outcome/quality-summary.env，驱动于步 26 落盘。
 - ③ **交付完整度**：文档链清单（§2.7 全链逐件带入仓锚）、开发分支与合入基线 commit、发布说明面向用户收益。
 - 证据在位才渲染。缺席如实标注「未采集」并记问题单（type=product-outcome-missing），禁以过程叙事冒充成效。
@@ -2215,11 +2163,11 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 **成效口径二·数字双源**：缺陷总数主源=中央仓测试报告缺陷清单表行（`| DEF-X |` 实读），issues.log 缺陷族键仅兜底且须窄匹配（defect-cards-assignee 类字段流转单不是缺陷本体）。缺陷已修复=测试报告状态列（定格在报告入仓时点），修复终局以 integration tip 复验判词为准——两时点真值并存随行，禁只报其一。单测条数扫 testlog 输出行累计须带 n_fail 差值与口径头注（含修复过程历史输出，非仅终态），无口径注的汇总数字禁入表。
 
-**成效口径三·评测面（V8.22，机制=§2.6.3）**：本轮若发起 Eval Studio 运行，测试报告评测节须带四件实测——发布门禁判定（verdict+实测项+证据缺口清单）、过程双指标（工具选择正确率/轨迹绕路比，未声明期望序列如实「未测」）、六环节分段通过率（有标注才呈现）、异常场景分桶（有异常类目才呈现）。数字一律取自 Eval Studio 运行报告导出（/app/eval），禁手抄改写；评测未发起的轮次如实标「本轮未发起评测」记问题单（type=eval-not-run，观察态），禁以测试过程叙事冒充评测面。
+**成效口径三·评测面（机制=§2.6.3）**：本轮若发起 Eval Studio 运行，测试报告评测节须带四件实测——发布门禁判定（verdict+实测项+证据缺口清单）、过程双指标（工具选择正确率/轨迹绕路比，未声明期望序列如实「未测」）、六环节分段通过率（有标注才呈现）、异常场景分桶（有异常类目才呈现）。数字一律取自 Eval Studio 运行报告导出（/app/eval），禁手抄改写；评测未发起的轮次如实标「本轮未发起评测」记问题单（type=eval-not-run，观察态），禁以测试过程叙事冒充评测面。
 
-**成效口径三·评测治理面（V8.45 扩展，机制=§2.6.7）**：测试报告评测节在四件之外增七件实测——①指标治理（总数/已接线/未接线/装饰候选与装饰键）；②评估器三角（来源计数/冲突/判词可审计率/人工覆盖误杀与假通过候选/严格 vs 保守反事实，保守明确标注「不作门禁」）；③四层指标金字塔（模型/应用/Agent/线上，no_data 如实）；④能力维度覆盖（n/7 + 未标注任务数）；⑤评测集锚点（setId/revision/run.setHash/当前 contentHash/漂移）；⑥安全红队（逃逸率/拦截数/良性误报/S1 未接线声明；逃逸率只作观测）；⑦线上证据回填（QPS/响应分档，未回填写 no_data）。数字一律取自 `evidence/evals/eval-summary.json`（G4-E 机械判定源），禁手抄；失败样本证据可回溯 trace 的写 sessionId，不可回溯如实写「内联证据不可回溯」。
+**成效口径三·评测治理面（机制=§2.6.7）**：测试报告评测节在四件之外增七件实测——①指标治理（总数/已接线/未接线/装饰候选与装饰键）；②评估器三角（来源计数/冲突/判词可审计率/人工覆盖误杀与假通过候选/严格 vs 保守反事实，保守明确标注「不作门禁」）；③四层指标金字塔（模型/应用/Agent/线上，no_data 如实）；④能力维度覆盖（n/7 + 未标注任务数）；⑤评测集锚点（setId/revision/run.setHash/当前 contentHash/漂移）；⑥安全红队（逃逸率/拦截数/良性误报/S1 未接线声明；逃逸率只作观测）；⑦线上证据回填（QPS/响应分档，未回填写 no_data）。数字一律取自 `evidence/evals/eval-summary.json`（G4-E 机械判定源），禁手抄；失败样本证据可回溯 trace 的写 sessionId，不可回溯如实写「内联证据不可回溯」。
 
-**成效口径四·治理结果（V8.46 新增，机制=§2.6.8）**：本轮报告须呈现七项治理读数——①观测信号（会话/LLM 调用/错误/429/工具失败率/TTFT p95/缓存命中）；②基线漂移告警（告警条数与类别、基线不足跳过项）；③评审治理（案例/活跃/已合/首轮通过率/轮次均值/人工批准中位）；④改进实验（面/提案/进行中/冠军/经验/已采纳/探测成本）；⑤发布门台账（当前判定+记录数）；⑥UAT 判定台账（通过/有条件/不通过）；⑦评测处置链（失败/已关/未关/同卷复评）。数字只读 `evidence/governance-closure/summary.json`、`evidence/release-gate.jsonl`、`evidence/uat-verdicts.jsonl`、`evidence/evals/remediations.json`；端点失败按 `summary.failed` 逐项写缺口，禁写成「全部通过」。
+**成效口径四·治理结果（机制=§2.6.8）**：本轮报告须呈现七项治理读数——①观测信号（会话/LLM 调用/错误/429/工具失败率/TTFT p95/缓存命中）；②基线漂移告警（告警条数与类别、基线不足跳过项）；③评审治理（案例/活跃/已合/首轮通过率/轮次均值/人工批准中位）；④改进实验（面/提案/进行中/冠军/经验/已采纳/探测成本）；⑤发布门台账（当前判定+记录数）；⑥UAT 判定台账（通过/有条件/不通过）；⑦评测处置链（失败/已关/未关/同卷复评）。数字只读 `evidence/governance-closure/summary.json`、`evidence/release-gate.jsonl`、`evidence/uat-verdicts.jsonl`、`evidence/evals/remediations.json`；端点失败按 `summary.failed` 逐项写缺口，禁写成「全部通过」。
 
 ### 5.4.5 章节骨架与导读层
 
@@ -2288,17 +2236,17 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
   - ③帧时刻一致性：帧采集记录（r18-steps.json）时间戳须落在该步执行窗口内（scenario.log 段界对账）。无补拍标注的窗外/晚拍帧=FAIL（冒充实时）。
   - ④缺帧处置三态：采集失败=无帧明示+问题单号（禁占位图）。该步无对应产品界面=「功能不存在」声明态（拍摄位规划判定，缺失 UI 列实施方案，不拍无关页凑数）。回归轮（非需求轮）沿用带=「不在本轮执行范围」声明态（完整需求一律全量链，不存在精简版；回归轮仅用于产品/流程验证，对外不用「精简轮」措辞）。
   - 准确补拍允许：补拍帧必须按拍摄位规划（capture-plan.env）拍正确页面+图注明示「补拍」时点（满足则 ③ 降级 WARN），无标注补拍仍 FAIL。错页/不合格帧归 frames-degraded/ 隔离区禁入报告。采集侧门禁照拒空态/错页/未水合壳页。
-- skill 过程展示：xxx-dev 生成过程 ≥3 张截图+开发调用过程 ≥2 张截图。**V8.46 明确排除**：产品技能治理页只有目录/供给/能力发现，没有「生成/调用过程」界面；不拿同一组页面帧冒充两类过程，按 `r18-collection-missing|step-13` 如实登记降级，技能使用读数走 `GET /api/harness/tool-audit`，报告证据九呈现。
+- skill 过程展示：xxx-dev 生成过程 ≥3 张截图+开发调用过程 ≥2 张截图。**明确排除**：产品技能治理页只有目录/供给/能力发现，没有「生成/调用过程」界面；不拿同一组页面帧冒充两类过程，按 `r18-collection-missing|step-13` 如实登记降级，技能使用读数走 `GET /api/harness/tool-audit`，报告证据九呈现。
 - 协作顺序总述：报告必含第 0 章（分幕总览/每幕 RACI 主角/六道关卡位置时序/人机接力点），时序数据自三源实抽，禁手编。
 - 交付物原文：每个产生交付物的步骤内嵌真实内容渲染+字段级核对（§5.4.2 第 2 段），禁转述、禁空占位。
 - 操作记录权威记录化：每步「操作记录」=本轮实际动作+锚点。产品路径参考表入报告附录《产品操作手册》并逐条标注「轮次无关的产品事实，非本轮实录」，正文逐步块不得以该表冒充操作记录。
 - 门禁证据引用：凡引用 QGate 判定/通过率的报告行须带来源分布（qgate release-report 来源列与分布行透传）。降级/声明/无信号桶非零、或存在未验证声明（no-gate/gate-not-run）、或存在未解除 advisory 时，该处不得表述为「全绿/已核验」。
-- 评测治理面（V8.45）：报告第 9 章必含证据八，PART1 必含评测行（子门判定/指标治理/维度覆盖/三角/红队/锚点）；数字只读 eval-summary.json；G4-E 判定三态合法（PASS/GAP/FAIL），FAIL 时 G4 不得置位；评测工作台作为 G4-E 证据面，不并入五面分母。
-- 治理结果面（V8.46）：报告第 9 章必含证据九，PART1 必含治理结果行（观测信号/告警/评审治理/改进实验/发布门/UAT 判定/评测处置链）；数字只读 `governance-closure/summary.json` 与两份 append-only 台账；端点缺口按 `summary.failed` 如实呈现；合并后复跑审计，R15 第 0 章与证据九为真断言。
+- 评测治理面：报告第 9 章必含证据八，PART1 必含评测行（子门判定/指标治理/维度覆盖/三角/红队/锚点）；数字只读 eval-summary.json；G4-E 判定三态合法（PASS/GAP/FAIL），FAIL 时 G4 不得置位；评测工作台作为 G4-E 证据面，不并入五面分母。
+- 治理结果面：报告第 9 章必含证据九，PART1 必含治理结果行（观测信号/告警/评审治理/改进实验/发布门/UAT 判定/评测处置链）；数字只读 `governance-closure/summary.json` 与两份 append-only 台账；端点缺口按 `summary.failed` 如实呈现；合并后复跑审计，R15 第 0 章与证据九为真断言。
 - 产品界面覆盖率：五个产品面（沟通=/app/s/chat 或 /app/s/room、任务=/app/board 看板与任务协同、审批=/app/inbox、度量=/app/stage/govern?tab=metrics 或 /app/stage/accept?tab=delivery、编码=/app/ide）各计 UI 实拍或产品内操作证据，报告 PART1 增承载率行（n/5+逐面一句判定）。验收线 ≥4/5（编码面允许 CLI 作业+IDE 走查组合计达），不达标不阻断收尾但逐面记问题单入下轮前置。
-- IA 面帧（V8.44/V8.55）：报告必含左侧导航帧 ≥1（任一阶段页，五组常驻）＋阶段页单层页签帧 ≥1（建议 ⑤验收 overview 与 ⑥治理 clearance）＋全流程推演区帧 ≥1（/app/sim）＋顶部统一检索弹窗帧 ≥1（/app/search 兼容唤起，射手清场后重开并断言可见）＋IDE 任务工作区帧 ≥1（/app/ide?task=:id，任务工作区/任务会话块）；采集通道=帧命名锚挂步 26 前后，不占必采分母 15；缺席记问题单（type=ia-frame-missing），面板未就绪按纪律 40⑩ 处置。
+- IA 面帧（/）：报告必含左侧导航帧 ≥1（任一阶段页，五组常驻）＋阶段页单层页签帧 ≥1（建议 ⑤验收 overview 与 ⑥治理 clearance）＋全流程推演区帧 ≥1（/app/sim）＋顶部统一检索弹窗帧 ≥1（/app/search 兼容唤起，射手清场后重开并断言可见）＋IDE 任务工作区帧 ≥1（/app/ide?task=:id，任务工作区/任务会话块）；采集通道=帧命名锚挂步 26 前后，不占必采分母 15；缺席记问题单（type=ia-frame-missing），面板未就绪按纪律 40⑩ 处置。
 - **采集三红线**：
-  - ①壳页帧占比红线：hash 冷启动壳页同帧步占已完成步比例 >10% 即审计 FAIL（SPA 就绪强断言在采集端根治，禁靠摘帧降级放行）。**V8.21 升级为结构性锚定**：审计改对盘上帧做 md5 分组，单一像素组被 ≥2 个帧位步键共用且 >10% 即 FAIL，不依赖登记措辞；frames-degraded/ 隔离区不在扫描面（升级来历见档案 §三 5.5-红线①）。
+  - ①壳页帧占比红线：hash 冷启动壳页同帧步占已完成步比例 >10% 即审计 FAIL（SPA 就绪强断言在采集端根治，禁靠摘帧降级放行）。**升级为结构性锚定**：审计改对盘上帧做 md5 分组，单一像素组被 ≥2 个帧位步键共用且 >10% 即 FAIL，不依赖登记措辞；frames-degraded/ 隔离区不在扫描面。
   - ②载荷全缺黄标：「步完成但三类载荷全缺」必采步维持红徽章呈现，非必采完成步降级黄标（区分「实质达标」与「降级在案」，黄标缺登记即 FAIL；降级凭证族=r18-collection-missing 与 frame-capture-failed 两族登记，经 §3.3 别名表折算到步号）。
   - ③承诺面零帧零登记=FAIL：§2.5 承载范围清单内的 ✅ 步零 UI 实拍帧且无 product-surface-degraded 降级登记，直接 FAIL（有降级键维持 WARN，合规降级在案）。
   反面基线见 §5.7 采集可信面。
@@ -2316,14 +2264,14 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 - 每步问题可见：步块第四问内嵌该步 ISSUE/DISP，文末台账仍为全量单一事实源。
 - 判据判定替代原文复制：步块第二段只给逐项判定结论（过/不过/部分过+差异说明），不整段复制方案原文充数。
 - 交付物原文升级：交付物渲染与字段级核对并入步块第二段，核对=字段级+计数/覆盖率断言，禁关键词命中充数。
-- 术语规范：报告正文用行业标准术语。内部代号（补丁号/事故昵称/流程俚语）首次出现必须给全称或一句话解释，违例计入审计发现。
+- 术语规范：报告正文用行业标准术语。内部代号（变更号/事故昵称/流程俚语）首次出现必须给全称或一句话解释，违例计入审计发现。
 - 方案解析源单一：生成器与审计器的方案路径必须指向当前正本，正本换代时同步切换并记档。
 - **六域体检当轮数据源**：报告第 7 章六域判定优先读当轮体检输出（驱动审计步 POST /domains/run 落台账 jsonl+evidence 副本）。按轮注册静态拼装仅作体检缺席时的回落（数据来源注明差异）。体检检查器读数面偏差（如台账视图滞后）如实呈现逐轮修，不粉饰。
 - **静态注册表兜底条款**：生成器一切按轮注册表（关卡打回/六域/注记/新特性/说人话叙事）的默认分支必须 ⬜/拒绝渲染，禁沿用静态文本（未注册=成功文案即历史数据冒充）。六域台账（domain-audit.jsonl）覆写只采纳 run 字段与本轮匹配的行。历轮台账只作来源注。
-- **审计收敛判据（V8.47，run22 报告审计收敛战 4.9h 立法）**：
+- **审计收敛判据（run22 报告审计收敛战 4.9h 立法）**：
   - DISP 配对只按键名：问题单处置（DISP）与开项（ISSUE）的配对判定只按「类型·主体」键名匹配，禁按整行文本匹配（描述字段多步一条时整行永不相等）。
   - 黑话三源同扫：jargon 门禁扫描面=报告正文＋治理报告 metrics 节＋scenario.log 派发词与日志串（七渗漏源全收：note() 日志、指标标注、步块叙事、收尾段、注释与 summary）。
-  - 帧标注通道：r18 帧记录支持 `{file,caption}` 形态，图注可携带「补拍」标注供 V8.4③ 合规降级（字符串路径形态向后兼容）。
+  - 帧标注通道：r18 帧记录支持 `{file,caption}` 形态，图注可携带「补拍」标注，作为降级判定依据（字符串路径形态向后兼容）。
   - 审计器崩溃零容忍：审计器自身异常（NameError 等）=FAIL 不是跳过；评测摘要缺席路径走显式降级分支。
   - 读态见证：每次审计落 issues.log 实读指纹（纪律 84）；驱动轮审计与手工审计读数矛盾时，先对指纹定诊再定性。
 - **纪律 85（CLI 采证走 stream-json）**：任何推演工具需要从 hermes CLI 单查（`chat -q`）回采证据（终文本/token/时长）时，必须加 `--format stream-json` 并解析 result 事件——CLI 0.22.4 起单查不再落 jsonl trace（`HERMES_RUN_TRACE_DIR` 通道缺席，2026-10-23 改进实验台探测根治轮实测锚定）；交互/网关会话的 run-trace 通道不受影响。
@@ -2333,7 +2281,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
   - ①结论先行：首屏=主旨+关键数字+诚实结论，禁穿靴戴帽。
   - ②句句可反查：叙事句=判断句+锚点（时刻须在 scenario.log 命中、计数与台账一致、布尔旗标不作锚点）。交付物模板字段说明写判断句、判据写可机械化核对条件（禁「完善/加强/清晰」类虚词）。
   - ③说人话：内部代号首现给一句话人话释义（术语卡+悬停双通道；词表=mux/glossary.txt 单一事实源，回执/登记/回灌/DISP/段位代号等一律入表）。空话黑名单（赋能/抓手/拆分粒度/众所周知/大幅提升/正在推进中 等）入审计 A7 WARN。
-  - ④人读层机械体检：人读正本生成链跑 jargon 体检（词表与 overlay/scripts/plan-html/jargon-check.py 同源维护），HARD>0 拒出报告。机器档案（simulation-report.html）不受此门约束，其明细进人读正本一律走折叠附录区。
+  - ④人读层机械体检：人读正本生成链跑 jargon 体检（词表与人读正本检查器同源维护），HARD>0 拒出报告。机器档案（simulation-report.html）不受此门约束，其明细进人读正本一律走折叠附录区。
   - 叙事骨架生成器 TODO 提示自带三问自检（判断句？带锚点？人话？）。
 - **步骤状态双轨**：步✅=机制步执行完成（state 标志维度）。交付物合格线未达的步，交付物维度红标+记问题单，不以机制✅遮交付物缺。
 
@@ -2359,18 +2307,18 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 7. 报告持久化。⑧收尾回写（中央仓补充提交）逐条带 DISP 记账。
 **全绿只是准入。零新缺陷的完整收尾轮才算达成**。
 
-**外部依赖不具备条件时的绕过口径（V8.56，run23 用户裁定「不具备条件的直接绕过」）**：
+**外部依赖不具备条件时的绕过口径（run23 用户裁定「不具备条件的直接绕过」）**：
 一轮推演里总有推演域无法自证的事项（典型=等保定级备案受理编号：须向属地公安机关真实递交取回执；
 再如生产流量类读数、真实支付渠道联调）。这类事项**不得靠编造材料过关，也不得无限期卡死整轮**，统一走三段：
 1. **识别**：该事项必须由责任角色在台账里点名（`ISSUE|external-unavailable|<角色>|<事项+依据>`），写清「为什么推演域内不具备条件」。
-2. **批准**：由导演（人）明示批准绕过/缓期，批准依据（用户原话或裁定编号）与截止条件（何真实条件满足后必须补齐）一并登记到事项自身台账（如等保声明 §2 缓期记录）。
+2. **批准**：由发布负责人（人）明示批准绕过/缓期，批准依据（用户原话或裁定编号）与截止条件（何真实条件满足后必须补齐）一并登记到事项自身台账（如等保声明 §2 缓期记录）。
 3. **显形**：报告第 0 章「一页读懂」必须列出「已批准绕过/缓期（不具备条件项）」清单；**缓期≠已完成**，禁在任何交付物或报告中把缓期写成已办结。截止条件满足而未补齐时，该项自动回落为阻断项。
 
-**带缺口放行的显形口径（V8.56，run23 复盘）**：G3/G4 走 `*_evidence_gap` 记录缺口后放行的关卡，
+**带缺口放行的显形口径（run23 复盘）**：G3/G4 走 `*_evidence_gap` 记录缺口后放行的关卡，
 报告第 0 章的状态必须写作「✅ 通过（带缺口）」并附警示行，禁只写「✅ 通过」——缺证过闸是如实记账，
 不是达标；审计口径不变（缺口在案即不判 FAIL，但呈现不得弱化）。
 
-**报告叙事与按轮事实口径（V8.56，run23 复盘）**：报告正文的步级叙事、六域审计结论、按轮注记
+**报告叙事与按轮事实口径（run23 复盘）**：报告正文的步级叙事、六域审计结论、按轮注记
 **必须按轮注册**（`simharness/mux/narrative_<run>.py` 与 `_DOMAINS_<RUN>`），未注册轮一律出「未注册」占位，
 **禁止复用其他轮次的文本或数字**（run23 实录：未注册轮沿用内置静态实测文本，报告出现「26/26 步 UI 图在位」
 「五域合跑 28/28 绿」等非本轮数字，属跨轮污染）。交付物路径匹配允许「基名+通配」变体命中（任务号 vs
@@ -2378,19 +2326,17 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 ### 5.7 基线引用
 
-历轮实测明细（历轮成绩单/门禁测试规模演变/趋势要点）=工程档案《推演历史与工程档案》§八「历轮成绩单」，每轮收尾后由治理报告回填。**run1-run7 不入成绩单**：V8 前判词语义与审计口径为旧制，并入即口径混装；其失败样本全在册——事故与教训见 §4.5 风险登记表与档案件风险全表，成绩单不是只留成功轮的滤镜。方案内常引基线三数：
+历轮实测明细（成绩单/门禁测试规模/趋势）由每轮治理报告回填。**run1-run7 不入成绩单**：早期判词语义与审计口径为旧制，并入即口径混装；其失败样本全在册——事故与教训见 §4.5 风险登记表。方案内常引基线三数：
 - **并行度基线**：run11 实测约 50%（验收线 ≥2× 基线，§5.5 并行度实测条）。
 - **六闸首过率水位**：run13 回归轮 6/6、run14 全量轮 5/6、run15 全量轮 5/6（G2 安全闸 FAIL→复审改判 PASS 首例——真实缺陷拦截+修复链完整走通，非失分污点）、run16 全量轮 4/6（G2 架构评审首轮真打回+G5 两轮真打回熔断——两次均为真缺陷拦截且修复链完整，监控修复链解锁 G5 为首次熔断复位实战；治理目标=上次基线+1，§2.6-5；G2/G5 各一轮低于水位，连续两轮将触发 §5.8.4 准入自动加严）。
-- **时长实测**：全量轮 run14 净 22h（含 13h 中断事故链）→ run15 净 12h39m → run16 净约 9.4h（16:33→01:55；含 G5 修复链 3.5h+报告链重启循环 1.1h——两段摩擦的根治见纪律 44/45 与 run16 复盘，剔除后实际执行面约 5h）；回归轮 run13 净 3.1h（§4.2 目标对账）；run18-lite（ACP 直连验证轮，run17 号位空缺顺延）2026-10-13 完整收卷，成果上 origin（治理归档 6a180c0）。
+- **时长实测**：全量轮 run14 净 22h（含 13h 中断事故链）→ run15 净 12h39m → run16 净约 9.4h（16:33→01:55；含 G5 修复链 3.5h+报告链重启循环 1.1h——两段摩擦的根治见纪律 44/45 与 run16 复盘，剔除后实际执行面约 5h）；回归轮 run13 净 3.1h（§4.2 目标对账）；run18-lite（ACP 直连验证轮，run17 号位空缺顺延）2026-10-13 完整收卷，成果上 origin。
 - **UAT 判词水位**：run14 7/7、run15 5/7、run16 7/7（run15 两缺口 AC-2 状态机/AC-7 三态经测试分片补齐——结构性改善路径兑现）。
 - **采集可信面**：run15 实时帧 48 张为降级在案放行（另有 24 壳页同帧摘除+9 步载荷全缺+产品面承载 3/5<4/5）；run16 帧质量塌方实锤——22/48 帧登录壳页同像素（采集会话被服务端弹回登录页；收尾段重启循环重复早步采集多轮），词面签名红线被登记措辞绕过零 FAIL——壳页红线自此改 md5 结构性锚定（单一像素组 ≥2 步键共用且 >10% 即 FAIL，§5.5），run16 报告按复盘轮重出（26 步全 ✅+11 图位全实拍+12/15 覆盖，28 壳页帧归 frames-degraded 在案）。
 - **并行饱和度**：run16 起验收线=每小时在线工位/应在线工位 ≥80%、任一时段消耗不低于该阶段基准小时的 50%（纪律 48；run15 反面基线=四个欠饱和小时约 50M 闲置，归因见复盘；run16 实测见当轮治理报告）。
 
-### 5.7.1 评测治理基线（V8.45，设计期实测样例）
+### 5.7.1 评测治理基线（设计期实测样例）
 
-以下为设计期在隔离环境实测的样例，只作口径演示，**非轮次验收线**：指标注册表 23 个（21 已接线/2 未接线/1 装饰候选）；能力维度覆盖 1/7、未标注 0（隔离种子集）；红队 3 代×20 个体=84 个体、28 拦截、56 逃逸（67%）、良性误报 17%、13 个算子行；评估器三角 S0 6 条、判词可审计 100%（6/6）；G4-E 结果 PASS；证据抽屉回溯 session/1 tool/150 tokens/900ms。真实轮次以当轮 `eval-summary.json` 为准，水位线待累计三轮后按 §5.8.4 控制线建立。
-
-**V8.46 run22 首验项**：V8.46 新增的七项接线（G6 键、评测处置链、线上证据回填、发布门/UAT 台账、治理结果快照、报告证据九、prelaunch 三十项）尚无真实轮基线。run22 是第一轮，验收只看三件事：接线是否确实执行、端点缺口是否如实呈现、台账与报告是否同源；不以观测告警条数或治理读数高低判优劣，也不据此建立水位线。
+以下为设计期在隔离环境实测的样例，只作口径演示，**非轮次验收线**：指标注册表 23 个（21 已接线/2 未接线/1 装饰候选）；能力维度覆盖 1/7、未标注 0（隔离种子集）；红队 3 代×20 个体=84 个体、28 拦截、56 逃逸（67%）、良性误报 17%、13 个算子行；评估器三角 S0 6 条、判词可审计 100%（6/6）；G4-E 结果 PASS；证据抽屉回溯 session/1 tool/150 tokens/900ms。真实轮次以当轮 `eval-summary.json` 为准，水位线按 §5.8.4 控制线建立。
 
 ### 5.8 环节准入准出与模板质量基线
 
@@ -2410,7 +2356,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 生效口径与配套：
 
 - run≥17 起按本节执行（run17 号位空缺，首个适用轮=run18-lite，已按新口径出报告）；run16 及以前按 §5.2 原基线不改判。
-- 测试准出增量变异得分主判据与编码准出重复行机器度量（V8.35）自 run≥21 起执行，已结束的轮次不改判。
+- 测试准出增量变异得分主判据与编码准出重复行机器度量自 run≥21 起执行，已结束的轮次不改判。
 - 「准出·交付物字段」即报告交付物全景矩阵的逐项核对项。生成器 V2 核查清单与本节同步，正则口径随首个适用轮校准（run16 工件预校准底表=76 项中 34 未中，已随 run16 复盘轮产出）——红项=口径变更信号，不是质量退化。
 
 #### 5.8.1 门层级模型
@@ -2553,7 +2499,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 - 拆分证据：>1 人日腿 ≥2 commit。
 - 安全自查清单过：OWASP Top 10 逐项声明+SSDF「生产良安」组实践。支付场景加三条：敏感认证数据零存储、金额计算不落浮点、写操作幂等键全覆盖。
 - 门禁执行证据：56 门禁四族运行记录随行。
-- 新代码质量门数值：静态扫描零新增严重问题；新增代码覆盖率 ≥80%、重复行 ≤3%（SonarQube 缺省质量门口径，只看新增代码）。重复行机器度量（V8.35）：`mux/mx-dup-ratio.mjs --repo <交付仓> --base <基线ref>`（simharness，窗口法近似 SonarQube 口径）产 `evidence/dup-ratio.json`，增量太小=unmeasured 如实不计比率；产物入 run evidence 与⑥治理度量检查签「AI 产出质量」区；无交付仓环境时降级=人工声明+如实记「未机器度量」。
+- 新代码质量门数值：静态扫描零新增严重问题；新增代码覆盖率 ≥80%、重复行 ≤3%（SonarQube 缺省质量门口径，只看新增代码）。重复行机器度量：`mux/mx-dup-ratio.mjs --repo <交付仓> --base <基线ref>`（simharness，窗口法近似 SonarQube 口径）产 `evidence/dup-ratio.json`，增量太小=unmeasured 如实不计比率；产物入 run evidence 与⑥治理度量检查签「AI 产出质量」区；无交付仓环境时降级=人工声明+如实记「未机器度量」。
 - 测试先失败后实现（TDD（测试驱动开发）铁律：先看到测试因功能缺失而红，再写实现转绿；没见过失败的测试不算数）——实现者自查声明+评审者复核。
 - 缺陷补测：本轮修复的缺陷各有先红后绿的回归用例。
 
@@ -2582,7 +2528,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 - 测试金字塔形态声明：单元/集成/端到端三层用例数递减；倒金字塔=结构性问题记入风险。
 
 准出·过程证据：
-- 假阳性抽查 ≥1 处：改坏被测代码，确认对应测试确实会红（变异抽查口径）。**主判据+降级档（V8.35）**：主判据=增量变异得分——`mux/mx-mutation-score.mjs --repo <交付仓> --base <基线ref> --test <测试命令>`（simharness）对 git 增量源码生成有界变异体逐个跑测试，用「测试是否如预期变红」评测试有效性（覆盖率只说明覆盖到，变异得分说明测得对——防 AI 定制化断言虚高覆盖率）；得分 ≥50 过线（本方案约定值，§5.8.4；外部参照自报口径：AI 生成测试 20-40、人写 60-80），产物 `evidence/mutation-score.json` 入 run evidence 与⑥治理度量检查签；基线红=工具 exit 2 中止先修基线（不产假得分）。无跑通环境时降级档=原抽查 ≥1 处+如实记「未跑系统化变异」。低于线处置=打回测试补强而非放行（测得对是测试段的责任，§5.8.1 卡级门语义）。
+- 假阳性抽查 ≥1 处：改坏被测代码，确认对应测试确实会红（变异抽查口径）。**主判据+降级档**：主判据=增量变异得分——`mux/mx-mutation-score.mjs --repo <交付仓> --base <基线ref> --test <测试命令>`（simharness）对 git 增量源码生成有界变异体逐个跑测试，用「测试是否如预期变红」评测试有效性（覆盖率只说明覆盖到，变异得分说明测得对——防 AI 定制化断言虚高覆盖率）；得分 ≥50 过线（本方案约定值，§5.8.4；外部参照自报口径：AI 生成测试 20-40、人写 60-80），产物 `evidence/mutation-score.json` 入 run evidence 与⑥治理度量检查签；基线红=工具 exit 2 中止先修基线（不产假得分）。无跑通环境时降级档=原抽查 ≥1 处+如实记「未跑系统化变异」。低于线处置=打回测试补强而非放行（测得对是测试段的责任，§5.8.1 卡级门语义）。
 - 测不了的用例退回设计：测不了=AC 判定法没写好，退回步 7 并留痕。
 
 **发布（步 20/G5）**
@@ -2665,7 +2611,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 - 过程资产回流清单：本轮教训改了哪个模板/门禁/词表，锚随行——教训不落文件等于没学。
 
 准出·过程证据：
-- 缺陷根因分型统计：本版缺陷按需求遗漏/设计遗漏/编码遗漏/测试遗漏四类归因（CMMI 原因分析口径），为下轮准入加严提供输入。
+- 缺陷根因分型统计：本轮缺陷按需求遗漏/设计遗漏/编码遗漏/测试遗漏四类归因（CMMI 原因分析口径），为下轮准入加严提供输入。
 - 复盘评审五问留痕：数据齐吗/影响全吗/根因够深吗/行动项对吗/结论分享了吗（SRE 口径）。
 
 #### 5.8.3 横切规范族映射
@@ -2692,38 +2638,38 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | 环节进出门 | 敏捷 DoR/DoD、看板在制上限 | 全环节 | §5.8.2 清单 |
 | 决策治理 | CMMI 决策分析、ISO 42001 三级分类；在库 decision-governance | 步 13/14/17 | 决策记录 |
 | 成本估算 | GB/T 42588 NESMA 功能点法；在库 cost-estimation | 步 13/17 | 估算行+互校记录 |
-| 门禁工程（56 门禁四族：核心/架构/合规/补丁） | 在库：目标技能 precheck 体系 | 步 18 | 门禁运行记录 |
+| 门禁工程（56 门禁四族） | 在库：目标技能 precheck 体系 | 步 18 | 门禁运行记录 |
 | 门机制工程（四类门与失败动作） | 在库 gsd 四类门+MEA 证据三轴+four-theories 回路铁则；hermes 列门与验证台账 | 全层级（§5.8.1） | 五级门证据件 |
 | 证据纪律（引用与台账一致） | 在库 EV-ID 引用门+grounded-citations；hermes「已验证/只读过」分离 | 全环节 | 各环节证据行 |
 | 可访问性与国际化 | WCAG 2.2 AA（文本对比度 ≥4.5:1 等）、W3C 国际化基线 | 前端件/UAT | 前端交付物 |
 | 量化管理与研效 | CMMI 四五级（过程性能基线）、DORA 四指标 | 全环节+G6 | §5.7 水位+治理报告 |
 | Agent 运行时评测 | 腾讯 ADP Pre-Launch 清单（TTFT/P99/工具成功率/降级率阈值）、信通院《云上 Agent 基准度量模型》六维（2026-07）、六环节分段与过程双指标方法论 | G4/步 19/§2.6.3 | 测试报告评测节+Eval Studio 运行报告 |
 | 指标注册表与动作绑定 | 百度《Agent 评测体系技术拆解》§4「评估器即回报函数」（2026-10-19）：每个指标先回答驱动什么动作；装饰指标不建 | G4-E/步 24/§2.6.7 | metric-registry 快照+报告证据八 |
-| 评估器三角互证与误杀审计 | 百度 §3：规则/裁判/人工三角互证；裁判理由可审计；保守倾向压低误杀率（本仓作反事实读数，不改正式口径） | G4-E/步 19 | runs/:id/evaluators+报告三角卡 |
-| 安全红队算法化 | 百度 §8：攻击向量库→自动生成→沙箱攻防→裁判自进化；本仓 v1=语料+12 确定性算子+逃逸适应度进化+S0 检测器 | G4-E/步 19 | redteam run+报告红队面 |
+| 评估器三角互证与误杀审计 | 百度 §3：规则/裁判/人工三角互证；裁判理由可审计；保守倾向压低误杀率（本方案作反事实读数，不改正式口径） | G4-E/步 19 | runs/:id/evaluators+报告三角卡 |
+| 安全红队算法化 | 百度 §8：攻击向量库→自动生成→沙箱攻防→裁判自进化；本方案 v1=语料+12 确定性算子+逃逸适应度进化+S0 检测器 | G4-E/步 19 | redteam run+报告红队面 |
 | 评测集资产化与防污染 | 百度 §6：数据集版本化/指纹/分库隔离/隐藏集 | G4-E/步 19 | setHash/revision+漂移行 |
 | 分层归因与证据点击 | 百度 §5：「答案哪来的」一次点击；平台侧归因到组件/切片 | G4-E/步 19 | runs/:id/evidence+证据抽屉 |
-| AgentOps/EvalOps | 百度 §7：评估织进全流程，线上即评测；本仓=评测运营卡+线上证据回填 | 步 24/§2.6.7 | EvalOps 卡+live-evidence |
+| AgentOps/EvalOps | 百度 §7：评估织进全流程，线上即评测；本方案=评测运营卡+线上证据回填 | 步 24/§2.6.7 | EvalOps 卡+live-evidence |
 | 多 Agent 端到端交付与经验复用 | 阿里 AgentCore/AgentLoop《15 个 Agent 组成研发小队》（2026-10）：三挡调优（手动挡 Rubric/半自动挡建议报告/自动挡经验库受控注入）、专家 Commit 反生成基线考卷、失败三档回退 | 派发/巡检/复盘/§2.6.4 | 复盘经验候选台账节+优化建议面板（/app/eval）+约束卡页签（/app/ontology） |
 | 评审治理 | Anthropic Code Review 文章吸收（2026-10-19）：风险分档/审批绑定 head commit/三轮收敛/度量熔断/夜间扫描 | 步 14/20/24、§2.6.8 | reviewgov metrics+报告证据九 |
 | 观测信号与基线漂移 | 内部观测层轮（2026-10-19）：run-trace v1.1 错误 span/reasoning 分离/三层采样/关联字段；四类漂移告警 | 步 24、报告证据九 | obs-signals/obs-alerts 快照 |
 | 改进实验与经验回流 | Google Research harness² 源码调研（2026-10-19）：提案-探测-组合-冠军/回滚；探测绑定真实 Eval 运行 | 步 24、⑥治理·改进实验 | workbench overview/experiences |
-| Harness 工程与 AI 产出验证 | 腾讯云开发者《3个月用Harness重写90万行旧代码》（2026-10-16，数字均自报口径）：运动员/裁判员分离、阈值入红线配置防 AI 作弊（改动触发门禁停等人工）、变异测试评测试有效性（AI 生成测试变异得分自报 20-40 vs 人写 60-80）、审查角色拆专职 SubAgent+干净上下文、Context 分层加载与按阶段模型分配 | G2→G4/步 18-19/§5.8.4 | 五级门证据件+闸 FAIL 修复单唯一出口+变异抽查（≥1 处，V8.29 版，现为降级档）+G5 并行评审编排器；系统化变异得分主判据与重复行机器度量已落地 V8.35 判据（§5.8.4，自 run≥21 起执行；调研档=2026-10-16-wx-three-article-research.md §3 E/F） |
+| Harness 工程与 AI 产出验证 | 腾讯云开发者《3个月用Harness重写90万行旧代码》（2026-10-16，数字均自报口径）：运动员/裁判员分离、阈值入红线配置防 AI 作弊（改动触发门禁停等人工）、变异测试评测试有效性（AI 生成测试变异得分自报 20-40 vs 人写 60-80）、审查角色拆专职 SubAgent+干净上下文、Context 分层加载与按阶段模型分配 | G2→G4/步 18-19/§5.8.4 | 五级门证据件+闸 FAIL 修复单唯一出口+变异抽查（≥1 处，现为降级档）+G5 并行评审编排器；系统化变异得分主判据与重复行机器度量已落地 判据（§5.8.4，自 run≥21 起执行；调研档=2026-10-16-wx-three-article-research.md §3 E/F） |
 | 人机速度分工与判断力治理 | 麦肯锡《The judgment bottleneck: Balancing AI and human speeds in strategy》（2026-10-15）：分析按 AI 时间、判断按人的时间；三层决策分类（参数明确的护栏内自动/不确定性高的由人主导/后果重大的由担责者掌握）；「要接受方案必须相信哪些前提」前置呈现；自动化偏差（人因结果来自机器而信）与 AI 审 AI 的责任递减律；重要结论指定一位负责人 | §2.9 人把关列/G5 HumanGate/UAT/清偿门/步 24 复盘 | 14 介入点登记+人工介入请求决策前提行（原介入卡，belief）+判词 provenance 三态+RACI 角标+清偿门 waive 强制理由 |
-| 会话内介入与插件工程 | 架构师之道《Claude Code mod 开发手册》（2026-10-16）：观察/改写/代答三能力心智模型、常驻状态+随事件刷新界面+参与事件链的适用判据、插件 validate/test 入 CI、与宿主同等权限的安全定位（装前读源码） | 介入动作执行面/巡检与泵/技能治理 | 介入三动作对位（观察=监督面板、改写=续作泵与催办、代答=人工授控与代批裁定史）+插件部署自动通道挂账对齐（2026-10-13 轮遗留） |
+| 会话内介入与插件工程 | 架构师之道《Claude Code mod 开发手册》（2026-10-16）：观察/改写/代答三能力心智模型、常驻状态+随事件刷新界面+参与事件链的适用判据、插件 validate/test 入 CI、与宿主同等权限的安全定位（装前读源码） | 介入动作执行面/巡检与泵/技能治理 | 介入三动作对位（观察=监督面板、改写=续作泵与催办、代答=人工授控与代批裁定史）+插件部署自动通道对齐 |
 
 #### 5.8.4 量化管理基线
 
 数值门槛分两源，写明出处，不得混称：
 
 - **外部权威值**：如新增覆盖率 ≥80%=SonarQube 缺省门、文本对比度 ≥4.5:1=WCAG 2.2、口令与加密参数下限=ASVS 4.0.3、评测门禁工具成功率 ≥99% 与降级率 <0.5%=腾讯 ADP 公开 Pre-Launch 清单（2026-07）。外部值随标准版本演进，采用版本在本节登记，升版须复盘确认。
-- **本方案约定值**：如缓冲 ≥15%、测试=开发×0.3、在制 ≤2、增量变异得分 ≥50（V8.35；防 AI 定制化断言虚高覆盖率，复盘拿实测校准）。约定值注明「本方案约定」，并在复盘里拿实测校准。
+- **本方案约定值**：如缓冲 ≥15%、测试=开发×0.3、在制 ≤2、增量变异得分 ≥50（防 AI 定制化断言虚高覆盖率，复盘拿实测校准）。约定值注明「本方案约定」，并在复盘里拿实测校准。
 
 环节度量沿用 §5.7 水位族（六闸首过率/缺陷密度/证据一次通过率/UAT 判词水位/并行饱和度/采集可信面），不另立口径。
 
-V8.45 评测治理项的阈值归属：**硬阈值只有三项**——G4-E 的 unknown ≤10%、红队良性误报 ≤20%、线上证据（QPS 达成 ≥90%/错误率 <1%/p99/p50 ≤2；响应分档简单 p95 ≤5s、复杂 ≤15s，经 mx-load-probe 回填）。红队逃逸率、能力维度覆盖、装饰指标数、金字塔层状态**不设硬阈值**，只作审计/复盘观测；不得在报告中自造及格线。
+评测治理项的阈值归属：**硬阈值只有三项**——G4-E 的 unknown ≤10%、红队良性误报 ≤20%、线上证据（QPS 达成 ≥90%/错误率 <1%/p99/p50 ≤2；响应分档简单 p95 ≤5s、复杂 ≤15s，经 mx-load-probe 回填）。红队逃逸率、能力维度覆盖、装饰指标数、金字塔层状态**不设硬阈值**，只作审计/复盘观测；不得在报告中自造及格线。
 
-V8.46 治理结果项的阈值归属：**只有一致性是硬判据**——评测摘要 verdict 与 state 闸键同源（审计查 15）、报告证据九与快照/台账同源（审计查 16）、G6 键=retro_done。观测告警条数、评审治理读数、改进实验读数**不设硬阈值**，只作复盘观测；`governance-closure/summary.failed` 只统计端点缺口并在报告如实呈现，不折算成「治理失败」。
+治理结果项的阈值归属：**只有一致性是硬判据**——评测摘要 verdict 与 state 闸键同源（审计查 15）、报告证据九与快照/台账同源（审计查 16）、G6 键=retro_done。观测告警条数、评审治理读数、改进实验读数**不设硬阈值**，只作复盘观测；`governance-closure/summary.failed` 只统计端点缺口并在报告如实呈现，不折算成「治理失败」。
 
 控制线规则：**同一环节度量连续两轮低于水位，该环节准入自动加严一档**。加严=新增一条准入项，由当轮复盘指定；连续两轮回升后恢复。这条规则把复盘的改进动作落到下一轮的进门口上，形成度量驱动的环节自我加严（CMMI 优化级思想：用过程数据反过来改过程本身）。
 
@@ -2734,13 +2680,12 @@ V8.46 治理结果项的阈值归属：**只有一致性是硬判据**——评�
 
 轮级研效度量（DORA 四指标：部署频率/变更前置时间/变更失败率/恢复时长）随治理报告实测，先观察两轮再定水位，不预设线。
 
-### 5.9 姿态门与代偿净额验收（V8.29，2026-10-15 治理轮）
-
+### 5.9 姿态门与代偿净额验收
 本节是 §1.5/§2.6.5 的裁判侧投影，验收线三条：
 
 1. **姿态声明线**：报告头部必须有姿态声明页（本轮 posture、该姿态下代演/代偿政策、能力声明适用范围）；state.env 无 posture 键且报告未声明，按 standard 缺省处理并记勘误。demo 姿态全程显著标注，未标注即 FAIL。
 2. **净额对账线**：报告必须有「代偿净额对账表」（自 evidence/compensation-ledger.tsv 生成；台账缺席时写明缺席而非省略）；能力声明必须含代偿/净额双行，只呈含代偿行即 FAIL。六道关卡仪表盘必须有判词 provenance 标注，代偿代判的闸在净额行不计通过（机械判据=纪律 73：approved.events 该闸裁决记录 actor 非 proxy）。
-3. **清偿门线**：开跑前置检查必须执行上一轮台账 check-clearance——open 笔未 resolve（PR 落码合入 main）且未 waive（带用户批准理由）而开跑的轮，审计判 FAIL，该轮成果标记「清偿门欠账轮」。
-4. **真值三件套线**（V8.36）：交付物轮次一致性（纪律 70）、锚点保留（纪律 71）、逐步问题单注册（纪律 72）由审计器查 14a/14b/14c 机械断言，三者均 FAIL 级（反查承诺失效类诚信问题禁 WARN 化——run20 四查全过照放的教训）；采集降级超限（纪律 74）为整轮级红徽章。
+3. **清偿门线**：开跑前置检查必须执行上一轮台账 check-clearance——open 笔未 resolve（对应缺陷修复合入 main）且未 waive（带用户批准理由）而开跑的轮，审计判 FAIL，该轮成果标记「清偿门欠账轮」。
+4. **真值三件套线**：交付物轮次一致性（纪律 70）、锚点保留（纪律 71）、逐步问题单注册（纪律 72）由审计器查 14a/14b/14c 机械断言，三者均 FAIL 级（反查承诺失效类诚信问题禁 WARN 化——run20 四查全过照放的教训）；采集降级超限（纪律 74）为整轮级红徽章。
 
 成功判定口径随 §2.6.5 激励反转：standard/strict 姿态轮的有效性=新发现并根治缺陷数+证据链完整性；「六闸全绿+26 步走完」不构成 standard/strict 轮的充分成功条件。
