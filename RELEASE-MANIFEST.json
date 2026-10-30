@@ -108,8 +108,8 @@
     "depSourcePolicy": "第三方依赖源码随包（用户裁定 2026-10-27）：vendor/ 三树为无法经 pip/npm 安装的上游源码，随所属模块整树入包（git archive 只取跟踪文件，node_modules/dist 等产物天然不入）；可经 pip/npm 在线安装的依赖不随包，安装时解析",
     "fullPackage": {
       "name": "aistudio-full",
-      "version": "1.0.2-overlay",
-      "tag": "v1.0.2-overlay",
+      "version": "1.0.3-overlay",
+      "tag": "v1.0.3-overlay",
       "includes": "全仓跟踪源码（git archive HEAD）＝4 模块＋仓级基建（scripts/config/docs/reports/evidence 等）",
       "note": "整体包可仅凭源码＋pip＋npm 完成本项目安装与测试（vendor 依赖源码随包，registry 依赖在线装）。tag 必须指向实际打包的 commit；同版本号不得复用于不同内容。"
     },
