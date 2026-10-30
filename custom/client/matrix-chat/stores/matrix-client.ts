@@ -22,6 +22,26 @@ import { matrixEventBus } from './matrix-events'
 import { fetchMatrixServerInfo } from '@/custom/ia2/matrix-server-info'
 import { homeserverUrlEquals } from '../utils/server-url'
 
+/**
+ * 凭据桥接（run23 复盘）：/api/matrix/gateway-credentials 返回本机 gateway 的
+ * Matrix 三元组（服务端回环四闸在 custom/server/matrix/routes.ts；deviceId 缺省
+ * 空串与上游 autoLoginFromGateway 同口径）。失败返回 null——调用方回落原错误口径。
+ * 不引 deviceId 桥（网关 dotenv 无该字段；空 deviceId 的 client 走 /sync 正常）。
+ */
+async function bridgeCredentialsFromGateway() {
+  try {
+    const res = await fetch('/api/matrix/gateway-credentials')
+    if (!res.ok) return null
+    const g = await res.json() as {
+      configured?: boolean; homeserverUrl?: string; accessToken?: string; userId?: string
+    }
+    if (!g?.configured || !g.accessToken || !g.userId || !g.homeserverUrl) return null
+    return { homeserverUrl: g.homeserverUrl, accessToken: g.accessToken, userId: g.userId, deviceId: '' }
+  } catch {
+    return null
+  }
+}
+
 export const useMatrixClientStore = defineStore('matrix-client', () => {
   // ─── State ─────────────────────────────────────────────
   const client = ref<MatrixClient | null>(null)
@@ -81,10 +101,23 @@ export const useMatrixClientStore = defineStore('matrix-client', () => {
   async function initClient() {
     if (client.value) return // already connected
 
-    const creds = getMatrixCredentials()
+    let creds = getMatrixCredentials()
     if (!creds) {
-      error.value = 'No Matrix credentials found'
-      return
+      // 凭据缺失桥接（run23 复盘根治）：登录有三种形态，其中两种会写 matrix 四件套
+      // （账号密码登录/网关免密自动登录），但「matrix-login 换 JWT 后直写 api_key」
+      // 的路径不写——该形态下 delivery-cases 等依赖 matrix-js-sdk 的面板恒空态
+      // （协议事件全落房而 client 起不来，run23 实录）。initClient 是所有此类面板
+      // 的统一入口，在此桥接一次：尝试 /api/matrix/gateway-credentials（服务端已有
+      // 回环四闸，返回本机 gateway 凭据三元组），拿到即按原语义持久化并继续；拿不到
+      // 保持原行为（报 No Matrix credentials found），不改变错误口径。
+      creds = await bridgeCredentialsFromGateway()
+      if (!creds) {
+        error.value = 'No Matrix credentials found'
+        return
+      }
+      // 桥接拿到的凭据按原语义持久化——后续 initClient 走正常 getMatrixCredentials
+      // 路径（含 homeserver 对账），不因刷新丢失。
+      storeMatrixCredentials(creds)
     }
     credentials.value = creds
     authenticated.value = true

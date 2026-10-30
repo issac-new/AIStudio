@@ -1,7 +1,8 @@
 // packages/server/src/custom/matrix/routes.ts
 import type Koa from 'koa';
 import Router from '@koa/router';
-import { readGatewayMatrixEnv } from './gateway-env';
+import { readGatewayMatrixEnv } from './gateway-env'
+import { loadMatrixSession } from './session-store';
 import { elementWebDirExists, getMatrixServerInfo } from './server-info';
 
 /** TCP 对端是否本机回环（127.0.0.0/8 / ::1 / ::ffff:127.x）。 */
@@ -90,7 +91,20 @@ export function registerMatrixAuthRoutes(app: Koa) {
       ctx.body = { configured: false, reason: 'host_not_allowed' };
       return;
     }
-    const env = readGatewayMatrixEnv();
+    // 凭据链（run23 复盘根治）：①orchestrator profile .env（桌面单用户形态，
+    // 原有语义）→ ②本机最近一次 matrix-login 会话 matrix-session.json（patch 012
+    // 在 /api/auth/matrix-login 校验通过即落盘；SIM 多 profile 形态下 orchestrator
+    // .env 不存在而会话文件在——交付案例等 matrix-js-sdk 面板此前因此恒空态）。
+    // 两级同信任域（本机回环四闸已过），会话文件 0600 权限由 session-store 保证。
+    const env = readGatewayMatrixEnv() ?? (() => {
+      const sess = loadMatrixSession();
+      if (!sess) return null;
+      return {
+        homeserverUrl: sess.homeserverUrl,
+        accessToken: sess.accessToken,
+        userId: sess.userId,
+      };
+    })();
     if (!env) {
       ctx.status = 404;
       ctx.body = { configured: false };
