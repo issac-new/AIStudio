@@ -410,6 +410,7 @@
 | 2026-10-30-chat-timeline-race-fix | 群聊时间线面板间歇性不挂载根治 | activeRoom null 竞态自愈：点房间后消息稳定可见（前轮漏登记补录） |
 | 2026-10-30-report-reshoot-auto-caption | 收尾补拍图注自动标注 | 补拍图注含「补拍」降级口径自动落（前轮漏登记补录） |
 | 2026-10-31-ide-workspace-regression-fixes | IDE 工作区全功能回归修复批 | 文件树换根竞态根治＋非 super_admin 权限回落任务域只读树＋板号回填＋i18n pickTask 键 |
+| 2026-10-31-kanban-detail-fast-path | kanban 详情链加固批 | sqlite 直读快道（补丁 709）＋CLI 瞬态重试＋抽屉装载 watch immediate 竞态根治＋验收乐观同步；走查探针沉淀 scripts/regression/ide-workspace-verify |
 | 2026-10-30-release-v1.0.3-overlay | 发布轮 v1.0.3-overlay | HelixHarness 吸收两轮＋run23 收官批后升版：cockpit studio.4 / agent-teams team.4 / yuan-skill v2.98.0 / full 1.0.3-overlay（ycode 零变更不动） |
 | 2026-10-31-run23-plan-report-retro-revision | run23 方案×报告全面复盘批 | 五机制入册（纪律 85-89）＋提前收尾通道立法＋HumanGate 审批面＋延后清账机械执法＋采集面参数化；附台账清账建议表 |
 

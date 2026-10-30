@@ -1,0 +1,93 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -10,6 +10,9 @@
+ import { RACIDispatchService } from '../../../../custom/services/kanban/raci-dispatch'
+ import { evaluateRules } from '../../../../custom/loop/engine/architecture-engine'
+ import { RetryGuardService } from '../../../../custom/services/kanban/retry-guard'
++// HERMES_CUSTOM[TaskDetailFastPath] BEGIN: 任务详情 sqlite 直读快道（overlay 709）
++import { readTaskDetailFast } from '../../../../custom/services/hermes/kanban-task-fast'
++// HERMES_CUSTOM[TaskDetailFastPath] END
+ 
+ const execOpts = { windowsHide: true }
+ // HERMES_CUSTOM[kanban-exec-queue] BEGIN: kanban CLI exec 并发上限。
+@@ -689,8 +692,37 @@
+   }
+ }
+ // HERMES_CUSTOM[ListTasksCache] END
++
++// HERMES_CUSTOM[TaskDetailFastPath] BEGIN: 归一化抽共享（快道与 CLI 同一出口形状）
++function normalizeTaskDetail(detail: KanbanTaskDetail, taskId: string): KanbanTaskDetail {
++  const resolvedTaskId = detail.task?.id || taskId
++  detail.comments = (detail.comments || []).map((comment, index) => ({
++    ...comment,
++    id: comment.id ?? `${resolvedTaskId}:comment:${index}`,
++    task_id: comment.task_id || resolvedTaskId,
++  }))
++  detail.events = (detail.events || []).map((event, index) => ({
++    ...event,
++    id: event.id ?? `${resolvedTaskId}:event:${index}`,
++    task_id: event.task_id || resolvedTaskId,
++  }))
++  return detail
++}
++// HERMES_CUSTOM[TaskDetailFastPath] END
+ 
+ export async function getTask(taskId: string, opts?: KanbanBoardOptions): Promise<KanbanTaskDetail | null> {
++  // HERMES_CUSTOM[TaskDetailFastPath] BEGIN: sqlite 直读快道优先（板库命中毫秒级；
++  // 冷 CLI 4-6s 且 exec 队列超时即 500——看板抽屉偶发「加载任务失败」根源）。
++  // 板号缺省（undefined，CLI 跨板搜索语义）与任何快道异常都回落 CLI。快道读的
++  // 是与 CLI 同一存储的只读快照；写路径经 execKanbanCli 咽喉，读到的至多是
++  // 写前一个瞬间态（与 CLI spawn 窗口同级的竞态，且 kanbanReadCache TTL 20s
++  // 本就容忍这一窗口）。
++  try {
++    const fast = readTaskDetailFast(taskId, opts?.board)
++    // custom 侧不 import 上游类型（仓规），经 unknown 桥接——形状契约由守门测试背书
++    if (fast) return normalizeTaskDetail(fast as unknown as KanbanTaskDetail, taskId)
++  } catch { /* 快道任何异常回落 CLI */ }
++  // HERMES_CUSTOM[TaskDetailFastPath] END
+   try {
+     const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'show', taskId, '--json'], {
+       maxBuffer: 50 * 1024 * 1024,
+@@ -698,20 +730,28 @@
+       ...execOpts,
+     })
+     const detail = JSON.parse(stdout) as KanbanTaskDetail
+-    const resolvedTaskId = detail.task?.id || taskId
+-    detail.comments = (detail.comments || []).map((comment, index) => ({
+-      ...comment,
+-      id: comment.id ?? `${resolvedTaskId}:comment:${index}`,
+-      task_id: comment.task_id || resolvedTaskId,
+-    }))
+-    detail.events = (detail.events || []).map((event, index) => ({
+-      ...event,
+-      id: event.id ?? `${resolvedTaskId}:event:${index}`,
+-      task_id: event.task_id || resolvedTaskId,
+-    }))
+-    return detail
++    // HERMES_CUSTOM[TaskDetailFastPath] BEGIN
++    return normalizeTaskDetail(detail, taskId)
++    // HERMES_CUSTOM[TaskDetailFastPath] END
+   } catch (err: any) {
+     if (err.code === 1 || err.status === 1) return null
++    // HERMES_CUSTOM[TaskDetailFastPath] BEGIN: 瞬态失败（exec 队列超时/子进程抖动）
++    // 重试一次再定性——IDE 回归走查实锤首载并发风暴下偶发 500 打断抽屉。
++    if (/queue timeout|ETIMEDOUT|ECONNRESET|spawn/i.test(String(err?.message ?? ''))) {
++      try {
++        const { stdout } = await execKanbanCli([...boardArgs(opts?.board), 'show', taskId, '--json'], {
++          maxBuffer: 50 * 1024 * 1024,
++          timeout: 30000,
++          ...execOpts,
++        })
++        return normalizeTaskDetail(JSON.parse(stdout) as KanbanTaskDetail, taskId)
++      } catch (err2: any) {
++        if (err2.code === 1 || err2.status === 1) return null
++        logger.error(err2, 'Hermes CLI: kanban show failed (retry)')
++        throw new Error(`Failed to get kanban task: ${err2.message}`)
++      }
++    }
++    // HERMES_CUSTOM[TaskDetailFastPath] END
+     logger.error(err, 'Hermes CLI: kanban show failed')
+     throw new Error(`Failed to get kanban task: ${err.message}`)
+   }
+
