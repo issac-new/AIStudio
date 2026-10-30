@@ -10,6 +10,8 @@ import { useFilesStore } from '@/stores/hermes/files'
 import FileTree from '@/components/hermes/files/FileTree.vue'
 import type { FileEntry } from '@/api/studio/files'
 import IdeGitPane from './IdeGitPane.vue'
+import IdeReadOnlyTree from '../components/IdeReadOnlyTree.vue'
+import type { TaskWorkspaceFileEntry } from '../api/taskWorkspace'
 import { noWorkspaceHint, useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useIdeStore } from '../store/ide'
 import { workspaceLabel } from '../utils/time'
@@ -55,17 +57,46 @@ const noWorkspaceMessage = computed(() => {
 const readOnlyFallback = computed(() =>
   Boolean(ide.activeTaskId) && Boolean(ide.taskWorkspace) && !ide.taskWorkspaceError && !root.value)
 
+// 权限回落（2026-10-31 回归修复）：root 校验被 super_admin 闸门拒（403）且任务
+// 工作区已物化时，接任务域只读通道（/api/hermes/kanban/workspace-files，服务端
+// 按任务沙箱限界）替代死胡同——普通账号可读不可写，root 闸门本身不放宽。
+const permReadOnly = computed(() =>
+  permissionDenied.value
+  && Boolean(ide.activeTaskId)
+  && Boolean(ide.taskWorkspace?.materialized && ide.taskWorkspace.path))
+const permTaskFiles = ref<TaskWorkspaceFileEntry[] | null>(null)
+watch(permReadOnly, async (on) => {
+  if (!on) { permTaskFiles.value = null; return }
+  const taskId = ide.activeTaskId
+  if (!taskId) return
+  try {
+    // 懒加载（与 store.associateTaskWorkspace 同因）：静态引入会拉
+    // api/client → router 链，击穿全量 mock vue-router 的既有测试。
+    const { ideTaskFilesApi } = await import('../api/taskWorkspace')
+    // 板号用解析回填后的 taskWorkspace.board（缺省 default，服务端按卡查详情兜底）
+    const res = await ideTaskFilesApi.list(taskId, ide.taskWorkspace?.board ?? undefined, 3)
+    if (ide.activeTaskId === taskId) permTaskFiles.value = res.entries
+  } catch {
+    if (ide.activeTaskId === taskId) permTaskFiles.value = []
+  }
+}, { immediate: true })
+
 // FileTree 的 workspaceKey 只用于根标签；真正决定列目录的根是 filesStore.
 // workspaceRoot（上游 FileTree 直接读该 ref）。根先校验再接线：非法根只打
 // 一次探测请求并显示可解释状态，不让 FileTree 反复 400。
+// 2026-10-31 回归修复：去掉「先清 undefined 再回填」的中间态——undefined 跳变会
+// 触发 FileTree 的 workspaceRoot watch 以无 root 参数装载默认根（~/.hermes），
+// 与随后带 root 的正确装载赛跑（最后写者胜），super_admin 走查两次实锤树显示
+// 默认根内容。改为校验通过才换根（旧根→新根单次跳变）、失败才清根，语义不变。
 watch(root, async (value) => {
-  filesStore.workspaceRoot = undefined
   if (!value) {
+    filesStore.workspaceRoot = undefined
     await validate()
     return
   }
   const ok = await validate()
-  if (ok && root.value === value) filesStore.workspaceRoot = value
+  if (root.value !== value) return
+  filesStore.workspaceRoot = ok ? value : undefined
 }, { immediate: true })
 onUnmounted(() => {
   filesStore.workspaceRoot = undefined
@@ -109,6 +140,15 @@ async function openEntry(entry: FileEntry): Promise<void> {
           {{ zhUi ? '查看账号角色' : 'View account role' }}
         </button>
       </div>
+      <!-- 权限回落（2026-10-31）：物化任务工作区的任务域只读视图，替代纯死胡同 -->
+      <template v-if="permReadOnly && permTaskFiles !== null">
+        <p class="ide-files__fallback-note" data-testid="ide-files-perm-ro-note">
+          {{ zhUi ? '当前账号无根目录权限：以下为该任务工作区的只读视图（任务域通道，不可写）' : 'No root permission for this account: read-only view of the task workspace below (task-scoped channel, no writes)' }}
+        </p>
+        <div class="ide-files__perm-tree" data-testid="ide-files-perm-tree">
+          <IdeReadOnlyTree :entries="permTaskFiles" />
+        </div>
+      </template>
     </div>
     <div v-else-if="tab === 'tree' && !root && readOnlyFallback" class="ide-files__fallback" data-testid="ide-files-readonly-fallback">
       <p class="ide-files__fallback-note" data-testid="ide-files-readonly-note">
@@ -119,7 +159,7 @@ async function openEntry(entry: FileEntry): Promise<void> {
     <div v-else-if="tab === 'tree' && !root" class="ide-files__invalid" data-testid="ide-files-no-workspace">
       <p data-testid="ide-files-no-workspace-message">{{ noWorkspaceMessage }}</p>
       <button type="button" class="ide-files__retry" data-testid="ide-files-pick-task" @click="router.push({ name: 'ia2.board' })">
-        {{ t('ide.files.pickTask', '去工作台选任务') }}
+        {{ invalidTx.pickTask }}
       </button>
     </div>
     <FileTree
@@ -194,6 +234,17 @@ async function openEntry(entry: FileEntry): Promise<void> {
 }
 .ide-files__invalid-hint { color: var(--text-muted); font-size: 10.5px; }
 .ide-files__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+/* 权限回落只读树（2026-10-31）：限高滚动，不与提示行互相挤压 */
+.ide-files__perm-tree {
+  flex: 1;
+  min-height: 80px;
+  max-height: 40vh;
+  margin: 6px 12px 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: auto;
+}
 .ide-files__fallback {
   flex: 1;
   min-height: 0;

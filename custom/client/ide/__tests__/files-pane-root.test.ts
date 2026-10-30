@@ -88,6 +88,42 @@ describe('IdeFilesPane → filesStore.workspaceRoot', () => {
     expect(filesState.workspaceRoot).toBeUndefined()
   })
 
+  // ── 2026-10-31 回归：换根竞态（undefined 中间态触发 FileTree 无 root 装载默认根） ──
+  it('换根校验在途时保留旧根（不得跳变 undefined → FileTree 无 root 装载默认根）', async () => {
+    const { authFetch } = await import('../utils/auth-fetch')
+    const mock = vi.mocked(authFetch)
+    ideState.workspace = '/ws/race-old'
+    const w = mount(IdeFilesPane, { global: { stubs: { FileTree: true, IdeGitPane: true } } })
+    await flushPromises()
+    expect(filesState.workspaceRoot).toBe('/ws/race-old')
+    // 换根：慢校验在途，workspaceRoot 必须保持旧值（回归修复前会先被清成 undefined）
+    let release!: () => void
+    const gate = new Promise<void>((r) => { release = r })
+    mock.mockImplementationOnce(async () => { await gate; return { ok: true, status: 200, json: async () => ({}) } as never })
+    ideState.workspace = '/ws/race-new'
+    await flushPromises()
+    expect(filesState.workspaceRoot).toBe('/ws/race-old')
+    release()
+    await flushPromises()
+    expect(filesState.workspaceRoot).toBe('/ws/race-new')
+    w.unmount()
+  })
+
+  it('校验失败才清根（invalid 根最终 undefined + 可解释状态面板）', async () => {
+    const { authFetch } = await import('../utils/auth-fetch')
+    const mock = vi.mocked(authFetch)
+    ideState.workspace = '/ws/race-base'
+    const w = mount(IdeFilesPane, { global: { stubs: { FileTree: true, IdeGitPane: true } } })
+    await flushPromises()
+    expect(filesState.workspaceRoot).toBe('/ws/race-base')
+    mock.mockImplementationOnce(async () => ({ ok: false, status: 400, json: async () => ({ error: 'out of sandbox' }) }) as never)
+    ideState.workspace = '/ws/race-bad'
+    await flushPromises()
+    expect(filesState.workspaceRoot).toBeUndefined()
+    expect(w.find('[data-testid="ide-files-invalid"]').exists()).toBe(true)
+    w.unmount()
+  })
+
   it('patch 655 注册且 FileTree 支持 showFiles（IDE 树内直出文件）', () => {
     const patch = resolve(__dirname, '../../../../patches/655-client-filetree-show-files.patch')
     expect(existsSync(patch)).toBe(true)

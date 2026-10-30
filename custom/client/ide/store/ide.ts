@@ -330,6 +330,15 @@ export const useIdeStore = defineStore('ide', () => {
     paletteOpen.value = true
   }
 
+  /** 板号回填（2026-10-31 回归修复）：并行首轮 task-workspace 未带板号时服务端
+   *  回显缺省 default；跨板解析推断出真实板号后就地补正，避免为显示字段重打
+   *  CLI 链。仅改 board 字段，路径/物化态以首轮解析为准。 */
+  function patchTaskWorkspaceBoard(board: string): void {
+    if (taskWorkspace.value && board && taskWorkspace.value.board !== board) {
+      taskWorkspace.value = { ...taskWorkspace.value, board }
+    }
+  }
+
   function closePalette(): void {
     paletteOpen.value = false
   }
@@ -432,6 +441,7 @@ export const useIdeStore = defineStore('ide', () => {
     setDimension,
     setActiveTask,
     associateTaskWorkspace,
+    patchTaskWorkspaceBoard,
     toggleFold,
     toggleMax,
     setOrganize,
