@@ -347,12 +347,7 @@ docs/superpowers/specs/2026-10-26-precommit-vendor-guard-restore.md
 docs/superpowers/specs/2026-10-26-rebrand-aistudio.md
 docs/superpowers/specs/2026-10-26-shared-exclusion-leaks.md
 docs/superpowers/specs/2026-10-26-sidenav-badge-dot-merge.md
-docs/superpowers/specs/2026-10-26-swarm-yuan-core-refactor.md
 docs/superpowers/specs/2026-10-26-walkthrough-bugs-fix.md
 docs/superpowers/specs/2026-10-26-walkthrough-debts-clearance.md
-docs/superpowers/specs/2026-10-27-global-search-consolidation.md
-docs/superpowers/specs/2026-10-27-search-dialog-truthiness.md
 docs/superpowers/specs/2026-10-29-agent-self-reflection.md
-docs/superpowers/specs/2026-10-30-helixharness-absorption.md
-docs/superpowers/specs/2026-10-30-run23-divergence-retro.md
 docs/superpowers/specs/2026-10-30-run23-product-capability.md
