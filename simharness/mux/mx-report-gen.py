@@ -232,7 +232,7 @@ STEPS_META_RUN2 = {
             imgs=[
                   ('ui-gov-center', '治理中心·六闸工件区：G1 冻结件呈现面（docs/requirements/RFD-001.freeze.md 已入 origin/main，commit 3191c11 锚）', 'ui'),
                   ('ui-08-groupchat', '驾驶舱·会话画布：冻结后建群现场（G1→room 衔接）', 'ui'),]),
-    8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
+    8: dict(keys=['room_analysis', 'room_done'], actor='both', actorText='人建群 · AI 邀人',
             narrative='产品经理 产品经理A 创建「支付收银台需求分析讨论群」（本轮房间 !zMzIGtITnwKsZtbjAp:matrix.test，02:16:47）并全量预邀（需求分析AI（fanfan-agent）+ 8 关联人及各自 agent，方案 §8）——建群即按 RACI 全量预邀根治 room-invite 缺口，本轮零邀人问题单。',
             imgs=[
                   ('ui-08-groupchat', '协作沟通界面（#/app/s/group）：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4③）', 'ui'),
@@ -362,7 +362,7 @@ STEPS_META_RUN4 = {
             imgs=[
                   ('ui-gov-center', '治理中心·六闸工件区：G1 需求冻结件呈现面（docs/requirements/RFD-001.freeze.md 已入 origin/main，worktree 锚 3191c11）', 'ui'),
                   ('ui-08-groupchat', '驾驶舱·会话画布：冻结后建群现场（G1→room 衔接，私信事件 $TQnF…4cszw）', 'ui'),]),
-    8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
+    8: dict(keys=['room_analysis', 'room_done'], actor='both', actorText='人建群 · AI 邀人',
             narrative='产品经理A 创建「支付收银台需求分析讨论群」（房间 !dNmjqtrriuDbzqTyvk:matrix.test，23:30:33）并全量预邀（fanfan-agent + 8 关联人及各自 agent）——建群即按 RACI 全量预邀（room-invite-gap 终清后 0→1 复验位），群即驾驶舱中栏会话画布（补遗⑤）。',
             imgs=[
                   ('ui-08-groupchat', '驾驶舱·会话画布：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4③）', 'ui'),
@@ -484,7 +484,7 @@ STEPS_META_RUN1 = {
             narrative='BA（需求分析师A）经 matrix 私信送达需求文档（邮件通道本期禁用，记问题单口径）。需求过 G1 四项检查：验收标准可机械判定（AC-1~7）、范围外清单、影响面、涉敏评估——四项齐才生成冻结标记入库，锁后不许改。',
             imgs=[
                   ('ui-gov-doc', '治理中心·六闸工件：G1 需求冻结件——AC-1~7 全文 + frozen:true + commit 锚点', 'ui'),]),
-    8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 邀人',
+    8: dict(keys=['room_analysis', 'room_done'], actor='both', actorText='人建群 · AI 邀人',
             narrative='产品经理 产品经理A 创建「支付收银台需求分析讨论群」（本轮房间 !FurImZOaeHVyUqaRQR），先邀 fanfan-agent；系统分析步自动补邀 研发工程师A/研发工程师B/研发工程师C/研发工程师D/团队负责人B/测试工程师A/测试工程师B 关联人（agent 自动邀请面不足记问题单、监控程序兜底——如实呈现）。',
             imgs=[
                   ('ui-08-groupchat', '协作沟通界面（#/app/s/room）：本轮需求分析讨论群真实消息流+右栏任务流转时间线（P4）', 'ui'),]),
@@ -594,7 +594,7 @@ STEPS_META_RUN5 = {
     7: dict(keys=['g1_frozen'], actor='gate', actorText='强制关卡 G1 · 人审上锁',
             narrative='BA（需求分析师A）经 matrix 私信送达需求书（$8ezsRliURAY8ElehoYRxFGR4WDF31lCHf4w_KKc7TIA，16:42:47）；四要素判读过锁（g1_frozen 16:42:53，AC-1~7 机械化可判）。如实记档：冻结件推送 origin 失败（GitHub 连通性，问题单 g1-push，留存本地）——通道故障不粉饰，治理动作照常写入通过标记。',
             imgs=[('ui-flow-freeze', '流转现场：G1 冻结链——私信送达→判读→冻结写入通过标记（对话+冻结件实物）', 'ui'),]),
-    8: dict(keys=['room_analysis'], actor='both', actorText='人建群 · AI 预邀',
+    8: dict(keys=['room_analysis', 'room_done'], actor='both', actorText='人建群 · AI 预邀',
             narrative='产品经理A 创建「支付收银台需求分析讨论群」!wbdIWyDcMaMOeSvYay:matrix.test（16:43:04）并全量预邀（fanfan-agent+8 关联人及各自 agent）——成员面板实证 0 缺口（room-invite-gap 终清后 0→1 复验）；群即驾驶舱中栏会话画布（群锚 !wbdIWyDcMaMOeSvYay，建群后首条机器派发 $Cxsn3swxmqViobFPZs9e5Cam130R44DUXpoo0l9_iOE 可反查群在位）。如实记档：群全景截图（10-01 07:50 实拍）在 09:40 一轮单点采集复跑中被空态页覆盖（当时群已随环境复位清除）——采集脚本已补空态拒拍自动检查防复发（capture-v42 shutter-gate），群消息流证据由 msgcard/members 两帧 07:50 实拍真图承载。',
             imgs=[('ui-08b-msgcard', '会话画布：群内派发与回执现场——@提及高亮+card=t_ 卡链接（07:50 实拍真图）', 'ui'),
                   ('ui-08d-members', '会话画布·成员面板：建群全量预邀实证——人+agent 并排在列（07:50 实拍真图）', 'ui'),]),
@@ -1465,7 +1465,7 @@ STEPS_META_20261013_V8_RUN18_LITE = {
         narrative='ACP 编码后端首个实跑轮：六路任务书 03:08 同刻即派（含【编码后端=delegate】段）；仿真工程师按 coding-delegate 技能以 nohup 后台模式委托 Ycode 引擎（zcode-acp-server 0.43.2 stdio 桥）真实现——chen 链式三托（PAYCORE-C/S/N）+xiao/研发工程师B（hu）/研发工程师C（lin） 并行，引擎进程峰值 8。分支真值：PAYCORE-C 03:37 首推（9b708d3 携委托日志），六路 03:53-03:59 全齐。G3 04:21 过闸：六条分支里五条带 materials/delegate-log.txt（4 份 RESULT exit=0 在案），DEV-MP 缺日志已登记问题单；CHWX/MP 缺 testlog 已登记问题单。', imgs=[('devimpl_done-op1-before','IDE 工作台·编码段起点（委托链首验轮）','ui'), ('devimpl_done-op1-after','IDE 工作台·编码段收尾','ui')]),
     19: dict(keys=['defect_done','testpass_done'], actor='ai', actorText='AI · 测试双线',
         narrative='缺陷+测试段 04:22 起：集成合并六路（testlog 副本冲突族已登记问题单）；ChannelAdapter 契约观察器影子 breaking=0 在案；测试分片执行后 G4 段完成（qi 线执行在案）。', imgs=[('testpass_done-op1-before','测试段·驾驶舱前态','ui'), ('testpass_done-op1-after','测试段·驾驶舱收尾','ui')]),
-    20: dict(keys=['ready_done'], actor='gate', actorText='强制关卡 G5 · 发布准出',
+    20: dict(keys=['ready_done', 'release_done'], actor='gate', actorText='强制关卡 G5 · 发布准出',
         narrative='G5 判词复用 PASS（05:54：本轮既有 PASS 结论行不重派评审——lite 语义；评审卡 t_76fa0c86→done；HumanGate=人工把关批准入 approved.events）；QGate release-report 落盘。', imgs=[]),
     21: dict(keys=['uat_done'], actor='human', actorText='人 · 需求分析师A 验收',
         narrative='UAT lite 段：验收文档留存（推送 origin/main 失败已登记问题单 uat-push，留存路径在案）。', imgs=[]),
@@ -1556,7 +1556,7 @@ STEPS_META_20261013_V8_RUN19 = {
     17: dict(keys=['plan_done'], narrative='排期文档入仓（docs/plan/RFD-001-schedule.md，RUN 标记本轮）。', imgs=[]),
     18: dict(keys=['devimpl_done'], narrative='ACP 编码后端六路并行（PAYCORE-C/S/N+CHWX/CHALI/MP）：18:47 起 S/N/MP 三分支先推 feat/*、19:15 C 分支点亮；G3 缺证据拦截首验——DEV-PAYCORE-C 缺 testlog 登记问题+补证派单（20:19），补齐后 g3_code_pass 写入（20:23）补证后过闸。', imgs=[]),
     19: dict(keys=['defect_done'], narrative='integration 合并链完成；测试分片五路派发（TEST-BE-S1/S2/S3+FE-S1/S2）；TEST-FE-S1 四套门禁全绿+23 条 TC 双端 37 场景；DEF-S1 修复（dd13141）合入；G4 过闸（04:48）——测试报告 TEST-FAIL 实文入树（G4 结论语义缺陷在案，评审 r4/r5 以「实质未过」拦截）。', imgs=[]),
-    20: dict(keys=['ready_done'], narrative='G5 全程治理样本：两轮不过触发熔断（缺项 R-1=DEF-S3/DEF-S4）→修复链派发（chen 类型收敛+qi 台架重锚）→夜间磁盘水位门禁挂起事故（4 小时无进展的根因）→300 秒提醒根治→评审 r6 维持 FAIL 判定与驱动错频（真实缺项=测试实质，非三件未补）→修复链落地后翻绿，g5_ready 11:59 写入。', imgs=[]),
+    20: dict(keys=['ready_done', 'release_done'], narrative='G5 全程治理样本：两轮不过触发熔断（缺项 R-1=DEF-S3/DEF-S4）→修复链派发（chen 类型收敛+qi 台架重锚）→夜间磁盘水位门禁挂起事故（4 小时无进展的根因）→300 秒提醒根治→评审 r6 维持 FAIL 判定与驱动错频（真实缺项=测试实质，非三件未补）→修复链落地后翻绿，g5_ready 11:59 写入。', imgs=[]),
     21: dict(keys=['uat_done'], narrative='UAT 逐条对账完成，uat_done 12:21 写入。', imgs=[]),
     22: dict(keys=['workmgr_done'], narrative='工作台账保存+零交付遥测登记。', imgs=[]),
     23: dict(keys=['audit_done'], narrative='六域体检当轮跑（domain-audit-run.json 在案）；审计段过。', imgs=[]),
@@ -1635,7 +1635,7 @@ STEPS_META_20261017_V8_RUN21 = {
              narrative='编码段净 4.3h：六分支全推 origin；期间供应商断供 2.5h（02:41-05:31 cc-switch 502，六档案假活跃=同秒重试日志），05:43 值班提速令+同域三单解捆绑并行改派——9 分钟出活实证；06:25 G3 过闸（契约面影子观察成立）。', imgs=[]),
     19: dict(keys=['defect_done'], issue_keys=['g3-testlog-stale-run', 'g3-npm-audit-missing', 'gate-evidence-blocked', 'test-report-missing'],
              narrative='五路测试单并行零缺陷→集成层抓到真缺陷：P0 渠道包五类文件缺失（7 spec 加载失败）+P1 类型检查漂移，BLOCKED 如实上报→球位纠偏直派两道极简修复令→修复分支+[LEAD-MERGE] lead 合并通道完成合并→11:44 G4 过闸；G3/G4 证据缺口显形记欠。', imgs=[]),
-    20: dict(keys=['ready_done'], issue_keys=['g5-ready-fail', 'gate-breaker-tripped', 'gate-breaker-reset', 'breaker-wait-nudge'],
+    20: dict(keys=['ready_done', 'release_done'], issue_keys=['g5-ready-fail', 'gate-breaker-tripped', 'gate-breaker-reset', 'breaker-wait-nudge'],
              narrative='G5 四轮往返 3.5h（12:01 文档缺项退回→13:32 深挖=汇总报告停旧版+HumanGate 缺留痕→14:13 熔断+假阴性窗→15:2x 过闸）：COND-1 安全条件值班直修、COND-2/3/4/6 派支付核心侧修复；REL-MERGE/TAG/DELIVER 三卡齐走；产品经理A 三笔 !approve 回执；15:16 发布完成。', imgs=[]),
     21: dict(keys=['uat_done'], narrative='UAT 15:28-15:34：七条冻结 AC 逐条证据（需求分析师A 逐条核对产品经理A 证据链，事件 $0g5F2wd…）。', imgs=[]),
     22: dict(keys=['workmgr_done'], issue_keys=['zero-delivery', 'harness-snapshot-audit'],
@@ -1743,10 +1743,28 @@ _STEP33_DEFAULT_KEYS = ['smoke_done','smoke_done','smoke_done','smoke_done','app
                         'defect_done','ready_done','uat_done','workmgr_done','audit_done','retro_done','ide_done','report_done']
 _STEP33_MULTI_KEYS = {11: ['analysis_done', 'analysis_verified'],
                       19: ['defect_done', 'testpass_done'],
-                      20: ['ready_done', 'release_done']}
+                      20: ['ready_done', 'release_done'],
+                      # 步 8 双名（run23 复盘）：驱动 capture_step 的标签是 room_done、报告步键是
+                      # room_analysis——两处名字分叉时帧文件永远挂不上（报告恒显「截图缺失」）。
+                      8: ['room_analysis', 'room_done']}
 for _n, _meta in list(STEPS_META.items()):
     if _n != 26 and not _meta.get('keys'):
         _meta['keys'] = _STEP33_MULTI_KEYS.get(_n) or [_STEP33_DEFAULT_KEYS[_n - 1]]
+# 双名并集（run23 复盘）：别名必须对骨架兜底轮同样生效，否则「驱动标签≠报告键」的帧
+# 在未注册叙事轮永远挂不上；dict.fromkeys 保序去重，幂等可重复执行。
+for _n, _alias in _STEP33_MULTI_KEYS.items():
+    _m = STEPS_META.get(_n)
+    if isinstance(_m, dict):
+        _m['keys'] = list(dict.fromkeys(list(_m.get('keys') or []) + list(_alias)))
+# 拍摄位实名纠正（run23 复盘）：步 1-4 历史共用 smoke_done 键，驱动另有 login_done
+# （登录双模式段）与 capture-precheck（开跑前采集自检）两个专拍位——按步归位，避免
+# 各自帧被当成「漏配」或只能落共用占位。步 19 增 eval_done（评测子门实拍同屏）。
+for _n, _ks in ((1, ['smoke_done', 'capture-precheck']),
+                (3, ['login_done', 'smoke_done']),
+                (19, ['defect_done', 'testpass_done', 'eval_done'])):
+    _m = STEPS_META.get(_n)
+    if isinstance(_m, dict):
+        _m['keys'] = _ks
         sys.stderr.write('[mx-report-gen] 步 %s 叙事注册 keys 为空——回落 §3.3 默认键 %s（run16 实锤防线）\n'
                          % (_n, '+'.join(_meta['keys'])))
 
@@ -4308,14 +4326,28 @@ def gov_final_rows():
                     f'<td class="{cls}">{verdict}</td><td>{_gate_ts(g) or "—"}</td></tr>')
     return ''.join(rows)
 
-total_imgs = sum(1 for _, _, _, m in STEPS for pre, _, _ in m.get('imgs', []) if (STEPS_DIR / f'{pre}.png').exists())
-unique_imgs = len({pre for _, _, _, m in STEPS for pre, _, _ in m.get('imgs', []) if (STEPS_DIR / f'{pre}.png').exists()})
-ui_imgs = sum(1 for _, _, _, m in STEPS for pre, _, kind in m.get('imgs', []) if kind == 'ui' and (STEPS_DIR / f'{pre}.png').exists())
+# 图数真值（run23 复盘修「自相矛盾」）：旧口径只数「叙事 imgs 显式注册」——骨架兜底
+# 轮（未注册叙事）没注册、帧全靠按状态键自动挂接，于是页头报「0 图次/本轮未拍摄」而
+# 正文实际嵌了 53 张。改为与渲染器同一判据：显式注册 ∪ 自动挂接（report_truth.
+# orphan_frames_for，键/步号匹配），两处不再各算一套。
+def _effective_step_imgs(_n, _m):
+    _reg = [pre for pre, _c, _k in _m.get('imgs', [])]
+    if _reg:
+        return _reg
+    return report_truth.orphan_frames_for(_m.get('keys') or [], _n, STEPS_DIR)
+
+_effective = {}
+for _n, _t, _g, _m in STEPS:
+    for _pre in _effective_step_imgs(_n, _m):
+        _effective[_pre] = _n
+total_imgs = sum(1 for pre in _effective if (STEPS_DIR / f'{pre}.png').exists())
+unique_imgs = len({pre for pre in _effective if (STEPS_DIR / f'{pre}.png').exists()})
+ui_imgs = total_imgs  # 证据图=界面上帝视角实拍（自动挂接帧同为产品界面帧）
 # 图数对账（2026-10-07 注册引用∩盘态与目录实态两套口径并存，曾渲 17 图/9 步
 # "截图缺失"而盘上 29 图全在）：盘上未引用=漏配 WARN，注册缺文件=冒配红标，均落生成日志。
 _disk_pngs = {p.stem for p in STEPS_DIR.glob('*.png')} if STEPS_DIR.exists() else set()
 _registered = {pre for _, _, _, m in STEPS for pre, _, _ in m.get('imgs', [])}
-_unreferenced = sorted(_disk_pngs - {p for p in _registered if (STEPS_DIR / f'{p}.png').exists()})
+_unreferenced = sorted(_disk_pngs - set(_effective))
 _missing_ref = sorted(p for p in _registered if not (STEPS_DIR / f'{p}.png').exists())
 if _unreferenced:
     print(f'[mx-report-gen] WARN 盘上未引用帧 {len(_unreferenced)} 张（漏配，如实列出）: {", ".join(_unreferenced)}')
@@ -4893,7 +4925,10 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .art-chk-label{{flex-shrink:0;font-weight:600;color:var(--text);min-width:110px}}
 .art-chk-val{{color:var(--muted);font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 .art-chk-val.miss{{color:var(--danger)}}
-.st-shots{{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin:6px 0 0 44px}}
+/* 步级证据图版面（2026-10-30 用户指令：图太小不便查看）——原 230px 自动填充网格把
+   2880×1800 实拍压成缩略图；改为「每列不小于 720px」的自适应网格：宽屏两列并排、
+   窄屏单列铺满，图宽恒等于列宽（自然比例不裁剪），点图仍可全屏放大。 */
+.st-shots{{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,720px),1fr));gap:14px;margin:10px 0 0}}
 .art-code{{max-height:340px;overflow:auto}}
 .gate-body{{max-height:260px;overflow:auto}}
 .step.gate-step .gate-body{{color:#78350f}}
@@ -5042,7 +5077,8 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 .st-crit-ev{{margin-top:8px;font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:6px}}
 .po-plain{{font-size:13.5px;line-height:1.7;margin:6px 0 10px;color:var(--ink)}}
 .hero-terms{{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}}
-.po-shots{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0}}
+/* 产品成效系列帧：原 4 列缩略（2026-10-11 指令）——2026-10-30 用户复评「图太小」改 2 列 */
+.po-shots{{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:8px 0}}
 .po-shots label.shot{{flex:none;max-width:none}}
 .po-shots label.shot img{{width:100%;height:auto;max-height:none;object-fit:contain}}
 .po-shots label.shot figcaption{{font-size:11px;word-break:break-all}}

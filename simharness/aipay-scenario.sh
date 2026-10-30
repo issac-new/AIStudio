@@ -1866,6 +1866,7 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
     sleep 30
   done
   sset defect_done 1
+  capture_step "defect_done" "/app/stage/build?tab=board"   # 步19 承载面（缺陷闭环看板；run23 复盘补拍摄位）
 fi
 
 # ══ 步骤 17：测试通过记录 + 测试报告 ═════════════════
@@ -2280,6 +2281,7 @@ if [ "$(posture)" = "strict" ]; then
     echo "ISSUE|evidence-worktree|delivery|main worktree 不可用（留存本地）" >> "$EVID_DIR/issues.log"
   fi
   sset ready_done 1
+  capture_step "ready_done" "/app/stage/accept?tab=g5"     # 步20 承载面（G5 审批留痕；run23 复盘补拍摄位）
 fi
 
 # ══ 步骤 21：发版交付记录（线下执行，在册追踪）═══════
