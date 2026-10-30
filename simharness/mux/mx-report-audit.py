@@ -752,7 +752,19 @@ for blk in blocks:
     if n not in _R18_DIALOG_STEPS and n not in _R18_OP_STEPS and n not in _R18_EFFECT_STEPS \
             and n not in _R18_SKILL_STEPS and n not in _R18_DELIVERY_STEPS \
             and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and v_cnt == 0 and not _r18_missing_file:
-        _r18_rep(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill/门禁灯任一在位即可）{_r18_suffix}')
+        # 夹具子步同源豁免（run23 复盘）：步 2/4 是冒烟段的子步（账号配置/功能就绪），
+        # 产品面没有独立操作位——实拍帧与载荷天然挂在同段兄弟步（1=smoke/3=登录）上，
+        # 采集端按 _STAGE_ALIAS_STEPS 归并。此前只对「采集失败凭证」做了别名折算，
+        # 载荷判据没折算，导致 2/4 恒报「载荷全缺」。此处按同一别名表查兄弟步载荷：
+        # 同段任一步有载荷即视为该段已覆盖（不假全过：兄弟步也一样空才报）。
+        _alias_src = next((steps for _k, steps in _STAGE_ALIAS_STEPS.items() if n in steps), ())
+        _alias_hit = any(
+            isinstance(_r18_payloads.get(str(_s)) or _r18_payloads.get(_s), dict)
+            and any(_r18_payloads.get(str(_s)) or _r18_payloads.get(_s) or {})
+            for _s in _alias_src if _s != n
+        )
+        if not _alias_hit:
+            _r18_rep(f'R18 步 {n} 载荷全缺（对话/操作/效果/skill/门禁灯任一在位即可）{_r18_suffix}')
 
 # ── 查 8b：产品成效两项（§5.4 产品成效呈现+§5.6 必采证据表 run13 起入分母；run14 起接线）──
 # exec 项（幂等/下单执行输出件）缺席=FAIL——执行输出无 UI 亦可产出，无降级通道；

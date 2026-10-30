@@ -12,12 +12,14 @@
 4. **`simharness/mux/mx-scenario-lib.sh`**——`lifecycle-service-unreachable|gov-report` 改 `issue_once`（报告链两次调用重复记单同因）。
 5. **`simharness/mux/run-driver-supervisor.sh`**——确定性失败硬停：连续 N 次（缺省 5，`MX_STORM_SAME_MAX` 可调）退出且**失败指纹**（驱动日志新增段末的 FAIL/条款行哈希）不变，判定确定性失败，记 `ISSUE|driver-deterministic-fail` 并退出（rc=3），指纹变化才继续自愈。run23 实录：报告步审计在同一批缺口上必然复现 FAIL，30s 重启只是把同一份 FAIL 再算一遍，连续 11 次、65 分钟零新增信息。
 6. **`simharness/tests/roster-account-count.test.sh`（新增）**——三断言守门：计数口径（14 人类 +1 admin=15，含服务令牌会得 16）、源码口径锁定（改回 `^jwt_` 即红）、`issue_once` 去重语义（同 key+subject 吞、不同 subject 各记）。
+7. **`simharness/mux/mx-report-audit.py`**——R18「载荷全缺」判据按 `_STAGE_ALIAS_STEPS` 做同段别名折算。步 2/4 是冒烟段的子步（账号配置/功能就绪），产品面无独立操作位，实拍帧与载荷天然挂在同段兄弟步（1=smoke、3=登录）上；此前只对「采集失败凭证」做别名折算，载荷判据没折算，导致 2/4 恒报载荷全缺（run23 只得靠降级登记转录）。同段任一步有载荷即视为该段已覆盖，兄弟步一样空才报（不假全过）。
 
 ## 决策记录
 
 - **G3/G4 缺证过闸（`g3_evidence_gap`/`g4_evidence_gap` 落键后仍置 pass）不改判据**：这是 V8.x 已立法的 fail-soft 口径（缺口如实呈现、闸语义由 G5 兜底），run23 实证它按设计工作——G5 正是以「证据链未落基线」为缺项①连续 18+ 轮拒绝认证。属风险非缺陷：门禁可带缺口放行，全靠 G5 复核；若后续要收紧须改方案 §5.3 判据（需用户裁决），不在本批擅自变更。
 - **verify/S2-r13 冲突不代决**：预演 8 文件冲突，且该支含「台架方言垫层拆除、3 例假绿转真红」披露——是否把真红带进 integration 属 lead/PM 判断，导演只代行三支无冲突的机械合并（另记 `ISSUE|lead-merge-fallback`）。
 - **配置编辑免重启生效**：`load_user_config_effective` 以文件签名做缓存键，改 config 即失效重读，故 42 份 profile config 的档位修改在下一回合即生效（实测网关 09:43:49 对各 profile 重放 `MCP servers reconciled with config`）。
+- **`vendor/hermes-agent` 里没有 705 不是缺陷**：`npm run inject` 在「上游工作树不干净」时整链拒绝执行（rc=1，本次实测输出 `[inject] 上游工作树不干净,先运行 npm run clean`）——而推演进行中 vendor 携带的正是注入脏态（预期工作态、不入提交），故 inject 本就不该在 run 中跑，服务在跑的现场也不能 `npm run clean`。agent 侧补丁的**运行期通道**是 `mx_apply_agent_patches`（本批已补齐 705/707）；vendor 的 705 会在下一次 clean+inject 周期自然收敛。
 
 ## 验证
 
