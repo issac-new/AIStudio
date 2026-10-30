@@ -10,12 +10,14 @@ import { useFilesStore } from '@/stores/hermes/files'
 import FileTree from '@/components/hermes/files/FileTree.vue'
 import type { FileEntry } from '@/api/studio/files'
 import IdeGitPane from './IdeGitPane.vue'
-import { useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { noWorkspaceHint, useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { useIdeStore } from '../store/ide'
 import { workspaceLabel } from '../utils/time'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const ide = useIdeStore()
 const invalidTx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].filesInvalid)
 const zhUi = computed(() => String(locale.value ?? 'zh').startsWith('zh'))
 // validation 是 ComputedRef（模板自动解包、脚本内不解包），脚本内必须读 .value。
@@ -32,6 +34,20 @@ const filesStore = useFilesStore()
 const { root, validation, validate, invalidate } = useIdeWorkspace()
 
 const tab = ref<'tree' | 'git'>('tree')
+
+/**
+ * 空工作区文案（2026-10-30 run23 复盘 · 产品承载面诊断）：
+ * 深链 ?task=<id> 未命中时，旧文案「还没有任务工作区」与「任务存在但未物化」看起来一样，
+ * 采集帧与用户都无法判断是页面没做还是参数错了。判定逻辑在 noWorkspaceHint（纯函数可单测）。
+ */
+const noWorkspaceMessage = computed(() => {
+  const hint = noWorkspaceHint({
+    taskId: ide.activeTaskId,
+    error: ide.taskWorkspaceError,
+    taskWorkspace: ide.taskWorkspace,
+  })
+  return zhUi.value ? hint.zh : hint.en
+})
 
 // FileTree 的 workspaceKey 只用于根标签；真正决定列目录的根是 filesStore.
 // workspaceRoot（上游 FileTree 直接读该 ref）。根先校验再接线：非法根只打
@@ -89,7 +105,7 @@ async function openEntry(entry: FileEntry): Promise<void> {
       </div>
     </div>
     <div v-else-if="tab === 'tree' && !root" class="ide-files__invalid" data-testid="ide-files-no-workspace">
-      <p>{{ t('ide.files.noWorkspace', '还没有任务工作区——从左侧任务或看板选一张卡带入') }}</p>
+      <p data-testid="ide-files-no-workspace-message">{{ noWorkspaceMessage }}</p>
       <button type="button" class="ide-files__retry" data-testid="ide-files-pick-task" @click="router.push({ name: 'ia2.board' })">
         {{ t('ide.files.pickTask', '去工作台选任务') }}
       </button>

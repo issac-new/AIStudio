@@ -70,6 +70,11 @@ export interface ReleaseGateCheckDto {
   threshold: string
   measured: string | null
   status: 'pass' | 'fail' | 'no_data'
+  /** no_data 结构化原因码：未采集 / 样本不足 / 无回放数据源（须线上回填）。 */
+  noDataCode?: 'not_collected' | 'insufficient_samples' | 'requires_live_backfill'
+  /** no_data 人读原因（优先于 gap 呈现）。 */
+  noDataReason?: string
+  /** 兼容别名（= noDataReason）。 */
   gap?: string
 }
 
@@ -105,6 +110,8 @@ export interface AggregatesDto {
     checks: ReleaseGateCheckDto[]
     measuredCount: number
     gapKeys: string[]
+    /** no_data 结构化清单（key/code/reason；与 gapKeys 同序）。 */
+    noData?: Array<{ key: string; code: string; reason: string }>
     basis: string
   }
   /** 百度轮 B3：四层金字塔（模型/应用/Agent/线上）。 */
@@ -516,7 +523,10 @@ export interface CoverageDto {
   dimensions: Array<{ key: string; zh: string; en: string; taskCount: number; setCount: number }>
   covered: number
   total: number
+  /** 真实未标注任务数（不含显式 unclassified）。 */
   untaggedTasks: number
+  /** 显式标为 unclassified 的任务数（已归类、不在七维内）。 */
+  unclassifiedTasks?: number
   taskTotal: number
   setTotal: number
 }

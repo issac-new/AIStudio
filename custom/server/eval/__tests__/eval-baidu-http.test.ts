@@ -181,3 +181,54 @@ describe('评估器审计与证据 HTTP', () => {
     expect(body.audit.audit.ratio).toBe(1)
   })
 })
+
+// 能力维度标注通道 HTTP 投影（2026-10-30 run23 复盘）
+describe('POST /sets/:id/dimensions', () => {
+  it('逐题标注 → 200 且 coverage 未标注数下降；非法值 400', async () => {
+    const res = await post('/api/hermes/eval/sets', {
+      name: 'dim-http', track: 'e2e',
+      tasks: [
+        { ...taskWith(), id: 't1' },
+        { ...taskWith(), id: 't2', problem: 'p2' },
+      ],
+    })
+    expect(res.status).toBe(201)
+    const setId = res.body.set.id
+    const ok = await post(`/api/hermes/eval/sets/${setId}/dimensions`, {
+      assignments: { t1: 'tool_params', t2: 'unclassified' },
+    })
+    expect(ok.status).toBe(200)
+    expect(ok.body.ok).toBe(true)
+    expect(ok.body.updated).toBe(2)
+    expect(ok.body.coverage.untaggedTasks).toBe(0)
+    expect(ok.body.coverage.unclassifiedTasks).toBe(1)
+    expect(ok.body.revision).toBe(2)
+
+    const bad = await post(`/api/hermes/eval/sets/${setId}/dimensions`, { assignments: { t1: 'nope' } })
+    expect(bad.status).toBe(400)
+    expect(bad.body.ok).toBe(false)
+    const empty = await post(`/api/hermes/eval/sets/${setId}/dimensions`, {})
+    expect(empty.status).toBe(400)
+    const wrongBackfill = await post(`/api/hermes/eval/sets/${setId}/dimensions`, { backfill: 'other' })
+    expect(wrongBackfill.status).toBe(400)
+  })
+
+  it('红队种子集回填：rt-* 全部归类（unclassified 12 / 越权注入 24）', async () => {
+    // 模拟 run23 存量形态：建集时 rt-* 任务没有 dimension（旧版本产物）
+    const legacy = await post('/api/hermes/eval/sets', {
+      name: 'rt-legacy', track: 'e2e',
+      tasks: ['rt-di-01', 'rt-ii-01', 'rt-se-01', 'rt-ta-01', 'rt-cr-01', 'rt-sc-01'].map((id) => ({ ...taskWith(), id })),
+    })
+    expect(legacy.status).toBe(201)
+    const setId = legacy.body.set.id
+    const before = await get(`/api/hermes/eval/metric-registry`)
+    expect(before.body.coverage.untaggedTasks).toBeGreaterThanOrEqual(6)
+
+    const res = await post(`/api/hermes/eval/sets/${setId}/dimensions`, { backfill: 'redteam-seed' })
+    expect(res.status).toBe(200)
+    expect(res.body.updated).toBe(6)
+    expect(res.body.coverage.untaggedTasks).toBe(0)
+    expect(res.body.coverage.unclassifiedTasks).toBe(2)
+    expect(res.body.coverage.dimensions.find((d: { key: string }) => d.key === 'privilege_injection').taskCount).toBe(4)
+  })
+})

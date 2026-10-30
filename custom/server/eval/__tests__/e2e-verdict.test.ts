@@ -26,7 +26,7 @@ const okInput = {
 describe('computeE2eVerdict（mx-eval-summary 判据逐条）', () => {
   it('全绿 → pass', () => {
     const r = computeE2eVerdict(okInput as never)
-    expect(r).toEqual({ verdict: 'pass', fails: [], gaps: [] })
+    expect(r).toEqual({ verdict: 'pass', fails: [], gaps: [], noData: [] })
     expect(e2eVerdictLine(r)).toBe('EVAL-GATE-PASS 全部门禁项通过')
   })
 
@@ -48,7 +48,7 @@ describe('computeE2eVerdict（mx-eval-summary 判据逐条）', () => {
     expect(r.fails).toContain('集已改版（run.setHash ≠ 当前 contentHash），读数不可直接对比')
   })
 
-  it('GAP 族：三角缺席/覆盖缺席/红队缺席/线上证据未回填/装饰指标', () => {
+  it('GAP 族：三角缺席/覆盖缺席/红队缺席/装饰指标', () => {
     const r = computeE2eVerdict({
       ...okInput,
       registry: { consumption: { summary: { decoration: 2 } } },
@@ -60,8 +60,77 @@ describe('computeE2eVerdict（mx-eval-summary 判据逐条）', () => {
     expect(r.gaps).toContain('评估器三角审计缺席（/runs/:id/evaluators 不可用）')
     expect(r.gaps).toContain('能力维度覆盖读数缺席（metric-registry.coverage 不可用）')
     expect(r.gaps).toContain('红队运行缺席（安全证据不可得）')
-    expect(r.gaps).toContain('线上证据未回填（QPS/响应分档仍为 no_data）')
     expect(r.gaps.some((g) => g.includes('装饰指标 2 个'))).toBe(true)
+    // 线上证据未回填不再单列笼统 GAP（run23 复盘去重）：该事实由门禁逐项
+    // response_tier/qps_headroom 的 requires_live_backfill 原因码承载。
+    expect(r.gaps.some((g) => g.includes('线上证据未回填'))).toBe(false)
+  })
+
+  it('发布门禁 no_data → GAP 且逐项带原因码；fail → FAIL 点名（§5.3 三态不混）', () => {
+    const runBody = {
+      run: {
+        status: 'done', setHash: 'h1',
+        aggregates: {
+          passAtK: 0.8, unknownRatio: 0.05, riskVeto: false,
+          releaseGate: {
+            verdict: 'pass',
+            checks: [
+              { key: 'tool_success', threshold: '≥ 99.0%', measured: '99.5%', status: 'pass' },
+              { key: 'ttft', threshold: '≤ 1.5s', measured: null, status: 'no_data', noDataCode: 'not_collected', noDataReason: '本次运行=内联证据（无 session/span 轨迹）', gap: '本次运行=内联证据（无 session/span 轨迹）' },
+              { key: 'qps_headroom', threshold: '峰值 QPS ×2', measured: null, status: 'no_data', noDataCode: 'requires_live_backfill', noDataReason: '容量压测属部署验收', gap: '容量压测属部署验收' },
+            ],
+            gapKeys: ['ttft', 'qps_headroom'],
+            noData: [
+              { key: 'ttft', code: 'not_collected', reason: '本次运行=内联证据（无 session/span 轨迹）' },
+              { key: 'qps_headroom', code: 'requires_live_backfill', reason: '容量压测属部署验收' },
+            ],
+          },
+        },
+      },
+    }
+    const gap = computeE2eVerdict({ ...okInput, runBody } as never)
+    expect(gap.verdict).toBe('gap')
+    expect(gap.noData).toEqual([
+      { key: 'ttft', code: 'not_collected', reason: '本次运行=内联证据（无 session/span 轨迹）' },
+      { key: 'qps_headroom', code: 'requires_live_backfill', reason: '容量压测属部署验收' },
+    ])
+    expect(gap.gaps.some((g) => g.includes('未采集（本可采集）：ttft'))).toBe(true)
+    expect(gap.gaps.some((g) => g.includes('无回放数据源（须线上回填）：qps_headroom'))).toBe(true)
+
+    const failed = computeE2eVerdict({
+      ...okInput,
+      runBody: {
+        run: {
+          ...runBody.run,
+          aggregates: {
+            ...runBody.run.aggregates,
+            releaseGate: {
+              verdict: 'fail',
+              checks: [
+                { key: 'tool_success', threshold: '≥ 99.0%', measured: '98.0%', status: 'fail' },
+                { key: 'qps_headroom', threshold: '峰值 QPS ×2', measured: null, status: 'no_data', noDataCode: 'requires_live_backfill', noDataReason: '容量压测属部署验收', gap: '容量压测属部署验收' },
+              ],
+              gapKeys: ['qps_headroom'],
+            },
+          },
+        },
+      },
+    } as never)
+    expect(failed.verdict).toBe('fail')
+    expect(failed.fails.some((f) => f.includes('发布门禁未达标：tool_success=98.0%'))).toBe(true)
+    // 未达标（有读数）不得混进 no_data；no_data 仍按 GAP 记，不升级为 FAIL 的唯一原因
+    expect(failed.noData.map((n) => n.key)).toEqual(['qps_headroom'])
+    expect(failed.gaps.some((g) => g.includes('qps_headroom'))).toBe(true)
+  })
+
+  it('历史 run（只有 gapKeys 无 checks）→ 维持兼容文案，不猜原因码', () => {
+    const r = computeE2eVerdict({
+      ...okInput,
+      runBody: { run: { status: 'done', aggregates: { passAtK: 1, unknownRatio: 0, riskVeto: false, releaseGate: { verdict: 'pass', gapKeys: ['ttft'] } } } },
+    } as never)
+    expect(r.gaps).toContain('发布门禁证据缺口：ttft')
+    expect(r.noData).toEqual([])
+    expect(r.verdict).toBe('gap')
   })
 
   it('裁判离线但存在 S1 判词=fail；无人工裁决=gap；abstain>30%=gap；冲突=gap', () => {

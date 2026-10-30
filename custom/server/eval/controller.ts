@@ -6,6 +6,7 @@
  * GET  /api/hermes/eval/sets/:id                   详情（密封集只回元数据）
  * POST /api/hermes/eval/sets/:id/seal              密封（此后内容不出库、改题须 Rubric Loop 留痕）
  * GET  /api/hermes/eval/sets/:id/export            导出（密封集拒绝）
+ * POST /api/hermes/eval/sets/:id/dimensions        能力维度批量标注/种子族回填 {assignments?|backfill:'redteam-seed'}
  * POST /api/hermes/eval/sets/:id/tasks/:taskId/rubric  Rubric 修订（密封集须带 iterationId 留痕）
  * POST /api/hermes/eval/runs                       发起回放判分运行 {setId, samples, target?, crossValidate?}
  * GET  /api/hermes/eval/runs?setId=                运行摘要列表（不含 attempt 明细）
@@ -42,7 +43,7 @@ import { reflowTraceToSet } from './trace-reflow'
 import { runOracleCase, playwrightBrowser, type OracleRunRecord } from './uioracle'
 import {
   appendIteration, appendOracleRun, appendTasksToSet, auditSnapshot, createOracleCase, createRemediation, createSet, exportSet,
-  getOracleCase, getRemediation, getRun, getSet, getSetRevision, listIterations, listOracleCases, listOracleRuns,
+  getOracleCase, getRemediation, getRun, getSet, getSetRevision, labelSetDimensions, listIterations, listOracleCases, listOracleRuns,
   listRemediations, listRuns, listSetRevisions, listSets, recordHumanVerdict, recordLiveEvidence,
   reflowTaskToSet, REGRESSION_SET_NAME, reviseRubric, sealSet, verifyRemediation,
 } from './store'
@@ -309,6 +310,35 @@ router.get('/sets/:id/export', async (ctx) => {
     return
   }
   ctx.body = { ok: true, set: result.set }
+})
+
+// 能力维度标注通道（2026-10-30 run23 复盘）：批量给集内任务打七维或显式 'unclassified'。
+// 两条用法：assignments 逐题显式标注（含 null 清除）；backfill='redteam-seed' 按产品登记的
+// 向量映射批量回填存量集（只补未标注项，不覆盖已有标注）。写入走版本快照（revision+1）。
+router.post('/sets/:id/dimensions', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const assignments = body.assignments
+  if (assignments !== undefined && (typeof assignments !== 'object' || assignments === null || Array.isArray(assignments))) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['assignments 须为 {taskId: dimension|null} 对象'] }
+    return
+  }
+  const backfill = body.backfill === undefined ? undefined : String(body.backfill)
+  if (backfill !== undefined && backfill !== 'redteam-seed') {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: [`backfill 只接受 'redteam-seed'（收到：${backfill}）`] }
+    return
+  }
+  const result = labelSetDimensions(ctx.params.id, {
+    ...(assignments ? { assignments: assignments as Record<string, EvalTask['dimension'] | null> } : {}),
+    ...(backfill ? { backfill: backfill as 'redteam-seed' } : {}),
+  })
+  if (!result.ok) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: result.problems }
+    return
+  }
+  ctx.body = { ok: true, ...result.result, actor: actorOf(ctx) ?? null }
 })
 
 router.post('/sets/:id/tasks/:taskId/rubric', async (ctx) => {

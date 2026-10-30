@@ -144,7 +144,9 @@ export const evalMessages = {
         gateTitle: '发布门禁（Pre-Launch 清单）',
         gateVerdict: { pass: '实测项全过', fail: '实测项有不过', no_data: '无实测证据' },
         gateCols: { check: '检查项', threshold: '阈值', measured: '实测', status: '状态' },
-        gateStatus: { pass: '过', fail: '不过', no_data: '证据缺口' },
+        gateStatus: { pass: '过', fail: '不过', no_data: '无数据' },
+        // no_data 原因码（发布门禁）：区分「没采」「样本不足」「回放不产生」
+        gateNoData: { not_collected: '未采集', insufficient_samples: '样本不足', requires_live_backfill: '无回放数据源' },
         excTitle: '异常场景分桶',
         excNames: {
           none: '理想问题',
@@ -386,6 +388,7 @@ export const evalMessages = {
         coverageSub: '只统计显式标注；未标注任务如实计数',
         covered: '已覆盖',
         untagged: '未标注任务',
+        unclassified: '显式未分类',
         taskCount: '任务数',
         setCount: '集数',
         gap: '缺口',
@@ -625,7 +628,8 @@ export const evalMessages = {
         gateTitle: 'Release gate (pre-launch checklist)',
         gateVerdict: { pass: 'all measured pass', fail: 'measured failures', no_data: 'no measured evidence' },
         gateCols: { check: 'Check', threshold: 'Threshold', measured: 'Measured', status: 'Status' },
-        gateStatus: { pass: 'pass', fail: 'fail', no_data: 'evidence gap' },
+        gateStatus: { pass: 'pass', fail: 'fail', no_data: 'no data' },
+        gateNoData: { not_collected: 'not collected', insufficient_samples: 'insufficient samples', requires_live_backfill: 'no replay source' },
         excTitle: 'Exception-scenario buckets',
         excNames: {
           none: 'happy path',
@@ -866,6 +870,7 @@ export const evalMessages = {
         coverageSub: 'Explicit tags only; untagged tasks are reported honestly',
         covered: 'Covered',
         untagged: 'Untagged tasks',
+        unclassified: 'Explicitly unclassified',
         taskCount: 'Tasks',
         setCount: 'Sets',
         gap: 'Gap',

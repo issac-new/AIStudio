@@ -205,6 +205,12 @@ export const useIdeStore = defineStore('ide', () => {
   // 持有服务端数据的状态（头部「不持有服务端数据」原则的历史豁免，关联链单一
   // 事实源收在本 store 避免散落组件各自 fetch）。
   const taskWorkspace = ref<TaskWorkspaceInfo | null>(null)
+  /**
+   * 任务 workspace 解析失败原因（2026-10-30 run23 复盘：深链 ?task=<不存在的任务> 时
+   * 界面只显示「还没有任务工作区」，读者无法区分「任务不存在」与「任务存在但未物化」）。
+   * 只记最近一次解析的失败；成功/切换任务即清空。
+   */
+  const taskWorkspaceError = ref<{ status: number; message: string } | null>(null)
   /** 中栏浮窗开关（任务计划/子代理名册；瞬态不持久化，对标 zcode 浮窗） */
   const floats = ref<Record<IdeFloatKey, boolean>>({ plan: false, agents: false, cua: false })
   // wiki 深化轮（2026-10-10）：@wiki 消费闭环配套——
@@ -272,6 +278,7 @@ export const useIdeStore = defineStore('ide', () => {
   /** 任务维度绑定（工作台 ⌨ 深链）；null 清除 */
   function setActiveTask(taskId: string | null): void {
     activeTaskId.value = taskId?.trim() || null
+    taskWorkspaceError.value = null
     if (!activeTaskId.value) taskWorkspace.value = null
   }
 
@@ -291,10 +298,15 @@ export const useIdeStore = defineStore('ide', () => {
       const info = await ideTaskWorkspaceApi.get(taskId, board)
       if (activeTaskId.value !== taskId) return null
       taskWorkspace.value = info
+      taskWorkspaceError.value = null
       if (info?.path && info.materialized) setWorkspace(info.path, 'task')
       return info
-    } catch {
-      if (activeTaskId.value === taskId) taskWorkspace.value = null
+    } catch (e) {
+      if (activeTaskId.value !== taskId) return null
+      taskWorkspace.value = null
+      // 404=任务不存在/无权访问；其他=解析服务故障——分开记，界面文案不同。
+      const status = typeof (e as { status?: unknown })?.status === 'number' ? (e as { status: number }).status : 0
+      taskWorkspaceError.value = { status, message: e instanceof Error ? e.message : String(e) }
       return null
     }
   }
@@ -389,6 +401,7 @@ export const useIdeStore = defineStore('ide', () => {
     dimension,
     activeTaskId,
     taskWorkspace,
+    taskWorkspaceError,
     floats,
     terminalCwd,
     wikiPages,

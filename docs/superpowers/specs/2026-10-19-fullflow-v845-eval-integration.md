@@ -88,3 +88,13 @@
 - 不设红队逃逸率/维度覆盖的硬阈值；待三轮后按 §5.8.4 控制线用实测水位建立。
 - 评测集内容不进报告（只进聚合读数）；密封集证据端点 403，报告只能看聚合。
 - 本轮的 `eval_flow` 失败会把 G4 卡住；运维处置=修环境后重跑该段（`eval_flow` 幂等：同名集/重复运行可复用）。
+
+## 7. 2026-10-30 增补：G4-E 发布门禁 no_data 归因（run23 复盘）
+
+run23 的 G4-E 判 GAP，缺口清单把 `tool_success / p99_ratio / ttft / response_tier / qps_headroom` 五项并列为「发布门禁证据缺口」，另有一条笼统的「线上证据未回填」——读者无法判断哪项该补采集、哪项结构性无源。本轮只改「怎么说清楚」，不改三态判据：
+
+- **no_data 带结构化原因码**（`ReleaseGateNoDataCode`）：`not_collected`（本可采集但本次没采，如内联证据无 session 轨迹）、`insufficient_samples`（n<2 等统计不足）、`requires_live_backfill`（回放结构性不产生，只能经 `POST /runs/:id/live-evidence` 回填）。每项 no_data 同时给 `noDataReason`（人读）；`gap` 保留为兼容别名。
+- **判据口径不变（§5.3）**：`status=no_data` → GAP 记单放行，不判 FAIL；`status=fail`（有读数未达标）→ FAIL 并点名 `key=实测（阈值）`。e2e-verdict 的 `gaps` 按原因码前缀区分「未采集/样本不足/无回放数据源」，并在 DTO 增 `noData: [{key, code, reason}]`。
+- **去重**：`response_tier / qps_headroom` 的「未回填」不再单列一条笼统 GAP，由该两项的 `requires_live_backfill` 承载（同一事实不两处计缺口）。
+- **TTFT 采集面措辞纠正**：TTFT 属 run-trace 会话遥测（`first_token_ms/ttft_ms`），不是 live 压测项；旧文案「TTFT 需 live 打点」把补采路径说错。三项回放可采项（tool_success/p99/ttft）以 `samples[].sessionId` 的 trace 证据重跑即可出数（`runner.ts` 已接线，run23 用的是内联文本证据）。
+- 变更正本=《2026-10-30-run23-product-capability.md》；阈值零变化（仍 `EVAL_GATE_*` env，见 §4.4 表三）。

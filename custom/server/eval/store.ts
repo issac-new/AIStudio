@@ -12,7 +12,8 @@ import type {
   EvalRun, EvalSet, EvalSetMeta, EvalSetRevision, EvalTask, RemediationRecord, RubricAssertion, RubricIterationLog,
 } from './types'
 import { loadEvalConfig } from './types'
-import { isEvalDimension } from './coverage'
+import { coverageOfSets, isEvalDimensionTag } from './coverage'
+import { dimensionForRedteamTaskId } from './redteam-seed'
 import type { OracleCase, OracleRunRecord } from './uioracle'
 import { contentFingerprint } from './fingerprint'
 import { atomicWriteJson } from '../lib/fs-store'
@@ -201,8 +202,8 @@ function validateTask(t: unknown, i: number, problems: string[]): void {
       problems.push(`任务 #${i} expectedToolCalls 每项须为非空工具名`)
     }
   }
-  if (it?.dimension !== undefined && !isEvalDimension(it.dimension)) {
-    problems.push(`任务 #${i} dimension 须为七维之一：task_completion/tool_params/failure_recovery/long_task_state/privilege_injection/cost_loop/human_escalation`)
+  if (it?.dimension !== undefined && !isEvalDimensionTag(it.dimension)) {
+    problems.push(`任务 #${i} dimension 须为七维之一或显式 'unclassified'：task_completion/tool_params/failure_recovery/long_task_state/privilege_injection/cost_loop/human_escalation/unclassified`)
   }
   if (it?.difficulty !== undefined && !['P0', 'P1', 'P2', 'P3'].includes(String(it.difficulty))) {
     problems.push(`任务 #${i} difficulty 须为 P0/P1/P2/P3（宁缺毋滥：共识不稳定不硬标，可不填）`)
@@ -543,6 +544,104 @@ export function appendTasksToSet(
   return { ok: true, set, appended: fresh.length }
 }
 
+// ---------- 能力维度标注通道（2026-10-30 run23 复盘：150 任务 unlabeled 根因） ----------
+
+export interface DimensionLabelInput {
+  /**
+   * 逐题显式标注：taskId → 七维 / 'unclassified' / null（清除标注回到未标注）。
+   * 只接受集内已存在的 taskId；未知 id 整单拒绝（防拼写错误静默放过）。
+   */
+  assignments?: Record<string, EvalTask['dimension'] | null>
+  /**
+   * 按产品声明的种子族映射批量回填（不臆断：映射表在 redteam-seed.ts 单一事实源）。
+   * 目前支持 'redteam-seed'——对 rt-* 族按向量前缀补 dimension，只补未标注项。
+   */
+  backfill?: 'redteam-seed'
+}
+
+export interface DimensionLabelResult {
+  /** 实际变更的任务数（值未变化不计）。 */
+  updated: number
+  /** 集内任务数（分母）。 */
+  taskTotal: number
+  /** 标注后读数（未标注/显式 unclassified/七维覆盖一次给全）。 */
+  coverage: ReturnType<typeof coverageOfSets>
+  revision: number
+  contentHash: string
+}
+
+/**
+ * 批量标注/回填评测集能力维度（产品侧唯一标注通道）。
+ *
+ * 纪律：写的是「显式标注」而不是猜维度——assignments 由调用方逐题给值；backfill 只走
+ * 产品内登记的种子族映射（redteam-seed.ts:REDTEAM_VECTOR_DIMENSIONS），未知族拒绝。
+ * 变更走 bumpSetAsset（revision+1 + 内容指纹重算 + 版本快照），历史 run 的锚点漂移
+ * 在判据层如实呈现（标注意味着集资产变了，不假装没变）。
+ * 密封集拒绝：密封集不可改题，维度标注同样不改。
+ */
+export function labelSetDimensions(
+  setId: string,
+  input: DimensionLabelInput,
+): { ok: true; result: DimensionLabelResult } | { ok: false; problems: string[] } {
+  const store = readStore()
+  const set = store.sets.find((s) => s.id === setId)
+  if (!set) return { ok: false, problems: [`评测集不存在：${setId}`] }
+  if (set.sealed) return { ok: false, problems: ['密封集不可标注能力维度（密封集不可改）'] }
+
+  const problems: string[] = []
+  const assignments = input.assignments ?? {}
+  const byId = new Map(set.tasks.map((t) => [t.id, t]))
+  for (const [taskId, value] of Object.entries(assignments)) {
+    if (!byId.has(taskId)) problems.push(`任务不存在：${taskId}`)
+    if (value !== null && !isEvalDimensionTag(value)) {
+      problems.push(`任务 ${taskId} 的 dimension 须为七维之一或 'unclassified'（收到：${String(value)}）`)
+    }
+  }
+  if (input.backfill !== undefined && input.backfill !== 'redteam-seed') {
+    problems.push(`backfill 只接受 'redteam-seed'（收到：${String(input.backfill)}）`)
+  }
+  if (problems.length) return { ok: false, problems }
+  if (Object.keys(assignments).length === 0 && input.backfill === undefined) {
+    return { ok: false, problems: ['assignments 或 backfill 至少给一个'] }
+  }
+
+  let updated = 0
+  for (const task of set.tasks) {
+    let next: EvalTask['dimension'] | null | undefined
+    if (Object.prototype.hasOwnProperty.call(assignments, task.id)) {
+      next = assignments[task.id]
+    } else if (input.backfill === 'redteam-seed' && !task.dimension) {
+      // 只补未标注项：已有标注（含 unclassified）不覆盖——显式标注优先于族默认。
+      next = dimensionForRedteamTaskId(task.id)
+    }
+    if (next === undefined) continue
+    if (next === null) {
+      if (task.dimension === undefined) continue
+      delete task.dimension
+      updated += 1
+      continue
+    }
+    if (task.dimension === next) continue
+    task.dimension = next
+    updated += 1
+  }
+
+  if (updated > 0) {
+    bumpSetAsset(store, set)
+    writeStore(store)
+  }
+  return {
+    ok: true,
+    result: {
+      updated,
+      taskTotal: set.tasks.length,
+      coverage: coverageOfSets([set]),
+      revision: set.revision,
+      contentHash: set.contentHash,
+    },
+  }
+}
+
 // ---------- 线上证据回填（百度轮后续批 B7） ----------
 
 /** 人工裁决落库：改写 attempt 判词（source='human'）。冲突=人工与既有机判相反。 */
@@ -790,7 +889,7 @@ export interface AuditSnapshot {
   iterationCount: number
   /** 带 origin 的回流任务数（跨集；溯源是回流动作的消费证据）。 */
   reflowCount: number
-  /** 显式标注维度的任务数（数据集治理动作已发生）。 */
+  /** 显式标注维度的任务数（含显式 'unclassified'：归类动作已发生；七维覆盖另由 coverage 计）。 */
   dimensionTaggedTasks: number
   /** 供覆盖度计算；只在服务端内部使用，不直接出 API。 */
   sets: EvalSet[]

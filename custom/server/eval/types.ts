@@ -159,8 +159,12 @@ export interface EvalTask {
   exceptionType?: ExceptionType
   /** 期望工具调用序列（工具名，按序）——Tool Head Accuracy 与轨迹编辑距离的参照路径。 */
   expectedToolCalls?: string[]
-  /** 能力维度（可选，七值；显式标注才计入覆盖度，未标注如实计入 untagged）。 */
-  dimension?: EvalDimension
+  /**
+   * 能力维度（可选）：七维之一，或显式 'unclassified'（已归类但不在七维分类内）。
+   * 缺省 undefined=未标注，如实计入 untagged；'unclassified' 不计入 untagged，
+   * 但也不冒充七维覆盖（覆盖读数与未标注数分开呈现）。
+   */
+  dimension?: EvalDimension | 'unclassified'
   /** 难度档（可选，P0-P3；宁缺毋滥——只标有稳定专家共识的任务，未标注计入 untagged）。 */
   difficulty?: DifficultyTier
   /** 责任角色域（可选；标注后聚合按角色分桶失败，归因直达责任方）。 */
