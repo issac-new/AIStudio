@@ -14,7 +14,7 @@
 8. 本仓只存源码/脚本/文档/依赖清单；中间产物（node_modules、dist、runs、截图、离线包、evidence 二进制）不入库（.gitignore 立法，2026-10-24 用户指示）。`evidence/` 内 2026-10-28 之前的历史截图按冻结白名单保留、禁新增（守门 `custom/__tests__/evidence-binary-freeze.test.ts`）。
 9. 访问上游树用统一解析序：显式 env（`OVERLAY_UPSTREAM_ROOT`）→ 仓内 `vendor/` → 旧兄弟 `upstream/`（先例 `scripts/build.mjs`、`scripts/serve-server.mjs`）。不要写死 `../upstream` 的层级假设——单仓检出没有兄弟 upstream，写死必坏。
 10. 运行时部署（`scripts/deploy-agent-runtime.mjs`）默认**保留安装树里与模板不同的文件**并报告；确需以模板覆盖时显式 `--force`。模板落后于宿主时应把宿主已知良好态回灌 `runtime/`，不要强推覆盖。
-11. 强制面分三处、都随仓入库：L2 提交强拦的判定库与钩子在 `.swarm-yuan/hooks/`（由 `npm run skill:build` 从 `skills/swarm-yuan/assets/` 渲染，字节一致性由 `custom/__tests__/l2-kit-parity.test.ts` 锁）；推送前 `pre-push` 执行 qgate L0 门集（默认只告警，`QGATE_PREPUSH_ENFORCE=1` 拦截，`QGATE_PREPUSH_SKIP=1` 关闭）；四层上下文读取计量由 `custom/qgate/plugin/hooks/post-tool-read.mjs` 落 `.qgate/reads.jsonl`，端点 `/api/harness/obs-signals` 的 `contextReads` 面消费。
+11. 强制面分三处、都随仓入库：L2 提交强拦的判定库与钩子在 `.swarm-yuan/hooks/`（由 `npm run skill:build` 从 `skills/swarm-yuan/assets/` 渲染——该命令需生成态技能目录，只在主检出生效；worktree/新克隆直接使用已入库副本，字节一致性由 `custom/__tests__/l2-kit-parity.test.ts` 锁）；推送前 `pre-push` 执行 qgate L0 门集（默认只告警，`QGATE_PREPUSH_ENFORCE=1` 拦截，`QGATE_PREPUSH_SKIP=1` 关闭）；四层上下文读取计量由 `custom/qgate/plugin/hooks/post-tool-read.mjs` 落 `.qgate/reads.jsonl`，端点 `/api/harness/obs-signals` 的 `contextReads` 面消费。
 
 ## 目录导航
 
