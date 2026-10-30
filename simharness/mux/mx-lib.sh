@@ -859,7 +859,28 @@ mx_drift_audit() { # <patchname> <patchfile> <tree> —— 只在「语义已在
       inf && /^\+/ { print substr($0, 2) }
     ' "$pf")
     if [ "$found" = 0 ]; then
-      fail "漂移守卫：${pname} 半应用态（$tf 缺补丁新增内容）——deploy-agent-runtime --apply --force 收敛或回灌 runtime/ 模板后重跑"
+      # 半应用态自愈（run23 实录：多文件补丁的 marker 命中另一文件即被判「已在位」，
+      # 真正接线文件在 SIM 是旧副本；provision 只复制 git 跟踪文件，未跟踪的接线文件
+      # 永远回灌不进来 → 每次 mx-up 都卡在这里）。收敛法：该文件若在宿主树存在且
+      # 含补丁内容，直接从宿主回灌（宿主=补丁态权威），回灌后再判一次。
+      local _hf="${HERMES_AGENT_SRC_FROM:-$HOME/.hermes/hermes-agent}/$tf"
+      if [ -f "$_hf" ]; then
+        mkdir -p "$(dirname "$tree/$tf")"
+        cp "$_hf" "$tree/$tf"
+        found=0
+        while IFS= read -r line; do
+          [ "${#line}" -ge 10 ] || continue
+          if grep -qF -- "$line" "$tree/$tf" 2>/dev/null; then found=1; break; fi
+        done < <(awk -v f="$tf" '
+          index($0, "diff --git a/" f " ") == 1 { inf = 1; next }
+          /^diff --git / { inf = 0 }
+          inf && /^\+/ { print substr($0, 2) }
+        ' "$pf")
+        [ "$found" = 1 ] && log "漂移自愈：${pname} 目标文件 ${tf} 已从宿主回灌"
+      fi
+      if [ "$found" = 0 ]; then
+        fail "漂移守卫：${pname} 半应用态（$tf 缺补丁新增内容，宿主回灌亦不可用）——deploy-agent-runtime --apply --force 收敛或回灌 runtime/ 模板后重跑"
+      fi
     fi
   done < <(git -C "$tree" apply --numstat "$pf" 2>/dev/null)
 }
