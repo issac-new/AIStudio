@@ -1,0 +1,22 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -122,6 +122,10 @@
+ // overlay[sim-fleet]: 舰队利用率遥测（自我觉察 spec §4 舰队层）——
+ // /api/sim/fleet-utilization：按角色域聚合在编×活跃×饱和度+闲置容量（fail-soft 只读）。
+ import fleetUtilizationRouter from '../custom/controllers/sim/fleet-utilization'
++// overlay[board-staleness]: 卡依赖图停滞看门狗（run23 实锤根治，spec
++// 2026-10-29-kanban-deps-and-session-rotation 案一）——/api/sim/board-staleness：
++// 检出「blocked 超阈值且仍有在途子卡」的父卡（fail-soft 只读，cron 消费）。
++import boardStalenessRouter from '../custom/controllers/sim/board-staleness'
+ // overlay[progress]: 按任务的研发进度（台账×会话投影聚合，进度可感知链）
+ import { progressRoutes } from '../custom/progress/task-progress-controller'
+ // overlay[eval]: Eval Studio 评测域（/api/hermes/eval/*：评测集/运行/人工仲裁/归因双 Loop）
+@@ -534,6 +538,7 @@
+   app.use(harnessRoutes.routes())                // 驾驭工程：capability-catalog/cost-accounts/maturity/primitives
+   app.use(simRunRouter.routes())                   // 推演运行态（后台感知③）：run-progress.json 只读
+   app.use(fleetUtilizationRouter.routes())         // 舰队利用率遥测（spec §4 舰队层）：profiles agent.log 心跳聚合
++  app.use(boardStalenessRouter.routes())           // 看板停滞看门狗（run23 根治案一）：blocked 父卡×在途子卡检出
+   app.use(progressRoutes.routes())                  // 研发任务进度：/api/progress/tasks（taskId 联表）
+   app.use(evalRoutes.routes())                     // Eval Studio：评测集/回放判分/pass@k 报告/归因双 Loop（spec 2026-10-07）
+   app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
