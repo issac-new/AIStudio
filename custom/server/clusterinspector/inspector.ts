@@ -518,8 +518,9 @@ export class ClusterInspector {
               title: typeof c.title === 'string' ? c.title : undefined,
               status: typeof c.status === 'string' ? c.status : undefined,
               // 「最后推进时刻」回退链（真实 tasks 表无 updated_at 列——run19 巡检实锤）：
-              // last_heartbeat_at（worker 心跳）?? completed_at ?? created_at
+              // last_event_at（task_events/comments 真实活动）?? last_heartbeat_at ?? completed_at ?? created_at
               updated_at: pickLastTouched(c),
+              last_event_at: typeof c.last_event_at === 'number' || typeof c.last_event_at === 'string' ? c.last_event_at : undefined,
             })).filter((c) => c.id),
           }
         } catch (e) {
@@ -542,6 +543,7 @@ export class ClusterInspector {
                 status: typeof c.status === 'string' ? c.status : undefined,
                 result: typeof c.result === 'string' ? c.result : undefined,
                 updated_at: pickLastTouched(c),
+                last_event_at: typeof c.last_event_at === 'number' || typeof c.last_event_at === 'string' ? c.last_event_at : undefined,
               })).filter((c) => c.id),
           }
         } catch (e) {
@@ -565,6 +567,7 @@ export class ClusterInspector {
                 body: typeof c.body === 'string' ? c.body : undefined,
                 created_at: typeof c.created_at === 'number' || typeof c.created_at === 'string' ? c.created_at : undefined,
                 updated_at: pickLastTouched(c),
+                last_event_at: typeof c.last_event_at === 'number' || typeof c.last_event_at === 'string' ? c.last_event_at : undefined,
               })).filter((c) => c.id),
           }
         } catch (e) {
@@ -734,9 +737,12 @@ export function startInspectorIfEnabled(deps: InspectorDeps = {}): ClusterInspec
 }
 
 
-/** blocked 卡「最后推进时刻」三重回退（tasks 表实无 updated_at 列；CLI 透传列实测） */
+/** blocked 卡「最后推进时刻」四重回退（tasks 表实无 updated_at 列；CLI 透传列实测）。
+ *  run23 挂账②：last_event_at 插在第二位——tasks 表 UPDATE 不写任何时间列，
+ *  卡面真实活动（改判/评论/状态迁移）只在 task_events/task_comments 留痕；
+ *  旧链落到 created_at，卡有活动仍按建卡时间判滞（run23 误报实录）。 */
 function pickLastTouched(c: Record<string, unknown>): number | string | undefined {
-  for (const k of ['updated_at', 'last_heartbeat_at', 'completed_at', 'created_at']) {
+  for (const k of ['updated_at', 'last_event_at', 'last_heartbeat_at', 'completed_at', 'created_at']) {
     const v = c[k]
     if (typeof v === 'number' && v > 0) return v
     if (typeof v === 'string' && v && !Number.isNaN(Number(v))) return v

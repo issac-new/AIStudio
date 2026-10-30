@@ -1,0 +1,43 @@
+diff --git a/agent/codex_runtime.py b/agent/codex_runtime.py
+--- a/agent/codex_runtime.py
++++ b/agent/codex_runtime.py
+@@ -20,6 +20,7 @@
+ from agent.sdk_transform_bypass import bypass_sdk_request_transform
+ from agent.stream_diag import buffer_connect_exhausted_notice
+ from agent.usage_anchor import set_usage_anchor
++from agent.errors import EmptyStreamError
+ 
+ logger = logging.getLogger(__name__)
+ _codex_watchdog_state_var: contextvars.ContextVar[Any | None] = contextvars.ContextVar(
+@@ -1411,7 +1412,30 @@
+                 raise
+             if not agent._interrupt_requested:
+                 _drain_for_finalizer(event_stream)
+-            if final.status in {"incomplete", "failed"}:
++            if getattr(final, "status", None) == "incomplete":
++                # 707（run23 挂账③）：terminal status=incomplete=上游流掐断的残响。
++                # 旧形态只告警后照常 return——掐流被当正常完成结算，回合落 settled
++                # 不进任何重试面（run23 实录：76K-241K 中毒会话对上游截断 out=8）。
++                # 与 aux 面对齐（auxiliary_codex_response：incomplete 残响一律拒收）：
++                # 不完整的响应不得提交。有重试余额→物理重试（与 transport 错误同面）；
++                # 耗尽→抛 EmptyStreamError 走瞬态失败面（run_turn_persistence 保留
++                # 用户消息等上下文重试），下一轮准入面视为可重入（非终态）。
++                if attempt < max_stream_retries and not agent._interrupt_requested:
++                    logger.warning(
++                        "Codex Responses stream terminal status=incomplete "
++                        "(incomplete_details=%s, streamed_chars=%d); physical retry "
++                        "(attempt %s/%s). %s",
++                        getattr(final, "incomplete_details", None),
++                        sum(len(p) for p in agent._codex_streamed_text_parts),
++                        attempt + 1, max_stream_retries + 1, agent._client_log_context())
++                    continue
++                _log_failure(ValueError("terminal status=incomplete"))
++                raise EmptyStreamError(
++                    "Codex Responses stream terminal status=incomplete after "
++                    f"{max_stream_retries + 1} attempts (incomplete_details="
++                    f"{getattr(final, 'incomplete_details', None)}); retryable incomplete "
++                    "response, not a settled completion.")
++            if final.status in {"failed"}:
+                 logger.warning("Codex Responses stream terminal status=%s "
+                                "(incomplete_details=%s, error=%s, streamed_chars=%d). %s",
+                                final.status, final.incomplete_details, final.error,

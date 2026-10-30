@@ -4,7 +4,7 @@
 
 import Router from '@koa/router'
 import { execFile } from 'node:child_process'
-import { hermesHomeDefault } from './collectors'
+import { hermesHomeDefault, enrichCardsWithLastEventAt } from './collectors'
 import { ensureInspector, type InspectorDeps } from './inspector'
 
 /** kanban 诊断接线（v1 缺口补齐）：CLI 桥（kanban-service 同款先例），fail-soft。 */
@@ -42,36 +42,13 @@ function runningCardsProvider(): (() => Promise<Array<Record<string, unknown>>>)
 /** FAIL 判卡接线（review.fail-stall 复审环老化面）：CLI 桥 list --status done --json，fail-soft。
  *  run20 22:34 复审链断棒实录：修订入仓 75 分钟复审派单悬空——闸类 FAIL 卡零推进即老化。 */
 function failedVerdictCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
-  return () => new Promise((resolve, reject) => {
-    execFile('hermes', ['kanban', 'list', '--status', 'done', '--json'], {
-      timeout: 30_000,
-      env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || hermesHomeDefault() },
-    }, (err, stdout) => {
-      if (err) { reject(err); return }
-      try {
-        const out = JSON.parse(stdout) as unknown
-        resolve(Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : [])
-      } catch (e) { reject(e as Error) }
-    })
-  })
+  return () => kanbanListWithActivityClock('done')
 }
 
 /** 未认领开放卡接线（card.unassigned-stale 面）：ready+todo 两查合并，fail-soft。
  *  run20 r3 派单断棒实录：主卡 ready+无人认领 2h45m 全检测器盲区。 */
 function unassignedCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
-  const list = (status: string) => new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
-    execFile('hermes', ['kanban', 'list', '--status', status, '--json'], {
-      timeout: 30_000,
-      env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || hermesHomeDefault() },
-    }, (err, stdout) => {
-      if (err) { reject(err); return }
-      try {
-        const out = JSON.parse(stdout) as unknown
-        resolve(Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : [])
-      } catch (e) { reject(e as Error) }
-    })
-  })
-  return async () => [...await list('ready'), ...await list('todo')]
+  return async () => [...await kanbanListWithActivityClock('ready'), ...await kanbanListWithActivityClock('todo')]
 }
 
 /** 期望工作卡接线（work.expected-silent 面，run20 双盲区实录）：遍历各板 kanban.db
@@ -121,20 +98,29 @@ export function startInspectorIfEnabled(): void {
   startPipelineIfEnabled(pipelineEngine)
 }
 
-/** 阻塞卡接线（card.blocked-stale 检测面，run19 G5 熔断死等产品化——用户 300s 时限）：CLI 桥 list --status blocked，fail-soft。 */
-function blockedCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
-  return () => new Promise((resolve, reject) => {
-    execFile('hermes', ['kanban', 'list', '--status', 'blocked', '--json'], {
+/** kanban list CLI 桥（单 status 查询，fail-soft）+活动时钟注入。
+ *  注入面 enrichCardsWithLastEventAt 落 collectors.ts（采集层关注点，依赖轻、
+ *  可单测——本控制器模块级建路由，import 即拉 pipeline 域，不进测试链）。 */
+function kanbanListWithActivityClock(status: string): Promise<Array<Record<string, unknown>>> {
+  return new Promise((resolve, reject) => {
+    execFile('hermes', ['kanban', 'list', '--status', status, '--json'], {
       timeout: 30_000,
       env: { ...process.env, HERMES_HOME: process.env.HERMES_HOME || hermesHomeDefault() },
     }, (err, stdout) => {
       if (err) { reject(err); return }
+      let cards: Array<Record<string, unknown>>
       try {
         const out = JSON.parse(stdout) as unknown
-        resolve(Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : [])
-      } catch (e) { reject(e as Error) }
+        cards = Array.isArray(out) ? (out as Array<Record<string, unknown>>) : Array.isArray((out as { tasks?: unknown }).tasks) ? ((out as { tasks: Array<Record<string, unknown>> }).tasks) : []
+      } catch (e) { reject(e as Error); return }
+      enrichCardsWithLastEventAt(cards).then(resolve, () => resolve(cards))
     })
   })
+}
+
+/** 阻塞卡接线（card.blocked-stale 检测面，run19 G5 熔断死等产品化——用户 300s 时限）：CLI 桥 list --status blocked，fail-soft。 */
+function blockedCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
+  return () => kanbanListWithActivityClock('blocked')
 }
 
 export function createClusterInspectorRouter(deps: InspectorDeps = {}): Router {

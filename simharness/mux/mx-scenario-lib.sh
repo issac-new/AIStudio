@@ -393,6 +393,59 @@ dm_room() { # <fromUser> <toUser> → room_id（缓存）
   sset "$key" "$rid"; echo "$rid"
 }
 
+# ── DM 送达保障（run23 挂账①：G1 回灌 DM 死信根治，2026-10-30）──
+# 事故形态：DM 派发无任何送达确认——回灌 DM 以 `>/dev/null 2>&1 || true` 全静默
+# 发送；mx_send 三试全败返回字面 SEND-FAILED 且退出码 0（mx-lib.sh mx_send），
+# 调用方 marker 照落、note 照写「已送达」——消息未达即死信，只能人工察觉手工回灌
+# （run23 G1 阶段实录）。群派发面已有 _verify_dispatch_delivery（网关容量丢弃
+# 检测+重递），DM 面此前零保障。本族三件套补齐：
+#   _gateway_dropped：网关容量丢弃判据（与 _verify_dispatch_delivery 同源，单一事实源）；
+#   _dm_readback_has：回读确认（mx_messages 查 event_id 在房——synapse 收录才算发过）；
+#   dm_send_tracked：DM 发送+死信检测+自动重发（幂等：重发消息内嵌原 event_id 去重锚）。
+_gateway_dropped() { # <event-id> → 0=网关容量丢弃/排队命中
+  local _gw _hits
+  _gw=$(ls -t "$LOGS_DIR"/gateway*.log 2>/dev/null | head -1)
+  [[ -n "$_gw" ]] || return 1
+  # pipefail 安全形态（run23 挂账① 实锚）：旧写法 `{ grep A; grep B; } | grep -qF`
+  # 在驱动 set -euEo pipefail 下，第二个 grep 无命中退出 1 会污染整管道——丢弃
+  # 行命中也判 MISS，容量检测形同虚设。单 grep 双 -e 先收拢（|| true 归零）再查，
+  # 空手/SIGPIPE 两条路径都不再翻转判定。
+  _hits=$(grep -h -e "dropping message for" -e "Capacity retry for" "$_gw" 2>/dev/null || true)
+  printf '%s\n' "$_hits" | grep -qF "$1"
+}
+_dm_readback_has() { # <token> <roomId> <event-id> → 0=回读在房
+  mx_messages "$1" "$2" 100 | jq -e --arg e "$3" 'map(.event_id) | index($e) != null' >/dev/null 2>&1
+}
+dm_send_tracked() { # <fromUser> <toUser> <text> [mention] → 生效 event_id | SEND-FAILED（恒返 0）
+  local _from="$1" _to="$2" _text="$3" _mention="${4:-}" _room _m _m2
+  _room=$(dm_room "$_from" "$_to") || { printf 'SEND-FAILED'; return 0; }
+  _m=$(mx_send "$(load_token "$_from")" "$_room" "$_text" "$_mention") || _m="SEND-FAILED"
+  if [[ -n "$_m" && "$_m" != "SEND-FAILED" ]]; then
+    sleep 3   # 与 _verify_dispatch_delivery 同窗：等网关丢弃日志落盘再查
+    if _gateway_dropped "$_m"; then
+      echo "ISSUE|dm-capacity-drop|${_from}|DM ${_m}（→${_to}）遭网关容量丢弃，已自动重递" >> "$EVID_DIR/issues.log"
+      note "[${_from}] DM ${_m} 命中网关容量限制——自动重递一次"
+      _m2=$(mx_send "$(load_token "$_from")" "$_room" "${_text}
+[重递标记] 上一条 ${_m} 遭网关容量限制未达，本条为同一内容重递，语义等同；若上一条实际已处理，按去重键合并回执即可。" "$_mention") || _m2="SEND-FAILED"
+      [[ "$_m2" != "SEND-FAILED" ]] && _m="$_m2"
+    elif ! _dm_readback_has "$(load_token "$_from")" "$_room" "$_m"; then
+      # 回读缺席=死信（服务端未收录，接收方无从看到）：记单+自动重发一次
+      echo "ISSUE|dm-dead-letter|${_from}|DM ${_m}（→${_to}）发送后回读缺席，已自动重发" >> "$EVID_DIR/issues.log"
+      note "[${_from}] DM ${_m} 回读缺席——死信检测触发，自动重发一次"
+      _m2=$(mx_send "$(load_token "$_from")" "$_room" "${_text}
+[重发标记] 上一条 ${_m} 发送后回读缺席（可能未达），本条为同一内容重发，语义等同；若上一条实际已处理，按去重键合并回执即可。" "$_mention") || _m2="SEND-FAILED"
+      [[ "$_m2" != "SEND-FAILED" ]] && _m="$_m2"
+    fi
+  else
+    # 三试全败：不静默——记单+退避重试一次，仍败如实返回 SEND-FAILED 交调用方呈现
+    echo "ISSUE|dm-send-failed|${_from}|DM →${_to} 三试全败（SEND-FAILED），退避后重试一次" >> "$EVID_DIR/issues.log"
+    sleep 5
+    _m=$(mx_send "$(load_token "$_from")" "$_room" "$_text" "$_mention") || _m="SEND-FAILED"
+    [[ "$_m" == "SEND-FAILED" ]] && note "[${_from}] DM →${_to} 重试仍败（死信如实呈现，不静默）"
+  fi
+  printf '%s' "$_m"
+}
+
 # approved.events 台账（边界设计 §2/§6-T4，eid 锚点约定）：每行
 #   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
 # 事件 id 即 Matrix ${event_id}（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
@@ -1795,12 +1848,11 @@ _progress_ledger_record() { # <dispatcher> <body> <mentions-csv> <event-id>
 # 标记，语义等同原任务书）+ 记问题单。慢路径（held 20min 后丢）抓不到，由巡检
 # cron 兜底；本机制消灭的是"即时丢弃驱动不知情"这一主类（当日全部事故形态）。
 _verify_dispatch_delivery() { # <user> <event-id> <body> <mentions> → 生效 event id
-  local user="$1" ev="$2" body="$3" mentions="$4" gw_log m2
+  local user="$1" ev="$2" body="$3" mentions="$4" m2
   [[ -n "$ev" && "$ev" != "SEND-FAILED" ]] || { printf '%s' "$ev"; return 0; }
-  gw_log=$(ls -t "$LOGS_DIR"/gateway*.log 2>/dev/null | head -1)
-  [[ -n "$gw_log" ]] || { printf '%s' "$ev"; return 0; }
   sleep 3
-  if { grep "dropping message for" "$gw_log" 2>/dev/null; grep "Capacity retry for" "$gw_log" 2>/dev/null; } | grep -qF "$ev"; then
+  # 判据收敛单一事实源（run23 挂账①）：与 dm_send_tracked 共用 _gateway_dropped
+  if _gateway_dropped "$ev"; then
     echo "ISSUE|dispatch-capacity-drop|${user}|派发 ${ev} 遭容量丢弃/排队，已自动重递" >> "$EVID_DIR/issues.log"
     note "[${user}] 派发 ${ev} 命中容量限制——自动重递一次"
     m2=$(mx_send "$(load_token "$user")" "$(sget room_analysis)" "$body

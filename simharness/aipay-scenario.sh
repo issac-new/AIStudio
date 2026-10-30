@@ -335,11 +335,18 @@ if step_reached ba; then
   fi
   DM=$(dm_room bella fanfan)
   if [[ -z "$(sget ba_dm_marker)" ]]; then
-    M=$(mx_send "$(load_token bella)" "$DM" "fanfan 你好，客户需求文档已出：${RFD_ID} 收单商户多端小程序支付收银台（依据财付通/支付宝公开技术手册）。
+    # run23 挂账①：改走 dm_send_tracked（发送后回读确认+网关丢弃检测+自动重发）。
+    # 旧形态 mx_send 裸发：SEND-FAILED 也落 marker 且 note 谎报「已送达」，下轮
+    # 驱动见 marker 非空跳过重发——死信跨轮固化。现在败果不落键，下轮自然重试。
+    M=$(dm_send_tracked bella fanfan "fanfan 你好，客户需求文档已出：${RFD_ID} 收单商户多端小程序支付收银台（依据财付通/支付宝公开技术手册）。
 仓库: github.com/issac-new/aipaydev → ${RFD_DOC}
 请产品团队接手做需求分析与分工。")
-    sset ba_dm_marker "$M"
-    note "[bella→fanfan] 需求私信已送达 ($M)"
+    if [[ "$M" == "SEND-FAILED" ]]; then
+      note "[bella→fanfan] 需求私信发送失败（ISSUE 已记；marker 不落键，下轮驱动重试）"
+    else
+      sset ba_dm_marker "$M"
+      note "[bella→fanfan] 需求私信已送达 ($M)"
+    fi
   fi
 fi
 
@@ -355,8 +362,11 @@ if step_reached reqgate; then
       # 首过口径（方案 §2.6-5）：准入退回后补齐再冻=「补过」形态（无 FAIL 判词但闸前有补交），
       # 记 g1_supplement 键供治理报告三态统计（首过/补过/打回），防拆分补交刷首过率。
       sset g1_supplement 1
-      mx_send "$(load_token bella)" "$(sget dm_bella_fanfan)" \
-        "@$(human_mxid bella) G1 准入退回：${RFD_DOC} 缺 ${JUDGE}请按 templates/prd.md 结构补齐（验收标准逐条 AC 编号且机械化可判）后重推。" >/dev/null 2>&1 || true
+      # run23 挂账①：回灌 DM 旧形态 `mx_send ... >/dev/null 2>&1 || true` 全静默——
+      # 消息未达即死信、无单无重试，run23 G1 阶段实录后只能人工回灌。改走
+      # dm_send_tracked：回读确认+网关丢弃检测+自动重发（幂等：重发内嵌去重锚）。
+      _g1dm=$(dm_send_tracked bella fanfan "@$(human_mxid bella) G1 准入退回：${RFD_DOC} 缺 ${JUDGE}请按 templates/prd.md 结构补齐（验收标准逐条 AC 编号且机械化可判）后重推。")
+      note "[G1] 回灌 DM 送达结果：${_g1dm}"
       # 二轮：等待补齐（导演侧重拉重判，900s×2）
       ok2=""
       for round in 1 2; do
