@@ -72,13 +72,13 @@ function getTheme(dark: boolean): XtermTheme {
     const accent = cssVar('--accent-primary', '#4cc9f0')
     const border = cssVar('--border-color', '#333')
     const primary = cssVar('--primary-color', '#18a058')
-    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#000000', red: error, green: success, yellow: warning, blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: border, brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: primary, brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: 'var(--bg-card)' }
+    return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}4d`, black: '#6e7681', red: error, green: success, yellow: warning, blue: accent, magenta: '#c678dd', cyan: '#56b6c2', white: fg, brightBlack: '#828a98', brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: primary, brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#fafafa' }
   }
   const bg = cssVar('--bg-primary', '#fafafa')
   const fg = cssVar('--text-primary', '#383a42')
   const accent = cssVar('--accent-primary', '#526fff')
   const border = cssVar('--border-color', '#e0e0e0')
-  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: border, red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: border, brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: cssVar('--primary-color', 'var(--success)'), brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: 'var(--bg-card)' }
+  return { background: bg, foreground: fg, cursor: accent, cursorAccent: bg, selectionBackground: `${accent}33`, black: '#6a6d76', red: '#e45649', green: '#50a14f', yellow: '#c18401', blue: accent, magenta: '#a626a4', cyan: '#0184bc', white: fg, brightBlack: '#8b8d94', brightRed: error, brightGreen: success, brightYellow: warning, brightBlue: cssVar('--primary-color', 'var(--success)'), brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#383a42' }
 }
 
 let term: Terminal | null = null
