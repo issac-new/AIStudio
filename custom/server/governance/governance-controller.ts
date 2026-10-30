@@ -96,17 +96,23 @@ function decisionActor(ctx: Context): AuthenticatedActor | null {
   }
 }
 
-/** 治理工件登记表：kind → 仓内路径 + 界面标题 + 所属闸。单一事实源（client 只消费）。 */
-export const GOVERNANCE_DOCS: ReadonlyArray<{ kind: string; path: string; title: string; gate: string; group: string; ref?: string }> = [
+/** 治理工件登记表：kind → 仓内路径 + 界面标题 + 所属闸。单一事实源（client 只消费）。
+ * candidates（run23 复盘新增）：按轮命名工件的回落路径族——注册表默认 path 是
+ * 「default-*」占位命名，而真实产出按轮落 `docs/retro/<date>-<runtag>-*.md` 等
+ * 形态（与 mx-report-gen 的 _cands 同族口径）。docMeta 逐候选解析，先命中先用。 */
+export const GOVERNANCE_DOCS: ReadonlyArray<{ kind: string; path: string; title: string; gate: string; group: string; ref?: string; candidates?: readonly string[] }> = [
   // 六闸工件（治理门禁对象）
   { kind: 'freeze', path: 'docs/requirements/RFD-001.freeze.md', title: 'G1 需求冻结', gate: 'G1', group: 'gate' },
   { kind: 'design', path: 'docs/design/RFD-001-architecture-design.md', title: '概要设计（G2 评审对象）', gate: 'G2', group: 'gate' },
   { kind: 'schedule', path: 'docs/plan/RFD-001-schedule.md', title: '开发/测试排期', gate: 'G2', group: 'gate' },
   { kind: 'test', path: 'docs/test/RFD-001-test-report.md', title: 'G4 测试报告', gate: 'G4', group: 'gate' },
-  { kind: 'release', path: 'RELEASE.md', title: 'G5 发布说明', gate: 'G5', group: 'gate' },
+  { kind: 'release', path: 'RELEASE.md', title: 'G5 发布说明', gate: 'G5', group: 'gate',
+    candidates: ['RELEASE.md', 'docs/release/RFD-001-release-notes.md'] },
   { kind: 'uat', path: 'docs/acceptance/RFD-001-acceptance.md', title: 'UAT 业务验收', gate: 'G5', group: 'gate' },
-  { kind: 'audit', path: 'docs/retro/default-audit-opinion.md', title: '合规审计意见书', gate: 'G6', group: 'gate' },
-  { kind: 'retro', path: 'docs/retro/default-RFD-001-retrospective.md', title: 'G6 复盘报告', gate: 'G6', group: 'gate' },
+  { kind: 'audit', path: 'docs/retro/default-audit-opinion.md', title: '合规审计意见书', gate: 'G6', group: 'gate',
+    candidates: ['docs/retro/default-audit-opinion.md', 'docs/retro/20261028-v8-run23-audit-opinion.md'] },
+  { kind: 'retro', path: 'docs/retro/default-RFD-001-retrospective.md', title: 'G6 复盘报告', gate: 'G6', group: 'gate',
+    candidates: ['docs/retro/default-RFD-001-retrospective.md', 'docs/retro/20261028-v8-run23-RFD-001-retrospective.md'] },
   // 管理档案（编制/应用/组织——推演报告步骤 1/5/6 的产品承载）
   { kind: 'roster', path: 'docs/admin/roster.md', title: '账号清单（15 人编制）', gate: '', group: 'admin' },
   { kind: 'app-registry', path: 'docs/admin/app-registry.md', title: '应用资产登记表', gate: '', group: 'admin' },
@@ -155,19 +161,24 @@ function repoReady(): boolean {
 async function docMeta(entry: typeof GOVERNANCE_DOCS[number]) {
   const empty = { ...entry, exists: false, commit: null as string | null, committedAt: null as string | null, lines: 0 }
   if (!repoReady()) return empty
-  try {
-    const refs = entry.ref ? [entry.ref] : ['HEAD', 'origin/main']
-    let best = ''
-    for (const ref of refs) {
-      const out = (await git(['log', '-1', '--format=%h %cI', ref, '--', entry.path])).trim()
-      if (out && (!best || out.split(' ').slice(1).join(' ') > best.split(' ').slice(1).join(' '))) best = out
-    }
-    if (!best) return empty
-    const [commit, ...rest] = best.split(' ')
-    return { ...entry, exists: true, commit, committedAt: rest.join(' '), lines: 0 }
-  } catch {
-    return empty
+  // candidates 回落（run23 复盘）：default path 未命中时逐候选解析，首个命中者
+  // 作为该工件的实际 path 返回（client 读 meta.path 打开全文——GET /doc 同用）。
+  const paths = entry.candidates ?? [entry.path]
+  for (const p of paths) {
+    try {
+      const refs = entry.ref ? [entry.ref] : ['HEAD', 'origin/main']
+      let best = ''
+      for (const ref of refs) {
+        const out = (await git(['log', '-1', '--format=%h %cI', ref, '--', p])).trim()
+        if (out && (!best || out.split(' ').slice(1).join(' ') > best.split(' ').slice(1).join(' '))) best = out
+      }
+      if (best) {
+        const [commit, ...rest] = best.split(' ')
+        return { ...entry, path: p, exists: true, commit, committedAt: rest.join(' '), lines: 0 }
+      }
+    } catch { /* 候选缺失试下一个 */ }
   }
+  return empty
 }
 
 /** G3 编码门禁分支证据：origin/feat/DEV-* 引用实查。 */
