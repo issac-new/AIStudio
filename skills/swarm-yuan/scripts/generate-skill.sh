@@ -151,6 +151,7 @@ UNIVERSAL_FILES=(
   "references/fibo-financial-ontology.md|ref|standard"
   "references/cost-estimation-methodology.md|ref|standard"
   "references/lazy-generation-methodology.md|ref|standard"
+  "references/clean-code-metrics-methodology.md|ref|standard"
   "references/claude-code-capabilities.md|refd|standard"
   "references/standards-compliance.md|ref|compliance"
   "references/cwe-database.md|ref|compliance"
@@ -1951,7 +1952,7 @@ _fg_emit_workflow() {
 
 **① 流程入口（顺序/并行）：** 前序=节点④；互不依赖的文件可并行实施（按文件归属切分子代理，禁止两个执行者写同一文件）；复杂变更（>3 文件/跨模块）用 Dynamic Workflows 并行扇出；写码前按 `references/lazy-generation-methodology.md` 七层阶梯先查再写（层 2 查 recipes/reference-manual，层 7 才新增）
 
-**④ 质量门禁：** ★分支开发（编码在 feature 分支进行——自 origin/main 起 \`<type>/<slug>\` 命名，测试与实现同分支提交；禁直接在 main 开发，主干合并是节点⑧的事）+ ★测试左移（每个 task 先写/更新测试再实现，TDD/BDD；precheck \`--shift-left\` 核验本次变更集是否同时含 test 与 impl 文件——跨栈测试命名均识别，但“先写后写”的时序仍靠任务纪律）
+**④ 质量门禁：** ★分支开发（编码在 feature 分支进行——自 origin/main 起 \`<type>/<slug>\` 命名，测试与实现同分支提交；禁直接在 main 开发，主干合并是节点⑧的事）+ ★测试左移（每个 task 先写/更新测试再实现，TDD/BDD；precheck \`--shift-left\` 核验本次变更集是否同时含 test 与 impl 文件——跨栈测试命名均识别，但“先写后写”的时序仍靠任务纪律） + ★三阶段（先让它能工作→再把它做好→守工程实践）：最小改动跑通再谈结构；新增逻辑前先减既有复杂度；测试断言可观测行为、不绑实现；只掩盖报错的防护判断不算修根因（口径见 \`references/clean-code-metrics-methodology.md\`）
 
 **⑥ 产出物与调用追踪：** 代码提交 + 测试提交
 
@@ -1965,13 +1966,13 @@ _fg_emit_workflow() {
 
 **① 流程入口（顺序/并行）：** 前序=节点⑤；本节点是**分支测试**——测试与门禁序列在 feature 分支上执行，全绿才进节点⑦⑧（主干不做"合后再测"）；长测试/全量回归起后台任务跑，主会话同时推进其他工作
 
-**④ 质量门禁：** gstack/OCR 5 审查维度 + AUTO-FIX/ASK；★运维左移（验证 metrics/日志/trace 已埋点）；独立跑单元/接口/集成测试 + `check_test` 第二层（覆盖率阈值 / 零断言 / 断言密度 / 负向用例 / 聚焦测试；配置 `MUTATION_CMD` 时追加变异分数）+ `--api` 接口测试覆盖（端点 × 测试映射 + 状态码断言）。
+**④ 质量门禁：** gstack/OCR 5 审查维度 + AUTO-FIX/ASK；★运维左移（验证 metrics/日志/trace 已埋点）；独立跑单元/接口/集成测试 + `check_test` 第二层（覆盖率阈值 / 零断言 / 断言密度 / 负向用例 / 聚焦测试；配置 `MUTATION_CMD` 时追加变异分数） + 可选复杂度/重复度维度（`COMPLEXITY_MAX` / `DUPLICATION_MIN_BLOCK`，默认关，配置后 warn；语义近似重复用 `DUPLICATION_CMD`）+ `--api` 接口测试覆盖（端点 × 测试映射 + 状态码断言）。
 
 **★质量门禁序列（参考 quality:full 十步模式，fail-fast 串行——任一步 fail 即停不跑后续；项目按形态裁剪，门禁映射到 precheck 既有 flag，不新增 check_*）**：`--build` 构建过 → `check_test`（`--test`：0 用例 / 覆盖率 / 断言质量 / 可选变异）→ `--api` 接口测试覆盖（端点 + 状态码）→ `--contract` 契约 → `--reuse` 复用合规（新增单元不与稳定单元重名）→ `--consistency` 业务/数据勾稽 → `--layer`/`--link-depth` 架构边界 → `--docs-pack` 文档齐备 → `--security` 安全 → `--deps` 版本锁定。串行顺序有讲究：构建/测试先行（跑不了代码谈什么都白搭），接口/契约次之（逻辑对但破坏契约也不行），架构/文档/安全/版本殿后。执行入口：`bash scripts/precheck.sh --all-full`（标准 29 门禁已含上述全部）或按需单跑。
 
 **⑥ 产出物与调用追踪：** 测试报告（含覆盖率数值/报告路径、接口端点覆盖、断言密度与负向用例数；配变异命令时含 mutation score）+ 门禁序列各步 pass/fail 留痕（gate-runs.jsonl）
 
-**⑩ 方法论引用：** `references/review-methodology.md`（5 维审查/测试有效性）+ `references/gsd-patterns.md`（goal-backward 对抗验证）
+**⑩ 方法论引用：** `references/review-methodology.md`（5 维审查/测试有效性）+ `references/gsd-patterns.md`（goal-backward 对抗验证）+ `references/clean-code-metrics-methodology.md`（复杂度/重复度/变异口径与阈值标定）
 
 **⑨ 调用追踪：** `bash scripts/trace-log.sh --node "测试验证" --actor "tester" --tool "<测试命令>"`
 

@@ -2883,3 +2883,14 @@ Claude Code / Codex / Cursor / Windsurf / OpenCode / Gemini CLI / Kimi——自�
 - **四阶段顺序立法**（用户指令"研发过程是分支开发、分支测试、主干合并、主干回归的顺序"）：九节点不变（FACT_FLOW_NODES=9），四阶段是节点上的顺序语义——⑤编码=分支开发（feature 分支自 origin/main 起，禁主干直开发）；⑥测试+⑦审查=分支测试（门禁序列在分支全绿才合入，主干不做"合后再测"）；⑧=主干合并（准入=⑥⑦分支全绿）；⑨=主干回归在先（合入后在 main 复跑全量回归，全绿才构建发布；失败回退 merge 或分支重入⑤，不在 main 直接改）。主干回归验证的是分支测试覆盖不了的集成面（并行合入交互、合并语义本身）。
 - **落点**：generate-skill.sh `_fg_emit_workflow`（总览声明+⑤⑥⑧⑨节点+终检表+state-machine 对照 operate=⑨主干回归+构建发布）、template-spec.md §2（权威节点表+详述+左移段）、SKILL.md（description+九节点行+使用块）、README 口径行；锁测试 test-r142-branch-trunk-order.sh（三处口径+顺序断言+节点数不回退）。
 - **与既有决策的关系**：决策合入序列（2026-10-26 立法，⑧节点）不变，四阶段是其外层的时序框架；节点数与状态机六阶段均不动，避免 facts/状态机/测试连锁改写。依据：本仓治理 spec docs/superpowers/specs/2026-10-27-swarm-yuan-branch-trunk-order.md。
+
+### 决策 58：ub-mode 吸收走「方法论档 + 既有门禁扩容」，不加 check_*（2026-10-30，ub-mode 吸收轮）
+
+- **吸收内容**：Uncle Bob 的 `unclebob/ub-mode`（GitHub API 实测 4,858★；README 2,195B + SKILL.md 3,958B）把「先让它能工作 → 再把它做好 → 守工程实践」写成三阶段纪律，质量约束交给确定性工具（crapper/CRAP、dryer/重复度、mutator/变异）而非长 prompt。其立论与本仓同源（不靠模型自觉、靠机械判据），增量是两处本仓此前没有的度量维度：复杂度与重复度。
+- **落地形态（守决策 26/27）**：新增方法论档 `references/clean-code-metrics-methodology.md`（逐条登记规则→本仓承载面），复杂度维度并入 `check_method_size`、重复度维度并入 `check_reuse`，**不新增 `check_*`**，`FACT_GATES_TOTAL=56` 与门禁预算 56 均不变。
+- **旋钮走门禁局部变量**：`COMPLEXITY_MAX`、`DUPLICATION_MIN_BLOCK`、`DUPLICATION_CMD`、`DUPLICATION_MAX_PCT` 沿用 `METHOD_MAX_LINES` 先例（门禁内 `${VAR:-默认}` + usage-manual 登记），不进 `precheck.conf`——`FACT_CONF_VARS=199` 与预算 200 不动，避免为四个可选旋钮走决策 26 修订。代价：生成物 conf 里看不到旋钮，可发现性由方法论档 §四、usage-manual 门禁表、生成的 workflow.md 节点行三处承载。
+- **默认关闭**：两维度默认 0（关），配置后才 warn 执法。理由=启发式复杂度/重复度跨栈必有不精确，默认开启会把误报推给全部存量项目；默认关闭不等于假门禁，配置后判定是机器做的。
+- **CRAP 不内置**：CRAP 需逐函数覆盖率，bash 侧只能拿项目行覆盖率，硬算等于编数；内置只做圈复杂度近似（决策点计数），CRAP 登记为「须外部工具（crapper 等）产出」，方法论档写明边界。
+- **阈值标定守卫**：`DUPLICATION_CMD` 已配而 `DUPLICATION_MAX_PCT` 未标定时报未标定——对治 ub-mode 实录的坑（dryer 原生默认 0.82、规则要求 0.8，照抄默认参数会漏检）。
+- **预算**：分发面 +4,096B（`FACT_ARTIFACT_BYTES_BUDGET` 614,400→618,496，新档 4,539B 整篇随发属功能性增量，登 `docs/budget-exception-ledger.md` 第 34 次）；生成期上下文表面 +51B（SKILL.md 加一条原则+一个路由名，同文件等额瘦身后净增 51B，仍为存量 warn 态）。
+- **依据**：治理 spec `docs/superpowers/specs/2026-10-30-swarm-yuan-ub-mode-absorption.md`；证据分级 A（仓库元数据本机实测）/B（官方 README+SKILL.md 原文）/C（第三方解读与「4200 Star」等二手数字不采信）。

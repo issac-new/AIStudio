@@ -1,5 +1,29 @@
 # Changelog
 
+## [v2.97.0] - 2026-10-30
+
+ub-mode 吸收轮（minor：新增方法论档 + 两处既有门禁扩容，门禁数 56 与变量数 199 均不变）。吸收 《代码整洁之道》作者 Uncle Bob 的 `unclebob/ub-mode`（GitHub API 实测 4,858★；README 2,195B + SKILL.md 3,958B）：三阶段纪律（先让它能工作→再把它做好→守工程实践）+ 确定性工具执法。本仓立论与之同源（不靠模型自觉、靠机械判据），本轮补的是此前缺的两处度量维度——复杂度与重复度。
+
+### Added
+
+- **`references/clean-code-metrics-methodology.md`**（4,539B，随技能分发，决策 58）：三阶段纪律逐条映射到本仓承载面；CRAP/重复度/变异分数的口径与阈值；阈值标定纪律（工具默认 0.82 ≠ 规则 0.8 的坑）；指标边界声明（覆盖不到越权/性能/业务语义偏差，架构不可自动化）；四条不可机器化的人审清单。证据分级 A（仓库元数据本机实测）/B（官方原文）/C（第三方解读不采信）。
+- **`check_method_size` 复杂度维度**（`--method-size`）：按函数边界累计决策点（控制关键字边界匹配 + `&&`/`||`/`?`），超 `COMPLEXITY_MAX` 报 warn。原门禁只量行数，满分支函数能过行数门。启发式，Python 的 and/or 不计。
+- **`check_reuse` 重复度维度**（`--reuse`）：内置 Type-1 精确重复块粗筛（`DUPLICATION_MIN_BLOCK`，单 awk 进程跨文件建首现表，命中段只报一次）+ 外部工具 `DUPLICATION_CMD`/`DUPLICATION_MAX_PCT`。原门禁只查重名，查不出复制粘贴。放在 §5.5 spec 门禁之前——无 spec 的纯工具仓库同样该查。
+- **阈值标定守卫**：`DUPLICATION_CMD` 已配而 `DUPLICATION_MAX_PCT` 未标定时报「未标定」，对治 dryer 默认 0.82 那类照抄默认参数的坑。
+- **生成侧模板**：节点⑤补三阶段纪律（最小改动/先减后加/测试断言行为/修根因），节点⑥门禁序列点名两个可选维度，节点⑥方法论引用补新档。
+
+### Changed
+
+- 四个新旋钮（`COMPLEXITY_MAX`、`DUPLICATION_MIN_BLOCK`、`DUPLICATION_CMD`、`DUPLICATION_MAX_PCT`）走**门禁局部变量**形态（沿 `METHOD_MAX_LINES` 先例），不进 `precheck.conf`：变量数 199、预算 200 不动，不走决策 26 修订；可发现性由方法论档 §四、usage-manual 门禁表、生成的 workflow.md 节点行三处承载。两维度**默认关闭**（0），配置后才 warn 执法。
+- `FACT_REFERENCES` 57→58；`FACT_ARTIFACT_BYTES_BUDGET` 614,400→618,496（第 34 次例外登记，见 `docs/budget-exception-ledger.md`）；注册表 `references.tsv`/`dist.tsv`/`capability-map.md` 同步；`SKILL.md` 文档路由与工作原则各加一处、同文件等额瘦身（生成期上下文表面净增 51B，仍为存量超预算 warn 态）。
+- CRAP 明确不内置：需逐函数覆盖率，bash 侧只能拿项目行覆盖率，硬算等于编数——登记为「须外部工具（crapper 等）产出」。
+
+### 回归证据
+
+- `registry-render --gates` 重渲三档聚合文件；`--check` 六表三向一致。
+- `tests/run-gate-fixture.sh method-size` 3/3、`reuse` 5/5（新增 `compliant-complexity-warn`、`compliant-duplication-warn` 两个 warn 态夹具，默认关闭时既有夹具输出不变）。
+- `self-check --check-only` 与 `tests/run.sh`（全量）结果见交付说明；`build-compendium --regen` 后 `--check` 通过。
+
 ## [v2.96.2] - 2026-10-29
 
 默认目录校正轮（patch）：用户裁定 `.agent/skills` → `.agents/skills`（zcode 技能发现根硬编码 `.zcode/skills`＋`.agents/skills`，源码锚 vendor/zcode `apps/zcode-cli/packages/adapters/src/skills/roots.ts:10-11`；装 `.agents` 即被原生发现，零配置零软链）。昨日 v2.96.1 引入的全部单数引用机械替换：安装旗标 `--agent`→`--agents`、宿主 key `agent`→`agents`、探测判据 `~/.agent`→`~/.agents`、生成默认落点/探测序/兜底、门禁豁免集、pre-commit 垫片探测序、文档与守门测试同步；措辞校正：`.agents` 定位为「跨工具通用技能目录（zcode 原生发现根）」，不再宣称开放标准默认路径（开放标准推荐单数 `.agent`，本机仅 openspec 在用）。v2.96.1 未对外分发（main 未推送），无迁移存量。spec：docs/superpowers/specs/2026-10-29-swarm-yuan-agents-dir-rename.md。

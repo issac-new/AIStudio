@@ -1,7 +1,7 @@
 # gate: method-size
 # domain: architecture / enforce: advisory / tier: arch
 check_method_size() {
-  echo "=== 方法粒度检查（单方法行数上限）==="
+  echo "=== 方法粒度检查（单方法行数上限 / 可选圈复杂度）==="
   local max_lines="${METHOD_MAX_LINES:-60}"
   local scan_dirs="${WRITABLE_DIRS[*]:-}"
   if [[ -z "$scan_dirs" ]]; then
@@ -41,5 +41,24 @@ check_method_size() {
     warn "发现 ${_big} 个方法超 ${max_lines} 行（METHOD_MAX_LINES）——拆分职责或抽子方法"
   else
     pass "方法粒度达标（无超 ${max_lines} 行方法）"
+  fi
+
+  # ---- 复杂度维度（决策 58）：圈复杂度可见化，默认关闭（COMPLEXITY_MAX=0）----
+  # 行数达标不等于复杂度达标：20 行 15 分支的满分支函数能过行数门，但改一处就要重测整条分支网。
+  # 决策点口径与已知误差见 references/clean-code-metrics-methodology.md §四；本维度只 warn 不 fail。
+  local cx_max="${COMPLEXITY_MAX:-0}"
+  case "$cx_max" in ''|*[!0-9]*) cx_max=0 ;; esac
+  if [[ "$cx_max" -le 0 ]]; then
+    echo "  (跳过：COMPLEXITY_MAX=0，圈复杂度维度未启用；建议 15)"
+    return
+  fi
+  local _cx_hits _cx_n
+  _cx_hits=$(_complexity_scan "$cx_max")
+  _cx_n=$(printf '%s\n' "$_cx_hits" | grep -c . || true)
+  if [[ "${_cx_n:-0}" -gt 0 ]]; then
+    printf '%s\n' "$_cx_hits" | head -5 | while IFS= read -r _l; do warn "$_l"; done
+    warn "共 ${_cx_n} 个函数决策点超 ${cx_max}（COMPLEXITY_MAX，启发式）——拆分函数或补分支测试"
+  else
+    pass "圈复杂度达标（无函数决策点超 ${cx_max}）"
   fi
 }

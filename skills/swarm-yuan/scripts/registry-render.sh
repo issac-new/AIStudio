@@ -287,12 +287,12 @@ cmd_check() {
   say "▶ 注册表一致性（G26）"
   check_file "$REG/gates.tsv" 56 "gates"
   check_file "$REG/frameworks.tsv" 81 "frameworks"
-  check_file "$REG/references.tsv" 57 "references"
+  check_file "$REG/references.tsv" 58 "references"
   check_file "$REG/runtimes.tsv" 22 "runtimes"
   check_file "$REG/hosts.tsv" 11 "hosts"
   # dist: WP1 92；WP7 manifest 后 93；本体轮 +2 后 94；manifest 后 95；运维排障底座轮 +5 后 99；R138 +assets/lib/files.sh 后 100；合规检查能力轮 +3 后 103。必须与 facts 生成段一致。
   local dn; dn="$(rows "$REG/dist.tsv")"
-  if [[ "$dn" -eq 99 || "$dn" -eq 100 || "$dn" -eq 103 || "$dn" -eq 104 ]]; then ok "dist $dn 行"; else bad "dist 行数 $dn ∉ {99,100,103,104}"; fi
+  if [[ "$dn" -eq 99 || "$dn" -eq 100 || "$dn" -eq 103 || "$dn" -eq 104 || "$dn" -eq 105 ]]; then ok "dist $dn 行"; else bad "dist 行数 $dn ∉ {99,100,103,104,105}"; fi
 
   check_unique "$REG/gates.tsv" 1 "gates.id"
   check_unique "$REG/gates.tsv" 2 "gates.flag"
