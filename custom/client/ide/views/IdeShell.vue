@@ -177,7 +177,15 @@ async function resolveActiveTask(id: string): Promise<void> {
     const relativePath = Boolean(workspacePath && !workspacePath.trim().startsWith('/'))
     const targetBoard = resolution.board ?? initialBoard
     const parallelReusable = Boolean(parallelWs) && resolvedId === id && (!relativePath || targetBoard === initialBoard)
-    if (parallelReusable) await parallelWs
+    if (parallelReusable) {
+      await parallelWs
+      // 2026-10-31 回归修复：并行首轮未带板号，服务端回显缺省 default；跨板解析
+      // 推断出的真实板号（boardFromWorkspacePath，如 …/boards/swarm/workspaces/…）
+      // 就地回填，不重打 task-workspace 请求。
+      if (resolution.board && ide.taskWorkspace?.board && ide.taskWorkspace.board !== resolution.board) {
+        ide.patchTaskWorkspaceBoard(resolution.board)
+      }
+    }
     else await ide.associateTaskWorkspace(resolvedId, targetBoard)
     void switchToTaskSession()
   } finally {

@@ -101,4 +101,25 @@ describe('ide store：任务 workspace 关联', () => {
     ide.setActiveTask(null)
     expect(ide.taskWorkspace).toBeNull()
   })
+
+  it('patchTaskWorkspaceBoard 板号回填（2026-10-31：并行首轮 default 回显→真实板号）', async () => {
+    const ide = useIdeStore()
+    ide.setActiveTask('t1')
+    const path = '/ws/boards/swarm/workspaces/t1'
+    getMock.mockResolvedValue(info({ board: 'default', path, materialized: true, note: 'ok' }))
+    await ide.associateTaskWorkspace('t1')
+    expect(ide.taskWorkspace?.board).toBe('default')
+    ide.patchTaskWorkspaceBoard('swarm')
+    // 只补板号：路径/物化态以首轮解析为准，不重打请求
+    expect(ide.taskWorkspace?.board).toBe('swarm')
+    expect(ide.taskWorkspace?.path).toBe(path)
+    expect(ide.taskWorkspace?.materialized).toBe(true)
+    expect(getMock).toHaveBeenCalledTimes(1)
+    // 同板号幂等 / 空板号忽略 / 无关联态不炸
+    ide.patchTaskWorkspaceBoard('swarm')
+    ide.patchTaskWorkspaceBoard('')
+    expect(ide.taskWorkspace?.board).toBe('swarm')
+    ide.setActiveTask(null)
+    expect(() => ide.patchTaskWorkspaceBoard('ops')).not.toThrow()
+  })
 })

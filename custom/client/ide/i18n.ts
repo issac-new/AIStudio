@@ -120,6 +120,8 @@ export const IDE_LOCAL_TEXT = {
     filesInvalid: {
       title: (msg: string) => `工作区不可用：${msg || '路径不在允许范围内'}`,
       fallback: '路径不在允许范围内', retry: '重试',
+      // 2026-10-31 回归卫生：pickTask 由 t('ide.files.pickTask') 迁来（双语 intlify 告警消除）
+      pickTask: '去工作台选任务',
     },
     // 未物化任务工作区兜底视图（2026-10-30 run23 复盘续作）
     fallback: {
@@ -266,6 +268,7 @@ export const IDE_LOCAL_TEXT = {
     filesInvalid: {
       title: (msg: string) => `Workspace unavailable: ${msg || 'path outside the allowed scope'}`,
       fallback: 'path outside the allowed scope', retry: 'Retry',
+      pickTask: 'Pick a task in the workspace',
     },
     fallback: {
       title: 'Task workspace not materialized',
