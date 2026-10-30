@@ -4858,6 +4858,65 @@ html[data-theme="dark"] ::selection{background:#2b4c8c;color:#fff}
 """
 
 
+
+# ── 第 0 章 · 一页读懂（2026-10-30 用户指令：报告要用户视角，先给结论再给过程）──
+# 全部实算：闸键取自 state、问题单取自 issues.log 统计、交付物取自集成树实查。
+def _readfirst_html() -> str:
+    # 需求单编号单一来源：报告侧沿用场景常量（RFD-001），不从 state 猜
+    RFD_ID = 'RFD-001'
+    _gates = [('G1 需求冻结', 'g1_frozen'), ('G2 架构评审', 'g2_arch_pass'),
+              ('G3 编码门禁', 'g3_code_pass'), ('G4 独立测试', 'g4_pass'),
+              ('G5 发布准出', 'ready_done'), ('G6 复盘', 'retro_done')]
+    _chips = []
+    for _name, _k in _gates:
+        _ok = bool(state.get(_k))
+        _chips.append(f'<span class="rf-gate {"ok" if _ok else "no"}"><b>{H.escape(_name)}</b>'
+                      f'{"✅ 通过" if _ok else "⏳ 未放行"}</span>')
+    _done_steps = sum(1 for _n in range(1, 27) if _step_done(_n))
+    import subprocess as _sp
+    def _in_repo(_path):
+        try:
+            return _sp.run(['git', '-C', str(SIM / 'central/aipaydev'), 'cat-file', '-e',
+                            f'origin/integration/{RFD_ID}:{_path}'], capture_output=True).returncode == 0
+        except Exception:
+            return False
+    _deliv = []
+    for _label, _path in (('可判定的验收标准（7 条）', 'docs/requirements/RFD-001.freeze.md'),
+                          ('概要设计（契约唯一事实源）', 'docs/design/RFD-001-architecture-design.md'),
+                          ('整合测试报告', 'docs/test/RFD-001-test-report.md')):
+        _deliv.append(f'<li>{H.escape(_label)}：<b>{"已入仓" if _in_repo(_path) else "未入仓"}</b>'
+                      f'　<code>{H.escape(_path)}</code></li>')
+    _deliv.append(f'<li>四个应用的代码与测试证据：集成基线 <code>integration/{RFD_ID}</code>'
+                  f'（每支改动都有提交号与卡号可回查）</li>')
+    _deliv.append('<li>安全条件与等保材料：<code>evidence/security-conditions.md</code>，逐条处置结论在案</li>')
+    _open = []
+    if not state.get('ready_done'):
+        _open.append('<li><b>发布准出（G5）未放行</b>：评审被连续退回并逐项指出缺什么，'
+                     '缺项正在清偿；<u>这不是拖延，是闸门在起作用</u>。</li>')
+    if not state.get('retro_done'):
+        _open.append('<li><b>业务验收、研发工作管理、合规审计、复盘四步未执行</b>——'
+                     '它们排在发布准出之后，属流程顺序，不是漏做。</li>')
+    if n_issue_open:
+        _open.append(f'<li>问题单尚有 <b>{n_issue_open}</b> 条没有处置结论（共 {n_issue_keys} 键）。</li>')
+    if not _open:
+        _open.append('<li>无未完成项。</li>')
+    _guide = ('<li><b>只看结论</b>：本页 + 第 1 章六道关卡。</li>'
+              '<li><b>核对证据</b>：第 2 章 26 步实录——每步有界面实拍与交付物实物。</li>'
+              '<li><b>查问题与缺口</b>：第 3 章六域审计、第 4 章问题单、第 5 章交付物全景。</li>'
+              '<li><b>看方法口径</b>：附录 A–E（数据口径 / 独立审计 / 意图通路 / 成效细分 / 产品能力说明）。</li>')
+    return (
+        '<section class="rf-sec" id="ch0-readfirst"><h2>第 0 章 · 一页读懂</h2>'
+        '<p class="rf-lead">这一页只回答三个问题：<b>现在走到哪了、你能拿到什么、还差什么。</b></p>'
+        f'<div class="rf-gates">{"".join(_chips)}</div>'
+        f'<p class="rf-note">26 步完成 {_done_steps} 步 ｜ 问题单 {n_issue_keys} 键（待处置 {n_issue_open}）'
+        f' ｜ 界面实拍 {total_imgs} 张（点图放大）</p>'
+        '<div class="rf-cols">'
+        f'<div class="rf-col"><h3>已经交付的</h3><ul>{"".join(_deliv)}</ul></div>'
+        f'<div class="rf-col"><h3>还没完成的</h3><ul>{"".join(_open)}</ul></div>'
+        '</div>'
+        f'<div class="rf-col rf-guide"><h3>怎么读这份报告</h3><ul>{_guide}</ul></div>'
+        '</section>')
+
 html = f'''<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -5059,6 +5118,23 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .shot input:checked ~ img{{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-height:90vh;max-width:92vw;width:auto;object-fit:contain;z-index:9999;background:var(--surface);box-shadow:0 8px 40px rgba(0,0,0,.3);border-radius:8px}}
 .shot input:checked ~ figcaption{{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:var(--ink);color:var(--surface);padding:4px 12px;border-radius:6px;font-size:13px}}
 .no-evidence{{font-size:13px;color:var(--muted);padding:8px 0}}
+/* 第 0 章·一页读懂（2026-10-30 报告重构）：首屏给结论，再给过程 */
+.rf-sec{{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0 18px}}
+.rf-lead{{font-size:15px;color:var(--ink);margin:0 0 12px}}
+.rf-gates{{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}}
+.rf-gate{{display:flex;gap:6px;align-items:center;font-size:13px;border-radius:999px;padding:5px 12px;border:1px solid var(--line);background:var(--bg)}}
+.rf-gate.ok{{border-color:#a7f3d0;background:#ecfdf5;color:#065f46}}
+.rf-gate.no{{border-color:#fde68a;background:#fffbeb;color:#92400e}}
+.rf-note{{font-size:12.5px;color:var(--muted);margin:4px 0 14px}}
+.rf-cols{{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
+@media (max-width:900px){{.rf-cols{{grid-template-columns:1fr}}}}
+.rf-col h3{{font-size:13.5px;margin:0 0 6px;color:var(--ink)}}
+.rf-col ul{{margin:0 0 6px 18px;padding:0}}
+.rf-col li{{font-size:13px;line-height:1.75;margin:3px 0;color:var(--ink)}}
+.rf-guide{{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}}
+.rf-appendix{{margin:10px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:0 14px}}
+.rf-appendix>summary{{cursor:pointer;padding:12px 0;font-size:14px;font-weight:600;color:var(--ink)}}
+.rf-appendix[open]>summary{{border-bottom:1px dashed var(--line);margin-bottom:10px}}
 
 h2.section-hd{{font-size:18px;font-weight:700;color:var(--text);margin:32px 0 16px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}}
 h2.section-hd::before{{content:'';width:4px;height:20px;border-radius:2px;background:var(--accent)}}
@@ -5181,45 +5257,36 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
   {_ck_zone_html()}
 
-  <details class="stat-note" style="margin:6px 0 14px"><summary>十章地图（§5.4 骨架导航：0 总述 → 1 口径 → 2 改判 → 3 意图链 → 4 新特性 → 5 叙事层 → 6 旅程层 → 7 六域 → 8 问题单 → 9 完整循环治理）</summary>
-  <p><a href="#ch0-collab">0 推演逻辑与协作顺序</a> · <a href="#ch1-caliber">1 本轮口径</a> · <a href="#audit-response">2 独立审计与处置（改判真值层）</a> · <a href="#nv-intent-chain">3 意图通路</a> · <a href="#ch4-features">4 本轮交付成效与新特性</a> · <a href="#nv-hero">5 叙事层</a> · <a href="#ch6-journey">6 旅程层 26 步</a> · <a href="#ch7-domains">7 六域审计</a> · <a href="#ch8-issues">8 问题单终态</a> · <a href="#ch9-gov">9 完整循环治理终态</a></p></details>
+  <!-- 阅读顺序（重构后）：结论 → 关卡 → 过程 → 治理证据 → 附录 -->
+  {_readfirst_html()}
 
-  {_ch0_html}
-  {_ch1_html}
-
-  <h2 class="section-hd" id="audit-response">第 2 章 · 独立审计与处置（改判真值层）</h2>
-  {audit_response_section}
-
-  {_ch3_html}
-  {_ch4_html}
-
-  <h2 class="section-hd">第 5 章 · 叙事层（挑战实例 / 双 loop / 六亮点 / 四维协作质量）</h2>
-  {_narrative_html}
-
-  <h2 class="section-hd" id="ch6-journey">第 6 章 · 旅程层：26 步实录（每步四段）</h2>
-  <h2 class="section-hd" id="checkpoints">六道关卡 · 谁在什么时间把住了什么关</h2>
+  <h2 class="section-hd" id="checkpoints">第 1 章 · 六道关卡：谁把住了什么关</h2>
   <div class="gates">{gate_cards()}</div>
   <p class="stat-note">{ckpt_intro_note}</p>
   {checkpoints_html()}
+
+  <details class="stat-note" style="margin:10px 0 14px"><summary>全文导航（结论 → 关卡 → 26 步 → 六域 → 问题单 → 治理 → 交付物 → 附录）</summary>
+  <p><a href="#ch0-readfirst">0 一页读懂</a> · <a href="#checkpoints">1 六道关卡</a> · <a href="#ch6-journey">2 26 步实录</a> · <a href="#ch7-domains">3 六域审计</a> · <a href="#ch8-issues">4 问题单终态</a> · <a href="#ch9-gov">5 完整循环治理</a> · <a href="#artifact-panorama">6 交付物全景</a> · 附录 A–E（口径 / 审计 / 意图通路 / 成效细分 / 产品能力说明）</p></details>
+
+  <h2 class="section-hd" id="ch6-journey">第 2 章 · 26 步实录（每步：这步做什么 / 交付物与判据 / 界面实拍 / 已知问题）</h2>
+  {content_html}
 
   {_posture_net_zone_html()}
 
   {_shadow_evidence_zone_html()}
 
-  {content_html}
-
-  <h2 class="section-hd" id="ch7-domains">第 7 章 · 六域审计（每域一个交付问题）</h2>
+  <h2 class="section-hd" id="ch7-domains">第 3 章 · 六域审计（每域一个问题）</h2>
   {domains_table()}
   <p class="stat-note">数据来源：{DOMAIN_LEDGER_SOURCE} —— 治理中心（#/app/board 治理页签组，v0.7.30 起 /app/gov 重定向至此）「六域体检」可在真实流程中随时重跑并累积台账</p>
 
-  <h2 class="section-hd" id="ch8-issues">第 8 章 · 问题单终态（{stat}）</h2>
+  <h2 class="section-hd" id="ch8-issues">第 4 章 · 问题单终态（{stat}）</h2>
   <p class="stat-note">{stat_note}</p>
   <details class="audit"><summary>▶ 展开问题单处置明细（唯一键口径）</summary>
   <table style="margin-top:8px"><tr><th>类型·主体</th><th>频次</th><th>级别</th><th>描述</th><th>处置结论</th></tr>{itable}</table></details>
   {monitor_proxy_html()}
 
 
-  <h2 class="section-hd" id="ch9-gov">第 9 章 · 完整循环治理终态——治理系统工作了吗？</h2>
+  <h2 class="section-hd" id="ch9-gov">第 5 章 · 治理系统工作了吗？</h2>
   <p class="stat-note">本章回答一个问题：AIStudio 的治理机制在真实研发中是否形成了完整循环（问题 100% 处置、经验积累、度量可追踪）。</p>
 
   <div style="margin:12px 0;padding:12px 16px;background:var(--bg);border-radius:8px;border-left:4px solid {_gov_verdict_color}">
@@ -5258,10 +5325,19 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
   {closure_evidence_html()}
 
-  <h2 class="section-hd" id="artifact-panorama">交付物全景矩阵</h2>
+  <h2 class="section-hd" id="artifact-panorama">第 6 章 · 交付物全景矩阵（缺什么一目了然）</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>
   {art_tbl}
   <p class="stat-note">{art_note_g5}</p>
+
+  <h2 class="section-hd" id="appendix">附录 · 方法与口径（供复核，不影响上面的结论）</h2>
+  <details class="rf-appendix" id="ch0-collab-wrap"><summary>附录 A · 推演逻辑与协作顺序总述（这套流程是怎么设计的）</summary>{_ch0_html}</details>
+  <details class="rf-appendix" id="ch1-caliber-wrap"><summary>附录 B · 数据与验收口径声明（数字是怎么算出来的）</summary>{_ch1_html}</details>
+  <details class="rf-appendix" id="audit-response"><summary>附录 C · 独立审计与处置（改判真值层）</summary>{audit_response_section}</details>
+  <details class="rf-appendix" id="nv-intent-chain-wrap"><summary>附录 D · 意图通路：一条验收标准从冻结到对账</summary>{_ch3_html}</details>
+  <details class="rf-appendix" id="ch4-features-wrap"><summary>附录 E · 本轮交付成效与新特性（细分）</summary>{_ch4_html}</details>
+  <details class="rf-appendix" id="nv-hero-wrap"><summary>附录 F · 产品能力说明（模板叙述，非本轮事实）</summary>{_narrative_html}</details>
+
 
   <div class="footer">报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本（单一事实源），交付物自中央仓实读，问题单与计数自台账实测统计<br>
 全部证据图=AIStudio 产品界面真实浏览器截图（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
