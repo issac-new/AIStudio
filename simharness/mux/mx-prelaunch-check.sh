@@ -102,6 +102,11 @@ ck "⑮ 运行时树 write_file 无蛇足参数" "test -f '$SR/hermes-agent-src/
 #     豁免通道=resolve（对应 PR 落码合入 main，带 commit 锚）或 waive（用户批准理由）。
 ck "⑯ 代偿清偿门（上一轮台账 open=0）" "AIPAY_SIM_ROOT='$SR' bash '$HERE/mux/mx-compensation-ledger.sh' check-clearance >/dev/null 2>&1" "上一轮存在未清偿代偿：bash mux/mx-compensation-ledger.sh list --status open 看明细；根治合入产品（对应 PR 编号落码）后逐笔 resolve，或经用户批准 waive（带理由）"
 
+# ⑯b 问题单延后清账（run23 收官批；方案 §5.9 清偿门线扩展＝纪律 56 的机械执法面：
+#     「prelaunch 断言上轮结构性延后 key 消失」此前只有条款没有检查）。DISP 处置首词
+#     =延后的唯一键非零即红——结构性延后须人工带锚回写 DISP 行，或经用户裁定豁免。
+ck "⑯b 问题单延后清账（上一轮延后桶=0）" "AIPAY_SIM_ROOT='$SR' bash '$HERE/mux/mx-compensation-ledger.sh' check-issue-clearance >/dev/null 2>&1" "上一轮问题单延后桶非零：bash mux/mx-compensation-ledger.sh check-issue-clearance 列键；逐键人工处置（带 file:line 锚回写 DISP 行=已修，或经用户批准豁免）后方可开跑（纪律 56）"
+
 # ⑱ 报告真值三件套在位（run20 复盘 fix/run20-report-truth-trio：4 件往轮产物冒充
 #     交付物+13 件死锚+逐步问题单 27 处空渲染，审计四查全过照放）。判据源
 #     report_truth.py 三处共用（生成器渲染/审计器查14/驱动 G3 闸证），守门=模块

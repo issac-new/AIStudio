@@ -10,6 +10,7 @@
 import { chromium } from 'playwright'
 import { readFileSync, mkdirSync, writeFileSync, appendFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { expandPlanVars } from './r18-plan-vars.mjs'
 
 const arg = (k, d) => {
   const i = process.argv.indexOf(`--${k}`)
@@ -45,6 +46,11 @@ try {
     }
   }
 } catch { /* 规划文件缺席=不覆盖（回落调用方参数） */ }
+
+// 规划行 URL 的按轮参数展开（run23 收官批：IDE 拍摄位任务号跨轮写死→陈旧 id 拍出
+// 空态帧）。实现单一事实源=r18-plan-vars.mjs（与守门测试共用）；只展开规划覆盖与
+// 回落两侧的最终 PLAN_URL，不改 --user。
+PLAN_URL = expandPlanVars(PLAN_URL)
 
 // URL 形态归一（run13 步18 实锤：路径形态深链不带 query 时，entry.mts 的
 // pathname→hash 迁移不触发，冷启动落登录链→驾驶舱首页→被带进最近群聊房，

@@ -1312,6 +1312,7 @@ graph TB
 3. **不改判据**：观测告警、评审治理、改进实验只作读数；G1-G5 判据不变，G6 键按 §2.6.8 统一。
 4. **单一读数源**：评测读数只读 `evidence/evals/eval-summary.json` 与 `remediations.json`；治理结果读数只读 `evidence/governance-closure/summary.json` 与两份台账；禁手抄。
 5. **审计时点**：报告生成后审计一次，`final-report-merge.py` 后再审计一次；R15 第 0 章以合并后为准。
+6. **HumanGate 批准落产品审批面（run23 g5-approval-ui-empty 实录）**：G5 HumanGate 批准（strict 真人／standard 代批两态）除 approved.events 与发布门台账外，必须可在产品审批面反查——驱动批准路径落台账后探测 `GET /api/approvals/history`，无该评审卡对应记录即记问题单（g5-approval-history-missing，接线缺口显形）；只写 evidence 文件而产品审批历史 0 条=「审批历史留痕 0 条」直接判 L3 行为域 fail，审批面 UI 帧不得再以 approved.events 降级计达充数（探测通过后方可计达）。
 
 #### 2.6.9 介入归因与协作资产消费
 
@@ -1564,7 +1565,7 @@ sequenceDiagram
 cd simharness                         # 推演 harness 工作目录
 bash mux/mx-setup.sh                  # 环境供给（账号/看板/团队/记忆库/中央仓，可反复跑）
 bash mux/mx-up.sh                     # 起单 gateway + 单 studio
-bash mux/mx-prelaunch-check.sh         # 开跑前三十项核验（门禁全绿/主脚本语法/新能力在位/工作树干净/服务健康/中央仓谱系/采集链/上轮四查/无在途进程/叙事注册/账号板/审批环/评测三方同步/write_file/清偿门/监督器/真值三件套/IA 版本/Harness 运行支持/IDE 工作区/阶段页签/评测接线/治理结果七项——全绿才开跑）
+bash mux/mx-prelaunch-check.sh         # 开跑前三十项核验（门禁全绿/主脚本语法/新能力在位/工作树干净/服务健康/中央仓谱系/采集链/上轮四查/无在途进程/叙事注册/账号板/审批环/评测三方同步/write_file/清偿门+延后清账/监督器/真值三件套/IA 版本/Harness 运行支持/IDE 工作区/阶段页签/评测接线/治理结果七项——全绿才开跑）
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 # 断点续跑 START_STEP=<步名>。区间上界 UNTIL_STEP=<步名>。换需求轮 RFD_ID=RFD-00X
 # delivery 协议事件缺省启用=产品真实形态
@@ -1593,6 +1594,8 @@ RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 - ⑦判定服务存活探测：判定后端 GET /health，在线则快照版本三元组入 evidence。离线记问题单（type=decision-backend-degraded）不阻断（fail-open）。
 - ⑧容量与负载预检：mx-up 启动前断言并发容量 ≥13 且容量重试队列去重时间戳标记在位，不过拒绝启动。系统负载告警 MX_LOAD_WARN（默认 200）。
 - ⑨推演期防休眠：mx-up 挂 caffeine -dims，推演全程系统不入睡。
+
+**提前收尾通道（人工决策，全程可逆；run23 立法）**：推演停滞且无自愈预期时，允许操作者走提前收尾通道直达报告步。三前提须同时核实——①用户明示推进指令；②agent 群停摆超阈（最后真实 API 调用停滞小时级，活性判定以 `grep 'API call #'` 末次时间戳为准，非日志 mtime）；③闸门熔断两轮未过且无新证据变化。动作=stop 文件停监督器（git/文档通道，非杀进程）＋`START_STEP=report` 直达报告步。可逆性=report_done 状态键未写、重挂监督器即续跑。义务三件：记 operator-closure 问题单留痕（决策依据/时点/终态）；终态如实呈现未过闸（G5 FAIL 在案即写 FAIL，禁装绿）；遗留账（代偿 open 笔/延后单）进清偿面。提前收尾始终是人工决策——纪律 87 的确定性失败停摆只停摆记问题单，不自动收尾。
 
 ### 4.2 容量与并发预算：全并发+快速模式
 
@@ -1971,7 +1974,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 59. **state.env 并发写纪律（run20 幂等键两度丢失实录）**：外部工具写 state 键一律经 `sset`（同进程语义毫秒窗）并写后核验；整文件读改写会被驱动循环的 sset 竞态吃掉。sset 依赖 RUN_ID/SIM_ROOT 环境完备，缺则写进幽灵路径假成功。
 60. **派单三件套与板名解析（run20 派单断棒第二刀）**：派单卡必须 ready+完整正文（任务/结论行契约/评审锚）+群内 @工人档案 触发；assignee=工人档案名（`*-csw-*` 族），板名只是容器——跨板复制时板名从 `kanban boards list` 解析，禁硬编。agent 执行走看板派发器，与 gateway 常驻无关。
 61. **平台配置变更连带重启+适配器活性探测（run20 矩阵断档 2.8h 实录）**：改平台配置（.env/config）后必须重启网关并验证适配器装载（mx-up 已内建 90s 活性探测 fail-fast）；/health 活性探测不覆盖消息面。派单后必须验证送达（agent 回执/工作痕迹），未达即重发。
-62. **夜间停滞六层防线（run20 隔夜 7h 停滞终修）**：工人连通性冒烟（启动前真打模型往返，import 检查抓不住 httpx2 版本冲突类）｜网关 pid+适配器双探活｜synapse/cc-switch 探活｜15min 智能监督（13 步 SOP v2）｜launchd 机械看守人（监督断档代行，不依赖会话存活）｜磁盘水位。venv 重建必须按 pyproject 钉版补 extras（anthropic==0.87.0 锚，未钉版装最新=httpx2 分叉冲突工人必崩）。
+62. **夜间停滞七层防线（run20 隔夜 7h 停滞终修＋run23 包面补层）**：工人连通性冒烟（启动前真打模型往返，import 检查抓不住 httpx2 版本冲突类）｜网关 pid+适配器双探活｜synapse/cc-switch 探活｜15min 智能监督（13 步 SOP v2）｜launchd 机械看守人（监督断档代行，不依赖会话存活）｜磁盘水位｜**venv 包面守卫**（起跑前必在包 import 断言：缺省清单 hindsight_client/aiohttp_retry/anthropic/yaml，`MX_VENV_REQUIRED_PACKAGES` 可整体覆盖，解释器与执行面同源解析；run23 实锤——清包形态开跑即工人全崩，冒烟段才暴露）。venv 重建必须按 pyproject 钉版补 extras（anthropic==0.87.0 锚，未钉版装最新=httpx2 分叉冲突工人必崩）。
 63. **巡检官采集面健壮性（run20 卡面三小时盲区实录）**：采集垫片（无板聚合器）缓存写必须 pid 唯一 tmp+fsync+读校验（并发截断=静默空串=假绿）；无板子命令逐个归一（diagnostics 空串炸轮）；巡检官轮失败要在快照可观测（runs 冻结=轮崩）。守卫链：巡检官→驱动自愈联动（anomalies 映射派单/催办）。
 64. **期望对账（run20 hu 份额 5 项无卡实录）**：「应存在而不存在」类（期望的派单卡/提交缺失）对一切存在性检测器原理性不可见——关键派单（评审缺项清单/任务分解）必须跑期望对账（`mx_audit_dispatch`：期望清单×全板卡×main 稿，两缺即补派），对账结果落 evidence。
 65. **集成合并职责归位（2026-10-15 用户裁定）**：代码评审与集成合并=域 lead 职权（后端 wei/前端 mei，评审与合并为同一责任链，双域串行防同分支推挤）；产品经理不合并不评审代码；推演程序（驱动）只做 git 祖先链真值验收（`_integration_truth`：origin/integration 须包含各在场 feat 分支 tip，lead 自报不算）与超时补棒兜底（45min 时限硬上限+活性早判，兜底触发记代偿单 §2.6.5）。派发词、角色边界注册表（reviewer 增合并本职＋integration-authority=own-domain；wei/mei 能力声明补位）、16b 场景代码三面同步；演进目标「合并回归组织侧」（§2）由此落地。
@@ -1994,6 +1997,11 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 82. **UAT 报告契约双路径（run22 复盘根治①）**：UAT 前置谓词认契约路径 `docs/test/<RFD>-test-report.md` 与汇总路径 `docs/reports/TEST-<RFD>.md` 任一满足即真，判据逐项同款；派发词须显式给出契约路径，不留隐性沿革口径。依据：run22 UAT fail-fast 永假，靠人工归位令解。
 83. **帧窗口与重放幂等（run22 复盘根治③/⑤）**：陈旧帧拦截的窗上界=审计执行时刻（非报告 mtime——报告生成与审计之间的后触帧恒红是误报）；run 起点 t0 拦截不放松、补拍标注豁免不变；capture_step 重放幂等（已拍且帧在盘即跳过），杜绝采集重试造成的帧集合轮转红。
 84. **采集-挂接-审计三链完整（run22 复盘根治④/⑦）**：R18 采集 op 注册缺席时按步键 glob 盘上帧补挂并标注来源（孤儿帧不静默降级）；每次审计把 issues.log 实读指纹（sha256+行数+mtime）落读态见证日志供双态振荡定诊；复位指纹取三源（评审卡 body＋结论行卡键＋房间最新判词行原文哈希，任一源缺席 fail-soft 退化）；HumanGate 批准记录由导演通道在判词 PASS 后自动记录，评审不得把「批准记录未落卡」计为缺项（R-5 环形依赖立法）。
+85. **DM 送达保障（run23 G1 回灌死信实录，纪律 61 的机械补全）**：派发类 DM 一律走「发送→房间回读确认→死信检测→自动重发」通道（dm_send_tracked）；重发幂等锚=原 event_id 内嵌去重；三试全败如实返回 SEND-FAILED 并记问题单（dm-send-failed）退避重试一次，仍败如实呈败——禁任何 `>/dev/null 2>&1 || true` 形态静默吞送（run23 实锤：G1 准入退回回灌 DM 全静默死信，消息未达即无单无重试无 marker，只能人工回灌）。
+86. **流完整性（run23 掐流残响实录）**：模型流以 terminal status=incomplete 收尾=残响，禁当完成结算；有重试余额先物理重试（与传输错误同面），耗尽按瞬态失败面抛错（回合不落 settled，下轮准入面视为可重入）——与 message_stop 缺席（anthropic/bedrock 流掐断）同族语义：不完整的响应不得提交。
+87. **确定性失败停摆（run23 同错重启 11 次/65 分钟实录）**：同一子目标连续 N 次（缺省 5，`MX_STORM_SAME_MAX` 可调）失败且失败指纹（驱动日志段末 FAIL/条款行哈希）不变=确定性失败，记问题单（driver-deterministic-fail）并停摆退出；指纹变化才继续自愈——30s 重启只是把同一份 FAIL 再算一遍，零新增信息。
+88. **会话上下文治理（run23 126K/241K 上游截断实录）**：会话轮换档位=auto，按轮归一写入网关根＋全部 profile config（供给脚本单一事实源幂等写入，禁两处各写一份实现）；上下文超阈值即真轮换（换会话），禁 report 档只追加建议通知不动会话——不动会话的「轮换」=上下文继续涨到被上游流掐断。
+89. **DEF 卡纪律（run23 依赖图锁死 26h 实录）**：缺陷卡=叶子工作，建卡禁挂父依赖（不 link 到复审/迁移/阻塞卡）；修复合入 integration 后 fixer 立即结卡——结卡被 kanban 依赖守卫拦截时，缺陷在派发词（挂父依赖），不在守卫：守卫拦得对，派发词要改。
 
 ### 4.4 关键技术规范总表
 
@@ -2236,6 +2244,8 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 - 派发→分诊→系分→评审→排期→开发→提测→发布→验收各环节流转现场截图 ≥1 张截图，报告按时间线把交付物视图与流转现场交替串联。
 - skill 过程位：xxx-dev 生成 ≥3 张截图+开发调用 ≥2 张截图。
 - 编码委托证据位：走 coding-delegate 的编码步（G3 承载面），`materials/delegate-log.txt` 须呈现引擎身份行（`engine_bin_source=`/`engine_bin=`；指定模型时含 `session 模型已设置`）与终态行（`RESULT exit=`）——引擎身份可审计是「ACP 调用的是谁」的报告证据，缺身份行=证据不全记问题单（type=delegate-identity-missing）。技能装载位声明随 G3 证据呈现：项目技能落 `.agents/skills`（项目级直读）或 `.claude/skills`＋用户级 `~/.zcode/skills` 软链，两方案之一并注明所选；落点与 `skills list` 实证（发现面截图或输出摘录）同批呈现。
+- 编码面拍摄位任务号按轮参数化（run23 陈旧任务号实录）：IDE 拍摄位 `?task=` 由 `IDE_TASK` 环境变量按轮注入（缺省回落上轮锚任务号），禁跨轮沿用陈旧任务号拍出「无任务工作区」空态帧冒充承载。
+- 审批面收件箱队列帧（run23 补位）：步 20 增第二拍摄位 `/app/inbox`（审批收件箱队列）——G5 审批页之外补审批面全貌；该帧与 §2.6.8 消费纪律 6 的探测互证（产品审批历史有记录＋收件箱帧在位，审批面承载才不降级计达）。
 - 图执行轮另附图执行证据三件并计入交付物视图：GraphSpec 图模板原文（26 步→节点/边/关卡 join 屏障的 JSON）、全流程推演导演台图执行实况截图、时间轴回放截图。
 - 引用 QGate 门禁判定的证据一律引用其 release-report/status 输出原文（含来源分布行、声明关联与未验证声明、advisory 面），禁手抄结论为「全绿」。来源分布含降级/声明/无信号桶或存在未验证声明时必须随行呈现（证据写入文件=evidence/qgate-release-report.txt，生成器透传、审计断言随行）。
 
@@ -2792,7 +2802,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 1. **姿态声明线**：报告头部必须有姿态声明页（本轮 posture、该姿态下代演/代偿政策、能力声明适用范围）；state.env 无 posture 键且报告未声明，按 standard 缺省处理并记勘误。demo 姿态全程显著标注，未标注即 FAIL。
 2. **净额对账线**：报告必须有「代偿净额对账表」（自 evidence/compensation-ledger.tsv 生成；台账缺席时写明缺席而非省略）；能力声明必须含代偿/净额双行，只呈含代偿行即 FAIL。六道关卡仪表盘必须有判词 provenance 标注，代偿代判的闸在净额行不计通过（机械判据=纪律 73：approved.events 该闸裁决记录 actor 非 proxy）。
-3. **清偿门线**：开跑前置检查必须执行上一轮台账 check-clearance——open 笔未 resolve（对应缺陷修复合入 main）且未 waive（带用户批准理由）而开跑的轮，审计判 FAIL，该轮成果标记「清偿门欠账轮」。
+3. **清偿门线**：开跑前置检查必须执行上一轮台账 check-clearance——open 笔未 resolve（对应缺陷修复合入 main）且未 waive（带用户批准理由）而开跑的轮，审计判 FAIL，该轮成果标记「清偿门欠账轮」。**延后清账同门（run23 扩展，纪律 56 的机械执法面）**：前置检查同时执行上一轮问题单延后清账（check-issue-clearance）——上一轮 issues.log 的 DISP「延后」桶非零（结构性延后既无人工带锚回写、又无用户裁定豁免）即拒开新轮；处置口径与代偿 open 笔同款（回写=带 `file:line` 锚的 DISP 行，豁免=用户批准理由随单在案）。
 4. **真值三件套线**：交付物轮次一致性（纪律 70）、锚点保留（纪律 71）、逐步问题单注册（纪律 72）由审计器查 14a/14b/14c 机械断言，三者均 FAIL 级（反查承诺失效类诚信问题禁 WARN 化——run20 四查全过照放的教训）；采集降级超限（纪律 74）为整轮级红徽章。
 
 成功判定口径随 §2.6.5 激励反转：standard/strict 姿态轮的有效性=新发现并根治缺陷数+证据链完整性；「六闸全绿+26 步走完」不构成 standard/strict 轮的充分成功条件。

@@ -675,6 +675,7 @@ _STAGE_ALIAS_STEPS = {'smoke': (1, 2, 3, 4), 'smoke_done': (1, 2, 3, 4),
                       'g2_arch_pass': (15,), 'close': (16,), 'close_done': (16,), 'plan': (17,), 'plan_done': (17,),
                       'devimpl': (18,), 'devimpl_done': (18,), 'defect': (19,), 'defect_done': (19,),
                       'testpass': (19,), 'testpass_done': (19,), 'ready': (20,), 'ready_done': (20,),
+                      'ready_inbox': (20,),   # run23 复盘批：步 20 第二拍摄位（审批收件箱队列帧）
                       'release': (20,), 'release_done': (20,), 'uat': (21,), 'uat_done': (21,),
                       'workmgr': (22,), 'workmgr_done': (22,), 'audit': (23,), 'audit_done': (23,),
                       'retro': (24,), 'retro_done': (24,), 'ide': (25,), 'ide_done': (25,), 'report': (26,)}

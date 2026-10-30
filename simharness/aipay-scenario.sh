@@ -2029,6 +2029,20 @@ if [ "$(posture)" = "strict" ]; then
     else
       issue_once release-gate-ledger step20 "发布门台账写入失败（studio token 不可得）——报告证据九按缺席呈现"
     fi
+    # HumanGate 批准落产品审批面探测（run23 收官批：g5-approval-ui-empty 实录——批准
+    # 只写 approved.events 文件，产品审批历史 0 条，L3 审计「审批历史留痕 0 条」fail；
+    # run23 按 ts/actor 补登记 history.json 是回填非根治）。此处只做接线缺口显形：
+    # 反查产品审批历史无该评审卡记录即记单；探测通过审批面承载才可不降级计达
+    # （方案 §2.6.8 消费纪律 6）。root fix（批准路径直接调 decide API）待评审卡
+    # decide 语义裁定，见 2026-10-31-run23-plan-report-retro-revision.md 遗留#1。
+    if [[ -n "${_rel_tok:-}" ]]; then
+      _hist="$(studio GET "/api/approvals/history?limit=50" "$_rel_tok" 2>/dev/null || true)"
+      if printf '%s' "$_hist" | grep -q "${RGID}"; then
+        note "[G5] 产品审批历史在案（card ${RGID}，/api/approvals/history 可反查）"
+      else
+        issue_once g5-approval-history-missing step20 "HumanGate 批准未落产品审批台账（/api/approvals/history 无 ${RGID} 记录）——接线缺口：驱动批准路径只写 approved.events；审批面承载维持降级计达（方案 §2.6.8 消费纪律 6）"
+      fi
+    fi
     # §4.4-4 QGate 证据接线（v1.31.1 条款：来源分布随行，禁手抄全绿）：G5 过闸即对
     # 中央仓跑 release-report，原文落 evidence。门未绑执行器=INCONCLUSIVE 全列（无信号桶），
     # 如实呈现不算全绿——绑定真跑留下轮（骨架部署锚：中央仓 1edcc23）。
@@ -2282,6 +2296,7 @@ if [ "$(posture)" = "strict" ]; then
   fi
   sset ready_done 1
   capture_step "ready_done" "/app/stage/accept?tab=g5"     # 步20 承载面（G5 审批留痕；run23 复盘补拍摄位）
+  capture_step "ready_inbox" "/app/inbox"                  # 步20 第二拍摄位：审批收件箱队列（run23 收官批——审批面 UI 帧与 §2.6.8 消费纪律 6 探测互证）
 fi
 
 # ══ 步骤 21：发版交付记录（线下执行，在册追踪）═══════
