@@ -20,6 +20,10 @@ from pathlib import Path
 
 import r18_matrix  # 必采清单单一事实源（审计器查 8 同表，自动检查测试 ⑫）
 import report_truth  # 报告真值三件套（run20 复盘根治：往轮产物/死锚/逐步问题单，2026-10-16）
+try:  # 按轮叙事（用户视角口径，2026-10-30 起按轮文件存放：mux/narrative_<run>.py）
+    from narrative_run23 import STEPS_META_RUN23 as _NARR_RUN23
+except Exception:  # noqa: BLE001 —— 叙事件缺席回落骨架兜底，绝不阻断报告链
+    _NARR_RUN23 = None
 
 # SIM 根与 final-report-merge.py 同源（AIPAY_SIM_ROOT 可覆盖）——工具链单一解析口径，
 # 亦支持隔离树回归测试（写死路径使归档态 run6 无法离线回归）。
@@ -1706,7 +1710,8 @@ STEPS_META_20261021_V8_RUN22 = {
             narrative='总报告与审计收敛战 4.9h：审计器 NameError 崩溃×2 修+评测链实跑（verdict=gap 耦合过查 15）+黑话渗漏八层生产者全清（记单→登记→记录两轮连环坑）+帧补拍标注通道；final-report.html 1.06MB（PART1+165 单入正本）、report_done 05:32:17，全程 19.5h 六闸 6/6。', imgs=[]),
 }
 
-_NARR={'20261021-v8-run22':STEPS_META_20261021_V8_RUN22,'20261017-v8-run21':STEPS_META_20261017_V8_RUN21,'20261015-v8-run20':STEPS_META_20261015_V8_RUN20,'20261013-v8-run19':STEPS_META_20261013_V8_RUN19,'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7}
+_NARR={'20261028-v8-run23':_NARR_RUN23} if _NARR_RUN23 else {}
+_NARR.update({'20261021-v8-run22':STEPS_META_20261021_V8_RUN22,'20261017-v8-run21':STEPS_META_20261017_V8_RUN21,'20261015-v8-run20':STEPS_META_20261015_V8_RUN20,'20261013-v8-run19':STEPS_META_20261013_V8_RUN19,'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7})
 def _narrative_fallback_skeleton(run_id):
     """R17 骨架兜底（run16 起修订）：未注册轮按 state.env 已落步键渲染骨架——全部步
     出 ⬜ 骨架占位叙事（明示待收尾链补注册），不携带任何历史轮文案，防冒充语义保留。
@@ -1890,7 +1895,58 @@ _DOMAINS_RUN14 = {
         'cp-g5,cp-g6'),
 }
 
-_DOMAINS_BY_RUN = {'20261010-v8-run14': _DOMAINS_RUN14, '20261010-v8-run13': _DOMAINS_RUN13, '20261009-v8-run12': _DOMAINS_RUN12, '20261007-v8-run11': _DOMAINS_RUN11, '20261007-v8-run10': _DOMAINS_RUN10, '20261006-v8-run9': _DOMAINS_RUN9, '20261001-v5-run6': _DOMAINS_RUN6}
+
+# ── run23（20261028-v8-run23）六域审计实写 ──
+# 口径：只用本轮可反查事实（state 键/评审卡 t_e492c92f/集成与 main 实物），不借旧轮数字。
+_DOMAINS_RUN23 = {
+    0: ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'pass',
+        '需求被冻结成 7 条可机器判定的验收标准，范围外事项与涉敏判定同批固化（docs/requirements/RFD-001.freeze.md）；'
+        '首次判读因「验收标准缺失」被打回、补齐后二过，退回过程留痕在案。',
+        '实测：AC 7 条 · 冻结件在仓 · G1 补过态（g1_supplement）留痕', 'cp-g1,cp-g6'),
+    1: ('L1', '工程正确性', '代码和制品是否成立？', 'pass',
+        '成立，但要分开说清楚：后端核心用例 155/155 全绿；集成基线一次全量 431/438（7 条红例有明确归因，'
+        '其中 5 条随修复分支并入已消除）；前端 89/89 全绿。三支开发分支的测试日志没在分支内产出，'
+        'G3 以「记录缺口仍放行」留痕，事后再由合入后的整合测试补齐证据——这是本轮工程证据链最薄弱的一环，不隐瞒。',
+        '实测：155/155 · 431/438（余 7 红有归因）· FE 89/89 · 整合测试报告 REPORT-DONE-RFD-001 在仓',
+        'cp-g3,cp-g4'),
+    2: ('L2', '系统一致性', 'API、Schema 与实际数据是否一致？', 'pass',
+        '接口契约与实现同源：冲突件按「概设契约唯一事实源」裁定书统一（金额单位、订单状态码、回调验签方式），'
+        '测试与实现在同一基线上复跑；提交进仓时被质量门禁要求走负责人合并通道，该口径与本轮实测的差异已如实记录。',
+        '实测：裁定书 t_883ffd9a · integration/RFD-001 与测试报告同基线 · 直推被拒记录在案',
+        'cp-g1,cp-g5'),
+    3: ('L3', '行为与业务语义', '运行行为是否符合业务意图？', 'warn',
+        '大体符合，但有量化缺口：评测子门判定为「缺口」而非通过——发布门禁的五项运行时证据（工具成功率、'
+        'p99、首字延迟、响应分档、并发余量）没有供给，150 个任务未标注能力维度，红队检测口径与声明不一致，'
+        '线上流量证据仍是空值。这些缺口逐条进了报告证据八，不冒充全绿。',
+        '实测：eval-summary verdict=gap（与 state g4_eval_gap 同源）· 缺口 5+3 项在案',
+        'cp-g2,cp-gate,cp-uat'),
+    4: ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'warn',
+        '可接受但不完整：安全条件九项中，密钥形态冻结、开立主体、授权六条、ISO27001 详单、序列号复测等已销项，'
+        '仍有 2 项只部分办结（序列号密钥的架构轮换口径、渠道摘要脱敏清单）；等保正式定级（Z-1）已有双交付登记，'
+        '受理编号（Z-2）未回填，按「未回填不放行」条款维持不放行。',
+        '实测：COND-1/3/4/5/8/9 销项 · COND-2/6 部分 · Z-1 登记双交付 · Z-2 未回填',
+        'cp-gate,cp-g3'),
+    5: ('L5', '交付与治理', '是否能部署、运营和追责？', 'warn',
+        '追责链完整、交付链未闭合：每次退回都有具体缺项、每份交付物都有提交号与卡号可反查；'
+        '但发布准出被连续退回多轮，业务验收、研发工作管理、合规审计、复盘四步按闸门顺序尚未执行。'
+        '本轮的结论应读作「质量闸门有效、发布尚未放行」。',
+        '实测：G5 多轮 READY-GATE-FAIL 全留痕 · 缺项四组逐条清偿 · 步 21-25 未执行（闸门顺序）',
+        'cp-g5,cp-g6'),
+}
+
+_DOMAINS_BY_RUN = {'20261028-v8-run23': _DOMAINS_RUN23, '20261010-v8-run14': _DOMAINS_RUN14, '20261010-v8-run13': _DOMAINS_RUN13, '20261009-v8-run12': _DOMAINS_RUN12, '20261007-v8-run11': _DOMAINS_RUN11, '20261007-v8-run10': _DOMAINS_RUN10, '20261006-v8-run9': _DOMAINS_RUN9, '20261001-v5-run6': _DOMAINS_RUN6}
+
+# ── run23（20261028-v8-run23）按轮注记（取代「骨架占位·未注册」）──
+_L3_A['20261028-v8-run23'] = ('行为面有量化缺口：评测子门判「缺口」——发布门禁五项运行时证据未供给、'
+    '150 个任务未标注能力维度、红队检测口径与声明不一致、线上流量证据为空；均已进报告证据八逐条披露。')
+_L3_B['20261028-v8-run23'] = ('实测口径：eval-summary.json verdict=gap（与 state g4_eval_gap 同源）；'
+    '业务验收（UAT）尚未执行，行为结论以已跑的集成测试与评测子门为限。')
+_CP_G5['20261028-v8-run23'] = ('评审卡 t_e492c92f：连续多轮 READY-GATE-FAIL，每次给具体缺项（证据链未落基线／'
+    '缺陷卡未关／安全条件未闭环／等保受理编号未回填）；本报告生成时缺项已逐条清偿或登记，复核进行中。')
+_NOTE_G5['20261028-v8-run23'] = ('步 20 发布准出：多轮真实打回全留痕（评审卡 t_e492c92f，r1-r23 逐轮记录）；'
+    '三支无冲突证据/修复分支由值守代行合并入基线（记录 lead-merge-fallback），第四支含「假绿转真红」披露按'
+    '负责人判断处置；发布计划与发布说明模板完备性检查在放行时产出。')
+
 if RUN_ID in _DOMAINS_BY_RUN:
     DOMAINS = [_DOMAINS_BY_RUN[RUN_ID].get(i, d) for i, d in enumerate(DOMAINS)]
 
