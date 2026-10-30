@@ -108,11 +108,18 @@ const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, d
 await ctx.addInitScript(() => { try { localStorage.setItem('hermes_brightness', 'dark') } catch {} })
 const page = await ctx.newPage()
 await page.goto(BASE + '/login')
-await page.evaluate(([token]) => {
+await page.evaluate(([token, mtok, muser, mhs]) => {
   localStorage.setItem('hermes_api_key', token)
   localStorage.setItem('hermes_server_url', location.origin)
   localStorage.setItem('hermes_locale', 'zh')
-}, [loginRes.token])
+  // matrix 凭据四件套（run23 复盘根治：交付案例/会话画布等依赖 matrix-js-sdk 的
+  // 面板，client 起不来即恒空态——只写 api_key 时 delivery-cases 空面板实录）。
+  // 键名=custom/client/matrix-chat/stores/matrix-credentials.ts 的 MATRIX_KEYS。
+  localStorage.setItem('matrix_access_token', mtok)
+  localStorage.setItem('matrix_user_id', muser)
+  localStorage.setItem('matrix_device_id', 'R18CAP')
+  localStorage.setItem('matrix_homeserver_url', mhs)
+}, [loginRes.token, mtok, `@${USER}:${MX_SERVER_NAME}`, MX_HS_URL])
 
 async function dismissPopups() {
   for (const txt of ['Confirm', '确认', '确定', '知道了', '稍等', '稍后提醒', '开始使用', '立即体验', '跳过']) {

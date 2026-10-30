@@ -53,7 +53,7 @@ EXPECT = {
     'defect_done':   {'want': ['看板', '缺陷', '任务'], 'title': '④开发·看板（缺陷）'},
     'eval_done':     {'want': ['评', '指标', '覆盖'], 'title': '评测工作台'},
     'ready_done':    {'want': ['验收', 'G5', '发布'], 'title': '⑤验收·G5 审批'},
-    'deliver_gate':  {'want': ['案例', '交付', '门禁'], 'title': '⑤验收·交付案例'},
+    'deliver_gate':  {'want': ['案例', '交付', '门禁', 'RFD-001', 'aipaydev'], 'title': '⑤验收·交付案例'},
     'uat_done':      {'want': ['追溯', '验收', '需求'], 'title': '⑤验收·需求追溯'},
     'workmgr_done':  {'want': ['交付健康', '看板', '验收'], 'title': '⑤验收·交付健康'},
     'audit_done':    {'want': ['审计', '治理', '变更'], 'title': '⑥治理·审计与变更'},
