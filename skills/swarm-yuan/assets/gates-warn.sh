@@ -1030,6 +1030,32 @@ check_spec_first() {
         fi
       fi
     fi
+    # 四段机检 + 内容收据（2026-10-30 HelixHarness 吸收轮；与 L2 同源 spec-first-lib）。
+    # 注意：gate-enforce-level.conf 的 warn 档=2 次 fail() 调用次数分档，不会让本门变"只告警"——
+    # 要真告警必须在本门内用 warn()，强拦用 fail()。
+    if command -v spf_sections_violation >/dev/null 2>&1; then
+      local _sec_mode _sec_v _rc_mode _rc_v
+      _sec_mode="$(spf_conf_val "$_CONF_PATH" SPEC_SECTIONS_ENFORCE)"
+      _sec_mode="${_sec_mode:-${SPEC_SECTIONS_ENFORCE:-warn}}"
+      _sec_v="$(spf_sections_violation "$_root" "$_approved" worktree)"
+      if [[ -n "$_sec_v" ]]; then
+        if [[ "$_sec_mode" == "block" ]]; then
+          fail "gate_spec_sections: ${_sec_v}——补齐四段（变更/决策记录/验证/设计文档影响）或把存量 spec 加入 .swarm-yuan/spec-sections-baseline.txt（只许减）"
+          return 0
+        fi
+        warn "gate_spec_sections: ${_sec_v}（SPEC_SECTIONS_ENFORCE=block 强拦）"
+      fi
+      _rc_mode="$(spf_conf_val "$_CONF_PATH" SPEC_RECEIPT_ENFORCE)"
+      _rc_mode="${_rc_mode:-${SPEC_RECEIPT_ENFORCE:-warn}}"
+      _rc_v="$(spf_receipt_check "$_root" "$_approved" worktree "$_CONF_PATH")"
+      if [[ "$_rc_v" == drift:* ]]; then
+        if [[ "$_rc_mode" == "block" ]]; then
+          fail "gate_spec_receipt: ${_approved} 内容与已绑定收据不符（已合入基分支的决策记录被改写；授权修订请 SPEC_REBIND=1 显式重绑）"
+          return 0
+        fi
+        warn "gate_spec_receipt: ${_approved} 内容与已绑定收据不符（授权修订请 SPEC_REBIND=1 重绑）"
+      fi
+    fi
     pass "spec-first: 可写区变更有变更集内已批准 spec（${_approved}）"
   else
     fail "gate_spec_first_missing: git 变更触及可写源码区（如 ${_hit}）但本变更集无已批准 spec（须含「## 决策记录」段且非占位；R109-D8 起=spec 须随本分支提交/staged/untracked 携带，历史 spec 不再放行）——先 spec 再编码；四层拦截同判据（L1 写时 hook/L2 提交时 pre-commit/本门/L4 状态机 build 准入）"

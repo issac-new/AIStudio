@@ -371,3 +371,147 @@ spf_design_sync_check() {
   fi
   return 0
 }
+
+# ===== 四段机检（2026-10-30 HelixHarness 吸收轮）=====
+# 动机：AGENTS.md 要求 spec 含「变更 / 决策记录 / 验证 / 设计文档影响」四段，但机械层此前
+# 只判「决策记录」（spf_approved_stream）与「设计文档影响」（spf_design_sync_check）；
+# 「变更」「验证」无判据 → 制度强于数据（2026-10-30 实测 406 份 spec 四段齐全 60 份）。
+# 判据：四段标题齐备；每段至少一行非空正文；全文不含占位符。
+# 存量豁免：.swarm-yuan/spec-sections-baseline.txt（只许减——条目一旦达标必须删除，
+# 守门测试断言「基线内条目全部仍不达标」，防基线变成永久豁免墙）。
+spf_sections_check() {  # stdin=spec 正文 → stdout 违规描述（空=通过）
+  LC_ALL=C awk '
+    function trim(s) { sub(/^[ \t\r]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
+    /^#+[ \t]/ {
+      h = $0
+      sub(/^#+[ \t]+/, "", h)
+      h = trim(h)
+      seg = ""
+      if (h ~ /^变更/) seg = "变更"
+      else if (h ~ /^决策记录/) seg = "决策记录"
+      else if (h ~ /^验证/) seg = "验证"
+      else if (h ~ /^设计文档影响/) seg = "设计文档影响"
+      cur = seg
+      if (seg != "") seen[seg] = 1
+      next
+    }
+    {
+      if ($0 ~ /待填充|<占位符>/) placeholder = 1
+      if (cur != "" && trim($0) != "") body[cur] = 1
+    }
+    END {
+      split("变更 决策记录 验证 设计文档影响", want, " ")
+      miss = ""; empty = ""
+      for (i = 1; i <= 4; i++) {
+        k = want[i]
+        if (!(k in seen)) miss = miss (miss == "" ? "" : "、") k
+        else if (!(k in body)) empty = empty (empty == "" ? "" : "、") k
+      }
+      if (placeholder) printf "placeholder"
+      if (miss != "") printf "%smissing:%s", (placeholder ? "；" : ""), miss
+      if (empty != "") printf "%sempty:%s", (placeholder || miss != "" ? "；" : ""), empty
+    }
+  '
+}
+
+# 基线清单读取（每行一个仓库相对路径；# 注释与空行忽略）。
+spf_sections_baseline() {  # $1=项目根 → stdout 基线路径
+  local _f="$1/.swarm-yuan/spec-sections-baseline.txt"
+  [[ -f "$_f" ]] || return 0
+  grep -v '^[[:space:]]*#' "$_f" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/[[:space:]]*$//'
+  return 0
+}
+
+# 单 spec 的四段违规（基线内直接放行）。
+# $1=项目根 $2=spec 路径（绝对或仓库相对）$3=正文视图（index|worktree）
+spf_sections_violation() {
+  local _root="$1" _spec="$2" _view="${3:-worktree}"
+  local _rel _content
+  _rel="$_spec"
+  case "$_rel" in
+    "${_root}/"*) _rel="${_rel#"${_root}/"}" ;;
+  esac
+  [[ -z "$_rel" ]] && return 0
+  if spf_sections_baseline "$_root" | grep -qxF -- "$_rel"; then return 0; fi
+  if [[ "$_view" == "index" ]]; then
+    _content="$(git -C "$_root" show ":${_rel}" 2>/dev/null || true)"
+  else
+    _content="$(cat "${_root}/${_rel}" 2>/dev/null || true)"
+  fi
+  [[ -z "$_content" ]] && return 0
+  printf '%s' "$_content" | spf_sections_check
+  return 0
+}
+
+# ===== spec 内容收据（2026-10-30 HelixHarness 吸收轮；吸收其 workflow.py spec_receipt）=====
+# 解决问题：spec 一旦合入 main 即成为决策事实源，但「评审/合入时的内容」与「之后有人悄悄
+# 改写的内容」此前无法区分——git 只看得到差异，看不到"这次改动是否被授权"。
+# 口径：正文去行尾空白 + 去尾部空行 + CRLF 归一后取 git blob sha1（与
+# custom/server/eval/fingerprint.ts 同算法，不自造哈希、不用 shasum 跨平台分歧口径）。
+# 绑定时机：spec 通过检查时写 .swarm-yuan/spec-receipts.jsonl（入库账本，L2 随提交落盘）。
+# 判定：
+#   未合入基分支的草稿（base 上无此文件）→ 自由迭代，每次重绑；
+#   已合入基分支且无收据（本轮机制首启用）→ 首次绑定，不判漂移；
+#   已合入且收据不符 → drift（SPEC_RECEIPT_ENFORCE=warn|block；SPEC_REBIND=1 显式重绑）。
+spf_spec_receipt_hash() {  # stdin=spec 正文 → stdout sha1（空=不可算，调用方按无收据处理）
+  LC_ALL=C awk '
+    { sub(/[ \t\r]+$/, ""); a[n++] = $0 }
+    END { while (n > 0 && a[n-1] == "") n--; for (i = 0; i < n; i++) printf "%s\n", a[i] }
+  ' | git hash-object --stdin 2>/dev/null
+}
+
+spf_receipt_ledger() { printf '%s' "$1/.swarm-yuan/spec-receipts.jsonl"; }
+
+# 最近一条收据（同 spec 多次绑定以最后一行为准；无账本/无记录=空）。
+spf_receipt_lookup() {  # $1=项目根 $2=spec 仓库相对路径
+  local _l
+  _l="$(spf_receipt_ledger "$1")"
+  [[ -f "$_l" ]] || return 0
+  LC_ALL=C awk -v key="\"spec\":\"$2\"" 'index($0, key) { r = $0 } END { if (r != "") print r }' "$_l" \
+    | sed -n 's/.*"receipt":"\([^"]*\)".*/\1/p'
+  return 0
+}
+
+spf_receipt_append() {  # $1=项目根 $2=spec 仓库相对路径 $3=receipt
+  local _l
+  _l="$(spf_receipt_ledger "$1")"
+  mkdir -p "$(dirname "$_l")" 2>/dev/null || true
+  printf '{"at":"%s","spec":"%s","receipt":"%s","commit":"%s"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$2" "$3" \
+    "$(git -C "$1" rev-parse --short HEAD 2>/dev/null || echo -)" >> "$_l" 2>/dev/null || true
+  return 0
+}
+
+# 收据核验主体。
+# $1=项目根 $2=spec 路径 $3=正文视图（index|worktree）$4=conf 路径（可空——BASE_BRANCH 来源）
+# → stdout: 空=通过/无变化；bound=本次写入收据（调用方据此把账本随提交落盘）；
+#           drift:<prev>=内容与上次绑定不符
+spf_receipt_check() {
+  local _root="$1" _spec="$2" _view="${3:-worktree}" _conf="${4:-}"
+  local _rel _content _hash _prev _base _onbase=1
+  _rel="$_spec"
+  case "$_rel" in
+    "${_root}/"*) _rel="${_rel#"${_root}/"}" ;;
+  esac
+  [[ -z "$_rel" ]] && return 0
+  if [[ "$_view" == "index" ]]; then
+    _content="$(git -C "$_root" show ":${_rel}" 2>/dev/null || true)"
+  else
+    _content="$(cat "${_root}/${_rel}" 2>/dev/null || true)"
+  fi
+  [[ -z "$_content" ]] && return 0
+  _hash="$(printf '%s' "$_content" | spf_spec_receipt_hash)"
+  [[ -z "$_hash" ]] && return 0
+  _base="$(spf_conf_val "$_conf" BASE_BRANCH)"
+  _base="${_base:-main}"
+  git -C "$_root" cat-file -e "${_base}:${_rel}" 2>/dev/null || _onbase=0
+  _prev="$(spf_receipt_lookup "$_root" "$_rel")"
+  [[ "$_prev" == "$_hash" ]] && return 0
+  if [[ "$_onbase" -eq 0 || -z "$_prev" || "${SPEC_REBIND:-0}" == "1" ]]; then
+    spf_receipt_append "$_root" "$_rel" "$_hash"
+    printf 'bound'
+    return 0
+  fi
+  printf 'drift:%s' "$_prev"
+  return 0
+}

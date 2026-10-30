@@ -291,6 +291,52 @@ export function sealSet(id: string, actor?: string): { ok: true } | { ok: false;
 }
 
 /**
+ * 追加集级澄清事实（2026-10-30 HelixHarness 吸收轮）。
+ * 只追加不修改：已冻结的澄清不应被悄悄改写（要修正是新澄清 + 重新校准）。
+ * 不 bump revision / contentHash（那是题目内容的口径）；校准失效由 clarificationsHash 判定。
+ */
+export function addSetClarification(
+  setId: string,
+  question: string,
+  answer: string,
+): { ok: true; set: EvalSet } | { ok: false; problems: string[] } {
+  const q = (question ?? '').trim()
+  const a = (answer ?? '').trim()
+  if (!q || !a) return { ok: false, problems: ['question 与 answer 必填'] }
+  const store = readStore()
+  const set = store.sets.find((s) => s.id === setId)
+  if (!set) return { ok: false, problems: [`评测集不存在：${setId}`] }
+  set.clarifications = [
+    ...(set.clarifications ?? []),
+    {
+      id: `clr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      question: q,
+      answer: a,
+      frozenAt: Date.now(),
+    },
+  ]
+  writeStore(store)
+  return { ok: true, set }
+}
+
+/**
+ * 落校准结果（2026-10-30 HelixHarness 吸收轮）。
+ * 只写元数据，不动 tasks/revision/contentHash——校准不是改题，改题仍须走 reviseRubric/reflow。
+ * 因此旧校准在 contentHash 变化后由 calibrationProblemsForRun 判失效，无需在此清理。
+ */
+export function saveSetCalibration(
+  setId: string,
+  calibration: import('./set-calibration').SetCalibration,
+): { ok: true; set: EvalSet } | { ok: false; problems: string[] } {
+  const store = readStore()
+  const set = store.sets.find((s) => s.id === setId)
+  if (!set) return { ok: false, problems: [`评测集不存在：${setId}`] }
+  set.calibration = calibration
+  writeStore(store)
+  return { ok: true, set }
+}
+
+/**
  * Rubric 修订（Rubric Loop 的落库动作）。
  * 结构性阻断：密封集改题必须先有该断言的 RubricIterationLog 留痕（finding 明示
  * judge_wrong/rubric_ambiguous）——只修 Agent 不留痕的"改题凑分"路径在此被拒绝。

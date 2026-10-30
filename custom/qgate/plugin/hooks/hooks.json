@@ -24,6 +24,17 @@
             "timeoutMs": 15000
           }
         ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-read.mjs\"",
+            "async": true,
+            "timeoutMs": 8000
+          }
+        ]
       }
     ],
     "Stop": [

@@ -1,3 +1,45 @@
 #!/bin/sh
+# qgate 本地推送前评估（2026-10-30 HelixHarness 吸收轮）
+#
+# 缺口：.qgate/gates/*.yaml 的 triggers 只是声明，本仓提交链从不调用——48 道门框架完整
+# 但治理面空转（外部对比时最容易被指出的「有框架、无强制」）。
+# 位置选择：pre-push 而非 pre-commit——提交保持轻量，推送前给一次本地判定；执行面取
+# `qgate plan` 输出的 L0 门集（静态检查，约 1.5s/门），不跑 engineering.basic-check
+# 这类全量测试门（分钟级，留给 merge 前的 npm test）。
+# 档位：QGATE_PREPUSH_ENFORCE=0（默认）只诊断不拦截；置 1 按 qgate 退出码拒绝推送。
+# 关闭本次评估：QGATE_PREPUSH_SKIP=1。证据落 .qgate/（运行态,不入库）。
+# 与 CI 的分工：.github/workflows/qgate.yml 只测框架自身（本仓全量测试在 CI 不可复现），
+# 本仓治理面的唯一自动执行点就是这里。
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [ "${QGATE_PREPUSH_SKIP:-0}" != "1" ] && [ -f "$ROOT/custom/qgate/src/cli.ts" ]; then
+  QG="$ROOT/custom/qgate/dist/cli.js"
+  if [ ! -f "$QG" ] || [ "$ROOT/custom/qgate/src/cli.ts" -nt "$QG" ]; then
+    TSC="$ROOT/node_modules/.bin/tsc"
+    if [ -x "$TSC" ]; then
+      ( cd "$ROOT/custom/qgate" && "$TSC" -p tsconfig.json >/dev/null 2>&1 ) || QG=""
+    else
+      QG=""
+    fi
+  fi
+  if [ -n "$QG" ]; then
+    _qg_rc=0
+    for _g in $( cd "$ROOT" && node "$QG" plan 2>/dev/null | LC_ALL=C awk '/\[L0\]/ {print $1}' ); do
+      # 判定输出走 stderr：pre-push 的 stdout 在部分传输下会被透传给远端。
+      ( cd "$ROOT" && node "$QG" run "$_g" --trigger pre_commit 1>&2 ) || _qg_rc=1
+    done
+    if [ "$_qg_rc" -ne 0 ]; then
+      if [ "${QGATE_PREPUSH_ENFORCE:-0}" = "1" ]; then
+        echo "[qgate] pre-push 存在非 PASS 判定，按 QGATE_PREPUSH_ENFORCE=1 拒绝推送。" >&2
+        echo "        查看：node custom/qgate/dist/cli.js status --fresh / explain <gateId>" >&2
+        exit 1
+      fi
+      echo "[qgate] pre-push 存在非 PASS 判定（默认只告警不拦截）。查看：node custom/qgate/dist/cli.js status --fresh；置 QGATE_PREPUSH_ENFORCE=1 即拦截。" >&2
+    fi
+  else
+    echo "[qgate] pre-push 跳过：dist 缺失且 tsc 不可用（npm run qgate:build 后重试）" >&2
+  fi
+fi
+
 command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\n%s\n\n" "This repository is configured for Git LFS but 'git-lfs' was not found on your path. If you no longer wish to use Git LFS, remove this hook by deleting the 'pre-push' file in the hooks directory (set by 'core.hookspath'; usually '.git/hooks')."; exit 2; }
 git lfs pre-push "$@"

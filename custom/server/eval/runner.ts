@@ -14,6 +14,7 @@ import { judgeAttempt, type JudgeDeps } from './judge'
 import { sha1Of } from './clef'
 import { runOutcomeCheck, type OutcomeRunContext } from './outcome'
 import { appendRun, getSet, getSetRevision, sealedAttemptCount } from './store'
+import { calibrationProblemsForRun } from './set-calibration'
 import { autoReflowFailedSamples } from './auto-reflow'
 import { evidenceFromRows, inspectTrace, sampleSpanFromTrace, spanEvidenceFromRows } from './trace-sampler'
 import type { Attempt, Evidence, EvalConfig, EvalRun, EvalTask, ToolCallRecord } from './types'
@@ -299,6 +300,14 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
     return { ok: false, problems: ['评测集已改版：试卷指纹与基准运行不一致，拒绝复评（须使用同一版本）'] }
   }
 
+  // 校准准入（2026-10-30 HelixHarness 吸收轮）：声明的集必须先通过 F2P/P2P 校准，
+  // 校准失效（改题后 contentHash 变）同样拒绝。历史复评（setRevision 钉版）不适用——
+  // 那是解释已有运行的口径，不是新评测。
+  if (input.setRevision === undefined) {
+    const calProblems = calibrationProblemsForRun(set)
+    if (calProblems.length) return { ok: false, problems: calProblems }
+  }
+
   if (set.sealed) {
     if (input.useOrigin) return { ok: false, problems: ['密封集不支持按 origin 自动展开（防止借来源引用探测题库）'] }
     const used = sealedAttemptCount(set.id, input.actor ?? 'anonymous')
@@ -359,6 +368,8 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
         crossValidate: input.crossValidate,
         referenceLeakCheck: input.referenceLeakCheck,
         stabilityRetest: input.stabilityRetest,
+        // 澄清事实（2026-10-30）：集级已冻结取舍作为已知事实进裁判状态。
+        ...(set.clarifications?.length ? { clarifications: set.clarifications } : {}),
       })
       const attempt: Attempt = {
         taskId: task.id,
@@ -399,6 +410,8 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
     createdAt: now(),
     ...(input.actor ? { createdBy: input.actor } : {}),
     ...(input.note ? { note: input.note } : {}),
+    // 澄清事实随 run 冻结（2026-10-30）：判分用快照，事后改集不改变本运行口径。
+    ...(set.clarifications?.length ? { clarifications: set.clarifications } : {}),
   }
   aggregateRun(set, run, config)
   appendRun(run)

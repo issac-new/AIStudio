@@ -136,6 +136,12 @@ export interface RubricAssertion {
   text: string
   expect: 'yes' | 'no'
   kind: AssertionKind
+  /**
+   * 隐藏断言（2026-10-30 HelixHarness 吸收轮）：不出现在任何对外 API 面（集详情/导出/
+   * 修订历史），只在服务端判分时参与——模拟其「隐藏测试跑后注入」的防过拟合手法。
+   * 注意：判分口径不因 hidden 变化（aggregate 用全量 rubric），隐藏只作用于可见性。
+   */
+  hidden?: boolean
   /** 链路六环节归属（可选；标注后聚合按环节分段出独立通过率）。 */
   link?: EvalLink
   /** 行为锚点（可选；给裁判可观测的成立/不成立判据，抑制"看起来像"的宽松判定）。 */
@@ -147,6 +153,29 @@ export interface RubricAssertion {
 export interface OutcomeCheckDecl {
   verifier: string
   params: Record<string, string>
+  /**
+   * command 验收器专用 argv（2026-10-30 HelixHarness 吸收轮）：
+   * 数组形式、不经 shell 解析——HelixHarness 明令「不得用空命令或文件存在冒充业务验收」，
+   * 但命令验收必须可审计：argv 是显式字面量，禁止字符串拼接后交给 shell。
+   */
+  argv?: string[]
+  /** command 验收器期望退出码（缺省 0）。 */
+  expectExit?: number
+  /** command 验收器超时毫秒（缺省 10000，硬上限 30000）。 */
+  timeoutMs?: number
+}
+
+/**
+ * 澄清事实（2026-10-30 HelixHarness 吸收轮）：集级需求澄清，一旦随 run 起跑即冻结。
+ * 其 case 合同要求澄清事实冻结、执行期不得临时问业务方——回放模型下等价物是：
+ * 起跑时把当前澄清快照进 run，判分用快照；事后改集不改变历史运行的解释口径。
+ */
+export interface EvalClarification {
+  id: string
+  question: string
+  answer: string
+  /** 冻结时刻（服务端写入；客户端不可指定）。 */
+  frozenAt: number
 }
 
 export interface EvalTask {
@@ -188,6 +217,19 @@ export interface EvalSet {
   createdAt: number
   createdBy?: string
   tasks: EvalTask[]
+  /**
+   * 是否要求先通过 F2P/P2P 校准才能正式运行（2026-10-30 HelixHarness 吸收轮）。
+   * 缺省 false：存量集向后兼容；新建/改版后要收紧的集置 true。
+   */
+  requireCalibration?: boolean
+  /** 最近一次校准结果；setHash 与 contentHash 不符即失效（改题后必须重校准）。 */
+  calibration?: import('./set-calibration').SetCalibration
+  /**
+   * 集级澄清事实（2026-10-30）：随 run 起跑冻结进 EvalRun.clarifications。
+   * 注意：contentFingerprint 只覆盖 tasks（向后兼容，改此字段不改变 setHash）；
+   * 校准侧用 clarificationsHash 单独判失效。
+   */
+  clarifications?: EvalClarification[]
 }
 
 /**
@@ -465,6 +507,8 @@ export interface EvalRun {
   createdAt: number
   createdBy?: string
   note?: string
+  /** 起跑时冻结的澄清事实快照（2026-10-30）：事后改集不改变本运行的解释口径。 */
+  clarifications?: EvalClarification[]
 }
 
 /** 处置单：评测失败样本的修复追踪，关闭由同卷复评结果机械决定。 */
