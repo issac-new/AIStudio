@@ -1493,7 +1493,11 @@ test_report_on_integration() { # <rfd>：测试报告在 origin/integration/<rfd
   for _path in "docs/test/$1-test-report.md" "docs/reports/TEST-$1.md"; do
     _body="$(git -C "$DIRECTOR_CLONE" show "origin/integration/$1:$_path" 2>/dev/null)" || continue
     [ -n "$_body" ] || continue
-    printf '%s' "$_body" | grep -qE 'TEST-PASS|结论[^，。]*通过' || continue
+    # run23 复盘：整合测试报告模板（templates/test-report.md §4）规定的结论行是
+    # REPORT-DONE-<RFD>，而本谓词只认 TEST-PASS——契约两处口径不一致，导致 UAT 前置
+    # 永假（G5 已过、报告在仓、结论行齐全仍被判「测试报告缺失」）。收编 REPORT-DONE
+    # 为等价通过标记（分片报告用 TEST-PASS-*，整合报告用 REPORT-DONE-*）。
+    printf '%s' "$_body" | grep -qE 'TEST-PASS|REPORT-DONE|结论[^，。]*通过' || continue
     _rs="$(evidence_baseline)"
     [ -z "$_rs" ] && return 0
     _ct="$(git -C "$DIRECTOR_CLONE" log -1 --format=%ct "origin/integration/$1" -- "$_path" 2>/dev/null)"
