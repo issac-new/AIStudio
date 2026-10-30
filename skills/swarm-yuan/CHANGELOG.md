@@ -1,5 +1,24 @@
 # Changelog
 
+## [v2.98.0] - 2026-10-30
+
+HelixHarness 吸收轮（minor：spec-first 判定库新增两类判据＋生成器新增渲染出口；门禁数 56 与变量数 199 不变）。源码级对照滴滴开源的 `didi/helixharness` 后只吸收机制不移植框架形态——本仓 26 步六闸/56 道门/改进台更强。
+
+### Added
+
+- **`spf_sections_check` 四段机检**：spec 须含「变更/决策记录/验证/设计文档影响」四段实质内容（此前仅决策记录/设计文档影响有机检，「变更」「验证」无判据——406 份存量四段齐全仅 60）。配套 `spf_sections_violation` 基线豁免（`.swarm-yuan/spec-sections-baseline.txt` 只许减，守门断言基线内条目仍不达标）。`SPEC_SECTIONS_ENFORCE=warn|block` 分档。
+- **`spf_spec_receipt_*` 内容收据**：spec 正文规范化哈希（git blob sha1）入 `.swarm-yuan/spec-receipts.jsonl`；已合入基分支的 spec 被改写判 drift，`SPEC_REBIND=1` 显式重绑留痕；行尾空白/尾部空行不算漂移。吸收其 `workflow.py spec_receipt`。
+- **L3 同判据接入**：`gates-warn.sh check_spec_first` 增四段/收据检查（warn 档=本门内 warn()，与 gate-enforce-level 分档语义解耦）。
+- **`_fg_render_l2_kit` 渲染出口**：generate-skill.sh 把判定库与提交钩子渲染到已入库路径 `.swarm-yuan/hooks/`（create/upgrade 共用），fresh clone 不再「L2 降级跳过」。
+
+### Fixed
+
+- **`spf_sections_check` 子标题切段缺陷**：`## 变更` 下用 `###` 组织小节时被误判 empty——标题行仅命中四段名才切游标，其余层级继承父段（基线 354→349）。
+
+### 差异说明
+
+门禁 56/变量 199/预算 200 均不变（新判据走 spec-first-lib 判定库与 hook，不新增 check_*）。分发面新增 `.swarm-yuan/hooks/` 入库副本（主仓载体，不随技能离线包分发）。
+
 ## [v2.97.0] - 2026-10-30
 
 ub-mode 吸收轮（minor：新增方法论档 + 两处既有门禁扩容，门禁数 56 与变量数 199 均不变）。吸收 《代码整洁之道》作者 Uncle Bob 的 `unclebob/ub-mode`（GitHub API 实测 4,858★；README 2,195B + SKILL.md 3,958B）：三阶段纪律（先让它能工作→再把它做好→守工程实践）+ 确定性工具执法。本仓立论与之同源（不靠模型自觉、靠机械判据），本轮补的是此前缺的两处度量维度——复杂度与重复度。
