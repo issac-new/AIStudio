@@ -72,6 +72,11 @@ describe('L2 可复现副本（模板↔产物字节一致）', () => {
   it('钩子垫片的第四级回退路径与入库副本文件名一致', () => {
     const shim = readFileSync(resolve(ROOT, '.swarm-yuan/hooks/pre-commit'), 'utf8')
     expect(shim).toContain('"$ROOT/.swarm-yuan/hooks/spec-first-pre-commit.sh"')
+    // 垫片五级/四级候选必须与生成器模板同构（2026-10-30 对账：入库垫片曾停留在写死
+    // aistudio-dev 的旧版，生成器模板早已改成通配候选 + .agents 兜底——模板↔产物漂移）。
+    expect(shim).toContain('"$ROOT"/.agents/skills/*/scripts/spec-first-pre-commit.sh')
+    expect(shim).toContain('"$ROOT"/.claude/skills/*/scripts/spec-first-pre-commit.sh')
+    expect(GEN).toContain('"\\$ROOT"/.agents/skills/*/scripts/spec-first-pre-commit.sh')
     const pc = readFileSync(KIT_PC, 'utf8')
     // 钩子自身按同目录定位判定库与 conf——副本必须同目录成套
     expect(pc).toContain('"${_self}/spec-first-lib.sh"')
