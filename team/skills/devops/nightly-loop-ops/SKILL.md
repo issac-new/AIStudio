@@ -9,12 +9,11 @@ metadata:
 
 # Unified Nightly Loop Operations
 
-> **停役状态（2026-10-10 用户裁决：免费优惠结束）**：`3e1690d29660` 统一夜间Loop入口
-> 与 `922320a901e3` 存活看门狗均已 pause（jobs.json 已写 paused_reason）；复活看门狗
-> `224b9f33d637` 的 WHITELIST 已清空（否则每 6h 自动 resume 回去），双份脚本
-> （`~/.hermes/scripts/` + profile `scripts/`）md5 同步，`.bak-1010` 备份在位，
-> `bash -n` + 实跑 rc=0 已验。**恢复排程**：WHITELIST 加回两条 entry → 删脚本内
-> 停役注释 → `hermes cron resume` 两个 job。
+> **当前入口状态（v4.0 起）**：cron 入口 `3e1690d29660` 已**删除**且 id 进 BANNED
+> （防复活看门狗自动 resume 回来造成双跑）；`launchd ai.hermes.unified-nightly-loop`
+> 02:15 是唯一入口。存活看门狗 `922320a901e3` @ 06:30。hotspot-gate 已停用
+> （`LOOP_GATE_ENABLED=0`，详见 v3.5 节停用标注）。**不要按本文件任何旧「恢复排程」
+> 段落重建 cron 入口**——入口裁决史以 `cron_paused_watchdog.sh` 头部注释为铁证。
 
 Orchestrator-profile skill for the unified nightly loop: entry job, step
 chain, integrated batch gates, and the retirement blacklist. General cron
@@ -42,6 +41,15 @@ pinning, no_agent conversion, weixin delivery triage) stay there too.
   alarms every patrol; `[active]` anchoring keeps disabled rows silent
   while still catching a disabled job flipped back to enabled (the classic
   batch-sync accident).
+- **A missing cron job is a RULING until proven a failure.** Before
+  rebuilding any vanished entry job, read `cron_paused_watchdog.sh`'s
+  WHITELIST/BANNED comments (both copies: `~/.hermes/scripts/` and the
+  profile `scripts/` — they drift; the profile copy is canonical) — job
+  ids land in BANNED precisely to prevent auto-resurrection double-runs,
+  and rebuilding the job silently overturns that ruling. Same check before
+  trusting any old "restore schedule" recipe inside this skill: the
+  watchdog header comments are the single source of truth for entry
+  topology rulings.
 - **Agent-type jobs use keep-number mode**: schedule a VALID never-firing
   expr, keep enabled=true, keep the model/provider pin, and let the loop's
   frequency gate drive them via `cron run`. Two traps: disabled jobs are
@@ -117,10 +125,60 @@ pinning, no_agent conversion, weixin delivery triage) stay there too.
 - **杀在跑 wrapper 前查 inode**：bash 边读边执行，patch 若原地改写同 inode，在跑进程从字节偏移恢复会错位读。stat 确认 patch 产生新 inode 才安全 kill。
 - **陈尸 index.lock**：workspace 仓 0 字节 index.lock（lsof 无持有）挡 commit 3 天，确认后直接 rm。
 
+## v3.13 入口裁决考古 + direct max_tokens 坑（2026-10-29，用户报「graph 任务有问题，内容不全」）
+
+- **版本化拓扑变更（2026-10-30 用户裁决方案 C）**：tupang 仓治理把 `life-workbench/`
+  整目录 gitignore 后，夜间管线源码**独立成仓** `life-workbench/.git`（基线 v1.0.0
+  @507e97e=loop v3.15 修复版；产物类 reports/cache/logs/gap_workspaces/.venv 不入仓）。
+  tupang 侧已 rm --cached 清零 85 个残留追踪项并推平（db36cdd35）。**此后改管线脚本
+  的 commit 去 life-workbench 仓，不再 force-add 进 tupang**（v3.4 的 git add -f 先例
+  作废）。两仓分叉历史与全部 diff 存档
+  `/Volumes/nvme2230/lab/archive/20261029-hotspot-system-retire/tupang-*.patch`。
+
+- **cron 入口 3e1690d29660 是 10-20 有意删除的（v4.0 裁决），不是丢了**：铁证在
+  `profiles/orchestrator/scripts/cron_paused_watchdog.sh` 头部注释——「10-10 停役后被本看门狗
+  每6h复活, 与 launchd 02:15 双入口每夜双跑(10-18日志2次full-done实证)。cron入口已删,
+  launchd=唯一入口」。该 id 同时进了 BANNED 尾部。**重建入口 job 前必须先读这个文件的
+  WHITELIST/BANNED 注释**；排查者曾按「故障丢失」重建过入口 job，对照注释后即删。
+- **launchd 唯一入口的结构性代价 = 夜间睡眠整夜空窗无补跑**：10-25~10-28 四夜机器
+  away/睡眠，02:15 StartCalendarInterval 未触发也未唤醒补跑，loop/看门狗快照/digest
+  全断 4 夜（存活看门狗 06:30 连告警 4 天，loop_watchdog_*.json 铁证）。机器在家且
+  醒着的夜晚无此问题。用户已裁决（见下两条）：去 hotspot-gate（开盖热点夜照跑）+
+  不设 pmset（合盖无解）——不再悬「恢复双入口」选项。
+- **direct 通道 max_tokens=4096 被 glm-5.3 thinking 耗尽 → 「empty text (thinking-only)」**：
+  长研判 prompt（40 源摘要/域报告）thinking 段吃光 4096，text block 为空，报错字符串
+  即 `_ask_anthropic_direct` 的返回。10-29 夜 8 域 PDF 全 rc1 + pulse 失败共因（zcode 同夜
+  push timeout 属瞬态）。修复=`max_tokens: 131072`（radar_llm.py，用户纠正后实测顶格：API
+  硬上限 131072，1M 报错 1210；初修 16384 仍偏保守）。4096 时 stop=max_tokens 被掐、
+  131072 时 end_turn 正常；修后 direct 单测 `ok via=direct attempt=1`。
+  **同症状复发先怀疑 thinking 预算，其次才是通道挂；给 max_tokens 一律按端点实测上限，
+  不拍保守小值**。
+- **render 的 Chrome Target.getTargets 15s 超时当日 3 犯（v3.8、04:21、12:21）→ 已加重试**：
+  根因=Chrome headless 间歇卡死（GPU 进程 exit_code=15 被杀/启动慢，当日冒烟实测 2/3 成功率；
+  另清了默认 profile 的 10-22 残留 SingletonLock——注意 Chrome 用户数据目录符号链接在
+  nvme 外置盘，盘睡眠窗口会加剧残留）。修复=render_loop_graph.py 对
+  `viewer/visual-check-runtime` 类故障（含无 JSON 输出）重试 1 次，质量门失败不刷重试。
+  当日 12:39 实战 pass。
+- **backfill 补跑日志**：`logs/backfill_YYYYMMDD.log`，k12+8 域串行、每步 3-8min。
+  digest 先发后补场景（当日 marker 已写但域产物后到）需删 marker 重跑 nightly_digest
+  才会补发完整版（当日实测 `--force` 正门可用）。
+- **Chrome 打印独立 profile 全链补齐（2026-10-29 下午）**：build_domain/fs/k12_report.py
+  已带 mkdtemp profile+150s 超时+重试（backfill 会话修）；同日补齐 build_report.py
+  （主雷达）与 daily_intel_report.py 的 generate_pdf。全 scripts/ 树再无共用默认
+  profile 的 print-to-pdf 调用。
+- **domain_closure.py 裸取 register 字段 12 处全改 .get（2026-10-29）**：gap_register
+  旧条目缺 description/id 时 `KeyError` 崩 sync/dispatch/docsync 段（当日 platform
+  rc1 实锤）。修后 `sync platform` 实测 +3 gaps 登记跑通。同类新代码一律
+  `g.get('description') or ''` 防御式（212 行起已有先例）。
+- **睡眠死窗结论（2026-10-29 裁决省略 pmset）**：系统 `sleep 0`（ZCode/caffeinate×3/
+  UURemote 持防睡眠断言），开盖或插电夜 02:15 必跑；合盖夜 pmset wakeor 唤不醒
+  （clamshell 硬限制，除非接电源+外接屏），故定时唤醒无实际收益，不设。合盖带走夜
+  =接受断更（与「去掉 hotspot-gate」裁决合并理解：开盖热点夜照跑，合盖夜物理无解）。
+
 ## v3.11 3600s 墙钟根治 + 心跳口径对齐（2026-10-20，卡 t_5ce6cf31）
 
 - **超时三落点已配 7200s，全部实证**：cron script timeout 解析链（`cron/scheduler_script.py _get_script_timeout`）= `_SCRIPT_TIMEOUT`（测试用）→ env `HERMES_CRON_SCRIPT_TIMEOUT` → config `cron.script_timeout_seconds`（**在 DEFAULT_CONFIG 里，默认 3600**）→ 3600。fire 路径走 external worker：`set_hermes_home_override(属主 home)` 后 env 读属主 `.env`、config 读属主 `config.yaml`（`scheduler.py:3905` 实锤）。落点：①orchestrator/.env `HERMES_CRON_SCRIPT_TIMEOUT=7200`（最高优先）；②orchestrator/config.yaml `cron.script_timeout_seconds: 7200`（config 兜底）；③default ~/.hermes/config.yaml 同键（独立 gateway 兜底）。三处均以 PM selected venv 实测 `_get_script_timeout()=7200` 收口。
-- **心跳「0/8 域」根因**：nightly_heartbeat.sh 的 `DOM_OK/DOM_ALL` 只数 8 域 PDF，但标签写「radar/[已移除]/8域」——10-19 夜（.venv 断链全灭）心跳显 0/8，读者以为 10 报告全缺。已改为 radar+[已移除]+8域=10 分母（10-20 实测 10/10，10-19 实测 1/10=dom-pay，双极性验证过）。
+- **心跳「0/8 域」根因**：nightly_heartbeat.sh 的 `DOM_OK/DOM_ALL` 只数 8 域 PDF，但标签写「radar/k12/8域」——10-19 夜（.venv 断链全灭）心跳显 0/8，读者以为 10 报告全缺。已改为 radar+k12+8域=10 分母（10-20 实测 10/10，10-19 实测 1/10=dom-pay，双极性验证过）。
 - **快照目录 mkdir 补丁**：loop 状态快照写 `cache/radar/unified_loop_$D.json` 前 mkdir（10-19 err.log 实锤：目录缺失时 `|| true` 静默吞错，次日判色缺快照）。
 - **launchd 孤儿 02:15 裁决：保留作安全网**。7200s 后 cron 侧最迟 02:02 终止，孤儿 02:15 起跑无重叠；它近 5 夜救了 2 夜（10-19 cron 未触发、10-20 cron 被超时杀，全靠 02:15 收尾）。摘除收益仅省一次 33min 幂等 SKIP 空跑。未来摘除条件：cron 入口连续 ≥5 夜自然满跑且无超时/未触发记录，方可 bootout。
 - **10-15/10-19 digest 不补**（operator 裁决 2026-10-20）：10-15 在停役窗内无产物、10-19 断链夜仅 domain_pay/fin_sentinel 两个 PDF，拼不出 digest（跑了也是 `no report PDFs; abort`）。10-20 已补发（marker `.digest_sent_2026-10-20.json` sha1 92e0869e…，10 parts+evo，agent mail msg_5ocw6qeS 实锤）。
@@ -135,15 +193,19 @@ pinning, no_agent conversion, weixin delivery triage) stay there too.
 
 ## Topology contract (mutable — update on restructure)
 
-Entry `3e1690d29660`「统一夜间Loop Graph入口」@ `2 0 * * *`; loop script
-`~/.hermes/scripts/unified_nightly_loop.sh`; step snapshot
+Entry (v4.0): `launchd ai.hermes.unified-nightly-loop` @ 02:15 is the SOLE
+entry; the cron entry `3e1690d29660` @ `2 0 * * *` is DELETED (id in
+BANNED — do not recreate). Loop script
+`~/.hermes/scripts/unified_nightly_loop.sh`; hotspot preflight gate
+DISABLED (`LOOP_GATE_ENABLED=0` in the gate block — away/hotspot nights
+run the full chain); step snapshot
 `~/.hermes/cache/unified_loop_YYYYMM.log` via `run_step <名> <守卫> <cmd>`
 (idempotent, SKIP on existing today artifact); renderer judges colors from
 that snapshot; watchdog findings surface through snapshot→render, not cron
 incidents. Authorization window 00:00–08:00 (user ruling, decider-script
 guards); provider billing window is a separate decider — never couple.
 Step order v3.3: sweep → reclaim → integrated batch (8 daily + weekly gate
-Mondays + monthly gate 1sts) → radar → [已移除] → 8 domains (30s stagger) → evo
+Mondays + monthly gate 1sts) → radar → k12 → 8 domains (30s stagger) → evo
 → friction → gh threats → agent-type keep-number jobs → snapshot → digest
 → render → docsync → heartbeat; infra before workload. Keep-number:
 skill-mining-weekly `0ccf161ff8ad` @ `7 3 29 2 *`, ttvv-monthly
@@ -152,7 +214,9 @@ lives in the cron self-heal watchdog script, `[active]`-anchored.
 Rollback: `cron/jobs.json.bak-20260921-v33`. Not foldable (standalone,
 disclosed): minute-cadence watchmen (mailbox / breaker 5m / card-stuck 30m
 / worldmonitor / meta / cron patrol / session-line), 夜间Loop存活看门狗
-`922320a901e3` @ `30 1 * * *` (independent of the loop it guards; cron
+`922320a901e3` @ `30 6 * * *` (v4.0 moved from 01:30 to 06:30 — the old
+slot fell inside the 02:15+3600s window and false-alarmed; independent of
+the loop it guards; cron
 shim in profile scripts/, real script `~/.hermes/scripts/loop_liveness_watchdog.sh`;
 alerts only when the day's `full done` line is missing AND no loop process
 is alive — closes the 10-02/10-06 "loop dies → heartbeat dies → zero
@@ -162,6 +226,17 @@ cron_paused_watchdog), and ~15 other-profile jobs (scheduler is
 HERMES_HOME-scoped).
 
 ## v3.6 auto hotspot schedule (2026-10-07, user ruling)
+
+> **整套停用+删除（2026-10-29 用户裁决「删掉吧, hotspot-guardd也删掉」）**：v3.15 起
+> loop 门禁块整段移除；hotspot-auto/patrol 两个 launchd 已 bootout+disable 且 plist、
+> `~/.hermes/bin` 6 脚本（auto_dispatch/wrapper/mode/patrol/network_zone/workday_check）、
+> `profiles/orchestrator/hotspot-guard/` 目录、hotspot_state.json、workday 缓存全部删除。
+> 全部原件+PF anchors 内容 SHA256 存档于
+> `/Volumes/nvme2230/lab/archive/20261029-hotspot-system-retire/`。
+> **系统层 root 部分需用户 sudo：`sudo bash <存档区>/guard-dir/uninstall.sh`**
+> （bootout system daemon + 删 /usr/local/libexec 副本 + 清 /etc/pf.anchors/hermes-hotspot-guard
+> 三件 + pf 重载）。**hermes-zcode-block anchor（zcode 绕 cc-switch 上传通道封禁）是独立
+> 组件、属 LLM 红线执行层，明确保留未删。** 以下为停用前的历史设计记录。
 
 - **Schedule**: workdays 09:00 auto-ON, 19:00 conditional-OFF, 22:00 fallback-OFF.
   Pluralist `ai.hermes.hotspot-auto` (one plist, 3 StartCalendarInterval entries,
@@ -192,7 +267,7 @@ HERMES_HOME-scoped).
   after 10-05. Swept nvme hard-paths out of the whole chain: loop entry (R,
   doc-quality, digest), reclaim MAIN, radar supervisor BASE, friction scan
   gap_register(+CLI), liveness watchdog R+sys.path, ops radar wrapper B,
-  render_loop_graph.py (LB/RESEARCH/gap_workspaces), [已移除]+domain BASE (LWB and
+  render_loop_graph.py (LB/RESEARCH/gap_workspaces), k12+domain BASE (LWB and
   ~/.hermes/scripts copies), docsync BASE, heartbeat BASE+MAP_URL,
   render_loop_graph_cron.sh, failure_pattern_monthly WORKSPACE,
   weixin_backlog_deliver REPORTS/STATE. **Kept on nvme on purpose**: reclaim
@@ -206,7 +281,12 @@ HERMES_HOME-scoped).
   `network_zone.sh` → home, then a real full-chain run (artifacts absent →
   every step actually executes).
 
-## v3.5 hotspot gate (2026-10-07, user ruling: save cellular data)
+## v3.5 hotspot gate（2026-10-07 用户裁决: save cellular data）
+
+> **停用（2026-10-29 用户裁决「去掉 hotspot-gate 的限制」）**：`LOOP_GATE_ENABLED=0`
+> 写死在 gate 段上方，外出/热点夜照常跑全链。恢复门禁=改回 1。触发背景=10-25~28
+> 外出四夜断更；双极性已验（0=away 放行 / 1=away SKIP）。network_zone.sh 与
+> hotspot_mode.sh、hotspot-auto launchd 均不动（另有消费者）。
 
 - **Single preflight gate, never per-step edits**: after `declare -a STEP_RC`, the loop
   calls `~/.hermes/bin/network_zone.sh` (outputs `home|away|gated|offline`; home =

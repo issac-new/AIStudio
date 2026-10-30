@@ -3,6 +3,10 @@ name: hotspot-traffic-guard
 description: Use when diagnosing macOS hotspot traffic and VPN routes.
 ---
 
+> **机制已停用（2026-10-29 用户裁决）**：hotspot 体系（App 层调度+PF 守卫）整体退役，
+> 存档 `/Volumes/YOURDISK/lab/archive/20261029-hotspot-system-retire/`。本 skill 保留作历史判定表
+> 知识（端点身份/IP 判定方法论可复用），不再描述在役机制。
+
 # macOS 热点流量守卫
 
 ## Procedure
