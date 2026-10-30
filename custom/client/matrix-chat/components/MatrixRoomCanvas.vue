@@ -44,8 +44,17 @@ watch(routeRoomId, (roomId) => {
 // client 就绪兜底：冷启动/深链时上面的 immediate watcher 跑在 initClient 之前，
 // activeRoom 因 client 未就绪缓存 null 且再无响应式依赖翻案；sync 完成 PREPARED
 // 时房间已入 client，重选一次让时间线自愈。
+// run23 间歇实录根治：PREPARED-only 漏了「sync 完成后新房间才入列」的窗口——
+// selectRoom 时房间不在列 → activeRoom 缓存 null → 后续 room list 刷新不再触发
+// 重选 → 时间线面板因 v-if="activeRoom" 永不挂载（点房间后中栏空态）。
+// 补第二条兜底：房间列表变化时，若 activeRoomId 在但 activeRoom 仍空，重选自愈。
 watch(() => clientStore.syncState, (s) => {
-  if (s === 'PREPARED' && routeRoomId.value) {
+  if ((s === 'PREPARED' || s === 'SYNCING') && routeRoomId.value) {
+    roomStore.selectRoom(routeRoomId.value)
+  }
+})
+watch(() => roomStore.rooms.length, () => {
+  if (routeRoomId.value && roomStore.activeRoomId === routeRoomId.value && !roomStore.activeRoom) {
     roomStore.selectRoom(routeRoomId.value)
   }
 })

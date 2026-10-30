@@ -3,3 +3,5 @@
 {"at":"2026-10-30T08:40:26Z","spec":"docs/superpowers/specs/2026-10-30-governance-doc-candidates.md","receipt":"24bd4afd9624ac39ae8009766e1b995072157438","commit":"110a6d6be"}
 {"at":"2026-10-30T08:43:31Z","spec":"docs/superpowers/specs/2026-10-30-helix-followup-debts.md","receipt":"e6cd089c90fe7212b921edd41ab022cb55c971b2","commit":"110a6d6be"}
 {"at":"2026-10-30T09:30:38Z","spec":"docs/superpowers/specs/2026-10-30-release-v1.0.3-overlay.md","receipt":"400c1e56752d0bcd42174be5eb2a27b5f6f4ec76","commit":"3dae6ff28"}
+{"at":"2026-10-30T11:24:28Z","spec":"docs/superpowers/specs/2026-10-30-chat-timeline-race-fix.md","receipt":"dea8b3baab0583506a041e7d55d7911dbe7b3a9a","commit":"f84994d21"}
+{"at":"2026-10-30T11:26:23Z","spec":"docs/superpowers/specs/2026-06-21-overlay-architecture-design.md","receipt":"33905a2269f04b3d898f66ec8e8a39bdde07e57f","commit":"d23118751"}
