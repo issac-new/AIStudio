@@ -44,6 +44,7 @@
     "typecheck:client": "node scripts/typecheck-client-baseline.mjs",
     "typecheck:client:ratchet": "node scripts/typecheck-client-baseline.mjs --check",
     "skill:build": "bash skills/swarm-yuan/scripts/generate-skill.sh --upgrade aistudio-dev . .claude/skills",
+    "hooks:install": "node scripts/install-hooks.mjs",
     "qgate:build": "tsc -p custom/qgate/tsconfig.json",
     "watch:board-staleness": "node scripts/board-staleness-watchdog.mjs"
   },

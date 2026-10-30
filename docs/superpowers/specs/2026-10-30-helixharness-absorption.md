@@ -18,6 +18,8 @@
 1. **L2 提交强拦在 fresh clone 可复现**
    - 现状：`.claude/skills/aistudio-dev/` 0 文件入库（`.gitignore:33`），钩子垫片三处回退皆无时打印"L2 降级跳过"放行（`.swarm-yuan/hooks/pre-commit:8-15`）。
    - 变更：`skills/swarm-yuan/scripts/generate-skill.sh` 装配段增加渲染 `spec-first-lib.sh`、`spec-first-pre-commit.sh` 到 `.swarm-yuan/hooks/`（垫片第三级回退预留路径），产物入库；新增 `npm run skill:build` 入口。
+   - 补充发现：`core.hooksPath` 是本地 git 配置、不随 clone 复制——只把文件入库，git 仍然不会调用钩子。新增 `scripts/install-hooks.mjs`（`npm run hooks:install`），并由 `ensure-injected` 在任一 npm 入口被动补装（已指向别处不覆盖，只告警）。
+   - 因此可复现性的准确表述是：**新克隆执行任一 npm 入口后即具备 L2 强拦**，未设置 `core.hooksPath` 前的裸 `git commit` 仍不触发钩子（git 机制限制，无法用入库文件绕过）。
    - 守门：新增 `custom/__tests__/l2-kit-parity.test.ts`，断言"入库副本 = 生成器渲染结果"，防两版漂移；单一事实源仍是生成器 assets。
 
 2. **qgate 接入提交链**

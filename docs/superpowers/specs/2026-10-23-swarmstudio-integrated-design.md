@@ -1269,7 +1269,10 @@ npm run serve
 
 提交强拦（spec-first 的 L2 层）的判定库、提交钩子与最小判定面配置随仓入库，
 落在 `.swarm-yuan/hooks/`，并由字节一致守门测试锁住与生成器资产的一致性。
-因此新克隆可以直接拦截无 spec 的源码提交，不再退化为"跳过并放行"。
+`core.hooksPath` 是本地配置、不随 clone 复制，因此由 `npm run hooks:install` 安装，
+并在 `ensure-injected`（predev/pretest/prebuild 的公共前置）里被动补装；已指向别处时不覆盖。
+准确边界是：新克隆执行任一 npm 入口后即具备提交强拦，裸 `git commit` 之前仍是 git 自身
+机制说了算。
 
 本地推送前额外执行 qgate 的 L0 门集（trigger 传 pre_commit），默认只告警、
 `QGATE_PREPUSH_ENFORCE=1` 时拦截；全量测试门不放在这一层。

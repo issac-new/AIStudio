@@ -14,8 +14,17 @@ import { resolve } from 'path';
 import { execSync } from 'child_process';
 import { applyPatchAtRoot, treeStatus, treeGitCtx, ensureNodeModulesSymlink, isHermesAgentPatchPath } from './inject.mjs';
 import { addedFilesFromPatch, missingFiles } from './lib/zcode-patch-manifest.mjs';
+import { installHooks } from './install-hooks.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
+// L2 钩子启用（2026-10-30）：core.hooksPath 不随 clone 复制，必须在任一 npm 入口被动补上，
+// 否则入库的判定库不会被 git 调用——「文件在」不等于「钩子生效」。
+try {
+  const hookState = installHooks(overlayRoot);
+  if (hookState.changed) console.log(`[ensure-injected] ${hookState.note}`);
+} catch (e) {
+  console.warn(`[ensure-injected] 钩子安装跳过：${e instanceof Error ? e.message : String(e)}`);
+}
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
 const patchDir = resolve(overlayRoot, 'patches');
