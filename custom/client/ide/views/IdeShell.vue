@@ -30,6 +30,8 @@ import IdeCommandPalette from '../components/IdeCommandPalette.vue'
 import IdeSelfCheckDialog from '../components/IdeSelfCheckDialog.vue'
 import IdeTaskContextBar from '../components/IdeTaskContextBar.vue'
 import TaskBriefingPanel from '../components/TaskBriefingPanel.vue'
+import IdeUnmaterializedView from '../components/IdeUnmaterializedView.vue'
+import { ideFallbackStateOf, looksLikeTaskNumber } from '../composables/useIdeFallback'
 import { useTaskProgress, taskProgressOf } from '@/custom/ia2/composables/useTaskProgress'
 import IdeLandingHero from '../components/IdeLandingHero.vue'
 import { shouldShowLandingHero } from '../utils/landingHero'
@@ -95,40 +97,104 @@ const briefingTaskResolved = ref<null | {
   priority?: number; assignee?: string | null; body?: string | null; workspacePath?: string | null; raci?: Record<string, string[]> | null
   parents?: string[]; children?: string[]; sessionId?: string | null
 }>(null)
-async function resolveBriefingCrossBoard(id: string): Promise<void> {
+/** 任务卡解析在途（兜底视图据此显示「解析中」而非「不存在」）。 */
+const briefingResolving = ref(false)
+/** 任务卡所在板（兜底视图展示 + 任务树端点参数）。 */
+const briefingBoard = ref<string | null>(null)
+/** 命中方式：卡 id 直查 / 任务号标题解析（按任务号命中时兜底视图如实标注）。 */
+const briefingResolvedBy = ref<'id' | 'task_number' | null>(null)
+/** 任务卡解析瞬时失败（超时/5xx/网络）：兜底视图走「解析故障」而非「未物化」。 */
+const briefingTaskError = ref<{ status: number } | null>(null)
+async function resolveBriefingCrossBoard(id: string): Promise<{ board: string | null; notFound: boolean; resolvedBy: 'id' | 'task_number' | null; transientError: boolean }> {
   const inStore = (kanbanStore.tasks ?? []).find((task: { id: string; session_id?: string | null }) => task.id === id || task.session_id === id)
   if (inStore) {
     briefingTaskResolved.value = inStore as typeof briefingTaskResolved.value
-    return
+    briefingResolvedBy.value = 'id'
+    return { board: kanbanStore.selectedBoard ?? null, notFound: false, resolvedBy: 'id', transientError: false }
   }
   // 2026-10-18 深度重构：详情优先（归档任务不被 listTasks 状态过滤影响），
   // 板提示后补；缓存/在途合并由 useIdeTask 负责。
+  // 2026-10-30 续作：任务号（DEV-CHWX-S1）404 时逐板标题前缀解析，命中后回填。
   const result = await taskReader.resolve(id, (task) => {
     if (ide.activeTaskId === id) briefingTaskResolved.value = task
+  }, (board) => {
+    // 后台板号回填（详情先回填、板扫描不阻塞深链）：切板；只有相对 workspace_path
+    // 才需要按正确板重算工作区（绝对路径与板无关，不重复请求）。
+    if (ide.activeTaskId !== id) return
+    briefingBoard.value = board
+    if (board !== kanbanStore.selectedBoard) kanbanStore.setBoard(board)
+    const resolvedId = briefingTaskResolved.value?.id ?? id
+    const path = briefingTaskResolved.value?.workspacePath
+    if (path && !path.trim().startsWith('/')) void ide.associateTaskWorkspace(resolvedId, board)
   })
-  if (ide.activeTaskId !== id) return
-  if (result.notFound) return
+  if (ide.activeTaskId !== id) return { board: null, notFound: false, resolvedBy: null, transientError: false }
   if (result.task) briefingTaskResolved.value = result.task
-  if (result.board && result.board !== kanbanStore.selectedBoard) kanbanStore.setBoard(result.board)
+  briefingResolvedBy.value = result.resolvedBy ?? null
+  if (result.board) {
+    briefingBoard.value = result.board
+    if (result.board !== kanbanStore.selectedBoard) kanbanStore.setBoard(result.board)
+  }
+  return { board: result.board, notFound: result.notFound, resolvedBy: result.resolvedBy ?? null, transientError: Boolean(result.transientError) }
 }
 // 回归轮 R7：直达链接任务不可解析时简报抽屉自动收起——原样常开空抽屉会盖住
 // 右栏页签（Git/查看文件点不到）；手动经导轨钮打开的无任务空态不受影响。
 const briefingMiss = ref(false)
+// 抽屉「miss 一次性消费」标记（2026-10-30 兜底视图批）：miss 本身要保留给兜底视图
+// 判「不存在」（此前直接清 briefingMiss，兜底视图会把它误读成「任务在但未物化」）；
+// 用独立标记保证自动收起只发生一次，手动打开空态不被强关（2026-10-18 审计轮语义）。
+// 声明须早于下方 immediate watch（TDZ——setup 期回调即执行）。
+const briefingMissHandled = ref(false)
 // 任务会话块（关联轮③）：声明先于下方 immediate watch（TDZ——watch 回调在
 // setup 期即执行，晚声明的 ref 会 ReferenceError，文件内已有同款先例）。
 const briefingSession = ref<BriefingSessionBlock | null>(null)
-watch(() => ide.activeTaskId, async (id) => {
+
+/**
+ * 解析激活任务：任务卡 → 所在板 → 任务工作区 → 任务会话。
+ * 按任务号命中时，后续关联/会话都用解析出的**卡 id**（任务号不是卡 id，直接查
+ * task-workspace 会 404）。
+ */
+async function resolveActiveTask(id: string): Promise<void> {
+  briefingResolving.value = true
+  try {
+    // 卡 id 形态：详情与工作区并行解析（两次 CLI 自请求串行约 3.6s，并行后首屏
+    // 只等详情）。任务号不并行——它不是卡 id，直接查 task-workspace 会 404。
+    const initialBoard = kanbanStore.selectedBoard ?? undefined
+    const parallelWs = looksLikeTaskNumber(id) ? null : ide.associateTaskWorkspace(id, initialBoard)
+    const resolution = await resolveBriefingCrossBoard(id)
+    if (ide.activeTaskId !== id) return
+    // 解析故障（超时/5xx/网络）不是「任务不存在」，也不是「未物化」——单独记录，
+    // 兜底视图走 resolve_error（带重试），不渲染默认根文件树。
+    briefingTaskError.value = resolution.transientError ? { status: 0 } : null
+    if (resolution.transientError) return
+    if (resolution.notFound) {
+      briefingMiss.value = true
+      return
+    }
+    // 顺序依赖：跨板解析命中会把选中板切到任务所在板，相对 workspace_path 须按
+    // 该板锚定（绝对路径与板无关，首轮并行结果可直接用，不重复请求）。
+    const resolvedId = briefingTaskResolved.value?.id ?? id
+    const workspacePath = briefingTaskResolved.value?.workspacePath
+    const relativePath = Boolean(workspacePath && !workspacePath.trim().startsWith('/'))
+    const targetBoard = resolution.board ?? initialBoard
+    const parallelReusable = Boolean(parallelWs) && resolvedId === id && (!relativePath || targetBoard === initialBoard)
+    if (parallelReusable) await parallelWs
+    else await ide.associateTaskWorkspace(resolvedId, targetBoard)
+    void switchToTaskSession()
+  } finally {
+    if (ide.activeTaskId === id) briefingResolving.value = false
+  }
+}
+
+watch(() => ide.activeTaskId, (id) => {
   briefingTaskResolved.value = null
   briefingMiss.value = false
   briefingSession.value = null
-  if (id) {
-    await resolveBriefingCrossBoard(id)
-    if (!briefingTaskResolved.value) briefingMiss.value = true
-    // 顺序依赖：跨板解析命中会把选中板切到任务所在板，关联端点随其后才能拿对
-    // 板的 workspaces 根（相对 workspace_path 锚定用）。
-    void ide.associateTaskWorkspace(id, kanbanStore.selectedBoard ?? undefined)
-    void switchToTaskSession()
-  }
+  briefingBoard.value = null
+  briefingResolvedBy.value = null
+  briefingTaskError.value = null
+  briefingMissHandled.value = false
+  if (id) void resolveActiveTask(id)
+  else briefingResolving.value = false
 }, { immediate: true })
 const briefingTask = computed(() => {
   if (briefingTaskResolved.value) return briefingTaskResolved.value
@@ -338,13 +404,11 @@ const briefingOpen = ref(false)
 watch(() => route.query.task, (taskId) => {
   if (typeof taskId === 'string' && taskId.trim()) briefingOpen.value = true
 }, { immediate: true })
+// 抽屉自动收起的一次性消费在声明处定义（briefingMissHandled，见上）；此处只挂监听。
 watch([briefingOpen, briefingTask, briefingMiss], ([open, task, miss]) => {
-  if (open && miss && !task) {
+  if (open && miss && !task && !briefingMissHandled.value) {
     briefingOpen.value = false
-    // miss 一次性消费：自动收起只针对直达链接的自动展开——不消费则 miss 粘滞，
-    // 导轨钮手动打开会被本 watch 当拍强关（抽屉闪一下即关，换任务前再也打不开，
-    // 2026-10-18 审计轮实测复现；与上注释「手动打开空态不受影响」的承诺对齐）
-    briefingMiss.value = false
+    briefingMissHandled.value = true
   }
 })
 
@@ -382,6 +446,53 @@ function landingEnterWorkspace() {
 function landingGoBoard() {
   landingEngaged.value = true
   void router.push({ name: 'ia2.board' })
+}
+
+// ── 未物化任务工作区兜底视图（2026-10-30 run23 复盘续作）──
+// 中栏在「有激活任务、无可用会话、工作区未物化/解析失败」时不再留空白会话，
+// 而是承载任务简报 + 只读文件视图；状态判定在 composables/useIdeFallback.ts（纯函数）。
+const fallbackState = computed(() => ideFallbackStateOf({
+  requestedId: ide.activeTaskId,
+  task: briefingTask.value,
+  taskSettled: !briefingResolving.value,
+  taskMiss: briefingMiss.value,
+  taskError: briefingTaskError.value,
+  workspace: ide.taskWorkspace,
+  workspaceError: ide.taskWorkspaceError,
+  workspaceSettled: !ide.taskWorkspaceLoading,
+}))
+// 有真实会话时让会话占中栏（用户正在干活），兜底视图只在空白会话/无会话时出现。
+const fallbackActive = computed(() => {
+  if (!ide.activeTaskId) return false
+  if (hasWorkingSession.value) return false
+  const kind = fallbackState.value
+  return kind !== 'ready' && kind !== 'no_task'
+})
+// 兜底视图只读 BriefingTask 最小面（raci 形状归一，避免把宽松 Record 直塞组件 props）
+const fallbackTask = computed(() => {
+  const t = briefingTask.value
+  if (!t) return null
+  return {
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    priority: t.priority,
+    assignee: t.assignee,
+    body: t.body,
+    raci: t.raci ?? null,
+  }
+})
+function fallbackRetry(): void {
+  const id = ide.activeTaskId
+  if (!id) return
+  // 显式重试：清掉上一次结论再解析（任务号解析/工作区解析都重走）
+  briefingTaskResolved.value = null
+  briefingMiss.value = false
+  briefingBoard.value = null
+  briefingResolvedBy.value = null
+  briefingTaskError.value = null
+  briefingMissHandled.value = false
+  void resolveActiveTask(id)
 }
 const briefingGit = ref<{ branch: string | null; worktreePath: string | null; commits: { hash: string; subject: string; at?: number }[] }>({ branch: null, worktreePath: null, commits: [] })
 // 抽屉打开时的兜底重试：eager watch 的跨板解析若因瞬时失败未命中，这里再试一次
@@ -597,6 +708,20 @@ onUnmounted(() => {
             />
           </div>
           <IdeLandingHero v-if="showLandingHero" class="ide-shell__colbody" :tasks="landingTasks" @pick="landingPickTask" @enter="landingEnterWorkspace" @board="landingGoBoard" />
+          <IdeUnmaterializedView
+            v-else-if="fallbackActive"
+            class="ide-shell__colbody"
+            :state="fallbackState"
+            :requested-id="ide.activeTaskId"
+            :task="fallbackTask"
+            :board="briefingBoard"
+            :workspace-path="ide.taskWorkspace?.path ?? briefingTask?.workspacePath ?? null"
+            :workspace-error="ide.taskWorkspaceError"
+            :workspace-materialized="ide.taskWorkspace?.materialized ?? null"
+            :resolved-by="briefingResolvedBy"
+            @open-board="landingGoBoard"
+            @retry="fallbackRetry"
+          />
           <IdeChatPane v-else class="ide-shell__colbody" />
         </div>
       </div>

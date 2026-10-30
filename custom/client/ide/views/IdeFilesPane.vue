@@ -49,6 +49,12 @@ const noWorkspaceMessage = computed(() => {
   return zhUi.value ? hint.zh : hint.en
 })
 
+// 只读兜底（2026-10-30 run23 复盘续作）：有激活任务、工作区已解析但未物化
+// （taskWorkspace 在、materialized=false）→ 右栏也出默认根只读树，不再停在死胡同
+// 空态。解析故障/任务不存在（taskWorkspaceError 非空）不渲染树——与中栏兜底视图同规则。
+const readOnlyFallback = computed(() =>
+  Boolean(ide.activeTaskId) && Boolean(ide.taskWorkspace) && !ide.taskWorkspaceError && !root.value)
+
 // FileTree 的 workspaceKey 只用于根标签；真正决定列目录的根是 filesStore.
 // workspaceRoot（上游 FileTree 直接读该 ref）。根先校验再接线：非法根只打
 // 一次探测请求并显示可解释状态，不让 FileTree 反复 400。
@@ -103,6 +109,12 @@ async function openEntry(entry: FileEntry): Promise<void> {
           {{ zhUi ? '查看账号角色' : 'View account role' }}
         </button>
       </div>
+    </div>
+    <div v-else-if="tab === 'tree' && !root && readOnlyFallback" class="ide-files__fallback" data-testid="ide-files-readonly-fallback">
+      <p class="ide-files__fallback-note" data-testid="ide-files-readonly-note">
+        {{ zhUi ? '未物化任务工作区：以下为服务器默认根只读视图（非任务仓库）' : 'Task workspace not materialized: read-only server default root below (not the task repo)' }}
+      </p>
+      <FileTree class="ide-files__tree" :profile="null" show-files @open-entry="openEntry" />
     </div>
     <div v-else-if="tab === 'tree' && !root" class="ide-files__invalid" data-testid="ide-files-no-workspace">
       <p data-testid="ide-files-no-workspace-message">{{ noWorkspaceMessage }}</p>
@@ -182,6 +194,21 @@ async function openEntry(entry: FileEntry): Promise<void> {
 }
 .ide-files__invalid-hint { color: var(--text-muted); font-size: 10.5px; }
 .ide-files__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.ide-files__fallback {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ide-files__fallback-note {
+  margin: 8px 12px 4px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 40%, var(--border-color));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-card));
+  font-size: 11px;
+  color: var(--text-primary);
+}
 
 .ide-files__retry {
   border: 1px solid var(--border-color);

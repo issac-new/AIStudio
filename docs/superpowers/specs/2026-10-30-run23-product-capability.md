@@ -173,3 +173,63 @@ npm run typecheck:client  → 138 errors（仓库基线 18）
 | 3 | 企业约束种子库 9 任务补 dimension | 产品线（本仓） | `ENTERPRISE_TASK_AXES` 已给三轴映射，需逐题映射到七维（compliance 轴跨 privilege_injection/human_escalation，须人工裁定，不猜） |
 | 4 | 失败检查项在报告侧的可读呈现 | 报告线 | `fails` 现在逐项带 `key=实测（阈值）`，报告模板尚未单独渲染该结构 |
 | 5 | 历史 run 的旧 gate（无 noDataCode） | 产品线 | 兼容为 `code='unknown'`，原因仍取 `gap` 文本；不回填历史 run（避免篡改已归档证据） |
+
+## 7. IDE 未物化兜底（2026-10-30 续作）
+
+### 7.1 现象与根因（带锚点）
+
+`/app/ide?task=<任意 id>` 在产品里是死胡同：中栏空白会话、右栏「还没有任务工作区」、简报抽屉在任务未命中时自动收起；`t_af224933`（真实卡）与 `DEV-CHWX-S1`（任务号）表现一致。逐层根因：
+
+| # | 根因 | 锚点 |
+| --- | --- | --- |
+| 1 | 右栏文件页签在无工作区时只渲染提示，没有任何文件视图 | `custom/client/ide/views/IdeFilesPane.vue:119-124`（改前 `:113` 无工作区块） |
+| 2 | 中栏只有「落地引导 / 会话」二分，未物化任务落到空白会话 | `custom/client/ide/views/IdeShell.vue` 模板（改前 `IdeChatPane v-else`） |
+| 3 | 任务号不等于卡 id：`getTask('DEV-CHWX-S1')` 404 即判未命中，不按标题解析 | `custom/client/ide/composables/useIdeTask.ts:91`（改前 `readUncached`） |
+| 4 | 抽屉「miss 一次性消费」直接清 `briefingMiss`——兜底视图若读该标记会把「不存在」误判成「未物化」 | `custom/client/ide/views/IdeShell.vue:408`（改前 watch 内 `briefingMiss.value = false`） |
+| 5 | 任务详情与工作区解析串行、逐板扫描 31 板；冷启实测 9s+，深链长期停在「解析中」 | `useIdeTask.ts` 改前串行 `for (slug of boards)` |
+| 6 | files API 带 `root` 参数要求 super_admin（fanfan=admin 实测 403），普通用户不能以任务仓库根做 files root | `patches/123-server-files-root-task-workspace-allowlist.patch`（role 检查先于沙箱放行） |
+
+第 6 条决定了「仓库根」的产品可达边界：**不改后端契约**的前提下，普通用户的只读树只能走无 `root` 的服务器默认根；任务目录内容另走既有 `GET /api/hermes/kanban/workspace-files`（按 task_id 沙箱到任务工作区，admin 可用）。
+
+### 7.2 修法
+
+| 文件 | 变更 |
+| --- | --- |
+| `custom/client/ide/composables/useIdeFallback.ts` | 新增纯函数 `ideFallbackStateOf`：`no_task / resolving / not_found / resolve_error / unmaterialized / ready` 六态（四态语义与 `noWorkspaceHint` 对齐）；`runMarkOf` 提取 `RUN=` 标记；`primaryOwnerOf` 取 RACI 的 R→A；任务号形态与前缀匹配 |
+| `custom/client/ide/components/IdeUnmaterializedView.vue` | 中栏兜底视图：顶部提示行 + 任务简报卡（标题/ID/状态/负责人/RUN/看板/请求 id/按任务号命中标记）+ 只读文件区；`not_found`/`resolve_error` 不渲染文件树 |
+| `custom/client/ide/components/IdeReadOnlyTree.vue` | 任务工作区文件树渲染（只读，`<details>` 折叠，目录优先） |
+| `custom/client/ide/views/IdeShell.vue` | 中栏接入 `IdeUnmaterializedView`（有激活任务、无真实会话、非 ready）；`briefingMissHandled` 把抽屉一次性消费与兜底判定解耦；任务号命中后按卡 id 关联；详情与工作区并行解析；`briefingTaskError` 区分解析故障 |
+| `custom/client/ide/composables/useIdeTask.ts` | 详情优先：拿到卡即返回，板号从 `workspace_path` 的 `/boards/<slug>/workspaces/` 推导（零扫描）；相对路径才后台有界扫板；详情 404 且 id 形如任务号时按标题前缀逐板解析（有界并发 8/单板 3s/总 12s）；超时 8s 与 5xx 记为 `transientError`，不冒充「不存在」 |
+| `custom/client/ide/store/ide.ts` | 新增 `taskWorkspaceLoading`（在途不渲染结论）；`setActiveTask` 换任务即清旧 `taskWorkspace`（防上一张卡的已回收路径串到新卡）；解析失败记 status |
+| `custom/client/ide/views/IdeFilesPane.vue` | 右栏在「有任务、工作区已解析但未物化、无错误」时出默认根只读树 + 提示行；任务不存在/解析故障保持可解释空态（与中栏同规则） |
+| `custom/client/ide/api/taskWorkspace.ts` | 新增 `ideTaskFilesApi.list`（复用既有 `/api/hermes/kanban/workspace-files`，不改后端契约） |
+| `custom/client/ide/i18n.ts` | `fallback` 双语字典（提示行/简报字段/文件区/动作） |
+
+文件区取舍（按可达性排序）：
+
+1. 任务目录有文件（`workspace-files` 非空）→ 任务工作区只读树（真正的「任务仓库根」）；
+2. 任务目录已回收（`materialized=false`，确定不存在）→ **跳过**任务目录探测（该接口冷启会预热 CLI 缓存，实测约 9s），直接服务器默认根只读树；
+3. 解析故障/任务不存在 → 不出树，只出原因与动作（重试/看板入口）。
+
+### 7.3 验证
+
+- `npx vitest run custom/client/ide`：**126 文件 / 814 测试全过**（原 795 + 新增 19：`ide-fallback.test.ts` 15 例、`files-pane-root.test.ts` 2 例、既有用例同步 2 例）。
+  新增守门覆盖：四态判定（含任务解析故障不得按「未物化」兜底）、RUN/负责人提取、任务号 S1/S10 边界、任务目录树 vs 默认根树、404/5xx 不渲染树、`materialized=false` 跳过慢接口、右栏兜底树。
+- 实地走查（SIM studio 8802，用户 fanfan=admin；已把本 worktree 构建的 client 部署到 `SIM_ROOT/product-dist/client`，原目录备份 `client.bak-run23prod`）：
+
+| 输入 | 稳定态 | 页面文字（实测） | 截图 |
+| --- | --- | --- | --- |
+| `?task=t_af224933` | `unmaterialized`（约 1-4s；冷启详情约 5s） | 提示「未物化任务工作区：以下为只读文件视图」；标题「DEV-CHWX-S1 契约镜像+配置域+工程骨架（RUN=20261028-v8-run23）」；RUN 20261028-v8-run23；状态 done；负责人 hu-agent；看板 hu-channel-wechat；文件区「服务器默认根只读视图（非任务仓库）」「任务目录已被回收或未派发（无任务文件）· …/workspaces/t_af224933」+ 根目录文件树 | `/Users/cuishi/lab/ncwk-sim-mux/evidence/ide-fallback-20261030/t_af224933.png` |
+| `?task=DEV-CHWX-S1` | `unmaterialized`（约 11s，任务号逐板解析） | 同上，且「请求 id DEV-CHWX-S1（按任务号命中）」；任务 ID 显示 t_af224933 | `…/task-number-DEV-CHWX-S1.png` |
+| `?task=DEV-NOPE-9` | `not_found`（约 2s） | 「任务 DEV-NOPE-9 不存在或当前账号无权访问（深链 ?task= 未命中）；从左侧任务或看板重选一张卡」；无文件树；「去工作台选任务」「重试」可点 | `…/not-found-DEV-NOPE-9.png` |
+| 收起简报抽屉（右栏） | — | 右栏出现「未物化任务工作区：以下为服务器默认根只读视图（非任务仓库）」+ 文件树；不再显示「还没有任务工作区」 | `…/t_af224933-right-pane.png` |
+
+- 走查中的真实接口：`GET /api/hermes/kanban/t_af224933`（200，详情含 workspace_path）、`GET /api/ide/task-workspace?task=t_af224933`（200，materialized=false）、`GET /api/studio/files/list`（无 root，200）、`GET /api/hermes/kanban/workspace-files?task_id=…`（任务号路径下 200）。普通用户带 root 的 `files/list` 仍 403（未改权限边界）。
+
+### 7.4 未做与边界（如实）
+
+- **任务仓库根**（如 SIM 的 `workspaces/fanfan/aipaydev`、`central/aipaydev`）对 admin 不可读：files API 的 `root` 参数要求 super_admin（patch 123 既有边界）。本轮按「不改后端契约」只回落服务器默认根，并在界面明示「非任务仓库」；若要展示任务仓库根，需放开只读 root 权限或新增按任务解析的只读树接口（产品权限决策 + 后端契约批次）。
+- 任务号解析依赖逐板 `listTasks`（服务端无任务搜索接口），最坏 12s 上限后判 `not_found`（带重试）；高负载环境会接近上限。根治需服务端搜索端点（后端批次）。
+- `materialized=false` 时跳过 `workspace-files`（避免 9s CLI 预热）；若该目录实际仍有文件（端点与目录状态竞态），本轮不展示任务目录内容，只展示默认根。
+- 右栏 Git 块仍为空（任务 worktree 不存在），不在本批范围。
+- `simharness/mux/capture-plan.env` 的编码面拍摄位仍写死 `?task=DEV-PAYCORE-S`（陈旧任务 id，采集线修复项，未改）。

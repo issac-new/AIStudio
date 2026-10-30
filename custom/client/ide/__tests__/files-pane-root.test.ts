@@ -4,11 +4,11 @@
 // 实际列 ~/.hermes（实测）。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fallback?: string) => fallback ?? k }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string, fallback?: string) => fallback ?? k, locale: ref('zh') }) }))
 vi.mock('../utils/auth-fetch', () => ({
   authFetch: vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ entries: [] }) })),
 }))
@@ -16,7 +16,12 @@ vi.mock('../utils/auth-fetch', () => ({
 const chatState = reactive<{ activeSession: { workspace?: string | null } | null }>({ activeSession: null })
 vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => chatState }))
 
-const ideState = reactive<{ workspace: string | null }>({ workspace: '/ws/a' })
+const ideState = reactive<{
+  workspace: string | null
+  activeTaskId: string | null
+  taskWorkspace: { materialized: boolean; path: string | null } | null
+  taskWorkspaceError: { status: number } | null
+}>({ workspace: '/ws/a', activeTaskId: null, taskWorkspace: null, taskWorkspaceError: null })
 vi.mock('../store/ide', () => ({ useIdeStore: () => ideState }))
 
 const filesState = reactive<{ workspaceRoot?: string }>({ workspaceRoot: undefined })
@@ -28,7 +33,34 @@ describe('IdeFilesPane → filesStore.workspaceRoot', () => {
   beforeEach(() => {
     chatState.activeSession = null
     ideState.workspace = '/ws/a'
+    ideState.activeTaskId = null
+    ideState.taskWorkspace = null
+    ideState.taskWorkspaceError = null
     filesState.workspaceRoot = undefined
+  })
+
+  it('未物化任务工作区：右栏出默认根只读树（不再停在死胡同空态）', async () => {
+    ideState.workspace = null
+    ideState.activeTaskId = 't_af224933'
+    ideState.taskWorkspace = { materialized: false, path: '/ws/t_af224933' }
+    const w = mount(IdeFilesPane, { global: { stubs: { FileTree: true, IdeGitPane: true } } })
+    await flushPromises()
+    expect(w.find('[data-testid="ide-files-readonly-fallback"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-files-readonly-note"]').text()).toContain('未物化任务工作区')
+    expect(w.find('[data-testid="ide-files-no-workspace"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('任务不存在/解析故障：右栏不渲染只读树（保持可解释空态）', async () => {
+    ideState.workspace = null
+    ideState.activeTaskId = 'DEV-NOPE-9'
+    ideState.taskWorkspaceError = { status: 404 }
+    const w = mount(IdeFilesPane, { global: { stubs: { FileTree: true, IdeGitPane: true } } })
+    await flushPromises()
+    expect(w.find('[data-testid="ide-files-readonly-fallback"]').exists()).toBe(false)
+    expect(w.find('[data-testid="ide-files-no-workspace"]').exists()).toBe(true)
+    expect(w.find('[data-testid="ide-files-no-workspace-message"]').text()).toContain('不存在或当前账号无权访问')
+    w.unmount()
   })
 
   it('挂载即把 IDE 工作区写入 filesStore.workspaceRoot（FileTree 据此列目录）', async () => {
