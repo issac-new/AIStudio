@@ -3965,6 +3965,30 @@ def artifact_panorama():
             f'行内锚=origin/main@{main_sha or "?"}（实查）· 生成时工作树 HEAD@{CEN_ANCHOR or "?"}')
     return html_tbl, stat, note_g5
 
+
+def _make_diff_frame(pre: str):
+    """操作前后差异标注（run23 用户指令：变化要标在图上）。
+    pre=操作序列前缀（如 room_done-op1）；需 before+after 两帧在位。
+    命中变化 → 生成 <pre>-diff.png 并返回文件名；无显著变化/缺帧 → None（不产图）。
+    结果按 mtime 缓存：after 比 diff 新才重算，报告重生成不重复算像素。
+    """
+    import subprocess as _sp
+    before = STEPS_DIR / f'{pre}-before.png'
+    after = STEPS_DIR / f'{pre}-after.png'
+    diff = STEPS_DIR / f'{pre}-diff.png'
+    if not (before.exists() and after.exists()):
+        return None
+    if diff.exists() and diff.stat().st_mtime >= max(before.stat().st_mtime, after.stat().st_mtime):
+        return diff.name
+    try:
+        rc = _sp.run(['python3', str(Path(__file__).parent / 'frame-diff.py'),
+                      str(before), str(after), str(diff)],
+                     capture_output=True, timeout=60).returncode
+    except Exception:
+        return None
+    return diff.name if rc == 0 and diff.exists() else None
+
+
 # 取帧单一事实源（显式注册 ∪ 按步键自动挂接）——章节构建与图数统计共用，须先定义
 def _effective_step_imgs(_n, _m):
     _reg = [pre for pre, _c, _k in _m.get('imgs', [])]
@@ -4731,9 +4755,21 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             # 正文只说人话——这是本步的界面实拍，点开可放大。
             _phase_cn = {'before': '操作前', 'action': '操作中', 'after': '操作后'}
             _or_imgs = []
+            _seen_ops = set()
             for pre in orphans:
                 _ph = pre.rsplit('-', 1)[-1]
                 _or_imgs.append((pre, f'本步界面实拍（{_phase_cn.get(_ph, _ph)}）· 点图放大查看', 'ui'))
+                _op = pre.rsplit('-', 1)[0]
+                if _ph in ('before', 'after') and _op not in _seen_ops:
+                    _seen_ops.add(_op)
+                    _dfn = _make_diff_frame(_op)
+                    if _dfn:
+                        _or_imgs.append((_dfn.rsplit('.', 1)[0],
+                                         '操作前后对比：红框=变化处（其余区域无变化）', 'ui'))
+                    elif _ph == 'after' and (STEPS_DIR / f'{_op}-before.png').exists():
+                        # 无差异也如实说（run23 用户指令「有变化要标出来」的反面：
+                        # 没变化就不能让人以为有变化）
+                        _or_imgs[-1] = (pre, '本步界面实拍（操作前/后无界面变化——本步推进在数据与管理侧）· 点图放大', 'ui')
             imgs_html = (f'<p class="st-autoattach">本步界面实拍 {len(orphans)} 张（操作前/后对照，点图可放大）。</p>'
                          + img_tags(_or_imgs))
         elif (meta.get('mark_chip') or '').startswith('沿用'):
@@ -4881,6 +4917,27 @@ html[data-theme="dark"] table{border-color:var(--line)}
 html[data-theme="dark"] td, html[data-theme="dark"] th{border-color:var(--line)}
 html[data-theme="dark"] a{color:var(--accent)}
 html[data-theme="dark"] ::selection{background:#2b4c8c;color:#fff}
+/* ── 深色底可读性（2026-10-30 用户实报「黑底深字看不清」）──
+   这批选择器在浅色主题下靠「透明底 + 深灰字」工作；切到深色主题后底色变 #0b1220，
+   深灰字对比度掉到 1.5~2:1，等于不可读。深色主题统一改用 token 文本色（--ink/--muted），
+   凡是靠自带浅色贴片（如 #fffbeb/#dcfce7）工作的不改——它们的对比度由贴片保证。 */
+html[data-theme="dark"] .st-story,
+html[data-theme="dark"] .art-body p,
+html[data-theme="dark"] .art-body ul,
+html[data-theme="dark"] .art-body li,
+html[data-theme="dark"] .gov-trend,
+html[data-theme="dark"] .gov-trend td,
+html[data-theme="dark"] .rf-bypass li,
+html[data-theme="dark"] .gate-body,
+html[data-theme="dark"] .step.gate-step .gate-body{{color:var(--ink)}}
+html[data-theme="dark"] .rf-gapnote{{color:#fdba74;background:#2a1a0d;border-left-color:#fdba74}}
+html[data-theme="dark"] .rf-gate.ok{{background:#0f2b22;color:#6ee7b7;border-color:#1f6f52}}
+html[data-theme="dark"] .rf-gate.no{{background:#2b220d;color:#fcd34d;border-color:#7a5a12}}
+html[data-theme="dark"] .rf-gate.gap{{background:#2b1a0d;color:#fdba74;border-color:#8a4a1a}}
+/* 关卡地图（ck-zone）：阶段色在深色底上掉到 2.5:1 上下——按 40% 混白提亮，
+   节点编号贴片改用深底字（浅字压在中等饱和色上同样看不清）*/
+html[data-theme="dark"] .ck-zone-hd{{color:color-mix(in srgb, var(--zc) 40%, white)}}
+html[data-theme="dark"] .ck-node-z{{color:#0b1220}}
 """
 
 
