@@ -28,7 +28,7 @@ CARDS = '''
   <div class="gw-kpis">
     <div class="gw-kpi"><b>26</b><span>标准流程步</span></div>
     <div class="gw-kpi"><b>6</b><span>道关卡 G1-G6</span></div>
-    <div class="gw-kpi"><b>15×2</b><span>人编制 × 双账号</span></div>
+    <div class="gw-kpi"><b>30</b><span>matrix 账号（人+AI）</span></div>
     <div class="gw-kpi"><b>54</b><span>条执行纪律</span></div>
     <div class="gw-kpi"><b>§5</b><span>验收唯一事实源</span></div>
   </div>
