@@ -181,14 +181,18 @@ if step_reached smoke; then
   # R28 编制三方对账（gap-audit P11 防复发）：roster.md × org.md × matrix 实际人类账号
   # 计数一致才算"账号与人员编制表一一对应"（方案步 1 合格线）；不一致记录不炸——
   # roster 停首签 12 人版横跨六轮无人拦，根因=无对账断言。
+  # run23 实录两修：①`^jwt_` 会把 admin 的服务令牌 `jwt__gov`（双下划线，governance
+  # 客户端写入）算进人类账号，再 +1 补 admin 即重复计数，恒报 16≠15/15 假不一致——
+  # 人类账号口径收窄为 `^jwt_<名字>=`（单下划线）；②本块属每次驱动重启都重跑的冒烟段
+  # （无 _done 幂等键），断言改 issue_once：同一不一致只记一单，防 48 条同文刷屏。
   _roster_n=$(grep -cE '^\| @[a-z]+:matrix\.test \|' "$DIRECTOR_CLONE/docs/admin/roster.md" 2>/dev/null); _roster_n=${_roster_n:-0}
   _org_n=$(grep -E '^\| [a-z]' "$DIRECTOR_CLONE/docs/admin/org.md" 2>/dev/null | grep -Evc '^\| 账号' || true); _org_n=${_org_n:-0}
-  _jwt_n=$(grep -c '^jwt_' "$STATE" 2>/dev/null); _jwt_n=${_jwt_n:-0}
-  _mx_n=$(( _jwt_n + 1 ))   # jwt_* 人类账号 + admin（独立凭证）
+  _jwt_n=$(grep -cE '^jwt_[a-z][a-z0-9_]*=' "$STATE" 2>/dev/null); _jwt_n=${_jwt_n:-0}
+  _mx_n=$(( _jwt_n + 1 ))   # jwt_* 人类账号 + admin（独立凭证 jwt__gov，不计入人类口径）
   if [[ "$_roster_n" == "$_org_n" && "$_org_n" == "$_mx_n" && "$_mx_n" -gt 0 ]]; then
     note "[R28] 编制三方对账一致：roster=${_roster_n} × org=${_org_n} × matrix=${_mx_n} ✓"
   else
-    echo "ISSUE|roster-org-matrix-mismatch|director|编制三方对账不一致：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}（R28 断言；防 run9 roster 停旧版六轮无人拦复发）" >> "$EVID_DIR/issues.log"
+    issue_once roster-org-matrix-mismatch director "编制三方对账不一致：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}（R28 断言；防 run9 roster 停旧版六轮无人拦复发）"
     note "[R28] 编制三方对账不一致（已记录，继续）：roster=${_roster_n} org=${_org_n} matrix=${_mx_n}"
   fi
   # R29 delivery 协议面小冒烟（P15 拍板：禁静默关旗标——MX_DELIVERY=1 时冒烟段即验
@@ -1068,7 +1072,9 @@ for a in last.get("anomalies", []):
   # 均不查 security_review_done——arch 先 PASS 时 g2_arch_pass 会静默绕过安全评审落键。
   # 此处 fail-closed：arch PASS 但安全评审未闭环（涉敏轮）即 fail 中止本轮，闸不放行。
   if ! printf '%s' "$_sens" | grep -qE '涉敏[：:]\s*(无|否|false|N/A)' && [[ -z "$(sget security_review_done)" ]]; then
-    echo "ISSUE|g2-security-not-closed|secops-agent|G2 安全前置未闭环：涉敏轮 security_review_done 未置（arch 已 PASS 但安全评审未 PASS/豁免）——闸不放行（禁止拆闸式解锁）" >> "$EVID_DIR/issues.log"
+    # run23 实录：本断言在 G2 等待/重入面反复触达（同一状态重复 6 单同文），改 issue_once
+    # ——它是状态断言不是事件流，一次在案即可（后续闭环以 security_review_done 键体现）。
+    issue_once g2-security-not-closed secops-agent "G2 安全前置未闭环：涉敏轮 security_review_done 未置（arch 已 PASS 但安全评审未 PASS/豁免）——闸不放行（禁止拆闸式解锁）"
     fail "G2 硬闸：涉敏轮安全评审（security_review_done）未闭环，不得落 g2_arch_pass"
   fi
   capture_step "g2_arch_pass" "/app/stage/design?tab=tasks"   # 步15 承载面：arch 板·G2 评审卡（capture-plan 覆盖 user=arch）

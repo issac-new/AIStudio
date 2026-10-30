@@ -2135,7 +2135,7 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三
   local out="$EVID_DIR/governance-report.md" dto rc=0
   dto=$(gov_run_metrics "${RFD_ID:-RFD-001}") || rc=$?
   if (( rc != 0 )) || ! printf '%s' "$dto" | jq -e '.ok == true' >/dev/null 2>&1; then
-    echo "ISSUE|lifecycle-service-unreachable|gov-report|治理指标服务不可达（GET /api/governance/run/:run/metrics）——治理报告按缺席呈现（fail-soft，不假数字）" >> "$EVID_DIR/issues.log"
+    issue_once lifecycle-service-unreachable gov-report "治理指标服务不可达（GET /api/governance/run/:run/metrics）——治理报告按缺席呈现（fail-soft，不假数字）"
     { echo "# ${RFD_ID:-RFD-001} 治理报告（RUN=${RUN_ID:-default}，$(date '+%F %T'))"; echo; echo "- 治理指标服务不可达——本报告数字缺席（fail-soft，不编造）。"; } > "$out"
     mask_env_paths "$out"; echo "$out"; return 0
   fi

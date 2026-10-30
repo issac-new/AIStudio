@@ -175,6 +175,18 @@ PYN
 done
 [ "$_norm_cnt" -gt 0 ] && log "provider 归一：${_norm_cnt} 份 config（builtin:bigmodel-coding-plan → custom:cc-switch/glm-5.3-flash）"
 
+# ── 4c. 会话轮换档位归一（705 run23 实证根治）：多路复用下每个 profile 读的是**自己
+#        家的** config.yaml（gateway._gateway_config_home → get_hermes_home_override），
+#        根 config 写了不生效——run23 实录档位只在根时各 profile 仍 report 档，轮换只
+#        发建议不改会话，上下文继续涨到 126K/241K 被上游流截断。此处按 profile 逐份补
+#        `session_rotation: mode: auto`（幂等；实现体=mux/mx_rotation_mode.py 单一事实源）。
+mxp_rotation_mode() { # <mode> ；不传=auto
+  python3 "$SCRIPT_DIR/mux/mx_rotation_mode.py" --mode "${1:-auto}" \
+    "$HERMES_ROOT/config.yaml" --glob "$HERMES_ROOT/profiles/*/config.yaml" 2>/dev/null || true
+}
+_rot_out="$(mxp_rotation_mode auto)"
+[ -n "$_rot_out" ] && log "会话轮换档位归一：${_rot_out}"
+
 # ── 5. 每账号 2 块独立 kanban + team 围栏（按节点切片）───
 for u in $(node_users); do
   for b in $(boards_of "$u"); do

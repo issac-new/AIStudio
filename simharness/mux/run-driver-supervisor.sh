@@ -150,6 +150,8 @@ fi
 # 监控介入信号）；≥10 次=退避 120s 防刷单与负载；rc=0 即复位。不自停（保留自愈能力——
 # run16 循环最终靠热修渡过），但把「跑完才知道坏」前移为「第 3 次失败就知道」。
 _storm=0
+_storm_same=0      # 连续同指纹失败次数（确定性失败判定，见下方注释）
+_storm_fp=""       # 上轮驱动日志新增段的失败指纹
 while true; do
   [[ -f "$STOPFLAG" ]] && { note "stop 文件在位，监督器退出"; rm -f "$STOPFLAG"; exit 0; }
   if grep -q '^report_done=' "$STATE" 2>/dev/null; then
@@ -239,6 +241,13 @@ while true; do
   fi
   if [[ $RC -ne 0 ]]; then
     _storm=$((_storm+1))
+    # 确定性失败判定（run23 实锤）：报告步审计在「同一批缺口」上必然复现 FAIL——驱动
+    # 每次退出都是 rc=1、每次重入的失败集一模一样，30s 重启只是把同一份 FAIL 再算一遍
+    # （run23 实测连续 11 次、耗时 65 分钟零新增信息）。故除次数外并入「失败指纹」：
+    # 驱动日志新增段末行哈希；连续 N 次同指纹=确定性失败，记单并停（人工可见），
+    # 指纹变化（缺口被修）才继续自愈。
+    _tailfp="$(tail -c +$((_loff+1)) "$LOGS/$RUN_ID-driver.log" 2>/dev/null | grep -E '^\[mux FAIL|^== FAIL ==|^\- ' | shasum | cut -c1-12)"
+    if [[ "$_tailfp" == "$_storm_fp" ]]; then _storm_same=$((_storm_same+1)); else _storm_same=1; _storm_fp="$_tailfp"; fi
     if [[ $_storm -eq 3 ]]; then
       _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
       if ! grep -q '^ISSUE|driver-restart-storm|' "$_iss_path" 2>/dev/null; then
@@ -246,13 +255,23 @@ while true; do
       fi
       note "⚠ 重启风暴：连续 ${_storm} 次失败——已记单 driver-restart-storm（监控介入信号）"
     fi
+    # 同指纹硬停（缺省 5 次；MX_STORM_SAME_MAX 可调，0=关闭）。
+    # 依据：同一失败集重复执行不产生新证据，停下来才是可观测的终态；继续刷只会
+    # 制造「以为在自愈」的假象（run23 65 分钟实证）。
+    _same_max="${MX_STORM_SAME_MAX:-5}"
+    if [[ "$_same_max" -gt 0 && $_storm_same -ge "$_same_max" ]]; then
+      _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
+      echo "ISSUE|driver-deterministic-fail|supervisor|驱动连续 ${_storm_same} 次退出且失败指纹不变（${_storm_fp}）——判定确定性失败，监督器停止自愈（人工可见）；复位=修复缺口后重挂监督器或指纹变化" >> "$_iss_path"
+      note "⛔ 连续 ${_storm_same} 次同指纹失败（${_storm_fp}）——判定确定性失败，监督器退出（真值：证据/缺口未变，重启不产生新信息）"
+      exit 3
+    fi
     if [[ $_storm -ge 10 ]]; then
       note "连续 ${_storm} 次失败——退避 120s 再续（防刷单与负载；自愈保留）"
       monitor_events
       sleep 120
     fi
   else
-    _storm=0
+    _storm=0; _storm_same=0; _storm_fp=""
   fi
   note "驱动退出 rc=$RC（${STATE} 无 report_done 键——30s 后按断点续跑）"
   sleep 30
