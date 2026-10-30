@@ -3627,6 +3627,23 @@ def _art_resolve(rel: str):
     if not rel:
         return None, '', '', {}
     _git_ok('fetch', '-q', 'origin')
+    # 变体容错（run23 复盘）：派发词的任务号与分支实际产物名可能差一段后缀
+    # （DEV-CHWX 声明 vs DEV-CHWX-S3 实产、DEV-MP vs DEV-MP-runtime 等），
+    # 精确路径缺席时按「基名+通配+扩展名」在仓内找唯一命中——命中即采用实际路径，
+    # 并在解析源里注明「变体命中」，不冒充原声明名。
+    _alt_rel = rel
+    if not any(_git_ok('cat-file', '-e', f'{ref}:{rel}') for ref in ('origin/main', 'origin/integration/RFD-001')):
+        import os as _os
+        _d, _b = _os.path.split(rel)
+        _stem, _ext = _os.path.splitext(_b)
+        _pat = f'{_d}/{_stem}*{_ext}' if _d else f'{_stem}*{_ext}'
+        for ref in ('origin/integration/RFD-001', 'origin/main'):
+            _ls = _git_out('ls-tree', '-r', '--name-only', ref, '--', _d or '.').splitlines()
+            _hits = [x for x in _ls if __import__('fnmatch').fnmatch(x, _pat)]
+            if len(_hits) == 1:
+                _alt_rel = _hits[0]
+                rel = _alt_rel
+                break
     for ref in ('origin/main', 'origin/integration/RFD-001'):
         if _git_ok('cat-file', '-e', f'{ref}:{rel}'):
             sha = _git_out('rev-parse', '--short', ref).strip()
@@ -4867,11 +4884,36 @@ def _readfirst_html() -> str:
     _gates = [('G1 需求冻结', 'g1_frozen'), ('G2 架构评审', 'g2_arch_pass'),
               ('G3 编码门禁', 'g3_code_pass'), ('G4 独立测试', 'g4_pass'),
               ('G5 发布准出', 'ready_done'), ('G6 复盘', 'retro_done')]
+    # 缺口显形（run23 复盘）：G3/G4 有"带缺口放行"键时，chip 不能只显示"通过"——
+    # 否则首页把「缺证过闸」读成"完全达标"，与正文/六域判定自相矛盾。
+    _gap_keys = {'g3_evidence_gap': 'G3 编码门禁', 'g4_evidence_gap': 'G4 独立测试'}
     _chips = []
+    _gap_notes = []
     for _name, _k in _gates:
         _ok = bool(state.get(_k))
-        _chips.append(f'<span class="rf-gate {"ok" if _ok else "no"}"><b>{H.escape(_name)}</b>'
-                      f'{"✅ 通过" if _ok else "⏳ 未放行"}</span>')
+        _gk = next((k for k in _gap_keys if _gap_keys[k] == _name), None)
+        _has_gap = bool(_gk and state.get(_gk))
+        if _ok and _has_gap:
+            _chips.append(f'<span class="rf-gate gap"><b>{H.escape(_name)}</b>✅ 通过（带缺口）</span>')
+            _gap_notes.append(f'{_name}：缺口已记录并在正文如实呈现（非全绿通过）')
+        else:
+            _chips.append(f'<span class="rf-gate {"ok" if _ok else "no"}"><b>{H.escape(_name)}</b>'
+                          f'{"✅ 通过" if _ok else "⏳ 未放行"}</span>')
+    _gap_line = (f'<p class="rf-gapnote">⚠ 带缺口通过的关卡：{"；".join(_gap_notes)}——'
+                 '这不等于达标，详见第 3 章六域审计与第 4 章问题单。</p>' if _gap_notes else '')
+    # 已批准绕过/缓期项（run23 用户裁定「不具备条件的直接绕过」）：从台账读事实，不猜。
+    _bypass = []
+    try:
+        _il = (EVID / 'issues.log')
+        if _il.exists():
+            for _ln in _il.read_text(encoding='utf-8', errors='replace').splitlines():
+                _p4 = _ln.split('|', 3)
+                if len(_p4) >= 4 and ('external-bypass' in _p4[1] or '缓期' in _p4[3]):
+                    _bypass.append(_p4[3][:160])
+    except Exception:
+        pass
+    _bypass_html = ('<div class="rf-col rf-bypass"><h3>已批准绕过 / 缓期（不具备条件项）</h3><ul>'
+                    + ''.join(f'<li>{H.escape(_b)}</li>' for _b in _bypass[:6]) + '</ul></div>') if _bypass else ''
     _done_steps = sum(1 for _n in range(1, 27) if _step_done(_n))
     import subprocess as _sp
     def _in_repo(_path):
@@ -4908,8 +4950,10 @@ def _readfirst_html() -> str:
         '<section class="rf-sec" id="ch0-readfirst"><h2>第 0 章 · 一页读懂</h2>'
         '<p class="rf-lead">这一页只回答三个问题：<b>现在走到哪了、你能拿到什么、还差什么。</b></p>'
         f'<div class="rf-gates">{"".join(_chips)}</div>'
+        f'{_gap_line}'
         f'<p class="rf-note">26 步完成 {_done_steps} 步 ｜ 问题单 {n_issue_keys} 键（待处置 {n_issue_open}）'
         f' ｜ 界面实拍 {total_imgs} 张（点图放大）</p>'
+        f'{_bypass_html}'
         '<div class="rf-cols">'
         f'<div class="rf-col"><h3>已经交付的</h3><ul>{"".join(_deliv)}</ul></div>'
         f'<div class="rf-col"><h3>还没完成的</h3><ul>{"".join(_open)}</ul></div>'
@@ -5125,6 +5169,10 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .rf-gate{{display:flex;gap:6px;align-items:center;font-size:13px;border-radius:999px;padding:5px 12px;border:1px solid var(--line);background:var(--bg)}}
 .rf-gate.ok{{border-color:#a7f3d0;background:#ecfdf5;color:#065f46}}
 .rf-gate.no{{border-color:#fde68a;background:#fffbeb;color:#92400e}}
+.rf-gate.gap{{border-color:#fdba74;background:#fff7ed;color:#9a3412}}
+.rf-gapnote{{font-size:12.5px;color:#9a3412;background:#fff7ed;border-left:3px solid #fdba74;padding:6px 10px;border-radius:6px;margin:6px 0 10px}}
+.rf-bypass{{margin-top:12px;border-top:1px dashed #fdba74;padding-top:10px}}
+.rf-bypass li{{color:#9a3412}}
 .rf-note{{font-size:12.5px;color:var(--muted);margin:4px 0 14px}}
 .rf-cols{{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
 @media (max-width:900px){{.rf-cols{{grid-template-columns:1fr}}}}
