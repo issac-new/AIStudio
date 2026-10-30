@@ -107,7 +107,7 @@ gov_lc_breaker_check() { # <gate> <sig> [label] → 0 放行/复位/复议 / 1 b
 # ── run 级治理面（融合批三：指标/工作台账/审计检查——数字与判定单源在产品）──
 
 _gov_get() { # <path> → stdout JSON（失败 rc=1）
-  local tok
+  local tok path="$1" # path 绑定不可省：set -u 下裸 $path 直接 unbound variable 击穿调用链（run23 收官实录）
   tok=$(_gov_tok) || return 1
   studio GET "/api/governance$path" "$tok" 2>/dev/null || return 1
 }

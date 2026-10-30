@@ -71,7 +71,7 @@ STEP_ENTRIES = {
     17: ('产品经理A（PM）', '③分析设计 → 排期（#/app/stage/design?tab=schedule）',
         'SMART 任务排期入卡（任务卡具体到人+人日，编号随本轮 tasklist；测试工作量=开发×0.3 独立成项）'),
     18: ('AI · 研发智能体', 'IDE 工作区（#/app/ide；任务右栏或页面切换进入；任务简报含任务工作区/任务会话）',
-        '创建 feat/DEV-* 分支 → 按概设实现（每条 AC 对应用例）→ 单测全绿（pay-core≥8/其余≥6）→ testlog+runtime-proof 随分支提交 → G3 落键 g3_code_pass'),
+        '创建 feat/DEV-* 分支 → 按概设实现（每条 AC 对应用例）→ 单测全绿（pay-core≥8/其余≥6）→ testlog+runtime-proof 随分支提交 → G3 门禁通过、通过标记 g3_code_pass 写入状态台账'),
     19: ('测试工程师A/测试工程师B（测试，≠写码者）', '④开发 → 看板（#/app/stage/build?tab=board）qi 板；质量与测试签',
         '按 AC 全量用例执行 → 缺陷报告→修复→复验全过关（一条不落）→ 测试报告六要素入仓'),
     20: ('PM+评审卡（HumanGate）', '⑤验收 → G5 审批（#/app/stage/accept?tab=g5）',
