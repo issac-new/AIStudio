@@ -1748,7 +1748,9 @@ _STEP33_DEFAULT_KEYS = ['smoke_done','smoke_done','smoke_done','smoke_done','app
                         'defect_done','ready_done','uat_done','workmgr_done','audit_done','retro_done','ide_done','report_done']
 _STEP33_MULTI_KEYS = {11: ['analysis_done', 'analysis_verified'],
                       19: ['defect_done', 'testpass_done'],
-                      20: ['ready_done', 'release_done'],
+                      # 步 20 三键（run23 收尾复盘批）：G5 审批页 + 发布留痕 + 审批收件箱队列帧
+                      # （ready_inbox=审批面 UI 帧，与 §2.6.8 消费纪律 6 探测互证）。
+                      20: ['ready_done', 'release_done', 'ready_inbox'],
                       # 步 8 双名（run23 复盘）：驱动 capture_step 的标签是 room_done、报告步键是
                       # room_analysis——两处名字分叉时帧文件永远挂不上（报告恒显「截图缺失」）。
                       8: ['room_analysis', 'room_done']}
@@ -2763,6 +2765,25 @@ def eval_summary_html():
     if isinstance(pyramid, dict):
         pyramid = pyramid.get('layers') or []
     pyr_txt = ' · '.join(f"{a.get('label') or a.get('key')}={a.get('status')}" for a in pyramid if isinstance(a, dict)) or '未采集'
+    # 发布门禁逐项 checks 渲染（run23 复盘批；遗留清单#4 清偿）：产品侧已给逐项
+    # status/measured/threshold/noDataCode（custom/server/eval/releaseGate.ts），旧口径
+    # 只渲染 gapKeys 汇总——fail 项「差多少」与 no_data 项「为什么没数」在报告丢失。
+    # 缺席（旧 run 无 checks）回落原 gapKeys 行，向前兼容不造数。
+    _NODATA_CN = {'not_collected': '未采集', 'insufficient_samples': '样本不足',
+                  'requires_live_backfill': '无回放数据源'}
+    gate_checks = [c for c in (gate.get('checks') or []) if isinstance(c, dict)]
+    if gate_checks:
+        _parts = []
+        for c in gate_checks:
+            if c.get('status') == 'fail':
+                _parts.append(f"<span style=\"color:var(--bad,#c0392b)\">{esc(c.get('key'))}={esc(c.get('measured'))}（阈值{esc(c.get('threshold'))}）FAIL</span>")
+            elif c.get('status') == 'no_data':
+                _code = c.get('noDataCode')
+                _why = _NODATA_CN.get(_code) or esc(c.get('noDataReason') or 'no_data')
+                _parts.append(f"{esc(c.get('key'))} 无数据（{_why}）")
+        gate_checks_txt = '<br>' + ' · '.join(_parts) if _parts else ''
+    else:
+        gate_checks_txt = ''
 
     return f"""
   <h3 style="font-size:13px;margin:14px 0 6px">证据八：EvalOps 评测运营（V8.45）</h3>
@@ -2777,7 +2798,7 @@ def eval_summary_html():
       <tr><td>能力维度覆盖</td><td>{esc(cov.get('covered'))}/{esc(cov.get('total'))} · 未标注任务 {esc(cov.get('untaggedTasks'))}</td><td>只认显式 dimension 标注，不猜</td></tr>
       <tr><td>评测集锚点</td><td>revision {esc(st.get('revision'))} · setHash {esc((st.get('contentHash') or run.get('setHash') or '')[:12])} · 漂移 {'是' if run.get('anchorDrift') else '否'}</td><td>漂移=集已改版，读数不可直接对比</td></tr>
       <tr><td>端到端读数</td><td>pass@1 {pct(run.get('passAt1'))} · pass@k {pct(run.get('passAtK'))} · unknown {pct(run.get('unknownRatio'))} · 红线 {'命中' if run.get('riskVeto') else '干净'}</td><td>Eval Studio 运行报告</td></tr>
-      <tr><td>发布门禁</td><td>{esc(gate.get('verdict'))} · 实测项 {esc(gate.get('measuredCount'))} · 缺口 {esc('、'.join(gate.get('gapKeys') or []) or '无')}</td><td>六检查；缺口如实 no_data</td></tr>
+      <tr><td>发布门禁</td><td>{esc(gate.get('verdict'))} · 实测项 {esc(gate.get('measuredCount'))} · 缺口 {esc('、'.join(gate.get('gapKeys') or []) or '无')}{gate_checks_txt}</td><td>六检查；缺口如实 no_data；fail 项点名实测与阈值</td></tr>
       <tr><td>评估器三角</td><td>规则 {esc(src.get('s0'))} · 裁判 {esc((src.get('s1') or 0) + (src.get('s0+s1') or 0))} · 人工 {esc(src.get('human'))} · 冲突 {esc(tri.get('conflicts'))} · 判词可审计 {pct((tri.get('audit') or {}).get('ratio'))}</td><td>S0/S1/人工互证；判词 reason 可追问</td></tr>
       <tr><td>严格 vs 保守</td><td>严格 {pct(strict.get('passAtK'))} · 保守（反事实）{pct(cons.get('passAtK'))} · 误杀候选 {esc(human.get('falseKillCandidates'))} · 假通过候选 {esc(human.get('falsePassCandidates'))}</td><td>保守口径不作门禁，只量误杀空间</td></tr>
       <tr><td>四层指标金字塔</td><td>{esc(pyr_txt)}</td><td>模型/应用/Agent/线上；no_data 如实</td></tr>
@@ -2967,7 +2988,7 @@ def harness_runtime_html():
 
 
 def security_html():
-    """安全合规证据小节（质量 B③，2026-10-16：审计 B 案「安全合规最薄」的产品化收口）。
+    """安全合规证据小节（质量 B③，2026-10-16：审计 B 案「安全合规最薄」的产品化完成）。
 
     三件套逐件实测呈现（缺数据=如实缺席，禁粉饰）：
       ①涉敏需求安全评审——state.env security_review_done（1=过闸/非涉敏豁免）；
@@ -4966,7 +4987,7 @@ html[data-theme="dark"] .ck-node-z{{color:#0b1220}}
 
 
 # ── 第 0 章 · 一页读懂（2026-10-30 用户指令：报告要用户视角，先给结论再给过程）──
-# 全部实算：闸键取自 state、问题单取自 issues.log 统计、交付物取自集成树实查。
+# 全部按实测计算：闸键取自 state、问题单取自 issues.log 统计、交付物取自集成树实查。
 def _readfirst_html() -> str:
     # 需求单编号单一来源：报告侧沿用场景常量（RFD-001），不从 state 猜
     RFD_ID = 'RFD-001'
@@ -5470,7 +5491,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
   <h2 class="section-hd" id="appendix">附录 · 方法与口径（供复核，不影响上面的结论）</h2>
   <details class="rf-appendix" id="ch0-collab-wrap"><summary>附录 A · 推演逻辑与协作顺序总述（这套流程是怎么设计的）</summary>{_ch0_html}</details>
-  <details class="rf-appendix" id="ch1-caliber-wrap"><summary>附录 B · 数据与验收口径声明（数字是怎么算出来的）</summary>{_ch1_html}</details>
+  <details class="rf-appendix" id="ch1-caliber-wrap"><summary>附录 B · 数据与验收标准声明（数字是怎么算出来的）</summary>{_ch1_html}</details>
   <details class="rf-appendix" id="audit-response"><summary>附录 C · 独立审计与处置（改判真值层）</summary>{audit_response_section}</details>
   <details class="rf-appendix" id="nv-intent-chain-wrap"><summary>附录 D · 意图通路：一条验收标准从冻结到对账</summary>{_ch3_html}</details>
   <details class="rf-appendix" id="ch4-features-wrap"><summary>附录 E · 本轮交付成效与新特性（细分）</summary>{_ch4_html}</details>

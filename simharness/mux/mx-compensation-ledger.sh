@@ -14,6 +14,7 @@
 #   bash mx-compensation-ledger.sh --run <RUN_ID> resolve <id> <note>
 #   bash mx-compensation-ledger.sh --run <RUN_ID> waive <id> <reason>
 #   bash mx-compensation-ledger.sh --run <RUN_ID> check-clearance   # 开跑前清偿门：有 open 即非零
+#   bash mx-compensation-ledger.sh --run <RUN_ID> check-issue-clearance  # 开跑前延后清账：DISP 延后桶非零即非零
 #
 # 台账文件：$SIM_ROOT/runs/<RUN_ID>/evidence/compensation-ledger.tsv
 # 列：id/ts/type/defect/detail/status/resolution（tab 分隔；detail 内 tab 净化为空格）
@@ -143,8 +144,20 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       awk -F'\t' 'NR>1 && $6=="open" { printf "  %s %s %s %s\n", $1, $2, $3, $5 }' "$F"
       exit 1
       ;;
+    check-issue-clearance)
+      # 问题单延后清账（方案 §5.9 清偿门线扩展，run23 收官批）：DISP 处置首词=延后 的
+      # 唯一键非零 → 非零退出并列键。纪律 56「prelaunch 断言上轮结构性延后 key 消失」
+      # 的机械执法面——此前只有代偿 open 笔被 check-clearance 拦，结构性延后单可带病开跑。
+      IL="$(dirname "$F")/issues.log"
+      if [ ! -f "$IL" ]; then echo "延后清账 ✓（$(_mx_led_run_id) 无 issues.log）"; exit 0; fi
+      KEYS=$(awk -F'|' '$1=="DISP" && $4 ~ /^延后/ { print $2"·"$3 }' "$IL" | sort -u)
+      if [ -z "$KEYS" ]; then echo "延后清账 ✓（$(_mx_led_run_id) 问题单延后桶=0）"; exit 0; fi
+      echo "延后清账 ✗：$(printf '%s\n' "$KEYS" | wc -l | tr -d ' ') 个延后唯一键未处置（人工带锚回写 DISP 行，或经用户裁定豁免；纪律 56/§5.9）："
+      printf '%s\n' "$KEYS" | sed 's/^/  /'
+      exit 1
+      ;;
     *)
-      echo "unknown cmd: $CMD（list|summary|catalog|resolve|waive|check-clearance）" >&2; exit 2
+      echo "unknown cmd: $CMD（list|summary|catalog|resolve|waive|check-clearance|check-issue-clearance）" >&2; exit 2
       ;;
   esac
 fi
