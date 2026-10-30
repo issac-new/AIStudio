@@ -15,7 +15,7 @@
         "runtime/roster/",
         "vendor/hermes-studio/"
       ],
-      "version": "0.7.39-studio.3",
+      "version": "0.7.39-studio.4",
       "versionCarrier": "RELEASE-NOTES.md",
       "buildCommand": "npm run build:dmg（需将 OVERLAY_UPSTREAM_ROOT 指向仓根 vendor；产物 DMG/zip，desktop 管理独立 hermes runtime）",
       "artifacts": "vendor/hermes-studio/packages/desktop/release/",
@@ -51,7 +51,7 @@
         "runtime/",
         "vendor/hermes-agent/"
       ],
-      "version": "v0.22.5-team.3",
+      "version": "v0.22.5-team.4",
       "versionCarrier": "team/VERSION",
       "buildCommand": "team/skills/devops/public-repo-release 六步（白名单圈资产→secret 扫描→rsync 发布仓）",
       "artifacts": "公开 git 仓工作树（issac-new/SwarmTeam 归档态）＋本清单源码包 aistudio-agent-teams-<ver>-src.tar.gz",
@@ -90,7 +90,7 @@
       "includes": [
         "skills/swarm-yuan/"
       ],
-      "version": "v2.97.0",
+      "version": "v2.98.0",
       "versionCarrier": "skills/swarm-yuan/CHANGELOG.md",
       "buildCommand": "bash skills/swarm-yuan/scripts/make-offline-bundle.sh（脚本在 skills/swarm-yuan/scripts/；三档：novendor 5M / 全量 ~52M / everything ~71M）",
       "artifacts": "skills/swarm-yuan/dist/swarm-yuan-offline-<ver>.zip（SHA256SUMS 随包）＋本清单源码包 aistudio-yuan-skill-<ver>-src.tar.gz",
