@@ -1585,10 +1585,21 @@ mx_text_gate_verdict() { # <gate 前缀> <text> → stdout: PASS|FAIL|空（空=
 # 房间正文收集（导演域）：深翻页直抵 since 时刻（run15 判词分页盲区根治口径），
 # 按 sender+时窗过滤后拼接（多体拼接后末判词赢语义与逐条取末等价）。
 mx_gate_room_text() { # <room> <sender-mxid> [since-ms] → 拼接正文（空=无消息）
+  # 判词行首闸（run23 复盘，V8.56 §5.6「判词纪律」落地）：只收「结论行在消息行首」的正文。
+  # 实录：评审把派单令原文（含「结论行 READY-GATE-PASS 或 READY-GATE-FAIL」这种指令句）
+  # 转述回房间，治理服务把其中的 PASS 字面当判词 → G5 在最后一项缺项（BE 报告终绿重报）
+  # 尚未落地前 2 分钟就被判定通过（10:50 判定 vs 10:52:07 证据转绿）。行首闸把这类
+  # 「引述型污染」挡在判词提取之外——真判词按纪律本就写在行首。
+  # 兼容既有形态：结论行可带少量前缀（如「（roundN，改判）：」），故按「行首 24 字内含闸词」判。
   mx_messages_deep "$(load_token fanfan)" "$1" $(( ${3:-0} / 1000 )) 8 2>/dev/null \
     | jq -r --arg s "$2" --argjson since "${3:-0}" \
       '[.[] | select(.sender == $s) | select((.origin_server_ts // 0) > $since)]
-       | sort_by(.origin_server_ts) | .[] | (.content.body // "")' 2>/dev/null || true
+       | sort_by(.origin_server_ts) | .[]
+       | (.content.body // "")
+       | select(
+           (split("\n") | map(select(length > 0)) | .[0] // "") as $first
+           | ($first | .[0:24] | test("READY-GATE|SECURITY-GATE|结论"))
+         )' 2>/dev/null || true
 }
 
 # 评审卡 body 收集（导演域）：带 since 窗只认本轮卡（run18 F1 闸键-证据耦合根治口径）。
