@@ -10,12 +10,14 @@ import { useFilesStore } from '@/stores/hermes/files'
 import FileTree from '@/components/hermes/files/FileTree.vue'
 import type { FileEntry } from '@/api/studio/files'
 import IdeGitPane from './IdeGitPane.vue'
-import { useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { noWorkspaceHint, useIdeWorkspace } from '../composables/useIdeWorkspace'
+import { useIdeStore } from '../store/ide'
 import { workspaceLabel } from '../utils/time'
 import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const ide = useIdeStore()
 const invalidTx = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].filesInvalid)
 const zhUi = computed(() => String(locale.value ?? 'zh').startsWith('zh'))
 // validation 是 ComputedRef（模板自动解包、脚本内不解包），脚本内必须读 .value。
@@ -32,6 +34,26 @@ const filesStore = useFilesStore()
 const { root, validation, validate, invalidate } = useIdeWorkspace()
 
 const tab = ref<'tree' | 'git'>('tree')
+
+/**
+ * 空工作区文案（2026-10-30 run23 复盘 · 产品承载面诊断）：
+ * 深链 ?task=<id> 未命中时，旧文案「还没有任务工作区」与「任务存在但未物化」看起来一样，
+ * 采集帧与用户都无法判断是页面没做还是参数错了。判定逻辑在 noWorkspaceHint（纯函数可单测）。
+ */
+const noWorkspaceMessage = computed(() => {
+  const hint = noWorkspaceHint({
+    taskId: ide.activeTaskId,
+    error: ide.taskWorkspaceError,
+    taskWorkspace: ide.taskWorkspace,
+  })
+  return zhUi.value ? hint.zh : hint.en
+})
+
+// 只读兜底（2026-10-30 run23 复盘续作）：有激活任务、工作区已解析但未物化
+// （taskWorkspace 在、materialized=false）→ 右栏也出默认根只读树，不再停在死胡同
+// 空态。解析故障/任务不存在（taskWorkspaceError 非空）不渲染树——与中栏兜底视图同规则。
+const readOnlyFallback = computed(() =>
+  Boolean(ide.activeTaskId) && Boolean(ide.taskWorkspace) && !ide.taskWorkspaceError && !root.value)
 
 // FileTree 的 workspaceKey 只用于根标签；真正决定列目录的根是 filesStore.
 // workspaceRoot（上游 FileTree 直接读该 ref）。根先校验再接线：非法根只打
@@ -88,8 +110,14 @@ async function openEntry(entry: FileEntry): Promise<void> {
         </button>
       </div>
     </div>
+    <div v-else-if="tab === 'tree' && !root && readOnlyFallback" class="ide-files__fallback" data-testid="ide-files-readonly-fallback">
+      <p class="ide-files__fallback-note" data-testid="ide-files-readonly-note">
+        {{ zhUi ? '未物化任务工作区：以下为服务器默认根只读视图（非任务仓库）' : 'Task workspace not materialized: read-only server default root below (not the task repo)' }}
+      </p>
+      <FileTree class="ide-files__tree" :profile="null" show-files @open-entry="openEntry" />
+    </div>
     <div v-else-if="tab === 'tree' && !root" class="ide-files__invalid" data-testid="ide-files-no-workspace">
-      <p>{{ t('ide.files.noWorkspace', '还没有任务工作区——从左侧任务或看板选一张卡带入') }}</p>
+      <p data-testid="ide-files-no-workspace-message">{{ noWorkspaceMessage }}</p>
       <button type="button" class="ide-files__retry" data-testid="ide-files-pick-task" @click="router.push({ name: 'ia2.board' })">
         {{ t('ide.files.pickTask', '去工作台选任务') }}
       </button>
@@ -166,6 +194,21 @@ async function openEntry(entry: FileEntry): Promise<void> {
 }
 .ide-files__invalid-hint { color: var(--text-muted); font-size: 10.5px; }
 .ide-files__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.ide-files__fallback {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ide-files__fallback-note {
+  margin: 8px 12px 4px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 40%, var(--border-color));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-card));
+  font-size: 11px;
+  color: var(--text-primary);
+}
 
 .ide-files__retry {
   border: 1px solid var(--border-color);

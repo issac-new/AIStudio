@@ -16,14 +16,18 @@ import {
   getSet,
   isDecoration,
   judgeAttempt,
+  labelSetDimensions,
   loadEvalConfig,
   METRIC_DEFS,
   METRIC_ACTIONS,
   recordHumanVerdict,
+  sealSet,
   summarizeConsumption,
   type EvalRun,
   type EvalSet,
 } from '../index'
+import { buildRedteamSeedTasks, dimensionForRedteamTaskId } from '../redteam-seed'
+import { buildRedteamVariants } from '../redteam-variants'
 
 let storeDir: string
 beforeAll(() => {
@@ -248,5 +252,118 @@ describe('判词审计理由与人工覆盖留痕', () => {
     expect(verdict.previousValue).toBe('unknown')
     expect(verdict.reason).toContain('机判 unknown')
     expect(getRun(run.id)!.attempts[0]!.verdicts[0]!.previousValue).toBe('unknown')
+  })
+})
+
+// ---------- 能力维度标注通道（2026-10-30 run23 复盘：150 任务 unlabeled 根因） ----------
+
+describe('能力维度标注通道（labelSetDimensions）', () => {
+  it("显式 'unclassified' 算已归类：不计 untagged，也不冒充七维覆盖", () => {
+    const set: EvalSet = {
+      ...fixtureSet(),
+      tasks: [
+        { id: 'u1', problem: 'p', expectedBehavior: 'e', dimension: 'unclassified', rubric: [{ id: 'a', text: 'a', expect: 'yes', kind: 'result' }] },
+        { id: 'u2', problem: 'p', expectedBehavior: 'e', dimension: 'task_completion', rubric: [{ id: 'a', text: 'a', expect: 'yes', kind: 'result' }] },
+        { id: 'u3', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a', text: 'a', expect: 'yes', kind: 'result' }] },
+      ],
+    }
+    const cov = coverageOfSets([set])
+    expect(cov.untaggedTasks).toBe(1) // 只有 u3 真未标注
+    expect(cov.unclassifiedTasks).toBe(1) // u1 显式归类但不在七维
+    expect(cov.covered).toBe(1) // 覆盖只认七维
+    expect(cov.dimensions.find((d) => d.key === 'task_completion')!.taskCount).toBe(1)
+  })
+
+  it('逐题 assignments：写入/清除/校验；变更走版本递增（不静默改资产）', () => {
+    const created = createSet({
+      name: '标注通道-逐题', track: 'e2e',
+      tasks: [
+        { id: 'd1', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a', text: 'a', expect: 'yes', kind: 'result' }] },
+        { id: 'd2', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a', text: 'a', expect: 'yes', kind: 'result' }] },
+      ],
+    } as never)
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+    const before = getSet(created.set.id)!
+    const r1 = labelSetDimensions(created.set.id, { assignments: { d1: 'tool_params', d2: 'unclassified' } })
+    expect(r1.ok).toBe(true)
+    if (!r1.ok) return
+    expect(r1.result.updated).toBe(2)
+    expect(r1.result.coverage.untaggedTasks).toBe(0)
+    expect(r1.result.coverage.unclassifiedTasks).toBe(1)
+    expect(r1.result.revision).toBe(before.revision + 1)
+    expect(r1.result.contentHash).not.toBe(before.contentHash)
+
+    // 值未变 → 不计变更、不递增版本
+    const r2 = labelSetDimensions(created.set.id, { assignments: { d1: 'tool_params' } })
+    expect(r2.ok).toBe(true)
+    if (!r2.ok) return
+    expect(r2.result.updated).toBe(0)
+    expect(r2.result.revision).toBe(r1.result.revision)
+
+    // null = 清除标注，回到未标注
+    const r3 = labelSetDimensions(created.set.id, { assignments: { d2: null } })
+    expect(r3.ok).toBe(true)
+    if (!r3.ok) return
+    expect(r3.result.updated).toBe(1)
+    expect(r3.result.coverage.untaggedTasks).toBe(1)
+
+    // 未知 taskId / 非法维度 / 空请求 → 整单拒绝
+    expect(labelSetDimensions(created.set.id, { assignments: { nope: 'tool_params' } }).ok).toBe(false)
+    expect(labelSetDimensions(created.set.id, { assignments: { d1: 'bogus' as never } }).ok).toBe(false)
+    expect(labelSetDimensions(created.set.id, {}).ok).toBe(false)
+  })
+
+  it("种子族批量回填（backfill='redteam-seed'）：rt-* 全部归类、七维与 unclassified 分开计", () => {
+    const created = createSet({ name: '标注通道-红队', track: 'e2e', tasks: buildRedteamSeedTasks() } as never)
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+    // 旧种子（模拟 run23 存量：建集时未带维度）——清掉 dimension 后回填
+    const set = getSet(created.set.id)!
+    for (const t of set.tasks) delete t.dimension
+    const cleared = labelSetDimensions(created.set.id, { assignments: Object.fromEntries(set.tasks.map((t) => [t.id, null])) })
+    expect(cleared.ok).toBe(true)
+    if (!cleared.ok) return
+    expect(cleared.result.coverage.untaggedTasks).toBe(36)
+
+    const filled = labelSetDimensions(created.set.id, { backfill: 'redteam-seed' })
+    expect(filled.ok).toBe(true)
+    if (!filled.ok) return
+    expect(filled.result.updated).toBe(36)
+    expect(filled.result.coverage.untaggedTasks).toBe(0)
+    expect(filled.result.coverage.unclassifiedTasks).toBe(12) // cr×6 + sc×6
+    expect(filled.result.coverage.dimensions.find((d) => d.key === 'privilege_injection')!.taskCount).toBe(24)
+    // 显式标注优先于族默认：已标 task_completion 的不被回填覆盖
+    const pinned = labelSetDimensions(created.set.id, { assignments: { 'rt-di-01': 'task_completion' } })
+    expect(pinned.ok).toBe(true)
+    const again = labelSetDimensions(created.set.id, { backfill: 'redteam-seed' })
+    expect(again.ok).toBe(true)
+    if (!again.ok) return
+    expect(again.result.updated).toBe(0)
+    expect(getSet(created.set.id)!.tasks.find((t) => t.id === 'rt-di-01')!.dimension).toBe('task_completion')
+  })
+
+  it('种子与变体内建维度：变体继承父题维度（新集不再产生未标注）', () => {
+    const seeds = buildRedteamSeedTasks()
+    expect(seeds.every((t) => t.dimension !== undefined)).toBe(true)
+    const variants = buildRedteamVariants()
+    expect(variants).toHaveLength(114)
+    const seedById = new Map(seeds.map((t) => [t.id, t]))
+    for (const v of variants) {
+      const parent = seedById.get(v.id.replace(/-v\d+$/, ''))!
+      expect(v.dimension).toBe(parent.dimension)
+    }
+    expect(dimensionForRedteamTaskId('rt-cr-01')).toBe('unclassified')
+    expect(dimensionForRedteamTaskId('rt-ii-03-v2')).toBe('privilege_injection')
+    expect(dimensionForRedteamTaskId('unknown-task')).toBeUndefined()
+  })
+
+  it('密封集拒绝标注（不可改）', () => {
+    const created = createSet({ name: '标注通道-密封', track: 'e2e', tasks: buildRedteamSeedTasks() } as never)
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+    expect(sealSet(created.set.id, 'tester').ok).toBe(true)
+    const r = labelSetDimensions(created.set.id, { backfill: 'redteam-seed' })
+    expect(r.ok).toBe(false)
   })
 })

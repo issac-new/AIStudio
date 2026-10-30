@@ -23,6 +23,10 @@ vi.mock('@/custom/ide/store/ide', () => ({
     setActiveTask: (v: string | null) => { ideState.activeTaskId = v },
     setDimension: (d: string) => { ideState.dimension = d },
     associateTaskWorkspace: vi.fn(async () => null),
+    // 2026-10-30 兜底视图：store 新面（未物化状态/错误/在途）
+    taskWorkspace: null,
+    taskWorkspaceError: null,
+    taskWorkspaceLoading: false,
     layout: { sidebar: { maximized: false }, chat: { maximized: false }, sidepane: { maximized: false } },
     sidePane: { open: true, active: 'files' },
     togglePalette: () => {},
@@ -64,6 +68,7 @@ function mountShell() {
       stubs: {
         IaGlobalTop: true, IaColumnControls: true, IdeTaskSidebar: true,
         IdeChatPane: true, IdeSidePane: true, IdeStatusBar: true,
+        IdeUnmaterializedView: true,
         IdeCommandPalette: true, IdeTaskContextBar: true, TaskBriefingPanel: true,
         CockpitRunTraceModal: true,
       },

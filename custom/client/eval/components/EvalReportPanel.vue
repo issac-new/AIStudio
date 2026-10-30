@@ -409,9 +409,11 @@ function durationText(ms: number | null): string {
           <tr v-for="c in run.aggregates.releaseGate.checks" :key="c.key" :data-testid="`eval-gate-row-${c.key}`">
             <td class="mono">{{ c.key }}</td>
             <td>{{ c.threshold }}</td>
-            <td :title="c.gap">{{ c.measured ?? '—' }}</td>
+            <td :title="c.noDataReason ?? c.gap">{{ c.measured ?? '—' }}</td>
             <td :class="c.status === 'pass' ? 'v-pass' : c.status === 'fail' ? 'v-fail' : 'v-unknown'">
-              {{ L.runs.gateStatus[c.status] }}<span v-if="c.status === 'no_data'" class="muted">（{{ c.gap }}）</span>
+              <!-- no_data 显式标原因码：无数据源 / 未采集 / 样本不足，不与「未达标」混读 -->
+              <span v-if="c.status === 'no_data' && c.noDataCode" class="muted" :data-testid="`eval-gate-nodata-${c.key}`" :title="c.noDataReason ?? c.gap">{{ L.runs.gateNoData[c.noDataCode] ?? c.noDataCode }}</span>
+              {{ L.runs.gateStatus[c.status] }}<span v-if="c.status === 'no_data'" class="muted">（{{ c.noDataReason ?? c.gap }}）</span>
             </td>
           </tr>
         </tbody>

@@ -286,11 +286,44 @@ describe('evaluateReleaseGate（腾讯 Pre-Launch 阈值机械执行）', () => 
     expect(gate.verdict).toBe('fail')
   })
 
-  it('无任何实测证据 → verdict=no_data（不编造通过）', () => {
+  it('无任何实测证据 → verdict=no_data（不编造通过）；no_data 项带原因码与原因文案', () => {
     const gate = evaluateReleaseGate([attemptOf({ taskId: 't' })], cfg)
     expect(gate.verdict).toBe('no_data')
     expect(gate.measuredCount).toBe(0)
     expect(gate.checks.every((c) => c.status === 'no_data')).toBe(true)
+    // 每一项 no_data 都必须能回答「为什么没数」——run23 复盘：五项同文案不可归因
+    for (const c of gate.checks) {
+      expect(c.noDataCode).toBeTruthy()
+      expect(c.noDataReason).toBeTruthy()
+      expect(c.gap).toBe(c.noDataReason)
+    }
+    expect(gate.noData.map((n) => n.key)).toEqual(gate.gapKeys)
+    const byKey = new Map(gate.noData.map((n) => [n.key, n.code]))
+    // 回放可采集但本次未采 vs 回放结构性不产生，必须分码
+    expect(byKey.get('tool_success')).toBe('not_collected')
+    expect(byKey.get('ttft')).toBe('not_collected')
+    expect(byKey.get('p99_ratio')).toBe('insufficient_samples')
+    expect(byKey.get('response_tier')).toBe('requires_live_backfill')
+    expect(byKey.get('qps_headroom')).toBe('requires_live_backfill')
+  })
+
+  it('内联证据模式（explicit）→ tool_success/ttft 原因点名证据形态与补救路径', () => {
+    const gate = evaluateReleaseGate([attemptOf({ taskId: 't' })], cfg, undefined, 'explicit')
+    expect(gate.evidenceMode).toBe('explicit')
+    const tool = gate.noData.find((n) => n.key === 'tool_success')
+    expect(tool?.reason).toContain('内联证据')
+    expect(tool?.reason).toContain('sessionId')
+    const ttft = gate.noData.find((n) => n.key === 'ttft')
+    expect(ttft?.reason).toContain('内联证据')
+    // 旧文案「TTFT 需 live 打点」把采集面说错：TTFT 属 trace 首 token 遥测
+    expect(ttft?.reason).not.toContain('live')
+  })
+
+  it('轨迹证据缺工具 span → tool_success 仍是 not_collected，但文案不再甩证据形态', () => {
+    const gate = evaluateReleaseGate([attemptOf({ taskId: 't' }), attemptOf({ taskId: 't', sampleIdx: 2, efficiency: { durationMs: 1 } })], cfg, undefined, 'origin')
+    const tool = gate.noData.find((n) => n.key === 'tool_success')
+    expect(tool?.reason).toContain('工具 span')
+    expect(tool?.reason).not.toContain('内联证据')
   })
 
   it('P99 尖刺 → p99_ratio fail', () => {

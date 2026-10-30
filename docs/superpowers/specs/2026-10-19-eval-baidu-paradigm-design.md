@@ -64,6 +64,10 @@
 - 覆盖度 = 至少一个任务显式标注该维度的维度数；九层体检从「评测集存在就给 3/7」改为读真实覆盖，并附未标注任务数。
 - 留出题库 UI 只做列表/建集/评分（后端已有），评分仍只回 `{n, passRate}`，不破坏防探测契约。
 
+> **2026-10-30 增补（run23 复盘 · 标注口径）**：新增显式取值 `'unclassified'`——表示「已归类、但不在上述七维分类法内」。判据口径：`untaggedTasks` 只算真实缺省；`unclassifiedTasks` 单列；二者都不冒充七维覆盖（`covered` 仍只数七维）。
+> 依据：红队社会病理两向量（互批合谋/迎合上位，`custom/server/eval/redteam-seed.ts` 向量 5/6）测多 Agent 社会动力学，七维无对应类目；硬塞进任一维=覆盖虚高，留空=永远记缺口，显式 unclassified 是第三条路。
+> 标注通道：`POST /api/hermes/eval/sets/:id/dimensions`（`assignments` 逐题标注/清除；`backfill:'redteam-seed'` 按向量映射回填存量集，只补未标注项）；四个安全攻击向量的种子与 114 条变体在建集时自带 `privilege_injection`。写入走 `bumpSetAsset`（revision+1 + 指纹重算 + 版本快照），密封集拒绝。变更正本=《2026-10-30-run23-product-capability.md》。
+
 ### 3.5 评测进入六阶段治理，默认开启（B5）
 
 - `features.eval` 从默认关改为默认开（`VITE_CUSTOM_EVAL !== 'false'`）。理由：评测已不是实验特性，默认关闭让整个评测工作台在产品上不可见；与 skillgov/ontology/bpa 的开关语义对齐。

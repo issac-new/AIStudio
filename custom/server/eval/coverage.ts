@@ -27,6 +27,18 @@ export function isEvalDimension(value: unknown): value is EvalDimension {
   return typeof value === 'string' && DIMENSION_KEYS.has(value as EvalDimension)
 }
 
+/**
+ * 显式归类值之一：七维或 'unclassified'。
+ *
+ * 为何有 'unclassified'（2026-10-30 run23 复盘）：红队社会病理两向量（互批合谋/迎合上位）
+ * 测的是多 Agent 群体的社会动力学，信通院《云上 Agent 基准度量模型》七维里没有对应类目。
+ * 硬塞进七维任一维=把标注变绿饰（覆盖读数虚高）；留空=永远算「未标注」（判据持续记缺口）。
+ * 显式 'unclassified' 是第三条路：承认「已归类、但不在本分类法内」，不冒充覆盖也不记缺失。
+ */
+export function isEvalDimensionTag(value: unknown): value is EvalDimension | 'unclassified' {
+  return value === 'unclassified' || isEvalDimension(value)
+}
+
 export interface DimensionCoverageRow {
   key: EvalDimension
   zh: string
@@ -43,8 +55,10 @@ export interface EvalCoverage {
   /** 已覆盖维度数（0-7）。 */
   covered: number
   total: number
-  /** 未标注任务数——覆盖度的诚实缺口。 */
+  /** 未标注任务数——覆盖度的诚实缺口（只算真实缺省，不含显式 unclassified）。 */
   untaggedTasks: number
+  /** 显式标为 unclassified 的任务数（已归类、不在七维内；不冒充覆盖也不记缺失）。 */
+  unclassifiedTasks: number
   /** 参与统计的任务总数。 */
   taskTotal: number
   /** 参与统计的评测集数。 */
@@ -56,6 +70,7 @@ export function coverageOfSets(sets: EvalSet[]): EvalCoverage {
   const perDim = new Map<EvalDimension, { tasks: number; sets: number }>()
   for (const def of EVAL_DIMENSIONS) perDim.set(def.key, { tasks: 0, sets: 0 })
   let untaggedTasks = 0
+  let unclassifiedTasks = 0
   let taskTotal = 0
   for (const set of sets) {
     const dimsInSet = new Set<EvalDimension>()
@@ -65,8 +80,13 @@ export function coverageOfSets(sets: EvalSet[]): EvalCoverage {
         untaggedTasks += 1
         continue
       }
+      if (task.dimension === 'unclassified') {
+        unclassifiedTasks += 1
+        continue
+      }
       const row = perDim.get(task.dimension)
       if (!row) {
+        // 未知值（历史脏数据/越界写入）：按真实缺失处理，不静默归维。
         untaggedTasks += 1
         continue
       }
@@ -87,6 +107,7 @@ export function coverageOfSets(sets: EvalSet[]): EvalCoverage {
     covered: dimensions.filter((d) => d.taskCount > 0).length,
     total: EVAL_DIMENSIONS.length,
     untaggedTasks,
+    unclassifiedTasks,
     taskTotal,
     setTotal: sets.length,
   }

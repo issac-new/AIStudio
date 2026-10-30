@@ -205,6 +205,18 @@ export const useIdeStore = defineStore('ide', () => {
   // 持有服务端数据的状态（头部「不持有服务端数据」原则的历史豁免，关联链单一
   // 事实源收在本 store 避免散落组件各自 fetch）。
   const taskWorkspace = ref<TaskWorkspaceInfo | null>(null)
+  /**
+   * 任务 workspace 解析失败原因（2026-10-30 run23 复盘：深链 ?task=<不存在的任务> 时
+   * 界面只显示「还没有任务工作区」，读者无法区分「任务不存在」与「任务存在但未物化」）。
+   * 只记最近一次解析的失败；成功/切换任务即清空。
+   */
+  const taskWorkspaceError = ref<{ status: number; message: string } | null>(null)
+  /**
+   * 任务 workspace 解析在途（2026-10-30 兜底视图）：未结束前不渲染「未物化」结论，
+   * 避免把「正在查」闪成「没有工作区」。
+   */
+  const taskWorkspaceLoading = ref(false)
+  let taskWorkspaceSeq = 0
   /** 中栏浮窗开关（任务计划/子代理名册；瞬态不持久化，对标 zcode 浮窗） */
   const floats = ref<Record<IdeFloatKey, boolean>>({ plan: false, agents: false, cua: false })
   // wiki 深化轮（2026-10-10）：@wiki 消费闭环配套——
@@ -271,7 +283,13 @@ export const useIdeStore = defineStore('ide', () => {
 
   /** 任务维度绑定（工作台 ⌨ 深链）；null 清除 */
   function setActiveTask(taskId: string | null): void {
-    activeTaskId.value = taskId?.trim() || null
+    const next = taskId?.trim() || null
+    // 换任务即清旧工作区关联（否则上一张卡已回收目录会串到新卡的空态文案/路径）
+    if (next !== activeTaskId.value) taskWorkspace.value = null
+    activeTaskId.value = next
+    taskWorkspaceSeq += 1
+    taskWorkspaceLoading.value = false
+    taskWorkspaceError.value = null
     if (!activeTaskId.value) taskWorkspace.value = null
   }
 
@@ -279,23 +297,32 @@ export const useIdeStore = defineStore('ide', () => {
    * 任务 workspace 关联：解析（patch 658 端点）+ materialized 时切换 IDE 工作区。
    * - 未物化（scratch 未派发/已完成回收）不切换、不覆盖用户手选的工作区，只回填
    *   taskWorkspace 供简报展示预测路径；
-   * - 解析失败静默（任务无 workspace 是常态：排期卡/跟踪卡），不清旧值以外不炸；
-   * - stale 守卫：请求期间任务又切换则丢弃本次结果。
+   * - 解析失败记原因（404=任务不存在/无权，其他=解析服务故障），不炸；
+   * - stale 守卫：请求期间任务又切换则丢弃本次结果（loading 只由最后一次请求收口）。
    */
   async function associateTaskWorkspace(taskId: string, board?: string): Promise<TaskWorkspaceInfo | null> {
+    const seq = ++taskWorkspaceSeq
+    taskWorkspaceLoading.value = true
     try {
       // 懒加载：api/taskWorkspace → @/api/client → @/router 的模块级 createRouter
       // 会击穿全量 mock vue-router 的既有测试（command-palette/task-sidebar）；
       // 动作内 import 只在实际关联时拉这条链。
       const { ideTaskWorkspaceApi } = await import('../api/taskWorkspace')
       const info = await ideTaskWorkspaceApi.get(taskId, board)
-      if (activeTaskId.value !== taskId) return null
+      if (seq !== taskWorkspaceSeq || activeTaskId.value !== taskId) return null
       taskWorkspace.value = info
+      taskWorkspaceError.value = null
       if (info?.path && info.materialized) setWorkspace(info.path, 'task')
       return info
-    } catch {
-      if (activeTaskId.value === taskId) taskWorkspace.value = null
+    } catch (e) {
+      if (seq !== taskWorkspaceSeq || activeTaskId.value !== taskId) return null
+      taskWorkspace.value = null
+      // 404=任务不存在/无权访问；其他=解析服务故障——分开记，界面文案不同。
+      const status = typeof (e as { status?: unknown })?.status === 'number' ? (e as { status: number }).status : 0
+      taskWorkspaceError.value = { status, message: e instanceof Error ? e.message : String(e) }
       return null
+    } finally {
+      if (seq === taskWorkspaceSeq) taskWorkspaceLoading.value = false
     }
   }
 
@@ -389,6 +416,8 @@ export const useIdeStore = defineStore('ide', () => {
     dimension,
     activeTaskId,
     taskWorkspace,
+    taskWorkspaceError,
+    taskWorkspaceLoading,
     floats,
     terminalCwd,
     wikiPages,

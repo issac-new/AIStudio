@@ -26,6 +26,11 @@ export interface E2eVerdictResult {
   verdict: 'pass' | 'gap' | 'fail'
   fails: string[]
   gaps: string[]
+  /**
+   * 发布门禁 no_data 结构化清单（key/code/reason）——「无数据源」「未采集」「样本不足」
+   * 与「有读数但未达标」（走 fails）严格分开，供报告与复盘点名补什么。
+   */
+  noData: Array<{ key: string; code: string; reason: string }>
 }
 
 function num(v: unknown): number | null {
@@ -36,9 +41,17 @@ function pct(v: number): string {
   return `${Math.round(v * 100)}%`
 }
 
+/** no_data 原因码 → 判据行前缀（口径见 releaseGate.ts ReleaseGateNoDataCode）。 */
+const NO_DATA_LABELS: Record<string, string> = {
+  not_collected: '未采集（本可采集）',
+  insufficient_samples: '样本不足',
+  requires_live_backfill: '无回放数据源（须线上回填）',
+}
+
 export function computeE2eVerdict(input: E2eVerdictInput): E2eVerdictResult {
   const fails: string[] = []
   const gaps: string[] = []
+  const noData: E2eVerdictResult['noData'] = []
   const registry = input.registry ?? {}
   const runBody = input.runBody ?? {}
   const setBody = input.setBody ?? {}
@@ -67,7 +80,29 @@ export function computeE2eVerdict(input: E2eVerdictInput): E2eVerdictResult {
     if (unknown > input.maxUnknown) fails.push(`unknown 率 ${pct(unknown)} 超过上限 ${pct(input.maxUnknown)}`)
     if (gate.verdict === 'fail') fails.push('评测发布门禁 verdict=fail')
     if (anchorDrift) fails.push('集已改版（run.setHash ≠ 当前 contentHash），读数不可直接对比')
-    for (const k of (gate.gapKeys as string[] | undefined) ?? []) gaps.push(`发布门禁证据缺口：${k}`)
+    // 发布门禁逐项判读（§5.3 G4-E 口径）：
+    //   status=fail    → FAIL 点名（有读数但未达标）
+    //   status=no_data → GAP 点名（缺口记单放行，不判 FAIL），原因码区分「未采集/样本不足/
+    //                    无回放数据源」，禁把两者并成一条笼统串（run23 复盘：五项缺口无法归因）。
+    const gateChecks = Array.isArray(gate.checks) ? (gate.checks as Array<Record<string, unknown>>) : []
+    if (gateChecks.length > 0) {
+      for (const c of gateChecks) {
+        const key = String(c.key ?? 'unknown')
+        if (c.status === 'fail') {
+          const measured = typeof c.measured === 'string' ? c.measured : '—'
+          fails.push(`发布门禁未达标：${key}=${measured}（阈值 ${String(c.threshold ?? '—')}）`)
+          continue
+        }
+        if (c.status !== 'no_data') continue
+        const reason = typeof c.noDataReason === 'string' ? c.noDataReason : (typeof c.gap === 'string' ? c.gap : '未给出原因')
+        const code = typeof c.noDataCode === 'string' ? c.noDataCode : 'unknown'
+        noData.push({ key, code, reason })
+        gaps.push(`发布门禁${NO_DATA_LABELS[code] ?? '无数据'}：${key} — ${reason}`)
+      }
+    } else {
+      // 兼容历史 run（旧 DTO 只有 gapKeys，无逐项 checks）：保持既有文案，不猜原因码。
+      for (const k of (gate.gapKeys as string[] | undefined) ?? []) gaps.push(`发布门禁证据缺口：${k}`)
+    }
     if (!Object.keys(gate).length) gaps.push('发布门禁读数缺席（releaseGate 未生成）')
   }
 
@@ -105,10 +140,10 @@ export function computeE2eVerdict(input: E2eVerdictInput): E2eVerdictResult {
 
   const deco = Number(summary.decoration ?? 0)
   if (deco > 0) gaps.push(`装饰指标 ${deco} 个（report_only 单独出现，不冒充已接线）`)
-  const live = (run.liveEvidence ?? {}) as Record<string, unknown>
-  if (runBody.run && !Object.keys(live).length) gaps.push('线上证据未回填（QPS/响应分档仍为 no_data）')
+  // 线上证据未回填不再单列一条笼统 GAP：response_tier/qps_headroom 的 no_data 已在门禁
+  // 逐项里按 requires_live_backfill 点名（同一事实不两处计缺口，run23 复盘去重）。
 
-  return { verdict: fails.length ? 'fail' : gaps.length ? 'gap' : 'pass', fails, gaps }
+  return { verdict: fails.length ? 'fail' : gaps.length ? 'gap' : 'pass', fails, gaps, noData }
 }
 
 /** 判定行（驱动侧 note 与 eval-summary.json 头行同源格式）。 */

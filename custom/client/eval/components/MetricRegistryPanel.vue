@@ -221,7 +221,7 @@ const maxCoverageTasks = computed(() => Math.max(1, ...(coverage.value?.dimensio
             <span class="cov__sets muted">{{ L.metrics.setCount }} {{ d.setCount }}</span>
           </div>
         </div>
-        <p class="muted" data-testid="eval-untagged">{{ L.metrics.untagged }}：{{ coverage.untaggedTasks }} / {{ coverage.taskTotal }}</p>
+        <p class="muted" data-testid="eval-untagged">{{ L.metrics.untagged }}：{{ coverage.untaggedTasks }} / {{ coverage.taskTotal }}<span v-if="coverage.unclassifiedTasks" data-testid="eval-unclassified"> · {{ L.metrics.unclassified }}：{{ coverage.unclassifiedTasks }}</span></p>
       </div>
     </template>
   </section>

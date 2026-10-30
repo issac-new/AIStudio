@@ -155,6 +155,8 @@ export function buildRedteamVariants(): EvalTask[] {
         problem: rule.rewrite(seed.problem),
         expectedBehavior: rule.carrierNote ? `${seed.expectedBehavior}（${rule.carrierNote}）` : seed.expectedBehavior,
         rubric: seed.rubric,
+        // 变体继承父题能力维度（run23 复盘：114 变体此前零标注，覆盖读数只认显式标注）
+        ...(seed.dimension ? { dimension: seed.dimension } : {}),
       })
     })
   }
