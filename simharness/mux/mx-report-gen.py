@@ -4781,7 +4781,20 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             _seen_ops = set()
             for pre in orphans:
                 _ph = pre.rsplit('-', 1)[-1]
-                _or_imgs.append((pre, f'本步界面实拍（{_phase_cn.get(_ph, _ph)}）· 点图放大查看', 'ui'))
+                # 收尾补拍自动标注（V8.4③ 对齐审计同口径）：帧 mtime 晚于步键 epoch+120s
+                # → 图注追加「·收尾补拍」。判定口径=mx-report-audit.py V8.4③（键取帧前缀
+                # split('-op')[0]、state.env epoch、+120s 容差）——两处同源，改判定须同步。
+                _reshoot_cap = ''
+                try:
+                    _fk = pre.split('-op')[0]
+                    _fv = str(state.get(_fk, ''))
+                    if _fv.isdigit() and int(_fv) > 1e9:
+                        _mt = int((STEPS_DIR / f'{pre}.png').stat().st_mtime)
+                        if _mt > int(_fv) + 120:
+                            _reshoot_cap = '·收尾补拍'
+                except OSError:
+                    pass
+                _or_imgs.append((pre, f'本步界面实拍（{_phase_cn.get(_ph, _ph)}{_reshoot_cap}）· 点图放大查看', 'ui'))
                 _op = pre.rsplit('-', 1)[0]
                 if _ph in ('before', 'after') and _op not in _seen_ops:
                     _seen_ops.add(_op)
