@@ -125,7 +125,10 @@ async function openEntry(entry: FileEntry): Promise<void> {
       <button type="button" role="tab" class="ide-files__tab" :class="{ 'is-active': tab === 'git' }" :aria-selected="tab === 'git'" data-testid="ide-files-tab-git" @click="tab = 'git'">Git</button>
     </div>
     <p class="ide-files__scope" :title="root ?? ''" data-testid="ide-files-scope">{{ root ? workspaceLabel(t, root) : t('ide.task.defaultGroup') }}</p>
-    <p v-if="tab === 'tree' && validation.status === 'checking'" class="ide-files__hint" data-testid="ide-files-checking">{{ t('ide.loading') }}</p>
+    <!-- 2026-10-31 回归修复（渲染闸）：有根但校验未完成（checking/idle）不挂 FileTree——
+         提前挂载会按 store 里的旧/空 workspaceRoot 发起装载（无 root=默认根），与校验
+         后的正确装载赛跑。校验 ok 才挂树，装载单发且根正确。 -->
+    <p v-if="tab === 'tree' && root && (validation.status === 'checking' || validation.status === 'idle')" class="ide-files__hint" data-testid="ide-files-checking">{{ t('ide.loading') }}</p>
     <div v-else-if="tab === 'tree' && validation.status === 'invalid'" class="ide-files__invalid" data-testid="ide-files-invalid">
       <p data-testid="ide-files-invalid-message">{{ invalidTitle }}</p>
       <p v-if="permissionDenied" class="ide-files__invalid-hint">
@@ -163,7 +166,7 @@ async function openEntry(entry: FileEntry): Promise<void> {
       </button>
     </div>
     <FileTree
-      v-else-if="tab === 'tree'"
+      v-else-if="tab === 'tree' && root && validation.status === 'ok'"
       class="ide-files__tree"
       :profile="null"
       :workspace-key="root"
