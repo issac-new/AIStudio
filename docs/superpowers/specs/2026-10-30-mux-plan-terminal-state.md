@@ -40,3 +40,52 @@
 ## 设计文档影响
 
 DESIGN_SYNC: none —— 仅改方案正本的表述层、格式层与渲染脚本，不动整合正本的机制、数字总账与版本载体；冻结面（26 步/六闸/纪律编号/state 键）零改动。
+
+## 四、按实际实现校正（2026-10-30 第二批）
+
+核验方式：三路只读对照（IA 注册表、simharness 驱动、产品端点与页签），逐条给出 file:line 证据后改正文。
+
+### 4.1 IA
+
+| 原表述 | 校正为 | 证据 |
+|---|---|---|
+| 左侧导航五组（含整轮/管理） | 日常侧栏三组（常用/流程/专题）＋页脚系统设置；进入 /app/sim* 切换为推演组 | `custom/client/ia2/components/IaSideNav.vue:2-6,284-423`、`nav-centers.ts:136-168` |
+| 六阶段 29/31 签，②含 launch | 37 签：①6/②4/③4/④5/⑤6/⑥12；②无 launch（旧 `?tab=launch` 回退 preflight） | `custom/client/ia2/stage-tabs.ts:30-89` |
+| ⑥治理 6 签 | 12 签，补 posture/secAudit/trust/reviewGov/improve/proactivity 并注明三组聚类 | 同上 |
+| 全流程推演六签、首签"运行总览" | 侧栏七项；首签"导演台"；补业务地图与导演详情子路由；编排/设置是独立路由而非 `?tab` | `nav-centers.ts:160-168`、`routes.ts:403-461`、`views/sim/sim-tabs.ts:10-27` |
+| 旧 `?tab=accounts` 重定向到⑤交付健康 | 删除（accounts 是①现役页签；GovHealthSection 在⑥metrics） | `stage-tabs.ts:34`、`views/stage/StageMetricsPanel.vue:5,13` |
+| 旧 /app/gov/* 全部重定向 | 除 settings、model-providers 两个实页外重定向 | `routes.ts:98-99,330-364` |
+| 任务协同 `?tab=orchestra` | 落 `?tab=tasks` | `stage-tabs.ts:45-50` |
+| 阶段完成键＝界面判定依据 | 键集是 STAGE_META 元数据（run-state/报告口径）；日常界面按看板九态桶推导 | `stage-meta.ts:42-99`、`composables/useDailyStageProgress.ts:2-43` |
+
+### 4.2 数字与参数
+
+| 原表述 | 校正为 | 证据 |
+|---|---|---|
+| QGate 45 门 | 47 门（48 个 Gate YAML，含 2 模板门+1 插件门，1 处重号） | `custom/qgate/src/cli.ts:134`、`custom/qgate/gate-packs/**` |
+| 研发门禁 56 项四族 | 全量 50 门四族；`--all-full` 跑核心 11+架构 18=29 门；合规 19 门另跑 `--compliance-suite` | `simharness/skills/aipaydev-dev/scripts/precheck.sh:605-609` |
+| 并发上限 30（GLM-5.3 依据） | 60（`MX_MAX_CONCURRENT` 默认，2026-10-18 由 30 扩至 60） | `simharness/mux/mx-lib.sh:956` |
+| MX_FAST 含 p90 动态校准、治理步并发 | 删除两项（仅轮询 5s 与审批扫描 30s 生效） | `simharness/mux/mx-scenario-lib.sh:117-128`、`aipay-scenario.sh:2490-2661` |
+| G2 首评 `MX_GATE_WAIT=3600` | `MX_G2_WAIT=600` | `aipay-scenario.sh:857,1085` |
+| MX_MODEL_NAME 缺省宿主默认 | 设 BASE_URL 而 NAME 未设时回落 qwen-plus；`MX_FALLBACK_MODELS` 为占位未接线 | `mx-lib.sh:981,1005-1008` |
+| 纪律 54 条 | §4.3 收录 83 条（1-74 含 25a/b/c、79-84；75-78 缺号；85/86 在 §5.5） | 正本条款编号实测 |
+| 指标注册表 23 项、红队 24 题 | 25 项；红队 36 题+114 变体 | `custom/server/eval/metric-registry.ts:58,291,302`、`redteam-seed.ts:33` |
+| GET `/sim/uat-verdict` | POST `/uat-verdict`、GET `/uat-verdicts` | `custom/server/simcenter/simcenter-controller.ts:843,862` |
+| 状态锚点 dm_bella_fanfan / anexec_d1/d2 / card_arch_g2 | ba_dm_marker / anexec_d1 / g2_anchor_ts | `aipay-scenario.sh:351,681,829` |
+| §2.6.9 引 `mx-interventions.py` | 已退役；改以 `GET /api/hermes/delivery/interventions` 为源 | `docs/superpowers/specs/2026-10-27-sim-governance-convergence.md:47`、`custom/server/delivery/delivery-controller.ts:166` |
+| 九层快照"各采一次" | 快照实际覆盖六项端点（其余按需单点查询） | `simharness/mux/mx-harness-snapshot.sh:46-51` |
+| `mx-report-gen.py --run 必带` | 建议显式指定，缺省回落 MX_RUN_ID/SIM 根 | `simharness/mux/mx-report-gen.py:36-44` |
+| USERS 真源 `mx-lib.sh:145` | 去掉行号（实际 164，避免脆引用） | `mx-lib.sh:164` |
+
+### 4.3 保留但标注实现缺口（未改判据）
+
+- G2 五项目投标注「历史偏差检索由分组记忆与问题台账面执行」；驱动派发词当前只列 4 项（`aipay-scenario.sh:832-835`），属实现缺口，不在正本删判据。
+- 账号口径保留 30（15 人 × 双账号）；`mx-setup.sh:110` 跳过 admin-agent 的供给，属实现缺口，已记入交付说明。
+- 阶段页 37 签与 `mx-prelaunch-check.sh` 的 31 签断言不一致，属门禁侧 stale，不在正本改回 31。
+
+### 4.4 验证
+
+- 26 步实解析 26/26；四段式标记在位；`harness-gate-integrity` 四段式 4/4 通过。
+- 术语门禁 HARD=0；格式检查（标题/表格空行、表格列数）零异常。
+- 渲染核验：页面单 H1、26 张步卡、61 张表格；正文 `六签/运行总览/45 门/56 门/29 签/31 个页签` 零命中。
+DESIGN_SYNC: none —— 校正的是方案对实现的描述，未改整合正本的机制与数字总账；冻结面（26 步/六闸/纪律编号/state 键）不动。
