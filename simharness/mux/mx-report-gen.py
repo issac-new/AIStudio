@@ -2515,7 +2515,7 @@ def r18_block(n: int) -> str:
                 f'<p class="no-evidence">本步属必采清单（§5.6）而载荷未采集（对话全文/操作前后帧/环节效果'
                 f'{"四" if n in r18_matrix.SKILL_STEPS else "三"}缺）'
                 f'——记入问题清单 r18-collection-missing（DISP 观察：采集链未挂驱动，run11 已接线）</p></div></details>')
-    parts = [f'<details class="st-r18"><summary>全量呈现（对话 {len(dialogs)} · 操作 {len(ops)} · 效果 {"✓" if effect else "—"}'
+    parts = [f'<details class="st-r18" open><summary>全量呈现（对话 {len(dialogs)} · 操作 {len(ops)} · 效果 {"✓" if effect else "—"}'
              + (f' · skill {sk_cnt}' if n in r18_matrix.SKILL_STEPS or sk_cnt else '')
              + (f' · 门禁灯 {len(dlv_frames)}' if n in r18_matrix.DELIVERY_STEPS or dlv_frames else '')
              + f'）</summary>',
@@ -4090,6 +4090,9 @@ try:
             'cashier-devtools-alipay-p1-order.png': '支付宝开发者工具·收银台首页（下单成功，真数据）',
             'cashier-devtools-alipay-p2-paid.png': '支付宝开发者工具·支付成功',
             'cashier-p3-idempotent.png': '幂等实证（重复提交返回同一单号）',
+            # run23 收尾补录（等效实测：小程序无浏览器壳，用 IDE 工作区+交付案例+逻辑层实跑代替）
+            'mp-ide-workspace.png': 'IDE 工作区·收银台小程序交付代码（DEV-MP 任务简报与工作区实拍）',
+            'delivery-cases.png': '交付案例面板·RFD-001 案例卡与六闸门禁灯（交付效果实拍）',
         }
         _po_img_html = ('<div class="po-shots">' + ''.join(
             f'<label class="shot"><input type="checkbox">'
@@ -4103,7 +4106,14 @@ try:
         _idem_spec = _re_idem.search(r'create-idempotency\.spec\.ts \((\d+) tests\)', _po_idem)
         _idem_sum = (f"{sum(map(int, _idem_suites))} 个测试包共 {sum(map(int, _idem_tests))} 条用例全部通过"
                      + (f"，其中幂等专项 {_idem_spec.group(1)} 条" if _idem_spec else ''))
-        _po_idem_html = (
+        _mp_live = ''
+        _mp_f = _po_dir / 'mp-live-verify.txt'
+        if _mp_f.exists():
+            _mp_txt = _mp_f.read_text(encoding='utf-8', errors='replace')
+            _mp_pass = 'ALL 18 TESTS PASSED' in _mp_txt
+            _mp_live = (f'<div class="po-plain"><b>收银台小程序逻辑层实跑（{("18/18 全绿" if _mp_pass else "含失败，见原文")}）：</b>'
+                        'BFF 基址注入、双端参数适配、支付守卫等 18 条断言在收尾窗口真实执行（命令与原始输出见 evidence/product-outcome/mp-live-verify.txt，非手抄）。</div>')
+        _po_idem_html = _mp_live + (
             '<div class="po-plain"><b>幂等是什么：</b>同一笔订单手抖提交两次，系统只认第一笔——返回同一个支付单号，不会开两个单、不会扣两次钱。这是收银台的硬验收标准之一。'
             f'<b>实测结论：</b>{_idem_sum}。'
             '出处说明：这是交付分支提交时跑测试的原始记录摘录（当时收尾环境没装依赖没法重跑——正因如此，规矩已改为「测试没执行过=缺陷，不算声明」）。'
