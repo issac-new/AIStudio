@@ -233,6 +233,45 @@ print(g.get('max_concurrent_sessions') or c.get('max_concurrent_sessions') or 0)
   fi
   log "preflight 容量自检过：并发=${mc}≥13、年龄锚在位"
 }
+
+# ── preflight venv 包面自检（run23 挂账④，2026-10-30）：run23 中 SIM venv 的
+# hindsight_client 等包被外部更新清除 → 8 次 admission 失败、全程无守门，中途
+# 才以成片失败暴露。左移到起跑前：必在包 import 断言，任一缺席=prelaunch 红。
+# 清单口径=run 中实际缺过的包 + 推演必经基础面；MX_VENV_REQUIRED_PACKAGES 可
+# 整体覆盖（逗号分隔 import 名；显式置空=禁用本断言）。
+# 边界（V8.29 夜间停滞教训）：import 断言只抓「缺包」，抓不住版本冲突——版本
+# 冲突面仍由 mxp_worker_smoke 真打一轮模型往返兜底，两者互补不互代。
+preflight_venv_packages_assert() {
+  local _py _p _miss="" _oldifs="$IFS"
+  if [[ -n "${MX_VENV_REQUIRED_PACKAGES+set}" && -z "$MX_VENV_REQUIRED_PACKAGES" ]]; then
+    log "preflight：MX_VENV_REQUIRED_PACKAGES 显式置空——venv 包面断言禁用（操作者自担）"
+    return 0
+  fi
+  local _pkgs="${MX_VENV_REQUIRED_PACKAGES:-hindsight_client,aiohttp_retry,anthropic,yaml}"
+  # 解释器解析（与执行面同源，单一口径）：HERMES_BIN 同目录 python（宿主 venv
+  # 布局 venv/bin/{hermes,python}）→ wrapper 内 exec 行的 python（SIM 快照壳
+  # hermes-sim 形态）→ 都不中=执行面本身失联，红（不静默跳过——跳过即无守门）。
+  _py="$(dirname "$HERMES_BIN")/python"
+  if [[ ! -x "$_py" ]]; then
+    _py=$(sed -n 's/^exec[[:space:]]*"\([^"]*python[^"]*\)".*/\1/p' "$HERMES_BIN" 2>/dev/null | head -1)
+  fi
+  [[ -n "$_py" && -x "$_py" ]] || fail "preflight：SIM 执行面解释器不可解析（HERMES_BIN=${HERMES_BIN} 同目录无 python 且非 exec wrapper）——先跑 mx-setup 供给快照再起跑"
+  IFS=','
+  for _p in $_pkgs; do
+    IFS="$_oldifs"
+    _p=$(printf '%s' "$_p" | tr -d '[:space:]')
+    [[ -n "$_p" ]] || continue
+    if ! "$_py" -c "import ${_p}" >/dev/null 2>&1; then
+      _miss="${_miss:+${_miss}, }${_p}"
+    fi
+    IFS=','
+  done
+  IFS="$_oldifs"
+  if [[ -n "$_miss" ]]; then
+    fail "preflight：venv 必在包缺席（${_miss}，解释器=${_py}）——外部更新清包实录形态（run23 8 次 admission 失败根因），先按 pyproject 钉版补装（如 uv pip install --python ${_py} hindsight-client aiohttp-retry）再起跑"
+  fi
+  log "preflight venv 包面自检过：${_pkgs} 全部可 import（解释器=${_py}）"
+}
 human_mxid() { echo "@$1:$SERVER_NAME"; }
 agent_mxid() { echo "@$1-agent:$SERVER_NAME"; }
 user_pass()  { echo "Aipay_$1_2026"; }

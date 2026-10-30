@@ -1007,3 +1007,14 @@
 # 结卡被依赖守卫锁死无人告警）；fail-soft 只读，cron 消费面
 # scripts/board-staleness-watchdog.mjs（npm run watch:board-staleness）。
 706-server-sim-board-staleness-route.patch
+
+# 707（2026-10-30 run23 挂账③：terminal-incomplete 不进重试面根治）：
+# agent/codex_runtime.py——Codex Responses 流以 terminal status=incomplete（上游
+# 掐流残响）收尾时，旧形态只 logger.warning 后照常 return final，掐流被当正常完成
+# 结算：回合落 settled、会话被视作终态，任何重试面/下一轮准入都不再进入（run23
+# 实录：76K-241K 中毒会话对上游截断 out=8）。根治：incomplete 与 transport 错误
+# 同面——有重试余额物理重试一次；耗尽抛 EmptyStreamError（与 anthropic/bedrock
+# 流掐断同族语义）走瞬态失败面，run_turn_persistence 保留用户消息，下一轮准入面
+# 可重入（非终态）。与 aux 面判据对齐（auxiliary_codex_response：incomplete 残响
+# 一律拒收，不完整响应不得提交）。
+707-agent-codex-terminal-incomplete-retry.patch

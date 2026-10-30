@@ -436,9 +436,12 @@ export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = 
   const face = snap.blockedCards
   if (!face || !face.ok) return out
   for (const c of face.cards) {
-    // 「最后推进时刻」双字段容错（真实 tasks 表无 updated_at 列——run19 巡检实锤；
-    // 采集层已做回退映射，此处再容错一层防直夹具/旧快照漏映射）
-    const rawTs = c.updated_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
+    // 「最后推进时刻」容错链（真实 tasks 表无 updated_at 列——run19 巡检实锤；
+    // 采集层已做回退映射，此处再容错一层防直夹具/旧快照漏映射）。
+    // run23 挂账②：last_event_at 插第二位——tasks 表 UPDATE 不写时间列，卡面
+    // 改判/评论/状态迁移只落 task_events/task_comments；缺此锚则回退到
+    // created_at，卡有真实活动仍按建卡时间报卡滞（run23 误报实录形态）
+    const rawTs = c.updated_at ?? c.last_event_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
     const updRaw = typeof rawTs === 'number' ? rawTs
       : typeof rawTs === 'string' ? Number(rawTs) : NaN
     if (!Number.isFinite(updRaw) || updRaw <= 0) continue
@@ -463,7 +466,7 @@ export function detectBlockedStale(snap: ClusterSnapshot, opts: DetectOptions = 
  *  「push 后 @复审」无机器保障（实录：修订入仓 75 分钟复审派单悬空，巡检官/
  *  驱动超时分支/人工监督清单三方同盲，全集群绿灯而死锁）。
  *  本检测器以 FAIL 判卡自身的最后推进时刻为复审环球钟：卡面长期无任何推进
- *  （复审改判/重审会更新卡面 result → 球钟自动重置）即报——无论球此刻在
+ *  （复审改判/重审会写 task_events → last_event_at 球钟自动重置）即报——无论球此刻在
  *  上游修订侧还是评审侧，闸的老化本身就该被看见。
  *  未接线（failedVerdictCards 缺席）=合法空态静默跳过。
  *  时间容错：卡表时间戳为 epoch 秒（10 位）——<1e12 视作秒 ×1000 归一（防
@@ -475,7 +478,9 @@ export function detectReviewFailStall(snap: ClusterSnapshot, opts: DetectOptions
   const face = snap.failedVerdictCards
   if (!face || !face.ok) return out
   for (const c of face.cards) {
-    const rawTs = c.updated_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
+    // last_event_at 同 blocked-stale 插第二位（run23 挂账②）：复审改判/重审只落
+    // 事件面不写 tasks 时间列，旧注释「result 更新即重置球钟」与 schema 不符
+    const rawTs = c.updated_at ?? c.last_event_at ?? c.last_heartbeat_at ?? c.completed_at ?? c.created_at
     const updRaw = typeof rawTs === 'number' ? rawTs
       : typeof rawTs === 'string' ? Number(rawTs) : NaN
     if (!Number.isFinite(updRaw) || updRaw <= 0) continue

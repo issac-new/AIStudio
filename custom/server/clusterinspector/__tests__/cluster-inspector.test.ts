@@ -483,6 +483,20 @@ describe('card.blocked-stale（run19 G5 熔断死等产品化——用户 300s �
     expect(out).toHaveLength(1)
     expect(out[0]).toMatchObject({ detector: 'card.blocked-stale' })
   })
+  it('run23 挂账②：卡有真实活动（last_event_at 新鲜）不报卡滞——created_at 陈旧不再决定判定', () => {
+    // 误报实录形态：blocked 卡建卡已久（created_at 陈旧、heartbeat 无、completed 无），
+    // 但 task_events/task_comments 有新鲜活动（采集层注入 last_event_at）→ 零报
+    const out = detectBlockedStale(snap({ blockedCards: { ok: true, cards: [
+      { id: 't5', status: 'blocked', created_at: NOW - 86_400_000, last_event_at: NOW - 30_000 },
+    ] } }), { nowMs: NOW })
+    expect(out).toHaveLength(0)
+    // 反向兜底：无任何新鲜活动（事件也停在远古）→ 仍报（真卡滞不漏）
+    const stale = detectBlockedStale(snap({ blockedCards: { ok: true, cards: [
+      { id: 't6', status: 'blocked', created_at: NOW - 86_400_000, last_event_at: NOW - 86_000_000 },
+    ] } }), { nowMs: NOW })
+    expect(stale).toHaveLength(1)
+    expect(stale[0]).toMatchObject({ detector: 'card.blocked-stale', severity: 'high' })
+  })
   it('detectAll 聚合含 card.blocked-stale（阈值可经 blockedStaleMs 收紧）', () => {
     const out = detectAll(snap({ blockedCards: { ok: true, cards: [
       { id: 't3', title: 'X', status: 'blocked', updated_at: NOW - 120_000 },

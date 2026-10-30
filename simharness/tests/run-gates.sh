@@ -57,5 +57,8 @@ fi
 if [ -n "$_ovr" ] && [ -x "$_ovr/node_modules/.bin/vitest" ]; then
   exec "$_ovr/node_modules/.bin/vitest" run --root "$HERE" "$@"
 fi
-echo "run-gates: 本仓 node_modules/vitest 缺席且产品根（$_ovr）无可执行 vitest——cd simharness && npm install 后重跑"
+# bash 3.2 兼容（run23 挂账批实测）：$_ovr 后跟全角括号时，3.2 在 C locale 把高位
+# 字节并进变量名解析 → set -u 报 _ovr…: unbound variable 杀脚本（worktree 无
+# node_modules 走到本分支即触发）。裸变量一律 ${_ovr} 花括号护名。
+echo "run-gates: 本仓 node_modules/vitest 缺席且产品根（${_ovr}）无可执行 vitest——cd simharness && npm install 后重跑"
 exit 1

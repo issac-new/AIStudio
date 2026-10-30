@@ -67,6 +67,11 @@ export interface RunningCard {
   status?: string
   /** 最后更新 epoch 秒（blocked 卡停滞检测面，run19 熔断死等产品化） */
   updated_at?: number | string
+  /** 最后真实活动 epoch 秒（run23 挂账②：kanban stuck 假阳性根治）——
+   *  tasks 表 UPDATE 从不触碰时间列（kanban_db.py 实锚），卡面改判/评论/状态迁移
+   *  只落 task_events/task_comments；本字段=两表最大 created_at，采集层注入，
+   *  回退链位于 updated_at 之后、last_heartbeat_at 之前 */
+  last_event_at?: number | string
   /** 结论正文（复审环老化检测面：done 卡 result 判词——run20 22:34 复审链断棒实录） */
   result?: string
   /** 任务正文（card.body-empty 检测面：在办卡正文空=研发 AI 拿到没正文） */
@@ -200,9 +205,52 @@ export interface CollectorDeps {
   now?: () => number
 }
 
-export function hermesHomeDefault(): string {
-  // 2026-10-28 收敛：家目录解析单一实现（lib/paths），不再各域 hermesHome()
+export function hermesHomeDefault(): string {  // 2026-10-28 收敛：家目录解析单一实现（lib/paths），不再各域 hermesHome()
   return hermesHome()
+}
+
+/** 卡面活动时钟注入（run23 挂账②：kanban stuck 假阳性根治）。
+ *  tasks 表的 UPDATE 从不触碰时间列（kanban_db.py schema 实锚：状态/正文/指派
+ *  变更只写 task_events/task_comments）——blocked-stale 族检测器的「最后推进
+ *  时刻」回退链此前落到 created_at，卡有真实活动（改判/评论/状态迁移）仍按
+ *  建卡时间报卡滞（run23 误报实录）。本助手遍历各板 kanban.db，取每卡
+ *  task_events 与 task_comments 的最大 created_at 作 last_event_at 注入行
+ *  （API 级真实活动面）。fail-soft：单板失败跳过、整体失败返回原卡集
+ *  （检测器回退链兜底，宁可多一层容错不炸采集）。 */
+export async function enrichCardsWithLastEventAt(
+  cards: Array<Record<string, unknown>>,
+): Promise<Array<Record<string, unknown>>> {
+  if (cards.length === 0) return cards
+  let DatabaseSync: typeof import('node:sqlite').DatabaseSync
+  try { ({ DatabaseSync } = await import('node:sqlite')) } catch { return cards }
+  const boardsDir = join(hermesHomeDefault(), 'kanban', 'boards')
+  let boards: string[]
+  try { boards = readdirSync(boardsDir, { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith('_')).map((d) => d.name) } catch { return cards }
+  const lastEvent = new Map<string, number>()
+  for (const b of boards) {
+    let db: InstanceType<typeof DatabaseSync> | null = null
+    try {
+      db = new DatabaseSync(join(boardsDir, b, 'kanban.db'))
+      const rows = db.prepare(
+        `SELECT task_id, MAX(ts) AS ts FROM (
+           SELECT task_id, created_at AS ts FROM task_events
+           UNION ALL SELECT task_id, created_at FROM task_comments
+         ) GROUP BY task_id`,
+      ).all() as Array<{ task_id: string; ts: number }>
+      for (const r of rows) {
+        const id = String(r.task_id ?? '')
+        const ts = Number(r.ts) || 0
+        if (id && ts > (lastEvent.get(id) ?? 0)) lastEvent.set(id, ts)
+      }
+    } catch { /* 单板失败跳过：活动面缺席=检测器回退链兜底 */ }
+    finally { try { db?.close() } catch { /* noop */ } }
+  }
+  if (lastEvent.size === 0) return cards
+  return cards.map((c) => {
+    const id = String(c.task_id ?? c.id ?? '')
+    const ts = id ? lastEvent.get(id) : undefined
+    return ts && ts > 0 ? { ...c, last_event_at: ts } : c
+  })
 }
 
 /** 压缩三档投影参数：输出预算缺省（602 sidecar 不带逐模型输出上限；保守 8K 并在 UI 披露）。

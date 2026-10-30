@@ -92,6 +92,7 @@ ensure_spawn_health   # 执行面预检（run20 00:30 瘫痪实录：防全绿�
 
 # ── 单 gateway（multiplex 全部 profile）────────────────
 preflight_capacity_assert   # run11 左移件 a：容量类故障起跑前拒绝（并发闸/年龄锚双断言）
+preflight_venv_packages_assert   # run23 挂账④：venv 必在包 import 断言——外部清包（hindsight_client 等）起跑前红，不再等推演中途 admission 成片失败
 
 # ── 推演期防休眠（提速方案⑥ 2026-10-09：04:55 主机重启事故后加护栏——睡眠/电源类
 #    中断是每轮最大非计划损耗；mac 走 caffeinate -dims，Windows 提示电源策略（平台层）──
