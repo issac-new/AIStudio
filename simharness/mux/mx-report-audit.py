@@ -130,8 +130,13 @@ for blk in blocks:
         # r18-collection-missing）——预解析后统一判；③其余 ✅ 缺图仍 FAIL，⬜ 预期内。
         if '本步无对应产品界面' in blk or '回归轮（本步不在本轮执行范围）' in blk:
             declared_absent.append(n)
+        elif 'data-shared-key' in blk:
+            # V8.4② 单嵌合规态（run23 复盘）：同源帧只嵌前步、后续步出「与前步共用」声明。
+            # 这是纪律要求的呈现形态，不是「无帧」——旧判据把它归进 ticketed 分支，还因为
+            # 取不到「截图缺失·<键>」而打出空键告警（'✅步无帧已登记降级：'）。
+            declared_absent.append(n)
         elif done and ('登记在案，无帧明示' in blk or '登记在案，无帧明示不补拍' in blk):
-            done_noimg_ticketed.append(blk)
+            done_noimg_ticketed.append((n, blk))
         else:
             (done_no_img if done else pending_no_img).append(n)
 
@@ -166,9 +171,9 @@ if _ilog.exists():
             elif _p[1] == 'r18-collection-missing':
                 _r18_pre = True
 done_noimg_unpaired = []
-for _blk in done_noimg_ticketed:
+for _bn, _blk in done_noimg_ticketed:
     _km = re.search(r'（截图缺失·([A-Za-z0-9_]+)', _blk)
-    _key = _km.group(1) if _km else ''
+    _key = _km.group(1) if _km else f'step{_bn}'
     if _r18_pre or (f'step-{_key}' in _fc_pre):
         warns.append(f'V8.4④ ✅步无帧已登记降级：{_key}（采集失败登记在案；补拍须按拍摄位规划准确补拍+图注明示时点）')
     else:
