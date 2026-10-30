@@ -10,11 +10,13 @@
 3. `custom/client/ide/store/ide.ts` + `custom/client/ide/views/IdeShell.vue`（缺陷③ 板归属失真）：store 新增 `patchTaskWorkspaceBoard(board)` 轻量回填；IdeShell `resolveActiveTask` 在并行首轮结果可复用（`parallelReusable`，绝对路径场景）时，若跨板解析推断出的真实板号（`boardFromWorkspacePath`，如 `…/boards/swarm/workspaces/…` → swarm）与首轮回显板号（客户端未传板号时服务端缺省 default）不一致，就地回填 `taskWorkspace.board`。修前形态：swarm 板任务经 `?task=` 深链后 `taskWorkspace.board` 恒为 default，简报板显示与下游板域查询（retry-count/workspace-files 的缺省板）拿错板号。
 4. `custom/client/ide/i18n.ts` + `custom/client/ide/views/IdeFilesPane.vue`（卫生④ i18n 键缺失）：`IDE_LOCAL_TEXT.filesInvalid` 补 `pickTask` 双语键（zh「去工作台选任务」/en「Pick a task in the workspace」），按钮改走 `invalidTx.value.pickTask`，消除 vue-i18n `Not found 'ide.files.pickTask' key` 双语告警（intlify zh+en 两发）。
 
-配套守门测试：`custom/client/ide/__tests__/files-pane-root.test.ts` 扩竞态回归用例（挂载期不发起无 root 装载/失败才清根）；新增 `files-pane-perm-fallback.test.ts`（权限拒绝+物化→只读树渲染、无任务/未物化→不回落）；`task-workspace-store.test.ts` 扩 `patchTaskWorkspaceBoard` 回填用例。
+配套守门测试：`custom/client/ide/__tests__/files-pane-root.test.ts` 扩竞态回归用例（挂载期不发起无 root 装载/失败才清根/渲染闸）；新增 `files-pane-perm-fallback.test.ts`（权限拒绝+物化→只读树渲染、无任务/未物化→不回落）；`task-workspace-store.test.ts` 扩 `patchTaskWorkspaceBoard` 回填用例。
+
+5. `patches/708-client-filetree-workspaceroot-seq-guard.patch`（B 类续作，series 已登记 708）：上游 `FileTree.vue` 的 `workspaceRoot` watch 无跨 watcher 序号守卫——A 类两层修复后活体复验仍三次实锤树内容错根（会话初始根=hermes-docker-sandbox 的响应晚到覆盖任务根装载；兜底视图清共享 `filesStore.workspaceRoot` 触发的无 root 装载同理）。该 watch 补 `rootLoadSeq` 同序号空间守卫（只认最新一次装载），与既有 immediate/entries 两 watcher 的守卫对齐。修复决策记录第一条「暂不立 B 类补丁」的前提（A 类后不再实锤）已被复验推翻，按其预案升级为 B 类。
 
 ## 决策记录
 
-- **缺陷① 修客户端而非 FileTree 上游**：竞态的另一半（FileTree 两 watch 无共享序号守卫，`treeInstanceKey` 重挂载对冲）在 vendor 基线，动它需走 patches/ B 类改造；本批以 A 类消除唯一可观察的失败形态（undefined 跳变→无 root 装载），FileTree 侧「任务切换期双装载竞态」为理论残余（两装载均带正确根，最后写者胜结果一致），不值得为此开补丁。若后续走查再现实错根，再立 B 类补丁。
+- **缺陷① 修客户端而非 FileTree 上游（已修订）**：初判 A 类两层（去 undefined 跳变+渲染闸）可消除可观察失败形态；活体复验三次实锤仍错根（会话初始根与兜底清根的跨组件写者），按本条既定预案升级为 B 类补丁 708（FileTree workspaceRoot watch 补 rootLoadSeq 守卫）。A 类两层保留：消除自发竞态与提前挂载，B 类兜跨组件晚到覆盖。
 - **缺陷② 回落只读而非放宽 root 闸门**：root 参数直通任意目录是安全边界（SecFileRootSandbox patch 097 立法；终端同族为上游 canOpenTerminal 设计），放宽须用户显式裁决。任务域只读通道（workspace-files）本身即服务端预置的按任务沙箱端点，权限语义=「能看到这张卡即能读它的工作区」，与租户隔离不冲突。选「fail-soft 接线既有通道」而非「提权」：普通账号从死胡同变为可读不可写，super_admin 行为零变化。
 - **缺陷③ 回填板号而非重发请求**：并行首轮（不待板号的 task-workspace 查询）是深链提速设计（2026-10-18 关联轮），路径解析结果与板号无关、无需重查；失真的只是回显板号字段。就地回填保住提速语义，避免为显示字段多打一次 CLI 链（冷启动 getTask 已实测 5-12s）。
 - **回归定性存档**：终端「需要超级管理员权限」禁用态、非 super_admin 文件页签 403 面板本身均为**预期安全呈现**非缺陷（本轮修的是后者有更好回落）；任务详情抽屉偶发「加载任务失败」（4 次走查 2 次，重试即恢复）与 getTask 冷启动 5-12s 为后端 CLI 子进程链慢/偶败的已知特性，本轮未动（见验证节未做项）。

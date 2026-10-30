@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/components/hermes/files/FileTree.vue b/packages/client/src/components/hermes/files/FileTree.vue
+--- a/packages/client/src/components/hermes/files/FileTree.vue
++++ b/packages/client/src/components/hermes/files/FileTree.vue
+@@ -169,9 +169,16 @@
+ }, { immediate: true })
+ 
+ // 当 workspaceRoot 变化时（切换到不同任务），重新加载根级目录树
++// HERMES_CUSTOM[FileTreeRootSeq] BEGIN: 跨 watcher 序号守卫（overlay 708，2026-10-31 IDE 回归）——
++// 与 immediate watch/entries watch 并发时（会话根→任务根切换、兜底视图清根），
++// 旧响应可能晚到覆盖新根结果（最后写者胜错根）；与 rootLoadSeq 同一序号空间，
++// 只认最新一次装载。
+ watch(() => filesStore.workspaceRoot, async () => {
+-  treeData.value = await loadChildren('')
++  const seq = ++rootLoadSeq
++  const next = await loadChildren('')
++  if (seq === rootLoadSeq) treeData.value = next
+ })
++// HERMES_CUSTOM[FileTreeRootSeq] END
+ 
+ watch(() => filesStore.entries, async () => {
+   if (!workspaceMode.value) return
+
