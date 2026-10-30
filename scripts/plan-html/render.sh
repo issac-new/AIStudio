@@ -5,13 +5,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="${1:-/tmp/plan-view}"
 SRC="$ROOT/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
-# 标题自动自正本提版（run16 复盘：硬编码 V8.20 滞后实锤——改这里必须无硬编码版本）
+# 标题取自正本一级标题（单一事实源=md 的 H1），缺 H1 时回落固定名。
 # 路径经 argv 传入，不写死本机目录（2026-10-28 修正：原内联绝对路径指向已退役的多仓树）。
 TITLE="${2:-$(python3 - "$SRC" <<'PY'
 import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
-m = re.search(r'现行版本\s*\**\s*(V8\.\d+)', s)
-print(f'AIStudio 全流程推演方案 {m.group(1)}' if m else 'AIStudio 全流程推演方案')
+m = re.search(r'^# (.+)$', s, re.M)
+print(m.group(1).strip() if m else '全流程推演方案')
 PY
 )}"
 mkdir -p "$OUT"
@@ -22,7 +22,7 @@ mkdir -p "$OUT"
 # （2026-10-10 视觉验收实锤：整段 CSS 源码排进左栏、横幅被挤飞）
 { printf '<style>\n'; cat "$ROOT/scripts/plan-html/tokens.css"; printf '\n</style>\n'; cat "$ROOT/scripts/plan-html/style-header.html"; printf "\n<style>\n"; cat "$ROOT/scripts/plan-html/theme-toggle.css"; printf "\n</style>\n"; } > "$OUT/style-header.html"
 cd "$ROOT/docs/superpowers/specs"
-pandoc "$(basename "$SRC")" -f gfm -t html5 -s --toc --toc-depth=3 \
+pandoc "$(basename "$SRC")" -f gfm -t html5 -s --toc --toc-depth=4 \
   --include-in-header="$OUT/style-header.html" \
   --metadata title="$TITLE" -o "$OUT/mux-v8-plan.html"
 export PLAN_VIEW_DIR="$OUT"
