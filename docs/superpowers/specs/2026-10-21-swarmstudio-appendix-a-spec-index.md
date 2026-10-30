@@ -1,4 +1,4 @@
-# 附录 A：产品面全量 spec 索引（401 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（404 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
 > 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 401 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
@@ -407,6 +407,9 @@
 | 2026-10-30-run23-product-capability | run23 产品能力侧改进 | 评测门禁归因／维度标注／承载面诊断三项；分支未合入 main |
 | 2026-10-30-helix-followup-debts | HelixHarness 吸收轮挂账清偿 | 三条既有红根治＋obs-signals/评测验收器活体 10/10；活体抓出三虫（重复 import／cwd 账本路径／服务孤儿进程） |
 | 2026-10-30-governance-doc-candidates | 治理工件注册表按轮回落 | 并行批次：按轮命名工件在评审面不再显示缺失（candidates 回落） |
+| 2026-10-30-chat-timeline-race-fix | 群聊时间线面板间歇性不挂载根治 | activeRoom null 竞态自愈：点房间后消息稳定可见（前轮漏登记补录） |
+| 2026-10-30-report-reshoot-auto-caption | 收尾补拍图注自动标注 | 补拍图注含「补拍」降级口径自动落（前轮漏登记补录） |
+| 2026-10-31-ide-workspace-regression-fixes | IDE 工作区全功能回归修复批 | 文件树换根竞态根治＋非 super_admin 权限回落任务域只读树＋板号回填＋i18n pickTask 键 |
 | 2026-10-30-release-v1.0.3-overlay | 发布轮 v1.0.3-overlay | HelixHarness 吸收两轮＋run23 收官批后升版：cockpit studio.4 / agent-teams team.4 / yuan-skill v2.98.0 / full 1.0.3-overlay（ycode 零变更不动） |
 
 ### 角色/排除（非 spec 文档）
