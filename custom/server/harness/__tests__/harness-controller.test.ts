@@ -18,6 +18,10 @@ beforeEach(async () => {
   process.env.HERMES_SKILLS_DIR = join(dir, 'no-skills')
   process.env.GOVERNANCE_REPO = join(dir, 'no-repo')
   process.env.HERMES_TRACES_DIR = join(dir, 'no-traces')
+// qgate 运行账隔离（2026-10-30 挂账清偿轮根治）：resolveQgateRunsDir 缺省从 cwd 上溯
+// 找 .qgate/runs——本机谁跑过 qgate 门禁（pre-push/活体脚本）谁就让「空账为 null」
+// 断言破裂（specComplianceRate=0）。指到不存在目录，空账语义才与测试假设一致。
+process.env.QGATE_RUNS_DIR = join(dir, 'no-qgate-runs')
   process.env.CHANGE_GOV_DB = join(dir, 'change-gov.db')
   process.env.HERMES_APPROVAL_RULES_FILE = join(dir, 'no-rules.json')
   process.env.GOVERNANCE_QGATE_GATE_PACKS = join(dir, 'no-packs')
