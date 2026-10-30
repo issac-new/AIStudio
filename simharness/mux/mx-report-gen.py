@@ -4190,7 +4190,20 @@ try:
     _ap_ok = (EVID / 'approved.events').exists() and (EVID / 'approved.events').stat().st_size > 0
     _faces.append(('审批', _ap_ok, 'approved.events 事件留痕（无 UI 帧，降级计达）'))
     _faces.append(('度量', bool(_face_step([24, 6, 26])), '治理中心帧'))
-    _faces.append(('编码', bool(_face_step([25, 18])), 'IDE 走查帧+CLI 作业组合计达'))
+    # 编码面按「帧内容核对」判定（run23 复盘）：IDE 帧在盘上但内容为空态
+    # （「还没有任务工作区」=任务工作区未物化），有帧 ≠ 承载达标——旧口径只看帧存在，
+    # 会把产品缺口读成 ✓。核对件=evidence/frame-verify.json（frame-verify.py 产物）。
+    _fv = {}
+    try:
+        _fvf = EVID / 'frame-verify.json'
+        if _fvf.exists():
+            _fv = {r['key']: bool(r.get('ok')) for r in __import__('json').loads(_fvf.read_text(encoding='utf-8'))}
+    except Exception:
+        _fv = {}
+    _ide_ok = any(_fv.get(k) for k in ('ide_done', 'devimpl_done')) if _fv else bool(_face_step([25, 18]))
+    _faces.append(('编码', _ide_ok,
+                   'IDE 任务工作区实拍（帧内容核对通过）' if _ide_ok
+                   else 'IDE 帧为空态：任务工作区未物化（产品缺口，已立产品改进项）'))
     _n_face = sum(1 for _, ok, _ in _faces if ok)
     _face_rows = ' · '.join(f'{n}={"✓" if ok else "⬜"}' for n, ok, _ in _faces)
     _face_note = '；'.join(f'{n}={d}' for n, ok, d in _faces if ok and '降级' in d or (not ok))
