@@ -8,7 +8,7 @@
 // 让裁判知道"我们希望答案是什么"，expect 只在聚合层比对。
 // fail-open：判定端不可用/熔断 → S1 断言全部 unknown，管线不抛错（judgeOnline=false）。
 import type {
-  AttemptVerdict, EvalConfig, EvalTask, Evidence,
+  AttemptVerdict, EvalClarification, EvalConfig, EvalTask, Evidence,
 } from './types'
 import { similarityVerdict } from './similarity'
 import { foldRepeats } from '../toolresultguard/fold'
@@ -45,6 +45,11 @@ export interface JudgeAttemptOptions {
    * flipRate 供选型/门禁消费，不污染 pass 率口径）。
    */
   stabilityRetest?: number
+  /**
+   * 集级澄清事实（2026-10-30，来自 run 起跑时的快照）：作为已知事实写进裁判状态，
+   * 避免裁判把「业务上已澄清的取舍」当成缺陷。缺省不注入（存量行为不变）。
+   */
+  clarifications?: EvalClarification[]
 }
 
 // 模块级共享默认实例：不注入时跨 judgeAttempt 调用复用（缓存生效、熔断计数累积）。
@@ -86,10 +91,20 @@ export function truncateForState(content: string, maxChars: number): string {
 }
 
 /** 构造判定 state（证据上下文）。导出供测试与缓存键一致性校验。 */
-export function buildJudgeState(task: EvalTask, evidence: Evidence, config: EvalConfig): Record<string, unknown> {
+export function buildJudgeState(
+  task: EvalTask,
+  evidence: Evidence,
+  config: EvalConfig,
+  context?: { clarifications?: EvalClarification[] },
+): Record<string, unknown> {
   const state: Record<string, unknown> = {
     task_problem: task.problem,
     expected_behavior: task.expectedBehavior,
+  }
+  // 已冻结的澄清事实（2026-10-30）：作为业务事实参与判定，不当作缺陷。
+  const clarifications = context?.clarifications ?? []
+  if (clarifications.length > 0) {
+    state.clarifications = clarifications.map((c) => ({ question: c.question, answer: c.answer }))
   }
   if (evidence.transcript) state.evidence_transcript = truncateForState(evidence.transcript, config.maxStateChars)
   if (evidence.outcomeDetail) state.outcome_detail = evidence.outcomeDetail
@@ -305,7 +320,7 @@ export async function judgeAttempt(
   if (s1Needed.length > 0) {
     const breaker = deps.breaker ?? (sharedBreaker ??= new Breaker(config.breakerThreshold, config.breakerCooldownMs))
     const cache = deps.cache ?? (sharedCache ??= new TtlCache<EvalJudgeAnswers>(config.cacheTtlMs))
-    const state = buildJudgeState(task, evidence, config)
+    const state = buildJudgeState(task, evidence, config, { clarifications: options.clarifications })
     const questions = buildQuestions(task, s1Needed)
     const ask = deps.ask ?? ((req, cfg) => clefAsk(req, cfg, deps.fetchDeps))
     const models = config.judgeModels.length > 0 ? config.judgeModels : [config.judgeModel]

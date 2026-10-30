@@ -1,6 +1,11 @@
 # QGate 项目配置——overlay 仓自备（零 init：clone 即生效，勿提交 runs/evidence 等运行数据）。
 # 档位从 advisory 起步：全量套件结果受 upstream 注入态影响（zcode-patches-guard 等
 # 注入态守门在未注入树上按设计必红），故 basic-check 先 warn 观察，稳定后再切 block。
+# 触发面（2026-10-30 HelixHarness 吸收轮补齐）：门的 triggers 声明此前无执行点——提交链
+# 从不调用 qgate。现由 .swarm-yuan/hooks/pre-push 执行 plan 输出的 L0 门集
+# （trigger 传 pre_commit，即"提交时该跑的门"在推送前本地实跑），默认只告警；
+# QGATE_PREPUSH_ENFORCE=1 拦截。engineering.basic-check 等全量测试门仍留给 merge 前
+# npm test（pre-push 跑分钟级全量不可接受）。
 profile: vibe-fast
 claims:
   - id: engineering.lint-clean

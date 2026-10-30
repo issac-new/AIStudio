@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（388 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（398 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 388 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 398 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -395,6 +395,16 @@
 | 2026-10-28-design-reconcile-release | 设计与发布对账轮 | 六域 65 条发现（修 52/限制 13）；四模块升版并发布 v1.0.1-overlay |
 | 2026-10-28-release-v1.0.2-overlay | 发布轮 v1.0.2-overlay | 架构债收口＋对账清偿后升版：cockpit studio.3 / agent-teams team.3 / full 1.0.2-overlay；产物 local-only 不上传 |
 | 2026-10-30-swarm-yuan-ub-mode-absorption | swarm-yuan 吸收 ub-mode | 新增洁净代码度量方法论档；复杂度并入 method-size、重复度并入 reuse，零新增门禁、变量数不变；阈值标定守卫 |
+| 2026-10-30-helixharness-absorption | 滴滴 HelixHarness 吸收与强制面修复 | 判定不移植框架形态；补 L2 可复现（判定库入库＋hooks 安装）、qgate pre-push、spec 四段机检＋收据漂移；吸收四层读取计量与评测校准合同（证据级） |
+| 2026-10-29-kanban-deps-and-session-rotation | 卡依赖图停滞看门狗＋会话尺寸轮换 | run23 两案根治：依赖图停滞检测与会话按尺寸轮换 |
+| 2026-10-30-delivery-cases-credential-bridge | 交付案例空态根治 | matrix 凭据双桥（client initClient 桥接＋服务端网关凭据回落），端到端自愈 |
+| 2026-10-30-mux-plan-terminal-state | 推演方案终态化 | 去版本沿革与中间过程产物，按终态表述重写文档层 |
+| 2026-10-30-report-frames-and-image-layout | 报告补帧与图版面放大 | 补 defect_done/ready_done 拍摄位；图版面与补拍标注规范 |
+| 2026-10-30-run23-closure-batch | run23 收官热线修复批 | DEF 卡纪律＋governance-client unbound 修复＋报告黑话修正 |
+| 2026-10-30-run23-divergence-retro | run23 三面差异复盘 | 报告×推演方案×设计对齐：运行口径立法＋推演程序修正（产品能力另批） |
+| 2026-10-30-run23-full-retro-batch | run23 全面复盘批 | 轮换档位供给归一（42 profile）＋断言幂等＋确定性失败停摆 |
+| 2026-10-30-run23-post-run-backlog | run23 在册挂账批 | DM 死信守门、kanban stuck 假阳性、terminal-incomplete 重试面、venv 包面守卫 |
+| 2026-10-30-run23-product-capability | run23 产品能力侧改进 | 评测门禁归因／维度标注／承载面诊断三项；分支未合入 main |
 
 ### 角色/排除（非 spec 文档）
 

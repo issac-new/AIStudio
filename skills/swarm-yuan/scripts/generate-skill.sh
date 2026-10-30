@@ -2218,6 +2218,25 @@ MEOF
 # 基线替换走 VENDOR_SYNC=1 显式通道（AIStudio 仓规；2026-10-24 b7aef6874 首装、
 # 2026-10-26 修复重生成丢失后回移本模板，custom/__tests__/precommit-vendor-guard.test.ts 锁同步）。
 # 尊重现状：项目已有自定义 core.hooksPath 不覆盖（披露+手工接入指引）；非 git 项目跳过披露。
+# L2 强制面可复现渲染（2026-10-30 HelixHarness 吸收轮）：判定库 + 提交钩子落到已入库
+# 路径 .swarm-yuan/hooks/——钩子垫片的第四级回退早已指向该处，此前从未落盘，导致 fresh
+# clone 恒走「L2 降级跳过」分支（宣称四层强制、克隆后只剩 L1/L3）。
+# create/upgrade 共用（挂在 _fg_emit_guides 的非 lite 段）；幂等：内容相同不动盘。
+# 一致性守门 custom/__tests__/l2-kit-parity.test.ts 断言副本 = assets/ 原文（单一事实源）。
+_fg_render_l2_kit() {
+  git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  local _syh="$PROJECT_DIR/.swarm-yuan/hooks" _src _dst
+  mkdir -p "$_syh"
+  for _src in "$ASSETS_DIR/spec-first-lib.sh" "$ASSETS_DIR/hooks/spec-first-pre-commit.sh"; do
+    [[ -f "$_src" ]] || continue
+    _dst="$_syh/$(basename "$_src")"
+    cmp -s "$_src" "$_dst" 2>/dev/null && continue
+    cp "$_src" "$_dst"
+    chmod +x "$_dst"
+  done
+  return 0
+}
+
 _fg_install_precommit() {
 if [[ "$MODE" != "upgrade" && "$PROFILE" != "lite" ]] && git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   _syh_dir="$PROJECT_DIR/.swarm-yuan/hooks"
@@ -2544,6 +2563,11 @@ _fg_emit_guides() {
     _fg_emit_mcp
     _fg_install_precommit
     _fg_emit_commands
+  fi
+  # L2 可复现副本：create/upgrade 两模式都渲染（_fg_install_precommit 只在 create 生效，
+  # 升级路径此前留不住这套副本——fresh clone 与重生成后都会退回「降级跳过」）。
+  if [[ "$PROFILE" != "lite" ]]; then
+    _fg_render_l2_kit
   fi
   # SKILL.md 含续传追加段，整段按存在性守卫（draft 骨架的 SKILL.md 已存在时整体跳过）
   if [[ "$RESUME" -eq 0 || ! -f "$SKILL_DIR/SKILL.md" ]]; then

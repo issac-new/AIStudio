@@ -5,7 +5,7 @@
 ## 工作规则
 
 1. 只改本仓；`vendor/**` 是钉版基线（台账 `vendor/VENDOR.md`），注入后的脏态是预期工作态、不入提交（pre-commit 自动撤出）；基线替换只走 `npm run vendor:sync` + `VENDOR_SYNC=1` 显式通道。`vendor/**` 内禁建 `.git`。
-2. 代码改动先写 `docs/superpowers/specs/YYYY-MM-DD-<slug>.md`，至少含「变更 / 决策记录 / 验证 / 设计文档影响」四段（设计文档影响=DESIGN_SYNC 声明：触及整合正本/数字总账须 touched 并同批修订，L2 钩子核验；纯内部变更 none 附理由）；spec 是决策事实源，不是事后补记。
+2. 代码改动先写 `docs/superpowers/specs/YYYY-MM-DD-<slug>.md`，至少含「变更 / 决策记录 / 验证 / 设计文档影响」四段（设计文档影响=DESIGN_SYNC 声明：触及整合正本/数字总账须 touched 并同批修订，L2 钩子核验；纯内部变更 none 附理由）；spec 是决策事实源，不是事后补记。四段由 L2/L3 机检（`spf_sections_check`）；存量债豁免清单 `.swarm-yuan/spec-sections-baseline.txt` 只许减（达标即删，守门测试断言基线内条目仍不达标）。已合入主干的 spec 有内容收据（`.swarm-yuan/spec-receipts.jsonl`）：改写会判 drift，授权修订须 `SPEC_REBIND=1` 显式重绑。
 3. 分支 `feat|fix|refactor/<slug>`，从 `origin/main` 起；并行会话用 worktree；清理只走 `git worktree remove/prune`，禁止 `rm -rf`。
 4. 提交前跑目标测试 `npx vitest run <path>`；合并前 `npm test`；新增服务端模块跑 `npm run typecheck:harness`。
 5. 失败不隐瞒：测试红、步骤跳过、未验证项必须写进交付说明。
@@ -14,6 +14,7 @@
 8. 本仓只存源码/脚本/文档/依赖清单；中间产物（node_modules、dist、runs、截图、离线包、evidence 二进制）不入库（.gitignore 立法，2026-10-24 用户指示）。`evidence/` 内 2026-10-28 之前的历史截图按冻结白名单保留、禁新增（守门 `custom/__tests__/evidence-binary-freeze.test.ts`）。
 9. 访问上游树用统一解析序：显式 env（`OVERLAY_UPSTREAM_ROOT`）→ 仓内 `vendor/` → 旧兄弟 `upstream/`（先例 `scripts/build.mjs`、`scripts/serve-server.mjs`）。不要写死 `../upstream` 的层级假设——单仓检出没有兄弟 upstream，写死必坏。
 10. 运行时部署（`scripts/deploy-agent-runtime.mjs`）默认**保留安装树里与模板不同的文件**并报告；确需以模板覆盖时显式 `--force`。模板落后于宿主时应把宿主已知良好态回灌 `runtime/`，不要强推覆盖。
+11. 强制面分三处、都随仓入库：L2 提交强拦的判定库与钩子在 `.swarm-yuan/hooks/`（由 `npm run skill:build` 从 `skills/swarm-yuan/assets/` 渲染——该命令需生成态技能目录，只在主检出生效；worktree/新克隆直接使用已入库副本，字节一致性由 `custom/__tests__/l2-kit-parity.test.ts` 锁）；推送前 `pre-push` 执行 qgate L0 门集（默认只告警，`QGATE_PREPUSH_ENFORCE=1` 拦截，`QGATE_PREPUSH_SKIP=1` 关闭）；四层上下文读取计量由 `custom/qgate/plugin/hooks/post-tool-read.mjs` 落 `.qgate/reads.jsonl`，端点 `/api/harness/obs-signals` 的 `contextReads` 面消费。
 
 ## 目录导航
 

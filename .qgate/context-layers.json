@@ -1,0 +1,38 @@
+{
+  "_comment": "四层工程上下文（knowledge/harness/specs/hooks）路径映射单一事实源——2026-10-30 HelixHarness 吸收轮。消费方：custom/qgate/plugin/hooks/post-tool-read.mjs（采集）与 custom/server/obssignals/context-reads.ts（聚合）。匹配规则：仓库相对路径按前缀匹配，最长命中胜出（避免 custom/ 这类宽前缀吃掉 custom/server/knowledge/ 这类窄前缀）；未命中归 other。",
+  "version": 1,
+  "layers": {
+    "knowledge": [
+      "custom/server/knowledge/",
+      ".swarm-yuan/project-knowledge.md",
+      ".swarm-yuan/notes/",
+      "skills/swarm-yuan/references/",
+      ".claude/skills/",
+      "docs/reports/"
+    ],
+    "harness": [
+      "AGENTS.md",
+      "custom/server/AGENTS.md",
+      "custom/client/AGENTS.md",
+      "vendor/VENDOR.md",
+      "config/",
+      "registries/",
+      "scripts/",
+      "patches/",
+      "zcode-patches/",
+      "runtime/",
+      "skills/swarm-yuan/assets/",
+      "package.json",
+      "custom/"
+    ],
+    "specs": [
+      "docs/superpowers/specs/"
+    ],
+    "hooks": [
+      ".swarm-yuan/hooks/",
+      ".qgate/",
+      "custom/qgate/",
+      ".github/workflows/"
+    ]
+  }
+}

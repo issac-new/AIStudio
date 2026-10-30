@@ -27,9 +27,18 @@ export interface OutcomeRunContext {
   allowedRoots?: string[]
   /** kanban API 基址与凭据（controller 层注入）。 */
   kanban?: { baseUrl: string; token?: string; board?: string }
+  /**
+   * 命令执行注入（默认 child_process.execFile，测试可替换）。
+   * 2026-10-30：command 验收器专用——argv 数组、无 shell、env 白名单。
+   */
+  commandExec?: (argv: string[], cwd: string, timeoutMs: number) => Promise<{ exitCode: number }>
 }
 
-export type OutcomeVerifier = (params: Record<string, string>, ctx: OutcomeRunContext) => Promise<OutcomeResult>
+export type OutcomeVerifier = (
+  params: Record<string, string>,
+  ctx: OutcomeRunContext,
+  decl?: OutcomeCheckDecl,
+) => Promise<OutcomeResult>
 
 function fail(detail: string): OutcomeResult {
   return { ok: false, detail }
@@ -46,6 +55,42 @@ function defaultGitExec(args: string[], cwd: string): Promise<{ stdout: string }
       if (error) reject(error)
       else resolve({ stdout: String(stdout) })
     })
+  })
+}
+
+/** 命令验收器默认执行：execFile（无 shell）+ 最小 env（不把模型进程的密钥带进去）。 */
+function defaultCommandExec(argv: string[], cwd: string, timeoutMs: number): Promise<{ exitCode: number }> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      argv[0],
+      argv.slice(1),
+      {
+        cwd,
+        timeout: timeoutMs,
+        maxBuffer: 1024 * 1024,
+        env: {
+          PATH: process.env.PATH ?? '',
+          HOME: process.env.HOME ?? '',
+          LANG: 'C',
+          LC_ALL: 'C',
+          TMPDIR: process.env.TMPDIR ?? '/tmp',
+        },
+      },
+      (error, _stdout, stderr) => {
+        if (!error) {
+          resolve({ exitCode: 0 })
+          return
+        }
+        // execFile 对"进程正常退出但码非 0"也给 error；此时 code 是数字退出码。
+        const code = (error as NodeJS.ErrnoException & { code?: number | string }).code
+        if (typeof code === 'number') {
+          resolve({ exitCode: code })
+          return
+        }
+        const tail = String(stderr ?? '').trim().slice(0, 200)
+        reject(new Error(`${error.message}${tail ? `；stderr: ${tail}` : ''}`))
+      },
+    )
   })
 }
 
@@ -135,6 +180,45 @@ const verifiers: Record<string, OutcomeVerifier> = {
       return fail(`kanban 查询失败：${(e as Error).message}`)
     }
   },
+
+  /**
+   * decl.argv + params.cwd —— 真执行一条命令并核对退出码（2026-10-30 HelixHarness 吸收轮）。
+   *
+   * 为什么加：HelixHarness 的 case 合同明令「不得用空命令或『文件存在』冒充业务验收」，
+   * 而本模块原有的 file_exists/content_contains 正是那类弱判据——验收强度不足时，
+   * G4/G5 的「通过」可能只是"文件被创建了"。
+   *
+   * 安全边界（默认关闭，fail-closed）：
+   *   - 仅当 EVAL_ALLOW_COMMANDS=1 时可用；禁用时返回失败而不是伪造通过。
+   *   - argv 必须是显式字符串数组，不经 shell（无通配符/管道/重定向注入面）。
+   *   - cwd 必须落在 allowedRoots 内（与文件类校验同一守卫）；env 只传 PATH/HOME/LANG/TMPDIR。
+   *   - 超时上限 30000ms；超时/启动失败一律记失败。
+   */
+  async command(params, ctx, decl) {
+    if (process.env.EVAL_ALLOW_COMMANDS !== '1') {
+      return fail('命令验收器未启用（置 EVAL_ALLOW_COMMANDS=1 才允许执行外部命令；默认关闭防越权执行）')
+    }
+    const argv = decl?.argv
+    if (!Array.isArray(argv) || argv.length === 0) return fail('decl.argv 必填（非空字符串数组）')
+    if (!argv.every((a) => typeof a === 'string' && a.trim().length > 0)) {
+      return fail('decl.argv 每项须为非空字符串')
+    }
+    const cwd = params.cwd
+    if (!cwd) return fail('params.cwd 必填（须落在 allowedRoots 内）')
+    if (!isWithin(cwd, ctx.allowedRoots)) return fail(`cwd 不在允许根目录内（fail-closed）：${cwd}`)
+    const expectExit = Number.isInteger(decl?.expectExit) ? (decl?.expectExit as number) : 0
+    const timeoutMs = Math.min(Math.max(Number(decl?.timeoutMs) || 10_000, 1_000), 30_000)
+    const exec = ctx.commandExec ?? defaultCommandExec
+    try {
+      const { exitCode } = await exec(argv, cwd, timeoutMs)
+      const shown = argv.join(' ')
+      return exitCode === expectExit
+        ? { ok: true, detail: `命令退出码 ${exitCode}（期望 ${expectExit}）：${shown}` }
+        : fail(`命令退出码 ${exitCode}，期望 ${expectExit}：${shown}`)
+    } catch (e) {
+      return fail(`命令执行失败：${(e as Error).message}`)
+    }
+  },
 }
 
 export function registerOutcomeVerifier(name: string, verifier: OutcomeVerifier): void {
@@ -152,7 +236,7 @@ export async function runOutcomeCheck(
   const verifier = verifiers[decl.verifier]
   if (!verifier) return fail(`未注册的校验器：${decl.verifier}（已注册：${listOutcomeVerifiers().join('/')}）`)
   try {
-    return await verifier(decl.params, ctx)
+    return await verifier(decl.params, ctx, decl)
   } catch (e) {
     return fail(`校验器异常：${(e as Error).message}`)
   }

@@ -269,8 +269,15 @@ router.get('/process-quality', async (ctx) => {
 // 429 率，按日分桶+窗口合计；trace 目录缺席如实 available:false。
 router.get('/obs-signals', async (ctx) => {
   try {
-    const { report, files, rows } = collectObsSignals(daysOf(ctx.query.days))
-    ctx.body = { ok: true, ...report, sources: { traceFiles: files, traceRows: rows } }
+    const { report, files, rows, contextReads } = collectObsSignals(daysOf(ctx.query.days))
+    ctx.body = {
+      ok: true,
+      ...report,
+      // 四层上下文读取计量（2026-10-30）：knowledge/harness/specs/hooks 各被读多少次，
+      // 与 trace 指标同端点返回；账本缺席时 available:false（fail-soft 不造假）。
+      contextReads,
+      sources: { traceFiles: files, traceRows: rows },
+    }
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }

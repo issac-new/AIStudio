@@ -45,8 +45,13 @@ import {
   appendIteration, appendOracleRun, appendTasksToSet, auditSnapshot, createOracleCase, createRemediation, createSet, exportSet,
   getOracleCase, getRemediation, getRun, getSet, getSetRevision, labelSetDimensions, listIterations, listOracleCases, listOracleRuns,
   listRemediations, listRuns, listSetRevisions, listSets, recordHumanVerdict, recordLiveEvidence,
-  reflowTaskToSet, REGRESSION_SET_NAME, reviseRubric, sealSet, verifyRemediation,
+  reflowTaskToSet, REGRESSION_SET_NAME, reviseRubric, saveSetCalibration, sealSet, verifyRemediation,
+  addSetClarification,
 } from './store'
+import { calibrateSet, type CalibrationSample } from './set-calibration'
+import { judgeAttempt } from './judge'
+import { publicSetView, publicTaskView } from './rubric-visibility'
+import { fail, ok } from '../lib/http'
 import { countRuns as countRedteamRuns } from '../redteam/store'
 import { mountRedteam } from '../redteam/routes'
 import { loadEvalConfig } from './types'
@@ -289,7 +294,8 @@ router.get('/sets/:id', async (ctx) => {
     ctx.body = { ok: true, sealed: true, set: { id: set.id, name: set.name, track: set.track, module: set.module, sealed: true, contentHash: set.contentHash, revision: set.revision, createdAt: set.createdAt, taskCount: set.tasks.length } }
     return
   }
-  ctx.body = { ok: true, set }
+  // 隐藏断言不出 API 面（2026-10-30）：只暴露条数，内容仅在服务端判分时使用。
+  ok(ctx, { set: publicSetView(set) })
 })
 
 router.post('/sets/:id/seal', async (ctx) => {
@@ -302,6 +308,61 @@ router.post('/sets/:id/seal', async (ctx) => {
   ctx.body = { ok: true }
 })
 
+/**
+ * 评测集校准（2026-10-30 HelixHarness 吸收轮）：F2P/P2P 合同。
+ * body: { samples: [{ taskId, kind?: 'f2p'|'p2p', baseline: Evidence, solution: Evidence }] }
+ * 两条证据走与正式运行**同一条判分管线**（judgeAttempt），结论落 set.calibration；
+ * 密封集同样可用（返回只含聚合结论，不含题目内容）。
+ */
+router.post('/sets/:id/calibrate', async (ctx) => {
+  const set = getSet(ctx.params.id)
+  if (!set) {
+    fail(ctx, 404, '评测集不存在')
+    return
+  }
+  const body = (ctx.request.body ?? {}) as { samples?: CalibrationSample[] }
+  const samples = Array.isArray(body.samples) ? body.samples : []
+  if (samples.length === 0) {
+    fail(ctx, 400, 'samples 必填', { problems: ['至少 1 条「基线失败→解法通过」样本'] })
+    return
+  }
+  const config = loadEvalConfig()
+  const calibration = await calibrateSet(set, samples, async (task, evidence) => {
+    const judged = await judgeAttempt(task, evidence, { config }, {})
+    // outcome 校验器检查的是运行环境终态，离线证据无法复现——synthesize 为通过，
+    // 使校准只作用于 rubric（notes 里如实声明这一口径）。
+    return {
+      taskId: task.id,
+      sampleIdx: 1,
+      verdicts: judged.verdicts,
+      ...(task.outcome ? { outcome: { verifier: task.outcome.verifier, ok: true, detail: 'calibration: 终态校验跳过' } } : {}),
+      judgeMeta: judged.judgeMeta,
+      judgedAt: Date.now(),
+    }
+  })
+  const saved = saveSetCalibration(set.id, calibration)
+  if (!saved.ok) {
+    fail(ctx, 400, '校准落库失败', { problems: saved.problems })
+    return
+  }
+  ok(ctx, { calibration, sealed: set.sealed })
+})
+
+/**
+ * 追加集级澄清事实（2026-10-30 HelixHarness 吸收轮）。
+ * body: { question, answer } —— frozenAt 由服务端写入；只追加不修改。
+ * 澄清会随 run 快照冻结并进入裁判状态；新增澄清后原校准失效（须重校准）。
+ */
+router.post('/sets/:id/clarifications', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as { question?: string; answer?: string }
+  const result = addSetClarification(ctx.params.id, String(body.question ?? ''), String(body.answer ?? ''))
+  if (!result.ok) {
+    fail(ctx, 400, '澄清事实写入失败', { problems: result.problems })
+    return
+  }
+  ok(ctx, { clarifications: result.set.clarifications ?? [] })
+})
+
 router.get('/sets/:id/export', async (ctx) => {
   const result = exportSet(ctx.params.id)
   if (!result.ok) {
@@ -309,7 +370,8 @@ router.get('/sets/:id/export', async (ctx) => {
     ctx.body = { ok: false, problems: result.problems }
     return
   }
-  ctx.body = { ok: true, set: result.set }
+  // 隐藏断言不可导出（2026-10-30）：导出面与详情面同一投影。
+  ok(ctx, { set: publicSetView(result.set) })
 })
 
 // 能力维度标注通道（2026-10-30 run23 复盘）：批量给集内任务打七维或显式 'unclassified'。
@@ -422,7 +484,8 @@ router.get('/sets/:id/revisions/:revision', async (ctx) => {
     ctx.body = { ok: false, problems: ['密封集不提供历史版本题目内容（防探测）'] }
     return
   }
-  ctx.body = { ok: true, revision: frozen }
+  // 历史版本同走可见性投影：隐藏断言不出对外 API 面（2026-10-30）。
+  ctx.body = { ok: true, revision: { ...frozen, tasks: frozen.tasks.map(publicTaskView) } }
 })
 
 // ---------- 运行 ----------

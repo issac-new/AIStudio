@@ -9,6 +9,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { isOTelSpanRow, otelRowToLegacy } from '../eval/trace-sampler'
 import { buildObsSignals, type ObsSignalsReport, type ObsSpanRow } from './signals'
+import { collectContextReads, type ContextReadsReport } from './context-reads'
 import { underHermes } from '../lib/paths'
 
 /** 采集上限：单文件行数与总行数双闸，超限采样口径如实标注。 */
@@ -29,6 +30,8 @@ export interface CollectResult {
   rows: number
   skippedOtelFiles: number
   truncated: boolean
+  /** 四层上下文读取计量（2026-10-30 HelixHarness 吸收轮；来源 .qgate/reads.jsonl）。 */
+  contextReads: ContextReadsReport
 }
 
 export function tracesDir(): string {
@@ -120,9 +123,13 @@ export function collectTraceRows(days = 7, opts: { dir?: string; now?: number } 
 }
 
 /** 采集 + 聚合。窗口内无文件/目录缺席 → available:false，不造数。 */
-export function collectObsSignals(days = 7, opts: { dir?: string; now?: number } = {}): CollectResult {
+export function collectObsSignals(
+  days = 7,
+  opts: { dir?: string; now?: number; contextReadsFile?: string } = {},
+): CollectResult {
   const { rows, files, skippedOtelFiles, truncated, notes } = collectTraceRows(days, opts)
   const report = buildObsSignals(rows, { days })
   report.notes.push(...notes)
-  return { report, files, rows: rows.length, skippedOtelFiles, truncated }
+  const contextReads = collectContextReads(days, { file: opts.contextReadsFile, now: opts.now })
+  return { report, files, rows: rows.length, skippedOtelFiles, truncated, contextReads }
 }

@@ -108,6 +108,49 @@ if [[ "$_ds_req" == "1" && -n "$_ds_docs" ]]; then
   fi
 fi
 if [[ -n "${_approved:-}${_governing:-}" ]]; then
+  # 四段机检 + 内容收据（2026-10-30 HelixHarness 吸收轮；判据同源 spec-first-lib，L3 复用）。
+  # 顺序：先判四段（结构缺项优先暴露），再判收据（内容是否被静默改写）。
+  _l2_spec="${_governing:-${_approved:-}}"
+  if [[ -n "$_l2_spec" ]] && command -v spf_sections_violation >/dev/null 2>&1; then
+    _audit_dir="$ROOT/.swarm-yuan"
+    _sec_mode="$(spf_conf_val "$CONF" SPEC_SECTIONS_ENFORCE)"
+    _sec_mode="${_sec_mode:-${SPEC_SECTIONS_ENFORCE:-warn}}"
+    _sec_v="$(spf_sections_violation "$ROOT" "$_l2_spec" index)"
+    if [[ -n "$_sec_v" ]]; then
+      if [[ "$_sec_mode" == "block" ]]; then
+        mkdir -p "$_audit_dir" 2>/dev/null || true
+        _ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        _e="$(printf '%s' "$_sec_v" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr -d '\r\n')"
+        printf '{"ts":"%s","tool":"git-commit","target":"%s","gates":"spec-sections"}\n' "$_ts" "$_e" >> "$_audit_dir/gate-deny.jsonl" 2>/dev/null || true
+        echo "✗ swarm-yuan spec-sections（L2 提交时强拦）: ${_sec_v}" >&2
+        echo "  解除方式: 1) 补齐四段（变更/决策记录/验证/设计文档影响），「变更」「验证」须有实质内容；2) 确属存量债——把该 spec 加入 .swarm-yuan/spec-sections-baseline.txt（只许减，达标即删）；3) 逃生门: git commit --no-verify（L3 门禁兜底）。" >&2
+        exit 1
+      fi
+      echo "⚠ swarm-yuan spec-sections（warn）: ${_sec_v}——置 SPEC_SECTIONS_ENFORCE=block 或 conf 同名键即强拦" >&2
+    fi
+
+    _rc_mode="$(spf_conf_val "$CONF" SPEC_RECEIPT_ENFORCE)"
+    _rc_mode="${_rc_mode:-${SPEC_RECEIPT_ENFORCE:-warn}}"
+    _rc_v="$(spf_receipt_check "$ROOT" "$_l2_spec" index "$CONF")"
+    case "$_rc_v" in
+      bound)
+        # 账本随本次提交落盘（与 vendor 撤出同级的索引操作先例）：否则收据永远滞后一提交。
+        git -C "$ROOT" add -A -- .swarm-yuan/spec-receipts.jsonl 2>/dev/null || true
+        ;;
+      drift:*)
+        if [[ "$_rc_mode" == "block" ]]; then
+          mkdir -p "$_audit_dir" 2>/dev/null || true
+          _ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          _e="spec-receipt drift: ${_l2_spec}（已合入基分支的决策记录被改写，绑定收据 ${_rc_v#drift:}）"
+          printf '{"ts":"%s","tool":"git-commit","target":"%s","gates":"spec-receipt"}\n' "$_ts" "$_e" >> "$_audit_dir/gate-deny.jsonl" 2>/dev/null || true
+          echo "✗ swarm-yuan spec-receipt（L2 提交时强拦）: ${_e}" >&2
+          echo "  解除方式: 1) 确认改动是被授权的决策修订——SPEC_REBIND=1 git commit 显式重绑并落痕；2) 撤回对已合入 spec 的改写；3) 逃生门: git commit --no-verify（L3 门禁兜底）。" >&2
+          exit 1
+        fi
+        echo "⚠ swarm-yuan spec-receipt（warn）: ${_l2_spec} 内容与已绑定收据不符——确属授权修订请 SPEC_REBIND=1 git commit 重绑（置 SPEC_RECEIPT_ENFORCE=block 即强拦）" >&2
+        ;;
+    esac
+  fi
   exit 0
 fi
 

@@ -5,6 +5,7 @@ exceptions/
 cache/
 state.json
 hooks.log
+reads.jsonl
 stop-state.json
 release-report.md
 release-report.json
