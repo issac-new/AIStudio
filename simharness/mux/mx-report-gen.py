@@ -4802,7 +4802,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             _seen_ops = set()
             for pre in orphans:
                 _ph = pre.rsplit('-', 1)[-1]
-                # 收尾补拍自动标注（V8.4③ 对齐审计同口径）：帧 mtime 晚于步键 epoch+120s
+                # 收尾补拍自动标注（与审计 V8.4③ 同口径）：帧 mtime 晚于步键 epoch+120s
                 # → 图注追加「·收尾补拍」。判定口径=mx-report-audit.py V8.4③（键取帧前缀
                 # split('-op')[0]、state.env epoch、+120s 容差）——两处同源，改判定须同步。
                 _reshoot_cap = ''
