@@ -2999,7 +2999,7 @@ def security_html():
                 % (len(conds), f'（其中未解决 {len(cond_open)}）' if cond_open else ''))
     audit_row = ('<tr><td>依赖审计（npm audit 入 testlog）</td><td>%s</td>'
                  '<td>G3 闸门实测 testlog 含 npm audit/漏洞计数/不可达声明三态之一（质量 B②）</td></tr>'
-                 % ('✅ 全分支达标' if not audit_miss else '⚠ %d 分支缺审计段（登记到问题清单）' % len(audit_miss)))
+                 % ('✓ 全分支达标' if not audit_miss else '⚠ %d 分支缺审计段（登记到问题清单）' % len(audit_miss)))
     scan_row = ('<tr><td>密钥泄漏扫描</td><td>机制在位</td>'
                 '<td>每轮门禁机械扫描两仓跟踪文件（secret-scan-gate，命中非白名单即 FAIL）；'
                 '执行面=prelaunch 门禁层，非轮内产物——此处说明机制位置，不冒充轮内扫描结果</td></tr>')
@@ -3332,7 +3332,7 @@ main_sha = main_head()
 
 # ── 8.6 交付物视图（补遗③，R11）─────────────────────────────────────────
 # 呈现形态=交付物实物渲染（markdown→简易 HTML / txt→<pre>，直接读中央仓文件，
-# 带 commit 锚）+ 模版核对行（每检查项 re.search 命中→✅，未中→缺（红），
+# 带 commit 锚）+ 模版核对行（每检查项 re.search 命中→✓，未中→缺（红），
 # 任一缺→该件「模版不符」）。禁转述、禁空占位——缺就红标。
 # 缺文件的步不进本映射（15/22 见文末汇总节如实标注「文件域无独立工件」）。
 def _central_anchor():
@@ -3684,7 +3684,7 @@ def _art_read(rel: str):
     return raw
 
 def _art_checks_html(raw: str, checks):
-    """模版字段核对（字段级呈现：字段值摘录，不只 ✅/缺）——
+    """模版字段核对（字段级呈现：字段值摘录，不只 ✓/缺）——
     模版作为标准输入输出的质量标准必须看得见：每个字段名旁给命中值首行摘录
     （≤60 字），未命中保持红「缺」。核对判定跑全文不受截断影响。"""
     ok_all = True
@@ -3700,7 +3700,7 @@ def _art_checks_html(raw: str, checks):
             frag = frag.split('|')[0].strip() if '|' in frag[:3] else frag
             val = frag[:60] + ('…' if len(frag) > 60 else '')
         cls = 'ok' if hit else 'miss'
-        spans.append(f'<div class="art-chk-row {cls}"><span class="art-chk-flag">{"✅" if hit else "缺"}</span>'
+        spans.append(f'<div class="art-chk-row {cls}"><span class="art-chk-flag">{"✓" if hit else "缺"}</span>'
                      f'<span class="art-chk-label">{H.escape(label)}</span>'
                      + (f'<span class="art-chk-val">{H.escape(val)}</span>' if val else '<span class="art-chk-val miss">未命中</span>')
                      + '</div>')
@@ -3733,7 +3733,7 @@ def _step_artifact_status(n: int):
                 break
     if bad:
         return ('warn', f'交付物 🟡 缺/不符 {bad}/{total}（详见本步②与文末矩阵·记入问题清单在案）')
-    return ('ok', f'交付物 ✅ {total}/{total} 模版符合')
+    return ('ok', f'交付物 ✓ {total}/{total} 模版符合')
 
 # ── 无文件域声明（§5.4 第二段：无交付物的步明示「本步无文件域交付物」及其实际产出在哪）──
 _NO_FILE_DOMAIN = {
@@ -3932,7 +3932,7 @@ def artifact_panorama():
                 # 逐项呈现（2026-10-12 用户指令：符合与不符合项具体列出，不只计数）——
                 # 符合项绿 ✓+项名，缺项红 ✗+项名；行内联排，与步内折叠块字段级核对同源。
                 _items = ' '.join(
-                    (f'<span class="d-ok">✓{H.escape(lb)}</span>' if re.search(rx, raw)
+                    (f'<span class="d-ok">✅{H.escape(lb)}</span>' if re.search(rx, raw)
                      else f'<span class="d-warn" style="font-weight:700">✗{H.escape(lb)}（缺）</span>')
                     for lb, rx in checks)
                 if ok_all:
@@ -4698,7 +4698,7 @@ def _ck_zone_html():
     for zone, items in STAGE_ZONES.items():
         c = STAGE_ZONE_COLOR[zone]
         links = ' '.join(f'<a href="#step{n}">{n}·{H.escape(lb)}</a>' for n, lb in items)
-        cells.append(f'<div class="ck-zone" style="--zc:{c}"><div class="ck-zone-hd">{zone}</div>'
+        cells.append(f'<div class="ck-zone" style="--zc:{c}"><div class="ck-zone-hd">{re.sub(r'[\u2460-\u2473]', '', zone).strip()}</div>'
                      f'<div class="ck-zone-links">{links}</div></div>')
     chains = []
     for cname, cdesc, nodes in LINKAGE_CHAINS:
@@ -4740,7 +4740,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
     for n in range(start, end + 1):
         _, title, gate_text, meta = STEPS[n-1]
         # 步 26 状态以产物存在性回填（§5.2 步 26 口径，替代 or n==26 恒真强置——
-        # report_done 未写入通过标记轮曾无条件 ✅，产物缺失时 ✅ 即作假）
+        # report_done 未写入通过标记轮曾无条件 ✓，产物缺失时 ✓ 即作假）
         done = any(state.get(k) for k in meta.get('keys', [])) or (n == 26 and OUT.exists())
         ts = meta.get('ts_override') or next((fmt_ts(k) for k in meta.get('keys', []) if fmt_ts(k)), '')
         gate_mark = f'<span class="gmark">{GATE_BY_STEP[n]}</span>' if n in GATE_BY_STEP else ''
@@ -4760,7 +4760,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             # V8.17 §5.5 三红线（run15 复盘 F2）：非必采步的载荷全缺也挂黄标（审计契约=完成步任一载荷
             # 在位即可；run15 实测 9 步全缺静默呈现为「正常步」——降级在案≠达标，须可见）
             status += '<span class="gmark" style="background:#fef3c7;color:#b45309">载荷全缺（降级在案）</span>'
-        # 交付物维度 chip（§5.5 节奏双轨：机制✅不遮交付物缺）
+        # 交付物维度 chip（§5.5 节奏双轨：机制✓不遮交付物缺）
         _ast = _step_artifact_status(n)
         if _ast:
             _acls = 'background:#d1fae5;color:#047857' if _ast[0] == 'ok' else 'background:#fef3c7;color:#b45309'
@@ -4983,11 +4983,11 @@ def _readfirst_html() -> str:
         _gk = next((k for k in _gap_keys if _gap_keys[k] == _name), None)
         _has_gap = bool(_gk and state.get(_gk))
         if _ok and _has_gap:
-            _chips.append(f'<span class="rf-gate gap"><b>{H.escape(_name)}</b>✅ 通过（带缺口）</span>')
+            _chips.append(f'<span class="rf-gate gap"><b>{H.escape(_name)}</b>✓ 通过（带缺口）</span>')
             _gap_notes.append(f'{_name}：缺口已记录并在正文如实呈现（非全绿通过）')
         else:
             _chips.append(f'<span class="rf-gate {"ok" if _ok else "no"}"><b>{H.escape(_name)}</b>'
-                          f'{"✅ 通过" if _ok else "⏳ 未放行"}</span>')
+                          f'{"✓ 通过" if _ok else "⏳ 未放行"}</span>')
     _gap_line = (f'<p class="rf-gapnote">⚠ 带缺口通过的关卡：{"；".join(_gap_notes)}——'
                  '这不等于达标，详见第 3 章六域审计与第 4 章问题单。</p>' if _gap_notes else '')
     # 已批准绕过/缓期项（run23 用户裁定「不具备条件的直接绕过」）：从台账读事实，不猜。
@@ -5166,7 +5166,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 .ck-chain-nodes{{display:flex;flex-wrap:wrap;align-items:center;gap:6px}}
 .ck-node{{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--zc) 6%,var(--card));border:1px solid color-mix(in srgb,var(--zc) 25%,var(--border));border-radius:16px;padding:3px 10px;transition:all .15s}}
 .ck-node:hover{{background:color-mix(in srgb,var(--zc) 15%,var(--card));border-color:var(--zc)}}
-.ck-node-z{{font-size:11px;color:var(--surface);background:var(--zc);border-radius:8px;padding:0 5px;font-weight:600}}
+/* run23 用户指令「乱七八糟的图标都删掉」：节点编号贴片退役 */
+.ck-node-z{{display:none}}
 .ck-arrow{{color:var(--muted);font-size:14px;margin:0 2px;font-weight:300}}
 .st-linkline{{font-size:13px;color:var(--muted);margin:4px 0 0;padding:4px 8px;background:var(--bg);border-radius:6px}}
 .st-linkline a{{text-decoration:none;border-bottom:1px dotted currentColor}}
@@ -5388,7 +5389,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
     </div>
     {_gov_metrics_line()}
     <div class="hero-terms">名词速查：G1-G6=六道关卡 ｜ UAT=用户验收测试 ｜ AC=验收标准 ｜ RACI=责任分配矩阵 ｜ WIP=在制品 ｜ ISSUE/DISP=问题登记行/处置结论行<br>首过=关卡第一次就通过 ｜ 补过=被打回补齐后通过 ｜ 打回=没通过 ｜ 判词=关卡的结论文本（只认卡片结构化字段）｜ 幂等=重复提交只生效一次 ｜ 锚点=可按编号回查的凭证（提交号/卡号/事件号）｜ 问题单=全程记录每个问题的台账条目<br>姿态=本轮政策档（strict 零代偿／standard 现状+记账／demo 演示） ｜ 代偿=推演程序替体系兜底的越界动作（逐笔记台账） ｜ 净额=扣除代偿后的能力口径（判据满足面）<br>编号与简称：RFD-*=需求单编号 ｜ 任务号 DEV-*=开发、AN-*=分析、TEST-*=测试、INT-MERGE-*=集成合并、REL-*=发布登记 ｜ PAYCORE=支付核心、CHWX/CHALI=微信/支付宝渠道、MP=小程序 ｜ 系分=系统分析 ｜ IDE=集成开发环境 ｜ SMART=任务五要求（具体/可衡量/可达成/相关/有时限）</div>
-    <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div><div class="pb-dot"></div>' for _,_,_,_,c1,_ in PHASES[:-1])}<div class="pb-seg" style="background:{PHASES[-1][4]}"></div></div>
+    <div class="phase-bar">{''.join(f'<div class="pb-seg" style="background:{c1}"></div>' for _,_,_,_,c1,_ in PHASES)}</div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">{''.join(f'<span class="pb-label">{p[2]}</span>' for p in PHASES)}</div>
   </header>
 
@@ -5463,7 +5464,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   {closure_evidence_html()}
 
   <h2 class="section-hd" id="artifact-panorama">第 6 章 · 交付物全景矩阵（缺什么一目了然）</h2>
-  <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✅/缺（红）。{art_stat}。</p>
+  <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✓/缺（红）。{art_stat}。</p>
   {art_tbl}
   <p class="stat-note">{art_note_g5}</p>
 
@@ -5603,7 +5604,7 @@ for n, title, gate_text, meta in STEPS:
     done = any(state.get(k) for k in meta.get('keys', [])) or n == 26
     _buf.write('=' * 88 + f'\nSTEP {n}\n')
     _buf.write(f'TITLE: {title}\n')
-    _buf.write(f"META: {'✅' if done else '⬜'} {meta.get("actorText", "")}\n")
+    _buf.write(f"META: {'✓' if done else '⬜'} {meta.get("actorText", "")}\n")
     _buf.write(f"STORY: {meta["narrative"]}\n")
     e = STEP_ENTRIES.get(n)
     if e:
