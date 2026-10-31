@@ -64,7 +64,7 @@ export interface RouteCandidate {
 }
 
 export interface RouteDecision {
-  ok: boolean
+  routed: boolean
   model: string | null
   provider: string | null
   tier: RiskTier

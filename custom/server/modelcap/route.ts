@@ -41,7 +41,7 @@ function candidateOf(cell: CapabilityCell, policy: RiskPolicy): RouteCandidate {
 function fallbackDecision(request: RouteRequest, candidates: RouteCandidate[], reason: string): RouteDecision {
   if (request.risk === 'high') {
     return {
-      ok: false,
+      routed: false,
       model: null,
       provider: null,
       tier: request.risk,
@@ -53,7 +53,7 @@ function fallbackDecision(request: RouteRequest, candidates: RouteCandidate[], r
   }
   if (request.defaultModel) {
     return {
-      ok: true,
+      routed: true,
       model: request.defaultModel,
       provider: null,
       tier: request.risk,
@@ -64,7 +64,7 @@ function fallbackDecision(request: RouteRequest, candidates: RouteCandidate[], r
     }
   }
   return {
-    ok: false,
+    routed: false,
     model: null,
     provider: null,
     tier: request.risk,
@@ -98,7 +98,7 @@ export function routeModel(request: RouteRequest, matrix: CapabilityMatrix | nul
   if (qualified.length > 0) {
     const winner = qualified[0]
     return {
-      ok: true,
+      routed: true,
       model: winner.model,
       provider: winner.provider,
       tier: request.risk,

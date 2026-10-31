@@ -2,12 +2,14 @@
 paths:
   - docs/superpowers/specs/2026-10-31-model-resilience-hardening.md
   - docs/superpowers/specs/2026-10-31-prepush-push-range-fix.md
+  - docs/superpowers/specs/2026-11-01-k19-new-endpoint-response-shape.md
   - docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - runtime/**
   - runtime-manifest.json
   - custom/qgate/**
   - custom/server/modelcap/**
+  - custom/server/workitem/**
   - custom/server/clusterinspector/**
   - custom/server/faileroute/**
   - custom/__tests__/**
