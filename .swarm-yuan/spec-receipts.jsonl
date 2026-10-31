@@ -72,3 +72,5 @@
 {"at":"2026-10-31T14:16:19Z","spec":"docs/superpowers/specs/2026-10-31-superagent-domain-auth.md","receipt":"3e5d02b2048e4b008a007079155866e82682faa0","commit":"59573b910"}
 {"at":"2026-10-31T14:27:02Z","spec":"docs/superpowers/specs/2026-10-31-rsi-improvement-plan.md","receipt":"0f9c1c92cead41200cfd115a44f70194ea386293","commit":"955785959"}
 {"at":"2026-10-31T14:58:05Z","spec":"docs/superpowers/specs/2026-10-31-approval-proxy-dedup.md","receipt":"d980b280c97fd64db5b92f457c1545fd434c92bc","commit":"1cb6aff0e"}
+{"at":"2026-10-31T14:30:42Z","spec":"docs/superpowers/specs/2026-10-31-superagent-router.md","receipt":"d378f6e035f8eedf0aca07ccb3efa4c4a71140d2","commit":"1cb6aff0e"}
+{"at":"2026-10-31T15:04:49Z","spec":"docs/superpowers/specs/2026-10-31-superagent-router.md","receipt":"c384d17c450722447bbc99320edc8c1b5d89286f","commit":"ecc018043"}

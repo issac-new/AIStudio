@@ -603,6 +603,18 @@ DeepSeek Harness 团队的 super-agent 设计（`dsh-superagent-prototype` 文�
 （`ORCHESTRATOR_STRICT_POLICY=1` 才拒绝）；HumanGate 的角色白名单与自批拒绝分别由
 `HUMAN_GATE_DECIDER_ROLES` 与 `HUMAN_GATE_REQUIRE_HUMAN_DECIDER=1` 开启。
 
+**Router 能力在本仓的落法。** 不新设常驻 Router 会话：AIStudio 已有 `mention-dispatch`
+与 kanban dispatcher 两条派发链，第三条会互相抢占。上游 Router 真正缺的两件事落在
+orchestrator 域内——`evaluator.ts` 做语义评估（程序准入之后判断这条事件值不值得处理），
+`summarizer.ts` 做人类交互汇总（同一 Thread 的增量事件合成一条消息，Worker 不各自刷屏）。
+语义评估走既有 hermes gateway 会话（`POST /p/<profile>/api/sessions/<id>/chat`），
+三项配置 `ORCHESTRATOR_EVAL_PROFILE`/`ORCHESTRATOR_EVAL_BASE_URL`/`API_SERVER_KEY`
+缺任一项即判 `unavailable`；超时与排队不重发（该端点无幂等键，重发会双跑一轮）。
+
+汇总规则：时间窗默认 5 分钟；终态与阻塞事件保留任务标题，纯列变更只给计数；
+全部是列变更且无终态事件时静默。评估推进规则：只有源 `mode=auto` 且 `accept` 才把
+Trigger 置为 `routed`，`observe` 下只记 Decision。
+
 ## 5、端到端交付机制
 
 ### 5.1 从需求到运维的岗位接力

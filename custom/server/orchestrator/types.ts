@@ -136,3 +136,22 @@ export interface AdmitResult {
   strength: AuthStrength | null
   reason: string
 }
+
+/** 人类交互汇总（C 批）：同一 Thread 的增量事件合成一条面向人的消息。 */
+export interface Digest {
+  id: string
+  threadId: string
+  subscriber: string
+  body: string
+  eventCount: number
+  delivered: boolean
+  createdAt: number
+}
+
+/** 语义评估结果：verdict 与 A+B 的 Decision 词表一致；reasons 供审计。 */
+export interface SemanticVerdict {
+  verdict: DecisionVerdict
+  reasons: string[]
+  /** 模型自报置信度（0-1）；通道未给时为 null。 */
+  confidence: number | null
+}
