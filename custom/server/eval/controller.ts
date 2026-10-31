@@ -389,8 +389,7 @@ router.post('/sets/:id/dimensions', async (ctx) => {
   // enterprise-seed 分支，路由层旧白名单先拦——单测直调 labelSetDimensions 绕过
   // 路由，活体 API 才暴露。教训：两端词表必须同批同步）。
   if (backfill !== undefined && backfill !== 'redteam-seed' && backfill !== 'enterprise-seed') {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: [`backfill 只接受 'redteam-seed' | 'enterprise-seed'（收到：${backfill}）`] }
+    fail(ctx, 400, 'backfill 参数不合法', { problems: [`backfill 只接受 'redteam-seed' | 'enterprise-seed'（收到：${backfill}）`] })
     return
   }
   const result = labelSetDimensions(ctx.params.id, {
