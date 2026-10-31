@@ -88,6 +88,11 @@ if (args.includes('--manifest')) {
 }
 const filterArg = args.find(arg => !arg.startsWith('--'))
 const filter = filterArg ? new RegExp(filterArg) : null
+/** 每页结束后的额外停留毫秒（WALK_SETTLE_MS 覆盖；录屏/慢速走查用 600-800）。 */
+const SETTLE_MS = (() => {
+  const raw = Number(process.env.WALK_SETTLE_MS)
+  return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 150
+})()
 const visits = [
   ...manifest.routes.map(route => ({
     ...route,
@@ -176,7 +181,9 @@ try {
       await waitForSettled(page)
       await clearMasks(page)
       // currentRoute 更新后再让 Vue 完成本轮 DOM patch，避免截图落到上一页。
-      await page.waitForTimeout(150)
+      // WALK_SETTLE_MS 可调页面停留（2026-10-31 录屏轮）：默认 150ms；慢速走查/
+      // 实拍录屏用 600-800ms，避免亚秒级连跳把 WS 握手打断成 console 噪声。
+      await page.waitForTimeout(SETTLE_MS)
     } catch (error) {
       const actual = `${await currentRoute(page)} @ ${await page.evaluate(() => location.hash)}`
       led.defect(`导航 ${visit.label}`, `${safeText(error)} | 当前 ${actual}`, 'P1')

@@ -33,6 +33,7 @@
    - `walk-writes.mjs` 支持 `API_TOKEN` 直给 JWT。
    - `ide-workspace-verify.mjs` 深链断言由固定 8/12s 睡眠改为条件等待（轮询 store 至 taskWorkspace 就绪，上限 25s；仍然固定预算判失败），消除冷启动/负载下的假红；失败时输出完整 store 快照。
    - `harness.mjs` 支持 `WALK_VIDEO_DIR`：设置后整段走查由 Playwright 实拍录屏（webm，1560×940），用于全路由走查的录屏留证（产物落仓外）。
+   - `walk-routes.mjs` 支持 `WALK_SETTLE_MS`：每页渲染后的额外停留（默认 150ms，录屏/慢速走查用 600-800ms），避免亚秒级连跳打断 WebSocket 握手产生 console 噪声。
 
 7. **IDE 简报上下文对 docs/ 的无条件探测（404 噪声）**（A 类，`custom/client/ide/views/IdeShell.vue` + `custom/client/ide/utils/briefing-context.ts`）
    - 现象：修复后全路由走查在 `/app/eval`、`/desktop-pet` 捕获 `GET /api/studio/files/list?path=docs&root=…/coding-agent/workspace/default/global → 404`。
