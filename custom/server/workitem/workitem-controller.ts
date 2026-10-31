@@ -7,6 +7,7 @@
  * 挂载：patches/ 追加 bootstrap/routes.ts（import + app.use，patch 590 同款范式）。
  */
 import Router from '@koa/router'
+import { fail, ok } from '../lib/http'
 import { buildPanorama } from './panorama'
 
 const router = new Router({ prefix: '/api/hermes/workitem' })
@@ -14,17 +15,15 @@ const router = new Router({ prefix: '/api/hermes/workitem' })
 router.get('/:taskId/panorama', async (ctx) => {
   const taskId = ctx.params.taskId?.trim() ?? ''
   if (!taskId || taskId.length > 128) {
-    ctx.status = 400
-    ctx.body = { ok: false, error: 'taskId 非法（非空且 ≤128 字符）' }
+    fail(ctx, 400, 'taskId 非法（非空且 ≤128 字符）')
     return
   }
   try {
     const panorama = await buildPanorama(taskId)
-    ctx.body = { ok: true, panorama }
+    ok(ctx, { panorama })
   } catch (e) {
     // 聚合器内部各面已 fail-soft；此处兜底的是未预期异常（如实 500 不吞）
-    ctx.status = 500
-    ctx.body = { ok: false, error: `全景汇聚失败：${(e as Error).message}` }
+    fail(ctx, 500, `全景汇聚失败：${(e as Error).message}`)
   }
 })
 

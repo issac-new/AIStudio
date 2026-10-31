@@ -22,7 +22,7 @@ describe('modelcap route', () => {
       { model: 'weak-b', passed: 8, total: 10 },
     ])
     const decision = routeModel({ risk: 'high', category: 'coding', difficulty: 'P1' }, matrix)
-    expect(decision.ok).toBe(true)
+    expect(decision.routed).toBe(true)
     expect(decision.model).toBe('strong-a')
     expect(decision.unknown).toBe(false)
     expect(decision.requiresHuman).toBe(false)
@@ -34,7 +34,7 @@ describe('modelcap route', () => {
       { risk: 'high', category: 'coding', difficulty: 'P1', defaultModel: 'strong-a' },
       matrix,
     )
-    expect(decision.ok).toBe(false)
+    expect(decision.routed).toBe(false)
     expect(decision.model).toBeNull()
     expect(decision.requiresHuman).toBe(true)
     expect(decision.unknown).toBe(true)
@@ -43,7 +43,7 @@ describe('modelcap route', () => {
   it('high risk does not borrow evidence from another difficulty', () => {
     const matrix = matrixOf([{ model: 'strong-a', passed: 19, total: 20, difficulty: 'P2' }])
     const decision = routeModel({ risk: 'high', category: 'coding', difficulty: 'P1' }, matrix)
-    expect(decision.ok).toBe(false)
+    expect(decision.routed).toBe(false)
     expect(decision.requiresHuman).toBe(true)
   })
 
@@ -52,7 +52,7 @@ describe('modelcap route', () => {
       { risk: 'low', category: 'coding', defaultModel: 'baseline' },
       null,
     )
-    expect(decision.ok).toBe(true)
+    expect(decision.routed).toBe(true)
     expect(decision.model).toBe('baseline')
     expect(decision.unknown).toBe(false)
     expect(decision.reason).toContain('回落默认模型')
@@ -60,7 +60,7 @@ describe('modelcap route', () => {
 
   it('medium risk without evidence and without default needs a human', () => {
     const decision = routeModel({ risk: 'medium', category: 'review' }, null)
-    expect(decision.ok).toBe(false)
+    expect(decision.routed).toBe(false)
     expect(decision.requiresHuman).toBe(true)
     expect(decision.unknown).toBe(true)
   })
@@ -71,7 +71,7 @@ describe('modelcap route', () => {
       at: new Date(NOW - 60 * DAY).toISOString(),
     }])
     const decision = routeModel({ risk: 'high', category: 'coding', difficulty: 'P1' }, matrix)
-    expect(decision.ok).toBe(false)
+    expect(decision.routed).toBe(false)
     expect(decision.candidates[0]?.stale).toBe(true)
     expect(decision.candidates[0]?.qualifies).toBe(false)
   })
