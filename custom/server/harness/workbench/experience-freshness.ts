@@ -57,3 +57,71 @@ export function experienceFreshness(
   const band: FreshnessBand = ageDays < FRESH_FRESH_DAYS ? 'fresh' : ageDays < FRESH_AGING_DAYS ? 'aging' : 'stale'
   return { confidenceScore, ageDays: Number(ageDays.toFixed(1)), band, anchor, anchoredAt }
 }
+
+// ---- D11（2026-10-31 RSI P2 批）：记忆压缩/遗忘策略 ----
+// 来源：上下文工程综述（arXiv 2507.13334）「记忆只增不减→长期噪声源」与
+// memory-as-action 思想——保留哪条记忆应由证据（再验证/采纳回流）决定，
+// 而非自然堆积。本仓的经验库即 harness 记忆面：三档状态机已有
+// （candidate/adopted/retired），缺的是「何时该再验证、何时该遗忘」的
+// 策略层。本层纯派生不落盘；执行走既有 setExperienceStatus（人裁决）。
+
+/** 孤儿候选退役线（天）：candidate 从未采纳且超过此龄 → 建议退役。 */
+export const ORPHAN_CANDIDATE_DAYS = 14
+
+export interface MemoryPolicyItem {
+  id: string
+  statement: string
+  ageDays: number
+  /** stale 采纳=需再验证；orphan 候选=建议退役。 */
+  action: 'revalidate' | 'retire'
+}
+
+export interface MemoryConsolidationPolicy {
+  staleAdopted: MemoryPolicyItem[]
+  orphanCandidates: MemoryPolicyItem[]
+  counts: { adopted: number; candidate: number; retired: number }
+  hint: string
+}
+
+/**
+ * 记忆压缩/遗忘策略（纯函数，视图现算）：
+ * - staleAdopted＝status=adopted 且保鲜档 stale（≥90 天无再验证）→ 再验证建议
+ *   （晋级引用经验即刷新 lastValidatedAt，HP-7 既有通道）；
+ * - orphanCandidates＝status=candidate 且龄超 ORPHAN_CANDIDATE_DAYS → 退役建议
+ *   （「可能有用」不是保留依据——无证据的记忆按遗忘处理）。
+ */
+export function memoryConsolidationPolicy(
+  experiences: Array<{
+    id: string
+    statement: string
+    status: 'candidate' | 'adopted' | 'retired'
+    confidence: 'low' | 'medium' | 'high'
+    createdAt: string
+    lastValidatedAt?: string
+  }>,
+  now: Date = new Date(),
+): MemoryConsolidationPolicy {
+  const staleAdopted: MemoryPolicyItem[] = []
+  const orphanCandidates: MemoryPolicyItem[] = []
+  const counts = { adopted: 0, candidate: 0, retired: 0 }
+  for (const e of experiences) {
+    if (e.status === 'adopted') counts.adopted += 1
+    else if (e.status === 'candidate') counts.candidate += 1
+    else counts.retired += 1
+    const fresh = experienceFreshness(e, now)
+    if (e.status === 'adopted' && fresh.band === 'stale') {
+      staleAdopted.push({ id: e.id, statement: e.statement, ageDays: fresh.ageDays, action: 'revalidate' })
+    } else if (e.status === 'candidate' && fresh.ageDays >= ORPHAN_CANDIDATE_DAYS) {
+      orphanCandidates.push({ id: e.id, statement: e.statement, ageDays: fresh.ageDays, action: 'retire' })
+    }
+  }
+  const parts: string[] = []
+  if (staleAdopted.length) parts.push(`${staleAdopted.length} 条采纳经验超 90 天未再验证（stale）——建议在下个提案中引用以刷新，或人工复核后退役`)
+  if (orphanCandidates.length) parts.push(`${orphanCandidates.length} 条候选经验超 ${ORPHAN_CANDIDATE_DAYS} 天未被采纳——「可能有用」不是保留依据，建议退役`)
+  return {
+    staleAdopted,
+    orphanCandidates,
+    counts,
+    hint: parts.length ? parts.join('；') : '记忆面健康：无 stale 采纳、无孤儿候选',
+  }
+}

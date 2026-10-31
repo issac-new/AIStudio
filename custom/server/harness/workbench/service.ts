@@ -12,7 +12,8 @@ import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, annealedEditBudget, behaviorContrast, candidateDiversity,
   composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
   findBenchmarkLeakage, findGraderMarkers, findGraderMarkersInPath, hypothesisRetries,
-  leakageBlockers, maxEditCount, paretoReportOf, probeCost, proposalArchive, pruneSignal,
+  leakageBlockers, maxEditCount, paretoReportOf, probeCost, proposalArchive,
+  proposerEvolutionHistory, deletionProposalTemplate, pruneSignal,
   rsiConfig, sha256, stallDetection, submitReadiness,
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
@@ -24,7 +25,7 @@ import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
 import { nextId, mutateStore, readStore } from './store'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
-import { experienceFreshness, type ExperienceFreshness } from './experience-freshness'
+import { experienceFreshness, memoryConsolidationPolicy, type ExperienceFreshness } from './experience-freshness'
 import type {
   BehaviorContrast, Champion, EditableSurface, EvolutionReport, Experience, ExperienceStatus,
   ConstraintCheck, GateBlocker, ParetoReport, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
@@ -208,6 +209,8 @@ export function overview(): {
   evolution: EvolutionReport
   /** 垫脚石档案（D3）：被拒/回滚提案的最佳读数投影，供提案端复用。 */
   archive: ArchiveSteppingStone[]
+  /** 记忆压缩/遗忘策略（D11）：stale 采纳再验证＋孤儿候选退役建议（纯派生）。 */
+  memoryPolicy: import('./experience-freshness').MemoryConsolidationPolicy
   meta: { note: string; source: string; boundary: string }
 } {
   const store = readStore()
@@ -248,6 +251,7 @@ export function overview(): {
     experiences,
     evolution: evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions),
     archive: proposalArchive(store.proposals),
+    memoryPolicy: memoryConsolidationPolicy(store.experiences),
     meta: {
       note: '候选、探测、组合、冠军四段闭环；探测证据只来自 Eval Studio 真实运行。',
       source: 'HERMES_HOME 八面产物 + ~/.hermes-web-ui/harness-workbench/workbench.json + Eval Studio 运行。',
@@ -560,6 +564,10 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     .filter((p) => p.status === 'rejected' || p.status === 'rolled_back')
     .slice(-8)
     .map((p) => `- [${p.status}] ${p.hypothesis.slice(0, 160)}`)
+  // D7（2026-10-31 P2 批）：全历史注入——冠军（含增益）/拒绝（含理由）/回滚（含理由）
+  const history = proposerEvolutionHistory(store.proposals, store.champions, input.surfaceKey)
+  // D10（2026-10-31 P2 批）：剪枝命中时给删除型提案模板（替代一句「优先做减法」）
+  const deletion = deletionProposalTemplate(store.proposals, input.surfaceKey, cfg)
   const adoptedExperiences = store.experiences
     .filter((e) => e.status === 'adopted' && (e.surfaceKey === null || e.surfaceKey === input.surfaceKey))
     .slice(0, 3)
@@ -584,9 +592,11 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     '当前基线文件内容：',
     basePreview,
     '',
-    `该面进化状态：已采纳 ${round} 轮（编辑预算 b_t=${editBudget}，本轮起草改动文件数必须 ≤ ${editBudget}）；${stalled ? '搜索停滞（连续提案无采纳，考虑换思路）；' : ''}${prune ? '近期探测无正增益，优先考虑做减法（删无贡献的机制）；' : ''}该面提案总数 ${mine.length}。`,
+    `该面进化状态：已采纳 ${round} 轮（编辑预算 b_t=${editBudget}，本轮起草改动文件数必须 ≤ ${editBudget}）；${stalled ? '搜索停滞（连续提案无采纳，考虑换思路）；' : ''}该面提案总数 ${mine.length}。`,
+    `\n【该面进化全史（D7）】${history.summary}\n${history.entries.length ? history.entries.map((e) => `- [${e.kind === 'adopted' ? '已采纳' : e.kind === 'rejected' ? '被拒' : '已回滚'}] ${e.proposalId}「${e.title}」：${e.detail}`).join('\n') : '（该面尚无历史提案——首提案属结构性探索，带内增益可豁免）'}\n纪律：被拒/回滚假设禁止换皮重提；低分祖先常是垫脚石，可显式改造其思路（注明来源 proposal id）。`,
     adoptedExperiences.length ? `\n已采纳经验（可参考）：\n${adoptedExperiences.join('\n')}` : '',
-    failedHypotheses.length ? `\n同面已失败假设（禁止换皮重提）：\n${failedHypotheses.join('\n')}` : '',
+    deletion.suggested ? `\n${deletion.scaffold}` : '',
+    (!deletion.suggested && failedHypotheses.length) ? `\n同面已失败假设（禁止换皮重提）：\n${failedHypotheses.join('\n')}` : '',
     '',
     '起草纪律：',
     '1. 通用改进——对一类任务普遍有效，禁止引用任何具体评测任务、题目内容或答案（泄漏批评者会拦）。',

@@ -217,6 +217,9 @@ export interface ImproveCopy {
     constraintBadStatus: string
     constraintEmpty: string
     archiveTitle: string
+    memoryPolicyTitle: string
+    memoryRevalidate: string
+    memoryRetire: string
   noiseRunIds: string
   noiseCalibrate: string
   noiseCalibrated: string
@@ -449,6 +452,9 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     constraintBadStatus: '约束状态非法（只接受 pass/fail/unknown）：{line}',
     constraintEmpty: '至少需要一条约束检查',
     archiveTitle: '垫脚石档案（被拒/回滚提案）',
+    memoryPolicyTitle: '记忆整理（D11）',
+    memoryRevalidate: '需再验证',
+    memoryRetire: '建议退役',
     noiseRunIds: '基线运行 ID（≥2 条，逗号或换行分隔）',
     noiseCalibrate: '标定噪声带',
     noiseCalibrated: '已标定',
@@ -679,6 +685,9 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     constraintBadStatus: 'Invalid constraint status (pass/fail/unknown only): {line}',
     constraintEmpty: 'At least one constraint check is required',
     archiveTitle: 'Stepping-stone archive (rejected/rolled-back)',
+    memoryPolicyTitle: 'Memory consolidation (D11)',
+    memoryRevalidate: 'needs revalidation',
+    memoryRetire: 'retire suggested',
     noiseRunIds: 'Baseline run IDs (≥2, comma or newline separated)',
     noiseCalibrate: 'Calibrate noise band',
     noiseCalibrated: 'Calibrated',

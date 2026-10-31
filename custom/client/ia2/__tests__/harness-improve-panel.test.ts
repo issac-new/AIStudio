@@ -107,6 +107,12 @@ const overview = {
     unexercised: ['memory', 'plugins'],
   },
   champions: [],
+  memoryPolicy: {
+    staleAdopted: [{ id: 'exp-old', statement: '半年前采纳', ageDays: 210, action: 'revalidate' }],
+    orphanCandidates: [{ id: 'exp-orphan', statement: '老候选', ageDays: 30, action: 'retire' }],
+    counts: { adopted: 1, candidate: 2, retired: 0 },
+    hint: '1 条采纳经验超 90 天未再验证（stale）；1 条候选经验超 14 天未被采纳',
+  },
   archive: [{
     proposalId: 'hw-000', surfaceKey: 'system_prompt', title: '旧假设', hypothesis: '收紧格式约束可减返工',
     status: 'rejected', bestPassAt1: 0.55, bestDelta: 0.05, updatedAt: '2026-09-01T00:00:00Z',
@@ -419,5 +425,26 @@ describe('RSI 二批：反事实/等预算输入、约束录入、垫脚石档�
     const w2 = mount(HarnessImprovePanel, )
     await flushPromises()
     expect(w2.find('[data-testid="hi-archive"]').exists()).toBe(false)
+  })
+})
+
+// D11（2026-10-31 RSI P2 批）：记忆整理面板块。
+describe('D11 记忆整理块', () => {
+  it('stale/orphan 双列渲染（含天数与建议动作）；健康面不渲染', async () => {
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    const block = w.find('[data-testid="hi-memory-policy"]')
+    expect(block.exists()).toBe(true)
+    expect(w.find('[data-testid="hi-memory-stale-exp-old"]').exists()).toBe(true)
+    expect(w.find('[data-testid="hi-memory-orphan-exp-orphan"]').exists()).toBe(true)
+    expect(block.text()).toContain('需再验证')
+    expect(block.text()).toContain('建议退役')
+    api.fetchWorkbenchOverview.mockResolvedValue({
+      ...overview,
+      memoryPolicy: { staleAdopted: [], orphanCandidates: [], counts: overview.memoryPolicy.counts, hint: '记忆面健康' },
+    })
+    const w2 = mount(HarnessImprovePanel, )
+    await flushPromises()
+    expect(w2.find('[data-testid="hi-memory-policy"]').exists()).toBe(false)
   })
 })

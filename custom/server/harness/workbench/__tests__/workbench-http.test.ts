@@ -554,6 +554,38 @@ describe('RRSI 跟进批 HTTP', () => {
     expect(Array.isArray(overview.body.archive)).toBe(true)
   })
 
+  it('RSI P2：起草 prompt 含 D7 进化全史与 D10 删除模板（剪枝命中时）；overview 含 memoryPolicy', async () => {
+    const { suggestProposal } = await import('../service')
+    const captured: string[] = []
+    const captureCli = (async (_argv: string[], prompt: string) => {
+      captured.push(prompt)
+      return { ok: true, stdout: '{"title":"删除计划","hypothesis":"删无贡献段","content":"# 删除计划：SOUL\\n- 锚点A｜基线原生｜零增益｜冗余"}' }
+    }) as never
+    // 空面：无历史→首提案权衡提示；无剪枝→无模板
+    await suggestProposal({ surfaceKey: 'memory', cli: captureCli })
+    expect(captured[0]).toContain('该面进化全史（D7）')
+    expect(captured[0]).toContain('首提案属结构性探索')
+    expect(captured[0]).not.toContain('删除型提案模板')
+    // 造一个被拒提案（含裁决理由）＋零增益记录 → D7 理由入 prompt
+    const created = await post('/api/harness/workbench/proposals', {
+      title: '旧思路', hypothesis: 'h', surfaceKey: 'memory',
+      evidenceRefs: ['task:t1'], variants: [{ label: 'a', content: 'A' }],
+    })
+    expect(created.status).toBe(200)
+    const id = created.body.proposal.id
+    expect((await post(`/api/harness/workbench/proposals/${id}/baseline`, { evalRunId: 'run-base' })).status).toBe(200)
+    expect((await post(`/api/harness/workbench/proposals/${id}/submit`, {})).status).toBe(200)
+    await post(`/api/harness/workbench/proposals/${id}/decide`, { decision: 'reject', actor: 'r', note: '成本超配额' })
+    await suggestProposal({ surfaceKey: 'memory', cli: captureCli })
+    expect(captured[1]).toContain('成本超配额')
+    expect(captured[1]).toContain('禁止换皮重提')
+    // overview：memoryPolicy 派生可见
+    const overview = await get('/api/harness/workbench/overview')
+    expect(overview.status).toBe(200)
+    expect(overview.body.memoryPolicy).toBeTruthy()
+    expect(typeof overview.body.memoryPolicy.hint).toBe('string')
+  })
+
   it('约束记录校验：空检查 / 非法 status / 重复 id → 400', async () => {
     const composed = await createSubmittedApproved()
     const empty = await post(`/api/harness/workbench/proposals/${composed.id}/constraints`, { actor: 'reviewer', checks: [] })
