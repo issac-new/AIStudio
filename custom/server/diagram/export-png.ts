@@ -16,6 +16,19 @@ export interface DiagramExportResult {
 
 const TIMEOUT_MS = 60_000
 
+/**
+ * 子进程超时预算：显式 options.timeoutMs 优先；否则默认 60s，允许
+ * DIAGRAM_EXPORT_TIMEOUT_MS 覆盖（2026-10-31 全功能回归：全量 970 文件并行时
+ * Chromium 启动/渲染被放大约 15x，产品默认 60s 与测试 90s 预算口径不一致，
+ * 单跑 11.7s 的导出在全量并行下偶发 60s 超时；测试以 env 放宽到预算内，
+ * 产品默认保持不变）。
+ */
+function exportTimeoutMs(override?: number): number {
+  if (override !== undefined) return override
+  const raw = Number(process.env.DIAGRAM_EXPORT_TIMEOUT_MS)
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : TIMEOUT_MS
+}
+
 export function exportScriptPath(root: string = overlayRoot()): string {
   return join(root, 'scripts', 'diagram-export-png.mjs')
 }
@@ -41,14 +54,15 @@ export function runExportPng(src: string, options: ExportOptions = {}): Promise<
       return
     }
     const scale = options.scale ?? 2
+    const timeoutMs = exportTimeoutMs(options.timeoutMs)
     execFile(
       process.execPath,
       [script, src, out, String(scale)],
-      { timeout: options.timeoutMs ?? TIMEOUT_MS, maxBuffer: 1024 * 1024 },
+      { timeout: timeoutMs, maxBuffer: 1024 * 1024 },
       (error, stdout, stderr) => {
         const durationMs = Date.now() - started
         if (error?.killed || (error && /timed out/i.test(error.message))) {
-          resolvePromise({ ok: false, runnerError: `导出超时（${options.timeoutMs ?? TIMEOUT_MS}ms）`, durationMs })
+          resolvePromise({ ok: false, runnerError: `导出超时（${timeoutMs}ms）`, durationMs })
           return
         }
         if (error) {

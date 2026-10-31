@@ -1,7 +1,7 @@
 // overlay/custom/server/loop/engine/__tests__/git-sos.test.ts
 // Git 冲突 SOS 降级（aipaydev 缺口 4 决策层）直测：冲突分类、重试升级、
 // Leader 模式回滚、执行分支的可观测副作用（日志/不抛）。
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { detectConflictType, evaluateSos, executeSosAction, SosLevel, porcelainConflictType, sosAdvisoryForConflicts } from '../git-sos'
 
 describe('git-sos 冲突降级', () => {
@@ -37,14 +37,14 @@ describe('git-sos 冲突降级', () => {
     expect(d.details).toContain('git merge --abort')
   })
 
-  it('executeSosAction 各分支不抛异常（降级决策安全执行）', async () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    await executeSosAction(evaluateSos('content', 0, false))
-    await executeSosAction(evaluateSos('content', 1, true))
-    await executeSosAction(evaluateSos('semantic', 0, false))
-    await executeSosAction({ level: SosLevel.INFO, action: 'CONTINUE', message: 'noop' })
-    expect(logSpy).toHaveBeenCalledTimes(3) // ABORT/ROLLBACK/ESCALATE 各有日志，CONTINUE 无
-    logSpy.mockRestore()
+  it('未实现的破坏性动作显式报错（fail-loud，不再静默成功）', async () => {
+    const abort = evaluateSos('content', 0, false)
+    const rollback = evaluateSos('content', 1, true)
+    const escalate = evaluateSos('semantic', 0, false)
+    await expect(executeSosAction(abort)).rejects.toMatchObject({ code: 'sos_action_not_implemented' })
+    await expect(executeSosAction(rollback)).rejects.toMatchObject({ code: 'sos_action_not_implemented' })
+    await expect(executeSosAction(escalate)).rejects.toMatchObject({ code: 'sos_action_not_implemented' })
+    await expect(executeSosAction({ level: SosLevel.INFO, action: 'CONTINUE', message: 'noop' })).resolves.toBeUndefined()
   })
 })
 

@@ -32,6 +32,16 @@ export interface ArchRule {
 export interface RuleCheckOptions {
   /** 上游依赖状态查询（id → status；null=任务不存在或无法查询）。缺省时规则 001 不做阻断判定 */
   getTaskStatus?: (taskId: string) => Promise<string | null>
+  /**
+   * 本次派发的目标负责人（assignTask 的 profile 参数）。规则 004 的配额对象是
+   * 「即将接单的人」，不是任务派发前的旧 assignee——缺省回落 task.assignee。
+   */
+  targetAssignee?: string | null
+  /**
+   * 负责人当前进行中（running）任务数查询。缺省时规则 004 如实跳过（不把
+   * 「没查」伪装成「没超」）；查询失败（null/抛错）按 fail-soft 不误拦派发。
+   */
+  getRunningTaskCount?: (assignee: string) => Promise<number | null>
 }
 
 function parseBody(task: ArchTask): Record<string, any> {
@@ -162,20 +172,36 @@ export const RULE_CONCURRENT_QUOTA: ArchRule = {
     return true
   },
   action: 'BLOCK',
-  executor: async (task: ArchTask): Promise<LoopAction> => {
-    // TODO: 查询该 assignee 当前进行中的任务数
-    const currentRunning = 0 // await getRunningTaskCount(task.assignee)
+  executor: async (task: ArchTask, options: RuleCheckOptions = {}): Promise<LoopAction> => {
     const maxConcurrent = 3
+    const assignee = (options.targetAssignee?.trim() || task.assignee?.trim()) ?? ''
+    // 派发目标未知时不猜配额对象（无 assignee 的任务由规则 002/派发链自行约束）。
+    if (!assignee) return { type: 'CONTINUE', message: '无负责人，规则 004 跳过校验', taskId: task.id }
+    const query = options.getRunningTaskCount
+    if (!query) {
+      // 无查询通道：如实跳过，不把「没查」伪装成「没超」。
+      return { type: 'CONTINUE', ruleId: 'arch-rule-004', message: '未注入并发计数查询，规则 004 跳过校验', taskId: task.id }
+    }
+    let currentRunning: number | null = null
+    try {
+      currentRunning = await query(assignee)
+    } catch {
+      currentRunning = null
+    }
+    // 查询失败 fail-soft：配额是治理约束不是安全边界，不能因读不到计数误拦派发。
+    if (currentRunning === null || !Number.isFinite(currentRunning)) {
+      return { type: 'CONTINUE', ruleId: 'arch-rule-004', message: '并发计数不可读，规则 004 跳过校验', taskId: task.id }
+    }
     if (currentRunning >= maxConcurrent) {
       return {
         type: 'BLOCKED_BY_POLICY',
         policy: BlockPolicyCategory.QUOTA,
         ruleId: 'arch-rule-004',
-        message: `${task.assignee} 已有 ${currentRunning} 个进行中任务，达到并发上限 ${maxConcurrent}`,
+        message: `${assignee} 已有 ${currentRunning} 个进行中任务，达到并发上限 ${maxConcurrent}`,
         taskId: task.id,
       }
     }
-    return { type: 'CONTINUE' }
+    return { type: 'CONTINUE', ruleId: 'arch-rule-004', taskId: task.id }
   },
 }
 

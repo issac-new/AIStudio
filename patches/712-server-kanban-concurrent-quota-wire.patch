@@ -1,0 +1,18 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -919,6 +919,14 @@
+       const verdict = await evaluateRules(current, {
+         // 依赖状态查询注入（规则 001 需要；custom 树禁 import upstream，只能由调用方提供）
+         getTaskStatus: async (depId: string) => (await getTask(depId, opts))?.task?.status ?? null,
++        // 并发配额查询注入（规则 004，2026-10-31 全功能回归接线）：配额对象是本次
++        // 派发目标 profile，不是任务派发前的旧 assignee；listTasks 走 CLI 按
++        // status/assignee 过滤，查询失败由规则 fail-soft 跳过（不误拦派发）。
++        targetAssignee: profile,
++        getRunningTaskCount: async (assignee: string) => {
++          const running = await listTasks({ board: opts?.board, status: 'running', assignee })
++          return running.filter(t => (t.assignee ?? null) === assignee).length
++        },
+       })
+       if (verdict && verdict.type === 'BLOCKED_BY_POLICY') {
+         throw new Error(`BLOCKED_BY_POLICY: ${verdict.message}（rule=${verdict.ruleId ?? 'n/a'}）——派发熔断，解除规则违例后重试`)

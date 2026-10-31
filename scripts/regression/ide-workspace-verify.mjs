@@ -59,7 +59,15 @@ try {
       await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})
     }
     await page.waitForSelector('.ide-shell', { timeout: 30000 }).catch(() => {})
-    await page.waitForTimeout(round === 1 ? 12000 : 8000)
+    // 条件等待（2026-10-31 全功能回归）：固定 8/12s 睡眠在冷启动/负载下假红
+    // （首跑 5/11、复跑 11/11 实锤）。轮询 store 至任务与工作区就绪即继续，
+    // 上限 25s 与 vitest 预算无关；超时仍按失败记录（不降级判据）。
+    await page.waitForFunction((task) => {
+      const pinia = document.querySelector('#app')?.__vue_app__?.config?.globalProperties?.$pinia
+      const ide = pinia?._s?.get('ide')
+      return ide?.activeTaskId === task && Boolean(ide?.taskWorkspace?.path)
+    }, TASK, { timeout: 25_000 }).catch(() => {})
+    await page.waitForTimeout(300)
     const snap = await page.evaluate((t) => {
       const pinia = document.querySelector('#app')?.__vue_app__?.config?.globalProperties?.$pinia
       const ide = pinia?._s?.get('ide')
@@ -79,9 +87,9 @@ try {
     const pathOk = String(snap.wsPath || '').length > 0
     const rootAnchored = String(snap.storeRoot || '') === String(snap.wsPath || '')
     rec(`round${round} 深链解析（任务绑定/物化/板号）`, snap.activeTask === TASK && snap.materialized === true && pathOk && Boolean(snap.board),
-      `board=${snap.board}`)
+      `board=${snap.board} materialized=${snap.materialized} wsPath=${snap.wsPath}`)
     rec(`round${round} 工作区切根（origin=task + storeRoot=任务工作区）`, snap.wsOrigin === 'task' && rootAnchored,
-      `origin=${snap.wsOrigin}`)
+      `origin=${snap.wsOrigin} storeRoot=${snap.storeRoot} wsPath=${snap.wsPath}`)
     rec(`round${round} 简报抽屉自动展开且含任务`, snap.drawerOpen && snap.drawerHasTask, '')
   }
 

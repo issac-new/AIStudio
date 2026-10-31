@@ -1,6 +1,6 @@
 // diagram PNG 导出测试（spec 项4）：真实 playwright 导出落盘 + 端点正反例。
 // 真实工具链先行（§5.1）：不 mock 浏览器；宿主无浏览器时 runnerError 语义另测。
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createServer } from 'node:http'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -40,6 +40,10 @@ let noSvg = ''
 const prevHermesHome = process.env.HERMES_HOME
 
 beforeAll(() => {
+  // 全量并行（970 文件）时 Chromium 启动/渲染被放大约 15x：产品默认 60s 超时与
+  // 测试 90s 预算口径不一致（单跑 11.7s 的导出偶发 60s 超时）。测试内放宽
+  // 子进程预算到 120s（仍在单测 90s 之外由 vitest 自身裁决），产品默认不变。
+  vi.stubEnv('DIAGRAM_EXPORT_TIMEOUT_MS', '120000')
   root = mkdtempSync(join(tmpdir(), 'diagram-export-'))
   hermesHome = join(root, 'hermes')
   process.env.HERMES_HOME = hermesHome
@@ -51,6 +55,7 @@ beforeAll(() => {
 })
 
 afterAll(() => {
+  vi.unstubAllEnvs()
   if (prevHermesHome === undefined) delete process.env.HERMES_HOME
   else process.env.HERMES_HOME = prevHermesHome
   rmSync(root, { recursive: true, force: true })

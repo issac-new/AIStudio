@@ -130,7 +130,19 @@ page.on('response', response => {
 
 // 生产链无 dev 自动登录：WALK_LOGIN=user:pass 时经同源 /api/auth/login 换 JWT 注入
 // localStorage（与 dev 链 devAutoLogin 同键），再重载进壳。dev 链不设此变量即原行为。
+// WALK_TOKEN=<JWT> 时直接注入 localStorage（与 dev 自动登录/生产登录同键），
+// 供已铸 super_admin 会话的回归轮使用；优先级高于 WALK_LOGIN。
 async function ensureLogin() {
+  const walkToken = process.env.WALK_TOKEN?.trim()
+  if (walkToken) {
+    await page.evaluate((t) => {
+      localStorage.setItem('hermes_api_key', t)
+      localStorage.setItem('hermes_active_profile_name', 'default')
+    }, walkToken)
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(1500)
+    return
+  }
   const login = process.env.WALK_LOGIN
   if (!login || !login.includes(':')) return
   const [username, password] = login.split(/:(.+)/)
@@ -191,6 +203,10 @@ try {
         msgs: msgs.slice(0, 5),
         loading: text.includes('AIStudio 加载中'),
         unauthenticated: text.includes('未认证'),
+        // 错误态文案启发式（2026-10-31 全功能回归）：白屏/空态判据之外，页面显示
+        // 「加载失败/不可用/未授权」也要有人看见。记 WARN 不作缺陷（有合法空态）。
+        suspicious: [...new Set((text.match(/(加载失败|加载不出来|请求失败(?!后)|服务不可用|出错了|未授权|无权限|无法加载|not available|failed to load)/gi) || []))]
+          .slice(0, 4),
         hasVisual,
         contentLen,
         url: location.hash,
@@ -222,6 +238,7 @@ try {
     }
     if (probe.overflow) led.defect(`${visit.label} 横向溢出`, `scrollWidth > innerWidth @ ${probe.url}`, 'P2')
     if (probe.rawKeys.length) led.defect(`${visit.label} 裸 i18n 键`, probe.rawKeys.join(','), 'P2')
+    if (probe.suspicious.length) led.record(`${visit.label} 错误态文案`, true, probe.suspicious.join(' / '), 'WARN')
 
     const errs = consoleErrors.filter(e => !e.includes('ResizeObserver') && !e.includes('Download the Vue Devtools'))
     // 资源加载错误没有 URL 或堆栈，网络响应用于判责；console 只保留真正的应用异常。
@@ -241,7 +258,10 @@ try {
     if (badReq.length) {
       led.defect(`${visit.label} 失败请求`, badReq.slice(0, 4).map(r => `${r.status} ${r.url}`).join(' | '), 'P2')
     }
-    if (lateReq.length) led.record(`${visit.label} 跨页延迟请求`, true, `${lateReq.length} 条，不归入本页缺陷`, 'WARN')
+    if (lateReq.length) {
+      led.record(`${visit.label} 跨页延迟请求`, true,
+        `${lateReq.length} 条，不归入本页缺陷` + (lateReq.slice(0, 2).map(r => ` | ${r.status} ${r.url}`).join('')), 'WARN')
+    }
     if (expectedReq.length) led.record(`${visit.label} 占位资源预期响应`, true, `${expectedReq.length} 条`, 'WARN')
     if (permissionReq.length) led.record(`${visit.label} 权限受限`, true, `${permissionReq.length} 条 401/403`, 'WARN')
     if (environmentReq.length) led.record(`${visit.label} 外部环境不可用`, true, `${environmentReq.length} 条 matrix.test`, 'WARN')

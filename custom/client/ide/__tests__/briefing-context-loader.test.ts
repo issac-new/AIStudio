@@ -20,6 +20,8 @@ vi.mock('@/api/studio/files', () => ({
         entries: [
           { name: '需求-支付渠道.md', path: '需求-支付渠道.md', isDir: false, size: 100, modTime: '2026-10-10T00:00:00.000Z' },
           { name: '概设-总览.md', path: '概设-总览.md', isDir: false, size: 100, modTime: '2026-10-10T00:00:00.000Z' },
+          // docs 目录条目：装载器先看根目录是否有 docs/，才决定二次探测
+          { name: 'docs', path: 'docs', isDir: true, size: 0, modTime: '2026-10-10T00:00:00.000Z' },
           // 名字命中归类且带 .md 后缀的目录：必须被 isDir 守卫跳过
           { name: '排期-归档目录.md', path: '排期-归档目录.md', isDir: true, size: 96, modTime: '2026-10-10T00:00:00.000Z' },
           { name: 'README.md', path: 'README.md', isDir: false, size: 10, modTime: '2026-10-10T00:00:00.000Z' },
