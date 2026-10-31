@@ -1047,6 +1047,11 @@
 # zh/en 词条 gitSosTitle；动作执行仍留引擎/人工（executeSosAction fail-loud），
 # UI 不触发 merge --abort 等破坏性操作。
 717-client-ide-git-sos-i18n.patch
+# 718（2026-10-31 v0.8.0 升级轮品牌扫尾）：v0.8.0 新面（Person/浏览器工具族/mcu 新固件/
+# 11 语种 locale/desktop 对话框与更新脚本/ekko-agent 文档/server 注释与提示词）残带的
+# 「Ekko Studio」字串归一到 AIStudio；SSID 家族随 329 先例归 SwarmStudio-WIFI。
+# 生成法=A(净注入态)→B(品牌态) 双树差分，33 文件；二进制已排除（bin 误伤复原在案）。
+718-brand-v080-new-faces.patch
 197-server-http-command-post-ws.patch
 528-server-profiles-read-cache-mount.patch
 623-server-cli-read-cache-expansion.patch
