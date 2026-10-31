@@ -604,7 +604,21 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
           }
         }
 
-        // ---- CHASE 反事实门（D2，2026-10-31 吸收轮）：协议级捷径检验 ----
+        // ---- R6 heldout 门（2026-10-31 二批）：独立新验证数据的准入规则（2610.18813） ----
+      if (gain != null && gain > 0) {
+        if (proposal.heldout == null) {
+          const msg = '未绑定密封留出集读数（R6）：晋级证据缺独立新验证数据——留出集防进化环过拟合'
+          if (cfg.requireHeldout) blockers.push({ code: 'heldout_missing', message: msg })
+          else warnings.push({ code: 'heldout_missing', message: msg })
+        } else if (noiseDelta != null && proposal.heldout.passRate < (probe.evidence.passAt1 ?? 0) - noiseDelta) {
+          blockers.push({
+            code: 'heldout_regression',
+            message: `留出集通过率 ${(proposal.heldout.passRate * 100).toFixed(1)}% 低于 evolve 通过率超噪声带 δ——增益未迁移到独立验证数据（AHE 教训：无留出的进化环过拟合）`,
+          })
+        }
+      }
+
+      // ---- CHASE 反事实门（D2，2026-10-31 吸收轮）：协议级捷径检验 ----
         // 语义：候选 harness 在「语义保持、协议变换」的变体集上的运行读数。
         // 原始增益为正但变体增益 ≤ 噪声带 ⇒ 增益绑定在原协议的可利用面（任务名/
         // 返回格式/错误注入），判捷径；变体读数缺席默认 warning 交人工裁决。
@@ -710,6 +724,21 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
         message: `${unknown.length} 项约束未验证：${unknown.map((c) => c.id).join('、')}（unknown 不等于通过）`,
       })
     }
+
+    // ---- R12b 约束单层消融（2026-10-31 二批；Masked Erosion 2610.38392 实证） ----
+    // 接受门只看任务分时，冗余护栏的删除被其余护栏掩护（411 循环实证：40 任务批次全失守）。
+    // 本层输出「消融准备清单」：每个约束最近一次被显式 fail 消融检验的轮次；
+    // 从未 fail 过（全 pass 历史）＝零对抗证据 → 人工复核提示（防静默删除的最低成本对治）。
+    const passOnly = constraintChecks!.filter((c) => c.status === 'pass')
+    if (passOnly.length > 0) {
+      const neverFailed = passOnly.filter((c) => !c.detail?.includes('ablation:fail'))
+      if (neverFailed.length === passOnly.length && passOnly.length >= 2) {
+        warnings.push({
+          code: 'constraint_ablation_due',
+          message: `${passOnly.length} 项约束全部 pass 且无任何 fail 历史（零对抗证据）——建议做一轮单层消融（逐个约束关闭后复测），防被其余护栏掩护的静默删除（Masked Erosion）`,
+        })
+      }
+    }
   }
 
   const diversity = candidateDiversity(proposal.variants)
@@ -795,6 +824,8 @@ export interface RsiConfig {
   requireConstraints: boolean
   /** true=未绑定反事实变体运行直接拦（缺省 false，warning 交人工裁决）。 */
   requireCounterfactual: boolean
+  /** true=未绑定密封留出读数直接拦（R6，缺省 false）。 */
+  requireHeldout: boolean
 }
 
 function envInt(name: string, fallback: number): number {
@@ -828,6 +859,7 @@ export function rsiConfig(): RsiConfig {
     requireAttribution: process.env.HARNESS2_RSI_REQUIRE_ATTRIBUTION === '1',
     requireConstraints: process.env.HARNESS2_RSI_REQUIRE_CONSTRAINTS === '1',
     requireCounterfactual: process.env.HARNESS2_RSI_REQUIRE_COUNTERFACTUAL === '1',
+    requireHeldout: process.env.HARNESS2_RSI_REQUIRE_HELDOUT === '1',
   }
 }
 

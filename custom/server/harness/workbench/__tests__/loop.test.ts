@@ -808,3 +808,32 @@ describe('R4 pass@k 背离与 R12a 验证分级', () => {
     expect(report.healthWarnings).toContainEqual({ surfaceKey: 'system_prompt', code: 'weak_verification_streak', streak: 3 })
   })
 })
+
+// R12b 约束单层消融（2026-10-31 二批）。
+describe('R12b 约束消融准备门', () => {
+  const base = () => ({ proposal: fixture(), currentChampion: null as Champion | null, applyRequested: false, applyEnvEnabled: false })
+
+  it('≥2 项全 pass 且无 fail 历史 → warning constraint_ablation_due；有 fail 历史不触发', () => {
+    const allPass = fixture()
+    allPass.constraints = {
+      checks: [
+        { id: 'c1', statement: 'a', status: 'pass' },
+        { id: 'c2', statement: 'b', status: 'pass' },
+      ],
+      actor: 'op', at: 'now',
+    }
+    const r = evaluatePromotion({ ...base(), proposal: allPass })
+    expect(r.warnings.map((w) => w.code)).toContain('constraint_ablation_due')
+
+    const withFailHistory = fixture()
+    withFailHistory.constraints = {
+      checks: [
+        { id: 'c1', statement: 'a', status: 'pass', detail: '轮3 ablation:fail 后修复' },
+        { id: 'c2', statement: 'b', status: 'pass' },
+      ],
+      actor: 'op', at: 'now',
+    }
+    const r2 = evaluatePromotion({ ...base(), proposal: withFailHistory })
+    expect(r2.warnings.map((w) => w.code)).not.toContain('constraint_ablation_due')
+  })
+})

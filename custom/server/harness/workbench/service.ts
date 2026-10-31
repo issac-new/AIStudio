@@ -841,6 +841,35 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
   })
 }
 
+/**
+ * R6（2026-10-31 二批执行）：绑定密封留出集读数（heldout-store scoreSet 形状）。
+ * 只接受 {runId,n,passRate}——内容永不出库（held-out-store 防探测契约）。
+ */
+export async function attachHeldout(
+  id: string,
+  input: { setId: string; answers: Array<{ index: number; answer: string }>; actor?: string },
+): Promise<ProposalView> {
+  const { scoreSet } = await import('../../heldout/held-out-store')
+  const r = scoreSet(input.setId, input.answers, input.actor?.trim() || `workbench:${id}`)
+  if (!r.ok) {
+    const problems = (r as { ok: false; problems: string[] }).problems
+    throw new ServiceError(400, problems.join('；'))
+  }
+  return mutateStore((store) => {
+    const p = requireProposal(store, id)
+    if (p.status === 'promoted' || p.status === 'rolled_back') {
+      throw new ServiceError(409, `当前状态 ${p.status} 不可绑定留出读数`)
+    }
+    p.heldout = {
+      runId: `${input.setId}@${Date.now()}`,
+      n: r.result.n,
+      passRate: r.result.passRate,
+    }
+    p.updatedAt = nowIso()
+    return view(store, p)
+  })
+}
+
 export interface RecordConstraintsInput {
   checks: Array<{
     id: string
@@ -894,6 +923,37 @@ export async function recordConstraints(id: string, input: RecordConstraintsInpu
     p.updatedAt = nowIso()
     return view(store, p)
   })
+}
+
+/**
+ * R5（2026-10-31 二批执行）：缺口驱动提案——读 RSI 内核 gap_register capability 条目，
+ * 映射为 workbench draft（evidenceRefs 引 gap id）。只读桥；内核文件缺席返回空数组不猜。
+ */
+export async function createGapDrivenProposals(limit = 5): Promise<ProposalView[]> {
+  const { readCapabilityGaps, gapToDraft } = await import('./gap-source')
+  const gaps = readCapabilityGaps()
+  if (gaps == null || gaps.length === 0) return []
+  const created: ProposalView[] = []
+  for (const gap of gaps.slice(0, limit)) {
+    const draft = gapToDraft(gap)
+    try {
+      created.push(await createProposal({
+        title: draft.title,
+        hypothesis: draft.hypothesis,
+        surfaceKey: draft.surfaceKey,
+        targetPath: null,
+        mode: 'sequential',
+        domain: draft.domain,
+        budgetCapUsd: DEFAULT_BUDGET_CAP_USD,
+        evidenceRefs: draft.evidenceRefs,
+        variants: [],
+        createdBy: 'gap-bridge',
+      }))
+    } catch {
+      // 单条失败（如面不可用）不阻断其余缺口
+    }
+  }
+  return created
 }
 
 export async function composeProposal(
@@ -1362,6 +1422,84 @@ async function runAutoProbeJob(
       note: `一键自动探测${result.stoppedBy ? `（${result.stoppedBy}）` : ''}`,
       actor: opts.actor ?? 'workbench-auto',
     })
+
+    // ---- R2（2026-10-31 二批执行）：三类证据自动供给 ----
+    // ①噪声：未改动 harness 同集×2（baseline 运行×2 → calibrateNoise 自动标定）；
+    // ②等预算：未改动 harness 同集×1（预算与候选相当 → equalBudgetBaseline）；
+    // 反事实（③）依赖 R3 变体集的运行编排，属下一轮（本批供变换器本体）。
+    // 未改动 harness＝variantTree 全 null 的物化（probe-runner materializeHome 语义）。
+    try {
+      const pNow = readStore().proposals.find((x) => x.id === id)
+      if (pNow) {
+        const noiseNeeded = pNow.noise == null
+        const eqNeeded = (() => {
+          const sel = composedVariant(pNow)
+          const pr2 = sel ? pNow.probes.find((x) => x.variantId === sel.id && x.status === 'recorded') : null
+          return pr2?.evidence?.equalBudgetBaseline == null
+        })()
+        const runsWanted = (noiseNeeded ? 2 : 0) + (eqNeeded ? 1 : 0)
+        if (runsWanted > 0) {
+          const nullTree: Record<string, string | null> = {}
+          for (const key of Object.keys(tree)) nullTree[key] = null
+          const baseRemaining = pNow.budgetCapUsd - (probeCost(pNow).total + job.costUsd)
+          const baseRunIds: string[] = []
+          for (let r = 0; r < runsWanted; r += 1) {
+            const baseResult = await runProbeTasks({
+              prompts: tasks,
+              baseHome: hermesHome(),
+              profile,
+              variantTree: nullTree,
+              budgetRemainingUsd: Math.max(0, baseRemaining),
+              estimatePerTaskUsd: limits.estimate,
+              k: 1,
+              spawnRun: opts.spawnRun,
+            })
+            if (!baseResult.ok || Object.keys(baseResult.samples).length === 0) break
+            const baseReplay = await runReplayEval(
+              {
+                setId: evalSet.id,
+                samples: baseResult.samples,
+                target: { profile, harnessRef: `${id}:baseline:${r}` },
+                actor: 'workbench-auto',
+                note: `R2 基线运行 ${id}:${r}${noiseNeeded && r < 2 ? '（噪声标定）' : '（等预算）'}`,
+              },
+              { judge: { config: loadEvalConfig(), ...(opts.judgeAsk ? { ask: opts.judgeAsk } : {}) }, outcomeCtx: probeOutcomeContext() },
+            )
+            if (baseReplay.ok) baseRunIds.push(baseReplay.run.id)
+          }
+          await mutateStore((st) => {
+            const pp = requireProposal(st, id)
+            if (noiseNeeded && baseRunIds.length >= 2) {
+              const m1 = readEvalEvidence(baseRunIds[0])
+              const m2 = readEvalEvidence(baseRunIds[1])
+              if (m1 && m2 && m1.passAt1 != null && m2.passAt1 != null) {
+                pp.noise = {
+                  runIds: baseRunIds.slice(0, 2),
+                  setId: m1.setId,
+                  delta: Number((Math.abs(m1.passAt1 - m2.passAt1) / 2).toFixed(4)),
+                  method: 'half-range',
+                  samples: [m1.passAt1, m2.passAt1],
+                  computedAt: nowIso(),
+                }
+              }
+            }
+            if (eqNeeded && baseRunIds.length >= 1) {
+              const sel = composedVariant(pp)
+              const target = sel ? pp.probes.find((x) => x.variantId === sel.id && x.status === 'recorded') : null
+              if (target?.evidence) {
+                const eqIdx = noiseNeeded && baseRunIds.length >= 3 ? 2 : Math.min(baseRunIds.length - 1, noiseNeeded ? baseRunIds.length - 1 : 0)
+                const mEq = readEvalEvidence(baseRunIds[eqIdx])
+                if (mEq) target.evidence.equalBudgetBaseline = { runId: mEq.evalRunId, setId: mEq.setId, passAt1: mEq.passAt1 }
+              }
+            }
+            pp.updatedAt = nowIso()
+          })
+        }
+      }
+    } catch {
+      // R2 证据供给失败不阻断主探测（证据可后补；如实静默跳过——note 不撒谎）
+    }
+
     await mutateStore((st) => {
       const pp = requireProposal(st, id)
       const pr = pp.probes.find((x) => x.variantId === variantId)

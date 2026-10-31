@@ -286,6 +286,8 @@ export interface Proposal {
   noise?: NoiseCalibration | null
   /** 约束保持断言（D5，2026-10-31 吸收轮）；缺席=未记录。 */
   constraints?: ConstraintRecord | null
+  /** 密封留出集读数（R6，二批）；缺席=未测。 */
+  heldout?: { runId: string; n: number; passRate: number } | null
   /** 多文件候选的根（相对 HERMES_HOME）；缺省=单文件模式。 */
   treeRoot?: string | null
   /** managed 面的相对 HERMES_HOME 目标文件；advisory 面只作锚点展示。 */
