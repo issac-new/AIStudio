@@ -29,7 +29,7 @@
 - 守门适配（断言介质迁移，非放宽）：connections-panel-gate/s3-feature-gates 三例由「补丁文本断言」改「注入态树断言」（重生成后补丁内归因可漂移，行为语义以树为准）；两守门实跑 16/16 绿。
 - 类型门：`typecheck:harness` 0 错；服务端 `tsc -p packages/server` 0 错（多轮：剔除错位 ENOENT＋node-edge-tts 1.2.12 后达成）。
 - 构建：`npm run build:full`（含 openapi 481 端点生成、vite overlay 构建、服务端 tsc、build-server、运行时资产）。派生配置 `vite.config.overlay.ts → .mts`（上游 v0.8.0 配置新增 `import pkg from './package.json'`，CJS 包装下 ESM 语法崩；.mts 强制 ESM，package.json/build.mjs/inject.mjs/.gitignore 四处引用同批替换）。
-- 全量：`npm test` = 969 文件 / 7065 用例通过、11 跳过、0 失败（终跑；过程失败均已逐项定性与根治：runtime-verify 探针夹具毫秒竞态改 mkdtemp、absent-tree 派生配置名随 .mts 迁移、release-manifest 三载体随底座升 0.8.0-studio.1、build-server 家族 525/608/663 按 series 实序定版且 663 并入 525 退役）。
+- 全量：`npm test` = 970 文件 / 7066 用例通过、11 跳过、0 失败（rebase 后终跑，含并行新补丁 717；过程失败均已逐项定性与根治：runtime-verify 探针夹具毫秒竞态改 mkdtemp、absent-tree 派生配置名随 .mts 迁移、release-manifest 三载体随底座升 0.8.0-studio.1、build-server 家族 525/608/663 按 series 实序定版且 663 并入 525 退役）。
 - `npm run release:check` 四模块对账全绿（cockpit=0.8.0-studio.1 / agent-teams=v0.22.5-team.4 / ycode=3.16.2 / yuan-skill=v2.98.0）。
 - `npm run build:full` 绿（openapi 481 端点、vite overlay 构建、服务端 esbuild＋固件拷贝、verify-dist 完整性门禁全过；fsevents 外置为运行期解析）。
 - 兼容面：Node>=23 不变；依赖仅 node-edge-tts ^1.2.11→^1.2.12（V2 DRM API）；person schema 全 CREATE-IF-NOT-EXISTS 自增（v0.7.39 无 person 表，DROP 分支不可达）；上游仓改名 ekko-studio 已随 VENDOR.md 记录。
