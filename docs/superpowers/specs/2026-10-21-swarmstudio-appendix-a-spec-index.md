@@ -1,8 +1,10 @@
 # 附录 A：产品面全量 spec 索引（413 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋E2 探针微批 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 413 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 412 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+
 ## A.1 逐份索引（按文件归档序）
+
 | 文件名 | 主旨 | 结论要点 |
 |---|---|---|
 | 2026-06-18-kanban-advanced-features-design | React 看板高级功能移植 Vue | 诊断条/编排/附件/富文本全量移植 |
@@ -407,7 +409,6 @@
 | 2026-10-30-governance-doc-candidates | 治理工件注册表按轮回落 | 并行批次：按轮命名工件在评审面不再显示缺失（candidates 回落） |
 | 2026-10-30-chat-timeline-race-fix | 群聊时间线面板间歇性不挂载根治 | activeRoom null 竞态自愈：点房间后消息稳定可见（前轮漏登记补录） |
 | 2026-10-30-report-reshoot-auto-caption | 收尾补拍图注自动标注 | 补拍图注含「补拍」降级口径自动落（前轮漏登记补录） |
-| 2026-10-31-daily-walkthrough-probe-e2-close | 走查探针微批 | E2 抽屉关毕验证（first button≠关闭钮致建卡点击落遮罩的序列性假红） |
 | 2026-10-31-matrix-autologin-deviceid | 日常工作台回归批② | Matrix 凭据校验器空 deviceId 误杀根治（网关自动登录会话房间画布恒「未认证」）＋探针时序三处 |
 | 2026-10-31-daily-workbench-regression | 日常工作台全功能回归轮 | human-gate store 行级容错＋裸 grant 迁移（收件箱 500 根治）＋房间画布 rooms 悬空引用清偿＋?new=1 建卡深链收窄＋走查探针沉淀 |
 | 2026-10-31-ide-workspace-regression-fixes | IDE 工作区全功能回归修复批 | 文件树换根竞态根治＋非 super_admin 权限回落任务域只读树＋板号回填＋i18n pickTask 键 |
@@ -418,10 +419,14 @@
 | 2026-10-30-release-v1.0.3-overlay | 发布轮 v1.0.3-overlay | HelixHarness 吸收两轮＋run23 收官批后升版：cockpit studio.4 / agent-teams team.4 / yuan-skill v2.98.0 / full 1.0.3-overlay（ycode 零变更不动） |
 | 2026-10-31-run23-plan-report-retro-revision | run23 方案×报告全面复盘批 | 五机制入册（纪律 85-89）＋提前收尾通道立法＋HumanGate 审批面＋延后清账机械执法＋采集面参数化；附台账清账建议表 |
 | 2026-10-31-full-regression-fixes | 全功能回归修复批 | HumanGate 历史 grant 兼容/矩阵画布键名崩溃（并行批已修，本批复核）＋规则 004 并发配额接线（补丁 712，原 710 撞号改号）＋SOS 残桩 fail-loud＋diagram 超时可配置＋IDE 简报 docs 探测 404 降噪＋kanban ?new=1 提示 i18n 补键（补丁 711）＋回归探针 token/条件等待 |
+| 2026-10-31-daily-walkthrough-probe-e2-close | 走查探针微批 | E2 抽屉关毕验证（first button≠关闭钮致建卡点击落遮罩的序列性假红） |
+
 ### 角色/排除（非 spec 文档）
+
 以下文件保留在 specs 根目录，但不是 A.1 的专题设计、规格或决策文档；排除是角色分类，不是删除或按日期作废。
+
 | 文件名 | 角色/排除 | 说明 |
-| --- | --- | --- |
+|---|---|---|
 | 2026-10-21-ncwk-unified-product-design | 文档导航 | AIStudio 设计文档导航，指向终态正本、配套档、A-D 与历史档案 |
 | 2026-10-21-swarmstudio-appendix-a-spec-index | A 索引，本文件 | specs 根目录唯一文件级 spec 索引；索引自身不重复计入 A.1 |
 | 2026-10-21-swarmstudio-appendix-b-plans-research | B 索引 | 实施计划与研究/复盘档索引，覆盖范围不在 specs 根目录文件级集合内 |
@@ -431,7 +436,9 @@
 | 2026-10-23-swarmstudio-design-ledger | 数字附录 | 稳定设计参数、参考部署与版本快照，不是专题设计或业务 spec |
 | 2026-10-23-swarmstudio-integrated-design | 当前终态正本 | AIStudio 唯一设计正本；在索引中登记角色，不重复计入 A.1 |
 | 2026-10-24-merged-projects-knowledge-compendium | 合并来源地图 | 自述只做映射与对账、不复制正文；登记并入项目、决策与会话来源 |
+
 ## A.2 按域聚类（13 域，2026-10-23 历史快照）
+
 | 域 | 份数 | 演化主线（摘要） | 当前终态 | 被推翻/废弃 |
 |---|---:|---|---|---|
 | D1 工作台与看板 | 59 | 三栏 mock → 接真数据 → 通知/筛选/日程/工作项 → 终端多工具 → 六阶段工作台+唯一看板 | `/app` 六阶段、`/app/board` 唯一看板、看板卡唯一写入口 | patch 028 重写、纯 mock、旧横向看板页、三栏六区菜单 |
@@ -447,9 +454,15 @@
 | D11 基础设施/升级 | 16 | overlay 架构 → gateway/LMM/node_modules → 三轮净树升级 → 性能/环境/地址源 | 382 补丁；净树三段式；port-per-profile | npm 包化/submodule、overlay multiplex、overlay LLM 路由、共享 node_modules |
 | D12 UI/UX/无障碍/术语 | 13 | Pure Ink → V1-V3 → token 收敛 → WCAG → 步显示名 | ia2.scss 单一 token；三壳同步；name/displayName 分层 | UI 框架、双主题、全量 WCAG 重校、三套抽屉合一 |
 | D13 正本/需求/验收 | 6 | 需求冻结 → 三中心定稿 → 完整设计 → 三域合一 | 三层结构；冲突裁决顺序；146 决策 | 三份并行事实源、旧决策计数、独立档案件、角色镜头波次 |
+
 > 本节保留 2026-10-23 的域聚类快照，份数与「当前终态」均按该日期理解，本轮不重算；不得用本节份数充当当前全量总数。当前文件级覆盖只以 A.1 与「角色/排除」表为准（2026-10-26 复核）。
+
 ## A.3 跨域单一事实源清单（节选）
+
 阶段定义=`stage-meta.ts`；设计 token=`ia2.scss`；技能期望源=`skill-provisioning.json`；Agent 能力=组织注册表；FIBO 正本=`ontology-fibo.ts`；工具契约=`toolcontract`；并行安全=`DISPATCH_SAFETY`；报告真值=`report_truth.py`；Matrix 地址=`server-info.ts`；评测指标=`METRIC_DEFS`；图事件日志=SQLite；验收标准=方案第五部分；术语=`glossary.txt`。
+
 ## A.4 明确否决与未验证（摘要）
+
 否决：音视频/贴纸特效/身份发现/spaces/tower/Tauri/iOS/新一级页；mods/pets/esp32；主会话 append-only/进程沙箱/完整 Mods；Jev-Omni 本地/SAT 策略学习/Hindsight 整体/容器沙箱/L4 决策融合；OWL DL/SPARQL/实例自动摄取/BPMN/运行时 RDF；MCP 投毒扫描/跨会话策略/outcome 校验/kill switch 进程终止；ClickHouse/S3 观测；冠军自动选择；处置单自动分配。
+
 未验证：diagram-export×3、cua×5、tool-waterfall×1、IDE 超时、Matrix 分享房、swarm-yuan 5 家 L1、zcode CUA Windows/Linux 路径、技能供给宿主半写文件、Harness² 四项未移植、FIBO 证券/衍生品/贷款仅只读目录。（agent 0.22.1 补丁 19 件未验项已由 0.22.4 升级轮消化：12 补丁手工移植全绿、镜像 44 文件、宿主网关换血）
