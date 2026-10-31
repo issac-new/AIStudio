@@ -998,7 +998,9 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
     // 2026-10-16 C4 九门执行器注入（覆盖注入+先 run 后 report）入函数后 5592 字符；
     // 2026-10-19 V8.46 发布门台账接线入函数后超 6000，窗口上调到 8000（判据不变）
     // 2026-10-27 融合批二 submit→approve(带锚) canonical 写链入函数后超 8000，窗口上调到 9200（判据不变）
-    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,9200}?\n  \}/)
+    // 2026-10-31 run23 复盘批审批历史探测（g5-approval-history-missing）入函数后实测 10251 字符
+    // 再超 9200（main 基线自带红，本批实测定位），窗口上调到 12000（判据不变）
+    const fin = scen.match(/g5_pass_finalize\(\) \{[\s\S]{0,12000}?\n  \}/)
     expect(fin).toBeTruthy()
     expect(fin![0]).toContain('dlv_gate')
     // V8.23 纪律46：finalize 前置评审卡 body 非空校验（run18 复盘 F1：空 body=无评审实物禁收口）

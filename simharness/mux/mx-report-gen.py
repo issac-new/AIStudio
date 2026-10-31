@@ -5449,7 +5449,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
   <h2 class="section-hd" id="ch7-domains">第 3 章 · 六域审计（每域一个问题）</h2>
   {domains_table()}
-  <p class="stat-note">数据来源：{DOMAIN_LEDGER_SOURCE} —— 治理中心（#/app/board 治理页签组，v0.7.30 起 /app/gov 重定向至此）「六域体检」可在真实流程中随时重跑并累积台账</p>
+  <p class="stat-note">数据来源：{DOMAIN_LEDGER_SOURCE} —— ⑥治理阶段页（/app/stage/govern，各页签 ?tab= 直达；旧 /app/gov、/app/board 均不再承载治理页签组）「六域体检」可在真实流程中随时重跑并累积台账</p>
 
   <h2 class="section-hd" id="ch8-issues">第 4 章 · 问题单终态（{stat}）</h2>
   <p class="stat-note">{stat_note}</p>
@@ -5473,7 +5473,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
     <tr><td>处置完整循环率</td><td>{'100%' if n_issue_open == 0 else f'{n_resolved}/{n_issue_keys}'}{f'（表外词 {n_nonstd} 键）' if n_nonstd else ''}</td><td>每个问题都有结论，没有静默丢失；表外词键=处置在案但首词越三态词表（台账卫生）</td></tr>
     </table>
   </div>
-  <p class="stat-note">每个问题从发现（ISSUE 行）到处置（DISP 行）全程在看板上留痕，AIStudio 治理中心的台账区可随时回查。</p>
+  <p class="stat-note">每个问题从发现（ISSUE 行）到处置（DISP 行）全程在看板上留痕，AIStudio ⑥治理·问题清单（/app/stage/govern?tab=issues）的台账区可随时回查。</p>
 
   <h3 style="font-size:13px;margin:14px 0 6px">证据二：经验积累（记忆库）</h3>
   <p style="font-size:13px;color:var(--text)">{_gov_ev2}</p>
@@ -5512,7 +5512,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
 
   <div class="footer">报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本（单一事实源），交付物自中央仓实读，问题单与计数自台账实测统计<br>
-全部证据图=AIStudio 产品界面真实浏览器截图（治理工件 markdown 经治理中心 UI 渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
+全部证据图=AIStudio 产品界面真实浏览器截图（治理工件 markdown 经⑥治理·文档评审（/app/stage/govern?tab=docs）渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
 </main>
 </div>
 <button id="back-top" title="回到顶部" aria-label="回到顶部" style="display:none;position:fixed;right:26px;bottom:30px;z-index:90;width:42px;height:42px;border:none;border-radius:50%;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(15,23,42,.22);opacity:.92">↑</button>
