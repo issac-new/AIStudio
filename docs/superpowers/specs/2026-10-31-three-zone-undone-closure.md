@@ -27,7 +27,7 @@
 
 - 目标测试：`architecture-ratchet` 7/7、409 守门 1/1、WS 守卫 1/1、admin 写权限守卫 1/1；厂商 `kanban-controller.test.ts` 19/19（此前 18/19）。
 - A.1 计数：并行「恢复图 run 详情」批新增 1 份 spec 后行实 424；标题/A.1 覆盖行同步 424，docs-ssot-guard 6/6 复跑绿。
-- 全量 `npm test`：**7065 通过 / 0 失败 / 11 跳过**（合入后主树实测；本批提交时为 7047，并行批新增用例后上升），棘轮 2 红清零。
+- 全量 `npm test`：**7066 通过 / 0 失败 / 11 跳过**（v0.8.0 基线升级后主树实测；本批提交时为 7047，并行批新增用例后上升），棘轮 2 红清零。
 - 活体验证：`PATCH status=running` → 409 `state_transition_rejected`；WS 合法 token 连接 open、坏 token 401；历史 run23 → 26/26 步、七幕、6/6 门、证据库报告入口；设置幂等保存回执；地图标注保存/删除；`hermes -z` 模型回合输出 OK；Agent 工具回合执行 `pwd` 返回仓库路径；Matrix 媒体上传/下载均 200。
 - 后端启动：`npm run serve` 在 main 树通过（rawGain null 守卫后）。
 
