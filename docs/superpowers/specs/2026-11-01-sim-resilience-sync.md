@@ -13,6 +13,8 @@
 5. **程序 `simharness/mux/mx-clean.sh`**：hermes 运行态归档重置清单补 `orchestrator`（编排域六表/授权流水）与 `modelcap`（能力路由矩阵）——两者是新落地产品能力在 `$SIM_ROOT/hermes/` 下的存储；不归档会让下一轮继承旧轮 Trigger/Decision/Mandate 或旧能力矩阵（与 §2.6.7 评测三库隔离同款纪律）。目录缺席时该循环天然跳过，零行为变化。
 6. **自动测试 `simharness/tests/harness-gate-integrity.test.ts`**：新增 describe ㉗，四条断言——721 在补丁自愈清单、mx-up 注释范围、mx-clean 归档新存储、方案两处锚点在案。
 7. **方案 §2.6.12 顺带修 HARD 词**：上一批引入的「守门测试锁序」改为「自动测试固定该顺序」——词表（`scripts/plan-html/jargon-check.py`）把「守门」列为自造词，提交态扫描已红。
+8. **修 jargon 门分支判据反向**（`simharness/mux/tests/jargon-source-gate.test.sh`）：原判据 `merge-base --is-ancestor main HEAD` 在「main 是 HEAD 祖先」（分支已提交领先）时反而继续读 main 基线，分支提交态永远扫不到；改为 `--is-ancestor HEAD main`（HEAD 领先或分叉才读 HEAD），TS 层同修。该缺陷使上一批提交后的 HARD 词在本批首次全量复跑才暴露。
+9. **修两处计数断言滞后**（`tests/eval-fullflow-integration.test.ts:39`、`tests/eval-metrics-template-sync.test.ts:90`）：两处仍断言 prelaunch「三十项」，而 run24 批已扩到「三十二项」（⑩b 跨轮残留门等两项）；断言随事实更新，prelaunch 实现不动。
 
 ## 决策记录
 
@@ -24,6 +26,8 @@
 | D4 | 代批强度只改方案陈述，不改代批程序 | 产品侧按「裁决人=申请人」自动判定并落凭证（`human-gate.ts:314,333`；`decision-grant.ts` 类型），程序无需传参；改程序反而多一个可漂移的事实源 | 在 decide 请求体显式传 strength（否决：与产品自动判定重复且可被伪造） | 是 |
 | D5 | 上一批的 HARD 词「守门」随本批修正 | 词表把「守门」列为自造词；上一批提交后提交态扫描即红（工作副本预告 WARN 未覆盖提交态），本批不修则 main 常红 | 只屏蔽词表（否决：词表是单一事实源，为单处违规放宽会放过同类回潮） | 是 |
 | D6 | 附录 A.1 计数一并归一到 449 | 首批合入后标题=448、覆盖句仍写 447，两处自相矛盾；本批新增一份 spec 正好一并校正 | 只加新行不改旧句（否决：把已知矛盾留在正本） | 是 |
+| D7 | 分支判据修脚本而不绕过 | 判据反向导致「分支提交后仍扫 main 基线」，是守门假绿的根因；绕过（如临时 checkout main）会让同类假绿留在工具里 | 本批手动指定 `MX_JARGON_CHECK` 绕过（否决：不修根因，下次复发） | 是 |
+| D8 | 计数以 prelaunch 事实为锚，改断言不改实现 | 三十二项是 run24 批现状（脚本头注与结尾行一致），测试是滞后侧；回退实现会删掉 run24 新增的跨轮残留门 | 把 prelaunch 回退到三十项（否决：删掉真检查换假绿） | 是 |
 
 ## 验证
 
