@@ -133,7 +133,12 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       TMP="$F.tmp.$$"
       awk -F'\t' -v id="$ID" -v st="$CMD" -v note="$NOTE" '
         NR==1 { print; next } $1==id { $6=st; $7=note } { print }' OFS='\t' "$F" > "$TMP" && mv "$TMP" "$F"
-      grep -q "^${ID}	.*	${CMD}	" "$F" && echo "$ID → $CMD ✓" || { echo "$ID 未找到" >&2; exit 1; }
+      # 回验=awk 字段精确匹配（2026-10-31 清账批首战实录：旧 grep 字面 tab 模式在
+      # 多字节行上假阴性，写入成功却报「未找到」exit 1——28 笔假错。awk 按列断言
+      # 不受 locale/二进制探测影响）。
+      awk -F'\t' -v id="$ID" -v st="$CMD" 'NR>1 && $1==id && $6==st { found=1 }
+        END { exit found ? 0 : 1 }' "$F" \
+        && echo "$ID → $CMD ✓" || { echo "$ID 未找到" >&2; exit 1; }
       ;;
     check-clearance)
       # 代偿清偿门：开跑前置检查用。有 open 笔 → 非零退出并逐笔列出。
@@ -145,13 +150,16 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       exit 1
       ;;
     check-issue-clearance)
-      # 问题单延后清账（方案 §5.9 清偿门线扩展，run23 收官批）：DISP 处置首词=延后 的
+      # 问题单延后清账（方案 §5.9 清偿门线扩展，run23 收官批）：唯一键处置终态
+      # =该键**末次** DISP 行（issues.log 是 append-only 事件流，人工复核回写终态
+      # 由新行承载——与报告第 4 章「按唯一键去重收尾」同口径；2026-10-31 清账批改，
+      # 原实现把历史任一延后行计入，回写终态后仍恒红）。末次 DISP 首词=延后 的
       # 唯一键非零 → 非零退出并列键。纪律 56「prelaunch 断言上轮结构性延后 key 消失」
       # 的机械执法面——此前只有代偿 open 笔被 check-clearance 拦，结构性延后单可带病开跑。
       IL="$(dirname "$F")/issues.log"
       if [ ! -f "$IL" ]; then echo "延后清账 ✓（$(_mx_led_run_id) 无 issues.log）"; exit 0; fi
-      KEYS=$(awk -F'|' '$1=="DISP" && $4 ~ /^延后/ { print $2"·"$3 }' "$IL" | sort -u)
-      if [ -z "$KEYS" ]; then echo "延后清账 ✓（$(_mx_led_run_id) 问题单延后桶=0）"; exit 0; fi
+      KEYS=$(awk -F'|' '$1=="DISP" { k=$2"·"$3; last[k]=$4 } END { for (k in last) if (last[k] ~ /^延后/) print k }' "$IL" | sort)
+      if [ -z "$KEYS" ]; then echo "延后清账 ✓（$(_mx_led_run_id) 问题单延后桶=0，末次 DISP 口径）"; exit 0; fi
       echo "延后清账 ✗：$(printf '%s\n' "$KEYS" | wc -l | tr -d ' ') 个延后唯一键未处置（人工带锚回写 DISP 行，或经用户裁定豁免；纪律 56/§5.9）："
       printf '%s\n' "$KEYS" | sed 's/^/  /'
       exit 1

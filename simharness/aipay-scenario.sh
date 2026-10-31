@@ -1981,6 +1981,28 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
       sset_once g5_supplement 1
       note "[G5] 补过口径：评审卡 body 存在 GAP/TODO 分节残留（边评边补后过）——治理报告计「补过」不计首过"
     fi
+    # ── G5 HumanGate 产品通道（2026-10-31 用户批准 root fix）──────────────
+    # 产品闭环=custom/server/approval-inbox/human-gate.ts：注册（幂等，id=mkId(run,card)）
+    # → 收件箱 pending 项（审批面 UI 帧有物可拍）→ decide（权威 store＋
+    # /api/approvals/history 留痕＋HUMAN_GATE_EVENTS 投影 approved.events 同款行）。
+    # run23 实录断层=驱动与产品 HumanGate 从不握手（只写 approved.events 文件），
+    # g5-approval-ui-empty/L3「审批历史留痕 0 条」由此而来。approved.events 仍是
+    # 唯一闸键真值（纪律 73），本通道补审计与呈现面。
+    _g5_tok=$(studio_login 2>/dev/null || true)
+    _hg_id=""
+    if [[ -n "$_g5_tok" ]]; then
+      _hg_resp="$(studio POST /api/approvals/human-gate/ "$_g5_tok" \
+        "$(jq -n --arg r "$RUN_ID" --arg c "$RGID" \
+           --arg t "G5 发布准出 · ${RFD_ID:-RFD-001}" \
+           --arg d "posture=$(posture)；七项过（评审卡 ${RGID}）；strict=待真人收件箱裁决 / standard=director-proxy 代批（净额扣除）" \
+           '{runId:$r,cardId:$c,title:$t,detail:$d}')" 2>/dev/null || true)"
+      _hg_id="$(printf '%s' "$_hg_resp" | jq -r '.request.id // empty' 2>/dev/null || true)"
+      if [[ -n "$_hg_id" ]]; then
+        note "[G5] HumanGate 批准单已注册（${_hg_id}，审批收件箱可见——审批面 UI 帧有物可拍）"
+      else
+        issue_once g5-humangate-register-failed step20 "HumanGate 批准单注册失败（POST /api/approvals/human-gate/ 无 request.id 返回）——收件箱缺席该 pending 项；approved.events 仍为闸键真值，不阻断"
+      fi
+    fi
 if [ "$(posture)" = "strict" ]; then
       echo "ISSUE|walk-done-strict|fanfan|G5 评审卡 ${RGID} strict 姿态不代走 done（待收紧面：等 fanfan 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
       note "[姿态] strict：fanfan G5 卡 ${RGID} 不代走 done——记录（闸键仍置：判词真值在房）"
@@ -1990,8 +2012,25 @@ if [ "$(posture)" = "strict" ]; then
       # humangate:<card> HUMAN-GATE-APPROVED 行）或人工向 approved.events 追加
       # humangate:<card> 行。超时未决=如实记问题单且不置 g5_ready（release 步
       # 将按缺闸失败，不装绿）。
+      # 2026-10-31 root fix（用户批准）：真值函数扩双源——产品批准单（收件箱真人
+      # decide）status=approved 时由驱动中继写 approved.events（actor=产品
+      # decidedBy 真人，写入前再 grep 保幂等）；approved.events 仍是唯一闸键真值。
       _hg_log="${APPROVED_LOG:-$EVID_DIR/approved.events}"
-      g5_humangate_decided() { grep -q "humangate:${RGID} " "$_hg_log" 2>/dev/null; }
+      g5_humangate_decided() {
+        grep -q "humangate:${RGID} " "$_hg_log" 2>/dev/null && return 0
+        [[ -n "${_g5_tok:-}" ]] || return 1
+        local _lst _dec
+        _lst="$(studio GET /api/approvals/human-gate/ "$_g5_tok" 2>/dev/null || true)"
+        _dec="$(printf '%s' "$_lst" | jq -r --arg c "$RGID" \
+          '.requests[]? | select(.cardId==$c and .status=="approved") | .decidedBy // empty' 2>/dev/null | head -1)"
+        if [[ -n "$_dec" ]]; then
+          grep -q "humangate:${RGID} " "$_hg_log" 2>/dev/null \
+            || echo "humangate:${RGID} HUMAN-GATE-APPROVED ${_dec} $(date +%s)" >> "$_hg_log"
+          note "[G5] strict：产品收件箱真人批准中继落案（card ${RGID}，actor=${_dec}，decidedBy 经 /api/approvals/human-gate/ 可反查）"
+          return 0
+        fi
+        return 1
+      }
       if wait_truth "G5 strict 真实 HumanGate（card ${RGID}）" "${MX_G5_HUMANGATE_WAIT:-900}" g5_humangate_decided; then
         sset_once g5_ready "$(date +%s)"
         note "[G5] strict：真实 HumanGate 批准在案（card ${RGID}，approved.events 可反查）"
@@ -2007,13 +2046,23 @@ if [ "$(posture)" = "strict" ]; then
       # strict 的真实批准行同键可 grep，但 actor 明示 director-proxy。
       echo "ISSUE|g5-humangate-proxy|${RGID}|standard 姿态由驱动代批（director-proxy）——净额口径扣除，不计真人批准" >> "$EVID_DIR/issues.log"
       echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-proxy $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
+      # 代批走产品 decide（2026-10-31 用户批准 root fix）：审批历史留痕（actor=studio
+      # 管理面身份，note 明示 proxy）；404=已裁决幂等；失败显形不阻断（真值已在案）。
+      if [[ -n "${_g5_tok:-}" && -n "${_hg_id:-}" ]]; then
+        if studio POST "/api/approvals/human-gate/${_hg_id}/decide" "$_g5_tok" \
+             "$(jq -n '{decision:"approve",note:"standard 姿态 director-proxy 代批（净额口径扣除，纪律 73；驱动走产品 decide 通道=2026-10-31 用户批准）"}')" >/dev/null 2>&1; then
+          note "[G5] 代批已落产品审批台账（/api/approvals/human-gate/${_hg_id}/decide → /api/approvals/history 留痕）"
+        else
+          issue_once g5-approval-decide-failed step20 "G5 代批 decide 写产品审批台账失败（POST /api/approvals/human-gate/${_hg_id}/decide，404=已裁决幂等不计）——approved.events 真值不受影响，呈现面按缺口显形"
+        fi
+      fi
     fi
     # V8.46 发布门台账（append-only）：产品端点 POST /api/hermes/sim/release-gate。
     # 融合批二修真实断点：原 decision=approve 无锚必 400（release-state approve 必填
     # anchor），失败被「只记问题单」吞掉=台账从未真实落过。改 canonical 链
     # submit→approve(锚=HumanGate 批准行 approved.events#humangate:<card>)，幂等
     # 重放按状态机语义（已 pending 的 submit=幂等 200；已 approved 的 approve=幂等）。
-    _rel_tok=$(studio_login 2>/dev/null || true)
+    _rel_tok="${_g5_tok:-$(studio_login 2>/dev/null || true)}"
     if [[ -n "$_rel_tok" ]]; then
       studio POST /api/hermes/sim/release-gate "$_rel_tok" \
         "$(jq -n --arg r "$RUN_ID" '{run:$r,action:"submit"}')" >/dev/null 2>&1 \
@@ -2029,12 +2078,12 @@ if [ "$(posture)" = "strict" ]; then
     else
       issue_once release-gate-ledger step20 "发布门台账写入失败（studio token 不可得）——报告证据九按缺席呈现"
     fi
-    # HumanGate 批准落产品审批面探测（run23 收官批：g5-approval-ui-empty 实录——批准
-    # 只写 approved.events 文件，产品审批历史 0 条，L3 审计「审批历史留痕 0 条」fail；
-    # run23 按 ts/actor 补登记 history.json 是回填非根治）。此处只做接线缺口显形：
-    # 反查产品审批历史无该评审卡记录即记单；探测通过审批面承载才可不降级计达
-    # （方案 §2.6.8 消费纪律 6）。root fix（批准路径直接调 decide API）待评审卡
-    # decide 语义裁定，见 2026-10-31-run23-plan-report-retro-revision.md 遗留#1。
+    # HumanGate 批准落产品审批面探测（验收面）：root fix 已落（上方注册＋decide 通道，
+    # 2026-10-31 用户批准）——本探测从「接线缺口显形」转「通道验收」：decide 成功即
+    # history 含 targetId=cardId 记录；仍缺席=通道断裂记单（g5-approval-history-missing），
+    # 审批面承载维持降级计达（方案 §2.6.8 消费纪律 6）。run23 实录背景：g5-approval-
+    # ui-empty（批准只写 approved.events、产品审批历史 0 条、L3 fail）——回填非根治，
+    # 本通道才是根治件。
     if [[ -n "${_rel_tok:-}" ]]; then
       _hist="$(studio GET "/api/approvals/history?limit=50" "$_rel_tok" 2>/dev/null || true)"
       if printf '%s' "$_hist" | grep -q "${RGID}"; then

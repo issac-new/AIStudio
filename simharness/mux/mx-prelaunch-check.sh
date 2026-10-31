@@ -100,7 +100,7 @@ ck "⑮ 运行时树 write_file 无蛇足参数" "test -f '$SR/hermes-agent-src/
 #     根治后合入 AIStudio 产品能力）。机械执法：读当前锚定轮（var/current-state.env
 #     指向的最近一轮）的代偿台账 check-clearance——open 笔存在且未 waive 即红。
 #     豁免通道=resolve（对应 PR 落码合入 main，带 commit 锚）或 waive（用户批准理由）。
-ck "⑯ 代偿清偿门（上一轮台账 open=0）" "AIPAY_SIM_ROOT='$SR' bash '$HERE/mux/mx-compensation-ledger.sh' check-clearance >/dev/null 2>&1" "上一轮存在未清偿代偿：bash mux/mx-compensation-ledger.sh list --status open 看明细；根治合入产品（对应 PR 编号落码）后逐笔 resolve，或经用户批准 waive（带理由）"
+ck "⑯ 代偿清偿门（上一轮台账 open=0）" "AIPAY_SIM_ROOT='$SR' bash '$HERE/mux/mx-compensation-ledger.sh' check-clearance >/dev/null 2>&1" "上一轮存在未清偿代偿：bash mux/mx-compensation-ledger.sh list open 看明细（list 吃位置参数，--status 形态无效——2026-10-31 清账批订正）；根治合入产品（对应 PR 编号落码）后逐笔 resolve，或经用户批准 waive（带理由）"
 
 # ⑯b 问题单延后清账（run23 收官批；方案 §5.9 清偿门线扩展＝纪律 56 的机械执法面：
 #     「prelaunch 断言上轮结构性延后 key 消失」此前只有条款没有检查）。DISP 处置首词
