@@ -75,3 +75,23 @@ describe('entry.mts devAutoLogin 手动登出闸门（2026-10-21 修复）', () 
     expect(gateLine, '闸门检查须在登录 fetch 之前（退出后不得自动拉回 admin）').toBeGreaterThan(fnStart)
   })
 })
+
+describe('entry.mts devAutoLogin 网关让位（2026-10-31 回归收尾批）', () => {
+  // 冷启实录：本机网关配 Matrix 免密时 admin/dev-bootstrap 探测注定 401，浏览器
+  // 网络层自动记红一条（应用层无法静默）。让位契约：admin fetch 前先轮询等
+  // hermes_api_key（网关路径落下即跳过）；不新增任何请求（否决 gateway-credentials
+  // 预探测：未配置时 404 换 401 不净）。
+  const lines = readFileSync(ENTRY, 'utf8').split('\n')
+
+  it('admin 探测前有等待 key 的让位轮询，且落下即 return', () => {
+    const fnStart = lines.findIndex(l => l.includes('async function devAutoLogin'))
+    expect(fnStart).toBeGreaterThan(-1)
+    const fetchLine = lines.findIndex((l, i) => i > fnStart && l.includes("fetch('/api/auth/login'"))
+    expect(fetchLine).toBeGreaterThan(fnStart)
+    const waitLoop = lines.findIndex((l, i) => i > fnStart && i < fetchLine && /for \(let i = 0; i < 9/.test(l))
+    expect(waitLoop, '让位轮询（≤1.8s 等 key）须在 admin fetch 之前').toBeGreaterThan(fnStart)
+    const yieldReturn = lines.findIndex((l, i) => i > waitLoop && i < fetchLine
+      && l.trim() === "if (localStorage.getItem('hermes_api_key')) return")
+    expect(yieldReturn, '轮询后须有「key 已落即 return」让位分支（行内式）').toBeGreaterThan(waitLoop)
+  })
+})

@@ -1036,3 +1036,7 @@
 # assignee 过滤）。此前规则 004 的 currentRunning 硬编码 0，声称的「同一负责人
 # running ≤3」在真实派发链永不生效；查询失败由规则 fail-soft 跳过，不误拦派发。
 712-server-kanban-concurrent-quota-wire.patch
+# 日常工作台回归收尾批（2026-10-31）：PATCH 任务状态被 CLI 状态机拒（cannot X for
+# Y / is not in）时回 409 state_transition_rejected，不再一律 500——业务规则拒绝
+# 与服务器故障可区分（走查实录 triage→review 直转表象为服务端故障）。
+713-server-kanban-patch-state-conflict.patch

@@ -1,0 +1,18 @@
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -1193,6 +1193,15 @@
+     const task = await kanbanCli.patchTask(taskId, { ...body, board })
+     ctx.body = { task }
+   } catch (err: any) {
++    // HERMES_CUSTOM[v713]: CLI 状态机拒绝（"cannot X for Y"/"is not in ..."）是业务
++    // 规则拒绝而非服务器错误——回 409 让前端可区分（此前一律 500：走查实录
++    // triage→review 直转被状态机拒时表象为服务端故障）。
++    const msg = String(err?.message || '')
++    if (/\bcannot\b.*\bfor\b|\bis not in\b/.test(msg)) {
++      ctx.status = 409
++      ctx.body = { error: msg, code: 'state_transition_rejected' }
++      return
++    }
+     ctx.status = 500
+     ctx.body = { error: err.message }
+   }
