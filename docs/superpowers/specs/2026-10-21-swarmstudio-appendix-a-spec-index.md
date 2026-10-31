@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（434 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（435 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 改进方案 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 434 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 改进方案 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 435 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -441,6 +441,7 @@
 | 2026-10-31-run24-plan-realign | run24 前重锚 | 方案正本品牌 12 处→AIStudio（裁定引文保留）＋/app/runs/:runId 实体路由＋37 签头注重锚＋治理中心称谓三处＋test-report 补契约用例判据 17＋守门窗口 9200→12000（main 自带红根治）＋run24 prelude；vitest 217/217 |
 | 2026-10-31-prelaunch-crossrun-residue-gate | prelaunch ⑩b 跨轮残留门 | 轮次工件七目录零残留硬门（run24 污染根治：AN-*/RFD-* 假真值跳系分）；PRELAUNCH_ALLOW_CROSSRUN_RESIDUE=1 豁免；九个跨轮基础目录设计内保留不在判定面；计数六处同步三十二项；绿红双测过 |
 | 2026-10-31-rsi-improvement-plan | AIStudio RSI 改进方案 | 四切面前沿调研＋仓内审计→R1-R12 分档项目（证据自动化/双体系合一/经验库治理/规模化）＋六条不做清单；执行按批次另立 spec |
+| 2026-10-31-superagent-domain-auth | super-agent 吸收 A+B 批：编排域与授权流水 | 新域 `custom/server/orchestrator/`（Trigger/Thread/Subscription/Decision/Mandate/Assignment 六表＋准入表＋四类策略版本＋看板事件桥）；DecisionGrant 增 strength/policyVersion/ruleIds；HumanGate 角色白名单与代批标注；patch 719 挂载 `/api/orchestrator/*`；vitest 24/24＋approval-inbox 96/96＋拼合树 pytest 11/11 |
 
 ### 角色/排除（非 spec 文档）
 

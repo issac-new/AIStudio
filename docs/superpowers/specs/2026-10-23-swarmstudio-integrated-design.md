@@ -574,6 +574,31 @@ Matrix 是外部基础设施，不作为本项目的独立发布模块。
 Electron 桌面构建是可选发布能力。
 桌面 runtime 钉版、构建根目录和逐平台验收见 7.4。
 
+### 4.7 编排域（super-agent 吸收）
+
+`custom/server/orchestrator/` 承载环境事件到授权工作单元的流水，语义对照
+DeepSeek Harness 团队的 super-agent 设计（`dsh-superagent-prototype` 文档 000-007）：
+
+| 概念 | 本仓落法 | 边界 |
+|---|---|---|
+| Source | 事件源，`kanban:<board>` / `file` / `git` / `webhook` / `im` | 只声明与准入，不直接执行 |
+| Trigger | 不可变事件，`UNIQUE(source_id, external_id)` 去重，全局 id 可重放 | 落 SQLite，不落内存 |
+| Thread | 同源同 `thread_key` 的事件流（如 `task:<board>:<id>`） | 订阅只投递上下文，不授予授权 |
+| Decision | 四值 `accept/stop/ignore/unavailable`，带强度与策略版本 | 只记录，不派发 |
+| Mandate | 凭证：`decisionId + ticketId + scope + strength + policyVersion + expiresAt` | 未撤销未过期即可续作 |
+| Admission | 每源准入表（发送者名单 × 是否明确指向 → accept/ignore/inferred），源级 `off/observe/auto` | 默认 `observe`，只记录不执行 |
+| Assignment | 工单到执行器（profile）的绑定记录 | 执行仍由 kanban dispatcher 驱动 |
+
+两层边界：**kanban** 是工单与执行的事实源（任务、尝试、事件、并发闸）；
+**loop** 是单工单内部的执行图；orchestrator 只做「事件 → 授权 → 工单引用」，
+不复制前两者的状态机。三条不变量沿用仓级规则：单一事实源、fail-soft 不造假、
+执行层强制。
+
+授权强度三档：`explicit`（人明确请求或非请求方真人批准）、`delegated`（同一主体代批，
+审计可区分）、`inferred`（规则推断，依赖准入表仍允许）。策略版本变更默认只告警放行
+（`ORCHESTRATOR_STRICT_POLICY=1` 才拒绝）；HumanGate 的角色白名单与自批拒绝分别由
+`HUMAN_GATE_DECIDER_ROLES` 与 `HUMAN_GATE_REQUIRE_HUMAN_DECIDER=1` 开启。
+
 ## 5、端到端交付机制
 
 ### 5.1 从需求到运维的岗位接力

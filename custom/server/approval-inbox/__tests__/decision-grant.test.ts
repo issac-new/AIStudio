@@ -88,3 +88,37 @@ describe('decision-grant T1/T2/T3 执行判定', () => {
       .toEqual({ ok: false, reason: 'expired' })
   })
 })
+
+describe('decision-grant 策略版本与授权强度（2026-10-31 A+B 批）', () => {
+  it('旧 grant 无新增字段：按缺省兼容，不拒绝', () => {
+    const grant = makeGrant()
+    expect(grant.strength).toBeUndefined()
+    expect(grant.policyVersion).toBeUndefined()
+    expect(checkDecisionGrant(grant, task, 'T2', NOW).ok).toBe(true)
+  })
+
+  it('版本落后：默认放行并给 warning', () => {
+    const grant = makeGrant({ policyVersion: 0 })
+    const r = checkDecisionGrant(grant, task, 'T2', NOW, { currentPolicyVersion: 3, strict: false })
+    expect(r.ok).toBe(true)
+    expect(r.warnings).toEqual(['policy_version_stale:0<3'])
+  })
+
+  it('版本落后 + 严格模式：拒绝', () => {
+    const grant = makeGrant({ policyVersion: 0 })
+    expect(checkDecisionGrant(grant, task, 'T2', NOW, { currentPolicyVersion: 3, strict: true }))
+      .toMatchObject({ ok: false, reason: 'policy_version_stale' })
+  })
+
+  it('版本已跟上：不产生 warning', () => {
+    const grant = makeGrant({ policyVersion: 3 })
+    const r = checkDecisionGrant(grant, task, 'T2', NOW, { currentPolicyVersion: 3 })
+    expect(r.warnings).toBeUndefined()
+  })
+
+  it('强度字段随 grant 原样保留（delegated 可审计）', () => {
+    const grant = makeGrant({ strength: 'delegated', issuerRole: 'local_operator' })
+    expect(checkDecisionGrant(grant, task, 'T2', NOW).ok).toBe(true)
+    expect(grant.strength).toBe('delegated')
+  })
+})

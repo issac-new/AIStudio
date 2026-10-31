@@ -66,6 +66,14 @@ function actorOrReply(ctx: ActorContext): AuthenticatedActor | null {
   }
 }
 
+/** 审批规则策略版本（2026-10-31 A+B 批）：由编排域递增，这里只读部署侧钉版本；
+ *  缺省 0 与旧 grant 兼容，不引入跨域 import。 */
+function approvalPolicyVersion(env: NodeJS.ProcessEnv): number {
+  const pinned = (env.ORCHESTRATOR_POLICY_APPROVAL_RULES_VERSION ?? '').trim()
+  const n = Number(pinned)
+  return pinned && Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0
+}
+
 export interface HumanGateRequest {
   id: string                       // hgate:<runId>:<cardId>
   runId: string
@@ -88,6 +96,9 @@ export interface HumanGateRequest {
   taskRevision?: string
   expiresAt?: number
   grant?: DecisionGrant
+  /** 2026-10-31 A+B 批（spec D5/D6）：裁决人角色与代批标记，审计可区分真人批准与代批。 */
+  decidedByRole?: string
+  deciderMode?: 'human' | 'delegated'
 }
 
 const store = new Map<string, HumanGateRequest>()
@@ -274,10 +285,34 @@ export function decide(
   actor: string,
   note?: string,
   choice?: string,
+  opts: { role?: string; strict?: boolean; env?: NodeJS.ProcessEnv } = {},
 ): HumanGateRequest | null {
   ensureLoaded()
   const req = store.get(id)
   if (!req || req.status !== 'pending') return null
+  const env = opts.env ?? process.env
+
+  // 2026-10-31 A+B 批（spec D5/D6）：
+  // - 角色白名单只在显式配置 HUMAN_GATE_DECIDER_ROLES 时生效（缺省不校验，保持存量行为）。
+  // - 自批（同一主体注册并裁决）默认不拒绝，记 delegated 强度；严格模式下拒绝。
+  const role = typeof opts.role === 'string' ? opts.role.trim() : ''
+  const allowedRoles = (env.HUMAN_GATE_DECIDER_ROLES ?? '').split(',').map(s => s.trim()).filter(Boolean)
+  if (allowedRoles.length && role && !allowedRoles.includes(role)) {
+    const error = new Error(`裁决角色 ${role} 不在允许列表（${allowedRoles.join(',')}）`) as Error & { code?: string; status?: number }
+    error.code = 'decider_role_not_allowed'
+    error.status = 403
+    throw error
+  }
+  const strictDecider = opts.strict ?? (env.HUMAN_GATE_REQUIRE_HUMAN_DECIDER ?? '').trim() === '1'
+  const selfApproval = req.requestedBy.trim() === actor.trim()
+  if (strictDecider && selfApproval) {
+    const error = new Error('严格模式：注册人与裁决人不得为同一主体') as Error & { code?: string; status?: number }
+    error.code = 'self_approval_denied'
+    error.status = 403
+    throw error
+  }
+  const deciderMode: 'human' | 'delegated' = selfApproval ? 'delegated' : 'human'
+
   if (req.scope === 'task' && req.tier === 'T2' && decision === 'approve'
     && (typeof choice !== 'string' || !choice.trim())) {
     const error = new Error('T2 批准必须由人选择非空 choice') as Error & { code?: string; status?: number }
@@ -294,6 +329,11 @@ export function decide(
     grant = {
       taskId: req.taskId, board: req.board, tier: req.tier, decision: 'approved', actor,
       taskRevision: req.taskRevision, issuedAt: decidedAt, decidedAt,
+      // 强度与策略版本随凭证签发（spec §4.3）：代批可审计，真人批准为 explicit。
+      strength: deciderMode === 'delegated' ? 'delegated' : 'explicit',
+      // 审批规则版本由编排域统一递增；HumanGate 只读钉版本，不引入跨域依赖。
+      policyVersion: approvalPolicyVersion(env),
+      ...(role ? { issuerRole: role } : {}),
       ...(choice?.trim() ? { choice: choice.trim() } : {}),
       ...(req.expiresAt !== undefined ? { expiresAt: req.expiresAt } : {}),
     }
@@ -302,6 +342,8 @@ export function decide(
     ...req,
     status: decision === 'approve' ? 'approved' : 'rejected',
     decidedBy: actor,
+    decidedByRole: role || undefined,
+    deciderMode,
     decidedAt,
     note,
     ...(grant ? { grant } : {}),
@@ -317,6 +359,8 @@ export function decide(
       actor, targetKind: req.scope === 'task' ? 'kanban' : 'harness', targetId: req.cardId,
       targetTitle: `HumanGate ${req.runId}/${req.cardId}`,
       decision: next.status, note: req.title,
+      strength: deciderMode === 'delegated' ? 'delegated' : 'explicit',
+      policyVersion: approvalPolicyVersion(env),
     })
   } catch (error) {
     warnings.push(projectionError('approval audit', error))
@@ -443,6 +487,8 @@ humanGateRouter.post('/:id/decide', async ctx => {
       String(ctx.params.id ?? ''), decision, actor.username,
       typeof body.note === 'string' ? body.note.slice(0, 500) : undefined,
       typeof body.choice === 'string' ? body.choice : undefined,
+      // 角色随认证主体传入：白名单未配置时不校验，配置后按角色拒绝（spec D5/D6）。
+      { role: actor.role },
     )
   } catch (error) {
     const e = error as Error & { status?: number; code?: string }

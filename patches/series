@@ -1055,4 +1055,6 @@
 197-server-http-command-post-ws.patch
 528-server-profiles-read-cache-mount.patch
 623-server-cli-read-cache-expansion.patch
+# 2026-10-31 super-agent 吸收 A+B 批：/api/orchestrator/* 挂载（routes.ts 终态末尾追加，须在 623 之后）
+719-server-orchestrator-mount.patch
 # ↑ 0.8.0 升级轮迁位：266→642 后（index.ts 终态跳变不破坏 642 上下文）；197/528/623→studio 序尾（http.ts/routes.ts 终态跳变）

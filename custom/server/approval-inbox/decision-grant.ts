@@ -28,6 +28,14 @@ export interface DecisionGrant {
   decidedAt: number
   choice?: string
   expiresAt?: number
+  /** 2026-10-31 A+B 批（spec §4.3）：授权强度。旧 grant 缺省视为 explicit。 */
+  strength?: 'explicit' | 'delegated' | 'inferred'
+  /** 签发时的策略版本；旧 grant 缺省为 0（与 currentPolicyVersion 未 bump 时同值）。 */
+  policyVersion?: number
+  /** 命中的规则 id；可审计「凭什么批的」。 */
+  ruleIds?: string[]
+  /** 裁决人角色（审计用，不参与旧逻辑）。 */
+  issuerRole?: string
 }
 
 export type DecisionGrantReason =
@@ -44,10 +52,13 @@ export type DecisionGrantReason =
   | 'revision_unavailable'
   | 'revision_mismatch'
   | 'store_unreadable'
+  | 'policy_version_stale'
 
 export interface DecisionGrantCheck {
   ok: boolean
   reason: DecisionGrantReason
+  /** 非阻断告警（如策略版本落后但未开严格模式）。 */
+  warnings?: string[]
 }
 
 export function normalizeDecisionBoard(board: string): string {
@@ -115,6 +126,7 @@ export function checkDecisionGrant(
   task: DecisionTask,
   tier: DecisionTier,
   nowMs = Date.now(),
+  opts: { currentPolicyVersion?: number; strict?: boolean; env?: NodeJS.ProcessEnv } = {},
 ): DecisionGrantCheck {
   if (tier === 'T1') return { ok: true, reason: 'ok' }
   if (!grant) return invalid('missing_grant')
@@ -137,6 +149,21 @@ export function checkDecisionGrant(
     return invalid('revision_unavailable')
   }
   if (grant.taskRevision !== actualRevision) return invalid('revision_mismatch')
+
+  // 2026-10-31 A+B 批（spec D10）：策略版本只在调用方显式传入 currentPolicyVersion 时校验；
+  // 默认放行并给 warning，严格模式（opts.strict 或 ORCHESTRATOR_STRICT_POLICY=1）才拒绝。
+  const env = opts.env ?? process.env
+  const strict = opts.strict ?? (env.ORCHESTRATOR_STRICT_POLICY ?? '').trim() === '1'
+  const current = typeof opts.currentPolicyVersion === 'number' && Number.isFinite(opts.currentPolicyVersion)
+    ? Math.max(0, Math.floor(opts.currentPolicyVersion))
+    : null
+  const recorded = typeof grant.policyVersion === 'number' && Number.isFinite(grant.policyVersion)
+    ? Math.max(0, Math.floor(grant.policyVersion))
+    : 0
+  if (current !== null && recorded < current) {
+    if (strict) return invalid('policy_version_stale')
+    return { ok: true, reason: 'ok', warnings: [`policy_version_stale:${recorded}<${current}`] }
+  }
   return { ok: true, reason: 'ok' }
 }
 
@@ -145,6 +172,7 @@ export function grantAllows(
   task: DecisionTask,
   tier: DecisionTier,
   nowMs = Date.now(),
+  opts: { currentPolicyVersion?: number; strict?: boolean; env?: NodeJS.ProcessEnv } = {},
 ): boolean {
-  return checkDecisionGrant(grant, task, tier, nowMs).ok
+  return checkDecisionGrant(grant, task, tier, nowMs, opts).ok
 }
