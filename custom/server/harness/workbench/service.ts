@@ -12,8 +12,8 @@ import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, annealedEditBudget, behaviorContrast, candidateDiversity,
   composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
   findBenchmarkLeakage, findGraderMarkers, findGraderMarkersInPath, hypothesisRetries,
-  leakageBlockers, maxEditCount, paretoReportOf, probeCost, pruneSignal, rsiConfig, sha256,
-  stallDetection, submitReadiness,
+  leakageBlockers, maxEditCount, paretoReportOf, probeCost, proposalArchive, pruneSignal,
+  rsiConfig, sha256, stallDetection, submitReadiness,
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
 import { getSet } from '../../eval/store'
@@ -30,6 +30,7 @@ import type {
   ConstraintCheck, GateBlocker, ParetoReport, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
   RegularizationDerived, SurfaceKey, Variant,
 } from './types'
+import type { ArchiveSteppingStone } from './loop'
 
 export class ServiceError extends Error {
   status: number
@@ -205,6 +206,8 @@ export function overview(): {
   champions: Champion[]
   experiences: Array<Experience & { freshness: ExperienceFreshness }>
   evolution: EvolutionReport
+  /** 垫脚石档案（D3）：被拒/回滚提案的最佳读数投影，供提案端复用。 */
+  archive: ArchiveSteppingStone[]
   meta: { note: string; source: string; boundary: string }
 } {
   const store = readStore()
@@ -244,6 +247,7 @@ export function overview(): {
     champions: store.champions,
     experiences,
     evolution: evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions),
+    archive: proposalArchive(store.proposals),
     meta: {
       note: '候选、探测、组合、冠军四段闭环；探测证据只来自 Eval Studio 真实运行。',
       source: 'HERMES_HOME 八面产物 + ~/.hermes-web-ui/harness-workbench/workbench.json + Eval Studio 运行。',
@@ -740,6 +744,8 @@ export interface RecordProbeInput {
   regressionRunId?: string | null
   /** HDA 等预算基线运行（可选；必须是同评测集、explicit 的真实运行）。 */
   equalBudgetBaselineRunId?: string | null
+  /** CHASE 反事实变体运行（可选；语义保持、协议变换集上的 explicit 真实运行）。 */
+  counterfactualRunId?: string | null
   note?: string
   actor?: string
 }
@@ -770,6 +776,18 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
     }
     equalBudget = { runId: eq.evalRunId, setId: eq.setId, passAt1: eq.passAt1 }
   }
+  let counterfactual: ProbeMetrics['counterfactual'] = null
+  if (input.counterfactualRunId) {
+    const cf = readEvalEvidence(input.counterfactualRunId)
+    if (!cf) throw new ServiceError(400, `反事实运行不存在或未聚合：${input.counterfactualRunId}`)
+    if ((cf.evidenceMode ?? 'explicit') !== 'explicit') {
+      throw new ServiceError(400, '反事实运行必须是 fresh explicit 评测运行（origin/mixed 只能诊断）')
+    }
+    if (cf.evalRunId === input.evalRunId) {
+      throw new ServiceError(400, '反事实运行不能与候选探测复用同一运行')
+    }
+    counterfactual = { runId: cf.evalRunId, setId: cf.setId, passAt1: cf.passAt1 }
+  }
   return mutateStore((store) => {
     const p = requireProposal(store, id)
     if (p.status !== 'approved' && p.status !== 'probing' && p.status !== 'composed') {
@@ -784,6 +802,7 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
     const withRegression: ProbeMetrics = {
       ...(regression ? attachRegression(metrics, regression) : metrics),
       ...(equalBudget ? { equalBudgetBaseline: equalBudget } : {}),
+      ...(counterfactual ? { counterfactual } : {}),
     }
     const contrast = behaviorContrast(p.baseline, withRegression)
     probe.status = 'recorded'

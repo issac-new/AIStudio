@@ -526,6 +526,34 @@ describe('RRSI 跟进批 HTTP', () => {
     expect(pass.body.proposal.derived.gate.warnings.map((w: any) => w.code)).not.toContain('constraint_unchecked')
   })
 
+  it('反事实（D2）：origin 拒、复用候选运行拒、成功后 evidence 可见且增益崩塌场景门可判', async () => {
+    const composed = await createSubmittedApproved()
+    const sel = composed.derived.selectedVariantId
+    const probe = composed.probes.find((x: any) => x.variantId === sel)
+    const origin = await post(`/api/harness/workbench/proposals/${composed.id}/probes/${probe.id}/record`, {
+      evalRunId: 'run-probe', regressionRunId: 'run-reg', counterfactualRunId: 'run-origin-probe',
+    })
+    expect(origin.status).toBe(400)
+    expect(origin.body.error).toContain('fresh explicit')
+    const same = await post(`/api/harness/workbench/proposals/${composed.id}/probes/${probe.id}/record`, {
+      evalRunId: 'run-probe', regressionRunId: 'run-reg', counterfactualRunId: 'run-probe',
+    })
+    expect(same.status).toBe(400)
+    expect(same.body.error).toContain('复用同一运行')
+    const store = await import('../../../eval/store')
+    store.appendRun(runOf('run-cf', baseSetId, 0.52))
+    const ok = await post(`/api/harness/workbench/proposals/${composed.id}/probes/${probe.id}/record`, {
+      evalRunId: 'run-probe', regressionRunId: 'run-reg', counterfactualRunId: 'run-cf',
+    })
+    expect(ok.status).toBe(200)
+    const recorded = ok.body.proposal.probes.find((x: any) => x.id === probe.id)
+    expect(recorded.evidence.counterfactual).toMatchObject({ runId: 'run-cf', setId: baseSetId })
+    // D2 门读数可见：反事实证据落盘后 overview archive（D3）同拍可见
+    const overview = await get('/api/harness/workbench/overview')
+    expect(overview.status).toBe(200)
+    expect(Array.isArray(overview.body.archive)).toBe(true)
+  })
+
   it('约束记录校验：空检查 / 非法 status / 重复 id → 400', async () => {
     const composed = await createSubmittedApproved()
     const empty = await post(`/api/harness/workbench/proposals/${composed.id}/constraints`, { actor: 'reviewer', checks: [] })

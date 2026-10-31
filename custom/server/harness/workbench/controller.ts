@@ -218,6 +218,7 @@ router.post('/proposals/:id/probes/:probeId/record', async (ctx) => {
         evalRunId: String(b.evalRunId ?? ''),
         regressionRunId: typeof b.regressionRunId === 'string' ? b.regressionRunId : null,
         equalBudgetBaselineRunId: typeof b.equalBudgetBaselineRunId === 'string' ? b.equalBudgetBaselineRunId : null,
+        counterfactualRunId: typeof b.counterfactualRunId === 'string' ? b.counterfactualRunId : null,
         note: typeof b.note === 'string' ? b.note : undefined,
         actor: actorOf(ctx, b),
       }),

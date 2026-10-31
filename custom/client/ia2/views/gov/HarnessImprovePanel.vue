@@ -18,8 +18,10 @@ import {
   fetchWorkbenchOverview,
   importWorkbenchExperiences,
   promoteWorkbenchProposal,
+  recordWorkbenchConstraints,
   recordWorkbenchProbe,
   rollbackWorkbenchProposal,
+  type ArchiveSteppingStoneDto,
   setWorkbenchExperienceStatus,
   suggestWorkbenchProposal,
   startAutoProbe,
@@ -63,7 +65,8 @@ interface ProposalForm {
   noiseRunIds: string
 }
 const forms = reactive<Record<string, ProposalForm>>({})
-const probeInputs = reactive<Record<string, { evalRunId: string; regressionRunId: string }>>({})
+const probeInputs = reactive<Record<string, { evalRunId: string; regressionRunId: string; equalBudgetRunId: string; counterfactualRunId: string }>>({})
+const constraintTexts = reactive<Record<string, string>>({})
 
 const createForm = reactive({
   title: '',
@@ -138,8 +141,8 @@ function formFor(id: string): ProposalForm {
   return forms[id]
 }
 
-function probeInput(probeId: string): { evalRunId: string; regressionRunId: string } {
-  if (!probeInputs[probeId]) probeInputs[probeId] = { evalRunId: '', regressionRunId: '' }
+function probeInput(probeId: string): { evalRunId: string; regressionRunId: string; equalBudgetRunId: string; counterfactualRunId: string } {
+  if (!probeInputs[probeId]) probeInputs[probeId] = { evalRunId: '', regressionRunId: '', equalBudgetRunId: '', counterfactualRunId: '' }
   return probeInputs[probeId]
 }
 
@@ -351,6 +354,8 @@ async function recordProbe(p: ProposalDto, probe: ProbeDto): Promise<void> {
   await act(() => recordWorkbenchProbe(p.id, probe.id, {
     evalRunId: input.evalRunId.trim(),
     regressionRunId: input.regressionRunId.trim() || undefined,
+    equalBudgetBaselineRunId: input.equalBudgetRunId.trim() || undefined,
+    counterfactualRunId: input.counterfactualRunId.trim() || undefined,
     actor: f.actor.trim() || 'operator',
   }))
 }
@@ -419,6 +424,43 @@ async function setExperienceStatus(exp: ExperienceDto, status: ExperienceDto['st
 }
 
 // ---------- RRSI 进化与正则化（2026-10-23 吸收轮） ----------
+
+/** 约束保持断言录入（D5 前端面）：每行「id | statement | pass/fail/unknown | evidenceRef」。 */
+function constraintFormFor(id: string): string {
+  if (!constraintTexts[id]) constraintTexts[id] = ''
+  return constraintTexts[id]
+}
+
+function parseConstraintLines(text: string): ConstraintCheckDto[] {
+  return text.split(/\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const [id, statement, status, evidenceRef] = line.split('|').map((s) => s.trim())
+    if (!id || !statement) throw new Error(L.value.constraintBadLine.replace('{line}', line))
+    if (status !== 'pass' && status !== 'fail' && status !== 'unknown') {
+      throw new Error(L.value.constraintBadStatus.replace('{line}', line))
+    }
+    return { id, statement, status, ...(evidenceRef ? { evidenceRef } : {}) }
+  })
+}
+
+async function saveConstraints(p: ProposalDto): Promise<void> {
+  const f = formFor(p.id)
+  let checks: ConstraintCheckDto[]
+  try {
+    checks = parseConstraintLines(constraintFormFor(p.id))
+  } catch (e) {
+    actionError.value = e instanceof Error ? e.message : String(e)
+    return
+  }
+  if (checks.length === 0) {
+    actionError.value = L.value.constraintEmpty
+    return
+  }
+  const ok = await act(() => recordWorkbenchConstraints(p.id, checks, f.actor.trim() || 'operator'))
+  if (ok) constraintTexts[p.id] = ''
+}
+
+/** D3 垫脚石档案：被拒/回滚提案投影（面内全部，供新提案假设引用）。 */
+const archiveList = computed<ArchiveSteppingStoneDto[]>(() => data.value?.archive ?? [])
 
 async function calibrateNoise(p: ProposalDto): Promise<void> {
   const f = formFor(p.id)
@@ -770,6 +812,20 @@ onMounted(() => void refresh())
                 </span>
               </div>
 
+              <div v-if="['draft', 'submitted', 'approved', 'probing', 'composed'].includes(p.status)" class="hi__row" :data-testid="`hi-constraints-${p.id}`">
+                <b>{{ L.constraintTitle }}</b>
+                <textarea
+                  v-model="constraintTexts[p.id]"
+                  rows="2" style="min-width: 260px" :placeholder="L.constraintPlaceholder"
+                  data-testid="hi-constraints-input"
+                />
+                <button type="button" class="hi__btn" @click="saveConstraints(p)">{{ L.constraintSave }}</button>
+                <span class="hi__meta">
+                  <template v-if="p.constraints">{{ L.constraintRecorded }}（{{ p.constraints.checks.length }}，{{ p.constraints.actor }}）</template>
+                  <template v-else>{{ L.constraintHint }}</template>
+                </span>
+              </div>
+
               <div v-if="p.status === 'draft'" class="hi__row">
                 <button type="button" class="hi__btn hi__btn--primary" @click="submit(p)">{{ L.submit }}</button>
                 <button
@@ -820,6 +876,8 @@ onMounted(() => void refresh())
                 <code>{{ probe.id }}</code>
                 <input v-model="probeInput(probe.id).evalRunId" :placeholder="L.evalRunId" />
                 <input v-model="probeInput(probe.id).regressionRunId" :placeholder="L.regressionRunId" />
+                <input v-model="probeInput(probe.id).equalBudgetRunId" :placeholder="L.equalBudgetRunId" data-testid="hi-eq-budget-input" />
+                <input v-model="probeInput(probe.id).counterfactualRunId" :placeholder="L.counterfactualRunId" data-testid="hi-counterfactual-input" />
                 <button type="button" class="hi__btn" @click="recordProbe(p, probe)">{{ L.record }}</button>
               </div>
 
@@ -950,6 +1008,17 @@ onMounted(() => void refresh())
         <p v-if="data.evolution.unexercised.length" class="hi__meta" data-testid="hi-evo-unexercised">
           {{ L.evoUnexercised }}：<code v-for="k in data.evolution.unexercised" :key="k">{{ surfaceName(k) }}</code>
         </p>
+
+        <details v-if="archiveList.length" class="hi__details" data-testid="hi-archive">
+          <summary>{{ L.archiveTitle }}（{{ archiveList.length }}）</summary>
+          <ul class="hi__list">
+            <li v-for="a in archiveList" :key="a.proposalId" :data-testid="`hi-archive-${a.proposalId}`">
+              <code>{{ a.proposalId }}</code>·{{ surfaceName(a.surfaceKey as SurfaceKey) }}·{{ a.title }}
+              <span v-if="a.bestPassAt1 != null" class="hi__meta">pass@1={{ fmtDelta(a.bestPassAt1) }}<template v-if="a.bestDelta != null">（Δ{{ fmtDelta(a.bestDelta) }}）</template></span>
+              <p class="hi__meta">{{ a.hypothesis }}</p>
+            </li>
+          </ul>
+        </details>
         <div
           v-if="(data.evolution.retirementCandidates ?? []).length"
           class="hi__gate hi__gate--blocked"

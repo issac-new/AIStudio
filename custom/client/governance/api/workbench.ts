@@ -332,6 +332,7 @@ export interface ChampionDto {
 }
 
 export interface WorkbenchOverviewDto {
+  archive?: ArchiveSteppingStoneDto[]
   ok: boolean
   surfaces: SurfaceDto[]
   counts: Record<string, number>
@@ -430,11 +431,42 @@ export function fetchAutoProbeStatus(id: string): Promise<{ ok: boolean; running
 }
 
 export function recordWorkbenchProbe(
-  id: string, probeId: string, input: { evalRunId: string; regressionRunId?: string; note?: string; actor?: string },
+  id: string, probeId: string,
+  input: { evalRunId: string; regressionRunId?: string; equalBudgetBaselineRunId?: string; counterfactualRunId?: string; note?: string; actor?: string },
 ): Promise<{ ok: boolean; proposal: ProposalDto }> {
   return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/probes/${encodeURIComponent(probeId)}/record`, {
     method: 'POST', body: JSON.stringify(input),
   })
+}
+
+export interface ConstraintCheckDto {
+  id: string
+  statement: string
+  status: 'pass' | 'fail' | 'unknown'
+  evidenceRef?: string
+  detail?: string
+}
+
+export function recordWorkbenchConstraints(
+  id: string,
+  checks: ConstraintCheckDto[],
+  actor: string,
+  note?: string,
+): Promise<{ ok: boolean; proposal: ProposalDto }> {
+  return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/constraints`, {
+    method: 'POST', body: JSON.stringify({ checks, actor, note }),
+  })
+}
+
+export interface ArchiveSteppingStoneDto {
+  proposalId: string
+  surfaceKey: string
+  title: string
+  hypothesis: string
+  status: string
+  bestPassAt1: number | null
+  bestDelta: number | null
+  updatedAt: string
 }
 
 export function composeWorkbenchProposal(

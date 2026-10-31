@@ -17,6 +17,7 @@ const api = vi.hoisted(() => ({
   decideWorkbenchProposal: vi.fn(),
   createWorkbenchProbes: vi.fn(),
   recordWorkbenchProbe: vi.fn(),
+  recordWorkbenchConstraints: vi.fn(),
   composeWorkbenchProposal: vi.fn(),
   promoteWorkbenchProposal: vi.fn(),
   rollbackWorkbenchProposal: vi.fn(),
@@ -106,6 +107,10 @@ const overview = {
     unexercised: ['memory', 'plugins'],
   },
   champions: [],
+  archive: [{
+    proposalId: 'hw-000', surfaceKey: 'system_prompt', title: '旧假设', hypothesis: '收紧格式约束可减返工',
+    status: 'rejected', bestPassAt1: 0.55, bestDelta: 0.05, updatedAt: '2026-09-01T00:00:00Z',
+  }],
   experiences: [{
     id: 'exp-001', surfaceKey: null, statement: '先复现再改代码', evidenceRefs: ['exp-1', 'task:t1'],
     confidence: 'medium', status: 'candidate', createdAt: 'now', updatedAt: 'now',
@@ -357,5 +362,62 @@ describe('HarnessImprovePanel', () => {
     await w.find('[data-testid="hi-create-treeform-0"] > button').trigger('click')
     expect(w.findAll('.hi__fileRow').length).toBe(rows + 1)
     w.unmount()
+  })
+})
+
+// RSI 二批（2026-10-31）：D2/D3/约束录入面。
+describe('RSI 二批：反事实/等预算输入、约束录入、垫脚石档案', () => {
+  it('探测录入行渲染等预算与反事实两输入，recordProbe 透传两 id', async () => {
+    api.recordWorkbenchProbe.mockResolvedValue({ ok: true, proposal: overview.proposals[0] })
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    expect(w.find('[data-testid="hi-eq-budget-input"]').exists()).toBe(true)
+    expect(w.find('[data-testid="hi-counterfactual-input"]').exists()).toBe(true)
+    await (w.find('[data-testid="hi-eq-budget-input"]').setValue('run-eq'))
+    await (w.find('[data-testid="hi-counterfactual-input"]').setValue('run-cf'))
+    const row = w.find('[data-testid="hi-actions-hw-001"]')
+    const recordBtn = row.findAll('button').find((b) => b.text() === '记录探测')
+    expect(recordBtn).toBeTruthy()
+    await recordBtn!.trigger('click')
+    await flushPromises()
+    expect(api.recordWorkbenchProbe).toHaveBeenCalledWith('hw-001', 'pr-2', expect.objectContaining({
+      equalBudgetBaselineRunId: 'run-eq',
+      counterfactualRunId: 'run-cf',
+    }))
+  })
+
+  it('约束录入：合法行解析为 checks 并调端点；非法状态行被前端拦下且不调端点', async () => {
+    api.recordWorkbenchConstraints.mockResolvedValue({ ok: true, proposal: overview.proposals[0] })
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    const input = w.find('[data-testid="hi-constraints-input"]')
+    expect(input.exists()).toBe(true)
+    await input.setValue('c1 | 拒答率不下降 | pass | run-reg')
+    const btn = w.findAll('button').find((b) => b.text().includes('记录约束'))
+    expect(btn).toBeTruthy()
+    await btn!.trigger('click')
+    await flushPromises()
+    expect(api.recordWorkbenchConstraints).toHaveBeenCalledWith('hw-001',
+      [{ id: 'c1', statement: '拒答率不下降', status: 'pass', evidenceRef: 'run-reg' }],
+      'operator')
+    api.recordWorkbenchConstraints.mockClear()
+    await input.setValue('c2 | 权限边界不扩大 | maybe')
+    await btn!.trigger('click')
+    await flushPromises()
+    expect(api.recordWorkbenchConstraints).not.toHaveBeenCalled()
+  })
+
+  it('垫脚石档案（D3）：overview.archive 渲染被拒提案与最佳读数；缺省不渲染', async () => {
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    const arc = w.find('[data-testid="hi-archive"]')
+    expect(arc.exists()).toBe(true)
+    expect(w.find('[data-testid="hi-archive-hw-000"]').exists()).toBe(true)
+    expect(arc.text()).toContain('旧假设')
+    expect(arc.text()).toContain('+55.0pp')
+    api.fetchWorkbenchOverview.mockResolvedValue({ ...overview, archive: [] })
+    const w2 = mount(HarnessImprovePanel, )
+    await flushPromises()
+    expect(w2.find('[data-testid="hi-archive"]').exists()).toBe(false)
   })
 })
