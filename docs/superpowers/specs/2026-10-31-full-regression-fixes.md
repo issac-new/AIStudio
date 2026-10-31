@@ -48,6 +48,10 @@
    - 根因：深比较把非确定的 wall-clock `ts` 纳入断言；同 threadId+node 的幂等语义与时间戳无关。
    - 修复：`withoutTs()` 去掉 `ts` 后比较语义载荷（channel/node/task 形状不变），断言仍能抓幂等破坏。
 
+10. **A.1「角色/排除」表分隔行缺失（并行合并落表后门禁红）**（文档修复）
+   - 现象：主树 `docs-ssot-guard` 3 例红（`第 424 行分隔行单元格不符合 :?-{3,}:?`）；原因是并行批合并 A.1 时角色表表头后丢了 Markdown 分隔行。
+   - 修复：补 `| --- | --- | --- |` 分隔行；A.1 实计数按守门算法对齐 413（含 E2 探针微批 spec）；`docs-ssot-guard` + `patches-series-guard` 8/8 转绿。
+
 配套测试：
 - `custom/server/loop/engine/__tests__/architecture-quota.test.ts`（新/扩）：有通道且超配额 → BLOCK；无通道 → 跳过不拦；查询失败 → 不误拦；targetAssignee 优先于 task.assignee。
 - `custom/server/loop/engine/__tests__/git-sos.test.ts`（扩）：未实现动作抛错、advisory 语义不变。
