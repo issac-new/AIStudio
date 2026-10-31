@@ -1,88 +1,113 @@
-"""完成契约门（A 层）接线测试：env 契约、源哈希、warn/enforce 分支。"""
+"""内核完成契约门测试（A 层下沉 complete_task，2026-11-01 dod-drill 实锤后）。
+
+覆盖：无回执拒绝（事件留痕）、坏回执拒绝、好回执过门、契约源被改拒绝、
+无契约直通。force=True 绕过 live-claim 栅（单测焦点在契约门，不在属主栅）。
+"""
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
 from completion_contract import CONTRACT_ENV, SOURCE_SHA_ENV, contract_source_sha256, derive_contract
-from tools import kanban_tools
+from hermes_cli import kanban_db as kb
+from hermes_cli import kanban_db_connect as kbc
 
 
-def _task(body: str, workspace: Path) -> SimpleNamespace:
-    return SimpleNamespace(body=body, workspace_path=str(workspace), id="t-1")
+BODY = "任务正文\nAC-1: 产物存在\nAC-2: TAP 报告零失败\n"
 
 
-def _workspace(tmp_path: Path) -> Path:
-    (tmp_path / "dist").mkdir()
-    (tmp_path / "dist" / "app.js").write_text("ok\n", encoding="utf8")
-    (tmp_path / "tap.txt").write_text("1..1\nok 1 - case\n", encoding="utf8")
-    return tmp_path
+@pytest.fixture
+def kanban_home(tmp_path, monkeypatch):
+    home = tmp_path / ".hermes"
+    home.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.delenv(CONTRACT_ENV, raising=False)
+    monkeypatch.delenv(SOURCE_SHA_ENV, raising=False)
+    kb.init_db()
+    return home
 
 
-def _receipt() -> dict:
+def _receipt(ws: Path) -> dict:
     return {
         "version": 1,
-        "criteria": [{
-            "id": "AC-1",
-            "status": "pass",
-            "evidence": [{"path": "dist/app.js"}],
-        }],
-        "artifacts": ["dist/app.js"],
-        "verifications": [{"command": "npm test", "exitCode": 0, "report": "tap.txt", "format": "tap"}],
+        "criteria": [
+            {"id": "AC-1", "status": "pass", "evidence": [{"path": "hello.txt"}]},
+            {"id": "AC-2", "status": "pass", "evidence": [{"kind": "test_report", "path": "tap.txt"}]},
+        ],
+        "artifacts": ["hello.txt"],
+        "verifications": [{"command": "cat tap.txt", "exitCode": 0, "report": "tap.txt", "format": "tap"}],
     }
 
 
-def test_gate_returns_validated_receipt(tmp_path, monkeypatch):
-    ws = _workspace(tmp_path)
-    body = "AC-1: 产物存在且测试通过\n"
-    monkeypatch.setenv(CONTRACT_ENV, json.dumps(derive_contract(body), ensure_ascii=False))
-    monkeypatch.setenv(SOURCE_SHA_ENV, contract_source_sha256(body))
-    result = kanban_tools._completion_contract_gate(None, None, _task(body, ws), "t-1", {"receipt": _receipt()})
-    assert result["ok"] is True
-    assert result["totals"] == {"tests": 1, "failures": 0}
+def _setup_task(ws: Path) -> str:
+    ws.mkdir(parents=True, exist_ok=True)
+    (ws / "hello.txt").write_text("ok\n", encoding="utf8")
+    (ws / "tap.txt").write_text("1..2\nok 1 - a\nok 2 - b\n", encoding="utf8")
+    with kbc.connect() as conn:
+        tid = kb.create_task(conn, title="contract gate", assignee="ops", body=BODY)
+        kb.claim_task(conn, tid)
+    return tid
 
 
-def test_gate_blocks_missing_receipt_and_records_event(tmp_path, monkeypatch):
-    ws = _workspace(tmp_path)
-    body = "AC-1: 必须回执\n"
-    monkeypatch.setenv(CONTRACT_ENV, json.dumps(derive_contract(body), ensure_ascii=False))
-    monkeypatch.setenv(SOURCE_SHA_ENV, contract_source_sha256(body))
-    events: list[tuple] = []
-    monkeypatch.setattr(
-        kanban_tools, "_record_completion_contract_event",
-        lambda conn, tid, kind, payload: events.append((tid, kind, payload)),
-    )
-    with pytest.raises(ValueError, match="缺少结构化回执"):
-        kanban_tools._completion_contract_gate(None, None, _task(body, ws), "t-1", {})
-    assert events and events[0][1] == "completion_blocked_contract"
-    assert events[0][2]["reason"] == "receipt_violation"
+def _kinds(conn, tid: str) -> list:
+    return [e.kind for e in kb.list_events(conn, tid)]
 
 
-def test_gate_blocks_contract_source_edit(tmp_path, monkeypatch):
-    ws = _workspace(tmp_path)
-    original = "AC-1: 原始验收\n"
-    edited = "AC-1: 原始验收\nAC-2: 派发后新增\n"
-    monkeypatch.setenv(CONTRACT_ENV, json.dumps(derive_contract(original), ensure_ascii=False))
-    monkeypatch.setenv(SOURCE_SHA_ENV, contract_source_sha256(original))
-    monkeypatch.setattr(kanban_tools, "_record_completion_contract_event", lambda *a, **k: None)
-    with pytest.raises(ValueError, match="changed after dispatch"):
-        kanban_tools._completion_contract_gate(None, None, _task(edited, ws), "t-1", {"receipt": _receipt()})
+def test_kernel_gate_blocks_completion_without_receipt(tmp_path, kanban_home, monkeypatch):
+    ws = tmp_path / "ws"
+    tid = _setup_task(ws)
+    monkeypatch.setenv(CONTRACT_ENV, json.dumps(derive_contract(BODY), ensure_ascii=False))
+    monkeypatch.setenv(SOURCE_SHA_ENV, contract_source_sha256(BODY))
+    with kbc.connect() as conn:
+        with pytest.raises(ValueError, match="completion contract"):
+            kb.complete_task(conn, tid, summary="没带回执", workspace=str(ws), force=True)
+        assert kb.get_task(conn, tid).status != "done"
+        assert "completion_blocked_contract" in _kinds(conn, tid)
 
 
-def test_gate_warn_mode_returns_warnings_without_blocking(tmp_path, monkeypatch):
-    ws = _workspace(tmp_path)
-    body = 'AC-1: x\n```dod\n{"mode": "warn"}\n```\n'
-    monkeypatch.setenv(CONTRACT_ENV, json.dumps(derive_contract(body), ensure_ascii=False))
-    monkeypatch.setenv(SOURCE_SHA_ENV, contract_source_sha256(body))
-    result = kanban_tools._completion_contract_gate(None, None, _task(body, ws), "t-1", {})
-    assert result["ok"] is False
-    assert result["warnings"]
+def test_kernel_gate_blocks_bad_receipt_and_keeps_task_open(tmp_path, kanban_home, monkeypatch):
+    ws = tmp_path / "ws"
+    tid = _setup_task(ws)
+    monkeypatch.setenv(CONTRACT_ENV, json.dumps(derive_contract(BODY), ensure_ascii=False))
+    monkeypatch.setenv(SOURCE_SHA_ENV, contract_source_sha256(BODY))
+    bad = _receipt(ws)
+    bad["criteria"][0]["evidence"][0]["path"] = "missing.txt"
+    with kbc.connect() as conn:
+        with pytest.raises(ValueError, match="文件不存在|completion contract"):
+            kb.complete_task(conn, tid, summary="坏回执", receipt=bad, workspace=str(ws), force=True)
+        assert kb.get_task(conn, tid).status != "done"
 
 
-def test_gate_is_noop_without_contract(tmp_path, monkeypatch):
-    monkeypatch.delenv(CONTRACT_ENV, raising=False)
-    monkeypatch.delenv(SOURCE_SHA_ENV, raising=False)
-    assert kanban_tools._completion_contract_gate(None, None, _task("no ac", tmp_path), "t-1", {}) is None
+def test_kernel_gate_passes_good_receipt(tmp_path, kanban_home, monkeypatch):
+    ws = tmp_path / "ws"
+    tid = _setup_task(ws)
+    monkeypatch.setenv(CONTRACT_ENV, json.dumps(derive_contract(BODY), ensure_ascii=False))
+    monkeypatch.setenv(SOURCE_SHA_ENV, contract_source_sha256(BODY))
+    with kbc.connect() as conn:
+        ok = kb.complete_task(conn, tid, summary="带回执完成", receipt=_receipt(ws), workspace=str(ws), force=True)
+        assert ok is True
+        assert kb.get_task(conn, tid).status == "done"
+        assert "completion_blocked_contract" not in _kinds(conn, tid)
+
+
+def test_kernel_gate_blocks_edited_contract_source(tmp_path, kanban_home, monkeypatch):
+    ws = tmp_path / "ws"
+    tid = _setup_task(ws)
+    monkeypatch.setenv(CONTRACT_ENV, json.dumps(derive_contract(BODY), ensure_ascii=False))
+    monkeypatch.setenv(SOURCE_SHA_ENV, contract_source_sha256(BODY))
+    edited = BODY + "AC-3: 派发后偷加\n"
+    with kbc.connect() as conn:
+        conn.execute("UPDATE tasks SET body = ? WHERE id = ?", (edited, tid))
+        conn.commit()
+        with pytest.raises(ValueError, match="changed after dispatch"):
+            kb.complete_task(conn, tid, summary="改过卡面", receipt=_receipt(ws), workspace=str(ws), force=True)
+
+
+def test_kernel_gate_noop_without_contract(tmp_path, kanban_home):
+    ws = tmp_path / "ws"
+    tid = _setup_task(ws)
+    with kbc.connect() as conn:
+        assert kb.complete_task(conn, tid, summary="无契约直通", workspace=str(ws), force=True) is True

@@ -1099,6 +1099,27 @@ def _cmd_complete(args: argparse.Namespace) -> int:
     metadata, rc = _parse_metadata_flag(raw_meta)
     if rc:
         return rc
+    # 完成契约回执（内核门输入）：JSON 字面量或 @file；多 id 批量关单禁用（回执是单卡证据）。
+    raw_receipt = getattr(args, "receipt", None)
+    receipt = None
+    if raw_receipt:
+        if len(ids) > 1:
+            return _err("kanban: --receipt is per-task evidence and can't be used with "
+                        "multiple ids. Complete tasks one at a time.", 2)
+        text: Optional[str] = None
+        if raw_receipt.startswith("@"):
+            try:
+                text = Path(raw_receipt[1:]).expanduser().read_text(encoding="utf-8")
+            except OSError as exc:
+                return _err(f"kanban: cannot read --receipt file: {exc}", 2)
+        else:
+            text = raw_receipt
+        try:
+            receipt = json.loads(text)
+        except ValueError as exc:
+            return _err(f"kanban: --receipt is not valid JSON: {exc}", 2)
+        if not isinstance(receipt, dict):
+            return _err("kanban: --receipt must be a JSON object", 2)
     fail_msg: dict[str, str] = {}
     with kbc.connect_closing() as conn:
         def op(tid):
@@ -1113,7 +1134,9 @@ def _cmd_complete(args: argparse.Namespace) -> int:
             try:
                 done = kb.complete_task(conn, tid, result=args.result, summary=summary, metadata=metadata,
                                         expected_run_id=_worker_run_id_for(tid),
-                                        force=bool(getattr(args, "force", False)))
+                                        force=bool(getattr(args, "force", False)),
+                                        receipt=receipt,
+                                        workspace=os.environ.get("HERMES_KANBAN_WORKSPACE"))
             except kb.LiveClaimError:
                 fail_msg[tid] = (f"cannot complete {tid}: a live worker is running it. Wait for the "
                                  f"worker, `hermes kanban reclaim {tid}` to release it, or re-run with "
@@ -1122,6 +1145,10 @@ def _cmd_complete(args: argparse.Namespace) -> int:
             except kb.EmptyCompletionError as empty_err:
                 fail_msg[tid] = (f"cannot complete {tid}: {empty_err}. Pass --result/--summary "
                                  f"describing what was done (an empty completion is not evidence).")
+                return False
+            except ValueError as contract_err:
+                # 内核完成契约门（complete_task）拒绝：结构化透传给 worker/操作者。
+                fail_msg[tid] = f"cannot complete {tid}: {contract_err}"
                 return False
             if not done:
                 # complete_task returns bare False for a dependency refusal too;

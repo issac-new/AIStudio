@@ -2880,11 +2880,89 @@ def _claim_is_live(trow) -> bool:
     )
 
 
+def _gate_completion_contract(
+    conn: sqlite3.Connection, task_id: str, *,
+    receipt: Optional[dict], workspace: Optional[str],
+) -> Optional[dict]:
+    """内核完成契约门（模型波动加固 A 层下沉，2026-11-01 演练实锤后）。
+
+    契约由派发方写入 env（``HERMES_KANBAN_DOD_CONTRACT`` + 源哈希锁）；本函数在
+    ``complete_task`` 内核边界执行——工具/CLI/面板任一完成面都必须经过这里，
+    堵住「worker 绕开 kanban_complete 工具、直接终端跑 hermes kanban complete」
+    的穿透向量（dod-drill R1/R2 实录）。返回规范化回执（无契约/通过）；
+    违规抛 :class:`ContractViolation`（ValueError 子类，调用方按既有 ValueError
+    通道结构化报错）。拒绝留痕 ``completion_blocked_contract`` 事件。
+    """
+    import os as _os
+
+    raw = _os.environ.get("HERMES_KANBAN_DOD_CONTRACT", "").strip()
+    if not raw:
+        return None
+    try:
+        from completion_contract import (
+            ContractViolation, contract_source_sha256, parse_contract, validate_receipt,
+        )
+    except ImportError as exc:  # 部署缺模块：fail-closed——宁可拒完成也不无门放行
+        raise ValueError(
+            f"kanban_complete blocked: completion-contract module unavailable ({exc}). "
+            "This is a deployment error; kanban_block with kind='dependency' and ask the "
+            "operator to re-deploy the runtime."
+        ) from None
+    try:
+        contract = parse_contract(raw)
+    except ContractViolation as exc:
+        _append_event(conn, task_id, "completion_blocked_contract",
+                      {"reason": "contract_unparseable", "detail": str(exc)[:400]})
+        raise ValueError(
+            f"kanban_complete blocked: dispatch-time completion contract is unparseable ({exc}). "
+            "This is a dispatcher/config error; kanban_block with kind='dependency' and ask the "
+            "operator to re-dispatch the card."
+        ) from None
+    if contract["mode"] == "off":
+        return None
+    if contract["mode"] != "enforce":  # warn 档：违规不拦，但事件留痕
+        try:
+            validate_receipt(contract, receipt, workspace or _os.getcwd())
+        except ContractViolation as exc:
+            _append_event(conn, task_id, "completion_contract_warning",
+                          {"detail": str(exc)[:600]})
+            return None
+    row = conn.execute("SELECT body FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    expected = _os.environ.get("HERMES_KANBAN_DOD_SOURCE_SHA256", "").strip()
+    if expected and row is not None:
+        actual = contract_source_sha256(row["body"] or "")
+        if actual != expected:
+            _append_event(conn, task_id, "completion_blocked_contract", {
+                "reason": "contract_source_changed",
+                "expectedSha256": expected, "actualSha256": actual,
+            })
+            raise ValueError(
+                "kanban_complete blocked: the card's acceptance contract changed after "
+                "dispatch (AC/dod block was edited). Restore the original AC/dod block, or "
+                "ask the operator to re-dispatch. Do not fabricate a receipt for the new text."
+            ) from None
+    try:
+        validated = validate_receipt(contract, receipt, workspace or _os.getcwd())
+    except ContractViolation as exc:
+        _append_event(conn, task_id, "completion_blocked_contract", {
+            "reason": "receipt_violation", "detail": str(exc)[:600],
+            "contractSha256": contract.get("sourceSha256"),
+        })
+        raise ValueError(
+            f"kanban_complete blocked by the completion contract: {exc}. "
+            "Fix the evidence or artifact, then complete again with a corrected receipt "
+            "(kanban_complete tool receipt 参数，或 CLI --receipt)。Nothing changed; "
+            "the task is still in-flight."
+        ) from None
+    return validated
+
+
 def complete_task(
     conn: sqlite3.Connection, task_id: str, *, result: Optional[str] = None,
     summary: Optional[str] = None, metadata: Optional[dict] = None,
     created_cards: Optional[Iterable[str]] = None, expected_run_id: Optional[int] = None,
     fire_lifecycle_hook: bool = True, force: bool = False,
+    receipt: Optional[dict] = None, workspace: Optional[str] = None,
 ) -> bool:
     """``running|ready|blocked|review -> done``; records ``result``.
 
@@ -2915,6 +2993,13 @@ def complete_task(
     from hermes_cli.kanban_pr_acceptance_store import prepare_acceptance, record_acceptance
     verified_cards = _gate_created_cards(conn, task_id, created_cards, summary or result)
     _gate_empty_completion(conn, task_id, result=result, summary=summary)
+    # 内核完成契约门（A 层下沉）：任何完成面（工具/CLI/面板）都必须过这里。
+    validated_receipt = _gate_completion_contract(conn, task_id, receipt=receipt, workspace=workspace)
+    if validated_receipt is not None and validated_receipt.get("ok"):
+        metadata = dict(metadata or {})
+        metadata["completion_receipt"] = validated_receipt
+        if validated_receipt.get("sourceSha256"):
+            metadata["completion_contract_sha256"] = validated_receipt["sourceSha256"]
     metadata = _merge_completion_prose_artifacts(
         conn, task_id, metadata, summary=summary, result=result,
     )
