@@ -126,6 +126,12 @@ await page.evaluate(([token, mtok, muser, mhs]) => {
   localStorage.setItem('matrix_device_id', 'R18CAP')
   localStorage.setItem('matrix_homeserver_url', mhs)
 }, [loginRes.token, mtok, `@${USER}:${MX_SERVER_NAME}`, MX_HS_URL])
+// 2026-10-31 活体收案（F4/F5 定谳）：goto('/login') 后才注入凭证＝凭证晚于应用引导，
+// 首次导航目标页会间歇整页空壳（仅侧栏 294 字符；五轮探针实录第 1 轮空、2-5 轮全
+// 渲染——run19「壳页复读」同族根因）。修法=注入后 reload 一次让应用带凭证重新引导，
+// 后续导航必为认证态。
+await page.reload()
+await page.waitForTimeout(1500)
 
 async function dismissPopups() {
   for (const txt of ['Confirm', '确认', '确定', '知道了', '稍等', '稍后提醒', '开始使用', '立即体验', '跳过']) {

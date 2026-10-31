@@ -43,3 +43,4 @@
 {"at":"2026-10-31T02:51:30Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md","receipt":"d05dbd5f9a58e8c53f763751b91d89d2c37df6f5","commit":"8e8ca2431"}
 {"at":"2026-10-31T03:10:14Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md","receipt":"d55f83001860b5c52874260b88b71d90ce9fadb3","commit":"e14e187db"}
 {"at":"2026-10-31T03:24:47Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md","receipt":"a8965f480d1863cbc0cbd6be2ab81633f1fcb127","commit":"910db93cd"}
+{"at":"2026-10-31T03:42:18Z","spec":"docs/superpowers/specs/2026-10-31-hanging-items-closure.md","receipt":"dfa80459c6712ed6717c7505efa9cdadae8da6b8","commit":"d575df606"}

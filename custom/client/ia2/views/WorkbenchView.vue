@@ -425,12 +425,22 @@ const deepLinkMissing = computed(() => {
 })
 const deepLinkUnreachable = ref(false)
 let deepLinkTimer: ReturnType<typeof setTimeout> | null = null
+// F6（2026-10-31 活体收案）：matrix 首同步慢于 15s 看门狗的房会误报「不可达」（活体
+// 实录：matrix 在册、client 列表未同步到，手动重试即好）。超时先自动补一刀（幂等
+// join＋刷新＝手动重试同语义，仅自动一次），二次超时仍缺才判不可达。
+let deepLinkAutoRetried = false
 
 function armDeepLinkWatchdog(): void {
   deepLinkUnreachable.value = false
   if (deepLinkTimer) clearTimeout(deepLinkTimer)
   deepLinkTimer = setTimeout(() => {
-    if (deepLinkMissing.value) deepLinkUnreachable.value = true
+    if (!deepLinkMissing.value) return
+    if (!deepLinkAutoRetried) {
+      deepLinkAutoRetried = true
+      retryDeepLinkRoom()
+      return
+    }
+    deepLinkUnreachable.value = true
   }, 15000)
 }
 
@@ -459,6 +469,7 @@ function retryDeepLinkRoom(): void {
 watch(deepLinkMissing, (missing) => {
   if (!missing) {
     deepLinkUnreachable.value = false
+    deepLinkAutoRetried = false
     if (deepLinkTimer) { clearTimeout(deepLinkTimer); deepLinkTimer = null }
     return
   }
