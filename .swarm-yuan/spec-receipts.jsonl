@@ -51,3 +51,4 @@
 {"at":"2026-10-31T04:00:53Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md","receipt":"d7de492cfb48ef9cec39b5bfa9d47c1ba382b768","commit":"899983ada"}
 {"at":"2026-10-31T04:16:46Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"aa80bb4a2aed44eeb380e240ab9b13b7a2d9f373","commit":"d575df606"}
 {"at":"2026-10-31T04:20:07Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"6af0adee5b3bbb19dc441435d4558d5adf207504","commit":"206b67a60"}
+{"at":"2026-10-31T05:11:42Z","spec":"docs/superpowers/specs/2026-10-31-k19-ghost-closeout.md","receipt":"054d24b10fcd690fb48e4c7ff3e600f609fc3f82","commit":"227f81410"}

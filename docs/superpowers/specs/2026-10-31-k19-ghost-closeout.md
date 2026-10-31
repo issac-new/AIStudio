@@ -26,6 +26,10 @@
 2. **幽灵卡销案而非深修**（Mechanical）：三源证据（observer available:true＋徽章在位＋点击跳转正确）证明设计内行为；错误在收尾批的判定而非产品。
 3. **只转新增块**（Mechanical）：棘轮语义=「新增请用 lib/http」；存量 1191 处按域灰度（lib/http 头注既策），不顺手扩大改写面。
 
+### 台账补全注记（2026-10-31 台账批）
+
+本 spec 首合（1ca45f3 经 7b544c8）时收据在合并荡失（收据对账 0 条实录）——本批以 SPEC_REBIND 修订重绑收据；同批补 decisions 追补 6 条（批①②③ 决策机读化）＋挂账登记 2 条（eval TS2339 存量松型／K19 计数并行抬高监视）＋链修复锚（verify-chain 第 5 行为 2026-10-15 历史旧伤，append-only 下不可改写，已按工具教义续写修复决策；自 seq57 起经官方写入器重锚）。
+
 ## 3. 验证
 
 - `npx vitest run custom/__tests__/architecture-ratchet.test.ts` 7/7（1191/872 双达标）；`custom/server/approval-inbox custom/server/harness/workbench custom/server/eval` 581/581。
