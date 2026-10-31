@@ -170,6 +170,27 @@ it('rejects missing or mismatched owners and never trusts ownership claimed in p
  }
 })
 
+it('adds Person event subscriptions with account ownership independent of the visible Profile',async()=>{
+ const {businessEvents}=await import('../../packages/server/src/modules/studio/services/webhooks/business-events')
+ const {canReceiveAppEvent}=await import('../../packages/server/src/modules/studio/services/webhooks/app-events')
+ const main={id:'person-main-1',studio_user_id:'1',user_id:'1',profile:'model-resource',source:'builtin_agent',agent:'ekko-agent'}
+ sessionFixtures.set(main.id,main);sessionFixtures.set('person-task-private',{...main,id:'person-task-private'})
+ const event={schema_version:1 as const,id:'person-completion',source:'person',type:'person.run.completed',profile:'model-resource',
+  occurred_at:new Date().toISOString(),subject:{session_id:main.id,run_id:'main-run'},payload:{run_id:'main-run',output:'Result'}}
+ expect(canReceiveAppEvent({id:2,role:'super_admin'} as any,event)).toBe(false)
+ expect(canReceiveAppEvent(auth.user,{...event,subject:{session_id:'person-task-private',run_id:'worker'}})).toBe(false)
+ const s=socket();bindAppEventSubscription(s as any)
+ try {
+  const ack=vi.fn();await s.handlers.get('app.events.subscribe')!({schema_version:1,profile:'default',types:['person.run.completed']},ack)
+  expect(ack).toHaveBeenCalledWith(expect.objectContaining({ok:true}))
+  businessEvents.publish(event);await flush()
+  expect(s.emit).toHaveBeenCalledWith('app.event',expect.objectContaining({source:'person',type:'person.run.completed',
+   subject:{session_id:main.id,run_id:'main-run'},display:expect.objectContaining({content:'Result'})}))
+  s.emit.mockClear();auth.user={id:2,role:'super_admin'}
+  businessEvents.publish({...event,id:'other-user'});await flush();expect(s.emit).not.toHaveBeenCalled()
+ } finally{s.handlers.get('disconnect')!()}
+})
+
 it('applies ownership to legacy notifications as well as the versioned subscription', async () => {
  const { bindLegacyAppEvents } = await import('../../packages/server/src/modules/studio/services/webhooks/legacy-app-events')
  const { stateEvent } = await import('../../packages/server/src/modules/studio/services/webhooks/app-event-state')

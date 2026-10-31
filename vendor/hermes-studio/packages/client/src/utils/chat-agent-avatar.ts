@@ -1,14 +1,43 @@
 import { deploymentUrl } from './deployment-url'
+import { personBotLabel } from './person-bot-label'
+import { DEFAULT_PERSON_BOT_TYPE, PERSON_BOTS, personBot } from '../../../shared/person-bots'
 
 export interface ChatAgentAvatar {
-  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'DeepSeek Harness' | 'Cursor' | 'Antigravity' | 'Qwen Code' | 'Kimi Code' | 'CodeBuddy' | 'Qoder' | 'GitHub Copilot' | 'ZCode'
+  label: string
   src: string
 }
 
 interface ChatAgentSessionIdentity {
+  id?: string
   source?: string
   agent?: string
   codingAgentId?: string
+  botType?: string
+  bot_type?: string
+}
+
+export const PERSON_AVATAR = { get label() { return personBotLabel(PERSON_BOTS[0]) }, src: deploymentUrl('/coding-agents/person.jpg') } as const satisfies ChatAgentAvatar
+export const PERSON_ANIMATIONS = {
+  idle: deploymentUrl('/person/idle.gif'),
+  thinking: deploymentUrl('/person/thinking.gif'),
+  searching: deploymentUrl('/person/searching.gif'),
+  done: deploymentUrl('/person/done.gif'),
+  error: deploymentUrl('/person/error.gif'),
+  sleeping: deploymentUrl('/person/sleeping.gif'),
+} as const
+
+export function personAvatarAnimation(avatar: ChatAgentAvatar, state: keyof typeof PERSON_ANIMATIONS) {
+  const bot = PERSON_BOTS.find(bot => deploymentUrl(bot.avatar) === avatar.src)
+  return bot ? deploymentUrl(bot.animations[state]) : undefined
+}
+
+export function personAvatarStyle(avatar: ChatAgentAvatar, state?: 'thinking') {
+  const bot = PERSON_BOTS.find(bot => deploymentUrl(bot.avatar) === avatar.src)
+  const offset = state === 'thinking' ? bot?.thinkingOffset : bot?.avatarOffset
+  return {
+    '--person-avatar-offset-x': offset?.x ?? 0,
+    '--person-avatar-offset-y': offset?.y ?? 0,
+  }
 }
 
 const AGENT_AVATARS = {
@@ -32,7 +61,11 @@ const AGENT_AVATARS = {
 
 export function chatSessionAgentAvatar(session?: ChatAgentSessionIdentity | null): ChatAgentAvatar {
   if (!session) return AGENT_AVATARS['ekko-agent']
+  const botType = session.botType || session.bot_type || (session.id?.startsWith('person-main-') ? DEFAULT_PERSON_BOT_TYPE : '')
+  const bot = personBot(botType)
+  if (bot) return { label: personBotLabel(bot), src: deploymentUrl(bot.avatar) }
   const runtime = String(session?.codingAgentId || session?.agent || '').trim().toLowerCase()
+  if (runtime === 'hermes') return AGENT_AVATARS.hermes
   if (runtime === 'ekko-agent' || runtime === 'ekko_agent' || runtime === 'ekko') return AGENT_AVATARS['ekko-agent']
   if (runtime === 'claude' || runtime === 'claude-code') return AGENT_AVATARS['claude-code']
   if (runtime === 'codex') return AGENT_AVATARS.codex

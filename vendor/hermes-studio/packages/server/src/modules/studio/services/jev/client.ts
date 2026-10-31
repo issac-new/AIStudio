@@ -55,7 +55,7 @@ export async function evaluateJevWithCredentials<Q extends Questions>(
   options: { signal?: AbortSignal; timeoutMs?: number; beforeFetch?: () => Promise<void> } = {},
 ): Promise<SystemOneResult<Q>> {
   const payload = parseJevRequest(request)
-  if (!settings.apiKey) throw new JevError('JEV API key is not configured for this Profile', 409, 'jev_not_configured')
+  if (!settings.apiKey) throw new JevError('JEV API key is not configured', 409, 'jev_not_configured')
   let fetchCount = 0
   const client = new TypeSafeClient({
     apiKey: settings.apiKey, baseURL: settings.baseUrl, defaultModel: settings.model,
@@ -87,18 +87,17 @@ export async function evaluateJevWithCredentials<Q extends Questions>(
   }
 }
 
-/** Shared server entry point. Callers must pass their own authorized profile. */
+/** Shared server entry point. Operation context does not select configuration; all callers share global settings. */
 export async function evaluateJev<Q extends Questions>(
-  profile: string,
   request: SystemOneRequest<Q>,
   options: { signal?: AbortSignal } = {},
 ): Promise<SystemOneResult<Q>> {
-  return evaluateJevWithCredentials(await readJevCredentials(profile), request, options)
+  return evaluateJevWithCredentials(await readJevCredentials(), request, options)
 }
 
-export async function testJev(profile: string) {
+export async function testJev() {
   const started = Date.now()
-  const result = await evaluateJev(profile, {
+  const result = await evaluateJev({
     state: 'The service is working correctly.',
     questions: {
       sentiment: choice('What is the sentiment?', { positive: null, negative: null }),

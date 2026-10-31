@@ -135,7 +135,21 @@ const extraMessages: Record<NativeDeviceLocale, Record<keyof typeof extraEnglish
     elapsed: '{seconds} sn bekleniyor', storedLocally: 'Bağlantılar bu bilgisayarda saklanır.',
   },
 }
-export type NativeDeviceLabels = Labels & typeof extraEnglish
+const openLabels: Record<NativeDeviceLocale, { openCurrent: string; openNew: string }> = {
+  en: { openCurrent: 'Open here', openNew: 'Open new instance' },
+  zh: { openCurrent: '此窗口打开', openNew: '新窗口打开' },
+  'zh-TW': { openCurrent: '此視窗開啟', openNew: '新視窗開啟' },
+  ja: { openCurrent: 'このウィンドウで開く', openNew: '新しいインスタンスで開く' },
+  ko: { openCurrent: '현재 창에서 열기', openNew: '새 인스턴스로 열기' },
+  fr: { openCurrent: 'Ouvrir ici', openNew: 'Ouvrir une nouvelle instance' },
+  es: { openCurrent: 'Abrir aquí', openNew: 'Abrir nueva instancia' },
+  de: { openCurrent: 'Hier öffnen', openNew: 'Neue Instanz öffnen' },
+  pt: { openCurrent: 'Abrir aqui', openNew: 'Abrir nova instância' },
+  ru: { openCurrent: 'Открыть здесь', openNew: 'Открыть новый экземпляр' },
+  ar: { openCurrent: 'فتح هنا', openNew: 'فتح نسخة جديدة' },
+  tr: { openCurrent: 'Burada aç', openNew: 'Yeni örnekte aç' },
+}
+export type NativeDeviceLabels = Labels & typeof extraEnglish & { openCurrent: string; openNew: string }
 export function nativeDeviceLabels(locale: NativeDeviceLocale = defaultNativeDeviceLocale()): NativeDeviceLabels {
-  return { ...messages[locale], ...extraMessages[locale] }
+  return { ...messages[locale], ...extraMessages[locale], ...openLabels[locale] }
 }

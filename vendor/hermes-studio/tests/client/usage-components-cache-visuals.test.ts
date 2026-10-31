@@ -99,9 +99,30 @@ describe('usage cache visualizations', () => {
     expect(wrapper.text()).toContain('Hermes')
     expect(wrapper.find('.agent-details').text()).toContain('usage.cacheWrite 10')
     expect(wrapper.find('.agent-details').text()).toContain('usage.sessions 2')
-    expect(wrapper.find('.agent-swatch').attributes('style')).toContain('background: rgb(99, 179, 237)')
+    expect(wrapper.find('.agent-logo img').attributes('src')).toBe('/coding-agents/hermes.png')
     expect(wrapper.find('.agent-bar-segment.input').exists()).toBe(true)
     expect(wrapper.find('.agent-bar-segment.output').exists()).toBe(true)
     expect(wrapper.find('.agent-bar-segment.cache').attributes('style')).toContain('width: 33.333%')
+  })
+
+  it('uses the matching logos for usage aliases and zhezhe, with generated avatars for unknown agents', () => {
+    const original = mockUsageStore.agentUsage
+    mockUsageStore.agentUsage = ['zhezhe', 'claude_code', 'ekko_agent', 'qwen', 'future-cli', 'unknown']
+      .map(agent => ({ ...original[0], agent }))
+    try {
+      const wrapper = mount(AgentBreakdown)
+      for (const [agent, logo] of [
+        ['zhezhe', 'person.jpg'], ['claude_code', 'claude-code.svg'],
+        ['ekko_agent', 'ekko-agent.png'], ['qwen', 'qwen-logo.svg'],
+      ]) {
+        expect(wrapper.find(`[data-agent="${agent}"] .agent-logo img`).attributes('src')).toBe(`/coding-agents/${logo}`)
+      }
+      for (const agent of ['future-cli', 'unknown']) {
+        expect(wrapper.find(`[data-agent="${agent}"] .agent-logo img`).exists()).toBe(false)
+        expect(wrapper.find(`[data-agent="${agent}"] .agent-logo svg`).exists()).toBe(true)
+      }
+    } finally {
+      mockUsageStore.agentUsage = original
+    }
   })
 })

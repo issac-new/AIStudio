@@ -1,5 +1,14 @@
+vi.mock('../../packages/server/src/modules/studio/repositories/person-session-store', () => ({ personSessionIds: (userId: number) => userId === 1 ? ['person-main-1'] : [] }))
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+vi.mock('../../packages/server/src/modules/studio/services/person/presence', () => ({ observePersonPresenceEvent: vi.fn() }))
 
+const personDeliveryCurrentMock = vi.hoisted(() => vi.fn(() => true))
+const finishPersonDeliveryMock = vi.hoisted(() => vi.fn())
+vi.mock('../../packages/server/src/modules/studio/services/person/delivery', () => ({ personDeliveryCurrent: personDeliveryCurrentMock, finishPersonDelivery: finishPersonDeliveryMock, cancelPersonDelivery: vi.fn() }))
+const personInteractionMock = vi.hoisted(() => vi.fn(() => undefined as any))
+vi.mock('../../packages/server/src/modules/studio/services/person/chat-interactions', () => ({ personChatInteraction: personInteractionMock, answerPersonChatInteraction: vi.fn(), answerPersonTaskInteraction: vi.fn() }))
+const ownedTaskSessionMock = vi.hoisted(() => vi.fn())
+vi.mock('../../packages/server/src/modules/studio/services/person/task-chat', () => ({ ownedPersonTaskSession: ownedTaskSessionMock }))
 const bridgeMock = vi.hoisted(() => ({
   clarifyRespond: vi.fn(),
   statusIfLoaded: vi.fn(),
@@ -63,6 +72,8 @@ vi.mock('../../packages/server/src/modules/studio/public/auth', () => ({
 
 vi.mock('../../packages/server/src/modules/studio/repositories/users-store', () => ({
   userCanAccessProfile: vi.fn(() => true),
+  findUserById: vi.fn((id: number) => ({ id, username: `user${id}`, role: 'admin', status: 'active' })),
+  listUserProfiles: vi.fn(() => [{ profile_name: 'default' }]),
 }))
 
 function createSocketHarness() {
@@ -94,6 +105,7 @@ function createSocketHarness() {
 describe('ChatRunSocket clarify responses', { timeout: 15_000 }, () => {
   beforeEach(() => {
     vi.resetModules()
+    personInteractionMock.mockReset()
     sessionStoreMock.getSession.mockReset()
     sessionStoreMock.getSession.mockReturnValue({ id: 'session-1', profile: 'default' })
     bridgeMock.clarifyRespond.mockReset()
@@ -101,6 +113,47 @@ describe('ChatRunSocket clarify responses', { timeout: 15_000 }, () => {
     respondToEkkoClarificationMock.mockReset()
     respondToEkkoClarificationMock.mockReturnValue({ handled: false, resolved: false })
     bridgeMock.statusIfLoaded.mockResolvedValue({ ok: true, exists: false, running: false, loaded: false })
+  })
+
+  it.each([{ busy: true, flow: false }, { busy: false, flow: false }, { busy: true, flow: true }, { busy: false, flow: true }])('returns a Person background result through one original chat run (busy=$busy, flow=$flow)', async ({ busy, flow }) => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { io, socket } = createSocketHarness()
+    const server = new ChatRunSocket(io as any)
+    const sid = 'person-main-1'
+    sessionStoreMock.getSession.mockReturnValue({ id: sid, profile: 'default', agent_preset: 'person', studio_user_id: '1' } as any)
+    const state = { isWorking: busy, queue: [], events: [], messages: [{ role: 'user', content: 'Unrelated later turn' }] }
+    ;(server as any).sessionMap.set(sid, state)
+    personDeliveryCurrentMock.mockReturnValue(true)
+    finishPersonDeliveryMock.mockClear()
+    const handle = vi.spyOn(server as any, 'handleRun').mockImplementation(async (_socket: any, data: any) => { data.onEvent('run.completed', { output: 'Your report is ready' }) })
+    const result = { user: { id: 1, username: 'user1', role: 'admin', profiles: ['default'] }, executionId: 'exec1', taskId: 'task1', title: 'Report', status: 'finished', output: '/tmp/report.txt', error: '',
+      origin: { sessionId: sid, runId: 'original-run', messages: [{ role: 'user', content: 'Prepare report' }] },
+      ...(flow ? { returnExpectation: '检查报告后按预设步骤移交', flow: { index: 0, total: 2, stopped: false, completed: false, next_session_id: 'person-main-design' } } : {}) }
+    await server.deliverPersonResult(result as any)
+    if (busy) {
+      expect(handle).not.toHaveBeenCalled()
+      await server.deliverPersonResult(result as any)
+      expect(state.queue).toHaveLength(1)
+      socket.data = { user: { id: 2 } } as any
+      ;(server as any).dequeueNextQueuedRun(socket, sid)
+    }
+    await vi.waitFor(() => expect(handle).toHaveBeenCalledTimes(1))
+    const [ownerSocket, data, _profile, skip, context] = handle.mock.calls[0] as any[]
+    expect(ownerSocket.data.user.id).toBe(1)
+    expect(data).toMatchObject({ session_id: sid, display_input: null, background_delegation_id: 'person-result:exec1', autonomous: true })
+    if (flow) {
+      expect(data.input).toContain('检查报告后按预设步骤移交')
+      expect(data.input).toContain('person-main-design')
+      expect(data.input).toContain('bot_task_control advance')
+      expect(context.messages).toHaveLength(2)
+      expect(context.messages[1]).toMatchObject({ role: 'user', content: expect.stringContaining('/tmp/report.txt') })
+      expect(context.messages[1].content).not.toContain('检查报告后按预设步骤移交')
+      expect(data.storage_message).toContain('检查报告后按预设步骤移交')
+    } else expect(data.input).toContain('/tmp/report.txt')
+    expect(skip).toBe(true)
+    expect(context).toMatchObject({ originRunId: 'original-run', memoryPolicy: 'disabled' })
+    expect(context.messages[0]).toEqual({ role: 'user', content: 'Prepare report' })
+    expect(finishPersonDeliveryMock).toHaveBeenCalledWith(1, 'exec1', true, '')
   })
 
   it.each(['socket', 'group'])('round-trips MCP questions through the %s reply path and removes replay state', async surface => {
@@ -125,6 +178,24 @@ describe('ChatRunSocket clarify responses', { timeout: 15_000 }, () => {
     expect(bridgeMock.clarifyRespond).not.toHaveBeenCalled()
   })
 
+  it('routes Person answers through the live question and hides pending prompts from profile subscribers', async () => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { io, namespace } = createSocketHarness()
+    const server = new ChatRunSocket(io as any)
+    const id = 'person-task-private'
+    const state = { isWorking: true, activeRunMarker: 'person-turn', events: [], profile: 'default' }
+    ;(server as any).sessionMap.set(id, state)
+    ;(server as any).clarificationRuns.begin('person-context', id, 'default', () => state)
+    const events: any[] = []
+    ;(server as any).runWaiters.set(id, new Set([(event: string, payload: any) => events.push({event,payload})]))
+    const result = server.requestClarification('person-context', 'default', { question: 'Which result?' })
+    const question = events.find(e => e.event === 'clarify.requested').payload
+    expect(namespace.to.mock.calls.flat()).not.toContain('pending-interactions:default')
+    expect(await server.respondPersonInteraction(id, question.clarify_id, '42', false)).toBe(true)
+    await expect(result).resolves.toMatchObject({ response:'42',reason:'response' })
+    expect(await server.respondPersonInteraction(id, question.clarify_id, '43', false)).toBe(false)
+  })
+
   it('settles MCP questions when a coding run stops and rejects expired contexts', async () => {
     const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
     const { io } = createSocketHarness()
@@ -136,6 +207,76 @@ describe('ChatRunSocket clarify responses', { timeout: 15_000 }, () => {
     server.emitExternalEvent('session-1', 'abort.completed', {})
     await expect(result).resolves.toMatchObject({ reason: 'cancelled' })
     expect(() => server.requestClarification('mcp-context', 'default', { question: 'Old Q' })).toThrow('expired')
+  })
+
+  it('defers background Person decisions during the foreground turn and publishes only to owner session and notification rooms', async () => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { io, namespace, namespaceEmit } = createSocketHarness()
+    const sid = 'person-main-1'
+    sessionStoreMock.getSession.mockReturnValue({ id: sid, studio_user_id: '1', profile: 'default' } as any)
+    const pending = { event: 'clarify.requested', data: { event: 'clarify.requested', session_id: sid, clarify_id: 'person-interaction:q:0', question: 'Which report?', choices: [], durable: true } }
+    personInteractionMock.mockReturnValue(pending)
+    const server = new ChatRunSocket(io as any)
+    ;(server as any).sessionMap.set(sid, { isWorking: true, events: [] })
+    ;(server as any).syncPersonInteraction(1)
+    expect(namespaceEmit.mock.calls.map(call => call[0])).toEqual(['person.updated', 'person.updated'])
+    ;(server as any).sessionMap.get(sid).isWorking = false
+    ;(server as any).syncPersonInteraction(1)
+    expect(namespaceEmit).toHaveBeenCalledWith('clarify.requested', expect.objectContaining({ session_id: sid, durable: true }))
+    expect(namespaceEmit).toHaveBeenCalledWith('person.clarification.requested', expect.objectContaining({ session_id: sid, durable: true }))
+    expect(namespace.to.mock.calls.every(call => [`session:${sid}`, 'person-notifications:1'].includes(call[0]))).toBe(true)
+    personInteractionMock.mockReturnValue(undefined)
+    ;(server as any).syncPersonInteraction(1)
+    expect(namespaceEmit).toHaveBeenCalledWith('clarify.resolved', expect.objectContaining({ clarify_id: 'person-interaction:q:0', resolved: true }))
+    expect(namespaceEmit).toHaveBeenCalledWith('person.clarification.resolved', expect.objectContaining({ clarify_id: 'person-interaction:q:0', resolved: true }))
+  })
+
+  it('rejects another account reading, running or answering a hidden Person session even on the same Profile', async () => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { handlers, io, socket } = createSocketHarness()
+    ;(socket as any).data.user = { id: 2, role: 'super_admin', username: 'other' }
+    sessionStoreMock.getSession.mockReturnValue({ id: 'person-main-1', profile: 'default', studio_user_id: '1' } as any)
+    const server = new ChatRunSocket(io as any)
+    ;(server as any).onConnection(socket)
+    await handlers.get('run')!({ session_id: 'person-main-1', input: 'Read private context', coding_agent_id: 'ekko-agent' })
+    expect(socket.emit).toHaveBeenCalledWith('run.failed', expect.objectContaining({ error: 'Session not found' }))
+    await handlers.get('resume')!({ session_id: 'person-main-1' })
+    expect(socket.join).not.toHaveBeenCalledWith('session:person-main-1')
+    await handlers.get('clarify.respond')!({ session_id: 'person-main-1', clarify_id: 'q', response: 'Yes' })
+    expect(socket.emit).toHaveBeenCalledWith('clarify.resolved', expect.objectContaining({ resolved: false, error: 'Session not found' }))
+    expect(respondToEkkoClarificationMock).not.toHaveBeenCalled()
+  })
+
+  it('resumes owned task history but rejects direct run and unowned resume', async () => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { handlers, io, socket } = createSocketHarness()
+    ;(socket as any).data.user = { id: 1, role: 'admin', username: 'owner' }
+    ownedTaskSessionMock.mockImplementation((userId, id) => {
+      if (userId !== 1 || id !== 'person-task-owned') throw new Error('Session not found')
+      return { session: { id, profile: 'default' } }
+    })
+    const server = new ChatRunSocket(io as any)
+    const resume = vi.spyOn(server as any, 'resumeSession').mockResolvedValue(undefined)
+    ;(server as any).onConnection(socket)
+    await handlers.get('resume')!({ session_id: 'person-task-owned' })
+    expect(socket.join).toHaveBeenCalledWith('session:person-task-owned')
+    expect(resume).toHaveBeenCalledWith(socket, 'person-task-owned')
+    await handlers.get('run')!({ session_id: 'person-task-owned', input: 'Bypass task scheduler', coding_agent_id: 'ekko-agent' })
+    expect(socket.emit).toHaveBeenCalledWith('run.failed', expect.objectContaining({ error: 'Session not found' }))
+    await handlers.get('resume')!({ session_id: 'person-task-other' })
+    expect(socket.join).not.toHaveBeenCalledWith('session:person-task-other')
+  })
+
+  it('allows the owner to answer Person on a different current Profile through the standard responder', async () => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { handlers, io, socket } = createSocketHarness()
+    ;(socket as any).data.user = { id: 1, role: 'admin', username: 'owner' }
+    sessionStoreMock.getSession.mockReturnValue({ id: 'person-main-1', profile: 'model-resource', studio_user_id: '1' } as any)
+    respondToEkkoClarificationMock.mockReturnValueOnce({ handled: true, resolved: true })
+    const server = new ChatRunSocket(io as any)
+    ;(server as any).onConnection(socket)
+    await handlers.get('clarify.respond')!({ session_id: 'person-main-1', clarify_id: 'q', response: 'Weekly' })
+    expect(respondToEkkoClarificationMock).toHaveBeenCalledWith('person-main-1', 'q', 'Weekly')
   })
 
   it('routes Ekko clarification responses without calling the Hermes bridge', async () => {

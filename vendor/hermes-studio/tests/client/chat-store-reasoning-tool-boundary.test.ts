@@ -18,6 +18,7 @@ const sessionsApi = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/studio/chat', () => ({
+  onUnobservedRunStarted: vi.fn(() => vi.fn()),
   startRunViaSocket: chatApi.startRunViaSocket,
   resumeSession: vi.fn(),
   registerSessionHandlers: vi.fn(),
@@ -1062,6 +1063,21 @@ describe('chat store reasoning/tool boundaries', () => {
     expect(abort).toHaveBeenCalledTimes(1)
     expect(chatApi.socketEmit).not.toHaveBeenCalled()
     expect(store.abortState).toEqual(expect.objectContaining({ aborting: true }))
+  })
+
+  it('deletes the last active session without creating a replacement', async () => {
+    const store = useChatStore()
+    const session = makeSession()
+    store.sessions = [session]
+    store.activeSessionId = session.id
+    store.activeSession = session
+
+    await expect(store.deleteSession(session.id)).resolves.toBe(true)
+
+    expect(store.sessions).toEqual([])
+    expect(store.activeSessionId).toBeNull()
+    expect(store.activeSession).toBeNull()
+    expect(sessionsApi.deleteSession).toHaveBeenCalledWith(session.id, undefined)
   })
 
   it('keeps a session in the local list when server deletion fails', async () => {

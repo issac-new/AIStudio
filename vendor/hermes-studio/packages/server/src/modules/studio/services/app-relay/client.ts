@@ -45,11 +45,13 @@ const ALLOWED_REQUEST_HEADERS = new Set([
   'x-expected-sha256',
 ])
 const ALLOWED_TERMINAL_CLIENT_EVENTS = new Set(['terminal.capabilities', 'terminal.list', 'terminal.create', 'terminal.attach', 'terminal.read', 'terminal.input', 'terminal.resize', 'terminal.detach', 'terminal.close'])
-const ALLOWED_SOCKET_NAMESPACES = new Set(['/terminal', '/chat-run', '/group-chat', '/workflow', '/group-chat-agent-relay'])
+const ALLOWED_SOCKET_NAMESPACES = new Set(['/terminal', '/chat-run', '/group-chat', '/workflow', '/group-chat-agent-relay', '/person-presence'])
 const ALLOWED_GROUP_AGENT_CLIENT_EVENTS = new Set([
   'run.accepted', 'run.completed', 'run.failed', 'agent.event', 'agent.events', 'agent.config.update', 'attachment.read', 'connector.revoke',
 ])
 const ALLOWED_CHAT_RUN_CLIENT_EVENTS = new Set([
+  'sessions.state.request',
+  'sessions.read',
   'app.events.subscribe',
   'app.events.unsubscribe',
   'run',
@@ -651,6 +653,7 @@ export class AppRelayClient {
 
     this.closeLocalSocket({ id })
     const localSocket = io(`${this.localBaseUrl}${namespace}`, {
+      forceNew: namespace === '/chat-run' && String(request.query?.session_state) === '1',
       auth: normalizeSocketAuth(request.auth),
       query: normalizeSocketQuery(request.query),
       transports: ['websocket', 'polling'],
@@ -1255,6 +1258,7 @@ function isMediaHttpRequest(request: AppRelayHttpRequest): boolean {
 }
 
 function isAllowedSocketEvent(namespace: string, event: string): boolean {
+  if (namespace === '/person-presence') return event === 'person.activity'
   if (namespace === '/terminal') return ALLOWED_TERMINAL_CLIENT_EVENTS.has(event)
   if (namespace === '/group-chat-agent-relay') return ALLOWED_GROUP_AGENT_CLIENT_EVENTS.has(event)
   if (namespace === '/chat-run') return ALLOWED_CHAT_RUN_CLIENT_EVENTS.has(event)

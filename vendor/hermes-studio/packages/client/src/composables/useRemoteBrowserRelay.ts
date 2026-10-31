@@ -8,16 +8,37 @@ import { desktopBridge } from '@/utils/desktop-bridge'
 // One desktop capability per main renderer; survives panel collapse, not logout.
 export const remoteBrowserEnabled = ref(false)
 export const remoteBrowserOwnerState = ref<'active' | 'standby' | 'busy' | 'connecting'>('connecting')
+let stopGrantState: (() => void) | null = null
 let stopActivity: (() => void) | null = null
 let generation = 0
 let socket: Socket | null = null
 let stopAuth: (() => void) | null = null
 let cancelConnection: (() => void) | null = null
+let resumeTimer: ReturnType<typeof setTimeout> | null = null
+
+// In remote mode the Desktop browser is shared automatically whenever this
+// renderer is logged in; dropped connections are retried in the background.
+const RESUME_DELAY_MS = 5000
+
+/** Connect the Desktop browser relay if possible; never throws and never prompts. */
+export async function ensureRemoteBrowserRelay(): Promise<void> {
+  if (resumeTimer) { clearTimeout(resumeTimer); resumeTimer = null }
+  const bridge = desktopBridge()
+  if (remoteBrowserEnabled.value || cancelConnection || !bridge?.remoteMode || !bridge.browser?.remoteRequest || !bridge.browser.setRemoteControl || !getApiKey()) return
+  try { await startRemoteBrowserRelay() } catch (error) { console.warn('[desktop-browser] remote control is not connected', error) }
+}
+
+function scheduleResume(): void {
+  if (resumeTimer || !getApiKey()) return
+  resumeTimer = setTimeout(() => { resumeTimer = null; void ensureRemoteBrowserRelay() }, RESUME_DELAY_MS)
+}
 
 export async function stopRemoteBrowserRelay(): Promise<void> {
   generation++
+  if (resumeTimer) { clearTimeout(resumeTimer); resumeTimer = null }
   remoteBrowserEnabled.value = false
   remoteBrowserOwnerState.value = 'connecting'
+  stopGrantState?.(); stopGrantState = null
   stopActivity?.(); stopActivity = null
   cancelConnection?.(); cancelConnection = null
   const previous = socket
@@ -33,7 +54,12 @@ export async function startRemoteBrowserRelay(): Promise<void> {
   const startedGeneration = generation
   const bridge = desktopBridge()
   if (!bridge?.remoteMode || !bridge.browser?.remoteRequest || !getApiKey()) throw new Error('Remote Desktop browser requires a Studio login and updated Desktop client')
-  if (!await bridge.browser.setRemoteControl?.(true)) return
+  try {
+    if (!await bridge.browser.setRemoteControl?.(true)) return
+  } catch (error) { await stopRemoteBrowserRelay(); throw error }
+  stopGrantState = bridge.browser.onRemoteControlState?.(enabled => {
+    if (!enabled && generation === startedGeneration) { void stopRemoteBrowserRelay(); scheduleResume() }
+  }) || null
   if (generation !== startedGeneration) { await bridge.browser.setRemoteControl?.(false); return }
   const endpoint = socketEndpoint(getBaseUrlValue(), '/desktop-browser')
   const connection = io(endpoint.url, {
@@ -63,9 +89,19 @@ export async function startRemoteBrowserRelay(): Promise<void> {
       if (socket !== connection || !remoteBrowserEnabled.value) throw new Error('Desktop browser relay revoked')
       const envelope = await bridge.browser!.remoteRequest!(body)
       acknowledge({ envelope })
-    } catch (error) { acknowledge({ error: error instanceof Error ? error.message : 'Desktop browser request failed' }) }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Desktop browser request failed'
+      acknowledge({ error: message })
+      // Older Desktop versions have no state event; still fail closed on the
+      // canonical permission errors instead of advertising a dead capability.
+      if (/remote control has not been authorized|browser permission was revoked/i.test(message) && socket === connection) void stopRemoteBrowserRelay()
+    }
   })
-  const stop = () => { if (socket === connection) void stopRemoteBrowserRelay() }
+  const stop = () => {
+    if (socket !== connection) return
+    void stopRemoteBrowserRelay()
+    scheduleResume()
+  }
   connection.on('disconnect', stop)
   connection.on('browser.revoked', stop)
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -96,4 +132,7 @@ export async function startRemoteBrowserRelay(): Promise<void> {
   }
 }
 
-if (typeof window !== 'undefined') window.addEventListener('beforeunload', () => { void stopRemoteBrowserRelay() })
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => { void stopRemoteBrowserRelay() })
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void ensureRemoteBrowserRelay() })
+}

@@ -28,6 +28,22 @@ describe('i18n lazy loading', () => {
     expect(i18n.global.t('usage.pricing.catalogError')).toBe('无法加载已配置的供应商和模型，仍可手动输入 ID。')
   })
 
+  it('updates shared Bot names when switching between Chinese and other interface languages', async () => {
+    localStorage.setItem('hermes_locale', 'en')
+    vi.resetModules()
+    const { i18nReady, switchLocale } = await import('@/i18n')
+    await i18nReady
+    const { computed } = await import('vue')
+    const { PERSON_AVATAR, chatSessionAgentAvatar } = await import('@/utils/chat-agent-avatar')
+    const name = computed(() => chatSessionAgentAvatar({ id: 'person-main-1' }).label)
+    for (const locale of ['en', 'zh', 'zh-TW', 'ja', 'ar', 'en']) {
+      await switchLocale(locale)
+      const expected = locale.startsWith('zh') ? '折折' : 'zhezhe'
+      expect(name.value).toBe(expected)
+      expect(PERSON_AVATAR.label).toBe(expected)
+    }
+  })
+
   it('loads Turkish on demand, retains English fallback and restores ltr from Arabic', async () => {
     localStorage.setItem('hermes_locale', 'en')
     vi.resetModules()

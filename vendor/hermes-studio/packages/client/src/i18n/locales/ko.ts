@@ -1,9 +1,11 @@
+import { personMessages } from '../person-messages'
 import { remoteDeviceMessages } from '../remote-device-messages'
 import { themePresetMessages } from '../theme-preset-locales'
 import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesKo } from '../social-messages-locales'
 
 export default {
+  person: personMessages['ko'],
   sessionTasks: {
       "title": "작업",
       "task": "작업",
@@ -15,6 +17,9 @@ export default {
       "all": "모든 상태",
       "open": "미완료",
       "completed": "완료",
+      "closed": "닫힘",
+      "changeStatus": "작업 상태 변경: {title}",
+      "updateFailed": "작업 상태를 변경하지 못했습니다. 새로고침 후 다시 시도하세요.",
       "openChat": "대화 열기",
       "openTask": "대화에서 보기: {title}",
       "loading": "작업 불러오는 중",
@@ -118,8 +123,9 @@ export default {
     "openFailed": "권한 설정을 열 수 없습니다. 시스템 설정 → 개인정보 보호 및 보안을 직접 여세요."
   },
   jev: {
+    globalReadonlyHint: "최고 관리자만 전역 JEV 설정을 변경하거나 테스트할 수 있습니다.",
     computerUseAutomation: "Ekko 컴퓨터 제어",
-    computerUseAutomationHint: "다음 Ekko 실행부터 이 프로필의 JEV 연결을 사용합니다. 접근성 레이블과 컨트롤 상태만 보내며 입력값과 이미지는 제외합니다. 실패하면 원래 결과를 유지합니다.",
+    computerUseAutomationHint: "다음 Ekko 실행부터 전역 JEV 연결을 사용합니다. 접근성 레이블과 컨트롤 상태만 보내며 입력값과 이미지는 제외합니다. 실패하면 원래 결과를 유지합니다.",
     computerUseMatchEnabled: "데스크톱 요소 매칭",
     computerUseMatchHint: "새 창 관찰에서 지정한 대상에 맞는 기존 요소 토큰을 제안합니다. 클릭하지 않습니다.",
     computerUseMatchCandidateLimit: "데스크톱 매칭 후보 수",
@@ -131,7 +137,7 @@ export default {
     computerUseVerifyTimeoutMs: "데스크톱 검증 제한 시간(ms)",
 
     browserAutomation: "내장 브라우저 자동화",
-    browserAutomationHint: "이 프로필에 저장된 JEV 연결을 사용하며 다음 판단부터 적용됩니다. 화면의 레이블을 JEV에 보내지만 입력값은 제외합니다. 비활성화, 서비스 오류 또는 불확실한 판단 시 기존 흐름을 유지합니다.",
+    browserAutomationHint: "저장된 전역 JEV 연결을 사용하며 다음 판단부터 적용됩니다. 화면의 레이블을 JEV에 보내지만 입력값은 제외합니다. 비활성화, 서비스 오류 또는 불확실한 판단 시 기존 흐름을 유지합니다.",
     browserMatchEnabled: "JEV 요소 매칭",
     browserMatchHint: "대상 설명을 바탕으로 실제 스냅샷 참조를 추천합니다. 전체 스냅샷의 상호작용 가능한 요소를 관련성순으로 정렬한 후 후보 한도를 적용하며, 모호한 경우 추천하지 않습니다.",
     browserMatchOptions: "요소 매칭 옵션",
@@ -174,7 +180,7 @@ export default {
 
     groupSummaryReviewEnabled: 'JEV로 그룹 요약 검토',
     groupSummaryDisabled: '비활성화됨. 기존 요약 동작을 유지합니다.',
-    groupSummaryReady: '이 프로필로 생성한 요약에 활성화되었습니다.',
+    groupSummaryReady: "그룹 요약에 활성화되었습니다.",
     groupSummaryReviewMinConfidence: '요약 검토 신뢰도',
     groupSummaryReviewMinConfidenceHint: '품질 문제를 보고할 최소 신뢰도입니다.',
     groupSummaryReviewTimeout: '요약 검토 시간 예산(ms)',
@@ -216,12 +222,14 @@ export default {
     memoryMinConfidenceHint: "0.5–1, 기본값 0.8. 검토가 불확실하면 기존 기록 흐름을 유지합니다.",
     memoryTimeout: "메모리 강화 총 대기 시간(ms)",
     memoryTimeoutHint: "100–30000, 권장값: 3000. 검색 또는 일괄 쓰기별 총 한도이며 각 요청에는 연결 시간 제한도 적용됩니다.",
+    personMemoryEnabled: "개인 비서 메모리에 JEV 사용",
+    personMemoryHint: "메모리는 계정에 유지되며 Ekko 메모리 설정과 별도로 구성됩니다.",
     "ekkoMemoryEnabled": "Ekko 메모리에 JEV 사용",
-    "description": "모듈에서 Choice, Score, Noul 판단을 호출합니다. 설정은 선택한 Profile에 적용됩니다.",
+    description: "모든 Profile이 공유하는 전역 JEV 연결 및 기능 설정입니다.",
     "timeout": "시간 제한(밀리초)",
     "keyHint": "비워 두면 저장된 키 유지",
     "testSaved": "저장된 설정 테스트",
-    "deleteConfirm": "이 Profile의 JEV 설정과 API 키를 삭제할까요?",
+    deleteConfirm: "전역 JEV 설정과 API 키를 삭제할까요?",
     "baseUrl": "API 주소",
     "apiKey": "API 키",
     "keyPlaceholder": "TypeSafe API 키 입력",
@@ -229,7 +237,7 @@ export default {
     "testSuccess": "연결 성공 · 모델: {model} · 소요 시간: {duration}밀리초",
     "errors": {
       "invalid_request": "입력이 올바르지 않습니다. 설정 또는 요청 매개변수를 확인하세요.",
-      "not_configured": "먼저 이 프로필의 API 키를 설정하고 저장하세요.",
+      not_configured: "먼저 전역 JEV API 키를 설정하고 저장하세요.",
       "timeout": "JEV 요청 시간이 초과되었습니다. 다시 시도하거나 제한 시간을 늘리세요.",
       "cancelled": "JEV 요청이 취소되었습니다.",
       "auth_failed": "TypeSafe 인증에 실패했습니다. API 키와 권한을 확인하세요.",
@@ -238,7 +246,7 @@ export default {
       "endpoint_not_found": "JEV 엔드포인트를 찾을 수 없습니다(HTTP 404). API 기본 URL에 게이트웨이 경로 접두사가 포함되어 있는지 확인하세요.",
       "request_failed": "JEV에 연결할 수 없습니다. API 주소와 네트워크를 확인하세요.",
       "settings_failed": "JEV 설정을 읽거나 저장할 수 없습니다. Studio 데이터 디렉터리를 확인하세요.",
-      "forbidden": "이 프로필에 접근할 권한이 없습니다.",
+      forbidden: "전역 JEV 설정을 관리할 권한이 없습니다.",
       "unavailable": "작업을 완료하지 못했습니다. Studio 연결을 확인한 후 다시 시도하세요."
     }
   },
@@ -409,13 +417,32 @@ export default {
   },
   socialMessages: socialMessagesKo,
   browser: {
+    recentDownloads: "최근 다운로드",
+    fullDownloadHistory: "전체 다운로드 기록",
+    searchDownloads: "다운로드 기록 검색",
+    clearDownloads: "모두 지우기",
+    clearDownloadsHint: "기록만 삭제합니다. 파일과 진행 중인 다운로드는 유지됩니다.",
+    downloadToday: "오늘",
+    downloadYesterday: "어제",
+    downloadUnavailable: "삭제 또는 이동됨",
+    downloadFrom: "출처 {origin}",
+    downloadSource: "다운로드 출처",
+    noMatchingDownloads: "일치하는 다운로드 없음",
+    openDownload: "파일 열기",
+    revealDownload: "폴더에서 보기",
+    removeDownload: "기록에서 제거",
+    trashDownload: "파일을 휴지통으로 이동",
+    downloadActive: "다운로드 중입니다. 먼저 취소하세요.",
+    downloadFileUnavailable: "파일이 이동 또는 삭제되었거나 일반 파일이 아닙니다.",
+    downloadOpenFailed: "다운로드한 파일을 열 수 없습니다.",
+    downloadActionFailed: "다운로드 작업을 완료할 수 없습니다.",
+    downloadNotFound: "다운로드 기록이 더 이상 없습니다.",
+
     remoteOwnerActive: 'Current control device',
     remoteOwnerStandby: 'Standby — another device is active',
     remoteOwnerBusy: 'Standby — browser operation in progress',
     remoteOwnerConnecting: 'Connecting',
 
-    remoteControl: 'Allow remote control',
-    remoteControlStop: 'Stop remote control',
 
     title: '브라우저', settings: '브라우저 설정', desktopOnly: '내장 브라우저는 Ekko Studio Desktop에서만 사용할 수 있습니다.', newTab: '새 탭',
     back: '뒤로', forward: '앞으로', reload: '새로고침', stop: '중지', addressPlaceholder: '검색 또는 주소 입력',
@@ -3537,6 +3564,34 @@ export default {
   },
 
   changelog: {
+    new_0_8_0_1: "첫 메시지로 개인 비서 BOT을 만들고 이름 지정, 검색, 전환, 일괄 삭제 가능. 대화 기록은 분리하고 계정 메모리, Agent 사전 설정, 작업 공간은 공유 (#3552, #3568, #3575)",
+    new_0_8_0_2: "캐릭터 10종과 마우스·터치·키보드용 순환 선택기 추가. 초기 설정 안내, 이름 중복 알림, 초안 보존 개선 (#3581, #3583)",
+    new_0_8_0_3: "비서 백그라운드 작업에 후속 지시를 대기열로 추가하고 기존 작업을 이어가며 실시간 도구 호출 확인 가능. 실행 지시를 읽기 쉬운 글로 표시 (#3566, #3580)",
+    new_0_8_0_4: "역할 간 순차·병렬 협업, 결과 전달, 간결한 진행 목록 지원. 실패 시 역할을 자동 해제하고 오류 확인과 미완료 분기 재개 제공 (#3571, #3585, #3592)",
+    new_0_8_0_5: "예약으로 비서를 깨우거나 작업자를 실행하고 매 실행의 대화를 격리. 예약 삭제 시 기존 작업과 실행 기록 유지 (#3578, #3579)",
+    new_0_8_0_6: "비서 컨텍스트 압축, 계정 메모리, 중지 제어 개선. 요청한 작업 결과를 기억하고 일상 응답의 반복 자기소개 방지 (#3554, #3565, #3576)",
+    new_0_8_0_7: "JEV 설정을 Studio 전역으로 공유하고 최고 관리자가 관리. 별도로 켤 수 있는 비서 메모리 강화 추가, 기본값은 꺼짐 (#3562)",
+    new_0_8_0_8: "비서 완료·실패·승인·확인 알림과 백그라운드 작업 표시 추가. 활동, 읽지 않음, 읽음 상태를 기기 간 동기화 (#3560, #3563, #3582)",
+    new_0_8_0_9: "사용량에서 비서를 zhezhe로 구분하고 Agent 아이콘 표시. 작업자 사용량은 실제 실행 Agent에 귀속 (#3564)",
+    new_0_8_0_10: "백그라운드 동시 실행 기본값을 6, 최댓값을 12로 확대. 계정의 모든 BOT이 공유하며 저장한 사용자 지정 한도 유지 (#3584)",
+    new_0_8_0_11: "비서 기본·작업 대화에 작업 공간, 터미널, 브라우저 공통 패널 추가. 파일 미리보기·편집·브라우저 주석과 저장하지 않은 내용 보존 지원 (#3591, #3593)",
+    new_0_8_0_12: "비서와 일반 채팅 전환 시 대화 격리 수정. 마지막 일반 대화 삭제 후 새 채팅을 표시하고 루트·홈 전체 스냅샷으로 인한 서버 멈춤 방지 (#3572, #3573, #3577)",
+    new_0_8_0_13: "작업을 미완료·완료·닫힘으로 수동 변경하고 사용자가 다시 열기 가능. 오래된 미완료 작업 우선 대신 갱신 시간순 정렬 (#3535, #3590)",
+    new_0_8_0_14: "작업 카드 단계와 설명이 대화 언어를 따르도록 개선. 계획 ID와 턴 인증 컨텍스트를 분리하고 만료 안내 개선 (#3542, #3544)",
+    new_0_8_0_15: "내장 브라우저가 Studio 테마를 따르고 고정 밝은 페이지에 Chromium 기본 자동 다크 렌더링 적용 (#3504, #3517)",
+    new_0_8_0_16: "데스크톱 원격 모드 로그인 후 브라우저 자동 공유 및 연결 복구. 인증 해제 상태를 동기화하고 라우터 이동 중 잘못된 공유 취소 수정 (#3514, #3519)",
+    new_0_8_0_17: "브라우저 Agent에 파일 업로드·다운로드, 호버, 옵션 선택, 텍스트 대기 추가. 시스템 파일 창 없이 업로드하고 MCP 호스트로 다운로드 가능 (#3522)",
+    new_0_8_0_18: "브라우저 Agent에 대화상자, 교차 출처 iframe, 더블·우클릭, 드래그, 좌표 조작, 파일 창 가로채기, 민감 정보 제거 네트워크 기록 추가. 서식 입력과 macOS Cmd 수정 (#3518, #3523)",
+    new_0_8_0_19: "기기·프로필별 다운로드 폴더 기억 및 검색, 날짜 그룹, 안전한 기록 정리 추가. 파일과 진행 중인 다운로드 유지 (#3536)",
+    new_0_8_0_20: "기기를 현재 또는 독립 창으로 열고 기존 창 재사용. 로그인·브라우저·저장소를 격리하고 여러 창의 업데이트 조정 (#3521)",
+    new_0_8_0_21: "Codex 호환 어댑터에서 발견된 MCP 도구 네임스페이스 유실 수정. Pi의 Studio 대화 읽기 도구를 항상 사용 가능하게 변경 (#3533, #3315)",
+    new_0_8_0_22: "Claude 시작·프롬프트 갱신 후 사용자 지침 유지. DSH의 비 DeepSeek 모델 도구 계속 실행 안내 개선 및 시작 대기 시간 설정 지원 (#3548, #3553, #3326, #3526)",
+    new_0_8_0_23: "MiniMax M3.1 Flash와 M3를 우선 추천하고 추론 매개변수·기록 호환성 개선. 채팅·그룹·워크플로는 최저 지원 추론 수준을 기본으로 하며 명시적 선택 유지 (#3476, #3554)",
+    new_0_8_0_24: "일반 사용자가 그룹과 워크플로에서 사용 가능한 Agent를 선택하지 못하는 문제 수정. 그룹 라우팅 실패 진단 기록 추가 (#3546, #3498)",
+    new_0_8_0_25: "Edge TTS WebSocket 핸드셰이크 실패 수정. Hermes는 정식 버전 식별을 표시하고 임시 0.0.0을 릴리스로 취급하지 않도록 개선 (#3444, #3557)",
+    new_0_8_0_26: "MCU가 기존 Webhook 이벤트를 명시적으로 구독하고 필터·본문 설정 사용 가능. 계정 권한 적용, 미구독 기기는 영향 없음 (#3541)",
+    new_0_8_0_27: "MCU 펌웨어 프로젝트 통합, StackChan 음성·Agent 제어 계획 문서 추가 및 중복 테스트 축소. 펌웨어 바이너리는 그대로이며 계획 기능은 미구현 (#3537, #3547, #3551)",
+    new_0_8_0_28: "슬래시 명령의 인수 구분자로 CJK 콜론과 쉼표를 허용하여 입력기 문장부호 때문에 일반 메시지로 처리되는 문제 수정 (#3484)",
     new_0_7_39_1: "대화 턴을 넘어 유지되는 세션 작업을 추가하여 Agent가 사용자 목표를 계속 추적하고 완료 근거를 기록할 수 있습니다 (#3499)",
     new_0_7_39_2: "관련 대화로 이동할 수 있는 세션 작업 서랍을 추가했습니다. 모바일 목록, 작업 상세 및 세션 이름을 개선하고 사소한 작업 기록을 줄였습니다 (#3501, #3509, #3510)",
     new_0_7_39_3: "데스크톱에서 명시적으로 허용하면 원격 Studio의 Agent가 로컬 내장 브라우저를 사용할 수 있으며 언제든 공유를 중지할 수 있습니다 (#3478)",

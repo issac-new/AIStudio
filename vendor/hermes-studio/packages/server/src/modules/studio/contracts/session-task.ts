@@ -1,9 +1,11 @@
+export type SessionTaskStatus = 'open' | 'completed' | 'closed'
+
 /** User goals persist across turns; they are independent of run task plans. */
 export interface SessionTask {
   id: string
   title: string
   summary: string
-  status: 'open' | 'completed'
+  status: SessionTaskStatus
   source_message_id: number
   evidence_message_id: number | null
   completion_evidence: string
@@ -46,7 +48,7 @@ export interface SessionTaskListQuery {
   profiles: string[]
   excludeSessionIds?: string[]
   search?: string
-  status?: 'open' | 'completed'
+  status?: SessionTaskStatus
   order: 'newest' | 'oldest'
   offset: number
   limit: number

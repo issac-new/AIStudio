@@ -3,7 +3,7 @@
   "info": {
     "title": "Ekko Studio API",
     "description": "Ekko Studio API — chat sessions, scheduled jobs, platform channels, model management, skills, memory, logs, file browser, group chat, and terminal.",
-    "version": "0.7.39"
+    "version": "0.8.0"
   },
   "servers": [
     {
@@ -12,6 +12,10 @@
     }
   ],
   "tags": [
+    {
+      "name": "Person",
+      "description": "Account-owned assistant, independent memory, task execution, decisions and durable schedules"
+    },
     {
       "name": "Desktop Browser",
       "description": "Authenticated remote Desktop browser relay with explicit Desktop consent"
@@ -170,7 +174,7 @@
     },
     {
       "name": "JEV",
-      "description": "Profile-scoped TypeSafe JEV configuration and shared Choice, Score, Noul evaluations"
+      "description": "Global TypeSafe JEV configuration and shared Choice, Score, Noul evaluations"
     },
     {
       "name": "Media",
@@ -16273,7 +16277,7 @@
           "JEV"
         ],
         "summary": "Create match",
-        "description": "POST /api/studio/jev/browser/match",
+        "description": "Uses the shared global JEV configuration, independent of model Profile. Configuration writes and connection tests require super administrator privileges.",
         "operationId": "matchBrowser",
         "security": [
           {
@@ -16282,7 +16286,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Advisory, Profile-gated assessment of supplied snapshot evidence. Never executes actions or changes their completion status.",
+            "description": "Advisory, globally configured assessment of supplied snapshot evidence. Never executes actions or changes their completion status.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16401,17 +16405,7 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "X-Hermes-Profile",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Authorized Profile; never changes the global active Profile."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -16496,7 +16490,7 @@
           "JEV"
         ],
         "summary": "Create verify",
-        "description": "POST /api/studio/jev/browser/verify",
+        "description": "Uses the shared global JEV configuration, independent of model Profile. Configuration writes and connection tests require super administrator privileges.",
         "operationId": "verifyBrowser",
         "security": [
           {
@@ -16505,7 +16499,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Advisory, Profile-gated assessment of supplied snapshot evidence. Never executes actions or changes their completion status.",
+            "description": "Advisory, globally configured assessment of supplied snapshot evidence. Never executes actions or changes their completion status.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16625,17 +16619,7 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "X-Hermes-Profile",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Authorized Profile; never changes the global active Profile."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -16720,7 +16704,7 @@
           "JEV"
         ],
         "summary": "Create evaluate",
-        "description": "POST /api/studio/jev/evaluate",
+        "description": "Uses the shared global JEV configuration, independent of model Profile. Configuration writes and connection tests require super administrator privileges.",
         "operationId": "evaluate",
         "security": [
           {
@@ -16863,17 +16847,7 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "X-Hermes-Profile",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Authorized Profile; never changes the global active Profile."
-          }
-        ]
+        "parameters": []
       }
     },
     "/api/studio/jev/settings": {
@@ -16882,7 +16856,7 @@
           "JEV"
         ],
         "summary": "Get settings",
-        "description": "GET /api/studio/jev/settings",
+        "description": "Uses the shared global JEV configuration, independent of model Profile. Configuration writes and connection tests require super administrator privileges.",
         "operationId": "getSettings",
         "security": [
           {
@@ -16897,6 +16871,56 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "personMemoryEnabled": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "personMemoryKindRoutingEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryRelevanceFilterEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryRerankEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryWriteReviewEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryCandidateLimit": {
+                      "type": "integer",
+                      "default": 20,
+                      "minimum": 1,
+                      "maximum": 50
+                    },
+                    "personMemoryRecallMinConfidence": {
+                      "type": "number",
+                      "default": 0.5,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryFilterMinConfidence": {
+                      "type": "number",
+                      "default": 0.8,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryMinConfidence": {
+                      "type": "number",
+                      "default": 0.8,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryTimeoutMs": {
+                      "type": "integer",
+                      "default": 3000,
+                      "minimum": 100,
+                      "maximum": 30000
+                    },
                     "ekkoComputerUseMatchEnabled": {
                       "type": "boolean",
                       "default": false
@@ -17080,24 +17104,14 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "X-Hermes-Profile",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Authorized Profile; never changes the global active Profile."
-          }
-        ]
+        "parameters": []
       },
       "put": {
         "tags": [
           "JEV"
         ],
         "summary": "Update settings",
-        "description": "PUT /api/studio/jev/settings",
+        "description": "Uses the shared global JEV configuration, independent of model Profile. Configuration writes and connection tests require super administrator privileges.",
         "operationId": "saveSettings",
         "security": [
           {
@@ -17112,6 +17126,56 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "personMemoryEnabled": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "personMemoryKindRoutingEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryRelevanceFilterEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryRerankEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryWriteReviewEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryCandidateLimit": {
+                      "type": "integer",
+                      "default": 20,
+                      "minimum": 1,
+                      "maximum": 50
+                    },
+                    "personMemoryRecallMinConfidence": {
+                      "type": "number",
+                      "default": 0.5,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryFilterMinConfidence": {
+                      "type": "number",
+                      "default": 0.8,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryMinConfidence": {
+                      "type": "number",
+                      "default": 0.8,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryTimeoutMs": {
+                      "type": "integer",
+                      "default": 3000,
+                      "minimum": 100,
+                      "maximum": 30000
+                    },
                     "ekkoComputerUseMatchEnabled": {
                       "type": "boolean",
                       "default": false
@@ -17300,6 +17364,56 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
+                  "personMemoryEnabled": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "personMemoryKindRoutingEnabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "personMemoryRelevanceFilterEnabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "personMemoryRerankEnabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "personMemoryWriteReviewEnabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "personMemoryCandidateLimit": {
+                    "type": "integer",
+                    "default": 20,
+                    "minimum": 1,
+                    "maximum": 50
+                  },
+                  "personMemoryRecallMinConfidence": {
+                    "type": "number",
+                    "default": 0.5,
+                    "minimum": 0.5,
+                    "maximum": 1
+                  },
+                  "personMemoryFilterMinConfidence": {
+                    "type": "number",
+                    "default": 0.8,
+                    "minimum": 0.5,
+                    "maximum": 1
+                  },
+                  "personMemoryMinConfidence": {
+                    "type": "number",
+                    "default": 0.8,
+                    "minimum": 0.5,
+                    "maximum": 1
+                  },
+                  "personMemoryTimeoutMs": {
+                    "type": "integer",
+                    "default": 3000,
+                    "minimum": 100,
+                    "maximum": 30000
+                  },
                   "ekkoComputerUseMatchEnabled": {
                     "type": "boolean",
                     "default": false
@@ -17402,24 +17516,14 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "X-Hermes-Profile",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Authorized Profile; never changes the global active Profile."
-          }
-        ]
+        "parameters": []
       },
       "delete": {
         "tags": [
           "JEV"
         ],
         "summary": "Delete settings",
-        "description": "DELETE /api/studio/jev/settings",
+        "description": "Uses the shared global JEV configuration, independent of model Profile. Configuration writes and connection tests require super administrator privileges.",
         "operationId": "deleteSettings",
         "security": [
           {
@@ -17434,6 +17538,56 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "personMemoryEnabled": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "personMemoryKindRoutingEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryRelevanceFilterEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryRerankEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryWriteReviewEnabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "personMemoryCandidateLimit": {
+                      "type": "integer",
+                      "default": 20,
+                      "minimum": 1,
+                      "maximum": 50
+                    },
+                    "personMemoryRecallMinConfidence": {
+                      "type": "number",
+                      "default": 0.5,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryFilterMinConfidence": {
+                      "type": "number",
+                      "default": 0.8,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryMinConfidence": {
+                      "type": "number",
+                      "default": 0.8,
+                      "minimum": 0.5,
+                      "maximum": 1
+                    },
+                    "personMemoryTimeoutMs": {
+                      "type": "integer",
+                      "default": 3000,
+                      "minimum": 100,
+                      "maximum": 30000
+                    },
                     "ekkoComputerUseMatchEnabled": {
                       "type": "boolean",
                       "default": false
@@ -17614,17 +17768,7 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "X-Hermes-Profile",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Authorized Profile; never changes the global active Profile."
-          }
-        ]
+        "parameters": []
       }
     },
     "/api/studio/jev/test": {
@@ -17633,7 +17777,7 @@
           "JEV"
         ],
         "summary": "Create test",
-        "description": "POST /api/studio/jev/test",
+        "description": "Uses the shared global JEV configuration, independent of model Profile. Configuration writes and connection tests require super administrator privileges.",
         "operationId": "testConnection",
         "security": [
           {
@@ -17718,17 +17862,7 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "X-Hermes-Profile",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Authorized Profile; never changes the global active Profile."
-          }
-        ]
+        "parameters": []
       }
     },
     "/api/studio/live-activities/registration": {
@@ -19119,6 +19253,1356 @@
         }
       }
     },
+    "/api/studio/person": {
+      "get": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Get person",
+        "description": "GET /api/studio/person",
+        "operationId": "snapshot",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Selected owned conversation; omitted returns shared settings with session=null and creates no conversation."
+          }
+        ]
+      }
+    },
+    "/api/studio/person/agent-models": {
+      "get": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Get agent-models",
+        "description": "GET /api/studio/person/agent-models",
+        "operationId": "executionModelCatalog",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/studio/person/capabilities": {
+      "get": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Get capabilities",
+        "description": "GET /api/studio/person/capabilities",
+        "operationId": "capabilities",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/studio/person/clear": {
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Clear Person chat history and tasks",
+        "description": "Clear only the specified owned Person conversation, its tasks, hidden worker conversations, execution records and schedules atomically. Running replies/tasks and pending deliveries return 409; expected_history_revision must match the Person snapshot. Preserves memories, settings, usage ledger and workspace files. Broadcasts cleared conversation state to connected views.",
+        "operationId": "clear",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Person is busy, has pending results, or the history revision changed"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": {
+                    "type": "string",
+                    "description": "Owning Person conversation ID. Required for new work; continuations preserve the existing task conversation."
+                  },
+                  "expected_history_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "session_id",
+                  "expected_history_revision"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/conversations": {
+      "get": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Get conversations",
+        "description": "GET /api/studio/person/conversations",
+        "operationId": "conversations",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Search owned Person conversation names and message contents only."
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Create conversations",
+        "description": "Create an account-owned, user-named conversation with a generated session ID and a persisted bot_type (defaults to zhezhe). Duplicate BOT names return HTTP 409 with code PERSON_BOT_NAME_EXISTS; concurrent creates are checked in the insertion transaction. Optional model and reasoning_effort apply only to the new conversation. Optional workspace changes the account-shared workspace atomically with creation and requires current expected_revision and idle work. Unknown bot types are rejected. Memory and Agent presets remain shared across the account.",
+        "operationId": "conversationCreate",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "BOT name, unique among this account’s Person conversations after trimming, Unicode NFKC normalization and lowercasing."
+                  },
+                  "bot_type": {
+                    "type": "string",
+                    "default": "zhezhe",
+                    "description": "Registered bot appearance, independent of conversation title and Agent runtime."
+                  },
+                  "model": {
+                    "type": "object",
+                    "required": [
+                      "profile",
+                      "provider",
+                      "model"
+                    ],
+                    "properties": {
+                      "profile": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "reasoning_effort": {
+                    "type": "string"
+                  },
+                  "workspace": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "Optional account-shared absolute workspace; empty restores the account private workspace. A change requires expected_revision and idle replies, tasks and deliveries, and commits atomically with BOT creation."
+                  },
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Current account settings revision, required when workspace changes."
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/conversations/{id}": {
+      "delete": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Delete :id",
+        "description": "Delete the owned conversation and its task graph after stopping main and worker executions. Cancels schedules and callbacks; waits for native stop acknowledgement. Keeps account memory, settings, workspace files and other conversations. No data migration or task reassignment.",
+        "operationId": "conversationDelete",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expected_history_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "expected_history_revision"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/executions/{id}/events": {
+      "get": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Get events",
+        "description": "GET /api/studio/person/executions/:id/events",
+        "operationId": "events",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/studio/person/flows/apply": {
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Create apply",
+        "description": "Create a flow with session_id (creator), title, goal and stages (session_id, goal, return_expectation). Omit group on all stages for serial execution, or set ordered contiguous group numbers from zero on every stage: 0,0,1 runs A and B in parallel then C. Each role appears once per group; the creator may join a first parallel group. The next group receives every previous-group result only after all are saved. No execution preset is required. Stop/resume require flow_id and current expected_revision. Stop cancels all stage turns, deliveries and workers; resume requeues only unfinished branches with a new generation, preserving completed results. Only an assigned live model turn may prepare its branch completion; its stage and generation fence the operation, so peer revision changes do not require retries. The host commits it after saving its final result. Route and creator are immutable.",
+        "operationId": "flowApply",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "create",
+                      "stop",
+                      "resume"
+                    ]
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "flow_id": {
+                    "type": "string"
+                  },
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "session_id": {
+                    "type": "string",
+                    "description": "Owning Person conversation ID. Required for new work; continuations preserve the existing task conversation."
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "goal": {
+                    "type": "string",
+                    "maxLength": 8000
+                  },
+                  "stages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 13,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "session_id",
+                        "goal",
+                        "return_expectation"
+                      ],
+                      "properties": {
+                        "session_id": {
+                          "type": "string",
+                          "description": "Owning Person conversation ID. Required for new work; continuations preserve the existing task conversation."
+                        },
+                        "goal": {
+                          "type": "string",
+                          "maxLength": 8000
+                        },
+                        "return_expectation": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 4000
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "action",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/flows/query": {
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Create query",
+        "description": "List up to 50 owned flows per page, most recently updated first, optionally filtered by involved conversation. Use offset for older flows, or read one flow_id. Includes ordered role stages with group_position, Bot appearance, current-generation delivery state/error, original result references and child tasks with actual execution state and Agent runtime. current_position identifies the current execution group; every role in that group can be active.",
+        "operationId": "flows",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "flow_id": {
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "type": "string",
+                    "description": "Owning Person conversation ID. Required for new work; continuations preserve the existing task conversation."
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/interactions/{id}/answer": {
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Create answer",
+        "description": "Studio user login required. Account isolation is enforced by the server. Mutations use current revisions; task and schedule operations require an idempotency key. Worker question answers are delivered through their original interactive runtime.",
+        "operationId": "answer",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "answer": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "answer",
+                  "expected_revision"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/memory": {
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Delete Person memory",
+        "description": "Studio user login required. Permanently delete one account-owned memory card at its current revision. New memories and corrections are made through the Person conversation.",
+        "operationId": "memory",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "forget": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "id",
+                  "forget",
+                  "expected_revision"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/models": {
+      "get": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Get models",
+        "description": "GET /api/studio/person/models",
+        "operationId": "modelCatalog",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/studio/person/schedules/apply": {
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Create apply",
+        "description": "Studio user login required. Account isolation is enforced by the server. Mutations use current revisions; task and schedule operations require an idempotency key. Worker question answers are delivered through their original interactive runtime. Delete requires schedule_id and current expected_revision. It removes the schedule and occurrence metadata, stops future triggers and preserves tasks, execution history, running work and result delivery. Exact retries with the same idempotency key return the deletion receipt.",
+        "operationId": "schedules",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "assistant",
+                      "worker"
+                    ],
+                    "description": "Required on create. Assistant uses session_id/title/goal and optional workers; worker uses task_id."
+                  },
+                  "session_id": {
+                    "type": "string",
+                    "description": "Owning Person conversation ID. Required for new work; continuations preserve the existing task conversation."
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "goal": {
+                    "type": "string",
+                    "maxLength": 8000
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "create",
+                      "update",
+                      "pause",
+                      "resume",
+                      "cancel",
+                      "delete"
+                    ]
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "task_id": {
+                    "type": "string"
+                  },
+                  "schedule_id": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "once",
+                      "cron"
+                    ]
+                  },
+                  "expression": {
+                    "type": "string",
+                    "description": "ISO date with offset or five-field cron"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "misfire": {
+                    "type": "string",
+                    "enum": [
+                      "skip",
+                      "run_latest"
+                    ]
+                  }
+                },
+                "required": [
+                  "action",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/settings": {
+      "put": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Update settings",
+        "description": "Studio user login required. Account isolation is enforced by the server. Mutations use current revisions; task and schedule operations require an idempotency key. Worker question answers are delivered through their original interactive runtime.",
+        "operationId": "settings",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "Owned Person conversation ID. Required for model, reasoning_effort or use_global_default changes; these settings are stored only for this session."
+                  },
+                  "workspace": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "Shared absolute working directory for all Person background tasks; empty restores the account private workspace. Requires all tasks and deliveries to be idle. Existing tasks use it on their next execution."
+                  },
+                  "agents": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "description": "Account-shared execution presets; required only for background tasks. Direct chat and dialogue stages need no worker preset.",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "selection"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "selection": {
+                          "type": "object",
+                          "required": [
+                            "runtime",
+                            "mode",
+                            "profile",
+                            "model"
+                          ],
+                          "properties": {
+                            "runtime": {
+                              "type": "string"
+                            },
+                            "mode": {
+                              "type": "string",
+                              "enum": [
+                                "scoped",
+                                "global"
+                              ]
+                            },
+                            "profile": {
+                              "type": "string"
+                            },
+                            "provider": {
+                              "type": "string"
+                            },
+                            "model": {
+                              "type": "string"
+                            },
+                            "reasoningEffort": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "use_global_default": {
+                    "type": "boolean"
+                  },
+                  "model": {
+                    "type": "object",
+                    "properties": {
+                      "profile": {
+                        "type": "string"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "profile",
+                      "provider",
+                      "model"
+                    ]
+                  },
+                  "reasoning_effort": {
+                    "type": "string",
+                    "enum": [
+                      "",
+                      "none",
+                      "minimal",
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ]
+                  },
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "maxSteps": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 30
+                  },
+                  "compressionThreshold": {
+                    "type": "number",
+                    "nullable": true,
+                    "minimum": 0.05,
+                    "maximum": 0.95,
+                    "description": "Fraction of the current interaction model context window that triggers compression; null inherits the global threshold. Model capacity is resolved automatically."
+                  },
+                  "maxConcurrentTasks": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12,
+                    "default": 6,
+                    "description": "Account-shared concurrency across all Person BOTs; additional tasks queue."
+                  }
+                },
+                "required": [
+                  "expected_revision"
+                ],
+                "allOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {
+                          "required": [
+                            "model"
+                          ]
+                        }
+                      },
+                      {
+                        "required": [
+                          "session_id"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "not": {
+                          "required": [
+                            "reasoning_effort"
+                          ]
+                        }
+                      },
+                      {
+                        "required": [
+                          "session_id"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "not": {
+                          "required": [
+                            "use_global_default"
+                          ]
+                        }
+                      },
+                      {
+                        "required": [
+                          "session_id"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/tasks/apply": {
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Create apply",
+        "description": "Studio user login required. Account isolation is enforced by the server. Mutations use current revisions; task and schedule operations require an idempotency key. Worker question answers are delivered through their original interactive runtime.",
+        "operationId": "taskApply",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": {
+                    "type": "string",
+                    "description": "Owning Person conversation ID. Required for new work; continuations preserve the existing task conversation."
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "create",
+                      "adopt",
+                      "update",
+                      "start",
+                      "stop",
+                      "close",
+                      "reopen"
+                    ]
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "task_id": {
+                    "type": "string"
+                  },
+                  "execution_id": {
+                    "type": "string",
+                    "description": "Required with task_id and expected_revision for stop; query the current execution first. Stops only this occurrence, keeping the goal and future schedules."
+                  },
+                  "schedule_id": {
+                    "type": "string"
+                  },
+                  "agent_id": {
+                    "type": "string",
+                    "description": "Configured execution agent ID; omitted selects the sole saved preset. At least one preset is required."
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "goal": {
+                    "type": "string",
+                    "maxLength": 8000
+                  },
+                  "start": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                },
+                "required": [
+                  "action",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/tasks/query": {
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Create query",
+        "description": "Studio user login required. Account isolation is enforced by the server. Mutations use current revisions; task and schedule operations require an idempotency key. Worker question answers are delivered through their original interactive runtime.",
+        "operationId": "tasks",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": {
+                    "type": "string",
+                    "description": "Owning Person conversation ID. Required for new work; continuations preserve the existing task conversation."
+                  },
+                  "search": {
+                    "type": "string"
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "",
+                      "open",
+                      "completed",
+                      "closed"
+                    ]
+                  },
+                  "order": {
+                    "type": "string",
+                    "enum": [
+                      "newest",
+                      "oldest"
+                    ]
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/tasks/{id}/chat": {
+      "get": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Get chat",
+        "description": "Open the selected account-owned execution conversation. Each fresh task start and scheduled occurrence has an independent session. Returns recent executions, task and session metadata for standard socket resume. It stays excluded from ordinary session lists. Read-only history is permitted to its owner; direct run, abort and other session mutations remain forbidden.",
+        "operationId": "taskChat",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "execution_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Select an owned execution conversation; omitted selects the current execution. Returns null session before the first run."
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Create chat",
+        "description": "Continue a non-closed task in the conversation selected by execution_id, or the current execution when omitted. Background schedules start fresh conversations; follow-ups retain the selected conversation. Running work queues follow-ups durably in FIFO order; completed tasks reopen. Stopping, stale revisions and a full queue return 409. Results return to the task-owning Person conversation, including cross-conversation instructions.",
+        "operationId": "taskContinue",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "execution_id": {
+                    "type": "string",
+                    "description": "Execution whose conversation receives this follow-up; defaults to current."
+                  },
+                  "expected_execution_id": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Current task execution ID for concurrency checks."
+                  },
+                  "input": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "type",
+                            "text"
+                          ],
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "text"
+                              ]
+                            },
+                            "text": {
+                              "type": "string",
+                              "maxLength": 32000
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "type",
+                            "name",
+                            "path"
+                          ],
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "file",
+                                "image"
+                              ]
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "path": {
+                              "type": "string"
+                            },
+                            "media_type": {
+                              "type": "string"
+                            },
+                            "context": {
+                              "type": "string"
+                            },
+                            "video_frame": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "input",
+                  "expected_revision",
+                  "idempotency_key"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/person/tasks/{id}/executions": {
+      "get": {
+        "tags": [
+          "Person"
+        ],
+        "summary": "Get executions",
+        "description": "GET /api/studio/person/tasks/:id/executions",
+        "operationId": "executions",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/api/studio/petdex/asset": {
       "get": {
         "tags": [
@@ -19775,7 +21259,7 @@
           "Sessions"
         ],
         "summary": "List conversation tasks across accessible profiles",
-        "description": "Lists persisted single-chat tasks, including archived sessions, with stable pagination. Profile access and pending deletions are applied before counting. Group, workflow and global-agent tasks are excluded. Open tasks precede completed tasks; update time and id determine stable order within each status. Does not invoke a model or modify task status.",
+        "description": "Lists persisted single-chat tasks, including archived sessions, with stable pagination. Profile access and pending deletions are applied before counting. Group, workflow and global-agent tasks are excluded. Open tasks precede completed then closed tasks; update time and id determine stable order within each status. Does not invoke a model or modify task status.",
         "operationId": "listSessionTaskItems",
         "security": [
           {
@@ -19847,7 +21331,8 @@
               "type": "string",
               "enum": [
                 "open",
-                "completed"
+                "completed",
+                "closed"
               ]
             }
           },
@@ -19891,7 +21376,7 @@
           "Chat Run"
         ],
         "summary": "Read the active turn session goals",
-        "description": "The current turn context binds the session and profile. Expired contexts, other profiles, group chats, workflows and background/delegated runs are rejected. No per-turn task plan is created or modified. Writes upsert only changed/new goals and preserve omitted goals; revision conflicts require rereading. New completions require completion_evidence.",
+        "description": "The current turn context binds the session and profile. Expired contexts, other profiles, group chats, workflows and background/delegated runs are rejected. No per-turn task plan is created or modified. Writes upsert only changed/new goals and preserve omitted goals; revision conflicts require rereading. New completions require completion_evidence. Closed goals remain readable but model writes cannot change them; only a user can reopen them from the task list.",
         "operationId": "listSessionTasks",
         "security": [
           {
@@ -19977,7 +21462,7 @@
           "Chat Run"
         ],
         "summary": "Update the active turn session goals",
-        "description": "The current turn context binds the session and profile. Expired contexts, other profiles, group chats, workflows and background/delegated runs are rejected. No per-turn task plan is created or modified. Writes upsert only changed/new goals and preserve omitted goals; revision conflicts require rereading. New completions require completion_evidence.",
+        "description": "The current turn context binds the session and profile. Expired contexts, other profiles, group chats, workflows and background/delegated runs are rejected. No per-turn task plan is created or modified. Writes upsert only changed/new goals and preserve omitted goals; revision conflicts require rereading. New completions require completion_evidence. Closed goals remain readable but model writes cannot change them; only a user can reopen them from the task list.",
         "operationId": "updateSessionTasks",
         "security": [
           {
@@ -22099,6 +23584,128 @@
             "description": "Optional exact session profile filter."
           }
         ]
+      }
+    },
+    "/api/studio/sessions/{id}/tasks/{taskId}/status": {
+      "patch": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Manually change a task status",
+        "description": "User action from the task list. Changes one existing task to open, completed or closed, with account/profile access checks. Requires its latest updated_at as expected_updated_at; stale rows return 409. Closed tasks remain readable and only this manual endpoint can reopen them. Manual completion records the user action as evidence and links to the original request. Does not invoke a model or create a run plan. Run credentials cannot use this endpoint.",
+        "operationId": "setSessionTaskStatus",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current goal ledger; tasks is empty before the first goal is recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "session_id",
+                    "revision",
+                    "updated_at",
+                    "tasks"
+                  ],
+                  "properties": {
+                    "session_id": {
+                      "type": "string"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "updated_at": {
+                      "type": "integer"
+                    },
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SessionTask"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid status or expected_updated_at."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The authenticated user cannot access this session profile."
+          },
+          "404": {
+            "description": "Session not found, or the explicit profile filter does not match."
+          },
+          "409": {
+            "description": "Task changed or session is unavailable. Refresh the task list."
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional exact session profile filter."
+          },
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "status",
+                  "expected_updated_at"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "completed",
+                      "closed"
+                    ]
+                  },
+                  "expected_updated_at": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/studio/sessions/{id}/unarchive": {
@@ -27620,7 +29227,8 @@
             "type": "string",
             "enum": [
               "open",
-              "completed"
+              "completed",
+              "closed"
             ]
           },
           "source_message_id": {
@@ -27632,7 +29240,7 @@
           },
           "completion_evidence": {
             "type": "string",
-            "description": "Concise evidence of verified delivery supplied by the conversation agent."
+            "description": "Concise verification from the conversation agent, or an explicit manual-completion marker for a user action."
           },
           "created_at": {
             "type": "integer",

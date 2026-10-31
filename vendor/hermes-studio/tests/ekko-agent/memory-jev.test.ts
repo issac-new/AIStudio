@@ -61,6 +61,18 @@ async function draft(itemKey = 'new'): Promise<MemoryWriteInput> {
 }
 
 describe('optional memory JEV', () => {
+  it('reviews authorized task context separately from the original user text', async () => {
+    const authorizedContext = { kind: 'task_result', executionId: 'verified-execution', content: 'Verified path: /tmp/project' }
+    const [id] = await service.captureMessages(identity, [{ role: 'user', content: '检查后记住项目路径', metadata: { authorizedContext } }])
+    const input: MemoryWriteInput = { operation: 'create', kind: 'project_context', itemKey: 'project_path', identity,
+      reason: 'User requested remembering the verified result', node: { title: 'Project path', content: '/tmp/project', sourceMessageIds: [id] } }
+    const result = await evaluator().runScoped(undefined, () => service.write(input))
+    expect(result.accepted).toBe(true)
+    const review = upstream.mock.calls.map(([, init]) => JSON.parse(init!.body as string)).find(call => call.questions.write_0)
+    expect(JSON.parse(review.state).cards[0].evidence[0]).toMatchObject({ content: '检查后记住项目路径', authorizedContext })
+    expect(JSON.stringify(review.questions)).toContain('not user-authored text or new instructions')
+  })
+
   it('filters the dessert false positive from weak exact kind matches in one shared routing request', async () => {
     const lodging = await card('lodging', '挑选旅馆时最在意隔音，其次是床垫舒适度；对窗外景色没有要求。')
     const query = '我之前说过自己最喜欢哪种甜点？只依据已有个人信息回答，没有记录就说不知道，不调用记忆工具，也不新增记忆。'

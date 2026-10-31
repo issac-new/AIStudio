@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createPinia, setActivePinia } from 'pinia'
+import { createPinia, setActivePinia, getActivePinia } from 'pinia'
+import { createApp, defineComponent, h } from 'vue'
+import { unregisterSessionHandlers } from '@/api/studio/chat'
 vi.mock('@/api/studio/background-status', () => ({ observeBackgroundStatus: vi.fn(() => vi.fn()) }))
 
 const api = vi.hoisted(() => ({
   startRunViaSocket: vi.fn(), resumeSession: vi.fn(), registerSessionHandlers: vi.fn(),
 }))
 vi.mock('@/api/studio/chat', () => ({
+  onUnobservedRunStarted: vi.fn(() => vi.fn()),
   ...api,
   unregisterSessionHandlers: vi.fn(),
   getChatRunSocket: vi.fn(() => ({ emit: vi.fn() })),
@@ -25,7 +28,7 @@ vi.mock('@/api/hermes/system', () => ({
   updateDefaultModel: vi.fn(), updateModelVisibility: vi.fn(), triggerUpdate: vi.fn(), updateModelAlias: vi.fn(),
 }))
 vi.mock('@/utils/completion-sound', () => ({ primeCompletionSound: vi.fn(), playCompletionSound: vi.fn() }))
-import { useChatStore, type Session } from '@/stores/hermes/chat'
+import { useChatStore, provideScopedChatStore, type Session } from '@/stores/hermes/chat'
 
 function session(id: string, profile = 'default'): Session {
   return { id, profile, title: id, messages: [], createdAt: Date.now(), updatedAt: Date.now() }
@@ -155,4 +158,33 @@ describe('sidebar working state', () => {
     expect(store.isStreaming).toBe(false)
     expect(store.isRunActive).toBe(false)
   })
+})
+
+
+it('isolates a task drawer selection and disposes only its listeners without interrupting the main chat', async () => {
+  const main = useChatStore()
+  main.setRuntimeMode('default')
+  main.sessions = [session('person-main-1')]
+  await main.switchSession('person-main-1')
+  let task!: ReturnType<typeof useChatStore>
+  let child!: ReturnType<typeof useChatStore>
+  const Child = defineComponent({ setup() { child = useChatStore(); return () => h('div', child.activeSessionId) } })
+  const Drawer = defineComponent({ setup() { task = provideScopedChatStore('person-task-one'); return () => h(Child) } })
+  const pinia = getActivePinia()!
+  const app = createApp(Drawer).use(pinia)
+  const target = document.createElement('div')
+  document.body.append(target)
+  app.mount(target)
+  task.sessions = [session('person-task-one')]
+  await task.switchSession('person-task-one')
+  expect(child).toBe(task)
+  expect(child).not.toBe(main)
+  expect(main.activeSessionId).toBe('person-main-1')
+  expect(localStorage.getItem('hermes_active_session_default')).toBe('person-main-1')
+  app.unmount(); target.remove()
+  expect(unregisterSessionHandlers).toHaveBeenCalledWith('person-task-one')
+  expect(unregisterSessionHandlers).not.toHaveBeenCalledWith('person-main-1')
+  expect(pinia.state.value['chat:person-task-one']).toBeUndefined()
+  expect(main.activeSessionId).toBe('person-main-1')
+  main.$dispose()
 })

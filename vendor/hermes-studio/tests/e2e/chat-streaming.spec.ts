@@ -1,9 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 import { authenticate, mockChatSocket, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
+import { selectNewChatAgent } from './new-chat-helpers'
 
 const inputPlaceholder = 'Type a message... (Enter to send, Shift+Enter for new line)'
 
 async function sendChatMessage(page: Page, message: string) {
+  await expect(page.locator('.chat-view')).toHaveAttribute('aria-busy', 'false')
+  if (await page.locator('.new-chat-page').isVisible()) await selectNewChatAgent(page, 'Hermes')
   const input = page.getByPlaceholder(inputPlaceholder)
   await expect(input).toBeVisible()
   await input.fill(message)
@@ -590,7 +593,7 @@ test('settles a running subagent card when Stop completes without a child termin
   await expect(page.locator('.thinking-status')).toHaveCount(0)
 })
 
-test('uses the newly selected profile for the next chat-run socket after profile switch reload', async ({ page }) => {
+test('uses the selected draft profile for the next chat-run socket after profile switch reload', async ({ page }) => {
   await authenticate(page, TEST_ACCESS_KEY, 'default')
   const api = await mockHermesApi(page, { initialProfileName: 'default' })
   await mockChatSocket(page)
@@ -615,10 +618,21 @@ test('uses the newly selected profile for the next chat-run socket after profile
   await expect(page.getByRole('button', { name: 'Stop' })).toHaveCount(0)
 
   await page.evaluate(() => window.localStorage.setItem('hermes_active_profile_name', 'research'))
+  await page.goto('/#/hermes/chat')
   await page.reload()
   await page.waitForLoadState('domcontentloaded')
   expect(await page.evaluate(() => window.localStorage.getItem('hermes_active_profile_name'))).toBe('research')
 
+  // New-chat settings are remembered across reloads. Select the intended
+  // profile explicitly before asserting the new socket's routing.
+  const draft = page.locator('.new-chat-page')
+  await expect(draft).toBeVisible()
+  await draft.getByRole('button', { name: 'Chat settings', exact: true }).click()
+  const profile = page.locator('.new-chat-field').filter({ hasText: /^Profiles/ })
+  await expect(profile).toContainText('default')
+  await profile.locator('.n-base-selection').click()
+  await page.locator('.n-base-select-option:visible').filter({ hasText: /^research$/ }).click()
+  await page.getByRole('dialog', { name: 'Chat settings', exact: true }).getByRole('button', { name: 'Close', exact: true }).click()
   await sendChatMessage(page, 'Use the active research profile')
   const { socket, run } = await waitForRun(page)
 

@@ -42,6 +42,21 @@ const write = (changes: unknown[], revision = tasks.getSessionTasks('task-sessio
   tasks.updateSessionTasks('task-session', 'research', { revision, changes })
 
 describe('session-task lifecycle webhooks', () => {
+  it('emits manual completion once and never reports closing as completion', () => {
+    let task = write([goal()]).tasks[0]
+    const change = (status: 'open' | 'completed' | 'closed') => {
+      task = tasks.setSessionTaskStatus('task-session', 'research', task.id, { status, expected_updated_at: task.updated_at }).tasks[0]
+    }
+    change('closed')
+    expect(events.map(event => event.type)).toEqual(['chat.task.created'])
+    change('completed')
+    change('completed')
+    expect(events.map(event => event.type)).toEqual(['chat.task.created', 'chat.task.completed'])
+    expect(events[1].session_task).toMatchObject({ completion_evidence: 'Manually marked completed by the user.' })
+    change('closed')
+    expect(events).toHaveLength(2)
+  })
+
   it('publishes each created task after commit, then only the task that becomes completed', () => {
     const dispatcher = webhooks.getChatWebhookDispatcher()
     const enqueue = vi.mocked(dispatcher.enqueue)

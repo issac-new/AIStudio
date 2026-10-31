@@ -62,6 +62,7 @@ export function resolveRemoteServerUrl(
   env: NodeJS.ProcessEnv = process.env,
   home: string = webUiHome(),
 ): string | null {
+  if (env.EKKO_STUDIO_DEVICE_INSTANCE && Object.hasOwn(env, REMOTE_SERVER_URL_ENV)) return remoteServerUrlFromEnv(env)
   return remoteServerUrlFromEnv(env) ?? remoteServerUrlFromSettings(home)
 }
 

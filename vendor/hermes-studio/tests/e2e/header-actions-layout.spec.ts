@@ -50,12 +50,17 @@ async function clippedControls(header: Locator) {
   })
 }
 
-for (const { widths, platform } of [
-  { widths: [390, 769, 900, 1440] },
-  { widths: [769], platform: 'win32' }, { widths: [769], platform: 'linux' },
-  { widths: [900], platform: 'darwin' },
+// Every route exercises responsive headers in the browser. Native chrome is a
+// shared shell: sample chat, a crowded toolbar and a configuration sidebar here;
+// desktop-window-chrome.spec.ts owns OS controls, RTL and native browser details.
+const nativeHeaderRoutes = ['/hermes/chat', '/hermes/jobs', '/studio/agents/codex/settings']
+for (const { widths, platform, paths } of [
+  { widths: [390, 769, 900, 1440], paths: routes },
+  { widths: [769], platform: 'win32', paths: nativeHeaderRoutes },
+  { widths: [769], platform: 'linux', paths: nativeHeaderRoutes },
+  { widths: [900], platform: 'darwin', paths: nativeHeaderRoutes },
 ]) {
-  for (const route of routes) {
+  for (const route of paths) {
     test(`keeps header actions visible on ${route} (${platform || 'browser'})`, async ({ page }) => {
       await page.setViewportSize({ width: widths[0], height: 900 })
       await page.clock.install()

@@ -3,6 +3,7 @@ import { getDb, isSqliteAvailable } from '../infrastructure/database'
 import { MESSAGES_TABLE, SESSIONS_TABLE, SESSION_TASKS_TABLE } from '../infrastructure/database/schemas'
 import type { SessionTask, SessionTasksSnapshot, SessionTaskChange } from '../contracts/session-task'
 import type { SessionTaskListPage, SessionTaskListQuery } from '../contracts/session-task'
+import type { SessionTaskStatus } from '../contracts/session-task'
 import { SESSION_PREVIEW_SQL, sessionDisplayTitle } from './session-display'
 
 /** Profile filtering happens in SQL, before counting or paginating. */
@@ -11,6 +12,7 @@ export function listSessionTaskItems(query: SessionTaskListQuery): SessionTaskLi
   const db = getDb()
   if (!db || !query.profiles.length) return empty
   const where = [
+    "s.id NOT LIKE 'person-task-%' AND s.id NOT LIKE 'person-main-%'",
     `s.profile IN (${query.profiles.map(() => '?').join(',')})`,
     `s.source IN ('api_server', 'cli', 'desktop', 'builtin_agent', 'coding_agent')`,
   ]
@@ -33,8 +35,7 @@ export function listSessionTaskItems(query: SessionTaskListQuery): SessionTaskLi
       AND m.role = 'user' AND COALESCE(m.display_role, m.role) = 'user' AND m.content NOT LIKE '/%'
       AND m.id <= CASE WHEN t.status = 'completed' THEN COALESCE(t.evidence_message_id, t.source_message_id) ELSE t.source_message_id END
       ORDER BY m.id DESC LIMIT 1) AS message_id
-    ${from} ORDER BY CASE t.status WHEN 'open' THEN 0 ELSE 1 END,
-      t.updated_at ${query.order === 'oldest' ? 'ASC' : 'DESC'}, t.id ASC LIMIT ? OFFSET ?`)
+    ${from} ORDER BY t.updated_at ${query.order === 'oldest' ? 'ASC' : 'DESC'}, t.id ASC LIMIT ? OFFSET ?`)
     .all(...args, Math.min(query.limit, total - query.offset), query.offset) as unknown as Array<SessionTaskListPage['tasks'][number] & { session_preview: string }>
   const tasks = rows.map(({ session_preview, ...task }) => ({
     ...task, session_title: sessionDisplayTitle(task.session_title, session_preview),
@@ -85,11 +86,12 @@ export function commitSessionTasks(
   const byId = new Map(previous.map(task => [task.id, task]))
   const byTitle = new Map(previous.map(task => [titleKey(task.title), task]))
   const seen = new Set<string>()
-  const now = Date.now()
+  const now = Math.max(Date.now(), ...previous.map(task => task.updated_at + 1))
   const tasks: SessionTask[] = []
   for (const change of changes) {
     const old = change.id ? byId.get(change.id) : byTitle.get(titleKey(change.title))
     if (change.id && !old) throw new Error('Unknown session goal id')
+    if (old?.status === 'closed') throw new Error('This goal was closed by the user; only the user can reopen it from the task list')
     const sameTitle = byTitle.get(titleKey(change.title))
     if (sameTitle && old && sameTitle.id !== old.id) throw new Error('Goal title belongs to another goal')
     const id = old?.id || randomUUID()
@@ -126,6 +128,37 @@ export function commitSessionTasks(
       updated_at = excluded.updated_at, completed_at = excluded.completed_at`)
     for (const task of tasks) save.run(task.id, expected.session_id, task.title, task.summary, task.status,
       task.source_message_id, task.evidence_message_id, task.completion_evidence, task.created_at, task.updated_at, task.completed_at)
+    db.exec('COMMIT')
+  } catch (error) { db.exec('ROLLBACK'); throw error }
+  return getSessionTasks(expected.session_id)
+}
+
+/** A user changes one existing task; stale list rows cannot overwrite newer work. */
+export function commitSessionTaskStatus(
+  expected: SessionTasksState, taskId: string, status: SessionTaskStatus, expectedUpdatedAt: number,
+): SessionTasksSnapshot | null {
+  const db = getDb()
+  if (!db) return null
+  db.exec('BEGIN')
+  try {
+    const current = getSessionTasksState(expected.session_id)
+    const task = getSessionTasks(expected.session_id).tasks.find(item => item.id === taskId)
+    if (!current || current.profile !== expected.profile || current.history_revision !== expected.history_revision
+      || current.revision !== expected.revision || !task || task.updated_at !== expectedUpdatedAt) {
+      db.exec('ROLLBACK')
+      return null
+    }
+    if (task.status !== status) {
+      const now = Math.max(Date.now(), current.updated_at + 1, task.updated_at + 1)
+      const completed = status === 'completed'
+      db.prepare(`UPDATE ${SESSION_TASKS_TABLE} SET status = ?, updated_at = ?, completed_at = ?,
+        completion_evidence = ?, evidence_message_id = ? WHERE session_id = ? AND id = ?`)
+        .run(status, now, completed ? now : null,
+          completed ? 'Manually marked completed by the user.' : '',
+          completed ? task.source_message_id : null, expected.session_id, taskId)
+      db.prepare(`UPDATE ${SESSIONS_TABLE} SET task_summary_revision = task_summary_revision + 1,
+        task_summary_updated_at = ? WHERE id = ?`).run(now, expected.session_id)
+    }
     db.exec('COMMIT')
   } catch (error) { db.exec('ROLLBACK'); throw error }
   return getSessionTasks(expected.session_id)

@@ -1,5 +1,5 @@
 import { getSessionTasks as readSessionTasks } from '../repositories/session-task-store'
-import { commitSessionTasks, getSessionTasksState } from '../repositories/session-task-store'
+import { commitSessionTasks, commitSessionTaskStatus, getSessionTasksState } from '../repositories/session-task-store'
 import type { SessionTasksUpdate } from '../contracts/session-task'
 import { publishSessionTaskEvents } from './webhooks'
 export { listSessionTaskItems } from '../repositories/session-task-store'
@@ -52,4 +52,24 @@ export function updateSessionTasks(sessionId: string, profile: string, input: Re
     if (error instanceof SessionTasksError) throw error
     throw new SessionTasksError(error instanceof Error ? error.message : String(error))
   }
+}
+
+/** Account-authorized task-list actions are separate from the model's turn tools. */
+export function setSessionTaskStatus(sessionId: string, profile: string, taskId: string, input: Record<string, unknown>) {
+  const { status, expected_updated_at: expectedUpdatedAt } = input
+  if (Object.keys(input).some(key => !['status', 'expected_updated_at'].includes(key))
+    || (status !== 'open' && status !== 'completed' && status !== 'closed')
+    || !Number.isSafeInteger(expectedUpdatedAt) || (expectedUpdatedAt as number) < 0) {
+    throw new SessionTasksError('A valid status and expected_updated_at from the task list are required')
+  }
+  const state = getSessionTasksState(sessionId)
+  if (!state || state.profile !== profile || !['api_server', 'cli', 'desktop', 'builtin_agent', 'coding_agent'].includes(state.source)) {
+    throw new SessionTasksError('The current session goal ledger is unavailable', 409)
+  }
+  const previous = readSessionTasks(sessionId).tasks
+  if (!previous.some(task => task.id === taskId)) throw new SessionTasksError('Session task not found', 404)
+  const snapshot = commitSessionTaskStatus(state, taskId, status, expectedUpdatedAt as number)
+  if (!snapshot) throw new SessionTasksError('Session task changed; refresh the task list before retrying', 409)
+  publishSessionTaskEvents({ profile: state.profile, source: state.source, previous, snapshot })
+  return snapshot
 }

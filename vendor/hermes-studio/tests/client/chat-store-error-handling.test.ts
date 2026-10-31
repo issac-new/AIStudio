@@ -14,8 +14,11 @@ const completionSoundMock = vi.hoisted(() => ({
   primeCompletionSound: vi.fn(),
   playCompletionSound: vi.fn(),
 }))
+const completionNotification=vi.hoisted(()=>vi.fn(async()=>true))
+vi.mock('@/utils/completion-notification',()=>({showCompletionNotification:completionNotification}))
 
 vi.mock('@/api/studio/chat', () => ({
+  onUnobservedRunStarted: vi.fn(() => vi.fn()),
   startRunViaSocket: chatApi.startRunViaSocket,
   resumeSession: chatApi.resumeSession,
   registerSessionHandlers: chatApi.registerSessionHandlers,
@@ -71,6 +74,8 @@ vi.mock('@/utils/completion-sound', () => ({
 
 import { useChatStore, type Message, type Session } from '@/stores/hermes/chat'
 import { useSettingsStore } from '@/stores/hermes/settings'
+import {respondClarify} from '@/api/studio/chat'
+import { invalidateAuth } from '@/api/auth-invalidation'
 
 function makeSession(id: string): Session {
   return {
@@ -104,6 +109,28 @@ describe('chat store error handling - #1644', () => {
       handlers = registeredHandlers
       return vi.fn()
     })
+  })
+
+  it('reuses completion notifications for Person terminal events outside the active conversation once',()=>{
+    const store=useChatStore(),settings=useSettingsStore()
+    settings.display.notify_on_complete=true
+    store.sessions=[makeSession('another-chat')];store.activeSessionId='another-chat'
+    const event={event:'person.run.completed',session_id:'person-main-1',notification_id:'main-run',output:'Report ready'}
+    chatApi.globalPendingHandler?.(event);chatApi.globalPendingHandler?.(event)
+    expect(completionNotification).toHaveBeenCalledTimes(1)
+    expect(completionNotification).toHaveBeenCalledWith(expect.objectContaining({title:'zhezhe',body:'Report ready',clickUrl:'/person?session=person-main-1'}))
+  })
+
+  it('answers a Person prompt on its chat transport while another runtime is selected',()=>{
+    const store=useChatStore()
+    chatApi.globalPendingHandler?.({event:'clarify.requested',session_id:'person-main-1',clarify_id:'q',question:'Which scope?',choices:[]})
+    store.setRuntimeMode('global_agent')
+    expect(store.respondToClarifyFor('person-main-1','q','Today')).toBe('submitted')
+    expect(respondClarify).toHaveBeenCalledWith('person-main-1','q','Today','chat-run')
+    store.setRuntimeMode('default')
+    expect(store.pendingClarifies.has('person-main-1')).toBe(true)
+    invalidateAuth()
+    expect(store.pendingClarifies.has('person-main-1')).toBe(false)
   })
 
   it('primes approval sound on direct send when completion sound is disabled', async () => {

@@ -1,7 +1,41 @@
-import { describe, expect, it } from 'vitest'
-import { chatSessionAgentAvatar } from '@/utils/chat-agent-avatar'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { chatSessionAgentAvatar, personAvatarAnimation } from '@/utils/chat-agent-avatar'
+import { PERSON_BOTS } from '../../packages/shared/person-bots'
+import { uiLocale } from '@/i18n/locale-state'
 
 describe('single chat Agent avatars', () => {
+  beforeEach(() => { uiLocale.value = 'en' })
+  it.each(PERSON_BOTS)('keeps $name appearance and thinking animation after selecting its bot type', bot => {
+    for (const locale of ['en', 'zh', 'zh-TW', 'zh-Hans', 'ja', 'ar']) {
+      uiLocale.value = locale
+      const avatar = chatSessionAgentAvatar({ id: 'person-main-new', agent: 'ekko-agent', bot_type: bot.type })
+      expect(avatar).toEqual({ label: locale.startsWith('zh') ? bot.name : bot.type, src: bot.avatar })
+      expect(personAvatarAnimation(avatar, 'thinking')).toBe(bot.animations.thinking)
+      expect(personAvatarAnimation(avatar, 'idle')).toBe(bot.animations.idle)
+    }
+  })
+
+  it('does not replace worker avatars with Person animations', () => {
+    expect(personAvatarAnimation(chatSessionAgentAvatar({ id: 'person-task-1', agent: 'ekko-agent' }), 'thinking')).toBeUndefined()
+  })
+
+  it('uses stored bot identity independently of runtime and does not relabel unknown bots as zhezhe', () => {
+    for (const identity of [{ botType: 'zhezhe' }, { bot_type: 'zhezhe' }]) {
+      expect(chatSessionAgentAvatar({ id: 'conversation-1', agent: 'ekko-agent', ...identity }).label).toBe('zhezhe')
+    }
+    expect(chatSessionAgentAvatar({ id: 'person-main-future', botType: 'future-bot', agent: 'ekko-agent' }).label).toBe('Ekko')
+  })
+  it('names the personal assistant 折折 while keeping task worker identities', () => {
+    expect(chatSessionAgentAvatar({ id: 'person-main-1', agent: 'ekko-agent' })).toEqual({
+      label: 'zhezhe',
+      src: '/coding-agents/person.jpg',
+    })
+    expect(chatSessionAgentAvatar({ id: 'person-task-1', agent: 'ekko-agent' })).toEqual({
+      label: 'Ekko',
+      src: '/coding-agents/ekko-agent.png',
+    })
+  })
+
   it('shows Ekko before the session loads while preserving legacy Hermes sessions', () => {
     for (const session of [null, undefined]) {
       expect(chatSessionAgentAvatar(session)).toEqual({
@@ -17,6 +51,9 @@ describe('single chat Agent avatars', () => {
 
   it.each([
     ['Hermes', { agent: 'hermes' }, '/coding-agents/hermes.png'],
+    ['Hermes', { source: 'coding_agent', agent: 'hermes' }, '/coding-agents/hermes.png'],
+    ['Hermes', { source: 'coding_agent', agent: ' Hermes ' }, '/coding-agents/hermes.png'],
+    ['Hermes', { source: 'coding_agent', codingAgentId: 'hermes' }, '/coding-agents/hermes.png'],
     ['Ekko', { agent: 'ekko-agent' }, '/coding-agents/ekko-agent.png'],
     ['Ekko', { agent: 'ekko_agent' }, '/coding-agents/ekko-agent.png'],
     ['Claude', { agent: 'claude' }, '/coding-agents/claude-code.svg'],

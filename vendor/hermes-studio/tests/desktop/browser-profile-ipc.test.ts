@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BrowserProfileStore } from '../../packages/desktop/src/main/browser/browser-profile-store'
 import type { BrowserProfileCreateInput, DesktopBrowserProfile } from '../../packages/desktop/src/main/browser/browser-types'
 
@@ -67,4 +67,56 @@ describe('desktop browser profile creation IPC', () => {
     const profile = await createProfile({}, { name: 'Work', rootDirectory, proxyMode, proxyRules })
     expect(profile).toMatchObject({ proxyMode, proxyRules })
   })
+})
+
+
+it('download actions are gated by browserForEvent and accept ids, never renderer file paths', () => {
+  const source = readFileSync('packages/desktop/src/main/index.ts', 'utf8')
+  const ast = ts.createSourceFile('index.ts', source, ts.ScriptTarget.Latest, true)
+  const statement = ast.statements.find(statement => ts.isExpressionStatement(statement)
+    && ts.isCallExpression(statement.expression)
+    && statement.expression.arguments[0]?.getText(ast) === "'hermes-desktop:browser-download-action'")
+  expect(statement).toBeDefined()
+  const compiled = ts.transpileModule(statement!.getText(ast), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText
+  let handler: any
+  const calls: unknown[] = []
+  runInNewContext(compiled, {
+    ipcMain: { handle: (_channel: string, callback: unknown) => { handler = callback } },
+    browserForEvent: (event: unknown) => {
+      if (event !== 'trusted') throw new Error('untrusted')
+      return { downloadAction: (...args: unknown[]) => { calls.push(args) } }
+    },
+  })
+  expect(() => handler('untrusted', 'record', 'open')).toThrow('untrusted')
+  expect(() => handler('trusted', { path: '/tmp/file' }, 'open')).toThrow('Invalid')
+  expect(() => handler('trusted', 'record', 'execute')).toThrow('Invalid')
+  handler('trusted', 'record', 'reveal')
+  expect(calls).toEqual([['record', 'reveal']])
+  const preload = readFileSync('packages/desktop/src/preload/index.ts', 'utf8')
+  expect(preload).toContain("ipcRenderer.invoke('hermes-desktop:browser-download-action', downloadId, action)")
+  const broker = readFileSync('packages/desktop/src/main/browser/browser-broker.ts', 'utf8')
+  expect(broker).not.toContain("case 'download.action'")
+})
+
+it('download availability refresh is restricted to the trusted main window', () => {
+  const source = readFileSync('packages/desktop/src/main/index.ts', 'utf8')
+  const ast = ts.createSourceFile('index.ts', source, ts.ScriptTarget.Latest, true)
+  const statement = ast.statements.find(statement => ts.isExpressionStatement(statement)
+    && ts.isCallExpression(statement.expression)
+    && statement.expression.arguments[0]?.getText(ast) === "'hermes-desktop:browser-refresh-downloads'")
+  expect(statement).toBeDefined()
+  let handler: any
+  const refresh = vi.fn()
+  runInNewContext(ts.transpileModule(statement!.getText(ast), {}).outputText, {
+    ipcMain: { handle: (_: string, callback: unknown) => { handler = callback } },
+    browserForEvent: (event: unknown) => {
+      if (event !== 'trusted') throw new Error('untrusted')
+      return { refreshDownloads: refresh }
+    },
+  })
+  expect(() => handler('untrusted')).toThrow('untrusted')
+  handler('trusted')
+  expect(refresh).toHaveBeenCalledOnce()
 })

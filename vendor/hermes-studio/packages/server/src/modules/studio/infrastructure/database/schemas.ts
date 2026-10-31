@@ -93,16 +93,23 @@ export const TASK_PLANS_TABLE = 'task_plans'
 export const SESSION_TASKS_TABLE = 'session_tasks'
 export const SESSION_TASKS_SCHEMA: Record<string, string> = {
   id: 'TEXT PRIMARY KEY',
-  session_id: 'TEXT NOT NULL',
+  session_id: 'TEXT',
   title: 'TEXT NOT NULL',
   summary: "TEXT NOT NULL DEFAULT ''",
-  status: "TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'completed'))",
-  source_message_id: 'INTEGER NOT NULL',
+  status: "TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'completed', 'closed'))",
+  source_message_id: 'INTEGER',
   evidence_message_id: 'INTEGER',
   completion_evidence: "TEXT NOT NULL DEFAULT ''",
   created_at: 'INTEGER NOT NULL',
   updated_at: 'INTEGER NOT NULL',
   completed_at: 'INTEGER',
+  owner_user_id: 'INTEGER',
+  bot_id: 'TEXT',
+  revision: 'INTEGER NOT NULL DEFAULT 0',
+  requirements_revision: 'INTEGER NOT NULL DEFAULT 0',
+  requirements_json: "TEXT NOT NULL DEFAULT '{}'",
+  selection_json: "TEXT NOT NULL DEFAULT '{}'",
+  workspace: "TEXT NOT NULL DEFAULT ''",
 }
 export const TASK_PLANS_SCHEMA: Record<string, string> = {
   session_id: 'TEXT NOT NULL',
@@ -195,6 +202,7 @@ export const SESSIONS_SCHEMA: Record<string, string> = {
   agent: 'TEXT NOT NULL DEFAULT \'\'',
   agent_mode: 'TEXT NOT NULL DEFAULT \'\'',
   agent_preset: 'TEXT NOT NULL DEFAULT \'\'',
+  bot_type: 'TEXT NOT NULL DEFAULT \'\'',
   agent_session_id: 'TEXT NOT NULL DEFAULT \'\'',
   agent_native_session_id: 'TEXT NOT NULL DEFAULT \'\'',
   user_id: 'TEXT',
@@ -1225,6 +1233,8 @@ export const GC_SESSION_PROFILES_SCHEMA: Record<string, string> = {
 // ============================================================================
 
 import { getDb, getStoragePath } from './index'
+import { initPersonTables } from './person-schema'
+import { initSessionStateTables } from './session-state-schema'
 import { BUILTIN_EKKO_AGENT_IDS, BUILTIN_HISTORY_SOURCES } from '../../contracts/history-source'
 
 function quoteIdentifier(identifier: string): string {
@@ -1614,6 +1624,38 @@ export function syncTable(
   addMissingSafeColumns(db, tableName, schema)
 }
 
+/** Rebuild constraints for account-owned tasks, preserving rows and custom schema objects. */
+function migrateSessionTaskSchema(db: NonNullable<ReturnType<typeof getDb>>): void {
+  const legacyCheck = /CHECK\s*\(\s*status\s+IN\s*\(\s*'open'\s*,\s*'completed'\s*\)\s*\)/i
+  const upgradedSql = (sql: string) => sql
+    .replace(legacyCheck, "CHECK(status IN ('open', 'completed', 'closed'))")
+    .replace(/((?:"session_id"|\bsession_id)\s+TEXT)\s+NOT\s+NULL\b/i, '$1')
+    .replace(/((?:"source_message_id"|\bsource_message_id)\s+INTEGER)\s+NOT\s+NULL\b/i, '$1')
+  const readSql = () => (db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(SESSION_TASKS_TABLE) as { sql: string } | undefined)?.sql
+  const original = readSql() || ''
+  if (upgradedSql(original) === original) return
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const sql = readSql() || ''
+    if (upgradedSql(sql) !== sql) {
+      const objects = db.prepare("SELECT sql FROM sqlite_master WHERE tbl_name = ? AND type IN ('index', 'trigger') AND sql IS NOT NULL")
+        .all(SESSION_TASKS_TABLE) as Array<{ sql: string }>
+      const columns = (db.prepare(`PRAGMA table_info(${quoteIdentifier(SESSION_TASKS_TABLE)})`).all() as Array<{ name: string }>)
+        .map(column => quoteIdentifier(column.name)).join(', ')
+      const temporary = 'session_tasks_schema_upgrade'
+      const createSql = upgradedSql(sql)
+        .replace(/^(CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)(?:"session_tasks"|session_tasks)(?=\s*\()/i, `$1${quoteIdentifier(temporary)}`)
+      db.exec(createSql)
+      db.exec(`INSERT INTO ${quoteIdentifier(temporary)} (${columns}) SELECT ${columns} FROM ${quoteIdentifier(SESSION_TASKS_TABLE)}`)
+      db.exec(`DROP TABLE ${quoteIdentifier(SESSION_TASKS_TABLE)}`)
+      db.exec(`ALTER TABLE ${quoteIdentifier(temporary)} RENAME TO ${quoteIdentifier(SESSION_TASKS_TABLE)}`)
+      for (const object of objects) db.exec(object.sql)
+    }
+    db.exec('COMMIT')
+  } catch (error) { db.exec('ROLLBACK'); throw error }
+}
+
 function cleanupHistoricalZeroLineWorkspaceDiffs(
   db: NonNullable<ReturnType<typeof getDb>>,
 ): void {
@@ -1673,7 +1715,7 @@ function cleanupHistoricalZeroLineWorkspaceDiffs(
 
 /**
  * Initialize missing Hermes SQLite tables with proper schemas.
- * Existing tables only receive safe additive columns.
+ * Existing tables receive safe additive columns and explicit domain migrations.
  * Call this once at application bootstrap.
  */
 export function initAllHermesTables(): void {
@@ -1709,9 +1751,13 @@ export function initAllHermesTables(): void {
     syncTable(SESSION_TASKS_TABLE, SESSION_TASKS_SCHEMA, {
       indexes: { idx_session_tasks_session: 'CREATE INDEX IF NOT EXISTS idx_session_tasks_session ON session_tasks(session_id, created_at, id)' },
     })
+    migrateSessionTaskSchema(db)
+    initPersonTables(db)
     syncTable(SESSIONS_TABLE, SESSIONS_SCHEMA, {
       indexes: SESSIONS_INDEXES,
     })
+    db.prepare(`UPDATE ${SESSIONS_TABLE} SET bot_type = 'zhezhe'
+      WHERE id LIKE 'person-main-%' AND bot_type = ''`).run()
     // Idempotent classification migration. Messages, timestamps and metadata
     // stay intact; group/workflow/global-agent sessions keep their source.
     db.prepare(`UPDATE ${SESSIONS_TABLE} SET source = 'builtin_agent', agent = 'ekko-agent'
@@ -1722,6 +1768,7 @@ export function initAllHermesTables(): void {
     createIndexes(db, SESSION_CATEGORIES_INDEXES)
     createIndexes(db, SESSIONS_INDEXES)
     syncTable(MESSAGES_TABLE, MESSAGES_SCHEMA)
+    initSessionStateTables(db)
     db.exec(MESSAGES_INDEX)
     syncTable(SKILL_USAGE_EVENTS_TABLE, SKILL_USAGE_EVENTS_SCHEMA, {
       indexes: SKILL_USAGE_EVENTS_INDEXES,

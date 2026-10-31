@@ -47,7 +47,9 @@ describe('Runtime install restart wiring', () => {
     expect(restart).toContain("process.env.NODE_ENV === 'development'")
     expect(restart).toContain('utimesSync(trigger, now, now)')
     expect(trigger).toContain('nodemon')
-    expect(nodemon).toContain('"watch": ["packages/server/src"')
+    expect(JSON.parse(nodemon).watch).toEqual(expect.arrayContaining([
+      'packages/server/src', 'packages/ekko-agent/src', 'packages/shared',
+    ]))
   })
 
   it('gates Gateway and bridge startup on the probed in-memory Hermes inventory', () => {

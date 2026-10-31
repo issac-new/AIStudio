@@ -1,3 +1,4 @@
+import { desktopListeningPort } from './desktop-listening-message'
 import { ChildProcess, execFile, execFileSync, spawn } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync, chmodSync, existsSync, readdirSync } from 'node:fs'
 import { createServer } from 'node:net'
@@ -730,7 +731,7 @@ export async function startWebUiServer(port = DEFAULT_PORT): Promise<string> {
     PATH: runtimePath,
   }, hermesSelection)
 
-  const released = await releaseOccupiedWebUiPort(port, token)
+  const released = port > 0 && await releaseOccupiedWebUiPort(port, token)
   if (released) {
     console.warn(`[webui] released an orphaned Desktop Web UI on port ${port}`)
   }
@@ -768,6 +769,8 @@ async function launchWebUiServer(webUiDirectory: string, entry: string, env: Nod
   const launchedProc = serverProc
   const bridgeStartup = createAgentBridgeStartupTracker()
   let startupReady = false
+  let resolveListening!: (value: number) => void
+  const listening = port === 0 ? new Promise<number>(resolve => { resolveListening = resolve }) : Promise.resolve(port)
 
   launchedProc.stdout?.on('data', (chunk: Buffer) => {
     diagnostics.observeStdout(chunk)
@@ -790,6 +793,8 @@ async function launchWebUiServer(webUiDirectory: string, entry: string, env: Nod
   })
   launchedProc.stderr?.on('error', () => { /* EPIPE: ignore */ })
   launchedProc.on('message', message => {
+    const selected = desktopListeningPort(message)
+    if (serverProc === launchedProc && port === 0 && selected) { resolveListening(selected); return }
     if (serverProc !== launchedProc || !isDesktopRestartRequest(message)) return
     if (!restartRequestHandler) {
       console.warn('[desktop] Web UI requested an App restart before a handler was registered')
@@ -817,6 +822,13 @@ async function launchWebUiServer(webUiDirectory: string, entry: string, env: Nod
     })
   })
   try {
+    let listeningTimer: ReturnType<typeof setTimeout> | undefined
+    try {
+      port = await Promise.race([listening, exitBeforeReady, new Promise<never>((_, reject) => {
+        listeningTimer = setTimeout(() => reject(new Error('Desktop server did not report its bound port')), timeoutMs)
+      })])
+    } finally { clearTimeout(listeningTimer) }
+    currentServerPort = port
     await Promise.race([waitForReady(port, timeoutMs), exitBeforeReady])
     startupReady = true
   } catch (err) {

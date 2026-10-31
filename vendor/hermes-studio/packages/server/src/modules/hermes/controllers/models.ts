@@ -585,7 +585,7 @@ async function buildAvailableForProfile(
   return { profile, default: currentDefault, default_provider: currentDefaultProvider, groups: applyCatalogModelMetadata(groupsWithCustomModels) }
 }
 
-export async function getAvailableModelGroupsForProfile(profile: string): Promise<AvailableGroup[]> {
+export async function getAvailableModelConfigForProfile(profile: string) {
   const appConfig = await readAppConfig()
   const modelVisibility = normalizeModelVisibility(appConfig.modelVisibility)
   const applyCatalogModelMetadata = createCatalogModelMetadataEnricher(
@@ -593,7 +593,11 @@ export async function getAvailableModelGroupsForProfile(profile: string): Promis
   )
   const modelCatalogCache = await readProviderModelCatalogCache()
   const result = await buildAvailableForProfile(profile || 'default', modelCatalogCache, appConfig, applyCatalogModelMetadata)
-  return applyModelVisibility(result.groups, modelVisibility)
+  return { ...result, groups: applyModelVisibility(applyModelAliases(result.groups, normalizeAliases(appConfig.modelAliases)), modelVisibility) }
+}
+
+export async function getAvailableModelGroupsForProfile(profile: string): Promise<AvailableGroup[]> {
+  return (await getAvailableModelConfigForProfile(profile)).groups
 }
 
 // Full directories are loaded by the settings editor, never by routine pickers.

@@ -32,6 +32,8 @@ describe('remote Desktop browser isolation', () => {
     const registry = new DesktopBrowserRelayRegistry()
     await expect(registry.request(1, 'default', { method: 'eval' })).rejects.toThrow('Unsupported')
     await expect(registry.request(1, 'default', { method: 'navigate', params: { url: 'a'.repeat(1_000_001) } })).rejects.toThrow('1 MB')
+    await expect(registry.request(1, 'default', { method: 'upload', params: { files: [{ data: 'A'.repeat(16_000_001) }] } })).rejects.toThrow('16 MB')
+    await expect(registry.request(1, 'default', { method: 'upload', params: { files: [{ data: 'A'.repeat(2_000_000) }] } })).rejects.toThrow('No authorized active Desktop browser')
   })
 })
 

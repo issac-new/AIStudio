@@ -85,6 +85,18 @@ describe('chat-run socket reconnect handling', () => {
     socketState.sockets = []
   })
 
+  it('dispatches Person events through the existing global chat notification handlers',async()=>{
+    const api=await import('../../packages/client/src/api/studio/chat')
+    const receive=vi.fn(),stop=api.onPeerUserMessage(receive)
+    api.connectChatRun('default')
+    const socket=socketState.sockets[0]
+    socket.__trigger('person.clarification.requested',{event:'person.clarification.requested',session_id:'person-main-1',clarify_id:'q',question:'Which scope?'})
+    expect(receive).toHaveBeenCalledWith(expect.objectContaining({event:'clarify.requested',session_id:'person-main-1',clarify_id:'q'}))
+    socket.__trigger('person.run.completed',{event:'person.run.completed',session_id:'person-main-1',run_id:'r',notification_id:'r'})
+    expect(receive).toHaveBeenLastCalledWith(expect.objectContaining({event:'person.run.completed',session_id:'person-main-1'}))
+    stop()
+  })
+
   it('keeps transient mobile disconnects alive and resumes after reconnect', async () => {
     const { startRunViaSocket } = await import('../../packages/client/src/api/studio/chat')
     const onEvent = vi.fn()

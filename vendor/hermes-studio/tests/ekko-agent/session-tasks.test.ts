@@ -99,6 +99,20 @@ describe('native session goal queries', () => {
     expect(reader).toHaveBeenCalledWith()
   })
 
+  it('exposes closed goals to the model while keeping closed out of model writes', async () => {
+    const ledger = snapshot()
+    ledger.tasks[0].status = 'closed'
+    const writer = vi.fn(() => ledger)
+    const context = { sessionId: 's1', listSessionTasks: () => ledger, updateSessionTasks: writer }
+    const read = await new ListSessionTasksTool().execute({}, context)
+    expect(read.ok).toBe(true)
+    expect(JSON.parse(read.content).tasks[0].status).toBe('closed')
+    const write = await new UpdateSessionTasksTool().execute({ revision: 0,
+      changes: [{ title: 'Export', summary: 'Closed by user', status: 'closed' }] }, context)
+    expect(write.ok).toBe(false)
+    expect(writer).not.toHaveBeenCalled()
+  })
+
   it.each([{ session_id: 'other' }, { profile: 'other' }, { status: 'completed' }])('rejects caller-selected scope or writes: %j', async input => {
     const reader = vi.fn(() => snapshot())
     const result = await new ListSessionTasksTool().execute(input, { sessionId: 's1', listSessionTasks: reader })

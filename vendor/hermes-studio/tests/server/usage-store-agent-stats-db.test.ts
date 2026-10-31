@@ -83,6 +83,62 @@ describe('usage store agent breakdown', () => {
     expect(getLocalUsageStats('default', 7, { model: 'unknown', agent: 'unknown' }).input_tokens).toBe(1)
   })
 
+  it('groups historical Person calls as zhezhe while preserving worker and ordinary Ekko usage', async () => {
+    const insert = db.prepare(`INSERT INTO session_usage
+      (session_id, source, agent, input_tokens, profile, created_at, origin)
+      VALUES (?, ?, ?, ?, 'default', ?, ?)`)
+    const now = Date.now()
+    insert.run('person-main-1', 'ekko_agent', 'ekko_agent', 100, now, 'internal')
+    insert.run('person:1', 'ekko_agent', 'ekko_agent', 50, now, 'internal')
+    insert.run('person-main-2', 'ekko_agent', 'zhezhe', 25, now, 'internal')
+    insert.run('ordinary', 'ekko_agent', 'ekko_agent', 200, now, 'internal')
+    insert.run('person-task-1', 'ekko_agent', 'ekko_agent', 300, now, 'internal')
+    insert.run('person-task-2', 'coding_agent', 'codex', 40, now, 'internal')
+    insert.run('person-main-1', 'ekko_agent', 'ekko_agent', 999, now, 'external')
+
+    const { getLocalUsageStats } = await import('../../packages/server/src/modules/studio/repositories/usage-store')
+    const result = getLocalUsageStats('default', 7)
+    expect(result.input_tokens).toBe(715)
+    expect(result.by_agent).toEqual([
+      expect.objectContaining({ agent: 'ekko_agent', input_tokens: 500, sessions: 2 }),
+      expect.objectContaining({ agent: 'zhezhe', input_tokens: 175, sessions: 3 }),
+      expect.objectContaining({ agent: 'codex', input_tokens: 40, sessions: 1 }),
+    ])
+    expect(result.filter_options?.agents).toEqual(['codex', 'ekko_agent', 'zhezhe'])
+    expect(getLocalUsageStats('default', 7, { origin: 'external' }).by_agent).toEqual([
+      expect.objectContaining({ agent: 'ekko_agent', input_tokens: 999 }),
+    ])
+    expect(db.prepare("SELECT agent FROM session_usage WHERE session_id = 'person:1'").get()).toEqual({ agent: 'ekko_agent' })
+  })
+
+  it('filters zhezhe consistently across tokens, costs, calls and charts for both old and new rows', async () => {
+    const now = Date.now()
+    const insert = db.prepare(`INSERT INTO session_usage
+      (session_id, source, agent, model, profile, account_id, created_at, input_tokens,
+       output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, cost_usd, cost_source, api_calls)
+      VALUES (?, 'ekko_agent', ?, ?, ?, ?, ?, ?, 2, 3, 4, 5, 0.1, 'reported', 1)`)
+    insert.run('person-main-1', 'ekko_agent', 'model-a', 'default', '1', now, 100)
+    insert.run('person-main-1', 'ekko_agent', 'model-a', 'default', '1', now, 25) // context summary
+    insert.run('person:1', 'ekko_agent', 'model-a', 'default', '1', now, 50) // coordinator
+    insert.run('person-main-1', 'zhezhe', 'model-a', 'default', '1', now, 25)
+    insert.run('person-task-1', 'ekko_agent', 'model-a', 'default', '1', now, 300)
+    insert.run('ordinary', 'ekko_agent', 'model-a', 'default', '1', now, 200)
+    insert.run('person-main-2', 'ekko_agent', 'model-a', 'default', '2', now, 700)
+    insert.run('person-main-1', 'ekko_agent', 'model-a', 'research', '1', now, 900)
+    insert.run('person-main-1', 'ekko_agent', 'model-a', 'default', '1', now - 8 * 86_400_000, 800)
+    insert.run('person-main-1', 'ekko_agent', 'model-b', 'default', '1', now, 600)
+
+    const { getLocalUsageStats } = await import('../../packages/server/src/modules/studio/repositories/usage-store')
+    const result = getLocalUsageStats('default', 7, { agent: 'zhezhe', account: '1', model: 'model-a' })
+    expect(result).toMatchObject({ input_tokens: 200, output_tokens: 8, cache_read_tokens: 12,
+      cache_write_tokens: 16, reasoning_tokens: 20, sessions: 2, total_api_calls: 4, cost: 0.4,
+      cost_coverage: { reported: 4, estimated: 0, unknown: 0 } })
+    expect(result.by_agent).toEqual([expect.objectContaining({ agent: 'zhezhe', input_tokens: 200, sessions: 2 })])
+    expect(result.by_model).toEqual([expect.objectContaining({ model: 'model-a', input_tokens: 200 })])
+    expect(result.by_day).toEqual([expect.objectContaining({ input_tokens: 200, cost: 0.4, sessions: 2 })])
+    expect(getLocalUsageStats('default', 7, { agent: 'ekko_agent', account: '1', model: 'model-a' }).input_tokens).toBe(500)
+  })
+
   it('counts today from local midnight and combines UTC dates without duplicating sessions', async () => {
     const { getTodayUsageWindow } = await import('../../packages/server/src/modules/studio/services/usage/usage-period')
     const today = getTodayUsageWindow('Asia/Shanghai', Date.parse('2026-10-11T10:00:00Z'))

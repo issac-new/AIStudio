@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { stopRemoteBrowserRelay } from '@/composables/useRemoteBrowserRelay'
+import { ensureRemoteBrowserRelay, stopRemoteBrowserRelay } from '@/composables/useRemoteBrowserRelay'
 import { deploymentUrl } from '@/utils/deployment-url'
 import {
   computed,
@@ -28,6 +28,7 @@ import { useSessionSearch } from "@/composables/useSessionSearch";
 import { watchServerTtsSettingsHydration } from "@/composables/useTtsSettingsHydration";
 import { useAppStore } from "@/stores/hermes/app";
 import { useProfilesStore } from "@/stores/hermes/profiles";
+import { usePersonPresenceStore } from '@/stores/hermes/person-presence';
 import { isStoredSuperAdmin } from "@/api/client";
 import AuthEventListener from "@/components/auth/AuthEventListener.vue";
 import { desktopBridge } from "@/utils/desktop-bridge";
@@ -107,7 +108,7 @@ const naiveLocale = computed(() => naiveLocaleFor(locale.value));
 const naiveRtl = computed(() => naiveRtlFor(locale.value));
 const appStore = useAppStore();
 const profilesStore = useProfilesStore();
-watch(() => profilesStore.activeProfileName, () => { void stopRemoteBrowserRelay() });
+watch(() => profilesStore.activeProfileName, async () => { await stopRemoteBrowserRelay(); await ensureRemoteBrowserRelay() });
 const route = useRoute();
 const { sessionSearchOpen } = useSessionSearch();
 
@@ -117,7 +118,7 @@ const themeOverrides = computed(() =>
 const naiveTheme = computed(() => (isDark.value ? darkTheme : null));
 
 const isLoginPage = computed(() => route.name === "login");
-watch(isLoginPage, login => { if (login) void stopRemoteBrowserRelay() });
+watch(isLoginPage, login => { void (login ? stopRemoteBrowserRelay() : ensureRemoteBrowserRelay()) }, { immediate: true });
 watchServerTtsSettingsHydration({
   isLoginPage: () => isLoginPage.value,
   activeProfileName: () => profilesStore.activeProfileName,
@@ -126,6 +127,10 @@ const isStandaloneChatPage = computed(
   () => route.meta?.standaloneChat === true,
 );
 const isInviteOnlyPage = computed(() => route.meta?.inviteOnly === true);
+const personPresence = usePersonPresenceStore();
+watch(() => !isLoginPage.value && !isInviteOnlyPage.value && route.name !== 'desktop.pet', enabled => {
+  if (enabled) personPresence.start(); else personPresence.stop();
+}, { immediate: true });
 const wideViewportQuery = window.matchMedia('(min-width: 769px)');
 const isWideViewport = ref(wideViewportQuery.matches);
 const viewportWidth = ref(window.innerWidth);
@@ -161,6 +166,7 @@ function handleWideViewportChange(event: MediaQueryListEvent) {
 }
 const usesPageSidebar = computed(() =>
   [
+    "hermes.person",
     "hermes.chat",
     "hermes.session",
     "hermes.connections",
@@ -295,6 +301,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  personPresence.stop();
   window.removeEventListener('resize', handleViewportResize);
   wideViewportQuery.removeEventListener('change', handleWideViewportChange);
   stopWindowStateListener?.();
@@ -630,6 +637,7 @@ useKeyboard();
     :deep(.header-title),
     :deep(h1),
     :deep(.header-session-title),
+    :deep(.person-title),
     :deep(.header-workflow-title),
     :deep(.room-title-text) {
       font-size: calc(var(--font-size-base, 14px) * 13 / 14);
@@ -765,6 +773,7 @@ useKeyboard();
   :deep(.ekko-config-sidebar),
   :deep(.coding-agent-config-sidebar),
   :deep(.chat-panel > .session-list),
+  :deep(.person-layout > .person-sidebar),
   :deep(.history-panel > .page-loading-content > .session-list),
   :deep(.group-chat-panel > .room-sidebar),
   :deep(.agent-avatar-rail),
@@ -870,6 +879,7 @@ useKeyboard();
   }
 
   :deep(.chat-panel > .session-list > .page-sidebar-top),
+  :deep(.person-layout > .person-sidebar > .page-sidebar-top),
   :deep(.history-panel > .page-loading-content > .session-list > .page-sidebar-top),
   :deep(.workflow-view > .page-loading-content > .workflow-sidebar > .page-sidebar-top),
   :deep(.group-chat-panel > .room-sidebar > .sidebar-header) {
@@ -918,6 +928,7 @@ useKeyboard();
   }
 
   :deep(.chat-panel > .session-list > .page-sidebar-top),
+  :deep(.person-layout > .person-sidebar > .page-sidebar-top),
   :deep(.history-panel > .page-loading-content > .session-list > .page-sidebar-top),
   :deep(.workflow-view > .page-loading-content > .workflow-sidebar > .page-sidebar-top),
   :deep(.group-chat-panel > .room-sidebar > .sidebar-header) {

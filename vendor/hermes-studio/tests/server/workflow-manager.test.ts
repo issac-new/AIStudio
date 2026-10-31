@@ -322,7 +322,7 @@ describe('workflow manager', () => {
     const { saveJevSettings } = await import('../../packages/server/src/modules/studio/services/jev/settings')
     const { listWorkflowRunQualityEvaluations } = await import('../../packages/server/src/modules/studio/repositories/workflow-run-store')
     initAllStores()
-    await saveJevSettings('default', { apiKey: 'quality-key', workflowQualityEnabled: true })
+    await saveJevSettings({ apiKey: 'quality-key', workflowQualityEnabled: true })
     const answer = { type: 'choice', choice: 'pass', confidence: .95, probabilities: { pass: .95, needs_improvement: .02, unknown: .03 } }; const response = { model: 'jev-test', usage: {}, answers: { expected_output: answer, completion_evidence: answer, downstream_readiness: answer } }
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json(response))
     chatRunMock.runAndWait.mockReset().mockImplementation(async (request: { session_id: string }) => {

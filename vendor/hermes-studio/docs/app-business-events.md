@@ -41,6 +41,10 @@ Filters only narrow this authorization. Internal payloads are never sent verbati
 
 ## Compatibility and channels
 
+MCU connections have a separate opt-in adapter for the complete HTTP Webhook
+catalog. See [MCU Webhook subscriptions](mcu-webhook-events.md) for the wire
+protocol, content controls and permissions. The existing MCU firmware is unchanged.
+
 New App sends `auth.appEventVersion=1`, subscribes on this single namespace and does
 not open legacy group/workflow notification listeners. Old clients retain the three
 legacy event names through a hub consumer. Version-1 clients never get both channels.

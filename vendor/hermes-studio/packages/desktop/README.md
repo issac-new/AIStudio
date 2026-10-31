@@ -226,10 +226,6 @@ python-build-standalone release mirror:
 export PBS_BASE_URL=https://github.com/astral-sh/python-build-standalone/releases/download
 ```
 
-Native switcher verification: `npm --prefix packages/desktop run build:main`, then
-`node packages/desktop/scripts/verify-native-device-switcher.cjs`. This uses real
-OS pointer input and requires a graphical desktop (and existing event-posting
-permission on macOS). The manual Windows build runs it before packaging, checks
-that the control is not a draggable caption, and uploads its interaction report.
-The Vitest Electron fixture uses renderer pointer events by default; set
-`STUDIO_TEST_NATIVE_MOUSE=1` to exercise OS hit testing locally as well.
+Device switching is covered by `tests/desktop/native-device-switcher.test.ts`
+and `tests/e2e/desktop-remote-devices.spec.ts`. These checks do not launch a
+separate Electron app or require OS pointer input.

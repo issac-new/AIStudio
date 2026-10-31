@@ -56,7 +56,7 @@ describe('desktop browser security primitives', () => {
     expect(source).toContain('await this.flushProfileSession(this.requireProfile(this.activeProfileId))')
     expect(source).toContain('browserSession.flushStorageData()')
     expect(source).toContain('await browserSession.cookies.flushStore()')
-    expect(source).toContain('const browserSession = this.profileSession(profile)')
+    expect(source).toContain('const browserSession = await this.profileSession(profile)')
     expect(source).toContain('browserSession.isPersistent()')
     expect(source).toContain('browserSession.getStoragePath()')
     expect(source).toContain("browserSession.cookies.on('changed', listener)")

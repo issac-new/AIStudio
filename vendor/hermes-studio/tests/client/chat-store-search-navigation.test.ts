@@ -15,6 +15,7 @@ vi.mock('@/api/studio/sessions', () => ({
   fetchWorkspaceRunChangeFile: vi.fn(),
 }))
 vi.mock('@/api/studio/chat', () => ({
+  onUnobservedRunStarted: vi.fn(() => vi.fn()),
   resumeSession: api.resumeSession,
   startRunViaSocket: vi.fn(), registerSessionHandlers: vi.fn(), unregisterSessionHandlers: vi.fn(),
   getChatRunSocket: vi.fn(() => ({ emit: vi.fn() })),
@@ -78,6 +79,37 @@ describe('search message navigation', () => {
     store.sessions = [session()]
     await expect(store.switchSession('search-session', '580')).resolves.toBe(true)
     expect(api.fetchSessionMessagesPage).not.toHaveBeenCalled()
+  })
+
+  it('confirms empty history only after a successful resume and preserves that fact across metadata refreshes', async () => {
+    const store = useChatStore()
+    store.sessions = [session()]
+    let resumed!: (data: any) => void
+    api.resumeSession.mockImplementation((_id, callback) => { resumed = callback })
+    const opening = store.switchSession('search-session')
+    expect(store.isLoadingMessages).toBe(true)
+    expect(store.activeSession?.messagesLoaded).toBe(false)
+    resumed({ session_id: 'search-session', messages: [], messageTotal: 0, isWorking: false, events: [] })
+    await opening
+    expect(store.isLoadingMessages).toBe(false)
+    expect(store.activeSession?.messagesLoaded).toBe(true)
+    store.ensureSessionLoaded({ id: 'search-session', title: 'Renamed', started_at: 1, message_count: 0 } as any)
+    expect(store.activeSession?.messagesLoaded).toBe(true)
+  })
+
+  it('does not treat a timed-out resume as an empty transcript', async () => {
+    vi.useFakeTimers()
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const store = useChatStore()
+      store.sessions = [session()]
+      api.resumeSession.mockImplementation(() => {})
+      const opening = store.switchSession('search-session')
+      await vi.advanceTimersByTimeAsync(15_001)
+      await expect(opening).resolves.toBe(false)
+      expect(store.isLoadingMessages).toBe(false)
+      expect(store.activeSession?.messagesLoaded).toBe(false)
+    } finally { log.mockRestore(); vi.useRealTimers() }
   })
 
   it('keeps ordinary history loading capped at 300 messages', async () => {
@@ -174,5 +206,54 @@ describe('search message navigation', () => {
     expect(store.activeSessionId).toBe('search-session')
     expect(store.messages).toHaveLength(150)
     expect(store.focusMessageId).toBeNull()
+  })
+
+  it.each([true, false])('leaves a focused Person conversation when loading ordinary chats (existing=%s)', async hasChat => {
+    const store = useChatStore()
+    store.sessions = [session('person-main-result')]
+    await store.switchSession('person-main-result', '580')
+    api.fetchSessions.mockResolvedValue(hasChat ? [{ id: 'ordinary-chat', title: 'Ordinary chat', profile: 'research', started_at: 1 }] : [])
+
+    await store.loadSessions(null)
+
+    expect(store.activeSessionId).toBe(hasChat ? 'ordinary-chat' : null)
+    expect(store.focusMessageId).toBeNull()
+    expect(store.sessions.some(item => item.id === 'person-main-result')).toBe(false)
+  })
+
+  it('detaches the Person selection even if loading ordinary chats fails', async () => {
+    let rejectList!: (reason: Error) => void
+    const store = useChatStore()
+    store.sessions = [session('person-main-result')]
+    await store.switchSession('person-main-result', '580')
+    api.fetchSessions.mockImplementationOnce(() => new Promise((_, reject) => { rejectList = reject }))
+
+    const pending = store.loadSessions(null)
+    try {
+      expect(store.activeSessionId).toBeNull()
+      expect(store.focusMessageId).toBeNull()
+      expect(store.sessions.some(item => item.id.startsWith('person-'))).toBe(false)
+    } finally {
+      rejectList(new Error('Session list unavailable'))
+      await pending
+    }
+    expect(store.activeSessionId).toBeNull()
+  })
+
+  it('preserves a newer Person selection when an older ordinary chat list request finishes', async () => {
+    let resolveList!: (value: unknown[]) => void
+    api.fetchSessions.mockImplementationOnce(() => new Promise(resolve => { resolveList = resolve }))
+    const store = useChatStore()
+    store.sessions = [session(), session('person-main-result')]
+    await store.switchSession('search-session')
+    const pending = store.loadSessions(null)
+    await store.switchSession('person-main-result', '580')
+
+    resolveList([])
+    await pending
+
+    expect(store.activeSessionId).toBe('person-main-result')
+    expect(store.activeSession?.id).toBe('person-main-result')
+    expect(store.focusMessageId).toBe('580')
   })
 })

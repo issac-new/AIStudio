@@ -1,9 +1,11 @@
 // Shared Responses payload translation for Coding Agent provider proxies.
+import { createHash } from 'node:crypto'
 import { imageUrlToAnthropicSource, openAiImageUrl } from './multimodal'
 import { shouldPreserveReasoningContent } from './anthropic'
 
 export interface ResponsesAdapterTarget {
   model: string
+  mcpToolRoutes?: McpToolRoutes
   provider?: string
   baseUrl?: string
   /** Default for providers such as Anthropic Messages that require max_tokens. */
@@ -127,14 +129,38 @@ function normalizedNamespaceName(value: unknown): string {
   return String(value || '').trim().replace(/-/g, '_')
 }
 
+export type McpToolRoutes = Record<string, { name: string; namespace: string }>
+
+// Stable provider-safe aliases retain namespace identity without a global registry.
+// The original name remains in the description for model-side tool selection.
+function mcpToolAlias(namespace: string, name: string): string {
+  return `mcp_${createHash('sha256').update(JSON.stringify([namespace, name])).digest('hex').slice(0, 40)}`
+}
+
+export function responseMcpToolRoutes(body: any): McpToolRoutes {
+  const routes: McpToolRoutes = Object.create(null)
+  for (const tool of expandedResponseTools(responsesAvailableTools(body))) {
+    if (tool.namespace?.startsWith('mcp__')) {
+      routes[mcpToolAlias(tool.namespace, tool.name)] = { name: tool.name, namespace: tool.namespace }
+    }
+  }
+  return routes
+}
+
+function providerToolName(tool: any): string {
+  return tool.namespace?.startsWith('mcp__') && tool.name !== tool.namespace
+    ? mcpToolAlias(tool.namespace, tool.name) : String(tool.name || 'tool')
+}
+
 function expandedResponseTools(tools: unknown): any[] {
   if (!Array.isArray(tools)) return []
   const mapped: any[] = []
   const seen = new Set<string>()
   const addFunctionTool = (tool: any) => {
     const name = String(tool?.name || '').trim()
-    if (!name || seen.has(name)) return
-    seen.add(name)
+    const key = JSON.stringify([tool?.namespace || '', name])
+    if (!name || seen.has(key)) return
+    seen.add(key)
     mapped.push({
       type: 'function',
       name,
@@ -388,7 +414,7 @@ function toolSearchArguments(value: unknown): Record<string, unknown> {
   return safeJsonParse(String(value || '{}'))
 }
 
-function responseToolCall(name: unknown, argumentsValue: unknown, id: unknown, index: number): any {
+function responseToolCall(name: unknown, argumentsValue: unknown, id: unknown, index: number, routes?: McpToolRoutes): any {
   const rawName = String(name || 'tool')
   const callId = String(id || `call_${index}`)
   if (rawName === TOOL_SEARCH_NAME) {
@@ -407,7 +433,7 @@ function responseToolCall(name: unknown, argumentsValue: unknown, id: unknown, i
     type: 'function_call',
     id: String(id || `fc_${index}`),
     call_id: callId,
-    ...normalizeResponseFunctionCall(rawName, rawArguments),
+    ...normalizeResponseFunctionCall(rawName, rawArguments, routes),
   }
 }
 
@@ -415,11 +441,13 @@ export function responseToolNamespaceForName(name: unknown): string | undefined 
   return HERMES_STUDIO_MCP_TOOL_NAMESPACES.get(String(name || ''))
 }
 
-export function normalizeResponseFunctionCall(name: unknown, argumentsValue: unknown): { name: string; arguments: string; namespace?: string } {
+export function normalizeResponseFunctionCall(name: unknown, argumentsValue: unknown, routes?: McpToolRoutes): { name: string; arguments: string; namespace?: string } {
   const rawName = String(name || 'tool')
   // An empty string starts streamed arguments; adding {} would corrupt the
   // JSON when the client appends subsequent argument deltas.
   const rawArguments = String(argumentsValue ?? '{}')
+  const route = routes?.[rawName]
+  if (route && route.name !== route.namespace) return { ...route, arguments: rawArguments }
   const namespace = normalizedNamespaceName(rawName)
   if (namespace.startsWith('mcp__')) {
     const parsed = safeJsonParse(rawArguments)
@@ -644,7 +672,7 @@ function responsesInputToChatMessages(body: any, target: ResponsesAdapterTarget)
         id: callId,
         type: 'function',
         function: {
-          name: item.type === 'tool_search_call' ? TOOL_SEARCH_NAME : String(item.name || 'tool'),
+          name: item.type === 'tool_search_call' ? TOOL_SEARCH_NAME : providerToolName(item),
           arguments: item.type === 'tool_search_call'
             ? JSON.stringify(toolSearchArguments(item.arguments))
             : String(item.arguments || '{}'),
@@ -719,8 +747,10 @@ function responsesToolsToChatTools(tools: unknown): any[] | undefined {
     return {
       type: 'function',
       function: {
-        name: String(tool.name || ''),
-        description: String(tool.description || ''),
+        name: providerToolName(tool),
+        description: tool.namespace?.startsWith('mcp__')
+          ? `${String(tool.description || '')} MCP tool: ${tool.namespace}.${tool.name}.`
+          : String(tool.description || ''),
         parameters: tool.parameters || { type: 'object', properties: {} },
       },
     }
@@ -789,7 +819,7 @@ function responsesInputToAnthropicMessages(body: any): any[] {
         content: [{
           type: 'tool_use',
           id: String(item.call_id || item.id || `toolu_${messages.length}`),
-          name: item.type === 'tool_search_call' ? TOOL_SEARCH_NAME : String(item.name || 'tool'),
+          name: item.type === 'tool_search_call' ? TOOL_SEARCH_NAME : providerToolName(item),
           input: item.type === 'tool_search_call'
             ? toolSearchArguments(item.arguments)
             : safeJsonParse(String(item.arguments || '{}')),
@@ -826,8 +856,10 @@ function responsesToolsToAnthropicTools(tools: unknown): any[] | undefined {
   const mapped = expandedResponseTools(tools).map((tool: any) => {
     if (tool?.type !== 'function') return null
     return {
-      name: String(tool.name || ''),
-      description: String(tool.description || ''),
+      name: providerToolName(tool),
+      description: tool.namespace?.startsWith('mcp__')
+          ? `${String(tool.description || '')} MCP tool: ${tool.namespace}.${tool.name}.`
+          : String(tool.description || ''),
       input_schema: tool.parameters || { type: 'object', properties: {} },
     }
   }).filter((tool: any) => tool?.name)
@@ -920,6 +952,7 @@ export function openAiChatToResponses(data: any, target: ResponsesAdapterTarget)
       call.function?.arguments || '{}',
       call.id,
       output.length,
+      target.mcpToolRoutes,
     ))
   }
 
@@ -948,6 +981,7 @@ export function anthropicMessageToResponses(data: any, target: ResponsesAdapterT
         block.input || {},
         block.id,
         output.length,
+        target.mcpToolRoutes,
       ))
     }
   }

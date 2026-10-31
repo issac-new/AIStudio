@@ -48,6 +48,68 @@ describe('Desktop Browser Broker', () => {
     }
   })
 
+  it('forwards in-memory upload, wait and download operations with validated params', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hermes-browser-broker-files-'))
+    roots.push(root)
+    const tab = { id: 'tab-1', title: 'Example', url: 'https://example.com/', agentControl: 'idle' }
+    const calls: unknown[][] = []
+    const manager = {
+      state: () => ({ tabs: [tab] }),
+      upload: async (...args: unknown[]) => { calls.push(['upload', ...args.slice(0, 5)]); return { ...tab, upload: { method: 'input', files: [] } } },
+      wait: async (...args: unknown[]) => { calls.push(['wait', ...args.slice(0, 2)]); return { tabId: tab.id, matched: true, elapsedMs: 1, url: tab.url } },
+      downloadStart: async (...args: unknown[]) => { calls.push(['download.start', ...args]); return { downloadId: 'd1', size: 1 } },
+      downloadRead: (...args: unknown[]) => { calls.push(['download.read', ...args]); return { downloadId: 'd1', done: true } },
+      pageDialog: () => ({ type: 'confirm', message: 'Sure?', url: tab.url, openedAt: 'now' }),
+      handleDialog: async (...args: unknown[]) => { calls.push(['dialog', ...args]); return { ...tab, dialog: { type: 'confirm' } } },
+      networkEntries: () => [{ url: 'https://example.com/a', status: 200 }, { url: 'https://example.com/api', status: 500 }, { url: 'https://cdn.test/x', failed: true }],
+      clearNetwork: (...args: unknown[]) => { calls.push(['network.clear', ...args]) },
+      setAgentControl: () => {}, revokeAgentControl: () => {}, cancelAgentOperation: () => {},
+    } as unknown as BrowserManager
+    const broker = new BrowserBroker(manager, root)
+    const descriptor = await broker.start()
+    try {
+      const registration = await fetch(`${descriptor.endpoint}/session`, {
+        method: 'POST', headers: { Authorization: `Bearer ${descriptor.token}`, 'Content-Type': 'application/json' }, body: '{}',
+      })
+      const client = await registration.json() as { client_id: string; session_token: string }
+      const send = async (method: string, params: Record<string, unknown>) => await fetch(descriptor.endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${client.session_token}`, 'Content-Type': 'application/json', 'X-Hermes-Browser-Client': client.client_id },
+        body: JSON.stringify({ method, params }),
+      })
+      const files = [{ name: 'a.png', type: 'image/png', data: 'AQID' }]
+      expect((await (await send('upload', { tab_id: 'tab-1', snapshot_id: 's1', ref: '@e1', files })).json()).result.upload.method).toBe('input')
+      expect((await send('upload', { tab_id: 'tab-1', snapshot_id: 's1', ref: '@e1', files: [] })).status).toBe(400)
+      expect((await send('upload', { tab_id: 'tab-1', snapshot_id: 's1', ref: '@e1', files, method: 'clipboard' })).status).toBe(400)
+      expect((await send('wait', { tab_id: 'tab-1', text: 'Done', timeout_ms: 1000 })).status).toBe(200)
+      expect((await send('wait', { tab_id: 'tab-1' })).status).toBe(400)
+      expect((await send('wait', { tab_id: 'tab-1', timeout_ms: 60_000 })).status).toBe(400)
+      expect((await send('download.start', { tab_id: 'tab-1', url: 'https://example.com/a.zip' })).status).toBe(200)
+      expect((await send('download.read', { download_id: 'd1', offset: 0 })).status).toBe(200)
+      expect((await (await send('upload', { tab_id: 'tab-1', files })).json()).result.upload.method).toBe('input')
+      expect((await (await send('dialog', { tab_id: 'tab-1', action: 'status' })).json()).result.dialog.type).toBe('confirm')
+      expect((await send('dialog', { tab_id: 'tab-1', action: 'accept', prompt_text: 'yes' })).status).toBe(200)
+      expect((await send('dialog', { tab_id: 'tab-1', action: 'close' })).status).toBe(400)
+      expect((await (await send('network.read', { tab_id: 'tab-1', only_failed: true })).json()).result.total).toBe(2)
+      expect((await (await send('network.read', { tab_id: 'tab-1', filter: 'API', limit: 1 })).json()).result.entries).toEqual([{ url: 'https://example.com/api', status: 500 }])
+      expect((await send('network.read', { tab_id: 'tab-1', limit: 500 })).status).toBe(400)
+      expect((await send('network.clear', { tab_id: 'tab-1' })).status).toBe(200)
+      expect(calls.slice(4)).toEqual([
+        ['upload', 'tab-1', undefined, undefined, files, 'auto'],
+        ['dialog', 'tab-1', true, 'yes'],
+        ['network.clear', 'tab-1'],
+      ])
+      expect(calls.slice(0, 4)).toEqual([
+        ['upload', 'tab-1', 's1', '@e1', files, 'auto'],
+        ['wait', 'tab-1', { text: 'Done', textGone: undefined, timeoutMs: 1000 }],
+        ['download.start', 'tab-1', { url: 'https://example.com/a.zip', snapshotId: undefined, ref: undefined }],
+        ['download.read', 'd1', 0],
+      ])
+    } finally {
+      await broker.stop()
+    }
+  })
+
   it('authenticates loopback MCP clients and enforces per-tab leases', async () => {
     const root = await mkdtemp(join(tmpdir(), 'hermes-browser-broker-'))
     roots.push(root)

@@ -1,9 +1,11 @@
+import { personMessages } from '../person-messages'
 import { remoteDeviceMessages } from '../remote-device-messages'
 import { themePresetMessages } from '../theme-preset-locales'
 import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesEn } from '../social-messages'
 
 export default {
+  person: personMessages['en'],
   sessionTasks: {
       "title": "Tasks",
       "task": "Task",
@@ -15,6 +17,9 @@ export default {
       "all": "All statuses",
       "open": "Incomplete",
       "completed": "Completed",
+      "closed": "Closed",
+      "changeStatus": "Change task status: {title}",
+      "updateFailed": "Could not update task status. Refresh and try again.",
       "openChat": "Open conversation",
       "openTask": "View in conversation: {title}",
       "loading": "Loading tasks",
@@ -118,8 +123,9 @@ export default {
     "openFailed": "Could not open authorization. Open System Settings → Privacy & Security manually."
   },
   jev: {
+    globalReadonlyHint: "Only the super administrator can change or test the global JEV configuration.",
     computerUseAutomation: "Ekko Computer Use",
-    computerUseAutomationHint: "Uses this Profile’s JEV connection from the next Ekko run. Only accessibility labels and control states are sent; field values and screenshots are excluded. Optional failures preserve the native result.",
+    computerUseAutomationHint: "Uses the shared global JEV connection from the next Ekko run. Only accessibility labels and control states are sent; field values and screenshots are excluded. Optional failures preserve the native result.",
     computerUseMatchEnabled: "Match desktop elements",
     computerUseMatchHint: "Suggest an existing element token for an explicit target in a fresh window observation. Does not click.",
     computerUseMatchCandidateLimit: "Desktop match candidate limit",
@@ -131,7 +137,7 @@ export default {
     computerUseVerifyTimeoutMs: "Desktop verification timeout (ms)",
 
     browserAutomation: "Built-in browser automation",
-    browserAutomationHint: "Optional assessments use this Profile’s saved JEV connection and take effect on the next assessment. Rendered page labels are sent to JEV; input values are excluded. Disabled, unavailable or uncertain assessments preserve the original flow.",
+    browserAutomationHint: "Optional assessments use the shared global JEV connection and take effect on the next assessment. Rendered page labels are sent to JEV; input values are excluded. Disabled, unavailable or uncertain assessments preserve the original flow.",
     browserMatchEnabled: "JEV element matching",
     browserMatchHint: "Suggests a real snapshot ref from the target description. Interactive elements across the snapshot are ranked by relevance before applying the candidate limit; ambiguous matches are declined.",
     browserMatchOptions: "Element matching options",
@@ -174,7 +180,7 @@ export default {
 
     groupSummaryReviewEnabled: "Review group summaries with JEV",
     groupSummaryDisabled: "Disabled; group summaries keep their existing behavior.",
-    groupSummaryReady: "Enabled for summaries created with this Profile.",
+    groupSummaryReady: "Enabled for group summaries.",
     groupSummaryReviewMinConfidence: "Summary review confidence",
     groupSummaryReviewMinConfidenceHint: "Minimum confidence required to report a quality issue.",
     groupSummaryReviewTimeout: "Summary review time budget (ms)",
@@ -216,12 +222,14 @@ export default {
     memoryMinConfidenceHint: "0.5–1, default 0.8. Uncertain reviews preserve the original write flow.",
     memoryTimeout: "Memory enhancement time budget (ms)",
     memoryTimeoutHint: "100–30000 ms; recommended: 3000. Total per recall or write batch; each request also obeys the connection timeout.",
+    personMemoryEnabled: "Use JEV for personal assistant memory",
+    personMemoryHint: "Memory stays with your account. These options are independent of Ekko memory settings.",
     "ekkoMemoryEnabled": "Use JEV for Ekko memory",
-    "description": "Shared Choice, Score and Noul evaluations. Settings apply to the selected Profile.",
+    description: "Global JEV connection and feature settings, shared across all Profiles.",
     "timeout": "Timeout (ms)",
     "keyHint": "Leave blank to keep the saved key",
     "testSaved": "Test saved configuration",
-    "deleteConfirm": "Delete the JEV configuration and API key for this Profile?",
+    deleteConfirm: "Delete the global JEV configuration and API key?",
     "baseUrl": "Base URL",
     "apiKey": "API Key",
     "keyPlaceholder": "Enter your TypeSafe API key",
@@ -229,7 +237,7 @@ export default {
     "testSuccess": "Connection succeeded · Model: {model} · {duration} ms",
     "errors": {
       "invalid_request": "Invalid input. Check the configuration or request parameters.",
-      "not_configured": "Configure and save an API key for this Profile first.",
+      not_configured: "Configure and save the global JEV API key first.",
       "timeout": "The JEV request timed out. Try again or increase the timeout.",
       "cancelled": "The JEV request was cancelled.",
       "auth_failed": "TypeSafe authentication failed. Check the API key and its permissions.",
@@ -238,7 +246,7 @@ export default {
       "endpoint_not_found": "JEV endpoint not found (HTTP 404). Check the API base URL and include any gateway path prefix.",
       "request_failed": "Unable to connect to JEV. Check the API URL and network connection.",
       "settings_failed": "Unable to read or save JEV settings. Check the Studio data directory.",
-      "forbidden": "You do not have access to this Profile.",
+      forbidden: "You do not have permission to manage global JEV settings.",
       "unavailable": "Unable to complete the operation. Check the Studio connection and try again."
     }
   },
@@ -409,13 +417,32 @@ export default {
   },
   socialMessages: socialMessagesEn,
   browser: {
+    recentDownloads: "Recent downloads",
+    fullDownloadHistory: "Full download history",
+    searchDownloads: "Search download history",
+    clearDownloads: "Clear all",
+    clearDownloadsHint: "Removes records only. Files and active downloads are kept.",
+    downloadToday: "Today",
+    downloadYesterday: "Yesterday",
+    downloadUnavailable: "Deleted or moved",
+    downloadFrom: "From {origin}",
+    downloadSource: "Download source",
+    noMatchingDownloads: "No matching downloads",
+    openDownload: "Open file",
+    revealDownload: "Show in folder",
+    removeDownload: "Remove from history",
+    trashDownload: "Move file to Trash / Recycle Bin",
+    downloadActive: "This download is still active. Cancel it first.",
+    downloadFileUnavailable: "The downloaded file was moved or deleted, or is not a regular file.",
+    downloadOpenFailed: "Could not open the downloaded file.",
+    downloadActionFailed: "Could not complete the download action.",
+    downloadNotFound: "This download record is no longer available.",
+
     remoteOwnerActive: 'Current control device',
     remoteOwnerStandby: 'Standby — another device is active',
     remoteOwnerBusy: 'Standby — browser operation in progress',
     remoteOwnerConnecting: 'Connecting',
 
-    remoteControl: 'Allow remote control',
-    remoteControlStop: 'Stop remote control',
 
     title: 'Browser', settings: 'Browser Settings', desktopOnly: 'The embedded browser is available only in Ekko Studio Desktop.', newTab: 'New Tab',
     back: 'Back', forward: 'Forward', reload: 'Reload', stop: 'Stop', addressPlaceholder: 'Search or enter an address',
@@ -3955,6 +3982,34 @@ export default {
 
   // Changelog
   changelog: {
+    new_0_8_0_1: "Added personal assistant Bots created with the first message, with naming, search, switching and batch deletion; conversations stay separate while account memory, Agent presets and workspace are shared (#3552, #3568, #3575)",
+    new_0_8_0_2: "Added ten characters and a looping picker with mouse, touch and keyboard support; improved initial setup, duplicate-name feedback and draft preservation (#3581, #3583)",
+    new_0_8_0_3: "Assistant background tasks accept queued follow-ups, continue existing work and show live tool calls; worker instructions are readable text (#3566, #3580)",
+    new_0_8_0_4: "Assistant roles support serial and parallel collaboration, result handoffs and compact progress lists; failures release roles automatically with errors and unfinished branches available to resume (#3571, #3585, #3592)",
+    new_0_8_0_5: "Assistant schedules can wake a role or run a worker in an isolated conversation for each occurrence; deleting a schedule preserves existing tasks and execution history (#3578, #3579)",
+    new_0_8_0_6: "Improved assistant context compression, account memory and stop controls; remember returned results when requested and avoid repeated introductions in routine replies (#3554, #3565, #3576)",
+    new_0_8_0_7: "JEV settings are now global to Studio and managed by super administrators; added independently enabled assistant memory enhancement, off by default (#3562)",
+    new_0_8_0_8: "Added assistant completion, failure, approval and clarification notifications, floating background activity, and cross-device activity, unread and read-receipt synchronization (#3560, #3563, #3582)",
+    new_0_8_0_9: "Usage reports identify the assistant as zhezhe and show Agent icons; worker usage remains attributed to the executing Agent (#3564)",
+    new_0_8_0_10: "Assistant background concurrency now defaults to 6 with a maximum of 12, shared by all Bots in an account; saved custom limits are preserved (#3584)",
+    new_0_8_0_11: "Assistant main and task conversations share Workspace, Terminal and Browser panels with file previews, editing and browser annotations while preserving unsaved content (#3591, #3593)",
+    new_0_8_0_12: "Fixed isolation when switching between assistant and ordinary chat; deleting the last ordinary conversation opens New Chat, and root or home-wide snapshots no longer block the server (#3572, #3573, #3577)",
+    new_0_8_0_13: "Tasks can be manually marked incomplete, completed or closed and reopened by the user; default sorting follows update time instead of prioritizing older incomplete tasks (#3535, #3590)",
+    new_0_8_0_14: "Task-card steps and explanations follow the conversation language; plan IDs are separate from turn authorization contexts with clearer expiry guidance (#3542, #3544)",
+    new_0_8_0_15: "The built-in browser follows Studio light/dark themes and uses Chromium native auto-dark rendering for fixed-light pages (#3504, #3517)",
+    new_0_8_0_16: "Desktop remote mode automatically shares its browser after login and reconnects after disconnection; authorization loss stays synchronized and router navigation no longer revokes sharing incorrectly (#3514, #3519)",
+    new_0_8_0_17: "Browser Agents can upload and download files, hover, select options and wait for text; uploads avoid system file dialogs and downloads can return to the MCP host (#3522)",
+    new_0_8_0_18: "Browser Agents handle page dialogs, cross-origin iframes, double/right clicks, dragging, coordinates, file-chooser interception and redacted network logs; fixed rich-text input and macOS Cmd shortcuts (#3518, #3523)",
+    new_0_8_0_19: "The browser remembers download folders per device/profile and adds search, date groups and safe history cleanup that preserves files and active downloads (#3536)",
+    new_0_8_0_20: "Devices can open in the current or an isolated window and reuse existing windows; login, browser and storage are isolated with coordinated multi-window updates (#3521)",
+    new_0_8_0_21: "Fixed discovered MCP tool namespaces in Codex compatibility adapters; Pi Studio conversation-reading tools are always available (#3533, #3315)",
+    new_0_8_0_22: "Claude preserves user instructions across launch and prompt refresh; DSH improves non-DeepSeek tool continuation guidance and supports configurable startup waits (#3548, #3553, #3326, #3526)",
+    new_0_8_0_23: "MiniMax now recommends M3.1 Flash and M3 with improved reasoning parameters and history compatibility; chats, groups and workflows default to the lowest available reasoning level while preserving explicit choices (#3476, #3554)",
+    new_0_8_0_24: "Fixed available Agent selection for ordinary users in groups and workflows; added diagnostics for group-routing failures (#3546, #3498)",
+    new_0_8_0_25: "Fixed Edge TTS WebSocket handshake failures and canonical Hermes runtime version display instead of treating the 0.0.0 placeholder as a release (#3444, #3557)",
+    new_0_8_0_26: "MCU devices can explicitly subscribe to existing Webhook events with filters and content controls; account permissions apply and unsubscribed devices are unaffected (#3541)",
+    new_0_8_0_27: "Consolidated MCU firmware projects, added StackChan voice/Agent-control planning documents and trimmed redundant tests; firmware binaries are unchanged and planned device features are not implemented (#3537, #3547, #3551)",
+    new_0_8_0_28: "Slash commands accept CJK colons and commas as argument separators so input-method punctuation no longer turns commands into ordinary messages (#3484)",
     new_0_7_39_1: "Added persistent session tasks so agents can follow user goals across turns and record evidence of completion (#3499)",
     new_0_7_39_2: "Added a session task drawer with links to related chat turns; improved mobile lists, task details and session names, and reduced trivial task records (#3501, #3509, #3510)",
     new_0_7_39_3: "Remote Studio agents can use the local built-in browser after explicit desktop authorization, with sharing that can be stopped at any time (#3478)",

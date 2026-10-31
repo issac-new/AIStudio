@@ -33,6 +33,8 @@ async function setup() {
         }
         if (method === 'DOM.resolveNode') return { object: { objectId: `node-${params.backendNodeId}` } }
         let effect = ''
+        // Readiness probes and pointer measurement only scroll; they are not page effects.
+        if (method === 'Runtime.callFunctionOn' && params.functionDeclaration.includes('covered')) return { result: { value: null } }
         if (method === 'Runtime.callFunctionOn' && !params.functionDeclaration.includes("return 'not visible'")) effect = `${params.functionDeclaration.includes('target.click') ? 'click' : 'focus'}:${params.objectId}`
         if (method === 'Input.insertText') effect = `type:${params.text}`
         if (method === 'Input.dispatchKeyEvent') effect = `${params.type}:${params.key}`
@@ -190,6 +192,77 @@ describe('desktop browser batch interactions', () => {
     expect(manager.state().tabs[0].agentControl).toBe('idle')
   })
 
+  it('stops at a page dialog, reports it instead of a snapshot, and continues after it is answered', async () => {
+    const { page, batch, manager, contents } = await setup()
+    const listeners: Array<(...args: any[]) => void> = []
+    Object.assign(contents.debugger, { on: (event: string, listener: (...args: any[]) => void) => { if (event === 'message') listeners.push(listener) } })
+    await manager.snapshot('tab')
+    const fresh = await manager.snapshot('tab')
+    page.onEffect = effect => {
+      if (effect === 'click:node-1') {
+        for (const listener of listeners) listener({}, 'Page.javascriptDialogOpening', { type: 'alert', message: 'Saved', url: page.url })
+        return new Promise(() => {})
+      }
+    }
+    const result = await batch([{ action: 'click', ref: '@e1' }, { action: 'click', ref: '@e2' }], fresh.snapshotId)
+    expect(result.results.map(item => item.status)).toEqual(['completed', 'skipped'])
+    expect(result.snapshot).toBeUndefined()
+    expect(result.observation).toMatchObject({ dialog: { type: 'alert', message: 'Saved' }, hint: expect.stringContaining('ekko_studio_browser_dialog') })
+    expect(page.effects).toEqual(['click:node-1'])
+    expect(manager.pageDialog('tab')).toMatchObject({ type: 'alert' })
+
+    page.onEffect = () => {}
+    const answered = await manager.handleDialog('tab', true)
+    expect(contents.debugger.sendCommand).toHaveBeenCalledWith('Page.handleJavaScriptDialog', { accept: true })
+    expect(answered.dialog.type).toBe('alert')
+    expect(answered.snapshot?.nodes).toHaveLength(3)
+    expect(manager.pageDialog('tab')).toBeUndefined()
+  })
+
+  it('keeps native alert/confirm boxes off screen while the agent controls the tab', async () => {
+    const { EventEmitter } = await import('node:events')
+    const { manager, internal, record, contents } = await setup()
+    const shown: unknown[] = []
+    const emitter = Object.assign(new EventEmitter(), contents)
+    emitter.on('-run-dialog', (info: unknown) => { shown.push(info) })
+    record.view.webContents = emitter
+    internal.routePageDialogs(record)
+
+    // The agent controls the tab: Electron's box is not shown; the agent answers via DevTools.
+    emitter.emit('-run-dialog', 'agent-confirm', () => {})
+    expect(shown).toEqual([])
+    expect(record.heldDialog).toMatchObject({ info: 'agent-confirm' })
+
+    // The user takes over before the agent answered: the box is handed to the user.
+    internal.automation.pageDialog = () => ({ type: 'confirm' })
+    manager.revokeAgentControl('tab')
+    expect(shown).toEqual(['agent-confirm'])
+    expect(record.heldDialog).toBeUndefined()
+
+    // The user's own browsing keeps Electron's normal native box.
+    emitter.emit('-run-dialog', 'user-alert', () => {})
+    expect(shown).toEqual(['agent-confirm', 'user-alert'])
+
+    // Answered by the agent, then released: nothing is replayed.
+    manager.setAgentControl('tab', 'active')
+    emitter.emit('-run-dialog', 'answered', () => {})
+    internal.automation.pageDialog = () => undefined
+    manager.revokeAgentControl('tab')
+    expect(shown).toEqual(['agent-confirm', 'user-alert'])
+  })
+
+  it('intercepts file pickers only while the agent controls the tab', async () => {
+    const { manager, contents } = await setup()
+    manager.setAgentControl('tab', 'idle')
+    manager.setAgentControl('tab', 'active')
+    manager.setAgentControl('tab', 'active')
+    manager.revokeAgentControl('tab')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const toggles = contents.debugger.sendCommand.mock.calls.filter(([method]) => method === 'Page.setInterceptFileChooserDialog').map(([, params]) => params.enabled)
+    // The fixture tab starts under agent control; repeated active states do not re-send.
+    expect(toggles).toEqual([false, true, false])
+  })
+
   it('uses the configured download preferences for Agent downloads', async () => {
     const { internal, manager, record, contents } = await setup()
     record.tab.profileId = 'profile'
@@ -236,5 +309,71 @@ describe('batch request validation', () => {
     [{ action: 'constructor' }], [{ action: 'click', ref: '' }],
   ])('rejects malformed or oversized batches: %j', value => {
     expect(() => parseBrowserBatchActions(value)).toThrow()
+  })
+
+  it('accepts pointer, drag and coordinate steps and rejects malformed ones', () => {
+    expect(parseBrowserBatchActions([
+      { action: 'double_click', ref: '@e1' }, { action: 'right_click', ref: '@e1' }, { action: 'drag', ref: '@e1', target_ref: '@e2' },
+      { action: 'click_at', x: 10, y: 20, button: 'right', click_count: 2 }, { action: 'drag_at', x: 1, y: 2, to_x: 3, to_y: 4 },
+    ])).toEqual([
+      { action: 'double_click', ref: '@e1' }, { action: 'right_click', ref: '@e1' }, { action: 'drag', ref: '@e1', target_ref: '@e2' },
+      { action: 'click_at', x: 10, y: 20, button: 'right', click_count: 2 }, { action: 'drag_at', x: 1, y: 2, to_x: 3, to_y: 4 },
+    ])
+    for (const bad of [{ action: 'drag', ref: '@e1' }, { action: 'click_at', x: -1, y: 0 }, { action: 'click_at', x: 1, y: 1, click_count: 3 },
+      { action: 'click_at', x: 1, y: 1, button: 'back' }, { action: 'drag_at', x: 1, y: 1, to_x: 2 }, { action: 'click_at', x: '1', y: 1 }]) {
+      expect(() => parseBrowserBatchActions([bad])).toThrow()
+    }
+  })
+
+  it('accepts hover and select steps with their required fields', () => {
+    expect(parseBrowserBatchActions([{ action: 'hover', ref: '@e1' }, { action: 'select', ref: '@e2', value: 'cn' }]))
+      .toEqual([{ action: 'hover', ref: '@e1' }, { action: 'select', ref: '@e2', value: 'cn' }])
+    expect(() => parseBrowserBatchActions([{ action: 'select', ref: '@e2' }])).toThrow()
+    expect(() => parseBrowserBatchActions([{ action: 'hover', ref: '@e1', text: 'x' }])).toThrow()
+  })
+})
+
+describe('desktop browser editing input', () => {
+  it('selects existing contenteditable content instead of rewriting the editor DOM', async () => {
+    const { JSDOM } = await import('jsdom')
+    const { batch, contents } = await setup()
+    await batch([{ action: 'type', ref: '@e3', text: 'Example' }])
+    const focus = contents.debugger.sendCommand.mock.calls.find(([method, params]: any[]) => method === 'Runtime.callFunctionOn' && params.functionDeclaration.includes('isContentEditable'))
+    expect(focus).toBeDefined()
+    const dom = new JSDOM('<div contenteditable="true"><div data-block="true"><span>old draft</span></div></div>')
+    const editor = dom.window.document.querySelector('[contenteditable]') as HTMLElement & { isContentEditable: boolean }
+    Object.defineProperty(editor, 'isContentEditable', { value: true })
+    editor.scrollIntoView = () => {}
+    const block = editor.firstElementChild
+    const run = new dom.window.Function(`return (${focus![1].functionDeclaration})`)() as (this: HTMLElement) => boolean
+    expect(run.call(editor)).toBe(true)
+    expect(editor.firstElementChild).toBe(block)
+    expect(dom.window.document.getSelection()?.toString()).toBe('old draft')
+  })
+
+  it('adds macOS editing commands to Cmd shortcuts only', async () => {
+    const { editingCommands } = await import('../../packages/desktop/src/main/browser/browser-automation')
+    expect(editingCommands('KeyA', 4, 'darwin')).toEqual(['selectAll'])
+    expect(editingCommands('KeyV', 4, 'darwin')).toEqual(['paste'])
+    expect(editingCommands('KeyZ', 4 | 8, 'darwin')).toEqual(['redo'])
+    expect(editingCommands('KeyV', 4 | 8, 'darwin')).toEqual([])
+    expect(editingCommands('KeyA', 2, 'darwin')).toEqual([])
+    expect(editingCommands('KeyA', 4 | 1, 'darwin')).toEqual([])
+    expect(editingCommands('KeyA', 2, 'linux')).toEqual([])
+    expect(editingCommands('KeyA', 4, 'win32')).toEqual([])
+  })
+
+  it('sends the editing command with the synthetic Cmd key press', async () => {
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    Object.defineProperty(process, 'platform', { value: 'darwin' })
+    try {
+      const { batch, contents } = await setup()
+      await batch([{ action: 'press', key: 'Meta+A' }], null)
+      const keyEvents = contents.debugger.sendCommand.mock.calls.filter(([method]: any[]) => method === 'Input.dispatchKeyEvent').map(([, params]: any[]) => params)
+      expect(keyEvents[0]).toMatchObject({ type: 'keyDown', code: 'KeyA', modifiers: 4, commands: ['selectAll'] })
+      expect(keyEvents[1]).not.toHaveProperty('commands')
+    } finally {
+      Object.defineProperty(process, 'platform', platform)
+    }
   })
 })

@@ -340,6 +340,21 @@ describe('existing APIs with session share credentials', () => {
     expect((await request(token, '/api/studio/sessions/s1/export?mode=compressed')).status).toBe(403)
   })
 
+  it('allows ordinary shared files named after Person sessions while enforcing file permissions', async () => {
+    const { token, record } = await issue({ workspaceRead: true, workspaceWrite: true, download: true })
+    for (const name of ['person-main-notes.txt', 'person-task-runtime.ts']) {
+      await writeFile(join(root, 'workspace', name), 'ordinary file')
+      expect(await request(token, `/api/studio/sessions/s1/workspace-file/read?path=${name}`))
+        .toMatchObject({ status: 200, body: { content: 'ordinary file' } })
+      expect((await request(token, '/api/studio/sessions/s1/workspace-file/write', 'PUT', { path: name, content: 'updated file' })).status).toBe(200)
+      expect(await request(token, `/api/studio/files/download?path=${name}`))
+        .toMatchObject({ status: 200, body: 'updated file' })
+    }
+    await service.change(7, 's1', record.id, { permissions: { workspaceRead: false, workspaceWrite: false, download: false } })
+    expect((await request(token, '/api/studio/sessions/s1/workspace-file/read?path=person-task-runtime.ts')).status).toBe(403)
+    expect((await request(token, '/api/studio/files/download?path=person-main-notes.txt')).status).toBe(403)
+  })
+
   it('binds upload chunks and downloads to the session without granting workspace access', async () => {
     const first = await issue({ upload: true, download: true, workspaceRead: true })
     const second = await issue({ upload: true, download: true }, 's2')
