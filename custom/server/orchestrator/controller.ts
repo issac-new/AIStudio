@@ -6,6 +6,7 @@ import Router from '@koa/router'
 import { requireAuthenticatedActor } from '../approval-inbox/human-gate'
 import { fail, ok } from '../lib/http'
 import { defaultCells, getAdmission, listAdmissions, normalizeAdmission, setAdmission } from './admission'
+import { deliverIntervalMs, deliverPendingDigests } from './delivery'
 import { ingestTrigger } from './ingest'
 import { bridgeAll, kanbanDbPaths } from './kanban-bridge'
 import { activeMandateFor, issueMandate, revalidate, revoke } from './mandate'
@@ -277,4 +278,24 @@ router.post('/digests/:id/delivered', async ctx => {
   ok(ctx, { updated: done })
 })
 
+/** 投递一批未发送的汇总（手动触发；定时器走 ORCHESTRATOR_DELIVER_INTERVAL_MS）。 */
+router.post('/deliver', async ctx => {
+  const actor = requireActorOrFail(ctx)
+  if (!actor) return
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
+  const limit = Number(body.limit ?? 20)
+  const result = await deliverPendingDigests({ limit: Number.isFinite(limit) ? limit : 20 })
+  ok(ctx, { ...result, triggeredBy: actor.username })
+})
+
 export const orchestratorRoutes = router
+
+// 定时投递：默认关（env 缺省 0），部署侧显式设 ORCHESTRATOR_DELIVER_INTERVAL_MS 才开。
+// unref 让定时器不阻止进程退出；句柄挂在模块级，随进程生命周期存在。
+const deliverInterval = deliverIntervalMs()
+if (deliverInterval > 0) {
+  const timer = setInterval(() => {
+    void deliverPendingDigests({ limit: 50 }).catch(() => { /* 单轮失败等下一轮 */ })
+  }, deliverInterval)
+  timer.unref?.()
+}

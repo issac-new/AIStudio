@@ -11,7 +11,8 @@
 //   声明(如 proper-lockfile.d.ts)不拾取(TS7016);v0.7.22 起 custom/server
 //   新增 loop/store/local-store.ts 首次把该缺项暴露为启动失败。
 import { spawn } from 'child_process';
-import { existsSync, lstatSync } from 'fs';
+import { existsSync, lstatSync, readFileSync } from 'fs';
+import { homedir } from 'os';
 import { resolve } from 'path';
 
 const args = process.argv.slice(2);
@@ -56,6 +57,30 @@ const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
 process.env.TS_NODE_PROJECT = 'packages/server/tsconfig.json';
 process.env.TS_NODE_FILES = '1';
 process.env.PORT = port;
+
+// 编排域服务端配置（2026-10-31 投递批）：config/orchestrator.env 承载非敏感项
+// （评估 profile / gateway 地址 / 投递间隔），已存在的 process.env 优先（shell 显式覆盖）。
+// 密钥不进配置文件：API_SERVER_KEY 缺省时从 $HERMES_HOME/.env 取同名行。
+const orchestratorEnvFile = resolve(overlayRoot, 'config', 'orchestrator.env');
+if (existsSync(orchestratorEnvFile)) {
+  for (const line of readFileSync(orchestratorEnvFile, 'utf8').split('\n')) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.+?)\s*$/.exec(line);
+    if (!m || process.env[m[1]] !== undefined) continue;
+    process.env[m[1]] = m[2];
+  }
+}
+if (!process.env.API_SERVER_KEY?.trim()) {
+  const hermesHome = process.env.HERMES_HOME?.trim() || resolve(homedir(), '.hermes');
+  const hermesEnv = resolve(hermesHome, '.env');
+  if (existsSync(hermesEnv)) {
+    for (const line of readFileSync(hermesEnv, 'utf8').split('\n')) {
+      const m = /^\s*API_SERVER_KEY\s*=\s*(.+?)\s*$/.exec(line);
+      if (!m) continue;
+      process.env.API_SERVER_KEY = m[1].replace(/^["']|["']$/g, '');
+      break;
+    }
+  }
+}
 // 推演执行面根（SIM_ROOT）：仿真中心族（run-state/topology/issues/quality/delivery…
 // 的 fail-closed 门）。缺省工作区同级目录 lab/ncwk-sim-mux（存在才设；显式 env
 // 尊重不动）——否则 npm run serve 起服务后整族 503「OBS_SIM_ROOT 缺席」，页面

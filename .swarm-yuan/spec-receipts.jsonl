@@ -74,3 +74,4 @@
 {"at":"2026-10-31T14:58:05Z","spec":"docs/superpowers/specs/2026-10-31-approval-proxy-dedup.md","receipt":"d980b280c97fd64db5b92f457c1545fd434c92bc","commit":"1cb6aff0e"}
 {"at":"2026-10-31T14:30:42Z","spec":"docs/superpowers/specs/2026-10-31-superagent-router.md","receipt":"d378f6e035f8eedf0aca07ccb3efa4c4a71140d2","commit":"1cb6aff0e"}
 {"at":"2026-10-31T15:04:49Z","spec":"docs/superpowers/specs/2026-10-31-superagent-router.md","receipt":"c384d17c450722447bbc99320edc8c1b5d89286f","commit":"ecc018043"}
+{"at":"2026-10-31T15:21:15Z","spec":"docs/superpowers/specs/2026-10-31-orchestrator-delivery.md","receipt":"9d033384c08d7a5b530f4b07f3d8a90731435d58","commit":"bd74f0b90"}

@@ -615,6 +615,13 @@ orchestrator 域内——`evaluator.ts` 做语义评估（程序准入之后判�
 全部是列变更且无终态事件时静默。评估推进规则：只有源 `mode=auto` 且 `accept` 才把
 Trigger 置为 `routed`，`observe` 下只记 Decision。
 
+**汇总投递。** digest 落库后由 `delivery.ts` 投递：按 `thread_key`（`task:<board>:<id>`）
+反查看板库的 `kanban_notify_subs` 拿原信道，只投 `platform=matrix` 的房间，用
+`matrixSend` 直发（`thread_id` 非空时挂 `m.relates_to` 线程关系）。发送成功置
+`delivered`，失败累加 `attempts` 并留 `last_error` 等下一轮；订阅为空记 skipped 不算失败。
+定时器由 `ORCHESTRATOR_DELIVER_INTERVAL_MS` 控制，默认关；E2EE 房不在支持范围（明文
+发送在加密房会显示不可解密）。
+
 ## 5、端到端交付机制
 
 ### 5.1 从需求到运维的岗位接力
