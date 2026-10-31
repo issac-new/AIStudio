@@ -1565,7 +1565,7 @@ sequenceDiagram
 cd simharness                         # 推演 harness 工作目录
 bash mux/mx-setup.sh                  # 环境供给（账号/看板/团队/记忆库/中央仓，可反复跑）
 bash mux/mx-up.sh                     # 起单 gateway + 单 studio
-bash mux/mx-prelaunch-check.sh         # 开跑前三十项核验（门禁全绿/主脚本语法/新能力在位/工作树干净/服务健康/中央仓谱系/采集链/上轮四查/无在途进程/叙事注册/账号板/审批环/评测三方同步/write_file/清偿门+延后清账/监督器/真值三件套/IA 版本/Harness 运行支持/IDE 工作区/阶段页签/评测接线/治理结果七项——全绿才开跑）
+bash mux/mx-prelaunch-check.sh         # 开跑前三十二项核验（门禁全绿/主脚本语法/新能力在位/工作树干净/服务健康/中央仓谱系/采集链/上轮四查/无在途进程/叙事注册/账号板/审批环/评测三方同步/write_file/清偿门+延后清账/监督器/真值三件套/IA 版本/Harness 运行支持/IDE 工作区/阶段页签/评测接线/治理结果七项——全绿才开跑）
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
 # 断点续跑 START_STEP=<步名>。区间上界 UNTIL_STEP=<步名>。换需求轮 RFD_ID=RFD-00X
 # delivery 协议事件缺省启用=产品真实形态

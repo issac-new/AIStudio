@@ -65,3 +65,4 @@
 {"at":"2026-10-31T09:41:41Z","spec":"docs/superpowers/specs/2026-10-31-release-v1.0.4-overlay.md","receipt":"a827cc86848b0e5cc7e1d9c90b504853a7513f28","commit":"4380d1e98"}
 {"at":"2026-10-31T10:19:03Z","spec":"docs/superpowers/specs/2026-10-31-package-lock-version-unify.md","receipt":"3df13c251bc33a63947ad84b5ac77d9e465a47ec","commit":"7aa1a7354"}
 {"at":"2026-10-31T11:22:04Z","spec":"docs/superpowers/specs/2026-10-31-run24-plan-realign.md","receipt":"4269696c2e9ec01fb48428a3da67aec1bd682b6f","commit":"d597b4d90"}
+{"at":"2026-10-31T13:42:22Z","spec":"docs/superpowers/specs/2026-10-31-prelaunch-crossrun-residue-gate.md","receipt":"70d2e2e6bf1d5ae64c8aa5a62309893d499e1d6f","commit":"fbe3e1483"}
