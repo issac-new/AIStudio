@@ -80,3 +80,4 @@
 {"at":"2026-10-31T16:06:13Z","spec":"docs/superpowers/specs/2026-11-01-k19-new-endpoint-response-shape.md","receipt":"aac974d3ec23d76434be500e1d29161ade89ed49","commit":"f25c50c65"}
 {"at":"2026-10-31T16:20:27Z","spec":"docs/superpowers/specs/2026-11-01-runtime-backfill-session-rotation-plugin-api.md","receipt":"671d07926df0469c10a4d9c816846f36058ac166","commit":"735f66d63"}
 {"at":"2026-10-31T16:23:05Z","spec":"docs/superpowers/specs/2026-10-31-rsi-exec-batch1.md","receipt":"ec994dc88b9a78459abd6e78dce3a9d09e6564d5","commit":"735f66d63"}
+{"at":"2026-10-31T16:54:43Z","spec":"docs/superpowers/specs/2026-11-01-dod-session-context-wiring.md","receipt":"d34262c8df295606e10e92092016efdf53402d38","commit":"8d9c22460"}

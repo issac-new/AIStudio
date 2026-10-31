@@ -257,6 +257,11 @@
       "source": "hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py",
       "dest": "hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py",
       "note": "coding-delegate zcode ACP 脚本，manifest 曾缺席（部署侧目录需存在）"
+    },
+    {
+      "source": "gateway/session_kanban.py",
+      "dest": "gateway/session_kanban.py",
+      "note": "A 层完成契约会话接线（2026-11-01 dod-drill R3 实锤）：build_kanban_policy 把 derive_contract(task.body) 冻进 kanban_json 上下文，bind_worker_context 导出 HERMES_KANBAN_DOD_CONTRACT/SOURCE_SHA256 到内层 agent——内层进程 env 不继承外层派发进程，契约必须随会话策略走"
     }
   ],
   "notes": [
