@@ -127,33 +127,37 @@ describe('全流程推演壳：四签路由', () => {
   })
 })
 
-describe('全流程推演壳：/app/runs 家族重定向', () => {
-  it('runs → /app/sim；runs/:runId → /app/sim?run=:runId（runId 原样透传）', async () => {
+describe('全流程推演壳：/app/runs 家族（列表退役 / 详情恢复）', () => {
+  // 2026-10-31 恢复轮（用户裁决）：/app/runs 列表维持重定向 → /app/sim；
+  // /app/runs/:runId 恢复为图 run 详情实体路由（RunDetailView），不再改道 /app/sim?run=
+  it('runs → /app/sim；runs/:runId 落图 run 详情实体路由', async () => {
     const router = makeStubbedRouter()
     await router.push('/app/runs')
     expect(router.currentRoute.value.fullPath).toBe('/app/sim')
     expect(router.currentRoute.value.name).toBe('ia2.sim')
     await router.push('/app/runs/run-abc')
-    expect(router.currentRoute.value.fullPath).toBe('/app/sim?run=run-abc')
-    expect(router.currentRoute.value.name).toBe('ia2.sim')
+    expect(router.currentRoute.value.name).toBe('ia2.runDetail')
+    expect(router.currentRoute.value.params.runId).toBe('run-abc')
   })
 
-  it('按名跳同样落全流程推演（既有调用面零改动）', async () => {
+  it('按名跳：ia2.runs 落全流程推演；ia2.runDetail 落详情（既有调用面零改动）', async () => {
     const router = makeStubbedRouter()
     await router.push({ name: 'ia2.runs', query: { tab: 'runs' } })
     expect(router.currentRoute.value.name).toBe('ia2.sim')
     expect(router.currentRoute.value.path).toBe('/app/sim')
     await router.push({ name: 'ia2.runDetail', params: { runId: 'r1' } })
-    expect(router.currentRoute.value.fullPath).toBe('/app/sim?run=r1')
+    expect(router.currentRoute.value.name).toBe('ia2.runDetail')
+    expect(router.currentRoute.value.params.runId).toBe('r1')
   })
 
-  it('runs 记录只剩重定向：组件零装载、runId 参数解析不炸', async () => {
+  it('runs 记录只剩重定向；runDetail 有组件装载、runId 参数解析不炸', async () => {
     const router = makeResolveRouter()
-    for (const path of ['/app/runs', '/app/runs/run-9']) {
-      const record = router.resolve(path).matched.slice(-1)[0]
-      expect(record?.components, `${path} 组件应退役`).toBeFalsy()
-      expect(typeof record?.redirect, `${path} 须为函数式重定向`).toBe('function')
-    }
+    const runsRec = router.resolve('/app/runs').matched.slice(-1)[0]
+    expect(runsRec?.components, '/app/runs 组件应退役').toBeFalsy()
+    expect(typeof runsRec?.redirect, '/app/runs 须为函数式重定向').toBe('function')
+    const detailRec = router.resolve('/app/runs/run-9').matched.slice(-1)[0]
+    expect(detailRec?.redirect, '/app/runs/:runId 不得再是重定向').toBeFalsy()
+    expect(typeof detailRec?.components?.default).toBe('function')
     expect(router.resolve('/app/runs/run-9').params.runId).toBe('run-9')
   })
 })

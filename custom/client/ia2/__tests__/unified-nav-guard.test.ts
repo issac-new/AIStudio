@@ -72,11 +72,11 @@ describe('v12 统一视图单测（双视图）', () => {
       .replace(':runId', 'run-9')
       .replace(':roomId', '!x:host')
       .replaceAll(':sessionId', 's1')
-    // B1（2026-10-16 推演中心壳）：/app/runs 家族退役为重定向 → /app/sim，
-    // 迁移表目标落在 runs 家族时导航终点顺延一跳（实走断言的是链尾落点）
+    // B1（2026-10-16 推演中心壳）：/app/runs 列表退役为重定向 → /app/sim；
+    // /app/runs/:runId 2026-10-31 恢复轮改回图 run 详情组件（用户裁决），
+    // 迁移表目标落在列表时顺延一跳到 /app/sim；详情已是实体路由不再顺延
     const chainEnd = (to: string): string => {
       if (to === '/app/runs') return '/app/sim'
-      if (to.startsWith('/app/runs/')) return `/app/sim?run=${to.slice('/app/runs/'.length)}`
       return to
     }
     const cases = IA_LEGACY_REDIRECTS.map(({ from, to }) => [sample(from), chainEnd(sample(to))] as [string, string])

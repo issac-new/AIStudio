@@ -471,15 +471,13 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           redirect: () => ({ path: '/app/sim' }),
         },
         {
-          // 运行详情 → 全流程推演（B1，2026-10-16）：run 参数保留为轮次定位锚
-          // （签 1 轮次总览消费；A13 升格同上——详情能力由轮次总览/锚点抽屉承接）。
-          // path 式重定向（非 name 式）：vue-router 4.1.4+ 按名目标会并入原导航
-          // params 触发 Discarded invalid param 告警，含参重定向走 path 拼接
-          //（同上方 IA_LEGACY_REDIRECTS 先例）
+          // 图 run 详情（2026-10-31 恢复轮，用户裁决）：B1 重定向撤销——运行详情
+          // 与回放是图运行时的既有能力（RunDetailView：图+时间轴回放+检查器+导出），
+          // 三条入口（编辑器试跑/RunLinks 任务反查/旧 loop 详情）都按名跳这里。
+          // 运行中心「列表页」维持退役（见上 ia2.runs 重定向），不随本路由恢复。
           path: 'runs/:runId',
           name: 'ia2.runDetail',
-          redirect: (loc: { params: Record<string, string | string[]> }) =>
-            ({ path: '/app/sim', query: { run: String(loc.params.runId) } }),
+          component: () => import('@/custom/loop/runcenter/views/RunDetailView.vue'),
         },
         {
           // hermes 会话历史 / 全局智能体（隐藏直达链接面，上游 PageSidebarNav 依赖）

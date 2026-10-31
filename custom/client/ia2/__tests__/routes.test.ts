@@ -98,8 +98,9 @@ describe('ia2 路由树（v12 双视图）', () => {
     const engRec = router.resolve('/app/eng').matched.slice(-1)[0]
     expect(engRec?.name).toBe('ia2.eng')
     expect(typeof engRec?.redirect).toBe('function')
-    // B1（2026-10-16 推演中心壳）：/app/runs 与 /app/runs/:runId 退役为重定向
-    // ——组件零装载，runId 参数解析保持（兼容守卫按名/按路径跳不炸）
+    // B1（2026-10-16 推演中心壳）：/app/runs 退役为重定向——组件零装载；
+    // /app/runs/:runId 2026-10-31 恢复轮（用户裁决）改回图 run 详情组件
+    //（RunDetailView：图+时间轴回放+检查器+导出；运行中心列表页维持退役）
     const runsRec = router.resolve('/app/runs').matched.slice(-1)[0]
     expect(runsRec?.name).toBe('ia2.runs')
     expect(runsRec?.components).toBeFalsy()
@@ -108,8 +109,12 @@ describe('ia2 路由树（v12 双视图）', () => {
     const runDetailRec = runDetailResolved.matched.slice(-1)[0]
     expect(runDetailResolved.name).toBe('ia2.runDetail')
     expect(runDetailResolved.params.runId).toBe('run-abc')
-    expect(runDetailRec?.components).toBeFalsy()
-    expect(typeof runDetailRec?.redirect).toBe('function')
+    expect(runDetailRec?.redirect, '/app/runs/:runId 不得再是重定向').toBeFalsy()
+    const runDetailLoader = runDetailRec?.components?.default as unknown as () => Promise<unknown>
+    expect(typeof runDetailLoader).toBe('function')
+    // 不在 node 环境执行 loader（RunDetailView → runcenter/api → 上游 client →
+    // createWebHashHistory 需要 window.location）；以 loader 源码指向核对装载目标
+    expect(String(runDetailLoader)).toContain('RunDetailView')
     // 全流程推演四签共用 SimCenterView（workbench 复用模式）
     for (const path of ['/app/sim', '/app/sim/supervision', '/app/sim/ops', '/app/sim/evidence']) {
       const resolved = router.resolve(path)

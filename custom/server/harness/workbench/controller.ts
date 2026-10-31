@@ -3,7 +3,7 @@
 // 写面沿用治理面约定：有认证主体时须 super_admin；单用户无鉴权部署放行。
 import Router from '@koa/router'
 import type { Context } from 'koa'
-import { fail as httpFail, ok as httpOk } from '../../lib/http'
+import { fail as httpFail, ok } from '../../lib/http'
 import { collectSurfaces } from './surface-registry'
 import {
   ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
@@ -232,7 +232,7 @@ router.post('/proposals/:id/constraints', async (ctx) => {
   if (writeDenied(ctx)) return
   const b = bodyOf(ctx)
   try {
-    httpOk(ctx, {
+    ok(ctx, {
       proposal: await recordConstraints(ctx.params.id, {
         checks: Array.isArray(b.checks) ? b.checks : [],
         actor: actorOf(ctx, b),
