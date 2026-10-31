@@ -27,6 +27,7 @@ import {
   type EvalSet,
 } from '../index'
 import { buildRedteamSeedTasks, dimensionForRedteamTaskId } from '../redteam-seed'
+import { buildEnterpriseSeedTasks } from '../enterprise-seed'
 import { buildRedteamVariants } from '../redteam-variants'
 
 let storeDir: string
@@ -341,6 +342,39 @@ describe('能力维度标注通道（labelSetDimensions）', () => {
     if (!again.ok) return
     expect(again.result.updated).toBe(0)
     expect(getSet(created.set.id)!.tasks.find((t) => t.id === 'rt-di-01')!.dimension).toBe('task_completion')
+  })
+
+  it("种子族批量回填（backfill='enterprise-seed'）：ent-* 归类、裁定口径落库", () => {
+    // 2026-10-31 用户授权裁定：permission→privilege_injection×3 / long_horizon→
+    // long_task_state×3 / approval-first→human_escalation×1 / pii+audit→unclassified×2。
+    const created = createSet({ name: '标注通道-企业', track: 'e2e', tasks: buildEnterpriseSeedTasks() } as never)
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+    // 模拟存量旧集：清掉 dimension 后回填
+    const set = getSet(created.set.id)!
+    for (const t of set.tasks) delete t.dimension
+    const cleared = labelSetDimensions(created.set.id, { assignments: Object.fromEntries(set.tasks.map((t) => [t.id, null])) })
+    expect(cleared.ok).toBe(true)
+    if (!cleared.ok) return
+    expect(cleared.result.coverage.untaggedTasks).toBe(9)
+
+    const filled = labelSetDimensions(created.set.id, { backfill: 'enterprise-seed' })
+    expect(filled.ok).toBe(true)
+    if (!filled.ok) return
+    expect(filled.result.updated).toBe(9)
+    expect(filled.result.coverage.untaggedTasks).toBe(0)
+    expect(filled.result.coverage.unclassifiedTasks).toBe(2)
+    expect(filled.result.coverage.dimensions.find((d) => d.key === 'privilege_injection')!.taskCount).toBe(3)
+    expect(filled.result.coverage.dimensions.find((d) => d.key === 'long_task_state')!.taskCount).toBe(3)
+    expect(filled.result.coverage.dimensions.find((d) => d.key === 'human_escalation')!.taskCount).toBe(1)
+    // 显式标注优先于族默认
+    const pinned = labelSetDimensions(created.set.id, { assignments: { 'ent-lh-handoff': 'task_completion' } })
+    expect(pinned.ok).toBe(true)
+    const again = labelSetDimensions(created.set.id, { backfill: 'enterprise-seed' })
+    expect(again.ok).toBe(true)
+    if (!again.ok) return
+    expect(again.result.updated).toBe(0)
+    expect(getSet(created.set.id)!.tasks.find((t) => t.id === 'ent-lh-handoff')!.dimension).toBe('task_completion')
   })
 
   it('种子与变体内建维度：变体继承父题维度（新集不再产生未标注）', () => {

@@ -14,6 +14,7 @@ import type {
 import { loadEvalConfig } from './types'
 import { coverageOfSets, isEvalDimensionTag } from './coverage'
 import { dimensionForRedteamTaskId } from './redteam-seed'
+import { dimensionForEnterpriseTaskId } from './enterprise-seed'
 import type { OracleCase, OracleRunRecord } from './uioracle'
 import { contentFingerprint } from './fingerprint'
 import { atomicWriteJson } from '../lib/fs-store'
@@ -606,10 +607,11 @@ export interface DimensionLabelInput {
    */
   assignments?: Record<string, EvalTask['dimension'] | null>
   /**
-   * 按产品声明的种子族映射批量回填（不臆断：映射表在 redteam-seed.ts 单一事实源）。
-   * 目前支持 'redteam-seed'——对 rt-* 族按向量前缀补 dimension，只补未标注项。
+   * 按产品声明的种子族映射批量回填（不臆断：映射表在种子模块单一事实源）。
+   * 'redteam-seed'=rt-* 族按向量前缀补 dimension；'enterprise-seed'=ent-* 族按
+   * ENTERPRISE_TASK_DIMENSIONS 补（2026-10-31 用户授权裁定）。都只补未标注项。
    */
-  backfill?: 'redteam-seed'
+  backfill?: 'redteam-seed' | 'enterprise-seed'
 }
 
 export interface DimensionLabelResult {
@@ -650,8 +652,8 @@ export function labelSetDimensions(
       problems.push(`任务 ${taskId} 的 dimension 须为七维之一或 'unclassified'（收到：${String(value)}）`)
     }
   }
-  if (input.backfill !== undefined && input.backfill !== 'redteam-seed') {
-    problems.push(`backfill 只接受 'redteam-seed'（收到：${String(input.backfill)}）`)
+  if (input.backfill !== undefined && input.backfill !== 'redteam-seed' && input.backfill !== 'enterprise-seed') {
+    problems.push(`backfill 只接受 'redteam-seed' | 'enterprise-seed'（收到：${String(input.backfill)}）`)
   }
   if (problems.length) return { ok: false, problems }
   if (Object.keys(assignments).length === 0 && input.backfill === undefined) {
@@ -666,6 +668,9 @@ export function labelSetDimensions(
     } else if (input.backfill === 'redteam-seed' && !task.dimension) {
       // 只补未标注项：已有标注（含 unclassified）不覆盖——显式标注优先于族默认。
       next = dimensionForRedteamTaskId(task.id)
+    } else if (input.backfill === 'enterprise-seed' && !task.dimension) {
+      // 同款纪律：ent-* 族按 ENTERPRISE_TASK_DIMENSIONS 补，显式标注优先。
+      next = dimensionForEnterpriseTaskId(task.id)
     }
     if (next === undefined) continue
     if (next === null) {

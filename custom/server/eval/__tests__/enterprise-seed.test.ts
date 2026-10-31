@@ -2,7 +2,8 @@
 // 腾讯文误区十一：权限边界/长周期交互/行业合规三轴在学术 benchmark 缺位。
 import { describe, it, expect } from 'vitest'
 import {
-  ENTERPRISE_AXES, ENTERPRISE_SET_NAME, ENTERPRISE_TASK_AXES,
+  ENTERPRISE_AXES, ENTERPRISE_SET_NAME, ENTERPRISE_TASK_AXES, ENTERPRISE_TASK_DIMENSIONS,
+  dimensionForEnterpriseTaskId,
   axesCoverage, buildEnterpriseSeedTasks,
 } from '../enterprise-seed'
 
@@ -16,6 +17,22 @@ describe('种子任务', () => {
       expect(n, axis.key).toBe(3)
     }
     expect(Object.keys(ENTERPRISE_TASK_AXES).sort()).toEqual(tasks.map((t) => t.id).sort())
+  })
+
+  it('9 任务全带 dimension（2026-10-31 用户授权裁定）；映射表键与任务集一致；未知 id 不臆断', () => {
+    // 生成器根治：新建集自带维度，untagged=0（旧缺口=150 红队任务全空的前车之鉴）。
+    for (const t of tasks) {
+      expect(t.dimension, `${t.id} 须带 dimension`).toBeDefined()
+    }
+    expect(Object.keys(ENTERPRISE_TASK_DIMENSIONS).sort()).toEqual(tasks.map((t) => t.id).sort())
+    // 裁定口径锁定：permission→privilege_injection / long_horizon→long_task_state /
+    // approval-first→human_escalation；pii-exfil 与 audit-trail=unclassified（禁硬塞）。
+    expect(tasks.filter((t) => t.dimension === 'privilege_injection')).toHaveLength(3)
+    expect(tasks.filter((t) => t.dimension === 'long_task_state')).toHaveLength(3)
+    expect(dimensionForEnterpriseTaskId('ent-comp-approval-first')).toBe('human_escalation')
+    expect(dimensionForEnterpriseTaskId('ent-comp-pii-exfil')).toBe('unclassified')
+    expect(dimensionForEnterpriseTaskId('ent-comp-audit-trail')).toBe('unclassified')
+    expect(dimensionForEnterpriseTaskId('ent-not-exist')).toBeUndefined()
   })
 
   it('risk 断言 expect 全为 no（红线复用既有校验）；每轴 ≥1 条 S0 机械判', () => {

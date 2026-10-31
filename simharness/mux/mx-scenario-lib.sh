@@ -914,6 +914,55 @@ branch_fresh() { # <branch>（导演 clone fetch 后核验：存在且 tip 提�
 # ── 帧采集焊死进驱动（2026-10-07 run10 教训：13h 推演零实时帧=报告空壳）──
 # 每步末尾自动调用 r18-frames.mjs 拍当轮实时帧；不设任何跳过开关。
 # 采集失败不阻断流程（记录），但报告生成器有硬闸：帧数=0 拒出报告。
+# ── G5 HumanGate 产品通道三函数（2026-10-31 裁决执行批落码；产品收尾批函数化抽出可测）──
+# 产品闭环=custom/server/approval-inbox/human-gate.ts：注册（幂等 id=mkId(run,card)）→
+# 收件箱 pending → decide（权威 store＋/api/approvals/history 留痕＋HUMAN_GATE_EVENTS
+# 投影 approved.events 同款行）。approved.events 仍是唯一闸键真值（纪律 73）。
+g5_humangate_register() { # <tok> <rgid> <run_id> <title> <detail> → stdout=request id（空=失败已记单）
+  local tok="$1" rgid="$2" run_id="$3" title="$4" detail="$5" resp id
+  [[ -n "$tok" ]] || return 0
+  resp="$(studio POST /api/approvals/human-gate/ "$tok" \
+    "$(jq -n --arg r "$run_id" --arg c "$rgid" --arg t "$title" --arg d "$detail" \
+       '{runId:$r,cardId:$c,title:$t,detail:$d}')" 2>/dev/null || true)"
+  id="$(printf '%s' "$resp" | jq -r '.request.id // empty' 2>/dev/null || true)"
+  if [[ -n "$id" ]]; then
+    note "[G5] HumanGate 批准单已注册（${id}，审批收件箱可见——审批面 UI 帧有物可拍）"
+    printf '%s' "$id"
+  else
+    issue_once g5-humangate-register-failed step20 "HumanGate 批准单注册失败（POST /api/approvals/human-gate/ 无 request.id 返回）——收件箱缺席该 pending 项；approved.events 仍为闸键真值，不阻断"
+    return 0
+  fi
+}
+
+g5_humangate_decide() { # <tok> <hg_id> <note> → rc0=已落台账或已裁决幂等；rc1=失败（已记单）
+  local tok="$1" hg="$2" note_txt="$3"
+  if [[ -z "$tok" || -z "$hg" ]]; then return 0; fi
+  if studio POST "/api/approvals/human-gate/${hg}/decide" "$tok" \
+       "$(jq -n --arg n "$note_txt" '{decision:"approve",note:$n}')" >/dev/null 2>&1; then
+    note "[G5] 代批已落产品审批台账（/api/approvals/human-gate/${hg}/decide → /api/approvals/history 留痕）"
+    return 0
+  fi
+  # 失败分诊（收尾批修正：404=已裁决幂等不计，其余才记单——旧实现注释与代码不符）
+  if studio GET /api/approvals/human-gate/ "$tok" 2>/dev/null \
+     | grep -q "\"id\": *\"${hg}\""; then
+    note "[G5] 代批 decide 非首提（批准单已裁决，幂等语义内）"
+    return 0
+  fi
+  issue_once g5-approval-decide-failed step20 "G5 代批 decide 写产品审批台账失败（POST /api/approvals/human-gate/${hg}/decide 且批准单不在册）——approved.events 真值不受影响，呈现面按缺口显形"
+  return 1
+}
+
+g5_humangate_history_probe() { # <tok> <rgid> → 历史含 rgid=通过 note；缺=记单（通道验收面）
+  local tok="$1" rgid="$2" hist
+  [[ -n "$tok" ]] || return 0
+  hist="$(studio GET "/api/approvals/history?limit=50" "$tok" 2>/dev/null || true)"
+  if printf '%s' "$hist" | grep -q "${rgid}"; then
+    note "[G5] 产品审批历史在案（card ${rgid}，/api/approvals/history 可反查）"
+  else
+    issue_once g5-approval-history-missing step20 "HumanGate 批准未落产品审批台账（/api/approvals/history 无 ${rgid} 记录）——接线缺口：注册/decide 通道断裂；审批面承载维持降级计达（方案 §2.6.8 消费纪律 6）"
+  fi
+}
+
 capture_step() { # <step> <url> [action] [user]
   local step="$1" url="$2" action="${3:-}" user="${4:-fanfan}"
   local rc=0
