@@ -77,7 +77,7 @@ def _task_dict(task, board="default"):
     }
 
 
-def _write_approved_grant(kanban_home, task, tier, *, choice=None, revision=None, expires_at=None):
+def _write_approved_grant(kanban_home, task, tier, *, choice=None, revision=None, expires_at=None, extra=None):
     now_ms = int(time.time() * 1000)
     task_dict = _task_dict(task)
     grant = {
@@ -90,6 +90,8 @@ def _write_approved_grant(kanban_home, task, tier, *, choice=None, revision=None
         "issuedAt": now_ms - 1000,
         "decidedAt": now_ms - 1000,
     }
+    if extra:
+        grant.update(extra)
     if choice is not None:
         grant["choice"] = choice
     if expires_at is not None:
@@ -211,3 +213,57 @@ def test_expired_grant_prevents_spawn(kanban_home):
         result, spawns = _dispatch(conn)
     assert spawns == []
     assert result.needs_decision == [(task.id, "expired")]
+
+
+def test_grant_with_new_auth_fields_still_passes(kanban_home):
+    """2026-10-31 A+B 批：新增 strength/policyVersion/ruleIds/issuerRole 不改变 Python 判定。
+
+    Python 消费端只读它认识的字段；未知字段必须被忽略而不是报错，否则 TS 侧扩展会把
+    存量 worker 直接挡死。
+    """
+    with kbc.connect() as conn:
+        task = _make_task(conn, "T3")
+        _write_approved_grant(
+            kanban_home,
+            task,
+            "T3",
+            extra={
+                "strength": "delegated",
+                "policyVersion": 3,
+                "ruleIds": ["admission:auto_accept"],
+                "issuerRole": "local_operator",
+            },
+        )
+        result, spawns = _dispatch(conn)
+    assert len(spawns) == 1, result.needs_decision
+
+
+def test_grant_check_ignores_unknown_fields(kanban_home):
+    """直接调判定：带新字段的 grant 仍返回 ok（不因未知键失败）。"""
+    task = {
+        "id": "t-direct",
+        "board": "default",
+        "title": "直测未知字段",
+        "body": "tier=T3",
+        "assignee": None,
+        "status": "ready",
+        "updated_at": 1,
+        "workspace_kind": None,
+        "workspace_path": None,
+        "branch_name": None,
+    }
+    grant = {
+        "taskId": task["id"],
+        "board": "default",
+        "tier": "T3",
+        "decision": "approved",
+        "actor": "human-director",
+        "taskRevision": grant_tools.compute_task_revision(task),
+        "issuedAt": int(time.time() * 1000) - 1000,
+        "decidedAt": int(time.time() * 1000) - 1000,
+        "strength": "delegated",
+        "policyVersion": 3,
+        "ruleIds": ["admission:auto_accept"],
+        "issuerRole": "local_operator",
+    }
+    assert grant_tools.check_decision_grant(grant, task, "T3") == (True, "ok")

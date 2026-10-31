@@ -335,3 +335,49 @@ describe('HumanGate 任务 grant', () => {
     })
   })
 })
+
+describe('HumanGate 授权强度与裁决鉴权（2026-10-31 A+B 批 spec D5/D6）', () => {
+  function seedTaskRequest(requestedBy: string) {
+    return createRequest({
+      runId: 'task:default', cardId: 't-auth', title: '授权强度用例',
+      requestedBy, scope: 'task', taskId: 't-auth', board: 'default',
+      tier: 'T3', taskRevision: 'rev-1',
+    }).req
+  }
+
+  it('同一主体注册并裁决：记 delegated 强度（不拒绝）', () => {
+    const created = seedTaskRequest('bot-a')
+    const done = decide(created.id, 'approve', 'bot-a')!
+    expect(done.deciderMode).toBe('delegated')
+    expect(done.grant?.strength).toBe('delegated')
+  })
+
+  it('不同主体裁决：记 explicit 强度', () => {
+    const created = seedTaskRequest('bot-a')
+    const done = decide(created.id, 'approve', 'human-b')!
+    expect(done.deciderMode).toBe('human')
+    expect(done.grant?.strength).toBe('explicit')
+  })
+
+  it('严格模式拒绝自批，且请求保持 pending', () => {
+    const created = seedTaskRequest('bot-a')
+    expect(() => decide(created.id, 'approve', 'bot-a', undefined, undefined, { strict: true, env: {} }))
+      .toThrow(/同一主体/)
+    expect(listHumanGateRequests().find(r => r.id === created.id)?.status).toBe('pending')
+  })
+
+  it('角色白名单：配置后名单外角色被拒', () => {
+    const created = seedTaskRequest('bot-a')
+    expect(() => decide(created.id, 'approve', 'human-b', undefined, undefined, {
+      role: 'user', env: { HUMAN_GATE_DECIDER_ROLES: 'admin,super_admin' },
+    })).toThrow(/不在允许列表/)
+  })
+
+  it('角色白名单未配置时不校验角色（存量兼容）', () => {
+    const created = seedTaskRequest('bot-a')
+    const done = decide(created.id, 'approve', 'human-b', undefined, undefined, {
+      role: 'user', env: {},
+    })
+    expect(done?.status).toBe('approved')
+  })
+})

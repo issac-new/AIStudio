@@ -65,6 +65,10 @@ export interface ApprovalLogEntry {
   expiresAt?: number
   /** 决策来源：人工 / 策略自动 / 系统兜底。 */
   source?: ApprovalLogSource
+  /** 2026-10-31 A+B 批：授权强度（explicit 真人明确 / delegated 代批 / inferred 规则推断）。老记录可无。 */
+  strength?: 'explicit' | 'delegated' | 'inferred'
+  /** 裁决时的策略版本（事后可回答「当时生效的是哪一版策略」）。老记录可无。 */
+  policyVersion?: number
   /** 前向链字段（2026-10-21 AGT 吸收轮 B）：升级前落账的旧记录无此二字段（unchained）。 */
   prevHash?: string
   hash?: string

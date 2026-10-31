@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index cde65f463..4e3c106a8 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -111,6 +111,8 @@ import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'
+ import { approvalRoutes } from '../custom/approval-rules/approval-controller'
+ // overlay[approvals]: P1 人工审批收件箱——待审聚合/就地裁决/决策历史（2026-09-28 产品 UI 缺陷修复 §二）
+ import { approvalsRoutes } from '../custom/approval-inbox/pending-controller'
++// overlay[orchestrator]: 编排域（Trigger/Thread/Decision/Mandate/准入/策略版本/看板事件桥）——2026-10-31 super-agent 吸收 A+B 批
++import { orchestratorRoutes } from '../custom/orchestrator/controller'
+ import { changeGovRoutes } from '../custom/governance/change-governance-controller'
+ import { governanceRoutes } from '../custom/governance/governance-controller'
+ // overlay[tokens]: token-meter 三投影互校（第一批吸收 #9）
+@@ -519,6 +521,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(zcodeEngineRoutes.routes())             // zcode 引擎健康面（R4-P1）
+   app.use(approvalRoutes.routes())                // 审批域：candidates/evaluate/decide/rules（R5 #4）
+   app.use(approvalsRoutes.routes())               // 审批收件箱：pending 聚合/decide 就地裁决/history 决策历史（P1 §二）
++  app.use(orchestratorRoutes.routes())            // 编排域：triggers/threads/subscriptions/decisions/mandates/admissions/kanban-bridge（A+B 批）
+   // overlay[kanban-nudge]: 催办 owner 动态路由（根挂载，绝对前缀 /api/kanban/nudge）；
+   // 卡源=command-post 看板聚合（异步 provider），未就绪端点显式 503 不猜。
+   registerKanbanRoutes(app)
