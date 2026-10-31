@@ -32,6 +32,7 @@
    - `walk-routes.mjs` 支持 `WALK_TOKEN`（已铸 super_admin JWT 直注 localStorage），优先级高于 `WALK_LOGIN`；新增每页「错误态文案」启发式扫描（加载失败/不可用/未授权等记 WARN，供人工分诊，不冒充缺陷）。
    - `walk-writes.mjs` 支持 `API_TOKEN` 直给 JWT。
    - `ide-workspace-verify.mjs` 深链断言由固定 8/12s 睡眠改为条件等待（轮询 store 至 taskWorkspace 就绪，上限 25s；仍然固定预算判失败），消除冷启动/负载下的假红；失败时输出完整 store 快照。
+   - `harness.mjs` 支持 `WALK_VIDEO_DIR`：设置后整段走查由 Playwright 实拍录屏（webm，1560×940），用于全路由走查的录屏留证（产物落仓外）。
 
 7. **IDE 简报上下文对 docs/ 的无条件探测（404 噪声）**（A 类，`custom/client/ide/views/IdeShell.vue` + `custom/client/ide/utils/briefing-context.ts`）
    - 现象：修复后全路由走查在 `/app/eval`、`/desktop-pet` 捕获 `GET /api/studio/files/list?path=docs&root=…/coding-agent/workspace/default/global → 404`。
@@ -52,11 +53,17 @@
    - 现象：主树 `docs-ssot-guard` 3 例红（`第 424 行分隔行单元格不符合 :?-{3,}:?`）；原因是并行批合并 A.1 时角色表表头后丢了 Markdown 分隔行。
    - 修复：补 `| --- | --- | --- |` 分隔行；A.1 实计数按守门算法对齐 413（含 E2 探针微批 spec）；`docs-ssot-guard` + `patches-series-guard` 8/8 转绿。
 
+11. **IDE 自检把「文件列表 403」记成失败（挂账项收口）**（A 类，`custom/client/ide/utils/selfCheck.ts` + `custom/client/ide/i18n.ts`）
+   - 现象：主树 `ide-smoke` 的自检汇总出现「1 失败」：`文件列表 API HTTP 403`；该会话不是 super_admin，根目录列表被服务端权限闸门拒绝。
+   - 根因：自检 `api()` 的 `warnStatuses` 默认只有 `[503, 401]`，403 落到 fail；但「根目录需 super_admin、任务工作区走只读树」是既定权限边界，不是产品缺陷；自检把合法边界报成红色失败会误导用户。
+   - 修复：文件列表检查把 `[401, 403, 503]` 记 warn，并新增双语 `permissionLimited` 说明（`权限受限（根目录列表需 super_admin；任务工作区走只读树）`）；新增测试「403 记 warn、汇总 fail=0」。
+
 配套测试：
 - `custom/server/loop/engine/__tests__/architecture-quota.test.ts`（新/扩）：有通道且超配额 → BLOCK；无通道 → 跳过不拦；查询失败 → 不误拦；targetAssignee 优先于 task.assignee。
 - `custom/server/loop/engine/__tests__/git-sos.test.ts`（扩）：未实现动作抛错、advisory 语义不变。
 - `custom/client/ide/__tests__/briefing-context-roots.test.ts`（新）：根目录无 docs / docs 是文件 / 没有条目时只扫根，不再发必 404 请求。
 - `custom/client/ide/__tests__/briefing-context-loader.test.ts`（更新夹具）：根目录需带 docs 目录条目，装载器才二次探测（与生产一致）。
+- `custom/client/ide/__tests__/self-check.test.ts`（扩）：文件列表 403 记 warn 并给出权限说明，汇总 fail=0。
 - HumanGate legacy 迁移与矩阵画布键名由并行批的 `human-gate.test.ts` / `room-canvas-watcher-sources.test.ts` 守门，本批复核不重复补测。
 
 ## 决策记录
@@ -70,7 +77,7 @@
 
 ## 验证
 
-- 目标单测：本批新增/扩展的 `architecture-quota.test.ts`、`git-sos.test.ts`、`briefing-context-roots.test.ts`、`briefing-context-loader.test.ts` 与受影响面全绿（29 文件/209 例）；`kanban-i18n-coverage.test.ts` 1/1、`custom/client/kanban` 14 文件/64 例全绿；并行批的 `human-gate.test.ts`、`room-canvas-watcher-sources.test.ts` 同步全绿。
+- 目标单测：本批新增/扩展的 `architecture-quota.test.ts`、`git-sos.test.ts`、`briefing-context-roots.test.ts`、`briefing-context-loader.test.ts`、`self-check.test.ts` 与受影响面全绿（29 文件/209 例；自检 8 例含 403→warn 新增例）；`kanban-i18n-coverage.test.ts` 1/1、`custom/client/kanban` 14 文件/64 例全绿；并行批的 `human-gate.test.ts`、`room-canvas-watcher-sources.test.ts` 同步全绿。
 - 客户端棘轮：`npm run typecheck:client:ratchet` 18 ≤ 基线 18（0 新增）。
 - 全量：worktree（`bd99cdbed` 基线 + 本批）`npm test` 7038 例 7027 过 / 11 跳过 / **0 失败**（含 `kanban-i18n-coverage` 与 `simulation-node-executors` 转绿）；`npm run typecheck:harness` 0 错；`typecheck:client:ratchet` 18 ≤ 基线 18。
 - 补丁链：worktree 内 `npm run clean && npm run inject` 全 series（001-712）重放通过（710 主并批 + 711/712 本批依序应用）；`patches-series-guard` 绿。
@@ -80,6 +87,11 @@
   - `walk-writes` 16/16；`ide-smoke` 11/11（自检 0 失败）；`ide-workspace-verify` 11/11。
   - 矩阵群时间线：**未用真实 Matrix 凭据验证**（走查为「未认证」WARN），仅以客户端棘轮、并行批守门测试与路由渲染复核——如实标注，不冒充实机通过。
 - 构建：`npm run build` exit 0 + postbuild verify-dist 通过。
+- 实拍录屏（真实浏览器 Playwright 录屏，非截图拼接；产物在仓外 `/Users/cuishi/lab/aistudio-regression-evidence-20261031/`）：
+  - `01-curated-regression-demo.mp4`：带步骤字幕的端到端演示——日常工作台、看板 `?new=1` 提示（711 词条生效）、审批 4/risk 页（human-gate 200）、IDE 任务深链与文件树、IDE 自检（403 权限告警态）、评测/观测页；
+  - `02-full-route-walk.mp4`：`walk-routes` 全量 155 个路由状态（118 路由 + 37 阶段页签）实拍走查，逐页停留并输出台账；
+  - `03-write-flow-probe.mp4`：写流回路（建板→建卡→状态迁移→running fail-loud→删卡→归档板）实拍；
+  - 视频时长/文件大小与录制时刻随产物清单同目录 `manifest.md` 记录。
 
 ## 设计文档影响
 

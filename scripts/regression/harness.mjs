@@ -10,12 +10,19 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 
 export const BASE = process.env.WALK_BASE || 'http://localhost:8649'
 export const SHOTS = process.env.WALK_SHOTS || '/tmp/regression-shots'
+/** 实拍录屏目录（2026-10-31 用户令）：设置后整段走查录成 webm，产物在仓外。 */
+export const VIDEO_DIR = process.env.WALK_VIDEO_DIR || ''
 
 mkdirSync(SHOTS, { recursive: true })
+if (VIDEO_DIR) mkdirSync(VIDEO_DIR, { recursive: true })
 
 export async function openBrowser() {
   const browser = await chromium.launch({ channel: 'chrome', headless: true })
-  const page = await browser.newPage({ viewport: { width: 1560, height: 940 }, locale: 'zh-CN' })
+  const page = await browser.newPage({
+    viewport: { width: 1560, height: 940 },
+    locale: 'zh-CN',
+    ...(VIDEO_DIR ? { recordVideo: { dir: VIDEO_DIR, size: { width: 1560, height: 940 } } } : {}),
+  })
   return { browser, page }
 }
 

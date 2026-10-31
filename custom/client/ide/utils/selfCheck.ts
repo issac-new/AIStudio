@@ -143,10 +143,15 @@ export async function runSelfChecks(ctx: SelfCheckContext): Promise<SelfCheckRes
       label: tx.label['files'],
       run: async () => {
         if (!ctx.workspace) return { status: 'warn', detail: tx.detail.skipNoWorkspace }
-        return api(`/api/studio/files/list?${qs({ root: ctx.workspace })}`, (body) =>
+        // 403 是产品边界不是缺陷（2026-10-31 全功能回归：非 super_admin 会话查
+        // 根目录列表被拒是既定权限闸门，任务工作区走只读树）；记 warn 并说明。
+        const outcome = await api(`/api/studio/files/list?${qs({ root: ctx.workspace })}`, (body) =>
           Array.isArray(body.entries)
             ? { status: 'pass', detail: `${body.entries.length}` }
-            : { status: 'fail', detail: '响应缺 entries' })
+            : { status: 'fail', detail: '响应缺 entries' }, { warnStatuses: [401, 403, 503] })
+        return outcome.status === 'warn' && outcome.detail.startsWith('HTTP 403')
+          ? { status: 'warn', detail: tx.detail.permissionLimited }
+          : outcome
       },
     },
     {
