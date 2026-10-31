@@ -1,5 +1,11 @@
 # 本变更的预期改动面（L0.scope-check 输入）。超出即 FAIL，需同步修订本文件或撤回改动。
 paths:
+  - docs/superpowers/specs/2026-10-31-rsi-exec-batch1.md
+  - custom/server/harness/**
+  - custom/client/governance/api/workbench.ts
+  - custom/client/governance/improve-i18n.ts
+  - custom/client/ia2/views/gov/HarnessImprovePanel.vue
+  - custom/client/ia2/__tests__/harness-improve-panel.test.ts
   - docs/superpowers/specs/2026-10-31-model-resilience-hardening.md
   - docs/superpowers/specs/2026-10-31-prepush-push-range-fix.md
   - docs/superpowers/specs/2026-11-01-k19-new-endpoint-response-shape.md

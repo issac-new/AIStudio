@@ -17,7 +17,7 @@ import {
   rsiConfig, sha256, stallDetection, submitReadiness,
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
-import { getSet } from '../../eval/store'
+import { createSet, getSet } from '../../eval/store'
 import { runReplayEval } from '../../eval/runner'
 import { loadEvalConfig } from '../../eval/types'
 import type { AskFn } from '../../eval/judge'
@@ -1526,6 +1526,67 @@ async function runAutoProbeJob(
           const pr2 = sel ? pNow.probes.find((x) => x.variantId === sel.id && x.status === 'recorded') : null
           return pr2?.evidence?.equalBudgetBaseline == null
         })()
+        // R2③（2026-11-01 残项）：反事实档自动编排——R3 变换器产出 rename_ids 变体，
+        // 注册为临时 eval 集后跑候选树探测，replay 判分写回 evidence.counterfactual。
+        const selNow = composedVariant(pNow)
+        const selProbeNow = selNow ? pNow.probes.find((x) => x.variantId === selNow.id && x.status === 'recorded') : null
+        const cfNeeded = selProbeNow?.evidence?.counterfactual == null
+        if (cfNeeded && selNow) {
+          const { buildCounterfactualVariant } = await import('./counterfactual-variants')
+          const variant = buildCounterfactualVariant(evalSet.id, 'rename_ids')
+          if (variant) {
+            const cfSetCreated = createSet({
+              name: `cf-${evalSet.id}-${id.slice(3)}-${Date.now().toString(36)}`,
+              track: evalSet.track,
+              ...(evalSet.module ? { module: evalSet.module } : {}),
+              tasks: variant.tasks.map((vt) => ({
+                id: vt.id,
+                problem: vt.problem,
+                expectedBehavior: vt.expectedBehavior,
+                rubric: evalSet.tasks.map((st) => st.rubric).flat().slice(0, 1),
+              })),
+            })
+            if (cfSetCreated.ok) {
+              const cfRemaining = pNow.budgetCapUsd - (probeCost(pNow).total + job.costUsd)
+              if (cfRemaining >= limits.estimate) {
+                const cfResult = await runProbeTasks({
+                  prompts: cfSetCreated.set.tasks.map((vt) => ({ taskId: vt.id, prompt: vt.problem })),
+                  baseHome: hermesHome(),
+                  profile,
+                  variantTree: tree,
+                  budgetRemainingUsd: Math.max(0, cfRemaining),
+                  estimatePerTaskUsd: limits.estimate,
+                  k: 1,
+                  spawnRun: opts.spawnRun,
+                })
+                if (cfResult.ok && Object.keys(cfResult.samples).length > 0) {
+                  const cfReplay = await runReplayEval(
+                    {
+                      setId: cfSetCreated.set.id,
+                      samples: cfResult.samples,
+                      target: { profile, harnessRef: `${id}:${variantId}:counterfactual` },
+                      actor: 'workbench-auto',
+                      note: `R2③ 反事实（rename_ids 变体）${id}/${variantId}`,
+                    },
+                    { judge: { config: loadEvalConfig(), ...(opts.judgeAsk ? { ask: opts.judgeAsk } : {}) }, outcomeCtx: probeOutcomeContext() },
+                  )
+                  if (cfReplay.ok) {
+                    const cfMetrics = readEvalEvidence(cfReplay.run.id)
+                    await mutateStore((st) => {
+                      const pp2 = requireProposal(st, id)
+                      const sel2 = composedVariant(pp2)
+                      const target2 = sel2 ? pp2.probes.find((x) => x.variantId === sel2.id && x.status === 'recorded') : null
+                      if (target2?.evidence && cfMetrics) {
+                        target2.evidence.counterfactual = { runId: cfMetrics.evalRunId, setId: cfMetrics.setId, passAt1: cfMetrics.passAt1 }
+                      }
+                      pp2.updatedAt = nowIso()
+                    })
+                  }
+                }
+              }
+            }
+          }
+        }
         const runsWanted = (noiseNeeded ? 2 : 0) + (eqNeeded ? 1 : 0)
         if (runsWanted > 0) {
           const nullTree: Record<string, string | null> = {}
