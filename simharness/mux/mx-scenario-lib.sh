@@ -239,6 +239,24 @@ normalize_assignee() { # <assignee> → 短名
   printf '%s' "$a"
 }
 
+# ── 完成契约段（模型波动加固 A 层·推演接线，2026-11-01）─────────────────
+# MX_DOD_CONTRACT=1（缺省 0=零行为变化）时，导演建卡 body 尾部追加 AC 验收段＋
+# receipt 回执指引——派发瞬间内核从 AC 行派生契约冻进 kanban_json 会话上下文，
+# worker 任何完成面（工具/CLI）都被 complete_task 内核门校验：证据路径真实存在、
+# TAP/JUnit 报告内核重算、违规拒完成并落 completion_blocked_contract 事件。
+# run25+ 由起跑 env 显式开启；在途轮（run24）不开启即不受影响（mode=off 直通）。
+_dod_contract_suffix() {
+  cat <<'DODEOF'
+
+---- 完成契约（内核强制）----
+本卡声明以下验收标准；完成时必须在 kanban_complete 的 receipt 参数提供结构化回执，无回执或证据路径不存在会被内核拒绝完成（任务保持 in-flight，修正后重试即可）：
+AC-1: 已完成本卡任务要求，产物/报告文件已落在当前 workspace
+AC-2: receipt 的 evidence 路径真实存在（相对当前 workspace）
+receipt 写法（把 <产物路径> 换成你的真实文件，可多条；artifacts 填主要交付物相对路径）：
+{"version":1,"criteria":[{"id":"AC-1","status":"pass","evidence":[{"path":"<产物路径>"},{"path":"<报告路径>"}]},{"id":"AC-2","status":"pass","evidence":[{"path":"<任一已列产物>"}]}],"artifacts":["<主要交付物>"]}
+DODEOF
+}
+
 kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → id（state 缓存防重；缺省落该账号默认板）
   # 09-26 studio POST /api/hermes/kanban 写路径与读路径同病（tenant 面），
   # 导演兜底建卡直接 fail。改 CLI 直查（--json 返回卡对象，.id 即卡号，实测 t_8b84e215）。
@@ -250,6 +268,8 @@ kanban_create_as() { # <user> <state-key> <title> <body> [board] [assignee] → 
   # 子 shell 即死（卡已建但 ID 丢失、驱动被 set -e 连坐），每棒复发。
   local u="$1" key="card_$2" title="$3" body="$4" cached id
   local board="${5:-$(first_board_of "$u")}" asg="${6:-}"
+  # 完成契约开关（缺省关）：开后 body 尾部并入 AC 段，内核完成门随之对该卡生效。
+  [[ "${MX_DOD_CONTRACT:-0}" = "1" ]] && body="${body}$(_dod_contract_suffix)"
   cached=$(sget "$key"); [[ -n "$cached" ]] && { echo "$cached"; return 0; }
   local asg_args=()
   [[ -n "$asg" ]] && asg_args=(--assignee "$asg")

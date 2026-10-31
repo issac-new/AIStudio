@@ -25,21 +25,21 @@ source "$SCRIPT_DIR/mx-lib.sh"
 
 # ── 运行面自愈（533/534 长效化：自更新擦除后每次 mx-up 收敛恢复）──────
 # 自更新会 git 清洗源码树——manifest 文件与 git-applied 补丁一并被擦（run5/6/7 三次实录，
-# run7 anexec 并发闸拒收即此因）。mx-up 是推演起跑/恢复的唯一入口，在此双通道收敛：
-#   ① deploy-agent-runtime --apply（manifest 21 文件内容同步，结构化 raci 等能力依赖）
-#   ② mx_apply_agent_patches（390/391/533/534 git apply，源码树语义在位）
-# 幂等：两路都带在位检查，重复跑零副作用；失败只告警不阻断（网关可能带旧码起——
-# 容量风暴行为会复发，issues.log 会有拒收实录可追）。
+# run7 anexec 并发闸拒收即此因）。mx-up 是推演起跑/恢复的唯一入口，在此三步收敛：
+#   ① mx_provision_agent_src（快照重供：宿主 git 工作态 → hermes-agent-src）
+#   ② mx_apply_agent_patches（390→707 git apply，源码树语义在位）
+#   ③ deploy-agent-runtime --apply（manifest 文件内容同步——收尾步）
+# 顺序硬约束（2026-11-01 run24 刷新窗实锤根治）：deploy 必须在 provision 之后——
+# 快照重供会整树重建，先前 deploy 的内容被洗掉；且快照只取宿主 git 跟踪文件，
+# 新增未跟踪文件（如 completion_contract.py）只能靠 manifest deploy 补位。
+# 旧序 deploy→provision 导致刷新后 completion_contract 缺席、dispatch 契约派生
+# 静默降级（惰性 import 吞在告警里）。幂等：三步都带在位检查，重复跑零副作用；
+# 失败只告警不阻断（网关可能带旧码起——容量风暴行为会复发，issues.log 可追）。
+mx_provision_agent_src || log "agent 快照刷新告警（provision 失败——旧快照可能缺新模块，网关有崩失风险）"
+mx_apply_agent_patches || log "运行时 patch 自愈告警（533/534 可能缺位——并发闸拒收风险）"
 if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
   ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" )     || log "runtime manifest 自愈告警（deploy-agent-runtime 失败，需人工复核）"
 fi
-# 快照新鲜度自愈（2026-10-27 实锤根治）：mx_provision_agent_src 原只在 mx-setup 调，
-# mx-up 从不重建——宿主升级（0.22.2→0.22.5）后旧快照缺 hermes_dir_acl/
-# base_log_safety 等 24 个新模块，网关 import 即崩（ModuleNotFoundError 连环）。
-# 键不同才全量重照（幂等：同键跳过，秒回）；必须先于 mx_apply_agent_patches
-# （新快照自带宿主工作态补丁，反向检查自然"已在位"）。
-mx_provision_agent_src || log "agent 快照刷新告警（provision 失败——旧快照可能缺新模块，网关有崩失风险）"
-mx_apply_agent_patches || log "运行时 patch 自愈告警（533/534 可能缺位——并发闸拒收风险）"
 
 # ── 诊断抑制配置收敛（run15 复盘 S3：No home channel 噪音根治）────────────
 # agent 被 @ 唤醒但未设 home channel 时，先回一条「📬 No home channel…」诊断噪音再

@@ -1429,3 +1429,52 @@ describe('⑱ 技能执勤账（V8.18 能力层叙事配套：第 9 章证据四
     expect(gen).toContain('G1-G6=六道关卡')  // 词条超集现于 mx-report-gen hero-terms
   })
 })
+
+describe('㉖ 完成契约门接线绊线（2026-11-01 方案×程序同步批：§2.6.12）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf8' })
+
+  it('mx-up 刷新顺序=provision→patch→deploy（旧序会洗掉 manifest 补位的新文件）', () => {
+    const up = read(join(MX, 'mx-up.sh'))
+    const iProv = up.indexOf('mx_provision_agent_src ||')
+    const iPatch = up.indexOf('mx_apply_agent_patches ||')
+    const iDeploy = up.indexOf('deploy-agent-runtime.mjs --apply --runtime')
+    expect(iProv).toBeGreaterThanOrEqual(0)
+    expect(iPatch).toBeGreaterThan(iProv)
+    expect(iDeploy).toBeGreaterThan(iPatch)  // run24 刷新窗实锤：deploy 必须收尾
+  })
+
+  it('建卡契约开关缺省关＋AC 段可出（MX_DOD_CONTRACT=1 才并入 body）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('_dod_contract_suffix')
+    expect(lib).toContain('${MX_DOD_CONTRACT:-0}')  // 缺省 0=在途轮零行为变化
+    // 行为面：真库 source 后 AC 段渲染出两行 AC-（real-lib 范式，非复制实现）
+    const root = sandbox()
+    const out = sh('MX_DOD_CONTRACT=1; _dod_contract_suffix | grep -c "^AC-[12]:"', root)
+    expect(Number(out.trim())).toBe(2)
+  })
+
+  it('部署手册走仓内 manifest 通道（单仓整合后旧 ../upstream 路径即失效）', () => {
+    const rb = read(join(MX, 'deploy-window-runbook.sh'))
+    expect(rb).not.toContain('../upstream/hermes-agent')
+    expect(rb).toContain('deploy-agent-runtime.mjs')
+  })
+
+  it('方案 §2.6.12 在案且写明开关与部署顺序约束（方案↔程序对齐锚）', () => {
+    const plan = read(join(PRODUCT, 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'))
+    expect(plan).toContain('#### 2.6.12 完成契约门')
+    expect(plan).toContain('MX_DOD_CONTRACT=1')
+    expect(plan).toContain('provision→patch→deploy')
+  })
+
+  it('产品面契约五件在位（completion_contract/内核门/会话接线/CLI/派发 env）', () => {
+    expect(existsSync(join(PRODUCT, 'runtime/completion_contract.py'))).toBe(true)
+    const kdb = read(join(PRODUCT, 'runtime/hermes_cli/kanban_db.py'))
+    expect(kdb).toContain('def _gate_completion_contract')
+    const sk = read(join(PRODUCT, 'runtime/gateway/session_kanban.py'))
+    expect(sk).toContain('dod_contract')
+    const cli = read(join(PRODUCT, 'runtime/hermes_cli/kanban_parser.py'))
+    expect(cli).toContain('--receipt')
+    const disp = read(join(PRODUCT, 'runtime/hermes_cli/kanban_db_dispatch.py'))
+    expect(disp).toContain('HERMES_KANBAN_DOD_CONTRACT')
+  })
+})
