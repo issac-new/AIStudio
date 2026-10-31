@@ -76,3 +76,4 @@
 {"at":"2026-10-31T15:04:49Z","spec":"docs/superpowers/specs/2026-10-31-superagent-router.md","receipt":"c384d17c450722447bbc99320edc8c1b5d89286f","commit":"ecc018043"}
 {"at":"2026-10-31T15:21:15Z","spec":"docs/superpowers/specs/2026-10-31-orchestrator-delivery.md","receipt":"9d033384c08d7a5b530f4b07f3d8a90731435d58","commit":"bd74f0b90"}
 {"at":"2026-10-31T15:50:08Z","spec":"docs/superpowers/specs/2026-10-31-model-resilience-hardening.md","receipt":"e6e2410c399d93bf9d093428d7a258b0d25e327b","commit":"c92966e90"}
+{"at":"2026-10-31T15:54:24Z","spec":"docs/superpowers/specs/2026-10-31-prepush-push-range-fix.md","receipt":"0736d904a2b56d6aa83b29a9962b353b3003e89e","commit":"556355892"}

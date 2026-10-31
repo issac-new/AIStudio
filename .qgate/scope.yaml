@@ -1,6 +1,7 @@
 # 本变更的预期改动面（L0.scope-check 输入）。超出即 FAIL，需同步修订本文件或撤回改动。
 paths:
   - docs/superpowers/specs/2026-10-31-model-resilience-hardening.md
+  - docs/superpowers/specs/2026-10-31-prepush-push-range-fix.md
   - docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - runtime/**
@@ -11,7 +12,8 @@ paths:
   - custom/server/faileroute/**
   - custom/__tests__/**
   - .qgate/**
-  - .swarm-yuan/hooks/pre-push
+  - .swarm-yuan/**
+  - swarm-yuan/**
   - swarm-yuan/hooks/pre-push
   - patches/7*.patch
   - patches/series

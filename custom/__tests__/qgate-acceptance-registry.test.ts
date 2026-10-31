@@ -47,6 +47,15 @@ describe('qgate 断言登记与 pre-push 强制面', () => {
     expect(hook).toContain('QGATE_PREPUSH_ENFORCE:-1')
   })
 
+  it('pre-push 只判本次推送的提交范围，不拿工作树脏态误拦', () => {
+    const hook = readFileSync('.swarm-yuan/hooks/pre-push', 'utf8')
+    expect(hook).toContain('while read -r _local_ref _local_sha _remote_ref _remote_sha')
+    expect(hook).toContain('--changed "$_changed"')
+    expect(hook).toContain('本次只删除引用')
+    // stdin 先落临时文件，末尾 LFS 必须还能读到同一份引用清单
+    expect(hook).toContain('git lfs pre-push "$@" < "${_stdin:-/dev/null}"')
+  })
+
   it('本变更 spec 四段齐全并声明设计文档影响', () => {
     const spec = readFileSync('docs/superpowers/specs/2026-10-31-model-resilience-hardening.md', 'utf8')
     for (const section of ['## 变更', '## 决策记录', '## 验证', '## 设计文档影响']) {
