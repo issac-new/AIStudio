@@ -75,6 +75,24 @@ async function waitForApp(page) {
   }, undefined, { timeout: 60_000 })
 }
 
+/**
+ * 2026-10-31：整页重载（鉴权失效/落地重定向）会销毁执行上下文，page.evaluate 抛
+ * "Execution context was destroyed"。等应用重新挂载后重试一次，避免把环境重载
+ * 记成走查崩溃（super_admin 全量扫第 3 站实录）。
+ */
+async function evaluateWithRetry(page, fn, arg, attempts = 2) {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await page.evaluate(fn, arg)
+    } catch (error) {
+      const message = String(error)
+      if (attempt >= attempts || !/Execution context was destroyed|navigat/i.test(message)) throw error
+      await waitForApp(page).catch(() => {})
+      await page.waitForTimeout(600)
+    }
+  }
+}
+
 async function waitForSettled(page) {
   await page.waitForFunction(() =>
     !document.querySelector('#boot-fallback, .boot-fallback, .page-loading[aria-busy="true"]'),
@@ -172,6 +190,17 @@ try {
   await bootApp(page)
   await ensureLogin()
   await waitForApp(page)
+  // 权限面判据（2026-10-31）：requiresSuperAdmin 路由对 admin 会被守卫送回 /app，
+  // 这是权限边界而非页面缺陷；记 WARN，专项轮用 WALK_TOKEN=super_admin 复验内容。
+  const role = await page.evaluate(async () => {
+    try {
+      const r = await fetch('/api/auth/me', {
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('hermes_api_key') || '') },
+      })
+      return r.ok ? String((await r.json())?.user?.role || 'unknown') : 'unknown'
+    } catch { return 'unknown' }
+  })
+  led.record('会话角色', true, role)
   for (const visit of visits) {
     consoleErrors = []
     failedReq = []
@@ -185,14 +214,32 @@ try {
       // 实拍录屏用 600-800ms，避免亚秒级连跳把 WS 握手打断成 console 噪声。
       await page.waitForTimeout(SETTLE_MS)
     } catch (error) {
-      const actual = `${await currentRoute(page)} @ ${await page.evaluate(() => location.hash)}`
+      const actual = await (async () => {
+        try {
+          return `${await currentRoute(page)} @ ${await page.evaluate(() => location.hash)}`
+        } catch {
+          return '执行上下文已销毁（整页重载）'
+        }
+      })()
+      if (visit.requiresSuperAdmin && role !== 'super_admin') {
+        led.record(`${visit.label}（权限回退）`, true,
+          `非 super_admin 被守卫改道 | 当前 ${actual}，未验收该页内容`, 'WARN')
+        continue
+      }
       led.defect(`导航 ${visit.label}`, `${safeText(error)} | 当前 ${actual}`, 'P1')
       continue
     }
-    const probe = await page.evaluate((rawReSrc) => {
+    const probe = await evaluateWithRetry(page, (rawReSrc) => {
       const rawRe = new RegExp(rawReSrc)
       const body = document.body
-      const text = (body?.innerText || '').slice(0, 20000)
+      if (!body) {
+        // 整页重载/网关重启瞬间 body 尚未建立：按白屏报，不抛 TypeError 吞掉归因。
+        return {
+          rawKeys: [], msgs: [], loading: true, unauthenticated: false, suspicious: [],
+          hasVisual: false, contentLen: 0, url: location.hash, title: document.title, overflow: false,
+        }
+      }
+      const text = (body.innerText || '').slice(0, 20000)
       const rawKeys = [...new Set((text.match(rawRe) || []))].slice(0, 8)
       const msgs = [...document.querySelectorAll('.n-message, .n-notification, .n-alert')]
         .map(el => el.textContent.trim().slice(0, 160)).filter(Boolean)
@@ -260,10 +307,25 @@ try {
     const expectedReq = activeReq.filter(r => r.url.includes('walkthrough') && [400, 404, 409, 422].includes(r.status))
     const permissionReq = activeReq.filter(r => visit.requiresSuperAdmin && [401, 403].includes(r.status))
     const environmentReq = activeReq.filter(r => r.url.includes('matrix.test') || r.url.includes('assets.petdex.dev'))
+    // 2026-10-31 设计内 fail-soft（决策见 spec 2026-10-31-three-zone-regression-fixes）：
+    // App 级 ProviderConfigurationPrompt 按网关 orchestrator profile 查询，非白名单用户 403，
+    // 客户端 catch 静默不弹窗。放宽＝削弱权限边界，不修；走查记 WARN 不记缺陷。
+    const failSoftReq = activeReq.filter(r =>
+      r.status === 403 && r.url.includes('/api/hermes/available-models?profile=orchestrator'))
+    // dev 链自动登录先试口令（出厂已移除，401）再走 Matrix 桥——401 是设计内回落。
+    const devLoginReq = activeReq.filter(r => r.status === 401 && r.url.includes('/api/auth/login'))
     const badReq = activeReq.filter(r =>
-      !r.url.includes('favicon') && !expectedReq.includes(r) && !permissionReq.includes(r) && !environmentReq.includes(r))
+      !r.url.includes('favicon') && !expectedReq.includes(r) && !permissionReq.includes(r)
+      && !environmentReq.includes(r) && !failSoftReq.includes(r) && !devLoginReq.includes(r))
     if (badReq.length) {
       led.defect(`${visit.label} 失败请求`, badReq.slice(0, 4).map(r => `${r.status} ${r.url}`).join(' | '), 'P2')
+    }
+    if (failSoftReq.length) {
+      led.record(`${visit.label} 权限 fail-soft`, true,
+        failSoftReq.slice(0, 2).map(r => `${r.status} ${r.url}`).join(' | '), 'WARN')
+    }
+    if (devLoginReq.length) {
+      led.record(`${visit.label} dev 登录回落`, true, `${devLoginReq.length} 条 401（口令→Matrix 桥）`, 'WARN')
     }
     if (lateReq.length) {
       led.record(`${visit.label} 跨页延迟请求`, true,

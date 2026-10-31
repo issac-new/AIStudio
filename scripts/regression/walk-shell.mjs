@@ -1,6 +1,6 @@
 // 驾驶舱壳层走查（顶栏/注意力条/图标栏/栏控）——每个可交互元素点到并留证。
 // 用法：node scripts/regression/walk-shell.mjs
-import { openBrowser, bootApp, clearMasks, domClick, gotoHash, Ledger, BASE } from './harness.mjs'
+import { openBrowser, bootApp, clearMasks, domClick, gotoHash, Ledger, waitForApp } from './harness.mjs'
 
 const { browser, page } = await openBrowser()
 const led = new Ledger('shell')
@@ -53,14 +53,21 @@ try {
   // （P2 产品竞态，spec 2026-10-31-three-zone-regression-fixes 挂账：wait 1.5-6s
   // 点击 3 次全丢、10s 全就绪 100% 成功，实测自愈型）。重试后仍不动才记缺陷。
   // 先等落地稳定（boot 竞态下异步落地恢复可晚至 ~15s 覆盖用户点击——P2 挂账，
-  // 脚本按「应用稳定后可交互」口径测；hash 连续 1.2s 不变视为稳定，上限 18s）
+  // 脚本按「应用稳定后可交互」口径测）。2026-10-31 修复：原实现首个 400ms tick
+  // 见 hash===last 即 resolve（实际只等 0.4s，注释声称的 1.2s 稳定窗未实现），
+  // 落地重定向仍会覆盖点击；改为 hash 连续 2.5s 不变 + 登录凭据已落，上限 20s。
   async function waitLandingSettled() {
     await page.waitForFunction(() => location.hash !== '#/' && location.hash !== '', undefined, { timeout: 15000 }).catch(() => {})
+    await page.waitForFunction(() => Boolean(localStorage.getItem('hermes_api_key')), undefined, { timeout: 15000 }).catch(() => {})
     await page.evaluate(() => new Promise((resolve) => {
-      let last = location.hash; const t0 = Date.now()
+      let last = location.hash
+      let stableSince = Date.now()
+      const t0 = Date.now()
       const iv = setInterval(() => {
-        if (location.hash === last || Date.now() - t0 > 18000) { clearInterval(iv); resolve(null) }
-        last = location.hash
+        const now = Date.now()
+        if (location.hash !== last) { last = location.hash; stableSince = now }
+        else if (now - stableSince >= 2500) { clearInterval(iv); resolve(null) }
+        if (now - t0 > 20000) { clearInterval(iv); resolve(null) }
       }, 400)
     }))
   }
@@ -137,9 +144,12 @@ try {
   for (const [aria, hash] of [['单聊', 'hermes/chat'], ['群聊', 'hermes/group-chat'], ['工作流', 'hermes/workflow'], ['历史', 'app/history'], ['Agent 管理', 'studio/agents'], ['模型', 'hermes/models'], ['饲料', 'hermes/petdex'], ['设置', 'app/settings']]) {
     await step(`图标栏 ${aria} → /${hash}`, async () => {
       await page.evaluate((h) => { location.hash = '#/' + h }, hash)
+      // 冷导航可能触发整页重载（网关重启/鉴权失效），等应用重新挂载再读内容。
+      await waitForApp(page, 30000)
       await page.waitForTimeout(3000)
       await clearMasks(page)
       const len = await page.evaluate(() => {
+        if (!document.body) return -1
         const clone = document.body.cloneNode(true)
         for (const el of clone.querySelectorAll('.studio-navigation-rail, .ia-header, .ia-attn-bar, header, nav, aside')) el.remove()
         return (clone.innerText || '').replace(/\s+/g, '').length
@@ -155,6 +165,13 @@ try {
   for (const [tid, label] of [['ia-col-left-max', '左栏最大化'], ['ia-col-right-max', '右栏最大化'], ['ia-col-center-max', '中栏最大化']]) {
     await step(`${label}（${tid}）`, async () => {
       await gotoHash(page, 'app/collab', 3000)
+      // 左栏折叠态（layout.leftFolded 持久化）不渲染栏控——先展开再测，
+      // 否则 testid 缺席被误判 P1（2026-10-31 实录：右/中过、左单挂）。
+      const unfold = page.locator('[data-testid=wb-unfold-left]')
+      if (tid.startsWith('ia-col-left') && await unfold.count()) {
+        await unfold.first().click()
+        await page.waitForTimeout(700)
+      }
       await domClick(page, `[data-testid=${tid}]`)
       await page.waitForTimeout(800)
       await led.shot(page, tid)
