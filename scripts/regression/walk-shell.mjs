@@ -52,7 +52,20 @@ try {
   // 点击用真实点击＋一次重试：boot 早期（auth 就绪前）点击会被落地重定向覆盖
   // （P2 产品竞态，spec 2026-10-31-three-zone-regression-fixes 挂账：wait 1.5-6s
   // 点击 3 次全丢、10s 全就绪 100% 成功，实测自愈型）。重试后仍不动才记缺陷。
+  // 先等落地稳定（boot 竞态下异步落地恢复可晚至 ~15s 覆盖用户点击——P2 挂账，
+  // 脚本按「应用稳定后可交互」口径测；hash 连续 1.2s 不变视为稳定，上限 18s）
+  async function waitLandingSettled() {
+    await page.waitForFunction(() => location.hash !== '#/' && location.hash !== '', undefined, { timeout: 15000 }).catch(() => {})
+    await page.evaluate(() => new Promise((resolve) => {
+      let last = location.hash; const t0 = Date.now()
+      const iv = setInterval(() => {
+        if (location.hash === last || Date.now() - t0 > 18000) { clearInterval(iv); resolve(null) }
+        last = location.hash
+      }, 400)
+    }))
+  }
   async function switchAndWait(testid, wantIn, wantOut) {
+    await waitLandingSettled()
     for (let attempt = 1; attempt <= 2; attempt++) {
       await page.locator(`[data-testid=${testid}]`).first().click({ timeout: 8000 })
       await page.waitForTimeout(2500)
