@@ -53,7 +53,7 @@ watch(() => clientStore.syncState, (s) => {
     roomStore.selectRoom(routeRoomId.value)
   }
 })
-watch(() => roomStore.rooms.length, () => {
+watch(() => roomStore.sortedRooms.length, () => {
   if (routeRoomId.value && roomStore.activeRoomId === routeRoomId.value && !roomStore.activeRoom) {
     roomStore.selectRoom(routeRoomId.value)
   }

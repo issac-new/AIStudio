@@ -178,3 +178,23 @@ describe('SwarmKanbanView — v12.5 聚合模式', () => {
     w2.unmount()
   })
 })
+
+describe('SwarmKanbanView — ?new=1 建卡深链自动收窄（2026-10-31 日常工作台回归）', () => {
+  // stub 板清单（swarm＋[已移除]）无 default → 收窄目标回落首个日常板 swarm。
+  // 一次性标志防板刷新重收窄的分支依赖响应式板清单，stub 为静态数组不覆盖，
+  // 由活体走查（daily-workbench-walkthrough E 节）承担。
+  it('autoOpenCreate 深链：聚合态自动收窄到单一板（唯一板守卫不再拦截建卡）', async () => {
+    const w = mount(SwarmKanbanView, { props: { autoOpenCreate: true } })
+    await flushPromises()
+    // 收窄到 swarm：仅剩 swarm 2 条任务
+    expect(w.find('[data-testid="kanban-board-stub"]').attributes('data-count')).toBe('2')
+    expect(w.find('[data-testid="kanban-board-chip-[已移除]"]').classes().join(' ')).not.toContain('is-on')
+    w.unmount()
+  })
+
+  it('非深链挂载不收窄：默认聚合全板（3 条全显示）', async () => {
+    const w = await mountView()
+    expect(w.find('[data-testid="kanban-board-stub"]').attributes('data-count')).toBe('3')
+    w.unmount()
+  })
+})
