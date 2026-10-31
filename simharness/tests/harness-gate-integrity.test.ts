@@ -1377,7 +1377,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
   it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑪ 叙事注册与骨架兜底')
-    expect(pre).toContain('prelaunch 三十项')  // V8.46 加 ㉔-㉚ 治理闭环；此前二十三项=V8.45 ㉓ 评测接线
+    expect(pre).toContain('prelaunch 三十二项')  // V8.46 加 ㉔-㉚ 治理闭环；此前二十三项=V8.45 ㉓ 评测接线
     expect(pre).toContain('⑫ 账号板供给在位')
   })
 

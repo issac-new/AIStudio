@@ -29,9 +29,9 @@ describe('V8.46 G6 闸键统一', () => {
 })
 
 describe('V8.46 治理闭环接线', () => {
-  it('prelaunch 三十项且 ㉔-㉚ 在位', () => {
+  it('prelaunch 三十二项且 ㉔-㉚ 在位', () => {
     const pre = read('mux/mx-prelaunch-check.sh')
-    expect(pre).toContain('prelaunch 三十项')
+    expect(pre).toContain('prelaunch 三十二项')
     for (const n of ['㉔', '㉕', '㉖', '㉗', '㉘', '㉙', '㉚']) {
       expect(pre).toContain(n)
     }

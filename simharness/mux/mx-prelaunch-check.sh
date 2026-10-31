@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前三十项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31））。
+# mx-prelaunch-check.sh — 开跑前三十二项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31））。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -66,6 +66,15 @@ ck "⑨ 无在途推演进程" "! mxp_pgrep_f 'aipay-scenario.sh' | grep -q . &&
 # ⑩ 推演域分支无上轮残留（run15 根治：run13 遗留 feat/DEV-PAYCORE-S 使 branch_fresh 恒假，
 #    devimpl 等待环盲转 150min——锚读数也把陈旧提交当本路进展）。feat/DEV-* 是每轮开发
 #    交付域分支，上轮未清=本轮真值锚必踩同坑；integration/* 是设计内跨轮续建不在清理面。
+# ⑩b 中央仓推演工件无跨轮残留（run24 污染根治 2026-10-31：run23 遗留 docs/analysis 等
+#     AN-*/RFD-* 文件令 run24 假真值——驱动「仓库出现 AN-XX ✓」命中旧文件、系分段被跳过、
+#     概设稿真值锚失效，用户裁定停跑清场重开。run15 ⑩ 只清分支面，工件面同类坑本检查补位
+#     （一个问题进来，一类问题出去）。清场通道=mx-clean --apply --reset-central；同轮续跑
+#     跑本检查时显式 PRELAUNCH_ALLOW_CROSSRUN_RESIDUE=1 豁免（声明式优于猜测式）。判定面=轮次
+#     工件七目录（requirements/analysis/design/plan/test/delivery/acceptance）；admin/architecture
+#     等九个跨轮基础目录为 mx-clean 设计内保留，不在判定面。）
+ck "⑩b 中央仓轮次工件无跨轮残留（七目录）" "[ -n \"\${PRELAUNCH_ALLOW_CROSSRUN_RESIDUE:-}\" ] || [ -z \"\$(git -C '$SR/central/aipaydev' ls-tree -r --name-only origin/main -- docs/requirements/ docs/analysis/ docs/design/ docs/plan/ docs/test/ docs/delivery/ docs/acceptance/ 2>/dev/null | head -1)\" ]" "上轮轮次工件残留（requirements/analysis/design/plan/test/delivery/acceptance 七目录）——bash mux/mx-clean.sh --apply --reset-central 清场后重跑（run24 污染实录：AN-*/RFD-* 假真值跳系分）；admin/architecture/governance 等跨轮基础目录 mx-clean 设计内保留不在判定面；同轮续跑显式 PRELAUNCH_ALLOW_CROSSRUN_RESIDUE=1 豁免"
+
 ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev' for-each-ref --format='%(refname:short)' refs/remotes/origin/feat/DEV-* 2>/dev/null | head -1)\" ]" "git -C central/aipaydev push origin --delete <分支>（或并入 mx-clean 清理面）"
 
 # ⑪ 按轮叙事注册与骨架兜底在位（run15 复盘：连续两轮漏预写注册的机制化收口——
@@ -166,4 +175,4 @@ ck "㉙ R18 交付灯帧与 skill 降级登记" "grep -q 'deliver --step 23' '$H
 ck "㉚ 阶段页签 31（reviewGov/improve）" "grep -q \"key: 'reviewGov'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'improve'\" '$OV/custom/client/ia2/stage-tabs.ts' && ! grep -q '29 个页签' '$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'" "阶段页签缺 reviewGov/improve，或方案正本仍写 29 签"
 
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十二项）" || { echo "有红项——修复后再跑"; exit 1; }
