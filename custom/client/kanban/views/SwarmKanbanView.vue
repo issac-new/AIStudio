@@ -132,6 +132,22 @@ const dailyBoardList = computed(() => boardList.value.filter(board => board.sour
 const checkedBoardCount = computed(() =>
   dailyBoardList.value.filter(b => boardChecked(b.slug)).length)
 
+// ?new=1 建卡深链收口（2026-10-31 日常工作台回归批，用户裁决）：到达即建卡意图明确，
+// 聚合态（勾选板非唯一）下行内建卡必被 handleInlineCreate 的唯一板守卫拦截——与其让
+// 用户撞 toast，不如随深链自动收窄到 default 板（缺席回落首个日常板）并告知。
+// 一次性标志：板清单刷新/后续聚合变化不得再次收窄，防覆盖用户手动放宽的选择。
+let newLinkTightened = false
+watch([() => props.autoOpenCreate, dailyBoardList], ([intent]) => {
+  if (!intent || newLinkTightened || checkedBoardCount.value === 1) return
+  if (!dailyBoardList.value.length) return // 板清单未装载，等下一次依赖变化
+  const target = dailyBoardList.value.some(b => b.slug === 'default')
+    ? 'default'
+    : dailyBoardList.value[0].slug
+  excludedBoards.value = new Set(dailyBoardList.value.map(b => b.slug).filter(slug => slug !== target))
+  newLinkTightened = true
+  message.info(t('kanban.message.newLinkBoardTightened', `已切到「${target}」板以便就地新建任务`))
+}, { immediate: true })
+
 const filteredTasks = computed(() => {
   let tasks: KeyedKanbanTask[] = mergedRefs.value.map(keyedTask)
   if (store.filterStatus) {
