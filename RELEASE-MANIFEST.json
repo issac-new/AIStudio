@@ -71,7 +71,7 @@
         "vendor/zcode/",
         "zcode-patches/"
       ],
-      "version": "3.16.2",
+      "version": "3.17.1",
       "versionCarrier": "vendor/zcode/package.json",
       "carrierFormat": "json:version",
       "buildCommand": "以仓根为 CWD：npm run zcode:ensure（pnpm 闭包构建）＋node scripts/zcode-engine.mjs install-cli（→ ~/.hermes/ycode/zcode.cjs）；本模块包内不含 scripts/，解包后需在整体包/cockpit 包根执行",
@@ -81,8 +81,8 @@
         "vendor/zcode/",
         "zcode-patches/"
       ],
-      "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（3.16.2）；基线 commit 3c5b2276（v3.16.1 系列）见 zcode-patches/series 头，activePatchCount=活跃补丁数（当前 8：002-009；字段 2026-10-28 由 carrierPattern 更名，语义不变）。",
-      "baselineCommit": "3c5b2276",
+      "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（3.17.1）；基线 commit a60ba6a7（v3.17.1 线，2026-10-31 同步批）见 zcode-patches/series 头，activePatchCount=活跃补丁数（当前 8：002-009；字段 2026-10-28 由 carrierPattern 更名，语义不变）。",
+      "baselineCommit": "a60ba6a7",
       "activePatchCount": "8"
     },
     "yuan-skill": {
@@ -131,5 +131,5 @@
     "checksums": "SHA256SUMS（随 dist/release/ 目录）",
     "artifactDistribution": "local-only（2026-10-28 用户裁定：构建产物只在本机构建留存，不上传 GitHub Release / 任何远端；除非用户明确要求。）发布动作=打 tag + 写 Release 说明，不含资产。"
   },
-  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 包版本 3.16.2、基线谱系 v3.16.1 系列 @3c5b2276。模块大版本对齐基准，与产品扩展序不互推）"
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.7.39 / hermes-agent v0.22.5 / zcode 包版本 3.17.1、基线谱系 v3.17.1 线 @a60ba6a7（2026-10-31 同步批）。模块大版本对齐基准，与产品扩展序不互推）"
 }

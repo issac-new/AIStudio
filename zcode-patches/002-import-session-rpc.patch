@@ -1,8 +1,7 @@
 diff --git a/packages/services/src/zcode-agent/zcodeAgentService.ts b/packages/services/src/zcode-agent/zcodeAgentService.ts
-index 92f4c14d..3f844b21 100644
 --- a/packages/services/src/zcode-agent/zcodeAgentService.ts
 +++ b/packages/services/src/zcode-agent/zcodeAgentService.ts
-@@ -176,6 +176,7 @@ import {
+@@ -201,6 +201,7 @@
    mergeAutomationMutationToolDenylist,
    mergeOffPeakMutationToolDenylist,
  } from "#src/zcode-agent/automationToolPolicy.js";
@@ -10,8 +9,8 @@ index 92f4c14d..3f844b21 100644
  import { ZCODE_AGENT_RUNTIME_UNAVAILABLE_CODE } from "./zcodeAgent.js";
  import type {
    ZCodeProtocolRequestId,
-@@ -6382,6 +6383,54 @@ export function createZCodeAgentService(
-       );
+@@ -6983,6 +6984,54 @@
+       }
      },
  
 +    // overlay 002-import-session-rpc（#22 多源导入写入面）：归一化行 → imported
@@ -66,10 +65,9 @@ index 92f4c14d..3f844b21 100644
      // 分页发生在存储层（JournalStorePort.listEvents 带 afterSequence/limit），这里不切片；
      // 在 RPC 层切等于每翻一页把整条 journal 读进内存。
 diff --git a/packages/shared/src/validation.ts b/packages/shared/src/validation.ts
-index 822334e6..059e89ec 100644
 --- a/packages/shared/src/validation.ts
 +++ b/packages/shared/src/validation.ts
-@@ -1086,7 +1086,7 @@ export const hostLogResponseSchema = z.object({
+@@ -1218,7 +1218,7 @@
  
  export { zcodeProviderSchema };
  
@@ -79,10 +77,9 @@ index 822334e6..059e89ec 100644
  export const hostAgentProcessSpawnedResponseSchema = z.object({
    type: z.literal("agent-process-spawned"),
 diff --git a/packages/shared/src/zcode-protocol-v4/transport.ts b/packages/shared/src/zcode-protocol-v4/transport.ts
-index 3ea350ae..ff89e4bd 100644
 --- a/packages/shared/src/zcode-protocol-v4/transport.ts
 +++ b/packages/shared/src/zcode-protocol-v4/transport.ts
-@@ -353,6 +353,9 @@ export const V4_METHODS = {
+@@ -363,6 +363,9 @@
    conversationFileRewindPreview: "v4/conversation/fileRewindPreview",
    // workflow run 的事件日志分页（详情页审计面）：只读、无状态、超时重发安全。
    // 新方法天然偏斜安全——旧桌面根本不会调用它。
@@ -92,7 +89,7 @@ index 3ea350ae..ff89e4bd 100644
    conversationWorkflowRunEvents: "v4/conversation/workflowRunEvents",
    conversationWorkflowRuns: "v4/conversation/workflowRuns",
    // workflow run 的用户面产物。三条同族：
-@@ -729,6 +732,33 @@ export type V4ConversationWorkflowRunsResult = z.infer<
+@@ -748,6 +751,33 @@
    typeof v4ConversationWorkflowRunsResultSchema
  >;
  

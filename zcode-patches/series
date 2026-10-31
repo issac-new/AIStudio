@@ -1,6 +1,6 @@
 # zcode patch series (受管 fork,路由全部进 upstream/zcode)
 # 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
-# 基线: origin/main @ 3c5b2276 (v3.16.1 系列, 2026-10-20 chore: sync ZCode source)。2026-10-25 对齐（同步口径=上游 main 变更非版本 tag）。
+# 基线: origin/main @ a60ba6a7 (v3.17.1 线, 2026-10-31 同步批；同步口径=上游 main 变更非版本 tag)。
 #
 # 001 已退役（2026-10-21 v3.16.1 基线轮）：上游 tsup.config.ts 已原生把 yazl 列入
 # external（附带 ESM require("fs") 崩溃原因注释），补丁语义被上游吸收，继续应用会冲突。

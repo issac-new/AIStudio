@@ -117,7 +117,7 @@ breaking changes（已核对本机面）：`analyze_function` 默认 retained su
 | 项 | 状态 | 去向 |
 |----|------|------|
 | hermes-studio 0.7.39 → v0.8.0 升级 | ✅ 已完成（2026-10-31 升级批） | spec `2026-10-31-studio-v080-upgrade.md`：pristine 换血＋44 失败件重生成（150/517 退役归档、266/197/528/623 迁位）＋esp32→mcu 品牌迁移；全量重放零失败 |
-| zcode 上游 main v3.17.1 线同步 | 新增（2026-10-31） | 单提交 5231 文件、包版本 3.16.2→3.17.1；`zcode-patches/series` 8 条活跃补丁需重放。按「跟 main」政策待升级轮 |
+| zcode 上游 main v3.17.1 线同步 | ✅ 已完成（2026-10-31 同步批） | spec `2026-10-31-zcode-3171-sync.md`：pristine 换血＋8 补丁全重放（002/006 重生成）；引擎构建绿 |
 | DeepInfer / deepseek-recipe 调研未收口（无 VERDICT） | 欠账 | 两仓 0 落后、快照新鲜，只欠裁决文档；目录 `~/.hermes/shared/research/20261026-deepseek-infer-recipe/`；按需派卡 |
 | Ghidra 12.2 升级（JDK 25 换绑） | 缺口未动 | 需用户裁决后执行（涉 wrapper 变更） |
 | REAP 上游高频更新无自动同步 | 已知（10-26 登记） | 低优先；内容零漂移，机制面无增量 |
@@ -167,6 +167,7 @@ curl -s https://pypi.org/pypi/lh-harness/json | jq -r '.info.version, .releases[
 
 ## 八、变更日志
 
+- 2026-10-31 同步批：zcode 基线 → a60ba6a7（v3.17.1，8 补丁重放零失败，002/006 重生成，引擎构建绿）。
 - 2026-10-31 升级批：hermes-studio 基线 → v0.8.0@f67b587b9（44 件重生成/2 退役/4 迁位，重放零失败，全量绿）。
 - 2026-10-31 点名刷新：三棵 vendor 树 + 本机常驻 + 🔴🟡/RETIRED 线实测；修正 37 行计数口径、HelixHarness 双源、VENDOR 改名/版本/补丁数；登记 hermes-studio v0.8.0 与 zcode 3.17.1 两个升级欠账；DeepInfer 路径与 HexStrikeAI 裁免说明补齐。
 - 2026-10-28 13:38 必吸收项全部落地（两张吸收卡 done+机械验收 5 组全过）；台账任务全链完结。
