@@ -10,6 +10,7 @@ paths:
   - docs/superpowers/specs/2026-10-31-prepush-push-range-fix.md
   - docs/superpowers/specs/2026-11-01-k19-new-endpoint-response-shape.md
   - docs/superpowers/specs/2026-11-01-runtime-backfill-session-rotation-plugin-api.md
+  - docs/superpowers/specs/2026-11-01-dod-kernel-gate-lineage-reclaim.md
   - docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - runtime/**

@@ -912,85 +912,6 @@ def _handle_list(args: dict, **kw) -> str:
             "promoted": promoted})
 
 
-def _record_completion_contract_event(conn: Any, task_id: str, kind: str, payload: dict) -> None:
-    """Completion-contract 拒绝留痕。失败不掩盖：日志可见，但不顶掉原始 tool_error。"""
-    try:
-        from hermes_cli import kanban_db as kb
-
-        kb._append_event(conn, task_id, kind, payload, run_id=_worker_run_id(task_id))
-        conn.commit()
-    except Exception:
-        logger.exception("kanban completion contract event failed: %s", kind)
-
-
-def _completion_contract_gate(kb: Any, conn: Any, task: Any, task_id: str, args: dict) -> Optional[dict]:
-    """Enforce the dispatch-time DoD contract for this worker.
-
-    Contract 由 dispatcher 写入 env（见 kanban_db_dispatch._default_spawn），
-    并以契约源哈希锁定；这里只做确定性校验，不执行命令。
-    """
-    raw = os.environ.get("HERMES_KANBAN_DOD_CONTRACT", "").strip()
-    if not raw:
-        return None
-    from completion_contract import (
-        ContractViolation,
-        contract_source_sha256,
-        parse_contract,
-        validate_receipt,
-    )
-
-    try:
-        contract = parse_contract(raw)
-    except ContractViolation as exc:
-        _record_completion_contract_event(conn, task_id, "completion_blocked_contract", {
-            "reason": "contract_unparseable", "detail": str(exc)[:400]})
-        raise ValueError(
-            f"kanban_complete blocked: dispatch-time completion contract is unparseable ({exc}). "
-            "This is a dispatcher/config error, not your output; kanban_block with kind='dependency' "
-            "and ask the operator to re-dispatch the card."
-        ) from None
-    if contract["mode"] == "off":
-        return None
-
-    expected_source = os.environ.get("HERMES_KANBAN_DOD_SOURCE_SHA256", "").strip()
-    if expected_source:
-        actual_source = contract_source_sha256(_task_value(task, "body", "") or "")
-        if actual_source != expected_source:
-            _record_completion_contract_event(conn, task_id, "completion_blocked_contract", {
-                "reason": "contract_source_changed",
-                "expectedSha256": expected_source,
-                "actualSha256": actual_source,
-            })
-            raise ValueError(
-                "kanban_complete blocked: the card's acceptance contract changed after dispatch "
-                "(AC/dod block was edited). Restore the original AC/dod block, or ask the operator "
-                "to re-dispatch so the contract is re-issued. Do not fabricate a receipt for the "
-                "new text."
-            )
-
-    workspace = (
-        os.environ.get("HERMES_KANBAN_WORKSPACE")
-        or _task_value(task, "workspace_path")
-        or os.getcwd()
-    )
-    try:
-        validated = validate_receipt(contract, args.get("receipt"), workspace)
-    except ContractViolation as exc:
-        if contract["mode"] == "warn":
-            return {"ok": False, "warnings": [str(exc)[:1000]], "contractSha256": contract.get("sourceSha256")}
-        _record_completion_contract_event(conn, task_id, "completion_blocked_contract", {
-            "reason": "receipt_violation",
-            "detail": str(exc)[:600],
-            "contractSha256": contract.get("sourceSha256"),
-        })
-        raise ValueError(
-            f"kanban_complete blocked by the completion contract: {exc}. "
-            "Fix the evidence or artifact, then call kanban_complete again with the corrected "
-            "receipt. Nothing changed; your task is still in-flight."
-        ) from None
-    return validated
-
-
 @_kanban_handler("kanban_complete")
 def _handle_complete(args: dict, **kw) -> str:
     """Mark the current task done with a structured handoff."""
@@ -1015,20 +936,15 @@ def _handle_complete(args: dict, **kw) -> str:
         # actually reachable — see _goal_judge_available for why an unavailable judge fails open.
         task = kb.get_task(conn, tid)
         _goal_gate("kanban_complete", task, tid, (summary or result or "").strip())
-        # DoD 契约门（模型波动加固 A）：派发时下发、契约源哈希锁定、回执证据重算。
-        contract_result = _completion_contract_gate(kb, conn, task, tid, args)
-        if contract_result is not None:
-            metadata = dict(metadata or {})
-            if contract_result.get("ok"):
-                metadata["completion_receipt"] = contract_result
-                if contract_result.get("sourceSha256"):
-                    metadata["completion_contract_sha256"] = contract_result["sourceSha256"]
-            else:
-                metadata["completion_contract_warnings"] = contract_result.get("warnings") or []
+        # DoD 契约门已下沉内核（complete_task，2026-11-01 dod-drill 实锤后）：
+        # 工具层只转发 receipt，任何完成面（工具/CLI/面板）都过同一道门。
         try:
             ok = kb.complete_task(
                 conn, tid, result=result, summary=summary, metadata=metadata,
-                created_cards=created_cards, expected_run_id=_worker_run_id(tid))
+                created_cards=created_cards, expected_run_id=_worker_run_id(tid),
+                receipt=args.get("receipt"),
+                workspace=os.environ.get("HERMES_KANBAN_WORKSPACE")
+                or _task_value(task, "workspace_path"))
         except kb.ArtifactPreservationError as artifact_err:
             # Structured rejection — surface the phantom ids so the worker can retry with a corrected list
             # or drop the field. Audit event already landed in the DB. The task itself was NOT mutated (the

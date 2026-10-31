@@ -332,6 +332,11 @@ _SPECS = [
         _arg("--metadata",
              help='JSON dict of structured facts (e.g. \'{"changed_files": [...], '
                   '"tests_run": 12}\'). Stored on the closing run.'),
+        _arg("--receipt",
+             help="Completion-contract evidence receipt (JSON literal, or @file to read from a "
+                  "path). REQUIRED when the card declares AC criteria and was dispatched with a "
+                  "DoD contract; the kernel re-validates evidence paths/sha256 and TAP/JUnit "
+                  "counts before the card may close."),
         _arg("--force", action="store_true",
              help="Override the live-claim guard: complete a running, claimed task "
                   "even without owning its run (closes the worker's run)."),

@@ -11,6 +11,7 @@
 - 新增运行时模块 `runtime/completion_contract.py`：从任务 body 派生 DoD 契约（`AC-n` 行或 ```dod JSON 块）、计算契约源哈希、校验结构化回执、重算 TAP/JUnit 计数与失败数、校验产物存在性与 sha256、拒绝越界路径。
 - `runtime/hermes_cli/kanban_db_dispatch.py`：派发时向 worker 注入 `HERMES_KANBAN_DOD_CONTRACT` 与 `HERMES_KANBAN_DOD_SOURCE_SHA256`，worker 无法通过改卡面削弱契约。
 - `runtime/tools/kanban_tools.py`：`kanban_complete` 读取契约并强制 `receipt`；违规返回结构化 tool_error（任务保持 in-flight）并落 `completion_blocked_contract` 事件；通过时把规范化回执写入 `metadata.completion_receipt`（含实际 sha256/字节数/解析计数）。
+- **2026-11-01 演练后下沉**：门移至 `kanban_db.complete_task` 内核边界（工具/CLI/面板唯一完成路径），工具层纯转发，CLI 增 `--receipt`；部署缺模块 fail-closed。实录见 `2026-11-01-dod-kernel-gate-lineage-reclaim.md`（含主 gateway 自更新双树劫持与血统收回）。
 - `runtime/tools/kanban_tools_schemas.py`：完成工具新增 `receipt` 参数与 schema 描述。
 - `runtime-manifest.json`：登记新模块，随部署到达运行时安装树。
 - 兼容：body 无 `AC-n` 且无 `dod` 块的卡契约 `mode=off`，行为与现状完全一致。
