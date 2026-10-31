@@ -93,8 +93,13 @@ try {
   // assignee 动态取当前用户名（2026-10-31 三区回归）：硬编码 'admin' 是 dist 验证环境
   // 假设——dev 环境用户库无 admin 号，swarm（matrix 桥接登录）不在 'admin' profile
   // 白名单 → 认领围栏 403（userCanAccessProfile 显式映射表，行为正确）。
-  const me = await api('/api/auth/me', { token })
-  const assignee = me.json?.user?.username || 'admin'
+  // assignee 域=profile 名（hermes agent 身份），非 studio 用户名：填 swarm（用户名）
+  // 会被围栏按 profile 白名单正确拒掉（三区回归二段实录）。取值走板内 assignees
+  // 端点——返回集必在围栏白名单内，dist（admin）/dev（default）两环境同式。
+  const asg = await api(`/api/hermes/kanban/assignees?${boardQ}`, { token })
+  const assignee = Array.isArray(asg.json?.assignees) && asg.json.assignees.length
+    ? String(asg.json.assignees[0]?.name ?? asg.json.assignees[0])
+    : 'default'
   const task = await api(`/api/hermes/kanban?${boardQ}`, {
     token, method: 'POST', body: { title: '走查写回路卡', priority: 1, assignee },
   })
