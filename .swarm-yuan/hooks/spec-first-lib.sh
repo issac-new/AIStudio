@@ -183,7 +183,9 @@ spf_on_base_branch() {  # $1=项目根 $2=conf 路径（可空——读 BASE_BRA
 # → stdout 命中路径（空=变更集内无已批准 spec）。变更集决定候选，正文视图决定证据快照；
 # L2 的 index 已含未改动的 HEAD 文件，既认本分支已提交 spec，也尊重 staged 删除/撤回批准。
 spf_find_governing_spec() {
-  local _root="$1" _glob="$2" _faces="$3" _conf="${4:-}" _view="${5:-worktree}" _exclude="${6:-}"
+  # 排除表取第 6 位起的全部实参：调用方以未加引号的 $_docs 展开时是多个词，
+  # 只取 $6 会把多值排除表静默降级成单值（2026-11-01 实证：四值表只排第一条）。
+  local _root="$1" _glob="$2" _faces="$3" _conf="${4:-}" _view="${5:-worktree}" _exclude="${*:6}"
   local _cand _p _base _content _changed=""
   [[ -d "$_root" ]] || return 0
   case " ${_faces} " in
