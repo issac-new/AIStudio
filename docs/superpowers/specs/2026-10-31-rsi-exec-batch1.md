@@ -56,7 +56,8 @@
 - **R4**：runner `k` 参数（缺省 2；预算不足 `affordableK` 降 1 如实降级）；晋级门 k<2 恒 `statistical_insufficient`＋新增 `pass_at_k_divergence`（pass@1 升而 pass@k 降＝靠运气）。
 - **R8**：加权 top3＝confidenceScore（HP-7 半衰期现算）×面域（同面 1.0/跨面 null 0.7/异面 0.5）×domain（同域 1.0/异域 0.7）；stale 刷新清单（同面 stale、上限 5 条）进起草 prompt；面板孤儿批量退役＋stale 批量引用（前端串行复用既有 `setExperienceStatus` 端点，window.confirm 门）。
 - **R12a**：`verificationTierOf`（regression > heldout（R6 后接，类型已占位）> judge > none；regression 存在即 regression 层，无硬证据而 judgeOnline 判 judge 层）；`PromotionRecord.verificationTier` 晋级留痕；`EvolutionRound.verificationTier`／`EvolutionSurface.weakVerificationStreak`／`EvolutionReport.healthWarnings`（streak≥3 触发 `weak_verification_streak`）。
-- 测试：`rsi-maturity-path.test.ts`（新文件，4/4：env 强制优先/失效三址如实/旧址兜底/不可读 null）＋loop 51/51（新增 R4 两例＋R12a tier/streak 例）＋http 27/27（R8 空态合法缺席＋建经验后加权串＋批量通道）＋面板 20/20（勾选→按钮态→串行调用）；typecheck 0 错。
+- 测试：`rsi-maturity-path.test.ts`（新文件，4/4）＋loop 53/53＋http 27/27＋面板 20/20；三批后 workbench 全套件 **160/160**；全量 `npm test` = 981 文件 / **7153 用例通过、11 跳过、0 失败**；typecheck 0 错（终态）。
+- K19 棘轮：新增端点统一走 lib/http ok() 出口（5 处），1195→1193 达标；一处括号笔误当场修复。
 
 ## 三批执行实记（2026-10-31 深夜，随码同批增补）
 

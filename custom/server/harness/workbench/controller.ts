@@ -231,7 +231,7 @@ router.post('/proposals/:id/probes/:probeId/record', async (ctx) => {
 // R7（2026-10-31 三批）：advisory 面建议产物导出＋人审应用标记。
 router.get('/proposals/:id/surface-artifacts', async (ctx) => {
   try {
-    ctx.body = { ok: true, artifacts: surfaceArtifactsOf(ctx.params.id) }
+    ok(ctx, { artifacts: surfaceArtifactsOf(ctx.params.id) })
   } catch (e) {
     fail(ctx, e)
   }
@@ -241,7 +241,7 @@ router.post('/proposals/:id/surface-applied', async (ctx) => {
   if (writeDenied(ctx)) return
   const b = bodyOf(ctx)
   try {
-    ctx.body = { ok: true, proposal: await markSurfaceApplied(ctx.params.id, actorOf(ctx, b)) }
+    ok(ctx, { proposal: await markSurfaceApplied(ctx.params.id, actorOf(ctx, b)) })
   } catch (e) {
     fail(ctx, e)
   }
@@ -252,11 +252,10 @@ router.get('/gap-suggestions', async (ctx) => {
   try {
     const { readCapabilityGaps, gapToDraft } = await import('./gap-source')
     const gaps = readCapabilityGaps()
-    ctx.body = {
-      ok: true,
+    ok(ctx, {
       gaps: (gaps ?? []).slice(0, 20).map((g) => ({ ...g, draft: gapToDraft(g) })),
       available: gaps != null,
-    }
+    })
   } catch (e) {
     fail(ctx, e)
   }
@@ -265,7 +264,7 @@ router.get('/gap-suggestions', async (ctx) => {
 router.post('/gap-suggestions/import', async (ctx) => {
   if (writeDenied(ctx)) return
   try {
-    ctx.body = { ok: true, proposals: await createGapDrivenProposals() }
+    ok(ctx, { proposals: await createGapDrivenProposals() })
   } catch (e) {
     fail(ctx, e)
   }
@@ -276,14 +275,13 @@ router.post('/proposals/:id/heldout', async (ctx) => {
   if (writeDenied(ctx)) return
   const b = bodyOf(ctx)
   try {
-    ctx.body = {
-      ok: true,
+    ok(ctx, {
       proposal: await attachHeldout(ctx.params.id, {
         setId: String(b.setId ?? ''),
         answers: Array.isArray(b.answers) ? b.answers : [],
         actor: actorOf(ctx, b),
       }),
-    }
+    })
   } catch (e) {
     fail(ctx, e)
   }
