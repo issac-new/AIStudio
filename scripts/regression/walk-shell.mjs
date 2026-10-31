@@ -70,17 +70,17 @@ try {
       await page.locator(`[data-testid=${testid}]`).first().click({ timeout: 8000 })
       await page.waitForTimeout(2500)
       const h = await page.evaluate(() => location.hash)
-      if (h.includes(wantIn) && !h.includes(wantOut)) return h
+      if (h.includes(wantIn) && (wantOut === null || !h.includes(wantOut))) return h
     }
     throw new Error(`两次点击未跳转, hash=${await page.evaluate(() => location.hash)}`)
   }
   await step('视图切换器 → IDE 工作台', async () => {
-    const h = await switchAndWait('ia-workspace-ide', 'ide', '')
+    const h = await switchAndWait('ia-workspace-ide', 'ide', null)
     await led.shot(page, 'view-switch-ide')
     return h
   })
   await step('视图切换器 → 返回沟通协作', async () => {
-    await switchAndWait('ia-workspace-collab', '', 'ide')
+    await switchAndWait('ia-workspace-collab', null, 'ide')
   })
 
   await step('搜索框（会话/任务/房间）', async () => {
