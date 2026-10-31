@@ -63,3 +63,4 @@
 {"at":"2026-10-31T09:33:54Z","spec":"docs/superpowers/specs/2026-10-31-rsi-p2-batch.md","receipt":"ae90bca4a55f552846376d7955dd7cc23f13512d","commit":"146a4138a"}
 {"at":"2026-10-31T09:36:03Z","spec":"docs/superpowers/specs/2026-10-31-release-v1.0.4-overlay.md","receipt":"3a2f69f99713a6951335a49622ab71aab5b13565","commit":"146a4138a"}
 {"at":"2026-10-31T09:41:41Z","spec":"docs/superpowers/specs/2026-10-31-release-v1.0.4-overlay.md","receipt":"a827cc86848b0e5cc7e1d9c90b504853a7513f28","commit":"4380d1e98"}
+{"at":"2026-10-31T10:19:03Z","spec":"docs/superpowers/specs/2026-10-31-package-lock-version-unify.md","receipt":"3df13c251bc33a63947ad84b5ac77d9e465a47ec","commit":"7aa1a7354"}

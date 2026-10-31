@@ -185,6 +185,24 @@ for (const key of REQUIRED_MODULES) {
   if (!existsSync(resolve(ROOT, 'scripts/make-release-packages.mjs'))) fail('packaging', '打包脚本缺失：scripts/make-release-packages.mjs')
 }
 
+// ── 整体包版本三载体对账（2026-10-31 版本归一批）：package.json 真源＋package-lock.json 派生同步 ──
+// v1.0.1–v1.0.4 四轮发布 package-lock 根 version 滞留 1.0.0-overlay（本仓 node_modules 为借用
+// 软链、根从不跑 npm install，无人触发顺带修复）——发布批改 package.json 必须同批同步 lock 两处。
+{
+  const full = manifest.packaging?.fullPackage?.version
+  let pkgV = ''
+  try { pkgV = String(JSON.parse(readCarrier('package.json')).version ?? '') } catch (e) { fail('packaging', `package.json 不可解析：${e.message}`) }
+  if (full && pkgV && pkgV !== full) {
+    fail('packaging', `package.json version=${pkgV} ≠ 清单 fullPackage ${full}（真源漂移）`)
+  }
+  try {
+    const lock = JSON.parse(readCarrier('package-lock.json'))
+    if (lock.version !== pkgV || lock.packages?.['']?.version !== pkgV) {
+      fail('packaging', `package-lock.json 根版本（${lock.version} / ${lock.packages?.['']?.version}）≠ package.json ${pkgV}——发布批须同批同步 lock 两处 root version`)
+    }
+  } catch (e) { fail('packaging', `package-lock.json 不可解析：${e.message}`) }
+}
+
 // ── buildCommand 脚本在位（不执行构建）＋ npm script 名存在 ──
 let pkgScripts = {}
 try { pkgScripts = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8')).scripts ?? {} } catch { pkgScripts = {} }
