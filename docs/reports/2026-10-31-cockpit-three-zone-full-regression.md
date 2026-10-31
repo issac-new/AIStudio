@@ -136,7 +136,7 @@
 | PATCH running 归 409 | 活体 409 `state_transition_rejected` | 补丁 714 + `kanban-patch-409-guard` |
 | WS upgrade 异常守卫 | 合法 open / 坏 token 401；异常回 503 | 补丁 715 + `kanban-ws-upgrade-guard` |
 | admin 写范围收窄 | 厂商测试 19/19 | 补丁 716 + `kanban-admin-scope-guard` |
-| 架构棘轮 2 红 | 7/7 绿；全量 7065/0（合入后主树） | `architecture-ratchet` |
+| 架构棘轮 2 红 | 7/7 绿；全量 7066/0（v0.8.0 升级后主树） | `architecture-ratchet` |
 | 后端启动阻断 | `rawGain` null 早退，`npm run serve` 通过 | `custom/server/harness/workbench/loop.ts` |
 | 推演设置写 | 幂等保存「已保存」 | `shots/sim-undo/` |
 | 地图标注写/删 | 保存→删除成功 | `shots/sim-undo/` |
