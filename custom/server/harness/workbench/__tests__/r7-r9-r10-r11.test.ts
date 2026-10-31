@@ -48,6 +48,20 @@ describe('R11 SQLite 后端（env 渐进）', () => {
   })
 })
 
+describe('R11 任务态落盘接线', () => {
+  it('running 行落盘→overview 暴露 interruptedProbes；收敛删行后消失', async () => {
+    process.env.HARNESS2_STORE_SQLITE = '1'
+    const { persistAutoJob } = await import('../store')
+    const { overview } = await import('../service')
+    persistAutoJob('hw-0001', { proposalId: 'hw-0001', status: 'running', startedAt: '2026-11-01T00:00:00Z' })
+    const o1 = overview()
+    expect(o1.interruptedProbes.map((x) => x.proposalId)).toContain('hw-0001')
+    expect(o1.interruptedProbes[0].startedAt).toBe('2026-11-01T00:00:00Z')
+    persistAutoJob('hw-0001', null)
+    expect(overview().interruptedProbes).toHaveLength(0)
+  })
+})
+
 describe('R9/R10 纯函数面', () => {
   it('skillDifferential 未测→skill_undifferentiated；负差分→skill_negative_delta（loop 门侧见 loop.test）', async () => {
     const { surfaceArtifactsOf } = await import('../service')

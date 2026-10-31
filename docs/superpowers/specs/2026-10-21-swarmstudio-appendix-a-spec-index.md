@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（446 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（447 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 440 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 447 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -444,11 +444,12 @@
 | 2026-10-31-rsi-improvement-plan | AIStudio RSI 改进方案 | 四切面前沿调研＋仓内审计→R1-R12 分档项目（证据自动化/双体系合一/经验库治理/规模化）＋六条不做清单；执行按批次另立 spec |
 | 2026-10-31-superagent-domain-auth | super-agent 吸收 A+B 批：编排域与授权流水 | 新域 `custom/server/orchestrator/`（Trigger/Thread/Subscription/Decision/Mandate/Assignment 六表＋准入表＋四类策略版本＋看板事件桥）；DecisionGrant 增 strength/policyVersion/ruleIds；HumanGate 角色白名单与代批标注；patch 719 挂载 `/api/orchestrator/*`；vitest 24/24＋approval-inbox 96/96＋拼合树 pytest 11/11 |
 | 2026-10-31-cockpit-attention-panel | 工作台概览三问重排与注意力经济守门 | `/app/dash` 概览按「要我做→是否健康→进展」重排；健康节仅异常显形（最多 3 条＋折叠）、计数=列表长度、标签写「等谁要什么」；五条规则入组件测试；ia2 934/934 绿 |
-| 2026-10-31-rsi-exec-batch1 | RSI 首批执行方案 | R1 探针修复/R4 k≥2/R8 加权检索+批量复核/R12a 验证信号分级（四件 S 规模实施细节与决策；二三批排期附后） |
+| 2026-10-31-rsi-exec-batch1 | RSI 执行方案（R1-R12） | R1-R12 十二件全部执行完毕（三批＋残项：探针双缺陷/加权检索/验证分级/三类证据自动供给/CHASE 变换器/留出门/缺口桥/约束消融/advisory 回路/技能差分/任务族/SQLite 渐进）；执行实记与坑随文 |
 | 2026-10-31-superagent-router | super-agent 吸收 C 批：Router 能力（语义评估与汇总） | 不新设常驻会话：`evaluator.ts` 走 gateway 会话做语义评估（三项配置缺一即 unavailable，超时/排队不重发）＋`summarizer.ts` 确定性汇总（5 分钟窗、终态留标题、纯列变更静默）＋`pass.ts` 评估轮（仅 auto+accept 推进）；vitest 46/46 |
 | 2026-10-31-orchestrator-delivery | 编排域汇总投递 | digest → thread_key → 看板 `kanban_notify_subs` 反查原信道 → `matrixSend` 直发；成功置 delivered、失败累加 attempts/last_error；订阅为空记 skipped；定时器默认关（`ORCHESTRATOR_DELIVER_INTERVAL_MS`）；vitest 7/7 |
 | 2026-10-31-model-resilience-hardening | 模型能力波动下的交付确定性加固 | A 完成门 DoD 契约（AC/dod 派生＋结构化回执＋TAP/JUnit 重算＋派发源哈希）；B qgate `runtime-proof` 可解析＋L0 硬件集 pre-push 默认拦截；C 能力矩阵×风险分档路由（高风险无证据 requiresHuman）；D 巡检/轮换补偿默认开＋建卡幂等唯一索引；patches 720-721 |
 | 2026-10-31-prepush-push-range-fix | pre-push 判定面修正 | 只判本次推送的提交范围（stdin 引用→merge-base/diff＋`--changed`），不拿 main 工作树的 inject vendor 脏态误拦；删除引用跳过；stdin 回放给 git-lfs；守门 5 例 |
+| 2026-11-01-design-sync-rsi-exec | RSI 执行后设计文档同步 | 工作台专项设计 §4/§5/§6/§14 对齐现行（门禁三档 64 code、26 端点、字段全集）；正本 §5.8 补七条证据约束、§7.3 更正 v0.8.0/zcode 升级状态与台账 41 行口径；总账补三行稳定参数；顺带修 R11 任务态落盘无调用方与 SQLite 连接缓存未绑路径两处实现缺口 |
 | 2026-11-01-k19-new-endpoint-response-shape | K19 新增端点响应形状收敛 | modelcap 走 lib/http 的 ok/fail/bodyOf；RouteDecision.ok→routed 解耦域决策；workitem 两处错误体收敛抵掉并行新增；ok:false 878→873、ctx.body 1190→1187，均低于基线 |
 | 2026-11-01-runtime-backfill-session-rotation-plugin-api | runtime 模板回灌 | session_rotation←705 软轮换第四类判据（与注入态逐字节同）；plugin_api←RFC 9457 problem+json 冲突体（宿主唯一正本入库）；回灌后 deploy 零保留差异 |
 | 2026-11-01-dod-kernel-gate-lineage-reclaim | 完成契约门下沉内核＋血统收回 | dod-drill 两轮穿透实锤（worker 走 installs CLI 无门完成）→门下沉 complete_task 唯一边界＋CLI --receipt＋启动器 shim 收回 .venv 血统＋HERMES_SKIP_UPDATE；内核门测试 5 分支全绿 |
