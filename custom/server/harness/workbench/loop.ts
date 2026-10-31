@@ -442,7 +442,9 @@ export function attributeGain(input: {
   const candidate = input.candidatePassAt1 ?? null
   const equalBudget = input.equalBudgetPassAt1 ?? null
   const rawGain = baseline != null && candidate != null ? candidate - baseline : null
-  if (baseline == null || candidate == null || equalBudget == null) {
+  // rawGain 为 null 当且仅当 baseline/candidate 缺失；一并纳入早退，既保持
+  // 「不猜数」语义，也让下方 note 的数值乘法在 TS 收窄后成立（main 重启门实测）。
+  if (baseline == null || candidate == null || equalBudget == null || rawGain == null) {
     return {
       rawGain,
       computeGain: null,

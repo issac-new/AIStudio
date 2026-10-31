@@ -76,12 +76,24 @@ try {
     await led.shot(page, 'orchestration-editor')
   })
 
-  await step('推演设置（/app/sim/settings）只读核对', async () => {
+  await step('推演设置（/app/sim/settings）读写（当前值幂等保存）', async () => {
     await nav('ia-side-nav-sim-settings', '#/app/sim/settings')
     await panel('[data-testid=sst-page]', '推演设置')
     const fields = page.locator('[data-testid^=sst-input-]')
     if ((await fields.count()) < 1) throw new Error('设置输入项缺席')
-    await led.shot(page, 'settings')
+    // 用读取到的当前值原样保存：验证 PUT 写路径与服务端有效值回传，不改变配置。
+    await page.locator('[data-testid=sst-save]').first().click({ timeout: 8000 })
+    const saved = page.locator('[data-testid=sst-saved]').first()
+    const saveErr = page.locator('[data-testid=sst-save-error]').first()
+    await Promise.race([
+      saved.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      saveErr.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+    ])
+    if (await saveErr.count() && await saveErr.isVisible().catch(() => false)) {
+      throw new Error('设置保存失败：' + (await saveErr.innerText()).trim())
+    }
+    if (!(await saved.isVisible().catch(() => false))) throw new Error('设置保存后无「已保存」回执')
+    await led.shot(page, 'settings-saved')
   })
 
   await step('业务地图（/app/sim/map）空值校验 + 需求影响分析', async () => {
@@ -104,6 +116,28 @@ try {
       await page.waitForTimeout(400)
     }
     await led.shot(page, 'map-analyzed')
+    // 人工标注写回路（可逆）：选节点 → 填备注 → 保存 → 删除，验证 mapnotes LWW 写路径。
+    const node = page.locator('.vue-flow__node').first()
+    await node.waitFor({ state: 'visible', timeout: 15000 })
+    await node.click({ timeout: 8000 })
+    const notePanel = page.locator('[data-testid=sim-map-note-panel]')
+    if (!(await notePanel.isVisible().catch(() => false))) {
+      await page.evaluate(() => document.querySelector('.vue-flow__node')?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    }
+    await notePanel.waitFor({ state: 'visible', timeout: 8000 })
+    await page.locator('[data-testid=sim-map-note-input]').fill('走查人工标注（保存后即删）')
+    await page.locator('[data-testid=sim-map-note-checked]').check({ force: true }).catch(() => {})
+    await page.locator('[data-testid=sim-map-note-save]').click({ timeout: 8000 })
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-testid=sim-map-note-msg]')
+      return Boolean(el && /保存|未覆盖/.test(el.textContent || ''))
+    }, undefined, { timeout: 10000 })
+    await led.shot(page, 'map-note-saved')
+    await page.locator('[data-testid=sim-map-note-delete]').click({ timeout: 8000 })
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-testid=sim-map-note-msg]')
+      return Boolean(el && /删除/.test(el.textContent || ''))
+    }, undefined, { timeout: 10000 })
   })
 } finally {
   led.flush()
