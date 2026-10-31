@@ -592,6 +592,33 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
             })
           }
         }
+
+        // ---- CHASE 反事实门（D2，2026-10-31 吸收轮）：协议级捷径检验 ----
+        // 语义：候选 harness 在「语义保持、协议变换」的变体集上的运行读数。
+        // 原始增益为正但变体增益 ≤ 噪声带 ⇒ 增益绑定在原协议的可利用面（任务名/
+        // 返回格式/错误注入），判捷径；变体读数缺席默认 warning 交人工裁决。
+        const cf = probe.evidence.counterfactual
+        if (gain != null && gain > 0) {
+          const noiseDelta = reg?.noiseDelta ?? null
+          if (!cf) {
+            const msg = '未绑定反事实变体运行（CHASE D2）：任务留出抓不到协议级捷径——增益可能绑定原协议可利用面'
+            if (cfg.requireCounterfactual) blockers.push({ code: 'counterfactual_missing', message: msg })
+            else warnings.push({ code: 'counterfactual_missing', message: msg })
+          } else if (cf.passAt1 == null) {
+            warnings.push({ code: 'counterfactual_unreadable', message: `反事实运行 ${cf.runId} 无 passAt1 聚合，捷径检验不可判` })
+          } else {
+            const basePassAt1 = proposal.baseline?.passAt1 ?? null
+            const cfGain = basePassAt1 != null ? cf.passAt1 - basePassAt1 : null
+            if (cfGain == null) {
+              warnings.push({ code: 'counterfactual_unreadable', message: '提案基线缺 passAt1，反事实增益不可算' })
+            } else if (noiseDelta != null && cfGain <= noiseDelta) {
+              blockers.push({
+                code: 'counterfactual_gain_collapse',
+                message: `原始增益 ${(gain * 100).toFixed(1)} 分，但反事实变体增益 ${(cfGain * 100).toFixed(1)} 分 ≤ 噪声带 δ=${(noiseDelta * 100).toFixed(1)} 分——增益未迁移到协议变换后的同义任务，判协议级捷径（CHASE）`,
+              })
+            }
+          }
+        }
       }
       // ---- HarnessPro 帕累托选拔（2026-10-23 吸收轮）：选中候选被支配=硬拦 ----
       // 论文「无情淘汰性能低于初始底线、或处于帕累托劣势（花钱更多、分还更低）的废案」。
@@ -755,6 +782,8 @@ export interface RsiConfig {
   requireAttribution: boolean
   /** true=未记录约束保持断言直接拦（缺省 false，warning 交人工裁决）。 */
   requireConstraints: boolean
+  /** true=未绑定反事实变体运行直接拦（缺省 false，warning 交人工裁决）。 */
+  requireCounterfactual: boolean
 }
 
 function envInt(name: string, fallback: number): number {
@@ -787,7 +816,56 @@ export function rsiConfig(): RsiConfig {
     requireNoise: process.env.HARNESS2_RSI_REQUIRE_NOISE === '1',
     requireAttribution: process.env.HARNESS2_RSI_REQUIRE_ATTRIBUTION === '1',
     requireConstraints: process.env.HARNESS2_RSI_REQUIRE_CONSTRAINTS === '1',
+    requireCounterfactual: process.env.HARNESS2_RSI_REQUIRE_COUNTERFACTUAL === '1',
   }
+}
+
+/**
+ * 垫脚石档案（D3，2026-10-31 吸收轮；DGM/ADAS 档案采样思想）：
+ * 把被拒/回滚提案连同其最佳探测读数暴露为「垫脚石候选」——纯爬山会丢掉
+ * 低分祖先，而它们常是通往最优的必经路径。提案端可据此在其新提案的
+ * 假设里显式引用/改造这些分支。只读投影，不改变任何状态。
+ */
+export interface ArchiveSteppingStone {
+  proposalId: string
+  surfaceKey: SurfaceKey
+  title: string
+  hypothesis: string
+  status: ProposalStatus
+  /** 该提案全部已记录探测的最高 passAt1（无探测=null）。 */
+  bestPassAt1: number | null
+  /** 选中候选相对基线的 passAt1 差（无读数=null）。 */
+  bestDelta: number | null
+  updatedAt: string
+}
+
+export function proposalArchive(
+  proposals: Proposal[],
+  surfaceKey?: SurfaceKey,
+): ArchiveSteppingStone[] {
+  return proposals
+    .filter((p) => (p.status === 'rejected' || p.status === 'rolled_back')
+      && (!surfaceKey || p.surfaceKey === surfaceKey))
+    .map((p) => {
+      const selected = composedVariant(p)
+      const recorded = selected
+        ? p.probes.find((x) => x.variantId === selected.id && x.status === 'recorded' && x.evidence)
+        : undefined
+      const deltas = p.probes
+        .filter((x) => x.status === 'recorded' && x.evidence?.passAt1 != null && p.baseline?.passAt1 != null)
+        .map((x) => (x.evidence!.passAt1 as number) - (p.baseline!.passAt1 as number))
+      return {
+        proposalId: p.id,
+        surfaceKey: p.surfaceKey,
+        title: p.title,
+        hypothesis: p.hypothesis,
+        status: p.status,
+        bestPassAt1: recorded?.evidence?.passAt1 ?? null,
+        bestDelta: deltas.length > 0 ? Math.max(...deltas) : null,
+        updatedAt: p.updatedAt,
+      }
+    })
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
 }
 
 /** 论文退火编辑预算：b_t = ⌈b_min + (b_max−b_min)·½(1+cos(πt/T))⌉；t≥T 后恒为 b_min。 */

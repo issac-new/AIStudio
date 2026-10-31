@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   annealedEditBudget, attributeGain, behaviorContrast, candidateDiversity, diffSummary, editCountOfVariant,
+  proposalArchive,
   evaluatePromotion, evolutionReport, findBenchmarkLeakage, findGraderMarkers,
   findGraderMarkersInPath, hypothesisRetries, hypothesisSimilarity, leakageBlockers,
   maxEditCount, pruneSignal, rsiConfig, sha256, stallDetection, submitReadiness,
@@ -609,5 +610,63 @@ describe('HDA 增益归因与约束保持门', () => {
     } finally {
       delete process.env.HARNESS2_RSI_REQUIRE_CONSTRAINTS
     }
+  })
+})
+
+// 2026-10-31 吸收轮第二批：CHASE 反事实门（D2）＋垫脚石档案（D3）。
+describe('CHASE 反事实门与垫脚石档案', () => {
+  const base = () => ({ proposal: fixture(), currentChampion: null as Champion | null, applyRequested: false, applyEnvEnabled: false })
+
+  function withCf(cfPassAt1: number | null): Proposal {
+    const p = fixture()
+    const probe = p.probes.find((x) => x.variantId === 'v1')!
+    probe.evidence = { ...probe.evidence!, counterfactual: { runId: 'run-cf', setId: 'set-cf', passAt1: cfPassAt1 } }
+    return p
+  }
+
+  it('未绑反事实默认 warning；HARNESS2_RSI_REQUIRE_COUNTERFACTUAL=1 升 blocker', () => {
+    const warn = evaluatePromotion(base())
+    expect(warn.warnings.map((w) => w.code)).toContain('counterfactual_missing')
+    expect(warn.blockers.map((b) => b.code)).not.toContain('counterfactual_missing')
+    process.env.HARNESS2_RSI_REQUIRE_COUNTERFACTUAL = '1'
+    try {
+      const blocked = evaluatePromotion(base())
+      expect(blocked.blockers.map((b) => b.code)).toContain('counterfactual_missing')
+    } finally {
+      delete process.env.HARNESS2_RSI_REQUIRE_COUNTERFACTUAL
+    }
+  })
+
+  it('变体增益≤噪声带 → blocker counterfactual_gain_collapse（协议级捷径）；增益迁移则无此 blocker', () => {
+    // fixture 基线 passAt1=0.5，候选 0.8（增益 0.3）；变体 0.52 ⇒ cfGain=0.02 ≤ δ
+    const collapsed = evaluatePromotion({ ...base(), proposal: withCf(0.52), regularization: reg({ noiseDelta: 0.05 }) })
+    expect(collapsed.blockers.map((b) => b.code)).toContain('counterfactual_gain_collapse')
+    const migrated = evaluatePromotion({ ...base(), proposal: withCf(0.75), regularization: reg({ noiseDelta: 0.05 }) })
+    expect(migrated.blockers.map((b) => b.code)).not.toContain('counterfactual_gain_collapse')
+  })
+
+  it('反事实读数缺 passAt1 / 基线缺 passAt1 → warning counterfactual_unreadable', () => {
+    const unreadable = evaluatePromotion({ ...base(), proposal: withCf(null) })
+    expect(unreadable.warnings.map((w) => w.code)).toContain('counterfactual_unreadable')
+    expect(unreadable.blockers.map((b) => b.code)).not.toContain('counterfactual_gain_collapse')
+  })
+
+  it('D3：proposalArchive 只收被拒/回滚件，带最佳读数与时间倒序；面过滤生效', () => {
+    const rejected = fixture()
+    rejected.status = 'rejected'
+    rejected.updatedAt = '2026-10-31T09:00:00.000Z'
+    const rolled = fixture()
+    rolled.id = 'hw-002'
+    rolled.status = 'rolled_back'
+    rolled.surfaceKey = 'skills'
+    rolled.updatedAt = '2026-10-31T10:00:00.000Z'
+    const open = fixture()
+    open.id = 'hw-003'
+    const archive = proposalArchive([rejected, rolled, open])
+    // 时间倒序：rolled（10:00）先于 rejected（09:00）
+    expect(archive.map((a) => a.proposalId)).toEqual(['hw-002', 'hw-001'])
+    expect(archive[0].bestPassAt1).toBeCloseTo(0.8)
+    expect(archive[0].bestDelta).toBeCloseTo(0.3)
+    expect(proposalArchive([rejected, rolled, open], 'skills').map((a) => a.proposalId)).toEqual(['hw-002'])
   })
 })

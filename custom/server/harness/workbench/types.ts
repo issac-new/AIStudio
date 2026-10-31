@@ -106,6 +106,18 @@ export interface RegressionEvidence {
 }
 
 /**
+ * CHASE 反事实证据（D2，2026-10-31 吸收轮）：同一候选 harness 在「语义保持、执行协议
+ * 变换」的变体评测集上的真实运行（arXiv 2609.18366）。原始增益在变体上崩塌 ⇒ 协议级
+ * 捷径而非通用改进。变体集本身由评测域产出（如任务 id/文件名/返回格式变换），本层
+ * 只消费运行读数，不生成变体。
+ */
+export interface CounterfactualEvidence {
+  runId: string
+  setId: string
+  passAt1: number | null
+}
+
+/**
  * HDA 等预算基线（2026-10-31 吸收轮）：未改动 harness 在同等 test-time compute 下的
  * 真实评测运行。用于把「候选涨的分」拆成算力增益与 harness 残差，不接受手填。
  */
@@ -155,6 +167,8 @@ export interface ProbeMetrics {
   regression?: RegressionEvidence
   /** 等预算基线（HDA）；缺席=未测，归因门按配置决定 warning/blocker。 */
   equalBudgetBaseline?: EqualBudgetBaseline | null
+  /** 反事实变体运行（CHASE D2）；缺席=未测，门按配置决定 warning/blocker。 */
+  counterfactual?: CounterfactualEvidence | null
 }
 
 export type QualityVerdict = 'improved' | 'regressed' | 'neutral' | 'unknown'

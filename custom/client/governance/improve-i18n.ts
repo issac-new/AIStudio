@@ -206,6 +206,17 @@ export interface ImproveCopy {
   hypothesisRetry: string
   noiseTitle: string
   noiseHint: string
+    equalBudgetRunId: string
+    counterfactualRunId: string
+    constraintTitle: string
+    constraintPlaceholder: string
+    constraintSave: string
+    constraintRecorded: string
+    constraintHint: string
+    constraintBadLine: string
+    constraintBadStatus: string
+    constraintEmpty: string
+    archiveTitle: string
   noiseRunIds: string
   noiseCalibrate: string
   noiseCalibrated: string
@@ -426,6 +437,18 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     hypothesisRetry: '似曾相识：该面有过高度相似的失败假设',
     noiseTitle: '噪声标定',
     noiseHint: '用 ≥2 条「未改动基线」的同评测集真实运行算 passAt1 半极差 = δ。δ 不提供调参入口——调低 δ 只会买到噪声分。',
+    // RSI 二批（2026-10-31）：D2/D3/约束录入
+    equalBudgetRunId: '等预算基线运行 id（HDA，可选）',
+    counterfactualRunId: '反事实变体运行 id（CHASE，可选）',
+    constraintTitle: '约束保持断言',
+    constraintPlaceholder: '每行：id | 陈述 | pass/fail/unknown | 证据引用',
+    constraintSave: '记录约束',
+    constraintRecorded: '已记录约束',
+    constraintHint: '能力涨了，行为约束不许退化——晋级前记录',
+    constraintBadLine: '约束行格式错：{line}',
+    constraintBadStatus: '约束状态非法（只接受 pass/fail/unknown）：{line}',
+    constraintEmpty: '至少需要一条约束检查',
+    archiveTitle: '垫脚石档案（被拒/回滚提案）',
     noiseRunIds: '基线运行 ID（≥2 条，逗号或换行分隔）',
     noiseCalibrate: '标定噪声带',
     noiseCalibrated: '已标定',
@@ -644,6 +667,18 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     hypothesisRetry: 'Déjà vu: a highly similar failed hypothesis exists on this surface',
     noiseTitle: 'Noise calibration',
     noiseHint: 'Compute δ = half-range of passAt1 from ≥2 real runs of the unchanged baseline on one eval set. δ is deliberately not tunable — lowering it only buys noise.',
+    // RSI 二批（2026-10-31）：D2/D3/约束录入
+    equalBudgetRunId: 'Equal-budget run id (HDA, optional)',
+    counterfactualRunId: 'Counterfactual run id (CHASE, optional)',
+    constraintTitle: 'Constraint assertions',
+    constraintPlaceholder: 'Per line: id | statement | pass/fail/unknown | evidence ref',
+    constraintSave: 'Record constraints',
+    constraintRecorded: 'Constraints recorded',
+    constraintHint: 'Capability may rise; behavior constraints must not regress — record before promotion',
+    constraintBadLine: 'Bad constraint line: {line}',
+    constraintBadStatus: 'Invalid constraint status (pass/fail/unknown only): {line}',
+    constraintEmpty: 'At least one constraint check is required',
+    archiveTitle: 'Stepping-stone archive (rejected/rolled-back)',
     noiseRunIds: 'Baseline run IDs (≥2, comma or newline separated)',
     noiseCalibrate: 'Calibrate noise band',
     noiseCalibrated: 'Calibrated',
