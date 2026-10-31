@@ -874,3 +874,4 @@
 {"ts":"2026-10-30T07:54:08Z","node":"生成","actor":"generate-skill","tool":"upgrade","status":"started","note":"/Users/cuishi/lab/AIStudio/.claude/skills/aistudio-dev"}
 {"ts":"2026-10-30T07:54:10Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/Users/cuishi/lab/AIStudio/.claude/skills/.swarm-yuan-upgrade.fXJQYD/skill"}
 {"ts":"2026-10-30T07:54:10Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/Users/cuishi/lab/AIStudio/.claude/skills/.swarm-yuan-upgrade.fXJQYD/skill"}
+{"ts":"2026-10-31T05:10:23Z","node":"回归","actor":"zcode/daily-workbench","tool":"daily-workbench-regression-series","status":"done","note":"日常工作台全功能回归三批+终清：走查 75/0、全量 7045/0、spec×6、decisions 16、录屏三章仓外、补丁 713、幽灵卡销案"}
