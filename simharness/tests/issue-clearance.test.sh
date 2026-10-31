@@ -59,4 +59,25 @@ else
   echo "FAIL ③ 无台账轮不应红（rc=$RC3）："; printf '%s\n' "$OUT3"; fails=$((fails+1))
 fi
 
+# ── 场景④：末次 DISP 生效（2026-10-31 清账批）──
+# 同键先延后、人工复核回写观察终态 → rc=0（旧口径把历史延后行计入=回写后仍恒红，
+# 与报告「按唯一键去重收尾」口径冲突）；反向：观察回写成延后 → rc≠0。
+R4="$SR/runs/20261102-v8-runW"; mkdir -p "$R4/evidence"
+: > "$R4/evidence/compensation-ledger.tsv"
+cat > "$R4/evidence/issues.log" <<'EOF'
+ISSUE|conclusion-gap|DEV-CHWX|结论行未发
+DISP|conclusion-gap|DEV-CHWX|延后（结构性缺陷类别禁自动观察归桶——须下轮开跑前人工处置并带锚点回写）
+DISP|conclusion-gap|DEV-CHWX|观察（人工复核终态 2026-10-31：结论行纪律已入册方案纪律 66 面——用户裁定全部清账）
+ISSUE|g3-local-gate-missing|DEV-CHWX|分支缺 testlog
+DISP|g3-local-gate-missing|DEV-CHWX|观察（收尾链自动归桶）
+DISP|g3-local-gate-missing|DEV-CHWX|延后（人工复核改判：仍须下轮补证）
+EOF
+OUT4="$(AIPAY_SIM_ROOT="$SR" RUN_ID=20261102-v8-runW bash "$HERE/mux/mx-compensation-ledger.sh" check-issue-clearance 2>&1)"; RC4=$?
+if [ "$RC4" -ne 0 ] && printf '%s' "$OUT4" | grep -q 'g3-local-gate-missing·DEV-CHWX' \
+   && ! printf '%s' "$OUT4" | grep -q 'conclusion-gap·DEV-CHWX'; then
+  echo "PASS ④ 末次 DISP 生效（回写终态转绿/改判延后仍红）"
+else
+  echo "FAIL ④ 末次 DISP 口径未按预期（rc=$RC4）："; printf '%s\n' "$OUT4"; fails=$((fails+1))
+fi
+
 [ "$fails" -eq 0 ] && echo "issue-clearance: ALL-PASS" || { echo "issue-clearance: ${fails} FAIL"; exit 1; }
