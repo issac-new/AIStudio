@@ -12,7 +12,7 @@
 
 ### 二、dev 自动登录网关让位（registries/client/entry.mts devAutoLogin）
 
-走查实录：冷启必现一条 401 控制台红——POST /api/auth/login {admin, dev-bootstrap}（fetch 调用栈定位于 devAutoLogin）。本机网关已配 Matrix 免密凭据（常见态）时 LoginView 网关自动登录必然接管会话，该探测注定 401；浏览器网络层自动记行、应用层无法静默。修复：admin 探测前先轮询等 key 落地（200ms×9=1.8s），网关路径落下即让位跳过；未落（空库引导机）保持原首登建号链，**零新增请求**（否决 gateway-credentials 预探测方案：未配置时它回 404，等于拿一条 404 红换一条 401 红）。
+走查实录：冷启必现一条 401 控制台红——POST /api/auth/login {admin, dev-bootstrap}（fetch 调用栈定位于 devAutoLogin）。本机网关已配 Matrix 免密凭据（常见态）时 LoginView 网关自动登录必然接管会话，该探测注定 401；浏览器网络层自动记行、应用层无法静默。修复：admin 探测前先轮询等 key 落地（200ms×18=3.6s；首版 1.8s 窗口实测漏过——网关链冷启 ~2.4s 才落 key，差 150ms，活体复验后加宽），网关路径落下即让位跳过；未落（空库引导机）保持原首登建号链，**零新增请求**（否决 gateway-credentials 预探测方案：未配置时它回 404，等于拿一条 404 红换一条 401 红）。
 
 ### 三、走查探针 E/I 段重写（scripts/regression/daily-workbench-walkthrough.mjs）
 
