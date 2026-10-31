@@ -76,22 +76,24 @@ describe('entry.mts devAutoLogin 手动登出闸门（2026-10-21 修复）', () 
   })
 })
 
-describe('entry.mts devAutoLogin 网关让位（2026-10-31 回归收尾批）', () => {
-  // 冷启实录：本机网关配 Matrix 免密时 admin/dev-bootstrap 探测注定 401，浏览器
-  // 网络层自动记红一条（应用层无法静默）。让位契约：admin fetch 前先轮询等
-  // hermes_api_key（网关路径落下即跳过）；不新增任何请求（否决 gateway-credentials
-  // 预探测：未配置时 404 换 401 不净）。
+describe('entry.mts devAutoLogin 网关让位（2026-10-31 回归收尾批 v2）', () => {
+  // 冷启实录：本机网关配 Matrix 免密时 admin/dev-bootstrap 探测注定 401（浏览器
+  // 网络层自动记红）。v2 契约：admin fetch 前先探 gateway-credentials（回环 GET），
+  // configured 即让位 return。v1 轮询等待案否决——devAutoLogin 在 boot Promise.all
+  // 关键路径，等待推迟 app.mount/LoginView，网关链 2.4s→4.1s 反落窗外（自噬）。
   const lines = readFileSync(ENTRY, 'utf8').split('\n')
 
-  it('admin 探测前有等待 key 的让位轮询，且落下即 return', () => {
+  it('admin 探测前有 gateway-credentials 探测，且 configured 即让位', () => {
     const fnStart = lines.findIndex(l => l.includes('async function devAutoLogin'))
     expect(fnStart).toBeGreaterThan(-1)
     const fetchLine = lines.findIndex((l, i) => i > fnStart && l.includes("fetch('/api/auth/login'"))
     expect(fetchLine).toBeGreaterThan(fnStart)
-    const waitLoop = lines.findIndex((l, i) => i > fnStart && i < fetchLine && /for \(let i = 0; i < 18/.test(l))
-    expect(waitLoop, '让位轮询（≤3.6s 等 key）须在 admin fetch 之前').toBeGreaterThan(fnStart)
-    const yieldReturn = lines.findIndex((l, i) => i > waitLoop && i < fetchLine
-      && l.trim() === "if (localStorage.getItem('hermes_api_key')) return")
-    expect(yieldReturn, '轮询后须有「key 已落即 return」让位分支（行内式）').toBeGreaterThan(waitLoop)
+    const probeLine = lines.findIndex((l, i) => i > fnStart && i < fetchLine && l.includes("fetch('/api/matrix/gateway-credentials'"))
+    expect(probeLine, 'gateway 探测须在 admin fetch 之前').toBeGreaterThan(fnStart)
+    const yieldLine = lines.findIndex((l, i) => i > probeLine && i < fetchLine && l.includes('?.configured) return'))
+    expect(yieldLine, 'configured 即让位 return 须在探测之后、admin fetch 之前').toBeGreaterThan(probeLine)
+    // v1 等待轮询不得回归（自噬案）：探测与 admin fetch 之间不得出现 setTimeout 轮询
+    const waitLoop = lines.findIndex((l, i) => i > probeLine && i < fetchLine && /setTimeout/.test(l))
+    expect(waitLoop, 'boot 关键路径不得有等待轮询（v1 自噬）').toBe(-1)
   })
 })
