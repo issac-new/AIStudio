@@ -70,7 +70,7 @@ try {
       await page.locator(`[data-testid=${testid}]`).first().click({ timeout: 8000 })
       await page.waitForTimeout(2500)
       const h = await page.evaluate(() => location.hash)
-      if (h.includes(wantIn) && (wantOut === null || !h.includes(wantOut))) return h
+      if ((wantIn === null || h.includes(wantIn)) && (wantOut === null || !h.includes(wantOut))) return h
     }
     throw new Error(`两次点击未跳转, hash=${await page.evaluate(() => location.hash)}`)
   }
