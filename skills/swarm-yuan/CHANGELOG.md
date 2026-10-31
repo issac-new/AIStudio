@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.98.1] - 2026-10-31
+
+v1.0.4 发布轮随批（patch：判定库单点缺陷修复；门禁数 56 与变量数 199 不变）。缺陷由 zcode 3.17.1 同步批实锤并独立提交（9066a492a），本条目为版本载体补记。
+
+### Fixed
+
+- **`spf_design_sync_check` 大变更集 SIGPIPE 误判**：`printf '%s\n' "$_decl" | grep -qF` 在 grep 命中即退出时使上游 printf 收 SIGPIPE，pipefail 把管线判非零、`!` 反转成「变更集未含其修订」——zcode 3.17.1 同步的 5,232 文件变更集首次触发（同型坑见 `spf_approved_stream` 注释）。改 here-string（`grep -qF -- "$_d" <<< "$_decl"`）消灭管道；资产（`skills/swarm-yuan/assets/spec-first-lib.sh`）与入库副本（`.swarm-yuan/hooks/spec-first-lib.sh`）双文件同修，l2-kit-parity 字节一致同批。
+
 ## [v2.98.0] - 2026-10-30
 
 HelixHarness 吸收轮（minor：spec-first 判定库新增两类判据＋生成器新增渲染出口；门禁数 56 与变量数 199 不变）。源码级对照滴滴开源的 `didi/helixharness` 后只吸收机制不移植框架形态——本仓 26 步六闸/56 道门/改进台更强。
