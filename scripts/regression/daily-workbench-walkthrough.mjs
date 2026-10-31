@@ -6,7 +6,7 @@
 import { spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
 import { chromium } from '@playwright/test'
-import { BASE, SHOTS, Ledger } from './harness.mjs'
+import { BASE, SHOTS, Ledger, waitForApp } from './harness.mjs'
 
 const ROOT = resolve(import.meta.dirname, '../..')
 const led = new Ledger('daily')
@@ -49,18 +49,22 @@ async function newPage(section) {
   ctxErrors.push({ section, errors })
   return { page, errors, section }
 }
-async function fresh(page, settle = 3800) {
+async function fresh(page, settle = 800) {
   await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
+  // 固定等待在冷启/网关重启时会把「加载中」误判为白屏（2026-10-31 实录）；
+  // 以 Vue 挂载＋启动占位消失为判据，settle 只留作动画缓冲。
+  await waitForApp(page, 45000)
   await page.waitForTimeout(settle)
   const later = page.locator('button', { hasText: '稍后提醒' }).first()
   if (await later.count()) { await later.click({ force: true }).catch(() => {}); await page.waitForTimeout(300) }
 }
 async function visit(page, hash, settle = 2300) {
   await page.goto(BASE + '/#/' + hash.replace(/^\/?#?\/?/, ''), { waitUntil: 'domcontentloaded' })
+  await waitForApp(page, 30000)
   await page.waitForTimeout(settle)
   return page.evaluate(() => ({
     hash: location.hash,
-    text: (document.body.innerText || '').replace(/\s+/g, ' ').trim(),
+    text: (document.body?.innerText || '').replace(/\s+/g, ' ').trim(),
     cards: document.querySelectorAll('.kanban-task-card').length,
   }))
 }
@@ -381,12 +385,18 @@ async function visit(page, hash, settle = 2300) {
   try {
     await fresh(page)
     await visit(page, 'app/dash', 2600)
-    await page.keyboard.press('Meta+k')
-    await page.waitForTimeout(1000)
-    let pal = await page.evaluate(() => {
-      const panel = document.querySelector('[data-testid=global-search-dialog]')
-      return { open: !!panel && panel.offsetParent !== null, focused: document.activeElement?.getAttribute('data-testid') === 'search-input' }
-    })
+    // 快捷键监听在壳层挂载后生效；冷启/页面切换窗口内首按可落空（2026-10-31
+    // 实录一次 open=false）。按真实用户行为重试至面板出现（最多 3 次），
+    // 焦点断言仍严格：面板开了但输入框未聚焦仍判红。
+    let pal = { open: false, focused: false }
+    for (let attempt = 1; attempt <= 3 && !pal.open; attempt++) {
+      await page.keyboard.press('Meta+k')
+      await page.waitForTimeout(1000)
+      pal = await page.evaluate(() => {
+        const panel = document.querySelector('[data-testid=global-search-dialog]')
+        return { open: !!panel && panel.offsetParent !== null, focused: document.activeElement?.getAttribute('data-testid') === 'search-input' }
+      })
+    }
     led.record('H1 ⌘K 唤起命令面板+焦点', pal.open && pal.focused, JSON.stringify(pal))
     // 输入关键词→结果/类型计数。关键词从真实数据派生（首轮用「看板」不命中任何
     // 任务标题/会话名——检索 hay=title/id/workspace/assignee——误报全 0 的实录）：

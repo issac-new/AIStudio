@@ -23,6 +23,10 @@ export async function openBrowser() {
     locale: 'zh-CN',
     ...(VIDEO_DIR ? { recordVideo: { dir: VIDEO_DIR, size: { width: 1560, height: 940 } } } : {}),
   })
+  // 高负载/冷转换下浏览器启动与首屏导航可超 Playwright 默认 30s（2026-10-31 实测
+  // loadavg >150 时 bootApp 超时）；导航放宽到 60s，元素动作保持 20s 快速失败。
+  page.setDefaultNavigationTimeout(60000)
+  page.setDefaultTimeout(20000)
   return { browser, page }
 }
 
@@ -78,13 +82,30 @@ export async function domClick(page, sel, timeout = 15000) {
   }, sel)
 }
 
+/**
+ * 等 SPA 真正可交互：Vue 已挂载且启动占位（「AIStudio 加载中」）已消失。
+ * 固定 settle 在冷启/网关重启时不可靠（2026-10-31 实测 boot 3.5-6s+，
+ * 首个壳层步骤点空即假缺陷）；判据用应用状态而非时间。
+ */
+export async function waitForApp(page, timeout = 30000) {
+  await page.waitForFunction(() => {
+    const el = document.querySelector('#app')
+    return Boolean(el?.__vue_app__) && Boolean(document.body)
+      && !document.body.innerText.includes('AIStudio 加载中')
+  }, undefined, { timeout })
+}
+
 export async function gotoHash(page, hash, settle = 3000) {
   await page.goto(BASE + '/#/' + hash.replace(/^\/?#?\/?/, ''), { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(settle)
+  await waitForApp(page, 30000)
+  if (settle > 0) await page.waitForTimeout(settle)
 }
 
 // 登录落地（dev 链 localhost 自动登录）
 export async function bootApp(page) {
   await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(3500)
+  await waitForApp(page, 60000)
+  // 落地重定向到 /hermes/chat 后壳层才完整挂载；等 hash 离开始发态。
+  await page.waitForFunction(() => location.hash !== '#/' && location.hash !== '', undefined, { timeout: 15000 }).catch(() => {})
+  await page.waitForTimeout(600)
 }
