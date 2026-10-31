@@ -164,7 +164,7 @@ async function visit(page, hash, settle = 2300) {
   } finally { await page.close() }
 }
 
-// ══ E. 看板交互：抽屉 / 行内建卡（triage 安全列）/ 批量催办 UI ══
+// ══ E. 看板交互：抽屉 / 行内建卡（triage 安全列）/ 审批面 / 批量催办 UI ══
 {
   const { page } = await newPage('E-board')
   let createdId = ''
@@ -182,42 +182,37 @@ async function visit(page, hash, settle = 2300) {
       const drawer = await page.evaluate(() => ({
         open: !!document.querySelector('[data-testid=kanban-task-drawer]'),
         header: document.querySelector('[data-testid=kanban-drawer-header]')?.textContent?.trim().slice(0, 60) || '',
-        raci: !!document.querySelector('[data-testid=drawer-raci]'),
       }))
-      led.record('E2 卡片点击→详情抽屉打开', drawer.open, JSON.stringify({ id: firstId, header: drawer.header, raci: drawer.raci }))
+      led.record('E2 卡片点击→详情抽屉打开', drawer.open, JSON.stringify({ id: firstId, header: drawer.header }))
       await led.shot(page, 'e-drawer')
-      // 关毕验证（走查序列实录：first button≠关闭钮，抽屉残留时后续建卡点击全落遮罩）。
-      // NDrawerContent closable 自带右上关闭钮；Escape 亦关（未编辑态）。
+      // 关毕验证（走查序列实录：first button≠关闭钮，抽屉残留时后续建卡点击全落遮罩）
       for (let i = 0; i < 4 && await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false); i++) {
         await page.keyboard.press('Escape')
         await page.waitForTimeout(500)
-        const mask = page.locator('.n-drawer-close, [data-testid=kanban-task-drawer] .n-drawer-close').first()
+        const mask = page.locator('.n-drawer-close').first()
         if (await mask.count().catch(() => 0)) { await mask.click({ force: true }).catch(() => {}); await page.waitForTimeout(400) }
       }
       const drawerClosed = !(await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false))
-      led.record('E2b 抽屉关毕（后续建卡不被遮罩拦）', drawerClosed, drawerClosed ? 'Escape+close 双路' : '抽屉未关——后续 E4 结果不可信')
+      led.record('E2b 抽屉关毕（后续建卡不被遮罩拦）', drawerClosed, drawerClosed ? 'Escape+close 双路' : '抽屉未关——后续结果不可信')
     }
-    // E2b 列视图切换（views menu 若在）
+    // E3 视图菜单可唤起（在则点开即收）
     const viewsMenu = page.locator('[data-testid=kanban-views-menu]')
     if (await viewsMenu.count()) {
       await viewsMenu.first().click({ force: true }).catch(() => {})
-      await page.waitForTimeout(800)
+      await page.waitForTimeout(600)
       led.record('E3 视图菜单可唤起', true, 'kanban-views-menu')
       await page.keyboard.press('Escape')
     }
-    // E4 行内建卡（triage 列=原始想法，不自动派发）
-    await visit(page, 'app/board?new=1', 3800)
+    // E4 行内建卡（triage 列=原始想法，不自动派发；?new=1 深链自动收窄唯一板）
+    await visit(page, 'app/board?new=1', 4200)
     const creator = page.locator('[data-testid=kanban-column-triage] textarea, [data-testid=kanban-column-triage] input').first()
     if (await creator.count()) {
       const mark = `[走查]回归探针卡-${Date.now().toString(36)}`
       await creator.fill(mark)
       await page.waitForTimeout(300)
-      // 提交钮=创建器内 primary 按钮（文字含 创建/添加/Create/Add）
       const submitBtn = page.locator('[data-testid=kanban-column-triage] button').filter({ hasText: /创建|添加|Create|Add/ }).first()
       if (await submitBtn.count()) {
-        // 普通点击（Playwright 自动等稳定性）：force 直点在板面高频重渲染下会打在
-        // 已被替换的旧节点上＝零 POST 假红（2026-10-31 三区回归实录，Enter 路径正常）
-        await submitBtn.click()
+        await submitBtn.click({ force: true })
         // 刷新管线（createTask→refreshAllBoards→聚合→WS→DOM）实测 ~4.5s：轮询上限 9s
         let appear = false
         for (let i = 0; i < 6 && !appear; i++) {
@@ -225,40 +220,11 @@ async function visit(page, hash, settle = 2300) {
           appear = await page.evaluate((m) => (document.body.innerText || '').includes(m), mark)
         }
         led.record('E4 行内建卡提交→卡出现在板面', appear, `title=${mark}`)
-        // 找到新卡 ID（标题匹配）
         createdId = await page.evaluate((m) => {
           const cards = [...document.querySelectorAll('.kanban-task-card[data-task-id]')]
           const hit = cards.find((c) => (c.textContent || '').includes(m))
           return hit?.getAttribute('data-task-id') || ''
         }, mark).catch(() => '')
-        // E5 新卡抽屉+审批按钮区（验收标签面）：审批钮只在 review 态渲染（设计内）。
-        // 现库无 review 卡 → 探针自有卡经 API 转 review（状态机拒转则如实记不可达）。
-        if (createdId) {
-          const moved = await page.evaluate(async (id) => {
-            const H = { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key'), 'Content-Type': 'application/json' }
-            const r = await fetch(`/api/hermes/kanban/${encodeURIComponent(id)}?board=default`, { method: 'PATCH', headers: H, body: JSON.stringify({ status: 'review' }) })
-            return r.status
-          }, createdId).catch(() => 0)
-          await page.waitForTimeout(1200)
-          await page.locator(`.kanban-task-card[data-task-id="${createdId}"]`).first().click()
-          await page.waitForTimeout(1800)
-          const drawer2 = await page.evaluate(() => ({
-            open: !!document.querySelector('[data-testid=kanban-task-drawer]'),
-            approve: !!document.querySelector('[data-testid=drawer-approve]'),
-            reject: !!document.querySelector('[data-testid=drawer-reject]'),
-          }))
-          if (moved === 200) {
-            led.record('E5 review 态卡抽屉审批按钮区（验收标签面）', drawer2.open && drawer2.approve && drawer2.reject, JSON.stringify(drawer2))
-          } else {
-            led.record('E5 review 态卡抽屉审批按钮区（验收标签面）', drawer2.open, `状态机拒转 triage→review（PATCH=${moved}），审批钮断言不可达；抽屉开=${drawer2.open}`, 'P2')
-          }
-          await led.shot(page, 'e-newcard-drawer')
-          // 关毕防遮罩残留（E6 前置）
-          for (let i = 0; i < 4 && await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false); i++) {
-            await page.keyboard.press('Escape')
-            await page.waitForTimeout(500)
-          }
-        }
       } else {
         led.record('E4 行内建卡提交→卡出现在板面', false, '未找到提交按钮（建卡器形态变化？）')
         await led.shot(page, 'e-creator-nosubmit')
@@ -267,18 +233,62 @@ async function visit(page, hash, settle = 2300) {
       led.record('E4 行内建卡表单（?new=1 直开）', false, 'triage 列未见建卡输入框')
       await led.shot(page, 'e-creator-missing')
     }
-    // E6 批量选择→催办条 UI（不实际发送，避免打扰真实身份）
+    // E5 审批面确定性链：triage 直转 review 断 409 语义；ready 直建→PATCH review→
+    // ?task= 深链抽屉轮询审批钮（approve/reject/viewDiff 仅 review 态渲染）。
     if (createdId) {
+      const chain = await page.evaluate(async (id) => {
+        const H = { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key'), 'Content-Type': 'application/json' }
+        const triagePatch = await fetch(`/api/hermes/kanban/${encodeURIComponent(id)}?board=default`, { method: 'PATCH', headers: H, body: JSON.stringify({ status: 'review' }) })
+        const triageCode = triagePatch.status
+        const c = await fetch('/api/hermes/kanban?board=default', { method: 'POST', headers: H, body: JSON.stringify({ title: '[走查]审批面验收卡', status: 'ready' }) })
+        const cj = await c.json().catch(() => null)
+        const rid = cj?.task?.id || ''
+        let reviewPatch = 0
+        if (rid) {
+          const p2 = await fetch(`/api/hermes/kanban/${encodeURIComponent(rid)}?board=default`, { method: 'PATCH', headers: H, body: JSON.stringify({ status: 'review' }) })
+          reviewPatch = p2.status
+        }
+        return { triageCode, rid, reviewPatch }
+      }, createdId).catch(() => ({ triageCode: 0, rid: '', reviewPatch: 0 }))
+      led.record('E5a 非法转移语义（triage→review 拒 409）', chain.triageCode === 409, `PATCH=${chain.triageCode}（补丁 713 前为 500）`)
+      if (chain.rid && chain.reviewPatch === 200) {
+        await page.goto(BASE + '/#/app/board?task=' + encodeURIComponent(chain.rid), { waitUntil: 'domcontentloaded' })
+        let approve = false
+        let drawerInfo = { approve: false, reject: false, viewDiff: false, open: false }
+        for (let i = 0; i < 14 && !approve; i++) {
+          await page.waitForTimeout(1000)
+          const st = await page.evaluate(() => ({
+            approve: !!document.querySelector('[data-testid=drawer-approve]'),
+            reject: !!document.querySelector('[data-testid=drawer-reject]'),
+            viewDiff: !!document.querySelector('[data-testid=drawer-view-diff]'),
+            open: !!document.querySelector('[data-testid=kanban-task-drawer]'),
+          }))
+          approve = st.approve
+          drawerInfo = st
+        }
+        led.record('E5b review 态卡抽屉审批按钮区（验收/打回/变更）', drawerInfo.approve && drawerInfo.reject, JSON.stringify(drawerInfo))
+        await led.shot(page, 'e-review-drawer')
+        for (let i = 0; i < 4 && await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false); i++) {
+          await page.keyboard.press('Escape')
+          await page.waitForTimeout(500)
+        }
+        await page.evaluate(async (id) => {
+          await fetch(`/api/hermes/kanban/${encodeURIComponent(id)}?board=default`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key') } })
+        }, chain.rid).catch(() => {})
+      } else {
+        led.record('E5b review 态卡抽屉审批按钮区（验收/打回/变更）', false, `建卡/转 review 链失败 rid=${chain.rid || 'none'} patch=${chain.reviewPatch}`, 'P2')
+      }
+      // E6 批量选择→催办条+催办入口（不实际发送，避免打扰真实身份）
       const chk = page.locator(`.kanban-task-card[data-task-id="${createdId}"] .card-checkbox`).first()
       if (await chk.count()) {
         await chk.click({ force: true })
-        const barVisible = await page.locator('.kanban-bulk-bar').first().isVisible({ timeout: 4000 }).catch(() => false)
+        await page.waitForTimeout(1200)
         const bar = await page.evaluate(() => {
           const scope = document.querySelector('.kanban-bulk-bar')
           const el = scope ? [...scope.querySelectorAll('button')].find((b) => (b.title || '').includes('催办') || (b.textContent || '').includes('催办')) : null
-          return { barVisible: !!scope && scope.offsetParent !== null, nudge: !!el, title: el?.title || el?.textContent?.trim() || '' }
+          return { bar: !!scope && scope.offsetParent !== null, nudge: !!el, title: el?.title || el?.textContent?.trim() || '' }
         })
-        led.record('E6 批量选择→催办条+催办入口可见（不发送）', bar.barVisible && bar.nudge, JSON.stringify(bar))
+        led.record('E6 批量选择→催办条+催办入口可见（不发送）', bar.bar && bar.nudge, JSON.stringify(bar))
         await led.shot(page, 'e-bulkbar')
       } else {
         led.record('E6 批量选择→催办条+催办入口可见（不发送）', false, '未找到卡复选框')
@@ -392,25 +402,33 @@ async function visit(page, hash, settle = 2300) {
   } finally { await page.close() }
 }
 
-// ══ I. loopCanvas（真实 loop 探测，缺数据则记未验证）══
+// ══ I. loopCanvas（API 建 manual 惰性 loop → 画布断言 → 删还原）══
 {
   const { page } = await newPage('I-loop')
   try {
     await fresh(page)
-    const loops = await page.evaluate(async () => {
-      const H = { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key') }
-      for (const u of ['/api/loops', '/api/hermes/loops', '/api/hermes/workflow/loops']) {
-        try { const r = await fetch(u, { headers: H }); if (r.ok) return { url: u, body: await r.json() } } catch {}
-      }
-      return null
-    }).catch(() => null)
-    const first = loops?.body?.loops?.[0]?.id || loops?.body?.[0]?.id || ''
-    if (first) {
-      const st = await visit(page, 'app/l/' + encodeURIComponent(first), 3600)
-      led.record('I1 loop 画布（真实 loop）', st.text.length > 30, `id=${first}`)
+    // 域内常态无 loop → 建 manual 惰性 loop（schedule.mode=manual 不自驱），
+    // 验证后即删，不留测试数据。
+    const loopId = 'walkthrough-daily-probe'
+    const created = await page.evaluate(async (id) => {
+      const H = { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key'), 'Content-Type': 'application/json' }
+      const c = await fetch('/api/loop/loops', { method: 'POST', headers: H, body: JSON.stringify({ id, name: '走查 loop 画布探针', goal: '验证 /app/l/:id 画布装载（manual 惰性，走查后即删）', schedule: { mode: 'manual', timezone: 'UTC' } }) })
+      return c.status
+    }, loopId).catch(() => 0)
+    if (created === 200 || created === 201) {
+      const st = await visit(page, 'app/l/' + encodeURIComponent(loopId), 4200)
+      const canvas = await page.evaluate(() => ({
+        textLen: (document.body.innerText || '').length,
+        hasName: (document.body.innerText || '').includes('走查 loop 画布探针'),
+      }))
+      led.record('I1 loop 画布（manual 惰性 loop）', canvas.hasName && canvas.textLen > 60, `create=${created} name=${canvas.hasName} text=${st.text.slice(0, 40)}`)
       await led.shot(page, 'i-loop')
+      await page.evaluate(async (id) => {
+        await fetch('/api/loop/loops/' + encodeURIComponent(id), { method: 'DELETE', headers: { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key') } })
+      }, loopId).catch(() => {})
     } else {
-      led.record('I1 loop 画布', true, '无 loop 数据源（端点空/不可达），本项未验证', 'info')
+      const st = await visit(page, 'app/l/' + encodeURIComponent(loopId), 3600)
+      led.record('I1 loop 画布', st.text.length > 30, `loop 创建 ${created}——回落既有空态口径断言`, 'P2')
     }
   } finally { await page.close() }
 }
