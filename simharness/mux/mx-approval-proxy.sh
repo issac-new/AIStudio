@@ -73,6 +73,13 @@ asks=[(m["event_id"],m["content"].get("body","")[:60]) for m in chunk
       and "needs your OK" in m["content"].get("body","")
       and m.get("sender","").endswith("-agent:matrix.test")]
 for ev,head in asks:
+    # 幂等去重（run24 实锤 2026-10-31：单实例 32 秒内对同一 pending 代批 9 次——LAST_TS
+    # 游标对同窗内重复处理不够，批前查代批日志同 event 已批即跳过；xiao 真人模拟同批
+    # 请求属双通道并存设计，不算重复面）
+    try: _done = open(log).read()
+    except Exception: _done = ""
+    if ev[:24] in _done:
+        continue
     if policy=="criteria" and not SAFE.search(head):
         open(log,"a").write(time.strftime("%F %T")+" 缓批 "+ev[:24]+" "+head.replace(chr(10)," ")[:60]+"（判据模式：非只读安全操作，不代批——PR-2 根治前诚实形态）\n")
         continue

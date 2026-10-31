@@ -1370,6 +1370,9 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     const proxy = read(join(MX, 'mx-approval-proxy.sh'))
     expect(proxy).toContain('--ttl')
     expect(proxy).toContain('report_done 在案，退场')
+    // run24 幂等去重（2026-10-31：单实例 32 秒同 pending 代批 9 次实锤）——批前查重符号钉死
+    expect(proxy).toContain('幂等去重')
+    expect(proxy).toContain("if ev[:24] in _done")
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑬ 独立审批环可启动')
   })
