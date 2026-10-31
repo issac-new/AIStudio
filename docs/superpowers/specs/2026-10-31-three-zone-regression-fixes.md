@@ -17,7 +17,7 @@ Playwright 自动化回归覆盖三区（顶部栏及次级功能 / 日常工作
 2. **403 available-models?profile=orchestrator 定性为设计内 fail-soft，不修**：App 全局 ProviderConfigurationPrompt 按网关 orchestrator profile 查询，swarm（admin）不在该 profile 白名单 → 服务端 403（users-store userCanAccessProfile 显式映射表）；客户端 `catch` 已 fail-soft（弹窗不出现），仅剩浏览器控制台网络噪声。放宽该端点权限＝削弱安全边界，拒绝。
 3. **walk-writes 登录桥接只作回落不替换**：保留 WALK_LOGIN 口令通道（dist 验证环境 8655 仍用），口令失败才走 gateway-credentials＋matrix-login 桥接，两环境同一脚本可跑。
 4. **并行上限处置**：开工时已有 3 个在途 worktree；`full-regression`（今晨、分支已合入 main、工作树 0 脏文件＝收口未清尾态）走 `git worktree remove` 释放槽位；`docs-aistudio-training-manual`（10-28、394 脏文件）超 24h 但有未提交工作，留待用户裁决不清理。
-5. **本批不修项如实挂账**：六阶段侧栏条目为非链接元素（span，无键盘可达性）——现状设计（2026-10-17 旅程重构）不改，仅在本 spec 记录观察；IDE 深链任务解析 5-8s 延迟（跨板 detail-first 解析链）为性能观察项，功能正确。
+5. **本批不修项如实挂账**：六阶段侧栏条目为非链接元素（span，无键盘可达性）——现状设计（2026-10-17 旅程重构）不改，仅在本 spec 记录观察；IDE 深链任务解析 5-8s 延迟（跨板 detail-first 解析链）为性能观察项，功能正确；**boot 早期视图切换器点击被落地重定向覆盖（P2 产品竞态，同批三段发现）**——auth 就绪前点击 ia-workspace-ide 的 router.push 会被引导落地链（entry 引导→auth→落地推送）覆盖，实测 boot 后 1.5s/3s/6s 点击 3 次全丢、10s 全就绪后 100% 成功、用户二次点击即自愈；修复链跨 entry 引导/auth/落地三层，需独立轮次专修，本批以走查脚本一次重试兜底并把缺陷挂账于此；已删任务详情瞬时 500（t_dd3c5763 单次，直查复归 404，疑删除竞态错误映射）挂观察项。
 
 ## 验证
 

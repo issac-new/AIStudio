@@ -49,20 +49,25 @@ try {
 
   // 2026-10-31 testid 校正：视图切换器=IaWorkspaceSwitch（ia-workspace-collab/ide/sim，
   // 2026-10-20 日常/推演拆分轮启用），旧 ia-view-toggle 已退役——此前 6 条假缺陷之源。
-  // 点击用真实点击（带 actionability）：domClick 的 evaluate 合成点击在本步全脚本
-  // 上下文偶发不触发路由（隔离复刻 3/3 通过、脚本内 2/4 失败实录），真实点击两态全过。
+  // 点击用真实点击＋一次重试：boot 早期（auth 就绪前）点击会被落地重定向覆盖
+  // （P2 产品竞态，spec 2026-10-31-three-zone-regression-fixes 挂账：wait 1.5-6s
+  // 点击 3 次全丢、10s 全就绪 100% 成功，实测自愈型）。重试后仍不动才记缺陷。
+  async function switchAndWait(testid, wantIn, wantOut) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      await page.locator(`[data-testid=${testid}]`).first().click({ timeout: 8000 })
+      await page.waitForTimeout(2500)
+      const h = await page.evaluate(() => location.hash)
+      if (h.includes(wantIn) && !h.includes(wantOut)) return h
+    }
+    throw new Error(`两次点击未跳转, hash=${await page.evaluate(() => location.hash)}`)
+  }
   await step('视图切换器 → IDE 工作台', async () => {
-    await page.locator('[data-testid=ia-workspace-ide]').first().click({ timeout: 8000 })
-    await page.waitForTimeout(2500)
-    const h = await page.evaluate(() => location.hash)
+    const h = await switchAndWait('ia-workspace-ide', 'ide', '')
     await led.shot(page, 'view-switch-ide')
-    if (!h.includes('ide')) throw new Error('未切到 IDE 视图, hash=' + h)
+    return h
   })
   await step('视图切换器 → 返回沟通协作', async () => {
-    await page.locator('[data-testid=ia-workspace-collab]').first().click({ timeout: 8000 })
-    await page.waitForTimeout(2500)
-    const h = await page.evaluate(() => location.hash)
-    if (h.includes('ide')) throw new Error('未返回, hash=' + h)
+    await switchAndWait('ia-workspace-collab', '', 'ide')
   })
 
   await step('搜索框（会话/任务/房间）', async () => {
