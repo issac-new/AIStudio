@@ -1,7 +1,7 @@
 // 改进闭环纯函数守门：摘要/行为对比/晋级门禁十类阻塞 + RRSI 正则化（2026-10-23）。
 import { describe, it, expect } from 'vitest'
 import {
-  annealedEditBudget, behaviorContrast, candidateDiversity, diffSummary, editCountOfVariant,
+  annealedEditBudget, attributeGain, behaviorContrast, candidateDiversity, diffSummary, editCountOfVariant,
   evaluatePromotion, evolutionReport, findBenchmarkLeakage, findGraderMarkers,
   findGraderMarkersInPath, hypothesisRetries, hypothesisSimilarity, leakageBlockers,
   maxEditCount, pruneSignal, rsiConfig, sha256, stallDetection, submitReadiness,
@@ -510,6 +510,104 @@ describe('晋级门 RRSI 新闸（S1/S2/S3 + P1）', () => {
     const report = evaluatePromotion(base())
     for (const code of ['benchmark_leakage', 'edit_budget_exceeded', 'gain_within_noise', 'cost_unjustified', 'noise_missing']) {
       expect(report.blockers.map((b) => b.code)).not.toContain(code)
+    }
+  })
+})
+
+// 2026-10-31 吸收轮：HDA 增益归因 + 约束保持门。
+describe('HDA 增益归因与约束保持门', () => {
+  const base = () => ({ proposal: fixture(), currentChampion: null as Champion | null, applyRequested: false, applyEnvEnabled: false })
+
+  it('等预算基线拆分：raw = compute + harness', () => {
+    const a = attributeGain({ baselinePassAt1: 0.5, candidatePassAt1: 0.8, equalBudgetPassAt1: 0.6 })
+    expect(a.rawGain).toBeCloseTo(0.3)
+    expect(a.computeGain).toBeCloseTo(0.1)
+    expect(a.harnessGain).toBeCloseTo(0.2)
+  })
+
+  it('缺等预算基线只给 rawGain，compute/harness 不猜', () => {
+    const a = attributeGain({ baselinePassAt1: 0.5, candidatePassAt1: 0.8, equalBudgetPassAt1: null })
+    expect(a.rawGain).toBeCloseTo(0.3)
+    expect(a.computeGain).toBeNull()
+    expect(a.harnessGain).toBeNull()
+  })
+
+  function withEqualBudget(equalPassAt1: number): Proposal {
+    const p = fixture()
+    const probe = p.probes.find((x) => x.variantId === 'v1')!
+    probe.evidence = {
+      ...probe.evidence!,
+      equalBudgetBaseline: { runId: 'run-eq', setId: 'set-1', passAt1: equalPassAt1 },
+    }
+    probe.contrast = behaviorContrast(p.baseline!, probe.evidence)
+    return p
+  }
+
+  it('等预算基线解释全部增益 → blocker gain_explained_by_compute', () => {
+    const report = evaluatePromotion({ ...base(), proposal: withEqualBudget(0.8) })
+    expect(report.blockers.map((b) => b.code)).toContain('gain_explained_by_compute')
+  })
+
+  it('算力贡献过半 → warning gain_mostly_compute；harness 残差占优 → 无归因 blocker', () => {
+    const mostly = evaluatePromotion({ ...base(), proposal: withEqualBudget(0.78) })
+    expect(mostly.warnings.map((w) => w.code)).toContain('gain_mostly_compute')
+    expect(mostly.blockers.map((b) => b.code)).not.toContain('gain_explained_by_compute')
+    const residual = evaluatePromotion({ ...base(), proposal: withEqualBudget(0.6) })
+    expect(residual.blockers.map((b) => b.code)).not.toContain('gain_explained_by_compute')
+    expect(residual.warnings.map((w) => w.code)).not.toContain('gain_mostly_compute')
+  })
+
+  it('缺归因默认 warning；HARNESS2_RSI_REQUIRE_ATTRIBUTION=1 时升 blocker', () => {
+    const warn = evaluatePromotion(base())
+    expect(warn.warnings.map((w) => w.code)).toContain('attribution_missing')
+    expect(warn.blockers.map((b) => b.code)).not.toContain('attribution_missing')
+    process.env.HARNESS2_RSI_REQUIRE_ATTRIBUTION = '1'
+    try {
+      const blocked = evaluatePromotion(base())
+      expect(blocked.blockers.map((b) => b.code)).toContain('attribution_missing')
+    } finally {
+      delete process.env.HARNESS2_RSI_REQUIRE_ATTRIBUTION
+    }
+  })
+
+  it('等预算基线与候选不同集 → warning attribution_set_mismatch', () => {
+    const p = withEqualBudget(0.6)
+    const probe = p.probes.find((x) => x.variantId === 'v1')!
+    probe.evidence = { ...probe.evidence!, equalBudgetBaseline: { runId: 'run-eq', setId: 'set-other', passAt1: 0.6 } }
+    const report = evaluatePromotion({ ...base(), proposal: p })
+    expect(report.warnings.map((w) => w.code)).toContain('attribution_set_mismatch')
+  })
+
+  it('约束 fail → blocker constraint_regression；unknown → warning；全 pass 不告警', () => {
+    const fail = fixture()
+    fail.constraints = { checks: [{ id: 'c1', statement: '拒答率不下降', status: 'fail' }], actor: 'op', at: new Date().toISOString() }
+    const blocked = evaluatePromotion({ ...base(), proposal: fail })
+    expect(blocked.blockers.map((b) => b.code)).toContain('constraint_regression')
+
+    const unknown = fixture()
+    unknown.constraints = { checks: [{ id: 'c2', statement: '权限边界不扩大', status: 'unknown' }], actor: 'op', at: new Date().toISOString() }
+    const warned = evaluatePromotion({ ...base(), proposal: unknown })
+    expect(warned.warnings.map((w) => w.code)).toContain('constraint_unverified')
+    expect(warned.blockers.map((b) => b.code)).not.toContain('constraint_regression')
+
+    const pass = fixture()
+    pass.constraints = { checks: [{ id: 'c3', statement: '审计留痕不缺失', status: 'pass' }], actor: 'op', at: new Date().toISOString() }
+    const clean = evaluatePromotion({ ...base(), proposal: pass })
+    expect(clean.warnings.map((w) => w.code)).not.toContain('constraint_unchecked')
+    expect(clean.warnings.map((w) => w.code)).not.toContain('constraint_unverified')
+    expect(clean.blockers.map((b) => b.code)).not.toContain('constraint_regression')
+  })
+
+  it('未记录约束默认 warning；HARNESS2_RSI_REQUIRE_CONSTRAINTS=1 时升 blocker', () => {
+    const warn = evaluatePromotion(base())
+    expect(warn.warnings.map((w) => w.code)).toContain('constraint_unchecked')
+    expect(warn.blockers.map((b) => b.code)).not.toContain('constraint_unchecked')
+    process.env.HARNESS2_RSI_REQUIRE_CONSTRAINTS = '1'
+    try {
+      const blocked = evaluatePromotion(base())
+      expect(blocked.blockers.map((b) => b.code)).toContain('constraint_unchecked')
+    } finally {
+      delete process.env.HARNESS2_RSI_REQUIRE_CONSTRAINTS
     }
   })
 })

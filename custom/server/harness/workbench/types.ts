@@ -105,6 +105,33 @@ export interface RegressionEvidence {
   passAt1?: number | null
 }
 
+/**
+ * HDA 等预算基线（2026-10-31 吸收轮）：未改动 harness 在同等 test-time compute 下的
+ * 真实评测运行。用于把「候选涨的分」拆成算力增益与 harness 残差，不接受手填。
+ */
+export interface EqualBudgetBaseline {
+  runId: string
+  setId: string
+  passAt1: number | null
+}
+
+/** 约束保持断言（D5，2026-10-31 吸收轮）：能力指标之外「不许退化」的检查项。 */
+export interface ConstraintCheck {
+  id: string
+  statement: string
+  status: 'pass' | 'fail' | 'unknown'
+  evidenceRef?: string
+  detail?: string
+}
+
+/** 一次约束检查记录；actor 必填，便于审计。 */
+export interface ConstraintRecord {
+  checks: ConstraintCheck[]
+  actor: string
+  at: string
+  note?: string
+}
+
 /** 探测证据：全部字段来自 Eval Studio 的真实运行，缺数据为 null。 */
 export interface ProbeMetrics {
   evalRunId: string
@@ -126,6 +153,8 @@ export interface ProbeMetrics {
   steps: number | null
   latencyMs: number | null
   regression?: RegressionEvidence
+  /** 等预算基线（HDA）；缺席=未测，归因门按配置决定 warning/blocker。 */
+  equalBudgetBaseline?: EqualBudgetBaseline | null
 }
 
 export type QualityVerdict = 'improved' | 'regressed' | 'neutral' | 'unknown'
@@ -237,6 +266,8 @@ export interface Proposal {
   surfaceKey: SurfaceKey
   /** 噪声标定（RRSI 接受地板的 δ）；未标定为 null/缺席。 */
   noise?: NoiseCalibration | null
+  /** 约束保持断言（D5，2026-10-31 吸收轮）；缺席=未记录。 */
+  constraints?: ConstraintRecord | null
   /** 多文件候选的根（相对 HERMES_HOME）；缺省=单文件模式。 */
   treeRoot?: string | null
   /** managed 面的相对 HERMES_HOME 目标文件；advisory 面只作锚点展示。 */

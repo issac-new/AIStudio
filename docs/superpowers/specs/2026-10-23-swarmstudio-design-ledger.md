@@ -1,7 +1,7 @@
 # AIStudio 设计事实与容量基线
 
 > 本文是《AIStudio 终态设计文档》的数字附录，不是独立设计正本。
-> 核实日：2026-10-27。
+> 核实日：2026-10-31。
 > 口径：区分稳定设计参数、参考部署和版本快照。
 > 用途：防止同一数字在多处定义，不滚动记录开发轮次。
 
@@ -57,7 +57,7 @@
 |---|---|---|
 | hermes-studio 基线 | v0.7.39 | `vendor/VENDOR.md` |
 | hermes-agent 基线 | v0.22.5 | `vendor/VENDOR.md` |
-| zcode 基线谱系 | v3.16.1 系列，同步跟随上游 main | `vendor/VENDOR.md` |
+| zcode 基线谱系 | v3.16.1 系列（包版本 3.16.2），同步跟随上游 main | `vendor/VENDOR.md` |
 | 驾驶舱模块 | 0.7.39-studio.1 | `RELEASE-NOTES.md` |
 | agent teams 模块 | v0.22.5-team.1 | `team/VERSION` |
 | Ycode 模块 | 3.16.2 | `vendor/zcode/package.json` |
@@ -67,6 +67,7 @@
 
 zcode 的基线谱系、包版本和补丁序列是三个不同口径。
 不得把其中任意一个字段单独改写成另外两个字段。
+2026-10-31 上游实测：hermes-studio 最新稳定 v0.8.0（未升级，补丁 329 硬冲突）；hermes-agent 最新稳定 v0.22.5；zcode 上游 main 到 v3.17.1 线（未同步）。本表仍记当前钉版，不以「上游最新」替代基线。
 Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互推。
 桌面安装身份与产物名中的 SwarmStudio 属于兼容标识，
 不改变主产品 AIStudio 的命名。

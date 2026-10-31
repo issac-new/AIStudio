@@ -477,6 +477,71 @@ describe('RRSI 跟进批 HTTP', () => {
     const selProbe = view.probes.find((x: any) => x.variantId === sel)
     expect(selProbe.evidence.regression.passAt1).toBeCloseTo(1)
   })
+
+  it('等预算基线：跨集拒绝；同集记录后归因可见（HDA）', async () => {
+    const composed = await createSubmittedApproved()
+    const sel = composed.derived.selectedVariantId
+    const probe = composed.probes.find((x: any) => x.variantId === sel)
+    const store = await import('../../../eval/store')
+    const otherSet = store.createSet({
+      name: '另一评测集',
+      track: 'e2e',
+      tasks: [{ id: 'o1', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a1', text: 'ok', expect: 'yes', kind: 'result' }] }],
+    })
+    if (!otherSet.ok) throw new Error(JSON.stringify(otherSet))
+    store.appendRun(runOf('run-eq-other', otherSet.set.id, 0.9))
+    const cross = await post(`/api/harness/workbench/proposals/${composed.id}/probes/${probe.id}/record`, {
+      evalRunId: 'run-probe', regressionRunId: 'run-reg', equalBudgetBaselineRunId: 'run-eq-other',
+    })
+    expect(cross.status).toBe(400)
+    expect(cross.body.error).toContain('同一评测集')
+
+    store.appendRun(runOf('run-eq', baseSetId, 0.6))
+    const ok = await post(`/api/harness/workbench/proposals/${composed.id}/probes/${probe.id}/record`, {
+      evalRunId: 'run-probe', regressionRunId: 'run-reg', equalBudgetBaselineRunId: 'run-eq',
+    })
+    expect(ok.status).toBe(200)
+    const recorded = ok.body.proposal.probes.find((x: any) => x.id === probe.id)
+    expect(recorded.evidence.equalBudgetBaseline).toMatchObject({ runId: 'run-eq', setId: baseSetId })
+    expect(recorded.evidence.equalBudgetBaseline.passAt1).toBeCloseTo(0.6)
+    expect(ok.body.proposal.derived.gate.warnings.map((w: any) => w.code)).not.toContain('attribution_missing')
+  })
+
+  it('约束保持：fail 记录后晋级门出现 constraint_regression；改 pass 后清除', async () => {
+    const composed = await createSubmittedApproved()
+    const fail = await post(`/api/harness/workbench/proposals/${composed.id}/constraints`, {
+      actor: 'reviewer',
+      checks: [{ id: 'c1', statement: '拒答率不下降', status: 'fail', evidenceRef: 'run-reg' }],
+    })
+    expect(fail.status).toBe(200)
+    expect(fail.body.proposal.constraints.checks[0].status).toBe('fail')
+    expect(fail.body.proposal.derived.gate.blockers.map((b: any) => b.code)).toContain('constraint_regression')
+
+    const pass = await post(`/api/harness/workbench/proposals/${composed.id}/constraints`, {
+      actor: 'reviewer',
+      checks: [{ id: 'c1', statement: '拒答率不下降', status: 'pass', evidenceRef: 'run-reg' }],
+    })
+    expect(pass.status).toBe(200)
+    expect(pass.body.proposal.derived.gate.blockers.map((b: any) => b.code)).not.toContain('constraint_regression')
+    expect(pass.body.proposal.derived.gate.warnings.map((w: any) => w.code)).not.toContain('constraint_unchecked')
+  })
+
+  it('约束记录校验：空检查 / 非法 status / 重复 id → 400', async () => {
+    const composed = await createSubmittedApproved()
+    const empty = await post(`/api/harness/workbench/proposals/${composed.id}/constraints`, { actor: 'reviewer', checks: [] })
+    expect(empty.status).toBe(400)
+    const bad = await post(`/api/harness/workbench/proposals/${composed.id}/constraints`, {
+      actor: 'reviewer', checks: [{ id: 'c1', statement: 'x', status: 'maybe' }],
+    })
+    expect(bad.status).toBe(400)
+    const dup = await post(`/api/harness/workbench/proposals/${composed.id}/constraints`, {
+      actor: 'reviewer', checks: [
+        { id: 'c1', statement: 'x', status: 'pass' },
+        { id: 'c1', statement: 'y', status: 'pass' },
+      ],
+    })
+    expect(dup.status).toBe(400)
+  })
 })
 
 describe('RRSI 挂账清偿批 HTTP', () => {
