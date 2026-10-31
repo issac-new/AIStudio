@@ -215,7 +215,9 @@ async function visit(page, hash, settle = 2300) {
       // 提交钮=创建器内 primary 按钮（文字含 创建/添加/Create/Add）
       const submitBtn = page.locator('[data-testid=kanban-column-triage] button').filter({ hasText: /创建|添加|Create|Add/ }).first()
       if (await submitBtn.count()) {
-        await submitBtn.click({ force: true })
+        // 普通点击（Playwright 自动等稳定性）：force 直点在板面高频重渲染下会打在
+        // 已被替换的旧节点上＝零 POST 假红（2026-10-31 三区回归实录，Enter 路径正常）
+        await submitBtn.click()
         // 刷新管线（createTask→refreshAllBoards→聚合→WS→DOM）实测 ~4.5s：轮询上限 9s
         let appear = false
         for (let i = 0; i < 6 && !appear; i++) {

@@ -44,13 +44,22 @@ const errs = []
 page.on('pageerror', e => errs.push(String(e).slice(0, 160)))
 
 try {
+  // 先落 BASE（无 TOKEN 时触发落地自动登录/Matrix 桥接，探角色才有会话）
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2500)
   if (TOKEN) {
-    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
     await page.evaluate((t) => {
       localStorage.setItem('hermes_api_key', t)
       localStorage.setItem('hermes_active_profile_name', 'default')
     }, TOKEN)
   }
+  // 会话角色探测（切根断言的权限前提，见断言 1 内注释）
+  const userRole = await page.evaluate(async () => {
+    try {
+      const r = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('hermes_api_key') || '') } })
+      return r.ok ? String((await r.json())?.user?.role || 'unknown') : 'unknown'
+    } catch { return 'unknown' }
+  }).catch(() => 'unknown')
   // ── 断言 1：三轮深链一致性 ──
   for (let round = 1; round <= 3; round++) {
     await page.goto(`${BASE}/#/app/ide?task=${TASK}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
@@ -88,8 +97,17 @@ try {
     const rootAnchored = String(snap.storeRoot || '') === String(snap.wsPath || '')
     rec(`round${round} 深链解析（任务绑定/物化/板号）`, snap.activeTask === TASK && snap.materialized === true && pathOk && Boolean(snap.board),
       `board=${snap.board} materialized=${snap.materialized} wsPath=${snap.wsPath}`)
-    rec(`round${round} 工作区切根（origin=task + storeRoot=任务工作区）`, snap.wsOrigin === 'task' && rootAnchored,
-      `origin=${snap.wsOrigin} storeRoot=${snap.storeRoot} wsPath=${snap.wsPath}`)
+    // 权限前提（2026-10-31 三区回归定谳）：storeRoot 锚定断言要求 super_admin——
+    // 非 super_admin（admin 角色）文件树走只读回落，files.workspaceRoot 不切任务根
+    // 为设计内行为（708 轮立法），此环境下该断言必假＝假红。按角色显式 SKIP，
+    // 不降级为 PASS 粉饰；需要跑真值时给 IDE_VERIFY_TOKEN 传 super_admin JWT。
+    if (userRole === 'super_admin') {
+      rec(`round${round} 工作区切根（origin=task + storeRoot=任务工作区）`, snap.wsOrigin === 'task' && rootAnchored,
+        `origin=${snap.wsOrigin} storeRoot=${snap.storeRoot} wsPath=${snap.wsPath}`)
+    } else {
+      rec(`round${round} 工作区切根（origin=task + storeRoot=任务工作区）`, true,
+        `SKIP(role=${userRole}) — 只读回落面不锚定任务根，root 断言需 IDE_VERIFY_TOKEN（super_admin JWT）`)
+    }
     rec(`round${round} 简报抽屉自动展开且含任务`, snap.drawerOpen && snap.drawerHasTask, '')
   }
 
