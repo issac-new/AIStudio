@@ -33,7 +33,7 @@ import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
 import { decideEnforceApproval, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
 import { listHumanGatePending, humanGateRouter, decide as humanGateDecide } from './human-gate'
 import { atomicWriteJson } from '../lib/fs-store'
-import { fail } from '../lib/http'
+import { fail, ok } from '../lib/http'
 import { hermesHome } from '../lib/paths'
 
 const router = new Router({ prefix: '/api/approvals' })
@@ -583,28 +583,26 @@ router.post('/:id/decide', async (ctx) => {
   // decide（appendApprovalLog＋HUMAN_GATE_EVENTS 投影同源，single source）。
   if (id.startsWith('hgate:')) {
     if (decision !== 'approve' && decision !== 'reject') {
-      ctx.status = 400
-      ctx.body = { ok: false, detail: 'hgate 决策须为 approve|reject' }
+      const msg = 'hgate 决策须为 approve|reject'
+      fail(ctx, 400, msg, { extra: { detail: msg } })
       return
     }
     try {
       const req = humanGateDecide(id, decision, actor, note)
       if (!req) {
-        ctx.status = 404
-        ctx.body = { ok: false, detail: '批准单不存在或已裁决' }
+        const msg = '批准单不存在或已裁决'
+        fail(ctx, 404, msg, { extra: { detail: msg } })
         return
       }
-      ctx.body = { ok: true, request: req, ...(req.warnings ? { warnings: req.warnings } : {}) }
+      ok(ctx, { request: req, ...(req.warnings ? { warnings: req.warnings } : {}) })
     } catch (error) {
       const e = error as Error & { status?: number; code?: string }
-      ctx.status = e.status ?? 500
-      ctx.body = { ok: false, code: e.code, detail: e.message }
+      fail(ctx, e.status ?? 500, e.message, { code: e.code, extra: { detail: e.message } })
     }
     return
   }
 
-  ctx.status = 400
-  ctx.body = { ok: false, detail: 'id 前缀须为 fleet: / review: / hgate:' }
+  fail(ctx, 400, 'id 前缀须为 fleet: / review: / hgate:', { extra: { detail: 'id 前缀须为 fleet: / review: / hgate:' } })
 })
 
 router.get('/history', async (ctx) => {

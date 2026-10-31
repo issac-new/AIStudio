@@ -28,7 +28,11 @@
 
 Playwright recordVideo 章节化实拍日常工作台：六阶段页签巡览／看板建卡→抽屉→审批面→催办条全链／审批收件箱／统一聊天与房间时间线／Cmd+K 检索。产物落仓外（本仓 rule 8 禁新增二进制；沿并行批先例目录），manifest 随 spec 引用路径。
 
-### 六、挂账登记（收尾批发现未修）
+### 六、挂账登记（收尾批发现未修）【销案修订 2026-10-31 终清批】
+
+> **销案**：下述「幽灵卡」经终清批复查撤销（spec 2026-10-31-k19-ghost-closeout.md §1 二）——t_ea687287 系活跃推演 run live-verify-20261031 的 sim 源卡（observer/overview available:true、推演徽章在位、点击正确跳推演域），非滞留渲染非产品缺陷；探针 E2 交取卡终案正确保留。原文如下留痕：
+
+
 
 **看板聚合/单板双源不一致（幽灵卡）**：收官走查实录——同一页面内 `/api/hermes/kanban/overview`（24 卡）不含 t_ea687287，而看板 DOM 以其为首卡渲染（三发三中点击抽屉不开：taskClick 按 taskRefs 解析不到该卡 ref）。定性：overview 聚合端点与单板列表端点数据分歧（服务端聚合缓存/partial 回落链域），DOM 渲染源与点击解析源不同步。本批处置（终案）：探针 E2 改 DOM∩overview 交取卡——只在两源都在册的卡上验抽屉（中间两版「次卡重试/即时复点卡数」均被滞留卡单卡板劫持，废弃）；直修留专项（方向：doRefreshOverview 聚合优先/N+1 回落两路的数据源对齐与 overview 缓存失效策略）。锚点：custom/client/shared/store/workspace.ts doRefreshOverview + 本轮 /tmp/ghost.mjs 对账实录。
 
