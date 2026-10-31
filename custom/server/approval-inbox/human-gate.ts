@@ -128,11 +128,54 @@ function ensureLoaded(): void {
     : parsed && typeof parsed === 'object' && Array.isArray((parsed as { requests?: unknown }).requests)
       ? (parsed as { requests: unknown[] }).requests
       : null
-  if (!rows || rows.some(r => !isRequest(r))) {
+  if (!rows) {
     throw new Error(`HumanGate store 格式无效：${file}`)
   }
-  for (const row of rows) store.set(row.id, row)
+  // 2026-10-31 合并统一：兼容旧版裸 grant 行（{scope:'task', board|task, grant}，旧 TS
+  // 写入、runtime/tools/kanban_tools.py 只读消费的历史形态）——装载时升级为请求信封行
+  // （grant 原样内嵌，python 消费者按 scope+grant 提取，契约不变），并归一化回写。
+  // 未知形状（既非请求也非裸 grant）保持 fail-closed，不猜数。
+  const upgraded: HumanGateRequest[] = []
+  for (const row of rows) {
+    if (isRequest(row)) { store.set(row.id, row); continue }
+    const legacy = upgradeLegacyGrantRow(row)
+    if (!legacy) throw new Error(`HumanGate store 格式无效：${file}`)
+    store.set(legacy.id, legacy)
+    upgraded.push(legacy)
+  }
+  if (upgraded.length > 0) persist([...store.values()])
   loadedStoreFile = file
+}
+
+/** 旧版裸 grant 行 → 请求信封行（grant 原样内嵌；id 用 legacy- 前缀防撞真批次）。
+ *  grant 内字段缺失致无法定位任务（无 taskId/board）→ 返回 null 交 fail-closed。 */
+function upgradeLegacyGrantRow(row: unknown): HumanGateRequest | null {
+  if (!row || typeof row !== 'object') return null
+  const r = row as Record<string, unknown>
+  if (r.scope !== 'task' || typeof r.grant !== 'object' || r.grant === null) return null
+  const grant = r.grant as Record<string, unknown>
+  const taskId = typeof grant.taskId === 'string' && grant.taskId.trim() ? grant.taskId.trim() : null
+  const boardRaw = typeof grant.board === 'string' && grant.board.trim()
+    ? grant.board.trim()
+    : typeof r.board === 'string' && r.board.trim() ? r.board.trim()
+      : typeof r.task === 'string' && r.task.trim() ? r.task.trim() : null
+  if (!taskId || !boardRaw) return null
+  const board = normalizeDecisionBoard(boardRaw)
+  const tier: DecisionTier = grant.tier === 'T2' || grant.tier === 'T3' ? grant.tier : 'T3'
+  const decidedAt = typeof grant.decidedAt === 'number' && grant.decidedAt >= 0 ? grant.decidedAt : Date.now()
+  const actor = typeof grant.actor === 'string' && grant.actor.trim() ? grant.actor.trim() : 'legacy-grant'
+  return {
+    id: `hgate:task:${board}:${taskId}:legacy-${decidedAt}`,
+    runId: `task:${board}`, cardId: taskId,
+    title: '旧版任务 grant（装载器自动迁移）',
+    requestedBy: actor, createdAt: decidedAt,
+    status: 'approved', decidedBy: actor, decidedAt,
+    note: 'legacy-grant-migrated',
+    scope: 'task', taskId, board, tier,
+    taskRevision: typeof grant.taskRevision === 'string' ? grant.taskRevision : undefined,
+    expiresAt: typeof grant.expiresAt === 'number' ? grant.expiresAt : undefined,
+    grant: grant as unknown as DecisionGrant,
+  }
 }
 
 function persist(rows: HumanGateRequest[]): void {

@@ -12,7 +12,7 @@ import Koa from 'koa'
 import bodyParser from '@koa/bodyparser'
 import { appendApprovalLog } from '../approval-log'
 import {
-  createRequest, decide, humanGateRouter, listHumanGatePending, mkId, resetHumanGateForTests,
+  createRequest, decide, humanGateRouter, listHumanGatePending, listHumanGateRequests, mkId, resetHumanGateForTests,
 } from '../human-gate'
 
 vi.mock('../approval-log', () => ({ appendApprovalLog: vi.fn() }))
@@ -224,6 +224,66 @@ describe('HumanGate 人责边界', () => {
     expect(listHumanGatePending().map(i => i.id)).toContain('hgate:old:card')
     expect(decide('hgate:none:none', 'approve', 'x')).toBeNull()
     expect(JSON.parse(readFileSync(storePath, 'utf8'))).toHaveLength(1)
+  })
+})
+
+describe('HumanGate store 合并统一（2026-10-31：旧版裸 grant 行装载迁移）', () => {
+  const LEGACY_GRANT = {
+    taskId: 't_632cbd94', board: 'swarm', tier: 'T2', decision: 'approved', choice: 'approved',
+    actor: 'user-oral-20261027', issuedAt: 1793117197249, decidedAt: 1793117197249,
+    expiresAt: 1793203597249, taskRevision: 'c9fa30d4369822fc9'.repeat(4),
+    note: '用户会话内裁决',
+  }
+
+  it('旧版裸 grant 行 → 装载即升级为请求信封行并归一化回写（python 消费者可见性保持）', () => {
+    mkdirSync(join(storePath, '..'), { recursive: true })
+    writeFileSync(storePath, JSON.stringify([
+      { scope: 'task', board: 'swarm', grant: LEGACY_GRANT },
+      { scope: 'task', task: 't_58855791', grant: { ...LEGACY_GRANT, taskId: 't_58855791', board: 'swarm' } },
+    ]), 'utf8')
+    resetHumanGateForTests()
+    const requests = listHumanGateRequests()
+    expect(requests).toHaveLength(2)
+    for (const req of requests) {
+      expect(req.scope).toBe('task')
+      expect(req.status).toBe('approved')
+      expect(req.grant).toBeTypeOf('object')
+      expect(req.id).toMatch(/^hgate:task:swarm:t_\w+:legacy-\d+$/)
+      // python _read_task_grants 提取判据：scope=task 且 grant 为对象（契约不变）
+      expect(req.note).toBe('legacy-grant-migrated')
+    }
+    // 归一化回写：文件里不再有裸 grant 行
+    const persisted = JSON.parse(readFileSync(storePath, 'utf8')) as Array<Record<string, unknown>>
+    expect(persisted).toHaveLength(2)
+    expect(persisted.every(r => typeof r.id === 'string' && r.status === 'approved')).toBe(true)
+  })
+
+  it('混合装载：请求行原样 + 裸 grant 行升级，互不干扰', () => {
+    mkdirSync(join(storePath, '..'), { recursive: true })
+    writeFileSync(storePath, JSON.stringify([
+      { id: 'hgate:r1:c1', runId: 'r1', cardId: 'c1', title: '现行', requestedBy: 'h', createdAt: 5, status: 'pending' },
+      { scope: 'task', board: 'core-chain', grant: LEGACY_GRANT },
+    ]), 'utf8')
+    resetHumanGateForTests()
+    const pending = listHumanGatePending().map(i => i.id)
+    expect(pending).toContain('hgate:r1:c1')
+    const all = listHumanGateRequests()
+    expect(all).toHaveLength(2)
+    expect(all.find(r => r.id === 'hgate:r1:c1')?.status).toBe('pending')
+  })
+
+  it('未知形状仍 fail-closed（既非请求也非裸 grant 不猜数）', () => {
+    mkdirSync(join(storePath, '..'), { recursive: true })
+    writeFileSync(storePath, JSON.stringify([{ scope: 'task', grant: 'not-an-object' }]), 'utf8')
+    resetHumanGateForTests()
+    expect(() => listHumanGateRequests()).toThrow(/格式无效/)
+  })
+
+  it('裸 grant 行缺 taskId/board（无法定位任务）→ fail-closed 不静默丢弃', () => {
+    mkdirSync(join(storePath, '..'), { recursive: true })
+    writeFileSync(storePath, JSON.stringify([{ scope: 'task', grant: { tier: 'T2' } }]), 'utf8')
+    resetHumanGateForTests()
+    expect(() => listHumanGateRequests()).toThrow(/格式无效/)
   })
 })
 
