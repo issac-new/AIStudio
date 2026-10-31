@@ -6,6 +6,16 @@ model:
 fallback_providers:
   - provider: custom:cc-switch
     model: aim
+# 长会话质量衰减：默认 report 只提示不换会话（runtime/gateway/session_rotation.py）。
+# 模型波动加固 D 层：部署面开启自动轮换；机械检查点（handoff_checkpoint）兜底连续性。
+session_rotation:
+  mode: auto
+  max_session_api_calls: 400
+  watermark_pct: 0.85
+  watermark_streak: 2
+  empty_streak_limit: 8
+  cooldown_turns: 5
+  soft_rotate_tokens: 60000
 toolsets:
   - hermes-cli
 agent:

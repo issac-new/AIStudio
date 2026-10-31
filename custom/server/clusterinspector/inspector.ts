@@ -142,7 +142,7 @@ export class ClusterInspector {
    *  退避到冷却期后由下轮重试（safeActedSubjects 复用 B4 幂等集）。 */
   private async dispatchSelfHeal(anomalies: Anomaly[]): Promise<string[]> {
     const acted: string[] = []
-    if (process.env.CLUSTER_INSPECTOR_SAFE_ACT !== 'on') return acted
+    if (process.env.CLUSTER_INSPECTOR_SAFE_ACT === 'off') return acted
     for (const a of anomalies) {
       if (a.detector !== 'dispatcher.stuck') continue
       // 熵增熔断：直派反复无效（dispatcher 病灶持续不收敛）——停发，等人介入
@@ -432,7 +432,7 @@ export class ClusterInspector {
 
   private async safeAct(anomalies: Anomaly[]): Promise<string[]> {
     const acted: string[] = []
-    if (process.env.CLUSTER_INSPECTOR_SAFE_ACT !== 'on') return acted
+    if (process.env.CLUSTER_INSPECTOR_SAFE_ACT === 'off') return acted
     // B4 幂等：同任务的 reclaim 进程内只做一次——重启环里巡检每轮都看到同一张
     // 僵尸卡，重复 reclaim 是副作用风暴（4be3a3b 教训同源；跨进程靠 hermes CLI 自身幂等）。
     const reclaim = this.deps.reclaimTask ?? ((id: string) => new Promise<string | undefined>((resolve) => {

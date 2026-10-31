@@ -1057,4 +1057,10 @@
 623-server-cli-read-cache-expansion.patch
 # 2026-10-31 super-agent 吸收 A+B 批：/api/orchestrator/* 挂载（routes.ts 终态末尾追加，须在 623 之后）
 719-server-orchestrator-mount.patch
+# 720（2026-10-31 模型波动加固 C）：/api/hermes/modelcap/{matrix,route} 挂载
+#      （routes.ts 终态追加，须在 697/698/719 之后）。
+720-server-modelcap-routes.patch
+# 721（2026-10-31 模型波动加固 D）：建卡幂等唯一部分索引 + 冲突返回既有卡
+#      （hermes-agent kanban_db/kanban_db_connect；历史重复键只告警不删数据）。
+721-agent-kanban-idempotency-unique.patch
 # ↑ 0.8.0 升级轮迁位：266→642 后（index.ts 终态跳变不破坏 642 上下文）；197/528/623→studio 序尾（http.ts/routes.ts 终态跳变）

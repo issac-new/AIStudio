@@ -4,9 +4,10 @@
 # 缺口：.qgate/gates/*.yaml 的 triggers 只是声明，本仓提交链从不调用——48 道门框架完整
 # 但治理面空转（外部对比时最容易被指出的「有框架、无强制」）。
 # 位置选择：pre-push 而非 pre-commit——提交保持轻量，推送前给一次本地判定；执行面取
-# `qgate plan` 输出的 L0 门集（静态检查，约 1.5s/门），不跑 engineering.basic-check
-# 这类全量测试门（分钟级，留给 merge 前的 npm test）。
-# 档位：QGATE_PREPUSH_ENFORCE=0（默认）只诊断不拦截；置 1 按 qgate 退出码拒绝推送。
+# `qgate plan --include-disabled` 的 L0 硬件集（静态检查，约 1.5s/门），不依赖当前
+# profile 的 disable 面，也不跑 engineering.basic-check 这类全量测试门（留给 merge 前
+# 的 npm test）。
+# 档位：默认拦截（QGATE_PREPUSH_ENFORCE=1）；置 0 显式降级为只诊断。
 # 关闭本次评估：QGATE_PREPUSH_SKIP=1。证据落 .qgate/（运行态,不入库）。
 # 与 CI 的分工：.github/workflows/qgate.yml 只测框架自身（本仓全量测试在 CI 不可复现），
 # 本仓治理面的唯一自动执行点就是这里。
@@ -24,17 +25,23 @@ if [ "${QGATE_PREPUSH_SKIP:-0}" != "1" ] && [ -f "$ROOT/custom/qgate/src/cli.ts"
   fi
   if [ -n "$QG" ]; then
     _qg_rc=0
-    for _g in $( cd "$ROOT" && node "$QG" plan 2>/dev/null | LC_ALL=C awk '/\[L0\]/ {print $1}' ); do
+    for _g in $( cd "$ROOT" && node "$QG" plan --include-disabled 2>/dev/null | LC_ALL=C awk '/\[L0\]/ {print $1}' ); do
+      # intent-drift 是「按任务登记」门：没有 .qgate/registers/task-intent.json 时
+      # 没有可对账的意图，跳过并明示；有登记则照常强制执行。
+      if [ "$_g" = "L0.intent-drift" ] && [ ! -f "$ROOT/.qgate/registers/task-intent.json" ]; then
+        echo "[qgate] L0.intent-drift 跳过：无按任务意图登记（登记后自动纳入强制）。" >&2
+        continue
+      fi
       # 判定输出走 stderr：pre-push 的 stdout 在部分传输下会被透传给远端。
-      ( cd "$ROOT" && node "$QG" run "$_g" --trigger pre_commit 1>&2 ) || _qg_rc=1
+      ( cd "$ROOT" && node "$QG" run "$_g" --trigger pre_commit --include-disabled 1>&2 ) || _qg_rc=1
     done
     if [ "$_qg_rc" -ne 0 ]; then
-      if [ "${QGATE_PREPUSH_ENFORCE:-0}" = "1" ]; then
-        echo "[qgate] pre-push 存在非 PASS 判定，按 QGATE_PREPUSH_ENFORCE=1 拒绝推送。" >&2
+      if [ "${QGATE_PREPUSH_ENFORCE:-1}" = "1" ]; then
+        echo "[qgate] pre-push 存在非 PASS 判定，按默认强制档拒绝推送（QGATE_PREPUSH_ENFORCE=0 可降级为告警）。" >&2
         echo "        查看：node custom/qgate/dist/cli.js status --fresh / explain <gateId>" >&2
         exit 1
       fi
-      echo "[qgate] pre-push 存在非 PASS 判定（默认只告警不拦截）。查看：node custom/qgate/dist/cli.js status --fresh；置 QGATE_PREPUSH_ENFORCE=1 即拦截。" >&2
+      echo "[qgate] pre-push 存在非 PASS 判定（QGATE_PREPUSH_ENFORCE=0 只告警）；置 1 即拦截。" >&2
     fi
   else
     echo "[qgate] pre-push 跳过：dist 缺失且 tsc 不可用（npm run qgate:build 后重试）" >&2

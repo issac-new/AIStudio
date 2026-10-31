@@ -51,7 +51,12 @@
     {
       "source": "tools/kanban_tools.py",
       "dest": "tools/kanban_tools.py",
-      "note": "C3: 工具建卡透传 raci"
+      "note": "C3: 工具建卡透传 raci；A 层完成契约门（receipt 校验）"
+    },
+    {
+      "source": "completion_contract.py",
+      "dest": "completion_contract.py",
+      "note": "A 层完成契约：AC/dod 派生、源哈希、回执校验、TAP/JUnit 重算（2026-10-31 模型波动加固）"
     },
     {
       "source": "hermes_cli/subcommands/cron.py",

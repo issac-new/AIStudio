@@ -1447,9 +1447,9 @@ def create_task(
                     if not branch_name:
                         branch_name = _project_branch_name(project_obj, task_id, title)
 
-                conn.execute(
+                cursor = conn.execute(
                     """
-                    INSERT INTO tasks (
+                    INSERT OR IGNORE INTO tasks (
                         id, title, body, assignee, status, priority,
                         created_by, created_at, workspace_kind, workspace_path,
                         branch_name, project_id, tenant, idempotency_key,
@@ -1470,6 +1470,18 @@ def create_task(
                         json.dumps(raci) if isinstance(raci, dict) else None,
                     ),
                 )
+                if cursor.rowcount == 0:
+                    # 跨进程同键并发（唯一索引生效）：返回既有卡，不插 links/events。
+                    if idempotency_key:
+                        row = conn.execute(
+                            "SELECT id FROM tasks WHERE idempotency_key = ? "
+                            "AND status != 'archived' "
+                            "ORDER BY created_at DESC LIMIT 1", (idempotency_key,),
+                        ).fetchone()
+                        if row:
+                            return row["id"]
+                    # 非幂等键的 id 碰撞：外层 attempt 循环重试一次。
+                    continue
                 for pid in parents:
                     _link(conn, pid, task_id)
                 _append_event(
@@ -1517,7 +1529,7 @@ def create_task(
         except sqlite3.IntegrityError:
             if attempt == 1:
                 raise
-    raise RuntimeError("unreachable")
+    raise RuntimeError("task id collision persisted after retry")
 
 
 def _board_meta_for(board: Optional[str]) -> dict:

@@ -121,7 +121,7 @@ describe('二期：容量泵 D6 + safe-act', () => {
     expect(only(10)).toHaveLength(0)
   })
 
-  it('safe-act：SAFE_ACT=on 僵尸卡触发 reclaim；off 不动', async () => {
+  it('safe-act：默认开启；SAFE_ACT=off 才不动手', async () => {
     const reclaimed: string[] = []
     const mkInsp = () => new ClusterInspector({
       emitGovEvent: () => {}, hermesHome: '/nonexistent', gatewayBase: 'http://127.0.0.1:1',
@@ -134,8 +134,13 @@ describe('二期：容量泵 D6 + safe-act', () => {
     delete process.env.CLUSTER_INSPECTOR_SAFE_ACT
     expect(r1.actions).toEqual(['t9:reclaimed'])
     expect(reclaimed).toEqual(['t9'])
+    // 默认（env 未设）也必须动手：检测只报不动是审计实证的空转根因。
     const r2 = await mkInsp().runOnce()
-    expect(r2.actions ?? []).toEqual([])  // off：不动手（anomaly 仍报）
+    expect(r2.actions).toEqual(['t9:reclaimed'])
+    process.env.CLUSTER_INSPECTOR_SAFE_ACT = 'off'
+    const r3 = await mkInsp().runOnce()
+    delete process.env.CLUSTER_INSPECTOR_SAFE_ACT
+    expect(r3.actions ?? []).toEqual([])  // off：不动手（anomaly 仍报）
   })
 })
 

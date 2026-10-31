@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runRuntimeProofExecutor } from '../src/executors/runtime-proof'
+import { parseGateSpec } from '../src/core/parse'
 import type { ExecutorSpec } from '../src/core/types'
 
 let dir = ''
@@ -76,5 +77,28 @@ describe('runtime-proof executor (B5)', () => {
     expect(ev.result).toBe('fail')
     expect(ev.summary).toContain('projectPath')
     expect(ev.summary).toContain('screenshot')
+  })
+
+  it('gate YAML parses a runtime-proof executor (parse-layer reachability)', () => {
+    const gate = parseGateSpec({
+      apiVersion: 'qgate/v1alpha1',
+      kind: 'Gate',
+      metadata: { id: 'L1.runtime-proof', version: 'v1' },
+      spec: {
+        domain: 'L1',
+        claims: ['runtime proof is machine-checkable'],
+        triggers: ['task_close'],
+        executors: [{
+          id: 'runtime-proof-miniprogram',
+          type: 'runtime-proof',
+          evidenceType: 'artifact.runtime-proof',
+          proofFile: 'docs/evidence/miniprogram-runtime-proof.json',
+        }],
+        evidence: { required: ['artifact.runtime-proof'] },
+        policy: { failure: 'block', inconclusive: 'warn' },
+      },
+    })
+    expect(gate).not.toBeNull()
+    expect(gate?.spec.executors[0].type).toBe('runtime-proof')
   })
 })

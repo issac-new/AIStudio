@@ -12,7 +12,15 @@ describe('失败路由显式表', () => {
       expect(r.fallbackTo.length).toBeGreaterThan(0)
       expect(r.carry.length).toBeGreaterThan(0)
       expect(r.existingAnchor.length).toBeGreaterThan(0)
+      expect(['same', 'upgrade', 'human']).toContain(r.modelTier)
     }
+  })
+
+  it('模型档位建议：能力型失败升档，验证型同档，资源/不收敛人裁', () => {
+    expect(ROUTE_TABLE.test_fail.modelTier).toBe('same')
+    expect(ROUTE_TABLE.direction_wrong.modelTier).toBe('upgrade')
+    expect(ROUTE_TABLE.non_convergent.modelTier).toBe('human')
+    expect(ROUTE_TABLE.stall_timeout.modelTier).toBe('human')
   })
 
   it('三档回退齐全：原地修/回上游/人闸各在表中（中间档=direction_wrong）', () => {
@@ -39,6 +47,7 @@ describe('失败路由显式表', () => {
     expect(() => resolveRoute('nonsense' as never)).toThrow('未知失败类型')
     const line = hintLineFor(ROUTE_TABLE.direction_wrong)
     expect(line).toContain('direction_wrong → 带证据回上游')
+    expect(line).toContain('模型档位：升档重派（能力型失败）')
     expect(line).toContain('携带：失败证据')
     expect(line).toContain('依据：')
   })

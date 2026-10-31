@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import logging
 import os
 import random
 import re
@@ -974,6 +975,20 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_tenant ON tasks(tenant)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_idempotency ON tasks(idempotency_key)")
+    # 幂等下沉（模型波动加固 D，2026-10-31）：跨进程唯一键。partial index 让归档卡
+    # 不挡同键重建；历史库若有并发插入留下的重复键，建索引失败只告警、保留非唯一
+    # 索引——不静默删数据，也不假装唯一性已成立。
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_idempotency_unique "
+            "ON tasks(idempotency_key) "
+            "WHERE idempotency_key IS NOT NULL AND status != 'archived'"
+        )
+    except sqlite3.IntegrityError:
+        logging.getLogger(__name__).warning(
+            "kanban: duplicate idempotency_key rows exist; unique index skipped "
+            "(existing non-unique index kept). Dedupe the board to enable cross-process idempotency."
+        )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_session_id ON tasks(session_id)")
 
     # task_events.run_id back-fills as NULL for historical events (they predate
