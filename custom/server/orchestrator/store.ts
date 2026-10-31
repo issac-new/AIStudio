@@ -108,6 +108,8 @@ CREATE TABLE IF NOT EXISTS digest (
   body TEXT NOT NULL,
   event_count INTEGER NOT NULL,
   delivered INTEGER NOT NULL DEFAULT 0,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_digest_thread ON digest(thread_id, created_at);
@@ -134,6 +136,13 @@ export function orchestratorDb(): SqliteDb {
   created.exec('PRAGMA journal_mode = WAL')
   created.exec('PRAGMA busy_timeout = 5000')
   created.exec(SCHEMA)
+  // 2026-10-31 投递批：老库补 attempts/last_error（CREATE IF NOT EXISTS 不改既有表）。
+  for (const ddl of [
+    'ALTER TABLE digest ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE digest ADD COLUMN last_error TEXT',
+  ]) {
+    try { created.exec(ddl) } catch { /* 列已存在，忽略 */ }
+  }
   db = created
   dbFile = file
   return db
@@ -458,4 +467,11 @@ export function markDigestDelivered(id: string): boolean {
     'UPDATE digest SET delivered = 1 WHERE id = ? AND delivered = 0',
   ).run(id) as { changes?: number }
   return Number(info?.changes ?? 0) > 0
+}
+
+/** 记录一次投递失败：attempts 自增并留最后一错，供下一轮重试与排查。 */
+export function recordDigestAttempt(id: string, error: string): void {
+  orchestratorDb().prepare(
+    'UPDATE digest SET attempts = attempts + 1, last_error = ? WHERE id = ?',
+  ).run(error.slice(0, 300), id)
 }
