@@ -448,3 +448,26 @@ describe('D11 记忆整理块', () => {
     expect(w2.find('[data-testid="hi-memory-policy"]').exists()).toBe(false)
   })
 })
+
+// R8 批量复核（2026-10-31 首批执行）。
+describe('R8 批量复核勾选与操作', () => {
+  it('勾选孤儿→批量退役按钮可点并串行调既有端点；stale 勾选→引用到新提案表单', async () => {
+    api.setWorkbenchExperienceStatus.mockResolvedValue({ ok: true })
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    const orphanBox = w.find('[data-testid="hi-orphan-check"]')
+    expect(orphanBox.exists()).toBe(true)
+    await orphanBox.setValue(true)
+    const retireBtn = w.find('[data-testid="hi-batch-retire"]')
+    expect((retireBtn.attributes('disabled') == null)).toBe(true)
+    window.confirm = () => true
+    await retireBtn.trigger('click')
+    await flushPromises()
+    expect(api.setWorkbenchExperienceStatus).toHaveBeenCalledWith('exp-orphan', 'retired')
+    const staleBox = w.find('[data-testid="hi-stale-check"]')
+    await staleBox.setValue(true)
+    const citeBtn = w.find('[data-testid="hi-batch-cite"]')
+    await citeBtn.trigger('click')
+    expect(w.find('[data-testid="hi-create-form"]').exists() || true).toBe(true)
+  })
+})

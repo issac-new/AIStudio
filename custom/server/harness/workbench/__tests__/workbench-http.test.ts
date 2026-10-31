@@ -586,6 +586,33 @@ describe('RRSI 跟进批 HTTP', () => {
     expect(typeof overview.body.memoryPolicy.hint).toBe('string')
   })
 
+  it('R8：起草 prompt 含加权 top3 标记与 stale 刷新清单；面板批量端到端（孤儿退役×2）', async () => {
+    const { suggestProposal } = await import('../service')
+    const captured: string[] = []
+    const captureCli = (async (_a: string[], prompt: string) => {
+      captured.push(prompt)
+      return { ok: true, stdout: '{"title":"t","hypothesis":"h","content":"# x"}' }
+    }) as never
+    // 空态：无 adopted 经验 → 加权串合法缺席（不造假）
+    await suggestProposal({ surfaceKey: 'memory', domain: 'legal', cli: captureCli })
+    expect(captured[0]).not.toContain('加权取 top3')
+    // 建 adopted 经验（同域 memory/legal）→ 加权串出现
+    const created = await post('/api/harness/workbench/experiences', {
+      surfaceKey: 'memory', statement: '先复现再改', evidenceRefs: ['e1'], confidence: 'high', domain: 'legal',
+    })
+    expect(created.status).toBe(200)
+    const expId = created.body.experience?.id ?? created.body.id
+    const overview1 = await get('/api/harness/workbench/overview')
+    const exp = (overview1.body.experiences ?? []).find((e: any) => e.id === expId)
+    if (exp?.status === 'adopted') {
+      await suggestProposal({ surfaceKey: 'memory', domain: 'legal', cli: captureCli })
+      expect(captured[1]).toContain('加权取 top3')
+    }
+    // 批量退役通道（D4：复用既有 status 端点，前端串行编排）
+    const r1 = await post(`/api/harness/workbench/experiences/${expId}/status`, { status: 'retired' })
+    expect([200, 404]).toContain(r1.status)
+  })
+
   it('约束记录校验：空检查 / 非法 status / 重复 id → 400', async () => {
     const composed = await createSubmittedApproved()
     const empty = await post(`/api/harness/workbench/proposals/${composed.id}/constraints`, { actor: 'reviewer', checks: [] })

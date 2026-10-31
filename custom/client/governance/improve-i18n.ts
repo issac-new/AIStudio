@@ -220,6 +220,9 @@ export interface ImproveCopy {
     memoryPolicyTitle: string
     memoryRevalidate: string
     memoryRetire: string
+    batchRetire: string
+    batchCite: string
+    batchRetireConfirm: string
   noiseRunIds: string
   noiseCalibrate: string
   noiseCalibrated: string
@@ -455,6 +458,9 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     memoryPolicyTitle: '记忆整理（D11）',
     memoryRevalidate: '需再验证',
     memoryRetire: '建议退役',
+    batchRetire: '批量退役',
+    batchCite: '引用到新提案',
+    batchRetireConfirm: '确认退役选中的 {n} 条孤儿候选经验？（逐条走既有退役通道，人裁决）',
     noiseRunIds: '基线运行 ID（≥2 条，逗号或换行分隔）',
     noiseCalibrate: '标定噪声带',
     noiseCalibrated: '已标定',
@@ -688,6 +694,9 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     memoryPolicyTitle: 'Memory consolidation (D11)',
     memoryRevalidate: 'needs revalidation',
     memoryRetire: 'retire suggested',
+    batchRetire: 'Retire selected',
+    batchCite: 'Cite into new proposal',
+    batchRetireConfirm: 'Retire {n} selected orphan candidates? (via existing retire channel, human decides)',
     noiseRunIds: 'Baseline run IDs (≥2, comma or newline separated)',
     noiseCalibrate: 'Calibrate noise band',
     noiseCalibrated: 'Calibrated',

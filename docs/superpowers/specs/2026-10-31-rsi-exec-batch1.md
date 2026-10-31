@@ -1,7 +1,7 @@
 # RSI 首批执行方案：R1/R4/R8/R12a 四件（2026-10-31）
 
 日期：2026-10-31
-状态：plan-approved-pending-execution（执行实施方案；对应总方案 `2026-10-31-rsi-improvement-plan.md` 的批次 A/D/C 摘出件）
+状态：implemented-批次一二三执行中（本 spec 即治理 spec；对应总方案 `2026-10-31-rsi-improvement-plan.md` 的批次 A/D/C 摘出件）
 来源：用户指示「哪些可以落地实施，制定下方案」。从 R1-R12 中按可落地性筛出**无外部依赖、S 规模、当轮可收口**的四件为首批；其余分第二/三批（本 spec 第二节）。
 
 ## 变更
@@ -49,6 +49,14 @@
 | D4 | R8 批量操作走前端串行复用既有端点 | 不新增 REST 面＝不扩攻击面；N 条规模（≤百）串行足够 | 新增批量 REST（否决：为省前端循环扩服务端接口不值） | 是 |
 | D5 | R12 拆 a/b，消融后置 | 消融需「每约束独立贡献」的运行时对照测量（每约束跑一次带/不带探测），成本与 R2 runner 耦合 | 与 tier 捆绑首批（否决：把 M 规模件混进 S 批） | 是 |
 | D6 | R12a 的 heldout 层暂列枚举但不判 | R6 未落地前该层无证据可判；枚举先占位避免 R6 落地后改类型 | 现在就接 heldout（否决：无消费者） | 是 |
+
+## 执行实记（2026-10-31 深夜，随码同批增补）
+
+- **R1 修复两个真缺陷**（超出原认知）：①路径三级序（env `GAP_REGISTER_PATH` 强制语义——指定即用、缺席失效不回落，D2 决策语义；→ life-workbench 新址 → 旧 `~/.hermes` 兜底）；②原正则 `^-[-\s]+domain:` 只匹配旧格式行首字面短横线，对 life-workbench 新址缩进格式 `  domain: capability` 恒数 0——改 `^\s*-?\s*` 兼容两格式。本机活体：L1-L3 全恢复 true，L2 证据锚点如实带新址路径。
+- **R4**：runner `k` 参数（缺省 2；预算不足 `affordableK` 降 1 如实降级）；晋级门 k<2 恒 `statistical_insufficient`＋新增 `pass_at_k_divergence`（pass@1 升而 pass@k 降＝靠运气）。
+- **R8**：加权 top3＝confidenceScore（HP-7 半衰期现算）×面域（同面 1.0/跨面 null 0.7/异面 0.5）×domain（同域 1.0/异域 0.7）；stale 刷新清单（同面 stale、上限 5 条）进起草 prompt；面板孤儿批量退役＋stale 批量引用（前端串行复用既有 `setExperienceStatus` 端点，window.confirm 门）。
+- **R12a**：`verificationTierOf`（regression > heldout（R6 后接，类型已占位）> judge > none；regression 存在即 regression 层，无硬证据而 judgeOnline 判 judge 层）；`PromotionRecord.verificationTier` 晋级留痕；`EvolutionRound.verificationTier`／`EvolutionSurface.weakVerificationStreak`／`EvolutionReport.healthWarnings`（streak≥3 触发 `weak_verification_streak`）。
+- 测试：`rsi-maturity-path.test.ts`（新文件，4/4：env 强制优先/失效三址如实/旧址兜底/不可读 null）＋loop 51/51（新增 R4 两例＋R12a tier/streak 例）＋http 27/27（R8 空态合法缺席＋建经验后加权串＋批量通道）＋面板 20/20（勾选→按钮态→串行调用）；typecheck 0 错。
 
 ## 验证
 

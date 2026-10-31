@@ -169,6 +169,8 @@ export interface ProbeMetrics {
   equalBudgetBaseline?: EqualBudgetBaseline | null
   /** 反事实变体运行（CHASE D2）；缺席=未测，门按配置决定 warning/blocker。 */
   counterfactual?: CounterfactualEvidence | null
+  /** 密封留出集读数（R6，2026-10-31 二批）：只回 {runId,n,passRate} 形状，内容永不出库。 */
+  heldout?: { runId: string; n: number; passRate: number } | null
 }
 
 export type QualityVerdict = 'improved' | 'regressed' | 'neutral' | 'unknown'
@@ -249,6 +251,8 @@ export interface PromotionRecord {
   applied: boolean
   targetPath?: string
   backupPath?: string
+  /** 本次晋级实际用到的最强验证层（R12a，2026-10-31 首批执行；2607.07663 验证层级）。 */
+  verificationTier?: 'command' | 'heldout' | 'regression' | 'judge' | 'none'
 }
 
 export interface RollbackRecord {
@@ -411,6 +415,8 @@ export interface EvolutionRound {
   noiseDelta: number | null
   /** 相对该提案基线的通过率增量（选中候选对比）。 */
   passAt1Delta: number | null
+  /** 该轮晋级实际用到的最强验证层（R12a）。 */
+  verificationTier?: 'command' | 'heldout' | 'regression' | 'judge' | 'none'
 }
 
 export interface EvolutionSurface {
@@ -426,6 +432,8 @@ export interface EvolutionSurface {
   stalled: boolean
   /** 论文 S4：近 pruneN 个提案的全部已记录探测最大增量 ≤0 → 建议做减法提案。 */
   pruneSuggested: boolean
+  /** R12a：未回滚冠军连续 tier≤judge（弱验证层）的轮数；≥3 为进化健康度警示。 */
+  weakVerificationStreak: number
   timeline: EvolutionRound[]
 }
 
@@ -446,6 +454,8 @@ export interface EvolutionReport {
   /** 冠军退役候选（2026-10-23 挂账清偿 G4，advisory）：采纳时无增益且成本上涨、
    *  其后 ≥2 个已采纳轮未被纠正的冠军——「拆墙」侧复核清单，人裁决。 */
   retirementCandidates: RetirementCandidate[]
+  /** R12a 进化健康度警示：weak_verification_streak＝该面未回滚冠军连续 tier≤judge 的轮数（≥3 触发）。 */
+  healthWarnings: Array<{ surfaceKey: SurfaceKey; code: 'weak_verification_streak'; streak: number }>
 }
 
 /** 退役候选（腾讯文误区九：随模型迭代，当年加的控制组件该被果断拆除）。 */

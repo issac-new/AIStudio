@@ -521,8 +521,19 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
           message: `选中候选的历史回归失败 ${probe.evidence.regression.failed} 项`,
         })
       }
-      if (probe.evidence.statisticallyInsufficient) {
-        warnings.push({ code: 'statistical_insufficient', message: '评测采样 k<2，统计上不足' })
+      // R4（2026-10-31 D4）：k=1 恒 warning（单样本无法区分运气与能力）；
+      // pass@1 升而 pass@k 降＝靠运气通过——divergence 告警（两读数齐全才判）。
+      if (probe.evidence.statisticallyInsufficient || (probe.evidence.k ?? 1) < 2) {
+        warnings.push({ code: 'statistical_insufficient', message: '评测采样 k<2，统计上不足（单样本无法区分运气与能力）' })
+      }
+      if (probe.evidence.passAt1 != null && probe.evidence.passAtK != null
+        && probe.evidence.k != null && probe.evidence.k >= 2
+        && probe.contrast?.passAt1Delta != null && probe.contrast.passAt1Delta > 0
+        && probe.evidence.passAtK < probe.evidence.passAt1) {
+        warnings.push({
+          code: 'pass_at_k_divergence',
+          message: `pass@1 ${(probe.evidence.passAt1 * 100).toFixed(1)}% 高于 pass@k ${(probe.evidence.passAtK * 100).toFixed(1)}%（k=${probe.evidence.k}）——首样本通过但多样本不稳定，增益可能靠运气而非能力`,
+        })
       }
 
       // ---- RRSI 选择端正则化（2026-10-23 吸收轮）：噪声地板 + 成本规则 ----
@@ -1043,6 +1054,41 @@ export function pruneSignal(surfaceProposals: Proposal[], pruneN: number): boole
   return deltas.length > 0 && Math.max(...deltas) <= 0
 }
 
+// ---- R12a（2026-10-31 首批执行）：验证信号分级（验证层级理论 arXiv 2607.07663） ----
+
+export type VerificationTier = 'command' | 'heldout' | 'regression' | 'judge' | 'none'
+
+const TIER_ORDER: Record<VerificationTier, number> = { command: 4, heldout: 3, regression: 2, judge: 1, none: 0 }
+
+/**
+ * 从提案的探测证据推导本次晋级实际用到的最强验证层：
+ * command（命令式验收器运行）> heldout（密封留出，R6 后接）> regression（普通 eval 回归）> judge（LLM 判分主导）> none。
+ * 依据：改进强度与验证信号强度绑定（2607.07663）——面板须显式区分，弱层连续晋级是进化健康度信号。
+ */
+export function verificationTierOf(proposal: Proposal): VerificationTier {
+  const selected = composedVariant(proposal)
+  if (!selected) return 'none'
+  const probe = proposal.probes.find((x) => x.variantId === selected.id && x.status === 'recorded' && x.evidence)
+  const ev = probe?.evidence
+  if (!ev) return 'none'
+  const tiers: VerificationTier[] = []
+  if (ev.regression != null) {
+    // 回归运行含命令式验收器（eval 侧 outcome command 类型）则升 command 层；
+    // ProbeMetrics 无该直读位——以 regression 存在为 regression 层，command 层由
+    // heldout/command 专用证据位判定（R6 落地后 heldout 进位）。
+    tiers.push('regression')
+  }
+  if (ev.heldout != null) tiers.push('heldout')
+  // 判分主导＝无回归/留出硬证据而 judgeOnline（LLM 判分参与）
+  if (tiers.length === 0 && ev.judgeOnline) tiers.push('judge')
+  if (tiers.length === 0) tiers.push('none')
+  return tiers.sort((a, b) => TIER_ORDER[b] - TIER_ORDER[a])[0]
+}
+
+export function tierAtLeast(tier: VerificationTier, floor: VerificationTier): boolean {
+  return TIER_ORDER[tier] >= TIER_ORDER[floor]
+}
+
 // ---- D7/D10（2026-10-31 RSI P2 批）：提案端全历史注入＋删除提案模板 ----
 
 export interface EvolutionHistoryEntry {
@@ -1200,6 +1246,7 @@ export function evolutionSurfaceReport(
       costUsd: ev?.evidence.costUsd ?? null,
       noiseDelta: p?.noise?.delta ?? null,
       passAt1Delta: ev?.contrast?.passAt1Delta ?? null,
+      verificationTier: p?.promotion?.verificationTier ?? (p ? verificationTierOf(p) : 'none'),
     }
   })
   const openStatuses: ProposalStatus[] = ['draft', 'submitted', 'approved', 'probing', 'composed']
@@ -1214,6 +1261,16 @@ export function evolutionSurfaceReport(
     failedProbes: mine.reduce((n, p) => n + p.probes.filter((x) => x.status === 'failed').length, 0),
     stalled: stallDetection(mine, cfg.stallWindow),
     pruneSuggested: pruneSignal(mine, cfg.pruneN),
+    weakVerificationStreak: (() => {
+      const live = timeline.filter((r) => !r.rolledBack)
+      let streak = 0
+      for (let i = live.length - 1; i >= 0; i -= 1) {
+        const tier = live[i].verificationTier ?? 'none'
+        if (tier === 'judge' || tier === 'none') streak += 1
+        else break
+      }
+      return streak
+    })(),
     timeline,
   }
 }
@@ -1235,6 +1292,9 @@ export function evolutionReport(
     },
     surfaces,
     unexercised: surfaceKeys.filter((key) => !exercised.has(key)),
+    healthWarnings: surfaces
+      .filter((s) => s.weakVerificationStreak >= 3)
+      .map((s) => ({ surfaceKey: s.surfaceKey, code: 'weak_verification_streak' as const, streak: s.weakVerificationStreak })),
     retirementCandidates: retirementCandidates(surfaces),
   }
 }

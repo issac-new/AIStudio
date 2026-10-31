@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   annealedEditBudget, attributeGain, behaviorContrast, candidateDiversity, deletionProposalTemplate, diffSummary, editCountOfVariant,
-  proposalArchive, proposerEvolutionHistory,
+  proposalArchive, proposerEvolutionHistory, verificationTierOf, evolutionReport,
   evaluatePromotion, evolutionReport, findBenchmarkLeakage, findGraderMarkers,
   findGraderMarkersInPath, hypothesisRetries, hypothesisSimilarity, leakageBlockers,
   maxEditCount, pruneSignal, rsiConfig, sha256, stallDetection, submitReadiness,
@@ -744,5 +744,67 @@ describe('RSI P2：D7 全历史注入与 D10 删除提案模板', () => {
     const d = deletionProposalTemplate(withGain, 'system_prompt')
     expect(d.suggested).toBe(false)
     expect(d.scaffold).toBeNull()
+  })
+})
+
+// 2026-10-31 首批执行：R4 pass@k 背离告警＋R12a 验证信号分级。
+describe('R4 pass@k 背离与 R12a 验证分级', () => {
+  const base = () => ({ proposal: fixture(), currentChampion: null as Champion | null, applyRequested: false, applyEnvEnabled: false })
+
+  it('k=1 → statistical_insufficient 必现（含 evidence.k 缺席场景）', () => {
+    const p = fixture()
+    const probe = p.probes.find((x) => x.variantId === 'v1')!
+    probe.evidence = { ...probe.evidence!, k: 1 }
+    const r = evaluatePromotion({ ...base(), proposal: p })
+    expect(r.warnings.map((w) => w.code)).toContain('statistical_insufficient')
+    const k2 = fixture()
+    const pr2 = k2.probes.find((x) => x.variantId === 'v1')!
+    pr2.evidence = { ...pr2.evidence!, k: 2, passAtK: 0.8 }
+    const r2 = evaluatePromotion({ ...base(), proposal: k2 })
+    expect(r2.warnings.map((w) => w.code)).not.toContain('statistical_insufficient')
+  })
+
+  it('pass@1 升而 pass@k 降 → warning pass_at_k_divergence；同步升不告警', () => {
+    const diverge = fixture()
+    const probe = diverge.probes.find((x) => x.variantId === 'v1')!
+    probe.evidence = { ...probe.evidence!, k: 3, passAt1: 0.8, passAtK: 0.4 }
+    const r = evaluatePromotion({ ...base(), proposal: diverge })
+    expect(r.warnings.map((w) => w.code)).toContain('pass_at_k_divergence')
+    const stable = fixture()
+    const sp = stable.probes.find((x) => x.variantId === 'v1')!
+    sp.evidence = { ...sp.evidence!, k: 3, passAt1: 0.7, passAtK: 0.7 }
+    const r2 = evaluatePromotion({ ...base(), proposal: stable })
+    expect(r2.warnings.map((w) => w.code)).not.toContain('pass_at_k_divergence')
+  })
+
+  it('R12a：tier 推导——regression>judge>none；healthWarnings 在 streak≥3 触发', () => {
+    const withReg = fixture() // fixture 探测带 regression（run-reg）
+    expect(verificationTierOf(withReg)).toBe('regression')
+    const noEvidence = fixture()
+    delete noEvidence.probes[0].evidence
+    noEvidence.probes[0].status = 'recorded'
+    expect(verificationTierOf(noEvidence)).toBe('none')
+    const judgeOnly = fixture()
+    const jp = judgeOnly.probes.find((x) => x.variantId === 'v1')!
+    jp.evidence = { ...jp.evidence!, regression: undefined }
+    expect(verificationTierOf(judgeOnly)).toBe('judge')
+
+    // streak：三轮 judge-only 晋级 → weakVerificationStreak=3 → healthWarnings 命中
+    const mkChamp = (i: number) => ({
+      id: 'ch-' + i, surfaceKey: 'system_prompt' as const, proposalId: 'hw-' + i, variantId: 'v1',
+      digest: 'd' + i, label: 'c' + i, previousDigest: null, previousProposalId: null,
+      targetPath: null, applied: false, promotedAt: '2026-10-0' + i + 'T00:00:00Z', promotedBy: 't',
+    })
+    const proposals = [0, 1, 2].map((i) => {
+      const q = fixture()
+      q.id = 'hw-' + i
+      const pr = q.probes.find((x) => x.variantId === 'v1')!
+      pr.evidence = { ...pr.evidence!, regression: undefined }
+      return q
+    })
+    const report = evolutionReport(['system_prompt'], proposals, mkChamp(0) && [mkChamp(0), mkChamp(1), mkChamp(2)])
+    const surf = report.surfaces.find((s) => s.surfaceKey === 'system_prompt')!
+    expect(surf.weakVerificationStreak).toBe(3)
+    expect(report.healthWarnings).toContainEqual({ surfaceKey: 'system_prompt', code: 'weak_verification_streak', streak: 3 })
   })
 })

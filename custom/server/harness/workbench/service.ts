@@ -13,7 +13,7 @@ import {
   composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
   findBenchmarkLeakage, findGraderMarkers, findGraderMarkersInPath, hypothesisRetries,
   leakageBlockers, maxEditCount, paretoReportOf, probeCost, proposalArchive,
-  proposerEvolutionHistory, deletionProposalTemplate, pruneSignal,
+  proposerEvolutionHistory, deletionProposalTemplate, pruneSignal, verificationTierOf,
   rsiConfig, sha256, stallDetection, submitReadiness,
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
@@ -568,10 +568,22 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
   const history = proposerEvolutionHistory(store.proposals, store.champions, input.surfaceKey)
   // D10（2026-10-31 P2 批）：剪枝命中时给删除型提案模板（替代一句「优先做减法」）
   const deletion = deletionProposalTemplate(store.proposals, input.surfaceKey, cfg)
+  // R8（2026-10-31 首批执行）：加权检索取代静态前 3——
+  // score = confidenceScore（HP-7 半衰期现算）× 面域匹配（同面 1.0/跨面 0.5）× domain 匹配（同域 1.0/异域 0.7）
+  const staleRefreshList: string[] = []
   const adoptedExperiences = store.experiences
-    .filter((e) => e.status === 'adopted' && (e.surfaceKey === null || e.surfaceKey === input.surfaceKey))
+    .filter((e) => e.status === 'adopted')
+    .map((e) => {
+      const fresh = experienceFreshness(e)
+      const surfaceW = e.surfaceKey === input.surfaceKey ? 1.0 : e.surfaceKey === null ? 0.7 : 0.5
+      const domainW = (e.domain ?? 'general') === (input.domain ?? 'general') ? 1.0 : 0.7
+      const score = fresh.confidenceScore * surfaceW * domainW
+      if (fresh.band === 'stale' && surfaceW >= 0.7) staleRefreshList.push(`- ${e.statement.slice(0, 160)}（上次验证 ${Math.round(fresh.ageDays)} 天前）`)
+      return { e, score }
+    })
+    .sort((a, b) => b.score - a.score)
     .slice(0, 3)
-    .map((e) => `- ${e.statement.slice(0, 200)}`)
+    .map(({ e }) => `- ${e.statement.slice(0, 200)}`)
 
   const baseContent = input.targetPath ? readHomeFileSafe(String(input.targetPath)) : null
   const sectionMode = baseContent != null
@@ -594,7 +606,8 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     '',
     `该面进化状态：已采纳 ${round} 轮（编辑预算 b_t=${editBudget}，本轮起草改动文件数必须 ≤ ${editBudget}）；${stalled ? '搜索停滞（连续提案无采纳，考虑换思路）；' : ''}该面提案总数 ${mine.length}。`,
     `\n【该面进化全史（D7）】${history.summary}\n${history.entries.length ? history.entries.map((e) => `- [${e.kind === 'adopted' ? '已采纳' : e.kind === 'rejected' ? '被拒' : '已回滚'}] ${e.proposalId}「${e.title}」：${e.detail}`).join('\n') : '（该面尚无历史提案——首提案属结构性探索，带内增益可豁免）'}\n纪律：被拒/回滚假设禁止换皮重提；低分祖先常是垫脚石，可显式改造其思路（注明来源 proposal id）。`,
-    adoptedExperiences.length ? `\n已采纳经验（可参考）：\n${adoptedExperiences.join('\n')}` : '',
+    adoptedExperiences.length ? `\n已采纳经验（按置信×保鲜×面域加权取 top3）：\n${adoptedExperiences.join('\n')}` : '',
+    staleRefreshList.length ? `\n【记忆整理（D11）】以下 stale 采纳经验建议在本提案中引用以刷新验证：\n${staleRefreshList.slice(0, 5).join('\n')}` : '',
     deletion.suggested ? `\n${deletion.scaffold}` : '',
     (!deletion.suggested && failedHypotheses.length) ? `\n同面已失败假设（禁止换皮重提）：\n${failedHypotheses.join('\n')}` : '',
     '',
@@ -997,6 +1010,7 @@ export async function promoteProposal(
       applied,
       targetPath: p.targetPath ?? undefined,
       backupPath,
+      verificationTier: verificationTierOf(p),
     }
     p.status = 'promoted'
     p.updatedAt = now
@@ -1228,6 +1242,9 @@ async function runAutoProbeJob(
       }
     })
 
+    // R4（D4 匹配预算口径）：k=2 默认；预算不足以支撑双样本全程时降 1（如实降级不造假）。
+    const perTask = limits.estimate
+    const affordableK = remaining >= tasks.length * perTask * 2 ? 2 : 1
     const result = await runProbeTasks({
       prompts: tasks,
       baseHome: hermesHome(),
@@ -1235,6 +1252,7 @@ async function runAutoProbeJob(
       variantTree: tree,
       budgetRemainingUsd: Math.max(0, remaining),
       estimatePerTaskUsd: limits.estimate,
+      k: affordableK,
       spawnRun: opts.spawnRun,
       onProgress: (done, costUsd, estimatedTasks) => {
         job.costUsd = costUsd

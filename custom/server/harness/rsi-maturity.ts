@@ -58,17 +58,51 @@ function probe(rel: string): RsiEvidence {
   return { anchor: rel, present: existsSync(p) }
 }
 
+/**
+ * gap_register.yaml 路径三级序（2026-10-31 R1 修复）：
+ * ① env GAP_REGISTER_PATH 显式覆盖（测试/多机）；
+ * ② life-workbench 新址（2026-10-12 迁移后的权威位置，watchdog 同源）；
+ * ③ 旧 ~/.hermes/gap_register.yaml 兜底（他机未迁移场景）。
+ * 三址均缺＝探针失效，不判定。
+ */
+export function gapRegisterCandidates(): string[] {
+  const home = process.env.HERMES_HOME?.trim() || hermesHome()
+  const overridden = process.env.GAP_REGISTER_PATH?.trim()
+  const cands = [
+    ...(overridden ? [overridden] : []),
+    '/Users/cuishi/hermes-docker-sandbox/workspace/life-workbench/gap_register.yaml',
+    join(home, 'gap_register.yaml'),
+  ]
+  return [...new Set(cands)]
+}
+
+function resolveGapRegister(): { path: string | null; tried: string[] } {
+  const tried = gapRegisterCandidates()
+  // env 覆盖＝强制（D2 决策：保测试与多机可复现）：指定了就用它，缺席即失效不回落。
+  const overridden = process.env.GAP_REGISTER_PATH?.trim()
+  if (overridden) {
+    return { path: existsSync(overridden) ? overridden : null, tried }
+  }
+  for (const p of tried) {
+    if (existsSync(p)) return { path: p, tried }
+  }
+  return { path: null, tried }
+}
+
 /** gap_register.yaml 中 capability 域条目数（L2 证据强度）。 */
 export function countCapabilityGaps(): number | null {
+  const { path } = resolveGapRegister()
+  if (!path) return null
   try {
-    const txt = readFileSync(hermesPath('gap_register.yaml'), 'utf8')
-    const matches = txt.match(/^[-\s]+domain:\s*capability\b/gm)
+    const txt = readFileSync(path, 'utf8')
+    // R1（2026-10-31）：兼容两种条目格式——旧 ~ 目录格式「- domain: x」行首字面短横线，
+    // life-workbench 新址缩进格式「  domain: x」（条目内字段行）。原 ^-[-\s]+ 对新格式恒 0。
+    const matches = txt.match(/^\s*-?\s*domain:\s*capability\b/gm)
     return matches ? matches.length : 0
   } catch {
     return null
   }
 }
-
 /**
  * 五级判定（证据静态定义 + 本机探测；纯函数便于测试——探测结果作为入参）。
  * 分级语义逐字对照源文 L1-L5 表，判定纪律：机制"存在"不等于级别"达成"。
@@ -153,11 +187,26 @@ export function buildRsiMaturity(probes: { ladder: boolean; watchdog: boolean; s
 
 /** 采集（探测+读数；全部 fail-soft）。 */
 export function collectRsiMaturity(): RsiMaturityReport {
+  const gap = resolveGapRegister()
   const probes = {
     ladder: probe('profiles/_shared/01-scheduling-bus/capability-ladder.md').present,
     watchdog: probe('bin/capability-gap-watchdog.py').present,
     soul: probe('profiles/orchestrator/SOUL.md').present,
-    gapRegister: probe('gap_register.yaml').present,
+    gapRegister: gap.path != null,
   }
-  return buildRsiMaturity(probes, countCapabilityGaps())
+  const report = buildRsiMaturity(probes, countCapabilityGaps())
+  // R1（2026-10-31）：探针失效时如实写明三址，防「静默 null 与达成文案矛盾」；
+  // 命中非默认址时把实际路径写进证据锚点（可复现）。
+  const home = process.env.HERMES_HOME?.trim() || hermesHome()
+  for (const lv of report.levels) {
+    for (const ev of lv.evidence) {
+      if (!ev.anchor.startsWith('gap_register')) continue
+      if (gap.path == null) {
+        ev.anchor = `gap_register 探针失效（三址均缺：${gap.tried.join(' → ')}）`
+      } else if (gap.path !== join(home, 'gap_register.yaml')) {
+        ev.anchor = `gap_register.yaml（@${gap.path}）`
+      }
+    }
+  }
+  return report
 }
