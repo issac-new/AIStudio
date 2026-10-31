@@ -30,7 +30,7 @@ Playwright recordVideo 章节化实拍日常工作台：六阶段页签巡览／
 
 ### 六、挂账登记（收尾批发现未修）
 
-**看板聚合/单板双源不一致（幽灵卡）**：收官走查实录——同一页面内 `/api/hermes/kanban/overview`（24 卡）不含 t_ea687287，而看板 DOM 以其为首卡渲染（三发三中点击抽屉不开：taskClick 按 taskRefs 解析不到该卡 ref）。定性：overview 聚合端点与单板列表端点数据分歧（服务端聚合缓存/partial 回落链域），DOM 渲染源与点击解析源不同步。本批处置：探针 E2 加次卡重试防御（两卡皆不开才判红；重试上限受板卡数约束且循环内即时复点卡数——板面在计数与点击间被并行会话重渲染缩卡的两例实录）；直修留专项（方向：doRefreshOverview 聚合优先/N+1 回落两路的数据源对齐与 overview 缓存失效策略）。锚点：custom/client/shared/store/workspace.ts doRefreshOverview + 本轮 /tmp/ghost.mjs 对账实录。
+**看板聚合/单板双源不一致（幽灵卡）**：收官走查实录——同一页面内 `/api/hermes/kanban/overview`（24 卡）不含 t_ea687287，而看板 DOM 以其为首卡渲染（三发三中点击抽屉不开：taskClick 按 taskRefs 解析不到该卡 ref）。定性：overview 聚合端点与单板列表端点数据分歧（服务端聚合缓存/partial 回落链域），DOM 渲染源与点击解析源不同步。本批处置（终案）：探针 E2 改 DOM∩overview 交取卡——只在两源都在册的卡上验抽屉（中间两版「次卡重试/即时复点卡数」均被滞留卡单卡板劫持，废弃）；直修留专项（方向：doRefreshOverview 聚合优先/N+1 回落两路的数据源对齐与 overview 缓存失效策略）。锚点：custom/client/shared/store/workspace.ts doRefreshOverview + 本轮 /tmp/ghost.mjs 对账实录。
 
 ## 2. 决策记录
 

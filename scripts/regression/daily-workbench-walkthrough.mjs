@@ -176,27 +176,29 @@ async function visit(page, hash, settle = 2300) {
     const cardCount = await page.locator(cardSel).count()
     led.record('E1 看板卡片装载', cardCount > 0, `cards=${cardCount}`)
     if (cardCount > 0) {
-      // 幽灵卡防御（收尾批实录）：聚合/单板双源偶发不一致（本页 overview 无此卡而
-      // DOM 渲染），点击该卡 taskClick 解析不到 ref 抽屉不开。首卡不开则换次卡重试，
-      // 两卡皆不开才判红；卡源分歧本体挂账（见 spec §挂账）。
-      let drawer = { open: false, header: '' }
-      let firstId = ''
-      for (let attempt = 0; attempt < 2 && !drawer.open; attempt++) {
-        // 即时复点卡数（计数与点击之间板面可能被并行会话重渲染缩卡）
-        if (attempt >= (await page.locator(cardSel).count())) break
-        const card = page.locator(cardSel).nth(attempt)
-        firstId = (await card.getAttribute('data-task-id')) || firstId
-        await card.click()
-        await page.waitForTimeout(2000)
-        drawer = await page.evaluate(() => ({
-          open: !!document.querySelector('[data-testid=kanban-task-drawer]'),
-          header: document.querySelector('[data-testid=kanban-drawer-header]')?.textContent?.trim().slice(0, 60) || '',
-        }))
-        if (!drawer.open) {
-          for (let i = 0; i < 3 && await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false); i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(400) }
-        }
-      }
-      led.record('E2 卡片点击→详情抽屉打开', drawer.open, JSON.stringify({ id: firstId, header: drawer.header }))
+      // 幽灵卡防御（收尾批实录，终案）：数据层已删而 DOM 常显的滞留卡（九板 CLI 全无
+      // 此卡）点击抽屉不开。改为 DOM∩overview 交选取卡——只在两源都在册的卡上验抽屉；
+      // 幽灵卡本体（客户端滞留渲染/双源分歧）挂账见 spec §挂账。
+      const liveId = await page.evaluate(async () => {
+        try {
+          const r = await fetch('/api/hermes/kanban/overview', { headers: { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key') } })
+          const ids = new Set(((await r.json()).tasks || []).map((t) => t.task?.id))
+          return [...document.querySelectorAll('.kanban-task-card[data-task-id]')]
+            .map((c) => c.getAttribute('data-task-id'))
+            .find((id) => ids.has(id)) || ''
+        } catch { return '' }
+      }).catch(() => '')
+      const target = liveId
+        ? page.locator(`${cardSel}[data-task-id="${liveId}"]`).first()
+        : page.locator(cardSel).first()
+      const firstId = (await target.getAttribute('data-task-id')) || ''
+      await target.click()
+      await page.waitForTimeout(2200)
+      const drawer = await page.evaluate(() => ({
+        open: !!document.querySelector('[data-testid=kanban-task-drawer]'),
+        header: document.querySelector('[data-testid=kanban-drawer-header]')?.textContent?.trim().slice(0, 60) || '',
+      }))
+      led.record('E2 卡片点击→详情抽屉打开（DOM∩overview 交取卡）', drawer.open, JSON.stringify({ id: firstId, header: drawer.header }))
       await led.shot(page, 'e-drawer')
       // 关毕验证（走查序列实录：first button≠关闭钮，抽屉残留时后续建卡点击全落遮罩）
       for (let i = 0; i < 4 && await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false); i++) {
