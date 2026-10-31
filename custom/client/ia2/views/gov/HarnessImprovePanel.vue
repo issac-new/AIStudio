@@ -462,6 +462,9 @@ async function saveConstraints(p: ProposalDto): Promise<void> {
 /** D3 垫脚石档案：被拒/回滚提案投影（面内全部，供新提案假设引用）。 */
 const archiveList = computed<ArchiveSteppingStoneDto[]>(() => data.value?.archive ?? [])
 
+/** D11 记忆压缩/遗忘策略（纯派生；执行走既有状态按钮，人裁决）。 */
+const memoryPolicy = computed(() => data.value?.memoryPolicy ?? null)
+
 async function calibrateNoise(p: ProposalDto): Promise<void> {
   const f = formFor(p.id)
   const runIds = f.noiseRunIds.split(/[,，\n\s]+/).map((s) => s.trim()).filter(Boolean)
@@ -1008,6 +1011,19 @@ onMounted(() => void refresh())
         <p v-if="data.evolution.unexercised.length" class="hi__meta" data-testid="hi-evo-unexercised">
           {{ L.evoUnexercised }}：<code v-for="k in data.evolution.unexercised" :key="k">{{ surfaceName(k) }}</code>
         </p>
+
+        <details v-if="memoryPolicy && (memoryPolicy.staleAdopted.length || memoryPolicy.orphanCandidates.length)" class="hi__details" data-testid="hi-memory-policy">
+          <summary>{{ L.memoryPolicyTitle }}（{{ memoryPolicy.staleAdopted.length + memoryPolicy.orphanCandidates.length }}）</summary>
+          <p class="hi__meta">{{ memoryPolicy.hint }}</p>
+          <ul class="hi__list">
+            <li v-for="s in memoryPolicy.staleAdopted" :key="s.id" :data-testid="`hi-memory-stale-${s.id}`">
+              <code>{{ s.id }}</code>·{{ L.memoryRevalidate }}（{{ Math.round(s.ageDays) }}d）——{{ s.statement.slice(0, 120) }}
+            </li>
+            <li v-for="o in memoryPolicy.orphanCandidates" :key="o.id" :data-testid="`hi-memory-orphan-${o.id}`">
+              <code>{{ o.id }}</code>·{{ L.memoryRetire }}（{{ Math.round(o.ageDays) }}d）——{{ o.statement.slice(0, 120) }}
+            </li>
+          </ul>
+        </details>
 
         <details v-if="archiveList.length" class="hi__details" data-testid="hi-archive">
           <summary>{{ L.archiveTitle }}（{{ archiveList.length }}）</summary>

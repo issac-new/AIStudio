@@ -333,6 +333,7 @@ export interface ChampionDto {
 
 export interface WorkbenchOverviewDto {
   archive?: ArchiveSteppingStoneDto[]
+  memoryPolicy?: MemoryConsolidationPolicyDto
   ok: boolean
   surfaces: SurfaceDto[]
   counts: Record<string, number>
@@ -456,6 +457,20 @@ export function recordWorkbenchConstraints(
   return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/constraints`, {
     method: 'POST', body: JSON.stringify({ checks, actor, note }),
   })
+}
+
+export interface MemoryPolicyItemDto {
+  id: string
+  statement: string
+  ageDays: number
+  action: 'revalidate' | 'retire'
+}
+
+export interface MemoryConsolidationPolicyDto {
+  staleAdopted: MemoryPolicyItemDto[]
+  orphanCandidates: MemoryPolicyItemDto[]
+  counts: { adopted: number; candidate: number; retired: number }
+  hint: string
 }
 
 export interface ArchiveSteppingStoneDto {

@@ -1197,7 +1197,7 @@ Ycode 通过受管构建与安装脚本落到部署位。
 基线升级只由上游稳定发版触发；未发版时保持钉版，
 不追逐上游 main 分支漂移。**例外：zcode** 按上游 main 同步、不看版本 tag（2026-10-25 用户裁定，见 `vendor/VENDOR.md`）。版本核对结论以 `vendor/VENDOR.md` 与 `RELEASE-MANIFEST.json` 为准；技术组件台账只收外部组件型调研线，不含仓内四大基线。
 
-2026-10-31 调研刷新：hermes-studio 已发 v0.8.0（基线后 58 提交，补丁 329 的 esp32 目标路径被上游迁到 `packages/mcu/`，硬冲突），本轮只做兼容评估、不升级；hermes-agent 仍 v0.22.5（main 领先 3087 提交，无新稳定 tag）；zcode 上游 main 到 v3.17.1 线，待独立升级轮。组件台账终态单文件统一为 37 行口径（3 红 / 10 黄 / 24 绿），并补上三账分工：vendor 版本归 `VENDOR.md`、技能清单归 `capability-map.md`、旧账冻结为历史档案。RSI 侧吸收 HDA 等预算基线归因与约束保持门两项，落改进实验台晋级门；同日二批补 CHASE 反事实门（D2，counterfactual_gain_collapse）、垫脚石档案（D3，proposalArchive）与约束/等预算/反事实前端录入面（spec 2026-10-31-rsi-d2d3-frontend.md）。品牌扫尾随批闭环：补丁 718 把 v0.8.0 新面残带的 280 处 Ekko Studio 归一（11 语种/desktop/mcu/文档/提示词，SSID 随 329 先例），文本残留清零。
+2026-10-31 调研刷新：hermes-studio 已发 v0.8.0（基线后 58 提交，补丁 329 的 esp32 目标路径被上游迁到 `packages/mcu/`，硬冲突），本轮只做兼容评估、不升级；hermes-agent 仍 v0.22.5（main 领先 3087 提交，无新稳定 tag）；zcode 上游 main 到 v3.17.1 线，待独立升级轮。组件台账终态单文件统一为 37 行口径（3 红 / 10 黄 / 24 绿），并补上三账分工：vendor 版本归 `VENDOR.md`、技能清单归 `capability-map.md`、旧账冻结为历史档案。RSI 侧吸收 HDA 等预算基线归因与约束保持门两项，落改进实验台晋级门；同日二批补 CHASE 反事实门（D2，counterfactual_gain_collapse）、垫脚石档案（D3，proposalArchive）与约束/等预算/反事实前端录入面（spec 2026-10-31-rsi-d2d3-frontend.md）；P2 批补起草器进化全史注入（D7）、剪枝命中时的删除提案模板（D10）与记忆压缩/遗忘策略（D11，stale 再验证＋孤儿退役，人裁决）（spec 2026-10-31-rsi-p2-batch.md）。品牌扫尾随批闭环：补丁 718 把 v0.8.0 新面残带的 280 处 Ekko Studio 归一（11 语种/desktop/mcu/文档/提示词，SSID 随 329 先例），文本残留清零。
 
 ### 7.4 发布与版本
 

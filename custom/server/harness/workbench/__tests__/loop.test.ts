@@ -1,8 +1,8 @@
 // 改进闭环纯函数守门：摘要/行为对比/晋级门禁十类阻塞 + RRSI 正则化（2026-10-23）。
 import { describe, it, expect } from 'vitest'
 import {
-  annealedEditBudget, attributeGain, behaviorContrast, candidateDiversity, diffSummary, editCountOfVariant,
-  proposalArchive,
+  annealedEditBudget, attributeGain, behaviorContrast, candidateDiversity, deletionProposalTemplate, diffSummary, editCountOfVariant,
+  proposalArchive, proposerEvolutionHistory,
   evaluatePromotion, evolutionReport, findBenchmarkLeakage, findGraderMarkers,
   findGraderMarkersInPath, hypothesisRetries, hypothesisSimilarity, leakageBlockers,
   maxEditCount, pruneSignal, rsiConfig, sha256, stallDetection, submitReadiness,
@@ -668,5 +668,81 @@ describe('CHASE 反事实门与垫脚石档案', () => {
     expect(archive[0].bestPassAt1).toBeCloseTo(0.8)
     expect(archive[0].bestDelta).toBeCloseTo(0.3)
     expect(proposalArchive([rejected, rolled, open], 'skills').map((a) => a.proposalId)).toEqual(['hw-002'])
+  })
+})
+
+// 2026-10-31 RSI P2 批：D7 起草器全历史注入＋D10 删除提案模板。
+describe('RSI P2：D7 全历史注入与 D10 删除提案模板', () => {
+  function surfaceFixture(status: ProposalStatus, over: Partial<Proposal> = {}): Proposal {
+    const p = fixture()
+    p.status = status
+    Object.assign(p, over)
+    return p
+  }
+
+  it('D7：冠军（含增益）/拒绝（含理由）/回滚（含理由）全史入表，summary 计数正确', () => {
+    const adopted = fixture() // hw-001：composed+recorded probe passAt1=0.8 → Δ+30pp
+    const champion = {
+      id: 'ch-1', surfaceKey: 'system_prompt' as const, proposalId: 'hw-001', variantId: 'v1',
+      digest: 'd', label: '候选 A', previousDigest: null, previousProposalId: null,
+      targetPath: null, applied: false, promotedAt: '2026-10-01T00:00:00Z', promotedBy: 'op',
+    }
+    const rejected = surfaceFixture('rejected', {
+      id: 'hw-002', title: '旧假设',
+      approval: { decision: 'rejected', actor: 'r', note: '增益在噪声带内', variantSetDigest: 'x', at: 'now' },
+    })
+    const rolled = surfaceFixture('rolled_back', {
+      id: 'hw-003', title: '回滚件',
+      rollback: { actor: 'r', at: 'now', reason: '真机走查回归', restoredDigest: null, fileRestored: false },
+    })
+    const { entries, summary } = proposerEvolutionHistory(
+      [adopted, rejected, rolled], [champion], 'system_prompt',
+    )
+    expect(entries.map((e) => e.kind)).toEqual(['adopted', 'rejected', 'rolled_back'])
+    expect(entries[0].detail).toContain('第 1 轮冠军')
+    expect(entries[0].detail).toContain('Δ30.0pp')
+    expect(entries[1].detail).toContain('增益在噪声带内')
+    expect(entries[2].detail).toContain('真机走查回归')
+    expect(summary).toContain('已采纳 1 轮 / 回滚 1 / 拒绝 1')
+  })
+
+  it('D7：空面（无历史）返回空 entries 与首提案权衡提示', () => {
+    const { entries, summary } = proposerEvolutionHistory([], [], 'memory')
+    expect(entries).toEqual([])
+    expect(summary).toContain('提案总数 0')
+  })
+
+  function zeroGainProposals(n: number): Proposal[] {
+    return Array.from({ length: n }, (_, i) => {
+      const p = fixture()
+      p.id = `hw-00${i + 1}`
+      p.title = `零增益${i + 1}`
+      p.createdAt = new Date(Date.now() + i * 1000).toISOString()
+      for (const probe of p.probes) {
+        if (probe.contrast) probe.contrast.passAt1Delta = i === 0 ? -0.05 : 0
+      }
+      return p
+    })
+  }
+
+  it('D10：近窗全零增益 → suggested=true，模板含锚点格式＋零增益证据＋禁增条款', () => {
+    const d = deletionProposalTemplate(zeroGainProposals(4), 'system_prompt')
+    expect(d.suggested).toBe(true)
+    expect(d.windowProposals).toHaveLength(4)
+    expect(d.scaffold).toContain('删除型提案模板')
+    expect(d.scaffold).toContain('段落锚点')
+    expect(d.scaffold).toContain('不新增任何机制段落')
+    expect(d.scaffold).toContain('hw-001「零增益1」最佳增益 -5.0pp')
+  })
+
+  it('D10：有正增益 → suggested=false 且 scaffold=null（directive 只在命中时给）', () => {
+    const withGain = zeroGainProposals(4)
+    const last = withGain[3]
+    for (const probe of last.probes) {
+      if (probe.contrast) probe.contrast.passAt1Delta = 0.08
+    }
+    const d = deletionProposalTemplate(withGain, 'system_prompt')
+    expect(d.suggested).toBe(false)
+    expect(d.scaffold).toBeNull()
   })
 })

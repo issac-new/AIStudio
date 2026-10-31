@@ -108,9 +108,9 @@ LLM 判分器本身可被 gaming。优先级：退出码 > 结构化断言 > LLM
 |---|---|---|---|
 | P1 | 反事实协议变体 | D2 | **已落地（2026-10-31 RSI 二批）**：`counterfactual` 证据＋晋级门 `counterfactual_gain_collapse`（spec `2026-10-31-rsi-d2d3-frontend.md`） |
 | P1 | 档案 DAG（保留劣解祖先） | D3 | **已落地（人类提案版，2026-10-31 RSI 二批）**：`proposalArchive()` 垫脚石档案＋面板展示（自动父代采样按边界否决） |
-| P2 | 起草器注入进化史 | D7 | 机制已有一半（Jaccard 警告），补全成本低 |
-| P2 | 剪枝升级为删除提案模板 | D10 | 现在只会加法，长期必然复杂度堆积 |
-| P2 | 记忆压缩/遗忘策略 | D11 | memory 面可编辑但策略缺位 |
+| P2 | 起草器注入进化史 | D7 | **已落地（2026-10-31 RSI P2 批）**：`proposerEvolutionHistory()` 全史进起草 prompt（spec `2026-10-31-rsi-p2-batch.md`） |
+| P2 | 剪枝升级为删除提案模板 | D10 | **已落地（2026-10-31 RSI P2 批）**：`deletionProposalTemplate()` 剪枝命中给结构化删除计划模板 |
+| P2 | 记忆压缩/遗忘策略 | D11 | **已落地（2026-10-31 RSI P2 批）**：`memoryConsolidationPolicy()` stale 采纳再验证＋孤儿候选退役（人裁决执行） |
 
 ## 七、来源
 
