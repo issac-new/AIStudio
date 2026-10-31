@@ -77,6 +77,14 @@ try {
       return ide?.activeTaskId === task && Boolean(ide?.taskWorkspace?.path)
     }, TASK, { timeout: 25_000 }).catch(() => {})
     await page.waitForTimeout(300)
+    // 抽屉内容（resolveBriefingCrossBoard）可滞后于工作区解析（super_admin 视角
+    // 跨板任务列更大，2026-10-31 真值轮实录：+300ms 不足、+12s 实态全开）——
+    // 简报断言前对抽屉文本短轮询，超时按当帧快照判（不降级判据）。
+    await page.waitForFunction((task) => {
+      const drawer = document.querySelector('[data-testid="ide-briefing-drawer"]')
+      const text = drawer?.textContent || ''
+      return Boolean(drawer) && (text.includes(task) || /IDE回归|回归/.test(text))
+    }, TASK, { timeout: 8_000 }).catch(() => {})
     const snap = await page.evaluate((t) => {
       const pinia = document.querySelector('#app')?.__vue_app__?.config?.globalProperties?.$pinia
       const ide = pinia?._s?.get('ide')
