@@ -1,7 +1,7 @@
 # AIStudio 设计事实与容量基线
 
 > 本文是《AIStudio 终态设计文档》的数字附录，不是独立设计正本。
-> 核实日：2026-10-31（studio 基线 v0.8.0 升级批）。
+> 核实日：2026-10-31（studio v0.8.0＋zcode 3.17.1 同步批）。
 > 口径：区分稳定设计参数、参考部署和版本快照。
 > 用途：防止同一数字在多处定义，不滚动记录开发轮次。
 
@@ -57,10 +57,10 @@
 |---|---|---|
 | hermes-studio 基线 | v0.8.0 | `vendor/VENDOR.md` |
 | hermes-agent 基线 | v0.22.5 | `vendor/VENDOR.md` |
-| zcode 基线谱系 | v3.16.1 系列（包版本 3.16.2），同步跟随上游 main | `vendor/VENDOR.md` |
+| zcode 基线谱系 | v3.16.1 系列（包版本 3.17.1 @a60ba6a7，2026-10-31 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
 | 驾驶舱模块 | 0.8.0-studio.1 | `RELEASE-NOTES.md` |
 | agent teams 模块 | v0.22.5-team.1 | `team/VERSION` |
-| Ycode 模块 | 3.16.2 | `vendor/zcode/package.json` |
+| Ycode 模块 | 3.17.1 | `vendor/zcode/package.json` |
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
 | yuan skill 模块 | v2.95.0 | `skills/swarm-yuan/CHANGELOG.md` |
 | 整体源码包 | 1.0.0-overlay | 仓根 `package.json` 与发布清单 |

@@ -1,8 +1,7 @@
 diff --git a/apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts b/apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts
-index 794e4f88..063b46d1 100644
 --- a/apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts
 +++ b/apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts
-@@ -382,14 +382,16 @@ export const OFFICIAL_PLUGIN_DEFINITIONS: readonly OfficialPluginDefinition[] =
+@@ -389,14 +389,16 @@
      version: "0.3.0",
    },
    {
@@ -28,10 +27,9 @@ index 794e4f88..063b46d1 100644
      hostMcpServerNames: ["node_repl"],
      // 用户露出名统一为「Computer Use / 电脑控制」。包名与 producer workspace 包仍保持 zcode-cua，
 diff --git a/apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts b/apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts
-index b75821d2..fafadc59 100644
 --- a/apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts
 +++ b/apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts
-@@ -50,15 +50,16 @@ it("Settings 默认启用集合与 CLI 的官方插件声明一致", () => {
+@@ -50,15 +50,16 @@
    );
  });
  
@@ -55,10 +53,9 @@ index b75821d2..fafadc59 100644
  });
  const ANDROID_EMULATOR_PLUGIN_ID = "android-emulator@zcode-plugins-official";
 diff --git a/packages/services/src/plugins/officialPluginCache.ts b/packages/services/src/plugins/officialPluginCache.ts
-index 3e072155..66044564 100644
 --- a/packages/services/src/plugins/officialPluginCache.ts
 +++ b/packages/services/src/plugins/officialPluginCache.ts
-@@ -9,6 +9,9 @@ export const ZCODE_OFFICIAL_PLUGIN_MARKETPLACE = "zcode-plugins-official";
+@@ -9,6 +9,9 @@
   */
  export const DEFAULT_ENABLED_OFFICIAL_PLUGIN_IDS: ReadonlySet<string> = new Set([
    "browser-use@zcode-plugins-official",
@@ -69,10 +66,9 @@ index 3e072155..66044564 100644
    // 宿主不贡献 skill/command/subagent，列在这里只为与 definitions 的 defaultEnabled 逐一对应
    // （见 @zcode/shared 的同名集合注释）；这份没有机械对照单测兜着，漏掉只会静默分叉。
 diff --git a/packages/shared/src/plugin-marketplaces.ts b/packages/shared/src/plugin-marketplaces.ts
-index 3e976241..7d4312c9 100644
 --- a/packages/shared/src/plugin-marketplaces.ts
 +++ b/packages/shared/src/plugin-marketplaces.ts
-@@ -18,6 +18,10 @@ export const CLAUDE_OFFICIAL_PLUGIN_MARKETPLACE_ID = "claude-plugins-official";
+@@ -18,6 +18,10 @@
  /** Settings 三类资源发现共用；Bootstrap 单测与官方 definition 的 defaultEnabled 机械对照。 */
  export const DEFAULT_ENABLED_OFFICIAL_PLUGIN_IDS: ReadonlySet<string> = new Set([
    "browser-use@zcode-plugins-official",
@@ -83,10 +79,10 @@ index 3e976241..7d4312c9 100644
    "image-search@zcode-plugins-official",
    "documents@zcode-plugins-official",
    "pdf@zcode-plugins-official",
-@@ -33,7 +37,7 @@ export const DEFAULT_ENABLED_OFFICIAL_PLUGIN_IDS: ReadonlySet<string> = new Set(
-   // visualize（交互视图）随 UI 插件合入时 CLI 定义已标 defaultEnabled，但这里漏加，
+@@ -34,7 +38,7 @@
    // Settings 会把它当成默认关闭，与 CLI 实际启用状态不一致。
    "visualize@zcode-plugins-official",
+   "zcode-site@zcode-plugins-official",
 -  // 电脑控制回退为默认关闭，故 computer-use 不在此名单内。
 +  // 电脑控制：Ycode fork 默认开启（见下方 computer-use 条目注释；上游产品线为默认关）。
    // 该集合必须与 official-plugin-definitions.ts 里标了 defaultEnabled 的插件逐一对应，

@@ -360,8 +360,11 @@ spf_design_sync_check() {
   _changed="$(spf_changed_files "$_root" "$_faces" "$_conf")"
   _missing=""
   for _d in $_docs; do
-    if printf '%s\n' "$_decl" | grep -qF -- "$_d"; then
-      if [[ -z "$_changed" ]] || ! printf '%s\n' "$_changed" | grep -qxF -- "$_d"; then
+    # 2026-10-31 zcode 同步批根治：printf|grep -q 在大变更集（>管道缓冲）下，grep -q
+    # 命中即退出 → printf 收 SIGPIPE → pipefail 把管线判非零 → `!` 反转成「未包含」
+    # （5232 文件变更集实锤；同型坑见 spf_approved_stream 注释）。改 here-string 零管道。
+    if grep -qF -- "$_d" <<< "$_decl"; then
+      if [[ -z "$_changed" ]] || ! grep -qxF -- "$_d" <<< "$_changed"; then
         _missing="${_missing}${_missing:+、}${_d}"
       fi
     fi
