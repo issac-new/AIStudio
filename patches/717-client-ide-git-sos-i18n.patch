@@ -1,0 +1,22 @@
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -1008,6 +1008,7 @@
+     sec: '秒',
+     gitViewStatus: '状态',
+     gitViewGraph: '图谱',
++    gitSosTitle: '合并冲突降级建议',
+     gitGraphTitle: '提交图谱',
+     gitGraphEmpty: '暂无提交',
+     gitGraphLoadFailed: '提交图谱加载失败',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -1009,6 +1009,7 @@
+     sec: 's',
+     gitViewStatus: 'Status',
+     gitViewGraph: 'Graph',
++    gitSosTitle: 'Merge-conflict advisory',
+     gitGraphTitle: 'Commit graph',
+     gitGraphEmpty: 'No commits yet',
+     gitGraphLoadFailed: 'Failed to load commit graph',

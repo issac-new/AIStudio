@@ -455,12 +455,16 @@ export function attributeGain(input: {
   }
   const computeGain = equalBudget - baseline
   const harnessGain = candidate - equalBudget
+  // rawGain 的非空收窄穿不过上面的相关条件守卫（baseline/candidate 各自判空），
+  // ts-node 全项目编译按 TS18047 拒启（2026-10-31 收口批实测：npm run serve 起不来）。
+  // 此处 baseline/candidate 均已非空，直接用 candidate - baseline 表达同一事实。
+  const rawGainNonNull = candidate - baseline
   return {
-    rawGain,
+    rawGain: rawGainNonNull,
     computeGain,
     harnessGain,
     equalBudgetPassAt1: equalBudget,
-    note: `原始增益 ${(rawGain * 100).toFixed(1)} 分 = 算力 ${(computeGain * 100).toFixed(1)} 分 + harness ${(harnessGain * 100).toFixed(1)} 分`,
+    note: `原始增益 ${(rawGainNonNull * 100).toFixed(1)} 分 = 算力 ${(computeGain * 100).toFixed(1)} 分 + harness ${(harnessGain * 100).toFixed(1)} 分`,
   }
 }
 

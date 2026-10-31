@@ -179,7 +179,9 @@ async function decide(item: PendingApprovalItem, decision: string): Promise<void
   try {
     const res = await decideApproval(item.id, decision)
     if (res && (res as { ok?: boolean }).ok === false) {
-      error.value = (res as { detail?: string }).detail || '决策失败'
+      // 统一出口失败体用 error 键（K19）；旧端点残留 detail 一并兼容，保住具体文案。
+      const failRes = res as { detail?: string; error?: string }
+      error.value = failRes.error || failRes.detail || '决策失败'
     } else {
       emit('changed')
       await refresh()

@@ -23,6 +23,14 @@ export interface GitLogCommit {
   subject: string
 }
 
+/** Git 冲突降级建议（服务端 git-sos 只读 advisory；动作执行不在读路径） */
+export interface GitSosAdvisory {
+  level: 'INFO' | 'WARNING' | 'CRITICAL'
+  action: 'CONTINUE' | 'ABORT_MERGE' | 'ROLLBACK' | 'ESCALATE'
+  message: string
+  details?: string
+}
+
 export interface GitStatus {
   repoRoot: string
   branch: string
@@ -31,6 +39,8 @@ export interface GitStatus {
   behind: number
   detached: boolean
   changes: GitChange[]
+  /** 有 porcelain 冲突项时服务端附带（无冲突不带该键） */
+  sos?: GitSosAdvisory
 }
 
 export interface GitDiff {

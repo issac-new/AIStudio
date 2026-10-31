@@ -1043,3 +1043,10 @@
 714-server-kanban-running-409.patch
 715-server-kanban-ws-upgrade-guard.patch
 716-server-kanban-admin-write-scope.patch
+
+# 717（2026-10-31 全功能回归收口：git-sos 建议客户端消费面配套 i18n；
+# 原拟 714，主并批已占用 714-716，改号 717）：
+# IdeGitPane 新增冲突降级建议横幅（只读 advisory，level 配色），本补丁补
+# zh/en 词条 gitSosTitle；动作执行仍留引擎/人工（executeSosAction fail-loud），
+# UI 不触发 merge --abort 等破坏性操作。
+717-client-ide-git-sos-i18n.patch
