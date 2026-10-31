@@ -220,6 +220,28 @@ describe('chat run webhooks', () => {
     expect(enqueue.mock.calls.every(([event]) => !('push_target_id' in event))).toBe(true)
   })
 
+  it('publishes main Person event types on the existing bus while keeping workers and HTTP webhooks private', async () => {
+    const service=await import('../../packages/server/src/modules/studio/services/webhooks/index')
+    const {businessEvents}=await import('../../packages/server/src/modules/studio/services/webhooks/business-events')
+    const enqueue=vi.spyOn(service.getChatWebhookDispatcher(),'enqueue').mockReturnValue(true)
+    const received:any[]=[]
+    const stop=businessEvents.subscribe('person-test',event=>{received.push(event);return true})
+    const base={sessionId:'person-main-1',profile:'default',source:'builtin_agent',agent:'ekko' as const,payload:{run_id:'r',output:'Report ready'}}
+    try {
+      for(const event of ['run.completed','run.failed','approval.requested','approval.resolved','clarify.requested','clarify.resolved']) {
+        expect(service.observeChatRunWebhookEvent({...base,event})).toBe(true)
+      }
+      expect(received.map(event=>event.type)).toEqual(['person.run.completed','person.run.failed','person.approval.requested',
+        'person.approval.resolved','person.clarification.requested','person.clarification.resolved'])
+      expect(received.every(event=>event.source==='person' && !event.chat)).toBe(true)
+      expect(enqueue).not.toHaveBeenCalled()
+      received.length=0
+      for(const event of ['run.completed','clarify.requested']) expect(service.observeChatRunWebhookEvent({...base,sessionId:'person-task-private',event})).toBe(false)
+      for(const event of ['tool.completed','message.created','plan.updated']) expect(service.observeChatRunWebhookEvent({...base,event})).toBe(false)
+      expect(received).toEqual([])
+    } finally {stop();enqueue.mockRestore()}
+  })
+
   it('normalizes terminal Chat Run events before enqueueing them', async () => {
     const webhookService = await import('../../packages/server/src/modules/studio/services/webhooks/index')
     const dispatcher = webhookService.getChatWebhookDispatcher()

@@ -166,6 +166,24 @@ function recordRequest(request: Request): MockedRequest {
   }
 }
 
+// Tests for an active Hermes conversation must not depend on the empty-page
+// composer or its remembered Agent/profile settings.
+export async function mockExistingHermesChat(page: Page, options: Omit<MockHermesApiOptions, 'sessions'> = {}) {
+  const session = {
+    id: 'existing-hermes-chat', title: 'Existing Hermes conversation', source: 'cli', agent: 'hermes',
+    profile: options.initialProfileName ?? 'research',
+    model: 'test-model', provider: 'test-provider', started_at: 1_800_000_000, message_count: 0,
+  }
+  await page.addInitScript(id => {
+    const target = window as any
+    target.__PW_CHAT_SOCKET_RESUMES__ = {
+      ...target.__PW_CHAT_SOCKET_RESUMES__,
+      [id]: { session_id: id, messages: [], isWorking: false, events: [] },
+    }
+  }, session.id)
+  return mockHermesApi(page, { ...options, sessions: [session] })
+}
+
 export async function mockHermesApi(page: Page, options: MockHermesApiOptions = {}) {
   const requests: MockedRequest[] = []
   const unexpectedRequests: MockedRequest[] = []
@@ -274,13 +292,13 @@ export async function mockHermesApi(page: Page, options: MockHermesApiOptions = 
         revision: 1,
         updatedAt: '2026-01-01T00:00:00.000Z',
         agents: [
-          { id: 'hermes', installed: true, source: 'user-cli' },
-          { id: 'ekko-agent', installed: true, source: 'built-in' },
-          { id: 'claude-code', installed: true, source: 'user-cli' },
-          { id: 'codex', installed: true, source: 'user-cli' },
-          { id: 'pi', installed: true, source: 'user-cli' },
-          { id: 'grok', installed: true, source: 'user-cli' },
-          { id: 'dsh', installed: true, source: 'user-cli' },
+          { id: 'hermes', installed: true, available: true, source: 'user-cli' },
+          { id: 'ekko-agent', installed: true, available: true, source: 'built-in' },
+          { id: 'claude-code', installed: true, available: true, source: 'user-cli' },
+          { id: 'codex', installed: true, available: true, source: 'user-cli' },
+          { id: 'pi', installed: true, available: true, source: 'user-cli' },
+          { id: 'grok', installed: true, available: true, source: 'user-cli' },
+          { id: 'dsh', installed: true, available: true, source: 'user-cli' },
         ],
       }))
       return
@@ -649,6 +667,18 @@ export async function mockHermesApi(page: Page, options: MockHermesApiOptions = 
 
     if (pathname === '/api/studio/sessions/hermes') {
       await route.fulfill(jsonResponse({ sessions: [] }))
+      return
+    }
+
+    const effortMatch = pathname.match(/^\/api\/studio\/sessions\/([^/]+)\/reasoning-effort$/)
+    if (effortMatch && request.method() === 'POST') {
+      const body = request.postDataJSON() as { reasoningEffort: string; model?: string }
+      const session = options.sessions?.find(item => item.id === decodeURIComponent(effortMatch[1]!))
+      if (session) {
+        session.reasoning_effort = body.reasoningEffort
+        if (body.model !== undefined) session.model = body.model
+      }
+      await route.fulfill(jsonResponse({ ok: true, reasoning_effort: body.reasoningEffort }))
       return
     }
 
@@ -1166,6 +1196,7 @@ function makeSocket(url, options) {
     id: 'pw-socket-' + socketNumber,
     rooms: new Set(),
     connected: true,
+    get volatile() { return this },
     url,
     options,
     on(event, handler) {
@@ -1242,7 +1273,7 @@ function makeSocket(url, options) {
   }
   state.allSockets = state.allSockets || []
   state.allSockets.push(socket)
-  if (String(url).endsWith('/chat-run') || String(url).endsWith('/global-agent')) {
+  if (!options?.query?.session_state && (String(url).endsWith('/chat-run') || String(url).endsWith('/global-agent'))) {
     state.sockets.push(socket)
     state.latest = socket
   }

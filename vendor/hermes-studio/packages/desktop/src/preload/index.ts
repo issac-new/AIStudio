@@ -101,8 +101,14 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     return () => ipcRenderer.removeListener('hermes-desktop:pet-window-refresh', listener)
   },
   ...(desktopWindowKind() === 'main' ? { browser: {
+    onRemoteControlState: (callback: (enabled: boolean) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, enabled: boolean) => callback(enabled === true)
+      ipcRenderer.on('hermes-desktop:browser-remote-control-state', listener)
+      return () => ipcRenderer.removeListener('hermes-desktop:browser-remote-control-state', listener)
+    },
     setRemoteControl: (enable: boolean): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:browser-remote-control', enable),
     remoteRequest: (body: Record<string, unknown>): Promise<unknown> => ipcRenderer.invoke('hermes-desktop:browser-remote-request', body),
+    setColorScheme: (scheme: 'light' | 'dark'): Promise<void> => ipcRenderer.invoke('hermes-desktop:browser-set-color-scheme', scheme),
     getState: (): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-get-state'),
     setViewport: (bounds: BrowserBounds, visible: boolean): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-set-viewport', bounds, visible),
     createTab: (url?: string, activate?: boolean): Promise<DesktopBrowserTab> => ipcRenderer.invoke('hermes-desktop:browser-create-tab', url, activate),
@@ -119,6 +125,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     updateProfile: (profileId: string, input: BrowserProfileUpdateInput): Promise<DesktopBrowserProfile> => ipcRenderer.invoke('hermes-desktop:browser-update-profile', profileId, input),
     deleteProfile: (profileId: string): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-delete-profile', profileId),
     clearProfileData: (profileId: string, kind: 'cache' | 'site-data' | 'permission-audit'): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-clear-profile-data', profileId, kind),
+    refreshDownloads: (): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-refresh-downloads'),
+    downloadAction: (downloadId: string, action: 'open' | 'reveal' | 'remove' | 'trash'): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-download-action', downloadId, action),
     cancelDownload: (downloadId: string): Promise<DesktopBrowserState> => ipcRenderer.invoke('hermes-desktop:browser-cancel-download', downloadId),
     takeOver: (tabId: string): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:browser-take-over', tabId),
     annotate: (tabId: string, mode: 'element' | 'region'): Promise<BrowserSelection> => ipcRenderer.invoke('hermes-desktop:browser-annotate', tabId, mode),

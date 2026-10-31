@@ -1,6 +1,6 @@
 # 派生构建产物(inject 生成,不入库)
 .overlay-injected.json
-vite.config.overlay.ts
+vite.config.overlay.mts
 *.log
 .env.local
 node_modules

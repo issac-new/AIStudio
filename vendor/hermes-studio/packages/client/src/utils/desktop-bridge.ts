@@ -31,6 +31,7 @@ export interface DesktopBrowserProfile {
   rootPath: string
   sessionPath: string
   downloadPath: string
+  lastDownloadDirectory?: string
   proxyMode: 'direct' | 'system' | 'fixed_servers'
   proxyRules: string
   askBeforeDownload: boolean
@@ -46,6 +47,7 @@ export interface DesktopBrowserDownload {
   fileName: string
   sourceUrl: string
   savePath?: string
+  fileAvailable?: boolean
   receivedBytes: number
   totalBytes: number
   state: 'blocked' | 'progressing' | 'completed' | 'cancelled' | 'interrupted'
@@ -81,6 +83,8 @@ export interface DesktopBrowserSelection {
 }
 
 export interface DesktopBrowserBridge {
+  setColorScheme?: (scheme: 'light' | 'dark') => Promise<void>
+  onRemoteControlState?: (callback: (enabled: boolean) => void) => (() => void)
   setRemoteControl?: (enable: boolean) => Promise<boolean>
   remoteRequest?: (body: Record<string, unknown>) => Promise<unknown>
   getState: () => Promise<DesktopBrowserState>
@@ -110,6 +114,8 @@ export interface DesktopBrowserBridge {
   }) => Promise<DesktopBrowserProfile>
   deleteProfile: (profileId: string) => Promise<DesktopBrowserState>
   clearProfileData: (profileId: string, kind: 'cache' | 'site-data' | 'permission-audit') => Promise<DesktopBrowserState>
+  refreshDownloads?: () => Promise<DesktopBrowserState>
+  downloadAction?: (downloadId: string, action: 'open' | 'reveal' | 'remove' | 'trash') => Promise<DesktopBrowserState>
   cancelDownload: (downloadId: string) => Promise<DesktopBrowserState>
   takeOver: (tabId: string) => Promise<boolean>
   annotate: (tabId: string, mode: 'element' | 'region') => Promise<DesktopBrowserSelection>

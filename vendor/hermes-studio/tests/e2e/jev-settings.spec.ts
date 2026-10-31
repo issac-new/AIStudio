@@ -17,7 +17,12 @@ const browserDefaults = { browserMatchEnabled: false, browserMatchCandidateLimit
   browserMatchTimeoutMs: 3000, browserVerifyEnabled: false, browserVerifyMinConfidence: 0.8, browserVerifyTimeoutMs: 3000 }
 const browserOptions = { browserMatchEnabled: true, browserMatchCandidateLimit: 12, browserMatchMinConfidence: 0.9,
   browserMatchTimeoutMs: 1100, browserVerifyEnabled: true, browserVerifyMinConfidence: 0.95, browserVerifyTimeoutMs: 1400 }
-const memoryDefaults = { ...computerDefaults, ...collaborationDefaults, ...browserDefaults, ekkoSkillsEnabled: false, ekkoSkillsCandidateLimit: 20, ekkoSkillsMinConfidence: 0.8, ekkoSkillsTimeoutMs: 3000, ekkoMemoryKindRoutingEnabled: true, ekkoMemoryRelevanceFilterEnabled: true, ekkoMemoryRerankEnabled: true, ekkoMemoryWriteReviewEnabled: true,
+const personMemoryDefaults = { personMemoryEnabled: false, personMemoryKindRoutingEnabled: true,
+  personMemoryRelevanceFilterEnabled: true, personMemoryRerankEnabled: true, personMemoryWriteReviewEnabled: true,
+  personMemoryCandidateLimit: 20, personMemoryRecallMinConfidence: .5, personMemoryFilterMinConfidence: .8,
+  personMemoryMinConfidence: .8, personMemoryTimeoutMs: 3000 }
+
+const memoryDefaults = { ...personMemoryDefaults, ...computerDefaults, ...collaborationDefaults, ...browserDefaults, ekkoSkillsEnabled: false, ekkoSkillsCandidateLimit: 20, ekkoSkillsMinConfidence: 0.8, ekkoSkillsTimeoutMs: 3000, ekkoMemoryKindRoutingEnabled: true, ekkoMemoryRelevanceFilterEnabled: true, ekkoMemoryRerankEnabled: true, ekkoMemoryWriteReviewEnabled: true,
   ekkoMemoryCandidateLimit: 20, ekkoMemoryRecallMinConfidence: 0.5, ekkoMemoryFilterMinConfidence: 0.8, ekkoMemoryMinConfidence: 0.8, ekkoMemoryTimeoutMs: 3000 }
 
 for (const [locale, messages] of [['en', en], ['zh', zh]] as const) {
@@ -54,6 +59,9 @@ for (const [locale, messages] of [['en', en], ['zh', zh]] as const) {
     await expect(panel.getByLabel(`JEV ${messages.jev.apiKey}`, { exact: true })).toHaveAttribute('placeholder', messages.jev.keyHint)
     await expect(panel.getByLabel(`JEV ${messages.jev.timeout}`, { exact: true })).toHaveValue('10000')
     await expect(panel.getByRole('switch', { name: messages.jev.ekkoMemoryEnabled, exact: true })).not.toBeChecked()
+    await expect(panel.getByRole('switch', { name: messages.jev.personMemoryEnabled, exact: true })).not.toBeChecked()
+    await expect(panel).toContainText(messages.jev.personMemoryHint)
+    await expect(panel).toContainText(messages.jev.description)
     await panel.getByRole('button', { name: messages.common.save, exact: true }).click()
     await expect(panel).toContainText(messages.jev.errors.invalid_request)
     const testButton = panel.getByRole('button', { name: messages.jev.testSaved, exact: true })
@@ -78,186 +86,160 @@ for (const [locale, messages] of [['en', en], ['zh', zh]] as const) {
   })
 }
 
-for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
-test(`configures JEV memory, skills and browser per Profile at ${viewport.width}px`, async ({ page }, testInfo) => {
-  await page.setViewportSize(viewport)
-  await authenticate(page, TEST_ACCESS_KEY, 'default')
-  const api = await mockHermesApi(page, { initialProfileName: 'default' })
-  const defaults = { ...memoryDefaults, baseUrl: 'https://api.typesafe.ai', model: 'jev-latest', timeoutMs: 10000, hasApiKey: false, ekkoMemoryEnabled: false }
-  const settings: Record<string, typeof defaults> = {
-    default: { ...defaults, model: 'jev-default', hasApiKey: true }, research: { ...defaults },
-  }
-  const requests: Array<{ method: string; profile: string; body: any }> = []
-  await page.route('**/api/studio/jev/**', async route => {
-    const request = route.request()
-    const profile = request.headers()['x-hermes-profile']
-    const method = request.method()
-    const body = request.postData() ? request.postDataJSON() : undefined
-    requests.push({ method, profile, body })
-    if (request.url().endsWith('/test')) {
-      await route.fulfill({ json: { model: settings[profile].model, durationMs: 8, answers: { working: { type: 'noul', noul: 1 } }, usage: { input_tokens: 1, output_tokens: 1 } } })
-      return
-    }
-    if (method === 'PUT') {
-      const { apiKey, ...values } = body
-      settings[profile] = { ...values, hasApiKey: !!apiKey || settings[profile].hasApiKey }
-    }
-    if (method === 'DELETE') settings[profile] = { ...defaults }
-    await route.fulfill({ json: settings[profile] })
-  })
-
-  await page.goto('/#/hermes/models?tab=jev&modelProfile=research')
-  await expect(page.locator('.n-tabs-tab--active')).toHaveText('JEV')
-  await expect(page.getByLabel('JEV Model', { exact: true })).toHaveValue('jev-latest')
-  const memorySwitch = page.getByRole('switch', { name: en.jev.ekkoMemoryEnabled, exact: true })
-  await expect(memorySwitch).not.toBeChecked()
-  await memorySwitch.click()
-  const skillsSwitch = page.getByRole('switch', { name: en.jev.ekkoSkillsEnabled, exact: true })
-  await expect(skillsSwitch).not.toBeChecked()
-  await skillsSwitch.click()
-  await page.getByLabel(en.jev.skillsCandidateLimit, { exact: true }).fill('12')
-  await page.getByLabel(en.jev.skillsMinConfidence, { exact: true }).fill('0.9')
-  await page.getByLabel(en.jev.skillsTimeout, { exact: true }).fill('1500')
-  await expect(page.locator('.jev-settings')).toContainText(en.common.notConfigured)
-  for (const label of [en.jev.memoryKindRouting, en.jev.memoryRelevanceFilter, en.jev.memoryRerank, en.jev.memoryWriteReview]) {
-    const control = page.getByRole('switch', { name: label, exact: true })
-    await expect(control).toBeChecked()
-  }
-  await page.locator('summary').filter({ hasText: en.jev.memoryAdvanced }).click()
-  await page.getByLabel(en.jev.memoryCandidateLimit, { exact: true }).fill('7')
-  await expect(page.getByLabel(en.jev.memoryRecallMinConfidence, { exact: true })).toHaveValue('0.5')
-  await page.getByLabel(en.jev.memoryRecallMinConfidence, { exact: true }).fill('0.65')
-  await expect(page.getByLabel(en.jev.memoryFilterMinConfidence, { exact: true })).toHaveValue('0.8')
-  await page.getByLabel(en.jev.memoryFilterMinConfidence, { exact: true }).fill('0.85')
-  await page.getByLabel(en.jev.memoryMinConfidence, { exact: true }).fill('0.9')
-  await page.getByLabel(en.jev.memoryTimeout, { exact: true }).fill('1200')
-  const matchSwitch = page.getByRole('switch', { name: en.jev.browserMatchEnabled, exact: true })
-  const verifySwitch = page.getByRole('switch', { name: en.jev.browserVerifyEnabled, exact: true })
-  await expect(matchSwitch).not.toBeChecked()
-  await expect(verifySwitch).not.toBeChecked()
-  await matchSwitch.click()
-  await verifySwitch.click()
-  for (const key of ['browserMatchCandidateLimit', 'browserMatchMinConfidence', 'browserMatchTimeoutMs', 'browserVerifyMinConfidence', 'browserVerifyTimeoutMs'] as const) {
-    await page.getByLabel(en.jev[key], { exact: true }).fill(String(browserOptions[key]))
-  }
-  for (const key of computerFields) {
-    const field = `ekko${key[0].toUpperCase()}${key.slice(1)}` as keyof typeof computerOptions
-    if (key.endsWith('Enabled')) {
-      const control = page.getByRole('switch', { name: en.jev[key], exact: true })
-      await expect(control).not.toBeChecked()
-      await control.click()
-    } else await page.getByLabel(en.jev[key], { exact: true }).fill(String(computerOptions[field]))
-  }
-  await page.getByLabel('JEV API Key', { exact: true }).fill('new-research-key')
-  await page.getByLabel('JEV Model', { exact: true }).fill('jev-research')
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(page.getByLabel('JEV API Key', { exact: true })).toHaveValue('')
-  expect(requests.find(r => r.method === 'PUT')).toMatchObject({ profile: 'research', body: { ...computerOptions, ...browserOptions, ekkoSkillsEnabled: true, ekkoSkillsCandidateLimit: 12, ekkoSkillsMinConfidence: 0.9, ekkoSkillsTimeoutMs: 1500, apiKey: 'new-research-key', model: 'jev-research', ekkoMemoryEnabled: true, ekkoMemoryKindRoutingEnabled: true, ekkoMemoryRelevanceFilterEnabled: true, ekkoMemoryRerankEnabled: true, ekkoMemoryWriteReviewEnabled: true, ekkoMemoryCandidateLimit: 7, ekkoMemoryRecallMinConfidence: 0.65, ekkoMemoryFilterMinConfidence: 0.85, ekkoMemoryMinConfidence: 0.9, ekkoMemoryTimeoutMs: 1200 } })
-  await expect(memorySwitch).toBeChecked()
-  await expect(skillsSwitch).toBeChecked()
-  await expect(page.locator('.jev-settings')).toContainText(en.jev.skillsReady)
-  await expect(page.locator('.jev-settings')).toContainText(en.jev.memoryReady)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.getByRole('region', { name: en.jev.computerUseAutomation, exact: true }).scrollIntoViewIfNeeded()
-  await page.getByRole('region', { name: en.jev.computerUseAutomation, exact: true }).screenshot({ path: testInfo.outputPath('jev-computer-use-settings.png') })
-
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect.poll(() => requests.filter(r => r.method === 'PUT').length).toBe(2)
-  expect(requests.filter(r => r.method === 'PUT')[1].body).not.toHaveProperty('apiKey')
-  await page.getByRole('button', { name: 'Test saved configuration', exact: true }).click()
-  await expect(page.getByTestId('jev-test-result')).toContainText('jev-research')
-
-  await page.getByTestId('models-profile-select').click()
-  await page.locator('.n-base-select-option').filter({ hasText: /^default$/ }).click()
-  await expect(skillsSwitch).not.toBeChecked()
-  await expect(matchSwitch).not.toBeChecked()
-  await expect(verifySwitch).not.toBeChecked()
-  for (const key of ['computerUseMatchEnabled', 'computerUseVerifyEnabled'] as const) {
-    await expect(page.getByRole('switch', { name: en.jev[key], exact: true })).not.toBeChecked()
-  }
-  await expect(page.getByLabel('JEV Model', { exact: true })).toHaveValue('jev-default')
-  await expect(memorySwitch).not.toBeChecked()
-  await expect(page.getByTestId('jev-test-result')).toHaveCount(0)
-  await page.getByTestId('models-profile-select').click()
-  await page.locator('.n-base-select-option').filter({ hasText: /^research$/ }).click()
-  await expect(skillsSwitch).toBeChecked()
-  await expect(matchSwitch).toBeChecked()
-  await expect(verifySwitch).toBeChecked()
-  for (const key of ['browserMatchCandidateLimit', 'browserMatchMinConfidence', 'browserMatchTimeoutMs', 'browserVerifyMinConfidence', 'browserVerifyTimeoutMs'] as const) {
-    await expect(page.getByLabel(en.jev[key], { exact: true })).toHaveValue(String(browserOptions[key]))
-  }
-  for (const key of computerFields) {
-    const field = `ekko${key[0].toUpperCase()}${key.slice(1)}` as keyof typeof computerOptions
-    if (key.endsWith('Enabled')) await expect(page.getByRole('switch', { name: en.jev[key], exact: true })).toBeChecked()
-    else await expect(page.getByLabel(en.jev[key], { exact: true })).toHaveValue(String(computerOptions[field]))
-  }
-  await expect(page.getByLabel(en.jev.skillsCandidateLimit, { exact: true })).toHaveValue('12')
-  await expect(page.getByLabel(en.jev.skillsMinConfidence, { exact: true })).toHaveValue('0.9')
-  await expect(page.getByLabel(en.jev.skillsTimeout, { exact: true })).toHaveValue('1500')
-  await expect(page.getByLabel('JEV Model', { exact: true })).toHaveValue('jev-research')
-  await expect(memorySwitch).toBeChecked()
-  for (const label of [en.jev.memoryKindRouting, en.jev.memoryRelevanceFilter, en.jev.memoryRerank, en.jev.memoryWriteReview]) {
-    await expect(page.getByRole('switch', { name: label, exact: true })).toBeChecked()
-  }
-  await page.locator('summary').filter({ hasText: en.jev.memoryAdvanced }).click()
-  await expect(page.getByLabel(en.jev.memoryCandidateLimit, { exact: true })).toHaveValue('7')
-  await expect(page.getByLabel(en.jev.memoryRecallMinConfidence, { exact: true })).toHaveValue('0.65')
-  await expect(page.getByLabel(en.jev.memoryFilterMinConfidence, { exact: true })).toHaveValue('0.85')
-  await expect(page.getByLabel(en.jev.memoryMinConfidence, { exact: true })).toHaveValue('0.9')
-  await expect(page.getByLabel(en.jev.memoryTimeout, { exact: true })).toHaveValue('1200')
-  await page.getByRole('switch', { name: en.jev.memoryRelevanceFilter, exact: true }).click()
-  await memorySwitch.click()
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect.poll(() => settings.research.ekkoMemoryEnabled).toBe(false)
-  for (const key of ['computerUseMatchEnabled', 'computerUseVerifyEnabled'] as const) {
-    await page.getByRole('switch', { name: en.jev[key], exact: true }).click()
-  }
-  await skillsSwitch.click()
-  await matchSwitch.click()
-  await verifySwitch.click()
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect.poll(() => settings.research.ekkoSkillsEnabled).toBe(false)
-  await page.reload()
-  await expect(matchSwitch).not.toBeChecked()
-  await expect(verifySwitch).not.toBeChecked()
-  await expect(page.getByRole('switch', { name: en.jev.computerUseMatchEnabled, exact: true })).not.toBeChecked()
-  await expect(page.getByRole('switch', { name: en.jev.computerUseVerifyEnabled, exact: true })).not.toBeChecked()
-  expect(settings.research.ekkoComputerUseMatchCandidateLimit).toBe(9)
-  expect(settings.research.browserMatchCandidateLimit).toBe(12)
-  expect(settings.research.browserVerifyMinConfidence).toBe(0.95)
-  await expect(memorySwitch).not.toBeChecked()
-  await expect(skillsSwitch).not.toBeChecked()
-  expect(settings.research.ekkoSkillsCandidateLimit).toBe(12)
-  expect(settings.research.ekkoMemoryRelevanceFilterEnabled).toBe(false)
-  expect(settings.research.ekkoMemoryWriteReviewEnabled).toBe(true)
-  expect(settings.research.ekkoMemoryCandidateLimit).toBe(7)
-  await page.getByRole('button', { name: 'Delete', exact: true }).click()
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click()
-  await expect(page.getByLabel('JEV Model', { exact: true })).toHaveValue('jev-latest')
-  await expect(memorySwitch).not.toBeChecked()
-  await expect(page.getByRole('button', { name: 'Test saved configuration', exact: true })).toBeDisabled()
-  expect(settings.research.ekkoSkillsEnabled).toBe(false)
-  expect(settings.research).toMatchObject({ ...computerDefaults, ...browserDefaults })
-  expect(settings.research.ekkoSkillsCandidateLimit).toBe(20)
-  expect(settings.default.model).toBe('jev-default')
-  expect(await page.evaluate(() => localStorage.getItem('hermes_active_profile_name'))).toBe('default')
-  expect(api.requests.filter(r => r.pathname.includes('/profiles/') && r.method !== 'GET')).toEqual([])
-  expect(api.unexpectedRequests).toEqual([])
+test('loads global JEV without waiting for model Profile providers', async ({ page }) => {
+  await authenticate(page)
+  await mockHermesApi(page)
+  await page.route('**/api/hermes/config/provider*', () => new Promise(() => {}))
+  await page.route('**/api/studio/jev/settings', route => route.fulfill({ json: {
+    ...memoryDefaults, baseUrl: 'https://api.typesafe.ai', model: 'jev-global',
+    timeoutMs: 10000, hasApiKey: false, ekkoMemoryEnabled: false,
+  } }))
+  await page.goto('/#/hermes/models?tab=jev')
+  await expect(page.getByLabel('JEV Model', { exact: true })).toHaveValue('jev-global')
+  await expect(page.getByTestId('models-profile-select')).toHaveCount(0)
+  await expect(page.locator('.models-view')).toHaveAttribute('aria-busy', 'false')
 })
+
+test('keeps global JEV configuration read-only for regular administrators', async ({ page }) => {
+  const [header, encoded, signature] = TEST_ACCESS_KEY.split('.')
+  const payload = { ...JSON.parse(Buffer.from(encoded, 'base64url').toString()), role: 'admin' }
+  const token = `${header}.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.${signature}`
+  await authenticate(page, token)
+  await mockHermesApi(page)
+  const writes: string[] = []
+  await page.route('**/api/studio/jev/**', async route => {
+    if (route.request().method() !== 'GET') writes.push(route.request().method())
+    await route.fulfill({ json: { ...memoryDefaults, baseUrl: 'https://api.typesafe.ai', model: 'jev-global',
+      timeoutMs: 10000, hasApiKey: true, ekkoMemoryEnabled: true } })
+  })
+  await page.goto('/#/hermes/models?tab=jev')
+  const panel = page.locator('.jev-settings')
+  await expect(panel).toContainText(en.jev.globalReadonlyHint)
+  await expect(panel.getByRole('switch', { name: en.jev.personMemoryEnabled, exact: true })).toBeDisabled()
+  await expect(panel.getByRole('button', { name: en.common.save, exact: true })).toBeDisabled()
+  await expect(panel.getByRole('button', { name: en.jev.testSaved, exact: true })).toBeDisabled()
+  expect(writes).toEqual([])
+})
+
+for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+  test(`configures global JEV and personal assistant memory at ${viewport.width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize(viewport)
+    await authenticate(page, TEST_ACCESS_KEY, 'default')
+    const api = await mockHermesApi(page, { initialProfileName: 'default' })
+    const defaults = { ...memoryDefaults, baseUrl: 'https://api.typesafe.ai', model: 'jev-latest', timeoutMs: 10000, hasApiKey: false, ekkoMemoryEnabled: false }
+    let state = { ...defaults }
+    const requests: Array<{ method: string; profile?: string; body: any }> = []
+    await page.route('**/api/studio/jev/**', async route => {
+      const req = route.request(), method = req.method()
+      const body = req.postData() ? req.postDataJSON() : undefined
+      requests.push({ method, profile: req.headers()['x-hermes-profile'], body })
+      if (req.url().endsWith('/test')) return route.fulfill({ json: { model: state.model, durationMs: 8, answers: {}, usage: {} } })
+      if (method === 'PUT') {
+        const { apiKey, ...values } = body
+        state = { ...values, hasApiKey: !!apiKey || state.hasApiKey }
+      }
+      if (method === 'DELETE') state = { ...defaults }
+      return route.fulfill({ json: state })
+    })
+    await page.goto('/#/hermes/models?tab=jev&modelProfile=research')
+    await expect(page.getByTestId('models-profile-select')).toHaveCount(0)
+    await expect(page.locator('.jev-settings')).toContainText(en.jev.description)
+    const person = page.getByRole('region', { name: en.jev.personMemoryEnabled, exact: true })
+    const personSwitch = person.getByRole('switch', { name: en.jev.personMemoryEnabled, exact: true })
+    const ekko = page.getByRole('region', { name: en.jev.ekkoMemoryEnabled, exact: true })
+    const memorySwitch = ekko.getByRole('switch', { name: en.jev.ekkoMemoryEnabled, exact: true })
+    await expect(personSwitch).not.toBeChecked()
+    await personSwitch.click()
+    await expect(memorySwitch).not.toBeChecked()
+    const features = ['memoryKindRouting', 'memoryRelevanceFilter', 'memoryRerank', 'memoryWriteReview'] as const
+    for (const key of features) await expect(person.getByRole('switch', { name: `Personal assistant · ${en.jev[key]}`, exact: true })).toBeChecked()
+    await person.getByRole('switch', { name: `Personal assistant · ${en.jev.memoryRerank}`, exact: true }).click()
+    await person.locator('summary').filter({ hasText: en.jev.memoryAdvanced }).click()
+    const personNumbers = [
+      ['personMemoryCandidateLimit', 'memoryCandidateLimit', 9],
+      ['personMemoryRecallMinConfidence', 'memoryRecallMinConfidence', .65],
+      ['personMemoryFilterMinConfidence', 'memoryFilterMinConfidence', .9],
+      ['personMemoryMinConfidence', 'memoryMinConfidence', .95],
+      ['personMemoryTimeoutMs', 'memoryTimeout', 1400],
+    ] as const
+    for (const [, label, value] of personNumbers) await person.getByLabel(`Personal assistant · ${en.jev[label]}`, { exact: true }).fill(String(value))
+    await expect(person).toContainText(en.common.notConfigured)
+    await page.getByLabel('JEV API Key', { exact: true }).fill('global-key')
+    await page.getByLabel('JEV Model', { exact: true }).fill('jev-global')
+    await memorySwitch.click()
+    await ekko.locator('summary').filter({ hasText: en.jev.memoryAdvanced }).click()
+    await ekko.getByLabel(en.jev.memoryCandidateLimit, { exact: true }).fill('7')
+    await ekko.getByLabel(en.jev.memoryRecallMinConfidence, { exact: true }).fill('0.7')
+    await ekko.getByLabel(en.jev.memoryFilterMinConfidence, { exact: true }).fill('0.85')
+    await ekko.getByLabel(en.jev.memoryMinConfidence, { exact: true }).fill('0.9')
+    await ekko.getByLabel(en.jev.memoryTimeout, { exact: true }).fill('1200')
+    const skills = page.getByRole('switch', { name: en.jev.ekkoSkillsEnabled, exact: true })
+    await skills.click()
+    await page.getByLabel(en.jev.skillsCandidateLimit, { exact: true }).fill('12')
+    await page.getByLabel(en.jev.skillsMinConfidence, { exact: true }).fill('0.9')
+    await page.getByLabel(en.jev.skillsTimeout, { exact: true }).fill('1500')
+    for (const key of ['browserMatchEnabled', 'browserVerifyEnabled'] as const) await page.getByRole('switch', { name: en.jev[key], exact: true }).click()
+    for (const key of ['browserMatchCandidateLimit', 'browserMatchMinConfidence', 'browserMatchTimeoutMs', 'browserVerifyMinConfidence', 'browserVerifyTimeoutMs'] as const) await page.getByLabel(en.jev[key], { exact: true }).fill(String(browserOptions[key]))
+    for (const key of computerFields) {
+      const field = `ekko${key[0].toUpperCase()}${key.slice(1)}` as keyof typeof computerOptions
+      if (key.endsWith('Enabled')) await page.getByRole('switch', { name: en.jev[key], exact: true }).click()
+      else await page.getByLabel(en.jev[key], { exact: true }).fill(String(computerOptions[field]))
+    }
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByLabel('JEV API Key', { exact: true })).toHaveValue('')
+    expect(requests.find(req => req.method === 'PUT')?.body).toMatchObject({ ...browserOptions, ...computerOptions,
+      personMemoryEnabled: true, personMemoryKindRoutingEnabled: true, personMemoryRelevanceFilterEnabled: true,
+      personMemoryRerankEnabled: false, personMemoryWriteReviewEnabled: true,
+      ...Object.fromEntries(personNumbers.map(([key, , value]) => [key, value])),
+      ekkoMemoryEnabled: true, ekkoMemoryCandidateLimit: 7, ekkoMemoryRecallMinConfidence: .7,
+      ekkoMemoryFilterMinConfidence: .85, ekkoMemoryMinConfidence: .9, ekkoMemoryTimeoutMs: 1200,
+      ekkoSkillsEnabled: true, ekkoSkillsCandidateLimit: 12, ekkoSkillsMinConfidence: .9, ekkoSkillsTimeoutMs: 1500,
+      apiKey: 'global-key', model: 'jev-global' })
+    await expect(person).toContainText(en.jev.memoryReady)
+    await person.screenshot({ path: testInfo.outputPath('personal-assistant-jev.png'), animations: 'disabled' })
+    await page.getByRole('button', { name: en.jev.testSaved, exact: true }).click()
+    await expect(page.getByTestId('jev-test-result')).toContainText('jev-global')
+    // Visiting from another model Profile must show the same saved global values.
+    await page.goto('/#/hermes/models?tab=jev&modelProfile=default')
+    await expect(personSwitch).toBeChecked()
+    await expect(memorySwitch).toBeChecked()
+    await expect(page.getByLabel('JEV Model', { exact: true })).toHaveValue('jev-global')
+    await person.locator('summary').filter({ hasText: en.jev.memoryAdvanced }).click()
+    for (const [, label, value] of personNumbers) await expect(person.getByLabel(`Personal assistant · ${en.jev[label]}`, { exact: true })).toHaveValue(String(value))
+    await expect(person.getByRole('switch', { name: `Personal assistant · ${en.jev.memoryRerank}`, exact: true })).not.toBeChecked()
+    await personSwitch.click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect.poll(() => state.personMemoryEnabled).toBe(false)
+    await page.reload()
+    await expect(personSwitch).not.toBeChecked()
+    await expect(memorySwitch).toBeChecked()
+    expect(state.personMemoryCandidateLimit).toBe(9)
+    expect(requests.filter(req => req.method === 'PUT')[1].body).not.toHaveProperty('apiKey')
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+    await expect(page.getByLabel('JEV Model', { exact: true })).toHaveValue('jev-latest')
+    await expect(personSwitch).not.toBeChecked()
+    await expect(memorySwitch).not.toBeChecked()
+    expect(state).toMatchObject(personMemoryDefaults)
+    expect(requests.every(req => req.profile === undefined)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect(await page.evaluate(() => localStorage.getItem('hermes_active_profile_name'))).toBe('default')
+    expect(api.unexpectedRequests).toEqual([])
+  })
 }
 
 for (const [locale, messages] of [['en', en], ['zh', zh]] as const) {
 for (const width of [1280, 390]) {
-  test(`saves group and workflow JEV settings per Profile in ${locale} at ${width}px`, async ({ page }) => {
+  test(`saves global group and workflow JEV settings in ${locale} at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 })
     await authenticate(page, TEST_ACCESS_KEY, 'default')
     await page.addInitScript(value => localStorage.setItem('hermes_locale', value), locale)
     await mockHermesApi(page, { initialProfileName: 'default' })
     const defaults = { ...memoryDefaults, baseUrl: 'https://api.typesafe.ai', model: 'jev-latest', timeoutMs: 10000, hasApiKey: false, ekkoMemoryEnabled: false }
-    const settings: Record<string, typeof defaults> = { default: { ...defaults }, research: { ...defaults } }
+    const settings = { global: { ...defaults } }
     const saves: Array<{ profile: string; body: any }> = []
     await page.route('**/api/studio/jev/settings', async route => {
-      const profile = route.request().headers()['x-hermes-profile']
+      const profile = 'global'
       if (route.request().method() === 'PUT') {
         const body = route.request().postDataJSON()
         saves.push({ profile, body })
@@ -291,18 +273,14 @@ for (const width of [1280, 390]) {
     await page.locator('.n-base-select-option').filter({ hasText: messages.jev.groupRoutingAuto }).click()
     await page.getByRole('button', { name: messages.common.save, exact: true }).click()
     await expect.poll(() => saves.length).toBe(1)
-    expect(saves[0]).toMatchObject({ profile: 'research', body: expected })
+    expect(saves[0]).toMatchObject({ profile: 'global', body: expected })
     await page.reload()
     for (const key of switches) await expect(page.getByRole('switch', { name: messages.jev[key], exact: true })).toBeChecked({ checked: expected[key] })
     for (const [key, label] of numbers) await expect(page.getByLabel(messages.jev[label], { exact: true })).toHaveValue(String(expected[key]))
     await expect(page.getByTestId('jev-routing-mode')).toContainText(messages.jev.groupRoutingAuto)
-    await page.getByTestId('models-profile-select').click()
-    await page.locator('.n-base-select-option').filter({ hasText: /^default$/ }).click()
-    for (const key of switches) await expect(page.getByRole('switch', { name: messages.jev[key], exact: true })).toBeChecked({ checked: collaborationDefaults[key] })
-    for (const [key, label] of numbers) await expect(page.getByLabel(messages.jev[label], { exact: true })).toHaveValue(String(collaborationDefaults[key]))
-    await expect(page.getByTestId('jev-routing-mode')).toContainText(messages.jev.groupRoutingSuggest)
-    await page.getByTestId('models-profile-select').click()
-    await page.locator('.n-base-select-option').filter({ hasText: /^research$/ }).click()
+    await page.goto('/#/hermes/models?tab=jev&modelProfile=default')
+    for (const key of switches) await expect(page.getByRole('switch', { name: messages.jev[key], exact: true })).toBeChecked({ checked: expected[key] })
+    for (const [key, label] of numbers) await expect(page.getByLabel(messages.jev[label], { exact: true })).toHaveValue(String(expected[key]))
     for (const key of ['groupSummaryReviewEnabled', 'groupSummaryRevisionEnabled', 'workflowQualityEnabled', 'groupMessageRoutingEnabled'] as const) {
       const control = page.getByRole('switch', { name: messages.jev[key], exact: true })
       await expect(control).toBeChecked()
@@ -311,18 +289,18 @@ for (const width of [1280, 390]) {
     }
     await page.getByRole('button', { name: messages.common.save, exact: true }).click()
     await expect.poll(() => saves.length).toBe(2)
-    expect(saves[1]).toMatchObject({ profile: 'research', body: expected })
+    expect(saves[1]).toMatchObject({ profile: 'global', body: expected })
     await page.reload()
     for (const key of switches) await expect(page.getByRole('switch', { name: messages.jev[key], exact: true })).not.toBeChecked()
     for (const [key, label] of numbers) await expect(page.getByLabel(messages.jev[label], { exact: true })).toHaveValue(String(expected[key]))
-    expect(settings.default).toMatchObject(collaborationDefaults)
+    expect(settings.global).toMatchObject(expected)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 }
 }
 
 for (const brightness of ['light', 'dark']) {
-  test(`Computer Use JEV controls follow ${brightness} theme, wallpaper and regional reset`, async ({ page }, testInfo) => {
+  test(`JEV controls including personal assistant memory follow ${brightness} theme, wallpaper and regional reset`, async ({ page }, testInfo) => {
     test.setTimeout(60000)
     await authenticate(page)
     await mockHermesApi(page, { theme: { brightness, background: { name: 'wall.png', mime: 'image/png', updatedAt: 1 } } })
@@ -331,10 +309,11 @@ for (const brightness of ['light', 'dark']) {
     } }))
     const path = '/#/hermes/models?tab=jev&modelProfile=default'
     const group = page.getByRole('region', { name: en.jev.computerUseAutomation, exact: true })
-    const cards = group.locator('[data-theme-surface="card"]')
+    const person = page.getByRole('region', { name: en.jev.personMemoryEnabled, exact: true })
+    const cards = group.locator('[data-theme-surface="card"]').or(person)
     const wallpaperBg = brightness === 'dark' ? 'rgba(42, 42, 42, 0.72)' : 'rgba(255, 255, 255, 0.72)'
     await page.goto(path)
-    await expect(cards).toHaveCount(2)
+    await expect(cards).toHaveCount(3)
     for (const card of await cards.all()) await expect(card).toHaveCSS('background-color', wallpaperBg)
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 900 })
@@ -345,6 +324,7 @@ for (const brightness of ['light', 'dark']) {
       await expect(control).not.toBeChecked()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await group.screenshot({ path: testInfo.outputPath(`computer-use-${brightness}-${width}.png`), animations: 'disabled' })
+      await person.screenshot({ path: testInfo.outputPath(`assistant-memory-${brightness}-${width}.png`), animations: 'disabled' })
     }
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.goto('/#/hermes/theme')

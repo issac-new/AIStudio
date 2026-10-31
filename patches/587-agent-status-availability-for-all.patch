@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/api/agent-status.ts b/packages/client/src/api/agent-status.ts
-index 7fd1a2061..e7d9000c7 100644
 --- a/packages/client/src/api/agent-status.ts
 +++ b/packages/client/src/api/agent-status.ts
-@@ -28,6 +28,7 @@ export interface AgentAvailabilitySnapshot {
+@@ -29,6 +29,7 @@ export interface AgentAvailabilitySnapshot {
    revision: number
    updatedAt: string
    agents: AgentAvailabilityRecord[]
@@ -10,7 +9,7 @@ index 7fd1a2061..e7d9000c7 100644
  }
  
  export type AgentInstallationState = 'installed' | 'not-installed' | 'unknown'
-@@ -59,14 +60,16 @@ export function resolveAgentStatusId(agent: string): AgentStatusId | null {
+@@ -60,14 +61,16 @@ export function resolveAgentStatusId(agent: string): AgentStatusId | null {
  }
  
  export function isAgentStatusAvailable(
@@ -28,9 +27,8 @@ index 7fd1a2061..e7d9000c7 100644
 +  return 'path' in status && status.path ? true : Boolean((snapshot as AgentAvailabilitySnapshot).hermesReady)
  }
  
- export function agentInstallationState(
+ /** Uses the server's execution eligibility without exposing local installation paths. */
 diff --git a/packages/client/src/stores/hermes/profiles.ts b/packages/client/src/stores/hermes/profiles.ts
-index bc66b7668..d0c92e882 100644
 --- a/packages/client/src/stores/hermes/profiles.ts
 +++ b/packages/client/src/stores/hermes/profiles.ts
 @@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
@@ -68,10 +66,9 @@ index bc66b7668..d0c92e882 100644
        activeProfile.value = profiles.value.find(profile => profile.active) ?? null
        clearAllSessionCaches()
 diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
-index 5f4009bab..26dc06b2e 100644
 --- a/packages/server/src/modules/studio/public/agent-status-registry.ts
 +++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
-@@ -44,6 +44,9 @@ export interface AgentAvailabilitySnapshot {
+@@ -45,6 +45,9 @@ export interface AgentAvailabilitySnapshot {
    revision: number
    updatedAt: string
    agents: AgentAvailabilityRecord[]
@@ -81,7 +78,7 @@ index 5f4009bab..26dc06b2e 100644
  }
  
  const AGENT_ORDER: AgentStatusId[] = ['hermes', 'ekko-agent', 'claude-code', 'codex', 'pi', 'grok', 'opencode', 'mimo', 'dsh', 'cursor', 'antigravity', 'qwen', 'kimi', 'codebuddy', 'qoder', 'copilot', 'zcode']
-@@ -236,7 +239,9 @@ export function getAgentStatusSnapshot(): AgentStatusSnapshot {
+@@ -237,7 +240,9 @@ export function getAgentStatusSnapshot(): AgentStatusSnapshot {
  }
  
  export function getAgentAvailabilitySnapshot(): AgentAvailabilitySnapshot {

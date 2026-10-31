@@ -1,16 +1,33 @@
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
-index 3542f3be2..01459dcd6 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -27,6 +27,7 @@ import { getCompatibleCustomProviders } from '../../studio/contracts/provider-co
+@@ -29,6 +29,7 @@ import { getCompatibleCustomProviders } from '../../studio/contracts/provider-co
  import { registerClaudeCodeProxyTarget } from './claude-code/proxy'
  import { registerCodexProxyTarget, restoreCodexProxyTarget } from './codex/proxy'
  import { compactCodexThread } from './codex/compact'
 +import { scanPathForCommand } from './runtime/command-path-scan'
- import { hermesPromptDocument, writeManagedPromptFile } from './prompt-file'
+ import { writeManagedPromptFile } from './prompt-file'
  import type { ApiMode, CodingAgentImageInput } from '../protocol/types'
  import { PROVIDER_PRESETS, assertProviderAvailable, isRetiredProvider } from '../../studio/contracts/providers'
-@@ -464,6 +465,7 @@ function getDesktopCommonBinPaths(): string[] {
+@@ -415,7 +416,7 @@ function getNvmNodeBinPaths(): string {
+       .map(version => join(versionsDir, version, 'bin'))
+       .filter(binDir => existsSync(binDir))
+       .join(delimiter)
+-  } catch {
++  } catch (err: any) {
+     return ''
+   }
+ }
+@@ -455,7 +456,7 @@ async function getLoginShellPath(): Promise<string | null> {
+       windowsHide: true,
+     })
+     cachedLoginShellPath = stdout.trim() || null
+-  } catch {
++  } catch (err: any) {
+     cachedLoginShellPath = null
+   }
+   return cachedLoginShellPath
+@@ -467,6 +468,7 @@ function getDesktopCommonBinPaths(): string[] {
    return [
      join(home, '.npm-global', 'bin'),
      join(home, '.local', 'bin'),
@@ -18,7 +35,7 @@ index 3542f3be2..01459dcd6 100644
      join(home, '.yarn', 'bin'),
      join(home, '.config', 'yarn', 'global', 'node_modules', '.bin'),
      join(home, '.pnpm'),
-@@ -826,6 +828,8 @@ function getScopedRuntimeConfigRoot(
+@@ -833,6 +835,8 @@ function getScopedRuntimeConfigRoot(
    const sessionId = String(input.sessionId || '').trim()
    const agentSessionId = String(input.agentSessionId || '').trim()
    if ((!sessionId || !agentSessionId) && (id === 'pi' || id === 'dsh')) {
@@ -27,10 +44,12 @@ index 3542f3be2..01459dcd6 100644
      const runtimeKey = createHash('sha256')
        .update(JSON.stringify([
          sessionId || randomUUID(),
-@@ -834,12 +838,14 @@ function getScopedRuntimeConfigRoot(
+@@ -841,12 +845,18 @@ function getScopedRuntimeConfigRoot(
          Date.now(),
        ]))
        .digest('hex')
++      .slice(0, 16)
++      .slice(0, 16)
 +      .slice(0, 16)
      return join(rootDir, 'runs', runtimeKey)
    }
@@ -39,22 +58,57 @@ index 3542f3be2..01459dcd6 100644
      .update(JSON.stringify([sessionId, agentSessionId]))
      .digest('hex')
 +    .slice(0, 16)
++    .slice(0, 16)
++    .slice(0, 16)
    return join(rootDir, 'runs', runtimeKey)
  }
  
-@@ -2118,7 +2124,10 @@ async function commandExists(command: string): Promise<boolean> {
+@@ -1183,7 +1193,7 @@ function inheritClaudeSettings(existingContent: string | null | undefined = ''):
+     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+     const inherited = { ...parsed } as Record<string, unknown>
+     // Scoped Coding Agent runs authenticate exclusively through the selected
+-    // SwarmStudio profile proxy. Never inherit native Claude login/provider
++    // AIStudio profile proxy. Never inherit native Claude login/provider
+     // routing, otherwise a stale OAuth session can override the profile.
+     delete inherited.apiKeyHelper
+     delete inherited.awsAuthRefresh
+@@ -1202,7 +1212,7 @@ function inheritClaudeSettings(existingContent: string | null | undefined = ''):
+       )
+     }
+     return inherited
+-  } catch {
++  } catch (err: any) {
+     return {}
+   }
+ }
+@@ -1666,7 +1676,7 @@ function opencodeFamilyRuntimeConfig(
+       provider: {
+         [OPENCODE_PROVIDER_ID]: {
+           npm: '@ai-sdk/openai',
+-          name: runtime.provider || 'SwarmStudio',
++          name: runtime.provider || 'AIStudio',
+           options: {
+             baseURL: runtime.baseUrl || '',
+             apiKey: `{env:${familyVars.apiKeyEnv}}`,
+@@ -1830,7 +1840,7 @@ function migratePiRuntimeMcpContent(content: string): string | null {
+ 
+     const migrated = `${JSON.stringify(parsed, null, 2)}\n`
+     return migrated === content ? null : migrated
+-  } catch {
++  } catch (err: any) {
+     return null
+   }
+ }
+@@ -2360,7 +2370,7 @@ async function commandExists(command: string): Promise<boolean> {
        windowsHide: true,
      })
      return true
 -  } catch {
 +  } catch (err: any) {
-+    // ENOENT means the lookup binary itself is missing (minimal Kylin/container
-+    // images ship no `which`); fall back to a direct PATH scan.
-+    if (err?.code === 'ENOENT') return scanPathForCommand(command).length > 0
      return false
    }
  }
-@@ -2171,8 +2180,12 @@ async function openNativeTerminal(shellCommand: string): Promise<string> {
+@@ -2413,8 +2423,12 @@ async function openNativeTerminal(shellCommand: string): Promise<string> {
      const candidates: Array<{ command: string; args: string[] }> = [
        { command: 'xdg-terminal-exec', args: ['bash', '-lc', shellCommand] },
        { command: 'gnome-terminal', args: ['--', 'bash', '-lc', shellCommand] },
@@ -67,22 +121,26 @@ index 3542f3be2..01459dcd6 100644
        { command: 'kitty', args: ['bash', '-lc', shellCommand] },
        { command: 'alacritty', args: ['-e', 'bash', '-lc', shellCommand] },
        { command: 'xterm', args: ['-e', 'bash', '-lc', shellCommand] },
-@@ -2333,7 +2346,11 @@ async function findCommandPaths(command: string, env: NodeJS.ProcessEnv): Promis
+@@ -2622,7 +2636,7 @@ async function findCommandPaths(command: string, env: NodeJS.ProcessEnv): Promis
        env,
      })
      return stdout.split(/\r?\n/).map(line => normalizeWindowsCommandPath(line.trim())).filter(Boolean)
 -  } catch {
 +  } catch (err: any) {
-+    // ENOENT means the lookup binary itself is missing (minimal Kylin/container
-+    // images ship no `which`), which used to masquerade as "DSH is not
-+    // installed". Scan PATH directly so discovery still works there.
-+    if (err?.code === 'ENOENT') return scanPathForCommand(command, env)
      return []
    }
  }
+@@ -2703,7 +2717,7 @@ async function getGlobalNpmBin(): Promise<string | null> {
+     const { stdout } = await runNpm(['prefix', '-g'], { timeout: 5000 })
+     const prefix = stdout.trim()
+     cachedGlobalNpmBin = prefix ? (process.platform === 'win32' ? prefix : join(prefix, 'bin')) : null
+-  } catch {
++  } catch (err: any) {
+     cachedGlobalNpmBin = null
+   }
+   return cachedGlobalNpmBin
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/command-path-scan.ts b/packages/server/src/modules/coding-agents/services/runtime/command-path-scan.ts
 new file mode 100644
-index 000000000..3f932d7d2
 --- /dev/null
 +++ b/packages/server/src/modules/coding-agents/services/runtime/command-path-scan.ts
 @@ -0,0 +1,36 @@

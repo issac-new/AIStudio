@@ -1,5 +1,7 @@
+import { isPersonSession, isPrivatePersonSession, ownsPersonSession } from '../contracts/person-session'
 import { isNativeCodingAgent } from '../contracts/agents/native-coding-agents'
 import { withRunUsage } from '../public/usage'
+import { withPersonTaskReturns } from '../services/person/service'
 import { businessEvents } from '../services/webhooks/business-events'
 import { publishSessionRemoval } from '../services/notifications/session-removal'
 import { getUsagePricing, saveUsagePricing, validateUsagePricing } from '../services/usage/usage-pricing'
@@ -9,7 +11,7 @@ import { ensureBusinessConsumers } from '../services/webhooks/business-consumers
 import { authorizeSessionShare, authorizeShareFile } from '../services/session-shares/access'
 import { sessionShareService } from '../services/session-shares/service'
 import { getSessionTaskPlans } from '../services/task-plans'
-import { getSessionTasks, listSessionTaskItems } from '../services/session-tasks'
+import { getSessionTasks, listSessionTaskItems, setSessionTaskStatus, SessionTasksError } from '../services/session-tasks'
 import { historySessionSource, isBuiltinEkkoAgent } from '../contracts/history-source'
 import {
   deleteHermesSessionForProfile,
@@ -89,6 +91,7 @@ function getPendingDeletedSessionIds(): Set<string> {
 
 function filterPendingDeletedSessions<T extends { id: string }>(items: T[]): T[] {
   const pendingIds = getPendingDeletedSessionIds()
+  items = items.filter(item => !isPrivatePersonSession(item.id))
   if (pendingIds.size === 0) return items
   return items.filter(item => !pendingIds.has(item.id))
 }
@@ -153,6 +156,9 @@ function filterByAllowedProfiles<T>(ctx: any, items: T[]): T[] {
 }
 
 function denySessionAccess(ctx: any, session: any | null | undefined): boolean {
+  if (ctx.method === 'GET' && ctx.state?.personTaskRead === session?.id) return false
+  if (isPersonSession(session?.id) && ownsPersonSession(ctx.state?.user?.id, session)) return false
+  if (isPrivatePersonSession(session?.id)) { ctx.status = 404; ctx.body = { error: 'Session not found' }; return true }
   if (!session || canAccessProfile(ctx, session.profile)) return false
   ctx.status = 403
   ctx.body = { error: `Profile "${session.profile || 'default'}" is not available for this user` }
@@ -433,6 +439,7 @@ export async function listConversations(ctx: any) {
     agent_session_id: s.agent_session_id,
     agent_native_session_id: s.agent_native_session_id,
     agent_preset: s.agent_preset,
+    bot_type: s.bot_type,
     model: s.model,
     provider: s.provider,
     api_mode: s.api_mode,
@@ -1155,7 +1162,7 @@ function cleanSessionContextMessages(messages: any[]): Array<{
 
 export function listTasks(ctx: any) {
   const { status, order = 'newest', search = '', offset = '0', limit = '50' } = ctx.query
-  if ((status !== undefined && status !== 'open' && status !== 'completed')
+  if ((status !== undefined && status !== 'open' && status !== 'completed' && status !== 'closed')
     || (ctx.query.profile !== undefined && typeof ctx.query.profile !== 'string')
     || (order !== 'newest' && order !== 'oldest') || typeof search !== 'string' || search.length > 200
     || typeof offset !== 'string' || !/^\d+$/.test(offset) || !Number.isSafeInteger(Number(offset))
@@ -1185,6 +1192,29 @@ export function getTasks(ctx: any) {
   }
   if (denySessionAccess(ctx, session)) return
   ctx.body = getSessionTasks(session.id)
+}
+
+export function updateTaskStatus(ctx: any) {
+  if (ctx.get?.('x-studio-run-context')) {
+    ctx.status = 403
+    ctx.body = { error: 'Manual task status changes require user access' }
+    return
+  }
+  const session = localGetSession(ctx.params.id)
+  const profile = explicitProfileFilter(ctx)
+  if (!session || getPendingDeletedSessionIds().has(session.id) || (profile && (session.profile || 'default') !== profile)) {
+    ctx.status = 404
+    ctx.body = { error: 'Session not found' }
+    return
+  }
+  if (denySessionAccess(ctx, session)) return
+  try {
+    ctx.body = setSessionTaskStatus(session.id, session.profile || 'default', ctx.params.taskId, ctx.request.body || {})
+  } catch (error) {
+    if (!(error instanceof SessionTasksError)) throw error
+    ctx.status = error.status
+    ctx.body = { error: error.message }
+  }
 }
 
 export async function getContext(ctx: any) {
@@ -1423,6 +1453,11 @@ export async function remove(ctx: any) {
   const sessionId = ctx.params.id
   const existing = localGetSession(sessionId)
   if (denySessionAccess(ctx, existing)) return
+  if (isPersonSession(sessionId) && existing) {
+    const { deletePersonConversation } = await import('../services/person/conversations')
+    ctx.body = { ok: true, ...await deletePersonConversation(ctx.state.user.id, sessionId, existing.history_revision) }
+    return
+  }
   const hermesProfile = requestedProfile(ctx) || existing?.profile || getActiveProfileName()
   const providerAgentSession = isProviderAgentSession(existing)
   if (providerAgentSession) stopCodingAgentSessionRun(sessionId, { reportClosed: false })
@@ -1483,6 +1518,22 @@ export async function batchRemove(ctx: any) {
   for (const target of targets) {
     const { id } = target
     const existing = localGetSession(id)
+    if (isPrivatePersonSession(id) && !ownsPersonSession(ctx.state?.user?.id, existing)) {
+      results.failed++
+      results.errors.push({ id, error: 'Session not found' })
+      continue
+    }
+    if (isPersonSession(id) && existing) {
+      try {
+        const { deletePersonConversation } = await import('../services/person/conversations')
+        await deletePersonConversation(ctx.state.user.id, id, existing.history_revision)
+        results.deleted++
+      } catch (error) {
+        results.failed++
+        results.errors.push({ id, error: error instanceof Error ? error.message : String(error) })
+      }
+      continue
+    }
     const targetProfile = target.profile || existing?.profile
     if (targetProfile && !canAccessProfile(ctx, targetProfile)) {
       results.failed++
@@ -2278,6 +2329,7 @@ export async function getConversationMessagesPaginated(ctx: any) {
       agent: (session as any).agent,
       agent_mode: (session as any).agent_mode,
       coding_agent_id: (session as any).coding_agent_id,
+      bot_type: (session as any).bot_type,
       workspace: (session as any).workspace || null,
       title: session.title,
       parent_session_id: (session as any).parent_session_id,
@@ -2293,7 +2345,7 @@ export async function getConversationMessagesPaginated(ctx: any) {
       input_tokens: session.input_tokens,
       output_tokens: session.output_tokens,
     },
-    messages: withRunUsage(ctx.params.id, result.messages),
+    messages: withPersonTaskReturns(ctx.params.id, withRunUsage(ctx.params.id, result.messages)),
     taskPlans: getSessionTaskPlans(ctx.params.id, result.messages, offset === 0),
     workspaceRunChanges: listWorkspaceRunChangesForAssistantMessages(ctx.params.id, assistantMessageIds),
     total: result.total,

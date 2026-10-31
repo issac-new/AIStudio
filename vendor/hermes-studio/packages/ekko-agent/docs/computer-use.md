@@ -135,7 +135,7 @@ it when done. A standalone `status` probe manages its own connection.
 
 In Studio, **Models → JEV → Ekko Computer Use** provides independent default-off
 switches for desktop element matching and outcome verification. Both use the
-selected Profile's JEV provider. Settings take effect at the next normal or
+shared global JEV provider. Settings take effect at the next normal or
 isolated Ekko run; a running agent keeps its configuration snapshot. These
 switches are independent of browser, memory and skill JEV settings and do not
 enable Computer Use itself.

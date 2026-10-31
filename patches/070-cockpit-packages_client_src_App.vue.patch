@@ -1,51 +1,15 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
-index ab7851c56..5674074be 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -29,6 +29,7 @@ import { watchServerTtsSettingsHydration } from "@/composables/useTtsSettingsHyd
- import { useAppStore } from "@/stores/hermes/app";
+@@ -30,6 +30,7 @@ import { useAppStore } from "@/stores/hermes/app";
  import { useProfilesStore } from "@/stores/hermes/profiles";
+ import { usePersonPresenceStore } from '@/stores/hermes/person-presence';
  import { isStoredSuperAdmin } from "@/api/client";
 +import { useAuthStore } from "@/stores/hermes/auth";
  import AuthEventListener from "@/components/auth/AuthEventListener.vue";
  import { desktopBridge } from "@/utils/desktop-bridge";
  import { naiveLocaleFor } from "@/constants/naiveLocale";
-@@ -107,6 +108,7 @@ const naiveLocale = computed(() => naiveLocaleFor(locale.value));
- const naiveRtl = computed(() => naiveRtlFor(locale.value));
- const appStore = useAppStore();
- const profilesStore = useProfilesStore();
-+const authStore = useAuthStore();
- watch(() => profilesStore.activeProfileName, () => { void stopRemoteBrowserRelay() });
- const route = useRoute();
- const { sessionSearchOpen } = useSessionSearch();
-@@ -159,24 +161,8 @@ provide(pageHeaderTargetKey, computed(() => showNavigationRail.value ? pageHeade
- function handleWideViewportChange(event: MediaQueryListEvent) {
-   isWideViewport.value = event.matches;
- }
--const usesPageSidebar = computed(() =>
--  [
--    "hermes.chat",
--    "hermes.session",
--    "hermes.connections",
--    "hermes.agentManager",
--    "hermes.models",
--    "hermes.usage",
--    "hermes.apiRelay",
--    "hermes.history",
--    "hermes.historySession",
--    "hermes.globalAgent",
--    "hermes.globalAgentSession",
--    "hermes.groupChat",
--    "hermes.groupChatRoom",
--    "hermes.workflow",
--  ].includes(route.name as string),
--);
-+const usesPageSidebar = computed(() => false);
-+const isFullscreen = computed(() => route.meta?.fullscreen === true);
- const usesHermesConfigSidebar = computed(
-   () => route.meta?.hermesConfig === true,
- );
-@@ -190,7 +176,7 @@ const showAppSidebar = computed(
+@@ -196,7 +197,7 @@ const showAppSidebar = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -54,7 +18,7 @@ index ab7851c56..5674074be 100644
      !usesHermesConfigSidebar.value &&
      !usesEkkoConfigSidebar.value &&
      !usesCodingAgentConfigSidebar.value,
-@@ -202,8 +188,8 @@ const showMobileMenuButton = computed(
+@@ -208,8 +209,8 @@ const showMobileMenuButton = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -64,7 +28,7 @@ index ab7851c56..5674074be 100644
        usesHermesConfigSidebar.value ||
        usesEkkoConfigSidebar.value ||
        usesCodingAgentConfigSidebar.value),
-@@ -263,6 +249,7 @@ watch(
+@@ -269,6 +270,7 @@ watch(
        appStore.stopHealthPolling();
        return;
      }
@@ -72,3 +36,91 @@ index ab7851c56..5674074be 100644
      appStore.loadModels();
      appStore.startHealthPolling();
    },
+diff --git a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
+--- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
++++ b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
+@@ -8,6 +8,8 @@ import AppConnectionsPanel from '@/components/hermes/connections/AppConnectionsP
+ import McuDevicesPanel from '@/components/hermes/connections/McuDevicesPanel.vue'
+ import RemoteDevicesPanel from '@/components/hermes/connections/RemoteDevicesPanel.vue'
+ import { desktopBridge } from '@/utils/desktop-bridge'
++// overlay[s3]：App/MCU 两 tab 由 features.connectionsExtras 门控（模板引用须在此导入——缺失即整页渲染崩，2026-10-03 回归实锤）
++import { features } from '@/custom/features'
+ 
+ type ConnectionTab = 'app' | 'mcu' | 'remote'
+ 
+@@ -18,6 +20,9 @@ const hasRemoteDevices = desktopBridge()?.isDesktop === true && !!desktopBridge(
+ 
+ function normalizeTab(value: unknown): ConnectionTab {
+   if (value === 'remote' && hasRemoteDevices) return value
++  // overlay[702]：extras 关闭时 app/mcu pane 已隐藏——任何落位（含缺省 'app' 与
++  // 深链 tab=app/mcu）归一到唯一可用 pane，避免 activeTab 指向隐藏页签。
++  if (!features.connectionsExtras) return 'remote'
+   if (value === 'mcu') return value
+   return 'app'
+ }
+@@ -54,6 +59,7 @@ function updateTab(value: string | number) {
+     </PageHeader>
+ 
+     <NTabs
++      v-if="features.connectionsExtras || hasRemoteDevices"
+       :value="activeTab"
+       class="connections-tabs"
+       type="line"
+@@ -61,16 +67,21 @@ function updateTab(value: string | number) {
+       pane-class="connections-tab-pane"
+       @update:value="updateTab"
+     >
+-      <NTabPane name="app" :tab="t('connections.tabs.app')" display-directive="if">
++      <NTabPane v-if="features.connectionsExtras" name="app" :tab="t('connections.tabs.app')" display-directive="if">
+         <AppConnectionsPanel />
+       </NTabPane>
+-      <NTabPane name="mcu" :tab="t('connections.tabs.mcu')" display-directive="if">
++      <NTabPane v-if="features.connectionsExtras" name="mcu" :tab="t('connections.tabs.mcu')" display-directive="if">
+         <McuDevicesPanel />
+       </NTabPane>
+       <NTabPane v-if="hasRemoteDevices" name="remote" :tab="t('remoteDevices.title')" display-directive="if">
+         <RemoteDevicesPanel />
+       </NTabPane>
+     </NTabs>
++    <!-- overlay[702]：extras 关且无 remote 设备时 pane 全隐藏（含 superadmin——
++         650 的 isSuperAdmin 放行会渲染零页签空条），统一走明确空态。 -->
++    <div v-else class="connections-empty">
++      <span>{{ t('common.noData') }}</span>
++    </div>
+   </div>
+ </template>
+ 
+@@ -85,6 +96,33 @@ function updateTab(value: string | number) {
+   background: var(--theme-content-bg, $bg-main-surface);
+ }
+ 
++.connections-empty {
++  flex: 1;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  color: var(--text-muted);
++  font-size: 13px;
++}
++
++.connections-empty {
++  flex: 1;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  color: var(--text-muted);
++  font-size: 13px;
++}
++
++.connections-empty {
++  flex: 1;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  color: var(--text-muted);
++  font-size: 13px;
++}
++
+ .connections-header-left {
+   min-width: 0;
+   display: flex;

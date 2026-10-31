@@ -10,17 +10,34 @@ const root = resolve(import.meta.dirname, '../..')
 const registered = JSON.parse(readFileSync(resolve(root, 'scripts/jev-integrations.json'), 'utf8'))
 const consumer = 'packages/server/src/modules/hermes/services/jev-example.ts'
 
-function fixture() {
-  const manifest = structuredClone(registered)
+// Harness mutations need real settings syntax, not the complete chat runtimes
+// and test suites of every consumer. Repository wiring is checked by harness:check.
+const fixtureSources = (() => {
+  const manifest = registered
   const { server, client, form } = manifest.settings
-  const integration = manifest.integrations[0]
-  const files = [server, client, form, manifest.settings.host, ...manifest.integrations.flatMap((item: typeof integration) => [...(item.runtimeConfig ? [item.runtimeConfig.file] : []), ...item.sources, ...item.tests])]
+  const files = [server, client, form, ...manifest.integrations.flatMap((item: any) => item.runtimeConfig ? [item.runtimeConfig.file] : [])]
   const sources = new Map<string, string>(files.map(file => [file, readFileSync(resolve(root, file), 'utf8')]))
+  sources.set(manifest.settings.host, '<template><JevSettingsPanel /></template>')
+  for (const integration of manifest.integrations) {
+    for (const file of integration.sources) {
+      const source = "import { evaluateJev } from '../../studio/public/jev'"
+      sources.set(file, file.endsWith('.vue') ? `<script setup>${source}</script>` : source)
+    }
+    for (const file of integration.tests) sources.set(file, 'export {}')
+  }
   const labels = Object.values(manifest.settings.fields).map((field: any) => field.label as string)
   sources.set('packages/client/src/i18n/locales/en.ts', `export default ${JSON.stringify({
     jev: Object.fromEntries(labels.filter(label => label.startsWith('jev.')).map(label => [label.slice(4), label])),
     profiles: { model: 'Model' },
   })}`)
+  return sources
+})()
+
+function fixture() {
+  const manifest = structuredClone(registered)
+  const { server, client, form } = manifest.settings
+  const integration = manifest.integrations[0]
+  const sources = new Map(fixtureSources)
   const change = (file: string, before: string, after: string) => {
     expect(sources.get(file)).toContain(before)
     sources.set(file, sources.get(file)!.replace(before, after))
@@ -152,7 +169,7 @@ describe('JEV integration harness', () => {
   it('rejects a switch that is displayed but never saved', () => {
     const f = fixture()
     const source = f.sources.get(f.form)!
-    const saveStart = source.indexOf('saveJevSettings(profile, {')
+    const saveStart = source.indexOf('saveJevSettings({')
     f.sources.set(f.form, source.slice(0, saveStart) + source.slice(saveStart).replace('ekkoMemoryEnabled, ', ''))
     expect(jevHarnessViolations(f.sources, f.manifest).join('\n')).toContain('ekkoMemoryEnabled is not submitted')
   })
@@ -174,7 +191,7 @@ describe('JEV integration harness', () => {
 
   it('rejects an orphaned settings form with no frontend page entry', () => {
     const f = fixture()
-    f.change(f.manifest.settings.host, '<JevSettingsPanel :profile="selectedProfile" />', '<!-- <JevSettingsPanel :profile="selectedProfile" /> -->')
+    f.change(f.manifest.settings.host, '<JevSettingsPanel />', '<!-- <JevSettingsPanel /> -->')
     expect(jevHarnessViolations(f.sources, f.manifest).join('\n')).toContain('must be mounted in its declared frontend page')
   })
 

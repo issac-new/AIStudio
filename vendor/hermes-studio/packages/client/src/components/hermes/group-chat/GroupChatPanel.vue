@@ -90,9 +90,9 @@ import { buildRemoteGroupChatRooms, type RemoteGroupChatRoom } from '@/utils/gro
 import { handoffErrorTranslationKey } from './handoff-presentation'
 import { clearGroupChatRoomDraft } from './group-chat-room-drafts'
 import {
-    fetchAgentStatusSnapshot,
-    isAgentStatusAvailable,
-    type AgentStatusSnapshot,
+    fetchAgentAvailabilitySnapshot,
+    isAgentAvailable,
+    type AgentAvailabilitySnapshot,
 } from '@/api/agent-status'
 
 const FilesPanel = defineAsyncComponent(async () => (await import('@/components/hermes/chat/FilesPanel.vue')).default)
@@ -137,7 +137,7 @@ const editingAgent = ref<RoomAgent | null>(null)
 const isSavingAgent = ref(false)
 const isLoadingAgentForm = ref(false)
 let agentDrawerLoadSequence = 0
-const agentStatusSnapshot = ref<AgentStatusSnapshot | null>(null)
+const agentAvailabilitySnapshot = ref<AgentAvailabilitySnapshot | null>(null)
 let agentStatusRequest: Promise<void> | null = null
 const showRoomSettingsModal = ref(false)
 const showUserProfileModal = ref(false)
@@ -257,7 +257,7 @@ type GroupAgentType = 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | '
 const groupAgentTypeDefinitions = GROUP_AGENT_OPTIONS
 
 const groupAgentTypeOptions = computed(() => groupAgentTypeDefinitions.filter(option =>
-    isAgentStatusAvailable(agentStatusSnapshot.value, option.value)
+    isAgentAvailable(agentAvailabilitySnapshot.value, option.value)
 ))
 
 const firstAvailableGroupAgentType = computed<GroupAgentType | null>(() =>
@@ -285,7 +285,7 @@ function groupAgentDisplayName(agent: GroupAgentType): string {
 }
 
 function isGroupAgentAvailable(agent: GroupAgentType): boolean {
-    return isAgentStatusAvailable(agentStatusSnapshot.value, agent)
+    return isAgentAvailable(agentAvailabilitySnapshot.value, agent)
 }
 
 function warnAgentUnavailable(agent: GroupAgentType) {
@@ -296,9 +296,9 @@ function refreshAgentAvailability(): Promise<void> {
     if (agentStatusRequest) return agentStatusRequest
     agentStatusRequest = (async () => {
         try {
-            agentStatusSnapshot.value = await fetchAgentStatusSnapshot()
+            agentAvailabilitySnapshot.value = await fetchAgentAvailabilitySnapshot()
         } catch {
-            agentStatusSnapshot.value = null
+            agentAvailabilitySnapshot.value = null
         }
     })().finally(() => { agentStatusRequest = null })
     return agentStatusRequest
@@ -382,13 +382,13 @@ const pendingAgentPreset = computed(() =>
 )
 
 const agentReasoningEffortOptions = computed(() => reasoningOptions([
-    { label: t(selectedAgentType.value === 'hermes' ? 'chat.reasoningEffort.options.default' : 'chat.reasoningEffort.options.none'), value: '' },
+    { label: t('chat.reasoningEffort.options.none'), value: '' },
     ...modelReasoningEfforts(
       getAgentModelGroups(selectedProfile.value || ''),
       selectedAgentProvider.value,
       selectedAgentModel.value,
     ).map(value => ({ label: t(`chat.reasoningEffort.options.${value}`), value })),
-], selectedAgentType.value === 'hermes'))
+]))
 const agentReasoningEffortValue = computed({
   get: () => reasoningValue(selectedAgentReasoningEffort.value, agentReasoningEffortOptions.value),
   set: (value: string) => { selectedAgentReasoningEffort.value = value },
@@ -1357,7 +1357,7 @@ function currentAgentPresetInput(): GroupAgentPresetInput | null {
         }),
         profile: selectedProfile.value,
         apiMode: selectedAgentType.value === 'hermes' || usesGlobalAgentMode.value ? '' : selectedAgentApiMode.value,
-        reasoningEffort: usesGlobalAgentMode.value ? nativeAgentSelection.value.reasoningEffort : selectedAgentReasoningEffort.value,
+        reasoningEffort: usesGlobalAgentMode.value ? nativeAgentSelection.value.reasoningEffort : agentReasoningEffortValue.value,
         agentPreset: selectedAgentType.value === 'dsh' ? selectedRuntimePreset.value : undefined,
         name: agentName.value.trim() || selectedProfile.value,
         description: agentDescription.value.trim(),
@@ -1741,7 +1741,7 @@ async function confirmAddAgent() {
             }),
             profile: selectedProfile.value,
             apiMode: selectedAgentType.value === 'hermes' || usesGlobalAgentMode.value ? undefined : selectedAgentApiMode.value,
-            reasoningEffort: usesGlobalAgentMode.value ? nativeAgentSelection.value.reasoningEffort : selectedAgentReasoningEffort.value,
+            reasoningEffort: usesGlobalAgentMode.value ? nativeAgentSelection.value.reasoningEffort : agentReasoningEffortValue.value,
             agentPreset: selectedAgentType.value === 'dsh' ? selectedRuntimePreset.value : undefined,
             name: agentName.value.trim() || undefined,
             description: agentDescription.value.trim() || undefined,
@@ -1781,7 +1781,7 @@ async function confirmUpdateAgent() {
             }),
             profile: selectedProfile.value,
             apiMode: selectedAgentType.value === 'hermes' || usesGlobalAgentMode.value ? undefined : selectedAgentApiMode.value,
-            reasoningEffort: usesGlobalAgentMode.value ? nativeAgentSelection.value.reasoningEffort : selectedAgentReasoningEffort.value,
+            reasoningEffort: usesGlobalAgentMode.value ? nativeAgentSelection.value.reasoningEffort : agentReasoningEffortValue.value,
             agentPreset: selectedAgentType.value === 'dsh' ? selectedRuntimePreset.value : undefined,
             name: agentName.value.trim() || undefined,
             description: agentDescription.value.trim() || undefined,

@@ -15,6 +15,7 @@ export interface SessionSummary {
   api_mode?: ProviderApiMode
   reasoning_effort?: string
   agent_preset?: string
+  bot_type?: string
   title: string | null
   parent_session_id?: string | null
   fork_point_message_id?: string | null
@@ -139,6 +140,7 @@ export interface HermesSessionPage {
 }
 
 export interface HermesMessage {
+  person_task_return?: import('../person').PersonTaskReturn
   run_usage?: import('@/utils/run-usage').RunUsageSummary
   id: number
   session_id: string

@@ -89,6 +89,26 @@ describe('user device APNs delivery', () => {
     expect(JSON.stringify(bodies)).not.toContain('push_')
   })
 
+  it.each([
+    ['person.run.completed','completion'],['person.run.failed','failure'],
+    ['person.approval.requested','approval'],['person.clarification.requested','interaction'],
+  ])('sends %s to the main assistant owner through the existing push protocol',async(type,kind)=>{
+    await register();await register(8,'other-phone','cd')
+    session={...session,id:'person-main-7',studio_user_id:'7',push_enabled:0}
+    const consume=await consumer()
+    await consume(event({type,source:'person',subject:{session_id:session.id,run_id:'main-run',
+      ...(kind==='approval'?{approval_id:'a'}:kind==='interaction'?{clarification_id:'q'}:{})},
+      payload:{run_id:'main-run',approval_id:'a',clarify_id:'q',output:'Report ready'}}))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({event_type:kind,recipient:{apns_token:'ab'.repeat(32)},
+      ekko_run:{run_kind:'chat',session_id:'person-main-7',cloud_user_id:107}})
+    fetchMock.mockClear()
+    for(const session_id of ['person-task-private','person-main-8']) {
+      await consume(event({type,source:'person',subject:{session_id,run_id:'invalid',approval_id:'a',clarification_id:'q'},payload:{run_id:'invalid',approval_id:'a',clarify_id:'q'}}))
+    }
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('ignores the legacy session push opt-out for ordinary APNs', async () => {
     await register(); session.push_enabled = 0
     await (await consumer())(event())

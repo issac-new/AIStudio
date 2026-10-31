@@ -46,7 +46,7 @@ export function nativeDeviceHtml(kind: 'button' | 'manager' | 'action'): string 
         <ol class="progress-steps"><li id="step-check"><span class="step-mark"></span><span id="check-label"></span></li><li id="step-restart"><span class="step-mark"></span><span id="restart-label"></span></li></ol>
       </section>
       <div id="action-error" class="notice error" role="alert" hidden></div>
-      <footer class="action-footer"><button id="action-cancel"></button><button id="action-confirm" class="primary"></button></footer>
+      <footer class="action-footer"><button id="action-cancel"></button><button id="action-new"></button><button id="action-confirm" class="primary"></button></footer>
     </main>`
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
@@ -131,7 +131,7 @@ input::placeholder { color:var(--device-secondary); }
 #target-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
 #target-address { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .action-hint { margin-bottom:18px; }
-.action-footer { margin-top:auto; padding-top:20px; display:flex; justify-content:flex-end; gap:8px; }
+.action-footer { margin-top:auto; padding-top:20px; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
 .action-footer button { min-width:80px; }
 .progress-status { display:flex; align-items:center; gap:8px; font-size:13px; }
 #elapsed { margin-inline-start:auto; font-size:11px; font-variant-numeric:tabular-nums; }
@@ -256,7 +256,10 @@ function renderAction(data) {
  text('action-error',failed ? errorText(operation.error) : '');$('action-error').hidden = !failed;
  $('action-cancel').textContent = failed ? labels.close : labels.cancel;
  $('action-cancel').hidden = data.busy;$('action-confirm').hidden = data.busy;
- $('action-confirm').textContent = failed ? labels.retry : switching ? labels.confirm : labels.remove;
+ $('action-new').textContent = labels.openNew;
+ $('action-new').hidden = !switching || data.busy;
+ $('action-new').disabled = working || data.busy;
+ $('action-confirm').textContent = failed ? labels.retry : switching ? labels.openCurrent : labels.remove;
  $('action-confirm').className = switching ? 'primary' : 'danger';
  $('action-confirm').disabled = working || data.busy;$('action-cancel').disabled = working || data.busy;
  updateElapsed();
@@ -296,7 +299,8 @@ if ($('add-form')) {
  $('add-form').addEventListener('submit', event => { event.preventDefault();void perform(async () => { await api.add({name:$('name').value,serverUrl:$('address').value});$('add-form').reset();setAddOpen(false);status('saved'); }); });
 }
 if ($('action-confirm')) {
- $('action-confirm').addEventListener('click', () => perform(() => api.confirm(latest.operation.token)));
+ $('action-confirm').addEventListener('click', () => perform(() => api.confirm(latest.operation.token, 'current')));
+ $('action-new').addEventListener('click', () => perform(() => api.confirm(latest.operation.token, 'new')));
  $('action-cancel').addEventListener('click', () => api.cancel(latest.operation.token));
  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !latest.busy) void api.cancel(latest.operation.token); });
  setInterval(updateElapsed,1000);

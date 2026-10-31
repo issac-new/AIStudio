@@ -85,6 +85,13 @@ describe('system notification adapter', () => {
     }))
   })
 
+  it('preserves the exact assistant main route in existing system notifications', async () => {
+    const {showCompletionNotification}=await import('@/utils/completion-notification')
+    await showCompletionNotification({title:'zhezhe',tag:'person:main',clickUrl:'/person'})
+    expect(shown[0].options?.data).toEqual({clickUrl:'/person'})
+    shown[0].instance.onclick();expect(window.location.hash).toBe('#/person')
+  })
+
   it('uses a cross-tab Web Lock and shared ledger for one delivery per tag', async () => {
     const request = vi.fn(async (_name: string, _options: unknown, callback: (lock: object | null) => Promise<boolean>) => callback({}))
     Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } })

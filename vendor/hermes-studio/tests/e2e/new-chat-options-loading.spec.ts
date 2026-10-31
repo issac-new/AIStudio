@@ -11,8 +11,12 @@ function gate() {
 
 async function warmDraft(page: Page) {
   await authenticate(page, TEST_ACCESS_KEY, 'research')
-  await mockHermesApi(page)
+  const session = { id: 'existing-chat', title: 'Existing conversation', source: 'cli', profile: 'research', started_at: 1, message_count: 0 }
+  await mockHermesApi(page, { sessions: [session] })
   await mockChatSocket(page)
+  await page.addInitScript(id => {
+    (window as any).__PW_CHAT_SOCKET_RESUMES__ = { [id]: { session_id: id, messages: [], isWorking: false, events: [] } }
+  }, session.id)
   await page.goto('/#/hermes/chat')
   await page.getByRole('button', { name: 'New Chat', exact: true }).click()
   const draft = page.locator('.new-chat-page')
@@ -133,8 +137,8 @@ for (const mode of ['scoped', 'global']) {
     })
     try {
       await page.goto('/#/hermes/chat')
-      await page.getByRole('button', { name: 'New Chat', exact: true }).click()
       const draft = page.locator('.new-chat-page')
+      await expect(draft).toBeVisible()
       const agent = draft.locator('.agent-card.active')
       await selectNewChatAgent(page, 'Codex')
       if (mode === 'global') await selectNewChatLaunchMode(page, 'global')
@@ -177,7 +181,13 @@ for (const entry of ['/hermes/chat', '/studio/agents']) {
   })
 }
 
-for (const agent of agentCatalog.agents) {
+// Exercise each request family and the global-only picker path in the browser.
+// Catalog identities/modes and CLI adapters have exhaustive unit coverage in
+// native-coding-agents.test.ts and coding-agents-launch.test.ts.
+const creationAgents = agentCatalog.agents.filter(agent =>
+  agent.kind !== 'coding-agent' || agent.id === 'codex' || agent.id === 'qoder',
+)
+for (const agent of creationAgents) {
   for (const mode of agent.modes) {
     test(`${agent.name} ${mode} new chat skips history resume and starts its first run`, async ({ page }) => {
       await authenticate(page, TEST_ACCESS_KEY, 'research')

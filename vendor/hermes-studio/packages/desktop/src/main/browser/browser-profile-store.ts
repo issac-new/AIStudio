@@ -125,6 +125,15 @@ export class BrowserProfileStore {
     await this.persist()
   }
 
+  async rememberDownloadDirectory(profileId: string, directory: string): Promise<void> {
+    if (!isAbsolute(directory)) return
+    const profile = this.requireProfile(profileId)
+    const normalized = resolve(directory)
+    if (profile.lastDownloadDirectory === normalized) return
+    profile.lastDownloadDirectory = normalized
+    await this.persist()
+  }
+
   async update(profileId: string, input: BrowserProfileUpdateInput): Promise<DesktopBrowserProfile> {
     const profile = this.requireProfile(profileId)
     const proxyMode = input.proxyMode === undefined ? profile.proxyMode : safeProxyMode(input.proxyMode)
@@ -174,6 +183,8 @@ export class BrowserProfileStore {
             rootPath,
             sessionPath: join(rootPath, 'data'),
             downloadPath: join(rootPath, 'download'),
+            lastDownloadDirectory: typeof profile.lastDownloadDirectory === 'string' && isAbsolute(profile.lastDownloadDirectory)
+              ? resolve(profile.lastDownloadDirectory) : undefined,
             proxyMode,
             proxyRules: safeProxyRules(profile.proxyRules, proxyMode),
             tabs: Array.isArray(profile.tabs) ? profile.tabs : ['about:blank'],

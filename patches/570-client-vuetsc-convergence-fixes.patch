@@ -1,18 +1,4 @@
-diff --git a/packages/client/src/utils/chat-agent-avatar.ts b/packages/client/src/utils/chat-agent-avatar.ts
-index b98738385..7a9739b4a 100644
---- a/packages/client/src/utils/chat-agent-avatar.ts
-+++ b/packages/client/src/utils/chat-agent-avatar.ts
-@@ -1,7 +1,7 @@
- import { deploymentUrl } from './deployment-url'
- 
- export interface ChatAgentAvatar {
--  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'DeepSeek Harness' | 'Cursor' | 'Antigravity' | 'Qwen Code' | 'Kimi Code' | 'CodeBuddy' | 'Qoder' | 'GitHub Copilot' | 'ZCode'
-+  label: 'Hermes' | 'Ekko' | 'Claude' | 'Codex' | 'Pi' | 'Grok' | 'OpenCode' | 'MiMo Code' | 'DeepSeek Harness' | 'Cursor' | 'Antigravity' | 'Qwen Code' | 'Kimi Code' | 'CodeBuddy' | 'Qoder' | 'GitHub Copilot' | 'ZCode'
-   src: string
- }
- 
 diff --git a/packages/client/src/views/hermes/CodingAgentConfigView.vue b/packages/client/src/views/hermes/CodingAgentConfigView.vue
-index f533429b2..2d352e00a 100644
 --- a/packages/client/src/views/hermes/CodingAgentConfigView.vue
 +++ b/packages/client/src/views/hermes/CodingAgentConfigView.vue
 @@ -46,8 +46,9 @@ const settingsKeys: Record<CodingAgentId, Partial<Record<SettingsEditor, string>

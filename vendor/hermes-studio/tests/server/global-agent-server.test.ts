@@ -114,6 +114,7 @@ function createMockSocket(id: string, auth: Record<string, unknown> = {}, header
     data: {},
     handshake: { auth, headers },
     broadcast: { emit: vi.fn() },
+    join: vi.fn(),
     on: vi.fn((event: string, handler: (...args: any[]) => void) => {
       handlers.set(event, (...args: any[]) => {
         if (mcuEventsRequiringApiToken.has(event) && args[0] && typeof args[0] === 'object' && !Array.isArray(args[0])) {
@@ -234,6 +235,8 @@ describe('GlobalAgentServer', () => {
     nsp.__handlers.get('connection')?.(socket)
 
     expect(server.getClientIds()).toEqual(['local-global-agent'])
+    expect(socket.__handlers.has('mcu.events.subscribe')).toBe(true)
+    expect(socket.__handlers.has('mcu.events.unsubscribe')).toBe(true)
 
     const response = await server.httpRequest({
       id: 'req-1',
@@ -270,6 +273,10 @@ describe('GlobalAgentServer', () => {
       nsp.__middleware[0](frontendSocket, (err?: Error) => err ? reject(err) : resolve())
     })
     nsp.__handlers.get('connection')?.(frontendSocket)
+
+    expect(frontendSocket.join).toHaveBeenCalledWith('person-notifications:7')
+    expect(agentSocket.join).not.toHaveBeenCalled()
+    expect(frontendSocket.__handlers.has('mcu.events.subscribe')).toBe(false)
 
     const httpAck = vi.fn()
     frontendSocket.__handlers.get('http.request')?.({

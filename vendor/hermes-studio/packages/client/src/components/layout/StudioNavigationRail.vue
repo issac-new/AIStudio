@@ -13,6 +13,7 @@ const route = useRoute()
 const { t } = useI18n()
 const canManageAgents = computed(() => isStoredSuperAdmin())
 const entries = computed(() => [
+  { key: 'person', route: 'hermes.person', label: 'person.subtitle', avatar: deploymentUrl('/person/idle.gif') },
   { key: 'chat', route: 'hermes.chat', label: 'sidebar.singleChat', path: 'M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
   { key: 'group', route: 'hermes.groupChat', label: 'sidebar.groupChat', path: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' },
   { key: 'workflow', route: 'hermes.workflow', label: 'sidebar.workflow', path: 'M8 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0M22 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0M22 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 12h3a4 4 0 0 0 4-4V6M8 12h3a4 4 0 0 1 4 4v2' },
@@ -46,7 +47,8 @@ function handleNavigate(key: string) {
       <NTooltip v-for="entry in entries" :key="entry.key" placement="right" trigger="hover">
         <template #trigger>
           <RouteLinkItem class="studio-navigation-rail__item" :to="{ name: entry.route }" :active="activeKey === entry.key" :aria-label="t(entry.label)" @click="handleNavigate(entry.key)">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="entry.path" /></svg>
+            <img v-if="entry.avatar" class="studio-navigation-rail__avatar" :src="entry.avatar" width="32" height="32" alt="" aria-hidden="true" />
+            <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="entry.path" /></svg>
           </RouteLinkItem>
         </template>
         {{ t(entry.label) }}
@@ -104,6 +106,7 @@ function handleNavigate(key: string) {
 }
 .studio-navigation-rail__bottom { display: flex; flex-direction: column; gap: calc(8px * var(--spacing-scale, 1)); padding-top: 12px; }
 .api-relay-logo { border-radius: var(--radius-component, 4px); }
+.studio-navigation-rail__avatar { aspect-ratio: 1; flex-shrink: 0; border-radius: 4px; object-fit: contain; }
 .studio-navigation-rail__item {
   display: grid;
   place-items: center;

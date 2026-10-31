@@ -4,7 +4,7 @@ export interface AgentSessionTask {
   id: string
   title: string
   summary: string
-  status: 'open' | 'completed'
+  status: 'open' | 'completed' | 'closed'
 }
 
 export interface AgentSessionTasksSnapshot {
@@ -63,7 +63,7 @@ export class ListSessionTasksTool implements AgentTool {
   readonly concurrency = 'parallel' as const
   readonly definition = {
     name: 'list_session_tasks',
-    description: 'Read durable user goals for the current session at the beginning of every turn. Review past delivery and outstanding work. Record only independent deliverables, ongoing follow-up or user-requested tracking; skip simple questions, one-off lookups and trivial edits without lasting tracking value. Reuse one goal per user outcome. Reading does not require a write. Goals span turns; update_plan manages execution steps for this run. The host binds the session. Follow the latest user request.',
+    description: 'Read durable user goals for the current session at the beginning of every turn. Review past delivery and outstanding work. Record only independent deliverables, ongoing follow-up or user-requested tracking; skip simple questions, one-off lookups and trivial edits without lasting tracking value. Reuse one goal per user outcome. Reading does not require a write. Closed goals were closed by the user. Leave them unchanged; only the user can reopen them from the task list. Goals span turns; update_plan manages execution steps for this run. The host binds the session. Follow the latest user request.',
     parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
   }
 
@@ -85,7 +85,7 @@ export class UpdateSessionTasksTool implements AgentTool {
   readonly concurrency = 'serial' as const
   readonly definition = {
     name: 'update_session_tasks',
-    description: 'Persist changed/new goals worth tracking: independent deliverables, ongoing follow-up or explicit user-requested tracking. Skip simple questions, one-off lookups and trivial edits without lasting tracking value. Keep one goal per user outcome: reuse its id for follow-ups, refinements, corrections, constraints and reopening. Create distinct goals before execution; save changed progress and verified completion before the final response. Use concise outcome titles and one or two short summary sentences about results and remaining blockers; keep implementation and test logs in the conversation, verification in completion_evidence. Omitted goals remain; unchanged ledgers need no write. Use the latest revision; reread on conflict. open includes blocked/interrupted work. Turn end or a finished update_plan never proves goal completion. Independent of run plans; no page card.',
+    description: 'Persist changed/new goals worth tracking: independent deliverables, ongoing follow-up or explicit user-requested tracking. Skip simple questions, one-off lookups and trivial edits without lasting tracking value. Keep one goal per user outcome: reuse its id for follow-ups, refinements, corrections, constraints and reopening. Create distinct goals before execution; save changed progress and verified completion before the final response. Use concise outcome titles and one or two short summary sentences about results and remaining blockers; keep implementation and test logs in the conversation, verification in completion_evidence. Omitted goals remain; unchanged ledgers need no write. Use the latest revision; reread on conflict. open includes blocked/interrupted work. Closed goals were closed by the user. Leave them unchanged; only the user can reopen them from the task list. Turn end or a finished update_plan never proves goal completion. Independent of run plans; no page card.',
     parameters: {
       type: 'object', additionalProperties: false, required: ['revision', 'changes'],
       properties: {

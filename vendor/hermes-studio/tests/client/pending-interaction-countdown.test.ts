@@ -11,6 +11,11 @@ describe('pending interaction countdown', () => {
     expect(formatPendingInteractionTime(3_661_000)).toBe('01:01:01')
   })
 
+  it('keeps durable task decisions pending until the server resolves them', () => {
+    expect(pendingInteractionRemainingMs(Infinity, 10000000)).toBe(Infinity)
+    expect(pendingInteractionRemainingMs(NaN)).toBe(0)
+  })
+
   it('uses a monotonic deadline and clamps the display at zero', () => {
     expect(pendingInteractionRemainingMs(1_500, 1_000)).toBe(500)
     expect(pendingInteractionRemainingMs(1_500, 2_000)).toBe(0)

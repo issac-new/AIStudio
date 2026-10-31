@@ -1,9 +1,11 @@
+import { personMessages } from '../person-messages'
 import { remoteDeviceMessages } from '../remote-device-messages'
 import { themePresetMessages } from '../theme-preset-locales'
 import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesZhTw } from '../social-messages'
 
 export default {
+  person: personMessages['zh-TW'],
   sessionTasks: {
       "title": "任務",
       "task": "任務",
@@ -15,6 +17,9 @@ export default {
       "all": "全部狀態",
       "open": "未完成",
       "completed": "已完成",
+      "closed": "已關閉",
+      "changeStatus": "修改任務狀態：{title}",
+      "updateFailed": "任務狀態更新失敗，請重新整理後重試",
       "openChat": "開啟對話",
       "openTask": "在對話中查看：{title}",
       "loading": "正在載入任務",
@@ -118,8 +123,9 @@ export default {
     "openFailed": "無法開啟授權設定，請手動前往「系統設定 → 隱私權與安全性」。"
   },
   jev: {
+    globalReadonlyHint: "僅超級管理員可修改或測試全域 JEV 設定。",
     computerUseAutomation: "Ekko 電腦操作",
-    computerUseAutomationHint: "沿用目前 Profile 的 JEV 連線，下次 Ekko 執行生效。僅傳送輔助使用標籤和控制項狀態，不包含欄位值與截圖。選用判斷失敗時保留原生結果。",
+    computerUseAutomationHint: "沿用全域 JEV 連線，下次 Ekko 執行生效。僅傳送輔助使用標籤和控制項狀態，不包含欄位值與截圖。選用判斷失敗時保留原生結果。",
     computerUseMatchEnabled: "桌面元素語意比對",
     computerUseMatchHint: "依明確目標，從最新視窗觀察中推薦既有元素 token，不會執行點擊。",
     computerUseMatchCandidateLimit: "桌面比對候選上限",
@@ -131,7 +137,7 @@ export default {
     computerUseVerifyTimeoutMs: "桌面驗證逾時（毫秒）",
 
     browserAutomation: "內建瀏覽器自動化",
-    browserAutomationHint: "選用判斷沿用目前 Profile 儲存的 JEV 連線，下次判斷生效。頁面可見標籤會傳送給 JEV，不包含輸入欄位的值。關閉、服務無法使用或判斷不確定時保留原有流程。",
+    browserAutomationHint: "選用判斷沿用全域儲存的 JEV 連線，下次判斷生效。頁面可見標籤會傳送給 JEV，不包含輸入欄位的值。關閉、服務無法使用或判斷不確定時保留原有流程。",
     browserMatchEnabled: "JEV 元素比對",
     browserMatchHint: "依目標描述推薦快照中的真實元素參照。先掃描整份快照中的可互動元素，按目標相關性排序後套用候選上限；有歧義時不推薦。",
     browserMatchOptions: "元素比對選項",
@@ -174,7 +180,7 @@ export default {
 
     groupSummaryReviewEnabled: '啟用群聊總結增強',
     groupSummaryDisabled: '已關閉；群聊摘要沿用原流程。',
-    groupSummaryReady: '已為此設定檔建立的摘要啟用。',
+    groupSummaryReady: "已啟用群聊摘要增強。",
     groupSummaryReviewMinConfidence: '摘要檢查信心門檻',
     groupSummaryReviewMinConfidenceHint: '回報摘要品質問題所需的最低信心值。',
     groupSummaryReviewTimeout: '摘要檢查時間預算（毫秒）',
@@ -216,12 +222,14 @@ export default {
     memoryMinConfidenceHint: "範圍 0.5–1，預設 0.8。校驗不確定時保留原寫入流程。",
     memoryTimeout: "記憶增強總等待時間（毫秒）",
     memoryTimeoutHint: "範圍 100–30000，建議 3000。每次召回或整批寫入的總上限；單次請求同時受連線逾時限制。",
+    personMemoryEnabled: "個人助理記憶使用 JEV",
+    personMemoryHint: "記憶仍歸屬你的帳號。這些選項獨立於 Ekko 記憶設定。",
     "ekkoMemoryEnabled": "Ekko 記憶使用 JEV",
-    "description": "供各模組呼叫選擇（Choice）、評分（Score）和真假判斷（Noul），設定僅套用至目前選取的設定檔。",
+    description: "全域 JEV 連線與功能設定，所有 Profile 共用。",
     "timeout": "請求逾時（毫秒）",
     "keyHint": "留空以保留已儲存的金鑰",
     "testSaved": "測試已儲存設定",
-    "deleteConfirm": "刪除此設定檔的 JEV 設定與 API 金鑰？",
+    deleteConfirm: "刪除全域 JEV 設定和 API Key？",
     "baseUrl": "API 位址",
     "apiKey": "API 金鑰",
     "keyPlaceholder": "輸入 TypeSafe API 金鑰",
@@ -229,7 +237,7 @@ export default {
     "testSuccess": "連線成功 · 模型：{model} · 耗時：{duration} 毫秒",
     "errors": {
       "invalid_request": "輸入無效，請檢查設定或請求參數。",
-      "not_configured": "請先為此設定檔設定並儲存 API 金鑰。",
+      not_configured: "請先設定並儲存全域 JEV API Key。",
       "timeout": "JEV 請求逾時，請重試或增加逾時時間。",
       "cancelled": "已取消 JEV 請求。",
       "auth_failed": "TypeSafe 驗證失敗，請檢查 API 金鑰及其權限。",
@@ -238,7 +246,7 @@ export default {
       "endpoint_not_found": "JEV 介面不存在（HTTP 404），請檢查介面位址是否包含閘道所需的路徑前綴。",
       "request_failed": "無法連線至 JEV，請檢查 API 位址與網路連線。",
       "settings_failed": "無法讀取或儲存 JEV 設定，請檢查 Studio 資料目錄。",
-      "forbidden": "你沒有存取此設定檔的權限。",
+      forbidden: "你沒有管理全域 JEV 設定的權限。",
       "unavailable": "操作未完成，請檢查與 Studio 的連線後重試。"
     }
   },
@@ -409,13 +417,32 @@ export default {
   },
   socialMessages: socialMessagesZhTw,
   browser: {
+    recentDownloads: "近期下載記錄",
+    fullDownloadHistory: "完整的下載記錄",
+    searchDownloads: "搜尋下載記錄",
+    clearDownloads: "全部清除",
+    clearDownloadsHint: "僅移除記錄，不刪除檔案，也不會取消正在下載的工作。",
+    downloadToday: "今天",
+    downloadYesterday: "昨天",
+    downloadUnavailable: "已刪除或移動",
+    downloadFrom: "來自 {origin}",
+    downloadSource: "下載來源",
+    noMatchingDownloads: "沒有符合的下載記錄",
+    openDownload: "開啟檔案",
+    revealDownload: "開啟所在資料夾",
+    removeDownload: "移除記錄",
+    trashDownload: "移至垃圾桶 / 資源回收筒",
+    downloadActive: "下載仍在進行，請先取消。",
+    downloadFileUnavailable: "下載檔案已移動或刪除，或不是一般檔案。",
+    downloadOpenFailed: "無法開啟下載檔案。",
+    downloadActionFailed: "無法完成下載操作。",
+    downloadNotFound: "此下載記錄已不存在。",
+
     remoteOwnerActive: '当前控制设备',
     remoteOwnerStandby: '待命：另一设备正在使用，闲置10分钟后可接管',
     remoteOwnerBusy: '待命：浏览器操作正在执行',
     remoteOwnerConnecting: '正在连接',
 
-    remoteControl: '允许远程控制',
-    remoteControlStop: '停止远程控制',
 
     title: '瀏覽器', settings: '瀏覽器設定', desktopOnly: '內建瀏覽器僅在 Ekko Studio 桌面版可用。', newTab: '新分頁',
     back: '上一頁', forward: '下一頁', reload: '重新整理', stop: '停止', addressPlaceholder: '搜尋或輸入網址',
@@ -3900,6 +3927,34 @@ export default {
 
   // 更新日誌
   changelog: {
+    new_0_8_0_1: "新增個人助理 BOT：傳送首則訊息即可建立，可命名、搜尋、切換及批次刪除；各 BOT 獨立保存對話，共用帳戶記憶、Agent 預設及工作區 (#3552, #3568, #3575)",
+    new_0_8_0_2: "新增十款角色與循環角色選擇器，支援滑鼠、觸控及鍵盤；改善首次設定提示、重名回饋與草稿保留 (#3581, #3583)",
+    new_0_8_0_3: "個人助理背景任務可排隊追加要求、延續原任務及查看即時工具呼叫；執行指令以易讀文字呈現 (#3566, #3580)",
+    new_0_8_0_4: "個人助理支援串行與平行角色協作、結果交接及精簡進度清單；協作失敗後自動釋放角色，可查看錯誤並恢復未完成分支 (#3571, #3585, #3592)",
+    new_0_8_0_5: "個人助理排程可喚醒助理或執行任務，每次觸發隔離執行對話；支援刪除排程並保留既有任務與執行紀錄 (#3578, #3579)",
+    new_0_8_0_6: "改善個人助理上下文壓縮、帳戶記憶及停止控制；依使用者要求記住任務結果，避免日常回覆重複自我介紹 (#3554, #3565, #3576)",
+    new_0_8_0_7: "JEV 改為 Studio 全域設定，由超級管理員管理；新增可獨立啟用的個人助理記憶增強，預設關閉 (#3562)",
+    new_0_8_0_8: "個人助理接入完成、失敗、核准及澄清通知；新增背景任務浮動提示，跨裝置同步活動、未讀狀態與已讀回條 (#3560, #3563, #3582)",
+    new_0_8_0_9: "用量統計獨立標示個人助理 zhezhe 並顯示 Agent 圖示；背景任務仍依實際執行 Agent 統計 (#3564)",
+    new_0_8_0_10: "個人助理背景並行數預設提高至 6、上限 12，同帳戶所有 BOT 共用額度，保留已儲存的自訂限制 (#3584)",
+    new_0_8_0_11: "個人助理主對話與任務對話新增工作區、終端機及瀏覽器工具面板，支援檔案預覽、編輯和瀏覽器標註，並保留未儲存內容 (#3591, #3593)",
+    new_0_8_0_12: "修正個人助理與一般聊天切換的對話隔離；刪除最後一個一般對話後顯示新增頁，避免根目錄或家目錄快照阻塞服務 (#3572, #3573, #3577)",
+    new_0_8_0_13: "任務清單可手動設為未完成、已完成或已關閉，關閉後可手動重開；預設依更新時間排序，不再置頂舊的未完成任務 (#3535, #3590)",
+    new_0_8_0_14: "任務卡步驟與說明遵循目前對話語言；計畫 ID 與每輪授權上下文分離，改善過期上下文提示 (#3542, #3544)",
+    new_0_8_0_15: "內建瀏覽器跟隨 Studio 明暗主題，並以 Chromium 原生自動深色渲染改善固定淺色網頁 (#3504, #3517)",
+    new_0_8_0_16: "桌面遠端模式登入後自動共用內建瀏覽器，斷線後自動重連；同步授權失效狀態，修正路由導覽誤撤銷共用 (#3514, #3519)",
+    new_0_8_0_17: "瀏覽器 Agent 新增檔案上傳與下載、懸停、選項選取及等待文字；上傳無須系統檔案選擇器，下載可傳回 MCP 所在主機 (#3522)",
+    new_0_8_0_18: "瀏覽器 Agent 新增網頁對話框、跨網域 iframe、雙擊、右鍵、拖曳、座標操作、檔案選擇攔截及去敏網路紀錄；修正富文字輸入與 macOS Cmd 快捷鍵 (#3518, #3523)",
+    new_0_8_0_19: "瀏覽器記住各裝置與設定檔的下載目錄，新增搜尋、日期分組及安全清理下載歷史；清理紀錄保留檔案與進行中的下載 (#3536)",
+    new_0_8_0_20: "裝置可在目前或獨立視窗開啟，重複開啟會重用既有視窗；隔離登入、瀏覽器與儲存空間，協調多視窗更新 (#3521)",
+    new_0_8_0_21: "修正 Codex 在相容介面中遺失已探索 MCP 工具命名空間；Pi 的 Studio 對話讀取工具改為常駐可用 (#3533, #3315)",
+    new_0_8_0_22: "Claude 在啟動與提示更新後保留使用者指令；DSH 改善非 DeepSeek 模型的工具續行提示，並支援設定啟動等待時間 (#3548, #3553, #3326, #3526)",
+    new_0_8_0_23: "MiniMax 優先推薦 M3.1 Flash 與 M3，改善推理參數和歷史相容；聊天、群聊與工作流程預設採最低可用推理等級，保留明確設定 (#3476, #3554)",
+    new_0_8_0_24: "修正一般使用者在群聊與工作流程中無法選取可用 Agent；補充群聊路由異常診斷紀錄 (#3546, #3498)",
+    new_0_8_0_25: "修正 Edge TTS WebSocket 交握失敗；Hermes 顯示正式版本識別，避免將佔位版本 0.0.0 視為實際版本 (#3444, #3557)",
+    new_0_8_0_26: "MCU 可明確訂閱既有 Webhook 事件，支援篩選與內文開關；沿用帳戶權限驗證，未訂閱裝置不受影響 (#3541)",
+    new_0_8_0_27: "統一 MCU 韌體專案目錄，新增 StackChan 即時語音與 Agent 控制規劃文件，精簡重複測試；韌體二進位檔未變，規劃功能尚未實作 (#3537, #3547, #3551)",
+    new_0_8_0_28: "斜線指令支援中文冒號、頓號及逗號作為參數分隔符，避免輸入法標點導致指令被視為一般訊息 (#3484)",
     new_0_7_39_1: "新增跨輪次工作階段任務記錄，Agent 可持續追蹤使用者目標並儲存完成依據 (#3499)",
     new_0_7_39_2: "新增工作階段任務抽屜，可跳轉至相關對話；改善行動版清單、任務詳情與工作階段名稱，減少瑣碎任務記錄 (#3501、#3509、#3510)",
     new_0_7_39_3: "遠端 Studio 的 Agent 可在桌面端明確授權後使用本機內建瀏覽器，並可隨時停止共用 (#3478)",

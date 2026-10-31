@@ -1,9 +1,11 @@
+import { personMessages } from '../person-messages'
 import { remoteDeviceMessages } from '../remote-device-messages'
 import { themePresetMessages } from '../theme-preset-locales'
 import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesJa } from '../social-messages-locales'
 
 export default {
+  person: personMessages['ja'],
   sessionTasks: {
       "title": "タスク",
       "task": "タスク",
@@ -15,6 +17,9 @@ export default {
       "all": "すべての状態",
       "open": "未完了",
       "completed": "完了",
+      "closed": "終了",
+      "changeStatus": "タスクの状態を変更：{title}",
+      "updateFailed": "タスクの状態を更新できませんでした。再読み込みして再試行してください。",
       "openChat": "会話を開く",
       "openTask": "会話で表示：{title}",
       "loading": "タスクを読み込み中",
@@ -118,8 +123,9 @@ export default {
     "openFailed": "権限設定を開けませんでした。「システム設定 → プライバシーとセキュリティ」を手動で開いてください。"
   },
   jev: {
+    globalReadonlyHint: "グローバル JEV 設定の変更とテストは最上位管理者のみ可能です。",
     computerUseAutomation: "Ekko コンピューター操作",
-    computerUseAutomationHint: "このプロファイルの JEV 接続を次の Ekko 実行から使用します。送信するのはアクセシビリティのラベルと操作部品の状態のみで、入力値や画像は含みません。失敗時は元の結果を保持します。",
+    computerUseAutomationHint: "グローバル JEV 接続を次の Ekko 実行から使用します。送信するのはアクセシビリティのラベルと操作部品の状態のみで、入力値や画像は含みません。失敗時は元の結果を保持します。",
     computerUseMatchEnabled: "デスクトップ要素の照合",
     computerUseMatchHint: "最新のウィンドウ観察から、指定した対象に合う既存の要素トークンを提案します。クリックは実行しません。",
     computerUseMatchCandidateLimit: "照合候補数の上限",
@@ -131,7 +137,7 @@ export default {
     computerUseVerifyTimeoutMs: "検証のタイムアウト（ミリ秒）",
 
     browserAutomation: "内蔵ブラウザーの自動化",
-    browserAutomationHint: "このプロファイルに保存した JEV 接続を使用し、次の判定から適用します。画面上のラベルを JEV に送信しますが、入力値は含みません。無効時、利用不可時、判定が不確かな場合は従来の処理を維持します。",
+    browserAutomationHint: "保存したグローバル JEV 接続を使用し、次の判定から適用します。画面上のラベルを JEV に送信しますが、入力値は含みません。無効時、利用不可時、判定が不確かな場合は従来の処理を維持します。",
     browserMatchEnabled: "JEV による要素の照合",
     browserMatchHint: "対象の説明から実在するスナップショット参照を提案します。スナップショット全体の操作可能な要素を関連度順に並べてから候補数の上限を適用し、曖昧な場合は提案しません。",
     browserMatchOptions: "要素照合の設定",
@@ -174,7 +180,7 @@ export default {
 
     groupSummaryReviewEnabled: 'JEVでグループ要約を確認',
     groupSummaryDisabled: '無効です。要約は従来どおり動作します。',
-    groupSummaryReady: 'このプロファイルで作成した要約に対して有効です。',
+    groupSummaryReady: "グループ要約で有効です。",
     groupSummaryReviewMinConfidence: '要約確認の信頼度',
     groupSummaryReviewMinConfidenceHint: '品質問題を報告する最小信頼度です。',
     groupSummaryReviewTimeout: '要約確認の時間予算（ms）',
@@ -216,12 +222,14 @@ export default {
     memoryMinConfidenceHint: "0.5～1、既定値 0.8。検証が不確かな場合は元の書き込み処理を維持します。",
     memoryTimeout: "メモリ拡張の合計待機時間（ミリ秒）",
     memoryTimeoutHint: "100～30000、推奨値は 3000。召回または一括書き込みごとの合計上限。各リクエストには接続タイムアウトも適用されます。",
+    personMemoryEnabled: "個人アシスタントのメモリに JEV を使用",
+    personMemoryHint: "メモリはアカウントに保持され、Ekko のメモリ設定とは独立しています。",
     "ekkoMemoryEnabled": "Ekko のメモリに JEV を使用",
-    "description": "各モジュールで Choice・Score・Noul を利用できます。設定は選択中の Profile に適用されます。",
+    description: "すべての Profile で共有するグローバル JEV 接続と機能設定です。",
     "timeout": "タイムアウト（ミリ秒）",
     "keyHint": "空欄にすると保存済みのキーを維持",
     "testSaved": "保存済み設定をテスト",
-    "deleteConfirm": "この Profile の JEV 設定と API キーを削除しますか？",
+    deleteConfirm: "グローバル JEV 設定と API キーを削除しますか？",
     "baseUrl": "API URL",
     "apiKey": "API キー",
     "keyPlaceholder": "TypeSafe API キーを入力",
@@ -229,7 +237,7 @@ export default {
     "testSuccess": "接続成功 · モデル：{model} · 所要時間：{duration} ミリ秒",
     "errors": {
       "invalid_request": "入力が無効です。設定またはリクエストのパラメーターを確認してください。",
-      "not_configured": "先にこのプロファイルの API キーを設定して保存してください。",
+      not_configured: "先にグローバル JEV API キーを設定して保存してください。",
       "timeout": "JEV リクエストがタイムアウトしました。再試行するか、制限時間を延ばしてください。",
       "cancelled": "JEV リクエストはキャンセルされました。",
       "auth_failed": "TypeSafe の認証に失敗しました。API キーと権限を確認してください。",
@@ -238,7 +246,7 @@ export default {
       "endpoint_not_found": "JEV エンドポイントが見つかりません（HTTP 404）。API ベース URL にゲートウェイのパス接頭辞が含まれているか確認してください。",
       "request_failed": "JEV に接続できません。API URL とネットワークを確認してください。",
       "settings_failed": "JEV 設定を読み込みまたは保存できません。Studio のデータディレクトリを確認してください。",
-      "forbidden": "このプロファイルへのアクセス権がありません。",
+      forbidden: "グローバル JEV 設定を管理する権限がありません。",
       "unavailable": "操作を完了できませんでした。Studio への接続を確認して再試行してください。"
     }
   },
@@ -409,13 +417,32 @@ export default {
   },
   socialMessages: socialMessagesJa,
   browser: {
+    recentDownloads: "最近のダウンロード",
+    fullDownloadHistory: "すべてのダウンロード履歴",
+    searchDownloads: "ダウンロード履歴を検索",
+    clearDownloads: "すべて削除",
+    clearDownloadsHint: "履歴のみ削除します。ファイルと進行中のダウンロードは保持されます。",
+    downloadToday: "今日",
+    downloadYesterday: "昨日",
+    downloadUnavailable: "削除または移動済み",
+    downloadFrom: "取得元 {origin}",
+    downloadSource: "ダウンロード元",
+    noMatchingDownloads: "一致するダウンロードがありません",
+    openDownload: "ファイルを開く",
+    revealDownload: "保存先フォルダーを開く",
+    removeDownload: "履歴から削除",
+    trashDownload: "ファイルをゴミ箱へ移動",
+    downloadActive: "ダウンロード中です。先にキャンセルしてください。",
+    downloadFileUnavailable: "ファイルが移動・削除されたか、通常のファイルではありません。",
+    downloadOpenFailed: "ダウンロードしたファイルを開けません。",
+    downloadActionFailed: "ダウンロード操作を完了できません。",
+    downloadNotFound: "このダウンロード履歴は存在しません。",
+
     remoteOwnerActive: 'Current control device',
     remoteOwnerStandby: 'Standby — another device is active',
     remoteOwnerBusy: 'Standby — browser operation in progress',
     remoteOwnerConnecting: 'Connecting',
 
-    remoteControl: 'Allow remote control',
-    remoteControlStop: 'Stop remote control',
 
     title: 'ブラウザー', settings: 'ブラウザー設定', desktopOnly: '内蔵ブラウザーは Ekko Studio Desktop でのみ利用できます。', newTab: '新しいタブ',
     back: '戻る', forward: '進む', reload: '再読み込み', stop: '停止', addressPlaceholder: '検索またはアドレスを入力',
@@ -3537,6 +3564,34 @@ export default {
   },
 
   changelog: {
+    new_0_8_0_1: "最初のメッセージで個人アシスタント BOT を作成可能に。命名、検索、切り替え、一括削除に対応し、会話履歴は個別、アカウントの記憶・Agent 設定・作業領域は共有 (#3552, #3568, #3575)",
+    new_0_8_0_2: "10 種類のキャラクターとマウス・タッチ・キーボード対応の循環選択を追加。初期設定案内、名前重複の表示、下書き保持を改善 (#3581, #3583)",
+    new_0_8_0_3: "アシスタントのバックグラウンドタスクに追加指示をキュー登録でき、既存作業の継続とリアルタイムのツール呼び出し表示に対応。実行指示を読みやすい文章で表示 (#3566, #3580)",
+    new_0_8_0_4: "役割間の直列・並列連携、結果の引き継ぎ、簡潔な進捗一覧を追加。失敗時は役割を自動解放し、エラー確認と未完了分岐の再開が可能 (#3571, #3585, #3592)",
+    new_0_8_0_5: "予定からアシスタントの起動またはワーカー実行が可能に。実行ごとに会話を分離し、予定を削除しても既存タスクと実行履歴を保持 (#3578, #3579)",
+    new_0_8_0_6: "コンテキスト圧縮、アカウントの記憶、停止操作を改善。依頼されたタスク結果を記憶し、通常の返答で自己紹介を繰り返さないよう修正 (#3554, #3565, #3576)",
+    new_0_8_0_7: "JEV 設定を Studio 全体で共有し、スーパー管理者が管理。個別に有効化できるアシスタント記憶強化を追加し、既定では無効 (#3562)",
+    new_0_8_0_8: "アシスタントの完了・失敗・承認・確認通知と浮動タスク表示を追加。会話の活動、未読、既読情報を端末間で同期 (#3560, #3563, #3582)",
+    new_0_8_0_9: "利用状況でアシスタントを zhezhe として区別し Agent アイコンを表示。ワーカーの利用量は実際の実行 Agent に計上 (#3564)",
+    new_0_8_0_10: "バックグラウンド並列数を既定 6、最大 12 に拡大。同一アカウントの全 BOT で共有し、保存済みの独自上限を保持 (#3584)",
+    new_0_8_0_11: "メイン会話とタスク会話に作業領域・ターミナル・ブラウザの共通パネルを追加。ファイルのプレビュー、編集、ブラウザ注釈に対応し未保存内容を保持 (#3591, #3593)",
+    new_0_8_0_12: "アシスタントと通常チャットの切り替え時の会話分離を修正。最後の通常会話削除後は新規チャットを表示し、ルートやホーム全体のスナップショットによる停止を防止 (#3572, #3573, #3577)",
+    new_0_8_0_13: "タスクを未完了・完了・終了に手動変更し、終了後もユーザーが再開可能に。既定は更新日時順となり古い未完了タスクの優先表示を廃止 (#3535, #3590)",
+    new_0_8_0_14: "タスクカードの手順と説明を会話言語に統一。計画 ID をターン認証コンテキストから分離し、期限切れの案内を改善 (#3542, #3544)",
+    new_0_8_0_15: "内蔵ブラウザが Studio の明暗テーマに追従し、固定ライトページに Chromium ネイティブの自動ダーク表示を適用 (#3504, #3517)",
+    new_0_8_0_16: "デスクトップのリモートモードでログイン後にブラウザを自動共有し、切断後は再接続。認証失効を同期し、ルート移動による誤った共有解除を修正 (#3514, #3519)",
+    new_0_8_0_17: "ブラウザ Agent にファイル送受信、ホバー、選択、文字待機を追加。アップロード時のシステムダイアログを回避し、MCP ホストへダウンロード可能 (#3522)",
+    new_0_8_0_18: "ブラウザ Agent にダイアログ、別オリジン iframe、ダブル・右クリック、ドラッグ、座標操作、ファイル選択の捕捉、機密情報を除いた通信記録を追加。リッチテキスト入力と macOS Cmd を修正 (#3518, #3523)",
+    new_0_8_0_19: "端末・プロファイル別に保存先を記憶し、履歴の検索、日付別表示、安全な削除に対応。ファイルと進行中のダウンロードは保持 (#3536)",
+    new_0_8_0_20: "端末を現在または独立したウィンドウで開き、既存ウィンドウを再利用可能に。ログイン・ブラウザ・保存領域を分離し、複数ウィンドウの更新を調整 (#3521)",
+    new_0_8_0_21: "Codex 互換アダプターで検出済み MCP ツールの名前空間が失われる問題を修正。Pi の Studio 会話読み取りツールを常時利用可能に (#3533, #3315)",
+    new_0_8_0_22: "Claude の起動・プロンプト更新後もユーザー指示を保持。DSH の非 DeepSeek モデル向けツール継続案内を改善し、起動待機時間を設定可能に (#3548, #3553, #3326, #3526)",
+    new_0_8_0_23: "MiniMax は M3.1 Flash と M3 を優先し、推論パラメーターと履歴互換性を改善。チャット・グループ・ワークフローは最低の利用可能な推論レベルを既定とし、明示設定を保持 (#3476, #3554)",
+    new_0_8_0_24: "一般ユーザーがグループやワークフローで利用可能な Agent を選べない問題を修正し、グループ経路処理の障害ログを追加 (#3546, #3498)",
+    new_0_8_0_25: "Edge TTS の WebSocket 接続失敗を修正。Hermes は正式なバージョン識別を表示し、仮の 0.0.0 をリリースと扱わないよう改善 (#3444, #3557)",
+    new_0_8_0_26: "MCU が既存 Webhook イベントを明示的に購読可能に。絞り込みと本文制御、アカウント権限確認に対応し、未購読端末に影響なし (#3541)",
+    new_0_8_0_27: "MCU ファームウェアの配置を統合し StackChan 音声・Agent 制御の計画文書を追加、重複テストを削減。バイナリは変更せず、計画機能は未実装 (#3537, #3547, #3551)",
+    new_0_8_0_28: "スラッシュコマンドの引数区切りに全角コロンや読点・カンマを使用可能に。入力方式の句読点で通常メッセージになる問題を修正 (#3484)",
     new_0_7_39_1: "会話をまたいで保持されるセッションタスクを追加。Agent がユーザーの目標を継続して追跡し、完了の根拠を記録できます (#3499)",
     new_0_7_39_2: "関連する会話へ移動できるセッションタスクドロワーを追加。モバイルの一覧、タスク詳細、セッション名を改善し、些細なタスクの記録を減らしました (#3501, #3509, #3510)",
     new_0_7_39_3: "デスクトップで明示的に許可すると、リモート Studio の Agent がローカルの内蔵ブラウザーを使用できます。共有はいつでも停止できます (#3478)",

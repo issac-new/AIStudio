@@ -1,19 +1,7 @@
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -3898,7 +3898,9 @@
-       moveToReady: '→ 待就绪',
-       priority: '设置优先级',
-       archive: '归档',
--      nudgeDispatcher: '催一下调度器'
-+      nudgeDispatcher: '催一下调度器',
-+      nudge: '催办',
-+      nudgeHint: '按卡的负责人/板归属解析催办对象',
-     },
-     message: {
-       taskCreated: '任务已创建',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -3899,7 +3899,9 @@
+@@ -3957,7 +3957,9 @@ export default {
        moveToReady: '→ ready',
        priority: 'Set priority',
        archive: 'Archive',
@@ -24,3 +12,17 @@
      },
      message: {
        taskCreated: 'Task created',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -3956,7 +3956,9 @@ export default {
+       moveToReady: '→ 待就绪',
+       priority: '设置优先级',
+       archive: '归档',
+-      nudgeDispatcher: '催一下调度器'
++      nudgeDispatcher: '催一下调度器',
++      nudge: '催办',
++      nudgeHint: '按卡的负责人/板归属解析催办对象',
+     },
+     message: {
+       taskCreated: '任务已创建',

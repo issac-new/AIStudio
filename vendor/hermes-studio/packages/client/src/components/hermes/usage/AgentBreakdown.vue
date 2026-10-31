@@ -2,17 +2,29 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUsageStore } from '@/stores/hermes/usage'
+import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
+import type { ProfileAvatar as AgentAvatar } from '@/api/hermes/profiles'
 import { agentMetadata } from '@/utils/agent-catalog'
+import { chatSessionAgentAvatar, PERSON_AVATAR } from '@/utils/chat-agent-avatar'
 import { formatUsageTokens } from '@/utils/usage-display'
 
 const { t, locale } = useI18n()
 const usageStore = useUsageStore()
 const maxAgentTokens = computed(() => Math.max(...usageStore.agentUsage.map(agent => agent.visualTokens), 1))
 
-function agentName(agent: string): string {
-  if (agent === 'unknown') return t('usage.agents.unknown')
+function metadata(agent: string) {
   const id = agent === 'claude_code' ? 'claude-code' : agent === 'ekko_agent' ? 'ekko-agent' : agent
-  return agentMetadata(id)?.name || agent
+  return agentMetadata(id)
+}
+function agentName(agent: string): string {
+  if (agent === 'zhezhe') return PERSON_AVATAR.label
+  if (agent === 'unknown') return t('usage.agents.unknown')
+  return metadata(agent)?.name || agent
+}
+function agentAvatar(agent: string): AgentAvatar | null {
+  if (agent === 'zhezhe') return { type: 'image', dataUrl: PERSON_AVATAR.src }
+  const entry = metadata(agent)
+  return entry ? { type: 'image', dataUrl: chatSessionAgentAvatar({ agent: entry.id }).src } : null
 }
 function formatTokens(n: number): string { return formatUsageTokens(n, locale?.value) }
 
@@ -36,7 +48,7 @@ function cacheHitRate(agent: { inputTokens: number; cacheTokens: number }): stri
 
     <div class="agent-list">
       <div v-for="agent in usageStore.agentUsage" :key="agent.agent" class="agent-row" :data-agent="agent.agent">
-        <span class="agent-swatch" :style="{ background: agent.color }" />
+        <ProfileAvatar class="agent-logo" :name="agentName(agent.agent)" :avatar="agentAvatar(agent.agent)" :size="24" aria-hidden="true" />
         <span class="agent-name" :title="agentName(agent.agent)">{{ agentName(agent.agent) }}</span>
         <div class="agent-bar-wrap">
           <div class="agent-bar" :style="{ width: (agent.visualTokens / maxAgentTokens * 100) + '%' }">
@@ -98,8 +110,7 @@ function cacheHitRate(agent: { inputTokens: number; cacheTokens: number }): stri
   gap: calc(5px * var(--spacing-scale, 1));
 }
 
-.legend-swatch,
-.agent-swatch {
+.legend-swatch {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-component, 2px);
@@ -121,7 +132,7 @@ function cacheHitRate(agent: { inputTokens: number; cacheTokens: number }): stri
 
 .agent-row {
   display: grid;
-  grid-template-columns: 8px minmax(90px, 140px) minmax(0, 1fr) auto;
+  grid-template-columns: 24px minmax(90px, 140px) minmax(0, 1fr) auto;
   align-items: center;
   gap: calc(10px * var(--spacing-scale, 1));
 }
@@ -135,6 +146,9 @@ function cacheHitRate(agent: { inputTokens: number; cacheTokens: number }): stri
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.agent-logo { border-radius: var(--radius-component, 4px); }
+.agent-logo :deep(.profile-avatar-image) { object-fit: contain; }
 
 .agent-bar-wrap {
   flex: 1;
@@ -175,7 +189,7 @@ function cacheHitRate(agent: { inputTokens: number; cacheTokens: number }): stri
 .agent-note { margin: 0 0 12px; }
 .agent-details { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: calc(4px * var(--spacing-scale, 1)) calc(14px * var(--spacing-scale, 1)); padding-bottom: 8px; }
 @media (max-width: 600px) {
-  .agent-row { grid-template-columns: 8px minmax(0, 1fr) auto; }
+  .agent-row { grid-template-columns: 24px minmax(0, 1fr) auto; }
   .agent-bar-wrap { grid-column: 2 / -1; grid-row: 2; }
   .agent-tokens { grid-column: 3; grid-row: 1; }
 }

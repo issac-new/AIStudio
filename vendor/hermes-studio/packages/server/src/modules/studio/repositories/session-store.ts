@@ -21,6 +21,7 @@ export interface HermesSessionRow {
   agent: string
   agent_mode: string
   agent_preset: string
+  bot_type: string
   agent_session_id: string
   agent_native_session_id: string
   user_id: string | null
@@ -148,6 +149,7 @@ function mapStoredSessionRow(row: Record<string, unknown>): HermesSessionRow {
     agent: String(row.agent || ''),
     agent_mode: String(row.agent_mode || ''),
     agent_preset: String(row.agent_preset || ''),
+    bot_type: String(row.bot_type || ''),
     agent_session_id: String(row.agent_session_id || ''),
     agent_native_session_id: String(row.agent_native_session_id || ''),
     user_id: row.user_id != null ? String(row.user_id) : null,
@@ -219,6 +221,7 @@ export function createSession(data: {
   agent?: string
   agent_mode?: string
   agent_preset?: string
+  bot_type?: string
   agent_session_id?: string
   agent_native_session_id?: string
   user_id?: string | number | null
@@ -244,6 +247,7 @@ export function createSession(data: {
       id: data.id, profile: data.profile || 'default', source, agent,
       agent_mode: data.agent_mode || '',
       agent_preset: data.agent_preset || '',
+      bot_type: data.bot_type || '',
       agent_session_id: data.agent_session_id || '', agent_native_session_id: data.agent_native_session_id || '',
       studio_user_id: studioUserId,
       user_id: data.user_id == null ? null : String(data.user_id), model: data.model || '', provider: data.provider || '', api_mode: data.api_mode || '', reasoning_effort: data.reasoning_effort || '', title: data.title || null,
@@ -260,8 +264,8 @@ export function createSession(data: {
   }
   const db = getDb()!
   db.prepare(
-    `INSERT INTO ${SESSIONS_TABLE} (id, profile, source, agent, agent_mode, agent_preset, agent_session_id, agent_native_session_id, user_id, studio_user_id, model, provider, api_mode, reasoning_effort, title, parent_session_id, started_at, last_active, workspace, category_id, push_enabled)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO ${SESSIONS_TABLE} (id, profile, source, agent, agent_mode, agent_preset, bot_type, agent_session_id, agent_native_session_id, user_id, studio_user_id, model, provider, api_mode, reasoning_effort, title, parent_session_id, started_at, last_active, workspace, category_id, push_enabled)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     data.id,
     data.profile || 'default',
@@ -269,6 +273,7 @@ export function createSession(data: {
     agent,
     data.agent_mode || '',
     data.agent_preset || '',
+    data.bot_type || '',
     data.agent_session_id || '',
     data.agent_native_session_id || '',
     data.user_id == null ? null : String(data.user_id),
@@ -672,7 +677,8 @@ function sessionFilterSql(
   profile: string | null | undefined,
   options: SessionListOptions,
 ): { sql: string; params: string[] } | null {
-  const clauses: string[] = []
+  // Person execution sessions are private implementation details, exposed by the account-owned Person API.
+  const clauses: string[] = ["s.id NOT LIKE 'person-task-%' AND s.id NOT LIKE 'person-main-%'"]
   const params: string[] = []
   const profileFilter = profile?.trim()
   if (profileFilter) {

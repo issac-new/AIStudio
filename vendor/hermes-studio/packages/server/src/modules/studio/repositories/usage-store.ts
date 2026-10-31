@@ -345,6 +345,12 @@ export function deleteUsage(sessionId: string): void {
 
 // --- Aggregation for stats endpoint ---
 
+// Classify Person's own calls, including historical main/summary/coordinator rows.
+// Worker sessions keep their execution agent; the raw runtime ledger stays intact.
+const statsAgentExpression = `CASE WHEN origin = 'internal' AND source = 'ekko_agent'
+  AND (session_id LIKE 'person-main-%' OR session_id LIKE 'person:%')
+  THEN 'zhezhe' ELSE COALESCE(NULLIF(TRIM(agent), ''), 'unknown') END`
+
 export function getRecordedUsageSessionIds(profile?: string): string[] {
   if (isSqliteAvailable()) {
     const filters = profile ? ' WHERE profile = ?' : ''
@@ -388,14 +394,14 @@ export function getLocalUsageStats(profile?: string, days = 30, selection: Usage
   const baseWhere = `WHERE ${filters.join(' AND ')}`
   const optionRows = db.prepare(`SELECT DISTINCT
     COALESCE(NULLIF(TRIM(model), ''), 'unknown') AS model,
-    COALESCE(NULLIF(TRIM(agent), ''), 'unknown') AS agent
+    ${statsAgentExpression} AS agent
     FROM ${TABLE} ${baseWhere}`).all(...params) as Array<{ model: string; agent: string }>
   if (selection.model) {
     filters.push("COALESCE(NULLIF(TRIM(model), ''), 'unknown') = ?")
     params.push(selection.model)
   }
   if (selection.agent) {
-    filters.push("COALESCE(NULLIF(TRIM(agent), ''), 'unknown') = ?")
+    filters.push(`${statsAgentExpression} = ?`)
     params.push(selection.agent)
   }
   if (selection.account) {
@@ -432,7 +438,7 @@ export function getLocalUsageStats(profile?: string, days = 30, selection: Usage
   `).all(...params) as unknown as UsageStatsModelRow[]
 
   const byAgent = db.prepare(`
-    SELECT agent,
+    SELECT ${statsAgentExpression} AS agent,
       COALESCE(SUM(input_tokens),0) as input_tokens,
       COALESCE(SUM(output_tokens),0) as output_tokens,
       COALESCE(SUM(cache_read_tokens),0) as cache_read_tokens,
@@ -441,7 +447,7 @@ export function getLocalUsageStats(profile?: string, days = 30, selection: Usage
       COUNT(DISTINCT NULLIF(session_id, '')) as sessions
     FROM ${TABLE}
     ${whereClause}
-    GROUP BY agent
+    GROUP BY ${statsAgentExpression}
     ORDER BY COALESCE(SUM(input_tokens),0) + COALESCE(SUM(output_tokens),0) DESC
   `).all(...params) as unknown as UsageStatsAgentRow[]
 

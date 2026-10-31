@@ -1,5 +1,4 @@
 diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
-index 1ba1e385..159c2cf4 100644
 --- a/packages/server/src/modules/studio/controllers/auth.ts
 +++ b/packages/server/src/modules/studio/controllers/auth.ts
 @@ -1,4 +1,6 @@
@@ -9,7 +8,7 @@ index 1ba1e385..159c2cf4 100644
  import { checkPassword, recordPasswordFailure, recordPasswordSuccess, extractIp, getLockedIps, unlockIp, unlockAll } from '../services/auth/login-limiter'
  import {
    createSuperAdmin,
-@@ -800,7 +802,7 @@ export async function matrixLogin(ctx: Context) {
+@@ -798,7 +800,7 @@ export async function matrixLogin(ctx: Context) {
   */
  export async function listMatrixUsers(ctx: Context) {
    const adminToken = getMatrixAdminToken(ctx)
@@ -18,7 +17,7 @@ index 1ba1e385..159c2cf4 100644
  
    if (!adminToken) {
      // Fallback: return only Hermes users with matrix_user_id
-@@ -872,7 +874,7 @@ export async function createMatrixUser(ctx: Context) {
+@@ -870,7 +872,7 @@ export async function createMatrixUser(ctx: Context) {
    }
  
    const adminToken = getMatrixAdminToken(ctx)
@@ -27,7 +26,7 @@ index 1ba1e385..159c2cf4 100644
  
    if (!adminToken) {
      ctx.status = 503
-@@ -942,7 +944,7 @@ export async function updateMatrixUser(ctx: Context) {
+@@ -940,7 +942,7 @@ export async function updateMatrixUser(ctx: Context) {
    // Update Matrix display name if provided
    if (body.displayName) {
      const adminToken = getMatrixAdminToken(ctx)
@@ -36,7 +35,7 @@ index 1ba1e385..159c2cf4 100644
      if (adminToken) {
        await fetch(`${homeserverUrl}/_matrix/client/v3/profile/${encodeURIComponent(matrixUserId)}/displayname`, {
          method: 'PUT',
-@@ -985,7 +987,7 @@ export async function deleteMatrixUser(ctx: Context) {
+@@ -983,7 +985,7 @@ export async function deleteMatrixUser(ctx: Context) {
    }
  
    const adminToken = getMatrixAdminToken(ctx)
@@ -45,7 +44,7 @@ index 1ba1e385..159c2cf4 100644
  
    if (adminToken) {
      await deleteMatrixUserOnServer(matrixUserId, adminToken, homeserverUrl)
-@@ -1023,7 +1025,7 @@ export async function deactivateMatrixUser(ctx: Context) {
+@@ -1021,7 +1023,7 @@ export async function deactivateMatrixUser(ctx: Context) {
    }
  
    const adminToken = getMatrixAdminToken(ctx)
@@ -54,7 +53,7 @@ index 1ba1e385..159c2cf4 100644
  
    if (adminToken) {
      await setMatrixUserActive(matrixUserId, active, adminToken, homeserverUrl)
-@@ -1055,7 +1057,7 @@ export async function resetMatrixUserPassword(ctx: Context) {
+@@ -1053,7 +1055,7 @@ export async function resetMatrixUserPassword(ctx: Context) {
    }
  
    const adminToken = getMatrixAdminToken(ctx)

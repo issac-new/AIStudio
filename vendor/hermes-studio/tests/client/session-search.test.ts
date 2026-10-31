@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 import { nextTick, defineComponent, h } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
+
+enableAutoUnmount(afterEach)
 
 const apiMocks = vi.hoisted(() => ({
   fetchSessionsMock: vi.fn(),
   searchSessionsMock: vi.fn(),
   routerPushMock: vi.fn(),
+  personRequestMock: vi.fn(),
 }))
+
+vi.mock('@/api/person', () => ({ personRequest: apiMocks.personRequestMock }))
 
 vi.mock('@/api/studio/sessions', () => ({
   fetchSessions: apiMocks.fetchSessionsMock,
@@ -30,6 +35,7 @@ vi.mock('@/stores/hermes/chat', () => ({
 const routerCurrentRoute = { value: { name: 'hermes.logs' } }
 
 vi.mock('vue-router', () => ({
+  useRoute: () => routerCurrentRoute.value,
   useRouter: () => ({
     currentRoute: routerCurrentRoute,
     push: apiMocks.routerPushMock,
@@ -80,6 +86,7 @@ describe('session search modal', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
+    apiMocks.personRequestMock.mockResolvedValue({ sessions: [], next_offset: null })
     chatStoreMock.sessions = []
     chatStoreMock.loadSessions.mockResolvedValue(undefined)
     chatStoreMock.activeSessionId = null
@@ -237,6 +244,26 @@ describe('session search modal', () => {
     expect(chatStoreMock.loadSessions).toHaveBeenCalled()
     expect(chatStoreMock.switchSession).toHaveBeenCalledWith('match-1', '17')
     expect(apiMocks.routerPushMock).toHaveBeenCalledWith({ name: 'hermes.session', params: { sessionId: 'match-1' } })
+  })
+
+  it('searches only Person conversations and navigates to the original matched message', async () => {
+    routerCurrentRoute.value = { name: 'hermes.person' }
+    apiMocks.personRequestMock.mockImplementation(async (path: string) => ({ sessions: path.includes('search=') ? [{
+      id: 'person-main-B', title: 'Travel', started_at: 100, matched_message_id: 73, snippet: 'A past receipt',
+    }] : [], next_offset: null }))
+    const wrapper = mount(SessionSearchModal)
+    useSessionSearch().openSessionSearch()
+    await flushPromises()
+    await wrapper.get('input.n-input-stub').setValue('receipt')
+    await vi.advanceTimersByTimeAsync(200)
+    await flushPromises()
+    expect(apiMocks.personRequestMock).toHaveBeenCalledWith('/conversations?search=receipt', undefined, 'GET')
+    expect(apiMocks.searchSessionsMock).not.toHaveBeenCalled()
+    expect(apiMocks.fetchSessionsMock).not.toHaveBeenCalled()
+    await wrapper.get('button.result-item').trigger('click')
+    expect(apiMocks.routerPushMock).toHaveBeenCalledWith({ name: 'hermes.person', query: { session: 'person-main-B', message: '73' } })
+    expect(chatStoreMock.switchSession).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 })
 

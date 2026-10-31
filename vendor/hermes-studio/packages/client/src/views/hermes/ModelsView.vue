@@ -202,7 +202,7 @@ async function handleRefreshModelCache() {
 </script>
 
 <template>
-  <PageLoading :show="profileLoading || modelsStore.refreshingModelCache || (modelsStore.loading && modelsStore.providers.length === 0)" class="models-view">
+  <PageLoading :show="activeTab !== 'jev' && (profileLoading || modelsStore.refreshingModelCache || (modelsStore.loading && modelsStore.providers.length === 0))" class="models-view">
     <PageHeader>
     <header class="page-header">
       <div class="models-header-left">
@@ -210,7 +210,7 @@ async function handleRefreshModelCache() {
       </div>
       <div class="header-actions">
         <NSelect
-          v-if="activeTab !== 'api'"
+          v-if="activeTab !== 'api' && activeTab !== 'jev'"
           class="models-profile-select"
           data-testid="models-profile-select"
           :value="selectedProfile"
@@ -255,10 +255,10 @@ async function handleRefreshModelCache() {
     </PageHeader>
 
     <div class="models-content">
-      <div v-if="profileLoading" class="models-profile-loading" role="status" aria-live="polite">
+      <div v-if="profileLoading && activeTab !== 'jev'" class="models-profile-loading" role="status" aria-live="polite">
 
       </div>
-      <NTabs v-else-if="selectedProfile || activeTab === 'api'" :key="activeTab === 'api' ? 'api' : selectedProfile" v-model:value="activeTab" type="line" animated @update:value="handleTabUpdate">
+      <NTabs v-else-if="selectedProfile || activeTab === 'api' || activeTab === 'jev'" :key="activeTab === 'api' || activeTab === 'jev' ? activeTab : selectedProfile" v-model:value="activeTab" type="line" animated @update:value="handleTabUpdate">
         <NTabPane name="general" :tab="t('models.generalTitle')">
           <div>
             <ProvidersPanel />
@@ -274,7 +274,7 @@ async function handleRefreshModelCache() {
           <CombinationModelsPanel />
         </NTabPane>
         <NTabPane name="jev" tab="JEV">
-          <JevSettingsPanel :profile="selectedProfile" />
+          <JevSettingsPanel />
         </NTabPane>
         <NTabPane name="stt" :tab="t('settings.voice.sttProvidersTitle')">
           <VoiceSettings :key="`stt-${selectedProfile}`" kind="stt" />

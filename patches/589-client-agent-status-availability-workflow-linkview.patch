@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/views/hermes/GroupChatLinkView.vue b/packages/client/src/views/hermes/GroupChatLinkView.vue
-index 235ed6e7e..2a0a0ee2b 100644
 --- a/packages/client/src/views/hermes/GroupChatLinkView.vue
 +++ b/packages/client/src/views/hermes/GroupChatLinkView.vue
-@@ -32,9 +32,9 @@ import {
+@@ -33,9 +33,9 @@ import {
    type RemoteGroupAgentDescriptor,
  } from '@/api/studio/group-chat-agent-link'
  import {
@@ -14,7 +13,7 @@ index 235ed6e7e..2a0a0ee2b 100644
  } from '@/api/agent-status'
  
  const { t } = useI18n()
-@@ -43,7 +43,7 @@ const appStore = useAppStore()
+@@ -44,7 +44,7 @@ const appStore = useAppStore()
  const profilesStore = useProfilesStore()
  const profileAgents = ref<RemoteGroupAgentDescriptor[]>([])
  const connections = ref<LocalGroupAgentConnection[]>([])
@@ -23,7 +22,7 @@ index 235ed6e7e..2a0a0ee2b 100644
  type GroupAgentType = RemoteGroupAgentDescriptor['agent']
  const selectedAgentType = ref<GroupAgentType>('hermes')
  const selectedProfile = ref('')
-@@ -583,7 +583,7 @@ onMounted(async () => {
+@@ -592,7 +592,7 @@ onMounted(async () => {
        listLocalGroupAgentConnections(),
        profilesStore.fetchProfiles(),
        appStore.loadModels(),
@@ -32,37 +31,3 @@ index 235ed6e7e..2a0a0ee2b 100644
      ])
      profileAgents.value = localAgents.agents
      connections.value = localConnections.connections
-diff --git a/packages/client/src/views/hermes/WorkflowView.vue b/packages/client/src/views/hermes/WorkflowView.vue
-index ff5f6021a..855be13d5 100644
---- a/packages/client/src/views/hermes/WorkflowView.vue
-+++ b/packages/client/src/views/hermes/WorkflowView.vue
-@@ -132,9 +132,9 @@ import type {
- } from '@/components/hermes/workflow/types'
- import type { AvailableModelGroup } from '@/api/hermes/system'
- import {
--  fetchAgentStatusSnapshot,
-+  fetchAgentAvailabilitySnapshot,
-   isAgentStatusAvailable,
--  type AgentStatusSnapshot,
-+  type AgentAvailabilitySnapshot,
- } from '@/api/agent-status'
- 
- import '@vue-flow/core/dist/style.css'
-@@ -166,7 +166,7 @@ const workflowImportConfirmVisible = ref(false)
- const workflowImportPreview = ref<Awaited<ReturnType<typeof previewWorkflowImport>> | null>(null)
- const workflowImportProfile = ref('default')
- const workflowImportConfirming = ref(false)
--const agentStatusSnapshot = ref<AgentStatusSnapshot | null>(null)
-+const agentStatusSnapshot = ref<AgentAvailabilitySnapshot | null>(null)
- const WORKFLOW_CHAT_PANEL_MIN_WIDTH = 360
- const WORKFLOW_CHAT_PANEL_DEFAULT_WIDTH = 560
- const WORKFLOW_CANVAS_MIN_WIDTH = 360
-@@ -453,7 +453,7 @@ function workflowAgentDisplayName(agent: string): string {
- 
- async function refreshAgentAvailability() {
-   try {
--    agentStatusSnapshot.value = await fetchAgentStatusSnapshot()
-+    agentStatusSnapshot.value = await fetchAgentAvailabilitySnapshot()
-   } catch {
-     agentStatusSnapshot.value = null
-   }

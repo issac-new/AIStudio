@@ -69,6 +69,7 @@ vi.mock('../../packages/server/src/modules/studio/controllers/sessions', () => (
   get: getMock,
   getContext: getContextMock,
   getTasks: getTasksMock,
+  updateTaskStatus: vi.fn(),
   listTasks: listTasksMock,
   remove: removeMock,
   batchRemove: batchRemoveMock,

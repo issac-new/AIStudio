@@ -1,3 +1,4 @@
+import { isPersonSession, isPrivatePersonSession } from '../../contracts/person-session'
 import { randomUUID } from 'crypto'
 import { businessEvents } from './business-events'
 import { ensureBusinessConsumers } from './business-consumers'
@@ -92,6 +93,11 @@ function occurredAt(value: unknown): string {
 }
 
 export function observeChatRunWebhookEvent(input: ObserveChatRunWebhookEventInput): boolean {
+  const person = isPersonSession(input.sessionId)
+  // Main assistant notices share the notification bus; worker/tool/history data stays private.
+  if (isPrivatePersonSession(input.sessionId) && (!person || ![
+    'run.completed', 'run.failed', 'approval.requested', 'approval.resolved', 'clarify.requested', 'clarify.resolved',
+  ].includes(input.event))) return false
   const payload = input.payload || {}
   const sessionId = stringValue(input.sessionId)
   const plan = input.event === 'plan.updated' ? taskPlanWebhookSnapshot(payload, sessionId) : null
@@ -168,8 +174,10 @@ export function observeChatRunWebhookEvent(input: ObserveChatRunWebhookEventInpu
   }
   if (plan && !acceptTaskPlanRevision(`${mapping.type}:${event.profile}`, plan)) return false
   ensureBusinessConsumers()
-  return businessEvents.publish({ schema_version: 1, id: event.id, type: event.type, occurred_at: event.occurred_at,
-    profile: event.profile.trim() || 'default', source: event.source, subject: event.subject, payload, chat: event,
+  return businessEvents.publish({ schema_version: 1, id: event.id, type: person ? event.type.replace(/^chat\./, 'person.') : event.type, occurred_at: event.occurred_at,
+    profile: event.profile.trim() || 'default', source: person ? 'person' : event.source, subject: event.subject, payload,
+    // HTTP webhooks never receive private assistant events.
+    ...(!person ? { chat: event } : {}),
     ...(input.pushTargetId ? { push_target_id: input.pushTargetId } : {}) })
 }
 

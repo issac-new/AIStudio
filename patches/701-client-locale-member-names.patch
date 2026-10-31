@@ -1,15 +1,7 @@
-# 701（2026-10-27 状态事件成员文案）：zh/en matrixChat member 族词条补占位符——
-# 用户实报「被邀请/加入了不显示账号名」：formatStateEvent 代码层已传
-# {sender}/{target}/{user} 插值，词条漏占位符致 vue-i18n 静默丢弃。
-# 语义对齐 element-web 完整句子（A invited B / B joined）；同文件
-# stateNameSet 族即占位符范式。守门=custom/client/matrix-chat/__tests__/
-# state-event-member-names.test.ts（词条占位符+端到端名字双面）。
-# 前序依赖：473 locales 基线（member 词条由其引入）；新 hunk 追加在 series 尾。
-diff --git aa/packages/client/src/i18n/locales/en.ts bb/packages/client/src/i18n/locales/en.ts
-index 6b1a1478f..ce5dd14c2 100644
---- aa/packages/client/src/i18n/locales/en.ts
-+++ bb/packages/client/src/i18n/locales/en.ts
-@@ -6931,19 +6931,19 @@ export default {
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -7007,19 +7007,19 @@ export default {
      showLess: 'Show Less',
      shareRoom: 'Share Room',
      startChat: 'Start Chat',
@@ -37,11 +29,10 @@ index 6b1a1478f..ce5dd14c2 100644
      stateNameSet: '{sender} set the room name to "{name}"',
      stateNameChanged: '{sender} changed the room name from "{oldName}" to "{newName}"',
      stateNameRemoved: '{sender} removed the room name "{oldName}"',
-diff --git aa/packages/client/src/i18n/locales/zh.ts bb/packages/client/src/i18n/locales/zh.ts
-index 7e3f951b7..0ada6f5af 100644
---- aa/packages/client/src/i18n/locales/zh.ts
-+++ bb/packages/client/src/i18n/locales/zh.ts
-@@ -6740,19 +6740,19 @@ export default {
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -6816,19 +6816,19 @@ export default {
      showLess: '收起',
      shareRoom: '分享房间',
      startChat: '开始聊天',

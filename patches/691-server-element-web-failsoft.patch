@@ -1,8 +1,7 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index 0000000..0000001 100644
---- a/packages/server/src/bootstrap/http.ts	2026-10-26 14:56:07
-+++ b/packages/server/src/bootstrap/http.ts	2026-10-26 14:54:41
-@@ -8,7 +8,7 @@
+--- a/packages/server/src/bootstrap/http.ts
++++ b/packages/server/src/bootstrap/http.ts
+@@ -8,7 +8,7 @@ import serve from 'koa-static'
  import send from 'koa-send'
  import { relative, resolve } from 'path'
  import { mkdir } from 'fs/promises'
@@ -11,7 +10,7 @@ index 0000000..0000001 100644
  import { config, shouldCreateWebUiDataDir } from '../modules/studio/public/config'
  import { initLoginLimiter } from '../modules/studio/services/auth/login-limiter'
  import { createShutdownHandler } from './lifecycle'
-@@ -525,6 +525,10 @@
+@@ -522,6 +522,10 @@ export async function bootstrap() {
  
    // Serve element-web static files at /element-web/*
    const elementWebDir = resolve(__dirname, '..', 'element-web')
@@ -22,7 +21,7 @@ index 0000000..0000001 100644
    app.use(async (ctx, next) => {
      // Dynamic element-web config.json — 必须先于下方静态分支（startsWith 会把它吞成
      // index.html，patch 008 引入的遮蔽缺陷）；homeserver 口径=server-info 单一事实源，
-@@ -548,6 +552,15 @@
+@@ -545,6 +549,15 @@ export async function bootstrap() {
        return
      }
      if (ctx.path.startsWith('/element-web/')) {

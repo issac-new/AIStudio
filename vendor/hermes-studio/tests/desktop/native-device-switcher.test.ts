@@ -30,6 +30,7 @@ vi.mock('electron', async () => {
       this.emit('close', event)
       if (!event.prevented) this.emit('closed')
     })
+    hide = vi.fn()
     show = vi.fn()
     focus = vi.fn()
     constructor() { super();mock.windows.push(this) }
@@ -47,7 +48,7 @@ import type { DesktopRemoteDevices } from '../../packages/desktop/src/main/remot
 beforeEach(() => { vi.clearAllMocks();mock.handlers.clear();mock.windows.length = 0 })
 function setup(quitting: () => boolean = () => false) {
   const state = { devices: [{ id: 'home', name: 'Home', serverUrl: 'https://home.example.com' }, { id: 'office', name: 'Office', serverUrl: 'https://office.example.com' }], activeDeviceId: 'home', activeServerUrl: 'https://home.example.com' }
-  const manager = { state: vi.fn(() => state), add: vi.fn(), remove: vi.fn(), switchTo: vi.fn(async () => {}) }
+  const manager = { state: vi.fn(() => state), add: vi.fn(), remove: vi.fn(), openInNewInstance: vi.fn(async () => {}), switchTo: vi.fn(async () => {}) }
   const window = new BrowserWindow()
   const control = new NativeDeviceSwitcher(window, () => manager as unknown as DesktopRemoteDevices, 'win32', quitting)
   const contents = control.view.webContents
@@ -189,4 +190,23 @@ describe('desktop-owned native device switcher', () => {
     expect(window.contentView.removeChildView).toHaveBeenCalledWith(control.view)
     expect(control.view.webContents.close).toHaveBeenCalledOnce()
   })
+})
+
+it('closes successful new-instance confirmation and allows another launch', async () => {
+  const { control, manager, call, fromWindow } = setup()
+  for (let index = 0; index < 2; index++) {
+    call('switch', undefined, 'office')
+    const action = mock.windows.at(-1)
+    const token = call('state').operation.token
+    await mock.handlers.get('studio-native-devices:confirm')!(fromWindow(action), token, 'new')
+    expect(call('state').operation).toBeNull()
+    expect(call('state').busy).toBe(false)
+  }
+  for (const action of mock.windows.slice(1)) {
+    expect(action.hide).toHaveBeenCalled()
+    expect(action.hide.mock.invocationCallOrder[0]).toBeLessThan(action.close.mock.invocationCallOrder[0])
+  }
+  expect(manager.openInNewInstance).toHaveBeenCalledTimes(2)
+  expect(manager.switchTo).not.toHaveBeenCalled()
+  control.dispose()
 })

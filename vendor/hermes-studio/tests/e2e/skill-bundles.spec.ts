@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
-import { authenticate, mockChatSocket, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
+import { authenticate, mockChatSocket, mockExistingHermesChat, TEST_ACCESS_KEY } from './fixtures'
 
 const inputPlaceholder = 'Type a message... (Enter to send, Shift+Enter for new line)'
 
 test('browses, creates, and deletes profile-scoped skill bundles', async ({ page }) => {
   await authenticate(page, TEST_ACCESS_KEY, 'research')
-  const api = await mockHermesApi(page, {
+  const api = await mockExistingHermesChat(page, {
     bundles: [
       {
         name: 'PR Review Team',

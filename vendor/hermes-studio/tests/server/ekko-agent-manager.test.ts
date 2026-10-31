@@ -98,28 +98,28 @@ function modelClient(content: string): ModelClient {
 }
 
 describe('GlobalEkkoAgent', () => {
-  it('passes current Profile JEV settings to Ekko without overwriting its persisted defaults', async () => {
+  it('passes current global JEV settings to Ekko without overwriting its persisted defaults', async () => {
     const setup = createTestSetup(['work', 'personal'])
     setup.config.update({ skills: { enabled: false }, jev: { enabled: true, memoryEnabled: true, skillsEnabled: true, apiKey: 'ekko-local-key' } })
     const before = await readFile(setup.layout.configPath, 'utf8')
     const createRuntime = vi.spyOn(setup, 'createRuntime')
-    getJevRuntimeConfigMock.mockImplementation(async profile => ({
-      ...DEFAULT_EKKO_JEV_CONFIG, enabled: true, memoryEnabled: profile === 'personal', skillsEnabled: profile === 'personal', apiKey: `studio-${profile}`, model: `jev-${profile}`,
-    }))
+    getJevRuntimeConfigMock.mockResolvedValue({
+      ...DEFAULT_EKKO_JEV_CONFIG, enabled: true, memoryEnabled: true, skillsEnabled: true, apiKey: 'studio-global', model: 'jev-global',
+    })
     const work = createGlobalEkkoAgent({ setup, profile: 'work', memory: false })
     const personal = createGlobalEkkoAgent({ setup, profile: 'personal', memory: false })
     await work.run({ messages: ['first'], modelClient: modelClient('work') })
     await personal.run({ messages: ['second'], modelClient: modelClient('personal') })
-    expect(createRuntime.mock.calls[0][0]?.jev).toMatchObject({ apiKey: 'studio-work' })
-    expect(createRuntime.mock.calls[1][0]?.jev).toMatchObject({ apiKey: 'studio-personal' })
+    expect(createRuntime.mock.calls[0][0]?.jev).toMatchObject({ apiKey: 'studio-global' })
+    expect(createRuntime.mock.calls[1][0]?.jev).toMatchObject({ apiKey: 'studio-global' })
     const workRuntime = createRuntime.mock.results[0].value
     const personalRuntime = createRuntime.mock.results[1].value
     expect(workRuntime.jev).not.toBe(personalRuntime.jev)
-    expect(workRuntime.jev.settings.model).toBe('jev-work')
-    expect(personalRuntime.jev.settings.model).toBe('jev-personal')
-    expect(workRuntime.jev.settings.memoryEnabled).toBe(false)
+    expect(workRuntime.jev.settings.model).toBe('jev-global')
+    expect(personalRuntime.jev.settings.model).toBe('jev-global')
+    expect(workRuntime.jev.settings.memoryEnabled).toBe(true)
     expect(personalRuntime.jev.settings.memoryEnabled).toBe(true)
-    expect(workRuntime.jev.settings.skillsEnabled).toBe(false)
+    expect(workRuntime.jev.settings.skillsEnabled).toBe(true)
     expect(personalRuntime.jev.settings.skillsEnabled).toBe(true)
     // The cached runtime picks up edits before the next run.
     getJevRuntimeConfigMock.mockResolvedValue({ ...DEFAULT_EKKO_JEV_CONFIG, enabled: true, memoryEnabled: true, apiKey: 'edited-key', model: 'jev-edited',
@@ -133,7 +133,7 @@ describe('GlobalEkkoAgent', () => {
     expect(workRuntime.jev.settings).toMatchObject({ memoryKindRoutingEnabled: true, memoryRerankEnabled: true,
       memoryWriteReviewEnabled: true, memoryRelevanceFilterEnabled: true, memoryFilterMinConfidence: 0.9, memoryCandidateLimit: 7, memoryMinConfidence: 0.95, memoryTimeoutMs: 1200 })
     expect(workRuntime.jev.settings.memoryEnabled).toBe(true)
-    expect(personalRuntime.jev.settings.model).toBe('jev-personal')
+    expect(personalRuntime.jev.settings.model).toBe('jev-global')
     getJevRuntimeConfigMock.mockResolvedValue({ ...DEFAULT_EKKO_JEV_CONFIG, enabled: true, apiKey: 'edited-key', model: 'jev-edited', memoryEnabled: false })
     await work.run({ messages: ['memory JEV off'], modelClient: modelClient('continued') })
     expect(workRuntime.jev.settings.memoryEnabled).toBe(false)
@@ -149,7 +149,7 @@ describe('GlobalEkkoAgent', () => {
     expect(await readFile(setup.layout.configPath, 'utf8')).toBe(before)
   })
 
-  it('passes Profile JEV settings into isolated runs and degrades config read failures', async () => {
+  it('passes global JEV settings into isolated runs and degrades config read failures', async () => {
     const setup = createTestSetup(['work'])
     const createRuntime = vi.spyOn(setup, 'createRuntime')
     const agent = createGlobalEkkoAgent({ setup, profile: 'work', memory: false })

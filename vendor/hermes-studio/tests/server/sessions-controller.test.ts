@@ -47,6 +47,7 @@ const getCompressionSnapshotMock = vi.fn()
 const buildDbExportHistoryMock = vi.fn()
 const listUserProfilesMock = vi.fn()
 const listSessionTaskItemsMock = vi.fn(() => ({ tasks: [], total: 0, has_more: false }))
+const setSessionTaskStatusMock = vi.fn()
 const readConfigYamlForProfileMock = vi.fn()
 const bridgeSwitchSessionModelMock = vi.fn()
 const bridgeGetRuntimeStateMock = vi.fn()
@@ -264,6 +265,8 @@ vi.mock('../../packages/server/src/modules/studio/services/task-plans', () => ({
 vi.mock('../../packages/server/src/modules/studio/services/session-tasks', () => ({
   getSessionTasks: (sessionId: string) => ({ session_id: sessionId, revision: 0, updated_at: 0, tasks: [] }),
   listSessionTaskItems: listSessionTaskItemsMock,
+  setSessionTaskStatus: setSessionTaskStatusMock,
+  SessionTasksError: class extends Error { constructor(message: string, public status = 400) { super(message) } },
 }))
 
 vi.mock('../../packages/server/src/modules/studio/public/agent-status-registry', () => ({
@@ -271,6 +274,49 @@ vi.mock('../../packages/server/src/modules/studio/public/agent-status-registry',
 }))
 
 describe('session conversations controller', () => {
+  it('authorizes manual task changes against the session profile and rejects run credentials', async () => {
+    const mod = await import('../../packages/server/src/modules/studio/controllers/sessions')
+    getSessionMock.mockReturnValue({ id: 's1', profile: 'research', source: 'coding_agent' })
+    listUserProfilesMock.mockReturnValue([{ profile_name: 'research' }])
+    const body = { status: 'closed', expected_updated_at: 123 }
+    const context = (): any => ({ params: { id: 's1', taskId: 't1' }, query: { profile: 'research' },
+      state: { user: { id: 3, role: 'user' } }, request: { body } })
+    setSessionTaskStatusMock.mockReturnValue({ revision: 2, tasks: [{ id: 't1', status: 'closed' }] })
+    const ctx = context()
+    mod.updateTaskStatus(ctx)
+    expect(setSessionTaskStatusMock).toHaveBeenLastCalledWith('s1', 'research', 't1', body)
+    expect(ctx.body.tasks[0].status).toBe('closed')
+    setSessionTaskStatusMock.mockClear()
+    const wrong = context(); wrong.query.profile = 'other'
+    mod.updateTaskStatus(wrong)
+    expect(wrong.status).toBe(404)
+    const run = context(); run.get = () => 'run-context'
+    mod.updateTaskStatus(run)
+    expect(run.status).toBe(403)
+    listUserProfilesMock.mockReturnValue([{ profile_name: 'other' }])
+    const forbidden = context()
+    mod.updateTaskStatus(forbidden)
+    expect(forbidden.status).toBe(403)
+    getSessionMock.mockReturnValue(null)
+    const missing = context()
+    mod.updateTaskStatus(missing)
+    expect(missing.status).toBe(404)
+    expect(setSessionTaskStatusMock).not.toHaveBeenCalled()
+  })
+
+  it('preserves manual task conflict errors and supports the closed filter', async () => {
+    const mod = await import('../../packages/server/src/modules/studio/controllers/sessions')
+    const { SessionTasksError } = await import('../../packages/server/src/modules/studio/services/session-tasks')
+    getSessionMock.mockReturnValue({ id: 's1', profile: 'research' })
+    setSessionTaskStatusMock.mockImplementationOnce(() => { throw new SessionTasksError('Task changed', 409) })
+    const ctx: any = { params: { id: 's1', taskId: 't1' }, query: {}, state: {}, request: { body: {} } }
+    mod.updateTaskStatus(ctx)
+    expect(ctx.status).toBe(409)
+    expect(ctx.body).toEqual({ error: 'Task changed' })
+    const list: any = { query: { status: 'closed' }, state: {} }
+    mod.listTasks(list)
+    expect(listSessionTaskItemsMock).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'closed' }))
+  })
   it('restricts task pages to existing account profiles before pagination, including explicit filters', async () => {
     const mod = await import('../../packages/server/src/modules/studio/controllers/sessions')
     listUserProfilesMock.mockReturnValue([{ profile_name: 'travel' }, { profile_name: 'deleted-profile' }])
@@ -395,6 +441,7 @@ describe('session conversations controller', () => {
     getCompressionSnapshotMock.mockReset()
     buildDbExportHistoryMock.mockReset()
     listUserProfilesMock.mockReset()
+    setSessionTaskStatusMock.mockReset()
     listUserProfilesMock.mockReturnValue([])
     readConfigYamlForProfileMock.mockReset()
     readConfigYamlForProfileMock.mockResolvedValue({ model: { default: 'gpt-default', provider: 'openai' } })

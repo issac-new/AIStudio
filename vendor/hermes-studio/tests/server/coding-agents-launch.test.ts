@@ -1,5 +1,6 @@
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs'
 import { createCipheriv, randomBytes } from 'crypto'
+import * as childProcess from 'child_process'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -29,7 +30,8 @@ import {
   normalizePiThinkingLevel,
   piModelSupportsThinking,
 } from '../../packages/server/src/modules/coding-agents/services/pi/thinking'
-import { codingAgentRunManager } from '../../packages/server/src/modules/coding-agents/services/runtime/run-manager'
+import { HERMES_PROMPT_BLOCK_BEGIN, HERMES_PROMPT_BLOCK_END, updateManagedPromptFileSync } from '../../packages/server/src/modules/coding-agents/services/prompt-file'
+import { CodingAgentRunManager, codingAgentRunManager } from '../../packages/server/src/modules/coding-agents/services/runtime/run-manager'
 import { getCodingAgentDefinition } from '../../packages/server/src/modules/coding-agents/services'
 import { configureProfileConfig } from '../../packages/server/src/modules/studio/public/profile-config'
 import * as providerRuntime from '../../packages/server/src/modules/studio/public/provider-runtime'
@@ -50,6 +52,17 @@ vi.mock('../../packages/server/src/modules/coding-agents/services/dsh/host', asy
   return { ...actual, createDshHost: (host: Parameters<typeof actual.createDshHost>[0]) => ({
     ...actual.createDshHost(host), runtimeInput: async () => ({ sourceHome: host.getSourceHome(), launchPath: '/fixture/bin' }),
   }) }
+})
+
+// Launch tests use advertised native capabilities without invoking installed CLIs.
+const nativeModelsMock = vi.hoisted(() => vi.fn(async () => ({ agents: [] as any[] })))
+vi.mock('../../packages/server/src/modules/coding-agents/services/models', () => ({
+  createCodingAgentModelDiscovery: () => nativeModelsMock,
+}))
+beforeEach(() => nativeModelsMock.mockResolvedValue({ agents: [] }))
+vi.mock('child_process', async original => {
+  const actual = await original<typeof import('child_process')>()
+  return { ...actual, spawn: vi.fn(actual.spawn) }
 })
 
 const homes: string[] = []
@@ -951,7 +964,7 @@ describe('coding agent launch preparation', () => {
     expect(runtimeMcp.mcpServers['ekko-studio-api']).toMatchObject({ directTools: false, lifecycle: 'lazy' })
     expect(runtimeMcp.mcpServers['ekko-studio-browser']).toMatchObject({ directTools: false, lifecycle: 'lazy' })
     expect(runtimeMcp.mcpServers['ekko-studio-devices']).toBeUndefined()
-    expect(runtimeMcp.mcpServers['ekko-studio-use']).toMatchObject({ directTools: false, lifecycle: 'lazy' })
+    expect(runtimeMcp.mcpServers['ekko-studio-use']).toMatchObject({ directTools: true, lifecycle: 'eager', toolPrefix: 'server' })
     expect(runtimeMcp.mcpServers['ekko-studio-interaction']).toMatchObject({ directTools: true, lifecycle: 'eager', toolPrefix: 'server' })
     const runtimeModels = JSON.parse(readFileSync(join(result.rootDir, 'models.json'), 'utf-8'))
     expect(runtimeModels.providers['hermes-studio'].apiKey).toMatch(/^hwui_/)
@@ -2154,6 +2167,109 @@ describe('coding agent launch preparation', () => {
     expect(codexConfig).toMatch(/\[mcp_servers.ekko-studio-use\][\s\S]*?tool_timeout_sec = 360/)
   })
 
+  it.each([
+    { name: 'global and scoped', global: 'Global user rule', scoped: 'Scoped user rule' },
+    { name: 'missing scoped', global: 'Global user rule', scoped: undefined },
+    { name: 'missing global', global: undefined, scoped: 'Scoped user rule' },
+    { name: 'both missing', global: undefined, scoped: undefined },
+    { name: 'blank files', global: '  \n', scoped: '\n' },
+    { name: 'duplicate content', global: 'Shared user rule\n', scoped: '  Shared user rule  ' },
+  ])('inherits Claude memory with $name while preserving settings isolation', async ({ global, scoped }) => {
+    const home = makeHome()
+    const globalPath = join(home, 'global-home', '.claude', 'CLAUDE.md')
+    const scopedPath = join(home, 'coding-agent', 'model', 'default', 'openrouter', 'claude-code', 'CLAUDE.md')
+    for (const [path, content] of [[globalPath, global], [scopedPath, scoped]] as const) {
+      if (content === undefined) continue
+      mkdirSync(dirname(path), { recursive: true })
+      writeFileSync(path, content)
+    }
+    const input = {
+      mode: 'scoped' as const,
+      profile: 'default',
+      provider: 'openrouter',
+      model: 'anthropic/claude-sonnet-4.6',
+      isolateSettings: true,
+      sessionId: 'memory-inheritance',
+      agentSessionId: 'memory-run',
+    }
+    const result = await prepareCodingAgentLaunch('claude-code', input)
+    const prompt = readFileSync(result.promptFile!, 'utf-8')
+    expect(prompt).toContain('<!-- BEGIN HERMES WEB UI PROMPT -->')
+    expect(prompt).toContain('Ekko Studio MCP usage')
+    const instructions = [...new Set([global?.trim(), scoped?.trim()].filter(Boolean))]
+    for (const instruction of instructions) {
+      expect(prompt.split(instruction!).length - 1).toBe(1)
+    }
+    if (global?.trim() && scoped?.trim() && global.trim() !== scoped.trim()) {
+      expect(prompt.indexOf(global.trim())).toBeLessThan(prompt.indexOf(scoped.trim()))
+    }
+    expect(result.args.slice(result.args.indexOf('--setting-sources'), result.args.indexOf('--setting-sources') + 2))
+      .toEqual(['--setting-sources', 'local'])
+    expect(result.args.slice(result.args.indexOf('--append-system-prompt-file'), result.args.indexOf('--append-system-prompt-file') + 2))
+      .toEqual(['--append-system-prompt-file', result.promptFile])
+    expectLauncherFragment(readFileSync(launcherFile(result.rootDir), 'utf-8'), '--setting-sources local')
+    expect(result.files.filter(file => file.key === 'prompt')).toEqual([{
+      key: 'prompt', path: '~/.claude/hermes-rules.md', absolutePath: result.promptFile,
+    }])
+    const configPaths = ['settings.json', 'mcp.json'].map(file => join(result.rootDir, file))
+    const configs = configPaths.map(path => readFileSync(path, 'utf-8'))
+    // Use the same refresh helper as startClaudePrintTurn, including the first turn.
+    for (const systemPrompt of ['First turn managed rules', 'Subsequent turn managed rules']) {
+      expect(updateManagedPromptFileSync(result.promptFile!, systemPrompt)).toBe(true)
+      const refreshed = readFileSync(result.promptFile!, 'utf-8')
+      expect(refreshed.split(HERMES_PROMPT_BLOCK_BEGIN)).toHaveLength(2)
+      expect(refreshed.split(HERMES_PROMPT_BLOCK_END)).toHaveLength(2)
+      expect(refreshed.slice(refreshed.indexOf(HERMES_PROMPT_BLOCK_BEGIN)))
+        .toBe(`${HERMES_PROMPT_BLOCK_BEGIN}\n${systemPrompt}\n${HERMES_PROMPT_BLOCK_END}\n`)
+      for (const instruction of instructions) {
+        expect(refreshed.split(instruction!).length - 1).toBe(1)
+        expect(refreshed.indexOf(instruction!)).toBeLessThan(refreshed.indexOf(HERMES_PROMPT_BLOCK_BEGIN))
+      }
+      expect(updateManagedPromptFileSync(result.promptFile!, systemPrompt)).toBe(false)
+      expect(updateManagedPromptFileSync(result.promptFile!, '')).toBe(false)
+      expect(configPaths.map(path => readFileSync(path, 'utf-8'))).toEqual(configs)
+    }
+    // Re-preparing a run must not accumulate inherited instructions.
+    await prepareCodingAgentLaunch('claude-code', input)
+    expect(readFileSync(result.promptFile!, 'utf-8')).toBe(prompt)
+    for (const [path, content] of [[globalPath, global], [scopedPath, scoped]] as const) {
+      if (content === undefined) expect(existsSync(path)).toBe(false)
+      else expect(readFileSync(path, 'utf-8')).toBe(content)
+    }
+  })
+
+  it('preserves inherited Claude rules at the run-manager spawn boundary on first and resumed turns', async () => {
+    const home = makeHome()
+    const globalPath = join(home, 'global-home', '.claude', 'CLAUDE.md')
+    mkdirSync(dirname(globalPath), { recursive: true })
+    writeFileSync(globalPath, 'User rule at spawn boundary\n')
+    const launch = await prepareCodingAgentLaunch('claude-code', {
+      mode: 'scoped', profile: 'default', provider: 'openrouter', model: 'claude-test',
+      isolateSettings: true, sessionId: 'refresh-spawn', agentSessionId: 'refresh-run',
+    })
+    const manager = new CodingAgentRunManager()
+    // Stop at spawn: exercise real argument construction and prompt refresh without a vendor CLI.
+    const stopAtSpawn = new Error('fixture spawn boundary')
+    const spawn = vi.spyOn(childProcess, 'spawn').mockImplementation(() => { throw stopAtSpawn })
+    vi.spyOn(manager as any, 'handleClaudePrintResponseEvent').mockImplementation(() => {})
+    const run: any = {
+      launch: { ...launch, agentNativeSessionId: '11111111-1111-4111-8111-111111111111' },
+      nativeResumeReady: false,
+    }
+    for (const [index, systemPrompt] of ['Initial managed prompt', 'Resumed managed prompt'].entries()) {
+      run.nativeResumeReady = index > 0
+      expect(() => (manager as any).startClaudePrintTurn(run, 'Hello', systemPrompt)).toThrow(stopAtSpawn)
+      const args = spawn.mock.calls[index]![1] as string[]
+      expect(args).toContain(index === 0 ? '--session-id' : '--resume')
+      expect(args).not.toContain('--append-system-prompt')
+      expect(args[args.indexOf('--append-system-prompt-file') + 1]).toBe(launch.promptFile)
+      expect(readFileSync(launch.promptFile!, 'utf-8')).toBe(
+        `User rule at spawn boundary\n\n${HERMES_PROMPT_BLOCK_BEGIN}\n${systemPrompt}\n${HERMES_PROMPT_BLOCK_END}\n`,
+      )
+    }
+    expect(readFileSync(globalPath, 'utf-8')).toBe('User rule at spawn boundary\n')
+  })
+
   it('isolates Claude Code settings for hidden chat runs only', async () => {
     const home = makeHome()
 
@@ -2449,7 +2565,7 @@ describe('coding agent launch preparation', () => {
 
     expect(result.rootDir).toBe(join(home, 'coding-agent', 'model', 'default', 'openrouter', 'codex'))
     expect(result.workspaceDir).toBe(join(home, 'coding-agent', 'workspace', 'default', 'openrouter'))
-    expect(result.args).toEqual(['--model', 'openai/gpt-oss-20b:free'])
+    expect(result.args).toEqual(['--model', 'openai/gpt-oss-20b:free', '-c', 'model_reasoning_effort="low"'])
     expect(result.env).toEqual({ CODEX_HOME: result.rootDir })
 
     const config = readFileSync(join(result.rootDir, 'config.toml'), 'utf-8')
@@ -2996,7 +3112,7 @@ describe('coding agent launch preparation', () => {
         content: [{
           type: 'tool_use',
           id: 'call_browser',
-          name: 'ekko_studio_browser_toolset',
+          name: 'mcp_79edf61fc450f6a9bcefad862164f87f4288ca6d',
           input: { action: 'list' },
         }],
         stop_reason: 'tool_use',
@@ -3070,7 +3186,7 @@ describe('coding agent launch preparation', () => {
     const secondRequestBody = JSON.parse(fetchMock.mock.calls[1][1].body)
     expect(secondRequestBody.tools.map((tool: any) => tool.name)).toEqual([
       'tool_search',
-      'ekko_studio_browser_toolset',
+      'mcp_79edf61fc450f6a9bcefad862164f87f4288ca6d',
     ])
     expect(secondRequestBody.messages).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -3107,7 +3223,7 @@ describe('coding agent launch preparation', () => {
       content: [{
         type: 'tool_use',
         id: 'toolu_browser',
-        name: 'ekko_studio_browser_toolset',
+        name: 'mcp_79edf61fc450f6a9bcefad862164f87f4288ca6d',
         input: { action: 'list' },
       }],
       stop_reason: 'tool_use',
@@ -3128,7 +3244,7 @@ describe('coding agent launch preparation', () => {
 
     const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body)
     expect(requestBody.tools).toEqual([expect.objectContaining({
-      name: 'ekko_studio_browser_toolset',
+      name: 'mcp_79edf61fc450f6a9bcefad862164f87f4288ca6d',
       input_schema: expect.objectContaining({
         required: ['action'],
       }),
@@ -4316,4 +4432,16 @@ it('retains the Anthropic BYOK client for scoped Copilot Claude models', async (
     COPILOT_PROVIDER_MODEL_ID: 'claude-sonnet-4-6', COPILOT_PROVIDER_WIRE_MODEL: 'claude-sonnet-4-6',
     COPILOT_PROVIDER_WIRE_API: '', COPILOT_PROVIDER_TRANSPORT: 'http' })
   expect(launch.env.COPILOT_PROVIDER_BASE_URL).toContain('/api/claude-code-proxy/')
+})
+
+
+it.each(['', 'xhigh'])('uses native advertised minimum without overriding explicit %s', async reasoningEffort => {
+  const home = makeHome()
+  nativeModelsMock.mockResolvedValue({ agents: [{ status: 'ready', models: [
+    { id: 'gpt-6.1-sol', isDefault: true, reasoningEfforts: ['high', 'low', 'xhigh'] },
+  ] }] })
+  const launch = await prepareCodingAgentLaunch('codex', { mode: 'global', model: 'gpt-6.1-sol',
+    workspace: join(home, 'workspace'), reasoningEffort })
+  expect(launch.reasoningEffort).toBe(reasoningEffort || 'low')
+  expect(launch.args).toContain(`model_reasoning_effort=${JSON.stringify(reasoningEffort || 'low')}`)
 })

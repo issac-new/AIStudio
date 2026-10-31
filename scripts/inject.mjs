@@ -52,7 +52,7 @@ const patchDir = resolve(overlayRoot, 'patches');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 // 派生状态输出目录：默认仓根；测试/沙箱可经 OVERLAY_STATE_OUT 重定向。
 // 背景（2026-10-28）：inject-absent-tree 测试以临时树作 OVERLAY_UPSTREAM_ROOT 跑真实 inject，
-// 而派生 config 按脚本位置写到仓根，把 /tmp/standalone-cockpit-* 烙进 vite.config.overlay.ts，
+// 而派生 config 按脚本位置写到仓根，把 /tmp/standalone-cockpit-* 烙进 vite.config.overlay.mts，
 // 令随后 build:full 的产物写进已删除的临时树。重定向后测试不再污染检出。
 const stateOutDir = process.env.OVERLAY_STATE_OUT?.trim()
   ? resolve(process.env.OVERLAY_STATE_OUT.trim())
@@ -131,7 +131,7 @@ export function treeStatus(treeRoot) {
 
 // 生成的 TS config 里嵌入路径的字符串字面量:JSON.stringify 保证 Windows 反斜杠
 // 被正确转义。裸 '${path}' 插值下 C:\repo 会被解析成 \r 回车/未知转义吞反斜杠,
-// 生成的 vite.config.overlay.ts 路径损坏,dev/build 全链在配置加载即崩。
+// 生成的 vite.config.overlay.mts 路径损坏,dev/build 全链在配置加载即崩。
 export const js = (p) => JSON.stringify(p);
 
 // Windows:Git for Windows 默认 core.autocrlf=true 时工作树为 CRLF 而 patch 上下文
@@ -512,8 +512,8 @@ export default mergeConfig(
 );
 `;
   mkdirSync(stateOutDir, { recursive: true });
-  writeFileSync(resolve(stateOutDir, 'vite.config.overlay.ts'), cfg);
-  console.log(`[inject] generated ${resolve(stateOutDir, 'vite.config.overlay.ts')} (@/@custom/@registries alias + entry input)`);
+  writeFileSync(resolve(stateOutDir, 'vite.config.overlay.mts'), cfg);
+  console.log(`[inject] generated ${resolve(stateOutDir, 'vite.config.overlay.mts')} (@/@custom/@registries alias + entry input)`);
 }
 
 // vendor 模式下 worktree 检出的 vendor/hermes-studio/node_modules 不存在(产物
@@ -833,7 +833,7 @@ function main() {
 }
 
 // --config-only：只生成派生构建 config + node_modules 软链，不触共享 upstream 注入态
-// （worktree 构建门禁用：build:full 需 vite.config.overlay.ts，而全量 inject 会重写
+// （worktree 构建门禁用：build:full 需 vite.config.overlay.mts，而全量 inject 会重写
 // 共享 upstream——多会话并行期只允许 config 层操作）。
 if (process.argv.includes('--config-only')) {
   generateOverlayViteConfig();

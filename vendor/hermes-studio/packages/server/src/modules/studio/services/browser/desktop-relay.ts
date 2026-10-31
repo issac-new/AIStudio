@@ -4,8 +4,12 @@ export const DESKTOP_BROWSER_IDLE_MS = 10 * 60 * 1000
 export const DESKTOP_BROWSER_METHODS = new Set([
   'state', 'tabs.list', 'tabs.create', 'tabs.activate', 'tabs.close', 'lease.release',
   'navigate', 'navigation.action', 'snapshot', 'text.read', 'interact', 'interact.batch',
-  'screenshot', 'console.read', 'console.clear',
+  'screenshot', 'console.read', 'console.clear', 'upload', 'wait', 'download.start', 'download.read',
+  'dialog', 'network.read', 'network.clear',
 ])
+// Uploads carry base64 file content (Desktop caps files at 10 MB); other requests stay small.
+const MAX_REQUEST_CHARS = 1_000_000
+const MAX_UPLOAD_REQUEST_CHARS = 16_000_000
 export type DesktopBrowserOwnerState = 'active' | 'standby' | 'busy'
 type RelayPeer = {
   id: string
@@ -67,7 +71,8 @@ export class DesktopBrowserRelayRegistry {
   }
   async request(userId: number, profile: string, input: Record<string, unknown>, bindingId?: string): Promise<unknown> {
     if (typeof input.method !== 'string' || !DESKTOP_BROWSER_METHODS.has(input.method)) throw new Error('Unsupported browser method')
-    if (JSON.stringify(input).length > 1_000_000) throw new Error('Browser request exceeds 1 MB')
+    const limit = input.method === 'upload' ? MAX_UPLOAD_REQUEST_CHARS : MAX_REQUEST_CHARS
+    if (JSON.stringify(input).length > limit) throw new Error(`Browser request exceeds ${limit / 1_000_000} MB`)
     const group = this.group(userId, profile)
     const bound = bindingId ? group.bindings.get(bindingId) : undefined
     let targetId = bound?.id

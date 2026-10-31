@@ -165,6 +165,49 @@ function makeServerHarness() {
 }
 
 describe('ChatRunSocket global pending interactions', () => {
+  it('forwards aborts and recovered background aggregates to account session state', async () => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { io } = makeServerHarness()
+    const server = new ChatRunSocket(io as any)
+    const observe = vi.spyOn((server as any).sessionStateSync, 'observe')
+    ;(server as any).emitSessionActivity('default', 'abort.completed', { session_id: 'restored-chat' })
+    expect(observe).toHaveBeenCalledWith('abort.completed', { session_id: 'restored-chat' })
+    const state = { isWorking: false, backgroundTasks: {} }
+    ;(server as any).applyBackgroundSessionPoll({ session_id: 'restored-chat', running_count: 1,
+      tasks: [{ subagent_id: 'child', status: 'running' }], events: [] }, state)
+    expect(observe).toHaveBeenLastCalledWith('delegation.updated', { session_id: 'restored-chat', background_pending: 1 })
+    ;(server as any).applyBackgroundSessionPoll({ session_id: 'restored-chat', running_count: 0,
+      tasks: [{ subagent_id: 'child', status: 'completed' }], events: [] }, state)
+    expect(observe).toHaveBeenLastCalledWith('delegation.updated', { session_id: 'restored-chat', background_pending: 0 })
+  })
+
+  it('uses account rooms and existing notification events for the Person main window only', async () => {
+    const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
+    const { io, emitted, socket } = makeServerHarness()
+    const server = new ChatRunSocket(io as any)
+    socket.data = { user: { id: 1, role: 'admin' } } as any
+    ;(server as any).onConnection(socket)
+    expect(socket.join).toHaveBeenCalledWith('person-notifications:1')
+    const main = { id: 'person-main-1', studio_user_id: '1', profile: 'research', source: 'builtin_agent' }
+    getSessionMock.mockReturnValueOnce(main as any)
+    ;(server as any).emitPendingInteraction('research','run.completed',{
+      session_id:main.id,run_id:'main-run',output:'Main result',command:'private command',error:'private error',
+    })
+    const notices=emitted.filter(entry=>entry.event==='person.run.completed')
+    expect(notices).toHaveLength(2) // Chat and global-agent frontend transports.
+    expect(notices.every(entry=>entry.room==='person-notifications:1')).toBe(true)
+    expect(notices[0].payload).toMatchObject({session_id:main.id,run_id:'main-run',output:'Main result'})
+    expect(JSON.stringify(notices)).not.toContain('private')
+    getSessionMock.mockReturnValueOnce(main as any)
+    ;(server as any).emitPendingInteraction('research','clarify.requested',{session_id:main.id,clarify_id:'q',question:'Which scope?'})
+    expect(emitted.some(entry=>entry.event==='person.clarification.requested' && entry.room==='person-notifications:1')).toBe(true)
+    const count=emitted.length
+    ;(server as any).emitPendingInteraction('research','run.completed',{session_id:'person-task-private',run_id:'worker'})
+    getSessionMock.mockReturnValueOnce(main as any)
+    ;(server as any).emitPendingInteraction('research','run.completed',{session_id:main.id,run_id:'replay',replayed:true})
+    expect(emitted).toHaveLength(count)
+  })
+
   it('binds session goals to the active primary turn without publishing a plan card', async () => {
     const { ChatRunSocket } = await import('../../packages/server/src/modules/studio/sockets/chat-run')
     const { io, emitted } = makeServerHarness()

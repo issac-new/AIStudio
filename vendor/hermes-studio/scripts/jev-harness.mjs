@@ -188,8 +188,8 @@ export function jevHarnessViolations(sources, manifest) {
   }
   const savedFields = new Set()
   walk(form, node => {
-    if (!ts.isCallExpression(node) || name(node.expression) !== 'saveJevSettings' || !node.arguments[1]) return
-    walk(node.arguments[1], property => {
+    if (!ts.isCallExpression(node) || name(node.expression) !== 'saveJevSettings' || !node.arguments[0]) return
+    walk(node.arguments[0], property => {
       if (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) savedFields.add(name(property.name))
     })
   })

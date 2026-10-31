@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -12,7 +12,7 @@ import {
 
 /** 临时假工具目录（探针可注入 appDir） */
 function fakeToolsDir(withCli: boolean): string {
-  const d = join(tmpdir(), 'rv-probe-' + Date.now())
+  const d = mkdtempSync(join(tmpdir(), 'rv-probe-'))
   const cli = join(d, 'wechatwebdevtools.app/Contents/MacOS')
   mkdirSync(cli, { recursive: true })
   if (withCli) writeFileSync(join(cli, 'cli'), '#!/bin/sh\n', 'utf-8')

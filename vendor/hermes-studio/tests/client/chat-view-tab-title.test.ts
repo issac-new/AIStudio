@@ -36,6 +36,7 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('@/api/studio/chat', () => ({
+  onUnobservedRunStarted: vi.fn(() => vi.fn()),
   startRunViaSocket: vi.fn(),
   resumeSession: vi.fn(),
   registerSessionHandlers: vi.fn(),

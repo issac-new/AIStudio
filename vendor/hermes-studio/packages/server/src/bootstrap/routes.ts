@@ -7,6 +7,8 @@ import './workflow-runtime-adapter'
 import './chat-agent-runtime-adapter'
 import './group-chat-agent-runtime-adapter'
 import './session-agent-runtime-adapter'
+import './person-runtime-adapter'
+import { personRoutes } from '../modules/studio/routes/person'
 import { apiDocsRoutes } from '../modules/studio'
 import { healthRoutes } from './health'
 import { updateRoutes } from './update'
@@ -114,6 +116,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
   app.use(socialMessageRoutes.routes())
   app.use(sessionRoutes.routes())
   app.use(modelApiRoutes.routes())
+  app.use(personRoutes.routes())
   app.use(sessionShareRoutes.routes())
   app.use(profileRoutes.routes())
   app.use(ekkoMemoryRoutes.routes())

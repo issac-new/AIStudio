@@ -27,7 +27,7 @@ import { useProfilesStore } from "@/stores/hermes/profiles";
 import { useToolTraceVisibility } from "@/composables/useToolTraceVisibility";
 import { openSubagentStream, subagentIdFromToolCall } from "@/utils/hermes/subagent-stream";
 import { messageScrollPositionKey, rememberMessageScrollPosition } from "./message-scroll-position";
-import { chatSessionAgentAvatar } from "@/utils/chat-agent-avatar";
+import { chatSessionAgentAvatar, personAvatarAnimation, personAvatarStyle } from "@/utils/chat-agent-avatar";
 import { parseThinking } from "@/utils/thinking-parser";
 import { groupCompletedToolsByRun } from "./tool-run-grouping";
 import { useMessageSelection } from './useMessageSelection';
@@ -35,11 +35,17 @@ import type { MessageSelectionRow } from './message-selection';
 import { desktopBridge } from '@/utils/desktop-bridge';
 
 const props = withDefaults(defineProps<{
+  userLabel?: string
+  hideToolCalls?: boolean
+  hideRunUsage?: boolean
+  hideReasoning?: boolean
+  activityLabel?: string
   approvalPortalToBody?: boolean
   scrollScope?: string
   selectionActionsTarget?: HTMLElement | null
 }>(), {
   approvalPortalToBody: false,
+  hideToolCalls: false,
   scrollScope: "chat",
   selectionActionsTarget: null,
 })
@@ -131,14 +137,14 @@ const currentToolCalls = computed(() => {
 });
 
 const visibleToolCalls = computed(() =>
-  currentToolCalls.value.filter((tool) => !!tool.toolName),
+  props.hideToolCalls ? [] : currentToolCalls.value.filter((tool) => !!tool.toolName),
 );
 
 const liveReasoningDetail = computed<{
   messageId: Message["id"]
   reasoning: string
 } | null>(() => {
-  if (!isRunIndicatorActive.value) return null;
+  if (props.hideReasoning || !isRunIndicatorActive.value) return null;
 
   const messages = chatStore.messages;
   let lastInputIdx = -1;
@@ -196,9 +202,9 @@ const activeSessionProfile = computed(() => (
   profilesStore.profiles.find(profile => profile.name === activeSessionProfileName.value) || null
 ));
 const userProfileName = computed(() => (
-  activeSessionProfile.value?.alias?.trim() || activeSessionProfileName.value
+  props.userLabel || activeSessionProfile.value?.alias?.trim() || activeSessionProfileName.value
 ));
-const userProfileAvatar = computed(() => activeSessionProfile.value?.avatar || null);
+const userProfileAvatar = computed(() => props.userLabel ? null : activeSessionProfile.value?.avatar || null);
 
 const emptyState = computed(() => {
   const agent = assistantAgent.value;
@@ -210,6 +216,12 @@ const emptyState = computed(() => {
       : t("chat.emptyStateAgent", { agent: agent.label }),
   };
 });
+const showEmptyConversation = computed(() => {
+  const session = chatStore.activeSession;
+  return !chatStore.isLoadingMessages && !isRunIndicatorActive.value
+    && !!session && (session.messagesLoaded === true || session.isLocalOnly === true)
+    && chatStore.messages.length === 0 && (session.messageTotal ?? session.messageCount ?? 0) === 0;
+});
 
 function assistantMessageBody(message: Message): string {
   return parseThinking(message.content || "", { streaming: !!message.isStreaming }).body.trim();
@@ -220,7 +232,8 @@ function hasRenderableAssistantContent(message: Message): boolean {
     assistantMessageBody(message) ||
     message.attachments?.length ||
     message.workspaceChanges?.length ||
-    message.runUsage
+    message.personTaskReturn ||
+    (!props.hideRunUsage && message.runUsage)
   );
 }
 
@@ -232,7 +245,8 @@ const displayMessages = computed(() => {
   const currentToolIds = new Set(currentToolCalls.value.map((tool) => tool.id));
   const renderedMessages = messages
     .filter((m) => {
-      if (m.id === chatStore.focusMessageId) return true;
+      if (props.hideToolCalls && m.role === "tool") return false;
+      if (m.id === chatStore.focusMessageId && !props.hideReasoning) return true;
       if (m.role === "tool") {
         return toolTraceVisible.value && !!m.toolName && !(isRunIndicatorActive.value && currentToolIds.has(m.id));
       }
@@ -374,7 +388,7 @@ watch([
 const canForkActiveSession = computed(() => {
   const session = chatStore.activeSession;
   const hasConversation = displayMessages.value.some((message) => message.role === "user" || message.role === "assistant");
-  return !!session && session.source !== "coding_agent" && session.source !== "builtin_agent" && !chatStore.isStreaming && !chatStore.isForkPending && hasConversation;
+  return !!session && !session.id.startsWith("person-task-") && session.source !== "coding_agent" && session.source !== "builtin_agent" && !chatStore.isStreaming && !chatStore.isForkPending && hasConversation;
 });
 
 const lastForkActionMessageId = computed(() => {
@@ -781,6 +795,7 @@ defineExpose({
       :inert="isSearchLoading || undefined"
       :aria-hidden="isSearchLoading || undefined"
       :messages="messageRows"
+      :show-empty="showEmptyConversation"
       :virtualized="(chatStore.activeSession?.loadedMessageCount || 0) > LIVE_CHAT_MAX_LOADED_MESSAGES"
       :padding="virtualListPadding"
       @scroll="handleListScroll"
@@ -788,7 +803,7 @@ defineExpose({
     >
       <template #empty>
         <div class="empty-state">
-          <img :src="emptyState.logo" :alt="emptyState.alt" class="empty-logo" />
+          <img :src="emptyState.logo" :alt="emptyState.alt" class="empty-logo" :class="{ 'empty-logo--person': !!personAvatarAnimation(assistantAgent, 'idle') }" :style="personAvatarStyle(assistantAgent)" />
           <p>{{ emptyState.text }}</p>
         </div>
       </template>
@@ -846,6 +861,8 @@ defineExpose({
               <MessageItem
                 v-else
                 :message="msg"
+                :hide-run-usage="hideRunUsage"
+                :hide-reasoning="hideReasoning"
                 :assistant-agent="assistantAgent"
                 :user-profile-name="userProfileName"
                 :user-profile-avatar="userProfileAvatar"
@@ -865,6 +882,8 @@ defineExpose({
           <LiveReasoningStatus
             :deployment-session-id="chatStore.activeSessionId || ''"
             :agent="assistantAgent"
+            :hide-reasoning="hideReasoning"
+            :activity-label="activityLabel"
             :reasoning="liveReasoningDetail?.reasoning"
             :reasoning-id="liveReasoningDetail?.messageId"
             :elapsed="formattedThinkingElapsed"
@@ -1226,6 +1245,7 @@ defineExpose({
 
 <style scoped lang="scss">
 @use "@/styles/variables" as *;
+@use "@/styles/person-avatar" as *;
 
 .message-list-shell {
   flex: 1;
@@ -1742,7 +1762,9 @@ defineExpose({
   .empty-logo {
     width: 48px;
     height: 48px;
+    object-fit: contain;
     opacity: 0.25;
+    &--person { @include person-avatar(48px); opacity: 1; }
   }
 
   p {

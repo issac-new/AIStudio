@@ -1,16 +1,15 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
-index 0f4b7b33..5b3ba496 100644
 --- a/packages/client/src/components/hermes/chat/MessageList.vue
 +++ b/packages/client/src/components/hermes/chat/MessageList.vue
 @@ -30,6 +30,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
- import { chatSessionAgentAvatar } from "@/utils/chat-agent-avatar";
+ import { chatSessionAgentAvatar, personAvatarAnimation, personAvatarStyle } from "@/utils/chat-agent-avatar";
  import { parseThinking } from "@/utils/thinking-parser";
  import { groupCompletedToolsByRun } from "./tool-run-grouping";
 +import GatewayNoticeBanner from "@/custom/chat/components/GatewayNoticeBanner.vue";
  import { useMessageSelection } from './useMessageSelection';
  import type { MessageSelectionRow } from './message-selection';
  import { desktopBridge } from '@/utils/desktop-bridge';
-@@ -473,6 +474,24 @@ async function openForkParent(event?: MouseEvent) {
+@@ -487,6 +488,24 @@ async function openForkParent(event?: MouseEvent) {
  }
  
  function handleApproval(choice: "once" | "session" | "always" | "deny") {
@@ -35,7 +34,7 @@ index 0f4b7b33..5b3ba496 100644
    chatStore.respondApproval(choice);
  }
  
-@@ -762,6 +781,7 @@ defineExpose({
+@@ -776,6 +795,7 @@ defineExpose({
  
  <template>
    <div class="message-list-shell" :aria-busy="isSearchLoading">

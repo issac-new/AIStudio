@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import SessionListItem from '@/components/hermes/chat/SessionListItem.vue'
@@ -50,6 +50,50 @@ const session = {
 }
 
 describe('SessionListItem', () => {
+  describe('touch actions', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    function mountRow() {
+      return mount(SessionListItem, {
+        props: { session, active: false, pinned: false, canDelete: false, to: '/session/s1' },
+        global: { stubs: { ProfileAvatar: true } },
+      })
+    }
+
+    it('opens actions after a long press and suppresses the resulting click', async () => {
+      const wrapper = mountRow()
+      const row = wrapper.get('a.session-item')
+      await row.trigger('touchstart', { touches: [{ clientX: 120, clientY: 180 }] })
+      vi.advanceTimersByTime(499)
+      expect(wrapper.emitted('contextmenu')).toBeUndefined()
+      vi.advanceTimersByTime(1)
+      expect(wrapper.emitted('contextmenu')).toHaveLength(1)
+      expect(wrapper.emitted('contextmenu')![0][0]).toMatchObject({ clientX: 120, clientY: 180 })
+      const release = new Event('touchend', { cancelable: true })
+      row.element.dispatchEvent(release)
+      expect(release.defaultPrevented).toBe(true)
+      await row.trigger('click')
+      expect(wrapper.emitted('select')).toBeUndefined()
+      wrapper.unmount()
+    })
+
+    it.each(['touchend', 'touchmove', 'touchcancel'])('cancels pending actions on %s', async event => {
+      const wrapper = mountRow()
+      const row = wrapper.get('a.session-item')
+      await row.trigger('touchstart', { touches: [{ clientX: 120, clientY: 180 }] })
+      vi.advanceTimersByTime(200)
+      await row.trigger(event)
+      vi.advanceTimersByTime(500)
+      expect(wrapper.emitted('contextmenu')).toBeUndefined()
+      if (event === 'touchend') {
+        await row.trigger('click')
+        expect(wrapper.emitted('select')).toHaveLength(1)
+      }
+      wrapper.unmount()
+    })
+  })
+
   it('renders normal mode as a link to the session route', () => {
     const wrapper = mount(SessionListItem, {
       props: {
@@ -69,6 +113,7 @@ describe('SessionListItem', () => {
     const link = wrapper.get('a.session-item')
     expect(link.attributes('href')).toBe('/session/s1')
     expect(wrapper.find('button.session-item').exists()).toBe(false)
+    expect(wrapper.get('.session-item-delete').attributes('aria-label')).toBe('common.delete Session One')
   })
 
   it('renders selectable mode as a button and does not expose row href', () => {

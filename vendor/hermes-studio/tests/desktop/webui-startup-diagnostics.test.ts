@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebUiStartupDiagnostics } from '../../packages/desktop/src/main/webui-startup-diagnostics'
-import { startWebUiServer } from '../../packages/desktop/src/main/webui-server'
+import { startWebUiServer, stopWebUiServer } from '../../packages/desktop/src/main/webui-server'
 
 vi.mock('../../packages/desktop/src/main/hermes-environment-selection', async importOriginal => {
   const original = await importOriginal<typeof import('../../packages/desktop/src/main/hermes-environment-selection')>()
@@ -57,6 +57,42 @@ describe('Desktop Web UI startup diagnostics', () => {
     expect(log).toContain(expected)
     expect(log).toContain(join(entryDirectory, 'index.js'))
     expect(log).toContain(`Node ${process.versions.node}`)
+  })
+
+  it('waits for a real child bound to port zero and stops that child by its selected port', async () => {
+    const root = tempDirectory()
+    const webUiRoot = join(root, 'webui')
+    const entryDirectory = join(webUiRoot, 'dist', 'server')
+    mkdirSync(entryDirectory, { recursive: true })
+    writeFileSync(join(entryDirectory, 'index.js'), `
+      const http = require('node:http')
+      const server = http.createServer((req, res) => {
+        if (req.url === '/api/desktop/shutdown') {
+          res.end('stopping')
+          server.close(() => process.exit(0))
+        } else { res.end(JSON.stringify({ pid: process.pid })) }
+      })
+      server.listen(Number(process.env.PORT), '127.0.0.1', () => {
+        process.send({ type: 'hermes-desktop:listening', port: server.address().port })
+        console.log('agent bridge ready')
+      })
+    `)
+    vi.stubEnv('HERMES_WEB_UI_DIR', webUiRoot)
+    vi.stubEnv('HERMES_WEB_UI_HOME', join(root, 'state'))
+    vi.stubEnv('HERMES_HOME', join(root, 'hermes'))
+    vi.stubEnv('HERMES_DESKTOP_RUNTIME_DIR', join(root, 'runtime'))
+    vi.stubEnv('HERMES_DESKTOP_READY_TIMEOUT_MS', '3000')
+    vi.stubEnv('SHELL', '/usr/bin/false')
+    let url = ''
+    try {
+      url = await startWebUiServer(0)
+      expect(Number(new URL(url).port)).toBeGreaterThan(0)
+      const response = await fetch(url)
+      const { pid } = await response.json()
+      expect(pid).not.toBe(process.pid)
+      expect(Number.isSafeInteger(pid)).toBe(true)
+    } finally { await stopWebUiServer() }
+    await expect(fetch(url)).rejects.toThrow()
   })
 
   it('preserves a traceback split across UTF-8 chunks and the original error', () => {

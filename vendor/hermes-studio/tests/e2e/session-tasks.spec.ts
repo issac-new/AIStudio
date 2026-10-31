@@ -132,9 +132,10 @@ for (const brightness of ['light', 'dark'] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
       await expect(page.locator('.mobile-source').first()).toBeVisible()
       await expect(page.locator('.source-column').first()).toBeHidden()
-      await page.getByRole('button', { name: 'Filter task status' }).click()
+      await page.getByRole('button', { name: 'Change task status: Design task list' }).click()
       await expect(page.getByRole('menuitem', { name: 'Completed', exact: true })).toBeVisible()
-      await page.screenshot({ path: `/tmp/ekko-task-mobile-${brightness}-${wallpaper}.png` })
+      await expect(page.getByRole('menuitem', { name: 'Closed', exact: true })).toBeVisible()
+      await page.screenshot({ path: `/tmp/ekko-task-mobile-${brightness}-${wallpaper}.png`, animations: 'disabled' })
     })
   }
 }

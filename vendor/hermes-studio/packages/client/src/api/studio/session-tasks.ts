@@ -1,5 +1,7 @@
 import { request } from '@/api/client'
 
+export type SessionTaskStatus = 'open' | 'completed' | 'closed'
+
 export interface SessionTaskListItem {
   id: string
   session_id: string
@@ -9,9 +11,16 @@ export interface SessionTaskListItem {
   agent: string
   title: string
   summary: string
-  status: 'open' | 'completed'
+  status: SessionTaskStatus
   updated_at: number
   message_id: number | null
+}
+
+export async function updateSessionTaskStatus(task: SessionTaskListItem, status: SessionTaskStatus) {
+  const query = new URLSearchParams({ profile: task.profile })
+  return request(`/api/studio/sessions/${encodeURIComponent(task.session_id)}/tasks/${encodeURIComponent(task.id)}/status?${query}`, {
+    method: 'PATCH', body: JSON.stringify({ status, expected_updated_at: task.updated_at }),
+  })
 }
 
 export interface SessionTaskListPage {

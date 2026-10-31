@@ -53,6 +53,7 @@ test('single chat covers its first load and keeps session switches uncovered', a
   await page.locator('.input-textarea').fill('Keep my draft')
   // Ordinary generation is independent of initial page readiness.
   await expect(page.locator('.chat-view')).toHaveAttribute('aria-busy', 'false')
+  const composer = await page.locator('.chat-main-content .input-textarea').elementHandle()
 
   await page.locator('.session-items').getByText('Next chat', { exact: true }).first().click()
   await page.waitForFunction(() => (window as any).__PW_CHAT_SOCKET__?.emitted.some((item: any) => item.event === 'resume' && item.payload.session_id === 'next-chat'))
@@ -65,6 +66,49 @@ test('single chat covers its first load and keeps session switches uncovered', a
   }))
   await expect(page.getByText('Next conversation loaded', { exact: true })).toBeVisible()
   await expect(page.locator('.chat-view > .page-loading-overlay')).toHaveCount(0)
+  const surface = page.locator('.chat-main-content')
+  await expect.poll(() => surface.evaluate(el => el.getAnimations().length)).toBe(1)
+  expect(await surface.evaluate(el => el.getAnimations()[0].effect!.getTiming())).toMatchObject({ duration: 1500, easing: 'ease' })
+  expect(await composer!.evaluate(el => el.isConnected)).toBe(true)
+})
+
+test('single chat shows its welcome only after history confirms an empty conversation', async ({ page }) => {
+  await authenticate(page)
+  await mockChatSocket(page)
+  const sessions = ['ready', 'history', 'empty', 'unknown'].map(id => ({
+    id: `empty-check-${id}`, title: id, profile: 'research', source: 'cli', started_at: 1, message_count: 0,
+  }))
+  await mockHermesApi(page, { sessions })
+  await page.addInitScript(() => {
+    (window as any).__PW_CHAT_SOCKET_RESUMES__ = { 'empty-check-ready': {
+      session_id: 'empty-check-ready', messages: [], isWorking: false, events: [], messageTotal: 0,
+    } }
+  })
+  await page.goto('/#/hermes/session/empty-check-ready')
+  const welcome = page.locator('.message-list-shell .empty-state')
+  await expect(welcome).toBeVisible()
+  const select = async (id: string) => {
+    await page.evaluate(id => { location.hash = `/hermes/session/empty-check-${id}` }, id)
+    await page.waitForFunction(id => (window as any).__PW_CHAT_SOCKET__.emitted.some((entry: any) => entry.event === 'resume' && entry.payload.session_id === `empty-check-${id}`), id)
+    await expect(welcome).toHaveCount(0)
+  }
+  const resumed = async (id: string, messages?: any[]) => page.evaluate(({ id, messages }) => {
+    (window as any).__PW_CHAT_SOCKET__.latest.__trigger('resumed', {
+      session_id: `empty-check-${id}`, isWorking: false, events: [], messageTotal: messages?.length ?? 0,
+      ...(messages ? { messages } : {}),
+    })
+  }, { id, messages })
+  await select('history')
+  await resumed('history', [{ id: 1, role: 'assistant', content: 'Existing conversation history', timestamp: 1 }])
+  await expect(page.getByText('Existing conversation history', { exact: true })).toBeVisible()
+  await expect(welcome).toHaveCount(0)
+  await select('empty')
+  await resumed('empty', [])
+  await expect(welcome).toBeVisible()
+  await select('unknown')
+  await resumed('unknown')
+  await expect(page.locator('.message-list-shell')).toBeVisible()
+  await expect(welcome).toHaveCount(0)
 })
 
 test('group chat covers initial room data and keeps failed or stale room switches uncovered', async ({ page }) => {
@@ -120,6 +164,16 @@ test('group chat covers initial room data and keeps failed or stale room switche
   await staleResponse
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())))
   await expect(page.locator('.room-title-text')).toHaveText('Room alpha')
+  await page.evaluate(() => { location.hash = '#/hermes/group-chat/room/beta' })
+  await expect(page.locator('.room-title-text')).toHaveText('Room beta')
+  const fade = await page.locator('.group-chat-surface').evaluate(el => {
+    const effect = el.getAnimations().find(animation => animation.playState !== 'finished')?.effect as KeyframeEffect
+    return { timing: effect.getTiming(), frames: effect.getKeyframes() }
+  })
+  expect(fade.timing.duration).toBe(1500)
+  // CSS animations expose the ease on each keyframe; WAAPI exposes it on timing.
+  expect([fade.timing.easing, ...fade.frames.map(frame => frame.easing)]).toContain('ease')
+  expect(fade.frames.map(frame => Number(frame.opacity))).toEqual([0, 1])
 })
 
 test('workflow waits for initial data and keeps its canvas uncovered when switching workflows', async ({ page }) => {

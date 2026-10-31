@@ -41,7 +41,7 @@ describe('inject 缺目标树跳过（standalone cockpit 包形态）', () => {
       expect(existsSync(join(tmp, 'hermes-studio/package.json'))).toBe(true)
       expect(existsSync(join(tmp, 'hermes-agent'))).toBe(false)
 
-      const repoConfig = join(ROOT, 'vite.config.overlay.ts')
+      const repoConfig = join(ROOT, 'vite.config.overlay.mts')
       const before = existsSync(repoConfig) ? readFileSync(repoConfig, 'utf8') : null
       const r = injectAt(tmp, tmp)
       expect(r.code, `standalone inject 应成功：\n${r.out.slice(-600)}`).toBe(0)
@@ -51,7 +51,7 @@ describe('inject 缺目标树跳过（standalone cockpit 包形态）', () => {
       const applied = (r.out.match(/applied patch/g) ?? []).length
       expect(applied, 'studio 补丁应全量应用').toBeGreaterThan(300)
       // 隔离锚：派生 config 落 OVERLAY_STATE_OUT，仓根同名文件不得被创建或改写
-      expect(existsSync(join(r.stateDir, 'vite.config.overlay.ts')), '派生 config 应落 OVERLAY_STATE_OUT').toBe(true)
+      expect(existsSync(join(r.stateDir, 'vite.config.overlay.mts')), '派生 config 应落 OVERLAY_STATE_OUT').toBe(true)
       const after = existsSync(repoConfig) ? readFileSync(repoConfig, 'utf8') : null
       expect(after, '仓根 vite.config.overlay.ts 被测试污染').toBe(before)
     }, 300_000)

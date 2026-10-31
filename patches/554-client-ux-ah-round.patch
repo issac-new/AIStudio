@@ -1,5 +1,4 @@
 diff --git a/packages/client/src/components/auth/DefaultCredentialPrompt.vue b/packages/client/src/components/auth/DefaultCredentialPrompt.vue
-index 66ffc163f..13d78dc2f 100644
 --- a/packages/client/src/components/auth/DefaultCredentialPrompt.vue
 +++ b/packages/client/src/components/auth/DefaultCredentialPrompt.vue
 @@ -40,7 +40,10 @@ async function checkDefaultCredentials() {
@@ -24,12 +23,11 @@ index 66ffc163f..13d78dc2f 100644
    show.value = false;
  }
 diff --git a/packages/client/src/i18n/index.ts b/packages/client/src/i18n/index.ts
-index d3ea2745e..7122cb946 100644
 --- a/packages/client/src/i18n/index.ts
 +++ b/packages/client/src/i18n/index.ts
-@@ -3,7 +3,24 @@ import { loadLocaleMessages, mergeMessagesWithFallback, supportedLocales } from
- import type { SupportedLocale } from './messages'
+@@ -4,7 +4,24 @@ import type { SupportedLocale } from './messages'
  import { applyDocumentDirection } from './direction'
+ import { uiLocale } from './locale-state'
  
 -const saved = localStorage.getItem('hermes_locale')
 +// A-H 复盘轮 G：语言偏好按账户分键——共享键在多账号切换时中英跳变（实测）。
@@ -53,7 +51,7 @@ index d3ea2745e..7122cb946 100644
  
  function resolveLocale(saved: string | null): SupportedLocale {
    if (saved && (supportedLocales as readonly string[]).includes(saved)) {
-@@ -116,5 +133,5 @@ export async function switchLocale(newLocale: string): Promise<void> {
+@@ -118,5 +135,5 @@ export async function switchLocale(newLocale: string): Promise<void> {
    if (sequence !== localeSwitchSequence) return
    globalI18n.locale.value = nextLocale
    setHtmlLang(nextLocale)

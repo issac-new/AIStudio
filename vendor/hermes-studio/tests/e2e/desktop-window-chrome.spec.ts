@@ -1,155 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { expectNewChatEffectsMoving } from './new-chat-helpers'
-import { authenticate, mockChatSocket, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
+import { authenticate, mockChatSocket, mockExistingHermesChat, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
 
-type DesktopPlatform = 'darwin' | 'linux' | 'win32'
-type DesktopWindowKind = 'main' | 'chat'
-
-async function installDesktopBridge(page: Page, platform: DesktopPlatform, withBrowser = false, windowKind: DesktopWindowKind = 'main', initialTabCount = 1) {
-  await page.addInitScript(({ desktopPlatform, includeBrowser, desktopWindowKind, tabCount }) => {
-    const state = {
-      actions: [] as string[],
-      isMaximized: false,
-      chatWindows: [] as Array<{ sessionId: string; profile?: string }>,
-    }
-    ;(window as typeof window & { __PW_DESKTOP_WINDOW__?: typeof state }).__PW_DESKTOP_WINDOW__ = state
-    const browserState = {
-      available: true,
-      activeProfileId: 'profile-default',
-      activeTabId: 'tab-1',
-      tabs: Array.from({ length: tabCount }, (_, index) => ({
-        id: `tab-${index + 1}`, profileId: 'profile-default', title: index ? `New Tab ${index + 1}` : 'New Tab', url: 'about:blank',
-        loading: false, canGoBack: false, canGoForward: false, crashed: false, agentControl: 'idle',
-      })),
-      profiles: [{
-        id: 'profile-default', name: 'Default', rootPath: '/tmp/hermes-browser', sessionPath: '/tmp/hermes-browser/data',
-        downloadPath: '/tmp/hermes-browser/download', proxyMode: 'direct', proxyRules: '', askBeforeDownload: true,
-        downloadConflictPolicy: 'uniquify', createdAt: '2026-01-01T00:00:00.000Z',
-        lastUsedAt: '2026-01-01T00:00:00.000Z', tabs: ['tab-1'],
-      }, {
-        id: 'profile-work', name: 'Work', rootPath: '/tmp/hermes-browser-work', sessionPath: '/tmp/hermes-browser-work/data',
-        downloadPath: '/tmp/hermes-browser-work/download', proxyMode: 'system', proxyRules: '', askBeforeDownload: false,
-        downloadConflictPolicy: 'uniquify', createdAt: '2026-01-02T00:00:00.000Z',
-        lastUsedAt: '2026-01-02T00:00:00.000Z', tabs: [],
-      }],
-      downloads: [{
-        id: 'download-1', profileId: 'profile-default', fileName: 'report.pdf', sourceUrl: 'https://example.test/report.pdf',
-        savePath: '/tmp/hermes-browser/download/report.pdf', receivedBytes: 25, totalBytes: 100,
-        state: 'progressing', startedAt: '2026-01-03T00:00:00.000Z',
-      }], permissions: [], visible: false, maxTabs: 12,
-    }
-    const browserHarness = {
-      viewportCalls: [] as Array<{ bounds: unknown; visible: boolean }>,
-      createdProfiles: [] as Array<{ name: string; proxyMode?: string }>,
-      annotationCount: 0,
-      clearAnnotationCalls: 0,
-      captureAnnotationCalls: 0,
-      annotationNotes: {} as Record<number, string>,
-      removedAnnotations: [] as number[],
-      markers: [] as number[],
-      capturedMarkers: [] as number[],
-      failRemoval: false,
-      failCapture: false,
-      requestAnnotation: undefined as undefined | ((request: { tabId: string; mode: 'element' | 'region' }) => void),
-    }
-    ;(window as typeof window & { __PW_DESKTOP_BROWSER__?: typeof browserHarness }).__PW_DESKTOP_BROWSER__ = browserHarness
-    let nextTabNumber = tabCount
-    let stateListener: ((state: typeof browserState) => void) | undefined
-    const browser = includeBrowser ? {
-      getState: async () => browserState,
-      setViewport: async (bounds: unknown, visible: boolean) => {
-        browserHarness.viewportCalls.push({ bounds, visible })
-        browserState.visible = visible
-        return browserState
-      },
-      createTab: async () => {
-        nextTabNumber += 1
-        const tab = { ...browserState.tabs[0], id: `tab-${nextTabNumber}`, title: `New Tab ${nextTabNumber}` }
-        browserState.tabs = [...browserState.tabs, tab].slice(-browserState.maxTabs)
-        browserState.activeTabId = tab.id
-        stateListener?.({ ...browserState })
-        return tab
-      },
-      closeTab: async () => browserState,
-      activateTab: async () => browserState,
-      navigate: async () => browserState.tabs[0],
-      navigationAction: async () => browserState.tabs[0],
-      createProfile: async (input: { name: string; proxyMode?: string }) => {
-        browserHarness.createdProfiles.push(input)
-        return browserState.profiles[0]
-      },
-      chooseProfileRootDirectory: async () => '/tmp/hermes-browser-new',
-      renameProfile: async () => browserState.profiles[0],
-      profileSwitchImpact: async () => ({ activeAgentRuns: 0, activeDownloads: 0, pendingAnnotations: 0, openTabs: 1, requiresConfirmation: false }),
-      switchProfile: async (profileId: string) => { browserState.activeProfileId = profileId; return { ...browserState } },
-      updateProfile: async () => browserState.profiles[0],
-      deleteProfile: async () => browserState,
-      clearProfileData: async () => browserState,
-      cancelDownload: async (downloadId: string) => {
-        const download = browserState.downloads.find(item => item.id === downloadId)
-        if (download) download.state = 'cancelled'
-        return { ...browserState, downloads: browserState.downloads.map(item => ({ ...item })) }
-      },
-      takeOver: async () => true,
-      annotate: async (_tabId: string, mode: 'element' | 'region') => {
-        browserHarness.annotationCount += 1
-        const marker = browserHarness.annotationCount
-        browserHarness.markers.push(marker)
-        return {
-          tabId: 'tab-1', marker, mode, url: 'about:blank', title: 'New Tab',
-          viewport: { width: 800, height: 600, scaleFactor: 1 },
-          region: marker === 1 ? { x: 160, y: 120, width: 240, height: 90 } : { x: 480, y: 300, width: 160, height: 120 },
-          screenshot: { mediaType: 'image/png', data: '', width: 800, height: 600 },
-        }
-      },
-      cancelAnnotation: async () => true,
-      removeAnnotation: async (_tabId: string, marker: number) => {
-        if (browserHarness.failRemoval) throw new Error('Could not remove annotation')
-        browserHarness.removedAnnotations.push(marker)
-        browserHarness.markers = browserHarness.markers.filter(value => value !== marker)
-        delete browserHarness.annotationNotes[marker]
-        return true
-      },
-      updateAnnotationNote: async (_tabId: string, marker: number, note: string) => {
-        browserHarness.annotationNotes[marker] = note
-        return true
-      },
-      captureAnnotations: async () => {
-        if (browserHarness.failCapture) throw new Error('Could not capture annotations')
-        browserHarness.captureAnnotationCalls += 1
-        browserHarness.capturedMarkers = [...browserHarness.markers]
-        return { mediaType: 'image/png', data: '', width: 800, height: 600 }
-      },
-      clearAnnotations: async () => { browserHarness.clearAnnotationCalls += 1; return true },
-      onAnnotationRequest: (callback: (request: { tabId: string; mode: 'element' | 'region' }) => void) => {
-        browserHarness.requestAnnotation = callback
-        return () => { if (browserHarness.requestAnnotation === callback) browserHarness.requestAnnotation = undefined }
-      },
-      onStateChange: (callback: (state: typeof browserState) => void) => {
-        stateListener = callback
-        return () => { stateListener = undefined }
-      },
-    } : undefined
-    Object.defineProperty(window, 'hermesDesktop', {
-      configurable: true,
-      value: {
-        isDesktop: true,
-        platform: desktopPlatform,
-        windowKind: desktopWindowKind,
-        getWindowState: async () => ({ isMaximized: state.isMaximized }),
-        windowControl: async (action: string) => {
-          state.actions.push(action)
-          if (action === 'toggle-maximize') state.isMaximized = !state.isMaximized
-          return { isMaximized: state.isMaximized }
-        },
-        openChatWindow: async (sessionId: string, profile?: string) => {
-          state.chatWindows.push({ sessionId, profile })
-        },
-        ...(browser ? { browser } : {}),
-      },
-    })
-  }, { desktopPlatform: platform, includeBrowser: withBrowser, desktopWindowKind: windowKind, tabCount: initialTabCount })
-}
+import { installDesktopBridge, type DesktopPlatform, type DesktopWindowKind } from './desktop-bridge-fixture'
 
 async function openDesktopJobs(page: Page, platform: DesktopPlatform) {
   await installDesktopBridge(page, platform)
@@ -509,7 +362,7 @@ test('keeps the chat tool drawer unchanged in LTR and mirrors its resize seam in
   await installDesktopBridge(page, 'darwin', true)
   await authenticate(page, TEST_ACCESS_KEY, 'research')
   await mockChatSocket(page)
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await page.goto('/#/hermes/chat')
 
   await page.locator('.header-tool-toggle').click()
@@ -567,7 +420,7 @@ test('shows the mobile file tree from the inline start edge in LTR and RTL', asy
   await authenticate(page, TEST_ACCESS_KEY, 'research')
   await page.addInitScript(() => window.localStorage.setItem('hermes_locale', 'en'))
   await mockChatSocket(page)
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await page.goto('/#/hermes/chat')
 
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
@@ -593,7 +446,7 @@ test('allows creating a tab at capacity and displays the replacement state', asy
   await installDesktopBridge(page, 'darwin', true, 'main', 12)
   await authenticate(page, TEST_ACCESS_KEY, 'research')
   await mockChatSocket(page)
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await page.goto('/#/hermes/chat')
   await page.locator('.header-tool-toggle').click()
   const panel = page.locator('.chat-tool-panel')
@@ -615,7 +468,7 @@ test('embeds the desktop browser beside workspace and terminal', async ({ page }
   await installDesktopBridge(page, 'darwin', true)
   await authenticate(page, TEST_ACCESS_KEY, 'research')
   await mockChatSocket(page)
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await page.goto('/#/hermes/chat')
 
   await page.locator('.header-tool-toggle').click()
@@ -763,7 +616,7 @@ async function openAnnotationPanel(page: Page) {
   await installDesktopBridge(page, 'darwin', true)
   await authenticate(page, TEST_ACCESS_KEY, 'research')
   await mockChatSocket(page)
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await page.goto('/#/hermes/chat')
   await page.locator('.header-tool-toggle').click()
   const panel = page.locator('.chat-tool-panel')
@@ -891,7 +744,7 @@ test('remote device browser keeps sharing off if the Desktop grant is unavailabl
   await installDesktopBridge(page, 'win32', true)
   await authenticate(page, TEST_ACCESS_KEY, 'research')
   await mockChatSocket(page)
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await page.addInitScript(() => {
     const desktop = (window as any).hermesDesktop
     desktop.remoteMode = true
@@ -906,17 +759,17 @@ test('remote device browser keeps sharing off if the Desktop grant is unavailabl
   await page.locator('.header-tool-toggle').click()
   const panel = page.locator('.chat-tool-panel')
   await panel.getByRole('tab', { name: 'Browser', exact: true }).click()
-  await panel.getByRole('button', { name: 'Allow remote control', exact: true }).click()
   await expect.poll(() => page.evaluate(() => (window as any).__remoteBrowserConsent.includes(true))).toBe(true)
-  await expect(panel.getByRole('button', { name: 'Allow remote control', exact: true })).toBeVisible()
-  await expect(panel.getByRole('button', { name: 'Stop remote control', exact: true })).toHaveCount(0)
+  await expect(panel.locator('.remote-control-action')).toHaveCount(0)
+  expect(await page.evaluate(() => (window as any).__PW_CHAT_SOCKET__.allSockets
+    .some((socket: any) => String(socket.url).endsWith('/desktop-browser')))).toBe(false)
 })
 
-test('remote device browser enables and stops with one click and a full-width label', async ({ page }) => {
+test('remote device browser is shared automatically without a consent control', async ({ page }) => {
   await installDesktopBridge(page, 'win32', true)
   await authenticate(page, TEST_ACCESS_KEY, 'research')
   await mockChatSocket(page)
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await page.addInitScript(() => {
     const desktop = (window as any).hermesDesktop
     desktop.remoteMode = true
@@ -928,26 +781,169 @@ test('remote device browser enables and stops with one click and a full-width la
     desktop.browser.remoteRequest = async () => ({ result: { tabs: [] } })
   })
   await page.goto('/#/hermes/chat')
+  await expect.poll(() => page.evaluate(() => (window as any).__remoteBrowserGrants.filter(Boolean))).toEqual([true])
   await page.locator('.header-tool-toggle').click()
   const panel = page.locator('.chat-tool-panel')
   await panel.getByRole('tab', { name: 'Browser', exact: true }).click()
-  const enable = panel.getByRole('button', { name: 'Allow remote control', exact: true })
-  const labelFits = async (selector: string) => page.locator(selector).evaluate(element => {
-    const button = element.getBoundingClientRect()
-    const label = element.querySelector('.n-button__content')!.getBoundingClientRect()
-    return label.left >= button.left && label.right <= button.right && button.width > 30
-  })
-  await expect(enable).toHaveAttribute('aria-pressed', 'false')
-  await expect.poll(() => labelFits('.remote-control-action button')).toBe(true)
-  await enable.click()
-  const stop = panel.getByRole('button', { name: 'Stop remote control', exact: true })
-  await expect(stop).toHaveAttribute('aria-pressed', 'true')
+  await expect(panel.getByRole('button', { name: /remote control/i })).toHaveCount(0)
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  expect(await page.evaluate(() => (window as any).__remoteBrowserGrants.filter(Boolean))).toEqual([true])
-  await expect.poll(() => labelFits('.remote-control-action button')).toBe(true)
-  await stop.click()
-  await expect(enable).toHaveAttribute('aria-pressed', 'false')
-  expect(await page.evaluate(() => (window as any).__PW_CHAT_SOCKET__.allSockets
-    .filter((socket: any) => String(socket.url).endsWith('/desktop-browser'))
-    .every((socket: any) => !socket.connected))).toBe(true)
+  await expect.poll(() => page.evaluate(() => (window as any).__PW_CHAT_SOCKET__.allSockets
+    .some((socket: any) => String(socket.url).endsWith('/desktop-browser') && socket.connected))).toBe(true)
+})
+
+
+for (const brightness of ['light', 'dark'] as const) {
+  test(`recent downloads stay compact and link to full history in ${brightness} mode`, async ({ page }) => {
+    await installDesktopBridge(page, 'darwin', true, 'main', 1, true)
+    await authenticate(page, TEST_ACCESS_KEY, 'research')
+    await page.addInitScript(() => localStorage.setItem('hermes_locale', 'en'))
+    await mockChatSocket(page)
+    await mockExistingHermesChat(page, { theme: { brightness } })
+    await page.goto('/#/hermes/chat')
+    await page.locator('.header-tool-toggle').click()
+    const panel = page.locator('.chat-tool-panel')
+    await panel.getByRole('tab', { name: 'Browser', exact: true }).click()
+    await panel.getByRole('button', { name: 'Downloads', exact: true }).click()
+    const popover = page.locator('.download-popover')
+    await expect(popover).toContainText('Recent downloads')
+    for (const name of ['Open file', 'Show in folder']) await expect(popover.getByRole('button', { name, exact: true })).toBeVisible()
+    for (const name of ['Remove from history', 'Move file to Trash / Recycle Bin', 'Clear all']) await expect(popover.getByRole('button', { name, exact: true })).toHaveCount(0)
+    await popover.getByRole('button', { name: 'Open file', exact: true }).click()
+    await popover.getByRole('button', { name: 'Show in folder', exact: true }).click()
+    expect(await page.evaluate(() => (window as any).__PW_DESKTOP_BROWSER__.downloadActions.map((item: any) => item.action))).toEqual(['open', 'reveal'])
+    expect(await popover.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+    await page.screenshot({ path: `/tmp/download-recent-${brightness}.png` })
+    await popover.getByRole('button', { name: 'Full download history' }).click()
+    await expect(popover).not.toBeVisible()
+    await expect(page).toHaveURL(/hermes\/chat/)
+    await expect(panel.locator('.panel-download-history')).toBeVisible()
+    await expect.poll(() => page.evaluate(() => (window as any).__PW_DESKTOP_BROWSER__.viewportCalls.at(-1).visible)).toBe(false)
+    const history = page.getByTestId('download-history')
+    await expect(history.getByRole('button', { name: 'Remove from history', exact: true })).toBeVisible()
+    await expect(history.getByRole('button', { name: 'Move file to Trash / Recycle Bin', exact: true })).toHaveCount(0)
+    await page.screenshot({ path: `/tmp/download-history-${brightness}.png` })
+    await history.getByRole('button', { name: 'Remove from history', exact: true }).click()
+    await expect(history).not.toContainText('report.pdf')
+    expect(await page.evaluate(() => (window as any).__PW_DESKTOP_BROWSER__.downloadActions.at(-1).action)).toBe('remove')
+    await panel.locator('.panel-download-history').getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(panel.locator('.native-viewport')).toBeVisible()
+    await expect.poll(() => page.evaluate(() => (window as any).__PW_DESKTOP_BROWSER__.viewportCalls.at(-1).visible)).toBe(true)
+    await expect(page).toHaveURL(/hermes\/chat/)
+  })
+}
+
+test('download settings keeps cancellation and history-only removal', async ({ page }) => {
+  await installDesktopBridge(page, 'win32', true)
+  await authenticate(page)
+  await page.addInitScript(() => localStorage.setItem('hermes_locale', 'en'))
+  await mockHermesApi(page)
+  await page.goto('/#/hermes/browser')
+  await page.locator('.n-tabs-tab').filter({ hasText: /^Downloads$/ }).click()
+  const record = page.locator('.download-record')
+  await record.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(record).toContainText('Cancelled')
+  await expect(record.getByRole('button', { name: 'Open file', exact: true })).toHaveCount(0)
+  await record.getByRole('button', { name: 'Remove from history', exact: true }).click()
+  await expect(record).toHaveCount(0)
+})
+
+test('full history groups, searches, handles unavailable files and clears only current-profile settled records', async ({ page }) => {
+  await installDesktopBridge(page, 'win32', true, 'main', 1, true)
+  await authenticate(page)
+  await page.addInitScript(() => localStorage.setItem('hermes_locale', 'en'))
+  await mockHermesApi(page)
+  await page.goto('/#/hermes/browser/downloads')
+  await page.evaluate(() => {
+    const h = (window as any).__PW_DESKTOP_BROWSER__, base = h.browserState.downloads[0]
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+    h.browserState.downloads = [
+      { ...base, startedAt: new Date().toISOString() },
+      { ...base, id: 'missing', fileName: 'gone.zip', fileAvailable: false, startedAt: yesterday.toISOString() },
+      { ...base, id: 'active', fileName: 'active.zip', state: 'progressing', startedAt: new Date().toISOString() },
+      { ...base, id: 'other-profile', profileId: 'profile-work', fileName: 'private.zip' },
+    ]; h.emitState()
+  })
+  const history = page.getByTestId('download-history')
+  await expect(history.locator('h3')).toHaveText(['Today', 'Yesterday'])
+  await expect(history).not.toContainText('private.zip')
+  const missing = history.locator('.download-record').filter({ hasText: 'gone.zip' })
+  await expect(missing).toContainText('Deleted or moved')
+  await expect(missing.getByRole('button', { name: 'Open file' })).toHaveCount(0)
+  const search = history.getByRole('textbox', { name: 'Search download history' })
+  await search.fill('gone')
+  await expect(history.locator('.download-record')).toHaveCount(1)
+  await search.fill('no such file')
+  await expect(history).toContainText('No matching downloads')
+  await search.fill('example.test')
+  await expect(history.locator('.download-record')).toHaveCount(3)
+  await page.setViewportSize({ width: 800, height: 800 })
+  // Desktop's shell has its own minimum width. Exercise a narrow history column within it.
+  await history.evaluate(el => { el.style.width = '340px'; el.style.maxWidth = '100%' })
+  expect(await history.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+  await page.screenshot({ path: '/tmp/download-history-narrow.png' })
+  await search.fill('gone')
+  await history.getByRole('button', { name: 'Clear all', exact: true }).click()
+  await search.fill('')
+  await expect(history.locator('.download-record')).toHaveCount(1)
+  await expect(history).toContainText('active.zip')
+  const state = await page.evaluate(() => {
+    const h = (window as any).__PW_DESKTOP_BROWSER__
+    return { ids: h.browserState.downloads.map((i: any) => i.id), actions: h.downloadActions }
+  })
+  expect(state.ids).toEqual(['active', 'other-profile'])
+  expect(state.actions.map((i: any) => i.action)).toEqual(['remove', 'remove'])
+})
+
+test('file action failure retains history and the optional refresh bridge stays compatible', async ({ page }) => {
+  await installDesktopBridge(page, 'darwin', true, 'main', 1, true)
+  await authenticate(page)
+  await page.addInitScript(() => localStorage.setItem('hermes_locale', 'en'))
+  await mockHermesApi(page)
+  await page.goto('/#/hermes/browser/downloads')
+  await page.evaluate(() => { (window as any).__PW_DESKTOP_BROWSER__.failDownloadAction = true })
+  const history = page.getByTestId('download-history')
+  await history.getByRole('button', { name: 'Open file', exact: true }).click()
+  await expect(page.locator('.n-message')).toContainText('moved or deleted')
+  await expect(history).toContainText('report.pdf')
+  expect(await page.evaluate(() => (window as any).__PW_DESKTOP_BROWSER__.refreshCount)).toBeGreaterThan(1)
+})
+
+
+test('download history stays usable on an older Desktop without refreshDownloads', async ({ page }) => {
+  await installDesktopBridge(page, 'darwin', true, 'main', 1, true)
+  await page.addInitScript(() => { delete (window as any).hermesDesktop.browser.refreshDownloads })
+  await authenticate(page)
+  await page.addInitScript(() => localStorage.setItem('hermes_locale', 'en'))
+  await mockHermesApi(page)
+  await page.goto('/#/hermes/browser/downloads')
+  await expect(page.getByTestId('download-history')).toContainText('report.pdf')
+  await page.getByRole('button', { name: 'Show in folder', exact: true }).click()
+  expect(await page.evaluate(() => (window as any).__PW_DESKTOP_BROWSER__.downloadActions.at(-1).action)).toBe('reveal')
+})
+
+
+test('recent downloads show five records, retain total active count and close without changing history', async ({ page }) => {
+  await installDesktopBridge(page, 'darwin', true, 'main', 1, true)
+  await authenticate(page, TEST_ACCESS_KEY, 'research')
+  await page.addInitScript(() => localStorage.setItem('hermes_locale', 'en'))
+  await mockChatSocket(page)
+  await mockExistingHermesChat(page, { theme: { background: { name: 'theme-background.png', mime: 'image/png', updatedAt: 101 } } })
+  await page.goto('/#/hermes/chat')
+  await page.locator('.header-tool-toggle').click()
+  const panel = page.locator('.chat-tool-panel')
+  await panel.getByRole('tab', { name: 'Browser', exact: true }).click()
+  await page.evaluate(() => {
+    const h = (window as any).__PW_DESKTOP_BROWSER__, base = h.browserState.downloads[0]
+    h.browserState.downloads = Array.from({ length: 7 }, (_, i) => ({ ...base, id: String(i), state: i >= 5 ? 'progressing' : 'completed' }))
+    h.emitState()
+  })
+  await expect(panel.locator('.download-trigger b')).toHaveText('2')
+  await panel.getByRole('button', { name: 'Downloads', exact: true }).click()
+  const popover = page.locator('.download-popover')
+  await expect(popover.locator('.download-record')).toHaveCount(5)
+  await expect(popover.getByRole('button', { name: 'Remove from history', exact: true })).toHaveCount(0)
+  await page.screenshot({ path: '/tmp/download-recent-wallpaper.png' })
+  await popover.getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(popover).not.toBeVisible()
+  expect(await page.evaluate(() => (window as any).__PW_DESKTOP_BROWSER__.browserState.downloads.length)).toBe(7)
 })

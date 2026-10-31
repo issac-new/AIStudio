@@ -1,18 +1,7 @@
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -3991,6 +3991,7 @@
-       downloadFailed: '下载失败',
-       linkAdded: '任务关联已添加',
-       linkFailed: '任务关联失败',
-+      newLinkBoardTightened: '已切到「{board}」板以便就地新建任务',
-       linkRemoved: '任务关联已移除',
-       logFailed: '日志加载失败',
-       moveFailed: '任务移动失败',
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -3992,6 +3992,7 @@
+@@ -4019,6 +4019,7 @@ export default {
        downloadFailed: 'Download failed',
        linkAdded: 'Task link added',
        linkFailed: 'Failed to link task',
@@ -20,3 +9,14 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        linkRemoved: 'Task link removed',
        logFailed: 'Failed to load log',
        moveFailed: 'Failed to move task',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -4018,6 +4018,7 @@ export default {
+       downloadFailed: '下载失败',
+       linkAdded: '任务关联已添加',
+       linkFailed: '任务关联失败',
++      newLinkBoardTightened: '已切到「{board}」板以便就地新建任务',
+       linkRemoved: '任务关联已移除',
+       logFailed: '日志加载失败',
+       moveFailed: '任务移动失败',

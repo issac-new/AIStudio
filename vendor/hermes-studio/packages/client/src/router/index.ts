@@ -7,6 +7,7 @@ import { captureProviderImport } from '@/utils/provider-import'
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
+    { path: '/person', name: 'hermes.person', component: () => import('@/views/hermes/PersonView.vue') },
     {
       path: '/hermes/tasks',
       name: 'hermes.tasks',
@@ -289,6 +290,11 @@ const router = createRouter({
 // Desktop exposes a dedicated settings page. Actual browsing stays inside the
 // chat tool panel so this route never creates or positions a WebContentsView.
 if (hasDesktopBrowserBridge()) {
+  router.addRoute({
+    path: '/hermes/browser/downloads',
+    name: 'hermes.browserDownloads',
+    component: () => import('@/views/hermes/BrowserDownloadsView.vue'),
+  })
   router.addRoute({
     path: '/hermes/browser',
     name: 'hermes.browser',

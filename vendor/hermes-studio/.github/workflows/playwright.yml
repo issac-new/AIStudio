@@ -18,8 +18,9 @@ concurrency:
 jobs:
   e2e-shard:
     runs-on: ubuntu-latest
-    # Keep shards small enough for serial CI workers; reserve time for reports.
-    timeout-minutes: 30
+    # Browser/dependency setup can take 15+ minutes on a cold runner.
+    # Reserve setup/report time in addition to the 25-minute test-step limit.
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:

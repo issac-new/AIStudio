@@ -35,6 +35,7 @@ Use the smallest relevant check while iterating. Before a broad PR, run
 - `packages/server/src` - Koa API, Socket.IO, persistence, Hermes integration.
 - `packages/ekko-agent` - canonical Ekko runtime, profiles, providers, tools, memory, skills, and package docs.
 - `packages/desktop` - Electron wrapper, bundled Python/Hermes runtime, release artifacts.
+- `packages/mcu` - ESP32-C3 and ESP32-S3 firmware, board projects, and release images.
 - `tests/client`, `tests/server`, `tests/shared` - Vitest coverage.
 - `tests/e2e` - Playwright browser coverage with mocked backend services.
 - `.github/workflows` - CI, release, Docker, and desktop packaging automation.

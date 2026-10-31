@@ -9,7 +9,7 @@ import { useSessionSearch } from '@/composables/useSessionSearch'
 import DesktopUpdateDownloadTab from './DesktopUpdateDownloadTab.vue'
 import { useNavigationRail } from '@/composables/useNavigationRail'
 
-type ActiveSection = 'chat' | 'history' | 'connections' | 'agents' | 'models' | 'usage' | 'apiRelay' | 'group' | 'global' | 'workflow'
+type ActiveSection = 'person' | 'chat' | 'history' | 'connections' | 'agents' | 'models' | 'usage' | 'apiRelay' | 'group' | 'global' | 'workflow'
 
 const props = defineProps<{
   active: ActiveSection

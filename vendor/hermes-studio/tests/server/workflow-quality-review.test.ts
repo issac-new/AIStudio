@@ -7,8 +7,8 @@ const dbRoot=mkdtempSync(join(tmpdir(),'workflow-quality-')); process.env.HERMES
 const answer={type:'choice',choice:'needs_improvement',confidence:.95,probabilities:{pass:.02,needs_improvement:.95,unknown:.03}}; const response={model:'jev-test',usage:{},answers:{expected_output:answer,completion_evidence:answer,downstream_readiness:answer}}
 async function waitFor(check:()=>boolean){for(let i=0;i<100;i++){if(check())return;await new Promise(r=>setTimeout(r,5))}throw new Error('timeout')}
 
-beforeEach(async()=>{vi.resetModules();vi.stubGlobal('fetch',vi.fn(async()=>Response.json(response))); const {initAllHermesTables}=await import('../../packages/server/src/modules/studio/infrastructure/database/schemas'); initAllHermesTables(); await saveJevSettings('default',{apiKey:'key',workflowQualityEnabled:true})})
-afterEach(async()=>{vi.unstubAllGlobals();await deleteJevSettings('default')})
+beforeEach(async()=>{vi.resetModules();vi.stubGlobal('fetch',vi.fn(async()=>Response.json(response))); const {initAllHermesTables}=await import('../../packages/server/src/modules/studio/infrastructure/database/schemas'); initAllHermesTables(); await saveJevSettings({apiKey:'key',workflowQualityEnabled:true})})
+afterEach(async()=>{vi.unstubAllGlobals();await deleteJevSettings()})
 
 describe('workflow JEV quality review',()=>{
   async function completedExecution() {
@@ -23,8 +23,8 @@ describe('workflow JEV quality review',()=>{
   it.each(['disabled', 'no-key', 'canceled', 'expired', 'other-profile'])('makes zero provider requests when %s', async reason => {
     const h = await completedExecution()
     const { scheduleWorkflowQualityReview } = await import('../../packages/server/src/modules/studio/services/workflow/quality-review')
-    if (reason === 'disabled') await saveJevSettings('default', { workflowQualityEnabled: false })
-    if (reason === 'no-key') { await deleteJevSettings('default'); await saveJevSettings('default', { workflowQualityEnabled: true }) }
+    if (reason === 'disabled') await saveJevSettings({ workflowQualityEnabled: false })
+    if (reason === 'no-key') { await deleteJevSettings(); await saveJevSettings({ workflowQualityEnabled: true }) }
     if (reason === 'canceled') h.store.updateWorkflowRun(h.run.id, { status: 'canceled' })
     if (reason === 'expired') h.input.run = h.store.updateWorkflowRun(h.run.id, { deadline_at: Date.now() - 1 })!
     if (reason === 'other-profile') h.input.run = { ...h.run, profile: 'other' }
@@ -49,7 +49,7 @@ describe('workflow JEV quality review',()=>{
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
     if (reason.endsWith('cancel')) h.store.updateWorkflowRun(h.run.id, { status: 'canceled' })
     if (reason === 'local-cancel') cancelWorkflowQualityReviews(h.run.id)
-    if (reason === 'disabled') await saveJevSettings('default', { workflowQualityEnabled: false })
+    if (reason === 'disabled') await saveJevSettings({ workflowQualityEnabled: false })
     if (reason === 'local-cancel' || reason === 'deadline') await vi.waitFor(() => expect(requestSignal?.aborted).toBe(true))
     release(reason === 'provider-error' ? new Response('', { status: 503 }) : Response.json(response))
     await new Promise(resolve => setTimeout(resolve, 30))

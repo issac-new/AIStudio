@@ -15,7 +15,7 @@
         "runtime/roster/",
         "vendor/hermes-studio/"
       ],
-      "version": "0.7.39-studio.4",
+      "version": "0.8.0-studio.1",
       "versionCarrier": "RELEASE-NOTES.md",
       "buildCommand": "npm run build:dmg（需将 OVERLAY_UPSTREAM_ROOT 指向仓根 vendor；产物 DMG/zip，desktop 管理独立 hermes runtime）",
       "artifacts": "vendor/hermes-studio/packages/desktop/release/",
@@ -42,7 +42,7 @@
         "RELEASE-NOTES.md",
         "RELEASE-MANIFEST.json"
       ],
-      "notes": "simharness/ 推演程序仅仓内运行、不随安装包（DMG）分发（用户裁定 2026-10-26），源码包含 simharness。runtime/pricing 与 runtime/roster 是 build.mjs 强制拷贝进 dist/server/runtime 的资源树，故本模块须自带（与 agent-teams 模块重复声明是有意的：两包都要能独立构建）。standalone 注意：patches/series 含 hermes-agent 路由补丁，独立源码包内 npm run inject 需搭配 agent-teams 源码包（或直接用整体包）——如实注记。2.x 版本线已于 2026-10-27 补记收线，现行线为 0.7.39-studio.N。"
+      "notes": "simharness/ 推演程序仅仓内运行、不随安装包（DMG）分发（用户裁定 2026-10-26），源码包含 simharness。runtime/pricing 与 runtime/roster 是 build.mjs 强制拷贝进 dist/server/runtime 的资源树，故本模块须自带（与 agent-teams 模块重复声明是有意的：两包都要能独立构建）。standalone 注意：patches/series 含 hermes-agent 路由补丁，独立源码包内 npm run inject 需搭配 agent-teams 源码包（或直接用整体包）——如实注记。2.x 版本线已于 2026-10-27 补记收线，现行线为 0.8.0-studio.N（2026-10-31 底座升级批起）。"
     },
     "agent-teams": {
       "name": "agent teams（多 profile 智能体团队）",

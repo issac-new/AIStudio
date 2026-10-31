@@ -1,5 +1,4 @@
 diff --git a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
-index a3faab4c8..d1e0abb8c 100644
 --- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
 +++ b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
 @@ -7,7 +7,6 @@ import { useRoute, useRouter } from 'vue-router'
@@ -10,7 +9,7 @@ index a3faab4c8..d1e0abb8c 100644
  import { desktopBridge } from '@/utils/desktop-bridge'
  // overlay[s3]：App/MCU 两 tab 由 features.connectionsExtras 门控（模板引用须在此导入——缺失即整页渲染崩，2026-10-03 回归实锤）
  import { features } from '@/custom/features'
-@@ -18,10 +17,12 @@ const route = useRoute()
+@@ -18,7 +17,6 @@ const route = useRoute()
  const router = useRouter()
  const { t } = useI18n()
  const hasRemoteDevices = desktopBridge()?.isDesktop === true && !!desktopBridge()?.remoteDevices
@@ -18,27 +17,13 @@ index a3faab4c8..d1e0abb8c 100644
  
  function normalizeTab(value: unknown): ConnectionTab {
    if (value === 'remote' && hasRemoteDevices) return value
-+  // overlay[702]：extras 关闭时 app/mcu pane 已隐藏——任何落位（含缺省 'app' 与
-+  // 深链 tab=app/mcu）归一到唯一可用 pane，避免 activeTab 指向隐藏页签。
-+  if (!features.connectionsExtras) return 'remote'
-   if (value === 'mcu') return value
-   return 'app'
- }
-@@ -58,7 +59,7 @@ function updateTab(value: string | number) {
-     </PageHeader>
- 
-     <NTabs
--      v-if="features.connectionsExtras || isSuperAdmin"
-+      v-if="features.connectionsExtras || hasRemoteDevices"
-       :value="activeTab"
-       class="connections-tabs"
-       type="line"
-@@ -76,6 +77,8 @@ function updateTab(value: string | number) {
+@@ -79,9 +77,6 @@ function updateTab(value: string | number) {
          <RemoteDevicesPanel />
        </NTabPane>
      </NTabs>
-+    <!-- overlay[702]：extras 关且无 remote 设备时 pane 全隐藏（含 superadmin——
-+         650 的 isSuperAdmin 放行会渲染零页签空条），统一走明确空态。 -->
+-    <div v-else class="connections-empty">
+-      <span>{{ t('common.noData') }}</span>
+-    </div>
+     <!-- overlay[702]：extras 关且无 remote 设备时 pane 全隐藏（含 superadmin——
+          650 的 isSuperAdmin 放行会渲染零页签空条），统一走明确空态。 -->
      <div v-else class="connections-empty">
-       <span>{{ t('common.noData') }}</span>
-     </div>

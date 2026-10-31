@@ -1,8 +1,7 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index c8cd639cd..00c1834fb 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
-@@ -19,7 +19,11 @@ import { dshPluginUi } from '../modules/coding-agents/services'
+@@ -20,6 +20,10 @@ import { dshPluginUi } from '../modules/coding-agents/services'
  import './chat-agent-runtime-adapter'
  import './skill-files-adapter'
  import { setGroupChatServer } from '../modules/studio/routes/group-chat'
@@ -12,9 +11,8 @@ index c8cd639cd..00c1834fb 100644
 +import { userCanAccessProfile as userCanAccessProfileForCommandPost } from '../modules/studio/public/users'
  // overlay[loop-socket]: Loop Engineering Socket.IO namespace
  import { setupLoopSocketNamespace } from '../custom/loop/services/loop-socket'
- import { setChatRunServer } from '../modules/studio/public/chat-run'
- import { GroupChatServer } from '../modules/studio/public/group-chat'
-@@ -550,6 +676,19 @@ export async function bootstrap() {
+ // overlay[zcode-projection]: zcode 会话投影 Socket.IO namespace（R4-P2）
+@@ -701,6 +705,19 @@ export async function bootstrap() {
      close: () => kanbanEventsWebSocket.close(),
      forceClose: () => kanbanEventsWebSocket.forceClose(),
    })

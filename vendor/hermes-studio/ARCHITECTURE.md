@@ -12,6 +12,7 @@ Ekko Agent, Hermes Agent, and coding agents for chat, coding, and workflows.
 | Server | `packages/server/src` | HTTP API, auth, Socket.IO, SQLite stores, file access, Hermes runtime integration. |
 | Ekko Agent | `packages/ekko-agent` | Canonical Ekko runtime, profile facade, providers, tools, memory, skills, conversations, and package API. |
 | Desktop | `packages/desktop` | Electron shell, local Web UI server bootstrap, updater, bundled Python/Hermes runtime. |
+| MCU | `packages/mcu` | ESP32-C3 source projects and release firmware; board-specific ESP32-S3 firmware. |
 | Tests | `tests` | Vitest unit/integration tests and Playwright browser tests. |
 | CI | `.github/workflows` | Build, e2e, lockfile, Docker, and desktop release automation. |
 

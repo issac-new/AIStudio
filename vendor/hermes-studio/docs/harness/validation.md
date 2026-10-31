@@ -11,6 +11,33 @@ assertion failures. Keep the running app's environment unchanged.
 Use the development shell's `PATH` as well: Desktop's bundled Hermes Python can
 import its installed agent instead of the Python fixtures used by bridge tests.
 
+## Keep tests small
+
+- Put exhaustive data, protocol and state-transition cases in unit/integration
+  tests. Browser tests cover user journeys and representative request families.
+- Cover every page's responsive layout once. Test shared OS chrome with a chat,
+  crowded toolbar and configuration sidebar; platform controls and RTL belong
+  in `desktop-window-chrome.spec.ts`. Avoid multiplying every route by every OS.
+- Check appearance in the browser and theme ownership in the theme harness.
+  Do not add tests that match CSS declarations, SVG paths, class names or exact
+  Vue source strings. Keep behavior tests for navigation, permissions and state.
+- Use minimal isolated fixtures for harness rejection cases. Loading complete
+  business runtimes into every fixture duplicates the repository-wide harness.
+- Before removing coverage, identify its remaining owner. Layout/theme tests
+  live in the relevant browser suites; catalog and adapter matrices stay in
+  `native-coding-agents.test.ts` and `coding-agents-launch.test.ts`.
+
+Behavioral coverage owns the former source-layout checks:
+
+| Surface | Coverage owner |
+| --- | --- |
+| Chat navigation, menus, drawers and responsive headers | `navigation-rail`, `session-action-menu`, `desktop-window-chrome`, `header-actions-layout` browser suites |
+| File and terminal controls | `file-tree-collapse`, `terminal` browser suites |
+| Configuration navigation | all-route header sweep, `dsh-plugins`, `ekko-computer-use-settings` browser suites |
+| Workflow history, snapshot and evidence interactions | `workflow-ui` browser suite |
+| Colors, opacity, wallpaper and surfaces | theme harness and `theme-*.spec.ts` browser suites |
+| Modified session clicks and Agent identity | `session-list-item-navigation`, `chat-agent-avatar`, `native-coding-agents` unit tests |
+
 ## Always Run For PRs
 
 ```bash
@@ -24,6 +51,10 @@ npm run test:coverage
 npm run test:e2e
 npm run build
 ```
+
+Run full coverage and browser suites sequentially on local workstations. Their
+compilation and coverage work can compete for resources and trigger unrelated
+default timeouts when run together.
 
 ## Change-Type Matrix
 

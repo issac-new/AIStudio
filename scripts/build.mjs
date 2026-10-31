@@ -37,7 +37,7 @@ const bin = (pkgEntry) => `node ${resolve(upstreamNodeModules, pkgEntry)}`;
 run('node scripts/generate-openapi.mjs', upstream, 'openapi:generate → dist/server/openapi.json');
 // 2. client bundle(用 overlay config,@/custom alias + entry shim)
 run(
-  `${bin('vite/bin/vite.js')} build --config ${resolve(overlayRoot, 'vite.config.overlay.ts')}`,
+  `${bin('vite/bin/vite.js')} build --config ${resolve(overlayRoot, 'vite.config.overlay.mts')}`,
   upstream,
   'vite build (overlay config → dist/client)',
 );

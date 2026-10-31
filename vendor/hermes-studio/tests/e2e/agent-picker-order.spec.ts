@@ -1,6 +1,6 @@
 import { selectNewChatAgent, selectNewChatLaunchMode } from './new-chat-helpers'
 import { expect, test } from '@playwright/test'
-import { authenticate, mockChatSocket, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
+import { authenticate, mockChatSocket, mockExistingHermesChat, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
 
 const agentLabels = ['Ekko', 'Hermes', 'Codex', 'Qwen Code']
 
@@ -65,7 +65,7 @@ for (const mobile of [false, true]) {
 test('a saved unavailable Agent falls back to the first installed option and is restored when available', async ({ page }) => {
   await authenticate(page, TEST_ACCESS_KEY, 'research')
   await page.addInitScript(() => localStorage.setItem('hermes_new_chat_agent_v1', 'codex'))
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await mockChatSocket(page)
   let codexInstalled = false
   await page.route('**/api/agents/availability', route => route.fulfill({ json: {

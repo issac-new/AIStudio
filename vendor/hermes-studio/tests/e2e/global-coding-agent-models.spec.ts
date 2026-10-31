@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { authenticate, mockChatSocket, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
+import { authenticate, mockChatSocket, mockExistingHermesChat, mockHermesApi, TEST_ACCESS_KEY } from './fixtures'
 import { selectNewChatAgent, selectNewChatLaunchMode, sendNewChatMessage } from './new-chat-helpers'
 
 const catalog = { agentId: 'codex', name: 'Codex', status: 'ready', source: 'app-server', scope: 'available',
@@ -162,7 +162,7 @@ for (const mobile of [false, true]) for (const native of [
   if (native.agent === 'cursor') await expect(picker.getByRole('menuitemradio', { name: 'Codex 5.3', exact: true })).toBeVisible()
   await picker.getByRole('menuitemradio', { name: native.family, exact: true }).click()
   await draft.locator('.reasoning-effort-button').click()
-  await expect(page.getByRole('slider')).toHaveAttribute('aria-valuemax', String(native.levels.length - (native.alias ? 0 : 1)))
+  await expect(page.getByRole('slider')).toHaveAttribute('aria-valuemax', String(native.levels.length - 1))
   await page.getByRole('slider').focus()
   for (let i = 0; i < native.levels.length; i++) await page.keyboard.press('ArrowRight')
   await page.keyboard.press('Escape')
@@ -234,7 +234,7 @@ for (const native of [
   const draft = page.locator('.new-chat-page')
   await draft.locator('.reasoning-effort-button').click()
   const slider = page.getByRole('slider')
-  await expect(slider).toHaveAttribute('aria-valuemax', String(native.efforts.length))
+  await expect(slider).toHaveAttribute('aria-valuemax', String(native.efforts.length - 1))
   await slider.focus()
   for (let i = 0; i < native.efforts.length; i++) await page.keyboard.press('ArrowRight')
   await expect(draft.locator('.reasoning-effort-label')).toHaveText(native.label)
@@ -269,7 +269,7 @@ for (const mobile of [false, true]) test(`global draft selects native model and 
   await expect(draft.locator('.input-model-button')).toContainText('Native B')
   await draft.locator('.reasoning-effort-button').click()
   const slider = page.getByRole('slider')
-  await expect(slider).toHaveAttribute('aria-valuemax', '2')
+  await expect(slider).toHaveAttribute('aria-valuemax', '1')
   await slider.focus()
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('ArrowRight')
@@ -406,7 +406,7 @@ test('slow first discovery shows one loading indicator and does not block native
 
 test('global native choices survive reopening and remain separate from scoped choices', async ({ page }) => {
   await authenticate(page, TEST_ACCESS_KEY, 'research')
-  await mockHermesApi(page)
+  await mockExistingHermesChat(page)
   await mockChatSocket(page)
   await page.route('**/api/coding-agents/models?*', route => route.fulfill({ json: { agents: [catalog] } }))
   await openGlobalDraft(page)
@@ -455,5 +455,5 @@ test('unavailable native catalogs allow agent defaults and refreshing the model 
   await expect.poll(() => page.evaluate(() => (window as any).__PW_CHAT_SOCKET__?.emitted?.find((item: any) => item.event === 'run')?.payload.mode)).toBe('global')
   const payload = await page.evaluate(() => (window as any).__PW_CHAT_SOCKET__.emitted.find((item: any) => item.event === 'run').payload)
   expect(payload.model).toBeUndefined()
-  expect(payload.reasoning_effort).toBeUndefined()
+  expect(payload.reasoning_effort).toBe('low')
 })

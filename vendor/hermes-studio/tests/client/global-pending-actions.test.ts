@@ -29,6 +29,7 @@ const created: any[] = []
 const clipboardMock = vi.hoisted(() => ({ copyToClipboard: vi.fn(async () => true) }))
 const uiMock = vi.hoisted(() => ({ messageError: vi.fn(), messageWarning: vi.fn() }))
 const systemNotificationMock = vi.hoisted(() => ({ showSystemNotification: vi.fn(async () => true) }))
+const chatConnectionMock = vi.hoisted(() => ({ connectChatRun: vi.fn(), getChatRunSocket: vi.fn(() => null as unknown) }))
 const workflowMock = vi.hoisted(() => ({
   statusHandlers: [] as Array<(status: any) => void>,
   approveWorkflowNode: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock('@/stores/hermes/chat', () => ({ useChatStore: () => chatState }))
 vi.mock('@/stores/hermes/group-chat', () => ({ useGroupChatStore: () => groupState }))
 vi.mock('@/stores/hermes/profiles', () => ({ useProfilesStore: () => profileState }))
 vi.mock('@/stores/hermes/settings', () => ({ useSettingsStore: () => settingsState }))
+vi.mock('@/api/studio/chat', () => chatConnectionMock)
 vi.mock('@/utils/clipboard', () => clipboardMock)
 vi.mock('@/utils/completion-notification', () => systemNotificationMock)
 vi.mock('@/utils/completion-sound', () => ({ playCompletionSound: vi.fn(async () => true) }))
@@ -99,8 +101,21 @@ describe('GlobalPendingActions', () => {
     settingsState.display.notify_on_approval = false
     routeState.name = 'hermes.chat'
     vi.clearAllMocks()
+    chatConnectionMock.getChatRunSocket.mockReturnValue(null)
     settingsState.fetchSettings.mockImplementation(async () => true)
     workflowMock.statusHandlers.splice(0)
+  })
+
+  it('opens the existing chat transport on non-chat pages without replacing a connected runtime', () => {
+    routeState.name = 'hermes.settings'
+    let wrapper = mount(GlobalPendingActions)
+    expect(chatConnectionMock.connectChatRun).toHaveBeenCalledWith('default')
+    wrapper.unmount()
+    chatConnectionMock.connectChatRun.mockClear()
+    chatConnectionMock.getChatRunSocket.mockReturnValue({ connected: true })
+    wrapper = mount(GlobalPendingActions)
+    expect(chatConnectionMock.connectChatRun).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('sends privacy-safe system notifications for new direct, group, and workflow pending keys with exact navigation', async () => {

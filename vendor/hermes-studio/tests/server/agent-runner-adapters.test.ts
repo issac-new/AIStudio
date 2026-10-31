@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { createHash } from 'node:crypto'
+const mcpAlias = (ns: string, name: string) => `mcp_${createHash('sha256').update(JSON.stringify([ns, name])).digest('hex').slice(0, 40)}`
 import {
   anthropicMessageToResponses,
   normalizeResponseFunctionCall,
@@ -600,8 +602,8 @@ describe('agent runner Responses adapters', () => {
     expect(followup.tools).toEqual([
       expect.objectContaining({ name: 'tool_search' }),
       {
-        name: 'ekko_studio_browser_toolset',
-        description: 'Discover browser operations.',
+        name: mcpAlias('mcp__ekko_studio_browser', 'ekko_studio_browser_toolset'),
+        description: 'Discover browser operations. MCP tool: mcp__ekko_studio_browser.ekko_studio_browser_toolset.',
         input_schema: { type: 'object', properties: { action: { type: 'string' } }, required: ['action'] },
       },
     ])
@@ -612,7 +614,7 @@ describe('agent runner Responses adapters', () => {
       input: [], tools: [{ type: 'namespace', name: 'mcp__hermes_studio_api' }],
     }, target)
     expect(result.tools).toEqual(expect.arrayContaining([
-      expect.objectContaining({ function: expect.objectContaining({ name: 'hermes_studio_api_request' }) }),
+      expect.objectContaining({ function: expect.objectContaining({ name: mcpAlias('mcp__hermes_studio_api', 'hermes_studio_api_request') }) }),
     ]))
     expect(responseToolNamespaceForName('hermes_studio_api_request')).toBe('mcp__hermes_studio_api')
     expect(responseToolNamespaceForName('ekko_studio_api_request')).toBe('mcp__ekko_studio_api')
@@ -628,7 +630,7 @@ describe('agent runner Responses adapters', () => {
       expect.objectContaining({
         type: 'function',
         function: expect.objectContaining({
-          name: 'ekko_studio_api_openapi_get',
+          name: mcpAlias('mcp__ekko_studio_api', 'ekko_studio_api_openapi_get'),
           parameters: expect.objectContaining({
             properties: expect.objectContaining({
               profile: expect.any(Object),
@@ -641,7 +643,7 @@ describe('agent runner Responses adapters', () => {
 
     expect(responsesToAnthropicMessages(body, target).tools).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        name: 'ekko_studio_api_openapi_get',
+        name: mcpAlias('mcp__ekko_studio_api', 'ekko_studio_api_openapi_get'),
         input_schema: expect.objectContaining({
           properties: expect.objectContaining({
             profile: expect.any(Object),
@@ -664,12 +666,12 @@ describe('agent runner Responses adapters', () => {
 
     const anthropicTools = responsesToAnthropicMessages(body, target).tools
     expect(anthropicTools.map((tool: any) => tool.name)).toEqual([
-      'ekko_studio_api_openapi_get',
-      'ekko_studio_api_request',
-      'ekko_studio_browser_toolset',
-      'ekko_studio_use_toolset',
+      mcpAlias('mcp__ekko_studio_api', 'ekko_studio_api_openapi_get'),
+      mcpAlias('mcp__ekko_studio_api', 'ekko_studio_api_request'),
+      mcpAlias('mcp__ekko_studio_browser', 'ekko_studio_browser_toolset'),
+      mcpAlias('mcp__ekko_studio_use', 'ekko_studio_use_toolset'),
     ])
-    expect(anthropicTools.find((tool: any) => tool.name === 'ekko_studio_browser_toolset')).toMatchObject({
+    expect(anthropicTools.find((tool: any) => tool.name === mcpAlias('mcp__ekko_studio_browser', 'ekko_studio_browser_toolset'))).toMatchObject({
       input_schema: {
         required: ['action'],
         properties: {

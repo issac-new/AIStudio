@@ -11,26 +11,24 @@ import { resolve } from 'path'
 const ROOT = resolve(__dirname, '../..')
 const PATCH_NAME = '702-client-connections-tab-normalize.patch'
 
-function readPatch(): string {
-  return readFileSync(resolve(ROOT, 'patches', PATCH_NAME), 'utf8')
-}
-
 describe('702 connections 面板关闭态守门', () => {
   it('series 已登记 702 补丁', () => {
     expect(readFileSync(resolve(ROOT, 'patches/series'), 'utf8')).toContain(PATCH_NAME)
   })
 
   it('normalizeTab 归一考虑可用 pane：extras 关闭时缺省归一 remote，mcu 不再是合法落位', () => {
-    const p = readPatch()
-    expect(p).toContain("if (value === 'remote' && hasRemoteDevices) return value")
-    // extras 关闭分支：mcu/app pane 已隐藏，缺省归一到唯一可用 pane（remote）
-    expect(p).toMatch(/if \(!features\.connectionsExtras\) return 'remote'/)
-    expect(p).toContain("if (value === 'mcu') return value")
+    // 2026-10-31 v0.8.0 升级轮：补丁文本断言改注入态树断言（同族两例先例）
+    const tree = readFileSync(resolve(ROOT, 'vendor/hermes-studio/packages/client/src/components/hermes/connections/ConnectionsPanel.vue'), 'utf8')
+    expect(tree).toContain("if (value === 'remote' && hasRemoteDevices) return value")
+    expect(tree).toMatch(/if \(!features\.connectionsExtras\) return 'remote'/)
+    expect(tree).toContain("if (value === 'mcu') return value")
   })
 
   it('Tabs 渲染条件要求至少一个可用 pane；全隐藏走明确空态而非空页签条', () => {
-    const p = readPatch()
-    expect(p).toContain('v-if="features.connectionsExtras || hasRemoteDevices"')
-    expect(p).toContain('connections-empty')
+    // 2026-10-31 v0.8.0 升级轮：补丁文本断言改注入态树断言（重生成后补丁内部
+    // 归因可漂移——524/650/702 分摊同一文件；行为语义以树为准）
+    const tree = readFileSync(resolve(ROOT, 'vendor/hermes-studio/packages/client/src/components/hermes/connections/ConnectionsPanel.vue'), 'utf8')
+    expect(tree).toContain('v-if="features.connectionsExtras || hasRemoteDevices"')
+    expect(tree).toContain('connections-empty')
   })
 })

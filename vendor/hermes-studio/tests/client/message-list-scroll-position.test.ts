@@ -35,6 +35,7 @@ vi.mock('@/components/hermes/chat/VirtualMessageList.vue', () => ({
     name: 'VirtualMessageList',
     props: {
       messages: { type: Array, default: () => [] },
+      showEmpty: { type: Boolean, default: true },
       virtualized: { type: Boolean, default: true },
     },
     emits: ['top-reach'],
@@ -54,7 +55,7 @@ vi.mock('@/components/hermes/chat/VirtualMessageList.vue', () => ({
     },
     template: `
       <div class="virtual-message-list-stub">
-        <slot v-if="messages.length === 0" name="empty" />
+        <slot v-if="showEmpty && messages.length === 0" name="empty" />
         <slot name="before" />
         <slot name="item" v-for="message in messages" :key="message.id" :message="message" />
       </div>
@@ -281,16 +282,14 @@ describe('MessageList session scroll position', () => {
     wrapper.unmount()
   })
 
-  it('shows Ekko while the session is pending, then displays the loaded Agent', async () => {
+  it('keeps the welcome hidden until an empty session has loaded, then displays its Agent', async () => {
     const chatStore = useChatStore()
     chatStore.activeSessionId = 'pending-session'
     chatStore.activeSession = null
     const wrapper = mount(MessageList, { global: { stubs: { Transition: false } } })
     await flushSessionScroll()
 
-    expect(wrapper.get('.empty-logo').attributes('src')).toBe('/coding-agents/ekko-agent.png')
-    expect(wrapper.get('.empty-logo').attributes('alt')).toBe('Ekko')
-    expect(wrapper.get('.empty-state p').text()).toBe('chat.emptyStateAgent')
+    expect(wrapper.find('.empty-state').exists()).toBe(false)
 
     chatStore.activeSession = {
       ...makeSession('pending-session'),
@@ -299,6 +298,9 @@ describe('MessageList session scroll position', () => {
       codingAgentId: 'codex',
       messages: [],
     }
+    await flushSessionScroll()
+    expect(wrapper.find('.empty-state').exists()).toBe(false)
+    chatStore.activeSession.messagesLoaded = true
     await flushSessionScroll()
     expect(wrapper.get('.empty-logo').attributes('src')).toBe('/coding-agents/codex-openai.png')
     expect(wrapper.get('.empty-logo').attributes('alt')).toBe('Codex')
@@ -320,7 +322,7 @@ describe('MessageList session scroll position', () => {
     },
   ])('renders the $runtime logo for an empty Global Agent session', async ({ session, logo, alt }) => {
     const chatStore = useChatStore()
-    const activeSession = { ...makeSession(`empty-${alt}`), ...session, messages: [] } as Session
+    const activeSession = { ...makeSession(`empty-${alt}`), ...session, messages: [], messagesLoaded: true } as Session
     chatStore.activeSessionId = activeSession.id
     chatStore.activeSession = activeSession
 
@@ -334,6 +336,17 @@ describe('MessageList session scroll position', () => {
     const emptyLogo = wrapper.get('.empty-logo')
     expect(emptyLogo.attributes('src')).toBe(logo)
     expect(emptyLogo.attributes('alt')).toBe(alt)
+  })
+
+  it('does not show an empty welcome for history hidden by the Person tool filter', async () => {
+    const store = useChatStore()
+    store.activeSessionId = 'hidden-history'
+    store.activeSession = { ...makeSession('hidden-history'), messagesLoaded: true, messageTotal: 1,
+      messages: [{ id: 'tool', role: 'tool', content: 'Stored result', timestamp: 1, toolName: 'read_file', toolStatus: 'done' }] }
+    const wrapper = mount(MessageList, { props: { hideToolCalls: true } })
+    await flushSessionScroll()
+    expect(wrapper.find('.empty-state').exists()).toBe(false)
+    wrapper.unmount()
   })
 
   it.each([
