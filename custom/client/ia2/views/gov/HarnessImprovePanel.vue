@@ -465,6 +465,48 @@ const archiveList = computed<ArchiveSteppingStoneDto[]>(() => data.value?.archiv
 /** D11 记忆压缩/遗忘策略（纯派生；执行走既有状态按钮，人裁决）。 */
 const memoryPolicy = computed(() => data.value?.memoryPolicy ?? null)
 
+/** R8 批量复核勾选集（2026-10-31 首批执行）：孤儿退役 / stale 引用到新提案。 */
+const orphanChecked = ref<Set<string>>(new Set())
+const staleChecked = ref<Set<string>>(new Set())
+
+function toggleOrphan(id: string): void {
+  const s = orphanChecked.value
+  if (s.has(id)) s.delete(id)
+  else s.add(id)
+}
+
+function toggleStale(id: string): void {
+  const s = staleChecked.value
+  if (s.has(id)) s.delete(id)
+  else s.add(id)
+}
+
+/** 批量退役孤儿：串行调既有 setExperienceStatus（D4 决策：不扩 REST 面）。 */
+async function retireCheckedOrphans(): Promise<void> {
+  const ids = [...orphanChecked.value]
+  if (!ids.length) return
+  if (!window.confirm(L.value.batchRetireConfirm.replace('{n}', String(ids.length)))) return
+  for (const id of ids) {
+    const ok = await act(() => setWorkbenchExperienceStatus(id, 'retired'))
+    if (!ok) break
+  }
+  orphanChecked.value = new Set()
+}
+
+/** 引用 stale 经验到新建提案表单（走既有 citeExperience 同款通道并弹创建表单）。 */
+function citeCheckedStale(): void {
+  const ids = [...staleChecked.value]
+  if (!ids.length) return
+  const all = data.value?.experiences ?? []
+  for (const id of ids) {
+    if (!createForm.experienceIds.includes(id)) createForm.experienceIds.push(id)
+  }
+  const first = all.find((e) => e.id === ids[0])
+  if (first?.domain) createForm.domain = first.domain
+  staleChecked.value = new Set()
+  showCreate.value = true
+}
+
 async function calibrateNoise(p: ProposalDto): Promise<void> {
   const f = formFor(p.id)
   const runIds = f.noiseRunIds.split(/[,，\n\s]+/).map((s) => s.trim()).filter(Boolean)
@@ -1017,12 +1059,18 @@ onMounted(() => void refresh())
           <p class="hi__meta">{{ memoryPolicy.hint }}</p>
           <ul class="hi__list">
             <li v-for="s in memoryPolicy.staleAdopted" :key="s.id" :data-testid="`hi-memory-stale-${s.id}`">
+              <label><input type="checkbox" :checked="staleChecked.has(s.id)" data-testid="hi-stale-check" @change="toggleStale(s.id)" /></label>
               <code>{{ s.id }}</code>·{{ L.memoryRevalidate }}（{{ Math.round(s.ageDays) }}d）——{{ s.statement.slice(0, 120) }}
             </li>
             <li v-for="o in memoryPolicy.orphanCandidates" :key="o.id" :data-testid="`hi-memory-orphan-${o.id}`">
+              <label><input type="checkbox" :checked="orphanChecked.has(o.id)" data-testid="hi-orphan-check" @change="toggleOrphan(o.id)" /></label>
               <code>{{ o.id }}</code>·{{ L.memoryRetire }}（{{ Math.round(o.ageDays) }}d）——{{ o.statement.slice(0, 120) }}
             </li>
           </ul>
+          <div class="hi__row">
+            <button type="button" class="hi__btn" data-testid="hi-batch-retire" :disabled="orphanChecked.size === 0" @click="retireCheckedOrphans">{{ L.batchRetire }}（{{ orphanChecked.size }}）</button>
+            <button type="button" class="hi__btn" data-testid="hi-batch-cite" :disabled="staleChecked.size === 0" @click="citeCheckedStale">{{ L.batchCite }}（{{ staleChecked.size }}）</button>
+          </div>
         </details>
 
         <details v-if="archiveList.length" class="hi__details" data-testid="hi-archive">

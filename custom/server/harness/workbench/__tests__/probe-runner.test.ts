@@ -164,6 +164,7 @@ describe('spawn 韧性（瞬态故障重试一次）', () => {
       profile: 'x',
       variantTree: {},
       budgetRemainingUsd: 5,
+      k: 1,
       retryDelayMs: 0,
       spawnRun: async (prompt, env, timeoutMs) => {
         calls += 1
@@ -237,5 +238,35 @@ describe('stream-json 证据通道', () => {
     })
     expect(none.ok).toBe(false)
     expect(none.error).toContain('未产生证据')
+  })
+})
+
+// R4（2026-10-31 首批执行）：k 样本语义。
+describe('R4 k 样本', () => {
+  it('k=2 → 每题 2 样本（samples 数组长度 2）；k 缺省 2', async () => {
+    const { runProbeTasks } = await import('../probe-runner')
+    const mk = (k?: number) => runProbeTasks({
+      prompts: [{ taskId: 't1', prompt: 'p' }],
+      baseHome: '/tmp', profile: 'x', variantTree: {},
+      budgetRemainingUsd: 5, ...(k != null ? { k } : {}), retryDelayMs: 0,
+      spawnRun: fakeTraceSpawn({ prompt: 100, completion: 50 }),
+    })
+    const r2 = await mk()
+    expect(r2.samples.t1).toHaveLength(2)
+    const r1 = await mk(1)
+    expect(r1.samples.t1).toHaveLength(1)
+  })
+
+  it('预算中途耗尽 → 已产样本保留、stoppedBy=budget_stop', async () => {
+    const { runProbeTasks } = await import('../probe-runner')
+    const r = await runProbeTasks({
+      prompts: [{ taskId: 't1', prompt: 'p' }],
+      baseHome: '/tmp', profile: 'x', variantTree: {},
+      budgetRemainingUsd: 1.5, k: 3, retryDelayMs: 0,
+      estimatePerTaskUsd: 1,
+      spawnRun: fakeTraceSpawn({ prompt: 100, completion: 50 }),
+    })
+    expect(r.ok).toBe(true)
+    expect(r.samples.t1.length).toBeGreaterThanOrEqual(1)
   })
 })

@@ -521,8 +521,19 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
           message: `选中候选的历史回归失败 ${probe.evidence.regression.failed} 项`,
         })
       }
-      if (probe.evidence.statisticallyInsufficient) {
-        warnings.push({ code: 'statistical_insufficient', message: '评测采样 k<2，统计上不足' })
+      // R4（2026-10-31 D4）：k=1 恒 warning（单样本无法区分运气与能力）；
+      // pass@1 升而 pass@k 降＝靠运气通过——divergence 告警（两读数齐全才判）。
+      if (probe.evidence.statisticallyInsufficient || (probe.evidence.k ?? 1) < 2) {
+        warnings.push({ code: 'statistical_insufficient', message: '评测采样 k<2，统计上不足（单样本无法区分运气与能力）' })
+      }
+      if (probe.evidence.passAt1 != null && probe.evidence.passAtK != null
+        && probe.evidence.k != null && probe.evidence.k >= 2
+        && probe.contrast?.passAt1Delta != null && probe.contrast.passAt1Delta > 0
+        && probe.evidence.passAtK < probe.evidence.passAt1) {
+        warnings.push({
+          code: 'pass_at_k_divergence',
+          message: `pass@1 ${(probe.evidence.passAt1 * 100).toFixed(1)}% 高于 pass@k ${(probe.evidence.passAtK * 100).toFixed(1)}%（k=${probe.evidence.k}）——首样本通过但多样本不稳定，增益可能靠运气而非能力`,
+        })
       }
 
       // ---- RRSI 选择端正则化（2026-10-23 吸收轮）：噪声地板 + 成本规则 ----
@@ -593,7 +604,36 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
           }
         }
 
-        // ---- CHASE 反事实门（D2，2026-10-31 吸收轮）：协议级捷径检验 ----
+        // ---- R9 技能差分（2026-10-31 三批）：「装了但不知有没有用」----
+    // Agent Skills Can Be Harmful（2608.11888）实证 307 例技能诱导失效；
+    // skills 面晋级无差分读数 → warning（差分＝有/无技能同集增益差，人工绑定或后续自动编排）。
+    if (proposal.surfaceKey === 'skills' && proposal.skillDifferential == null) {
+      warnings.push({
+        code: 'skill_undifferentiated',
+        message: 'skills 面晋级未绑定技能差分读数——「看似相关」技能可致功能失效（307 例实证）；建议对同一探测集跑有技能/无技能两态对比',
+      })
+    } else if (proposal.surfaceKey === 'skills' && proposal.skillDifferential?.delta != null && proposal.skillDifferential.delta <= 0) {
+      warnings.push({
+        code: 'skill_negative_delta',
+        message: `技能差分为 ${(proposal.skillDifferential.delta * 100).toFixed(1)}pp（无技能反而更好）——该技能可能是负担（过度验证/重型流水线失效模式）`,
+      })
+    }
+
+    // ---- R6 heldout 门（2026-10-31 二批）：独立新验证数据的准入规则（2610.18813） ----
+      if (gain != null && gain > 0) {
+        if (proposal.heldout == null) {
+          const msg = '未绑定密封留出集读数（R6）：晋级证据缺独立新验证数据——留出集防进化环过拟合'
+          if (cfg.requireHeldout) blockers.push({ code: 'heldout_missing', message: msg })
+          else warnings.push({ code: 'heldout_missing', message: msg })
+        } else if (noiseDelta != null && proposal.heldout.passRate < (probe.evidence.passAt1 ?? 0) - noiseDelta) {
+          blockers.push({
+            code: 'heldout_regression',
+            message: `留出集通过率 ${(proposal.heldout.passRate * 100).toFixed(1)}% 低于 evolve 通过率超噪声带 δ——增益未迁移到独立验证数据（AHE 教训：无留出的进化环过拟合）`,
+          })
+        }
+      }
+
+      // ---- CHASE 反事实门（D2，2026-10-31 吸收轮）：协议级捷径检验 ----
         // 语义：候选 harness 在「语义保持、协议变换」的变体集上的运行读数。
         // 原始增益为正但变体增益 ≤ 噪声带 ⇒ 增益绑定在原协议的可利用面（任务名/
         // 返回格式/错误注入），判捷径；变体读数缺席默认 warning 交人工裁决。
@@ -699,6 +739,21 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
         message: `${unknown.length} 项约束未验证：${unknown.map((c) => c.id).join('、')}（unknown 不等于通过）`,
       })
     }
+
+    // ---- R12b 约束单层消融（2026-10-31 二批；Masked Erosion 2610.38392 实证） ----
+    // 接受门只看任务分时，冗余护栏的删除被其余护栏掩护（411 循环实证：40 任务批次全失守）。
+    // 本层输出「消融准备清单」：每个约束最近一次被显式 fail 消融检验的轮次；
+    // 从未 fail 过（全 pass 历史）＝零对抗证据 → 人工复核提示（防静默删除的最低成本对治）。
+    const passOnly = constraintChecks!.filter((c) => c.status === 'pass')
+    if (passOnly.length > 0) {
+      const neverFailed = passOnly.filter((c) => !c.detail?.includes('ablation:fail'))
+      if (neverFailed.length === passOnly.length && passOnly.length >= 2) {
+        warnings.push({
+          code: 'constraint_ablation_due',
+          message: `${passOnly.length} 项约束全部 pass 且无任何 fail 历史（零对抗证据）——建议做一轮单层消融（逐个约束关闭后复测），防被其余护栏掩护的静默删除（Masked Erosion）`,
+        })
+      }
+    }
   }
 
   const diversity = candidateDiversity(proposal.variants)
@@ -784,6 +839,8 @@ export interface RsiConfig {
   requireConstraints: boolean
   /** true=未绑定反事实变体运行直接拦（缺省 false，warning 交人工裁决）。 */
   requireCounterfactual: boolean
+  /** true=未绑定密封留出读数直接拦（R6，缺省 false）。 */
+  requireHeldout: boolean
 }
 
 function envInt(name: string, fallback: number): number {
@@ -817,6 +874,7 @@ export function rsiConfig(): RsiConfig {
     requireAttribution: process.env.HARNESS2_RSI_REQUIRE_ATTRIBUTION === '1',
     requireConstraints: process.env.HARNESS2_RSI_REQUIRE_CONSTRAINTS === '1',
     requireCounterfactual: process.env.HARNESS2_RSI_REQUIRE_COUNTERFACTUAL === '1',
+    requireHeldout: process.env.HARNESS2_RSI_REQUIRE_HELDOUT === '1',
   }
 }
 
@@ -1043,6 +1101,41 @@ export function pruneSignal(surfaceProposals: Proposal[], pruneN: number): boole
   return deltas.length > 0 && Math.max(...deltas) <= 0
 }
 
+// ---- R12a（2026-10-31 首批执行）：验证信号分级（验证层级理论 arXiv 2607.07663） ----
+
+export type VerificationTier = 'command' | 'heldout' | 'regression' | 'judge' | 'none'
+
+const TIER_ORDER: Record<VerificationTier, number> = { command: 4, heldout: 3, regression: 2, judge: 1, none: 0 }
+
+/**
+ * 从提案的探测证据推导本次晋级实际用到的最强验证层：
+ * command（命令式验收器运行）> heldout（密封留出，R6 后接）> regression（普通 eval 回归）> judge（LLM 判分主导）> none。
+ * 依据：改进强度与验证信号强度绑定（2607.07663）——面板须显式区分，弱层连续晋级是进化健康度信号。
+ */
+export function verificationTierOf(proposal: Proposal): VerificationTier {
+  const selected = composedVariant(proposal)
+  if (!selected) return 'none'
+  const probe = proposal.probes.find((x) => x.variantId === selected.id && x.status === 'recorded' && x.evidence)
+  const ev = probe?.evidence
+  if (!ev) return 'none'
+  const tiers: VerificationTier[] = []
+  if (ev.regression != null) {
+    // 回归运行含命令式验收器（eval 侧 outcome command 类型）则升 command 层；
+    // ProbeMetrics 无该直读位——以 regression 存在为 regression 层，command 层由
+    // heldout/command 专用证据位判定（R6 落地后 heldout 进位）。
+    tiers.push('regression')
+  }
+  if (ev.heldout != null) tiers.push('heldout')
+  // 判分主导＝无回归/留出硬证据而 judgeOnline（LLM 判分参与）
+  if (tiers.length === 0 && ev.judgeOnline) tiers.push('judge')
+  if (tiers.length === 0) tiers.push('none')
+  return tiers.sort((a, b) => TIER_ORDER[b] - TIER_ORDER[a])[0]
+}
+
+export function tierAtLeast(tier: VerificationTier, floor: VerificationTier): boolean {
+  return TIER_ORDER[tier] >= TIER_ORDER[floor]
+}
+
 // ---- D7/D10（2026-10-31 RSI P2 批）：提案端全历史注入＋删除提案模板 ----
 
 export interface EvolutionHistoryEntry {
@@ -1200,6 +1293,7 @@ export function evolutionSurfaceReport(
       costUsd: ev?.evidence.costUsd ?? null,
       noiseDelta: p?.noise?.delta ?? null,
       passAt1Delta: ev?.contrast?.passAt1Delta ?? null,
+      verificationTier: p?.promotion?.verificationTier ?? (p ? verificationTierOf(p) : 'none'),
     }
   })
   const openStatuses: ProposalStatus[] = ['draft', 'submitted', 'approved', 'probing', 'composed']
@@ -1214,6 +1308,16 @@ export function evolutionSurfaceReport(
     failedProbes: mine.reduce((n, p) => n + p.probes.filter((x) => x.status === 'failed').length, 0),
     stalled: stallDetection(mine, cfg.stallWindow),
     pruneSuggested: pruneSignal(mine, cfg.pruneN),
+    weakVerificationStreak: (() => {
+      const live = timeline.filter((r) => !r.rolledBack)
+      let streak = 0
+      for (let i = live.length - 1; i >= 0; i -= 1) {
+        const tier = live[i].verificationTier ?? 'none'
+        if (tier === 'judge' || tier === 'none') streak += 1
+        else break
+      }
+      return streak
+    })(),
     timeline,
   }
 }
@@ -1235,6 +1339,10 @@ export function evolutionReport(
     },
     surfaces,
     unexercised: surfaceKeys.filter((key) => !exercised.has(key)),
+    healthWarnings: surfaces
+      .filter((s) => s.weakVerificationStreak >= 3)
+      .map((s) => ({ surfaceKey: s.surfaceKey, code: 'weak_verification_streak' as const, streak: s.weakVerificationStreak })),
+    familyGains: [], // service 层 overview 后处理补（loop 纯函数层拿不到 EvalSet.family）
     retirementCandidates: retirementCandidates(surfaces),
   }
 }

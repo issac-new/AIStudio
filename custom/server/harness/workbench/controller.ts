@@ -8,7 +8,7 @@ import { collectSurfaces } from './surface-registry'
 import {
   ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
   createProbes, createProposal, decideProposal, deleteProposal, importExperiences, listExperiences,
-  listProposals, overview, promoteProposal, recordConstraints, recordProbe, rollbackProposal, setExperienceStatus,
+  attachHeldout, createGapDrivenProposals, listProposals, markSurfaceApplied, surfaceArtifactsOf, overview, promoteProposal, recordConstraints, recordProbe, rollbackProposal, setExperienceStatus,
   startAutoProbe, submitProposal, suggestProposal,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
@@ -223,6 +223,65 @@ router.post('/proposals/:id/probes/:probeId/record', async (ctx) => {
         actor: actorOf(ctx, b),
       }),
     }
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// R7（2026-10-31 三批）：advisory 面建议产物导出＋人审应用标记。
+router.get('/proposals/:id/surface-artifacts', async (ctx) => {
+  try {
+    ok(ctx, { artifacts: surfaceArtifactsOf(ctx.params.id) })
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+router.post('/proposals/:id/surface-applied', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = bodyOf(ctx)
+  try {
+    ok(ctx, { proposal: await markSurfaceApplied(ctx.params.id, actorOf(ctx, b)) })
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// R5（2026-10-31 二批）：RSI 内核缺口 → 提案来源（只读桥）。
+router.get('/gap-suggestions', async (ctx) => {
+  try {
+    const { readCapabilityGaps, gapToDraft } = await import('./gap-source')
+    const gaps = readCapabilityGaps()
+    ok(ctx, {
+      gaps: (gaps ?? []).slice(0, 20).map((g) => ({ ...g, draft: gapToDraft(g) })),
+      available: gaps != null,
+    })
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+router.post('/gap-suggestions/import', async (ctx) => {
+  if (writeDenied(ctx)) return
+  try {
+    ok(ctx, { proposals: await createGapDrivenProposals() })
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// R6（2026-10-31 二批）：绑定密封留出集读数（只回 {runId,n,passRate}，内容不出库）。
+router.post('/proposals/:id/heldout', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = bodyOf(ctx)
+  try {
+    ok(ctx, {
+      proposal: await attachHeldout(ctx.params.id, {
+        setId: String(b.setId ?? ''),
+        answers: Array.isArray(b.answers) ? b.answers : [],
+        actor: actorOf(ctx, b),
+      }),
+    })
   } catch (e) {
     fail(ctx, e)
   }

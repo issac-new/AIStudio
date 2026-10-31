@@ -237,6 +237,8 @@ export interface ProbeTaskRunOptions {
   profile: string
   variantTree: Record<string, string | null>
   budgetRemainingUsd: number
+  /** 每题样本数（R4/D4 匹配预算口径；缺省 2，预算不足时由调用方降 1）。 */
+  k?: number
   estimatePerTaskUsd?: number
   timeoutPerTaskMs?: number
   spawnRun?: SpawnRun
@@ -273,37 +275,46 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
   let estimatedTasks = 0
   let done = 0
   const retryDelay = opts.retryDelayMs ?? 5_000
+  // R4（2026-10-31 D4 匹配预算口径）：每题 k 个样本（缺省 2）；
+  // 样本数>1 时 pass@1 才是能力读数、pass@k 是稳定性读数——单样本探测无法区分
+  // 「靠运气通过」与「稳定能力」。
+  const k = Math.max(1, Math.trunc(opts.k ?? 2))
   for (const task of opts.prompts) {
-    const startedAt = Date.now()
-    const env = {
-      HERMES_HOME: join(homeDir, 'home'),
-      HERMES_RUN_TRACE_DIR: tracesDir,
-      HERMES_PROBE_PROFILE: opts.profile,
+    const pickedForTask: Array<{ sessionId?: string; evidence: Evidence }> = []
+    for (let sampleIdx = 0; sampleIdx < k; sampleIdx += 1) {
+      const startedAt = Date.now()
+      const env = {
+        HERMES_HOME: join(homeDir, 'home'),
+        HERMES_RUN_TRACE_DIR: tracesDir,
+        HERMES_PROBE_PROFILE: opts.profile,
+      }
+      // 瞬态故障（模型 API 抖动）重试一次；两败才定性失败（走查实录：单次抖动曾报废整场探测）
+      let spawned = await spawn(task.prompt, env, timeout)
+      if (!spawned.ok) {
+        if (retryDelay > 0) await new Promise((r) => setTimeout(r, retryDelay))
+        spawned = await spawn(task.prompt, env, timeout)
+      }
+      if (!spawned.ok) {
+        return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 运行失败（已重试一次）：${spawned.error}`, homeDir }
+      }
+      // 证据双通道：stream-json stdout（新 CLI）优先，jsonl trace（旧通道）后备
+      const stream = spawned.stdout ? evidenceFromStreamJson(spawned.stdout) : null
+      const trace = stream ? null : readNewestTrace(tracesDir, startedAt - 1000)
+      const picked = stream ?? trace
+      if (!picked) {
+        return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 第 ${sampleIdx + 1} 样本未产生证据（stream-json 与 trace 通道均缺席）`, homeDir }
+      }
+      pickedForTask.push({ sessionId: picked.sessionId, evidence: picked.evidence })
+      const costUsdOfPicked = picked.evidence.efficiency?.costUsd ?? null
+      if (costUsdOfPicked == null) {
+        costUsd += estimate
+        estimatedTasks += 1
+      } else {
+        costUsd += costUsdOfPicked
+      }
+      if (costUsd >= opts.budgetRemainingUsd) break
     }
-    // 瞬态故障（模型 API 抖动）重试一次；两败才定性失败（走查实录：单次抖动曾报废整场探测）
-    let spawned = await spawn(task.prompt, env, timeout)
-    if (!spawned.ok) {
-      if (retryDelay > 0) await new Promise((r) => setTimeout(r, retryDelay))
-      spawned = await spawn(task.prompt, env, timeout)
-    }
-    if (!spawned.ok) {
-      return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 运行失败（已重试一次）：${spawned.error}`, homeDir }
-    }
-    // 证据双通道：stream-json stdout（新 CLI）优先，jsonl trace（旧通道）后备
-    const stream = spawned.stdout ? evidenceFromStreamJson(spawned.stdout) : null
-    const trace = stream ? null : readNewestTrace(tracesDir, startedAt - 1000)
-    const picked = stream ?? trace
-    if (!picked) {
-      return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 未产生证据（stream-json 与 trace 通道均缺席）`, homeDir }
-    }
-    samples[task.taskId] = [{ sessionId: picked.sessionId, evidence: picked.evidence }]
-    const costUsdOfPicked = picked.evidence.efficiency?.costUsd ?? null
-    if (costUsdOfPicked == null) {
-      costUsd += estimate
-      estimatedTasks += 1
-    } else {
-      costUsd += costUsdOfPicked
-    }
+    samples[task.taskId] = pickedForTask
     done += 1
     opts.onProgress?.(done, costUsd, estimatedTasks)
     if (costUsd >= opts.budgetRemainingUsd) {

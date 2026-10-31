@@ -13,7 +13,7 @@ import {
   composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
   findBenchmarkLeakage, findGraderMarkers, findGraderMarkersInPath, hypothesisRetries,
   leakageBlockers, maxEditCount, paretoReportOf, probeCost, proposalArchive,
-  proposerEvolutionHistory, deletionProposalTemplate, pruneSignal,
+  proposerEvolutionHistory, deletionProposalTemplate, pruneSignal, verificationTierOf,
   rsiConfig, sha256, stallDetection, submitReadiness,
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
@@ -249,7 +249,45 @@ export function overview(): {
     proposals: proposals.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)).slice(0, 50),
     champions: store.champions,
     experiences,
-    evolution: evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions),
+    evolution: (() => {
+      const report = evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions)
+      // R10（2026-10-31 三批）：任务族聚合增益（HCAST 范式）——族→平均增益＋背离警示。
+      // family 标签来自 eval 集登记（EvalSet.family），探测证据带 setId 可溯源。
+      const familyDeltas = new Map<string, number[]>()
+      for (const p2 of store.proposals) {
+        for (const probe of p2.probes) {
+          if (probe.status !== 'recorded' || probe.contrast?.passAt1Delta == null) continue
+          const set = getSet(probe.evidence?.setId ?? '')
+          const fam = set?.family
+          if (!fam) continue
+          const arr = familyDeltas.get(fam) ?? []
+          arr.push(probe.contrast.passAt1Delta)
+          familyDeltas.set(fam, arr)
+        }
+      }
+      const familyGains = [...familyDeltas.entries()].map(([family, deltas]) => ({
+        family,
+        avgDelta: Number((deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(4)),
+        rounds: deltas.length,
+      }))
+      // 背离警示：面级平均增益>0 而某族平均<0 → 该面在该族退化（单任务特化信号）
+      const warnings = [...report.healthWarnings]
+      for (const s of report.surfaces) {
+        const live = s.timeline.filter((r) => !r.rolledBack && r.passAt1Delta != null)
+        if (live.length === 0) continue
+        const surfaceAvg = live.reduce((a, r) => a + (r.passAt1Delta ?? 0), 0) / live.length
+        for (const fg of familyGains) {
+          if (fg.rounds >= 2 && surfaceAvg > 0 && fg.avgDelta < 0) {
+            warnings.push({
+              surfaceKey: s.surfaceKey,
+              code: 'family_specialization' as const,
+              detail: `面级平均增益 +${(surfaceAvg * 100).toFixed(1)}pp 但族「${fg.family}」平均 ${ (fg.avgDelta * 100).toFixed(1)}pp（${fg.rounds} 次探测）——增益可能来自单任务特化（R10）`,
+            })
+          }
+        }
+      }
+      return { ...report, familyGains, healthWarnings: warnings }
+    })(),
     archive: proposalArchive(store.proposals),
     memoryPolicy: memoryConsolidationPolicy(store.experiences),
     meta: {
@@ -568,10 +606,22 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
   const history = proposerEvolutionHistory(store.proposals, store.champions, input.surfaceKey)
   // D10（2026-10-31 P2 批）：剪枝命中时给删除型提案模板（替代一句「优先做减法」）
   const deletion = deletionProposalTemplate(store.proposals, input.surfaceKey, cfg)
+  // R8（2026-10-31 首批执行）：加权检索取代静态前 3——
+  // score = confidenceScore（HP-7 半衰期现算）× 面域匹配（同面 1.0/跨面 0.5）× domain 匹配（同域 1.0/异域 0.7）
+  const staleRefreshList: string[] = []
   const adoptedExperiences = store.experiences
-    .filter((e) => e.status === 'adopted' && (e.surfaceKey === null || e.surfaceKey === input.surfaceKey))
+    .filter((e) => e.status === 'adopted')
+    .map((e) => {
+      const fresh = experienceFreshness(e)
+      const surfaceW = e.surfaceKey === input.surfaceKey ? 1.0 : e.surfaceKey === null ? 0.7 : 0.5
+      const domainW = (e.domain ?? 'general') === (input.domain ?? 'general') ? 1.0 : 0.7
+      const score = fresh.confidenceScore * surfaceW * domainW
+      if (fresh.band === 'stale' && surfaceW >= 0.7) staleRefreshList.push(`- ${e.statement.slice(0, 160)}（上次验证 ${Math.round(fresh.ageDays)} 天前）`)
+      return { e, score }
+    })
+    .sort((a, b) => b.score - a.score)
     .slice(0, 3)
-    .map((e) => `- ${e.statement.slice(0, 200)}`)
+    .map(({ e }) => `- ${e.statement.slice(0, 200)}`)
 
   const baseContent = input.targetPath ? readHomeFileSafe(String(input.targetPath)) : null
   const sectionMode = baseContent != null
@@ -594,7 +644,8 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     '',
     `该面进化状态：已采纳 ${round} 轮（编辑预算 b_t=${editBudget}，本轮起草改动文件数必须 ≤ ${editBudget}）；${stalled ? '搜索停滞（连续提案无采纳，考虑换思路）；' : ''}该面提案总数 ${mine.length}。`,
     `\n【该面进化全史（D7）】${history.summary}\n${history.entries.length ? history.entries.map((e) => `- [${e.kind === 'adopted' ? '已采纳' : e.kind === 'rejected' ? '被拒' : '已回滚'}] ${e.proposalId}「${e.title}」：${e.detail}`).join('\n') : '（该面尚无历史提案——首提案属结构性探索，带内增益可豁免）'}\n纪律：被拒/回滚假设禁止换皮重提；低分祖先常是垫脚石，可显式改造其思路（注明来源 proposal id）。`,
-    adoptedExperiences.length ? `\n已采纳经验（可参考）：\n${adoptedExperiences.join('\n')}` : '',
+    adoptedExperiences.length ? `\n已采纳经验（按置信×保鲜×面域加权取 top3）：\n${adoptedExperiences.join('\n')}` : '',
+    staleRefreshList.length ? `\n【记忆整理（D11）】以下 stale 采纳经验建议在本提案中引用以刷新验证：\n${staleRefreshList.slice(0, 5).join('\n')}` : '',
     deletion.suggested ? `\n${deletion.scaffold}` : '',
     (!deletion.suggested && failedHypotheses.length) ? `\n同面已失败假设（禁止换皮重提）：\n${failedHypotheses.join('\n')}` : '',
     '',
@@ -828,6 +879,35 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
   })
 }
 
+/**
+ * R6（2026-10-31 二批执行）：绑定密封留出集读数（heldout-store scoreSet 形状）。
+ * 只接受 {runId,n,passRate}——内容永不出库（held-out-store 防探测契约）。
+ */
+export async function attachHeldout(
+  id: string,
+  input: { setId: string; answers: Array<{ index: number; answer: string }>; actor?: string },
+): Promise<ProposalView> {
+  const { scoreSet } = await import('../../heldout/held-out-store')
+  const r = scoreSet(input.setId, input.answers, input.actor?.trim() || `workbench:${id}`)
+  if (!r.ok) {
+    const problems = (r as { ok: false; problems: string[] }).problems
+    throw new ServiceError(400, problems.join('；'))
+  }
+  return mutateStore((store) => {
+    const p = requireProposal(store, id)
+    if (p.status === 'promoted' || p.status === 'rolled_back') {
+      throw new ServiceError(409, `当前状态 ${p.status} 不可绑定留出读数`)
+    }
+    p.heldout = {
+      runId: `${input.setId}@${Date.now()}`,
+      n: r.result.n,
+      passRate: r.result.passRate,
+    }
+    p.updatedAt = nowIso()
+    return view(store, p)
+  })
+}
+
 export interface RecordConstraintsInput {
   checks: Array<{
     id: string
@@ -880,6 +960,88 @@ export async function recordConstraints(id: string, input: RecordConstraintsInpu
     }
     p.updatedAt = nowIso()
     return view(store, p)
+  })
+}
+
+/**
+ * R5（2026-10-31 二批执行）：缺口驱动提案——读 RSI 内核 gap_register capability 条目，
+ * 映射为 workbench draft（evidenceRefs 引 gap id）。只读桥；内核文件缺席返回空数组不猜。
+ */
+export async function createGapDrivenProposals(limit = 5): Promise<ProposalView[]> {
+  const { readCapabilityGaps, gapToDraft } = await import('./gap-source')
+  const gaps = readCapabilityGaps()
+  if (gaps == null || gaps.length === 0) return []
+  const created: ProposalView[] = []
+  for (const gap of gaps.slice(0, limit)) {
+    const draft = gapToDraft(gap)
+    try {
+      created.push(await createProposal({
+        title: draft.title,
+        hypothesis: draft.hypothesis,
+        surfaceKey: draft.surfaceKey,
+        targetPath: null,
+        mode: 'sequential',
+        domain: draft.domain,
+        budgetCapUsd: DEFAULT_BUDGET_CAP_USD,
+        evidenceRefs: draft.evidenceRefs,
+        variants: [],
+        createdBy: 'gap-bridge',
+      }))
+    } catch {
+      // 单条失败（如面不可用）不阻断其余缺口
+    }
+  }
+  return created
+}
+
+/**
+ * R7（2026-10-31 三批执行）：advisory 面冠军的结构化建议产物导出。
+ * memory 面＝经验条目清单 JSON（供既有记忆管理面人审导入）；tool_guidance 面＝
+ * 工具描述覆盖片段（供 tool contract 面人审应用）。只导出不直写——advisory 面无写盘授权。
+ */
+export function surfaceArtifactsOf(id: string): { surfaceKey: SurfaceKey; kind: string; payload: string } | null {
+  const store = readStore()
+  const p2 = store.proposals.find((x) => x.id === id)
+  if (!p2 || p2.status !== 'promoted') return null
+  const selected = composedVariant(p2)
+  if (!selected) return null
+  if (p2.surfaceKey === 'memory') {
+    // memory 面：候选内容按行拆条目（每行一条记忆建议）
+    const lines = variantContent(selected).split('\n').map((l) => l.trim()).filter((l) => l.length > 0)
+    return {
+      surfaceKey: 'memory',
+      kind: 'memory-items',
+      payload: JSON.stringify({ source: id, items: lines.map((text, i) => ({ id: `mem-${id}-${i}`, text })) }, null, 2),
+    }
+  }
+  if (p2.surfaceKey === 'tool_guidance') {
+    return {
+      surfaceKey: 'tool_guidance',
+      kind: 'tool-guidance-override',
+      payload: variantContent(selected),
+    }
+  }
+  return null
+}
+
+/**
+ * R7：标记某晋级的建议产物已由既有管理面应用（人审后调用）。
+ * applied=false 的 advisory 面冠军从此有了可追踪的应用通道；回读验证＝
+ * 下一轮提案基线即新产物生效态（面板提示用户新建验证提案）。
+ */
+export async function markSurfaceApplied(id: string, actor: string): Promise<ProposalView> {
+  const who = String(actor ?? '').trim()
+  if (!who) throw new ServiceError(400, '标记应用必须记录操作人')
+  return mutateStore((store) => {
+    const p2 = requireProposal(store, id)
+    if (p2.status !== 'promoted') throw new ServiceError(409, `当前状态 ${p2.status} 不可标记应用`)
+    if (!['memory', 'tool_guidance'].includes(p2.surfaceKey)) {
+      throw new ServiceError(400, `面 ${p2.surfaceKey} 不在 R7 执行回路范围（memory/tool_guidance）`)
+    }
+    if (!p2.promotion) throw new ServiceError(409, '晋级记录缺失')
+    p2.promotion.appliedVia = 'via-surface'
+    p2.updatedAt = nowIso()
+    return view(store, p2)
   })
 }
 
@@ -997,6 +1159,7 @@ export async function promoteProposal(
       applied,
       targetPath: p.targetPath ?? undefined,
       backupPath,
+      verificationTier: verificationTierOf(p),
     }
     p.status = 'promoted'
     p.updatedAt = now
@@ -1228,6 +1391,9 @@ async function runAutoProbeJob(
       }
     })
 
+    // R4（D4 匹配预算口径）：k=2 默认；预算不足以支撑双样本全程时降 1（如实降级不造假）。
+    const perTask = limits.estimate
+    const affordableK = remaining >= tasks.length * perTask * 2 ? 2 : 1
     const result = await runProbeTasks({
       prompts: tasks,
       baseHome: hermesHome(),
@@ -1235,6 +1401,7 @@ async function runAutoProbeJob(
       variantTree: tree,
       budgetRemainingUsd: Math.max(0, remaining),
       estimatePerTaskUsd: limits.estimate,
+      k: affordableK,
       spawnRun: opts.spawnRun,
       onProgress: (done, costUsd, estimatedTasks) => {
         job.costUsd = costUsd
@@ -1344,6 +1511,84 @@ async function runAutoProbeJob(
       note: `一键自动探测${result.stoppedBy ? `（${result.stoppedBy}）` : ''}`,
       actor: opts.actor ?? 'workbench-auto',
     })
+
+    // ---- R2（2026-10-31 二批执行）：三类证据自动供给 ----
+    // ①噪声：未改动 harness 同集×2（baseline 运行×2 → calibrateNoise 自动标定）；
+    // ②等预算：未改动 harness 同集×1（预算与候选相当 → equalBudgetBaseline）；
+    // 反事实（③）依赖 R3 变体集的运行编排，属下一轮（本批供变换器本体）。
+    // 未改动 harness＝variantTree 全 null 的物化（probe-runner materializeHome 语义）。
+    try {
+      const pNow = readStore().proposals.find((x) => x.id === id)
+      if (pNow) {
+        const noiseNeeded = pNow.noise == null
+        const eqNeeded = (() => {
+          const sel = composedVariant(pNow)
+          const pr2 = sel ? pNow.probes.find((x) => x.variantId === sel.id && x.status === 'recorded') : null
+          return pr2?.evidence?.equalBudgetBaseline == null
+        })()
+        const runsWanted = (noiseNeeded ? 2 : 0) + (eqNeeded ? 1 : 0)
+        if (runsWanted > 0) {
+          const nullTree: Record<string, string | null> = {}
+          for (const key of Object.keys(tree)) nullTree[key] = null
+          const baseRemaining = pNow.budgetCapUsd - (probeCost(pNow).total + job.costUsd)
+          const baseRunIds: string[] = []
+          for (let r = 0; r < runsWanted; r += 1) {
+            const baseResult = await runProbeTasks({
+              prompts: tasks,
+              baseHome: hermesHome(),
+              profile,
+              variantTree: nullTree,
+              budgetRemainingUsd: Math.max(0, baseRemaining),
+              estimatePerTaskUsd: limits.estimate,
+              k: 1,
+              spawnRun: opts.spawnRun,
+            })
+            if (!baseResult.ok || Object.keys(baseResult.samples).length === 0) break
+            const baseReplay = await runReplayEval(
+              {
+                setId: evalSet.id,
+                samples: baseResult.samples,
+                target: { profile, harnessRef: `${id}:baseline:${r}` },
+                actor: 'workbench-auto',
+                note: `R2 基线运行 ${id}:${r}${noiseNeeded && r < 2 ? '（噪声标定）' : '（等预算）'}`,
+              },
+              { judge: { config: loadEvalConfig(), ...(opts.judgeAsk ? { ask: opts.judgeAsk } : {}) }, outcomeCtx: probeOutcomeContext() },
+            )
+            if (baseReplay.ok) baseRunIds.push(baseReplay.run.id)
+          }
+          await mutateStore((st) => {
+            const pp = requireProposal(st, id)
+            if (noiseNeeded && baseRunIds.length >= 2) {
+              const m1 = readEvalEvidence(baseRunIds[0])
+              const m2 = readEvalEvidence(baseRunIds[1])
+              if (m1 && m2 && m1.passAt1 != null && m2.passAt1 != null) {
+                pp.noise = {
+                  runIds: baseRunIds.slice(0, 2),
+                  setId: m1.setId,
+                  delta: Number((Math.abs(m1.passAt1 - m2.passAt1) / 2).toFixed(4)),
+                  method: 'half-range',
+                  samples: [m1.passAt1, m2.passAt1],
+                  computedAt: nowIso(),
+                }
+              }
+            }
+            if (eqNeeded && baseRunIds.length >= 1) {
+              const sel = composedVariant(pp)
+              const target = sel ? pp.probes.find((x) => x.variantId === sel.id && x.status === 'recorded') : null
+              if (target?.evidence) {
+                const eqIdx = noiseNeeded && baseRunIds.length >= 3 ? 2 : Math.min(baseRunIds.length - 1, noiseNeeded ? baseRunIds.length - 1 : 0)
+                const mEq = readEvalEvidence(baseRunIds[eqIdx])
+                if (mEq) target.evidence.equalBudgetBaseline = { runId: mEq.evalRunId, setId: mEq.setId, passAt1: mEq.passAt1 }
+              }
+            }
+            pp.updatedAt = nowIso()
+          })
+        }
+      }
+    } catch {
+      // R2 证据供给失败不阻断主探测（证据可后补；如实静默跳过——note 不撒谎）
+    }
+
     await mutateStore((st) => {
       const pp = requireProposal(st, id)
       const pr = pp.probes.find((x) => x.variantId === variantId)
