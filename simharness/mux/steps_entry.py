@@ -8,22 +8,27 @@
   旧表 13=评审卡审批/14=派发系分，系更早版 26 步映射，与 V8.2 正本不符）。
 
 路由与页签勘误（2026-10-06 差异审计 P1 落版；2026-10-07 页签词表对齐实测；
-2026-10-17 V8.37 按时序六阶段 IA 全表重锚；2026-10-18 V8.44 按左侧导航+阶段页签全表重锚）：
+2026-10-17 V8.37 按时序六阶段 IA 全表重锚；2026-10-18 V8.44 按左侧导航+阶段页签全表重锚；
+2026-10-31 run24 前按 v1.0.4-overlay 基线重锚：日常/推演两模式＋37 签＋导演台）：
 当前产品事实（单一事实源=overlay custom/client/ia2/{IaSideNav.vue,stage-meta.ts,
 stage-tabs.ts,routes.ts,sim-tabs.ts}）：
-- 左侧导航五组：常用（流程总览 /app、工作台 /app/collab、看板 /app/board、
-  审批收件箱 /app/inbox）＋流程（①搭建 /app/stage/setup、
-  ②需求 /app/stage/reqs、③分析设计 /app/stage/design、④开发 /app/stage/build、
-  ⑤验收 /app/stage/accept、⑥治理 /app/stage/govern）＋整轮（全流程推演 /app/sim）
-  ＋专题（流程架构/本体/评测/技能治理）＋管理（系统设置）。
+- 侧栏两模式（2026-10-20 日常/推演拆分后）：日常模式=常用（流程总览 /app、
+  工作台 /app/collab、看板 /app/board、审批收件箱 /app/inbox）＋流程（①搭建
+  /app/stage/setup、②需求 /app/stage/reqs、③分析设计 /app/stage/design、
+  ④开发 /app/stage/build、⑤验收 /app/stage/accept、⑥治理 /app/stage/govern）
+  ＋专题（流程架构/本体/评测/技能治理/IDE）＋页脚系统设置；全流程推演不再占用
+  日常侧栏「整轮」组，改为顶栏独立模式（进入后侧栏切推演组七项）。
 - 检索统一在顶部搜索框及其弹窗（Cmd/Ctrl+K）：五类对象+命令+组合筛选；
   /app/search 为兼容深链，自动打开同一弹窗，不再是独立页面。
-- 六阶段页单层页签（?tab=，共 29 签）：① steps/org/accounts/teams/assets/agents；
-  ② reqs/docs/g1/preflight/launch；③ tasks/analysis/g2/schedule；
-  ④ today/board/approvals/risk/quality；⑤ overview/trace/delivery/uat/g5/cases；
-  ⑥ clearance/issues/audit/metrics/docs/gateLog。
-- 全流程推演（/app/sim，原仿真中心）四签兄弟路由：运行总览/监督面板/运行监控/证据库；
-  运行编排/推演设置为左侧栏独立入口（旧 ?tab=orchestration|settings 兼容重定向）；
+- 六阶段页单层页签（?tab=，共 37 签）：① steps/org/accounts/teams/assets/agents（6）；
+  ② reqs/docs/g1/preflight（4，旧 ?tab=launch 回退 preflight）；③ tasks/analysis/g2/schedule（4）；
+  ④ today/board/approvals/risk/quality（5）；⑤ overview/trace/delivery/uat/g5/cases（6）；
+  ⑥ clearance/issues/posture/secAudit/audit/trust/reviewGov/improve/metrics/docs/gateLog/
+  proactivity（12，按待处理/审计与质量/改进与度量三组聚类）。
+- 全流程推演（/app/sim，原仿真中心）四内容签：导演台（默认签，原「运行总览」）/
+  监督面板/运行监控/证据库；运行编排/业务地图/推演设置为独立页（旧
+  ?tab=orchestration|settings 自动改道）；导演台运行详情=/app/sim/director/:runId，
+  图 run 详情实体路由=/app/runs/:runId（RunDetailView，2026-10-31 恢复）；
   交付健康与需求追溯已迁⑤验收。
 - 治理中心壳已解体：/app/gov 与 /app/gov/* 全部 redirect 到阶段页并带 ?tab=；
   旧 /app/runs、/app/eng、/app/journey、?tab=trace/accounts/observatory 等

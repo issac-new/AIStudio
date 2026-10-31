@@ -63,5 +63,5 @@ test-report.md §8 增评测处置链行、§9 判据 16；release-plan.md §7 �
 
 ## 后续批量项（挂账，列清单待批）
 
-- §2.7 其余行模板候选：analysis.md（系分稿）、app-registry.md、org.md、governance-report.md、completeness-check.md。编码行（步 18）交付物=分支+执行输出原文，无可模板化结构，不立模板（原文不得修饰，模板化反而诱导粉饰）。
+- §2.7 其余行模板候选：analysis.md（系分稿）、app-registry.md、org.md、governance-report.md、completeness-check.md、test-design 三行（UC 案例设计/INT 集成案例/QUALITY 质量合规检验——2026-10-31 对账补登，此前清单漏列）。编码行（步 18）交付物=分支+执行输出原文，无可模板化结构，不立模板（原文不得修饰，模板化反而诱导粉饰）。
 - ~~mux/tests/r18-capability.test.sh 陈旧断言 FAIL~~（2026-10-08 已修：断言对齐生成器/审计器现行文案，测试意图不变，三段全过）。
