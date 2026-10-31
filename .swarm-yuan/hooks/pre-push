@@ -1,18 +1,44 @@
 #!/bin/sh
-# qgate 本地推送前评估（2026-10-30 HelixHarness 吸收轮）
+# qgate 本地推送前评估（2026-10-30 HelixHarness 吸收轮；2026-10-31 推送范围修正）
 #
 # 缺口：.qgate/gates/*.yaml 的 triggers 只是声明，本仓提交链从不调用——48 道门框架完整
 # 但治理面空转（外部对比时最容易被指出的「有框架、无强制」）。
-# 位置选择：pre-push 而非 pre-commit——提交保持轻量，推送前给一次本地判定；执行面取
-# `qgate plan --include-disabled` 的 L0 硬件集（静态检查，约 1.5s/门），不依赖当前
-# profile 的 disable 面，也不跑 engineering.basic-check 这类全量测试门（留给 merge 前
-# 的 npm test）。
+# 判定面：只判「本次推送的提交范围」（pre-push stdin 给的 local/remote sha 之间），
+# 不再读工作树状态——main 工作树的 vendor/ 是 inject 注入态（预期脏、永不入提交），
+# 按工作树判会把正常推送和分支删除误拦。执行面取 `qgate plan --include-disabled` 的
+# L0 硬件集（静态检查，约 1.5s/门），不依赖当前 profile 的 disable 面，也不跑
+# engineering.basic-check 这类全量测试门（留给 merge 前的 npm test）。
 # 档位：默认拦截（QGATE_PREPUSH_ENFORCE=1）；置 0 显式降级为只诊断。
 # 关闭本次评估：QGATE_PREPUSH_SKIP=1。证据落 .qgate/（运行态,不入库）。
 # 与 CI 的分工：.github/workflows/qgate.yml 只测框架自身（本仓全量测试在 CI 不可复现），
 # 本仓治理面的唯一自动执行点就是这里。
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+# pre-push 的 stdin 是引用清单；先落临时文件：qgate 读它算推送范围，
+# 末尾 git-lfs 还要读同一份（直接消费会让 LFS 拿不到输入）。
+_stdin=$(mktemp "${TMPDIR:-/tmp}/qgate-prepush.XXXXXX" 2>/dev/null) || _stdin=""
+trap 'rm -f "$_stdin"' EXIT INT TERM
+if [ -n "$_stdin" ]; then cat > "$_stdin"; fi
+
+_changed=""
+_has_commit=0
+if [ -n "$_stdin" ]; then
+  while read -r _local_ref _local_sha _remote_ref _remote_sha; do
+    case "$_local_sha" in "" | 0000000000000000000000000000000000000000) continue ;; esac
+    _has_commit=1
+    _base="$_remote_sha"
+    if [ "$_remote_sha" = "0000000000000000000000000000000000000000" ] \
+      || ! git cat-file -e "$_remote_sha^{commit}" 2>/dev/null; then
+      _base=$(git merge-base "$_local_sha" origin/main 2>/dev/null || true)
+    fi
+    if [ -n "$_base" ] && git cat-file -e "$_base^{commit}" 2>/dev/null; then
+      _changed="$_changed $(git diff --name-only "$_base" "$_local_sha" 2>/dev/null | tr '\n' ' ')"
+    fi
+  done < "$_stdin"
+fi
+_changed=$(printf '%s\n' $_changed | sed '/^[[:space:]]*$/d' | sort -u | paste -sd, -)
+
 if [ "${QGATE_PREPUSH_SKIP:-0}" != "1" ] && [ -f "$ROOT/custom/qgate/src/cli.ts" ]; then
   QG="$ROOT/custom/qgate/dist/cli.js"
   if [ ! -f "$QG" ] || [ "$ROOT/custom/qgate/src/cli.ts" -nt "$QG" ]; then
@@ -24,24 +50,30 @@ if [ "${QGATE_PREPUSH_SKIP:-0}" != "1" ] && [ -f "$ROOT/custom/qgate/src/cli.ts"
     fi
   fi
   if [ -n "$QG" ]; then
-    _qg_rc=0
-    for _g in $( cd "$ROOT" && node "$QG" plan --include-disabled 2>/dev/null | LC_ALL=C awk '/\[L0\]/ {print $1}' ); do
-      # intent-drift 是「按任务登记」门：没有 .qgate/registers/task-intent.json 时
-      # 没有可对账的意图，跳过并明示；有登记则照常强制执行。
-      if [ "$_g" = "L0.intent-drift" ] && [ ! -f "$ROOT/.qgate/registers/task-intent.json" ]; then
-        echo "[qgate] L0.intent-drift 跳过：无按任务意图登记（登记后自动纳入强制）。" >&2
-        continue
+    if [ "$_has_commit" = "0" ]; then
+      echo "[qgate] pre-push 跳过：本次只删除引用，没有提交内容可判。" >&2
+    elif [ -z "$_changed" ]; then
+      echo "[qgate] pre-push 跳过：本次推送没有文件变更。" >&2
+    else
+      _qg_rc=0
+      for _g in $( cd "$ROOT" && node "$QG" plan --include-disabled --changed "$_changed" 2>/dev/null | LC_ALL=C awk '/\[L0\]/ {print $1}' ); do
+        # intent-drift 是「按任务登记」门：没有 .qgate/registers/task-intent.json 时
+        # 没有可对账的意图，跳过并明示；有登记则照常强制执行。
+        if [ "$_g" = "L0.intent-drift" ] && [ ! -f "$ROOT/.qgate/registers/task-intent.json" ]; then
+          echo "[qgate] L0.intent-drift 跳过：无按任务意图登记（登记后自动纳入强制）。" >&2
+          continue
+        fi
+        # 判定输出走 stderr：pre-push 的 stdout 在部分传输下会被透传给远端。
+        ( cd "$ROOT" && node "$QG" run "$_g" --trigger pre_commit --include-disabled --changed "$_changed" 1>&2 ) || _qg_rc=1
+      done
+      if [ "$_qg_rc" -ne 0 ]; then
+        if [ "${QGATE_PREPUSH_ENFORCE:-1}" = "1" ]; then
+          echo "[qgate] pre-push 存在非 PASS 判定，按默认强制档拒绝推送（QGATE_PREPUSH_ENFORCE=0 可降级为告警）。" >&2
+          echo "        查看：node custom/qgate/dist/cli.js status --fresh / explain <gateId>" >&2
+          exit 1
+        fi
+        echo "[qgate] pre-push 存在非 PASS 判定（QGATE_PREPUSH_ENFORCE=0 只告警）；置 1 即拦截。" >&2
       fi
-      # 判定输出走 stderr：pre-push 的 stdout 在部分传输下会被透传给远端。
-      ( cd "$ROOT" && node "$QG" run "$_g" --trigger pre_commit --include-disabled 1>&2 ) || _qg_rc=1
-    done
-    if [ "$_qg_rc" -ne 0 ]; then
-      if [ "${QGATE_PREPUSH_ENFORCE:-1}" = "1" ]; then
-        echo "[qgate] pre-push 存在非 PASS 判定，按默认强制档拒绝推送（QGATE_PREPUSH_ENFORCE=0 可降级为告警）。" >&2
-        echo "        查看：node custom/qgate/dist/cli.js status --fresh / explain <gateId>" >&2
-        exit 1
-      fi
-      echo "[qgate] pre-push 存在非 PASS 判定（QGATE_PREPUSH_ENFORCE=0 只告警）；置 1 即拦截。" >&2
     fi
   else
     echo "[qgate] pre-push 跳过：dist 缺失且 tsc 不可用（npm run qgate:build 后重试）" >&2
@@ -49,4 +81,4 @@ if [ "${QGATE_PREPUSH_SKIP:-0}" != "1" ] && [ -f "$ROOT/custom/qgate/src/cli.ts"
 fi
 
 command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\n%s\n\n" "This repository is configured for Git LFS but 'git-lfs' was not found on your path. If you no longer wish to use Git LFS, remove this hook by deleting the 'pre-push' file in the hooks directory (set by 'core.hookspath'; usually '.git/hooks')."; exit 2; }
-git lfs pre-push "$@"
+git lfs pre-push "$@" < "${_stdin:-/dev/null}"
