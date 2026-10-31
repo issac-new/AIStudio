@@ -70,17 +70,20 @@ if [ "$STEP" = all ] || [ "$STEP" = inject ]; then
     || { echo "✗ clean/inject 失败——按输出排查后重跑"; exit 1; }
 fi
 
-# ── C. agent 补丁的运行时副本部署 ──
+# ── C. agent 运行时副本部署（manifest 通道）──
+# 2026-11-01 修正：旧版逐文件 cp 自仓外旧兄弟 upstream 树——单仓整合后该
+# 兄弟树已退役为本地缓存，路径失效即静默跳过。改走仓内正本通道 deploy-agent-runtime
+# （与 mx-up 自愈同源：runtime/ 模板 → $SR/hermes-agent-src，manifest 52 文件，
+# 幂等、内容级核对），补丁与新增未跟踪文件（completion_contract.py 类）一并覆盖。
 if [ "$STEP" = all ] || [ "$STEP" = deploy ]; then
-  echo "--- C. hermes-agent 运行时副本（内容级核对）---"
-  for f in tools/approval_context.py tools/approval_gateway_wait.py gateway/kanban_watchers_dispatcher.py hermes_cli/kanban_db.py hermes_cli/kanban_parser.py hermes_cli/kanban.py tools/file_tools.py; do
-    src="$OV/../upstream/hermes-agent/$f"; dst="$SR/hermes-agent-src/$f"
-    if [ -f "$src" ] && [ -d "$(dirname "$dst")" ]; then
-      if cmp -s "$src" "$dst"; then echo "  = $f（已一致）"; else cp "$src" "$dst" && echo "  ↻ $f 已部署"; fi
-    else
-      echo "  ? $f 源或目标缺席——deploy 通道核对" >&2
-    fi
-  done
+  echo "--- C. hermes-agent 运行时副本（deploy-agent-runtime manifest 通道）---"
+  if [ -f "$OV/scripts/deploy-agent-runtime.mjs" ]; then
+    ( cd "$OV" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$SR/hermes-agent-src" ) \
+      || { echo "✗ deploy-agent-runtime 失败——按输出排查后重跑"; exit 1; }
+  else
+    echo "✗ $OV/scripts/deploy-agent-runtime.mjs 缺席——deploy 通道核对" >&2
+    exit 1
+  fi
 fi
 
 # ── D. escalate 开关 ──
