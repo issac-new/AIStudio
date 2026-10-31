@@ -28,6 +28,10 @@
 
 Playwright recordVideo 章节化实拍日常工作台：六阶段页签巡览／看板建卡→抽屉→审批面→催办条全链／审批收件箱／统一聊天与房间时间线／Cmd+K 检索。产物落仓外（本仓 rule 8 禁新增二进制；沿并行批先例目录），manifest 随 spec 引用路径。
 
+### 六、挂账登记（收尾批发现未修）
+
+**看板聚合/单板双源不一致（幽灵卡）**：收官走查实录——同一页面内 `/api/hermes/kanban/overview`（24 卡）不含 t_ea687287，而看板 DOM 以其为首卡渲染（三发三中点击抽屉不开：taskClick 按 taskRefs 解析不到该卡 ref）。定性：overview 聚合端点与单板列表端点数据分歧（服务端聚合缓存/partial 回落链域），DOM 渲染源与点击解析源不同步。本批处置：探针 E2 加次卡重试防御（两卡皆不开才判红）；直修留专项（方向：doRefreshOverview 聚合优先/N+1 回落两路的数据源对齐与 overview 缓存失效策略）。锚点：custom/client/shared/store/workspace.ts doRefreshOverview + 本轮 /tmp/ghost.mjs 对账实录。
+
 ## 2. 决策记录
 
 1. **409 判定用消息话形而非新增错误类型**（Mechanical）：CLI 拒绝消息稳定以「cannot X for Y / is not in …」开头（request-review/unblock 实测两例），在 catch 处判定改动面最小；给 execKanbanMutation 引入错误类型需动 vendor 服务层多点，收益不抵风险。
