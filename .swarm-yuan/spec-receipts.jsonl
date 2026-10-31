@@ -23,3 +23,5 @@
 {"at":"2026-10-31T01:26:04Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"9e4660cdb5b89d0aafc0f0df4db7f9b1e11cc514","commit":"5712f6b02"}
 {"at":"2026-10-31T01:44:17Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"90365a009875c3700354f589c7f77696e7b9906b","commit":"310001eec"}
 {"at":"2026-10-31T01:52:44Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"8fb9e7f374bd87f33e570de28540903cf7e357c0","commit":"57b8817d7"}
+{"at":"2026-10-31T01:57:08Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"e61db47d56c04d9b6c169c559f09c4039aae96ee","commit":"85d7059d7"}
+{"at":"2026-10-31T01:57:09Z","spec":"docs/superpowers/specs/2026-10-31-ide-workspace-regression-fixes.md","receipt":"06a8aa0c34eabd2160fddf1f0baa96daa21ea3fb","commit":"85d7059d7"}
