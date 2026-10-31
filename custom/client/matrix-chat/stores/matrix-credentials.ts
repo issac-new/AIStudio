@@ -27,8 +27,12 @@ export function getMatrixCredentials(): MatrixCredentials | null {
   const userId = localStorage.getItem(MATRIX_KEYS.userId)
   const deviceId = localStorage.getItem(MATRIX_KEYS.deviceId)
   const homeserverUrl = localStorage.getItem(MATRIX_KEYS.homeserverUrl)
-  if (!accessToken || !userId || !deviceId || !homeserverUrl) return null
-  return { accessToken, userId, deviceId, homeserverUrl }
+  // 2026-10-31 日常工作台回归批②：deviceId 为协议可选字段，网关免密自动登录链
+  // （patch 382 / bridgeCredentialsFromGateway）按设计写空串（matrix-client.ts 头注
+  // 「空 deviceId 的 client 走 /sync 正常」，opts 侧已做 falsy 跳过）——校验器不得
+  // 因空 deviceId 判无凭据，否则自动登录会话的房间画布恒「未认证」（走查实录）。
+  if (!accessToken || !userId || !homeserverUrl) return null
+  return { accessToken, userId, deviceId: deviceId ?? '', homeserverUrl }
 }
 
 export function clearMatrixCredentials(): void {

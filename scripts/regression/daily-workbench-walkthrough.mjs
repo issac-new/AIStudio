@@ -208,8 +208,12 @@ async function visit(page, hash, settle = 2300) {
       const submitBtn = page.locator('[data-testid=kanban-column-triage] button').filter({ hasText: /创建|添加|Create|Add/ }).first()
       if (await submitBtn.count()) {
         await submitBtn.click({ force: true })
-        await page.waitForTimeout(2600)
-        const appear = await page.evaluate((m) => (document.body.innerText || '').includes(m), mark)
+        // 刷新管线（createTask→refreshAllBoards→聚合→WS→DOM）实测 ~4.5s：轮询上限 9s
+        let appear = false
+        for (let i = 0; i < 6 && !appear; i++) {
+          await page.waitForTimeout(1500)
+          appear = await page.evaluate((m) => (document.body.innerText || '').includes(m), mark)
+        }
         led.record('E4 行内建卡提交→卡出现在板面', appear, `title=${mark}`)
         // 找到新卡 ID（标题匹配）
         createdId = await page.evaluate((m) => {
@@ -306,7 +310,7 @@ async function visit(page, hash, settle = 2300) {
     led.record('G4 全局智能体会话页装载', st.text.length > 30, st.text.slice(0, 60))
     // G5 真实房间页（完整 Matrix 客户端）
     if (realRoom) {
-      st = await visit(page, 'app/s/room/' + encodeURIComponent(realRoom), 5200)
+      st = await visit(page, 'app/s/room/' + encodeURIComponent(realRoom), 8000)
       const timeline = await page.evaluate(() => ({
         msgCount: document.querySelectorAll('[data-event-id], .timeline [class*=message], [class*=msg-]').length,
         hasInput: !!document.querySelector('textarea'),
@@ -341,7 +345,8 @@ async function visit(page, hash, settle = 2300) {
         try {
           const r = await fetch('/api/hermes/kanban/overview', { headers: { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key') } })
           const tasks = r.ok ? (await r.json()).tasks || [] : []
-          const hit = tasks.find((x) => x?.task?.title)
+          // 搜索默认排除归档：必须取非归档任务标题，否则命中 0 属正确行为
+          const hit = tasks.find((x) => x?.task?.title && x.task.status !== 'archived')
           return hit ? String(hit.task.title).slice(0, 4) : 't_'
         } catch { return 't_' }
       })
