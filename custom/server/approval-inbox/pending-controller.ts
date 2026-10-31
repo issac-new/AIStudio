@@ -582,27 +582,27 @@ router.post('/:id/decide', async (ctx) => {
   // 点击成功却无历史记录，回落驱动 decide 才落账）。裁决走 human-gate store 权威
   // decide（appendApprovalLog＋HUMAN_GATE_EVENTS 投影同源，single source）。
   if (id.startsWith('hgate:')) {
+    // 2026-10-31 恢复轮随批 K19 收敛：新块一律走 lib/http（fail/ok），存量键名不改
     if (decision !== 'approve' && decision !== 'reject') {
-      const msg = 'hgate 决策须为 approve|reject'
-      fail(ctx, 400, msg, { extra: { detail: msg } })
+      fail(ctx, 400, 'hgate 决策须为 approve|reject')
       return
     }
     try {
       const req = humanGateDecide(id, decision, actor, note)
       if (!req) {
-        const msg = '批准单不存在或已裁决'
-        fail(ctx, 404, msg, { extra: { detail: msg } })
+        fail(ctx, 404, '批准单不存在或已裁决')
         return
       }
       ok(ctx, { request: req, ...(req.warnings ? { warnings: req.warnings } : {}) })
     } catch (error) {
       const e = error as Error & { status?: number; code?: string }
-      fail(ctx, e.status ?? 500, e.message, { code: e.code, extra: { detail: e.message } })
+      fail(ctx, e.status ?? 500, e.message, e.code ? { code: e.code } : {})
     }
     return
   }
 
-  fail(ctx, 400, 'id 前缀须为 fleet: / review: / hgate:', { extra: { detail: 'id 前缀须为 fleet: / review: / hgate:' } })
+  ctx.status = 400
+  ctx.body = { ok: false, detail: 'id 前缀须为 fleet: / review: / hgate:' }
 })
 
 router.get('/history', async (ctx) => {

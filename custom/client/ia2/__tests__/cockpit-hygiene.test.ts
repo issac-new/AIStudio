@@ -32,7 +32,9 @@ describe('cockpit hygiene', () => {
       'views/OrchestrateView.vue', 'components/SpecList.vue', 'components/SpecDetail.vue',
       'adapters/orchestrate.ts', 'views/scenes/EngScene.vue', 'components/flow/RunCanvas.vue',
       'views/gov/GovClusterSection.vue', 'views/gov/GovSessionHealthSection.vue',
-      '../loop/runcenter/views/RunCenterView.vue', '../loop/runcenter/views/RunDetailView.vue',
+      // RunDetailView 2026-10-31 按用户裁决恢复（图 run 详情+回放），移出删除清单；
+      // RunCenterView（运行中心列表页）维持退役。
+      '../loop/runcenter/views/RunCenterView.vue',
     ]
     for (const p of removed) expect(existsSync(resolve(__dirname, '..', p)), p).toBe(false)
   })

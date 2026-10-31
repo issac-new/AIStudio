@@ -86,8 +86,8 @@ const EXPECTED_NAMES = [
   'ia2.search',
   'ia2.shell',
   // B1（2026-10-16 推演中心壳·三中心重构波 2 首件）：六签名入账（需求冻结+
-  // 详设重审通过——本快照变更即该评审的显式变更点）；ia2.runs/ia2.runDetail
-  // 保留在账（降为重定向记录，兼容期一个版本周期，A13 升格移除）
+  // 详设重审通过——本快照变更即该评审的显式变更点）；ia2.runs 保留重定向
+  // （A13 升格移除）；ia2.runDetail 2026-10-31 恢复为图 run 详情组件（用户裁决）
   'ia2.sim',
   'ia2.simDelivery',
   'ia2.simDirectorRun',

@@ -25,10 +25,10 @@
 
 | ID | 任务 | 来源 | 当前代码事实 | 优先级 |
 |---|---|---|---|---|
-| LG-01 | 恢复 graph run 详情/回放/检查器入口（loop run、任务抽屉 RunLinks、编辑器试跑三条入口） | P2 Task 6/7、P4 验收 | 三条入口都跳 `ia2.runDetail`；该路由重定向 `/app/sim?run=`（`custom/client/ia2/routes.ts:479-486`），`SimCenterView` 只把 `run-sim-director-*` 当导演 run，其余图 run 无详情/回放面 | P0 |
-| LG-02 | 运行中心 UI 去留裁决：恢复 peek/attach、业务阶段列、收件箱两态，或正式退役并改文档 | P2 计划、spec §7B.1 | `RunCenterView`/`RunDetailView` 已删；`store/runs.ts` 的 `archiveRun`/`pendingInboxRuns`/`fetchMetrics` 无生产消费者 | P1 |
+| LG-01 | 恢复 graph run 详情/回放/检查器入口（loop run、任务抽屉 RunLinks、编辑器试跑三条入口） | P2 Task 6/7、P4 验收 | **已修（2026-10-31 恢复批，用户裁决）**：RunDetailView/RunGraphCanvas/RunTimeline/NodeInspector 五件套自 250e058d9^ 恢复，`ia2.runDetail` 改回实体路由（spec `2026-10-31-restore-graph-run-detail.md`） | ~~P0~~ 已闭环 |
+| LG-02 | 运行中心 UI 去留裁决：恢复 peek/attach、业务阶段列、收件箱两态，或正式退役并改文档 | P2 计划、spec §7B.1 | 部分收敛（2026-10-31 恢复批）：详情/回放面已恢复（LG-01），**列表页**仍退役待裁决；`store/runs.ts` 部分死 API 待 LG-28 清理 | P1 |
 | LG-03 | 审批面统一：拒绝原因、specified 指定人、always-allow | P2 #27/#28、P4 T9 | 服务端 `stampApproverIdentity` 有效；活跃 `useDecisionActions` 只发 boolean；带 comment/指定人的 `runcenter/ApprovalPanel.vue` 成孤儿 | P1 |
-| LG-04 | 恢复运行导出 UI 入口 | P2 #30 | `GET /export` 与 `runRest.exportRun` 在，无视图调用 | P2 |
+| LG-04 | 恢复运行导出 UI 入口 | P2 #30 | **已修（2026-10-31 恢复批）**：导出按钮随 RunDetailView 头部恢复（Blob 下载 run-<id>.json，测试断言在案） | ~~P2~~ 已闭环 |
 | LG-05 | GraphSpec 模板实例化与 meta 预览 | P4 T5、P3 T6 | 服务端 `body.template` 支持；`LoopCreateWizard` 不传 template、不展示 meta | P2 |
 | LG-06 | 舰队审批专属 UI 重建或正式降级 | P4 A2 | `CockpitFleetGrid` 不存在；仅通知下拉/通用审批有 fleet 动作 | P2 |
 | LG-07 | 运行/规格列表分页与静默截断 | P2 #21、P3 T6 | `SimOrchestrationView` 直接 `slice(0, 50)`，无总数/翻页 | P2 |
@@ -70,7 +70,7 @@
 
 | 矛盾 | 证据 |
 |---|---|
-| P4 ledger 称 #21/#23/#29/#30「已修」，对应视图/测试已随运行中心删除 | 删除提交 `250e058d9`；`custom/client/ia2/__tests__/cockpit-hygiene.test.ts` 断言不存在 |
+| P4 ledger 称 #21/#23/#29/#30「已修」，对应视图/测试已随运行中心删除 | 删除提交 `250e058d9`；**2026-10-31 恢复批已按用户裁决恢复详情/回放面（#29/#30 相关），列表页维持退役** |
 | 多视图设计写「设计定稿待实施」，代码已实施后又拆除 | `2026-09-16-loop-graph-multiview-design.md:3`；merge `6383fa398`；拆除 `d14557675`/`03e053e8c` |
 | P3 R4 走查锚点大量指向已删除文件 | `RunListTable.vue`、`RunCenterView.vue`、`InboxPanel.vue` 均不存在 |
 | P4 §5.2 称自动归档文档已回写，spec 原文仍要求 Triage/自动归档 | `2026-09-09-loop-graph-aihub-redesign-design.md` §7B.4；`InboxView.vue` |
