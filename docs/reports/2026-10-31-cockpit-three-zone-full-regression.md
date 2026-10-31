@@ -8,9 +8,9 @@
 
 1. **页面与功能盘点完成**：路由注册链现场生成 118 条路由，其中页面 77、重定向 41；六阶段页签 37 个；可访问状态 155 个（118 路由 + 37 页签）。页面清单见附录 A。
 2. **三区全量回归通过**：壳层 23/23、日常工作区 75/75、IDE 工作区 11/11、全流程推演 7/7、写回路与权限矩阵 16/16；全量路由扫 155/155 访问态到达，180 项检查 0 缺陷（并行轮曾出现 1 次 kanban WebSocket 握手 P2，本会话最终轮未复现，重连后恢复）。
-3. **本轮修复**：8 类走查装具缺陷（固定等待误判、视图切换器空排除、落地稳定窗、左栏折叠、权限回退误判、整页重载执行上下文、看板 E2 交取卡、⌘K 首按重试）已修；服务端 `PATCH /api/hermes/kanban/:id` 状态机拒绝由并行批次补丁 713 修为 409 `state_transition_rejected`，本轮活体验证通过（修复前 500）。
+3. **本轮修复**：8 类走查装具缺陷（固定等待误判、视图切换器空排除、落地稳定窗、左栏折叠、权限回退误判、整页重载执行上下文、看板 E2 交取卡、⌘K 首按重试）已修；服务端 PATCH 状态机拒绝（713/714）统一 409 `state_transition_rejected`（含 running 手工设置），写路径 admin profile 越权收窄（716），WS upgrade 异常回 503（715），架构棘轮 2 红清零，后端 rawGain 启动阻断修复。活体验证见 4.5。
 4. **实拍证据**：155 张全量页面截图、四段精选录屏（全量路由、回归演示、写回路、Matrix 实时）、各面台账与缺陷记录；清单见第 5 节。
-5. **未验证/挂账**：网关 liveness 重启（环境/平台稳定性）、kanban WebSocket 单次 P2、厂商基线 `kanban-controller.test.ts` 1 例既有失败、模型/外部服务依赖的对话生成与真实推演运行未纳入自动回归。详见 4.3/4.4。
+5. **未做项收口**：PATCH running→409、WS upgrade 守卫、admin 写范围、架构棘轮 2 红、后端启动阻断、推演设置/地图标注写回路、历史 run 26/26 回放、真实模型/Agent 回合、Matrix 媒体均已补验（4.5）；仅网关 liveness 根因未改运行时、外部联邦/通话/外网资产无环境。详见 4.3/4.4。
 
 ## 2. 页面与功能盘点
 
@@ -113,20 +113,36 @@
 - 修复：并行批次补丁 `patches/713-server-kanban-patch-state-conflict.patch`，注入态 controller 返回 **409** `{code:"state_transition_rejected"}`，守门测试 `custom/__tests__/kanban-patch-409-guard.test.ts`。
 - 本轮活体验证：`PATCH /api/hermes/kanban/t_0ea691d9?board=default` → **409**，响应体含 `state_transition_rejected`（修复前同一操作 500）。decision 见 `.swarm-yuan/decisions.jsonl`（本批让渡同题补丁，不重复落第二个 713）。
 
-### 4.3 观察项与挂账
+### 4.3 观察项与挂账（含未做项收口状态）
 
-1. **网关 liveness 重启**：回归窗口内多次出现 `Gateway event loop missed 3 consecutive liveness probes ... exit 75`，另见外部 SIGTERM；表现为 `/agent-health/detailed` 502、依赖网关的接口短时 502。属 hermes-agent 运行时/平台稳定性问题，与本轮 UI 缺陷分离；建议单独立项排查 SQLite 读连接竞争与多板 watcher 轮询。
-2. **kanban WebSocket 偶发 P2**：并行轮在收件箱页记录 1 次 `ws://.../api/hermes/kanban/events ... Connection closed before receiving a handshake`，重连后恢复；本会话最终轮 155 态未复现。判为偶发，未修；若复现需检查 upgrade 阶段异常处理。
-3. **`PATCH status=running` 仍回 500**：显式拒绝（fail-loud，补丁 692）且脚本按 ≥400 验收；语义上也可归 409，属同类 API 卫生余量，未在本批扩大改动。
-4. **全量测试 2 例既有棘轮失败**：`npm test` 7043 通过 / 2 失败 / 11 跳过；失败为 `custom/__tests__/architecture-ratchet.test.ts` 的 `ctx.body=`（1196 > 1193）与 `ok: false`（877 > 874），main 基线同败，非本批引入。厂商基线 `kanban-controller.test.ts` 另 1 例既有失败（admin 读详情放行与上游测试口径不一致）。
-5. **桌面宠物/语音/外链等关闭项**：按功能开关设计不渲染或走透明空态，未验收其内容。
+1. **网关 liveness 重启（诊断完成，未改运行时）**：回归窗口内多次出现 `Gateway event loop missed 3 consecutive liveness probes ... exit 75`，另见外部 SIGTERM；崩溃栈指向高负载下 SQLite 读连接竞争（`hermes_state._connect_read_only` 阻塞）。回归停止、服务归一后 90 分钟未复现。改 hermes-agent 运行时属平台级变更，需单独立项做容量/索引评估；本轮只记录诊断与证据。
+2. **kanban WebSocket 偶发 P2（已修）**：并行轮在收件箱页记录 1 次 `Connection closed before receiving a handshake`。补丁 715 给 `onUpgrade` 加 try/catch，异常显式回 503 并销毁，正常 400/401/403 分支不变；活体验证合法 token 连接 open、坏 token 401。新增 `custom/__tests__/kanban-ws-upgrade-guard.test.ts` 锁源码。
+3. **`PATCH status=running` 500（已修）**：补丁 714 把 running 手工设置/worker claim/策略熔断纳入 409 `state_transition_rejected`；活体验证 `PATCH status=running` → 409。
+4. **全量测试 2 例棘轮失败（已清零）**：5 处手写失败体改用 `lib/http.fail()`（approval-inbox 2 文件 + eval controller），阈值不调高；`architecture-ratchet` 7/7 绿。厂商 `kanban-controller.test.ts` 由 18/19 转 **19/19**——补丁 716 将写路径 profile 可见性从 `admin||super_admin` 收窄为仅 `super_admin`（admin 保留全局读详情，但写隐藏 profile 的卡回 404）。
+5. **桌面宠物/语音/外链等关闭项**：按功能开关设计不渲染或走透明空态，属设计内不验收，不是缺陷。
 
-### 4.4 未验证项
+### 4.4 未验证项（收口后）
 
-- 真实模型对话生成、Agent 回合执行、推演「开始运行」后的 26 步执行链（会产生不可逆运行态与模型消耗）。
-- 推演设置保存、业务地图人工标注的写回路（会改配置/数据）。
-- 外部 Matrix 联邦、媒体上传/通话、petdex 外部资产。
-- 网关崩溃根因修复（仅记录证据，未改 hermes-agent 运行时）。
+- **26 步执行链**：用真实历史运行 `20261028-v8-run23` 回放验证 **26/26 步、七幕分组、6/6 质量门、证据库报告入口**（`scripts/regression/sim-run-replay.mjs`）；未新起 26 步 harness run——新起是数小时、产生模型消耗与不可逆运行态，呈现面已验、执行面未新起。
+- **推演设置保存、业务地图人工标注**：已验证。设置用当前值幂等保存（PUT 回传「已保存」回执，不改配置）；地图标注保存后立即删除（可逆写，无残留）。
+- **真实模型/Agent 回合**：`hermes -z` 冒烟输出 `OK`；Agent 工具回合执行 `pwd` 返回 `/Users/cuishi/lab/AIStudio`。
+- **Matrix 媒体**：本地 homeserver 媒体上传/下载均 200（`mxc://matrix.test/...`，回读内容一致）。外部联邦、WebRTC 通话、petdex 外部资产仍无环境（单 homeserver/无通话终端/外网资产不可控）。
+- **网关崩溃根因修复**：仅诊断，未改 hermes-agent 运行时（见 4.3-1）。
+
+### 4.5 未做项收口结果
+
+| 收口项 | 结果 | 证据 |
+|---|---|---|
+| PATCH running 归 409 | 活体 409 `state_transition_rejected` | 补丁 714 + `kanban-patch-409-guard` |
+| WS upgrade 异常守卫 | 合法 open / 坏 token 401；异常回 503 | 补丁 715 + `kanban-ws-upgrade-guard` |
+| admin 写范围收窄 | 厂商测试 19/19 | 补丁 716 + `kanban-admin-scope-guard` |
+| 架构棘轮 2 红 | 7/7 绿；全量 7047/0 | `architecture-ratchet` |
+| 后端启动阻断 | `rawGain` null 早退，`npm run serve` 通过 | `custom/server/harness/workbench/loop.ts` |
+| 推演设置写 | 幂等保存「已保存」 | `shots/sim-undo/` |
+| 地图标注写/删 | 保存→删除成功 | `shots/sim-undo/` |
+| 26 步链路回放 | 26/26、七幕、6/6 门、报告入口 | `shots/sim-replay/sim-replay-ledger.json` |
+| 真实模型/Agent | `OK`；工具回合 `pwd` 成功 | 控制台输出 |
+| Matrix 媒体 | 上传/下载 200 | `mxc://matrix.test/ZiAThZSPjXmIaivxcguJAzSs` |
 
 ## 5. 实拍证据清单
 
@@ -139,6 +155,8 @@
 | `shots/routes-final/` | 155 | 155 个访问态逐页截图（本会话最终轮全量路由扫） |
 | `shots/routes-parallel/` | 155 | 并行轮同口径全量扫逐页截图（交叉核对） |
 | `shots/sim/` | 8 | 推演七入口 + 编排编辑器 + 业务地图 |
+| `shots/sim-undo/` | 连续帧 | 推演设置幂等保存 + 地图标注保存/删除 |
+| `shots/sim-replay/` | 2 | 历史 run23：26/26 步 KPI + 证据库报告入口 |
 | `ide-evidence/final.png` | 1 | IDE 任务深链与 Git 面 |
 
 ### 5.2 录屏

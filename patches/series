@@ -1040,3 +1040,6 @@
 # Y / is not in）时回 409 state_transition_rejected，不再一律 500——业务规则拒绝
 # 与服务器故障可区分（走查实录 triage→review 直转表象为服务端故障）。
 713-server-kanban-patch-state-conflict.patch
+714-server-kanban-running-409.patch
+715-server-kanban-ws-upgrade-guard.patch
+716-server-kanban-admin-write-scope.patch

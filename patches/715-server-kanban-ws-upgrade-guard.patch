@@ -1,0 +1,96 @@
+diff --git a/packages/server/src/modules/hermes/sockets/kanban-events.ts b/packages/server/src/modules/hermes/sockets/kanban-events.ts
+--- a/packages/server/src/modules/hermes/sockets/kanban-events.ts
++++ b/packages/server/src/modules/hermes/sockets/kanban-events.ts
+@@ -42,48 +42,59 @@
+   const servers = Array.isArray(httpServers) ? httpServers : [httpServers]
+ 
+   const onUpgrade = async (req: KanbanEventsRequest, socket: Duplex, head: Buffer) => {
+-    const url = parseUpgradeRequestUrl(req)
+-    if (!url) {
+-      writeBadUpgradeRequest(socket)
+-      return
+-    }
+-    if (url.pathname !== '/api/hermes/kanban/events') return
++    try {
++      const url = parseUpgradeRequestUrl(req)
++      if (!url) {
++        writeBadUpgradeRequest(socket)
++        return
++      }
++      if (url.pathname !== '/api/hermes/kanban/events') return
+ 
+-    if (shouldRejectUpgradeOrigin(req, config.corsOrigins)) {
+-      writeForbiddenOrigin(socket)
+-      return
+-    }
++      if (shouldRejectUpgradeOrigin(req, config.corsOrigins)) {
++        writeForbiddenOrigin(socket)
++        return
++      }
+ 
+-    if (await isAuthEnabled()) {
+-      const token = url.searchParams.get('token') || ''
+-      const user = await authenticateUserToken(token)
+-      if (!user) {
+-        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
++      if (await isAuthEnabled()) {
++        const token = url.searchParams.get('token') || ''
++        const user = await authenticateUserToken(token)
++        if (!user) {
++          socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
++          socket.destroy()
++          return
++        }
++        const profile = (url.searchParams.get('profile') || '').trim()
++        if (profile && user.role !== 'super_admin' && !userCanAccessProfile(user.id, profile)) {
++          socket.write('HTTP/1.1 403 Forbidden\r\n\r\n')
++          socket.destroy()
++          return
++        }
++        req.kanbanProfile = profile || undefined
++      }
++
++      try {
++        req.kanbanBoard = kanbanCli.normalizeBoardSlug(url.searchParams.get('board'))
++      } catch {
++        socket.write('HTTP/1.1 400 Bad Request\r\n\r\n')
+         socket.destroy()
+         return
+       }
+-      const profile = (url.searchParams.get('profile') || '').trim()
+-      if (profile && user.role !== 'super_admin' && !userCanAccessProfile(user.id, profile)) {
+-        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n')
++
++      wss.handleUpgrade(req, socket, head, (ws) => {
++        wss.emit('connection', ws, req)
++      })
++    } catch (error) {
++      // 2026-10-31 三区回归 P2：upgrade 阶段异步失败（鉴权查询/DB 繁忙等）此前是
++      // unhandled rejection，socket 被直接关闭——浏览器只见「Connection closed before
++      // receiving a handshake」，无状态码可重试。这里显式回 503 并销毁，客户端可按
++      // 5xx 退避重连；正常路径（含 400/401/403）仍在 try 内原样返回。
++      logger.error(error, 'Hermes kanban WS upgrade failed')
++      if (!socket.destroyed && socket.writable) {
++        socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n')
+         socket.destroy()
+-        return
+       }
+-      req.kanbanProfile = profile || undefined
+     }
+-
+-    try {
+-      req.kanbanBoard = kanbanCli.normalizeBoardSlug(url.searchParams.get('board'))
+-    } catch {
+-      socket.write('HTTP/1.1 400 Bad Request\r\n\r\n')
+-      socket.destroy()
+-      return
+-    }
+-
+-    wss.handleUpgrade(req, socket, head, (ws) => {
+-      wss.emit('connection', ws, req)
+-    })
+   }
+-
+   servers.forEach(httpServer => httpServer.on('upgrade', onUpgrade))
+ 
+   wss.on('connection', (ws, req: KanbanEventsRequest) => {

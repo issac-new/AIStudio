@@ -1,0 +1,12 @@
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -1197,7 +1197,7 @@
+     // 规则拒绝而非服务器错误——回 409 让前端可区分（此前一律 500：走查实录
+     // triage→review 直转被状态机拒时表象为服务端故障）。
+     const msg = String(err?.message || '')
+-    if (/\bcannot\b.*\bfor\b|\bis not in\b/.test(msg)) {
++    if (/\bcannot\b.*\bfor\b|\bis not in\b|cannot be set manually|entered by a worker claim|BLOCKED_BY_POLICY/i.test(msg)) {
+       ctx.status = 409
+       ctx.body = { error: msg, code: 'state_transition_rejected' }
+       return

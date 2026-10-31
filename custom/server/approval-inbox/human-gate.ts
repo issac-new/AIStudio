@@ -12,6 +12,7 @@ import {
 import type { PendingItem } from './pending-controller'
 import { atomicWriteJson } from '../lib/fs-store'
 import { hermesHome } from '../lib/paths'
+import { fail } from '../lib/http'
 
 export interface AuthenticatedActor {
   id: string
@@ -454,6 +455,6 @@ humanGateRouter.post('/:id/decide', async ctx => {
     }
     return
   }
-  if (!req) { ctx.status = 404; ctx.body = { ok: false, detail: '批准单不存在或已裁决' }; return }
+  if (!req) { fail(ctx, 404, '批准单不存在或已裁决', { code: 'not_found' }); return }
   ctx.body = { ok: true, request: req, ...(req.warnings ? { warnings: req.warnings } : {}) }
 })

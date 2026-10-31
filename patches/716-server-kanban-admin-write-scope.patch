@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -137,11 +137,15 @@
+ ): Promise<boolean> {
+   const visible = visibleProfileSet(ctx)
+   const role = ctx.state?.user?.role
+-  const isAdmin = role === 'admin' || role === 'super_admin'
++  // 2026-10-31 未做项收口：写路径的 profile 可见性只对 super_admin 放开。
++  // admin 可以读全局详情（overlay 的读放行口径），但仍是 profile-scoped——
++  // 否则 profile 绑定的 admin 可完成/派发其他 profile 的卡（上游测试
++  // "prevents profile-scoped users from mutating hidden tasks" 锁死该行为）。
++  const isSuperAdmin = role === 'super_admin'
+   if (!visible && !allowedStatuses) return true
+   const ids = [...new Set(taskIds.map(id => id.trim()).filter(Boolean))]
+   const details = await Promise.all(ids.map(id => getTaskResilient(board, id)))
+-  if (details.some(detail => !detail || (!isAdmin && visible && !filterTasksByVisibleProfiles(ctx, [detail.task]).length))) {
++  if (details.some(detail => !detail || (!isSuperAdmin && visible && !filterTasksByVisibleProfiles(ctx, [detail.task]).length))) {
+     ctx.status = 404
+     ctx.body = { error: 'Task not found' }
+     return false
