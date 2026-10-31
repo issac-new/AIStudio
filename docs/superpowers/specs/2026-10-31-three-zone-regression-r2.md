@@ -24,7 +24,7 @@
 
 ## 验证
 
-- 走查：`walk-shell.mjs` 23/0；`daily-workbench-walkthrough.mjs` 75/0（含 E5a 409 语义、E5b 审批面、I1 loop 画布）；`ide-workspace-verify.mjs` 11/11（super_admin）；`sim-center-walkthrough.mjs` 7/0；`walk-writes.mjs` 16/16；`walk-routes.mjs` 155/155 访问态到达、180 项 0 缺陷（本会话最终轮，`shots/routes-final/`；并行轮另有一次 WebSocket 握手 P2，最终轮未复现）。
+- 走查：`walk-shell.mjs` 23/0；`daily-workbench-walkthrough.mjs` 75/0（最终分支 daily-final7；含 E5a 409 语义、E5b 审批面、I1 loop 画布）；`ide-workspace-verify.mjs` 11/11（super_admin）；`sim-center-walkthrough.mjs` 7/0；`walk-writes.mjs` 16/16；`walk-routes.mjs` 155/155 访问态到达、180 项 0 缺陷（本会话最终轮，`shots/routes-final/`；并行轮另有一次 WebSocket 握手 P2，最终轮未复现）。
 - 全量测试：`npm test` 7043 通过 / 2 失败 / 11 跳过；2 失败均为 `custom/__tests__/architecture-ratchet.test.ts` 既有棘轮债（main 基线同败，计数 1196/877 超阈值 1193/874，非本批引入），按未修项记录。
 - 并行补丁 713 核对：`custom/__tests__/kanban-patch-409-guard.test.ts` 通过；注入态 `PATCH /api/hermes/kanban/:id` triage→review 返回 409（活体验证）。
 - 既有基线：`vendor/hermes-studio/tests/server/kanban-controller.test.ts` 19 通过 / 1 既有失败（`prevents profile-scoped users...` 期望 404、实际 200：overlay「admin 读详情放行」与上游测试口径不一致，main 基线同败，非本批引入）。
