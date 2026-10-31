@@ -181,4 +181,35 @@ describe('IdeGitPane', () => {
     expect(wrapper.find('.ide-git__diff-body').text()).not.toContain('STALE-A')
     expect(wrapper.find('.ide-git__diff-body').text()).toContain('+B-content')
   })
+
+  it('git-sos 建议横幅：status 带 sos 时按 level 配色只读展示；无 sos 不渲染', async () => {
+    const ide = useIdeStore()
+    ide.setWorkspace('/tmp/repo')
+    // 冲突态 status（服务端 sosAdvisoryForConflicts 同构载荷）
+    status.mockResolvedValue({
+      repoRoot: '/tmp/repo', branch: 'main', upstream: null, ahead: 0, behind: 0, detached: false,
+      changes: [change({ file: 'both.ts', indexStatus: 'U', worktreeStatus: 'U', kind: 'conflicted' })],
+      sos: { level: 'WARNING', action: 'ABORT_MERGE', message: '检测到内容冲突，自动中止合并', details: '将执行 git merge --abort 清理冲突状态' },
+    })
+    const wrapper = mountPane()
+    await flushPromises()
+
+    const banner = wrapper.find('[data-testid="ide-git-sos"]')
+    expect(banner.exists()).toBe(true)
+    expect(banner.classes()).toContain('is-warning')
+    expect(banner.text()).toContain('ide.gitSosTitle')
+    expect(banner.text()).toContain('检测到内容冲突，自动中止合并')
+    expect(banner.text()).toContain('将执行 git merge --abort 清理冲突状态')
+    // 只读建议：横幅内没有任何可点动作控件
+    expect(banner.findAll('button')).toEqual([])
+
+    // 无冲突（服务端不带 sos 键）：横幅不出现
+    status.mockResolvedValue({
+      repoRoot: '/tmp/repo', branch: 'main', upstream: null, ahead: 0, behind: 0, detached: false,
+      changes: [change({ file: 'work.ts', indexStatus: ' ', worktreeStatus: 'M', kind: 'modified' })],
+    })
+    await wrapper.find('.ide-git__refresh').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="ide-git-sos"]').exists()).toBe(false)
+  })
 })

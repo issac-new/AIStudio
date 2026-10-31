@@ -21,6 +21,9 @@ const CANONICAL_PAGES = new Set([
   'ia2.collabSession', 'ia2.collabHistory', 'ia2.collabHistorySession',
   'ia2.collabGlobalAgentSession', 'ia2.groupRoom', 'hermes.session',
   'hermes.globalAgentSession', 'hermes.groupChatRoom', 'desktop.chat',
+  // 群聊列表页无房参时 canonical 跳到首个真实房间（2026-10-31 录屏轮实锤，
+  // 走查占位房号被改道是合法产品行为，非缺陷）。
+  'hermes.groupChat',
   // externalLinks 默认关闭时，router guard 将公开外链送回 /app。
   'share.groupChat', 'groupChat.link',
 ])

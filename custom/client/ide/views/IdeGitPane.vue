@@ -186,6 +186,16 @@ const diffLines = computed(() =>
   diffText.value ? diffText.value.split('\n') : [],
 )
 
+/** git-sos 消费面（2026-10-31 收口批）：服务端 /status 附带的冲突降级建议，
+ *  只读展示（level 配色 + message/details）。不在 UI 触发 merge --abort 等破坏性
+ *  动作——动作执行留给引擎/人工确认（executeSosAction 对未实现动作 fail-loud）。 */
+const sosLevelClass = computed(() => {
+  const level = status.value?.sos?.level
+  if (level === 'CRITICAL') return 'critical'
+  if (level === 'WARNING') return 'warning'
+  return 'info'
+})
+
 watch(root, () => { void refresh() })
 onMounted(() => { void refresh() })
 
@@ -217,6 +227,16 @@ defineExpose({ refresh, toGroups })
         @click="refresh"
       >⟳</button>
     </header>
+    <div
+      v-if="status?.sos && gitView === 'status'"
+      class="ide-git__sos"
+      :class="`is-${sosLevelClass}`"
+      data-testid="ide-git-sos"
+    >
+      <span class="ide-git__sos-badge">{{ t('ide.gitSosTitle') }}</span>
+      <span class="ide-git__sos-msg">{{ status.sos.message }}</span>
+      <span v-if="status.sos.details" class="ide-git__sos-details">{{ status.sos.details }}</span>
+    </div>
     <IdeGitLog v-if="gitView === 'graph'" class="ide-git__graph" />
 
     <div v-if="!root && gitView === 'status'" class="ide-git__state">{{ t('ide.gitNeedWorkspace') }}</div>
@@ -339,6 +359,26 @@ defineExpose({ refresh, toGroups })
   color: var(--text-muted);
   text-align: center;
 }
+
+/* git-sos 冲突降级建议横幅（只读 advisory，配色随 level） */
+.ide-git__sos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin: 6px 8px 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  border: 1px solid transparent;
+}
+.ide-git__sos.is-info { background: var(--git-decoration-added, rgba(70, 200, 130, .12)); }
+.ide-git__sos.is-warning { background: rgba(224, 168, 0, .12); border-color: rgba(224, 168, 0, .35); }
+.ide-git__sos.is-critical { background: rgba(224, 84, 84, .12); border-color: rgba(224, 84, 84, .4); }
+.ide-git__sos-badge { font-weight: 600; flex: none; }
+.ide-git__sos-msg { min-width: 0; overflow-wrap: anywhere; }
+.ide-git__sos-details { color: var(--text-muted); flex-basis: 100%; font-size: 11px; }
 
 .ide-git__state--error { color: var(--git-decoration-deleted); }
 
