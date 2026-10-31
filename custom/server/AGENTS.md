@@ -32,7 +32,7 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 | `govbus/` | 治理事件总线（append-only JSONL） |
 | `evidence/` | 任务证据台账（hash 链防篡改） |
 | `trust/` | 长程任务可信执行（主张三态审计/完成态双准入/工作区完整性栅栏/原子断点，fail-closed） |
-| `orchestrator/` | 编排域：Trigger/Thread/订阅/Decision/Mandate/准入表/策略版本/看板事件桥（patch 719 挂载 `/api/orchestrator/*`）；只做事件→授权→工单引用，不复制 kanban 与 loop 的状态机 |
+| `orchestrator/` | 编排域：Trigger/Thread/订阅/Decision/Mandate/准入表/策略版本/看板事件桥/语义评估（gateway 会话）/汇总（window + 静默规则）/评估轮（patch 719 挂载 `/api/orchestrator/*`）；只做事件→授权→工单引用，不复制 kanban 与 loop 的状态机 |
 
 ## 测试约定
 

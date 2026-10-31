@@ -9,8 +9,10 @@ import { defaultCells, getAdmission, listAdmissions, normalizeAdmission, setAdmi
 import { ingestTrigger } from './ingest'
 import { bridgeAll, kanbanDbPaths } from './kanban-bridge'
 import { activeMandateFor, issueMandate, revalidate, revoke } from './mandate'
+import { evaluatePending } from './pass'
 import { currentPolicyVersion } from './policy-version'
-import { listAssignments, listDecisions, listMandates, listThreads, listTriggers } from './store'
+import { insertDigest, listAssignments, listDecisions, listDigests, listMandates, listThreads, listTriggers, markDigestDelivered } from './store'
+import { summarize } from './summarizer'
 import { markRead, pendingFor, subscribe, subscriptionsOf } from './thread'
 import { POLICY_KINDS, SOURCE_KINDS, TRIGGER_STATUSES, type PolicyKind, type SourceKind, type TriggerStatus } from './types'
 
@@ -230,6 +232,49 @@ router.post('/kanban-bridge/tick', async ctx => {
     duplicated: results.filter(r => r.duplicated).length,
     results: results.slice(0, 50),
   })
+})
+
+/** 语义评估一轮（C 批 C2）：把 pending Trigger 送评估器并落 Decision。 */
+router.post('/evaluate', async ctx => {
+  const actor = requireActorOrFail(ctx)
+  if (!actor) return
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
+  const limit = Number(body.limit ?? 20)
+  const result = await evaluatePending({ limit: Number.isFinite(limit) ? limit : 20 })
+  ok(ctx, { ...result, decidedBy: actor.username })
+})
+
+router.get('/digests', async ctx => {
+  const threadId = typeof ctx.query.threadId === 'string' ? ctx.query.threadId.trim() : ''
+  ok(ctx, { digests: listDigests(threadId || undefined, Number(ctx.query.limit ?? 50) as number) })
+})
+
+/** 生成一条汇总：读订阅者游标之后的增量事件，按确定性模板合成。 */
+router.post('/digests', async ctx => {
+  const actor = requireActorOrFail(ctx)
+  if (!actor) return
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
+  const threadId = String(body.threadId ?? '').trim()
+  const subscriber = String(body.subscriber ?? '').trim()
+  if (!threadId || !subscriber) {
+    fail(ctx, 400, 'threadId/subscriber 必填', { code: 'missing_field' })
+    return
+  }
+  const triggers = pendingFor(threadId, subscriber)
+  const digest = summarize(threadId, subscriber, triggers)
+  if (!digest) {
+    ok(ctx, { generated: false, reason: 'nothing_notable', scanned: triggers.length })
+    return
+  }
+  insertDigest(digest)
+  ok(ctx, { generated: true, digest })
+})
+
+router.post('/digests/:id/delivered', async ctx => {
+  const actor = requireActorOrFail(ctx)
+  if (!actor) return
+  const done = markDigestDelivered(String(ctx.params.id ?? ''))
+  ok(ctx, { updated: done })
 })
 
 export const orchestratorRoutes = router

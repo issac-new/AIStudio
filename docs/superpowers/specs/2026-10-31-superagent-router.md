@@ -42,11 +42,11 @@ AIStudio 已有两条派发链：
 
 | # | 决策 | 理由 | 否决的备选 | 类型 | 用户裁定 | 可逆 |
 |---|---|---|---|---|---|---|
-| D1 | 不新增常驻 Router 会话；Router 能力拆为「语义评估 + 汇总」两件 | AIStudio 已有两条派发链，第三条会互相抢占；上游 Router 的价值在判断与汇总，不在进程形态 | 新增独立常驻会话（否决：三链冲突） | UserChallenge | **待裁定** | 是 |
-| D2 | 先做汇总（C1）再做语义评估（C2） | 汇总是确定性逻辑、可完全单测；语义评估需要模型通道，风险与验证成本高 | 先做评估（否决：验证依赖活体模型） | Taste | 待裁定 | 是 |
-| D3 | 语义评估走既有 gateway 会话（agent 用工具写回 Decision），不在服务端直调模型 | 避免新增模型调用面与密钥分发；agent 可读上下文；与「执行层强制」不冲突（服务端仍校验写回） | 服务端直调 LLM（否决：新增密钥面） | UserChallenge | **待裁定** | 是 |
-| D4 | 汇总用确定性模板，不调 LLM | 可测、可解释、无额外成本；摘要质量不足时再上 LLM | LLM 摘要（否决：先引入不可测变量） | Mechanical | 待裁定 | 是 |
-| D5 | 汇总只读 `subscription` + `pendingFor`，不新建投递通道 | 复用 A+B 的订阅游标；投递走既有渠道（不新增推送面） | 新建消息总线（否决：重复造轮子） | Mechanical | 待裁定 | 是 |
+| D1 | 不新增常驻 Router 会话；Router 能力拆为「语义评估 + 汇总」两件 | AIStudio 已有两条派发链，第三条会互相抢占；上游 Router 的价值在判断与汇总，不在进程形态 | 新增独立常驻会话（否决：三链冲突） | UserChallenge | approved（2026-10-31 用户裁定：重要的是功能，不是形式） | 是 |
+| D2 | C1（汇总）与 C2（语义评估）同批实施 | 用户裁定「一起」；两件共用 digest/Decision 存储，拆开会重复改同一批文件 | 分两批（否决：用户要求一起） | UserChallenge | approved（2026-10-31 用户裁定） | 是 |
+| D3 | 语义评估走既有 gateway 会话（agent 用工具写回 Decision），不在服务端直调模型 | 避免新增模型调用面与密钥分发；agent 可读上下文 | 服务端直调 LLM（否决：新增密钥面） | UserChallenge | approved（2026-10-31 用户裁定） | 是 |
+| D4 | 汇总用确定性模板，不调 LLM | 可测、可解释、无额外成本；摘要质量不足时再上 LLM | LLM 摘要（否决：先引入不可测变量） | Mechanical | approved | 是 |
+| D5 | 汇总只读 `subscription` + `pendingFor`，不新建投递通道 | 复用 A+B 的订阅游标；投递走既有渠道（不新增推送面） | 新建消息总线（否决：重复造轮子） | Mechanical | approved | 是 |
 
 ## 3. 变更范围与侵入点
 
@@ -111,12 +111,13 @@ CREATE TABLE IF NOT EXISTS digest (
 );
 ```
 
-## 5. 验证
+## 5. 验证（实测结果）
 
-- `npx vitest run custom/server/orchestrator`：汇总五条规则各一例；评估器三态（accept/ignore/unavailable）与通道缺失降级。
-- `npm run typecheck:harness` 0 错（新增文件并入点名清单）。
-- 合并前 `npm test` 全量。
-- C2 的活体验证需要 gateway 会话可用，本轮若无可用通道，只验证 `unavailable` 降级路径（如实声明）。
+- `npx vitest run custom/server/orchestrator` = **46/46 通过**（6 文件；新增 summarizer 6 例、evaluator 11 例、pass 5 例）。
+- `npm run typecheck:harness` = **0 错**（summarizer/evaluator/pass 已并入点名清单）。
+- 合并前 `npm test` 全量（见交付说明）。
+- **未做**：gateway 会话的活体调用未验证——需要 `ORCHESTRATOR_EVAL_PROFILE` / `ORCHESTRATOR_EVAL_BASE_URL` / `API_SERVER_KEY` 三项配置与可用的 hermes gateway；本批只验证到「未配置→unavailable」「202 排队→unavailable」「超时→unavailable 不重发」三条降级路径。
+- **未做**：digest 的实际投递未接——本批只落库并暴露 `POST /digests/:id/delivered`，由既有渠道消费。
 
 ## 6. 风险与回滚
 
@@ -131,9 +132,10 @@ CREATE TABLE IF NOT EXISTS digest (
 
 ## 7. 设计文档影响
 
-DESIGN_SYNC: none
+DESIGN_SYNC: touched
 
-理由：本批只出 spec 草案，不含实现代码；设计正本 §4.7 的「Router 落法」修订与实现同批进行——实施批须把本行改回 `touched`，并同批修订 §4.7 与附录 A.1。
+- `docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md`：§4.7 补「Router 能力在本仓的落法=语义评估 + 汇总，不新设常驻会话」与汇总/静默规则。
+- `docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md`：本 spec 登记（计数 +1）。
 
 ## 8. 待确认（阻塞实施）
 

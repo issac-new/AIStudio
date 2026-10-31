@@ -6,7 +6,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { hermesHome } from '../lib/paths'
 import type {
-  Assignment, AssignmentStage, Decision, Mandate, Subscription, Thread, Trigger, TriggerStatus,
+  Assignment, AssignmentStage, Decision, Digest, Mandate, Subscription, Thread, Trigger, TriggerStatus,
 } from './types'
 
 type SqliteDb = {
@@ -100,6 +100,17 @@ CREATE TABLE IF NOT EXISTS kv (
   value TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS digest (
+  id TEXT PRIMARY KEY,
+  thread_id TEXT NOT NULL,
+  subscriber TEXT NOT NULL,
+  body TEXT NOT NULL,
+  event_count INTEGER NOT NULL,
+  delivered INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_digest_thread ON digest(thread_id, created_at);
 `
 
 let db: SqliteDb | null = null
@@ -414,4 +425,37 @@ export function kvSet(key: string, value: string, at = Date.now()): void {
     `INSERT INTO kv (key, value, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
   ).run(key, value, at)
+}
+
+export function insertDigest(digest: Digest): void {
+  orchestratorDb().prepare(
+    `INSERT INTO digest (id, thread_id, subscriber, body, event_count, delivered, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    digest.id, digest.threadId, digest.subscriber, digest.body,
+    digest.eventCount, digest.delivered ? 1 : 0, digest.createdAt,
+  )
+}
+
+function toDigest(row: Record<string, unknown>): Digest {
+  return {
+    id: String(row.id), threadId: String(row.thread_id), subscriber: String(row.subscriber),
+    body: String(row.body), eventCount: Number(row.event_count),
+    delivered: Number(row.delivered) === 1, createdAt: Number(row.created_at),
+  }
+}
+
+export function listDigests(threadId?: string, limit = 50): Digest[] {
+  const d = orchestratorDb()
+  const rows = threadId
+    ? d.prepare('SELECT * FROM digest WHERE thread_id = ? ORDER BY created_at DESC LIMIT ?').all(threadId, limit)
+    : d.prepare('SELECT * FROM digest ORDER BY created_at DESC LIMIT ?').all(limit)
+  return (rows as Record<string, unknown>[]).map(toDigest)
+}
+
+export function markDigestDelivered(id: string): boolean {
+  const info = orchestratorDb().prepare(
+    'UPDATE digest SET delivered = 1 WHERE id = ? AND delivered = 0',
+  ).run(id) as { changes?: number }
+  return Number(info?.changes ?? 0) > 0
 }
