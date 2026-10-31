@@ -418,7 +418,7 @@
 | 2026-10-31-humangate-store-unify | HumanGate store 合并统一 | 旧版裸 grant 行装载迁移（升级信封行+归一化回写，未知形状仍 fail-closed）；runtime grant 测试 fixture 路径债顺手清偿 |
 | 2026-10-30-release-v1.0.3-overlay | 发布轮 v1.0.3-overlay | HelixHarness 吸收两轮＋run23 收官批后升版：cockpit studio.4 / agent-teams team.4 / yuan-skill v2.98.0 / full 1.0.3-overlay（ycode 零变更不动） |
 | 2026-10-31-run23-plan-report-retro-revision | run23 方案×报告全面复盘批 | 五机制入册（纪律 85-89）＋提前收尾通道立法＋HumanGate 审批面＋延后清账机械执法＋采集面参数化；附台账清账建议表 |
-| 2026-10-31-full-regression-fixes | 全功能回归修复批 | HumanGate 历史 grant 兼容/矩阵画布键名崩溃（并行批已修，本批复核）＋规则 004 并发配额接线（补丁 712，原 710 撞号改号）＋SOS 残桩 fail-loud＋diagram 超时可配置＋IDE 简报 docs 探测 404 降噪＋kanban ?new=1 提示 i18n 补键（补丁 711）＋回归探针 token/条件等待 |
+| 2026-10-31-full-regression-fixes | 全功能回归修复批 | HumanGate 历史 grant 兼容/矩阵画布键名崩溃（并行批已修，本批复核）＋规则 004 并发配额接线（补丁 712，原 710 撞号改号）＋SOS 残桩 fail-loud＋diagram 超时可配置＋IDE 简报 docs 探测 404 降噪＋kanban ?new=1 提示 i18n 补键（补丁 711）＋IDE 自检 403 权限告警＋回归探针 token/条件等待＋实拍录屏证据 |
 | 2026-10-31-daily-walkthrough-probe-e2-close | 走查探针微批 | E2 抽屉关毕验证（first button≠关闭钮致建卡点击落遮罩的序列性假红） |
 | 2026-10-31-daily-walkthrough-probe-e5-e6 | 走查探针微批③ | E5 审批钮 review 态前置如实化（状态机拒转记不可达）＋E6 催办条断言修正（遮罩残留根治） |
 | 2026-10-31-three-zone-regression-fixes | 驾驶舱三区全量回归批 | roomList 事件外初始快照＋client watch（深链房间页间歇不挂载竞态根治，守门 3 例）＋走查资产四脚本修复（testid 漂移/force 假红/权限前提 SKIP/桥接登录回落） |

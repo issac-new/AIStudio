@@ -79,6 +79,22 @@ describe('runSelfChecks', () => {
     expect(selfCheckSummary(results).fail).toBe(0)
   })
 
+  it('文件列表 403 记 warn 并说明权限边界（非 super_admin 不是产品缺陷）', async () => {
+    const c = ctx()
+    const base = c.authFetch
+    c.authFetch = vi.fn(async (path: string) => {
+      if (path.startsWith('/api/studio/files/list')) {
+        return { ok: false, status: 403, json: async () => ({ error: 'forbidden' }) } as Response
+      }
+      return base(path)
+    }) as never
+    const results = await runSelfChecks(c)
+    const files = results.find(r => r.id === 'files')
+    expect(files?.status).toBe('warn')
+    expect(files?.detail).toContain('权限受限')
+    expect(selfCheckSummary(results).fail).toBe(0)
+  })
+
   it('接口 503/401 记 warn（引擎/鉴权依赖），500 记 fail', async () => {
     const c = ctx()
     c.authFetch = makeFetch({
