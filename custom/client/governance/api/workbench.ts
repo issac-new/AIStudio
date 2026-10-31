@@ -459,6 +459,21 @@ export function recordWorkbenchConstraints(
   })
 }
 
+export function fetchWorkbenchSurfaceArtifacts(
+  id: string,
+): Promise<{ ok: boolean; artifacts: { surfaceKey: string; kind: string; payload: string } | null }> {
+  return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/surface-artifacts`)
+}
+
+export function markWorkbenchSurfaceApplied(
+  id: string,
+  actor: string,
+): Promise<{ ok: boolean; proposal: ProposalDto }> {
+  return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/surface-applied`, {
+    method: 'POST', body: JSON.stringify({ actor }),
+  })
+}
+
 export interface MemoryPolicyItemDto {
   id: string
   statement: string

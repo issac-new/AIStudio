@@ -25,6 +25,8 @@ const api = vi.hoisted(() => ({
   addWorkbenchExperience: vi.fn(),
   setWorkbenchExperienceStatus: vi.fn(),
   calibrateWorkbenchNoise: vi.fn(),
+  fetchWorkbenchSurfaceArtifacts: vi.fn(),
+  markWorkbenchSurfaceApplied: vi.fn(),
   suggestWorkbenchProposal: vi.fn(),
   deleteWorkbenchProposal: vi.fn(),
 }))
@@ -469,5 +471,50 @@ describe('R8 批量复核勾选与操作', () => {
     const citeBtn = w.find('[data-testid="hi-batch-cite"]')
     await citeBtn.trigger('click')
     expect(w.find('[data-testid="hi-create-form"]').exists() || true).toBe(true)
+  })
+})
+
+// R7（2026-11-01 残项）：advisory 面建议产物导出＋已应用标记按钮。
+describe('R7 建议产物导出与已应用标记', () => {
+  it('memory 面晋级提案渲染两按钮；导出触发端点并下载 JSON；标记后 appliedVia=via-surface', async () => {
+    api.fetchWorkbenchSurfaceArtifacts.mockResolvedValue({
+      ok: true,
+      artifacts: { surfaceKey: 'memory', kind: 'memory-items', payload: '{"items":[]}' },
+    })
+    api.markWorkbenchSurfaceApplied.mockResolvedValue({
+      ok: true,
+      proposal: { ...overview.proposals[0], status: 'promoted', surfaceKey: 'memory', promotion: { actor: 'r', at: 'now', digest: 'd', applied: false, appliedVia: 'via-surface' } },
+    })
+    const withPromoted = {
+      ...overview,
+      proposals: overview.proposals.map((p: any) => p.status === 'probing'
+        ? { ...p, status: 'promoted' as const, surfaceKey: 'memory' as const, promotion: { actor: 'r', at: 'now', digest: 'd', applied: false } }
+        : p),
+    }
+    api.fetchWorkbenchOverview.mockResolvedValue(withPromoted)
+    const w = mount(HarnessImprovePanel, )
+    await flushPromises()
+    const exportBtn = w.find('[data-testid="hi-export-artifacts"]')
+    expect(exportBtn.exists()).toBe(true)
+    const clicks: Array<{ url: string }> = []
+    const origCreate = URL.createObjectURL
+    ;(URL as any).createObjectURL = (b: Blob) => { void b; return 'blob:x' }
+    ;(URL as any).revokeObjectURL = () => {}
+    const origClick = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) { clicks.push({ url: this.href }); return undefined }
+    try {
+      await exportBtn.trigger('click')
+      await flushPromises()
+      expect(api.fetchWorkbenchSurfaceArtifacts).toHaveBeenCalledWith('hw-001')
+    } finally {
+      ;(URL as any).createObjectURL = origCreate
+      HTMLAnchorElement.prototype.click = origClick
+    }
+    const markBtn = w.find('[data-testid="hi-mark-applied"]')
+    expect(markBtn.exists()).toBe(true)
+    window.confirm = () => true
+    await markBtn.trigger('click')
+    await flushPromises()
+    expect(api.markWorkbenchSurfaceApplied).toHaveBeenCalledWith('hw-001', 'operator')
   })
 })

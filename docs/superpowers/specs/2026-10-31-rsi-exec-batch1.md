@@ -77,6 +77,12 @@
 - **R10**：`EvalSet.family` 字段＋overview 族聚合（familyGains：族→平均增益）＋`family_specialization` 警示（面级均增益>0 而某族<0）。
 - **R11**：`HARNESS2_STORE_SQLITE=1` 渐进切 SQLite（四表＋显式事务＋旧 JSON 一次性迁移改名 .migrated＋auto_jobs 任务态落盘/孤儿查询）。**落地实测抓出列名混用 bug**：INSERT 模板串内插 JSON 字段名当列名（updatedAt≠updated_at），静默 catch 吞掉——修复后迁移往返全绿；catch 改为 console.warn 不再全静默。
 
+## 残项清偿实记（2026-11-01，R2③＋R7 前端）
+
+- **R2③ 反事实档自动编排**：`runAutoProbeJob` 的 R2 证据块扩展——R3 变换器对探测集产 `rename_ids` 变体→注册临时 eval 集（name 带 `cf-<set>-<id>-<ts>` 防撞名）→候选树跑探测→replay 判分→写回 `evidence.counterfactual`。预算不足（剩余 < 单题估价）或变体/建集失败时如实跳过不阻断主探测。CHASE 门从此有自动证据供给，闭环完整。
+- **R7 前端按钮**：`fetchWorkbenchSurfaceArtifacts`/`markWorkbenchSurfaceApplied` 两 api＋晋级态 memory/tool_guidance 面提案行内「导出建议产物」（Blob 下载 JSON/md）与「标记已应用」（confirm 门＋`appliedVia=via-surface` 后按钮隐藏）；i18n 三键 zh/en 成对。
+- **R11 维持 D2 渐进决策不动**：默认仍 JSON；`HARNESS2_STORE_SQLITE=1` 启用路径与迁移窗归用户（决策可逆，不擅自翻默认）。
+
 ## 验证
 
 - 每件独立 vitest 套件（上列验收）；`npm run typecheck:harness`；全量 `npm test` 收口。

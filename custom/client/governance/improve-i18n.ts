@@ -223,6 +223,9 @@ export interface ImproveCopy {
     batchRetire: string
     batchCite: string
     batchRetireConfirm: string
+    exportArtifacts: string
+    markApplied: string
+    markAppliedConfirm: string
   noiseRunIds: string
   noiseCalibrate: string
   noiseCalibrated: string
@@ -461,6 +464,9 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     batchRetire: '批量退役',
     batchCite: '引用到新提案',
     batchRetireConfirm: '确认退役选中的 {n} 条孤儿候选经验？（逐条走既有退役通道，人裁决）',
+    exportArtifacts: '导出建议产物',
+    markApplied: '标记已应用',
+    markAppliedConfirm: '确认该建议已由既有管理面人工应用？标记后回读验证＝新建提案基线即生效态。',
     noiseRunIds: '基线运行 ID（≥2 条，逗号或换行分隔）',
     noiseCalibrate: '标定噪声带',
     noiseCalibrated: '已标定',
@@ -697,6 +703,9 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     batchRetire: 'Retire selected',
     batchCite: 'Cite into new proposal',
     batchRetireConfirm: 'Retire {n} selected orphan candidates? (via existing retire channel, human decides)',
+    exportArtifacts: 'Export artifacts',
+    markApplied: 'Mark applied',
+    markAppliedConfirm: 'Confirm this suggestion has been applied via the existing management surface? Read-back verification = next proposal baseline.',
     noiseRunIds: 'Baseline run IDs (≥2, comma or newline separated)',
     noiseCalibrate: 'Calibrate noise band',
     noiseCalibrated: 'Calibrated',

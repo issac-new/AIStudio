@@ -10,6 +10,8 @@ import {
   addWorkbenchExperience,
   attachWorkbenchBaseline,
   calibrateWorkbenchNoise,
+  fetchWorkbenchSurfaceArtifacts,
+  markWorkbenchSurfaceApplied,
   composeWorkbenchProposal,
   deleteWorkbenchProposal,
   createWorkbenchProbes,
@@ -375,6 +377,26 @@ async function promote(p: ProposalDto): Promise<void> {
     ? { cue: f.cue.trim(), lesson: f.lesson.trim(), evidence: f.evidence.trim(), confidence: f.confidence }
     : undefined
   await act(() => promoteWorkbenchProposal(p.id, f.apply, reflection))
+}
+
+/** R7（2026-11-01 残项）：advisory 面建议产物导出（人审后经既有管理面应用）。 */
+async function exportSurfaceArtifacts(p: ProposalDto): Promise<void> {
+  const res = await fetchWorkbenchSurfaceArtifacts(p.id)
+  if (!res.artifacts) return
+  const blob = new Blob([res.artifacts.payload], { type: res.artifacts.kind === 'memory-items' ? 'application/json' : 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `surface-artifacts-${p.id}.${res.artifacts.kind === 'memory-items' ? 'json' : 'md'}`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/** R7：人审应用完成后标记（三态 appliedVia；回读验证＝新建提案基线即生效态）。 */
+async function markApplied(p: ProposalDto): Promise<void> {
+  const f = formFor(p.id)
+  if (!window.confirm(L.value.markAppliedConfirm)) return
+  await act(() => markWorkbenchSurfaceApplied(p.id, f.actor.trim() || 'operator'))
 }
 
 async function rollback(p: ProposalDto): Promise<void> {
@@ -956,7 +978,14 @@ onMounted(() => void refresh())
               </div>
 
               <div v-if="p.status === 'promoted'" class="hi__row">
-                <input v-model="formFor(p.id).rollbackReason" :placeholder="L.rollbackReason" />
+                <input v-model="formFor(p.id).rollbackReason" :placeholder="L.rollbackReason" /><button
+          v-if="p.status === 'promoted' && (p.surfaceKey === 'memory' || p.surfaceKey === 'tool_guidance')"
+          type="button" class="hi__btn" data-testid="hi-export-artifacts" @click="exportSurfaceArtifacts(p)"
+        >{{ L.exportArtifacts }}</button>
+        <button
+          v-if="p.status === 'promoted' && (p.surfaceKey === 'memory' || p.surfaceKey === 'tool_guidance') && p.promotion?.appliedVia !== 'via-surface'"
+          type="button" class="hi__btn" data-testid="hi-mark-applied" @click="markApplied(p)"
+        >{{ L.markApplied }}</button>
                 <button type="button" class="hi__btn" @click="rollback(p)">{{ L.rollbackAction }}</button>
                 <span v-if="p.promotion" class="hi__meta">{{ L.promote }}：{{ p.promotion.applied ? L.managed : L.advisory }} · {{ short(p.promotion.digest) }}</span>
               </div>
