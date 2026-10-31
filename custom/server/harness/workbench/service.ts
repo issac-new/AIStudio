@@ -27,7 +27,7 @@ import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from '.
 import { experienceFreshness, type ExperienceFreshness } from './experience-freshness'
 import type {
   BehaviorContrast, Champion, EditableSurface, EvolutionReport, Experience, ExperienceStatus,
-  GateBlocker, ParetoReport, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
+  ConstraintCheck, GateBlocker, ParetoReport, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
   RegularizationDerived, SurfaceKey, Variant,
 } from './types'
 
@@ -738,6 +738,8 @@ export async function createProbes(
 export interface RecordProbeInput {
   evalRunId: string
   regressionRunId?: string | null
+  /** HDA 等预算基线运行（可选；必须是同评测集、explicit 的真实运行）。 */
+  equalBudgetBaselineRunId?: string | null
   note?: string
   actor?: string
 }
@@ -753,6 +755,21 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
     regression = readRegressionEvidence(input.regressionRunId)
     if (!regression) throw new ServiceError(400, `回归运行不存在：${input.regressionRunId}`)
   }
+  let equalBudget: ProbeMetrics['equalBudgetBaseline'] = null
+  if (input.equalBudgetBaselineRunId) {
+    const eq = readEvalEvidence(input.equalBudgetBaselineRunId)
+    if (!eq) throw new ServiceError(400, `等预算基线运行不存在或未聚合：${input.equalBudgetBaselineRunId}`)
+    if ((eq.evidenceMode ?? 'explicit') !== 'explicit') {
+      throw new ServiceError(400, '等预算基线必须是 fresh explicit 评测运行（origin/mixed 只能诊断）')
+    }
+    if (eq.setId !== metrics.setId) {
+      throw new ServiceError(400, `等预算基线必须与候选同一评测集（${eq.setId} ≠ ${metrics.setId}）`)
+    }
+    if (eq.evalRunId === input.evalRunId) {
+      throw new ServiceError(400, '等预算基线不能与候选探测复用同一运行')
+    }
+    equalBudget = { runId: eq.evalRunId, setId: eq.setId, passAt1: eq.passAt1 }
+  }
   return mutateStore((store) => {
     const p = requireProposal(store, id)
     if (p.status !== 'approved' && p.status !== 'probing' && p.status !== 'composed') {
@@ -764,7 +781,10 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
       throw new ServiceError(400, '候选探测不能复用基线运行')
     }
     if (!p.baseline) throw new ServiceError(400, '提案缺少基线，无法做行为对比')
-    const withRegression: ProbeMetrics = regression ? attachRegression(metrics, regression) : metrics
+    const withRegression: ProbeMetrics = {
+      ...(regression ? attachRegression(metrics, regression) : metrics),
+      ...(equalBudget ? { equalBudgetBaseline: equalBudget } : {}),
+    }
     const contrast = behaviorContrast(p.baseline, withRegression)
     probe.status = 'recorded'
     probe.evalRunId = input.evalRunId
@@ -774,6 +794,61 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
     probe.note = String(input.note ?? '').slice(0, 500)
     probe.recordedBy = String(input.actor ?? 'operator')
     probe.recordedAt = nowIso()
+    p.updatedAt = nowIso()
+    return view(store, p)
+  })
+}
+
+export interface RecordConstraintsInput {
+  checks: Array<{
+    id: string
+    statement: string
+    status: 'pass' | 'fail' | 'unknown'
+    evidenceRef?: string
+    detail?: string
+  }>
+  actor: string
+  note?: string
+}
+
+/**
+ * 记录约束保持断言（D5，2026-10-31 吸收轮）。
+ * 约束是「不许退化」的人审断言，不是能力指标；记录 actor 与 evidenceRef 以便审计。
+ */
+export async function recordConstraints(id: string, input: RecordConstraintsInput): Promise<ProposalView> {
+  const actor = String(input.actor ?? '').trim()
+  if (!actor) throw new ServiceError(400, '记录约束检查必须写明操作人')
+  const checks = Array.isArray(input.checks) ? input.checks : []
+  if (checks.length === 0) throw new ServiceError(400, '至少需要一条约束检查')
+  const seen = new Set<string>()
+  const normalized: ConstraintCheck[] = checks.map((c) => {
+    const cid = String(c?.id ?? '').trim()
+    const statement = String(c?.statement ?? '').trim()
+    if (!cid || !statement) throw new ServiceError(400, '约束检查缺少 id 或 statement')
+    if (seen.has(cid)) throw new ServiceError(400, `约束检查 id 重复：${cid}`)
+    seen.add(cid)
+    if (c.status !== 'pass' && c.status !== 'fail' && c.status !== 'unknown') {
+      throw new ServiceError(400, `约束检查 ${cid} 的 status 非法（只接受 pass/fail/unknown）`)
+    }
+    return {
+      id: cid,
+      statement,
+      status: c.status,
+      evidenceRef: c.evidenceRef ? String(c.evidenceRef).slice(0, 300) : undefined,
+      detail: c.detail ? String(c.detail).slice(0, 500) : undefined,
+    }
+  })
+  return mutateStore((store) => {
+    const p = requireProposal(store, id)
+    if (p.status === 'promoted' || p.status === 'rolled_back') {
+      throw new ServiceError(409, `当前状态 ${p.status} 不可记录约束检查`)
+    }
+    p.constraints = {
+      checks: normalized,
+      actor,
+      at: nowIso(),
+      note: String(input.note ?? '').slice(0, 500),
+    }
     p.updatedAt = nowIso()
     return view(store, p)
   })

@@ -3,6 +3,7 @@
 > 退役指针（2026-10-28）：现行唯一正本已迁至
 > [技术组件台账终态单文件](../../team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md)。
 > 本文件保留 2026-10-27 立账原文供反查，不再更新；判级与待办以终态单文件为准。
+> 2026-10-31 补：2026-10-30 曾在本文件追加的 HelixHarness 行已迁入终态表 §3.2，本文件恢复冻结态。
 > 原阅读顺序：当前状态 → 当前待办 → 组件主账 → 技能与知识来源 → 历史索引。
 
 ## 0. 使用与维护
@@ -100,7 +101,6 @@
 | diagram-design（cathrynlavery） | v2.6.110 @550fd66 → 2.6.131（2026-10-26，以 commit bump 为准） | 21 个 patch 均为修复：mermaid-import、draw.io 尖括号、Excalidraw 外层组、svg-only 排除规则等；无新机制 | 技能已吸收 v2.6.110，不升级；runtime 镜像见 §4.1 |
 | agent-governance-toolkit（微软） | v4.1.0（调研日 2026-10-21）→ v4.1.0 持平 | 官方发布日为 2026-06-09；此前“10-21 发布”实为调研日 | 部分吸收；A-F 六件＋MCP 扫描 |
 | Anthropic-Cybersecurity-Skills（mukul975） | 571 净增技能索引 → 上游 817/818（页面两数不一致；main 最后提交 2026-08-31） | 571 与 818 是同一快照的净增/总数两口径；我方融合日 2026-10-12 晚于上游 HEAD，改判无需刷新 | 索引技能＋hack-team 消费 |
-| HelixHarness（didi） | 2026-10-29 开源（1.0.0，仓库单提交 ad6c1bff）→ 持平 | 插件 579 文件 + 平台 226 文件；九命令/四层文档/同步评测账本/人类唯一采纳。判定：框架形态不吸收（AIStudio 的 26 步六闸与 56 道门更强），吸收 spec 内容收据、四层上下文读取计量、F2P/P2P 校准合同、隐藏断言与澄清冻结、命令式验收 | 已吸收五项；见 `2026-10-30-helixharness-absorption.md` |
 | mimo-code（npm @mimo-ai/cli） | 456678b（2026-09-24）→ 0.1.16（2026-10-26） | legacy compose 退役，改 /compose-next 六段流；MCP 会话级懒加载；npm 薄启动器；实验 Orchestrator 移除；Claude 会话导入改启动时 opt-in | 已吸收；第 8 个托管 Agent＋LSP/FIFO 栅栏；六段流作范式参考 |
 
 ### 3.5 闭源/商业产品

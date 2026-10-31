@@ -2729,18 +2729,18 @@ flowchart LR
 
 ---
 
-### 4.40 技术组件台账与上游增量闭环（2026-10-28）
+### 4.40 技术组件台账与上游增量闭环（2026-10-28，2026-10-31 刷新）
 
 > 来源：技术组件台账全链（外置盘历史基线 20260925 + 20261016 增量 → v1/v2 分卷 → 终态单文件整合）。执行卡：t_2bee444f（台账留痕）、t_632cbd94/t_20ad092c/t_58855791（hexstrike T1/T2/T3）、t_5bf395b3/t_fb51a770/t_21d69a77/t_767b724d/t_17bc9db5/t_b0c916bb（六条 delta）、t_87adf8cb/t_f304f7b4（吸收落地）。验收：上游状态全部当日 gh api/npm/PyPI 实测锚，吸收项 5 组机械 grep 验收。
 
-**机制核心：集群调研过的全部技术组件（38 线）以单一台账文件统管「基线→上游现版→差异→判级→处置」，配季度重跑与 3 个月退役线；判级 🔴 的大增量线自动进入 delta 调研→吸收落地管线。** 替换的缺口：此前调研结论散在三调研区（外置盘/shared/workspace），「上次调研后上游变了什么」无系统答案。
+**机制核心：集群调研过的全部技术组件（2026-10-31 刷新后 37 行六域）以单一台账文件统管「基线→上游现版→差异→判级→处置」，配季度重跑与 3 个月退役线；判级 🔴 的大增量线自动进入 delta 调研→吸收落地管线。** 替换的缺口：此前调研结论散在三调研区（外置盘/shared/workspace），「上次调研后上游变了什么」无系统答案。
 
 **落地内容**：
 
 | 项 | 载体 | 补了什么缺口 | 证据 |
 |---|---|---|---|
-| 终态台账（38 线五域） | `~/.hermes/shared/research/tech-components-ledger-20261027/tech-components-ledger.md`（AIStudio 同步件 team/shared/research/ 同目录） | 全组件线单一事实源：判级 🔴0/🟡8/🟢18、退役裁决、验证锚 | commit c12a831f6 等 6 个台账 commit |
-| 刷新程序 | skill `tech-component-ledger-refresh-orch`（v1.2.0，单文件契约） | 四步程序：组件面扫描→基线锚→上游实测→判级落盘；坑清单（gh api 限流/封顶近似/产物异位） | SKILL.md 于 devops 类目 |
+| 终态台账（37 行六域） | `team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md`（仓内正本；`~/.hermes/shared/research/` 为镜像） | 全组件线单一事实源：判级 🔴3/🟡10/🟢24、退役裁决、验证锚；2026-10-31 刷新补 hermes-studio v0.8.0 升级评估与三账分工 | commit c12a831f6 等 6 个台账 commit；2026-10-31 刷新批 |
+| 刷新程序 | skill `tech-component-ledger-refresh-orch`（v1.3.0，单文件契约） | 四步程序：组件面扫描→基线锚→上游实测→判级落盘；坑清单（gh api 限流/封顶近似/产物异位） | SKILL.md 于 devops 类目 |
 | delta 派发模板 | skill `delta-research-dispatch` | 🔴 线转增量调研卡的验收模板（commit 全量禁封顶近似/三档建议/sha 锚） | 六卡全 done 实证 |
 | 退役线（用户裁决） | 台账 §一维护契约 | 上游静默 >90 天→RETIRED 保留轨迹停跟进；复活条款 | RETIRED 4 条+临线观察 1 条 |
 | hexstrike 三源融合 | skill `evidence-governed-execution` v1.0.0 + `pentest-methodology-fusion` v2.0.0 + 4 hack profile 接线 | 40 条机制裁决（keep 6/new 22/downgrade 1/drop 11），证据门控执行 | FUSION-REPORT.md，t_58855791 done |
@@ -2973,7 +2973,7 @@ flowchart LR
 
 | 条目 id | 主题 |
 |---|---|
-| `gap-20261028-tech-components-ledger` | 技术组件台账全链与上游增量闭环（38 线终态+退役线+delta 吸收），2026-10-28 |
+| `gap-20261028-tech-components-ledger` | 技术组件台账全链与上游增量闭环（38 线终态+退役线+delta 吸收），2026-10-28；2026-10-31 刷新为 37 行六域 |
 | `gap-20261020-doc-restructure-r5` | 规模复测 + 机制域四要素补齐 + 文风基线门禁 + R4 漏报修复 |
 | `gap-20261020-doc-restructure-r4` | 安全族抽离 §4.7 + 健全性清单 + 标题去流程化 |
 | `gap-20261019-doc-restructure` | 整体设计文档结构重构：导航层 + 载体总表 + 台账拆卷 |

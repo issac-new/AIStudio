@@ -419,6 +419,49 @@ export function probeCost(proposal: Proposal): { total: number; complete: boolea
   return { total, complete: missing.length === 0 && proposal.probes.length > 0, missing }
 }
 
+/**
+ * HDA 增益归因（2026-10-31 吸收轮）：论文 arXiv 2610.22466。
+ * 原始增益 = 候选 − 标准基线；算力增益 = 等预算基线 − 标准基线；
+ * harness 残差 = 候选 − 等预算基线。三项满足 raw = compute + harness。
+ * 等预算基线缺席时只给 rawGain，compute/harness 记 null（不猜）。
+ */
+export interface GainAttribution {
+  rawGain: number | null
+  computeGain: number | null
+  harnessGain: number | null
+  equalBudgetPassAt1: number | null
+  note: string
+}
+
+export function attributeGain(input: {
+  baselinePassAt1: number | null | undefined
+  candidatePassAt1: number | null | undefined
+  equalBudgetPassAt1: number | null | undefined
+}): GainAttribution {
+  const baseline = input.baselinePassAt1 ?? null
+  const candidate = input.candidatePassAt1 ?? null
+  const equalBudget = input.equalBudgetPassAt1 ?? null
+  const rawGain = baseline != null && candidate != null ? candidate - baseline : null
+  if (baseline == null || candidate == null || equalBudget == null) {
+    return {
+      rawGain,
+      computeGain: null,
+      harnessGain: null,
+      equalBudgetPassAt1: equalBudget,
+      note: '等预算基线缺失：无法区分算力增益与 harness 残差',
+    }
+  }
+  const computeGain = equalBudget - baseline
+  const harnessGain = candidate - equalBudget
+  return {
+    rawGain,
+    computeGain,
+    harnessGain,
+    equalBudgetPassAt1: equalBudget,
+    note: `原始增益 ${(rawGain * 100).toFixed(1)} 分 = 算力 ${(computeGain * 100).toFixed(1)} 分 + harness ${(harnessGain * 100).toFixed(1)} 分`,
+  }
+}
+
 export interface PromotionGateInput {
   proposal: Proposal
   currentChampion: Champion | null
@@ -512,6 +555,37 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
             }
           }
         }
+
+        // ---- HDA 增益归因（2026-10-31 吸收轮）：区分算力与 harness 残差 ----
+        const attribution = attributeGain({
+          baselinePassAt1: proposal.baseline?.passAt1 ?? null,
+          candidatePassAt1: probe.evidence.passAt1,
+          equalBudgetPassAt1: probe.evidence.equalBudgetBaseline?.passAt1 ?? null,
+        })
+        if (gain != null && gain > 0) {
+          if (attribution.harnessGain == null) {
+            const msg = '未绑定等预算基线（HDA）：无法区分 harness 改进与额外 test-time compute'
+            if (cfg.requireAttribution) blockers.push({ code: 'attribution_missing', message: msg })
+            else warnings.push({ code: 'attribution_missing', message: msg })
+          } else if (attribution.harnessGain <= 0) {
+            blockers.push({
+              code: 'gain_explained_by_compute',
+              message: `${attribution.note}；等预算基线已解释全部增益，涨的分来自算力而非 harness（HDA）`,
+            })
+          } else if (attribution.harnessGain < gain * 0.5) {
+            warnings.push({
+              code: 'gain_mostly_compute',
+              message: `${attribution.note}；算力贡献超过一半，交人工裁决（HDA）`,
+            })
+          }
+          const eq = probe.evidence.equalBudgetBaseline
+          if (eq && eq.setId !== probe.evidence.setId) {
+            warnings.push({
+              code: 'attribution_set_mismatch',
+              message: `等预算基线来自不同评测集（${eq.setId} ≠ ${probe.evidence.setId}），归因不可比`,
+            })
+          }
+        }
       }
       // ---- HarnessPro 帕累托选拔（2026-10-23 吸收轮）：选中候选被支配=硬拦 ----
       // 论文「无情淘汰性能低于初始底线、或处于帕累托劣势（花钱更多、分还更低）的废案」。
@@ -569,6 +643,29 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
       code: 'surface_stalled',
       message: `该面连续 ${reg.stallWindow} 个提案无采纳，搜索停滞——可考虑转向未探索面（RRSI 结构性探索）`,
     })
+  }
+
+  // ---- 约束保持门（D5，2026-10-31 吸收轮）：能力涨了，行为约束不许退化 ----
+  const constraintChecks = proposal.constraints?.checks ?? null
+  if (!constraintChecks || constraintChecks.length === 0) {
+    const msg = '未记录约束保持断言（guardrails/权限/审计/拒答等「不许退化」项）；晋级前建议记录'
+    if (rsiConfig().requireConstraints) blockers.push({ code: 'constraint_unchecked', message: msg })
+    else warnings.push({ code: 'constraint_unchecked', message: msg })
+  } else {
+    const failed = constraintChecks.filter((c) => c.status === 'fail')
+    const unknown = constraintChecks.filter((c) => c.status === 'unknown')
+    if (failed.length > 0) {
+      blockers.push({
+        code: 'constraint_regression',
+        message: `${failed.length} 项约束未保持：${failed.map((c) => c.id).join('、')}——能力改进不能以行为约束退化为代价`,
+      })
+    }
+    if (unknown.length > 0) {
+      warnings.push({
+        code: 'constraint_unverified',
+        message: `${unknown.length} 项约束未验证：${unknown.map((c) => c.id).join('、')}（unknown 不等于通过）`,
+      })
+    }
   }
 
   const diversity = candidateDiversity(proposal.variants)
@@ -648,6 +745,10 @@ export interface RsiConfig {
   beta1PerPoint: number
   /** true=未标定噪声带直接拦（缺省 false，warning 交人工裁决）。 */
   requireNoise: boolean
+  /** true=未绑定等预算基线直接拦（缺省 false，warning 交人工裁决）。 */
+  requireAttribution: boolean
+  /** true=未记录约束保持断言直接拦（缺省 false，warning 交人工裁决）。 */
+  requireConstraints: boolean
 }
 
 function envInt(name: string, fallback: number): number {
@@ -678,6 +779,8 @@ export function rsiConfig(): RsiConfig {
     beta0: envFloat('HARNESS2_RSI_BETA0', 0.1),
     beta1PerPoint: envFloat('HARNESS2_RSI_BETA1', 0.25),
     requireNoise: process.env.HARNESS2_RSI_REQUIRE_NOISE === '1',
+    requireAttribution: process.env.HARNESS2_RSI_REQUIRE_ATTRIBUTION === '1',
+    requireConstraints: process.env.HARNESS2_RSI_REQUIRE_CONSTRAINTS === '1',
   }
 }
 

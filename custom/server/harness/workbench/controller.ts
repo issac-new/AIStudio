@@ -8,7 +8,7 @@ import { collectSurfaces } from './surface-registry'
 import {
   ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
   createProbes, createProposal, decideProposal, deleteProposal, importExperiences, listExperiences,
-  listProposals, overview, promoteProposal, recordProbe, rollbackProposal, setExperienceStatus,
+  listProposals, overview, promoteProposal, recordConstraints, recordProbe, rollbackProposal, setExperienceStatus,
   startAutoProbe, submitProposal, suggestProposal,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
@@ -217,8 +217,27 @@ router.post('/proposals/:id/probes/:probeId/record', async (ctx) => {
       proposal: await recordProbe(ctx.params.id, ctx.params.probeId, {
         evalRunId: String(b.evalRunId ?? ''),
         regressionRunId: typeof b.regressionRunId === 'string' ? b.regressionRunId : null,
+        equalBudgetBaselineRunId: typeof b.equalBudgetBaselineRunId === 'string' ? b.equalBudgetBaselineRunId : null,
         note: typeof b.note === 'string' ? b.note : undefined,
         actor: actorOf(ctx, b),
+      }),
+    }
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// 约束保持断言（D5，2026-10-31 吸收轮）：记录「不许退化」的人审检查项。
+router.post('/proposals/:id/constraints', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = bodyOf(ctx)
+  try {
+    ctx.body = {
+      ok: true,
+      proposal: await recordConstraints(ctx.params.id, {
+        checks: Array.isArray(b.checks) ? b.checks : [],
+        actor: actorOf(ctx, b),
+        note: typeof b.note === 'string' ? b.note : undefined,
       }),
     }
   } catch (e) {
