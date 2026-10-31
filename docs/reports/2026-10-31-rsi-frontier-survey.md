@@ -1,7 +1,8 @@
 # RSI 前沿增量调研：综述、技术栈、评测与产品生态（2026-10-31 下午轮）
 
 > 用途：为《AIStudio RSI 改进方案》（specs/2026-10-31-rsi-improvement-plan.md）提供外部依据。与同日上午轮报告（2026-10-31-rsi-survey-and-tech-stack.md）互补：上午轮建基线并吸收 P0-P2 机制，本报告只收**基线之外的新发现**。
-> 证据分级：〔实测〕= 论文/官方页含数字且本轮核实；〔摘要级〕= 仅读摘要；〔主张〕= 作者或媒体论断。四路并行调研（综述理论/技术栈/评测安全/产品生态）＋一路仓内审计，全部结论带 URL 或 file:line。
+> 证据分级：〔实测〕= 论文/官方页含数字且本轮核实；〔摘要级〕= 仅读摘要；〔主张〕= 作者或媒体论断。
+> 22:10 补全：第八至十节为「10 月整月 RSI 全景＋截至 2026-10-31 22:10 时效核查＋对改进方案的回填」，覆盖本轮四切面之外的当月漏网论文与 48 小时动态。四路并行调研（综述理论/技术栈/评测安全/产品生态）＋一路仓内审计，全部结论带 URL 或 file:line。
 
 ## 一、三句话结论
 
@@ -67,3 +68,47 @@
 产品生态：code.claude.com/docs/en/memory ｜ learn.chatgpt.com/docs/changelog ｜ cursor.com/changelog ｜ antigravity.google/docs/agent ｜ learn.microsoft.com/en-us/azure/foundry/agents/concepts/agent-optimizer-overview ｜ braintrust.dev/docs/evaluate/compare-experiments ｜ hai.stanford.edu/what-is-recursive-self-improvement ｜ wired.com/story/recursive-self-improvement-flint-latest-model-scary-good
 
 **未检索到**：递归深度 >2 带安全治理的实证；CRDT 与 agent 记忆结合的开源实现；Azure Agent Optimizer 公开效果数字；Irregular 自我修改事故与 RAND judge 研究的原始链接（均为转述级，已如实降级）。
+
+
+## 八、10 月整月 RSI 全景（2026-01 至 10-28 提交全量拉取补全）
+
+arXiv export API 六关键词组合命中 320 条，去重并剔除前文在册后，补漏 27 条高/中相关（时间戳取 `<published>`）。整月五周主题演进：
+
+| 周 | 主题重心 | 代表条目 |
+|---|---|---|
+| W1（10-01~05） | 方法学奠基：模块化搜索与优化器自进化 | MESH-Harness（2610.05300，模块化接口＋bandit 组合、限评估预算）〔摘要级〕；VERSE（2610.02616，优化器自进化，无外部执行则无效）〔摘要级〕 |
+| W2（10-06~12） | 边界与基建：天花板与共进化 | **Harness Evolution Hits a Ceiling（2610.11655：按失败构成判断何时该停 harness 转权重）**；HarnessNet（2610.15221，多智能体联合进化）；Evo²（2610.13025，权重-harness 双轨「进化进化者」）；RSIGym/RSI-Forge（2610.10310/09426，研究环境基建）〔摘要级〕 |
+| W3（10-13~19） | 验证器成为进化对象 | Verifier-Harness 共进化（2610.17609，验证器错则错误经验持续）；Harness-Policy 联合优化（2610.22791）；HarnessPro（2610.26770，Pareto＋LLM 生成测试代打分）〔摘要级〕 |
+| W4（10-20~26） | 结构化与怀疑 | MaD-RSI（2610.28201，模型即数据解耦合）；**Successive Scale Racing（2610.28815，任务池扩大反致退化的悖论实证）**；Auditing the Product（2610.27610，审计 RSI 论文评估证据兑现率）〔摘要级〕 |
+| W5（10-27~31） | 理论与安全收口 | 决策几何（2610.37255）、RuHarness（2610.36826）、**Masked Erosion（2610.38392）**、KARMA（2610.39884）密集落地 |
+
+### 六篇精读要点（对本仓最有操作价值的证据）
+
+1. **Masked Erosion（2610.38392）〔实测〕**：接受门只看当前任务分时，冗余护栏的删除被其余护栏掩护、不可见。411 个改进循环×10 种门规则给出硬数字：20 任务批次保住全部 6 个 harness；同成本 40 任务批次全失守。**批量越大越敢删安全件。** GEPA 逐字保留安全规则，但 3 个终态 harness 仍有 2 个在弱模型下滥用凭据。对策指向：人审采纳须看「单层消融」而非总分；冻结安全文本＋定期一层消融审计。
+2. **Your Policy Is Secretly a Harness（2610.37255）〔实测〕**：KL 正则下最优策略对数几率恢复 harness 偏好；部署回报＝harness 上限−策略失配。MiniWoB++ 仅调换观测字段顺序，训练模型从 85.0% 掉到 19.2%。这是「冻结模型＋改 harness」范式的理论根基，也证明**先量上限再采纳**——本仓等预算基线即其实操形态。
+3. **RuHarness（2610.36826）〔摘要级〕**：rubric 与 harness 共进化。从执行轨迹持续发现、复评行为 rubric，锁定未解决弱点驱动定向更新；静态监督追不上轮次间弱点漂移。「评价标准本身是活文档」与本仓人审清单同构。
+4. **KARMA（2610.39884）〔实测〕**：六类知识模块原子化编辑＋Trace Verifier 定位＋成败轨迹对照＋阈值门不过即回滚，权重与 harness 代码全冻结。18 个设定 hold-out 30.19→39.15（+29.7%）；删掉成败对照轨迹，增益即腰斩。「补丁-诊断证据-验证结果」三链回滚＝人审采纳的最小审计单元。
+5. **Coding-Agent Harnesses Self-Evolve（2610.34938）〔实测〕**：让 Claude Code 复盘会话自提 harness 变更，125 项提案实施 24 项。对照评估中仅 2/7 根除目标问题；43 项 lint 提案中 18 项无视实际事件套模板。**会生成不等于有用**——缺事后验证与回收环节的变革大半无效。
+6. **RSI-Anything（2610.13912）〔实测〕**：冻结执行体＋世界模型做预测式选择器。代码修复 26.3%→31.2%，GUI 动作数降 39.4%。外部反馈成本可压到可比测试量级的实证。
+
+## 九、截至 2026-10-31 22:10 的时效核查
+
+**arXiv 可见窗口判定**〔实测〕：周六无 announce，最新可见为周五批（北京 10-31 08:00 上线；提交区间 10-28 18:00 至 10-29 17:59 UTC，API 实测最晚 10-29T17:59Z）。美东 10-30/31 的新投稿此刻**均不可见**，下一波须等北京周日或周一晨。第八节即当前时刻的完整前沿边界。
+
+**GitHub 48 小时动态**（pushed_at，10-31 14:1x UTC 抓取）〔实测〕：SkillOpt 10-29 两项安全修复——sleep 流程不再执行项目目录代码，WebUI 未鉴权不暴露训练控制。**Sage 10-30 RSI 主线推进：服务端持久化 RSI 操作＋pairwise web 评估。** mem0 10-30 修复删除竞态。harness2、rrsi、sia、ebiose、RSIAgent 窗口内零 push。
+
+**产品 changelog**（10-29 后）〔实测〕：**Codex CLI 0.166（10-29）增量式 skill catalog＋记忆合并按层级配置**；0.165（10-27）memory v2 默认开＋外部 agent 记忆导入。Claude Code 2.1.314（10-30）迭代内置技能（dataviz、claude-api）。**Azure Agent Optimizer 文档 10-28 更新：优化目标明确含 skill improvement（改写 SKILL.md）。** Cursor 窗口内无新版本。产品侧「技能资产化」信号本周集中出现：Codex skill catalog、Azure skill improvement、Claude 技能迭代三线并发。
+
+**48 小时新闻**：Claude Code VS Code 扩展供应链投毒（10-30，HN 928 分；phorion.io 博客〔实测〕）。非 RSI 主题，但属 agent 生态安全大事件，对本仓供应链纪律（vendor 钉版＋补丁审计）构成正面印证。RSI 学术侧仅 Trinity 与 RSI-Anything 两条低热度 HN 帖，无大厂 RSI 官宣。
+
+## 十、对改进方案的回填（关键新证据 → 方案动作）
+
+| 新证据 | 回填到 | 动作 |
+|---|---|---|
+| Masked Erosion：接受门侵蚀冗余护栏，批量越大越敢删 | D5 约束保持门（已有）＋R12 | R12 增补：晋级时输出「约束单层消融清单」（每个约束在当前冠军上的独立贡献）；连续两轮零贡献的约束进入人工复核，防被其余护栏掩护的静默删除 |
+| Policy-is-Harness：回报＝上限−失配，换 harness 两项都动 | R2 等预算基线 | 理论根基补记：等预算基线即「先量上限再采纳」的实操形态，验收不变 |
+| Coding-Agent 自进化 2/7 有效＋套模板提案 | 起草器（suggestProposal） | 证据补强 P2 批已落的进化史注入＋失败假设禁复提；新增启示：AI 起草的提案须强制 evidenceRefs 绑定真实事件（本仓 submitReadiness 已有，维持） |
+| KARMA 成败对照轨迹删则增益腰斩 | R2/R3 | 反事实变换器的对照设计参照：变体与源集的成对运行是增益来源，不可省 |
+| Successive Scale Racing：任务池扩大反致退化 | R10 任务族 | 家族设计的负警示：族内任务数不贪多，验收加「族规模敏感性」注记 |
+| Harness Evolution Hits a Ceiling | 方案总纲 | 直接支持「机制扩展停止」判断：harness 进化有天花板，按失败构成转判而非堆机制 |
+| Codex skill catalog/Azure skill improvement/Claude 技能迭代 | R7/R9 | 产品侧三线并发验证「技能资产化」方向；R7 执行回路与 R9 差分验证的优先级上调一档 |
