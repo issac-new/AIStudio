@@ -229,17 +229,33 @@ async function visit(page, hash, settle = 2300) {
           const hit = cards.find((c) => (c.textContent || '').includes(m))
           return hit?.getAttribute('data-task-id') || ''
         }, mark).catch(() => '')
-        // E5 新卡抽屉+验收区
+        // E5 新卡抽屉+审批按钮区（验收标签面）：审批钮只在 review 态渲染（设计内）。
+        // 现库无 review 卡 → 探针自有卡经 API 转 review（状态机拒转则如实记不可达）。
         if (createdId) {
+          const moved = await page.evaluate(async (id) => {
+            const H = { Authorization: 'Bearer ' + localStorage.getItem('hermes_api_key'), 'Content-Type': 'application/json' }
+            const r = await fetch(`/api/hermes/kanban/${encodeURIComponent(id)}?board=default`, { method: 'PATCH', headers: H, body: JSON.stringify({ status: 'review' }) })
+            return r.status
+          }, createdId).catch(() => 0)
+          await page.waitForTimeout(1200)
           await page.locator(`.kanban-task-card[data-task-id="${createdId}"]`).first().click()
-          await page.waitForTimeout(1600)
+          await page.waitForTimeout(1800)
           const drawer2 = await page.evaluate(() => ({
             open: !!document.querySelector('[data-testid=kanban-task-drawer]'),
             approve: !!document.querySelector('[data-testid=drawer-approve]'),
             reject: !!document.querySelector('[data-testid=drawer-reject]'),
           }))
-          led.record('E5 新卡抽屉审批按钮区（验收标签面）', drawer2.open && (drawer2.approve || drawer2.reject), JSON.stringify(drawer2))
+          if (moved === 200) {
+            led.record('E5 review 态卡抽屉审批按钮区（验收标签面）', drawer2.open && drawer2.approve && drawer2.reject, JSON.stringify(drawer2))
+          } else {
+            led.record('E5 review 态卡抽屉审批按钮区（验收标签面）', drawer2.open, `状态机拒转 triage→review（PATCH=${moved}），审批钮断言不可达；抽屉开=${drawer2.open}`, 'P2')
+          }
           await led.shot(page, 'e-newcard-drawer')
+          // 关毕防遮罩残留（E6 前置）
+          for (let i = 0; i < 4 && await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false); i++) {
+            await page.keyboard.press('Escape')
+            await page.waitForTimeout(500)
+          }
         }
       } else {
         led.record('E4 行内建卡提交→卡出现在板面', false, '未找到提交按钮（建卡器形态变化？）')
@@ -251,18 +267,19 @@ async function visit(page, hash, settle = 2300) {
     }
     // E6 批量选择→催办条 UI（不实际发送，避免打扰真实身份）
     if (createdId) {
-      const chk = page.locator(`.kanban-task-card[data-task-id="${createdId}"] .card-checkbox, .kanban-task-card[data-task-id="${createdId}"] [class*=checkbox]`).first()
+      const chk = page.locator(`.kanban-task-card[data-task-id="${createdId}"] .card-checkbox`).first()
       if (await chk.count()) {
         await chk.click({ force: true })
-        await page.waitForTimeout(900)
+        const barVisible = await page.locator('.kanban-bulk-bar').first().isVisible({ timeout: 4000 }).catch(() => false)
         const bar = await page.evaluate(() => {
-          const el = [...document.querySelectorAll('button')].find((b) => (b.title || '').includes('催办') || (b.textContent || '').includes('催办'))
-          return { visible: !!el, title: el?.title || el?.textContent?.trim() || '' }
+          const scope = document.querySelector('.kanban-bulk-bar')
+          const el = scope ? [...scope.querySelectorAll('button')].find((b) => (b.title || '').includes('催办') || (b.textContent || '').includes('催办')) : null
+          return { barVisible: !!scope && scope.offsetParent !== null, nudge: !!el, title: el?.title || el?.textContent?.trim() || '' }
         })
-        led.record('E6 批量选择→催办入口可见（不发送）', bar.visible, bar.title)
+        led.record('E6 批量选择→催办条+催办入口可见（不发送）', bar.barVisible && bar.nudge, JSON.stringify(bar))
         await led.shot(page, 'e-bulkbar')
       } else {
-        led.record('E6 批量选择→催办入口可见（不发送）', false, '未找到卡复选框')
+        led.record('E6 批量选择→催办条+催办入口可见（不发送）', false, '未找到卡复选框')
       }
     }
   } finally {
