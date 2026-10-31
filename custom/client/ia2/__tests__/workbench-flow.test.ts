@@ -471,7 +471,7 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
     roomStubs.state.sortedRooms = had
   })
 
-  it('15s 看门狗：超时判不可达 + 重试按钮；重试对已建连 client 主动补 joinRoom', async () => {
+  it('15s 看门狗（F6 根治）：首轮超时自动补 join（幂等重试语义）不误报不可达；二次超时仍缺才判不可达+手动重试钮', async () => {
     const had = [...roomStubs.state.sortedRooms]
     vi.useFakeTimers()
     try {
@@ -479,12 +479,21 @@ describe('WorkbenchView — 装配（行构建/默认选择/路由跳转）', ()
       matrixClientStubs.state.client = { joinRoom }
       const { wrapper } = await mountAt('/app/s/room/!invited:host')
       expect(wrapper.find('[data-testid="wb-canvas-ph-retry"]').exists()).toBe(false)
+      // 首轮 15s：自动补一刀（join+刷新），仍显示同步态——首同步慢的房不再误报
       vi.advanceTimersByTime(15000)
       await flushPromises()
-      const st = wrapper.find('[data-testid="wb-canvas-deeplink-state"]')
+      expect(joinRoom).toHaveBeenCalledWith('!invited:host')
+      let st = wrapper.find('[data-testid="wb-canvas-deeplink-state"]')
+      expect(st.exists()).toBe(true)
+      expect(st.text()).not.toContain('会话不可达或未加入')
+      // 二轮 15s：仍缺 → 判不可达 + 重试按钮（手动通道保留）
+      vi.advanceTimersByTime(15000)
+      await flushPromises()
+      st = wrapper.find('[data-testid="wb-canvas-deeplink-state"]')
       expect(st.text()).toContain('会话不可达或未加入')
       const retry = wrapper.find('[data-testid="wb-canvas-ph-retry"]')
       expect(retry.exists()).toBe(true)
+      joinRoom.mockClear()
       await retry.trigger('click')
       await flushPromises()
       expect(joinRoom).toHaveBeenCalledWith('!invited:host')
