@@ -1,7 +1,7 @@
 # AIStudio RSI 改进方案：证据自动化、双体系合一与经验库治理（2026-10-31）
 
 日期：2026-10-31
-状态：plan-approved-pending-execution（决策事实源；执行按批次另立 spec。2026-10-31 22:10 补记：第五节整月新证据回填，R12 增补约束单层消融）
+状态：plan-approved-pending-execution（决策事实源；执行按批次另立 spec。22:10 补记§五回填与 R12 增补；首批执行包已定案见 §二点五/执行 spec）
 来源：四切面前沿调研（`docs/reports/2026-10-31-rsi-frontier-survey.md`）＋仓内资产审计（十条差距，逐条 file:line 见各项目行）。用户指示「全面调研当前 RSI 相关综述及技术栈等，为 AIStudio 制定改进方案」。
 前置：RRSI 七机制＋D1-D11 十一件已全部落地（截至 2c7ad72ea），本方案是下一阶段的基础设施补全，不是再加机制。
 
@@ -53,6 +53,10 @@ AIStudio 改进实验台的机制密度已超全部调研对象（27 blocker＋1
 |---|---|---|---|---|---|---|
 | R11 | workbench 持久化与任务态恢复 | —（工程债） | store 单文件 JSON＋进程内串行（store.ts:55-68）；auto-run 态内存 Set 重启失联（service.ts:1093，types.ts:221 自述） | store 迁 SQLite（复用 loop/graph event-log-store 先例：append-only＋版本迁移）；auto-run 任务态落盘（jobs 表），重启后 running 态标记 orphaned 并可一键重发起 | 并发读写冒烟；重启恢复用例；旧 JSON 一次性迁移+备份 | L |
 | R12 | 验证信号分级面板 | 2607.07663 验证层级：改进强度绑定验证强度〔实测〕 | 晋级报告不区分「用了哪级验证信号」；LLM judge 与命令式验收器同权重展示 | 每次晋级计算 `verificationTier`（命令式验收器>密封 heldout>普通 eval>LLM judge，按探测证据的证据类型推导）入 PromotionRecord；面板进化表增 tier 列；tier=最弱级的连续晋级触发 warning（进化健康度） | tier 推导单测全覆盖；面板列渲染；与 R6 联动 | S |
+
+### 二点五、首批执行包（已定案）
+
+首批＝R1（探针修复）＋R4（k≥2）＋R8（加权检索＋批量复核）＋R12a（验证信号分级，R12 拆分的 tier 件；R12b 约束消融后置第二批）。实施细节与决策见执行 spec `2026-10-31-rsi-exec-batch1.md`。
 
 ### 三、批次路线图与依赖
 
