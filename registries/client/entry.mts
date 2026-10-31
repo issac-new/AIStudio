@@ -95,15 +95,16 @@ async function devAutoLogin(): Promise<void> {
   // 登录时不再自动拉回 admin 会话，回落手动登录页；手动登录成功后闸门即清（新开
   // 标签页不受影响）。不加此闸时退出→重载 2s 内即被本桩以 admin 复活，登出形同虚设。
   if (sessionStorage.getItem('hermes_manual_logout') === '1') return
-  // 网关免密让位（2026-10-31 日常工作台回归收尾批）：LoginView 的网关自动登录
-  // 与本桩并行抢跑；本机网关已配 Matrix 凭据（常见态）时 admin/dev-bootstrap 探测
-  // 注定 401——浏览器网络层会把这次失败自动记成控制台红，应用层无法静默。先等
-  // 网关路径落 key（最长 3.6s；实测网关链冷启 ~2.4s 落地，1.8s 窗口差 150ms 漏过），
-  // 落下即让位；未落（空库引导机/网关未配）保持原 admin/dev-bootstrap 首登建号链，
-  // 不增任何额外请求。
-  for (let i = 0; i < 18 && !localStorage.getItem('hermes_api_key'); i++) {
-    await new Promise(resolve => setTimeout(resolve, 200))
-  }
+  // 网关免密让位（2026-10-31 收尾批 v2）：本机网关已配 Matrix 凭据（常见态）时
+  // LoginView 网关路径必然接管会话，admin/dev-bootstrap 探测注定 401——浏览器网络
+  // 层自动记红、应用层无法静默。先探 gateway-credentials（回环 GET，configured 即
+  // 让位，不阻塞 boot）。v1 轮询等待案实测自噬：devAutoLogin 处在 boot Promise.all
+  // 关键路径，等待本身推迟 app.mount/LoginView，网关链 2.4s→4.1s 反落窗外。未配置
+  // 机本探测 404 与 LoginView 自身探测同款同数（2 行换 2 行不增），常见态净 -1 行。
+  try {
+    const gw = await fetch('/api/matrix/gateway-credentials')
+    if (gw.ok && (await gw.json().catch(() => null))?.configured) return
+  } catch { /* 探测失败不阻断原链 */ }
   if (localStorage.getItem('hermes_api_key')) return
   try {
     const res = await fetch('/api/auth/login', {
