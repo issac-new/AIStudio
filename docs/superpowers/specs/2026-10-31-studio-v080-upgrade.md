@@ -33,7 +33,7 @@
 - `npm run release:check` 四模块对账全绿（cockpit=0.8.0-studio.1 / agent-teams=v0.22.5-team.4 / ycode=3.16.2 / yuan-skill=v2.98.0）。
 - `npm run build:full` 绿（openapi 481 端点、vite overlay 构建、服务端 esbuild＋固件拷贝、verify-dist 完整性门禁全过；fsevents 外置为运行期解析）。
 - 兼容面：Node>=23 不变；依赖仅 node-edge-tts ^1.2.11→^1.2.12（V2 DRM API）；person schema 全 CREATE-IF-NOT-EXISTS 自增（v0.7.39 无 person 表，DROP 分支不可达）；上游仓改名 ekko-studio 已随 VENDOR.md 记录。
-- 已知取舍：023 原件中一段纯注释（peer-unread Note 两行）因锚漂移未随批保真，属零行为注释，git 历史可考；主线 brand 面新增 231 处 Ekko Studio 字串（v0.8.0 新面）未在本批扫尾——记入组件台账待办，品牌统一轮处理。
+- 已知取舍：023 原件中一段纯注释（peer-unread Note 两行）因锚漂移未随批保真，属零行为注释，git 历史可考；主线 brand 面新增约 280 处 Ekko Studio 字串（v0.8.0 新面）未在本批扫尾——**已由后续批闭环（补丁 718，spec 2026-10-31-brand-v080-new-faces.md：33 文件归一，净树重放零失败）**。
 
 ## 设计文档影响
 

@@ -1,0 +1,2033 @@
+diff --git a/packages/desktop/tests/update-test-build.test.cjs b/packages/desktop/tests/update-test-build.test.cjs
+--- a/packages/desktop/tests/update-test-build.test.cjs
++++ b/packages/desktop/tests/update-test-build.test.cjs
+@@ -85,7 +85,7 @@
+   const mac = target.startsWith('darwin')
+   const linux = target.startsWith('linux')
+   const manifestName = linux ? (target.endsWith('arm64') ? 'latest-linux-arm64.yml' : 'latest-linux.yml') : mac ? 'latest-mac.yml' : target === 'win32-arm64' ? 'latest-arm64.yml' : 'latest.yml'
+-  const resources = join(output, mac ? `${target.endsWith('arm64') ? 'mac-arm64' : 'mac'}/Ekko Studio.app/Contents/Resources`
++  const resources = join(output, mac ? `${target.endsWith('arm64') ? 'mac-arm64' : 'mac'}/AIStudio.app/Contents/Resources`
+     : linux ? `${target.endsWith('arm64') ? 'linux-arm64-unpacked' : 'linux-unpacked'}/resources` : target === 'win32-arm64' ? 'win-arm64-unpacked/resources' : 'win-unpacked/resources')
+   const source = join(output, 'package-source')
+   await mkdir(source)
+diff --git a/packages/desktop/scripts/publish-update-test.mjs b/packages/desktop/scripts/publish-update-test.mjs
+--- a/packages/desktop/scripts/publish-update-test.mjs
++++ b/packages/desktop/scripts/publish-update-test.mjs
+@@ -46,7 +46,7 @@
+     release: tag => JSON.parse(run(['api', `${apiRoot}/releases?per_page=100`, '--paginate', '--slurp']))
+       .flat().find(release => release.tag_name === tag) ?? null,
+     create: tag => api('releases', 'POST', { tag_name: tag, name: `Desktop update test: ${tag.replace('update-test-', '')}`,
+-      body: 'Isolated Ekko Studio update testing. Test installers only. See the repository README for A → B instructions.',
++      body: 'Isolated AIStudio update testing. Test installers only. See the repository README for A → B instructions.',
+       draft: true, prerelease: true, make_latest: 'false' }),
+     assets: id => JSON.parse(run(['api', `${apiRoot}/releases/${id}/assets?per_page=100`, '--paginate', '--slurp'])).flat(),
+     download: id => run(['api', `${apiRoot}/releases/assets/${id}`, '-H', 'Accept: application/octet-stream']),
+diff --git a/packages/desktop/scripts/build-update-test.mjs b/packages/desktop/scripts/build-update-test.mjs
+--- a/packages/desktop/scripts/build-update-test.mjs
++++ b/packages/desktop/scripts/build-update-test.mjs
+@@ -14,8 +14,8 @@
+ const { load: loadYaml } = require('js-yaml')
+ const desktopRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+ const targets = {
+-  'darwin-arm64': { platform: 'darwin', args: ['--mac', 'dmg', 'zip', '--arm64'], resources: 'mac-arm64/Ekko Studio.app/Contents/Resources', manifest: 'latest-mac.yml' },
+-  'darwin-x64': { platform: 'darwin', args: ['--mac', 'dmg', 'zip', '--x64'], resources: 'mac/Ekko Studio.app/Contents/Resources', manifest: 'latest-mac.yml' },
++  'darwin-arm64': { platform: 'darwin', args: ['--mac', 'dmg', 'zip', '--arm64'], resources: 'mac-arm64/AIStudio.app/Contents/Resources', manifest: 'latest-mac.yml' },
++  'darwin-x64': { platform: 'darwin', args: ['--mac', 'dmg', 'zip', '--x64'], resources: 'mac/AIStudio.app/Contents/Resources', manifest: 'latest-mac.yml' },
+   'win32-x64': { platform: 'win32', args: ['--win', 'nsis', '--x64'], resources: 'win-unpacked/resources', manifest: 'latest.yml' },
+   'win32-arm64': { platform: 'win32', args: ['--win', 'nsis', '--arm64'], resources: 'win-arm64-unpacked/resources', manifest: 'latest-arm64.yml' },
+   'linux-x64': { platform: 'linux', args: ['--linux', 'AppImage', '--x64'], resources: 'linux-unpacked/resources', manifest: 'latest-linux.yml' },
+diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/installer.nsh
+--- a/packages/desktop/build/installer.nsh
++++ b/packages/desktop/build/installer.nsh
+@@ -1,6 +1,6 @@
+ !macro stopStudioExecutable EXE_NAME LABEL
+   IfFileExists "$INSTDIR\${EXE_NAME}" 0 studioStopDone_${LABEL}
+-    DetailPrint "Stopping Ekko Studio..."
++    DetailPrint "Stopping AIStudio..."
+     nsExec::ExecToLog '"$INSTDIR\${EXE_NAME}" --quit'
+     Pop $0
+ 
+@@ -106,7 +106,7 @@
+ 
+ !macro stopHermesStudioProcesses
+   ; Close either installed product name when upgrading across the rename.
+-  !insertmacro stopStudioExecutable "Ekko Studio.exe" ekko
++  !insertmacro stopStudioExecutable "AIStudio.exe" ekko
+   !insertmacro stopStudioExecutable "Hermes Studio.exe" hermes
+ !macroend
+ 
+diff --git a/packages/desktop/src/main/screenshot-windows.ts b/packages/desktop/src/main/screenshot-windows.ts
+--- a/packages/desktop/src/main/screenshot-windows.ts
++++ b/packages/desktop/src/main/screenshot-windows.ts
+@@ -32,7 +32,7 @@
+   if (!imageEditor || imageEditor.window.isDestroyed()) {
+     const window = new BrowserWindow({
+       width: 1000, height: 740, minWidth: 600, minHeight: 480, show: false,
+-      title: 'Ekko Studio',
++      title: 'AIStudio',
+       useContentSize: true, autoHideMenuBar: true, backgroundColor: '#181b22',
+       webPreferences: webPreferences(),
+     })
+diff --git a/packages/desktop/src/main/native-device-html.ts b/packages/desktop/src/main/native-device-html.ts
+--- a/packages/desktop/src/main/native-device-html.ts
++++ b/packages/desktop/src/main/native-device-html.ts
+@@ -19,7 +19,7 @@
+   const nonce = randomBytes(18).toString('base64')
+   const body = kind === 'button' ? `
+     <button id="device-button" aria-haspopup="menu" aria-expanded="false" aria-controls="device-menu">
+-      <span id="toolbar-icon">${icons.monitor}</span><span id="device-label">Ekko Studio</span><span id="device-arrow">${icons.chevron}</span>
++      <span id="toolbar-icon">${icons.monitor}</span><span id="device-label">AIStudio</span><span id="device-arrow">${icons.chevron}</span>
+     </button><nav id="device-menu" role="menu" hidden></nav>` : kind === 'manager' ? `
+     <main class="manager-shell">
+       <header class="manager-header"><span class="hero-icon">${icons.monitor}</span><div><p class="eyebrow">STUDIO</p><h1 id="title"></h1><p id="description" class="muted"></p></div></header>
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -550,7 +550,7 @@
+         try {
+           await desktopRemoteDevices().switchTo(null)
+         } catch {
+-          dialog.showErrorBox('Ekko Studio', t('desktop.switchDeviceFailed'))
++          dialog.showErrorBox('AIStudio', t('desktop.switchDeviceFailed'))
+         }
+       },
+     },
+@@ -1776,7 +1776,7 @@
+   try { installationCoordinator.register(app.getVersion()) } catch (error) {
+     if (!(error instanceof Error) || error.message !== 'DESKTOP_INSTALLATION_IN_PROGRESS') throw error
+     await app.whenReady()
+-    const choice = await dialog.showMessageBox({ type: 'warning', title: 'Ekko Studio',
++    const choice = await dialog.showMessageBox({ type: 'warning', title: 'AIStudio',
+       message: t('update.interrupted'), buttons: [t('common.cancel'), t('update.recoverInterrupted')], defaultId: 0, cancelId: 0 })
+     if (choice.response !== 1) { app.quit(); return }
+     installationCoordinator.recoverInterruptedInstall()
+diff --git a/packages/desktop/src/main/login-item-settings.ts b/packages/desktop/src/main/login-item-settings.ts
+--- a/packages/desktop/src/main/login-item-settings.ts
++++ b/packages/desktop/src/main/login-item-settings.ts
+@@ -109,7 +109,7 @@
+   writeAutostartEntry(options, [
+     '[Desktop Entry]',
+     'Type=Application',
+-    'Name=Ekko Studio',
++    'Name=AIStudio',
+     `Exec=${command}`,
+     'Terminal=false',
+     'StartupNotify=false',
+diff --git a/packages/server/src/modules/studio/public/runs/prompt.ts b/packages/server/src/modules/studio/public/runs/prompt.ts
+--- a/packages/server/src/modules/studio/public/runs/prompt.ts
++++ b/packages/server/src/modules/studio/public/runs/prompt.ts
+@@ -151,7 +151,7 @@
+   'When the user asks to use the AIStudio MCP browser (including 内置浏览器, MCP浏览器, Studio browser, or built-in browser) and ekko_studio_browser_toolset is available, prefer that toolset. The separate browser_navigate/browser_click tools use a different browser environment and do not share Studio tabs or login state. Use that environment only when explicitly requested or Studio browser is unavailable. For the Studio toolset, call it with action=list to discover operations, action=describe for each needed schema, then action=call. Browser MCP exposes a compact toolset rather than resources; an empty list_mcp_resources or list_mcp_resource_templates result does not mean the browser toolset is unavailable. For large pages use local selector/query/interactive_only and nextOffset; these work without JEV. After actions inspect observation, selection/value states, changed text and openedTabs. Completed means dispatched, not that the goal was achieved. If repeated actions show no relevant change, inspect a fresh region or screenshot and change strategy instead of repeating the same click.',
+   'Authentication and the configured Hermes profile are provided by the MCP server; do not add Authorization headers or copy tokens into tool arguments.',
+   'Do not use ekko_studio_use_chat_run, AIStudio session tools, /api/studio/chat-run/*, or /api/studio/sessions/* as an internal delegation mechanism. In delegate_task, subtask, or workflow-node contexts, do not create, rename, delete, or continue AIStudio sessions unless the user explicitly asked to operate AIStudio sessions; return the delegated result in the current task instead.',
+-  'Ekko Studio session lookup: when the user provides a session id (for example a value like "muy...") or asks to read, inspect, or summarize a previous Studio conversation, use the ekko_studio_use_toolset MCP tool - call it with action=describe then action=call for ekko_studio_use_session_get or ekko_studio_use_session_messages, passing session_id (and profile when the id is not in the current profile). Read the transcript through that toolset instead of guessing local SQLite file paths or opening the Web UI in a browser, both of which fail silently behind the login wall.',
++  'AIStudio session lookup: when the user provides a session id (for example a value like "muy...") or asks to read, inspect, or summarize a previous Studio conversation, use the ekko_studio_use_toolset MCP tool - call it with action=describe then action=call for ekko_studio_use_session_get or ekko_studio_use_session_messages, passing session_id (and profile when the id is not in the current profile). Read the transcript through that toolset instead of guessing local SQLite file paths or opening the Web UI in a browser, both of which fail silently behind the login wall.',
+ ];
+ 
+ export function studioMcpUsageGuidelines(capabilities?: StudioMcpCapabilities): string {
+diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
+--- a/packages/server/src/modules/studio/controllers/auth.ts
++++ b/packages/server/src/modules/studio/controllers/auth.ts
+@@ -441,7 +441,7 @@
+ /**
+  * POST /api/auth/mcu-login
+  * Authenticate with the existing username/password login for an MCU/device.
+- * When remote relay is requested or a legacy relay URL is provided, connect this Ekko Studio instance to it.
++ * When remote relay is requested or a legacy relay URL is provided, connect this AIStudio instance to it.
+  * Body: { token, id, account, password, url? }.
+  */
+ export async function microcontrollerLogin(ctx: Context) {
+diff --git a/packages/ekko-agent/docs/computer-use.md b/packages/ekko-agent/docs/computer-use.md
+--- a/packages/ekko-agent/docs/computer-use.md
++++ b/packages/ekko-agent/docs/computer-use.md
+@@ -39,7 +39,7 @@
+ the page, returning to it, or selecting **Check again** only reads permissions.
+ **Authorize** explicitly requests the selected permission and opens its System
+ Settings pane; the screen request registers the app without collecting thumbnails.
+-Enable Ekko Studio in that pane and return to recheck. If macOS requires a restart,
++Enable AIStudio in that pane and return to recheck. If macOS requires a restart,
+ save your work and reopen the app. These OS grants are separate from tool approvals.
+ The guide is hidden in browsers, older desktop bridges, remote-server mode, Windows,
+ and Linux; it never reports those environments as authorized based on local Mac grants.
+diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
+--- a/packages/client/src/i18n/locales/zh-TW.ts
++++ b/packages/client/src/i18n/locales/zh-TW.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "電腦操作需要授權",
+-    "promptDescription": "Ekko Studio 尚未取得以下系統權限，相關電腦操作可能無法完成。",
++    "promptDescription": "AIStudio 尚未取得以下系統權限，相關電腦操作可能無法完成。",
+     "promptLaterHint": "稍後也可在「設定 → 工具 → 電腦操作」中授權。",
+     "promptGo": "前往授權",
+     "promptLater": "暫不",
+     "title": "電腦操作權限",
+-    "intro": "允許 Ekko Studio 查看和操作這台 Mac 上的應用程式。",
++    "intro": "允許 AIStudio 查看和操作這台 Mac 上的應用程式。",
+     "complete": "兩項系統權限均已開啟。",
+     "refresh": "重新偵測",
+     "checking": "偵測中…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "用於點擊、輸入和讀取其他應用程式的介面控制項。",
+     "screenRecordingHint": "用於擷取應用程式視窗，讓 Ekko 看見螢幕內容。",
+     "authorize": "前往授權",
+-    "guide": "在「系統設定 → 隱私權與安全性」中，為 Ekko Studio 開啟對應權限；若清單中沒有該應用程式，點擊「＋」加入。",
+-    "restartHint": "返回此頁會自動重新偵測。若 macOS 要求重新開啟應用程式，請儲存工作後重新啟動 Ekko Studio。",
++    "guide": "在「系統設定 → 隱私權與安全性」中，為 AIStudio 開啟對應權限；若清單中沒有該應用程式，點擊「＋」加入。",
++    "restartHint": "返回此頁會自動重新偵測。若 macOS 要求重新開啟應用程式，請儲存工作後重新啟動 AIStudio。",
+     "checkFailed": "暫時無法讀取權限，請重新偵測。",
+     "openFailed": "無法開啟授權設定，請手動前往「系統設定 → 隱私權與安全性」。"
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: '正在连接',
+ 
+ 
+-    title: '瀏覽器', settings: '瀏覽器設定', desktopOnly: '內建瀏覽器僅在 Ekko Studio 桌面版可用。', newTab: '新分頁',
++    title: '瀏覽器', settings: '瀏覽器設定', desktopOnly: '內建瀏覽器僅在 AIStudio 桌面版可用。', newTab: '新分頁',
+     back: '上一頁', forward: '下一頁', reload: '重新整理', stop: '停止', addressPlaceholder: '搜尋或輸入網址',
+     undoAnnotation: '復原上一個', deleteAnnotation: '刪除標註 {index}',
+     selectElement: '選取元素', selectRegion: '框選區域', annotationPlaceholder: '描述希望 Agent 檢查或修改的內容…', selectionData: '瀏覽器選取資料', annotationAdded: '截圖已加入對話輸入框', annotationCount: '已標註 {count} 處', annotationLabel: '標註 {index}', clearAnnotations: '清除標註', finishAnnotation: '完成',
+@@ -456,7 +456,7 @@
+   },
+   // 登入
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: '輸入使用者名稱和密碼以繼續。',
+     placeholder: '存取權杖',
+     submit: '登入',
+@@ -639,7 +639,7 @@
+   apiRelay: {
+     title: "API 中轉",
+     headline: "一站接入主流 AI 模型",
+-    description: "APIKEY.FAN 是 Ekko Studio 的合作中轉服務，統一接入 Claude、ChatGPT、Grok、Gemini、智譜、Kimi、DeepSeek 和 MiniMax，相容官方 API 與 SDK。",
++    description: "APIKEY.FAN 是 AIStudio 的合作中轉服務，統一接入 Claude、ChatGPT、Grok、Gemini、智譜、Kimi、DeepSeek 和 MiniMax，相容官方 API 與 SDK。",
+     zhipu: "智譜",
+     viewNow: "立即查看",
+     apiCompatible: "相容官方 API",
+@@ -781,13 +781,13 @@
+     aiHelpGeneralPrompt: '請使用 `hermes-studio-installation` Skill，並遵循 Skill 自己的路由說明，依 Agent 和問題類型選擇合適的 reference。協助我排查或管理這台裝置上的 Agent 安裝、更新或刪除問題。請檢查實際安裝來源、所有實際命中的可執行檔路徑、Node/npm 環境及對應的套件管理器前綴。如果上下文不足，請先詢問我要處理的 Agent 和具體症狀。不要刪除使用者設定、認證資訊或對話資料，任何破壞性修改都必須再次取得使用者確認。',
+     aiHelpPrompt: '請使用 `hermes-studio-installation` Skill，並遵循 Skill 自己的路由說明，依這次 Agent 和問題類型選擇合適的 reference，排查這次 Agents 頁面操作失敗。\n\nAgent：{name}\nAgent ID：{id}\n操作類型：{operation}\n可執行命令：{command}\nnpm 套件：{package}\n原始錯誤：\n{error}\n\n請檢查安裝來源、所有實際命中的可執行檔路徑、Node/npm 環境及對應的套件管理器前綴。不要刪除使用者設定、認證資訊或對話資料。先說明根因，任何破壞性修改都必須再次取得使用者確認。',
+     legacyDataMigrationTitle: '發現舊版 Hermes 資料',
+-    legacyDataMigrationDescription: 'Ekko Studio 在舊版 Windows 資料目錄中發現了資料。是否將其遷移到目前資料目錄？',
++    legacyDataMigrationDescription: 'AIStudio 在舊版 Windows 資料目錄中發現了資料。是否將其遷移到目前資料目錄？',
+     legacyDataMigrationSource: '舊目錄',
+     legacyDataMigrationTarget: '目前目錄',
+     legacyDataMigrationWarning: '同意後 Studio 將自動重新啟動，並在服務啟動前以舊目錄中的同名檔案覆蓋目前目錄；目前目錄獨有的檔案會保留。此詢問只會顯示一次。',
+     legacyDataMigrationPositive: '遷移舊資料',
+     legacyDataMigrationNegative: '不遷移',
+-    legacyDataMigrationSuccess: '已記錄遷移選擇，Ekko Studio 將重新啟動並在服務啟動前遷移資料。',
++    legacyDataMigrationSuccess: '已記錄遷移選擇，AIStudio 將重新啟動並在服務啟動前遷移資料。',
+     legacyDataMigrationFailed: '舊版 Hermes 資料遷移失敗：{error}',
+   },
+ 
+@@ -807,8 +807,8 @@
+     dataDirectoryEnvMacos: 'macOS（桌面端 / 終端機）',
+     dataDirectoryEnvLinux: 'Linux（登入環境）',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: '修改後請完全結束並重新開啟 Ekko Studio。若 Windows 或 Linux 桌面端仍讀取舊值，請登出並重新登入系統。',
+-    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支援透過以下指令單獨升級內建的 Hermes Agent；此指令不會升級 Ekko Studio 桌面端或 Web UI。執行前請先完全結束 Ekko Studio：',
++    dataDirectoryEnvRestart: '修改後請完全結束並重新開啟 AIStudio。若 Windows 或 Linux 桌面端仍讀取舊值，請登出並重新登入系統。',
++    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支援透過以下指令單獨升級內建的 Hermes Agent；此指令不會升級 AIStudio 桌面端或 Web UI。執行前請先完全結束 AIStudio：',
+     webUiTitle: 'Web UI',
+     platform: '平台',
+     currentWebUi: '目前 Web UI',
+@@ -817,10 +817,10 @@
+     chooseRuntimeDirectory: '選擇目錄',
+     resetRuntimeDirectory: '恢復系統預設',
+     runtimeDirectoryHint: '下次重新啟動時會在本機服務啟動前複製並驗證目前 Runtime，舊目錄會保留；後續 Runtime 下載也會儲存在這裡。',
+-    runtimeDirectorySaved: 'Runtime 遷移已排程，重新啟動 Ekko Studio 後執行。',
++    runtimeDirectorySaved: 'Runtime 遷移已排程，重新啟動 AIStudio 後執行。',
+     runtimeMigrationPending: '待遷移至：{directory}',
+     runtimeMigrationFailed: '儲存目錄遷移失敗，已繼續使用原目錄',
+-    runtimeActivationFailed: '所選 Runtime 無法啟動，Ekko Studio 已改用其他已安裝版本',
++    runtimeActivationFailed: '所選 Runtime 無法啟動，AIStudio 已改用其他已安裝版本',
+     active: '已啟用',
+     installed: '已安裝',
+     download: '下載',
+@@ -839,7 +839,7 @@
+     remoteLoadFailed: '遠端版本載入失敗',
+     downloadTasks: '下載任務',
+     downloadStarted: '已開始下載',
+-    activateSuccess: '版本選擇已儲存，重啟 Ekko Studio 後生效。',
++    activateSuccess: '版本選擇已儲存，重啟 AIStudio 後生效。',
+     restartPromptTitle: 'Runtime 已就緒',
+     restartPromptContent: 'Hermes Runtime {version} 已安裝完成，是否立即重新啟動並使用此版本？',
+     restartLater: '稍後',
+@@ -932,9 +932,9 @@
+       viewList: '列表',
+       viewDownload: '下載',
+       viewMessages: '訊息推送',
+-      downloadTitle: '在手機上使用 Ekko Studio',
++      downloadTitle: '在手機上使用 AIStudio',
+       downloadDescription: '我們目前正處於封閉測試階段，必須使用註冊碼才能註冊；我們會在社群媒體上釋出部分註冊碼。',
+-      downloadPaidDescription: 'Ekko Studio App 已正式上線，目前處於付費階段。如需體驗，請前往定價與購買頁面選擇合適的方案，完成購買後即可開始使用。',
++      downloadPaidDescription: 'AIStudio App 已正式上線，目前處於付費階段。如需體驗，請前往定價與購買頁面選擇合適的方案，完成購買後即可開始使用。',
+       downloadScan: '用手機掃碼下載',
+       downloadScanHint: '目前提供 Android 安裝包',
+       available: '可下載',
+@@ -970,7 +970,7 @@
+       accessFailures: {
+         tokenExpired: 'Token 已失效',
+         paidAccountRequired: '目前帳號不是付費帳號，無法使用此功能',
+-        cloudSubscriptionRequired: '目前帳號尚未開通 Ekko Studio Cloud，無法使用雲端連線',
++        cloudSubscriptionRequired: '目前帳號尚未開通 AIStudio Cloud，無法使用雲端連線',
+         appAccessExpired: '目前內部測試或公開測試資格已過期，無法使用雲端連線',
+         required: 'App 未攜帶存取授權簽章',
+         invalid: 'App 存取授權簽章無效',
+@@ -1174,7 +1174,7 @@
+       systemUnavailable: "系統截圖目前無法使用",
+       systemWaiting: "請在系統介面選擇截圖區域",
+       timedOut: "截圖等候逾時，請重試。",
+-      permissionDenied: "請在系統設定中授予 Ekko Studio 螢幕錄製權限，然後重新啟動應用程式。",
++      permissionDenied: "請在系統設定中授予 AIStudio 螢幕錄製權限，然後重新啟動應用程式。",
+       sourceUnavailable: "無法取得螢幕畫面，請檢查螢幕錄製權限後重試。",
+       failed: "擷取失敗，請重試。",
+     },
+@@ -1321,7 +1321,7 @@
+     },
+     showToolCalls: '顯示工具呼叫',
+     pushEnabled: '是否推送',
+-    pushNotConfigured: '請先到 Ekko Studio「裝置互聯」中設定訊息推送。',
++    pushNotConfigured: '請先到 AIStudio「裝置互聯」中設定訊息推送。',
+     hideToolCalls: '隱藏工具呼叫',
+     messageQueue: '訊息佇列',
+     removeQueuedMessage: '移除佇列訊息',
+@@ -2747,14 +2747,14 @@
+       approvalBellHint: '出現新的待處理審批或澄清時播放提示音',
+       notifyOnComplete: '完成彈窗通知',
+       notifyOnApproval: '審批桌面通知',
+-      notifyOnApprovalHint: 'Ekko Studio 不在前景時，新的審批或澄清會傳送系統通知；通知不顯示敏感詳情',
++      notifyOnApprovalHint: 'AIStudio 不在前景時，新的審批或澄清會傳送系統通知；通知不顯示敏感詳情',
+       notifyOnApprovalTest: '審批桌面通知已啟用。',
+       notifyOnApprovalTestButton: '測試',
+       notifyOnApprovalTestSent: '審批通知已傳送',
+       notifyOnApprovalTestFailed: '審批通知傳送失敗',
+       approvalNotificationTitle: '需要審批',
+       approvalNotificationClarifyTitle: '需要澄清',
+-      approvalNotificationBody: '開啟 Ekko Studio 查看並處理。',
++      approvalNotificationBody: '開啟 AIStudio 查看並處理。',
+       notifyOnCompleteHint: 'AI 回覆完成時顯示系統通知',
+       notifyOnCompleteMacHint: 'macOS 需要在系統設定中允許瀏覽器通知。',
+       notifyOnCompleteDenied: '通知權限已被拒絕',
+@@ -2776,7 +2776,7 @@
+       chatInputHeightHint: '桌面端聊天輸入框預設高度（像素）。行動端保持自動高度。',
+       linkOpenTarget: '網頁連結開啟方式',
+       linkOpenTargetHint: '選擇訊息與 Markdown 預覽中的網頁連結要在哪裡開啟。',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: '預設瀏覽器',
+     },
+     agent: {
+@@ -2967,10 +2967,10 @@
+         extract: '正在解壓縮模型……', validate: '正在驗證模型……', install: '正在安裝模型……', completed: '模型已可用', failed: '下載失敗',
+       },
+       hermesConfigTitle: 'Hermes Agent 設定',
+-      hermesConfigDescription: 'Hermes profile 中原有的原生提供商會繼續保留；Web UI 管理的提供商對 Hermes 統一顯示為 Ekko Studio。',
++      hermesConfigDescription: 'Hermes profile 中原有的原生提供商會繼續保留；Web UI 管理的提供商對 Hermes 統一顯示為 AIStudio。',
+       hermesActiveProvider: '目前提供商',
+       hermesConfiguredProviders: '已設定提供商',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: '語速',
+       providerSampleRate: '取樣率',
+       providerBitRate: '位元率',
+@@ -2984,7 +2984,7 @@
+       optionDisabled: '停用',
+       nativeProvider: 'Hermes 原生提供商',
+       selectNativeProvider: '選擇 Hermes 原生提供商',
+-      useHermesStudioProvider: '使用 Ekko Studio 提供商',
++      useHermesStudioProvider: '使用 AIStudio 提供商',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
+--- a/packages/client/src/i18n/locales/de.ts
++++ b/packages/client/src/i18n/locales/de.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "Computersteuerung benötigt Berechtigungen",
+-    "promptDescription": "Ekko Studio fehlen die folgenden Systemberechtigungen. Betroffene Desktopaktionen können möglicherweise nicht abgeschlossen werden.",
++    "promptDescription": "AIStudio fehlen die folgenden Systemberechtigungen. Betroffene Desktopaktionen können möglicherweise nicht abgeschlossen werden.",
+     "promptLaterHint": "Du kannst die Berechtigungen auch später unter Einstellungen → Werkzeuge → Computersteuerung erteilen.",
+     "promptGo": "Zu den Berechtigungen",
+     "promptLater": "Nicht jetzt",
+     "title": "Berechtigungen für Computersteuerung",
+-    "intro": "Erlaube Ekko Studio, Apps auf diesem Mac zu sehen und zu bedienen.",
++    "intro": "Erlaube AIStudio, Apps auf diesem Mac zu sehen und zu bedienen.",
+     "complete": "Beide Systemberechtigungen sind aktiviert.",
+     "refresh": "Erneut prüfen",
+     "checking": "Wird geprüft…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "Zum Klicken, Tippen und Lesen von Bedienelementen anderer Apps.",
+     "screenRecordingHint": "Erfasst App-Fenster, damit Ekko den Bildschirm sehen kann.",
+     "authorize": "Autorisieren",
+-    "guide": "Aktiviere unter Systemeinstellungen → Datenschutz & Sicherheit die Berechtigungen für Ekko Studio. Fehlt die App, füge sie mit + hinzu.",
+-    "restartHint": "Bei der Rückkehr wird erneut geprüft. Falls macOS einen Neustart verlangt, speichere deine Arbeit und starte Ekko Studio neu.",
++    "guide": "Aktiviere unter Systemeinstellungen → Datenschutz & Sicherheit die Berechtigungen für AIStudio. Fehlt die App, füge sie mit + hinzu.",
++    "restartHint": "Bei der Rückkehr wird erneut geprüft. Falls macOS einen Neustart verlangt, speichere deine Arbeit und starte AIStudio neu.",
+     "checkFailed": "Berechtigungen konnten nicht gelesen werden. Bitte erneut prüfen.",
+     "openFailed": "Autorisierung konnte nicht geöffnet werden. Öffne Systemeinstellungen → Datenschutz & Sicherheit manuell."
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: 'Connecting',
+ 
+ 
+-    title: 'Browser', settings: 'Browser-Einstellungen', desktopOnly: 'Der integrierte Browser ist nur in Ekko Studio Desktop verfügbar.', newTab: 'Neuer Tab',
++    title: 'Browser', settings: 'Browser-Einstellungen', desktopOnly: 'Der integrierte Browser ist nur in AIStudio Desktop verfügbar.', newTab: 'Neuer Tab',
+     back: 'Zurück', forward: 'Vor', reload: 'Neu laden', stop: 'Stopp', addressPlaceholder: 'Suchen oder Adresse eingeben',
+     undoAnnotation: 'Letzte rückgängig machen', deleteAnnotation: 'Markierung {index} löschen',
+     selectElement: 'Element wählen', selectRegion: 'Bereich wählen', annotationPlaceholder: 'Beschreibe, was der Agent prüfen oder ändern soll…', selectionData: 'Browser-Auswahldaten', annotationAdded: 'Screenshot wurde zum Chat hinzugefügt', annotationCount: '{count} Markierung(en)', annotationLabel: 'Markierung {index}', clearAnnotations: 'Markierungen löschen', finishAnnotation: 'Fertig',
+@@ -468,7 +468,7 @@
+   },
+   // Login
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: 'Geben Sie Benutzername und Passwort ein, um fortzufahren.',
+     placeholder: 'Zugangs-Token',
+     submit: 'Anmelden',
+@@ -651,7 +651,7 @@
+   apiRelay: {
+     title: "API-Relay",
+     headline: "Führende KI-Modelle über ein Gateway",
+-    description: "APIKEY.FAN ist das API-Gateway von Ekko Studios Partner. Es bietet einheitlichen Zugriff auf Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek und MiniMax und ist mit offiziellen APIs und SDKs kompatibel.",
++    description: "APIKEY.FAN ist das API-Gateway von AIStudios Partner. Es bietet einheitlichen Zugriff auf Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek und MiniMax und ist mit offiziellen APIs und SDKs kompatibel.",
+     zhipu: "Zhipu",
+     viewNow: "Jetzt ansehen",
+     apiCompatible: "Mit offiziellen APIs kompatibel",
+@@ -793,13 +793,13 @@
+     aiHelpGeneralPrompt: 'Verwende den Skill `hermes-studio-installation` und folge seinen Routing-Anweisungen, um die passende Referenz für Agent und Problem auszuwählen. Hilf mir bei Installation, Updates oder Entfernung von Agents auf diesem Gerät. Prüfe die tatsächliche Installationsquelle, alle aufgelösten Programmpfade, die Node/npm-Umgebung und passende Paketmanager-Präfixe. Frage bei fehlendem Kontext zuerst nach Agent und Symptom. Erhalte Benutzerkonfiguration, Authentifizierung und Unterhaltungsdaten und frage vor destruktiven Änderungen erneut nach Bestätigung.',
+     aiHelpPrompt: 'Verwende den Skill `hermes-studio-installation` und folge seinen Routing-Anweisungen, um die passende Referenz für diesen Agent und dieses Problem auszuwählen. Untersuche diesen Fehler auf der Agents-Seite.\n\nAgent: {name}\nAgent-ID: {id}\nVorgang: {operation}\nBefehl: {command}\nnpm-Paket: {package}\nUrsprünglicher Fehler:\n{error}\n\nPrüfe Installationsquelle, alle aufgelösten Programmpfade, die Node/npm-Umgebung und passende Paketmanager-Präfixe. Erhalte Benutzerkonfiguration, Authentifizierung und Unterhaltungsdaten. Erkläre zuerst die Ursache und frage vor destruktiven Änderungen erneut nach Bestätigung.',
+     legacyDataMigrationTitle: 'Alte Hermes-Daten gefunden',
+-    legacyDataMigrationDescription: 'Ekko Studio hat Daten in einem früheren Windows-Datenordner gefunden. Möchten Sie diese in den aktuellen Datenordner migrieren?',
++    legacyDataMigrationDescription: 'AIStudio hat Daten in einem früheren Windows-Datenordner gefunden. Möchten Sie diese in den aktuellen Datenordner migrieren?',
+     legacyDataMigrationSource: 'Alter Ordner',
+     legacyDataMigrationTarget: 'Aktueller Ordner',
+     legacyDataMigrationWarning: 'Studio wird nach der Bestätigung neu gestartet und ersetzt vor dem Start der lokalen Dienste gleichnamige Dateien durch die alten Versionen. Nur im aktuellen Ordner vorhandene Dateien bleiben erhalten. Diese Frage wird nur einmal angezeigt.',
+     legacyDataMigrationPositive: 'Alte Daten migrieren',
+     legacyDataMigrationNegative: 'Nicht migrieren',
+-    legacyDataMigrationSuccess: 'Die Migration wurde vorgemerkt. Ekko Studio wird neu gestartet und migriert die Daten vor dem Start der lokalen Dienste.',
++    legacyDataMigrationSuccess: 'Die Migration wurde vorgemerkt. AIStudio wird neu gestartet und migriert die Daten vor dem Start der lokalen Dienste.',
+     legacyDataMigrationFailed: 'Migration der alten Hermes-Daten fehlgeschlagen: {error}',
+   },
+ 
+@@ -819,8 +819,8 @@
+     dataDirectoryEnvMacos: 'macOS (Desktop / Terminal)',
+     dataDirectoryEnvLinux: 'Linux (Anmeldeumgebung)',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: 'Beenden Sie Ekko Studio nach der Änderung vollständig und öffnen Sie es erneut. Wenn die Desktop-App unter Windows oder Linux weiterhin den alten Wert sieht, melden Sie sich ab und wieder an.',
+-    cliUpdateDescription: 'Mit Hermes Runtime 0.19.1 und höher aktualisiert der folgende Befehl ausschließlich den integrierten Hermes Agent. Die Ekko Studio-Desktop-App und die Web UI werden nicht aktualisiert. Beenden Sie Ekko Studio vor der Ausführung vollständig:',
++    dataDirectoryEnvRestart: 'Beenden Sie AIStudio nach der Änderung vollständig und öffnen Sie es erneut. Wenn die Desktop-App unter Windows oder Linux weiterhin den alten Wert sieht, melden Sie sich ab und wieder an.',
++    cliUpdateDescription: 'Mit Hermes Runtime 0.19.1 und höher aktualisiert der folgende Befehl ausschließlich den integrierten Hermes Agent. Die AIStudio-Desktop-App und die Web UI werden nicht aktualisiert. Beenden Sie AIStudio vor der Ausführung vollständig:',
+     webUiTitle: 'Web UI',
+     platform: 'Plattform',
+     currentWebUi: 'Aktuelles Web UI',
+@@ -829,10 +829,10 @@
+     chooseRuntimeDirectory: 'Verzeichnis auswählen',
+     resetRuntimeDirectory: 'Systemstandard verwenden',
+     runtimeDirectoryHint: 'Die aktuelle Runtime wird beim nächsten Neustart vor den lokalen Diensten kopiert und geprüft. Der alte Speicher bleibt erhalten; künftige Runtime-Downloads landen ebenfalls hier.',
+-    runtimeDirectorySaved: 'Runtime-Migration geplant. Starten Sie Ekko Studio neu, um sie auszuführen.',
++    runtimeDirectorySaved: 'Runtime-Migration geplant. Starten Sie AIStudio neu, um sie auszuführen.',
+     runtimeMigrationPending: 'Ausstehendes Migrationsziel: {directory}',
+     runtimeMigrationFailed: 'Speichermigration fehlgeschlagen; der vorherige Speicher bleibt aktiv',
+-    runtimeActivationFailed: 'Die ausgewählte Runtime konnte nicht gestartet werden; Ekko Studio verwendet eine andere installierte Version',
++    runtimeActivationFailed: 'Die ausgewählte Runtime konnte nicht gestartet werden; AIStudio verwendet eine andere installierte Version',
+     active: 'Aktiv',
+     installed: 'Installiert',
+     download: 'Herunterladen',
+@@ -851,7 +851,7 @@
+     remoteLoadFailed: 'Remote-Versionen konnten nicht geladen werden',
+     downloadTasks: 'Download-Aufgaben',
+     downloadStarted: 'Download gestartet',
+-    activateSuccess: 'Versionsauswahl gespeichert. Starten Sie Ekko Studio neu, um sie zu verwenden.',
++    activateSuccess: 'Versionsauswahl gespeichert. Starten Sie AIStudio neu, um sie zu verwenden.',
+     restartPromptTitle: 'Runtime bereit',
+     restartPromptContent: 'Hermes Runtime {version} wurde installiert. Jetzt neu starten, um sie zu verwenden?',
+     restartLater: 'Später',
+@@ -944,9 +944,9 @@
+       viewList: 'Liste',
+       viewDownload: 'Download',
+       viewMessages: 'Nachrichtenversand',
+-      downloadTitle: 'Ekko Studio auf deinem Smartphone',
++      downloadTitle: 'AIStudio auf deinem Smartphone',
+       downloadDescription: 'Wir befinden uns derzeit in einer geschlossenen Beta. Für die Registrierung ist ein Registrierungscode erforderlich; einige Codes werden wir über unsere Social-Media-Kanäle veröffentlichen.',
+-      downloadPaidDescription: 'Die Ekko Studio App ist jetzt offiziell als kostenpflichtiges Produkt verfügbar. Besuchen Sie die Preis- und Kaufseite, wählen Sie den passenden Tarif und schließen Sie den Kauf ab.',
++      downloadPaidDescription: 'Die AIStudio App ist jetzt offiziell als kostenpflichtiges Produkt verfügbar. Besuchen Sie die Preis- und Kaufseite, wählen Sie den passenden Tarif und schließen Sie den Kauf ab.',
+       downloadScan: 'Mit dem Smartphone scannen',
+       downloadScanHint: 'Android-Download ist verfügbar',
+       available: 'Verfügbar',
+@@ -982,7 +982,7 @@
+       accessFailures: {
+         tokenExpired: 'Token ist abgelaufen',
+         paidAccountRequired: 'Das aktuelle Konto ist nicht kostenpflichtig und kann diese Funktion nicht verwenden',
+-        cloudSubscriptionRequired: 'Dieses Konto hat keinen Zugriff auf Ekko Studio Cloud',
++        cloudSubscriptionRequired: 'Dieses Konto hat keinen Zugriff auf AIStudio Cloud',
+         appAccessExpired: 'Der Zugriff auf den internen Test oder die öffentliche Beta ist abgelaufen',
+         required: 'Die App hat keine Zugriffsberechtigung übermittelt',
+         invalid: 'Die App-Zugriffsberechtigung ist ungültig',
+@@ -1160,7 +1160,7 @@
+       systemUnavailable: "System-Screenshots sind derzeit nicht verfügbar",
+       systemWaiting: "Wählen Sie einen Screenshot im Systemdialog",
+       timedOut: "Zeitüberschreitung beim Screenshot. Bitte erneut versuchen.",
+-      permissionDenied: "Erlauben Sie Ekko Studio die Bildschirmaufnahme in den Systemeinstellungen und starten Sie die App neu.",
++      permissionDenied: "Erlauben Sie AIStudio die Bildschirmaufnahme in den Systemeinstellungen und starten Sie die App neu.",
+       sourceUnavailable: "Bildschirmaufnahme fehlgeschlagen. Prüfen Sie die Berechtigungen und versuchen Sie es erneut.",
+       failed: "Screenshot fehlgeschlagen. Bitte versuchen Sie es erneut.",
+     },
+@@ -1282,7 +1282,7 @@
+     },
+     showToolCalls: 'Tool-Aufrufe anzeigen',
+     pushEnabled: 'Push aktivieren',
+-    pushNotConfigured: 'Richte den Nachrichten-Push zuerst unter „Geräteverbindungen“ in Ekko Studio ein.',
++    pushNotConfigured: 'Richte den Nachrichten-Push zuerst unter „Geräteverbindungen“ in AIStudio ein.',
+     hideToolCalls: 'Tool-Aufrufe ausblenden',
+     messageQueue: 'Nachrichtenwarteschlange',
+     removeQueuedMessage: 'Nachricht aus Warteschlange entfernen',
+@@ -2301,7 +2301,7 @@
+       notifyOnApprovalTestFailed: 'Failed to send approval notification',
+       approvalNotificationTitle: 'Approval required',
+       approvalNotificationClarifyTitle: 'Clarification required',
+-      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
++      approvalNotificationBody: 'Open AIStudio to review and respond.',
+       notifyOnCompleteHint: 'Systembenachrichtigung anzeigen, wenn die KI fertig ist',
+       notifyOnCompleteMacHint: 'Unter macOS Browserbenachrichtigungen in den Systemeinstellungen erlauben.',
+       notifyOnCompleteDenied: 'Benachrichtigungsberechtigung wurde verweigert',
+@@ -2323,7 +2323,7 @@
+       chatInputHeightHint: 'Standardhöhe der Chat-Eingabe auf dem Desktop in Pixeln. Mobil bleibt die Höhe automatisch.',
+       linkOpenTarget: 'Weblinks öffnen in',
+       linkOpenTargetHint: 'Wählen Sie, wo Links aus Nachrichten und Markdown-Vorschauen geöffnet werden.',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: 'Standardbrowser',
+     },
+     agent: {
+@@ -2486,10 +2486,10 @@
+         extract: 'Modell wird entpackt…', validate: 'Modell wird validiert…', install: 'Modell wird installiert…', completed: 'Modell ist bereit', failed: 'Download fehlgeschlagen',
+       },
+       hermesConfigTitle: 'Hermes-Agent-Konfiguration',
+-      hermesConfigDescription: 'Vorhandene native Anbieter bleiben im Hermes-Profil; Web-UI-Anbieter erscheinen als Ekko Studio.',
++      hermesConfigDescription: 'Vorhandene native Anbieter bleiben im Hermes-Profil; Web-UI-Anbieter erscheinen als AIStudio.',
+       hermesActiveProvider: 'Aktiver Anbieter',
+       hermesConfiguredProviders: 'Konfigurierte Anbieter',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: 'Geschwindigkeit',
+       providerSampleRate: 'Abtastrate',
+       providerBitRate: 'Bitrate',
+@@ -2503,7 +2503,7 @@
+       optionDisabled: 'Deaktiviert',
+       nativeProvider: 'Nativer Hermes-Anbieter',
+       selectNativeProvider: 'Nativen Hermes-Anbieter waehlen',
+-      useHermesStudioProvider: 'Ekko Studio-Anbieter verwenden',
++      useHermesStudioProvider: 'AIStudio-Anbieter verwenden',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
+--- a/packages/client/src/i18n/locales/ar.ts
++++ b/packages/client/src/i18n/locales/ar.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "التحكم بالكمبيوتر يحتاج إلى إذن",
+-    "promptDescription": "يفتقد Ekko Studio أذونات النظام التالية. قد يتعذر إكمال عمليات سطح المكتب المتعلقة بها.",
++    "promptDescription": "يفتقد AIStudio أذونات النظام التالية. قد يتعذر إكمال عمليات سطح المكتب المتعلقة بها.",
+     "promptLaterHint": "يمكنك منح الأذونات لاحقًا من الإعدادات ← الأدوات ← التحكم بالكمبيوتر.",
+     "promptGo": "الانتقال إلى الأذونات",
+     "promptLater": "ليس الآن",
+     "title": "أذونات التحكم بالكمبيوتر",
+-    "intro": "اسمح لـ Ekko Studio بعرض التطبيقات على هذا الـ Mac والتحكم بها.",
++    "intro": "اسمح لـ AIStudio بعرض التطبيقات على هذا الـ Mac والتحكم بها.",
+     "complete": "تم تفعيل إذنَي النظام.",
+     "refresh": "إعادة التحقق",
+     "checking": "جارٍ التحقق…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "للنقر والكتابة وقراءة عناصر التحكم في التطبيقات الأخرى.",
+     "screenRecordingHint": "لالتقاط نوافذ التطبيقات حتى يتمكن Ekko من رؤية الشاشة.",
+     "authorize": "منح الإذن",
+-    "guide": "في إعدادات النظام ← الخصوصية والأمان، فعّل كل إذن لـ Ekko Studio. إذا لم يظهر التطبيق، أضفه باستخدام +.",
+-    "restartHint": "تُفحص الأذونات مجددًا عند العودة. إذا طلب macOS إعادة فتح التطبيق، احفظ عملك وأعد تشغيل Ekko Studio.",
++    "guide": "في إعدادات النظام ← الخصوصية والأمان، فعّل كل إذن لـ AIStudio. إذا لم يظهر التطبيق، أضفه باستخدام +.",
++    "restartHint": "تُفحص الأذونات مجددًا عند العودة. إذا طلب macOS إعادة فتح التطبيق، احفظ عملك وأعد تشغيل AIStudio.",
+     "checkFailed": "تعذرت قراءة الأذونات. أعد التحقق.",
+     "openFailed": "تعذر فتح إعدادات الأذونات. افتح إعدادات النظام ← الخصوصية والأمان يدويًا."
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: 'Connecting',
+ 
+ 
+-    title: 'المتصفح', settings: 'إعدادات المتصفح', desktopOnly: 'المتصفح المدمج متوفر فقط في Ekko Studio Desktop.', newTab: 'تبويب جديد',
++    title: 'المتصفح', settings: 'إعدادات المتصفح', desktopOnly: 'المتصفح المدمج متوفر فقط في AIStudio Desktop.', newTab: 'تبويب جديد',
+     back: 'رجوع', forward: 'تقدّم', reload: 'إعادة تحميل', stop: 'إيقاف', addressPlaceholder: 'ابحث أو أدخل عنوانًا',
+     undoAnnotation: 'التراجع عن الأخير', deleteAnnotation: 'حذف التعليق {index}',
+     selectElement: 'تحديد عنصر', selectRegion: 'تحديد منطقة', annotationPlaceholder: 'اوصف ما يجب أن يفحصه الوكيل أو يغيّره…', selectionData: 'بيانات التحديد في المتصفح', annotationAdded: 'تمت إضافة لقطة الشاشة إلى محرّر المحادثة', annotationCount: '{count} تعليق', annotationLabel: 'تعليق {index}', clearAnnotations: 'مسح التعليقات', finishAnnotation: 'تم',
+@@ -456,7 +456,7 @@
+   },
+   // Login
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: 'أدخل اسم المستخدم وكلمة المرور للمتابعة.',
+     placeholder: 'رمز الوصول',
+     submit: 'تسجيل الدخول',
+@@ -639,7 +639,7 @@
+   apiRelay: {
+     title: "بوابة API",
+     headline: "نماذج الذكاء الاصطناعي الرائدة عبر بوابة واحدة",
+-    description: "APIKEY.FAN هي بوابة API الشريكة لـ Ekko Studio. توفر وصولًا موحدًا إلى Claude وChatGPT وGrok وGemini وZhipu وKimi وDeepSeek وMiniMax، وهي متوافقة مع واجهات API وحزم SDK الرسمية.",
++    description: "APIKEY.FAN هي بوابة API الشريكة لـ AIStudio. توفر وصولًا موحدًا إلى Claude وChatGPT وGrok وGemini وZhipu وKimi وDeepSeek وMiniMax، وهي متوافقة مع واجهات API وحزم SDK الرسمية.",
+     zhipu: "Zhipu",
+     viewNow: "عرض الآن",
+     apiCompatible: "متوافقة مع واجهات API الرسمية",
+@@ -781,13 +781,13 @@
+     aiHelpGeneralPrompt: 'استخدم Skill باسم `hermes-studio-installation` واتبع تعليمات التوجيه الخاصة به لاختيار المرجع المناسب للـ Agent والمشكلة. ساعدني في تشخيص أو إدارة تثبيت Agents أو تحديثها أو إزالتها على هذا الجهاز. افحص مصدر التثبيت الفعلي وكل مسارات الملفات التنفيذية التي تم حلها وبيئة Node/npm وبادئات مدير الحزم المناسبة. إذا كان السياق غير كافٍ، فاسأل أولاً عن Agent والعرض المطلوب حله. حافظ على إعدادات المستخدم وبيانات المصادقة والمحادثات واطلب التأكيد قبل أي تغييرات مدمرة.',
+     aiHelpPrompt: 'استخدم Skill باسم `hermes-studio-installation` واتبع تعليمات التوجيه الخاصة به لاختيار المرجع المناسب لهذا الـ Agent والمشكلة. شخّص هذا الفشل في صفحة Agents.\n\nAgent: {name}\nمعرّف Agent: {id}\nالعملية: {operation}\nالأمر التنفيذي: {command}\nحزمة npm: {package}\nالخطأ الأصلي:\n{error}\n\nافحص مصدر التثبيت وكل مسارات الملفات التنفيذية التي تم حلها وبيئة Node/npm وبادئات مدير الحزم المناسبة. حافظ على إعدادات المستخدم وبيانات المصادقة والمحادثات. اشرح السبب الجذري أولاً واطلب التأكيد قبل أي تغييرات مدمرة.',
+     legacyDataMigrationTitle: 'تم العثور على بيانات Hermes قديمة',
+-    legacyDataMigrationDescription: 'عثر Ekko Studio على بيانات في مجلد Windows قديم. هل تريد نقلها إلى مجلد البيانات الحالي؟',
++    legacyDataMigrationDescription: 'عثر AIStudio على بيانات في مجلد Windows قديم. هل تريد نقلها إلى مجلد البيانات الحالي؟',
+     legacyDataMigrationSource: 'المجلد القديم',
+     legacyDataMigrationTarget: 'المجلد الحالي',
+     legacyDataMigrationWarning: 'سيُعاد تشغيل Studio بعد التأكيد، وقبل بدء الخدمات المحلية ستُستبدل الملفات المتطابقة بالنسخ القديمة مع الاحتفاظ بالملفات الموجودة فقط في المجلد الحالي. سيظهر هذا السؤال مرة واحدة فقط.',
+     legacyDataMigrationPositive: 'نقل البيانات القديمة',
+     legacyDataMigrationNegative: 'عدم النقل',
+-    legacyDataMigrationSuccess: 'تمت جدولة النقل. سيُعاد تشغيل Ekko Studio وينقل البيانات قبل بدء الخدمات المحلية.',
++    legacyDataMigrationSuccess: 'تمت جدولة النقل. سيُعاد تشغيل AIStudio وينقل البيانات قبل بدء الخدمات المحلية.',
+     legacyDataMigrationFailed: 'فشل نقل بيانات Hermes القديمة: {error}',
+   },
+ 
+@@ -807,8 +807,8 @@
+     dataDirectoryEnvMacos: 'macOS (سطح المكتب / الطرفية)',
+     dataDirectoryEnvLinux: 'Linux (بيئة تسجيل الدخول)',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: 'بعد التغيير، أغلق Ekko Studio بالكامل ثم افتحه مجددًا. في Windows أو Linux، سجّل الخروج ثم الدخول إذا ظل تطبيق سطح المكتب يرى القيمة القديمة.',
+-    cliUpdateDescription: 'في Hermes Runtime بالإصدار 0.19.1 والإصدارات الأحدث، يحدّث الأمر التالي Hermes Agent المضمّن فقط. ولا يحدّث تطبيق Ekko Studio لسطح المكتب أو Web UI. أغلق Ekko Studio بالكامل قبل تنفيذه:',
++    dataDirectoryEnvRestart: 'بعد التغيير، أغلق AIStudio بالكامل ثم افتحه مجددًا. في Windows أو Linux، سجّل الخروج ثم الدخول إذا ظل تطبيق سطح المكتب يرى القيمة القديمة.',
++    cliUpdateDescription: 'في Hermes Runtime بالإصدار 0.19.1 والإصدارات الأحدث، يحدّث الأمر التالي Hermes Agent المضمّن فقط. ولا يحدّث تطبيق AIStudio لسطح المكتب أو Web UI. أغلق AIStudio بالكامل قبل تنفيذه:',
+     webUiTitle: 'واجهة الويب',
+     platform: 'المنصة',
+     currentWebUi: 'واجهة الويب الحالية',
+@@ -817,10 +817,10 @@
+     chooseRuntimeDirectory: 'اختر مجلدًا',
+     resetRuntimeDirectory: 'استخدام الافتراضي للنظام',
+     runtimeDirectoryHint: 'يتم نسخ Runtime الحالي والتحقق منه قبل بدء الخدمات المحلية في التشغيل التالي. ويُحتفظ بالتخزين القديم، وتُخزَّن تنزيلات Runtime المستقبلية هنا.',
+-    runtimeDirectorySaved: 'تم جدولة نقل Runtime. أعد تشغيل Ekko Studio لتطبيقه.',
++    runtimeDirectorySaved: 'تم جدولة نقل Runtime. أعد تشغيل AIStudio لتطبيقه.',
+     runtimeMigrationPending: 'وجهة النقل المعلّقة: {directory}',
+     runtimeMigrationFailed: 'فشل نقل التخزين، وما زال التخزين السابق نشطًا',
+-    runtimeActivationFailed: 'تعذر تشغيل Runtime المحدد، لذلك استخدم Ekko Studio إصدارًا آخر مثبتًا',
++    runtimeActivationFailed: 'تعذر تشغيل Runtime المحدد، لذلك استخدم AIStudio إصدارًا آخر مثبتًا',
+     active: 'نشط',
+     installed: 'مثبّت',
+     download: 'تنزيل',
+@@ -839,7 +839,7 @@
+     remoteLoadFailed: 'تعذّر تحميل الإصدارات البعيدة',
+     downloadTasks: 'مهام التنزيل',
+     downloadStarted: 'بدأ التنزيل',
+-    activateSuccess: 'تم حفظ اختيار الإصدار. أعد تشغيل Ekko Studio لاستخدامه.',
++    activateSuccess: 'تم حفظ اختيار الإصدار. أعد تشغيل AIStudio لاستخدامه.',
+     restartPromptTitle: 'Runtime جاهز',
+     restartPromptContent: 'تم تثبيت Hermes Runtime {version}. هل تريد إعادة التشغيل الآن لاستخدامه؟',
+     restartLater: 'لاحقًا',
+@@ -932,9 +932,9 @@
+       viewList: 'القائمة',
+       viewDownload: 'تنزيل',
+       viewMessages: 'إرسال الرسائل',
+-      downloadTitle: 'Ekko Studio على هاتفك',
++      downloadTitle: 'AIStudio على هاتفك',
+       downloadDescription: 'نحن حاليًا في مرحلة اختبار تجريبي مغلق. يلزم رمز تسجيل لإنشاء حساب، وسننشر عددًا محدودًا من الرموز عبر حساباتنا على وسائل التواصل الاجتماعي.',
+-      downloadPaidDescription: 'تم إطلاق تطبيق Ekko Studio رسميًا، وهو متاح الآن كمنتج مدفوع. للبدء، انتقل إلى صفحة الأسعار والشراء، واختر الخطة المناسبة، ثم أكمل عملية الشراء.',
++      downloadPaidDescription: 'تم إطلاق تطبيق AIStudio رسميًا، وهو متاح الآن كمنتج مدفوع. للبدء، انتقل إلى صفحة الأسعار والشراء، واختر الخطة المناسبة، ثم أكمل عملية الشراء.',
+       downloadScan: 'امسح بهاتفك',
+       downloadScanHint: 'تنزيل Android متاح الآن',
+       available: 'متاح',
+@@ -970,7 +970,7 @@
+       accessFailures: {
+         tokenExpired: 'انتهت صلاحية الرمز المميز',
+         paidAccountRequired: 'الحساب الحالي غير مدفوع ولا يمكنه استخدام هذه الميزة',
+-        cloudSubscriptionRequired: 'هذا الحساب لا يملك صلاحية الوصول إلى Ekko Studio Cloud',
++        cloudSubscriptionRequired: 'هذا الحساب لا يملك صلاحية الوصول إلى AIStudio Cloud',
+         appAccessExpired: 'انتهت صلاحية الوصول للاختبار الداخلي أو الإصدار التجريبي العام',
+         required: 'لم يقدّم التطبيق استحقاق وصول',
+         invalid: 'استحقاق وصول التطبيق غير صالح',
+@@ -1174,7 +1174,7 @@
+       systemUnavailable: "لقطات النظام غير متاحة حاليًا",
+       systemWaiting: "اختر منطقة الالتقاط في نافذة النظام",
+       timedOut: "انتهت مهلة الالتقاط. حاول مرة أخرى.",
+-      permissionDenied: "اسمح بتسجيل الشاشة لتطبيق Ekko Studio في إعدادات النظام، ثم أعد تشغيل التطبيق.",
++      permissionDenied: "اسمح بتسجيل الشاشة لتطبيق AIStudio في إعدادات النظام، ثم أعد تشغيل التطبيق.",
+       sourceUnavailable: "تعذر التقاط الشاشة. تحقق من أذونات تسجيل الشاشة وحاول مجددًا.",
+       failed: "تعذر التقاط الشاشة. حاول مجددًا.",
+     },
+@@ -1323,7 +1323,7 @@
+     },
+     showToolCalls: 'إظهار نداءات الأدوات',
+     pushEnabled: 'تفعيل الإرسال',
+-    pushNotConfigured: 'أعِدّ دفع الرسائل في «اتصالات الأجهزة» ضمن Ekko Studio قبل تفعيله.',
++    pushNotConfigured: 'أعِدّ دفع الرسائل في «اتصالات الأجهزة» ضمن AIStudio قبل تفعيله.',
+     hideToolCalls: 'إخفاء نداءات الأدوات',
+     messageQueue: 'طابور الرسائل',
+     removeQueuedMessage: 'إزالة الرسالة من الطابور',
+@@ -2804,7 +2804,7 @@
+       notifyOnApprovalTestFailed: 'Failed to send approval notification',
+       approvalNotificationTitle: 'Approval required',
+       approvalNotificationClarifyTitle: 'Clarification required',
+-      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
++      approvalNotificationBody: 'Open AIStudio to review and respond.',
+       notifyOnCompleteHint: 'إظهار إشعار من النظام عند انتهاء الذكاء الاصطناعي',
+       notifyOnCompleteMacHint: 'على macOS، اسمح بإشعارات المتصفح من إعدادات النظام.',
+       notifyOnCompleteDenied: 'تم رفض إذن الإشعارات',
+@@ -2826,7 +2826,7 @@
+       chatInputHeightHint: 'ارتفاع حقل إدخال المحادثة الافتراضي على سطح المكتب بالبكسل. يبقى الارتفاع تلقائياً على الجوال.',
+       linkOpenTarget: 'فتح روابط الويب في',
+       linkOpenTargetHint: 'اختر مكان فتح الروابط من الرسائل ومعاينات Markdown.',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: 'المتصفح الافتراضي',
+     },
+     agent: {
+@@ -3017,10 +3017,10 @@
+         extract: 'جارٍ فك ضغط النموذج…', validate: 'جارٍ التحقق من النموذج…', install: 'جارٍ تثبيت النموذج…', completed: 'النموذج جاهز', failed: 'فشل التنزيل',
+       },
+       hermesConfigTitle: 'إعدادات Hermes Agent',
+-      hermesConfigDescription: 'المزوّدون الأصليون الحاليون يبقون في بروفايل Hermes. مزوّدو واجهة الويب يظهرون لـ Hermes باسم Ekko Studio.',
++      hermesConfigDescription: 'المزوّدون الأصليون الحاليون يبقون في بروفايل Hermes. مزوّدو واجهة الويب يظهرون لـ Hermes باسم AIStudio.',
+       hermesActiveProvider: 'المزوّد النشط',
+       hermesConfiguredProviders: 'المزوّدون المُهيّأون',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: 'السرعة',
+       providerSampleRate: 'معدل العيّنات',
+       providerBitRate: 'معدل البِت',
+@@ -3034,7 +3034,7 @@
+       optionDisabled: 'مُعطّل',
+       nativeProvider: 'مزوّد Hermes الأصلي',
+       selectNativeProvider: 'اختر مزوّد Hermes أصلي',
+-      useHermesStudioProvider: 'استخدام مزوّد Ekko Studio',
++      useHermesStudioProvider: 'استخدام مزوّد AIStudio',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
+--- a/packages/client/src/i18n/locales/es.ts
++++ b/packages/client/src/i18n/locales/es.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "El control del ordenador necesita permiso",
+-    "promptDescription": "Ekko Studio no tiene los siguientes permisos del sistema. Es posible que las operaciones correspondientes no se completen.",
++    "promptDescription": "AIStudio no tiene los siguientes permisos del sistema. Es posible que las operaciones correspondientes no se completen.",
+     "promptLaterHint": "También puedes autorizar más tarde en Ajustes → Herramientas → Control del ordenador.",
+     "promptGo": "Ir a permisos",
+     "promptLater": "Ahora no",
+     "title": "Permisos de control del ordenador",
+-    "intro": "Permite que Ekko Studio vea y controle apps en este Mac.",
++    "intro": "Permite que AIStudio vea y controle apps en este Mac.",
+     "complete": "Ambos permisos del sistema están activados.",
+     "refresh": "Volver a comprobar",
+     "checking": "Comprobando…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "Para hacer clic, escribir y leer controles de otras apps.",
+     "screenRecordingHint": "Captura ventanas de apps para que Ekko pueda ver la pantalla.",
+     "authorize": "Autorizar",
+-    "guide": "En Ajustes del Sistema → Privacidad y seguridad, activa cada permiso para Ekko Studio. Si la app no aparece, añádela con +.",
+-    "restartHint": "Al volver se comprobarán los permisos. Si macOS pide reabrir la app, guarda tu trabajo y reinicia Ekko Studio.",
++    "guide": "En Ajustes del Sistema → Privacidad y seguridad, activa cada permiso para AIStudio. Si la app no aparece, añádela con +.",
++    "restartHint": "Al volver se comprobarán los permisos. Si macOS pide reabrir la app, guarda tu trabajo y reinicia AIStudio.",
+     "checkFailed": "No se pudieron leer los permisos. Vuelve a comprobarlos.",
+     "openFailed": "No se pudo abrir la autorización. Abre Ajustes del Sistema → Privacidad y seguridad manualmente."
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: 'Connecting',
+ 
+ 
+-    title: 'Navegador', settings: 'Ajustes del navegador', desktopOnly: 'El navegador integrado solo está disponible en Ekko Studio Desktop.', newTab: 'Nueva pestaña',
++    title: 'Navegador', settings: 'Ajustes del navegador', desktopOnly: 'El navegador integrado solo está disponible en AIStudio Desktop.', newTab: 'Nueva pestaña',
+     back: 'Atrás', forward: 'Adelante', reload: 'Recargar', stop: 'Detener', addressPlaceholder: 'Buscar o escribir una dirección',
+     undoAnnotation: 'Deshacer última', deleteAnnotation: 'Eliminar anotación {index}',
+     selectElement: 'Seleccionar elemento', selectRegion: 'Seleccionar región', annotationPlaceholder: 'Describe qué debe revisar o cambiar el Agent…', selectionData: 'Datos de selección del navegador', annotationAdded: 'Captura añadida al cuadro de chat', annotationCount: '{count} anotación(es)', annotationLabel: 'Anotación {index}', clearAnnotations: 'Borrar anotaciones', finishAnnotation: 'Listo',
+@@ -468,7 +468,7 @@
+   },
+   // Login
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: 'Introduce tu nombre de usuario y contrasena para continuar.',
+     placeholder: 'Token de acceso',
+     submit: 'Iniciar sesion',
+@@ -651,7 +651,7 @@
+   apiRelay: {
+     title: "Relay de API",
+     headline: "Los principales modelos de IA en una sola puerta de enlace",
+-    description: "APIKEY.FAN es la puerta de enlace de API asociada de Ekko Studio. Ofrece acceso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek y MiniMax, y es compatible con las API y los SDK oficiales.",
++    description: "APIKEY.FAN es la puerta de enlace de API asociada de AIStudio. Ofrece acceso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek y MiniMax, y es compatible con las API y los SDK oficiales.",
+     zhipu: "Zhipu",
+     viewNow: "Ver ahora",
+     apiCompatible: "Compatible con las API oficiales",
+@@ -793,13 +793,13 @@
+     aiHelpGeneralPrompt: 'Usa el Skill `hermes-studio-installation` y sigue sus instrucciones de enrutamiento para elegir la referencia adecuada según el Agent y el problema. Ayúdame a diagnosticar o gestionar la instalación, actualización o eliminación de Agents en este dispositivo. Comprueba el origen real de instalación, todas las rutas de ejecutables resueltas, el entorno Node/npm y los prefijos del gestor de paquetes aplicables. Si falta contexto, pregunta primero qué Agent y síntoma debo resolver. Conserva la configuración, autenticación y conversaciones del usuario y solicita confirmación antes de cualquier cambio destructivo.',
+     aiHelpPrompt: 'Usa el Skill `hermes-studio-installation` y sigue sus instrucciones de enrutamiento para elegir la referencia adecuada para este Agent y problema. Diagnostica este fallo de la página Agents.\n\nAgent: {name}\nID del Agent: {id}\nOperación: {operation}\nEjecutable: {command}\nPaquete npm: {package}\nError original:\n{error}\n\nComprueba el origen de instalación, todas las rutas de ejecutables resueltas, el entorno Node/npm y los prefijos del gestor de paquetes aplicables. Conserva la configuración, autenticación y conversaciones del usuario. Explica primero la causa y solicita confirmación antes de cualquier cambio destructivo.',
+     legacyDataMigrationTitle: 'Se encontraron datos antiguos de Hermes',
+-    legacyDataMigrationDescription: 'Ekko Studio encontró datos en un directorio antiguo de Windows. ¿Desea migrarlos al directorio actual?',
++    legacyDataMigrationDescription: 'AIStudio encontró datos en un directorio antiguo de Windows. ¿Desea migrarlos al directorio actual?',
+     legacyDataMigrationSource: 'Directorio antiguo',
+     legacyDataMigrationTarget: 'Directorio actual',
+     legacyDataMigrationWarning: 'Studio se reiniciará tras la confirmación y, antes de iniciar los servicios locales, sobrescribirá los archivos coincidentes con las copias antiguas, conservando los archivos exclusivos del directorio actual. Esta pregunta solo se mostrará una vez.',
+     legacyDataMigrationPositive: 'Migrar datos antiguos',
+     legacyDataMigrationNegative: 'No migrar',
+-    legacyDataMigrationSuccess: 'La migración está programada. Ekko Studio se reiniciará y migrará los datos antes de iniciar los servicios locales.',
++    legacyDataMigrationSuccess: 'La migración está programada. AIStudio se reiniciará y migrará los datos antes de iniciar los servicios locales.',
+     legacyDataMigrationFailed: 'Error al migrar los datos antiguos de Hermes: {error}',
+   },
+ 
+@@ -819,8 +819,8 @@
+     dataDirectoryEnvMacos: 'macOS (escritorio / terminal)',
+     dataDirectoryEnvLinux: 'Linux (entorno de inicio de sesión)',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: 'Después del cambio, cierra Ekko Studio por completo y vuelve a abrirlo. En Windows o Linux, cierra sesión y vuelve a iniciarla si la aplicación de escritorio sigue viendo el valor anterior.',
+-    cliUpdateDescription: 'En Hermes Runtime 0.19.1 y posteriores, el siguiente comando solo actualiza el Hermes Agent integrado. No actualiza la aplicación de escritorio Ekko Studio ni la Web UI. Cierra Ekko Studio por completo antes de ejecutarlo:',
++    dataDirectoryEnvRestart: 'Después del cambio, cierra AIStudio por completo y vuelve a abrirlo. En Windows o Linux, cierra sesión y vuelve a iniciarla si la aplicación de escritorio sigue viendo el valor anterior.',
++    cliUpdateDescription: 'En Hermes Runtime 0.19.1 y posteriores, el siguiente comando solo actualiza el Hermes Agent integrado. No actualiza la aplicación de escritorio AIStudio ni la Web UI. Cierra AIStudio por completo antes de ejecutarlo:',
+     webUiTitle: 'Web UI',
+     platform: 'Plataforma',
+     currentWebUi: 'Web UI actual',
+@@ -829,10 +829,10 @@
+     chooseRuntimeDirectory: 'Elegir directorio',
+     resetRuntimeDirectory: 'Usar valor del sistema',
+     runtimeDirectoryHint: 'El Runtime actual se copiará y verificará antes de iniciar los servicios locales en el próximo reinicio. El almacenamiento anterior se conserva y las futuras descargas de Runtime se guardan aquí.',
+-    runtimeDirectorySaved: 'Migración de Runtime programada. Reinicia Ekko Studio para ejecutarla.',
++    runtimeDirectorySaved: 'Migración de Runtime programada. Reinicia AIStudio para ejecutarla.',
+     runtimeMigrationPending: 'Destino de migración pendiente: {directory}',
+     runtimeMigrationFailed: 'La migración del almacenamiento falló; se sigue usando el almacenamiento anterior',
+-    runtimeActivationFailed: 'No se pudo iniciar el Runtime seleccionado; Ekko Studio está usando otra versión instalada',
++    runtimeActivationFailed: 'No se pudo iniciar el Runtime seleccionado; AIStudio está usando otra versión instalada',
+     active: 'Activa',
+     installed: 'Instalada',
+     download: 'Descargar',
+@@ -851,7 +851,7 @@
+     remoteLoadFailed: 'No se pudieron cargar las versiones remotas',
+     downloadTasks: 'Tareas de descarga',
+     downloadStarted: 'Descarga iniciada',
+-    activateSuccess: 'Selección de versión guardada. Reinicia Ekko Studio para usarla.',
++    activateSuccess: 'Selección de versión guardada. Reinicia AIStudio para usarla.',
+     restartPromptTitle: 'Runtime listo',
+     restartPromptContent: 'Hermes Runtime {version} se ha instalado. ¿Reiniciar ahora para usarlo?',
+     restartLater: 'Más tarde',
+@@ -944,9 +944,9 @@
+       viewList: 'Lista',
+       viewDownload: 'Descargar',
+       viewMessages: 'Envío de mensajes',
+-      downloadTitle: 'Ekko Studio en tu teléfono',
++      downloadTitle: 'AIStudio en tu teléfono',
+       downloadDescription: 'Estamos en fase beta cerrada. Se necesita un código de registro para crear una cuenta y publicaremos algunos códigos en nuestras redes sociales.',
+-      downloadPaidDescription: 'La app Ekko Studio ya se ha lanzado oficialmente y es de pago. Para empezar a usarla, visita la página de precios y compra, elige el plan que mejor se adapte a ti y completa la compra.',
++      downloadPaidDescription: 'La app AIStudio ya se ha lanzado oficialmente y es de pago. Para empezar a usarla, visita la página de precios y compra, elige el plan que mejor se adapte a ti y completa la compra.',
+       downloadScan: 'Escanea con tu teléfono',
+       downloadScanHint: 'La descarga para Android ya está disponible',
+       available: 'Disponible',
+@@ -982,7 +982,7 @@
+       accessFailures: {
+         tokenExpired: 'El token ha caducado',
+         paidAccountRequired: 'La cuenta actual no es de pago y no puede usar esta función',
+-        cloudSubscriptionRequired: 'Esta cuenta no tiene acceso a Ekko Studio Cloud',
++        cloudSubscriptionRequired: 'Esta cuenta no tiene acceso a AIStudio Cloud',
+         appAccessExpired: 'El acceso a la prueba interna o beta pública ha caducado',
+         required: 'La App no proporcionó una autorización de acceso',
+         invalid: 'La autorización de acceso de la App no es válida',
+@@ -1160,7 +1160,7 @@
+       systemUnavailable: "Las capturas del sistema no están disponibles",
+       systemWaiting: "Elige una captura en el diálogo del sistema",
+       timedOut: "Se agotó el tiempo de captura. Inténtalo de nuevo.",
+-      permissionDenied: "Permite la grabación de pantalla para Ekko Studio en los ajustes del sistema y reinicia la aplicación.",
++      permissionDenied: "Permite la grabación de pantalla para AIStudio en los ajustes del sistema y reinicia la aplicación.",
+       sourceUnavailable: "No se pudo capturar la pantalla. Revisa los permisos e inténtalo de nuevo.",
+       failed: "No se pudo capturar la pantalla. Inténtalo de nuevo.",
+     },
+@@ -1282,7 +1282,7 @@
+     },
+     showToolCalls: 'Mostrar llamadas de herramientas',
+     pushEnabled: 'Activar envío',
+-    pushNotConfigured: 'Configura las notificaciones en «Conexiones de dispositivos» de Ekko Studio antes de activarlas.',
++    pushNotConfigured: 'Configura las notificaciones en «Conexiones de dispositivos» de AIStudio antes de activarlas.',
+     hideToolCalls: 'Ocultar llamadas de herramientas',
+     messageQueue: 'Cola de mensajes',
+     removeQueuedMessage: 'Quitar mensaje de la cola',
+@@ -2301,7 +2301,7 @@
+       notifyOnApprovalTestFailed: 'Failed to send approval notification',
+       approvalNotificationTitle: 'Approval required',
+       approvalNotificationClarifyTitle: 'Clarification required',
+-      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
++      approvalNotificationBody: 'Open AIStudio to review and respond.',
+       notifyOnCompleteHint: 'Mostrar una notificacion del sistema cuando la IA termina',
+       notifyOnCompleteMacHint: 'En macOS, permite las notificaciones del navegador en Ajustes del Sistema.',
+       notifyOnCompleteDenied: 'Permiso de notificacion denegado',
+@@ -2323,7 +2323,7 @@
+       chatInputHeightHint: 'Altura predeterminada de la entrada del chat en escritorio, en píxeles. En móvil se mantiene automática.',
+       linkOpenTarget: 'Abrir enlaces web en',
+       linkOpenTargetHint: 'Elige dónde se abren los enlaces de mensajes y vistas previas de Markdown.',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: 'Navegador predeterminado',
+     },
+     agent: {
+@@ -2486,10 +2486,10 @@
+         extract: 'Extrayendo modelo…', validate: 'Validando modelo…', install: 'Instalando modelo…', completed: 'El modelo está listo', failed: 'Descarga fallida',
+       },
+       hermesConfigTitle: 'Configuracion de Hermes Agent',
+-      hermesConfigDescription: 'Los proveedores nativos existentes permanecen en el perfil de Hermes; los del Web UI aparecen como Ekko Studio.',
++      hermesConfigDescription: 'Los proveedores nativos existentes permanecen en el perfil de Hermes; los del Web UI aparecen como AIStudio.',
+       hermesActiveProvider: 'Proveedor activo',
+       hermesConfiguredProviders: 'Proveedores configurados',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: 'Velocidad',
+       providerSampleRate: 'Frecuencia de muestreo',
+       providerBitRate: 'Tasa de bits',
+@@ -2503,7 +2503,7 @@
+       optionDisabled: 'Desactivado',
+       nativeProvider: 'Proveedor nativo de Hermes',
+       selectNativeProvider: 'Seleccionar proveedor nativo de Hermes',
+-      useHermesStudioProvider: 'Usar proveedor Ekko Studio',
++      useHermesStudioProvider: 'Usar proveedor AIStudio',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/locales/tr.ts
+--- a/packages/client/src/i18n/locales/tr.ts
++++ b/packages/client/src/i18n/locales/tr.ts
+@@ -134,12 +134,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "Bilgisayar denetimi izin gerektiriyor",
+-    "promptDescription": "Ekko Studio aşağıdaki sistem izinlerine sahip değil. İlgili masaüstü işlemleri tamamlanamayabilir.",
++    "promptDescription": "AIStudio aşağıdaki sistem izinlerine sahip değil. İlgili masaüstü işlemleri tamamlanamayabilir.",
+     "promptLaterHint": "Daha sonra Ayarlar → Araçlar → Bilgisayar kullanımı bölümünden de izin verebilirsiniz.",
+     "promptGo": "İzinlere git",
+     "promptLater": "Şimdi değil",
+     "title": "Bilgisayar denetimi izinleri",
+-    "intro": "Ekko Studio’nun bu Mac’teki uygulamaları görmesine ve denetlemesine izin verin.",
++    "intro": "AIStudio’nun bu Mac’teki uygulamaları görmesine ve denetlemesine izin verin.",
+     "complete": "Her iki sistem izni de etkin.",
+     "refresh": "Tekrar denetle",
+     "checking": "Denetleniyor…",
+@@ -152,8 +152,8 @@
+     "accessibilityHint": "Diğer uygulamalarda tıklamak, yazmak ve denetimleri okumak için kullanılır.",
+     "screenRecordingHint": "Ekko’nun ekranı görebilmesi için uygulama pencerelerini yakalar.",
+     "authorize": "İzin ver",
+-    "guide": "Sistem Ayarları → Gizlilik ve Güvenlik bölümünde Ekko Studio için izinleri etkinleştirin. Uygulama yoksa + ile ekleyin.",
+-    "restartHint": "Bu sayfaya dönünce tekrar denetlenir. macOS uygulamayı yeniden açmanızı isterse çalışmanızı kaydedip Ekko Studio’yu yeniden başlatın.",
++    "guide": "Sistem Ayarları → Gizlilik ve Güvenlik bölümünde AIStudio için izinleri etkinleştirin. Uygulama yoksa + ile ekleyin.",
++    "restartHint": "Bu sayfaya dönünce tekrar denetlenir. macOS uygulamayı yeniden açmanızı isterse çalışmanızı kaydedip AIStudio’yu yeniden başlatın.",
+     "checkFailed": "İzinler okunamadı. Tekrar denetleyin.",
+     "openFailed": "İzin ayarları açılamadı. Sistem Ayarları → Gizlilik ve Güvenlik bölümünü elle açın."
+   },
+@@ -400,7 +400,7 @@
+ 
+     title: 'Tarayıcı',
+     settings: 'Tarayıcı ayarları',
+-    desktopOnly: 'Yerleşik tarayıcı yalnızca Ekko Studio Desktop sürümünde kullanılabilir.',
++    desktopOnly: 'Yerleşik tarayıcı yalnızca AIStudio Desktop sürümünde kullanılabilir.',
+     newTab: 'Yeni sekme',
+     back: 'Geri',
+     forward: 'İleri',
+@@ -448,7 +448,7 @@
+   },
+ 
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: 'Devam etmek için kullanıcı adınızı ve parolanızı girin.',
+     placeholder: 'Erişim belirteci',
+     submit: 'Giriş yap',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "Computer Use needs permission",
+-    "promptDescription": "Ekko Studio is missing the following system permissions. Related desktop operations may not complete.",
++    "promptDescription": "AIStudio is missing the following system permissions. Related desktop operations may not complete.",
+     "promptLaterHint": "You can also authorize later in Settings → Tools → Computer Use.",
+     "promptGo": "Go to permissions",
+     "promptLater": "Not now",
+     "title": "Computer Use permissions",
+-    "intro": "Allow Ekko Studio to observe and control apps on this Mac.",
++    "intro": "Allow AIStudio to observe and control apps on this Mac.",
+     "complete": "Both system permissions are enabled.",
+     "refresh": "Check again",
+     "checking": "Checking…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "Click, type, and read controls in other apps.",
+     "screenRecordingHint": "Capture app windows so Ekko can see the screen.",
+     "authorize": "Authorize",
+-    "guide": "In System Settings → Privacy & Security, enable each permission for Ekko Studio. If the app is missing, use + to add it.",
+-    "restartHint": "This page checks again when you return. If macOS asks you to reopen the app, save your work and restart Ekko Studio.",
++    "guide": "In System Settings → Privacy & Security, enable each permission for AIStudio. If the app is missing, use + to add it.",
++    "restartHint": "This page checks again when you return. If macOS asks you to reopen the app, save your work and restart AIStudio.",
+     "checkFailed": "Could not read permissions. Try checking again.",
+     "openFailed": "Could not open authorization. Open System Settings → Privacy & Security manually."
+   },
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "电脑操作需要授权",
+-    "promptDescription": "Ekko Studio 尚未获得以下系统权限，相关电脑操作可能无法完成。",
++    "promptDescription": "AIStudio 尚未获得以下系统权限，相关电脑操作可能无法完成。",
+     "promptLaterHint": "稍后也可在「设置 → 工具 → 电脑操作」中授权。",
+     "promptGo": "去授权",
+     "promptLater": "暂不",
+     "title": "电脑操作权限",
+-    "intro": "允许 Ekko Studio 查看和操作这台 Mac 上的应用。",
++    "intro": "允许 AIStudio 查看和操作这台 Mac 上的应用。",
+     "complete": "两项系统权限均已开启。",
+     "refresh": "重新检测",
+     "checking": "检测中…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "用于点击、输入和读取其他应用的界面控件。",
+     "screenRecordingHint": "用于获取应用窗口截图，让 Ekko 看见屏幕内容。",
+     "authorize": "前往授权",
+-    "guide": "在「系统设置 → 隐私与安全性」中，为 Ekko Studio 开启对应权限；若列表中没有该应用，点击「＋」添加。",
+-    "restartHint": "返回此页会自动重新检测。若 macOS 要求重新打开应用，请保存工作后重启 Ekko Studio。",
++    "guide": "在「系统设置 → 隐私与安全性」中，为 AIStudio 开启对应权限；若列表中没有该应用，点击「＋」添加。",
++    "restartHint": "返回此页会自动重新检测。若 macOS 要求重新打开应用，请保存工作后重启 AIStudio。",
+     "checkFailed": "暂时无法读取权限，请重新检测。",
+     "openFailed": "无法打开授权设置，请手动前往「系统设置 → 隐私与安全性」。"
+   },
+diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
+--- a/packages/client/src/i18n/locales/fr.ts
++++ b/packages/client/src/i18n/locales/fr.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "Le contrôle de l’ordinateur nécessite une autorisation",
+-    "promptDescription": "Ekko Studio ne dispose pas des autorisations système suivantes. Les opérations concernées risquent de ne pas aboutir.",
++    "promptDescription": "AIStudio ne dispose pas des autorisations système suivantes. Les opérations concernées risquent de ne pas aboutir.",
+     "promptLaterHint": "Vous pouvez aussi les accorder plus tard dans Paramètres → Outils → Contrôle de l’ordinateur.",
+     "promptGo": "Gérer les autorisations",
+     "promptLater": "Pas maintenant",
+     "title": "Autorisations de contrôle de l’ordinateur",
+-    "intro": "Autorisez Ekko Studio à voir et utiliser les apps sur ce Mac.",
++    "intro": "Autorisez AIStudio à voir et utiliser les apps sur ce Mac.",
+     "complete": "Les deux autorisations système sont activées.",
+     "refresh": "Vérifier à nouveau",
+     "checking": "Vérification…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "Pour cliquer, saisir du texte et lire les commandes des autres apps.",
+     "screenRecordingHint": "Capture les fenêtres des apps pour permettre à Ekko de voir l’écran.",
+     "authorize": "Autoriser",
+-    "guide": "Dans Réglages Système → Confidentialité et sécurité, activez chaque autorisation pour Ekko Studio. Si l’app est absente, ajoutez-la avec +.",
+-    "restartHint": "Cette page vérifie à nouveau à votre retour. Si macOS demande de rouvrir l’app, enregistrez votre travail et redémarrez Ekko Studio.",
++    "guide": "Dans Réglages Système → Confidentialité et sécurité, activez chaque autorisation pour AIStudio. Si l’app est absente, ajoutez-la avec +.",
++    "restartHint": "Cette page vérifie à nouveau à votre retour. Si macOS demande de rouvrir l’app, enregistrez votre travail et redémarrez AIStudio.",
+     "checkFailed": "Impossible de lire les autorisations. Réessayez.",
+     "openFailed": "Impossible d’ouvrir les autorisations. Ouvrez Réglages Système → Confidentialité et sécurité manuellement."
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: 'Connecting',
+ 
+ 
+-    title: 'Navigateur', settings: 'Paramètres du navigateur', desktopOnly: 'Le navigateur intégré est disponible uniquement dans Ekko Studio Desktop.', newTab: 'Nouvel onglet',
++    title: 'Navigateur', settings: 'Paramètres du navigateur', desktopOnly: 'Le navigateur intégré est disponible uniquement dans AIStudio Desktop.', newTab: 'Nouvel onglet',
+     back: 'Précédent', forward: 'Suivant', reload: 'Actualiser', stop: 'Arrêter', addressPlaceholder: 'Rechercher ou saisir une adresse',
+     undoAnnotation: 'Annuler la dernière', deleteAnnotation: 'Supprimer l’annotation {index}',
+     selectElement: 'Sélectionner un élément', selectRegion: 'Sélectionner une zone', annotationPlaceholder: 'Décrivez ce que l’Agent doit examiner ou modifier…', selectionData: 'Données de sélection du navigateur', annotationAdded: 'Capture ajoutée à la zone de discussion', annotationCount: '{count} annotation(s)', annotationLabel: 'Annotation {index}', clearAnnotations: 'Effacer les annotations', finishAnnotation: 'Terminé',
+@@ -468,7 +468,7 @@
+   },
+   // Login
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: 'Entrez votre nom d\'utilisateur et votre mot de passe pour continuer.',
+     placeholder: 'Jeton d\'acces',
+     submit: 'Connexion',
+@@ -651,7 +651,7 @@
+   apiRelay: {
+     title: "Relais API",
+     headline: "Les principaux modèles IA, une seule passerelle",
+-    description: "APIKEY.FAN est la passerelle API partenaire d’Ekko Studio. Elle offre un accès unifié à Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek et MiniMax, et est compatible avec les API et SDK officiels.",
++    description: "APIKEY.FAN est la passerelle API partenaire d’AIStudio. Elle offre un accès unifié à Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek et MiniMax, et est compatible avec les API et SDK officiels.",
+     zhipu: "Zhipu",
+     viewNow: "Voir maintenant",
+     apiCompatible: "Compatible avec les API officielles",
+@@ -793,13 +793,13 @@
+     aiHelpGeneralPrompt: 'Utilisez le Skill `hermes-studio-installation` et suivez ses instructions de routage pour choisir la référence adaptée à l’Agent et au problème. Aidez-moi à diagnostiquer ou gérer l’installation, la mise à jour ou la suppression d’Agents sur cet appareil. Vérifiez la source d’installation réelle, tous les chemins d’exécutables résolus, l’environnement Node/npm et les préfixes de gestionnaire de paquets applicables. Si le contexte manque, demandez d’abord quel Agent et quel symptôme traiter. Préservez la configuration, l’authentification et les conversations de l’utilisateur et demandez confirmation avant toute modification destructive.',
+     aiHelpPrompt: 'Utilisez le Skill `hermes-studio-installation` et suivez ses instructions de routage pour choisir la référence adaptée à cet Agent et à ce problème. Diagnostiquez cet échec de la page Agents.\n\nAgent : {name}\nID Agent : {id}\nOpération : {operation}\nExécutable : {command}\nPaquet npm : {package}\nErreur d’origine :\n{error}\n\nVérifiez la source d’installation, tous les chemins d’exécutables résolus, l’environnement Node/npm et les préfixes de gestionnaire de paquets applicables. Préservez la configuration, l’authentification et les conversations de l’utilisateur. Expliquez d’abord la cause et demandez confirmation avant toute modification destructive.',
+     legacyDataMigrationTitle: 'Anciennes données Hermes détectées',
+-    legacyDataMigrationDescription: 'Ekko Studio a trouvé des données dans un ancien dossier Windows. Voulez-vous les migrer vers le dossier actuel ?',
++    legacyDataMigrationDescription: 'AIStudio a trouvé des données dans un ancien dossier Windows. Voulez-vous les migrer vers le dossier actuel ?',
+     legacyDataMigrationSource: 'Ancien dossier',
+     legacyDataMigrationTarget: 'Dossier actuel',
+     legacyDataMigrationWarning: 'Studio redémarrera après confirmation et, avant le lancement des services locaux, remplacera les fichiers de même nom par les anciennes copies tout en conservant les fichiers propres au dossier actuel. Cette question ne sera affichée qu’une fois.',
+     legacyDataMigrationPositive: 'Migrer les anciennes données',
+     legacyDataMigrationNegative: 'Ne pas migrer',
+-    legacyDataMigrationSuccess: 'La migration est planifiée. Ekko Studio va redémarrer et migrer les données avant de lancer les services locaux.',
++    legacyDataMigrationSuccess: 'La migration est planifiée. AIStudio va redémarrer et migrer les données avant de lancer les services locaux.',
+     legacyDataMigrationFailed: 'Échec de la migration des anciennes données Hermes : {error}',
+   },
+ 
+@@ -819,8 +819,8 @@
+     dataDirectoryEnvMacos: 'macOS (bureau / terminal)',
+     dataDirectoryEnvLinux: 'Linux (environnement de connexion)',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: 'Après la modification, quittez complètement Ekko Studio puis rouvrez-le. Sous Windows ou Linux, déconnectez-vous puis reconnectez-vous si l’application de bureau voit encore l’ancienne valeur.',
+-    cliUpdateDescription: 'Avec Hermes Runtime 0.19.1 et versions ultérieures, la commande suivante met uniquement à jour le Hermes Agent intégré. Elle ne met pas à jour l’application de bureau Ekko Studio ni la Web UI. Quittez complètement Ekko Studio avant de l’exécuter :',
++    dataDirectoryEnvRestart: 'Après la modification, quittez complètement AIStudio puis rouvrez-le. Sous Windows ou Linux, déconnectez-vous puis reconnectez-vous si l’application de bureau voit encore l’ancienne valeur.',
++    cliUpdateDescription: 'Avec Hermes Runtime 0.19.1 et versions ultérieures, la commande suivante met uniquement à jour le Hermes Agent intégré. Elle ne met pas à jour l’application de bureau AIStudio ni la Web UI. Quittez complètement AIStudio avant de l’exécuter :',
+     webUiTitle: 'Web UI',
+     platform: 'Plateforme',
+     currentWebUi: 'Web UI actuel',
+@@ -829,10 +829,10 @@
+     chooseRuntimeDirectory: 'Choisir un répertoire',
+     resetRuntimeDirectory: 'Utiliser le dossier système',
+     runtimeDirectoryHint: 'Le Runtime actuel sera copié et vérifié avant les services locaux au prochain redémarrage. L’ancien stockage est conservé et les prochains téléchargements de Runtime seront enregistrés ici.',
+-    runtimeDirectorySaved: 'Migration du Runtime planifiée. Redémarrez Ekko Studio pour l’exécuter.',
++    runtimeDirectorySaved: 'Migration du Runtime planifiée. Redémarrez AIStudio pour l’exécuter.',
+     runtimeMigrationPending: 'Destination de migration en attente : {directory}',
+     runtimeMigrationFailed: 'Échec de la migration du stockage ; le stockage précédent reste actif',
+-    runtimeActivationFailed: 'Le Runtime sélectionné n’a pas pu démarrer ; Ekko Studio utilise une autre version installée',
++    runtimeActivationFailed: 'Le Runtime sélectionné n’a pas pu démarrer ; AIStudio utilise une autre version installée',
+     active: 'Active',
+     installed: 'Installée',
+     download: 'Télécharger',
+@@ -851,7 +851,7 @@
+     remoteLoadFailed: 'Impossible de charger les versions distantes',
+     downloadTasks: 'Tâches de téléchargement',
+     downloadStarted: 'Téléchargement démarré',
+-    activateSuccess: 'Sélection de version enregistrée. Redémarrez Ekko Studio pour l’utiliser.',
++    activateSuccess: 'Sélection de version enregistrée. Redémarrez AIStudio pour l’utiliser.',
+     restartPromptTitle: 'Runtime prêt',
+     restartPromptContent: 'Hermes Runtime {version} a été installé. Redémarrer maintenant pour l’utiliser ?',
+     restartLater: 'Plus tard',
+@@ -944,9 +944,9 @@
+       viewList: 'Liste',
+       viewDownload: 'Télécharger',
+       viewMessages: 'Envoi de messages',
+-      downloadTitle: 'Ekko Studio sur votre téléphone',
++      downloadTitle: 'AIStudio sur votre téléphone',
+       downloadDescription: 'Nous sommes actuellement en bêta fermée. Un code d’inscription est nécessaire pour créer un compte, et nous en diffuserons quelques-uns sur nos réseaux sociaux.',
+-      downloadPaidDescription: 'L’app Ekko Studio est officiellement disponible et son utilisation est payante. Pour commencer, consultez la page des tarifs et d’achat, choisissez l’offre qui vous convient et finalisez votre achat.',
++      downloadPaidDescription: 'L’app AIStudio est officiellement disponible et son utilisation est payante. Pour commencer, consultez la page des tarifs et d’achat, choisissez l’offre qui vous convient et finalisez votre achat.',
+       downloadScan: 'Scanner avec votre téléphone',
+       downloadScanHint: 'Le téléchargement Android est disponible',
+       available: 'Disponible',
+@@ -982,7 +982,7 @@
+       accessFailures: {
+         tokenExpired: 'Le jeton a expiré',
+         paidAccountRequired: 'Le compte actuel n’est pas payant et ne peut pas utiliser cette fonctionnalité',
+-        cloudSubscriptionRequired: 'Ce compte n’a pas accès à Ekko Studio Cloud',
++        cloudSubscriptionRequired: 'Ce compte n’a pas accès à AIStudio Cloud',
+         appAccessExpired: 'L’accès au test interne ou à la bêta publique a expiré',
+         required: 'L’App n’a fourni aucune autorisation d’accès',
+         invalid: 'L’autorisation d’accès de l’App est invalide',
+@@ -1160,7 +1160,7 @@
+       systemUnavailable: "Les captures système sont actuellement indisponibles",
+       systemWaiting: "Choisissez une capture dans la boîte de dialogue système",
+       timedOut: "Le délai de capture a expiré. Réessayez.",
+-      permissionDenied: "Autorisez l’enregistrement de l’écran pour Ekko Studio dans les réglages système, puis redémarrez l’application.",
++      permissionDenied: "Autorisez l’enregistrement de l’écran pour AIStudio dans les réglages système, puis redémarrez l’application.",
+       sourceUnavailable: "Impossible de capturer l’écran. Vérifiez les autorisations et réessayez.",
+       failed: "Impossible de capturer l’écran. Veuillez réessayer.",
+     },
+@@ -1282,7 +1282,7 @@
+     },
+     showToolCalls: 'Afficher les appels d’outils',
+     pushEnabled: 'Activer l’envoi',
+-    pushNotConfigured: 'Configurez les notifications dans « Connexions d’appareils » de Ekko Studio avant de les activer.',
++    pushNotConfigured: 'Configurez les notifications dans « Connexions d’appareils » de AIStudio avant de les activer.',
+     hideToolCalls: 'Masquer les appels d’outils',
+     messageQueue: 'File de messages',
+     removeQueuedMessage: 'Retirer le message de la file',
+@@ -2301,7 +2301,7 @@
+       notifyOnApprovalTestFailed: 'Failed to send approval notification',
+       approvalNotificationTitle: 'Approval required',
+       approvalNotificationClarifyTitle: 'Clarification required',
+-      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
++      approvalNotificationBody: 'Open AIStudio to review and respond.',
+       notifyOnCompleteHint: 'Afficher une notification systeme lorsque l\'IA a termine',
+       notifyOnCompleteMacHint: 'Sur macOS, autorisez les notifications du navigateur dans Reglages Systeme.',
+       notifyOnCompleteDenied: 'Autorisation de notification refusee',
+@@ -2323,7 +2323,7 @@
+       chatInputHeightHint: 'Hauteur par défaut de la zone de saisie sur ordinateur, en pixels. Le mobile reste automatique.',
+       linkOpenTarget: 'Ouvrir les liens web dans',
+       linkOpenTargetHint: 'Choisissez où ouvrir les liens des messages et des aperçus Markdown.',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: 'Navigateur par défaut',
+     },
+     agent: {
+@@ -2486,10 +2486,10 @@
+         extract: 'Extraction du modèle…', validate: 'Validation du modèle…', install: 'Installation du modèle…', completed: 'Le modèle est prêt', failed: 'Échec du téléchargement',
+       },
+       hermesConfigTitle: 'Configuration de Hermes Agent',
+-      hermesConfigDescription: 'Les fournisseurs natifs existants restent dans le profil Hermes ; ceux du Web UI apparaissent comme Ekko Studio.',
++      hermesConfigDescription: 'Les fournisseurs natifs existants restent dans le profil Hermes ; ceux du Web UI apparaissent comme AIStudio.',
+       hermesActiveProvider: 'Fournisseur actif',
+       hermesConfiguredProviders: 'Fournisseurs configures',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: 'Vitesse',
+       providerSampleRate: 'Frequence d’echantillonnage',
+       providerBitRate: 'Debit binaire',
+@@ -2503,7 +2503,7 @@
+       optionDisabled: 'Desactive',
+       nativeProvider: 'Fournisseur natif Hermes',
+       selectNativeProvider: 'Choisir un fournisseur natif Hermes',
+-      useHermesStudioProvider: 'Utiliser le fournisseur Ekko Studio',
++      useHermesStudioProvider: 'Utiliser le fournisseur AIStudio',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
+--- a/packages/client/src/i18n/locales/ru.ts
++++ b/packages/client/src/i18n/locales/ru.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "Для управления компьютером нужны разрешения",
+-    "promptDescription": "У Ekko Studio нет следующих системных разрешений. Соответствующие действия могут не завершиться.",
++    "promptDescription": "У AIStudio нет следующих системных разрешений. Соответствующие действия могут не завершиться.",
+     "promptLaterHint": "Разрешения можно выдать позже: Настройки → Инструменты → Управление компьютером.",
+     "promptGo": "К разрешениям",
+     "promptLater": "Не сейчас",
+     "title": "Разрешения для управления компьютером",
+-    "intro": "Разрешите Ekko Studio просматривать приложения на этом Mac и управлять ими.",
++    "intro": "Разрешите AIStudio просматривать приложения на этом Mac и управлять ими.",
+     "complete": "Оба системных разрешения включены.",
+     "refresh": "Проверить снова",
+     "checking": "Проверка…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "Для нажатий, ввода текста и чтения элементов других приложений.",
+     "screenRecordingHint": "Снимки окон приложений позволяют Ekko видеть экран.",
+     "authorize": "Разрешить",
+-    "guide": "В разделе «Системные настройки → Конфиденциальность и безопасность» включите разрешения для Ekko Studio. Если приложения нет, добавьте его кнопкой +.",
+-    "restartHint": "При возвращении разрешения проверяются снова. Если macOS попросит перезапустить приложение, сохраните работу и перезапустите Ekko Studio.",
++    "guide": "В разделе «Системные настройки → Конфиденциальность и безопасность» включите разрешения для AIStudio. Если приложения нет, добавьте его кнопкой +.",
++    "restartHint": "При возвращении разрешения проверяются снова. Если macOS попросит перезапустить приложение, сохраните работу и перезапустите AIStudio.",
+     "checkFailed": "Не удалось прочитать разрешения. Повторите проверку.",
+     "openFailed": "Не удалось открыть настройки разрешений. Откройте «Системные настройки → Конфиденциальность и безопасность» вручную."
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: 'Connecting',
+ 
+ 
+-    title: 'Браузер', settings: 'Настройки браузера', desktopOnly: 'Встроенный браузер доступен только в Ekko Studio Desktop.', newTab: 'Новая вкладка',
++    title: 'Браузер', settings: 'Настройки браузера', desktopOnly: 'Встроенный браузер доступен только в AIStudio Desktop.', newTab: 'Новая вкладка',
+     back: 'Назад', forward: 'Вперёд', reload: 'Обновить', stop: 'Остановить', addressPlaceholder: 'Поиск или адрес',
+     undoAnnotation: 'Отменить последнюю', deleteAnnotation: 'Удалить аннотацию {index}',
+     selectElement: 'Выбрать элемент', selectRegion: 'Выбрать область', annotationPlaceholder: 'Опишите, что Agent должен проверить или изменить…', selectionData: 'Данные выбора браузера', annotationAdded: 'Снимок добавлен в поле чата', annotationCount: 'Аннотаций: {count}', annotationLabel: 'Аннотация {index}', clearAnnotations: 'Очистить аннотации', finishAnnotation: 'Готово',
+@@ -456,7 +456,7 @@
+   },
+ 
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: 'Введите имя пользователя и пароль для продолжения.',
+     placeholder: 'Токен доступа',
+     submit: 'Войти',
+@@ -565,7 +565,7 @@
+   apiRelay: {
+     title: "API-реле",
+     headline: "Ведущие модели ИИ через единый шлюз",
+-    description: "APIKEY.FAN — партнёрский API-шлюз Ekko Studio. Он предоставляет единый доступ к Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek и MiniMax и совместим с официальными API и SDK.",
++    description: "APIKEY.FAN — партнёрский API-шлюз AIStudio. Он предоставляет единый доступ к Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek и MiniMax и совместим с официальными API и SDK.",
+     zhipu: "Zhipu",
+     viewNow: "Посмотреть",
+     apiCompatible: "Совместимость с официальными API",
+@@ -703,13 +703,13 @@
+     aiHelpGeneralPrompt: 'Используй Skill `hermes-studio-installation` и следуй его правилам маршрутизации, чтобы выбрать подходящий reference для Agent и проблемы. Помоги мне диагностировать или выполнить установку, обновление либо удаление Agents на этом устройстве. Проверь фактический источник установки, все найденные пути исполняемых файлов, окружение Node/npm и применимые префиксы менеджера пакетов. Если контекста недостаточно, сначала спроси, какой Agent и симптом нужно разобрать. Сохрани пользовательские настройки, данные аутентификации и разговоров и запроси подтверждение перед любыми разрушительными изменениями.',
+     aiHelpPrompt: 'Используй Skill `hermes-studio-installation` и следуй его правилам маршрутизации, чтобы выбрать подходящий reference для этого Agent и проблемы. Диагностируй этот сбой на странице Agents.\n\nAgent: {name}\nID Agent: {id}\nОперация: {operation}\nКоманда: {command}\nПакет npm: {package}\nИсходная ошибка:\n{error}\n\nПроверь источник установки, все найденные пути исполняемого файла, окружение Node/npm и применимые префиксы менеджера пакетов. Сохрани пользовательские настройки, данные аутентификации и разговоров. Сначала объясни первопричину и запроси подтверждение перед любыми разрушительными изменениями.',
+     legacyDataMigrationTitle: 'Найдены прежние данные Hermes',
+-    legacyDataMigrationDescription: 'Ekko Studio обнаружил данные в прежнем каталоге Windows. Перенести их в текущий каталог данных?',
++    legacyDataMigrationDescription: 'AIStudio обнаружил данные в прежнем каталоге Windows. Перенести их в текущий каталог данных?',
+     legacyDataMigrationSource: 'Прежний каталог',
+     legacyDataMigrationTarget: 'Текущий каталог',
+     legacyDataMigrationWarning: 'После подтверждения Studio перезапустится и до запуска локальных служб заменит совпадающие файлы прежними копиями, сохранив файлы, существующие только в текущем каталоге. Этот вопрос будет показан только один раз.',
+     legacyDataMigrationPositive: 'Перенести прежние данные',
+     legacyDataMigrationNegative: 'Не переносить',
+-    legacyDataMigrationSuccess: 'Миграция запланирована. Ekko Studio перезапустится и перенесёт данные до запуска локальных служб.',
++    legacyDataMigrationSuccess: 'Миграция запланирована. AIStudio перезапустится и перенесёт данные до запуска локальных служб.',
+     legacyDataMigrationFailed: 'Не удалось перенести прежние данные Hermes: {error}',
+   },
+ 
+@@ -729,8 +729,8 @@
+     dataDirectoryEnvMacos: 'macOS (настольное приложение / терминал)',
+     dataDirectoryEnvLinux: 'Linux (среда входа)',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: 'После изменения полностью закройте Ekko Studio и откройте снова. Если приложение в Windows или Linux всё ещё видит старое значение, выйдите из системы и войдите снова.',
+-    cliUpdateDescription: 'В Hermes Runtime версии 0.19.1 и новее следующая команда обновляет только встроенный Hermes Agent. Она не обновляет настольное приложение Ekko Studio или Web UI. Перед выполнением полностью закройте Ekko Studio:',
++    dataDirectoryEnvRestart: 'После изменения полностью закройте AIStudio и откройте снова. Если приложение в Windows или Linux всё ещё видит старое значение, выйдите из системы и войдите снова.',
++    cliUpdateDescription: 'В Hermes Runtime версии 0.19.1 и новее следующая команда обновляет только встроенный Hermes Agent. Она не обновляет настольное приложение AIStudio или Web UI. Перед выполнением полностью закройте AIStudio:',
+     webUiTitle: 'Web UI',
+     platform: 'Платформа',
+     currentWebUi: 'Текущий Web UI',
+@@ -739,10 +739,10 @@
+     chooseRuntimeDirectory: 'Выбрать каталог',
+     resetRuntimeDirectory: 'Системный каталог',
+     runtimeDirectoryHint: 'При следующем перезапуске текущий Runtime будет скопирован и проверен до запуска локальных сервисов. Старое хранилище сохранится, а будущие загрузки Runtime будут помещаться сюда.',
+-    runtimeDirectorySaved: 'Миграция Runtime запланирована. Перезапустите Ekko Studio, чтобы выполнить ее.',
++    runtimeDirectorySaved: 'Миграция Runtime запланирована. Перезапустите AIStudio, чтобы выполнить ее.',
+     runtimeMigrationPending: 'Ожидаемое место миграции: {directory}',
+     runtimeMigrationFailed: 'Перенос хранилища не выполнен; продолжает использоваться прежнее хранилище',
+-    runtimeActivationFailed: 'Выбранный Runtime не удалось запустить; Ekko Studio использует другую установленную версию',
++    runtimeActivationFailed: 'Выбранный Runtime не удалось запустить; AIStudio использует другую установленную версию',
+     active: 'Активна',
+     installed: 'Установлена',
+     download: 'Скачать',
+@@ -761,7 +761,7 @@
+     remoteLoadFailed: 'Не удалось загрузить удаленные версии',
+     downloadTasks: 'Задачи загрузки',
+     downloadStarted: 'Загрузка начата',
+-    activateSuccess: 'Выбор версии сохранен. Перезапустите Ekko Studio, чтобы применить его.',
++    activateSuccess: 'Выбор версии сохранен. Перезапустите AIStudio, чтобы применить его.',
+     restartPromptTitle: 'Runtime готов',
+     restartPromptContent: 'Hermes Runtime {version} установлен. Перезапустить сейчас, чтобы использовать его?',
+     restartLater: 'Позже',
+@@ -871,9 +871,9 @@
+       viewList: 'Список',
+       viewDownload: 'Скачать',
+       viewMessages: 'Отправка сообщений',
+-      downloadTitle: 'Ekko Studio на вашем телефоне',
++      downloadTitle: 'AIStudio на вашем телефоне',
+       downloadDescription: 'Сейчас мы проводим закрытое бета-тестирование. Для регистрации нужен код, часть кодов мы будем публиковать в наших социальных сетях.',
+-      downloadPaidDescription: 'Приложение Ekko Studio официально запущено и доступно на платной основе. Чтобы начать, перейдите на страницу тарифов и покупки, выберите подходящий тариф и завершите покупку.',
++      downloadPaidDescription: 'Приложение AIStudio официально запущено и доступно на платной основе. Чтобы начать, перейдите на страницу тарифов и покупки, выберите подходящий тариф и завершите покупку.',
+       downloadScan: 'Сканировать телефоном',
+       downloadScanHint: 'Версия для Android доступна',
+       available: 'Доступно',
+@@ -909,7 +909,7 @@
+       accessFailures: {
+         tokenExpired: 'Срок действия токена истёк',
+         paidAccountRequired: 'Текущая учётная запись не является платной и не может использовать эту функцию',
+-        cloudSubscriptionRequired: 'У этой учётной записи нет доступа к Ekko Studio Cloud',
++        cloudSubscriptionRequired: 'У этой учётной записи нет доступа к AIStudio Cloud',
+         appAccessExpired: 'Срок доступа к внутреннему тестированию или публичной бета-версии истёк',
+         required: 'App не предоставило разрешение на доступ',
+         invalid: 'Разрешение на доступ App недействительно',
+@@ -1087,7 +1087,7 @@
+       systemUnavailable: "Системные снимки экрана сейчас недоступны",
+       systemWaiting: "Выберите область снимка в системном окне",
+       timedOut: "Время ожидания снимка истекло. Повторите попытку.",
+-      permissionDenied: "Разрешите Ekko Studio запись экрана в настройках системы и перезапустите приложение.",
++      permissionDenied: "Разрешите AIStudio запись экрана в настройках системы и перезапустите приложение.",
+       sourceUnavailable: "Не удалось захватить экран. Проверьте разрешения и повторите попытку.",
+       failed: "Не удалось сделать снимок. Повторите попытку.",
+     },
+@@ -1223,7 +1223,7 @@
+     },
+     showToolCalls: 'Показать вызовы инструментов',
+     pushEnabled: 'Включить отправку',
+-    pushNotConfigured: 'Перед включением настройте push-уведомления в разделе «Подключение устройств» Ekko Studio.',
++    pushNotConfigured: 'Перед включением настройте push-уведомления в разделе «Подключение устройств» AIStudio.',
+     hideToolCalls: 'Скрыть вызовы инструментов',
+     messageQueue: 'Очередь сообщений',
+     removeQueuedMessage: 'Удалить сообщение из очереди',
+@@ -2576,7 +2576,7 @@
+       notifyOnApprovalTestFailed: 'Failed to send approval notification',
+       approvalNotificationTitle: 'Approval required',
+       approvalNotificationClarifyTitle: 'Clarification required',
+-      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
++      approvalNotificationBody: 'Open AIStudio to review and respond.',
+       notifyOnCompleteHint: 'Показывать системное уведомление по окончании ответа AI',
+       notifyOnCompleteMacHint: 'В macOS разрешите уведомления браузера в системных настройках.',
+       notifyOnCompleteDenied: 'Разрешение на уведомления отклонено',
+@@ -2598,7 +2598,7 @@
+       chatInputHeightHint: 'Высота поля ввода чата на рабочем столе в пикселях. На мобильных остается авто.',
+       linkOpenTarget: 'Открывать веб-ссылки в',
+       linkOpenTargetHint: 'Выберите, где открывать ссылки из сообщений и предпросмотров Markdown.',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: 'Браузер по умолчанию',
+     },
+     agent: {
+@@ -2789,10 +2789,10 @@
+         extract: 'Распаковка модели…', validate: 'Проверка модели…', install: 'Установка модели…', completed: 'Модель готова', failed: 'Ошибка загрузки',
+       },
+       hermesConfigTitle: 'Конфигурация Hermes Agent',
+-      hermesConfigDescription: 'Существующие нативные провайдеры остаются в профиле Hermes; провайдеры Web UI отображаются как Ekko Studio.',
++      hermesConfigDescription: 'Существующие нативные провайдеры остаются в профиле Hermes; провайдеры Web UI отображаются как AIStudio.',
+       hermesActiveProvider: 'Активный провайдер',
+       hermesConfiguredProviders: 'Настроенные провайдеры',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: 'Скорость',
+       providerSampleRate: 'Частота дискретизации',
+       providerBitRate: 'Битрейт',
+@@ -2806,7 +2806,7 @@
+       optionDisabled: 'Выключено',
+       nativeProvider: 'Нативный провайдер Hermes',
+       selectNativeProvider: 'Выбрать нативный провайдер Hermes',
+-      useHermesStudioProvider: 'Использовать провайдер Ekko Studio',
++      useHermesStudioProvider: 'Использовать провайдер AIStudio',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
+--- a/packages/client/src/i18n/locales/pt.ts
++++ b/packages/client/src/i18n/locales/pt.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "O controle do computador precisa de permissão",
+-    "promptDescription": "O Ekko Studio não tem as seguintes permissões do sistema. As operações correspondentes podem não ser concluídas.",
++    "promptDescription": "O AIStudio não tem as seguintes permissões do sistema. As operações correspondentes podem não ser concluídas.",
+     "promptLaterHint": "Você também pode autorizar depois em Configurações → Ferramentas → Controle do computador.",
+     "promptGo": "Abrir permissões",
+     "promptLater": "Agora não",
+     "title": "Permissões de controle do computador",
+-    "intro": "Permita que o Ekko Studio veja e controle apps neste Mac.",
++    "intro": "Permita que o AIStudio veja e controle apps neste Mac.",
+     "complete": "As duas permissões do sistema estão ativadas.",
+     "refresh": "Verificar novamente",
+     "checking": "Verificando…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "Para clicar, digitar e ler controles de outros apps.",
+     "screenRecordingHint": "Captura janelas de apps para que o Ekko veja a tela.",
+     "authorize": "Autorizar",
+-    "guide": "Em Ajustes do Sistema → Privacidade e Segurança, ative cada permissão para o Ekko Studio. Se o app não aparecer, adicione-o com +.",
+-    "restartHint": "As permissões serão verificadas ao retornar. Se o macOS solicitar a reabertura do app, salve seu trabalho e reinicie o Ekko Studio.",
++    "guide": "Em Ajustes do Sistema → Privacidade e Segurança, ative cada permissão para o AIStudio. Se o app não aparecer, adicione-o com +.",
++    "restartHint": "As permissões serão verificadas ao retornar. Se o macOS solicitar a reabertura do app, salve seu trabalho e reinicie o AIStudio.",
+     "checkFailed": "Não foi possível ler as permissões. Verifique novamente.",
+     "openFailed": "Não foi possível abrir a autorização. Abra Ajustes do Sistema → Privacidade e Segurança manualmente."
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: 'Connecting',
+ 
+ 
+-    title: 'Navegador', settings: 'Configurações do navegador', desktopOnly: 'O navegador integrado está disponível apenas no Ekko Studio Desktop.', newTab: 'Nova aba',
++    title: 'Navegador', settings: 'Configurações do navegador', desktopOnly: 'O navegador integrado está disponível apenas no AIStudio Desktop.', newTab: 'Nova aba',
+     back: 'Voltar', forward: 'Avançar', reload: 'Recarregar', stop: 'Parar', addressPlaceholder: 'Pesquisar ou inserir endereço',
+     undoAnnotation: 'Desfazer última', deleteAnnotation: 'Excluir anotação {index}',
+     selectElement: 'Selecionar elemento', selectRegion: 'Selecionar área', annotationPlaceholder: 'Descreva o que o Agent deve verificar ou alterar…', selectionData: 'Dados da seleção do navegador', annotationAdded: 'Captura adicionada ao chat', annotationCount: '{count} anotação(ões)', annotationLabel: 'Anotação {index}', clearAnnotations: 'Limpar anotações', finishAnnotation: 'Concluído',
+@@ -468,7 +468,7 @@
+   },
+   // Login
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: 'Insira seu nome de usuário e senha para continuar.',
+     placeholder: 'Token de acesso',
+     submit: 'Entrar',
+@@ -651,7 +651,7 @@
+   apiRelay: {
+     title: "Relay de API",
+     headline: "Os principais modelos de IA em um só gateway",
+-    description: "APIKEY.FAN é o gateway de API parceiro do Ekko Studio. Oferece acesso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek e MiniMax e é compatível com as APIs e os SDKs oficiais.",
++    description: "APIKEY.FAN é o gateway de API parceiro do AIStudio. Oferece acesso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek e MiniMax e é compatível com as APIs e os SDKs oficiais.",
+     zhipu: "Zhipu",
+     viewNow: "Ver agora",
+     apiCompatible: "Compatível com as APIs oficiais",
+@@ -793,13 +793,13 @@
+     aiHelpGeneralPrompt: 'Use o Skill `hermes-studio-installation` e siga suas instruções de roteamento para escolher a referência adequada ao Agent e ao problema. Ajude-me a diagnosticar ou gerenciar a instalação, atualização ou remoção de Agents neste dispositivo. Verifique a origem real da instalação, todos os caminhos de executáveis resolvidos, o ambiente Node/npm e os prefixos aplicáveis do gerenciador de pacotes. Se faltar contexto, pergunte primeiro qual Agent e sintoma devo resolver. Preserve configurações, autenticação e conversas do usuário e peça confirmação antes de alterações destrutivas.',
+     aiHelpPrompt: 'Use o Skill `hermes-studio-installation` e siga suas instruções de roteamento para escolher a referência adequada a este Agent e problema. Diagnostique esta falha da página Agents.\n\nAgent: {name}\nID do Agent: {id}\nOperação: {operation}\nExecutável: {command}\nPacote npm: {package}\nErro original:\n{error}\n\nVerifique a origem da instalação, todos os caminhos de executáveis resolvidos, o ambiente Node/npm e os prefixos aplicáveis do gerenciador de pacotes. Preserve configurações, autenticação e conversas do usuário. Explique primeiro a causa e peça confirmação antes de alterações destrutivas.',
+     legacyDataMigrationTitle: 'Dados antigos do Hermes encontrados',
+-    legacyDataMigrationDescription: 'O Ekko Studio encontrou dados em um diretório antigo do Windows. Deseja migrá-los para o diretório atual?',
++    legacyDataMigrationDescription: 'O AIStudio encontrou dados em um diretório antigo do Windows. Deseja migrá-los para o diretório atual?',
+     legacyDataMigrationSource: 'Diretório antigo',
+     legacyDataMigrationTarget: 'Diretório atual',
+     legacyDataMigrationWarning: 'O Studio será reiniciado após a confirmação e, antes de iniciar os serviços locais, substituirá arquivos com o mesmo nome pelas cópias antigas, preservando os arquivos exclusivos do diretório atual. Esta pergunta será exibida apenas uma vez.',
+     legacyDataMigrationPositive: 'Migrar dados antigos',
+     legacyDataMigrationNegative: 'Não migrar',
+-    legacyDataMigrationSuccess: 'A migração foi agendada. O Ekko Studio será reiniciado e migrará os dados antes de iniciar os serviços locais.',
++    legacyDataMigrationSuccess: 'A migração foi agendada. O AIStudio será reiniciado e migrará os dados antes de iniciar os serviços locais.',
+     legacyDataMigrationFailed: 'Falha ao migrar os dados antigos do Hermes: {error}',
+   },
+ 
+@@ -819,8 +819,8 @@
+     dataDirectoryEnvMacos: 'macOS (desktop / terminal)',
+     dataDirectoryEnvLinux: 'Linux (ambiente de login)',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: 'Após a alteração, feche completamente o Ekko Studio e abra-o novamente. No Windows ou Linux, encerre a sessão e entre novamente se o aplicativo desktop ainda mostrar o valor antigo.',
+-    cliUpdateDescription: 'No Hermes Runtime 0.19.1 e versões posteriores, o comando abaixo atualiza somente o Hermes Agent integrado. Ele não atualiza o aplicativo desktop Ekko Studio nem a Web UI. Feche completamente o Ekko Studio antes de executá-lo:',
++    dataDirectoryEnvRestart: 'Após a alteração, feche completamente o AIStudio e abra-o novamente. No Windows ou Linux, encerre a sessão e entre novamente se o aplicativo desktop ainda mostrar o valor antigo.',
++    cliUpdateDescription: 'No Hermes Runtime 0.19.1 e versões posteriores, o comando abaixo atualiza somente o Hermes Agent integrado. Ele não atualiza o aplicativo desktop AIStudio nem a Web UI. Feche completamente o AIStudio antes de executá-lo:',
+     webUiTitle: 'Web UI',
+     platform: 'Plataforma',
+     currentWebUi: 'Web UI atual',
+@@ -829,10 +829,10 @@
+     chooseRuntimeDirectory: 'Escolher diretório',
+     resetRuntimeDirectory: 'Usar padrão do sistema',
+     runtimeDirectoryHint: 'O Runtime atual será copiado e verificado antes dos serviços locais na próxima reinicialização. O armazenamento anterior será mantido e futuros downloads do Runtime serão salvos aqui.',
+-    runtimeDirectorySaved: 'Migração do Runtime agendada. Reinicie o Ekko Studio para executá-la.',
++    runtimeDirectorySaved: 'Migração do Runtime agendada. Reinicie o AIStudio para executá-la.',
+     runtimeMigrationPending: 'Destino de migração pendente: {directory}',
+     runtimeMigrationFailed: 'A migração do armazenamento falhou; o armazenamento anterior continua ativo',
+-    runtimeActivationFailed: 'O Runtime selecionado não pôde iniciar; o Ekko Studio está usando outra versão instalada',
++    runtimeActivationFailed: 'O Runtime selecionado não pôde iniciar; o AIStudio está usando outra versão instalada',
+     active: 'Ativa',
+     installed: 'Instalada',
+     download: 'Baixar',
+@@ -851,7 +851,7 @@
+     remoteLoadFailed: 'Falha ao carregar versões remotas',
+     downloadTasks: 'Tarefas de download',
+     downloadStarted: 'Download iniciado',
+-    activateSuccess: 'Seleção de versão salva. Reinicie o Ekko Studio para usá-la.',
++    activateSuccess: 'Seleção de versão salva. Reinicie o AIStudio para usá-la.',
+     restartPromptTitle: 'Runtime pronto',
+     restartPromptContent: 'O Hermes Runtime {version} foi instalado. Reiniciar agora para usá-lo?',
+     restartLater: 'Mais tarde',
+@@ -944,9 +944,9 @@
+       viewList: 'Lista',
+       viewDownload: 'Download',
+       viewMessages: 'Envio de mensagens',
+-      downloadTitle: 'Ekko Studio no seu celular',
++      downloadTitle: 'AIStudio no seu celular',
+       downloadDescription: 'Estamos em fase beta fechada. É necessário um código de registro para criar uma conta, e divulgaremos alguns códigos em nossas redes sociais.',
+-      downloadPaidDescription: 'O app Ekko Studio foi lançado oficialmente e agora é pago. Para começar a usá-lo, acesse a página de preços e compra, escolha o plano mais adequado e conclua a compra.',
++      downloadPaidDescription: 'O app AIStudio foi lançado oficialmente e agora é pago. Para começar a usá-lo, acesse a página de preços e compra, escolha o plano mais adequado e conclua a compra.',
+       downloadScan: 'Escaneie com o celular',
+       downloadScanHint: 'Download para Android disponível',
+       available: 'Disponível',
+@@ -982,7 +982,7 @@
+       accessFailures: {
+         tokenExpired: 'O token expirou',
+         paidAccountRequired: 'A conta atual não é paga e não pode usar este recurso',
+-        cloudSubscriptionRequired: 'Esta conta não tem acesso ao Ekko Studio Cloud',
++        cloudSubscriptionRequired: 'Esta conta não tem acesso ao AIStudio Cloud',
+         appAccessExpired: 'O acesso ao teste interno ou à beta pública expirou',
+         required: 'O App não forneceu uma autorização de acesso',
+         invalid: 'A autorização de acesso do App é inválida',
+@@ -1160,7 +1160,7 @@
+       systemUnavailable: "As capturas do sistema estão indisponíveis",
+       systemWaiting: "Escolha uma captura na janela do sistema",
+       timedOut: "O tempo da captura expirou. Tente novamente.",
+-      permissionDenied: "Permita a gravação de tela para Ekko Studio nas configurações do sistema e reinicie o aplicativo.",
++      permissionDenied: "Permita a gravação de tela para AIStudio nas configurações do sistema e reinicie o aplicativo.",
+       sourceUnavailable: "Não foi possível capturar a tela. Verifique as permissões e tente novamente.",
+       failed: "Não foi possível capturar a tela. Tente novamente.",
+     },
+@@ -1282,7 +1282,7 @@
+     },
+     showToolCalls: 'Mostrar chamadas de ferramentas',
+     pushEnabled: 'Ativar envio',
+-    pushNotConfigured: 'Configure as notificações em “Conexões de dispositivos” no Ekko Studio antes de ativá-las.',
++    pushNotConfigured: 'Configure as notificações em “Conexões de dispositivos” no AIStudio antes de ativá-las.',
+     hideToolCalls: 'Ocultar chamadas de ferramentas',
+     messageQueue: 'Fila de mensagens',
+     removeQueuedMessage: 'Remover mensagem da fila',
+@@ -2301,7 +2301,7 @@
+       notifyOnApprovalTestFailed: 'Failed to send approval notification',
+       approvalNotificationTitle: 'Approval required',
+       approvalNotificationClarifyTitle: 'Clarification required',
+-      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
++      approvalNotificationBody: 'Open AIStudio to review and respond.',
+       notifyOnCompleteHint: 'Mostrar notificação do sistema quando a IA terminar',
+       notifyOnCompleteMacHint: 'No macOS, permita notificações do navegador nos Ajustes do Sistema.',
+       notifyOnCompleteDenied: 'Permissão de notificação negada',
+@@ -2323,7 +2323,7 @@
+       chatInputHeightHint: 'Altura padrão da entrada do chat no desktop, em pixels. No celular permanece automática.',
+       linkOpenTarget: 'Abrir links da web em',
+       linkOpenTargetHint: 'Escolha onde abrir links de mensagens e prévias de Markdown.',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: 'Navegador padrão',
+     },
+     agent: {
+@@ -2486,10 +2486,10 @@
+         extract: 'Extraindo modelo…', validate: 'Validando modelo…', install: 'Instalando modelo…', completed: 'Modelo pronto', failed: 'Falha no download',
+       },
+       hermesConfigTitle: 'Configuracao do Hermes Agent',
+-      hermesConfigDescription: 'Os provedores nativos existentes permanecem no perfil Hermes; os do Web UI aparecem como Ekko Studio.',
++      hermesConfigDescription: 'Os provedores nativos existentes permanecem no perfil Hermes; os do Web UI aparecem como AIStudio.',
+       hermesActiveProvider: 'Provedor ativo',
+       hermesConfiguredProviders: 'Provedores configurados',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: 'Velocidade',
+       providerSampleRate: 'Taxa de amostragem',
+       providerBitRate: 'Taxa de bits',
+@@ -2503,7 +2503,7 @@
+       optionDisabled: 'Desativado',
+       nativeProvider: 'Provedor nativo Hermes',
+       selectNativeProvider: 'Selecionar provedor nativo Hermes',
+-      useHermesStudioProvider: 'Usar provedor Ekko Studio',
++      useHermesStudioProvider: 'Usar provedor AIStudio',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
+--- a/packages/client/src/i18n/locales/ko.ts
++++ b/packages/client/src/i18n/locales/ko.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "컴퓨터 조작에 권한이 필요합니다",
+-    "promptDescription": "Ekko Studio에 다음 시스템 권한이 없어 관련 조작을 완료하지 못할 수 있습니다.",
++    "promptDescription": "AIStudio에 다음 시스템 권한이 없어 관련 조작을 완료하지 못할 수 있습니다.",
+     "promptLaterHint": "나중에 설정 → 도구 → 컴퓨터 조작에서도 권한을 허용할 수 있습니다.",
+     "promptGo": "권한 설정으로",
+     "promptLater": "나중에",
+     "title": "컴퓨터 조작 권한",
+-    "intro": "Ekko Studio가 이 Mac의 앱을 보고 조작하도록 허용합니다.",
++    "intro": "AIStudio가 이 Mac의 앱을 보고 조작하도록 허용합니다.",
+     "complete": "두 시스템 권한이 모두 활성화되었습니다.",
+     "refresh": "다시 확인",
+     "checking": "확인 중…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "다른 앱에서 클릭, 입력 및 컨트롤 읽기에 사용합니다.",
+     "screenRecordingHint": "앱 창을 캡처하여 Ekko가 화면을 볼 수 있게 합니다.",
+     "authorize": "권한 허용",
+-    "guide": "시스템 설정 → 개인정보 보호 및 보안에서 Ekko Studio의 각 권한을 켜세요. 앱이 없으면 +로 추가하세요.",
+-    "restartHint": "이 페이지로 돌아오면 다시 확인합니다. macOS에서 앱 재실행을 요청하면 작업을 저장하고 Ekko Studio를 다시 시작하세요.",
++    "guide": "시스템 설정 → 개인정보 보호 및 보안에서 AIStudio의 각 권한을 켜세요. 앱이 없으면 +로 추가하세요.",
++    "restartHint": "이 페이지로 돌아오면 다시 확인합니다. macOS에서 앱 재실행을 요청하면 작업을 저장하고 AIStudio를 다시 시작하세요.",
+     "checkFailed": "권한을 읽을 수 없습니다. 다시 확인하세요.",
+     "openFailed": "권한 설정을 열 수 없습니다. 시스템 설정 → 개인정보 보호 및 보안을 직접 여세요."
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: 'Connecting',
+ 
+ 
+-    title: '브라우저', settings: '브라우저 설정', desktopOnly: '내장 브라우저는 Ekko Studio Desktop에서만 사용할 수 있습니다.', newTab: '새 탭',
++    title: '브라우저', settings: '브라우저 설정', desktopOnly: '내장 브라우저는 AIStudio Desktop에서만 사용할 수 있습니다.', newTab: '새 탭',
+     back: '뒤로', forward: '앞으로', reload: '새로고침', stop: '중지', addressPlaceholder: '검색 또는 주소 입력',
+     undoAnnotation: '마지막 주석 취소', deleteAnnotation: '주석 {index} 삭제',
+     selectElement: '요소 선택', selectRegion: '영역 선택', annotationPlaceholder: 'Agent가 확인하거나 변경할 내용을 입력하세요…', selectionData: '브라우저 선택 데이터', annotationAdded: '스크린샷을 채팅 입력창에 추가했습니다', annotationCount: '주석 {count}개', annotationLabel: '주석 {index}', clearAnnotations: '주석 지우기', finishAnnotation: '완료',
+@@ -468,7 +468,7 @@
+   },
+   // 로그인
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: '계속하려면 사용자 이름과 비밀번호를 입력하세요.',
+     placeholder: '액세스 토큰',
+     submit: '로그인',
+@@ -651,7 +651,7 @@
+   apiRelay: {
+     title: "API 릴레이",
+     headline: "주요 AI 모델을 하나의 게이트웨이로",
+-    description: "APIKEY.FAN은 Ekko Studio의 제휴 API 게이트웨이입니다. Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, MiniMax에 통합 API로 접근할 수 있으며, 공식 API 및 SDK와 호환됩니다.",
++    description: "APIKEY.FAN은 AIStudio의 제휴 API 게이트웨이입니다. Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, MiniMax에 통합 API로 접근할 수 있으며, 공식 API 및 SDK와 호환됩니다.",
+     zhipu: "Zhipu",
+     viewNow: "지금 보기",
+     apiCompatible: "공식 API 호환",
+@@ -799,7 +799,7 @@
+     legacyDataMigrationWarning: '확인 후 Studio가 다시 시작되며, 로컬 서비스 시작 전에 같은 이름의 파일을 이전 복사본으로 덮어씁니다. 현재 디렉터리에만 있는 파일은 유지됩니다. 이 질문은 한 번만 표시됩니다.',
+     legacyDataMigrationPositive: '이전 데이터 이전',
+     legacyDataMigrationNegative: '이전하지 않음',
+-    legacyDataMigrationSuccess: '이전이 예약되었습니다. Ekko Studio가 다시 시작되고 로컬 서비스 시작 전에 데이터를 이전합니다.',
++    legacyDataMigrationSuccess: '이전이 예약되었습니다. AIStudio가 다시 시작되고 로컬 서비스 시작 전에 데이터를 이전합니다.',
+     legacyDataMigrationFailed: '이전 Hermes 데이터 이전 실패: {error}',
+   },
+ 
+@@ -819,8 +819,8 @@
+     dataDirectoryEnvMacos: 'macOS(데스크톱 / 터미널)',
+     dataDirectoryEnvLinux: 'Linux(로그인 환경)',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: '변경 후 Ekko Studio를 완전히 종료했다가 다시 여세요. Windows 또는 Linux 데스크톱 앱에서 이전 값이 계속 보이면 로그아웃한 뒤 다시 로그인하세요.',
+-    cliUpdateDescription: 'Hermes Runtime 0.19.1 이상에서는 다음 명령으로 내장 Hermes Agent만 업데이트할 수 있습니다. Ekko Studio 데스크톱 앱이나 Web UI는 업데이트되지 않습니다. 실행 전에 Ekko Studio를 완전히 종료하세요:',
++    dataDirectoryEnvRestart: '변경 후 AIStudio를 완전히 종료했다가 다시 여세요. Windows 또는 Linux 데스크톱 앱에서 이전 값이 계속 보이면 로그아웃한 뒤 다시 로그인하세요.',
++    cliUpdateDescription: 'Hermes Runtime 0.19.1 이상에서는 다음 명령으로 내장 Hermes Agent만 업데이트할 수 있습니다. AIStudio 데스크톱 앱이나 Web UI는 업데이트되지 않습니다. 실행 전에 AIStudio를 완전히 종료하세요:',
+     webUiTitle: 'Web UI',
+     platform: '플랫폼',
+     currentWebUi: '현재 Web UI',
+@@ -829,10 +829,10 @@
+     chooseRuntimeDirectory: '디렉터리 선택',
+     resetRuntimeDirectory: '시스템 기본값 사용',
+     runtimeDirectoryHint: '다음 재시작 시 로컬 서비스 시작 전에 현재 Runtime을 복사하고 검증합니다. 이전 저장소는 유지되며 이후 Runtime 다운로드도 여기에 저장됩니다.',
+-    runtimeDirectorySaved: 'Runtime 마이그레이션을 예약했습니다. Ekko Studio를 다시 시작하면 실행됩니다.',
++    runtimeDirectorySaved: 'Runtime 마이그레이션을 예약했습니다. AIStudio를 다시 시작하면 실행됩니다.',
+     runtimeMigrationPending: '마이그레이션 예정 위치: {directory}',
+     runtimeMigrationFailed: '저장소 마이그레이션에 실패하여 이전 저장소를 계속 사용합니다',
+-    runtimeActivationFailed: '선택한 Runtime을 시작할 수 없어 Ekko Studio가 설치된 다른 버전을 사용했습니다',
++    runtimeActivationFailed: '선택한 Runtime을 시작할 수 없어 AIStudio가 설치된 다른 버전을 사용했습니다',
+     active: '활성',
+     installed: '설치됨',
+     download: '다운로드',
+@@ -851,7 +851,7 @@
+     remoteLoadFailed: '원격 버전을 불러오지 못했습니다',
+     downloadTasks: '다운로드 작업',
+     downloadStarted: '다운로드를 시작했습니다',
+-    activateSuccess: '버전 선택이 저장되었습니다. Ekko Studio를 다시 시작하면 적용됩니다.',
++    activateSuccess: '버전 선택이 저장되었습니다. AIStudio를 다시 시작하면 적용됩니다.',
+     restartPromptTitle: 'Runtime 준비 완료',
+     restartPromptContent: 'Hermes Runtime {version} 설치가 완료되었습니다. 지금 다시 시작하여 사용하시겠습니까?',
+     restartLater: '나중에',
+@@ -944,9 +944,9 @@
+       viewList: '목록',
+       viewDownload: '다운로드',
+       viewMessages: '메시지 전송',
+-      downloadTitle: '휴대폰에서 Ekko Studio 사용하기',
++      downloadTitle: '휴대폰에서 AIStudio 사용하기',
+       downloadDescription: '현재 비공개 베타 테스트 중이며 가입하려면 등록 코드가 필요합니다. 일부 등록 코드는 소셜 미디어를 통해 공개할 예정입니다.',
+-      downloadPaidDescription: 'Ekko Studio App이 정식 출시되었으며 현재 유료로 제공됩니다. 이용하려면 요금 및 구매 페이지에서 적합한 플랜을 선택하고 구매를 완료해 주세요.',
++      downloadPaidDescription: 'AIStudio App이 정식 출시되었으며 현재 유료로 제공됩니다. 이용하려면 요금 및 구매 페이지에서 적합한 플랜을 선택하고 구매를 완료해 주세요.',
+       downloadScan: '휴대폰으로 스캔',
+       downloadScanHint: 'Android 다운로드 가능',
+       available: '다운로드 가능',
+@@ -982,7 +982,7 @@
+       accessFailures: {
+         tokenExpired: '토큰이 만료되었습니다',
+         paidAccountRequired: '현재 계정은 유료 계정이 아니므로 이 기능을 사용할 수 없습니다',
+-        cloudSubscriptionRequired: '이 계정에는 Ekko Studio Cloud 이용 권한이 없습니다',
++        cloudSubscriptionRequired: '이 계정에는 AIStudio Cloud 이용 권한이 없습니다',
+         appAccessExpired: '내부 테스트 또는 공개 베타 이용 기간이 만료되었습니다',
+         required: 'App에서 접근 권한을 제공하지 않았습니다',
+         invalid: 'App 접근 권한이 유효하지 않습니다',
+@@ -1160,7 +1160,7 @@
+       systemUnavailable: "현재 시스템 스크린샷을 사용할 수 없습니다",
+       systemWaiting: "시스템 창에서 캡처 영역을 선택하세요",
+       timedOut: "스크린샷 시간이 초과되었습니다. 다시 시도하세요.",
+-      permissionDenied: "시스템 설정에서 Ekko Studio의 화면 기록을 허용한 뒤 앱을 다시 시작하세요.",
++      permissionDenied: "시스템 설정에서 AIStudio의 화면 기록을 허용한 뒤 앱을 다시 시작하세요.",
+       sourceUnavailable: "화면을 캡처하지 못했습니다. 화면 기록 권한을 확인하고 다시 시도하세요.",
+       failed: "캡처하지 못했습니다. 다시 시도하세요.",
+     },
+@@ -1282,7 +1282,7 @@
+     },
+     showToolCalls: '도구 호출 표시',
+     pushEnabled: '푸시 사용',
+-    pushNotConfigured: '활성화하기 전에 Ekko Studio의 “기기 연결”에서 메시지 푸시를 설정하세요.',
++    pushNotConfigured: '활성화하기 전에 AIStudio의 “기기 연결”에서 메시지 푸시를 설정하세요.',
+     hideToolCalls: '도구 호출 숨기기',
+     messageQueue: '메시지 대기열',
+     removeQueuedMessage: '대기열 메시지 제거',
+@@ -2301,7 +2301,7 @@
+       notifyOnApprovalTestFailed: 'Failed to send approval notification',
+       approvalNotificationTitle: 'Approval required',
+       approvalNotificationClarifyTitle: 'Clarification required',
+-      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
++      approvalNotificationBody: 'Open AIStudio to review and respond.',
+       notifyOnCompleteHint: 'AI 응답 완료 시 시스템 알림 표시',
+       notifyOnCompleteMacHint: 'macOS 에서는 시스템 설정에서 브라우저 알림을 허용해야 합니다.',
+       notifyOnCompleteDenied: '알림 권한이 거부되었습니다',
+@@ -2323,7 +2323,7 @@
+       chatInputHeightHint: '데스크톱 채팅 입력창 기본 높이(px). 모바일은 자동 높이를 유지합니다.',
+       linkOpenTarget: '웹 링크 열기 위치',
+       linkOpenTargetHint: '메시지와 Markdown 미리보기의 링크를 열 위치를 선택합니다.',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: '기본 브라우저',
+     },
+     agent: {
+@@ -2486,10 +2486,10 @@
+         extract: '모델 압축 해제 중…', validate: '모델 검증 중…', install: '모델 설치 중…', completed: '모델 사용 가능', failed: '다운로드 실패',
+       },
+       hermesConfigTitle: 'Hermes Agent 설정',
+-      hermesConfigDescription: 'Hermes 프로필의 기존 네이티브 제공자는 유지되며 Web UI 제공자는 Ekko Studio로 표시됩니다.',
++      hermesConfigDescription: 'Hermes 프로필의 기존 네이티브 제공자는 유지되며 Web UI 제공자는 AIStudio로 표시됩니다.',
+       hermesActiveProvider: '활성 제공자',
+       hermesConfiguredProviders: '설정된 제공자',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: '속도',
+       providerSampleRate: '샘플 레이트',
+       providerBitRate: '비트 레이트',
+@@ -2503,7 +2503,7 @@
+       optionDisabled: '사용 안 함',
+       nativeProvider: 'Hermes 네이티브 제공자',
+       selectNativeProvider: 'Hermes 네이티브 제공자 선택',
+-      useHermesStudioProvider: 'Ekko Studio 제공자 사용',
++      useHermesStudioProvider: 'AIStudio 제공자 사용',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
+--- a/packages/client/src/i18n/locales/ja.ts
++++ b/packages/client/src/i18n/locales/ja.ts
+@@ -99,12 +99,12 @@
+   },
+   computerUsePermissions: {
+     "promptTitle": "コンピューター操作には許可が必要です",
+-    "promptDescription": "Ekko Studio に次のシステム権限がないため、該当する操作を完了できない場合があります。",
++    "promptDescription": "AIStudio に次のシステム権限がないため、該当する操作を完了できない場合があります。",
+     "promptLaterHint": "後から「設定 → ツール → コンピューター操作」で許可することもできます。",
+     "promptGo": "権限設定へ",
+     "promptLater": "今はしない",
+     "title": "コンピューター操作の権限",
+-    "intro": "Ekko Studio に、この Mac のアプリの表示と操作を許可します。",
++    "intro": "AIStudio に、この Mac のアプリの表示と操作を許可します。",
+     "complete": "両方のシステム権限が有効です。",
+     "refresh": "再確認",
+     "checking": "確認中…",
+@@ -117,8 +117,8 @@
+     "accessibilityHint": "他のアプリのクリック、入力、コントロールの読み取りに使用します。",
+     "screenRecordingHint": "アプリのウインドウを撮影し、Ekko が画面を確認できるようにします。",
+     "authorize": "許可する",
+-    "guide": "「システム設定 → プライバシーとセキュリティ」で Ekko Studio の各権限を有効にしてください。アプリがなければ「＋」で追加します。",
+-    "restartHint": "このページに戻ると再確認します。macOS に再起動を求められた場合は、作業を保存して Ekko Studio を再起動してください。",
++    "guide": "「システム設定 → プライバシーとセキュリティ」で AIStudio の各権限を有効にしてください。アプリがなければ「＋」で追加します。",
++    "restartHint": "このページに戻ると再確認します。macOS に再起動を求められた場合は、作業を保存して AIStudio を再起動してください。",
+     "checkFailed": "権限を読み取れませんでした。再確認してください。",
+     "openFailed": "権限設定を開けませんでした。「システム設定 → プライバシーとセキュリティ」を手動で開いてください。"
+   },
+@@ -444,7 +444,7 @@
+     remoteOwnerConnecting: 'Connecting',
+ 
+ 
+-    title: 'ブラウザー', settings: 'ブラウザー設定', desktopOnly: '内蔵ブラウザーは Ekko Studio Desktop でのみ利用できます。', newTab: '新しいタブ',
++    title: 'ブラウザー', settings: 'ブラウザー設定', desktopOnly: '内蔵ブラウザーは AIStudio Desktop でのみ利用できます。', newTab: '新しいタブ',
+     back: '戻る', forward: '進む', reload: '再読み込み', stop: '停止', addressPlaceholder: '検索またはアドレスを入力',
+     undoAnnotation: '直前の注釈を取り消す', deleteAnnotation: '注釈 {index} を削除',
+     selectElement: '要素を選択', selectRegion: '範囲を選択', annotationPlaceholder: 'Agent に確認または変更してほしい内容を入力…', selectionData: 'ブラウザー選択データ', annotationAdded: 'スクリーンショットをチャット入力欄に追加しました', annotationCount: '{count} 件の注釈', annotationLabel: '注釈 {index}', clearAnnotations: '注釈を消去', finishAnnotation: '完了',
+@@ -468,7 +468,7 @@
+   },
+   // ログイン
+   login: {
+-    title: 'Ekko Studio',
++    title: 'AIStudio',
+     description: 'ユーザー名とパスワードを入力して続行してください。',
+     placeholder: 'アクセストークン',
+     submit: 'ログイン',
+@@ -651,7 +651,7 @@
+   apiRelay: {
+     title: "APIリレー",
+     headline: "主要なAIモデルを一つの窓口で",
+-    description: "APIKEY.FANはEkko Studioの提携APIゲートウェイです。Claude、ChatGPT、Grok、Gemini、Zhipu、Kimi、DeepSeek、MiniMaxに統一APIで接続でき、公式APIとSDKに対応しています。",
++    description: "APIKEY.FANはAIStudioの提携APIゲートウェイです。Claude、ChatGPT、Grok、Gemini、Zhipu、Kimi、DeepSeek、MiniMaxに統一APIで接続でき、公式APIとSDKに対応しています。",
+     zhipu: "Zhipu",
+     viewNow: "今すぐ見る",
+     apiCompatible: "公式API互換",
+@@ -799,7 +799,7 @@
+     legacyDataMigrationWarning: '確認後に Studio が再起動し、ローカルサービスの開始前に同名ファイルを以前のデータで上書きします。現在のディレクトリにのみあるファイルは保持されます。この確認は一度だけ表示されます。',
+     legacyDataMigrationPositive: '以前のデータを移行',
+     legacyDataMigrationNegative: '移行しない',
+-    legacyDataMigrationSuccess: '移行を予約しました。Ekko Studio を再起動し、ローカルサービスの開始前にデータを移行します。',
++    legacyDataMigrationSuccess: '移行を予約しました。AIStudio を再起動し、ローカルサービスの開始前にデータを移行します。',
+     legacyDataMigrationFailed: '以前の Hermes データの移行に失敗しました：{error}',
+   },
+ 
+@@ -819,8 +819,8 @@
+     dataDirectoryEnvMacos: 'macOS（デスクトップ / ターミナル）',
+     dataDirectoryEnvLinux: 'Linux（ログイン環境）',
+     dataDirectoryEnvDocker: 'Docker Compose',
+-    dataDirectoryEnvRestart: '変更後は Ekko Studio を完全に終了して再度開いてください。Windows または Linux のデスクトップアプリで古い値が残る場合は、サインアウトして再度サインインしてください。',
+-    cliUpdateDescription: 'Hermes Runtime 0.19.1 以降では、次のコマンドで内蔵 Hermes Agent のみを更新できます。Ekko Studio デスクトップアプリや Web UI は更新されません。実行前に Ekko Studio を完全に終了してください：',
++    dataDirectoryEnvRestart: '変更後は AIStudio を完全に終了して再度開いてください。Windows または Linux のデスクトップアプリで古い値が残る場合は、サインアウトして再度サインインしてください。',
++    cliUpdateDescription: 'Hermes Runtime 0.19.1 以降では、次のコマンドで内蔵 Hermes Agent のみを更新できます。AIStudio デスクトップアプリや Web UI は更新されません。実行前に AIStudio を完全に終了してください：',
+     webUiTitle: 'Web UI',
+     platform: 'プラットフォーム',
+     currentWebUi: '現在の Web UI',
+@@ -829,10 +829,10 @@
+     chooseRuntimeDirectory: 'ディレクトリを選択',
+     resetRuntimeDirectory: 'システム既定に戻す',
+     runtimeDirectoryHint: '次回再起動時にローカルサービスの起動前に現在の Runtime をコピーして検証します。元の保存先は保持され、今後の Runtime ダウンロードもここに保存されます。',
+-    runtimeDirectorySaved: 'Runtime の移行を予約しました。Ekko Studio を再起動すると実行されます。',
++    runtimeDirectorySaved: 'Runtime の移行を予約しました。AIStudio を再起動すると実行されます。',
+     runtimeMigrationPending: '移行先：{directory}',
+     runtimeMigrationFailed: '保存先の移行に失敗したため、以前の保存先を引き続き使用します',
+-    runtimeActivationFailed: '選択した Runtime を起動できなかったため、Ekko Studio は別のインストール済みバージョンを使用しています',
++    runtimeActivationFailed: '選択した Runtime を起動できなかったため、AIStudio は別のインストール済みバージョンを使用しています',
+     active: '有効',
+     installed: 'インストール済み',
+     download: 'ダウンロード',
+@@ -851,7 +851,7 @@
+     remoteLoadFailed: 'リモートバージョンの読み込みに失敗しました',
+     downloadTasks: 'ダウンロードタスク',
+     downloadStarted: 'ダウンロードを開始しました',
+-    activateSuccess: 'バージョン選択を保存しました。Ekko Studio を再起動すると反映されます。',
++    activateSuccess: 'バージョン選択を保存しました。AIStudio を再起動すると反映されます。',
+     restartPromptTitle: 'Runtime の準備が完了しました',
+     restartPromptContent: 'Hermes Runtime {version} がインストールされました。今すぐ再起動して使用しますか？',
+     restartLater: '後で',
+@@ -944,9 +944,9 @@
+       viewList: '一覧',
+       viewDownload: 'ダウンロード',
+       viewMessages: 'メッセージ送信',
+-      downloadTitle: 'スマートフォンで Ekko Studio を使う',
++      downloadTitle: 'スマートフォンで AIStudio を使う',
+       downloadDescription: '現在クローズドベータ中です。登録には登録コードが必要で、今後ソーシャルメディアで一部のコードを配布します。',
+-      downloadPaidDescription: 'Ekko Studio App は正式にリリースされ、現在は有料でご利用いただけます。ご利用になるには、料金・購入ページで最適なプランを選び、購入手続きを完了してください。',
++      downloadPaidDescription: 'AIStudio App は正式にリリースされ、現在は有料でご利用いただけます。ご利用になるには、料金・購入ページで最適なプランを選び、購入手続きを完了してください。',
+       downloadScan: 'スマートフォンでスキャン',
+       downloadScanHint: 'Android 版をダウンロードできます',
+       available: 'ダウンロード可能',
+@@ -982,7 +982,7 @@
+       accessFailures: {
+         tokenExpired: 'トークンの有効期限が切れています',
+         paidAccountRequired: '現在のアカウントは有料アカウントではないため、この機能を利用できません',
+-        cloudSubscriptionRequired: 'このアカウントには Ekko Studio Cloud の利用権限がありません',
++        cloudSubscriptionRequired: 'このアカウントには AIStudio Cloud の利用権限がありません',
+         appAccessExpired: '内部テストまたはパブリックベータの利用期限が切れています',
+         required: 'App からアクセス権限が送信されていません',
+         invalid: 'App のアクセス権限が無効です',
+@@ -1160,7 +1160,7 @@
+       systemUnavailable: "現在システムのスクリーンショットを利用できません",
+       systemWaiting: "システム画面で撮影範囲を選択してください",
+       timedOut: "撮影がタイムアウトしました。再試行してください。",
+-      permissionDenied: "システム設定で Ekko Studio の画面収録を許可し、アプリを再起動してください。",
++      permissionDenied: "システム設定で AIStudio の画面収録を許可し、アプリを再起動してください。",
+       sourceUnavailable: "画面を取得できません。画面収録の権限を確認して再試行してください。",
+       failed: "キャプチャに失敗しました。もう一度お試しください。",
+     },
+@@ -1282,7 +1282,7 @@
+     },
+     showToolCalls: 'ツール呼び出しを表示',
+     pushEnabled: 'プッシュ通知を有効化',
+-    pushNotConfigured: '有効にする前に、Ekko Studio の「デバイス接続」でメッセージプッシュを設定してください。',
++    pushNotConfigured: '有効にする前に、AIStudio の「デバイス接続」でメッセージプッシュを設定してください。',
+     hideToolCalls: 'ツール呼び出しを非表示',
+     messageQueue: 'メッセージキュー',
+     removeQueuedMessage: 'キューのメッセージを削除',
+@@ -2301,7 +2301,7 @@
+       notifyOnApprovalTestFailed: 'Failed to send approval notification',
+       approvalNotificationTitle: 'Approval required',
+       approvalNotificationClarifyTitle: 'Clarification required',
+-      approvalNotificationBody: 'Open Ekko Studio to review and respond.',
++      approvalNotificationBody: 'Open AIStudio to review and respond.',
+       notifyOnCompleteHint: 'AI の応答完了時にシステム通知を表示',
+       notifyOnCompleteMacHint: 'macOS ではシステム設定でブラウザ通知を許可してください。',
+       notifyOnCompleteDenied: '通知権限が拒否されました',
+@@ -2323,7 +2323,7 @@
+       chatInputHeightHint: 'デスクトップでの既定の入力欄高さ（px）。モバイルでは自動高さを維持します。',
+       linkOpenTarget: 'Web リンクを開く場所',
+       linkOpenTargetHint: 'メッセージと Markdown プレビュー内のリンクを開く場所を選択します。',
+-      linkOpenTargetHermesStudio: 'Ekko Studio',
++      linkOpenTargetHermesStudio: 'AIStudio',
+       linkOpenTargetDefaultBrowser: '既定のブラウザ',
+     },
+     agent: {
+@@ -2486,10 +2486,10 @@
+         extract: 'モデルを展開中…', validate: 'モデルを検証中…', install: 'モデルをインストール中…', completed: 'モデルを利用できます', failed: 'ダウンロード失敗',
+       },
+       hermesConfigTitle: 'Hermes Agent 設定',
+-      hermesConfigDescription: 'Hermes プロファイルの既存ネイティブプロバイダーは保持され、Web UI のプロバイダーは Ekko Studio として表示されます。',
++      hermesConfigDescription: 'Hermes プロファイルの既存ネイティブプロバイダーは保持され、Web UI のプロバイダーは AIStudio として表示されます。',
+       hermesActiveProvider: '有効なプロバイダー',
+       hermesConfiguredProviders: '設定済みプロバイダー',
+-      hermesStudioProvider: 'Ekko Studio',
++      hermesStudioProvider: 'AIStudio',
+       providerSpeed: '速度',
+       providerSampleRate: 'サンプルレート',
+       providerBitRate: 'ビットレート',
+@@ -2503,7 +2503,7 @@
+       optionDisabled: '無効',
+       nativeProvider: 'Hermes ネイティブプロバイダー',
+       selectNativeProvider: 'Hermes ネイティブプロバイダーを選択',
+-      useHermesStudioProvider: 'Ekko Studio プロバイダーを使用',
++      useHermesStudioProvider: 'AIStudio プロバイダーを使用',
+       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
+       presetGeminiTtsLabel: 'Gemini TTS',
+       presetXaiTtsLabel: 'xAI TTS',
+diff --git a/packages/mcu/m5stack-stackchan/docs/ROADMAP.md b/packages/mcu/m5stack-stackchan/docs/ROADMAP.md
+--- a/packages/mcu/m5stack-stackchan/docs/ROADMAP.md
++++ b/packages/mcu/m5stack-stackchan/docs/ROADMAP.md
+@@ -2,7 +2,7 @@
+ 
+ 日期：2026-10-26。状态：规划稿；实时语音、设备动作与动画接口方向已按用户要求确定，具体参数与实现待验证。
+ 
+-建议把这台设备定位为连接 Ekko Studio 的桌面语音助手与任务终端：用户通过触摸和语音发起请求，在设备上看到执行状态、听到回复，并通过表情和受控动作获得反馈。Studio 承担 Agent、语音识别、语音合成和任务执行；固件承担本地交互和硬件控制。
++建议把这台设备定位为连接 AIStudio 的桌面语音助手与任务终端：用户通过触摸和语音发起请求，在设备上看到执行状态、听到回复，并通过表情和受控动作获得反馈。Studio 承担 Agent、语音识别、语音合成和任务执行；固件承担本地交互和硬件控制。
+ 
+ 本轮仅整理文档，暂停继续开发。本文的阶段安排是后续实施建议，不表示已获准开始实施，也不表示原厂功能会全部保留。App 开发、动画播放器实现与角色素材制作继续延后。
+ 
+@@ -104,7 +104,7 @@
+ flowchart LR
+     App[现有 App：后续接入] -->|BLE 配网| Device[StackChan：本地交互与硬件]
+     USB[电脑开发工具] <-->|USB：诊断与固件维护| Device
+-    Device <-->|Wi-Fi：认证、状态、语音| Studio[Ekko Studio：设备与交互服务]
++    Device <-->|Wi-Fi：认证、状态、语音| Studio[AIStudio：设备与交互服务]
+     Studio <-->|识别、推理、合成、工具| Services[Agent / STT / TTS / 任务服务]
+     Agent[后续 Studio 专用 Agent] -->|MCP tools| MCP[Studio 侧设备 MCP]
+     MCP <-->|统一设备控制服务| Studio
+diff --git a/packages/mcu/m5stack-stackchan/README.md b/packages/mcu/m5stack-stackchan/README.md
+--- a/packages/mcu/m5stack-stackchan/README.md
++++ b/packages/mcu/m5stack-stackchan/README.md
+@@ -1,6 +1,6 @@
+ # M5Stack StackChan firmware
+ 
+-Dedicated development workspace for the new StackChan integration with Ekko Studio.
++Dedicated development workspace for the new StackChan integration with AIStudio.
+ This board project lives directly under `packages/mcu/`, alongside the existing
+ `esp32-c3/` and `esp32-s3/` projects.
+ 
+diff --git a/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md b/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md
+--- a/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md
++++ b/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md
+@@ -2,7 +2,7 @@
+ 
+ Development-preview **LAN application update** for [M5Stack Cardputer-Adv](https://docs.m5stack.com/en/core/Cardputer-Adv): Stamp-S3A / ESP32-S3FN8, 8 MiB Flash, no PSRAM.
+ 
+-This firmware connects directly to an unmodified official Ekko Studio on the same local network. It provides a 16-Agent selection catalog, Chinese keyboard input, paged chat history, and Fn+Space voice input with a five-second RAM recording limit. Runtime installation, authorization, Profile permissions and model configuration determine which Agents can actually reply.
++This firmware connects directly to an unmodified official AIStudio on the same local network. It provides a 16-Agent selection catalog, Chinese keyboard input, paged chat history, and Fn+Space voice input with a five-second RAM recording limit. Runtime installation, authorization, Profile permissions and model configuration determine which Agents can actually reply.
+ 
+ **仅适用于已安装本项目双固件布局的 M5Stack Cardputer-Adv；这是局域网开发预览版，不支持远程，也不是新机首刷包。**
+ 
+diff --git a/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json b/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json
+--- a/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json
++++ b/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json
+@@ -1,5 +1,5 @@
+ {
+-  "name": "M5Stack Cardputer-Adv — Ekko Studio LAN firmware",
++  "name": "M5Stack Cardputer-Adv — AIStudio LAN firmware",
+   "firmwareVersion": "cardputer-adv-v9.0.0-dev.10-ram-lan",
+   "version": "v9.0.0-dev.10-lan",
+   "releaseStage": "development-preview",
+diff --git a/packages/mcu/esp32-s3/README.md b/packages/mcu/esp32-s3/README.md
+--- a/packages/mcu/esp32-s3/README.md
++++ b/packages/mcu/esp32-s3/README.md
+@@ -2,6 +2,6 @@
+ 
+ | Hardware | Firmware | Installation |
+ | --- | --- | --- |
+-| [M5Stack Cardputer-Adv](m5stack-cardputer-adv/README.md) | Ekko Studio LAN development preview | Existing project dual-firmware layout only; application update at `0x10000` |
++| [M5Stack Cardputer-Adv](m5stack-cardputer-adv/README.md) | AIStudio LAN development preview | Existing project dual-firmware layout only; application update at `0x10000` |
+ 
+ Read the board-specific layout, checksum, source and validation notes before flashing. These images are separate from the ESP32-C3 `v1`/`v2` firmware and are not registered with Studio's C3 OTA endpoints.
+diff --git a/packages/mcu/esp32-c3/v1/README.md b/packages/mcu/esp32-c3/v1/README.md
+--- a/packages/mcu/esp32-c3/v1/README.md
++++ b/packages/mcu/esp32-c3/v1/README.md
+@@ -80,9 +80,9 @@
+ ## First Boot
+ 
+ 1. The device tries the saved Wi-Fi credentials first.
+-2. If Wi-Fi is missing or connection fails, it starts the open `Ekko Studio-WIFI`
++2. If Wi-Fi is missing or connection fails, it starts the open `SwarmStudio-WIFI`
+    setup hotspot.
+-3. Join `Ekko Studio-WIFI` and open `http://192.168.4.1/`.
++3. Join `SwarmStudio-WIFI` and open `http://192.168.4.1/`.
+ 4. Select the target Wi-Fi SSID from the scanned list, or enter it manually,
+    then enter the password and save.
+ 5. The setup page connects once, shows the router-assigned IP, opens that IP,
+diff --git a/packages/mcu/esp32-c3/v1/manifest.json b/packages/mcu/esp32-c3/v1/manifest.json
+--- a/packages/mcu/esp32-c3/v1/manifest.json
++++ b/packages/mcu/esp32-c3/v1/manifest.json
+@@ -1,5 +1,5 @@
+ {
+-  "name": "Ekko Studio ESP32-C3 Wi-Fi Setup Firmware v1",
++  "name": "AIStudio ESP32-C3 Wi-Fi Setup Firmware v1",
+   "firmwareVersion": "v1",
+   "version": "v1-esp32-c3-wifi-setup-oled",
+   "buildDate": "2026-08-08",
+@@ -17,7 +17,7 @@
+   },
+   "features": [
+     "Wi-Fi setup portal",
+-    "Open Ekko Studio-WIFI setup access point",
++    "Open SwarmStudio-WIFI setup access point",
+     "Pre-AP Wi-Fi network scan dropdown",
+     "Manual Wi-Fi SSID fallback",
+     "Provisioning success page with LAN IP redirect",
+diff --git a/packages/mcu/esp32-c3/v2/manifest.json b/packages/mcu/esp32-c3/v2/manifest.json
+--- a/packages/mcu/esp32-c3/v2/manifest.json
++++ b/packages/mcu/esp32-c3/v2/manifest.json
+@@ -1,5 +1,5 @@
+ {
+-  "name": "Ekko Studio ESP32-C3 Wi-Fi Setup Firmware v2",
++  "name": "AIStudio ESP32-C3 Wi-Fi Setup Firmware v2",
+   "firmwareVersion": "v2",
+   "version": "v2-esp32-c3-wifi-setup-oled",
+   "buildDate": "2026-08-08",
+@@ -8,7 +8,7 @@
+   "flashMode": "dio",
+   "flashFrequency": "40m",
+   "hardware": {
+-    "board": "Ekko Studio ESP32-C3 hardware v2 with ES8311 audio and SSD1306-compatible OLED",
++    "board": "AIStudio ESP32-C3 hardware v2 with ES8311 audio and SSD1306-compatible OLED",
+     "i2c": {
+       "sda": 3,
+       "scl": 4
+@@ -29,7 +29,7 @@
+   "features": [
+     "Same application logic as firmware v1",
+     "Wi-Fi setup portal",
+-    "Open Ekko Studio-WIFI setup access point",
++    "Open SwarmStudio-WIFI setup access point",
+     "Saved Wi-Fi reconnect and reprovisioning",
+     "LAN and remote Hermes endpoint discovery",
+     "MCU login and profile selection",
