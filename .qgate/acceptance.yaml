@@ -1,0 +1,28 @@
+# 本变更的验收断言登记（L0.acceptance-coverage 输入）。
+# 每条 criterion 必须有非空 coveredBy：测试文件路径或门 id。
+criteria:
+  - id: MR-A1
+    statement: 完成工具在卡面声明 AC/dod 时强制结构化回执，并按 TAP/JUnit 重算计数与失败数
+    coveredBy:
+      - runtime/tests/hermes_cli/test_completion_contract.py
+      - runtime/tests/hermes_cli/test_completion_contract_gate.py
+  - id: MR-A2
+    statement: 派发时锁定契约源哈希，worker 改卡面无法削弱契约
+    coveredBy:
+      - runtime/tests/hermes_cli/test_completion_contract_gate.py
+  - id: MR-B1
+    statement: qgate 解析层接受 runtime-proof，pre-push 以 L0 硬件集默认拦截
+    coveredBy:
+      - custom/qgate/__tests__/qgate-runtime-proof.test.ts
+      - .swarm-yuan/hooks/pre-push
+  - id: MR-C1
+    statement: 能力矩阵按风险分档路由，高风险无足量证据不静默降级
+    coveredBy:
+      - custom/server/modelcap/__tests__/route.test.ts
+      - custom/server/modelcap/__tests__/matrix.test.ts
+  - id: MR-D1
+    statement: 巡检自动处置默认开启，失败路由透出模型档位建议，建卡幂等跨进程生效
+    coveredBy:
+      - custom/server/clusterinspector/__tests__/cluster-inspector.test.ts
+      - custom/server/faileroute/__tests__/failure-routes.test.ts
+      - runtime/tests/hermes_cli/test_kanban_idempotency_unique.py

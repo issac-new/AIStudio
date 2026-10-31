@@ -223,7 +223,9 @@ async function main(): Promise<void> {
     case 'plan': {
       const changedArg = flag(rest, '--changed')
       const changed = changedArg ? changedArg.split(',').filter(Boolean) : gitContext(workspace).changedPaths
-      const applicable = selectGates(enabledGates, changed)
+      // 硬件集模式（模型波动加固 B）：pre-push 需要 L0 判据，不受当前 profile 禁用面影响。
+      const planPool = rest.includes('--include-disabled') ? loaded.gates : enabledGates
+      const applicable = selectGates(planPool, changed)
       process.stdout.write(`profile: ${resolved.profileId}${resolved.tier ? ` (tier=${resolved.tier})` : ''}\n`)
       process.stdout.write(`changed: ${changed.length === 0 ? '(none)' : changed.slice(0, 20).join(', ')}${changed.length > 20 ? ` …+${changed.length - 20}` : ''}\n`)
       for (const g of applicable) {
@@ -244,11 +246,13 @@ async function main(): Promise<void> {
       const deadline = budgetMs !== undefined ? Date.now() + budgetMs : undefined
       const git = gitContext(workspace)
       const changed = changedArg ? changedArg.split(',').filter(Boolean) : git.changedPaths
+      // 硬件集模式：显式点名/--all 时从全量门清单取，不受 profile disable 影响。
+      const pool = rest.includes('--include-disabled') ? loaded.gates : enabledGates
       const toRun: GateSpec[] =
         target === '--all'
-          ? (changed.length > 0 ? selectGates(enabledGates, changed) : enabledGates)
-          : enabledGates.filter((g) => g.metadata.id === target)
-      if (toRun.length === 0) fail(target ? `gate not found or disabled: ${target}` : 'missing gateId or --all')
+          ? (changed.length > 0 ? selectGates(pool, changed) : pool)
+          : pool.filter((g) => g.metadata.id === target)
+      if (toRun.length === 0) fail(target ? `gate not found (or disabled; use --include-disabled): ${target}` : 'missing gateId or --all')
       // 元门二轮通道（v0.3 §3.3）：meta 门排在普通门之后——它们的输入是其他门的本轮判定。
       const ordered = [...toRun.filter((g) => g.spec.meta !== true), ...toRun.filter((g) => g.spec.meta === true)]
       let blocking = 0

@@ -8,6 +8,7 @@ late-bound via ``_kb`` (import-cycle breaking) so monkeypatching
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import re
 import signal
@@ -3079,6 +3080,19 @@ def _default_spawn(task: Task, workspace: str, *, board: Optional[str] = None) -
         env["HERMES_TENANT"] = task.tenant
     env["HERMES_KANBAN_TASK"] = task.id
     env["HERMES_KANBAN_WORKSPACE"] = workspace
+    # DoD 契约（模型波动加固 A）：把卡面 AC/dod 块固化为 env 并锁源哈希。
+    # worker 进程内改卡面不会改变这里；完成工具按 env 校验回执。
+    try:
+        from completion_contract import derive_contract
+
+        _dod_contract = derive_contract(getattr(task, "body", "") or "")
+        if _dod_contract.get("mode") != "off":
+            env["HERMES_KANBAN_DOD_CONTRACT"] = json.dumps(
+                _dod_contract, ensure_ascii=False, separators=(",", ":"))
+            if _dod_contract.get("sourceSha256"):
+                env["HERMES_KANBAN_DOD_SOURCE_SHA256"] = _dod_contract["sourceSha256"]
+    except Exception as exc:  # noqa: BLE001 - 部署缺模块/派生异常不应阻断派发；完成门随之缺省
+        _kb._log.warning("kanban worker: completion contract derivation failed (%s)", exc)
     # Tag the session `kanban` so session-browsing surfaces filter it out by
     # source instead of rendering one sidebar row per attempt.
     env["HERMES_SESSION_SOURCE"] = "kanban"

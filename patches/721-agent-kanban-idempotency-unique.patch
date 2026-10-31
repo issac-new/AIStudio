@@ -1,0 +1,75 @@
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -1433,9 +1433,9 @@
+                     if not branch_name:
+                         branch_name = _project_branch_name(project_obj, task_id, title)
+ 
+-                conn.execute(
++                cursor = conn.execute(
+                     """
+-                    INSERT INTO tasks (
++                    INSERT OR IGNORE INTO tasks (
+                         id, title, body, assignee, status, priority,
+                         created_by, created_at, workspace_kind, workspace_path,
+                         branch_name, project_id, tenant, idempotency_key,
+@@ -1456,6 +1456,18 @@
+                         json.dumps(raci) if isinstance(raci, dict) else None,
+                     ),
+                 )
++                if cursor.rowcount == 0:
++                    # 跨进程同键并发（唯一索引生效）：返回既有卡，不插 links/events。
++                    if idempotency_key:
++                        row = conn.execute(
++                            "SELECT id FROM tasks WHERE idempotency_key = ? "
++                            "AND status != 'archived' "
++                            "ORDER BY created_at DESC LIMIT 1", (idempotency_key,),
++                        ).fetchone()
++                        if row:
++                            return row["id"]
++                    # 非幂等键的 id 碰撞：外层 attempt 循环重试一次。
++                    continue
+                 for pid in parents:
+                     _link(conn, pid, task_id)
+                 _append_event(
+@@ -1503,7 +1515,7 @@
+         except sqlite3.IntegrityError:
+             if attempt == 1:
+                 raise
+-    raise RuntimeError("unreachable")
++    raise RuntimeError("task id collision persisted after retry")
+ 
+ 
+ def _board_meta_for(board: Optional[str]) -> dict:
+diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -9,6 +9,7 @@
+ 
+ import contextlib
+ import hashlib
++import logging
+ import random
+ import re
+ import secrets
+@@ -958,6 +959,20 @@
+     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status)")
+     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_tenant ON tasks(tenant)")
+     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_idempotency ON tasks(idempotency_key)")
++    # 幂等下沉（模型波动加固 D，2026-10-31）：跨进程唯一键。partial index 让归档卡
++    # 不挡同键重建；历史库若有并发插入留下的重复键，建索引失败只告警、保留非唯一
++    # 索引——不静默删数据，也不假装唯一性已成立。
++    try:
++        conn.execute(
++            "CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_idempotency_unique "
++            "ON tasks(idempotency_key) "
++            "WHERE idempotency_key IS NOT NULL AND status != 'archived'"
++        )
++    except sqlite3.IntegrityError:
++        logging.getLogger(__name__).warning(
++            "kanban: duplicate idempotency_key rows exist; unique index skipped "
++            "(existing non-unique index kept). Dedupe the board to enable cross-process idempotency."
++        )
+     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_session_id ON tasks(session_id)")
+ 
+     # task_events.run_id back-fills as NULL for historical events (they predate

@@ -22,6 +22,9 @@ export type RouteAction =
   | 'upstream_redispatch'// 回上游：带失败证据回调研/方案段重做
   | 'human_gate'         // 人闸：升级人工裁决（escalation）
 
+/** 模型档位处置建议：同档重试 / 升档 / 人裁（D 层：失败分级联动模型档位）。 */
+export type ModelTier = 'same' | 'upgrade' | 'human'
+
 export interface RouteRule {
   failureClass: FailureClass
   action: RouteAction
@@ -32,6 +35,8 @@ export interface RouteRule {
   rationale: string
   /** 本仓既有件锚（对账用） */
   existingAnchor: string
+  /** 模型档位建议：能力型失败升档，验证型失败同档，资源/不收敛走人裁 */
+  modelTier: ModelTier
 }
 
 export const ROUTE_TABLE: Record<FailureClass, RouteRule> = {
@@ -42,6 +47,7 @@ export const ROUTE_TABLE: Record<FailureClass, RouteRule> = {
     carry: ['失败断言原文', '复现命令', '本卡历史尝试'],
     rationale: '测试挂优先原地修——上下文还在，回上游反而丢证据',
     existingAnchor: '熔断指纹自动复位（run19 2026-10-14 首验）+ 缺陷修复卡链',
+    modelTier: 'same',
   },
   direction_wrong: {
     failureClass: 'direction_wrong',
@@ -50,6 +56,7 @@ export const ROUTE_TABLE: Record<FailureClass, RouteRule> = {
     carry: ['失败证据', '方向错在哪的裁决/评审结论', '已排除的路径清单'],
     rationale: '方向错时继续修是烧 token——带失败证据回上游重做，避免同坑重踩',
     existingAnchor: '人工改派裁决（run19 卡 t_f7276cc1 先例）；本表把该档升为显式规则',
+    modelTier: 'upgrade',
   },
   budget_exhausted: {
     failureClass: 'budget_exhausted',
@@ -58,6 +65,7 @@ export const ROUTE_TABLE: Record<FailureClass, RouteRule> = {
     carry: ['触顶维度与余量', '已完成部分', '继续的预期收益'],
     rationale: '预算触顶不是失败是资源决策——只有人能决定追加还是止损',
     existingAnchor: 'goalbudget 域三维触顶（步数/token/时限）+ escalation 域',
+    modelTier: 'human',
   },
   non_convergent: {
     failureClass: 'non_convergent',
@@ -66,6 +74,7 @@ export const ROUTE_TABLE: Record<FailureClass, RouteRule> = {
     carry: ['同错重试次数与指纹', '全部已试方案', '失败证据汇总'],
     rationale: '反复不收敛说明问题定义可能有误——人补判断比再试一轮便宜',
     existingAnchor: 'escalation 域（urgency 三档/幂等 escalationId/一次定音裁决）',
+    modelTier: 'human',
   },
   stall_timeout: {
     failureClass: 'stall_timeout',
@@ -74,6 +83,7 @@ export const ROUTE_TABLE: Record<FailureClass, RouteRule> = {
     carry: ['停滞时长与最后推进时刻', '会话健康证据', '在等谁（依赖/裁决/审批）'],
     rationale: '停滞先定性再路由——run19 教训：评审争议与死等表现相同，误路由会烧时间',
     existingAnchor: 'clusterinspector 检测器（blocked-stale/gate-stuck）+ supervisor 催办链',
+    modelTier: 'human',
   },
 }
 
@@ -112,11 +122,18 @@ export function resolveRoute(
 export function hintLineFor(rule: RouteRule, suffix?: string): string {
   const parts = [
     `失败路由：${rule.failureClass} → ${actionLabel(rule.action)}（${rule.fallbackTo}）`,
+    `模型档位：${modelTierLabel(rule.modelTier)}`,
     `携带：${rule.carry.join('、')}`,
     `依据：${rule.rationale}`,
   ]
   if (suffix) parts.push(suffix)
   return parts.join('；')
+}
+
+export function modelTierLabel(tier: ModelTier): string {
+  if (tier === 'same') return '同档重试'
+  if (tier === 'upgrade') return '升档重派（能力型失败）'
+  return '人裁（不自动换模型）'
 }
 
 export function actionLabel(action: RouteAction): string {

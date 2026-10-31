@@ -163,6 +163,24 @@ KANBAN_COMPLETE_SCHEMA = _schema(
                 "task in-flight so you can fix the path and retry."
             ),
         },
+        "receipt": {
+            "type": "object",
+            "description": (
+                "Structured evidence receipt. REQUIRED when the card body declares "
+                "acceptance criteria (AC-1/AC-2/...) or a ```dod JSON block — the "
+                "kernel derives the contract at dispatch time and rejects a "
+                "completion without a valid receipt. Shape: "
+                '{"version":1,"criteria":[{"id":"AC-1","status":"pass|na",'
+                '"note":"why na","evidence":[{"kind":"artifact|test_report|command|doc",'
+                '"path":"relative/path","sha256":"optional"}]}],'
+                '"artifacts":["relative/path"],"verifications":[{"command":"...",'
+                '"exitCode":0,"report":"relative/tap-or-junit","format":"tap|junit"}]}. '
+                "Paths must stay inside the task workspace. TAP/JUnit reports are "
+                "re-counted by the kernel and must show zero failures; a prose "
+                'report (format "text") cannot satisfy a criterion that requires '
+                "test evidence."
+            ),
+        },
     },
     [],
 )
