@@ -1478,3 +1478,33 @@ describe('㉖ 完成契约门接线绊线（2026-11-01 方案×程序同步批�
     expect(disp).toContain('HERMES_KANBAN_DOD_CONTRACT')
   })
 })
+
+describe('㉗ 模型波动支撑面接线绊线（2026-11-01 方案×程序同步二批）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf8' })
+
+  it('agent 补丁自愈清单含 721 建卡幂等（D 层），mx-up 注释范围同步到 721', () => {
+    const lib = read(join(MX, 'mx-lib.sh'))
+    expect(lib).toContain('721-agent-kanban-idempotency-unique.patch')
+    expect(lib).toContain('721=建卡幂等唯一部分索引')
+    const up = read(join(MX, 'mx-up.sh'))
+    expect(up).toContain('390→721')
+    expect(up).not.toContain('390→707')
+  })
+
+  it('mx-clean 归档重置编排域与能力路由存储（跨轮残留防线）', () => {
+    const clean = read(join(MX, 'mx-clean.sh'))
+    expect(clean).toMatch(/for f in[^;]*approvals orchestrator modelcap[^;]*; do/)
+  })
+
+  it('方案 §2.6.12 四层同族关系在案（B/C/D 不进判据，D 层 721 随补丁自愈）', () => {
+    const plan = read(join(PRODUCT, 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'))
+    expect(plan).toContain('四层同族关系')
+    expect(plan).toContain('721-agent-kanban-idempotency-unique.patch')
+  })
+
+  it('方案 §2.6.8 代批强度自动标注在案（delegated/explicit 可反查）', () => {
+    const plan = read(join(PRODUCT, 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'))
+    expect(plan).toContain('deciderMode=delegated')
+    expect(plan).toContain('strength=delegated')
+  })
+})

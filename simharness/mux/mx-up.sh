@@ -27,7 +27,7 @@ source "$SCRIPT_DIR/mx-lib.sh"
 # 自更新会 git 清洗源码树——manifest 文件与 git-applied 补丁一并被擦（run5/6/7 三次实录，
 # run7 anexec 并发闸拒收即此因）。mx-up 是推演起跑/恢复的唯一入口，在此三步收敛：
 #   ① mx_provision_agent_src（快照重供：宿主 git 工作态 → hermes-agent-src）
-#   ② mx_apply_agent_patches（390→707 git apply，源码树语义在位）
+#   ② mx_apply_agent_patches（390→721 git apply，源码树语义在位）
 #   ③ deploy-agent-runtime --apply（manifest 文件内容同步——收尾步）
 # 顺序硬约束（2026-11-01 run24 刷新窗实锤根治）：deploy 必须在 provision 之后——
 # 快照重供会整树重建，先前 deploy 的内容被洗掉；且快照只取宿主 git 跟踪文件，
