@@ -88,8 +88,8 @@ describe('entry.mts devAutoLogin 网关让位（2026-10-31 回归收尾批）', 
     expect(fnStart).toBeGreaterThan(-1)
     const fetchLine = lines.findIndex((l, i) => i > fnStart && l.includes("fetch('/api/auth/login'"))
     expect(fetchLine).toBeGreaterThan(fnStart)
-    const waitLoop = lines.findIndex((l, i) => i > fnStart && i < fetchLine && /for \(let i = 0; i < 9/.test(l))
-    expect(waitLoop, '让位轮询（≤1.8s 等 key）须在 admin fetch 之前').toBeGreaterThan(fnStart)
+    const waitLoop = lines.findIndex((l, i) => i > fnStart && i < fetchLine && /for \(let i = 0; i < 18/.test(l))
+    expect(waitLoop, '让位轮询（≤3.6s 等 key）须在 admin fetch 之前').toBeGreaterThan(fnStart)
     const yieldReturn = lines.findIndex((l, i) => i > waitLoop && i < fetchLine
       && l.trim() === "if (localStorage.getItem('hermes_api_key')) return")
     expect(yieldReturn, '轮询后须有「key 已落即 return」让位分支（行内式）').toBeGreaterThan(waitLoop)

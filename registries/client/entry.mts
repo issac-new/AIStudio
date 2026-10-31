@@ -98,9 +98,10 @@ async function devAutoLogin(): Promise<void> {
   // 网关免密让位（2026-10-31 日常工作台回归收尾批）：LoginView 的网关自动登录
   // 与本桩并行抢跑；本机网关已配 Matrix 凭据（常见态）时 admin/dev-bootstrap 探测
   // 注定 401——浏览器网络层会把这次失败自动记成控制台红，应用层无法静默。先等
-  // 网关路径落 key（最长 1.8s），落下即让位；未落（空库引导机/网关未配）保持原
-  // admin/dev-bootstrap 首登建号链，不增任何额外请求。
-  for (let i = 0; i < 9 && !localStorage.getItem('hermes_api_key'); i++) {
+  // 网关路径落 key（最长 3.6s；实测网关链冷启 ~2.4s 落地，1.8s 窗口差 150ms 漏过），
+  // 落下即让位；未落（空库引导机/网关未配）保持原 admin/dev-bootstrap 首登建号链，
+  // 不增任何额外请求。
+  for (let i = 0; i < 18 && !localStorage.getItem('hermes_api_key'); i++) {
     await new Promise(resolve => setTimeout(resolve, 200))
   }
   if (localStorage.getItem('hermes_api_key')) return
