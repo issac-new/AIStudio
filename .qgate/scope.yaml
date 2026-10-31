@@ -13,6 +13,7 @@ paths:
   - docs/superpowers/specs/2026-11-01-dod-kernel-gate-lineage-reclaim.md
   - docs/superpowers/specs/2026-11-01-dod-session-context-wiring.md
   - docs/superpowers/specs/2026-11-01-sim-dod-sync.md
+  - docs/superpowers/specs/2026-11-01-sim-resilience-sync.md
   - docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md
   - simharness/**
   - docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md

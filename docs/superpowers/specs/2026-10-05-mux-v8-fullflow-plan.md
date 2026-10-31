@@ -1312,7 +1312,7 @@ graph TB
 3. **不改判据**：观测告警、评审治理、改进实验只作读数；G1-G5 判据不变，G6 键按 §2.6.8 统一。
 4. **单一读数源**：评测读数只读 `evidence/evals/eval-summary.json` 与 `remediations.json`；治理结果读数只读 `evidence/governance-closure/summary.json` 与两份台账；禁手抄。
 5. **审计时点**：报告生成后审计一次，`final-report-merge.py` 后再审计一次；R15 第 0 章以合并后为准。
-6. **HumanGate 批准落产品审批面（run23 g5-approval-ui-empty 实录）**：G5 HumanGate 批准（strict 真人／standard 代批两态）除 approved.events 与发布门台账外，必须可在产品审批面反查——驱动批准路径落台账后探测 `GET /api/approvals/history`，无该评审卡对应记录即记问题单（g5-approval-history-missing，接线缺口显形）；只写 evidence 文件而产品审批历史 0 条=「审批历史留痕 0 条」直接判 L3 行为域 fail，审批面 UI 帧不得再以 approved.events 降级计达充数（探测通过后方可计达）。
+6. **HumanGate 批准落产品审批面（run23 g5-approval-ui-empty 实录）**：G5 HumanGate 批准（strict 真人／standard 代批两态）除 approved.events 与发布门台账外，必须可在产品审批面反查——驱动批准路径落台账后探测 `GET /api/approvals/history`，无该评审卡对应记录即记问题单（g5-approval-history-missing，接线缺口显形）；只写 evidence 文件而产品审批历史 0 条=「审批历史留痕 0 条」直接判 L3 行为域 fail，审批面 UI 帧不得再以 approved.events 降级计达充数（探测通过后方可计达）。代批强度由产品侧自动标注：裁决人=申请人的自批记 `deciderMode=delegated`（DecisionGrant 与审批日志记 `strength=delegated`），真人裁决记 `explicit`；审批历史与授权凭证可反查，净额规则不变（代批放行的闸仍不计通过）。
 
 #### 2.6.9 介入归因与协作资产消费
 
@@ -1387,7 +1387,8 @@ G6 验收判据不变（本节是消费面增量，不是新闸）；从 run23 �
 - **完成校验**（`complete_task` 内核边界，工具/CLI/面板任何完成面共用）：结构化回执 `receipt` 必填；证据路径必须真实存在于 workspace（防「写了路径没写文件」）；声明 sha256 则内核重算比对；TAP/JUnit 报告由**内核重算**计数与失败数（不信模型自报）；声明 `test` 要求的 AC 不接受纯文本报告。违规=拒完成＋`completion_blocked_contract` 事件留痕＋任务保持 in-flight，错误文案带可操作的回执形状指引（worker 可自愈重试，dod-drill R4 真机实录：拒→纠错→过门全程 40 秒）。
 - **激活开关**：`MX_DOD_CONTRACT=1`（缺省 0＝零行为变化）——导演建卡时（`mx-scenario-lib.kanban_create_as`）body 尾部并入 AC 段与 receipt 写法指引。**run25+ 起跑 env 显式开启**；在途轮不开启即完全不受影响（无 AC 卡 `mode=off` 直通，run24 续跑段已按此口径）。设计正本与实施实录：`2026-10-31-model-resilience-hardening.md`、`2026-11-01-dod-kernel-gate-lineage-reclaim.md`（含主 gateway 双树劫持收回）、`2026-11-01-dod-session-context-wiring.md`。
 - **与 G 闸的分工**：完成契约管「卡能不能关」（证据真实存在、可重算）；G3/G4 管「过了这关的交付物合不合格」（testlog 六要素、测试者≠写码者、契约测试）。完成契约不是 G 闸的替代，是把 G 闸的输入从「模型自述」升级为「内核核验过的回执」的第一道过滤。
-- **部署通道约束**：SIM 全量刷新时 manifest 部署必须在快照重供之后（`mx-up` 已按 provision→patch→deploy 固序，守门测试锁序）——快照只取宿主 git 跟踪文件，新增未跟踪文件（`completion_contract.py` 类）只能靠 manifest 补位，旧序会静默洗掉它（run24 刷新窗实锤）。
+- **部署通道约束**：SIM 全量刷新时 manifest 部署必须在快照重供之后（`mx-up` 已按 provision→patch→deploy 固序，自动测试固定该顺序）——快照只取宿主 git 跟踪文件，新增未跟踪文件（`completion_contract.py` 类）只能靠 manifest 补位，旧序会静默洗掉它（run24 刷新窗实锤）。
+- **四层同族关系**：本条是模型波动加固的 A 层（完成契约）。B 判定网（qgate pre-push L0）、C 能力路由（modelcap 矩阵/路由）、D 补偿止损（巡检自动处置／会话轮换 auto／建卡幂等）是产品侧支撑层，不进推演判据；其中 D 层的建卡幂等（agent 侧 `721-agent-kanban-idempotency-unique.patch`）是派发重试不落重复卡的前提，随 `mx-up` 运行时补丁自愈清单覆盖。
 
 ### 2.7 交付物体系与模板字段
 

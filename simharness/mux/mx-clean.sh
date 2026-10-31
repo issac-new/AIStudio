@@ -192,12 +192,14 @@ fi
 #       queue.jsonl 残留旧轮 execute_code 单，新一轮误批=执行旧脚本）/ state.db·state/·
 #       state-snapshots·shared-state.db（旧房间/会话状态机）/ cron（旧轮定时任务余留）/
 #       projects.db·response_store.db·runs_idempotency.db·gateway_state.json（旧轮运行簿记）。
+#     2026-11-01 补：orchestrator（编排域六表/授权流水）、modelcap（能力路由矩阵）为新增跨轮
+#       存储——不归档会让下一轮继承旧轮 Trigger/Decision/Mandate 或旧能力矩阵（与评测三库同款隔离纪律）。
 #     归档纪律：整包 hermes-runtime-state.tar 后删，骨架目录重建。
 #     保留：auth.json/channel_directory/config.yaml/profiles/tools/installs/cache/plugins（基建）。
 if [ "$APPLY" = 1 ]; then
   H="$SIM_ROOT/hermes"
   _rt=""
-  for f in pending_messages sessions approvals state state-snapshots cron logs gateway_state.json \
+  for f in pending_messages sessions approvals orchestrator modelcap state state-snapshots cron logs gateway_state.json \
            gateway gateway-starts.log projects.db shared-state.db response_store.db \
            runs_idempotency.db state.db config.yaml.bak; do
     [ -e "$H/$f" ] && _rt="$_rt $f"

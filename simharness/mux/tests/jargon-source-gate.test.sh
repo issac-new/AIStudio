@@ -29,8 +29,8 @@ _ov_committed() { # <repo> <path> → 临时文件路径（已提交内容），
   local _ref="main"
   if ! git -C "$1" rev-parse --verify -q "main:$2" >/dev/null 2>&1; then
     _ref="HEAD"
-  elif ! git -C "$1" merge-base --is-ancestor main HEAD 2>/dev/null; then
-    _ref="HEAD"   # 本分支领先 main（未合并）——按本分支提交态查
+  elif ! git -C "$1" merge-base --is-ancestor HEAD main 2>/dev/null; then
+    _ref="HEAD"   # HEAD 领先或分叉于 main（未合并）——按本分支提交态查
   fi
   git -C "$1" show "${_ref}:$2" > "$TMP_PLAN_DIR/$(basename "$2")" 2>/dev/null && \
     { [ "$1" != "$OV" ] || ! cmp -s "$TMP_PLAN_DIR/$(basename "$2")" "$1/$2" && \
@@ -56,7 +56,7 @@ if [ -d "$OV/custom/server/report" ]; then
   TS_DIR="$TMP_PLAN_DIR/ts"; mkdir -p "$TS_DIR"
   # 分支感知（同 _ov_committed：worktree 内 main 是他人快照，按 HEAD 提交态查）
   _ts_ref="main"
-  if ! git -C "$OV" merge-base --is-ancestor main HEAD 2>/dev/null; then _ts_ref="HEAD"; fi
+  if ! git -C "$OV" merge-base --is-ancestor HEAD main 2>/dev/null; then _ts_ref="HEAD"; fi
   for f in "$OV"/custom/server/report/*.ts "$OV"/custom/server/report/__tests__/*.ts; do
     rel=${f#"$OV"/}
     git -C "$OV" show "${_ts_ref}:$rel" > "$TS_DIR/$(basename "$rel")" 2>/dev/null || cp "$f" "$TS_DIR/"
