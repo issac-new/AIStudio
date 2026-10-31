@@ -78,3 +78,4 @@
 {"at":"2026-10-31T15:50:08Z","spec":"docs/superpowers/specs/2026-10-31-model-resilience-hardening.md","receipt":"e6e2410c399d93bf9d093428d7a258b0d25e327b","commit":"c92966e90"}
 {"at":"2026-10-31T15:54:24Z","spec":"docs/superpowers/specs/2026-10-31-prepush-push-range-fix.md","receipt":"0736d904a2b56d6aa83b29a9962b353b3003e89e","commit":"556355892"}
 {"at":"2026-10-31T16:06:13Z","spec":"docs/superpowers/specs/2026-11-01-k19-new-endpoint-response-shape.md","receipt":"aac974d3ec23d76434be500e1d29161ade89ed49","commit":"f25c50c65"}
+{"at":"2026-10-31T16:20:27Z","spec":"docs/superpowers/specs/2026-11-01-runtime-backfill-session-rotation-plugin-api.md","receipt":"671d07926df0469c10a4d9c816846f36058ac166","commit":"735f66d63"}
