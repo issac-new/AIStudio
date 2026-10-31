@@ -56,7 +56,13 @@ describe('registerSimulationNodeTypes', () => {
     const upd = r1.update as unknown as Record<string, Array<{ node: string; task: string }>>
     expect(upd['m1.coding'][0].node).toBe('m1-coding')
     expect(upd['m1.coding'][0].task).toBe('dry-t1')
-    expect(r2).toEqual(r1)
+    // 幂等断言不能比较 wall-clock ts（2026-10-31 回归：两次执行跨毫秒边界时
+    // ts 相差 1ms 致 deepEqual 假红，负载下必现）——去掉 ts 后按语义载荷比较。
+    const withoutTs = (r: typeof r1) => Object.fromEntries(
+      Object.entries((r.update ?? {}) as Record<string, Array<Record<string, unknown>>>)
+        .map(([channel, items]) => [channel, items.map(({ ts: _ts, ...rest }) => rest)]),
+    )
+    expect(withoutTs(r2)).toEqual(withoutTs(r1))
   })
 
   it('agent-review/agent-test 复用 agent-task 语义（kind 区分）', async () => {

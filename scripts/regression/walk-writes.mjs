@@ -32,6 +32,9 @@ async function api(path, { method = 'GET', token, body } = {}) {
 }
 
 async function login() {
+  // API_TOKEN 直给已铸 JWT（回归轮 super_admin 会话）；缺省仍走口令换 JWT。
+  const preset = process.env.API_TOKEN?.trim()
+  if (preset) return preset
   const [username, password] = LOGIN.split(/:(.+)/)
   const r = await api('/api/auth/login', { method: 'POST', body: { username, password } })
   return r.json?.token || r.json?.jwt || null

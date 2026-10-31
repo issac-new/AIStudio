@@ -35,6 +35,7 @@ import { ideFallbackStateOf, looksLikeTaskNumber } from '../composables/useIdeFa
 import { useTaskProgress, taskProgressOf } from '@/custom/ia2/composables/useTaskProgress'
 import IdeLandingHero from '../components/IdeLandingHero.vue'
 import { shouldShowLandingHero } from '../utils/landingHero'
+import { briefingRoots } from '../utils/briefing-context'
 import { listFiles } from '@/api/studio/files'
 import { useFilesStore } from '@/stores/hermes/files'
 import type { BriefingContextFile, BriefingSessionBlock } from '../components/briefing-types'
@@ -258,10 +259,16 @@ async function loadBriefingContextFiles(): Promise<void> {
   const picked: BriefingContextFile[] = []
   const perKind: Record<string, number> = {}
   try {
-    const roots = ['', 'docs']
-    for (const root of roots) {
-      const res = await listFiles(root, ws)
-      for (const entry of res.entries ?? []) {
+    // 先列根目录；只有根里真有 docs/ 目录才二次探（没有 docs 的工作区不再发
+    // 必 404 的请求——2026-10-31 回归：空 global 工作区的 404 噪声）。
+    const rootsRes = await listFiles('', ws)
+    const scan: Array<[string, Array<{ name: string; isDir?: boolean }>]> = [['', rootsRes.entries ?? []]]
+    if (briefingRoots(rootsRes.entries).includes('docs')) {
+      const docsRes = await listFiles('docs', ws)
+      scan.push(['docs', docsRes.entries ?? []])
+    }
+    for (const [dir, entries] of scan) {
+      for (const entry of entries) {
         // FileEntry 契约字段是 isDir（无 type 字段）——曾用 entry.type !== 'file'
         // （恒真）把所有条目 continue 掉，简报上下文文件永远为空。
         if (entry.isDir || !/\.(md|txt|docx?|pdf)$/i.test(entry.name)) continue
@@ -269,7 +276,7 @@ async function loadBriefingContextFiles(): Promise<void> {
         if (!hit) continue
         if ((perKind[hit.kind] ?? 0) >= 3) continue
         perKind[hit.kind] = (perKind[hit.kind] ?? 0) + 1
-        picked.push({ path: root ? `${root}/${entry.name}` : entry.name, kind: hit.kind })
+        picked.push({ path: dir ? `${dir}/${entry.name}` : entry.name, kind: hit.kind })
         if (picked.length >= 8) break
       }
       if (picked.length >= 8) break

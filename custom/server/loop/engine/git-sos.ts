@@ -84,25 +84,31 @@ export function evaluateSos(
 }
 
 /**
- * 执行降级操作
+ * 执行降级操作。
+ *
+ * 2026-10-31 全功能回归：原实现对 ABORT_MERGE/ROLLBACK/ESCALATE 只打日志（TODO
+ * 残桩），调用方会误以为动作已执行。破坏性 git 动作（merge --abort/回滚）与
+ * Leader 通知目前没有接线，故显式抛错 fail-loud；只读建议走
+ * `sosAdvisoryForConflicts`（IDE /api/ide/git/status 消费），不受影响。
  */
 export async function executeSosAction(decision: SosDecision): Promise<void> {
   switch (decision.action) {
-    case 'ABORT_MERGE':
-      // TODO: 执行 git merge --abort
-      console.log('[GitSOS] 执行 ABORT_MERGE')
-      break
-    case 'ROLLBACK':
-      // TODO: 回滚到最近的稳定提交
-      console.log('[GitSOS] 执行 ROLLBACK')
-      break
-    case 'ESCALATE':
-      // TODO: 发送通知到 Leader
-      console.log('[GitSOS] 执行 ESCALATE')
-      break
     case 'CONTINUE':
-      // 继续执行
-      break
+      return
+    case 'ABORT_MERGE':
+    case 'ROLLBACK':
+    case 'ESCALATE': {
+      const error = new Error(
+        `GitSOS 动作 ${decision.action} 尚未实现（只读建议可用；执行面需接线后才能调用）`,
+      ) as Error & { code?: string }
+      error.code = 'sos_action_not_implemented'
+      throw error
+    }
+    default: {
+      const error = new Error(`GitSOS 未知动作：${String(decision.action)}`) as Error & { code?: string }
+      error.code = 'sos_action_unknown'
+      throw error
+    }
   }
 }
 

@@ -145,7 +145,7 @@ watch([() => props.autoOpenCreate, dailyBoardList], ([intent]) => {
     : dailyBoardList.value[0].slug
   excludedBoards.value = new Set(dailyBoardList.value.map(b => b.slug).filter(slug => slug !== target))
   newLinkTightened = true
-  message.info(t('kanban.message.newLinkBoardTightened', `已切到「${target}」板以便就地新建任务`))
+  message.info(t('kanban.message.newLinkBoardTightened', { board: target }, `已切到「${target}」板以便就地新建任务`))
 }, { immediate: true })
 
 const filteredTasks = computed(() => {
