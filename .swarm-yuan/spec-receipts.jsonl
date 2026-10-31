@@ -48,3 +48,4 @@
 {"at":"2026-10-31T03:47:45Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"87368527617463ce4d1804ea24c76e565c4b103b","commit":"7b544c898"}
 {"at":"2026-10-31T03:49:31Z","spec":"docs/superpowers/specs/2026-10-31-loop-graph-task-ledger.md","receipt":"4fc96a0b72cf3fc5ed7fb31d21e20b8128368e8a","commit":"d575df606"}
 {"at":"2026-10-31T03:57:44Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md","receipt":"3ee88c1d3f6680cda8fac00f24266f5b1e990db3","commit":"78065af29"}
+{"at":"2026-10-31T04:00:53Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md","receipt":"d7de492cfb48ef9cec39b5bfa9d47c1ba382b768","commit":"899983ada"}
