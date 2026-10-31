@@ -181,7 +181,7 @@ async function visit(page, hash, settle = 2300) {
       // 两卡皆不开才判红；卡源分歧本体挂账（见 spec §挂账）。
       let drawer = { open: false, header: '' }
       let firstId = ''
-      for (let attempt = 0; attempt < 2 && !drawer.open; attempt++) {
+      for (let attempt = 0; attempt < Math.min(2, cardCount) && !drawer.open; attempt++) {
         const card = page.locator(cardSel).nth(attempt)
         firstId = (await card.getAttribute('data-task-id')) || firstId
         await card.click()
