@@ -71,4 +71,4 @@
 {"at":"2026-10-31T14:07:27Z","spec":"docs/superpowers/specs/2026-10-31-cockpit-attention-panel.md","receipt":"e67077b5955ea9ac1157b3da81d05292aea2aba0","commit":"fbe3e1483"}
 {"at":"2026-10-31T14:16:19Z","spec":"docs/superpowers/specs/2026-10-31-superagent-domain-auth.md","receipt":"3e5d02b2048e4b008a007079155866e82682faa0","commit":"59573b910"}
 {"at":"2026-10-31T14:27:02Z","spec":"docs/superpowers/specs/2026-10-31-rsi-improvement-plan.md","receipt":"0f9c1c92cead41200cfd115a44f70194ea386293","commit":"955785959"}
-{"at":"2026-10-31T14:56:20Z","spec":"docs/superpowers/specs/2026-10-31-rsi-exec-batch1.md","receipt":"94fa3f73682e01209f8699892e3e700a313d2d5e","commit":"1cb6aff0e"}
+{"at":"2026-10-31T14:58:05Z","spec":"docs/superpowers/specs/2026-10-31-approval-proxy-dedup.md","receipt":"d980b280c97fd64db5b92f457c1545fd434c92bc","commit":"1cb6aff0e"}
