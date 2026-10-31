@@ -1,29 +1,42 @@
 <!-- overlay/custom/client/ia2/components/flow/CockpitOverview.vue -->
-<!-- P5 工作台概览（2026-09-28 产品 UI 缺陷修复 §六 / V4 域5「为审查者设计接口」）：
-     无选中对象时的中栏 landing——三卡真实数据聚合：
-     ① 我的待办（审批待审 + 看板 RACI 等我卡）② 评审闸口（待裁决 + 最近裁决留痕）
-     ③ 交付进度（全局任务状态分布 + 完成率条）。
-     数据全 props（WorkbenchView 装配：approvals API + workspace.tasks）；
-     动作全 emit。不耦合推演步数——闸门态势以产品真实评审域呈现。 -->
+<!-- J 批工作台概览（spec 2026-10-31-cockpit-attention-panel §4.1）：按三问重排——
+     ① 现在需要我做什么（等你批准 + 等你决定 + 异常时的系统问题）② 系统是否健康
+     （仅异常显形，健康态零占位）③ 工作进展（完成率 + 状态分布 + 最近一条工作历史）。
+     注意力经济守门（§4.2）：健康态不占空间、异常最多 3 条、计数=列表长度、
+     用户可见文案写「等谁 + 要什么」且不出现内部代码。数据全 props（WorkbenchView
+     装配：approvals API + workspace.tasks + sim topology），动作全 emit。 -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { CockpitTask } from '@/custom/shared/adapters/task-adapter'
-import type { PendingApprovalItem, ApprovalHistoryEntry } from '@/custom/shared/api/approvals'
-import { needsMyAction, parseTaskRaci } from '@/custom/kanban/utils/raci'
+import type { PendingApprovalItem } from '@/custom/shared/api/approvals'
+import { needsMyAction } from '@/custom/kanban/utils/raci'
 import type { KanbanTask } from '@/api/hermes/kanban'
 
-const props = defineProps<{
+/** 健康信号（spec §4.3）：空数组=健康——健康态不渲染任何占位（§4.2 规则一）。 */
+export interface HealthSignal {
+  id: string
+  /** 用户可见的「哪里有问题」 */
+  label: string
+  /** 「需要谁做什么」 */
+  detail: string
+  /** 点击落点（路由名或任务 id，由装配方解释） */
+  target?: string
+  severity: 'blocker' | 'warning'
+}
+
+const props = withDefaults(defineProps<{
   tasks: CockpitTask[]
   pending: PendingApprovalItem[]
-  history: ApprovalHistoryEntry[]
   username: string
-}>()
+  health?: HealthSignal[]
+}>(), { health: () => [] })
 
 const emit = defineEmits<{
   (e: 'open-inbox'): void
   (e: 'open-board'): void
   (e: 'open-task', taskId: string): void
+  (e: 'open-health', signal: HealthSignal): void
 }>()
 
 const i18nApi = useI18n() as unknown as {
@@ -37,32 +50,19 @@ function hasMessage(key: string): boolean {
   return typeof i18nApi.te === 'function' ? i18nApi.te(key) : t(key) !== key
 }
 
-// 决策枚举含服务端域值（approved_once/approved_scoped 等），未上词表时如实给中文短名
-const DECISION_FALLBACK: Record<string, string> = {
-  approved_once: '批准（本次）',
-  approved_for_session: '本会话允许',
-  approved_scoped: '批准（范围内）',
-  denied_for_session: '本会话拒绝',
-  expolicy_amendment: '策略修订',
-}
-function decisionLabel(d: string): string {
-  const key = `approvals.choice.${d}`
-  return hasMessage(key) ? t(key) : (DECISION_FALLBACK[d] ?? d)
-}
-
-// ① 我的待办：审批待审 + 我在 RACI 中担 R/A 的卡
+// ① 现在需要我做什么：审批待审 + 我在 RACI 中担 R/A 的卡
 const myRaciTasks = computed(() =>
   props.tasks.filter((t) => needsMyAction(t as unknown as KanbanTask, props.username)),
 )
 const myTodoCount = computed(() => props.pending.length + myRaciTasks.value.length)
 
-// ② 评审闸口：待裁决评审 + 最近裁决（history 中 review 类）
-const pendingReviews = computed(() => props.pending.filter((i) => i.kind === 'review'))
-const recentVerdicts = computed(() =>
-  props.history.filter((h) => h.targetKind === 'review').slice(0, 5),
-)
+// ② 系统是否健康：只渲染异常；最多 3 条，超出用「还有 N 条」折叠（§4.2 规则二）
+const healthSignals = computed(() => props.health ?? [])
+const visibleHealth = computed(() => healthSignals.value.slice(0, 3))
+const healthMoreCount = computed(() => Math.max(0, healthSignals.value.length - visibleHealth.value.length))
+const topBlocker = computed(() => healthSignals.value.find(s => s.severity === 'blocker') ?? null)
 
-// ③ 交付进度：状态分布 + 完成率
+// ③ 工作进展：状态分布 + 完成率 + 最近一条工作历史
 const statusCount = computed(() => {
   const c = { done: 0, running: 0, review: 0, blocked: 0, open: 0 }
   for (const t of props.tasks) {
@@ -84,31 +84,33 @@ const progressPct = computed(() => {
 })
 const progressComplete = computed(() => props.tasks.length > 0 && statusCount.value.done >= props.tasks.length)
 
-function fmtTime(ts: number): string {
-  if (!ts) return ''
-  const d = new Date(ts)
-  return `${String(d.getMonth() + 1)}-${String(d.getDate())} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
+/** 最近一条工作历史：CockpitTask 只有 createdAt（无 updatedAt，spec §8 未决项），
+ *  取创建时间最新的一条作为「最近」；单遍取最大，不改 props 顺序。 */
+const recentTask = computed<CockpitTask | null>(() => {
+  let best: CockpitTask | null = null
+  for (const t of props.tasks) {
+    if (!best || (t.createdAt ?? 0) > (best.createdAt ?? 0)) best = t
+  }
+  return best
+})
 
-// 卡片 RACI 摘要（首行列表用）
-function raciOf(t: CockpitTask) {
-  return parseTaskRaci(t as unknown as KanbanTask)
+/** 状态词只经词表转中文；词表缺键时落「状态未知」，绝不把内部状态码直接甩给用户。 */
+function statusLabel(status: string): string {
+  const key = `ia2.overviewDash.status.${status}`
+  return hasMessage(key) ? t(key) : t('ia2.overviewDash.status.unknown')
 }
 </script>
 
 <template>
   <div class="ov" data-testid="cockpit-overview">
     <div class="ov__title">{{ t('ia2.overviewDash.title') }}</div>
-    <!-- U2 使用动线：三张卡按「先处理等我的事→再看我的活→最后去沟通」串起来 -->
-    <p class="ov__flow-hint" data-testid="ov-flow-hint">
-      先办等我的 → 再审我审的 → 后查我交的；数字可点。
-    </p>
+    <p class="ov__flow-hint" data-testid="ov-flow-hint">{{ t('ia2.overviewDash.flowHint') }}</p>
     <div class="ov__grid">
-      <!-- ① 我的待办 -->
-      <section class="ov__card ov__card--click" data-testid="ov-todo" role="button" :title="t('ia2.overviewDash.cardHint')" @click="emit('open-inbox')">
+      <!-- ① 现在需要我做什么 -->
+      <section class="ov__card ov__card--click" data-testid="ov-need-me" role="button" :title="t('ia2.overviewDash.cardHint')" @click="emit('open-inbox')">
         <div class="ov__card-head">
-          <span>{{ t('ia2.overviewDash.myTodo') }}</span>
-          <span v-if="myTodoCount" class="ov__n ov__n--hot">{{ myTodoCount }}</span>
+          <span>{{ t('ia2.overviewDash.needMe') }}</span>
+          <span v-if="myTodoCount" class="ov__n ov__n--hot" data-testid="ov-need-me-count">{{ myTodoCount }}</span>
         </div>
         <button type="button" class="ov__row" data-testid="ov-todo-approvals" @click.stop="emit('open-inbox')">
           <span class="ov__row-label">{{ t('ia2.overviewDash.waitingApproval') }}</span>
@@ -120,35 +122,38 @@ function raciOf(t: CockpitTask) {
         </button>
         <div v-if="myRaciTasks.length" class="ov__mini">
           <button
-            v-for="t in myRaciTasks.slice(0, 3)" :key="t.id"
-            type="button" class="ov__mini-row" :data-testid="`ov-mytask-${t.id}`"
-            @click.stop="emit('open-task', t.id)"
-          >{{ t.title }}</button>
+            v-for="task in myRaciTasks.slice(0, 3)" :key="task.id"
+            type="button" class="ov__mini-row" :data-testid="`ov-mytask-${task.id}`"
+            @click.stop="emit('open-task', task.id)"
+          >{{ task.title }}</button>
         </div>
-      </section>
-
-      <!-- ② 评审闸口 -->
-      <section class="ov__card ov__card--click" data-testid="ov-gates" role="button" :title="t('ia2.overviewDash.cardHint')" @click="emit('open-inbox')">
-        <div class="ov__card-head">
-          <span>{{ t('ia2.overviewDash.gateReview') }}</span>
-          <span v-if="pendingReviews.length" class="ov__n ov__n--warn">{{ pendingReviews.length }}</span>
-        </div>
-        <button type="button" class="ov__row" data-testid="ov-gates-pending" @click.stop="emit('open-inbox')">
-          <span class="ov__row-label">{{ t('ia2.overviewDash.pendingReview') }}</span>
-          <b>{{ pendingReviews.length }}</b>
+        <!-- 异常时的系统问题一句话：点进对应修复面（§4.1） -->
+        <button v-if="topBlocker" type="button" class="ov__issue" data-testid="ov-system-issue" @click.stop="emit('open-health', topBlocker)">
+          {{ t('ia2.overviewDash.systemIssue', { label: topBlocker.label }) }}
         </button>
-        <div class="ov__sub">{{ t('ia2.overviewDash.recentVerdicts') }}</div>
-        <div v-if="!recentVerdicts.length" class="ui-empty-state ui-empty-state--compact">{{ t('ia2.overviewDash.noVerdicts') }}</div>
-        <div v-for="v in recentVerdicts" :key="v.id + v.ts" class="ov__verdict" :data-testid="`ov-verdict-${v.targetId}`">
-          <span class="ov__verdict-badge" :class="v.decision === 'approve' ? 'is-ok' : 'is-no'">
-            {{ decisionLabel(v.decision) }}
-          </span>
-          <span class="ov__verdict-title">{{ v.targetTitle }}</span>
-          <span class="ov__verdict-meta">{{ v.actor }} · {{ fmtTime(v.ts) }}</span>
+      </section>
+
+      <!-- ② 系统是否健康、在做对的事：健康态零占位（§4.2 规则一） -->
+      <section v-if="healthSignals.length" class="ov__card" data-testid="ov-health">
+        <div class="ov__card-head">
+          <span>{{ t('ia2.overviewDash.healthTitle') }}</span>
+          <span class="ov__n ov__n--warn" data-testid="ov-health-count">{{ healthSignals.length }}</span>
+        </div>
+        <button
+          v-for="signal in visibleHealth" :key="signal.id"
+          type="button" class="ov__health-row" :class="`ov__health-row--${signal.severity}`"
+          :data-testid="`ov-health-signal-${signal.id}`"
+          @click="emit('open-health', signal)"
+        >
+          <span class="ov__health-label">{{ signal.label }}</span>
+          <span class="ov__health-detail">{{ signal.detail }}</span>
+        </button>
+        <div v-if="healthMoreCount" class="ov__health-more" data-testid="ov-health-more">
+          {{ t('ia2.overviewDash.healthMore', { n: healthMoreCount }) }}
         </div>
       </section>
 
-      <!-- ③ 交付进度 -->
+      <!-- ③ 工作进展 -->
       <section class="ov__card ov__card--click" data-testid="ov-progress" role="button" :title="t('ia2.overviewDash.cardHint')" @click="emit('open-board')">
         <div class="ov__card-head"><span>{{ t('ia2.overviewDash.progress') }}</span></div>
         <div class="ov__bar" role="progressbar" :aria-valuenow="progressPct">
@@ -161,6 +166,13 @@ function raciOf(t: CockpitTask) {
           <span>{{ t('ia2.overviewDash.blocked') }} {{ statusCount.blocked }}</span>
           <span>{{ t('ia2.overviewDash.open') }} {{ statusCount.open }}</span>
         </div>
+        <!-- 最近一条工作历史：复用既有 open-task（进入任务详情/时间线，D5） -->
+        <div class="ov__sub">{{ t('ia2.overviewDash.recentWork') }}</div>
+        <button v-if="recentTask" type="button" class="ov__recent" data-testid="ov-recent-task" @click.stop="emit('open-task', recentTask.id)">
+          <span class="ov__recent-title">{{ recentTask.title }}</span>
+          <span class="ov__recent-stage">{{ statusLabel(recentTask.status) }}</span>
+        </button>
+        <div v-else class="ui-empty-state ui-empty-state--compact" data-testid="ov-recent-empty">{{ t('ia2.overviewDash.recentWorkEmpty') }}</div>
         <p class="ov__scope" data-testid="ov-progress-scope">{{ t('ia2.overviewDash.scopeNote') }}</p>
       </section>
     </div>
@@ -199,13 +211,31 @@ function raciOf(t: CockpitTask) {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   &:hover { text-decoration: underline; }
 }
+.ov__issue {
+  display: block; width: 100%; margin-top: 6px; padding: 5px 8px; text-align: left;
+  border: 1px dashed rgba(var(--error-rgb), 0.45); border-radius: 6px;
+  background: transparent; color: var(--error); font-size: 11.5px; cursor: pointer;
+}
+.ov__health-row {
+  display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
+  padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px;
+  margin-bottom: 6px; background: var(--bg-secondary); cursor: pointer; font-size: 12px;
+}
+.ov__health-row--blocker { border-color: rgba(var(--error-rgb), 0.35); }
+.ov__health-row--warning { border-color: rgba(var(--warning-rgb), 0.35); }
+.ov__health-label { color: var(--error); font-weight: 600; }
+.ov__health-row--warning .ov__health-label { color: var(--ia-stale); }
+.ov__health-detail { color: var(--text-secondary); font-size: 11px; }
+.ov__health-more { font-size: 11px; color: var(--text-muted); }
 .ov__sub { font-size: 11px; color: var(--text-muted); margin: 8px 0 4px; }
-.ov__verdict { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; font-size: 11.5px; }
-.ov__verdict-badge { font-size: 10px; padding: 0 5px; border-radius: 3px; flex-shrink: 0; }
-.ov__verdict-badge.is-ok { color: var(--success); background: rgba(var(--success-rgb), 0.08); }
-.ov__verdict-badge.is-no { color: var(--error); background: rgba(var(--error-rgb), 0.08); }
-.ov__verdict-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ov__verdict-meta { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+.ov__recent {
+  display: flex; justify-content: space-between; gap: 8px; width: 100%;
+  padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px;
+  background: var(--bg-secondary); cursor: pointer; font-size: 12px;
+  &:hover { border-color: var(--accent-primary); }
+}
+.ov__recent-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov__recent-stage { flex-shrink: 0; color: var(--text-muted); font-size: 11px; }
 .ov__bar { height: 8px; border-radius: 4px; background: var(--bg-secondary); overflow: hidden; }
 .ov__bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-primary), var(--success)); transition: width .3s; }
 .ov__pct { font-size: 12px; font-weight: 600; margin-top: 6px; }

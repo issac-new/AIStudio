@@ -47,8 +47,9 @@ import TaskDecisionPanel from '../components/flow/TaskDecisionPanel.vue'
 import SessionCanvas from '../components/flow/SessionCanvas.vue'
 import IdentityChatCanvas from '../components/IdentityChatCanvas.vue'
 import WorkflowPanel from '../components/WorkflowPanel.vue'
-import CockpitOverview from '../components/flow/CockpitOverview.vue'
-import { fetchPendingApprovals, dedupePending, fetchApprovalHistory, type PendingApprovalItem, type ApprovalHistoryEntry } from '@/custom/shared/api/approvals'
+import CockpitOverview, { type HealthSignal } from '../components/flow/CockpitOverview.vue'
+import { fetchPendingApprovals, dedupePending, type PendingApprovalItem } from '@/custom/shared/api/approvals'
+import { fetchTopology, topologyRows } from '../api/ops'
 import { getStoredUsername } from '@/api/client'
 import IaColumnControls from '../components/IaColumnControls.vue'
 import KanbanTaskDrawer from '@/custom/kanban/components/KanbanTaskDrawer.vue'
@@ -115,10 +116,11 @@ const unsubscribeCols = onColWidthsChange((w) => {
 })
 onUnmounted(unsubscribeCols)
 
-// ── P5 工作台概览数据（2026-09-28 §六）：审批待审+决策历史 30s 轮询，
-//    交付进度复用 workspace.tasks（tasksForShow 已在内存）。 ──
+// ── P5 工作台概览数据（J 批 spec 2026-10-31-cockpit-attention-panel）：审批待审
+//    30s 轮询 + sim topology 四服务存活（健康节仅异常显形），交付进度复用
+//    workspace.tasks（tasksForShow 已在内存）。 ──
 const overviewPending = ref<PendingApprovalItem[]>([])
-const overviewHistory = ref<ApprovalHistoryEntry[]>([])
+const overviewHealth = ref<HealthSignal[]>([])
 const overviewUsername = getStoredUsername() ?? ''
 /** P5：#/app/overview 显式概览路由（不占对象选择轴） */
 const isOverviewRoute = computed(() => route.name === 'ia2.dash')
@@ -133,13 +135,46 @@ const identityPreset = computed(() => (typeof route.query.idc === 'string' ? rou
 let overviewTimer: ReturnType<typeof setInterval> | null = null
 async function refreshOverview(): Promise<void> {
   try {
-    const [p, h] = await Promise.all([fetchPendingApprovals(), fetchApprovalHistory(20)])
+    const p = await fetchPendingApprovals()
     overviewPending.value = dedupePending(p.items ?? [])
-    overviewHistory.value = h.entries ?? []
   } catch { /* 后端未就绪保持上次数据 */ }
 }
+
+/** 服务名走词表；缺键回退原始名（t 回键名即缺键），不把 i18n 键名甩给用户。 */
+function serviceLabel(name: string): string {
+  const key = `ia2.overviewDash.service.${name}`
+  const label = t(key)
+  return label === key ? name : label
+}
+
+/** 健康数据装配（spec §3.1/§4.3）：四服务任一不可用→一条 blocker 信号；
+ *  端点失败或全部健康→空数组（健康态零占位，§6 fail-soft 视为健康）。 */
+async function refreshOverviewHealth(): Promise<void> {
+  try {
+    const topo = await fetchTopology()
+    const services = topo.services ?? {}
+    // 只报端点明确返回且探测失败的服务；缺键=未知，不伪造「不可用」（fail-soft 不造假）
+    overviewHealth.value = topologyRows(services)
+      .filter(row => !row.ok && services[row.name])
+      .map(row => ({
+        id: `svc:${row.name}`,
+        label: t('ia2.overviewDash.serviceDown', { service: serviceLabel(row.name) }),
+        detail: t('ia2.overviewDash.healthServiceDetail'),
+        // 修复面=推演·运行监控（四服务红绿点与原因在 OpsPanel）
+        target: 'ia2.simOps',
+        severity: 'blocker' as const,
+      }))
+  } catch {
+    overviewHealth.value = []
+  }
+}
+
 void refreshOverview()
-overviewTimer = setInterval(() => void refreshOverview(), 30000)
+void refreshOverviewHealth()
+overviewTimer = setInterval(() => {
+  void refreshOverview()
+  void refreshOverviewHealth()
+}, 30000)
 onUnmounted(() => { if (overviewTimer) clearInterval(overviewTimer) })
 
 // 栏宽必须进 grid 轨道：grid item 的内联 width 改不动固定轨道（2026-09-22
@@ -394,6 +429,13 @@ function onHandleTask(taskId: string): void {
   // 就地开任务抽屉（不跳看板）
   drawerTaskId.value = taskId
   drawerOpen.value = true
+}
+
+/** 健康信号的落点（spec §4.3 target）：路由名走路由，其余按任务 id 开抽屉。 */
+function onOpenHealth(signal: HealthSignal): void {
+  if (!signal.target) return
+  if (router.hasRoute(signal.target)) void router.push({ name: signal.target })
+  else onHandleTask(signal.target)
 }
 
 function onNewTask(): void {
@@ -698,16 +740,18 @@ async function onDeleteGroup(roomId: string): Promise<void> {
         />
       </div>
       <!-- P5 工作台概览：#/app/overview 显式路由（左栏「🏠 概览」入口）——
-           我的待办/评审闸口/交付进度三卡；不占对象选择轴（auto-select 语义不动） -->
+           J 批三问：现在需要我做什么/系统是否健康/工作进展；健康节仅异常显形。
+           不占对象选择轴（auto-select 语义不动） -->
       <CockpitOverview
         v-if="isOverviewRoute"
         :tasks="tasksForShow"
         :pending="overviewPending"
-        :history="overviewHistory"
+        :health="overviewHealth"
         :username="overviewUsername"
         @open-inbox="router.push({ name: 'ia2.inbox' })"
         @open-board="router.push({ name: 'ia2.board' })"
         @open-task="onHandleTask"
+        @open-health="onOpenHealth"
       />
       <WorkflowPanel
         v-else-if="wfRunId"
