@@ -47,15 +47,17 @@ try {
     if (!text) throw new Error('切语言后无文本')
   })
 
+  // 2026-10-31 testid 校正：视图切换器=IaWorkspaceSwitch（ia-workspace-collab/ide/sim，
+  // 2026-10-20 日常/推演拆分轮启用），旧 ia-view-toggle 已退役——此前 6 条假缺陷之源。
   await step('视图切换器 → IDE 工作台', async () => {
-    await domClick(page, '[data-testid=ia-view-toggle]')
+    await domClick(page, '[data-testid=ia-workspace-ide]')
     await page.waitForTimeout(2500)
     const h = await page.evaluate(() => location.hash)
     await led.shot(page, 'view-switch-ide')
     if (!h.includes('ide')) throw new Error('未切到 IDE 视图, hash=' + h)
   })
   await step('视图切换器 → 返回沟通协作', async () => {
-    await domClick(page, '[data-testid=ia-view-toggle]')
+    await domClick(page, '[data-testid=ia-workspace-collab]')
     await page.waitForTimeout(2500)
     const h = await page.evaluate(() => location.hash)
     if (h.includes('ide')) throw new Error('未返回, hash=' + h)
@@ -90,18 +92,26 @@ try {
     await page.waitForTimeout(400)
   }
 
-  // ── 注意力条 ──
-  await step('注意力条任务 chip 点击', async () => {
+  // ── 注意力条（数据态容错：注意力条无活跃项=无 chip，属正常空态而非缺陷）──
+  {
+    const bar = page.locator('.ia-attn-bar')
     const chip = page.locator('.ia-attn-bar [class*=chip], .ia-attn-bar button').first()
-    if (await chip.count() === 0) throw new Error('无注意力 chip')
-    await chip.click({ force: true })
-    await page.waitForTimeout(1500)
-    await led.shot(page, 'attn-chip-click')
-    const h = await page.evaluate(() => location.hash)
-    console.log('  chip click → hash=' + h)
-    await page.goBack().catch(() => {})
-    await page.waitForTimeout(800)
-  })
+    if ((await bar.count()) === 0 || (await chip.count()) === 0) {
+      led.record('注意力条任务 chip 点击', true, '注意力条空态（无活跃项＝数据态，非缺陷）')
+    } else {
+      try {
+        await chip.click({ force: true })
+        await page.waitForTimeout(1500)
+        await led.shot(page, 'attn-chip-click')
+        const h = await page.evaluate(() => location.hash)
+        led.record('注意力条任务 chip 点击', true, 'chip click → hash=' + h)
+        await page.goBack().catch(() => {})
+        await page.waitForTimeout(800)
+      } catch (e) {
+        led.defect('注意力条任务 chip 点击', String(e).slice(0, 100), 'P1')
+      }
+    }
+  }
 
   // ── 左侧图标栏（逐个冷导航避开崩溃级联；跳过设备互联=F1 缺陷）──
   for (const [aria, hash] of [['单聊', 'hermes/chat'], ['群聊', 'hermes/group-chat'], ['工作流', 'hermes/workflow'], ['历史', 'app/history'], ['Agent 管理', 'studio/agents'], ['模型', 'hermes/models'], ['饲料', 'hermes/petdex'], ['设置', 'app/settings']]) {
@@ -119,10 +129,12 @@ try {
     })
   }
 
-  // ── 栏控 ──
-  for (const [tid, label] of [['ia-col-left-fold', '左栏折叠'], ['ia-col-right-fold', '右栏折叠'], ['ia-col-center-max', '中栏最大化']]) {
+  // ── 栏控（2026-10-31 校正：三栏栏控=IaColumnControls，testid 形如 ia-col-*-max/-popout，
+  //   2026-10-23 栏控统一轮后 fold 语义并入 max；栏控只挂 WorkbenchView——须落在
+  //   /app/collab 而非 /app 旅程页，此前错页+旧 testid＝4 条假缺陷）──
+  for (const [tid, label] of [['ia-col-left-max', '左栏最大化'], ['ia-col-right-max', '右栏最大化'], ['ia-col-center-max', '中栏最大化']]) {
     await step(`${label}（${tid}）`, async () => {
-      await gotoHash(page, 'app', 2500)
+      await gotoHash(page, 'app/collab', 3000)
       await domClick(page, `[data-testid=${tid}]`)
       await page.waitForTimeout(800)
       await led.shot(page, tid)

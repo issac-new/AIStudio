@@ -37,7 +37,17 @@ async function login() {
   if (preset) return preset
   const [username, password] = LOGIN.split(/:(.+)/)
   const r = await api('/api/auth/login', { method: 'POST', body: { username, password } })
-  return r.json?.token || r.json?.jwt || null
+  if (r.json?.token || r.json?.jwt) return r.json?.token || r.json?.jwt
+  // 口令回落：Matrix 桥接登录（2026-10-31 三区回归）。dev 环境用户库实态无
+  // admin:dev-bootstrap（walkadmin/swarm，swarm 无口令走 matrix-login 换 JWT）；
+  // gateway-credentials 回环闸对本机进程放行，与前端 devAutoLogin 桥同链路。
+  const g = (await api('/api/matrix/gateway-credentials')).json
+  if (!g?.accessToken) return null
+  const m = await api('/api/auth/matrix-login', {
+    method: 'POST',
+    body: { matrixAccessToken: g.accessToken, matrixUserId: g.userId, deviceId: '', homeserverUrl: g.homeserverUrl },
+  })
+  return m.json?.token || m.json?.jwt || null
 }
 
 /** CLI 硬删（boards rm --delete）：REST DELETE 是归档（可恢复），验收残留用官方硬删通道兜底。 */
@@ -80,8 +90,13 @@ try {
   ok('建临时板', created.status === 200 || created.status === 201, `POST /boards → ${created.status} ${created.text?.slice(0, 80)}`)
   if (!created.json?.board) throw new Error('建板未返回 board')
 
+  // assignee 动态取当前用户名（2026-10-31 三区回归）：硬编码 'admin' 是 dist 验证环境
+  // 假设——dev 环境用户库无 admin 号，swarm（matrix 桥接登录）不在 'admin' profile
+  // 白名单 → 认领围栏 403（userCanAccessProfile 显式映射表，行为正确）。
+  const me = await api('/api/auth/me', { token })
+  const assignee = me.json?.user?.username || 'admin'
   const task = await api(`/api/hermes/kanban?${boardQ}`, {
-    token, method: 'POST', body: { title: '走查写回路卡', priority: 1, assignee: 'admin' },
+    token, method: 'POST', body: { title: '走查写回路卡', priority: 1, assignee },
   })
   ok('建卡', !!task.json?.task?.id, `POST /kanban → ${task.status} ${task.text?.slice(0, 80)}`)
   const taskId = task.json?.task?.id

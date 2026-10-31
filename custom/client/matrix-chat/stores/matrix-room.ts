@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed } from 'vue'
+import { ref, shallowRef, computed, watch } from 'vue'
 import {
   Room,
   MatrixEvent,
@@ -324,6 +324,16 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     // Create a new array so Vue detects the change
     roomList.value = [...clientStore.client.getRooms()]
   }
+
+  // 深链房间页竞态根治（2026-10-31 三区回归实录）：roomList 只靠事件总线回填，
+  // 而本模块是懒加载 chunk——晚于 client 的 Sync 状态转换装载时，订阅前的
+  // PREPARED/SYNCING 事件已被 matrixEventBus 的 ?.() 静默吞掉；静默 homeserver
+  // 无后续房间事件 → roomList 恒空 → 深链房间画布停在「正在同步会话…」直至
+  // 15s watchdog 判不可达（实测 7 次深链 4 次不挂载）。事件之外补两条主动快照：
+  // 创建时 client 已在 → 立即快照；client 后到位 → watch 快照。与既有
+  // 「SDK 事件驱动重快照」同构（roomList 本就是快照式 ref），零常驻开销。
+  if (clientStore.client) refreshRoomList()
+  watch(() => clientStore.client, (client) => { if (client) refreshRoomList() })
 
   /**
    * 刷新当前房间的消息列表。

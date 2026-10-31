@@ -30,6 +30,9 @@ function installClient(pages: Array<{ chunk: Array<{ id: string; ts?: number }>;
   let call = 0
   clientState.client = {
     getRoom: (id: string) => (id === 'r1' ? fakeRoom : null),
+    // getRooms 必须在列（2026-10-31 roomList 初始快照后 store 创建期即调用；
+    // MatrixClient 接口本就含 getRooms，fixture 对齐真身契约）。
+    getRooms: () => [] as unknown[],
     getEventMapper: () => (raw: { id: string; ts?: number }) => makeEvent(raw.id, raw.ts),
     createMessagesRequest: async () => pages[Math.min(call++, Math.max(pages.length - 1, 0))] ?? { chunk: [], end: null },
   }
