@@ -31,7 +31,7 @@ import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
 import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotchecks, listResolvedSpotchecks, resolveSpotcheck } from './autopass'
 import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
 import { decideEnforceApproval, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
-import { listHumanGatePending, humanGateRouter } from './human-gate'
+import { listHumanGatePending, humanGateRouter, decide as humanGateDecide } from './human-gate'
 import { atomicWriteJson } from '../lib/fs-store'
 import { fail } from '../lib/http'
 import { hermesHome } from '../lib/paths'
@@ -576,8 +576,35 @@ router.post('/:id/decide', async (ctx) => {
     return
   }
 
+  // HumanGate 批准单（2026-10-31 活体验证补路由）：listHumanGatePending 把批准单投进
+  // 收件箱（kind=review），但 decide 端点此前无 hgate: 分支——UI 批准按钮落 400
+  // 「id 前缀须为 fleet: 或 review:」，strict 真人链在收件箱侧断点（实拍实录：
+  // 点击成功却无历史记录，回落驱动 decide 才落账）。裁决走 human-gate store 权威
+  // decide（appendApprovalLog＋HUMAN_GATE_EVENTS 投影同源，single source）。
+  if (id.startsWith('hgate:')) {
+    if (decision !== 'approve' && decision !== 'reject') {
+      ctx.status = 400
+      ctx.body = { ok: false, detail: 'hgate 决策须为 approve|reject' }
+      return
+    }
+    try {
+      const req = humanGateDecide(id, decision, actor, note)
+      if (!req) {
+        ctx.status = 404
+        ctx.body = { ok: false, detail: '批准单不存在或已裁决' }
+        return
+      }
+      ctx.body = { ok: true, request: req, ...(req.warnings ? { warnings: req.warnings } : {}) }
+    } catch (error) {
+      const e = error as Error & { status?: number; code?: string }
+      ctx.status = e.status ?? 500
+      ctx.body = { ok: false, code: e.code, detail: e.message }
+    }
+    return
+  }
+
   ctx.status = 400
-  ctx.body = { ok: false, detail: 'id 前缀须为 fleet: 或 review:' }
+  ctx.body = { ok: false, detail: 'id 前缀须为 fleet: / review: / hgate:' }
 })
 
 router.get('/history', async (ctx) => {

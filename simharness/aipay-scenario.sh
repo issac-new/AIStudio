@@ -2318,7 +2318,7 @@ if [ "$(posture)" = "strict" ]; then
   fi
   sset ready_done 1
   capture_step "ready_done" "/app/stage/accept?tab=g5"     # 步20 承载面（G5 审批留痕；run23 复盘补拍摄位）
-  capture_step "ready_inbox" "/app/inbox"                  # 步20 第二拍摄位：审批收件箱队列（run23 收官批——审批面 UI 帧与 §2.6.8 消费纪律 6 探测互证）
+  capture_step "ready_inbox" "/app/inbox"                  # 步20 第二拍摄位：审批收件箱（2026-10-31 活体复核 /app/inbox 即真路由；面板首拉间歇，采集时序见 capture-plan 注）
 fi
 
 # ══ 步骤 21：发版交付记录（线下执行，在册追踪）═══════

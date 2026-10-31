@@ -6,7 +6,7 @@
  * GET  /api/hermes/eval/sets/:id                   详情（密封集只回元数据）
  * POST /api/hermes/eval/sets/:id/seal              密封（此后内容不出库、改题须 Rubric Loop 留痕）
  * GET  /api/hermes/eval/sets/:id/export            导出（密封集拒绝）
- * POST /api/hermes/eval/sets/:id/dimensions        能力维度批量标注/种子族回填 {assignments?|backfill:'redteam-seed'}
+ * POST /api/hermes/eval/sets/:id/dimensions        能力维度批量标注/种子族回填 {assignments?|backfill:'redteam-seed'|'enterprise-seed'}
  * POST /api/hermes/eval/sets/:id/tasks/:taskId/rubric  Rubric 修订（密封集须带 iterationId 留痕）
  * POST /api/hermes/eval/runs                       发起回放判分运行 {setId, samples, target?, crossValidate?}
  * GET  /api/hermes/eval/runs?setId=                运行摘要列表（不含 attempt 明细）
@@ -385,14 +385,17 @@ router.post('/sets/:id/dimensions', async (ctx) => {
     return
   }
   const backfill = body.backfill === undefined ? undefined : String(body.backfill)
-  if (backfill !== undefined && backfill !== 'redteam-seed') {
+  // 路由层白名单与 store 同步扩（2026-10-31 活体实拍实录：收尾批只扩了 store 的
+  // enterprise-seed 分支，路由层旧白名单先拦——单测直调 labelSetDimensions 绕过
+  // 路由，活体 API 才暴露。教训：两端词表必须同批同步）。
+  if (backfill !== undefined && backfill !== 'redteam-seed' && backfill !== 'enterprise-seed') {
     ctx.status = 400
-    ctx.body = { ok: false, problems: [`backfill 只接受 'redteam-seed'（收到：${backfill}）`] }
+    ctx.body = { ok: false, problems: [`backfill 只接受 'redteam-seed' | 'enterprise-seed'（收到：${backfill}）`] }
     return
   }
   const result = labelSetDimensions(ctx.params.id, {
     ...(assignments ? { assignments: assignments as Record<string, EvalTask['dimension'] | null> } : {}),
-    ...(backfill ? { backfill: backfill as 'redteam-seed' } : {}),
+    ...(backfill ? { backfill: backfill as 'redteam-seed' | 'enterprise-seed' } : {}),
   })
   if (!result.ok) {
     ctx.status = 400

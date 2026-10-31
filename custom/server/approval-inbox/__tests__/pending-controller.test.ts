@@ -115,6 +115,38 @@ describe('审批收件箱 REST（/api/approvals）', () => {
     expect(comment.status).toBe(400)
   })
 
+  it('hgate decide：收件箱裁决 HumanGate 批准单（2026-10-31 活体验证补路由）＋历史落账＋幂等 404', async () => {
+    // 实拍实录：批准单进了收件箱但 decide 端点无 hgate: 分支——UI 批准按钮落 400、
+    // 历史无记录（strict 真人链断点）。本断言锁新路由：pending 可见 → UI 同款端点可裁 → 历史在案。
+    const { createRequest } = await import('../human-gate')
+    createRequest({ runId: 'run-x', cardId: 't_hgate_ui_1', title: 'G5 发布准出（UI 链）', requestedBy: 'qa-lead' })
+    const pend = await fetchJson(base, '/api/approvals/pending')
+    const hgId = (pend.body.items as Array<{ id: string }>).map(i => i.id).find(id => id.startsWith('hgate:'))
+    expect(hgId).toBeTruthy()
+
+    const ok = await fetchJson(base, `/api/approvals/${encodeURIComponent(hgId!)}/decide`, {
+      method: 'POST', body: JSON.stringify({ decision: 'approve', note: '收件箱真人批准' }),
+    })
+    expect(ok.status).toBe(200)
+    expect(ok.body.ok).toBe(true)
+    expect((ok.body.request as { status?: string }).status).toBe('approved')
+
+    const hist = await fetchJson(base, '/api/approvals/history?limit=50')
+    const entry = (hist.body.entries as Array<{ targetId?: string; decision?: string }>)
+      .find(e => e.targetId === 't_hgate_ui_1')
+    expect(entry?.decision).toBe('approved')
+
+    const again = await fetchJson(base, `/api/approvals/${encodeURIComponent(hgId!)}/decide`, {
+      method: 'POST', body: JSON.stringify({ decision: 'approve' }),
+    })
+    expect(again.status).toBe(404)
+
+    const badDecision = await fetchJson(base, `/api/approvals/${encodeURIComponent(hgId!)}/decide`, {
+      method: 'POST', body: JSON.stringify({ decision: 'later' }),
+    })
+    expect(badDecision.status).toBe(400) // 决策词校验先于在册查询（词表 400 在前，语义正确）
+  })
+
   it('kanban decide：纯记账分支（决策 + 操作人 + 对象标题入历史）', async () => {
     const res = await fetchJson(base, '/api/approvals/kanban:t_200/decide', {
       method: 'POST', headers: { 'content-type': 'application/json' },
