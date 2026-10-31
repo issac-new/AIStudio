@@ -186,8 +186,16 @@ async function visit(page, hash, settle = 2300) {
       }))
       led.record('E2 卡片点击→详情抽屉打开', drawer.open, JSON.stringify({ id: firstId, header: drawer.header, raci: drawer.raci }))
       await led.shot(page, 'e-drawer')
-      const closeBtn = page.locator('[data-testid=kanban-task-drawer] button').first()
-      if (await closeBtn.count()) { await closeBtn.click({ force: true }); await page.waitForTimeout(600) }
+      // 关毕验证（走查序列实录：first button≠关闭钮，抽屉残留时后续建卡点击全落遮罩）。
+      // NDrawerContent closable 自带右上关闭钮；Escape 亦关（未编辑态）。
+      for (let i = 0; i < 4 && await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false); i++) {
+        await page.keyboard.press('Escape')
+        await page.waitForTimeout(500)
+        const mask = page.locator('.n-drawer-close, [data-testid=kanban-task-drawer] .n-drawer-close').first()
+        if (await mask.count().catch(() => 0)) { await mask.click({ force: true }).catch(() => {}); await page.waitForTimeout(400) }
+      }
+      const drawerClosed = !(await page.locator('[data-testid=kanban-task-drawer]').isVisible().catch(() => false))
+      led.record('E2b 抽屉关毕（后续建卡不被遮罩拦）', drawerClosed, drawerClosed ? 'Escape+close 双路' : '抽屉未关——后续 E4 结果不可信')
     }
     // E2b 列视图切换（views menu 若在）
     const viewsMenu = page.locator('[data-testid=kanban-views-menu]')

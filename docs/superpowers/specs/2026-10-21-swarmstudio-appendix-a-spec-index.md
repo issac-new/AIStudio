@@ -1,4 +1,5 @@
-# 附录 A：产品面全量 spec 索引（411 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（412 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（412 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
 > 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋回归批②deviceId 1＋计数对齐 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 401 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
@@ -409,6 +410,7 @@
 | 2026-10-30-governance-doc-candidates | 治理工件注册表按轮回落 | 并行批次：按轮命名工件在评审面不再显示缺失（candidates 回落） |
 | 2026-10-30-chat-timeline-race-fix | 群聊时间线面板间歇性不挂载根治 | activeRoom null 竞态自愈：点房间后消息稳定可见（前轮漏登记补录） |
 | 2026-10-30-report-reshoot-auto-caption | 收尾补拍图注自动标注 | 补拍图注含「补拍」降级口径自动落（前轮漏登记补录） |
+| 2026-10-31-daily-walkthrough-probe-e2-close | 走查探针微批 | E2 抽屉关毕验证（first button≠关闭钮致建卡点击落遮罩的序列性假红） |
 | 2026-10-31-matrix-autologin-deviceid | 日常工作台回归批② | Matrix 凭据校验器空 deviceId 误杀根治（网关自动登录会话房间画布恒「未认证」）＋探针时序三处 |
 | 2026-10-31-daily-workbench-regression | 日常工作台全功能回归轮 | human-gate store 行级容错＋裸 grant 迁移（收件箱 500 根治）＋房间画布 rooms 悬空引用清偿＋?new=1 建卡深链收窄＋走查探针沉淀 |
 | 2026-10-31-ide-workspace-regression-fixes | IDE 工作区全功能回归修复批 | 文件树换根竞态根治＋非 super_admin 权限回落任务域只读树＋板号回填＋i18n pickTask 键 |
