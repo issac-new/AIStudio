@@ -53,20 +53,30 @@ type SqliteDb = {
 }
 
 let dbCache: SqliteDb | null = null
+let dbCachePath: string | null = null
 
 function getDb(): SqliteDb {
-  if (dbCache) return dbCache
+  // 缓存按路径绑定：HARNESS2_STORE 运行期变化（测试切临时目录、运维换库）必须重开，
+  // 否则会继续写旧库——旧库已删时表现为 "attempt to write a readonly database"。
+  const target = sqliteFile()
+  if (dbCache && dbCachePath === target) return dbCache
+  if (dbCache) {
+    try { (dbCache as unknown as { close?: () => void }).close?.() } catch { /* 关闭失败不阻断重开 */ }
+    dbCache = null
+    dbCachePath = null
+  }
   // 动态 require 防止 JSON 模式也加载原生模块
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Database = require('node:sqlite').DatabaseSync
   mkdirSync(storeDir(), { recursive: true })
-  const db = new Database(sqliteFile()) as unknown as SqliteDb
+  const db = new Database(target) as unknown as SqliteDb
   db.exec(`CREATE TABLE IF NOT EXISTS proposals (id TEXT PRIMARY KEY, updated_at TEXT, json TEXT NOT NULL)`)
   db.exec(`CREATE TABLE IF NOT EXISTS experiences (id TEXT PRIMARY KEY, updated_at TEXT, json TEXT NOT NULL)`)
   db.exec(`CREATE TABLE IF NOT EXISTS champions (id TEXT PRIMARY KEY, promoted_at TEXT, json TEXT NOT NULL)`)
   db.exec(`CREATE TABLE IF NOT EXISTS auto_jobs (probe_key TEXT PRIMARY KEY, json TEXT NOT NULL)`)
   db.exec(`CREATE INDEX IF NOT EXISTS idx_proposals_updated ON proposals(updated_at)`)
   dbCache = db
+  dbCachePath = target
   return db
 }
 

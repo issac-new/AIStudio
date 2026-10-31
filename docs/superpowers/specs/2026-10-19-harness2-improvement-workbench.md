@@ -50,17 +50,33 @@
 ## 4. 数据模型
 
 存储：`HARNESS2_STORE`（文件）或 `HERMES_WEB_UI_HOME|HERMES_WEBUI_STATE_DIR/harness-workbench/workbench.json`，原子写（tmp+rename），进程内串行化。
+`HARNESS2_STORE_SQLITE=1` 切 SQLite 后端（`workbench.sqlite`，proposals/experiences/champions/auto_jobs 四表，显式事务，旧 JSON 首次自动迁移并改名 `.migrated` 保留）——R11，缺省仍 JSON，切换属独立迁移窗。
 
 ```
 WorkbenchStore { version, nextSeq, proposals[], experiences[], champions[] }
 Proposal {
   id, title, hypothesis, surfaceKey, targetPath?, risk, mode: 'parallel'|'sequential',
   status: 'draft'|'submitted'|'approved'|'rejected'|'probing'|'composed'|'promoted'|'rolled_back',
-  budgetCapUsd, evidenceRefs[], experienceIds[],
+  budgetCapUsd, evidenceRefs[], experienceIds[], domain, treeRoot?,
+  noise?: { runIds[≥2], setId, delta, method:'half-range', samples[], computedAt },   // S2→R2
+  constraints?: { checks[{id,statement,status:'pass'|'fail'|'unknown',detail?}], actor, at }, // D5→R12b
+  heldout?: { runId, n, passRate },                                                  // R6
+  skillDifferential?: { withSkill, withoutSkill, delta },                            // R9
   base: { content, digest, revision, exists }, variants: Variant[],
   probes: Probe[], approval?, composition?, promotion?, rollback?,
   createdBy, createdAt, updatedAt
 }
+ProbeMetrics {
+  evalRunId, setId, setRevision?, evidenceMode, k, passAt1, passAtK,
+  resultPassRate, trajectoryPassRate, unknownRatio, riskVeto, judgeOnline,
+  statisticallyInsufficient, tokens, costUsd, steps, latencyMs, regression?,
+  equalBudgetBaseline?: { runId, setId, passAt1 },   // HDA→R2
+  counterfactual?: { runId, setId, passAt1 },        // CHASE→R2③
+  heldout?: { runId, n, passRate }                   // R6
+}
+PromotionRecord { actor, at, digest, applied, targetPath?, backupPath?,
+                  verificationTier?: 'command'|'heldout'|'regression'|'judge'|'none',  // R12a
+                  appliedVia?: 'false'|'via-workbench'|'via-surface' }               // R7
 Variant { id, label, content, digest, diffSummary }
 Probe {
   id, variantId, status: 'planned'|'recorded'|'failed',
@@ -95,28 +111,63 @@ submitted/approved --reject--> rejected
 | POST | `/proposals/:id/compose` | 选冠军候选或合并内容，必填理由 |
 | POST | `/proposals/:id/promote` | 晋级门禁 + 可选写盘 |
 | POST | `/proposals/:id/rollback` | 回滚冠军与已写文件 |
+| GET | `/surfaces` | 八类可编辑面清单与冠军态 |
+| POST | `/proposals/suggest` | 起草建议（加权检索 top3＋stale 刷新清单，R8） |
+| DELETE | `/proposals/:id` | 删除草稿（未提交前） |
+| POST | `/proposals/:id/baseline` | 绑定基线运行 |
+| POST | `/proposals/:id/noise` | 噪声 δ 标定（≥2 条同集未改动基线，半极差；δ 无调参入口） |
+| POST | `/proposals/:id/heldout` | 绑定密封留出集读数（R6，只回 n/passRate） |
+| POST | `/proposals/:id/constraints` | 记录约束保持断言（D5/R12b） |
+| POST | `/proposals/:id/probes/auto-run` | 一键自动探测（含 R2 噪声/等预算/反事实三类证据自动供给） |
+| GET | `/proposals/:id/probes/auto-status` | 自动探测任务态 |
+| GET | `/proposals/:id/surface-artifacts` | advisory 面建议产物导出（memory=条目 JSON／tool_guidance=覆盖片段，R7） |
+| POST | `/proposals/:id/surface-applied` | 标记建议已由既有管理面人审应用（appliedVia=via-surface，R7） |
+| GET | `/gap-suggestions` | RSI 内核 gap_register capability 条目 → 提案 draft（只读桥，R5） |
+| POST | `/gap-suggestions/import` | 批量导入缺口驱动提案（R5） |
 | GET/POST | `/experiences` | 经验列表/新增 |
 | POST | `/experiences/import` | 从 expcandidates 已批准项导入 |
 | POST | `/experiences/:id/status` | 采纳/退役 |
 
 写操作沿用 `writeDenied`：有认证主体时须 `super_admin`；单用户部署放行。
 
-## 6. 晋级门禁（硬阻塞，逐条带 code）
+## 6. 晋级门禁（三档，逐条带 code）
 
-1. `not_composed`：未完成组合。
-2. `approval_missing` / `approval_stale`：未批准，或批准后候选集合摘要变化。
-3. `probes_incomplete`：K 个候选未全部记录真实评测。
-4. `quality_regressed`：任一候选结果层倒退，或回归运行出现失败。
-5. `quality_unknown`：结果层证据不足（判定端离线/未知占比过高/无通过率），不得晋级。
-6. `regression_missing` / `regression_failed`：未绑定历史回归运行，或回归有倒退。
-7. `cost_missing` / `budget_exceeded`：探测成本未记录，或总成本超提案上限。
-8. `champion_drift`：提案基线摘要与当前冠军不一致（防止覆盖别人的改进）。
-9. `apply_env_disabled` / `target_drift` / `surface_not_managed`：请求写盘但环境未开、目标文件被外部改动、该面只出建议。
-10. `apply_failed`：原子写失败（回滚到写前内容）。
+判定在 `loop.ts` 纯函数层（`evaluatePromotion()`），service 只读证据与编排。分三档：**硬阻塞**（无条件拦）、**证据门**（同一份证据缺省只告警，对应 env 可升为硬闸）、**警告**（人裁决参考，不拦截）。`loop.ts` 现行 64 个 code 全部归入本节，新增 code 必须同时改本节与守门测试。
+
+### 6.1 硬阻塞
+
+| 组 | code |
+|---|---|
+| 流程完整性 | `not_composed`、`approval_missing`、`approval_stale`、`approval_rejected`、`variants_missing`、`title_missing`、`hypothesis_missing`、`baseline_missing`、`evidence_missing`、`target_missing`、`composition_unprobed`、`probes_incomplete` |
+| 质量与回归 | `quality_regressed`、`regression_missing`、`regression_failed`、`budget_exceeded`、`cost_missing`、`champion_drift`、`target_drift`、`surface_not_managed`、`apply_env_disabled` |
+| 泄漏与探索纪律 | `benchmark_leakage`、`pareto_dominated`、`gain_within_noise`（该面首个提案＝结构性探索，降 warning）、`gain_explained_by_compute`、`cost_unjustified`、`edit_budget_exceeded` |
+| 约束保持 | `constraint_regression`（任一约束 fail 即拦——能力改进不得以行为约束退化为代价） |
+
+### 6.2 证据门（缺省告警，env 升硬闸）
+
+同一条证据缺席在不同环境该不该硬拦，取决于该环境对证据链的成熟度要求；五道门各配一个 env，缺省告警不阻断既有工作流。
+
+| 门 | 缺省 code（warning） | 升闸 code（blocker） | env |
+|---|---|---|---|
+| 噪声地板 | `noise_uncalibrated` | `noise_missing` | `HARNESS2_RSI_REQUIRE_NOISE=1` |
+| 增益归因 | `attribution_missing`（含 `attribution_set_mismatch`、`gain_mostly_compute`） | `attribution_missing` | `HARNESS2_RSI_REQUIRE_ATTRIBUTION=1` |
+| 约束保持 | `constraint_unchecked`、`constraint_unverified` | `constraint_unchecked` | `HARNESS2_RSI_REQUIRE_CONSTRAINTS=1` |
+| 反事实 | `counterfactual_missing`（含 `counterfactual_unreadable`） | `counterfactual_missing` | `HARNESS2_RSI_REQUIRE_COUNTERFACTUAL=1` |
+| 密封留出 | `heldout_missing` | `heldout_missing` | `HARNESS2_RSI_REQUIRE_HELDOUT=1` |
+
+`heldout_regression`（留出集通过率低于演化通过率−δ）与 `counterfactual_gain_collapse`（语义等价变换下增益崩塌）不受 env 影响，恒为 blocker。
+
+### 6.3 警告（不阻塞）
+
+| 组 | code | 判据 |
+|---|---|---|
+| 统计充分性 | `statistical_insufficient`、`pass_at_k_divergence` | k<2 恒告警；pass@1 高于 pass@k 说明有样本全败（抽样面未覆盖） |
+| 探索健康度 | `candidate_collapse`、`parallel_single_candidate`、`surface_stalled`、`exploratory_within_noise` | 候选去重后不足 K 或逐行 Jaccard>0.9、并行单候选、连续 w 轮无采纳、结构性探索落在噪声带内 |
+| 验证强度 | `weak_verification_streak`、`skill_undifferentiated`、`skill_negative_delta` | 该面连续 ≥3 轮最强验证层 ≤judge；skills 面无差分读数；差分 ≤0（装了反而更差） |
+| 约束消融 | `constraint_ablation_due` | ≥2 项约束全 pass 且零 fail 历史＝零对抗证据，提示单层消融（防被其余护栏掩护的静默删除） |
+| 其他 | `probes_incomplete`、`quality_unknown`、`prefix_cache_churn` | 证据未齐、判定端离线或未知占比过高、前缀缓存抖动 |
 
 创建期硬拒绝（不进生命周期）：候选内容命中源文防泄漏标记（`deterministic_eval_summary`、`"pass_rate"` 等七个）时返回 400，并在 `blockers.markers` 给出命中清单——判词写进 harness 等于把答案喂给后续任务。
-
-警告（不阻塞）：单跑统计不足（k<2）；并行模式只有 1 个候选（等价单步，不构成搜索）；候选塌缩（去重后少于 K 个或逐行 Jaccard > 0.9，探索预算可能被浪费）。
 
 ## 7. 安全边界
 
@@ -197,3 +248,47 @@ submitted/approved --reject--> rejected
 - 判分沿用 Eval Studio 回放判分（S0/S1/人工三层），不新增判定逻辑。
 - scripts/plugins/hooks 禁跑闸是 v1 保守线；沙箱化执行（sandbox-lease 真根 + rlimit）属下一阶段，不在本批。
 - 密封集尝试计数照常生效（actor=workbench-auto）。
+
+## 14. 证据自动化与执行面（R1-R12，2026-10-31～11-01 执行批）
+
+机制扩展已停止（改进方向转为「让既有门禁拿得到证据、让实验可规模化」），本节是这一步的设计约束。执行细节与决策见 `2026-10-31-rsi-improvement-plan.md`、`2026-10-31-rsi-exec-batch1.md`。
+
+### 14.1 三类独立证据与自动供给
+
+晋级门要判的三件事——增益是否超过噪声、增益是否来自候选本身、增益是否依赖本次改写的表面特征——各需一份独立证据：
+
+| 证据 | 语义 | 供给方式（`POST /probes/auto-run` 自动编排） |
+|---|---|---|
+| 噪声 δ | 未改动 harness 重复评测的离散度 | 同集未改动树跑 2 次，passAt1 半极差＝δ；足够预算时逐次追加 |
+| 等预算基线 | 同等预算下未改动 harness 的读数 | 同集未改动树再跑 1 次，写 `equalBudgetBaseline` |
+| 反事实 | 语义等价变换下的读数（改名/换路径/包装输出/注干扰） | 变换器产变体集→注册临时 eval 集（`cf-<set>-<id>-<ts>` 防撞名）→候选树跑同题→写 `counterfactual` |
+
+约束：三类证据全部来自真实运行，禁止手填；预算不足或建集失败如实跳过并在任务态标注，不阻断主探测；反事实默认用 `rename_ids`（最不容易改变语义的一类），其余三类留给人工指定。变换器必须确定性——同输入同输出，否则「语义等价」无从谈起。
+
+### 14.2 验证信号分层
+
+晋级记录写 `verificationTier`，按证据强度取最高档：`command`（命令验收器）> `heldout`（密封留出）> `regression`（历史回归）> `judge`（仅裁判判分）> `none`。该面连续 3 轮最强层 ≤`judge` 时报 `weak_verification_streak`——分数在涨但证据没变强，等于在同一个判分器上自我强化。留出集只回聚合读数（`n`、`passRate`），题目与答案永不出库。
+
+### 14.3 约束保持与单层消融
+
+晋级前记录「不许退化」的行为约束（护栏/权限/审计/拒答），任一 fail 即 `constraint_regression` 硬拦。仅 pass 不等于有对抗证据：≥2 项约束全 pass 且历史上从未 fail 过时，报 `constraint_ablation_due`，要求做一轮单层消融（逐个约束关闭后复测）——多个相似护栏并存时，删掉其中一个会被其余掩护而在聚合分上不可见。
+
+### 14.4 技能与任务族的横向校验
+
+skills 面晋级要求 `skillDifferential`（同集有技能/无技能两态），缺读数告警、差分为负告警——「看似相关」的技能可致功能失效。评测集可带 `family` 标签；overview 按族聚合增益，面级平均增益为正而某族为负时告警 `family_specialization`（增益可能来自单任务特化）。
+
+### 14.5 应用回路与提案来源
+
+- **managed 面**（`system_prompt`/`skills`）：双闸齐备时工作台直接写盘，`appliedVia='via-workbench'`。
+- **advisory 面**（`memory`/`tool_guidance`）：工作台不写盘，只导出结构化建议产物（记忆条目 JSON／工具描述覆盖片段）；人审应用后调 `surface-applied` 标记 `via-surface`。回读验证＝以新产物为基线新建提案。
+- **提案来源**：除人工起草与经验检索（加权 top3：置信度×面域×domain，附 stale 刷新清单），可只读消费 RSI 内核的 capability 缺口登记（`/gap-suggestions`），映射为草稿；采纳回写走独立建议文件，不直写内核手工区。
+
+### 14.6 缺省档位汇总
+
+| 项 | 缺省 | 开启方式 |
+|---|---|---|
+| 证据门五门 | 告警 | `HARNESS2_RSI_REQUIRE_{NOISE,ATTRIBUTION,CONSTRAINTS,COUNTERFACTUAL,HELDOUT}=1` |
+| 自动证据供给 | 随一键探测执行 | 无需开关（预算内自动跑） |
+| 反事实变换类 | `rename_ids` | 其余三类待人工指定 |
+| 存储后端 | JSON 文件 | `HARNESS2_STORE_SQLITE=1` |
+| 断点续跑 | 关闭（重启后 running 判失联） | 后续接 `auto_jobs` 表恢复 |

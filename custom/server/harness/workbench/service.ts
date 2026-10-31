@@ -23,7 +23,7 @@ import { loadEvalConfig } from '../../eval/types'
 import type { AskFn } from '../../eval/judge'
 import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
-import { nextId, mutateStore, readStore } from './store'
+import { nextId, mutateStore, readStore, persistAutoJob, listOrphanAutoJobs } from './store'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
 import { experienceFreshness, memoryConsolidationPolicy, type ExperienceFreshness } from './experience-freshness'
 import type {
@@ -211,6 +211,8 @@ export function overview(): {
   archive: ArchiveSteppingStone[]
   /** 记忆压缩/遗忘策略（D11）：stale 采纳再验证＋孤儿候选退役建议（纯派生）。 */
   memoryPolicy: import('./experience-freshness').MemoryConsolidationPolicy
+  /** R11：上次进程退出时仍在 running 的自动探测（SQLite 后端才有；JSON 后端空表）。 */
+  interruptedProbes: Array<{ proposalId: string; startedAt?: string }>
   meta: { note: string; source: string; boundary: string }
 } {
   const store = readStore()
@@ -290,6 +292,9 @@ export function overview(): {
     })(),
     archive: proposalArchive(store.proposals),
     memoryPolicy: memoryConsolidationPolicy(store.experiences),
+    interruptedProbes: listOrphanAutoJobs()
+      .filter((r) => !runningProbes.has(r.probeKey))
+      .map((r) => ({ proposalId: r.probeKey, ...(typeof r.payload.startedAt === 'string' ? { startedAt: r.payload.startedAt } : {}) })),
     meta: {
       note: '候选、探测、组合、冠军四段闭环；探测证据只来自 Eval Studio 真实运行。',
       source: 'HERMES_HOME 八面产物 + ~/.hermes-web-ui/harness-workbench/workbench.json + Eval Studio 运行。',
@@ -1350,9 +1355,12 @@ export async function startAutoProbe(id: string, opts: AutoProbeOptions): Promis
     estimatedTasks: 0,
   }
   runningProbes.add(id)
+  // R11：任务态落盘（SQLite 后端生效）——进程崩溃后重启可查「上次未完成的探测」，
+  // 不自动续跑（续跑属下一阶段），但不再静默丢失。
+  persistAutoJob(id, { proposalId: id, status: 'running', variantsTotal: job.variantsTotal, startedAt: nowIso() })
   void runAutoProbeJob(id, pendingVariants.map((v) => v.id), opts, { setId: set.id, regressionSetId: regressionSet?.id }, { maxTasks, estimate }, job)
     .catch((e) => { job.status = 'failed'; job.error = e instanceof Error ? e.message : String(e) })
-    .finally(() => { runningProbes.delete(id) })
+    .finally(() => { runningProbes.delete(id); persistAutoJob(id, null) })
   return job
 }
 

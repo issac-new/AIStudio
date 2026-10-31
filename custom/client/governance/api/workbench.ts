@@ -334,6 +334,8 @@ export interface ChampionDto {
 export interface WorkbenchOverviewDto {
   archive?: ArchiveSteppingStoneDto[]
   memoryPolicy?: MemoryConsolidationPolicyDto
+  /** R11：上次进程退出时仍在跑的自动探测（SQLite 后端才有数据）。 */
+  interruptedProbes?: Array<{ proposalId: string; startedAt?: string }>
   ok: boolean
   surfaces: SurfaceDto[]
   counts: Record<string, number>
