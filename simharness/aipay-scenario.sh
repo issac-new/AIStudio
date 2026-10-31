@@ -1989,20 +1989,9 @@ if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
     # g5-approval-ui-empty/L3「审批历史留痕 0 条」由此而来。approved.events 仍是
     # 唯一闸键真值（纪律 73），本通道补审计与呈现面。
     _g5_tok=$(studio_login 2>/dev/null || true)
-    _hg_id=""
-    if [[ -n "$_g5_tok" ]]; then
-      _hg_resp="$(studio POST /api/approvals/human-gate/ "$_g5_tok" \
-        "$(jq -n --arg r "$RUN_ID" --arg c "$RGID" \
-           --arg t "G5 发布准出 · ${RFD_ID:-RFD-001}" \
-           --arg d "posture=$(posture)；七项过（评审卡 ${RGID}）；strict=待真人收件箱裁决 / standard=director-proxy 代批（净额扣除）" \
-           '{runId:$r,cardId:$c,title:$t,detail:$d}')" 2>/dev/null || true)"
-      _hg_id="$(printf '%s' "$_hg_resp" | jq -r '.request.id // empty' 2>/dev/null || true)"
-      if [[ -n "$_hg_id" ]]; then
-        note "[G5] HumanGate 批准单已注册（${_hg_id}，审批收件箱可见——审批面 UI 帧有物可拍）"
-      else
-        issue_once g5-humangate-register-failed step20 "HumanGate 批准单注册失败（POST /api/approvals/human-gate/ 无 request.id 返回）——收件箱缺席该 pending 项；approved.events 仍为闸键真值，不阻断"
-      fi
-    fi
+    _hg_id="$(g5_humangate_register "$_g5_tok" "$RGID" "$RUN_ID" \
+      "G5 发布准出 · ${RFD_ID:-RFD-001}" \
+      "posture=$(posture)；七项过（评审卡 ${RGID}）；strict=待真人收件箱裁决 / standard=director-proxy 代批（净额扣除）")"
 if [ "$(posture)" = "strict" ]; then
       echo "ISSUE|walk-done-strict|fanfan|G5 评审卡 ${RGID} strict 姿态不代走 done（待收紧面：等 fanfan 自走；V8.29 §2.4）" >> "$EVID_DIR/issues.log"
       note "[姿态] strict：fanfan G5 卡 ${RGID} 不代走 done——记录（闸键仍置：判词真值在房）"
@@ -2048,14 +2037,8 @@ if [ "$(posture)" = "strict" ]; then
       echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-proxy $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
       # 代批走产品 decide（2026-10-31 用户批准 root fix）：审批历史留痕（actor=studio
       # 管理面身份，note 明示 proxy）；404=已裁决幂等；失败显形不阻断（真值已在案）。
-      if [[ -n "${_g5_tok:-}" && -n "${_hg_id:-}" ]]; then
-        if studio POST "/api/approvals/human-gate/${_hg_id}/decide" "$_g5_tok" \
-             "$(jq -n '{decision:"approve",note:"standard 姿态 director-proxy 代批（净额口径扣除，纪律 73；驱动走产品 decide 通道=2026-10-31 用户批准）"}')" >/dev/null 2>&1; then
-          note "[G5] 代批已落产品审批台账（/api/approvals/human-gate/${_hg_id}/decide → /api/approvals/history 留痕）"
-        else
-          issue_once g5-approval-decide-failed step20 "G5 代批 decide 写产品审批台账失败（POST /api/approvals/human-gate/${_hg_id}/decide，404=已裁决幂等不计）——approved.events 真值不受影响，呈现面按缺口显形"
-        fi
-      fi
+      g5_humangate_decide "$_g5_tok" "$_hg_id" \
+        "standard 姿态 director-proxy 代批（净额口径扣除，纪律 73；驱动走产品 decide 通道=2026-10-31 用户批准）" || true
     fi
     # V8.46 发布门台账（append-only）：产品端点 POST /api/hermes/sim/release-gate。
     # 融合批二修真实断点：原 decision=approve 无锚必 400（release-state approve 必填
@@ -2079,19 +2062,9 @@ if [ "$(posture)" = "strict" ]; then
       issue_once release-gate-ledger step20 "发布门台账写入失败（studio token 不可得）——报告证据九按缺席呈现"
     fi
     # HumanGate 批准落产品审批面探测（验收面）：root fix 已落（上方注册＋decide 通道，
-    # 2026-10-31 用户批准）——本探测从「接线缺口显形」转「通道验收」：decide 成功即
-    # history 含 targetId=cardId 记录；仍缺席=通道断裂记单（g5-approval-history-missing），
-    # 审批面承载维持降级计达（方案 §2.6.8 消费纪律 6）。run23 实录背景：g5-approval-
-    # ui-empty（批准只写 approved.events、产品审批历史 0 条、L3 fail）——回填非根治，
-    # 本通道才是根治件。
-    if [[ -n "${_rel_tok:-}" ]]; then
-      _hist="$(studio GET "/api/approvals/history?limit=50" "$_rel_tok" 2>/dev/null || true)"
-      if printf '%s' "$_hist" | grep -q "${RGID}"; then
-        note "[G5] 产品审批历史在案（card ${RGID}，/api/approvals/history 可反查）"
-      else
-        issue_once g5-approval-history-missing step20 "HumanGate 批准未落产品审批台账（/api/approvals/history 无 ${RGID} 记录）——接线缺口：驱动批准路径只写 approved.events；审批面承载维持降级计达（方案 §2.6.8 消费纪律 6）"
-      fi
-    fi
+    # 2026-10-31 用户批准）——decide 成功即 history 含 targetId=cardId 记录；仍缺席=通道
+    # 断裂记单，审批面承载维持降级计达（方案 §2.6.8 消费纪律 6）。
+    g5_humangate_history_probe "$_rel_tok" "$RGID"
     # §4.4-4 QGate 证据接线（v1.31.1 条款：来源分布随行，禁手抄全绿）：G5 过闸即对
     # 中央仓跑 release-report，原文落 evidence。门未绑执行器=INCONCLUSIVE 全列（无信号桶），
     # 如实呈现不算全绿——绑定真跑留下轮（骨架部署锚：中央仓 1edcc23）。

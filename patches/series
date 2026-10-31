@@ -1020,3 +1020,4 @@
 707-agent-codex-terminal-incomplete-retry.patch
 708-client-filetree-workspaceroot-seq-guard.patch
 709-server-kanban-task-detail-fast-path.patch
+710-client-group-chat-rooms-shape-guard.patch

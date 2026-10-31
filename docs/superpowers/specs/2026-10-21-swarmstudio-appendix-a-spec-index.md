@@ -1,4 +1,4 @@
-# 附录 A：产品面全量 spec 索引（409 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（410 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
 > 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 401 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
@@ -412,6 +412,7 @@
 | 2026-10-31-daily-workbench-regression | 日常工作台全功能回归轮 | human-gate store 行级容错＋裸 grant 迁移（收件箱 500 根治）＋房间画布 rooms 悬空引用清偿＋?new=1 建卡深链收窄＋走查探针沉淀 |
 | 2026-10-31-ide-workspace-regression-fixes | IDE 工作区全功能回归修复批 | 文件树换根竞态根治＋非 super_admin 权限回落任务域只读树＋板号回填＋i18n pickTask 键 |
 | 2026-10-31-run23-clearance-g5-decide | run23 裁决执行批 | 台账全部清账（150 代偿＋41 DISP 终态回写）＋G5 批准走产品 human-gate decide＋fail-soft 维持记录 |
+| 2026-10-31-product-capability-finalize | 产品能力收尾批 | 群时间线第二根源根治（补丁 710 rooms 形态守卫）＋企业种子七维映射＋G5 产品通道函数化测试；遗留#5 收案 |
 | 2026-10-31-kanban-detail-fast-path | kanban 详情链加固批 | sqlite 直读快道（补丁 709）＋CLI 瞬态重试＋抽屉装载 watch immediate 竞态根治＋验收乐观同步；走查探针沉淀 scripts/regression/ide-workspace-verify |
 | 2026-10-31-humangate-store-unify | HumanGate store 合并统一 | 旧版裸 grant 行装载迁移（升级信封行+归一化回写，未知形状仍 fail-closed）；runtime grant 测试 fixture 路径债顺手清偿 |
 | 2026-10-30-release-v1.0.3-overlay | 发布轮 v1.0.3-overlay | HelixHarness 吸收两轮＋run23 收官批后升版：cockpit studio.4 / agent-teams team.4 / yuan-skill v2.98.0 / full 1.0.3-overlay（ycode 零变更不动） |

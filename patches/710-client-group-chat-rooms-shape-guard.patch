@@ -1,0 +1,30 @@
+# overlay 710：群时间线间歇不挂载第二根源根治——loadRooms rooms 形态守卫
+# 根因：listRooms 回包无 rooms 字段（网关瞬时降级/错误体 200）时 rooms.value 被写成
+# undefined，sortRoomsByActivity 对 undefined 展开抛 TypeError 被 catch 吞（只存 error
+# 文案），rooms 永久 undefined → GroupChatView :45/:99 的 store.rooms.length 抛
+# 「Cannot read properties of undefined (reading 'length')」→ onMounted catch 吞 →
+# 时间线整页不挂载（run23 间歇实录，补拍轮以重试环绕过；第一根源 activeRoom 竞态
+# 已由 3d3275734 根治）。修法=Array.isArray 守卫，形态降级保旧值+提示（fail-soft：
+# 不静默、不清空、不写 undefined）。守卫在 store 单点，View 两处读法随之安全。
+# 回归测试=custom/client/hermes/__tests__/group-chat-rooms-guard.test.ts（三形态）。
+# spec=docs/superpowers/specs/2026-10-31-product-capability-finalize.md 变更一。
+diff --git a/packages/client/src/stores/hermes/group-chat.ts b/packages/client/src/stores/hermes/group-chat.ts
+index 153dae29b..995bd492c 100644
+--- a/packages/client/src/stores/hermes/group-chat.ts
++++ b/packages/client/src/stores/hermes/group-chat.ts
+@@ -1624,6 +1624,15 @@ export const useGroupChatStore = defineStore('groupChat', () => {
+     async function loadRooms() {
+         try {
+             const res = await listRooms()
++            // HERMES_CUSTOM[GroupRoomsShapeGuard] BEGIN: rooms 形态守卫（overlay 710）——
++            // 回包无 rooms 数组（网关降级/错误体 200）时保留既有列表并提示，禁把
++            // undefined 写进状态：GroupChatView 的 rooms.length 随即 TypeError、群时间线
++            // 整页不挂载（run23 间歇实录第二根源；第一根源 activeRoom 竞态已根治）。
++            if (!Array.isArray(res?.rooms)) {
++                error.value = '房间列表回包形态异常（无 rooms 数组），已保留既有列表'
++                return
++            }
++            // HERMES_CUSTOM[GroupRoomsShapeGuard] END
+             rooms.value = res.rooms
+             sortRoomsByActivity()
+         } catch (err: any) {
