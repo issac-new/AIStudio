@@ -80,19 +80,20 @@
 
 - 目标单测：本批新增/扩展的 `architecture-quota.test.ts`、`git-sos.test.ts`、`briefing-context-roots.test.ts`、`briefing-context-loader.test.ts`、`self-check.test.ts` 与受影响面全绿（29 文件/209 例；自检 8 例含 403→warn 新增例）；`kanban-i18n-coverage.test.ts` 1/1、`custom/client/kanban` 14 文件/64 例全绿；并行批的 `human-gate.test.ts`、`room-canvas-watcher-sources.test.ts` 同步全绿。
 - 客户端棘轮：`npm run typecheck:client:ratchet` 18 ≤ 基线 18（0 新增）。
-- 全量：worktree（`bd99cdbed` 基线 + 本批）`npm test` 7038 例 7027 过 / 11 跳过 / **0 失败**（含 `kanban-i18n-coverage` 与 `simulation-node-executors` 转绿）；`npm run typecheck:harness` 0 错；`typecheck:client:ratchet` 18 ≤ 基线 18。
+- 全量：worktree（`3e9793a43` 干净树，注入态 001-712）`npm test` 7042 例 7031 过 / 11 跳过 / **0 失败**（含 `kanban-i18n-coverage`、`simulation-node-executors`、`self-check` 转绿）；`npm run typecheck:harness` 0 错；`typecheck:client:ratchet` 18 ≤ 基线 18；构建 `npm run build` + verify-dist 通过。
 - 补丁链：worktree 内 `npm run clean && npm run inject` 全 series（001-712）重放通过（710 主并批 + 711/712 本批依序应用）；`patches-series-guard` 绿。
 - 活体：
   - `GET /api/approvals/human-gate`（`HUMAN_GATE_STORE` 指向 legacy 副本）→ 200 且返回 3 条升级后的记录（对并行实现 `f6dc39bf6` 的复核，非本批代码）。
   - `walk-routes` 修复树全量 184 项：182 过 / 2 缺陷（均为 IDE 简报 docs 探测 404）；docs 探测门控修复后同过滤集复跑 0 缺陷。
   - `walk-writes` 16/16；`ide-smoke` 11/11（自检 0 失败）；`ide-workspace-verify` 11/11。
-  - 矩阵群时间线：**未用真实 Matrix 凭据验证**（走查为「未认证」WARN），仅以客户端棘轮、并行批守门测试与路由渲染复核——如实标注，不冒充实机通过。
+  - 矩阵群时间线：**已用真实 Matrix 凭据验证**——网关自动登录会话 `@swarm:matrix.test` 入 1 个真实房间（Hermes Home，时间线 14 条消息）渲染正常，录屏 `04-matrix-live.mp4`；super_admin token 会话（无矩阵凭据）走查仍显示「未认证」WARN，如实保留。
 - 构建：`npm run build` exit 0 + postbuild verify-dist 通过。
-- 实拍录屏（真实浏览器 Playwright 录屏，非截图拼接；产物在仓外 `/Users/cuishi/lab/aistudio-regression-evidence-20261031/`）：
-  - `01-curated-regression-demo.mp4`：带步骤字幕的端到端演示——日常工作台、看板 `?new=1` 提示（711 词条生效）、审批 4/risk 页（human-gate 200）、IDE 任务深链与文件树、IDE 自检（403 权限告警态）、评测/观测页；
-  - `02-full-route-walk.mp4`：`walk-routes` 全量 155 个路由状态（118 路由 + 37 阶段页签）实拍走查，逐页停留并输出台账；
-  - `03-write-flow-probe.mp4`：写流回路（建板→建卡→状态迁移→running fail-loud→删卡→归档板）实拍；
-  - 视频时长/文件大小与录制时刻随产物清单同目录 `manifest.md` 记录。
+- 实拍录屏（真实浏览器 Playwright 录屏，非截图拼接；产物在仓外 `/Users/cuishi/lab/aistudio-regression-evidence-20261031/`，清单 `manifest.md` 含时长/大小/SHA-256）：
+  - `01-curated-regression-demo.mp4`（89s）：带步骤字幕的端到端演示——日常工作台、看板 `?new=1` 提示（711 词条生效）、审批 4/risk 页（human-gate 200）、IDE 任务深链与文件树、IDE 自检（13 通过 · 2 告警 · 0 失败）、评测/治理页；
+  - `02-full-route-walk.mp4`（278s）：隔离服务（8659/8747，录制树 `3e9793a43`）上 `walk-routes` 全量 155 个路由状态实拍走查；台账 179 过 / 1 缺陷——`hermes.groupChat` 无房参时 canonical 重定向到真实房间，走查白名单未覆盖该跳转（非产品缺陷），页面渲染正常；同日主树另一轮全量走查 179/0；
+  - `03-write-flow-probe.mp4`（75s）：看板行内建卡（`?new=1`）→ 回读命中 taskId → DELETE 200 → 回读 404 → 刷新消失（临时卡残留 0）；
+  - `04-matrix-live.mp4`（35s）：真实 Matrix 凭据入房与时间线渲染实拍；
+  - 视频时长/文件大小/SHA-256 与录制时刻随 `manifest.md` 记录。
 
 ## 设计文档影响
 
