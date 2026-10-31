@@ -222,6 +222,12 @@ export interface EvalSet {
    * 缺省 false：存量集向后兼容；新建/改版后要收紧的集置 true。
    */
   requireCalibration?: boolean
+  /**
+   * 任务族标签（R10，2026-10-31 三批）：同族任务测同一能力（HCAST 范式）——
+   * 进化报告按族聚合增益，防单任务特化（面级增益与族级增益背离即 family_specialization 警示）。
+   * 缺省 undefined＝无族归属（向后兼容，族视图跳过该集）。
+   */
+  family?: string
   /** 最近一次校准结果；setHash 与 contentHash 不符即失效（改题后必须重校准）。 */
   calibration?: import('./set-calibration').SetCalibration
   /**

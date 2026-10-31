@@ -58,6 +58,24 @@
 - **R12a**：`verificationTierOf`（regression > heldout（R6 后接，类型已占位）> judge > none；regression 存在即 regression 层，无硬证据而 judgeOnline 判 judge 层）；`PromotionRecord.verificationTier` 晋级留痕；`EvolutionRound.verificationTier`／`EvolutionSurface.weakVerificationStreak`／`EvolutionReport.healthWarnings`（streak≥3 触发 `weak_verification_streak`）。
 - 测试：`rsi-maturity-path.test.ts`（新文件，4/4：env 强制优先/失效三址如实/旧址兜底/不可读 null）＋loop 51/51（新增 R4 两例＋R12a tier/streak 例）＋http 27/27（R8 空态合法缺席＋建经验后加权串＋批量通道）＋面板 20/20（勾选→按钮态→串行调用）；typecheck 0 错。
 
+## 三批执行实记（2026-10-31 深夜，随码同批增补）
+
+### 第二批（R3/R2/R6/R5/R12b）
+
+- **R3**：`counterfactual-variants.ts`——四类确定性变换（rename_ids 哈希/rename_files 路径词/wrap_output 标签包装/inject_noise 干扰行），语义保持自检清单四条，同输入同输出（测试断言 JSON 全等）。
+- **R2**：auto-probe 候选探测完成后自动补基线运行——nullTree（未改动 harness 物化）×2 跑同集＝噪声 δ 自动标定，×1＝等预算基线写回 `equalBudgetBaseline`；预算内串行，失败不阻断主探测（如实静默跳过）。反事实（③）依赖 R3 变体集运行编排，下轮接。
+- **R6**：heldout-store `scoreSet`（密封契约原样：限次/只回聚合）接晋级门——`heldout_missing` warning（`HARNESS2_RSI_REQUIRE_HELDOUT=1` 升 blocker）＋`heldout_regression` blocker（留出率低于 evolve 通过率−δ）。
+- **R5**：`gap-source.ts` 只读桥——capability 域条目解析（容错 YAML 子集）→draft 映射（关键词定面/`gap:` evidenceRefs）＋`GET /gap-suggestions`＋`POST /gap-suggestions/import`＋建议行回写通道。
+- **R12b**：`constraint_ablation_due` warning——≥2 项约束全 pass 且零 fail 历史＝零对抗证据，提示单层消融。
+- 坑：DatabaseSync（Node 24.22）**无 `.transaction()`**（类型库有签名、运行时没有）——改显式 BEGIN/COMMIT/ROLLBACK。
+
+### 第三批（R7/R9/R10/R11）
+
+- **R7**：`surfaceArtifactsOf`（memory 面=条目 JSON／tool_guidance 面=覆盖片段）＋`markSurfaceApplied`（`appliedVia: 'via-surface'` 三态）＋GET/POST 端点。导出不直写（advisory 面无写盘授权，人审后由既有管理面应用）。
+- **R9**：`Proposal.skillDifferential` 字段＋双 warning（`skill_undifferentiated` 未测／`skill_negative_delta` 负差分=负担技能）。
+- **R10**：`EvalSet.family` 字段＋overview 族聚合（familyGains：族→平均增益）＋`family_specialization` 警示（面级均增益>0 而某族<0）。
+- **R11**：`HARNESS2_STORE_SQLITE=1` 渐进切 SQLite（四表＋显式事务＋旧 JSON 一次性迁移改名 .migrated＋auto_jobs 任务态落盘/孤儿查询）。**落地实测抓出列名混用 bug**：INSERT 模板串内插 JSON 字段名当列名（updatedAt≠updated_at），静默 catch 吞掉——修复后迁移往返全绿；catch 改为 console.warn 不再全静默。
+
 ## 验证
 
 - 每件独立 vitest 套件（上列验收）；`npm run typecheck:harness`；全量 `npm test` 收口。

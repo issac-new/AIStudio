@@ -249,7 +249,45 @@ export function overview(): {
     proposals: proposals.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)).slice(0, 50),
     champions: store.champions,
     experiences,
-    evolution: evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions),
+    evolution: (() => {
+      const report = evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions)
+      // R10（2026-10-31 三批）：任务族聚合增益（HCAST 范式）——族→平均增益＋背离警示。
+      // family 标签来自 eval 集登记（EvalSet.family），探测证据带 setId 可溯源。
+      const familyDeltas = new Map<string, number[]>()
+      for (const p2 of store.proposals) {
+        for (const probe of p2.probes) {
+          if (probe.status !== 'recorded' || probe.contrast?.passAt1Delta == null) continue
+          const set = getSet(probe.evidence?.setId ?? '')
+          const fam = set?.family
+          if (!fam) continue
+          const arr = familyDeltas.get(fam) ?? []
+          arr.push(probe.contrast.passAt1Delta)
+          familyDeltas.set(fam, arr)
+        }
+      }
+      const familyGains = [...familyDeltas.entries()].map(([family, deltas]) => ({
+        family,
+        avgDelta: Number((deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(4)),
+        rounds: deltas.length,
+      }))
+      // 背离警示：面级平均增益>0 而某族平均<0 → 该面在该族退化（单任务特化信号）
+      const warnings = [...report.healthWarnings]
+      for (const s of report.surfaces) {
+        const live = s.timeline.filter((r) => !r.rolledBack && r.passAt1Delta != null)
+        if (live.length === 0) continue
+        const surfaceAvg = live.reduce((a, r) => a + (r.passAt1Delta ?? 0), 0) / live.length
+        for (const fg of familyGains) {
+          if (fg.rounds >= 2 && surfaceAvg > 0 && fg.avgDelta < 0) {
+            warnings.push({
+              surfaceKey: s.surfaceKey,
+              code: 'family_specialization' as const,
+              detail: `面级平均增益 +${(surfaceAvg * 100).toFixed(1)}pp 但族「${fg.family}」平均 ${ (fg.avgDelta * 100).toFixed(1)}pp（${fg.rounds} 次探测）——增益可能来自单任务特化（R10）`,
+            })
+          }
+        }
+      }
+      return { ...report, familyGains, healthWarnings: warnings }
+    })(),
     archive: proposalArchive(store.proposals),
     memoryPolicy: memoryConsolidationPolicy(store.experiences),
     meta: {
@@ -954,6 +992,57 @@ export async function createGapDrivenProposals(limit = 5): Promise<ProposalView[
     }
   }
   return created
+}
+
+/**
+ * R7（2026-10-31 三批执行）：advisory 面冠军的结构化建议产物导出。
+ * memory 面＝经验条目清单 JSON（供既有记忆管理面人审导入）；tool_guidance 面＝
+ * 工具描述覆盖片段（供 tool contract 面人审应用）。只导出不直写——advisory 面无写盘授权。
+ */
+export function surfaceArtifactsOf(id: string): { surfaceKey: SurfaceKey; kind: string; payload: string } | null {
+  const store = readStore()
+  const p2 = store.proposals.find((x) => x.id === id)
+  if (!p2 || p2.status !== 'promoted') return null
+  const selected = composedVariant(p2)
+  if (!selected) return null
+  if (p2.surfaceKey === 'memory') {
+    // memory 面：候选内容按行拆条目（每行一条记忆建议）
+    const lines = variantContent(selected).split('\n').map((l) => l.trim()).filter((l) => l.length > 0)
+    return {
+      surfaceKey: 'memory',
+      kind: 'memory-items',
+      payload: JSON.stringify({ source: id, items: lines.map((text, i) => ({ id: `mem-${id}-${i}`, text })) }, null, 2),
+    }
+  }
+  if (p2.surfaceKey === 'tool_guidance') {
+    return {
+      surfaceKey: 'tool_guidance',
+      kind: 'tool-guidance-override',
+      payload: variantContent(selected),
+    }
+  }
+  return null
+}
+
+/**
+ * R7：标记某晋级的建议产物已由既有管理面应用（人审后调用）。
+ * applied=false 的 advisory 面冠军从此有了可追踪的应用通道；回读验证＝
+ * 下一轮提案基线即新产物生效态（面板提示用户新建验证提案）。
+ */
+export async function markSurfaceApplied(id: string, actor: string): Promise<ProposalView> {
+  const who = String(actor ?? '').trim()
+  if (!who) throw new ServiceError(400, '标记应用必须记录操作人')
+  return mutateStore((store) => {
+    const p2 = requireProposal(store, id)
+    if (p2.status !== 'promoted') throw new ServiceError(409, `当前状态 ${p2.status} 不可标记应用`)
+    if (!['memory', 'tool_guidance'].includes(p2.surfaceKey)) {
+      throw new ServiceError(400, `面 ${p2.surfaceKey} 不在 R7 执行回路范围（memory/tool_guidance）`)
+    }
+    if (!p2.promotion) throw new ServiceError(409, '晋级记录缺失')
+    p2.promotion.appliedVia = 'via-surface'
+    p2.updatedAt = nowIso()
+    return view(store, p2)
+  })
 }
 
 export async function composeProposal(

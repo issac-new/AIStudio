@@ -604,7 +604,22 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
           }
         }
 
-        // ---- R6 heldout 门（2026-10-31 二批）：独立新验证数据的准入规则（2610.18813） ----
+        // ---- R9 技能差分（2026-10-31 三批）：「装了但不知有没有用」----
+    // Agent Skills Can Be Harmful（2608.11888）实证 307 例技能诱导失效；
+    // skills 面晋级无差分读数 → warning（差分＝有/无技能同集增益差，人工绑定或后续自动编排）。
+    if (proposal.surfaceKey === 'skills' && proposal.skillDifferential == null) {
+      warnings.push({
+        code: 'skill_undifferentiated',
+        message: 'skills 面晋级未绑定技能差分读数——「看似相关」技能可致功能失效（307 例实证）；建议对同一探测集跑有技能/无技能两态对比',
+      })
+    } else if (proposal.surfaceKey === 'skills' && proposal.skillDifferential?.delta != null && proposal.skillDifferential.delta <= 0) {
+      warnings.push({
+        code: 'skill_negative_delta',
+        message: `技能差分为 ${(proposal.skillDifferential.delta * 100).toFixed(1)}pp（无技能反而更好）——该技能可能是负担（过度验证/重型流水线失效模式）`,
+      })
+    }
+
+    // ---- R6 heldout 门（2026-10-31 二批）：独立新验证数据的准入规则（2610.18813） ----
       if (gain != null && gain > 0) {
         if (proposal.heldout == null) {
           const msg = '未绑定密封留出集读数（R6）：晋级证据缺独立新验证数据——留出集防进化环过拟合'
@@ -1327,6 +1342,7 @@ export function evolutionReport(
     healthWarnings: surfaces
       .filter((s) => s.weakVerificationStreak >= 3)
       .map((s) => ({ surfaceKey: s.surfaceKey, code: 'weak_verification_streak' as const, streak: s.weakVerificationStreak })),
+    familyGains: [], // service 层 overview 后处理补（loop 纯函数层拿不到 EvalSet.family）
     retirementCandidates: retirementCandidates(surfaces),
   }
 }

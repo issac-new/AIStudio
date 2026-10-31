@@ -8,7 +8,7 @@ import { collectSurfaces } from './surface-registry'
 import {
   ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
   createProbes, createProposal, decideProposal, deleteProposal, importExperiences, listExperiences,
-  attachHeldout, createGapDrivenProposals, listProposals, overview, promoteProposal, recordConstraints, recordProbe, rollbackProposal, setExperienceStatus,
+  attachHeldout, createGapDrivenProposals, listProposals, markSurfaceApplied, surfaceArtifactsOf, overview, promoteProposal, recordConstraints, recordProbe, rollbackProposal, setExperienceStatus,
   startAutoProbe, submitProposal, suggestProposal,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
@@ -223,6 +223,25 @@ router.post('/proposals/:id/probes/:probeId/record', async (ctx) => {
         actor: actorOf(ctx, b),
       }),
     }
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// R7（2026-10-31 三批）：advisory 面建议产物导出＋人审应用标记。
+router.get('/proposals/:id/surface-artifacts', async (ctx) => {
+  try {
+    ctx.body = { ok: true, artifacts: surfaceArtifactsOf(ctx.params.id) }
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+router.post('/proposals/:id/surface-applied', async (ctx) => {
+  if (writeDenied(ctx)) return
+  const b = bodyOf(ctx)
+  try {
+    ctx.body = { ok: true, proposal: await markSurfaceApplied(ctx.params.id, actorOf(ctx, b)) }
   } catch (e) {
     fail(ctx, e)
   }
