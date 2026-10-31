@@ -15,7 +15,7 @@ from tools import kanban_tools as grant_tools
 
 _REPO = Path(__file__).resolve().parents[3]
 _VECTOR = json.loads(
-    (_REPO / "custom/server/approvals/__tests__/fixtures/decision-grant-revision.json").read_text(
+    (_REPO / "custom/server/approval-inbox/__tests__/fixtures/decision-grant-revision.json").read_text(
         encoding="utf8"
     )
 )
