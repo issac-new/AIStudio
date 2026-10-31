@@ -59,16 +59,15 @@ describe('S3 上游挂载点 patch 524 守门（997faa70 收敛删 522 后复活
   })
 
   it('connections 社媒 app + ESP32 mcu tab 被 features.connectionsExtras 套住', () => {
-    expect(patch.match(/v-if="features\.connectionsExtras" name="app"/g)).toHaveLength(1)
-    expect(patch.match(/v-if="features\.connectionsExtras" name="mcu"/g)).toHaveLength(1)
+    // 2026-10-31 v0.8.0 升级轮：补丁文本断言改注入态树断言（同 702 守门理由）
+    const tree = readOverlay('vendor/hermes-studio/packages/client/src/components/hermes/connections/ConnectionsPanel.vue')
+    expect(tree.match(/v-if="features\.connectionsExtras" name="app"/g)).toHaveLength(1)
+    expect(tree.match(/v-if="features\.connectionsExtras" name="mcu"/g)).toHaveLength(1)
   })
 
   it('ConnectionsPanel 段落必须自带 features 导入（模板引用而缺导入=整页渲染崩+导航冻结，2026-10-03 回归实锤）', () => {
-    const section = patch.slice(
-      patch.indexOf('--- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue'),
-      patch.indexOf('--- a/packages/client/src/views/hermes/ModelsView.vue'),
-    )
-    expect(section).toContain("import { features } from '@/custom/features'")
+    const tree = readOverlay('vendor/hermes-studio/packages/client/src/components/hermes/connections/ConnectionsPanel.vue')
+    expect(tree).toContain("import { features } from '@/custom/features'")
   })
 })
 

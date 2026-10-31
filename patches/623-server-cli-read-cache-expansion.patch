@@ -1,7 +1,7 @@
 diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -32,6 +32,12 @@
+@@ -35,6 +35,12 @@ import { profileRoutes } from '../modules/hermes/routes/profiles'
  // overlay[perf]（2026-09-30 性能批）：CLI 读端点缓存中间件（GET 白名单 TTL +
  // 非 GET 失效；挂载位置见下方 profileRoutes / fleetRouter 之前）
  import { profileReadCache, kanbanReadCache } from '../custom/middleware/kanban-read-cache'
@@ -14,7 +14,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
  // overlay[perf]（2026-09-30 性能批二轮）：快道库根解析用（见 initCommandPost）
  import { homedir } from 'node:os'
  import { join } from 'node:path'
-@@ -344,13 +350,20 @@
+@@ -424,13 +430,20 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    // 任一非 GET /api/hermes/profiles* 落定即全量失效（见 custom/server/middleware/
    // kanban-read-cache.ts profileReadCache）。
    app.use(profileReadCache)
@@ -35,7 +35,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
    app.use(pluginRoutes.routes())
    app.use(memoryRoutes.routes())
    app.use(modelRoutes.routes())
-@@ -376,6 +389,10 @@
+@@ -456,6 +469,10 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    // 仅在同 router 有匹配路由时才执行，fleetRouter 无 boards 等路由故拦不住，
    // 最小复现实证）；须在 fleetRouter/kanbanRoutes 之前、鉴权之后（键含用户）。
    // boards/stats/assignees 实测 4.4-5.6s/个（CLI 子进程），页面一次并发 4-5 个。
@@ -46,7 +46,7 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
    app.use(kanbanReadCache)
    app.use(commandPost.fleetRouter.routes())      // overlay[command-post]: 舰队/看板聚合/团队（须先于 kanbanRoutes 挂载：/api/hermes/kanban/overview 否则被上游 /api/hermes/kanban/:id 抢答 404，聚合端点失效触发客户端 N+1 风暴）
    app.use(kanbanRoutes.routes())
-@@ -387,7 +404,11 @@
+@@ -467,7 +484,11 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    app.use(mediaRoutes.routes())
    app.use(performanceMonitorRoutes.routes())
    app.use(journeyRoutes.routes())

@@ -1,8 +1,7 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index b2bd1f46b..e6203c863 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
-@@ -524,7 +524,8 @@ export async function bootstrap() {
+@@ -521,7 +521,8 @@ export async function bootstrap() {
    app.use(createStaticCompressionMiddleware())
  
    // Serve element-web static files at /element-web/*

@@ -1,5 +1,4 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
-index ae8d52224..2cfef9baf 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
 @@ -20,6 +20,8 @@ import { dshPluginUi } from '../modules/coding-agents/services'
@@ -11,8 +10,8 @@ index ae8d52224..2cfef9baf 100644
  import { setChatRunServer } from '../modules/studio/public/chat-run'
  import { GroupChatServer } from '../modules/studio/public/group-chat'
  import {
-@@ -720,6 +722,9 @@ export async function bootstrap() {
-   petStateSocketServer.init()
+@@ -731,6 +733,9 @@ export async function bootstrap() {
+   additionalShutdownSteps.push({ name: 'Person presence', close: () => personPresenceServer.close() })
    registerDesktopBrowserRelay(activeGroupChatServer.getIO())
  
 +  // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.

@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -1,6 +1,6 @@
+@@ -2,7 +2,7 @@ import { lowestReasoningEffort } from '../../../../../shared/reasoning-effort'
+ import { studioModelReasoningEffort } from '../../studio/public/model-reasoning-effort'
  import type { CodingAgentDefinition, CodingAgentConfigFileDefinition } from '../contracts/definition'
  import { TOOL_DEFINITIONS, CONFIG_FILE_DEFINITIONS } from './registry/definitions'
 -import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, openCodeRuntimeEnv, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID } from './opencode/config'
@@ -9,7 +10,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
  import { prepareOpenCodeBaseConfig } from './opencode/runtime-config'
  import { prepareZcodeGlobalModel } from './zcode/runtime-config'
  import { NATIVE_CODING_AGENTS, prepareNativeScopedRuntime, nativeScopedUsesChatCompletions, checkNativeCodingAgentEnvironment, checkNativeCodingAgentPlatform } from './registry/native-agents'
-@@ -34,6 +34,7 @@
+@@ -35,6 +35,7 @@ import { PROVIDER_PRESETS, assertProviderAvailable, isRetiredProvider } from '..
  import { getModelContextLength, getModelRuntimeCapabilities } from '../../studio/public/provider-runtime'
  import { getSystemPrompt, studioMcpUsageGuidelines } from '../../studio/public/runs/prompt'
  import { codingAgentRunManager } from './runtime/run-manager'
@@ -17,7 +18,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
  import { mergePiSettings, userSettingsProvidesPiMcpAdapter } from './pi/settings'
  import { ANTIGRAVITY_DEFAULT_SETTINGS, ANTIGRAVITY_INSTALL_URL, prepareAntigravityRuntime, validateAntigravitySettings } from './antigravity/config'
  import { CURSOR_DEFAULT_SETTINGS, cursorSettingsPath, validateCursorSettings } from './cursor/settings'
-@@ -786,7 +787,7 @@
+@@ -786,7 +787,7 @@ function storedCodingAgentMode(session: HermesSessionRow | null): 'scoped' | 'gl
    return session?.provider === 'global' ? 'global' : 'scoped'
  }
  
@@ -26,7 +27,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
    if (isNativeCodingAgent(id)) return id
    if (id === 'codex') return 'codex'
    if (id === 'pi') return 'pi'
-@@ -794,6 +795,7 @@
+@@ -794,6 +795,7 @@ function persistedAgentId(id: string): 'claude' | 'codex' | 'pi' | 'grok' | 'ope
    if (id === 'dsh') return 'dsh'
    if (id === 'opencode') return 'opencode'
    if (id === 'antigravity') return 'antigravity'
@@ -34,7 +35,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
    if (id === 'cursor') return 'cursor'
    return 'claude'
  }
-@@ -1138,7 +1140,7 @@
+@@ -1134,7 +1136,7 @@ function managedHermesMcpServerConfig(
      if (env?.[HERMES_MCP_MANAGED_ENV_KEY] === '1') {
        server.env = { ...env, HERMES_MCP_SERVER_NAME: serverName, HERMES_MCP_USER_CLARIFICATION: '1' }
      }
@@ -43,7 +44,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
      if (agentId === 'dsh') server.toolCallTimeoutMs = Math.max(360_000, Number(server.toolCallTimeoutMs) || 0)
    }
    return server
-@@ -1649,7 +1759,7 @@
+@@ -1763,7 +1765,7 @@ export function getCodingAgentManagedMcpServerConfigs(
          ...(disabledManaged.has(item.name) ? { enabled: false } : {}),
        }]
      }
@@ -52,7 +53,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
        return [item.name, opencodeMcpServerConfig(server, !disabledManaged.has(item.name))]
      }
      return [item.name, {
-@@ -2004,12 +2114,102 @@
+@@ -2145,12 +2147,102 @@ async function ensurePiScopedBaseConfigFiles(scope: Required<CodingAgentConfigSc
    }
  }
  
@@ -148,19 +149,19 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
 +    configDir: rootDir,
 +    databasePath: join(rootDir, familyVars.databaseFile),
 +    runtimeConfig: launcherRuntimeConfig,
-   })
++  })
 +  const launcherFile = await writeLauncherScript({
 +    rootDir,
 +    workspaceDir,
 +    env,
 +    command: family,
 +    args: [],
-+  })
+   })
 +  return { rootDir, memoryFile, promptFile, configFile, launcherFile, launcherRuntimeConfig }
  }
  
  function buildLaunchShellCommand(input: {
-@@ -2544,7 +2744,7 @@
+@@ -2674,7 +2766,7 @@ export function withCodingAgentRegistry(id: CodingAgentId, args: string[]): stri
    // DSH's native dependencies share a process-wide FFI type registry; duplicate
    // copies can crash plugin startup after an otherwise successful npm update.
    const installOptions = id === 'dsh' && args[0] === 'install' ? ['--prefer-dedupe'] : []
@@ -169,7 +170,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
      ? [...args, ...installOptions, `--registry=${OFFICIAL_NPM_REGISTRY}`]
      : [...args]
  }
-@@ -2911,7 +3111,7 @@
+@@ -3041,7 +3133,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope:
        )
        : id === 'grok' && key === 'settings'
          ? grokSettingsConfig(sourceContent)
@@ -178,7 +179,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
            ? openCodeSettingsConfig(sourceContent)
          : sourceContent
      return {
-@@ -2930,7 +3130,7 @@
+@@ -3060,7 +3152,7 @@ export async function readCodingAgentConfigFile(id: string, key: string, scope:
        : id === 'cursor' && key === 'settings' ? CURSOR_DEFAULT_SETTINGS
        : id === 'pi'
          ? piLiveConfigDefault(key, normalizedScope.profile) || ''
@@ -187,7 +188,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
            ? '{}\n'
            : id === 'dsh' && key === 'settings' ? '{}\n'
              : id === 'dsh' && key === 'mcp' ? '[]\n'
-@@ -2967,7 +3167,7 @@
+@@ -3097,7 +3189,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
      persistedContent = key === 'mcp'
        ? mergeGrokUserMcpConfig(existingContent, persistedContent)
        : mergeGrokSettingsConfig(existingContent, persistedContent)
@@ -196,7 +197,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
      const existingContent = await safeReadFile(definition.absolutePath) || '{}'
      persistedContent = mergeOpenCodeSettingsConfig(existingContent, persistedContent)
    }
-@@ -2995,7 +3195,7 @@
+@@ -3125,7 +3217,7 @@ export async function writeCodingAgentConfigFile(id: string, key: string, conten
          )
        : id === 'grok' && key === 'settings'
          ? grokSettingsConfig(persistedContent)
@@ -205,7 +206,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
            ? openCodeSettingsConfig(persistedContent)
          : content,
      exists: true,
-@@ -3187,17 +3387,18 @@
+@@ -3330,17 +3422,18 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
        files = prepared.files
        args = prepared.args
        env = {}
@@ -229,7 +230,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
        })
        const launcherFile = await writeLauncherScript({
          rootDir,
-@@ -3209,7 +3410,7 @@
+@@ -3352,7 +3445,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
        files = [
          { key: 'agents', path: 'AGENTS.md', absolutePath: prepared.memoryFile },
          { key: 'prompt', path: 'hermes-rules.md', absolutePath: promptFile },
@@ -238,7 +239,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
          {
            key: 'launcher',
            path: process.platform === 'win32' ? WINDOWS_LAUNCHER_FILE : POSIX_LAUNCHER_FILE,
-@@ -3679,11 +3880,13 @@
+@@ -3829,11 +3922,13 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
            chatSessionId: isolatedInput.sessionId,
          })
        : null
@@ -255,7 +256,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
        studioMcpTokenFile: input.studioMcpTokenFile,
        provider,
        model,
-@@ -3693,12 +3896,12 @@
+@@ -3843,12 +3938,12 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
      })
      await writeFile(configPath, runtimeConfig, 'utf-8')
      files.push(
@@ -271,7 +272,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
        runtimeConfig,
        apiKey: proxyTarget?.token || apiKey,
      })
-@@ -3753,7 +3956,7 @@
+@@ -3903,7 +3998,7 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
        ? join(rootDir, 'hermes-rules.md')
        : tool.id === 'grok' || tool.id === 'dsh'
          ? join(rootDir, 'AGENTS.md')
@@ -280,7 +281,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
            ? join(rootDir, 'AGENTS.md')
          : undefined,
      reasoningEffort,
-@@ -3818,10 +4021,10 @@
+@@ -3968,10 +4063,10 @@ async function startCodingAgentRunInternal(
      isolateSettings: true,
      piOutputMode: id === 'pi' ? 'rpc' : undefined,
    })
@@ -294,7 +295,6 @@ diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packa
        : id === 'pi'
          ? join(launch.rootDir, 'mcp.json')
          : '')
-
 diff --git a/packages/server/src/modules/coding-agents/services/mimo/definition.ts b/packages/server/src/modules/coding-agents/services/mimo/definition.ts
 new file mode 100644
 --- /dev/null
@@ -320,7 +320,6 @@ new file mode 100644
 +  { key: 'config', path: `~/.config/mimocode/${OPENCODE_FAMILY_VARS.mimo.configFileName}`, scopedPath: OPENCODE_FAMILY_VARS.mimo.configFileName, language: 'json' },
 +  { key: 'agents', path: '~/.config/mimocode/AGENTS.md', scopedPath: 'AGENTS.md', language: 'markdown' },
 +]
-
 diff --git a/packages/server/src/modules/coding-agents/services/opencode-family.ts b/packages/server/src/modules/coding-agents/services/opencode-family.ts
 new file mode 100644
 --- /dev/null
@@ -387,11 +386,10 @@ new file mode 100644
 +export function isOpenCodeFamily(id: string): id is OpenCodeFamilyId {
 +  return (OPENCODE_FAMILY_IDS as readonly string[]).includes(id)
 +}
-
 diff --git a/packages/server/src/modules/coding-agents/services/opencode/chat-turn.ts b/packages/server/src/modules/coding-agents/services/opencode/chat-turn.ts
 --- a/packages/server/src/modules/coding-agents/services/opencode/chat-turn.ts
 +++ b/packages/server/src/modules/coding-agents/services/opencode/chat-turn.ts
-@@ -6,6 +6,7 @@
+@@ -6,6 +6,7 @@ import type { OpenCodeTurnHost } from './turn-host'
  import { logger } from '../../../studio/public/logging'
  import { updateManagedPromptFileSync } from '../prompt-file'
  import { isolatedCodingAgentChildEnv } from '../runtime/child-env'
@@ -399,7 +397,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/opencode/chat-tu
  
  export function startOpenCodeTurn(
    run: ManagedCodingAgentRun,
-@@ -15,7 +16,9 @@
+@@ -15,7 +16,9 @@ export function startOpenCodeTurn(
    host: OpenCodeTurnHost,
  ) {
    if (host.isRunning(run.currentChild)) {
@@ -410,7 +408,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/opencode/chat-tu
    }
  
    const responseId = `resp_${Date.now()}`
-@@ -39,11 +42,14 @@
+@@ -39,11 +42,14 @@ export function startOpenCodeTurn(
    })
  
    if (run.launch.promptFile) updateManagedPromptFileSync(run.launch.promptFile, systemPrompt)
@@ -426,11 +424,10 @@ diff --git a/packages/server/src/modules/coding-agents/services/opencode/chat-tu
      '--thinking',
      ...run.launch.args,
      ...(run.launch.agentNativeSessionId && run.nativeResumeReady
-
 diff --git a/packages/server/src/modules/coding-agents/services/registry/definitions.ts b/packages/server/src/modules/coding-agents/services/registry/definitions.ts
 --- a/packages/server/src/modules/coding-agents/services/registry/definitions.ts
 +++ b/packages/server/src/modules/coding-agents/services/registry/definitions.ts
-@@ -12,6 +12,7 @@
+@@ -12,6 +12,7 @@ import { CODEX_DEFINITION, CODEX_CONFIG_FILES } from '../codex/definition'
  import { PI_DEFINITION, PI_CONFIG_FILES } from '../pi/definition'
  import { GROK_CODING_AGENT_DEFINITION, GROK_CODING_AGENT_CONFIG_FILES } from '../grok/definition'
  import { OPENCODE_DEFINITION, OPENCODE_CONFIG_FILES } from '../opencode/definition'
@@ -438,7 +435,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/registry/definit
  import { DSH_DEFINITION, DSH_CONFIG_FILES } from '../dsh/definition'
  import { CURSOR_DEFINITION, CURSOR_CONFIG_FILES } from '../cursor/definition'
  import { NATIVE_CODING_AGENTS } from './native-agents'
-@@ -24,6 +25,7 @@
+@@ -24,6 +25,7 @@ export const TOOL_DEFINITIONS: CodingAgentDefinition[] = [
    PI_DEFINITION,
    GROK_CODING_AGENT_DEFINITION,
    OPENCODE_DEFINITION,
@@ -446,7 +443,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/registry/definit
    DSH_DEFINITION,
    CURSOR_DEFINITION,
  ]
-@@ -41,6 +43,7 @@
+@@ -41,6 +43,7 @@ export const CONFIG_FILE_DEFINITIONS: Record<CodingAgentRuntime, CodingAgentConf
    pi: PI_CONFIG_FILES,
    grok: GROK_CODING_AGENT_CONFIG_FILES,
    opencode: OPENCODE_CONFIG_FILES,
@@ -454,11 +451,10 @@ diff --git a/packages/server/src/modules/coding-agents/services/registry/definit
    dsh: DSH_CONFIG_FILES,
    cursor: CURSOR_CONFIG_FILES,
  }
-
 diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
 --- a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
 +++ b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
-@@ -9,6 +9,7 @@
+@@ -9,6 +9,7 @@ import { startDshChatTurn } from '../dsh/chat-turn'
  import { agentUpdateLocked, noteAgentActivity } from '../update-lock'
  import { dirname, join } from 'path'
  import { existsSync, accessSync, chmodSync, constants as fsConstants, readFileSync, writeFileSync } from 'fs'
@@ -466,7 +462,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
  import { homedir } from 'os'
  import { spawn, type ChildProcess } from 'child_process'
  import { createSession, addMessage, getSession, updateSession, updateSessionStats } from '../../../studio/public/sessions'
-@@ -362,10 +363,10 @@
+@@ -362,10 +363,10 @@ function truncateCodingAgentToolOutputEvent(event: CanonicalResponsesEvent): Can
  }
  
  function isPrintAgent(agentId: string): boolean {
@@ -479,7 +475,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
    if (isNativeCodingAgent(agentId)) return agentId
    if (agentId === 'codex') return 'codex'
    if (agentId === 'pi') return 'pi'
-@@ -373,11 +374,12 @@
+@@ -373,11 +374,12 @@ function persistedCodingAgent(agentId: string): 'claude' | 'codex' | 'pi' | 'gro
    if (agentId === 'dsh') return 'dsh'
    if (agentId === 'opencode') return 'opencode'
    if (agentId === 'antigravity') return 'antigravity'
@@ -493,7 +489,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
    if (isNativeCodingAgent(agentId)) return agentId
    if (agentId === 'codex') return 'codex'
    if (agentId === 'pi') return 'pi'
-@@ -385,6 +387,7 @@
+@@ -385,6 +387,7 @@ export function usageCodingAgent(agentId: string): 'claude_code' | 'codex' | 'pi
    if (agentId === 'dsh') return 'dsh'
    if (agentId === 'opencode') return 'opencode'
    if (agentId === 'antigravity') return 'antigravity'
@@ -501,7 +497,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
    if (agentId === 'cursor') return 'cursor'
    return 'claude_code'
  }
-@@ -418,11 +421,12 @@
+@@ -418,11 +421,12 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
        return false
      }
    }
@@ -517,7 +513,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
        return config.includes('"ekko-studio-api"') && config.includes('"ekko-studio-use"') && config.includes('"ekko-studio-interaction"')
      } catch {
        return false
-@@ -548,7 +552,7 @@
+@@ -548,7 +552,7 @@ function codingAgentDisplayName(agentId: string): string {
    if (agentId === 'codex') return 'Codex'
    if (agentId === 'pi') return 'Pi'
    if (agentId === 'grok') return 'Grok'
@@ -526,7 +522,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
    if (agentId === 'dsh') return 'DeepSeek Harness'
    return 'Claude Code'
  }
-@@ -800,8 +804,8 @@
+@@ -801,8 +805,8 @@ export class CodingAgentRunManager {
            ? 'Pi'
            : launch.agentId === 'grok'
              ? 'Grok'
@@ -537,7 +533,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
              : launch.agentId === 'dsh'
                ? 'DeepSeek Harness'
              : launch.agentId === 'antigravity'
-@@ -940,7 +944,7 @@
+@@ -941,7 +945,7 @@ export class CodingAgentRunManager {
        this.startDshTurn(run, text, systemPrompt, images)
        return { runId: run.id, messageId }
      }
@@ -546,7 +542,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
        this.startOpenCodeTurn(run, text, systemPrompt, images)
        return { runId: run.id, messageId }
      }
-@@ -1233,7 +1237,7 @@
+@@ -1253,7 +1257,7 @@ export class CodingAgentRunManager {
        // for transport and usage accounting only.
        return
      }
@@ -555,7 +551,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
        // Native JSON/ACP stdout is the authoritative turn stream. A single
        // turn can contain several provider requests, so treating each
        // proxy response.completed event as the turn boundary duplicates output
-@@ -1299,7 +1303,7 @@
+@@ -1319,7 +1323,7 @@ export class CodingAgentRunManager {
      if (isTerminalEvent) {
        run.assistantMessageId = this.persistTerminalResponse(run)
        const final = (storageSafeResponseEvent.data as any).response || storageSafeResponseEvent.data
@@ -564,7 +560,7 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
          this.captureUsage(run, () => {
            const rows = (run.nativeUsage || new NativeTurnUsage()).rows(run.launch.agentId, final?.usage, final?.model || run.launch.model)
            this.recordNativeUsage(run, rows, final?.id || run.printResponseId || run.runMarker || run.id)
-@@ -3074,7 +3078,7 @@
+@@ -3097,7 +3101,7 @@ export class CodingAgentRunManager {
      return {
        spawn: spawnCodingAgentChild, isRunning: childIsRunning, terminate: terminateChildProcess,
        processError: error => childProcessErrorMessage(error, run.launch.agentId),
@@ -573,7 +569,6 @@ diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-mana
        errorMessage: responseErrorMessage, sanitizeOutput: sanitizeCodingAgentTerminalOutput,
        appendedTextDelta, truncateToolOutput: truncateCodingAgentToolOutputForStorage,
        touch: () => this.touch(run), line: line => this.handleOpenCodeLine(run, line),
-
 diff --git a/packages/server/src/modules/studio/contracts/agents/runtime.ts b/packages/server/src/modules/studio/contracts/agents/runtime.ts
 --- a/packages/server/src/modules/studio/contracts/agents/runtime.ts
 +++ b/packages/server/src/modules/studio/contracts/agents/runtime.ts
@@ -589,7 +584,7 @@ diff --git a/packages/server/src/modules/studio/contracts/agents/runtime.ts b/pa
  
  const AGENT_RUNTIME_SET = new Set<string>(AGENT_RUNTIMES)
  
-@@ -16,6 +16,7 @@
+@@ -16,6 +16,7 @@ const RUNTIME_FAMILIES: Record<AgentRuntime, AgentFamily> = {
    grok: 'coding',
    opencode: 'coding',
    dsh: 'coding',
@@ -597,11 +592,10 @@ diff --git a/packages/server/src/modules/studio/contracts/agents/runtime.ts b/pa
    cursor: 'coding',
    antigravity: 'coding',
    qwen: 'coding',
-
 diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/packages/server/src/modules/studio/contracts/runs/session.ts
 --- a/packages/server/src/modules/studio/contracts/runs/session.ts
 +++ b/packages/server/src/modules/studio/contracts/runs/session.ts
-@@ -175,7 +175,7 @@
+@@ -180,7 +180,7 @@ export interface SessionState {
    queueInsertion?: QueueInsertionControl
    responseRun?: ResponseRunState
    source?: ChatRunSource
@@ -610,7 +604,7 @@ diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/pack
    webhookRoomId?: string
    webhookWorkflowId?: string
    webhookWorkflowNodeId?: string
-@@ -223,7 +223,7 @@
+@@ -228,7 +228,7 @@ export interface BridgeContextState {
  }
  
  export type ChatRunSource = 'api_server' | 'cli' | 'coding_agent' | 'builtin_agent' | 'global_agent' | 'workflow' | 'group_chat'
@@ -619,9 +613,7 @@ diff --git a/packages/server/src/modules/studio/contracts/runs/session.ts b/pack
  
  export interface BridgeCompressionResult {
    messages: ChatMessage[]
-
 diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts b/packages/server/src/modules/studio/public/agent-status-registry.ts
-
 --- a/packages/server/src/modules/studio/public/agent-status-registry.ts
 +++ b/packages/server/src/modules/studio/public/agent-status-registry.ts
 @@ -1,4 +1,4 @@
@@ -630,7 +622,7 @@ diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts 
  
  export type AgentStatusSource =
    | 'managed-runtime'
-@@ -46,7 +46,7 @@ export interface AgentAvailabilitySnapshot {
+@@ -47,7 +47,7 @@ export interface AgentAvailabilitySnapshot {
    agents: AgentAvailabilityRecord[]
  }
  
@@ -642,7 +634,7 @@ diff --git a/packages/server/src/modules/studio/public/agent-status-registry.ts 
 diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b/packages/server/src/modules/studio/services/agent-availability.ts
 --- a/packages/server/src/modules/studio/services/agent-availability.ts
 +++ b/packages/server/src/modules/studio/services/agent-availability.ts
-@@ -14,6 +14,7 @@
+@@ -14,6 +14,7 @@ const AGENT_ALIASES: Record<string, AgentStatusId> = {
    grok: 'grok',
    opencode: 'opencode',
    dsh: 'dsh',
@@ -650,7 +642,7 @@ diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b
    cursor: 'cursor',
    antigravity: 'antigravity',
    qwen: 'qwen',
-@@ -33,6 +34,7 @@
+@@ -33,6 +34,7 @@ const AGENT_NAMES: Record<AgentStatusId, string> = {
    pi: 'Pi',
    grok: 'Grok',
    opencode: 'OpenCode',
@@ -658,11 +650,10 @@ diff --git a/packages/server/src/modules/studio/services/agent-availability.ts b
    dsh: 'DeepSeek Harness',
    cursor: 'Cursor',
    antigravity: 'Antigravity',
-
 diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 --- a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
 +++ b/packages/server/src/modules/studio/services/usage/usage-recorder.ts
-@@ -25,7 +25,7 @@
+@@ -33,7 +33,7 @@ export interface RecordSessionUsageInput {
    /** Model request duration in seconds, excluding tool execution. */
    apiDuration?: number
    source: 'hermes' | 'coding_agent' | 'ekko_agent' | 'model_api'
@@ -671,11 +662,10 @@ diff --git a/packages/server/src/modules/studio/services/usage/usage-recorder.ts
    profile?: string | null
    model?: string | null
    provider?: string | null
-
 diff --git a/packages/server/src/modules/studio/services/webhooks/envelope.ts b/packages/server/src/modules/studio/services/webhooks/envelope.ts
 --- a/packages/server/src/modules/studio/services/webhooks/envelope.ts
 +++ b/packages/server/src/modules/studio/services/webhooks/envelope.ts
-@@ -6,7 +6,7 @@
+@@ -7,7 +7,7 @@ export const CHAT_WEBHOOK_SCHEMA_VERSION = 1
  export const MAX_WEBHOOK_CONTENT_BYTES = 64 * 1024
  
  export type ChatRunWebhookSource = 'chat' | 'api_server' | 'cli' | 'coding_agent' | 'builtin_agent' | 'global_agent' | 'workflow' | 'group_chat'

@@ -83,7 +83,7 @@
 144-server-bridge-stderr-capture.patch
 146-bridge-agent-root-optional-default.patch
 148-package-runtime-run-agent-check.patch
-150-updater-no-auto-install-on-quit.patch
+# 150（0.8.0 升级轮退役：上游已内置 autoInstallOnAppQuit=false；原件 .archived-patches/2026-10-31-v080/）
 153-bridge-import-fallback-for-missing-run-agent.patch
 154-cli-shim-powershell-encoded-command.patch
 155-gateway-windows-http-health-fallback.patch
@@ -112,7 +112,6 @@
 194-server-terminal-session-cap.patch
 195-server-chatrun-fleet-tap.patch
 196-server-routes-command-post.patch
-197-server-http-command-post-ws.patch
 198-client-router-restore-groupchat-workflow.patch
 201-client-v102-vuetsc-fixes.patch
 202-loop-graph-assembly.patch
@@ -130,7 +129,6 @@
 251-server-http-fleet-ws-whitelist.patch
 260-three-dep.patch
 265-server-dsh-acp-cross-platform.patch
-266-server-coding-agents-kylin-discovery.patch
 267-nodepty-linux-packaging.patch
 268-desktop-linux-sandbox-fallback.patch
 270-desktop-cli-shim-gui-shell-fallback.patch
@@ -354,7 +352,7 @@
 # 517（驾驶舱聚焦轮 V5 补遗⑤ M3/M4，2026-09-29；两度让号：513/514→ide-automations、515→type-gate）：全局审批浮层两处介入深链
 #      （群聊审批→ia2.groupRoom、工作流审批→ia2.inbox）与通知点击 URL 同步
 #      迁 /app 树——chat 类 301 已迁，本补丁收尾群聊+工作流两处。
-517-client-globalpendingactions-cockpit-deeplinks.patch
+# 517（0.8.0 升级轮退役：内容并入 301 重生成件；原件 .archived-patches/2026-10-31-v080/）
 # 518（驾驶舱聚焦轮 V5 补遗⑤ M6；原拟 514/516 两度让号）：runcenter.detail.loopCanvas zh/en 成对
 #      （473 之后按 496/501/512 同例单补，不动其余 9 语言）。
 # 518-client-i18n-runcenter-loop-canvas.patch  # 临时跳过：473 跳过后 locale 基线失配，末批键合并统一迁移
@@ -392,7 +390,6 @@
 # 528（性能批 2026-09-30）：profiles 读缓存挂载——profileRoutes（§281）先于
 #      fleetRouter，profileReadCache 须直挂其前（GET /api/hermes/profiles 实测
 #      8.7s CLI；中间件实现在 custom/server/middleware/kanban-read-cache.ts）。
-528-server-profiles-read-cache-mount.patch
 
 # 529（根治批 2026-09-30）：CLI 启动快道——check_runtime 旗标短路（venv 货币性
 #      检查 48 插件 YAML 解析 3.9s/exec）+ 舰队重启启动提示 TTY 门（git 身份解析
@@ -680,7 +677,6 @@
 # skills/plugins/mcp/runtime-versions 四域 GET 列表 TTL 缓存（同前缀写失效）；
 # 看板任务快 404（sqlite 存在性预检，不存在的 id 9-11s→秒回）+ profiles 快 404
 #（磁盘清单预检，12s 超时→秒回）。闸逻辑在 custom/server/middleware/cli-fast-gates.ts。
-623-server-cli-read-cache-expansion.patch
 
 # [624] 约束卡注册表路由挂载（2026-10-14 阿里 15-Agent 调研轮 D）：架构级约束
 # （陈述/适用范围/来源锚/生效轮）人工维护，派单简报按列/specialist 命中注入
@@ -791,6 +787,7 @@
 # Unknown ZCode builtin model。个人层规则并入候选(builtin 优先、保留原生路由),空模型
 # 且无原生默认时跳过 overlay 直接以 zcode 自身默认启动;发现面同步列出个人层模型。
 642-server-zcode-personal-models.patch
+266-server-coding-agents-kylin-discovery.patch
 # 644: 回归测试 D1 修复——退出登录后被 C2 自动登录立即拉回 gateway 账号（用户视角"退不掉"）。
 # 登出路径（SidebarAccountControls.handleLogout / authStore.logout）写 sessionStorage
 # hermes_manual_logout 标记；LoginView 检测到标记跳过 autoLoginFromGateway 回落手动表单，
@@ -867,7 +864,7 @@
 # 663: build-server 的 custom 兄弟布局 require 逃逸前缀扩展到任意层 ../——
 # custom/server/controllers/ide 深一级（五个 ../），原四层匹配漏掉导致 esbuild 解析失败。
 # 663 让位：661/662 已被并行 Harness 批占用。
-663-server-build-escape-five-up.patch
+# 663（0.8.0 升级轮退役：通配逃逸 plugin 已并入 525 重生成件；原件 .archived-patches/2026-10-31-v080/）
 
 # 664: zcode 会话 CUA 闸门（Cua 完整回路 2026-10-18）：startZcodeChatTurn 在 spawn 前
 # 合并 cuaEnvForSession(sessionId)——默认注入 ZCODE_CUA_DISABLE=1（fail-closed），
@@ -1050,3 +1047,7 @@
 # zh/en 词条 gitSosTitle；动作执行仍留引擎/人工（executeSosAction fail-loud），
 # UI 不触发 merge --abort 等破坏性操作。
 717-client-ide-git-sos-i18n.patch
+197-server-http-command-post-ws.patch
+528-server-profiles-read-cache-mount.patch
+623-server-cli-read-cache-expansion.patch
+# ↑ 0.8.0 升级轮迁位：266→642 后（index.ts 终态跳变不破坏 642 上下文）；197/528/623→studio 序尾（http.ts/routes.ts 终态跳变）

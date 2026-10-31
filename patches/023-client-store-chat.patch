@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
-index 9aa0c4f69..bfb9e04b0 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
-@@ -46,6 +46,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
+@@ -49,6 +49,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
    if (agent === 'opencode') return 'opencode'
    if (agent === 'antigravity') return 'antigravity'
    if (agent === 'cursor') return 'cursor'
@@ -10,7 +9,7 @@ index 9aa0c4f69..bfb9e04b0 100644
    if (agent === 'claude') return 'claude-code'
    if (['ekko', 'ekko_agent', 'ekko-agent'].includes(agent || '')) return 'ekko-agent'
    return undefined
-@@ -61,6 +62,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
+@@ -64,6 +65,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
    if (id === 'antigravity') return 'antigravity'
    if (id === 'cursor') return 'cursor'
    if (id === 'claude-code') return 'claude'
@@ -18,7 +17,7 @@ index 9aa0c4f69..bfb9e04b0 100644
    if (id === 'ekko-agent') return 'ekko-agent'
    return undefined
  }
-@@ -1397,6 +1399,11 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1423,6 +1425,11 @@ function createChatState(scopedSessionId?: string) {
    const pendingForkCommands = ref<Set<string>>(new Set())
    /** Sessions that completed while the user was viewing another session. */
    const completedUnreadSessions = ref<Set<string>>(new Set())
@@ -30,7 +29,7 @@ index 9aa0c4f69..bfb9e04b0 100644
    /** UI-only live streams for Hermes background subagents. Never sent into parent context. */
    const subagentStreams = ref<Map<string, SubagentStream>>(new Map())
    const storedSessionProfileFilter = getItemBestEffort(SESSION_PROFILE_FILTER_STORAGE_KEY)?.trim()
-@@ -1555,6 +1562,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1583,6 +1590,8 @@ function createChatState(scopedSessionId?: string) {
      sessions.value = []
      pendingRunUsage.clear()
      completedUnreadSessions.value = new Set()
@@ -39,7 +38,7 @@ index 9aa0c4f69..bfb9e04b0 100644
      queueLengths.value = new Map()
      queuedUserMessages.value = new Map()
      queueInsertionStates.value = new Map()
-@@ -1661,8 +1670,50 @@ export const useChatStore = defineStore('chat', () => {
+@@ -1689,8 +1698,50 @@ function createChatState(scopedSessionId?: string) {
    function pruneCompletedUnreadSessions(existingIds: Set<string>) {
      const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
      if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
@@ -69,12 +68,12 @@ index 9aa0c4f69..bfb9e04b0 100644
 +
 +  function isSessionUnread(sessionId: string): boolean {
 +    return unreadMessages.value.has(sessionId)
-+  }
-+
-+  function getSessionUnreadCount(sessionId: string): number {
-+    return unreadMessages.value.get(sessionId)?.count ?? 0
    }
  
++  function getSessionUnreadCount(sessionId: string): number {
++    return unreadMessages.value.get(sessionId)?.count ?? 0
++  }
++
 +  function getSessionUnreadInfo(sessionId: string): { count: number; lastPreview: string; lastRole: string; lastTs: number } | null {
 +    return unreadMessages.value.get(sessionId) ?? null
 +  }
@@ -90,8 +89,8 @@ index 9aa0c4f69..bfb9e04b0 100644
    function clearActiveSession() {
      activeSelectionSequence++
      const sid = activeSessionId.value
-@@ -2079,6 +2130,8 @@ export const useChatStore = defineStore('chat', () => {
-     if (legacyActiveKey) removeItem(legacyActiveKey)
+@@ -2160,6 +2211,8 @@ function createChatState(scopedSessionId?: string) {
+     }
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
 +    // HERMES_CUSTOM[ChatUnread]
@@ -99,7 +98,7 @@ index 9aa0c4f69..bfb9e04b0 100644
  
      if (!activeSession.value) return false
  
-@@ -3175,6 +3228,7 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3265,6 +3318,7 @@ function createChatState(scopedSessionId?: string) {
        runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
        queueId,
        runtime: raw.runtime === 'ekko'
@@ -107,7 +106,7 @@ index 9aa0c4f69..bfb9e04b0 100644
          || raw.runtime === 'claude-code'
          || raw.runtime === 'codex'
          || raw.runtime === 'pi'
-@@ -3598,6 +3652,9 @@ export const useChatStore = defineStore('chat', () => {
+@@ -3688,6 +3742,9 @@ function createChatState(scopedSessionId?: string) {
      if (codingAgentId === 'codex') {
        return { icon: '/coding-agents/codex-openai.png' }
      }
@@ -117,7 +116,7 @@ index 9aa0c4f69..bfb9e04b0 100644
      if (codingAgentId === 'claude-code') {
        return { icon: '/coding-agents/claude-code.svg' }
      }
-@@ -4248,6 +4305,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -4340,6 +4397,8 @@ function createChatState(scopedSessionId?: string) {
                    isStreaming: true,
                  })
                  activeAssistantMessageId = newId
@@ -126,7 +125,7 @@ index 9aa0c4f69..bfb9e04b0 100644
                }
  
                break
-@@ -4909,6 +4968,8 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5001,6 +5060,8 @@ function createChatState(scopedSessionId?: string) {
                isStreaming: true,
              })
              activeAssistantMessageId = newId
@@ -135,16 +134,7 @@ index 9aa0c4f69..bfb9e04b0 100644
            }
  
            break
-@@ -5264,6 +5325,8 @@ export const useChatStore = defineStore('chat', () => {
- 
-   function handlePeerUserMessage(evt: RunEvent) {
-     const sid = evt.session_id
-+    // Note: peer user messages are NOT counted as unread — only agent (assistant)
-+    // replies generate notifications (see accumulateUnread calls at run completion).
-     if (evt.event === 'approval.requested') return setPendingApproval(evt)
-     if (evt.event === 'approval.resolved') return clearPendingApproval(evt)
-     if (evt.event === 'clarify.requested') return setPendingClarify(evt)
-@@ -5613,6 +5676,13 @@ export const useChatStore = defineStore('chat', () => {
+@@ -5731,6 +5792,13 @@ function createChatState(scopedSessionId?: string) {
      runStartedAt,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,

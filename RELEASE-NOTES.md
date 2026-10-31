@@ -32,6 +32,7 @@
 构建产物（源码包、安装包、离线包）**只在本机构建留存**（`dist/release/`），不上传 GitHub Release 或任何远端；Release 只承载版本说明与 tag。需要产物时本地执行 `npm run release:packages`（内含 `release:check`），校验 `dist/release/SHA256SUMS`。此口径为 2026-10-28 用户明确裁定，推翻此前「随 Release 上传五件包」的做法。
 
 ## 版本
+AIStudio 驾驶舱 **0.8.0-studio.1**（2026-10-31 hermes-studio 底座升级批：v0.7.39→v0.8.0@f67b587b9 pristine 换血；44 条失败补丁重生成/退役/迁位收口，重放零失败；派生配置 .mts 化＋fsevents 外置；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **0.7.39-studio.4**（2026-10-30 HelixHarness 吸收与强制面可复现轮升版：L2 提交强拦入库可复现、qgate pre-push 接线、spec 四段机检＋内容收据、四层上下文读取计量、评测校准合同；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行，release:check 校验与 vendor/VENDOR.md 的对齐）
 AIStudio 驾驶舱 **0.7.39-studio.3**（2026-10-28 架构债收口＋对账清偿轮升版：基础库三项归零、API 响应统一出口、客户端类型基线、前端依赖单向化；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行，release:check 校验与 vendor/VENDOR.md 的对齐）
 AIStudio 驾驶舱 **0.7.39-studio.2**（2026-10-27 版本方案切换：完整底座版本 0.7.39 与 hermes-studio 对齐，`-studio.1` 为本仓扩展发布序，真源=本文件版本节首行，release:check 校验与 vendor/VENDOR.md 的对齐；2.x 为旧方案历史线）
