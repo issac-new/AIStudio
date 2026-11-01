@@ -1079,3 +1079,4 @@
 #      spawn 行为）：拒绝桶聚合计数，stuck 期间每 300s 打 "spawn refusals by reason={...}"，
 #      每段 stuck 首次额外给 actionable hint（点名 board.json profiles 期望值 / max_spawn 等）。
 723-agent-dispatcher-refusal-reasons.patch
+724-client-app-isfullscreen-define.patch

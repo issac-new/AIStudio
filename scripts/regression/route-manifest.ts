@@ -92,7 +92,11 @@ async function main(): Promise<void> {
         requiresSuperAdmin: Boolean(record.meta?.requiresSuperAdmin),
         allowCanonical: CANONICAL_PAGES.has(String(record.name ?? '')),
         allowQuery: record.name === 'hermes.models',
-        allowBlank: record.name === 'desktop.pet' && !features.pet,
+        allowBlank: (record.name === 'desktop.pet' && !features.pet)
+          // matrix 客户端两页在无已连接 Matrix 会话的走查环境＝访客态（element-web
+          // 未认证提示/占位房号空壳），合法空态；内容验收须专项轮带真实会话
+          // （2026-11-02 全功能回归轮定性，spec 2026-11-02-full-regression-fixes）。
+          || record.name === 'matrix.client' || record.name === 'matrix.clientRoom',
       }))
     const stagePaths: Record<number, string> = {
       1: '/app/stage/setup', 2: '/app/stage/reqs', 3: '/app/stage/design',
