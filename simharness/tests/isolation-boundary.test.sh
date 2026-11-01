@@ -31,8 +31,10 @@ fi
 
 # ── ② harness 消费白名单 ──
 # 白名单=只读消费面（run13 复盘补：custom/qgate 只读 CLI 执行〔release-report 证据〕、
-# runtime/plugins 只读配置读取〔style-charter〕——均为 harness→产品只读方向，非反向依赖）
-wl='patches|deploy-agent-runtime\.mjs|custom/client|custom/server|custom/qgate|runtime/plugins|package\.json|\.overlay-injected|rev-parse'
+# runtime/plugins 只读配置读取〔style-charter〕——均为 harness→产品只读方向，非反向依赖；
+# 2026-11-01 补 runtime/hermes_cli：721 建卡幂等两文件定点补位读 runtime 模板，
+# 只写 SIM 快照不写产品仓）
+wl='patches|deploy-agent-runtime\.mjs|custom/client|custom/server|custom/qgate|runtime/plugins|runtime/hermes_cli|package\.json|\.overlay-injected|rev-parse'
 bad2=$(grep -rn 'OVERLAY_ROOT' "$HERE"/*.sh "$HERE"/mux/*.sh 2>/dev/null \
   | grep -vE "^\S+:\s*#" \
   | grep '\$OVERLAY_ROOT' | grep -vE "$wl" | head -5 || true)

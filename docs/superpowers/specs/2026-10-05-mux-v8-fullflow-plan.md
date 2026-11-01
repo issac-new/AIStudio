@@ -1388,7 +1388,7 @@ G6 验收判据不变（本节是消费面增量，不是新闸）；从 run23 �
 - **激活开关**：`MX_DOD_CONTRACT=1`（缺省 0＝零行为变化）——导演建卡时（`mx-scenario-lib.kanban_create_as`）body 尾部并入 AC 段与 receipt 写法指引。**run25+ 起跑 env 显式开启**；在途轮不开启即完全不受影响（无 AC 卡 `mode=off` 直通，run24 续跑段已按此口径）。设计正本与实施实录：`2026-10-31-model-resilience-hardening.md`、`2026-11-01-dod-kernel-gate-lineage-reclaim.md`（含主 gateway 双树劫持收回）、`2026-11-01-dod-session-context-wiring.md`。
 - **与 G 闸的分工**：完成契约管「卡能不能关」（证据真实存在、可重算）；G3/G4 管「过了这关的交付物合不合格」（testlog 六要素、测试者≠写码者、契约测试）。完成契约不是 G 闸的替代，是把 G 闸的输入从「模型自述」升级为「内核核验过的回执」的第一道过滤。
 - **部署通道约束**：SIM 全量刷新时 manifest 部署必须在快照重供之后（`mx-up` 已按 provision→patch→deploy 固序，自动测试固定该顺序）——快照只取宿主 git 跟踪文件，新增未跟踪文件（`completion_contract.py` 类）只能靠 manifest 补位，旧序会静默洗掉它（run24 刷新窗实锤）。
-- **四层同族关系**：本条是模型波动加固的 A 层（完成契约）。B 判定网（qgate pre-push L0）、C 能力路由（modelcap 矩阵/路由）、D 补偿止损（巡检自动处置／会话轮换 auto／建卡幂等）是产品侧支撑层，不进推演判据；其中 D 层的建卡幂等（agent 侧 `721-agent-kanban-idempotency-unique.patch`）是派发重试不落重复卡的前提，随 `mx-up` 运行时补丁自愈清单覆盖。
+- **四层同族关系**：本条是模型波动加固的 A 层（完成契约）。B 判定网（qgate pre-push L0）、C 能力路由（modelcap 矩阵/路由）、D 补偿止损（巡检自动处置／会话轮换 auto／建卡幂等）是产品侧支撑层，不进推演判据；其中 D 层的建卡幂等（`runtime/hermes_cli/kanban_db.py` 与 `kanban_db_connect.py` 两文件）是派发重试不落重复卡的前提；`mx-up` 以两文件定点补位覆盖 SIM 快照，补丁本身不进宿主补丁自愈清单（上下文绑定钉版基线，宿主新版 import 段已漂移且无 def/class 标记可兜底，硬套会让 mx-up 失败）。
 
 ### 2.7 交付物体系与模板字段
 
