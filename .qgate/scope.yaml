@@ -50,3 +50,6 @@ paths:
   - patches/series
   - docs/superpowers/specs/2026-11-01-parallel-dispatch-saturation.md
   - docs/superpowers/specs/2026-11-01-release-v1.0.6-overlay.md
+  - docs/superpowers/specs/2026-11-01-run24-closure.md
+  - simharness/mux/narrative_run24.py
+  - simharness/docs/2026-11-01-run24-pending-batch.md

@@ -87,3 +87,4 @@
 {"at":"2026-10-31T18:26:20Z","spec":"docs/superpowers/specs/2026-11-01-sim-resilience-sync.md","receipt":"f1f83f09fbbcb6496e5335a8da0d423e10e5881b","commit":"cf7874d6f"}
 {"at":"2026-11-01T00:41:10Z","spec":"docs/superpowers/specs/2026-11-01-sim-resilience-sync.md","receipt":"0a7f17ebf151225c5ad16265f8a799676fb60e16","commit":"6239fef81"}
 {"at":"2026-11-01T02:03:52Z","spec":"docs/superpowers/specs/2026-11-01-gate-verdict-hardening.md","receipt":"6d8540d4193d7a3d0b31f7423bfdf2f976271024","commit":"0305dc3a7"}
+{"at":"2026-11-01T15:32:18Z","spec":"docs/superpowers/specs/2026-11-01-run24-closure.md","receipt":"ffbac656c20a8cd65d30b7b49168d3a7990c2932","commit":"dc328f84c"}
