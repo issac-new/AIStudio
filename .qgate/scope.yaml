@@ -58,3 +58,4 @@ paths:
   - docs/superpowers/specs/2026-11-02-run24-retro-product-batch.md
   - patches/723-agent-dispatcher-refusal-reasons.patch
   - patches/series
+  - docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md
