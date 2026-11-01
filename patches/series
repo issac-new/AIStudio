@@ -1064,3 +1064,9 @@
 #      （hermes-agent kanban_db/kanban_db_connect；历史重复键只告警不删数据）。
 721-agent-kanban-idempotency-unique.patch
 # ↑ 0.8.0 升级轮迁位：266→642 后（index.ts 终态跳变不破坏 642 上下文）；197/528/623→studio 序尾（http.ts/routes.ts 终态跳变）
+# 722（2026-11-01 run24 根治·chat 回合自恢复）：EmptyStreamError 显式归类 timeout——
+#      流掐断（terminal incomplete 物理重试耗尽）落入 unknown 不在自动恢复梯子
+#      资格清单（overloaded/server_error/timeout），回合耗尽即死无自恢复（run24 四现场
+#      实锤：熔断群静默/系分停滞/编码中断/改判回合死）；归类 timeout 后梯子自动接住
+#      （15/30/60s 退避重试，agent.auto_recovery_cycles 默认 5）。classifier 192/192。
+722-agent-emptystream-ladder-classify.patch

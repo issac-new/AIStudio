@@ -45,3 +45,6 @@ paths:
   - team/VERSION
   - team/version.json
   - skills/swarm-yuan/CHANGELOG.md
+  - docs/superpowers/specs/2026-11-01-emptystream-ladder-classify.md
+  - patches/722-agent-emptystream-ladder-classify.patch
+  - patches/series
