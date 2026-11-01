@@ -66,6 +66,25 @@ describe('gateVerdictOfText（判词结构锚定，三案归一回归面）', ()
   })
 })
 
+  // run24 G2 实锤（2026-11-01）：评审卡「**结论 1：过。**」分项族——无闸 token 的中文判词
+  it('中文判词：锚点紧邻分项形态（结论 N：过）认 PASS', () => {
+    const body = '前置叙述行。\n**结论 1：过。** 五要素实质齐备\n**结论 2：过。**\n- 结论 3：过。'
+    expect(gateVerdictOfText('ARCH-GATE', body)).toBe('PASS')
+  })
+  it('中文判词：否定长词优先（不通过/未通过/不过）认 FAIL', () => {
+    expect(gateVerdictOfText('ARCH-GATE', '结论：不通过。')).toBe('FAIL')
+    expect(gateVerdictOfText('ARCH-GATE', '结论：未通过。')).toBe('FAIL')
+    expect(gateVerdictOfText('ARCH-GATE', '结论：不过。')).toBe('FAIL')
+  })
+  it('中文判词：无锚点紧邻的散落「过」不判（转述防护不放宽）', () => {
+    const body = '流程走完一遍，测试通过率 95%，跨模块契约两本对齐中。'
+    expect(gateVerdictOfText('ARCH-GATE', body)).toBe('')
+  })
+  it('中文判词：末判词赢（分项过→末行不过翻 FAIL）', () => {
+    const body = '结论 1：过。\n结论 2：过。\n结论：不过。'
+    expect(gateVerdictOfText('ARCH-GATE', body)).toBe('FAIL')
+  })
+
 describe('combinedGateVerdict（房间行+评审卡双源保守合并）', () => {
   it('FAIL 任一出现即 FAIL；无 FAIL 且任一 PASS 才 PASS', () => {
     expect(combinedGateVerdict({ room: 'PASS', card: 'FAIL' })).toBe('FAIL')

@@ -31,6 +31,9 @@ const LEADING_RE = /^[\s*_+>.#|~-]*(\d+[.)]\s*)?$/
 const ANCHOR_RE = /(结论行|结论|判词行|判词|conclusion|verdict|closing)[\s:=*_·「」<>#|~.-]*(为|是)?[\s:=*_·「」<>#|~.-]*$/
 const PAIR_CHOICE_RE = /或|二选一/
 const PAIR_TRANSITION_RE = /->|→|改判|改写|修正|覆写|已解决|已修复|已补/
+/** 中文判词（run24 G2 分项形态）：锚词（含行首格式）→编号/格式/为是→判词→任意解说收尾。
+ *  组1=锚词前缀（须行首，格式符白名单），组2=判词（白名单长词优先）。 */
+const CN_VERDICT = /^[\s*_+>.#|~-]*(?:结论行|结论|判词行|判词)[\s:=*_·「」<>#|~.\-]*\d*[)）.，,：:\s]*(?:为|是)?[\s:=*_·「」]*(不通过|未通过|不过|失败|通过|过)/
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -57,12 +60,23 @@ export function gateVerdictOfText(gate: string, text: string): GateVerdict {
       }
       continue
     }
-    if (!hasP && !hasF) continue
+    if (!hasP && !hasF) {
+      // 中文判词（run24 G2 实锤 2026-11-01：评审写「**结论 1：过。** 五要素齐备」分项
+      // 族，无闸 token。判定=中文锚点紧邻（锚词后容忍分项编号/格式符/为是，独立于
+      // ANCHOR_RE——其锚词后允许集不含数字编号）+ 判词白名单（长词优先防「不过」截成
+      // 「过」）+ 判词后容忍解说/格式收尾。转述防护不放宽：无锚点紧邻的散落「过/通过」不判）。
+      const cn = CN_VERDICT.exec(line)
+      if (cn) {
+        last = /不通过|未通过|不过|失败/.test(cn[1]) ? 'FAIL' : 'PASS'
+      }
+      continue
+    }
     const tok = hasP ? 'PASS' : 'FAIL'
     const pos = line.indexOf(`${gate}-${tok}`)
     const pre = line.slice(0, pos)
     if (LEADING_RE.test(pre)) { last = tok; continue }
     if (ANCHOR_RE.test(pre)) { last = tok; continue }
+    continue
   }
   return last
 }

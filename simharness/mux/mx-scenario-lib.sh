@@ -1673,9 +1673,12 @@ mx_gate_room_text() { # <room> <sender-mxid> [since-ms] → 拼接正文（空=�
 
 # 评审卡 body 收集（导演域）：带 since 窗只认本轮卡（run18 F1 闸键-证据耦合根治口径）。
 mx_gate_card_text() { # <user> <卡 needle> [since-ms] → 卡 body（空=未命中）
+  # 窗锚边界放宽 60s（run24 实锤 2026-11-01：毫秒锚 1793467850000 vs 秒级卡 created_at
+  # 1793467849 差 1 秒被 >= 挡在窗外——卡面源恒失明、relay 对照行不触发；锚回拨是值守
+  # 应急，此处放宽 60s 为产品正解：卡建时刻与锚落键时刻存在天然竞态秒差）
   if [ -n "${3:-}" ]; then
     kanban_list "$1" | jq -r --arg n "$2" --argjson s "$(( $3 / 1000 ))" \
-      '[.. | objects | select(has("title")) | select((.created_at // 0) >= $s)
+      '[.. | objects | select(has("title")) | select((.created_at // 0) >= ($s - 60))
         | select(((.title // "") + (.body // "")) + ((.result // "")) | contains($n)) | (.body // "")][0] // ""'
   else
     kanban_list "$1" | jq -r --arg n "$2" \
