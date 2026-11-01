@@ -37,7 +37,8 @@
 - `bash -n` 三脚本（mx-lib/mx-up/mx-clean）语法通过。
 - `npx vitest run custom/__tests__/docs-ssot-guard.test.ts` → 6/6（附录 A.1 行数=标题计数=449）。
 - **721 活体验证（2026-11-01 08:3x，SIM 快照副本 + 隔离 SIM_ROOT）**：①补丁正向/反向检查均失败（rc=1/1），标记提取 0 个；②默认 `deploy-agent-runtime --apply` 对漂移文件输出「保留目标 1」且不覆盖；`--force` 恢复模板并留 `.bak`；③新 `mx_restore_idempotency_fix` 在两文件均被洗掉的副本上 rc=0，两处标记恢复为 1/1 并各留 `.bak`；④移除 721 后 `mx_apply_agent_patches` 在快照上 rc=0（全部反向检查跳过）。
-- 诚实边界：run24 在途，本批不触碰运行中的 `aipay-scenario.sh` 与已 source 的进程内存；orchestrator/modelcap 归档为预防性清场（当前 SIM 树两目录均不存在，实测无跨轮残留）。
+- **mx-clean 归档活体验证（隔离 SIM_ROOT `/tmp/mx-clean-verify` 真跑 `--apply`）**：hermes 运行态归档块把 `orchestrator/orchestrator.sqlite` 与 `modelcap/matrix.json` 打入 `hermes-runtime-state.tar` 后删除两目录并重建骨架；脚本随后在「中央仓开发分支清理」段因夹具无 central 仓以 rc=128 退出（夹具缺口，非归档块缺陷，真实 SIM_ROOT 有 central 仓）。
+- 诚实边界：run24 在途，本批不触碰运行中的 `aipay-scenario.sh` 与已 source 的进程内存；真实 SIM 树两目录（orchestrator/modelcap）当前不存在，跨轮残留未发生，归档块行为已在隔离夹具实测（见上）。
 
 ## 设计文档影响
 
