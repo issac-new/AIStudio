@@ -62,3 +62,5 @@ paths:
   - docs/superpowers/specs/2026-11-02-full-regression-fixes.md
   - scripts/regression/walk-routes.mjs
   - scripts/regression/route-manifest.ts
+  - docs/superpowers/specs/2026-11-02-run24-runtime-closeout.md
+  - simharness/docs/2026-11-01-run24-pending-batch.md
