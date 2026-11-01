@@ -107,6 +107,10 @@ describe('evaluateTrigger', () => {
     const chatCall = fetchImpl.mock.calls[1]!
     expect(String(chatCall[0])).toContain('/p/evaluator/api/sessions/')
     expect(String(chatCall[0])).toContain('/chat')
+    // 2026-11-02 实测：author 传字符串被 gateway 拒（author must be an object）→ 请求不带该字段
+    const chatBody = JSON.parse(String((chatCall[1] as RequestInit).body))
+    expect(chatBody.author).toBeUndefined()
+    expect(typeof chatBody.message).toBe('string')
   })
 
   it('202 排队：判 unavailable 且不重发', async () => {

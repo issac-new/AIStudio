@@ -57,6 +57,10 @@ paths:
   - docs/superpowers/specs/2026-11-02-run24-retro-driver-batch.md
   - docs/superpowers/specs/2026-11-02-run24-retro-product-batch.md
   - patches/723-agent-dispatcher-refusal-reasons.patch
+  - custom/server/orchestrator/**
+  - config/orchestrator.env
+  - docs/superpowers/specs/2026-10-31-orchestrator-tick.md
+  - docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md
   - patches/series
   - docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md
   - docs/superpowers/specs/2026-11-02-full-regression-fixes.md

@@ -6,7 +6,7 @@ import Router from '@koa/router'
 import { requireAuthenticatedActor } from '../approval-inbox/human-gate'
 import { fail, ok } from '../lib/http'
 import { defaultCells, getAdmission, listAdmissions, normalizeAdmission, setAdmission } from './admission'
-import { deliverIntervalMs, deliverPendingDigests } from './delivery'
+import { deliverPendingDigests } from './delivery'
 import { ingestTrigger } from './ingest'
 import { bridgeAll, kanbanDbPaths } from './kanban-bridge'
 import { activeMandateFor, issueMandate, revalidate, revoke } from './mandate'
@@ -15,6 +15,7 @@ import { currentPolicyVersion } from './policy-version'
 import { insertDigest, listAssignments, listDecisions, listDigests, listMandates, listThreads, listTriggers, markDigestDelivered } from './store'
 import { summarize } from './summarizer'
 import { markRead, pendingFor, subscribe, subscriptionsOf } from './thread'
+import { evalOnTick, runOrchestratorTick, tickIntervalMs } from './tick'
 import { POLICY_KINDS, SOURCE_KINDS, TRIGGER_STATUSES, type PolicyKind, type SourceKind, type TriggerStatus } from './types'
 
 const router = new Router({ prefix: '/api/orchestrator' })
@@ -288,14 +289,32 @@ router.post('/deliver', async ctx => {
   ok(ctx, { ...result, triggeredBy: actor.username })
 })
 
+/** 编排轮：桥接 → 评估 → 汇总 → 投递，一次走完（手动触发；定时器见文件末尾）。 */
+router.post('/tick', async ctx => {
+  const actor = requireActorOrFail(ctx)
+  if (!actor) return
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
+  const num = (v: unknown, d: number): number => {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : d
+  }
+  const result = await runOrchestratorTick({
+    bridgeLimit: num(body.bridgeLimit, 100),
+    evalLimit: num(body.evalLimit, 2),
+    evalEnabled: body.evalEnabled === undefined ? evalOnTick() : body.evalEnabled !== false,
+    deliverLimit: num(body.deliverLimit, 20),
+  })
+  ok(ctx, { ...result, triggeredBy: actor.username })
+})
+
 export const orchestratorRoutes = router
 
-// 定时投递：默认关（env 缺省 0），部署侧显式设 ORCHESTRATOR_DELIVER_INTERVAL_MS 才开。
-// unref 让定时器不阻止进程退出；句柄挂在模块级，随进程生命周期存在。
-const deliverInterval = deliverIntervalMs()
-if (deliverInterval > 0) {
+// 编排定时轮：2026-10-31 起取代单独的投递定时器（一轮含桥接/评估/汇总/投递）。
+// 默认关（env 缺省 0），部署侧设 ORCHESTRATOR_TICK_INTERVAL_MS 才开；unref 不阻塞退出。
+const tickInterval = tickIntervalMs()
+if (tickInterval > 0) {
   const timer = setInterval(() => {
-    void deliverPendingDigests({ limit: 50 }).catch(() => { /* 单轮失败等下一轮 */ })
-  }, deliverInterval)
+    void runOrchestratorTick({ evalEnabled: evalOnTick() }).catch(() => { /* 单轮失败等下一轮 */ })
+  }, tickInterval)
   timer.unref?.()
 }

@@ -619,8 +619,13 @@ Trigger 置为 `routed`，`observe` 下只记 Decision。
 反查看板库的 `kanban_notify_subs` 拿原信道，只投 `platform=matrix` 的房间，用
 `matrixSend` 直发（`thread_id` 非空时挂 `m.relates_to` 线程关系）。发送成功置
 `delivered`，失败累加 `attempts` 并留 `last_error` 等下一轮；订阅为空记 skipped 不算失败。
-定时器由 `ORCHESTRATOR_DELIVER_INTERVAL_MS` 控制，默认关；E2EE 房不在支持范围（明文
-发送在加密房会显示不可解密）。
+E2EE 房不在支持范围（明文发送在加密房会显示不可解密）。
+
+**编排轮。** `tick.ts` 按 `ORCHESTRATOR_TICK_INTERVAL_MS`（默认 0=关）跑一轮：
+桥接（default + `aiteam` + `data` 三块板，`ORCHESTRATOR_KANBAN_DBS` 支持 `~/` 展开）→
+语义评估（每轮上限 `ORCHESTRATOR_EVAL_LIMIT`，默认 2；`ORCHESTRATOR_EVAL_ON_TICK=0` 可关）→
+汇总（只为有订阅的线程生成，生成后推进订阅游标；纯列变更静默但游标照推）→ 投递。
+任一步失败记入 `errors` 并继续其余步骤。定时轮取代了原来单独的投递定时器。
 
 ## 5、端到端交付机制
 

@@ -113,7 +113,7 @@ export async function evaluateTrigger(
     const res = await doFetch(`${cfg.baseUrl}/p/${encodeURIComponent(cfg.profile)}/api/sessions/${encodeURIComponent(sessionId)}/chat`, {
       method: 'POST',
       headers: { authorization: `Bearer ${cfg.apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ message: buildEvalMessage(trigger, opts.context ?? []), author: 'orchestrator' }),
+      body: JSON.stringify({ message: buildEvalMessage(trigger, opts.context ?? []) }),
       signal: AbortSignal.timeout(cfg.timeoutMs),
     })
     if (res.status === 202) {
