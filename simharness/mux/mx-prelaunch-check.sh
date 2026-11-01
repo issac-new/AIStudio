@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前三十二项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31））。
+# mx-prelaunch-check.sh — 开跑前三十三项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31））。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -74,6 +74,11 @@ ck "⑨ 无在途推演进程" "! mxp_pgrep_f 'aipay-scenario.sh' | grep -q . &&
 #     工件七目录（requirements/analysis/design/plan/test/delivery/acceptance）；admin/architecture
 #     等九个跨轮基础目录为 mx-clean 设计内保留，不在判定面。）
 ck "⑩b 中央仓轮次工件无跨轮残留（七目录）" "[ -n \"\${PRELAUNCH_ALLOW_CROSSRUN_RESIDUE:-}\" ] || [ -z \"\$(git -C '$SR/central/aipaydev' ls-tree -r --name-only origin/main -- docs/requirements/ docs/analysis/ docs/design/ docs/plan/ docs/test/ docs/delivery/ docs/acceptance/ 2>/dev/null | head -1)\" ]" "上轮轮次工件残留（requirements/analysis/design/plan/test/delivery/acceptance 七目录）——bash mux/mx-clean.sh --apply --reset-central 清场后重跑（run24 污染实录：AN-*/RFD-* 假真值跳系分）；admin/architecture/governance 等跨轮基础目录 mx-clean 设计内保留不在判定面；同轮续跑显式 PRELAUNCH_ALLOW_CROSSRUN_RESIDUE=1 豁免"
+
+# ⑩c 帧内容 OCR 通道在位（run24 实锤 2026-11-01：tesseract chi_sim 语言包被环境变迁洗掉
+#     （tessdata 只剩 eng/osd），frame-verify 全量误报「未命中」——依赖「已装」宣告失效，
+#     开跑前硬检 tesseract 可执行＋chi_sim 在语言清单；缺席即红，装回=官方 tessdata 包。）
+ck "⑩c 帧内容 OCR 通道（tesseract+chi_sim 在位）" "command -v tesseract >/dev/null 2>&1 && tesseract --list-langs 2>/dev/null | grep -q '^chi_sim$'" "brew 装 tesseract 后放 chi_sim.traineddata 到 /opt/homebrew/share/tessdata/（官方 tessdata_fast）——run24 实录：缺席致 frame-verify 全量误报"
 
 ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev' for-each-ref --format='%(refname:short)' refs/remotes/origin/feat/DEV-* 2>/dev/null | head -1)\" ]" "git -C central/aipaydev push origin --delete <分支>（或并入 mx-clean 清理面）"
 
@@ -175,4 +180,4 @@ ck "㉙ R18 交付灯帧与 skill 降级登记" "grep -q 'deliver --step 23' '$H
 ck "㉚ 阶段页签 31（reviewGov/improve）" "grep -q \"key: 'reviewGov'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'improve'\" '$OV/custom/client/ia2/stage-tabs.ts' && ! grep -q '29 个页签' '$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'" "阶段页签缺 reviewGov/improve，或方案正本仍写 29 签"
 
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十二项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十三项）" || { echo "有红项——修复后再跑"; exit 1; }
