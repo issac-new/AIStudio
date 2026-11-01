@@ -462,7 +462,7 @@
 | 2026-11-01-sim-resilience-sync | 推演方案×程序同步二批：模型波动支撑面与运行态存储 | 方案 §2.6.12 补四层同族关系（B/C/D 不进判据，D 层建卡幂等走两文件定点补位）、§2.6.8 补代批强度自动标注 delegated；mx-lib 新增 721 定点补位（补丁清单不含 721，实测会硬失败）；mx-clean 归档 orchestrator/modelcap 新存储；守门 ㉗ 四断言＋226/226 |
 | 2026-11-01-chat-turn-recovery-design | chat 回合自恢复（agent 主动性产品能力）立项与设计定稿 | 群/DM 派发回合熔断打断后死等无自恢复（run24 三现场实据，看板回合恢复不覆盖）；HERMES_CHAT_TURN_RECOVERY 判定扩展＋无卡恢复 prompt＋会话预算防风暴；状态 designed 待补丁批 |
 | 2026-11-01-release-v1.0.5-overlay | v1.0.5 发布轮 | cockpit 0.8.0-studio.3／agent-teams team.6／yuan-skill v2.98.2／ycode 3.17.1 零变更照发；GitHub Release 首次上传构建物（用户明示，local-only 显式例外）；chat-turn 补登记随批清主干守门红 |
-| 2026-11-01-release-v1.0.6-overlay | v1.0.6 发布轮 | cockpit 0.8.0-studio.4（补丁 722 载体在 patches/ 属 cockpit 包含面）／agent-teams、yuan-skill、ycode 零变更照发；GitHub Release 构建物上传（用户明示例外同 v1.0.5）；ModelScope 同步 tupang/ollama 仓（everything 档，术语=本地仓 ollamalinux/ollama 用户立法）；run24 待落批台账（9 件）随批 |
+| 2026-11-01-release-v1.0.6-overlay | v1.0.6 发布轮 | cockpit 0.8.0-studio.4（补丁 722 载体在 patches/ 属 cockpit 包含面）／agent-teams、yuan-skill、ycode 零变更照发；GitHub Release 构建物上传（用户明示例外同 v1.0.5）；ModelScope 全资产同步 tupang/ollama 仓（aistudio/ 4+1 源码包＋swarm-yuan/ everything 档，术语=本地仓 ollamalinux/ollama 用户立法）；run24 待落批台账（9 件）随批 |
 
 ### 角色/排除（非 spec 文档）
 
