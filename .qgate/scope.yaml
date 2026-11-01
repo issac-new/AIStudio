@@ -38,3 +38,10 @@ paths:
   - docs/superpowers/specs/2026-11-01-chat-turn-recovery-design.md
   - custom/server/governance/lifecycle/verdict.ts
   - custom/server/governance/__tests__/lifecycle-verdict.test.ts
+  - docs/superpowers/specs/2026-11-01-release-v1.0.5-overlay.md
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md
+  - package-lock.json
+  - team/VERSION
+  - team/version.json
+  - skills/swarm-yuan/CHANGELOG.md
