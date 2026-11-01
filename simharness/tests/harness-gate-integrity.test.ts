@@ -1482,13 +1482,16 @@ describe('㉖ 完成契约门接线绊线（2026-11-01 方案×程序同步批�
 describe('㉗ 模型波动支撑面接线绊线（2026-11-01 方案×程序同步二批）', () => {
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf8' })
 
-  it('agent 补丁自愈清单含 721 建卡幂等（D 层），mx-up 注释范围同步到 721', () => {
+  it('721 不进宿主补丁自愈清单，mx-up 以两文件定点补位（实测：补丁上下文漂移会硬失败）', () => {
     const lib = read(join(MX, 'mx-lib.sh'))
-    expect(lib).toContain('721-agent-kanban-idempotency-unique.patch')
-    expect(lib).toContain('721=建卡幂等唯一部分索引')
+    expect(lib).not.toContain('721-agent-kanban-idempotency-unique.patch')
+    expect(lib).toContain('mx_restore_idempotency_fix')
+    expect(lib).toContain('INSERT OR IGNORE INTO tasks')
+    expect(lib).toContain('idx_tasks_idempotency_unique')
     const up = read(join(MX, 'mx-up.sh'))
-    expect(up).toContain('390→721')
-    expect(up).not.toContain('390→707')
+    expect(up).toContain('mx_restore_idempotency_fix')
+    expect(up).toContain('390→707')
+    expect(up).not.toContain('390→721')
   })
 
   it('mx-clean 归档重置编排域与能力路由存储（跨轮残留防线）', () => {
@@ -1496,10 +1499,11 @@ describe('㉗ 模型波动支撑面接线绊线（2026-11-01 方案×程序同�
     expect(clean).toMatch(/for f in[^;]*approvals orchestrator modelcap[^;]*; do/)
   })
 
-  it('方案 §2.6.12 四层同族关系在案（B/C/D 不进判据，D 层 721 随补丁自愈）', () => {
+  it('方案 §2.6.12 四层同族关系在案（B/C/D 不进判据，D 层两文件定点补位）', () => {
     const plan = read(join(PRODUCT, 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'))
     expect(plan).toContain('四层同族关系')
-    expect(plan).toContain('721-agent-kanban-idempotency-unique.patch')
+    expect(plan).toContain('两文件定点补位')
+    expect(plan).toContain('不进宿主补丁自愈清单')
   })
 
   it('方案 §2.6.8 代批强度自动标注在案（delegated/explicit 可反查）', () => {

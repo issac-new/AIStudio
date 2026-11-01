@@ -889,7 +889,7 @@ mx_apply_agent_patches() {
   local tree="${HERMES_AGENT_TREE:-$AGENT_SRC}"
   [[ -d "$tree/.git" ]] || fail "不是 git 仓库：$tree"
   # 长会话治理轮（2026-10-11）：401/457 首次入 SIM 通道（此前仅工作区树可达，SIM/宿主从未执行）；601-605 新增（心跳/遥测/轮换/检查点/监督接线）。
-  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch 569-agent-kanban-gate-guard.patch 586-agent-gateway-wedged-agent-sweep.patch 593-agent-per-tool-allowlist.patch 594-agent-tool-audit-ledger.patch 595-agent-usage-anomaly-watch.patch 596-agent-write-fence-roots.patch 599-agent-turn-ended-audit.patch 600-agent-assignee-realname.patch 401-agent-runaway-guard-six-signals.patch 457-agent-runaway-supervisor.patch 601-agent-rule-heartbeat.patch 602-agent-session-telemetry.patch 603-agent-session-rotation.patch 604-agent-handoff-checkpoint.patch 605-agent-runaway-supervisor-wiring.patch 609-agent-kanban-blocker-auth-degrade.patch 611-agent-session-rotation-itercap.patch 612-agent-capacity-retry-anchor.patch 636-agent-turn-end-delivery-guard.patch 637-agent-gateway-continuation-pump.patch 643-agent-mautrix-darwin-ungate.patch 705-agent-session-size-rotation.patch 707-agent-codex-terminal-incomplete-retry.patch 721-agent-kanban-idempotency-unique.patch; do  # 636=干完不交卷 push 兜底；637=网关续作泵（静默根治，V8.35）；643=darwin 裸 mautrix 解门控（原拟 638 与 638-server-simcenter-routes 撞号改 643）（2026-10-17 macOS pm 正规安装无 mautrix 根治，B 案正路；配套锁重解+mx-sim-mautrix-ensure.sh A 案兜底）；705=会话上下文绝对尺寸轮换（run23 实证：上下文涨到 76K-241K 被上游流截断，水位百分比口径在长上限模型上永不咬合）；707=terminal-incomplete 掐流残响不得当完成（run23 实证：只 WARNING 后照常结算，回合成终态不再进重试面）；721=建卡幂等唯一部分索引（模型波动 D 层：导演重试同键返回既有卡，不落重复卡）。701-704/706 非 agent 面（产品/custom）不在本清单
+  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch 569-agent-kanban-gate-guard.patch 586-agent-gateway-wedged-agent-sweep.patch 593-agent-per-tool-allowlist.patch 594-agent-tool-audit-ledger.patch 595-agent-usage-anomaly-watch.patch 596-agent-write-fence-roots.patch 599-agent-turn-ended-audit.patch 600-agent-assignee-realname.patch 401-agent-runaway-guard-six-signals.patch 457-agent-runaway-supervisor.patch 601-agent-rule-heartbeat.patch 602-agent-session-telemetry.patch 603-agent-session-rotation.patch 604-agent-handoff-checkpoint.patch 605-agent-runaway-supervisor-wiring.patch 609-agent-kanban-blocker-auth-degrade.patch 611-agent-session-rotation-itercap.patch 612-agent-capacity-retry-anchor.patch 636-agent-turn-end-delivery-guard.patch 637-agent-gateway-continuation-pump.patch 643-agent-mautrix-darwin-ungate.patch 705-agent-session-size-rotation.patch 707-agent-codex-terminal-incomplete-retry.patch; do  # 636=干完不交卷 push 兜底；637=网关续作泵（静默根治，V8.35）；643=darwin 裸 mautrix 解门控（原拟 638 与 638-server-simcenter-routes 撞号改 643）（2026-10-17 macOS pm 正规安装无 mautrix 根治，B 案正路；配套锁重解+mx-sim-mautrix-ensure.sh A 案兜底）；705=会话上下文绝对尺寸轮换（run23 实证：上下文涨到 76K-241K 被上游流截断，水位百分比口径在长上限模型上永不咬合）；707=terminal-incomplete 掐流残响不得当完成（run23 实证：只 WARNING 后照常结算，回合成终态不再进重试面）。701-704/706 非 agent 面（产品/custom）不在本清单
     local pf="$PATCH_DIR/$p"
     [[ -f "$pf" ]] || fail "缺 patch 文件：$pf"
     if git -C "$tree" apply --reverse --check "$pf" >/dev/null 2>&1; then
@@ -931,6 +931,25 @@ mx_apply_agent_patches() {
     fi
     git -C "$tree" apply --whitespace=nowarn "$pf" || fail "$p 应用失败"
     log "运行时 patch 已部署：$p → $tree"
+  done
+}
+
+# ── 721 建卡幂等定点补位（2026-11-01 活体验证修正）────────────────────
+# 721 的补丁上下文绑定钉版基线（vendor/hermes-agent 的 import 段无 logging）；
+# SIM 快照来自宿主运行树（上游已前进，import 段含 logging），补丁正/反向都套
+# 不上，且该补丁只改 SQL 语句、没有 def/class/常量标记可供语义兜底——放进
+# mx_apply_agent_patches 会 fail 退出（实测）。改由 runtime 模板两文件定点补位：
+# 只覆盖 SIM 快照的两文件（先备份），不整树 --force，不碰宿主安装树。
+mx_restore_idempotency_fix() {
+  local tree="${HERMES_AGENT_TREE:-$AGENT_SRC}" spec f marker src dst
+  for spec in "kanban_db.py:INSERT OR IGNORE INTO tasks" \
+              "kanban_db_connect.py:idx_tasks_idempotency_unique"; do
+    f="${spec%%:*}"; marker="${spec#*:}"
+    src="$OVERLAY_ROOT/runtime/hermes_cli/${f}"; dst="$tree/hermes_cli/${f}"
+    [[ -f "$src" && -f "$dst" ]] || continue
+    grep -qF "$marker" "$dst" 2>/dev/null && continue
+    cp "$dst" "$dst.bak.$(date +%s)" 2>/dev/null || true
+    cp "$src" "$dst" && log "721 定点补位：${f}（runtime 模板覆盖 SIM 快照，旧文件已备份）"
   done
 }
 

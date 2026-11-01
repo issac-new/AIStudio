@@ -455,7 +455,7 @@
 | 2026-11-01-dod-kernel-gate-lineage-reclaim | 完成契约门下沉内核＋血统收回 | dod-drill 两轮穿透实锤（worker 走 installs CLI 无门完成）→门下沉 complete_task 唯一边界＋CLI --receipt＋启动器 shim 收回 .venv 血统＋HERMES_SKIP_UPDATE；内核门测试 5 分支全绿 |
 | 2026-11-01-dod-session-context-wiring | 完成契约会话接线 | R3 实锤：内层 agent env 由 bind_worker_context 从 kanban_json 重建、不继承派发 env——契约冻进会话上下文（build_kanban_policy）并随 bind 导出；旧会话豁免 |
 | 2026-11-01-sim-dod-sync | 推演方案×程序同步：完成契约门接线 | 方案 §2.6.12（执行层第零道锁，G 判据零改动）；mx-up 固序 provision→patch→deploy；建卡 MX_DOD_CONTRACT 开关（缺省关，run25+ 开）；runbook 换 manifest 通道；守门 ㉖ 五断言＋117/117＋shell 门 ALL-PASS |
-| 2026-11-01-sim-resilience-sync | 推演方案×程序同步二批：模型波动支撑面与运行态存储 | 方案 §2.6.12 补四层同族关系（B/C/D 不进判据，D 层建卡幂等随补丁自愈）、§2.6.8 补代批强度自动标注 delegated；mx-lib 补 patch 721；mx-clean 归档 orchestrator/modelcap 新存储；守门 ㉗ 四断言 |
+| 2026-11-01-sim-resilience-sync | 推演方案×程序同步二批：模型波动支撑面与运行态存储 | 方案 §2.6.12 补四层同族关系（B/C/D 不进判据，D 层建卡幂等走两文件定点补位）、§2.6.8 补代批强度自动标注 delegated；mx-lib 新增 721 定点补位（补丁清单不含 721，实测会硬失败）；mx-clean 归档 orchestrator/modelcap 新存储；守门 ㉗ 四断言＋226/226 |
 
 ### 角色/排除（非 spec 文档）
 

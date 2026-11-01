@@ -25,10 +25,11 @@ source "$SCRIPT_DIR/mx-lib.sh"
 
 # ── 运行面自愈（533/534 长效化：自更新擦除后每次 mx-up 收敛恢复）──────
 # 自更新会 git 清洗源码树——manifest 文件与 git-applied 补丁一并被擦（run5/6/7 三次实录，
-# run7 anexec 并发闸拒收即此因）。mx-up 是推演起跑/恢复的唯一入口，在此三步收敛：
+# run7 anexec 并发闸拒收即此因）。mx-up 是推演起跑/恢复的唯一入口，在此四步收敛：
 #   ① mx_provision_agent_src（快照重供：宿主 git 工作态 → hermes-agent-src）
-#   ② mx_apply_agent_patches（390→721 git apply，源码树语义在位）
+#   ② mx_apply_agent_patches（390→707 git apply，源码树语义在位）
 #   ③ deploy-agent-runtime --apply（manifest 文件内容同步——收尾步）
+#   ④ mx_restore_idempotency_fix（721 两文件定点补位；deploy 默认保留差异，洗树后不覆盖）
 # 顺序硬约束（2026-11-01 run24 刷新窗实锤根治）：deploy 必须在 provision 之后——
 # 快照重供会整树重建，先前 deploy 的内容被洗掉；且快照只取宿主 git 跟踪文件，
 # 新增未跟踪文件（如 completion_contract.py）只能靠 manifest deploy 补位。
@@ -40,6 +41,9 @@ mx_apply_agent_patches || log "运行时 patch 自愈告警（533/534 可能缺�
 if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
   ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" )     || log "runtime manifest 自愈告警（deploy-agent-runtime 失败，需人工复核）"
 fi
+# 721 定点补位：deploy 默认保留目标差异（宿主新版 import 段已漂移），洗树后不会
+# 自动覆盖；两文件定点补位见 mx-lib 函数注释（只碰 SIM 快照，不碰宿主）。
+mx_restore_idempotency_fix || log "721 定点补位告警（kanban_db/kanban_db_connect 覆盖失败，需人工复核）"
 
 # ── 诊断抑制配置收敛（run15 复盘 S3：No home channel 噪音根治）────────────
 # agent 被 @ 唤醒但未设 home channel 时，先回一条「📬 No home channel…」诊断噪音再
