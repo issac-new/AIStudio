@@ -59,3 +59,6 @@ paths:
   - patches/723-agent-dispatcher-refusal-reasons.patch
   - patches/series
   - docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md
+  - docs/superpowers/specs/2026-11-02-full-regression-fixes.md
+  - scripts/regression/walk-routes.mjs
+  - scripts/regression/route-manifest.ts
