@@ -64,11 +64,27 @@
 
 ## 5. 验证（实测结果）
 
-- `npx vitest run custom/server/orchestrator/__tests__/tick.test.ts` = **7/7 通过**（间隔/开关解析、三种汇总场景、四步串联、关闭评估）。
+- `npx vitest run custom/server/orchestrator` = **63/63 通过**（8 文件；tick 7、evaluator 13、pass 6、delivery 7、其余既有）。
 - `npm run typecheck:harness` = **0 错**。
 - 合并前 `npm test` 全量。
-- **未做**：真实定时器长期运行的稳定性未验证（需要观察多轮）。
-- **未做**：命名板首次摄入后的真实数据流未验证（本批只验证到游标设置与单轮执行）。
+- **活体端到端（2026-11-02，8652 临时实例）**：写入一条演示 Trigger（`blocked`）→ 一轮 tick 后
+  - Trigger 状态 `ignored`（评估完成，不再重评）
+  - Decision `ignore` + `inferred` + `semantic:no_reason`
+  - digest 生成「t-demo 阻塞」，`delivered=0`
+  - 三块板游标生效：aiteam(4017)/data(2242)/default(7027) 均未回填
+- **未做**：真实 Matrix 投递未验证（演示线程无 `kanban_notify_subs` 订阅，走 skipped 分支）。
+
+### 5.1 活体暴露并已修的三个真缺陷
+
+1. **`author` 字段类型错**：`POST /p/<profile>/api/sessions/<id>/chat` 的 `author` 必须是对象，
+   传字符串返回 400 `invalid_author`。已删该字段（evaluator 不需要署名）。
+2. **模型输出词表不匹配**：模型返回 `{"verdict":"no_action"}`，原实现只认
+   `accept|ignore|unavailable`，直接丢弃 → 白花一次调用。已加 `normalizeVerdict` 同义词表
+   （no_action/skip/approve 等）。
+3. **评估失败无限重试 + observe 下重复评估**：原实现 `unavailable` 与 `observe` 都保持 `pending`，
+   每轮 tick 对同一批事件重复调模型。已修：`trigger.eval_attempts` 累计，达 2 次置 `ignored`；
+   `Trigger.status` 改为表达「评估是否完成」（accept→routed / ignore→ignored），实际派发仍由
+   `mode` 决定（`promoted` 字段单独表达）。
 
 ## 6. 风险与回滚
 

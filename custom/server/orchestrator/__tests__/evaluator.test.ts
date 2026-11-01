@@ -146,3 +146,21 @@ describe('evaluateTrigger', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('normalizeVerdict 同义词（2026-11-02 实测补）', () => {
+  it('模型常用词归一；未知词返回 null', async () => {
+    const { normalizeVerdict } = await import('../evaluator')
+    expect(normalizeVerdict('no_action')).toBe('ignore')
+    expect(normalizeVerdict('NO-ACTION')).toBe('ignore')
+    expect(normalizeVerdict('Approve')).toBe('accept')
+    expect(normalizeVerdict('skip')).toBe('ignore')
+    expect(normalizeVerdict('insufficient')).toBe('unavailable')
+    expect(normalizeVerdict('accept')).toBe('accept')
+    expect(normalizeVerdict('something_else')).toBeNull()
+  })
+
+  it('parseVerdict 接受同义词输出', () => {
+    expect(parseVerdict('{"verdict":"no_action","reasons":["噪音"]}'))
+      .toMatchObject({ verdict: 'ignore', reasons: ['噪音'] })
+  })
+})
