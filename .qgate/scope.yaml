@@ -49,3 +49,4 @@ paths:
   - patches/722-agent-emptystream-ladder-classify.patch
   - patches/series
   - docs/superpowers/specs/2026-11-01-parallel-dispatch-saturation.md
+  - docs/superpowers/specs/2026-11-01-release-v1.0.6-overlay.md
