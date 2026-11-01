@@ -87,7 +87,7 @@ describe('评测门禁四方同步（模板/参数/生成器/预检）', () => {
     expect(sh).toContain('评测与运行时指标')
     expect(sh).toContain('EVAL_GATE_TOOL_SUCCESS_MIN')
     expect(sh).toContain('eval-metrics')
-    expect(sh).toContain('三十二项')  // run24 批增 ⑩b 跨轮残留门等两项；此前三十项=V8.46 ㉔-㉚ 治理闭环
+    expect(sh).toContain('三十四项')  // 2026-11-02 run24 驱动面批⑤ 加 ⑩d；此前 三十二项 断言自 2026-11-01 批起已陈旧
     expect(sh).toContain('㉓ 评测接线')
     execFileSync('bash', ['-n', join(HARNESS, 'mux', 'mx-prelaunch-check.sh')])
   })

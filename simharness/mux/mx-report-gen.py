@@ -5004,6 +5004,73 @@ html[data-theme="dark"] .ck-node-z{{color:#0b1220}}
 
 
 
+# ── 编制利用率读数（run24 复盘批，2026-11-02；用户口径：AI 员工实际干活时长／全天在编时长）──
+# 分子：run 窗口内各编制 <profiles>/<p>/logs/gateway.log 里 `response ready` 行的
+#       time=<秒> 之和。只算「行首时间戳 ≥ run_started_at」的行——编制日志跨轮长驻
+#       （run24 实测单个 4-5MB、43 编制共 138MB），不按行过滤会把往轮耗时算进本轮。
+# 分母：(出报告时点 − run_started_at) × 在编编制数（profiles 下不含 `_` 前缀的目录数）。
+# 任一要素缺席 → available=False 并按空渲染（fail-soft：源缺席不猜数）。
+_UTIL_TIME_RE = re.compile(r'time=([\d.]+)s')
+_UTIL_STAMP_RE = re.compile(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})')
+
+
+def _staffing_utilization() -> dict:
+    import time as _time
+
+    out = dict(available=False, numerator_s=0.0, window_s=0, profiles=0, pct=None,
+               lines=0, reason='')
+    try:
+        started = int(float(state.get('run_started_at') or 0))
+    except (TypeError, ValueError):
+        started = 0
+    prof_root = SIM / 'hermes' / 'profiles'
+    try:
+        profiles = sorted(d for d in prof_root.iterdir()
+                          if d.is_dir() and not d.name.startswith('_'))
+    except OSError:
+        profiles = []
+    out['profiles'] = len(profiles)
+    if not started:
+        out['reason'] = 'state.env 缺 run_started_at'
+        return out
+    if not profiles:
+        out['reason'] = f'在编编制目录缺席（{prof_root}）'
+        return out
+    now = int(_time.time())
+    window = max(now - started, 1)
+    total = 0.0
+    lines = 0
+    for d in profiles:
+        logf = d / 'logs' / 'gateway.log'
+        if not logf.exists():
+            continue
+        try:
+            with open(logf, 'r', encoding='utf-8', errors='replace') as fh:
+                for ln in fh:
+                    if 'response ready' not in ln:
+                        continue
+                    m = _UTIL_TIME_RE.search(ln)
+                    s = _UTIL_STAMP_RE.match(ln)
+                    if not m or not s:
+                        continue
+                    try:
+                        ts = int(_time.mktime(_time.strptime(s.group(1), '%Y-%m-%d %H:%M:%S')))
+                    except (ValueError, OverflowError):
+                        continue
+                    if ts < started:
+                        continue
+                    try:
+                        total += float(m.group(1))
+                    except ValueError:
+                        continue
+                    lines += 1
+        except OSError:
+            continue
+    out.update(available=True, numerator_s=total, window_s=window, lines=lines,
+               pct=total / (window * len(profiles)) * 100.0)
+    return out
+
+
 # ── 第 0 章 · 一页读懂（2026-10-30 用户指令：报告要用户视角，先给结论再给过程）──
 # 全部按实测计算：闸键取自 state、问题单取自 issues.log 统计、交付物取自集成树实查。
 def _readfirst_html() -> str:
@@ -5074,6 +5141,24 @@ def _readfirst_html() -> str:
               '<li><b>核对证据</b>：第 2 章 26 步实录——每步有界面实拍与交付物实物。</li>'
               '<li><b>查问题与缺口</b>：第 3 章六域审计、第 4 章问题单、第 5 章交付物全景。</li>'
               '<li><b>看方法口径</b>：附录 A–E（数据口径 / 独立审计 / 意图通路 / 成效细分 / 产品能力说明）。</li>')
+    # 编制利用率（run24 复盘批）：分子/分母定义见 _staffing_utilization 上方注释；
+    # 口径句固定含「AI 员工实际干活时长占全天在编时长」，审计按这两个词锚定。
+    _um = _staffing_utilization()
+    if _um['available']:
+        _util_line = (
+            f'<p class="rf-note" id="staffing-utilization">编制利用率 {_um["pct"]:.1f}%'
+            f'（分子 {_um["numerator_s"]:,.0f}s／分母 定义式＝报告时点−开跑 '
+            f'{_um["window_s"] / 3600:.1f}h × 在编 {_um["profiles"]} 编制＝'
+            f'{_um["window_s"] * _um["profiles"]:,}s；计入 response ready {_um["lines"]} 条）'
+            '——这一行是「AI 员工实际干活时长占全天在编时长」的读数：分子是各编制日志里'
+            '每次响应就绪耗时的累加，分母是从开跑到出报告的全长乘以在编人数。</p>'
+        )
+    else:
+        _util_line = (
+            f'<p class="rf-note" id="staffing-utilization">编制利用率 ⬜ 不可算'
+            f'（{H.escape(_um["reason"])}）——这一行是「AI 员工实际干活时长占全天在编时长」'
+            '的读数；数据源缺席如实标空，不猜数。</p>'
+        )
     return (
         '<section class="rf-sec" id="ch0-readfirst"><h2>第 0 章 · 一页读懂</h2>'
         '<p class="rf-lead">这一页只回答三个问题：<b>现在走到哪了、你能拿到什么、还差什么。</b></p>'
@@ -5081,6 +5166,7 @@ def _readfirst_html() -> str:
         f'{_gap_line}'
         f'<p class="rf-note">26 步完成 {_done_steps} 步 ｜ 问题单 {n_issue_keys} 键（待处置 {n_issue_open}）'
         f' ｜ 界面实拍 {total_imgs} 张（点图放大）</p>'
+        f'{_util_line}'
         f'{_bypass_html}'
         '<div class="rf-cols">'
         f'<div class="rf-col"><h3>已经交付的</h3><ul>{"".join(_deliv)}</ul></div>'

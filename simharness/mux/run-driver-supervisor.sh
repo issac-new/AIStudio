@@ -219,6 +219,18 @@ while true; do
         break
       fi
       if [ $((_wd % 600)) -eq 0 ]; then note "证据等待 ${_wd}s（指纹不变：${_fp1}）"; fi
+      # run24 复盘批（2026-11-02）：熔断等待期并行预备（early-start，纪律 93）＋跨域依赖
+      # 看护（纪律 94）——驱动因熔断已退出，这些机械动作只能由监督器内环补位。run24 实录：
+      # G5 等待 4.5h 全员空转（15 编制均活跃 3-4 人），UAT 矩阵/发布件/复盘度量全靠值守
+      # 人肉前置 9+ 次。全部走 state 键幂等（prep_* / depwatch_*），重复调用零副作用。
+      ( set +e
+        cd "$SCRIPT_DIR/.." 2>/dev/null && RUN_ID="$RUN_ID" bash -c '
+          source mux/mx-lib.sh 2>/dev/null || exit 0
+          source mux/mx-scenario-lib.sh 2>/dev/null || exit 0
+          declare -F mx_prep_early_start_tick >/dev/null 2>&1 && mx_prep_early_start_tick
+          declare -F dependency_watch_once >/dev/null 2>&1 && dependency_watch_once
+        ' >> "$LOGS/$RUN_ID-driver.log" 2>&1
+      ) || true
       # 超时催办：每 _NG 一次催办令（群内点名 owner 补评审卡）；连续 10 次无响应
       # 升级记单（人工介入信号）——防无限轰炸，但永不放弃（用户 2026-10-14：禁死等）
       if (( _wd >= _WM && (_wd - _WM) % _NG == 0 )); then

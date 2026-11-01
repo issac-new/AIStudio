@@ -61,6 +61,15 @@ test-report.md §8 追加七行：指标治理（接线/未接线/装饰候选�
 
 test-report.md §8 增评测处置链行、§9 判据 16；release-plan.md §7 增发布门台账锚、判据 8；acceptance.md 增 UAT 判定台账锚与判据 5；retrospective.md 增治理闭环读数表与判据 12；audit-opinion.md 增治理闭环抽查行与判据 6。数字单一来源=evidence/governance-closure/summary.json + evidence/{release-gate,uat-verdicts}.jsonl + evidence/evals/remediations.json；采集器=`mux/mx-closure-snapshot.sh`（驱动步 24 调用），报告消费=`mx-report-gen.py` 证据九，审计消费=`mx-report-audit.py` 查 15/16。端点失败按 summary.failed 如实呈现，禁把「端点没起」写成「闭环通过」。同步位：模板五张、驱动步 13/20/21/24/26、生成器、审计器、prelaunch ㉔-㉚；守门测试 `tests/v846-governance-closure.test.ts`。
 
+## run24 复盘补记（2026-11-02）
+
+- **采集三形态参数各异**：`r18-collect.py op|dialog|effect` 各自参数集不同——`op` 用 `--step/--title/--entry/--frames`；`dialog` 必带 `--step/--room/--anchor/--title`，**anchor 必须是 `$…` 开头的 Matrix 事件号**（传时间/描述串会被拒并记 `r18-collect-failed`）；`effect` 用 `--step/--text`。run24 收官实录：锚格式错两次致 2 条 collect-failed 单。
+- **删帧必须同步清引用**：截图文件删除后若 `r18-steps.json` 仍引用，审计报 A5b「报告引用但文件缺失」（run24 实录 3 张冒配）；删帧后用脚本清 `ops[].frames` 与 `imgs` 两处引用，否则审计 FAIL。
+- **帧去重要看内容不看名**：同一张图复制成两个文件名会被审计「md5 假重复」拦（run24 实录 `8-op1-after` 与 `room_done-op1-after` 同图）；补拍须真拍新画面，禁复制改名。
+- **`mx-closure-snapshot.sh --out` 双语义**：以 `.json` 结尾=文件（自动建父目录），否则=目录（内写 `summary.json`）；run24 实录传 `.json` 被当目录 mkdir 致审计 `Is a directory`，已于 2026-11-02 修复。
+- **判据 17 有执法器**（run≥20261102）：测试报告缺「契约用例」清单=审计 FAIL（查 18），不再是「模板要求但无人检查」。
+- **叙事注册不可省**：`report_done` 前必须注册 `narrative_<run>.py`＋PART1（骨架兜底只防拒出报告）；值守代写须逐条锚实录并留痕（方案 §4.1 收官通道）。
+
 ## 后续批量项（挂账，列清单待批）
 
 - §2.7 其余行模板候选：analysis.md（系分稿）、app-registry.md、org.md、governance-report.md、completeness-check.md、test-design 三行（UC 案例设计/INT 集成案例/QUALITY 质量合规检验——2026-10-31 对账补登，此前清单漏列）。编码行（步 18）交付物=分支+执行输出原文，无可模板化结构，不立模板（原文不得修饰，模板化反而诱导粉饰）。

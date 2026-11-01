@@ -53,3 +53,8 @@ paths:
   - docs/superpowers/specs/2026-11-01-run24-closure.md
   - simharness/mux/narrative_run24.py
   - simharness/docs/2026-11-01-run24-pending-batch.md
+  - docs/superpowers/specs/2026-11-02-run24-retro.md
+  - docs/superpowers/specs/2026-11-02-run24-retro-driver-batch.md
+  - docs/superpowers/specs/2026-11-02-run24-retro-product-batch.md
+  - patches/723-agent-dispatcher-refusal-reasons.patch
+  - patches/series

@@ -223,18 +223,78 @@ if [ -f "$WEBUI_DB" ]; then
   log "user_profiles 重播完成（agent 映射 ${_seeded} 条；studio 用户行缺席的账号登录后重跑收敛）"
 fi
 
-# ── 5b. 中央仓克隆（导演真值反查）+ 每账号工作区 ──────────
+# ── 5b. 中央仓克隆（导演真值反查）+ 本机 bare 真值锚 + 每账号工作区 ──────────
 # 克隆后立即剥掉 remote URL 里的 token：git clone <带token URL> 会把它永久写进每个
 # clone 的 remote.origin.url——随后 runs.tar/workspaces.tar 归档与 push 失败时的
 # stderr（进 relay/scenario 日志=证据链）都会带着凭据扩散
 gh_clone_sanitize() { # <cloneDir>：token 只用于拉取，落盘 remote 一律还原无凭据形态
   git -C "$1" remote set-url origin "https://github.com/${GH_REPO}.git" 2>/dev/null || true
 }
+# ── 工作区 origin 单一性（run24 复盘驱动面批⑤，2026-11-02）──────────────
+# 实录锚：run24 双仓分裂——部分 agent 工作区 origin 仍是 GitHub 真远端旧根，而驱动
+# 真值锚（repo_has/branch_fresh/merge-base）查本机 central bare；四路系分推了 GitHub，
+# 驱动一条都认不到（gate 判「未交付」，agent 自认已交付，双方各说各话）。
+# 立法：所有工作区（以及导演 clone、工作树）的 origin 一律=本机 bare 单一入口；
+# GitHub 只作 bare 的同步上游（保留为具名 remote `github`，仅供出入库搬运）。
+CENTRAL_BARE="${MX_CENTRAL_BARE:-$SIM_ROOT/central-origin.git}"
+mx_central_bare_ensure() {
+  if [[ ! -d "$CENTRAL_BARE" ]]; then
+    mkdir -p "$(dirname "$CENTRAL_BARE")"
+    git init -q --bare "$CENTRAL_BARE" || fail "中央 bare 初始化失败：$CENTRAL_BARE"
+    log "中央 bare 已建：${CENTRAL_BARE}"
+  fi
+  # 种子供给（首建/空仓）：从导演 clone 灌入分支——不带 token、不额外走网络。
+  # 关键：刚 clone 的导演仓往往只有 refs/remotes/origin/*（无本地分支），旧写法只推
+  # refs/heads/* 会推空（实测 WARN）。故先按远端跟踪引用铺底，再以本地分支覆盖同名
+  # （本地若有 checkout 后提交则本地更新，后者为准）。
+  if [[ -z "$(git -C "$CENTRAL_BARE" for-each-ref --count=1 refs/heads 2>/dev/null)" ]]; then
+    local _rs="" _r
+    _rs="$(git -C "$DIRECTOR_CLONE" for-each-ref --format='%(refname)' 'refs/remotes/origin/*' 2>/dev/null \
+      | grep -v '/HEAD$' \
+      | while IFS= read -r _r; do printf '+%s:refs/heads/%s ' "$_r" "${_r#refs/remotes/origin/}"; done)"
+    [[ -n "$_rs" ]] && git -C "$DIRECTOR_CLONE" push -q "$CENTRAL_BARE" $_rs 2>/dev/null || true
+    git -C "$DIRECTOR_CLONE" push -q "$CENTRAL_BARE" '+refs/heads/*:refs/heads/*' 2>/dev/null || true
+    # HEAD 指 main（bare 缺省 HEAD=master 会让工作区 clone 报 "nonexistent ref" 且无 checkout）
+    if git -C "$CENTRAL_BARE" rev-parse -q --verify refs/heads/main >/dev/null 2>&1; then
+      git -C "$CENTRAL_BARE" symbolic-ref HEAD refs/heads/main 2>/dev/null || true
+    fi
+    if [[ -n "$(git -C "$CENTRAL_BARE" for-each-ref --count=1 refs/heads 2>/dev/null)" ]]; then
+      log "中央 bare 已从导演 clone 种子化（分支谱系就位）"
+    else
+      log "WARN 中央 bare 种子化失败（导演 clone 无分支或推送失败）——工作区 origin 仍指向 bare，需人工补种"
+    fi
+  fi
+}
+mx_origin_to_bare() { # <repo-dir>：origin 指向本机 bare（幂等；GitHub 留作具名 remote）
+  local _d="$1" _cur
+  [[ -d "$_d/.git" ]] || return 0
+  _cur="$(git -C "$_d" remote get-url origin 2>/dev/null || true)"
+  if [[ "$_cur" != "$CENTRAL_BARE" ]]; then
+    # GitHub 出口保留为 `github` 具名 remote（缺省 clone 时才挂；既有 origin 若是 GitHub 也记下来）
+    if ! git -C "$_d" remote get-url github >/dev/null 2>&1; then
+      case "$_cur" in
+        https://github.com/*) git -C "$_d" remote add github "$_cur" 2>/dev/null || true ;;
+        *) git -C "$_d" remote add github "https://github.com/${GH_REPO}.git" 2>/dev/null || true ;;
+      esac
+    fi
+    git -C "$_d" remote set-url origin "$CENTRAL_BARE" 2>/dev/null \
+      || git -C "$_d" remote add origin "$CENTRAL_BARE" 2>/dev/null || true
+    log "origin 归一：${_d}（${_cur:-空} → ${CENTRAL_BARE}）"
+  fi
+}
 if [[ ! -d "$DIRECTOR_CLONE/.git" ]]; then
   mkdir -p "$(dirname "$DIRECTOR_CLONE")"
   git clone -q "$(gh_clone_url)" "$DIRECTOR_CLONE" || fail "中央仓克隆失败（github token 见 gh_token 链）"
   gh_clone_sanitize "$DIRECTOR_CLONE"
   log "中央仓已克隆：${DIRECTOR_CLONE}（remote URL 已剥 token）"
+fi
+# 多机分工（MX_NODE 层）：agent 节点以 GitHub 为中枢（本机 bare 只有导演机那份，各节点
+# 各建一份会让「谁推的算数」再次漂移），只在导演/单机路径建 bare 并归一。
+if [[ "$MX_ROLE" == "agent" ]]; then
+  log "MX_ROLE=agent：工作区 origin 保持 GitHub 中枢（本机 bare 立法只在导演/单机生效）"
+else
+  mx_central_bare_ensure
+  mx_origin_to_bare "$DIRECTOR_CLONE"
 fi
 # 治理基线接线（2026-10-04 台账与规则页 404 实锤）：studio 的 resolveRosterFile 从服务目录
 # 向上探测 <dir>/runtime/governance；SIM 根软链到中央仓 runtime/governance（单一事实源、
@@ -247,17 +307,27 @@ for u in $(node_users); do
   WS=$(workspace "$u")
   if [[ ! -d "$WS/.git" ]]; then
     mkdir -p "$(dirname "$WS")"
-    git clone -q "$(gh_clone_url)" "$WS" || fail "账号工作区克隆失败：$u"
+    # 导演/单机：从本机 bare 克隆（run24 复盘批⑤）——origin 生来就是真值锚，且不带任何
+    # token；旧实现从 gh_clone_url 克隆再剥 token，origin 仍是 GitHub，四路系分推了驱动
+    # 认不到的远端（run24 双仓分裂实录）。agent 节点沿用 GitHub 中枢（多机跨节点真值）。
+    if [[ "$MX_ROLE" == "agent" ]]; then
+      git clone -q "$(gh_clone_url)" "$WS" || fail "账号工作区克隆失败：$u"
+    else
+      git clone -q "$CENTRAL_BARE" "$WS" || fail "账号工作区克隆失败：$u（bare=${CENTRAL_BARE}）"
+    fi
     # [LEAD-MERGE] 客户端守门（2026-10-18 立法 run21 三文件冲突实录）：工作区本地
     # pre-push 钩子——直推 integration/* 须含 [LEAD-MERGE] 标记，fixer 推 fix/DEF-X
     # 分支不受限。中央仓本地化前的可执行层（服务端 pre-receive 已备 git-hooks/）。
     cp "$HARNESS_ROOT/mux/git-hooks/pre-push-client" "$WS/.git/hooks/pre-push" 2>/dev/null \
       && chmod +x "$WS/.git/hooks/pre-push" || true
-    gh_clone_sanitize "$WS"
+    [[ "$MX_ROLE" == "agent" ]] && gh_clone_sanitize "$WS" || true
     git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.name "$u"
     git -C "$WS" -c user.name="$u" -c user.email="$u@aipaydev.local" config user.email "$u@aipaydev.local"
-    log "账号工作区就绪：${WS}（remote URL 已剥 token）"
+    log "账号工作区就绪：${WS}（origin=$(git -C "$WS" remote get-url origin 2>/dev/null)）"
   fi
+  # 存量工作区 origin 归一（幂等）：上轮遗留的 GitHub origin 一律拉回 bare——
+  # 这是「四路系分推 GitHub、驱动认不到」的根治点（run24 复盘批⑤）。
+  [[ "$MX_ROLE" == "agent" ]] || mx_origin_to_bare "$WS"
 done
 
 # ── 6. fleet-manifest ───────────────────────────────────

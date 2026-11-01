@@ -11,7 +11,7 @@
 // 测试方式：bash 子进程 source 真实 mx-lib/mx-scenario-lib（AIPAY_SIM_ROOT 指向
 // 临时目录，不碰真实 sim 栈），断言函数行为本身而非复制实现。
 import { execFileSync } from 'child_process'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync, statSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { describe, expect, it, afterAll } from 'vitest'
@@ -1380,7 +1380,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
   it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑪ 叙事注册与骨架兜底')
-    expect(pre).toContain('prelaunch 三十三项')  // V8.46 加 ㉔-㉚ 治理闭环；此前二十三项=V8.45 ㉓ 评测接线
+    expect(pre).toContain('prelaunch 三十四项')  // 2026-11-02 run24 驱动面批⑤：加 ⑩d 工作区 origin 单一性；此前三十三项=V8.46 治理闭环 ㉔-㉚
     expect(pre).toContain('⑫ 账号板供给在位')
   })
 
@@ -1510,5 +1510,231 @@ describe('㉗ 模型波动支撑面接线绊线（2026-11-01 方案×程序同�
     const plan = read(join(PRODUCT, 'docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'))
     expect(plan).toContain('deciderMode=delegated')
     expect(plan).toContain('strength=delegated')
+  })
+})
+
+// ── ㉘ run24 复盘驱动面批（2026-11-02，六件）──────────────────────────────
+// ① DM 直达后备（群动员令 15min 零响应 vs DM 秒触发四例）
+// ② 复测预启动（新 [LEAD-MERGE] 合入即令增量复测，sha 幂等）
+// ③ early-start 预备步（G5 熔断等待期派 UAT 矩阵/发布说明/复盘度量草稿）
+// ④ 跨域依赖看护（fix/* 未合入即催域 lead，600s 分支级节流）
+// ⑤ 工作区 origin 单一性（prelaunch ⑩d，计数三十四项）
+// ⑥ G5 风暴去重（issue_once）+ 闭包快照 --out *.json 按文件写
+describe('㉘ run24 复盘驱动面批（驱动面六件，2026-11-02）', () => {
+  const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf8' })
+  const gitx = (args: string[], cwd?: string) =>
+    execFileSync('git', [...(cwd ? ['-C', cwd] : []), ...args], { encoding: 'utf8' })
+
+  /** bare + 工作区 fixture：main / integration/<rfd> / fix/DEF-BE-1 / [LEAD-MERGE] 合入 */
+  function gitFixture(root: string, rfd = 'RFD-001'): { clone: string; bare: string; work: string } {
+    const bare = join(root, 'origin.git')
+    const work = join(root, 'work')
+    mkdirSync(bare, { recursive: true })
+    gitx(['init', '-q', '--bare', bare])
+    gitx(['init', '-q', work])
+    gitx(['config', 'user.email', 'lead@aipaydev.local'], work)
+    gitx(['config', 'user.name', 'lead'], work)
+    writeFileSync(join(work, 'a.txt'), 'x\n')
+    gitx(['add', '-A'], work)
+    gitx(['commit', '-qm', 'init'], work)
+    gitx(['branch', '-M', 'main'], work)
+    gitx(['remote', 'add', 'origin', bare], work)
+    gitx(['push', '-q', 'origin', 'main'], work)
+    // integration 基线
+    gitx(['checkout', '-qb', `integration/${rfd}`], work)
+    writeFileSync(join(work, 'i.txt'), 'i\n')
+    gitx(['add', '-A'], work)
+    gitx(['commit', '-qm', 'integration base'], work)
+    gitx(['push', '-q', 'origin', `integration/${rfd}`], work)
+    // fix 分支（未合入）
+    gitx(['checkout', '-qb', 'fix/DEF-BE-1', 'main'], work)
+    writeFileSync(join(work, 'f.txt'), 'f\n')
+    gitx(['add', '-A'], work)
+    gitx(['commit', '-qm', 'fix backend'], work)
+    gitx(['push', '-q', 'origin', 'fix/DEF-BE-1'], work)
+    // 域 lead 合并提交（[LEAD-MERGE] 标记）
+    gitx(['checkout', '-q', `integration/${rfd}`], work)
+    writeFileSync(join(work, 'y.txt'), 'y\n')
+    gitx(['add', '-A'], work)
+    gitx(['commit', '-qm', 'merge fix/DEF-BE-1 [LEAD-MERGE]'], work)
+    gitx(['push', '-q', 'origin', `integration/${rfd}`], work)
+    const clone = join(root, 'dirclone')
+    gitx(['clone', '-q', bare, clone])
+    return { clone, bare, work }
+  }
+
+  it('① DM 直达：第二次催办起 DM（state 计数），MX_NUDGE_DM=0 全关', () => {
+    const root = sandbox()
+    const out = sh(`
+mx() { echo '{"room_id":"!dm:stub"}'; }
+mx_send() { echo "SEND|$2" >> "$AIPAY_SIM_ROOT/sent.log"; echo evt-ok; }
+load_token() { echo tok; }
+note() { :; }
+mx_nudge_dm_once bb "等待结论行" "回执一行"
+echo "n1=$(grep -c 'SEND|!dm:stub' "$AIPAY_SIM_ROOT/sent.log" 2>/dev/null || echo 0)"
+mx_nudge_dm_once bb "等待结论行" "回执一行"
+mx_nudge_dm_once bb "等待结论行" "回执一行"
+echo "n3=$(grep -c 'SEND|!dm:stub' "$AIPAY_SIM_ROOT/sent.log")"
+MX_NUDGE_DM=0 mx_nudge_dm_once bb "等待结论行" "回执一行"
+echo "n4=$(grep -c 'SEND|!dm:stub' "$AIPAY_SIM_ROOT/sent.log")"
+echo "cnt=$(grep '^nudge_cnt_bb=' "$STATE" | cut -d= -f2)"`, root)
+    expect(out).toContain('n1=0')   // 第一次只走群消息（DM 不打扰）
+    expect(out).toContain('n3=2')   // 第 2/3 次各一条 DM 直达
+    expect(out).toContain('n4=2')   // 开关关闭后不再 DM
+    expect(out).toContain('cnt=3')
+  })
+
+  it('① mx_dm_send：createRoom is_direct+invite 只建一次，room 缓存复用', () => {
+    const root = sandbox()
+    const out = sh(`
+mx() { echo "MX|$2|$3" >> "$AIPAY_SIM_ROOT/calls.log"; echo '{"room_id":"!dm:stub"}'; }
+mx_send() { echo "SEND|$2" >> "$AIPAY_SIM_ROOT/calls.log"; echo evt-ok; }
+echo "e1=$(mx_dm_send tok @qi-agent:matrix.test hello1)"
+echo "e2=$(mx_dm_send tok @qi-agent:matrix.test hello2)"
+echo "rooms=$(grep -c 'MX|POST|createRoom' "$AIPAY_SIM_ROOT/calls.log")"
+echo "sends=$(grep -c 'SEND|!dm:stub' "$AIPAY_SIM_ROOT/calls.log")"
+echo "cache=$(grep '^dm_direct_' "$STATE" | cut -d= -f2)"`, root)
+    expect(out).toContain('e1=evt-ok')
+    expect(out).toContain('rooms=1')     // run24 值守配方：is_direct+trusted_private_chat+invite
+    expect(out).toContain('sends=2')
+    expect(out).toContain('cache=!dm:stub')
+    expect(read(join(MX, 'mx-scenario-lib.sh'))).toContain('is_direct:true')
+  })
+
+  it('② 复测预启动：新 [LEAD-MERGE] 合入只发一次；非标记提交不触发', () => {
+    const root = sandbox()
+    const { clone, work, bare } = gitFixture(root)
+    const out = sh(`
+DIRECTOR_CLONE="${clone}"
+dispatch_in_room() { echo "DISPATCH|$1|$3" >> "$AIPAY_SIM_ROOT/sent.log"; echo evt-1; }
+mx_dm_send() { echo "DM|$2" >> "$AIPAY_SIM_ROOT/sent.log"; echo evt-dm; }
+load_token() { echo tok; }
+note() { :; }
+posture() { echo standard; }
+MX_PRETEST_CHECK_SEC=0
+pretest_prestart_once; pretest_prestart_once
+echo "d1=$(grep -c 'DISPATCH' "$AIPAY_SIM_ROOT/sent.log")"
+echo "dm1=$(grep -c 'DM|' "$AIPAY_SIM_ROOT/sent.log")"
+echo "key1=$(grep -c '^pretest_prestart_' "$STATE")"`, root)
+    expect(out).toContain('d1=1')   // 同一合入提交只发一次（sha 前 7 位幂等）
+    expect(out).toContain('dm1=2')  // qi+fei 各一条 DM
+    expect(out).toContain('key1=1')
+    // 追加一条普通提交（无 [LEAD-MERGE]）→ 不触发预热
+    gitx(['checkout', '-q', 'main'], work)
+    writeFileSync(join(work, 'n.txt'), 'n\n')
+    gitx(['add', '-A'], work)
+    gitx(['commit', '-qm', 'chore: no marker'], work)
+    gitx(['checkout', '-q', 'integration/RFD-001'], work)
+    gitx(['merge', '-q', '--no-ff', 'main', '-m', 'merge main (no marker)'], work)
+    gitx(['push', '-q', 'origin', 'integration/RFD-001'], work)
+    const out2 = sh(`
+DIRECTOR_CLONE="${clone}"
+dispatch_in_room() { echo "DISPATCH" >> "$AIPAY_SIM_ROOT/sent2.log"; echo evt-1; }
+mx_dm_send() { echo "DM" >> "$AIPAY_SIM_ROOT/sent2.log"; echo evt-dm; }
+load_token() { echo tok; }
+note() { :; }
+posture() { echo standard; }
+MX_PRETEST_CHECK_SEC=0
+pretest_prestart_once
+echo "d2=$(grep -c 'DISPATCH' "$AIPAY_SIM_ROOT/sent2.log" 2>/dev/null || echo 0)"`, root)
+    expect(out2).toContain('d2=0')   // 无 [LEAD-MERGE] 标记的新 tip 不触发预热
+  })
+
+  it('④ 跨域依赖看护：未合 fix 分支催域 lead；域映射 DEF-BE→wei / DEF-FE→mei / 其他→fanfan', () => {
+    const root = sandbox()
+    const { clone } = gitFixture(root)
+    const out = sh(`
+DIRECTOR_CLONE="${clone}"
+dispatch_in_room() { :; }
+mx_send() { echo "ROOM|$2|$4" >> "$AIPAY_SIM_ROOT/dep.log"; echo evt-room; }
+mx_dm_send() { echo "DM|$2" >> "$AIPAY_SIM_ROOT/dep.log"; echo evt-dm; }
+load_token() { echo tok; }
+note() { :; }
+MX_DEPWATCH_CHECK_SEC=0 MX_DEPWATCH_NUDGE_SEC=600
+echo "own_be=$(_dep_owner_of fix/DEF-BE-9)"
+echo "own_fe=$(_dep_owner_of fix/DEF-FE-9)"
+echo "own_other=$(_dep_owner_of fix/chore-x)"
+dependency_watch_once
+echo "n1=$(grep -c 'DM|' "$AIPAY_SIM_ROOT/dep.log")"
+dependency_watch_once
+echo "n2=$(grep -c 'DM|' "$AIPAY_SIM_ROOT/dep.log")"
+echo "keys=$(grep -c '^depwatch_fix_' "$STATE")"`, root)
+    expect(out).toContain('own_be=wei')
+    expect(out).toContain('own_fe=mei')
+    expect(out).toContain('own_other=fanfan')
+    expect(out).toContain('n1=1')   // fix/DEF-BE-1 未真正合入 integration → 催域 lead 一次（DM）
+    expect(out).toContain('n2=1')   // 600s 内同分支不重复催（分支级节流）
+    expect(out).toContain('keys=1') // state 键 depwatch_<分支名>=上次催时刻
+  })
+
+  it('③ early-start 预备步：g5_phase 前零动作；G5 期三键各派一次（群+DM）', () => {
+    const root = sandbox()
+    const out = sh(`
+dispatch_in_room() { echo "DISPATCH|$1" >> "$AIPAY_SIM_ROOT/prep.log"; echo evt-1; }
+mx_dm_send() { echo "DM|$2" >> "$AIPAY_SIM_ROOT/prep.log"; echo evt-dm; }
+load_token() { echo tok; }
+note() { :; }
+posture() { echo standard; }
+mx_prep_early_start_tick
+echo "before=$(grep -c . "$AIPAY_SIM_ROOT/prep.log" 2>/dev/null || echo 0)"
+sset g5_phase 1
+mx_prep_early_start_tick
+mx_prep_early_start_tick
+echo "disp=$(grep -c 'DISPATCH' "$AIPAY_SIM_ROOT/prep.log")"
+echo "dm=$(grep -c 'DM|' "$AIPAY_SIM_ROOT/prep.log")"
+echo "keys=$(grep -cE '^prep_(uat|release|retro)=' "$STATE")"
+echo "owners=$(grep -oE 'DISPATCH\\|[a-z]+' "$AIPAY_SIM_ROOT/prep.log" | cut -d'|' -f2 | tr '\\n' ',')"`, root)
+    expect(out).toContain('before=0')  // 未到 G5 阶段不派（早期步零行为）
+    expect(out).toContain('disp=3')    // audit / ops / fanfan 各一
+    expect(out).toContain('dm=3')
+    expect(out).toContain('keys=3')
+    expect(out).toContain('audit,ops,fanfan,')
+
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('mx_prep_early_start_tick')
+    expect(lib).toContain('prep_uat_doc')
+    expect(lib).toContain('docs/acceptance/')
+    expect(lib).toContain('retro-metrics.md')
+    expect(lib).toContain('prep_finalize_hint')
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    expect(scen).toContain('sset_once g5_phase 1')
+    expect(scen).toContain('_prep_uat_hint')
+    expect(scen).toContain('_prep_retro_hint')
+    expect(scen).toContain('mx_prep_early_start_tick')
+  })
+
+  it('⑤ 工作区 origin 单一性：prelaunch ⑩d 在位且计数三十四项；mx-setup 建 bare/归 origin', () => {
+    const pre = read(join(MX, 'mx-prelaunch-check.sh'))
+    expect(pre).toContain('⑩d 各工作区 origin 单一性')
+    expect(pre).toContain('prelaunch 三十四项')
+    expect(pre).toContain("_bare='$SR/central-origin.git'")
+    const setup = read(join(MX, 'mx-setup.sh'))
+    expect(setup).toContain('CENTRAL_BARE="${MX_CENTRAL_BARE:-$SIM_ROOT/central-origin.git}"')
+    expect(setup).toContain('mx_central_bare_ensure')
+    expect(setup).toContain('mx_origin_to_bare')
+    expect(setup).toContain('git clone -q "$CENTRAL_BARE" "$WS"')   // 新工作区生来 origin=bare
+    expect(setup).toContain('mx_origin_to_bare "$WS"')              // 存量工作区归一（幂等）
+  })
+
+  it('⑥ G5 风暴去重 + 闭包快照 --out *.json 按文件写（不套同名目录）', () => {
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    expect(scen).toContain('issue_once g5-ready-fail')
+    expect(scen).toContain('issue_once g5-fail-settled')
+    expect(scen).not.toContain('ISSUE|g5-ready-fail|')
+    expect(scen).not.toContain('ISSUE|g5-fail-settled|')
+    expect(scen).toContain('mx_gate_breaker_trip g5')   // 每轮事实保留
+
+    const root = sandbox()
+    const sim = join(root, 'sim')
+    const outFile = join(root, 'evidence', 'governance-closure.json')
+    execFileSync('bash', [join(MX, 'mx-closure-snapshot.sh'), '--run', 'run-x', '--out', outFile,
+      '--token', 'invalid-jwt-for-test'], {
+      env: { ...process.env, AIPAY_SIM_ROOT: sim }, encoding: 'utf8',
+    })
+    expect(statSync(outFile).isFile()).toBe(true)
+    expect(existsSync(join(root, 'evidence', 'governance-closure'))).toBe(false)  // 不再造同名目录
+    const data = JSON.parse(readFileSync(outFile, 'utf8'))
+    expect(data.run).toBe('run-x')
+    expect(Array.isArray(data.failed)).toBe(true)   // 端点失败如实呈现（不伪造全绿）
   })
 })

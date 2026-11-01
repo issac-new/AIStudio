@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前三十三项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31））。
+# mx-prelaunch-check.sh — 开跑前三十四项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31）；⑩d=2026-11-02 run24 复盘驱动面批⑤ 工作区 origin 单一性）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -79,6 +79,18 @@ ck "⑩b 中央仓轮次工件无跨轮残留（七目录）" "[ -n \"\${PRELAUN
 #     （tessdata 只剩 eng/osd），frame-verify 全量误报「未命中」——依赖「已装」宣告失效，
 #     开跑前硬检 tesseract 可执行＋chi_sim 在语言清单；缺席即红，装回=官方 tessdata 包。）
 ck "⑩c 帧内容 OCR 通道（tesseract+chi_sim 在位）" "command -v tesseract >/dev/null 2>&1 && tesseract --list-langs 2>/dev/null | grep -q '^chi_sim$'" "brew 装 tesseract 后放 chi_sim.traineddata 到 /opt/homebrew/share/tessdata/（官方 tessdata_fast）——run24 实录：缺席致 frame-verify 全量误报"
+
+# ⑩d 各工作区 origin 单一性（run24 双仓分裂根治，2026-11-02）：agent 工作区 origin
+#    =GitHub 真远端旧根、驱动真值锚=本机 bare → 四路系分推 GitHub，驱动一条都认不到
+#    （agent 自认已交付、gate 判未交付各说各话）。立法=导演/单机下所有工作区 origin
+#    一律指本机 bare（$SR/central-origin.git，GitHub 只作 bare 的具名同步上游）；
+#    任一不等即红，指引=mx-setup 重跑（第 5b 段幂等归一）。多机 agent 节点以 GitHub
+#    为跨节点中枢（本机 bare 只有导演机那份），按 MX_ROLE 显式跳过并如实标注。
+if [[ "${MX_ROLE:-director}" == "agent" ]]; then
+  echo "✓ ⑩d 各工作区 origin 单一性（MX_ROLE=agent 跳过：多机 agent 节点 origin 中枢=GitHub，本机 bare 立法只在导演/单机生效）"; PASS=$((PASS+1))
+else
+ck "⑩d 各工作区 origin 单一性（统一指本机 bare）" "_bad=0; _bare='$SR/central-origin.git'; for _w in '$SR'/workspaces/*/aipaydev; do [ -d \"\$_w/.git\" ] || continue; _cur=\$(git -C \"\$_w\" remote get-url origin 2>/dev/null); if [ \"\$_cur\" != \"\$_bare\" ]; then _bad=\$((_bad+1)); echo \"\$_w origin=\${_cur:-空}\"; fi; done; [ \"\$_bad\" = 0 ]" "有工作区 origin 不是本机 bare（run24 实录：推 GitHub 的分支驱动真值锚认不到）——bash mux/mx-setup.sh 重跑归一（幂等，第 5b 段）；bare 缺失时 mx-setup 会自动建并种子化"
+fi
 
 ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev' for-each-ref --format='%(refname:short)' refs/remotes/origin/feat/DEV-* 2>/dev/null | head -1)\" ]" "git -C central/aipaydev push origin --delete <分支>（或并入 mx-clean 清理面）"
 
@@ -180,4 +192,4 @@ ck "㉙ R18 交付灯帧与 skill 降级登记" "grep -q 'deliver --step 23' '$H
 ck "㉚ 阶段页签 31（reviewGov/improve）" "grep -q \"key: 'reviewGov'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'improve'\" '$OV/custom/client/ia2/stage-tabs.ts' && ! grep -q '29 个页签' '$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'" "阶段页签缺 reviewGov/improve，或方案正本仍写 29 签"
 
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十三项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十四项）" || { echo "有红项——修复后再跑"; exit 1; }

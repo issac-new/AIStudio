@@ -1057,6 +1057,59 @@ else:
         warns.append('查16 UAT 已判但判定台账缺席/为空（evidence/uat-verdicts.jsonl）——'
                      '产品端点未写入或驱动接线未生效')
 
+# ── 查 17：编制利用率读数行（run24 复盘批，2026-11-02）──
+# 第 0 章导读区必有「编制利用率 xx%（分子 …／分母 定义式 …）」一行，并带口径句。
+# 缺席或有数但缺口径句只记 WARN、不 FAIL——历史轮报告重生成时不该整批翻红；
+# 目的在「让读者知道这个百分数是什么」，不是新增放行门。
+# 锚点用元素 id 而不用裸词「编制利用率」：run24 实证该词在问题单台账正文里已出现
+# （「G5 熔断等待 4.5h 期间编制利用率约 25%」），裸词锚会把缺行读成有行。
+if 'id="staffing-utilization"' not in rep:
+    warns.append('查17 编制利用率读数行缺席（第 0 章导读区）——run24 复盘批要求的'
+                 '「分子/分母」读数未渲染（mx-report-gen._staffing_utilization 未接上或报告未重生成）')
+elif 'AI 员工实际干活时长占全天在编时长' not in rep:
+    warns.append('查17 编制利用率有数但缺口径句——读者无法判断这个百分数是什么；'
+                 '须一句话说明「AI 员工实际干活时长占全天在编时长」')
+
+# ── 查 18：判据 17「跨模块契约用例清单」机械执法（模板 §9；run id ≥ 20261102 适用）──
+# 立了条款却从无执法器：run24 实证 G4 通过而测试报告零「契约用例」字样——立法与执法两套。
+# 数据面：integration 分支 docs/test/*test-report*.md ＋ 证据面同名文件；两者都缺席=只注明
+# 不判（测试报告整体缺席由既有 G4 证据链负责）。判定：全部在场报告均无「契约用例」=FAIL；
+# 部分有部分无=WARN 点名缺件（避免主报告达标而子报告缺项把整轮翻红）。
+if RUN_ID >= '20261102':
+    import subprocess as _sp18
+    _cen18 = SIM / 'central' / 'aipaydev' / '.git'
+    _docs18 = []  # (标签, 正文)
+    for _f18 in sorted(EVID.glob('**/*test-report*.md')):
+        try:
+            _docs18.append((f'证据面 {_f18.relative_to(EVID)}',
+                            _f18.read_text(encoding='utf-8', errors='replace')))
+        except OSError:
+            continue
+    if _cen18.exists():
+        _ref18 = 'origin/integration/RFD-001'
+        _ls18 = _sp18.run(['git', '--git-dir', str(_cen18), 'ls-tree', '-r', '--name-only',
+                           _ref18, '--', 'docs/test'],
+                          capture_output=True, text=True)
+        for _p18 in (_ls18.stdout or '').splitlines():
+            _n18 = _p18.rsplit('/', 1)[-1]
+            if 'test-report' not in _n18 or not _n18.endswith('.md'):
+                continue
+            _show18 = _sp18.run(['git', '--git-dir', str(_cen18), 'show', f'{_ref18}:{_p18}'],
+                                capture_output=True, text=True)
+            if _show18.returncode == 0:
+                _docs18.append((f'integration {_p18}', _show18.stdout))
+    _hit18 = [lbl for lbl, txt in _docs18 if '契约用例' in txt]
+    _miss18 = [lbl for lbl, txt in _docs18 if '契约用例' not in txt]
+    if _docs18 and not _hit18:
+        fails.append(f'查18 判据 17「跨模块契约用例清单」缺失：在场测试报告 {_miss18} 全文零「契约用例」'
+                     '——模板 §9 判据 17 已立法（G4⑦ 按标题词核对），测试报告须给跨模块契约用例清单'
+                     '（用例编号/契约点/覆盖模块/结论），否则 G4 不得以「测试通过」放行')
+    elif _miss18:
+        warns.append(f'查18 判据 17 仅部分报告带契约用例清单，缺件：{_miss18}——主报告达标，'
+                     '子报告缺项如实黄标')
+else:
+    print(f'NOTE 判据17 自 20261102 起适用（本轮 {RUN_ID} 早于生效日，契约用例清单不判）')
+
 # ── 汇总 ──
 # 工具版本锚：审计结论绑定工具版本——镜像树落后一代曾在同一份
 # 报告上产出全错结果（标题逐字 0/26 假 FAIL）。输出自带 git 锚，结论不可复现时先对版本。
