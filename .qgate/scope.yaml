@@ -34,3 +34,7 @@ paths:
   - patches/series
   - team/config.yaml
   - package.json
+  - docs/superpowers/specs/2026-11-01-gate-verdict-hardening.md
+  - docs/superpowers/specs/2026-11-01-chat-turn-recovery-design.md
+  - custom/server/governance/lifecycle/verdict.ts
+  - custom/server/governance/__tests__/lifecycle-verdict.test.ts
