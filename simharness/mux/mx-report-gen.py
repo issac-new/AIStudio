@@ -24,6 +24,10 @@ try:  # 按轮叙事（用户视角口径，2026-10-30 起按轮文件存放：m
     from narrative_run23 import STEPS_META_RUN23 as _NARR_RUN23
 except Exception:  # noqa: BLE001 —— 叙事件缺席回落骨架兜底，绝不阻断报告链
     _NARR_RUN23 = None
+try:  # run24 叙事（值守全程实录撰写）
+    from narrative_run24 import STEPS_META_20261031_V8_RUN24 as _NARR_RUN24
+except Exception:  # noqa: BLE001
+    _NARR_RUN24 = None
 
 # SIM 根与 final-report-merge.py 同源（AIPAY_SIM_ROOT 可覆盖）——工具链单一解析口径，
 # 亦支持隔离树回归测试（写死路径使归档态 run6 无法离线回归）。
@@ -1711,6 +1715,7 @@ STEPS_META_20261021_V8_RUN22 = {
 }
 
 _NARR={'20261028-v8-run23':_NARR_RUN23} if _NARR_RUN23 else {}
+if _NARR_RUN24: _NARR['20261031-v8-run24']=_NARR_RUN24
 _NARR.update({'20261021-v8-run22':STEPS_META_20261021_V8_RUN22,'20261017-v8-run21':STEPS_META_20261017_V8_RUN21,'20261015-v8-run20':STEPS_META_20261015_V8_RUN20,'20261013-v8-run19':STEPS_META_20261013_V8_RUN19,'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7})
 def _narrative_fallback_skeleton(run_id):
     """R17 骨架兜底（run16 起修订）：未注册轮按 state.env 已落步键渲染骨架——全部步
