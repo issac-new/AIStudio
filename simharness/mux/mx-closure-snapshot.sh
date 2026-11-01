@@ -12,9 +12,12 @@
 #   3. 数字单一来源：本脚本只搬运产品响应，不在 harness 侧二次计算。
 #
 # 用法：
-#   bash mux/mx-closure-snapshot.sh --run <RUN_ID> [--out <dir>] [--token <jwt>] [--eval-run <id>]
-# 输出：
-#   <out>/summary.json + 每个端点一份 <name>.json；退出码 0=脚本执行完成（即使有端点失败）
+#   bash mux/mx-closure-snapshot.sh --run <RUN_ID> [--out <dir|summary.json>] [--token <jwt>] [--eval-run <id>]
+# 输出（--out 双语义，run24 实录 2026-11-02）：
+#   --out <dir>          → <dir>/summary.json + 每个端点一份 <name>.json
+#   --out <file>.json    → 以该 .json 为 summary（逐端点文件落同目录，不再套一层同名目录）
+#   缺省                  → $SIM_ROOT/runs/<RUN_ID>/evidence/governance-closure/
+#   退出码 0=脚本执行完成（即使有端点失败）
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 RUN_ID=""; OUT=""; TOK="${MX_JWT:-}"; EVAL_RUN=""
@@ -33,19 +36,31 @@ if [[ -z "$RUN_ID" ]]; then echo "用法: $0 --run <RUN_ID> [--out <dir>] [--tok
 source "$HERE/mux/mx-lib.sh"
 
 OUT="${OUT:-$SIM_ROOT/runs/$RUN_ID/evidence/governance-closure}"
-mkdir -p "$OUT"
+# --out 口径（run24 实录根治 2026-11-02）：传入以 .json 结尾的路径时必须按「文件」
+# 处理——旧实现一律 mkdir 该路径再写 <out>/summary.json，得到同名目录套娃，审计侧
+# 读 summary.json 报 `Is a directory`（run24 收官批实录）。新口径：
+#   *.json        → OUT_FILE=该文件本身，逐端点文件落同目录（内层结构不变）
+#   其他（含 /）   → 目录语义，OUT_FILE=<dir>/summary.json（旧行为）
+if [[ "$OUT" == *.json ]]; then
+  OUT_DIR="$(dirname "$OUT")"
+  OUT_FILE="$OUT"
+else
+  OUT_DIR="${OUT%/}"
+  OUT_FILE="$OUT_DIR/summary.json"
+fi
+mkdir -p "$OUT_DIR"
 if [[ -z "$TOK" ]]; then
   TOK=$(studio_login 2>/dev/null || true)
 fi
 if [[ -z "$TOK" ]]; then
-  printf '{"run":"%s","ok":0,"failed":["studio-login"],"note":"无法取得 JWT，治理闭环端点未探测"}\n' "$RUN_ID" > "$OUT/summary.json"
+  printf '{"run":"%s","ok":0,"failed":["studio-login"],"note":"无法取得 JWT，治理闭环端点未探测"}\n' "$RUN_ID" > "$OUT_FILE"
   echo "[closure] JWT 不可用——快照未采集（如实记缺口）"
   exit 0
 fi
 
 ok=0; failed=()
 fetch() { # <name> <path>
-  local name="$1" path="$2" file="$OUT/$1.json"
+  local name="$1" path="$2" file="$OUT_DIR/$1.json"
   if studio GET "$path" "$TOK" > "$file" 2>/dev/null && [[ -s "$file" ]]; then
     ok=$((ok+1))
     echo "  ✓ $name"
@@ -75,7 +90,7 @@ rg_n=0; uv_n=0
 [[ -f "$rg_file" ]] && rg_n=$(grep -c . "$rg_file" 2>/dev/null || echo 0)
 [[ -f "$uv_file" ]] && uv_n=$(grep -c . "$uv_file" 2>/dev/null || echo 0)
 
-python3 - "$OUT/summary.json" "$RUN_ID" "$ok" "${#failed[@]}" "$rg_n" "$uv_n" "${failed[*]:-}" <<'PY'
+python3 - "$OUT_FILE" "$RUN_ID" "$ok" "${#failed[@]}" "$rg_n" "$uv_n" "${failed[*]:-}" <<'PY'
 import json, sys, time
 out, run, ok, failed_n, rg_n, uv_n, failed = sys.argv[1:8]
 data = {
@@ -94,5 +109,5 @@ with open(out, 'w', encoding='utf-8') as fh:
     json.dump(data, fh, ensure_ascii=False, indent=2)
     fh.write('\n')
 PY
-echo "[closure] 快照完成：ok=$ok failed=${#failed[@]} release-gate=${rg_n} uat-verdicts=${uv_n} → $OUT/summary.json"
+echo "[closure] 快照完成：ok=$ok failed=${#failed[@]} release-gate=${rg_n} uat-verdicts=${uv_n} → $OUT_FILE"
 exit 0

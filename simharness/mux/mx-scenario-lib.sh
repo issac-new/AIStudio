@@ -466,6 +466,51 @@ dm_send_tracked() { # <fromUser> <toUser> <text> [mention] → 生效 event_id |
   printf '%s' "$_m"
 }
 
+# ── DM 直达后备（run24 复盘驱动面批①，2026-11-02）────────────────────
+# 实录锚：run24 群内动员令 15 分钟零响应，同一责任人改走 DM 秒触发（四例）。
+# 群消息被房间噪音稀释（催办/回灌/进度行同房），DM 是直达其会话的强提醒。
+# 语义：同一收件人本轮被催办计数 ≥2 时，群消息照发之外再 DM 直达；计数落
+# state（跨重启累计，避免每次重启都算「第一次」）。开关 MX_NUDGE_DM=0 关闭。
+MX_NUDGE_DM="${MX_NUDGE_DM:-1}"
+mx_dm_send() { # <token> <agent_mxid> <body> → event_id | SEND-FAILED（恒返 0，不阻断）
+  local _tok="$1" _mxid="$2" _body="$3" _key _rid _m
+  [[ -n "$_tok" && -n "$_mxid" && -n "$_body" ]] || { printf 'SEND-FAILED'; return 0; }
+  # DM 房缓存键=收件人 mxid：首建 createRoom（is_direct+trusted_private_chat+invite），
+  # agent 侧 _on_invite 自动加入（同 dm_room_agent 既有约定），不代其 accept。
+  _key="dm_direct_$(printf '%s' "$_mxid" | tr -c 'A-Za-z0-9_-' '_')"
+  _rid="$(sget "$_key")"
+  if [[ -z "$_rid" ]]; then
+    _rid="$(mx "$_tok" POST createRoom "$(jq -n --arg t "$_mxid" \
+      '{is_direct:true, preset:"trusted_private_chat", invite:[$t]}')" 2>/dev/null \
+      | jq -r '.room_id // empty' 2>/dev/null || true)"
+    [[ "$_rid" == '!'* ]] || { printf 'SEND-FAILED'; return 0; }
+    sset "$_key" "$_rid"
+  fi
+  _m="$(mx_send "$_tok" "$_rid" "$_body")" || _m="SEND-FAILED"
+  printf '%s' "$_m"
+}
+mx_nudge_dm_once() { # <agent> <desc> <text> → 第二次起群催办外加 DM 直达（恒返 0）
+  local _a="$1" _desc="$2" _text="$3" _k _n _tok _mxid _eid
+  [[ "${MX_NUDGE_DM:-1}" == "1" ]] || return 0
+  [[ -n "${STATE:-}" ]] || return 0
+  _k="nudge_cnt_${_a}"
+  _n="$(sget "$_k" 2>/dev/null || true)"
+  case "$_n" in ''|*[!0-9]*) _n=0 ;; esac
+  _n=$(( _n + 1 ))
+  sset "$_k" "$_n"
+  (( _n >= 2 )) || return 0
+  _tok="$(load_token fanfan 2>/dev/null || true)"
+  _mxid="$(agent_mxid "$_a" 2>/dev/null || true)"
+  [[ -n "$_tok" && -n "$_mxid" ]] || return 0
+  _eid="$(mx_dm_send "$_tok" "$_mxid" "【DM 直达·第 ${_n} 次催办】导演值守：仍在等「${_desc}」。${_text}")"
+  if [[ "$_eid" == "SEND-FAILED" ]]; then
+    note "[观察] 第 ${_n} 次催办 DM 直达失败（${_a}，如实记失败不装达）"
+  else
+    note "[观察] 第 ${_n} 次催办改走 DM 直达（${_a}，${_eid}）"
+  fi
+  return 0
+}
+
 # approved.events 台账（边界设计 §2/§6-T4，eid 锚点约定）：每行
 #   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
 # 事件 id 即 Matrix ${event_id}（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
@@ -856,6 +901,11 @@ mx_wait_eval() { # <predicate-cmd...>：等待环谓词求值——临时摘 ERR
   return $_rc
 }
 
+# 等待环每拍钩子（run24 复盘批③）：等待态里可并行推进的预热件（early-start 预备步/
+# 复测预启动/依赖看护）由调用方以 MX_TICK_FN 挂载；未挂=零行为，节流与幂等在被调方。
+# 用内联形态而非助手函数：守门测试按函数名逐个抽取（sed 提取单函数）时，助手不在
+# 抽取面会让「命令未找到」噪音污染守门输出（multi-owner-stall 实测）。
+
 wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   local desc="$1" timeout="$2"; shift 2
   local deadline=$(( $(date +%s) + timeout ))
@@ -865,6 +915,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   if [[ "$1" = "repo_has" ]]; then
     while (( $(date +%s) < deadline )); do
       [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+      [[ -n "${MX_TICK_FN:-}" ]] && "$MX_TICK_FN" || true
       if mx_wait_eval "$@"; then note "[真值] $desc ✓"; return 0; fi
       local _el=$(( $(date +%s) - _ws ))
       if (( _n1 == 0 && _el * 2 >= timeout )); then _n1=1; _artifact_nudge "$desc" "半窗"
@@ -874,6 +925,7 @@ wait_truth() { # <desc> <timeout-sec> <predicate-cmd...>
   else
     while (( $(date +%s) < deadline )); do
       [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+      [[ -n "${MX_TICK_FN:-}" ]] && "$MX_TICK_FN" || true
       if mx_wait_eval "$@"; then note "[真值] $desc ✓"; return 0; fi
       sleep "$MX_POLL_IVAL"
     done
@@ -1129,6 +1181,147 @@ _nudge_precision() { # <desc> → 精确催办片段
   esac
 }
 
+# ══ run24 复盘驱动面批（2026-11-02）：复测预启动 / 跨域依赖看护 / early-start 预备步 ══
+# 三件共同形态：等待环里「等人」不发生在真空里——等待期该做的下一步可以并行预热，
+# 条件一成熟立即起跑；每件都幂等（state 键）且带节流，每拍调用代价可忽略。
+
+# ── ② 复测预启动（run24 复盘批②）──────────────────────────────────
+# 实录锚：run24 修复合入 integration 后测试侧仍按「等正式派单」节奏，增量复测起步晚。
+# 语义：defect/testpass 等待环每拍检测 integration tip 是否为新出现的 [LEAD-MERGE]
+# 提交（域 lead 合并提交的固定标记，见 defect 任务书立法），命中即向测试责任人
+# （qi/fei）发「修复已合入，立即增量复测 X 片」预启动令（群+DM）。幂等键=
+# pretest_prestart_<sha 前 7 位>：同一合入提交只发一次；节流 MX_PRETEST_CHECK_SEC。
+pretest_prestart_once() { # → 恒返 0（等待环内调用，任何失败不阻断）
+  local _now _last _tip _key _shards _files _m _tok _t
+  _now=$(date +%s)
+  _last=$(sget pretest_last_check 2>/dev/null || true)
+  case "$_last" in ''|*[!0-9]*) _last=0 ;; esac
+  (( _now - _last >= ${MX_PRETEST_CHECK_SEC:-120} )) || return 0
+  sset pretest_last_check "$_now"
+  [[ -n "${DIRECTOR_CLONE:-}" && -d "${DIRECTOR_CLONE:-/nonexistent}/.git" ]] || return 0
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  _tip=$(git -C "$DIRECTOR_CLONE" rev-parse "refs/remotes/origin/integration/${RFD_ID}" 2>/dev/null || true)
+  [[ -n "$_tip" ]] || return 0
+  # 只认 [LEAD-MERGE] 标记：其余提交（fixer 直推/驱动归档提交）不触发预热，避免噪音令
+  git -C "$DIRECTOR_CLONE" log -1 --format=%s "$_tip" 2>/dev/null | grep -q '\[LEAD-MERGE\]' || return 0
+  _key="pretest_prestart_${_tip:0:7}"
+  [[ -n "$(sget "$_key" 2>/dev/null || true)" ]] && return 0
+  sset "$_key" "$_now"
+  # 片别推断=合并提交触及路径（BE=服务端/领域面，FE=前端面）；不可判按全片如实标注
+  _files=$(git -C "$DIRECTOR_CLONE" show --name-only --format= "$_tip" 2>/dev/null || true)
+  _shards=""
+  printf '%s\n' "$_files" | grep -qE '^(apps/(web|fe|client)|web/|client/|frontend/|src/ui/)' && _shards="FE"
+  printf '%s\n' "$_files" | grep -qE '^(apps/(api|server|core)|server/|services/|packages/|src/domain/)' && _shards="${_shards:+$_shards+}BE"
+  [[ -n "$_shards" ]] || _shards="BE+FE（合并提交路径不可判，按全片）"
+  _m="@qi-agent:matrix.test @fei-agent:matrix.test 【复测预启动】修复已合入 integration/${RFD_ID}（[LEAD-MERGE] 提交 ${_tip:0:7}，受影响 ${_shards} 片）——立即增量复测，不等正式派单：拉取 integration/${RFD_ID} 最新，只跑受影响分片用例，结果回一行 TEST-PASS/FAIL-TEST-*-S<n>（附用例数）；失败走 defect-loop 回灌；本片无变更回一行 NO-IMPACT。不许谎报。"
+  dispatch_in_room qi "$_m" "$(agent_mxid qi),$(agent_mxid fei)" >/dev/null 2>&1 || true
+  if [ "$(posture)" != "strict" ]; then
+    _tok="$(load_token fanfan 2>/dev/null || true)"
+    for _t in qi fei; do
+      mx_dm_send "$_tok" "$(agent_mxid "$_t")" "$_m" >/dev/null 2>&1 || true
+    done
+  fi
+  note "[预热] 复测预启动令已发（integration ${_tip:0:7}，${_shards} 片；群+DM）"
+  return 0
+}
+
+# ── ④ 跨域依赖看护（run24 复盘批④）────────────────────────────────
+# 实录锚：run24 fix/DEF-* 分支推上去了、域 lead 没合并，integration 缺修复，复测侧
+# 空等，只有人工巡检才发现（同轮 fix 分支在 origin 挂着无人收口）。
+# 语义：等待环每拍扫 origin 的 fix/* 分支，逐个判是否已合入 integration/<RFD>；
+# 未合的按分支名前缀找域 lead 催合并（群+DM），同一分支 600s 内不重复催；
+# state 键 depwatch_<分支名>=上次催时刻。节流 MX_DEPWATCH_CHECK_SEC（缺省 300s）。
+_dep_owner_of() { # <分支名> → 域 lead（DEF-BE-*→wei / DEF-FE-*→mei / 其他→fanfan）
+  case "$1" in
+    *DEF-BE-*|*def-be-*) echo wei ;;
+    *DEF-FE-*|*def-fe-*) echo mei ;;
+    *) echo fanfan ;;
+  esac
+}
+dependency_watch_once() { # → 恒返 0（对象缺席=未知跳过，不猜不拦）
+  local _now _last _base _sha _br _key _owner _room _m _tok _unmerged=0
+  _now=$(date +%s)
+  _last=$(sget depwatch_last_check 2>/dev/null || true)
+  case "$_last" in ''|*[!0-9]*) _last=0 ;; esac
+  (( _now - _last >= ${MX_DEPWATCH_CHECK_SEC:-300} )) || return 0
+  sset depwatch_last_check "$_now"
+  [[ -n "${DIRECTOR_CLONE:-}" && -d "${DIRECTOR_CLONE:-/nonexistent}/.git" ]] || return 0
+  mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
+  _base="refs/remotes/origin/integration/${RFD_ID}"
+  git -C "$DIRECTOR_CLONE" rev-parse -q --verify "$_base" >/dev/null 2>&1 || return 0
+  _room="${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}"
+  _tok="$(load_token fanfan 2>/dev/null || true)"
+  while read -r _sha _br; do
+    [[ -n "${_br:-}" ]] || continue
+    _br="${_br#refs/heads/}"
+    # 对象缺席（ls-remote 只给 sha，本地可能没取过该分支）→ 定向补取一次；仍缺=未知跳过
+    if ! git -C "$DIRECTOR_CLONE" cat-file -e "${_sha}^{commit}" 2>/dev/null; then
+      mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin "refs/heads/${_br}:refs/remotes/origin/${_br}" 2>/dev/null || true
+      git -C "$DIRECTOR_CLONE" cat-file -e "${_sha}^{commit}" 2>/dev/null || continue
+    fi
+    if git -C "$DIRECTOR_CLONE" merge-base --is-ancestor "$_sha" "$_base" 2>/dev/null; then continue; fi
+    _unmerged=$((_unmerged + 1))
+    _key="depwatch_$(printf '%s' "$_br" | tr -c 'A-Za-z0-9_-' '_')"
+    _last=$(sget "$_key" 2>/dev/null || true)
+    case "$_last" in ''|*[!0-9]*) _last=0 ;; esac
+    (( _now - _last >= ${MX_DEPWATCH_NUDGE_SEC:-600} )) || continue
+    sset "$_key" "$_now"
+    _owner=$(_dep_owner_of "$_br")
+    _m="@${_owner}-agent:matrix.test 【跨域依赖看护】分支 ${_br}（${_sha:0:7}）已推送但未合入 integration/${RFD_ID}——请 ${_owner} 以域 lead 身份拉取并合并（冲突在你侧消化，合并提交带 [LEAD-MERGE] 标记），合入后复测链自动预启动。若该分支已废弃，请删除远端分支并在群里说明。"
+    [[ -n "${_room:-}" ]] && mx_send "$_tok" "$_room" "$_m" "$(agent_mxid "$_owner")" >/dev/null 2>&1 || true
+    mx_dm_send "$_tok" "$(agent_mxid "$_owner")" "$_m" >/dev/null 2>&1 || true
+    note "[依赖] ${_br} 未合入 integration——已催 ${_owner} 合并（分支级 600s 节流）"
+  done < <(mx_fetch -C "$DIRECTOR_CLONE" ls-remote origin 'refs/heads/fix/*' 2>/dev/null || true)
+  (( _unmerged > 0 )) && note "[依赖] 在途未合 fix 分支 ${_unmerged} 个（见上逐条催办行）"
+  return 0
+}
+
+# ── ③ early-start 预备步（run24 复盘批③）────────────────────────────
+# 实录锚：run24 G5 熔断等待期全员空转——UAT 证据矩阵/发布说明骨架/复盘度量三件事
+# 本可并行预做，却都压到正式步才起步，正式步一到就等料。
+# 语义：G5 熔断等待段每拍 tick 检查 prep_uat/prep_release/prep_retro 三键，未落即
+# 一次性派发「只集料不判词」的预备件（群+DM，幂等键即该 state 键），派发后置 1。
+# 正式段（release/uat/retro）见到草稿即改口径「在既有草稿上定稿」，不重复要料。
+# 守门：仅 G5 阶段起效（g5_phase 键未置=零动作），避免早期步误派。
+prep_uat_doc() { echo "docs/acceptance/${RFD_ID}-uat-evidence-matrix.md"; }
+prep_release_doc() { echo "docs/delivery/${RFD_ID}-release-notes-draft.md"; }
+prep_retro_doc() { echo "docs/governance/${RFD_ID}-retro-metrics.md"; }
+mx_prep_early_start_tick() { # → 恒返 0
+  local _m _tok
+  [[ -n "$(sget g5_phase 2>/dev/null || true)" ]] || return 0
+  _tok="$(load_token fanfan 2>/dev/null || true)"
+  # prep_uat → audit：AC×证据源对照表草稿（只集料，判词归 bella 的 UAT 步）
+  if [[ -z "$(sget prep_uat 2>/dev/null || true)" ]]; then
+    _m="@audit-agent:matrix.test 【预备步·UAT 证据矩阵草稿（early-start，只集料不判词）】G5 仍在等待，UAT 段可并行预做：在 integration/${RFD_ID} 分支产出 $(prep_uat_doc)，两列——左列按 G1 冻结清单 $(freeze_doc) 的 AC 原编号逐条一行；右列证据源候选（测试报告对应节/commit/分支/接口或页面路径/可复跑命令）。只集料，不写「通过/不通过」判词（判词归 bella 的 UAT 步）。做完 push 并回一行 UAT-MATRIX-DRAFT。"
+    dispatch_in_room audit "$_m" "$(agent_mxid audit)" >/dev/null 2>&1 || true
+    if [ "$(posture)" != "strict" ]; then mx_dm_send "$_tok" "$(agent_mxid audit)" "$_m" >/dev/null 2>&1 || true; fi
+    sset prep_uat 1
+    note "[预备] UAT 证据矩阵草稿已派发（audit；early-start 只集料）"
+  fi
+  # prep_release → ops：release-notes 骨架 + 灰度三档表草稿
+  if [[ -z "$(sget prep_release 2>/dev/null || true)" ]]; then
+    _m="@ops-agent:matrix.test 【预备步·发布说明骨架与灰度表草稿（early-start）】G5 仍在等待，发版交付段可并行预做：在 docs/delivery/ 下产出 $(prep_release_doc)（骨架即可，落 integration/${RFD_ID} 分支），含三节——面向用户收益（按需求书 AC 归纳，不贴 commit 罗列）、灰度三档表（5%→25%→100% 各档观察期与判据）、回滚触发阈值与命令级步骤占位。数据缺项留 <待定> 并写明缺什么，不要编数字。做完 push 并回一行 RELEASE-DRAFT。"
+    dispatch_in_room ops "$_m" "$(agent_mxid ops)" >/dev/null 2>&1 || true
+    if [ "$(posture)" != "strict" ]; then mx_dm_send "$_tok" "$(agent_mxid ops)" "$_m" >/dev/null 2>&1 || true; fi
+    sset prep_release 1
+    note "[预备] 发布说明/灰度表草稿已派发（ops；early-start）"
+  fi
+  # prep_retro → fanfan：治理度量预收集
+  if [[ -z "$(sget prep_retro 2>/dev/null || true)" ]]; then
+    _m="@fanfan-agent:matrix.test 【预备步·复盘治理度量预收集（early-start）】G5 仍在等待，G6 复盘可并行预做：基于 runs/${RUN_ID}/evidence/（issues.log/scenario.log/state.env 与 governance-closure 快照）产出 $(prep_retro_doc)，表格式收集——问题单按类归桶计数、门禁打回/熔断次数、催办与 DM 响应间隔、修复到复测时长、代偿台账净额。只收集与口径说明，不写根因判定与行动项（判定归复盘段）。做完 push 并回一行 RETRO-METRICS-DRAFT。"
+    dispatch_in_room fanfan "$_m" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
+    if [ "$(posture)" != "strict" ]; then mx_dm_send "$_tok" "$(agent_mxid fanfan)" "$_m" >/dev/null 2>&1 || true; fi
+    sset prep_retro 1
+    note "[预备] 复盘治理度量预收集已派发（fanfan；early-start）"
+  fi
+  return 0
+}
+# 正式段措辞助手：草稿在位 → 「在既有草稿上定稿」提示（空=无草稿，按原派单）
+prep_finalize_hint() { # <草稿路径> <产出方> → stdout
+  [[ -f "$1" ]] || return 0
+  printf '｜注意：%s 已有 early-start 预备步草稿（%s 产出），本段在既有草稿上定稿/补齐即可，不重复索料。' "$1" "$2"
+}
+
 wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   local desc="$1" idle="$2" agents="$3"; shift 3
   # 总时长硬窗（纪律 26 兜底，2026-10-09 提速轮根治）：idle 判据可被"房间噪音持续
@@ -1175,6 +1368,7 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
   while true; do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
     [[ -n "${MX_PROGRESS_FN:-}" ]] && "$MX_PROGRESS_FN" || true
+    [[ -n "${MX_TICK_FN:-}" ]] && "$MX_TICK_FN" || true
     if mx_wait_eval "$@"; then note "[真值] $desc ✓"; return 0; fi
     cur_work=0
     for a in ${logs[@]+"${logs[@]}"}; do
@@ -1214,6 +1408,12 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
         compensate nudge "agents=$agents desc=${desc:0:60}（空转过半轻推）" 2>/dev/null || true
         mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${desc}」。${_intel}若你已完成派发词的部分条目，请继续完成剩余条目（交付物入库并 push、结论行收口）；确有阻塞请在群里说明。" "$_nmentions" >/dev/null 2>&1 || true
         note "[观察] 空转过半（${idle_half}s），已向 $agents 催办一次${_intel:+（含分支情报）}"
+        # 同一收件人第二次起群催办外加 DM 直达（run24 复盘批①：群动员令长期零响应）
+        if declare -F mx_nudge_dm_once >/dev/null 2>&1; then
+          for a in ${agents//,/ }; do
+            mx_nudge_dm_once "$a" "$desc" "$(_nudge_precision "${desc}" 2>/dev/null || true)" || true
+          done
+        fi
       fi
       nudged=1
     fi
@@ -1297,6 +1497,7 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
   while true; do
     [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
     [[ -n "${MX_PROGRESS_FN:-}" ]] && "$MX_PROGRESS_FN" || true
+    [[ -n "${MX_TICK_FN:-}" ]] && "$MX_TICK_FN" || true
     all_done=1
     for i in "${!exprs[@]}"; do
       (( done_flag[$i] == 1 )) && continue
@@ -1383,6 +1584,13 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
       [[ -n "$hint" ]] && hint="诊断：$hint"
       mx_send "$(load_token fanfan)" "$_nroom" "⏰ 催办：仍在等待「${lag}」名下任务的真值锚（分支/交付物）。${_fbi}若已部分完成请继续收口（交付物入库并 push、结论行）；确有阻塞请在群里说明。${hint}" "$_m" >/dev/null 2>&1 || true
       note "[观察] 个体静默过半（>${idle_half}s），已向 ${lag} 催办一次${hint:+（含陈旧分支诊断）}${_fbi:+（含分支情报）}"
+      # 同一收件人第二次起群催办外加 DM 直达（run24 复盘批①：群动员令 15min 零响应
+      # vs DM 秒触发四例；按人计数，个体活动复位后再到第二次即再直达）
+      if declare -F mx_nudge_dm_once >/dev/null 2>&1; then
+        for _x in ${lag//,/ }; do
+          mx_nudge_dm_once "$_x" "${lag} 名下真值锚" "任务卡/分支/交付物/结论行任一进展请回执一行。" || true
+        done
+      fi
       for _x in ${lag//,/ }; do
         for _j in "${!_uo_names[@]}"; do
           [[ "${_uo_names[$_j]}" = "$_x" ]] && _uo_nudged[$_j]=1
@@ -1994,6 +2202,9 @@ mx_gate_breaker_trip() { # <gate-key> <label> <unpassed-rounds>：记 N 轮未�
 mx_gate_breaker_check() { # <gate-key> <label>：≥2 轮未过则拒绝；复位=证据变化或人工复议
   local gate
   gate=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')
+  # 熔断等待段 tick（run24 复盘批③）：判定前先给「等待期可并行预做」的件一次派发机会
+  # （early-start 预备步）。幂等键自守，重复进入=零动作；判定本身零改动。
+  declare -F mx_prep_early_start_tick >/dev/null 2>&1 && mx_prep_early_start_tick || true
   gov_lc_breaker_check "$gate" "$(_mx_gate_evidence_sig "$2")" "$2" \
     || fail "${2} 打回熔断（治理服务判定阻断）。证据变化后自动复位；人工复议须同时给 GATE_BREAKER_OVERRIDE=1 与 GATE_BREAKER_REASON。"
 }

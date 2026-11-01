@@ -1506,6 +1506,12 @@ DEVSPECS
 fi
 
 # ══ 步骤 16b：合并集成 + 测试执行 + 缺陷闭环 ═════════
+# run24 复盘驱动面批（2026-11-02）等待期 tick：任何等待环（wait_truth/wait_alive_truth*）
+# 每拍调它——②复测预启动（新 [LEAD-MERGE] 合入即令 qi/fei 增量复测）+ ④跨域依赖看护
+# （fix/* 未合入即催域 lead）。两者自带节流（120s/300s）与幂等键，重复调用零动作。
+_stage_tick() { pretest_prestart_once; dependency_watch_once; }
+# G5 阶段 tick（run24 复盘批③）：在预热两件之外加派 early-start 预备步三键。
+_g5_tick() { mx_prep_early_start_tick; pretest_prestart_once; dependency_watch_once; }
 if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   # 段界锚：并行度实测以「── devimpl → ── defect」取窗，本行须最先落
   note "── defect：集成合并+测试执行+缺陷闭环段起（devimpl 段收尾分界锚）"
@@ -1778,6 +1784,11 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
     #    回话顶回不清零，再静默即再催）。判活节流 60s/轮。
     if (( $(date +%s) - _tst_check_ts >= 60 )); then
       _tst_check_ts=$(date +%s)
+      # run24 复盘驱动面批（2026-11-02）：等待环每拍两件并行预热——②复测预启动
+      # （integration 出现新 [LEAD-MERGE] 即令 qi/fei 增量复测）+ ④跨域依赖看护
+      # （fix/* 未合入即催域 lead 合并）。两者自带节流与幂等键，重复调用零动作。
+      pretest_prestart_once || true
+      dependency_watch_once || true
       for _t in qi fei; do
         eval "_tst_w=\${_tst_lw_$_t:-0}"
         _w=$(_agent_log_last_work_ts "$HERMES_ROOT/profiles/$_t/logs/agent.log" 2>/dev/null || echo 0)
@@ -1811,6 +1822,8 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
             mx_send "$(load_token fanfan)" "$SCAN_ROOM" "⏰ 催办：@${_t}-agent 静默超 $(( ${MX_DEFECT_NUDGE_HALF:-600} / 60 )) 分钟，${_tst_gap}（缺陷 ${DEFECTS:-0} 修复 ${FIXED:-0}）。请继续测试执行并收口：testlog 入库 push、每片一行结论行 TEST-PASS/FAIL-TEST-*-S<n>（附用例数）、有修复则 FIX-DONE+commit 锚。若已全部完成请补发结论行；确有阻塞请在群里说明。禁静默。" "$(agent_mxid "$_t")" >/dev/null 2>&1 || true
             note "[观察] 测试员 ${_t} 个体静默过半，已催办一次（${_tst_gap}）"
             eval "_tst_nudged_$_t=1"
+            # run24 复盘批①：同一测试员第二次被催办时群催办外加 DM 直达
+            mx_nudge_dm_once "$_t" "${_tst_gap}" "testlog 入库 push、每片一行结论行（附用例数）、有修复则 FIX-DONE+commit 锚；确有阻塞请在群里说明。" || true
           fi
         fi
       done
@@ -1888,9 +1901,11 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
 2) push origin integration/${RFD_ID}
 3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本账号的板；其他账号的由你发 matrix 通知其 owner-agent 更新）
 结论行 REPORT-DONE 开头。不许谎报。" "$(agent_mxid qi)"
+    MX_TICK_FN=_stage_tick   # 报告等待期同款预热 tick（run24 复盘批②④）
     wait_alive_truth "测试报告入库" 1800 qi test_report_on_integration "${RFD_ID}" \
       || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; \
            sset g4_evidence_gap 1; note "[G4] g4_evidence_gap=1（缺报告过闸显形，run18 复盘 F3：闸键-证据耦合）"; }
+    unset MX_TICK_FN
   fi
   gate_review qi "G4-测试过闸"
   # ── 契约执行强制线（质量 C 转正，2026-10-16：run15 前置 P4-10 影子模式→G4 强制）──
@@ -1949,6 +1964,11 @@ fi
 # 硬闸：G4 未过不得评审；G5 未过不得发布。
 if step_reached ready && [[ -z "$(sget ready_done)" ]]; then
   gate_blocked g4_pass ready   # V3 硬闸：G4 未过不进发布准出
+  # run24 复盘批③（G5 熔断等待段 tick）：g5_phase=G5 已进入标记（early-start 预备步
+  # 只在本阶段起效，早期步零动作）；MX_TICK_FN 让本节所有等待环每拍尝试派发
+  # prep_uat/prep_release/prep_retro（幂等键自守，派过即零动作）。
+  sset_once g5_phase 1
+  MX_TICK_FN=_g5_tick
   # 判词锚点=本轮开跑时刻（run8 优化 E）：派发时刻锚会把重启前已存在的结论行排除在
   # 窗外，relay 换代后只能整轮重评（run7 首评 1800s 死墙超时+重评 20m 实录）。开跑锚
   # 使既有判词可见可复用；旧轮残留由 branch/repo 同款新鲜度语义兜住（新一轮房间重建）。
@@ -2199,6 +2219,9 @@ if [ "$(posture)" = "strict" ]; then
     note "[真值] G5 判词复用（本轮既有 PASS 结论行，不重派评审）✓"
   else
     mx_gate_breaker_check g5 "G5 发布准出"   # 熔断：两轮未过不得发布（跨调用持久；已 PASS 复用不受历史 FAIL 计数拦）
+    # run24 复盘批③ 定稿口径：ops 的 early-start 发布说明/灰度表草稿在位时，评审按
+    # 「在既有草稿上定稿」执行（不重复索料）；草稿缺席=原派单，零行为变化。
+    _prep_rel_hint="$(prep_finalize_hint "$DIRECTOR_CLONE/$(prep_release_doc)" ops)"
     dispatch_in_room fanfan "@fanfan-agent:matrix.test 测试报告已在 integration/${RFD_ID}，请执行 G5 发布准出评审（评审卡 ${RGID}@fanfan-review 板，按 templates/release-plan.md 与 release-notes.md 产出）：
 1) G4 证据已挂关联任务卡
 2) 构建产物同 commit 可复现（integration commit 存在、分支树干净）
@@ -2208,7 +2231,7 @@ if [ "$(posture)" = "strict" ]; then
 6) 发布说明：面向用户收益（不贴 commit 罗列）
 7) 对外发布 HumanGate：由导演批准通道在你结论行 PASS 后自动记录落卡（approved.events 留痕）——你无需等待批准记录、也不得把它计为缺项（run22 复盘根治④：R-5 环形依赖——评审等批准记录而批准只在 PASS 后触发=永锁；此节你只写「PASS 后由导演通道记录」一句话即可）
 8) 安全条件复核（V8.17 裁决 A）：安全评审的 SECURITY-COND 条目（见 evidence/security-conditions.md，无则本项直接过）逐条核对——已修复的附修复 commit 锚；未修复的必须在卡 body 标 GAP:COND-<n> 并写明归属与计划（未闭环条件如实呈现，不掩盖）
-评审记录落卡 body（review-record 结构）。评审过程分节落卡：卡 body 按上述 1)-8) 要素分节（每节一行判词+证据指针；未评节标 TODO、缺项节标 GAP）——过程可见、缺项可边评边补，禁终态一次性打回重做（run11 左移件 e：G5 两轮打回实录）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid fanfan)"
+评审记录落卡 body（review-record 结构）。评审过程分节落卡：卡 body 按上述 1)-8) 要素分节（每节一行判词+证据指针；未评节标 TODO、缺项节标 GAP）——过程可见、缺项可边评边补，禁终态一次性打回重做（run11 左移件 e：G5 两轮打回实录）。结论行 READY-GATE-PASS 或 READY-GATE-FAIL（附缺项，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。${_prep_rel_hint}" "$(agent_mxid fanfan)"
     # 活性等待（run8 优化 E）：固定 1800s 死墙在 agent 真干活时也会超时（run7 首评实录）；
     # fanfan 日志持续增长=还在产出，零增长 idle 窗才判空转退出。
     if wait_alive_truth "房间出现 READY-GATE 结论行（判词语义）" 3600 fanfan mx_gate_verdict_seen "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS"; then
@@ -2226,13 +2249,16 @@ if [ "$(posture)" = "strict" ]; then
           fi
         fi
       else
-        echo "ISSUE|g5-ready-fail|fanfan-agent|${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐" >> "$EVID_DIR/issues.log"
+        # run24 复盘批⑥ 风暴去重：G5 FAIL 是「每轮一次事实」，但驱动重启/补齐重派会
+        # 反复触达同一状态（run24 实测 g5-ready-fail 25 条同文、g5-fail-settled 18 条）
+        # ——改 issue_once（同键只记一单；轮次事实由 scenario.log 时间线承载）。
+        issue_once g5-ready-fail fanfan-agent "${RFD_ID} G5 FAIL（缺项见评审卡），回灌补齐"
         mx_gate_breaker_trip g5 "G5 发布准出" 1
         _G5GAPS="$(g5_real_gaps)"
         if g5_verdict_settled; then
           # 评审结论稳定（卡面含复核维持）：不重派评审（重派=同判词空转 40min/轮），
           # 直接熔断等待修复证据变化复位；真实缺项随记录留痕供修复链对齐。
-          echo "ISSUE|g5-fail-settled|fanfan-agent|G5 FAIL 判词稳定（评审卡含复核维持，真实缺项=${_G5GAPS}）——跳过重派评审空转，熔断等待修复证据（run19 复盘根治）" >> "$EVID_DIR/issues.log"
+          issue_once g5-fail-settled fanfan-agent "G5 FAIL 判词稳定（评审卡含复核维持，真实缺项=${_G5GAPS}）——跳过重派评审空转，熔断等待修复证据（run19 复盘根治）"
           note "[G5] 判词稳定 FAIL（缺项=${_G5GAPS}）——不重派评审，熔断等修复证据"
           fail "G5 评审结论稳定（FAIL·缺项 ${_G5GAPS}），等待修复链证据变化后复位（V3 硬闸+run19 复盘根治）"
         fi
@@ -2317,6 +2343,7 @@ if [ "$(posture)" = "strict" ]; then
     echo "ISSUE|evidence-worktree|delivery|main worktree 不可用（留存本地）" >> "$EVID_DIR/issues.log"
   fi
   sset ready_done 1
+  MX_TICK_FN=_stage_tick   # 出 G5 后回落到预热两件（early-start 键已落=零动作；显式回落防语义漂移）
   capture_step "ready_done" "/app/stage/accept?tab=g5"     # 步20 承载面（G5 审批留痕；run23 复盘补拍摄位）
   capture_step "ready_inbox" "/app/inbox"                  # 步20 第二拍摄位：审批收件箱（2026-10-31 活体复核 /app/inbox 即真路由；面板首拉间歇，采集时序见 capture-plan 注）
 fi
@@ -2324,11 +2351,15 @@ fi
 # ══ 步骤 21：发版交付记录（线下执行，在册追踪）═══════
 if step_reached release && [[ -z "$(sget release_done)" ]]; then
   gate_blocked g5_ready release   # V3 硬闸：G5 未过不发布
+  # run24 复盘批③ 定稿口径：ops 的 early-start 发布说明/灰度表草稿在位 → 发版卡带
+  # 「在既有草稿上定稿」指引（不重复索料）；草稿缺席=卡面文案零行为变化。
+  _prep_rel_card_hint="$(prep_finalize_hint "$DIRECTOR_CLONE/$(prep_release_doc)" ops)"
+  [[ -n "$_prep_rel_card_hint" ]] && note "[预备] 发布说明/灰度表按既有草稿定稿（early-start 草稿在位）"
   for spec in "REL-MERGE|integration/${RFD_ID} 合入 main（变更发版）|chen" \
               "REL-TAG|打 tag v1.0.0-cashier 并出 RELEASE.md|fanfan" \
               "REL-DELIVER|商户交付包与接入文档交付|fanfan"; do
     IFS='|' read -r k t owner <<< "$spec"
-    ID=$(kanban_create_as fanfan "$k" "${RFD_ID} $t" "线下执行；责任: ${owner}；关联 integration/${RFD_ID}")
+    ID=$(kanban_create_as fanfan "$k" "${RFD_ID} $t" "线下执行；责任: ${owner}；关联 integration/${RFD_ID}${_prep_rel_card_hint}")
     kanban_status_as fanfan "$ID" todo || true
     note "[fanfan] 发布记录 $k → 卡 $ID"
   done
@@ -2380,7 +2411,10 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     # 证据复用：本轮既有结论行且逐条覆盖全部 AC——不重派，直接进核验
     note "[真值] UAT 证据复用（本轮既有合格结论行，不重派验收）✓"
   else
-    _m21=$(dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。" "$(agent_mxid fanfan)")
+    # run24 复盘批③ 定稿口径：audit 的 AC×证据源矩阵草稿在位时，UAT 证据按
+    # 「在既有草稿上定稿」执行（只补判词与证据锚，不重复集料）。
+    _prep_uat_hint="$(prep_finalize_hint "$DIRECTOR_CLONE/$(prep_uat_doc)" audit)"
+    _m21=$(dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。${_prep_uat_hint}" "$(agent_mxid fanfan)")
     sset m21_marker "$_m21"
     # 必采对话挂钩随派发即时采+marker 持久化
     python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m21_marker)")" --title "UAT 验收任务书全文（bella→fanfan）" --user fanfan >/dev/null 2>&1 || true
@@ -2703,6 +2737,13 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     dispatch_in_room audit "@audit-agent:matrix.test 复盘·时间线素材片（提前批，独立会话）：基于 runs/${RUN_ID}/evidence/scenario.log 整理本轮时间线骨架（里程碑/事故/干预点），写 docs/retro/${RUN_ID}-retro-timeline.md。只整理事实不写判定。完成回一行 RETRO-SEC-TIMELINE-DONE。"
     dispatch_in_room secops "@secops-agent:matrix.test 复盘·问题分类素材片（提前批，独立会话）：基于 issues.log 全量问题单归类（产品通道/凭证/流程/环境），写 docs/retro/${RUN_ID}-retro-issues.md。只分类不判定根因。完成回一行 RETRO-SEC-ISSUES-DONE。"
     sset retro_material_dispatched 1
+  fi
+  # run24 复盘批③ 定稿口径：fanfan 的治理度量预收集草稿在位 → 本段「在既有草稿上定稿」
+  # （按终态数据补齐，不重复集料）；草稿缺席=零行为（正式段自带的度量收集照旧）。
+  _prep_retro_hint="$(prep_finalize_hint "$DIRECTOR_CLONE/$(prep_retro_doc)" fanfan)"
+  if [[ -n "$_prep_retro_hint" ]]; then
+    dispatch_in_room fanfan "@fanfan-agent:matrix.test 复盘·治理度量定稿：$(prep_retro_doc) 已有 early-start 预备步草稿，请按本轮终态数据（issues.log/scenario.log/state.env 与 governance-closure 快照）在既有草稿上定稿、补齐缺项并 push，不重复集料；根因判定与行动项仍归复盘段汇总。完成回一行 RETRO-METRICS-DONE。"
+    note "[预备] 治理度量按既有草稿定稿（early-start 草稿在位，不重复要料）"
   fi
   # UAT 收口（#1）：全过落 uat_done，有条件通过落 uat_conditional——复盘门二者取一，
   # 有条件通过须 bella 显式批准事件（UAT-COND-APPROVED 入 approved.events）方可进复盘。
