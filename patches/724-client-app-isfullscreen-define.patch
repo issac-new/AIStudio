@@ -1,0 +1,11 @@
+diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
+--- a/packages/client/src/App.vue
++++ b/packages/client/src/App.vue
+@@ -194,6 +194,7 @@ const usesPageSidebar = computed(() =>
+ const usesCodingAgentConfigSidebar = computed(
+   () => route.meta?.codingAgentConfig === true,
+ );
++const isFullscreen = computed(() => route.meta?.fullscreen === true);
+ const showAppSidebar = computed(
+   () =>
+     !isLoginPage.value &&

@@ -284,7 +284,7 @@ try {
     } else if (probe.unauthenticated) {
       led.record(`${visit.label}（未认证）`, reached, `${note} | 未验证房间数据`, 'WARN')
     } else if (visit.allowBlank && blank) {
-      led.record(`${visit.label}（默认关闭）`, reached, `${note} | 合法透明空态，未验收宠物内容`, 'WARN')
+      led.record(`${visit.label}（合法空态）`, reached, `${note} | 合法透明空态（访客/关闭态），未验收该页内容`, 'WARN')
     } else if (bounced) {
       led.record(`${visit.label}（守卫弹回）`, reached, `${note} | 守卫改道，未验收该页内容`, 'WARN')
     } else {
@@ -314,9 +314,27 @@ try {
       r.status === 403 && r.url.includes('/api/hermes/available-models?profile=orchestrator'))
     // dev 链自动登录先试口令（出厂已移除，401）再走 Matrix 桥——401 是设计内回落。
     const devLoginReq = activeReq.filter(r => r.status === 401 && r.url.includes('/api/auth/login'))
+    // 2026-11-02 全功能回归轮三类设计内状态（spec 2026-11-02-full-regression-fixes）：
+    // ①治理注册表读 404＝注册表 md 尚未创建（writeRegistry 首写才落目录），
+    //   daily-setup-signals 明文「源失败=该项 null（fail-soft，不阻断导航）」；
+    // ②sim/orgloop 族 503＝simcenter 成文 fail-closed 门（OBS_SIM_ROOT 缺席或不存在）；
+    // ③locked-ips 403＝管理面权限边界（非 super_admin 会话被拒，客户端静默处理）。
+    // 三者均为环境态而非页面缺陷，记 WARN 留痕不记缺陷。
+    const registryEmptyReq = activeReq.filter(r =>
+      r.status === 404 && r.url.includes('/api/governance/registry/'))
+    const simFailClosedReq = activeReq.filter(r =>
+      r.status === 503 && /\/api\/hermes\/(sim|orgloop)\//.test(r.url))
+    const adminGateReq = activeReq.filter(r =>
+      r.status === 403 && r.url.includes('/api/auth/locked-ips'))
+    // ide.shell 物化工作区 files/list 403＝非 super_admin 会话被拒后客户端走可解释
+    // 空态（守门测试 files-pane-perm-fallback 锁定该回落，2026-11-02 回归同判）。
+    const ideWorkspaceReq = activeReq.filter(r =>
+      r.status === 403 && r.url.includes('/api/studio/files/list'))
     const badReq = activeReq.filter(r =>
       !r.url.includes('favicon') && !expectedReq.includes(r) && !permissionReq.includes(r)
-      && !environmentReq.includes(r) && !failSoftReq.includes(r) && !devLoginReq.includes(r))
+      && !environmentReq.includes(r) && !failSoftReq.includes(r) && !devLoginReq.includes(r)
+      && !registryEmptyReq.includes(r) && !simFailClosedReq.includes(r) && !adminGateReq.includes(r)
+      && !ideWorkspaceReq.includes(r))
     if (badReq.length) {
       led.defect(`${visit.label} 失败请求`, badReq.slice(0, 4).map(r => `${r.status} ${r.url}`).join(' | '), 'P2')
     }
@@ -326,6 +344,22 @@ try {
     }
     if (devLoginReq.length) {
       led.record(`${visit.label} dev 登录回落`, true, `${devLoginReq.length} 条 401（口令→Matrix 桥）`, 'WARN')
+    }
+    if (registryEmptyReq.length) {
+      led.record(`${visit.label} 注册表空态`, true,
+        `${registryEmptyReq.length} 条 404（注册表未建，fail-soft null）`, 'WARN')
+    }
+    if (simFailClosedReq.length) {
+      led.record(`${visit.label} sim fail-closed`, true,
+        `${simFailClosedReq.length} 条 503（OBS_SIM_ROOT 态，设计内门）`, 'WARN')
+    }
+    if (adminGateReq.length) {
+      led.record(`${visit.label} 管理面权限`, true,
+        `${adminGateReq.length} 条 403（locked-ips 权限边界）`, 'WARN')
+    }
+    if (ideWorkspaceReq.length) {
+      led.record(`${visit.label} 工作区权限回落`, true,
+        `${ideWorkspaceReq.length} 条 403（files/list 非 super_admin，客户端可解释空态）`, 'WARN')
     }
     if (lateReq.length) {
       led.record(`${visit.label} 跨页延迟请求`, true,

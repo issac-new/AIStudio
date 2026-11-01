@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（459 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（461 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1＋推演方案×程序同步二批 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1；2026-11-01 ＋chat 回合自恢复立项补登记 1（edb3c6636 落 spec 未登记、docs-ssot-guard 主干红，本批清零）＋v1.0.5 发布 1；2026-11-01 ＋v1.0.6 发布 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 459 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1＋推演方案×程序同步二批 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1；2026-11-01 ＋chat 回合自恢复立项补登记 1（edb3c6636 落 spec 未登记、docs-ssot-guard 主干红，本批清零）＋v1.0.5 发布 1；2026-11-01 ＋v1.0.6 发布 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 461 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -447,6 +447,8 @@
 | 2026-11-02-run24-retro | run24 复盘与根治批 | 问题谱系四层全量归因（137 单 31 键+4 新识别）＋处置映射；驱动 6 件/产品 4 件/方案四修订/模板三张；判据 17 执法器落地 |
 | 2026-11-02-run24-retro-driver-batch | 驱动面六件根治 | DM 直达后备/复测预启动钩子/early-start 三预备键/跨域依赖看护/origin 立法+⑩d/G5 风暴去重+快照 out 守卫；vitest 233/233＋17 sh 全过 |
 | 2026-11-02-run24-retro-product-batch | 产品面与报告链四件 | 补丁 723 dispatcher 拒绝原因聚合（根因=board 团队围栏拒子编制 assignee）/利用率报告行/判据 17 执法（查 18） |
+| 2026-11-02-full-regression-fixes | 全功能回归轮补丁面两缺陷修复 | 723 尾 hunk 缺尾随上下文致 git apply EOF 锚定误判（inject WARN 跳过＝到达即坏；补计数 3/172→6/175＋3 行尾上下文）＋724 新增 isFullscreen 定义回补（App.vue ReferenceError，070 使用侧在位而 111 定义侧缺席）＋走查探针对齐设计语义（registry 空态/sim fail-closed/locked-ips・files 权限面白名单＋matrix 访客态）；walk-routes C/D 簇清零 |
+| 2026-11-02-agent-patch-injection-list | agent 补丁注入白名单 | 722/723 纳入 simharness 注入白名单＋runtime 副本同步 723 诊断段（原只登记 series 从未应用）；与 full-regression-fixes 的补丁本体修复互补（副本修在跑网关、补丁修 vendor/发布包）；本行由回归轮代登记清 docs-ssot 红 |
 | 2026-10-31-prelaunch-crossrun-residue-gate | prelaunch ⑩b 跨轮残留门 | 轮次工件七目录零残留硬门（run24 污染根治：AN-*/RFD-* 假真值跳系分）；PRELAUNCH_ALLOW_CROSSRUN_RESIDUE=1 豁免；九个跨轮基础目录设计内保留不在判定面；计数六处同步三十二项；绿红双测过 |
 | 2026-10-31-rsi-improvement-plan | AIStudio RSI 改进方案 | 四切面前沿调研＋仓内审计→R1-R12 分档项目（证据自动化/双体系合一/经验库治理/规模化）＋六条不做清单；执行按批次另立 spec |
 | 2026-10-31-superagent-domain-auth | super-agent 吸收 A+B 批：编排域与授权流水 | 新域 `custom/server/orchestrator/`（Trigger/Thread/Subscription/Decision/Mandate/Assignment 六表＋准入表＋四类策略版本＋看板事件桥）；DecisionGrant 增 strength/policyVersion/ruleIds；HumanGate 角色白名单与代批标注；patch 719 挂载 `/api/orchestrator/*`；vitest 24/24＋approval-inbox 96/96＋拼合树 pytest 11/11 |

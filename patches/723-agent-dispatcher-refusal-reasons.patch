@@ -90,7 +90,7 @@ diff --git a/gateway/kanban_watchers_dispatcher.py b/gateway/kanban_watchers_dis
 index 52eff21..a1518d7 100644
 --- a/gateway/kanban_watchers_dispatcher.py
 +++ b/gateway/kanban_watchers_dispatcher.py
-@@ -343,3 +343,172 @@ def _log_spawn_results(results: Optional[list]) -> bool:
+@@ -343,6 +343,175 @@ def _log_spawn_results(results: Optional[list]) -> bool:
                  len(res.auto_blocked) if hasattr(res.auto_blocked, "__len__") else 0,
              )
      return any_spawned
@@ -263,3 +263,6 @@ index 52eff21..a1518d7 100644
 +    except Exception:  # pragma: no cover - diagnostics must never break dispatch
 +        logger.debug("kanban dispatcher: refusal hint unavailable", exc_info=True)
 +        return ""
+
+
+ # ── 派发器健康面（PR-1 最小面，V8.29 治理轮）──
