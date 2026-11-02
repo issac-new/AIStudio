@@ -92,3 +92,10 @@ term:approval-todo | 审批待办 | 把关待办 | 人工介入请求/清算审�
 term:ide-workspace | IDE 工作区 | IDE 画布 | /app/ide 开发工作位：任务简报（任务工作区/任务会话）/交互编码/git 图谱 | 产品术语
 term:run-orchestration | 运行编排 | 场景编排 | /app/sim?tab=orchestration：启动/续跑/运行模式切换与启动前检查 | 产品术语
 term:run-mode | 运行模式 | 姿态 | strict/standard/demo 三档推演政策（产品界面词；方案机制条款仍用姿态） | 产品术语
+# ── 测试受控动词（2026-11-02 方法论吸收批 F，spec 2026-11-02-test-vocab：用例步骤动词单一事实源，禁同义散用）──
+term:verb-query | 查询 | 获取,找到,读取,检索 | 测试步骤中的一切读取动作（接口/DB/页面取数） | 测试
+term:verb-verify | 验证 | 检查,确认,校验 | 执行后的状态确认（非代码级期望） | 测试
+term:verb-construct | 构造 | 创建,准备,生成,造数 | 建测试数据与前置状态 | 测试
+term:verb-wait | 等待 | 轮询,等到,休眠 | 异步条件成立的谓词轮询（对齐 DSL waitFor） | 测试
+term:verb-clean | 清理 | 回收,还原,重置,teardown | 测试后状态恢复（对齐 DSL Teardown） | 测试
+term:verb-assert | 断言 | 期望,应当,应该等于 | 写进测试代码的期望值检查（与验证分工：断言=代码级，验证=状态级） | 测试

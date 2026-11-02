@@ -41,4 +41,23 @@ grep -q '"references/knowledge-retrieval-ladder.md|ref|standard"' "$GEN" \
 grep -q '"references/failure-taxonomy.md|ref|standard"' "$GEN" \
   && ok "态6 taxonomy 补账进 dist-manifest" || bad "态6 taxonomy 未登记分发（B 批漏账未清）"
 
+# --- 态7：测试受控动词表在位（glossary 六动词条目＋模板 §19.2 注记；spec 2026-11-02-test-vocab，防两处漂移）---
+GLS="../../simharness/mux/glossary.txt"   # 相对 skills/swarm-yuan/（本测试已 cd 到 skills/swarm-yuan，simharness 在仓根）
+if [[ -f "$GLS" ]]; then
+  for pair in 'query 查询' 'verify 验证' 'construct 构造' 'wait 等待' 'clean 清理' 'assert 断言'; do
+    slug="${pair%% *}"; name="${pair#* }"
+    # 条目存在（-F 固定串匹配，竖线免转义）且字段数=5（cut 取第 6 段为空=无多余竖线）
+    if grep -Fq "term:verb-$slug | $name |" "$GLS" \
+       && [[ -z "$(grep -F "term:verb-$slug | " "$GLS" | cut -d'|' -f6)" ]]; then
+      ok "态7 glossary 动词 term:verb-${slug}（${name}，五字段）"
+    else
+      bad "态7 glossary 缺 term:verb-${slug}/${name} 或字段数≠5"
+    fi
+  done
+else
+  bad "态7 缺 glossary（$GLS）"
+fi
+grep -q '受控动词表' "$TPL" \
+  && ok "态7 模板 §19.2 受控动词表注记" || bad "态7 模板 §19.2 注记缺位（动词规范指引缺位）"
+
 [[ $FAIL -eq 0 ]] && { echo "PASS test-spec-template-maet"; exit 0; } || { echo "FAIL test-spec-template-maet" >&2; exit 1; }
