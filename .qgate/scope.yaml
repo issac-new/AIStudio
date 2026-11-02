@@ -124,3 +124,14 @@ paths:
   - skills/swarm-yuan/SKILL.md
   - skills/swarm-yuan/CHANGELOG.md
   - .qgate/scope.yaml
+  # 2026-11-02 MAET+检索协议批（feat/maet-retrieval-ladder, spec 2026-11-02-maet-retrieval-ladder）
+  - docs/superpowers/specs/2026-11-02-maet-retrieval-ladder.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - skills/swarm-yuan/assets/spec-template.md
+  - skills/swarm-yuan/references/knowledge-retrieval-ladder.md
+  - skills/swarm-yuan/references/capability-map.md
+  - skills/swarm-yuan/scripts/generate-skill.sh
+  - skills/swarm-yuan/tests/test-spec-template-maet.sh
+  - skills/swarm-yuan/SKILL.md
+  - skills/swarm-yuan/CHANGELOG.md
+  - .qgate/scope.yaml

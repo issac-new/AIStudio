@@ -1,5 +1,19 @@
 # Changelog
 
+## [v2.98.4] - 2026-11-02
+
+方法论吸收批 C+D：MAET 四路径完备门 + 四层知识检索协议（spec 2026-11-02-maet-retrieval-ladder）。
+
+### Added
+
+- **spec 模板 §19.2 MAET 重组**：用例骨架加「路径类型」列（M/A/E/T），补 Alternative（替代流程）与 Termination（终止路径：取消/中断后回收与终态）两行；§19.3 checklist 加四路径完备项。
+- **`references/knowledge-retrieval-ladder.md` 四层检索协议**：L1 relations 边集→L2 索引/路由→L3 spec/术语/本体→L4 vendor 源码/台账；四纪律（由近及远命中即止/不足升层/跨层佐证/结论带锚）+ 升层判据速查表。
+- **守门 `test-spec-template-maet.sh` 六态**：路径类型列/四路径行/段头声明/checklist/判据说明/dist-manifest 登记锁。
+
+### Fixed
+
+- **dist-manifest 补账**：failure-taxonomy.md（v2.98.3 漏登记，未分发=死档）与 knowledge-retrieval-ladder.md 进 UNIVERSAL 分发清单；generate-skill.sh 描述映射补两行。
+
 ## [v2.98.3] - 2026-11-02
 
 方法论吸收批 B：统一失败根因分类器（spec 2026-11-02-failure-taxonomy）。

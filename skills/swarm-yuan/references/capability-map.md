@@ -84,6 +84,7 @@
 | bugfix-runbook | 内生（A） | 开发工作流 ②-⑥ fix 任务排障流水线（研发环境取证） | fix 任务连研发环境日志/数据库/远程断点取证 |
 | remote-debug-jvm | 内生（A） | bugfix-runbook 第③步（JDWP 经隧道 + IDE attach + 断点纪律） | fix 任务需断点级取证 |
 | failure-taxonomy | MTSC2026 AI Native 测试工程（极智嘉）六类根因（B） | ⑥ 测试失败处置决策点 + failure-detector `_classify_failure` 规则表正本 | 任何测试/命令/走查失败后先归类再处置，禁无效重试 |
+| knowledge-retrieval-ladder | MTSC2026 四层知识检索本仓化（B） | ② 探查节点检索起点 + 任何「谁依赖/什么语义/怎么改」问题 | 检索纪律：由近及远命中即止、不足升层、跨层佐证、结论带锚 |
 
 ### 族⑤ 安全合规与行业立法（门禁）
 
