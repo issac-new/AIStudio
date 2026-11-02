@@ -33,6 +33,21 @@ export function scanSecrets(text) {
   return hits;
 }
 
+/** 第三方依赖源码清单（D15, 2026-11-02 用户口径「不可经 npm/pip 安装的第三方依赖打包其源码」）。
+ * 对齐 swarm-yuan src-pins.conf 钉基线（gstack/superpowers/ECC, R134）＋zcode 环境在用的
+ * 官方插件：gstack 已随 zcode/skills 快照入包（工作副本形态），此处补齐其余源；
+ * 可经 npm/pip 装的（如 gstack 的 node_modules）仍走目标机镜像源安装不入包。 */
+export const THIRD_PARTY_SRC = [
+  { name: 'superpowers', path: join(homedir(), '.zcode/cli/plugins/cache/claude-plugins-official/superpowers'),
+    note: '官方插件缓存源形态(安装态 7.0.0; src-pins 钉 v7.0.1, 差异如实记录)' },
+  { name: 'ralph-loop', path: join(homedir(), '.zcode/cli/plugins/cache/claude-plugins-official/ralph-loop'),
+    note: '官方插件缓存源形态' },
+  { name: 'github', path: join(homedir(), '.zcode/cli/plugins/cache/claude-plugins-official/github'),
+    note: '官方插件缓存源形态' },
+  { name: 'ecc', path: join(homedir(), '.claude/skills/ecc'),
+    note: 'ECC 技能族源码(src-pins 钉 c05b2d66 工作副本形态)' },
+];
+
 /** zcode 配置面快照排除规则（D14, 2026-11-02）：可再生产物与缓存不入包
  * （node_modules/.git/缓存/备份/.DS_Store）；mac 编译二进制（gstack bin/dist 等）
  * 保留随包以维持环境一致，README 注明 Windows 不可执行。 */
@@ -274,6 +289,17 @@ function main() {
       }
     }
   }
+  // 第三方依赖源码快照（D15）: 不可经 npm/pip 安装的三方源整树入包, 排除规则同 zcode 面
+  const tpMissing = [];
+  for (const tp of THIRD_PARTY_SRC) {
+    if (!existsSync(tp.path)) { tpMissing.push(`${tp.name}: ${tp.path}`); continue; }
+    try {
+      cpSync(tp.path, join(staging, 'thirdparty-src', tp.name), { recursive: true, dereference: true, filter: zcodeFilter(tp.path) });
+    } catch (e) {
+      tpMissing.push(`${tp.name}: 采集失败 ${String(e.message).slice(0, 50)}`);
+    }
+  }
+  if (tpMissing.length) warns.push(`三方源缺件: ${tpMissing.join(' | ')}`);
   cpSync(join(templateRoot, 'install'), join(staging, 'install'), { recursive: true });
   const pmLockPath = join(hermesTree, 'pm', 'lock.json');
   const uvPin = existsSync(pmLockPath)
@@ -328,7 +354,7 @@ function main() {
   // 等一律入扫, 读到的 NUL 字节(二进制特征)再跳过——扩展名白名单曾让 .pem/.patch 整体绕过。
   const BIN_EXT = /\.(png|jpe?g|gif|ico|webp|bmp|pdf|zip|gz|tgz|tar|7z|rar|exe|dll|dylib|so|bin|dat|woff2?|ttf|otf|mp3|mp4|wav|mov|avi|onnx|pyd|node|wasm|asar|db|sqlite3?|class|jar|pyc|pyo)$/i;
   const hitSha = (s) => createHash('sha256').update(s).digest('hex');
-  for (const area of ['hermes-agent-src', 'env', 'install', 'zcode']) {
+  for (const area of ['hermes-agent-src', 'env', 'install', 'zcode', 'thirdparty-src']) {
     walk(join(staging, area), (p, isDir) => {
       if (isDir || BIN_EXT.test(p)) return;
       const rel = relative(staging, p);
@@ -375,6 +401,8 @@ function main() {
   console.log(`  aistudio/          ${a.files} 文件 ${a.mb}MB`);
   console.log(`  hermes-agent-src/  ${h.files} 文件 ${h.mb}MB（基线 ${baseCommit}, M${nMod}+A${nNew}, patch ${Math.round(patch.length / 1024)}KB）`);
   console.log(`  zcode/             ${z.files} 文件 ${z.mb}MB（规则脱敏正本＋skills/scripts/workflows/vendor 解引用快照; 排除: ${[...zcodeExcluded].join('/') || '无'}; 断链: ${zcodeBroken.length}${zcodeBroken.length ? ' -> ' + zcodeBroken.join(' | ') : ''}; mac 编译二进制随包, Windows 不可执行—见 README）`);
+  const tp = dirStats(join(staging, 'thirdparty-src'));
+  console.log(`  thirdparty-src/    ${tp.files} 文件 ${tp.mb}MB（不可经 npm/pip 装的三方源: ${THIRD_PARTY_SRC.map((x) => x.name).join('/')} + gstack 随 zcode 面; 缺件: ${tpMissing.length || '无'}）`);
   console.log(`  敏感名剔除: ${excludedSensitive.length} 个(${excludedSensitive.join(', ') || '无'}); 排除目录: ${[...excludedDirs].join('/') || '无'}`);
   console.log(`  脱敏扫描: fatal 0 / 降级 ${dummies.length} 处(测试文档面+假值标记, 真实值哈希对撞 fatal); 对账告警: ${warns.length ? warns.join(' | ') : '无'}`);
   if (warns.length) for (const w of warns) console.warn(`  WARN: ${w}`);

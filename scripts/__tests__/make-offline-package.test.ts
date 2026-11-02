@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import { scanSecrets, isDummySecret, allowlistReason, agentTreeExclude, zcodeTreeExclude, deriveConfigExample, parseEnvKeys } from '../make-offline-package.mjs'
+import { scanSecrets, isDummySecret, allowlistReason, agentTreeExclude, zcodeTreeExclude, deriveConfigExample, parseEnvKeys, THIRD_PARTY_SRC } from '../make-offline-package.mjs'
 
 const overlayRoot = process.cwd()
 
@@ -72,6 +72,13 @@ describe('agentTreeExclude 排除规则(spec 打包链 2 两轮实测口径)', (
     expect(agentTreeExclude('.env', false)).toContain('敏感名')
     expect(agentTreeExclude('web/.env', false)).toContain('敏感名')
     expect(agentTreeExclude('config/.env.production', false)).toContain('敏感名')
+  })
+})
+
+describe('THIRD_PARTY_SRC 三方源清单(D15)', () => {
+  it('覆盖 src-pins 三方(gstack 经 zcode 面)＋zcode 官方插件, 不含 npm/pip 可装项', () => {
+    expect(THIRD_PARTY_SRC.map((x) => x.name).sort()).toEqual(['ecc', 'github', 'ralph-loop', 'superpowers'])
+    expect(THIRD_PARTY_SRC.every((x) => x.path.length > 0 && x.note.length > 0)).toBe(true)
   })
 })
 
