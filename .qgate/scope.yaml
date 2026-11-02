@@ -64,3 +64,5 @@ paths:
   - scripts/regression/route-manifest.ts
   - docs/superpowers/specs/2026-11-02-run24-runtime-closeout.md
   - simharness/docs/2026-11-01-run24-pending-batch.md
+  - docs/superpowers/specs/2026-11-02-regression-followup.md
+  - scripts/regression/matrix-session-walkthrough.mjs

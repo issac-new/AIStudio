@@ -140,7 +140,7 @@ new file mode 100644
 index 0000000000..a9d785a27a
 --- /dev/null
 +++ b/tests/tools/test_subagent_source_marks.py
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,87 @@
 +"""子代理结果来源标头守门（claude-code 2.1.277 概念吸收，矩阵 §3.7 P0：防冒充注入）。"""
 +
 +from __future__ import annotations
@@ -212,6 +212,7 @@ index 0000000000..a9d785a27a
 +            parent_agent=None,
 +            live_writers=[],
 +            live_paths=[],
++            refused=[],
 +            live_deleg_id=None,
 +            live_home=None,
 +            group=None,
