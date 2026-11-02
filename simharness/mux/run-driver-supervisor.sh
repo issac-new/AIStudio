@@ -67,6 +67,9 @@ _g5_evidence_fp() {
   repo="$SIM_ROOT/central/${MX_CENTRAL_NAME:-aipaydev}"
   git -C "$repo" fetch -q origin 2>/dev/null
   fp="itip:$(git -C "$repo" rev-parse --short "origin/integration/${RFD_ID:-RFD-001}" 2>/dev/null || echo -)"
+  # 2026-11-02 run25 G2 实锤（与 _mx_gate_evidence_sig 同根）：integration 分支开发合并期才
+  # 建，pre-integration 闸的修订证据落 origin/main——指纹无 main tip 即复位永不触发。
+  fp="$fp mtip:$(git -C "$repo" rev-parse --short origin/main 2>/dev/null || echo -)"
   rgid=$(sed -n 's/^card_g5_ready=//p' "$STATE" 2>/dev/null | head -1)
   if [[ -n "$rgid" ]]; then
     db="$SIM_ROOT/hermes/kanban/boards/${MX_ANCHOR_USER:-fanfan}-review/kanban.db"
