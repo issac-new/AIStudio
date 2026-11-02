@@ -15,7 +15,7 @@
         "runtime/roster/",
         "vendor/hermes-studio/"
       ],
-      "version": "1.0.9-studio.6",
+      "version": "1.0.9-studio.7",
       "versionCarrier": "RELEASE-NOTES.md",
       "buildCommand": "npm run build:dmg（需将 OVERLAY_UPSTREAM_ROOT 指向仓根 vendor；产物 DMG/zip，desktop 管理独立 hermes runtime）",
       "artifacts": "vendor/hermes-studio/packages/desktop/release/",
