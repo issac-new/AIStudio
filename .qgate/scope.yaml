@@ -183,3 +183,10 @@ paths:
   - simharness/mux/mx-prelaunch-check.sh
   - simharness/mux/tests/plan-program-sync.test.sh
   - .swarm-yuan/spec-receipts.jsonl
+  # 2026-11-02 run25 工具链批代声明（7b64f31c2+f78ee0791 并行落批，解堵补全非门禁放宽）
+  - simharness/mux/mx-clean.sh
+  - simharness/mux/mx-lib.sh
+  - docs/superpowers/specs/2026-11-02-run25-prelaunch-tooling-hardening.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md
