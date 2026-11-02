@@ -62,3 +62,4 @@ vendor/**/*.tsbuildinfo
 **/.*-*.tmp
 **/*.tmp-*
 **/*.tmp.*
+.qgate/burn/

@@ -26,6 +26,8 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/mx-platform.sh"   # 独立进程：不 source mx-lib，平台原语显式挂载
+source "$SCRIPT_DIR/mx-gate-lib.sh"  # 闸门催办判定纯函数（2026-11-02 机制治理批：可行为测试）
+source "$SCRIPT_DIR/mx-recovery-lib.sh"  # 恢复层让位判定纯函数（同上批：v1 让位=断打架环第一回环）
 STATE="$SIM_ROOT/runs/$RUN_ID/state.env"
 LOGS="$SIM_ROOT/logs"
 STOPFLAG="$SIM_ROOT/var/$RUN_ID-supervisor.stop"
@@ -113,20 +115,10 @@ _br_nudge_g5() { # <waited-sec>——熔断死等催办：以导演账号（fanf
   rgid=$(sed -n 's/^card_g5_ready=//p' "$STATE" 2>/dev/null | head -1)
   [ -n "$room" ] || return 0
   hs="${MX_HOMESERVER:-http://127.0.0.1:8008}"
-  gate=$(python3 -c 'import json,sys
-try:
-  d=json.load(open(sys.argv[1]))
-  print(",".join(k for k,v in d.items() if isinstance(v,dict) and v.get("failRounds",0)>=2))
-except Exception: print("")' "$SIM_ROOT/runs/$RUN_ID/governance/breaker.json" 2>/dev/null)
+  # 判定与话术全部在 mx-gate-lib.sh（纯函数，行为测试直调）——本函数只管发消息。
+  gate="$(mx_breaker_gates "$SIM_ROOT/runs/$RUN_ID/governance/breaker.json")"
   glabel="${gate:-G5}"
-  case "$glabel" in
-    G2)
-      body="@${MX_ANCHOR_USER:-fanfan}-agent:matrix.test 【G2 熔断等待催办（自动，已等 ${waited}s）】架构评审未翻正（指纹不变）。请以评审卡面完整缺项清单为唯一依据做概设全量修订并推 origin/main，随后 @arch-agent 复评（结论行同步更新卡 body）——卡面/判词变化即自动复位熔断。不许谎报。" ;;
-    G5|G5,*|*,G5)
-      body="@${MX_ANCHOR_USER:-fanfan}-agent:matrix.test 【G5 熔断等待催办（自动，已等 ${waited}s）】评审卡${rgid:+ ${rgid}}缺项仍未补（指纹不变）。请按 templates/release-plan.md 把缺项（回滚阈值/灰度计划/发布说明等以卡面 GAP/缺项清单为准）补进评审卡 body 并重报结论行 READY-GATE-PASS——卡面更新即证据变化自动复位熔断，无需人工。不许谎报。" ;;
-    *)
-      body="@${MX_ANCHOR_USER:-fanfan}-agent:matrix.test 【${glabel} 熔断等待催办（自动，已等 ${waited}s）】闸判据证据未变化（指纹不变）。请按该闸卡面缺项清单补齐证据/材料并更新卡面——证据变化即自动复位熔断。不许谎报。" ;;
-  esac
+  body="$(mx_nudge_body_for_gate "$gate" "$waited" "$rgid" "${MX_ANCHOR_USER:-fanfan}")"
   eid=$(curl -s -m 10 -X PUT "$hs/_matrix/client/v3/rooms/$room/send/m.room.message/g5nudge-$(date +%s%3N)" \
     -H "Authorization: Bearer $tok" -d "$(python3 -c 'import json,sys; print(json.dumps({"msgtype":"m.text","body":sys.argv[1]}))' "$body")" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("event_id",""))' 2>/dev/null)
   [ -n "$eid" ] && note "催办令已发（${glabel}，${eid}）" || note "催办令发送失败（matrix 通道，下轮重试）"
@@ -214,6 +206,17 @@ while true; do
       continue
     fi
   fi
+  # 恢复层让位 v1（2026-11-02 机制治理批）：网关正在供应商恢复循环/回合恢复时先不重启——
+  # 此刻重启只会再撞一次同样的失败，正是 run25 打架环的第一次回环（见 mechanism-map §3）。
+  # 上限 MX_RESTART_DEFER_MAX（默认 300s）后照常重启：永不无限等待，任何异常一律放行。
+  _deferred=0
+  while mx_gateway_recovering "$LOGS/gateway.log" "$(date +%s)" "${MX_RECOVERING_WINDOW:-300}" \
+        && mx_defer_restart_policy 0 "$_deferred" "${MX_RESTART_DEFER_MAX:-300}"; do
+    [ "$_deferred" -eq 0 ] && note "网关恢复信号在位——重启让位（上限 ${MX_RESTART_DEFER_MAX:-300}s）"
+    sleep 30
+    _deferred=$((_deferred + 30))
+  done
+  [ "$_deferred" -gt 0 ] && note "让位结束（${_deferred}s）——继续重启"
   note "驱动缺席，断点续跑（START_STEP=$START_STEP）"
   _loff=$(mxp_file_size "$LOGS/$RUN_ID-driver.log")
   ( cd "$SCRIPT_DIR/.." && RUN_ID="$RUN_ID" START_STEP="$START_STEP" bash aipay-scenario.sh >> "$LOGS/$RUN_ID-driver.log" 2>&1 )

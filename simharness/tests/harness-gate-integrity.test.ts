@@ -1393,13 +1393,32 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     // run25 四启实录（21:55:04 _sens unbound）：重放路径 security_review_done 在位时
     // 跳过赋值块，set -u 必炸——锁默认空写法防回退
     expect(scen).toContain('printf \'%s\' "${_sens:-}"')
+    // 2026-11-02 机制治理批（run25 内耗 120 分钟定谳后立制度）：五件必须同时在位，
+    // 缺一即「根治追不上复杂度」的结构性问题回归
+    const map = read(join(HARNESS, '..', 'docs/design/mechanism-map.md'))
+    expect(map).toContain('三级时序')
+    expect(map).toContain('互扰关系')
+    expect(existsSync(join(MX, 'mx-burn-test.sh'))).toBe(true)
+    expect(existsSync(join(MX, 'mx-gate-timing.sh'))).toBe(true)
+    expect(existsSync(join(MX, 'mx-gate-lib.sh'))).toBe(true)
+    expect(existsSync(join(MX, 'mx-recovery-lib.sh'))).toBe(true)
+    const sup2 = read(join(MX, 'run-driver-supervisor.sh'))
+    expect(sup2).toContain("source \"$SCRIPT_DIR/mx-gate-lib.sh\"")
+    expect(sup2).toContain('mx_nudge_body_for_gate')
+    expect(sup2).toContain('mx_breaker_gates')
+    expect(sup2).toContain("source \"$SCRIPT_DIR/mx-recovery-lib.sh\"")
+    expect(sup2).toContain('mx_defer_restart_policy')
     // run25 实锤（22:45-22:55）：supervisor 熔断催办不分公司闸别——G2 熔断被 G5 话术
     // 误催抢占修订关键路径。锁闸别分流（breaker.json failRounds>=2 判闸+三分支话术）
     const sup = read(join(MX, 'run-driver-supervisor.sh'))
     expect(sup).toContain('闸别分流（run25 实锤')
     expect(sup).toContain('glabel="${gate:-G5}"')
-    expect(sup).toContain('G2)')  // G2 分支话术存在（催概设修订+复评，非 READY-GATE-PASS）
-    expect(sup).toContain('failRounds",0)>=2')  // 按 breaker.json 实际熔断闸判定
+    // 2026-11-02 机制治理批：判定搬到 mx-gate-lib.sh（纯函数可行为测试）——
+    // 分支话术与 breaker 解析改在库内断言，supervisor 只留「调库+发送」
+    const gateLib = read(join(MX, 'mx-gate-lib.sh'))
+    expect(gateLib).toContain('*,G2,*)')
+    expect(gateLib).toContain('READY-GATE-PASS')
+    expect(gateLib).toContain('failRounds')
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑬ 独立审批环可启动')
   })
@@ -1407,7 +1426,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
   it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑪ 叙事注册与骨架兜底')
-    expect(pre).toContain('prelaunch 三十四项')  // 2026-11-02 run24 驱动面批⑤：加 ⑩d 工作区 origin 单一性；此前三十三项=V8.46 治理闭环 ㉔-㉚
+    expect(pre).toContain('prelaunch 三十五项')  // 2026-11-02 run24 驱动面批⑤：加 ⑩d 工作区 origin 单一性；此前三十三项=V8.46 治理闭环 ㉔-㉚
     expect(pre).toContain('⑫ 账号板供给在位')
   })
 
@@ -1545,7 +1564,7 @@ describe('㉗ 模型波动支撑面接线绊线（2026-11-01 方案×程序同�
 // ② 复测预启动（新 [LEAD-MERGE] 合入即令增量复测，sha 幂等）
 // ③ early-start 预备步（G5 熔断等待期派 UAT 矩阵/发布说明/复盘度量草稿）
 // ④ 跨域依赖看护（fix/* 未合入即催域 lead，600s 分支级节流）
-// ⑤ 工作区 origin 单一性（prelaunch ⑩d，计数三十四项）
+// ⑤ 工作区 origin 单一性（prelaunch ⑩d，计数随机制治理批到三十五项）
 // ⑥ G5 风暴去重（issue_once）+ 闭包快照 --out *.json 按文件写
 describe('㉘ run24 复盘驱动面批（驱动面六件，2026-11-02）', () => {
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf8' })
@@ -1730,10 +1749,10 @@ echo "owners=$(grep -oE 'DISPATCH\\|[a-z]+' "$AIPAY_SIM_ROOT/prep.log" | cut -d'
     expect(scen).toContain('mx_prep_early_start_tick')
   })
 
-  it('⑤ 工作区 origin 单一性：prelaunch ⑩d 在位且计数三十四项；mx-setup 建 bare/归 origin', () => {
+  it('⑤ 工作区 origin 单一性：prelaunch ⑩d 在位且计数同步；mx-setup 建 bare/归 origin', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑩d 各工作区 origin 单一性')
-    expect(pre).toContain('prelaunch 三十四项')
+    expect(pre).toContain('prelaunch 三十五项')
     expect(pre).toContain("_bare='$SR/central-origin.git'")
     const setup = read(join(MX, 'mx-setup.sh'))
     expect(setup).toContain('CENTRAL_BARE="${MX_CENTRAL_BARE:-$SIM_ROOT/central-origin.git}"')

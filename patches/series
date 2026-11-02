@@ -1090,3 +1090,8 @@
 #      TypeError 挡掉→600s 窗烧尽→G2 硬闸 FAIL）。与 title_user_message 同款防御排除。
 726-agent-chat-recovery-kwarg-fix.patch
 727-server-simrun-supervisor-routes.patch
+# 729（2026-11-02 机制治理批·方案 C）：recovery 转发白名单抽纯函数
+#      agent/recovery_kwargs.py:filter_recovery_kwargs——725/726 的 pop 逻辑收敛为
+#      单一判定点，可被无 agent/无 provider 的行为测试直调（run25 教训：382 条
+#      标记断言全绿仍连炸 3 个机制缺陷，因为测的是"代码在不在"）。
+729-agent-recovery-kwargs-pure.patch

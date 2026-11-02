@@ -215,3 +215,20 @@ paths:
   # 2026-11-02 run25 值守批（监督器催办闸别分流）
   - docs/superpowers/specs/2026-11-02-supervisor-nudge-gate-aware.md
   - simharness/mux/run-driver-supervisor.sh
+  # 2026-11-02 机制治理批（五件：地图/烧机/台账/纯函数行为测试/让位）
+  - docs/superpowers/specs/2026-11-02-mechanism-governance.md
+  - docs/design/mechanism-map.md
+  - simharness/mux/mx-burn-test.sh
+  - simharness/mux/mx-gate-timing.sh
+  - simharness/mux/mx-gate-lib.sh
+  - simharness/mux/mx-recovery-lib.sh
+  - simharness/mux/run-driver-supervisor.sh
+  - simharness/mux/mx-prelaunch-check.sh
+  - simharness/mux/mx-lib.sh
+  - simharness/tests/mechanism-behavior.test.ts
+  - simharness/tests/harness-gate-integrity.test.ts
+  - simharness/tests/eval-fullflow-integration.test.ts
+  - simharness/tests/eval-metrics-template-sync.test.ts
+  - simharness/tests/v846-governance-closure.test.ts
+  - patches/729-agent-recovery-kwargs-pure.patch
+  - patches/series
