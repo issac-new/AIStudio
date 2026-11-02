@@ -56,6 +56,7 @@ import { countRuns as countRedteamRuns } from '../redteam/store'
 import { mountRedteam } from '../redteam/routes'
 import { loadEvalConfig } from './types'
 import { synthesizeProbesForTask } from './synthesize'
+import { compareBaseline, gradeSpecDesign, snapshotBaseline } from './skill-grader'
 import { ENTERPRISE_AXES, ENTERPRISE_SET_NAME, axesCoverage, buildEnterpriseSeedTasks } from './enterprise-seed'
 import type { EvalRun, EvalSet, EvalTask, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
@@ -981,6 +982,30 @@ router.post('/flywheel/merge-gate', async (ctx) => {
   const latest = regression ? latestRunOfSet(runs, regression.id) : undefined
   const result = mergeGateOf(manifest, latest)
   ctx.body = { ok: true, ...result, ...(regression ? { setId: regression.id } : {}) }
+})
+
+// 技能产出 Grader 环（spec: 2026-11-02-skill-grader.md，方法论吸收批 E）：
+// spec §19 测试设计段 S0 机械+S1 语义四维评估；可选对基线快照比 delta。
+// fail-open：判定端不可用 → 四维 unknown（meta.online=false），端点不 5xx。
+router.post('/skill-grade', async (ctx) => {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const specText = typeof body.specText === 'string' ? body.specText : ''
+  if (!specText.trim()) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['specText 必填（含 §19 测试左移段的 spec 全文）'] }
+    return
+  }
+  const config = loadEvalConfig()
+  const grades = await gradeSpecDesign(specText, { config })
+  // 可选基线对比：传 baselineRunId 时读同 runId 末次快照；缺快照/文件 → baseline:null（fail-open）
+  let baseline: ReturnType<typeof compareBaseline> = null
+  if (typeof body.baselineRunId === 'string' && body.baselineRunId.trim()) {
+    const runId = body.baselineRunId.trim()
+    baseline = compareBaseline(runId, grades)
+    // 请求里显式 snapshot=true 时把本次判定落为该 runId 的新基线（写失败 fail-soft）
+    if (body.snapshot === true) snapshotBaseline(runId, grades)
+  }
+  ctx.body = { ok: true, grades, ...(baseline ? { baseline } : {}) }
 })
 
 router.get('/runs/:id', async (ctx) => {
