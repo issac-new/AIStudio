@@ -106,3 +106,4 @@
 {"at":"2026-11-02T06:53:49Z","spec":"docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md","receipt":"37bf58e841ca478cb277cc4b20d95f505611db6b","commit":"624b8f5a2"}
 {"at":"2026-11-02T06:43:32Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"a6df2e7f00dfcd18bb24471c1ecd7a7cf2c2c175","commit":"0c2c1752c"}
 {"at":"2026-11-02T07:29:07Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"f69ea184832076bf7b033f7632276203223c1fd7","commit":"d0395af5c"}
+{"at":"2026-11-02T07:43:40Z","spec":"docs/superpowers/specs/2026-11-02-agent-debt-recheck.md","receipt":"e431e758690c6a9b622853b3a2eb5b75ce5413a4","commit":"d0395af5c"}

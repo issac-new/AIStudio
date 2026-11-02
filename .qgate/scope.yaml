@@ -99,3 +99,8 @@ paths:
   - scripts/vendor-sync.sh
   - AGENTS.md
   - docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md
+  # 2026-11-02 agent 存量债复核批（fix/agent-debt-recheck, spec 2026-11-02-agent-debt-recheck）
+  - vendor/hermes-agent/**
+  - vendor/VENDOR.md
+  - docs/superpowers/specs/2026-11-02-agent-debt-recheck.md
+  - docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md
