@@ -49,7 +49,9 @@ describe('evaluatePending', () => {
     const r = await evaluatePending({ evaluate: async () => accept })
     expect(r.accepted).toBe(1)
     expect(r.recordedOnly).toBe(1)
-    expect(getTrigger(id)?.status).toBe('pending')
+    // 2026-11-02 修正：status 表达「评估完成」，observe 下 accept 也落 routed（但不实际派发）
+    expect(getTrigger(id)?.status).toBe('routed')
+    expect(r.details[0]!.promoted).toBe(false)
   })
 
   it('auto 模式 + accept：推进为 routed', async () => {
@@ -83,5 +85,21 @@ describe('evaluatePending', () => {
     expect(getTrigger(id)?.status).toBe('routed')
     const second = await evaluatePending({ evaluate: async () => accept })
     expect(second.evaluated).toBe(0)
+  })
+})
+
+describe('评估失败退避（2026-11-02 实测补）', () => {
+  it('连续失败达到上限后置 ignored，不再进评估', async () => {
+    setAdmission({ sourceId: 'kanban:default', mode: 'observe', allowedSenders: ['kanban:blocked'], cells: defaultCells() }, 't')
+    const id = seed('e-retry')
+    const unavailable = async () => ({ verdict: 'unavailable' as const, reasons: ['timeout'], confidence: null })
+    const first = await evaluatePending({ evaluate: unavailable })
+    expect(first.unavailable).toBe(1)
+    expect(getTrigger(id)?.status).toBe('pending')
+    const second = await evaluatePending({ evaluate: unavailable })
+    expect(second.retryExhausted).toBe(1)
+    expect(getTrigger(id)?.status).toBe('ignored')
+    const third = await evaluatePending({ evaluate: unavailable })
+    expect(third.evaluated).toBe(0)
   })
 })

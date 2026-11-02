@@ -107,6 +107,10 @@ describe('evaluateTrigger', () => {
     const chatCall = fetchImpl.mock.calls[1]!
     expect(String(chatCall[0])).toContain('/p/evaluator/api/sessions/')
     expect(String(chatCall[0])).toContain('/chat')
+    // 2026-11-02 实测：author 传字符串被 gateway 拒（author must be an object）→ 请求不带该字段
+    const chatBody = JSON.parse(String((chatCall[1] as RequestInit).body))
+    expect(chatBody.author).toBeUndefined()
+    expect(typeof chatBody.message).toBe('string')
   })
 
   it('202 排队：判 unavailable 且不重发', async () => {
@@ -140,5 +144,23 @@ describe('evaluateTrigger', () => {
     expect(v.verdict).toBe('unavailable')
     expect(v.reasons[0]).toContain('evaluator_error:TimeoutError')
     expect(fetchImpl).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('normalizeVerdict 同义词（2026-11-02 实测补）', () => {
+  it('模型常用词归一；未知词返回 null', async () => {
+    const { normalizeVerdict } = await import('../evaluator')
+    expect(normalizeVerdict('no_action')).toBe('ignore')
+    expect(normalizeVerdict('NO-ACTION')).toBe('ignore')
+    expect(normalizeVerdict('Approve')).toBe('accept')
+    expect(normalizeVerdict('skip')).toBe('ignore')
+    expect(normalizeVerdict('insufficient')).toBe('unavailable')
+    expect(normalizeVerdict('accept')).toBe('accept')
+    expect(normalizeVerdict('something_else')).toBeNull()
+  })
+
+  it('parseVerdict 接受同义词输出', () => {
+    expect(parseVerdict('{"verdict":"no_action","reasons":["噪音"]}'))
+      .toMatchObject({ verdict: 'ignore', reasons: ['噪音'] })
   })
 })

@@ -68,6 +68,25 @@ export function buildEvalMessage(trigger: Trigger, context: Trigger[] = []): str
   return lines.join('\n')
 }
 
+/**
+ * 模型常用同义词 → 规范词表。
+ * 2026-11-02 实测：模型会输出 no_action / skip / approve 等，直接丢弃等于白花一次调用。
+ */
+const VERDICT_ALIASES: Record<string, DecisionVerdict> = {
+  accept: 'accept', approve: 'accept', approved: 'accept', act: 'accept',
+  action: 'accept', actionable: 'accept', process: 'accept', handle: 'accept',
+  ignore: 'ignore', no_action: 'ignore', noaction: 'ignore', skip: 'ignore',
+  skipped: 'ignore', noise: 'ignore', irrelevant: 'ignore', dismiss: 'ignore',
+  unavailable: 'unavailable', unknown: 'unavailable', insufficient: 'unavailable',
+}
+
+/** 规范化词：大小写、连字符、空格都抹平后再查表。 */
+export function normalizeVerdict(raw: string): DecisionVerdict | null {
+  const key = raw.trim().toLowerCase().replace(/[\s-]+/g, '_')
+  if (DECISION_VERDICTS.includes(key as DecisionVerdict)) return key as DecisionVerdict
+  return VERDICT_ALIASES[key] ?? null
+}
+
 /** 从模型输出中抽出 JSON 对象（容忍 ```json 围栏与前后闲话）。 */
 export function parseVerdict(text: string): SemanticVerdict | null {
   if (typeof text !== 'string' || !text.trim()) return null
@@ -84,8 +103,8 @@ export function parseVerdict(text: string): SemanticVerdict | null {
   }
   if (!parsed || typeof parsed !== 'object') return null
   const obj = parsed as Record<string, unknown>
-  const verdict = String(obj.verdict ?? '').trim()
-  if (!DECISION_VERDICTS.includes(verdict as DecisionVerdict)) return null
+  const verdict = normalizeVerdict(String(obj.verdict ?? ''))
+  if (!verdict) return null
   const reasons = Array.isArray(obj.reasons)
     ? obj.reasons.map(v => String(v).trim()).filter(Boolean).slice(0, 8)
     : []
@@ -113,7 +132,7 @@ export async function evaluateTrigger(
     const res = await doFetch(`${cfg.baseUrl}/p/${encodeURIComponent(cfg.profile)}/api/sessions/${encodeURIComponent(sessionId)}/chat`, {
       method: 'POST',
       headers: { authorization: `Bearer ${cfg.apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ message: buildEvalMessage(trigger, opts.context ?? []), author: 'orchestrator' }),
+      body: JSON.stringify({ message: buildEvalMessage(trigger, opts.context ?? []) }),
       signal: AbortSignal.timeout(cfg.timeoutMs),
     })
     if (res.status === 202) {

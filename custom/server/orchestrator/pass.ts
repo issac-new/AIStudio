@@ -7,7 +7,7 @@ import { getAdmission } from './admission'
 import { evaluateTrigger } from './evaluator'
 import { recordDecision } from './decision'
 import { currentPolicyVersion } from './policy-version'
-import { listTriggers, setTriggerStatus } from './store'
+import { listTriggers, setTriggerStatus, bumpEvalAttempts } from './store'
 import type { SemanticVerdict, Trigger } from './types'
 
 export interface EvaluationPassResult {
@@ -17,8 +17,13 @@ export interface EvaluationPassResult {
   unavailable: number
   /** 因 mode 不是 auto 而没有推进状态的条数（observe/off）。 */
   recordedOnly: number
+  /** 失败达到上限、已停止重试的条数（2026-11-02 补）。 */
+  retryExhausted: number
   details: Array<{ triggerId: string; verdict: string; reasons: string[]; promoted: boolean }>
 }
+
+/** 同一条 Trigger 允许的评估失败次数；超过即置 ignored，避免每轮 tick 重复烧模型。 */
+export const EVAL_RETRY_LIMIT = 2
 
 /** 同线程上下文：取该 threadKey 最近的若干条已入库事件（含当前条）。 */
 function contextOf(trigger: Trigger, all: Trigger[]): Trigger[] {
@@ -37,7 +42,7 @@ export async function evaluatePending(opts: {
     ?? ((trigger: Trigger, context: Trigger[]) => evaluateTrigger(trigger, { context, env: opts.env }))
 
   const result: EvaluationPassResult = {
-    evaluated: 0, accepted: 0, ignored: 0, unavailable: 0, recordedOnly: 0, details: [],
+    evaluated: 0, accepted: 0, ignored: 0, unavailable: 0, recordedOnly: 0, retryExhausted: 0, details: [],
   }
 
   for (const trigger of pending) {
@@ -60,17 +65,25 @@ export async function evaluatePending(opts: {
 
     const admission = getAdmission(trigger.sourceId)
     const autoMode = admission?.mode === 'auto'
-    const promote = autoMode && verdict.verdict === 'accept'
-    if (promote) {
+    // 2026-11-02 实测修正：Trigger.status 表达「评估是否已完成」，不表达「是否实际派发」。
+    // 原实现 observe 下 kept pending，导致每轮 tick 对同一批事件重复调模型。
+    // 实际派发仍由 mode 决定（auto+accept 才落 routed 供下游消费；observe 只记录）。
+    if (verdict.verdict === 'accept') {
       setTriggerStatus(trigger.id, 'routed')
-    } else if (autoMode && verdict.verdict === 'ignore') {
+    } else if (verdict.verdict === 'ignore') {
       setTriggerStatus(trigger.id, 'ignored')
     } else {
-      // observe/off 或 unavailable：保持 pending，等人工或下次评估。
-      result.recordedOnly++
+      // unavailable：累计失败次数，达到上限就停手。
+      const attempts = bumpEvalAttempts(trigger.id)
+      if (attempts >= EVAL_RETRY_LIMIT) {
+        setTriggerStatus(trigger.id, 'ignored')
+        result.retryExhausted++
+      }
     }
+    if (!(autoMode && verdict.verdict === 'accept')) result.recordedOnly++
     result.details.push({
-      triggerId: trigger.id, verdict: verdict.verdict, reasons: verdict.reasons, promoted: promote,
+      triggerId: trigger.id, verdict: verdict.verdict, reasons: verdict.reasons,
+      promoted: autoMode && verdict.verdict === 'accept',
     })
   }
   return result

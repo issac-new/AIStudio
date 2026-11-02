@@ -10,6 +10,7 @@
 //   启用方在 admissions.json 为源配置 allowedSenders 与 mode=auto 后才真正接单。
 // - task_events.created_at 是秒级时间戳，转 ms（历史坑：秒/毫秒混用致时序错乱）。
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import { hermesHome } from '../lib/paths'
 import { ingestTrigger, type IngestResult } from './ingest'
@@ -30,12 +31,18 @@ interface EventRow {
   created_at: number
 }
 
+/** `~/` 前缀展开：配置文件里写家目录相对路径，换机器不用改。 */
+function expandHome(p: string): string {
+  const t = p.trim()
+  return t.startsWith('~/') ? resolve(homedir(), t.slice(2)) : resolve(t)
+}
+
 /** 桥接的看板库列表：显式 env > HERMES_KANBAN_DB > 家目录 default 板。 */
 export function kanbanDbPaths(env: NodeJS.ProcessEnv = process.env): string[] {
   const explicit = (env.ORCHESTRATOR_KANBAN_DBS ?? '').trim()
-  if (explicit) return explicit.split(',').map(s => resolve(s.trim())).filter(Boolean)
+  if (explicit) return explicit.split(',').map(expandHome).filter(Boolean)
   const pinned = (env.HERMES_KANBAN_DB ?? '').trim()
-  if (pinned) return [resolve(pinned)]
+  if (pinned) return [expandHome(pinned)]
   return [resolve(hermesHome(env), 'kanban.db')]
 }
 
@@ -105,10 +112,10 @@ function safeJson(text: string): unknown {
   try { return JSON.parse(text) } catch { return text }
 }
 
-/** 遍历所有配置库各桥一次。 */
-export function bridgeAll(opts: { limit?: number } = {}): IngestResult[] {
+/** 遍历所有配置库各桥一次。dbPaths 显式给出时覆盖 env/默认解析（测试与多板场景）。 */
+export function bridgeAll(opts: { limit?: number; dbPaths?: string[] } = {}): IngestResult[] {
   const out: IngestResult[] = []
-  for (const dbPath of kanbanDbPaths()) {
+  for (const dbPath of opts.dbPaths ?? kanbanDbPaths()) {
     out.push(...bridgeOnce(dbPath, opts))
   }
   return out

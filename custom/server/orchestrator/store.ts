@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS trigger (
   addressed INTEGER NOT NULL,
   payload TEXT NOT NULL,
   status TEXT NOT NULL,
+  eval_attempts INTEGER NOT NULL DEFAULT 0,
   received_at INTEGER NOT NULL,
   UNIQUE(source_id, external_id)
 );
@@ -137,9 +138,11 @@ export function orchestratorDb(): SqliteDb {
   created.exec('PRAGMA busy_timeout = 5000')
   created.exec(SCHEMA)
   // 2026-10-31 投递批：老库补 attempts/last_error（CREATE IF NOT EXISTS 不改既有表）。
+  // 2026-11-02 补 trigger.eval_attempts（评估失败退避）。
   for (const ddl of [
     'ALTER TABLE digest ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE digest ADD COLUMN last_error TEXT',
+    'ALTER TABLE trigger ADD COLUMN eval_attempts INTEGER NOT NULL DEFAULT 0',
   ]) {
     try { created.exec(ddl) } catch { /* 列已存在，忽略 */ }
   }
@@ -201,6 +204,18 @@ export function insertTrigger(
 
 export function setTriggerStatus(id: string, status: TriggerStatus): void {
   orchestratorDb().prepare('UPDATE trigger SET status = ? WHERE id = ?').run(status, id)
+}
+
+/**
+ * 评估失败计数（2026-11-02 实测补）：unavailable 的 Trigger 若不限重试，
+ * 每轮 tick 都会再调一次模型。返回累计次数供调用方判是否停止重试。
+ */
+export function bumpEvalAttempts(id: string): number {
+  const d = orchestratorDb()
+  d.prepare('UPDATE trigger SET eval_attempts = eval_attempts + 1 WHERE id = ?').run(id)
+  const row = d.prepare('SELECT eval_attempts FROM trigger WHERE id = ?').get(id) as { eval_attempts?: unknown } | undefined
+  const n = Number(row?.eval_attempts ?? 0)
+  return Number.isFinite(n) ? n : 0
 }
 
 export function getTrigger(id: string): Trigger | null {
