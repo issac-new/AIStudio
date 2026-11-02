@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import { scanSecrets, isDummySecret, allowlistReason, agentTreeExclude, zcodeTreeExclude, deriveConfigExample, parseEnvKeys, THIRD_PARTY_SRC } from '../make-offline-package.mjs'
+import { scanSecrets, isDummySecret, allowlistReason, agentTreeExclude, zcodeTreeExclude, deriveConfigExample, parseEnvKeys, THIRD_PARTY_SRC, pluginLatestFilter } from '../make-offline-package.mjs'
 
 const overlayRoot = process.cwd()
 
@@ -79,6 +79,19 @@ describe('THIRD_PARTY_SRC 三方源清单(D15)', () => {
   it('覆盖 src-pins 三方(gstack 经 zcode 面)＋zcode 官方插件, 不含 npm/pip 可装项', () => {
     expect(THIRD_PARTY_SRC.map((x) => x.name).sort()).toEqual(['ecc', 'github', 'ralph-loop', 'superpowers'])
     expect(THIRD_PARTY_SRC.every((x) => x.path.length > 0 && x.note.length > 0)).toBe(true)
+  })
+})
+
+describe('pluginLatestFilter 每插件只取最新版(D17)', () => {
+  it('多版本目录只留最新, 旧版计数; 非版本顶层项放行', () => {
+    expect(pluginLatestFilter('superpowers', ['7.0.0', '7.0.1'])).toEqual({ keep: ['7.0.1'], dropped: ['superpowers/7.0.0'] })
+    expect(pluginLatestFilter('p', ['1.10.2', '1.9.9'])).toEqual({ keep: ['1.10.2'], dropped: ['p/1.9.9'] })  // 数值比较非字典序
+    expect(pluginLatestFilter('p', ['2.0.0', '2.0.10', '2.0.9'])).toEqual({ keep: ['2.0.10'], dropped: ['p/2.0.0', 'p/2.0.9'] })
+    expect(pluginLatestFilter('p', ['7.0.0', 'hooks', '7.0.1'])).toEqual({ keep: ['hooks', '7.0.1'], dropped: ['p/7.0.0'] })
+  })
+  it('0/1 个版本目录不过滤', () => {
+    expect(pluginLatestFilter('p', ['7.0.0'])).toEqual({ keep: ['7.0.0'], dropped: [] })
+    expect(pluginLatestFilter('p', ['skills', 'docs'])).toEqual({ keep: ['skills', 'docs'], dropped: [] })
   })
 })
 

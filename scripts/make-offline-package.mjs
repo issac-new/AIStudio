@@ -48,6 +48,29 @@ export const THIRD_PARTY_SRC = [
     note: 'ECC 技能族源码(src-pins 钉 c05b2d66 工作副本形态)' },
 ];
 
+/** 插件缓存「每插件只取最新版」过滤（D17, 2026-11-02 用户裁决）：插件缓存目录
+ * （thirdparty-src 的 superpowers/ralph-loop/github）顶层是语义化版本号目录
+ * （7.0.0/ 7.0.1/…），只保留最新一版，旧版剔除并计数。
+ * 顶层非版本号形态（如 ecc 的技能目录布局）原样放行。 */
+export function pluginLatestFilter(name, entries) {
+  const semver = (s) => {
+    const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(s);
+    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+  };
+  const versions = entries.map((e) => ({ e, v: semver(e) })).filter((x) => x.v);
+  if (versions.length < 2) return { keep: entries, dropped: [] }; // 0/1 个版本目录=无需过滤
+  let best = versions[0];
+  for (const x of versions) {
+    for (let i = 0; i < 3; i++) {
+      if (x.v[i] !== best.v[i]) { if (x.v[i] > best.v[i]) best = x; break; }
+    }
+  }
+  return {
+    keep: entries.filter((e) => e === best.e || !semver(e)),
+    dropped: versions.filter((x) => x.e !== best.e).map((x) => `${name}/${x.e}`),
+  };
+}
+
 /** zcode 配置面快照排除规则（D14, 2026-11-02）：可再生产物与缓存不入包
  * （node_modules/.git/缓存/备份/.DS_Store）；**mac 编译产物（bin/dist）剔除**（D16 用户
  * 裁决 2026-11-02：目标是 Windows 服务器）——对应技能均为 TS＋src/ 源码齐全，目标机经
@@ -291,17 +314,31 @@ function main() {
       }
     }
   }
-  // 第三方依赖源码快照（D15）: 不可经 npm/pip 安装的三方源整树入包, 排除规则同 zcode 面
+  // 第三方依赖源码快照（D15）: 不可经 npm/pip 安装的三方源整树入包, 排除规则同 zcode 面;
+  // 插件缓存源形态(superpowers/ralph-loop/github)按 D17 只取每插件最新版目录
   const tpMissing = [];
+  const tpDropped = [];
   for (const tp of THIRD_PARTY_SRC) {
     if (!existsSync(tp.path)) { tpMissing.push(`${tp.name}: ${tp.path}`); continue; }
     try {
-      cpSync(tp.path, join(staging, 'thirdparty-src', tp.name), { recursive: true, dereference: true, filter: zcodeFilter(tp.path) });
+      const dst = join(staging, 'thirdparty-src', tp.name);
+      const top = readdirSync(tp.path, { withFileTypes: true })
+        .filter((e) => e.isDirectory()).map((e) => e.name);
+      const { keep, dropped } = pluginLatestFilter(tp.name, top);
+      tpDropped.push(...dropped);
+      for (const ent of keep) {
+        cpSync(join(tp.path, ent), join(dst, ent), { recursive: true, dereference: true, filter: zcodeFilter(tp.path) });
+      }
+      // 顶层散文件(如有)也收
+      for (const f of readdirSync(tp.path, { withFileTypes: true }).filter((e) => e.isFile())) {
+        cpSync(join(tp.path, f.name), join(dst, f.name), { dereference: true });
+      }
     } catch (e) {
       tpMissing.push(`${tp.name}: 采集失败 ${String(e.message).slice(0, 50)}`);
     }
   }
   if (tpMissing.length) warns.push(`三方源缺件: ${tpMissing.join(' | ')}`);
+  if (tpDropped.length) console.log(`  D17 插件旧版剔除: ${tpDropped.join(', ')}`);
   cpSync(join(templateRoot, 'install'), join(staging, 'install'), { recursive: true });
   const pmLockPath = join(hermesTree, 'pm', 'lock.json');
   const uvPin = existsSync(pmLockPath)
