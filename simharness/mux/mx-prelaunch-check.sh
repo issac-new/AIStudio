@@ -157,7 +157,9 @@ ck "㉑ IDE 任务工作区端点编入生效 dist" "_d='$SR/product-dist'; [ -d
 
 # ㉒ 阶段页签与重定向矩阵在位（V8.44）：六阶段页签化后，旧 /app/gov/* 深链必须
 #     redirect 到阶段页（书签/通知零断链）；页签注册表缺位会让 ?tab= 全部回落默认签。
-ck "㉒ 阶段页签与重定向矩阵在位" "grep -q \"key: 'clearance'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q '/app/stage/accept' '$OV/custom/client/ia2/routes.ts' && grep -q '/app/gov/org-assets' '$OV/custom/client/ia2/routes.ts'" "阶段页签注册表缺 clearance，或 /app/gov/* 重定向矩阵缺位——按 custom/client/ia2/{stage-tabs.ts,routes.ts} 修复"
+#     /app/gov/* 重定向矩阵真身在 stage-attribution.ts（22e98bdef 直接链接阶段归属）；
+#     routes.ts 自 92a01abd9 升格后只有嵌套 path 形态，勿再指错文件（2026-11-02 run25 前置实锤）。
+ck "㉒ 阶段页签与重定向矩阵在位" "grep -q \"key: 'clearance'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q '/app/stage/accept' '$OV/custom/client/ia2/routes.ts' && grep -q '/app/gov/org-assets' '$OV/custom/client/ia2/stage-attribution.ts'" "阶段页签注册表缺 clearance，或 /app/gov/* 重定向矩阵缺位——按 custom/client/ia2/{stage-tabs.ts,stage-attribution.ts,routes.ts} 修复"
 
 # ㉓ 评测接线（V8.45）：评测库/红队/留出库必须隔离到 SIM_ROOT；G4 必须挂评测子门；
 #    报告生成器必须消费 eval-summary；驱动必须 source 评测库。任何一环缺席=旧轮

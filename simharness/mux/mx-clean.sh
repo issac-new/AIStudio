@@ -453,10 +453,13 @@ if [ "$RESET_CENTRAL" = 1 ]; then
     #   20 条逃过旧正则——agent worktree 分支 wt/* 是 run6/7 主力命名，漏清面最大）
     # 归档纪律：删前统一 tag 快照 mx-clean-${TS}-branches + SHA 清单落 $ARC（可恢复）。
     ( cd "$CEN" || exit 0
+      # 2026-11-02 run25 前置实锤：枚举族必漏（docs/plan/verify/sec-rereview 23 条逃过），
+      # 合格线本就是「仅剩 main 分支」——删除面改为全部非 main；保全纪律不变
+      # （先 tag 后删、tag 未推达远端即 fail-closed 中止）。_keep_integ 窗口仅豁免 integration/*。
       if [ "$_keep_integ" = "1" ]; then
-        _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -E 'refs/heads/(feat/|test-|wt/|fix/|wip/)' || true)
+        _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -v -E 'refs/heads/(main|integration/.+)$' || true)
       else
-        _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -E 'refs/heads/(integration/|feat/|test/|wt/|fix/|wip/)' || true)
+        _brs=$(git ls-remote --heads origin 2>/dev/null | awk '{print $2}' | grep -v 'refs/heads/main$' || true)
       fi
       if [ -n "$_brs" ]; then
         git fetch -q origin 2>/dev/null || true
@@ -546,6 +549,13 @@ if [ "$RESET_CENTRAL" = 1 ]; then
       fi
     else
       say "⚠ push origin main 失败（重克隆将带回旧稿——起跑前必须人工 push）"
+    fi
+    # bare HEAD 单一立法（2026-11-02 run25 前置实锤：HEAD 悬空指向不存在的 master，
+    # mx-setup 全量建区首次踩雷——工作区克隆出「空 master 无提交」坏基线）。
+    if [ -d "$SIM_ROOT/central-origin.git" ]; then
+      git --git-dir="$SIM_ROOT/central-origin.git" symbolic-ref HEAD refs/heads/main 2>/dev/null \
+        && say "✓ 中央 bare HEAD 已立 refs/heads/main" \
+        || say "⚠ bare HEAD 立正失败（$SIM_ROOT/central-origin.git）——工作区克隆将走坏基线，起跑前人工核"
     fi
     git -C "$CEN" push -q origin "mx-clean-${TS}" "mx-clean-${TS}-branches" "mx-clean-${TS}-pretrunc" 2>/dev/null || true
   fi

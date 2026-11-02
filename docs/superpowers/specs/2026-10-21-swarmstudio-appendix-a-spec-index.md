@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（479 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（480 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1＋推演方案×程序同步二批 1＋编排定时轮与多板接入 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1；2026-11-01 ＋chat 回合自恢复立项补登记 1（edb3c6636 落 spec 未登记、docs-ssot-guard 主干红，本批清零）＋v1.0.5 发布 1；2026-11-01 ＋v1.0.6 发布 1；2026-11-02 ＋离线 Windows 安装包 1＋测试稳定性 DSL 1＋失败根因分类器 1＋MAET 检索协议 1＋测试词汇 1＋Grader 环 1＋载体对账 1＋技能面板 1；2026-11-02 ＋v1.0.8 发布 1＋方案同步代登记 1（3ec71fd4d 落 spec 未登记，本批代补））：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 479 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1＋推演方案×程序同步二批 1＋编排定时轮与多板接入 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1；2026-11-01 ＋chat 回合自恢复立项补登记 1（edb3c6636 落 spec 未登记、docs-ssot-guard 主干红，本批清零）＋v1.0.5 发布 1；2026-11-01 ＋v1.0.6 发布 1；2026-11-02 ＋离线 Windows 安装包 1＋测试稳定性 DSL 1＋失败根因分类器 1＋MAET 检索协议 1＋测试词汇 1＋Grader 环 1＋载体对账 1＋技能面板 1；2026-11-02 ＋v1.0.8 发布 1＋方案同步代登记 1（3ec71fd4d 落 spec 未登记，本批代补）＋run25 工具链加固 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 479 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -486,6 +486,7 @@
 | 2026-11-02-eval-skill-panel | Eval Studio 技能评估面板（skill-grade UI 接线，E 批挂账清偿） | 第八页签 SkillGradePanel（specText 输入＋基线 runId＋落基线复选→四维判定/四判表/delta 分层呈现）＋api.ts DTO 镜像＋i18n 双语＋组件测试 |
 | 2026-11-02-release-v1.0.8-overlay | v1.0.8-overlay 发布轮 | cockpit 1.0.9-studio.6／agent-teams team.8／yuan-skill v2.98.5／ycode 3.17.1 照发＋整包 1.0.8；GitHub 7 资产＋ModelScope 通道恢复源码档（不含构建物，用户本轮令，v1.0.7 暂停口径取代）；fullPackage.tag v1.0.6 滞留漏账随批修正 |
 | 2026-11-02-eval-skill-grade-plan-sync | 方案同步：Eval 技能评估环（代登记） | 方案八页签（§2.5/§2.6.3 第 13 条 Grader 环）＋prelaunch ㉓ 断言第八页签与端点＋守门三条；报告证据八 no_data 如实呈现不硬凑；此行为 3ec71fd4d 漏登记的机械代补 |
+| 2026-11-02-run25-prelaunch-tooling-hardening | run25 前置暴露的三处工具链缺陷收口 | mx-clean 分支清理面改「除 main 全清」（tag 保全纪律不变）＋中央 bare HEAD 立正 refs/heads/main（工作区克隆坏基线根治）＋ensure_studio_up 显式携带 PIPELINE_TRIGGER/PARALLEL_REVIEW（mx-setup 先行拉起占位致 mx-up 带旗标启动 EADDRINUSE 实锤）＋prelaunch ㉒ 断言目标修指 stage-attribution.ts |
 
 ### 角色/排除（非 spec 文档）
 
