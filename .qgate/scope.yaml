@@ -193,3 +193,6 @@ paths:
   # 2026-11-02 run25 值守批（G2 熔断现场 B 层根治：补丁 726）
   - docs/superpowers/specs/2026-11-02-chat-recovery-kwarg-fix.md
   - patches/726-agent-chat-recovery-kwarg-fix.patch
+  # 2026-11-02 run25 挂账清偿批（场景闸门韧性两件）
+  - docs/superpowers/specs/2026-11-02-scenario-gate-resilience.md
+  - simharness/aipay-scenario.sh

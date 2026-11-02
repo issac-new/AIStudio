@@ -1385,6 +1385,11 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     expect(mxlib).toContain('726-agent-chat-recovery-kwarg-fix.patch')
     const patch726 = read(join(HARNESS, '..', 'patches/726-agent-chat-recovery-kwarg-fix.patch'))
     expect(patch726).toContain('_rec_kwargs.pop("conversation_history", None)')
+    // run25 G2 熔断挂账清偿（2026-11-02）：RACI 免等窗＋G2 超时分支二轮等待——
+    // 两标记缺一即韧性状被洗掉（升级冲掉/回滚），值守轮次依赖此断言兜底
+    const scen = read(join(HARNESS, 'aipay-scenario.sh'))
+    expect(scen).toContain('免等窗即时单查')
+    expect(scen).toContain('超时分支二轮等待')
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑬ 独立审批环可启动')
   })
