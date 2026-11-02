@@ -403,6 +403,50 @@ export const evalApi = {
     req<FewshotRecallDto>(`/api/hermes/eval/flywheel/fewshot?query=${encodeURIComponent(query)}`),
   flywheelMergeGate: (body: { prompt?: boolean; model?: boolean; orchestration?: boolean }) =>
     req<MergeGateDto>('/api/hermes/eval/flywheel/merge-gate', { method: 'POST', body: JSON.stringify(body) }),
+  // —— 技能产出 Grader 环（2026-11-02 方法论吸收批 E）：spec §19 测试设计段评估 ——
+  skillGrade: (body: { specText: string; baselineRunId?: string; snapshot?: boolean }) =>
+    req<SkillGradeResponseDto>('/api/hermes/eval/skill-grade', { method: 'POST', body: JSON.stringify(body) }),
+}
+
+// ---------- 技能评估 DTO（服务端契约镜像：custom/server/eval/skill-grader.ts） ----------
+
+export type SkillGradeVerdictDto = 'PASS' | 'CONDITIONAL' | 'FAIL'
+
+export interface SkillS0CheckDto {
+  id: string
+  label: string
+  pass: boolean
+  detail: string
+}
+
+export interface SkillDimensionGradeDto {
+  dimension: 'maet-completeness' | 'gwt-concreteness' | 'boundary-coverage' | 'verifiability'
+  value: 'yes' | 'no' | 'unknown'
+  source: 's0' | 's1'
+  p?: number
+  reason: string
+}
+
+export interface SkillGradeResultDto {
+  overall: SkillGradeVerdictDto
+  sectionFound: boolean
+  s0: SkillS0CheckDto[]
+  dimensions: SkillDimensionGradeDto[]
+  meta: { model: string; online: boolean; cached: boolean; latencyMs: number | null }
+}
+
+export interface SkillBaselineDeltaDto {
+  runId: string
+  baselineTs: number
+  baselinePassRate: number
+  currentPassRate: number
+  delta: number
+}
+
+export interface SkillGradeResponseDto {
+  ok: true
+  grades: SkillGradeResultDto
+  baseline?: SkillBaselineDeltaDto
 }
 
 // ---------- 数据飞轮 DTO（服务端契约镜像：custom/server/eval/flywheel.ts） ----------
