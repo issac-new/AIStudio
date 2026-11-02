@@ -15,6 +15,7 @@ import EvalAdvicePanel from '@/custom/eval/components/EvalAdvicePanel.vue'
 import MetricRegistryPanel from '@/custom/eval/components/MetricRegistryPanel.vue'
 import RedteamPanel from '@/custom/eval/components/RedteamPanel.vue'
 import FlywheelPanel from '@/custom/eval/components/FlywheelPanel.vue'
+import SkillGradePanel from '@/custom/eval/components/SkillGradePanel.vue'
 import HeldOutPanel from '@/custom/eval/components/HeldOutPanel.vue'
 
 const i18nCtx = useI18n()
@@ -24,7 +25,7 @@ const L = computed(() => {
 })
 const route = useRoute()
 
-type Tab = 'sets' | 'runs' | 'metrics' | 'redteam' | 'oracle' | 'advice' | 'flywheel'
+type Tab = 'sets' | 'runs' | 'metrics' | 'redteam' | 'oracle' | 'advice' | 'flywheel' | 'skill-grade'
 const tab = ref<Tab>('sets')
 const sets = ref<EvalSetMetaDto[]>([])
 const runs = ref<RunSummaryDto[]>([])
@@ -258,6 +259,7 @@ function deltaText(v: number | null | undefined): string {
         <button type="button" :class="{ active: tab === 'oracle' }" data-testid="eval-tab-oracle" @click="tab = 'oracle'">{{ L.tabs.oracle }}</button>
         <button type="button" :class="{ active: tab === 'advice' }" data-testid="eval-tab-advice" @click="tab = 'advice'">{{ L.tabs.advice }}</button>
         <button type="button" :class="{ active: tab === 'flywheel' }" data-testid="eval-tab-flywheel" @click="tab = 'flywheel'">{{ L.tabs.flywheel }}</button>
+        <button type="button" :class="{ active: tab === 'skill-grade' }" data-testid="eval-tab-skill-grade" @click="tab = 'skill-grade'">{{ L.tabs.skillGrade }}</button>
       </nav>
     </template>
 
@@ -524,6 +526,7 @@ function deltaText(v: number | null | undefined): string {
 
     <!-- ── 数据飞轮页签（2026-10-25 吸收轮：坏例→资产→通过率门） ── -->
     <FlywheelPanel v-if="tab === 'flywheel'" />
+    <SkillGradePanel v-if="tab === 'skill-grade'" />
   </TopicPageLayout>
   </section>
 </template>
