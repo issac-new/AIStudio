@@ -162,7 +162,7 @@ ck "㉒ 阶段页签与重定向矩阵在位" "grep -q \"key: 'clearance'\" '$OV
 # ㉓ 评测接线（V8.45）：评测库/红队/留出库必须隔离到 SIM_ROOT；G4 必须挂评测子门；
 #    报告生成器必须消费 eval-summary；驱动必须 source 评测库。任何一环缺席=旧轮
 #    评测接线不完整（跑起来会退化成「评测未发起」或污染宿主 home）。
-ck "㉓ 评测接线（隔离库+G4 子门+报告消费+库/汇总器可执行）" "grep -q 'mx-eval-lib.sh' '$HERE/aipay-scenario.sh' && grep -q 'EVAL_STORE=' '$HERE/mux/mx-lib.sh' && grep -q 'eval_flow' '$HERE/aipay-scenario.sh' && grep -q 'eval-summary.json' '$HERE/mux/mx-report-gen.py' && bash -n '$HERE/mux/mx-eval-lib.sh' && python3 -m py_compile '$HERE/mux/mx-eval-summary.py'" "评测接线不完整：驱动未 source mx-eval-lib / mx-lib 未隔离 EVAL_STORE / G4 未挂 eval_flow / 报告未消费 eval-summary / 脚本语法错——按 specs/2026-10-19-fullflow-v845-eval-integration.md 接线"
+ck "㉓ 评测接线（隔离库+G4 子门+报告消费+技能评估面板/端点）" "grep -q 'mx-eval-lib.sh' '$HERE/aipay-scenario.sh' && grep -q 'EVAL_STORE=' '$HERE/mux/mx-lib.sh' && grep -q 'eval_flow' '$HERE/aipay-scenario.sh' && grep -q 'eval-summary.json' '$HERE/mux/mx-report-gen.py' && grep -q 'skill-grade' '$OV/custom/client/eval/views/EvalView.vue' && grep -q '/skill-grade' '$OV/custom/server/eval/controller.ts' && bash -n '$HERE/mux/mx-eval-lib.sh' && python3 -m py_compile '$HERE/mux/mx-eval-summary.py'" "评测接线不完整：驱动未 source mx-eval-lib / mx-lib 未隔离 EVAL_STORE / G4 未挂 eval_flow / 报告未消费 eval-summary / 技能评估面板或端点缺位 / 脚本语法错——按 specs/2026-10-19-fullflow-v845-eval-integration.md 与 2026-11-02-skill-grader.md 接线"
 
 # ㉔ G6 闸键统一（V8.46）：产品六闸 G6 必须取 retro_done（步 24），不得再取报告步
 #    完成键 report_done。口径分裂会让「复盘已过、报告未出」时 G6 灯不亮。
