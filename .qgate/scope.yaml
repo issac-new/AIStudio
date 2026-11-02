@@ -177,3 +177,9 @@ paths:
   - team/VERSION
   - team/version.json
   - .qgate/scope.yaml
+  # 2026-11-02 方案同步批代声明（bb44a7060 并行合入：3ec71fd4d+109a72628，解堵补全非门禁放宽）
+  - docs/superpowers/specs/2026-11-02-eval-skill-grade-plan-sync.md
+  - docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md
+  - simharness/mux/mx-prelaunch-check.sh
+  - simharness/mux/tests/plan-program-sync.test.sh
+  - .swarm-yuan/spec-receipts.jsonl
