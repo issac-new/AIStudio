@@ -1321,11 +1321,15 @@ write_fleet_manifest() { # 全局事实源：users → matrix 账号 / boards / 
   chmod 604 "$out"
 }
 
-set_board_team() { # <board> <agent-id>：board.json.profiles = team 白名单（patch 391 事实源）
-  local board="$1" agent="$2"
-  HERMES_HOME="$HERMES_ROOT" python3 - "$board" "$agent" <<'PYEOF'
+set_board_team() { # <board> <agent-id>...：board.json.profiles = team 白名单（patch 391 事实源）。
+  # 2026-11-02 板围栏全名册立法（specs/2026-11-02-board-fence-full-roster.md）：可收多个
+  # agent-id——SIM 单 home 内全编制均为合法领卡人；只挂板主单 profile 会在缺陷卡跨板
+  # 指派子编制/基名时整批 skipped_nonspawnable（run24 只修运行态未修供给、run25 复发实锤）。
+  local board="$1"; shift
+  HERMES_HOME="$HERMES_ROOT" python3 - "$board" "$@" <<'PYEOF'
 import json, sys, pathlib
-board, agent = sys.argv[1], sys.argv[2]
+board = sys.argv[1]
+agents = sorted(set(sys.argv[2:]))
 root = pathlib.Path(__import__('os').environ['HERMES_HOME'])
 if board == 'default':
     d = root / 'kanban' / 'boards' / 'default'
@@ -1335,9 +1339,9 @@ d.mkdir(parents=True, exist_ok=True)
 p = d / 'board.json'
 meta = json.loads(p.read_text()) if p.exists() else {'slug': board}
 meta.setdefault('slug', board)
-meta['profiles'] = [agent]
+meta['profiles'] = agents
 p.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + '\n')
-print(f'board {board} team -> {agent}')
+print(f'board {board} team -> {len(agents)} profiles')
 PYEOF
 }
 

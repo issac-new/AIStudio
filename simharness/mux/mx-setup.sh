@@ -194,6 +194,14 @@ _rot_out="$(mxp_rotation_mode auto)"
 [ -n "$_rot_out" ] && log "会话轮换档位归一：${_rot_out}"
 
 # ── 5. 每账号 2 块独立 kanban + team 围栏（按节点切片）───
+# 围栏=全编制名册（2026-11-02 立法 specs/2026-11-02-board-fence-full-roster.md）：SIM 单
+# home 内基名＋全部子编制 profile 都是合法领卡人（缺陷卡跨板指派子编制、修订卡指基名），
+# 只挂板主单 profile 会整批 skipped_nonspawnable（run24 修运行态未修供给、run25 复发实锤）。
+_roster=""
+for u in $(node_users); do
+  _roster="$_roster $u"
+  for a in $(agents_of "$u"); do _roster="$_roster $(agent_profile "$u" "$a")"; done
+done
 for u in $(node_users); do
   for b in $(boards_of "$u"); do
     slug="${b%%:*}"; agent="${b##*:}"
@@ -202,7 +210,8 @@ for u in $(node_users); do
         || fail "建板失败：$slug"
       log "已建板 $slug"
     fi
-    set_board_team "$slug" "$(agent_profile "$u" "$agent")"
+    # shellcheck disable=SC2086
+    set_board_team "$slug" $_roster "$(agent_profile "$u" "$agent")"
   done
 done
 # default 板 = 串板哨兵（G2 门禁要求全程零任务）

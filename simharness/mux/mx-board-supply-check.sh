@@ -3,12 +3,15 @@
 # mx-clean --apply 归档清走全部账号板（含 board.json），板供给在 mx-setup 第 5 段——
 # 「clean 后首跑」路径缺供给即驱动步 5 必炸「板元数据缺失」。
 # 判据：每个编制账号的全部账号板 board.json 在位且带 profiles 围栏。
-# 供给面（缺板时执行，与 mx-setup 第 5 段同款幂等循环）：
+# 供给面（缺板时执行，与 mx-setup 第 5 段同款幂等循环；围栏=全编制名册，2026-11-02 立法
+# specs/2026-11-02-board-fence-full-roster.md——只挂板主单 profile 会整批 skipped_nonspawnable）：
 #   source mux/mx-lib.sh; source mux/mx-scenario-lib.sh
+#   _roster=""; for u in $(node_users); do _roster="$_roster $u"
+#     for a in $(agents_of "$u"); do _roster="$_roster $(agent_profile "$u" "$a")"; done; done
 #   for u in $(node_users); do for b in $(boards_of "$u"); do
 #     slug="${b%%:*}"
 #     HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban boards create "$slug" --name "$slug"
-#     set_board_team "$slug" "$(agent_profile "$u" "${b##*:}")"
+#     set_board_team "$slug" $_roster "$(agent_profile "$u" "${b##*:}")"
 #   done; done
 set -u
 LC_ALL=C
