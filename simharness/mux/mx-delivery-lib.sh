@@ -76,6 +76,24 @@ dlv_stage() { # <who> <room> <caseId> <stage> <worker-account> <outcome> <artifa
   dlv_msg "$who" "$room" "$DLV_STAGE_TYPE" "$(dlv_event "${args[@]}" "$@")"
 }
 
+dlv_gate_try() { # <gate> <verdict> <summary> [who]——六闸事件化安全包装（run25 复盘）
+  # run25 实锤（M3 断言：缺 pass 的门=G2）：脚本只在 G5 派发 gate 事件，G1/G2/G3/G4/G6
+  # 落键时零事件——交付面板六闸灯只有一盏会亮。本包装在闸落键点各派一次，且：
+  #   * dlv 关闭（MX_DELIVERY=0）直接返回；
+  #   * 无案例房（lite/夹具轮 dlv_room/dlv_case 未初始化）跳过并记 note，绝不缺参 exit
+  #     （run12 实锤：dlv_gate 缺参 exit 4 被 set -e 击杀驱动成重启循环）；
+  #   * 发送失败只记 note 不阻断（事件化是观测面，不是闸判据）。
+  local g="$1" v="$2" sum="$3" who="${4:-fanfan}" room cid
+  dlv_enabled || return 0
+  room="$(sget dlv_room 2>/dev/null || true)"; cid="$(sget dlv_case 2>/dev/null || true)"
+  if [[ -z "$room" || -z "$cid" ]]; then
+    note "[M3] ${g} gate 事件跳过（无案例房：lite/夹具轮）"; return 0
+  fi
+  dlv_gate "$who" "$room" "$cid" "$g" "$v" human "$sum" >/dev/null 2>&1 \
+    && note "[M3] ${g} gate 事件已发（${v}）" \
+    || note "[M3] ${g} gate 事件发送失败（不阻断）"
+}
+
 dlv_gate() { # <who> <room> <caseId> <gate> <verdict> <evid-kind> <evid-summary> [extra...]
   local who="$1" room="$2" cid="$3" g="$4" v="$5" k="$6" s="$7"; shift 7
   dlv_msg "$who" "$room" "$DLV_GATE_TYPE" "$(dlv_event gate --case-id "$cid" --gate "$g" --verdict "$v" \

@@ -2,7 +2,7 @@
 # mx-report-gen.py — V3 全流程推演报告生成器（生命周期旅程版 v2）
 # 设计原则：六阶段分组 + 侧栏导航 + 每步叙事（人/AI 角色+动作+结果锚点）+ 闸门可视化 + 证据灯箱
 # 步骤标题与把关逐字取自方案文档（单一事实源）：
-#   docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 具体流程 1-26
+#   docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md 具体流程 1-26
 #
 # 2026-09-28 改版（内容级审计 report-audit-20260928.md 驱动）：
 #   1. 每步补「执行叙事」：谁（人/AI/闸）做了什么、结果锚点是什么——26 张卡片连成故事线
