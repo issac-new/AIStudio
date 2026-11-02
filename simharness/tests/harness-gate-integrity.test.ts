@@ -1390,6 +1390,9 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     const scen = read(join(HARNESS, 'aipay-scenario.sh'))
     expect(scen).toContain('免等窗即时单查')
     expect(scen).toContain('超时分支二轮等待')
+    // run25 四启实录（21:55:04 _sens unbound）：重放路径 security_review_done 在位时
+    // 跳过赋值块，set -u 必炸——锁默认空写法防回退
+    expect(scen).toContain('printf \'%s\' "${_sens:-}"')
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑬ 独立审批环可启动')
   })
