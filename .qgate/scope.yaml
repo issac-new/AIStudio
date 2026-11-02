@@ -158,4 +158,12 @@ paths:
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - RELEASE-MANIFEST.json
   - RELEASE-NOTES.md
+  # 2026-11-02 技能评估面板批（feat/eval-skill-panel, spec 2026-11-02-eval-skill-panel）
+  - docs/superpowers/specs/2026-11-02-eval-skill-panel.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - custom/client/eval/api.ts
+  - custom/client/eval/i18n.ts
+  - custom/client/eval/components/SkillGradePanel.vue
+  - custom/client/eval/views/EvalView.vue
+  - custom/client/eval/__tests__/skill-grade-panel.test.ts
   - .qgate/scope.yaml
