@@ -559,12 +559,17 @@ if step_reached analysis; then
   for pair in "chen wei" "hu wei" "lin wei" "xiao mei"; do
     set -- $pair
     # 消息洪窗口失效（当日风暴数千条，500 条仅回溯 5 分钟；深翻页到昨日需
-    # 数十页不经济）：派发真实性由 state dispatch_marker（事件 id 可反查）锚定，此处
-    # 文本级复查按 60s 窗降级观察——结论不放宽，只省注定超时的等待。
-    # 注意必须当前 shell 直调谓词函数：bash -c 起的子进程继承不到 shell 函数（未 export -f），
-    # mx_messages_deep 在子进程内 127 恒假=复查恒失败白等 60s（24h 审查实锤）
-    wait_truth "房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发" 60 raci_dispatch_seen "${1}" "${2}" "${RID}" \
-      || { note "[观察] @$1/@$2 派发消息未见（先记数，末尾统一回灌）"; RACI_MISS_PAIRS="${RACI_MISS_PAIRS:-} $1/$2"; }
+    # 数十页不经济）：派发真实性由 state dispatch_marker（事件 id 可反查）锚定。
+    # 提速④（2026-11-02 run25 挂账清偿）：免等窗——60s 轮询在消息洪下注定超时
+    # （run25 四组全超时实锤烧 4 分钟纯墙钟），与下文 raci-not-structured 提速③同语义
+    # （副作用证据，真值=主卡 raci 列）：谓词即时单查一次，未见即记数走末尾统一回灌，
+    # 验证归审计段。注意必须当前 shell 直调谓词：shell 函数不跨子进程（未 export -f）。
+    if raci_dispatch_seen "${1}" "${2}" "${RID}"; then
+      note "[真值] 房间出现 @${1}-agent 与 @${2}-agent 的 RACI 派发 ✓（免等窗即时单查）"
+    else
+      note "[观察] @$1/@$2 派发消息未见（免等窗即时判，末尾统一回灌）"
+      RACI_MISS_PAIRS="${RACI_MISS_PAIRS:-} $1/$2"
+    fi
   done
   # 双 @ 派发消息回灌闭环（run8 遗留⑤：run7 四组全未见只记观察——agent 执行率缺口，
   # 记录前先回灌要求补发，重查一轮仍缺才落单）：消息洪窗口外不是借口，群通知是
@@ -986,6 +991,17 @@ if [ "$(posture)" = "strict" ]; then
           note "[安全] 修订 ${_rr_head_h} 已入仓——驱动派安全工程师AI 复审（缺失分支闭环）"
         fi
         # 闸不放行：driver 在本环继续等复审 PASS（wait_truth 由外层 supervisor 续跑驱动重入）
+        # C 层韧性（2026-11-02 run25 挂账清偿）：原设计依赖驱动 fail 退出后 supervisor 重启
+        # 重入再等——run25 实证复审没有执行窗（派单后 2s 即总闸 FAIL，两轮即熔断：19:40/20:12）。
+        # 根治=派单后原地等一轮复审结论（600s 与主等待同窗）：PASS 即置键过闸；仍无才放行
+        # 到总闸 fail。闸门语义不变（只有末判词翻 PASS 才放行，用户 2026-10-14 21:02 裁定），
+        # 熔断计数语义不变（二轮仍超时才走到 fail）。
+        if wait_truth "涉敏安全复审结论（超时分支二轮等待）" ${MX_G2_WAIT:-600} mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 安全评审"; then
+          kanban_walk_done secops "$SGID"; sset security_review_done 1
+          note "[安全] 超时分支二轮复审 PASS——G2 放行前置满足（C 层韧性生效）"
+        else
+          note "[安全] 超时分支二轮复审仍无结论——放行到总闸判（fail 语义不变）"
+        fi
       fi
     fi
   fi

@@ -117,3 +117,4 @@
 {"at":"2026-11-02T09:17:41Z","spec":"docs/superpowers/specs/2026-11-02-eval-skill-panel.md","receipt":"3402d0a83fb4f0140f3e2c21ccbd1dc19ba44895","commit":"755f54514"}
 {"at":"2026-11-02T09:42:09Z","spec":"docs/superpowers/specs/2026-11-02-eval-skill-grade-plan-sync.md","receipt":"7ec3e8ca0deff8fe38eb00bce9aaaa4152f2f62f","commit":"1e24d02db"}
 {"at":"2026-11-02T12:18:00Z","spec":"docs/superpowers/specs/2026-11-02-chat-recovery-kwarg-fix.md","receipt":"83154228a4dcc7d84fd949c6501ae9902ec0c7fe","commit":"782b4768b"}
+{"at":"2026-11-02T12:33:48Z","spec":"docs/superpowers/specs/2026-11-02-scenario-gate-resilience.md","receipt":"78158a869d0225e090cae172dc6f2e93f70b0ec5","commit":"1e0663365"}
