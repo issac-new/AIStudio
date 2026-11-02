@@ -119,3 +119,4 @@
 {"at":"2026-11-02T12:18:00Z","spec":"docs/superpowers/specs/2026-11-02-chat-recovery-kwarg-fix.md","receipt":"83154228a4dcc7d84fd949c6501ae9902ec0c7fe","commit":"782b4768b"}
 {"at":"2026-11-02T12:33:48Z","spec":"docs/superpowers/specs/2026-11-02-scenario-gate-resilience.md","receipt":"78158a869d0225e090cae172dc6f2e93f70b0ec5","commit":"1e0663365"}
 {"at":"2026-11-02T14:02:43Z","spec":"docs/superpowers/specs/2026-11-02-sens-unbound-replay-fix.md","receipt":"6ba5b3879418428436042d89eae8d3559c4145af","commit":"43df7b4ef"}
+{"at":"2026-11-02T14:59:46Z","spec":"docs/superpowers/specs/2026-11-02-supervisor-nudge-gate-aware.md","receipt":"1cf18a314093fbe0de3e4c4da373d1d35fc16ff2","commit":"c734ce7e7"}

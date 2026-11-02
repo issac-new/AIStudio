@@ -212,3 +212,6 @@ paths:
   - custom/server/simrun/__tests__/supervisor.test.ts
   - patches/727-server-simrun-supervisor-routes.patch
   - docs/superpowers/specs/2026-11-02-simrun-supervisor-product.md
+  # 2026-11-02 run25 值守批（监督器催办闸别分流）
+  - docs/superpowers/specs/2026-11-02-supervisor-nudge-gate-aware.md
+  - simharness/mux/run-driver-supervisor.sh
