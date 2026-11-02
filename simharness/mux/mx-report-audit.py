@@ -404,7 +404,10 @@ if _ilog.exists():
     _iss_lines = [l for l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines() if l.startswith('ISSUE|')]
 if _ilog.exists() and '问题单终态' in rep:
     _uniq = len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines})
-    _m3 = re.search(rf'唯一键\s*(\d+)', rep)
+    # run25 收尾实录（04:35 轮）：全文首匹配撞上审计意见书引文里的历史数字（「issues.log
+    # 35 行（唯一键 26）」被报告 C1 节引用）——引文不可改（agent 产物+真实性），词面污染
+    # 属审计器缺陷。取数口径锚定「问题单终态」表单元格（报告自身的计数主张位）。
+    _m3 = re.search(r'问题单终态</td><td>唯一键\s*(\d+)', rep)
     # run20 收尾实录：审计 FAIL→驱动追加降级 DISP 行→issues 涨→上轮报告数字固化→
     # 永远差 3 的自增死循环。容差 5（降级行属过程追加非计数失实）；超容差仍 FAIL。
     if _m3 and abs(int(_m3.group(1)) - _uniq) > 5:
@@ -424,7 +427,9 @@ else:
 # A3 三源计数：复盘文档成文数 × issues.log 事件流 × 报告唯一键（P18/R29 承诺兑现——
 # 方案声称「复盘三源计数一致性入审计断言已落地」但无代码，本断言即补位）。
 if _ilog.exists():
-    _m_rep = re.search(r'唯一键\s*(\d+)', rep)
+    # 同 R8 口径锚定（run25 04:55 轮 A3a 撞同一引文坑——两判据共 401 行注释所载解析，
+    # 取数必须同修）：全文首匹配会命中审计意见书引文里的历史数字，锚定终态表单元格。
+    _m_rep = re.search(r'问题单终态</td><td>唯一键\s*(\d+)', rep)
     if _m_rep and int(_m_rep.group(1)) != len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines}):
         fails.append(f'A3a 报告问题单唯一键计数（{_m_rep.group(1)}）≠ issues.log 实测（{len({l.split("|")[1] + "·" + l.split("|")[2] for l in _iss_lines})}）——计数三源不一致')
     _retro = EVID.parent.parent / 'central' / 'aipaydev' / 'docs' / 'retro'

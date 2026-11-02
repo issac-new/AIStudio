@@ -53,7 +53,10 @@ for _i, _k in enumerate([
     STEP_KEY_TO_NUM.setdefault(_k, _i)
 STEP_KEY_TO_NUM.update({'login_done': 3, 'room_done': 8, 'testpass_done': 19,
                         'eval_done': 19, 'release_done': 20, 'deliver_gate': 23,
-                        'report_view': 26})
+                        'report_view': 26,
+                        # run25 两条 collect 失败单的根因：采集键不在映射即 die。
+                        # dispatch_done=步9 新增采集位；ready_inbox=步20 第二拍摄位。
+                        'dispatch_done': 9, 'ready_inbox': 20})
 
 
 def die(msg):

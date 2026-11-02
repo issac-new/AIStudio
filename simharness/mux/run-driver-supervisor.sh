@@ -280,8 +280,18 @@ while true; do
     # （run23 实测连续 11 次、耗时 65 分钟零新增信息）。故除次数外并入「失败指纹」：
     # 驱动日志新增段末行哈希；连续 N 次同指纹=确定性失败，记单并停（人工可见），
     # 指纹变化（缺口被修）才继续自愈。
-    _tailfp="$(tail -c +$((_loff+1)) "$LOGS/$RUN_ID-driver.log" 2>/dev/null | grep -E '^\[mux FAIL|^== FAIL ==|^\- ' | shasum | cut -c1-12)"
-    if [[ "$_tailfp" == "$_storm_fp" ]]; then _storm_same=$((_storm_same+1)); else _storm_same=1; _storm_fp="$_tailfp"; fi
+    # run25 实锤：驱动退出段若无 FAIL 行（崩溃型/审计器热修后空段），grep 空输出经
+    # shasum 得空串哈希 da39a3ee5e6b——与「上轮同失败」无法区分，5 轮即误判确定性失败
+    # 自退（03:07 现场停摆 7 分钟，人工才发现）。口径：指纹必须有实质失败行才算数，
+    # 空指纹=未知失败，只计入 storm 次数、不累计 storm_same（永不触发确定性自退）。
+    _tailtxt="$(tail -c +$((_loff+1)) "$LOGS/$RUN_ID-driver.log" 2>/dev/null | grep -E '^\[mux FAIL|^== FAIL ==|^\- ' || true)"
+    _tailfp="$(mx_fail_fingerprint "$_tailtxt")"
+    if [[ -n "$_tailfp" ]]; then
+      if [[ "$_tailfp" == "$_storm_fp" ]]; then _storm_same=$((_storm_same+1)); else _storm_same=1; _storm_fp="$_tailfp"; fi
+    else
+      _tailfp=""; _storm_same=0; _storm_fp=""
+      note "本轮失败段无 FAIL 行（指纹未知）——不累计确定性判定（run25 空指纹误判根治）"
+    fi
     if [[ $_storm -eq 3 ]]; then
       _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
       if ! grep -q '^ISSUE|driver-restart-storm|' "$_iss_path" 2>/dev/null; then

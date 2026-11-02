@@ -232,3 +232,16 @@ paths:
   - simharness/tests/v846-governance-closure.test.ts
   - patches/729-agent-recovery-kwargs-pure.patch
   - patches/series
+  # 2026-11-03 run25 全流程复盘批
+  - docs/superpowers/specs/2026-11-03-run25-full-retro.md
+  - docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md
+  - simharness/aipay-scenario.sh
+  - simharness/mux/run-driver-supervisor.sh
+  - simharness/mux/mx-recovery-lib.sh
+  - simharness/mux/mx-delivery-lib.sh
+  - simharness/mux/r18-collect.py
+  - simharness/mux/mx-report-audit.py
+  - simharness/mux/mx-report-gen.py
+  - simharness/mux/mx-scenario-lib.sh
+  - simharness/mux/final-report-merge.py
+  - simharness/tests/mechanism-behavior.test.ts

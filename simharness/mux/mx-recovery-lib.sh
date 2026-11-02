@@ -42,3 +42,12 @@ mx_defer_restart_policy() {
   [ "$recovering" -eq 0 ] || return 1
   [ "$deferred" -lt "$cap" ] && return 0 || return 1
 }
+
+# mx_fail_fingerprint <text> → 失败指纹（12 位哈希）；无实质失败行时输出空串
+# 纯函数：run25 空指纹误判（grep 空输出→shasum 空串哈希 da39a3ee→5 轮误判确定性
+# 失败自退）的判定核心，行为测试直调。
+mx_fail_fingerprint() {
+  local txt="${1:-}"
+  [[ -n "$txt" ]] || { printf ''; return 0; }
+  printf '%s' "$txt" | shasum | cut -c1-12
+}

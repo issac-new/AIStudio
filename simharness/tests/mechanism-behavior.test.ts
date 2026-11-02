@@ -167,6 +167,52 @@ describe('恢复层让位 mx_gateway_recovering / mx_defer_restart_policy', () =
   })
 })
 
+// ── 5b) run25 复盘批：空指纹、步键映射完备、六闸事件、方案路径（四条结构性断言）
+describe('run25 复盘批：结构性缺口不再复发', () => {
+  const read = (rel: string) => readFileSync(join(REPO, rel), 'utf8')
+
+  it('空失败段不产出指纹（da39a3ee 空串哈希误判确定性失败的根因）', () => {
+    const lib = join(MX, 'mx-recovery-lib.sh')
+    const fp = (txt: string) =>
+      bash(`source ${JSON.stringify(lib)}; mx_fail_fingerprint ${JSON.stringify(txt)}`)
+    expect(fp('')).toBe('')
+    expect(fp('[mux FAIL 01:02:03] x')).toMatch(/^[0-9a-f]{12}$/)
+    // 同文本同指纹、异文本异指纹（判定可用性）
+    expect(fp('[mux FAIL 01:02:03] x')).toBe(fp('[mux FAIL 01:02:03] x'))
+    expect(fp('[mux FAIL 01:02:03] x')).not.toBe(fp('[mux FAIL 01:02:03] y'))
+  })
+
+  it('每个 capture_step 步键都在 r18 规范映射内（run25 两条 collect 失败单的根因）', () => {
+    const scen = read('simharness/aipay-scenario.sh')
+    const r18 = read('simharness/mux/r18-collect.py')
+    const keys = new Set<string>()
+    for (const m of scen.matchAll(/capture_step "([a-z0-9_]+)"/g)) keys.add(m[1])
+    expect(keys.size).toBeGreaterThan(20)
+    const missing: string[] = []
+    for (const k of keys) if (!r18.includes(`'${k}'`)) missing.push(k)
+    expect(missing).toEqual([])  // 缺一个即 r18-collect die（run25 ready_inbox 实锤）
+  })
+
+  it('六闸都有 delivery gate 事件落点（run25 M3 断言：缺 pass 的门=G2）', () => {
+    const scen = read('simharness/aipay-scenario.sh')
+    for (const g of ['G1', 'G2', 'G3', 'G4', 'G6']) {
+      expect(scen).toContain(`dlv_gate_try ${g} pass`)
+    }
+    const lib = read('simharness/mux/mx-delivery-lib.sh')
+    expect(lib).toContain('dlv_gate_try()')      // 安全包装在位（缺参不 exit）
+    expect(lib).toContain('无案例房')
+  })
+
+  it('活跃代码不再引用已归档的方案路径（悬空引用=单一事实源破坏）', () => {
+    const files = ['simharness/aipay-scenario.sh', 'simharness/mux/mx-report-gen.py',
+                   'simharness/mux/mx-scenario-lib.sh']
+    for (const f of files) {
+      expect(read(f)).not.toContain('2026-09-25-mux-v3-lifecycle-plan')
+      expect(read(f)).toContain('2026-10-05-mux-v8-fullflow-plan')
+    }
+  })
+})
+
 // ── 5) 闸门耗时台账（ETA 口径：质量环与故障分列）
 describe('闸门耗时台账 mx-gate-timing', () => {
   it('同闸多次打回计入 rounds；无 pass 键判未过；跨闸互不串', () => {

@@ -1,7 +1,7 @@
 #!/bin/bash
 # aipay-scenario.sh — V3 全流程 0-1 推演脚本（单文件完整版，26 步）
 #
-# 方案：docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md（六阶段 L0-L5
+# 方案：docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md（六阶段 L0-L5
 # + 管理域 M1-M3/audit + G1-G6 硬闸；每步准入/准出/质量/治理见方案 §2）。
 # 拓扑：单 gateway 多路复用 + 单 studio 多账号 + 账号板 + 家族共享记忆（V2 手册）。
 # 本文件由 aipay-scenario.sh(1-14 步)+aipay-scenario2.sh(15-25 步) 合并而来
@@ -46,7 +46,7 @@ trap 'rc=$?; if [ "${BASH_SUBSHELL:-0}" -eq 0 ]; then _em="[mux $(date +%H:%M:%S
 # M3 事件化：delivery.* 协议事件层（R29 拍板：缺省启用=产品真实形态、全程开启——
 # Delivery Cases 面板由协议事件真实喂数；MX_DELIVERY=0 显式关闭自动记录
 # product-surface-degraded 降级（§5.6 采集纪律⑩，禁静默关旗标跑全程）；映射与断言见
-# docs/superpowers/specs/2026-09-25-mux-v3-lifecycle-plan.md 实测记录）
+# docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md 实测记录）
 source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
 if ! dlv_enabled; then
   echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：§5.6 采集纪律⑩ 降级口径记录，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
@@ -421,6 +421,7 @@ if step_reached reqgate; then
     fi
     sset_once g1_frozen "$(date +%s)"
     capture_step "g1_frozen" "/app/stage/reqs?tab=docs"   # 步7 承载面
+    dlv_gate_try G1 pass "需求冻结四要素过（AC/Scope-Out/影响面/涉敏）"
   fi
 fi
 
@@ -489,6 +490,9 @@ card 必须取自建卡工具返回的真实卡 ID（形如 t_1a2b3c4d），填�
   # 重启重入段即补采（r18-collect 按锚点幂等拒重，重复调用无副作用）——
   # run14 实锤 plan/test 段挂钩错过即整轮载荷缺。
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 9 --room "$RID" --anchor "$(sget dispatch_marker)" --title "需求派发任务书全文（fanfan→fanfan-agent）" --user fanfan --limit 40 >/dev/null 2>&1 || true
+  # run25 复盘（36 轮审计环首因）：步 9 只有 dialog 载荷、没有 UI 实拍位——审计三红线
+  # 「承诺面零帧+零登记=FAIL」每轮必炸，最终靠降级登记才过。补采集位=从根上不再需要登记。
+  capture_step "dispatch_done" "/app/stage/design?tab=tasks"   # 步9 承载面：派发后的任务板
   # ── V8.8 纪律 33：测试左移① UC 用户案例（触发=G1 冻结+分析群在位；run15 首验）──
   # 与系统分析并行：测试线拿到冻结 AC 即起笔用户案例，G4 不再从零开始。
   if [[ -z "$(sget uc_dispatched)" ]]; then
@@ -1119,6 +1123,7 @@ if [ "$(posture)" = "strict" ]; then
       fi
       # M3 事件化：P2 done（概设定稿）→ G2 pass（arch 评审）→ case→P3
       dlv_enabled && dlv_scenario_phase P2 fanfan G2 arch artifact "概设评审过（arch 板 ${AGID}）" P3
+      dlv_gate_try G2 pass "架构治理评审过（arch 板 ${AGID}）" arch
     else
       echo "ISSUE|g2-design-review-fail|arch-agent|${RFD_ID} G2 评审 FAIL（缺项见评审卡），回灌修订" >> "$EVID_DIR/issues.log"
       mx_gate_breaker_trip g2 "G2 架构治理评审" 1
@@ -1527,6 +1532,7 @@ DEVSPECS
 
   sset devimpl_done 1
   sset_once g3_code_pass "$(date +%s)"   # G3 硬闸键（独立审计意见 R-A4：G3 曾无 g3_ 落键，治理报告跳闸）
+  dlv_gate_try G3 pass "编码门通过（分支合流+本地测试证据在案）"
   # M3 事件化：P3 done（开发实施+自测收口）→ G3 pass（本地门禁）→ case→P4
   dlv_enabled && dlv_scenario_phase P3 chen G3 chen command-exit "devimpl 分支自测+评审过" P4
 fi
@@ -1976,6 +1982,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   sset testpass_done 1
   if (( _eval_rc != 1 )); then
     sset_once g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
+    dlv_gate_try G4 pass "独立验证过（测试执行+缺口如实记录）"
   else
     sset g4_eval_blocked 1
     echo "ISSUE|g4-eval-blocked|${RFD_ID}|评测子门 FAIL：G4 未置位（详见 evidence/evals/eval-summary.json）" >> "$EVID_DIR/issues.log"
@@ -2079,7 +2086,8 @@ if [ "$(posture)" = "strict" ]; then
       sset_once g5_ready "$(date +%s)"
       # standard/demo：代批如实记 proxy（净额口径：代偿行，不计真人批准）；行文与
       # strict 的真实批准行同键可 grep，但 actor 明示 director-proxy。
-      echo "ISSUE|g5-humangate-proxy|${RGID}|standard 姿态由驱动代批（director-proxy）——净额口径扣除，不计真人批准" >> "$EVID_DIR/issues.log"
+      # run25 实测同键刷 6 条（每轮重放都记一次）——状态断言改 issue_once（同 raci 族先例）
+      issue_once g5-humangate-proxy "${RGID}" "standard 姿态由驱动代批（director-proxy）——净额口径扣除，不计真人批准"
       echo "humangate:${RGID} G5-HUMANGATE-APPROVED director-proxy $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
       # 代批走产品 decide（2026-10-31 用户批准 root fix）：审批历史留痕（actor=studio
       # 管理面身份，note 明示 proxy）；404=已裁决幂等；失败显形不阻断（真值已在案）。
@@ -2345,7 +2353,13 @@ if [ "$(posture)" = "strict" ]; then
     echo "- 优先级口径：以排期窗（D1-D11）与状态（todo/ready/blocked/done）表达——blocked=依赖等待非废弃，done=已闭环；分布见上节状态标记。"
     # 依赖核对空值兜底：tasklist 无独立"依赖"节时 sed 输出空，
     # 截断成半行——兜底指向排期文档依赖列，不留空尾。
-    _dep_txt=$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" | { grep -E '^- ' || true; } | head -1 | cut -c3-)
+    # run25 尾段实录（03:07:58 驱动崩）：tasklist.md 可能在 integration 合流中被侧支化
+    # （sed 对缺失文件 rc=2 直杀 ERR trap——下方文案本有兜底意图却到不了）。先测存在再
+    # sed，缺文件走既定兜底文案；sed 自身 stderr 也压静（存在性已判，残余错误不升驱动级）。
+    _dep_txt=""
+    if [[ -f "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" ]]; then
+      _dep_txt=$(sed -n '/^## .*依赖/,/^## /p' "$DIRECTOR_CLONE/docs/analysis/${RFD_ID}-tasklist.md" 2>/dev/null | { grep -E '^- ' || true; } | head -1 | cut -c3-)
+    fi
     echo "- 依赖核对（tasklist §6 声明 vs 卡覆盖）：${_dep_txt:-（tasklist 无独立依赖节——依赖声明在 docs/plan/RFD-001-schedule.md 依赖列，以该列反查卡覆盖）}"
   } > "$EVID_DIR/completeness-check.md"
   DL_WT="$SIM_ROOT/var/templates-main-wt"
@@ -2401,6 +2415,7 @@ if step_reached release && [[ -z "$(sget release_done)" ]]; then
   fi
   sset release_done 1
   capture_step "release_done" "/app/stage/accept?tab=g5"   # 步20 承载面
+  dlv_gate_try G6 pass "发布门 released（REL-MERGE/TAG/DELIVER 三卡）" ops
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 20 --text "G5 过闸+REL 三卡记录" --ev "cards=REL-MERGE,REL-TAG,REL-DELIVER" >/dev/null 2>&1 || true
 fi
 
@@ -3079,6 +3094,10 @@ PAYSPECS
   # V8.45：评测摘要必须在报告生成前落档（报告第 9 章证据八的唯一读数源）
   evalops_snapshot >/dev/null 2>&1 || true
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
+  # run25 复盘（步 26 载荷鸡生蛋）：原采集位在 report_done 落键之后、审计之后——审计
+  # 查「步 26 载荷」时现场永远不存在，只能靠降级登记。前移到首次审计之前并改用
+  # report_done 键（r18-collect 映射 26），载荷在审计时刻真实在位。
+  capture_step "report_done" "/app/sim"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落
   # report_done、报告不得持久化交付（15 项 FAIL 下报告曾被产出交付，判据②
@@ -3094,7 +3113,9 @@ PAYSPECS
   python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"} \
     || fail "报告审计（合并后复跑）FAIL（R15 第 0 章/证据九/评测闭环须真断言）"
   sset report_done "$(date +%s)"
-  capture_step "report_view" "/app/sim"   # 步26 承载面
+  # 步 26 采集已前移至首次审计前（report_done 键）——此处不再重拍（幂等键在位即跳过，
+  # 保留调用无副作用，删掉是为省一次浏览器启动）。
+
   # M3 事件化收口：六 stage/六 gate/终态断言 + 证据报告（记问题单不打断）
   dlv_enabled && dlv_scenario_assert
 fi
