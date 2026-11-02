@@ -8,6 +8,10 @@
 import { chromium } from '@playwright/test'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
+// 稳定性 DSL 三件套 re-export（2026-11-02 批 A）：纯逻辑在 dsl.mjs（零依赖可直测），
+// 走查脚本沿用 `import ... from './harness.mjs'` 一站取件。
+export { waitFor, Teardown, pick } from './dsl.mjs'
+
 export const BASE = process.env.WALK_BASE || 'http://localhost:8649'
 export const SHOTS = process.env.WALK_SHOTS || '/tmp/regression-shots'
 /** 实拍录屏目录（2026-10-31 用户令）：设置后整段走查录成 webm，产物在仓外。 */
