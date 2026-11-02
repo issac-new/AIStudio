@@ -1,0 +1,45 @@
+# ~/.hermes/.env 模板（离线安装包 2026-11-02）
+# 用途：安装脚本 S3 步落位到 %USERPROFILE%\.hermes\.env（已存在则不覆盖，人工合并）。
+# 口径：只含变量名与用途，值一律留空——隐私红线，密钥永不入包。
+# 变量清单与家机 ~/.hermes/.env 实测键名对账（打包时自动核对，多出的键名会在打包报告提示）。
+
+# ── 网关与服务（studio↔agent 联动的关键三件） ──
+# API 服务器（agent 网关 8650）开关与鉴权；studio 侧以它代理 agent 网关
+API_SERVER_ENABLED=
+# 64 位随机串即可，例如 PowerShell: -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 64 | % {[char]$_})
+API_SERVER_KEY=
+# agent 网关接入令牌（matrix/直连房间通道鉴权）
+HERMES_GATEWAY_TOKEN=
+
+# ── 模型 provider 凭证（按目标机实际可用的填，用不到的留空） ──
+BAILIAN_API_KEY=
+DASHSCOPE_API_KEY=
+QWEN_PORTAL_API_KEY=
+# cc-switch 多 provider 档的 key 组（LM Studio/Ollama 本地端点通常可留空）
+CHERRY_DEEPSEEK_API_KEY=
+CHERRY_LMSTUDIO_API_KEY=
+CHERRY_MODELSCOPE_API_KEY=
+CHERRY_OLLAMA_API_KEY=
+
+# ── 浏览器/工具行为（按需调，均可留空走默认） ──
+# agent 浏览器工具用的浏览器可执行文件路径（留空=自动探测）
+AGENT_BROWSER_EXECUTABLE_PATH=
+# BrowserBase 云浏览器会话（离线环境无外网，一般用不到，留空）
+BROWSERBASE_PROXIES=
+BROWSERBASE_ADVANCED_STEALTH=
+BROWSER_SESSION_TIMEOUT=
+BROWSER_INACTIVITY_TIMEOUT=
+# 终端工具行为
+TERMINAL_TIMEOUT=
+TERMINAL_LIFETIME_SECONDS=
+TERMINAL_MODAL_IMAGE=
+# 本地语音转文字命令（留空=不用本地 STT）
+HERMES_LOCAL_STT_COMMAND=
+# messaging 工具工作目录（留空=默认）
+MESSAGING_CWD=
+
+# ── 调试开关（true 时打印对应工具族的调试日志，平时留空） ──
+IMAGE_TOOLS_DEBUG=
+VISION_TOOLS_DEBUG=
+WEB_TOOLS_DEBUG=
+MOA_TOOLS_DEBUG=

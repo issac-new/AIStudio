@@ -147,6 +147,8 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 
 改了 B 类 patch 后须 `npm run clean && npm run inject` 再重启后端。完整走法（三种模式的典型流程、角色旅程、服务重启、排障）见[《使用指南》](docs/USAGE.md)。
 
+**离线环境（Windows amd64，仅 pip/npm 镜像可达）**：`npm run offline:package`（即 `node scripts/make-offline-package.mjs`）打出含全仓源码＋本机 hermes-agent 工作树快照＋脱敏 env/zcode 模板＋PowerShell 安装链的 zip（`dist/offline/`，不入库）；目标机双击包内 `install\install-windows.bat` 一键安装（web 模式）。设计与口径见 [spec 2026-11-02](docs/superpowers/specs/2026-11-02-offline-windows-package.md)，安装手册随包（`scripts/offline-template/install/README-windows.md`）。
+
 ## 验证与证据
 
 稳定设计参数和版本基线见[《设计事实与容量基线》](docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)。动态测试数、补丁数和文档数不在 README 手工维护。

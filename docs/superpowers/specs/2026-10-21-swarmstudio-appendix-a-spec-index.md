@@ -1,7 +1,7 @@
-# 附录 A：产品面全量 spec 索引（465 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（466 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
-> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1＋推演方案×程序同步二批 1＋编排定时轮与多板接入 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1；2026-11-01 ＋chat 回合自恢复立项补登记 1（edb3c6636 落 spec 未登记、docs-ssot-guard 主干红，本批清零）＋v1.0.5 发布 1；2026-11-01 ＋v1.0.6 发布 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 465 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
+> 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1＋推演方案×程序同步二批 1＋编排定时轮与多板接入 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1；2026-11-01 ＋chat 回合自恢复立项补登记 1（edb3c6636 落 spec 未登记、docs-ssot-guard 主干红，本批清零）＋v1.0.5 发布 1；2026-11-01 ＋v1.0.6 发布 1；2026-11-02 ＋离线 Windows 安装包 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 466 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
 
 ## A.1 逐份索引（按文件归档序）
 
@@ -472,6 +472,7 @@
 | 2026-11-01-chat-turn-recovery-design | chat 回合自恢复（agent 主动性产品能力）立项与设计定稿 | 群/DM 派发回合熔断打断后死等无自恢复（run24 三现场实据，看板回合恢复不覆盖）；HERMES_CHAT_TURN_RECOVERY 判定扩展＋无卡恢复 prompt＋会话预算防风暴；状态 designed 待补丁批 |
 | 2026-11-01-release-v1.0.5-overlay | v1.0.5 发布轮 | cockpit 0.8.0-studio.3／agent-teams team.6／yuan-skill v2.98.2／ycode 3.17.1 零变更照发；GitHub Release 首次上传构建物（用户明示，local-only 显式例外）；chat-turn 补登记随批清主干守门红 |
 | 2026-11-01-release-v1.0.6-overlay | v1.0.6 发布轮 | cockpit 0.8.0-studio.4（补丁 722 载体在 patches/ 属 cockpit 包含面）／agent-teams、yuan-skill、ycode 零变更照发；GitHub Release 构建物上传（用户明示例外同 v1.0.5）；ModelScope 全资产同步 tupang/ollama 仓（aistudio/ 4+1 源码包＋swarm-yuan/ everything 档，术语=本地仓 ollamalinux/ollama 用户立法）；run24 待落批台账（9 件）随批 |
+| 2026-11-02-offline-windows-package | 离线安装包（Windows amd64）设计与交付 | web 模式（全仓快照＋本机 hermes-agent 工作树快照＋脱敏 env/zcode 模板＋PowerShell 安装链）；Teams 默认全装（D12）；uv 通道（D6）；registry 继承目标机环境变量（D3）；脱敏 fail-closed（D7/D13）；安装链未实机验证如实标注 |
 
 ### 角色/排除（非 spec 文档）
 

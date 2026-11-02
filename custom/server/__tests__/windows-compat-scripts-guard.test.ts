@@ -57,3 +57,34 @@ describe('verifier/dispatcher 不再手写 .loop 相对路径', () => {
     expect(dispatcher).toContain('resolveHermesInvocation()')
   })
 })
+
+describe('离线安装脚本守门(2026-11-02-offline-windows-package D3/D9/D13)', () => {
+  const ps1Path = 'scripts/offline-template/install/install-windows.ps1'
+  it('install-windows.ps1 存在且不写/不覆写 registry(D3 镜像由目标机环境变量接管)', () => {
+    const ps1 = readFileSync(resolve(overlayRoot, ps1Path), 'utf8')
+    const lower = ps1.toLowerCase()
+    expect(lower).not.toContain('config set registry')
+    expect(lower).not.toContain('index-url')
+    expect(lower).not.toContain('npmrc')
+  })
+  it('install-windows.ps1 纯 PowerShell,不依赖 bash/WSL(D9)', () => {
+    const ps1 = readFileSync(resolve(overlayRoot, ps1Path), 'utf8')
+    expect(ps1).not.toMatch(/\bbash\b/i)
+    expect(ps1).not.toMatch(/\bwsl\b/i)
+  })
+  it('安装链四要素齐: doctor/uv 通道/ignore-scripts/zcode ensure', () => {
+    const ps1 = readFileSync(resolve(overlayRoot, ps1Path), 'utf8')
+    expect(ps1).toContain('S0 doctor')
+    // uv 走钉版占位(打包器从上游 pm/lock.json 注入真版本), 占位在=注入机制在
+    expect(ps1).toContain('"-m","pip","install","uv==__UV_VERSION__"')
+    expect(ps1).toContain('"install","--ignore-scripts"')
+    expect(ps1).toContain('zcode:ensure')
+  })
+  it('zcode AGENTS.md 脱敏正本无本机路径与凭证位置描述(D13)', () => {
+    const ag = readFileSync(resolve(overlayRoot, 'scripts/offline-template/zcode/AGENTS.md'), 'utf8')
+    expect(ag).not.toContain('/Users/')
+    expect(ag).not.toContain('/Volumes/')
+    expect(ag.toLowerCase()).not.toContain('modelscope')
+    expect(ag.toLowerCase()).not.toContain('oauth2')
+  })
+})
