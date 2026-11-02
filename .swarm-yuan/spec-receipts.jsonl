@@ -115,3 +115,4 @@
 {"at":"2026-11-02T08:37:01Z","spec":"docs/superpowers/specs/2026-11-02-skill-grader.md","receipt":"68684c0a9184be95ba7f7e87714aa1e45a09e93f","commit":"f24f305a1"}
 {"at":"2026-11-02T09:15:10Z","spec":"docs/superpowers/specs/2026-11-02-release-carrier-reconcile.md","receipt":"17bf22b35760e6a15cde5072b7829698c32d98f4","commit":"755f54514"}
 {"at":"2026-11-02T09:17:41Z","spec":"docs/superpowers/specs/2026-11-02-eval-skill-panel.md","receipt":"3402d0a83fb4f0140f3e2c21ccbd1dc19ba44895","commit":"755f54514"}
+{"at":"2026-11-02T09:42:09Z","spec":"docs/superpowers/specs/2026-11-02-eval-skill-grade-plan-sync.md","receipt":"7ec3e8ca0deff8fe38eb00bce9aaaa4152f2f62f","commit":"1e24d02db"}
