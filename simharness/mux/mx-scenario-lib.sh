@@ -2225,6 +2225,10 @@ _mx_gate_evidence_sig() { # <label> →证据签名=scenario.log 证据行数+in
   local repo="$SIM_ROOT/central/aipaydev"
   mx_fetch -C "$repo" fetch -q origin 2>/dev/null
   extra="itip:$(git -C "$repo" rev-parse --short "origin/integration/${RFD_ID:-RFD-001}" 2>/dev/null || echo -)"
+  # 2026-11-02 run25 G2 实锤：integration 分支在开发合并期才创建——G2 及此前闸的
+  # 修订证据全部落 origin/main（fanfan 概设 v1.1 落 main 后熔断器全盲 35min 不复位）。
+  # 签名并入 main tip：pre-integration 闸以 main 为复位证据，integration 建支后两 tip 并存。
+  extra="${extra} mtip:$(git -C "$repo" rev-parse --short origin/main 2>/dev/null || echo -)"
   if [[ "$label" == *G5* ]]; then
     local rgid db
     rgid=$(sget card_g5_ready 2>/dev/null || true)

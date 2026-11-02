@@ -198,3 +198,5 @@ paths:
   - simharness/aipay-scenario.sh
   # 2026-11-02 run25 值守批（板围栏全名册）
   - docs/superpowers/specs/2026-11-02-board-fence-full-roster.md
+  # 2026-11-02 run25 G2 熔断复位盲区批
+  - docs/superpowers/specs/2026-11-02-g2-breaker-evidence-main-tip.md
