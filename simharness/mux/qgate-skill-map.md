@@ -8,9 +8,9 @@
 
 ## 门禁体系事实
 
-- 门总数 45（按 profile 三档裁剪：lite 当前显 5 门/vibe-fast；standard/compliance 全量）。
+- 门总数 47（48 个 Gate YAML，含 2 个模板门与 1 个插件门，1 处重号；按 profile 三档裁剪，数量以 `qgate templates` 输出为准）。
 - 触发模型：每门声明 triggers（task_close|pre_commit|release），`qgate plan --trigger <t>` 列适用门。
-- 推演侧消费点：QUALITY 段 `precheck --all-full`（56 项四族检查项，纪律 33）+G5 release-report（§4.4-4）。
+- 推演侧消费点：QUALITY 段 `precheck --all-full`（核心 11+架构 18=29 门；合规 19 门另跑 `--compliance-suite`；全量 50 门四族）+G5 release-report；纪律编号见 §4.3（96 条）。
 
 ## 七技能 × 门禁责任面
 

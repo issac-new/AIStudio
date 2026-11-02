@@ -275,6 +275,21 @@ preflight_venv_packages_assert() {
 human_mxid() { echo "@$1:$SERVER_NAME"; }
 agent_mxid() { echo "@$1-agent:$SERVER_NAME"; }
 user_pass()  { echo "Aipay_$1_2026"; }
+login_password_for() { # <账号 localpart 或 <u>-agent>：优先邀请随机口令，缺省约定口令
+  # 邀请流建号时服务端生成随机 initialPassword（agent 按产品约定追加 -agent）；
+  # 回退 matrix-users 旧通道或既有账号则无 invite-pass 文件，回落约定口令。
+  local n="$1"
+  local u="${1%-agent}"
+  local f="$CREDS_DIR/$u.invite-pass"
+  local p
+  if [[ -f "$f" ]]; then
+    p=$(cat "$f")
+    [[ "$n" == *-agent ]] && p="$p-agent"
+    printf '%s' "$p"
+  else
+    user_pass "$n"
+  fi
+}
 api_server_key() { grep '^API_SERVER_KEY=' "$HOME/.hermes/.env" | head -1 | cut -d= -f2- | tr -d '"'; }
 studio_url() { echo "http://127.0.0.1:$STUDIO_PORT"; }
 
