@@ -10,7 +10,7 @@ spec：`docs/superpowers/specs/2026-11-02-offline-windows-package.md`（D1-D13�
 3. [x] 打包器 `scripts/make-offline-package.mjs`：git archive→aistudio/、agent 树采集（两轮实测扩充排除：.venv 族/.hermes-runtime/.worktrees/dist/release/build/.cache）、local-mods.patch（GIT_INDEX_FILE 临时索引——活体树锁竞态根治，maxBuffer 512MB）、env/config 派生（team/config.yaml）、脱敏三层判据（真实值哈希对撞 fatal／测试文档面＋假值标记降级／其余 fatal）、SHA256SUMS＋zip＋报告
 4. [x] 测试：`scripts/__tests__/make-offline-package.test.ts`（10 用例）；windows-compat guard 增补 4 断言（registry 禁写死/无 bash/四要素/AGENTS 无本机路径）
 5. [x] 本机实测打包（第 4 轮过）：zip 463MB；必含 9 件全在；必不含（.git/venv 族/.hermes-runtime/node_modules/.env/desktop release）全零；SUMS 解压回验进行中
-6. [ ] 文档接线（README 安装段＋windows-x64-setup §八 已落）＋节点⑦审查＋全量 npm test＋收口合并
+6. [x] 文档接线＋节点⑦审查（有条件过→P0/P1 全修）＋最终全量 7231/0＋合并 main 71d01301b＋worktree 收口净
 
 ## 实测坑（已根治，防复发机制=try/finally＋临时索引＋排除清单＋三层判据）
 
