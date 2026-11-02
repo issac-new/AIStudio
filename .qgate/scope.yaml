@@ -203,3 +203,6 @@ paths:
   # 2026-11-02 run25 四启实录批（_sens 重放 unbound）
   - docs/superpowers/specs/2026-11-02-sens-unbound-replay-fix.md
   - simharness/aipay-scenario.sh
+  # 2026-11-02 run25 监督器产品化批
+  - docs/superpowers/specs/2026-11-02-mx-run-single-entry.md
+  - simharness/mux/mx-run.sh

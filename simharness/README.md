@@ -17,7 +17,7 @@ cd simharness
 bash mux/mx-setup.sh                  # 环境供给：账号/看板/团队/记忆库/中央仓，可反复跑
 bash mux/mx-up.sh                     # 起单 gateway(:8801) + 单 studio(:8802)
 bash mux/mx-prelaunch-check.sh        # 开跑前三十四项核验，全绿才开跑
-RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
+bash mux/mx-run.sh --run <轮次>       # 26 步一键推演（单入口＝监督器自愈＋驱动一体；勿裸跑 aipay-scenario.sh——熔断退出后无人续跑，run25 实锤 34min 断摆）
 ```
 
 断点续跑 `START_STEP=<步名>`，区间上界 `UNTIL_STEP=<步名>`，换需求轮 `RFD_ID=RFD-00X`。0→1 清环境用 `bash mux/mx-clean.sh --apply --reset-central --reset-workspaces [--reset-memory]`。
