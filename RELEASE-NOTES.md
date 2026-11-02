@@ -36,6 +36,7 @@
 构建产物（源码包、安装包、离线包）**只在本机构建留存**（`dist/release/`），不上传 GitHub Release 或任何远端；Release 只承载版本说明与 tag。需要产物时本地执行 `npm run release:packages`（内含 `release:check`），校验 `dist/release/SHA256SUMS`。此口径为 2026-10-28 用户明确裁定，推翻此前「随 Release 上传五件包」的做法。
 
 ## 版本
+AIStudio 驾驶舱 **1.0.9-studio.6**（2026-11-02 载体对账批：hermes-studio 基线 v0.8.0→v1.0.9 升级批落位（023/042/718 适配＋207 退役，element-web v1.12.33）＋AI Native 测试方法论六项吸收（稳定性 DSL/根因六类/MAET 四路径/检索协议/Grader 环/受控动词）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **0.8.0-studio.5**（2026-11-02 v1.0.7-overlay 发布轮：run24 复盘根治＋722/723 真正加载链＋全功能回归两真缺陷修复（723 尾随上下文/724 isFullscreen）＋725 chat 跨回合恢复＋编排定时轮＋离线安装包通道 Windows amd64；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **0.8.0-studio.3**（2026-11-01 v1.0.5-overlay 发布轮：super-agent 编排域三批＋RSI R1-R12 全量执行＋闸门判词硬化；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **0.8.0-studio.2**（2026-10-31 v1.0.4-overlay 发布轮：RSI 二批（CHASE 反事实门＋垫脚石档案＋前端录入面）＋品牌扫尾补丁 718 落 v0.8.0 新面＋三区回归挂账清零；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）

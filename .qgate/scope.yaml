@@ -153,3 +153,9 @@ paths:
   - custom/server/eval/controller.ts
   - package.json
   - .qgate/scope.yaml
+  # 2026-11-02 发布载体对账批（fix/release-carrier-reconcile, spec 2026-11-02-release-carrier-reconcile）
+  - docs/superpowers/specs/2026-11-02-release-carrier-reconcile.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md
+  - .qgate/scope.yaml
