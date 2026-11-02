@@ -1088,7 +1088,10 @@ for a in last.get("anomalies", []):
   # 原实现安全评审在独立 if 块（:822 起）、超时只记录不终止，而 gate_blocked 全调用点
   # 均不查 security_review_done——arch 先 PASS 时 g2_arch_pass 会静默绕过安全评审落键。
   # 此处 fail-closed：arch PASS 但安全评审未闭环（涉敏轮）即 fail 中止本轮，闸不放行。
-  if ! printf '%s' "$_sens" | grep -qE '涉敏[：:]\s*(无|否|false|N/A)' && [[ -z "$(sget security_review_done)" ]]; then
+  # _sens 默认空（run25 四启实录 21:55:04：security_review_done 已在位时重放跳过 :845 的
+  # 赋值块，set -u 下 unbound 报错且行为随 bash 上下文漂移）——空值经 grep 必不中豁免
+  # 分支，fail-closed 语义不变；第二条件 security_review_done 在位即短路，重放零副作用。
+  if ! printf '%s' "${_sens:-}" | grep -qE '涉敏[：:]\s*(无|否|false|N/A)' && [[ -z "$(sget security_review_done)" ]]; then
     # run23 实录：本断言在 G2 等待/重入面反复触达（同一状态重复 6 单同文），改 issue_once
     # ——它是状态断言不是事件流，一次在案即可（后续闭环以 security_review_done 键体现）。
     issue_once g2-security-not-closed secops-agent "G2 安全前置未闭环：涉敏轮 security_review_done 未置（arch 已 PASS 但安全评审未 PASS/豁免）——闸不放行（禁止拆闸式解锁）"

@@ -200,3 +200,6 @@ paths:
   - docs/superpowers/specs/2026-11-02-board-fence-full-roster.md
   # 2026-11-02 run25 G2 熔断复位盲区批
   - docs/superpowers/specs/2026-11-02-g2-breaker-evidence-main-tip.md
+  # 2026-11-02 run25 四启实录批（_sens 重放 unbound）
+  - docs/superpowers/specs/2026-11-02-sens-unbound-replay-fix.md
+  - simharness/aipay-scenario.sh
