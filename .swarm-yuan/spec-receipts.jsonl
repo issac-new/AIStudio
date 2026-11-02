@@ -110,3 +110,4 @@
 {"at":"2026-11-02T07:54:36Z","spec":"docs/superpowers/specs/2026-11-02-test-stability-dsl.md","receipt":"64e0ffc559d736f0664df5a248945b512f65a551","commit":"0aab81368"}
 {"at":"2026-11-02T08:02:06Z","spec":"docs/superpowers/specs/2026-11-02-failure-taxonomy.md","receipt":"02929ee3488119a8dddd6eb803370921e4bc459e","commit":"0aab81368"}
 {"at":"2026-11-02T08:30:56Z","spec":"docs/superpowers/specs/2026-11-02-maet-retrieval-ladder.md","receipt":"931cf307a663f6a82420c68726b07738f91be7cf","commit":"5296cac62"}
+{"at":"2026-11-02T08:37:06Z","spec":"docs/superpowers/specs/2026-11-02-test-vocab.md","receipt":"cffb1b7d51bcf2461831d3fe9af5308c570669de","commit":"f24f305a1"}
