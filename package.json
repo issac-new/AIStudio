@@ -39,6 +39,7 @@
     "zcode:serve": "node scripts/zcode-engine.mjs serve",
     "release:check": "node scripts/verify-release-manifest.mjs",
     "release:packages": "npm run release:check && node scripts/make-release-packages.mjs",
+    "offline:package": "node scripts/make-offline-package.mjs",
     "postbuild": "node scripts/verify-dist.mjs",
     "fibo:sync": "npx -y tsx scripts/fibo/sync-qgate-index.ts",
     "typecheck:client": "node scripts/typecheck-client-baseline.mjs",

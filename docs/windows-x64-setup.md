@@ -129,3 +129,12 @@ README 有加白名单指引。
 - IDE worktree 建/绑路径分叉:`custom/server/controllers/ide/worktree.ts`
 - 附件文件名 Windows 非法字符:patch 013/111 + `KanbanAttachments.vue`
 - 守门测试:`custom/server/**/__tests__/windows-compat-*.test.ts` ×4
+
+## 八、离线安装通道（2026-11-02 起）
+
+目标机**仅 pip/npm 镜像可达、无外网**时，不走本文前几节的在线安装，改用离线包：
+
+- 打包（联网的开发机）：`npm run offline:package` → `dist/offline/aistudio-offline-<full版>-win64.zip`（含全仓源码＋本机 hermes-agent 工作树快照＋脱敏 env/zcode 模板＋安装链；脱敏扫描 fail-closed，命中凭据形态即拒打包）。
+- 安装（离线的 Windows 机）：解压后双击 `install\install-windows.bat`。前置 Node≥23（zcode 建议 24）＋Python 3.14＋Git；npm/pip 镜像由目标机环境变量接管，安装脚本不写不覆盖 registry。
+- 口径与排障：`docs/superpowers/specs/2026-11-02-offline-windows-package.md`（D1-D13）；安装手册随包（模板正本 `scripts/offline-template/install/README-windows.md`）。
+- 已知限制：Electron 桌面线与实机验证缺口见 spec「风险与未验证项」。

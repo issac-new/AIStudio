@@ -72,3 +72,12 @@ paths:
   - scripts/regression/matrix-session-walkthrough.mjs
   - docs/superpowers/specs/2026-11-02-chat-turn-recovery.md
   - patches/725-agent-chat-turn-recovery.patch
+  # 2026-11-02 离线安装包批（feat/offline-win-package, spec 2026-11-02-offline-windows-package）
+  - scripts/make-offline-package.mjs
+  - scripts/offline-template/**
+  - scripts/__tests__/make-offline-package.test.ts
+  - custom/server/__tests__/windows-compat-scripts-guard.test.ts
+  - README.md
+  - docs/windows-x64-setup.md
+  - docs/superpowers/specs/2026-11-02-offline-windows-package.md
+  - package.json

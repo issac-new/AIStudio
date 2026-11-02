@@ -95,3 +95,5 @@
 {"at":"2026-11-01T17:59:08Z","spec":"docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md","receipt":"03f9545c90dc2fa5c88bb4179c7c05c5c6b89288","commit":"478dc920a"}
 {"at":"2026-11-01T18:11:58Z","spec":"docs/superpowers/specs/2026-11-02-run24-runtime-closeout.md","receipt":"b51ae9c4ef728a69115cea64193d60af820cf843","commit":"2396f267a"}
 {"at":"2026-11-02T01:27:42Z","spec":"docs/superpowers/specs/2026-11-02-chat-turn-recovery.md","receipt":"431b65e38a6d3038887082239a83cf559348648e","commit":"ad37434dc"}
+{"at":"2026-11-02T03:29:10Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"7c4dce6e5946ce871a05b83e7408165eaec7e3aa","commit":"2043294e1"}
+{"at":"2026-11-02T03:47:23Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"7c30a11835ed21380e32f2f9429733a37b375ec5","commit":"06a6256fb"}
