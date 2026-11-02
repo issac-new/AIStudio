@@ -1,0 +1,22 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -159,6 +159,10 @@
+ // overlay[cluster-inspector]（集群巡检官）：分布式集群异常监控与处置（采集→检测→
+ // 定级→govbus system 域留痕；周期 60s，CLUSTER_INSPECTOR=off 关）。/api/hermes/cluster-inspector
+ import { clusterInspectorRoutes, startInspectorIfEnabled } from '../custom/clusterinspector/cluster-inspector-controller'
++// overlay[simrun-supervisor]（推演运行监督域·同类合一批 2026-11-02）：驱动生命周期监督
++// （死→证据指纹变化→断点重拉；report_done 终态）＋网关健康观测；OBS_SIM_ROOT 缺席不启用。
++// /api/simrun/supervisor/{status,start,stop}
++import { simRunSupervisorRoutes, startSimSupervisorIfEnabled } from '../custom/simrun/router'
+ // overlay[humansim+observability]（PR-0 通道面）：人类模拟受控发送+审计留痕
+ // （/api/hermes/humansim/{send,audit}，HUMANSIM_CREDS_DIR 缺席=503 fail-closed）
+ // 与推演运行状态只读查询（/api/hermes/observability/run-state，OBS_SIM_ROOT
+@@ -560,6 +564,8 @@
+   app.use(sessionModeRoutes.routes())             // 会话权限档：查/切/清 + 引擎 v4 切档（permmodes v4 通道轮）
+   startInspectorIfEnabled()                       // 集群巡检官：周期巡检环（RunSpawner 同款 .unref() timer）
+   app.use(clusterInspectorRoutes.routes())        // 集群巡检官：snapshot/run REST
++  startSimSupervisorIfEnabled()                   // simrun 监督域：adopt 在跑轮（OBS_SIM_ROOT 在位才启用）
++  app.use(simRunSupervisorRoutes.routes())        // simrun 监督域：status/start/stop REST
+   app.use(humansimRouter.routes())                // 人类模拟：受控发送+审计（PR-0①，env fail-closed）
+   app.use(observabilityRouter.routes())
+   app.use(autoschedRouter.routes())                   // 排期生成：PR-7 产品源（无状态纯计算）

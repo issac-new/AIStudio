@@ -206,3 +206,9 @@ paths:
   # 2026-11-02 run25 监督器产品化批
   - docs/superpowers/specs/2026-11-02-mx-run-single-entry.md
   - simharness/mux/mx-run.sh
+  # 2026-11-02 simrun 监督域批（监督器落产品＋同类合一）
+  - custom/server/simrun/supervisor.ts
+  - custom/server/simrun/router.ts
+  - custom/server/simrun/__tests__/supervisor.test.ts
+  - patches/727-server-simrun-supervisor-routes.patch
+  - docs/superpowers/specs/2026-11-02-simrun-supervisor-product.md

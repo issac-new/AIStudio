@@ -1089,3 +1089,4 @@
 #      在最需要它的熔断场景哑火（secops 19:57 实锤：熔断→turn 中断→recovery 被
 #      TypeError 挡掉→600s 窗烧尽→G2 硬闸 FAIL）。与 title_user_message 同款防御排除。
 726-agent-chat-recovery-kwarg-fix.patch
+727-server-simrun-supervisor-routes.patch
