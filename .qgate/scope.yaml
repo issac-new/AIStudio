@@ -114,3 +114,12 @@ paths:
   - .qgate/scope.yaml
   # 2026-11-02 设计文档复盘批（4a43992c8 gap-20261102-design-doc-sync，scope 补声明）
   - team/profiles/orchestrator/references/design-doc/**
+  # 2026-11-02 失败根因分类器批（feat/failure-taxonomy, spec 2026-11-02-failure-taxonomy）
+  - docs/superpowers/specs/2026-11-02-failure-taxonomy.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - skills/swarm-yuan/references/failure-taxonomy.md
+  - skills/swarm-yuan/assets/hooks/failure-detector.sh
+  - skills/swarm-yuan/tests/test-failure-detector.sh
+  - skills/swarm-yuan/SKILL.md
+  - skills/swarm-yuan/CHANGELOG.md
+  - .qgate/scope.yaml

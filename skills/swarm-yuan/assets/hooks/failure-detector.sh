@@ -189,6 +189,31 @@ ERROR_SIG=$(echo "$TOOL_RESULT" | grep -iE 'error|fatal|Traceback|Exception|FAIL
 [[ -z "$ERROR_SIG" ]] && ERROR_SIG=$(echo "$TOOL_RESULT" | head -1 | cut -c1-200)
 [[ -z "$ERROR_SIG" ]] && ERROR_SIG="exit_code_${EXIT_CODE}"
 
+# 根因六类初判（taxonomy 正本 references/failure-taxonomy.md；改规则两处同步，
+# tests/test-failure-detector.sh 分类态锁一致）。优先级 ENV>TIMEOUT>PRODUCT>SCRIPT>FLOW：
+# 环境错会伪装成一切下游错误（ECONNREFUSED 下游像 TIMEOUT、缺依赖像 SCRIPT），先排除。
+# 机械层不判 FLAKY（需跨次比较）与 PRODUCT 确证（需稳定复现证据）——category_source=rule
+# 标初判，AI 复核可改（防越权误判制造错误分类信任）。
+_classify_failure() {
+  local sig="$1"
+  if echo "$sig" | grep -qiE 'EADDRINUSE|ECONNREFUSED|command not found|No such file or directory|Permission denied|ENOTFOUND|EACCES'; then
+    echo "ENV|环境重置（inject/起服/清缓存）后再试一次"
+  elif echo "$sig" | grep -qiE 'timeout|timed out|ETIMEDOUT|waitFor timeout|deadline'; then
+    echo "TIMEOUT|放大预算一次或标记跳过，禁死磕重试"
+  elif echo "$sig" | grep -qiE 'status (code )?(500|502|503)|Internal Server Error|ECONNRESET'; then
+    echo "PRODUCT|重试确认稳定复现后记 defect 台账，不修测试迁就"
+  elif echo "$sig" | grep -qiE 'ModuleNotFoundError|SyntaxError|ImportError|Cannot find module|TS[0-9]{4}|is not a function'; then
+    echo "SCRIPT|修一次即止，修完只跑目标不重跑全量"
+  elif echo "$sig" | grep -qiE 'AssertionError|Assertion failed|expected .+ to (be|equal|contain|match)'; then
+    echo "FLOW|回流用例设计段（spec §19.2）重推前置与断言"
+  else
+    echo "UNKNOWN|AI 复核归类（同命令二次结果不同=FLAKY 判据化重跑）后按对应类处理"
+  fi
+}
+CLASSIFY_RESULT=$(_classify_failure "$ERROR_SIG")
+FAILURE_CATEGORY="${CLASSIFY_RESULT%%|*}"
+FAILURE_STRATEGY="${CLASSIFY_RESULT#*|}"
+
 # 提前定义 _sig_hash（同签名去重与 SPINNING 共用）
 _sig_hash() {
   local s="$1"
@@ -228,7 +253,8 @@ fi
 ts_epoch="$(date +%s 2>/dev/null || printf '0')"
 # JSON 转义（反斜杠 + 双引号 + 剔除换行）
 ERROR_SIG_ESC=$(printf '%s' "$ERROR_SIG" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr -d '\r\n')
-printf '{"ts":%s,"count":%s,"sig":"%s"}\n' "$ts_epoch" "$COUNT" "$ERROR_SIG_ESC" >> "$ERROR_HISTORY_FILE" 2>/dev/null || true
+# category/category_source 字段向后兼容新增（旧记录无字段不破坏消费者）
+printf '{"ts":%s,"count":%s,"sig":"%s","category":"%s","category_source":"rule"}\n' "$ts_epoch" "$COUNT" "$ERROR_SIG_ESC" "$FAILURE_CATEGORY" >> "$ERROR_HISTORY_FILE" 2>/dev/null || true
 # 截断保留最近 10 条（tail + mv，三平台兼容）
 tail -10 "$ERROR_HISTORY_FILE" > "${ERROR_HISTORY_FILE}.tmp" 2>/dev/null && mv "${ERROR_HISTORY_FILE}.tmp" "$ERROR_HISTORY_FILE" 2>/dev/null || true
 
@@ -299,17 +325,21 @@ EOF
   exit 0
 fi
 
-# 按等级输出（L1 简短提示保留；L2+ 一行换路线提示——叙事剧场退役）
+# 按等级输出（L1 简短提示保留；L2+ 一行换路线提示——叙事剧场退役）。
+# 分类提示附现有块尾一行（taxonomy references/failure-taxonomy.md 六类单一事实源），
+# 不建独立输出块。
 if [[ "$COUNT" -eq 2 ]]; then
   cat << EOF
 [swarm-yuan L1 — 连续失败检测]
 
 检测到连续 2 次失败。你必须切换到本质不同的方案——不是改参数/改函数名，是换策略。
+根因初判=${FAILURE_CATEGORY}——${FAILURE_STRATEGY}。
 EOF
 elif [[ "$COUNT" -ge 3 ]]; then
   cat << EOF
 [swarm-yuan L${COUNT} — 连续 ${COUNT} 次失败]
 换路线：不是改参数/函数名，是换策略。先自己跑一遍验证命令确认通过再继续。
+根因初判=${FAILURE_CATEGORY}——${FAILURE_STRATEGY}。
 EOF
 fi
 

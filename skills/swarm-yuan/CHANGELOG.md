@@ -1,5 +1,15 @@
 # Changelog
 
+## [v2.98.3] - 2026-11-02
+
+方法论吸收批 B：统一失败根因分类器（spec 2026-11-02-failure-taxonomy）。
+
+### Added
+
+- **`references/failure-taxonomy.md` 六类根因正本**：ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 单一事实源（每类绑唯一处理策略与回流目标，禁无效重试）；五套台账映射（error-history.jsonl 唯一落 category 机械字段）。
+- **`failure-detector.sh` `_classify_failure` 规则表**：error-history.jsonl 行新增 `category`+`category_source:"rule"`（向后兼容）；L1/L2+ 输出附「根因初判=<类>——<策略>」一行。机械层不判 FLAKY/PRODUCT 确证（AI 复核防越权）。
+- **测试态 20-23**：六类分类断言、category 落盘、ENV>TIMEOUT 优先级、hook↔md 规则词一致性锁。
+
 ## [v2.98.2] - 2026-11-01
 
 v1.0.5 发布轮随批（patch：判定库单点缺陷修复；门禁数 56 与变量数 199 不变）。
