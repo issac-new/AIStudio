@@ -103,17 +103,33 @@ print(last)' 2>/dev/null)
 
 _br_nudge_g5() { # <waited-sec>——熔断死等催办：以导演账号（fanfan 人类号）在分析群点名
   # 评审卡 owner-agent 补齐缺项（证据变化即自动复位；run19 实锤死等 14400s+ 的根治件）。
-  local waited="${1:-?}" tok room hs rgid body eid
+  # 闸别分流（run25 实锤 22:45-22:55：G2 熔断死等被 G5 话术误催——run25 未到 G5，
+  # fanfan 只能拒报，每 20min 一回合抢占修订关键路径）：按 breaker.json 实际熔断闸
+  # 生成话术；非 G5 闸不催 READY-GATE-PASS（G2 催概设修订+复评链，其余催通用补证）。
+  local waited="${1:-?}" tok room hs rgid body eid gate glabel
   tok=$(head -1 "$SIM_ROOT/creds/${MX_ANCHOR_USER:-fanfan}.token" 2>/dev/null) || return 0
   [ -n "$tok" ] || return 0
   room=$(sed -n 's/^room_analysis=//p' "$STATE" 2>/dev/null | head -1)
   rgid=$(sed -n 's/^card_g5_ready=//p' "$STATE" 2>/dev/null | head -1)
   [ -n "$room" ] || return 0
   hs="${MX_HOMESERVER:-http://127.0.0.1:8008}"
-  body="@${MX_ANCHOR_USER:-fanfan}-agent:matrix.test 【G5 熔断等待催办（自动，已等 ${waited}s）】评审卡${rgid:+ ${rgid}}缺项仍未补（指纹不变）。请按 templates/release-plan.md 把缺项（回滚阈值/灰度计划/发布说明等以卡面 GAP/缺项清单为准）补进评审卡 body 并重报结论行 READY-GATE-PASS——卡面更新即证据变化自动复位熔断，无需人工。不许谎报。"
+  gate=$(python3 -c 'import json,sys
+try:
+  d=json.load(open(sys.argv[1]))
+  print(",".join(k for k,v in d.items() if isinstance(v,dict) and v.get("failRounds",0)>=2))
+except Exception: print("")' "$SIM_ROOT/runs/$RUN_ID/governance/breaker.json" 2>/dev/null)
+  glabel="${gate:-G5}"
+  case "$glabel" in
+    G2)
+      body="@${MX_ANCHOR_USER:-fanfan}-agent:matrix.test 【G2 熔断等待催办（自动，已等 ${waited}s）】架构评审未翻正（指纹不变）。请以评审卡面完整缺项清单为唯一依据做概设全量修订并推 origin/main，随后 @arch-agent 复评（结论行同步更新卡 body）——卡面/判词变化即自动复位熔断。不许谎报。" ;;
+    G5|G5,*|*,G5)
+      body="@${MX_ANCHOR_USER:-fanfan}-agent:matrix.test 【G5 熔断等待催办（自动，已等 ${waited}s）】评审卡${rgid:+ ${rgid}}缺项仍未补（指纹不变）。请按 templates/release-plan.md 把缺项（回滚阈值/灰度计划/发布说明等以卡面 GAP/缺项清单为准）补进评审卡 body 并重报结论行 READY-GATE-PASS——卡面更新即证据变化自动复位熔断，无需人工。不许谎报。" ;;
+    *)
+      body="@${MX_ANCHOR_USER:-fanfan}-agent:matrix.test 【${glabel} 熔断等待催办（自动，已等 ${waited}s）】闸判据证据未变化（指纹不变）。请按该闸卡面缺项清单补齐证据/材料并更新卡面——证据变化即自动复位熔断。不许谎报。" ;;
+  esac
   eid=$(curl -s -m 10 -X PUT "$hs/_matrix/client/v3/rooms/$room/send/m.room.message/g5nudge-$(date +%s%3N)" \
     -H "Authorization: Bearer $tok" -d "$(python3 -c 'import json,sys; print(json.dumps({"msgtype":"m.text","body":sys.argv[1]}))' "$body")" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("event_id",""))' 2>/dev/null)
-  [ -n "$eid" ] && note "催办令已发（${eid}）" || note "催办令发送失败（matrix 通道，下轮重试）"
+  [ -n "$eid" ] && note "催办令已发（${glabel}，${eid}）" || note "催办令发送失败（matrix 通道，下轮重试）"
 }
 
 note "启动：RUN_ID=$RUN_ID START_STEP=$START_STEP（report_done 落键即退；stop 文件=$STOPFLAG）"

@@ -1393,6 +1393,13 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     // run25 四启实录（21:55:04 _sens unbound）：重放路径 security_review_done 在位时
     // 跳过赋值块，set -u 必炸——锁默认空写法防回退
     expect(scen).toContain('printf \'%s\' "${_sens:-}"')
+    // run25 实锤（22:45-22:55）：supervisor 熔断催办不分公司闸别——G2 熔断被 G5 话术
+    // 误催抢占修订关键路径。锁闸别分流（breaker.json failRounds>=2 判闸+三分支话术）
+    const sup = read(join(MX, 'run-driver-supervisor.sh'))
+    expect(sup).toContain('闸别分流（run25 实锤')
+    expect(sup).toContain('glabel="${gate:-G5}"')
+    expect(sup).toContain('G2)')  // G2 分支话术存在（催概设修订+复评，非 READY-GATE-PASS）
+    expect(sup).toContain('failRounds",0)>=2')  // 按 breaker.json 实际熔断闸判定
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑬ 独立审批环可启动')
   })
