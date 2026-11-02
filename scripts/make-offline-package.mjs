@@ -33,11 +33,30 @@ export function scanSecrets(text) {
   return hits;
 }
 
+/** zcode 配置面快照排除规则（D14, 2026-11-02）：可再生产物与缓存不入包
+ * （node_modules/.git/缓存/备份/.DS_Store）；mac 编译二进制（gstack bin/dist 等）
+ * 保留随包以维持环境一致，README 注明 Windows 不可执行。 */
+export function zcodeTreeExclude(relPath, isDir) {
+  const segs = relPath.split('\\').join('/').split('/');
+  for (let i = 0; i < segs.length; i++) {
+    const seg = segs[i];
+    const isLast = i === segs.length - 1;
+    if (/\.bak(\.|[-0-9]|$)/i.test(seg)) return `剔除杂项 ${seg}`;  // 备份目录族(如 swarm-yuan.bak.1793…)与文件
+    if (seg === '.DS_Store') return `剔除杂项 ${seg}`;
+    if (isLast && !isDir) continue;
+    if (['node_modules', '.git', '__pycache__'].includes(seg)) return `排除目录 ${seg}`;
+    if (seg.startsWith('venv') || seg.startsWith('.venv')) return `排除目录 ${seg}`;
+    if (/^\.[a-zA-Z]+[-_]cache$/.test(seg)) return `排除目录 ${seg}`;
+  }
+  return null;
+}
+
 /** 明显假值判定（上游测试夹具/文档示例形态, 2026-11-02 实测采样校准）。
  * 命中这些标记的降级为报告项; 其余命中一律 fatal（fail-closed 不变）,
  * 另有本机真实密钥值哈希对撞检查兜底（见 main 流程, 假值形态也拦）。 */
 const DUMMY_MARKERS = [
   /abcdefghijklmnop/i,           // 字母表序列 fixture
+  /^sk-[a-z]+(-[a-z]+){3,}$/,    // 人类词 slug 链(如 sk-user-question-format-compliance, ≥4 小写词非随机 key)
   /0123456789|1234567890/,       // 数字序列 fixture
   /ABCDEF/i,
   /(^|[-_])(test|fake|dummy|example|your|xxx|aaa|000|123|abc)/i, // 凭据前缀后的假值开头词
@@ -47,6 +66,19 @@ const DUMMY_MARKERS = [
 // [A-Z]{12,} 会把真 key 误降级(审查 P0-3, 已实测证伪后删除)。
 export function isDummySecret(s) {
   return DUMMY_MARKERS.some((re) => re.test(s));
+}
+
+/** 扫描白名单（显式人工核判留痕, 2026-11-02）：只放宽到「文件×模式」粒度,
+ * 真实值哈希对撞检查在其之前仍然 fatal。新增条目必须附核判理由与日期。 */
+export const SCAN_ALLOWLIST = [
+  { fileRe: /^zcode\/skills\/gstack\/lib\/diagram-render\/dist\/diagram-render\.html$/, pattern: 'aws-access-key',
+    reason: '编译产物内 base64 噪声偶合 AKIA+16 位大写(无密钥语境, 人工核判 2026-11-02)' },
+  { fileRe: /^zcode\/skills\/gstack\/lib\/redact-patterns\.ts$/, pattern: 'private-key-block',
+    reason: '脱敏规则库的正则定义本体(检测器自带 PEM 标记字面量, L754-757/848, 人工核判 2026-11-02)' },
+];
+export function allowlistReason(rel, pattern) {
+  for (const e of SCAN_ALLOWLIST) if (e.fileRe.test(rel) && e.pattern === pattern) return e.reason;
+  return null;
 }
 
 /** agent 树采集排除规则（2026-11-02 两轮实测口径，spec 打包链 2）。
@@ -214,6 +246,34 @@ function main() {
   writeFileSync(join(staging, 'env', 'config.example.yaml'), deriveConfigExample(teamCfg));
   mkdirSync(join(staging, 'zcode'));
   cpSync(join(templateRoot, 'zcode'), join(staging, 'zcode'), { recursive: true });
+  // zcode 配置面快照（D14 用户裁决「其余都包含」）: skills/scripts/workflows/vendor 整树,
+  // 符号链解引用成实体; 排除可再生产物/缓存/备份; 断链逐项容错并报告
+  const zcodeHome = join(homedir(), '.zcode');
+  const zcodeBroken = [];
+  const zcodeExcluded = new Set();
+  const zcodeFilter = (src) => (p) => {
+    const rel = relative(src, p);
+    if (!rel || rel.startsWith('..')) return true;
+    const isDir = existsSync(p) && statSync(p).isDirectory();
+    const reason = zcodeTreeExclude(rel, isDir);
+    if (!reason) return true;
+    if (reason.startsWith('排除目录')) zcodeExcluded.add(reason.replace('排除目录 ', ''));
+    return false;
+  };
+  for (const sub of ['skills', 'scripts', 'workflows', 'vendor']) {
+    const src = join(zcodeHome, sub);
+    if (!existsSync(src)) continue;
+    const dst = join(staging, 'zcode', sub);
+    mkdirSync(dst, { recursive: true });
+    for (const ent of readdirSync(src)) {
+      // dereference 解引用符号链; 断链(目标缺失)逐项容错记录, 不打断整批
+      try {
+        cpSync(join(src, ent), join(dst, ent), { recursive: true, dereference: true, filter: zcodeFilter(src) });
+      } catch (e) {
+        zcodeBroken.push(`${sub}/${ent}: ${String(e.cause?.code ?? e.message).slice(0, 60)}`);
+      }
+    }
+  }
   cpSync(join(templateRoot, 'install'), join(staging, 'install'), { recursive: true });
   const pmLockPath = join(hermesTree, 'pm', 'lock.json');
   const uvPin = existsSync(pmLockPath)
@@ -242,6 +302,11 @@ function main() {
   if (existsSync(liveAg)) {
     const a = readFileSync(liveAg, 'utf8'), b = readFileSync(join(staging, 'zcode', 'AGENTS.md'), 'utf8');
     console.log(`  INFO: ~/.zcode/AGENTS.md 实况 ${a.split('\n').length} 行 vs 脱敏正本 ${b.split('\n').length} 行(差异=脱敏本身, 大改时人工复核)`);
+  }
+  const liveCl = join(homedir(), '.zcode', 'CLAUDE.md');
+  if (existsSync(liveCl)) {
+    const a = readFileSync(liveCl, 'utf8'), b = readFileSync(join(staging, 'zcode', 'CLAUDE.md'), 'utf8');
+    console.log(`  INFO: ~/.zcode/CLAUDE.md 实况 ${a.split('\n').length} 行 vs 脱敏正本 ${b.split('\n').length} 行(差异=脱敏本身, 大改时人工复核)`);
   }
 
   // 7) 脱敏扫描 fail-closed: hermes-agent-src + env + install + zcode（文本文件全量）
@@ -273,7 +338,11 @@ function main() {
       const text = buf.toString('utf8');
       for (const h of scanSecrets(text)) {
         const rec = { file: rel, pattern: h.pattern, sample: h.sample };
-        const fatal = liveHashes.has(hitSha(h.match)) || (!testDoc && !isDummySecret(h.match));
+        let fatal = liveHashes.has(hitSha(h.match)) || (!testDoc && !isDummySecret(h.match));
+        if (fatal) {
+          const al = allowlistReason(rel, h.pattern);
+          if (al && !liveHashes.has(hitSha(h.match))) { rec.sample += ` [白名单放行: ${al}]`; fatal = false; }
+        }
         (fatal ? findings : dummies).push(rec);
       }
     });
@@ -301,9 +370,11 @@ function main() {
   // 10) 报告
   const a = dirStats(join(staging, 'aistudio'));
   const h = dirStats(join(staging, 'hermes-agent-src'));
+  const z = dirStats(join(staging, 'zcode'));
   console.log(`[offline-package] ${pkgName}.zip`);
   console.log(`  aistudio/          ${a.files} 文件 ${a.mb}MB`);
   console.log(`  hermes-agent-src/  ${h.files} 文件 ${h.mb}MB（基线 ${baseCommit}, M${nMod}+A${nNew}, patch ${Math.round(patch.length / 1024)}KB）`);
+  console.log(`  zcode/             ${z.files} 文件 ${z.mb}MB（规则脱敏正本＋skills/scripts/workflows/vendor 解引用快照; 排除: ${[...zcodeExcluded].join('/') || '无'}; 断链: ${zcodeBroken.length}${zcodeBroken.length ? ' -> ' + zcodeBroken.join(' | ') : ''}; mac 编译二进制随包, Windows 不可执行—见 README）`);
   console.log(`  敏感名剔除: ${excludedSensitive.length} 个(${excludedSensitive.join(', ') || '无'}); 排除目录: ${[...excludedDirs].join('/') || '无'}`);
   console.log(`  脱敏扫描: fatal 0 / 降级 ${dummies.length} 处(测试文档面+假值标记, 真实值哈希对撞 fatal); 对账告警: ${warns.length ? warns.join(' | ') : '无'}`);
   if (warns.length) for (const w of warns) console.warn(`  WARN: ${w}`);
