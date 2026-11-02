@@ -1,5 +1,15 @@
 # Changelog
 
+## [v2.98.5] - 2026-11-02
+
+方法论吸收批 F：测试受控动词表（spec 2026-11-02-test-vocab）。
+
+### Added
+
+- **`simharness/mux/glossary.txt` 测试动词段**：term:verb-* 六条受控动词（查询/验证/构造/等待/清理/断言），别名列登记禁用同义词（获取/检查/创建/轮询/teardown…）；断言（代码级期望）与验证（状态级确认）分工写入定义；等待↔waitFor、清理↔Teardown 可溯源到 DSL 件。
+- **spec 模板 §19.2 表前注记**：用例名与 Given/When/Then 步骤动词用受控动词表，步骤动词应可溯源到被测方法或 DSL 件。
+- **守门 `test-spec-template-maet.sh` 扩态 7**：glossary 六动词条目存在＋五字段格式（cut 第 6 段为空）＋模板注记在位，锁 glossary 与模板两处不漂移。
+
 ## [v2.98.4] - 2026-11-02
 
 方法论吸收批 C+D：MAET 四路径完备门 + 四层知识检索协议（spec 2026-11-02-maet-retrieval-ladder）。

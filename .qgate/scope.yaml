@@ -135,3 +135,11 @@ paths:
   - skills/swarm-yuan/SKILL.md
   - skills/swarm-yuan/CHANGELOG.md
   - .qgate/scope.yaml
+  # 2026-11-02 测试词汇批（feat/test-vocab, spec 2026-11-02-test-vocab）
+  - docs/superpowers/specs/2026-11-02-test-vocab.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - simharness/mux/glossary.txt
+  - skills/swarm-yuan/assets/spec-template.md
+  - skills/swarm-yuan/tests/test-spec-template-maet.sh
+  - skills/swarm-yuan/CHANGELOG.md
+  - .qgate/scope.yaml
