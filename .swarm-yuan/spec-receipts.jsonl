@@ -107,3 +107,4 @@
 {"at":"2026-11-02T06:43:32Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"a6df2e7f00dfcd18bb24471c1ecd7a7cf2c2c175","commit":"0c2c1752c"}
 {"at":"2026-11-02T07:29:07Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"f69ea184832076bf7b033f7632276203223c1fd7","commit":"d0395af5c"}
 {"at":"2026-11-02T07:43:40Z","spec":"docs/superpowers/specs/2026-11-02-agent-debt-recheck.md","receipt":"e431e758690c6a9b622853b3a2eb5b75ce5413a4","commit":"d0395af5c"}
+{"at":"2026-11-02T07:54:36Z","spec":"docs/superpowers/specs/2026-11-02-test-stability-dsl.md","receipt":"64e0ffc559d736f0664df5a248945b512f65a551","commit":"0aab81368"}
