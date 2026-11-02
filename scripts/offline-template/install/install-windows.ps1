@@ -186,9 +186,14 @@ $cfgEx  = Join-Path $envTpl "config.example.yaml"
 if (-not (Test-Path $cfgDst)) { Copy-Item $cfgEx $cfgDst; Step "S3 config.yaml" "OK" }
 else { Copy-Item $cfgEx (Join-Path $hermesHome "config.example.yaml") -Force; Write-Host "  config.yaml 已存在(setup 生成), 团队口径模板另存 config.example.yaml 供比对"; Step "S3 config.yaml" "SKIP(已存在)" }
 $zcDstDir = Join-Path $env:USERPROFILE ".zcode"
-$zcDst = Join-Path $zcDstDir "AGENTS.md"
-if (-not (Test-Path $zcDst)) { New-Item -ItemType Directory -Path $zcDstDir -Force | Out-Null; Copy-Item (Join-Path $pkgRoot "zcode\AGENTS.md") $zcDst; Step "S3 zcode AGENTS.md" "OK" }
-else { Step "S3 zcode AGENTS.md" "SKIP(已存在)" }
+$zcSrc = Join-Path $pkgRoot "zcode"
+if (Test-Path $zcSrc) {
+  # zcode 配置面整树落位(D14: 脱敏规则正本+skills/scripts/workflows/vendor 解引用快照);
+  # 合并式覆盖(全新装机幂等, 不删目标机已有内容)
+  New-Item -ItemType Directory -Path $zcDstDir -Force | Out-Null
+  Copy-Item "$zcSrc\*" $zcDstDir -Recurse -Force
+  Step "S3 zcode 环境(规则+技能+脚本)" "OK"
+} else { Step "S3 zcode 环境" "SKIP(包内无 zcode/)" }
 
 # ---------- S4 studio(inject + npm install + 冒烟) ----------
 Write-Host "`n== S4 studio(inject -> npm install -> serve 冒烟) ==" -ForegroundColor Cyan

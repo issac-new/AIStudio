@@ -80,10 +80,13 @@ describe('离线安装脚本守门(2026-11-02-offline-windows-package D3/D9/D13)
     expect(ps1).toContain('"install","--ignore-scripts"')
     expect(ps1).toContain('zcode:ensure')
   })
-  it('zcode AGENTS.md 脱敏正本无本机路径与凭证位置描述(D13)', () => {
+  it('zcode AGENTS/CLAUDE 脱敏正本无本机路径与凭证位置描述(D13/D14)', () => {
+    for (const f of ['AGENTS.md', 'CLAUDE.md']) {
+      const ag = readFileSync(resolve(overlayRoot, 'scripts/offline-template/zcode', f), 'utf8')
+      expect(ag).not.toContain('/Users/')
+      expect(ag).not.toMatch(/(?<!\/System)\/Volumes\//) // /System/Volumes/Data=macOS 通用系统卷, 放行
+    }
     const ag = readFileSync(resolve(overlayRoot, 'scripts/offline-template/zcode/AGENTS.md'), 'utf8')
-    expect(ag).not.toContain('/Users/')
-    expect(ag).not.toContain('/Volumes/')
     expect(ag.toLowerCase()).not.toContain('modelscope')
     expect(ag.toLowerCase()).not.toContain('oauth2')
   })

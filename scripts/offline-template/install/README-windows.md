@@ -50,7 +50,8 @@ powershell -ExecutionPolicy Bypass -File install\install-windows.ps1
 - Electron 桌面线（DMG/MSIX）不在本包：需要另捆 electron win32-x64 二进制（约 120MB）＋桌面运行时（约 543MB，官方 CDN 离线不可达）＋必须在 Windows 主机构建，属于后续单独批次。
 - `node-pty` 若镜像上的版本不含 win32 预编译，终端类功能在离线机不可用（web 主功能不受影响）；打包报告会记录实测结论。
 - `hermes-agent-src` 是打包时刻的本机工作树快照（含 154 文件本地改动，追溯见 `local-mods.patch`＋`HERMES-AGENT-SNAPSHOT.md`）；与包内 `aistudio\vendor\hermes-agent`（钉版 0.22.5 基线）是**两棵树**，studio 运行时消费的是 `~\.hermes\hermes-agent` 这棵。
-- 隐私口径：包内不含任何密钥/token/会话状态库（打包口脱敏扫描 fail-closed）；`.env`/`config.yaml` 模板只含键名。
+- 隐私口径：包内不含任何密钥/token/会话状态库（打包口脱敏扫描 fail-closed）；`.env`/`config.yaml` 模板只含键名；`~/.zcode` 只取配置面（技能/规则/脚本），会话库（cli/ 8.8G）、插件缓存、桌面运行态（v2/）、macOS 专属 app 均不入包。
+- zcode 技能里的 mac 编译二进制（gstack bin/dist 等）随包保留以维持环境一致，**Windows 上不可执行**；zcode 市场插件缓存（cli/plugins）未随包，离线机装新插件受镜像可达性限制。
 
 ## 五、包结构
 
@@ -61,7 +62,7 @@ aistudio-offline-<版本>-win64\
 │   ├── HERMES-AGENT-SNAPSHOT.md   基线 commit＋改动量＋采集时间
 │   └── local-mods.patch           上游基线→本机改动的完整补丁（含新增文件）
 ├── env\                 dot-env.example / config.example.yaml / env-vars.md
-├── zcode\AGENTS.md      %USERPROFILE%\.zcode\AGENTS.md 脱敏正本
+├── zcode\               ~/.zcode 配置面：AGENTS/CLAUDE 脱敏正本＋skills(85,符号链已解引用)＋scripts/workflows/vendor
 ├── install\             本手册＋install-windows.ps1/.bat
 └── SHA256SUMS.txt       包内文件摘要（解压后可校验完整性）
 ```

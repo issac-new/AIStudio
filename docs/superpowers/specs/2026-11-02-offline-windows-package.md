@@ -39,8 +39,10 @@ aistudio-offline-<full版>-win64/
 │   ├── dot-env.example          # 23+ 变量名（API_SERVER_KEY/HERMES_GATEWAY_TOKEN/各 provider KEY 名…）＋用途
 │   ├── config.example.yaml      # 由 team/config.yaml（脱敏正本）派生＋头注「按目标机调整 model/provider」
 │   └── env-vars.md
-├── zcode/
-│   └── AGENTS.md                # ~/.zcode/AGENTS.md 脱敏正本（去除本机路径/凭证位置/项目名，2026-11-02）
+├── zcode/                      # ~/.zcode 配置面（D13/D14）
+│   ├── AGENTS.md / CLAUDE.md   # 脱敏正本（去本机路径/凭证位置/项目实名）
+│   ├── skills/                 # 85 项技能解引用实体快照（符号链已展开）
+│   ├── scripts/ + workflows/ + vendor/  # hook 脚本/工作流/vendor 技能副本
 ├── install/
 │   ├── install-windows.ps1
 │   ├── install-windows.bat
@@ -67,7 +69,7 @@ aistudio-offline-<full版>-win64/
 2. 采集 `~/.hermes/hermes-agent` 工作树（Node `fs.cpSync` filter 实现排除，不依赖 rsync）。排除清单（2026-11-02 两轮实测口径）：**venv 族**（`venv*`/`.venv*`，含 `.venv.bak-*`/`.venv.dangling-*` 残留）、`.hermes-runtime`（内嵌 Python 运行时）、`.worktrees`（遗留 worktree 拷贝）、`.git`、`node_modules`、`dist`/`release`/`build`/`.cache`（构建产物，目标机重建）、`__pycache__`、点前缀缓存目录族（`.[a-z]+[-_]cache`——`.ruff_cache`/`.pytest_cache`/`.pytest-cache` 等，2026-11-02 zip 实测泄漏后补）、`*.egg-info`、`logs`、`MagicMock/`（测试残留）。**敏感名文件剔除并报告**：`.env`/`.env.*`（`.env.example`/`.envrc` 白名单放行——前者上游模板、后者 direnv watch 配置无值）。排除后净树约 790M。
 3. `local-mods.patch` 生成（覆盖全部改动形态）：本机实测 154 改动＝68 已修改（unstaged）＋86 untracked 新增文件（如 `agent/runaway_guard.py` 一族），裸 `git diff` 会漏 86 个——打包脚本先 `git status --porcelain` 对账（须无 staged 项），再 `git add -A --intent-to-add` → `git diff > local-mods.patch` → `git reset` 还原本机索引，前后 porcelain 快照一致才放行。SNAPSHOT.md 记基线 commit、68＋86 拆分、采集时间。
 4. 渲染 `env/`（模板正本＋`~/.hermes/.env` 键名对账）、拷贝 `install/`。
-5. **脱敏扫描（fail-closed，三层判据 2026-11-02 两轮实测校准）**：对 `hermes-agent-src/`、`env/`、`install/`、`zcode/` 文本文件全量扫内容模式（`AKIA`/`sk-`/`ghp_`/`xox`/`glpat-`/私钥块/JWT）。命中处置：①与本机 `~/.hermes/.env` 真实值**哈希对撞→无条件 fatal**（假值形态也拦，防真实密钥巧合成 fixture 形态）；②测试/文档面路径（`tests/`/`tests-js/`/`evals/`/`website/`/`docs/`/`manual/`）或明显假值标记（字母表序列、数字序列、`example/placeholder/here/do-not/fake` 等，实测采样校准）→降级为报告项计数（上游公开仓库的测试夹具，如 `sk-abc123…`/`xoxb-test-token`/假 PEM）；③其余命中一律 fatal，打包失败不产包并逐条列出待人工核判。生产面（非测试文档路径）的 key 形态串没有任何合法存在理由，fail-closed 不放松。
+5. **脱敏扫描（fail-closed，三层判据 2026-11-02 两轮实测校准）**：对 `hermes-agent-src/`、`env/`、`install/`、`zcode/` 文本文件全量扫内容模式（`AKIA`/`sk-`/`ghp_`/`xox`/`glpat-`/私钥块/JWT）。命中处置：①与本机 `~/.hermes/.env` 真实值**哈希对撞→无条件 fatal**（假值形态也拦，防真实密钥巧合成 fixture 形态）；②测试/文档面路径（`tests/`/`tests-js/`/`evals/`/`website/`/`docs/`/`manual/`）或明显假值标记（字母表序列、数字序列、`example/placeholder/here/do-not/fake` 等，实测采样校准）→降级为报告项计数（上游公开仓库的测试夹具，如 `sk-abc123…`/`xoxb-test-token`/假 PEM）；③其余命中一律 fatal，打包失败不产包并逐条列出待人工核判。生产面（非测试文档路径）的 key 形态串没有任何合法存在理由，fail-closed 不放松。zcode 快照引入两处补充（2026-11-02 实测）：人类词 slug 链（如 `sk-user-question-format-compliance`，gstack 命令名撞 sk- 前缀）计入假值标记；**显式扫描白名单**（`SCAN_ALLOWLIST`，文件×模式粒度，附人工核判理由与日期，首条=gstack diagram-render 编译产物内 base64 噪声偶合 AKIA）——白名单在真实值哈希对撞检查之后，真值永不放行。
 6. `zip`＋`SHA256SUMS.txt`＋包体量与文件数报告（含脱敏扫描结论、env 键名对账差异）。
 
 ### 环境变量与配置模板口径
@@ -93,7 +95,8 @@ aistudio-offline-<full版>-win64/
 | D10 | zcode 走 `zcode:ensure`＋`install-cli` 仓内幂等通道，不裸跑 pnpm install | 裸装触发 electron postinstall 外网挂死（R1 实证）；ensure 内置 `ELECTRON_SKIP_BINARY_DOWNLOAD=1`；产物 `~/.hermes/ycode/zcode.cjs` 是 ACP 桥的引擎正身 |
 | D11 | 离线 zip 不入 `RELEASE-MANIFEST.json` 4+1 版本对账 | 离线包=按需快照通道（版本=full 档版本＋构建日期），非版本化发布物；治理口径由本 spec 声明，避免改已合入 release spec 触发 SPEC_REBIND |
 | D12 | SwarmTeam profiles/skills/_shared/plugins/patches **默认全装**（`-SkipTeams` 逃生） | 用户裁决 2026-11-02；装源=仓内 `team/` 脱敏正本（不入包的隐私面为零）；第三方工具按 requirements-tools.txt 自身治理口径只默认装钉版区 4 件 |
-| D13 | `~/.zcode/AGENTS.md` 以**手工脱敏正本**入包（`scripts/offline-template/zcode/AGENTS.md`），落位 `%USERPROFILE%\.zcode\AGENTS.md` | 用户指令 2026-11-02；脱敏=去本机绝对路径（/Users、/Volumes）、去 modelscope 术语条目（含凭证位置描述）、去项目实名（agentpay）、swarm-yuan 渲染块路径泛化；机械 scrub 对散文有破义风险，正本人工维护＋打包时与实况文件 diff 告警（仅提示漂移，不自动覆盖） |
+| D13 | `~/.zcode/AGENTS.md`＋`CLAUDE.md` 以**手工脱敏正本**入包（`scripts/offline-template/zcode/`），落位 `%USERPROFILE%\.zcode\` | 用户指令 2026-11-02（当日二版基线=实况重构版）；脱敏=去本机专属术语条目（含凭证位置描述）、项目实名泛化（agentpay→某支付网关项目）、卷路径泛化（/Volumes→外置卷）、渲染块本机路径泛化；机械 scrub 对散文有破义风险，正本人工维护＋打包时与实况行数 INFO 对账（不自动覆盖） |
+| D14 | `~/.zcode` **配置面全量入包**（用户裁决 2026-11-02「其余都包含」）：skills(85)/scripts/workflows/vendor 整树、符号链解引用；**运行态不入**（cli/ 8.8G 会话库与插件缓存、tmp/、v2/ 桌面运行态、computer-use/ macOS .app、backup/）；可再生产物不入（node_modules/.git/缓存/备份）；mac 编译二进制（gstack bin/dist 等）**随包保留**维持环境一致，README 注明 Windows 不可执行 | 用户裁决＋隐私红线（会话库=个人数据）兼平衡：配置面=技能/规则/脚本可迁移资产，运行态=不可迁移且含隐私 |
 | D7 | 脱敏扫描 fail-closed 于打包口；env/config 模板只键名 | 用户「不含环境隐私数据」＋仓规「审计不落敏感原值、密钥只存 env 名」 |
 | D8 | 复用 git archive 通道与 README 四步口径（inject→install --ignore-scripts→serve） | 单一事实源；2026-10-27 干净环境轮已实测非 git 树可装通（`git apply` 仓外可用，inject.mjs:107） |
 | D9 | 安装脚本 PowerShell＋.bat shim | 沿 `team/install-windows.ps1` 先例（纯 PowerShell，无 bash/WSL 依赖） |

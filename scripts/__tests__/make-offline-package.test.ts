@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import { scanSecrets, isDummySecret, agentTreeExclude, deriveConfigExample, parseEnvKeys } from '../make-offline-package.mjs'
+import { scanSecrets, isDummySecret, allowlistReason, agentTreeExclude, zcodeTreeExclude, deriveConfigExample, parseEnvKeys } from '../make-offline-package.mjs'
 
 const overlayRoot = process.cwd()
 
@@ -37,6 +37,9 @@ describe('scanSecrets 脱敏扫描(fail-closed 判定)', () => {
     // 回归(审查 P0-3): 真 AWS Access Key ID 是 20 位大写字母数字, 不得被任何规则误降级
     expect(isDummySecret('AKIAXKQWZPJETMCLSA7')).toBe(false)
     expect(isDummySecret('AKIAIOSFODNN7EXAMPLE')).toBe(true) // 官方文档示例值仍降级
+    // slug 词链(gstack 命令名撞 sk- 前缀)降级; 真随机 key 不受影响
+    expect(isDummySecret('sk-user-question-format-compliance')).toBe(true)
+    expect(isDummySecret('sk-Xk9mP2qL8vN4rT7wY3zA5bC1dE6fG0hJ')).toBe(false)
   })
 })
 
@@ -72,6 +75,31 @@ describe('agentTreeExclude 排除规则(spec 打包链 2 两轮实测口径)', (
   })
 })
 
+describe('扫描白名单(显式人工核判留痕)', () => {
+  it('文件×模式粒度命中给理由, 其余不放行', () => {
+    expect(allowlistReason('zcode/skills/gstack/lib/diagram-render/dist/diagram-render.html', 'aws-access-key')).toContain('base64 噪声')
+    expect(allowlistReason('zcode/skills/gstack/lib/diagram-render/dist/diagram-render.html', 'openai-style-key')).toBeNull()
+    expect(allowlistReason('hermes-agent-src/agent/x.py', 'aws-access-key')).toBeNull()
+    expect(allowlistReason('zcode/skills/gstack/lib/redact-patterns.ts', 'private-key-block')).toContain('正则定义本体')
+  })
+})
+
+describe('zcodeTreeExclude 排除规则(D14 配置面快照口径)', () => {
+  it('可再生产物/缓存/备份/杂项剔除', () => {
+    expect(zcodeTreeExclude('gstack/node_modules/x', false)).toContain('node_modules')
+    expect(zcodeTreeExclude('gstack/.git/hooks', false)).toContain('.git')
+    expect(zcodeTreeExclude('a/.pytest_cache/v', false)).toContain('pytest_cache')
+    expect(zcodeTreeExclude('swarm-yuan.bak.1793151380/SKILL.md', false)).toContain('杂项')
+    expect(zcodeTreeExclude('.DS_Store', false)).toContain('杂项')
+  })
+  it('配置面资产放行——含 mac 编译二进制(D14: 随包保留)', () => {
+    expect(zcodeTreeExclude('gstack/bin/gstack-global-discover', false)).toBeNull()
+    expect(zcodeTreeExclude('gstack/design/dist/design', false)).toBeNull()
+    expect(zcodeTreeExclude('gongwen-bifa/SKILL.md', false)).toBeNull()
+    expect(zcodeTreeExclude('model-peak-guard.sh', false)).toBeNull()
+  })
+})
+
 describe('deriveConfigExample / parseEnvKeys', () => {
   it('config 模板带头注且保留正本内容', () => {
     const out = deriveConfigExample('model:\n  default: aim\n')
@@ -92,6 +120,7 @@ describe('offline-template 结构与模板值纪律', () => {
       'scripts/offline-template/install/install-windows.bat',
       'scripts/offline-template/install/README-windows.md',
       'scripts/offline-template/zcode/AGENTS.md',
+      'scripts/offline-template/zcode/CLAUDE.md',
       'scripts/offline-template/env/env-vars.md',
     ]) expect(readFileSync(resolve(overlayRoot, f), 'utf8').length).toBeGreaterThan(0)
   })
