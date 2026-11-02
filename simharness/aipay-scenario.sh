@@ -822,7 +822,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
     fi
   done
   AGID=$(kanban_create_as arch arch_g2 "${RFD_ID} 架构治理评审（G2）" \
-    "G2 检查单：①设计五要素（背景/方案/接口/数据/风险）②爆炸半径（影响模块 vs 三清单）③验证计划前移④备选方案≥2 及取舍。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项)。" arch-governance)
+    "G2 检查单：①设计五要素（背景/方案/接口/数据/风险）②爆炸半径（影响模块 vs 三清单）③验证计划前移④备选方案≥2 及取舍⑤历史偏差硬性拦截（检索分组记忆库与问题台账，命中项逐条显式回应）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项)。" arch-governance)
   # V8.29 修复（10:0x 真根因：G2_TS 每次重启重锚→判词检索窗把历史 PASS 全排出→
   # G2 悬置 12h 实录。锚必须跨重启持久，与 security_anchor_ts 同型）
   if [[ -n "$(sget g2_anchor_ts)" ]]; then G2_TS="$(sget g2_anchor_ts)"; else
@@ -833,6 +833,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
 2) 爆炸半径排查：变更影响模块清单 vs 任务三清单，缺漏列出
 3) 验证计划前移：测试要点是否在设计期已列
 4) 备选方案 ≥2 且有取舍理由
+5) 历史偏差硬性拦截：先检索分组记忆库与问题台账，命中项逐条显式回应；未回应即 ARCH-GATE-FAIL
 评审记录落评审卡 body（review-record 结构：检查项×证据×结论）。结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL（附缺项清单，写在行首；旧判词→复审改判时用「→ 复审改判」句式、新判词放末尾）。结论行发出后回读群里确认可见，未见即重发一次。不许谎报。" "$(agent_mxid arch)"
   # 幂等时间锚（run15 根治「重启白等 40min」）：锚随 state 持久化——重放沿用派发时刻，
   # 旧判词对重放可见（原实现每轮重置 TS，旧 FAIL 判词变不可见且卡已存在不重派，
@@ -1094,6 +1095,9 @@ if [ "$(posture)" = "strict" ]; then
         sset_once g2_arch_pass "$(date +%s)"
         note "[G2] 架构治理评审通过（arch 板评审卡 ${AGID} → done）"
       fi
+      if ! kanban_card_body_contains arch "${RFD_ID} 架构治理评审" '历史偏差'; then
+        issue_once g2-history-check-missing arch-agent "G2 PASS 但评审卡 ${AGID} body 缺历史偏差检索结论（§5.3 G2⑤）——记问题单，不阻断闸"
+      fi
       # M3 事件化：P2 done（概设定稿）→ G2 pass（arch 评审）→ case→P3
       dlv_enabled && dlv_scenario_phase P2 fanfan G2 arch artifact "概设评审过（arch 板 ${AGID}）" P3
     else
@@ -1107,6 +1111,9 @@ if [ "$(posture)" = "strict" ]; then
           sset_once g2_arch_pass "$(date +%s)"
         else
           kanban_walk_done arch "$AGID"; sset_once g2_arch_pass "$(date +%s)"
+        fi
+        if ! kanban_card_body_contains arch "${RFD_ID} 架构治理评审" '历史偏差'; then
+          issue_once g2-history-check-missing arch-agent "G2 复审 PASS 但评审卡 ${AGID} body 缺历史偏差检索结论（§5.3 G2⑤）——记问题单，不阻断闸"
         fi
       else
         mx_gate_breaker_trip g2 "G2 架构治理评审" 1

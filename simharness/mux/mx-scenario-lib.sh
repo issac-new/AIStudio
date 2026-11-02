@@ -1943,6 +1943,13 @@ mx_gate_combined_pass() { # 同 mx_gate_verdict_combined，供 wait_truth 断言
   [[ "$(mx_gate_verdict_combined "$@")" == "PASS" ]]
 }
 
+kanban_card_body_contains() { # <user> <needle> <text> → 0 当匹配卡 body 含 text
+  local body
+  body=$(kanban_list "$1" 2>/dev/null | jq -r --arg n "$2" \
+    '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null)
+  printf '%s' "$body" | grep -q -- "$3"
+}
+
 kanban_card_body_nonempty() { # <user> <needle> → 0 当匹配卡 body 非空
   # run18 复盘 F1 配套谓词：判词 PASS 而 body 空=无评审实物（房间行/代发行撑判词），
   # finalize 前须等 review-record 真落卡。供 wait_truth 断言用。

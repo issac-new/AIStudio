@@ -1758,7 +1758,10 @@ _STEP33_MULTI_KEYS = {11: ['analysis_done', 'analysis_verified'],
                       20: ['ready_done', 'release_done', 'ready_inbox'],
                       # 步 8 双名（run23 复盘）：驱动 capture_step 的标签是 room_done、报告步键是
                       # room_analysis——两处名字分叉时帧文件永远挂不上（报告恒显「截图缺失」）。
-                      8: ['room_analysis', 'room_done']}
+                      8: ['room_analysis', 'room_done'],
+                      # 步 21 双终态（run23 闸门终态批）：全过落 uat_done，有条件/不通过落
+                      # uat_conditional——只映射 uat_done 会让条件通过轮的报告步 21 恒 ⬜。
+                      21: ['uat_done', 'uat_conditional']}
 for _n, _meta in list(STEPS_META.items()):
     if _n != 26 and not _meta.get('keys'):
         _meta['keys'] = _STEP33_MULTI_KEYS.get(_n) or [_STEP33_DEFAULT_KEYS[_n - 1]]

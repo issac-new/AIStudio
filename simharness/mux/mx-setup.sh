@@ -104,6 +104,14 @@ case "$MX_SYNAPSE_MODE" in
     log "manual 模式：admin 已在位（登录验证通过）"
     ;;
 esac
+# admin-agent：系统引导账号的 AI 助理（与 admin 同属 bootstrap 例外，不经邀请流）。
+# 供 G2 安全升级等 @admin-agent 派发使用；synapse_register 幂等，manual 模式只校验在位。
+case "$MX_SYNAPSE_MODE" in
+  docker|api) synapse_register "admin-agent" "$(user_pass admin-agent)" ;;
+  manual)
+    synapse_list_users | grep -qx "@admin-agent:$SERVER_NAME" || fail "manual 模式：admin-agent 缺失——请按 user_pass 约定人工创建后重跑"
+    ;;
+esac
 ensure_studio_up || fail "studio 提前拉起失败（R31 产品通道前置；查 $LOGS_DIR/studio.log）"
 log "studio 就绪（:${STUDIO_PORT}，产品通道前置）"
 for u in "${USERS[@]}"; do
@@ -112,9 +120,7 @@ for u in "${USERS[@]}"; do
   log "账号供给（产品通道）：$u + $u-agent（建号即 roster 提交）"
 done
 for n in "${USERS[@]}" $(for u in "${USERS[@]}"; do echo "$u-agent"; done); do
-  localpart="${n%-agent}"; suffix=""
-  [[ "$n" == *-agent ]] && suffix="-agent"
-  tok=$(mx_login "$n" "$(user_pass "$localpart$suffix")" | tr -d '\n')
+  tok=$(mx_login "$n" "$(login_password_for "$n")" | tr -d '\n')
   [[ -n "$tok" && "$tok" != "null" ]] || fail "matrix 登录失败：$n"
   save_token "$n" "$tok"
 done

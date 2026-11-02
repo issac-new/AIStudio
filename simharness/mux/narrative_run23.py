@@ -81,7 +81,7 @@ STEPS_META_RUN23 = {
                        '本轮这一步被连续退回多轮，每次退回都给了具体缺项（证据未合入基线、卡未关、安全条件未办完、'
                        '等保受理编号未回填）；截至本报告生成，四组缺项已逐条清偿或登记，评审复核进行中——'
                        '闸门没有为了「跑完」而放宽，这正是它该有的样子。', imgs=[]),
-    21: dict(keys=['uat_done'], ts_override='',
+    21: dict(keys=['uat_done', 'uat_conditional'], ts_override='',
              narrative='业务验收（UAT）：由业务方按需求冻结时定下的 7 条验收标准逐条验，产出验收书。'
                        '本轮尚未执行——前置的发布准出评审未放行，业务验收不越过闸门先做。', imgs=[]),
     22: dict(keys=['workmgr_done'], ts_override='',

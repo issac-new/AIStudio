@@ -304,10 +304,15 @@ if not state_keys.get('lite_fixtures_from'):
                9: 'dispatch_marker', 10: 'register_done', 11: 'analysis_done',
                12: 'triage_done', 13: 'anexec_done', 14: 'review_done', 15: 'g2_arch_pass',
                16: 'close_done', 17: 'plan_done', 18: 'devimpl_done', 19: 'defect_done',
-               20: 'ready_done', 21: 'uat_done', 22: 'workmgr_done', 23: 'audit_done',
-               24: 'retro_done', 25: 'ide_done'}
+               20: 'ready_done', 21: ('uat_done', 'uat_conditional'), 22: 'workmgr_done',
+               23: 'audit_done', 24: 'retro_done', 25: 'ide_done'}
+
+    def _key_on(v):
+        if isinstance(v, (list, tuple)):
+            return any(state_keys.get(k) for k in v)
+        return bool(state_keys.get(v))
     _mismatch = sorted(n for n, ok in _step_report_done.items()
-                       if not ok and n in _STEP33 and state_keys.get(_STEP33[n]))
+                       if not ok and n in _STEP33 and _key_on(_STEP33[n]))
     if _mismatch:
         fails.append('步骤完成态与 state 矛盾：步 ' + '、'.join(map(str, _mismatch)) +
                      ' 的 §3.3 state 键在位但报告渲染 ⬜（叙事注册 keys 疑空/错配'

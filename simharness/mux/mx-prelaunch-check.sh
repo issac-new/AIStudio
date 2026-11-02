@@ -140,7 +140,7 @@ ck "⑯b 问题单延后清账（上一轮延后桶=0）" "AIPAY_SIM_ROOT='$SR' 
 #     双向同步纪律的真值面落地）。
 ck "⑱ 报告真值三件套（判据源+三侧接线+守门测试）" "python3 -m py_compile '$HERE/mux/report_truth.py' && grep -q 'import report_truth' '$HERE/mux/mx-report-gen.py' && grep -q 'report-truth-findings.json' '$HERE/mux/mx-report-audit.py' && grep -q 'repo_branch_runtag' '$HERE/aipay-scenario.sh' && bash '$HERE/tests/report-truth-anchor.test.sh' >/dev/null 2>&1" "报告真值件缺位：report_truth.py 不可编译/生成器未接判据/审计器未读侧柜/驱动未接闸证轮次检查/守门测试红——按 docs/specs/2026-10-16-run20-report-truth-trio.md 接线后重跑"
 
-# ⑲ 产品 IA 版本（V8.44 纪律 75：生效 studio dist 必须含左侧导航五组、阶段页签、
+# ⑲ 产品 IA 版本（纪律 75：生效 studio dist 必须含日常三组+页脚系统设置、阶段页签、
 #     全流程推演与检索标记，防 V8.44 前旧 dist 上轮——旧 UI 拍出的帧与方案 §2.5 新锚
 #     全部错位。生效面判定与 mx-lib 一致：product-dist 有 server 目录用之，否则回落 upstream dist）。
 ck "⑲ 产品 IA 版本（左栏+阶段页签+全流程推演+检索在生效 dist）" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'stage/setup' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'ia2.journey' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'ia-side-nav' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git '五步进度' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git '全流程推演' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'global-search-dialog' \"\$_d\" 2>/dev/null" "生效 dist 不含左侧栏/阶段页签/全流程推演/检索标记——是 V8.44 前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
@@ -157,7 +157,7 @@ ck "㉑ IDE 任务工作区端点编入生效 dist" "_d='$SR/product-dist'; [ -d
 
 # ㉒ 阶段页签与重定向矩阵在位（V8.44）：六阶段页签化后，旧 /app/gov/* 深链必须
 #     redirect 到阶段页（书签/通知零断链）；页签注册表缺位会让 ?tab= 全部回落默认签。
-ck "㉒ 阶段页签与重定向矩阵在位" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'stage/accept' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'gov/org-assets' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'clearance' \"\$_d\" 2>/dev/null" "生效 dist 不含阶段页签或 /app/gov/* 重定向矩阵——按 overlay custom/client/ia2/{stage-tabs.ts,routes.ts} 重建后再试"
+ck "㉒ 阶段页签与重定向矩阵在位" "grep -q \"key: 'clearance'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q '/app/stage/accept' '$OV/custom/client/ia2/routes.ts' && grep -q '/app/gov/org-assets' '$OV/custom/client/ia2/routes.ts'" "阶段页签注册表缺 clearance，或 /app/gov/* 重定向矩阵缺位——按 custom/client/ia2/{stage-tabs.ts,routes.ts} 修复"
 
 # ㉓ 评测接线（V8.45）：评测库/红队/留出库必须隔离到 SIM_ROOT；G4 必须挂评测子门；
 #    报告生成器必须消费 eval-summary；驱动必须 source 评测库。任何一环缺席=旧轮
@@ -187,9 +187,9 @@ ck "㉘ G5/UAT 台账写入接线" "grep -q '/api/hermes/sim/release-gate' '$HER
 #    step13 skill 过程帧无产品拍摄位，已如实登记降级。
 ck "㉙ R18 交付灯帧与 skill 降级登记" "grep -q 'deliver --step 23' '$HERE/aipay-scenario.sh' && grep -q 'skill 过程帧采集位未建' '$HERE/aipay-scenario.sh'" "aipay 步23 未改 deliver 登记，或步13 未登记 skill 降级"
 
-# ㉚ 阶段页签 31 与两个新治理签在生效 dist（V8.46）：⑥治理新增 reviewGov/improve，
-#    页面签数 31；文档若仍写 29 属口径漂移。
-ck "㉚ 阶段页签 31（reviewGov/improve）" "grep -q \"key: 'reviewGov'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'improve'\" '$OV/custom/client/ia2/stage-tabs.ts' && ! grep -q '29 个页签' '$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'" "阶段页签缺 reviewGov/improve，或方案正本仍写 29 签"
+# ㉚ 阶段页签 37 与六个治理签（⑥治理 12 签）：页签注册表合计 37（①6/②4/③4/④5/⑤6/⑥12）；
+#    方案正本若仍写 29/31 属口径漂移。
+ck "㉚ 阶段页签 37（reviewGov/improve/proactivity/posture/secAudit/trust）" "grep -q \"key: 'reviewGov'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'improve'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'proactivity'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'posture'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'secAudit'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'trust'\" '$OV/custom/client/ia2/stage-tabs.ts' && ! grep -Eq '(29|31) 个页签' '$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'" "阶段页签缺治理签，或方案正本仍写 29/31 签"
 
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
 [ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十四项）" || { echo "有红项——修复后再跑"; exit 1; }

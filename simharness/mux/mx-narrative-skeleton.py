@@ -44,7 +44,7 @@ STEP_KEYS = {
     9: ['dispatch_marker'], 10: ['register_done'], 11: ['analysis_done', 'analysis_verified'],
     12: ['triage_done'], 13: ['anexec_done'], 14: ['review_done'], 15: ['g2_arch_pass'],
     16: ['close_done'], 17: ['plan_done'], 18: ['devimpl_done'], 19: ['defect_done', 'testpass_done'],
-    20: ['ready_done', 'release_done'], 21: ['uat_done'], 22: ['workmgr_done'],
+    20: ['ready_done', 'release_done'], 21: ['uat_done', 'uat_conditional'], 22: ['workmgr_done'],
     23: ['audit_done'], 24: ['retro_done'], 25: ['ide_done'], 26: ['report_done'],
 }
 
