@@ -190,3 +190,6 @@ paths:
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - RELEASE-MANIFEST.json
   - RELEASE-NOTES.md
+  # 2026-11-02 run25 值守批（G2 熔断现场 B 层根治：补丁 726）
+  - docs/superpowers/specs/2026-11-02-chat-recovery-kwarg-fix.md
+  - patches/726-agent-chat-recovery-kwarg-fix.patch
