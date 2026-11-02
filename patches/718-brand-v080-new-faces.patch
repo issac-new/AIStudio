@@ -39,14 +39,13 @@ diff --git a/packages/desktop/scripts/build-update-test.mjs b/packages/desktop/s
 diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/installer.nsh
 --- a/packages/desktop/build/installer.nsh
 +++ b/packages/desktop/build/installer.nsh
-@@ -1,6 +1,6 @@
+@@ -1,5 +1,5 @@
  !macro stopStudioExecutable EXE_NAME LABEL
    IfFileExists "$INSTDIR\${EXE_NAME}" 0 studioStopDone_${LABEL}
 -    DetailPrint "Stopping Ekko Studio..."
 +    DetailPrint "Stopping AIStudio..."
-     nsExec::ExecToLog '"$INSTDIR\${EXE_NAME}" --quit'
-     Pop $0
- 
+     InitPluginsDir
+     FileOpen $0 "$PLUGINSDIR\stop-hermes-studio.ps1" w
 @@ -106,7 +106,7 @@
  
  !macro stopHermesStudioProcesses

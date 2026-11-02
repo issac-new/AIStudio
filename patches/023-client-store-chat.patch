@@ -29,7 +29,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
    /** UI-only live streams for Hermes background subagents. Never sent into parent context. */
    const subagentStreams = ref<Map<string, SubagentStream>>(new Map())
    const storedSessionProfileFilter = getItemBestEffort(SESSION_PROFILE_FILTER_STORAGE_KEY)?.trim()
-@@ -1583,6 +1590,8 @@ function createChatState(scopedSessionId?: string) {
+@@ -1585,6 +1592,8 @@ function createChatState(scopedSessionId?: string) {
      sessions.value = []
      pendingRunUsage.clear()
      completedUnreadSessions.value = new Set()
@@ -37,8 +37,8 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
 +    unreadMessages.value = new Map()
      queueLengths.value = new Map()
      queuedUserMessages.value = new Map()
-     queueInsertionStates.value = new Map()
-@@ -1689,8 +1698,50 @@ function createChatState(scopedSessionId?: string) {
+     pendingUserMessageIds.clear()
+@@ -1692,8 +1701,50 @@ function createChatState(scopedSessionId?: string) {
    function pruneCompletedUnreadSessions(existingIds: Set<string>) {
      const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
      if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
@@ -89,7 +89,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
    function clearActiveSession() {
      activeSelectionSequence++
      const sid = activeSessionId.value
-@@ -2160,6 +2211,8 @@ function createChatState(scopedSessionId?: string) {
+@@ -2163,6 +2214,8 @@ function createChatState(scopedSessionId?: string) {
      }
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
@@ -98,7 +98,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
  
      if (!activeSession.value) return false
  
-@@ -3265,6 +3318,7 @@ function createChatState(scopedSessionId?: string) {
+@@ -3271,6 +3324,7 @@ function createChatState(scopedSessionId?: string) {
        runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
        queueId,
        runtime: raw.runtime === 'ekko'
@@ -106,7 +106,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
          || raw.runtime === 'claude-code'
          || raw.runtime === 'codex'
          || raw.runtime === 'pi'
-@@ -3688,6 +3742,9 @@ function createChatState(scopedSessionId?: string) {
+@@ -3733,6 +3787,9 @@ function createChatState(scopedSessionId?: string) {
      if (codingAgentId === 'codex') {
        return { icon: '/coding-agents/codex-openai.png' }
      }
@@ -116,7 +116,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
      if (codingAgentId === 'claude-code') {
        return { icon: '/coding-agents/claude-code.svg' }
      }
-@@ -4340,6 +4397,8 @@ function createChatState(scopedSessionId?: string) {
+@@ -4392,6 +4449,8 @@ function createChatState(scopedSessionId?: string) {
                    isStreaming: true,
                  })
                  activeAssistantMessageId = newId
@@ -125,7 +125,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
                }
  
                break
-@@ -5001,6 +5060,8 @@ function createChatState(scopedSessionId?: string) {
+@@ -5056,6 +5115,8 @@ function createChatState(scopedSessionId?: string) {
                isStreaming: true,
              })
              activeAssistantMessageId = newId
@@ -134,7 +134,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
            }
  
            break
-@@ -5731,6 +5792,13 @@ function createChatState(scopedSessionId?: string) {
+@@ -5787,6 +5848,13 @@ function createChatState(scopedSessionId?: string) {
      runStartedAt,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,

@@ -16,7 +16,9 @@
 
 ## 验证
 
-- 执行中（收口前回填）：A=clean→inject 重放全绿＋全量 vitest；B=/element-web/ 200 + elementWebAvailable:true + CSP 补丁面走查；C=新版本技能可加载。
+- **A（studio v1.0.9）**：`vendor-sync` 整树替换（100 文件与上游 v0.8.0→v1.0.9 diff 吻合）→ 修复循环（023 上下文重生成 / 042 上下文行 0.8.0→0.8.11 / 718 installer.nsh hunk 上下文校准 / 207 退役归档）→ **pristine 净基线原版 `npm run inject` 单次全量重放 exit=0，studio 侧 351 补丁零失败**（hermes-agent 侧 80 补丁 WARN 跳过为存量债，见决策记录）。全量 vitest 7230 过 / 5 红：A.1 登记缺失（本批已补，复跑 6/6 绿）、diagram-export 3 红（Chromium 启动崩，**主检出 main 树同文件对照同 3 红**，磁盘僵死期环境问题非本批引入）、specialist 九件套 1 红（重跑绿，负载 flaky）。
+- **B（element-web v1.12.33）**：上游源树软链因 NVMe 卷掉线失联（diskutil list 见盘、mount 卡死，需物理介入），改本地盘 `~/lab/element-web-v1.12.33` 重新 clone 构建；构建结果与 `/element-web/` 走查回填见下（执行中）。
+- **C（superpowers v7.0.1）**：cache 落位 `claude-plugins-official/superpowers/7.0.1`（tag commit cfd50a28，纯文件态与 7.0.0 形态一致）；`installed_plugins.json` 已备份 `installed_plugins.json.bak-20261102` 并更新指向 7.0.1；旧 7.0.0 目录保留可回退。
 
 ## 设计文档影响
 
