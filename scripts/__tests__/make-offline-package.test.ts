@@ -53,6 +53,9 @@ describe('agentTreeExclude 排除规则(spec 打包链 2 两轮实测口径)', (
     expect(agentTreeExclude('.git', true)).toContain('.git')
     expect(agentTreeExclude('MagicMock/mock._routing_home/f', false)).toContain('MagicMock')
     expect(agentTreeExclude('hermes_agent.egg-info/PKG-INFO', false)).toContain('.egg-info')
+    expect(agentTreeExclude('.ruff_cache/0000/xx', false)).toContain('ruff_cache')
+    expect(agentTreeExclude('.pytest_cache/v/n', false)).toContain('pytest_cache')
+    expect(agentTreeExclude('.pytest-cache/v/n', false)).toContain('pytest-cache')
     expect(agentTreeExclude('a/b.pyc', false)).toContain('字节码')
   })
   it('源码与无害点文件放行', () => {

@@ -67,6 +67,8 @@ export function agentTreeExclude(relPath, isDir) {
     if (DIR_EXACT.has(seg)) return `排除目录 ${seg}`;
     if (seg.startsWith('venv') || seg.startsWith('.venv')) return `排除目录 ${seg}`;
     if (seg.endsWith('.egg-info')) return `排除目录 ${seg}`;
+    // lint/test 缓存目录族(.ruff_cache/.pytest_cache/.pytest-cache 等, 2026-11-02 zip 实测泄漏后补)
+    if (/^\.[a-zA-Z]+[-_]cache$/.test(seg)) return `排除目录 ${seg}`;
   }
   const name = segs.at(-1);
   if (name.endsWith('.pyc') || name.endsWith('.pyo')) return '字节码缓存';
