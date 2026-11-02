@@ -1,4 +1,4 @@
-# 附录 A：产品面全量 spec 索引（468 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（469 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
 > 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1＋推演方案×程序同步二批 1＋编排定时轮与多板接入 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1；2026-11-01 ＋chat 回合自恢复立项补登记 1（edb3c6636 落 spec 未登记、docs-ssot-guard 主干红，本批清零）＋v1.0.5 发布 1；2026-11-01 ＋v1.0.6 发布 1；2026-11-02 ＋离线 Windows 安装包 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 467 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
@@ -475,6 +475,7 @@
 | 2026-11-02-release-v1.0.7-overlay | v1.0.7-overlay 发布轮 | cockpit studio.5（48 文件）／agent-teams team.7（runtime 723 副本）／yuan・ycode 照发；run24 根治＋回归两真缺陷修复＋725 chat 跨回合恢复＋编排定时轮＋离线安装包 Windows amd64；八载体同批 |
 | 2026-11-02-offline-windows-package | 离线安装包（Windows amd64）设计与交付 | web 模式（全仓快照＋本机 hermes-agent 工作树快照＋脱敏 env/zcode 模板＋PowerShell 安装链）；Teams 默认全装（D12）；uv 通道（D6）；registry 继承目标机环境变量（D3）；脱敏 fail-closed（D7/D13）；安装链未实机验证如实标注 |
 | 2026-11-02-vendor-upgrade-studio-v109 | 第三方依赖升级批：hermes-studio v1.0.9＋element-web v1.12.33＋superpowers v7.0.1 | studio 基线 v0.8.0→v1.0.9（023/042/718 校准＋207 退役：上游原生 pin agent 0.22.5）；element-web 本机构建面 v1.12.33；superpowers 本机插件面 v7.0.1；agent 维持 v0.22.5（80 补丁 pristine 重放存量债挂账） |
+| 2026-11-02-agent-debt-recheck | agent「80 补丁存量债」证伪收口批 | 真 pristine 80/80 全绿（昨日 WARN=final inject 重跑伪象：无幂等+已部分注入树）；主检出态=基线+80 补丁完全可再生（431/431 零失败实测）；7 件 .gitignore 误伤补录；VENDOR.md 曾被 pre-commit vendor 撤出丢失随批补回 |
 
 ### 角色/排除（非 spec 文档）
 
