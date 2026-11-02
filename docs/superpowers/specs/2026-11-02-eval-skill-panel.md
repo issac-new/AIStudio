@@ -24,7 +24,7 @@
 
 - `npx vitest run custom/client/eval/__tests__/skill-grade-panel.test.ts`（新测试绿）
 - `npx vitest run custom/client/eval/__tests__/`（域内无回归）
-- 活体走查（dev :8649 eval 页第八页签渲染+空态）——若 dev 服务不可起则以组件测试为准并在交付说明如实标注
+- 活体走查（dev :8649）：✅ 5/5 全过（2026-11-02 实测 `/app/eval` 第八页签「技能评估」渲染、点击挂载面板、spec 输入框/基线 runId 渲染、空输入禁用提交；探针 walk 一次性通过，ledger 落 /tmp/regression-shots/ 运行态）
 
 ## 设计文档影响
 
