@@ -112,3 +112,5 @@ paths:
   - scripts/__tests__/regression-dsl.test.ts
   - custom/server/test-support/**
   - .qgate/scope.yaml
+  # 2026-11-02 设计文档复盘批（4a43992c8 gap-20261102-design-doc-sync，scope 补声明）
+  - team/profiles/orchestrator/references/design-doc/**
