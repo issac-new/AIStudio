@@ -63,6 +63,7 @@ aistudio-offline-<版本>-win64\
 │   └── local-mods.patch           上游基线→本机改动的完整补丁（含新增文件）
 ├── env\                 dot-env.example / config.example.yaml / env-vars.md
 ├── zcode\               ~/.zcode 配置面：AGENTS/CLAUDE 脱敏正本＋skills(85,符号链已解引用)＋scripts/workflows/vendor
+├── thirdparty-src\      不可经 npm/pip 装的三方源码：superpowers/ralph-loop/github 插件源形态＋ECC 技能族（gstack 随 zcode 面）
 ├── install\             本手册＋install-windows.ps1/.bat
 └── SHA256SUMS.txt       包内文件摘要（解压后可校验完整性）
 ```

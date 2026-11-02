@@ -39,6 +39,9 @@ aistudio-offline-<full版>-win64/
 │   ├── dot-env.example          # 23+ 变量名（API_SERVER_KEY/HERMES_GATEWAY_TOKEN/各 provider KEY 名…）＋用途
 │   ├── config.example.yaml      # 由 team/config.yaml（脱敏正本）派生＋头注「按目标机调整 model/provider」
 │   └── env-vars.md
+├── thirdparty-src/             # 不可经 npm/pip 安装的三方依赖源码（D15）
+│   ├── superpowers/ ralph-loop/ github/   # zcode 官方插件缓存源形态
+│   └── ecc/                    # ECC 技能族源码（gstack 已随 zcode 面快照）
 ├── zcode/                      # ~/.zcode 配置面（D13/D14）
 │   ├── AGENTS.md / CLAUDE.md   # 脱敏正本（去本机路径/凭证位置/项目实名）
 │   ├── skills/                 # 85 项技能解引用实体快照（符号链已展开）
@@ -96,6 +99,7 @@ aistudio-offline-<full版>-win64/
 | D11 | 离线 zip 不入 `RELEASE-MANIFEST.json` 4+1 版本对账 | 离线包=按需快照通道（版本=full 档版本＋构建日期），非版本化发布物；治理口径由本 spec 声明，避免改已合入 release spec 触发 SPEC_REBIND |
 | D12 | SwarmTeam profiles/skills/_shared/plugins/patches **默认全装**（`-SkipTeams` 逃生） | 用户裁决 2026-11-02；装源=仓内 `team/` 脱敏正本（不入包的隐私面为零）；第三方工具按 requirements-tools.txt 自身治理口径只默认装钉版区 4 件 |
 | D13 | `~/.zcode/AGENTS.md`＋`CLAUDE.md` 以**手工脱敏正本**入包（`scripts/offline-template/zcode/`），落位 `%USERPROFILE%\.zcode\` | 用户指令 2026-11-02（当日二版基线=实况重构版）；脱敏=去本机专属术语条目（含凭证位置描述）、项目实名泛化（agentpay→某支付网关项目）、卷路径泛化（/Volumes→外置卷）、渲染块本机路径泛化；机械 scrub 对散文有破义风险，正本人工维护＋打包时与实况行数 INFO 对账（不自动覆盖） |
+| D15 | **不可经 npm/pip 安装的第三方依赖打包其源码**（用户口径 2026-11-02 三批）：对齐 swarm-yuan `src-pins.conf` 钉基线（gstack/superpowers/ECC）＋zcode 环境在用官方插件——gstack 随 zcode 面工作副本形态入包；superpowers（插件缓存源形态 7.0.0，pin 为 v7.0.1，差异如实记录）/ralph-loop/github/ECC 整树入 `thirdparty-src/`；可经 npm/pip 装的（gstack node_modules 等）仍走目标机镜像源，不入包 | 与 RELEASE-MANIFEST depSourcePolicy 同源原则（vendor 三树随包、registry 依赖在线装）的补全：zcode 环境的三方源不落 npm/pip 通道 |
 | D14 | `~/.zcode` **配置面全量入包**（用户裁决 2026-11-02「其余都包含」）：skills(85)/scripts/workflows/vendor 整树、符号链解引用；**运行态不入**（cli/ 8.8G 会话库与插件缓存、tmp/、v2/ 桌面运行态、computer-use/ macOS .app、backup/）；可再生产物不入（node_modules/.git/缓存/备份）；mac 编译二进制（gstack bin/dist 等）**随包保留**维持环境一致，README 注明 Windows 不可执行 | 用户裁决＋隐私红线（会话库=个人数据）兼平衡：配置面=技能/规则/脚本可迁移资产，运行态=不可迁移且含隐私 |
 | D7 | 脱敏扫描 fail-closed 于打包口；env/config 模板只键名 | 用户「不含环境隐私数据」＋仓规「审计不落敏感原值、密钥只存 env 名」 |
 | D8 | 复用 git archive 通道与 README 四步口径（inject→install --ignore-scripts→serve） | 单一事实源；2026-10-27 干净环境轮已实测非 git 树可装通（`git apply` 仓外可用，inject.mjs:107） |
