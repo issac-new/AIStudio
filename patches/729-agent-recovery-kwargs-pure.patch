@@ -1,0 +1,91 @@
+diff --git a/agent/recovery_kwargs.py b/agent/recovery_kwargs.py
+new file mode 100644
+--- /dev/null
++++ b/agent/recovery_kwargs.py
+@@ -0,0 +1,61 @@
++"""Recovery kwarg filter: the one decision chat-turn recovery makes about *what* it forwards.
++
++Why a separate module (2026-11-02 mechanism-governance batch):
++
++``run_turn_runner`` builds the recovery call as
++``agent.run_conversation(nudge, conversation_history=<prior>, **_rec_kwargs)``.
++Anything already present in ``_rec_kwargs`` under a name the call site also passes
++explicitly raises ``TypeError: got multiple values for keyword argument`` — and the
++caller's broad ``except`` turns that into a single "chat turn recovery skipped"
++warning. run25 (2026-11-02 19:57, the secops turn during a provider outage) showed
++exactly that: recovery died in the outage scenario it exists for (725 introduced
++the filter, 726 patched one leak).
++
++Two rules follow, both learned the hard way:
++
++* every explicitly-passed argument must be denied here, not popped ad hoc later;
++* this decision must be testable without an agent, a provider or a turn.
++
++Hence: a pure function with no imports beyond ``typing``, no module state, no I/O.
++Behaviour tests import it directly (see simharness/tests/mechanism-behavior.test.ts).
++Keep it that way — if this file ever needs an import of ``agent`` or a logger, the
++design has drifted.
++"""
++
++from __future__ import annotations
++
++from typing import Any, Mapping, Optional
++
++# Names the recovery call site passes explicitly (``conversation_history``) or that
++# must never be replayed into a recovery turn (persistence side effects would
++# duplicate the user message; ``prelude``/``moa_config`` are turn-setup inputs).
++# Everything here is a *hard* deny: a duplicate keyword kills recovery silently.
++_DENY_EXACT = frozenset({
++    "conversation_history",   # passed explicitly by the recovery call site
++    "title_user_message",     # already consumed by the first turn
++    "prelude",
++    "moa_config",
++})
++# Persistence side effects: the user message was already stored by the original
++# turn; replaying them would duplicate it in history.
++_DENY_PREFIXES = ("persist_",)
++
++
++def filter_recovery_kwargs(kwargs: Optional[Mapping[str, Any]]) -> dict[str, Any]:
++    """Return the subset of ``kwargs`` safe to forward to a recovery turn.
++
++    Pure: no side effects, no logging, no module state, no dependency on ``agent``.
++    ``None`` and empty mappings yield ``{}``. Keys are matched as ``str(key)`` for
++    the deny rules but returned with their original objects and order preserved.
++    """
++    if not kwargs:
++        return {}
++    out: dict[str, Any] = {}
++    for key, value in kwargs.items():
++        name = str(key)
++        if name in _DENY_EXACT:
++            continue
++        if any(name.startswith(prefix) for prefix in _DENY_PREFIXES):
++            continue
++        out[key] = value
++    return out
+--- a/gateway/run_turn_runner.py
++++ b/gateway/run_turn_runner.py
+@@ -1004,14 +1004,14 @@
+                 # 用户原始消息（去掉 persist_* 与 prelude，历史取自上一回合 messages）。
+                 try:
+                     from agent.chat_turn_recovery import run_chat_recovery
+-
+-                    _rec_kwargs = {k: v for k, v in kwargs.items()
+-                                   if not str(k).startswith("persist_") and k not in ("prelude", "moa_config")}
+-                    _rec_kwargs.pop("title_user_message", None)
+-                    # run25 实证（G2 熔断现场 19:57 secops）：kwargs 自带 conversation_history
+-                    # 时与 _recover_turn 内显式实参撞 multiple values for keyword argument，
+-                    # 恢复回合在最需要它的熔断场景哑火——与 title_user_message 同款防御排除。
+-                    _rec_kwargs.pop("conversation_history", None)
++                    from agent.recovery_kwargs import filter_recovery_kwargs
++
++                    # 转发白名单抽纯函数（2026-11-02 机制治理批）：这是 recovery 唯一的
++                    # "决策"部分，必须能被无 agent/无 provider 的行为测试直接调用。run25
++                    # 教训：382 条标记断言全绿仍连炸——测"代码在不在"测不出"行为对不对"。
++                    # 白名单本体见 agent/recovery_kwargs.py（含 conversation_history 硬禁：
++                    # kwargs 自带时与 _recover_turn 显式实参撞重复关键字，恢复哑火）。
++                    _rec_kwargs = filter_recovery_kwargs(kwargs)
+ 
+                     def _recover_turn(nudge):  # noqa: ANN001 — one synthetic continuation
+                         prior = result.get("messages") if isinstance(result, dict) else None

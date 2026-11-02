@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前三十四项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31）；⑩d=2026-11-02 run24 复盘驱动面批⑤ 工作区 origin 单一性）。
+# mx-prelaunch-check.sh — 开跑前三十五项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31）；⑩d=2026-11-02 run24 复盘驱动面批⑤ 工作区 origin 单一性；㉛=2026-11-02 机制治理批 烧机测试在位与自检）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -193,5 +193,10 @@ ck "㉙ R18 交付灯帧与 skill 降级登记" "grep -q 'deliver --step 23' '$H
 #    方案正本若仍写 29/31 属口径漂移。
 ck "㉚ 阶段页签 37（reviewGov/improve/proactivity/posture/secAudit/trust）" "grep -q \"key: 'reviewGov'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'improve'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'proactivity'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'posture'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'secAudit'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'trust'\" '$OV/custom/client/ia2/stage-tabs.ts' && ! grep -Eq '(29|31) 个页签' '$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'" "阶段页签缺治理签，或方案正本仍写 29/31 签"
 
+# ㉛ 烧机测试制度（2026-11-02 机制治理批·方案 D）：触及机制地图任一行的改动（恢复/
+#    催办/闸门等待/熔断）合入前必须跑一次短场景真环境验证；整轮 26 步当试验场的代价
+#    是 4 小时/次，短场景约 40 分钟。此项只查「工具在位且自检可跑」——收据核验在报告面。
+ck "㉛ 烧机测试在位（mx-burn-test.sh 自检）" "[ -x '$HERE/mux/mx-burn-test.sh' ] && bash '$HERE/mux/mx-burn-test.sh' --dry-run >/dev/null 2>&1" "机制类改动缺烧机通道：恢复/催办/闸门等待类补丁合入前须能跑 mx-burn-test.sh（--dry-run 至少要通过前置自检）"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十四项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十五项）" || { echo "有红项——修复后再跑"; exit 1; }
