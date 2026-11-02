@@ -173,6 +173,8 @@ UNIVERSAL_FILES=(
   "references/crypto-spec.md|ref|compliance"
   "references/bugfix-runbook.md|ref|standard"
   "references/remote-debug-jvm.md|ref|standard"
+  "references/failure-taxonomy.md|ref|standard"
+  "references/knowledge-retrieval-ladder.md|ref|standard"
   "scripts/inspection-ledger.sh|gen|compliance"
   "references/compliance-checkpoints.md|ref|compliance"
   "references/regulatory-checkpoint-table.md|ref|compliance"
@@ -2503,6 +2505,8 @@ _idx_desc() {  # $1=path $2=cat → 用途短语（≤10 字，防 8KB 预算爆
     tunnel.sh) echo "堡垒机隧道编排";;
     tunnel.conf) echo "隧道配置(用户填)";;
     bugfix-runbook.md) echo "排障六步流水线";;
+    failure-taxonomy.md) echo "失败根因六类分类";;
+    knowledge-retrieval-ladder.md) echo "四层知识检索协议";;
     remote-debug-jvm.md) echo "JDWP 远程调试";;
     compliance-checkpoints.md) echo "合规检查点库";;
     regulatory-checkpoint-table.md) echo "执法检查主表";;
