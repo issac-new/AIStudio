@@ -6,12 +6,15 @@ export interface PersonModelGroup extends Pick<AvailableModelGroup, 'provider' |
 export interface PersonAgentPreset { id: string; name: string; description: string; selection: PersonModel & { runtime: string; mode: 'scoped' | 'global'; reasoningEffort: string } }
 export interface PersonTask { session_id: string; session_title?: string; updated_at: number; selection_json: string; id: string; title: string; summary: string; status: string; revision: number; execution_id?: string | null; execution_state: string; running: boolean | number; completion_evidence: string }
 export interface PersonExecutionSummary { id: string; session_id: string; state: string; created_at: number; occurrence_id?: string | null }
+export interface PersonTaskQueueState { canInsert?: boolean; canRemove?: boolean; insertion?: { queueId: string; phase: string } | null; insertionError?: string }
+export interface PersonTaskQueueSnapshot extends PersonTaskQueueState { task: PersonTask; pending: { id: string; input: { type: string; text?: string; name?: string }[] }[] }
 export interface PersonSchedule { id: string; mode: 'assistant' | 'worker'; task_id: string | null; session_id: string; title: string; goal: string; expression: string; timezone: string; next_at: number; state: string; revision: number }
 export interface PersonMemory { id: string; content: string; revision: number }
 export interface PersonQuestion { id: string; task_id: string | null; question: string; kind: string; choices_json: string; revision: number }
 export interface PersonTaskReturn { taskId: string; executionId: string; assistantMessageId: string; title: string; summary: string; agent: string; state: 'finished' | 'failed' }
 export interface PersonGeneralSettings { compressionThreshold: number | null; maxSteps: number; maxConcurrentTasks: number; timezone: string }
 export interface PersonFlow {
+  creator_session_id?: string
   id: string; title: string; goal: string; revision: number; state: 'active' | 'failed' | 'stopped' | 'completed'; current_position: number; error: string
   stages: Array<{ id: string; position: number; group_position: number; session_id: string; session_title?: string; bot_type?: string | null; delivery_state?: string; delivery_error?: string; goal: string; state: 'pending' | 'active' | 'failed' | 'completed'; result_message_id: number | null; tasks: Array<{ id: string; title: string; status: string; execution_state?: string; agent?: string }> }>
 }
@@ -22,7 +25,7 @@ export interface PersonSnapshot {
   inherits_global_model: boolean; reasoning_efforts: string[]
   compression: { enabled: boolean; threshold: number; globalThreshold: number }
   contextTokens: number
-  tasks: PersonTask[]; schedules: PersonSchedule[]; memories: PersonMemory[]; interactions: PersonQuestion[]; flows?: PersonFlow[]
+  tasks: PersonTask[]; schedules: PersonSchedule[]; memories: PersonMemory[]; interactions: PersonQuestion[]; flows?: PersonFlow[]; active_flows?: PersonFlow[]; active_flow_count?: number
 }
 export function personRequest<T>(path = '', body?: unknown, method = 'POST', signal?: AbortSignal) {
   return request<T>(`/api/studio/person${path}`, body === undefined ? { signal } : { method, body: JSON.stringify(body), signal })
@@ -33,4 +36,9 @@ export function personTaskCanStop(task?: PersonTask | null) {
 export function stopPersonTask(task: PersonTask, signal?: AbortSignal) {
   return personRequest<{ task: PersonTask }>('/tasks/apply', { action: 'stop', task_id: task.id,
     execution_id: task.execution_id, expected_revision: task.revision, idempotency_key: crypto.randomUUID() }, 'POST', signal)
+}
+export function removePersonTaskMessage(task: PersonTask, queueId: string, signal?: AbortSignal) {
+  return personRequest<PersonTaskQueueSnapshot>(`/tasks/${encodeURIComponent(task.id)}/queue/remove`, {
+    queue_id: queueId, expected_execution_id: task.execution_id, expected_revision: task.revision, idempotency_key: crypto.randomUUID(),
+  }, 'POST', signal)
 }
