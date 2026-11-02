@@ -66,3 +66,5 @@ paths:
   - simharness/docs/2026-11-01-run24-pending-batch.md
   - docs/superpowers/specs/2026-11-02-regression-followup.md
   - scripts/regression/matrix-session-walkthrough.mjs
+  - docs/superpowers/specs/2026-11-02-chat-turn-recovery.md
+  - patches/725-agent-chat-turn-recovery.patch

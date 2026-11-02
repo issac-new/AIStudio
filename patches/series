@@ -1080,3 +1080,7 @@
 #      每段 stuck 首次额外给 actionable hint（点名 board.json profiles 期望值 / max_spawn 等）。
 723-agent-dispatcher-refusal-reasons.patch
 724-client-app-isfullscreen-define.patch
+# 725（2026-11-02 run24 复盘·chat 恢复第二块）：回合终态失败后同会话注入「续做」提示
+#      再跑一回合（预算 HERMES_CHAT_TURN_RECOVERY 缺省 1/上限 3；确定性失败不重试；
+#      722 只保回合内重试，本层补跨回合恢复——run24 四现场回合死即静止全靠人工 DM）。
+725-agent-chat-turn-recovery.patch
