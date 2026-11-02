@@ -167,3 +167,13 @@ paths:
   - custom/client/eval/views/EvalView.vue
   - custom/client/eval/__tests__/skill-grade-panel.test.ts
   - .qgate/scope.yaml
+  # 2026-11-02 v1.0.8 发布轮（chore/release-v1.0.8, spec 2026-11-02-release-v1.0.8-overlay）
+  - docs/superpowers/specs/2026-11-02-release-v1.0.8-overlay.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md
+  - package.json
+  - package-lock.json
+  - team/VERSION
+  - team/version.json
+  - .qgate/scope.yaml
