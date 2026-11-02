@@ -51,7 +51,7 @@ powershell -ExecutionPolicy Bypass -File install\install-windows.ps1
 - `node-pty` 若镜像上的版本不含 win32 预编译，终端类功能在离线机不可用（web 主功能不受影响）；打包报告会记录实测结论。
 - `hermes-agent-src` 是打包时刻的本机工作树快照（含 154 文件本地改动，追溯见 `local-mods.patch`＋`HERMES-AGENT-SNAPSHOT.md`）；与包内 `aistudio\vendor\hermes-agent`（钉版 0.22.5 基线）是**两棵树**，studio 运行时消费的是 `~\.hermes\hermes-agent` 这棵。
 - 隐私口径：包内不含任何密钥/token/会话状态库（打包口脱敏扫描 fail-closed）；`.env`/`config.yaml` 模板只含键名；`~/.zcode` 只取配置面（技能/规则/脚本），会话库（cli/ 8.8G）、插件缓存、桌面运行态（v2/）、macOS 专属 app 均不入包。
-- zcode 技能里的 mac 编译二进制（gstack bin/dist 等）随包保留以维持环境一致，**Windows 上不可执行**；zcode 市场插件缓存（cli/plugins）未随包，离线机装新插件受镜像可达性限制。
+- zcode 技能的 mac 编译产物（bin/dist）已剔除（D16）；gstack browse/make-pdf/design 等工具以 **TS 源码形态**随包（src/＋package.json 全在），目标机进对应目录 `npm install`（走镜像源）后可从源码运行——编译链未在 Windows 实测；zcode 市场插件缓存（cli/plugins）未随包，离线机装新插件受镜像可达性限制。
 
 ## 五、包结构
 

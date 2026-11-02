@@ -49,8 +49,10 @@ export const THIRD_PARTY_SRC = [
 ];
 
 /** zcode 配置面快照排除规则（D14, 2026-11-02）：可再生产物与缓存不入包
- * （node_modules/.git/缓存/备份/.DS_Store）；mac 编译二进制（gstack bin/dist 等）
- * 保留随包以维持环境一致，README 注明 Windows 不可执行。 */
+ * （node_modules/.git/缓存/备份/.DS_Store）；**mac 编译产物（bin/dist）剔除**（D16 用户
+ * 裁决 2026-11-02：目标是 Windows 服务器）——对应技能均为 TS＋src/ 源码齐全，目标机经
+ * npm 镜像装依赖后可从源码跑（如 gstack browse/make-pdf/design）；内容资产（mp3 教程等
+ * 跨平台媒体）保留。 */
 export function zcodeTreeExclude(relPath, isDir) {
   const segs = relPath.split('\\').join('/').split('/');
   for (let i = 0; i < segs.length; i++) {
@@ -59,7 +61,7 @@ export function zcodeTreeExclude(relPath, isDir) {
     if (/\.bak(\.|[-0-9]|$)/i.test(seg)) return `剔除杂项 ${seg}`;  // 备份目录族(如 swarm-yuan.bak.1793…)与文件
     if (seg === '.DS_Store') return `剔除杂项 ${seg}`;
     if (isLast && !isDir) continue;
-    if (['node_modules', '.git', '__pycache__'].includes(seg)) return `排除目录 ${seg}`;
+    if (['node_modules', '.git', '__pycache__', 'bin', 'dist'].includes(seg)) return `排除目录 ${seg}`;
     if (seg.startsWith('venv') || seg.startsWith('.venv')) return `排除目录 ${seg}`;
     if (/^\.[a-zA-Z]+[-_]cache$/.test(seg)) return `排除目录 ${seg}`;
   }
@@ -400,7 +402,7 @@ function main() {
   console.log(`[offline-package] ${pkgName}.zip`);
   console.log(`  aistudio/          ${a.files} 文件 ${a.mb}MB`);
   console.log(`  hermes-agent-src/  ${h.files} 文件 ${h.mb}MB（基线 ${baseCommit}, M${nMod}+A${nNew}, patch ${Math.round(patch.length / 1024)}KB）`);
-  console.log(`  zcode/             ${z.files} 文件 ${z.mb}MB（规则脱敏正本＋skills/scripts/workflows/vendor 解引用快照; 排除: ${[...zcodeExcluded].join('/') || '无'}; 断链: ${zcodeBroken.length}${zcodeBroken.length ? ' -> ' + zcodeBroken.join(' | ') : ''}; mac 编译二进制随包, Windows 不可执行—见 README）`);
+  console.log(`  zcode/             ${z.files} 文件 ${z.mb}MB（规则脱敏正本＋skills/scripts/workflows/vendor 解引用快照; 排除: ${[...zcodeExcluded].join('/') || '无'}; 断链: ${zcodeBroken.length}${zcodeBroken.length ? ' -> ' + zcodeBroken.join(' | ') : ''}; mac 编译产物 bin/dist 已剔除, 工具以 TS 源码随包(D16)—见 README）`);
   const tp = dirStats(join(staging, 'thirdparty-src'));
   console.log(`  thirdparty-src/    ${tp.files} 文件 ${tp.mb}MB（不可经 npm/pip 装的三方源: ${THIRD_PARTY_SRC.map((x) => x.name).join('/')} + gstack 随 zcode 面; 缺件: ${tpMissing.length || '无'}）`);
   console.log(`  敏感名剔除: ${excludedSensitive.length} 个(${excludedSensitive.join(', ') || '无'}); 排除目录: ${[...excludedDirs].join('/') || '无'}`);
