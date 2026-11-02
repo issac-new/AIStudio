@@ -90,28 +90,10 @@ diff --git a/packages/client/src/components/hermes/connections/ConnectionsPanel.
    </div>
  </template>
  
-@@ -85,6 +96,33 @@ function updateTab(value: string | number) {
+@@ -85,6 +96,15 @@ function updateTab(value: string | number) {
    background: var(--theme-content-bg, $bg-main-surface);
  }
  
-+.connections-empty {
-+  flex: 1;
-+  display: flex;
-+  align-items: center;
-+  justify-content: center;
-+  color: var(--text-muted);
-+  font-size: 13px;
-+}
-+
-+.connections-empty {
-+  flex: 1;
-+  display: flex;
-+  align-items: center;
-+  justify-content: center;
-+  color: var(--text-muted);
-+  font-size: 13px;
-+}
-+
 +.connections-empty {
 +  flex: 1;
 +  display: flex;

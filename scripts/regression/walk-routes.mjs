@@ -214,6 +214,17 @@ try {
       // 实拍录屏用 600-800ms，避免亚秒级连跳把 WS 握手打断成 console 噪声。
       await page.waitForTimeout(SETTLE_MS)
     } catch (error) {
+      // 韧性（2026-11-02 三跑实录）：并行 git 操作重写工作树会触发 vite
+      // 自重启＋全页重载风暴（vite.config.ts changed, restarting server），
+      // 走查中段的导航等待被打断成超时群——环境闪断先重导航一次再判，
+      // 重试通过记 WARN 留痕，仍失败才进权限回退/缺陷定性。
+      let retried = false
+      try {
+        await gotoHash(page, visit.visitPath, 250)
+        await waitForRoute(page, visit)
+        await waitForSettled(page)
+        retried = true
+      } catch { retried = false }
       const actual = await (async () => {
         try {
           return `${await currentRoute(page)} @ ${await page.evaluate(() => location.hash)}`
@@ -221,12 +232,17 @@ try {
           return '执行上下文已销毁（整页重载）'
         }
       })()
+      if (retried) {
+        led.record(`${visit.label}（环境闪断重试通过）`, true,
+          `首导航被 vite 重启/整页重载打断 | 重试后到达 ${actual}`, 'WARN')
+        continue
+      }
       if (visit.requiresSuperAdmin && role !== 'super_admin') {
         led.record(`${visit.label}（权限回退）`, true,
           `非 super_admin 被守卫改道 | 当前 ${actual}，未验收该页内容`, 'WARN')
         continue
       }
-      led.defect(`导航 ${visit.label}`, `${safeText(error)} | 当前 ${actual}`, 'P1')
+      led.defect(`导航 ${visit.label}`, `${safeText(error)} | 重试仍失败 | 当前 ${actual}`, 'P1')
       continue
     }
     const probe = await evaluateWithRetry(page, (rawReSrc) => {
