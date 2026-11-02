@@ -145,3 +145,11 @@ paths:
   - .qgate/scope.yaml
   # 2026-11-02 并行批落档代声明（plan-program-latest-sync spec 入 main 未声明，pre-push 解堵）
   - docs/superpowers/specs/2026-11-02-plan-program-latest-sync.md
+  # 2026-11-02 Grader 环批（feat/skill-grader, spec 2026-11-02-skill-grader）
+  - docs/superpowers/specs/2026-11-02-skill-grader.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - custom/server/eval/skill-grader.ts
+  - custom/server/eval/__tests__/skill-grader.test.ts
+  - custom/server/eval/controller.ts
+  - package.json
+  - .qgate/scope.yaml
