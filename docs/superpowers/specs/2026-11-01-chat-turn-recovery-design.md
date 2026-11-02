@@ -1,6 +1,6 @@
 # chat 回合自恢复（agent 主动性产品能力）——立项与设计定稿（2026-10-31 用户指令「务必落地到产品能力」）
 
-日期：2026-11-01（凌晨值守中立项） ｜ 状态：designed（代码批待完整窗口落地） ｜ 类型：feat（hermes-agent 网关/回合生命周期）
+日期：2026-11-01（凌晨值守中立项） ｜ 状态：implemented（第一块=补丁 722 分类入梯子；第二块=补丁 725 跨回合续做，2026-11-02 已落地并加载） ｜ 类型：feat（hermes-agent 网关/回合生命周期）
 
 ## 触发与三现场实据
 
@@ -14,7 +14,7 @@
 
 现有回合恢复（`agent/kanban_turn_recovery.py` 的 `recover_failed_kanban_turns`，gateway/session_kanban.py:366 接线）只保护「看板卡工作回合」（`kanban_turn_recovery_enabled` 要求 task_id 非空）。**群/DM 消息派发的回合（推演派单主战场）异常终态后无任何自恢复面**——回合死即静止，等外部催。mei 板卡实测为空（消息派发无卡），全链不受保护。
 
-## 设计（已定稿，代码批实现）
+## 设计（已定稿并已实现：722 回合内重试＋725 跨回合续做）
 
 1. **判定扩展**（kanban_turn_recovery.py 或新模块 chat_turn_recovery.py）：
    - `chat_turn_recovery_enabled()`：env `HERMES_CHAT_TURN_RECOVERY`（缺省=kanban 同值 3；0/off 禁用；clamp [0,10]）；
