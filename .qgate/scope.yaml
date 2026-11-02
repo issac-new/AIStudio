@@ -118,6 +118,7 @@ paths:
   - docs/superpowers/specs/2026-11-02-failure-taxonomy.md
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - skills/swarm-yuan/references/failure-taxonomy.md
+  - skills/swarm-yuan/references/capability-map.md
   - skills/swarm-yuan/assets/hooks/failure-detector.sh
   - skills/swarm-yuan/tests/test-failure-detector.sh
   - skills/swarm-yuan/SKILL.md
