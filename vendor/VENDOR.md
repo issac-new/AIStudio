@@ -4,11 +4,15 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 
 | 树 | commit | 版本 | upstream remote | 提取方式 |
 |---|---|---|---|---|
-| hermes-studio | `f67b587b9` | v0.8.0 | https://github.com/EKKOLearnAI/ekko-studio.git（旧名 `hermes-studio` 为重定向别名；2026-10-31 实测 full_name=ekko-studio） | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
+| hermes-studio | `dad736a93` | v1.0.9（tag 与包版本脱钩：该 tag 的 package.json=0.8.11；台账以 tag 为准） | https://github.com/EKKOLearnAI/ekko-studio.git（旧名 `hermes-studio` 为重定向别名；2026-10-31 实测 full_name=ekko-studio） | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
 | hermes-agent | `bf0203a794` | v0.22.5 | https://github.com/NousResearch/hermes-agent.git | 同上 |
 | zcode | `a60ba6a7` | 包版本 3.17.1（谱系 v3.16.1 系列；**同步口径=上游 main 变更，不看版本 tag**，2026-10-25 用户裁定） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
 
 > 2026-10-31 升级轮：hermes-studio 基线已升 v0.8.0（本批，44 失败件重生成/2 退役/4 条迁位，重放零失败）；补丁 329 esp32 段随上游迁移改指 `packages/mcu/esp32-*`。hermes-agent 仍 v0.22.5（main 领先 3087c）。zcode 已于 2026-10-31 同步批升 `a60ba6a7`（v3.17.1 线，8 条活跃补丁重放零失败，002/006 重生成、引擎构建绿）；同步 spec 见 `2026-10-31-zcode-3171-sync.md`。
+
+> 2026-11-02 升级批：hermes-studio 基线升 **v1.0.9**（`dad736a93`，上游 2026-11-01 发布；v0.8.0→v1.0.9 为 13 提交/100 文件）。studio 侧 351 补丁净基线全量重放零失败：023 上下文重生成、042 上下文行校准（0.8.0→0.8.11）、718 installer.nsh hunk 上下文校准、**207 退役**（上游已原生 pin hermes-agent 0.22.5/v0.22.5/bf0203a7，与本仓 agent 钉版一致，保留即降级；原件 .archived-patches/）。hermes-agent 维持 v0.22.5（上游最新稳定仍此版）。spec 见 `2026-11-02-vendor-upgrade-studio-v109.md`。
+
+> 2026-11-02 复核批（同日晚，spec `2026-11-02-agent-debt-recheck.md`）：升级批曾记「agent 80 补丁 pristine 重放必败存量债」，**证伪**——真 pristine（bf0203a794 archive）与 git 基线树上 80/80 全绿；升级批观察到的 80 WARN 系 final inject 重跑在已部分注入 agent 树上的伪象（git apply 无幂等，已应用补丁连锁报错）。主检出 agent 态已验算=基线+80 补丁完全可再生（clean+inject 即重建）。真实小债=7 项上游文件被 `vendor/hermes-agent/.gitignore`（上游自带，随基线入库）的 `export*` 与 `apps/desktop/electron/**/*.d.ts` 规则误伤未入库，本批 `git add -f` 补录；**后续 vendor-sync 重建 agent 基线时同规则补录**。另：升级批的 VENDOR.md 台账更新曾被 pre-commit 的 vendor/** 撤出规则静默退栈（未带 VENDOR_SYNC=1），改动随 worktree 删除丢失，本批一并补齐——**vendor/ 下任何入库变更（含本台账）都须 VENDOR_SYNC=1 提交**。
 
 ## zcode 基线差一提交说明（2026-10-24 实测记录）
 
