@@ -1379,6 +1379,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     const mxlib = read(join(MX, 'mx-lib.sh'))
     expect(mxlib).toContain('722-agent-emptystream-ladder-classify.patch')
     expect(mxlib).toContain('723-agent-dispatcher-refusal-reasons.patch')
+    expect(mxlib).toContain('725-agent-chat-turn-recovery.patch')
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑬ 独立审批环可启动')
   })

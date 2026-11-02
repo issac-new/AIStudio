@@ -1,0 +1,215 @@
+diff --git a/agent/chat_turn_recovery.py b/agent/chat_turn_recovery.py
+new file mode 100644
+index 000000000..c2a7f6c5a
+--- /dev/null
++++ b/agent/chat_turn_recovery.py
+@@ -0,0 +1,168 @@
++"""Chat turn recovery: re-enter a failed chat turn in the same session (run24 复盘批).
++
++``agent.kanban_turn_recovery`` only protects *kanban worker* turns (it requires a
++task id and a live claim). Chat turns dispatched by Matrix/DM have neither, so a
++turn that exhausts the retry ladder simply stops mid-work — the session goes
++quiet until an external message wakes it. run24 recorded this four times
++(provider-wide 429 at 22:08, analysis stall, coding interruption, and a G5
++rejudgement turn killed by a stream cut) and every recovery needed a human DM.
++
++722 already keeps a turn alive *inside* the retry ladder by classifying
++``EmptyStreamError`` as ``timeout``. This module adds the layer above it: once
++the turn has genuinely ended in failure, inject one short "continue where you
++stopped" instruction in the SAME session (same agent, same history) so the work
++resumes without a human nudge.
++
++Design constraints (see docs/superpowers/specs/2026-11-01-chat-turn-recovery-design.md):
++
++* Same session, same agent — never start over; the prompt says so explicitly.
++* Check the on-disk state before continuing: a tool call that was cut off may not
++  have executed.
++* Bounded: ``HERMES_CHAT_TURN_RECOVERY`` attempts (default 1, 0 disables, capped
++  at 3) with a short backoff, and never for a user interrupt.
++* Never for deterministic failures a retry cannot fix (auth, billing, quota,
++  policy). Those end the turn honestly.
++"""
++
++from __future__ import annotations
++
++import os
++import time
++from typing import Any, Optional
++
++DEFAULT_MAX_RECOVERY_ATTEMPTS = 1
++_MAX_RECOVERY_ATTEMPTS_CAP = 3
++_OFF_VALUES = frozenset({"0", "false", "no", "off"})
++# Deterministic verdicts a second turn cannot fix: retrying only burns quota and
++# delays the honest error the user needs to see.
++_NON_RECOVERABLE = frozenset({
++    "auth", "auth_permanent", "billing", "content_policy_blocked",
++    "data_policy_denied", "provider_policy_blocked", "model_not_found",
++    "context_overflow", "payload_too_large", "ssl_cert_verification",
++})
++
++
++def max_recovery_attempts() -> int:
++    """``HERMES_CHAT_TURN_RECOVERY`` parsed as an attempt count (0 disables).
++
++    Unset/blank -> :data:`DEFAULT_MAX_RECOVERY_ATTEMPTS`; explicit 0/false/no/off
++    -> 0; unparseable -> the default; clamped to [0, 3] so a bad value can never
++    create an unbounded loop.
++    """
++    raw = (os.environ.get("HERMES_CHAT_TURN_RECOVERY") or "").strip()
++    if not raw:
++        return DEFAULT_MAX_RECOVERY_ATTEMPTS
++    if raw.lower() in _OFF_VALUES:
++        return 0
++    try:
++        value = int(raw)
++    except (TypeError, ValueError):
++        return DEFAULT_MAX_RECOVERY_ATTEMPTS
++    return max(0, min(value, _MAX_RECOVERY_ATTEMPTS_CAP))
++
++
++def recovery_delay_seconds(attempt: int) -> float:
++    """Backoff before recovery attempt ``attempt`` (1-based): 5s, then 15s."""
++    return 5.0 if max(attempt, 1) <= 1 else 15.0
++
++
++def _reason_of(result: Any) -> str:
++    if not isinstance(result, dict):
++        return ""
++    classified = result.get("error_classified")
++    if isinstance(classified, dict):
++        reason = classified.get("reason")
++        if isinstance(reason, str):
++            return reason
++    reason = result.get("error_reason")
++    return reason if isinstance(reason, str) else ""
++
++
++def should_recover_chat_turn(
++    result: Any, *, attempt: int, interrupted: bool = False
++) -> bool:
++    """Whether one more "continue" turn is justified for this settled result.
++
++    Only a turn that ended in a *transient* failure qualifies: the turn exit code
++    must be non-zero (``hermes_cli.turn_exit`` semantics), an error must be
++    recorded, the caller must not be interrupted, the classified reason must not
++    be deterministic, and the attempt budget must not be spent.
++    """
++    if interrupted or attempt >= max_recovery_attempts():
++        return False
++    reason = _reason_of(result)
++    if reason and reason in _NON_RECOVERABLE:
++        return False
++    try:
++        from hermes_cli.turn_exit import turn_exit_code
++
++        if turn_exit_code(result, kanban_worker=False) == 0:
++            return False
++    except Exception:  # noqa: BLE001 — missing helper must not crash a settle path
++        if not (isinstance(result, dict) and result.get("error")):
++            return False
++    if not (isinstance(result, dict) and result.get("error")):
++        # An unfinished turn without a recorded error (e.g. a tool loop that never
++        # settled) is still recoverable: the agent knows its own next step.
++        return bool(isinstance(result, dict) and result.get("completed") is False)
++    return True
++
++
++def chat_recovery_prompt(*, attempt: int, max_attempts: int, error: str = "") -> str:
++    """The synthetic user message that resumes an interrupted chat turn."""
++    detail = (error or "provider stream or transport failure").strip()
++    if len(detail) > 400:
++        detail = detail[:400] + "…"
++    return (
++        "[System: the previous turn ended UNFINISHED — the API call failed and the "
++        f"turn was interrupted (recovery attempt {attempt}/{max_attempts}). "
++        f"Error: {detail}.\n\n"
++        "This is the SAME session with your full context — nothing you already "
++        "read, wrote, or computed is lost. Do NOT start over.\n\n"
++        "Do this immediately:\n"
++        "1. Re-check the on-disk state of whatever the interrupted turn was "
++        "writing before continuing (the action may not have executed).\n"
++        "2. Continue from where it stopped and finish any remaining deliverable "
++        "of that task.\n"
++        "3. Report back as the original task asked (the usual completion "
++        "receipt). If nothing is left to do, say so in one line.]"
++    )
++
++
++def run_chat_recovery(
++    turn_fn,
++    *,
++    get_result,
++    sleep_fn=time.sleep,
++    emit=None,
++    interrupted_fn=None,
++) -> int:
++    """Retry a failed chat turn in place; returns the number of attempts made.
++
++    ``turn_fn(nudge)`` runs one more turn on the same agent with the recovery
++    message; ``get_result()`` returns the latest settled result (``None`` stops
++    the loop). Every attempt is bounded by the budget even when ``get_result``
++    never changes; ``interrupted_fn()`` cancels the remaining attempts after a
++    user interrupt.
++    """
++    attempts = 0
++    for attempt in range(1, max_recovery_attempts() + 1):
++        result = get_result()
++        interrupted = bool(interrupted_fn()) if interrupted_fn else False
++        if not should_recover_chat_turn(result, attempt=attempts, interrupted=interrupted):
++            break
++        wait_s = recovery_delay_seconds(attempt)
++        if emit:
++            try:
++                emit(f"⏳ Turn interrupted — continuing automatically in {wait_s:.0f}s "
++                     f"(recovery {attempt}/{max_recovery_attempts()})")
++            except Exception:  # noqa: BLE001
++                pass
++        sleep_fn(wait_s)
++        error = ""
++        if isinstance(result, dict):
++            error = str(result.get("error") or "")
++        turn_fn(chat_recovery_prompt(
++            attempt=attempt, max_attempts=max_recovery_attempts(), error=error))
++        attempts += 1
++    return attempts
+diff --git a/gateway/run_turn_runner.py b/gateway/run_turn_runner.py
+index c5a6d6de5..f2ea3bdbf 100644
+--- a/gateway/run_turn_runner.py
++++ b/gateway/run_turn_runner.py
+@@ -996,6 +996,36 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
+                       getattr(agent, 'session_completion_tokens', 0) or 0)
+             with notification_turn(agent, muted=ctx.mute_notification_reply, session_id=ctx.session_id or ""):
+                 result = agent.run_conversation(api_message, **kwargs)
++                # run24 复盘批（2026-11-02，chat 恢复第二块）：回合终态失败后在**同一会话、
++                # 同一 agent**里注入一次「从中断处续做」提示再跑——722 只在回合内重试，
++                # 回合一旦结束（流掐断耗尽/传输失败）会话就静止，run24 四现场全靠人工 DM
++                # 唤醒。仅瞬态失败恢复（auth/billing/policy 等确定性失败不重试），预算
++                # HERMES_CHAT_TURN_RECOVERY（缺省 1，0 关，上限 3）；恢复 turn 不重复持久化
++                # 用户原始消息（去掉 persist_* 与 prelude，历史取自上一回合 messages）。
++                try:
++                    from agent.chat_turn_recovery import run_chat_recovery
++
++                    _rec_kwargs = {k: v for k, v in kwargs.items()
++                                   if not str(k).startswith("persist_") and k not in ("prelude", "moa_config")}
++                    _rec_kwargs.pop("title_user_message", None)
++
++                    def _recover_turn(nudge):  # noqa: ANN001 — one synthetic continuation
++                        prior = result.get("messages") if isinstance(result, dict) else None
++                        with notification_turn(agent, muted=ctx.mute_notification_reply,
++                                               session_id=ctx.session_id or ""):
++                            return agent.run_conversation(
++                                nudge, conversation_history=prior or agent_history, **_rec_kwargs)
++
++                    _recovered = run_chat_recovery(
++                        _recover_turn,
++                        get_result=lambda: result,
++                        interrupted_fn=lambda: bool(getattr(agent, "_interrupt_requested", False)),
++                        emit=lambda msg: logger.warning("%s", msg),
++                    )
++                    if _recovered:
++                        logger.warning("chat turn recovered after %d attempt(s)", _recovered)
++                except Exception as _rec_exc:  # noqa: BLE001 — recovery must never break a settle path
++                    logger.warning("chat turn recovery skipped: %s", _rec_exc)
+             if captured is not None:
+                 incoming = max(0, (getattr(agent, 'session_prompt_tokens', 0) or 0) - before[0])
+                 outgoing = max(0, (getattr(agent, 'session_completion_tokens', 0) or 0) - before[1])
