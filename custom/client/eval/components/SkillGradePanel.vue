@@ -155,20 +155,21 @@ const metaLine = computed(() => {
 </template>
 
 <style scoped>
+/* 色一律语义 token（raw-hex 预算闸 eval 域=0；verdict 底色用 rgba 同 FlywheelPanel 惯例） */
 .skill-grade__input { width: 100%; box-sizing: border-box; font-family: monospace; font-size: 12px; }
 .skill-grade__controls { display: flex; gap: 12px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
 .skill-grade__runid { flex: 1; min-width: 220px; }
-.skill-grade__error { color: #d03050; }
+.skill-grade__error { color: var(--danger); }
 .skill-grade__verdict { font-weight: 600; padding: 2px 10px; border-radius: 4px; }
-.skill-grade__verdict--pass { background: rgba(102, 195, 131, .18); color: #18a058; }
-.skill-grade__verdict--fail { background: rgba(224, 92, 92, .16); color: #d03050; }
-.skill-grade__verdict--conditional { background: rgba(240, 196, 70, .2); color: #b8810b; }
-.skill-grade__dim--yes { color: #18a058; }
-.skill-grade__dim--no { color: #d03050; }
-.skill-grade__dim--unknown { color: #b8810b; }
+.skill-grade__verdict--pass { background: rgba(46, 160, 67, 0.12); color: var(--success); }
+.skill-grade__verdict--fail { background: rgba(248, 81, 73, 0.12); color: var(--danger); }
+.skill-grade__verdict--conditional { background: rgba(204, 162, 22, 0.14); color: var(--warning); }
+.skill-grade__dim--yes { color: var(--success); }
+.skill-grade__dim--no { color: var(--danger); }
+.skill-grade__dim--unknown { color: var(--warning); }
 .skill-grade__table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-.skill-grade__table th, .skill-grade__table td { border: 1px solid var(--n-border-color, #e0e0e6); padding: 4px 8px; text-align: left; font-size: 13px; }
+.skill-grade__table th, .skill-grade__table td { border: 1px solid var(--border-color); padding: 4px 8px; text-align: left; font-size: 13px; }
 .skill-grade__head { display: flex; gap: 12px; align-items: center; margin: 10px 0; }
-.skill-grade__meta { color: #888; font-size: 12px; }
-.skill-grade__missing { color: #d03050; font-size: 13px; }
+.skill-grade__meta { color: var(--text-muted); font-size: 12px; }
+.skill-grade__missing { color: var(--danger); font-size: 13px; }
 </style>
