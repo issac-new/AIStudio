@@ -81,3 +81,10 @@ paths:
   - docs/windows-x64-setup.md
   - docs/superpowers/specs/2026-11-02-offline-windows-package.md
   - package.json
+  - docs/superpowers/specs/2026-11-02-release-v1.0.7-overlay.md
+  - RELEASE-NOTES.md
+  - RELEASE-MANIFEST.json
+  - team/VERSION
+  - team/version.json
+  - package.json
+  - package-lock.json
