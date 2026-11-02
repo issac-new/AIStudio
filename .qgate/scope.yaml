@@ -104,3 +104,11 @@ paths:
   - vendor/VENDOR.md
   - docs/superpowers/specs/2026-11-02-agent-debt-recheck.md
   - docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md
+  # 2026-11-02 测试稳定性 DSL 批（feat/test-stability-dsl, spec 2026-11-02-test-stability-dsl）
+  - docs/superpowers/specs/2026-11-02-test-stability-dsl.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - scripts/regression/dsl.mjs
+  - scripts/regression/harness.mjs
+  - scripts/__tests__/regression-dsl.test.ts
+  - custom/server/test-support/**
+  - .qgate/scope.yaml
