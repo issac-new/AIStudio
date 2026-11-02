@@ -143,3 +143,5 @@ paths:
   - skills/swarm-yuan/tests/test-spec-template-maet.sh
   - skills/swarm-yuan/CHANGELOG.md
   - .qgate/scope.yaml
+  # 2026-11-02 并行批落档代声明（plan-program-latest-sync spec 入 main 未声明，pre-push 解堵）
+  - docs/superpowers/specs/2026-11-02-plan-program-latest-sync.md
