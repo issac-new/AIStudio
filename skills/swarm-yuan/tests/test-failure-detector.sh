@@ -142,4 +142,44 @@ out=$(PROJECT_DIR="$TMP/proj18" bash "$TL" --verify-chain 2>&1); rc=$?
 out=$(PROJECT_DIR="${TMP}/proj19-nonexistent" bash "$TL" --verify-chain 2>&1); rc=$?
 [[ $rc -eq 0 ]] && ok "态19 无文件 → exit 0" || bad "态19 rc=$rc: $out"
 
+# --- 态 20：六类根因初判（taxonomy references/failure-taxonomy.md 执行投影）---
+# 每类典型签名喂入，断言 L1 输出「根因初判=<CATEGORY>」（第二次失败触发 L1 块）。
+_cls_case() { # $1=项目目录名 $2=签名 $3=期望类
+  mkdir -p "$TMP/$1"
+  local i out=""
+  for i in 1 2; do
+    out=$(echo "{\"tool_name\":\"Bash\",\"tool_result\":{\"exit_code\":1,\"content\":\"$2\"},\"session_id\":\"s20\"}" | PROJECT_DIR="$TMP/$1" bash "$FD" 2>&1)
+  done
+  echo "$out" | grep -q "根因初判=$3——" && ok "态20 $3 分类命中" || bad "态20 $3 未命中: $out"
+}
+_cls_case proj-env  "listen EADDRINUSE: address already in use :::8647"    "ENV"
+_cls_case proj-tmo  "Error: Test timed out in 5000ms / waitFor timeout"    "TIMEOUT"
+_cls_case proj-prd  "fetch failed: status 500 Internal Server Error"       "PRODUCT"
+_cls_case proj-scr  "Error: Cannot find module '@custom/server/missing'"   "SCRIPT"
+_cls_case proj-flw  "AssertionError: expected 'a' to be 'b'"               "FLOW"
+_cls_case proj-unk  "error: something totally unprecedented went wrong"    "UNKNOWN"
+
+# --- 态 21：error-history.jsonl 落 category + category_source 字段（向后兼容新增）---
+mkdir -p "$TMP/proj21"
+echo '{"tool_name":"Bash","tool_result":{"exit_code":1,"content":"AssertionError: expected 1 to be 2"},"session_id":"s21"}' | PROJECT_DIR="$TMP/proj21" bash "$FD" >/dev/null 2>&1
+_last=$(tail -1 "$TMP/proj21/.swarm-yuan/error-history.jsonl" 2>/dev/null)
+echo "$_last" | grep -q '"category":"FLOW"' && ok "态21 category 字段落盘" || bad "态21 缺 category: $_last"
+echo "$_last" | grep -q '"category_source":"rule"' && ok "态21 category_source=rule" || bad "态21 缺 source: $_last"
+
+# --- 态 22：优先级 ENV>TIMEOUT（环境错伪装成超时先判 ENV）---
+mkdir -p "$TMP/proj22"
+out=""
+for i in 1 2; do
+  out=$(echo '{"tool_name":"Bash","tool_result":{"exit_code":1,"content":"Error: connect ECONNREFUSED 127.0.0.1:8647 after timeout 30s"},"session_id":"s22"}' | PROJECT_DIR="$TMP/proj22" bash "$FD" 2>&1)
+done
+echo "$out" | grep -q "根因初判=ENV——" && ok "态22 ECONNREFUSED+timeout 混签优先 ENV" || bad "态22 优先级错: $out"
+
+# --- 态 23：hook 规则表 ↔ taxonomy md 一致性锁（防两处漂移）---
+TAX="references/failure-taxonomy.md"
+for kw in EADDRINUSE ECONNREFUSED ETIMEDOUT 'Internal Server Error' ModuleNotFoundError SyntaxError AssertionError; do
+  grep -q -- "$kw" "$TAX" && grep -q -- "$kw" "$FD" \
+    && ok "态23 规则词 $kw 两处一致" \
+    || bad "态23 规则词 $kw 漂移（md/hook 不一致）"
+done
+
 [[ $FAIL -eq 0 ]] && { echo "PASS test-failure-detector"; exit 0; } || { echo "FAIL test-failure-detector" >&2; exit 1; }

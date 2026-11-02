@@ -83,6 +83,7 @@
 | rsi-evidence-methodology | 清华 RSI 综述 + D2I-ai + 字节三论文（B） | 生成侧吸收轮收口验收 + 目标技能自成长链证据纪律（⑤⑦） | 改进/自进化系统的验收证据分层、升级已有技能 |
 | bugfix-runbook | 内生（A） | 开发工作流 ②-⑥ fix 任务排障流水线（研发环境取证） | fix 任务连研发环境日志/数据库/远程断点取证 |
 | remote-debug-jvm | 内生（A） | bugfix-runbook 第③步（JDWP 经隧道 + IDE attach + 断点纪律） | fix 任务需断点级取证 |
+| failure-taxonomy | MTSC2026 AI Native 测试工程（极智嘉）六类根因（B） | ⑥ 测试失败处置决策点 + failure-detector `_classify_failure` 规则表正本 | 任何测试/命令/走查失败后先归类再处置，禁无效重试 |
 
 ### 族⑤ 安全合规与行业立法（门禁）
 
