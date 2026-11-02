@@ -1084,3 +1084,8 @@
 #      再跑一回合（预算 HERMES_CHAT_TURN_RECOVERY 缺省 1/上限 3；确定性失败不重试；
 #      722 只保回合内重试，本层补跨回合恢复——run24 四现场回合死即静止全靠人工 DM）。
 725-agent-chat-turn-recovery.patch
+# 726（2026-11-02 run25 G2 熔断现场）：修 725 recovery 的 kwarg 冲突——kwargs 自带
+#      conversation_history 时与 _recover_turn 显式实参撞 multiple values，恢复回合
+#      在最需要它的熔断场景哑火（secops 19:57 实锤：熔断→turn 中断→recovery 被
+#      TypeError 挡掉→600s 窗烧尽→G2 硬闸 FAIL）。与 title_user_message 同款防御排除。
+726-agent-chat-recovery-kwarg-fix.patch

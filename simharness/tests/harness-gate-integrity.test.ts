@@ -1380,6 +1380,11 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
     expect(mxlib).toContain('722-agent-emptystream-ladder-classify.patch')
     expect(mxlib).toContain('723-agent-dispatcher-refusal-reasons.patch')
     expect(mxlib).toContain('725-agent-chat-turn-recovery.patch')
+    // 726（run25 G2 熔断现场）：725 recovery 的 kwarg 冲突修复必须同在注入白名单——
+    // 缺位即被 provision 洗掉（722 曾实锤），recovery 在熔断场景继续哑火
+    expect(mxlib).toContain('726-agent-chat-recovery-kwarg-fix.patch')
+    const patch726 = read(join(HARNESS, '..', 'patches/726-agent-chat-recovery-kwarg-fix.patch'))
+    expect(patch726).toContain('_rec_kwargs.pop("conversation_history", None)')
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑬ 独立审批环可启动')
   })

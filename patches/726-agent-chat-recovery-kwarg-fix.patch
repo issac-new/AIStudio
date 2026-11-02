@@ -1,0 +1,14 @@
+diff --git a/gateway/run_turn_runner.py b/gateway/run_turn_runner.py
+--- a/gateway/run_turn_runner.py
++++ b/gateway/run_turn_runner.py
+@@ -1008,6 +1008,10 @@
+                     _rec_kwargs = {k: v for k, v in kwargs.items()
+                                    if not str(k).startswith("persist_") and k not in ("prelude", "moa_config")}
+                     _rec_kwargs.pop("title_user_message", None)
++                    # run25 实证（G2 熔断现场 19:57 secops）：kwargs 自带 conversation_history
++                    # 时与 _recover_turn 内显式实参撞 multiple values for keyword argument，
++                    # 恢复回合在最需要它的熔断场景哑火——与 title_user_message 同款防御排除。
++                    _rec_kwargs.pop("conversation_history", None)
+ 
+                     def _recover_turn(nudge):  # noqa: ANN001 — one synthetic continuation
+                         prior = result.get("messages") if isinstance(result, dict) else None
