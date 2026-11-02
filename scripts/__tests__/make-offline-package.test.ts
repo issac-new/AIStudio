@@ -99,9 +99,13 @@ describe('zcodeTreeExclude 排除规则(D14 配置面快照口径)', () => {
     expect(zcodeTreeExclude('swarm-yuan.bak.1793151380/SKILL.md', false)).toContain('杂项')
     expect(zcodeTreeExclude('.DS_Store', false)).toContain('杂项')
   })
-  it('配置面资产放行——含 mac 编译二进制(D14: 随包保留)', () => {
-    expect(zcodeTreeExclude('gstack/bin/gstack-global-discover', false)).toBeNull()
-    expect(zcodeTreeExclude('gstack/design/dist/design', false)).toBeNull()
+  it('mac 编译产物 bin/dist 剔除(D16), TS 源码与内容资产放行', () => {
+    expect(zcodeTreeExclude('gstack/bin/gstack-global-discover', false)).toContain('bin')
+    expect(zcodeTreeExclude('gstack/design/dist/design', false)).toContain('dist')
+    expect(zcodeTreeExclude('browse/dist/browse', false)).toContain('dist')
+    expect(zcodeTreeExclude('gstack/browse/src/main.ts', false)).toBeNull()
+    expect(zcodeTreeExclude('gstack/browse/test/x.spec.ts', false)).toBeNull()
+    expect(zcodeTreeExclude('huashu-design/assets/bgm-tutorial.mp3', false)).toBeNull()
     expect(zcodeTreeExclude('gongwen-bifa/SKILL.md', false)).toBeNull()
     expect(zcodeTreeExclude('model-peak-guard.sh', false)).toBeNull()
   })
