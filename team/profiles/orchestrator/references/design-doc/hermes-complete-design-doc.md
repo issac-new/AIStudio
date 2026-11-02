@@ -2766,6 +2766,32 @@ flowchart LR
 
 ---
 
+### 4.41 hack 团队三源融合：编制纪律与 CTF 场景扩容（2026-11-02 收口）
+
+> 来源：三微信文调研 + 三仓正典回源——sapper-v2（腾讯云第三届智能攻防挑战赛初赛冠军，80.18 分/85 flag/10.3 亿 token 无人值守 8h，MIT）/ alexgaoth/awesome-reverse-engineered（17,728 项目逆向成果索引，MIT+CC0，nightly 刷新）/ zhaoxuya520/reverse-skill（37k star 安全技能路由包，44 路由规则+175 回归 case）。调研档案（三源机制全文/gap 矩阵/吸收边界/终态）：`~/.hermes/shared/research/hack-teams-fusion-20261101/FUSION-DOSSIER.md`。执行：hack 板七卡（W1-A/B/C、W2-A/B/C、CTF），2026-11-02 13:51 全 done，收卡独立验收 17/17 实质通过（只跑冻结验收命令，不采信 worker 自述）。
+
+**决策主线**：用户 2026-11-01 指令「深入调研三文完善 hack teams」→ 2026-11-02 裁决「CTF 纳入」hack 团队服务面 → 同日裁决「加快进度」改五路全并行派发。否决三项：sapper 模型分层（指挥官/将军与士兵/侦察兵分档模型）不落地——撞 2026-09-17 舰队统一模型裁决，仅存档「精英脑决策/轻量脑量产」角色分工思想；reverse-skill 的 CTF-Sandbox-Orchestrator（42 子技能，GPLv3）零 vendor——上游自警其 skills 收集自 GitHub 生态须先逐一检查危险操作，一律按模式自写；awesome 索引内容不改变授权门判定（索引只收互操作类，与红线同向但不构成授权依据）。
+
+**机制核心：编制纪律三件（sapper「传承」能力 × reverse-skill field-journal 合流）+ 场景面四新 + 质量门一升。**
+
+| 落点 | 机制 | 验收锚（实测） |
+|---|---|---|
+| `knowledge-base/` SKILL.md（升级：原裸目录无 SKILL.md） | 三字段分层（标签/一句话概括/完整打法——注入只给前两层按需自取，省注入不省存储，单条坏只坏一层）＋五触发写回（任务完成/新工具坑点/流程缺陷修复/路由未覆盖新场景/有值失败）＋先读后做（开工先查 INDEX）＋同族迁移条目类型（isomorphism：验证过的通用解法标注适用形状，新任务带成熟打法进场——sapper 同族迁移 3min/题的载体） | SKILL.md 五节 grep 齐；INDEX.md 三字段表＋3 条示范（含 isomorphism 首条 IoT 配对链）＋「旧格式待迁」标注 |
+| `skill-resolver/` 回归基准（升级：spec 承诺未实现→落地） | golden.json 黄金集 52 case（36 个不同 primary 覆盖/4 弃权 case）＋run_regression.py（任一 mismatch exit 1，期望值实测锚定防把 bug 锁进黄金集）＋test_determinism.py（4 探针×10 次全一致）；契约：路由规则改动必跑回归 rc=0 | 实测 52/52 PASS；红绿验证（改坏期望被抓回）过 |
+| `ctf-orchestration/`（新） | CTF 授权门特化：平台注册参赛＝目标侧授权（比赛条款即授权书），scope 限平台分配题面/靶机；**特化不外溢**——真实目标渗透仍走 security-domain-delegation §1 完整授权门，禁打平台基础设施/他队机器；easy-first 并行＋升级查表四档（0-10min 换战术/10-20min 换角度/20-30min 换人/30-45min 止损记死路进 failure-trace-index）；分类路由 ≥7 类接既有能力（pwn→REA、web→redteam 五件套、forensics→cybersecurity-forensics 面） | resolver 实测「CTF pwn 题」命中 primary score 5.0 |
+| `reverse-ecosystem-index/`（新） | 先搜再做三步（搜→found 用+修+上游报障→not there 做+开源+提交回索引）；健康度四档（非官方 API 随厂商变更失效，依赖前必查）；三库分工：本索引答「别人拆过没」/knowledge-base 答「我们的活法」/failure-trace-index 答「我们的死路」 | re_index.py search 实测 rc=0 返回带星数/健康度排序；MIT license 头保留 |
+| `js-api-reverse/`（新） | 前端加密参数四步（定位 JS 断点→补环境→复现签名→重放验证）＋API/GraphQL 专项（路由表 AST 穷举/匿名可达性/IDOR A/B 差分）＋ARTEX 实战三条（凭证写 goal 不写 constraint——planner 只按 goal 开方向；路由清单进派单补自探盲区；每轮开工先探会话有效性失效剔除） | GraphQL 7 测试点；跨技能锚（bola-session-detection/poc-evidence-snapshot）在位 |
+| `patch-diff-exploit/`（新） | N-day 补丁差分链（CVE→厂商补丁定位→REA compare_application_versions 二进制 diff→修复点定位→PoC 骨架 staging 验证）＋跨版本符号迁移（LLM 辅助批量迁移低置信函数人工复核） | REA 工具接线 grep 命中；复现链五件套样例在位 |
+| `firmware-pentest/`（新） | OWASP FSTM 七阶段通用化（lg-webos 单例吸收为通例，双向引用）；IoT 目标不豁免授权门（设备所有权/授权前置） | 七阶段每阶段 ≥1 工具或降级路径 |
+
+**派发机制首例沉淀**（本次执行链三类障碍的根治，手续固化于 `orchestrator-cli-reference` skill「T2/T3 卡 HumanGate 授权登记」节）：tier=T2 卡派发前须有 HumanGate grant，用户会话内裁决按 user-oral-＜日期＞ 先例登记（note 引原话——登记用户已给出的决定，非 agent 自批）；worktree 工作区 branch_name 每次派发重解析使 grant 修订哈希失效——T2 卡一律 dir 工作区，用户裁决已消除方案不确定性时按判据重打分 T1（验收冻结＋单域＋可重派）。
+
+**边界声明**：六新技能全部按模式自写，外部仓库零正文 vendor（唯一例外 awesome 仓 MIT 单文件 re_index.py，license 头保留）；执行段 TTVV 36 分钟（13:15 五路全并行→13:51 全 done，对照同规模 teamai G1-G5 批 80 分钟），整链墙钟含派发机制学费约 13 小时（missing_grant 授权登记空窗/worktree 哈希漂移/落板异常三类，根治手法已固化不复现）。
+
+- **落点**：`~/.hermes/skills/hack-team/{ctf-orchestration,js-api-reverse,patch-diff-exploit,firmware-pentest,reverse-ecosystem-index}/`（新五件）＋`knowledge-base/`、`skill-resolver/`（升级两件）；正典位四 hack profile symlink 板共享，入位即全队可见。
+
+---
+
 ## 5、运转链、迭代闭环与环境阶段纪律
 
 第 3 章定义机制，第 4 章把机制接到载体；本章验证这条链是否真正闭合。它不再新增机制或配置，而是沿着「输入 → 执行 → 证据 → 判定 → 回流」观察系统：先看七域如何共同运转，再看失败如何生成改进任务，最后说明建设期的改动纪律。其输出只有两类：继续运行的反馈，或回写 §3/§4 的修复任务。
