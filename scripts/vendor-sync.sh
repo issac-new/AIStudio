@@ -19,7 +19,7 @@ if [ -n "$_src_real" ] && [ "$_src_real" = "$_dst_real" ]; then
 fi
 [ -d "$src/.git" ] || { echo "[vendor-sync] 升级源必须是 git 仓: $src"; exit 1; }
 ver="$(git -C "$src" describe --tags --always 2>/dev/null || git -C "$src" rev-parse --short HEAD)"
-echo "[vendor-sync] $tree: $ver → $dst（整树替换）"
+echo "[vendor-sync] $tree: $ver → ${dst}（整树替换）"
 rm -rf "$dst"
 mkdir -p "$dst"
 git -C "$src" archive --format=tar HEAD | tar -x -C "$dst"

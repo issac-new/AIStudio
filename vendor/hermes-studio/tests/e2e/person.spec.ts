@@ -102,7 +102,31 @@ async function setup(page: Page, mode: 'light' | 'dark', wallpaper = true, custo
       })
       return route.fulfill({ json: { cleared: true } })
     }
+    if (path.endsWith('/tasks/task1/queue/insert')) {
+      if (body.expected_revision !== state.tasks[0].revision || body.expected_execution_id !== state.tasks[0].execution_id) return route.fulfill({status:409,json:{error:'Task changed'}})
+      if (state.rejectInsertion) return route.fulfill({status:409,json:{error:'Task insertion unavailable: unsupported'}})
+      const index=state.pending.findIndex((item:any)=>item.id===body.queue_id)
+      if(index<0) return route.fulfill({status:409,json:{error:'Queued execution changed'}})
+      state.pending.unshift(...state.pending.splice(index,1))
+      state.insertion={queueId:body.queue_id,phase:'waiting_for_tool_batch'}; state.tasks[0].revision++
+      return route.fulfill({json:{task:state.tasks[0],pending:state.pending,...(state.canInsert ? {canInsert:true,insertion:state.insertion} : {})}})
+    }
+    if (path.endsWith('/tasks/task1/queue/remove')) {
+      state.removeAttempted = true
+      await state.beforeRemove?.()
+      if (state.removeFailure) {
+        if (state.removeFailure.abort) return route.abort('failed')
+        if (state.removeFailure.status === 409) state.tasks[0].revision++
+        return route.fulfill({ status: state.removeFailure.status, json: { error: state.removeFailure.error } })
+      }
+      if (body.expected_revision !== state.tasks[0].revision || body.expected_execution_id !== state.tasks[0].execution_id) return route.fulfill({ status: 409, json: { error: 'Task changed' } })
+      if (state.insertion?.queueId === body.queue_id) return route.fulfill({ status: 409, json: { error: 'Another insertion is in progress' } })
+      state.pending = state.pending.filter((item: any) => item.id !== body.queue_id)
+      state.tasks[0].revision++
+      return route.fulfill({ json: { task: state.tasks[0], pending: state.pending, canRemove: state.canRemove, canInsert: !!state.canInsert, insertion: state.insertion || null } }).catch(() => {})
+    }
     if (path.endsWith('/tasks/task1/chat')) {
+      if (req.method() === 'GET' && state.removeAttempted && state.failChatReadAfterRemove) return route.fulfill({ status: 503, json: { error: 'Refresh unavailable' } })
       if (req.method() === 'POST') {
         if (body.expected_revision !== state.tasks[0].revision) return route.fulfill({ status: 409, json: { error: 'Task changed' } })
         state.pending ||= []
@@ -112,7 +136,7 @@ async function setup(page: Page, mode: 'light' | 'dark', wallpaper = true, custo
       }
       const executions = state.executions || [{ id: state.tasks[0].execution_id || 'execution1', session_id: 'person-task-task1', state: state.tasks[0].execution_state, created_at: 1 }]
       const execution = executions.find((run: any) => run.id === new URL(req.url()).searchParams.get('execution_id')) || executions[0]
-      return route.fulfill({ json: { pending: state.pending || [], task: state.tasks[0], executions, execution, session: { ...state.session, id: execution.session_id, title: state.tasks[0].title } } })
+      return route.fulfill({ json: { canInsert: !!state.canInsert, ...(state.canRemove === undefined ? {} : { canRemove: state.canRemove }), insertion: state.insertion || null, pending: state.pending || [], task: state.tasks[0], executions, execution, session: { ...state.session, id: execution.session_id, title: state.tasks[0].title } } })
     }
     if (path.endsWith('/tasks/apply')) {
       if (body.expected_revision !== state.tasks[0].revision || (body.action === 'stop' && body.execution_id !== state.tasks[0].execution_id)) return route.fulfill({ status: 409, json: { error: 'Execution changed' } })
@@ -121,6 +145,7 @@ async function setup(page: Page, mode: 'light' | 'dark', wallpaper = true, custo
       state.tasks[0].revision++
       return route.fulfill({ json: { task: state.tasks[0] } })
     }
+    if (path.endsWith('/flows/query')) return route.fulfill({ json: { flows: [...(state.flows || []),...(state.active_flows || [])].filter(flow => flow.id === body.flow_id).slice(0,1) } })
     if (path.endsWith('/flows/apply')) {
       const flow = state.flows.find((item: any) => item.id === body.flow_id)
       if (body.expected_revision !== flow.revision) return route.fulfill({status:409,json:{error:'Flow changed'}})
@@ -152,6 +177,201 @@ async function setup(page: Page, mode: 'light' | 'dark', wallpaper = true, custo
   })
   return { state, operations }
 }
+
+async function setupTaskRemoval(page: Page, mode: 'light' | 'dark' = 'light') {
+  const scenario = await setup(page, mode, mode === 'light', false)
+  Object.assign(scenario.state, {
+    canRemove: true,
+    canInsert: true,
+    pending: [
+      { id: 'first', input: [{ type: 'text', text: 'Keep the earlier message' }] },
+      { id: 'selected', input: [{ type: 'text', text: 'Remove this queued message' }, { type: 'file', name: 'report.txt' }] },
+      { id: 'last', input: [{ type: 'text', text: 'Keep the last message' }] },
+    ],
+  })
+  await page.addInitScript(() => {
+    for (const id of ['person-task-task1', 'person-task-older']) (window as any).__PW_CHAT_SOCKET_RESUMES__[id] = { session_id: id, isWorking: true, messages: [], events: [] }
+  })
+  const drawer = page.locator('.person-task-chat')
+  const open = async () => {
+    await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+    await page.getByRole('button', { name: 'View in conversation: Check report', exact: true }).click()
+    await expect(drawer.locator('.queue-float-item')).toHaveCount(scenario.state.pending.length)
+  }
+  return { ...scenario, drawer, open, attempts: () => scenario.operations.filter(op => op.path.endsWith('/queue/remove')) }
+}
+
+for (const mode of ['light', 'dark'] as const) {
+  test(`task queue removal preserves other inputs and survives drawer reopen in ${mode}`, async ({ page }, testInfo) => {
+    const { state, operations, drawer, open, attempts } = await setupTaskRemoval(page, mode)
+    await page.setViewportSize({ width: mode === 'light' ? 390 : 1440, height: 900 })
+    await page.goto('/#/person'); await open()
+    const items = drawer.locator('.queue-float-item')
+    await items.filter({ hasText: 'Remove this queued message' }).getByRole('button', { name: 'Remove queued message', exact: true }).click()
+    await expect(items).toHaveCount(2)
+    expect(await items.locator('.queue-text').allTextContents()).toEqual(['Keep the earlier message', 'Keep the last message'])
+    expect(attempts()[0].body).toMatchObject({ queue_id: 'selected', expected_execution_id: 'execution1', expected_revision: 0 })
+    expect(attempts()[0].body.idempotency_key).toBeTruthy()
+    expect(state.tasks[0]).toMatchObject({ status: 'open', execution_state: 'running', running: true })
+    expect(operations.some(op => op.path.endsWith('/tasks/apply'))).toBe(false)
+    expect(await emitted(page, 'cancel_queued_run')).toEqual([])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`task-queue-removal-${mode}.png`), animations: 'disabled' })
+    await page.keyboard.press('Escape'); await expect(drawer).toHaveCount(0)
+    await open(); await expect(items).toHaveCount(2)
+    await items.first().getByRole('button', { name: 'Remove queued message', exact: true }).click()
+    await expect(items).toHaveCount(1)
+    await items.first().getByRole('button', { name: 'Remove queued message', exact: true }).click()
+    await expect(drawer.locator('.task-chat-queue')).toHaveCount(0)
+    expect(attempts().map(op => op.body.expected_revision)).toEqual([0, 1, 2])
+    expect(new Set(attempts().map(op => op.body.idempotency_key)).size).toBe(3)
+    await expect(drawer.locator('.input-textarea')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`task-queue-empty-${mode}.png`), animations: 'disabled' })
+  })
+}
+
+test('task queue removal blocks duplicate actions while the request is pending', async ({ page }) => {
+  const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  state.beforeRemove = () => gate
+  await page.goto('/#/person'); await open()
+  const removes = drawer.locator('.queue-remove')
+  await removes.first().click()
+  await expect.poll(() => attempts().length).toBe(1)
+  await expect(drawer.locator('.task-chat-queue')).toHaveAttribute('aria-busy', 'true')
+  for (const button of await removes.all()) await expect(button).toBeDisabled()
+  await expect(drawer.getByRole('button', { name: 'Stop task', exact: true })).toBeDisabled()
+  await page.screenshot({ path: test.info().outputPath('task-queue-removal-pending.png'), animations: 'disabled' })
+  await removes.nth(1).evaluate((button: HTMLButtonElement) => button.click())
+  expect(attempts()).toHaveLength(1)
+  release()
+  await expect(drawer.locator('.queue-float-item')).toHaveCount(2)
+  await expect(removes.first()).toBeEnabled()
+})
+
+test('task queue removal protects the inserting item and permits removal of another input', async ({ page }) => {
+  const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+  state.insertion = { queueId: 'selected', phase: 'waiting_for_tool_batch' }
+  await page.goto('/#/person'); await open()
+  const selected = drawer.locator('.queue-float-item').filter({ hasText: 'Remove this queued message' })
+  await expect(selected.locator('.queue-remove')).toBeDisabled()
+  await drawer.locator('.queue-float-item').first().locator('.queue-remove').click()
+  await expect(drawer.locator('.queue-float-item')).toHaveCount(2)
+  await expect(selected.locator('.queue-remove')).toBeDisabled()
+  expect(state.insertion.queueId).toBe('selected')
+  expect(attempts().map(op => op.body.queue_id)).toEqual(['first'])
+})
+
+test('task queue removal hides controls for old backends without the capability', async ({ page }) => {
+  const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+  delete state.canRemove
+  await page.goto('/#/person'); await open()
+  await expect(drawer.locator('.queue-remove')).toHaveCount(0)
+  expect(attempts()).toEqual([])
+})
+
+test('task queue removal prevents operations on historical and stopping executions', async ({ page }) => {
+  const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+  state.executions = [
+    { id: 'execution1', session_id: 'person-task-task1', created_at: 2000, state: 'running' },
+    { id: 'older', session_id: 'person-task-older', created_at: 1000, state: 'finished' },
+  ]
+  await page.goto('/#/person'); await open()
+  await drawer.getByLabel('Execution history', { exact: true }).click()
+  await page.locator('.n-base-select-option:visible').last().click()
+  await expect(drawer.locator('.queue-remove')).toHaveCount(0)
+  state.tasks[0].execution_state = 'stopping'
+  await drawer.getByLabel('Execution history', { exact: true }).click()
+  await page.locator('.n-base-select-option:visible').first().click()
+  await expect(drawer.locator('.queue-remove')).toHaveCount(3)
+  for (const button of await drawer.locator('.queue-remove').all()) await expect(button).toBeDisabled()
+  expect(attempts()).toEqual([])
+})
+
+for (const status of ['completed', 'closed']) {
+  test(`task queue removal hides controls when the task becomes ${status}`, async ({ page }) => {
+    const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+    await page.goto('/#/person'); await open()
+    state.tasks[0].status = status
+    await emit(page, 'person.updated', { session_id: 'person-main-1' })
+    await expect(drawer).toBeVisible()
+    await expect(drawer.locator('.queue-remove')).toHaveCount(0)
+    expect(attempts()).toEqual([])
+  })
+}
+
+for (const failure of [
+  { status: 403, error: 'Resource permission revoked' },
+  { status: 409, error: 'Task changed; refresh and try again' },
+  { status: 404, error: 'Deletion endpoint unavailable' },
+  { status: 500, error: 'Server unavailable' },
+  { status: 0, abort: true, error: 'Failed to fetch' },
+]) {
+  test(`task queue removal preserves messages and recovers after ${failure.status || 'network'} failure`, async ({ page }) => {
+    const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+    state.removeFailure = failure
+    state.failChatReadAfterRemove = failure.status === 403
+    await page.goto('/#/person'); await open()
+    const removes = drawer.locator('.queue-remove')
+    await removes.first().click()
+    await expect(drawer.locator('.task-chat-alert').filter({ hasText: failure.error })).toBeVisible()
+    await expect(drawer.locator('.queue-float-item')).toHaveCount(3)
+    await expect(removes.first()).toBeEnabled()
+    expect(attempts()).toHaveLength(1)
+    const revision = state.tasks[0].revision
+    state.removeFailure = null; state.failChatReadAfterRemove = false
+    await removes.first().click()
+    await expect(drawer.locator('.queue-float-item')).toHaveCount(2)
+    await expect(drawer.locator('.task-chat-alert')).toHaveCount(0)
+    expect(attempts()[1].body.expected_revision).toBe(revision)
+    expect(attempts()[1].body.idempotency_key).not.toBe(attempts()[0].body.idempotency_key)
+  })
+}
+
+test('task queue removal retains a confirmed deletion when the follow-up refresh fails', async ({ page }) => {
+  const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+  state.failChatReadAfterRemove = true
+  await page.goto('/#/person'); await open()
+  await drawer.locator('.queue-remove').first().click()
+  await expect(drawer.locator('.task-chat-alert')).toContainText('Could not load tasks')
+  await expect(drawer.getByRole('button', { name: 'Retry', exact: true })).toBeEnabled()
+  await expect(drawer.locator('.queue-float-item')).toHaveCount(2)
+  await expect(drawer.locator('.queue-float-item').filter({ hasText: 'Keep the earlier message' })).toHaveCount(0)
+  expect(attempts()).toHaveLength(1)
+  state.failChatReadAfterRemove = false
+  await drawer.getByRole('button', { name: 'Retry', exact: true }).click()
+  await expect(drawer.locator('.task-chat-alert')).toHaveCount(0)
+  await expect(drawer.locator('.queue-float-item')).toHaveCount(2)
+})
+
+test('task queue removal reconciles an accepted deletion after closing and reopening the drawer', async ({ page }) => {
+  const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+  let release!: () => void
+  state.beforeRemove = () => new Promise<void>(resolve => { release = resolve })
+  await page.goto('/#/person'); await open()
+  await drawer.locator('.queue-remove').first().click()
+  await expect.poll(() => attempts().length).toBe(1)
+  await page.keyboard.press('Escape'); await expect(drawer).toHaveCount(0)
+  release()
+  await expect.poll(() => state.pending.length).toBe(2)
+  await open()
+  await expect(drawer.locator('.queue-float-item')).toHaveCount(2)
+  await expect(drawer.locator('.task-chat-alert')).toHaveCount(0)
+})
+
+test('task queue removal refreshes a queued input that started before the delete reached the server', async ({ page }) => {
+  const { state, drawer, open, attempts } = await setupTaskRemoval(page)
+  state.beforeRemove = async () => { state.pending.shift() }
+  state.removeFailure = { status: 409, error: 'Queued execution changed; refresh and try again' }
+  await page.goto('/#/person'); await open()
+  await drawer.locator('.queue-remove').first().click()
+  await expect(drawer.locator('.task-chat-alert')).toContainText('Queued execution changed')
+  await expect(drawer.locator('.queue-float-item')).toHaveCount(2)
+  await expect(drawer.locator('.queue-float-item').filter({ hasText: 'Keep the earlier message' })).toHaveCount(0)
+  expect(attempts()).toHaveLength(1)
+  expect(state.tasks[0].execution_state).toBe('running')
+})
 
 for (const listState of ['existing', 'empty', 'unavailable']) {
   test(`leaving a focused Person result sends to ordinary chat (${listState} list)`, async ({ page }) => {
@@ -779,7 +999,7 @@ test('Person scopes task indicators to the conversation and receives remote unre
   await backgroundTaskCount(page, 1)
   await expect(island).toBeVisible()
   await switchPersonSession(page, second.id)
-  await expect(island.locator('.person-task-island__count')).toHaveText('2')
+  await expect(island.locator('.activity-counter > span')).toHaveText('2')
   expect(await emitted(page, 'sessions.read')).not.toContainEqual({ sessionId: second.id, messageId: 10 })
   await page.evaluate(sessionId => {
     const socket = (window as any).__PW_CHAT_SOCKET__.allSockets.find((socket: any) => socket.options?.query?.session_state === '1')
@@ -937,8 +1157,8 @@ for (const mode of ['light', 'dark'] as const) {
     expect(animations).toBeGreaterThan(0)
     await page.screenshot({ path: `/tmp/person-task-island-enter-${mode}.png` })
     await page.evaluate(() => document.querySelector('.person-task-activity')!.getAnimations({ subtree: true }).forEach(animation => animation.finish()))
-    await expect(page.getByRole('button', { name: 'zhezhe · Background tasks · 3', exact: true })).toBeVisible()
-    await expect(island.locator('img')).toHaveAttribute('src', '/person/searching.gif')
+    await expect(page.getByRole('button', { name: 'Person · Background tasks · 3', exact: true })).toBeVisible()
+    await expect(island.locator('.person-task-island__avatar')).toHaveAttribute('src', '/person/searching.gif')
     const box = await island.boundingBox()
     expect(Math.abs(box!.x + box!.width / 2 - messageBounds!.x - messageBounds!.width / 2)).toBeLessThan(1)
     await expect(page.locator('.person-task-activity')).toHaveCSS('position', 'absolute')
@@ -951,14 +1171,17 @@ for (const mode of ['light', 'dark'] as const) {
     await island.evaluate(element => { (element as HTMLElement).dataset.instance = 'same-task-animation' })
     // The server count can exceed the current task-list page; feedback never hides active tasks.
     await backgroundTaskCount(page, 24, 'done')
-    await expect(page.getByRole('button', { name: 'zhezhe · Background tasks · 24', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Person · Background tasks · 24', exact: true })).toBeVisible()
     await expect(island).toHaveAttribute('data-instance', 'same-task-animation')
-    await expect(island.locator('img')).toHaveAttribute('src', '/person/searching.gif')
-    await island.click()
-    await expect(page.locator('.session-tasks-drawer')).toBeVisible()
-    await expect(island).toHaveAttribute('aria-expanded', 'true')
+    await expect(island.locator('.person-task-island__avatar')).toHaveAttribute('src', '/person/searching.gif')
+    const toggle = island.locator('.person-task-island__toggle')
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(island.locator('.activity-details')).toBeVisible()
+    await expect.poll(async () => (await island.boundingBox())!.width).toBeGreaterThan(box!.width)
+    expect(await composer.boundingBox()).toEqual(composerBounds)
     await page.keyboard.press('Escape')
-    await expect(page.locator('.session-tasks-drawer')).not.toBeVisible()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
     await backgroundTaskCount(page, 0, 'idle')
     await expect(island).toHaveCount(0)
     expect(await messages.boundingBox()).toEqual(messageBounds)
@@ -973,7 +1196,10 @@ for (const mode of ['light', 'dark'] as const) {
     }).toBeLessThan(1)
     await page.locator('.person-compose textarea').click()
     await expect(page.locator('.person-compose textarea')).toBeFocused()
-    await island.focus(); await page.keyboard.press('Enter')
+    await toggle.focus(); await page.keyboard.press('Enter')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(island.getByRole('button', { name: 'Tasks', exact: true })).toHaveCount(0)
+    await page.locator('.person-header-actions').getByRole('button', { name: 'Tasks', exact: true }).click()
     await expect(page.locator('.session-tasks-drawer')).toBeVisible()
     await page.keyboard.press('Escape')
     await page.goto('/#/hermes/theme')
@@ -1025,12 +1251,13 @@ test('Person background-task island supports reduced motion and hides for main-c
   await backgroundTaskCount(page, 0, 'thinking')
   await expect(page.locator('.person-task-island')).toHaveCount(0)
   await backgroundTaskCount(page, 1)
-  const island = page.getByRole('button', { name: 'zhezhe · Background tasks · 1', exact: true })
+  const island = page.getByRole('button', { name: 'Person · Background tasks · 1', exact: true })
   await expect(island).toBeVisible()
-  await expect(island.locator('img')).toHaveAttribute('src', '/coding-agents/person.jpg')
+  await expect(island.locator('.person-task-island__avatar')).toHaveAttribute('src', '/coding-agents/person.jpg')
   expect(await island.evaluate(element => element.getAnimations().length)).toBe(0)
   await island.click()
-  await expect(page.locator('.session-tasks-drawer')).toBeVisible()
+  await expect(island).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('.activity-details')).toBeVisible()
 })
 
 test('Person general settings save independently, survive refresh and retain drafts across tabs', async ({ page }) => {
@@ -1354,7 +1581,7 @@ for (const mode of ['light', 'dark'] as const) {
     await expect(page.locator('.input-model-button')).toHaveAttribute('aria-label', 'global-model')
 
     await page.getByRole('button', { name: 'Tasks', exact: true }).click()
-    await expect(page.locator('[role=status]:visible')).toContainText('Running')
+    await expect(page.locator('.session-tasks-drawer .task-row [role=status]:visible')).toContainText('Running')
     await expect(page.locator('.task-row button[aria-haspopup=menu]:visible')).toBeDisabled()
     await expect(page.getByRole('button', { name: /^(Pause|Resume|Cancel run|Accept result|Details)$/ })).toHaveCount(0)
     await page.screenshot({ path: `/tmp/person-tasks-${mode}-running.png`, animations: 'disabled' })
@@ -1421,6 +1648,109 @@ async function emit(page: Page, event: string, payload: Record<string, unknown>)
 }
 async function emitted(page: Page, event: string) {
   return page.evaluate(event => (window as any).__PW_CHAT_SOCKET__.emitted.filter((e: any) => e.event === event).map((e: any) => e.payload), event)
+}
+
+test('Person preserves 1 2 3 through partial queue snapshots and refresh', async ({ page }) => {
+  await setup(page, 'dark', false)
+  await page.goto('/#/person?session=person-main-1')
+  await expect(page.locator('.person-view')).toHaveAttribute('aria-busy', 'false')
+  const input = page.locator('.person-compose .input-textarea')
+  const queue = page.locator('.queue-float-panel')
+  await input.fill('1')
+  await input.press('Enter')
+  await expect.poll(() => emitted(page, 'run').then(runs => runs.length)).toBe(1)
+  await emit(page, 'run.started', { queue_id: (await emitted(page, 'run'))[0].queue_id, queue_length: 0 })
+  for (const text of ['2', '3']) {
+    await input.fill(text)
+    await input.press('Enter')
+  }
+  await expect.poll(() => emitted(page, 'run').then(runs => runs.length)).toBe(3)
+  const [, second, third] = await emitted(page, 'run')
+  await emit(page, 'run.queued', { queue_id: second.queue_id, queue_length: 1,
+    queued_messages: [{ id: second.queue_id, role: 'user', content: '2', timestamp: 1 }] })
+  await expect(queue.locator('.queue-float-item')).toHaveCount(2)
+  await expect(queue).toContainText('2')
+  await expect(queue).toContainText('3')
+  await emit(page, 'message.delta', { delta: 'reply 1' })
+  await emit(page, 'run.completed', { output: 'reply 1', queue_remaining: 1 })
+  await emit(page, 'run.queued', { dequeued_queue_id: second.queue_id, queue_length: 0, queued_messages: [] })
+  await emit(page, 'run.started', { run_id: 'turn-2', queue_id: second.queue_id, queue_length: 0 })
+  await expect(queue.locator('.queue-float-item')).toHaveCount(1)
+  await expect(queue).toContainText('3')
+  await expect(page.locator('.msg-content.user .markdown-body')).toHaveText(['1', '2'])
+  await page.screenshot({ path: test.info().outputPath('second-running-third-queued.png'), animations: 'disabled' })
+  await emit(page, 'run.queued', { queue_id: third.queue_id, queue_length: 1,
+    queued_messages: [{ id: third.queue_id, role: 'user', content: '3', timestamp: 1 }] })
+  await emit(page, 'message.delta', { run_id: 'turn-2', delta: 'reply 2' })
+  await emit(page, 'run.completed', { run_id: 'turn-2', output: 'reply 2', queue_remaining: 1 })
+  await emit(page, 'run.queued', { dequeued_queue_id: third.queue_id, queue_length: 0, queued_messages: [] })
+  await emit(page, 'run.started', { run_id: 'turn-3', queue_id: third.queue_id, queue_length: 0 })
+  await emit(page, 'message.delta', { run_id: 'turn-3', delta: 'reply 3' })
+  await emit(page, 'run.completed', { run_id: 'turn-3', output: 'reply 3', queue_remaining: 0 })
+  const expected = ['1', 'reply 1', '2', 'reply 2', '3', 'reply 3']
+  await expect(page.locator('.msg-content .markdown-body')).toHaveText(expected)
+  await expect(queue).toHaveCount(0)
+  await page.addInitScript(messages => {
+    (window as any).__PW_CHAT_SOCKET_RESUMES__ = { ...(window as any).__PW_CHAT_SOCKET_RESUMES__, 'person-main-1': {
+      session_id: 'person-main-1', isWorking: false, events: [], queueLength: 0, queueMessages: [], messages,
+    } }
+  }, expected.map((content, index) => ({ id: index + 1, role: index % 2 ? 'assistant' : 'user', content, timestamp: index + 1 })))
+  await page.reload()
+  await expect(page.locator('.msg-content .markdown-body')).toHaveText(expected)
+  await expect(queue).toHaveCount(0)
+  await expect(page.locator('.person-view')).toHaveAttribute('aria-busy', 'false')
+  await expect(page.locator('.page-loading-overlay')).toHaveCount(0)
+  await expect(page.locator('.person-chat-surface')).toHaveCSS('opacity', '1')
+  await page.screenshot({ path: test.info().outputPath('ordered-after-refresh.png'), animations: 'disabled' })
+})
+
+for (const scenario of ['active', 'resumed'] as const) {
+  test(`Person clears a started input from the queue (${scenario})`, async ({ page }) => {
+    await setup(page, scenario === 'active' ? 'light' : 'dark', false)
+    if (scenario === 'resumed') {
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.addInitScript(() => {
+        Object.assign((window as any).__PW_CHAT_SOCKET_RESUMES__['person-main-1'], {
+          isWorking: true, queueLength: 2, queueMessages: [
+            { id: 'follow-up-1', role: 'user', content: 'First queued follow-up', timestamp: 1 },
+            { id: 'follow-up-2', role: 'user', content: 'Later queued follow-up', timestamp: 2 },
+          ],
+        })
+      })
+    }
+    await page.goto('/#/person?session=person-main-1')
+    const queue = page.locator('.queue-float-panel')
+    let queueId = 'follow-up-1'
+    let text = 'First queued follow-up'
+    if (scenario === 'active') {
+      const input = page.locator('.person-compose .input-textarea')
+      await input.fill('Initial request')
+      await input.press('Enter')
+      await expect.poll(() => emitted(page, 'run').then(runs => runs.length)).toBe(1)
+      await emit(page, 'run.started', { queue_id: (await emitted(page, 'run'))[0].queue_id, queue_length: 0 })
+      text = 'Follow-up after the previous run'
+      await input.fill(text)
+      await input.press('Enter')
+      await expect.poll(() => emitted(page, 'run').then(runs => runs.length)).toBe(2)
+      queueId = (await emitted(page, 'run'))[1].queue_id
+    }
+    await expect(queue).toContainText(text)
+    await expect(page.locator('.msg-content.user').filter({ hasText: text })).toHaveCount(0)
+
+    // A direct start or a reconnect may have no matching run.queued dequeue.
+    await emit(page, 'run.started', { run_id: 'follow-up-run', queue_id: queueId, queue_length: scenario === 'resumed' ? 1 : 0 })
+    if (scenario === 'active') await expect(queue).toHaveCount(0)
+    else {
+      await expect(queue.locator('.queue-float-item')).toHaveCount(1)
+      await expect(queue).toContainText('Later queued follow-up')
+      await expect(queue).not.toContainText(text)
+    }
+    await emit(page, 'run.peer_user_message', { message: { id: queueId, role: 'user', content: text, timestamp: 3 } })
+    await expect(page.locator('.msg-content.user').filter({ hasText: text })).toHaveCount(1)
+    await expect(page.locator('.person-view')).toHaveAttribute('aria-busy', 'false')
+    await expect(page.locator('.page-loading-overlay')).toHaveCount(0)
+    await page.screenshot({ path: test.info().outputPath('queue-started.png'), animations: 'disabled' })
+  })
 }
 
 test('Person displays a delivered screenshot while keeping the artifact tool hidden', async ({ page }) => {
@@ -1613,16 +1943,16 @@ test('Person saves agent presets, preserves unsaved edits and only offers openin
   await emit(page, 'person.updated', {})
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Tasks', exact: true }).click()
-  await expect(page.locator('[role=status]:visible')).toContainText('Completed')
+  await expect(page.locator('.session-tasks-drawer .task-row [role=status]:visible')).toContainText('Completed')
   await expect(page.getByRole('button', { name: 'Accept result', exact: true })).toHaveCount(0)
   const status = page.locator('.task-row button[aria-haspopup=menu]:visible')
   await status.click()
   await expect(page.getByRole('menuitem')).toHaveCount(2)
   await page.getByRole('menuitem', { name: 'Closed', exact: true }).click()
-  await expect(page.locator('[role=status]:visible')).toContainText('Closed')
+  await expect(page.locator('.session-tasks-drawer .task-row [role=status]:visible')).toContainText('Closed')
   await status.click()
   await page.getByRole('menuitem', { name: 'Incomplete', exact: true }).click()
-  await expect(page.locator('[role=status]:visible')).toContainText('Open')
+  await expect(page.locator('.session-tasks-drawer .task-row [role=status]:visible')).toContainText('Open')
   await page.screenshot({ path: '/tmp/person-tasks-mobile.png', animations: 'disabled' })
   expect(operations.filter(op => op.path.endsWith('/tasks/apply')).map(op => op.body.action)).toEqual(['close', 'reopen'])
 })
@@ -1676,7 +2006,7 @@ for (const scenario of ['after-request', 'reconnect', 'idle-schedule'] as const)
     await expect(page.getByText('Xiamen is sunny, 25°C.', { exact: true })).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Tasks', exact: true }).click()
-    await expect(page.locator('[role=status]:visible')).toContainText('Completed')
+    await expect(page.locator('.session-tasks-drawer .task-row [role=status]:visible')).toContainText('Completed')
     expect(operations.some(op => op.path.endsWith('/tasks/apply'))).toBe(false)
     if (scenario === 'after-request') await page.screenshot({ path: '/tmp/person-background-return.png', animations: 'disabled' })
   })
@@ -1762,6 +2092,86 @@ test('Person uses the single-chat task drawer with search and filters but no pag
 })
 
 for (const mode of ['light', 'dark'] as const) {
+  test(`Person task loading recovers and coalesces detail updates in ${mode}`, async ({ page }, testInfo) => {
+    const { state } = await setup(page, mode, mode === 'light', false)
+    if (mode === 'dark') await page.setViewportSize({ width: 390, height: 844 })
+    await page.addInitScript(() => {
+      (window as any).__PW_CHAT_SOCKET_RESUMES__['person-task-task1'] = {
+        session_id: 'person-task-task1', messages: [{ id: 'result', role: 'assistant', content: 'Recovered task output', timestamp: 1 }], isWorking: false, events: [],
+      }
+    })
+    let attempts = 0
+    await page.route('**/api/studio/person/tasks/task1/chat**', route => {
+      if (++attempts === 1) return route.fulfill({ status: 503, json: { error: 'Temporary failure' } })
+      return route.fallback()
+    })
+    await page.goto('/#/person')
+    await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+    await page.getByRole('button', { name: 'View in conversation: Check report', exact: true }).click()
+    const drawer = page.locator('.person-task-chat')
+    await expect(drawer.getByRole('button', { name: 'Retry', exact: true })).toBeVisible()
+    await expect(drawer.locator('.task-chat-loading')).toHaveCount(0)
+    await page.screenshot({ path: testInfo.outputPath('detail-load-error.png') })
+    await drawer.getByRole('button', { name: 'Retry', exact: true }).click()
+    await expect(drawer.getByText('Recovered task output', { exact: true })).toBeVisible()
+    await expect(drawer.getByRole('button', { name: 'Retry', exact: true })).toHaveCount(0)
+
+    let reads = 0, releaseFirst!: () => void, releaseNext!: () => void
+    const first = new Promise<void>(resolve => { releaseFirst = resolve })
+    const next = new Promise<void>(resolve => { releaseNext = resolve })
+    await page.route('**/api/studio/person/tasks/task1/chat**', async route => {
+      reads++
+      if (reads === 1) await first
+      if (reads === 2) await next
+      await route.fallback()
+    })
+    await page.evaluate(() => {
+      for (let i = 0; i < 20; i++) (window as any).__PW_CHAT_SOCKET__.broadcast('person.updated', { session_id: 'person-main-1' })
+    })
+    await expect.poll(() => reads).toBe(1)
+    state.tasks[0].title = 'First update'; releaseFirst()
+    await expect.poll(() => reads).toBe(2)
+    await expect(drawer.locator('.task-chat-heading')).toContainText('First update')
+    await expect(drawer.getByText('Recovered task output', { exact: true })).toBeVisible()
+    state.tasks[0].title = 'Latest update'; releaseNext()
+    await expect(drawer.locator('.task-chat-heading')).toContainText('Latest update')
+    expect(reads).toBe(2)
+    await page.screenshot({ path: testInfo.outputPath('detail-load-recovered.png') })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+
+  test(`Person task loading publishes the first list response during an update burst in ${mode}`, async ({ page }, testInfo) => {
+    await setup(page, mode, mode === 'light', false)
+    if (mode === 'dark') await page.setViewportSize({ width: 390, height: 844 })
+    let reads = 0, releaseFirst!: () => void, releaseNext!: () => void
+    const first = new Promise<void>(resolve => { releaseFirst = resolve })
+    const next = new Promise<void>(resolve => { releaseNext = resolve })
+    await page.route('**/api/studio/person/tasks/query', async route => {
+      reads++
+      if (reads === 1) await first
+      if (reads === 2) await next
+      await route.fallback()
+    })
+    await page.goto('/#/person')
+    await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+    await expect.poll(() => reads).toBe(1)
+    await page.evaluate(() => {
+      for (let i = 0; i < 20; i++) (window as any).__PW_CHAT_SOCKET__.broadcast('person.updated', { session_id: 'person-main-1' })
+    })
+    expect(reads).toBe(1)
+    releaseFirst()
+    const drawer = page.locator('.session-tasks-drawer')
+    await expect(drawer.locator('.task-row')).toHaveCount(1)
+    await expect.poll(() => reads).toBe(2)
+    await expect(drawer.locator('table')).toHaveAttribute('aria-busy', 'false')
+    await page.screenshot({ path: testInfo.outputPath('list-during-followup.png') })
+    releaseNext()
+    await expect(drawer.getByRole('button', { name: 'View in conversation: Check report', exact: true })).toBeVisible()
+    expect(reads).toBe(2)
+  })
+}
+
+for (const mode of ['light', 'dark'] as const) {
   test(`stops a Person task from the list and waits for acknowledgement in ${mode}`, async ({ page }) => {
     const { state, operations } = await setup(page, mode)
     if (mode === 'dark') await page.setViewportSize({ width: 390, height: 844 })
@@ -1779,7 +2189,7 @@ for (const mode of ['light', 'dark'] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     Object.assign(state.tasks[0], { running: false, execution_state: 'interrupted' })
     await emit(page, 'person.updated', {})
-    await expect(page.locator('[role=status]:visible')).toContainText('Interrupted')
+    await expect(page.locator('.session-tasks-drawer .task-row [role=status]:visible')).toContainText('Interrupted')
     await expect(page.getByRole('button', { name: 'Stopping', exact: true })).toHaveCount(0)
     await expect(page.locator('.task-row button[aria-haspopup=menu]:visible')).toBeEnabled()
     expect(await emitted(page, 'abort')).toEqual([])
@@ -1854,10 +2264,10 @@ for (const mode of ['light', 'dark'] as const) {
     await page.keyboard.press('Escape'); await expect(drawer).toHaveCount(0)
     await page.getByRole('button', { name: 'Tasks', exact: true }).click()
     await open()
-    await expect(drawer.locator('.task-chat-queue')).toContainText('1 follow-up(s) queued')
+    await expect(drawer.locator('.task-chat-queue .queue-float-item')).toHaveCount(1)
     await drawer.locator('.input-textarea').fill('Send me the merge result too.')
     await drawer.locator('.input-textarea').press('Enter')
-    await expect(drawer.locator('.task-chat-queue li')).toHaveCount(2)
+    await expect(drawer.locator('.task-chat-queue .queue-float-item')).toHaveCount(2)
     expect(operations.filter(op => op.path.endsWith('/tasks/task1/chat') && op.body).map(op => op.body.expected_revision)).toEqual([0, 1])
     await page.mouse.move(2, 2)
     await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(a => a.effect?.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => {}))) })
@@ -3874,3 +4284,308 @@ test('limits collaboration display and filters to the latest 50 flows',async ({p
   await expect(page).toHaveURL(/session=person-main-1&message=7/)
   await expect(drawer).not.toBeVisible()
 })
+
+
+for(const mode of ['light','dark'] as const){
+  test(`task queue insertion selects a later message and preserves the rest in ${mode}`,async({page},testInfo)=>{
+    const {state,operations}=await setup(page,mode,false,false)
+    state.canInsert=true
+    state.pending=[{id:'first',input:[{type:'text',text:'Keep this earlier follow-up'}]},{id:'selected',input:[{type:'text',text:'Insert this message now'}]}]
+    await page.addInitScript(()=>{(window as any).__PW_CHAT_SOCKET_RESUMES__['person-task-task1']={session_id:'person-task-task1',isWorking:true,messages:[],events:[]}})
+    await page.goto('/#/person')
+    await page.getByRole('button',{name:'Tasks',exact:true}).click()
+    const open=()=>page.getByRole('button',{name:'View in conversation: Check report',exact:true}).click()
+    await open()
+    const drawer=page.locator('.person-task-chat')
+    const items=drawer.locator('.queue-float-item')
+    await expect(items).toHaveCount(2)
+    await items.filter({hasText:'Insert this message now'}).getByRole('button',{name:'Insert queued message',exact:true}).click()
+    await expect(items.first()).toContainText('Insert this message now')
+    await expect(items.nth(1)).toContainText('Keep this earlier follow-up')
+    await expect(drawer.getByRole('button',{name:'Waiting for the current tools to finish'})).toHaveCount(2)
+    await expect(items.locator('.queue-insert').first()).toBeDisabled()
+    const operation=operations.find(op=>op.path.endsWith('/tasks/task1/queue/insert'))
+    expect(operation.body).toMatchObject({queue_id:'selected',expected_execution_id:'execution1',expected_revision:0})
+    expect(operations.some(op=>op.path.endsWith('/tasks/apply'))).toBe(false)
+    expect(await emitted(page,'insert_queued_run')).toEqual([])
+    await page.keyboard.press('Escape');await expect(drawer).toHaveCount(0)
+    await page.getByRole('button',{name:'Tasks',exact:true}).click();await open()
+    await expect(items.first()).toContainText('Insert this message now')
+    await expect(items.locator('.queue-insert').first()).toBeDisabled()
+    await page.screenshot({path:testInfo.outputPath(`task-insertion-${mode}.png`),animations:'disabled'})
+  })
+}
+
+test('task insertion reports a rejected runtime without losing queued messages',async({page})=>{
+  const {state}=await setup(page,'light',false,false)
+  state.canInsert=true;state.rejectInsertion=true
+  state.pending=[{id:'first',input:[{type:'text',text:'Keep my queued message'}]}]
+  await page.addInitScript(()=>{(window as any).__PW_CHAT_SOCKET_RESUMES__['person-task-task1']={session_id:'person-task-task1',isWorking:true,messages:[],events:[]}})
+  await page.goto('/#/person');await page.getByRole('button',{name:'Tasks',exact:true}).click()
+  await page.getByRole('button',{name:'View in conversation: Check report',exact:true}).click()
+  const drawer=page.locator('.person-task-chat')
+  await drawer.getByRole('button',{name:'Insert queued message',exact:true}).click()
+  await expect(drawer.locator('.task-chat-alert')).toContainText('unsupported')
+  await expect(drawer.locator('.queue-float-item')).toContainText('Keep my queued message')
+  await expect(drawer.getByRole('button',{name:'Insert queued message',exact:true})).toBeEnabled()
+})
+
+for(const mode of ['light','dark'] as const){
+  test(`task messages use the same primary and semantic colors as the main chat in ${mode}`,async({page},testInfo)=>{
+    await setup(page,mode,true,false)
+    await page.addInitScript(()=>{
+      const messages=[{id:'user',role:'user',content:'Color sample **strong** *emphasis* [link](https://example.com) and `code`.',timestamp:1},{id:'assistant',role:'assistant',content:'Color sample **strong** *emphasis* [link](https://example.com) and `code`.',timestamp:2}]
+      for(const id of ['person-main-1','person-task-task1'])(window as any).__PW_CHAT_SOCKET_RESUMES__[id]={session_id:id,isWorking:false,messages,events:[]}
+    })
+    await page.goto('/#/person')
+    const main=page.locator('.person-view')
+    await expect(main).toHaveAttribute('aria-busy','false')
+    const read=(root:Locator)=>root.evaluate(element=>Object.fromEntries(['user','assistant'].map(role=>[role,Object.fromEntries(['p','strong','em','a','code'].map(tag=>[tag,getComputedStyle(element.querySelector(`.message.${role} .message-bubble ${tag}`)!).color]))])))
+    await expect(main.locator('.message.assistant .message-bubble p')).toContainText('Color sample')
+    const expected=await read(main)
+    await page.getByRole('button',{name:'Tasks',exact:true}).click()
+    await page.getByRole('button',{name:'View in conversation: Check report',exact:true}).click()
+    const drawer=page.locator('.person-task-chat')
+    await expect(drawer.locator('.message.assistant .message-bubble p')).toContainText('Color sample')
+    expect(await read(drawer)).toEqual(expected)
+    await page.screenshot({path:testInfo.outputPath(`task-text-colors-${mode}.png`),animations:'disabled'})
+  })
+}
+
+for (const width of [1440, 360]) {
+  test(`Person activity capsule places each bot along a turning route at ${width}px`, async ({ page }, testInfo) => {
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    const { state } = await setup(page, width === 1440 ? 'light' : 'dark', false, false)
+    const counts = [1,3,1,8,1,3,1,1]
+    const stages = counts.flatMap((count, group) => Array.from({ length: count }, (_, index) => {
+      const id = `person-main-${group}-${index}`
+      state.conversations.push({ ...state.session, id, title: `Role ${group}-${index}`, bot_type: PERSON_BOTS[(group + index) % PERSON_BOTS.length].type })
+      return { id: `stage-${group}-${index}`, position: group * 8 + index, group_position: group, session_id: id,
+        session_title: `Role ${group}-${index}`, bot_type: PERSON_BOTS[(group + index) % PERSON_BOTS.length].type,
+        goal: 'Work together', state: group < 3 || (group === 3 && index === 0) ? 'completed' : group > 3 ? 'pending' : 'active',
+        result_message_id: null, tasks: group === 3 && index === 3 ? [{ id: 'waiting-task', title: 'Confirm scope', status: 'open', execution_state: 'waiting_user' }] : [] }
+    }))
+    state.flows = [{ id: 'parallel-preview', creator_session_id: state.session.id, title: 'Publish together', goal: 'Review and publish', state: 'active', revision: 0, current_position: 3, error: '', stages }]
+    await page.setViewportSize({ width, height: 950 })
+    await page.goto('/#/person')
+    await backgroundTaskCount(page, 1)
+    const island = page.locator('.person-task-island'), toggle = island.locator('.person-task-island__toggle')
+    await expect(toggle).toHaveAccessibleName('Person · Background tasks · 1 · Flows · 1')
+    const closed = await island.boundingBox(), compose = await page.locator('.person-compose').boundingBox()
+    await toggle.click()
+    const graph = island.locator('.person-flow-graph')
+    await expect(graph.getByRole('button')).toHaveCount(19)
+    await expect.poll(async () => (await island.boundingBox())!.width).toBeGreaterThan(closed!.width + 70)
+    expect(await page.locator('.person-compose').boundingBox()).toEqual(compose)
+    await expect(island.getByRole('button', { name: 'Check report', exact: true })).toBeVisible()
+    const steps = graph.getByRole('listitem')
+    await expect(steps).toHaveCount(19)
+    await expect(graph.locator('.flow-step > .bot-sprite')).toHaveCount(19)
+    await expect(graph.locator('.step-bots')).toHaveCount(0)
+    await expect(graph).toHaveText('')
+    await expect(graph.locator('.route-line')).toHaveCount(7)
+    await expect(graph.locator('.route-passed')).toHaveCount(3)
+    await expect(graph.locator('.route-pending')).toHaveCount(4)
+    const parallel = graph.locator('[data-group="3"] > .bot-sprite')
+    await expect(parallel).toHaveCount(8)
+    await expect.poll(() => graph.locator('[data-group="3"][data-turn="true"]').count()).toBeGreaterThan(0)
+    // A parallel node follows the bend too; it is neither a separate grid nor a chain of edges.
+    const directions = await parallel.evaluateAll(elements => elements.slice(1).map((element,index) => Math.sign(element.getBoundingClientRect().x-elements[index].getBoundingClientRect().x)))
+    if (width === 360) expect(directions).toContain(1)
+    expect(directions).toContain(-1)
+    await expect.poll(() => graph.locator('img').evaluateAll(images => images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true)
+    const animations = await graph.locator('img').evaluateAll(images => images.map(image => (image as HTMLImageElement).src))
+    for (const state of ['done','sleeping','searching']) expect(animations.some(src => src.endsWith(`/${state}.gif`))).toBe(true)
+    // Connect only node boundaries, with no line through any parallel peer or avatar.
+    const geometry = await graph.evaluate(root => {
+      const bounds = root.getBoundingClientRect()
+      const boxes = [...root.querySelectorAll('.bot-sprite')].map(element => element.getBoundingClientRect())
+      const collisions = boxes.some((box,index) => boxes.slice(index+1).some(other => box.left < other.right && box.right > other.left && box.top < other.bottom && box.bottom > other.top))
+      let crossedBots = false, outside = false, internalEdges = false, detached = false
+      const bots = [...root.querySelectorAll('.flow-step')]
+      for (const edge of root.querySelectorAll<SVGPathElement>('.route-line')) {
+        const source = Number(edge.dataset.source), target = Number(edge.dataset.target)
+        internalEdges ||= bots[source].getAttribute('data-group') === bots[target].getAttribute('data-group')
+        const length = edge.getTotalLength(), matrix = edge.getScreenCTM()!
+        const start = edge.getPointAtLength(0).matrixTransform(matrix), end = edge.getPointAtLength(length).matrixTransform(matrix)
+        detached ||= Math.hypot(start.x-boxes[source].x-16,start.y-boxes[source].y-16)>25 || Math.hypot(end.x-boxes[target].x-16,end.y-boxes[target].y-16)>25
+        for (let distance = 0; distance <= length; distance += 1) {
+          const point = edge.getPointAtLength(distance).matrixTransform(matrix)
+          outside ||= point.x < bounds.left || point.x > bounds.right || point.y < bounds.top || point.y > bounds.bottom
+          crossedBots ||= boxes.some(box => point.x > box.left && point.x < box.right && point.y > box.top && point.y < box.bottom)
+        }
+      }
+      return { internalEdges, detached, outside, collisions, crossedBots, overflow: boxes.some(box => box.left < bounds.left || box.right > bounds.right) }
+    })
+    expect(geometry).toEqual({ internalEdges: false, detached: false, outside: false, collisions: false, crossedBots: false, overflow: false })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`capsule-${width}.png`), animations: 'disabled' })
+    await island.screenshot({ path: testInfo.outputPath(`capsule-closeup-${width}.png`), animations: 'disabled' })
+    await graph.screenshot({ path: `/tmp/person-capsule-flow-${width}.png` })
+    const current = state.flows[0].stages.filter(stage => stage.group_position === 3)
+    current.at(-1).state='completed'
+    await emit(page, 'person.updated', {})
+    await expect(graph.locator('.route-passed[data-from="3"]')).toHaveCount(0)
+    current.at(-1).state='active'
+    current.slice(0,-1).forEach(stage => { stage.state='completed' })
+    await emit(page, 'person.updated', {})
+    await expect(graph.locator('.route-passed')).toHaveCount(3)
+    current.at(-1).state='completed'
+    state.flows[0].current_position=4
+    state.flows[0].stages.find(stage => stage.group_position === 4).state='active'
+    await emit(page, 'person.updated', {})
+    await expect(graph.locator('.route-passed')).toHaveCount(4)
+    // Collapsing a flow survives real-time refreshes and only one flow opens at a time.
+    const flowToggle = island.locator('.flow-preview-toggle')
+    await flowToggle.click()
+    await emit(page, 'person.updated', {})
+    await expect(flowToggle).toHaveAttribute('aria-expanded', 'false')
+    await flowToggle.click()
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect.poll(() => graph.locator('img').evaluateAll(images => images.every(image => !(image as HTMLImageElement).src.endsWith('.gif')))).toBe(true)
+    // A node opens and locates its collaboration in the drawer.
+    const target = graph.getByRole('button').first()
+    await target.click()
+    const drawer=page.locator('.person-workspace-drawer')
+    const selected=drawer.getByRole('button',{name:'Publish together',exact:true})
+    await expect(selected).toHaveAttribute('aria-expanded','true')
+    await expect(selected).toBeFocused()
+    await expect(drawer.locator('.flow-card')).toHaveCount(1)
+    await expect(page.locator('.person-title')).toHaveText('Person')
+    expect(errors).toEqual([])
+  })
+}
+
+test('Person capsule includes flows without workers and handles long names, counts and resize', async ({ page }) => {
+  const { state } = await setup(page, 'light', false, false)
+  state.tasks = []
+  state.session.title = 'Ein außergewöhnlich langer mehrsprachiger Botname '.repeat(3)
+  state.flows = []
+  state.active_flow_count = 128
+  state.active_flows = [{ id: 'older-flow', creator_session_id: state.session.id, title: 'An older flow outside the history page', goal: '', state: 'active', current_position: 0, revision: 0, error: '',
+    stages: Array.from({ length: 8 }, (_, index) => ({ id: `parallel-${index}`, position: index, group_position: 0, session_id: 'person-main-1', session_title: `Bot ${index}`, bot_type: PERSON_BOTS[index].type, goal: '', state: 'active', result_message_id: null, tasks: [] })) }]
+  await page.setViewportSize({ width: 320, height: 850 })
+  await page.goto('/#/person')
+  const island = page.locator('.person-task-island'), toggle = island.locator('.person-task-island__toggle')
+  await expect(toggle).toBeVisible()
+  await expect(toggle).toHaveAccessibleName(`${state.session.title} · Flows · 128`)
+  await expect(island.locator('.activity-counter')).toHaveText('99+')
+  await toggle.click()
+  await expect(island.locator('.activity-full-name')).toHaveText(state.session.title)
+  const bots = island.locator('.bot-sprite')
+  await expect(bots).toHaveCount(8)
+  await expect(island.locator('.route-line')).toHaveCount(0)
+  await expect.poll(() => island.locator('.flow-step[data-turn="true"]').count()).toBeGreaterThan(0)
+  const fits = () => bots.evaluateAll(elements => elements.every(element => { const box=element.getBoundingClientRect(),root=element.closest('.person-flow-graph')!.getBoundingClientRect(); return box.left >= root.left && box.right <= root.right }))
+  await expect.poll(fits).toBe(true)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect.poll(fits).toBe(true)
+  await expect(island.locator('.route-line')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(toggle).toBeFocused()
+  await toggle.click()
+  await page.locator('.person-compose textarea').click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  state.active_flow_count = 0; state.active_flows = []
+  await emit(page, 'person.updated', {})
+  await expect(island).toHaveCount(0)
+})
+
+for (const width of [1440, 360]) {
+  test(`Person capsule hides failed and participant flows from its list and count at ${width}px`, async ({ page }) => {
+    const { state } = await setup(page, 'light', false, false)
+    const healthy = { id: 'own-flow', creator_session_id: state.session.id, title: 'Own healthy collaboration', goal: '', state: 'active', current_position: 0, revision: 0, error: '',
+      stages: [{ id: 'own-stage', position: 0, group_position: 0, session_id: state.session.id, session_title: 'Creator', goal: '', state: 'active', result_message_id: null, tasks: [] }] }
+    const failed = { ...healthy, id: 'failed-flow', title: 'Failed collaboration', state: 'failed' }
+    const incoming = { ...healthy, id: 'incoming-flow', creator_session_id: 'person-main-b', title: 'Someone else created this' }
+    const brokenDelivery = { ...healthy, id: 'delivery-error', title: 'Handoff error', stages: [{ ...healthy.stages[0], delivery_error: 'Cannot deliver' }] }
+    state.flows = [healthy, failed, incoming, brokenDelivery]
+    state.tasks = []
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/#/person')
+    const island = page.locator('.person-task-island'), toggle = island.locator('.person-task-island__toggle')
+    await expect(toggle).toHaveAccessibleName('Person · Flows · 1')
+    await toggle.click()
+    await expect(island.locator('.activity-flow-row')).toHaveCount(1)
+    await expect(island.getByRole('button', { name: healthy.title, exact: true })).toBeVisible()
+    for (const flow of [failed,incoming,brokenDelivery]) await expect(island.getByRole('button', { name: flow.title, exact: true })).toHaveCount(0)
+    healthy.state = 'failed'
+    await emit(page, 'person.updated', {})
+    await expect(island).toHaveCount(0)
+    healthy.state = 'active'
+    await emit(page, 'person.updated', {})
+    await expect(toggle).toHaveAccessibleName('Person · Flows · 1')
+    healthy.creator_session_id = 'person-main-b'
+    await emit(page, 'person.updated', {})
+    await expect(island).toHaveCount(0)
+    // Background tasks keep their own capsule when all collaboration rows are hidden.
+    await backgroundTaskCount(page, 2)
+    await expect(toggle).toHaveAccessibleName('Person · Background tasks · 2')
+    await toggle.click()
+    await expect(island.locator('.activity-flow-row')).toHaveCount(0)
+  })
+}
+
+for (const width of [1440, 360]) {
+  test(`Person capsule opens the exact flow in the drawer including older history at ${width}px`, async ({ page }, testInfo) => {
+    const { state,operations }=await setup(page,'light',false,false)
+    state.tasks=[]
+    const makeFlow=(id:string,title:string,status='active')=>({id,creator_session_id:state.session.id,title,goal:`Goal for ${title}`,state:status,current_position:0,revision:0,error:'',stages:[
+      {id:`stage-${id}`,position:0,group_position:0,session_id:state.session.id,session_title:'Creator',bot_type:'zhezhe',goal:`Review ${title}`,state:status === 'completed' ? 'completed' : 'active',result_message_id:null,tasks:[]},
+    ]})
+    state.flows=Array.from({length:50},(_,index)=>makeFlow(`recent-${index}`,`Recent collaboration ${index}`,index === 40 ? 'active' : 'completed'))
+    const target=state.flows[40],older=makeFlow('older-target','Older collaboration outside the recent page')
+    state.active_flows=[target,older];state.active_flow_count=2
+    await page.setViewportSize({width,height:900})
+    await page.goto('/#/person')
+    const island=page.locator('.person-task-island'),toggle=island.locator('.person-task-island__toggle')
+    await toggle.click()
+    await expect(island.getByRole('button',{name:'Tasks',exact:true})).toHaveCount(0)
+    await expect(island.getByRole('button',{name:'Flows',exact:true})).toHaveCount(0)
+    const drawer=page.locator('.person-workspace-drawer')
+    const title=island.getByRole('button',{name:target.title,exact:true})
+    const preview=island.locator('.activity-list > li').filter({has:page.getByRole('button',{name:target.title,exact:true})}).locator('.person-flow-graph')
+    await expect(title).toHaveAttribute('aria-expanded','true')
+    await title.click()
+    await expect(title).toHaveAttribute('aria-expanded','false')
+    await expect(preview).toHaveCount(0)
+    await expect(drawer).not.toBeVisible()
+    expect(operations.filter(op=>op.path.endsWith('/flows/query'))).toEqual([])
+    await title.press('Enter')
+    await expect(title).toHaveAttribute('aria-expanded','true')
+    await expect(preview).toBeVisible()
+    await expect(drawer).not.toBeVisible()
+    expect(operations.filter(op=>op.path.endsWith('/flows/query'))).toEqual([])
+    // Blank space in the expanded flow opens its drawer too.
+    await preview.click({position:{x:5,y:5}})
+    const current=drawer.getByRole('button',{name:target.title,exact:true})
+    await expect(drawer.getByRole('tab',{name:'Flows',exact:true})).toHaveAttribute('aria-selected','true')
+    await expect(current).toHaveAttribute('aria-expanded','true')
+    await expect(current).toBeFocused()
+    await expect(current).toBeInViewport()
+    await expect(drawer.locator('.flow-card')).toHaveCount(1)
+    await drawer.getByRole('textbox',{name:'Search flows or roles',exact:true}).fill('An unrelated query')
+    await expect(drawer.getByText('No matching flows.',{exact:true})).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(drawer).not.toBeVisible()
+    await toggle.click()
+    const olderTitle=island.getByRole('button',{name:older.title,exact:true})
+    await olderTitle.click()
+    await expect(olderTitle).toHaveAttribute('aria-expanded','true')
+    await expect(title).toHaveAttribute('aria-expanded','false')
+    await expect(drawer).not.toBeVisible()
+    expect(operations.filter(op=>op.path.endsWith('/flows/query')).map(op=>op.body.flow_id)).toEqual([target.id])
+    const olderPreview=island.locator('.activity-list > li').filter({has:page.getByRole('button',{name:older.title,exact:true})}).locator('.person-flow-graph')
+    await olderPreview.getByRole('button').first().click()
+    const olderRow=drawer.getByRole('button',{name:older.title,exact:true})
+    await expect(olderRow).toHaveAttribute('aria-expanded','true')
+    await expect(olderRow).toBeFocused()
+    await expect(drawer.getByRole('textbox',{name:'Search flows or roles',exact:true})).toHaveValue('')
+    await expect(drawer.locator('.flow-card')).toContainText(older.goal)
+    await expect(drawer.locator('.flow-card')).toHaveCount(1)
+    expect(operations.filter(op=>op.path.endsWith('/flows/query')).map(op=>op.body.flow_id)).toEqual([target.id,older.id])
+    await page.screenshot({path:testInfo.outputPath(`located-flow-${width}.png`),animations:'disabled'})
+  })
+}

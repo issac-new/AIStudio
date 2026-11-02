@@ -115,7 +115,7 @@
 198-client-router-restore-groupchat-workflow.patch
 201-client-v102-vuetsc-fixes.patch
 202-loop-graph-assembly.patch
-207-desktop-runtime-pin.patch
+# 207（v1.0.9 升级轮退役：上游已原生 pin hermes-agent 0.22.5 / v0.22.5 / bf0203a7，与本仓 vendor/hermes-agent 钉版一致，高于本补丁的 0.21.5 pin，保留即降级；原件 .archived-patches/207-desktop-runtime-pin.patch）
 228-client-settingsview-graph-engine-card.patch
 233-desktop-identity-swarmstudio.patch
 235-server-sessions-tests-includechildren.patch

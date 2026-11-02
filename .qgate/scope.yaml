@@ -88,3 +88,14 @@ paths:
   - team/version.json
   - package.json
   - package-lock.json
+  # 2026-11-02 第三方依赖升级批（feat/vendor-studio-v109, spec 2026-11-02-vendor-upgrade-studio-v109）
+  - vendor/hermes-studio/**
+  - vendor/VENDOR.md
+  - patches/023-client-store-chat.patch
+  - patches/042-desktop-rebrand-swarmstudio-pkg.patch
+  - patches/718-brand-v080-new-faces.patch
+  - patches/series
+  - .archived-patches/**
+  - scripts/vendor-sync.sh
+  - AGENTS.md
+  - docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md

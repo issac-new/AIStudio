@@ -3982,6 +3982,23 @@ export default {
 
   // Changelog
   changelog: {
+    new_0_8_11_1: "Prioritize a selected queued Person task message: interrupt and drain the current turn, run that input next, preserve the remaining queue and attachments, and suppress delivery of the interrupted result (#3607)",
+    new_0_8_11_2: "Safely remove one unstarted task message and its result delivery without stopping the active worker or clearing other inputs; validate ownership, revisions and idempotency, and protect the active insertion target (#3610)",
+    new_0_8_11_3: "Add per-message task queue removal when supported by the server; disable conflicting actions, recover from failures, retain the confirmed queue if a later refresh fails, and resync when the drawer reopens (#3611)",
+    new_0_8_11_4: "Recover task details and conversations from failed loading with retry controls; bound list/detail reads to 15 seconds, cancel obsolete requests, coalesce frequent refreshes, and retain the existing list when background refresh fails (#3609)",
+    new_0_8_11_5: "Optimize Person task list and execution history queries with indexes and fewer repeated lookups; read session snapshots without rewriting shared session records while preserving priority, ordering and account isolation (#3609)",
+    new_0_8_11_6: "Align task drawer message text with the regular chat theme in both light and dark modes (#3607)",
+    new_0_8_11_7: "Fix Windows desktop updates blocked by the quit helper: notify the existing instance and exit before installation checks; let the installer continue cleanup after at most five seconds, including upgrades from affected older versions (#3608)",
+    new_0_8_11_8: "Restore the macOS local built-in browser when it remains stuck starting; accept existing profile directories and preserve login/storage paths while retaining directory isolation for remote and independent device sessions (#3612)",
+    new_0_8_1_9: "Upgraded the default desktop Hermes runtime to 0.22.5, pinned its source tag and commit, and aligned published runtime assets for all six platforms, including Windows ARM64",
+    new_0_8_1_1: "Removed native focus acquisition from built-in browser automation and isolated background-tab rendering from the main window focus tree to reduce interference with user input (#3594)",
+    new_0_8_1_2: "Browser profile saves use separate temporary files to avoid concurrent writes colliding across store instances (#3594)",
+    new_0_8_1_3: "Improved assistant task-routing guidance: additions, changes and feedback first query and continue the original task, including completed tasks, preserving its Agent and conversation (#3601)",
+    new_0_8_1_4: "Completed silent assistant run-state updates across the lifecycle; App reconnection restores live main-session state in the current Studio process across model Profiles in the same account (#3602)",
+    new_0_8_1_5: "Restore pending assistant approvals and clarifications from live requests and withdraw reminders on timeout, cancellation or abort; exclude private workers, archived sessions and expired requests (#3602)",
+    new_0_8_1_6: "Fixed missing, duplicate, out-of-order and stuck queued messages during continuous assistant input; preserve unacknowledged input, reconcile the queue with the transcript and retain order after refresh (#3603)",
+    new_0_8_1_7: "Serialize request preparation per session and reserve execution slots early so later inputs queue in submission order; preparation or startup failures release the slot and advance the queue (#3603)",
+    new_0_8_1_8: "Fixed report artifact name collisions when rerunning Playwright workflows by allowing existing shard and merged reports to be overwritten (#3602)",
     new_0_8_0_1: "Added personal assistant Bots created with the first message, with naming, search, switching and batch deletion; conversations stay separate while account memory, Agent presets and workspace are shared (#3552, #3568, #3575)",
     new_0_8_0_2: "Added ten characters and a looping picker with mouse, touch and keyboard support; improved initial setup, duplicate-name feedback and draft preservation (#3581, #3583)",
     new_0_8_0_3: "Assistant background tasks accept queued follow-ups, continue existing work and show live tool calls; worker instructions are readable text (#3566, #3580)",
