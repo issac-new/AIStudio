@@ -24,6 +24,16 @@ run25 G2 环（20:15-20:26）复现 run24 同款病：kanban dispatcher `skipped
 - `mx-board-supply-check.sh` 头部供给配方注释同步为多名册形态（该检查只断言
   board.json 带 profiles 键，不钉名册内容，无需改判定）。
 
+同批补收第二处供给缺口（run25 20:40 现场续锤，同文件收口）：
+
+- **板 default_workdir 供给缺位**：agent 缺陷卡/驱动 G2 退回卡不带 workspace_path，
+  板又无 default_workdir 时 worker 起不来→卡 blocked（`workspace_kind=worktree but no
+  workspace_path`；skills/requirements-analyst/SKILL.md 已把该形态记为已知坑，
+  mx-scenario-lib 应用资产表也约定「board.json default_workdir 指向工作区」，但供给层
+  从未落码）。修法：`mx-lib.sh set_board_workdir`（board.json.default_workdir=板主
+  `workspaces/<u>/aipaydev`）＋mx-setup 第 5 段建板时同步设置。路径在 §5 时点尚不存在
+  （§5b 才克隆）无碍——default_workdir 是派生时读的指针，非建板时校验项。
+
 ## 决策记录
 
 - 全名册而非「板主＋已知缺陷目标」枚举：枚举必再漏（run24 修 4 板→run25 复发即证）；
@@ -37,6 +47,9 @@ run25 G2 环（20:15-20:26）复现 run24 同款病：kanban dispatcher `skipped
 
 - 前置已实测：手工补齐 fanfan-review/fei-test-mp 两板实际 assignee 后，拒派告警止于
   20:26:04、两板 ready 清空、3 缺陷卡＋1 修订卡全部派生，G2 安全评审 20:26 过闸。
+- default_workdir 运行态实测：28 板补设后重排 7 张真伤卡（G2 修订/3 FE 缺陷/T01/T02/T03），
+  全部 worker 起跑 running、consecutive_failures 清零、拒派面只剩 PM 镜像卡的 1 例
+  unattributed（设计态）。
 - 本批落地后：`bash -n` 语法门＋`bash tests/run-gates.sh` 守门套件全绿＋28 板
   board.json 回读名册数=编制名册数。
 

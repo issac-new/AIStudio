@@ -212,6 +212,7 @@ for u in $(node_users); do
     fi
     # shellcheck disable=SC2086
     set_board_team "$slug" $_roster "$(agent_profile "$u" "$agent")"
+    set_board_workdir "$slug" "$SIM_ROOT/workspaces/$u/aipaydev"
   done
 done
 # default 板 = 串板哨兵（G2 门禁要求全程零任务）

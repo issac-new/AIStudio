@@ -1345,6 +1345,26 @@ print(f'board {board} team -> {len(agents)} profiles')
 PYEOF
 }
 
+set_board_workdir() { # <board> <abs-path>：board.json.default_workdir = 板主工作区仓
+  # （卡派生 worktree 的兜底锚。2026-11-02 run25 实锤：agent 缺陷卡/驱动退回卡不带
+  # workspace_path 时，板无 default_workdir 即 worker 起不来→blocked；约定见
+  # mx-scenario-lib 应用资产表「board.json default_workdir 指向工作区」——本函数把
+  # 约定落进供给层。）
+  local board="$1" wd="$2"
+  HERMES_HOME="$HERMES_ROOT" python3 - "$board" "$wd" <<'PYEOF'
+import json, sys, pathlib
+board, wd = sys.argv[1], sys.argv[2]
+root = pathlib.Path(__import__('os').environ['HERMES_HOME'])
+p = root / 'kanban' / 'boards' / board / 'board.json'
+meta = json.loads(p.read_text()) if p.exists() else {'slug': board}
+meta.setdefault('slug', board)
+meta['default_workdir'] = wd
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + '\n')
+print(f'board {board} default_workdir -> {wd}')
+PYEOF
+}
+
 # 条款块 marker 前缀（升版换装按前缀剥离，不锁定具体版本号）
 STYLE_CHARTER_BEGIN='<!-- style-charter:'
 STYLE_CHARTER_END='<!-- /style-charter:'
