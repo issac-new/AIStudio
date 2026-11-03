@@ -242,6 +242,22 @@ const SURFACES: SurfaceDef[] = [
     },
   },
   {
+    key: 'scheduling',
+    nameZh: '调度',
+    nameEn: 'Scheduling',
+    source: { components: ['c9'], context: 'tool_loop', opencode: 'harness-schedule.json', codex: 'AGENTS.md' },
+    applyMode: 'managed',
+    risk: 'medium',
+    managedBy: '本工作台（策略文件 + 快照回滚）',
+    expected: '$HERMES_HOME/harness-schedule.json',
+    note: '探测调度策略（每题上限/采样 k/并发位/重试退避）：改了就真的改变一键探测行为；写盘须人工批准且 HARNESS2_APPLY=1。',
+    spec: {
+      writableRoots: ['harness-schedule.json'],
+      writablePattern: /^harness-schedule\.json$/,
+      scan: (home) => (existsSync(resolve(home, 'harness-schedule.json')) ? ['harness-schedule.json'] : []),
+    },
+  },
+  {
     key: 'plugins',
     nameZh: '插件',
     nameEn: 'Plugins',

@@ -10,6 +10,9 @@ import {
   createProbes, createProposal, decideProposal, deleteProposal, importExperiences, listExperiences,
   attachHeldout, createGapDrivenProposals, listProposals, markSurfaceApplied, surfaceArtifactsOf, overview, promoteProposal, recordConstraints, recordProbe, rollbackProposal, setExperienceStatus,
   startAutoProbe, submitProposal, suggestProposal,
+  schedulePolicy,
+  validateSchedulePolicy,
+  ensureSchedulePolicyFile,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
 
@@ -245,6 +248,34 @@ router.post('/proposals/:id/surface-applied', async (ctx) => {
   } catch (e) {
     fail(ctx, e)
   }
+})
+
+// 调度面（Harmony 吸收轮 2026-11-03）：策略文件是一等可编辑产物，改它真的改变探测行为。
+router.get('/schedule', async (ctx) => {
+  try {
+    const { policy, file } = schedulePolicy()
+    ok(ctx, { policy, file })
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+router.post('/schedule/bootstrap', async (ctx) => {
+  if (writeDenied(ctx)) return
+  try {
+    ok(ctx, ensureSchedulePolicyFile() as unknown as Record<string, unknown>)
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+router.post('/schedule/validate', async (ctx) => {
+  const v = validateSchedulePolicy(bodyOf(ctx))
+  if (!v.valid) {
+    httpFail(ctx, 400, '调度策略校验失败', { code: 'invalid_schedule', problems: v.problems })
+    return
+  }
+  ok(ctx, { policy: v.policy })
 })
 
 // R5（2026-10-31 二批）：RSI 内核缺口 → 提案来源（只读桥）。

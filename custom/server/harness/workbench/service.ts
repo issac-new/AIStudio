@@ -25,6 +25,7 @@ import type { AskFn } from '../../eval/judge'
 import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
 import { nextId, mutateStore, readStore, persistAutoJob, listOrphanAutoJobs } from './store'
+import { ensureScheduleFile, readSchedulePolicy, validateSchedulePolicy, normalizeSchedulePolicy, DEFAULT_SCHEDULE_POLICY, SCHEDULE_REL } from './schedule-policy'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
 import { experienceFreshness, memoryConsolidationPolicy, type ExperienceFreshness } from './experience-freshness'
 import type {
@@ -1323,6 +1324,8 @@ function probeOutcomeContext(): OutcomeRunContext {
 /** 发起自动探测：预检同步完成（状态/预算/可执行件闸），任务异步跑。 */
 export async function startAutoProbe(id: string, opts: AutoProbeOptions): Promise<AutoProbeJob> {
   if (runningProbes.has(id)) throw new ServiceError(409, '该提案已有在途自动探测')
+  // managed 面写盘要求目标文件已存在——调度策略文件在本台首次使用时 bootstrap 出缺省值
+  ensureScheduleFile()
   const store = readStore()
   const p = store.proposals.find((x) => x.id === id)
   if (!p) throw new ServiceError(404, `提案不存在：${id}`)
@@ -1336,7 +1339,10 @@ export async function startAutoProbe(id: string, opts: AutoProbeOptions): Promis
     regressionSet = getSet(opts.regressionSetId)
     if (!regressionSet) throw new ServiceError(400, `回归集不存在：${opts.regressionSetId}`)
   }
-  const maxTasks = Math.max(1, Math.min(50, opts.maxTasks ?? 5))
+  // 调度面：策略文件存在则按它取每题上限（Harmony 吸收轮——调度是因子化演化的一块，
+  // 改策略文件即改变探测行为；显式 opts.maxTasks 优先，便于单次覆盖）
+  const policy = readSchedulePolicy()
+  const maxTasks = Math.max(1, Math.min(50, opts.maxTasks ?? policy.probeMaxTasks))
   const estimate = opts.estimatedCostPerTaskUsd ?? DEFAULT_TASK_COST_ESTIMATE_USD
   const pendingVariants = p.variants.filter((v) => !p.probes.some((x) => x.variantId === v.id && x.status === 'recorded'))
   if (pendingVariants.length === 0) throw new ServiceError(409, '全部候选都已记录探测')
@@ -1427,7 +1433,8 @@ async function runAutoProbeJob(
 
     // R4（D4 匹配预算口径）：k=2 默认；预算不足以支撑双样本全程时降 1（如实降级不造假）。
     const perTask = limits.estimate
-    const affordableK = remaining >= tasks.length * perTask * 2 ? 2 : 1
+    const wantK = Math.max(1, Math.min(readSchedulePolicy().probeK, 10))
+    const affordableK = remaining >= tasks.length * perTask * wantK ? wantK : 1
     const result = await runProbeTasks({
       prompts: tasks,
       baseHome: hermesHome(),
@@ -1797,3 +1804,18 @@ export async function importExperiences(): Promise<{ imported: number; skipped: 
     return { imported: added.length, skipped: candidates.length - added.length, experiences: added }
   })
 }
+
+// ── 调度面（Harmony 吸收轮）：策略读写与校验 ─────────────────────
+export { DEFAULT_SCHEDULE_POLICY, SCHEDULE_REL }
+
+/** 读当前调度策略（文件缺席返回缺省；坏档已隔离）。 */
+export function schedulePolicy(): { policy: ReturnType<typeof readSchedulePolicy>; file: string } {
+  return { policy: readSchedulePolicy(), file: SCHEDULE_REL }
+}
+
+/** 确保策略文件存在（bootstrap；返回是否新建）。 */
+export function ensureSchedulePolicyFile(): { created: boolean; file: string } {
+  return ensureScheduleFile()
+}
+
+export { validateSchedulePolicy, normalizeSchedulePolicy }

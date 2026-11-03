@@ -19,6 +19,7 @@ export type SurfaceKey =
   | 'skills'
   | 'scripts'
   | 'plugins'
+  | 'scheduling'
 
 export type ApplyMode = 'managed' | 'advisory'
 export type RiskTier = 'low' | 'medium' | 'high'

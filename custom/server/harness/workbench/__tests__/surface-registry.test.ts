@@ -31,9 +31,9 @@ afterEach(() => {
 })
 
 describe('collectSurfaces', () => {
-  it('恒八面；真实产物有数、缺失面 available=false；只有两面 managed', () => {
+  it('恒九面；真实产物有数、缺失面 available=false；三面 managed（调度面 2026-11-03 加入）', () => {
     const surfaces = collectSurfaces()
-    expect(surfaces).toHaveLength(8)
+    expect(surfaces).toHaveLength(9)
     const byKey = Object.fromEntries(surfaces.map((s) => [s.key, s]))
     expect(byKey.system_prompt.available).toBe(true)
     expect(byKey.system_prompt.applyMode).toBe('managed')
@@ -43,7 +43,7 @@ describe('collectSurfaces', () => {
     expect(byKey.tool_guidance.available).toBe(true)
     expect(byKey.subagents.available).toBe(false)
     expect(byKey.subagents.expected).toContain('subagents')
-    expect(surfaces.filter((s) => s.applyMode === 'managed').map((s) => s.key)).toEqual(['system_prompt', 'skills'])
+    expect(surfaces.filter((s) => s.applyMode === 'managed').map((s) => s.key)).toEqual(['system_prompt', 'skills', 'scheduling'])
     expect(byKey.system_prompt.source).toMatchObject({ components: ['c1'], context: 'always_on' })
     expect(byKey.plugins.source).toMatchObject({ components: ['c8'], context: 'tool_loop' })
     expect(byKey.skills.source.opencode).toContain('SKILL.md')
