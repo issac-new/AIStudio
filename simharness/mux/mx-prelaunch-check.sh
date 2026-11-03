@@ -198,5 +198,19 @@ ck "㉚ 阶段页签 37（reviewGov/improve/proactivity/posture/secAudit/trust�
 #    是 4 小时/次，短场景约 40 分钟。此项只查「工具在位且自检可跑」——收据核验在报告面。
 ck "㉛ 烧机测试在位（mx-burn-test.sh 自检）" "[ -x '$HERE/mux/mx-burn-test.sh' ] && bash '$HERE/mux/mx-burn-test.sh' --dry-run >/dev/null 2>&1" "机制类改动缺烧机通道：恢复/催办/闸门等待类补丁合入前须能跑 mx-burn-test.sh（--dry-run 至少要通过前置自检）"
 
+# ㉜ runtime-verify 探针（run26 N10 接线 2026-11-03，fail-soft 不计数）：18b 目标运行时
+#    验证面的可用性预告——微信开发者工具+automator SDK 缺席只黄字告警不阻断开跑
+#    （缺席轮 G3⑦ 前端工程判据走声明态降级；工具在位轮 runtime-proof 产出走 DEV-MP
+#    技能纪律 8 或产品端点 POST /api/hermes/runtime-verify/miniprogram）。
+_RTV_CLI="/Applications/wechatwebdevtools.app/Contents/MacOS/cli"
+_RTV_HTTP=$(curl -s -m 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:8802/api/hermes/runtime-verify/health 2>/dev/null || true)
+# 端点带鉴权（实测 Unauthorized=面在）：HTTP 401/200 均判「runtime-verify 面在」；
+# CLI 文件在位=18b 必要条件（SDK 解析在中央仓 app 目录，devimpl 段核验兜底）。
+if [[ -x "$_RTV_CLI" ]] && [[ "$_RTV_HTTP" == "200" || "$_RTV_HTTP" == "401" ]]; then
+  echo "  ✅ ㉜ runtime-verify 探针：开发者工具 CLI 在位+产品端点可达（HTTP $_RTV_HTTP）——18b 面可用"
+else
+  echo "  ⚠️ ㉜ runtime-verify 探针（不阻断）：CLI=$([[ -x "$_RTV_CLI" ]] && echo 在位 || echo 缺席)、端点 HTTP=${_RTV_HTTP:-不可达}；本轮 18b 走声明态降级"
+fi
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
 [ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十五项）" || { echo "有红项——修复后再跑"; exit 1; }
