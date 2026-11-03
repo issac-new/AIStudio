@@ -1,5 +1,6 @@
 diff --git a/agent/recovery_kwargs.py b/agent/recovery_kwargs.py
 new file mode 100644
+index 0000000000..0b939c108f
 --- /dev/null
 +++ b/agent/recovery_kwargs.py
 @@ -0,0 +1,61 @@
@@ -64,9 +65,11 @@ new file mode 100644
 +            continue
 +        out[key] = value
 +    return out
+diff --git a/gateway/run_turn_runner.py b/gateway/run_turn_runner.py
+index 1da1948f2d..723290e7be 100644
 --- a/gateway/run_turn_runner.py
 +++ b/gateway/run_turn_runner.py
-@@ -1004,14 +1004,14 @@
+@@ -1039,14 +1039,14 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
                  # 用户原始消息（去掉 persist_* 与 prelude，历史取自上一回合 messages）。
                  try:
                      from agent.chat_turn_recovery import run_chat_recovery

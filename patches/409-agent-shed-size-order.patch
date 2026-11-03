@@ -1,8 +1,8 @@
 diff --git a/agent/context_compressor.py b/agent/context_compressor.py
-index e40447278d..9e60c36326 100644
+index 50060901cd..72f486a813 100644
 --- a/agent/context_compressor.py
 +++ b/agent/context_compressor.py
-@@ -3288,9 +3288,38 @@ class ContextCompressor(
+@@ -3289,9 +3289,38 @@ class ContextCompressor(
          hard_share = int(input_window * TAIL_MAX_CONTEXT_FRACTION)
          return pending if sum(_estimate_msg_budget_tokens(messages[i]) for i in pending) <= hard_share else range(0)
  
@@ -41,7 +41,7 @@ index e40447278d..9e60c36326 100644
      ) -> tuple[list[dict[str, Any]], int]:
          """Project old tool-result bodies to bounded summaries without rewriting tool-call arguments.
          Returns ``(messages, count)``; token budget (when given) takes priority over the
-@@ -3314,9 +3343,8 @@ class ContextCompressor(
+@@ -3315,9 +3344,8 @@ class ContextCompressor(
          # Pass 2: summarize old tool results. Tool-call arguments are canonical execution
          # records and are never rewritten; summary input is bounded separately by
          # _render_tool_call_for_summary().
@@ -54,7 +54,7 @@ index e40447278d..9e60c36326 100644
          # Pass 3: retire image payloads inside the protected tail; re-sent embeds otherwise make
          # compression look ineffective and trip anti-thrash. Newest frames stay live.
 diff --git a/agent/context_compressor_prune.py b/agent/context_compressor_prune.py
-index 505f40dc25..5f0e1fb2d7 100644
+index 043ee38bdc..36d9326988 100644
 --- a/agent/context_compressor_prune.py
 +++ b/agent/context_compressor_prune.py
 @@ -65,8 +65,12 @@ class ProactivePruneMixin:
@@ -68,8 +68,8 @@ index 505f40dc25..5f0e1fb2d7 100644
              messages, protect_tail_count=self.protect_last_n, protect_tail_tokens=None, min_prune_chars=self.proactive_prune_min_result_chars,
 +            shed_target_chars=shed_target,
          )
-         if not pruned_count:
-             # No-op contract: return the INPUT object so callers can gate on `result is not input`.
+         from agent.context_compressor_tail import with_pruned_row_skill_safety_rule
+         pruned_msgs = with_pruned_row_skill_safety_rule(messages, pruned_msgs)
 diff --git a/tests/agent/test_shed_size_order.py b/tests/agent/test_shed_size_order.py
 new file mode 100644
 index 0000000000..1d2849c054

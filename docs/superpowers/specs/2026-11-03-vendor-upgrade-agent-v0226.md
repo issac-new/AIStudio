@@ -18,7 +18,12 @@
 
 ## 验证
 
-（执行后回填：inject 重放结果 / 失配补丁处置清单 / 目标测试 / 全量 npm test / mx-setup 复跑结果）
+- **inject 重放**：clean+inject 全量 **434 补丁零 WARN 零 SKIP**（agent 面 82 枚含 17 枚重生成件全数套上；exit=0）。
+- **失配处置清单（17/17）**：3way 自动合 14 枚（118/397/406/407/408/409/410/475/599/604/611/633/726/729）；手解并集 3 枚——450（上游同元组新增 timezone/grace_minutes/catch_up 与我方 base_url 并集）、470（上游签名新增 control_reserve 与我方 collab_event_id 并集）、725（上游 silence_allowed 包裹与我方回合恢复块叠放，去重合一处 run_conversation 调用）。三枚手解件 `ast.parse` 过语法门。
+- **语义落树抽验**：`turn.ended`×2（conversation_loop.py）、`run_chat_recovery`×2（run_turn_runner.py）、`base_url`×2（subcommands/cron.py）。
+- **重建纪律**：regen 链在上游仓临时 worktree 按真实序重放 82 枚（每枚一提交取边界 diff），完成后 `git worktree remove` 走 git 通道清理。
+- **基线提交**：`60a5a849b`（4318 文件；`get-windows.d.ts` 在暂存内核验过）。
+- **全量测试**：`npm test` 结果见提交后回执（本 spec 提交时在跑，结果落本节追加）。
 
 ## 设计文档影响
 

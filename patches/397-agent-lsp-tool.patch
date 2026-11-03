@@ -1,8 +1,8 @@
 diff --git a/agent/lsp/client.py b/agent/lsp/client.py
-index 7ea05958bc..67e8f5264a 100644
+index 9fc5ae418d..1d0796c998 100644
 --- a/agent/lsp/client.py
 +++ b/agent/lsp/client.py
-@@ -495,6 +495,14 @@ class LSPClient:
+@@ -506,6 +506,14 @@ class LSPClient:
                      raise
                  await asyncio.sleep(RETRY_BASE_DELAY * (2 ** attempt))
  
@@ -723,7 +723,7 @@ index 0000000000..0a1ff6fb25
 +    emoji="🧭",
 +)
 diff --git a/toolsets.py b/toolsets.py
-index 7572ad1285..1185cb1bad 100644
+index 1d931d1e7d..96bb42f7a6 100644
 --- a/toolsets.py
 +++ b/toolsets.py
 @@ -11,7 +11,7 @@ from typing import Dict, List, Any, Set, Optional, Tuple
@@ -734,4 +734,4 @@ index 7572ad1285..1185cb1bad 100644
 +    "read_file", "write_file", "patch", "search_files", "lsp",
      "vision_analyze", "image_generate",
      "skills_list", "skill_view", "skill_manage",
-     "browser_navigate", "browser_snapshot", "browser_click",
+     "browser_exec",  # THE browser: Python over CDP (browser-harness)

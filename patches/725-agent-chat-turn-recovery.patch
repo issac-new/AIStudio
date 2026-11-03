@@ -1,6 +1,6 @@
 diff --git a/agent/chat_turn_recovery.py b/agent/chat_turn_recovery.py
 new file mode 100644
-index 000000000..c2a7f6c5a
+index 0000000000..c2a7f6c5a1
 --- /dev/null
 +++ b/agent/chat_turn_recovery.py
 @@ -0,0 +1,168 @@
@@ -173,13 +173,13 @@ index 000000000..c2a7f6c5a
 +        attempts += 1
 +    return attempts
 diff --git a/gateway/run_turn_runner.py b/gateway/run_turn_runner.py
-index c5a6d6de5..f2ea3bdbf 100644
+index ceb4f26746..ccd79cbd94 100644
 --- a/gateway/run_turn_runner.py
 +++ b/gateway/run_turn_runner.py
-@@ -996,6 +996,36 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
-                       getattr(agent, 'session_completion_tokens', 0) or 0)
-             with notification_turn(agent, muted=ctx.mute_notification_reply, session_id=ctx.session_id or ""):
-                 result = agent.run_conversation(api_message, **kwargs)
+@@ -1031,6 +1031,36 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
+                     result = agent.run_conversation(api_message, **kwargs)
+                 finally:
+                     agent._silence_marker_needs_reply = False
 +                # run24 复盘批（2026-11-02，chat 恢复第二块）：回合终态失败后在**同一会话、
 +                # 同一 agent**里注入一次「从中断处续做」提示再跑——722 只在回合内重试，
 +                # 回合一旦结束（流掐断耗尽/传输失败）会话就静止，run24 四现场全靠人工 DM

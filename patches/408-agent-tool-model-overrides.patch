@@ -1,10 +1,10 @@
 diff --git a/agent/agent_init.py b/agent/agent_init.py
-index 58ed7e0e30..be91a15eb5 100644
+index 72d96a38fd..ee651b2684 100644
 --- a/agent/agent_init.py
 +++ b/agent/agent_init.py
-@@ -1123,6 +1123,11 @@ def _load_tools(agent, enabled_toolsets, disabled_toolsets):
-     if drops := agent_tool_drops(agent):
-         agent.tools = [t for t in agent.tools if t["function"]["name"] not in drops]
+@@ -1035,6 +1035,11 @@ def _load_tools(agent, enabled_toolsets, disabled_toolsets):
+     agent.tools = agent_tool_surface(agent, model_tools.get_tool_definitions(
+         enabled_toolsets=enabled_toolsets, disabled_toolsets=disabled_toolsets, quiet_mode=agent.quiet_mode) or [])
  
 +    # per-model 工具覆盖（codex 候补吸收）：config.tool_model_overrides 按当前模型
 +    # 套 description/parameters，坏 schema 回退捆绑版告警不拖垮装配。

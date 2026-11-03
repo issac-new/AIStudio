@@ -295,7 +295,7 @@ index 0000000000..6b873b101b
 +#     --prompt "调用 memory 工具 action=consolidate 做周期沉淀，然后报告 merged/pruned 数字"
 +# （cron 会话内模型可调 memory 工具；规则式 distill 本身无模型调用，prompt 只做报告壳。）
 diff --git a/tools/memory_tool.py b/tools/memory_tool.py
-index e9e7280a68..4d6f6f10be 100644
+index dfcfe7af5e..4d4d2d4095 100644
 --- a/tools/memory_tool.py
 +++ b/tools/memory_tool.py
 @@ -281,10 +281,12 @@ def _memory_tool(action, target, content, old_text, new_text, operations, store)

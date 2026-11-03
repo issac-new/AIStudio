@@ -259,12 +259,12 @@ index 0000000000..24764dc384
 +                pass
 +            self._conn = None
 diff --git a/tools/memory_tool.py b/tools/memory_tool.py
-index aeb839a2e6..e9e7280a68 100644
+index abf8342f0b..dfcfe7af5e 100644
 --- a/tools/memory_tool.py
 +++ b/tools/memory_tool.py
 @@ -277,10 +277,14 @@ def _memory_tool(action, target, content, old_text, new_text, operations, store)
-             "Missing required parameter: provide 'action' (add/patch/remove) "
-             "or 'operations' (batch list). Got neither."
+             "Missing required parameter: 'operations', a list of {action: add/patch/remove, "
+             "content?, old_text?} changes; a single change is a one-item list."
          )
 +    # P4 一期：FTS 检索（只读，reconcile-then-query；markdown 仍为唯一事实源，
 +    # 索引坏只影响本查询，见 tools/memory_index.py 头注释）。

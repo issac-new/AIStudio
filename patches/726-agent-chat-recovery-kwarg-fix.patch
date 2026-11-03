@@ -1,7 +1,8 @@
 diff --git a/gateway/run_turn_runner.py b/gateway/run_turn_runner.py
+index ccd79cbd94..1da1948f2d 100644
 --- a/gateway/run_turn_runner.py
 +++ b/gateway/run_turn_runner.py
-@@ -1008,6 +1008,10 @@
+@@ -1043,6 +1043,10 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
                      _rec_kwargs = {k: v for k, v in kwargs.items()
                                     if not str(k).startswith("persist_") and k not in ("prelude", "moa_config")}
                      _rec_kwargs.pop("title_user_message", None)

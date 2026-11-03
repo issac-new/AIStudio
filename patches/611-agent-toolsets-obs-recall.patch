@@ -1,5 +1,5 @@
 diff --git a/toolsets.py b/toolsets.py
-index 1185cb1bad..5ece3faf6b 100644
+index 96bb42f7a6..2cd9481f4d 100644
 --- a/toolsets.py
 +++ b/toolsets.py
 @@ -11,7 +11,7 @@ from typing import Dict, List, Any, Set, Optional, Tuple
@@ -10,4 +10,4 @@ index 1185cb1bad..5ece3faf6b 100644
 +    "read_file", "write_file", "patch", "search_files", "lsp", "obs_recall",
      "vision_analyze", "image_generate",
      "skills_list", "skill_view", "skill_manage",
-     "browser_navigate", "browser_snapshot", "browser_click",
+     "browser_exec",  # THE browser: Python over CDP (browser-harness)
