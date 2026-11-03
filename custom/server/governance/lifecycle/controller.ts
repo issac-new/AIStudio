@@ -19,11 +19,20 @@
 import type Router from '@koa/router'
 import type { Context } from 'koa'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { isAbsolute, resolve, sep } from 'node:path'
+import { createHash } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import { isValidRun, safeRunDir, simRootOrNull } from '../../simcenter/observer-root'
-import { fail } from '../../lib/http'
+import { fail, ok, bodyOf } from '../../lib/http'
 import { checkBreaker, initialBreaker, tripBreaker, type GateBreakerState } from './breaker'
 import { judgeRequirementFreeze } from './requirements'
+import {
+  buildAcTrace, collectBindings, parseAcceptanceCriteria,
+  CASE_STATUSES, type CaseStatus,
+} from './ac-trace'
+import {
+  judgeStageChain, toChainResponse, STAGE_KEY_NAMES, type StageKeyName, type StageKeyVerifyDeps,
+} from '../../handoff/stage-keys'
 import { combinedGateVerdict, coveredAcs, gateVerdictOfText, uatVerdictFor, type GateVerdict } from './verdict'
 import { atomicWriteJson } from '../../lib/fs-store'
 
@@ -78,6 +87,13 @@ function badRequest(ctx: Context, error: string): void {
   fail(ctx, 400, error)
 }
 
+/** 产物路径围栏：相对 root 解析后必须仍在 root 内（防目录穿越；越界返回 null）。 */
+function withinRoot(base: string, rel: string): string | null {
+  const target = resolve(base, rel)
+  if (target === base) return null
+  return target.startsWith(base + sep) ? target : null
+}
+
 export function registerLifecycleRoutes(router: Router): void {
   router.post('/lifecycle/gate-verdict', (ctx) => {
     const b = ctx.request.body as { gate?: unknown; roomText?: unknown; cardText?: unknown } | undefined
@@ -95,6 +111,123 @@ export function registerLifecycleRoutes(router: Router): void {
     const b = ctx.request.body as { doc?: unknown } | undefined
     if (typeof b?.doc !== 'string' || !b.doc.trim()) return badRequest(ctx, 'doc 必填（需求书全文）')
     ctx.body = judgeRequirementFreeze(b.doc)
+  })
+
+  // AC 追溯（四性四格收敛批 C1）：形式判据之外的追溯判据——每条 AC 是否被用例证明、
+  // 用例是否真跑过、跑过是否过关。绑定只认显式标记，不猜语义（猜出来的覆盖等于造假）。
+  // 入参：{ doc, sources?: [{file, content}], results?: { 用例标识: pass|fail|skipped|missing|unknown } }
+  router.post('/lifecycle/ac-trace', (ctx) => {
+    const b = bodyOf<{ doc?: unknown; sources?: unknown; results?: unknown }>(ctx)
+    if (typeof b.doc !== 'string' || !b.doc.trim()) return badRequest(ctx, 'doc 必填（需求书全文）')
+
+    const sources: Array<{ file: string; content: string }> = []
+    if (b.sources !== undefined) {
+      if (!Array.isArray(b.sources)) return badRequest(ctx, 'sources 必须是数组')
+      for (const raw of b.sources) {
+        const s = raw as { file?: unknown; content?: unknown } | null
+        if (typeof s?.file !== 'string' || !s.file.trim() || typeof s.content !== 'string') {
+          return badRequest(ctx, 'sources 每项须为 { file: string, content: string }')
+        }
+        sources.push({ file: s.file, content: s.content })
+      }
+    }
+
+    const results: Record<string, CaseStatus> = {}
+    if (b.results !== undefined) {
+      if (typeof b.results !== 'object' || b.results === null || Array.isArray(b.results)) {
+        return badRequest(ctx, 'results 必须是 { 用例标识: 状态 } 对象')
+      }
+      for (const [k, v] of Object.entries(b.results as Record<string, unknown>)) {
+        if (typeof v !== 'string' || !(CASE_STATUSES as readonly string[]).includes(v)) {
+          return badRequest(ctx, `results[${k}] 状态非法（须为 ${CASE_STATUSES.join('|')}）`)
+        }
+        results[k] = v as CaseStatus
+      }
+    }
+
+    const acs = parseAcceptanceCriteria(b.doc)
+    if (acs.length === 0) return badRequest(ctx, 'doc 中未解析到 AC 条目（行首形态：- **AC-1** ...）')
+    const trace = buildAcTrace(acs, collectBindings(sources), results)
+    ok(ctx, { acTotal: acs.length, ...trace })
+  })
+
+  // 阶段交接键校验（四性四格收敛批 C4）：把「上游已达、下游没收到」从事后审计改成
+  // 入口拒绝。root/gitRepo 给了才做 IO 核验（产物存在/哈希一致/提交锚点可解析）；
+  // 不给只做结构校验，并在响应里 ioChecked=false 如实标注（弱保证不冒充强保证）。
+  router.post('/lifecycle/stage-keys/verify', (ctx) => {
+    const b = bodyOf<{ keys?: unknown; required?: unknown; root?: unknown; gitRepo?: unknown }>(ctx)
+    if (!Array.isArray(b.keys)) return badRequest(ctx, 'keys 必填（阶段键数组）')
+    if (b.keys.length > 32) return badRequest(ctx, 'keys 最多 32 项')
+
+    let required: readonly StageKeyName[] = STAGE_KEY_NAMES
+    if (b.required !== undefined) {
+      if (!Array.isArray(b.required) || b.required.length === 0
+        || !b.required.every((s) => typeof s === 'string' && (STAGE_KEY_NAMES as readonly string[]).includes(s))) {
+        return badRequest(ctx, `required 非法（须为 ${STAGE_KEY_NAMES.join('|')} 的非空子集）`)
+      }
+      required = b.required as StageKeyName[]
+    }
+
+    let root: string | null = null
+    if (b.root !== undefined) {
+      if (typeof b.root !== 'string' || !isAbsolute(b.root)) return badRequest(ctx, 'root 必须是绝对路径')
+      root = resolve(b.root)
+      if (!existsSync(root)) return badRequest(ctx, 'root 不存在')
+    }
+    let gitRepo: string | null = null
+    if (b.gitRepo !== undefined) {
+      if (typeof b.gitRepo !== 'string' || !isAbsolute(b.gitRepo)) return badRequest(ctx, 'gitRepo 必须是绝对路径')
+      gitRepo = resolve(b.gitRepo)
+      if (!existsSync(gitRepo)) return badRequest(ctx, 'gitRepo 不存在')
+    }
+
+    const deps: StageKeyVerifyDeps = {}
+    if (root) {
+      const base = root
+      // 先用路径围栏拦越界项并 400 点名，再进校验——不把越界误报成「产物缺失」。
+      for (const raw of b.keys) {
+        const arts = (raw as { artifacts?: unknown } | null)?.artifacts
+        if (!Array.isArray(arts)) continue
+        for (const a of arts) {
+          const p = (a as { path?: unknown } | null)?.path
+          if (typeof p === 'string' && withinRoot(base, p) === null) {
+            return badRequest(ctx, `产物路径越界：${p}（须在 root 内）`)
+          }
+        }
+      }
+      deps.fileExists = (p: string) => {
+        const t = withinRoot(base, p)
+        return t !== null && existsSync(t)
+      }
+      deps.sha256Of = (p: string) => {
+        const t = withinRoot(base, p)
+        if (t === null) return null
+        try {
+          return createHash('sha256').update(readFileSync(t)).digest('hex')
+        } catch {
+          return null
+        }
+      }
+    }
+    if (gitRepo) {
+      const repo = gitRepo
+      deps.resolveCommit = (c: string) => {
+        try {
+          execFileSync('git', ['-C', repo, 'cat-file', '-e', `${c}^{commit}`], { stdio: 'ignore', timeout: 5000 })
+          return true
+        } catch {
+          return false
+        }
+      }
+    }
+
+    const report = judgeStageChain(b.keys, required, deps)
+    ok(ctx, {
+      ioChecked: Boolean(root || gitRepo),
+      fileChecked: Boolean(root),
+      commitChecked: Boolean(gitRepo),
+      ...toChainResponse(report),
+    })
   })
 
   router.post('/lifecycle/uat-verdict', (ctx) => {

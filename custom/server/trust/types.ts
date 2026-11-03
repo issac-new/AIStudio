@@ -4,6 +4,8 @@
 // 文章把长程任务失效归为三类：上下文膨胀、幻觉自证、中断即回零；对应到执行框架
 // 的四个机制：逐条主张三态审计、完成态双准入、工作区完整性栅栏、原子断点。
 // 本文件只放类型与常量，不写业务判断；判断在 integrity/admission/service。
+
+import type { IndependenceAssessment, ModelRef } from './independence'
 //
 // 与既有域的关系：证据账（evidence-store）记录"发生了什么"，本域记录"声称的完成
 // 是否被独立复核并通过两条准入条件"。两者都用前向哈希链，但本域不复制证据正文。
@@ -34,6 +36,8 @@ export interface TrustClaim {
    */
   evidenceRefs: string[]
   claimedBy: string
+  /** 可选：作者侧模型标识（provider/model/version）。只用于独立性判定，不参与裁决本身。 */
+  claimedByModel?: ModelRef
   claimedAt: number
 }
 
@@ -42,6 +46,10 @@ export interface ClaimAudit {
   id: string
   claimId: string
   auditor: string
+  /** 可选：审阅者侧模型标识（provider/model/version）。 */
+  auditorModel?: ModelRef
+  /** 独立性评估（三态；报告里落指纹摘要，不落原值）。 */
+  independence?: IndependenceAssessment
   verdict: ClaimVerdict
   /** 阶段一的只读复核笔记（文章要求先复核再裁决，裁决时不再补做观察）。 */
   observations: string[]

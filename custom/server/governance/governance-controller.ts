@@ -30,6 +30,7 @@ import { queryApprovalLog } from '../approval-inbox/approval-log'
 import { requireAuthenticatedActor, type AuthenticatedActor } from '../approval-inbox/human-gate'
 import { loadCapabilityLedger, loadMetricsDefs, deriveLedgerStats, loadActionContracts, loadStateModel } from './governance-ledger'
 import { collectGovernancePosture } from './posture'
+import { evaluatePostureAdmission, resolvePosturePolicy } from './posture-admission'
 import { emergencyStopAll } from './emergency-stop'
 import { queryImpact } from './governance-impact'
 import { crossMachineDispatchStats } from './governance-crossdispatch'
@@ -51,7 +52,7 @@ import {
 import { readDispatchLedger } from './dispatch-ledger'
 import { collectBoardStatus } from './board-status'
 import { underWebUi } from '../lib/paths'
-import { fail } from '../lib/http'
+import { fail, ok } from '../lib/http'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -317,6 +318,20 @@ registerRunSurfaceRoutes(router, { repoReady, docText })
 router.get('/posture', async (ctx) => {
   try {
     ctx.body = { ok: true, ...collectGovernancePosture() }
+  } catch (e) {
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
+  }
+})
+
+// 姿态准入（四性四格收敛批 C2，2026-11-03）：同一份姿态读数按策略判「准/不准进
+// 交付门」。report 档零行为变化（恒 admits:true）；require-for-gate / strict 由
+// HERMES_POSTURE_POLICY 显式开启。判定结果是领域结论不是传输错误，故一律 200 +
+// admits 字段，供调用方分支；采集失败才 500。
+router.get('/posture-admission', async (ctx) => {
+  try {
+    const posture = collectGovernancePosture()
+    const admission = evaluatePostureAdmission(posture, resolvePosturePolicy())
+    ok(ctx, { admission, postureDigest: admission.digest })
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
