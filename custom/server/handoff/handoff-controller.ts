@@ -14,6 +14,17 @@ import { computeHandoffQuality, mergeBoardsForHandoff } from './handoff-quality'
 export const handoffRoutes = new Router()
 
 handoffRoutes.get('/quality', (ctx) => {
+  // 参数校验先于数据源解析：参数错是调用方问题，不该被「看板根缺席」掩盖成 200
+  const windowHours = Number(ctx.query.windowHours ?? 24)
+  const stallHours = Number(ctx.query.stallHours ?? 6)
+  if (!Number.isFinite(windowHours) || windowHours < 1 || windowHours > 720) {
+    httpFail(ctx, 400, 'windowHours 必须是 1-720 的数值', { code: 'invalid_window' })
+    return
+  }
+  if (!Number.isFinite(stallHours) || stallHours < 1 || stallHours > 168) {
+    httpFail(ctx, 400, 'stallHours 必须是 1-168 的数值', { code: 'invalid_stall' })
+    return
+  }
   const { home, tried } = resolveKanbanHome()
   if (!home) {
     ok(ctx, { available: false, reason: '看板数据根缺席', tried })
@@ -22,16 +33,6 @@ handoffRoutes.get('/quality', (ctx) => {
   try {
     const boards = readAllBoards(home)
     const merged = mergeBoardsForHandoff(boards)
-    const windowHours = Number(ctx.query.windowHours ?? 24)
-    const stallHours = Number(ctx.query.stallHours ?? 6)
-    if (!Number.isFinite(windowHours) || windowHours < 1 || windowHours > 720) {
-      httpFail(ctx, 400, 'windowHours 必须是 1-720 的数值', { code: 'invalid_window' })
-      return
-    }
-    if (!Number.isFinite(stallHours) || stallHours < 1 || stallHours > 168) {
-      httpFail(ctx, 400, 'stallHours 必须是 1-168 的数值', { code: 'invalid_stall' })
-      return
-    }
     const report = merged.tasks.length === 0 && merged.events.length === 0
       ? { ...computeHandoffQuality([], [], { windowHours, stallHours }), available: false, reason: '看板无任务与事件（空库）' }
       : computeHandoffQuality(merged.tasks, merged.events, { windowHours, stallHours })
