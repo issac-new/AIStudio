@@ -128,3 +128,4 @@
 {"at":"2026-11-03T01:17:04Z","spec":"docs/superpowers/specs/2026-11-03-offline-everything-complete.md","receipt":"4acab327e22cb765d2be1563020f6f9340468fea","commit":"9062b976a"}
 {"at":"2026-11-03T01:26:57Z","spec":"docs/superpowers/specs/2026-11-03-offline-everything-complete.md","receipt":"753512a049c7936c9d1b88d0dd9f6d4d90e03dab","commit":"ea88ed424"}
 {"at":"2026-11-03T02:09:51Z","spec":"docs/superpowers/specs/2026-11-03-run25-collection-gaps-backfill.md","receipt":"847ad37425ce93471fafcc93433ff04bdbf199db","commit":"c2c18b896"}
+{"at":"2026-11-03T02:26:00Z","spec":"docs/superpowers/specs/2026-11-03-bundle-tracked-only.md","receipt":"6a955410eb64e3c6a817da729731ea29c1b3b5e3","commit":"5269614f4"}

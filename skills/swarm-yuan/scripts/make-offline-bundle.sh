@@ -51,7 +51,10 @@ for arg in "$@"; do
   esac
 done
 OUT_ROOT="${OUT_ROOT:-$SWARM_YUAN_SOURCE_ROOT/dist}"
-VER="$(git -C "$SKILL_ROOT" describe --tags --always 2>/dev/null || echo unknown)"
+# R146：版本名可显式覆盖（SWARM_YUAN_OFFLINE_VER）——发行物命名不该被 tag 之后的
+# 无关提交污染（run25 复盘实测：tag 后 4 个提交即让包名变成 v1.0.9-overlay-4-gxxxx，
+# 资产名与 SHA256SUMS 约定全部错位）。缺省仍走 describe。
+VER="${SWARM_YUAN_OFFLINE_VER:-$(git -C "$SKILL_ROOT" describe --tags --always 2>/dev/null || echo unknown)}"
 VER="${VER#swarm-yuan-}"   # AIStudio tag 形如 swarm-yuan-v2.95.0，包名与版本文件只留 v 前缀
 VER="${VER//\//-}"
 BUNDLE_NAME="swarm-yuan-offline-$VER"
@@ -82,19 +85,37 @@ echo "  暂存: $STAGE"
 echo "① 技能本体…"
 SRC_BASE="$(basename "$SKILL_ROOT")"
 mkdir -p "$BUNDLE/$SRC_BASE/scripts"
-for item in "$SKILL_ROOT"/* "$SKILL_ROOT"/.[!.]*; do
-  [[ -e "$item" ]] || continue
-  base="$(basename "$item")"
-  # R118：vendor-knowledge 为第三方规范/版权材料（MANIFEST 声明不分发），与 install.sh 同步排除。
-  # R126-dist8：docs/ 补入排除——install.sh 装机侧有 rm -rf $dest/docs 补救（:263 一带），bundle 侧
-  # 此前无对应排除，R125 重建生成器侧 docs/（预算例外台账等档案）后会被打进离线包，
-  # 两条分发路径产物内容悄然分叉（历史实证：v2.83.0 包内嵌套上层 dist 包的自我污染残骸）。
-  case "$base" in
-    research|.swarm-yuan|offline-cache|ci|dist|docs) continue ;;
-    vendor-knowledge) [[ "$WITH_VENDOR" -eq 1 ]] || continue ;;
-  esac
-  cp -R "$item" "$BUNDLE/$SRC_BASE/"
-done
+# R146（2026-11-03 run25 复盘）：技能树复制改「只取 git 跟踪文件」——原 cp -R 会把工作区
+# 未跟踪残留带进离线包（实测 v1.0.9 everything 档多出 34 条：tests/e2e/java-demo/target/classes/
+# *.xml、嵌套 .swarm-yuan/trace.jsonl 等构建与运行产物；v2.83.0 曾有「包内嵌套上层 dist 包」
+# 自我污染前例）。口径=包内容必须可从源码仓复现，禁带本机痕迹。
+_copy_skill_tree() {
+  local rel base
+  if git -C "$SKILL_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    while IFS= read -r -d '' rel; do
+      base="${rel%%/*}"
+      case "$base" in
+        research|.swarm-yuan|offline-cache|ci|dist|docs) continue ;;
+        vendor-knowledge) [[ "$WITH_VENDOR" -eq 1 ]] || continue ;;
+      esac
+      mkdir -p "$BUNDLE/$SRC_BASE/$(dirname "$rel")"
+      cp "$SKILL_ROOT/$rel" "$BUNDLE/$SRC_BASE/$rel"
+    done < <(git -C "$SKILL_ROOT" ls-files -z)
+  else
+    # 非 git 树（已安装态）回落目录复制；R118/R126-dist8 排除同口径
+    local item
+    for item in "$SKILL_ROOT"/* "$SKILL_ROOT"/.[!.]*; do
+      [[ -e "$item" ]] || continue
+      base="$(basename "$item")"
+      case "$base" in
+        research|.swarm-yuan|offline-cache|ci|dist|docs) continue ;;
+        vendor-knowledge) [[ "$WITH_VENDOR" -eq 1 ]] || continue ;;
+      esac
+      cp -R "$item" "$BUNDLE/$SRC_BASE/"
+    done
+  fi
+}
+_copy_skill_tree
 # 构建器与清单随包（目标机可重打包/核对版本口径）
 cp "$SELF_DIR/make-offline-bundle.sh" "$SELF_DIR/offline-manifest.conf" "$BUNDLE/$SRC_BASE/scripts/"
 
