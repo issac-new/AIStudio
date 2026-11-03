@@ -55,7 +55,7 @@ if [[ -f "$GLS" ]]; then
     fi
   done
 else
-  bad "态7 缺 glossary（$GLS）"
+  bad "态7 缺 glossary（${GLS}）"
 fi
 grep -q '受控动词表' "$TPL" \
   && ok "态7 模板 §19.2 受控动词表注记" || bad "态7 模板 §19.2 注记缺位（动词规范指引缺位）"

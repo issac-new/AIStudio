@@ -1,5 +1,35 @@
 # Changelog
 
+## [v2.99.0] - 2026-11-03
+
+方法论吸收批：pstack 全量 + addyosmani/mattpocock 上游漂移刷新（12 项；门禁 56→59，变量 199→204）。源码级调研三仓（pstack `ae5650f`、addyosmani `301b02b`、mattpocock `4ae2317`），按"只吸收机制不移植体量"落地。
+
+### Added
+
+- **`references/pstack-methodology.md`**：pstack 十三机制档——验证即生成物五段（Launch/Doctor/Drive/Evidence/Cleanup）+ 功能地图四 H2、"从未执行过的生成物是草稿"、"证明它能失败"、arena 与 swarm 的分工（覆盖 vs 择优、缺口不计为通过、跨家族 judge）、blast-radius 五级证据强度、原则卡引用契约、决策日志 TSV、overnight 契约。登记 `references.tsv` 与 `capability-map`，走 gen_only（细则按需读，不占生成期与分发预算）。
+- **`scripts/eval-routing.sh` 路由评测器**（零依赖 bash+awk）：TF-IDF 余弦排序 + 正例 top-k + 反例 owner 压过 + 描述碰撞 0.75 判错 + rank-1 棘轮；中文按 3 字节 n-gram 分词（无词典依赖）。用例走 TSV（不引入 node/jq）。
+- **`scripts/floor-guard.sh` 降标守卫**：diff 范围内只报五类降标（阈值下调/测试变松/断言删除/静默检查器/新增例外），退出码 2 绝不读成 0；"收紧静默、放宽响亮"。
+- **三个新门禁**（59）：`check_skill_docs`（反合理化表存在/位置/行数/锚点 + SKILL.md 体积 + sidecar 路由头 + 原则卡四段防残片）、`check_skill_routing`、`check_floor_guard`；均带双态夹具。`floor_guard/skill_docs/skill_routing` 入 `GATE_ENFORCE_DENY` 硬拦截白名单。
+- **目标技能第七类产物模板三件**：`assets/verify-skill-template.md`（verify-<project> 五段 + 功能地图 + 自跑与证伪判据）、`assets/out-of-scope-template.md`（拒答库三段 + 写与不写判据）、`assets/principles-template.md`（原则卡四段 + 引用契约）。随技能分发（lite），产物落技能根新子目录、不进 references。
+- **九节点三处接线**：①决策前沿（依赖分层轮次 + 每问附推荐答案 + 事实派子代理）与拒答库先行；④决策四区（已决/前沿/待明确/界外，"待明确"须写卡在哪个未决问题）；⑦证据强度自评 + 拒答落账 + 原则引用。spec 决策表增「依据问题号」列（可机检追溯）。
+
+### Changed
+
+- **`references/agent-skills-methodology.md`**：补三档评测体系（Tier1 结构 / Tier2 词法路由 / Tier3 行为，含负例 owner 防 vacuous pass、rank-1 棘轮"不许下调"）、floor guard 五类、doubt 协议（ARTIFACT+CONTRACT 不传 CLAIM、3 轮上限、doubt theater 可检测信号）、interview-me 的 95% 操作化判据；反借口表统计更新为 24/25 技能 169 条；HEAD 锚升 `301b02b`。
+- **`references/mattpocock-skills-methodology.md`**：新增 §九上游漂移增量（子代理一律新上下文窗口不 fork、implement-spec 每票新 implementer、out-of-scope 拒答库规范、ADR 追加式更新）；HEAD 锚升 `4ae2317`。
+- **`references/subagent-orchestration.md`**：新增「子代理一律新上下文窗口不 fork」与「swarm/arena 分工 + 缺口不计为通过」两节。
+- **`template-spec.md`**：节点①④⑦与第七类产物只留指针，细则落 pstack-methodology（生成期上下文预算第七次登记 197632→199680，实测 198536B）。
+
+### Fixed
+
+- **`check_spec_first` 四段机检/内容收据块回灌源文件**：26 行此前只存在于生成物 `assets/gates-warn.sh`，源 `assets/gates/process/spec-first.sh` 缺失——按渲染纪律重生成会**静默删除** L3 的 spec 四段与收据执法。补入源文件后重生成，`gate-enforce-level.conf` 随之分档为 strict（该门本就有 4 处 fail，此前声明 warn 与代码不符）。
+- **`tests/test-spec-template-maet.sh` G20 多字节违规**：`$GLS）` → `${GLS}）`。
+
+### Notes
+
+- 未修（如实登记）：`FACT_ARTIFACT_BYTES_BUDGET` 实测 642207B > 预算 618496B（本轮前已超 641806B，本轮 +401B 来自 router 路由表一行）；本轮未上调预算，留待专门瘦身轮。
+- 文章两处与源码不符，按源码写：pstack **无**"五轴 arena 评审"（rubric 每次现场生成 3-6 条，反对固定轴）；Matt 的 grilling 首轮吸收（2026-10-03）即按"依赖分层前沿轮次"记录，非"一次一问"。
+
 ## [v2.98.5] - 2026-11-02
 
 方法论吸收批 F：测试受控动词表（spec 2026-11-02-test-vocab）。

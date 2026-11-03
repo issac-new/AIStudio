@@ -940,127 +940,6 @@ check_scope() {
   fi
   [[ $readonly_violation -eq 0 ]] && { pass "只读目录无改动"; return 0; }
 }
-# gate: spec-first
-# domain: process / enforce: warn / tier: core
-check_spec_first() {
-  echo "=== spec-first 流程门（L3 门禁时强拦，R101）==="
-  local _sr="${SPEC_REQUIRED:-}"
-  # R128：占位符剥离收敛到 spec-first-lib spf_strip_placeholder（precheck.sh source 本文件前
-  # 已加载判定库）；command -v 守卫=库缺失时不剥不炸（set -e 安全，同下方 spf_* 缺失守卫）。
-  command -v spf_strip_placeholder >/dev/null 2>&1 && _sr="$(spf_strip_placeholder "${_sr}")"
-  if [[ "$_sr" != "1" ]]; then
-    skip_if_unconfigured "SPEC_REQUIRED 未启用（conf 置 1 开启——与 fail-gate-hook/pre-commit/state-machine 同开关）"
-    return 0
-  fi
-  if [[ -z "${WRITABLE_DIRS[*]:-}" ]]; then
-    skip_if_unconfigured "WRITABLE_DIRS 未配置（spec-first 检测面为空）"
-    return 0
-  fi
-  if ! command -v spf_find_approved_spec >/dev/null 2>&1; then
-    skip_if_unconfigured "spec-first-lib.sh 缺失（判定面不可用，生成物成套分发被破坏）"
-    return 0
-  fi
-  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    skip_if_unconfigured "非 git 仓库（无变更检测面；L2 pre-commit 亦不适用）"
-    return 0
-  fi
-  local _root="${PROJECT_DIR:-$(pwd)}"
-  local _changed _hit=""
-  _changed=$(_git_changed_files)
-  # 与 check_scope 同款豁免过滤：工具链自有路径（.swarm-yuan/.agents/skills/.claude/skills/.codex/skills）
-  # 是门禁/hook/技能升级的合法写入面，不属"无 spec 写源码"语义——分层执法，不重复兜。
-  _changed=$(printf '%s\n' "$_changed" | grep -vE '^(\.agents/skills/|\.claude/skills/|\.codex/skills/|\.swarm-yuan/)' || true)
-  local _f
-  while IFS= read -r _f; do
-    [[ -z "${_f:-}" ]] && continue
-    # _git_changed_files 给仓库相对路径；spf_path_in_dirs 按绝对路径段匹配——补根再判（同 L2）
-    if spf_path_in_dirs "${_root}/${_f}" "$_root" "${WRITABLE_DIRS[*]}"; then _hit="$_f"; break; fi
-  done <<< "$_changed"
-  if [[ -z "$_hit" ]]; then
-    pass "spec-first: git 变更未触及可写源码区（WRITABLE_DIRS）"
-    return 0
-  fi
-  local _sg="${SPEC_GLOB:-}"
-  # R128：占位符剥离收敛（同上方 _sr——spec-first-lib spf_strip_placeholder，守卫式调用）。
-  command -v spf_strip_placeholder >/dev/null 2>&1 && _sg="$(spf_strip_placeholder "${_sg}")"
-  _sg="${_sg:-docs/specs/*.md}"
-  local _approved=""
-  # R109-D8 spec-变更关联（与 L2 同源 spec-first-lib）：特性分支上治理 spec 须在变更集
-  # （staged ∪ 本分支 diff ∪ untracked——门禁时开发中态的 spec 已写未提交也认）；
-  # 基分支保留存在性（主干直提交归分支门，合并后全量复查按宽口径放行）。
-  # --no-verify 逃逸的提交在 L3 被抓：分支 diff 有源码无 spec 即 fail（比存在性更强）。
-  # conf 路径=本文件同目录（生成器 assets/ 与目标技能 scripts/ 两布局皆然）——BASE_BRANCH 优先级来源。
-  local _CONF_PATH
-  _CONF_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/precheck.conf"
-  [[ -f "$_CONF_PATH" ]] || _CONF_PATH=""
-  if spf_on_base_branch "$_root" "$_CONF_PATH"; then
-    _approved="$(spf_find_approved_spec "$_root" "$_sg")"
-  else
-    _approved="$(spf_find_governing_spec "$_root" "$_sg" 'staged branch untracked' "$_CONF_PATH")"
-  fi
-  if [[ -n "$_approved" ]]; then
-    # DESIGN_SYNC 二段核验（与 L2 同判据 spec-first-lib；关联面=门禁态 staged∪branch∪untracked，worktree 视图）。
-    # 治理 spec 选择器排除 DESIGN_DOCS（正本自身常含「## 决策记录」章会抢注 governing 选择——
-    # 正本是被同步对象不是治理 spec，2026-10-26 立法轮实证）；无治理 spec 但变更集触及 DESIGN_DOCS
-    # =正本修订无声明治理，同拦（unowned-doc-change）。
-    if command -v spf_design_sync_check >/dev/null 2>&1; then
-      local _ds_violation _ds_docs _ds_req _ds_spec _ds_f _d
-      _ds_docs="$(spf_design_docs "$_CONF_PATH")"
-      _ds_req="$(spf_conf_val "$_CONF_PATH" DESIGN_SYNC_REQUIRED)"
-      if [[ "$_ds_req" == "1" && -n "$_ds_docs" ]]; then
-        if spf_on_base_branch "$_root" "$_CONF_PATH"; then
-          _ds_spec=""
-        else
-          _ds_spec="$(spf_find_governing_spec "$_root" "$_sg" 'staged branch untracked' "$_CONF_PATH" worktree $_ds_docs)"
-        fi
-        _ds_violation=""
-        if [[ -n "$_ds_spec" ]]; then
-          _ds_violation="$(spf_design_sync_check "$_root" "$_CONF_PATH" "$_ds_spec" 'staged branch untracked' worktree)"
-        else
-          while IFS= read -r _ds_f; do
-            [[ -z "${_ds_f:-}" ]] && continue
-            for _d in $_ds_docs; do
-              [[ "$_ds_f" == "$_d" ]] && _ds_violation="unowned-doc-change: ${_ds_f} 设计文档修订无治理 spec（须有 spec 以「设计文档影响」段声明 DESIGN_SYNC: touched 治理本批修订——先 spec 再改正本）"
-            done
-          done <<< "$(spf_changed_files "$_root" 'staged branch untracked' "$_CONF_PATH")"
-        fi
-        if [[ -n "$_ds_violation" ]]; then
-          fail "gate_design_sync: ${_ds_violation}——解除：写治理 spec 声明/并入设计文档修订/改声明 none 附理由（节点⑦审查背书）；开关 DESIGN_SYNC_REQUIRED/DESIGN_DOCS（precheck.conf）"
-          return 0
-        fi
-      fi
-    fi
-    # 四段机检 + 内容收据（2026-10-30 HelixHarness 吸收轮；与 L2 同源 spec-first-lib）。
-    # 注意：gate-enforce-level.conf 的 warn 档=2 次 fail() 调用次数分档，不会让本门变"只告警"——
-    # 要真告警必须在本门内用 warn()，强拦用 fail()。
-    if command -v spf_sections_violation >/dev/null 2>&1; then
-      local _sec_mode _sec_v _rc_mode _rc_v
-      _sec_mode="$(spf_conf_val "$_CONF_PATH" SPEC_SECTIONS_ENFORCE)"
-      _sec_mode="${_sec_mode:-${SPEC_SECTIONS_ENFORCE:-warn}}"
-      _sec_v="$(spf_sections_violation "$_root" "$_approved" worktree)"
-      if [[ -n "$_sec_v" ]]; then
-        if [[ "$_sec_mode" == "block" ]]; then
-          fail "gate_spec_sections: ${_sec_v}——补齐四段（变更/决策记录/验证/设计文档影响）或把存量 spec 加入 .swarm-yuan/spec-sections-baseline.txt（只许减）"
-          return 0
-        fi
-        warn "gate_spec_sections: ${_sec_v}（SPEC_SECTIONS_ENFORCE=block 强拦）"
-      fi
-      _rc_mode="$(spf_conf_val "$_CONF_PATH" SPEC_RECEIPT_ENFORCE)"
-      _rc_mode="${_rc_mode:-${SPEC_RECEIPT_ENFORCE:-warn}}"
-      _rc_v="$(spf_receipt_check "$_root" "$_approved" worktree "$_CONF_PATH")"
-      if [[ "$_rc_v" == drift:* ]]; then
-        if [[ "$_rc_mode" == "block" ]]; then
-          fail "gate_spec_receipt: ${_approved} 内容与已绑定收据不符（已合入基分支的决策记录被改写；授权修订请 SPEC_REBIND=1 显式重绑）"
-          return 0
-        fi
-        warn "gate_spec_receipt: ${_approved} 内容与已绑定收据不符（授权修订请 SPEC_REBIND=1 重绑）"
-      fi
-    fi
-    pass "spec-first: 可写区变更有变更集内已批准 spec（${_approved}）"
-  else
-    fail "gate_spec_first_missing: git 变更触及可写源码区（如 ${_hit}）但本变更集无已批准 spec（须含「## 决策记录」段且非占位；R109-D8 起=spec 须随本分支提交/staged/untracked 携带，历史 spec 不再放行）——先 spec 再编码；四层拦截同判据（L1 写时 hook/L2 提交时 pre-commit/本门/L4 状态机 build 准入）"
-  fi
-}
 # gate: build
 # domain: quality / enforce: warn / tier: core
 check_build() {
@@ -2315,4 +2194,94 @@ check_rtm() {
   local pct=$((traced*100/total))
   echo "  ⓘ 追溯率：${pct}%（${traced}/${total}，矩阵：${matrix}）"
   [[ $found -eq 0 ]] && { pass "需求追溯矩阵检查通过（全部 ${total} 个 REQ 已追溯，追溯率 ${pct}%）"; return 0; }
+}
+# gate: skill-routing
+# domain: quality / enforce: warn / tier: arch
+check_skill_routing() {
+  echo "=== 技能描述路由评测（触发词表回归 + 描述碰撞）==="
+  local root="${PROJECT_DIR:-.}"
+  if [[ ! -f "${root}/SKILL.md" ]]; then
+    skip_if_unconfigured "当前目录无 SKILL.md（非目标技能根），路由评测跳过"
+    return 0
+  fi
+  local cases="${SKILL_CASES_FILE:-assets/evals/cases.tsv}"
+  [[ "$cases" = /* ]] || cases="${root}/${cases}"
+  if [[ ! -f "$cases" ]]; then
+    skip_if_unconfigured "未配置路由用例（${cases}）——生成期从目标仓的 issue/commit/AGENTS.md 取用户真实说法，落正例≥3、反例≥2"
+    return 0
+  fi
+  # 定位外部判定器：源文件同目录 → ../scripts/ → 项目 scripts/（生成物与夹具两种布局都覆盖）
+  local _d _runner="" _c
+  _d="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+  for _c in "$_d/eval-routing.sh" "$_d/../scripts/eval-routing.sh" "${root}/scripts/eval-routing.sh"; do
+    [[ -f "$_c" ]] && { _runner="$_c"; break; }
+  done
+  if [[ -z "$_runner" ]]; then
+    skip_if_unconfigured "eval-routing.sh 不可达，路由评测跳过（诚实披露：未评不等于通过）"
+    return 0
+  fi
+
+  local minr="${ROUTING_MIN_RANK1:-90}"
+  local out rc
+  local peers="${root}/.."
+  if compgen -G "${peers}/*/SKILL.md" >/dev/null 2>&1; then
+    out=$(bash "$_runner" --cases "$cases" --skill "${root}/SKILL.md" --skill-dir "$peers" --min-rank1 "$minr" 2>&1); rc=$?
+  else
+    out=$(bash "$_runner" --cases "$cases" --skill "${root}/SKILL.md" --min-rank1 "$minr" 2>&1); rc=$?
+  fi
+
+  case "$rc" in
+    0) pass "路由评测通过（$(printf '%s' "$out" | grep -c '^PASS' ) 例通过；$(printf '%s' "$out" | grep 'rank-1 率' | head -1)）" ;;
+    1)
+      local _pos _neg
+      _pos=$(printf '%s' "$out" | grep -E '^FAIL 正例|^FAIL 描述碰撞' | head -2 | tr '\n' '；')
+      _neg=$(printf '%s' "$out" | grep -E '^FAIL 反例|^ERR' | head -2 | tr '\n' '；')
+      if [[ -n "$_pos" ]]; then
+        fail "gate_skill_routing_hit: ${_pos}——描述缺用户会说的词或与邻技能过近；改描述，不要改用例"
+      fi
+      if [[ -n "$_neg" ]]; then
+        fail "gate_skill_routing_neg: ${_neg}——反例被抢走或 owner 配错；先确认真实归属再改描述"
+      fi
+      ;;
+    *) warn "gate_skill_routing_unavailable: 评测器无法运行（rc=${rc}）：$(printf '%s' "$out" | tail -1)——未评不等于通过" ;;
+  esac
+  return 0
+}
+# gate: floor-guard
+# domain: process / enforce: strict / tier: core
+check_floor_guard() {
+  echo "=== 降标守卫（只报把质量底线往下挪的 diff 动作）==="
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    skip_if_unconfigured "非 git 仓库，降标守卫跳过"
+    return 0
+  fi
+  # 定位外部判定器：源文件同目录 → ../scripts/ → 项目 scripts/（生成物与夹具两种布局都覆盖）
+  local _d _runner="" _c
+  _d="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+  for _c in "$_d/floor-guard.sh" "$_d/../scripts/floor-guard.sh" "${PROJECT_DIR:-.}/scripts/floor-guard.sh"; do
+    [[ -f "$_c" ]] && { _runner="$_c"; break; }
+  done
+  if [[ -z "$_runner" ]]; then
+    skip_if_unconfigured "floor-guard.sh 不可达，降标守卫跳过（诚实披露：未判定不等于无降标）"
+    return 0
+  fi
+  local out rc
+  out=$(bash "$_runner" --root "${PROJECT_DIR:-.}" 2>&1); rc=$?
+  case "$rc" in
+    0) pass "降标守卫通过：${out}" ;;
+    1)
+      local _ln _lines
+      # 用 here-string 而非管道：管道会让 while 落到子 shell，fail() 的计数增量丢失（门禁假绿）
+      _lines="$(printf '%s\n' "$out" | grep '^降标' | head -5)"
+      if [[ -n "$_lines" ]]; then
+        while IFS= read -r _ln; do
+          fail "gate_floor_guard: ${_ln}——恢复底线，或按决策 26.2 在 decisions.jsonl 逐条登记降标理由"
+        done <<< "$_lines"
+      else
+        fail "gate_floor_guard: 守卫判定存在降标但未给出条目——检查 scripts/floor-guard.sh 输出格式"
+      fi
+      ;;
+    *) warn "gate_floor_guard_unavailable: 无法判定（rc=${rc}）：${out}——rc=2 不计为通过" ;;
+  esac
+  return 0
 }

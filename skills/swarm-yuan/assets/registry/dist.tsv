@@ -64,9 +64,9 @@ scripts/task-scale.sh	target	lite	copy	gen	yes	yes	-	-
 scripts/ops-readonly-guard.sh	target	standard	copy	gen	yes	yes	-	-
 scripts/tunnel.sh	target	standard	copy	gen	yes	yes	-	-
 scripts/tunnel.conf	target	standard	copy	assets	yes	yes	-	-
-references/subagent-orchestration.md	target	standard	copy	refd	yes	yes	subagent-orchestration	66579
+references/subagent-orchestration.md	target	standard	copy	refd	yes	yes	subagent-orchestration	69007
 references/governance-agents.md	target	compliance	copy	ref	yes	yes	governance-agents	28769
-references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	16252
+references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	16653
 references/canary-monitoring.md	target	standard	copy	ref	yes	yes	canary-monitoring	1725
 references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	60429
 references/code-graph-tools.md	target	standard	copy	refd	yes	yes	code-graph-tools	45651
@@ -87,10 +87,10 @@ references/standards-compliance.md	target	compliance	copy	ref	yes	yes	standards-
 references/cwe-database.md	target	compliance	copy	ref	yes	yes	cwe-database	10559
 references/security-certification-profiles.md	target	compliance	copy	ref	yes	yes	security-certification-profiles	14502
 references/knowledge-lifecycle-methodology.md	target	standard	copy	ref	yes	yes	knowledge-lifecycle-methodology	11502
-references/mattpocock-skills-methodology.md	target	standard	copy	ref	yes	yes	mattpocock-skills-methodology	12079
+references/mattpocock-skills-methodology.md	target	standard	copy	ref	yes	yes	mattpocock-skills-methodology	16475
 references/decision-governance.md	target	standard	copy	ref	yes	yes	decision-governance	14002
 references/ai-process-records.md	target	standard	copy	ref	yes	yes	ai-process-records	8195
-references/agent-skills-methodology.md	target	standard	copy	ref	yes	yes	agent-skills-methodology	12566
+references/agent-skills-methodology.md	target	standard	copy	ref	yes	yes	agent-skills-methodology	21028
 references/codex-methodology.md	target	standard	distill	refd	yes	yes	codex-methodology	39306
 references/mea-loop-methodology.md	target	standard	copy	ref	yes	yes	mea-loop-methodology	13598
 references/rsi-evidence-methodology.md	target	standard	copy	ref	yes	yes	rsi-evidence-methodology	9284
@@ -106,3 +106,8 @@ references/remote-debug-jvm.md	target	standard	copy	ref	yes	yes	remote-debug-jvm
 scripts/inspection-ledger.sh	target	compliance	copy	gen	yes	yes	-	-
 references/compliance-checkpoints.md	target	compliance	copy	ref	yes	yes	compliance-checkpoints	35380
 references/regulatory-checkpoint-table.md	target	compliance	copy	ref	yes	yes	regulatory-checkpoint-table	55197
+references/failure-taxonomy.md	target	standard	copy	ref	yes	yes	-	5164
+references/knowledge-retrieval-ladder.md	target	standard	copy	ref	yes	yes	-	4089
+assets/verify-skill-template.md	target	lite	copy	assets	yes	yes	-	-
+assets/out-of-scope-template.md	target	lite	copy	assets	yes	yes	-	-
+assets/principles-template.md	target	lite	copy	assets	yes	yes	-	-

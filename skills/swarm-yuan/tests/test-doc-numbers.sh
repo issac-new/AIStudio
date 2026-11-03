@@ -69,18 +69,18 @@ else
 fi
 
 # ===== 0. facts.conf 数字锁 =====
-facts_eq FACT_GATES_TOTAL 56
-facts_eq FACT_GATES_CORE 11
-facts_eq FACT_GATES_ARCH 18
-facts_eq FACT_GATES_STANDARD 29
+facts_eq FACT_GATES_TOTAL 59
+facts_eq FACT_GATES_CORE 12
+facts_eq FACT_GATES_ARCH 20
+facts_eq FACT_GATES_STANDARD 32
 facts_eq FACT_GATES_COMPLIANCE 19
-facts_eq FACT_GATES_FULL 50
+facts_eq FACT_GATES_FULL 53
 facts_eq FACT_GATES_ADVISORY_ONLY 6
-facts_eq FACT_ENFORCE_STRICT 21
-facts_eq FACT_ENFORCE_WARN 20
+facts_eq FACT_ENFORCE_STRICT 23
+facts_eq FACT_ENFORCE_WARN 21
 facts_eq FACT_ENFORCE_ADVISORY 15
 # 决策 54：执行面复杂度预算（引擎域源 / 框架注入），冻结值变化须同步预算与文档
-facts_eq FACT_ENGINE_CODE_LOC_MAX 7980
+facts_eq FACT_ENGINE_CODE_LOC_MAX 8600
 facts_eq FACT_FRAMEWORK_GATE_LOC_MAX 18469
 facts_eq FACT_FRAMEWORKS 81
 facts_eq FACT_RUNTIMES 15
@@ -90,10 +90,10 @@ facts_eq FACT_RUNTIMES_METHOD 5
 facts_eq FACT_FEATURE_CARDS 17
 facts_eq FACT_FEATURE_CARDS_P0 6
 facts_eq FACT_FEATURE_CARDS_P1 11
-facts_eq FACT_CONF_VARS 199
+facts_eq FACT_CONF_VARS 204
 facts_eq FACT_CONF_VARS_CORE 30
-facts_eq FACT_CONF_VARS_ARCH 121
-facts_eq FACT_REFERENCES 58
+facts_eq FACT_CONF_VARS_ARCH 126
+facts_eq FACT_REFERENCES 61
 # 合规检查点库（compliance 档随发）：主表/罚则库条数机械计数对账（口径见 facts.conf 合规检查点库段）
 facts_eq FACT_INSPECTION_CHECKPOINTS 173
 facts_eq FACT_PENALTY_CLAUSES 21
@@ -342,7 +342,7 @@ present "生成器模板标准计数=facts" "scripts/generate-skill.sh" "标准 
 # frameworks/ 与 case-studies/ 子目录另有配对/路径锁（self-check 守），不在本清单面。
 # business-ontology-methodology / fibo-financial-ontology 的 3060/948/265 等数字是
 # FIBO 外部基线（随上游发布变），不是 facts.conf 口径；锚点由 test-ontology-knowledge.sh 锁定。
-TDN_EXEMPT=" clean-code-metrics-methodology.md business-ontology-methodology.md bugfix-runbook.md fibo-financial-ontology.md agent-skills-methodology.md ai-process-records.md canary-monitoring.md capability-map.md claude-code-capabilities.md code-graph-tools.md codex-security-methodology.md cognition-framework.md cognitive-bias.md controlled-language-methodology.md cordis-composability-methodology.md cost-estimation-methodology.md crypto-spec.md cwe-database.md decision-governance.md diagram-production-methodology.md domain-knowledge.md dsh-engineering-methodology.md frontend-design-methodology.md governance-agents.md gsd-patterns.md industry-profile-automotive.md industry-profile-energy.md industry-profile-finance.md industry-profile-gov.md industry-profile-industrial.md industry-profile-medical.md industry-profile-payment.md industry-profile-telecom.md logic-razor.md mattpocock-skills-methodology.md mcp-governance.md mea-loop-methodology.md memory-persistence.md remote-debug-jvm.md review-methodology.md rsi-evidence-methodology.md security-certification-profiles.md security-spec.md subagent-orchestration.md task-methodology-router.md "
+TDN_EXEMPT=" clean-code-metrics-methodology.md business-ontology-methodology.md bugfix-runbook.md fibo-financial-ontology.md agent-skills-methodology.md ai-process-records.md canary-monitoring.md capability-map.md claude-code-capabilities.md code-graph-tools.md codex-security-methodology.md cognition-framework.md cognitive-bias.md controlled-language-methodology.md cordis-composability-methodology.md cost-estimation-methodology.md crypto-spec.md cwe-database.md decision-governance.md diagram-production-methodology.md domain-knowledge.md dsh-engineering-methodology.md frontend-design-methodology.md governance-agents.md gsd-patterns.md industry-profile-automotive.md industry-profile-energy.md industry-profile-finance.md industry-profile-gov.md industry-profile-industrial.md industry-profile-medical.md industry-profile-payment.md industry-profile-telecom.md logic-razor.md mattpocock-skills-methodology.md mcp-governance.md mea-loop-methodology.md memory-persistence.md remote-debug-jvm.md review-methodology.md rsi-evidence-methodology.md security-certification-profiles.md security-spec.md subagent-orchestration.md task-methodology-router.md failure-taxonomy.md knowledge-retrieval-ladder.md pstack-methodology.md "
 # 备注：cwe-database.md / security-certification-profiles.md 虽在豁免列（不携带跨档口径
 # 手抄数），其条目计数已由上方 0b 节 count_eq 机器对账（豁免=无手抄漂移面，非无锁）。
 # domain-knowledge.md 的「核心 10 规则集」是框架 fixture 分级轴（非门禁计数轴），不归本锁。

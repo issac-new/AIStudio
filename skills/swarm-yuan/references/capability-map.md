@@ -85,6 +85,7 @@
 | remote-debug-jvm | 内生（A） | bugfix-runbook 第③步（JDWP 经隧道 + IDE attach + 断点纪律） | fix 任务需断点级取证 |
 | failure-taxonomy | MTSC2026 AI Native 测试工程（极智嘉）六类根因（B） | ⑥ 测试失败处置决策点 + failure-detector `_classify_failure` 规则表正本 | 任何测试/命令/走查失败后先归类再处置，禁无效重试 |
 | knowledge-retrieval-ladder | MTSC2026 四层知识检索本仓化（B） | ② 探查节点检索起点 + 任何「谁依赖/什么语义/怎么改」问题 | 检索纪律：由近及远命中即止、不足升层、跨层佐证、结论带锚 |
+| pstack-methodology | cursor/plugins · pstack v0.15.36（A） | ⑦ 审查（证据强度五级/arena 互证）+ 生成流程 Step 7 目标技能产物规范（验证技能五段、原则卡、拒答库） | 设计验证产物 / 选择 swarm 还是 arena / 写原则卡或审查证据强度 |
 
 ### 族⑤ 安全合规与行业立法（门禁）
 

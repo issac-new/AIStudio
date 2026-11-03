@@ -1,8 +1,8 @@
-> **何时读我**：需求模糊需要结构化访谈（开发工作流 节点①）、写 spec 前定测试缝与防腐（节点②）、拆任务定纵切与阻塞边（节点③）、修缺陷建反馈回路（fix 任务路由）时。来源：mattpocock/skills（需求到任务链四协议 + 诊断回路）。
+> **何时读我**：需求模糊需要结构化访谈（开发工作流 节点①）、写 spec 前定测试缝与防腐（节点②）、拆任务定纵切与阻塞边（节点③）、修缺陷建反馈回路（fix 任务路由）、写拒答库或 ADR（⑦审查/决策留痕）时。来源：mattpocock/skills（需求到任务链四协议 + 诊断回路 + 拒答库/ADR）。
 
 # mattpocock-skills 需求到任务方法论（访谈协议 / 测试缝 / 纵切拆分 / 诊断回路）
 
-> 来源：[mattpocock/skills](https://github.com/mattpocock/skills)（Matt Pocock，MIT，v1.2.3 tag 6acc160，2026-08-06 源码实测；main d81f3a1 2026-09-29 已合并 release/v1.3 未出 tag，线上三新技能一并评估）。
+> 来源：[mattpocock/skills](https://github.com/mattpocock/skills)（Matt Pocock，MIT）。机制基线：v1.2.3 tag `6acc160`（2026-08-06）→ main `5beb35b04`（2026-10-19）→ **本轮刷新 main `4ae2317`（2026-10-31，见 §九）**。
 > 形态：25 技能集合（engineering 17 + productivity 8），按**谁能触发**双轴分层——user-invoked 编排技能（仅人显式触发，`disable-model-invocation: true`）调用 model-invoked 纪律技能（人与模型都可触达，可复用原语）；user-invoked 不得互相调用。Claude Code 官方插件市场 + skills.sh 可编辑拷贝双渠道分发。
 > 纪律：只吸收机制，装配叙事不纳入；不调上游安装链。守决策 27：不新增 `check_*`，门禁数 56 不变。
 > 双层定位：本文档=方法论层（机制改写进九节点）；`runtime/mattpocock-skills/`=CLI 层运行时（上游原语全文物化，engineering 20 + productivity 7 共 27 技能，基线 main `49dd158` 2026-10-09，MANIFEST 登记来源与刷新）——读原文执行不悬空，为 15 个外部运行时中 CLI 层第 5 项（物化型守卫判定可用性）。
@@ -70,8 +70,7 @@
 - 仓库：mattpocock/skills（MIT）。引用基线 v1.2.3（tag 6acc160，2026-08-06；`package.json` 与 `.claude-plugin/plugin.json` 双实核 1.2.3）；main d81f3a1（2026-09-29）合 release/v1.3 未出 tag，三新技能按 main 线评估：implement-spec 落 subagent-orchestration；pr / retro 见 §五吸收边界。
 - 运行时物化基线（2026-10-15）：main `49dd158`（2026-10-09）→ `runtime/mattpocock-skills/` 整目录镜像 27 技能（较机制评估期新增：domain-modeling/codebase-design/research/prototype/triage/wayfinder/retro/wizard/teach/wait-what/writing-for-agents/to-questionnaire/handoff/grill-me 全原语可达；misc 与 in-progress 不取，理由见 MANIFEST）。
 
-## 七、记忆沉淀：带日期与提交引用的 wiki（main 5beb35b04）
-
+## 八、记忆沉淀：带日期与提交引用的 wiki（main 5beb35b04）
 > 来源：mattpocock/skills main `5beb35b04`（2026-10-19，“chief-of-staff: keep memory in a dated, commit-cited wiki” #1304）。该技能位于上游 `skills/in-progress/`，按既有物化边界**不纳入 runtime 镜像**（MANIFEST 不取清单），只吸收方法层。
 
 - **记忆按日期归档**：chief-of-staff 的记忆写入按日期组织的 wiki，而不是无时间锚的散落文档——**“什么时候知道的”是记忆的一部分**，过期判断与冲突裁决都需要时间轴。
@@ -79,3 +78,44 @@
 - **应用**：本技能 memory-writeback 的目标侧笔记若沉淀项目事实，应带 `日期 + 提交/文件锚`；无锚记忆在知识生命周期三态处置中优先复核，不作为稳定事实引用。
 - 一手材料（2026-10-03 本机克隆精读，A 级证据）：`skills/productivity/grilling/SKILL.md`（前沿原语）/ `skills/engineering/{to-spec,to-tickets,diagnosing-bugs,implement}/SKILL.md` / `skills/engineering/ask-matt/SKILL.md` + `PHASE-BOUNDARIES.md` / `skills/productivity/writing-for-agents/SKILL.md` / `.agents/invocation.md` / `.claude-plugin/plugin.json`（promoted 25 skills）。
 - 治理面注记：promoted 桶 ↔ README ↔ plugin.json skills 数组 ↔ docs 页 ↔ ask-matt 路由五处一致性不变量——与 swarm-yuan 四载体一致性同构，不另吸收。
+
+## 九、2026-11 上游漂移增量（HEAD 4ae2317）
+
+> 来源：mattpocock/skills main `4ae2317`（2026-10-31，三条实质提交：`7739eae` 子代理新上下文、`a496f55` implement-spec 每票一个全新 implementer、`4ae2317` software-factory glossary）。相对本档首轮吸收基线 `5beb35b04`（2026-10-19）。
+
+### 9.1 子代理一律新上下文窗口，不 fork 父会话
+
+原文（`CLAUDE.md`）：「Every skill that dispatches a subagent says to start it with a fresh context window. Some harnesses (Codex, for one) fork the parent conversation by default, and a fork inherits the parent's context, which is what the subagent was meant to escape.」
+
+改造面：`implement-spec` / `code-review` / `codebase-design` / `improve-codebase-architecture` / `wayfinder` / `research` / `grilling` / `chief-of-staff` 八个派发子代理的技能全部加注。理由不是风格，是**机制失效**：fork 出来的子代理继承父上下文，"隔离"这个存在的理由被抹掉。与 doubt 协议"干净上下文"、与"缺口不计通过"同一根因域。
+
+**落地（N12）**：`subagent-orchestration.md` 增跨技能纪律一条；与既有"第 4-5 轮 fresh dispatch"不冲突——那是修复环内的升级策略，这是**默认**起点。
+
+### 9.2 implement-spec：每票一个全新 implementer + 落地前先合流
+
+`a496f55` 的协议要点：每个 ticket 一个 implementer 子代理，各自 worktree、各自分支；**报告完成前先把集成分支最新提交 merge 进自己的分支**，使落地是 fast-forward 而非解冲突；完成后由 merger 子代理合入；全部完成后在集成分支跑一次 code-review，所有问题交给**一个**全新 implementer 修。
+
+通信只走上下文指针（spec、ticket、研究笔记、先前提交），不复制内容。已知缺陷作者自己记录了两条：worktree 只推迟冲突不改消；GitHub 的 blocked-by 计数只在关单时才降，运行中前沿是陈旧的，orchestrator 必须按"已合入集成分支"自己重算。
+
+### 9.3 out-of-scope 拒答库（N07 的直接来源）
+
+`SCOPE.md` 的两道杠：**观察到的失败**（真实会话里跑过什么、技能做了什么、期望什么；"如果能…会更好"不算）+ **符合哲学**（不撞 `.out-of-scope/` 与既往拒绝、不是配置项、不是宿主专属分支、不是为某一个人的工作流调参）。"Size is irrelevant: a one-word fix and a rewrite face the same bar."
+
+`.out-of-scope/` 的文件规范（`skills/engineering/triage/OUT-OF-SCOPE.md`）：
+
+- **一概念一文件，不是一 issue 一文件**；同概念的多个请求归并到同一文件。
+- 三段骨架：H1 陈述 / `## Why this is out of scope` / `## Prior requests`（必要时加替代路径段）。
+- **理由必须耐久**：项目范围/哲学、技术约束、战略取舍三条合法依据；明确排除"我们最近太忙"——"those aren't real rejections, they're deferrals"。
+- 只在**增强请求被以 wontfix 拒绝**时写；"已经实现所以关闭"**不写**，否则"would poison the dedup checks with false rejections"。
+- 消费方式：read **全部**文件，按**概念相似度**匹配而非关键词（"night theme" 要命中 `dark-mode.md`）。
+- 改主意：直接删文件，不重开旧 issue。
+
+### 9.4 ADR 的追加式更新
+
+`ADR-FORMAT.md`：ADR 正文极简（H1 + 1-3 句"上下文/决定了什么/为什么"），"An ADR can be a single paragraph."；可选三节（Status / Considered Options / Consequences）只在真加价值时用。三道闸同时成立才写：**难逆** + **无上下文会困惑** + **真权衡**；"大多数会话产生零个 ADR 是设计正常"。
+
+值得单独吸收的实践：决策被后续事实推翻时**不重写原文，追加带日期的 `## Update, YYYY-MM-DD` 段**（`0002` 有四次这样的更新，逐条记录反转原因）。ADR 的正文是**当时**的判断，历史不被擦掉。
+
+### 9.5 未吸收
+
+`software-factory`（工厂设计：gossary 技能 + GIT-HOSTS/RUNNERS/TICKET-TRACKERS/OBSERVABILITY-PLATFORMS 四份平台对照）位于 `skills/in-progress/`，且本仓已有九节点流程与 worktree/编排纪律，重叠面大于增量——登记不吸收，若将来出现"为团队设计交付流水线"的需求再评估。
