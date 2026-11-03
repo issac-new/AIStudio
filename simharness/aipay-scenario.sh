@@ -2377,6 +2377,12 @@ if [ "$(posture)" = "strict" ]; then
       note "[归档] 完备性检查已推送 origin/main（docs/delivery/）"
     else
       echo "ISSUE|evidence-push|delivery|完备性检查推送失败（留存 $EVID_DIR/completeness-check.md）" >> "$EVID_DIR/issues.log"
+      # run25 复盘根治（spec 2026-11-03-run25-collection-gaps-backfill 决策 2）：推送失败不得
+      # 只落 issues.log（收尾链自动归桶「观察」会埋掉，run25 实锤缺件）——同笔登记
+      # pending-backfill.tsv，收尾链与审计器按该清单显式升级待办；补流执行须直接
+      # 提交/ cherry-pick 到 origin/main（决策 1：禁只落特性分支，run8..run23 五轮补件
+      # 全部因落分支被 mx-clean 清丢）。
+      echo "PENDING-BACKFILL|docs/delivery/${RFD_ID}-completeness-check.md|$EVID_DIR/completeness-check.md|补推 origin/main（直接落 main 血统，禁只落分支）" >> "$EVID_DIR/pending-backfill.tsv"
     fi
     ( cd "$DIRECTOR_CLONE" && git worktree remove --force "$DL_WT" ) 2>/dev/null || true
   else

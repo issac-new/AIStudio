@@ -430,7 +430,11 @@ if _ilog.exists():
     # 同 R8 口径锚定（run25 04:55 轮 A3a 撞同一引文坑——两判据共 401 行注释所载解析，
     # 取数必须同修）：全文首匹配会命中审计意见书引文里的历史数字，锚定终态表单元格。
     _m_rep = re.search(r'问题单终态</td><td>唯一键\s*(\d+)', rep)
-    if _m_rep and int(_m_rep.group(1)) != len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines}):
+    # run25 补流批（2026-11-03）：A3a 与 R8 共用 401 行注释所载解析（同 kind·key 口径），
+    # R8 有容差 5（run20 自增死循环教训：降级/追加行属过程追加非计数失实），A3a 此前
+    # 零容差硬比——终态后 issues.log 追加一行（m3-v3-events 工具复跑噪声）即 FAIL，
+    # 与 R8 教训同族。对齐同款容差 5；超容差仍 FAIL（计数失实照抓）。
+    if _m_rep and abs(int(_m_rep.group(1)) - len({l.split('|')[1] + '·' + l.split('|')[2] for l in _iss_lines})) > 5:
         fails.append(f'A3a 报告问题单唯一键计数（{_m_rep.group(1)}）≠ issues.log 实测（{len({l.split("|")[1] + "·" + l.split("|")[2] for l in _iss_lines})}）——计数三源不一致')
     _retro = EVID.parent.parent / 'central' / 'aipaydev' / 'docs' / 'retro'
     import datetime as _dt

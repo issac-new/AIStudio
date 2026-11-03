@@ -4498,6 +4498,15 @@ _effective = {}
 for _n, _t, _g, _m in STEPS:
     for _pre in _effective_step_imgs(_n, _m):
         _effective[_pre] = _n
+# run25 补流批（2026-11-03，spec 2026-11-03-run25-collection-gaps-backfill）：r18 ops 通道帧
+# 并入引用集——ops 帧随 r18-steps.json 注册即渲染进报告（步 8/10/25「帧走 r18 ops 通道」
+# 先例），此前 _effective 只算步块 imgs 面，7 张 ops 帧被误报「盘上未引用」污染值守信号
+# （deliver_gate/report_view 存量误报+本批补拍三键）。
+for _sn, _sv in (R18 or {}).items():
+    for _op in ((_sv or {}).get('ops') if isinstance(_sv, dict) else None) or []:
+        for _fr in (_op.get('frames') or []):
+            _pre = _fr[:-4] if _fr.endswith('.png') else _fr
+            _effective.setdefault(_pre, f'r18:{_sn}')
 total_imgs = sum(1 for pre in _effective if (STEPS_DIR / f'{pre}.png').exists())
 unique_imgs = len({pre for pre in _effective if (STEPS_DIR / f'{pre}.png').exists()})
 ui_imgs = total_imgs  # 证据图=界面上帝视角实拍（自动挂接帧同为产品界面帧）
