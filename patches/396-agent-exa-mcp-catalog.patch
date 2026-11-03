@@ -1,6 +1,6 @@
 diff --git a/optional-mcps/exa/manifest.yaml b/optional-mcps/exa/manifest.yaml
 new file mode 100644
-index 0000000000..c143174083
+index 0000000000..d102276473
 --- /dev/null
 +++ b/optional-mcps/exa/manifest.yaml
 @@ -0,0 +1,51 @@
@@ -18,7 +18,7 @@ index 0000000000..c143174083
 +
 +# Official exa-labs npm server, spawned locally via npx (no vendor-hosted URL;
 +# mcp_security intentionally allows npx/uvx commands).
-+# 版本锁定 exa-mcp-server@3.4.1（npm latest，2026-09-25 registry.npmjs.org 实测）：
++# 版本锁定 exa-mcp-server@3.4.3（npm latest，2026-11-03 registry.npmjs.org 实测）：
 +# 不锁版本时每次启动解析 npm latest 并携带 EXA_API_KEY 运行任意新代码（供应链面）。
 +# EXA_API_KEY 的凭据声明在 auth.env（安装期提示并存入 profile 的 .env）；
 +# transport.env 只放 ${EXA_API_KEY} 引用、不落明文。保留该引用是对
@@ -30,8 +30,8 @@ index 0000000000..c143174083
 +  command: npx
 +  args:
 +    - "-y"
-+    - exa-mcp-server@3.4.1
-+  version: "3.4.1"
++    - exa-mcp-server@3.4.3
++  version: "3.4.3"
 +  env:
 +    EXA_API_KEY: "${EXA_API_KEY}"
 +
