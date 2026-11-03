@@ -44,6 +44,7 @@ import { listLeases, registerLease, startSandboxJanitorIfEnabled, sweepExpiredLe
 import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 import { PROFILE_PRESETS, presetsValid, routeTaskProfile, type TaskFacts } from '../goalbudget/task-router'
+import { handoffRoutes } from '../handoff/handoff-controller'
 import { workbenchRoutes } from './workbench/controller'
 import { fail } from '../lib/http'
 // 融合批四（D7）：启动器上移 simcenter（推演运行域）；路由前缀冻结——本域只保留装配位。
@@ -60,6 +61,7 @@ const router = new Router({ prefix: '/api/harness' })
 // Harness² 改进实验台（2026-10-19）：提案-探测-组合-冠军闭环，复用本路由前缀，
 // 不新增 bootstrap patch。子路由自带写面权限校验（super_admin）。
 router.use('/workbench', workbenchRoutes.routes(), workbenchRoutes.allowedMethods())
+router.use('/handoff', handoffRoutes.routes(), handoffRoutes.allowedMethods())
 // 受控 harness 推演启动（SIM_HARNESS_LAUNCH=1 + super_admin；固定脚本，不接受任意命令）
 router.use('/sim-launch', simLaunchRoutes.routes(), simLaunchRoutes.allowedMethods())
 // 长程任务可信执行（2026-10-22）：主张审计 / 双准入 / 完整性栅栏 / 断点核对
