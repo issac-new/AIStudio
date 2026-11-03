@@ -8,6 +8,7 @@ import { readAllBoards } from '../delivery/boards-reader'
 import { resolveKanbanHome } from '../delivery/kanban-home'
 import { fail as httpFail, ok } from '../lib/http'
 import { checkAcceptance, parseCriterion, probeArtifacts, type AcceptanceEvidence } from './acceptance'
+import { verifyClaims, receiptFactsOf, type ClaimInput } from './claims'
 import { computeHandoffQuality, mergeBoardsForHandoff } from './handoff-quality'
 
 export const handoffRoutes = new Router()
@@ -76,4 +77,32 @@ handoffRoutes.post('/acceptance/check', (ctx) => {
   if (Array.isArray(body.commands)) evidence.commands = body.commands as never[]
   const verdict = checkAcceptance(criteria, evidence)
   ok(ctx, { verdict, ...(problems.length ? { problems } : {}) })
+})
+
+/**
+ * 主张-回执核验（2026-11-03 DeerFlow L1 吸收）：
+ *   POST /claims/verify { taskId, claims: [{id,text,evidenceRefs[]}] }
+ * 回执来自 evidence 台账（同 taskId 的 evidenceId 才算依据）；未引用/不可解析/跨任务均判未验证。
+ */
+handoffRoutes.post('/claims/verify', async (ctx) => {
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
+  const taskId = String(body.taskId ?? '').trim()
+  if (!taskId) {
+    httpFail(ctx, 400, 'taskId 必填', { code: 'no_task' })
+    return
+  }
+  const claims = Array.isArray(body.claims) ? (body.claims as ClaimInput[]) : []
+  if (claims.length === 0) {
+    httpFail(ctx, 400, 'claims 必填（至少一条）', { code: 'no_claims' })
+    return
+  }
+  const { listEvidence } = await import('../evidence/evidence-store')
+  let records: Array<{ evidenceId: string }> = []
+  try {
+    records = listEvidence(taskId, undefined, 200)
+  } catch {
+    /* 台账不存在按空账处理：所有引用都会判不可解析（不猜） */
+  }
+  const report = verifyClaims(taskId, claims, receiptFactsOf(records))
+  ok(ctx, { report, knownReceipts: records.length })
 })

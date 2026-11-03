@@ -56,6 +56,7 @@ describe('dispatch reason 词表（第一批吸收 #1，multica MUL-4525 模式�
       'attribution_blocked', 'already_active', 'self_trigger_suppressed',
       'engine_unreachable', 'handshake_failed', 'subscription_failed', 'subscription_lapsed',
       'frame_fragment_skipped', 'frame_malformed', 'command_rejected', 'internal_error',
+      'capacity_exhausted', 'capacity_timeout',
     ])
   })
 
