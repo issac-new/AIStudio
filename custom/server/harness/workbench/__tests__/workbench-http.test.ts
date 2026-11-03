@@ -15,6 +15,7 @@ beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'harness2-http-'))
   process.env.HERMES_HOME = join(dir, 'home')
   process.env.HARNESS2_STORE = join(dir, 'workbench', 'workbench.json')
+  process.env.HARNESS2_COMPONENT_LIBRARY = join(dir, 'workbench', 'components.json')
   process.env.EVAL_STORE = join(dir, 'eval')
   process.env.HERMES_APPROVALS_LOG_FILE = join(dir, 'approvals.json')
   delete process.env.HARNESS2_APPLY
@@ -97,7 +98,7 @@ function runOf(id: string, setId: string, pass: number) {
 
 afterEach(async () => {
   server.close()
-  for (const k of ['HERMES_HOME', 'HARNESS2_STORE', 'EVAL_STORE', 'HERMES_APPROVALS_LOG_FILE', 'HARNESS2_APPLY']) delete process.env[k]
+  for (const k of ['HERMES_HOME', 'HARNESS2_STORE', 'EVAL_STORE', 'HERMES_APPROVALS_LOG_FILE', 'HARNESS2_APPLY', 'HARNESS2_COMPONENT_LIBRARY']) delete process.env[k]
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -174,6 +175,13 @@ describe('Harness² 工作台 HTTP', () => {
     expect(promoted.body.proposal.status).toBe('promoted')
     expect(promoted.body.experience).toMatchObject({ status: 'adopted', domain: 'legal', sourceProposalId: composed.id })
     expect(promoted.body.experience.snapshot.content).toBe('persona A')
+
+    // PluginRSI 吸收轮：晋级即把选中变体作为组件入库，可经 /library 复用
+    const lib = await get('/api/harness/workbench/library?latestOnly=1')
+    expect(lib.status).toBe(200)
+    const libBody = lib.body as { summary: { total: number }; components: Array<{ proposalId?: string; surfaceKey?: string; digest: string }> }
+    expect(libBody.summary.total).toBeGreaterThanOrEqual(1)
+    expect(libBody.components.some((c) => c.surfaceKey === 'system_prompt')).toBe(true)
 
     const overview = await get('/api/harness/workbench/overview')
     expect(overview.body.counts.champions).toBe(1)

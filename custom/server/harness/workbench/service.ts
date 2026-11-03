@@ -25,6 +25,7 @@ import type { AskFn } from '../../eval/judge'
 import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
 import { nextId, mutateStore, readStore, persistAutoJob, listOrphanAutoJobs } from './store'
+import { listComponents, librarySummary, recordComponent } from './component-library'
 import { ensureScheduleFile, readSchedulePolicy, validateSchedulePolicy, normalizeSchedulePolicy, DEFAULT_SCHEDULE_POLICY, SCHEDULE_REL } from './schedule-policy'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
 import { experienceFreshness, memoryConsolidationPolicy, type ExperienceFreshness } from './experience-freshness'
@@ -1165,7 +1166,7 @@ export async function promoteProposal(
   const selected = composedVariant(p0)
   if (!selected) throw new ServiceError(409, '组合内容缺失')
 
-  return mutateStore((store2) => {
+  const result = await mutateStore((store2) => {
     const p = requireProposal(store2, id)
     const now = nowIso()
     const previous = currentChampionOf(store2.champions, p.surfaceKey, p.id)
@@ -1233,6 +1234,28 @@ export async function promoteProposal(
     }
     return { proposal: view(store2, p), gate, applied, ...(experience ? { experience } : {}) }
   })
+
+  // PluginRSI 吸收轮（2026-11-03）：晋级即把选中变体作为**组件**入库（幂等，append-only）。
+  // 入库失败不阻断晋级——库是复用资产，不是晋级前置条件（如实吞掉并在下次重试）。
+  try {
+    const probe = p0.probes.find((x) => x.variantId === selected.id && x.status === 'recorded')
+    recordComponent(
+      p0,
+      selected,
+      {
+        proposalId: p0.id,
+        variantId: selected.id,
+        ...(probe?.evalRunId ? { evalRunId: probe.evalRunId } : {}),
+        passAt1: probe?.evidence?.passAt1 ?? null,
+        delta: probe?.contrast?.passAt1Delta ?? null,
+        ...(verificationTierOf(p0) ? { verificationTier: verificationTierOf(p0) } : {}),
+      },
+      { actor: String(opts.actor ?? 'operator') },
+    )
+  } catch {
+    /* 组件库写入失败不影响晋级结果（fail-soft） */
+  }
+  return result
 }
 
 export async function rollbackProposal(
@@ -1823,3 +1846,11 @@ export function ensureSchedulePolicyFile(): { created: boolean; file: string } {
 }
 
 export { validateSchedulePolicy, normalizeSchedulePolicy }
+
+// ── 组件库（PluginRSI 吸收轮）：只读投影 ─────────────────────────
+export function componentLibrary(): {
+  summary: ReturnType<typeof librarySummary>
+  list: (q?: Parameters<typeof listComponents>[0]) => ReturnType<typeof listComponents>
+} {
+  return { summary: librarySummary(), list: (q) => listComponents(q) }
+}

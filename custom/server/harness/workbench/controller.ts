@@ -12,6 +12,7 @@ import {
   startAutoProbe, submitProposal, suggestProposal,
   schedulePolicy,
   validateSchedulePolicy,
+  componentLibrary,
   ensureSchedulePolicyFile,
 } from './service'
 import type { ExperienceStatus, SurfaceKey } from './types'
@@ -245,6 +246,24 @@ router.post('/proposals/:id/surface-applied', async (ctx) => {
   const b = bodyOf(ctx)
   try {
     ok(ctx, { proposal: await markSurfaceApplied(ctx.params.id, actorOf(ctx, b)) })
+  } catch (e) {
+    fail(ctx, e)
+  }
+})
+
+// 组件库（PluginRSI 吸收轮 2026-11-03）：晋级过的零件可按类目复用。
+router.get('/library', async (ctx) => {
+  try {
+    const q = ctx.query as Record<string, string | undefined>
+    ok(ctx, {
+      summary: componentLibrary().summary,
+      components: componentLibrary().list({
+        ...(q.kind ? { kind: q.kind } : {}),
+        ...(q.surfaceKey ? { surfaceKey: q.surfaceKey } : {}),
+        latestOnly: q.latestOnly === '1',
+        ...(q.limit ? { limit: Number(q.limit) } : {}),
+      }),
+    })
   } catch (e) {
     fail(ctx, e)
   }
