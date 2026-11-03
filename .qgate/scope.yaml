@@ -270,3 +270,7 @@ paths:
   - package-lock.json
   - RELEASE-MANIFEST.json
   - RELEASE-NOTES.md
+  # 2026-11-03 发布资产口径立法（上传面永久收窄=两包）
+  - docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - RELEASE-MANIFEST.json
