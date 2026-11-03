@@ -36,7 +36,7 @@
 | cost-estimation-methodology | 人行科技司培训 + GB/T 42588（B） | spec §25 填充 | 规模/工作量估算 |
 | domain-knowledge | 内生速查（A） | 生成流程 Step 4 + --domain 门禁 | 领域规律推导 |
 | business-ontology-methodology | FIBO ONTOLOGY_GUIDE + 2026Q3 源码树（B，MIT） | 生成流程 Step 4/5 探查建模 + 开发工作流 ③ spec 领域段 | 业务领域建模、术语表、跨系统语义对齐 |
-| code-graph-tools | GitNexus/graphify/codegraph 调研（A） | 生成流程 Step 3 图谱优先 | 图谱工具选型 |
+| code-graph-tools | GitNexus/graphify/codegraph 调研（A） | 生成流程 Step 3 图谱优先【生成器侧】 | 图谱工具选型（目标技能不随之分发：选型是生成期决策） |
 | togaf-metamodel-methodology | TOGAF BDAT（B） | §D.0.6 四层视角 | 架构类变更探查 |
 | frontend-design-methodology | pbakaus/impeccable（B） | 生成流程 Step 7 + 开发工作流 ⑤ 前端 | 前端设计任务 |
 | diagram-production-methodology | cathrynlavery/diagram-design v2.6.120（A，MIT；版本真值=runtime/diagram-design/MANIFEST.md，facts.conf FACT_DIAGRAM_DESIGN_VERSION 对账） | 生成流程 Step 7 + 开发工作流 ③ spec/⑦ 审查/⑨ 发布 | 需要可发布架构/流程/时序/状态/ER/依赖/部署图 |

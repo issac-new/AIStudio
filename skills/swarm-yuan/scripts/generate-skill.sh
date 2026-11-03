@@ -139,7 +139,6 @@ UNIVERSAL_FILES=(
   "references/task-methodology-router.md|ref|standard"
   "references/canary-monitoring.md|ref|standard"
   "references/review-methodology.md|refd|standard"
-  "references/code-graph-tools.md|refd|standard"
   "references/gsd-patterns.md|ref|standard"
   "references/memory-persistence.md|refd|standard"
   "references/security-spec.md|ref|lite"
