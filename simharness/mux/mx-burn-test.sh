@@ -113,13 +113,15 @@ ELAPSED=$((FINISHED_AT - STARTED_AT))
 # ── 判读：①驱动退出码 ②无 FAIL 行 ③到达目标步（state.env 有目标步的 *_done 键）
 ST=pass; REASONS=""
 [ "$DRV_RC" -ne 0 ] && { ST=fail; REASONS="driver_rc=$DRV_RC;"; }
-FAIL_LINES="$(grep -cE '^\[mux FAIL |\[ERR\]' "$LOG" 2>/dev/null || echo 0)"
+# grep -c 零匹配时 exit 1 且已打印 0——`|| echo 0` 会再补一行 0，receipt 里嵌进
+# "0\n0" 使 JSON 破损（burn-20261103-215414 实锤）。空值兜底改后置展开。
+FAIL_LINES="$(grep -cE '^\[mux FAIL |\[ERR\]' "$LOG" 2>/dev/null)"; FAIL_LINES="${FAIL_LINES:-0}"
 [ "${FAIL_LINES:-0}" -gt 0 ] && { ST=fail; REASONS="${REASONS}fail_lines=$FAIL_LINES;"; }
-DONE_KEYS="$(grep -cE '_done=1|_done=[0-9]{10}' "$RUN_DIR/state.env" 2>/dev/null || echo 0)"
+DONE_KEYS="$(grep -cE '_done=1|_done=[0-9]{10}' "$RUN_DIR/state.env" 2>/dev/null)"; DONE_KEYS="${DONE_KEYS:-0}"
 # 目标步达成判据：目标步自身的 done 键在位（archgate 的键= arch_pass 或 g2_arch_pass；其余用 <step>_done）
 case "$UNTIL" in
-  archgate) GOAL_OK=$(grep -cE '^(g2_arch_pass|arch_pass)=' "$RUN_DIR/state.env" 2>/dev/null || echo 0) ;;
-  *)        GOAL_OK=$(grep -cE "^${UNTIL}_done=" "$RUN_DIR/state.env" 2>/dev/null || echo 0) ;;
+  archgate) GOAL_OK=$(grep -cE '^(g2_arch_pass|arch_pass)=' "$RUN_DIR/state.env" 2>/dev/null); GOAL_OK="${GOAL_OK:-0}" ;;
+  *)        GOAL_OK=$(grep -cE "^${UNTIL}_done=" "$RUN_DIR/state.env" 2>/dev/null); GOAL_OK="${GOAL_OK:-0}" ;;
 esac
 [ "${GOAL_OK:-0}" -eq 0 ] && { ST=fail; REASONS="${REASONS}goal_step_not_reached($UNTIL);"; }
 
