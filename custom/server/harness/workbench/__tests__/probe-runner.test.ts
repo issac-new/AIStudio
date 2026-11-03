@@ -336,19 +336,27 @@ describe('并发探测', () => {
     expect(r.costUsd).toBeLessThanOrEqual(0.05 + 3 * 0.02 + 1e-9)
   })
 
-  it('并发下证据只认 stream-json：只有 jsonl trace 时报错并说明归因风险', async () => {
+  it('并发下 trace-only 也可用：每单元独立 trace 目录，session 不串题', async () => {
+    const sessions = new Map<string, string>()
     const traceOnly = async (prompt: string, env: Record<string, string>, _t: number) => {
-      await new Promise((r) => setTimeout(r, 2))
-      writeFileSync(join(env.HERMES_RUN_TRACE_DIR, `sess-${Math.random()}.jsonl`), JSON.stringify({ type: 'header', session_id: 'x' }) + '\n')
+      await new Promise((r) => setTimeout(r, 3))
+      const sid = `sess-${prompt}`
+      writeFileSync(
+        join(env.HERMES_RUN_TRACE_DIR, `${sid}.jsonl`),
+        [JSON.stringify({ type: 'header', session_id: sid }), JSON.stringify({ type: 'chunk', kind: 'llm_span', usage: { prompt_tokens: 10, completion_tokens: 5 } })].join('\n') + '\n',
+      )
+      sessions.set(prompt, sid)
       return { ok: true as const, stdout: '' }
     }
     const r = await runProbeTasks({
       prompts: prompts.slice(0, 2), baseHome: home, profile: 'p1', variantTree: tree,
       budgetRemainingUsd: 100, k: 1, concurrency: 2, spawnRun: traceOnly as never,
     })
-    expect(r.ok).toBe(false)
-    expect(r.error).toContain('stream-json')
-    expect(r.error).toContain('降并发')
+    expect(r.ok).toBe(true)
+    expect(r.peakInFlight).toBeGreaterThanOrEqual(2)
+    // 归因靠目录隔离：t1/t2 各自拿到自己那次的 session
+    expect(r.samples.t1[0].sessionId).toBe('sess-题目一')
+    expect(r.samples.t2[0].sessionId).toBe('sess-题目二')
   })
 
   it('并发下单题失败仍如实中断（不静默吞）', async () => {
@@ -363,5 +371,48 @@ describe('并发探测', () => {
     })
     expect(r.ok).toBe(false)
     expect(r.error).toContain('运行失败')
+  })
+})
+
+describe('并发收敛（缺省 2 的边界）', () => {
+  const prompts = [
+    { taskId: 't1', prompt: '题目一' },
+    { taskId: 't2', prompt: '题目二' },
+    { taskId: 't3', prompt: '题目三' },
+  ]
+  const tree = { 'profiles/p1/SOUL.md': 'candidate persona' }
+  const concSpawn = () => {
+    let inFlight = 0
+    let peak = 0
+    const spawn = async (prompt: string) => {
+      inFlight += 1
+      peak = Math.max(peak, inFlight)
+      await new Promise((r) => setTimeout(r, 5))
+      inFlight -= 1
+      return { ok: true as const, stdout: JSON.stringify({ type: 'result', session_id: `s-${prompt}`, text: 'ok', tokens: { total: 10 } }) }
+    }
+    return { spawn, peakOf: () => peak }
+  }
+
+  it('不超过单元数：2 个单元即便请求 5 路并行也只跑 2 路', async () => {
+    const { spawn, peakOf } = concSpawn()
+    const r = await runProbeTasks({
+      prompts: prompts.slice(0, 2), baseHome: home, profile: 'p1', variantTree: tree,
+      budgetRemainingUsd: 100, k: 1, concurrency: 5, spawnRun: spawn as never,
+    })
+    expect(r.ok).toBe(true)
+    expect(peakOf()).toBeLessThanOrEqual(2)
+    expect(r.peakInFlight).toBeLessThanOrEqual(2)
+  })
+
+  it('不超过预算允许的超支：预算仅 1.0（估值 0.5）时自动降到串行', async () => {
+    const { spawn, peakOf } = concSpawn()
+    const r = await runProbeTasks({
+      prompts, baseHome: home, profile: 'p1', variantTree: tree,
+      budgetRemainingUsd: 1.0, estimatePerTaskUsd: 0.5, k: 1, concurrency: 3, spawnRun: spawn as never,
+    })
+    expect(r.ok).toBe(true)
+    expect(peakOf()).toBe(1)
+    expect(r.peakInFlight).toBe(1)
   })
 })

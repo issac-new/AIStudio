@@ -26,7 +26,11 @@ export interface SchedulePolicy {
 export const DEFAULT_SCHEDULE_POLICY: SchedulePolicy = {
   probeMaxTasks: 5,
   probeK: 2,
-  probeConcurrency: 1,
+  // 缺省 2：探测墙钟时间减半，代价是最多多花 1 份单题估值（约 5 美元上限的 10%），
+  // 且只占 2 个 agent 子进程。3 以上留给「机器够、预算宽、题多」的场景——模型账号
+  // 限流是按账号算的，同机其它 agent 也在用同一个额度。执行器还会再按「单元数」
+  // 与「预算允许的超支」自动收敛，所以配置只表达上限。
+  probeConcurrency: 2,
   retryBackoffSeconds: 30,
 }
 

@@ -21,6 +21,8 @@ describe('调度策略', () => {
   it('缺省值完整；归一化越界钳制；start==... 非法类型回落默认', async () => {
     const m = await import('../schedule-policy')
     expect(m.readSchedulePolicy(dir)).toEqual(m.DEFAULT_SCHEDULE_POLICY)
+    // 缺省并发 2（2026-11-03 缺省评估：墙钟减半、超支 ≤1 份估值）
+    expect(m.DEFAULT_SCHEDULE_POLICY.probeConcurrency).toBe(2)
     const n = m.normalizeSchedulePolicy({ probeMaxTasks: 999, probeK: 0, probeConcurrency: 99, retryBackoffSeconds: -5 })
     expect(n.probeMaxTasks).toBe(50)
     expect(n.probeK).toBe(1)
@@ -46,6 +48,8 @@ describe('调度策略', () => {
     const file = m.scheduleFile(dir)
     writeFileSync(file, '{not json')
     expect(m.readSchedulePolicy(dir)).toEqual(m.DEFAULT_SCHEDULE_POLICY)
+    // 缺省并发 2（2026-11-03 缺省评估：墙钟减半、超支 ≤1 份估值）
+    expect(m.DEFAULT_SCHEDULE_POLICY.probeConcurrency).toBe(2)
     const leftovers = (await import('node:fs')).readdirSync(dir).filter((f) => f.includes('.corrupt-'))
     expect(leftovers).toHaveLength(1)
   })
