@@ -125,3 +125,4 @@
 {"at":"2026-11-02T23:59:40Z","spec":"docs/superpowers/specs/2026-11-03-run25-full-retro.md","receipt":"17029e315b50604bd3998890124358c82c6f5fa0","commit":"33f701f2b"}
 {"at":"2026-11-03T00:13:37Z","spec":"docs/superpowers/specs/2026-11-03-release-v1.0.9-overlay.md","receipt":"8fddf774f20b5ad1b69d90046bd76d8843713bfd","commit":"2a36ea852"}
 {"at":"2026-11-03T01:03:51Z","spec":"docs/superpowers/specs/2026-10-28-aistudio-interactive-training.md","receipt":"ce3930d6c8eabcc791ab311a623ccf7ccb1debe1","commit":"e30f0cd0f"}
+{"at":"2026-11-03T01:17:04Z","spec":"docs/superpowers/specs/2026-11-03-offline-everything-complete.md","receipt":"4acab327e22cb765d2be1563020f6f9340468fea","commit":"9062b976a"}

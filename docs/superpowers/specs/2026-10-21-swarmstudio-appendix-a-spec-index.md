@@ -457,6 +457,7 @@
 | 2026-11-03-run25-full-retro | run25 全流程复盘与根治 | 33 唯一键全量归因四层（采集/纪律/接线/容量）；驱动 5 件＋监督器空指纹＋采集映射 2 键＋审计口径 2 处＋六闸事件＋方案 §5.10 七条；门集 254/254、行为测试 21/21 |
 | 2026-11-03-run26-pending-batch | run26 挂账台账 | run25 复盘未做项唯一事实源：N01 烧机首跑/N02 审批台账/N03 发布门台账/N04 评测数据/N05 模板两节/N06 DISP 闭环+N07-N09 观察项+N 429 不处置裁定 |
 | 2026-11-03-release-v1.0.9-overlay | v1.0.9 发布轮 | run25 收官（六闸全过 11h04m）＋机制治理五件＋复盘根治 12 项；cockpit studio.8/teams team.8/ycode 3.17.1/yuan v2.98.5/fullPackage 1.0.9 |
+| 2026-11-03-offline-everything-complete | 离线包 everything 全内嵌 | R134→R145 口径修订：默认档含运行时零知识库、everything 档含知识库零运行时（互补非包含）→ --everything 改为全内嵌（127M）；断网机一次装齐 |
 | 2026-11-02-run24-retro-product-batch | 产品面与报告链四件 | 补丁 723 dispatcher 拒绝原因聚合（根因=board 团队围栏拒子编制 assignee）/利用率报告行/判据 17 执法（查 18） |
 | 2026-11-02-full-regression-fixes | 全功能回归轮补丁面两缺陷修复 | 723 尾 hunk 缺尾随上下文致 git apply EOF 锚定误判（inject WARN 跳过＝到达即坏；补计数 3/172→6/175＋3 行尾上下文）＋724 新增 isFullscreen 定义回补（App.vue ReferenceError，070 使用侧在位而 111 定义侧缺席）＋走查探针对齐设计语义（registry 空态/sim fail-closed/locked-ips・files 权限面白名单＋matrix 访客态）；walk-routes C/D 簇清零 |
 | 2026-11-02-run24-runtime-closeout | run24 运行面收口 | 722/723 真正加载（白名单+重放）/板围栏 4 板修正（nonspawnable 5→0）/遗留卡 5 张冻结/studio 换装活体三态/归档 35 键审计 rc=0；pending-batch 8/9 闭环 |
