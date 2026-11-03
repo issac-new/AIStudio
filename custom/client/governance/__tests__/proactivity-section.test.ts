@@ -36,6 +36,31 @@ vi.mock('@/custom/governance/api/incident-suite', () => ({
       },
     ],
   })),
+  fetchAttentionPrefs: vi.fn(async () => ({
+    ok: true,
+    prefs: { quietHours: { startHour: 21, endHour: 7 }, dailyBudget: 5, hourlyBudget: 2, cooldownMinutes: 20, rejectionBackoffHours: 8, minScore: 0.15 },
+    defaults: { quietHours: { startHour: 22, endHour: 8 }, dailyBudget: 8, hourlyBudget: 3, cooldownMinutes: 30, rejectionBackoffHours: 12, minScore: 0.2 },
+    file: '/tmp/attention.json',
+  })),
+  fetchProactivityScorecard: vi.fn(async () => ({
+    ok: true,
+    scorecard: {
+      task: { accepted: 3, acceptedWithEffect: 2, acceptanceRate: 0.6 },
+      mechanism: { decisions: { deliver: 5, defer: 2, batch: 1, suppress: 4, escalate: 1 }, suppressed: 4, deferred: 2, batched: 1, escalated: 1, quietHoursDefers: 2, budgetDefers: 1, deferralAging: 1 },
+      user: { interruptions: 5, accepted: 3, rejected: 1, ignored: 1, modified: 0, takeover: 0, snoozed: 0, acceptanceRate: 0.6, ignoreRate: 0.2, retractionRate: 0, trustGap: 0.6, quietHoursBlocked: 2, budgetCapped: 1 },
+      note: '指标度量系统行为，不是真人满意度',
+    },
+    calibration: [],
+  })),
+  fetchInterventions: vi.fn(async () => ({
+    ok: true,
+    interventions: [
+      { id: 'iv-1', surface: 'suggestion', severity: 'attention', audience: 'human', topicKey: 'unblock-blocked:c1', summary: '卡点任务待确认', decision: 'deliver', reasonCode: 'budget_ok', reasons: ['预算与冷却均有余量'], score: 0.5, decidedAtMs: 1730000000000, outcome: null },
+    ],
+  })),
+  putAttentionPrefs: vi.fn(async (p: { dailyBudget: number }) => ({ ok: true, prefs: p })),
+  syncInterventions: vi.fn(async () => ({ ok: true, available: true, created: 2, skipped: 1, byDecision: { deliver: 2 } })),
+  postInterventionFeedback: vi.fn(async () => ({ ok: true })),
   putProactivityPolicy: vi.fn(async () => ({ ok: true, entry: { profile: 'new-agent', level: 'L3', updatedAt: 3 } })),
   deleteProactivityPolicy: vi.fn(async () => ({ ok: true })),
   confirmProactivityAlignment: vi.fn(async () => ({ ok: true, entry: {} })),
@@ -55,7 +80,10 @@ import {
   confirmProactivityAlignment,
   deleteProactivityPolicy,
   fetchProactivityModel,
+  postInterventionFeedback,
+  putAttentionPrefs,
   putProactivityPolicy,
+  syncInterventions,
 } from '@/custom/governance/api/incident-suite'
 
 beforeEach(() => {
@@ -124,5 +152,47 @@ describe('ProactivitySection', () => {
     await w.find('[data-testid="pa-policy-del-coding-agent"]').trigger('click')
     await flushPromises()
     expect(deleteProactivityPolicy).toHaveBeenCalledWith('coding-agent')
+  })
+})
+
+// 介入治理（注意力轴，2026-11-03）：三层计分卡渲染、干预列表反馈、偏好保存。
+describe('介入治理区', () => {
+  it('三层计分卡与干预列表渲染；反馈按钮调用端点', async () => {
+    const w = mount(ProactivitySection)
+    await flushPromises()
+    expect(w.find('[data-testid="pa-scorecard"]').exists()).toBe(true)
+    expect(w.text()).toContain('打扰 5 次')
+    expect(w.text()).toContain('接受率 60.0%')
+    expect(w.find('[data-testid="pa-interventions"]').exists()).toBe(true)
+    expect(w.text()).toContain('预算与冷却均有余量')
+
+    await w.find('[data-testid="pa-iv-accept-iv-1"]').trigger('click')
+    await flushPromises()
+    expect(postInterventionFeedback).toHaveBeenCalledWith('iv-1', 'accepted')
+  })
+
+  it('保存偏好调用 PUT；同步建议调用 POST 并提示结果', async () => {
+    const w = mount(ProactivitySection)
+    await flushPromises()
+    await w.find('[data-testid="pa-att-save"]').trigger('click')
+    await flushPromises()
+    expect(putAttentionPrefs).toHaveBeenCalled()
+    const payload = (putAttentionPrefs as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as { dailyBudget: number; hourlyBudget: number }
+    expect(payload.dailyBudget).toBe(5)
+    expect(payload.hourlyBudget).toBe(2)
+
+    await w.find('[data-testid="pa-att-sync"]').trigger('click')
+    await flushPromises()
+    expect(syncInterventions).toHaveBeenCalled()
+    expect(w.text()).toContain('同步完成')
+  })
+
+  it('只读态隐藏偏好保存、同步与反馈按钮，计分卡仍呈现', async () => {
+    const w = mount(ProactivitySection, { props: { readonly: true } })
+    await flushPromises()
+    expect(w.find('[data-testid="pa-scorecard"]').exists()).toBe(true)
+    expect(w.find('[data-testid="pa-att-save"]').exists()).toBe(false)
+    expect(w.find('[data-testid="pa-att-sync"]').exists()).toBe(false)
+    expect(w.find('[data-testid="pa-iv-accept-iv-1"]').exists()).toBe(false)
   })
 })

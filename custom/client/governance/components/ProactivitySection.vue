@@ -12,6 +12,12 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   assessProactivity,
+  fetchAttentionPrefs,
+  fetchInterventions,
+  fetchProactivityScorecard,
+  postInterventionFeedback,
+  putAttentionPrefs,
+  syncInterventions,
   confirmProactivityAlignment,
   deleteProactivityPolicy,
   fetchProactivityAlignments,
@@ -19,6 +25,9 @@ import {
   fetchProactivityPolicies,
   putProactivityPolicy,
   type ActionTierDto,
+  type AttentionPrefsDto,
+  type InterventionDto,
+  type ProactivityScorecardDto,
   type AlignmentEntryDto,
   type AssessResultDto,
   type PolicyEntryDto,
@@ -32,6 +41,76 @@ const router = useRouter() as ReturnType<typeof useRouter> | undefined
 const editTarget = { name: 'ia2.stage1', query: { tab: 'assets' } }
 function goEdit(): void {
   void router?.push(editTarget)
+}
+
+// 介入治理（注意力轴）状态
+const attForm = reactive<AttentionPrefsDto>({
+  quietHours: { startHour: 22, endHour: 8 },
+  dailyBudget: 8,
+  hourlyBudget: 3,
+  cooldownMinutes: 30,
+  rejectionBackoffHours: 12,
+  minScore: 0.2,
+})
+const scorecard = ref<ProactivityScorecardDto | null>(null)
+const interventions = ref<InterventionDto[]>([])
+
+function pct(v: number | null): string {
+  return v == null ? '—' : `${(v * 100).toFixed(1)}%`
+}
+
+async function loadAttention(): Promise<void> {
+  try {
+    const [p, sc, iv] = await Promise.all([
+      fetchAttentionPrefs(),
+      fetchProactivityScorecard(),
+      fetchInterventions('all', 20),
+    ])
+    if (p?.prefs) Object.assign(attForm, p.prefs)
+    if (sc?.scorecard) scorecard.value = sc.scorecard
+    if (iv?.interventions) interventions.value = iv.interventions
+  } catch {
+    // 降级不影响两轴主面板
+  }
+}
+
+async function saveAttention(): Promise<void> {
+  try {
+    const r = await putAttentionPrefs({
+      quietHours: attForm.quietHours && attForm.startHour !== undefined
+        ? { startHour: Number(attForm.startHour ?? 22), endHour: Number(attForm.endHour ?? 8) }
+        : null,
+      dailyBudget: Number(attForm.dailyBudget ?? 8),
+      hourlyBudget: Number(attForm.hourlyBudget ?? 3),
+      cooldownMinutes: Number(attForm.cooldownMinutes ?? 30),
+      rejectionBackoffHours: Number(attForm.rejectionBackoffHours ?? 12),
+      minScore: Number(attForm.minScore ?? 0.2),
+    } as AttentionPrefsDto)
+    if (r?.prefs) Object.assign(attForm, r.prefs)
+    msg.value = '注意力偏好已保存'
+    await loadAttention()
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : String(e)
+  }
+}
+
+async function runSync(): Promise<void> {
+  try {
+    const r = await syncInterventions()
+    msg.value = r.available === false ? '看板数据根缺席，暂无可同步建议' : `同步完成：新增 ${r.created} 条，跳过 ${r.skipped} 条`
+    await loadAttention()
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : String(e)
+  }
+}
+
+async function sendFeedback(id: string, outcome: string): Promise<void> {
+  try {
+    await postInterventionFeedback(id, outcome)
+    await loadAttention()
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : String(e)
+  }
 }
 
 const LEVELS: { key: ProblemDefinerLevelDto; short: string }[] = [
@@ -179,7 +258,10 @@ function tierShort(t: ActionTierDto): string {
   return map[t]
 }
 
-onMounted(() => void refresh())
+onMounted(() => {
+  void refresh()
+  void loadAttention()
+})
 </script>
 
 <template>
@@ -293,6 +375,58 @@ onMounted(() => void refresh())
         <div class="pa__upgrade">{{ assessResult.upgrade.note }}</div>
       </div>
     </form>
+
+    <!-- 介入治理（注意力轴，2026-11-03 主动式 AI 综述吸收轮）：
+         两轴管「最多能做哪一步」，本区管「现在该不该出现」——安静时段/预算/冷却/拒绝退避。 -->
+    <div class="pa__att" data-testid="pa-attention">
+      <div class="pa__form-title">介入治理（注意力轴：何时以何形态打扰人）</div>
+      <div class="pa__hint pa__hint--sm">
+        与上面两轴正交：两轴决定动作上限，本区决定时机与频次。critical 必达；安全告警不接本层。
+      </div>
+      <div class="pa__row">
+        <label class="pa__check">安静时段
+          <input class="pa__num" type="number" min="0" max="23" v-model.number="attForm.startHour" :disabled="props.readonly" data-testid="pa-att-start" />
+          –
+          <input class="pa__num" type="number" min="0" max="23" v-model.number="attForm.endHour" :disabled="props.readonly" data-testid="pa-att-end" />
+        </label>
+        <label class="pa__check">日预算 <input class="pa__num" type="number" min="0" max="200" v-model.number="attForm.dailyBudget" :disabled="props.readonly" data-testid="pa-att-daily" /></label>
+        <label class="pa__check">时预算 <input class="pa__num" type="number" min="0" max="50" v-model.number="attForm.hourlyBudget" :disabled="props.readonly" data-testid="pa-att-hourly" /></label>
+        <label class="pa__check">同类冷却(分) <input class="pa__num" type="number" min="0" max="1440" v-model.number="attForm.cooldownMinutes" :disabled="props.readonly" data-testid="pa-att-cooldown" /></label>
+        <label class="pa__check">拒绝退避(时) <input class="pa__num" type="number" min="0" max="720" v-model.number="attForm.rejectionBackoffHours" :disabled="props.readonly" data-testid="pa-att-backoff" /></label>
+        <button v-if="!props.readonly" type="button" class="pa__save" data-testid="pa-att-save" @click="saveAttention">保存偏好</button>
+        <button v-if="!props.readonly" type="button" class="pa__op" data-testid="pa-att-sync" @click="runSync">同步建议</button>
+      </div>
+
+      <table class="pa__matrix" data-testid="pa-scorecard" v-if="scorecard">
+        <thead><tr><th>层</th><th>读数</th></tr></thead>
+        <tbody>
+          <tr><td>任务层</td><td class="pa__ts">被采纳 {{ scorecard.task.accepted }}（其中确有动作 {{ scorecard.task.acceptedWithEffect }}）· 采纳率 {{ pct(scorecard.task.acceptanceRate) }}</td></tr>
+          <tr><td>机制层</td><td class="pa__ts">放行 {{ scorecard.mechanism.decisions.deliver ?? 0 }} · 延后 {{ scorecard.mechanism.deferred }} · 合并 {{ scorecard.mechanism.batched }} · 抑制 {{ scorecard.mechanism.suppressed }} · 升级 {{ scorecard.mechanism.escalated }}（安静时段 {{ scorecard.mechanism.quietHoursDefers }} · 预算 {{ scorecard.mechanism.budgetDefers }} · 积压升级 {{ scorecard.mechanism.deferralAging }}）</td></tr>
+          <tr><td>用户层</td><td class="pa__ts">打扰 {{ scorecard.user.interruptions }} 次 · 接受 {{ scorecard.user.accepted }} · 拒绝 {{ scorecard.user.rejected }} · 忽略 {{ scorecard.user.ignored }} · 撤回/接管 {{ scorecard.user.modified + scorecard.user.takeover }} · 接受率 {{ pct(scorecard.user.acceptanceRate) }} · 信任校准 {{ pct(scorecard.user.trustGap) }}</td></tr>
+        </tbody>
+      </table>
+      <div class="pa__hint pa__hint--sm" v-if="scorecard">{{ scorecard.note }}</div>
+
+      <table class="pa__matrix" data-testid="pa-interventions" v-if="interventions.length">
+        <thead><tr><th>时间</th><th>面</th><th>决策</th><th>理由</th><th>摘要</th><th v-if="!props.readonly">反馈</th></tr></thead>
+        <tbody>
+          <tr v-for="iv in interventions" :key="iv.id">
+            <td class="pa__ts">{{ new Date(iv.decidedAtMs).toLocaleString() }}</td>
+            <td>{{ iv.surface }}</td>
+            <td><span class="pa__status" :class="iv.decision === 'deliver' || iv.decision === 'escalate' ? 'is-fresh' : iv.decision === 'suppress' ? 'is-stale' : 'is-never'">{{ iv.decision }}</span></td>
+            <td class="pa__summary">{{ iv.reasons[0] }}</td>
+            <td class="pa__summary">{{ iv.summary }}</td>
+            <td v-if="!props.readonly">
+              <button type="button" class="pa__op" :data-testid="`pa-iv-accept-${iv.id}`" @click="sendFeedback(iv.id, 'accepted')">接受</button>
+              <button type="button" class="pa__op" :data-testid="`pa-iv-reject-${iv.id}`" @click="sendFeedback(iv.id, 'rejected')">拒绝</button>
+              <button type="button" class="pa__op" :data-testid="`pa-iv-ignore-${iv.id}`" @click="sendFeedback(iv.id, 'ignored')">忽略</button>
+              <button type="button" class="pa__op" :data-testid="`pa-iv-snooze-${iv.id}`" @click="sendFeedback(iv.id, 'snoozed')">稍后</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pa__hint pa__hint--sm" v-else>暂无干预记录——巡检每 15 分钟从交付建议同步一次（INTERVENTION_AUTOSYNC=off 可关），或点「同步建议」立即拉取。</div>
+    </div>
   </div>
 </template>
 
@@ -306,6 +440,9 @@ onMounted(() => void refresh())
 }
 .pa__bar { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .pa__title { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.pa__hint--sm { font-size: 11px; }
+.pa__num { width: 56px; margin: 0 2px; }
+.pa__att { margin-top: 16px; border-top: 1px dashed var(--border-color); padding-top: 10px; }
 .pa__hint { font-size: 10px; color: var(--ia-stale); }
 .pa__err { font-size: 11px; color: var(--error); }
 .pa__msg { font-size: 11px; color: var(--success); }

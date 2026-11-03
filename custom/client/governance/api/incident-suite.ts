@@ -223,3 +223,67 @@ export function assessProactivity(body: {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   })
 }
+
+// ---- 介入治理（注意力轴，2026-11-03 主动式 AI 综述吸收轮） ----
+
+export interface AttentionPrefsDto {
+  quietHours: { startHour: number; endHour: number } | null
+  dailyBudget: number
+  hourlyBudget: number
+  cooldownMinutes: number
+  rejectionBackoffHours: number
+  minScore: number
+}
+
+export interface InterventionDto {
+  id: string
+  surface: string
+  severity: string
+  audience: string
+  topicKey: string
+  summary: string
+  decision: 'deliver' | 'defer' | 'batch' | 'suppress' | 'escalate'
+  reasonCode: string
+  reasons: string[]
+  score: number
+  nextWindowAtMs?: number
+  decidedAtMs: number
+  outcome: string | null
+}
+
+export interface ProactivityScorecardDto {
+  task: { accepted: number; acceptedWithEffect: number; acceptanceRate: number | null }
+  mechanism: { decisions: Record<string, number>; suppressed: number; deferred: number; batched: number; escalated: number; quietHoursDefers: number; budgetDefers: number; deferralAging: number }
+  user: { interruptions: number; accepted: number; rejected: number; ignored: number; modified: number; takeover: number; snoozed: number; acceptanceRate: number | null; ignoreRate: number | null; retractionRate: number | null; trustGap: number | null; quietHoursBlocked: number; budgetCapped: number }
+  note: string
+}
+
+export function fetchAttentionPrefs(): Promise<{ ok: boolean; prefs: AttentionPrefsDto; defaults: AttentionPrefsDto; file: string }> {
+  return request('/api/hermes/proactivity/attention')
+}
+
+export function putAttentionPrefs(prefs: AttentionPrefsDto): Promise<{ ok: boolean; prefs: AttentionPrefsDto }> {
+  return request('/api/hermes/proactivity/attention', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prefs),
+  })
+}
+
+export function syncInterventions(): Promise<{ ok: boolean; available: boolean; created: number; skipped: number; byDecision: Record<string, number> }> {
+  return request('/api/hermes/proactivity/interventions/sync', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  })
+}
+
+export function fetchInterventions(status = 'all', limit = 30): Promise<{ ok: boolean; interventions: InterventionDto[] }> {
+  return request(`/api/hermes/proactivity/interventions?status=${encodeURIComponent(status)}&limit=${limit}`)
+}
+
+export function postInterventionFeedback(id: string, outcome: string, note?: string): Promise<{ ok: boolean }> {
+  return request(`/api/hermes/proactivity/interventions/${encodeURIComponent(id)}/feedback`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ outcome, ...(note ? { note } : {}) }),
+  })
+}
+
+export function fetchProactivityScorecard(): Promise<{ ok: boolean; scorecard: ProactivityScorecardDto; calibration: Array<Record<string, unknown>> }> {
+  return request('/api/hermes/proactivity/scorecard')
+}

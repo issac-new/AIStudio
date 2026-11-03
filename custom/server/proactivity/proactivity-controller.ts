@@ -6,6 +6,19 @@
 import Router from '@koa/router'
 
 import { appendGovEvent } from '../govbus/event-log'
+import { fail as httpFail, ok } from '../lib/http'
+import {
+  DEFAULT_ATTENTION_PREFS,
+  calibrationOf,
+  feedback as recordInterventionFeedback,
+  listInterventions,
+  prefsFile,
+  readAttentionPrefs,
+  scorecard as buildScorecardOf,
+  syncInterventions,
+  validateAttentionPrefs,
+  writeAttentionPrefs,
+} from './interventions-service'
 import {
   ACTION_TIERS,
   ACTION_TIER_TITLES,
@@ -284,4 +297,90 @@ proactivityRouter.delete('/policy/:profile', (ctx) => {
     refs: { profile: ctx.params.profile },
   })
   ctx.body = { ok: true }
+})
+
+// ── 介入治理（2026-11-03 主动式 AI 综述吸收轮）────────────────────────
+// 权限轴（上面两轴）决定「最多能做哪一步」；本组端点管注意力轴——何时以何形态递给人。
+// 新端点一律走 lib/http 的 ok/fail（K19 只减不增）。
+
+/** 写操作权限：与 workbench/harness 控制器同款收窄（有认证主体须超管）。 */
+function denyWrite(ctx: { state: unknown; status: number; body: unknown }): boolean {
+  const user = (ctx.state as { user?: { role?: string } } | undefined)?.user
+  const multiUser = process.env.HERMES_MULTI_USER === '1'
+  if (!user || !multiUser) return false
+  if (user.role === 'super_admin' || user.role === 'admin') return false
+  httpFail(ctx as never, 403, '需要管理员权限才能修改注意力偏好或提交介入反馈', { code: 'forbidden' })
+  return true
+}
+
+proactivityRouter.get('/attention', (ctx) => {
+  ok(ctx, { prefs: readAttentionPrefs(), defaults: DEFAULT_ATTENTION_PREFS, file: prefsFile() })
+})
+
+proactivityRouter.put('/attention', (ctx) => {
+  if (denyWrite(ctx as never)) return
+  const v = validateAttentionPrefs(bodyOf(ctx))
+  if (!v.ok || !v.prefs) {
+    httpFail(ctx, 400, '注意力偏好校验失败', { code: 'invalid_prefs', problems: v.problems })
+    return
+  }
+  const saved = writeAttentionPrefs(v.prefs)
+  appendGovEvent({
+    domain: 'autonomy',
+    severity: 'info',
+    type: 'proactivity.attention_prefs_updated',
+    source: 'proactivity/proactivity-controller',
+    summary: `注意力偏好更新：日预算 ${saved.dailyBudget}／时预算 ${saved.hourlyBudget}／安静时段 ${saved.quietHours ? `${saved.quietHours.startHour}:00-${saved.quietHours.endHour}:00` : '关闭'}`,
+    refs: { by: actorOf(ctx) ?? 'unknown' },
+  })
+  ok(ctx, { prefs: saved })
+})
+
+/** 从 delivery 建议同步干预：候选 → 治理裁决 → 落台账（幂等 6h）。 */
+proactivityRouter.post('/interventions/sync', (ctx) => {
+  if (denyWrite(ctx as never)) return
+  const result = syncInterventions(Date.now(), actorOf(ctx))
+  if (!result.available) {
+    ok(ctx, { available: false, reason: result.reason ?? '数据源不可用', created: 0, skipped: 0, byDecision: {} })
+    return
+  }
+  ok(ctx, { available: true, created: result.created, skipped: result.skipped, byDecision: result.byDecision, records: result.records })
+})
+
+proactivityRouter.get('/interventions', (ctx) => {
+  const status = String(ctx.query.status ?? 'all')
+  const limit = Math.max(1, Math.min(200, Number(ctx.query.limit ?? 30) || 30))
+  ok(ctx, { interventions: listInterventions(status, limit) })
+})
+
+proactivityRouter.post('/interventions/:id/feedback', (ctx) => {
+  if (denyWrite(ctx as never)) return
+  const body = bodyOf(ctx)
+  const r = recordInterventionFeedback({
+    id: ctx.params.id,
+    outcome: String(body.outcome ?? ''),
+    ...(body.note ? { note: String(body.note) } : {}),
+    ...(actorOf(ctx) ? { by: actorOf(ctx) as string } : {}),
+  })
+  if (!r.ok) {
+    httpFail(ctx, 400, '反馈校验失败', { code: 'invalid_feedback', problems: r.problems })
+    return
+  }
+  appendGovEvent({
+    domain: 'autonomy',
+    severity: 'info',
+    type: 'proactivity.intervention_feedback',
+    source: 'proactivity/proactivity-controller',
+    summary: `介入反馈：${ctx.params.id} → ${String(body.outcome ?? '')}`,
+    refs: { intervention: ctx.params.id },
+  })
+  ok(ctx, { id: ctx.params.id, outcome: String(body.outcome ?? '') })
+})
+
+proactivityRouter.get('/scorecard', (ctx) => {
+  const withEffect = Number(ctx.query.acceptedWithEffect ?? 0)
+  ok(ctx, {
+    scorecard: buildScorecardOf(Number.isFinite(withEffect) ? Math.max(0, Math.trunc(withEffect)) : 0),
+    calibration: calibrationOf(),
+  })
 })
