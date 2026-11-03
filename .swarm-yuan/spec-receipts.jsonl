@@ -150,3 +150,6 @@
 {"at":"2026-11-03T11:25:03Z","spec":"docs/superpowers/specs/2026-11-03-sim-capability-refresh.md","receipt":"836aaa5d5edac6f0f895519477da898ca2c18e11","commit":"401fb4225"}
 {"at":"2026-11-03T11:53:15Z","spec":"docs/superpowers/specs/2026-11-03-aistudio-comprehensive-training-manual.md","receipt":"9679b1450117dfcd48964a04287b79726a76059f","commit":"e300df9f8"}
 {"at":"2026-11-03T15:55:09Z","spec":"docs/superpowers/specs/2026-11-03-runtime-deps-refresh.md","receipt":"3d2ecde5ba46262319a44166a917f9d6d8c40e83","commit":"dcf24c35a"}
+{"at":"2026-11-03T16:38:30Z","spec":"docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md","receipt":"20aea2b3ec680f82a9670d820a287da1513178de","commit":"70175e34d"}
+{"at":"2026-11-03T16:44:15Z","spec":"docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md","receipt":"7776c9b5ddcbc9b0c936a14e0a02fadc457aec34","commit":"4b895da3a"}
+{"at":"2026-11-03T16:45:53Z","spec":"docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md","receipt":"9e87fad8fc053214f26182dcdcd4fd6f5d92b4ca","commit":"64320210b"}
