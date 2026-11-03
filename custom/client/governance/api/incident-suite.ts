@@ -306,3 +306,18 @@ export function postInterventionFeedback(id: string, outcome: string, note?: str
 export function fetchProactivityScorecard(): Promise<{ ok: boolean; scorecard: ProactivityScorecardDto; calibration: Array<Record<string, unknown>> }> {
   return request('/api/hermes/proactivity/scorecard')
 }
+
+export interface BreakpointDto {
+  available: boolean
+  reason?: string
+  boards: number
+  atBreakpoint: boolean
+  nextBreakpointAtMs: number | null
+  reasonCode: 'recent_boundary' | 'lull' | 'mid_flow' | 'no_evidence'
+  detail: string
+  evidence: { eventsConsidered: number; lastEventAgeSec: number | null; lastBoundaryAgeSec: number | null; medianGapSec: number | null; activeStream: boolean }
+}
+
+export function fetchBreakpoint(): Promise<{ ok: boolean } & BreakpointDto> {
+  return request('/api/hermes/proactivity/breakpoints')
+}

@@ -36,6 +36,16 @@ vi.mock('@/custom/governance/api/incident-suite', () => ({
       },
     ],
   })),
+  fetchBreakpoint: vi.fn(async () => ({
+    ok: true,
+    available: true,
+    boards: 1,
+    atBreakpoint: false,
+    nextBreakpointAtMs: 1730000600000,
+    reasonCode: 'mid_flow',
+    detail: '工作流中途（最近事件 1 分钟前）——按历史节奏推测下次断点约在 10 分钟后',
+    evidence: { eventsConsidered: 12, lastEventAgeSec: 60, lastBoundaryAgeSec: 600, medianGapSec: 600, activeStream: true },
+  })),
   fetchAttentionPrefs: vi.fn(async () => ({
     ok: true,
     prefs: { quietHours: { startHour: 21, endHour: 7 }, dailyBudget: 5, hourlyBudget: 2, cooldownMinutes: 20, rejectionBackoffHours: 8, minScore: 0.15 },
@@ -194,5 +204,18 @@ describe('介入治理区', () => {
     expect(w.find('[data-testid="pa-att-save"]').exists()).toBe(false)
     expect(w.find('[data-testid="pa-att-sync"]').exists()).toBe(false)
     expect(w.find('[data-testid="pa-iv-accept-iv-1"]').exists()).toBe(false)
+  })
+})
+
+// 断点推断展示（2026-11-03 断点适配器）：有信号就显示状态与理由，不可用如实降级。
+describe('断点推断展示', () => {
+  it('非断点态显示「当前非断点」与理由文本', async () => {
+    const w = mount(ProactivitySection)
+    await flushPromises()
+    const el = w.find('[data-testid="pa-breakpoint"]')
+    expect(el.exists()).toBe(true)
+    expect(el.text()).toContain('当前非断点')
+    expect(el.text()).toContain('mid_flow')
+    expect(el.text()).toContain('推测下次断点')
   })
 })

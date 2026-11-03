@@ -13,6 +13,7 @@ import { useRouter } from 'vue-router'
 import {
   assessProactivity,
   fetchAttentionPrefs,
+  fetchBreakpoint,
   fetchInterventions,
   fetchProactivityScorecard,
   postInterventionFeedback,
@@ -26,6 +27,7 @@ import {
   putProactivityPolicy,
   type ActionTierDto,
   type AttentionPrefsDto,
+  type BreakpointDto,
   type InterventionDto,
   type ProactivityScorecardDto,
   type AlignmentEntryDto,
@@ -53,6 +55,7 @@ const attForm = reactive<AttentionPrefsDto>({
   minScore: 0.2,
 })
 const scorecard = ref<ProactivityScorecardDto | null>(null)
+const breakpoint = ref<BreakpointDto | null>(null)
 const interventions = ref<InterventionDto[]>([])
 
 function pct(v: number | null): string {
@@ -61,11 +64,13 @@ function pct(v: number | null): string {
 
 async function loadAttention(): Promise<void> {
   try {
-    const [p, sc, iv] = await Promise.all([
+    const [p, sc, iv, bp] = await Promise.all([
       fetchAttentionPrefs(),
       fetchProactivityScorecard(),
       fetchInterventions('all', 20),
+      fetchBreakpoint().catch(() => null),
     ])
+    if (bp) breakpoint.value = bp as BreakpointDto
     if (p?.prefs) Object.assign(attForm, p.prefs)
     if (sc?.scorecard) scorecard.value = sc.scorecard
     if (iv?.interventions) interventions.value = iv.interventions
@@ -382,6 +387,9 @@ onMounted(() => {
       <div class="pa__form-title">介入治理（注意力轴：何时以何形态打扰人）</div>
       <div class="pa__hint pa__hint--sm">
         与上面两轴正交：两轴决定动作上限，本区决定时机与频次。critical 必达；安全告警不接本层。
+      </div>
+      <div v-if="breakpoint" class="pa__hint pa__hint--sm" data-testid="pa-breakpoint">
+        断点推断：{{ breakpoint.available ? (breakpoint.atBreakpoint ? '当前是断点' : '当前非断点') : '数据源不可用' }}（{{ breakpoint.reasonCode }}）——{{ breakpoint.detail }}
       </div>
       <div class="pa__row">
         <label class="pa__check">安静时段

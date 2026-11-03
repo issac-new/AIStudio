@@ -14,6 +14,7 @@ import {
   listInterventions,
   prefsFile,
   readAttentionPrefs,
+  resolveBreakpoint,
   scorecard as buildScorecardOf,
   syncInterventions,
   validateAttentionPrefs,
@@ -344,7 +345,14 @@ proactivityRouter.post('/interventions/sync', (ctx) => {
     ok(ctx, { available: false, reason: result.reason ?? '数据源不可用', created: 0, skipped: 0, byDecision: {} })
     return
   }
-  ok(ctx, { available: true, created: result.created, skipped: result.skipped, byDecision: result.byDecision, records: result.records })
+  ok(ctx, {
+    available: true,
+    created: result.created,
+    skipped: result.skipped,
+    byDecision: result.byDecision,
+    records: result.records,
+    ...(result.breakpoint ? { breakpoint: result.breakpoint } : {}),
+  })
 })
 
 proactivityRouter.get('/interventions', (ctx) => {
@@ -375,6 +383,22 @@ proactivityRouter.post('/interventions/:id/feedback', (ctx) => {
     refs: { intervention: ctx.params.id },
   })
   ok(ctx, { id: ctx.params.id, outcome: String(body.outcome ?? '') })
+})
+
+/** 当前断点推断（p27 骑现成断点）：面板可直接显示「现在适不适合提」。 */
+proactivityRouter.get('/breakpoints', (ctx) => {
+  const snap = resolveBreakpoint()
+  const d = snap.decision
+  ok(ctx, {
+    available: snap.available,
+    ...(snap.reason ? { reason: snap.reason } : {}),
+    boards: snap.boards,
+    atBreakpoint: d.atBreakpoint,
+    nextBreakpointAtMs: d.nextBreakpointAtMs,
+    reasonCode: d.reason,
+    detail: d.detail,
+    evidence: d.evidence,
+  })
 })
 
 proactivityRouter.get('/scorecard', (ctx) => {
