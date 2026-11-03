@@ -37,12 +37,12 @@ for arg in "$@"; do
     --with-vendor) WITH_VENDOR=1 ;;
     --with-docs) WITH_DOCS=1 ;;
     --with-github-src) WITH_GH_SRC=1 ;;
-    --everything) NO_VENDOR=0; WITH_VENDOR=1; WITH_DOCS=1; WITH_GH_SRC=1 ;;  # R145 口径修订（2026-11-03 用户令）：断网机必须一次装齐——一切都内嵌（npm/pip 运行时＋知识库＋文档＋github 源包）；R134「可源装的不内嵌」导致 everything 档缺失 9 npm＋1 pip 运行时
+    --everything) NO_VENDOR=1; WITH_VENDOR=1; WITH_DOCS=1; WITH_GH_SRC=1 ;;  # R134 口径（2026-11-03 用户再次确认）：可经 npm/pip 镜像源装的一律不打包——只内嵌源装不了的（知识库/文档/github 源包）；R145 全内嵌修订已撤销
     -h|--help)
       echo "用法: bash $0 [<输出目录>] [--allow-partial] [--no-vendor] [--with-vendor] [--with-docs] [--with-github-src] [--everything]" >&2
       echo "  --with-docs      仓库 docs/ 档案随包（包根 docs/，设计文档/使用手册/轮档）" >&2
       echo "  --with-github-src  gstack/superpowers/ECC 源码包内嵌（MIT；按 src-pins/基线钉定，经 release-src-packages --no-upload 产出）" >&2
-      echo "  --everything     全内嵌档（R145）：npm/pip 运行时本地包 + vendor-knowledge + docs + github 源包——断网机一次装齐，安装不缺件" >&2
+      echo "  --everything     = --no-vendor + --with-vendor(knowledge) + --with-docs + --with-github-src（R134：npm/pip 可源装的一律不打包，只带源装不了的）" >&2
       echo "  --no-vendor   不携带 npm/pip 通道运行时（目标机经镜像源安装）；清单行登记 skipped，不计缺件" >&2
       echo "  --with-vendor 携带 vendor-knowledge（默认排除；含第三方规范/版权材料，按需显式启用）" >&2
       exit 0 ;;
