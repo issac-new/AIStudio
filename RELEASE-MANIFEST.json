@@ -51,7 +51,7 @@
         "runtime/",
         "vendor/hermes-agent/"
       ],
-      "version": "v0.22.5-team.8",
+      "version": "v0.22.6-team.1",
       "versionCarrier": "team/VERSION",
       "buildCommand": "team/skills/devops/public-repo-release 六步（白名单圈资产→secret 扫描→rsync 发布仓）",
       "artifacts": "公开 git 仓工作树（issac-new/SwarmTeam 归档态）＋本清单源码包 aistudio-agent-teams-<ver>-src.tar.gz",
@@ -62,7 +62,7 @@
         "runtime-manifest.json",
         "vendor/hermes-agent/"
       ],
-      "notes": "版本方案（2026-10-27 用户裁定＋纠正）：完整底座版本 0.22.5 与 hermes-agent 对齐，`-team.N`=本仓扩展发布序；真源 team/VERSION，README 双语同步；v3.3.0 为旧方案末版。",
+      "notes": "版本方案（2026-10-27 用户裁定＋纠正）：完整底座版本 0.22.6 与 hermes-agent 对齐（2026-11-03 vendor 升级批进位，扩展序归 1），`-team.N`=本仓扩展发布序；真源 team/VERSION，README 双语同步；v3.3.0 为旧方案末版。",
       "machineCarrier": "team/version.json"
     },
     "ycode": {
@@ -131,5 +131,5 @@
     "checksums": "SHA256SUMS（随 dist/release/ 目录）",
     "artifactDistribution": "two-package-only（2026-11-03 用户立法为全局长期规则：每版只上传 2 件——aistudio-full-<ver>-src.tar.gz＋swarm-yuan-offline-<ver>-everything.zip（附配套 SHA256SUMS 校验件），双通道=Github Release 与 ModelScope（aistudio/ 只换 full＋仓根 everything zip＋SHA256SUMS-v<版本>.txt，旧版本保留）。四模块源码包（cockpit/agent-teams/ycode/yuan-skill）与 DMG/zip 构建物不再上传任何远端也不打包——make-release-packages 默认只打整体包，--all-modules 显式打 4+1 全量（逃生通道）。"
   },
-  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v1.0.9 / hermes-agent v0.22.5 / zcode 包版本 3.17.1、基线谱系 v3.16.1 系列 @a60ba6a7（2026-10-31 同步批）。模块大版本对齐基准，与产品扩展序不互推）"
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v1.0.9 / hermes-agent v0.22.6 / zcode 包版本 3.17.1、基线谱系 v3.16.1 系列 @a60ba6a7（2026-10-31 同步批）。模块大版本对齐基准，与产品扩展序不互推）"
 }

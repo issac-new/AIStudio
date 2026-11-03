@@ -2,9 +2,9 @@
 
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
 
-- 快照基线：`e300df9f8`；核实日：2026-11-03；版本线：`1.0.10-overlay`。
-- 当前工作树根目录：**510 份 Markdown**（HEAD 跟踪 509 份，当前工作树另有未提交新增 1 份）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 57 份；合计 510 份。
+- 快照基线：`1508f0ac8`；核实日：2026-11-03；版本线：`1.0.10-overlay`（vendor agent v0.22.6 升级批）。
+- 当前工作树根目录：**523 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 70 份；合计 523 份。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
@@ -477,7 +477,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（57 份）
+## 2026-11（70 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -525,9 +525,18 @@
 - [2026-11-02-test-stability-dsl.md](../superpowers/specs/2026-11-02-test-stability-dsl.md)
 - [2026-11-02-test-vocab.md](../superpowers/specs/2026-11-02-test-vocab.md)
 - [2026-11-02-vendor-upgrade-studio-v109.md](../superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md)
+- [2026-11-03-acceptance-checks.md](../superpowers/specs/2026-11-03-acceptance-checks.md)
 - [2026-11-03-aistudio-comprehensive-training-manual.md](../superpowers/specs/2026-11-03-aistudio-comprehensive-training-manual.md)
 - [2026-11-03-bundle-tracked-only.md](../superpowers/specs/2026-11-03-bundle-tracked-only.md)
+- [2026-11-03-claim-receipts-and-dispatch-capacity.md](../superpowers/specs/2026-11-03-claim-receipts-and-dispatch-capacity.md)
+- [2026-11-03-component-library.md](../superpowers/specs/2026-11-03-component-library.md)
+- [2026-11-03-deerflow-source-verification.md](../superpowers/specs/2026-11-03-deerflow-source-verification.md)
+- [2026-11-03-four-gap-capabilities.md](../superpowers/specs/2026-11-03-four-gap-capabilities.md)
+- [2026-11-03-four-gap-completion.md](../superpowers/specs/2026-11-03-four-gap-completion.md)
+- [2026-11-03-handoff-quality-ledger.md](../superpowers/specs/2026-11-03-handoff-quality-ledger.md)
+- [2026-11-03-harmony-multiobjective.md](../superpowers/specs/2026-11-03-harmony-multiobjective.md)
 - [2026-11-03-offline-everything-complete.md](../superpowers/specs/2026-11-03-offline-everything-complete.md)
+- [2026-11-03-proactive-intervention-governance.md](../superpowers/specs/2026-11-03-proactive-intervention-governance.md)
 - [2026-11-03-release-asset-policy-twopackage.md](../superpowers/specs/2026-11-03-release-asset-policy-twopackage.md)
 - [2026-11-03-release-v1.0.10-overlay.md](../superpowers/specs/2026-11-03-release-v1.0.10-overlay.md)
 - [2026-11-03-release-v1.0.9-overlay.md](../superpowers/specs/2026-11-03-release-v1.0.9-overlay.md)
@@ -535,8 +544,12 @@
 - [2026-11-03-run25-full-retro.md](../superpowers/specs/2026-11-03-run25-full-retro.md)
 - [2026-11-03-run26-pending-batch.md](../superpowers/specs/2026-11-03-run26-pending-batch.md)
 - [2026-11-03-run26-pending-clearance.md](../superpowers/specs/2026-11-03-run26-pending-clearance.md)
+- [2026-11-03-sim-capability-refresh.md](../superpowers/specs/2026-11-03-sim-capability-refresh.md)
+- [2026-11-03-swarm-yuan-absorption-pstack-evals.md](../superpowers/specs/2026-11-03-swarm-yuan-absorption-pstack-evals.md)
+- [2026-11-03-swarm-yuan-budget-tier3.md](../superpowers/specs/2026-11-03-swarm-yuan-budget-tier3.md)
 - [2026-11-03-tar-pax-gnu-repack.md](../superpowers/specs/2026-11-03-tar-pax-gnu-repack.md)
 
+- [2026-11-03-vendor-upgrade-agent-v0226.md](../superpowers/specs/2026-11-03-vendor-upgrade-agent-v0226.md)
 ## archive（2 份，不计入上述根目录）
 
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。

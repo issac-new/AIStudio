@@ -12,9 +12,14 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 
 ### Version
 
-Current: **v0.22.5-team.1** (scheme changed 2026-10-27: full 3-segment base tracks hermes-agent in vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v3.3.0.
+Current: **v0.22.6-team.1** (base bumped 2026-11-03 with the vendor upgrade to hermes-agent v0.22.6; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.22.5-team.8.
 
-### What changed in this release (v0.22.5-team.1)
+### What changed in this release (v0.22.6-team.1)
+
+- **Base bump only**: hermes-agent base v0.22.5 → v0.22.6 (vendor upgrade 2026-11-03, spec `docs/superpowers/specs/2026-11-03-vendor-upgrade-agent-v0226.md`); extension counter reset to 1. No profile content changes.
+- Previous releases in the old base line: v0.22.5-team.1..team.8 (below).
+
+### What changed in v0.22.5-team.1 (2026-10-27)
 
 - **Incremental refresh**: 2026-10-14 fusion batch synced — skillguard v1.2.0 supply-chain rules (SG-013 embedded-instruction / SG-014 tool-description-code consistency / SG-015 rug-pull, with round-trip test fixtures), `llm-redteam` multi-turn adversarial strategies, AIG registration + 3 gaps in `_shared/hack-tool-registry.md`, DSH-style structured finding store in `_shared/hack-knowledge-index.md`, skill admission gate (G-A4) in `platform-skill-miner`, Checklist reflection verification in `_shared/03-evolution-memory/output-contract.md`
 - **17 root skills refreshed** to live state (cost-ledger, weixin ops series, public-repo-release v1.2.0, etc.)
