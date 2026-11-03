@@ -11,6 +11,7 @@ import { assertWorkspaceRoot } from './integrity'
 import { buildManifest, IntegrityError, reportIntegrity } from './integrity'
 import { appendLedger, caseDigest, caseSummary, listCases, loadCase, loadManifest, newId, readLedger, saveCase, saveManifest, trustDir, verifyLedger } from './store'
 import { checkSurfaceChain } from './surfaces'
+import { assessIndependence, resolveIndependencePolicy, type ModelRef } from './independence'
 import {
   CLAIM_VERDICTS, INTEGRITY_STATES,
   type AdmissionBlocker, type CheckpointVerification, type ClaimAudit, type ClaimVerdict, type IntegrityManifest,
@@ -105,12 +106,29 @@ function normalizeClaim(raw: unknown, fallbackActor: string): TrustClaim {
   const r = rec(raw)
   const statement = text(r.statement, '主张内容')
   const evidenceRefs = stringList(r.evidenceRefs, '证据锚', 20)
+  const claimedByModel = normalizeModelRef(r.claimedByModel)
   return {
     id: optText(r.id, 80) ?? newId('claim'),
     statement,
     evidenceRefs,
     claimedBy: optText(r.claimedBy, 120) ?? fallbackActor,
+    ...(claimedByModel ? { claimedByModel } : {}),
     claimedAt: Date.now(),
+  }
+}
+
+/** 模型标识归一化：三要素全空视为未提供（不伪造指纹）。 */
+function normalizeModelRef(raw: unknown): ModelRef | undefined {
+  if (raw == null) return undefined
+  const r = rec(raw)
+  const provider = optText(r.provider, 80)
+  const model = optText(r.model, 120)
+  const version = optText(r.version, 80)
+  if (!provider && !model && !version) return undefined
+  return {
+    ...(provider ? { provider } : {}),
+    ...(model ? { model } : {}),
+    ...(version ? { version } : {}),
   }
 }
 
@@ -283,6 +301,19 @@ export function recordAudits(caseId: string, rawAudits: unknown, actorRaw: unkno
     if (auditor === claim.claimedBy) {
       throw new ServiceError(400, 'auditor 不能与主张人相同', { claimId, auditor })
     }
+    // 独立性判定（C3）：身份可分离 ≠ 模型级独立。共模默认只记录；
+    // require-for-verified 档下共模不能支撑 verified（unverified/refuted 不受影响）。
+    const auditorModel = normalizeModelRef(r.auditorModel)
+    const independence = assessIndependence({
+      authorModel: claim.claimedByModel,
+      reviewerModel: auditorModel,
+      policy: resolveIndependencePolicy(),
+    })
+    if (verdict === 'verified' && independence.blocksVerified) {
+      throw new ServiceError(400, '共模评审不能支撑 verified（作者与审阅者模型指纹相同）', {
+        claimId, auditor, independence,
+      })
+    }
     const observations = stringList(r.observations, '复核观察', 20)
     if ((verdict === 'verified' || verdict === 'refuted') && observations.length === 0) {
       throw new ServiceError(400, `${verdict} 至少需要一条复核观察`, { claimId })
@@ -296,6 +327,8 @@ export function recordAudits(caseId: string, rawAudits: unknown, actorRaw: unkno
       id: newId('audit'),
       claimId,
       auditor,
+      ...(auditorModel ? { auditorModel } : {}),
+      independence,
       verdict,
       observations,
       ...(counterEvidence ? { counterEvidence } : {}),
