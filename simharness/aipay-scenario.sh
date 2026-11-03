@@ -1530,6 +1530,18 @@ DEVSPECS
   gate_review xiao "G3-代码实现闸-csw-cashier-mp"
   capture_step "devimpl_done" "/app/ide"
 
+  # ── 18b 目标运行时验证面核验（run26 N10 接线 2026-11-03，fail-soft）──
+  # 方案 §2.5 步18b：小程序工程交付须有 runtime-proof（微信开发者工具编译+启动+首帧；
+  # aipaydev-dev 技能纪律 8 / 产品端点 /api/hermes/runtime-verify/miniprogram）。
+  # 核验=中央仓 origin/main 的 docs/evidence/DEV-MP-runtime-proof.json 本轮新鲜且
+  # launchOk=true（repo_has 自带新鲜度判定，防旧轮 proof 假真值）；缺席=声明态登记
+  # issues（不阻断 devimpl——G3⑦ 按 V8.17 红线②降级凭证族，与 testlog 缺席同处置）。
+  if repo_has docs/evidence/DEV-MP-runtime-proof.json      && [[ "$(git -C "$DIRECTOR_CLONE" show origin/main:docs/evidence/DEV-MP-runtime-proof.json 2>/dev/null | jq -r '.launchOk // empty' 2>/dev/null)" == "true" ]]; then
+    note "[18b] runtime-proof 在位且 launchOk=true（目标运行时验证面过——微信开发者工具真实首帧）"
+  else
+    echo "ISSUE|runtime-proof-missing|DEV-MP|18b 目标运行时验证面缺席：origin/main 无本轮 launchOk=true 的 runtime-proof（方案 §2.5 步18b/技能纪律 8；fail-soft 不阻断，G3⑦ 声明态降级）" >> "$EVID_DIR/issues.log"
+  fi
+
   sset devimpl_done 1
   sset_once g3_code_pass "$(date +%s)"   # G3 硬闸键（独立审计意见 R-A4：G3 曾无 g3_ 落键，治理报告跳闸）
   dlv_gate_try G3 pass "编码门通过（分支合流+本地测试证据在案）"

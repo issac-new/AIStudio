@@ -2385,8 +2385,24 @@ def _r18_frame_tags(frames, step, view=''):
         _USED_FRAMES.add(_stem)
 
         if p.exists():
+            # run26 清偿批（2026-11-03，用户令「小程序收银台界面按 1/4 比例大小排版」）：
+            # 手机竖屏帧（18b 小程序首帧等，实测宽高比判据）按 1/4 宽排版——横屏平台帧
+            # 维持原布局，不全局改版面。
+            _portrait = ''
+            try:
+                # 零依赖 PNG IHDR 宽高（本环境无 PIL——frame-verify 同因走 tesseract 直读）：
+                # 字节 16..20=宽、20..24=高（big-endian），竖屏（高>宽×1.2）即 1/4 宽排版。
+                with open(p, 'rb') as _fh:
+                    _head = _fh.read(24)
+                if _head[:8] == b'\x89PNG\r\n\x1a\n' and len(_head) == 24:
+                    _w = int.from_bytes(_head[16:20], 'big')
+                    _h = int.from_bytes(_head[20:24], 'big')
+                    if _w and _h and _h > _w * 1.2:
+                        _portrait = ' portrait'
+            except Exception:
+                pass
             out.append(
-                f'<label class="shot r18-shot"><input type="checkbox">'
+                f'<label class="shot r18-shot{_portrait}"><input type="checkbox">'
                 f'<img src="screenshots/steps/{name}" alt="{H.escape(cap)}" loading="lazy">'
                 f'<figcaption>{H.escape(cap)}</figcaption></label>')
         else:
@@ -5381,6 +5397,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hel
 
 /* .st-shots 单一定义=上方 grid 版（原此处 flex 版与 grid 版双定义打架，删 flex 保 grid） */
 .shot{{flex:1 1 400px;max-width:520px;position:relative;cursor:zoom-in}}
+.shot.portrait{{flex:0 0 25%;max-width:25%}}
+.shot.portrait img{{width:100%;max-height:none;object-fit:contain}}
 .shot img{{width:100%;max-height:420px;object-fit:cover;object-position:top;border:1px solid var(--border);border-radius:8px;display:block;transition:box-shadow .2s}}
 .shot:hover img{{box-shadow:0 4px 16px rgba(0,0,0,.12)}}
 .shot figcaption{{font-size:13px;color:var(--muted);text-align:center;margin-top:4px}}

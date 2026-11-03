@@ -93,3 +93,21 @@ describe('runtime-proof 呈现面（C1/C3 根治）', () => {
     expect(skill).toMatch(/目标运行时自证/)
   })
 })
+
+describe('18b 目标运行时验证面接线（run26 N10）', () => {
+  it('驱动 devimpl 段含 runtime-proof fail-soft 核验（缺席登记 runtime-proof-missing 不阻断）', () => {
+    expect(DRIVER).toMatch(/runtime-proof-missing/)
+    expect(DRIVER).toMatch(/DEV-MP-runtime-proof\.json/)
+    // fail-soft 语义：核验失败只落 issues.log，不进 gate_blocked/exit 路径
+    const seg = DRIVER.slice(DRIVER.indexOf('18b 目标运行时验证面核验'), DRIVER.indexOf('18b 目标运行时验证面核验') + 900)
+    expect(seg).toMatch(/issues\.log/)
+    expect(seg).not.toMatch(/gate_blocked|process exit|熔断/)
+  })
+
+  it('prelaunch 含 runtime-verify 探针（fail-soft 双通道：CLI 在位+端点可达）', () => {
+    const pre = readFileSync(`${ROOT}mux/mx-prelaunch-check.sh`, 'utf-8')
+    expect(pre).toMatch(/runtime-verify 探针/)
+    expect(pre).toMatch(/wechatwebdevtools/)
+    expect(pre).toMatch(/不阻断/)
+  })
+})
