@@ -10,6 +10,7 @@ import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
 import { readAllBoards } from '../delivery/boards-reader'
 import { buildDigest } from '../delivery/digest'
+import { inferBreakpoint, type BreakpointDecision } from './breakpoint-adapter'
 import { resolveKanbanHome } from '../delivery/kanban-home'
 import {
   DEFAULT_ATTENTION_PREFS,
@@ -108,6 +109,32 @@ const SUGGESTION_PROFILE: Record<string, { severity: 'info' | 'attention'; benef
 /** 同话题幂等窗口：6h 内已入账的候选不再重复记录（避免每次 sync 都刷一遍台账）。 */
 const INGEST_DEDUPE_MS = 6 * 3_600_000
 
+export interface BreakpointSnapshot {
+  available: boolean
+  reason?: string
+  decision: BreakpointDecision
+  boards: number
+}
+
+/**
+ * 从看板生命周期事件推断当前断点（2026-11-03 断点适配器）。
+ * 看板根缺席 → available:false + 非断点；事件为空 → no_evidence + 非断点（不猜成断点去促成打扰）。
+ */
+export function resolveBreakpoint(nowMs: number = Date.now()): BreakpointSnapshot {
+  const { home } = resolveKanbanHome()
+  if (!home) {
+    return {
+      available: false,
+      reason: '看板数据根缺席',
+      boards: 0,
+      decision: inferBreakpoint([], nowMs),
+    }
+  }
+  const boards = readAllBoards(home)
+  const events = boards.flatMap((b) => b.events.map((e) => ({ kind: e.kind, atSec: e.at })))
+  return { available: true, boards: boards.length, decision: inferBreakpoint(events, nowMs) }
+}
+
 export interface SyncResult {
   available: boolean
   reason?: string
@@ -115,6 +142,8 @@ export interface SyncResult {
   skipped: number
   byDecision: Record<string, number>
   records: InterventionRecord[]
+  /** 本轮候选所依据的断点推断（2026-11-03）；调用方据此解释延后。 */
+  breakpoint?: BreakpointDecision
 }
 
 /**
@@ -124,6 +153,7 @@ export interface SyncResult {
 export function syncInterventions(nowMs: number = Date.now(), actor?: string): SyncResult {
   const { home } = resolveKanbanHome()
   if (!home) return { available: false, reason: '看板数据根缺席', created: 0, skipped: 0, byDecision: {}, records: [] }
+  const breakpoint = resolveBreakpoint(nowMs).decision
   const boards = readAllBoards(home)
   const digest = buildDigest(
     boards.map((b) => ({ slug: b.slug, available: b.available, tasks: b.tasks, events: b.events })),
@@ -155,6 +185,9 @@ export function syncInterventions(nowMs: number = Date.now(), actor?: string): S
       topicKey,
       expectedBenefit: profile.benefit,
       attentionCost: profile.cost,
+      // 断点由看板事件推断（p27 骑现成断点）：只有信息型干预会因非断点延后
+      atBreakpoint: breakpoint.atBreakpoint,
+      ...(breakpoint.nextBreakpointAtMs != null ? { nextBreakpointAtMs: breakpoint.nextBreakpointAtMs } : {}),
     }
     const verdict = govern({ nowMs, prefs, candidate, history })
     const rec: InterventionRecord = {
@@ -179,7 +212,7 @@ export function syncInterventions(nowMs: number = Date.now(), actor?: string): S
     records.push(rec)
     byDecision[verdict.decision] = (byDecision[verdict.decision] ?? 0) + 1
   }
-  return { available: true, created: records.length, skipped, byDecision, records }
+  return { available: true, created: records.length, skipped, byDecision, records, breakpoint }
 }
 
 // ── 读数 ─────

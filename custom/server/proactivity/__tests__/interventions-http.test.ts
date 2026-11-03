@@ -128,6 +128,25 @@ describe('介入治理 REST', () => {
     expect(card.scorecard.user.acceptanceRate).toBe(1)
   })
 
+  it('GET /breakpoints：返回断点推断结构（available/reason/detail/evidence 齐备）', async () => {
+    const res = await fetch(`${base}/breakpoints`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      ok: boolean
+      available: boolean
+      atBreakpoint: boolean
+      reasonCode: string
+      detail: string
+      evidence: { eventsConsidered: number }
+    }
+    expect(body.ok).toBe(true)
+    expect(typeof body.available).toBe('boolean')
+    expect(typeof body.atBreakpoint).toBe('boolean')
+    expect(['recent_boundary', 'lull', 'mid_flow', 'no_evidence']).toContain(body.reasonCode)
+    expect(body.detail.length).toBeGreaterThan(0)
+    expect(typeof body.evidence.eventsConsidered).toBe('number')
+  })
+
   it('反馈未知干预 → 400（不静默造记录）', async () => {
     const res = await fetch(`${base}/interventions/ghost/feedback`, {
       method: 'POST',
