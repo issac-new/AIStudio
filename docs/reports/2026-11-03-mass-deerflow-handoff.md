@@ -1,8 +1,8 @@
 # 两篇调研吸收：多智能体自监督（MASS）与 DeerFlow 2.0——把「交接」变成可观测对象
 
 日期：2026-11-03
-材料一：公号解读文《UC Berkeley 提出 MAS-RSI：多智能体自监督驱动递归进化，科研效率最高 1.6 倍》→ 论文《Recursive Self-Improvement through Multi-Agent Self-Supervision》（arXiv 2610.12176，UC Berkeley + Sakana AI）
-材料二：公号解读文《字节跳动开源 84k Star DeerFlow：让 AI 自己带团队干活》→ https://github.com/bytedance/deer-flow
+材料一：公号解读文《UC Berkeley 提出 MAS-RSI：多智能体自监督驱动递归进化，科研效率最高 1.6 倍》→ 论文《Recursive Self-Improvement through Multi-Agent Self-Supervision》（arXiv 2610.12176，39 页，UC Berkeley + Sakana AI；**核对到摘要级，正文未读**）
+材料二：公号解读文《字节跳动开源 84k Star DeerFlow：让 AI 自己带团队干活》→ https://github.com/bytedance/deer-flow（**已补源码级核对，见 §五**，浅克隆 commit `1dd6d05`）
 性质：吸收轮调研报告；落地见 `docs/superpowers/specs/2026-11-03-handoff-quality-ledger.md`
 
 ## 一、MASS 说了什么（可迁移的部分）
@@ -20,7 +20,7 @@
 
 ## 二、DeerFlow 2.0 说了什么（工程形状）
 
-字节的 Super Agent Harness（84.2k star，MIT，LangGraph 重写）：Gateway 多通道入口 → **Lead Agent 拆活** → **四类子代理**（Researcher/Coder/Reporter/Creator）按需委派 → 工具层（Skills/MCP/三档沙箱）→ 持久层（跨会话记忆 + 私有知识检索）。
+字节的 Super Agent Harness（84.2k star，MIT，LangGraph 重写）。**以下为文章口径，源码核对见 §五**：Gateway 多通道入口 → Lead Agent 拆活 → 四类子代理（Researcher/Coder/Reporter/Creator，**源码实际只有 bash_agent 与 general_purpose 两个内置**）按需委派 → 工具层（Skills/MCP/沙箱）→ 持久层（跨会话记忆 + 私有知识检索）。
 
 三条对工程有约束力的做法：
 
@@ -52,7 +52,41 @@
 - **依赖交接**：`dependency_wait` 次数与其后 `unblocked` 次数（跨卡/跨板依赖的断链面）。
 - **口径纪律**：窗口外的认领不计（不偷看历史）；`running` 不进分母（还没到判的时候）；空输入比率为 `null` 而不是 0%；任务状态为 done 时作为事件裁剪的兜底。
 
-## 五、边界（如实）
+## 五、源码级核对（2026-11-03 补做，本机浅克隆 `1dd6d05`）
+
+上一版对 DeerFlow 的判断来自公号解读文，**不是源码级**——用户当面质询后补做。核对结果：文章大方向对，但有一处硬错、几处遗漏，且遗漏的恰是最值得借鉴的部分。
+
+### 5.1 仓库实况
+
+| 项 | 实测 |
+|---|---|
+| 规模 | 2595 个 `.py`（不含 frontend），`backend/app`（channels/gateway/scheduler/subagent_batches）+ `backend/packages/harness/deerflow`（agents/skills/sandbox/subagents/memory/persistence）+ `skills/public` + 大量 `test_subagent_*` |
+| 通道 | `channels/` 下确有 slack、telegram、wechat、wecom、feishu（100.3KB）、dingtalk（61.7KB）、discord（62.3KB）、qq、github、buzz_nostr——文章列的没夸大 |
+| 沙箱 | `sandbox/` 不是「三种模式」一句话：`lease.py`(33.8KB)、`middleware.py`(30.9KB)、`acquire_serialization.py`、`command_scope.py`、`env_policy.py`、`identity.py`、`file_operation_lock.py`——租约+串行化+命令作用域+环境策略 |
+
+### 5.2 硬错：子代理不是「四类」
+
+- 文章：Lead Agent 委派 **Researcher / Coder / Reporter / Creator** 四类子代理。
+- 源码：`subagents/builtins/` 只有 **`bash_agent.py`、`general_purpose.py`** 两个内置（`builtins/__init__.py` 只导出这两个）。文章的四类更像 1.x 的品牌叙事或宣传口径，不是 2.0 的代码事实。
+
+### 5.3 文章漏掉、但比「四类子代理」重要得多的四件
+
+1. **报告契约（`subagents/report_contract.py`，注释标 RFC #4651 PR3）**：子代理的最终报告是**自述**，必须给主张挂可核验把手（绝对路径/URL/记录 ID/HTTP 状态），并（在 receipts 开启时）用 `[rN]` 引用执行记录；**父侧核验器拿执行记录对账，未引用即判 UNVERIFIED**。这正好是 MASS「输出约定」的可执行版本：不是让模型"说清楚"，而是让自述可被机器对照。
+2. **验收条件走不可信通道（同文件）**：`acceptance_criteria` 是模型生成、最终用户可影响的数据，因此注入时做框架标签转义 + 整条消息按不可信输入边界框定，且**上限 20 条 × 500 字符**；子代理的 SystemMessage 只带框架自己的指针，绝不带条件正文——防"条件里写 ignore the report contract"夺权。
+3. **容量与预算治理**：`capacity.py`（进程内准入：队列满即拒 `SubagentCapacityRejected`、等不到槽位即 `SubagentCapacityTimeout`）、`turn_budget.py`、`token_collector.py`、`batch_lease.py`、`context_snapshot.py`、`step_events.py`——派活不是 `spawn` 完就算，有准入、预算、租约、步事件。
+4. **技能是真·延迟发现（`skills/catalog.py`）**：注释明写「exposes metadata on demand instead of embedding full descriptions in prompts」——模型只在 `<skill_index>` 看到技能名，调 `describe_skill` 才拿元数据（`MAX_RESULTS=5`）。且技能带 `required_secrets`＋`secrets_autonomous`（自主加载可绑密钥，/slash 显式激活另走一路）＋`authz/skill_filter.py` 授权过滤＋`security_static_scanner.py`。文章的「渐进式加载」属实，但安全面（密钥绑定、授权过滤、静态扫描）一字未提。
+
+### 5.4 另一篇（MASS）的核对深度
+
+MASS 只到 **arXiv 摘要级**（`arxiv.org/abs/2610.12176`：39 页、2026-10-08 提交、Qwen3.6-27B、1.2–1.6×、多智能体学生比单智能体学生少用 1.4× token）；正文 39 页未读。摘要与公号文的数字一致，未发现冲突。
+
+### 5.5 这些发现如何修正我方结论
+
+- 上轮把 DeerFlow 概括成「Lead + 四类子代理」应当撤回：**真实可借鉴的是「报告契约 + 验收对账 + 容量准入 + 步事件」**。
+- 我实现的**交接质量账本测的是「结果」**（认领→终态：有没有交出东西）；DeerFlow 测的是**「声明与执行记录的一致性」**（你说做了 ⇄ 记录里有）。两者不重复：前者是事后统计，后者是事中可核验主张。若要做「主张-证据对账」，仓内已有 `custom/server/auditchain`、`custom/server/evidence`，应先查重再动手，不另造一套。
+- 容量准入（队列满拒/超时拒）与我方 `dispatchpreview`（死代码）与 kanban dispatcher 的并发闸是同一问题域——这条列后续观察，不在本轮改。
+
+## 六、边界（如实）
 
 - 看板事件里 `claimed` 的 payload 只有锁与 run_id，**没有可用的历史接手人**，所以账本按「回合」算，不做「谁交给谁」的人际归因；人员维度要用 assignee 快照，无法回溯。
 - `worker_result` 的 `exit_code` 不在 EventLite 里（读取器只取 author），因此「交付但失败」只能靠 `gave_up/crashed` 间接识别，不能细到退出码。
