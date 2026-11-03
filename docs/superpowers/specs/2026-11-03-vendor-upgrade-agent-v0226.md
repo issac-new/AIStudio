@@ -23,7 +23,9 @@
 - **语义落树抽验**：`turn.ended`×2（conversation_loop.py）、`run_chat_recovery`×2（run_turn_runner.py）、`base_url`×2（subcommands/cron.py）。
 - **重建纪律**：regen 链在上游仓临时 worktree 按真实序重放 82 枚（每枚一提交取边界 diff），完成后 `git worktree remove` 走 git 通道清理。
 - **基线提交**：`60a5a849b`（4318 文件；`get-windows.d.ts` 在暂存内核验过）。
-- **全量测试**：`npm test` 结果见提交后回执（本 spec 提交时在跑，结果落本节追加）。
+- **追加失配（SIM 运行时面，series 外）**：`643-agent-mautrix-darwin-ungate`（SIM-only 补丁、不在 series）上下文绑旧版 asyncpg==0.31.0/aiohttp-socks==0.11.0，上游 0.22.6 进位为 0.32.0/0.12.0——版本行校准后快照可套（`743a18709`）。
+- **版本载体进位**：agent-teams 底座跟进入位 `v0.22.6-team.1`（扩展序归 1，方案裁定原文）——team/VERSION、team/version.json、RELEASE-MANIFEST（3 处）、team/README Current 行、requirements 两注释同步；设计文档索引机械覆盖补 13 份 spec 链接＋计数 510→523（`b544da09c`）。
+- **全量测试（确认轮）**：`npm test` **1019 文件 / 7488 tests / 0 failed**（11 skipped 既有）。首轮 9 红全数定谳：3 枚版本载体红=本批真债（已修）；1 枚培训手册索引红=13 份 spec 缺登记（已补）；5 枚客户端组件红=与 mx-setup 并跑的资源挤兑假红（隔离复跑 27/27 绿，541s→15s 负载签名实锤）。
 
 ## 设计文档影响
 
