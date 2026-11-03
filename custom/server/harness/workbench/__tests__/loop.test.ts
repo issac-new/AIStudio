@@ -837,3 +837,47 @@ describe('R12b 约束消融准备门', () => {
     expect(r2.warnings.map((w) => w.code)).not.toContain('constraint_ablation_due')
   })
 })
+
+// Harmony 门（2026-11-03 吸收轮）：增益保留率 + 整块重写警示。
+describe('Harmony：保留率与整块重写', () => {
+  it('演化增益大而留出增益小 → gain_retention_low warning；env 开启升 blocker', () => {
+    const p = fixture()
+    const sel = p.composition!.variantId
+    const probe = p.probes.find((x) => x.variantId === sel)!
+    probe.evidence = {
+      ...probe.evidence!,
+      passAt1: 0.9,
+      equalBudgetBaseline: { runId: 'base', setId: probe.evidence!.setId, passAt1: 0.4 },
+      heldoutBaselinePassRate: 0.4,
+    }
+    p.heldout = { runId: 'h', n: 20, passRate: 0.45 }
+    const r = evaluatePromotion({ proposal: p, currentChampion: null, applyRequested: false, applyEnvEnabled: false })
+    expect(r.warnings.map((w) => w.code)).toContain('gain_retention_low')
+    process.env.HARNESS2_RSI_REQUIRE_RETENTION = '1'
+    try {
+      const strict = evaluatePromotion({ proposal: p, currentChampion: null, applyRequested: false, applyEnvEnabled: false })
+      expect(strict.blockers.map((b) => b.code)).toContain('gain_retention_low')
+    } finally {
+      delete process.env.HARNESS2_RSI_REQUIRE_RETENTION
+    }
+  })
+
+  it('留出基线缺席 → 算不出保留率，不报该门（不猜）', () => {
+    const p = fixture()
+    const sel = p.composition!.variantId
+    const probe = p.probes.find((x) => x.variantId === sel)!
+    probe.evidence = { ...probe.evidence!, passAt1: 0.9, equalBudgetBaseline: { runId: 'b', setId: probe.evidence!.setId, passAt1: 0.4 } }
+    p.heldout = { runId: 'h', n: 20, passRate: 0.45 }
+    const r = evaluatePromotion({ proposal: p, currentChampion: null, applyRequested: false, applyEnvEnabled: false })
+    expect(r.warnings.map((w) => w.code)).not.toContain('gain_retention_low')
+  })
+
+  it('候选一次改 ≥8 个文件 → whole_harness_rewrite warning（整块重写实测更差）', () => {
+    const p = fixture()
+    const v = p.variants.find((x) => x.id === p.composition!.variantId)!
+    v.content = ''
+    v.files = Array.from({ length: 8 }, (_, i) => ({ path: `f${i}.md`, content: `x${i}` }))
+    const r = evaluatePromotion({ proposal: p, currentChampion: null, applyRequested: false, applyEnvEnabled: false })
+    expect(r.warnings.map((w) => w.code)).toContain('whole_harness_rewrite')
+  })
+})

@@ -6,6 +6,7 @@ import { spawnSync } from 'child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { gainRetention } from './multi-objective'
 import { parseHookPolicy } from '../../goalbudget/stage-ladder'
 import type {
   BehaviorContrast, Champion, EvolutionReport, EvolutionRound, EvolutionSurface, GateBlocker,
@@ -617,6 +618,38 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
         code: 'skill_negative_delta',
         message: `技能差分为 ${(proposal.skillDifferential.delta * 100).toFixed(1)}pp（无技能反而更好）——该技能可能是负担（过度验证/重型流水线失效模式）`,
       })
+    }
+
+    // ---- Harmony 门（2026-11-03 吸收轮）：增益保留率 + 整块重写 ----
+    // 论文《Harmony Harness》（2610.15150）：接受规则只读优化集反馈会被刷；headline 指标是
+    // 「换分布后还留住多少演化增益」。留出基线与会话基线都在时才算，缺就不给数。
+    {
+      const sel = composedVariant(proposal)
+      const probe = sel ? proposal.probes.find((p) => p.variantId === sel.id && p.status === 'recorded') : null
+      const ev = probe?.evidence
+      const baseline = ev?.equalBudgetBaseline?.passAt1 ?? null
+      const retained = gainRetention({
+        passAt1: ev?.passAt1 ?? null,
+        baselinePassAt1: baseline,
+        heldoutPassRate: proposal.heldout?.passRate ?? null,
+        heldoutBaselinePassRate: ev?.heldoutBaselinePassRate ?? null,
+      })
+      if (retained.retention != null && retained.retention < 0.3 && (retained.evolveGain ?? 0) > 0) {
+        const msg = `增益保留率 ${(retained.retention * 100).toFixed(0)}%（演化增益 +${((retained.evolveGain ?? 0) * 100).toFixed(1)}pp → 留出增益 ${(((retained.heldoutGain ?? 0)) * 100).toFixed(1)}pp）——换分布后增益基本没留住，可能背下了优化集分布`
+        if (process.env.HARNESS2_RSI_REQUIRE_RETENTION === '1') blockers.push({ code: 'gain_retention_low', message: msg })
+        else warnings.push({ code: 'gain_retention_low', message: msg })
+      }
+    }
+    // 整块重写警示（论文消融：整块重写留出合计 35.0，比不演化 43.3 还低；工具+技能+调度分开演化才到 76.7）
+    {
+      const sel = composedVariant(proposal)
+      const touched = (sel?.files?.length ?? 0) + (sel?.files ? 0 : sel?.content ? 1 : 0) + (sel?.deletions?.length ?? 0)
+      if (touched >= 8) {
+        warnings.push({
+          code: 'whole_harness_rewrite',
+          message: `候选一次改 ${touched} 个文件——整块重写实测比不演化更差（增益不可归因）；建议按工具/技能逻辑/调度分开演化`,
+        })
+      }
     }
 
     // ---- R6 heldout 门（2026-10-31 二批）：独立新验证数据的准入规则（2610.18813） ----
