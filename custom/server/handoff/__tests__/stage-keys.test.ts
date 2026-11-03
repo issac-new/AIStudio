@@ -144,7 +144,7 @@ describe('judgeStageChain（链校验）', () => {
 
 describe('toChainResponse（响应形状）', () => {
   // 回归：链结论字段曾叫 ok，被 lib/http 的 ok() 的 `{ok:true, ...data}` 覆盖成
-  // 200+ok:false 的假信号。响应体顶层 ok 是传输层保留键，结论必须改名 chainOk。
+  // 「200 却带失败语义」的假信号。响应体顶层 ok 是传输层保留键，结论必须改名 chainOk。
   it('不输出顶层 ok 键，结论落 chainOk', () => {
     const report = judgeStageChain([])
     const payload = toChainResponse(report)
