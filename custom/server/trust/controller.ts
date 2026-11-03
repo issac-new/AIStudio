@@ -10,6 +10,9 @@ import {
   listCaseSummaries, openCase, overview, recordAudits, verifyCheckpoint, writeCheckpoint,
 } from './service'
 import { checkSurfaceChain } from './surfaces'
+import { modelFingerprint } from './independence'
+import { resolveModelRef } from './model-fingerprint-source'
+import { ok as okBody, unavailable } from '../lib/http'
 import type { TrustCase } from './types'
 
 const router = new Router()
@@ -207,6 +210,23 @@ router.get('/cases/:id/checkpoints/:checkpointId/verify', async (ctx) => {
   } catch (e) {
     fail(ctx, e)
   }
+})
+
+// 模型指纹采集端点（F4）：按 profile 读 config.yaml，回落 env；取不到即 available:false。
+// 只回摘要与来源，不回显原始模型标识——证据账不需要落部署细节。
+router.get('/model-fingerprint', async (ctx) => {
+  const raw = ctx.query.profile
+  const profile = typeof raw === 'string' ? raw.trim() : ''
+  if (profile && !/^[A-Za-z0-9._-]{1,64}$/.test(profile)) {
+    fail(ctx, new Error('profile 非法（字母/数字/点/下划线/连字符）'))
+    return
+  }
+  const resolved = resolveModelRef(profile ? { profile } : {})
+  if (!resolved.ref) {
+    unavailable(ctx, resolved.reason)
+    return
+  }
+  okBody(ctx, { available: true, source: resolved.source, fingerprint: modelFingerprint(resolved.ref) })
 })
 
 export default router

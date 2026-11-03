@@ -2839,6 +2839,20 @@ def eval_summary_html():
 """
 
 
+def _four_properties_html():
+    """四性自评节（四性四格补齐批 F3，2026-11-03）。
+
+    读 run 目录下四个可选制品（AC 追溯/阶段键/姿态准入/独立性摘要），缺席一律写
+    「未采集」。生成异常不阻断报告主体（spec D3）：失败只降级本节并写明原因。
+    """
+    try:
+        from four_properties import build_section
+        return build_section(str(EVID.parent))
+    except Exception as e:  # noqa: BLE001 - 报告链 fail-soft
+        return ('<p class="stat-note">四性自评节生成失败：'
+                + H.escape(str(e)) + '（不影响其余章节）</p>')
+
+
 def closure_evidence_html():
     """治理结果证据（V8.46，2026-10-19）：读 evidence/governance-closure/ 与评测处置链。
 
@@ -2851,7 +2865,8 @@ def closure_evidence_html():
     sp = d / 'summary.json'
     if not sp.exists():
         return ('<p class="stat-note">本轮未采集治理结果快照（evidence/governance-closure/summary.json 缺席）'
-                '——评审治理/观测告警/改进实验/发布门与 UAT 台账记为缺口，不编造。</p>')
+                '——评审治理/观测告警/改进实验/发布门与 UAT 台账记为缺口，不编造。</p>'
+                + _four_properties_html())
 
     def load(name, base=None):
         p = (base or d) / name
@@ -2929,7 +2944,7 @@ def closure_evidence_html():
         for name, reading, meaning in rows
     )
     color = '#15803d' if not failed else '#b45309'
-    return f"""
+    base = f"""
   <h3 style="font-size:13px;margin:14px 0 6px">证据九：治理结果可反查（V8.46）</h3>
   <div style="margin:8px 0;padding:10px 14px;background:var(--bg);border-radius:8px;border-left:4px solid {color}">
     <b style="color:{color}">治理快照：{summary.get('ok', '—')} 项可用 / {summary.get('failedCount', '—')} 项缺口</b>
@@ -2943,6 +2958,7 @@ def closure_evidence_html():
   </div>
   <p class="stat-note">评审治理、观测告警、改进实验三项为本轮治理能力读数，不改变 G1-G6 判据；发布门与 UAT 台账是 G5/UAT 的 append-only 证据，报告与产品 UI 同源。</p>
 """
+    return base + _four_properties_html()
 
 
 def _evolution_reading(wb):
