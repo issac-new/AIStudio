@@ -271,18 +271,23 @@ ECC 的 `agent.yaml` 是**导出 surface**（portability layer），不是**auth
 > generate-skill.sh 的 workflow.md emit 按 9 节点骨架生成。
 
 **详细节点说明：**
-1. 需求理解（模糊需求走结构化访谈协议：设计树+前沿轮次+事实自查决策问人，见 `mattpocock-skills-methodology.md` §一）
+1. 需求理解（模糊需求走结构化访谈协议：设计树+前沿轮次+事实自查决策问人，见 `mattpocock-skills-methodology.md` §一；**决策前沿**与**拒答库**先行，细则见 `pstack-methodology.md` §十一）
 2. 探查（设计 spec 前的仓库探查；可三路并行——结构/规范/代码组织子代理，按文件归属切分不重叠）—— 组件库清单全量穷举（非代表性样本）；改实体字段/数据模型时影响面反查走边集三查（`relations-query.sh --field/--entity` + 声明式映射耦合面清单 + §8 字段级映射台账），边集缺失先 `relations-extract.sh` 重建
 3. 设计 spec（采用 OpenSpec proposal 模式：proposal.md + delta spec + design.md + tasks.md）—— **★测试左移**：spec 须含"测试设计"段（测试策略/用例骨架/边界值/回归范围——分级推导协议见下方左移要求；测试缝先行：优先既有缝/用最高缝/缝越少越好，见 `mattpocock-skills-methodology.md` §二）；**★运维左移**：spec 须含"可观测性约束"段（日志结构/metrics 埋点/trace 透传/告警阈值/健康检查）；**★文档左移**（DESIGN_SYNC_REQUIRED=1 时）：spec 须含"设计文档影响"声明段（§20.4——`DESIGN_SYNC: touched`（逐行列出 DESIGN_DOCS 路径与修订点）或 `DESIGN_SYNC: none`（无需更新+理由）），L2 提交钩子核验 touched 兑现（声明与兑现同一批）；spec 正文不写文件路径与代码片段（防腐），原型决策片段除外
-4. 实施 plan（采用 OpenSpec tasks checkbox 格式 + superpowers writing-plans bite-sized 步骤；任务拆分走纵切纪律：每票纵切全层可独立验证+声明阻塞边+宽改造 expand-contract 例外，见 `mattpocock-skills-methodology.md` §三）—— **★变更左移**：plan 须含"变更影响范围"段（消费方反查/回滚预案/灰度策略/数据库迁移兼容窗口）
+4. 实施 plan（采用 OpenSpec tasks checkbox 格式 + superpowers writing-plans bite-sized 步骤；任务拆分走纵切纪律：每票纵切全层可独立验证+声明阻塞边+宽改造 expand-contract 例外，见 `mattpocock-skills-methodology.md` §三）—— **★决策四区**（`assets/plan-template.md` 内置，判据见 `pstack-methodology.md` §十一）；**★变更左移**：plan 须含"变更影响范围"段（消费方反查/回滚预案/灰度策略/数据库迁移兼容窗口）
 5. 编码实现（**分支开发**：feature 分支自 origin/main 起、`<type>/<slug>` 命名，禁直接在 main 开发——主干合并是节点⑧的事；采用 superpowers subagent-driven：orchestrator + 每任务新 subagent + 两阶段审查；**复杂变更（>3 文件/跨模块）用 Dynamic Workflows 并行扇出 + 交叉验证**；互不依赖的文件可并行实施——子代理按文件归属切分，禁止两个执行者写同一文件）—— **★测试左移**：每个 task 须先写/更新测试再实现（TDD/BDD），precheck `--shift-left` 核验本次变更集同时含 test 与 impl 文件（跨栈测试命名均识别；严格时序靠任务纪律）
 6. 测试验证（**分支测试**：测试与门禁序列在 feature 分支上执行，全绿才进节点⑦⑧——主干不做"合后再测"；含 gstack/OCR 5 审查维度 + AUTO-FIX/ASK + 可选 `claude ultrareview` 云端多 agent 审查；长测试/全量回归起后台任务跑，主会话同时推进其他工作）—— **★运维左移**：验证阶段须确认 metrics/日志/trace 已埋点且可通过健康检查端点访问；独立跑单元/接口/集成测试：`check_test` 第二层核验覆盖率阈值（COVERAGE_MIN）、零断言/断言密度、负向用例与聚焦测试，配置 `MUTATION_CMD` 时追加变异分数；`--api` 核验端点×测试映射与状态码断言。**★质量门禁序列（quality:full 十步模式）**：多门禁按序执行、fail-fast（任一步 fail 即停不跑后续）、每步耗时留痕；序列=build→check_test（--test）→api→contract→reuse→consistency→layer/link-depth→docs-pack→security→deps，全部映射 precheck 既有 flag，不新增 check_*；执行入口 `--all-full`（标准 29 已含全部）或按需单跑。生成骨架 emit 该序列指引（workflow.md 节点⑥）。
-7. 独立审查 —— **独立 code review（非自检）**：以第三方 reviewer 视角找 Step 7 填充后仍残留的逻辑错误/占位符遗漏/门禁误配/清单错漏等低级错误；`check_review` 门禁核验 `references/review-record.md` 留痕非空（5 维审查点 + findings 表），缺则 fail；**审查范围含质量门禁序列运行证据**（确认节点⑥序列真实跑过——gate-runs.jsonl 有当次 run 记录）
+7. 独立审查 —— **独立 code review（非自检）**：以第三方 reviewer 视角找 Step 7 填充后仍残留的逻辑错误/占位符遗漏/门禁误配/清单错漏等低级错误；**证据强度自评 / 拒答落账 / 原则引用**三条见 `pstack-methodology.md` §十一；`check_review` 门禁核验 `references/review-record.md` 留痕非空（5 维审查点 + findings 表），缺则 fail；**审查范围含质量门禁序列运行证据**（确认节点⑥序列真实跑过——gate-runs.jsonl 有当次 run 记录）
 8. 合入 main（**主干合并**：准入=节点⑥⑦分支测试全绿）—— **★变更左移**：合入前须确认回滚预案存在 + 数据库变更兼容（向前兼容/双写期）；**★文档左移**（DESIGN_SYNC_REQUIRED=1 时）：spec 声明 touched 的 DESIGN_DOCS 修订须在本变更集内（L2 pre-commit 机械核验，声明与兑现同一批）；**合入序列**：fetch origin → 本地 main `--ff-only` 快进（不可快进=远端历史被改写，停下对账）→ worktree 分支 rebase 新 main（冲突 worktree 内解决）→ `merge --no-ff` 保留任务边界 → push（多人协作防本地 main 滞后远端，2026-10-26 立法）
 9. 构建发布（**主干回归在先**：合入后在 main 复跑全量测试/`--all-full` 门禁序列，全绿才构建发布——验证分支测试覆盖不了的集成面；失败=本批引入则回退 merge 后回分支重入节点⑤，主干既有问题另开分支修，不在 main 直接改）—— **★运维左移**：发布须含灰度/金丝雀策略 + 监控告警阈值已设 + 运维 runbook 已更新
 10. 发布后运营 —— **★运维左移运行态验证**：发布后验证健康检查端点可访问 + 告警阈值已设 + runbook 已更新 + 灰度观察期无异常（precheck `--operate`，warn 级 advisory）
 
 > 项目可能有额外节点（如"代码审查"、"部署验证"），或无发布环节。按项目实际裁剪。
+
+## 目标技能第七类产物
+
+verify-`<project>/`、`.swarm-yuan/out-of-scope/`、`principles/` 三件产物的模板、产出时机与机器检查见 `pstack-methodology.md` §十二。
+
 > **方法论整合：** 节点③④用 OpenSpec 的 proposal→spec(delta)→design→tasks 模式（specs as source of truth）；节点⑤用 superpowers 的 subagent 编排（见 subagent-orchestration.md）；节点间状态用 comet 风格脚本背书（state-machine.sh，非 prompt-only）；节点⑥含 gstack/OCR 审查维度（见 review-methodology.md）。**方法论分派（任务类型→档）单源见 task-methodology-router.md §文档路由表**。
 > **★调用追踪（设计理念 2 落地）：** 每个节点必须含第 ⑨ 要素——进入节点先公告（`→ [节点X] 调用 …`），节点级落盘 `.swarm-yuan/trace.jsonl`（`SWARM_YUAN_TRACE=verbose` 含每次具体调用）。机器执法：`generate-skill.sh --verify-completeness` 校验每节点段含「调用追踪」字样，缺则 exit 1。
 > **★左移原则（Shift-Left）：测试、变更影响、运维监控、设计文档同步不等到节点⑥⑦⑧才考虑，须在节点③④⑤就嵌入约束**——spec 阶段写测试设计+可观测性约束+设计文档影响声明，plan 阶段写变更影响+回滚预案，编码阶段先测试后实现，合入前确认回滚+迁移兼容+设计文档随批兑现，发布前先主干回归（main 全量回归全绿）再确认灰度+告警+runbook。precheck `--shift-left` 门禁校验各阶段左移产出物存在；设计文档同步由 L2 pre-commit 核验（DESIGN_SYNC 开关）。

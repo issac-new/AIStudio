@@ -1,4 +1,4 @@
-# references.tsv — authoritative registry (58 rows; 57 map rows + capability-map itself).
+# references.tsv — authoritative registry (61 rows; 60 map rows + capability-map itself).
 # id	family	source	evidence	consumer_node	distributed	claim	overlap_group	trigger
 exploration-guide	generation	内生 + semantica/graphify（A）	A	生成流程 Step 2/Step 4 探查（含 §D.0.6/矛盾裁决）	gen_only	M1	generation	执行任何探查
 generation-flow	generation	内生	B	生成流程 Step 1-13 详解	gen_only	M1	generation	生成流程逐步执行
@@ -58,3 +58,6 @@ fibo-financial-ontology	security	EDM Council FIBO master_2026Q3（B，MIT；提�
 compliance-checkpoints	security	执法检查底稿调研（B，法规引用核至条文号，26 轮核实成果）	B	开发工作流 ⑦ 审查 + 迎检自查任务路由 + spec §22 合规矩阵	compliance	M1	security	强监管交付/迎检准备/敏感数据与权限密钥变更
 regulatory-checkpoint-table	security	执法检查底稿调研（B，主表 173 条经原文核实）	B	inspection-ledger.sh checklist/ledger 数据正本	compliance	M1	security	需要执法检查条目级底稿
 capability-map	meta	内生（A）	A	SKILL.md 路由表 + self-check G25	none	M1	meta	路由与对账
+failure-taxonomy	verification	MTSC2026 AI Native 测试工程（极智嘉）六类根因（B）	B	开发工作流 ⑤⑥ 失败处置 + failure-detector.sh _classify_failure 规则表	standard	M1	verification	命令/测试/走查失败后的处置决策
+knowledge-retrieval-ladder	assembly	MTSC2026 四层知识检索本仓化（B）	B	开发工作流 ② 探查 + ⑤ 编码的检索起点（L1 边集→L2 索引→L3 语义→L4 实现）	standard	M1	assembly	查实现/查依赖/查语义/查影响面
+pstack-methodology	verification	cursor/plugins · pstack v0.15.36（A）	A	开发工作流 ⑦ 审查 + 生成流程 Step 7 目标技能产物规范（验证技能/原则卡/拒答库）	gen_only	M1	verification	设计验证产物/选择并行范式/写原则卡或审查证据强度

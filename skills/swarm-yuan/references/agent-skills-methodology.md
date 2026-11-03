@@ -1,4 +1,4 @@
-> **何时读我**：做反借口/假设前置/Prove-It 自证/自治硬停判断时。Addy Osmani agent-skills 吸收——反借口表/假设清单/Prove-It 五步/自治三类硬停/Composition 协议。
+> **何时读我**：做反借口/假设前置/Prove-It 自证/自治硬停判断时，或写目标技能描述（触发词表）、设计质量底线守卫、做干净上下文对抗评审时。Addy Osmani agent-skills 吸收——反借口表/假设清单/Prove-It 五步/自治三类硬停/Composition 协议/三档评测/降标守卫/doubt 协议。
 
 # agent-skills 工程纪律方法论（反借口表 / 假设前置 / Prove-It / 自治硬停）
 
@@ -25,7 +25,9 @@
 
 ### 2.1 机制
 
-两列表格，**第一人称借口引语 + 不留情面的量化反驳**。上游 24 技能中 22 个携带（共 153 条，平均每技能 7 条），嵌在技能正文 Process 与 Verification 之间——**每当 agent 想跳步，借口就在上下文里被当场反驳**，不需要外置纪律文档。
+两列表格，**第一人称借口引语 + 不留情面的量化反驳**。上游 25 技能中 24 个携带（共 169 条，中位 6 条、最少 4、最多 11），嵌在 `## Red Flags` 之前、Process 与 Verification 之间——**每当 agent 想跳步，借口就在上下文里被当场反驳**，不需要外置纪律文档。
+
+**机检现状与加严**：上游 `scripts/lib/skill-lint.js:75-81` 把 `## Common Rationalizations` 列入 `REQUIRED_SECTIONS`，缺失即 CI 错误；但只断言这一行存在，**空章节、两行表、无锚点的空话都能过**。swarm-yuan 的 `check_rationalization`（N02）加严三条：段存在且位于红旗段之前 / 数据行 ≥ max(4, 核心步骤数一半) / 每行 Reality 含可核锚点（门禁名、命令、`file:line`、`tests/` 路径）之一。
 
 **生成配方**（skill-anatomy 写作原则第 4 条）：**Anti-rationalization——每个值得跳过的步骤都必须在表里有对应反驳**。借口条目不是自由发挥，而是从流程步骤反推：目标技能的每个门禁/precheck 步骤问一句"agent 会想什么借口跳过它"，逐条配对。
 
@@ -136,21 +138,93 @@ Bug report arrives
 
 **落地**：governance-agents.md 四权角色补 Composition 声明；swarm-yuan 的任务路由（task-methodology-router）保持单层，不加 meta-orchestrator。
 
-## 七、已登记未实施
+## 七、三档技能评测体系（N01 的直接来源）
+
+上游 2026-08 后把"技能写得对不对"拆成三层可执行检查，`evals/README.md:14-22` 原文目标："that they **trigger** when they should, **stay distinct** from each other, and **change agent behavior** the way each skill promises."
+
+| 档 | 查什么 | 何时跑 | 成本 | 确定性 |
+|---|---|---|---|---|
+| 1 结构 | frontmatter、命名、必需章节、行预算、`references/` 链接、命令齐平、artifact 路径、manifest 版本 | CI | 免费 | 确定性 |
+| 2 触发与路由 | 正例 prompt 把本技能排进 top-k；反例不排第一；两两描述不近似碰撞 | CI（`--min-rank1 95`） | 免费 | 确定性（词法近似） |
+| 3 行为 | agent 按技能执行后是否满足 `expectations[]` | 按需 | token | 随机 |
+
+**Tier 2 是唯一被 swarm-yuan 直接移植的一档**（N01）。实现要点（`scripts/run-evals.js:59-60,137-190`）：
+
+- 语料 = 技能名 token（权重 2×）+ description token（1×）；轻量词干化（`-ing/-ed/-ation/-ification` 等）把 "conflicts/conflict" "specification/specify" 归并；停用词表 + 缩写别名表（`docs→document`、`auth→authenticate`）显式登记，**不在描述里堆缩写词作弊**。
+- 打分 = TF-IDF 余弦；正例须排进 `top_k`（默认 3），反例不得排第一。
+- **负例必须声明 `owner`**：`evals/README.md:111` 说明，不声明 owner 的负例可能"vacuous pass"（prompt 与任何技能都不匹配，本技能自然不排第一）。声明后断言 owner **压过**本技能，负例升级为成对路由测试。
+- 碰撞阈值：两两描述余弦 ≥0.75 报错、≥0.5 警告。
+- **rank-1 棘轮**：CI 用 `--min-rank1 95`，低于下限失败；`evals/README.md:121` 原文 "never lower it to make a regression pass"。
+- 失败处置方向是**改描述，不是改 prompt**（`:123`）："When these evals surface a description-vocabulary gap, fix the description, not the prompt."
+
+**实测到的杠杆量级**（同仓 README 自记，`evals/README.md:65`）：给 code-review 描述加一句"即使 diff 是粘贴的也适用"，四种评审措辞的触发率 7/27→21/27，相邻九个不该触发的 prompt 保持 0/27。这说明描述词表是触发率的第一杠杆。
+
+**不移植 Tier 3 的绝对分数当门禁**：上游自己记录了大波动（同一用例 6/6、1/6、2/7 都出现过），它适合做"描述改动前后对照"和"行为抽查"，不适合做 `precheck` 的通过条件。
+
+## 八、降标守卫 floor guard（N04 的直接来源）
+
+`constraint-driven-development` 的核心不是设阈值，而是**只在 diff 范围内报告"把底线往下挪"的动作**（`references/floor-guard.md`）。五类：
+
+| 类别 | 检测对象 |
+|---|---|
+| 阈值下调 | 约束文件里最小值/覆盖率/上限被改小 |
+| 测试变松 | 新增 `.skip`/`xit`/`@pytest.mark.skip`、删除测试文件、删除测试文件里仍存在那行的断言 |
+| 静默检查器 | 新增 `@ts-ignore`/`eslint-disable`/`# noqa`/`nosemgrep`/`istanbul ignore` 等抑制注释 |
+| 未完成工作 | 新增桩（`not implemented`）、空 catch、`TODO`、`pass # stub` |
+| 新增例外 | 约束文件里新增例外行 |
+
+合同条款（`floor-guard.md` 的 Contract 段）：
+
+- **输入**：merge base 到工作树的 diff，**含新增与删除行 + 未跟踪文件**。只读 `git diff` 会漏新文件。
+- **退出码**：0 干净、1 有降标（阻断）、2 守卫无法运行（无 merge base / 非 git 仓）。**"Never let a `2` read as a `0`."**
+- **只报规则与位置，不报命中的敏感原值**；脱敏不是可选项。
+- **"Tightening is silent, loosening is loud."** 收紧不报，放宽才响。
+- 解析细节：`---`/`+++` 只在 `diff` 行与第一个 `@@` 之间是文件头，hunk 内每行都是内容——否则新增的 `++i` 会被误认成文件头。
+
+**落地**：`scripts/floor-guard.sh` + `check_floor_guard`（N04），接入 ⑧合入前；判定库与阈值口径留在 conf，不写死。
+
+## 九、doubt 协议与 interview-me 判据（干净上下文对抗评审）
+
+### 9.1 doubt-driven development 五步
+
+原文定位（`skills/doubt-driven-development/SKILL.md:10`）："the discipline of materializing a fresh-context reviewer — biased to **disprove**, not approve — before any non-trivial output stands."
+
+1. **CLAIM**：2-3 行写出决策与"为什么重要"。判据："If you can't write the claim that compactly, you have a vibe, not a decision."
+2. **EXTRACT**：只交最小可评审单元（代码给 diff 或函数，决策给 3-5 句提案加约束）。原则："Strip your reasoning"——交结论只会拿回对结论的确认；但"**Strip reasoning, not evidence**"。
+3. **DOUBT**：对抗式提示词，六类检查项（未言明的假设/未处理的边界/隐藏耦合或共享状态/契约可能被违反的方式/可能破坏的既有约定/异常输入下的失效模式），并明令 "Do NOT validate. Do NOT summarize."
+   - **最关键一条**（`:108`）："**Pass ARTIFACT + CONTRACT only. Do NOT pass the CLAIM.**" 把结论交给评审者，只会得到对结论的认同。
+   - 干净上下文 = 主会话 spawn 子代理/persona（"start with isolated context by design"），不是新 session；子代理无法再 spawn 时降级为自我审问，且必须标注 degraded。
+   - 对抗式提示词要**原样传入并覆盖 persona 默认输出形状**（persona 常带"What's done well，至少一条"这类平衡要求，与 issues-only 冲突）。
+4. **RECONCILE**：评审输出是数据不是判决。分类优先级：契约误读 → 有效且可行动 → 有效取舍 → 噪音。原文明令："Don't defer just because it's 'fresh.'"
+5. **STOP**：满足任一即停——只剩琐碎/已考虑项、完成 3 轮、用户说 ship。**3 轮上限不得抬高**；"3 轮明显不够"意味着工件太大，回到第 2 步拆解。
+
+**可检测失败信号**（`:217`）："Doubt theater — across 2 or more cycles where the reviewer surfaced substantive findings, zero findings were classified as actionable. You are validating, not doubting." 这条把"假怀疑"从感觉变成了可数谓词。
+
+### 9.2 interview-me 的 95% 操作化
+
+不是"感觉懂了"，而是一个可判定的测试（`skills/interview-me/SKILL.md:132-140`）：
+
+> "You're done when you can answer yes to this: *Can I predict the user's reaction to the next three questions I would ask?*"
+
+配套：一次一个问题 + `GUESS:` 行附自己的假设（让反应比生成快、且自己可被证伪）；四个缺项判据 who/why/success/binding constraint；"want vs should want" 探测（最佳实践话术/从众/should probably/把 buzzword 当目标）；收口用固定六行（Outcome/User/Why now/Success/Constraint/Out of scope）且只接受显式 yes——"whatever you think is best" 意味着用户在委派、他自己也没有 95% 把握，须换成两个具体选项重问。
+
+**落地**：①②之间插入的"决策前沿轮次"协议（N08）取它的"每问附推荐答案"与"只接受显式确认"，不取"一次一问"（Matt 已改为按依赖分层整前沿轮次，见 mattpocock-skills-methodology）。
+
+## 十、已登记未实施
 
 | 候选 | 评估 | 决定 |
 |------|------|------|
 | 五轴审查全量引入（Correctness/Readability/Architecture/Security/Performance） | 与 review-methodology 五权审查高度同构；真增量是「概念计数」判据（"Count the concepts a reader must hold—if the count unchanged, it isn't cleaner"）+ 审查意见必须附结构处方 + 发现分级前缀（Critical/Nit/Optional/FYI 防止全部被当必修） | 登记，条件=review-methodology 补强时合并吸收（避免与 codex rubric 双轨） |
 | 变更尺寸双阈值（diff ~100 好/~300 可接受/~1000 拆 + 单文件总行数 1000 预警 + 四种拆分策略） | check_pr_quality 已有尺寸维度？若有则补阈值口径 | 登记，条件=check_pr_quality 调优时对齐 |
-| 路由 eval 体系（每技能 positive/negative 触发用例 + description 余弦相似度碰撞检测 >0.75 拒绝 + rank-1 ratchet） | 真空白（生成的技能会不会被正确触发无人管），但需 embedding 基建 | 登记，条件=出现"生成技能不被路由命中"的真实案例时立项（可先做纯文本相似度碰撞检测，零依赖） |
+| 路由 eval 体系（每技能 positive/negative 触发用例 + description 余弦相似度碰撞检测 >0.75 拒绝 + rank-1 ratchet） | **已实施（N01，2026-11-03）**：`scripts/eval-routing.sh` + `check_skill_routing` + `assets/evals/cases.tsv`；零依赖 bash+awk 复刻，用 TSV 不用 JSON（不引入 jq/node）。原登记条件"需 embedding 基建"被上游证伪——TF-IDF 词法近似即可捕获两类主要失效（描述缺词、描述过宽）。 | 已落地，阈值实测后按结果调 |
 | /ship 并行 fan-out 编排 | swarm-yuan 是 bash 生成器，无并行 subagent 基建 | 不做 |
 | spec 六区极简模板 | swarm-yuan §1-23 深度规格是差异化优势，不换 | 不做 |
 
-## 八、来源溯源
+## 十一、来源溯源
 
-- 仓库：addyosmani/agent-skills（MIT，HEAD df1edb2，2026-08-14；24 技能 7208 行 SKILL.md，最大 499 行）
-- 一手材料（2026-08-16 浅克隆实测）：`docs/skill-anatomy.md`（模板纪律）/ `skills/spec-driven-development` 等 24 个 SKILL.md（Rationalizations 22/24 覆盖）/ `commands/build.toml`（三类硬停）/ `agents/`（Composition 生成期必读文件）/ `docs/agents.md`（三层架构与反模式）
-- 关键数字复核：153 条借口条目（22 技能平均 7 条）；description 上限 1024 字符；技能行数 178-499
+- 仓库：addyosmani/agent-skills（MIT）；首轮吸收基线 HEAD `df1edb2`（2026-08-14，24 技能）；**本轮刷新基线 HEAD `301b02b`（2026-11-01，25 技能，plugin v0.6.15）**
+- 一手材料（2026-11-03 浅克隆实读）：`docs/skill-anatomy.md`（模板纪律）/ `scripts/lib/skill-lint.js`（结构门禁实现）/ `scripts/run-evals.js`（Tier 2 词法路由实现）/ `evals/README.md`（三档口径与实测记录）/ `skills/doubt-driven-development/SKILL.md` / `skills/interview-me/SKILL.md` / `skills/constraint-driven-development/references/floor-guard.md` / `commands/build.toml` / `agents/` 四个 persona / `docs/agents.md`
+- 关键数字复核（2026-11-03 实测）：25 个 SKILL.md 合计 7,335 行，最大 400 行，无超过 500 行；Rationalizations 24/25 覆盖、169 条、中位 6；description 上限 1024 字符；本地 `references/` 仅 3 个技能（763 行），根 `references/` 7 份共享清单（1,412 行）
 
 ## 骨架级模式两条
 

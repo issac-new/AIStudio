@@ -66,6 +66,7 @@ swarm-yuan 的 13 步生成流程是线性的（Step 1-13，唯一编号口径�
 | **验收/交付类** | 何时可宣称完成 | ⑦【必】agent-skills-methodology（Prove-It 五步/自治硬停）+ review-methodology +【按·改进型变更】rsi-evidence-methodology（三类证据分离：任务增益/能力保留/改进器增益各给一句） |
 | **记忆/知识沉淀类** | 记忆写回/知识更新 | ⑧【必】memory-persistence（工具族/蒸馏）+ knowledge-lifecycle-methodology（过期三态） |
 | **迎检自查/强监管合规类** | 迎检窗口、监管自查、compliance 档项目的敏感数据/权限/密钥变更 | ⑦【必】compliance-checkpoints（五步判断法+罚则库+机检映射）+ regulatory-checkpoint-table（条目底稿）；出证跑 `scripts/inspection-ledger.sh`（checklist/ledger/agent-audit，compliance 档随技能分发） |
+| **验证产物/并行范式选型类** | 要为目标项目生成可复跑验证（verify-<project>），或并行任务该用 swarm（覆盖/竞速）还是 arena（择优） | ⑦【必】pstack-methodology（【生成器侧】验证五段 Launch/Doctor/Drive/Evidence/Cleanup、swarm 与 arena 分工、证据强度五级）→【必】review-methodology（证据强度判据的落地形态） |
 
 **生成侧任务同样按本表分派**（叠加在上表"路由表"节点序列之上）：升级已有技能 → 加 knowledge-lifecycle（反馈回路三态）+ memory-persistence（记忆写回）+【生成器侧】rsi-evidence-methodology（吸收与升级收口的三类证据对账）；合规审计 → 加 four-theories-methodology（剪裁评估）+ quality-management-standards（【生成器侧】认证资产映射）。
 

@@ -72,6 +72,10 @@ run_one() {
   done
   # R122：diagram 门禁机械分支依赖 scripts/diagram-check.sh（源在 scripts/，不在 assets/）
   [[ -f "$BASE/scripts/diagram-check.sh" ]] && cp "$BASE/scripts/diagram-check.sh" "$tmp/scripts/diagram-check.sh"
+  # 新门禁的外部判定器（skill-docs 无外部依赖；skill-routing/floor-guard 各有一件）
+  for _gs in eval-routing.sh floor-guard.sh; do
+    [[ -f "$BASE/scripts/$_gs" ]] && cp "$BASE/scripts/$_gs" "$tmp/scripts/$_gs"
+  done
   # conf 中 __REPO_ROOT__ 占位符替换为 fixture 根（机器无关化）
   sed "s|__REPO_ROOT__|$fx|g" "$fx/scripts/precheck.conf" > "$tmp/scripts/precheck.conf"
   # setup 钩子：运行时生成被 .gitignore 排除的样本（如 node_modules mock）

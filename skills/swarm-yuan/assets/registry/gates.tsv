@@ -1,8 +1,8 @@
-# gates.tsv — authoritative registry (56 rows). Generated mechanically from precheck --list-gates + gate fixtures.
+# gates.tsv — authoritative registry (59 rows). Generated mechanically from precheck --list-gates + gate fixtures.
 # id	flag	fn	domain	tier	enforce	conf_vars	fixture	claim	notes
 branch	--branch	check_branch	process	core	strict	BRANCH_REGEX,PROTECTED_BRANCHES	tests/gate-fixtures/branch	M2	-
 scope	--scope	check_scope	process	core	warn	PROJECT_DIR,READONLY_DIRS	tests/gate-fixtures/scope	M2	-
-spec-first	--spec-first	check_spec_first	process	core	warn	BASE_BRANCH,PROJECT_DIR,SPEC_GLOB,SPEC_REQUIRED,WRITABLE_DIRS	-	M1	-
+spec-first	--spec-first	check_spec_first	process	core	strict	BASE_BRANCH,PROJECT_DIR,SPEC_GLOB,SPEC_REQUIRED,WRITABLE_DIRS	-	M1	-
 build	--build	check_build	quality	core	warn	BUILD_CMD	tests/gate-fixtures/build	M2	-
 test	--test	check_test	quality	core	strict	PROJECT_DIR,TEST_CMD,TEST_QUALITY_STRICT	tests/gate-fixtures/test	M2	-
 sensitive	--sensitive	check_sensitive	security	core	warn	SCAN_DIRS,SENSITIVE_EXCLUDE_GLOBS,SENSITIVE_TOOL	tests/gate-fixtures/sensitive	M2	R126 #1 static mismatch pending
@@ -56,3 +56,6 @@ skill-supply-chain	--skill-supply-chain	check_skill_supply_chain	security	explic
 state-phase	--state-phase	check_state_phase	process	full_tail	advisory	PROJECT_DIR	tests/gate-fixtures/state-phase	M2	-
 upstream-baseline	--upstream-baseline	check_upstream_baseline	process	explicit	advisory	PROJECT_DIR	tests/gate-fixtures/upstream-baseline	M2	-
 learnings	--learnings	check_learnings	process	explicit	advisory	PROJECT_DIR	tests/gate-fixtures/learnings	M2	-
+skill-docs	--skill-docs	check_skill_docs	quality	arch	strict	SKILL_LINE_BUDGET,SKILL_SIDECAR_MAX,RATIONALIZATION_MIN_ROWS	tests/gate-fixtures/skill-docs	M2	-
+skill-routing	--skill-routing	check_skill_routing	quality	arch	warn	ROUTING_MIN_RANK1,SKILL_CASES_FILE	tests/gate-fixtures/skill-routing	M2	-
+floor-guard	--floor-guard	check_floor_guard	process	core	warn	BASE_BRANCH	tests/gate-fixtures/floor-guard	M2	-
