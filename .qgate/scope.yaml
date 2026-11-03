@@ -263,3 +263,10 @@ paths:
   # 2026-11-03 源码包 PAX 头清除（R147）
   - docs/superpowers/specs/2026-11-03-tar-pax-gnu-repack.md
   - scripts/make-release-packages.mjs
+  # 2026-11-03 v1.0.10 发布轮（资产口径收窄=只发 full＋yuan everything）
+  - docs/superpowers/specs/2026-11-03-release-v1.0.10-overlay.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - package.json
+  - package-lock.json
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md

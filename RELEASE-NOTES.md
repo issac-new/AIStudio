@@ -1,5 +1,8 @@
 # SwarmStudio 发布说明
 
+> **run26 挂账清偿＋采集呈现根治发布轮（2026-11-03，chore/release-v1.0.10）** — v1.0.9 后本轮交付：**①run26 挂账 N10-N13 全清**（18b 接线：prelaunch ㉜ 双通道探针＋驱动 devimpl 段 fail-soft 核验＋守门 2 断言）；**②小程序首帧空白页根治**（用户实看反馈——运行副本重建为仓内正本＋appid/bffBaseUrl 注入＋mock BFF 渠道＋等渲染截帧 R1 三要素 businessLogicRan=true）；**③方案 HTML 自包含渲染器**（用户「裸文本」反馈根治：内联 CSS＋mermaid SVG 预渲染内联＋目录，零外部依赖）＋竖屏帧 1/4 排版。**资产口径（用户令）**：本轮只发 full 整体包＋yuan everything 离线档两包，其余模块包保留 v1.0.9 现行版。cockpit 版本声明前进 1.0.9-studio.8→studio.9（simharness 7 文件实质变更，包不重发）。验证：全量 vitest **7293 passed / 0 failed / 11 skipped**（1005 文件）；`release:check` 四模块对账全绿。
+
+
 > **run25 全流程推演收官＋复盘根治＋机制治理发布轮（2026-11-03，chore/release-v1.0.9）** — v1.0.8 后本轮聚合三类交付：**①run25 推演收官（11 小时 04 分，六闸全过、完整交付）**——7 个 DEV 分支 30+ 提交、测试证据 476 用例留存、G5 一轮过、发布门 approved→released，报告双正本 803KB/837KB；**②机制治理批（五件）**——机制地图（6 层恢复/3 横切面/互扰图/改动落点指引）、烧机测试制度（`mx-burn-test.sh`＋prelaunch ㉛）、闸门耗时台账（`mx-gate-timing.sh`）、判定纯函数化＋行为测试 17 项、恢复层让位 v1（supervisor 让位窗口，掐断重启→熔断→误催的循环）；**③run25 复盘根治 12 项**——步 9 采集位补齐/步 26 采集时机前移/r18 映射 2 键/监督器空指纹不判死/六闸 delivery 事件补齐/审计 R8·A3a 取数锚定终态表/代批刷单收敛/`_dep_txt` fail-soft/PART1 注册/方案路径悬空 4 处修正/方案 §5.10 七条纪律/4 条结构性行为断言。挂账项台账化到 `specs/2026-11-03-run26-pending-batch.md`（N01-N09；429 按用户裁定不处置，现有五层兜底实测消化 56 次零死锁）。
 
 
@@ -39,6 +42,7 @@
 构建产物（源码包、安装包、离线包）**只在本机构建留存**（`dist/release/`），不上传 GitHub Release 或任何远端；Release 只承载版本说明与 tag。需要产物时本地执行 `npm run release:packages`（内含 `release:check`），校验 `dist/release/SHA256SUMS`。此口径为 2026-10-28 用户明确裁定，推翻此前「随 Release 上传五件包」的做法。
 
 ## 版本
+AIStudio 驾驶舱 **1.0.9-studio.9**（2026-11-03 v1.0.10-overlay 发布轮：run26 挂账 N10-N13 全清＋小程序首帧空白页根治＋方案 HTML 自包含渲染器＋竖屏帧排版；**版本声明前进、cockpit 包不重发**（用户令资产口径收窄=本轮只发 full＋yuan everything 两包，cockpit/agent-teams/ycode/yuan-skill 源码包保留 v1.0.9 现行版）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **1.0.9-studio.8**（2026-11-03 v1.0.9-overlay 发布轮：run25 全流程推演收官（六闸全过，11h04m）＋机制治理批五件（机制地图/烧机测试/闸门台账/行为测试/恢复层让位）＋run25 复盘根治 12 项（采集链三处/审计口径两处/监督器空指纹/六闸事件/方案 §5.10 七条）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **1.0.9-studio.7**（2026-11-02 载体对账批＋run25 前置工具链加固：hermes-studio 基线 v0.8.0→v1.0.9 升级批落位（023/042/718 适配＋207 退役，element-web v1.12.33）＋AI Native 测试方法论六项吸收（稳定性 DSL/根因六类/MAET 四路径/检索协议/Grader 环/受控动词）＋simharness 清场/起服/门禁三缺陷收口（mx-clean 除 main 全清＋bare HEAD 立正＋studio 旗标源＋㉒ 断言正身）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **0.8.0-studio.5**（2026-11-02 v1.0.7-overlay 发布轮：run24 复盘根治＋722/723 真正加载链＋全功能回归两真缺陷修复（723 尾随上下文/724 isFullscreen）＋725 chat 跨回合恢复＋编排定时轮＋离线安装包通道 Windows amd64；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
