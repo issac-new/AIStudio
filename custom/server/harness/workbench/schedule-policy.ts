@@ -17,7 +17,7 @@ export interface SchedulePolicy {
   probeMaxTasks: number
   /** 每任务采样次数 k（≥2 才有统计意义）。 */
   probeK: number
-  /** 预留并发位（当前自动探测串行执行，此值只作声明与后续接线）。 */
+  /** 探测并发样本数（>1 时按有界池并行跑题×样本；并发下证据只认 stream-json）。 */
   probeConcurrency: number
   /** 失败重试退避秒数。 */
   retryBackoffSeconds: number

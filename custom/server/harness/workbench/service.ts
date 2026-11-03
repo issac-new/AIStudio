@@ -1306,6 +1306,8 @@ export interface AutoProbeJob {
   variantsDone: number
   costUsd: number
   estimatedTasks: number
+  /** 并发峰值（调度面 probeConcurrency>1 时才会 >1；如实呈现并发有没有真的生效）。 */
+  peakInFlight?: number
   error?: string
 }
 
@@ -1443,6 +1445,7 @@ async function runAutoProbeJob(
       budgetRemainingUsd: Math.max(0, remaining),
       estimatePerTaskUsd: limits.estimate,
       k: affordableK,
+      concurrency: readSchedulePolicy().probeConcurrency,
       spawnRun: opts.spawnRun,
       onProgress: (done, costUsd, estimatedTasks) => {
         job.costUsd = costUsd
@@ -1701,6 +1704,7 @@ async function runAutoProbeJob(
       }
     })
     job.variantsDone += 1
+    if (result.peakInFlight != null) job.peakInFlight = Math.max(job.peakInFlight ?? 1, result.peakInFlight)
     if (result.stoppedBy === 'budget_stop') break
   }
   job.status = 'done'

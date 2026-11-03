@@ -270,3 +270,98 @@ describe('R4 k 样本', () => {
     expect(r.samples.t1.length).toBeGreaterThanOrEqual(1)
   })
 })
+
+// 并发编排（2026-11-03 调度面接线）：有界池、预算预扣、证据归因纪律。
+describe('并发探测', () => {
+  const prompts = [
+    { taskId: 't1', prompt: '题目一' },
+    { taskId: 't2', prompt: '题目二' },
+    { taskId: 't3', prompt: '题目三' },
+  ]
+  const tree = { 'profiles/p1/SOUL.md': 'candidate persona' }
+  /** 测量同时在跑样本数的 spawn：每次 sleep 一个 tick 再返回 stream-json。 */
+  const concSpawn = () => {
+    let inFlight = 0
+    let peak = 0
+    const spawn = async (prompt: string, _env: Record<string, string>, _t: number) => {
+      inFlight += 1
+      peak = Math.max(peak, inFlight)
+      await new Promise((r) => setTimeout(r, 5))
+      inFlight -= 1
+      return {
+        ok: true as const,
+        stdout: JSON.stringify({ type: 'result', session_id: `s-${prompt}-${Math.random()}`, text: 'done', tokens: { total: 10 } }),
+      }
+    }
+    return { spawn, peakOf: () => peak }
+  }
+
+  it('concurrency=3 时三题真的并行（峰值 ≥2），每题各 1 样本', async () => {
+    const { spawn, peakOf } = concSpawn()
+    const r = await runProbeTasks({
+      prompts, baseHome: home, profile: 'p1', variantTree: tree,
+      budgetRemainingUsd: 100, k: 1, concurrency: 3, spawnRun: spawn as never,
+    })
+    expect(r.ok).toBe(true)
+    expect(peakOf()).toBeGreaterThanOrEqual(2)
+    expect(r.peakInFlight).toBeGreaterThanOrEqual(2)
+    expect(r.tasksDone).toBe(3)
+    expect(Object.keys(r.samples).sort()).toEqual(['t1', 't2', 't3'])
+    expect(r.samples.t1).toHaveLength(1)
+  })
+
+  it('k=2 并发：每题两样本齐全且按样本序落位', async () => {
+    const { spawn } = concSpawn()
+    const r = await runProbeTasks({
+      prompts: prompts.slice(0, 2), baseHome: home, profile: 'p1', variantTree: tree,
+      budgetRemainingUsd: 100, k: 2, concurrency: 2, spawnRun: spawn as never,
+    })
+    expect(r.ok).toBe(true)
+    expect(r.tasksDone).toBe(2)
+    for (const id of ['t1', 't2']) {
+      expect(r.samples[id]).toHaveLength(2)
+      expect(r.samples[id][0]).toBeTruthy()
+      expect(r.samples[id][1]).toBeTruthy()
+    }
+  })
+
+  it('并发预算预扣：不会超支到预算之外太多（≤ budget + concurrency×单题估值）', async () => {
+    const { spawn } = concSpawn()
+    const r = await runProbeTasks({
+      prompts, baseHome: home, profile: 'p1', variantTree: tree,
+      budgetRemainingUsd: 0.05, estimatePerTaskUsd: 0.02, k: 1, concurrency: 3, spawnRun: spawn as never,
+    })
+    expect(r.ok).toBe(true)
+    expect(r.stoppedBy).toBe('budget_stop')
+    expect(r.costUsd).toBeLessThanOrEqual(0.05 + 3 * 0.02 + 1e-9)
+  })
+
+  it('并发下证据只认 stream-json：只有 jsonl trace 时报错并说明归因风险', async () => {
+    const traceOnly = async (prompt: string, env: Record<string, string>, _t: number) => {
+      await new Promise((r) => setTimeout(r, 2))
+      writeFileSync(join(env.HERMES_RUN_TRACE_DIR, `sess-${Math.random()}.jsonl`), JSON.stringify({ type: 'header', session_id: 'x' }) + '\n')
+      return { ok: true as const, stdout: '' }
+    }
+    const r = await runProbeTasks({
+      prompts: prompts.slice(0, 2), baseHome: home, profile: 'p1', variantTree: tree,
+      budgetRemainingUsd: 100, k: 1, concurrency: 2, spawnRun: traceOnly as never,
+    })
+    expect(r.ok).toBe(false)
+    expect(r.error).toContain('stream-json')
+    expect(r.error).toContain('降并发')
+  })
+
+  it('并发下单题失败仍如实中断（不静默吞）', async () => {
+    const failing = async (prompt: string, _env: Record<string, string>, _t: number) => {
+      await new Promise((r) => setTimeout(r, 2))
+      if (prompt === '题目二') return { ok: false as const, error: 'boom' }
+      return { ok: true as const, stdout: JSON.stringify({ type: 'result', session_id: 's', text: 'done', tokens: { total: 5 } }) }
+    }
+    const r = await runProbeTasks({
+      prompts, baseHome: home, profile: 'p1', variantTree: tree,
+      budgetRemainingUsd: 100, k: 1, concurrency: 2, retryDelayMs: 0, spawnRun: failing as never,
+    })
+    expect(r.ok).toBe(false)
+    expect(r.error).toContain('运行失败')
+  })
+})

@@ -9,6 +9,7 @@
 - 新增 `custom/server/harness/workbench/multi-objective.ts`（纯函数）：权重向量生成（双/三目标单纯形）、加权 Tchebycheff 打分、分解搜索报告（理想点＋每子问题代表解＋互不支配前沿）、增益保留率、行为多样性诊断（标注「只能当监测」）。
 - `custom/server/harness/workbench/types.ts`：`ProbeMetrics` 增可选 `safetyRate`、`heldoutBaselinePassRate`（安全读数与留出基线由评测方回填，缺席即退化，不猜）。
 - **安全读数生产者（2026-11-03 补做）**：`custom/server/eval/aggregate.ts`＋`types.ts` 增 `RunAggregates.riskRate`——已判定 risk 断言里守住红线的比例（无 risk 断言或全 unknown 时 null）；`workbench/evidence.ts` 把它回填成 `safetyRate`。此前 `safetyRate` 只是位子无生产者，现由内置回归集的 risk 断言直接供给。
+- **探测并发编排（2026-11-03 补做）**：`probe-runner.ts` 改为有界并发工作池（`concurrency`，1-8）——「题×样本」为单元，预算按在途估值预扣（最多多花 (c-1)×单题估值），首个单元无条件放行（与旧串行「先跑一题再按真实成本停」一致）；进度按「已出样本的题数」报；并发下证据只认 stream-json（jsonl trace 是「目录里最新一份」，多路并行会张冠李戴，宁可报错）。`AutoProbeJob.peakInFlight` 如实呈现并发有没有真的起来。
 - **调度面（2026-11-03 补做）**：新增 `schedule-policy.ts` 与 `harness-schedule.json` 真实产物（probeMaxTasks/probeK/probeConcurrency/retryBackoffSeconds）；`surface-registry` 第九面 `scheduling`（managed，可写白名单只放行该文件）；一键探测按策略取每题上限与 k（实测：策略 2 题 → 预算预估按 2 题算，默认按 5 题）。端点 `GET /schedule`、`POST /schedule/bootstrap`、`POST /schedule/validate`。
 - `custom/server/harness/workbench/loop.ts`：新增 `gain_retention_low`（保留率 <30% 告警，`HARNESS2_RSI_REQUIRE_RETENTION=1` 升硬闸）与 `whole_harness_rewrite`（单候选改 ≥8 文件告警）两道门。
 - `custom/server/harness/workbench/service.ts`：`derived.search` 下发 `{ decomposition, retention, diversity }`（视图现算不落盘）。
@@ -23,6 +24,7 @@
 | D3 | 保留率缺基线时返回 null 并说明 | 论文的保留率是「增益之比」，没有基线算出来的是伪指标 | 用水平比值（heldout/evolve）替代（否决：会被基线水位污染） | 是 |
 | D4 | 整块重写只告警不拦 | 论文消融显示整块重写更差，但确有需要大改的场景；限流已有编辑预算 | 直接 blocker（否决：会误伤合法大重构） | 是 |
 | D6 | 安全读数用既有 risk 断言聚合出 `riskRate`，不新建安全基准 | 仓内已有 risk 断言（红线负例）在跑；新增一套安全基准是另一个项目，且没有真值来源就是假数据 | 新造安全数据集（否决：无标注来源，等于自造真值） | 是 |
+| D8 | 并发下禁用 jsonl trace 归因 | trace 通道只能取「最新一份」，并发时会把别人的 trace 认成本题——错证据比没证据更糟 | 并发时加文件锁串行化 trace 读取（否决：等于把并发废掉） | 是 |
 | D7 | 调度面做成真实文件而非只挂名字 | 论文的调度是影响执行的一块；假面（无人读）等于自欺 | 只登记 advisory 面（否决：不可演化，白占一面） | 是 |
 | D5 | 结构多样性显式标注「禁止当优化目标」 | 论文实测结构距离与目标空间相关仅 +0.030，且可被改写刷高 | 用作候选淘汰依据（否决：可被 game） | 是 |
 

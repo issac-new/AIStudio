@@ -245,6 +245,11 @@ export interface ProbeTaskRunOptions {
   onProgress?: (done: number, costUsd: number, estimatedTasks: number) => void
   /** spawn 失败重试前的等待（缺省 5s；测试传 0）。 */
   retryDelayMs?: number
+  /**
+   * 并发样本数（调度面 probeConcurrency，2026-11-03）：1=串行（缺省，行为与旧版一致）；
+   * >1 时按有界工作池并行跑「题×样本」单元，预算按在途估值预扣，避免并发超支。
+   */
+  concurrency?: number
 }
 
 export interface ProbeTaskRunResult {
@@ -256,9 +261,18 @@ export interface ProbeTaskRunResult {
   tasksDone: number
   error?: string
   homeDir: string
+  /** 观测用：本次探测同时在跑的样本数峰值（并发是否真的生效）。 */
+  peakInFlight?: number
 }
 
-/** 单候选逐题驱动：物化 → 逐题 spawn → 读 trace → 预算硬停。 */
+/**
+ * 单候选驱动：物化 → 逐题（×k 样本）spawn → 读证据 → 预算硬停。
+ *
+ * 并发（2026-11-03 调度面接线）：`concurrency > 1` 时把「题×样本」当工作单元，用有界池并行；
+ * 预算按**在途估值预扣**（cost + reserved + estimate ≤ budget 才派新单元），因此在途最多
+ * 多花 (concurrency-1)×estimate。并发下证据只认 stream-json 通道——jsonl trace 是「取目录里
+ * 最新一份」，多路并行会张冠李戴，宁可如实报错也不串证据。
+ */
 export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTaskRunResult> {
   const homeDir = mkdtempSync(join(tmpdir(), 'harness2-probe-'))
   const tracesDir = join(homeDir, 'traces')
@@ -270,56 +284,127 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
   const spawn = opts.spawnRun ?? defaultSpawnRun
   const estimate = opts.estimatePerTaskUsd ?? DEFAULT_TASK_COST_ESTIMATE_USD
   const timeout = opts.timeoutPerTaskMs ?? DEFAULT_TASK_TIMEOUT_MS
+  const retryDelay = opts.retryDelayMs ?? 5_000
+  // R4（2026-10-31 D4 匹配预算口径）：每题 k 个样本（缺省 2）
+  const k = Math.max(1, Math.trunc(opts.k ?? 2))
+  const concurrency = Math.max(1, Math.min(8, Math.trunc(opts.concurrency ?? 1)))
+
   const samples: ProbeTaskRunResult['samples'] = {}
+  const scheduledPerTask = new Map<string, number>()
+  const collectedPerTask = new Map<string, number>()
+  for (const task of opts.prompts) {
+    scheduledPerTask.set(task.taskId, 0)
+    collectedPerTask.set(task.taskId, 0)
+  }
   let costUsd = 0
   let estimatedTasks = 0
-  let done = 0
-  const retryDelay = opts.retryDelayMs ?? 5_000
-  // R4（2026-10-31 D4 匹配预算口径）：每题 k 个样本（缺省 2）；
-  // 样本数>1 时 pass@1 才是能力读数、pass@k 是稳定性读数——单样本探测无法区分
-  // 「靠运气通过」与「稳定能力」。
-  const k = Math.max(1, Math.trunc(opts.k ?? 2))
-  for (const task of opts.prompts) {
-    const pickedForTask: Array<{ sessionId?: string; evidence: Evidence }> = []
-    for (let sampleIdx = 0; sampleIdx < k; sampleIdx += 1) {
-      const startedAt = Date.now()
-      const env = {
-        HERMES_HOME: join(homeDir, 'home'),
-        HERMES_RUN_TRACE_DIR: tracesDir,
-        HERMES_PROBE_PROFILE: opts.profile,
-      }
-      // 瞬态故障（模型 API 抖动）重试一次；两败才定性失败（走查实录：单次抖动曾报废整场探测）
-      let spawned = await spawn(task.prompt, env, timeout)
-      if (!spawned.ok) {
-        if (retryDelay > 0) await new Promise((r) => setTimeout(r, retryDelay))
-        spawned = await spawn(task.prompt, env, timeout)
-      }
-      if (!spawned.ok) {
-        return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 运行失败（已重试一次）：${spawned.error}`, homeDir }
-      }
-      // 证据双通道：stream-json stdout（新 CLI）优先，jsonl trace（旧通道）后备
-      const stream = spawned.stdout ? evidenceFromStreamJson(spawned.stdout) : null
-      const trace = stream ? null : readNewestTrace(tracesDir, startedAt - 1000)
-      const picked = stream ?? trace
-      if (!picked) {
-        return { ok: false, samples, costUsd, estimatedTasks, tasksDone: done, error: `任务 ${task.taskId} 第 ${sampleIdx + 1} 样本未产生证据（stream-json 与 trace 通道均缺席）`, homeDir }
-      }
-      pickedForTask.push({ sessionId: picked.sessionId, evidence: picked.evidence })
-      const costUsdOfPicked = picked.evidence.efficiency?.costUsd ?? null
-      if (costUsdOfPicked == null) {
-        costUsd += estimate
-        estimatedTasks += 1
-      } else {
-        costUsd += costUsdOfPicked
-      }
-      if (costUsd >= opts.budgetRemainingUsd) break
+  let tasksDone = 0
+  let peakInFlight = 0
+  let reserved = 0
+  let failure: string | null = null
+  let budgetStopped = false
+
+  const envBase = {
+    HERMES_HOME: join(homeDir, 'home'),
+    HERMES_RUN_TRACE_DIR: tracesDir,
+    HERMES_PROBE_PROFILE: opts.profile,
+  }
+
+  /** 跑一个「题×样本」单元；返回本单元成本（估算或真实）。 */
+  const runUnit = async (taskId: string, prompt: string, sampleIdx: number): Promise<void> => {
+    const startedAt = Date.now()
+    let spawned = await spawn(prompt, envBase, timeout)
+    if (!spawned.ok) {
+      if (retryDelay > 0) await new Promise((r) => setTimeout(r, retryDelay))
+      spawned = await spawn(prompt, envBase, timeout)
     }
-    samples[task.taskId] = pickedForTask
-    done += 1
-    opts.onProgress?.(done, costUsd, estimatedTasks)
-    if (costUsd >= opts.budgetRemainingUsd) {
-      return { ok: true, stoppedBy: 'budget_stop', samples, costUsd, estimatedTasks, tasksDone: done, homeDir }
+    if (!spawned.ok) {
+      failure = `任务 ${taskId} 运行失败（已重试一次）：${spawned.error}`
+      return
+    }
+    // 证据双通道：stream-json 优先；trace 后备仅在串行时可用（并发会串证据）
+    const stream = spawned.stdout ? evidenceFromStreamJson(spawned.stdout) : null
+    if (!stream && concurrency > 1) {
+      failure = `任务 ${taskId} 第 ${sampleIdx + 1} 样本未走 stream-json 通道：并发探测无法用 jsonl trace 归因（会把别人的 trace 认成本题），请降并发到 1 或修复 CLI 输出`
+      return
+    }
+    const trace = stream ? null : readNewestTrace(tracesDir, startedAt - 1000)
+    const picked = stream ?? trace
+    if (!picked) {
+      failure = `任务 ${taskId} 第 ${sampleIdx + 1} 样本未产生证据（stream-json 与 trace 通道均缺席）`
+      return
+    }
+    const costOf = picked.evidence.efficiency?.costUsd ?? null
+    if (costOf == null) {
+      costUsd += estimate
+      estimatedTasks += 1
+    } else {
+      costUsd += costOf
+    }
+    if (!samples[taskId]) samples[taskId] = []
+    samples[taskId][sampleIdx] = { sessionId: picked.sessionId, evidence: picked.evidence }
+    const got = (collectedPerTask.get(taskId) ?? 0) + 1
+    collectedPerTask.set(taskId, got)
+    // 进度按「已出样本的题数」报（并发下题与样本交错；与旧串行语义一致：
+    // 预算停在半途的题也计一次 done，不是等 k 样本凑齐才计）
+    const touchedTasks = opts.prompts.filter((x) => (collectedPerTask.get(x.taskId) ?? 0) > 0).length
+    opts.onProgress?.(touchedTasks, costUsd, estimatedTasks)
+  }
+
+  // 单元调度：按「题顺序 × 样本序」推进，预算不足即停止派新单元
+  let taskIdx = 0
+  let sampleIdx = 0
+  const inFlight = new Set<Promise<void>>()
+  const hasNextUnit = (): boolean => taskIdx < opts.prompts.length
+  const scheduleNext = (): void => {
+    const task = opts.prompts[taskIdx]
+    scheduledPerTask.set(task.taskId, (scheduledPerTask.get(task.taskId) ?? 0) + 1)
+    reserved += estimate
+    const p = runUnit(task.taskId, task.prompt, sampleIdx).finally(() => {
+      reserved -= estimate
+      inFlight.delete(p)
+    })
+    inFlight.add(p)
+    sampleIdx += 1
+    if (sampleIdx >= k) {
+      sampleIdx = 0
+      taskIdx += 1
     }
   }
-  return { ok: true, samples, costUsd, estimatedTasks, tasksDone: done, homeDir }
+
+  while (true) {
+    while (
+      !failure &&
+      !budgetStopped &&
+      hasNextUnit() &&
+      inFlight.size < concurrency &&
+      (costUsd + reserved + estimate <= opts.budgetRemainingUsd ||
+        // 预算连一题估值都不够时也放行第一单元：旧串行语义就是「先跑一题，再按真实成本停」，
+        // 这里保持一致（否则小预算提案会零样本收场，反而看不出真实成本）。
+        (costUsd === 0 && reserved === 0 && inFlight.size === 0))
+    ) {
+      scheduleNext()
+      peakInFlight = Math.max(peakInFlight, inFlight.size)
+    }
+    if (inFlight.size === 0) break
+    await Promise.race([...inFlight])
+    if (costUsd >= opts.budgetRemainingUsd) budgetStopped = true
+  }
+
+  // tasksDone：已完整派出的题（index < taskIdx）中至少收到一个样本的；预算/失败中断时，
+  // 当前题若已有样本也算完成（与旧串行语义一致：停在半途的题照样记一次 done）
+  const partial = taskIdx < opts.prompts.length && sampleIdx > 0
+  const completed = opts.prompts
+    .map((t2, i) => ({ id: t2.taskId, i }))
+    .filter(({ id, i }) => (collectedPerTask.get(id) ?? 0) > 0 && (i < taskIdx || (partial && i === taskIdx)))
+    .length
+  tasksDone = completed
+
+  if (failure) {
+    return { ok: false, samples, costUsd, estimatedTasks, tasksDone, error: failure, homeDir, peakInFlight }
+  }
+  if (budgetStopped || hasNextUnit()) {
+    return { ok: true, stoppedBy: 'budget_stop', samples, costUsd, estimatedTasks, tasksDone, homeDir, peakInFlight }
+  }
+  return { ok: true, samples, costUsd, estimatedTasks, tasksDone, homeDir, peakInFlight }
 }
