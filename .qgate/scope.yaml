@@ -279,3 +279,5 @@ paths:
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - RELEASE-MANIFEST.json
   - scripts/make-release-packages.mjs
+  # 2026-11-03 培训手册版本载体清偿（升版轮漏改，全量测试抓出）
+  - docs/manuals/aistudio-training-and-user-guide.md
