@@ -67,6 +67,12 @@ mx_provision_product_dist
 
 # ── 1. 运行时 patch（390/391 → SIM 源码快照树）───────────
 mx_apply_agent_patches
+# 快照新鲜度戳（2026-11-03 burn 实锤立法）：树更新后必须网关重启才进进程——常驻
+# 网关在 setup 之前被 launchd 拉起时（mx-clean 骨架重建竞态），后续 setup 刷树而
+# mx-up 见健康即「跳过」，进程吃旧模块（stream_held ImportError 全 agent 死）。
+# mx-up 消费本戳：树新于网关进程启动时间＝弹跳重启。
+mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
+touch "$SIM_ROOT/var/agent-src.stamp"
 
 # ── 1b. overlay/runtime 部署（B1 结构化 raci 等 7 文件；与 inject 出口同源，
 #        mx 流程不经 inject 故显式幂等同步，失败只告警不阻断）─────────────

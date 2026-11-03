@@ -109,7 +109,42 @@ load_1m=$(mxp_loadavg_1m)
 if [ -n "$load_1m" ] && awk "BEGIN{exit !($load_1m > ${MX_LOAD_WARN:-200})}"; then
   log "负载预检告警：1 分钟负载均值 ${load_1m} 超阈值 ${MX_LOAD_WARN:-200}——外部负载竞争显著拖慢推演，建议错峰 armada/Docker 构建等重负载"
 fi
-if curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1; then
+_gw_healthy=0
+curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1 && _gw_healthy=1
+if [[ "$_gw_healthy" = 1 ]]; then
+  # 树新于进程必重启（2026-11-03 burn-20261103-211750 实锤立法）：常驻网关吃 setup
+  # 前的旧模块缓存（stream_held ImportError 族），树刷了进程不重启＝改动零生效。
+  # 守卫：驱动锁在位（活体 run）不弹跳——中途换血属值守纪律须人工序列，这里不自动。
+  _stamp="$SIM_ROOT/var/agent-src.stamp"
+  if [[ -f "$_stamp" && ! -d "$SIM_ROOT/.driver.lock.d" ]]; then
+    _gwpid=$(lsof -ti ":$GW_PORT" -sTCP:LISTEN 2>/dev/null | head -1)
+    if [[ -n "$_gwpid" ]]; then
+      # etime 人形折秒（macOS ps 无 etimes——Linux 主义字段在本机输出空串哑火实锤）：
+      # 形态 MM:SS / HH:MM:SS / [D+]D-HH:MM:SS。
+      _etime=$(ps -p "$_gwpid" -o etime= 2>/dev/null | tr -d ' ')
+      _es=0
+      if [[ -n "$_etime" ]]; then
+        _er="$_etime"
+        case "$_er" in
+          *-*) _ed=${_er%%-*}; _er=${_er#*-}; _es=$(( _ed * 86400 )) ;;
+        esac
+        IFS=: read -r _eh _em _esec <<< "$_er"
+        _es=$(( _es + ${_eh:-0} * 3600 + ${_em:-0} * 60 + ${_esec:-0} ))
+      fi
+      if [[ "$_es" -gt 0 ]]; then
+        _gw_start=$(( $(date +%s) - _es ))
+        _stamp_m=$(stat -f %m "$_stamp" 2>/dev/null || echo 0)
+        if [[ "$_stamp_m" -gt "$_gw_start" ]]; then
+          log "快照新于网关进程（stamp $(date -r "$_stamp_m" '+%H:%M:%S') > 进程启动）——弹跳重启加载新代码"
+          bash "$SCRIPT_DIR/mx-down.sh" >/dev/null 2>&1 || true
+          sleep 2
+          curl -sf "http://127.0.0.1:$GW_PORT/health" -m 2 >/dev/null 2>&1 && _gw_healthy=1 || _gw_healthy=0
+        fi
+      fi
+    fi
+  fi
+fi
+if [[ "$_gw_healthy" = 1 ]]; then
   log "gateway 已在跑（:${GW_PORT}），跳过"
 else
   [[ -d "$HERMES_ROOT" ]] || fail "先跑 mx-setup.sh"
