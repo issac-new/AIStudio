@@ -13,6 +13,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { observerSimRootOrNull, isValidRun, safeRunDir } from '../simcenter/observer-root'
 import { readAllBoards } from './boards-reader'
+import { resolveKanbanHome } from './kanban-home'
 import { buildDigest, type DailyDigest } from './digest'
 import { matrixOf, type DeliveryMatrix } from './matrix'
 import {
@@ -53,17 +54,6 @@ export function kanbanHomeCandidates(env: NodeJS.ProcessEnv, simRoot: string | n
   return [...new Set([...explicit, ...sim])]
 }
 
-function resolveKanbanHome(): { home: string | null; tried: string[] } {
-  const simRoot = observerSimRootOrNull()
-  for (const p of kanbanHomeCandidates(process.env, simRoot)) {
-    try {
-      if (existsSync(resolve(p, 'kanban', 'boards')) || existsSync(resolve(p, 'boards')) || existsSync(resolve(p, 'kanban.db')) || existsSync(resolve(p, 'kanban', 'kanban.db'))) {
-        return { home: p, tried: [] }
-      }
-    } catch { /* 候选缺席继续 */ }
-  }
-  return { home: null, tried: kanbanHomeCandidates(process.env, simRoot) }
-}
 
 /** run 目录列表（字符集校验；缺 runs/ 空数组） */
 export function listRunDirs(simRoot: string): string[] {

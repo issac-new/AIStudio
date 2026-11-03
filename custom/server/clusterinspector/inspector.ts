@@ -291,6 +291,27 @@ export class ClusterInspector {
    *  总开关 CLUSTER_INSPECTOR_SECURITY_RELAY 默认开，'off' 显式关。 */
   private securityRelayCooldown = new Map<string, number>()
   private lastRelayTs = 0
+  /** 介入候选自动同步节拍（2026-11-03 主动式 AI 吸收轮；默认 15 分钟一轮）。 */
+  private lastInterventionSync = 0
+  /**
+   * 介入候选自动同步（2026-11-03）：把 delivery 的主动建议转成干预候选并过治理者裁决落账。
+   * 只记账不外呼——「何时打扰人」的判定在这里统一，外呼仍由各域自己决定（安全告警不接本层）。
+   * INTERVENTION_AUTOSYNC=off 关闭；15 分钟一轮（与巡检冷却同量级）。
+   */
+  private async syncInterventionCandidates(now: number): Promise<string[]> {
+    if (process.env.INTERVENTION_AUTOSYNC === 'off') return []
+    if (now - this.lastInterventionSync < 900_000) return []
+    this.lastInterventionSync = now
+    try {
+      const { syncInterventions } = require('../proactivity/interventions-service') as typeof import('../proactivity/interventions-service')
+      const r = syncInterventions(now, 'inspector')
+      if (!r.available) return []
+      return [`interventions:created=${r.created}`, ...Object.entries(r.byDecision).map(([k, v]) => `interventions:${k}=${v}`)]
+    } catch {
+      return []
+    }
+  }
+
   private async relaySecurityEvents(): Promise<string[]> {
     const acted: string[] = []
     if (process.env.CLUSTER_INSPECTOR_SECURITY_RELAY === 'off') return acted
@@ -694,7 +715,7 @@ export class ClusterInspector {
         emitted += 1
       }
       const allAnomalies = [...anomalies, ...trips]
-      const actions = [...(await this.safeAct(allAnomalies)), ...(await this.nudgeStalled(allAnomalies)), ...(await this.dispatchSelfHeal(allAnomalies)), ...(await this.destructiveGuard(allAnomalies)), ...(await this.relaySecurityEvents())]
+      const actions = [...(await this.safeAct(allAnomalies)), ...(await this.nudgeStalled(allAnomalies)), ...(await this.dispatchSelfHeal(allAnomalies)), ...(await this.destructiveGuard(allAnomalies)), ...(await this.relaySecurityEvents()), ...(await this.syncInterventionCandidates(now))]
       outcome = { ts: snap.ts, durationMs: Date.now() - t0, anomalies: allAnomalies, emitted, suppressedByCooldown: suppressed, actions }
     } catch (e) {
       outcome = { ts: t0, durationMs: Date.now() - t0, anomalies: [], emitted: 0, suppressedByCooldown: 0, error: (e as Error).message }
