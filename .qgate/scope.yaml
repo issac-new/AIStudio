@@ -245,3 +245,11 @@ paths:
   - simharness/mux/mx-scenario-lib.sh
   - simharness/mux/final-report-merge.py
   - simharness/tests/mechanism-behavior.test.ts
+  # 2026-11-03 v1.0.9 发布轮（run25 收官＋挂账台账）
+  - docs/superpowers/specs/2026-11-03-run26-pending-batch.md
+  - docs/superpowers/specs/2026-11-03-run25-full-retro.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - package.json
+  - package-lock.json
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md
