@@ -45,6 +45,20 @@ bash mux/mx-harness-snapshot.sh --out <run>/evidence/harness/harness-summary.jso
 快照写 `harness-summary.json` + `harness-summary.md`，报告第 9 章「证据七：Harness 运行面」
 引用；端点缺席如实标 ⬜ 并记问题单，不阻断主链。prelaunch ⑳ 检查生效 dist 是否含六个新端点。
 
+## 新能力探测（2026-11-03 立，方案 §5.11）
+
+2026-11-03 落地的七组新能力（主动性介入治理／交接质量账本／确定性验收断言／主张-回执核验／
+组件库与多目标搜索／探测并发与调度面／派单容量准入）多数只有 HTTP 面、无独立 UI 承载，
+截图采集位采不到。改用端点级探测取证：
+
+```bash
+node mux/mx-capability-probes.mjs --base http://127.0.0.1:8686 --out <run>/evidence --token <JWT>
+```
+
+产物 `capability-probes.json`（七组正例读数＋负例判决）；退出码非 0 即 G4 不通过。
+负例是能力的存在理由——「不可判定不放行」「未引用判未验证」一旦静默放行，能力即失效。
+脚本自身守门：`tests/capability-probes.test.ts`（七组齐、服务不可达时仍写产物并退 1）。
+
 ## 工作台 IA 与采集位（V8.44/V8.55）
 
 产品工作台为「日常侧栏三组（常用/流程/专题）＋页脚系统设置＋六阶段页单层页签（37 签）＋全流程推演独立专区（七项：导演台/监督面板/运行监控/证据库/运行编排/业务地图/推演设置）＋顶部检索弹窗」，治理中心壳解体、`/app/gov/*` 除 settings/model-providers 两个实页外 redirect 到阶段页，IDE 任务工作区让文件树/终端/记忆/新会话跟随 kanban 任务根。2026-10-27 检索并入顶部统一弹窗，左侧常用组不再保留独立检索项；`/app/search` 只作兼容唤起，`r18-frames` 拍检索帧时会重开并断言弹窗可见。推演侧同步：
