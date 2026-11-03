@@ -171,6 +171,7 @@ curl -s https://pypi.org/pypi/lh-harness/json | jq -r '.info.version, .releases[
 
 ## 八、变更日志
 
+- 2026-11-03 运行时台账刷新批：zcode 基线 → a9fe401e（v3.17.2，+1 提交/203 文件，8 补丁重放零失败零重生成，幂等二连验证过；upstream/zcode 缓存树同步治理）；exa-mcp-server 3.4.1→3.4.3（npm latest 实测）；semantica v0.7.0／pua e6e6cd2／hermes-agent v0.22.6／ekko-studio v1.0.9 上游核对均无更新。spec `2026-11-03-runtime-deps-refresh.md`。
 - 2026-10-31 RSI 前沿轮：新增四条 harness 自改进框架线（harness2/SkillOpt/sia/Sage，首次在册 🟢），37→41 行；判级汇总 🟢 24→28。
 - 2026-10-31 同步批：zcode 基线 → a60ba6a7（v3.17.1，8 补丁重放零失败，002/006 重生成，引擎构建绿）。
 - 2026-10-31 升级批：hermes-studio 基线 → v0.8.0@f67b587b9（44 件重生成/2 退役/4 迁位，重放零失败，全量绿）。

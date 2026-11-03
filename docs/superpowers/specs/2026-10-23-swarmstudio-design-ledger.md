@@ -70,12 +70,12 @@
 
 | 对象 | 核实值 | 版本载体 |
 |---|---|---|
-| hermes-studio 基线 | v0.8.0 | `vendor/VENDOR.md` |
-| hermes-agent 基线 | v0.22.5 | `vendor/VENDOR.md` |
-| zcode 基线谱系 | v3.16.1 系列（包版本 3.17.1 @a60ba6a7，2026-10-31 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
-| 驾驶舱模块 | 0.8.0-studio.1 | `RELEASE-NOTES.md` |
-| agent teams 模块 | v0.22.5-team.1 | `team/VERSION` |
-| Ycode 模块 | 3.17.1 | `vendor/zcode/package.json` |
+| hermes-studio 基线 | v1.0.9 | `vendor/VENDOR.md` |
+| hermes-agent 基线 | v0.22.6 | `vendor/VENDOR.md` |
+| zcode 基线谱系 | v3.16.1 系列（包版本 3.17.2 @a9fe401e，2026-11-03 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
+| 驾驶舱模块 | 1.0.9-studio.9 | `RELEASE-NOTES.md` |
+| agent teams 模块 | v0.22.6-team.1 | `team/VERSION` |
+| Ycode 模块 | 3.17.2 | `vendor/zcode/package.json` |
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
 | yuan skill 模块 | v2.95.0 | `skills/swarm-yuan/CHANGELOG.md` |
 | 整体源码包 | 1.0.0-overlay | 仓根 `package.json` 与发布清单 |
@@ -83,6 +83,7 @@
 zcode 的基线谱系、包版本和补丁序列是三个不同口径。
 不得把其中任意一个字段单独改写成另外两个字段。
 2026-11-01 核对：hermes-studio 已升级至 v0.8.0（44 处补丁冲突处置完毕，全量与构建绿）；hermes-agent 最新稳定仍 v0.22.5（本表即当前钉版）；zcode 已同步 3.17.1（8/8 补丁，引擎构建绿）。本表所记即当前钉版，不以「上游最新」替代基线。
+2026-11-03 台账刷新批核对：全表六行随载体真值对齐（studio v1.0.9／agent v0.22.6／zcode 3.17.2 @a9fe401e／cockpit studio.9／teams team.1 底座段随 v0.22.6 归 1／yuan v2.99.1）——前三行此前随各自升级批进位，本批补 zcode 同步并清偿 §C 滞留的模块行旧值；各值以载体文件为准。
 Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互推。
 桌面安装身份与产物名中的 SwarmStudio 属于兼容标识，
 不改变主产品 AIStudio 的命名。
