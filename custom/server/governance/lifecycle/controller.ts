@@ -23,15 +23,17 @@ import { isAbsolute, resolve, sep } from 'node:path'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { isValidRun, safeRunDir, simRootOrNull } from '../../simcenter/observer-root'
-import { fail, ok, bodyOf } from '../../lib/http'
+import { fail, ok, created, unavailable, bodyOf } from '../../lib/http'
 import { checkBreaker, initialBreaker, tripBreaker, type GateBreakerState } from './breaker'
 import { judgeRequirementFreeze } from './requirements'
+import { listRunJsonStems, readRunJson, writeRunJson } from './run-artifacts'
 import {
   buildAcTrace, collectBindings, parseAcceptanceCriteria,
   CASE_STATUSES, type CaseStatus,
 } from './ac-trace'
 import {
-  judgeStageChain, toChainResponse, STAGE_KEY_NAMES, type StageKeyName, type StageKeyVerifyDeps,
+  judgeStageChain, toChainResponse, validateStageKeyStructure,
+  STAGE_KEY_NAMES, type StageKeyName, type StageKeyVerifyDeps,
 } from '../../handoff/stage-keys'
 import { combinedGateVerdict, coveredAcs, gateVerdictOfText, uatVerdictFor, type GateVerdict } from './verdict'
 import { atomicWriteJson } from '../../lib/fs-store'
@@ -115,10 +117,14 @@ export function registerLifecycleRoutes(router: Router): void {
 
   // AC 追溯（四性四格收敛批 C1）：形式判据之外的追溯判据——每条 AC 是否被用例证明、
   // 用例是否真跑过、跑过是否过关。绑定只认显式标记，不猜语义（猜出来的覆盖等于造假）。
-  // 入参：{ doc, sources?: [{file, content}], results?: { 用例标识: pass|fail|skipped|missing|unknown } }
+  // 入参：{ doc, sources?: [{file, content}], results?: { 用例标识: pass|fail|skipped|missing|unknown },
+  //        run? }。给 run 时把结果落 <run>/evidence/ac-trace.json（F1 制品落盘），供报告与界面读取。
   router.post('/lifecycle/ac-trace', (ctx) => {
-    const b = bodyOf<{ doc?: unknown; sources?: unknown; results?: unknown }>(ctx)
+    const b = bodyOf<{ doc?: unknown; sources?: unknown; results?: unknown; run?: unknown }>(ctx)
     if (typeof b.doc !== 'string' || !b.doc.trim()) return badRequest(ctx, 'doc 必填（需求书全文）')
+    if (b.run !== undefined && (typeof b.run !== 'string' || !isValidRun(b.run))) {
+      return badRequest(ctx, 'run 非法（形如 20261102-v8-run25）')
+    }
 
     const sources: Array<{ file: string; content: string }> = []
     if (b.sources !== undefined) {
@@ -148,7 +154,28 @@ export function registerLifecycleRoutes(router: Router): void {
     const acs = parseAcceptanceCriteria(b.doc)
     if (acs.length === 0) return badRequest(ctx, 'doc 中未解析到 AC 条目（行首形态：- **AC-1** ...）')
     const trace = buildAcTrace(acs, collectBindings(sources), results)
-    ok(ctx, { acTotal: acs.length, ...trace })
+    let artifact: string | null = null
+    if (typeof b.run === 'string') {
+      const w = writeRunJson(b.run, ['evidence', 'ac-trace.json'], {
+        at: Date.now(), run: b.run, acTotal: acs.length, ...trace,
+      })
+      if (!w.ok) return badRequest(ctx, `制品落盘失败：${w.reason}`)
+      artifact = w.path
+    }
+    ok(ctx, { acTotal: acs.length, ...trace, ...(artifact ? { artifact } : {}) })
+  })
+
+  // AC 追溯回读（F1）：界面与报告读这份制品；未采集时 available:false，不编造空矩阵。
+  router.get('/lifecycle/ac-trace', (ctx) => {
+    const run = String(ctx.query.run ?? '').trim()
+    if (!run) return badRequest(ctx, 'run 必填（形如 20261102-v8-run25）')
+    if (!isValidRun(run)) return badRequest(ctx, 'run 非法')
+    const r = readRunJson<Record<string, unknown>>(run, ['evidence', 'ac-trace.json'])
+    if (!r.available) {
+      unavailable(ctx, r.reason)
+      return
+    }
+    ok(ctx, { run, path: r.path, trace: r.doc })
   })
 
   // 阶段交接键校验（四性四格收敛批 C4）：把「上游已达、下游没收到」从事后审计改成
@@ -228,6 +255,31 @@ export function registerLifecycleRoutes(router: Router): void {
       commitChecked: Boolean(gitRepo),
       ...toChainResponse(report),
     })
+  })
+
+  // 阶段交接键落盘（F1 生产方）：阶段出口把键写进 run 目录，下一阶段入口用上面的
+  // verify 端点做准入。结构不合法一律 400（键是准入凭据，不允许半成品入库）。
+  router.post('/lifecycle/stage-keys', (ctx) => {
+    const b = bodyOf<{ run?: unknown; key?: unknown }>(ctx)
+    if (typeof b.run !== 'string' || !isValidRun(b.run)) return badRequest(ctx, 'run 必填且合法（形如 20261102-v8-run25）')
+    const { key, problems } = validateStageKeyStructure(b.key)
+    if (!key) return fail(ctx, 400, '阶段键结构不合法', { problems })
+    const w = writeRunJson(b.run, ['governance', 'stage-keys', `${key.stage}.json`], key)
+    if (!w.ok) return badRequest(ctx, `阶段键落盘失败：${w.reason}`)
+    created(ctx, { run: b.run, stage: key.stage, path: w.path })
+  })
+
+  // 阶段交接键列表（F1）：界面与报告读已落键；空目录返回空数组而非 404。
+  router.get('/lifecycle/stage-keys', (ctx) => {
+    const run = String(ctx.query.run ?? '').trim()
+    if (!run) return badRequest(ctx, 'run 必填（形如 20261102-v8-run25）')
+    if (!isValidRun(run)) return badRequest(ctx, 'run 非法')
+    const stages = listRunJsonStems(run, ['governance', 'stage-keys'])
+    const keys = stages.map((s) => {
+      const r = readRunJson(run, ['governance', 'stage-keys', `${s}.json`])
+      return r.available ? { stage: s, available: true as const, key: r.doc } : { stage: s, available: false as const, reason: r.reason }
+    })
+    ok(ctx, { run, stages, keys })
   })
 
   router.post('/lifecycle/uat-verdict', (ctx) => {

@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useWorkspaceStore } from '@/custom/shared/store/workspace'
+import AcTraceSection from '@/custom/governance/components/AcTraceSection.vue'
 
 const emit = defineEmits<{ (e: 'open-tab', key: string): void }>()
 const i18nCtx = useI18n() as { locale?: { value?: string } }
@@ -63,6 +64,9 @@ function openSimulation(): void {
         </li>
       </ol>
     </div>
+
+    <!-- 四性四格补齐批 F2：AC × 用例矩阵（只读 run 制品；未采集如实显示） -->
+    <AcTraceSection />
   </section>
 </template>
 

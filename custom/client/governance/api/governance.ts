@@ -589,6 +589,42 @@ export function fetchGovernancePosture(): Promise<GovernancePostureResp> {
   return request<GovernancePostureResp>('/api/governance/posture')
 }
 
+// AC 追溯（四性四格补齐批 F2）：读 run 目录里已落盘的 evidence/ac-trace.json。
+// 未采集时服务端回 ok:true + available:false，界面据此显示「未采集」，不显示空矩阵。
+export interface AcTraceCase {
+  case: string
+  status: 'pass' | 'fail' | 'skipped' | 'missing' | 'unknown'
+}
+export interface AcTraceRow {
+  acId: string
+  text: string
+  verifiable: 'auto' | 'manual' | 'evidence' | 'unspecified'
+  cases: AcTraceCase[]
+}
+export interface AcTraceJudgement {
+  ok: boolean
+  unbound: string[]
+  noResult: string[]
+  failed: string[]
+  orphanCases: string[]
+}
+export interface AcTraceResp {
+  ok: boolean
+  available?: boolean
+  note?: string
+  run?: string
+  trace?: {
+    at: number
+    acTotal: number
+    rows: AcTraceRow[]
+    judgement: AcTraceJudgement
+  }
+}
+
+export function fetchAcTrace(run: string): Promise<AcTraceResp> {
+  return request<AcTraceResp>(`/api/governance/lifecycle/ac-trace?run=${encodeURIComponent(run)}`)
+}
+
 export interface ChainVerifyResp {
   ok: boolean
   total: number
