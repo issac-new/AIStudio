@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// AIStudio 交互培训页本地启动器：只读两个培训文档，不代理任何业务服务。
+// AIStudio 交互培训页本地启动器：只读白名单内的培训文档，不代理任何业务服务。
 import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
@@ -14,6 +14,30 @@ const DOCUMENTS = new Map([
   }],
   ['/aistudio-training-and-user-guide.md', {
     file: resolve(ROOT, 'docs/manuals/aistudio-training-and-user-guide.md'),
+    type: 'text/plain; charset=utf-8',
+  }],
+  ['/aistudio-feature-inventory.md', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-feature-inventory.md'),
+    type: 'text/plain; charset=utf-8',
+  }],
+  ['/aistudio-operations-reference.md', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-operations-reference.md'),
+    type: 'text/plain; charset=utf-8',
+  }],
+  ['/aistudio-design-document-guide.md', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-design-document-guide.md'),
+    type: 'text/plain; charset=utf-8',
+  }],
+  ['/aistudio-design-document-index.md', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-design-document-index.md'),
+    type: 'text/plain; charset=utf-8',
+  }],
+  ['/aistudio-run25-simulation-case.md', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-run25-simulation-case.md'),
+    type: 'text/plain; charset=utf-8',
+  }],
+  ['/aistudio-swarm-yuan-developer-guide.md', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-swarm-yuan-developer-guide.md'),
     type: 'text/plain; charset=utf-8',
   }],
 ])

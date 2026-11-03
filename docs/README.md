@@ -7,7 +7,13 @@
 | 用途 | 文档 |
 |---|---|
 | 上手与日常使用 | [USAGE.md](USAGE.md) |
-| 培训、分角色实操与考核 | [培训和使用手册](manuals/aistudio-training-and-user-guide.md) |
+| 六团队独立交付路径 | [产品交付团队培训手册](manuals/aistudio-training-and-user-guide.md) |
+| swarm-yuan 研发核心技能 | [swarm-yuan 研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md) |
+| 全量页面与能力边界 | [全量功能清单](manuals/aistudio-feature-inventory.md) |
+| 部署、配置与运维检查 | [管理员运维参考](manuals/aistudio-operations-reference.md) |
+| 设计事实源与冲突裁决 | [设计文档导读](manuals/aistudio-design-document-guide.md) |
+| 全部 spec 可点击索引 | [设计文档全量索引](manuals/aistudio-design-document-index.md) |
+| 最新推演方案与真实报告案例 | [run25 全流程推演案例](manuals/aistudio-run25-simulation-case.md) |
 | 交互拓扑培训与一键启动 | [交互培训页](manuals/aistudio-interactive-training.html)；`npm run training` |
 | Windows x64 排查 | [windows-x64-setup.md](windows-x64-setup.md) |
 | 一页看懂产品（离线单文件） | [intro.html](intro.html) |
