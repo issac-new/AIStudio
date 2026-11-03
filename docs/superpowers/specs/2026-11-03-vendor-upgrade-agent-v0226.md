@@ -25,6 +25,8 @@
 - **基线提交**：`60a5a849b`（4318 文件；`get-windows.d.ts` 在暂存内核验过）。
 - **追加失配（SIM 运行时面，series 外）**：`643-agent-mautrix-darwin-ungate`（SIM-only 补丁、不在 series）上下文绑旧版 asyncpg==0.31.0/aiohttp-socks==0.11.0，上游 0.22.6 进位为 0.32.0/0.12.0——版本行校准后快照可套（`743a18709`）。
 - **版本载体进位**：agent-teams 底座跟进入位 `v0.22.6-team.1`（扩展序归 1，方案裁定原文）——team/VERSION、team/version.json、RELEASE-MANIFEST（3 处）、team/README Current 行、requirements 两注释同步；设计文档索引机械覆盖补 13 份 spec 链接＋计数 510→523（`b544da09c`）。
+- **mx-lib 根治两判据（SIM 运行时补丁链复验缺口收编，`c3cccfe17`）**：①「内容已在位」——纯插入型补丁（无 def/class/常量标记）全部新增行已逐字存在于目标文件即跳过（721 特例同族病的通用化）；②「后置吸收」——链中段补丁改动被更后补丁重写吸收（726 的 pop 行被 729 白名单函数取代：终态语义在、字面行不在）时，目标文件有交集且后置补丁语义标记在位即跳过。`bash -n` 过；mx-up 实跑复验零 FAIL（吸收判据实证触发：`726 ← 729（marker=_DENY_EXACT）`）。
+- **存量 jargon 清偿（并行批 d4a1b5677 带入，当轮修，同提交）**：mx-report-audit.py「对齐同款容差」→「改用同款容差」；方案正本 §5.11 四处「守门」→「把关」（SPEC_REBIND 显式重绑）。
 - **全量测试（确认轮）**：`npm test` **1019 文件 / 7488 tests / 0 failed**（11 skipped 既有）。首轮 9 红全数定谳：3 枚版本载体红=本批真债（已修）；1 枚培训手册索引红=13 份 spec 缺登记（已补）；5 枚客户端组件红=与 mx-setup 并跑的资源挤兑假红（隔离复跑 27/27 绿，541s→15s 负载签名实锤）。
 
 ## 设计文档影响

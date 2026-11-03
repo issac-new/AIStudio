@@ -2894,7 +2894,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 > 立条背景：2026-11-03 一天内落了七组新能力（主动性介入治理／交接质量账本／确定性验收断言／主张-回执核验／组件库与多目标搜索／探测并发与调度面／派单容量准入），其中多数**只有 HTTP 面、没有独立 UI 承载**——`capture-plan.env` 的截图采集位采不到。若推演不取证，这些能力就是「写完了没人验」，下一轮又变成新的存量债。
 >
-> 取证工装：`simharness/mux/mx-capability-probes.mjs`（端点级探测，正例取读数、负例必须红），产物 `capability-probes.json` 落 run 证据目录；脚本自身的端到端守门是 `simharness/tests/capability-probes.test.ts`（七组齐、失败可见）。
+> 取证工装：`simharness/mux/mx-capability-probes.mjs`（端点级探测，正例取读数、负例必须红），产物 `capability-probes.json` 落 run 证据目录；脚本自身的端到端把关是 `simharness/tests/capability-probes.test.ts`（七组齐、失败可见）。
 
 | # | 能力 | 正例判据（必须可机械核对） | 负例判据（必须红） |
 |---|---|---|---|
@@ -2904,7 +2904,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | 4 | 主张-回执核验 | ——（正例需真实证据台账，随 run 数据；无数据时只跑负例） | 无回执主张 → `allVerified=false` 且 `issues` 含 `no_receipt`；跨任务引用 → `cross_task_receipt` |
 | 5 | 组件库与多目标搜索 | `GET /api/harness/workbench/library` 回 `summary.total` 数值＋`components` 数组；`derived.search` 三面（decomposition/retention/diversity）在每个提案上都在位（空提案表合法） | —— |
 | 6 | 探测并发与调度面 | `GET /api/harness/workbench/schedule` 回 `policy.probeConcurrency` 数值（缺省 2、上限 8） | —— |
-| 7 | 派单容量准入 | 码表 `capacity_exhausted`/`capacity_timeout` 在册且客户端 chip 文案成对（由 `dispatch-capacity.test.ts` 与 `client/zcode/__tests__/zcode-projection.test.ts` 守门） | —— |
+| 7 | 派单容量准入 | 码表 `capacity_exhausted`/`capacity_timeout` 在册且客户端 chip 文案成对（由 `dispatch-capacity.test.ts` 与 `client/zcode/__tests__/zcode-projection.test.ts` 把关） | —— |
 
 **准出规则**：`capability-probes.json` 必须在场，`failed=0`；任一负例转绿（本该拒的放行了）即判 G4 不通过——负例是这些能力的存在理由，负例失效等于能力失效。七组里第 4 组若无真实证据台账，允许只跑负例并在报告写「正例未跑，理由：本轮无证据写入」，属如实缺省而非跳过。
 
@@ -2912,10 +2912,10 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 run25（20261102-v8-run25，11 小时 04 分、六闸全过）收尾阶段暴露的流程与工装缺陷，按下列七条固化。每条都有 run25 实测锚点，不是预设。
 
-1. **采集位与步键是单一事实源，必须双向完备**：每个 capture 步键须在 `r18-collect.py` 的 `STEP_KEY_TO_NUM` 映射内（缺一即采集器 die，run25 `ready_inbox` 实锤）；每个有产品承载承诺的步须有 `capture_step` 调用（run25 步 9 无采集位→审计三红线每轮必炸→靠降级登记才过）。两道守门由 `tests/mechanism-behavior.test.ts` 机械断言（「每个 capture 键都在映射内」＋「六闸都有 delivery 事件落点」），新增采集位漏映射在提交前即红。
+1. **采集位与步键是单一事实源，必须双向完备**：每个 capture 步键须在 `r18-collect.py` 的 `STEP_KEY_TO_NUM` 映射内（缺一即采集器 die，run25 `ready_inbox` 实锤）；每个有产品承载承诺的步须有 `capture_step` 调用（run25 步 9 无采集位→审计三红线每轮必炸→靠降级登记才过）。两道把关由 `tests/mechanism-behavior.test.ts` 机械断言（「每个 capture 键都在映射内」＋「六闸都有 delivery 事件落点」），新增采集位漏映射在提交前即红。
 2. **报告审计环收敛三分法**：审计缺口分三类处置，禁「同一 FAIL 反复重跑等它自己好」——①可自动修复（计数时效、载体未生成）→ 修审计器/生成器；②可合规降级（采集链失效、夹具未执行）→ 按 §5.6 纪律⑩ 登记，审计自动转黄标；③需内容补齐（缺证、缺清单）→ 派单补证。**同一缺口连续 3 轮不收敛即升级人工**（run25 实测 36 轮，其中 16 轮是我方重启起点错误导致的空转，7 轮是 PART1 未注册）。
 3. **收尾必做件清单（报告步准出前逐项核）**：①`final-report-merge.py` 的 `PART1_BY_RUN` 已注册本轮（缺注册即合并失败，run25 撞 7 次）；②人读层行话体检 HARD=0（「落地/收口/口径/催办」等词表词禁入正文，run25 撞 1 次）；③步 26 载荷在首次审计前已在场（采集位前移）；④报告数字与 issues.log 同刻快照对齐。四项任一缺失，report_done 不得落。
 4. **计数口径解耦与词面隔离**：报告内计数取「生成时刻快照」，审计比对须带同一时刻语义；审计判据的取数必须锚定报告自身的计数主张位（如「问题单终态」表单元格），**不得全文首匹配**——run25 撞上审计意见书引文里的历史数字（「issues.log 35 行（唯一键 26）」），R8 与 A3a 两个执行点各撞一次，容差 5 被穿透。引文内容属真实产物不得改写，改的是审计取数口径。
 5. **重启起点纪律**：报告审计 FAIL 后的断点续跑，`START_STEP` 必须覆盖缺口步的**上游采集位**（缺步 9 帧即从 dispatch 起），不得从缺口下游段起——run25 用 `START_STEP=release` 重启，步 9 采集位永远不进，审计空转 16 轮、25 分钟。
 6. **六闸事件化完备**：G1-G6 每道闸落键时必须派发 delivery gate 事件（`dlv_gate_try` 安全包装：dlv 关闭/无案例房跳过并记 note，缺参不得 exit——run12 缺参击杀驱动实锤）。run25 M3 断言「缺 pass 的门=G2」，交付面板只有 G5 一盏灯亮，即本缺陷。
-7. **方案文档改名/归档后必须全仓清扫引用**：V3 主文归档后，驱动/生成器/库仍引用旧路径 4 处，活跃代码的「方案正本」指向一个不存在的文件（单一事实源实质失效）。改名提交必须同批 `grep` 全仓活跃面（排除 `runtime/hermes-records/research/retired-docs`），守门测试钉住三份活跃文件只引用现行正本。
+7. **方案文档改名/归档后必须全仓清扫引用**：V3 主文归档后，驱动/生成器/库仍引用旧路径 4 处，活跃代码的「方案正本」指向一个不存在的文件（单一事实源实质失效）。改名提交必须同批 `grep` 全仓活跃面（排除 `runtime/hermes-records/research/retired-docs`），把关测试钉住三份活跃文件只引用现行正本。

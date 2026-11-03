@@ -906,7 +906,8 @@ mx_apply_agent_patches() {
   local tree="${HERMES_AGENT_TREE:-$AGENT_SRC}"
   [[ -d "$tree/.git" ]] || fail "不是 git 仓库：$tree"
   # 长会话治理轮（2026-10-11）：401/457 首次入 SIM 通道（此前仅工作区树可达，SIM/宿主从未执行）；601-605 新增（心跳/遥测/轮换/检查点/监督接线）。
-  for p in 390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch 569-agent-kanban-gate-guard.patch 586-agent-gateway-wedged-agent-sweep.patch 593-agent-per-tool-allowlist.patch 594-agent-tool-audit-ledger.patch 595-agent-usage-anomaly-watch.patch 596-agent-write-fence-roots.patch 599-agent-turn-ended-audit.patch 600-agent-assignee-realname.patch 401-agent-runaway-guard-six-signals.patch 457-agent-runaway-supervisor.patch 601-agent-rule-heartbeat.patch 602-agent-session-telemetry.patch 603-agent-session-rotation.patch 604-agent-handoff-checkpoint.patch 605-agent-runaway-supervisor-wiring.patch 609-agent-kanban-blocker-auth-degrade.patch 611-agent-session-rotation-itercap.patch 612-agent-capacity-retry-anchor.patch 636-agent-turn-end-delivery-guard.patch 637-agent-gateway-continuation-pump.patch 643-agent-mautrix-darwin-ungate.patch 705-agent-session-size-rotation.patch 707-agent-codex-terminal-incomplete-retry.patch 722-agent-emptystream-ladder-classify.patch 723-agent-dispatcher-refusal-reasons.patch 725-agent-chat-turn-recovery.patch 726-agent-chat-recovery-kwarg-fix.patch 729-agent-recovery-kwargs-pure.patch; do  # 636=干完不交卷 push 兜底；637=网关续作泵（静默根治，V8.35）；643=darwin 裸 mautrix 解门控（原拟 638 与 638-server-simcenter-routes 撞号改 643）（2026-10-17 macOS pm 正规安装无 mautrix 根治，B 案正路；配套锁重解+mx-sim-mautrix-ensure.sh A 案兜底）；705=会话上下文绝对尺寸轮换（run23 实证：上下文涨到 76K-241K 被上游流截断，水位百分比口径在长上限模型上永不咬合）；707=terminal-incomplete 掐流残响不得当完成（run23 实证：只 WARNING 后照常结算，回合成终态不再进重试面）。722=EmptyStreamError 归类 timeout 入自动恢复梯子（run24 四现场：流掐断回合耗尽即死无自恢复）；723=dispatcher「ready 非空 0 spawn」拒绝原因聚合（run24 实证 196 tick；根因=板级团队围栏拒子编制 assignee）。725=chat 回合终态失败后同会话续做恢复（run24 四现场：回合死即静止，只能人工 DM 唤醒）；726=修 725 的 kwarg 冲突（run25 G2 熔断实锤：kwargs 带 conversation_history 撞显式实参，recovery 哑火）。729=recovery 转发白名单抽纯函数（行为可测；与 726 同判定点收敛）。701-704/706 非 agent 面（产品/custom）不在本清单
+  _rt=(390-agent-kanban-home-default-board.patch 391-agent-kanban-board-team-fence.patch 533-agent-gateway-capacity-storm.patch 534-agent-gateway-outbound-notice-guard.patch 564-agent-response-delivery-fallback.patch 569-agent-kanban-gate-guard.patch 586-agent-gateway-wedged-agent-sweep.patch 593-agent-per-tool-allowlist.patch 594-agent-tool-audit-ledger.patch 595-agent-usage-anomaly-watch.patch 596-agent-write-fence-roots.patch 599-agent-turn-ended-audit.patch 600-agent-assignee-realname.patch 401-agent-runaway-guard-six-signals.patch 457-agent-runaway-supervisor.patch 601-agent-rule-heartbeat.patch 602-agent-session-telemetry.patch 603-agent-session-rotation.patch 604-agent-handoff-checkpoint.patch 605-agent-runaway-supervisor-wiring.patch 609-agent-kanban-blocker-auth-degrade.patch 611-agent-session-rotation-itercap.patch 612-agent-capacity-retry-anchor.patch 636-agent-turn-end-delivery-guard.patch 637-agent-gateway-continuation-pump.patch 643-agent-mautrix-darwin-ungate.patch 705-agent-session-size-rotation.patch 707-agent-codex-terminal-incomplete-retry.patch 722-agent-emptystream-ladder-classify.patch 723-agent-dispatcher-refusal-reasons.patch 725-agent-chat-turn-recovery.patch 726-agent-chat-recovery-kwarg-fix.patch 729-agent-recovery-kwargs-pure.patch)
+  for p in "${_rt[@]}"; do  # 636=干完不交卷 push 兜底；637=网关续作泵（静默根治，V8.35）；643=darwin 裸 mautrix 解门控（原拟 638 与 638-server-simcenter-routes 撞号改 643）（2026-10-17 macOS pm 正规安装无 mautrix 根治，B 案正路；配套锁重解+mx-sim-mautrix-ensure.sh A 案兜底）；705=会话上下文绝对尺寸轮换（run23 实证：上下文涨到 76K-241K 被上游流截断，水位百分比口径在长上限模型上永不咬合）；707=terminal-incomplete 掐流残响不得当完成（run23 实证：只 WARNING 后照常结算，回合成终态不再进重试面）。722=EmptyStreamError 归类 timeout 入自动恢复梯子（run24 四现场：流掐断回合耗尽即死无自恢复）；723=dispatcher「ready 非空 0 spawn」拒绝原因聚合（run24 实证 196 tick；根因=板级团队围栏拒子编制 assignee）。725=chat 回合终态失败后同会话续做恢复（run24 四现场：回合死即静止，只能人工 DM 唤醒）；726=修 725 的 kwarg 冲突（run25 G2 熔断实锤：kwargs 带 conversation_history 撞显式实参，recovery 哑火）。729=recovery 转发白名单抽纯函数（行为可测；与 726 同判定点收敛）。701-704/706 非 agent 面（产品/custom）不在本清单
     local pf="$PATCH_DIR/$p"
     [[ -f "$pf" ]] || fail "缺 patch 文件：$pf"
     if git -C "$tree" apply --reverse --check "$pf" >/dev/null 2>&1; then
@@ -944,6 +945,54 @@ mx_apply_agent_patches() {
         mx_drift_audit "$p" "$pf" "$tree"
         continue
       fi
+      # 内容已在位兜底（2026-11-03 vendor v0.22.6 升级轮，726 实锤）：纯插入型补丁无
+      # def/class/常量标记可抓（721 曾因同缺口走定点补位特例）；且快照已收敛到链末态时
+      # 后置补丁的 reverse-check 上下文会被更后补丁的重构消掉（726 的上下文被 729 重写）
+      # ——正反都套不上、标记也没有，误报 fail 挡 mx-up。判据：补丁全部新增行（≥10 字符，
+      # 与 mx_drift_audit 同阈值）已逐字存在于其目标文件中＝该补丁的改动确实在树上。
+      local _all_present=1 _checked=0 _tf _ln
+      while IFS= read -r _tf; do
+        [ -n "$_tf" ] || continue
+        while IFS= read -r _ln; do
+          [ "${#_ln}" -ge 10 ] || continue
+          _checked=$((_checked + 1))
+          grep -qF -- "$_ln" "$tree/$_tf" 2>/dev/null || { _all_present=0; break 2; }
+        done < <(awk -v f="$_tf" '
+          index($0, "diff --git a/" f " ") == 1 { inf = 1; next }
+          /^diff --git / { inf = 0 }
+          inf && /^\+/ { print substr($0, 2) }
+        ' "$pf")
+      done < <(git -C "$tree" apply --numstat "$pf" 2>/dev/null | awk '{print $3}')
+      if [ "$_all_present" = 1 ] && [ "$_checked" -ge 1 ]; then
+        log "运行时 patch 内容已在位（纯插入型无标记；全部新增行已存在于目标文件）：${p}"
+        continue
+      fi
+      # 后置吸收判据（2026-11-03 vendor v0.22.6 升级轮，726 实锤）：链中段补丁的改动被
+      # 更后的补丁重写吸收（726 的 pop 行被 729 的白名单函数取代——终态语义在、字面行
+      # 不在），正反/标记/内容四查全空但仍被链尾语义覆盖。判据：本补丁的目标文件被链上
+      # 更后的补丁触及、且该后置补丁的语义标记已在树上 → 本补丁被吸收，跳过不 fail。
+      local _pi _pq _absorbed=0 _myfiles _laterfiles _lm
+      _myfiles="$(git -C "$tree" apply --numstat "$pf" 2>/dev/null | awk '{print $3}')"
+      for _pi in "${_rt[@]}"; do
+        [ "$_pi" = "$p" ] && _absorbed=-1 && continue   # 先越过自身，此后均为后置
+        [ "$_absorbed" = "-1" ] || continue
+        _pq="$PATCH_DIR/$_pi"
+        [ -f "$_pq" ] || continue
+        _laterfiles="$(git -C "$tree" apply --numstat "$_pq" 2>/dev/null | awk '{print $3}')"
+        # 目标文件有交集才有吸收关系
+        if [ -n "$(printf '%s\n' "$_myfiles" | grep -Fxf <(printf '%s\n' "$_laterfiles") 2>/dev/null)" ]; then
+          while IFS= read -r _lm; do
+            [ -n "$_lm" ] || continue
+            if grep -rql --include='*.py' "$_lm" "$tree/gateway/" "$tree/hermes_cli/" "$tree/tools/" "$tree/agent/" "$tree/plugins/" "$tree/tests/" 2>/dev/null; then
+              log "运行时 patch 已被后置补丁吸收：${p} ← ${_pi}（marker=${_lm} 在位，目标文件交集且后置语义已生效）"
+              _absorbed=1; break
+            fi
+          done < <({ grep -oE '^\+[[:space:]]*(def|class) [A-Za-z_0-9]+' "$_pq" | sed -E 's/^\+[[:space:]]*(def|class) //' | grep -v '^test_';
+                    grep -oE '^\+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=' "$_pq" | sed -E 's/^\+//; s/[[:space:]]*=$//'; } | sort -u)
+          [ "$_absorbed" = "1" ] && break
+        fi
+      done
+      [ "$_absorbed" = "1" ] && continue
       fail "$p 与安装树冲突且语义未在位（marker=${_marker:-无}）——人工处置后重跑"
     fi
     git -C "$tree" apply --whitespace=nowarn "$pf" || fail "$p 应用失败"
