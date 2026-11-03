@@ -104,6 +104,42 @@ describe('一键自动探测', () => {
     expect(probe.contrast).toBeTruthy()
   })
 
+  it('调度面 probeConcurrency 生效：并发峰值 >1 并回填 job.peakInFlight', async () => {
+    const id = await approvedProposal()
+    const sp = await import('../schedule-policy')
+    sp.ensureScheduleFile()
+    const f = sp.scheduleFile()
+    const prev = process.env.HERMES_HOME
+    // 写策略：并发 3、每题 2 题（本测试只关心并发是否真的起来）
+    const fs = await import('node:fs')
+    fs.writeFileSync(f, JSON.stringify({ probeMaxTasks: 2, probeK: 1, probeConcurrency: 3, retryBackoffSeconds: 0 }))
+    try {
+      // 并发下证据只认 stream-json：这里的桩同时写 trace 并返回 result 行
+      const slow = (_tag: string) => async (_prompt: string, env: Record<string, string | undefined>) => {
+        await new Promise((r) => setTimeout(r, 8))
+        const sid = `sess-conc-${Math.random().toString(36).slice(2)}`
+        writeFileSync(
+          join(env.HERMES_RUN_TRACE_DIR!, `${sid}.jsonl`),
+          [JSON.stringify({ type: 'header', session_id: sid }), JSON.stringify({ type: 'chunk', kind: 'llm_span', usage: { prompt_tokens: 100, completion_tokens: 50 } })].join('\n') + '\n',
+        )
+        return { ok: true as const, stdout: JSON.stringify({ type: 'result', session_id: sid, text: '完成', tokens: { total: 150 } }) }
+      }
+      const job = await startAutoProbe(id, {
+        setId: (await import('../../../eval/store')).listSets()[0].id,
+        spawnRun: slow('x') as never,
+        actor: 'tester',
+        judgeAsk: offlineAsk,
+      })
+      await waitJob(job)
+      expect(job.status).toBe('done')
+      expect(job.peakInFlight ?? 1).toBeGreaterThanOrEqual(2)
+    } finally {
+      fs.rmSync(f, { force: true })
+      if (prev === undefined) delete process.env.HERMES_HOME
+      else process.env.HERMES_HOME = prev
+    }
+  })
+
   it('预算硬停：单题真实成本超剩余额度即停，部分样本照常判分回填', async () => {
     const id = await approvedProposal({ budgetCapUsd: 1.0 })
     const setId = (await import('../../../eval/store')).listSets()[0].id
