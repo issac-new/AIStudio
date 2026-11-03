@@ -287,7 +287,15 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
   const retryDelay = opts.retryDelayMs ?? 5_000
   // R4（2026-10-31 D4 匹配预算口径）：每题 k 个样本（缺省 2）
   const k = Math.max(1, Math.trunc(opts.k ?? 2))
-  const concurrency = Math.max(1, Math.min(8, Math.trunc(opts.concurrency ?? 1)))
+  // 并发收敛（2026-11-03 缺省评估）：
+  //   ① 不超过单元数（题×k）——3 路跑 2 个单元只是多占位；
+  //   ② 不超过预算允许的超支——并发最多多花 (c-1)×单题估值，把它压到剩余预算的 10% 内，
+  //      避免「小预算 + 宽并发」把硬限额花穿。首个单元仍无条件放行（见下）。
+  const requested = Math.max(1, Math.min(8, Math.trunc(opts.concurrency ?? 1)))
+  const units = opts.prompts.length * k
+  const overshootBudget = opts.budgetRemainingUsd * 0.1
+  const byBudget = Math.max(1, Math.floor(overshootBudget / Math.max(estimate, 1e-9)) + 1)
+  const concurrency = Math.max(1, Math.min(requested, units, byBudget, 8))
 
   const samples: ProbeTaskRunResult['samples'] = {}
   const scheduledPerTask = new Map<string, number>()
@@ -313,10 +321,15 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
   /** 跑一个「题×样本」单元；返回本单元成本（估算或真实）。 */
   const runUnit = async (taskId: string, prompt: string, sampleIdx: number): Promise<void> => {
     const startedAt = Date.now()
-    let spawned = await spawn(prompt, envBase, timeout)
+    // 每个单元一个独立 trace 目录：并发时「取最新一份」不会串到别的题上——
+    // 归因靠隔离而不是靠禁止并发（trace-only 环境也能并发）。
+    const unitTraceDir = join(tracesDir, `${taskId}-${sampleIdx}-${Math.random().toString(36).slice(2, 8)}`)
+    mkdirSync(unitTraceDir, { recursive: true })
+    const env = { ...envBase, HERMES_RUN_TRACE_DIR: unitTraceDir }
+    let spawned = await spawn(prompt, env, timeout)
     if (!spawned.ok) {
       if (retryDelay > 0) await new Promise((r) => setTimeout(r, retryDelay))
-      spawned = await spawn(prompt, envBase, timeout)
+      spawned = await spawn(prompt, env, timeout)
     }
     if (!spawned.ok) {
       failure = `任务 ${taskId} 运行失败（已重试一次）：${spawned.error}`
@@ -324,11 +337,7 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
     }
     // 证据双通道：stream-json 优先；trace 后备仅在串行时可用（并发会串证据）
     const stream = spawned.stdout ? evidenceFromStreamJson(spawned.stdout) : null
-    if (!stream && concurrency > 1) {
-      failure = `任务 ${taskId} 第 ${sampleIdx + 1} 样本未走 stream-json 通道：并发探测无法用 jsonl trace 归因（会把别人的 trace 认成本题），请降并发到 1 或修复 CLI 输出`
-      return
-    }
-    const trace = stream ? null : readNewestTrace(tracesDir, startedAt - 1000)
+    const trace = stream ? null : readNewestTrace(unitTraceDir, startedAt - 1000)
     const picked = stream ?? trace
     if (!picked) {
       failure = `任务 ${taskId} 第 ${sampleIdx + 1} 样本未产生证据（stream-json 与 trace 通道均缺席）`
