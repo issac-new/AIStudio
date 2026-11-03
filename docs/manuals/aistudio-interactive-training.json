@@ -1,0 +1,12 @@
+{
+  "source_mockup": null,
+  "source_plan": "docs/superpowers/specs/2026-10-28-aistudio-interactive-training.md",
+  "mode": "evolve",
+  "html_file": "docs/manuals/aistudio-interactive-training.html",
+  "pretext_tier": "native-css fallback + optional prepare/layout",
+  "framework": "vanilla",
+  "iterations": 12,
+  "date": "2026-11-02",
+  "screen": "aistudio-training",
+  "branch": "docs/aistudio-training-manual"
+}

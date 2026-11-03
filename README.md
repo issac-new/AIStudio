@@ -143,7 +143,7 @@ npm run serve &                                   # 3. 后端 :8647
 npm run dev                                       # 4. 前端 :8649（vite，改代码即时热更新）
 ```
 
-浏览器打开 `http://localhost:8649`。首次空库引导需后端显式设 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`（出厂默认口令已删除）。已有账号直接登录。
+浏览器打开 `http://localhost:8649`。已有账号直接登录。共享或培训环境首次建号使用[《培训和使用手册》的随机密码流程](docs/manuals/aistudio-training-and-user-guide.md#34-创建首个管理员账号)；`HERMES_WEB_UI_DEV_BOOTSTRAP=1` 仅限隔离开发环境的空库引导。出厂默认口令已删除。
 
 改了 B 类 patch 后须 `npm run clean && npm run inject` 再重启后端。完整走法（三种模式的典型流程、角色旅程、服务重启、排障）见[《使用指南》](docs/USAGE.md)。
 
@@ -162,6 +162,8 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 
 - [交互式介绍页](docs/intro.html)：一页看懂 AIStudio 与五件套体系，分屏滚动叙事，离线单文件。
 - [使用指南](docs/USAGE.md)：启动、三种工作模式走法、角色旅程、重启与排障。
+- [培训和使用手册](docs/manuals/aistudio-training-and-user-guide.md)：30 分钟首用、日常操作、分角色实操、培训考核与故障处理。
+- [交互拓扑培训](docs/manuals/aistudio-interactive-training.html)：设计、实现、部署、使用四部分 12 幕；`npm run training` 一键启动，以四套独立拓扑展示系统协作、任务状态、服务发布和日常治理，面向 PC 横屏使用。
 - [AIStudio 终态设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施与验证的唯一正本。
 - [Hermes Agent 集群设计文档](team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md)：运行面的组织、机制、治理与决策依据。
 - [Hermes Agent Architecture](vendor/hermes-agent/website/docs/developer-guide/architecture.md)：上游 agent 引擎与 gateway 内部架构。
