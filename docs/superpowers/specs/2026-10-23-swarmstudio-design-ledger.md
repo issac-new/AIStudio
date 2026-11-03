@@ -30,6 +30,7 @@
 | 改进实验验证信号层级 | 5 档 | 命令验收 > 密封留出 > 历史回归 > 仅裁判判分 > 无；连续 3 轮停在裁判层即告警（`2026-10-19-harness2-improvement-workbench.md` §14.2） |
 | 改进实验独立证据 | 3 类 | 噪声 δ（半极差）／等预算基线／语义等价反事实；均须真实运行，禁手填（同上 §14.1） |
 | 介入决策档 | 7 | 投递／延后／合并／抑制／升级／澄清／优雅不动；四门顺序＝置信→价值成本→时机→风险，critical 必达，安全告警不接该层（`2026-11-03-proactive-intervention-governance.md`） |
+| 组件库身份 | 面 key＋文件名 | `id=<kind>:<name>@<digest8>`；同 digest 幂等，同组件版本递增且旧版保留；空内容不入库（`2026-11-03-component-library.md`） |
 | 主张回执判定 | 3 类未验证 | 无引用／解析不到／跨任务引用；空主张不判通过（`2026-11-03-claim-receipts-and-dispatch-capacity.md`） |
 | 派单并发准入 | 缺省不拦 | `ZCODE_MAX_CONCURRENT_RUNS` 未配（=0）即放行；饱和按 `ZCODE_CAPACITY_POLICY=reject|queue`；排队截止 `ZCODE_CAPACITY_QUEUE_TIMEOUT_MS` |
 | 验收断言家族 | 6 | `file_exists/file_readable/file_min_bytes/file_contains/command_ok/test_passed`；不可判定落 unchecked 且整体不放行（`2026-11-03-acceptance-checks.md`） |
