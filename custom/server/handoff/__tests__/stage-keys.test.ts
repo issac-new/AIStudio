@@ -3,7 +3,7 @@
 // 删掉 verdict=fail 检查 → 第 12 例红；把 duplicate 检查删掉 → 第 13 例红。
 import { describe, expect, it } from 'vitest'
 import {
-  judgeStageChain, validateStageKeyStructure, verifyStageKeyIo,
+  judgeStageChain, toChainResponse, validateStageKeyStructure, verifyStageKeyIo,
   type StageKey,
 } from '../stage-keys'
 
@@ -139,5 +139,25 @@ describe('judgeStageChain（链校验）', () => {
     const r = judgeStageChain(keys, undefined, { fileExists: (p) => !p.includes('design') })
     expect(r.ok).toBe(false)
     expect(r.problems.flatMap((p) => p.problems).join()).toContain('artifact-missing:docs/design/b.md')
+  })
+})
+
+describe('toChainResponse（响应形状）', () => {
+  // 回归：链结论字段曾叫 ok，被 lib/http 的 ok() 的 `{ok:true, ...data}` 覆盖成
+  // 200+ok:false 的假信号。响应体顶层 ok 是传输层保留键，结论必须改名 chainOk。
+  it('不输出顶层 ok 键，结论落 chainOk', () => {
+    const report = judgeStageChain([])
+    const payload = toChainResponse(report)
+    expect('ok' in payload).toBe(false)
+    expect(payload.chainOk).toBe(false)
+    expect(payload.missing).toEqual(['req-frozen', 'design-approved', 'dev-done', 'verify-done'])
+  })
+
+  it('通过时 chainOk 为 true，且与传输层 ok 不冲突', () => {
+    const keys = (['req-frozen', 'design-approved', 'dev-done', 'verify-done'] as const)
+      .map((stage) => validKey({ stage }))
+    const payload = toChainResponse(judgeStageChain(keys))
+    expect(payload.chainOk).toBe(true)
+    expect('ok' in payload).toBe(false)
   })
 })

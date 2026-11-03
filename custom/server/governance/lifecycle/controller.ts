@@ -31,7 +31,7 @@ import {
   CASE_STATUSES, type CaseStatus,
 } from './ac-trace'
 import {
-  judgeStageChain, STAGE_KEY_NAMES, type StageKeyName, type StageKeyVerifyDeps,
+  judgeStageChain, toChainResponse, STAGE_KEY_NAMES, type StageKeyName, type StageKeyVerifyDeps,
 } from '../../handoff/stage-keys'
 import { combinedGateVerdict, coveredAcs, gateVerdictOfText, uatVerdictFor, type GateVerdict } from './verdict'
 import { atomicWriteJson } from '../../lib/fs-store'
@@ -222,7 +222,12 @@ export function registerLifecycleRoutes(router: Router): void {
     }
 
     const report = judgeStageChain(b.keys, required, deps)
-    ok(ctx, { ioChecked: Boolean(root || gitRepo), fileChecked: Boolean(root), commitChecked: Boolean(gitRepo), ...report })
+    ok(ctx, {
+      ioChecked: Boolean(root || gitRepo),
+      fileChecked: Boolean(root),
+      commitChecked: Boolean(gitRepo),
+      ...toChainResponse(report),
+    })
   })
 
   router.post('/lifecycle/uat-verdict', (ctx) => {

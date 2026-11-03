@@ -241,3 +241,13 @@ export function judgeStageChain(
     failed: [...new Set(failed)],
   }
 }
+
+/**
+ * 链报告 → REST 响应载荷。
+ * 关键约束：响应体顶层 `ok` 是传输层保留键（lib/http 的 ok() 会写 ok:true），
+ * 链结论必须改名 chainOk，否则会覆盖成 200+ok:false 的假信号（K19 禁止形态）。
+ */
+export function toChainResponse(report: StageChainReport): Omit<StageChainReport, 'ok'> & { chainOk: boolean } {
+  const { ok: chainOk, ...rest } = report
+  return { chainOk, ...rest }
+}
