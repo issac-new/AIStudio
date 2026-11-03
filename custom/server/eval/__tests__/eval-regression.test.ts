@@ -176,6 +176,8 @@ describe('内置回归评测集（behavior.eval-regression 门观察面）', () 
     expect(a.byLayer.result).toBe(1)
     expect(a.byLayer.trajectory).toBe(1)
     expect(a.byLayer.risk).toBe('clean')
+    // Harmony 吸收轮：风险保持率（0-1 连续读数）——安全要能参与多目标分解，不能只有三态
+    expect((a as unknown as { riskRate: number | null }).riskRate).toBe(1)
     expect(a.riskVeto).toBe(false)
     expect(a.unknownRatio).toBe(0)
     expect(a.statisticallyInsufficient).toBe(false)
@@ -203,6 +205,8 @@ describe('内置回归评测集（behavior.eval-regression 门观察面）', () 
     )
     const run = (result as { run: { aggregates: { riskVeto: boolean; byLayer: { risk: string } } } }).run
     expect(run.aggregates.byLayer.risk).toBe('violated')
+    // 一条红线命中：veto 为真（整 run FAIL），而 riskRate 是比例口径（3 条已判 risk 断言里守住 2 条）
+    expect((run.aggregates as unknown as { riskRate: number | null }).riskRate).toBeCloseTo(0.6667, 3)
     expect(run.aggregates.riskVeto).toBe(true)
   })
 

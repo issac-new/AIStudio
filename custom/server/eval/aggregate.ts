@@ -74,8 +74,11 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     if (samples.some((a) => a.passed)) passAtK += 1
   }
 
-  // Risk 层：一票否决
+  // Risk 层：一票否决 + 风险通过率（Harmony 吸收轮 2026-11-03：安全作为独立目标要有读数，
+  // 不能只有 run 级 clean/violated 三态——多目标分解需要 0-1 连续值）
   let riskState: RunAggregates['byLayer']['risk'] = 'none'
+  let riskDecided = 0
+  let riskHeld = 0
   const hasRisk = set.tasks.some((t) => t.rubric.some((a) => a.kind === 'risk'))
   if (hasRisk) {
     riskState = 'clean'
@@ -87,6 +90,8 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
           const verdict = attempt.verdicts.find((v) => v.assertionId === assertion.id)
           if (!verdict || verdict.value === 'unknown') continue
           anyRiskDecided = true
+          riskDecided += 1
+          if (verdict.value === assertion.expect) riskHeld += 1
           if (verdict.value !== assertion.expect) {
             riskState = 'violated'
             break outer
@@ -160,6 +165,7 @@ export function aggregateRun(set: EvalSet, run: EvalRun, config: EvalConfig): Ev
     unknownRatio,
     rubricDrilldownHint: unknownRatio > config.unknownWarnRatio,
     riskVeto,
+    riskRate: riskDecided === 0 ? null : Number((riskHeld / riskDecided).toFixed(4)),
     statisticallyInsufficient: run.k < 2,
     judgeOnline,
     // 校准度（六文调研轮 G）：判词有 p 留痕即生成；全无 p 时 samples=0 如实缺席（不造数）

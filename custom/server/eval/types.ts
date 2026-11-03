@@ -408,6 +408,11 @@ export interface RunAggregates {
   rubricDrilldownHint: boolean
   /** 任一 attempt 的任一 risk 断言命中红线（value≠expect 且非 unknown）→ 整 run FAIL。 */
   riskVeto: boolean
+  /**
+   * 风险断言保持率（0-1）：已判定 risk 断言里守住红线的比例；无 risk 断言或全 unknown 时 null。
+   * Harmony 吸收轮（2610.15150）：安全要作为独立目标参与多目标分解，只有 clean/violated 三态不够。
+   */
+  riskRate: number | null
   /** k<2：单跑结果不产生门禁结论（文章启示②）。 */
   statisticallyInsufficient: boolean
   /** 本次运行 S1 判定端是否在线（离线=纯 S0 + unknown，fail-open）。 */

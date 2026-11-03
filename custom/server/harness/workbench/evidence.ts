@@ -22,6 +22,8 @@ export function readEvalEvidence(runId: string): ProbeMetrics | null {
     trajectoryPassRate: a.byLayer.trajectory,
     unknownRatio: a.unknownRatio,
     riskVeto: a.riskVeto,
+    // Harmony 吸收轮：安全作为独立目标——风险断言保持率直接进探针证据（无 risk 断言时 null，不猜）
+    safetyRate: a.riskRate,
     judgeOnline: a.judgeOnline,
     statisticallyInsufficient: a.statisticallyInsufficient,
     tokens: a.byLayer.efficiency.avgTokens,

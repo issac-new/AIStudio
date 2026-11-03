@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createServer } from 'node:http'
 
 let dir: string
 let server: import('node:http').Server
@@ -147,12 +148,12 @@ async function createSubmittedApproved(): Promise<any> {
 }
 
 describe('Harness² 工作台 HTTP', () => {
-  it('GET overview：八面 + 计数 + 边界说明', async () => {
+  it('GET overview：九面 + 计数 + 边界说明', async () => {
     const { status, body } = await get('/api/harness/workbench/overview')
     expect(status).toBe(200)
     expect(body.ok).toBe(true)
-    expect(body.surfaces).toHaveLength(8)
-    expect(body.counts.managedSurfaces).toBe(2)
+    expect(body.surfaces).toHaveLength(9)
+    expect(body.counts.managedSurfaces).toBe(3) // 调度面 2026-11-03 加入
     expect(body.meta.boundary).toContain('HARNESS2_APPLY=1')
   })
 
@@ -678,5 +679,59 @@ describe('RRSI 挂账清偿批 HTTP', () => {
     expect((await post(`/api/harness/workbench/proposals/${id3}/submit`, {})).status).toBe(200)
     expect((await post(`/api/harness/workbench/proposals/${id3}/decide`, { decision: 'approve', actor: 'r', note: '' })).status).toBe(200)
     expect((await del(id3)).status).toBe(409)
+  })
+})
+
+// 调度面（Harmony 吸收轮 2026-11-03）：策略读取/bootstrap/校验（独立 server，复用同一隔离目录）。
+describe('调度面 REST', () => {
+  it('GET /schedule 缺省策略；bootstrap 建文件；validate 拒非法值', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wb-sched-'))
+    const prevHome = process.env.HERMES_HOME
+    process.env.HERMES_HOME = dir
+    const bodyParser = (await import('@koa/bodyparser')).default
+    const Koa = (await import('koa')).default
+    const { workbenchRoutes } = await import('../controller')
+    const app = new Koa()
+    app.use(bodyParser())
+    app.use(workbenchRoutes.routes())
+    const server = createServer(app.callback())
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
+    const b = `http://127.0.0.1:${(server.address() as { port: number }).port}`
+    try {
+      const get = await fetch(`${b}/schedule`)
+      expect(get.status).toBe(200)
+      const g = (await get.json()) as { ok: boolean; policy: { probeMaxTasks: number }; file: string }
+      expect(g.ok).toBe(true)
+      expect(g.policy.probeMaxTasks).toBeGreaterThanOrEqual(1)
+      expect(g.file).toBe('harness-schedule.json')
+
+      const boot = await fetch(`${b}/schedule/bootstrap`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+      expect(boot.status).toBe(200)
+      const bb = (await boot.json()) as { ok: boolean; created: boolean }
+      expect(bb.ok).toBe(true)
+      expect(typeof bb.created).toBe('boolean')
+
+      const bad = await fetch(`${b}/schedule/validate`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ probeK: 99, probeMaxTasks: 0 }),
+      })
+      expect(bad.status).toBe(400)
+      const badBody = (await bad.json()) as { ok: boolean; problems: string[] }
+      expect(badBody.ok).toBe(false)
+      expect(badBody.problems.length).toBe(2)
+
+      const good = await fetch(`${b}/schedule/validate`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ probeMaxTasks: 3, probeK: 2 }),
+      })
+      const gb = (await good.json()) as { ok: boolean; policy: { probeMaxTasks: number } }
+      expect(gb.ok).toBe(true)
+      expect(gb.policy.probeMaxTasks).toBe(3)
+    } finally {
+      server.close()
+      if (prevHome === undefined) delete process.env.HERMES_HOME
+      else process.env.HERMES_HOME = prevHome
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
