@@ -1,4 +1,4 @@
-# SwarmStudio 发布说明
+# AIStudio 发布说明
 
 > **run26 挂账清偿＋采集呈现根治发布轮（2026-11-03，chore/release-v1.0.10）** — v1.0.9 后本轮交付：**①run26 挂账 N10-N13 全清**（18b 接线：prelaunch ㉜ 双通道探针＋驱动 devimpl 段 fail-soft 核验＋守门 2 断言）；**②小程序首帧空白页根治**（用户实看反馈——运行副本重建为仓内正本＋appid/bffBaseUrl 注入＋mock BFF 渠道＋等渲染截帧 R1 三要素 businessLogicRan=true）；**③方案 HTML 自包含渲染器**（用户「裸文本」反馈根治：内联 CSS＋mermaid SVG 预渲染内联＋目录，零外部依赖）＋竖屏帧 1/4 排版。**资产口径（用户令）**：本轮只发 full 整体包＋yuan everything 离线档两包，其余模块包保留 v1.0.9 现行版。cockpit 版本声明前进 1.0.9-studio.8→studio.9（simharness 7 文件实质变更，包不重发）。验证：全量 vitest **7293 passed / 0 failed / 11 skipped**（1005 文件）；`release:check` 四模块对账全绿。
 
@@ -39,7 +39,9 @@
 
 ## 产物分发口径
 
-构建产物（源码包、安装包、离线包）**只在本机构建留存**（`dist/release/`），不上传 GitHub Release 或任何远端；Release 只承载版本说明与 tag。需要产物时本地执行 `npm run release:packages`（内含 `release:check`），校验 `dist/release/SHA256SUMS`。此口径为 2026-10-28 用户明确裁定，推翻此前「随 Release 上传五件包」的做法。
+自 2026-11-03 起，每版 GitHub Release 只上传 `aistudio-full-<ver>-src.tar.gz` 与 `swarm-yuan-offline-<ver>-everything.zip` 两件主资产及配套 SHA256SUMS 校验件；ModelScope 的 `aistudio/` 只替换 full 包，仓根放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。
+
+本地执行 `npm run release:check` 核对版本，再执行 `npm run release:packages` 默认只打整体包；确需本地生成 4+1 全量时显式使用 `--all-modules`。此长期规则取代 2026-10-28 的 local-only 口径，历史发布条目保留当时事实。
 
 ## 版本
 AIStudio 驾驶舱 **1.0.9-studio.9**（2026-11-03 v1.0.10-overlay 发布轮：run26 挂账 N10-N13 全清＋小程序首帧空白页根治＋方案 HTML 自包含渲染器＋竖屏帧排版；**版本声明前进、cockpit 包不重发**（用户令资产口径收窄=本轮只发 full＋yuan everything 两包，cockpit/agent-teams/ycode/yuan-skill 源码包保留 v1.0.9 现行版）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）

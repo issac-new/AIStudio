@@ -113,10 +113,10 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 
 | 基线 | 用途 | 版本 |
 |---|---|---|
-| [hermes-studio](https://github.com/EKKOLearnAI/hermes-studio) | 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），注入目标 | v0.7.39 |
+| [hermes-studio](https://github.com/EKKOLearnAI/ekko-studio) | 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），注入目标 | v1.0.9 |
 | [hermes-agent](https://github.com/NousResearch/hermes-agent) | Agent 运行时（Python，单网关多路复用） | v0.22.5 |
-| zcode（Ycode 引擎底座） | IDE 编码引擎，`zcode-patches/` 注入 | v3.16.1 系列 |
-| [element-web](https://github.com/element-hq/element-web) | Matrix 客户端参考实现（无构建依赖，不入仓） | v1.12.32 |
+| zcode（Ycode 引擎底座） | IDE 编码引擎，`zcode-patches/` 注入 | 包版本 3.17.1（v3.16.1 谱系） |
+| [element-web](https://github.com/element-hq/element-web) | Matrix 客户端参考实现（无构建依赖，不入仓） | 本机构建 v1.12.33 |
 
 | 层 | 技术 |
 |---|---|
@@ -162,8 +162,13 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 
 - [交互式介绍页](docs/intro.html)：一页看懂 AIStudio 与五件套体系，分屏滚动叙事，离线单文件。
 - [使用指南](docs/USAGE.md)：启动、三种工作模式走法、角色旅程、重启与排障。
-- [培训和使用手册](docs/manuals/aistudio-training-and-user-guide.md)：30 分钟首用、日常操作、分角色实操、培训考核与故障处理。
-- [交互拓扑培训](docs/manuals/aistudio-interactive-training.html)：设计、实现、部署、使用四部分 12 幕；`npm run training` 一键启动，以四套独立拓扑展示系统协作、任务状态、服务发布和日常治理，面向 PC 横屏使用。
+- [六团队培训手册](docs/manuals/aistudio-training-and-user-guide.md)：产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控的独立交付路径。
+- [swarm-yuan 研发交付指南](docs/manuals/aistudio-swarm-yuan-developer-guide.md)：项目技能生成、九节点、precheck、hooks、变异验证与真实 ACP 链。
+- [全量功能清单](docs/manuals/aistudio-feature-inventory.md)：全部路由、页签、写读边界、特性开关和未接线能力。
+- [管理员运维参考](docs/manuals/aistudio-operations-reference.md)：启动注入、配置、数据、健康检查与故障分类。
+- [设计文档导读](docs/manuals/aistudio-design-document-guide.md)与[全量索引](docs/manuals/aistudio-design-document-index.md)：设计事实源、阅读顺序、正本与实现差异及全部 spec 链接。
+- [run25 全流程推演案例](docs/manuals/aistudio-run25-simulation-case.md)：最新方案与真实报告对照，覆盖六闸、UAT、GAP、事故、补流和未做项。
+- [交互拓扑培训](docs/manuals/aistudio-interactive-training.html)：产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控各两幕，共 12 幕；`npm run training` 一键启动，以六套独立拓扑展示跨团队协作与角色交付，面向 PC 横屏使用。
 - [AIStudio 终态设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施与验证的唯一正本。
 - [Hermes Agent 集群设计文档](team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md)：运行面的组织、机制、治理与决策依据。
 - [Hermes Agent Architecture](vendor/hermes-agent/website/docs/developer-guide/architecture.md)：上游 agent 引擎与 gateway 内部架构。
@@ -171,7 +176,7 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 - [全流程推演方案](docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步六闸的推演判据与运行规程。
 - [设计事实与容量基线](docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)：稳定参数、参考部署与版本快照。
 - [发布清单 RELEASE-MANIFEST.json](RELEASE-MANIFEST.json)：定义四个独立模块的版本、产物与安装通道。`npm run release:check` 执行对账。
-- 发布物为 4 个独立源码包和 1 份整体包。`npm run release:packages` 负责打包，vendor 源码随包，registry 依赖在线安装，SHA256SUMS 随目录提供。
+- 每版远端只上传整体源码包与 yuan everything 离线包两件及配套校验件。`npm run release:packages` 默认只打整体包，`--all-modules` 为显式 4+1 全量逃生通道；vendor 源码随包，registry 依赖在线安装，SHA256SUMS 随目录提供。
 - 历史 spec 索引见[附录 A](docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)。
 
 ## 已知注意点

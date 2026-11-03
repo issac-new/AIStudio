@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <meta name="description" content="AIStudio 交互式培训手册：设计、实现、部署、使用四部分，以 12 个可旋转 3D 场景演示完整工作流程。">
+  <meta name="description" content="AIStudio 交互式培训手册：设计、实现、部署、使用六团队，以 12 个可旋转 3D 场景演示完整工作流程。">
   <title>AIStudio 交互式培训手册</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111413'/%3E%3Cpath d='M18 46 30 16h5l12 30h-8l-2-7H27l-2 7Zm12-14h5l-2-8Z' fill='%237de3b0'/%3E%3C/svg%3E">
   <style>
@@ -322,7 +322,7 @@
     @media (max-width: 920px) {
       main { padding: 0 var(--space-3); }
       .course-strip { padding: var(--space-2) 0; }
-      .course-strip::after { content: "四部分 12 幕"; margin-left: auto; color: var(--muted); font-size: 12px; }
+      .course-strip::after { content: "六团队 12 幕"; margin-left: auto; color: var(--muted); font-size: 12px; }
       .part-nav { display: none; }
       .mobile-course { padding: var(--space-2) 0; }
       .sim-stage { height: 52dvh; min-height: 420px; max-height: none; }
@@ -366,14 +366,39 @@
     .topology-step { fill: #ffffff; stroke: #9db2a3; }
     .topology-step-text { fill: #4b6754; }
     .topology-pulse { fill: #1b8f57; stroke: #e6fff0; }
-  </style>
+      .part-nav { flex-wrap: wrap; overflow-x: auto; }
+    .part-link { min-width: 0; }
+    @media (max-width: 1450px) { .part-link small { display: none; } }
+    .coach { display: block; min-width: 0; }
+    .lesson-grid { display: grid; grid-template-columns: 1.05fr 1.45fr 1.25fr 250px; gap: 18px; align-items: start; }
+    .lesson-grid > *, .lesson-more-grid > * { min-width: 0; }
+    .lesson-steps ol, .lesson-inputs ul, .lesson-more-grid ul { margin: 8px 0 0; padding-left: 20px; }
+    .lesson-steps li, .lesson-inputs li, .lesson-more-grid li { margin: 0 0 8px; line-height: 1.55; }
+    .lesson-goal { margin: 6px 0 10px; color: var(--muted); font-size: 13px; }
+    .lesson-example dl { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 6px 10px; margin: 8px 0 0; }
+    .lesson-example dt { color: var(--accent); font-weight: 700; }
+    .lesson-example dd { margin: 0; line-height: 1.5; }
+    .lesson-code { margin-top: 12px; max-width: 100%; overflow: auto; }
+    .lesson-code span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+    .lesson-code pre { margin: 0; padding: 12px; max-height: 180px; overflow: auto; background: rgba(127,227,176,0.06); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .lesson-more { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .lesson-more summary { cursor: pointer; color: var(--accent); font-weight: 700; }
+    .lesson-more-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 12px; }
+    .lesson-references { display: grid; gap: 8px; }
+    .lesson-references a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+    @media (max-width: 1280px) {
+      .lesson-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .lesson-controls, .coach-controls { grid-column: 1 / -1; }
+      .lesson-more-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+</style>
 </head>
 <body>
   <a class="skip-link" href="#main">跳到培训内容</a>
   <header class="trainer-header">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">A</span>
-      <div><strong>AIStudio 培训</strong><small>分层拓扑手册</small></div>
+      <div><strong>AIStudio 培训</strong><small>六团队协作手册</small></div>
     </div>
     <span class="simulation-badge">培训模拟 · 不连接真实数据</span>
     <div class="header-actions">
@@ -385,7 +410,7 @@
 
   <div class="trainer-layout">
     <aside class="course-sidebar" aria-label="课程目录">
-      <h2>课程目录 · 四部分 12 幕</h2>
+      <h2>课程目录 · 六团队 12 幕</h2>
       <div id="courseNav"></div>
       <div class="course-progress">
         <div class="progress-copy"><span>已学习</span><span id="progressText">1 / 12</span></div>
@@ -414,40 +439,65 @@
           </div>
           <div class="sim-stage" id="simStage">
             <div class="scene-viewport" id="sceneViewport">
-              <div class="scene-label"><strong id="sceneLabel">五件套体系</strong><span>分层拓扑 · 运行流转</span></div>
+              <div class="scene-label"><strong id="sceneLabel">六团队协作全景</strong><span>分层拓扑 · 运行流转</span></div>
               <canvas id="webglCanvas" role="img" aria-label="WebGL 三维课程站点与转场路径" hidden></canvas>
-              <svg id="topologySvg" role="img" aria-label="AIStudio 五层协作拓扑与任务证据流转" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid meet" hidden></svg>
+              <svg id="topologySvg" role="img" aria-label="AIStudio 六团队协作拓扑与任务证据流转" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid meet" hidden></svg>
               <div class="world" id="world">
                 <div class="grid-plane" aria-hidden="true"></div>
                 <svg class="scene-svg" id="sceneSvg" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="true"></svg>
                 <div id="sceneNodes"></div>
               </div>
             </div>
-            <span class="drag-hint">亮线表示当前课程的运行路径。点击圈选节点跟练</span>
+            <span class="drag-hint">亮线表示当前课程的运行路径。点击高亮节点跟练</span>
           </div>
           <aside class="coach" aria-label="当前步骤指引">
             <div class="coach-head">
-              <h1 id="coachTitle" data-pretext>设计｜五件套怎样协同</h1>
+              <h1 id="coachTitle" data-pretext>产品需求分析｜六团队怎样交接</h1>
               <p class="coach-summary" id="coachSummary" data-pretext></p>
             </div>
-            <section class="coach-section">
-              <h2>你要做什么</h2>
-              <div class="coach-action"><span class="action-number" id="actionNumber">1</span><p id="coachAction" data-pretext></p></div>
-            </section>
-            <section class="coach-section proof-box">
-              <h2>完成判据</h2>
-              <p id="coachProof" data-pretext></p>
-            </section>
-            <section class="coach-section coach-route">
-              <h2>真实产品入口</h2>
-              <p><code id="coachRoute">/app</code></p>
-            </section>
-            <div class="coach-controls">
-              <button class="ui-button primary" id="followButton" type="button" aria-pressed="false">开始跟练</button>
-              <button class="ui-button" id="restartButton" type="button">从头播放</button>
-              <button class="ui-button" id="nextCoachButton" type="button">下一幕</button>
-              <span class="mode-note" id="modeNote">自动播放中，点击圈选节点可直接前进</span>
+            <div class="lesson-grid">
+              <section class="coach-section lesson-inputs">
+                <h2>输入条件</h2>
+                <ul id="coachInputs"></ul>
+              </section>
+              <section class="coach-section lesson-steps">
+                <h2>操作步骤 <span class="action-number" id="actionNumber">1</span></h2>
+                <p class="lesson-goal" id="coachAction" data-pretext></p>
+                <ol id="coachSteps"></ol>
+              </section>
+              <section class="coach-section lesson-example">
+                <h2 id="exampleTitle"></h2>
+                <dl>
+                  <dt>背景</dt><dd id="exampleGiven"></dd>
+                  <dt>操作</dt><dd id="exampleWhen"></dd>
+                  <dt>应得结果</dt><dd id="exampleThen"></dd>
+                </dl>
+                <div class="lesson-code" id="coachCodeWrap" hidden>
+                  <span id="coachCodeLabel"></span>
+                  <pre><code id="coachCode"></code></pre>
+                </div>
+              </section>
+              <section class="coach-section coach-route">
+                <h2>真实产品入口</h2>
+                <p><code id="coachRoute">/app</code></p>
+              </section>
+              <div class="coach-controls">
+                <button class="ui-button primary" id="followButton" type="button" aria-pressed="false">开始跟练</button>
+                <button class="ui-button" id="restartButton" type="button">从头播放</button>
+                <button class="ui-button" id="nextCoachButton" type="button">下一幕</button>
+                <span class="mode-note" id="modeNote">自动播放中，点击高亮节点可直接前进</span>
+              </div>
             </div>
+            <details class="lesson-more" id="coachMore">
+              <summary>交付物、验收检查、常见误区与参考资料</summary>
+              <div class="lesson-more-grid">
+                <section><h2>本幕交付物</h2><ul id="coachDeliverables"></ul></section>
+                <section><h2>验收检查</h2><ul id="coachChecks"></ul></section>
+                <section><h2>常见误操作</h2><ul id="coachPitfalls"></ul></section>
+                <section><h2>对应手册</h2><div id="coachReferences" class="lesson-references"></div></section>
+              </div>
+              <section class="proof-box"><h2>整幕完成判据</h2><p id="coachProof" data-pretext></p></section>
+            </details>
           </aside>
           <div class="stage-footer">
             <button class="spatial-focus" id="spatialFocus" type="button"></button>
@@ -467,7 +517,7 @@
 
   <dialog id="courseDialog" aria-labelledby="courseDialogTitle">
     <div class="dialog-body">
-      <h2 id="courseDialogTitle">课程目录 · 四部分 12 幕</h2>
+      <h2 id="courseDialogTitle">课程目录 · 六团队 12 幕</h2>
       <div id="courseDialogNav"></div>
       <div class="dialog-actions"><button class="ui-button primary" id="closeCourseButton" type="button">返回培训</button></div>
     </div>
@@ -478,12 +528,22 @@
       <h2 id="helpTitle">培训页操作</h2>
       <ul>
         <li>自动播放：点击“暂停”可停在当前幕，速度可切换为 1×、1.5×、2×。</li>
-        <li>手动跟练：点击绿色圈选的目标节点，进入下一幕。</li>
+        <li>手动跟练：点击绿色高亮的目标节点，进入下一幕。</li>
         <li>拓扑视角：点击“显示全部流转”查看全部契约，点击“当前课程路径”只看本幕流向。按 R 可快速切换。</li>
         <li>键盘：空格播放或暂停，左右方向键切换场景，? 打开帮助。</li>
         <li>减少动态效果：跟随系统设置，也可点击顶部“动效”关闭动画。</li>
       </ul>
       <p>所有界面与数据均为培训模拟，不会修改真实任务、账号、审批或代码。</p>
+      <p>完整参考材料（本地只读）：</p>
+      <div class="dialog-actions" style="flex-wrap:wrap">
+        <a class="ui-button ghost" href="/aistudio-training-and-user-guide.md" target="_blank" rel="noopener">六团队培训手册</a>
+        <a class="ui-button ghost" href="/aistudio-feature-inventory.md" target="_blank" rel="noopener">全量功能清单</a>
+        <a class="ui-button ghost" href="/aistudio-operations-reference.md" target="_blank" rel="noopener">管理员运维参考</a>
+        <a class="ui-button ghost" href="/aistudio-design-document-guide.md" target="_blank" rel="noopener">设计文档导读</a>
+        <a class="ui-button ghost" href="/aistudio-design-document-index.md" target="_blank" rel="noopener">全部规格索引</a>
+        <a class="ui-button ghost" href="/aistudio-run25-simulation-case.md" target="_blank" rel="noopener">run25 真实推演案例</a>
+        <a class="ui-button ghost" href="/aistudio-swarm-yuan-developer-guide.md" target="_blank" rel="noopener">swarm-yuan 研发指南</a>
+      </div>
       <div class="dialog-actions"><button class="ui-button primary" id="closeHelpButton" type="button">知道了</button></div>
     </div>
   </dialog>
@@ -491,12 +551,14 @@
   <dialog id="completionDialog" aria-labelledby="completionTitle">
     <div class="dialog-body">
       <h2 id="completionTitle">已完成 12 幕流程导览</h2>
-      <p>你已经看过设计、实现、部署和使用四部分。下一步应在培训环境完成真实操作，不能用本模拟页代替实操验收。</p>
+      <p>你已经看过设计、实现、部署和使用六团队。下一步应在培训环境完成真实操作，不能用本模拟页代替实操验收。</p>
       <div class="completion-grid">
-        <div class="completion-item"><strong>设计</strong><span>说清五件套、质量门与证据</span></div>
-        <div class="completion-item"><strong>实现</strong><span>建卡、派发、编码与独立评审</span></div>
-        <div class="completion-item"><strong>部署</strong><span>服务、会签、UAT 与 G5</span></div>
-        <div class="completion-item"><strong>使用</strong><span>日常检索、评测与治理</span></div>
+        <div class="completion-item"><strong>产品需求分析</strong><span>Spec、AC 与 UAT 追溯</span></div>
+        <div class="completion-item"><strong>项目管理</strong><span>派工、质量门与发布复盘</span></div>
+        <div class="completion-item"><strong>研发</strong><span>swarm-yuan、IDE 与真实提交</span></div>
+        <div class="completion-item"><strong>测试</strong><span>G4、Eval 与独立评审</span></div>
+        <div class="completion-item"><strong>运维监控</strong><span>readiness、恢复与发布观察</span></div>
+        <div class="completion-item"><strong>安全合规及审计内控</strong><span>独立核验与整改复验</span></div>
       </div>
       <div class="dialog-actions">
         <button class="ui-button" id="printButton" type="button">打印完成清单</button>
@@ -525,10 +587,12 @@ var x0=["BN","BN","BN","BN","BN","BN","BN","BN","BN","S","B","S","WS","B","BN","
 
 
 const PARTS = [
-  { id: 'design', name: '设计', subtitle: '看懂系统与判据' },
-  { id: 'implementation', name: '实现', subtitle: '从任务到独立评审' },
-  { id: 'deployment', name: '部署', subtitle: '服务、权限与发布' },
-  { id: 'usage', name: '使用', subtitle: '日常交付与治理' },
+  { id: 'product', name: '产品需求分析', subtitle: 'Spec、AC 与可追溯验收' },
+  { id: 'project', name: '项目管理', subtitle: '派工、质量门与发布复盘' },
+  { id: 'development', name: '研发', subtitle: '目标技能与可审查交付' },
+  { id: 'testing', name: '测试', subtitle: 'G4、Eval 与独立评审' },
+  { id: 'operations', name: '运维监控', subtitle: 'readiness、恢复与发布观察' },
+  { id: 'audit', name: '安全合规及审计内控', subtitle: '独立核验与整改复验' },
 ]
 
 const node = (id, title, subtitle, x, y, options = {}) => ({
@@ -542,191 +606,411 @@ const edge = (from, to, flow = false, strong = false) => ({ from, to, flow, stro
 
 const SCENES = [
   {
-    id: 'design-architecture', part: 'design', title: '五件套怎样协同', short: '五件套体系', route: '/app', duration: 7600,
-    summary: '产品面负责给人看与操作，Matrix 负责通信，hermes agent 运行身份，Ycode 执行编码，swarm-yuan 提供项目技能。',
-    action: '点击圈选的 AIStudio 产品面，沿着连线说出其余四个组件各自承担什么工作。',
-    proof: '你能说明页面不是任务真值：任务以看板为准，审批以源系统记录为准，交付以提交和测试证据为准。',
-    focus: 'studio', target: '认识产品面',
-    nodes: [
-      node('need', '交付需求', '从人的目标开始', 10, 52, { kicker: 'INPUT', color: '#efc27a', small: true }),
-      node('studio', 'AIStudio 产品面', '看板 · 审批 · 沟通 · IDE · 治理', 35, 52, { kicker: 'PRODUCT', wide: true, z: 58, chips: ['统一入口', '写回权威系统'] }),
-      node('matrix', 'Matrix', '消息与房间协调', 66, 16, { kicker: 'COMMUNICATION', color: '#8bb8f6' }),
-      node('agent', 'hermes agent', '身份 · 网关 · 任务执行', 66, 51, { kicker: 'RUNTIME', z: 52 }),
-      node('ycode', 'Ycode', 'IDE 编码执行', 66, 84, { kicker: 'ENGINE', color: '#c2a9ef' }),
-      node('skill', 'swarm-yuan', '项目技能与门禁', 89, 51, { kicker: 'CAPABILITY', color: '#efc27a', small: true }),
+    id: 'product-overview', part: 'product', title: '从需求进入 15 步跨团队协作', short: '六团队协作全景', route: '/app', duration: 9000,
+    summary: '产品需求分析提供目标、范围、AC 与授权输入；沿主管、Studio、gateway、Kanban、worker/Ycode、独立证据和状态回流理解六团队交接，Matrix 只是可选协作分支。',
+    action: '从第 1 步跟踪到第 15 步，指出 3/4 的可选消息、7/9 的技能约束、13 的独立复审和 15 的人工升级。',
+    proof: '能说清任务、代码、审批和运行证据各自的权威来源，并能按任务 ID、commit 和证据锚对齐交接双方。',
+    focus: 'studio', target: '查看协作全景',
+    inputs: ['一份脱敏订单导出需求及至少 3 条 AC', '六角色名单和一张空证据索引'],
+    steps: [
+      '在 /app 定位培训任务并记录系统任务 ID，不使用聊天标题代替。',
+      '按 1-15 步填写发出者、接收者、产物和权威落点，单独标记 3/4 可选 Matrix、7/9 技能约束、13 独立复审、15 人工升级。',
+      '将任务 ID、真实 commit、测试报告、审批记录和运行证据填入索引；缺项写 missing/unobserved。',
+      '故意让测试 commit 与任务 commit 不一致，退回责任团队，并将发布裁决升级给人。',
+      '回查 Kanban、Git、审批源系统和 RUN 证据目录，确认没有使用页面投影代替权威事实。',
     ],
-    edges: [edge('need', 'studio', true, true), edge('studio', 'matrix', true), edge('studio', 'agent', true, true), edge('studio', 'ycode', true), edge('agent', 'skill', true)],
+    example: {
+      title: '订单导出：空结果、失败与取消',
+      given: 'AC-1 两笔订单导出表头+两行 CSV；AC-2 零订单仅表头；AC-3 存储失败不得成功；AC-4 取消后不得继续写文件。',
+      when: '把四项 AC 映射到任务、代码、G4、审批和发布回执，并制造一次测试 commit 不一致。',
+      then: '形成 15 步交接表和五类证据索引；mismatch 被退回，人工裁决有源记录。',
+    },
+    deliverables: ['15 步跨团队交接表', '任务、代码、测试、审批、运行五类证据索引', '一次 mismatch 退回与人工升级记录'],
+    checks: ['Kanban、Git、审批源系统和 RUN 目录均未被页面投影替代', 'Matrix 缺席不阻断任务真值交接', '交接双方能按任务 ID 和 commit 找到同一对象'],
+    pitfalls: ['把 Agent 自述完成或看板 done 当端到端交付', '把可选消息、技能文件存在和独立复审合并成“系统自动验收”'],
+    references: [{ label: '六团队手册 §1.2-1.4', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('studio', '产品需求与授权', '目标 · 范围 · AC', 12, 28, { kicker: 'INPUT' }),
+      node('gateway', 'gateway / orchestrator', '路由与派发', 39, 28, { kicker: 'ROUTE' }),
+      node('worker', 'worker + Ycode', '技能约束下的执行', 39, 73, { kicker: 'BUILD' }),
+      node('evidence', '独立证据与回流', '复审 · 测试 · 审批', 67, 73, { kicker: 'PROOF' }),
+      node('human', '人工升级', '关键判断与发布裁决', 67, 28, { kicker: 'HUMAN' }),
+    ],
+    edges: [edge('studio', 'gateway', true, true), edge('gateway', 'worker', true, true), edge('worker', 'evidence', true, true), edge('evidence', 'human', true, true)],
   },
   {
-    id: 'design-gates', part: 'design', title: '六道质量门控制什么', short: '六阶段质量门', route: '/app/stage/reqs', duration: 8000,
-    summary: '质量门不是页面装饰。G1 到 G6 分别控制需求冻结、架构评审、编码质量、独立测试、发布准出和复盘。',
-    action: '从 G1 沿流动标记看到 G6，再点击 G1，确认需求冻结先于开发。',
-    proof: '你能解释“已流转”不等于“已完成”，G5 批准也不能用一张 done 任务卡代替。',
-    focus: 'g1', target: '从 G1 开始',
-    nodes: [
-      node('g1', 'G1 需求冻结', '范围与验收标准上锁', 12, 28, { kicker: 'REQUIREMENT', color: '#efc27a', small: true }),
-      node('g2', 'G2 架构评审', '设计先于开发', 34, 28, { kicker: 'DESIGN', small: true }),
-      node('g3', 'G3 编码门禁', '提交与自测证据', 57, 28, { kicker: 'CODE', color: '#c2a9ef', small: true }),
-      node('g4', 'G4 独立测试', '验证者不看自报', 79, 28, { kicker: 'TEST', color: '#8bb8f6', small: true }),
-      node('g5', 'G5 发布准出', 'UAT 与人工批准', 57, 76, { kicker: 'RELEASE', color: '#ef9b96', z: 52 }),
-      node('g6', 'G6 复盘', '问题进入下一轮', 25, 76, { kicker: 'RETRO', small: true }),
+    id: 'product-spec-design', part: 'product', title: '冻结 Spec、AC 与 G1/G2 设计', short: 'Spec 与设计冻结', route: '/app/stage/reqs', duration: 8500,
+    summary: 'G1 核对范围、非目标、依赖、影响面、涉敏评估和至少三条可判 AC；G2 核对职责、接口、爆炸半径、备选取舍及 MAET 验证计划。',
+    action: '沿需求、验收规则和人工升级路径检查 G1/G2；模拟一次冻结后变更，重新进入评审和冻结。',
+    proof: 'G1/G2 记录对应当前对象；AC 能追溯到设计、任务、测试和 UAT，Termination 不缺席，旧批准不被冻结后变更沿用。',
+    focus: 'studio', target: '冻结需求与设计',
+    inputs: ['订单导出取消的原始需求及范围外清单', '既有实现、依赖清单和一名非作者评审人'],
+    steps: [
+      '在 spec 写全目标、范围、非目标、依赖、接口、验收、风险和验证八块。',
+      '把 AC 改成可观察断言，并补齐 Main、Alternative、Exception、Termination。',
+      '在 /app/stage/reqs 核对影响面、涉敏评估和范围外清单，处理缺项后执行 G1 冻结。',
+      '在 /app/stage/design 写职责、接口、数据、状态、爆炸半径和至少两个备选，形成 G2 结论。',
+      '建立 AC → 设计组件 → 任务 → 测试 → UAT 证据追溯表；冻结后增加变更时重新评审和冻结。',
     ],
-    edges: [edge('g1', 'g2', true, true), edge('g2', 'g3', true), edge('g3', 'g4', true), edge('g4', 'g5', true), edge('g5', 'g6', true)],
+    example: {
+      title: 'AC-4：取消订单导出的 Termination',
+      given: '备选 A 后端生成临时文件；备选 B 前端生成 Blob。若需服务端审计选 A，还必须评估临时文件清理和存储失败。',
+      when: 'Given 导出正在运行；When 用户取消；Then 终态为 cancelled，不继续写文件、不返回成功下载凭证。',
+      then: '形成含 MAET 的冻结 spec、G2 备选取舍和 AC 全链追溯矩阵。',
+      code: { label: 'AC-4 / Termination', content: 'Given 导出任务正在运行\nWhen 用户点击取消\nThen 任务终态=cancelled\nAnd 不继续写 CSV\nAnd 不返回成功下载凭证' },
+    },
+    deliverables: ['含 MAET 的冻结 spec 与 G1 记录', '含备选取舍和爆炸半径的 G2 记录', 'AC 全链追溯矩阵'],
+    checks: ['至少 3 条 AC 均能独立判定', 'Termination 覆盖取消、中断、超时后的资源与终态', '冻结后变更没有沿用旧批准'],
+    pitfalls: ['先建卡编码，再倒补 AC 和设计', '用业务地图词面命中代替业务采纳判断'],
+    references: [{ label: '六团队手册 §2、§17.3', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('studio', 'G1 需求冻结', '范围 · AC · 影响面', 12, 28, { kicker: 'G1' }),
+      node('g2', 'G2 设计评审', '接口 · 爆炸半径 · 备选', 39, 28, { kicker: 'G2' }),
+      node('maet', 'MAET 测试设计', '主路径 · 替代 · 异常 · 终止', 39, 73, { kicker: 'TEST DESIGN' }),
+      node('uat', 'UAT 需求追溯', 'AC × 证据 × 判词', 67, 73, { kicker: 'UAT' }),
+    ],
+    edges: [edge('studio', 'g2', true, true), edge('g2', 'maet', true, true), edge('maet', 'uat', true, true)],
   },
   {
-    id: 'design-evidence', part: 'design', title: '任务完成要有证据', short: '任务与证据模型', route: '/app/board', duration: 7600,
-    summary: '一张任务卡先写清目标、范围、非目标和验收标准。完成时再关联提交、自测与独立评审，不能用聊天记录代替。',
-    action: '先读左侧任务契约，再点击“验收标准”，看证据怎样汇入完成声明。',
-    proof: '你能说出任务卡号、真实提交号、测试结果和审批记录分别证明什么。',
-    focus: 'acceptance', target: '核对验收标准',
-    nodes: [
-      node('scope', '目标与范围', '包含非目标', 12, 24, { kicker: 'CONTRACT', color: '#efc27a' }),
-      node('acceptance', '验收标准', '至少三条可判标准', 12, 69, { kicker: 'ACCEPTANCE', z: 56, chips: ['可观察', '可判定'] }),
-      node('task', '任务卡', '负责人 · 工作区 · 状态', 39, 47, { kicker: 'TASK', wide: true, z: 62, chips: ['t_train_01', 'worktree'] }),
-      node('commit', '真实提交', '代码和产物可反查', 67, 18, { kicker: 'COMMIT', color: '#c2a9ef' }),
-      node('test', '测试结果', '命令与输出可复跑', 67, 51, { kicker: 'TEST', color: '#8bb8f6' }),
-      node('review', '独立评审', '执行人与评审人不同', 67, 83, { kicker: 'REVIEW' }),
-      node('done', '完成声明', '证据先于声明', 91, 51, { kicker: 'DONE', small: true, customClass: 'approved-stamp' }),
+    id: 'project-dispatch', part: 'project', title: '开工派工先核 RACI、依赖与容量', short: '派工与真实认领', route: '/app/board', duration: 8500,
+    summary: '先分类 ready、running、blocked、review，再核对 R/A、parent、工作区、板级/home 围栏及容量；routed 和催办都不是 worker 执行证据。',
+    action: '选择一张 ready 卡，模拟一次 dispatcher；随后核对 claimed、run、worker 日志，并把催办的路由 decision 与真实评论/房间通知分开。',
+    proof: '能解释“谁能领、为何能领、何时能领”；没有把 routed、“催办已路由”或手改 running 当作真实执行，blocked 必须先解除真实原因。',
+    focus: 'dispatcher', target: '触发 dispatcher',
+    inputs: ['一张 ready 和一张 blocked 培训卡，均有 AC、负责人和任务 ID', 'board/home 围栏、实际并发配置及任务评论或培训房间'],
+    steps: [
+      '在 /app/board 分类 ready/running/blocked/review，另记 partial/stale/error 和源缺席。',
+      '对 ready 卡核对结构化 R/A、已完成 parent、worktree、DoD 和 assignee 完整名称。',
+      '核对 board.json profiles/profile_scope、home 级 dispatch_profiles 与真实容量；未配置 board_concurrency 时按默认每板 1 理解。',
+      '只触发一次 dispatcher，分别记录 routed、后续 claimed、running run 和 worker 日志/PID/heartbeat。',
+      '对 blocked 卡保存催办 decision，再经任务评论或真实房间取得接收回复；补齐真实输入后 unblock 并回读实际阶段。',
     ],
-    edges: [edge('scope', 'task', true), edge('acceptance', 'task', true, true), edge('task', 'commit', true), edge('task', 'test', true), edge('task', 'review', true), edge('commit', 'done'), edge('test', 'done'), edge('review', 'done', true, true)],
+    example: {
+      title: 'PM-BLOCK-01：已经 routed，但没有 claimed',
+      given: '阻塞原因是缺少培训测试账号；催办 decision=assignee，Matrix 已发送=否，blocked 已解除=否。',
+      when: '用任务评论请求提供账号，要求责任人回复“任务 ID+已接收”；随后检查认领锁、围栏和最近失败事件。',
+      then: '形成“路由 decision／真实通知／接收证据”三栏记录；没有回复前不得登记 running 或解除阻塞。',
+    },
+    deliverables: ['ready 派工核对表及真实 claim/run 证据', '路由、通知、接收证据三栏记录', 'blocked 原因解除和阶段恢复记录'],
+    checks: ['routed 没有被登记成 worker 已启动', '通知有真实接收证据而非本地提示', '未手改 running、未删除依赖或围栏', 'reclaim/reassign 只在日志确认后使用'],
+    pitfalls: ['反复全板 Nudge 或批量 unblock 代替查明原因', '把“催办已路由”当消息已经送达'],
+    references: [{ label: '六团队手册 §8、§17.2', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('task', '任务契约', 'RACI · parent · 工作区', 12, 28, { kicker: 'CONTRACT' }),
+      node('fence', '围栏与容量', 'board/home · 单板/profile', 39, 28, { kicker: 'CAPACITY' }),
+      node('dispatcher', 'dispatcher', '只调度，不是执行者', 39, 73, { kicker: 'DISPATCH' }),
+      node('worker', 'claimed / running', '真实认领与工作信号', 67, 73, { kicker: 'CLAIMED' }),
+      node('blocked', 'blocked', '先补真实输入', 67, 28, { kicker: 'BLOCKED' }),
+    ],
+    edges: [edge('task', 'fence', true, true), edge('fence', 'dispatcher', true, true), edge('dispatcher', 'worker', true, true), edge('blocked', 'task', true)],
   },
   {
-    id: 'implementation-task', part: 'implementation', title: '建卡并用聊天澄清', short: '建卡与统一聊天', route: '/app/board?new=1', duration: 8200,
-    summary: '聚合看板只保留一个培训板才能建卡。统一聊天用于澄清需求，需要执行和追踪的工作仍要落到任务卡。',
-    action: '点击“创建任务”，模拟生成任务卡，再用 @worker-coder 澄清验收标准。',
-    proof: '任务卡有负责人、正确工作区和至少三条可判验收标准；需要保留产物时没有使用 scratch。',
-    focus: 'create', target: '创建任务',
-    nodes: [
-      node('board', '培训看板', '只选中一个板', 13, 25, { kicker: 'BOARD', color: '#8bb8f6' }),
-      node('create', '＋ 创建任务', 'triage → ready', 37, 25, { kicker: 'ACTION', wide: true, z: 62, chips: ['负责人', 'worktree'] }),
-      node('task', 't_train_01', '整理登录页验收清单', 37, 72, { kicker: 'NEW TASK', wide: true, customClass: 'message-in', chips: ['3 条标准', '非目标'] }),
-      node('chat', '统一身份聊天', '@worker-coder', 70, 25, { kicker: 'BOT CHAT', color: '#c2a9ef', wide: true }),
-      node('reply', '身份回复', '复述范围，不修改文件', 70, 72, { kicker: 'REPLY', color: '#8bb8f6', wide: true, customClass: 'message-in' }),
+    id: 'project-release-retro', part: 'project', title: '质量门、UAT/G5 与 G6 收口', short: '质量门与发布复盘', route: '/app/stage/accept', duration: 8800,
+    summary: 'G1—G6 各有当前证据、裁决人和 FAIL 动作；任务 done、UAT、G5、实际发布是不同事实，G6 要把问题转成有 owner、期限和验收判据的行动项。',
+    action: '用发布案例核对测试、当前 commit、回滚、灰度、HumanGate 和 UAT/G5，作放行或冻结决定，再登记一条 G6 行动项。',
+    proof: '日常与 SIM 写面没有混用；实际发布有回执和观察责任；GAP、unknown、零测试未被豁免成 PASS，retro_done 没被 report_done 替代。',
+    focus: 'g5', target: '核对发布与复盘',
+    inputs: ['当前 commit、构建、自测、G4/G4-E、评审、回滚和 HumanGate 材料', 'run25 报告摘录及一条待登记问题单'],
+    steps: [
+      '先标明日常还是 SIM；日常 UAT/G5 与 SIM 的 release-gate/uat-verdicts 台账不得混写。',
+      '按 G1-G6 登记当前证据、裁决人和 FAIL 动作，特别检查零测试、unknown 和反证。',
+      '核对同 commit 构建、依赖、具体回滚、灰度、用户说明和批准；任一 G5 硬项失败即冻结。',
+      '分开形成 UAT 判词与 G5 结论；SIM 严格先 G5 后 UAT，conditional 写说明，pendingAck 不算真人认可。',
+      '作放行或冻结决定；放行后另取真实发布回执、观察负责人和复验结果。',
+      '将问题登记为已修/观察/延后，写 owner、期限和验收判据；分别回读 retro_done 与 report_done。',
     ],
-    edges: [edge('board', 'create', true, true), edge('create', 'task', true, true), edge('task', 'chat', true), edge('chat', 'reply', true)],
+    example: {
+      title: 'run25：全过与缺口并存',
+      given: 'G4-E=GAP，G5=READY-GATE-PASS，UAT=7/7；posture=standard，open compensation=65，呈现覆盖 13/15。',
+      when: '按规则登记 GAP 后决定放行或冻结，并把 run26 MP unit 85 红标为后续新时点。',
+      then: '形成发布决策单、日常/SIM 对照表和一条完整 G6 行动项；不回填历史成绩。',
+    },
+    deliverables: ['放行或冻结的发布决策单', '日常/SIM 写面及 UAT/G5/真实发布对照表', '完整 G6 行动项和 DISP 记录'],
+    checks: ['日常 UAT/G5 没有写 SIM 台账', 'done、UAT、G5、实际发布分别取证', 'GAP 没有豁免成 PASS', '报告快照、补证和新债没有混成同一时点'],
+    pitfalls: ['把 approved 或资产上传直接写成 released 和观察完成', '用 report_done 替代 retro_done'],
+    references: [{ label: 'run25 推演案例 §1-§6', href: '/aistudio-run25-simulation-case.md' }],
+    nodes: [
+      node('g4', '测试与独立评审', '当前 commit 与证据', 12, 28, { kicker: 'VERIFY' }),
+      node('uat', '日常 UAT', '任务/评审级判定', 39, 28, { kicker: 'DAILY UAT' }),
+      node('g5', '日常 G5 / SIM G5', '不同写面与状态机', 67, 28, { kicker: 'G5' }),
+      node('release', '真实发布与观察', '回执 · 观察 · 回滚', 67, 73, { kicker: 'RELEASE' }),
+      node('retro', 'G6 行动项', 'owner · 期限 · 验收', 39, 73, { kicker: 'RETRO' }),
+    ],
+    edges: [edge('g4', 'uat', true), edge('g4', 'g5', true), edge('uat', 'release', true), edge('g5', 'release', true, true), edge('release', 'retro', true, true)],
   },
   {
-    id: 'implementation-dispatch', part: 'implementation', title: '任务从 ready 流向 running', short: '派发与 IDE 执行', route: '/app/board', duration: 8500,
-    summary: 'dispatcher 只负责调度，worker 认领后任务才进入 running。催办只发送消息，不会解除阻塞。',
-    action: '点击 dispatcher，观察任务卡跨列移动，再沿连线进入 IDE 查看工作区、变更和测试。',
-    proof: '你能在真实看板核对 worker 认领记录，不会用人工修改 running 冒充执行。',
-    focus: 'dispatcher', target: 'Nudge dispatcher',
-    nodes: [
-      node('ready', 'READY', 't_train_01 · 待认领', 12, 30, { kicker: 'COLUMN', color: '#8bb8f6', wide: true }),
-      node('dispatcher', 'dispatcher', '触发一次调度', 39, 30, { kicker: 'DISPATCH', z: 66, chips: ['不是执行者'] }),
-      node('running', 'RUNNING', 'worker-coder 已认领', 67, 30, { kicker: 'CLAIMED', wide: true, z: 54, customClass: 'task-flight', chips: ['t_train_01'] }),
-      node('ide', 'IDE 工作区', '任务 · 文件 · 终端 · 变更', 67, 79, { kicker: 'YCODE', color: '#c2a9ef', wide: true, lines: 3 }),
-      node('test', '自测通过', '保留命令与输出', 38, 79, { kicker: 'VERIFY', customClass: 'message-in' }),
+    id: 'development-swarm', part: 'development', title: 'swarm-yuan 目标技能必须先于编码', short: 'swarm-yuan 技能先行', route: '/app/ide', duration: 9500,
+    summary: 'swarm-yuan 是项目技能生成器，不是编码引擎；它生成 <项目>-dev，worker 先准备目标技能，再经 ACP 把任务上下文和 cwd 交给 Ycode。Step 1-13 与日常九节点不能混用。',
+    action: '点击高亮的 swarm-yuan，沿“生成器 → 目标技能 → worker → ACP → Ycode”检查；分别确认 active、宿主发现和本次任务实际读取。',
+    proof: '能拿出当次 Skill 调用、ACP cwd、测试和审查证据；不会把生成骨架、技能被发现或门禁全绿当作本次编码已受约束或业务已正确。',
+    focus: 'swarm', target: '检查项目技能',
+    inputs: ['受信任培训仓库、冻结 spec 和带 worktree 的任务卡', '目标技能 activation、宿主发现、当次调用和 ACP 日志入口'],
+    steps: [
+      '先判断是生成技能还是使用技能；日常开发使用既有 <项目>-dev，不重新运行生成器。',
+      '核对六段目录和 strict activation report；仅生成骨架或手工改状态字不算 active。',
+      '用 --list-gates 查看实际门禁，再经批准执行带 GATE_RUNS_DIR 的 --all-full，记录真实输出。',
+      '在 ACP 编码前取得当次 Skill 调用证据，证明 worker 先准备技能，再组织任务上下文。',
+      '核对 ACP cwd 等于 Kanban worktree，并记录实际 engine_bin 和版本日志；provider=zcode 本身不算身份证据。',
+      '汇总 FAIL 和 SKIPPED；缺 active、实际加载或真实 ACP 回合任一证据时，该链记未验证。',
     ],
-    edges: [edge('ready', 'dispatcher', true, true), edge('dispatcher', 'running', true, true), edge('running', 'ide', true), edge('ide', 'test', true)],
+    example: {
+      title: 'DEV-SWARM-01：技能是否真的进入编码',
+      given: '目标技能=aistudio-dev（必须重新核当前实例，不能引用历史 active 记录）；engine_bin 以当次日志实值为准。',
+      when: '执行 Skill 调用 → ACP cwd=<任务 worktree> → Ycode 实际版本 → 测试/审查，并列出 precheck FAIL/SKIPPED。',
+      then: '形成三态证据表、ACP/Ycode 回合记录和 gate-runs 判读表；缺任一硬证据就停止完成声明。',
+      code: { label: '受信任目标技能根目录下的检查', content: 'bash scripts/precheck.sh --list-gates\nGATE_RUNS_DIR=.swarm-yuan/gate-runs bash scripts/precheck.sh --all-full' },
+    },
+    deliverables: ['active、宿主发现、实际读取三态证据表', 'ACP cwd、Ycode 身份及真实回合记录', 'gate-runs 索引和 FAIL/SKIPPED 判读表'],
+    checks: ['安装、骨架、strict active、宿主发现、实际读取分别核验', 'Step 1-13 与日常九节点没有混号', 'TEST/BUILD/MUTATION_CMD 来源受信任', '门禁通过没有替代业务测试和独立审查'],
+    pitfalls: ['每个需求重新运行生成器，或拿 draft 骨架直接编码', '把技能被发现、ACP 回复成功或 precheck 全绿当成技能已生效和业务正确'],
+    references: [{ label: 'swarm-yuan 研发指南 §3-§9', href: '/aistudio-swarm-yuan-developer-guide.md' }],
+    nodes: [
+      node('swarm', 'swarm-yuan 生成器', 'Step 1-13 · 不是编码引擎', 12, 28, { kicker: 'GENERATOR', color: '#238b5c' }),
+      node('skill', '<项目>-dev 目标技能', '六段目录 · strict active', 39, 28, { kicker: 'TARGET SKILL', color: '#238b5c' }),
+      node('worker', 'Hermes worker', '先准备技能，再组织上下文', 39, 73, { kicker: 'WORKER' }),
+      node('acp', 'ACP', '任务上下文 + cwd', 67, 73, { kicker: 'ACP' }),
+      node('ycode', 'Ycode', '实际读取技能并编码', 67, 28, { kicker: 'YCODE' }),
+    ],
+    edges: [edge('swarm', 'skill', true, true), edge('skill', 'worker', true, true), edge('worker', 'acp', true, true), edge('acp', 'ycode', true, true), edge('skill', 'ycode', true, true)],
   },
   {
-    id: 'implementation-review', part: 'implementation', title: '独立评审后才完成', short: '独立评审', route: '/app/board · review', duration: 7800,
-    summary: '研发提交自测证据后进入 review。另一名评审人查看变更，选择批准或打回；批准后还要填写完成总结。',
-    action: '点击独立评审人，模拟批准，观察任务进入 done 并生成证据包。',
-    proof: '审批记录和状态迁移都已核对，评审人与执行人不同，完成总结能反查提交与测试。',
-    focus: 'reviewer', target: '独立评审',
-    nodes: [
-      node('changes', '查看变更', '2 个文件 · 测试输出', 12, 25, { kicker: 'DIFF', color: '#c2a9ef', wide: true, lines: 3 }),
-      node('reviewer', '独立评审人', '不是执行者', 39, 25, { kicker: 'REVIEWER', z: 62 }),
-      node('approve', '批准', '先记审批，再迁移状态', 66, 25, { kicker: 'APPROVE', customClass: 'approved-stamp' }),
-      node('done', 'DONE', '完成总结已填写', 66, 76, { kicker: 'STATUS', wide: true, customClass: 'message-in' }),
-      node('evidence', '交付证据包', '卡号 · 提交 · 测试 · 审批', 37, 76, { kicker: 'EVIDENCE', wide: true, chips: ['4 项可反查'] }),
+    id: 'development-delivery', part: 'development', title: 'IDE 交付留下提交、自测与评审锚', short: 'IDE 与可审查交付', route: '/app/ide', duration: 8500,
+    summary: '在正确任务、worktree 和分支中按冻结设计编码，保留真实测试输出和窄而完整的 commit；研发完成声明不替代独立评审、状态迁移及后续发布。',
+    action: '核对任务 ID、cwd、分支和 diff，运行目标测试，记录退出码和真实 commit，再交给非实现者评审。',
+    proof: '任务卡号与真实提交号双凭证齐全，测试可复跑，完成总结能指向剩余风险；批准和状态迁移分别回读，分支测试与主干回归不互相替代。',
+    focus: 'commit', target: '形成真实提交',
+    inputs: ['已冻结 spec/AC、正确任务卡和隔离 worktree', '可运行的项目测试配置及一名非实现者评审人'],
+    steps: [
+      '从任务卡进入 IDE，核对任务 ID、cwd、分支、RACI 和会话，确认没有串卡。',
+      '从最新主干建立 feature 分支并记录基线；测试和实现留在同一分支。',
+      '先写或更新测试，再按复用阶梯实现；发现设计不成立时退回 G2，不在代码中扩范围。',
+      '在目标 commit 运行测试与适用门禁，保存命令、退出码和关键输出；再执行 git diff --check。',
+      '检查 diff 只含任务变更，形成真实 commit 和完成总结，由非实现者绑定当前 commit 评审。',
+      '批准后按授权合入，另在 main 执行全量回归；需要 DoD receipt 时提交证据路径、sha256 和 TAP/JUnit 计数。',
     ],
-    edges: [edge('changes', 'reviewer', true, true), edge('reviewer', 'approve', true, true), edge('approve', 'done', true), edge('done', 'evidence', true, true)],
+    example: {
+      title: '订单导出取消：从实现到证据',
+      given: '交付对象为 AC-4；期望取消后无新增 CSV、无成功下载凭证、终态 cancelled。',
+      when: '运行取消路径测试并保存输出，再提交真实 commit 和完成总结，交给非实现者评审。',
+      then: '形成 commit、可审查 diff、自测、review-record；receipt 只重算证据，不替研发复跑测试。',
+      code: { label: '提交前核对', content: 'git rev-parse HEAD\ngit diff --check\nbash scripts/precheck.sh --all' },
+    },
+    deliverables: ['真实 commit 和可审查 diff', '目标 commit 上的自测输出', '非实现者 review-record 与完成总结', '适用时的 receipt、merge commit 和 main 回归记录'],
+    checks: ['测试实跑对象与提交对象一致且不是零用例空跑', '评审 actor 不同于实现者，批准和状态迁移分别回读', '分支测试与 main 回归都完成', '推送与合入有独立授权'],
+    pitfalls: ['用测试文件存在或 Agent 自述代替真实输出', '使用 --no-verify 绕过守门，或派发后改 AC 不恢复原契约'],
+    references: [{ label: '六团队手册 §5、§17.1', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('ide', 'IDE / worktree', '任务 · 分支 · diff', 12, 28, { kicker: 'IDE' }),
+      node('test', '真实自测', '命令 · 退出码 · 输出', 39, 28, { kicker: 'TEST' }),
+      node('commit', '真实 commit', '窄而完整 · 可回滚', 67, 28, { kicker: 'COMMIT' }),
+      node('review', '独立审查', '非实现者 · review-record', 39, 73, { kicker: 'REVIEW' }),
+      node('main', 'main 合入与回归', '分支全绿后再验主干', 67, 73, { kicker: 'MAIN' }),
+    ],
+    edges: [edge('ide', 'test', true, true), edge('test', 'commit', true, true), edge('commit', 'review', true, true), edge('review', 'main', true, true)],
   },
   {
-    id: 'deployment-services', part: 'deployment', title: '部署先核对服务拓扑', short: '服务与启动顺序', route: '127.0.0.1 · localhost', duration: 8500,
-    summary: '页面学习只需启动培训页。真实实操再启动 8647 后端、8649 前端、8650 网关和 3030 Ycode，并显式指定培训治理仓。',
-    action: '点击网关，沿服务连线检查端口和依赖。真实组织练习前，必须核对 GOVERNANCE_REPO 指向培训仓。',
-    proof: '服务只绑定预期地址，网关健康检查通过，治理仓不是生产仓；本培训页本身不需要这些服务。',
-    focus: 'gateway', target: '检查网关',
-    nodes: [
-      node('web', 'Web 前端', ':8649', 12, 23, { kicker: 'BROWSER', color: '#8bb8f6' }),
-      node('server', 'Koa 后端', ':8647', 38, 23, { kicker: 'SERVER', z: 52 }),
-      node('gateway', 'hermes 网关', ':8650 · profiles', 65, 23, { kicker: 'GATEWAY', z: 66, chips: ['health'] }),
-      node('ycode', 'Ycode', ':3030 · WebSocket', 65, 76, { kicker: 'ENGINE', color: '#c2a9ef' }),
-      node('matrix', 'Matrix', '独立部署', 91, 23, { kicker: 'SERVICE', color: '#8bb8f6', small: true }),
-      node('repo', '培训治理仓', 'GOVERNANCE_REPO', 37, 76, { kicker: 'GIT', color: '#efc27a', wide: true }),
+    id: 'testing-g4-review', part: 'testing', title: 'G4 独立测试与独立评审', short: 'G4 与独立评审', route: '/app/stage/build?tab=quality', duration: 8500,
+    summary: '研发自测、G4 独立测试、独立代码评审是三件事；测试者基于当前 commit 独立执行 MAET 路径，缺陷完成“报—修—验”，评审另核设计、权限和回滚。',
+    action: '核对实跑 commit 与基线同祖，执行正常、替代、异常和终止路径，建立缺陷闭环，再核对评审 actor 与实现者不同。',
+    proof: '测试报告、缺陷终态和当前 commit 可反查；测试者/评审者与写码者不同，系统存在 verdict 或测试文件存在不等于独立通过。',
+    focus: 'g4', target: '执行独立验证',
+    inputs: ['发布候选 commit、冻结 AC/设计和研发自测材料', '与写码者不同的测试者和代码评审人'],
+    steps: [
+      '核对实跑 commit 与发布基线同祖，记录测试者、评审者和实现者身份。',
+      '按 AC 独立执行 Main、Alternative、Exception、Termination，保留实际输出。',
+      '对每个缺陷建立“报→修→验”，修复后记录新 commit 并独立复验，原失败证据继续保留。',
+      '评审人另查设计符合性、非目标、权限、数据、安全和回滚，不以测试绿替代代码审查。',
+      '作批准或 request_changes；修复后复验，并分别回读审批历史和任务状态。',
     ],
-    edges: [edge('web', 'server', true, true), edge('server', 'gateway', true, true), edge('gateway', 'matrix', true), edge('server', 'ycode', true), edge('server', 'repo', true, true)],
+    example: {
+      title: 'D-01：取消后仍生成下载凭证',
+      given: 'Termination 路径：取消订单导出后仍生成 CSV 并返回下载凭证。',
+      when: '报=保存原 commit、请求和文件；修=记录修复 commit；验=非写码者在新 commit 重跑取消路径。',
+      then: '确认无文件、无凭证、终态 cancelled；G4 报告与独立评审 actor 都可反查。',
+    },
+    deliverables: ['绑定当前 commit 的 G4 MAET 测试报告', '缺陷报修验闭环记录', '独立代码评审结论及发现项处置'],
+    checks: ['研发自测、G4 和独立代码评审没有互替', 'verdict 绑定当前 commit 且 actor 不是实现者', 'IDE 本地标记、聊天 verdict 或 director-proxy 没有算作真人批准'],
+    pitfalls: ['研发自己重跑一次就同时填写 G4 和独立评审通过', '修复后只口头确认，不在新 commit 复测原缺陷'],
+    references: [{ label: '六团队手册 §6-§7', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('commit', '当前 commit', '与发布基线同祖', 12, 28, { kicker: 'BASELINE' }),
+      node('g4', 'G4 独立测试', 'MAET · 报修验闭环', 39, 28, { kicker: 'G4' }),
+      node('defect', '缺陷闭环', '报 → 修 → 验', 39, 73, { kicker: 'DEFECT' }),
+      node('review', '独立代码评审', 'actor 不同于实现者', 67, 73, { kicker: 'REVIEW' }),
+    ],
+    edges: [edge('commit', 'g4', true, true), edge('g4', 'defect', true, true), edge('defect', 'review', true, true)],
   },
   {
-    id: 'deployment-cosign', part: 'deployment', title: '关键治理由两个人确认', short: '组织与双人会签', route: '/app/stage/setup?tab=org', duration: 8000,
-    summary: '组织保存会直接提交到治理仓。修改已有 admin 行时，super_admin 发起人提交会签，另一名编制内 admin 或审计人员裁决。',
-    action: '点击第二会签人，模拟批准。注意第二人不能是发起人，首次空编制加入 admin 行有建编豁免。',
-    proof: '治理仓路径正确，第二人与发起人不同，组织提交和会签记录都可反查。',
-    focus: 'approver', target: '第二人会签',
-    nodes: [
-      node('initiator', '发起人', 'super_admin 应用角色', 12, 28, { kicker: 'INITIATOR', color: '#efc27a' }),
-      node('change', 'admin 行变更', '系统拦截并生成会签单', 38, 28, { kicker: 'CHANGE', wide: true }),
-      node('approver', '第二会签人', '编制内 admin 或审计', 66, 28, { kicker: 'CO-SIGN', z: 66 }),
-      node('commit', '治理仓提交', '组织变更与会签记录', 66, 78, { kicker: 'COMMIT', wide: true, customClass: 'message-in' }),
-      node('audit', '审计留痕', '操作人 · 对象 · 时间', 36, 78, { kicker: 'AUDIT', color: '#8bb8f6' }),
-    ],
-    edges: [edge('initiator', 'change', true, true), edge('change', 'approver', true, true), edge('approver', 'commit', true), edge('commit', 'audit', true)],
-  },
-  {
-    id: 'deployment-release', part: 'deployment', title: 'UAT 与 G5 决定能否发布', short: '验收与发布准出', route: '/app/stage/accept', duration: 8200,
-    summary: '任务 done、UAT 通过和 G5 批准是不同事实。发布前要核对需求追溯、测试证据、回滚安排与人工批准。',
-    action: '点击 G5，模拟人工准出，观察发布节点进入观察窗。',
-    proof: 'UAT 每条判定都有结果，G5 裁决留在源系统，发布后还有观察与复验。',
-    focus: 'g5', target: 'G5 人工准出',
-    nodes: [
-      node('uat', 'UAT 判定', '通过 · 有条件通过 · 不通过', 12, 25, { kicker: 'ACCEPTANCE', color: '#8bb8f6', wide: true }),
-      node('trace', '需求追溯', '标准 → 用例 → 测试', 12, 76, { kicker: 'TRACE' }),
-      node('human', 'HumanGate', '前置批准记录', 39, 25, { kicker: 'DECISION', color: '#efc27a' }),
-      node('g5', 'G5 发布准出', '人工核对并批准', 66, 25, { kicker: 'RELEASE GATE', z: 66 }),
-      node('release', '发布', '不是流程终点', 66, 78, { kicker: 'RELEASE', customClass: 'approved-stamp' }),
-      node('observe', '观察与复验', '异常则回流处置', 37, 78, { kicker: 'OBSERVE', color: '#8bb8f6' }),
-    ],
-    edges: [edge('uat', 'human', true), edge('trace', 'g5', true), edge('human', 'g5', true, true), edge('g5', 'release', true, true), edge('release', 'observe', true)],
-  },
-  {
-    id: 'usage-daily', part: 'usage', title: '每天从总览找到下一步', short: '日常工作与检索', route: '/app · Cmd/Ctrl+K', duration: 7800,
-    summary: '工作总览告诉你任务集中在哪里。全局检索按任务 ID 找回工作，审批收件箱告诉你哪些决定在等人。',
-    action: '点击全局检索，模拟输入任务 ID，再进入审批收件箱区分“零待办”和“源缺席”。',
-    proof: '你能找到任务、核对负责人和状态，并能解释“已流转”与“源缺席”。',
-    focus: 'search', target: '全局检索',
-    nodes: [
-      node('overview', '工作总览', '准备阶段 · 交付阶段', 12, 25, { kicker: '/app', color: '#8bb8f6' }),
-      node('search', 'Cmd/Ctrl + K', '按任务 ID 检索', 39, 25, { kicker: 'SEARCH', z: 66, chips: ['t_train_01'] }),
-      node('task', '任务结果', '看板 · 状态 · 负责人', 67, 25, { kicker: 'RESULT', wide: true, customClass: 'message-in' }),
-      node('inbox', '审批收件箱', '等人决定 · 前置批准', 67, 78, { kicker: 'INBOX', wide: true }),
-      node('unknown', '源缺席', '状态未知，不是零待办', 37, 78, { kicker: 'UNKNOWN', color: '#efc27a' }),
-    ],
-    edges: [edge('overview', 'search', true, true), edge('search', 'task', true, true), edge('task', 'inbox', true), edge('inbox', 'unknown', true)],
-  },
-  {
-    id: 'usage-evaluation', part: 'usage', title: '失败样本用新证据关闭', short: '评测与同卷复评', route: '/app/eval', duration: 8200,
-    summary: '评测运行是离线判分。失败样本建立处置单后，必须提供修复后的新证据并同卷复评，原证据复现只能诊断。同一页面的“技能评估”检查 spec 第 19 节，CONDITIONAL 不算通过。',
-    action: '点击“同卷复评”，观察失败 run 与新 run 的 A/B 对比，核对处置单关闭条件。',
-    proof: '复评使用同一考卷版本和 fresh explicit 证据，最近复评通过，原始失败记录仍保留。',
+    id: 'testing-eval', part: 'testing', title: 'Eval 同卷复评与 G4-E 判读', short: 'Eval 与同卷复评', route: '/app/eval', duration: 8800,
+    summary: 'Eval 是对既有会话或显式证据的离线判分，不是在线重跑 Agent；失败处置需要同卷同版的新证据，G4-E 的 GAP 和技能评估的 CONDITIONAL 都不是 PASS。',
+    action: '保留失败 run，建立处置单，提交 fresh explicit 证据并同卷复评，用 A/B 检查改善和回归；同一页面的“技能评估”检查 spec 第 19 节。',
+    proof: '原失败证据仍保留，原证据复现没有用于关闭处置单；k<2 不作门禁统计，unknown/no_data 不算通过，最近复评通过且无红线才关闭。',
     focus: 'rerun', target: '同卷复评',
-    nodes: [
-      node('set', '开放评测集', 'E2E · S0 正则', 11, 25, { kicker: 'SET', color: '#8bb8f6' }),
-      node('failed', '失败 run', '2 个样本未通过', 36, 25, { kicker: 'BASE', color: '#ef9b96' }),
-      node('remediation', '处置单', '定位失败样本', 36, 77, { kicker: 'OPEN', color: '#efc27a' }),
-      node('rerun', '同卷复评', '提交修复后的新证据', 64, 25, { kicker: 'RERUN', z: 66, chips: ['fresh explicit'] }),
-      node('closed', 'closed', '服务端核对后关闭', 65, 77, { kicker: 'REMEDIATION', customClass: 'approved-stamp' }),
-      node('compare', 'A/B 对比', '改善与回归同时可见', 90, 51, { kicker: 'COMPARE', small: true }),
+    inputs: ['固定版本评测集、Rubric 和原始失败 run', '修复后的 fresh explicit 证据及失败处置单'],
+    steps: [
+      '在 /app/eval 选择固定评测集，核对题目、期望行为和 Rubric；明确这是离线判分，不是在线重跑 Agent。',
+      '使用原始失败证据运行，保留 run ID、失败样本、unknown 和红线。',
+      '为失败样本建处置单；k<2 时只作功能练习，不作门禁统计结论。',
+      '修复后提供新证据，用同一评测集、同一版本复评；不得仅用原证据复现关闭处置单。',
+      '用 A/B 同时检查改善和回归，最近复评通过且无红线才关闭。',
+      '分别填写 G4-E 与技能评估：G4-E 按 PASS/GAP/FAIL；技能评估检查 spec 第 19 节，unknown/CONDITIONAL 不叫 PASS。',
     ],
-    edges: [edge('set', 'failed', true), edge('failed', 'remediation', true), edge('remediation', 'rerun', true, true), edge('rerun', 'closed', true, true), edge('failed', 'compare'), edge('closed', 'compare', true)],
+    example: {
+      title: '最小 S0 评测集：从失败到复评',
+      given: '原证据“已经修复”不命中 OK，建立处置单；新证据“OK；新测试报告=<新证据锚>”。',
+      when: '使用下方 Rubric 原样建集；每题准备 2 个样本，以同卷同版复评并做 A/B。',
+      then: '保留原失败 run 和复评 run；关闭依据是新证据，GAP、CONDITIONAL、unknown 均未写成 PASS。',
+      code: { label: 'S0 评测任务 JSON', content: '[{"id":"t1","problem":"验证修复标记","expectedBehavior":"证据包含 OK","rubric":[{"id":"a1","text":"回复含 OK","expect":"yes","kind":"result","s0":{"kind":"regex","pattern":"OK"}}]}]' },
+    },
+    deliverables: ['原失败 run 与同卷复评 run 的 ID 和报告', '失败处置单和 A/B 改善/回归记录', 'G4-E 三态结论及技能评估独立结论'],
+    checks: ['关闭依据是新证据，不是原失败证据重放', 'GAP、CONDITIONAL、unknown、no_data 均未写成 PASS', '离线 Eval 没有伪造 QPS、P99、TTFT 或生产 SLA', '执行型红队载荷只在已接入沙箱中验证'],
+    pitfalls: ['换评测集或换版本后仍宣称同卷复评通过', '把 S0 正则通过当成业务缺陷已根治'],
+    references: [{ label: '六团队手册 §6.4-6.6', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('failed', '原始失败 run', '历史证据保留', 12, 28, { kicker: 'FAILED RUN' }),
+      node('remediation', '处置单', '失败样本登记', 39, 28, { kicker: 'REMEDIATION' }),
+      node('rerun', '同卷复评', 'fresh explicit 新证据', 67, 28, { kicker: 'RERUN' }),
+      node('ab', 'A/B 对比', '改善与回归同时看', 39, 73, { kicker: 'COMPARE' }),
+      node('g4e', 'G4-E / 技能评估', 'GAP / CONDITIONAL ≠ PASS', 67, 73, { kicker: 'VERDICT' }),
+    ],
+    edges: [edge('failed', 'remediation', true, true), edge('remediation', 'rerun', true, true), edge('rerun', 'ab', true, true), edge('rerun', 'g4e', true, true)],
   },
   {
-    id: 'usage-governance', part: 'usage', title: '把问题变成下一轮改进', short: '治理与完成培训', route: '/app/stage/govern', duration: 9000,
-    summary: '治理不是给项目画句号。问题要有处置结论，审计要能反查，改进要进入下一轮任务和验证。',
-    action: '点击“完成培训”，回看四部分，再到真实培训环境完成一项可反查的交付。',
-    proof: '你能带着任务 ID、提交号、测试结果和审批记录离开培训，而不是只带着截图。',
-    focus: 'finish', target: '完成培训',
-    nodes: [
-      node('issues', '问题清单', '每项都有处置结论', 12, 25, { kicker: 'ISSUES', color: '#ef9b96' }),
-      node('audit', '审计与变更', '记录可以反查', 12, 77, { kicker: 'AUDIT', color: '#8bb8f6' }),
-      node('improve', '改进实验', '用对比验证改动', 39, 51, { kicker: 'IMPROVE', color: '#c2a9ef' }),
-      node('next', '下一轮任务', '行动项回到看板', 66, 51, { kicker: 'NEXT RUN', wide: true }),
-      node('finish', '完成培训', '进入真实环境跟练', 89, 51, { kicker: 'COMPLETE', z: 72, small: true, customClass: 'approved-stamp' }),
+    id: 'operations-readiness', part: 'operations', title: '部署 readiness 核对真实运行面', short: '服务与 readiness', route: '127.0.0.1 · localhost', duration: 8500,
+    summary: '分别核对 8647 Koa、8649 Web、8650 gateway、3030/ws Ycode，以及实际 cwd、绑定地址、GOVERNANCE_REPO、SIM 独立根和状态目录。',
+    action: '沿服务拓扑检查监听和各探针，区分 Web /health/ready、custom 路由、gateway basic health 与 Ycode online:true。',
+    proof: 'readiness 记录不含秘密原值，每项健康结论有对应探针或日志；没有把 Web shell ready 当成 Matrix、模型、worker、Ycode 和治理仓全部健康。',
+    focus: 'readiness', target: '检查运行面',
+    inputs: ['培训机仓根、版本、进程清单及预期端口和状态目录', '通过安全渠道预置的 STUDIO_JWT、GATEWAY_KEY；只记录可用性'],
+    steps: [
+      '采集版本、commit、Node、实际监听和进程 cwd，分别解释 Koa、Web shell、agent_bridge 和 gateway adapter。',
+      '请求 /livez、/health/ready、/health 和 gateway /health，不合并成“全链健康”。',
+      '请求 orchestrator/health：无 JWT 为 401 表示 custom 已挂且受保护；404 优先登记注入或重启问题。',
+      '读取 zcode-engine/health 和 gateway /health/detailed；Ycode 必须看 online:true，gateway 看 readiness/platforms/active_agents/pid。',
+      '核对 GOVERNANCE_REPO、OBS_SIM_ROOT、HERMES_HOME、HERMES_WEB_UI_HOME 和绑定地址；生产关闭 SIM 使用非空且不存在的保留路径。',
+      '运行 runtime:doctor、release:check 和 runtime dry-run，将 WARN、kept、未验证项分别写入 readiness 模板。',
     ],
-    edges: [edge('issues', 'improve', true), edge('audit', 'improve', true), edge('improve', 'next', true, true), edge('next', 'finish', true, true)],
+    example: {
+      title: 'Ycode HTTP 200，但 online:false',
+      given: '端点返回 HTTP 200，但 online:false；另一反例 orchestrator available:true。',
+      when: '判定 Ycode WS 未打开，不发起 ACP 培训任务；orchestrator 只证明路由、策略版本和 DB 可读。',
+      then: '形成端口、PID、cwd、绑定和状态目录清单，以及已验证/失败/未验证/必须处置四栏台账。',
+      code: { label: '分服务探针示例', content: 'curl -fsS http://127.0.0.1:8647/health/ready\ncurl -sS -o /dev/null -w "%{http_code}\\n" http://127.0.0.1:8647/api/orchestrator/health\ncurl -fsS -H "Authorization: Bearer ${STUDIO_JWT}" http://127.0.0.1:8647/api/zcode-engine/health' },
+    },
+    deliverables: ['不含秘密原值的 readiness 记录', '端口、PID、cwd、绑定地址和状态目录清单', '已验证/失败/未验证/开课前必须处置四栏台账'],
+    checks: ['/health/ready 没有替代 Matrix、模型、worker、Ycode 和治理仓检查', '受保护 GET 标明可能刷新登录时间或初始化状态', '只记录状态码、布尔值、路径和非敏感计数', '未把 POST /api/orchestrator/tick 当健康检查'],
+    pitfalls: ['只看端口或 HTTP 200 就宣布端到端 ready', '将 JWT、gateway key 或 Matrix token 写进命令历史、截图或记录'],
+    references: [{ label: '管理员运维参考 §13-§14', href: '/aistudio-operations-reference.md' }],
+    nodes: [
+      node('web', 'Web :8649', '浏览器入口', 12, 28, { kicker: 'WEB' }),
+      node('koa', 'Koa :8647', 'API 与读模型', 39, 28, { kicker: 'KOA' }),
+      node('gateway', 'gateway :8650', 'profiles · dispatcher', 67, 28, { kicker: 'GATEWAY' }),
+      node('ycode', 'Ycode :3030/ws', 'online:true 才算 WS open', 67, 73, { kicker: 'YCODE' }),
+      node('readiness', 'readiness', '探针 · 日志 · 实际配置', 39, 73, { kicker: 'READINESS' }),
+    ],
+    edges: [edge('web', 'koa', true), edge('koa', 'gateway', true, true), edge('gateway', 'ycode', true, true), edge('readiness', 'koa', true), edge('readiness', 'gateway', true), edge('readiness', 'ycode', true, true)],
+  },
+  {
+    id: 'operations-release', part: 'operations', title: '停滞恢复、发布观察与回滚', short: '恢复与发布观察', route: '/app/stage/govern', duration: 8500,
+    summary: '恢复先看真实 claim、日志和故障分类，不能手改任务真值；Graph legacy/shadow/on、多 gateway 和进度联邦都有明确边界，发布后仍需观察、复验和必要回滚。',
+    action: '对一个停滞案例按 ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 分类，再沿发布回执、观察指标、异常和回滚路径走查。',
+    proof: '恢复动作有界且没有扩大权限或伪造 running；实际发布有通道回执，观察、负责人和具体回滚命令齐全，异常能够回流处置。',
+    focus: 'observe', target: '观察与回滚',
+    inputs: ['停滞任务的 claim/run、worker 日志、diagnostics 和近期事件', '培训发布包、通道回执、观察指标和具体回滚 runbook'],
+    steps: [
+      '用 sleeping-workers 和 diagnostics 只读采集停滞信号，结合 ready/running、claim 和 gateway 日志判断。',
+      '按 ENV > TIMEOUT > PRODUCT > SCRIPT > FLOW > UNKNOWN 初筛；同一错误第二次出现必须改变处置动作。',
+      'ready 不认领先查围栏、依赖、容量、锁和模型额度；确认停滞后才 reclaim/reassign，并验证新的有效 claim/run。',
+      '发布前执行 release:check 和 release:packages -- --dry-run，核对依赖、灰度、告警、负责人、回滚命令和 SHA256。',
+      '经授权后保存真实通道回执和版本，观察错误、运行指标、任务状态及用户反馈；异常按问题单回流。',
+      '达到回滚条件时执行既定 runbook，记录原因、执行人、结果和复验；Graph 另核实际 tick 和事件。',
+    ],
+    example: {
+      title: 'run25 的 56 次 429：恢复有效但容量不是无限',
+      given: '恢复链全部消化 56 次 429，零死锁，但每波等待 5-10 分钟。',
+      when: '记录 rate-limit 分类、有界退避、恢复次数和等待成本；恢复循环连续耗尽即人工升级。',
+      then: '形成恢复记录和发布观察表；上传 full/everything 成功后仍需远端回下载、hash 复核和观察。',
+    },
+    deliverables: ['停滞分类、干预和新 claim/run 恢复记录', '发布回执、观察窗和异常台账', '具体回滚记录或经批准的回滚演练结果'],
+    checks: ['恢复没有手改任务真值、扩大权限或连续盲目 reclaim', 'shadow 成功没有冒充 on 的生产结果', '多 gateway 和进度联邦没有宣传统一调度、HA 或自动 failover', 'everything 仍需要 npm/pip 镜像'],
+    pitfalls: ['对 ENV/TIMEOUT 故障只会重复运行，第二次仍不改变动作', '用本地打包或上传回执替代真实发布、观察和回滚准备'],
+    references: [{ label: 'run25 推演案例 §4-§5', href: '/aistudio-run25-simulation-case.md' }],
+    nodes: [
+      node('logs', 'claim / run / 日志', '真实工作信号', 12, 28, { kicker: 'SIGNAL' }),
+      node('recover', '有界恢复', '分类 · 退避 · 人工升级', 39, 28, { kicker: 'RECOVERY' }),
+      node('release', '真实发布回执', '通道与版本', 67, 28, { kicker: 'RELEASE' }),
+      node('observe', '观察与复验', '指标 · 异常 · 负责人', 67, 73, { kicker: 'OBSERVE' }),
+      node('rollback', '回滚与异常回流', '具体命令与处置', 39, 73, { kicker: 'ROLLBACK' }),
+    ],
+    edges: [edge('logs', 'recover', true, true), edge('release', 'observe', true, true), edge('observe', 'rollback', true, true), edge('recover', 'observe', true)],
+  },
+  {
+    id: 'audit-posture-approval', part: 'audit', title: '安全姿态、HumanGate 与双人会签', short: '姿态与人工批准', route: '/app/stage/govern?tab=posture', duration: 8800,
+    summary: '审计读取实际生效配置而非 expectations 文件；工具执法、strict、HumanGate、组织 RACI 和双人会签是不同判断面，审计从需求和设计阶段就参与。',
+    action: '核对实际角色与开关，回查 HumanGate 的 requestedBy、decidedBy、deciderMode、strength 和有效期，再核验一条 admin 行双人会签。',
+    proof: '需要严格异人时已显式配置并证明主体不同；director-proxy、本地标记和聊天 verdict 不计真人批准，紧急通道没有被当作常规绕过方式。',
+    focus: 'human', target: '核验真实裁决',
+    inputs: ['脱敏培训变更、当前 commit、角色和实际配置快照', '一条低风险 HumanGate 或关键 admin 会签记录及两名治理人员'],
+    steps: [
+      '确认审计范围、版本和攻击面，区分 super_admin/admin、组织 RACI、团队领导和 Matrix 权限。',
+      '从实际进程读取 HERMES_TOOL_ENFORCE、strict、HumanGate 两键、gates.json 和 sandbox 状态；expectations 只作期望对照。',
+      '核验非 strict 的无配置或异常可能 fail-open，strict 才在相应场景 fail-closed。',
+      '回查 HumanGate 源 store 的 requestedBy、decidedBy、deciderMode、strength 和有效期；严格异人还需显式配置并证明主体不同。',
+      '对关键 admin 行核对另一名在册合格治理人员会签；紧急通道检查 [BREAK-GLASS] 理由和审计记录。',
+      '将每项结论写成通过、缺口或未知并附原始证据；OS sandbox 未接入或不可用不得写成已隔离。',
+    ],
+    example: {
+      title: '严格异人核验与 director-proxy 反例',
+      given: 'requestedBy=trainer.a，decidedBy=trainer.b，deciderMode=human，strength=explicit，REQUIRE_HUMAN_DECIDER=1。',
+      when: '回查 DECIDER_ROLES 实际值和有效期；另看同一主体自批 delegated 或 SIM director-proxy。',
+      then: '只有主体不同且 human/explicit 同时满足才记严格异人批准；自批和 proxy 不计第二名真人。',
+    },
+    deliverables: ['实际安全姿态矩阵及配置来源', 'HumanGate 主体、强度和有效期核验单', 'admin 双人会签或 break-glass 例外记录'],
+    checks: ['配置存在、进程已加载、实际裁决生效分别验证', 'requestedBy != decidedBy 与 human/explicit 同时满足', 'OS sandbox 只覆盖已接入执行面', '安全审计没有替代 G4、代码评审或组织会签'],
+    pitfalls: ['用 expectations、SIM strict 或页面姿态文字推断真实进程已严格执法', '把 director-proxy、自批 delegated 或聊天 verdict 算作独立真人批准'],
+    references: [{ label: '六团队手册 §14、§17.6', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('posture', '实际安全姿态', '角色 · 开关 · 生效配置', 12, 28, { kicker: 'POSTURE' }),
+      node('human', 'HumanGate', 'requestedBy / decidedBy', 39, 28, { kicker: 'HUMANGATE' }),
+      node('cosign', 'admin 双人会签', '组织治理 · 异人', 67, 28, { kicker: 'CO-SIGN' }),
+      node('actor', '裁决主体与强度', 'human / explicit / 有效期', 67, 73, { kicker: 'ACTOR' }),
+      node('proxy', 'director-proxy', '代偿，不计真人批准', 39, 73, { kicker: 'PROXY' }),
+    ],
+    edges: [edge('posture', 'human', true, true), edge('human', 'actor', true, true), edge('cosign', 'actor', true, true), edge('proxy', 'actor', false)],
+  },
+  {
+    id: 'audit-evidence-remediation', part: 'audit', title: '独立审计、整改复验与完成培训', short: '独立审计与整改', route: '/app/stage/govern?tab=secAudit', duration: 9000,
+    summary: '审计将任务、commit、测试、评审、UAT/G5 和运行证据对齐到同一对象；候选发现由非主张人独立验证，缺口进入整改和复验。',
+    action: '检查证据哈希链和源缺席，登记一项有 owner、期限、复验条件的整改，由另一名审计人员复核后完成培训。',
+    proof: '审计者与主张人不同，结论有原始证据；未知和缺口没有改写成通过，篡改、历史挤出和锚点悬空没有被混为一谈。',
+    focus: 'audit', target: '完成独立复核',
+    inputs: ['脱敏培训变更的任务、commit、测试、评审、UAT/G5 和运行记录', '审计范围、攻击面目录及一名非主张人的独立审计人员'],
+    steps: [
+      '建立项目与攻击面目录，固定范围和版本，创建审计运行。',
+      '按任务 ID 和 commit 对齐全部证据，收集候选发现及原始记录，不先写结论。',
+      '检查哈希链 intact、firstBroken、hash_mismatch/link_broken，区分篡改、环形挤出、锚点悬空和源缺席。',
+      '对候选作接受、驳回或待补证判定，由非主张人独立验证对象、方法和结论；复核覆盖账本和例外。',
+      '为接受发现登记 owner、期限和复验条件；证据不足写 unknown 或 no_data，不写通过。',
+      '用新证据复验并由另一名审计人员签独立结论；报告快照、后续补拍和清偿分别标日期。',
+    ],
+    example: {
+      title: 'run25 报告与后续台账是否互相矛盾',
+      given: 'G4-E=GAP 且评测处置失败 2、未关 2；报告“无未完成项”与后续 N01-N06 并存；run26 MP unit 85 红。',
+      when: '接受 GAP 为缺口；按不同时点对照“无未完成项”；把 MP 红登记为后续新债而非篡改或历史成绩。',
+      then: '形成 AUD-R25-01 整改卡，owner=评测负责人，复验要求同卷新证据、原失败保留、无红线和独立复核。',
+    },
+    deliverables: ['审计运行底稿及候选发现处置表', '同对象证据链和覆盖账本', '整改项、owner、期限及复验记录', '非主张人的独立复核结论'],
+    checks: ['审计者与主张人不同，接受结论都有原始证据', '源缺席、warn、GAP 和未知没有被豁免成通过', '审计链只声明有限保留期内的篡改可发现性', '后续修复没有反向改写历史判词'],
+    pitfalls: ['把历史挤出、锚点悬空和源缺席一律判成攻击或无问题', '只完成整改文字和自审，没有新证据及第二名审计人员复验'],
+    references: [{ label: 'run25 推演案例 §3、§6', href: '/aistudio-run25-simulation-case.md' }],
+    nodes: [
+      node('evidence', '原始证据', '任务 · commit · 测试 · 审批', 12, 28, { kicker: 'EVIDENCE' }),
+      node('candidate', '候选发现', '范围 · 方法 · 原始记录', 39, 28, { kicker: 'CANDIDATE' }),
+      node('audit', '独立审计人', '非主张人独立验证', 67, 28, { kicker: 'AUDIT' }),
+      node('hash', '证据哈希链', '有限保留期内可发现篡改', 39, 73, { kicker: 'HASH CHAIN' }),
+      node('remediation', '整改与复验', 'owner · 期限 · 复验条件', 67, 73, { kicker: 'REMEDIATION' }),
+    ],
+    edges: [edge('evidence', 'candidate', true, true), edge('candidate', 'audit', true, true), edge('hash', 'audit', true), edge('candidate', 'remediation', true, true), edge('remediation', 'audit', true, true)],
   },
 ]
 
@@ -776,6 +1060,46 @@ function buildCourseNav() {
   $('timeline').querySelectorAll('[data-timeline]').forEach(button => button.addEventListener('click', () => goTo(Number(button.dataset.timeline))))
 }
 
+function renderCoach(scene) {
+  const fillList = (id, items) => {
+    const list = $(id)
+    list.replaceChildren(...items.map(item => {
+      const li = document.createElement('li')
+      li.textContent = item
+      return li
+    }))
+  }
+  fillList('coachInputs', scene.inputs)
+  fillList('coachSteps', scene.steps)
+  fillList('coachDeliverables', scene.deliverables)
+  fillList('coachChecks', scene.checks)
+  fillList('coachPitfalls', scene.pitfalls)
+  $('exampleTitle').textContent = scene.example.title
+  $('exampleGiven').textContent = scene.example.given
+  $('exampleWhen').textContent = scene.example.when
+  $('exampleThen').textContent = scene.example.then
+  const code = scene.example.code
+  $('coachCodeWrap').hidden = !code
+  if (code) {
+    $('coachCodeLabel').textContent = code.label
+    $('coachCode').textContent = code.content
+  } else {
+    $('coachCodeLabel').textContent = ''
+    $('coachCode').textContent = ''
+  }
+  const references = $('coachReferences')
+  references.replaceChildren(...scene.references.map(reference => {
+    const link = document.createElement('a')
+    link.href = reference.href
+    link.target = '_blank'
+    link.rel = 'noopener'
+    link.textContent = reference.label
+    return link
+  }))
+  $('coachMore').open = false
+  document.querySelector('.lesson-example').scrollTop = 0
+}
+
 function renderScene() {
   const scene = SCENES[current]
   const partIndex = PARTS.findIndex(part => part.id === scene.part)
@@ -807,6 +1131,7 @@ function renderScene() {
   $('prevButton').disabled = current === 0
   $('nextButton').textContent = current === SCENES.length - 1 ? '完成' : '下一幕'
   $('nextCoachButton').textContent = current === SCENES.length - 1 ? '完成培训' : '下一幕'
+  renderCoach(scene)
 
   sceneSvg.innerHTML = scene.edges.map((item, index) => {
     const path = edgePath(scene, item)
@@ -929,7 +1254,7 @@ function setPlaying(value) {
   playing = value && motionAllowed
   $('playButton').textContent = playing ? '暂停' : '播放'
   $('playButton').setAttribute('aria-pressed', String(playing))
-  $('modeNote').textContent = playing ? '自动播放中，点击圈选节点可直接前进' : followMode ? '跟练模式：点击圈选节点进入下一幕' : '手动模式：可逐步播放或点击圈选节点'
+  $('modeNote').textContent = playing ? '自动播放中，点击高亮节点可直接前进' : followMode ? '跟练模式：点击高亮节点进入下一幕' : '手动模式：可逐步播放或点击高亮节点'
   syncFlowAnimation()
   schedule()
 }
@@ -1066,7 +1391,7 @@ $('followButton').addEventListener('click', () => {
   setPlaying(false)
   $('followButton').setAttribute('aria-pressed', String(followMode))
   $('followButton').textContent = followMode ? '退出跟练' : '开始跟练'
-  $('modeNote').textContent = followMode ? '跟练模式：点击圈选节点进入下一幕' : '手动模式：可逐步播放或点击圈选节点'
+  $('modeNote').textContent = followMode ? '跟练模式：点击高亮节点进入下一幕' : '手动模式：可逐步播放或点击高亮节点'
 })
 $('resetViewButton').addEventListener('click', resetView)
 $('motionButton').addEventListener('click', () => setMotion(!motionAllowed))
@@ -1168,7 +1493,7 @@ let spatialFrameTimer = null
 let spatialOrbit = { yaw: 0.62, pitch: 0.72, distance: 52 }
 
 function sceneCenter(index) {
-  const row = Math.floor(index / 3)
+  const row = Math.floor(index / 2)
   const column = index % 3
   const xs = row % 2 === 0 ? [-28, 0, 28] : [28, 0, -28]
   return new THREE.Vector3(xs[column], 36 - row * 24, 0)
@@ -1266,7 +1591,7 @@ function localNodePosition(item) {
 function buildStation(scene, index) {
   const group = new THREE.Group()
   group.position.copy(sceneCenter(index))
-  const partColor = ['#7de3b0', '#8bb8f6', '#efc27a', '#c2a9ef'][Math.floor(index / 3)]
+  const partColor = ['#7de3b0', '#8bb8f6', '#efc27a', '#c2a9ef'][Math.floor(index / 2)]
   const platformMaterial = new THREE.MeshStandardMaterial({
     color: '#101a15', roughness: 0.82, metalness: 0.18, transparent: true, opacity: 0.08,
   })
@@ -1693,103 +2018,159 @@ const TOPO_LAYERS = [
 ]
 
 const TOPO_VIEWS = {
-  design: { layers: TOPO_LAYERS, nodes: TOPO_NODES, flows: TOPO_FLOWS, flowByScene: TOPO_FLOW_BY_SCENE, activeNode: TOPO_NODE_BY_SCENE },
-  implementation: {
-    layers: [{ label: '任务与沟通', y: 50, h: 180 }, { label: '调度与执行', y: 280, h: 180 }, { label: '评审与证据', y: 510, h: 180 }],
+  product: { layers: TOPO_LAYERS, nodes: TOPO_NODES, flows: TOPO_FLOWS, flowByScene: TOPO_FLOW_BY_SCENE.map((flows, index) => index === 1 ? [1, 2, 12, 13, 14, 15] : flows), activeNode: TOPO_NODE_BY_SCENE.map((node, index) => index === 1 ? 'studio' : node) },
+  project: {
+    layers: [{ label: '派工与认领', y: 50, h: 180 }, { label: '验收与发布', y: 280, h: 180 }, { label: '发布与复盘', y: 510, h: 180 }],
     nodes: [
-      { id: 'task', title: '任务卡与验收标准', sub: '目标 · 范围 · 非目标', x: 100, y: 90, w: 250, h: 80 },
-      { id: 'chat', title: '统一身份聊天', sub: '澄清范围，不代替任务真值', x: 480, y: 90, w: 280, h: 80 },
-      { id: 'board', title: '看板 · ready', sub: '负责人与工作区已确认', x: 900, y: 90, w: 220, h: 80 },
-      { id: 'dispatcher', title: 'dispatcher', sub: '触发调度，不负责执行', x: 100, y: 320, w: 250, h: 80 },
-      { id: 'worker', title: 'worker · running', sub: '认领授权任务', x: 480, y: 320, w: 250, h: 80 },
-      { id: 'ycode', title: 'Ycode / IDE', sub: '任务上下文与工作区', x: 830, y: 320, w: 250, h: 80 },
-      { id: 'test', title: '自测结果', sub: '命令与输出可复跑', x: 60, y: 550, w: 220, h: 80 },
-      { id: 'review', title: '独立评审', sub: '评审人不是执行人', x: 340, y: 550, w: 220, h: 80 },
-      { id: 'done', title: 'done + 证据包', sub: '提交 · 测试 · 审批 · 卡号', x: 620, y: 550, w: 220, h: 80 },
-      { id: 'blocked', title: 'blocked', sub: '等待依赖或人工输入', x: 900, y: 550, w: 220, h: 80 },
+      { id: 'task', title: '任务契约与 RACI', sub: '依赖 · 工作区 · AC', x: 40, y: 90, w: 240, h: 80 },
+      { id: 'fence', title: '围栏与容量', sub: 'board/home · 单板/profile', x: 330, y: 90, w: 240, h: 80 },
+      { id: 'dispatcher', title: 'dispatcher', sub: '只调度，不是执行者', x: 620, y: 90, w: 230, h: 80 },
+      { id: 'worker', title: 'claimed / running', sub: '真实认领与工作信号', x: 900, y: 90, w: 250, h: 80 },
+      { id: 'blocked', title: 'blocked', sub: '先解除真实原因', x: 40, y: 320, w: 240, h: 80 },
+      { id: 'review', title: '独立评审', sub: 'actor 与当前 commit', x: 330, y: 320, w: 240, h: 80 },
+      { id: 'uat', title: '日常 UAT', sub: '任务/评审级判定', x: 620, y: 320, w: 230, h: 80 },
+      { id: 'g5', title: '日常 G5 / SIM G5', sub: '不同写面与状态机', x: 900, y: 320, w: 250, h: 80 },
+      { id: 'release', title: '真实发布与观察', sub: '回执 · 观察 · 回滚', x: 180, y: 550, w: 260, h: 80 },
+      { id: 'retro', title: 'G6 行动项', sub: 'owner · 期限 · 验收判据', x: 760, y: 550, w: 260, h: 80 },
     ],
     flows: [
-      { id: 1, kind: 'task', label: '澄清范围', path: 'M350 130 L480 130', x: 382, y: 112 },
-      { id: 2, kind: 'task', label: '形成任务契约', path: 'M760 130 L900 130', x: 790, y: 112 },
-      { id: 3, kind: 'task', label: 'Nudge dispatcher', path: 'M1010 170 L1010 250 L225 250 L225 320', x: 620, y: 236 },
-      { id: 4, kind: 'task', label: 'worker 认领', path: 'M350 360 L480 360', x: 382, y: 342 },
-      { id: 5, kind: 'task', label: 'ACP 编码执行', path: 'M730 360 L830 360', x: 748, y: 342 },
-      { id: 6, kind: 'evidence', label: '自测证据', path: 'M955 400 L955 480 L190 480 L190 550', x: 610, y: 466 },
-      { id: 7, kind: 'review', label: '独立评审', path: 'M280 590 L340 590', x: 286, y: 572 },
-      { id: 8, kind: 'review', label: '批准与完成总结', path: 'M560 590 L620 590', x: 566, y: 572 },
-      { id: 9, kind: 'evidence', label: '状态与证据回流', path: 'M730 550 L730 220 L1010 220 L1010 170', x: 760, y: 366 },
-      { id: 10, kind: 'review', label: '打回返工', path: 'M560 590 L900 590', x: 720, y: 572 },
-      { id: 11, kind: 'task', label: '解除阻塞后重新派发', path: 'M1010 550 L1010 170', x: 1024, y: 366 },
+      { id: 1, kind: 'task', label: '契约与依赖', path: 'M280 130 L330 130', x: 282, y: 112 },
+      { id: 2, kind: 'task', label: '围栏容量通过', path: 'M570 130 L620 130', x: 572, y: 112 },
+      { id: 3, kind: 'task', label: '真实 claim', path: 'M850 130 L900 130', x: 852, y: 112 },
+      { id: 4, kind: 'collab', label: '催办只返回路由，未发消息', path: 'M735 170 L160 320', x: 430, y: 230 },
+      { id: 5, kind: 'task', label: '补输入后按依赖恢复', path: 'M160 400 L160 460 L450 460 L450 400', x: 188, y: 446 },
+      { id: 6, kind: 'review', label: '评审与验收证据', path: 'M570 360 L620 360', x: 572, y: 342 },
+      { id: 7, kind: 'approval', label: '发布类审批', path: 'M850 360 L900 360', x: 852, y: 342 },
+      { id: 8, kind: 'review', label: 'UAT 与 G5 分别核对', path: 'M735 400 L735 470 L310 550', x: 600, y: 470 },
+      { id: 9, kind: 'approval', label: '实际发布回执', path: 'M1025 400 L1025 470 L440 550', x: 690, y: 470 },
+      { id: 10, kind: 'evidence', label: '问题与行动项进入下一轮', path: 'M440 590 L760 590', x: 570, y: 572 },
     ],
-    flowByScene: [[], [], [], [1, 2, 3], [3, 4, 5, 6], [6, 7, 8, 9, 10, 11], [], [], [], [], [], []],
-    activeNode: ['', '', '', 'board', 'dispatcher', 'review', '', '', '', '', '', ''],
+    flowByScene: [[], [], [1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [], [], [], [], [], [], [], []],
+    activeNode: ['', '', 'dispatcher', 'g5', '', '', '', '', '', '', '', ''],
   },
-  deployment: {
-    layers: [{ label: 'Web 与服务拓扑', y: 50, h: 180 }, { label: '组织与权限', y: 280, h: 180 }, { label: '验收与发布', y: 510, h: 180 }],
+  development: {
+    layers: [{ label: '项目技能与任务', y: 50, h: 180 }, { label: 'ACP 编码与守门', y: 280, h: 180 }, { label: '交付与证据回流', y: 510, h: 180 }],
     nodes: [
-      { id: 'web', title: 'Web 前端 :8649', sub: '浏览器入口', x: 60, y: 90, w: 230, h: 80 },
-      { id: 'backend', title: 'Koa 后端 :8647', sub: '产品 API 与读模型', x: 360, y: 90, w: 230, h: 80 },
-      { id: 'gateway', title: 'hermes 网关 :8650', sub: 'profiles · dispatcher', x: 660, y: 90, w: 230, h: 80 },
-      { id: 'kanban', title: 'kanban', sub: '任务真值与 ready', x: 960, y: 200, w: 180, h: 60 },
-      { id: 'worker', title: 'worker', sub: '锁定认领后执行', x: 730, y: 200, w: 180, h: 60 },
-      { id: 'ycode', title: 'Ycode :3030', sub: 'IDE 编码服务', x: 960, y: 90, w: 180, h: 80 },
-      { id: 'matrix', title: 'Matrix（可选）', sub: '协作消息与回执', x: 60, y: 200, w: 230, h: 60 },
-      { id: 'initiator', title: '发起人 · super_admin', sub: '提交 admin 行变更', x: 80, y: 320, w: 230, h: 80 },
-      { id: 'change', title: '治理者守卫', sub: '生成待会签变更', x: 380, y: 320, w: 230, h: 80 },
-      { id: 'approver', title: '第二会签人', sub: 'admin 或审计 · 异人', x: 680, y: 320, w: 230, h: 80 },
-      { id: 'repo', title: '治理仓', sub: '组织提交与审计留痕', x: 960, y: 320, w: 180, h: 80 },
-      { id: 'uat', title: 'UAT 判定', sub: '逐条验收标准', x: 60, y: 550, w: 220, h: 80 },
-      { id: 'human', title: 'HumanGate', sub: '前置人工批准', x: 340, y: 550, w: 220, h: 80 },
-      { id: 'g5', title: 'G5 发布准出', sub: '人工核对并批准', x: 620, y: 550, w: 220, h: 80 },
-      { id: 'observe', title: '发布与观察', sub: '复验与异常回流', x: 900, y: 550, w: 240, h: 80 },
+      { id: 'spec', title: '冻结 Spec / AC', sub: '目标 · 验收 · 测试设计', x: 30, y: 90, w: 220, h: 80 },
+      { id: 'swarm', title: 'swarm-yuan 生成器', sub: 'Step 1-13 · 不是编码引擎', x: 290, y: 90, w: 250, h: 80 },
+      { id: 'skill', title: '<项目>-dev 目标技能', sub: '六段目录 · strict active', x: 580, y: 90, w: 250, h: 80 },
+      { id: 'worker', title: 'Hermes worker', sub: '先准备技能，再组织上下文', x: 900, y: 90, w: 250, h: 80 },
+      { id: 'acp', title: 'ACP', sub: '任务上下文与 cwd', x: 180, y: 320, w: 230, h: 80 },
+      { id: 'ycode', title: 'Ycode / IDE', sub: '实际读取技能并编码', x: 500, y: 320, w: 250, h: 80 },
+      { id: 'precheck', title: 'precheck + hooks', sub: 'L1-L4 · 分支测试与门禁', x: 830, y: 320, w: 260, h: 80 },
+      { id: 'test', title: '真实测试与 commit', sub: '命令 · 输出 · 可审查 diff', x: 500, y: 470, w: 250, h: 70 },
+      { id: 'commit', title: '真实提交', sub: '窄而完整 · 可回滚', x: 50, y: 570, w: 230, h: 80 },
+      { id: 'review', title: '独立审查', sub: '非实现者 · review-record', x: 350, y: 570, w: 250, h: 80 },
+      { id: 'main', title: 'main 合入与回归', sub: '分支全绿后再验主干', x: 650, y: 570, w: 250, h: 80 },
+      { id: 'evidence', title: 'Kanban 证据回流', sub: '任务 · commit · 测试 · 审批', x: 950, y: 570, w: 220, h: 80 },
     ],
     flows: [
-      { id: 1, kind: 'task', label: '浏览器访问', path: 'M290 130 L360 130', x: 300, y: 112 },
-      { id: 2, kind: 'task', label: '身份与任务请求', path: 'M590 130 L660 130', x: 600, y: 112 },
-      { id: 3, kind: 'task', label: '路由与派发', path: 'M775 170 L960 240', x: 860, y: 202 },
-      { id: 4, kind: 'task', label: 'worker 认领', path: 'M960 240 L840 240', x: 880, y: 222 },
-      { id: 5, kind: 'task', label: 'ACP 编码', path: 'M840 240 L960 170', x: 900, y: 202 },
-      { id: 6, kind: 'collab', label: '可选协作消息', path: 'M475 170 L175 240 M175 240 L775 170', x: 420, y: 216 },
-      { id: 7, kind: 'approval', label: '提交变更', path: 'M310 360 L380 360', x: 320, y: 342 },
-      { id: 8, kind: 'approval', label: '第二人会签', path: 'M610 360 L680 360', x: 620, y: 342 },
-      { id: 9, kind: 'evidence', label: '组织提交与留痕', path: 'M910 360 L960 360', x: 906, y: 342 },
-      { id: 10, kind: 'review', label: '验收证据', path: 'M280 590 L340 590', x: 286, y: 572 },
-      { id: 11, kind: 'approval', label: 'G5 人工准出', path: 'M560 590 L620 590', x: 566, y: 572 },
-      { id: 12, kind: 'evidence', label: '观察与复验', path: 'M840 590 L900 590', x: 846, y: 572 },
+      { id: 1, kind: 'task', label: '冻结需求与项目事实', path: 'M250 130 L290 130', x: 252, y: 112 },
+      { id: 2, kind: 'task', label: 'Step 1-13 生成/激活', path: 'M540 130 L580 130', x: 542, y: 112 },
+      { id: 3, kind: 'task', label: '技能准备先于 ACP', path: 'M830 130 L900 130', x: 832, y: 112 },
+      { id: 4, kind: 'task', label: '任务上下文与 cwd', path: 'M1025 170 L1025 250 L295 320', x: 660, y: 252 },
+      { id: 5, kind: 'task', label: 'ACP 编码执行', path: 'M410 360 L500 360', x: 412, y: 342 },
+      { id: 6, kind: 'evidence', label: '本次实际读取技能', path: 'M705 170 L705 250 L625 320', x: 718, y: 246 },
+      { id: 7, kind: 'review', label: 'L1-L4 spec-first', path: 'M140 170 L140 250 L960 320', x: 370, y: 252 },
+      { id: 8, kind: 'evidence', label: '真实测试输出', path: 'M625 400 L625 470', x: 640, y: 438 },
+      { id: 9, kind: 'evidence', label: '真实提交', path: 'M500 505 L280 570', x: 360, y: 528 },
+      { id: 10, kind: 'review', label: '独立审查', path: 'M280 610 L350 610', x: 282, y: 592 },
+      { id: 11, kind: 'review', label: '合入与主干回归', path: 'M600 610 L650 610', x: 602, y: 592 },
+      { id: 12, kind: 'evidence', label: '证据回写 Kanban', path: 'M900 610 L950 610', x: 902, y: 592 },
     ],
-    flowByScene: [[], [], [], [], [], [], [1, 2, 3, 4, 5, 6], [7, 8, 9], [10, 11, 12], [], [], []],
-    activeNode: ['', '', '', '', '', '', 'gateway', 'approver', 'g5', '', '', ''],
+    flowByScene: [[], [], [], [], [1, 2, 3, 4, 5, 6, 7], [8, 9, 10, 11, 12], [], [], [], [], [], []],
+    activeNode: ['', '', '', '', 'swarm', 'commit', '', '', '', '', '', ''],
   },
-  usage: {
-    layers: [{ label: '日常工作', y: 50, h: 180 }, { label: '评测与修复', y: 280, h: 180 }, { label: '治理与改进', y: 510, h: 180 }],
+  testing: {
+    layers: [{ label: '独立测试与评审', y: 50, h: 180 }, { label: 'Eval 失败与复评', y: 280, h: 180 }, { label: '判定与缺口', y: 510, h: 180 }],
     nodes: [
-      { id: 'overview', title: '工作总览', sub: '准备阶段与交付阶段', x: 60, y: 90, w: 220, h: 80 },
-      { id: 'search', title: '全局检索', sub: '按任务 ID 找回工作', x: 340, y: 90, w: 220, h: 80 },
-      { id: 'board', title: '看板任务', sub: '状态 · 负责人 · 时间', x: 620, y: 90, w: 220, h: 80 },
-      { id: 'inbox', title: '审批收件箱', sub: '等人决定 · 前置批准', x: 900, y: 90, w: 240, h: 80 },
-      { id: 'set', title: '开放评测集', sub: 'E2E · S0 规则断言', x: 60, y: 320, w: 200, h: 80 },
-      { id: 'failed', title: '失败 run', sub: '保留原始失败证据', x: 310, y: 320, w: 220, h: 80 },
-      { id: 'remediation', title: '处置单', sub: '原证据仅诊断，不能关闭', x: 580, y: 320, w: 220, h: 80 },
-      { id: 'rerun', title: '同卷复评', sub: '满足判据才关闭 · A/B', x: 850, y: 320, w: 260, h: 80 },
-      { id: 'issues', title: '问题清单', sub: '每项都有处置结论', x: 60, y: 550, w: 220, h: 80 },
-      { id: 'audit', title: '审计与变更', sub: '操作可反查', x: 340, y: 550, w: 220, h: 80 },
-      { id: 'improve', title: '改进实验', sub: '对比验证改动', x: 620, y: 550, w: 220, h: 80 },
-      { id: 'next', title: '下一轮任务', sub: '行动项回到看板', x: 900, y: 550, w: 240, h: 80 },
+      { id: 'commit', title: '当前 commit + AC', sub: '与发布基线同祖', x: 40, y: 90, w: 240, h: 80 },
+      { id: 'g4', title: 'G4 独立测试', sub: 'MAET · 报修验闭环', x: 350, y: 90, w: 240, h: 80 },
+      { id: 'defect', title: '缺陷闭环', sub: '报 → 修 → 验', x: 660, y: 90, w: 220, h: 80 },
+      { id: 'review', title: '独立代码评审', sub: 'actor 不同于实现者', x: 950, y: 90, w: 220, h: 80 },
+      { id: 'failed', title: '原始失败 run', sub: '历史证据保留', x: 40, y: 320, w: 240, h: 80 },
+      { id: 'remediation', title: '处置单', sub: '失败样本登记', x: 350, y: 320, w: 240, h: 80 },
+      { id: 'rerun', title: '同卷复评', sub: '满足判据才关闭 · fresh explicit', x: 660, y: 320, w: 260, h: 80 },
+      { id: 'ab', title: 'A/B 对比', sub: '改善与回归同时看', x: 980, y: 320, w: 190, h: 80 },
+      { id: 'g4e', title: 'G4-E 判定', sub: 'PASS / GAP / FAIL', x: 100, y: 550, w: 240, h: 80 },
+      { id: 'skillgrade', title: '技能评估第八页签', sub: 'spec 第 19 节 · S0/S1', x: 450, y: 550, w: 250, h: 80 },
+      { id: 'closed', title: '满足判据才关闭', sub: '通过且无红线', x: 800, y: 550, w: 240, h: 80 },
     ],
     flows: [
-      { id: 1, kind: 'task', label: '找到工作入口', path: 'M280 130 L340 130', x: 286, y: 112 },
-      { id: 2, kind: 'task', label: '按 ID 找回任务', path: 'M560 130 L620 130', x: 566, y: 112 },
-      { id: 3, kind: 'approval', label: '进入审批与决定', path: 'M840 130 L900 130', x: 846, y: 112 },
-      { id: 4, kind: 'evidence', label: '离线判分', path: 'M260 360 L310 360', x: 262, y: 342 },
-      { id: 5, kind: 'evidence', label: '失败样本建单', path: 'M530 360 L580 360', x: 532, y: 342 },
-      { id: 6, kind: 'evidence', label: '同卷同版的新证据', path: 'M800 360 L850 360', x: 806, y: 342 },
-      { id: 7, kind: 'review', label: '通过且无红线才关闭', path: 'M980 320 L980 250 L740 250 L740 320', x: 850, y: 238 },
-      { id: 8, kind: 'review', label: '问题进入改进', path: 'M280 590 L620 590', x: 420, y: 572 },
-      { id: 9, kind: 'evidence', label: '审计约束改进', path: 'M560 590 L620 590', x: 566, y: 572 },
-      { id: 10, kind: 'task', label: '行动项回到看板', path: 'M840 590 L900 590', x: 846, y: 572 },
+      { id: 1, kind: 'review', label: '独立执行 MAET', path: 'M280 130 L350 130', x: 282, y: 112 },
+      { id: 2, kind: 'review', label: '缺陷报修验', path: 'M590 130 L660 130', x: 592, y: 112 },
+      { id: 3, kind: 'review', label: '独立 actor 复核', path: 'M880 130 L950 130', x: 882, y: 112 },
+      { id: 4, kind: 'evidence', label: '失败样本建单', path: 'M280 360 L350 360', x: 282, y: 342 },
+      { id: 5, kind: 'evidence', label: '同卷同版新证据', path: 'M590 360 L660 360', x: 592, y: 342 },
+      { id: 6, kind: 'evidence', label: '改善与回归 A/B', path: 'M920 360 L980 360', x: 922, y: 342 },
+      { id: 7, kind: 'review', label: 'PASS / GAP / FAIL 分开', path: 'M770 400 L770 470 L220 550', x: 620, y: 470 },
+      { id: 8, kind: 'review', label: 'CONDITIONAL 不算 PASS', path: 'M575 400 L575 550', x: 590, y: 474 },
+      { id: 9, kind: 'review', label: '通过且无红线才关闭', path: 'M920 400 L920 550', x: 934, y: 474 },
+      { id: 10, kind: 'evidence', label: 'unknown/no_data 进入补证', path: 'M160 400 L160 470 L340 470 L340 550', x: 180, y: 456 },
     ],
-    flowByScene: [[], [], [], [], [], [], [], [], [], [1, 2, 3], [4, 5, 6, 7], [8, 9, 10]],
-    activeNode: ['', '', '', '', '', '', '', '', '', 'search', 'rerun', 'next'],
+    flowByScene: [[], [], [], [], [], [], [1, 2, 3], [4, 5, 6, 7, 8, 9, 10], [], [], [], []],
+    activeNode: ['', '', '', '', '', '', 'g4', 'rerun', '', '', '', ''],
+  },
+  operations: {
+    layers: [{ label: '服务与探针', y: 50, h: 180 }, { label: '配置与恢复', y: 280, h: 180 }, { label: '发布观察与回滚', y: 510, h: 180 }],
+    nodes: [
+      { id: 'web', title: 'Web 前端 :8649', sub: '浏览器入口', x: 30, y: 90, w: 220, h: 80 },
+      { id: 'koa', title: 'Koa 后端 :8647', sub: '产品 API 与读模型', x: 300, y: 90, w: 230, h: 80 },
+      { id: 'gateway', title: 'hermes 网关 :8650', sub: 'profiles · dispatcher', x: 600, y: 90, w: 250, h: 80 },
+      { id: 'ycode', title: 'Ycode :3030/ws', sub: 'online:true 才算 WS open', x: 920, y: 90, w: 250, h: 80 },
+      { id: 'readiness', title: 'readiness 记录', sub: '探针 · 日志 · 无秘密原值', x: 40, y: 320, w: 240, h: 80 },
+      { id: 'config', title: '实际配置', sub: 'cwd · binding · 状态目录 · 治理仓', x: 340, y: 320, w: 250, h: 80 },
+      { id: 'logs', title: 'claim / run / 日志', sub: '真实工作信号', x: 650, y: 320, w: 230, h: 80 },
+      { id: 'recover', title: '有界恢复', sub: '分类 · 退避 · 人工升级', x: 940, y: 320, w: 230, h: 80 },
+      { id: 'release', title: '真实发布回执', sub: '通道与版本', x: 40, y: 550, w: 240, h: 80 },
+      { id: 'observe', title: '观察与复验', sub: '指标 · 异常 · 负责人', x: 360, y: 550, w: 250, h: 80 },
+      { id: 'rollback', title: '回滚与异常回流', sub: '具体命令与处置', x: 690, y: 550, w: 250, h: 80 },
+      { id: 'simroot', title: '独立 SIM_ROOT', sub: '独立运行根，不混生产库', x: 970, y: 550, w: 200, h: 80 },
+    ],
+    flows: [
+      { id: 1, kind: 'task', label: '浏览器访问', path: 'M250 130 L300 130', x: 252, y: 112 },
+      { id: 2, kind: 'task', label: '任务与身份请求', path: 'M530 130 L600 130', x: 532, y: 112 },
+      { id: 3, kind: 'task', label: 'ACP / WS 编码链', path: 'M850 130 L920 130', x: 852, y: 112 },
+      { id: 4, kind: 'evidence', label: '分服务探针，不只看 ready', path: 'M415 170 L415 250 L160 320', x: 250, y: 250 },
+      { id: 5, kind: 'review', label: 'cwd/binding/状态目录', path: 'M280 360 L340 360', x: 282, y: 342 },
+      { id: 6, kind: 'evidence', label: '真实工作信号', path: 'M590 360 L650 360', x: 592, y: 342 },
+      { id: 7, kind: 'task', label: '分类与有界恢复', path: 'M880 360 L940 360', x: 882, y: 342 },
+      { id: 8, kind: 'approval', label: '真实发布回执', path: 'M1055 400 L1055 470 L160 550', x: 700, y: 470 },
+      { id: 9, kind: 'review', label: '观察指标与异常', path: 'M280 590 L360 590', x: 282, y: 572 },
+      { id: 10, kind: 'review', label: '异常触发具体回滚', path: 'M610 590 L690 590', x: 612, y: 572 },
+      { id: 11, kind: 'evidence', label: '异常回流与独立根隔离', path: 'M940 590 L970 590', x: 942, y: 572 },
+    ],
+    flowByScene: [[], [], [], [], [], [], [], [], [1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [], []],
+    activeNode: ['', '', '', '', '', '', '', '', 'readiness', 'observe', '', ''],
+  },
+  audit: {
+    layers: [{ label: '姿态与人工批准', y: 50, h: 180 }, { label: '独立审计与证据链', y: 280, h: 180 }, { label: '整改与复验', y: 510, h: 180 }],
+    nodes: [
+      { id: 'posture', title: '实际安全姿态', sub: '角色 · 开关 · 生效配置', x: 30, y: 90, w: 230, h: 80 },
+      { id: 'human', title: 'HumanGate', sub: 'deciderMode · strength · 有效期', x: 320, y: 90, w: 250, h: 80 },
+      { id: 'cosign', title: 'admin 双人会签', sub: '组织治理 · 异人', x: 640, y: 90, w: 230, h: 80 },
+      { id: 'actor', title: '真实裁决主体', sub: 'requestedBy ≠ decidedBy', x: 930, y: 90, w: 240, h: 80 },
+      { id: 'evidence', title: '原始证据', sub: '任务 · commit · 测试 · 审批', x: 40, y: 320, w: 240, h: 80 },
+      { id: 'candidate', title: '候选发现', sub: '范围 · 方法 · 原始记录', x: 340, y: 320, w: 240, h: 80 },
+      { id: 'audit', title: '独立审计人', sub: '非主张人独立验证', x: 650, y: 320, w: 240, h: 80 },
+      { id: 'hash', title: '证据哈希链', sub: '有限保留期内可发现篡改', x: 960, y: 320, w: 210, h: 80 },
+      { id: 'remediation', title: '整改与复验', sub: 'owner · 期限 · 复验条件', x: 230, y: 550, w: 250, h: 80 },
+      { id: 'verify', title: '独立复核结论', sub: '审计者 ≠ 主张人', x: 550, y: 550, w: 250, h: 80 },
+      { id: 'unknown', title: 'unknown / 源缺席', sub: '进入补证，不进入 PASS', x: 880, y: 550, w: 250, h: 80 },
+    ],
+    flows: [
+      { id: 1, kind: 'review', label: '读取实际配置', path: 'M260 130 L320 130', x: 262, y: 112 },
+      { id: 2, kind: 'approval', label: '主体与强度核验', path: 'M570 130 L930 130', x: 700, y: 112 },
+      { id: 3, kind: 'approval', label: '异人会签', path: 'M870 130 L930 130', x: 872, y: 112 },
+      { id: 4, kind: 'evidence', label: '形成候选发现', path: 'M280 360 L340 360', x: 282, y: 342 },
+      { id: 5, kind: 'review', label: '非主张人独立验证', path: 'M580 360 L650 360', x: 582, y: 342 },
+      { id: 6, kind: 'evidence', label: '链完整性与 firstBroken', path: 'M890 360 L960 360', x: 892, y: 342 },
+      { id: 7, kind: 'review', label: '缺口进入整改', path: 'M460 400 L460 470 L355 550', x: 380, y: 470 },
+      { id: 8, kind: 'review', label: '整改后独立复验', path: 'M480 590 L550 590', x: 482, y: 572 },
+      { id: 9, kind: 'evidence', label: 'unknown 进入补证', path: 'M1005 400 L1005 550', x: 1020, y: 474 },
+    ],
+    flowByScene: [[], [], [], [], [], [], [], [], [], [], [1, 2, 3], [4, 5, 6, 7, 8, 9]],
+    activeNode: ['', '', '', '', '', '', '', '', '', '', 'human', 'audit'],
   },
 }
 
@@ -1836,6 +2217,10 @@ async function init() {
   fontsReady = true
   prepareDynamicText()
 }
+$('coachMore').addEventListener('toggle', () => {
+  if ($('coachMore').open) setPlaying(false)
+})
+
 init().catch(error => {
   console.error('AIStudio 培训页初始化失败', error)
   setPlaying(false)
