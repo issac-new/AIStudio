@@ -57,9 +57,9 @@ export function readAttentionPrefs(): AttentionPrefs {
   }
 }
 
-export function validateAttentionPrefs(input: unknown): { ok: boolean; problems: string[]; prefs?: AttentionPrefs } {
+export function validateAttentionPrefs(input: unknown): { valid: boolean; problems: string[]; prefs?: AttentionPrefs } {
   const problems: string[] = []
-  if (!input || typeof input !== 'object') return { ok: false, problems: ['请求体必须是对象'] }
+  if (!input || typeof input !== 'object') return { valid: false, problems: ['请求体必须是对象'] }
   const body = input as Record<string, unknown>
   const q = body.quietHours
   if (q != null) {
@@ -85,8 +85,8 @@ export function validateAttentionPrefs(input: unknown): { ok: boolean; problems:
     const v = body.minScore
     if (typeof v !== 'number' || !Number.isFinite(v) || v < -1 || v > 1) problems.push('minScore 必须是 -1..1 的数值')
   }
-  if (problems.length) return { ok: false, problems }
-  return { ok: true, problems: [], prefs: normalizePrefs(body as Partial<AttentionPrefs>) }
+  if (problems.length) return { valid: false, problems }
+  return { valid: true, problems: [], prefs: normalizePrefs(body as Partial<AttentionPrefs>) }
 }
 
 export function writeAttentionPrefs(prefs: AttentionPrefs): AttentionPrefs {
@@ -195,7 +195,7 @@ export function listInterventions(status?: string, limit = 30) {
 export function feedback(input: { id: string; outcome: string; note?: string; by?: string }) {
   const outcome = String(input.outcome ?? '').trim()
   const allowed = ['accepted', 'rejected', 'ignored', 'modified', 'takeover', 'snoozed']
-  if (!allowed.includes(outcome)) return { ok: false as const, problems: [`outcome 必须是 ${allowed.join('/')}`] }
+  if (!allowed.includes(outcome)) return { recorded: false as const, problems: [`outcome 必须是 ${allowed.join('/')}`] }
   return appendFeedback({
     interventionId: String(input.id ?? ''),
     outcome: outcome as (typeof allowed)[number] as never,

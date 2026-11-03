@@ -43,7 +43,7 @@ describe('介入台账', () => {
     L._resetLedgerForTests()
     L.appendIntervention(rec({ id: 'iv-1' }))
     const r = L.appendFeedback({ interventionId: 'iv-1', outcome: 'accepted', at: Date.now() })
-    expect(r.ok).toBe(true)
+    expect(r.recorded).toBe(true)
     const store = L.readLedger()
     expect(store.entries).toHaveLength(1)
     expect(store.entries[0].decision).toBe('deliver')
@@ -56,7 +56,7 @@ describe('介入台账', () => {
     const L = await ledger()
     L._resetLedgerForTests()
     const r = L.appendFeedback({ interventionId: 'nope', outcome: 'accepted', at: Date.now() })
-    expect(r.ok).toBe(false)
+    expect(r.recorded).toBe(false)
     expect(r.problems[0]).toContain('未知干预')
   })
 

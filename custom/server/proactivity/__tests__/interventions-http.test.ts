@@ -1,7 +1,7 @@
 // 介入治理 HTTP 契约：偏好读写、干预列表、反馈流转、计分卡、同步降级。
 // 隔离：台账/偏好/govbus 全落临时目录；看板根显式指向不存在的路径 → sync 走 available:false。
 import { describe, it, expect, beforeEach, afterAll } from 'vitest'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createServer } from 'node:http'
@@ -20,6 +20,11 @@ describe('介入治理 REST', () => {
     process.env.ATTENTION_PREFS_PATH = join(dir, 'attention.json')
     process.env.DELIVERY_KANBAN_HOME = join(dir, 'no-kanban-here')
     delete process.env.HERMES_KANBAN_HOME
+    // 主检出可能挂着真实 sim-mux：显式钉住观察面 SIM 根为空，sync 才稳定走 available:false
+    process.env.OBS_SIM_ROOT = join(dir, 'no-sim-root')
+    process.env.SIM_OBSERVER_ROOT = join(dir, 'no-sim-root')
+    process.env.SIM_ROOT = join(dir, 'no-sim-root')
+    delete process.env.HERMES_HOME
     const bodyParser = (await import('@koa/bodyparser')).default
     const Koa = (await import('koa')).default
     const { proactivityRouter } = await import('../proactivity-controller')
@@ -32,7 +37,7 @@ describe('介入治理 REST', () => {
   })
 
   afterAll(() => {
-    for (const k of ['HERMES_GOAL_ALIGNMENT_DIR', 'HERMES_GOV_EVENT_DIR', 'INTERVENTION_LEDGER_PATH', 'ATTENTION_PREFS_PATH', 'DELIVERY_KANBAN_HOME']) {
+    for (const k of ['HERMES_GOAL_ALIGNMENT_DIR', 'HERMES_GOV_EVENT_DIR', 'INTERVENTION_LEDGER_PATH', 'ATTENTION_PREFS_PATH', 'DELIVERY_KANBAN_HOME', 'OBS_SIM_ROOT', 'SIM_OBSERVER_ROOT', 'SIM_ROOT']) {
       delete process.env[k]
     }
     server?.close()
@@ -67,14 +72,17 @@ describe('介入治理 REST', () => {
     expect(reread.prefs.dailyBudget).toBe(4)
   })
 
-  it('POST /interventions/sync：看板根缺席时 available:false（fail-soft 不造数）', async () => {
+  it('POST /interventions/sync：空看板根可用但零候选（不造数）', async () => {
+    // 空 boards 目录：available:true 而 suggestions 为空——断言不凭缺席编造干预
+    const home = join(dir, 'kanban-home')
+    mkdirSync(join(home, 'kanban', 'boards'), { recursive: true })
+    process.env.DELIVERY_KANBAN_HOME = home
     const res = await fetch(`${base}/interventions/sync`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { ok: boolean; available: boolean; reason: string; created: number }
+    const body = (await res.json()) as { ok: boolean; available: boolean; created: number }
     expect(body.ok).toBe(true)
-    expect(body.available).toBe(false)
+    expect(body.available).toBe(true)
     expect(body.created).toBe(0)
-    expect(body.reason).toContain('看板数据根')
   })
 
   it('干预列表与反馈流转：追加记录→列表可见→反馈落账→计分卡读数变化', async () => {

@@ -320,7 +320,7 @@ proactivityRouter.get('/attention', (ctx) => {
 proactivityRouter.put('/attention', (ctx) => {
   if (denyWrite(ctx as never)) return
   const v = validateAttentionPrefs(bodyOf(ctx))
-  if (!v.ok || !v.prefs) {
+  if (!v.valid || !v.prefs) {
     httpFail(ctx, 400, '注意力偏好校验失败', { code: 'invalid_prefs', problems: v.problems })
     return
   }
@@ -362,7 +362,7 @@ proactivityRouter.post('/interventions/:id/feedback', (ctx) => {
     ...(body.note ? { note: String(body.note) } : {}),
     ...(actorOf(ctx) ? { by: actorOf(ctx) as string } : {}),
   })
-  if (!r.ok) {
+  if (!r.recorded) {
     httpFail(ctx, 400, '反馈校验失败', { code: 'invalid_feedback', problems: r.problems })
     return
   }

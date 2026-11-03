@@ -110,15 +110,15 @@ export function appendIntervention(rec: InterventionRecord): InterventionStore {
 }
 
 /** 追加反馈（不改写决策；同一条可多次追加，以最后一次为准）。 */
-export function appendFeedback(fb: InterventionFeedback): { ok: boolean; problems: string[]; store?: InterventionStore } {
+export function appendFeedback(fb: InterventionFeedback): { recorded: boolean; problems: string[]; store?: InterventionStore } {
   const store = readLedger()
   if (!store.entries.some((e) => e.id === fb.interventionId)) {
-    return { ok: false, problems: [`未知干预：${fb.interventionId}`] }
+    return { recorded: false, problems: [`未知干预：${fb.interventionId}`] }
   }
   store.feedback.push(fb)
   if (store.feedback.length > MAX_FEEDBACK) store.feedback = store.feedback.slice(-MAX_FEEDBACK)
   writeLedger(store)
-  return { ok: true, problems: [], store }
+  return { recorded: true, problems: [], store }
 }
 
 /** 决策 → 治理者历史项（供 govern() 消费；outcome 取该条最后一次反馈）。 */
