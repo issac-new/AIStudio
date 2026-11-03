@@ -1,6 +1,6 @@
 # AIStudio 使用指南
 
-本指南面向第一次启动 AIStudio 的用户。内容涵盖启动、三种工作模式、角色入口与排障。安装与架构背景见 [README](../README.md)。设计事实见[《AIStudio 终态设计文档》](superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)。
+本指南面向第一次启动 AIStudio 的用户。内容涵盖启动、三种工作模式、角色入口与排障。需要分角色培训、实操练习和考核时，使用[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md)。需要交互拓扑导览时，运行 `npm run training`，或双击 `docs/manuals/start-training.command`（macOS）/ `start-training.bat`（Windows），打开[《交互拓扑培训》](manuals/aistudio-interactive-training.html)。安装与架构背景见 [README](../README.md)。设计事实见[《AIStudio 终态设计文档》](superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)。
 
 ## 1、启动（浏览器 web 版）
 
@@ -46,7 +46,9 @@ npm run dev
 
 ### 1.3 登录
 
-已有账号直接登录。首次空库引导需在后端环境显式设置 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`。出厂默认口令已删除，这是安全设计。权限分超级管理员、领导层、普通成员三层。组织关键权限变更需双人会签。
+已有账号直接登录。共享或培训环境首次建号时，在启动前执行 `node vendor/hermes-studio/bin/hermes-web-ui.mjs reset-default-login`，使用命令生成的随机密码。隔离开发环境的空库也可显式设置 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`，不要把该入口用于共享培训环境。出厂默认口令已删除。
+
+全局账号角色为 `super_admin` 和 `admin`。团队领导与组织治理岗属于另外的职责判断。组织关键权限变更需双人会签。详细步骤见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md#34-创建首个管理员账号)。
 
 ## 2、三种工作模式怎么走
 
