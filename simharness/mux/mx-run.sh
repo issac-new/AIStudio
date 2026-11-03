@@ -44,6 +44,18 @@ if [[ -f "$STOPF" ]]; then
 fi
 
 SUP_ARGS=(--run "$RUN_ID")
+# 起点自动判（2026-11-03 run26 首发事故立法）：未显式给 --start-step 时——本 RUN 的
+# state.env 不存在＝净环境首发，起点 smoke（监督器缺省 devimpl 是断点续跑语义，净环境
+# 会跳过 smoke→plan 十四步直发开发派单，devimpl on fresh 全 SEND-FAILED 实锤）；
+# state.env 在位＝续跑，保持监督器缺省 devimpl（各步 done 键幂等跳过）。
+if [[ -z "$START_STEP" ]]; then
+  if [[ -f "$SIM_ROOT/runs/$RUN_ID/state.env" ]]; then
+    :   # 续跑：不传，走监督器缺省 devimpl
+  else
+    START_STEP="smoke"
+    echo "[mx-run] 净环境首发：起点自动定为 smoke（state.env 缺席）"
+  fi
+fi
 [[ -n "$START_STEP" ]] && SUP_ARGS+=(--start-step "$START_STEP")
 SUP_LOG="$SIM_ROOT/logs/$RUN_ID-supervisor.log"
 cd "$SCRIPT_DIR" || exit 1
