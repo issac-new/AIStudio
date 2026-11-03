@@ -262,6 +262,16 @@
       "source": "gateway/session_kanban.py",
       "dest": "gateway/session_kanban.py",
       "note": "A 层完成契约会话接线（2026-11-01 dod-drill R3 实锤）：build_kanban_policy 把 derive_contract(task.body) 冻进 kanban_json 上下文，bind_worker_context 导出 HERMES_KANBAN_DOD_CONTRACT/SOURCE_SHA256 到内层 agent——内层进程 env 不继承外层派发进程，契约必须随会话策略走"
+    },
+    {
+      "source": "exa/manifest.yaml",
+      "dest": "optional-mcps/exa/manifest.yaml",
+      "note": "optional-mcps 部署链补位（2026-11-04）：patch 396 只注入 vendor 树，安装树 optional-mcps/ 从未有 exa 条目——catalog 不识别、mcp install 无门。正身=runtime/exa/manifest.yaml 单一事实源，部署后 catalog 即时可见（3.4.3）"
+    },
+    {
+      "source": "semantica/manifest.yaml",
+      "dest": "optional-mcps/semantica/manifest.yaml",
+      "note": "同上补位（patch 375 注入面同病）：semantica v0.7.0 catalog 条目随部署链到位，`hermes mcp install semantica` 恢复可用"
     }
   ],
   "notes": [

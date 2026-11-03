@@ -347,65 +347,6 @@ def _log_spawn_results(results: Optional[list]) -> bool:
     return any_spawned
 
 
-# ── 派发器健康面（PR-1 最小面，V8.29 治理轮）──
-# run12/run19 实锤：ready 卡滞留数小时零孵化且根因未明——先让病可见，根治用本
-# 数据面开展。消费方：cluster-inspector/哨兵/studio 运行中心（import 本模块调
-# dispatcher_health_snapshot()）；报警阈值 env DISPATCHER_STALL_ALARM_TICKS（缺省
-# 60 拍）。根因未明前不自动重排队列（识别不干预），只报警留痕。
-_HEALTH = {"last_spawn_ts": 0.0, "stall_ticks": 0, "last_tick_ts": 0.0, "total_ticks": 0}
-
-
-def _record_tick(any_spawned: bool) -> None:
-    now = time.time()
-    _HEALTH["last_tick_ts"] = now
-    _HEALTH["total_ticks"] += 1
-    if any_spawned:
-        _HEALTH["last_spawn_ts"] = now
-        _HEALTH["stall_ticks"] = 0
-    else:
-        _HEALTH["stall_ticks"] += 1
-    try:
-        threshold = int(os.environ.get("DISPATCHER_STALL_ALARM_TICKS", "60"))
-    except ValueError:
-        threshold = 60
-    if _HEALTH["stall_ticks"] == threshold:
-        logger.warning("kanban dispatcher stall alarm: %d ticks with zero spawns (ready may be stuck); snapshot=%s",
-                       _HEALTH["stall_ticks"], dispatcher_health_snapshot())
-
-
-def dispatcher_health_snapshot() -> dict:
-    """只读健康快照：ready 在场板清单/距最近孵化秒数/连续零孵化拍数/总拍数。
-    不写任何库；板级 ready 判定与 ready_nonempty() 同源（spawnable+assigned）。"""
-    boards_with_ready: list[str] = []
-    try:
-        kbd = _kbd()
-        from hermes_cli import kanban_db as _kb
-        disp = _KanbanDispatcher(None, _resolve_dispatcher_settings({}, None))
-        with _kb.pin_first_board_resolution():
-            for slug in disp._board_slugs():
-                conn = None
-                try:
-                    conn = _kbc().connect(board=slug)
-                    if kbd.has_spawnable_ready(conn):
-                        boards_with_ready.append(slug)
-                except Exception:
-                    continue
-                finally:
-                    if conn is not None:
-                        with contextlib.suppress(Exception):
-                            conn.close()
-    except Exception:
-        pass
-    now = time.time()
-    last = _HEALTH["last_spawn_ts"]
-    return {
-        "boards_with_ready": boards_with_ready,
-        "ready_nonempty": bool(boards_with_ready),
-        "seconds_since_last_spawn": round(now - last, 1) if last else None,
-        "stall_ticks": _HEALTH["stall_ticks"],
-        "total_ticks": _HEALTH["total_ticks"],
-    }
-
 # ---------------------------------------------------------------------------
 # 723（2026-11-01 run24 根治·诊断面）：0 spawn 但 ready 非空的拒绝原因显形。
 #
@@ -573,3 +514,63 @@ def _refusal_hint(kb: Any, settings: _DispatcherSettings, results: Optional[list
     except Exception:  # pragma: no cover - diagnostics must never break dispatch
         logger.debug("kanban dispatcher: refusal hint unavailable", exc_info=True)
         return ""
+
+
+# ── 派发器健康面（PR-1 最小面，V8.29 治理轮）──
+# run12/run19 实锤：ready 卡滞留数小时零孵化且根因未明——先让病可见，根治用本
+# 数据面开展。消费方：cluster-inspector/哨兵/studio 运行中心（import 本模块调
+# dispatcher_health_snapshot()）；报警阈值 env DISPATCHER_STALL_ALARM_TICKS（缺省
+# 60 拍）。根因未明前不自动重排队列（识别不干预），只报警留痕。
+_HEALTH = {"last_spawn_ts": 0.0, "stall_ticks": 0, "last_tick_ts": 0.0, "total_ticks": 0}
+
+
+def _record_tick(any_spawned: bool) -> None:
+    now = time.time()
+    _HEALTH["last_tick_ts"] = now
+    _HEALTH["total_ticks"] += 1
+    if any_spawned:
+        _HEALTH["last_spawn_ts"] = now
+        _HEALTH["stall_ticks"] = 0
+    else:
+        _HEALTH["stall_ticks"] += 1
+    try:
+        threshold = int(os.environ.get("DISPATCHER_STALL_ALARM_TICKS", "60"))
+    except ValueError:
+        threshold = 60
+    if _HEALTH["stall_ticks"] == threshold:
+        logger.warning("kanban dispatcher stall alarm: %d ticks with zero spawns (ready may be stuck); snapshot=%s",
+                       _HEALTH["stall_ticks"], dispatcher_health_snapshot())
+
+
+def dispatcher_health_snapshot() -> dict:
+    """只读健康快照：ready 在场板清单/距最近孵化秒数/连续零孵化拍数/总拍数。
+    不写任何库；板级 ready 判定与 ready_nonempty() 同源（spawnable+assigned）。"""
+    boards_with_ready: list[str] = []
+    try:
+        kbd = _kbd()
+        from hermes_cli import kanban_db as _kb
+        disp = _KanbanDispatcher(None, _resolve_dispatcher_settings({}, None))
+        with _kb.pin_first_board_resolution():
+            for slug in disp._board_slugs():
+                conn = None
+                try:
+                    conn = _kbc().connect(board=slug)
+                    if kbd.has_spawnable_ready(conn):
+                        boards_with_ready.append(slug)
+                except Exception:
+                    continue
+                finally:
+                    if conn is not None:
+                        with contextlib.suppress(Exception):
+                            conn.close()
+    except Exception:
+        pass
+    now = time.time()
+    last = _HEALTH["last_spawn_ts"]
+    return {
+        "boards_with_ready": boards_with_ready,
+        "ready_nonempty": bool(boards_with_ready),
+        "seconds_since_last_spawn": round(now - last, 1) if last else None,
+        "stall_ticks": _HEALTH["stall_ticks"],
+        "total_ticks": _HEALTH["total_ticks"],
+    }
