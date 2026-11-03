@@ -37,8 +37,10 @@ let base: string
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'handoff-http-'))
   const Koa = (await import('koa')).default
+  const bodyParser = (await import('@koa/bodyparser')).default
   const { handoffRoutes } = await import('../handoff-controller')
   const app = new Koa()
+  app.use(bodyParser())
   app.use(handoffRoutes.routes())
   server = createServer(app.callback())
   await new Promise<void>((r) => server!.listen(0, '127.0.0.1', r))
@@ -75,5 +77,47 @@ describe('GET /quality', () => {
     expect((await fetch(`${base}/quality?windowHours=9999`)).status).toBe(400)
     expect((await fetch(`${base}/quality?stallHours=0`)).status).toBe(400)
     expect((await fetch(`${base}/quality?stallHours=999`)).status).toBe(400)
+  })
+})
+
+describe('POST /acceptance/check', () => {
+  it('调用方观测证据：全部成立 → allHold；缺证据 → unchecked 且不放行', async () => {
+    const okRes = await fetch(`${base}/acceptance/check`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        criteria: ['file_exists: out/a.md', 'test_passed: npm test'],
+        artifacts: [{ path: 'out/a.md', exists: true, readable: true, size: 10 }],
+        commands: [{ command: 'npm test', exitCode: 0, stdoutTail: 'Tests 5 passed' }],
+      }),
+    })
+    expect(okRes.status).toBe(200)
+    const okBody = (await okRes.json()) as { verdict: { allHold: boolean; applicable: boolean } }
+    expect(okBody.verdict.applicable).toBe(true)
+    expect(okBody.verdict.allHold).toBe(true)
+
+    const missRes = await fetch(`${base}/acceptance/check`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ criteria: ['file_exists: out/missing.md'] }),
+    })
+    const missBody = (await missRes.json()) as { verdict: { allHold: boolean; unchecked: string[] } }
+    expect(missBody.verdict.allHold).toBe(false)
+    expect(missBody.verdict.unchecked).toEqual(['file_exists: out/missing.md'])
+  })
+
+  it('无断言 → 400；root 不在允许根 → 问题如实回传', async () => {
+    const empty = await fetch(`${base}/acceptance/check`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ criteria: [] }),
+    })
+    expect(empty.status).toBe(400)
+
+    const guarded = await fetch(`${base}/acceptance/check`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ criteria: ['file_exists: x'], root: '/definitely/not/allowed' }),
+    })
+    expect(guarded.status).toBe(200)
+    const gb = (await guarded.json()) as { verdict: { allHold: boolean }; problems?: string[] }
+    expect(gb.verdict.allHold).toBe(false)
+    expect(gb.problems?.[0]).toContain('不在允许根内')
   })
 })

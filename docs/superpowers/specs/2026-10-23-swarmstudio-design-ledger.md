@@ -30,6 +30,7 @@
 | 改进实验验证信号层级 | 5 档 | 命令验收 > 密封留出 > 历史回归 > 仅裁判判分 > 无；连续 3 轮停在裁判层即告警（`2026-10-19-harness2-improvement-workbench.md` §14.2） |
 | 改进实验独立证据 | 3 类 | 噪声 δ（半极差）／等预算基线／语义等价反事实；均须真实运行，禁手填（同上 §14.1） |
 | 介入决策档 | 7 | 投递／延后／合并／抑制／升级／澄清／优雅不动；四门顺序＝置信→价值成本→时机→风险，critical 必达，安全告警不接该层（`2026-11-03-proactive-intervention-governance.md`） |
+| 验收断言家族 | 6 | `file_exists/file_readable/file_min_bytes/file_contains/command_ok/test_passed`；不可判定落 unchecked 且整体不放行（`2026-11-03-acceptance-checks.md`） |
 | 交接回合口径 | 认领起、终态止 | `claimed`→`completed/gave_up/crashed/reclaimed/archived`；运行中不进分母；`reclaimed` 只关上一回合（`2026-11-03-handoff-quality-ledger.md`） |
 | 探测并发缺省 | 2（上限 8，另按单元数与预算超支二次收敛） | 调度面 `probeConcurrency`：>1 时按有界池并行「题×样本」，预算按在途估值预扣，并发下证据只认 stream-json（`2026-11-03-harmony-multiobjective.md`） |
 | 断点推断缺省阈值 | 边界 3 分／间歇 20 分／节奏钳 5-120 分 | 看板生命周期事件推断断点：状态边界或长间歇判为断点，否则按事件间隔中位数推测下一断点；缺证据判非断点（`2026-11-03-proactive-intervention-governance.md`） |
