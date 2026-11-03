@@ -1,5 +1,23 @@
 # Changelog
 
+## [v2.99.1] - 2026-11-03
+
+收官批：分发预算欠账清偿＋Tier-3 行为评测落地（门禁数 59 与变量数 204 不变）。
+
+### Added
+
+- **`scripts/skill-behavioral-eval.sh` Tier-3 行为评测**：用目标仓真实任务提示跑宿主 CLI（`claude -p` / `codex exec` / 自定义 `-p`），抓 stream-json trace 做**确定性动作断言**（该出现的动作出现、不该出现的动作没出现），不移植 LLM judge（上游自记同用例 6/6、1/6、2/7 波动，随机判分不能做门禁）。opt-in、`--dry-run` 先出计划、runner 不可用 exit 2 并明说"未运行≠通过"；显式 `--runner` 为权威，找不到不回落其他宿主。
+- **`assets/evals/behavioral.tsv` 用例模板**（列：case_id / prompt / expect_actions / forbid_actions）。
+- **`tests/test-skill-behavioral-eval.sh` 五态守门**：模板 dry-run、runner 不可用 exit 2、动作命中、动作缺失、触发禁止项（假 runner 驱动，零 token）。
+
+### Changed
+
+- **`references/code-graph-tools.md` 转生成器侧（gen_only）**：其唯一消费节点是「生成流程 Step 3 图谱选型」——选型是生成期决策，目标技能运行期不需要它。分发面预算 642207B → **598954B**（预算 618496B，余量 19542B）；`FACT_UNIVERSAL_FILES` 110→109。**预算数字未上调**：为容纳新增而调高税制锚，正是 floor guard 要拦的降标。
+
+### Fixed
+
+- **`--runner` 静默回落**：显式指定不存在的 runner 时原先会回落到 `claude` 并真跑（测试 hang 暴露），改为权威判定、找不到即 exit 2。
+
 ## [v2.99.0] - 2026-11-03
 
 方法论吸收批：pstack 全量 + addyosmani/mattpocock 上游漂移刷新（12 项；门禁 56→59，变量 199→204）。源码级调研三仓（pstack `ae5650f`、addyosmani `301b02b`、mattpocock `4ae2317`），按"只吸收机制不移植体量"落地。

@@ -1,0 +1,5 @@
+# 行为评测用例（Tier-3，按需烧 token，不进默认门禁）
+# 列：case_id	prompt	expect_actions（正则;分号分隔，全部须命中 trace）	forbid_actions（命中即失败）
+# 写"可辨识动作"而非结论：工具名 + 目标文件/命令；结论由人看 trace 判
+# 示例（生成期按目标仓真实任务替换）：
+# 1	修复 BUG.md 里的分账错误	Write.*src/split\.js;Read.*BUG\.md;Bash\(.*npm test	Edit.*package\.json
