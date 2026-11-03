@@ -242,7 +242,7 @@ export interface InterventionDto {
   audience: string
   topicKey: string
   summary: string
-  decision: 'deliver' | 'defer' | 'batch' | 'suppress' | 'escalate'
+  decision: 'deliver' | 'defer' | 'batch' | 'suppress' | 'escalate' | 'clarify' | 'hold'
   reasonCode: string
   reasons: string[]
   score: number
@@ -252,8 +252,27 @@ export interface InterventionDto {
 }
 
 export interface ProactivityScorecardDto {
-  task: { accepted: number; acceptedWithEffect: number; acceptanceRate: number | null }
-  mechanism: { decisions: Record<string, number>; suppressed: number; deferred: number; batched: number; escalated: number; quietHoursDefers: number; budgetDefers: number; deferralAging: number }
+  task: {
+    accepted: number
+    acceptedWithEffect: number
+    acceptanceRate: number | null
+    reliance?: { acceptedWithEffect: number; acceptedWithoutEffect: number; rejected: number; unknown: number }
+  }
+  mechanism: {
+    decisions: Record<string, number>
+    suppressed: number
+    deferred: number
+    batched: number
+    escalated: number
+    quietHoursDefers: number
+    budgetDefers: number
+    deferralAging: number
+    clarifications?: number
+    holds?: number
+    interventionPrecision?: number | null
+    falseInterventionRate?: number | null
+    missedAssistance?: number
+  }
   user: { interruptions: number; accepted: number; rejected: number; ignored: number; modified: number; takeover: number; snoozed: number; acceptanceRate: number | null; ignoreRate: number | null; retractionRate: number | null; trustGap: number | null; quietHoursBlocked: number; budgetCapped: number }
   note: string
 }

@@ -128,7 +128,31 @@ describe('三层计分卡', () => {
     expect(card.mechanism.quietHoursDefers).toBe(1)
     expect(card.mechanism.suppressed).toBe(1)
     expect(card.task.acceptedWithEffect).toBe(1)
+    // 适当依赖四象限（全文版）：有真值才拆，其余 unknown
+    expect(card.task.reliance).toEqual({ acceptedWithEffect: 1, acceptedWithoutEffect: 0, rejected: 0, unknown: 0 })
+    // 机制层新增：精确率/误介入率/漏助/澄清/优雅不动
+    expect(card.mechanism.interventionPrecision).toBeCloseTo(0.5, 4)
+    expect(card.mechanism.falseInterventionRate).toBe(0)
+    expect(card.mechanism.missedAssistance).toBe(1) // c 延后过且从未投递=疑似漏助（近似口径）
+    expect(card.mechanism.clarifications).toBe(0)
+    expect(card.mechanism.holds).toBe(0)
     expect(card.note).toContain('不是真人满意度')
+  })
+
+  it('漏助与澄清/优雅不动计数：延后但同话题从未投递算漏助', async () => {
+    const { buildScorecard } = await import('../proactivity-scorecard')
+    const entries = [
+      { id: 'd1', topicKey: 't-orphan', surface: 'suggestion', severity: 'info', audience: 'human' as const, decision: 'defer' as const, reasonCode: 'quiet_hours' as const, score: 0.2, decidedAtMs: 1 },
+      { id: 'd2', topicKey: 't-later', surface: 'suggestion', severity: 'info', audience: 'human' as const, decision: 'defer' as const, reasonCode: 'hourly_budget' as const, score: 0.2, decidedAtMs: 2 },
+      { id: 'd3', topicKey: 't-later', surface: 'suggestion', severity: 'info', audience: 'human' as const, decision: 'deliver' as const, reasonCode: 'budget_ok' as const, score: 0.3, decidedAtMs: 3 },
+      { id: 'c1', topicKey: 't-q', surface: 'suggestion', severity: 'attention', audience: 'human' as const, decision: 'clarify' as const, reasonCode: 'clarify_first' as const, score: 0.1, decidedAtMs: 4 },
+      { id: 'h1', topicKey: 't-h', surface: 'suggestion', severity: 'attention', audience: 'human' as const, decision: 'hold' as const, reasonCode: 'irreversible_hold' as const, score: 0.1, decidedAtMs: 5 },
+    ]
+    const card = buildScorecard({ entries, outcomes: [] })
+    expect(card.mechanism.missedAssistance).toBe(1)
+    expect(card.mechanism.clarifications).toBe(1)
+    expect(card.mechanism.holds).toBe(1)
+    expect(card.mechanism.decisions.clarify).toBe(1)
   })
 
   it('空台账读零不造数', async () => {

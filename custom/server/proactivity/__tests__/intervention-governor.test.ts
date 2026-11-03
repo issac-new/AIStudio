@@ -184,3 +184,69 @@ describe('治理规则优先级', () => {
     expect(busy.score).toBeCloseTo(0.45, 5)
   })
 })
+
+// ── 全文版增补（2026-11-03 第二轮）：四门顺序与新决策档 ──
+describe('四门与新增决策档', () => {
+  it('门1 置信：低于下限先澄清（action_required 豁免）', () => {
+    const r = govern({ nowMs: DAY, candidate: baseCandidate({ confidence: 0.3 }), history: [] })
+    expect(r.decision).toBe('clarify')
+    expect(r.reasonCode).toBe('clarify_first')
+    const urgent = govern({ nowMs: DAY, candidate: baseCandidate({ confidence: 0.1, severity: 'action_required' }), history: [] })
+    expect(urgent.decision).toBe('deliver')
+    const confident = govern({ nowMs: DAY, candidate: baseCandidate({ confidence: 0.9 }), history: [] })
+    expect(confident.decision).toBe('deliver')
+  })
+
+  it('门4 风险：不可逆+对外 → hold；代价可逆或影响团队 → escalate 要确认', () => {
+    const hold = govern({
+      nowMs: DAY,
+      candidate: baseCandidate({ reversibility: 'irreversible', blastRadius: 'external' }),
+      history: [],
+    })
+    expect(hold.decision).toBe('hold')
+    expect(hold.reasonCode).toBe('irreversible_hold')
+    const confirm = govern({ nowMs: DAY, candidate: baseCandidate({ reversibility: 'costly' }), history: [] })
+    expect(confirm.decision).toBe('escalate')
+    expect(confirm.reasonCode).toBe('blast_radius_confirm')
+    const team = govern({ nowMs: DAY, candidate: baseCandidate({ blastRadius: 'team' }), history: [] })
+    expect(team.decision).toBe('escalate')
+  })
+
+  it('门3 时机：不在断点的信息型干预延后到下一断点', () => {
+    const r = govern({
+      nowMs: DAY,
+      candidate: baseCandidate({ severity: 'info', atBreakpoint: false, nextBreakpointAtMs: DAY + 20 * 60_000 }),
+      history: [],
+    })
+    expect(r.decision).toBe('defer')
+    expect(r.reasonCode).toBe('breakpoint_wait')
+    expect(r.nextWindowAtMs).toBe(DAY + 20 * 60_000)
+    const onBreak = govern({
+      nowMs: DAY,
+      candidate: baseCandidate({ severity: 'info', atBreakpoint: true, nextBreakpointAtMs: DAY + 60_000 }),
+      history: [],
+    })
+    expect(onBreak.decision).toBe('deliver')
+  })
+
+  it('成本性质：resource 型不占注意力预算', () => {
+    const history = Array.from({ length: 8 }, (_, i) => hist({ id: `x${i}`, topicKey: `t${i}`, decidedAtMs: DAY - HOUR - i * 60_000 }))
+    const att = govern({ nowMs: DAY, prefs: { dailyBudget: 8 }, candidate: baseCandidate(), history })
+    expect(att.decision).toBe('defer')
+    const res = govern({ nowMs: DAY, prefs: { dailyBudget: 8 }, candidate: baseCandidate({ kind: 'resource' }), history })
+    expect(res.decision).toBe('deliver')
+  })
+
+  it('未来接受度折现：近期忽略/拒绝占比高 → 同条件下分数更低（cry-wolf）', () => {
+    const base = { nowMs: DAY, prefs: { hourlyBudget: 10, dailyBudget: 20, minScore: 0.1 }, candidate: baseCandidate({ topicKey: 'fresh' }) }
+    const clean = govern({ ...base, history: [] })
+    const tiredHistory = [
+      hist({ id: 'a', topicKey: 'o1', decidedAtMs: DAY - 2 * HOUR, outcome: 'ignored' }),
+      hist({ id: 'b', topicKey: 'o2', decidedAtMs: DAY - 3 * HOUR, outcome: 'ignored' }),
+      hist({ id: 'c', topicKey: 'o3', decidedAtMs: DAY - 4 * HOUR, outcome: 'rejected' }),
+    ]
+    const tired = govern({ ...base, history: tiredHistory })
+    expect(clean.score).toBeGreaterThan(tired.score)
+    expect(tired.reasons.join()).toContain('接受度折现')
+  })
+})
