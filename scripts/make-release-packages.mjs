@@ -60,6 +60,19 @@ for (const item of plan) {
     continue
   }
   execFileSync('git', args, { cwd: ROOT })
+  // R147（2026-11-03）：git archive 对 >100 字节路径（中文知识库文件名）产出 PAX 扩展头
+  // （<sha>.paxheader 条目）——标准 tar 透明处理，但 7-Zip 等 Windows 工具把它们显示为
+  // 实体文件（run25 复盘实测：yuan-skill 60 条/full 119 条）。修复=解包后以 GNU 格式重打
+  // （@LongLink 长名机制，所有主流工具含 7-Zip 均透明处理）。
+  // macOS bsdtar 无 --format=gnu，用 Python tarfile 重打（GNU_FORMAT 原生支持、可移植）
+  execFileSync('python3', ['-I', '-c', `
+import tarfile, sys
+src_path, = sys.argv[1:]
+with tarfile.open(src_path, 'r:gz') as src, tarfile.open(src_path + '.gnu', 'w:gz', format=tarfile.GNU_FORMAT) as dst:
+    for m in src:
+        dst.addfile(m, src.extractfile(m) if m.isfile() else None)
+import os; os.replace(src_path + '.gnu', src_path)
+`, out], { stdio: 'pipe' })
   const size = human(statSync(out).size)
   const sum = sha256(out)
   lines.push(`${sum}  ${item.name}`)

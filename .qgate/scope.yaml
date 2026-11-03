@@ -260,3 +260,6 @@ paths:
   # 2026-11-03 离线包卫生批（R146）
   - docs/superpowers/specs/2026-11-03-bundle-tracked-only.md
   - skills/swarm-yuan/scripts/make-offline-bundle.sh
+  # 2026-11-03 源码包 PAX 头清除（R147）
+  - docs/superpowers/specs/2026-11-03-tar-pax-gnu-repack.md
+  - scripts/make-release-packages.mjs

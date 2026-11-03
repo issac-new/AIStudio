@@ -1,4 +1,4 @@
-# 附录 A：产品面全量 spec 索引（496 份设计/规格/决策文档）
+# 附录 A：产品面全量 spec 索引（497 份设计/规格/决策文档）
 
 > 附件，非正本。供「AIStudio 终态设计文档」检索与审计；每条给主旨与结论或状态要点。
 > 覆盖与计数（2026-10-28 v1.0.2 发布批后复核：main 376＋目录整理 1＋预检单仓 1＋清偿 1＋run23 两批 2＋对账发布 1＋v1.0.2 发布 1；2026-10-29 ＋安装目录 1＋目录校正 1；2026-10-30 ＋swarm-yuan ub-mode 吸收 1＋HelixHarness 吸收 1＋并行批次 9；2026-10-31 ＋日常工作台回归 1＋产品能力收尾 1＋回归批②deviceId 1＋计数对齐 1＋全功能回归修复 1＋三区全量回归 1＋活体验证收案 1＋日常调研吸收 1＋Loop Graph 任务台账 1＋三区回归二轮 1＋三区未做收口 1＋恢复图 run 详情 1＋studio v0.8.0 升级 1＋RSI 二批 1＋品牌扫尾 1＋zcode 3.17.1 同步 1＋RSI P2 批 1＋v1.0.4 发布 1＋package-lock 版本归一 1＋run24 方案模板重锚 1＋prelaunch 跨轮残留门 1＋super-agent 吸收 A+B 批 1＋RSI 改进方案 1＋工作台概览三问重排 1＋super-agent 吸收 C 批 1＋编排域汇总投递 1＋模型波动加固 1＋pre-push 范围修正 1＋K19 响应形状修正 1＋runtime 回灌 1＋内核门下沉 1＋会话接线 1＋RSI 全量执行后的设计文档同步 1＋推演方案×程序同步二批 1＋编排定时轮与多板接入 1；2026-10-31 合并行去重说明：v0.8.0 升级批曾引入第二条覆盖行且枚举链缺 4 项，本批合并为一条＋RSI 首批执行方案 1；2026-11-01 ＋chat 回合自恢复立项补登记 1（edb3c6636 落 spec 未登记、docs-ssot-guard 主干红，本批清零）＋v1.0.5 发布 1；2026-11-01 ＋v1.0.6 发布 1；2026-11-02 ＋离线 Windows 安装包 1＋测试稳定性 DSL 1＋失败根因分类器 1＋MAET 检索协议 1＋测试词汇 1＋Grader 环 1＋载体对账 1＋技能面板 1；2026-11-02 ＋v1.0.8 发布 1＋方案同步代登记 1（3ec71fd4d 落 spec 未登记，本批代补）＋run25 工具链加固 1＋chat recovery kwarg 修复 1＋场景闸门韧性两件 1＋_sens 重放 unbound 修复 1＋监督器催办闸别分流 1＋机制治理批 1＋run25 全流程复盘 1＋run26 挂账台账 1＋v1.0.9 发布 1；2026-11-03 ＋run25 采集面补流 1）：只取 `docs/superpowers/specs/*.md` 直接根文件，不递归 `archive/`、`assets/`，不含 2 份 HTML。A.1 收 495 份实际设计、规格与决策文档（含历史业务 spec）；导航、整合正本、数字总账、合并来源地图、A-D 索引与退役拼接指针列入「角色/排除」表。两表不重叠，并集覆盖全部直接根 Markdown；文档不会仅因日期旧被排除。
@@ -459,6 +459,7 @@
 | 2026-11-03-release-v1.0.9-overlay | v1.0.9 发布轮 | run25 收官（六闸全过 11h04m）＋机制治理五件＋复盘根治 12 项；cockpit studio.8/teams team.8/ycode 3.17.1/yuan v2.98.5/fullPackage 1.0.9 |
 | 2026-11-03-offline-everything-complete | 离线包 everything 全内嵌 | R134→R145 口径修订：默认档含运行时零知识库、everything 档含知识库零运行时（互补非包含）→ --everything 改为全内嵌（127M）；断网机一次装齐 |
 | 2026-11-03-bundle-tracked-only | 离线包只打跟踪文件＋版本覆盖 | cp -R 带入 34 条构建残留（tests/e2e/target、嵌套 .swarm-yuan）→ 改 git ls-files 白名单复制；SWARM_YUAN_OFFLINE_VER 解包名被 describe 后缀污染 |
+| 2026-11-03-tar-pax-gnu-repack | 源码包 PAX 头清除 | 中文文件名 >100B 触发 git archive PAX 扩展头（7-Zip 显示为 .paxheader 文件）→ Python tarfile GNU_FORMAT 重打，三包 pax 头归零 |
 | 2026-11-02-run24-retro-product-batch | 产品面与报告链四件 | 补丁 723 dispatcher 拒绝原因聚合（根因=board 团队围栏拒子编制 assignee）/利用率报告行/判据 17 执法（查 18） |
 | 2026-11-02-full-regression-fixes | 全功能回归轮补丁面两缺陷修复 | 723 尾 hunk 缺尾随上下文致 git apply EOF 锚定误判（inject WARN 跳过＝到达即坏；补计数 3/172→6/175＋3 行尾上下文）＋724 新增 isFullscreen 定义回补（App.vue ReferenceError，070 使用侧在位而 111 定义侧缺席）＋走查探针对齐设计语义（registry 空态/sim fail-closed/locked-ips・files 权限面白名单＋matrix 访客态）；walk-routes C/D 簇清零 |
 | 2026-11-02-run24-runtime-closeout | run24 运行面收口 | 722/723 真正加载（白名单+重放）/板围栏 4 板修正（nonspawnable 5→0）/遗留卡 5 张冻结/studio 换装活体三态/归档 35 键审计 rc=0；pending-batch 8/9 闭环 |
