@@ -25,6 +25,8 @@
 | spec 校准样本下限 | 1 条 F2P | 本批 spec 决策 6（证据级校准，非执行级） |
 | 命令验收器超时上限 | 30 s | 本批 spec 决策 7（默认关闭） |
 | 模型波动交付防线 | 4 层 | A 完成契约（门在 complete_task 内核边界，2026-11-01 下沉）/ B 判定网 / C 能力路由 / D 补偿止损（`2026-10-31-model-resilience-hardening.md`＋`2026-11-01-dod-kernel-gate-lineage-reclaim.md`） |
+| 改进实验目标数 | 2 或 3 | 质量/成本恒在，安全读数（`safetyRate`）由评测方回填后升三目标；缺席不猜（`2026-11-03-harmony-multiobjective.md`） |
+| 增益保留率阈值 | 30% | 留出增益/演化增益低于该值告警（`HARNESS2_RSI_REQUIRE_RETENTION=1` 升硬闸）；缺留出基线不给数 |
 | 改进实验验证信号层级 | 5 档 | 命令验收 > 密封留出 > 历史回归 > 仅裁判判分 > 无；连续 3 轮停在裁判层即告警（`2026-10-19-harness2-improvement-workbench.md` §14.2） |
 | 改进实验独立证据 | 3 类 | 噪声 δ（半极差）／等预算基线／语义等价反事实；均须真实运行，禁手填（同上 §14.1） |
 | 介入决策档 | 7 | 投递／延后／合并／抑制／升级／澄清／优雅不动；四门顺序＝置信→价值成本→时机→风险，critical 必达，安全告警不接该层（`2026-11-03-proactive-intervention-governance.md`） |

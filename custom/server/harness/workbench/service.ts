@@ -17,6 +17,7 @@ import {
   rsiConfig, sha256, stallDetection, submitReadiness,
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
+import { behavioralDiversity, decomposeSearch, gainRetention, objectivePointsOf } from './multi-objective'
 import { createSet, getSet } from '../../eval/store'
 import { runReplayEval } from '../../eval/runner'
 import { loadEvalConfig } from '../../eval/types'
@@ -55,6 +56,12 @@ export interface ProposalDerived {
   regularization: RegularizationDerived
   /** HarnessPro 帕累托三档报告（2026-10-23 吸收轮；视图现算不落盘）。 */
   pareto: ParetoReport
+  /** Harmony 多目标搜索报告（2026-11-03 吸收轮）：分解代表解、增益保留率、行为多样性监测。 */
+  search: {
+    decomposition: ReturnType<typeof decomposeSearch>
+    retention: ReturnType<typeof gainRetention>
+    diversity: ReturnType<typeof behavioralDiversity>
+  }
 }
 
 export type ProposalView = Proposal & { derived: ProposalDerived }
@@ -102,6 +109,25 @@ function derive(
     diversity: candidateDiversity(proposal.variants),
     regularization: regularization ?? emptyRegularization(proposal),
     pareto: paretoReportOf(proposal),
+    search: (() => {
+      const { points, excluded } = objectivePointsOf(proposal)
+      const decomposition = decomposeSearch(points)
+      decomposition.excluded = excluded
+      const sel = composedVariant(proposal)
+      const probe = sel ? proposal.probes.find((p) => p.variantId === sel.id && p.status === 'recorded') : null
+      const ev = probe?.evidence
+      const retention = gainRetention({
+        passAt1: ev?.passAt1 ?? null,
+        baselinePassAt1: ev?.equalBudgetBaseline?.passAt1 ?? null,
+        heldoutPassRate: proposal.heldout?.passRate ?? null,
+        heldoutBaselinePassRate: ev?.heldoutBaselinePassRate ?? null,
+      })
+      return {
+        decomposition,
+        retention,
+        diversity: behavioralDiversity(proposal.variants.map((v) => v.content)),
+      }
+    })(),
   }
 }
 

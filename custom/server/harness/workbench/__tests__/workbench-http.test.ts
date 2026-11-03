@@ -333,6 +333,11 @@ describe('RRSI 正则化 HTTP', () => {
     const view = body.proposals.find((x: any) => x.id === composed.id)
     expect(view.derived.regularization.round).toBe(1)
     expect(view.derived.regularization.editBudgetExceeded).toBe(false)
+    // Harmony 搜索报告（2026-11-03）：分解代表解/增益保留率/多样性监测三面随视图下发
+    expect(view.derived.search.decomposition.eligible).toBeGreaterThanOrEqual(1)
+    expect(view.derived.search.decomposition.subproblems.length).toBeGreaterThanOrEqual(1)
+    expect(view.derived.search.retention.verdict.length).toBeGreaterThan(0)
+    expect(view.derived.search.diversity.note).toContain('监测')
   })
 
   it('提交期泄漏批评者：候选携带基线集任务 ID → 400 benchmark_leakage', async () => {

@@ -171,6 +171,13 @@ export interface ProbeMetrics {
   counterfactual?: CounterfactualEvidence | null
   /** 密封留出集读数（R6，2026-10-31 二批）：只回 {runId,n,passRate} 形状，内容永不出库。 */
   heldout?: { runId: string; n: number; passRate: number } | null
+  /**
+   * 安全类基准的独立读数（Harmony 吸收轮 2026-11-03）：与质量分开报，才谈得上双/三目标分解。
+   * 缺席＝该评测集不度量安全，分解退化为质量/经济双目标（不猜安全值）。
+   */
+  safetyRate?: number | null
+  /** 留出集基线读数（可选）：只有它与会话内基线都在，才算得出增益保留率。 */
+  heldoutBaselinePassRate?: number | null
 }
 
 export type QualityVerdict = 'improved' | 'regressed' | 'neutral' | 'unknown'
