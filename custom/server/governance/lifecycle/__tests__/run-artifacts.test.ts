@@ -35,7 +35,7 @@ describe('runFilePath（围栏）', () => {
 describe('writeRunJson / readRunJson', () => {
   it('写入后可读回，内容一致', () => {
     const w = writeRunJson(RUN, ['evidence', 'ac-trace.json'], { a: 1, rows: [{ acId: 'AC-1' }] })
-    expect(w.ok).toBe(true)
+    expect(w.written).toBe(true)
     const r = readRunJson<{ a: number }>(RUN, ['evidence', 'ac-trace.json'])
     expect(r.available).toBe(true)
     if (r.available) expect(r.doc.a).toBe(1)
@@ -60,8 +60,8 @@ describe('writeRunJson / readRunJson', () => {
 
   it('非法 run 写入失败并给原因（不抛）', () => {
     const w = writeRunJson('../escape', ['a.json'], { a: 1 })
-    expect(w.ok).toBe(false)
-    if (!w.ok) expect(w.reason).toContain('run')
+    expect(w.written).toBe(false)
+    if (!w.written) expect(w.reason).toContain('run')
   })
 })
 

@@ -130,37 +130,37 @@ const statusGlyph = { unbound: '○', 'no-result': '◐', failed: '✕', ok: '�
 
 <style scoped lang="scss">
 .atx {
-  border: 1px solid var(--border-secondary, #e5e5e5);
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius, 8px);
   padding: 12px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-primary);
 }
 .atx__head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .atx__title { font-size: 14px; margin: 0; color: var(--text-primary); }
-.atx__run { font-size: 12px; color: var(--text-secondary); font-family: mono, monospace; }
+.atx__run { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); }
 .atx__btn { margin-left: auto; font-size: 12px; padding: 3px 10px; cursor: pointer; }
-.atx__hint { font-size: 12px; color: var(--text-secondary); margin: 6px 0; }
-.atx__err { font-size: 12px; color: var(--danger-primary, #c00); margin: 6px 0; }
+.atx__hint { font-size: 12px; color: var(--text-muted); margin: 6px 0; }
+.atx__err { font-size: 12px; color: var(--color-danger); margin: 6px 0; }
 .atx__summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
-.atx__pill { font-size: 12px; padding: 2px 8px; border-radius: 10px; }
-.atx__pill.is-ok { background: var(--success-bg, #e8f5e9); color: var(--success-primary, #1b5e20); }
-.atx__pill.is-bad { background: var(--danger-bg, #fdecea); color: var(--danger-primary, #c00); }
+.atx__pill { font-size: 12px; padding: 2px 8px; border-radius: var(--radius-pill); }
+.atx__pill.is-ok { background: color-mix(in srgb, var(--color-success) 12%, transparent); color: var(--color-success); }
+.atx__pill.is-bad { background: color-mix(in srgb, var(--color-danger) 12%, transparent); color: var(--color-danger); }
 .atx__count { font-size: 12px; color: var(--text-secondary); }
-.atx__gap { font-size: 12px; color: var(--warning-primary, #8a6d00); }
-.atx__gap.is-bad { color: var(--danger-primary, #c00); }
+.atx__gap { font-size: 12px; color: var(--color-warning); }
+.atx__gap.is-bad { color: var(--color-danger); }
 .atx__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.atx__th { text-align: left; padding: 6px; border-bottom: 1px solid var(--border-secondary, #e5e5e5); color: var(--text-secondary); font-weight: 500; }
-.atx__td { padding: 6px; border-bottom: 1px solid var(--border-tertiary, #f0f0f0); vertical-align: top; }
+.atx__th { text-align: left; padding: 6px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-weight: 500; }
+.atx__td { padding: 6px; border-bottom: 1px solid var(--border-light); vertical-align: top; }
 .atx__text { display: block; color: var(--text-secondary); margin-top: 2px; }
 .atx__kind { color: var(--text-secondary); }
-.atx__none { color: var(--text-tertiary, #999); }
-.atx__case { display: inline-block; margin: 0 6px 4px 0; padding: 1px 6px; border-radius: 4px; background: var(--bg-secondary, #f7f7f7); }
+.atx__none { color: var(--text-color-3); }
+.atx__case { display: inline-block; margin: 0 6px 4px 0; padding: 1px 6px; border-radius: var(--radius-micro); background: var(--bg-secondary); }
 .atx__case em { font-style: normal; margin-left: 4px; color: var(--text-secondary); }
-.atx__case[data-status='fail'] { background: var(--danger-bg, #fdecea); }
-.atx__case[data-status='unknown'] { background: var(--warning-bg, #fff8e1); }
-.atx__mark.is-ok { color: var(--success-primary, #1b5e20); }
+.atx__case[data-status='fail'] { background: color-mix(in srgb, var(--color-danger) 12%, transparent); }
+.atx__case[data-status='unknown'] { background: color-mix(in srgb, var(--color-warning) 14%, transparent); }
+.atx__mark.is-ok { color: var(--color-success); }
 .atx__mark.is-unbound { color: var(--text-secondary); }
-.atx__mark.is-no-result { color: var(--warning-primary, #8a6d00); }
-.atx__mark.is-failed { color: var(--danger-primary, #c00); }
-.atx__row[data-status='failed'] { background: var(--danger-bg-faint, #fffafa); }
+.atx__mark.is-no-result { color: var(--color-warning); }
+.atx__mark.is-failed { color: var(--color-danger); }
+.atx__row[data-status='failed'] { background: color-mix(in srgb, var(--color-danger) 6%, transparent); }
 </style>

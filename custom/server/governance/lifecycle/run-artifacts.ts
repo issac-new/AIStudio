@@ -27,14 +27,14 @@ export function runFilePath(run: string, ...parts: string[]): string | null {
 }
 
 /** 原子写 JSON 制品；失败返回原因，不抛（调用方决定是否 400）。 */
-export function writeRunJson(run: string, parts: string[], doc: unknown): { ok: true; path: string } | { ok: false; reason: string } {
+export function writeRunJson(run: string, parts: string[], doc: unknown): { written: true; path: string } | { written: false; reason: string } {
   const path = runFilePath(run, ...parts)
-  if (!path) return { ok: false, reason: 'run 非法或 SIM_ROOT 未配置' }
+  if (!path) return { written: false, reason: 'run 非法或 SIM_ROOT 未配置' }
   try {
     atomicWriteJson(path, doc, { indent: 1 })
-    return { ok: true, path }
+    return { written: true, path }
   } catch (e) {
-    return { ok: false, reason: e instanceof Error ? e.message : String(e) }
+    return { written: false, reason: e instanceof Error ? e.message : String(e) }
   }
 }
 

@@ -159,7 +159,7 @@ export function registerLifecycleRoutes(router: Router): void {
       const w = writeRunJson(b.run, ['evidence', 'ac-trace.json'], {
         at: Date.now(), run: b.run, acTotal: acs.length, ...trace,
       })
-      if (!w.ok) return badRequest(ctx, `制品落盘失败：${w.reason}`)
+      if (!w.written) return badRequest(ctx, `制品落盘失败：${w.reason}`)
       artifact = w.path
     }
     ok(ctx, { acTotal: acs.length, ...trace, ...(artifact ? { artifact } : {}) })
@@ -265,7 +265,7 @@ export function registerLifecycleRoutes(router: Router): void {
     const { key, problems } = validateStageKeyStructure(b.key)
     if (!key) return fail(ctx, 400, '阶段键结构不合法', { problems })
     const w = writeRunJson(b.run, ['governance', 'stage-keys', `${key.stage}.json`], key)
-    if (!w.ok) return badRequest(ctx, `阶段键落盘失败：${w.reason}`)
+    if (!w.written) return badRequest(ctx, `阶段键落盘失败：${w.reason}`)
     created(ctx, { run: b.run, stage: key.stage, path: w.path })
   })
 
