@@ -217,6 +217,7 @@ export function scorecard(acceptedWithEffect = 0): ProactivityScorecard {
       reasonCode: e.reasonCode,
       score: e.score,
       decidedAtMs: e.decidedAtMs,
+      topicKey: e.topicKey,
     })),
     outcomes: store.feedback.map((f) => ({ interventionId: f.interventionId, outcome: f.outcome, at: f.at })),
     acceptedWithEffect,

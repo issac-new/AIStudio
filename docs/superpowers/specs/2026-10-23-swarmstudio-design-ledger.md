@@ -27,7 +27,7 @@
 | 模型波动交付防线 | 4 层 | A 完成契约（门在 complete_task 内核边界，2026-11-01 下沉）/ B 判定网 / C 能力路由 / D 补偿止损（`2026-10-31-model-resilience-hardening.md`＋`2026-11-01-dod-kernel-gate-lineage-reclaim.md`） |
 | 改进实验验证信号层级 | 5 档 | 命令验收 > 密封留出 > 历史回归 > 仅裁判判分 > 无；连续 3 轮停在裁判层即告警（`2026-10-19-harness2-improvement-workbench.md` §14.2） |
 | 改进实验独立证据 | 3 类 | 噪声 δ（半极差）／等预算基线／语义等价反事实；均须真实运行，禁手填（同上 §14.1） |
-| 介入决策档 | 5 | 投递／延后／合并／抑制／升级；critical 必达，安全告警不接该层（`2026-11-03-proactive-intervention-governance.md`） |
+| 介入决策档 | 7 | 投递／延后／合并／抑制／升级／澄清／优雅不动；四门顺序＝置信→价值成本→时机→风险，critical 必达，安全告警不接该层（`2026-11-03-proactive-intervention-governance.md`） |
 | 注意力偏好缺省 | 日 8／时 3／冷却 30 分／退避 12h／安静 22:00-08:00 | 同上；`attention.json` 可改，反馈不自动改写 |
 | 改进实验证据门缺省档 | 5 门告警 | `HARNESS2_RSI_REQUIRE_{NOISE,ATTRIBUTION,CONSTRAINTS,COUNTERFACTUAL,HELDOUT}` 逐门升硬闸；缺省不阻断（同上 §6.2） |
 

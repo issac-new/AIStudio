@@ -26,11 +26,15 @@ export type InterventionUrgency = (typeof INTERVENTION_URGENCIES)[number]
 export const INTERVENTION_OUTCOMES = ['accepted', 'rejected', 'ignored', 'modified', 'takeover', 'snoozed'] as const
 export type InterventionOutcome = (typeof INTERVENTION_OUTCOMES)[number]
 
-export const INTERVENTION_DECISIONS = ['deliver', 'defer', 'batch', 'suppress', 'escalate'] as const
+export const INTERVENTION_DECISIONS = ['deliver', 'defer', 'batch', 'suppress', 'escalate', 'clarify', 'hold'] as const
 export type InterventionDecision = (typeof INTERVENTION_DECISIONS)[number]
 
 export type GovernorReasonCode =
   | 'critical_bypass'
+  | 'clarify_first'
+  | 'irreversible_hold'
+  | 'blast_radius_confirm'
+  | 'breakpoint_wait'
   | 'cooldown'
   | 'rejection_backoff'
   | 'quiet_hours'
@@ -47,6 +51,16 @@ export interface QuietHours {
   endHour: number
 }
 
+/** 成本性质（p26）：建议/提醒花用户注意力，环境动作花资源与风险——两类不共用一把预算尺。 */
+export const INTERVENTION_KINDS = ['attention', 'resource'] as const
+export type InterventionKind = (typeof INTERVENTION_KINDS)[number]
+
+/** 可逆性（p27-28）：可逆 / 代价可逆 / 不可逆。 */
+export const REVERSIBILITY_LEVELS = ['reversible', 'costly', 'irreversible'] as const
+export type Reversibility = (typeof REVERSIBILITY_LEVELS)[number]
+
+export type BlastRadius = 'self' | 'team' | 'external'
+
 export interface AttentionPrefs {
   quietHours: QuietHours | null
   /** 人面每 24h 最多主动打扰条数（不含 critical/安全告警）。 */
@@ -59,6 +73,8 @@ export interface AttentionPrefs {
   rejectionBackoffHours: number
   /** 收益成本分下限：低于此值不打扰（仅约束 info/attention）。 */
   minScore: number
+  /** 置信下限（p24 第一门）：低于此值先澄清，不直接行动。 */
+  minConfidence: number
 }
 
 export const DEFAULT_ATTENTION_PREFS: AttentionPrefs = {
@@ -68,6 +84,7 @@ export const DEFAULT_ATTENTION_PREFS: AttentionPrefs = {
   cooldownMinutes: 30,
   rejectionBackoffHours: 12,
   minScore: 0.2,
+  minConfidence: 0.5,
 }
 
 export interface InterventionCandidate {
@@ -82,6 +99,17 @@ export interface InterventionCandidate {
   expectedBenefit?: number | null
   /** 打断成本（0-1）；缺省按 severity 取保守值。 */
   attentionCost?: number | null
+  /** 成本性质（p26）：缺省 attention。resource 类不受注意力预算约束。 */
+  kind?: InterventionKind
+  /** 置信（0-1，p24 第一门）：低于 minConfidence 先澄清。缺省=不参与（保持旧行为）。 */
+  confidence?: number | null
+  /** 可逆性（p27-28 第四门）：不可逆 + 对外影响 → hold；代价可逆 → 需确认升级。 */
+  reversibility?: Reversibility | null
+  blastRadius?: BlastRadius | null
+  /** 当前是否处在任务断点（p27「骑现成断点」）；调用方声明。 */
+  atBreakpoint?: boolean
+  /** 下一个断点时刻（可延后到断点再投递）。 */
+  nextBreakpointAtMs?: number | null
 }
 
 export interface InterventionHistoryItem {
@@ -144,6 +172,7 @@ export function normalizePrefs(input?: Partial<AttentionPrefs> | null): Attentio
     cooldownMinutes: num(input.cooldownMinutes, d.cooldownMinutes, 0, 1440),
     rejectionBackoffHours: num(input.rejectionBackoffHours, d.rejectionBackoffHours, 0, 720),
     minScore: num(input.minScore, d.minScore, -1, 1),
+    minConfidence: num(input.minConfidence, d.minConfidence, 0, 1),
   }
 }
 
@@ -190,18 +219,17 @@ export function govern(input: GovernorInput): GovernorResult {
   const c = input.candidate
   const history = input.history ?? []
   const now = input.nowMs
-  const urgency = c.urgency ?? (c.severity === 'action_required' ? 'normal' : 'normal')
+  const urgency = c.urgency ?? 'normal'
   const topic = topicOf(c)
   const defaults = SEVERITY_DEFAULTS[c.severity]
   const benefit = typeof c.expectedBenefit === 'number' ? c.expectedBenefit : defaults.benefit
   const cost = typeof c.attentionCost === 'number' ? c.attentionCost : defaults.cost
   const isHuman = c.audience === 'human'
+  const kind: InterventionKind = c.kind ?? 'attention'
 
-  const recentDeliver = history.filter(
-    (h) => h.decision === 'deliver' || h.decision === 'escalate',
-  )
-  const humanDelivers24h = recentDeliver.filter((h) => h.audience === 'human' && now - h.decidedAtMs < 24 * HOUR_MS)
-  const humanDelivers1h = recentDeliver.filter((h) => h.audience === 'human' && now - h.decidedAtMs < HOUR_MS)
+  const delivered = history.filter((h) => h.decision === 'deliver' || h.decision === 'escalate')
+  const humanDelivers24h = delivered.filter((h) => h.audience === 'human' && now - h.decidedAtMs < 24 * HOUR_MS)
+  const humanDelivers1h = delivered.filter((h) => h.audience === 'human' && now - h.decidedAtMs < HOUR_MS)
   const sameTopic = history.filter((h) => (h.topicKey ?? `${h.surface}:${h.id}`) === topic)
   const sameTopicDelivers = sameTopic.filter((h) => h.decision === 'deliver' || h.decision === 'escalate')
   const sameTopicRejected = sameTopic.filter((h) => h.outcome === 'rejected')
@@ -210,21 +238,41 @@ export function govern(input: GovernorInput): GovernorResult {
     (h) => h.decision === 'defer' && h.audience === 'human' && h.surface === c.surface && now - h.decidedAtMs < 2 * HOUR_MS,
   )
 
-  // 近期打扰密度惩罚：每小时每多一条，分数下调 0.05（上限 0.2）
-  const penalty = Math.min(0.2, 0.05 * humanDelivers1h.length)
-  const score = Number((benefit - cost - penalty).toFixed(4))
+  // 未来接受度折现（p26 cry-wolf）：近期人面投递里被忽略/拒绝的比例越高，此刻的「愿意听」越低。
+  const recentHumanDeliverIds = new Set(humanDelivers24h.map((h) => h.id))
+  const recentOutcomes = history.filter((h) => recentHumanDeliverIds.has(h.id) && h.outcome != null)
+  const negative = recentOutcomes.filter((h) => h.outcome === 'ignored' || h.outcome === 'rejected').length
+  const receptivity = recentOutcomes.length >= 3 ? negative / recentOutcomes.length : 0
 
-  // ① critical 必达：安全与不可逆风险优先于一切节流（安全告警另有独立通道，此处只兜底）
+  // 近期打扰密度惩罚：每小时每多一条，分数下调 0.05（上限 0.2）
+  const densityPenalty = Math.min(0.2, 0.05 * humanDelivers1h.length)
+  const receptivityPenalty = Number((0.3 * receptivity).toFixed(4))
+  const score = Number((benefit - cost - densityPenalty - receptivityPenalty).toFixed(4))
+  const baseReasons = [
+    `收益 ${benefit.toFixed(2)} − 成本 ${cost.toFixed(2)} − 密度惩罚 ${densityPenalty.toFixed(2)} − 接受度折现 ${receptivityPenalty.toFixed(2)} = ${score.toFixed(2)}`,
+  ]
+
+  // ── 门 0：安全必达（本仓对安全告警通道的显式豁免，见 spec D6）──
   if (urgency === 'critical') {
     return {
       decision: 'deliver',
       reasonCode: 'critical_bypass',
-      reasons: ['critical 级介入必达：安全/不可逆风险优先于安静时段与预算（综述：某些情况必须打断）'],
+      reasons: ['critical 级介入必达：安全/不可逆风险优先于安静时段与预算'],
       score,
     }
   }
 
-  // ② 同类冷却：同一话题刚打扰过，不重复（人面与 agent 面都适用）
+  // ── 门 1：置信（p24）——把握不够时先问，不是先压 ──
+  if (typeof c.confidence === 'number' && c.severity !== 'action_required' && c.confidence < prefs.minConfidence) {
+    return {
+      decision: 'clarify',
+      reasonCode: 'clarify_first',
+      reasons: [`置信 ${c.confidence.toFixed(2)} 低于下限 ${prefs.minConfidence}：先把不确定处问清，再决定要不要行动（混 Initiative 的经典解：有把握才直接做，没把握就对话）`],
+      score,
+    }
+  }
+
+  // ── 门 2：价值 vs 成本（p26）——含同类冷却、拒绝退避、收益阈值 ──
   const lastDeliver = sameTopicDelivers.sort((a, b) => b.decidedAtMs - a.decidedAtMs)[0]
   if (lastDeliver && now - lastDeliver.decidedAtMs < prefs.cooldownMinutes * 60_000) {
     return {
@@ -235,8 +283,6 @@ export function govern(input: GovernorInput): GovernorResult {
       nextWindowAtMs: lastDeliver.decidedAtMs + prefs.cooldownMinutes * 60_000,
     }
   }
-
-  // ③ 拒绝退避：拒绝≠再劝（综述点名的失败模式）
   const lastRejected = sameTopicRejected.sort((a, b) => b.decidedAtMs - a.decidedAtMs)[0]
   if (lastRejected && now - lastRejected.decidedAtMs < prefs.rejectionBackoffHours * HOUR_MS) {
     return {
@@ -249,8 +295,11 @@ export function govern(input: GovernorInput): GovernorResult {
       nextWindowAtMs: lastRejected.decidedAtMs + prefs.rejectionBackoffHours * HOUR_MS,
     }
   }
+  if (c.severity !== 'action_required' && score < prefs.minScore) {
+    return { decision: 'suppress', reasonCode: 'below_threshold', reasons: [...baseReasons, `低于阈值 ${prefs.minScore}，不值得占用注意力`], score }
+  }
 
-  // ④ 安静时段：只压 info/attention；action_required 视为必须让人知道
+  // ── 门 3：时机（p26-27）——安静时段、断点、预算 ──
   if (isHuman && prefs.quietHours && c.severity !== 'action_required' && inQuietHours(localHour(now), prefs.quietHours)) {
     return {
       decision: 'defer',
@@ -260,9 +309,18 @@ export function govern(input: GovernorInput): GovernorResult {
       nextWindowAtMs: quietWindowEndMs(now, prefs.quietHours),
     }
   }
-
-  // ⑤ 预算（人面）：日/时上限触顶即延后，不静默丢弃
-  if (isHuman && humanDelivers24h.length >= prefs.dailyBudget) {
+  // 断点：注意力型 info 若不在断点且调用方给了下一断点，延后到断点（骑现成断点，p27）
+  if (isHuman && kind === 'attention' && c.severity === 'info' && c.atBreakpoint === false && typeof c.nextBreakpointAtMs === 'number' && c.nextBreakpointAtMs > now) {
+    return {
+      decision: 'defer',
+      reasonCode: 'breakpoint_wait',
+      reasons: ['当前不在任务断点：注意到信息型干预延后到下一个断点，避免打断思路'],
+      score,
+      nextWindowAtMs: c.nextBreakpointAtMs,
+    }
+  }
+  // 预算只约束注意力性质的人面干预；资源型（环境动作）不占注意力额度
+  if (isHuman && kind === 'attention' && humanDelivers24h.length >= prefs.dailyBudget) {
     const oldest = humanDelivers24h.reduce((m, h) => Math.min(m, h.decidedAtMs), now)
     return {
       decision: 'defer',
@@ -272,7 +330,7 @@ export function govern(input: GovernorInput): GovernorResult {
       nextWindowAtMs: oldest + 24 * HOUR_MS,
     }
   }
-  if (isHuman && humanDelivers1h.length >= prefs.hourlyBudget) {
+  if (isHuman && kind === 'attention' && humanDelivers1h.length >= prefs.hourlyBudget) {
     const oldest = humanDelivers1h.reduce((m, h) => Math.min(m, h.decidedAtMs), now)
     return {
       decision: 'defer',
@@ -282,8 +340,6 @@ export function govern(input: GovernorInput): GovernorResult {
       nextWindowAtMs: oldest + HOUR_MS,
     }
   }
-
-  // ⑥ 积压合并：同面已有 ≥2 条待议，合并成一条发（多而杂不如少而清）
   if (pendingDefersSameSurface.length >= 2) {
     return {
       decision: 'batch',
@@ -292,8 +348,6 @@ export function govern(input: GovernorInput): GovernorResult {
       score,
     }
   }
-
-  // ⑦ 反复延后升级：同话题延后 ≥3 次且从未投递——静默丢失比吵闹更糟
   if (sameTopicDefers.length >= 3 && sameTopicDelivers.length === 0 && c.severity !== 'info') {
     return {
       decision: 'escalate',
@@ -303,20 +357,23 @@ export function govern(input: GovernorInput): GovernorResult {
     }
   }
 
-  // ⑧ 收益成本阈值：不划算就不打扰（action_required 不受此限）
-  if (c.severity !== 'action_required' && score < prefs.minScore) {
+  // ── 门 4：风险与可逆（p27-28）──
+  if (c.reversibility === 'irreversible' && c.blastRadius === 'external' && c.severity !== 'action_required') {
     return {
-      decision: 'suppress',
-      reasonCode: 'below_threshold',
-      reasons: [`收益 ${benefit.toFixed(2)} − 成本 ${cost.toFixed(2)} − 密度惩罚 ${penalty.toFixed(2)} = ${score.toFixed(2)} 低于阈值 ${prefs.minScore}，不值得占用注意力`],
+      decision: 'hold',
+      reasonCode: 'irreversible_hold',
+      reasons: ['不可逆且对外影响：等待便宜时优雅不动本身就是校准结论（intelligent disobedience）——需人工硬门放行'],
+      score,
+    }
+  }
+  if (c.reversibility === 'costly' || c.blastRadius === 'team') {
+    return {
+      decision: 'escalate',
+      reasonCode: 'blast_radius_confirm',
+      reasons: ['代价可逆或影响团队：权限随后果强度成比例——要求显式确认后再执行'],
       score,
     }
   }
 
-  return {
-    decision: 'deliver',
-    reasonCode: 'budget_ok',
-    reasons: [`收益 ${benefit.toFixed(2)} − 成本 ${cost.toFixed(2)} − 密度惩罚 ${penalty.toFixed(2)} = ${score.toFixed(2)}；预算与冷却均有余量`],
-    score,
-  }
+  return { decision: 'deliver', reasonCode: 'budget_ok', reasons: [...baseReasons, '预算、冷却与风险门均有余量'], score }
 }

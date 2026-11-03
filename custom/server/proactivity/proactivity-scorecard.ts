@@ -19,6 +19,8 @@ export interface ScorecardInput {
     reasonCode: GovernorReasonCode
     score: number
     decidedAtMs: number
+    /** 话题键（漏助/去重统计用）；缺省按 id 归并。 */
+    topicKey?: string
   }>
   outcomes: Array<{ interventionId: string; outcome: string; at: number }>
   /** 关联结果（任务层）：被采纳建议里，后续确实产生了动作的条数（缺省 0，不猜）。 */
@@ -33,6 +35,8 @@ export interface ProactivityScorecard {
     acceptedWithEffect: number
     /** 采纳转化率（accepted / delivered）。 */
     acceptanceRate: number | null
+    /** 适当依赖的可判定子集（p47 四象限）：有外部真值时才分段，否则 unknown 全量。 */
+    reliance: { acceptedWithEffect: number; acceptedWithoutEffect: number; rejected: number; unknown: number }
   }
   mechanism: {
     decisions: Record<InterventionDecision, number>
@@ -47,6 +51,16 @@ export interface ProactivityScorecard {
     budgetDefers: number
     /** 反复延后升级。 */
     deferralAging: number
+    /** 先澄清（置信不足）。 */
+    clarifications: number
+    /** 优雅不动（不可逆+对外）。 */
+    holds: number
+    /** 介入精确率 = 被接受 / 已投递（p42 的 operational interruption-cost 口径）。 */
+    interventionPrecision: number | null
+    /** 误介入率 = 被拒 / 已投递。 */
+    falseInterventionRate: number | null
+    /** 漏助（近似）：延后过但同话题从未投递的条数。 */
+    missedAssistance: number
   }
   user: {
     /** 真正占用人注意力的条数（deliver + escalate；agent 面不计）。 */
@@ -84,16 +98,27 @@ export function buildScorecard(input: ScorecardInput): ProactivityScorecard {
     batch: 0,
     suppress: 0,
     escalate: 0,
+    clarify: 0,
+    hold: 0,
   }
   let quietHoursDefers = 0
   let budgetDefers = 0
   let deferralAging = 0
   let humanInterruptions = 0
+  let clarifications = 0
+  let holds = 0
+  const deferredTopics = new Map<string, number>()
+  const deliveredTopics = new Set<string>()
   for (const e of input.entries) {
     decisions[e.decision] += 1
     if (e.reasonCode === 'quiet_hours') quietHoursDefers += 1
     if (e.reasonCode === 'daily_budget' || e.reasonCode === 'hourly_budget') budgetDefers += 1
     if (e.reasonCode === 'deferral_aging') deferralAging += 1
+    if (e.decision === 'clarify') clarifications += 1
+    if (e.decision === 'hold') holds += 1
+    const topic = e.topicKey ?? e.id
+    if (e.decision === 'defer') deferredTopics.set(topic, (deferredTopics.get(topic) ?? 0) + 1)
+    if (e.decision === 'deliver' || e.decision === 'escalate') deliveredTopics.add(topic)
     if (e.audience === 'human' && (e.decision === 'deliver' || e.decision === 'escalate')) humanInterruptions += 1
   }
   // 反馈只统计人面投递过的条目（agent 面没有「人接受」语义）
@@ -113,11 +138,18 @@ export function buildScorecard(input: ScorecardInput): ProactivityScorecard {
   const withFeedback = outcomes.length
   const acceptanceRate = ratio(accepted, withFeedback)
   const retractionRate = ratio(modified + takeover, withFeedback)
+  const missedAssistance = [...deferredTopics.keys()].filter((k) => !deliveredTopics.has(k)).length
   return {
     task: {
       accepted,
       acceptedWithEffect: Math.max(0, Math.min(accepted, input.acceptedWithEffect ?? 0)),
       acceptanceRate: ratio(accepted, Math.max(humanInterruptions, withFeedback)),
+      reliance: {
+        acceptedWithEffect: Math.max(0, Math.min(accepted, input.acceptedWithEffect ?? 0)),
+        acceptedWithoutEffect: Math.max(0, accepted - Math.max(0, Math.min(accepted, input.acceptedWithEffect ?? 0))),
+        rejected,
+        unknown: Math.max(0, humanInterruptions - withFeedback),
+      },
     },
     mechanism: {
       decisions,
@@ -128,6 +160,11 @@ export function buildScorecard(input: ScorecardInput): ProactivityScorecard {
       quietHoursDefers,
       budgetDefers,
       deferralAging,
+      clarifications,
+      holds,
+      interventionPrecision: ratio(accepted, withFeedback),
+      falseInterventionRate: ratio(rejected, withFeedback),
+      missedAssistance,
     },
     user: {
       interruptions: humanInterruptions,
