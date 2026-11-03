@@ -274,3 +274,8 @@ paths:
   - docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - RELEASE-MANIFEST.json
+  # 2026-11-03 打包面同口径收窄（spec D1 修订随批）
+  - docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - RELEASE-MANIFEST.json
+  - scripts/make-release-packages.mjs

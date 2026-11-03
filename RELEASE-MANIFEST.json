@@ -129,7 +129,7 @@
     ],
     "repoLevelNote": "repoLevelPaths 是仓级基建/资产，只随整体包分发，不单独成模块包；四条模块包按各自 packageIncludes 圈定。新增顶层目录时须在此登记或归入某模块，否则只出现在整体包且无归属声明。",
     "checksums": "SHA256SUMS（随 dist/release/ 目录）",
-    "artifactDistribution": "two-package-only（2026-11-03 用户立法为全局长期规则：每版只上传 2 件——aistudio-full-<ver>-src.tar.gz＋swarm-yuan-offline-<ver>-everything.zip（附配套 SHA256SUMS 校验件），双通道=Github Release 与 ModelScope（aistudio/ 只换 full＋仓根 everything zip＋SHA256SUMS-v<版本>.txt，旧版本保留）。四模块源码包（cockpit/agent-teams/ycode/yuan-skill）与 DMG/zip 构建物不再上传任何远端，仅本地构建留存（make-release-packages 全量打包流程不变，供 manifest 对账与本地留存）。"
+    "artifactDistribution": "two-package-only（2026-11-03 用户立法为全局长期规则：每版只上传 2 件——aistudio-full-<ver>-src.tar.gz＋swarm-yuan-offline-<ver>-everything.zip（附配套 SHA256SUMS 校验件），双通道=Github Release 与 ModelScope（aistudio/ 只换 full＋仓根 everything zip＋SHA256SUMS-v<版本>.txt，旧版本保留）。四模块源码包（cockpit/agent-teams/ycode/yuan-skill）与 DMG/zip 构建物不再上传任何远端也不打包——make-release-packages 默认只打整体包，--all-modules 显式打 4+1 全量（逃生通道）。"
   },
   "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.8.0 / hermes-agent v0.22.5 / zcode 包版本 3.17.1、基线谱系 v3.17.1 线 @a60ba6a7（2026-10-31 同步批）。模块大版本对齐基准，与产品扩展序不互推）"
 }

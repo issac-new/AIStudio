@@ -506,7 +506,7 @@
 | 2026-11-03-run25-collection-gaps-backfill | run25 采集面缺失全量补流与根治（注册对账守门＋文件域呈现位＋缺件不埋桶） | 方案/程序采集面 vs run25 实测五类缺失定谳；中央仓五笔补流直接落 main（五轮补件落分支被清丢根治）；dispatch_done/report_done 补注册补拍、mp_runtime_proof 首帧进报告；evidence-push 失败必登记 pending-backfill.tsv；审计四查全过、缺件 2→0 |
 | 2026-11-03-run26-pending-clearance | run26 挂账 N10-N13 清偿＋采集呈现两反馈根治 | 18b 接线（prelaunch ㉜ 双通道探针+驱动 fail-soft 核验+守门）；小程序首帧空白页根治（副本重建为正本+mock BFF+等渲染截帧，businessLogicRan=true）；竖屏帧 1/4 排版；方案 HTML 自包含渲染器（mmdc SVG 内联）；四 app 行覆盖实测；N11 补做复核（双人 5/5+5/5 锚实+红线三条过）；中央仓分叉仲裁 0/0 |
 | 2026-11-03-release-v1.0.10-overlay | v1.0.10 发布轮（run26 清偿＋采集呈现根治；资产口径收窄=只发 full＋yuan everything 两包） | fullPackage 1.0.9→1.0.10＋cockpit 声明前进 studio.9（包不重发）；GitHub Release 2 资产；ModelScope aistudio/ 只换 full＋仓根 everything zip＋SHA256SUMS-v1.0.10（旧版保留）；全量 7293/0 |
-| 2026-11-03-release-asset-policy-twopackage | 发布资产口径立法（上传面永久收窄=两包） | artifactDistribution 旧 local-only 文整体替换为 two-package-only：每版只传 full＋yuan everything（GitHub 2 资产；ModelScope aistudio/ 只换 full＋仓根 zip＋SUMS）；四模块包/构建物不再上传、存量保留；打包流程与版本进位纪律不变（D1/D2/D3） |
+| 2026-11-03-release-asset-policy-twopackage | 发布资产口径立法（上传面永久收窄=两包） | artifactDistribution 旧 local-only 文整体替换为 two-package-only：每版只传 full＋yuan everything（GitHub 2 资产；ModelScope aistudio/ 只换 full＋仓根 zip＋SUMS）；四模块包/构建物不再上传也不打包（make-release-packages 默认只打整体包＋--all-modules 逃生）、存量保留（D1/D2/D3） |
 
 ### 角色/排除（非 spec 文档）
 
