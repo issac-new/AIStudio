@@ -35,6 +35,9 @@ export const DISPATCH_REASON_CODES = [
   'frame_malformed',         // 帧结构非法（缺 topic/frame/payload 等）
   'command_rejected',        // 引擎拒绝命令（引擎侧 reasonCode 原样透传）
   'internal_error',          // 未预期错误（detail 携带摘要）
+  // ── 进程级准入（2026-11-03 DeerFlow capacity 吸收轮，只追加）──
+  'capacity_exhausted',      // 并发上限已满且策略=拒绝（等待无用：槽位要等既有 run 结束）
+  'capacity_timeout',        // 排队等待超过截止仍未拿到槽位
 ] as const
 
 export type DispatchReasonCode = (typeof DISPATCH_REASON_CODES)[number]

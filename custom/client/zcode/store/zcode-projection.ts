@@ -96,6 +96,9 @@ export const REASON_CHIP_TEXT: Record<string, string> = {
   frame_malformed: '帧异常',
   command_rejected: '命令被拒',
   internal_error: '内部错误',
+  // ── 进程级准入（2026-11-03）──
+  capacity_exhausted: '并发已满',
+  capacity_timeout: '排队超时',
 }
 
 export interface ProjectionState {

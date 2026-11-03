@@ -25,6 +25,7 @@ import { appendEvidence } from '../evidence/evidence-store'
 import { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
 import { fewshotRerank, rerankInjectLine } from '../eval/fewshot-rerank'
 import { listLedger } from '../eval/flywheel'
+import { admitDispatch, capacityFromEnv } from './dispatch-capacity'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
 import { registerEntry } from '../taskledger/taskledger-store'
 import {
@@ -137,6 +138,11 @@ export interface PlanFacts {
   pendingSince: ReadonlyMap<string, number>
   pendingTtlMs: number
   now: number
+  /**
+   * 进程级并发准入事实（2026-11-03 DeerFlow capacity 吸收轮；缺省=不拦，存量行为不变）。
+   * runningTotal 由调用方注入（本文件不自己数在跑 run，避免与 pending 槽双事实源）。
+   */
+  capacity?: { runningTotal: number; maxRunning: number; policy?: 'reject' | 'queue'; waitedMs?: number; queueTimeoutMs?: number }
 }
 
 export interface PlanRequest {
@@ -198,6 +204,16 @@ export function planDispatch(req: PlanRequest, facts: PlanFacts): DispatchPlan {
   // 4) 引擎可达性。
   if (!req.engineOnline) {
     return wrap({ action: 'reject', reason: 'runtime_offline', detail: 'zcode 引擎（:3030）不可达，稍后重派或先起引擎' })
+  }
+  // 5) 进程级并发准入（缺省不拦）：上限已满按策略排队/拒绝。
+  if (facts.capacity) {
+    const cap = admitDispatch(facts.capacity)
+    if (cap.action === 'reject') {
+      return wrap({ action: 'reject', reason: cap.reason ?? 'capacity_exhausted', detail: cap.detail })
+    }
+    if (cap.action === 'queue') {
+      return wrap({ action: 'reject', reason: 'deferred', detail: cap.detail })
+    }
   }
   return wrap({ action: 'start', reason: 'queued', detail: `将起跑（${runsFor}）` })
 }
@@ -274,6 +290,8 @@ export class MentionDispatchService {
       pendingSince: new Map([...this.pending.entries()].map(([k, v]) => [k, v.since] as const)),
       pendingTtlMs: this.pendingTtlMs,
       now: this.now(),
+      // 进程级准入：活跃 pending 槽数即「本进程在跑的派单」下界（保守，不含别处起的 run）
+      capacity: capacityFromEnv(process.env, this.pending.size),
     }
   }
 

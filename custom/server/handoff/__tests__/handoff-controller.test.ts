@@ -121,3 +121,47 @@ describe('POST /acceptance/check', () => {
     expect(gb.problems?.[0]).toContain('不在允许根内')
   })
 })
+
+describe('POST /claims/verify', () => {
+  it('无证据台账 → 所有引用不可解析；有证据后同一断言通过', async () => {
+    const evDir = mkdtempSync(join(tmpdir(), 'claims-ev-'))
+    const prev = process.env.HERMES_EVIDENCE_DIR
+    process.env.HERMES_EVIDENCE_DIR = evDir
+    try {
+      const missRes = await fetch(`${base}/claims/verify`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ taskId: 'task-x', claims: [{ id: 'c1', text: '我修好了', evidenceRefs: ['ev-1'] }] }),
+      })
+      expect(missRes.status).toBe(200)
+      const miss = (await missRes.json()) as { report: { allVerified: boolean; claims: Array<{ issues: string[] }> } }
+      expect(miss.report.allVerified).toBe(false)
+      expect(miss.report.claims[0].issues).toEqual(['unresolvable_receipt'])
+
+      const store = await import('../../evidence/evidence-store')
+      const appended = store.appendEvidence({ evidenceId: 'ev-1', taskId: 'task-x', kind: 'artifact', at: Date.now(), ref: 'docs/x.md' } as never)
+      expect(appended.ok ?? true).toBeTruthy()
+
+      const okRes = await fetch(`${base}/claims/verify`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ taskId: 'task-x', claims: [{ id: 'c1', text: '我修好了', evidenceRefs: ['ev-1'] }] }),
+      })
+      const okBody = (await okRes.json()) as { report: { allVerified: boolean } }
+      expect(okBody.report.allVerified).toBe(true)
+    } finally {
+      if (prev === undefined) delete process.env.HERMES_EVIDENCE_DIR
+      else process.env.HERMES_EVIDENCE_DIR = prev
+      rmSync(evDir, { recursive: true, force: true })
+    }
+  })
+
+  it('缺 taskId / 空 claims → 400', async () => {
+    const noTask = await fetch(`${base}/claims/verify`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ claims: [{ id: 'c' }] }),
+    })
+    expect(noTask.status).toBe(400)
+    const noClaims = await fetch(`${base}/claims/verify`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ taskId: 't' }),
+    })
+    expect(noClaims.status).toBe(400)
+  })
+})
