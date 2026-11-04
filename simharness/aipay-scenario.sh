@@ -2040,7 +2040,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   node "$SCRIPT_DIR/mux/mx-capability-probes.mjs" --base "http://127.0.0.1:${STUDIO_PORT:-8802}" \
     --out "$EVID_DIR" --profile default --token "$(jwt_of fanfan 2>/dev/null || true)" || _cap_rc=$?
   if (( _cap_rc == 0 )); then
-    note "[G4] 新能力探测十三组全绿（evidence/capability-probes.json）"
+    note "[G4] 新能力探测十四组全绿（evidence/capability-probes.json）"
   else
     note "[G4] 新能力探测 rc=${_cap_rc}——g4_pass 不置位（详见 evidence/capability-probes.json）"
   fi

@@ -32,6 +32,11 @@ describe('P1 工具执行瀑布（注入态守门）', () => {
     expect(preIdx).toBeGreaterThan(authIdx, 'pre 钩子必须在权限门之后')
     expect(execIdx).toBeGreaterThan(preIdx)
     expect(postIdx).toBeGreaterThan(execIdx)
+    // W4：{replace} 判决在档——替换结果仍走 post 钩子链（审计配对完整）
+    expect(txt).toContain("'replace' in verdict")
+    const replaceIdx = txt.indexOf("'replace' in verdict")
+    expect(replaceIdx).toBeGreaterThan(preIdx)
+    expect(replaceIdx).toBeLessThan(execIdx, 'replace 分支必须在真实执行前短路')
   })
 
   it('runtime/types.ts 选项 + runtime.ts 双路径挂载（自建与外部 registry）', () => {

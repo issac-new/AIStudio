@@ -15,6 +15,7 @@ locks). Schema: tasks, task_links, task_comments, task_events, task_runs, attach
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import math
 import os
@@ -2219,6 +2220,31 @@ def _synthesize_ended_run(
 
 # --- Dependency resolution (todo -> ready) ---
 
+def _run_input_manifest(conn: sqlite3.Connection, task_id: str) -> dict:
+    """W4 输入冻结（2026-11-04）：run 开启时把任务输入面快照进 run metadata——
+    body 哈希 + 附件行清单（id/文件名/字节数）。历史 run 复现的依据是快照，
+    不是开 run 时刻之后仍可变的 tasks 行；读侧（taskmodel）据此报
+    available.inputVersions=true。附件文件内容不在此哈希（体积与 IO 成本），
+    行级清单+size 足以判定「附件集是否变化」。"""
+    trow = conn.execute(
+        "SELECT body FROM tasks WHERE id = ?", (task_id,),
+    ).fetchone()
+    body_sha = None
+    if trow is not None and trow["body"]:
+        body_sha = hashlib.sha256(str(trow["body"]).encode("utf-8", "replace")).hexdigest()
+    atts = conn.execute(
+        "SELECT id, filename, size FROM task_attachments WHERE task_id = ? ORDER BY id",
+        (task_id,),
+    ).fetchall()
+    return {
+        "bodySha256": body_sha,
+        "attachments": [
+            {"id": int(a["id"]), "filename": a["filename"], "size": int(a["size"] or 0)}
+            for a in atts
+        ],
+    }
+
+
 def _has_sticky_block(conn: sqlite3.Connection, task_id: str) -> bool:
     """True when the newest ``blocked``/``unblocked``/``gave_up`` event says the
     block must wait for an operator: an explicit ``kanban_block`` (#28712), or a
@@ -2395,12 +2421,13 @@ def _claim_and_open_run(
         INSERT INTO task_runs (
             task_id, profile, step_key, status,
             claim_lock, claim_expires, max_runtime_seconds,
-            started_at
-        ) VALUES (?, ?, ?, 'running', ?, ?, ?, ?)
+            metadata, started_at
+        ) VALUES (?, ?, ?, 'running', ?, ?, ?, ?, ?)
         """,
         (
             task_id, trow["assignee"] if trow else None, trow["current_step_key"] if trow else None,
-            lock, expires, trow["max_runtime_seconds"] if trow else None, now,
+            lock, expires, trow["max_runtime_seconds"] if trow else None,
+            _json_or_null({"input_manifest": _run_input_manifest(conn, task_id)}), now,
         ),
     )
     run_id = run_cur.lastrowid

@@ -9,8 +9,8 @@
 //
 // 失败传播语义（与 auditHook 的 fail-open 契约区分开）：
 //   - 入参违规（契约已声明 schema）→ fail-closed：拒绝执行。
-//   - 幂等回放（契约显式 replay:'return' 且账上有缓存）→ 拒绝重复执行并回放
-//     首次结果（瀑布 pre 只能拒绝，ok:true 替换需执行器改造——见 spec 未做项）。
+//   - 幂等回放（契约显式 replay:'return' 且账上有缓存）→ {replace} 判决替换执行
+//     （W4：patch 565 瀑布已支持 ok:true 替换回放，见 error-envelope.ts 同款构造）。
 //   - 契约未声明 / 校验器自身异常 → 放行（fail-soft：执法器故障不拦业务）。
 //   - 出参 strict 档改写在 postExecute：违反 outputSchema 的结果改写为错误信封。
 import {
@@ -21,7 +21,7 @@ import {
   type ToolContract,
 } from '../toolcontract/contract'
 import {
-  idempotentReplayEnvelope,
+  idempotentReplayResult,
   rewriteAsOutputViolation,
   schemaRejectionEnvelope,
 } from '../toolcontract/error-envelope'
@@ -31,6 +31,11 @@ import { getToolCallCorrelation } from './call-correlation'
 interface PreExecuteVerdict {
   allow: false
   error: string
+}
+
+/** W4：瀑布替换判决（patch 565）——preExecute 返回 {replace} 即跳过真实执行。 */
+export interface PreExecuteReplace {
+  replace: ToolResultLike
 }
 
 /** AgentToolResult 最小面（改写结果用；完整类型在 ekko 上游）。 */
@@ -91,7 +96,7 @@ export function contractGuardHook(
       name: string,
       input: Record<string, unknown>,
       context?: HookIdentity,
-    ): Promise<PreExecuteVerdict | void> {
+    ): Promise<PreExecuteVerdict | PreExecuteReplace | void> {
       let contract: ToolContract
       try {
         contract = resolveContract(name)
@@ -116,7 +121,8 @@ export function contractGuardHook(
         try {
           const hit = store.peek(contractIdempotencyKey(name, input, contract, context))
           if (hit?.result !== undefined) {
-            return { allow: false, error: idempotentReplayEnvelope(name, hit.result, hit.firstAt) }
+            // W4：{replace} 判决——ok:true 替换回放，不再以拒绝形态打断
+            return { replace: idempotentReplayResult(name, hit.result, hit.firstAt) }
           }
         } catch {
           return // 账本故障=放行（幂等层降级为观测）

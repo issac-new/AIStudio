@@ -269,7 +269,9 @@ const auditHook = {
       userId: context?.userId,
       profileId: context?.profileId,
       runId: context?.runId,
-      traceId: correlation.traceId,
+      // W4 生产者：traceId 兜底=sessionId（otel_formatter.py 同口径 traceId=session_id
+      // ——只兜底不覆盖显式关联，跨账本按此键可 join）。
+      traceId: correlation.traceId ?? context?.sessionId,
       taskId: correlation.taskId,
       stepId: correlation.stepId,
       workflowVersion: correlation.workflowVersion,
@@ -341,7 +343,7 @@ const auditHook = {
       userId: context?.userId,
       profileId: context?.profileId,
       runId: context?.runId,
-      traceId: correlation.traceId,
+      traceId: correlation.traceId ?? context?.sessionId,
       taskId: correlation.taskId,
       stepId: correlation.stepId,
       workflowVersion: correlation.workflowVersion,

@@ -9,13 +9,18 @@
 // （run 开启时 input_manifest 冻结）需 kanban_db patch 通道，本轮不做（见 spec）。
 import type { KanbanTaskFastDetail } from '../services/hermes/kanban-task-fast'
 
-/** 输入引用：来源对象 + 版本 + 内容指纹（能拿到的面；拿不到=缺席）。 */
+/** 输入引用：来源对象 + 内容指纹（能拿到的面；拿不到=缺席）。
+ *  W4 起 body 带 sha256、附件带 filename/size（补丁 750 input_manifest 冻结面）。 */
 export interface TaskInputRef {
   type: 'attachment' | 'task-body' | 'missing'
   id: string
-  /** 输入版本（attachments 表无版本列——如实缺席）。 */
+  /** 输入版本（任务体无版本列——如实缺席）。 */
   version?: string
   sha256?: string
+  /** 附件文件名（manifest 冻结面）。 */
+  filename?: string
+  /** 附件字节数（manifest 冻结面；行级判变依据）。 */
+  size?: number
 }
 
 export interface TaskModelRun {
@@ -63,9 +68,33 @@ export function deriveTaskModel(detail: KanbanTaskFastDetail): TaskModel | null 
   const body = typeof task.body === 'string' ? bodyFirstParagraph(task.body) : ''
   const userGoal = [title, body].filter(Boolean).join('——') || title
 
-  // 输入引用：attachments（快道详情未含——如实缺席）+ task body 兜底（任务文本即输入面）
+  // 输入引用（W4 升级）：最新 run 的 metadata.input_manifest（补丁 750 写侧冻结）
+  // 优先——bodySha256+附件行清单即「run 开启时的输入面」；无 manifest 的旧 run
+  // 回落 task-body 兜底（历史 run 无版本面，如实缺席）。
+  const latestRunWithManifest = [...(detail.runs ?? [])].reverse()
+    .find((r) => {
+      const meta = r?.metadata
+      return meta && typeof meta === 'object' && (meta as Record<string, unknown>).input_manifest !== undefined
+    }) ?? null
+  const manifest = latestRunWithManifest
+    ? ((latestRunWithManifest.metadata as Record<string, unknown>).input_manifest as Record<string, unknown> | undefined)
+    : undefined
+
   const inputRefs: TaskInputRef[] = []
-  if (body) inputRefs.push({ type: 'task-body', id: `${task.id}:body` })
+  if (manifest) {
+    if (typeof manifest.bodySha256 === 'string' && manifest.bodySha256) {
+      inputRefs.push({ type: 'task-body', id: `${task.id}:body`, sha256: manifest.bodySha256 })
+    }
+    for (const a of Array.isArray(manifest.attachments) ? (manifest.attachments as Array<Record<string, unknown>>) : []) {
+      inputRefs.push({
+        type: 'attachment',
+        id: String(a.id ?? ''),
+        ...(typeof a.filename === 'string' ? { filename: a.filename } : {}),
+        ...(typeof a.size === 'number' ? { size: a.size } : {}),
+      })
+    }
+  }
+  if (inputRefs.length === 0 && body) inputRefs.push({ type: 'task-body', id: `${task.id}:body` })
   if (inputRefs.length === 0) inputRefs.push({ type: 'missing', id: `${task.id}:none` })
 
   const workflowVersion = typeof task.workflow_template_id === 'string' && task.workflow_template_id.trim()
@@ -117,7 +146,8 @@ export function deriveTaskModel(detail: KanbanTaskFastDetail): TaskModel | null 
     conversation: { sessionId: typeof task.session_id === 'string' && task.session_id ? task.session_id : null },
     available: {
       workflowVersion: Boolean(workflowVersion),
-      inputVersions: false, // attachments 无版本列——如实声明缺席（写路径冻结挂账）
+      // W4：有 input_manifest（补丁 750 冻结）即 true；旧 run 无 manifest 如实 false
+      inputVersions: Boolean(manifest),
       artifacts: artifactRefs.length > 0,
       runs: runs.length > 0,
     },

@@ -127,6 +127,32 @@ export function idempotentReplayEnvelope(tool: string, cached: unknown, firstAt:
 }
 
 /**
+ * W4（2026-11-04 未做项收口）：幂等回放的替换形态——patch 565 瀑布 {replace}
+ * 判决消费。ok:true 替换首次结果（不再以拒绝形态回放），content 自述回放语义、
+ * data 携带首次结果，审计配对完整（pre/post 行齐）。
+ */
+export function idempotentReplayResult(tool: string, cached: unknown, firstAt: number): {
+  ok: true
+  content: string
+  data: { replayed: true; cached: unknown }
+} {
+  const payload = {
+    code: 'IDEMPOTENT_REPLAY',
+    replayed: true,
+    tool,
+    firstAt,
+    cached,
+    hint: '同一业务动作已完成，本次为幂等回放首次结果；请直接使用 cached，勿重复调用',
+  }
+  return {
+    ok: true,
+    content: JSON.stringify(payload),
+    data: { replayed: true, cached },
+  }
+}
+
+
+/**
  * 出参违规结果改写（strict 档 postExecute 用）：保留原结果字段，结局置为
  * 失败、content/error 换错误信封——构造细节收敛在本模块，执法钩子只做判定。
  */

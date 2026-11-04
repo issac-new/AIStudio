@@ -162,8 +162,30 @@ function validateAssertion(a: unknown, i: number, problems: string[]): void {
       if (typeof it.s0.max !== 'number' || !Number.isFinite(it.s0.max) || it.s0.max < 0 || it.s0.max > 1) {
         problems.push(`断言 #${i} s0.redundant_ratio.max 须为 0~1`)
       }
+    } else if (it.s0.kind === 'forbidden_tools') {
+      // W4（清偿 W3 缺口：四断言已入 types/judge 但 store 校验器未接纳——判据进不了评测集）
+      if (!Array.isArray(it.s0.tools) || it.s0.tools.length === 0 || it.s0.tools.some((t) => typeof t !== 'string' || !t)) {
+        problems.push(`断言 #${i} s0.forbidden_tools.tools 须为非空字符串数组`)
+      }
+    } else if (it.s0.kind === 'json_path') {
+      if (typeof it.s0.path !== 'string' || !it.s0.path.startsWith('$')) problems.push(`断言 #${i} s0.json_path.path 须为 $ 起始路径`)
+      if (!['eq', 'ne', 'lt', 'le', 'gt', 'ge', 'exists', 'contains'].includes(String(it.s0.operator))) {
+        problems.push(`断言 #${i} s0.json_path.operator 非法`)
+      }
+      if (it.s0.operator !== 'exists' && it.s0.value === undefined) problems.push(`断言 #${i} s0.json_path.value 必填（exists 除外）`)
+    } else if (it.s0.kind === 'result_schema') {
+      if (!Array.isArray(it.s0.required) || it.s0.required.length === 0) {
+        problems.push(`断言 #${i} s0.result_schema.required 须为非空数组`)
+      } else if (it.s0.required.some((r) => !r || typeof r.key !== 'string' || !r.key)) {
+        problems.push(`断言 #${i} s0.result_schema.required[].key 必填`)
+      }
+    } else if (it.s0.kind === 'side_effects_max') {
+      if (typeof it.s0.counter !== 'string' || !it.s0.counter) problems.push(`断言 #${i} s0.side_effects_max.counter 必填`)
+      if (typeof it.s0.max !== 'number' || !Number.isInteger(it.s0.max) || it.s0.max < 0) {
+        problems.push(`断言 #${i} s0.side_effects_max.max 须为非负整数`)
+      }
     } else {
-      problems.push(`断言 #${i} s0.kind 须为 regex/threshold/similarity/required_tools/no_loop/redundant_ratio`)
+      problems.push(`断言 #${i} s0.kind 须为 regex/threshold/similarity/required_tools/no_loop/redundant_ratio/forbidden_tools/json_path/result_schema/side_effects_max`)
     }
   }
   if (it?.anchor !== undefined) {
