@@ -1156,6 +1156,74 @@ if RUN_ID >= '20261103':
 else:
     print(f'NOTE 判据18 自 20261103 起适用（本轮 {RUN_ID} 早于生效日，新能力探测不判）')
 
+# ── 查 21（2026-11-04 用户质询）：帧诚实性——内容核验／重复填充／markdown 渲染 ──
+# 用户实拍质询（run26）：截图与步骤内容不符（如排期步页面显示「已排期任务 0」）、
+# 同图跨步复用当填充、markdown 原文未渲染。三条判据：①跨步同图=FAIL（纯填充）；
+# ②<pre class="art-code"> 内出现 ATX 标题/表格分隔=FAIL（该渲染没渲染）；
+# ③frame-verify.json 缺席或存在偏差=WARN 并点名（报告已按徽章标注，不冒充实拍）。
+if RUN_ID >= '20261104' and REPORT.exists():
+    _rep21 = REPORT.read_text(encoding='utf-8', errors='replace')
+    import hashlib as _hl21
+    _steps_dir = EVID / 'screenshots' / 'steps'
+    if _steps_dir.is_dir():
+        _h21 = {}
+        for _f in sorted(_steps_dir.glob('*.png')):
+            _h21.setdefault(_hl21.md5(_f.read_bytes()).hexdigest(), []).append(_f.name)
+        for _names in _h21.values():
+            _steps21 = {_n.split('-op')[0] for _n in _names}
+            if len(_steps21) > 1 and any(_n in _rep21 for _n in _names):
+                fails.append('查21 帧重复填充：同一张图被多个步骤共用（'
+                             + ','.join(sorted(_names)) + '）——重复截图不得按各自实拍呈现')
+    for _pre21 in re.findall(r'<pre class="art-code">([\s\S]{0,4000}?)</pre>', _rep21):
+        if re.search(r'(?m)^#{1,3} ', _pre21) or re.search(r'\|\s*-{3,}', _pre21):
+            fails.append('查21 markdown 未渲染：<pre class="art-code"> 内出现标题/表格分隔标记'
+                         '——该交付物应按文档渲染而非原文透传')
+            break
+    _fv21 = EVID / 'frame-verify.json'
+    if not _fv21.exists():
+        warns.append('查21 帧内容未核验（frame-verify.json 缺席）——截图与步骤是否相符无机械证据，'
+                     '报告帧按「未核验」标注')
+    else:
+        try:
+            _rows21 = json.loads(_fv21.read_text(encoding='utf-8', errors='replace'))
+            _bad21 = [r for r in _rows21 if isinstance(r, dict) and not r.get('ok')]
+            if _bad21:
+                warns.append('查21 帧内容偏差 %d 帧（%s）——报告已按「内容不符」徽章标注，'
+                             '不得当实拍证据引用；修采集位/页面态后重拍'
+                             % (len(_bad21), '、'.join(str(r.get('key')) for r in _bad21[:6])))
+        except Exception as _e21:
+            warns.append(f'查21 frame-verify.json 不可解析：{_e21}')
+
+# ── 查 20（2026-11-04 N05 清偿）：零交付分类节与交付物缺件节的机械核验 ──
+# 报告模板补两节后，缺「谁缺、缺什么」的可核归属。核验三条：
+# ①分类节在位（id=zero-delivery）——节缺席=模板回退；
+# ②产品分类落盘（evidence/zero-delivery.json）与节内计数一致（防手抄走样）；
+# ③缺件节在位（id=artifact-gap）——本节由 8.6 矩阵实解析生成，缺席即渲染链断。
+if RUN_ID >= '20261104':
+    if not REPORT.exists():
+        warns.append('查20 报告未生成，零交付/缺件两节无从核验')
+    else:
+        _rep20 = REPORT.read_text(encoding='utf-8', errors='replace')
+        if 'id="zero-delivery"' not in _rep20:
+            fails.append('查20 报告缺「零交付逐卡分类」节（id=zero-delivery）——'
+                         '模板回退或渲染链断，N05 归属面不可核')
+        if 'id="artifact-gap"' not in _rep20:
+            fails.append('查20 报告缺「交付物缺件清单」节（id=artifact-gap）——'
+                         '8.6 矩阵缺件只可按步翻查，不可一表核')
+        _zd20 = EVID / 'zero-delivery.json'
+        if _zd20.exists():
+            try:
+                _d20 = json.loads(_zd20.read_text(encoding='utf-8', errors='replace'))
+                _n20 = len(_d20.get('candidates') or [])
+                if f'</b>（{_n20} 张）' not in _rep20:
+                    warns.append(f'查20 产品零交付候选 {_n20} 张，但报告节内未见同数计数——'
+                                 '检查渲染是否吃到 stale 落盘（evidence/zero-delivery.json）')
+            except Exception as _e20:
+                warns.append(f'查20 evidence/zero-delivery.json 不可解析：{_e20}')
+        elif 'ISSUE|zero-delivery|' in (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace'):
+            warns.append('查20 有 zero-delivery 问题单但无逐卡分类落盘（zero-delivery.json 缺席）——'
+                         '产品巡检器未产出，报告按总数呈现；须查 cluster-inspector 接线')
+
 # ── 汇总 ──
 # 工具版本锚：审计结论绑定工具版本——镜像树落后一代曾在同一份
 # 报告上产出全错结果（标题逐字 0/26 假 FAIL）。输出自带 git 锚，结论不可复现时先对版本。

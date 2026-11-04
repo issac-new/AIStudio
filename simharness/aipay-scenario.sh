@@ -2172,7 +2172,7 @@ if [ "$(posture)" = "strict" ]; then
     # HumanGate 批准落产品审批面探测（验收面）：root fix 已落（上方注册＋decide 通道，
     # 2026-10-31 用户批准）——decide 成功即 history 含 targetId=cardId 记录；仍缺席=通道
     # 断裂记单，审批面承载维持降级计达（方案 §2.6.8 消费纪律 6）。
-    g5_humangate_history_probe "$_rel_tok" "$RGID"
+    g5_humangate_history_probe "$_rel_tok" "$RGID" "${_hg_id:-}"
     # §4.4-4 QGate 证据接线（v1.31.1 条款：来源分布随行，禁手抄全绿）：G5 过闸即对
     # 中央仓跑 release-report，原文落 evidence。门未绑执行器=INCONCLUSIVE 全列（无信号桶），
     # 如实呈现不算全绿——绑定真跑留下轮（骨架部署锚：中央仓 1edcc23）。
@@ -2675,6 +2675,23 @@ if step_reached workmgr && [[ -z "$(sget workmgr_done)" ]]; then
     echo "ISSUE|zero-delivery|director|done 卡 body 无 commit= 锚 ${_zd} 张（零交付遥测：研发交付类卡须逐张判定，治理类合法）——见 work-report 零交付节" >> "$EVID_DIR/issues.log"
     note "[遥测] 零交付形态 ${_zd} 张（记问题单，人工判定归属）"
   fi
+  # 零交付逐卡分类（N05 清偿·产品能力消费）：分类判据与检测逻辑归属产品
+  # （custom/server/clusterinspector/detectors-zero-delivery.ts＋card-classify.ts：
+  # delivery 强告警 / governance 静默 / uncertain 人工分诊），驱动不再自算分类——
+  # 调产品巡检器 run+snapshot，把逐卡结果落 evidence/zero-delivery.json 供报告两列呈现。
+  _zd_tok="$(studio_login 2>/dev/null || true)"
+  if [[ -n "$_zd_tok" ]]; then
+    studio POST /api/hermes/cluster-inspector/run "$_zd_tok" '{}' >/dev/null 2>&1 || true
+    _zd_payload="$(studio GET /api/hermes/cluster-inspector/snapshot "$_zd_tok" 2>/dev/null \
+      | jq -c '[.anomalies[]? | select(.detector == "completion.zero-delivery") | .detail][0] // empty' 2>/dev/null || true)"
+    if [[ -n "$_zd_payload" && "$_zd_payload" != "null" ]]; then
+      printf '%s\n' "$_zd_payload" > "$EVID_DIR/zero-delivery.json"
+      note "[遥测] 零交付逐卡分类已落 evidence/zero-delivery.json（产品检测器：研发 $(printf '%s' "$_zd_payload" | jq '.candidates | length' 2>/dev/null || echo '?') 张／治理合法无锚 $(printf '%s' "$_zd_payload" | jq '.governanceNoAnchor | length' 2>/dev/null || echo '?') 张）"
+    else
+      echo "ISSUE|zero-delivery-classify-missing|director|产品巡检器未返回零交付分类（cluster-inspector run/snapshot 无 completion.zero-delivery 异常）——报告零交付节按总数呈现" >> "$EVID_DIR/issues.log"
+      note "[遥测] 零交付分类缺席（产品巡检器无该异常）——报告按总数呈现并记单"
+    fi
+  fi
   # 台账落档（run8 复盘根治：方案 §8.6 步 22 准出=work-report.md 落档，此前只写
   # evidence 致 8.6 矩阵"文件域无独立工件"）——repo_commit_main 口径进 origin/main，
   # 失败记录不中止（与验收书/意见书同族收尾语义）。
@@ -3119,6 +3136,52 @@ PAYSPECS
   python3 "$SCRIPT_DIR/mux/tri-disp-backfill.py" --run "${RUN_ID}" 2>/dev/null \
     && note "[报告] DISP 三态归桶收尾件已执行（表外词键补观察桶，纪律 28）" \
     || note "[观察] DISP 三态归桶件无产出（台账缺席或零表外词——非阻断）"
+  # 帧内容核对（run26 用户质询根治：截图与步骤内容不符／同图重复被当成实拍证据）——
+  # frame-verify.py 早已实现「期望词 + 空白态标记」的 OCR 判据（EXPECT 投影自
+  # capture-plan.env，tests 有守门），但从未被驱动调用，于是空壳页一直按「真实截图」
+  # 进报告。此处收尾统一核一遍：偏差落 ISSUE＋JSON，报告按核验态挂徽章；同图跨步复用
+  # 与操作前后零变化同时显形（判据=文件 md5）。
+  if [[ -f "$SCRIPT_DIR/mux/frame-verify.py" ]]; then
+    _fv_rc=0
+    python3 "$SCRIPT_DIR/mux/frame-verify.py" --run "${RUN_ID}" --out "$EVID_DIR/frame-verify.json" >/dev/null 2>&1 || _fv_rc=$?
+    if [[ -f "$EVID_DIR/frame-verify.json" ]]; then
+      python3 - "$EVID_DIR/frame-verify.json" "$EVID_DIR/issues.log" <<'PYF'
+import json, sys
+rows = json.load(open(sys.argv[1], encoding='utf-8'))
+log = open(sys.argv[2], 'a', encoding='utf-8')
+bad = [r for r in rows if not r.get('ok')]
+for r in bad:
+    log.write(f"ISSUE|frame-content-mismatch|step-{r['key']}|帧内容与步骤不符（期望「{r.get('title','')}」）：{r.get('why','')}——该帧不得按实拍证据呈现\n")
+if bad:
+    print(f'[帧核验] 偏差 {len(bad)}/{len(rows)} 帧（已落 frame-content-mismatch）')
+PYF
+      note "[帧核验] frame-verify 完成（rc=${_fv_rc}，明细 evidence/frame-verify.json，偏差已记单）"
+    else
+      echo "ISSUE|frame-verify-missing|step26|帧内容核对未产出 JSON（frame-verify 异常）——报告帧按未核验呈现" >> "$EVID_DIR/issues.log"
+      note "[帧核验] frame-verify 未产出（rc=${_fv_rc}）——如实记单，不假装已核验"
+    fi
+  fi
+  # 同图复用/前后零变化盘点（md5）：跨步同图＝重复填充（FAIL 面）；同一步前后同图＝
+  # 操作无可视变化（WARN 面，报告挂徽章）。
+  python3 - "$EVID_DIR/screenshots/steps" "$EVID_DIR/issues.log" <<'PYD' 2>/dev/null || true
+import hashlib, os, sys, collections
+d, logp = sys.argv[1], sys.argv[2]
+if not os.path.isdir(d):
+    raise SystemExit(0)
+h = collections.defaultdict(list)
+for f in os.listdir(d):
+    if f.endswith('.png'):
+        h[hashlib.md5(open(os.path.join(d, f), 'rb').read()).hexdigest()].append(f)
+log = open(logp, 'a', encoding='utf-8')
+for key, files in h.items():
+    steps = {f.split('-op')[0] for f in files}
+    if len(steps) > 1:
+        log.write('ISSUE|frame-duplicate-across-steps|' + ','.join(sorted(steps)) +
+                  '|同一张图被多个步骤复用（' + ','.join(sorted(files)) + '）——重复填充，不得按各自实拍呈现\n')
+    elif len(files) > 1 and any('-op1-before' in f for f in files) and any('-op1-after' in f for f in files):
+        log.write('ISSUE|frame-no-visible-change|' + ','.join(sorted(steps)) +
+                  '|操作前后两帧完全相同（' + key[:8] + '）——该步无可视变化，报告按「无可见变化」标注\n')
+PYD
   # 融合批六：报告生成前刷新治理指标快照（归桶件已追加 DISP 行，快照须含终态台账
   # ——issues_stats/R5 配对取件正源；快照过期=报告配对缺归桶行）
   gov_report >/dev/null 2>&1 || issue_once governance-snapshot-stale step26 "报告前快照刷新失败（gov_report）——报告配对可能缺归桶行，如实记录"

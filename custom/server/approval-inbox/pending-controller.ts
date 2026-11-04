@@ -607,7 +607,13 @@ router.post('/:id/decide', async (ctx) => {
 
 router.get('/history', async (ctx) => {
   const limit = Number(ctx.query.limit ?? 50)
-  ctx.body = { ok: true, entries: queryApprovalLog(Number.isFinite(limit) ? limit : 50) }
+  // targetId（2026-11-04 N02）：按审批对象精确反查，过滤在截断之前——台账增长后
+  // 「最近 N 条」窗口会把目标记录挤出去，造成「未落账」误判。
+  const targetId = typeof ctx.query.targetId === 'string' ? ctx.query.targetId : undefined
+  ctx.body = {
+    ok: true,
+    entries: queryApprovalLog(Number.isFinite(limit) ? limit : 50, targetId),
+  }
 })
 
 // 审批决策日志前向链校验（AGT 吸收轮 B，2026-10-21）：防篡改对账——改写历史/

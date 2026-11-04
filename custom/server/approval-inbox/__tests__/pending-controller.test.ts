@@ -115,6 +115,27 @@ describe('审批收件箱 REST（/api/approvals）', () => {
     expect(comment.status).toBe(400)
   })
 
+  it('N02：history 支持 targetId 精确反查（窗口外记录不得误判未落账）', async () => {
+    // 2026-11-04 N02 清偿：驱动曾用 /history?limit=50 + grep 判「批准是否落账」，
+    // 台账一长目标行滚出窗口即误判 g5-approval-history-missing（run26 实锤）。
+    // 本用例锁定：按 targetId 查询必须在截断之前过滤，且只返回该对象记录。
+    const { createRequest } = await import('../human-gate')
+    createRequest({ runId: 'run-n02', cardId: 't_n02_target', title: 'G5 发布准出（N02）', requestedBy: 'qa-lead' })
+    const ok = await fetchJson(base, '/api/approvals/hgate:run-n02:t_n02_target/decide', {
+      method: 'POST', body: JSON.stringify({ decision: 'approve', note: 'N02 精确反查' }),
+    })
+    expect(ok.status).toBe(200)
+
+    const hit = await fetchJson(base, '/api/approvals/history?targetId=t_n02_target&limit=1')
+    expect(hit.status).toBe(200)
+    const entries = (hit.body.entries ?? []) as Array<{ targetId?: string; decision?: string }>
+    expect(entries).toHaveLength(1)
+    expect(entries[0].targetId).toBe('t_n02_target')
+
+    const miss = await fetchJson(base, '/api/approvals/history?targetId=t_n02_absent')
+    expect((miss.body.entries as unknown[])).toHaveLength(0)
+  })
+
   it('hgate decide：收件箱裁决 HumanGate 批准单（2026-10-31 活体验证补路由）＋历史落账＋幂等 404', async () => {
     // 实拍实录：批准单进了收件箱但 decide 端点无 hgate: 分支——UI 批准按钮落 400、
     // 历史无记录（strict 真人链断点）。本断言锁新路由：pending 可见 → UI 同款端点可裁 → 历史在案。

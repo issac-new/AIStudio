@@ -53,6 +53,55 @@ if RUN_ID:
 else:
     STATE_FILES = [SIM / 'state.env']
 STEPS_DIR = EVID / 'screenshots' / 'steps'
+
+# ── 帧核验态（2026-11-04 用户质询：截图与步骤内容不符／同图重复填充却按实拍呈现）──
+# 数据面：evidence/frame-verify.json（驱动收尾跑 frame-verify.py 的明细）+ 盘上 md5
+# 盘点（跨步同图／前后零变化）。报告不再一律宣称「真实截图」：逐帧挂核验徽章，
+# 未核验与内容不符显式标注——宁可标「未核验」，不拿空壳页冒充证据。
+_FRAME_VERIFY = {}
+_FRAME_DUP = set()
+_FRAME_PAIR_SAME = set()
+try:
+    _fv_path = EVID / 'frame-verify.json'
+    if _fv_path.exists():
+        for _row in json.loads(_fv_path.read_text(encoding='utf-8', errors='replace')):
+            if isinstance(_row, dict) and _row.get('key'):
+                _FRAME_VERIFY[str(_row['key'])] = _row
+except Exception:
+    _FRAME_VERIFY = {}
+try:
+    if STEPS_DIR.is_dir():
+        import hashlib as _hl
+        _by_md5 = {}
+        for _f in sorted(STEPS_DIR.glob('*.png')):
+            # 存 stem（不含 .png）——帧引用前缀是 `键-opN-phase`，带后缀会永远不命中徽章
+            _by_md5.setdefault(_hl.md5(_f.read_bytes()).hexdigest(), []).append(_f.name[:-4] if _f.name.endswith('.png') else _f.name)
+        for _names in _by_md5.values():
+            _steps = {_n.split('-op')[0] for _n in _names}
+            if len(_steps) > 1:
+                _FRAME_DUP.update(_names)
+            elif len(_names) > 1 and any('-op1-before' in _n for _n in _names) and any('-op1-after' in _n for _n in _names):
+                _FRAME_PAIR_SAME.update(_names)
+except Exception:
+    pass
+
+
+def frame_badge(pre: str) -> str:
+    """单帧核验徽章：已验证 / 内容不符 / 未核验 / 跨步同图 / 前后无可见变化。"""
+    notes = []
+    row = _FRAME_VERIFY.get(pre.split('-op')[0])
+    if row is None:
+        notes.append('·未核验')
+    elif not row.get('ok'):
+        why = (row.get('why') or '').strip()
+        notes.append('·⚠内容不符' + (f'：{why[:60]}' if why else ''))
+    else:
+        notes.append('·✓已核验')
+    if pre in _FRAME_DUP:
+        notes.append('·⚠跨步同图')
+    if pre in _FRAME_PAIR_SAME:
+        notes.append('·前后无可见变化')
+    return ''.join(notes)
 OUT = EVID / 'simulation-report.html'
 # ── 并发写根防（run21 收尾实录 2026-10-18）：值班侧手动 gen 与驱动 gen 同刻并跑，
 # 同写 simulation-report.html → 审计读到的版本与盘上版本错位（19:48 审计 FAIL 双嵌、
@@ -1782,6 +1831,33 @@ for _n, _ks in ((1, ['smoke_done', 'capture-precheck']),
         _m['keys'] = _ks
         sys.stderr.write('[mx-report-gen] 步 %s 叙事注册 keys 为空——回落 §3.3 默认键 %s（run16 实锤防线）\n'
                          % (_n, '+'.join(_meta['keys'])))
+
+# ── N11（2026-11-04 台账清偿）：台账键→步 集中注册表 ─────────────────────
+# run26 实锤：未注册叙事轮走骨架兜底，骨架不建 issue_keys → issues.log 的 27 个键
+# 全部「未注册」，逐步「已知问题」空渲染（审计只 WARN，账实不符却无人管）。
+# 注册表按方案 §2.4 步号语义固定（改步语义须同改此处），与按轮 narrative 的
+# issue_keys 取并集——按轮注册仍可覆盖/补充，集中表保证骨架轮也有归属。
+ISSUE_KEYS_BY_STEP = {
+    9: ['raci-dispatch-missing', 'receipt-missing'],
+    15: ['review-card-missing', 'security-review-missing', 'security-review-timeout',
+         'g2-design-review-fail', 'g2-arch-fail-hold',
+         'gate-breaker-tripped', 'breaker-wait-nudge', 'gate-breaker-reset'],
+    17: ['split-evidence-missing'],
+    18: ['g3-local-gate-missing', 'runtime-proof-missing'],
+    20: ['eval-live-evidence-missing', 'eval-remediation-open', 'eval-gate-gap',
+         'g5-humangate-proxy', 'g5-approval-history-missing', 'evidence-push',
+         'release-gate-ledger'],
+    21: ['uat-ac-failed'],
+    22: ['zero-delivery', 'product-outcome-missing'],
+    23: ['audit-finding'],
+    24: ['retro-open-items'],
+    26: ['r18-collection-missing', 'r18-collect-failed', 'driver-restart-storm',
+         'dispatch-send-failed'],
+}
+for _n, _keys in ISSUE_KEYS_BY_STEP.items():
+    _m = STEPS_META.get(_n)
+    if isinstance(_m, dict):
+        _m['issue_keys'] = list(dict.fromkeys(list(_m.get('issue_keys') or []) + list(_keys)))
 
 # ── run20 复盘防线（fix/run20-report-truth-trio）：逐步问题单漏注册机械暴露 ──
 # run20 实锤：26 步 issue_keys 全空 → 逐步 ③段 27 处「已知问题：无（本步零问题单）」
@@ -3846,9 +3922,12 @@ def qgate_block(n: int) -> str:
     if not qf.exists():
         return ''
     raw = qf.read_text(encoding='utf-8', errors='replace').strip()
+    # 2026-11-04 用户质询：原实现把 release-report（markdown）直接塞 <pre> 原文透传，
+    # 报告里出现 `# 标题`/`| --- |` 未渲染——读者看到的是源码不是文档。改为走
+    # art_md_to_html（内容不改，只做形式渲染；HTML 内的原始锚/表格文本仍逐字可核）。
     return ('<details class="st-artifact st-qgate"><summary>🛡 QGate 门禁证据'
-            '（release-report 原文透传，来源分布随行——§5.5：降级/声明/无信号桶非零或存在未验证声明时不得表述为全绿/已核验）</summary>'
-            f'<pre class="art-code">{H.escape(raw)}</pre></details>')
+            '（release-report 渲染呈现，来源分布随行——§5.5：降级/声明/无信号桶非零或存在未验证声明时不得表述为全绿/已核验）</summary>'
+            f'<div class="art-md">{art_md_to_html(raw)}</div></details>')
 
 
 def delegate_identity_block(n: int) -> str:
@@ -3886,8 +3965,10 @@ def gov_evidence_block(n: int) -> str:
         if not f.exists():
             continue
         raw = f.read_text(encoding='utf-8', errors='replace').strip()
+        body = f'<div class="art-md">{art_md_to_html(raw)}</div>' if fname.endswith('.md') \
+            else f'<pre class="art-code">{H.escape(raw)}</pre>'
         outs.append(f'<details class="st-artifact st-gov"><summary>🧾 {label}'
-                    f'（原文透传）</summary><pre class="art-code">{H.escape(raw)}</pre></details>')
+                    f'（原文透传）</summary>{body}</details>')
     return ''.join(outs)
 
 
@@ -3967,6 +4048,67 @@ _ART_NOFILE_BY_RUN = {
     },
 }
 ART_NOFILE_NOTES = _ART_NOFILE_BY_RUN.get(RUN_ID, _ART_NOFILE_DEFAULT)
+
+def zero_delivery_html():
+    """N05（2026-11-04 台账清偿）：零交付逐卡分类节——研发卡/治理卡分列。
+
+    数据源=产品巡检器落盘的 evidence/zero-delivery.json（detectors-zero-delivery.ts
+    的 detail：candidates=研发/待分诊，governanceNoAnchor=治理类合法无锚）。报告只呈现
+    产品判定，不自行重算分类（判据单一事实源在 card-classify.ts）。缺席如实声明，不猜数。
+    """
+    head = '<h2 class="section-hd" id="zero-delivery">第 4 章附 · 零交付逐卡分类（研发卡／治理卡）</h2>'
+    f = EVID / 'zero-delivery.json'
+    if not f.exists():
+        return (head + '<div class="card info"><b>分类缺席</b>：产品巡检器未产出逐卡分类'
+                '（evidence/zero-delivery.json 不在场，见问题单 zero-delivery-classify-missing）。'
+                '总数仍见问题单行；逐卡归属待产品检测器恢复后回填——本节不猜数。</div>')
+    try:
+        d = json.loads(f.read_text(encoding='utf-8'))
+    except Exception as e:
+        return head + f'<div class="card warn"><b>解析失败</b>：{H.escape(str(e))}</div>'
+    cand = d.get('candidates') or []
+    gov = d.get('governanceNoAnchor') or []
+
+    def _tbl(items, cols, title, cls, note):
+        body = ''.join(
+            '<tr>' + ''.join(f'<td>{H.escape(str(it.get(c) or "—"))}</td>' for c in cols) + '</tr>'
+            for it in items) or f'<tr><td colspan="{len(cols)}">（无）</td></tr>'
+        heads = ''.join(f'<th>{c}</th>' for c in cols)
+        return (f'<div class="card {cls}"><b>{title}</b>（{len(items)} 张）'
+                f'<div class="d-muted">{note}</div>'
+                f'<table class="mini"><thead><tr>{heads}</tr></thead><tbody>{body}</tbody></table></div>')
+
+    return (head
+            + f'<p class="d-muted">口径：分类判据归属产品 <code>card-classify.ts</code>——治理／台账类卡合法无锚'
+              f'（静默记录）、研发交付类零凭证＝强告警、双命中／双不命中＝人工分诊。'
+              f'产品判定总数 {H.escape(str(d.get("total", len(cand))))} 张。</p>'
+            + _tbl(cand, ['card', 'title', 'assignee', 'cls'],
+                   '研发／待分诊卡（零交付候选）', 'warn', '须补 commit 锚／分支引用，或改状态并说明。')
+            + _tbl(gov, ['card', 'title', 'cls'],
+                   '治理／台账类（合法无锚）', 'info', '按分类判据静默剔除；列出仅供反查。'))
+
+
+def artifact_gap_html():
+    """N05：交付物缺件节——8.6 矩阵内缺件／往轮产物一表列全（第 6 章逐件核对的汇总视图）。"""
+    head = '<h2 class="section-hd" id="artifact-gap">第 6 章附 · 交付物缺件清单</h2>'
+    miss = []
+    for n in sorted(ARTIFACT_VIEWS):
+        for name, rel, _checks in ARTIFACT_VIEWS.get(n, []):
+            raw, _aref, _asha, truth = _art_resolve(rel)
+            if raw is None:
+                miss.append((n, name, rel or '—', '缺件（文件不存在）'))
+            elif truth.get('stale'):
+                miss.append((n, name, rel, f'往轮产物（RUN={truth.get("declared") or "?"}）'))
+    if not miss:
+        return (head + '<div class="card info"><b>零缺件</b>：8.6 矩阵内全部交付物本轮属实'
+                '（项级模版缺项见第 6 章逐件核对）。</div>')
+    rows = ''.join(
+        f'<tr><td><b>{n}</b></td><td>{H.escape(name)}</td><td>{H.escape(rel)}</td>'
+        f'<td><span class="art-verdict miss">{H.escape(state)}</span></td></tr>'
+        for n, name, rel, state in miss)
+    return (head + f'<div class="card warn"><b>缺件 {len(miss)} 项</b>'
+            '<table class="mini"><thead><tr><th>步</th><th>交付物</th><th>路径</th><th>状态</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table></div>')
 
 def artifact_panorama():
     """文末汇总节：8.6 矩阵全景表（步|交付物|模版核对结果|锚）+ 全 OK 计数与缺件如实。"""
@@ -4848,6 +4990,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             # 正文只说人话——这是本步的界面实拍，点开可放大。
             _phase_cn = {'before': '操作前', 'action': '操作中', 'after': '操作后'}
             _or_imgs = []
+            _bad_imgs = []   # 核验不符/重复的帧不进证据画廊（2026-11-04 用户质询：禁填充）
             _seen_ops = set()
             for pre in orphans:
                 _ph = pre.rsplit('-', 1)[-1]
@@ -4864,7 +5007,10 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
                             _reshoot_cap = '·收尾补拍'
                 except OSError:
                     pass
-                _or_imgs.append((pre, f'本步界面实拍（{_phase_cn.get(_ph, _ph)}{_reshoot_cap}）· 点图放大查看', 'ui'))
+                _row_fv = _FRAME_VERIFY.get(pre.split('-op')[0])
+                _is_bad = (_row_fv is not None and not _row_fv.get('ok')) or pre in _FRAME_DUP
+                _cap = f'本步界面实拍（{_phase_cn.get(_ph, _ph)}{_reshoot_cap}）{frame_badge(pre)}· 点图放大查看'
+                (_bad_imgs if _is_bad else _or_imgs).append((pre, _cap, 'ui'))
                 _op = pre.rsplit('-', 1)[0]
                 if _ph in ('before', 'after') and _op not in _seen_ops:
                     _seen_ops.add(_op)
@@ -4876,8 +5022,19 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
                         # 无差异也如实说（run23 用户指令「有变化要标出来」的反面：
                         # 没变化就不能让人以为有变化）
                         _or_imgs[-1] = (pre, '本步界面实拍（操作前/后无界面变化——本步推进在数据与管理侧）· 点图放大', 'ui')
-            imgs_html = (f'<p class="st-autoattach">本步界面实拍 {len(orphans)} 张（操作前/后对照，点图可放大）。</p>'
-                         + img_tags(_or_imgs))
+            _bad_html = ''
+            if _bad_imgs:
+                # 内容不符/重复的帧不混进证据画廊（用户 2026-11-04 质询：截图与步骤不符、
+                # 重复填充）。仍保留可查——折叠区里逐帧给偏差原因，明示「不作实拍证据」。
+                _bad_html = ('<details class="st-framegap"><summary>⚠ 本步采集偏差 %d 帧'
+                             '（内容与步骤不符／重复，未按实拍证据呈现）</summary>'
+                             % len(_bad_imgs)
+                             + img_tags(_bad_imgs)
+                             + '<p class="d-warn">处理：按拍摄位重拍（页面态需与步一致）；'
+                               '偏差已登记 frame-content-mismatch，重拍后本节消失。</p></details>')
+            imgs_html = (f'<p class="st-autoattach">本步界面实拍 {len(_or_imgs)} 张（操作前/后对照，点图可放大）。'
+                         f'{("另有 %d 帧采集偏差，见下折叠区。" % len(_bad_imgs)) if _bad_imgs else ""}</p>'
+                         + img_tags(_or_imgs) + _bad_html)
         elif (meta.get('mark_chip') or '').startswith('沿用'):
             imgs_html = f'<p class="no-evidence">回归轮（本步不在本轮执行范围）：本步未执行（沿用源轮工件，见步卡夹具标签），无当轮帧——不适用未采集口径</p>'
         elif _CAPTURE_PLAN.get(_bkey, ('',))[0] == 'none':
@@ -5593,6 +5750,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <details class="audit"><summary>▶ 展开问题单处置明细（唯一键口径）</summary>
   <table style="margin-top:8px"><tr><th>类型·主体</th><th>频次</th><th>级别</th><th>描述</th><th>处置结论</th></tr>{itable}</table></details>
   {monitor_proxy_html()}
+  {zero_delivery_html()}
 
 
   <h2 class="section-hd" id="ch9-gov">第 5 章 · 治理系统工作了吗？</h2>
@@ -5637,6 +5795,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <h2 class="section-hd" id="artifact-panorama">第 6 章 · 交付物全景矩阵（缺什么一目了然）</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✓/缺（红）。{art_stat}。</p>
   {art_tbl}
+  {artifact_gap_html()}
   <p class="stat-note">{art_note_g5}</p>
 
   <h2 class="section-hd" id="appendix">附录 · 方法与口径（供复核，不影响上面的结论）</h2>
@@ -5649,7 +5808,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
 
   <div class="footer">报告由 mx-report-gen.py 生成：步骤标题与把关逐字解析自方案正本（单一事实源），交付物自中央仓实读，问题单与计数自台账实测统计<br>
-全部证据图=AIStudio 产品界面真实浏览器截图（治理工件 markdown 经⑥治理·文档评审（/app/stage/govern?tab=docs）渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
+证据图=AIStudio 产品界面浏览器截图（逐帧标注核验态：✓已核验／未核验／内容不符；不符帧在偏差折叠区，不作实拍证据）（治理工件 markdown 经⑥治理·文档评审（/app/stage/govern?tab=docs）渲染；消息=协作沟通房间实拍；证据锚点见图内 commit/分支）{_img_honest_note} · 点击截图可放大</div>
 </main>
 </div>
 <button id="back-top" title="回到顶部" aria-label="回到顶部" style="display:none;position:fixed;right:26px;bottom:30px;z-index:90;width:42px;height:42px;border:none;border-radius:50%;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(15,23,42,.22);opacity:.92">↑</button>

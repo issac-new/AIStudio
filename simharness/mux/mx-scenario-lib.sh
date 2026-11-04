@@ -1132,10 +1132,19 @@ g5_humangate_decide() { # <tok> <hg_id> <note> → rc0=已落台账或已裁决�
   return 1
 }
 
-g5_humangate_history_probe() { # <tok> <rgid> → 历史含 rgid=通过 note；缺=记单（通道验收面）
-  local tok="$1" rgid="$2" hist
+g5_humangate_history_probe() { # <tok> <rgid> [hg-id] → 历史含 rgid=通过 note；缺=重放一次 decide 再判，仍缺记单
+  # N02 清偿（2026-11-04）：①按 targetId 精确反查（产品端口已支持，过滤在截断前）——
+  # 原「limit=50 + grep」在台账增长后会把目标记录挤出窗口，误判「未落账」（run26 实锤）；
+  # ②命中失败且拿到批准单 id 时，重放一次 decide（幂等）再判——网关重启等瞬时态可自愈，
+  # 不再把一次决定失败直接记成缺口单。
+  local tok="$1" rgid="$2" hg="${3:-}" hist
   [[ -n "$tok" ]] || return 0
-  hist="$(studio GET "/api/approvals/history?limit=50" "$tok" 2>/dev/null || true)"
+  hist="$(studio GET "/api/approvals/history?targetId=${rgid}&limit=5" "$tok" 2>/dev/null || true)"
+  if ! printf '%s' "$hist" | grep -q "${rgid}" && [[ -n "$hg" ]]; then
+    g5_humangate_decide "$tok" "$hg" "N02 重放：历史反查未命中，幂等重放 decide（瞬时态自愈）" >/dev/null 2>&1 || true
+    hist="$(studio GET "/api/approvals/history?targetId=${rgid}&limit=5" "$tok" 2>/dev/null || true)"
+    printf '%s' "$hist" | grep -q "${rgid}" && note "[G5] 审批历史重放命中（card ${rgid}，decide 幂等重放自愈）"
+  fi
   if printf '%s' "$hist" | grep -q "${rgid}"; then
     note "[G5] 产品审批历史在案（card ${rgid}，/api/approvals/history 可反查）"
   else
@@ -2164,6 +2173,21 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   # 再兜一层，失败降级 SEND-FAILED 字面而非杀驱动。
   m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$_body" "$3") || m="SEND-FAILED"
   m=$(_verify_dispatch_delivery "$1" "$m" "$_body" "$3") || m="${m:-SEND-FAILED}"
+  # N10（2026-11-04 台账清偿）：SEND-FAILED 退避重试一次并在案。run26 audit 两片派发
+  # 首轮失败、靠后续重发补位——派发是任务生命线，失败不该只留一行日志等人工发现。
+  if [[ "$m" == "SEND-FAILED" ]]; then
+    echo "ISSUE|dispatch-send-retry|$1|首次派发 SEND-FAILED（Matrix 发送三试全败），退避 5s 重试一次" >> "${EVID_DIR:-/tmp}/issues.log"
+    note "[$1] 派发 SEND-FAILED——退避 5s 重试一次（N10）"
+    sleep 5
+    m=$(mx_send "$(load_token "$1")" "$(sget room_analysis)" "$_body" "$3") || m="SEND-FAILED"
+    m=$(_verify_dispatch_delivery "$1" "$m" "$_body" "$3") || m="${m:-SEND-FAILED}"
+    if [[ "$m" == "SEND-FAILED" ]]; then
+      echo "ISSUE|dispatch-send-failed|$1|派发退避重试仍失败（SEND-FAILED）——任务书未达，须人工/后续重派补位" >> "${EVID_DIR:-/tmp}/issues.log"
+      note "[$1] 派发重试仍失败——已记 dispatch-send-failed（不静默）"
+    else
+      note "[$1] 派发重试成功（${m}）"
+    fi
+  fi
 
   # MX_BYZANTINE_SPEC=chen-agent:corruption,xiao-agent:noise（D11）：对被 @ 命中的
   # agent 经 owner↔agent DM 追加标记化污染指令（[BYZANTINE-INJECT] 前缀=事后
