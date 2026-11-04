@@ -6,8 +6,8 @@
 // 环境要求：账户 admin:dev-bootstrap 与 walktemp:walk-temp-r26（缺则先建，
 // scrypt 同源 hashPassword 配方）；网关 /api/matrix/gateway-credentials 已配置。
 import { chromium } from '@playwright/test'
-const BASE = 'http://localhost:8649'
-const API = 'http://localhost:8647'
+const BASE = process.env.WALK_BASE || 'http://localhost:8649'
+const API = process.env.WALK_API || 'http://localhost:8647'
 const out = []
 const ok = (n, c, note = '') => { out.push({ n, pass: !!c, note }); console.log(`${c ? 'PASS' : 'FAIL'} ${n}${note ? ' — ' + note : ''}`) }
 const login = async (u, p) => (await (await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) })).json()).token
@@ -37,6 +37,13 @@ await pageB.evaluate(({ t, g }) => {
     localStorage.setItem('matrix_homeserver_url', g.homeserverUrl)
   }
 }, { t: tokB, g: gwCreds })
+
+// 生产链冷启动竞态（r26 实录）：注入后 reload 等就绪，防 hash 直达被落地重定向覆盖
+await pageB.reload({ waitUntil: 'domcontentloaded' })
+await pageB.waitForFunction(() => {
+  const el = document.querySelector('#app')
+  return Boolean(el?.__vue_app__) && !(document.body?.innerText || '').includes('AIStudio 加载中')
+}, undefined, { timeout: 60000 }).catch(() => {})
 await pageB.goto(BASE + '/#/matrix', { waitUntil: 'load' })
 await pageB.waitForTimeout(4000)
 
@@ -75,6 +82,12 @@ const pageA = await ctxA.newPage()
 for (const [page, tok, label] of [[pageA, tokA, 'A'], [pageB, tokB, 'B']]) {
   await page.goto(BASE + '/', { waitUntil: 'load' })
   await page.evaluate(t => { localStorage.setItem('hermes_api_key', t); localStorage.setItem('hermes_locale', 'zh') }, tok)
+  // 生产链冷启动竞态：注入后 reload 等就绪（同上 pageB 注）
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForFunction(() => {
+    const el = document.querySelector('#app')
+    return Boolean(el?.__vue_app__) && !(document.body?.innerText || '').includes('AIStudio 加载中')
+  }, undefined, { timeout: 60000 }).catch(() => {})
   await page.goto(BASE + '/#/app/board', { waitUntil: 'load' })
   await page.waitForSelector('[data-testid="ia-tasks-tab-board"], .board, [class*="board"]', { timeout: 20000 }).catch(() => {})
   await page.waitForTimeout(2000)

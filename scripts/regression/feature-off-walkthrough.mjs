@@ -9,8 +9,8 @@
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'fs'
 
-const BASE = 'http://localhost:8649'
-const API = 'http://localhost:8647'
+const BASE = process.env.WALK_BASE || 'http://localhost:8649'
+const API = process.env.WALK_API || 'http://localhost:8647'
 const shots = '/tmp/feature-off-shots'
 mkdirSync(shots, { recursive: true })
 
@@ -34,6 +34,14 @@ try {
     localStorage.setItem('hermes_server_url', location.origin)
     localStorage.setItem('hermes_locale', 'zh')
   }, login.token)
+  // 生产链冷启动竞态（r26 实录）：注入 token 后 app 可能已按未认证态启动，后续
+  // hash 直达被落地重定向覆盖（connections→chat）。reload 让 app 按认证态重启，
+  // 等 Vue 挂载+启动占位消失再导航（walk-routes ensureLogin 同款判据）。
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForFunction(() => {
+    const el = document.querySelector('#app')
+    return Boolean(el?.__vue_app__) && !(document.body?.innerText || '').includes('AIStudio 加载中')
+  }, undefined, { timeout: 60000 }).catch(() => {})
 
   // ── voice：/hermes/settings 无 stt/tts tab（patch 524 门控）──
   await page.goto(BASE + '/#/hermes/settings', { waitUntil: 'domcontentloaded' })
@@ -68,19 +76,24 @@ try {
   // 关闭态产品形态（ConnectionsPanel:25）：activeTab 直落 remote，单面板无 tab 切换条
   // ——r26 诊断实录 tabs=[] 是设计内（单面板不渲染 NTabPane 族），非数据缺失。
   await page.goto(BASE + '/#/hermes/connections', { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(2500)
+  // 生产链首访冷加载慢（r26 实录：固定 2.5s 时 bodyLen=121 假红，加长即 2588）
+  // ——轮询等页面实质内容渲染再采样。
+  await page.waitForFunction(() => (document.body.innerText || '').replace(/\s+/g, '').length > 400, undefined, { timeout: 25000 }).catch(() => {})
+  await page.waitForTimeout(800)
   const conn = await page.evaluate(() => {
     const text = document.body.innerText || ''
+    // 判据用 DOM 而非 body 文本采样（r26 实录：页头「设备互联」在 innerText 中
+    // 位置随壳层排版漂移，文本 regex 采样假红；DOM 判据稳定）。
     return {
       tabs: [...document.querySelectorAll('[role="tab"], .n-tabs-tab')].map(el => el.textContent?.trim() || '').filter(Boolean),
-      bodyLen: text.replace(/\s+/g, '').length,
-      hasRemoteFace: /远程|Remote|设备互联/.test(text),
+      connEls: document.querySelectorAll('[class*="connection"]').length,
+      pageHeader: document.querySelector('.page-header, [class*="page-header"]')?.textContent?.trim().slice(0, 20) || '',
       hasAppFace: /应用互联|Apps? 互联/i.test(text),
       hasMcuFace: /MCU|微控/i.test(text),
     }
   })
   ok('connectionsExtras 关：连接页无 app/mcu tab/面板', !conn.hasAppFace && !conn.hasMcuFace, `tabs=${JSON.stringify(conn.tabs.slice(0, 6))}`)
-  ok('connectionsExtras 关：remote 单面板直显（页面在渲染）', conn.hasRemoteFace && conn.bodyLen > 20, `len=${conn.bodyLen}`)
+  ok('connectionsExtras 关：remote 单面板直显（页面在渲染）', (conn.connEls > 0 || conn.pageHeader.includes('设备互联')) && !conn.hasAppFace, `connEls=${conn.connEls} header=${conn.pageHeader}`)
   await page.screenshot({ path: `${shots}/03-connections-off.png` })
 
   // ── agentManager：/studio/agents 路由不可达（守卫改道或 not-found）──
