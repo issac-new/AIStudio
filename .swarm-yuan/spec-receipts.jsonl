@@ -176,3 +176,4 @@
 {"at":"2026-11-04T10:36:32Z","spec":"docs/superpowers/specs/2026-11-04-userenv-route-mount.md","receipt":"13320455b796a42b639a6126f71a47b57154e41d","commit":"d9c82dc63"}
 {"at":"2026-11-04T10:56:55Z","spec":"docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md","receipt":"5f67b036c177147f6715ff88cb89e73ce0e3ddfb","commit":"729cae521"}
 {"at":"2026-11-04T11:30:55Z","spec":"docs/superpowers/specs/2026-11-04-shell-form-control-text-baseline.md","receipt":"b10407c94dc0271c2b48d5d178fdaa661d24c138","commit":"0a0d0104f"}
+{"at":"2026-11-04T11:39:26Z","spec":"docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md","receipt":"969f27103219004195338021b9124acf3b5d31d8","commit":"79c3b957a"}
