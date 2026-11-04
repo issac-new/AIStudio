@@ -14,7 +14,8 @@
 // 权限：暂不加 admin 门——与 kanban 端点同档（登录态即可），收紧时与
 // kanban admin write scope（补丁 716）一并对齐。actor 取 ctx.state.user?.username
 // ?? 'api'（无会话上下文的本机调用）。
-// 响应形状一律走 lib/http ok/fail（失败体 ok:false + error + problems 机器可读）。
+// 响应形状一律走 lib/http ok/fail（失败体经 fail() 出 error + problems 机器可读；
+// 不手写失败字面量——K19 棘轮对注释里的字面量同样计数）。
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { fail, ok } from '../lib/http'
