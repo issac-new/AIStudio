@@ -4,6 +4,12 @@
 // 端点（prefix /api/projectworkflow）：
 //   GET  /projects                状态文件 × 全板任务统计的合并清单
 //   GET  /projects/:id            状态 + 统计 + 未终结任务清单 + timeline 倒序
+//   GET  /projects/:id/graph      任务拓扑投影 {nodes,edges,next,interrupts}；
+//                                 ?format=mermaid → text/plain 的 graph TD 源。
+//                                 mermaid 分支直接 ctx.body= 纯文本是声明例外：
+//                                 非 JSON 响应，lib/http ok() 只服务 JSON 包
+//                                 （architecture-ratchet K19 为总量棘轮 ≤1193，
+//                                 本处 1 例有注释留痕，不改基线数值）。
 //   POST /projects/:id/pause      暂停收单（completed 终态 → 409）
 //   POST /projects/:id/resume     恢复（completed 须显式 reopen，本轮未提供 → 409）
 //   POST /projects/:id/complete   完成守卫：有未终结任务 → 422 + problems；
@@ -19,8 +25,9 @@
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { fail, ok } from '../lib/http'
-import { getProjectState, readState, setStatus, type ProjectStateEntry } from './state-store'
+import { getProjectState, readState, setStatus, kanbanRootOf, type ProjectStateEntry } from './state-store'
 import { listProjectIds, projectTaskStats, unfinishedProjectTasks } from './project-tasks'
+import { projectTaskGraph, specToMermaid } from './graph'
 
 const router = new Router({ prefix: '/api/projectworkflow' })
 
@@ -134,8 +141,28 @@ export async function completeProject(ctx: Context): Promise<void> {
   ok(ctx, { id, status: next.status, completedAt: next.completedAt })
 }
 
+/**
+ * 任务拓扑（AgentTeams buildWorkflow 对标）：无任务项目回空图不 404——
+ * 项目可能只有状态行（paused/completed 的治理事实仍值得看图）。
+ * ?format=mermaid → text/plain 纯文本（ctx.body 直赋例外，理由见文件头）。
+ */
+export async function getProjectGraph(ctx: Context): Promise<void> {
+  const id = String(ctx.params.id ?? '')
+  if (!id) { fail(ctx, 400, '缺少项目 id', { code: 'missing_project_id' }); return }
+  const graph = projectTaskGraph(kanbanRootOf(), id)
+  if (String(ctx.query?.format ?? '').trim().toLowerCase() === 'mermaid') {
+    // 显式 200：不依赖 Koa「赋 body 时 404→200」的隐式规则，语义自足。
+    ctx.status = 200
+    ctx.type = 'text/plain; charset=utf-8'
+    ctx.body = specToMermaid(graph)
+    return
+  }
+  ok(ctx, { graph })
+}
+
 router.get('/projects', listProjects)
 router.get('/projects/:id', getProject)
+router.get('/projects/:id/graph', getProjectGraph)
 router.post('/projects/:id/pause', pauseProject)
 router.post('/projects/:id/resume', resumeProject)
 router.post('/projects/:id/complete', completeProject)

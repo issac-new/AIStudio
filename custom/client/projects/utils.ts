@@ -75,3 +75,58 @@ export function formatEpochTime(at: number, locale: 'zh' | 'en'): string {
     ? d.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US', { hour12: false })
     : String(at)
 }
+
+// --- 拓扑折叠区状态机（纯函数供测试；视图只消费不复制判定） ---
+
+/** 折叠区状态：idle 未加载 / loading 拉取+渲染中 / ok iframe 可显 / fallback
+ *  品牌渲染不支持或失败（回退显 mermaid 源文本）/ error 拓扑本身拉取失败。 */
+export interface TopologyPanelState {
+  open: boolean
+  status: 'idle' | 'loading' | 'ok' | 'fallback' | 'error'
+  /** 品牌 HTML（ok 态；iframe srcdoc 用，经 wrapGenUiHtml 加固） */
+  html?: string
+  /** 源文本（fallback 态兜底展示，内容不丢） */
+  source?: string
+  note?: string
+}
+
+export type TopologyPanelEvent =
+  | { type: 'toggle' }
+  | { type: 'load-start'; source?: string }
+  | { type: 'load-ok'; html: string }
+  | { type: 'load-fallback'; source?: string; note?: string }
+  | { type: 'load-error'; note?: string }
+
+export const TOPOLOGY_PANEL_INITIAL: TopologyPanelState = { open: false, status: 'idle' }
+
+/**
+ * 折叠区状态转移（纯函数）：
+ * - toggle 只翻 open，不动加载事实——折叠再展开不重拉（html/source 保留）。
+ * - load-start 记录当次源文本（无论后续成败，源都不丢）。
+ * - collapse 后再 toggle 回来：status 保持已加载态，视图据此跳过重复加载。
+ */
+export function topologyPanelNext(state: TopologyPanelState, event: TopologyPanelEvent): TopologyPanelState {
+  switch (event.type) {
+    case 'toggle':
+      return { ...state, open: !state.open }
+    case 'load-start':
+      return { ...state, status: 'loading', ...(event.source !== undefined ? { source: event.source } : {}) }
+    case 'load-ok':
+      return { ...state, status: 'ok', html: event.html, note: undefined }
+    case 'load-fallback':
+      return {
+        ...state,
+        status: 'fallback',
+        html: undefined,
+        ...(event.source !== undefined ? { source: event.source } : {}),
+        ...(event.note ? { note: event.note } : { note: undefined }),
+      }
+    case 'load-error':
+      return { ...state, status: 'error', html: undefined, ...(event.note ? { note: event.note } : { note: undefined }) }
+  }
+}
+
+/** 折叠区展开且未加载过（idle）→ 需要触发一次加载（视图 watch 用） */
+export function topologyNeedsLoad(state: TopologyPanelState): boolean {
+  return state.open && state.status === 'idle'
+}

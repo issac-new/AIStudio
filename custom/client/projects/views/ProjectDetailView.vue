@@ -1,19 +1,25 @@
 <!-- overlay/custom/client/projects/views/ProjectDetailView.vue
      项目详情页：route param id → 详情 + 刷新（DirectorRunDetail 骨架：
-     useRoute + watch + 返回入口）。三区：统计卡（total/byStatus）/ 未终结
-     任务表（id/status/board/title）/ timeline 倒序列表（时间+kind+detail）。
+     useRoute + watch + 返回入口）。四区：统计卡（total/byStatus）/ 未终结
+     任务表（id/status/board/title）/ 任务拓扑折叠区（mermaid 品牌 iframe）/
+     timeline 倒序列表（时间+kind+detail）。
      操作条同列表页三按钮（共享 useProjectActions 编排）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
-import { fetchProject, type ProjectDetailData } from '../api/projects'
+import { fetchMermaidBrand, fetchProject, fetchProjectGraph, type ProjectDetailData } from '../api/projects'
 import {
-  actionAvailability, distributionRows, formatEpochTime, statusBadgeClass, statusLabel, timelineDescending,
+  TOPOLOGY_PANEL_INITIAL, actionAvailability, distributionRows, formatEpochTime, statusBadgeClass, statusLabel,
+  timelineDescending, topologyNeedsLoad, topologyPanelNext, type TopologyPanelState,
 } from '../utils'
 import { useProjectActions } from '../composables/useProjectActions'
 import ProjectCompleteDialog from '../components/ProjectCompleteDialog.vue'
+// 品牌 HTML 展示安全形态同 IdeWikiPane：wrapGenUiHtml 注 CSP（无网络/无外链）
+// 后 iframe sandbox srcdoc；brandedFrameHeight 从 viewBox 估高。纯函数无副作用。
+import { wrapGenUiHtml } from '../../ide/utils/genui'
+import { brandedFrameHeight } from '../../ide/utils/mermaid-brand'
 
 const route = useRoute()
 const router = useRouter()
@@ -45,7 +51,62 @@ async function refresh(): Promise<void> {
 }
 
 onMounted(() => { void refresh() })
-watch(projectId, () => { void refresh() })
+
+// --- 任务拓扑折叠区：首展开触发「GET graph?format=mermaid → POST mermaid-brand」 ---
+// 状态转移走 utils topologyPanelNext（纯函数，供测试）；折叠不丢已加载内容，
+// 再展开不重拉。品牌渲染失败/不支持 → 回退显 mermaid 源文本（内容不丢）。
+const topo = ref<TopologyPanelState>({ ...TOPOLOGY_PANEL_INITIAL })
+
+watch(projectId, () => {
+  void refresh()
+  // 项目切换：拓扑折叠区回到初始（不跨项目沿用旧图）。
+  topo.value = { ...TOPOLOGY_PANEL_INITIAL }
+})
+
+function toggleTopo(): void {
+  topo.value = topologyPanelNext(topo.value, { type: 'toggle' })
+  if (topologyNeedsLoad(topo.value)) void loadTopo()
+}
+
+async function loadTopo(): Promise<void> {
+  if (!projectId.value) return
+  topo.value = topologyPanelNext(topo.value, { type: 'load-start' })
+  try {
+    const source = await fetchProjectGraph(projectId.value, 'mermaid')
+    topo.value = topologyPanelNext(topo.value, { type: 'load-start', source })
+    try {
+      const brand = await fetchMermaidBrand(source, zh.value ? '项目任务拓扑' : 'Project task topology')
+      if (brand.ok && brand.html) {
+        topo.value = topologyPanelNext(topo.value, {
+          type: 'load-ok',
+          html: wrapGenUiHtml(brand.html, `topology-${projectId.value}`),
+        })
+      } else {
+        topo.value = topologyPanelNext(topo.value, {
+          type: 'load-fallback',
+          source,
+          note: brand.reason === 'unsupported_kind'
+            ? (zh.value ? '品牌渲染暂不支持该图型，回退显示 mermaid 源。' : 'Brand rendering unsupported for this diagram; showing mermaid source.')
+            : (zh.value ? '品牌渲染失败，回退显示 mermaid 源。' : 'Brand rendering failed; showing mermaid source.'),
+        })
+      }
+    } catch {
+      topo.value = topologyPanelNext(topo.value, {
+        type: 'load-fallback',
+        source,
+        note: zh.value ? '品牌渲染请求失败，回退显示 mermaid 源。' : 'Brand render request failed; showing mermaid source.',
+      })
+    }
+  } catch (e) {
+    topo.value = topologyPanelNext(topo.value, {
+      type: 'load-error',
+      note: e instanceof Error ? e.message : String(e),
+    })
+  }
+}
+
+/** iframe 高度：品牌 HTML 的 viewBox 估算（上限防爆版，同 wiki 形态） */
+const topoFrameHeight = computed(() => (topo.value.html ? brandedFrameHeight(topo.value.html) : 240))
 
 const actions = useProjectActions(refresh)
 
@@ -163,6 +224,39 @@ function backToList(): void {
         </table>
       </section>
 
+      <!-- 任务拓扑：折叠区首展开加载；品牌 HTML 经 CSP 加固后 iframe sandbox srcdoc
+           展示（同 IdeWikiPane 安全形态），回退态显 mermaid 源文本不丢内容。 -->
+      <section class="prd__card" data-testid="project-detail-topo">
+        <div class="prd__topo-head">
+          <h3 class="prd__h">{{ zh ? '任务拓扑' : 'Task topology' }}</h3>
+          <NButton size="tiny" data-testid="project-detail-topo-toggle" @click="toggleTopo">
+            {{ topo.open ? (zh ? '收起' : 'Collapse') : (zh ? '展开' : 'Expand') }}
+          </NButton>
+        </div>
+        <template v-if="topo.open">
+          <p v-if="topo.status === 'idle' || topo.status === 'loading'" class="prd__muted" data-testid="project-detail-topo-loading">
+            {{ zh ? '拓扑加载中…' : 'Loading topology…' }}
+          </p>
+          <iframe
+            v-else-if="topo.status === 'ok'"
+            class="prd__topo-frame"
+            :style="{ height: `${topoFrameHeight}px` }"
+            sandbox="allow-scripts"
+            referrerpolicy="no-referrer"
+            title="project topology diagram"
+            :srcdoc="topo.html ?? ''"
+            data-testid="project-detail-topo-frame"
+          />
+          <div v-else-if="topo.status === 'fallback'" data-testid="project-detail-topo-fallback">
+            <p class="prd__muted">{{ topo.note }}</p>
+            <pre v-if="topo.source" class="prd__topo-src">{{ topo.source }}</pre>
+          </div>
+          <p v-else class="prd__error" :title="topo.note" data-testid="project-detail-topo-error">
+            {{ zh ? '任务拓扑暂不可用。' : 'Task topology unavailable.' }}
+          </p>
+        </template>
+      </section>
+
       <section class="prd__card" data-testid="project-detail-timeline">
         <h3 class="prd__h">{{ zh ? '时间线（倒序）' : 'Timeline (latest first)' }}</h3>
         <p v-if="!timeline.length" class="prd__muted">{{ zh ? '还没有时间线记录。' : 'No timeline events yet.' }}</p>
@@ -218,6 +312,11 @@ function backToList(): void {
 .prd__task { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .prd__task-id { word-break: break-all; }
 .prd__timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+/* 拓扑折叠区：头部按钮行 + 品牌 iframe（宽度自适应、边框同卡片 token）+ 回退源文本 */
+.prd__topo-head { display: flex; align-items: center; gap: 8px; }
+.prd__topo-head .prd__h { flex: 1; }
+.prd__topo-frame { width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-standard); background: var(--bg-page, #fafafa); }
+.prd__topo-src { margin: 0; padding: 8px 10px; max-height: 320px; overflow: auto; font-family: var(--ia-font-mono, ui-monospace, monospace); font-size: var(--ia-fs-aux, 11px); border: 1px dashed var(--border-color); border-radius: var(--radius-standard); white-space: pre-wrap; word-break: break-all; }
 .prd__event { display: flex; gap: 10px; font-size: var(--ia-fs-aux, 11px); }
 .prd__ts { color: var(--text-muted); min-width: 130px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .prd__kind { min-width: 96px; word-break: break-all; }
