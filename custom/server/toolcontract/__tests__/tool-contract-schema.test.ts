@@ -42,9 +42,24 @@ describe('validateToolCallArgs（按契约解析）', () => {
   })
 
   it('未声明 schema 的工具放行（如实不检查）', () => {
-    const r = validateToolCallArgs('read_file', { whatever: 1 })
+    // W1 执法轮后 read_file 已声明 schema，改用仍未声明的工具锚定「无契约不检查」。
+    const r = validateToolCallArgs('search_files', { whatever: 1 })
     expect(r.ok).toBe(true)
     expect(r.issues).toEqual([])
+  })
+
+  it('W1 执法轮：read_file/skill_view/view_image 已声明入参契约，缺必填即违规', () => {
+    expect(validateToolCallArgs('read_file', { offset: 0 }).ok).toBe(false)
+    expect(validateToolCallArgs('skill_view', {}).issues.some((i) => i.rule === 'required')).toBe(true)
+    expect(validateToolCallArgs('view_image', { path: '/a.png' }).ok).toBe(true)
+  })
+
+  it('W1 执法轮：运行时别名解析到同名契约（terminal_exec/code_exec/skill_list）', () => {
+    expect(resolveToolContract('terminal_exec').match).toBe('terminal')
+    expect(resolveToolContract('code_exec').match).toBe('execute_code')
+    expect(resolveToolContract('skill_list').match).toBe('skills_list')
+    // 原名直查仍有效（hermes-agent Python 侧沿用旧名）
+    expect(resolveToolContract('terminal').match).toBe('terminal')
   })
 })
 
@@ -78,6 +93,6 @@ describe('兼容与版本', () => {
       const r = resolveToolContract(c.match.replace(/\*$/, 'x'))
       expect(r).toBeTruthy()
     }
-    expect(TOOL_CONTRACT_VERSION).toBe('2026-10-21.1')
+    expect(TOOL_CONTRACT_VERSION).toBe('2026-11-04.1')
   })
 })

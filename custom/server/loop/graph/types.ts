@@ -188,6 +188,16 @@ export interface GraphInstance {
 // 事件模型
 // ============================================================================
 
+/** run 全程节点结局对账（W1 执法轮）：终态事件的 verification 载荷——
+ *  「跑完」不再等价于「全绿」，消费方按 failed/errorRouted 判别实际质量。 */
+export interface GraphRunVerification {
+  nodesCompleted: number
+  nodesFailed: number
+  /** 失败但被 onError 路由（run 不判失败，但质量面可见）。 */
+  nodesErrorRouted: number
+  interruptsRaised: number
+}
+
 export type GraphEvent =
   | { type: 'graph.started'; graphId: string; threadId: string; ts: string }
   | { type: 'graph.step-start'; graphId: string; threadId: string; step: number; nodes: string[]; ts: string }
@@ -198,8 +208,13 @@ export type GraphEvent =
   | { type: 'graph.resume'; graphId: string; threadId: string; interruptId: string; resumeValue: unknown; ts: string }
   | { type: 'graph.step-complete'; graphId: string; threadId: string; step: number; state: StateValues; ts: string }
   | { type: 'graph.checkpoint'; graphId: string; threadId: string; checkpointId: string; step: number; ts: string }
-  | { type: 'graph.completed'; graphId: string; threadId: string; finalState: StateValues; totalCost: number; ts: string }
-  | { type: 'graph.failed'; graphId: string; threadId: string; error: string; ts: string }
+  | { type: 'graph.completed'; graphId: string; threadId: string; finalState: StateValues; totalCost: number; ts: string
+      /** 终态为何触发：消费方不再从状态反猜成因（W1 执法轮）。 */
+      finishReason?: 'end-condition' | 'node-end' | 'no-next-nodes'
+      verification?: GraphRunVerification }
+  | { type: 'graph.failed'; graphId: string; threadId: string; error: string; ts: string
+      finishReason?: 'node-error' | 'budget-exceeded' | 'duration-exceeded' | 'max-steps-exceeded'
+      verification?: GraphRunVerification }
   | { type: 'graph.forked'; graphId: string; threadId: string; parentThreadId: string; ts: string }
   /** 回边守卫：迭代次数超 maxIterations，该边被丢弃 */
   | { type: 'edge.guard-exceeded'; graphId: string; threadId: string; edge: string; iterations: number; maxIterations: number; ts: string }

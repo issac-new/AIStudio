@@ -12,6 +12,9 @@ import { computeIdempotencyKey } from './contract'
 import { atomicWriteText } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
 
+/** 结果缓存上限：回放面只承载小结果（脱敏摘要级），大产物走 artifactRefs。 */
+const RESULT_CACHE_MAX_BYTES = 8192
+
 export interface IdempotencyRecord {
   key: string
   tool: string
@@ -21,6 +24,12 @@ export interface IdempotencyRecord {
   count: number
   /** 结果摘要指纹（不落结果原文）。 */
   resultDigest?: string
+  /**
+   * 脱敏后的结果缓存（W1 执法轮，replay:'return' 契约消费）：命中时可回放，
+   * 让调用方「跳转已有记录」而非重复执行。只存脱敏摘要、8KB 上限——
+   * 存的是可安全进审计面的形状，不是结果原文。
+   */
+  result?: unknown
   expiresAt: number
 }
 
@@ -94,13 +103,28 @@ export class IdempotencyStore {
     return { ...record }
   }
 
-  /** 落键：首次写入 firstAt；重复写入只更新 lastAt/count 与结果指纹。 */
-  complete(key: string, input: { tool: string; ttlMs: number; resultDigest?: string }): IdempotencyRecord {
+  /** 落键：首次写入 firstAt；重复写入只更新 lastAt/count 与结果指纹。
+   *  result 为脱敏结果缓存（可选）：序列化超 8KB 截断为 undefined——回放面
+   *  只承载小结果，大产物走 artifactRefs 路径，不进幂等账。 */
+  complete(key: string, input: { tool: string; ttlMs: number; resultDigest?: string; result?: unknown }): IdempotencyRecord {
     const loaded = this.load()
     const now = this.now()
+    let cached: unknown
+    if (input.result !== undefined) {
+      try {
+        const serialized = JSON.stringify(input.result)
+        cached = serialized && serialized.length <= RESULT_CACHE_MAX_BYTES ? input.result : undefined
+      } catch { /* 不可序列化结果不缓存 */ }
+    }
     const existing = loaded.get(key)
     const record: IdempotencyRecord = existing
-      ? { ...existing, lastAt: now, count: existing.count + 1, resultDigest: input.resultDigest ?? existing.resultDigest }
+      ? {
+          ...existing,
+          lastAt: now,
+          count: existing.count + 1,
+          resultDigest: input.resultDigest ?? existing.resultDigest,
+          ...(cached !== undefined ? { result: cached } : {}),
+        }
       : {
           key,
           tool: input.tool,
@@ -108,6 +132,7 @@ export class IdempotencyStore {
           lastAt: now,
           count: 1,
           resultDigest: input.resultDigest,
+          ...(cached !== undefined ? { result: cached } : {}),
           expiresAt: now + Math.max(1_000, input.ttlMs),
         }
     loaded.set(key, record)
@@ -177,6 +202,8 @@ export function idempotencyKeyFor(input: {
   args: unknown
   userId?: string
   runId?: string
+  taskId?: string
+  stepId?: string
   ttlMs: number
   keyFields?: string[]
   now?: number
@@ -186,6 +213,8 @@ export function idempotencyKeyFor(input: {
     args: input.args,
     userId: input.userId,
     runId: input.runId,
+    taskId: input.taskId,
+    stepId: input.stepId,
     windowMs: input.ttlMs,
     keyFields: input.keyFields,
     now: input.now,

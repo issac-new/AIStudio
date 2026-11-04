@@ -41,6 +41,13 @@ export interface IdempotencyPolicy {
   ttlMs: number
   /** 参与幂等键的参数字段；缺省=全量参数。 */
   keyFields?: string[]
+  /**
+   * 命中处置（2026-11-04 W1 执法轮）：
+   *   observe=只审计不短路（缺省，向后兼容——存量语义）；
+   *   return=命中且有缓存结果时短路执行、回放缓存（需 IdempotencyStore 持结果）。
+   * 灰度路径：先 observe 让命中率可审计，确认键无碰撞再逐工具改 return。
+   */
+  replay?: 'observe' | 'return'
 }
 
 /**
@@ -92,10 +99,15 @@ export interface ToolContract {
   authRule?: ToolAuthRule
   /** 工具级限速（每分钟最大调用数；缺省不限）。 */
   rateLimitPerMinute?: number
+  /**
+   * 出参契约执法档（2026-11-04 W1 执法轮）：audit=只记审计（缺省）；
+   * strict=结果违反 outputSchema 时改写为错误信封（fail-closed）。
+   */
+  outputEnforcement?: 'audit' | 'strict'
 }
 
 /** 工具契约表版本：运行清单记录该值，回答“这次运行用的是哪版契约”。 */
-export const TOOL_CONTRACT_VERSION = '2026-10-21.1'
+export const TOOL_CONTRACT_VERSION = '2026-11-04.1'
 
 export const DEFAULT_TIMEOUT_MS = 60_000
 
@@ -134,6 +146,33 @@ const EXTERNAL_RETRY: RetryPolicy = {
   jitterRatio: 0.3,
   strategy: 'exponential',
   retryOn: ['transient', 'rate_limit'],
+}
+
+/**
+ * 模型生成类重试（2026-11-04 W1 执法轮，源文 07 节「模型生成：修复提示词或
+ * 基于校验错误再生成」）：格式不合法/内容不完整类失败可有界重试，但每次重试
+ * 语义是「带着校验错误重新生成」，不是盲重放——瞬时传输错误也可重试。
+ */
+const MODEL_GENERATION_RETRY: RetryPolicy = {
+  maxAttempts: 3,
+  baseDelayMs: 800,
+  maxDelayMs: 15_000,
+  jitterRatio: 0.2,
+  strategy: 'exponential',
+  retryOn: ['transient', 'rate_limit', 'validation'],
+}
+
+/**
+ * 长任务重试（源文 07 节「长任务：拆分、异步化或延长租约，不应盲目重复执行」）：
+ * 只容一次瞬态重试，且默认期望调用方走恢复/续跑通道而非重放整个任务。
+ */
+const LONG_TASK_RETRY: RetryPolicy = {
+  maxAttempts: 1,
+  baseDelayMs: 2_000,
+  maxDelayMs: 30_000,
+  jitterRatio: 0.3,
+  strategy: 'exponential',
+  retryOn: ['transient'],
 }
 
 const READ_IDEMPOTENT: IdempotencyPolicy = { mode: 'none', ttlMs: 0 }
@@ -182,15 +221,33 @@ function externalContract(match: string, extra?: Partial<ToolContract>): ToolCon
 /** 内置契约表：按工具族声明副作用、超时、重试与幂等。顺序无关，解析时取最长匹配。 */
 export const BUILTIN_CONTRACTS: ToolContract[] = [
   // ---- 只读 ----
-  readContract('read_file'),
+  // 2026-11-04 W1 执法轮：参数面稳定的工具补 inputSchema——声明即由
+  // contractGuard 在执行瀑布拒绝违规入参（未声明的工具维持不检查）。
+  readContract('read_file', {
+    inputSchema: {
+      type: 'object',
+      required: ['path'],
+      properties: { path: { type: 'string' }, offset: { type: 'number' }, limit: { type: 'number' } },
+    },
+    // 出参契约：校验 result.data（结构化负载）；data 缺席=非结构化结果，跳过。
+    outputSchema: {
+      type: 'object',
+      required: ['path', 'bytes', 'totalBytes', 'offset', 'nextOffset', 'truncated'],
+      properties: { bytes: { type: 'number' }, totalBytes: { type: 'number' }, truncated: { type: 'boolean' } },
+    },
+  }),
   readContract('search_files'),
-  readContract('view_image'),
+  readContract('view_image', {
+    inputSchema: { type: 'object', required: ['path'], properties: { path: { type: 'string' } } },
+  }),
   readContract('read_terminal'),
   readContract('read_window_below'),
   readContract('memory_search'),
   readContract('memory_get'),
   readContract('skills_list'),
-  readContract('skill_view'),
+  readContract('skill_view', {
+    inputSchema: { type: 'object', required: ['name'], properties: { name: { type: 'string' }, filePath: { type: 'string' } } },
+  }),
   readContract('session_search'),
   readContract('obs_recall'),
   readContract('web_search', {
@@ -224,7 +281,11 @@ export const BUILTIN_CONTRACTS: ToolContract[] = [
   externalContract('terminal', { timeoutMs: 120_000 }),
   externalContract('process_manage', { timeoutMs: 30_000, retry: NO_RETRY }),
   externalContract('close_terminal', { retry: NO_RETRY }),
-  externalContract('delegate_task', { idempotency: EXTERNAL_IDEMPOTENT }),
+  externalContract('delegate_task', {
+    // 子代理委托=模型生成类任务：格式/内容失败走「带校验错重生成」，非盲重放（W1）。
+    retry: MODEL_GENERATION_RETRY,
+    idempotency: EXTERNAL_IDEMPOTENT,
+  }),
   externalContract('browser_*', { timeoutMs: 60_000 }),
   externalContract('computer_use', { timeoutMs: 120_000 }),
   externalContract('desktop_*'),
@@ -253,18 +314,37 @@ export const DEFAULT_CONTRACT: ToolContract = {
   maxArgSummaryChars: 400,
 }
 
+/**
+ * 运行时工具名 → 契约表名（2026-11-04 W1 执法轮）。契约表沿用了 hermes-agent
+ * 侧历史名，而 ekko 运行时注册名不同（terminal_exec/code_exec/skill_list，
+ * 实测 vendor/hermes-studio/packages/ekko-agent/src/tools/*.ts）——不加别名时
+ * 这三个工具永远落 DEFAULT 兜底（external/no-retry），契约等于没写。
+ * 原名直查仍优先：hermes-agent Python 侧沿用旧名，双向都能解析。
+ */
+export const CONTRACT_ALIASES: Readonly<Record<string, string>> = {
+  terminal_exec: 'terminal',
+  code_exec: 'execute_code',
+  skill_list: 'skills_list',
+}
+
 function matches(pattern: string, name: string): boolean {
   if (pattern.endsWith('*')) return name.startsWith(pattern.slice(0, -1))
   return pattern === name
 }
 
-/** 工具名 → 契约：精确匹配优先，其次最长前缀通配，最后兜底。 */
+/** 工具名 → 契约：原名精确 → 别名精确 → 最长前缀通配 → 兜底。 */
 export function resolveToolContract(name: string): ToolContract {
   const normalized = String(name ?? '').trim()
   if (!normalized) return DEFAULT_CONTRACT
 
   const exact = BUILTIN_CONTRACTS.find((c) => !c.match.endsWith('*') && c.match === normalized)
   if (exact) return exact
+
+  const aliasTarget = CONTRACT_ALIASES[normalized]
+  if (aliasTarget) {
+    const aliased = BUILTIN_CONTRACTS.find((c) => !c.match.endsWith('*') && c.match === aliasTarget)
+    if (aliased) return aliased
+  }
 
   let best: ToolContract | null = null
   for (const c of BUILTIN_CONTRACTS) {
@@ -479,12 +559,19 @@ export interface IdempotencyKeyInput {
   args: unknown
   userId?: string
   runId?: string
+  /** 业务任务/步骤身份（W1 执法轮）：同一业务动作跨用户窗口仍应折叠为同一键。 */
+  taskId?: string
+  stepId?: string
   windowMs: number
   now?: number
   keyFields?: string[]
 }
 
-/** 幂等键：工具名 + 发起者 + 时间窗 + 关键参数指纹。 */
+/**
+ * 幂等键：工具名 + 发起者 + 时间窗 + 关键参数指纹；可选附执行身份
+ * （taskId/stepId/runId，任一存在才入料）。执行身份全部缺席时 material 与
+ * 旧版逐字节一致——存量幂等账（tool-idempotency.json）不因升级失效。
+ */
 export function computeIdempotencyKey(input: IdempotencyKeyInput): string {
   const now = input.now ?? Date.now()
   const window = Math.floor(now / Math.max(1, input.windowMs))
@@ -495,7 +582,10 @@ export function computeIdempotencyKey(input: IdempotencyKeyInput): string {
     for (const key of input.keyFields) picked[key] = src[key]
     args = picked
   }
-  const material = `${input.tool}\n${input.userId ?? ''}\n${stableStringify(args)}\n${window}`
+  const identity = [input.taskId, input.stepId, input.runId].filter(Boolean).join('|')
+  const material = identity
+    ? `${input.tool}\n${input.userId ?? ''}\n${identity}\n${stableStringify(args)}\n${window}`
+    : `${input.tool}\n${input.userId ?? ''}\n${stableStringify(args)}\n${window}`
   return sha1(material).slice(0, 24)
 }
 
