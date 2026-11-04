@@ -28,6 +28,31 @@ const CANONICAL_PAGES = new Set([
   'share.groupChat', 'groupChat.link',
 ])
 
+// expected 声明面（2026-11-04 Windows 离线回归批固化判定口径，spec
+// 2026-11-04-win-regression-p1-fixes）：按路由名声明「设计内失败」类别——
+// roleGate=角色门 401/403；failClosed=环境变量未配置的 503；negative404=占位
+// 资源负向用例；offline=外部依赖不可达 5xx。walk-routes 对命中类别的失败请求
+// 记 WARN 留痕而非 defect（与既有 URL 级白名单并联，全局模式仍覆盖未声明处）。
+const EXPECT_BY_NAME: Record<string, ('roleGate' | 'failClosed' | 'negative404' | 'offline')[]> = {
+  // /api/auth/locked-ips 仅 super_admin（回归六-4：admin 403 属角色门非缺陷）
+  'hermes.settings': ['roleGate'],
+  // OBS_SIM_ROOT 未配置时 sim 面 fail-closed 503（回归二-3：子路由同源）
+  'ia2.sim': ['failClosed'],
+  'ia2.simSupervision': ['failClosed'],
+  'ia2.simOps': ['failClosed'],
+  'ia2.simEvidence': ['failClosed'],
+  'ia2.simDelivery': ['failClosed'],
+  'ia2.simTrace': ['failClosed'],
+  'ia2.simSettings': ['failClosed'],
+  'ia2.simOrchestration': ['failClosed'],
+  'ia2.simMap': ['failClosed'],
+  'ia2.simDirectorRun': ['failClosed'],
+  // /app/s/chat 走查态拉 sim topology，同 fail-closed 源（回归二-5）
+  'ia2.collabChat': ['failClosed'],
+  // loop 详情用占位 loopId（walkthrough-missing-loop），404 为正确负向语义（回归二-6）
+  'ia2.loopCanvas': ['negative404'],
+}
+
 function materializePath(path: string): string {
   const visitPath = path.replace(/:([A-Za-z0-9_]+)(?:\([^)]*\))?([?*]?)/g, (_match, key: string, modifier: string) => {
     if (modifier === '?') return ''
@@ -97,11 +122,15 @@ async function main(): Promise<void> {
           // 未认证提示/占位房号空壳），合法空态；内容验收须专项轮带真实会话
           // （2026-11-02 全功能回归轮定性，spec 2026-11-02-full-regression-fixes）。
           || record.name === 'matrix.client' || record.name === 'matrix.clientRoom',
+        expect: EXPECT_BY_NAME[String(record.name ?? '')] ?? [],
       }))
     const stagePaths: Record<number, string> = {
       1: '/app/stage/setup', 2: '/app/stage/reqs', 3: '/app/stage/design',
       4: '/app/stage/build', 5: '/app/stage/accept', 6: '/app/stage/govern',
     }
+    // stage6（govern）走查态 ORGLOOP_LEDGER_TSV 未配置 → orgloop ledger 503
+    // fail-closed（回归二-1 同源，声明面与路由同口径）。
+    const STAGE_EXPECT: Record<number, ('roleGate' | 'failClosed' | 'negative404' | 'offline')[]> = { 6: ['failClosed'] }
     const stageTabs = Object.entries(STAGE_TABS).flatMap(([stage, tabs]) =>
       tabs.map(tab => ({
         name: `ia2.stage${stage}`,
@@ -109,6 +138,7 @@ async function main(): Promise<void> {
         key: tab.key,
         path: stagePaths[Number(stage)],
         visitPath: `${stagePaths[Number(stage)]}?tab=${encodeURIComponent(tab.key)}`,
+        expect: STAGE_EXPECT[Number(stage)] ?? [],
       })),
     )
     const manifest = {

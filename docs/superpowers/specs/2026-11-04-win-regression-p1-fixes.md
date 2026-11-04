@@ -47,10 +47,12 @@
 
 ## 验证
 
-- 目标测试：`npx vitest run custom/__tests__/patches-series-guard.test.ts scripts/regression/route-manifest.test.ts custom/client/ide/__tests__/files-pane-perm-fallback.test.ts`；新增 `scripts/regression/api-expected.test.mjs`；guard 式断言新补丁标记（`petdex_fetch_failed`、`6_000` 超时常量存在于注入后 vendor 树）。
-- 注入回路：`npm run clean && npm run inject` 全量重放零失败。
-- 合并前全量 `npm test`。
-- 离线端点（api.ekkostudio.xyz / GitHub / assets.petdex.dev）的运行时失败路径在本机不可可靠模拟（需断网/阻断外部域名），以补丁标记 guard 测试 + 代码评审覆盖；UI 三面（files 403 提示 / settings 权限说明 / petdex 深链门）尽力本地走查，未做到则交付说明如实标注。
+实测（2026-11-04 本轮真实采集）：
+
+- 目标测试全绿：`npx vitest run custom/__tests__/win-regression-patches-guard.test.ts custom/__tests__/patches-series-guard.test.ts custom/__tests__/docs-ssot-guard.test.ts scripts/regression/api-expected.test.ts scripts/regression/route-manifest.test.ts custom/client/ide/__tests__/files-pane-perm-fallback.test.ts` → **6 文件 33 用例全过**（含 guard 断言 `petdex_fetch_failed`/`6_000` 超时常量/`locksForbidden`/`petdex.offline` 存在于注入后 vendor 树、api-expected 十项判定口径、route-manifest expect 枚举合法性、files-pane 5 例含 openEntry 403/非 403 失败态）。
+- 注入回路：vendor 重置 pristine → `npm run inject` **452 枚全量重放干净**（446 既有＋743-748 新增全部 applied，尾行 `[inject] done`）；重放态树上复跑目标测试仍 33/33。
+- 合并前全量 `npm test`（结果见合并说明）。
+- 未验证项（如实声明）：① 离线端点（api.ekkostudio.xyz / GitHub / assets.petdex.dev）运行时失败路径未在本机模拟（需断网/域名阻断），以 guard 测试＋代码评审覆盖；② UI 三面（files 403 提示 / settings 权限说明 / petdex 深链门）未做浏览器活体走查——组件级行为由 files-pane 测试覆盖，vendor 组件改动由补丁标记 guard 覆盖，待下轮全功能回归活体复核。
 
 ## 设计文档影响
 

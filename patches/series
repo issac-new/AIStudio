@@ -1146,3 +1146,10 @@
 #      环境变量编辑域路由挂载——原批（ledger-items）禁改 patches/ 把挂载推后续批次后被遗忘，
 #      活体探测 404 实锤（capability-probes 组 11）；照 740 形态两行：import＋auth 后 app.use。
 743-server-userenv-routes.patch
+# 2026-11-04 Windows 离线回归 P1 修复批（spec 2026-11-04-win-regression-p1-fixes）
+743-server-announcements-offline-hardening.patch
+744-server-preview-tags-timeout.patch
+745-server-petdex-offline-hardening.patch
+746-client-files-open-permission-hint.patch
+747-client-accountsettings-lockedips-permission-note.patch
+748-client-petdex-offline-ux.patch

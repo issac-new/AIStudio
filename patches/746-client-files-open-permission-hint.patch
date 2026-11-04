@@ -1,0 +1,115 @@
+diff --git a/packages/client/src/components/hermes/files/FileList.vue b/packages/client/src/components/hermes/files/FileList.vue
+index 8c3d4d1cc..146ad5e01 100644
+--- a/packages/client/src/components/hermes/files/FileList.vue
++++ b/packages/client/src/components/hermes/files/FileList.vue
+@@ -58,11 +58,27 @@ function getFileIcon(entry: FileEntry): string {
+   return iconMap[ext] || '📄'
+ }
+ 
++// overlay[perm]（2026-11-04 Windows 离线回归批）：/api/studio/files/read 仅
++// super_admin——非 super 用户点开文本文件 403 时原实现裸 await（未捕获
++// rejection，仅剩全局 toast 概率性一闪），Monaco 不打开且无任何本地提示，
++// 是回归唯一用户可感知缺陷；统一 catch 并对 403 给显式权限文案。
++function isForbiddenError(err: unknown): boolean {
++  return String((err as { message?: string })?.message || '').includes('API Error 403')
++}
++
+ async function handlePreview(entry: FileEntry) {
+   try {
+     await filesStore.openPreview(entry)
+-  } catch {
+-    message.error(t('files.backendError'))
++  } catch (err: any) {
++    message.error(isForbiddenError(err) ? t('files.openSuperadminRequired') : t('files.backendError'))
++  }
++}
++
++async function handleOpenEditor(entry: FileEntry) {
++  try {
++    await filesStore.openEditor(entry.path)
++  } catch (err: any) {
++    message.error(isForbiddenError(err) ? t('files.openSuperadminRequired') : (err.message || t('files.backendError')))
+   }
+ }
+ 
+@@ -70,7 +86,7 @@ async function handleDoubleClick(entry: FileEntry) {
+   if (entry.isDir) {
+     filesStore.navigateTo(entry.path)
+   } else if (isTextFile(entry.name)) {
+-    await filesStore.openEditor(entry.path)
++    await handleOpenEditor(entry)
+   } else if (isPreviewableFile(entry.name)) {
+     await handlePreview(entry)
+   }
+@@ -125,7 +141,7 @@ async function handleDownload(entry: FileEntry) {
+           <div class="file-date" :title="formatDateTitle(entry.modTime)">{{ formatDate(entry.modTime) }}</div>
+           <div class="file-actions">
+             <NButton v-if="isPreviewableFile(entry.name) && !entry.isDir" size="tiny" quaternary @click.stop="handlePreview(entry)" :title="t('files.preview')">👁️</NButton>
+-            <NButton v-if="isTextFile(entry.name) && !entry.isDir" size="tiny" quaternary @click.stop="filesStore.openEditor(entry.path)" :title="t('files.edit')">✏️</NButton>
++            <NButton v-if="isTextFile(entry.name) && !entry.isDir" size="tiny" quaternary @click.stop="handleOpenEditor(entry)" :title="t('files.edit')">✏️</NButton>
+             <NButton v-if="!filesStore.currentWorkspaceSessionId && !filesStore.currentWorkspaceRoomId && !entry.isDir" size="tiny" quaternary @click.stop="handleDownload(entry)" :title="t('files.download')">⬇️</NButton>
+           </div>
+         </div>
+diff --git a/packages/client/src/views/hermes/FilesView.vue b/packages/client/src/views/hermes/FilesView.vue
+index 5afbb5c07..ccd4a49b9 100644
+--- a/packages/client/src/views/hermes/FilesView.vue
++++ b/packages/client/src/views/hermes/FilesView.vue
+@@ -3,7 +3,7 @@ import PageLoading from '@/components/common/PageLoading.vue'
+ import PageHeader from '@/components/layout/PageHeader.vue'
+ import { computed, defineAsyncComponent, ref, watch } from 'vue'
+ import { useRoute, useRouter } from 'vue-router'
+-import { useDialog } from 'naive-ui'
++import { useDialog, useMessage } from 'naive-ui'
+ import { useI18n } from 'vue-i18n'
+ import { useFilesStore } from '@/stores/hermes/files'
+ import { useProfilesStore } from '@/stores/hermes/profiles'
+@@ -24,6 +24,7 @@ const profilesStore = useProfilesStore()
+ const route = useRoute()
+ const router = useRouter()
+ const dialog = useDialog()
++const message = useMessage()
+ const { t } = useI18n()
+ 
+ const contextMenuRef = ref<InstanceType<typeof FileContextMenu> | null>(null)
+@@ -111,7 +112,14 @@ async function loadFromRoute() {
+     }
+ 
+     if (filePath) {
+-      await filesStore.openEditor(filePath, { profile })
++      // overlay[perm]（2026-11-04 Windows 离线回归批）：?file= 深链与 FileList 打开
++      // 同口径——非 super 用户 read 403 时给显式权限提示，不再静默无操作。
++      try {
++        await filesStore.openEditor(filePath, { profile })
++      } catch (err: any) {
++        const forbidden = String(err?.message || '').includes('API Error 403')
++        message.error(forbidden ? t('files.openSuperadminRequired') : (err.message || t('files.backendError')))
++      }
+     }
+   } finally {
+     if (generation === loadGeneration) initializing.value = false
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 88fb194d8..5f5a3ea85 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -6243,6 +6247,8 @@ export default {
+     permissionDenied: '无法修改受保护的文件',
+     notFound: '文件或目录不存在',
+     backendError: '文件操作失败',
++    // overlay[perm]（2026-11-04 Windows 离线回归批）：files/read 仅 super_admin，非 super 打开 403 的显式提示
++    openSuperadminRequired: '打开文件需要超级管理员权限',
+     dragDropHint: '拖拽文件到此处上传',
+     closeEditor: '关闭编辑器',
+     closePreview: '关闭',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index e4d92b4ab..ece772b88 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -6245,6 +6249,8 @@ export default {
+     permissionDenied: 'Cannot modify protected file',
+     notFound: 'File or directory not found',
+     backendError: 'File operation failed',
++    // overlay[perm] (2026-11-04 Windows offline regression): files/read is super_admin-only; explicit hint on 403
++    openSuperadminRequired: 'Opening files requires super administrator privileges',
+     dragDropHint: 'Drag files here to upload',
+     closeEditor: 'Close Editor',
+     closePreview: 'Close',

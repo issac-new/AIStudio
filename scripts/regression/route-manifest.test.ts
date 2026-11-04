@@ -30,6 +30,33 @@ describe('全功能路由清单生成器', () => {
     expect(manifest.counts.visitStates).toBe(manifest.routes.length + manifest.stageTabs.length)
   })
 
+  // 2026-11-04 Windows 离线回归批固化判定口径：expect 字段四类枚举 + 声明路由真实在册
+  it('expect 声明面只使用合法枚举且声明的路由/页签真实存在', () => {
+    const LEGAL = ['roleGate', 'failClosed', 'negative404', 'offline']
+    const result = spawnSync(process.execPath, [
+      resolve(root, 'node_modules/vite-node/vite-node.mjs'),
+      '--config', resolve(root, 'vitest.config.ts'),
+      manifestScript,
+    ], { cwd: root, encoding: 'utf8', timeout: 60_000 })
+    expect(result.status, result.stderr || result.stdout).toBe(0)
+    const manifest = JSON.parse(result.stdout)
+    const routeNames = new Set(manifest.routes.map((r: any) => r.name))
+    const tabNames = new Set(manifest.stageTabs.map((t: any) => t.name))
+    for (const entry of [...manifest.routes, ...manifest.stageTabs]) {
+      const expectList: string[] = Array.isArray(entry.expect) ? entry.expect : []
+      expect(expectList.every(e => LEGAL.includes(e)), `${entry.name} expect 含非法枚举`).toBe(true)
+      if (expectList.length > 0) {
+        expect(routeNames.has(entry.name) || tabNames.has(entry.name), `${entry.name} 不在册却带 expect`).toBe(true)
+      }
+    }
+    // 口径锚点：回归定谳的 4 个声明必须存在（settings 角色门/sim 族 fail-closed/
+    // loop 负向 404/govern 页签 fail-closed）
+    expect(manifest.routes.find((r: any) => r.name === 'hermes.settings')?.expect).toContain('roleGate')
+    expect(manifest.routes.find((r: any) => r.name === 'ia2.sim')?.expect).toContain('failClosed')
+    expect(manifest.routes.find((r: any) => r.name === 'ia2.loopCanvas')?.expect).toContain('negative404')
+    expect(manifest.stageTabs.find((t: any) => t.name === 'ia2.stage6')?.expect).toContain('failClosed')
+  })
+
   it('浏览器走查默认使用当前开发端口，WALK_BASE 仍可覆盖', async () => {
     const { BASE } = await import('./harness.mjs')
     expect(BASE).toBe('http://localhost:8649')

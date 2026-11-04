@@ -36,7 +36,13 @@ const ideState = reactive<{
 vi.mock('../store/ide', () => ({ useIdeStore: () => ideState }))
 
 const filesState = reactive<{ workspaceRoot?: string }>({ workspaceRoot: undefined })
-vi.mock('@/stores/hermes/files', () => ({ useFilesStore: () => filesState }))
+// openPreview/closePreview（2026-11-04 Windows 离线回归批 openEntry 失败态断言用）：
+// 挂到同一 reactive 对象上，保持 workspaceRoot 既有响应式契约不变。
+const openPreviewMock = vi.fn()
+const closePreviewMock = vi.fn()
+vi.mock('@/stores/hermes/files', () => ({
+  useFilesStore: () => Object.assign(filesState, { closePreview: closePreviewMock, openPreview: openPreviewMock }),
+}))
 
 import IdeFilesPane from '../views/IdeFilesPane.vue'
 
@@ -49,6 +55,8 @@ describe('IdeFilesPane 权限回落（非 super_admin 物化任务工作区）',
     ideState.taskWorkspaceError = null
     filesState.workspaceRoot = undefined
     listMock.mockReset()
+    openPreviewMock.mockReset()
+    closePreviewMock.mockReset()
   })
 
   it('权限拒 + 物化任务 → 任务域只读树（workspace-files 通道）+ 权限提示行', async () => {
@@ -89,6 +97,41 @@ describe('IdeFilesPane 权限回落（非 super_admin 物化任务工作区）',
     await flushPromises()
     expect(w.find('[data-testid="ide-files-perm-tree"]').exists()).toBe(true)
     expect(w.find('[data-testid="ide-files-perm-tree"]').text().trim()).toBe('')
+    w.unmount()
+  })
+
+  // 2026-11-04 Windows 离线回归批：openPreview → files/read 仅 super_admin，
+  // 非 super 点文件 403 时必须有内联提示（原实现裸 await 静默无操作）。
+  it('openEntry 403 → 内联权限提示（不静默）', async () => {
+    ideState.activeTaskId = 't_open1'
+    ideState.taskWorkspace = { materialized: true, path: '/ws/t_open1' }
+    listMock.mockResolvedValue({ path: '', entries: [] })
+    const w = mount(IdeFilesPane, { global: { stubs: { FileTree: true, IdeGitPane: true } } })
+    await flushPromises()
+    openPreviewMock.mockRejectedValueOnce(new Error('API Error 403: Super administrator privileges are required'))
+    await (w.vm as unknown as { openEntry: (e: unknown) => Promise<void> }).openEntry({ name: 'security.yaml', path: 'security.yaml', isDir: false, size: 10 })
+    await flushPromises()
+    const hint = w.find('[data-testid="ide-files-open-error"]')
+    expect(hint.exists()).toBe(true)
+    expect(hint.text()).toContain('超级管理员')
+    w.unmount()
+  })
+
+  it('openEntry 非 403 失败 → 通用失败文案；再次点击成功 → 提示清除', async () => {
+    ideState.activeTaskId = 't_open2'
+    ideState.taskWorkspace = { materialized: true, path: '/ws/t_open2' }
+    listMock.mockResolvedValue({ path: '', entries: [] })
+    const w = mount(IdeFilesPane, { global: { stubs: { FileTree: true, IdeGitPane: true } } })
+    await flushPromises()
+    const vm = w.vm as unknown as { openEntry: (e: unknown) => Promise<void> }
+    openPreviewMock.mockRejectedValueOnce(new Error('API Error 500: Internal Server Error'))
+    await vm.openEntry({ name: 'a.txt', path: 'a.txt', isDir: false, size: 1 })
+    await flushPromises()
+    expect(w.find('[data-testid="ide-files-open-error"]').text()).toContain('打开失败')
+    openPreviewMock.mockResolvedValueOnce(undefined)
+    await vm.openEntry({ name: 'a.txt', path: 'a.txt', isDir: false, size: 1 })
+    await flushPromises()
+    expect(w.find('[data-testid="ide-files-open-error"]').exists()).toBe(false)
     w.unmount()
   })
 })

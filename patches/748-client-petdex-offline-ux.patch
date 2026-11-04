@@ -1,0 +1,66 @@
+diff --git a/packages/client/src/views/hermes/PetdexView.vue b/packages/client/src/views/hermes/PetdexView.vue
+index 2b1a591af..32fce1783 100644
+--- a/packages/client/src/views/hermes/PetdexView.vue
++++ b/packages/client/src/views/hermes/PetdexView.vue
+@@ -62,7 +62,12 @@ async function loadManifest(force = false) {
+     manifest.value = await fetchPetdexManifest(force)
+     visibleLimit.value = 96
+   } catch (err: any) {
+-    error.value = err?.message || t('petdex.loadFailed')
++    // overlay[offline]（2026-11-04 Windows 离线回归批）：离线/外部服务不可达时
++    // 原样透传「API Error 500 …」技术串，且与误导性空筛选文案同屏；改离线友好文案。
++    const raw = String(err?.message || '')
++    error.value = /petdex_fetch_failed|API Error 5\d\d|fetch failed|abort/i.test(raw)
++      ? t('petdex.offline')
++      : (raw || t('petdex.loadFailed'))
+   } finally {
+     loading.value = false
+   }
+@@ -143,7 +148,9 @@ onMounted(() => {
+           </div>
+         </div>
+ 
+-        <div class="filter-row">
++        <!-- overlay[offline]（2026-11-04）：error 且无 manifest 时不渲染筛选行——
++             对不可达的清单做筛选没有意义 -->
++        <div v-if="manifest" class="filter-row">
+           <NInput v-model:value="searchQuery" :placeholder="t('petdex.searchPlaceholder')" clearable />
+           <NSelect v-model:value="kindFilter" :options="kindOptions" :placeholder="t('petdex.kindFilter')" clearable />
+         </div>
+@@ -184,7 +191,9 @@ onMounted(() => {
+           </article>
+         </div>
+ 
+-        <NEmpty v-else :description="t('petdex.empty')" />
++        <!-- overlay[offline]（2026-11-04）：空筛选文案只在确有清单时出现，避免与
++             离线错误红条同屏误导「没有符合筛选的宠物」 -->
++        <NEmpty v-else-if="manifest" :description="t('petdex.empty')" />
+ 
+         <div v-if="canShowMore" class="load-more">
+           <NButton :disabled="loading" @click="showMore">
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 88fb194d8..5f5a3ea85 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -4480,6 +4480,8 @@ export default {
+     spritesheet: '精灵图',
+     submittedBy: '作者 {name}',
+     empty: '没有符合当前筛选的宠物。',
++    // overlay[offline]（2026-11-04 Windows 离线回归批）：manifest 拉取失败的离线友好文案
++    offline: '离线或宠物清单服务不可达，请检查网络后重试。',
+     showMore: '再显示 {count} 个',
+     summary: {
+       total: '图库总数',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index e4d92b4ab..ece772b88 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -4481,6 +4481,8 @@ export default {
+     spritesheet: 'Spritesheet',
+     submittedBy: 'By {name}',
+     empty: 'No pets match the current filters.',
++    // overlay[offline] (2026-11-04 Windows offline regression): friendly copy when the manifest fetch fails
++    offline: 'Offline or the petdex manifest service is unreachable. Check the network and retry.',
+     showMore: 'Show {count} more',
+     summary: {
+       total: 'Catalog total',

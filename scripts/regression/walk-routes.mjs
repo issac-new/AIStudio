@@ -237,7 +237,9 @@ try {
           `首导航被 vite 重启/整页重载打断 | 重试后到达 ${actual}`, 'WARN')
         continue
       }
-      if (visit.requiresSuperAdmin && role !== 'super_admin') {
+      // 权限回退泛化（2026-11-04 Windows 离线回归批）：除 requiresSuperAdmin 外，
+      // manifest expect 声明 roleGate 的路由导航被守卫改道同样属设计内角色门。
+      if ((visit.requiresSuperAdmin || visit.expect?.includes('roleGate')) && role !== 'super_admin') {
         led.record(`${visit.label}（权限回退）`, true,
           `非 super_admin 被守卫改道 | 当前 ${actual}，未验收该页内容`, 'WARN')
         continue
@@ -346,11 +348,23 @@ try {
     // 空态（守门测试 files-pane-perm-fallback 锁定该回落，2026-11-02 回归同判）。
     const ideWorkspaceReq = activeReq.filter(r =>
       r.status === 403 && r.url.includes('/api/studio/files/list'))
+    // per-visit expected 声明（2026-11-04 Windows 离线回归批固化口径，spec
+    // 2026-11-04-win-regression-p1-fixes）：manifest expect 字段按路由声明设计内
+    // 失败类别（roleGate/failClosed/negative404/offline），与上方 URL 级白名单并联
+    // （全局模式仍覆盖未声明的同名族）；命中记 WARN 留痕不记缺陷。
+    const expectDeclared = Array.isArray(visit.expect) ? visit.expect : []
+    const expectedByDecl = activeReq.filter(r => {
+      if (expectDeclared.includes('roleGate') && [401, 403].includes(r.status)) return true
+      if (expectDeclared.includes('failClosed') && r.status === 503) return true
+      if (expectDeclared.includes('negative404') && r.status === 404) return true
+      if (expectDeclared.includes('offline') && r.status >= 500) return true
+      return false
+    })
     const badReq = activeReq.filter(r =>
       !r.url.includes('favicon') && !expectedReq.includes(r) && !permissionReq.includes(r)
       && !environmentReq.includes(r) && !failSoftReq.includes(r) && !devLoginReq.includes(r)
       && !registryEmptyReq.includes(r) && !simFailClosedReq.includes(r) && !adminGateReq.includes(r)
-      && !ideWorkspaceReq.includes(r))
+      && !ideWorkspaceReq.includes(r) && !expectedByDecl.includes(r))
     if (badReq.length) {
       led.defect(`${visit.label} 失败请求`, badReq.slice(0, 4).map(r => `${r.status} ${r.url}`).join(' | '), 'P2')
     }
@@ -376,6 +390,10 @@ try {
     if (ideWorkspaceReq.length) {
       led.record(`${visit.label} 工作区权限回落`, true,
         `${ideWorkspaceReq.length} 条 403（files/list 非 super_admin，客户端可解释空态）`, 'WARN')
+    }
+    if (expectedByDecl.length) {
+      led.record(`${visit.label} expected 声明命中`, true,
+        `${expectedByDecl.length} 条（${expectDeclared.join('/')}：设计内失败，口径见 spec 2026-11-04-win-regression-p1-fixes）`, 'WARN')
     }
     if (lateReq.length) {
       led.record(`${visit.label} 跨页延迟请求`, true,

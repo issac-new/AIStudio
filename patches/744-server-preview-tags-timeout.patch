@@ -1,0 +1,87 @@
+diff --git a/packages/server/src/modules/studio/services/update/version-preview-manager.ts b/packages/server/src/modules/studio/services/update/version-preview-manager.ts
+index 72bc23d98..ea34a8756 100644
+--- a/packages/server/src/modules/studio/services/update/version-preview-manager.ts
++++ b/packages/server/src/modules/studio/services/update/version-preview-manager.ts
+@@ -42,9 +42,14 @@ const PREVIEW_TAG_REF_PATTERN = /^[A-Za-z0-9._/-]+$/
+ const PREVIEW_MAIN_REF = 'main'
+ const PREVIEW_VERSION_TAG_LIMIT = 8
+ const PREVIEW_TAGS_CACHE_MS = 5 * 60 * 1000
++// overlay[offline]（2026-11-04 Windows 离线回归批）：tags 拉取失败负缓存 60s
++// ——离线时 git ls-remote + GitHub API 两级串行等满才 502（回归实测 20.9s，
++// version-preview 页 PageLoading 全程遮挡）；负缓存让后续请求立即失败，短
++// TTL 兼顾网络恢复后的重探。
++const PREVIEW_TAGS_FAILURE_CACHE_MS = 60 * 1000
+ 
+ type PreviewTagRef = { name: string; sha: string }
+-type PreviewTagsCache = { expiresAt: number; tags: PreviewTagRef[] }
++type PreviewTagsCache = { expiresAt: number; tags: PreviewTagRef[]; failure?: boolean }
+ type PreviewActionResult = { success: boolean; message?: string; code?: string }
+ 
+ type ParsedPreviewVersion = {
+@@ -62,15 +67,23 @@ class PreviewRuntimeState {
+   lastActionResult: PreviewActionResult | null = null
+ 
+   getCachedTags(): PreviewTagRef[] | null {
+-    return this.tagsCache && this.tagsCache.expiresAt > Date.now()
++    return this.tagsCache && !this.tagsCache.failure && this.tagsCache.expiresAt > Date.now()
+       ? this.tagsCache.tags
+       : null
+   }
+ 
++  getTagsFailure(): boolean {
++    return Boolean(this.tagsCache?.failure && this.tagsCache.expiresAt > Date.now())
++  }
++
+   setTags(tags: PreviewTagRef[]) {
+     this.tagsCache = { tags, expiresAt: Date.now() + PREVIEW_TAGS_CACHE_MS }
+   }
+ 
++  setTagsFailure() {
++    this.tagsCache = { tags: [], expiresAt: Date.now() + PREVIEW_TAGS_FAILURE_CACHE_MS, failure: true }
++  }
++
+   beginAction(action: string): boolean {
+     if (this.activeAction) return false
+     this.activeAction = action
+@@ -199,7 +212,9 @@ function execFileText(
+ 
+ async function listPreviewTagsWithGitAsync(): Promise<PreviewTagRef[]> {
+   const output = await execFileText('git', ['ls-remote', '--tags', '--refs', getPreviewRepoGitUrl()], {
+-    timeout: 8_000,
++    // overlay[offline]（2026-11-04 Windows 离线回归批）：原 8s，离线时纯等死；
++    // 后续 GitHub API 兜底 6s，两级合计 ≤10s
++    timeout: 4_000,
+   })
+   return parsePreviewTagRefs(output)
+ }
+@@ -1123,6 +1138,11 @@ export async function previewTags(ctx: any) {
+     ctx.body = { tags: cachedTags }
+     return
+   }
++  if (previewState.getTagsFailure()) {
++    ctx.status = 502
++    ctx.body = previewPayload({ error: networkErrorMessage(new Error('tags fetch failed recently (cached)')) })
++    return
++  }
+ 
+   try {
+     appendPreviewActionLog('load tags with git ls-remote')
+@@ -1138,7 +1158,9 @@ export async function previewTags(ctx: any) {
+     appendPreviewActionLog('load tags with GitHub API')
+     const res = await fetch(`${getPreviewRepoApiUrl()}/tags?per_page=100`, {
+       headers: { 'User-Agent': 'hermes-web-ui-preview' },
+-      signal: AbortSignal.timeout(15_000),
++      // overlay[offline]（2026-11-04 Windows 离线回归批）：原 15s——与 git 4s 串行
++      // 叠加即回归实测的 20.9s 假死；两级合计压到 ≤10s
++      signal: AbortSignal.timeout(6_000),
+     })
+     if (!res.ok) {
+       throw new Error(`GitHub API HTTP ${res.status}`)
+@@ -1152,6 +1174,7 @@ export async function previewTags(ctx: any) {
+     ctx.body = { tags: parsedTags }
+   } catch (apiErr: any) {
+     appendPreviewActionLog(`load tags failed: ${apiErr.message || String(apiErr)}`)
++    previewState.setTagsFailure()
+     ctx.status = 502
+     ctx.body = previewPayload({ error: networkErrorMessage(apiErr) })
+   }

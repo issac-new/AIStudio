@@ -1,0 +1,107 @@
+diff --git a/packages/client/src/components/hermes/settings/AccountSettings.vue b/packages/client/src/components/hermes/settings/AccountSettings.vue
+index f2ece3620..a1d323b1f 100644
+--- a/packages/client/src/components/hermes/settings/AccountSettings.vue
++++ b/packages/client/src/components/hermes/settings/AccountSettings.vue
+@@ -232,12 +232,19 @@ async function handleMatrixPasswordChange() {
+ // Locked IPs management
+ const lockedIps = ref<LockedIp[]>([]);
+ const loadingLocks = ref(false);
++// overlay[perm]（2026-11-04 Windows 离线回归批）：/api/auth/locked-ips 仅
++// super_admin——原实现吞掉 403 后显示误导性的「0 个 IP 被锁定/暂无锁定 IP」
++// ＋对必然失败无意义的重试按钮；403 改显权限说明。
++const locksForbidden = ref(false);
+ 
+ async function loadLockedIps() {
+   loadingLocks.value = true;
+   try {
+     lockedIps.value = await fetchLockedIps();
+-  } catch { /* ignore */ }
++    locksForbidden.value = false;
++  } catch (err: any) {
++    locksForbidden.value = String(err?.message || "").includes("API Error 403");
++  }
+   finally {
+     loadingLocks.value = false;
+   }
+@@ -371,29 +378,35 @@ onMounted(() => { loadLockedIps(); });
+     <!-- Locked IPs management -->
+     <div class="locked-ips-section">
+       <h3 class="section-title">{{ t("settings.lockedIps.title") }}</h3>
+-      <div class="action-row" style="margin-bottom: 12px;">
+-        <span class="action-label">{{ t("settings.lockedIps.count", { count: lockedIps.length }) }}</span>
+-        <div class="action-buttons">
+-          <NButton size="small" :loading="loadingLocks" @click="loadLockedIps">{{ t("common.retry") }}</NButton>
+-          <NPopconfirm v-if="lockedIps.length > 0" @positive-click="handleUnlockAll">
+-            <template #trigger>
+-              <NButton size="small" type="warning">{{ t("settings.lockedIps.unlockAll") }}</NButton>
+-            </template>
+-            {{ t("settings.lockedIps.unlockAllConfirm") }}
+-          </NPopconfirm>
+-        </div>
++      <!-- overlay[perm]（2026-11-04 Windows 离线回归批）：403 → 权限说明替代「0 个 IP+重试」 -->
++      <div v-if="locksForbidden" class="action-row" style="margin-bottom: 12px;">
++        <span class="action-label">{{ t("settings.lockedIps.superAdminOnly") }}</span>
+       </div>
+-      <div v-if="lockedIps.length > 0" class="locked-list">
+-        <div v-for="lock in lockedIps" :key="lock.ip + lock.type" class="locked-item">
+-          <div class="locked-info">
+-            <span class="locked-ip">{{ lock.ip }}</span>
+-            <span class="locked-badge">{{ lockedIpTypeLabel(lock.type) }}</span>
+-            <span class="locked-ttl">{{ formatTime(lock.lockedUntil) }}</span>
++      <template v-else>
++        <div class="action-row" style="margin-bottom: 12px;">
++          <span class="action-label">{{ t("settings.lockedIps.count", { count: lockedIps.length }) }}</span>
++          <div class="action-buttons">
++            <NButton size="small" :loading="loadingLocks" @click="loadLockedIps">{{ t("common.retry") }}</NButton>
++            <NPopconfirm v-if="lockedIps.length > 0" @positive-click="handleUnlockAll">
++              <template #trigger>
++                <NButton size="small" type="warning">{{ t("settings.lockedIps.unlockAll") }}</NButton>
++              </template>
++              {{ t("settings.lockedIps.unlockAllConfirm") }}
++            </NPopconfirm>
+           </div>
+-          <NButton size="tiny" type="error" ghost @click="handleUnlockIp(lock.ip)">{{ t("settings.lockedIps.unlock") }}</NButton>
+         </div>
+-      </div>
+-      <p v-else class="empty-hint">{{ t("settings.lockedIps.empty") }}</p>
++        <div v-if="lockedIps.length > 0" class="locked-list">
++          <div v-for="lock in lockedIps" :key="lock.ip + lock.type" class="locked-item">
++            <div class="locked-info">
++              <span class="locked-ip">{{ lock.ip }}</span>
++              <span class="locked-badge">{{ lockedIpTypeLabel(lock.type) }}</span>
++              <span class="locked-ttl">{{ formatTime(lock.lockedUntil) }}</span>
++            </div>
++            <NButton size="tiny" type="error" ghost @click="handleUnlockIp(lock.ip)">{{ t("settings.lockedIps.unlock") }}</NButton>
++          </div>
++        </div>
++        <p v-else class="empty-hint">{{ t("settings.lockedIps.empty") }}</p>
++      </template>
+     </div>
+ 
+     <!-- Change password modal -->
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 88fb194d8..5f5a3ea85 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -5257,6 +5259,8 @@ export default {
+       title: '锁定 IP 管理',
+       count: '{count} 个 IP 被锁定',
+       empty: '暂无锁定 IP',
++      // overlay[perm]（2026-11-04 Windows 离线回归批）：非 super 403 时替代「0 个 IP+重试」
++      superAdminOnly: '仅超级管理员可查看锁定 IP',
+       unlock: '解锁',
+       unlockAll: '全部解锁',
+       unlockAllConfirm: '确认解锁所有锁定的 IP？',
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index e4d92b4ab..ece772b88 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -5266,6 +5268,8 @@ export default {
+       title: 'Locked IPs',
+       count: '{count} locked',
+       empty: 'No locked IPs',
++      // overlay[perm] (2026-11-04 Windows offline regression): replaces "0 locked + retry" on non-super 403
++      superAdminOnly: 'Only super administrators can view locked IPs',
+       unlock: 'Unlock',
+       unlockAll: 'Unlock All',
+       unlockAllConfirm: 'Unlock all locked IPs?',
