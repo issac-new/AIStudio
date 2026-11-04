@@ -3,7 +3,7 @@
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
 
 - 快照基线：`1508f0ac8`；核实日：2026-11-04；版本线：`1.0.11-overlay`（vendor agent v0.22.6 升级批）。
-- 当前工作树根目录：**549 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
+- 当前工作树根目录：**551 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
 - 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 96 份；合计 549 份。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 
@@ -562,6 +562,7 @@
 - [2026-11-04-harness-w1-toolcontract-enforcement.md](../superpowers/specs/2026-11-04-harness-w1-toolcontract-enforcement.md)
 - [2026-11-04-harness-w2-result-approval.md](../superpowers/specs/2026-11-04-harness-w2-result-approval.md)
 - [2026-11-04-harness-w3-observability-taskmodel.md](../superpowers/specs/2026-11-04-harness-w3-observability-taskmodel.md)
+- [2026-11-04-harness-w4-closeout.md](../superpowers/specs/2026-11-04-harness-w4-closeout.md)
 - [2026-11-04-message-area-collapse.md](../superpowers/specs/2026-11-04-message-area-collapse.md)
 - [2026-11-04-agentteams-execution-records.md](../superpowers/specs/2026-11-04-agentteams-execution-records.md)
 - [2026-11-04-agentteams-project-graph.md](../superpowers/specs/2026-11-04-agentteams-project-graph.md)
