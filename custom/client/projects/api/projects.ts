@@ -1,6 +1,7 @@
 // overlay/custom/client/projects/api/projects.ts
 // 项目工作流客户端 API：消费服务端 /api/projectworkflow/*（列表/详情/暂停/
-// 恢复/完成五端点收作四函数）。fetch 包装照 ia2/api/sim-director.ts 的本地
+// 恢复/完成五端点收作四函数 + 拓扑 graph 端点）与既有 /api/hermes/diagram/
+// mermaid-brand（品牌渲染）。fetch 包装照 ia2/api/sim-director.ts 的本地
 // json() 形态（authFetch 来自 custom/client/shared/http.ts 统一鉴权实现）。
 // 错误契约：动作端点非 2xx 时体含 { ok:false, error, problems? }——409（恢复
 // 已完成）与 422（有未终结任务）的字段以 ProjectActionError 透传给视图，
@@ -138,4 +139,83 @@ export async function completeProject(id: string, overrideReason?: string): Prom
   const reason = overrideReason?.trim()
   const query = reason ? `?override=true&reason=${encodeURIComponent(reason)}` : ''
   await postAction(base + query)
+}
+
+// --- 拓扑面（AgentTeams 吸收批三）：GET /projects/:id/graph + mermaid 品牌渲染 ---
+
+/** 拓扑节点（字段镜像服务端 graph.ts GraphNode） */
+export interface ProjectGraphNode {
+  id: string
+  title: string
+  status: string
+  board: string
+  assignee?: string
+}
+
+/** 父→子依赖边（source=父） */
+export interface ProjectGraphEdge {
+  source: string
+  target: string
+}
+
+export type ProjectGraphInterruptKind =
+  | 'blocked-card'
+  | 'project-paused'
+  | 'review-pending'
+  | 'cross-board-link'
+  | 'cycle-dropped'
+
+export interface ProjectGraphInterrupt {
+  id: string
+  kind: ProjectGraphInterruptKind
+  reason: string
+}
+
+/** 拓扑四元投影（buildWorkflow 对标；含项目级状态上下文） */
+export interface ProjectTaskGraphData {
+  projectId: string
+  projectStatus: ProjectStatus
+  nodes: ProjectGraphNode[]
+  edges: ProjectGraphEdge[]
+  next: string[]
+  interrupts: ProjectGraphInterrupt[]
+}
+
+/**
+ * 项目拓扑：默认 JSON 四元；format='mermaid' 返回 text/plain 的 graph TD 源
+ * （非 JSON 端点，不走 json() 包装，res.text() 直取）。
+ */
+export async function fetchProjectGraph(id: string, format: 'mermaid'): Promise<string>
+export async function fetchProjectGraph(id: string): Promise<ProjectTaskGraphData>
+export async function fetchProjectGraph(id: string, format?: string): Promise<ProjectTaskGraphData | string> {
+  const query = format === 'mermaid' ? '?format=mermaid' : ''
+  const res = await authFetch(`/api/projectworkflow/projects/${encodeURIComponent(id)}/graph${query}`)
+  if (!res.ok) throw new Error('项目拓扑获取失败')
+  if (format === 'mermaid') return res.text()
+  const r = await res.json() as { ok: boolean; graph?: ProjectTaskGraphData }
+  if (!r.ok || !r.graph) throw new Error('项目拓扑获取失败')
+  return r.graph
+}
+
+/** mermaid-brand 响应（契约镜像 custom/server/diagram/diagram-controller.ts:48-72） */
+export interface MermaidBrandResult {
+  ok: boolean
+  html?: string
+  kind?: string
+  reason?: 'extract_failed' | 'unsupported_kind'
+  runnerError?: string
+}
+
+/**
+ * mermaid 源 → 服务端品牌 HTML+SVG（POST /api/hermes/diagram/mermaid-brand，
+ * 请求体 { source, title? }）。产物是服务端自渲染 HTML——展示面必须走
+ * iframe srcdoc（同 IdeWikiPane 安全形态），禁止直接 v-html。
+ */
+export async function fetchMermaidBrand(source: string, title?: string): Promise<MermaidBrandResult> {
+  const res = await authFetch('/api/hermes/diagram/mermaid-brand', {
+    method: 'POST',
+    body: JSON.stringify({ source, ...(title ? { title } : {}) }),
+  })
+  if (!res.ok) throw new Error('mermaid 品牌渲染请求失败')
+  return res.json() as Promise<MermaidBrandResult>
 }

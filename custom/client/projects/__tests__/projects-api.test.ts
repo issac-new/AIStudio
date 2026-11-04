@@ -8,10 +8,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const authFetchMock = vi.fn()
 vi.mock('../../shared/http', () => ({ authFetch: (...args: unknown[]) => authFetchMock(...args) }))
 
-const { fetchProjects, fetchProject, setProjectPaused, completeProject, isProjectActionError } = await import('../api/projects')
+const { fetchProjects, fetchProject, setProjectPaused, completeProject, isProjectActionError, fetchProjectGraph, fetchMermaidBrand } = await import('../api/projects')
 const {
   statusBadgeClass, statusLabel, actionAvailability,
   distributionRows, distributionSegments, timelineDescending,
+  TOPOLOGY_PANEL_INITIAL, topologyPanelNext, topologyNeedsLoad,
 } = await import('../utils')
 
 /** Response 形状桩（api 层只消费 ok/status/json/text） */
@@ -175,5 +176,87 @@ describe('utils：timeline 倒序', () => {
     const input = [a, b, c]
     expect(timelineDescending(input)).toEqual([b, a, c])
     expect(input).toEqual([a, b, c])
+  })
+})
+
+describe('api：项目拓扑（GET graph JSON / mermaid 源）', () => {
+  const graph = {
+    projectId: 'p1', projectStatus: 'active',
+    nodes: [{ id: 't1', title: 'A', status: 'todo', board: 'default' }],
+    edges: [], next: ['t1'], interrupts: [],
+  }
+
+  it('默认 JSON：命中 graph 端点并透传四元投影', async () => {
+    authFetchMock.mockResolvedValue(res(200, { ok: true, graph }))
+    await expect(fetchProjectGraph('p1')).resolves.toEqual(graph)
+    expect(authFetchMock.mock.calls[0][0]).toBe('/api/projectworkflow/projects/p1/graph')
+  })
+
+  it("format='mermaid' → 带 query 且 res.text() 直取（非 JSON 端点不走 json 包装）", async () => {
+    authFetchMock.mockResolvedValue(res(200, undefined, 'graph TD\n  T0["A"]'))
+    await expect(fetchProjectGraph('p1', 'mermaid')).resolves.toBe('graph TD\n  T0["A"]')
+    expect(authFetchMock.mock.calls[0][0]).toBe('/api/projectworkflow/projects/p1/graph?format=mermaid')
+  })
+
+  it('非 2xx / ok:false / 缺 graph 均抛错（fail-soft 只留给字段，不留给契约）', async () => {
+    authFetchMock.mockResolvedValue(res(500, undefined, 'boom'))
+    await expect(fetchProjectGraph('p1')).rejects.toThrow('项目拓扑获取失败')
+    authFetchMock.mockResolvedValue(res(200, { ok: false }))
+    await expect(fetchProjectGraph('p1')).rejects.toThrow('项目拓扑获取失败')
+    authFetchMock.mockResolvedValue(res(200, { ok: true }))
+    await expect(fetchProjectGraph('p1')).rejects.toThrow('项目拓扑获取失败')
+  })
+})
+
+describe('api：mermaid 品牌渲染（POST mermaid-brand）', () => {
+  it('请求体 {source, title?} POST 到品牌端点，响应原样透传（ok:false 不抛）', async () => {
+    authFetchMock.mockResolvedValue(res(200, { ok: true, html: '<!doctype html>…', kind: 'flowchart' }))
+    await expect(fetchMermaidBrand('graph TD', '项目任务拓扑')).resolves.toEqual({
+      ok: true, html: '<!doctype html>…', kind: 'flowchart',
+    })
+    const call = authFetchMock.mock.calls[0]
+    expect(call[0]).toBe('/api/hermes/diagram/mermaid-brand')
+    expect(call[1]).toMatchObject({ method: 'POST', body: JSON.stringify({ source: 'graph TD', title: '项目任务拓扑' }) })
+
+    // 服务端提取失败=HTTP 200 + ok:false（契约在 body 不在状态码），透传给视图回退。
+    authFetchMock.mockResolvedValue(res(200, { ok: false, reason: 'unsupported_kind' }))
+    await expect(fetchMermaidBrand('graph TD')).resolves.toMatchObject({ ok: false, reason: 'unsupported_kind' })
+    expect(authFetchMock.mock.calls[1][1]).toMatchObject({ body: JSON.stringify({ source: 'graph TD' }) })
+  })
+
+  it('非 2xx（如 invalid_source 400）抛错', async () => {
+    authFetchMock.mockResolvedValue(res(400, { ok: false, error: 'source 必填' }))
+    await expect(fetchMermaidBrand('')).rejects.toThrow('mermaid 品牌渲染请求失败')
+  })
+})
+
+describe('utils：拓扑折叠区状态机', () => {
+  it('toggle 只翻 open 不丢已加载内容；再展开不重拉（needsLoad 仅 idle+open）', () => {
+    let s = topologyPanelNext(TOPOLOGY_PANEL_INITIAL, { type: 'toggle' })
+    expect(s).toEqual({ open: true, status: 'idle' })
+    expect(topologyNeedsLoad(s)).toBe(true)
+
+    s = topologyPanelNext(s, { type: 'load-start', source: 'graph TD' })
+    expect(s).toEqual({ open: true, status: 'loading', source: 'graph TD' })
+    expect(topologyNeedsLoad(s)).toBe(false)
+
+    s = topologyPanelNext(s, { type: 'load-ok', html: '<html></html>' })
+    expect(s).toEqual({ open: true, status: 'ok', source: 'graph TD', html: '<html></html>' })
+
+    s = topologyPanelNext(s, { type: 'toggle' })
+    expect(s).toMatchObject({ open: false, status: 'ok', html: '<html></html>' })
+    expect(topologyNeedsLoad(s)).toBe(false)
+
+    s = topologyPanelNext(s, { type: 'toggle' })
+    expect(s).toMatchObject({ open: true, status: 'ok', html: '<html></html>' })
+    expect(topologyNeedsLoad(s)).toBe(false) // 已加载：不重拉
+  })
+
+  it('fallback 保源文本（内容不丢）清 html；error 记 note', () => {
+    let s = topologyPanelNext({ open: true, status: 'loading', source: 'graph TD', html: 'stale' }, { type: 'load-fallback', source: 'graph TD', note: '不支持' })
+    expect(s).toEqual({ open: true, status: 'fallback', source: 'graph TD', html: undefined, note: '不支持' })
+    s = topologyPanelNext(s, { type: 'load-error', note: '网络失败' })
+    expect(s).toMatchObject({ status: 'error', note: '网络失败' })
+    expect(s.html).toBeUndefined()
   })
 })
