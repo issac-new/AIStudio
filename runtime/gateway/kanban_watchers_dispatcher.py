@@ -259,6 +259,10 @@ class _KanbanDispatcher:
             return 0
         attempted = 0
         successes = 0
+        # overlay[732] 项目暂停拦机器派单：存在 paused 项目时，paused 项目的
+        # triage 卡本 tick 不进分解计数（按住新卡孵化面，不动已有卡面）。
+        from hermes_cli.kanban_projects_pause import paused_project_ids
+        paused_projects = paused_project_ids()
         from hermes_cli import kanban_db as _kb
         with _default_profile_secret_scope(), _kb.pin_first_board_resolution():
             for slug in self._board_slugs():
@@ -274,6 +278,7 @@ class _KanbanDispatcher:
                     except Exception as exc:
                         logger.debug("kanban auto-decompose: list_triage_ids failed on board %s (%s)", slug, exc)
                         triage_ids = []
+                    triage_ids = _filter_paused_triage(slug, triage_ids, paused_projects)
                     for tid in triage_ids:
                         if attempted >= auto_decompose_per_tick:
                             break
@@ -303,6 +308,42 @@ class _KanbanDispatcher:
         else:
             logger.info("kanban auto-decompose [%s]: %s → single task (no fanout)", slug, tid)
         return 1
+
+
+def _filter_paused_triage(slug: str, triage_ids: list, paused_projects: frozenset) -> list:
+    """732：从 triage 待分解清单中滤掉 paused 项目的卡。
+
+    只在存在暂停项目且清单非空时才开连查库（其余情况零开销，行为与现状
+    逐字节等价）；一句 ``SELECT id, project_id FROM tasks WHERE status='triage'``
+    与 triage_ids 求交，比逐卡一查省。读库任何异常都按不过滤返回
+    （fail-open：暂停判定故障不拖垮 auto-decompose 主链路）。"""
+    if not paused_projects or not triage_ids:
+        return triage_ids
+    conn = None
+    try:
+        conn = _kbc().connect(board=slug)
+        rows = conn.execute(
+            "SELECT id, project_id FROM tasks WHERE status = 'triage'"
+        ).fetchall()
+    except Exception as exc:
+        logger.debug(
+            "kanban auto-decompose: paused-project filter failed on board %s (%s); dispatching unfiltered",
+            slug, exc,
+        )
+        return triage_ids
+    finally:
+        if conn is not None:
+            with contextlib.suppress(Exception):
+                conn.close()
+    paused_ids = {row["id"] for row in rows if row["project_id"] in paused_projects}
+    if not paused_ids:
+        return triage_ids
+    kept = [tid for tid in triage_ids if tid not in paused_ids]
+    logger.info(
+        "kanban auto-decompose [%s]: %d triage task(s) held back by paused projects",
+        slug, len(triage_ids) - len(kept),
+    )
+    return kept
 
 
 @contextlib.contextmanager

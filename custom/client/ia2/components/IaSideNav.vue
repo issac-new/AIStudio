@@ -79,6 +79,8 @@ const COMMON_MATCH: Record<string, () => boolean> = {
   journey: () => routeName.value === 'ia2.journey',
   workbench: () => WORKBENCH_ROUTE_NAMES.has(routeName.value),
   board: () => routeName.value === 'ia2.board',
+  // 项目工作流（custom/client/projects）：列表+详情两路由都算「项目」入口命中
+  projects: () => routeName.value === 'projects' || routeName.value === 'projectDetail',
   inbox: () => routeName.value === 'ia2.inbox',
 }
 

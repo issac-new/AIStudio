@@ -1,0 +1,20 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -286,6 +286,10 @@ import * as kanbanCli from '../modules/hermes/services/kanban/kanban-service'
+ // overlay[loop-graph-r1]: 每日 Brief Matrix 投递传输——身份=本机最近一次应用内 Matrix 登录
+ import { createMatrixBriefDelivery } from '../custom/loop/graph/brief-matrix-delivery'
+ import { legacyAppApiCompatibility } from '../modules/studio/middleware/legacy-app-api'
++// overlay[projectworkflow]: 项目一级状态机（active/paused/completed）+ 完成守卫——
++// /api/projectworkflow/projects：全板任务统计聚合 + pause/resume/complete
++// （有未终结任务 422+problems；override=true 带非空 reason 放行并落佐证）。
++import { projectworkflowRoutes } from '../custom/projectworkflow/controller'
+ 
+ let loopStore: any = null
+ const lazyStore = new Proxy({} as any, {
+@@ -609,4 +613,5 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   // overlay[kg-evolution]: 板级 KG 自动同步（60s tick + 攒批窗口触发；env KG_AUTO_SYNC=0 关闭）
+   startKgAutoSync()
+   initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
++  app.use(projectworkflowRoutes.routes())       // 项目工作流：项目一级状态机+完成守卫（状态面与看板库只读分离）
+ }

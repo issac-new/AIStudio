@@ -155,3 +155,4 @@
 {"at":"2026-11-03T16:45:53Z","spec":"docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md","receipt":"9e87fad8fc053214f26182dcdcd4fd6f5d92b4ca","commit":"64320210b"}
 {"at":"2026-11-04T01:11:24Z","spec":"docs/superpowers/specs/2026-11-04-run26-retro-hardening.md","receipt":"dd81fe8b69917fe80a889295e7b0169e5a4e38ba","commit":"097bfe830"}
 {"at":"2026-11-04T01:38:59Z","spec":"docs/superpowers/specs/2026-11-04-ledger-clearance.md","receipt":"304f3ce923337314d08747eedc6c6319c4548850","commit":"4d5cf118d"}
+{"at":"2026-11-04T04:47:03Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-project-workflow.md","receipt":"44e84f277d3f9e0b16b0f37dc44fa1e435d2c37d","commit":"2a01090e7"}

@@ -72,6 +72,11 @@ export async function bootstrapClient(app: App): Promise<void> {
   // 路由无条件注册（口径同上，Task 10）。
   registrations.push(import('../../custom/client/bpa').then(m => m.registerBpa(app)))
 
+  // 项目工作流（「项目列表+详情」，消费服务端 /api/projectworkflow/*）：顶层路由
+  // /app/projects(:id) + ProjectShellView 装 IaShell（IaFeatureShell 先例）。
+  // 无特性开关（默认能力）；导航入口=nav-centers COMMON_NAVS「项目」（IaSideNav 常用组）。
+  registrations.push(import('../../custom/client/projects').then(m => m.registerProjects(app)))
+
   await Promise.all(registrations)
 
   // 注:i18n 翻译键不在此运行时 merge —— 原 custom 的 registerExtendedI18n 是空壳,

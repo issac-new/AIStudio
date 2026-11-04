@@ -89,6 +89,9 @@ const PAGE_LABELS: Record<string, { zh: string; en: string }> = {
   accounts: { zh: '账户管理', en: 'Accounts' },
   deliveryCases: { zh: '交付案例', en: 'Delivery Cases' },
   search: { zh: '检索', en: 'Search' },
+  // 项目工作流详情页（路由名无 ia2. 前缀；列表页词条由 COMMON_NAVS「项目」覆盖，
+  // 此处只补详情，避免双源）
+  projectDetail: { zh: '项目详情', en: 'Project Detail' },
   simOrchestration: { zh: '运行编排', en: 'Orchestration' },
   simSettings: { zh: '推演设置', en: 'Simulation Settings' },
   govSettings: { zh: '系统设置', en: 'System Settings' },
