@@ -28,6 +28,7 @@ from typing import Mapping
 from typing import Optional
 from typing import TYPE_CHECKING
 
+from hermes_cli.kanban_projects_pause import paused_project_ids
 from hermes_cli.quiet_single_query import KANBAN_WORKER_EXIT_TRAILER
 
 if TYPE_CHECKING:
@@ -163,6 +164,10 @@ class DispatchResult:
     """Memory pressure that restricted this tick: ``"critical"`` (no new
     workers), ``"elevated"`` (at most one), ``None`` (no restriction).
     Reclaim/promotion bookkeeping still ran; deferred tasks stay queued."""
+    paused_project_filtered: int = 0
+    """overlay[732] 本 tick 因项目暂停（projects-state.json 中 status=paused 的项目）
+    被滤出 ready/review 选卡面的行数：只拦机器派单，不 block 卡、不动在飞
+    worker；项目恢复 active 后下一 tick 自动回到选卡面。"""
 
 
 # [609] blocker_auth 阻塞退场参数：近窗秒数与最少拦截次数（60s tick × 阈值≈退场时延；
@@ -200,6 +205,10 @@ def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
             counts[f"concurrency_capped({r}/{c})"] = counts.get(f"concurrency_capped({r}/{c})", 0) + 1
         if res.skipped_per_profile_capped:
             counts["per_profile_capped"] = counts.get("per_profile_capped", 0) + len(res.skipped_per_profile_capped)
+        # overlay[732] 项目暂停滤出的行数并入抑制摘要——零 spawn 时能看出
+        # 「卡被项目暂停按住」而非「派单器卡死」（照 478 budget_capped 样式）。
+        if res.paused_project_filtered:
+            counts["project_paused"] = counts.get("project_paused", 0) + res.paused_project_filtered
         if res.memory_pressure:
             pressure = res.memory_pressure
     parts = [f"{k}={v}" for k, v in sorted(counts.items())]
@@ -1887,12 +1896,20 @@ def dispatch_profile_allowlist_summary() -> str:
 
 def _has_spawnable(conn: sqlite3.Connection, status: str) -> bool:
     rows = conn.execute(
-        "SELECT DISTINCT assignee FROM tasks "
+        "SELECT DISTINCT assignee, project_id FROM tasks "
         "WHERE status = ? AND assignee IS NOT NULL AND claim_lock IS NULL",
         (status,),
     ).fetchall()
     if not rows:
         return False
+    # overlay[732] 项目暂停只拦机器派单：paused 项目的行先剔除，再判 profile
+    # 存在。无暂停集时与旧的 DISTINCT assignee 行为等价——多出的 project_id
+    # 维度只会让同一 assignee 重复出现，不改变 any() 语义。
+    paused_projects = paused_project_ids()
+    if paused_projects:
+        rows = [row for row in rows if row["project_id"] not in paused_projects]
+        if not rows:
+            return False
     profile_exists = _profile_exists_fn()
     if profile_exists is None:
         # Can't introspect — assume spawnable, preserve legacy behavior.
@@ -2471,9 +2488,10 @@ def _tick_spawn_budget(
 
 def _lane_rows(conn: sqlite3.Connection, status: str) -> list[sqlite3.Row]:
     """Unclaimed rows of one lane in dispatch order (``priority`` rides along
-    for the ready-lane workload reorder's tier grouping)."""
+    for the ready-lane workload reorder's tier grouping; ``project_id`` 随行
+    带出供 732 项目暂停过滤——消费方按键取列，多一列向后兼容）。"""
     return conn.execute(
-        "SELECT id, assignee, priority FROM tasks "
+        "SELECT id, assignee, priority, project_id FROM tasks "
         f"WHERE status = '{status}' AND claim_lock IS NULL "
         "ORDER BY priority DESC, created_at ASC"
     ).fetchall()
@@ -2644,6 +2662,15 @@ def _dispatch_once_locked(
     # Review rows are enumerated up front so the budget split can see whether
     # review work exists at all.
     review_rows = _lane_rows(conn, "review") if review_dispatch_enabled() else []
+    # overlay[732] 项目暂停拦机器派单：paused 项目的卡不进本 tick 选卡面——
+    # 只滤派单，不 block 卡、不动在飞 worker；恢复 active 后自动回到选卡面。
+    # 行集为空或无暂停集时零开销（与现状逐字节等价）。
+    paused_projects = paused_project_ids()
+    if paused_projects and (ready_rows or review_rows):
+        _before_rows = len(ready_rows) + len(review_rows)
+        ready_rows = [r for r in ready_rows if r["project_id"] not in paused_projects]
+        review_rows = [r for r in review_rows if r["project_id"] not in paused_projects]
+        result.paused_project_filtered = _before_rows - len(ready_rows) - len(review_rows)
     # Per-profile cap. Deferred tasks go to skipped_per_profile_capped, not
     # skipped_unassigned — "busy, retry later" differs from "needs routing".
     # Resolved BEFORE the review reservation so the reservation can see which

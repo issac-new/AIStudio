@@ -137,6 +137,9 @@ export const COMMON_NAVS: readonly CommonNavMeta[] = [
   { key: 'journey', lead: '◫', zh: '流程总览', en: 'Overview', name: 'ia2.journey', testid: 'ia-side-nav-journey' },
   { key: 'workbench', lead: '▤', zh: '工作台', en: 'Workbench', name: 'ia2.collab', testid: 'ia-side-nav-workbench' },
   { key: 'board', lead: '▦', zh: '看板', en: 'Board', name: 'ia2.board', testid: 'ia-side-nav-board' },
+  // 项目工作流（custom/client/projects）：项目聚合看板之上，日常管理高频面——
+  // 紧跟看板。路由名无 ia2. 前缀（projects 模块自注册，路径 /app/projects）。
+  { key: 'projects', lead: '▥', zh: '项目', en: 'Projects', name: 'projects', testid: 'ia-side-nav-projects' },
   { key: 'inbox', lead: '◷', zh: '审批收件箱', en: 'Approvals Inbox', name: 'ia2.inbox', testid: 'ia-side-nav-inbox' },
 ]
 

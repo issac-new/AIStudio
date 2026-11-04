@@ -1099,3 +1099,16 @@
 #      与真卡死分开措辞，并把拒绝原因并进告警。run26 35 次误报把值守引向 venv/PATH
 #      错方向，真因是一名 agent 会话楔死——告警要自带现场。
 730-agent-dispatcher-stuck-diagnosis.patch
+# 731（2026-11-04 AgentTeams 吸收批一）：项目一级管控面挂载——custom/server/projectworkflow
+#      路由进 bootstrap/routes.ts（状态机/完成守卫/暂停恢复端点，spec 2026-11-04-agentteams-project-workflow）。
+731-server-projectworkflow-routes.patch
+# 732（2026-11-04 AgentTeams 吸收批一）：项目暂停拦机器派单——dispatch 选卡面三处过滤
+#      （_lane_rows/_dispatch_once_locked/_has_spawnable）+auto-decompose 跳过 paused 项目 triage 卡，
+#      DispatchResult.paused_project_filtered 遥信；改派通知 ping-only（TERMINAL_KINDS+assigned，
+#      默认分派 source 键静默）+locale 键。基底=注入态；runtime 侧 dispatch 保留 4 个既有
+#      runtime-only 特性（D8：既有债 163 行零补丁背书，追补另立批）。
+732-agent-kanban-project-pause.patch
+# 733（2026-11-04 AgentTeams 吸收批一）：运行时配置 PUT section 白名单（fail-closed）——
+#      单一事实源 custom/server/projectworkflow/config-whitelist.ts（26 项，含 tts/stt 语音面），
+#      未知 section 400。
+733-server-config-section-whitelist.patch

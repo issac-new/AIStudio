@@ -1,0 +1,28 @@
+diff --git a/packages/server/src/modules/hermes/controllers/config.ts b/packages/server/src/modules/hermes/controllers/config.ts
+index 03c87e2d64..570c47d81e 100644
+--- a/packages/server/src/modules/hermes/controllers/config.ts
++++ b/packages/server/src/modules/hermes/controllers/config.ts
+@@ -8,6 +8,9 @@ import { logger } from '../../studio/public/logging'
+ import { safeFileStore } from '../../studio/public/safe-file-store'
+ import { EXCLUSIVE_PLATFORM_CREDENTIAL_KEYS } from '../services/profiles/profile-credentials'
+ import { invalidateProviderRuntime } from '../../studio/public/provider-runtime'
++// overlay[projectworkflow]: PUT section 白名单 fail-closed 接线（spec 2026-11-04-agentteams-project-workflow.md D6；
++// 事实源=overlay custom/server/projectworkflow/config-whitelist.ts，经 src/custom 符号链接解析）
++import { isAllowedConfigSection } from '../../../custom/projectworkflow/config-whitelist'
+
+ const PLATFORM_SECTIONS = new Set([
+   'telegram', 'discord', 'slack', 'whatsapp', 'matrix',
+@@ -521,6 +524,13 @@ export async function updateConfig(ctx: any) {
+       }
+     }
+
++    // overlay[projectworkflow]: 通用 deepMerge 分支 fail-closed——白名单外 section
++    // 一律 400，不再允许任意键写入 config.yaml（proxy/gatewayAutoStart 特例分支
++    // 已在上方各自处理并 return，不受本拦截影响）
++    if (!isAllowedConfigSection(section)) {
++      ctx.status = 400; ctx.body = { error: 'Unsupported config section' }; return
++    }
++
+     const profile = requestedProfile(ctx)
+     await safeFileStore.updateYaml(configPath(profile), (config) => {
+       config[section] = deepMerge(config[section] || {}, values)

@@ -272,6 +272,31 @@
       "source": "semantica/manifest.yaml",
       "dest": "optional-mcps/semantica/manifest.yaml",
       "note": "同上补位（patch 375 注入面同病）：semantica v0.7.0 catalog 条目随部署链到位，`hermes mcp install semantica` 恢复可用"
+    },
+    {
+      "source": "gateway/kanban_watchers_notifier.py",
+      "dest": "gateway/kanban_watchers_notifier.py",
+      "note": "assigned 改派通知 ping-only，732"
+    },
+    {
+      "source": "hermes_cli/kanban_projects_pause.py",
+      "dest": "hermes_cli/kanban_projects_pause.py",
+      "note": "项目暂停状态读取器（projects-state.json，mtime 缓存 fail-open），732"
+    },
+    {
+      "source": "tests/hermes_cli/test_project_pause.py",
+      "dest": "tests/hermes_cli/test_project_pause.py",
+      "note": "732 项目暂停拦派单行为测试（随 notifier/pause 模块部署，安装树可就地回归）"
+    },
+    {
+      "source": "locales/en.yaml",
+      "dest": "locales/en.yaml",
+      "note": "732 改派通知词条（gateway.kanban.ping.assigned 族）——locale 走 vendor 注入不进 overlay 部署链，缺它安装树 ping 显示裸键（照 exa/semantica 补位先例；基底与安装树逐字节一致已核实）"
+    },
+    {
+      "source": "locales/zh.yaml",
+      "dest": "locales/zh.yaml",
+      "note": "同上（中文词条）"
     }
   ],
   "notes": [
