@@ -30,6 +30,7 @@ function courseData() {
       edges: Array<{ from: string; to: string }>
       inputs: string[]
       steps: string[]
+      stepGuide: Array<{ nodeId: string; flowIds: number[]; deliverable: number; check: number; pitfall: number }>
       example: { title: string; given: string; when: string; then: string; code?: { label: string; content: string } }
       deliverables: string[]
       checks: string[]
@@ -92,19 +93,20 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(exampleSignatures.size).toBe(12)
   })
 
-  it('离线 HTML 包含动效和无障碍契约', () => {
+  it('离线 HTML 使用 A4 横屏与 SVG 动效，不再携带旧 3D 或 Pretext', () => {
     expect(html).not.toContain('__PRETEXT_BUNDLE__')
     expect(html).not.toMatch(/<script[^>]+src=/i)
     expect(html).not.toMatch(/<link[^>]+href=["']https?:/i)
-    expect(html).toContain('transform-style: preserve-3d')
+    expect(html).toContain('@page { size: A4 landscape; margin: 0; }')
+    expect(html).toContain('width: 297mm; height: 210mm')
     expect(html).toContain('prefers-reduced-motion: reduce')
-    expect(html).toContain('class="focus-ring"')
-    expect(html).toContain('task-flight')
     expect(html).toContain('pauseAnimations')
     expect(html).toContain('培训模拟 · 不连接真实数据')
     expect(html).toContain('GOVERNANCE_REPO')
-    expect(html).toContain('prepareDynamicText()')
-    expect(html).toContain("typeof prepare !== 'function' || typeof layout !== 'function'")
+    expect(html).toContain('function renderCoach')
+    expect(html).not.toContain('webglCanvas')
+    expect(html).not.toContain('prepareDynamicText')
+    expect(html).not.toContain('transform-style: preserve-3d')
   })
 
   it('使用五层拓扑、可选 Matrix 分支和证据回流', () => {
@@ -117,26 +119,65 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(html).toContain('TOPO_FLOW_BY_SCENE')
   })
 
-  it('横屏布局同时显示步骤和实例，展开区承载交付验收', () => {
-    expect(html).toContain('class="course-strip"')
+  it('纸张右上角承载导航，三类信息节点在图内同步流转', () => {
+    for (const removed of ['<header class="app-header">', '<nav class="course-strip"', '<div class="course-toolbar">', '<div class="course-controls">', 'completionDialog', 'printCompletionButton', 'replayButton']) {
+      expect(html).not.toContain(removed)
+    }
+    const actions = html.match(/<div class="stage-actions"[\s\S]*?<\/div>/)?.[0] ?? ''
+    for (const id of ['prevButton', 'playButton', 'nextButton', 'speedButton', 'courseMenuButton', 'helpButton']) {
+      expect(actions).toContain(`id="${id}"`)
+    }
     expect(html).toContain('id="partNav"')
+    expect(html).toContain('<nav class="page-side" aria-label="课程导航目录">')
+    expect(html).toContain('id="directoryTeams" role="group"')
+    expect(html).toContain('id="directoryScenes" role="group"')
+    expect(html).toContain('data-directory-scene')
     expect(html).toContain('id="courseDialog"')
     expect(html).toContain('function renderCoach')
+    expect(html).toContain('function renderStep')
+    expect(html).toContain('function goToStep')
+    expect(html).toContain('function advanceStep')
+    expect(html).toContain('const atCourseEnd = current === SCENES.length - 1 && atSceneEnd')
+    expect(html).toContain("$('nextStepButton').disabled = atCourseEnd")
+    expect(html).toContain('let stepIndex = 0')
+    expect(html).toContain('id="stepDots"')
+    expect(html).toContain('data-guide-step')
     expect(html).toContain('id="coachInputs"')
     expect(html).toContain('id="coachSteps"')
     expect(html).toContain('id="exampleGiven"')
     expect(html).toContain('id="exampleWhen"')
     expect(html).toContain('id="exampleThen"')
+    expect(html).toContain('id="exampleToggle"')
+    expect(html).toContain('id="codeToggle"')
+    expect(html).toContain('aria-controls="exampleDetail"')
     expect(html).toContain('id="coachMore"')
     expect(html).toContain('id="coachDeliverables"')
     expect(html).toContain('id="coachPitfalls"')
     expect(html).toContain('id="coachReferences"')
-    expect(html).toContain('grid-template-columns: 1.05fr 1.45fr 1.25fr 250px')
+    expect(html).toContain('class="a4-page"')
+    const stageStart = html.indexOf('<section class="topology-panel" id="simStage"')
+    const stageEnd = html.indexOf('\n        </div>\n      </article>', stageStart)
+    expect(stageStart).toBeGreaterThan(-1)
+    expect(stageEnd).toBeGreaterThan(stageStart)
+    const stage = html.slice(stageStart, stageEnd)
+    const appMarkup = html.slice(html.indexOf('<div id="appRoot">'), html.indexOf('<div id="printRoot"'))
+    expect(appMarkup).not.toContain('class="page-footer"')
+    expect(appMarkup).not.toContain('id="spatialFocus"')
+    expect(appMarkup).not.toContain('class="panel-head"')
+    expect(html).toContain('chip.textContent = `${label.id} · ${label.label}`')
+    for (const marker of ['class="lesson-steps flow-card"', 'class="lesson-example flow-card"', 'class="lesson-more" id="coachMore"', 'class="topology-flow-deck"', 'class="flow-cards"']) {
+      expect(stage).toContain(marker)
+    }
+    expect(html).toContain('grid-template-rows: 26mm 165mm')
+    expect(html).toContain('grid-template-columns: minmax(0, 1fr) 68mm')
+    expect(html).toContain('#appRoot .topology-panel { display: grid; grid-template-rows: 165mm; }')
+    expect(html).toContain('grid-template-columns: 1.15fr 1fr 1.2fr .75fr')
     expect(html).toContain('.lesson-more-grid')
-    expect(html).not.toContain('id="guideLink"')
-    expect(html).toContain('#focusLayer, #guideLink { display: none !important; }')
-    expect(html).toContain('.stage-footer .spatial-focus')
-    expect(html).toContain('.coach-route { display: none; }')
+    expect(html).toContain('section class="lesson-more" id="coachMore"')
+    expect(html).toContain('break-after: page')
+    expect(html).toContain('break-inside: avoid')
+    expect(html).toContain('#printRoot .lesson-main { display: grid; grid-template-columns: 112mm 82mm 75mm; }')
+    expect(html).not.toContain('<details')
   })
 
   it('12 幕映射到五层拓扑的 15 个协作步骤', () => {
@@ -154,12 +195,57 @@ describe('AIStudio 交互培训课程契约', () => {
     }
   })
 
-  it('拓扑使用 PC 横屏视口与独立文字层级', () => {
-    expect(html).toContain('viewBox="0 0 1200 760"')
-    expect(html).toContain('.topology-node-title { fill: #1c2b22; font-size: 20px;')
-    expect(html).toContain('.topology-node-subtitle { fill: #65776a; font-size: 13px;')
-    expect(html).toContain('.topology-active .scene-viewport::before { display: none; }')
-    expect(html).toContain('.sim-stage, .scene-viewport { background: #f3f5f2; }')
+  it('每幕步骤映射真实流线并覆盖整幕路径，节点与亮线实际相连', () => {
+    const start = html.indexOf('let topologyActive = false')
+    const end = html.indexOf('\n\nfunction renderTopology', start)
+    const views = new Function(`${html.slice(start, end)}; return TOPO_VIEWS`)() as Record<string, { nodes: Array<{ id: string; x: number; y: number; w: number; h: number }>; flows: Array<{ id: number; path: string }>; flowByScene: number[][] }>
+    const { SCENES } = courseData()
+    SCENES.forEach((scene, index) => {
+      expect(scene.stepGuide, scene.id).toHaveLength(scene.steps.length)
+      const sceneFlows = views[scene.part].flowByScene[index]
+      const validFlows = new Set(sceneFlows)
+      const validNodes = new Set(views[scene.part].nodes.map(node => node.id))
+      const coveredFlows = new Set<number>()
+      const view = views[scene.part]
+      for (const guide of scene.stepGuide) {
+        expect(validNodes.has(guide.nodeId), `${scene.id} node ${guide.nodeId}`).toBe(true)
+        expect(guide.flowIds.length, scene.id).toBeGreaterThan(0)
+        for (const id of guide.flowIds) {
+          expect(validFlows.has(id), `${scene.id} flow ${id}`).toBe(true)
+          coveredFlows.add(id)
+        }
+        const node = view.nodes.find(item => item.id === guide.nodeId)!
+        const connected = guide.flowIds.some(id => {
+          const flow = view.flows.find(item => item.id === id)!
+          const points = [...flow.path.matchAll(/[ML]([\d.]+)\s+([\d.]+)/g)].map(match => ({ x: Number(match[1]), y: Number(match[2]) }))
+          return [points[0], points.at(-1)].some(point => point.x >= node.x - 4 && point.x <= node.x + node.w + 4 && point.y >= node.y - 4 && point.y <= node.y + node.h + 4)
+        })
+        expect(connected, `${scene.id} step node ${guide.nodeId} must touch an active flow`).toBe(true)
+        expect(guide.deliverable).toBeGreaterThanOrEqual(0)
+        expect(guide.deliverable).toBeLessThan(scene.deliverables.length)
+        expect(guide.check).toBeGreaterThanOrEqual(0)
+        expect(guide.check).toBeLessThan(scene.checks.length)
+        expect(guide.pitfall).toBeGreaterThanOrEqual(0)
+        expect(guide.pitfall).toBeLessThan(scene.pitfalls.length)
+      }
+      expect([...coveredFlows].sort((a, b) => a - b), scene.id).toEqual([...sceneFlows].sort((a, b) => a - b))
+    })
+  })
+
+  it('拓扑使用固定 SVG 视口、可读文字层级与 A4 安全区', () => {
+    expect(html).toContain('viewBox="0 0 1200 720"')
+    expect(html).toContain('.topology-node-title { fill: #1c2b22; font-size: 21px;')
+    expect(html).toContain('.topology-node-subtitle { fill: #65776a; font-size: 14px;')
+    expect(html).toContain('grid-template-rows: 26mm 165mm')
+    expect(html).toContain('grid-template-columns: 1.15fr 1fr 1.2fr .75fr')
+    expect(html).toContain('grid-template-columns: minmax(0, 1fr) 68mm')
+    expect(html).toContain('stepNodeId = null')
+    expect(html).toContain('#printRoot .a4-page { grid-template-rows: 30mm 96mm 62mm; }')
+    expect(html).toContain('padding: 8mm')
+    expect(html).toContain('Math.min(1.35')
+    expect(html).toContain('return defs + layers + flowLines + nodes + flowLabels + pulses')
+    expect(html).toContain('#appRoot, dialog, .skip-link { display: none !important; }')
+    expect(html).not.toContain('availableHeight')
   })
 
   it('六团队使用不同拓扑，且每幕激活流与跟练节点一致', () => {
