@@ -1,0 +1,19 @@
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -301,6 +301,10 @@
+ // 查询端点 GET /api/userperms/audit（?user=&action=&limit=&offset=）。
+ import { userPermsAuditMiddleware } from '../custom/userperms/middleware'
+ import { userPermsAuditRoutes } from '../custom/userperms/controller'
++// overlay[userenv-routes]: profile 环境变量编辑域（N01，spec 2026-11-04-agentteams-ledger-items；
++// 挂载补丁 743 清偿——原批禁改 patches/ 挂载被遗忘，活体探测 404 实锤，spec 2026-11-04-userenv-route-mount）。
++// GET/PUT /api/userenv/profiles/:name/env（读脱敏回显/写整表原子替换＋敏感确认位）。
++import { userenvRoutes } from '../custom/userenv/controller'
+ 
+ let loopStore: any = null
+ const lazyStore = new Proxy({} as any, {
+@@ -633,4 +637,5 @@
+   app.use(projectworkflowRoutes.routes())       // 项目工作流：项目一级状态机+完成守卫（状态面与看板库只读分离）
+   app.use(executionRecordsRoutes.routes())      // 执行记录：双源归并列表+delegate/coding 详情（只读 fail-soft）
+   app.use(userPermsAuditRoutes.routes())        // 用户权限审计查询：GET /api/userperms/audit（只读，fail-soft）
++  app.use(userenvRoutes.routes())              // profile 环境变量编辑面：GET/PUT /api/userenv/profiles/:name/env（743，auth 后）
+ }

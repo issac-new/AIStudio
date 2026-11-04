@@ -269,7 +269,9 @@ export function writeProfileEnv(
         ? resolveSubmittedValue(e.key, e.value, currentMap.get(e.key))
         : e.value,
     }))
-    .filter((e) => e.value !== undefined)
+    // 类型谓词收窄：不加 is 守卫时 TS 保持 string|undefined，下游四处（确认闸/幂等跳写/
+    // 序列化/回显）全部报 TS2345——本域从未被 ts-node 服务端装载编译过，挂载补丁 743 首次暴露
+    .filter((e): e is EnvEntryInput => e.value !== undefined)
 
   // 敏感值变更确认闸：新增敏感键或改值都算变更（与现值相同不算）；删除不在 entries 内不触发
   const unconfirmed = resolved

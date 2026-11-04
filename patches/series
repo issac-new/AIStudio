@@ -1141,3 +1141,8 @@
 #      （cron room 目标/platforms typing_metadata/toolsets selection_key/tool_executor memo 读穿）；
 #      同时 408/470/593 在 v0.22.7 干净基线上重建（撞窗事故修复：对方再生成补丁基底错致链断）。
 742-agent-v0227-runtime-resync.patch
+
+# 743（2026-11-04 userenv 挂载清偿，spec 2026-11-04-userenv-route-mount）：N01 profile
+#      环境变量编辑域路由挂载——原批（ledger-items）禁改 patches/ 把挂载推后续批次后被遗忘，
+#      活体探测 404 实锤（capability-probes 组 11）；照 740 形态两行：import＋auth 后 app.use。
+743-server-userenv-routes.patch
