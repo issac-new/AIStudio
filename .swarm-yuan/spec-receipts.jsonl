@@ -163,3 +163,4 @@
 {"at":"2026-11-04T05:21:19Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-execution-records.md","receipt":"ca7243cfe47fed522d272f31619e9bf96a5cfd67","commit":"35a46643e"}
 {"at":"2026-11-04T05:24:51Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-project-graph.md","receipt":"307d145028f89e232704b6957bc22ce8c690c80a","commit":"35a46643e"}
 {"at":"2026-11-04T05:25:21Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-skill-export.md","receipt":"edb4ed396aee6fc6655eb45eca7913a88bb589b1","commit":"35a46643e"}
+{"at":"2026-11-04T06:32:13Z","spec":"docs/superpowers/specs/2026-11-04-composer-popups.md","receipt":"8ba34e0f1f665885521562cfbe5ac79fdb6ca19b","commit":"a8515a50d"}

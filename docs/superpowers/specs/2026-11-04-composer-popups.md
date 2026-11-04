@@ -1,27 +1,35 @@
-# 2026-11-04 composer 工具条弹层三缺陷（遮罩中断/位置不对/多开叠层）＋存量红处置收官
+# 2026-11-04 composer 工具条弹层四缺陷（遮罩中断/位置不对/多开叠层/模型清单割裂）＋存量红处置收官
+
+> 2026-11-04 跟进批授权修订（SPEC_REBIND）：用户复验追加第 4 项「模型清单和选择按钮位置不连续、割裂感太重」，并入本 spec；验证段补齐首轮全量终跑数字与 K19 处置记录。
 
 ## 变更
 
-用户走查（`#/app/ide?session=…` 会话视图 composer 工具条）报「所有按钮的弹窗都存在遮罩中断、位置不对」。活体定谳三处同型缺陷，修复：
+用户走查（`#/app/ide?session=…` 会话视图 composer 工具条）分两轮报「所有按钮的弹窗都存在遮罩中断、位置不对」与「模型清单和选择按钮位置不连续，割裂感太严重」。活体定谳四处同族缺陷，修复：
 
 1. **弹层被输入区盖住（「遮罩中断/位置不对」主根因）**：思考菜单（`.ide-chat__effort-menu` z-30）、⚙ 设置菜单（锚 `.ide-chat__csettings` z-20 造栈上下文，菜单 z-30 被困）、⛨ 权限面板（`.ide-perm__panel` z-40）都向上弹进 ChatInput 输入区地盘，而输入区 z-80（ChatInput.vue:1713）——弹层上半被输入框整片盖住（elementFromPoint 实锤命中 input-textarea），视觉残缺＝「位置不对」，点击落进输入框＝「遮罩中断」。修复＝三锚根开弹时 `is-open` 抬 z-index 110（同状态栏面板修复口径：压过 z-80 输入区与 z-100 分割条命中域）。
-2. **无互斥**：思考/⚙/⛨ 三弹层可同时开（活体实锤两菜单同时可见叠层）。修复＝文档级 pointerdown 点外关闭：点击落在该组件锚根之外（含另一弹层的触发钮）即收起；互斥由「点 A 触发钮＝B 的点外」自然获得（pointerdown 先关 B、click 再开 A，顺序天然正确）。
-3. **无点外关闭**：同上 handler 覆盖（点击输入框/页面任意处收起）。模型选择器（IdeEngineModelsDialog z-500 模态）层级本就正确不动。
+2. **无互斥**：思考/⚙/⛨ 弹层可同时开（活体实锤两菜单同时可见叠层）。修复＝文档级 pointerdown 点外关闭：逐菜单判属主收起（整组早退会保住对方——首轮实现即踩此坑，活体抓出后改逐菜单判定）；互斥由「点对方触发钮＝点外」自然获得（pointerdown 先于 click 无竞态）。
+3. **无点外关闭**：同上 handler 覆盖（点击输入框/页面任意处收起）。模型管理对话框（IdeEngineModelsDialog z-500 模态）层级本就正确不动。
+4. **模型清单割裂（跟进批）**：清单原挂大锚（整个输入区）顶部 `bottom:100%+right:12px`，按钮却在输入区底部左侧——清单飘到右上角离按钮 ~470px（实测 rect x=845,y=219 vs 按钮 x=538,y=686）。修复＝新锚 `.ide-chat__model-anchor` 包住模型按钮，清单 `left:0` 从按钮左缘向上弹（同家族锚定）＋`is-open` 抬 110＋纳入 pointerdown 互斥/点外关闭（`COMPOSER_MENU_ROOTS` 三成员）。
 
-**存量红处置（同批收官，无码改）**：diagram-export×3＝本机 playwright chromium 缓存缺失（chromium_headless_shell-1243 不在位，系统 Chrome 通道又因版本协议不匹配启动即关）——`npx playwright install chromium` 装回后 5/5 绿；specialist-presets×1＝上游 routa 仓读取的瞬时态（当时两树同红，现单跑 5/5 绿，全量终跑再确认）；满载 20s 超时×7＝并发负载抖动（两树单跑均绿），全量终跑（不带额外 dev 服务负载）复核。
+**存量红处置（同批收官，无码改）**：diagram-export×3＝本机 playwright chromium 缓存缺失（chromium_headless_shell-1243 不在位，系统 Chrome 通道又因版本协议不匹配启动即关）——`npx playwright install chromium` 装回后 5/5 绿；specialist-presets×1＝上游 routa 仓读取瞬态（当时两树同红，稍后单跑 5/5 绿）；满载 20s 超时×7＝并发负载抖动（无服务负载全量跑全绿）。
+
+**顺修（首轮合并批 28ac395）**：K19 棘轮 875>874——并行批 `projectworkflow/controller.ts:17` 注释里的 `ok:false` 字面量（棘轮连注释计数），改措辞回落 874，不抬阈值。
 
 ## 决策记录
 
-- **决策 D1（抬层口径 110）**：与 2026-11-04 状态栏面板修复（ide-workspace-bugs spec）同值——高于输入区 z-80 与三栏分割条 z-100（±5px 加宽命中域），低于页头面板层 800/z-layers 体系，不侵入全局层级立法。
-- **决策 D2（点外关闭用文档级 pointerdown 而非 click）**：pointerdown 先于 click 触发，保证「点另一弹层触发钮」时旧弹层先收起、新弹层由 click 正常开启，无竞态；先例＝IdeDevTools.onDocPointerDown。
+- **决策 D1（抬层口径 110）**：与 2026-11-04-ide-workspace-bugs 批状态栏面板同值——高于输入区 z-80 与三栏分割条 z-100（±5px 加宽命中域），低于页头面板层 800/z-layers 体系，不侵入全局层级立法。跟进批模型清单锚同口径。
+- **决策 D2（点外关闭用文档级 pointerdown 而非 click）**：pointerdown 先于 click 触发，保证「点另一弹层触发钮」时旧弹层先收起、新弹层由 click 正常开启，无竞态；先例＝IdeDevTools.onDocPointerDown。实现红线＝逐菜单判属主（保护范围只到各自锚根），整组早退会让互斥失效（活体实锤）。
 - **决策 D3（is-open 条件抬层而非静态高 z）**：锚根常驻高 z 会让触发钮所在行片带常驻覆盖语义（悬停/命中测试面变大），开弹才抬层把影响面收到弹层存续期。
+- **决策 D4（模型清单锚定按钮左缘）**：按钮在工具条左半区，220px 清单从左缘向右上弹不溢出视口；右对齐会越过按钮右侧的思考/⚙ 控件再添割裂。
+- **决策 D5（测试面）**：守门取源码级断言（is-open z≥110×四锚＋pointerdown 接线＋清单 left:0/无 right:12px/住在锚内），jsdom 无真实层叠（docs-ssot-guard 先例）。
 
 ## 验证
 
-- 新增守门 `custom/client/ide/__tests__/composer-popups-stack-guard.test.ts`：三锚 is-open z≥110＋两组 pointerdown 接线（源码级断言，jsdom 无真实层叠先例同前批）。
-- 目标测试：`npx vitest run custom/client/ide/__tests__/ custom/client/ia2/__tests__/ia-shell-header-mask-order-guard.test.ts`。
-- 活体走查（修复后）：思考菜单完整可见且顶点命中自身（不再命中 input-textarea）；思考开→点 ⚙ 只剩 ⚙ 开；点输入框/空白处全收；⛨ 面板同验。
-- 合并前全量 `npm test`（不带 dev 服务负载）。
+- 守门 `composer-popups-stack-guard.test.ts`：三锚＋接线断言（首轮），跟进批增模型锚四断言（z/绑定/定位/模板序）。IDE 全套 126 文件 814 例全绿（注入态 worktree）。
+- 活体走查（首轮，修复后）：⚙/思考/⛨ 弹层完整可见且顶点命中自身（不再命中 input-textarea）；⚙开→点思考只剩思考、思考开→点⛨只剩⛨、⛨开→点⚙只剩⚙（三向互斥）；点消息流/输入框全收。用户预览源 8649（主树热更）终验同口径全过。
+- 活体走查（跟进批）：清单 rect 贴按钮左缘上方（y 距离≈按钮上方一级弹层间距），与 ⚙/思考互斥、点外收起——合并前在 8651 复验。
+- 首轮全量 `npm test`（无服务负载）：7541 过/1 败——唯一败＝K19 棘轮（上表顺修 28ac395 回落后 29/29 绿）；diagram-export/specialist-presets/七例超时全部转绿（存量红处置生效）。
+- 推送锚点：首轮合入 `9f5c804f8`（已推 origin）；跟进批（模型清单锚）在其后合并。
 
 ## 设计文档影响
 

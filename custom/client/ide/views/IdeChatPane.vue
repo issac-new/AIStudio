@@ -751,19 +751,20 @@ async function pickEffort(value: string): Promise<void> {
 // 原Teleport 进 ChatInput .input-top-bar 的宿主机制退役——行内直接渲染无需宿主解析。
 const composerSettingsOpen = ref(false)
 
-// 2026-11-04 走查修复：composer 弹层（思考/⚙）点外关闭＋互斥。文档级 pointerdown
-// （先于 click）：点击落在两锚根之外（含对方触发钮）即全部收起——「点 A 触发钮」
-// 对 B 是点外，pointerdown 先关 B、click 再开 A，互斥无竞态（IdeDevTools 先例）。
+// 2026-11-04 走查修复：composer 弹层（思考/⚙/模型清单）点外关闭＋互斥。文档级
+// pointerdown（先于 click）：点击落在锚根之外（含对方触发钮）即收起——「点 A
+// 触发钮」对 B 是点外，pointerdown 先关 B、click 再开 A，互斥无竞态（IdeDevTools 先例）。
+const COMPOSER_MENU_ROOTS = ['.ide-chat__effort', '.ide-chat__csettings', '.ide-chat__model-anchor'] as const
 function onComposerMenuPointerDown(e: PointerEvent): void {
-  if (!effortOpen.value && !composerSettingsOpen.value) return
+  if (!effortOpen.value && !composerSettingsOpen.value && !modelPickerOpen.value) return
   const target = e.target as Node | null
   if (!target) return
   // 逐菜单判属主：点在谁的锚根内谁保留，其余收起（活体实锤：整组早退会让
   // 「点 A 触发钮」保住已开的 B——两菜单同时开着叠层）。
-  const inEffort = document.querySelector('.ide-chat__effort')?.contains(target) ?? false
-  const inSettings = document.querySelector('.ide-chat__csettings')?.contains(target) ?? false
-  if (!inEffort) effortOpen.value = false
-  if (!inSettings) composerSettingsOpen.value = false
+  const within = COMPOSER_MENU_ROOTS.map(sel => document.querySelector(sel)?.contains(target) ?? false)
+  if (!within[0]) effortOpen.value = false
+  if (!within[1]) composerSettingsOpen.value = false
+  if (!within[2]) modelPickerOpen.value = false
 }
 onMounted(() => document.addEventListener('pointerdown', onComposerMenuPointerDown))
 onUnmounted(() => document.removeEventListener('pointerdown', onComposerMenuPointerDown))
@@ -1092,17 +1093,57 @@ watch(() => chatStore.activeSessionId, syncPermMode)
             @click="toggleComputerUse"
           ><span class="ide-chat__cb-dot" />{{ tx.computerUse }}</button>
           <IdeContextBar />
-          <button
-            type="button"
-            class="ide-chat__cb-btn ide-chat__cb-model"
-            :disabled="modelDisabled"
-            data-testid="ide-composer-model-btn"
-            :title="tx.modelSelect"
-            @click="onModelClick"
-          >
-            <span class="ide-chat__cb-model-label">{{ modelLabel }}</span>
-            <span class="ide-chat__cb-chevron">▾</span>
-          </button>
+          <!-- 2026-11-04 走查修复（模型清单割裂）：清单原挂在大锚（整个输入区）
+               顶部 bottom:100%+right:12px，按钮却在输入区底部左侧——清单飘到
+               右上角离按钮 ~470px（「位置不连续，割裂感太重」）。改挂按钮旁
+               （思考/⚙ 同家族锚定）：锚根 position:relative，清单 left:0 从按钮
+               左缘向上弹；is-open 抬 110 压输入区 z-80。 -->
+          <div class="ide-chat__model-anchor" :class="{ 'is-open': modelPickerOpen }">
+            <button
+              type="button"
+              class="ide-chat__cb-btn ide-chat__cb-model"
+              :disabled="modelDisabled"
+              data-testid="ide-composer-model-btn"
+              :title="tx.modelSelect"
+              @click="onModelClick"
+            >
+              <span class="ide-chat__cb-model-label">{{ modelLabel }}</span>
+              <span class="ide-chat__cb-chevron">▾</span>
+            </button>
+            <div v-if="modelPickerOpen" class="ide-chat__model-picker" data-testid="ide-input-model-picker">
+              <button
+                type="button"
+                class="ide-chat__model-option is-auto"
+                data-testid="ide-input-model-auto"
+                :title="tx.autoTitle"
+                @click="pickAuto"
+              >{{ tx.autoRoute }}</button>
+              <div
+                v-for="group in modelGroupsView"
+                :key="group.provider"
+                class="ide-chat__model-group"
+              >
+                <div class="ide-chat__model-group-title">{{ group.label || group.provider }}</div>
+                <button
+                  v-for="m in group.models"
+                  :key="m.id"
+                  type="button"
+                  class="ide-chat__model-option"
+                  :class="{ 'is-active': m.id === chatStore.activeSession?.model }"
+                  :data-testid="`ide-input-model-${group.provider}-${m.id}`"
+                  @click="pickModel(group.provider, m.id)"
+                >{{ m.id }}</button>
+              </div>
+              <div class="ide-chat__model-manage">
+                <button
+                  type="button"
+                  class="ide-chat__model-managebtn"
+                  data-testid="ide-input-model-manage"
+                  @click="manageOpen = true"
+                >⚙ {{ tx.manageModels }}</button>
+              </div>
+            </div>
+          </div>
           <!-- Ycode 思考档（2026-10-18 用户指令）：档位取 ZCode manifest（经引擎目录
                reasoningLevels 下发），不用 Hermes 的推理强度配置——ChatInput 内置
                控件已禁用并隐藏（reasoning-effort-disabled + :deep 隐藏）。 -->
@@ -1199,39 +1240,6 @@ watch(() => chatStore.activeSessionId, syncPermMode)
                 >{{ toolTraceVisible ? '✓ ' : '' }}{{ labels.toolTrace }}</button>
               </div>
             </div>
-          </div>
-        </div>
-        <div v-if="modelPickerOpen" class="ide-chat__model-picker" data-testid="ide-input-model-picker">
-          <button
-            type="button"
-            class="ide-chat__model-option is-auto"
-            data-testid="ide-input-model-auto"
-            :title="tx.autoTitle"
-            @click="pickAuto"
-          >{{ tx.autoRoute }}</button>
-          <div
-            v-for="group in modelGroupsView"
-            :key="group.provider"
-            class="ide-chat__model-group"
-          >
-            <div class="ide-chat__model-group-title">{{ group.label || group.provider }}</div>
-            <button
-              v-for="m in group.models"
-              :key="m.id"
-              type="button"
-              class="ide-chat__model-option"
-              :class="{ 'is-active': m.id === chatStore.activeSession?.model }"
-              :data-testid="`ide-input-model-${group.provider}-${m.id}`"
-              @click="pickModel(group.provider, m.id)"
-            >{{ m.id }}</button>
-          </div>
-          <div class="ide-chat__model-manage">
-            <button
-              type="button"
-              class="ide-chat__model-managebtn"
-              data-testid="ide-input-model-manage"
-              @click="manageOpen = true"
-            >⚙ {{ tx.manageModels }}</button>
           </div>
         </div>
         <IdeEngineModelsDialog v-if="manageOpen" @close="manageOpen = false" @saved="onManageSaved" />
@@ -1737,10 +1745,20 @@ watch(() => chatStore.activeSessionId, syncPermMode)
 }
 .ide-chat__effort-caret { font-size: 10px; opacity: 0.7; }
 
+/* 模型清单锚根（2026-11-04 走查修复：割裂感）——挂按钮旁，清单从按钮左缘
+ * 向上弹（原挂大锚顶部 right:12px，飘到右上角离按钮 ~470px）。is-open 抬
+ * 110 与思考/⚙/⛨ 同口径（压输入区 z-80）。 */
+.ide-chat__model-anchor {
+  position: relative;
+  display: inline-flex;
+
+  &.is-open { z-index: 110; }
+}
+
 .ide-chat__model-picker {
   position: absolute;
   bottom: calc(100% + 6px);
-  right: 12px;
+  left: 0;
   max-height: 260px;
   overflow-y: auto;
   background: var(--card-color);
