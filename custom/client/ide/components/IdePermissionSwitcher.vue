@@ -8,7 +8,7 @@
 // A2 诚实化保留：档位随任务派发/自动化消费（穿线服务端会话档，随
 // createSession.config.mode 生效）；会话内即时切换需引擎通道（v4 sendText mode
 // 已查实，接线列独立轮）。
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { useIdeStore } from '../store/ide'
 import { authFetch } from '../utils/auth-fetch'
@@ -20,6 +20,19 @@ import {
 const chatStore = useChatStore()
 const ide = useIdeStore()
 const open = ref(false)
+
+// 2026-11-04 走查修复：点外关闭＋与 composer 其他弹层互斥。文档级 pointerdown
+//（先于 click，IdeDevTools/IdeChatPane 同款）：点击落在锚根外（含思考/⚙ 触发钮）
+// 即收起——对面弹层的 pointerdown 亦会关掉本面板，互斥无竞态。
+const permRoot = ref<HTMLElement | null>(null)
+function onPermPointerDown(e: PointerEvent): void {
+  if (!open.value) return
+  const target = e.target as Node | null
+  if (target && permRoot.value?.contains(target)) return
+  open.value = false
+}
+onMounted(() => document.addEventListener('pointerdown', onPermPointerDown))
+onUnmounted(() => document.removeEventListener('pointerdown', onPermPointerDown))
 
 const state = ref<ZcodeModeState>(readZcodeMode(chatStore.activeSessionId))
 const selectedLabel = computed(() => zcodeModeLabel(state.value))
@@ -80,7 +93,7 @@ defineExpose({ cycle })
 </script>
 
 <template>
-  <span class="ide-perm">
+  <span ref="permRoot" class="ide-perm" :class="{ 'is-open': open }">
     <button
       type="button"
       class="ide-perm__trigger"
@@ -144,6 +157,9 @@ defineExpose({ cycle })
 
 <style scoped lang="scss">
 .ide-perm { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+/* 2026-11-04 走查修复：面板开启时锚根抬到输入区（ChatInput z-80）之上（口径 110，
+ * 同 IdeChatPane 思考/⚙ 菜单与状态栏面板批）；面板 z-40 本身不动，靠锚根抬层带出。 */
+.ide-perm.is-open { z-index: 110; }
 .ide-perm__trigger:hover { border-color: var(--primary-color); color: var(--primary-color); }
 .ide-perm__trigger:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
 .ide-perm__trigger {

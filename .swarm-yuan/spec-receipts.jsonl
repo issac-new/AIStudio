@@ -157,3 +157,4 @@
 {"at":"2026-11-04T01:38:59Z","spec":"docs/superpowers/specs/2026-11-04-ledger-clearance.md","receipt":"304f3ce923337314d08747eedc6c6319c4548850","commit":"4d5cf118d"}
 {"at":"2026-11-04T04:47:03Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-project-workflow.md","receipt":"44e84f277d3f9e0b16b0f37dc44fa1e435d2c37d","commit":"2a01090e7"}
 {"at":"2026-11-04T04:48:05Z","spec":"docs/superpowers/specs/2026-11-04-ide-workspace-bugs.md","receipt":"80a2f4257f41b8cdd94982fb830fb8d3fa3ad807","commit":"2a01090e7"}
+{"at":"2026-11-04T05:22:12Z","spec":"docs/superpowers/specs/2026-11-04-composer-popups.md","receipt":"b07239bcdab14fda732a953d135325d39d1232b2","commit":"76170b420"}
