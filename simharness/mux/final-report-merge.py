@@ -10,6 +10,7 @@
 # 红线：一切数字自 issues.log / state.env 实测统计注入占位标记（{{...}}），取不到留 ⬜
 # 不编造；PART 1 措辞与处置终态核对一致（已修项不得写「待修」）。
 import argparse
+import datetime
 import html
 import json
 import importlib.util
@@ -735,9 +736,63 @@ def jargon_gate(human_text: str):
     return hits
 
 
+_GATE_LABELS = (
+    ('g1_frozen', 'G1 需求冻结'),
+    ('g2_arch_pass', 'G2 架构评审'),
+    ('g3_code_pass', 'G3 编码门'),
+    ('g4_pass', 'G4 独立验证'),
+    ('g5_ready', 'G5 发布准出'),
+    ('report_done', '报告完结'),
+)
+
+
+def _fmt_hhmm(ts: str) -> str:
+    try:
+        return datetime.datetime.fromtimestamp(int(ts)).strftime('%m-%d %H:%M')
+    except (TypeError, ValueError):
+        return '⬜'
+
+
+def auto_part1(run: str, run_dir: Path, evid: Path) -> str:
+    """按本轮实测数据起草一页读懂（数据真实、来源标签明示、不产出占位符）。
+
+    2026-11-04 run26 复盘：PART1 是逐轮人工正本（run13 闸：禁旧轮冒充、禁占位符），
+    但「未注册」在合并步才报错——run26 因此白等 58 分钟（报告审计环转完才撞到）。
+    自动草稿把闸的事实基线直接写出来（六闸时刻/总时长/问题单计数），人工只需润色，
+    不再从零补。
+    """
+    import datetime
+    st = load_state(run_dir)
+    rows = []
+    for key, label in _GATE_LABELS:
+        if st.get(key):
+            rows.append(f'{label} {_fmt_hhmm(st[key])}')
+    start = st.get('run_started_at') or st.get('g1_frozen')
+    end = st.get('report_done')
+    dur = '⬜'
+    if start and end:
+        try:
+            mins = (int(end) - int(start)) // 60
+            dur = f'{mins // 60} 小时 {mins % 60} 分'
+        except ValueError:
+            pass
+    n_issue, n_keys, n_disp = count_issues(evid)
+    gates = '；'.join(rows) if rows else '⬜（state.env 无可读闸键）'
+    return (
+        '<div class="card hero"><h2>'
+        f'{run.split("-")[-1]} 一页读懂（自动起草·待人工润色）</h2>'
+        f'<p>本轮共 {dur}（{_fmt_hhmm(start or "")} → {_fmt_hhmm(end or "")}），'
+        f'闸门时刻：{gates}。'
+        f'问题单记录 {n_issue} 条（唯一键 {n_keys}，处置回写 {n_disp} 条）。'
+        '本卡由收尾链按 state.env 与 issues.log 实测数据自动起草，只陈述可核事实；'
+        '叙事与取舍请人工复核后改写（自动起草事件已登记 part1-auto-draft 问题单）。</p></div>'
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(description='最终报告双层正本合并器')
     ap.add_argument('--run', required=True, help='RUN_ID（runs/ 目录名）')
+    ap.add_argument('--auto-part1', action='store_true', help='本轮未注册 PART1 时按实测数据自动起草（落 part1-auto-draft 问题单，人工可润色）')
     args = ap.parse_args()
 
     run_dir = SIM_ROOT / 'runs' / args.run
@@ -814,10 +869,17 @@ def main():
     gen_time = datetime.datetime.now().strftime('%H:%M')
     part1_tmpl = PART1_BY_RUN.get(args.run)
     if part1_tmpl is None:
-        raise SystemExit(
-            '[final-report-merge] 无该轮说人话叙事: ' + args.run
-            + '（已知: ' + ', '.join(sorted(PART1_BY_RUN))
-            + '）——PART 1 为逐轮人工正本，禁旧轮冒充；请按本轮实测依据编写后注册 PART1_BY_RUN')
+        if not args.auto_part1:
+            raise SystemExit(
+                '[final-report-merge] 无该轮说人话叙事: ' + args.run
+                + '（已知: ' + ', '.join(sorted(PART1_BY_RUN))
+                + '）——PART 1 为逐轮人工正本，禁旧轮冒充；请按本轮实测依据编写后注册 PART1_BY_RUN，'
+                '或显式加 --auto-part1 走实测数据自动草稿')
+        part1_tmpl = auto_part1(args.run, run_dir, evid)
+        _ev = evid / 'issues.log'
+        with _ev.open('a', encoding='utf-8') as _fh:
+            _fh.write('ISSUE|part1-auto-draft|director|本轮 PART1 未注册，合并器按实测时间线自动起草一页读懂（数据真实、待人工润色；run26 复盘：原闸在合并步才报错白等 58min）\n')
+        print('[final-report-merge] PART1 未注册——已按实测数据自动起草并登记 part1-auto-draft')
     # run13 复盘 A1/F-P1 闸：PART1 占位符残留拒出——【收尾链回填/【TODO 类占位出厂=导读层
     # 核心结论卡空转（两卡带占位交付）。占位符必须在收尾链回填后才许合并。
     import re as _re_ph

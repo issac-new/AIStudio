@@ -1095,3 +1095,7 @@
 #      单一判定点，可被无 agent/无 provider 的行为测试直调（run25 教训：382 条
 #      标记断言全绿仍连炸 3 个机制缺陷，因为测的是"代码在不在"）。
 729-agent-recovery-kwargs-pure.patch
+# 730（2026-11-04 run26 复盘）：派单器 stuck 告警分流——容量饱和（per-profile cap）
+#      与真卡死分开措辞，并把拒绝原因并进告警。run26 35 次误报把值守引向 venv/PATH
+#      错方向，真因是一名 agent 会话楔死——告警要自带现场。
+730-agent-dispatcher-stuck-diagnosis.patch

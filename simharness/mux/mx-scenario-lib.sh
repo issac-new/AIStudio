@@ -511,6 +511,114 @@ mx_nudge_dm_once() { # <agent> <desc> <text> → 第二次起群催办外加 DM 
   return 0
 }
 
+# ── 责任人安静判定＋失联自动唤醒（2026-11-04 run26 复盘批）──────────
+# run26 实测：G2 修订稿 01:18 已落 origin/main，但被退回者没 @ 复评人，arch 从
+# 未收到触发，闸空等 81 分钟；testpass 汇总责任人 qi 会话楔死，群催 2 次＋DM 3
+# 次零回合，又耗 61 分钟。两处合计 142 分钟＝该轮可避免损耗的七成。
+# 等待方只看得见「判词没来」，看不见「对方没在干活」——本组把「安静」变可见，
+# 并在安静超阈值时以**新任务书**形态重派（run24/run26 双实例：新派单起回合，
+# 催办不起）。
+mx_owner_last_ts() { # <room> <mxid> → 责任人最后发言 epoch 秒（0=无记录）
+  local _room="$1" _mxid="$2" _tok _ts
+  _tok="$(load_token fanfan 2>/dev/null || true)"
+  [[ -n "$_room" && -n "$_mxid" && -n "$_tok" ]] || { echo 0; return 0; }
+  _ts="$(mx_messages "$_tok" "$_room" 80 2>/dev/null \
+    | jq -r --arg s "$_mxid" '[.[] | select(.sender == $s) | (.origin_server_ts // 0)] | max // 0' 2>/dev/null || echo 0)"
+  [[ "$_ts" =~ ^[0-9]+$ ]] || _ts=0
+  echo $(( _ts / 1000 ))
+}
+
+mx_wait_revive() { # <desc> <timeout> <room> <owner-mxid> <owner> <revive-text> -- <predicate...>
+  # 语义：等判词；责任人安静 ≥MX_REVIVE_QUIET（默认 420s）且距上次唤醒
+  # ≥MX_REVIVE_IVAL（默认 600s）且次数 <MX_REVIVE_MAX（默认 3）时，以新任务书形态
+  # 重派一次（群内 mention＋DM 直达）。每次唤醒落 ISSUE 留痕。判词到达返 0；窗满返 1。
+  local desc="$1" timeout="$2" room="$3" owner_mxid="$4" owner="$5" revive_text="$6"; shift 6
+  [[ "${1:-}" == "--" ]] && shift
+  local _deadline=$(( $(date +%s) + timeout ))
+  local _last_revive=0 _tries=0 _quiet _last _now _since _tok _eid
+  local _q_thr="${MX_REVIVE_QUIET:-420}" _iv="${MX_REVIVE_IVAL:-600}" _max="${MX_REVIVE_MAX:-3}"
+  _since=$(date +%s)
+  note "[真值] 等「${desc}」——失联自动唤醒已挂（安静阈值 ${_q_thr}s／间隔 ${_iv}s／上限 ${_max} 次）"
+  while (( $(date +%s) < _deadline )); do
+    [[ -n "${SCAN_ROOM:-}" ]] && auto_approve "$SCAN_ROOM" || true
+    [[ -n "${MX_TICK_FN:-}" ]] && "$MX_TICK_FN" || true
+    if mx_wait_eval "$@"; then note "[真值] $desc ✓"; return 0; fi
+    if (( _tries < _max )); then
+      _now=$(date +%s)
+      _last="$(mx_owner_last_ts "$room" "$owner_mxid")"
+      if (( _last > 0 )); then _quiet=$(( _now - _last )); else _quiet=$(( _now - _since )); fi
+      if (( _quiet >= _q_thr && (_last_revive == 0 || _now - _last_revive >= _iv) )); then
+        _tries=$(( _tries + 1 )); _last_revive=$_now
+        echo "ISSUE|wait-revive|${owner}|「${desc}」责任人安静 ${_quiet}s，第 ${_tries} 次新任务书唤醒（run26 复盘：失联靠新派单唤醒，催办无效）" >> "$EVID_DIR/issues.log"
+        note "[观察] 「${desc}」责任人 ${owner} 安静 ${_quiet}s——第 ${_tries}/${_max} 次新任务书唤醒"
+        _tok="$(load_token fanfan 2>/dev/null || true)"
+        if [[ -n "$_tok" && -n "$room" ]]; then
+          mx_send "$_tok" "$room" "$revive_text" "$owner_mxid" >/dev/null 2>&1 || true
+        fi
+        if [[ -n "$_tok" && -n "$owner_mxid" ]]; then
+          _eid="$(mx_dm_send "$_tok" "$owner_mxid" "$revive_text")"
+        else
+          _eid="SEND-FAILED"
+        fi
+        note "[观察] 唤醒 DM →${owner}：${_eid:-SEND-FAILED}"
+      fi
+    fi
+    sleep "$MX_POLL_IVAL"
+  done
+  mx_wait_eval "$@" && { note "[真值] $desc ✓（窗口超时终态复核）"; return 0; }
+  return 1
+}
+
+# ── R18 必采采集的「不静默」包装＋步末机械核验（2026-11-04 run26 复盘批）──
+# run26 实锤：步 19 对话采集挂了 `|| true`，失败被吞，5 小时后才在报告审计环
+# 暴露（又转 5 轮）；步 7 环节效果则压根没有采集调用。采集纪律的检查点应落在
+# 发生处：本组把「采集失败/无锚」立即落 ISSUE，并用 r18_matrix.step_ok（与审计器
+# 同一事实源）在步末复判一次。
+r18_dialog_step() { # <script-dir> <step> <marker|空> <title>
+  local _sd="$1" _st="$2" _mk="$3" _ti="$4" _anchor _room _tok
+  _room="$(sget room_analysis 2>/dev/null || true)"
+  _anchor="$(marker_eventid "$_mk")"
+  if [[ -z "$_anchor" && -n "$_room" ]]; then
+    _tok="$(load_token fanfan 2>/dev/null || true)"
+    _anchor="$(mx_messages "$_tok" "$_room" 20 2>/dev/null | jq -r '[.[].event_id][-1] // empty' 2>/dev/null || true)"
+  fi
+  if [[ -z "$_anchor" || -z "$_room" ]]; then
+    echo "ISSUE|r18-collect-failed|step${_st}|对话全文采集无锚（marker 与房间均不可用）——报告审计环将缺该步" >> "${EVID_DIR}/issues.log"
+    return 0
+  fi
+  if ! python3 "$_sd/mux/r18-collect.py" --run "${RUN_ID}" dialog --step "$_st" --room "$_room" --anchor "$_anchor" --title "$_ti" --user fanfan >/dev/null 2>&1; then
+    echo "ISSUE|r18-collect-failed|step${_st}|对话全文采集失败（anchor=${_anchor}）——报告审计环将缺该步" >> "${EVID_DIR}/issues.log"
+  fi
+  return 0
+}
+
+r18_guard() { # <step>：必采步未达标当场登记（与审计器同判据 r18_matrix.step_ok）
+  local _st="$1" _miss _md
+  # 矩阵目录解析序（bash -c 抽取式测试里 BASH_SOURCE 为空）：显式 env → 本文件目录 → SCRIPT_DIR
+  _md="${R18_MATRIX_DIR:-}"
+  if [[ -z "$_md" ]]; then
+    if [[ -n "${BASH_SOURCE[0]:-}" ]]; then _md="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; else _md="${SCRIPT_DIR:-$PWD}"; fi
+  fi
+  _miss="$(python3 - "$_st" "${EVID_DIR}/r18-steps.json" "$_md" <<'PY' 2>/dev/null || true
+import json, sys
+step, payload_path, here = sys.argv[1], sys.argv[2], sys.argv[3]
+sys.path.insert(0, here)
+from r18_matrix import step_ok
+try:
+    payload = (json.load(open(payload_path, encoding='utf-8')).get('steps') or {}).get(step)
+except Exception:
+    payload = None
+ok = step_ok(int(step), payload)
+print('' if ok is not False else 'missing')
+PY
+)"
+  if [[ -n "$_miss" ]]; then
+    echo "ISSUE|r18-required-missing|step${_st}|必采证据未达标（r18_matrix.step_ok=false）——已在步内登记，勿等报告审计环发现" >> "${EVID_DIR}/issues.log"
+    note "[采集] 步 ${_st} 必采证据未达标——已登记 r18-required-missing（r18_guard）"
+  fi
+  return 0
+}
+
 # approved.events 台账（边界设计 §2/§6-T4，eid 锚点约定）：每行
 #   <请求event_id> <回执event_id|NO_REPLY> <人类账号> <unix时间戳>
 # 事件 id 即 Matrix ${event_id}（跨机 eid 全局锚点）；去重按行首请求 id 前缀匹配。
@@ -1339,10 +1447,21 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       _hbag+=("$a")
     fi
   done
+  # SIM 单网关拓扑补强（2026-11-04 run26 复盘根治）：多路复用下 profiles/<agent>/logs/
+  # agent.log 并不存在（profiles 下只有 curator/process-results 等），原逻辑退化为纯硬窗
+  # →「判死/催办/早判」整条链失效——run26 qi 报告卡死 61 分钟，驱动只按半窗轻推一次，
+  # 全程不知道对方零回合。改为：无分档案日志时用「房间发言活性」判活（见 _room_alive 分支，
+  # 由 mx_owner_last_ts 供数），保留硬窗兜底与终态复核。
+  local _room_alive=0
   if (( ${#logs[@]} == 0 && ${#_hbag[@]} == 0 )); then
-    note "[观察] wait_alive_truth 无日志面可观测（agents=$agents HERMES_ROOT=${HERMES_ROOT:-未设}），退化为 ${hard}s 硬窗"
-    wait_truth "$desc" "$hard" "$@"
-    return
+    if [[ -n "${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}" ]]; then
+      _room_alive=1
+      note "[观察] wait_alive_truth 分档案日志缺席（SIM 多路复用拓扑）——改走房间发言活性判活（agents=$agents），硬窗 ${hard}s 兜底"
+    else
+      note "[观察] wait_alive_truth 无日志面也无房间（agents=$agents HERMES_ROOT=${HERMES_ROOT:-未设}），退化为 ${hard}s 硬窗"
+      wait_truth "$desc" "$hard" "$@"
+      return
+    fi
   fi
   # 三机补强（mx-hb）：远程档案判活走心跳面；不可达→硬窗，绝不假判死
   local _hb_on=0 _hb_miss=0
@@ -1375,6 +1494,14 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
       w=$(_agent_log_last_work_ts "$a")
       (( w > cur_work )) && cur_work=$w
     done
+    if (( _room_alive == 1 )); then
+      local _ra_room _ra_ts
+      _ra_room="${SCAN_ROOM:-$(sget room_analysis 2>/dev/null || true)}"
+      for a in ${agents//,/ }; do
+        _ra_ts="$(mx_owner_last_ts "$_ra_room" "$(agent_mxid "$a" 2>/dev/null || true)")"
+        (( _ra_ts > cur_work )) && cur_work=$_ra_ts
+      done
+    fi
     if (( _hb_on == 1 )); then
       if hb_refresh_cache 2>/dev/null && hb_all_ok "${_hbag[@]}"; then
         _hb_miss=0

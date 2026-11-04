@@ -522,6 +522,7 @@
 | 2026-11-03-four-gap-capabilities | 四性四格能力：姿态准入／AC 追溯／阶段交接键／审阅独立性 | posture 由只读对账升级为可拦判据（report/require-for-gate/strict）；AC→用例→运行结果追溯（unbound/no-result/failed 三分）；四把阶段键入口校验（结构/产物/哈希/提交锚点）；模型指纹三态＋require-for-verified 共模降级；四件默认 report 零行为变化，新增 48 断言 |
 | 2026-11-03-aistudio-comprehensive-training-manual | AIStudio 全量功能盘点与培训手册完善 | 主手册分层扩展＋全量功能清单＋管理员运维参考＋设计导读与全量 spec 可点击索引；明确写读/模拟/外部依赖/未接线、日常与 SIM 验收差异、默认安全配置和两件发布资产政策 |
 | 2026-11-03-vendor-upgrade-agent-v0226 | vendor 基线升级：hermes-agent v0.22.5 → v0.22.6 | 整树替换 bf0203a794→f0d94882e（3482 提交/4316 文件）；agent 面补丁新基线重放对账（失配三型处置）；VENDOR.md 台账同批；run26 前置 |
+| 2026-11-04-run26-retro-hardening | run26 全面复盘根治：复评触发/失联唤醒/采集前移/PART1 自动草稿/N04 探针接线 | 时间账本三段损耗 187min 逐段归因；G2 修订落仓即驱动直派复评＋mx_wait_revive 失联新派单唤醒；R18 必采 step_ok 步内核验；TEST 派单词注入契约用例清单；--auto-part1 实测草稿；load-probe 接线；补丁 730 告警分流 |
 | 2026-11-03-runtime-deps-refresh | 运行时第三方组件及 skill 台账刷新 | zcode 基线同步 3.17.1→3.17.2（a9fe401e，8 补丁重放零失败，缓存树同批治理）；exa-mcp-server 3.4.1→3.4.3（patch 396 重生成）；semantica/pua/hermes-agent/ekko-studio 四面上游核对无更新；§C 版本表模块行旧值清偿 |
 | 2026-11-04-runtime-rebase-v0226 | runtime 覆盖层重灌 v0.22.6 基底＋optional-mcps 部署链补位 | 16 件重灌（4 镜像+12 三向，11 冲突块手解并集/去重/保留三型）；manifest 52→54 条（exa/semantica catalog 部署链补位）；拼合树 94 用例全绿；宿主 --force 换血+网关重启生效 |
 

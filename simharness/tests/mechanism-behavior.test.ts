@@ -228,3 +228,102 @@ describe('闸门耗时台账 mx-gate-timing', () => {
     ].join('\n'), 'utf8')
   })
 })
+// ── 6) 失联唤醒与采集不静默（2026-11-04 run26 复盘批）：行为断言，不测 marker
+describe('run26 复盘批：失联唤醒／采集核验', () => {
+  const libSrc = readFileSync(join(MX, 'mx-scenario-lib.sh'), 'utf8')
+  const extract = (name: string) => {
+    const start = libSrc.indexOf(`${name}()`)
+    expect(start, `${name} 不在 mx-scenario-lib.sh`).toBeGreaterThan(-1)
+    // 取到下一个顶层函数定义（行首非空注释块后的 `xxx()`）为止
+    const rest = libSrc.slice(start)
+    const next = rest.slice(1).search(/\n[a-zA-Z_][a-zA-Z0-9_]*\(\) \{/)
+    return next === -1 ? rest : rest.slice(0, next + 1)
+  }
+
+  it('判词立即到达时 mx_wait_revive 不做任何唤醒（零打扰）', () => {
+    const script = `
+set -u
+note() { echo "NOTE $*"; }
+mx_wait_eval() { return 0; }
+mx_owner_last_ts() { echo 0; }
+mx_send() { echo "SHOULD-NOT-SEND"; }
+mx_dm_send() { echo "SHOULD-NOT-DM"; }
+EVID_DIR=$(mktemp -d)
+MX_POLL_IVAL=0.1
+${extract('mx_wait_revive')}
+mx_wait_revive "判词" 5 "" "" owner "唤醒词" -- true && echo RESULT-PASS
+grep -c wait-revive "$EVID_DIR/issues.log" 2>/dev/null || echo 0`
+    const out = bash(script)
+    expect(out).toContain('RESULT-PASS')
+    expect(out).not.toContain('SHOULD-NOT')
+    expect(out.trim().endsWith('0')).toBe(true)
+  })
+
+  it('责任人安静超阈且判词未到＝以新任务书唤醒并落 ISSUE（run26 两案例的同一判据）', () => {
+    const script = `
+set -u
+note() { :; }
+mx_wait_eval() { return 1; }
+mx_owner_last_ts() { echo 1; }
+load_token() { echo TOKEN; }
+mx_send() { echo "GROUP-SENT" >> "$EVID_DIR/sends.log"; }
+mx_dm_send() { echo "DM-SENT" >> "$EVID_DIR/sends.log"; }
+EVID_DIR=$(mktemp -d)
+MX_POLL_IVAL=0.1
+MX_REVIVE_QUIET=1
+MX_REVIVE_IVAL=1
+MX_REVIVE_MAX=1
+${extract('mx_wait_revive')}
+mx_wait_revive "判词" 2 "!room:x" "@owner:x" owner "唤醒词" -- false || echo RESULT-TIMEOUT
+echo "SENDS:$(cat "$EVID_DIR/sends.log" 2>/dev/null | tr '\n' ',')"
+echo "REVIVES:$(grep -c 'wait-revive' "$EVID_DIR/issues.log" 2>/dev/null || echo 0)"`
+    const out = bash(script)
+    expect(out).toContain('SENDS:GROUP-SENT,DM-SENT,')
+    expect(out).toContain('RESULT-TIMEOUT')
+    expect(out).toContain('REVIVES:1')
+  })
+
+  it('r18_guard 用 r18_matrix 同判据：缺必采件即落 ISSUE，齐备即静默', () => {
+    const evid = join(TMP, 'r18')
+    mkdirSync(evid, { recursive: true })
+    const missing = join(evid, 'missing.json')
+    writeFileSync(missing, JSON.stringify({ steps: { '7': { ops: [] } } }), 'utf8')
+    const full = join(evid, 'full.json')
+    writeFileSync(full, JSON.stringify({ steps: { '7': { effect: [{ text: 'x', evidence: ['a'] }] } } }), 'utf8')
+    const run = (payload: string) => bash(`
+set -u
+note() { :; }
+EVID_DIR=${JSON.stringify(evid)}
+R18_MATRIX_DIR=${JSON.stringify(MX)}
+${extract('r18_guard')}
+cp ${JSON.stringify(payload)} "$EVID_DIR/r18-steps.json"
+r18_guard 7
+grep -c 'r18-required-missing' "$EVID_DIR/issues.log" 2>/dev/null || echo 0`)
+    expect(run(missing).trim()).toBe('1')
+    const second = run(full)
+    expect(second.trim().split('\n').pop()).toBe('1')  // issues.log 累积，第二次不再新增
+  })
+
+  it('合并器 --auto-part1：按实测时间线起草且不产出占位符（run13 闸兼容）', () => {
+    const runDir = join(TMP, 'runs/20260101-v8-runX')
+    mkdirSync(join(runDir, 'evidence'), { recursive: true })
+    writeFileSync(join(runDir, 'state.env'),
+      'run_started_at=1000000000\ng1_frozen=1000000100\ng2_arch_pass=1000005000\nreport_done=1000030000\n', 'utf8')
+    writeFileSync(join(runDir, 'evidence/issues.log'), 'ISSUE|a|b|x\nDISP|x|y|z\n', 'utf8')
+    // 组合器要求机器报告先存在——只为取 auto_part1 文本，直接 import 函数
+    const out = bash(`
+AIPAY_SIM_ROOT=${JSON.stringify(join(TMP, 'runs'))} python3 -I -c '
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("frm", ${JSON.stringify(join(MX, 'final-report-merge.py'))})
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+from pathlib import Path
+html = m.auto_part1("20260101-v8-runX", Path(${JSON.stringify(runDir)}), Path(${JSON.stringify(join(runDir, 'evidence'))}))
+print(html)
+print("HAS_PLACEHOLDER", "【TODO" in html or "【收尾链回填" in html)
+print("HAS_GATES", "G2 架构评审" in html)
+'`)
+    expect(out).toContain('HAS_PLACEHOLDER False')
+    expect(out).toContain('HAS_GATES True')
+    expect(out).toContain('自动起草')
+  })
+})
