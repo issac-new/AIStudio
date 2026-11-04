@@ -54,5 +54,8 @@ export function bindTeardownToSuite(
   scope: TeardownScope,
   afterAllHook: (fn: () => void | Promise<void>) => void,
 ): void {
-  afterAllHook(() => scope.run())
+  // 钩子签名只收 void：run() 的结果内部已落账（failures 不抛），此处仅等待完成
+  afterAllHook(async () => {
+    await scope.run()
+  })
 }
