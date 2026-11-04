@@ -750,6 +750,23 @@ async function pickEffort(value: string): Promise<void> {
 // 事实源）。本批（e0a3c301）把 ⚙ 按钮收进 composer 工具条行（ZCode 对齐五控件同排），
 // 原Teleport 进 ChatInput .input-top-bar 的宿主机制退役——行内直接渲染无需宿主解析。
 const composerSettingsOpen = ref(false)
+
+// 2026-11-04 走查修复：composer 弹层（思考/⚙）点外关闭＋互斥。文档级 pointerdown
+// （先于 click）：点击落在两锚根之外（含对方触发钮）即全部收起——「点 A 触发钮」
+// 对 B 是点外，pointerdown 先关 B、click 再开 A，互斥无竞态（IdeDevTools 先例）。
+function onComposerMenuPointerDown(e: PointerEvent): void {
+  if (!effortOpen.value && !composerSettingsOpen.value) return
+  const target = e.target as Node | null
+  if (!target) return
+  // 逐菜单判属主：点在谁的锚根内谁保留，其余收起（活体实锤：整组早退会让
+  // 「点 A 触发钮」保住已开的 B——两菜单同时开着叠层）。
+  const inEffort = document.querySelector('.ide-chat__effort')?.contains(target) ?? false
+  const inSettings = document.querySelector('.ide-chat__csettings')?.contains(target) ?? false
+  if (!inEffort) effortOpen.value = false
+  if (!inSettings) composerSettingsOpen.value = false
+}
+onMounted(() => document.addEventListener('pointerdown', onComposerMenuPointerDown))
+onUnmounted(() => document.removeEventListener('pointerdown', onComposerMenuPointerDown))
 // 模式=ZCode 四档形态（2026-10-18 锚定校正轮）：Plan 勾选 + build/guarded/yolo 三单选
 // （目录/描述/色语义锚 upstream/zcode v3.16.1 ZCODE_AGENT_MODE_OPTIONS + 
 // V4ComposerModeControls）；存储与派生经 utils/zcodeModes（派生七档写旧键，
@@ -1089,7 +1106,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
           <!-- Ycode 思考档（2026-10-18 用户指令）：档位取 ZCode manifest（经引擎目录
                reasoningLevels 下发），不用 Hermes 的推理强度配置——ChatInput 内置
                控件已禁用并隐藏（reasoning-effort-disabled + :deep 隐藏）。 -->
-          <div v-if="effortLevels.length > 0" class="ide-chat__effort" data-testid="ide-effort">
+          <div v-if="effortLevels.length > 0" class="ide-chat__effort" :class="{ 'is-open': effortOpen }" data-testid="ide-effort">
             <button
               type="button"
               class="ide-chat__effort-btn"
@@ -1117,7 +1134,7 @@ watch(() => chatStore.activeSessionId, syncPermMode)
           </div>
           <!-- composer 设置菜单（zcode 对照：模式/模型就地可调；bee7c5e4）——收进
                composer 工具条行（原 Teleport 宿主/is-floating 回落随并位退役）。 -->
-          <div class="ide-chat__csettings" data-testid="ide-composer-settings">
+          <div class="ide-chat__csettings" :class="{ 'is-open': composerSettingsOpen }" data-testid="ide-composer-settings">
             <button
               type="button"
               class="ide-chat__effort-btn ide-chat__csettings-btn"
@@ -1662,6 +1679,14 @@ watch(() => chatStore.activeSessionId, syncPermMode)
   display: inline-flex;
   align-items: center;
   z-index: 20;
+}
+
+/* 2026-11-04 走查修复：弹层开启时锚根抬到输入区（ChatInput z-80）之上——
+ * 菜单向上弹进输入区地盘，z-20/30 会被输入区整片盖住（可见残缺+点击落空）。
+ * 110 口径同状态栏面板（压过 z-80 输入区与 z-100 分割条加宽命中域）。 */
+.ide-chat__effort.is-open,
+.ide-chat__csettings.is-open {
+  z-index: 110;
 }
 .ide-chat__csettings-menu {
   position: absolute;
