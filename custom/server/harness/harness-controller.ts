@@ -49,7 +49,7 @@ import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from 
 import { PROFILE_PRESETS, presetsValid, routeTaskProfile, type TaskFacts } from '../goalbudget/task-router'
 import { handoffRoutes } from '../handoff/handoff-controller'
 import { workbenchRoutes } from './workbench/controller'
-import { fail } from '../lib/http'
+import { fail , ok } from '../lib/http'
 // 融合批四（D7）：启动器上移 simcenter（推演运行域）；路由前缀冻结——本域只保留装配位。
 import { simLaunchRoutes } from '../simcenter/sim-launch'
 // 长程任务可信执行层（2026-10-22）：逐条主张审计、完成态双准入、完整性栅栏、原子断点。
@@ -167,12 +167,12 @@ router.get('/execution-join', async (ctx) => {
     }
     const days = Number(q.days)
     const limit = Number(q.limit)
-    ctx.body = await executionJoin({
+    ok(ctx, await executionJoin({
       runId, taskId,
       board: typeof q.board === 'string' && q.board ? q.board : undefined,
       days: Number.isFinite(days) ? days : undefined,
       limit: Number.isFinite(limit) ? limit : undefined,
-    })
+    }))
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
