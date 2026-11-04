@@ -52,10 +52,10 @@ export function createTeardownScope(label = 'teardown'): TeardownScope {
  */
 export function bindTeardownToSuite(
   scope: TeardownScope,
-  afterAllHook: (fn: () => void | Promise<void>) => void,
+  // 返回 any 是边界适配的刻意选择：需同时双向兼容 void 型钩子注册器（vitest
+  // afterAll）与取值型收集器（测试直接 await 钩子函数拿 TeardownResult，显式
+  // 绑定契约）。收窄成 void|Promise<void> 会把带值 Promise 判 TS2322。
+  afterAllHook: (fn: () => any) => void,
 ): void {
-  // 钩子签名只收 void：run() 的结果内部已落账（failures 不抛），此处仅等待完成
-  afterAllHook(async () => {
-    await scope.run()
-  })
+  afterAllHook(() => scope.run())
 }
