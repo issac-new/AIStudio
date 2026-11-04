@@ -38,6 +38,7 @@ SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Users/cuishi/lab/ncwk-sim-
 # N13 语义判据（2026-11-04）：面包屑＝页面身份，关键词命中可能只是侧栏字样的假阳性。
 # 有 crumb 的键必须同时命中面包屑（去空白后比对），确保「拍的是这一步该在的页面」。
 _FRAME_TAB = {
+ 'capture-precheck':'流程总览',
  'smoke_done':'账号','appinit_done':'文档评审','people_done':'组织','login_done':'账号',
  'g1_frozen':'质量门 G1','dispatch_done':'任务分解','register_done':'任务分解',
  'analysis_done':'G2 系统分析','anexec_done':'G2 系统分析','review_done':'G2 系统分析',
@@ -48,6 +49,8 @@ _FRAME_TAB = {
  'retro_done':'度量检查',
 }
 EXPECT = {
+    # 启动自检帧（开跑前采集链自检，非 26 步之一）：证明登录态与总览已装载。
+    'capture-precheck': {'want': [], 'title': '启动自检帧（登录/总览装载，页面身份=流程总览）'},
     'smoke_done':    {'want': ['流程总览', '环境准备', 'AIStudio'], 'title': '首页/流程总览'},
     'appinit_done':  {'want': ['应用资产', '治理', '文档评审'], 'title': '⑥治理·文档评审'},
     'people_done':   {'want': ['组织', '角色', '权限'], 'title': '①搭建·组织与团队'},
@@ -157,7 +160,7 @@ def main() -> int:
             text = norm(ocr(frame, tmp))
             hit = [w for w in exp['want'] if w in text]
             empties = [m for m in EMPTY_MARKERS if m in text]
-            ok = bool(hit) and not empties
+            ok = (bool(hit) or not exp['want']) and not empties
             why = ''
             _tab = _FRAME_TAB.get(key)
             if _tab:
@@ -174,7 +177,7 @@ def main() -> int:
                 elif _tab.replace(' ', '') not in text:
                     ok = False
                     why = (why + '；' if why else '') + f'页面身份未证（无 sidecar 且 OCR 未见「{_tab}」）'
-            if not hit:
+            if exp['want'] and not hit:
                 why = '未命中期望词 ' + '/'.join(exp['want'])
             if empties:
                 why = (why + '；' if why else '') + '空白态：' + '/'.join(empties)

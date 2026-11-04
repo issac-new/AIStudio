@@ -5089,7 +5089,9 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
                 except OSError:
                     pass
                 _row_fv = _FRAME_VERIFY.get(pre.split('-op')[0])
-                _is_bad = (_row_fv is not None and not _row_fv.get('ok')) or pre in _FRAME_DUP
+                # 跨步同图不再是「坏帧」（N13 定谳：同页签多步是事实），只按核验结果判坏；
+                # 跨步/前后同图以徽章标注，不藏证据。
+                _is_bad = _row_fv is not None and not _row_fv.get('ok')
                 # 同图跨步（同一页签的多步）：只由最前步嵌图，后续步注明「共用该帧」——
                 # 既不做重复填充，也不谎称各有独立实拍（N13 采集面盘点产物）。
                 _k_pre = pre.split('-op')[0]

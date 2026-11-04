@@ -30,7 +30,9 @@
    - **一处产品态未驱动（已改）**：`plan_done` 排期页数据源=看板 `status=scheduled`，驱动此前只写 tasklist → 拍前建/复用「排期基线」信息卡并 `kanban schedule`（不派单，不影响 devimpl）。
    - **判据升级**：核验从「OCR 关键词」升为「**页面身份**」——拍摄时写 `<step>-op1-meta.json`（`document.title`＋hash，源码 stage-shell 设定 `阶段 · 页签 - AIStudio`），核验以 title 是否含该步页签为准，关键词仅作辅助；无 sidecar 时回落 OCR。这样「拍错页」不再靠侧栏字样蒙混。
    - **同页签多步共用帧**：11/14 都在 G2 系统分析、18/25 都在 IDE、1/3 都在账号——字节相同但页面身份一致＝事实同一界面，审计按 title 判为「同页签共用」黄标，不再误判假重复；页内前后同图另由 `frame-no-visible-change` 标注。
-   - **实测**：run26 全部 30 个拍摄位按新面重拍后，核验 **31/32 通过**（原 20/32），唯一残留 `mp_runtime_proof` 属真缺件（DEV-MP 合入被 revert）。报告双正本重生成，审计四查全过。
+   - **文件域帧（本批补面）**：capture-plan 的 `file:<path>` 拍摄位（小程序 runtime-proof 首帧等产物图）此前驱动从不拷贝 → 永远缺帧。已在 `capture_step` 实现：从中央仓检出目录拷贝 before/after 并写 meta（`文件域帧：<path>`），源缺席落 `frame-file-missing` 单不阻断。
+   - **判据细则**：`want` 为空时仅按页面身份＋空态判（用于启动自检帧这类非 26 步的采集链自检位，其 title=`流程总览 - AIStudio`）；跨步同图不再计坏帧（按徽章标注、不藏证据）。
+   - **实测终态**：run26 33 帧（30 拍摄位＋文件域＋启动自检）核验 **33/33 通过**；报告双正本重生成，逐帧徽章 126 处「已核验」、0 未核验、0 内容不符、0 偏差折叠；审计四查全过。
 
 5.1 **N13 采集层页面态对齐（已完成，2026-11-04 同日晚）**：①射手新增 `--expect` 等内容（期望词单一事实源＝`frame-verify.py --dump-expect`；超时仍拍但写 capture-plan.log）；②`__RUN__` 占位替换（`/app/sim?run=<RUN>` 报告查看面不再是「未选中运行」）；③capture-plan 第四列声明动作——会话画布点开分析群（否则主栏「未选择对象」）、G5 拍「审批历史」而非与 ready 步同页同刻（消 4 张假重复）；④排期步由驱动建并 schedule 一张「排期基线」信息卡（产品 status=scheduled 才有排期页数据；信息卡不派单不影响 devimpl）。run26 重拍后核验 **31/32**（原 20/32），唯一残留 `mp_runtime_proof` 属真缺件（DEV-MP 合入被 revert，run26 已登记 runtime-proof-missing）。
 

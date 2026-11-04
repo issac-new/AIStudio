@@ -1172,6 +1172,36 @@ capture_step() { # <step> <url> [action] [user]
           || [[ -f "$EVID_DIR/screenshots/steps/${step}-op2-after.png" ]]; }; then
     return 0
   fi
+  # 文件域帧（2026-11-04 N13 补面）：capture-plan 里 `file:<repo-relative-path>` 的
+  # 拍摄位不是活体页面，而是本轮产物图（如小程序 runtime-proof 首帧，由 18b 工具生成
+  # 并随分支入库）。此前驱动只对活体 URL 拍摄，这类帧永远缺——改为从中央仓检出目录
+  # 拷贝（before/after 同源，meta 标注来源），并留档 capture-plan.log。
+  local _plan_line _plan_url
+  _plan_line="$(grep -m1 "^${step}|" "$SCRIPT_DIR/mux/capture-plan.env" 2>/dev/null || true)"
+  _plan_url="$(printf '%s' "$_plan_line" | cut -d'|' -f2 | sed 's/[[:space:]].*$//')"
+  if [[ "$_plan_url" == file:* ]]; then
+    local _rel="${_plan_url#file:}" _src _dst
+    _src="${DIRECTOR_CLONE:-}/$_rel"
+    if [[ -f "$_src" ]]; then
+      for _ph in before after; do
+        _dst="$EVID_DIR/screenshots/steps/${step}-op1-${_ph}.png"
+        cp "$_src" "$_dst" 2>/dev/null || true
+      done
+      python3 - "$step" "$_rel" "$EVID_DIR/screenshots/steps" <<'PYM' >/dev/null 2>&1 || true
+import json, sys, pathlib
+step, rel, d = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3])
+pathlib.Path(d, f'{step}-op1-meta.json').write_text(json.dumps(
+    {'step': step, 'url': 'file:' + rel, 'title': '文件域帧：' + rel,
+     'hash': '', 'at': __import__('datetime').datetime.now().isoformat()}, ensure_ascii=False, indent=1), encoding='utf-8')
+PYM
+      note "[帧采集] 步 ${step} 文件域帧已就位（${_rel}——非活体页面，来源=本轮产物图）"
+      sset "capture_ok_${step}" 1
+      return 0
+    fi
+    echo "ISSUE|frame-file-missing|step-${step}|文件域帧源缺席（${_rel}）——该步证据图缺失，如实登记" >> "$EVID_DIR/issues.log"
+    note "[帧采集] 步 ${step} 文件域帧源缺席（${_rel}）——记单不阻断"
+    return 0
+  fi
   # 已降级步不重拍（run19 壳页复读根治）：frame-capture-failed|step-<键> 在案的步，
   # 断点续跑重放期重拍只会产出新的壳页帧回填帧池（采集链登录态漂移未根治前），
   # 隔离区清完又被写回=结构性红线永不过闸。采集端修复后移除该记录即恢复拍摄。
