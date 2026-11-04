@@ -168,3 +168,6 @@
 {"at":"2026-11-04T07:37:34Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-ledger-items.md","receipt":"66cd2506bd2c3c6c1c88b8a7da9f4a0e60957ccd","commit":"a8515a50d"}
 {"at":"2026-11-04T07:42:32Z","spec":"docs/superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md","receipt":"0bf1b9262fe3cfa2f85f3c006878887aa25933f9","commit":"271b5eff0"}
 {"at":"2026-11-04T08:10:37Z","spec":"docs/superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md","receipt":"dd1f86b3b0598376005f36d57a39044830af13e7","commit":"b9595fc32"}
+{"at":"2026-11-04T08:14:45Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md","receipt":"789d3c6d92fc9c8eef9098b9a8ec72e183aa3b66","commit":"a8515a50d"}
+{"at":"2026-11-04T08:17:15Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md","receipt":"585d7b1f5db661cc52d2cdb0d16621bc2e4bbb5e","commit":"226b9dbb0"}
+{"at":"2026-11-04T08:34:46Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md","receipt":"390c6c9064b8dd74bc52c1985b3ff03f9c8bbe54","commit":"19f97af2d"}

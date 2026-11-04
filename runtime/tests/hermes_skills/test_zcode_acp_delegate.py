@@ -12,8 +12,13 @@ import importlib.util
 import os
 from pathlib import Path
 
-_RUNTIME = Path(__file__).resolve().parents[2]
-_SCRIPT = _RUNTIME / "hermes-skills" / "coding-delegate" / "scripts" / "zcode-acp-delegate.py"
+# 739：宿主布局(<home>/hermes-agent/hermes-skills/...)与仓内布局(<仓根>/runtime/hermes-skills/...)
+# 双候选；技能脚本是 overlay 原生资产，vendor 树本身没有——两处都没有则跳过。
+_SCRIPT = next((
+    p / "hermes-skills" / "coding-delegate" / "scripts" / "zcode-acp-delegate.py"
+    for p in [Path(__file__).resolve().parents[2], Path(__file__).resolve().parents[4] / "runtime"]
+    if (p / "hermes-skills" / "coding-delegate" / "scripts" / "zcode-acp-delegate.py").exists()
+), None)
 
 
 def _load():

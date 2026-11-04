@@ -6,14 +6,20 @@ import time
 from pathlib import Path
 
 import pytest
-
 from hermes_cli import kanban_db as kb
 from hermes_cli import kanban_db_connect as kbc
 from hermes_cli import kanban_db_dispatch as kbd
 from tools import kanban_tools as grant_tools
 
 
-_REPO = Path(__file__).resolve().parents[3]
+# 739：repo 布局(vendor/hermes-agent/tests/... parents[4]=仓根)与宿主布局
+# (~/.hermes/hermes-agent/tests/... parents[3]=home)都能定位 fixtures；都缺则跳过
+# （fixtures 是仓内资产，宿主部署树本来就没有）。
+_REPO = next((p for p in Path(__file__).resolve().parents[:5]
+              if (p / "custom/server/approval-inbox/__tests__/fixtures/decision-grant-revision.json").exists()),
+             None)
+if _REPO is None:
+    pytest.skip("fixture 不在本布局（宿主部署树无仓内 fixtures）", allow_module_level=True)
 _VECTOR = json.loads(
     (_REPO / "custom/server/approval-inbox/__tests__/fixtures/decision-grant-revision.json").read_text(
         encoding="utf8"

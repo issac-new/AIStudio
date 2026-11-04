@@ -1,16 +1,16 @@
 diff --git a/model_tools.py b/model_tools.py
-index b9864a45..6a274dda 100644
+index 501014633..1aa6d4689 100644
 --- a/model_tools.py
 +++ b/model_tools.py
-@@ -294,6 +294,7 @@ def _tool_defs_cache_key(
+@@ -274,6 +274,7 @@ def _tool_defs_cache_key(
          frozenset(disabled_toolsets) if disabled_toolsets else None, registry._generation, cfg_fp,
          bool(os.environ.get("HERMES_KANBAN_TASK")), bool(skip_tool_search_assembly),
-         _is_delegated_child_context(), _is_dispatcher_owned_worker(), profile_scope, check_fn_cache_epoch(),
+         _is_delegated_child_context(), _is_dispatcher_owned_worker(), profile_scope,
 +        _profile_tool_filter(),
      )
  
  
-@@ -330,6 +331,30 @@ def _apply_toolset_selection(tools: set, names: list[str], quiet_mode: bool, *,
+@@ -310,6 +311,30 @@ def _apply_toolset_selection(tools: set, names: list[str], quiet_mode: bool, *,
              print(f"{icon} {label} '{name}': {', '.join(resolved) if resolved else 'no tools'}")
  
  
@@ -41,7 +41,7 @@ index b9864a45..6a274dda 100644
  def _select_tool_names(enabled_toolsets: Optional[list[str]], disabled_toolsets: Optional[list[str]], quiet_mode: bool) -> set:
      """Tool names requested by the toolset selection (before check_fn filtering)."""
      tools: set = set()
-@@ -352,6 +377,14 @@ def _select_tool_names(enabled_toolsets: Optional[list[str]], disabled_toolsets:
+@@ -332,6 +357,14 @@ def _select_tool_names(enabled_toolsets: Optional[list[str]], disabled_toolsets:
      # disabled toolset are strictly stripped out. See issue #17309.
      if disabled_toolsets:
          _apply_toolset_selection(tools, disabled_toolsets, quiet_mode, disable=True)
