@@ -274,7 +274,7 @@ export function _resetSkillGraderDefaultsForTests(): void {
 
 /** S1 问句构造（反偏置：只含断言文本与行为锚点，无期望答案；格式与 judge.buildQuestions 同款）。 */
 export function buildGradeQuestions(rubrics: readonly DimensionRubric[]): Record<string, { type: 'noul'; instructions: string }> {
-  const questions: Record<string, { type: 'noul'; instructions }> = {}
+  const questions: Record<string, { type: 'noul'; instructions: string }> = {}
   for (const r of rubrics) {
     questions[r.dimension] = {
       type: 'noul',

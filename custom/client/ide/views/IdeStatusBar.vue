@@ -344,7 +344,11 @@ watch(
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   min-width: 0;
-  overflow: hidden;
+  /* 2026-11-04 走查修复：禁栏级 overflow:hidden——它会把向上弹出的面板
+   *（IdeDevTools 工具下拉 / ⚙ 插槽面板，均 bottom:100%）整个裁掉，按钮
+   * 点不到（2026-10-18 只把 slots-btn 单改 visible 不够）。横向溢出由
+   * __item 自身的 overflow:hidden+ellipsis 兜住，栏级裁剪冗余。 */
+  overflow: visible;
 }
 
 .ide-statusbar__item {
@@ -528,7 +532,9 @@ watch(
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 6px 10px;
-  z-index: 60;
+  /* 110：压过三栏分割条 .ide-shell__split 的 z-100（命中域加宽 ±5px 会挡住
+   * 面板贴边区域的点击，2026-11-04 工具下拉实锤同型） */
+  z-index: 110;
   font-size: 12px;
   min-width: 150px;
 }
