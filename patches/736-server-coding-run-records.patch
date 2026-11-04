@@ -1,0 +1,223 @@
+diff --git a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+index 07eb4de685..277dd317a7 100644
+--- a/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
++++ b/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+@@ -51,6 +51,9 @@
+   nativeTurnContextRecoveryMessage,
+   resetNativeSessionAfterContextOverflow,
+ } from '../context-recovery'
++// overlay[execution-records]: run 出口统一落痕（spec 2026-11-04-agentteams-execution-records.md）。
++// 事实源=overlay custom/server/execution-records/record.ts，经 src/custom 符号链接解析（runtime 四级到 src）。
++import { appendExecutionRecord } from '../../../../custom/execution-records/record'
+ 
+ export { isolatedCodingAgentChildEnv } from './child-env'
+ 
+@@ -585,8 +588,47 @@
+   const message = `${agentName} exited with code ${code ?? 'unknown'}`
+   const detail = String(stderr || '').trim()
+   return detail ? `${message}: ${detail}` : message
++}
++
++// overlay[execution-records]: run 出口落痕（旁路观测）。appendExecutionRecord 内部
++// 自吞异常，此处不得再包 try 改变主链路行为。outcome 契约见 record.ts：
++// 自然退出 code===0→success、非 0→failed；管理者终止（stop/排队打断/空闲回收/关停）→timeout；
++// 启动前拒绝（更新锁/pty 缺失/spawn 失败/CLI 缺失）→blocked+短码。
++function appendCodingRunRecord(
++  run: ManagedCodingAgentRun,
++  outcome: 'success' | 'failed' | 'timeout' | 'blocked',
++  extras: { exitCode?: number; reason?: string } = {},
++): void {
++  appendExecutionRecord({
++    kind: 'coding-run',
++    runId: run.id,
++    sessionId: run.launch.sessionId,
++    agentId: run.launch.agentId,
++    cli: run.launch.agentId,
++    outcome,
++    exitCode: extras.exitCode,
++    reason: extras.reason,
++    startedAt: run.startedAt,
++    endedAt: Date.now(),
++  })
+ }
+ 
++// overlay[execution-records]: 启动前拒绝——尚无 run 对象，runId 用 agentSessionId（缺省生成一次性 id），
++// 保证被拒绝的尝试不因无 transcript 而隐形。
++function appendCodingLaunchRejected(launch: CodingAgentRunLaunch, reason: string): void {
++  appendExecutionRecord({
++    kind: 'coding-run',
++    runId: launch.agentSessionId || `rejected_${makeId()}`,
++    sessionId: launch.sessionId,
++    agentId: launch.agentId,
++    cli: launch.agentId,
++    outcome: 'blocked',
++    reason,
++    startedAt: Date.now(),
++    endedAt: Date.now(),
++  })
++}
++
+ function appendedTextDelta(existing: string, next: string): string {
+   if (!existing || !next) return next
+   if (next.startsWith(existing)) return next.slice(existing.length)
+@@ -759,7 +801,11 @@
+   }
+ 
+   start(launch: CodingAgentRunLaunch): { runId: string; pid: number } {
+-    if (agentUpdateLocked(launch.agentId)) throw new Error('Agent is updating; retry after completion')
++    // overlay[execution-records]: 启动前拒绝留痕（blocked），下同
++    if (agentUpdateLocked(launch.agentId)) {
++      appendCodingLaunchRejected(launch, 'agent-update-locked')
++      throw new Error('Agent is updating; retry after completion')
++    }
+     const existingRunId = this.sessionIndex.get(launch.sessionId)
+     if (existingRunId) {
+       const existing = this.runs.get(existingRunId)
+@@ -795,6 +841,8 @@
+         try {
+           this.startPiRpcProcess(run)
+         } catch (err) {
++          // overlay[execution-records]: Pi RPC spawn 失败=启动前拒绝（blocked）
++          appendCodingRunRecord(run, 'blocked', { reason: 'pi-spawn-failed' })
+           this.cleanupRun(run, { kill: true, reportClosed: false })
+           throw err
+         }
+@@ -827,7 +875,11 @@
+       return { runId: run.id, pid: run.currentChild?.pid || 0 }
+     }
+ 
+-    if (!pty) throw new Error('Hidden coding agent terminal is unavailable because node-pty is not installed')
++    if (!pty) {
++      // overlay[execution-records]: 隐藏终端基建缺失=启动前拒绝（blocked）
++      appendCodingLaunchRejected(launch, 'pty-unavailable')
++      throw new Error('Hidden coding agent terminal is unavailable because node-pty is not installed')
++    }
+ 
+     const shell = defaultShell()
+     const args = process.platform === 'win32'
+@@ -867,8 +919,12 @@
+       this.bufferTerminalOutput(run, data)
+     })
+     proc.onExit(({ exitCode }: { exitCode: number }) => {
++      // overlay[execution-records]: 自然退出才在此落痕；cleanupRun 已先行（stop/空闲回收/关停
++      // 先置 run.exited）的终止由触发方按 timeout 落痕，此处不重复记以免末行胜覆盖短码。
++      const managerClosed = run.exited
+       run.exited = true
+       this.cleanupRun(run, { kill: false })
++      if (!managerClosed) appendCodingRunRecord(run, exitCode === 0 ? 'success' : 'failed', { exitCode })
+       logger.info({ runId: run.id, sessionId: launch.sessionId, exitCode }, '[coding-agent-run] process exited')
+     })
+ 
+@@ -1066,6 +1122,8 @@
+     const run = this.getBySession(sessionId)
+     if (!run) return false
+     if (options.reportClosed === false) run.stoppedByUser = true
++    // overlay[execution-records]: 管理者终止按 timeout 落痕（后续 pty/print close 分支见 run.exited 守卫不重复记）
++    appendCodingRunRecord(run, 'timeout', { reason: 'stopped' })
+     this.cleanupRun(run, { kill: true, reportClosed: options.reportClosed ?? true })
+     return true
+   }
+@@ -1087,6 +1145,8 @@
+     // releasing the queued run so the next one can resume the native session
+     // without overlapping the old process.
+     run.stoppedByUser = true
++    // overlay[execution-records]: 排队插入打断（stop_reason=queue_insertion）按 timeout 落痕
++    appendCodingRunRecord(run, 'timeout', { reason: 'queue-insertion' })
+     const interruptedChild = run.currentChild
+     const childClosed = waitForChildProcessClose(interruptedChild)
+     this.cleanupRun(run, { kill: true, reportClosed: false })
+@@ -1129,6 +1189,8 @@
+     let stopped = 0
+     for (const run of [...this.runs.values()]) {
+       if (!predicate(run.launch)) continue
++      // overlay[execution-records]: 批量终止同 stop 语义，按 timeout 落痕
++      appendCodingRunRecord(run, 'timeout', { reason: 'stopped' })
+       this.cleanupRun(run, { kill: true, reportClosed: options.reportClosed ?? true })
+       stopped += 1
+     }
+@@ -1149,6 +1211,8 @@
+         deferred += 1
+         continue
+       }
++      // overlay[execution-records]: 配置失效即回收（延后 dispose 的由回合出口落痕）
++      appendCodingRunRecord(run, 'timeout', { reason: 'invalidated' })
+       this.cleanupRun(run, { kill: true, reportClosed: false })
+     }
+     return { invalidated, deferred }
+@@ -1488,7 +1552,11 @@
+   }
+ 
+   shutdown() {
+-    for (const run of [...this.runs.values()]) this.cleanupRun(run, { kill: true })
++    // overlay[execution-records]: 关停=管理者终止，按 timeout 落痕
++    for (const run of [...this.runs.values()]) {
++      appendCodingRunRecord(run, 'timeout', { reason: 'server-shutdown' })
++      this.cleanupRun(run, { kill: true })
++    }
+     for (const child of this.memoryExportChildren) forceKillChildProcess(child)
+     this.memoryExportChildren.clear()
+   }
+@@ -1565,6 +1633,8 @@
+         return
+       }
+       logger.info({ runId: current.id, sessionId: current.launch.sessionId, idleMs: this.idleMs }, '[coding-agent-run] closing idle hidden session')
++      // overlay[execution-records]: 空闲回收=超时路径（timeout+idle-recycled）
++      appendCodingRunRecord(current, 'timeout', { reason: 'idle-recycled' })
+       this.cleanupRun(current, { kill: true })
+     }, this.idleMs)
+   }
+@@ -2143,6 +2213,9 @@
+     })
+     run.currentChild = child
+ 
++    // overlay[execution-records]: spawn 失败（error 事件）时 close 随后触发，
++    // 用闭包标记让 close 分支不重复落痕（blocked 已在 error 分支记录）
++    let spawnErrored = false
+     let stdoutBuffer = ''
+     child.stdout?.on('data', (chunk: Buffer) => {
+       this.touch(run)
+@@ -2166,9 +2239,12 @@
+     }
+ 
+     child.on('error', (err) => {
++      spawnErrored = true
+       if (run.currentChildKillTimer) clearTimeout(run.currentChildKillTimer)
+       run.currentChildKillTimer = undefined
+       run.currentChild = undefined
++      // overlay[execution-records]: spawn 失败/CLI 缺失（ENOENT）=启动前拒绝（blocked）
++      appendCodingRunRecord(run, 'blocked', { reason: (err as { code?: string } | null)?.code === 'ENOENT' ? 'cli-missing' : 'spawn-error' })
+       logger.warn({ err, runId: run.id, sessionId: run.launch.sessionId }, '[coding-agent-run] claude print failed to start')
+       this.handleClaudePrintResponseEvent(run, {
+         type: 'response.failed',
+@@ -2196,14 +2272,21 @@
+       run.currentChild = undefined
+       logger.info({ runId: run.id, sessionId: run.launch.sessionId, code }, '[coding-agent-run] claude print exited')
+       if (run.stoppedByUser) return
++      // overlay[execution-records]: 出口落痕——只记自然退出。spawn 失败已在 error 分支按
++      // blocked 落痕；管理者终止（stop/空闲回收/关停，run.exited 已先行置位）已由触发方按
++      // timeout 落痕，此处跳过避免末行胜覆盖短码。
++      if (run.exited || spawnErrored) return
+       if (run.pendingChatCompletionEvent) {
++        appendCodingRunRecord(run, run.pendingChatCompletionEvent === 'run.completed' ? 'success' : 'failed', { exitCode: code ?? undefined })
+         void this.emitAndMarkPrintChatRunCompletedAfterUsage(run, run.pendingChatCompletionEvent, run.pendingChatCompletionPayload)
+         return
+       }
+       if (code === 0) {
++        appendCodingRunRecord(run, 'success', { exitCode: 0 })
+         this.completeClaudePrintTurn(run, run.claudeResultUsage)
+         return
+       }
++      appendCodingRunRecord(run, 'failed', { exitCode: code ?? undefined, reason: 'nonzero-exit' })
+       this.handleClaudePrintResponseEvent(run, {
+         type: 'response.failed',
+         data: {
+@@ -3754,6 +3837,9 @@
+     if (event === 'run.completed') this.startCodingAgentMemoryExport(run)
+     run.runMarker = undefined
+     if (run.launch.agentId === 'pi' || run.disposeAfterTurn) {
++      // overlay[execution-records]: 回合后即回收（Pi 每回合一进程/失效延后 dispose）——
++      // 按本回合事件落痕，Pi 自然收工路径唯一次点
++      appendCodingRunRecord(run, event === 'run.completed' ? 'success' : 'failed', { reason: 'disposed-after-turn' })
+       this.cleanupRun(run, { kill: true, reportClosed: false })
+     }
+     // Completion can synchronously release a queued run. Dispose the stale or

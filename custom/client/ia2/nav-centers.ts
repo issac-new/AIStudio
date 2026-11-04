@@ -140,6 +140,9 @@ export const COMMON_NAVS: readonly CommonNavMeta[] = [
   // 项目工作流（custom/client/projects）：项目聚合看板之上，日常管理高频面——
   // 紧跟看板。路由名无 ia2. 前缀（projects 模块自注册，路径 /app/projects）。
   { key: 'projects', lead: '▥', zh: '项目', en: 'Projects', name: 'projects', testid: 'ia-side-nav-projects' },
+  // 执行记录（views/records）：编码 CLI run 与 delegate 通道的统一留痕查询面——
+  // 低频但排障必达，挂审批收件箱之前。
+  { key: 'records', lead: '▩', zh: '执行记录', en: 'Records', name: 'ia2.records', testid: 'ia-side-nav-records' },
   { key: 'inbox', lead: '◷', zh: '审批收件箱', en: 'Approvals Inbox', name: 'ia2.inbox', testid: 'ia-side-nav-inbox' },
 ]
 

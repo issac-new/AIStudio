@@ -81,6 +81,8 @@ const COMMON_MATCH: Record<string, () => boolean> = {
   board: () => routeName.value === 'ia2.board',
   // 项目工作流（custom/client/projects）：列表+详情两路由都算「项目」入口命中
   projects: () => routeName.value === 'projects' || routeName.value === 'projectDetail',
+  // 执行记录（views/records）：列表+详情两路由都算「执行记录」入口命中
+  records: () => routeName.value === 'ia2.records' || routeName.value === 'ia2.recordDetail',
   inbox: () => routeName.value === 'ia2.inbox',
 }
 

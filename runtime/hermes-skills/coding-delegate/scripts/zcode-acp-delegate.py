@@ -112,6 +112,47 @@ def write_delegate_result(cwd: Path, payload: dict) -> Path | None:
         return None
 
 
+def _run_outcome(exit_code: int) -> str:
+    """exit → outcome，与中央索引 custom/server/execution-records/record.ts 契约对齐：
+    0=success、2=blocked（启动前拒绝）、3=timeout、4|5=failed。"""
+    return {0: "success", 2: "blocked", 3: "timeout"}.get(exit_code, "failed")
+
+
+def _append_run_record(exit_code: int, reason, *, cwd, run_id, task_id, board,
+                       prompt_sha, started_at, log_path=None) -> None:
+    """materials/runs.jsonl 追加一行执行留痕（跨机可见性；中央索引由服务端
+    run-manager 补丁 734 落 coding-run 族）。单行 O_APPEND 追加近似原子，异常
+    全吞——留痕失败绝不改变退出主链路。"""
+    try:
+        log_bytes = None
+        if log_path is not None:
+            try:
+                log_bytes = os.path.getsize(log_path)
+            except OSError:
+                log_bytes = None  # tee 未落盘/不可读=未知，不猜数
+        rec = {
+            "v": 1,
+            "run": run_id,
+            "kind": "delegate",
+            "taskId": task_id,
+            "board": board,
+            "cli": "zcode-acp",
+            "outcome": _run_outcome(exit_code),
+            "exit": exit_code,
+            "reason": reason,
+            "startedAt": started_at,
+            "endedAt": int(time.time()),
+            "promptSha256": prompt_sha,
+            "logBytes": log_bytes,
+        }
+        d = Path(cwd) / "materials"
+        d.mkdir(parents=True, exist_ok=True)
+        with open(d / "runs.jsonl", "a", encoding="utf8") as fh:
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
 def find_engine(override: str):
     """返回引擎启动命令（list）。override 优先；否则按 DEFAULT_ENGINE_BINS 找 PATH。
     zcode-acp 需要 `server` 子参数才进 stdio 桥模式。"""
@@ -213,6 +254,10 @@ def main() -> int:
         with open(prompt[1:], encoding="utf-8") as fh:
             prompt = fh.read()
 
+    # 留痕基线字段先立（task 上下文/引擎解析失败前的退出路径也要有数可记）
+    prompt_sha = __import__("hashlib").sha256(prompt.encode()).hexdigest()
+    t_start = int(time.time())
+
     task_mode = bool(args.task.strip())
     task_meta: dict = {"taskId": args.task.strip() or None, "board": (args.board.strip() or "default") if task_mode else None}
     cwd_override: str | None = None
@@ -221,6 +266,12 @@ def main() -> int:
             context, task, ws = load_task_context(args.task.strip(), args.board.strip() or None)
         except TaskContextError as exc:
             log(f"RESULT exit={EXIT_ENGINE_MISSING} stage=task_context error={exc}")
+            # 留痕：task 上下文装配失败（工作区未知 → 落 --cwd 兜底）
+            _append_run_record(EXIT_ENGINE_MISSING, "task-context",
+                               cwd=os.path.abspath(args.cwd),
+                               run_id=f"delegate-{t_start}-{os.getpid()}",
+                               task_id=task_meta["taskId"], board=task_meta["board"],
+                               prompt_sha=prompt_sha, started_at=t_start)
             return EXIT_ENGINE_MISSING
         prompt = compose_task_prompt(context, prompt)
         cwd_override = str(ws)
@@ -232,23 +283,16 @@ def main() -> int:
         })
         log(f"task 上下文装配：task={args.task.strip()} workspace={ws} prompt_chars={len(prompt)}")
 
-    cmd = find_engine(args.engine)
-    if not cmd:
-        log(f"RESULT exit={EXIT_ENGINE_MISSING} engine=NOT_FOUND（PATH 无 zcode-acp-server/zcode-acp）")
-        if task_mode and cwd_override:
-            write_delegate_result(Path(cwd_override), {**task_meta, "exit": EXIT_ENGINE_MISSING,
-                                                       "stage": "engine_not_found", "prompt_sha256": __import__("hashlib").sha256(prompt.encode()).hexdigest()})
-        return EXIT_ENGINE_MISSING
-
     cwd = os.path.abspath(cwd_override or args.cwd)
     engine_src = resolve_engine_bin_env()
     engine_bin = os.environ.get("ZCODE_BIN", "(桥自解析)")
+    # task 模式下 prompt 已并入任务上下文——此处重算终版指纹（失败早退路径用的是
+    # 装配前原文指纹，各自如实）；t_start 同步后移到引擎解析前（原语义不变）。
     prompt_sha = __import__("hashlib").sha256(prompt.encode()).hexdigest()
     t_start = int(time.time())
-    log(f"engine={' '.join(cmd)} engine_bin_source={engine_src} engine_bin={engine_bin} cwd={cwd} timeout={args.timeout}s prompt_chars={len(prompt)}")
 
     def finish(exit_code: int, stage_or_stop: str, session_id=None, usage=None) -> int:
-        """统一收口：RESULT 行 + 任务模式落 delegate-result.json（机器可读证据）。"""
+        """统一收口：RESULT 行 + 任务模式落 delegate-result.json（机器可读证据）+ runs.jsonl 留痕。"""
         if task_mode:
             write_delegate_result(Path(cwd), {
                 **task_meta,
@@ -266,7 +310,25 @@ def main() -> int:
                 "startedAt": t_start,
                 "endedAt": int(time.time()),
             })
+        # 留痕：所有经 finish 收口的退出路径统一追加 runs.jsonl（reason 取既有语义短码；
+        # engine_not_found 对齐中央索引 kebab 短码 'engine-not-found'）。logBytes 为
+        # 调用方 tee 的 delegate-log.txt 尺寸（尚在写入，取当下值，best-effort）。
+        _append_run_record(exit_code,
+                           "engine-not-found" if stage_or_stop == "engine_not_found" else stage_or_stop,
+                           cwd=cwd,
+                           run_id=session_id or f"delegate-{t_start}-{os.getpid()}",
+                           task_id=task_meta["taskId"], board=task_meta["board"],
+                           prompt_sha=prompt_sha, started_at=t_start,
+                           log_path=Path(cwd) / "materials" / "delegate-log.txt")
         return exit_code
+
+    cmd = find_engine(args.engine)
+    if not cmd:
+        log(f"RESULT exit={EXIT_ENGINE_MISSING} engine=NOT_FOUND（PATH 无 zcode-acp-server/zcode-acp）")
+        # 留痕+回执统一走 finish()：契约单一事实源（历史缺陷：此处曾绕开 finish 手拼
+        # snake_case 的 prompt_sha256 且字段残缺，消费方 evidence-blocks 按 camelCase 读不到）
+        return finish(EXIT_ENGINE_MISSING, "engine_not_found")
+    log(f"engine={' '.join(cmd)} engine_bin_source={engine_src} engine_bin={engine_bin} cwd={cwd} timeout={args.timeout}s prompt_chars={len(prompt)}")
 
     try:
         proc = subprocess.Popen(

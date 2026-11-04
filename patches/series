@@ -1117,3 +1117,9 @@
 #      list/stat/download 的 super_admin 闸对已知任务工作区（isWithinKnownTaskWorkspace）
 #      放开，非本人的任务工作区只读可打开；写面 8 端点仍 super_admin。
 734-server-files-root-task-workspace-readonly.patch
+# 735（2026-11-04 AgentTeams 吸收批二）：执行记录查询路由挂载——custom/server/execution-records
+#      进 bootstrap/routes.ts（列表/委托详情/编码详情三端点，spec 2026-11-04-agentteams-execution-records）。
+735-server-execution-records-routes.patch
+# 736（2026-11-04 AgentTeams 吸收批二）：run-manager 出口落痕——pty/print/停止/回收各退出路径
+#      追加统一执行记录 JSONL（outcome/exitCode 结构化，blocked=启动前拒绝；幂等防双记）。
+736-server-coding-run-records.patch

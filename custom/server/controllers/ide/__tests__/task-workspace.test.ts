@@ -110,6 +110,20 @@ describe('resolveTaskWorkspace（纯解析）', () => {
     expect(boardWorkspacesRoot(HOME, 'default')).toBe(`${HOME}/workspaces`)
     expect(boardWorkspacesRoot(HOME, 'b1')).toBe(`${HOME}/boards/b1/workspaces`)
   })
+
+  it('HERMES_KANBAN_WORKSPACES_ROOT env 优先（Python kanban_db.py workspaces_root pin 对齐），未设走约定根', () => {
+    const pin = '/srv/pinned-workspaces'
+    expect(boardWorkspacesRoot(HOME, 'default', { HERMES_KANBAN_WORKSPACES_ROOT: pin })).toBe(pin)
+    expect(boardWorkspacesRoot(HOME, 'b1', { HERMES_KANBAN_WORKSPACES_ROOT: pin })).toBe(pin)
+    // 空/空白 env 不算 pin（trim 后非空才生效，lib/paths pick 同语义）
+    expect(boardWorkspacesRoot(HOME, 'default', { HERMES_KANBAN_WORKSPACES_ROOT: '  ' })).toBe(`${HOME}/workspaces`)
+    // resolveTaskWorkspace 经 deps.env 透传 pin（相对路径锚定被改写）
+    const r = resolveTaskWorkspace(
+      { taskId: 't_pin', board: 'default', workspaceKind: 'scratch', workspacePath: 't_pin' },
+      { kanbanHome: `${HOME}/.hermes/kanban`, isDir, env: { HERMES_KANBAN_WORKSPACES_ROOT: pin } },
+    )
+    expect(r.path).toBe(`${pin}/t_pin`)
+  })
 })
 
 describe('GET /api/ide/task-workspace（路由行为）', () => {
@@ -125,7 +139,8 @@ describe('GET /api/ide/task-workspace（路由行为）', () => {
   })
 
   it('任务详情 404 → 404', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404 })
+    // 真 Response：404 天然 ok=false——不用手写字面量（K19 棘轮只许减少，照 simulation-node-executors 先例）
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 404 }))
     vi.stubGlobal('fetch', fetchMock)
     const r = await run(router, '/api/ide/task-workspace?task=t_x', { query: { task: 't_x' } })
     expect(r.status).toBe(404)

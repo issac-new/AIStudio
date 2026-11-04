@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -290,6 +290,11 @@ import * as kanbanCli from '../modules/hermes/services/kanban/kanban-service'
+ // /api/projectworkflow/projects：全板任务统计聚合 + pause/resume/complete
+ // （有未终结任务 422+problems；override=true 带非空 reason 放行并落佐证）。
+ import { projectworkflowRoutes } from '../custom/projectworkflow/controller'
++// overlay[execution-records]: 编码执行记录查询域（AgentTeams 吸收批二）——
++// /api/execution-records：中央 JSONL 索引 × delegate 任务工作区扫描归并列表
++// （过滤/分页）+ /delegate/:taskId 详情（result+log 尾读）+ /coding/:sessionId
++// webui 三表摘要（sessions/run_usage/workspace_run_changes，只读 fail-soft）。
++import { executionRecordsRoutes } from '../custom/execution-records/controller'
+
+ let loopStore: any = null
+ const lazyStore = new Proxy({} as any, {
+@@ -614,4 +619,5 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   startKgAutoSync()
+   initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
+   app.use(projectworkflowRoutes.routes())       // 项目工作流：项目一级状态机+完成守卫（状态面与看板库只读分离）
++  app.use(executionRecordsRoutes.routes())      // 执行记录：双源归并列表+delegate/coding 详情（只读 fail-soft）
+ }
