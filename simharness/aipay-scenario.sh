@@ -421,6 +421,13 @@ if step_reached reqgate; then
     fi
     sset_once g1_frozen "$(date +%s)"
     capture_step "g1_frozen" "/app/stage/reqs?tab=docs"   # 步7 承载面
+    # 步 7 环节效果（r18_matrix.EFFECT_STEPS 要求；2026-11-04 run26 复盘：本步原先
+    # 只有帧没有 effect 采集，报告审计环因此多转 5 轮才补出——缺口应在发生处补齐）
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 7 \
+      --text "G1 需求冻结环节效果：$(freeze_doc) 已入 origin/main；四要素判读全过（验收标准/Scope-Out/影响面/涉敏），后续设计评审与安全评审共用同一冻结基线" \
+      --ev "freeze_doc=$(freeze_doc)" --ev "gate=g1_frozen" >/dev/null 2>&1 \
+      || echo "ISSUE|r18-collect-failed|step7|环节效果采集失败（r18-collect effect）——报告审计环将缺该步" >> "$EVID_DIR/issues.log"
+    r18_guard 7
     dlv_gate_try G1 pass "需求冻结四要素过（AC/Scope-Out/影响面/涉敏）"
   fi
 fi
@@ -1129,7 +1136,20 @@ if [ "$(posture)" = "strict" ]; then
       mx_gate_breaker_trip g2 "G2 架构治理评审" 1
       G2_RETRY_TS=$(( $(date +%s) * 1000 ))
       dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评（复评结论行须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
-      if wait_truth "修订后 ARCH-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_RETRY_TS" arch "${RFD_ID} 架构治理评审"; then
+      # 复评触发权归驱动（2026-11-04 run26 复盘根治）：原设计把「修完喊复评」押在
+      # 被退回者身上——run26 实锤 fanfan 01:18 已把修订稿推进 origin/main 却没 @
+      # 复评人，arch 全程零回合，闸空等 81 分钟。驱动持有「修订落仓」这一事实，
+      # 应自任触发方：先等修订稿落仓，落仓即直接向 arch 派复评任务，再进带失联
+      # 唤醒的判词等待。
+      if wait_truth "修订稿落仓（G2 回灌）" ${MX_G2_REV_WAIT:-1800} repo_has "docs/design/${RFD_ID}-architecture-design.md"; then
+        _g2_rev_sha="$(git -C "$DIRECTOR_CLONE" log -1 --format=%h origin/main -- "docs/design/${RFD_ID}-architecture-design.md" 2>/dev/null || true)"
+        dispatch_in_room arch "@arch-agent:matrix.test 概设已按评审卡 ${AGID} 缺项修订重推（修订锚 ${_g2_rev_sha:-未取到}），请立即执行 G2 复评：逐条核对缺项是否闭合 → 评审卡 ${AGID} body 更新结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项) → 分析群同步同一结论行（卡面与房间行一致才放行）。不许谎报。" "$(agent_mxid arch)"
+        echo "ISSUE|g2-review-redispatch|arch-agent|修订落仓 ${_g2_rev_sha:-?} 后由驱动直接派复评（run26 复盘：修完无人触发损耗 81min）" >> "$EVID_DIR/issues.log"
+        note "[G2] 修订落仓（${_g2_rev_sha:-?}）——已直接向 arch 派复评（不等被退回者转告）"
+      else
+        note "[G2] 修订稿 ${MX_G2_REV_WAIT:-1800}s 未见落仓——仍进判词等待（唤醒链会兜底）"
+      fi
+      if mx_wait_revive "修订后 ARCH-GATE-PASS（判词语义）" 2400 "$(sget room_analysis)" "$(agent_mxid arch)" arch "【新任务·G2 复评】RFD-001 概设修订已在 origin/main（锚 ${_g2_rev_sha:-见最新提交}），评审卡 ${AGID} 等你出结论：逐条核对缺项闭合 → 卡面更新 ARCH-GATE-PASS/FAIL → 分析群同步同一行。闸在等这一行。" -- mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid arch)" ARCH-GATE "$G2_RETRY_TS" arch "${RFD_ID} 架构治理评审"; then
 if [ "$(posture)" = "strict" ]; then
           echo "ISSUE|walk-done-strict|arch|复审卡 ${AGID} strict 姿态不代走 done（等 arch 自走）" >> "$EVID_DIR/issues.log"
           sset_once g2_arch_pass "$(date +%s)"
@@ -1201,9 +1221,9 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   fi
   # 必采对话挂钩在幂等块外（run14 复盘 B3 抗重启加固：r18-collect 幂等拒重，
   # 重启重入段即补采——run14 实锤 plan 段挂钩错过即整轮载荷缺）
-  if [[ -n "$(sget m17_marker)" ]]; then
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 17 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m17_marker)")" --title "排期派发任务书全文（fanfan）" --user fanfan >/dev/null 2>&1 || true
-  fi
+  # 必采对话（2026-11-04 run26 复盘：改走不静默包装＋步末机械核验）
+  r18_dialog_step "$SCRIPT_DIR" 17 "$(sget m17_marker)" "排期派发任务书全文（fanfan）"
+  r18_guard 17
   repo_pull
   note "[真值] 排期计划入库 ✓"
   capture_step "plan_done" "/app/stage/design?tab=schedule"
@@ -1765,6 +1785,7 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
 2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit+affected=<文件路径>——同文件缺陷串行修，异文件并行）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>（研发收到即开工不等提醒）；研发修复回执 FIX-DONE-<DEF-X> commit=<id> branch=<名>（须已推送）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因
 3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。
+3b) 测试报告须含「跨模块契约用例清单」一节（列：用例编号/契约点/覆盖模块/结论）——审计判据 17 机械核对，缺节即不通过（2026-11-04 run26 复盘前移）。
 【dev_signal·V8.33 持续改进】上轮 review 关注点（最近 done 卡 result 抽 2 条）：$(dev_signal wei 2 2>/dev/null | tr '\n' ';' | head -c 300)
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-BE-<组>（一句话进度锚）。" "$(agent_mxid qi),$(agent_mxid wei)")
     sset m19_marker "$_m19"
@@ -1773,14 +1794,14 @@ _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试�
 工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE origin/integration/${RFD_ID}
 1) 测试 csw-cashier-mp 逻辑层：支付方式双端排序/隐藏、倒计时关单提示、失败重试不重复下单、结果三态
 2) 缺陷走 defect-loop 技能发【缺陷】@xiao-agent（P级/复现/期望实际/分支commit+affected=）；建卡后一行 DEF-NEW-<DEF-X> card=<卡ID> @xiao；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；3) 结论行 TEST-PASS-TEST-FE 或 TEST-FAIL-TEST-FE。不许谎报。
+3b) 测试报告须含「跨模块契约用例清单」一节（列：用例编号/契约点/覆盖模块/结论）——审计判据 17 机械核对，缺节即不通过。
 干预点纪律：用例先行——先出用例清单骨架（分组+命名）@会签人 一句确认后展开；每组完成即 push+群内一行 PROGRESS-TEST-FE-<组>（一句话进度锚）。" "$(agent_mxid fei),$(agent_mxid mei)"
     fi
     sset defect_dispatched 1
   fi
   # 必采对话挂钩在幂等块外（r18-collect 幂等拒重，重启重入即补采）
-  if [[ -n "$(sget m19_marker)" ]]; then
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 19 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m19_marker)")" --title "测试执行派发全文（qi/TEST-BE）" --user fanfan >/dev/null 2>&1 || true
-  fi
+  r18_dialog_step "$SCRIPT_DIR" 19 "$(sget m19_marker)" "测试执行派发全文（qi/TEST-BE）"
+  r18_guard 19
 
   # 派发时间戳（ms，持久化）：真值门禁只认派发之后的消息——历史轮残留的
   # TEST-PASS/缺陷消息曾让门禁在派发后 1 秒即判「零缺陷轮真值」（假完成）。
@@ -1941,14 +1962,26 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
     dispatch_in_room qi "@qi-agent:matrix.test 测试报告·BE 片（并行分工）：在 integration/${RFD_ID} 分支写 docs/test/${RFD_ID}-test-report-BE.md（范围与环境/后端用例-结果矩阵/缺陷统计/回归结论/残留风险+V8.20 五项标注，仅后端部分）。首片草稿完成即先 push 一次（途中锚，勿攒齐）；做完 push 并回一行 BE-SECTION-DONE。不要写前端章节（由测试工程师B 并行负责）。" "$(agent_mxid qi)"
     dispatch_in_room fei "@fei-agent:matrix.test 测试报告·FE 片（并行分工）：在 integration/${RFD_ID} 分支写 docs/test/${RFD_ID}-test-report-FE.md（前端用例-结果矩阵/缺陷统计/回归结论/残留风险+V8.20 五项标注，仅前端部分）。做完 push 并回一行 FE-SECTION-DONE。不要写后端章节（由测试工程师A 并行负责）。" "$(agent_mxid fei)"
     dispatch_in_room qi "@qi-agent:matrix.test 请出具测试报告（汇总篇，总分总之总）：
-1) 在 integration/${RFD_ID} 分支汇总测试结果，写 docs/test/${RFD_ID}-test-report.md（范围与环境/用例-结果矩阵/缺陷分级统计/回归结论/残留风险与未解异常（出口准则=残留可接受并写明理由）/通过时的 git commit id；另附 V8.20 五项：设计技术标注（等价类/边界值/状态迁移各注适用理由）·覆盖声明数值化（语句/分支至少一档给数）·安全测试项显式（含人工测试项单列）·测试金字塔形态（单元/集成/端到端三层用例数））
+1) 在 integration/${RFD_ID} 分支汇总测试结果，写 docs/test/${RFD_ID}-test-report.md（范围与环境/用例-结果矩阵/缺陷分级统计/回归结论/残留风险与未解异常（出口准则=残留可接受并写明理由）/通过时的 git commit id；**必须含「跨模块契约用例清单」一节（用例编号/契约点/覆盖模块/结论——审计判据 17 机械核对）**；另附 V8.20 五项：设计技术标注（等价类/边界值/状态迁移各注适用理由）·覆盖声明数值化（语句/分支至少一档给数）·安全测试项显式（含人工测试项单列）·测试金字塔形态（单元/集成/端到端三层用例数））
 2) push origin integration/${RFD_ID}
 3) 把通过的 git commit id 通过 kanban 更新到所有关联开发/测试/需求任务（你能访问本账号的板；其他账号的由你发 matrix 通知其 owner-agent 更新）
 结论行 REPORT-DONE 开头。不许谎报。" "$(agent_mxid qi)"
     MX_TICK_FN=_stage_tick   # 报告等待期同款预热 tick（run24 复盘批②④）
-    wait_alive_truth "测试报告入库" 1800 qi test_report_on_integration "${RFD_ID}" \
-      || { note "[观察] 测试报告未达"; echo "ISSUE|test-report-missing|qi|测试报告未入库" >> "$EVID_DIR/issues.log"; \
-           sset g4_evidence_gap 1; note "[G4] g4_evidence_gap=1（缺报告过闸显形，run18 复盘 F3：闸键-证据耦合）"; }
+    if ! wait_alive_truth "测试报告入库" 1800 qi test_report_on_integration "${RFD_ID}"; then
+      # 失联即新派单（2026-11-04 run26 复盘：qi 会话楔死，群催 2 次＋DM 3 次零回合；
+      # run24/run26 双实例证明「完整任务书新派单」才起回合——催办只作留痕）
+      echo "ISSUE|test-report-stalled|qi|测试报告 1800s 未入库，按失联处置：新任务书重派（run26 复盘配方）" >> "$EVID_DIR/issues.log"
+      note "[观察] 测试报告 1800s 未达——改走新任务书重派（不重复催办）"
+      dispatch_in_room qi "@qi-agent:matrix.test 【新任务·测试报告】请立即在 integration/${RFD_ID} 写 docs/test/${RFD_ID}-test-report.md（范围与环境/用例-结果矩阵/缺陷分级统计/回归结论/残留风险/五项 V8.20/跨模块契约用例清单），push 后群内落行首 REPORT-DONE。这是独立任务：不必回顾前序会话，按本消息直接开工。" "$(agent_mxid qi)" >/dev/null 2>&1 || true
+      mx_dm_send "$(load_token fanfan)" "$(agent_mxid qi)" "【新任务·测试报告】integration/${RFD_ID} → docs/test/${RFD_ID}-test-report.md；要点：用例-结果矩阵/缺陷分级/残留风险/五项 V8.20/跨模块契约用例清单；push 后群内 REPORT-DONE 行。直接开工，无需回看前序会话。" >/dev/null 2>&1 || true
+    fi
+    if ! test_report_on_integration "${RFD_ID}" \
+         && ! wait_alive_truth "测试报告入库（失联唤醒后重试）" 1200 qi test_report_on_integration "${RFD_ID}"; then
+      note "[观察] 测试报告两轮未达——按缺证据显形"
+      echo "ISSUE|test-report-missing|qi|测试报告未入库（含失联唤醒后重试一轮）" >> "$EVID_DIR/issues.log"
+      sset g4_evidence_gap 1
+      note "[G4] g4_evidence_gap=1（缺报告过闸显形，run18 复盘 F3：闸键-证据耦合）"
+    fi
     unset MX_TICK_FN
   fi
   gate_review qi "G4-测试过闸"
@@ -1981,6 +2014,15 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   # ── V8.45 G4 评测子门：评测运行 + 红队 + 三角 + 覆盖 + 锚点（方案 §5.3 G4-E）──
   # FAIL 阻断 g4_pass（G5 的 gate_blocked 会拒入）；GAP 记录放行（缺口如实呈现，
   # 不拿基础设施缺席冒充通过）；PASS 置 g4_eval_pass。
+  # N04（run26 复盘）：评测子门的「线上证据」消费 load-probe.jsonl，但此前**没有任何
+  # 生产方**——run26 g4_eval_gap 因此固定为 1。探针脚本早就在（mx-load-probe.py），
+  # 缺的是接线：评测前对生效 studio 压一次（短档 20s），失败如实登记不阻断。
+  if [[ ! -s "$EVID_DIR/load-probe.jsonl" ]]; then
+    python3 "$SCRIPT_DIR/mux/mx-load-probe.py" --base-url "http://127.0.0.1:${STUDIO_PORT:-8802}" \
+      --paths /health --qps 20 --duration 20 --json "$EVID_DIR/load-probe.jsonl" >/dev/null 2>&1 \
+      || echo "ISSUE|load-probe-failed|tester|容量探针未产出（N04：g4 评测线上证据将缺 qpsProbe）" >> "$EVID_DIR/issues.log"
+    [[ -s "$EVID_DIR/load-probe.jsonl" ]] && note "[评测] 容量探针已落 evidence/load-probe.jsonl（N04 接线）"
+  fi
   _eval_rc=0
   eval_flow || _eval_rc=$?
   case "$_eval_rc" in
@@ -2313,7 +2355,7 @@ if [ "$(posture)" = "strict" ]; then
         # 2026-10-29 值守兜底：卡面 0 条 R-n 行时 grep 无匹配退出码会击穿错误管道杀驱动
         # （两实录）——分派 0 是合法结果；函数任何内部非零在此吞掉并如实记 0 条。
         g5_gap_fanout "${RGID}" || note "[G5] 退回自动分派跳过（fanout 内部异常，按 0 条如实记；run 后修复批根治）"
-        if wait_truth "补齐后 READY-GATE-PASS（判词语义）" 2400 mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
+        if mx_wait_revive "补齐后 READY-GATE-PASS（判词语义）" 2400 "$(sget room_analysis)" "$(agent_mxid fanfan)" fanfan "【新任务·G5 补齐复评】发布准出评审卡 ${RGID} 缺项=${_G5GAPS}；材料已在 origin/main，请按卡面真实缺项补齐后更新卡面判词 READY-GATE-PASS（或按卡面证据改判并说明），分析群同步同一行。闸在等这一行。" -- mx_gate_combined_pass "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_RETRY_TS" fanfan "${RFD_ID} 发布准出评审"; then
           # 补齐轮与复用/首轮同一收口（2026-10-07 本路径曾内联收口漏发
           # dlv_gate G5 pass——交付案例面板 G5 门禁灯灰，记录 delivery-g5-gate-event-missing）
           if ! g5_pass_finalize; then
@@ -2435,6 +2477,7 @@ if step_reached release && [[ -z "$(sget release_done)" ]]; then
   capture_step "release_done" "/app/stage/accept?tab=g5"   # 步20 承载面
   dlv_gate_try G6 pass "发布门 released（REL-MERGE/TAG/DELIVER 三卡）" ops
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 20 --text "G5 过闸+REL 三卡记录" --ev "cards=REL-MERGE,REL-TAG,REL-DELIVER" >/dev/null 2>&1 || true
+  r18_guard 20
 fi
 
 # ══ 步骤 22：uat（业务验收，V3 新增）══════════════════
@@ -2476,7 +2519,8 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
     _m21=$(dispatch_in_room bella "@fanfan-agent:matrix.test 业务验收（UAT）：请按 G1 冻结清单 ${AC_LIST}逐条给出证据（commit/分支/测试报告行号锚点），发结论行 UAT-EVIDENCE 开头、每条一行。编号必须逐条使用冻结清单原编号（AC-N 一一对应，不得自设编号或沿用开发任务书旧编号；一行一条冻结 AC，判词紧跟该行）。bella 将逐条核对。${_prep_uat_hint}" "$(agent_mxid fanfan)")
     sset m21_marker "$_m21"
     # 必采对话挂钩随派发即时采+marker 持久化
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" dialog --step 21 --room "$(sget room_analysis)" --anchor "$(marker_eventid "$(sget m21_marker)")" --title "UAT 验收任务书全文（bella→fanfan）" --user fanfan >/dev/null 2>&1 || true
+    r18_dialog_step "$SCRIPT_DIR" 21 "$(sget m21_marker)" "UAT 验收任务书全文（bella→fanfan）"
+    r18_guard 21
     # 判据行首锚定（run5 实锤误判）：contains 会命中 agent 工作回声里的
     # hindsight_recall 预览串（"UAT-EVIDENCE AC-1 AC-2 …"），把中间态当结论行——
     # 110s 即"到位"、覆盖核验只见到 AC-1/2 误判未过。结论行约定 UAT-EVIDENCE 开头，
@@ -2781,6 +2825,7 @@ if step_reached audit && [[ -z "$(sget audit_done)" ]]; then
   sset audit_done "$(date +%s)"
   capture_step "deliver_gate" "/app/stage/accept?tab=cases"   # 步23 R29 delivery 面板灯
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 24 --text "独立审计完成（工件见 evidence）" --ev "state=audit_done" >/dev/null 2>&1 || true
+  r18_guard 24
   # V8.46 修正：R29/P15 要求的是 delivery 门禁灯帧（payload['delivery']），run21 错登成 op
   # 导致矩阵步 23 恒缺——按 r18_matrix.py DELIVERY_STEPS 的读法记录。
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" deliver --step 23 --frame deliver_gate-op1-before.png deliver_gate-op1-after.png --note "Delivery Cases 面板六闸门禁灯（审计独立见证位）" >/dev/null 2>&1 || true
@@ -3124,8 +3169,10 @@ PAYSPECS
     || fail "报告审计 FAIL（§5.7 收官判据②——缺口记录+DISP 降级后重试）"
   # 双正本制（§5.4）：final-report.html（人读正本）缺一即违例——run10 收官时未产出实锤；
   # PART1 未注册时合并器会给出注册指引（按轮人工正本，禁旧轮顶包）。
-  python3 "$SCRIPT_DIR/mux/final-report-merge.py" ${RUN_ID:+--run "$RUN_ID"} \
-    || fail "final-report 合并失败（§5.4 双正本缺一即违例——PART1 未注册时先编写注册）"
+  # run26 复盘：PART1 未注册在合并步才报错＝白等 58 分钟（审计环先转完）。人工注册仍优先；
+  # 未注册时走 --auto-part1 实测数据自动草稿并落 part1-auto-draft 问题单，交人工润色。
+  python3 "$SCRIPT_DIR/mux/final-report-merge.py" ${RUN_ID:+--run "$RUN_ID"} --auto-part1 \
+    || fail "final-report 合并失败（§5.4 双正本缺一即违例——PART1 未注册且自动草稿亦失败）"
   # V8.46 合并后复跑审计（run21 实证：R15 载体 final-report.html 在首次审计时必然未生成，
   # 只能 WARN；合并后复跑让 R15 成为真断言。首次审计保留=报告生成后早失败，防白等合并）。
   python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"} \

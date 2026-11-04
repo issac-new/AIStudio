@@ -988,8 +988,10 @@ describe('⑱ 报告链验收守门（run10 勘误轮：15 FAIL 绕行交付+G5 
 
   it('G5 补齐轮收口走 g5_pass_finalize（不漏 dlv_gate G5 pass 事件）', () => {
     const scen = read(join(HARNESS, 'aipay-scenario.sh'))
-    // 补齐轮 wait_truth 块内必须调 g5_pass_finalize（内联 kanban_walk_done+sset 曾绕过 dlv 事件）
-    const retry = scen.match(/补齐后 READY-GATE-PASS（判词语义）[\s\S]{0,600}?else/)
+    // 补齐轮等待块内必须调 g5_pass_finalize（内联 kanban_walk_done+sset 曾绕过 dlv 事件）。
+    // 2026-11-04 run26 复盘批：等待器由 wait_truth 换 mx_wait_revive（失联自动唤醒），
+    // 唤醒词使「等待调用→收口分支」距离变长，窗口 600→1400（判据不变：块内必须出现收口函数）。
+    const retry = scen.match(/补齐后 READY-GATE-PASS（判词语义）[\s\S]{0,1400}?else/)
     expect(retry).toBeTruthy()
     expect(retry![0]).toContain('g5_pass_finalize')
     // g5_pass_finalize 本体必须含 dlv_gate G5 pass 发射（窗口 6000：QGate 接线+安全条件对账
