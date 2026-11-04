@@ -1,5 +1,8 @@
-// 运行面融合批走查（8649）：日程还原 + 运行中心工作流页签 + 看板全链路追踪页签
+// 运行面融合批走查（8649）：日程还原 + 运行中心深链 + 看板效益页签 + IDE 工作流面板
 // 全断言显式 waitFor（vite 按需编译时序抖动，固定 sleep 不可靠）
+// 2026-11-04 r26 清偿：①results 曾声明在 try 块内、汇总在块外——ReferenceError 崩溃
+// ②rc-tab-workflows 旧运行中心页签已随 0d44031ee 死件删除收敛→改 /app/runs 深链断言
+// ③ia-tasks-tab-observatory→ia-tasks-tab-effectiveness（TasksView 四页签重构现名）
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'fs'
 
@@ -8,19 +11,24 @@ const shots = '/tmp/run-surface-fusion-shots'
 mkdirSync(shots, { recursive: true })
 
 const browser = await chromium.launch({ channel: 'chrome' })
+// page/results 提到 try 外：results 曾在 try 内声明、finally 后汇总引用——块级作用域
+// ReferenceError（2026-11-04 r26 回归实录），任何路径都要能走到汇总。
+const results = []
+function record(name, ok, note = '') { results.push({ name, ok, note }) }
 // try/finally 保证中途异常也关浏览器：曾无兜底，任一断言抛错即泄漏 Chrome 子进程
 try {
 const page = await browser.newPage({ viewport: { width: 1560, height: 940 } })
 await page.addInitScript(() => {
   try { localStorage.setItem('hermes_ide_sidepane', JSON.stringify({ open: true, tab: 'workflow', width: 340 })) } catch {}
 })
-const results = []
-function record(name, ok, note = '') { results.push({ name, ok, note }) }
 async function waitSel(sel, timeout = 15000) {
   try { await page.waitForSelector(sel, { timeout }); return true } catch { return false }
 }
 
-await page.goto(BASE + '/#/', { waitUntil: 'domcontentloaded' })
+// 落地直进 ia2 壳（#/# 落地可能在登录页/hermes 旧壳——日程按钮在 ia2 壳页头，
+// r26 清偿实录：旧起点 goto #/ 等 ia-header-schedule 超时假红，02 截图 17.6K 空页）
+await page.goto(BASE + '/#/app', { waitUntil: 'domcontentloaded' })
+await page.waitForSelector('[data-testid="ia-shell-header"]', { timeout: 30000 })
 await page.waitForTimeout(2000)
 for (let i = 0; i < 3; i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(250) }
 await page.evaluate(() => { document.querySelectorAll('.n-modal-mask, .n-modal-container').forEach(e => e.remove()) })
@@ -40,40 +48,35 @@ if (schedOk) {
 }
 await page.screenshot({ path: `${shots}/02-app-header.png` })
 
-// ② 运行中心：工作流第四页签 + 深链
+// ② 运行中心：/app/runs 深链可达（旧 rc-tab-workflows 页签面已随 0d44031ee 收敛删除）
 await page.goto(BASE + '/#/app/runs', { waitUntil: 'domcontentloaded' })
-const wfTabOk = await waitSel('[data-testid="rc-tab-workflows"]', 20000)
-record('② 运行中心工作流页签', wfTabOk)
-if (wfTabOk) {
-  const wfText = (await page.locator('[data-testid="rc-tab-workflows"]').first().textContent()) || ''
-  record('② 页签文案=工作流', wfText.includes('工作流') || wfText.includes('Workflows'), wfText.trim())
-  await page.locator('[data-testid="rc-tab-workflows"]').first().evaluate(el => el.click())
-  const panelOk = await waitSel('[data-testid="workflow-observation-panel"]', 10000)
-  record('② 工作流面板挂载', panelOk)
-  await page.screenshot({ path: `${shots}/03-runcenter-workflows.png` })
-  await page.goto(BASE + '/#/app/runs?tab=workflows', { waitUntil: 'domcontentloaded' })
-  record('② ?tab=workflows 深链直达', await waitSel('[data-testid="workflow-observation-panel"]', 15000))
-}
+const runsOk = await waitSel('.ia-shell, [data-testid="ia-shell-header"]', 20000)
+record('② /app/runs 深链可达（收敛后入口）', runsOk)
+await page.screenshot({ path: `${shots}/03-runcenter.png` })
 
-// ③ 看板：全链路追踪页签
+// ③ 看板：效益页签（原「全链路追踪」observatory 页签重构并入 effectiveness）
 await page.goto(BASE + '/#/app/board', { waitUntil: 'domcontentloaded' })
-const obsTabOk = await waitSel('[data-testid="ia-tasks-tab-observatory"]', 20000)
-record('③ 看板全链路追踪页签', obsTabOk)
+const obsTabOk = await waitSel('[data-testid="ia-tasks-tab-effectiveness"]', 20000)
+record('③ 看板效益页签', obsTabOk)
 if (obsTabOk) {
-  const obsText = (await page.locator('[data-testid="ia-tasks-tab-observatory"]').first().textContent()) || ''
-  record('③ 页签文案=全链路追踪', obsText.includes('全链路追踪') || obsText.includes('Observatory'), obsText.trim())
-  await page.locator('[data-testid="ia-tasks-tab-observatory"]').first().evaluate(el => el.click())
-  const rtoOk = await waitSel('[data-testid="ia-tasks-panel-observatory"] .run-trace-overview', 15000)
-  record('③ RunTraceOverview 面板挂载', rtoOk)
-  await page.screenshot({ path: `${shots}/04-board-observatory.png` })
+  await page.locator('[data-testid="ia-tasks-tab-effectiveness"]').first().evaluate(el => el.click())
+  const panelOk = await waitSel('[data-testid="ia-tasks-panel-effectiveness"]', 15000)
+  record('③ 效益面板挂载', panelOk)
+  await page.screenshot({ path: `${shots}/04-board-effectiveness.png` })
 }
 
 // ④ IDE 壳：⟐ 工作流面板薄壳 + 日程（共享页头）
 await page.goto(BASE + '/#/app/ide', { waitUntil: 'domcontentloaded' })
 const ideShellOk = await waitSel('[data-testid="ide-sidepane"]', 25000)
 record('④ IdeShell 渲染（ide-sidepane 挂载）', ideShellOk)
-const ideWfTabOk = await waitSel('[data-testid="ide-sidepane-tab-workflow"]', 10000)
-record('④ IDE 侧栏 ⟐ 页签', ideWfTabOk)
+// 侧栏页签按组过滤渲染（groupFilter 持久化，默认可能非 observe 组）——真实用户
+// 路径=点 observe 组露出 workflow 页签；直接等 tab 会在 code 组下假红（r26 实录）。
+let ideWfTabOk = false
+if (ideShellOk) {
+  await page.locator('[data-testid="ide-sidepane-group-observe"]').first().evaluate(el => el.click()).catch(() => {})
+  ideWfTabOk = await waitSel('[data-testid="ide-sidepane-tab-workflow"]', 20000)
+}
+record('④ IDE 侧栏 ⟐ 页签（observe 组）', ideWfTabOk)
 if (ideWfTabOk) {
   await page.locator('[data-testid="ide-sidepane-tab-workflow"]').first().evaluate(el => el.click())
   const paneOk = await waitSel('[data-testid="ide-sidepane-workflow"]', 10000)

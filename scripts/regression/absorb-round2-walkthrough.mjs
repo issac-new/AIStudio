@@ -1,6 +1,6 @@
 // 吸收二期 A/B+建议 3 浏览器走查（dev 链 8649→8647）
 // 断言：①页头版本号钮→changelog 弹窗 ②Spotlight 深搜升级行→SessionSearchModal
-// ③设置侧栏 terminal 条目在（superadmin）+petdex 条目默认隐（features.pet 关）
+// ③设置侧栏 terminal 条目收敛态（Task 7 注册表化，负断言）+petdex/agentManager 默认隐
 // ④FlowNav 排序三档切换器存在可点 ⑤房间路由 ?event= 深链不炸
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'fs'
@@ -90,7 +90,7 @@ await dismissModals()
   await dismissModals()
 }
 
-// ③ A1+A4：设置页侧栏——terminal 条目在（superadmin）、petdex 隐（默认关）
+// ③ A1+A4：设置页侧栏——terminal 条目收敛态、petdex/agentManager 隐（默认关）
 {
   await page.goto(BASE + '/#/app/settings')
   await page.waitForSelector('[data-testid="ia-settings-sidebar"]', { timeout: 20000 })
@@ -99,7 +99,10 @@ await dismissModals()
   // href 断言代替文案断言（locale 加载时序使文案中英不定，href 是硬真值）
   const hrefs = await page.locator('[data-testid="ia-settings-sidebar"] a').evaluateAll(
     els => els.map(a => a.getAttribute('href') ?? ''))
-  ok('A1 终端条目在（superadmin）', hrefs.includes('#/hermes/terminal'), 'link #/hermes/terminal')
+  // 2026-11-04 r26 清偿：A1 断言语义反转。Task 7（2026-10-27）设置目录注册表化后
+  // terminal 无设置侧栏条目——入口收敛为 IDE 底部面板/驾驶舱面板内嵌（独立路由
+  // #/hermes/terminal 保留可直达）。负断言锁收敛决策防回潮（注册表单一事实源）。
+  ok('A1 终端条目不在设置侧栏（入口收敛，IDE/驾驶舱内嵌）', !hrefs.includes('#/hermes/terminal'), 'converged, no #/hermes/terminal link')
   ok('A4 petdex 条目默认隐（features.pet 关）', !hrefs.includes('#/hermes/petdex'), 'petdex gated')
   ok('A4 agentManager 条目默认隐（features.agentManager 关）', !hrefs.includes('#/studio/agents'), 'agentManager gated')
   await page.screenshot({ path: shots + '/03-settings-sidebar.png' })
@@ -107,15 +110,21 @@ await dismissModals()
 
 // ④ 建议 3：FlowNav 排序三档切换器
 {
-  await page.goto(BASE + '/#/app')
+  // FlowNavPanel 挂 WorkbenchView（ia2.collab 沟通协作壳）——r26 清偿：/app 已落
+  // 驾驶舱 dash，旧 goto #/app 等 flow-nav 必超时；改走 collab 真实挂载页。
+  await page.goto(BASE + '/#/app/collab', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('[data-testid="flow-nav"]', { timeout: 20000 })
   const sorts = await page.locator('.flow-nav__sort').count()
   ok('建议3 排序切换器三档存在', sorts === 3, `sorts=${sorts}`)
   const alphaBtn = page.locator('[data-testid="flow-sort-alpha"]')
   await alphaBtn.click()
   await page.waitForTimeout(300)
-  const persisted = await page.evaluate(() => localStorage.getItem('ia2.flow.sortMode'))
-  ok('建议3 排序选择持久化 localStorage', persisted === 'alpha', `sortMode=${persisted}`)
+  // 持久化走 settings-layers 分层键（sl:user:flow.sortMode，JSON 包裹）——
+  // 裸键 ia2.flow.sortMode 仅作收养源，r26 清偿：旧断言读裸键必 null。
+  const persisted = await page.evaluate(() => {
+    try { return JSON.parse(localStorage.getItem('sl:user:flow.sortMode') ?? 'null') } catch { return null }
+  })
+  ok('建议3 排序选择持久化（sl:user:flow.sortMode）', persisted === 'alpha', `sortMode=${persisted}`)
   await page.screenshot({ path: shots + '/04-flow-sorts.png' })
 }
 
