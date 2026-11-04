@@ -31,6 +31,36 @@ function baselineEntries(): string[] {
     .filter((l) => l && !l.startsWith('#'))
 }
 
+const TASKCARD_BASELINE = resolve(ROOT, '.swarm-yuan/spec-taskcard-baseline.txt')
+
+function taskcardBaselineEntries(): string[] {
+  if (!existsSync(TASKCARD_BASELINE)) return []
+  return readFileSync(TASKCARD_BASELINE, 'utf8')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'))
+}
+
+/** 任务卡七项批量违规（2026-11-04 W3）：仍缺七项的=应留在基线。 */
+function taskcardsViolating(files: string[]): string[] {
+  if (files.length === 0) return []
+  const script = `
+set -uo pipefail
+lib="$1"; shift
+. "$lib"
+for f in "$@"; do
+  v=$(spf_taskcard_check < "$f")
+  [ -n "$v" ] && printf '%s\n' "$f"
+done
+`
+  const out = execFileSync('bash', ['-c', script, 'bash', KIT_LIB, ...files], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 16 * 1024 * 1024,
+  })
+  return out.split('\n').filter(Boolean)
+}
+
 /** 单次 bash 调用里批量跑 spf_sections_check，返回仍不达标（=应留在基线）的条目。 */
 function sectionsViolating(files: string[]): string[] {
   if (files.length === 0) return []
@@ -127,6 +157,26 @@ describe('spec 四段基线棘轮（只许减）', () => {
   it('基线条目不得指向不存在的 spec', () => {
     const missing = entries.filter((p) => !existsSync(resolve(ROOT, p)))
     expect(missing, `基线里有过期路径（spec 已删/改名，须同步清理）：\n${missing.join('\n')}`).toEqual([])
+  })
+
+describe('spec 任务卡七项基线棘轮（只许减；2026-11-04 W3）', () => {
+  const entries = taskcardBaselineEntries()
+
+  it('基线内条目必须仍然缺七项（补齐后须删条目）', () => {
+    const existing = entries.filter((p) => existsSync(resolve(ROOT, p)))
+    const stillViolating = new Set(taskcardsViolating(existing))
+    const nowCompliant = existing.filter((p) => !stillViolating.has(p))
+    expect(nowCompliant, `以下 spec 已七项齐全，须从 .swarm-yuan/spec-taskcard-baseline.txt 删除：\n${nowCompliant.join('\n')}`).toEqual([])
+  })
+
+  it('基线必须存在且覆盖全部存量 spec（新 spec 不进基线=被机检）', () => {
+    expect(entries.length, '任务卡基线缺席或为空——存量豁免面必须显式落盘').toBeGreaterThan(0)
+  })
+
+  it('基线条目不得指向不存在的 spec', () => {
+    const missing = entries.filter((p) => !existsSync(resolve(ROOT, p)))
+    expect(missing, `任务卡基线里有过期路径：\n${missing.join('\n')}`).toEqual([])
+  })
   })
 })
 

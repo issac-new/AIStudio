@@ -45,13 +45,13 @@ afterEach(() => {
 })
 
 describe('appendExecutionRecord', () => {
-  it('追加写入按日分片的今日文件，带契约版本 v=1', () => {
+  it('追加写入按日分片的今日文件，带契约版本 v=2（W3 关联字段批）', () => {
     appendExecutionRecord({ kind: 'coding-run', runId: 'r1', outcome: 'success', startedAt: Date.now() }, env)
     const expected = join(dir, `execution-records-${dayStamp(Date.now())}.jsonl`)
     expect(existsSync(expected)).toBe(true)
     const lines = readFileSync(expected, 'utf8').trim().split('\n')
     expect(lines).toHaveLength(1)
-    expect(JSON.parse(lines[0])).toMatchObject({ v: 1, kind: 'coding-run', runId: 'r1', outcome: 'success' })
+    expect(JSON.parse(lines[0])).toMatchObject({ v: 2, kind: 'coding-run', runId: 'r1', outcome: 'success' })
   })
 
   it('目录自建：EXECUTION_RECORDS_DIR 指向不存在路径也能落盘', () => {

@@ -8,6 +8,7 @@
  *   GET  /api/harness/nine-layers?days=7          九层运行体检（2026-10-18；逐层证据/差距/动作）
  *   GET  /api/harness/tool-contracts               工具契约表（副作用/超时/重试/幂等）
  *   GET  /api/harness/tool-audit?days=&limit=      工具执行审计查询（窗口/身份/结果过滤+聚合）
+ *   GET  /api/harness/execution-join?runId=&taskId= 执行关联单点归并（W3：记录/审计/批单/结果四源一次取）
  *   GET  /api/harness/policy-decisions?days=        执法放行/拒绝决策账（P0-2）
  *   GET  /api/harness/run-manifests?days=            运行清单与运行级成本（P1-3）
  *   GET  /api/harness/obs-signals?days=7           观测信号聚合（2026-10-19：请求量/token拆分/TTFT/429 率，按日分桶）
@@ -27,6 +28,8 @@ import { buildPrimitivesReport, collectPrimitiveCounts, type PrimitivesReport } 
 import { buildEvalLayers, collectEvalLayersInputs, type EvalLayersReport } from './eval-layers'
 import { collectRsiMaturity, type RsiMaturityReport } from './rsi-maturity'
 import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
+import { executionJoin } from './execution-join'
+import { taskModelRoutes } from '../taskmodel/taskmodel-controller'
 import { queryPolicyDecisions, verifyPolicyDecisionChain } from '../toolpipeline/policy-decisions'
 import { collectMcpDrift, snapshotMcpDrift } from '../mcpcatalog/mcp-drift'
 import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
@@ -151,6 +154,30 @@ router.get('/tool-contracts', async (ctx) => {
 
 // 工具执行审计查询（v3）：窗口/身份/工具/结果过滤 + 分页与聚合。
 // 坏行跳过、目录缺席返回空账（fail-soft）；审计写失败计数随回包可见。
+// W3 执行观测贯通：单点归并——按 runId/taskId 一次取执行记录+工具审计+执法批单
+// +结果投影（每源 fail-soft，源缺席 available:false 不 500）。
+router.get('/execution-join', async (ctx) => {
+  try {
+    const q = ctx.query
+    const runId = typeof q.runId === 'string' && q.runId ? q.runId : undefined
+    const taskId = typeof q.taskId === 'string' && q.taskId ? q.taskId : undefined
+    if (!runId && !taskId) {
+      fail(ctx, 400, 'runId 与 taskId 至少提供一个')
+      return
+    }
+    const days = Number(q.days)
+    const limit = Number(q.limit)
+    ctx.body = await executionJoin({
+      runId, taskId,
+      board: typeof q.board === 'string' && q.board ? q.board : undefined,
+      days: Number.isFinite(days) ? days : undefined,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    })
+  } catch (e) {
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
+  }
+})
+
 router.get('/tool-audit', async (ctx) => {
   try {
     const q = ctx.query
@@ -521,5 +548,8 @@ if (process.env.NODE_ENV !== 'test') {
   // 残余项⑥：沙箱租约 janitor（显式配置根与间隔才启动）。
   startSandboxJanitorIfEnabled()
 }
+
+// W3：任务模型读模型路由（挂本前缀下零 patch：/api/harness/taskmodel/:taskId）
+router.use(taskModelRoutes.routes())
 
 export const harnessRoutes = router

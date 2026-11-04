@@ -1410,6 +1410,8 @@ npm run serve
 | 主动性执行 | 两轴判定与页签已接线，执法门默认关闭 | 显式开启后的拦截与豁免审计 |
 | 桌面安装 | 未逐平台构建和安装验收 | mac/win 分别构建、安装、启动核对 |
 | 运行面新增模块 | 未逐项纳入本文，避免把未验证实现写成稳定契约 | 以代码、测试和专题文档为准 |
+| 任务模型读投影（2026-11-04 W3） | taskmodel v1 只读派生（kanban-task-fast 详情→schemaVersion/userGoal/inputRefs/artifactRefs/runs/conversation）；inputRefs 版本面与 run 级输入冻结缺席 | 读投影 fail-soft（缺字段 null 不猜）；宣称「输入可复现」前须补写路径冻结（kanban_db patch 通道） |
+| 执行记录关联面（2026-11-04 W3） | ExecutionRecord v2 增可选 traceId/stepId/workflowVersion/promptVersion/inputRef/outputRef/retryCount/approvalId；/api/harness/execution-join 四源归并（记录/审计/批单/结果投影） | v1 旧档缺字段=未知不猜；单源缺席 available:false 不得 500 |
 
 这些边界是实现检查项，不是新的设计原则。
 主要代码锚点为 `zcode-acp-delegate.py` 的 `resolve_engine_bin_env`、

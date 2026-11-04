@@ -120,6 +120,43 @@ export type S0Rule =
   | S0RequiredToolsRule
   | S0NoLoopRule
   | S0RedundantRatioRule
+  | S0ForbiddenToolsRule
+  | S0JsonPathRule
+  | S0ResultSchemaRule
+  | S0SideEffectsMaxRule
+
+/**
+ * W3 验收 DSL（2026-11-04，源文 08 节契约用例四断言）：forbidden_tools/
+ * json_path/result_schema/side_effects_max——不承诺模型必须写哪句话，但明确
+ * 「不能调用无关工具、结果必须带哪些键、副作用不得超限」。
+ */
+
+/** 禁用工具规则：清单内任一工具出现即判 no（如 publishAnnouncement 不得被调）。 */
+export interface S0ForbiddenToolsRule {
+  kind: 'forbidden_tools'
+  tools: string[]
+}
+
+/** JSONPath 断言（最小子集：$.a.b / $.a[0].b / $.a[*].b / 终端 .length）。 */
+export interface S0JsonPathRule {
+  kind: 'json_path'
+  path: string
+  operator: 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge' | 'exists' | 'contains'
+  value?: number | string | boolean
+}
+
+/** 结果结构断言：必填键 + 基本类型（object/array/string/number/boolean）。 */
+export interface S0ResultSchemaRule {
+  kind: 'result_schema'
+  required: Array<{ key: string; type?: 'object' | 'array' | 'string' | 'number' | 'boolean' }>
+}
+
+/** 副作用上限断言：具名计数器不得超过 max（如 maxCreatedRecords:1 防重复建卡）。 */
+export interface S0SideEffectsMaxRule {
+  kind: 'side_effects_max'
+  counter: string
+  max: number
+}
 
 /**
  * 行为锚点（OpenAI Evals 教科书 Rubric 四要素之二）：为"成立/不成立"各写一条
@@ -585,6 +622,13 @@ export interface Evidence {
   outcomeDetail?: string
   /** 工具调用序列（过程双指标数据源；无工具调用的证据可为空数组）。 */
   toolCalls?: ToolCallRecord[]
+  /**
+   * W3 验收 DSL 证据面：结构化结果载荷（json_path/result_schema 的求值对象）。
+   * 缺席=无法判定（unknown），不为缺证据判失败——fail-soft 契约。
+   */
+  resultJson?: unknown
+  /** W3：具名副作用计数器（side_effects_max 求值对象；如 createdRecords/提交数）。 */
+  sideEffects?: Record<string, number>
 }
 
 export interface EvalConfig {

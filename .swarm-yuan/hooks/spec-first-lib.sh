@@ -422,6 +422,63 @@ spf_sections_check() {  # stdin=spec 正文 → stdout 违规描述（空=通过
   '
 }
 
+# ===== 任务卡审查七项（2026-11-04 W3 吸收轮；vivo Harness 10 章任务卡模板）=====
+# 七项=业务完成条件/输入与来源/工作流边界/工具与副作用/结果与证据/异常与恢复/
+# 验收反例。检查形态=标题行锚定（^#{1,6} 标题含锚词即算），存量 spec 全量基线
+# 豁免（.swarm-yuan/spec-taskcard-baseline.txt，只许减——棘轮与四段基线同范式），
+# 只拦基线外（新增）spec；档位 SPEC_TASKCARD_ENFORCE=warn|block（默认 warn）。
+spf_taskcard_check() {  # stdin=spec 正文 → stdout 违规描述（空=通过）
+  LC_ALL=C awk '
+    /^#+[ \t]/ {
+      h = $0
+      sub(/^#+[ \t]+/, "", h)
+      if (h ~ /完成条件/) has["完成条件"] = 1
+      if (h ~ /输入/)    has["输入与来源"] = 1
+      if (h ~ /工作流/)  has["工作流边界"] = 1
+      if (h ~ /工具/)    has["工具与副作用"] = 1
+      if (h ~ /结果/)    has["结果与证据"] = 1
+      if (h ~ /异常/)    has["异常与恢复"] = 1
+      if (h ~ /验收反例/) has["验收反例"] = 1
+    }
+    END {
+      split("完成条件 输入与来源 工作流边界 工具与副作用 结果与证据 异常与恢复 验收反例", want, " ")
+      miss = ""
+      for (i = 1; i <= 7; i++) {
+        k = want[i]
+        if (!(k in has)) miss = miss (miss == "" ? "" : "、") k
+      }
+      if (miss != "") printf "taskcard-missing:%s", miss
+    }
+  '
+}
+
+spf_taskcard_baseline() {  # $1=项目根 → stdout 基线条目（缺席=空）
+  local _f="$1/.swarm-yuan/spec-taskcard-baseline.txt"
+  [[ -f "$_f" ]] || return 0
+  grep -v '^[[:space:]]*#' "$_f" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/[[:space:]]*$//'
+  return 0
+}
+
+# 单 spec 的七项违规（基线内直接放行）。参数同 spf_sections_violation。
+spf_taskcard_violation() {
+  local _root="$1" _spec="$2" _view="${3:-worktree}"
+  local _rel _content
+  _rel="$_spec"
+  case "$_rel" in
+    "${_root}/"*) _rel="${_rel#"${_root}/"}" ;;
+  esac
+  [[ -z "$_rel" ]] && return 0
+  if spf_taskcard_baseline "$_root" | grep -qxF -- "$_rel"; then return 0; fi
+  if [[ "$_view" == "index" ]]; then
+    _content="$(git -C "$_root" show ":${_rel}" 2>/dev/null || true)"
+  else
+    _content="$(cat "${_root}/${_rel}" 2>/dev/null || true)"
+  fi
+  [[ -z "$_content" ]] && return 0
+  printf '%s' "$_content" | spf_taskcard_check
+  return 0
+}
+
 # 基线清单读取（每行一个仓库相对路径；# 注释与空行忽略）。
 spf_sections_baseline() {  # $1=项目根 → stdout 基线路径
   local _f="$1/.swarm-yuan/spec-sections-baseline.txt"
