@@ -2592,6 +2592,53 @@ def devimpl_parallelism_html(n: int) -> str:
             f'run11 基线 ~50% 复盘口径同参 —— {verdict}）</div>'
             + tl_html + prog_html)
 
+def step_evidence_supplement(n: int) -> str:
+    """补录证据（2026-11-04 用户指令：偏差内容要在报告里补全为正确的）。
+
+    采集偏差帧不冒充实拍；该步改用「可核实物」补录——状态键时间戳（state.env）、
+    交付物实物与 commit 锚（ARTIFACT_VIEWS 解析）、该步对话摘录（r18 载荷 dialogs）。
+    三者都是本轮真实产物，读者可据此核对这一步到底发生了什么，而不是看一张壳页。
+    """
+    meta = STEPS_META.get(n) or {}
+    rows = []
+    stamp = []
+    for k in (meta.get('keys') or [])[:4]:
+        v = str(state.get(k, '') or '')
+        if v.isdigit() and int(v) > 1e9:
+            try:
+                import datetime as _dt
+                stamp.append(f'{k}={_dt.datetime.fromtimestamp(int(v)).strftime("%m-%d %H:%M:%S")}')
+            except Exception:
+                stamp.append(f'{k}={v}')
+        elif v:
+            stamp.append(f'{k}={v[:40]}')
+    if stamp:
+        rows.append('<div class="sup-row"><b>状态键（台账真值）</b>：' + H.escape('、'.join(stamp)) + '</div>')
+    arts = []
+    for name, rel, _checks in ARTIFACT_VIEWS.get(n, []):
+        raw, aref, asha, truth = _art_resolve(rel)
+        if raw is None:
+            arts.append(f'{name}：缺件（{rel or "无路径"}）')
+        else:
+            state_txt = '往轮产物' if truth.get('stale') else '本轮实物'
+            arts.append(f'{name}：{state_txt} {aref or rel}@{asha or "?"}')
+    if arts:
+        rows.append('<div class="sup-row"><b>交付物实物</b>：' + H.escape('；'.join(arts[:6])) + '</div>')
+    payload = R18.get(str(n)) or R18.get(n) or {}
+    dlg = payload.get('dialogs') or []
+    if dlg:
+        msgs = dlg[0].get('messages') or []
+        lines = [str(m.get('body') or '') for m in msgs if m.get('body')]
+        if lines:
+            ex = ' ／ '.join(x.replace('\n', ' ')[:90] for x in lines[-3:])
+            rows.append('<div class="sup-row"><b>对话摘录</b>：' + H.escape(ex) + '</div>')
+    if not rows:
+        rows.append('<div class="sup-row d-muted">本步无可补录实物（状态键/交付物/对话均缺席）——'
+                    '缺口如实保留，修采集位后重拍。</div>')
+    return ('<div class="card info st-supplement"><b>补录证据（采集偏差按实物补全，非截图）</b>'
+            + ''.join(rows) + '</div>')
+
+
 def r18_block(n: int) -> str:
     """步骤 n 的 R18 载荷渲染。载荷空 → 诚实「未采集」章（审计查 8 按线打回）。"""
     payload = R18.get(str(n)) or R18.get(n) or {}
@@ -5023,15 +5070,18 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
                         # 没变化就不能让人以为有变化）
                         _or_imgs[-1] = (pre, '本步界面实拍（操作前/后无界面变化——本步推进在数据与管理侧）· 点图放大', 'ui')
             _bad_html = ''
+            if _bad_imgs and not _or_imgs:
+                # 该步没有任何合格帧：用可核实物补录（用户 2026-11-04 指令：偏差内容补全为正确的）
+                _bad_html = step_evidence_supplement(n)
             if _bad_imgs:
                 # 内容不符/重复的帧不混进证据画廊（用户 2026-11-04 质询：截图与步骤不符、
                 # 重复填充）。仍保留可查——折叠区里逐帧给偏差原因，明示「不作实拍证据」。
-                _bad_html = ('<details class="st-framegap"><summary>⚠ 本步采集偏差 %d 帧'
-                             '（内容与步骤不符／重复，未按实拍证据呈现）</summary>'
-                             % len(_bad_imgs)
-                             + img_tags(_bad_imgs)
-                             + '<p class="d-warn">处理：按拍摄位重拍（页面态需与步一致）；'
-                               '偏差已登记 frame-content-mismatch，重拍后本节消失。</p></details>')
+                _bad_html += ('<details class="st-framegap"><summary>⚠ 本步采集偏差 %d 帧'
+                              '（内容与步骤不符／重复，未按实拍证据呈现）</summary>'
+                              % len(_bad_imgs)
+                              + img_tags(_bad_imgs)
+                              + '<p class="d-warn">处理：按拍摄位重拍（页面态需与步一致）；'
+                                '偏差已登记 frame-content-mismatch，重拍后本节消失。</p></details>')
             imgs_html = (f'<p class="st-autoattach">本步界面实拍 {len(_or_imgs)} 张（操作前/后对照，点图可放大）。'
                          f'{("另有 %d 帧采集偏差，见下折叠区。" % len(_bad_imgs)) if _bad_imgs else ""}</p>'
                          + img_tags(_or_imgs) + _bad_html)
