@@ -27,6 +27,7 @@ import { hermesHomePath, readGatewayMatrixEnv } from './gateway-env'
 import {
   TASK_ASSIGN_EVENT_TYPE, TASK_RECEIPT_EVENT_TYPE,
   AGENT_MESSAGE_EVENT_TYPE, AGENT_PROFILE_EVENT_TYPE, SWARM_EVENT_PREFIX,
+  serializeReceipt,
 } from './task-protocol'
 import { atomicWriteJson } from '../lib/fs-store'
 
@@ -348,15 +349,18 @@ export class ChatBridge {
       content: prompt,
     })
     try {
-      await matrixSend(this.opts.env, mapping.matrixRoomId, TASK_RECEIPT_EVENT_TYPE, {
+      // 投影化（2026-10-26 九段校正）：桥不代为编排——投影成功=running（已进
+      // 本地房、执行归成员本机 gateway，桥不声称 done）。回执一律走
+      // serializeReceipt（W2：服务端唯一序列化点，此前内联拼 observed/by/at
+      // 与客户端解析器形状不符，回执必解析失败）。
+      await matrixSend(this.opts.env, mapping.matrixRoomId, TASK_RECEIPT_EVENT_TYPE, serializeReceipt({
         taskId,
-        // 投影化（2026-10-26 九段校正）：桥不再代为编排——回执 observed=已投影
-        // 进本地房，执行归成员本机 gateway（Matrix 原生链），桥不声称接单。
-        status: injected ? 'observed' : 'failed',
+        status: injected ? 'running' : 'failed',
         reason: injected ? 'projected-execution-belongs-to-gateway' : 'local-room-missing',
-        by: this.opts.env.userId,
-        at: this.opts.now(),
-      }, this.opts.fetchImpl, `receipt-${taskId.slice(0, 12)}`)
+        reportedBy: this.opts.env.userId,
+        reportedAt: this.opts.now(),
+        legacyByAndAt: true,
+      }), this.opts.fetchImpl, `receipt-${taskId.slice(0, 12)}`)
     } catch (e) {
       this.opts.log(`receipt ${taskId} 发送失败：${String((e as Error).message)}`)
     }

@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync } from 'fs'
 import { dirname, resolve } from 'path'
 import type { ApprovalDecision, ApprovalRule, DefaultMode } from './approval-domain'
+import { ALLOW_RULE_TTL_MS } from './approval-domain'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
 
@@ -72,6 +73,7 @@ export class ApprovalRuleStore {
     }
     try {
       const parsed = JSON.parse(raw)
+      const loadTime = Date.now()
       const data: ApprovalRulesFile = {
         defaultMode: parsed.defaultMode === 'allow' || parsed.defaultMode === 'deny' ? parsed.defaultMode : 'ask',
         // 旧档兼容（X2）：缺 owner/sessionId/agentId 的旧规则原样保留（无主=全局可见，
@@ -79,6 +81,21 @@ export class ApprovalRuleStore {
         rules: Array.isArray(parsed.rules)
           ? parsed.rules.filter((r: ApprovalRule) => r && typeof r.tool === 'string').map(normalizeRuleIdentity)
           : [],
+      }
+      // W2 审批口径收口（2026-11-04）：存量无期限 allow 规则装载时补 24h 期限并标
+      // migratedAt——关闭「一次确认=永久通行证」，同时给在途会话一天缓冲（与
+      // approval-log scoped 24h 口径一致）。deny/ask 不补期（保护性规则不因时间
+      // 削弱）。补期后落盘（fail-soft：只读介质写失败时内存仍生效，下次装载重试）。
+      let migratedCount = 0
+      for (const rule of data.rules) {
+        if (rule.list === 'allow' && rule.expiresAt === undefined) {
+          rule.expiresAt = loadTime + ALLOW_RULE_TTL_MS
+          rule.migratedAt = loadTime
+          migratedCount += 1
+        }
+      }
+      if (migratedCount > 0) {
+        try { this.save(data) } catch { /* 只读介质：内存补期已生效，落盘待下次可写 */ }
       }
       this.file = data
       if (legacy) {

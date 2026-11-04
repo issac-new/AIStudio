@@ -60,7 +60,7 @@ describe('readTaskDetailFast（overlay 709 sqlite 直读快道）', () => {
   it('命中：七键齐、task 28 字段、skills 数组/raci dict、epoch 语义', () => {
     const d = readTaskDetailFast('t_fast1', 'demo', home)
     expect(d).not.toBeNull()
-    expect(Object.keys(d).sort()).toEqual(['children', 'comments', 'events', 'latest_summary', 'parents', 'runs', 'task'])
+    expect(Object.keys(d).sort()).toEqual(['children', 'comments', 'events', 'latest_summary', 'parents', 'resultContract', 'runs', 'task'])
     const t = d.task
     expect(Object.keys(t).length).toBe(28)
     expect(t.id).toBe('t_fast1')

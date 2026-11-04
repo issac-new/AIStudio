@@ -28,6 +28,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { createRequire } from 'node:module'
 import { hermesHome } from '../../lib/paths'
+import { validateResultEnvelope, type ResultEnvelope } from '../../result-contract/result-contract'
 
 // 双运行时取 node:sqlite：服务端 ts-node（CJS）与 vitest（ESM）都走 createRequire
 // 解内置模块（路径实参对内置模块无意义，任意占位即可）；解不出=快道关闭。
@@ -43,6 +44,12 @@ export interface KanbanTaskFastDetail {
   comments: Array<Record<string, unknown>>
   events: Array<Record<string, unknown>>
   runs: Array<Record<string, unknown>>
+  /**
+   * W2 结果协议读侧投影（2026-11-04）：从 latest run metadata/completion_receipt/
+   * artifacts 派生的 ResultEnvelope + 校验结论；源不足以成形（无 summary）时为
+   * null（fail-soft，不猜）。派生为纯函数 deriveResultContract（独立可测）。
+   */
+  resultContract?: { envelope: ResultEnvelope; validation: { ok: boolean; problems: Array<{ path: string; rule: string; detail: string }> } } | null
 }
 
 // _TASK_DICT_FIELDS（kanban_output.py:16-25）——顺序即 CLI 输出顺序
@@ -100,14 +107,76 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /** 板库路径解析（与 kanban-overview fast 布局兼容）：分板库优先，default 板
- *  兼容旧根级布局（<home>/kanban/kanban.db）。返回存在的路径或 null。 */
-export function boardDbPath(board: string, home = hermesHome()): string | null {
+ *  兼容旧根级布局（<home>/kanban/kanban.db）。返回存在的路径或 null。 */export function boardDbPath(board: string, home = hermesHome()): string | null {
   const slug = board.trim()
   if (!slug) return null
   const candidates = slug === 'default'
     ? [join(home, 'kanban', 'boards', 'default', 'kanban.db'), join(home, 'kanban', 'kanban.db')]
     : [join(home, 'kanban', 'boards', slug, 'kanban.db')]
   return candidates.find(p => existsSync(p)) ?? null
+}
+
+/**
+ * W2 结果协议读侧投影（纯函数）：从任务详情派生 ResultEnvelope。
+ * 源映射——summary←latest_summary|task.result；claims/evidence←最新 run 的
+ * completion_receipt（criteria[].evidence {kind,path,sha256}→可定位引用）；
+ * artifactRefs←metadata.artifacts；generatorVersion←profile+workflow_template_id。
+ * 源不足以成形（无 summary 或无 run）返回 null——不猜数。
+ */
+export function deriveResultContract(detail: {
+  task: Record<string, unknown>
+  latest_summary: string | null
+  runs: Array<Record<string, unknown>>
+}): { envelope: ResultEnvelope; validation: ReturnType<typeof validateResultEnvelope> } | null {
+  const summary = detail.latest_summary ?? (typeof detail.task.result === 'string' && detail.task.result.trim() ? detail.task.result : null)
+  if (!summary) return null
+  const latestRun = [...detail.runs].reverse().find(r => isPlainObject(r.metadata)) ?? null
+  const meta = isPlainObject(latestRun?.metadata) ? (latestRun!.metadata as Record<string, unknown>) : null
+  const receipt = meta && isPlainObject(meta.completion_receipt) ? (meta.completion_receipt as Record<string, unknown>) : null
+
+  const claims = receipt && Array.isArray(receipt.criteria)
+    ? (receipt.criteria as Array<Record<string, unknown>>).map((c, i) => ({
+        id: String(c.id ?? `criterion-${i}`),
+        statement: String(c.note ?? c.status ?? `criterion ${i}`),
+        evidence: (Array.isArray(c.evidence) ? (c.evidence as Array<Record<string, unknown>>) : [])
+          .filter(e => typeof e.path === 'string' && e.path)
+          .map(e => ({
+            sourceId: String(e.path),
+            locator: { kind: 'path' as const, value: String(e.path) },
+            role: 'supports' as const,
+          })),
+      }))
+    : undefined
+
+  const evidence = receipt && Array.isArray(receipt.artifacts)
+    ? (receipt.artifacts as Array<Record<string, unknown>>)
+        .filter(a => typeof a.path === 'string' && a.path)
+        .map(a => ({
+          sourceId: String(a.path),
+          locator: { kind: 'path' as const, value: String(a.path) },
+          role: 'context' as const,
+        }))
+    : undefined
+
+  const artifactRefs = meta && Array.isArray(meta.artifacts)
+    ? (meta.artifacts as unknown[]).filter((a): a is string => typeof a === 'string' && a.length > 0)
+        .map(a => ({ kind: 'file' as const, ref: a }))
+    : undefined
+
+  const lastEnded = latestRun && typeof latestRun.ended_at === 'number' ? latestRun.ended_at : null
+  const profile = latestRun && typeof latestRun.profile === 'string' ? latestRun.profile : ''
+  const workflow = typeof detail.task.workflow_template_id === 'string' && detail.task.workflow_template_id ? detail.task.workflow_template_id : 'kanban'
+
+  const envelope: ResultEnvelope = {
+    resultVersion: 1,
+    generatedAt: new Date(lastEnded ?? Date.now()).toISOString(),
+    generatorVersion: [workflow, profile].filter(Boolean).join('@') || 'kanban',
+    summary: String(summary).slice(0, 500),
+    ...(claims?.length ? { claims } : {}),
+    ...(evidence?.length ? { evidence } : {}),
+    ...(artifactRefs?.length ? { artifactRefs } : {}),
+  }
+  return { envelope, validation: validateResultEnvelope(envelope) }
 }
 
 /**
@@ -192,7 +261,7 @@ export function readTaskDetailFast(taskId: string, board?: string, home?: string
         return out
       })
 
-    return {
+    const assembled = {
       task,
       latest_summary: summaryRow?.summary ?? null,
       parents,
@@ -201,6 +270,12 @@ export function readTaskDetailFast(taskId: string, board?: string, home?: string
       events,
       runs,
     }
+    // W2：结果协议投影（fail-soft——派生异常不影响快道主形状）
+    let resultContract: KanbanTaskFastDetail['resultContract'] = null
+    try {
+      resultContract = deriveResultContract(assembled)
+    } catch { resultContract = null }
+    return { ...assembled, resultContract }
   } catch {
     return null
   } finally {

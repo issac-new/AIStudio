@@ -55,3 +55,44 @@ export function buildAssignContent(params: {
 }): AssignEventContent {
   return { ...params, issuedAt: Date.now() }
 }
+
+// ── 回执（task.receipt）服务端唯一序列化点（2026-11-04 W2 轮）──
+// 漂移事故：服务端曾内联拼 {status:'observed',by,at}，客户端 parseReceiptContent
+// 要 {reportedBy,reportedAt,status∈五态}——服务端回执必解析失败、跨机回执链
+// 静默断裂。本类型+序列化器与客户端 protocol.ts ReceiptContent 对齐；发回执
+// 一律走这里，字段漂移由交叉守门测试（receipt-roundtrip）当场红。
+
+/** 客户端协议 v2 认可的回执状态五态（镜像 custom/client/matrix-teams/protocol.ts）。 */
+export type ReceiptStatus = 'created' | 'running' | 'waiting-human' | 'done' | 'failed'
+
+export interface ReceiptContent {
+  [key: string]: unknown
+  taskId: string
+  status: ReceiptStatus
+  localTaskId?: string
+  reason?: string
+  reportedBy: string
+  reportedAt: number
+}
+
+export function serializeReceipt(input: {
+  taskId: string
+  status: ReceiptStatus
+  reportedBy: string
+  reportedAt?: number
+  localTaskId?: string
+  reason?: string
+  /** 兼容过渡期：旧消费方仍读 by/at（增量字段不破坏它们）。 */
+  legacyByAndAt?: boolean
+}): ReceiptContent {
+  const reportedAt = input.reportedAt ?? Date.now()
+  return {
+    taskId: input.taskId,
+    status: input.status,
+    ...(input.localTaskId ? { localTaskId: input.localTaskId } : {}),
+    ...(input.reason ? { reason: input.reason } : {}),
+    reportedBy: input.reportedBy,
+    reportedAt,
+    ...(input.legacyByAndAt ? { by: input.reportedBy, at: reportedAt } : {}),
+  }
+}
