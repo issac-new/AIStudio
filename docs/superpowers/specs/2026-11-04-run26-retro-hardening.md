@@ -43,8 +43,8 @@
 - **新守门（tests/mechanism-behavior.test.ts 追加 5 例）**：`npx vitest run tests/mechanism-behavior.test.ts` → **25/25 全绿**。含两条行为断言直接钉住本轮根因：①判词立即到达时零唤醒（不打扰）；②责任人安静超阈＝群内＋DM 双发并落 wait-revive 问题单；③r18_guard 与审计器同判据（缺件落 ISSUE、齐备静默）；④`--auto-part1` 起草文本不含占位符（run13 闸兼容）且含闸门时刻。
 - **全量门禁**：`bash tests/run-gates.sh` → **272 passed / 0 failed**（18 文件）。其中 harness-gate-integrity ⑱ 的「G5 补齐轮收口」窗口 600→1400（等待器换 mx_wait_revive 后距离变长，判据不变，理由写进测试注释）。
 - **jargon 门**：`bash mux/tests/jargon-source-gate.test.sh` → HARD=0（方案正本新增条款与 spec 全过）。
-- **补丁 730**：clean+inject 重放验证（合并后执行，结果回填本节）。
-- **全量 npm test**：合并前在 main 执行（结果回填）。
+- **补丁 730**：`npm run clean && npm run inject` → `applied patch: 730-ag... (to hermes-agent)`，全量 435 枚零 WARN（补丁可重放）。
+- **全量 npm test**：合并后 main 执行 7486 passed / 2 failed；两红均为文档机械门（A.1 声明数与行数、设计索引未含本 spec），当场清偿后复跑该两门 **19/19 绿**（详见合并后修复提交）。
 
 ## 设计文档影响
 
