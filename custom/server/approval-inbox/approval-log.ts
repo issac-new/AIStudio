@@ -162,9 +162,19 @@ export function appendApprovalLog(entry: Omit<ApprovalLogEntry, 'ts'> & { ts?: n
   return full
 }
 
-/** 历史查询（新→旧）。 */
-export function queryApprovalLog(limit = 50): ApprovalLogEntry[] {
-  return load().slice().reverse().slice(0, Math.max(1, Math.min(limit, CAP)))
+/** 历史查询（新→旧）。
+ *
+ * `targetId` 精确过滤在**截断之前**执行（2026-11-04 N02 清偿）：原先只能取最近 N 条
+ * 再在消费方 grep，台账一长，目标记录滚出窗口即被误判「未落账」——run26 G5 验收
+ * 就吃过这个亏（`g5-approval-history-missing`）。按对象 id 反查应不受窗口影响。
+ */
+export function queryApprovalLog(limit = 50, targetId?: string): ApprovalLogEntry[] {
+  const wanted = (targetId ?? '').trim()
+  const entries = load().slice().reverse()
+  const filtered = wanted
+    ? entries.filter((entry) => String(entry.targetId ?? '') === wanted)
+    : entries
+  return filtered.slice(0, Math.max(1, Math.min(limit, CAP)))
 }
 
 export interface ApprovalChainVerification extends ChainVerifyResult {

@@ -25,11 +25,12 @@ import json
 import re
 import shutil
 import subprocess
+import os
 import sys
 import tempfile
 from pathlib import Path
 
-SIM_ROOT = Path('/Users/cuishi/lab/ncwk-sim-mux')
+SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Users/cuishi/lab/ncwk-sim-mux')
 
 # 每步「必须出现」的关键词（任一命中即可）与「不得出现」的空白态噪声。
 # 语义来源：capture-plan.env 同键行的页签名/注释（见各行末注释）。
@@ -84,8 +85,10 @@ def ocr(path: Path, tmp: Path) -> str:
         im.save(small)
     except Exception:
         small = path
+    # stderr 解码容错（2026-11-04 实证）：tesseract 混入非 UTF-8 字节时 text=True 严格
+    # 解码会抛 UnicodeDecodeError，整个核对崩——这是「帧从未被核验」的隐性原因之一。
     out = subprocess.run(['tesseract', str(small), 'stdout', '-l', 'chi_sim', '--psm', '6'],
-                         capture_output=True, text=True, timeout=120)
+                         capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=120)
     return out.stdout or ''
 
 

@@ -14,7 +14,7 @@
 //   3) simharness/mux/mx-recovery-lib.sh:mx_gateway_recovering / mx_defer_restart_policy
 //   4) simharness/mux/mx-gate-timing.sh 的台账判读（fixture state.env + scenario.log）
 import { execFileSync } from 'child_process'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'fs'
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -203,13 +203,44 @@ describe('run25 复盘批：结构性缺口不再复发', () => {
     expect(lib).toContain('无案例房')
   })
 
-  it('活跃代码不再引用已归档的方案路径（悬空引用=单一事实源破坏）', () => {
-    const files = ['simharness/aipay-scenario.sh', 'simharness/mux/mx-report-gen.py',
-                   'simharness/mux/mx-scenario-lib.sh']
-    for (const f of files) {
-      expect(read(f)).not.toContain('2026-09-25-mux-v3-lifecycle-plan')
-      expect(read(f)).toContain('2026-10-05-mux-v8-fullflow-plan')
+  it('活跃面不再引用已归档的方案路径（全仓扫描，非三文件硬编码——N09）', () => {
+    // N09（2026-11-04 台账清偿）：原先只钉三份文件，改名/移动后的悬空引用仍可漏网
+    // （run25 撞出 4 处）。改为扫全部活跃面：代码根（simharness/custom/scripts/config/
+    // registries）＋读者面 docs/manuals；历史记录目录（specs/、reports/、archive/）不在
+    // 扫描面——那是留档，引用旧路径属证据原文。
+    const roots = ['simharness', 'custom', 'scripts', 'config', 'registries', 'docs/manuals']
+    const exts = new Set(['.sh', '.py', '.mjs', '.js', '.ts', '.vue', '.md'])
+    const skipDirs = new Set(['node_modules', 'vendor', 'dist', '.git', '.qgate', '__pycache__', 'archive'])
+    const self = join(HARNESS, 'tests', 'mechanism-behavior.test.ts')
+    // 代码面禁两类（旧方案名 + 指向归档目录的路径引用）；读者面（docs/manuals）只禁
+    // 旧方案名——设计文档索引按职责就是要收录 archive 条目，链接归档不是悬空引用。
+    const forbiddenCode = ['2026-09-25-mux-v3-lifecycle-plan', 'superpowers/specs/archive/']
+    const forbiddenDocs = ['2026-09-25-mux-v3-lifecycle-plan']
+    const hits: string[] = []
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name.startsWith('.')) continue
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) {
+          if (!skipDirs.has(entry.name)) walk(full)
+          continue
+        }
+        if (!exts.has(entry.name.slice(entry.name.lastIndexOf('.')))) continue
+        if (full === self) continue
+        const body = readFileSync(full, 'utf8')
+        const forbidden = full.includes(`${join('docs', 'manuals')}`) ? forbiddenDocs : forbiddenCode
+        for (const needle of forbidden) {
+          if (body.includes(needle)) hits.push(`${full}: ${needle}`)
+        }
+      }
     }
+    for (const r of roots) {
+      const dir = join(REPO, r)
+      if (existsSync(dir)) walk(dir)
+    }
+    expect(hits, hits.join('\n')).toEqual([])
+    // 正本必须在活跃面被引用（防「谁都不指向正本」的另一种悬空）
+    expect(read('simharness/aipay-scenario.sh')).toContain('2026-10-05-mux-v8-fullflow-plan')
   })
 })
 
@@ -325,5 +356,65 @@ print("HAS_GATES", "G2 架构评审" in html)
     expect(out).toContain('HAS_PLACEHOLDER False')
     expect(out).toContain('HAS_GATES True')
     expect(out).toContain('自动起草')
+  })
+})
+
+// ── 7) 台账清偿批（2026-11-04 N05/N09/N11）：机械核验
+describe('台账清偿批：零交付分类／缺件节／台账键注册', () => {
+  it('N11：集中注册表覆盖 run26 全部 27 个表外键（骨架轮不再空渲染）', () => {
+    // 真值样本=run26 侧柜实测的 unregistered_ledger_keys（27 个）——原样作为 fixture，
+    // 断言「注册表 ∪」后无遗漏；注册表解析走 ast（不执行 report-gen 的重模块加载）。
+    const keys = [
+      'raci-dispatch-missing', 'receipt-missing', 'r18-collection-missing', 'review-card-missing',
+      'security-review-missing', 'security-review-timeout', 'g2-design-review-fail', 'g2-arch-fail-hold',
+      'gate-breaker-tripped', 'breaker-wait-nudge', 'gate-breaker-reset', 'split-evidence-missing',
+      'g3-local-gate-missing', 'runtime-proof-missing', 'eval-live-evidence-missing',
+      'eval-remediation-open', 'eval-gate-gap', 'g5-humangate-proxy', 'g5-approval-history-missing',
+      'evidence-push', 'uat-ac-failed', 'driver-restart-storm', 'zero-delivery', 'audit-finding',
+      'retro-open-items', 'product-outcome-missing', 'r18-collect-failed',
+    ]
+    const log = join(TMP, 'n11-issues.log')
+    writeFileSync(log, keys.map((k) => `ISSUE|${k}|actor|note`).join('\n') + '\n', 'utf8')
+    const registered = bash(`
+cd ${JSON.stringify(MX)} && python3 -I -c '
+import ast, json
+src = open("mx-report-gen.py", encoding="utf-8").read()
+tree = ast.parse(src)
+out = {}
+for node in tree.body:
+    if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "ISSUE_KEYS_BY_STEP":
+        out = ast.literal_eval(node.value)
+print(json.dumps({str(k): v for k, v in out.items()}))
+'`)
+    const map = JSON.parse(registered) as Record<string, string[]>
+    const covered = new Set(Object.values(map).flat())
+    const missing = keys.filter((k) => !covered.has(k))
+    expect(missing, `未注册键：${missing.join(',')}`).toEqual([])
+    // 反向：真调用 report_truth 的判据（同一事实源），27 键全注册后应为空
+    const unreg = bash(`
+cd ${JSON.stringify(MX)} && python3 -I -c '
+import json, sys
+sys.path.insert(0, ".")
+import report_truth
+m = json.loads(${JSON.stringify(JSON.stringify(map))})
+registered = {int(k): v for k, v in m.items()}
+print(json.dumps(report_truth.unregistered_ledger_keys(${JSON.stringify(log)}, registered)))
+'`)
+    expect(JSON.parse(unreg)).toEqual([])
+  })
+
+  it('N05：报告两节与产品分类消费在位（模板缺节/审计漏查即红）', () => {
+    const gen = readFileSync(join(REPO, 'simharness/mux/mx-report-gen.py'), 'utf8')
+    for (const needle of ['id="zero-delivery"', 'id="artifact-gap"', 'zero-delivery.json',
+                          'governanceNoAnchor']) {
+      expect(gen, `报告生成器缺 ${needle}`).toContain(needle)
+    }
+    const audit = readFileSync(join(REPO, 'simharness/mux/mx-report-audit.py'), 'utf8')
+    expect(audit).toContain('查20')
+    expect(audit).toContain('id="zero-delivery"')
+    expect(audit).toContain('id="artifact-gap"')
+    const drv = readFileSync(join(REPO, 'simharness/aipay-scenario.sh'), 'utf8')
+    expect(drv).toContain('/api/hermes/cluster-inspector/run')
+    expect(drv).toContain('zero-delivery.json')
   })
 })

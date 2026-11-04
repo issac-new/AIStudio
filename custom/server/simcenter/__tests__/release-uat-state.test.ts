@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import Koa from 'koa'
 import bodyParser from '@koa/bodyparser'
 import type { Server } from 'node:http'
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import {
@@ -182,6 +182,14 @@ describe('REST：G5 状态机与 UAT 台账', () => {
     const approve = await post('/release-gate', { run: 'run-g5', action: 'approve', anchor: 'evidence/uat-verdicts.jsonl#AC-1' })
     expect([200, 201]).toContain(approve.status)
     expect(approve.json.state).toBe('approved')
+    // N03（2026-11-04 台账清偿）：不只是 GET 回读——台账文件须真实落 approve 行且带锚
+    // （run25 实锤「只记问题单不落行」；报告证据九按该文件引用）。
+    const ledger = resolve(simRoot, 'runs', 'run-g5', 'evidence', 'release-gate.jsonl')
+    expect(existsSync(ledger)).toBe(true)
+    const lines = readFileSync(ledger, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l))
+    const approved = lines.find((r) => (r.action ?? r.decision) === 'approve')
+    expect(approved).toBeTruthy()
+    expect(approved.anchor).toBe('evidence/uat-verdicts.jsonl#AC-1')
 
     const again = await post('/release-gate', { run: 'run-g5', action: 'approve', anchor: 'x' })
     expect(again.status).toBe(200)
