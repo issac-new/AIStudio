@@ -561,6 +561,8 @@
 - [2026-11-04-composer-popups.md](../superpowers/specs/2026-11-04-composer-popups.md)
 - [2026-11-04-harness-w1-toolcontract-enforcement.md](../superpowers/specs/2026-11-04-harness-w1-toolcontract-enforcement.md)
 - [2026-11-04-harness-w2-result-approval.md](../superpowers/specs/2026-11-04-harness-w2-result-approval.md)
+- [2026-11-04-harness-w3-observability-taskmodel.md](../superpowers/specs/2026-11-04-harness-w3-observability-taskmodel.md)
+- [2026-11-04-harness-w2-result-approval.md](../superpowers/specs/2026-11-04-harness-w2-result-approval.md)
 - [2026-11-04-message-area-collapse.md](../superpowers/specs/2026-11-04-message-area-collapse.md)
 - [2026-11-04-agentteams-execution-records.md](../superpowers/specs/2026-11-04-agentteams-execution-records.md)
 - [2026-11-04-agentteams-project-graph.md](../superpowers/specs/2026-11-04-agentteams-project-graph.md)
