@@ -165,3 +165,4 @@
 {"at":"2026-11-04T05:25:21Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-skill-export.md","receipt":"edb4ed396aee6fc6655eb45eca7913a88bb589b1","commit":"35a46643e"}
 {"at":"2026-11-04T06:32:13Z","spec":"docs/superpowers/specs/2026-11-04-composer-popups.md","receipt":"8ba34e0f1f665885521562cfbe5ac79fdb6ca19b","commit":"a8515a50d"}
 {"at":"2026-11-04T07:12:08Z","spec":"docs/superpowers/specs/2026-11-04-message-area-collapse.md","receipt":"8e852a7c198e4634d1d8cd1d75c08bb0bc6b06f3","commit":"967840ba6"}
+{"at":"2026-11-04T07:42:32Z","spec":"docs/superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md","receipt":"0bf1b9262fe3cfa2f85f3c006878887aa25933f9","commit":"271b5eff0"}
