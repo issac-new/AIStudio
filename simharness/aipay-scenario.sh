@@ -2032,6 +2032,18 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
     sset g4_contract_gap 1
     note "[契约] G4 强制线：观察产物缺席——fail-closed 记录"
   fi
+  # ── 新能力探测（方案 §5.11 十三组；2026-11-03 立、2026-11-04 扩组并接线）──
+  # 上轮立法（§5.11＋审计查19）但驱动从未生成证据——每轮只能靠审计环 WARN，等于没验。
+  # 本轮接线：G4 段对生效 studio 全量探测一次；failed>0 或不可达 → g4_pass 不置位
+  # （§5.11 准出规则：负例转绿=能力失效，当轮拦截，不靠报告期追认）。
+  _cap_rc=0
+  node "$SCRIPT_DIR/mux/mx-capability-probes.mjs" --base "http://127.0.0.1:${STUDIO_PORT:-8802}" \
+    --out "$EVID_DIR" --profile default --token "$(jwt_of fanfan 2>/dev/null || true)" || _cap_rc=$?
+  if (( _cap_rc == 0 )); then
+    note "[G4] 新能力探测十三组全绿（evidence/capability-probes.json）"
+  else
+    note "[G4] 新能力探测 rc=${_cap_rc}——g4_pass 不置位（详见 evidence/capability-probes.json）"
+  fi
   # ── V8.45 G4 评测子门：评测运行 + 红队 + 三角 + 覆盖 + 锚点（方案 §5.3 G4-E）──
   # FAIL 阻断 g4_pass（G5 的 gate_blocked 会拒入）；GAP 记录放行（缺口如实呈现，
   # 不拿基础设施缺席冒充通过）；PASS 置 g4_eval_pass。
@@ -2055,12 +2067,20 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   capture_step "eval_done" "/app/eval" "click:[data-testid=eval-tab-metrics]"
 
   sset testpass_done 1
-  if (( _eval_rc != 1 )); then
+  # G4 置位条件（2026-11-04 扩）：评测子门非 FAIL 且新能力探测全绿——两者任一失败
+  # 都不置 g4_pass，问题单分键落账（g4_eval_blocked / g4_capability_blocked）。
+  if (( _eval_rc != 1 && _cap_rc == 0 )); then
     sset_once g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
-    dlv_gate_try G4 pass "独立验证过（测试执行+缺口如实记录）"
+    dlv_gate_try G4 pass "独立验证过（测试执行+新能力探测+缺口如实记录）"
   else
-    sset g4_eval_blocked 1
-    echo "ISSUE|g4-eval-blocked|${RFD_ID}|评测子门 FAIL：G4 未置位（详见 evidence/evals/eval-summary.json）" >> "$EVID_DIR/issues.log"
+    if (( _eval_rc == 1 )); then
+      sset g4_eval_blocked 1
+      echo "ISSUE|g4-eval-blocked|${RFD_ID}|评测子门 FAIL：G4 未置位（详见 evidence/evals/eval-summary.json）" >> "$EVID_DIR/issues.log"
+    fi
+    if (( _cap_rc != 0 )); then
+      sset g4_capability_blocked 1
+      echo "ISSUE|g4-capability-probe-failed|${RFD_ID}|新能力探测 failed>0 或不可达（evidence/capability-probes.json）——负例转绿=能力失效，G4 不置位" >> "$EVID_DIR/issues.log"
+    fi
   fi
   # M3 事件化：P4 done（集成+缺陷闭环+测试报告）→ G4 pass（非实现者 tester）→ case→P5
   dlv_enabled && dlv_scenario_phase P4 qi G4 qi command-exit "testpass 测试报告入仓+G4 硬闸置位" P5

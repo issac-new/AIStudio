@@ -24,8 +24,12 @@ describe('V8.45 评测接线结构', () => {
     const sh = read('aipay-scenario.sh')
     expect(sh).toContain('source "$SCRIPT_DIR/mux/mx-eval-lib.sh"')
     expect(sh).toContain('eval_flow || _eval_rc=$?')
-    expect(sh).toContain('if (( _eval_rc != 1 )); then')
+    // 2026-11-04 §5.11 扩组批：置位条件并入新能力探测 rc（探测失败同拦 G4）
+    expect(sh).toContain('if (( _eval_rc != 1 && _cap_rc == 0 )); then')
     expect(sh).toContain('sset g4_eval_blocked 1')
+    expect(sh).toContain('sset g4_capability_blocked 1')
+    // 探测生产方接线（上轮立法无生产方的根治）：testpass 步自动全量探测
+    expect(sh).toContain('mx-capability-probes.mjs')
     expect(sh).toContain('evalops_snapshot')
     expect(sh).toContain('eval_done')
   })

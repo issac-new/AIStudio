@@ -1145,8 +1145,8 @@ if RUN_ID >= '20261102':
 else:
     print(f'NOTE 判据17 自 20261102 起适用（本轮 {RUN_ID} 早于生效日，契约用例清单不判）')
 
-# ── 查 19：判据 18「新能力探测七组」机械执法（方案 §5.11；自 20261103 起适用）──
-# 与查 18 同教训：本轮七组新能力只有 HTTP 面、无截图采集位，若审计不判，G4 会再次「通过了但没人验」。
+# ── 查 19：判据 18「新能力探测十三组」机械执法（方案 §5.11；自 20261103 起适用，2026-11-04 扩组）──
+# 与查 18 同教训：新能力组只有 HTTP 面、无截图采集位，若审计不判，G4 会再次「通过了但没人验」。
 # 数据面：证据目录下 capability-probes.json。缺席=WARN（能力未落地的轮次允许不跑，但必须显式说明）；
 # 在场而 failed>0 或缺组=FAIL（负例转绿＝能力失效，不是脚本问题）。
 if RUN_ID >= '20261103':
@@ -1155,7 +1155,7 @@ if RUN_ID >= '20261103':
         _probe19 = _f19
         break
     if _probe19 is None:
-        warns.append('查19 判据 18「新能力探测七组」证据缺席：未见 capability-probes.json'
+        warns.append('查19 判据 18「新能力探测十三组」证据缺席：未见 capability-probes.json'
                      '（脚本 simharness/mux/mx-capability-probes.mjs）——本轮若未跑须在测试报告 §8.1 写明理由，否则 G4 不得放行')
     else:
         try:
@@ -1163,7 +1163,11 @@ if RUN_ID >= '20261103':
             _rep19 = _json19.loads(_probe19.read_text(encoding='utf-8', errors='replace'))
             _failed19 = int(_rep19.get('failed') or 0)
             _groups19 = set((_rep19.get('byGroup') or {}).keys())
-            _need19 = {'proactivity', 'handoff', 'acceptance', 'claims', 'workbench', 'schedule', 'dispatch'}
+            # 2026-11-04 扩组（spec 2026-11-04-sim-capability-refresh-round2）：新六组只对
+            # RUN_ID≥20261104 必齐；20261103 轮次按原七组口径（历史证据不回填）。
+            _base19 = {'proactivity', 'handoff', 'acceptance', 'claims', 'workbench', 'schedule', 'dispatch'}
+            _need19 = _base19 if RUN_ID < '20261104' else _base19 | {
+                'fourgap', 'projectworkflow', 'execution-records', 'userenv', 'userperms', 'skills'}
             _missg19 = sorted(_need19 - _groups19)
             if _failed19 > 0:
                 _bad19 = [r for r in (_rep19.get('results') or []) if not r.get('ok')]
@@ -1171,7 +1175,7 @@ if RUN_ID >= '20261103':
                              + '；'.join(f"[{r.get('group')}] {r.get('name')}: {r.get('detail')}" for r in _bad19[:6])
                              + '——负例转绿=能力失效，须先修能力再重跑，不得降级登记')
             elif _missg19:
-                warns.append(f'查19 判据 18 探测组不齐，缺：{_missg19}——七组是方案 §5.11 最小验证面')
+                warns.append(f'查19 判据 18 探测组不齐，缺：{_missg19}——本轮最小验证面未齐（2026-11-04 起十三组，此前七组；方案 §5.11）')
         except Exception as _e19:
             fails.append(f'查19 判据 18 capability-probes.json 不可解析：{_e19}')
 else:

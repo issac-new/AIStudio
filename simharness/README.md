@@ -45,19 +45,22 @@ bash mux/mx-harness-snapshot.sh --out <run>/evidence/harness/harness-summary.jso
 快照写 `harness-summary.json` + `harness-summary.md`，报告第 9 章「证据七：Harness 运行面」
 引用；端点缺席如实标 ⬜ 并记问题单，不阻断主链。prelaunch ⑳ 检查生效 dist 是否含六个新端点。
 
-## 新能力探测（2026-11-03 立，方案 §5.11）
+## 新能力探测（2026-11-03 立；2026-11-04 扩组至十三组，方案 §5.11）
 
-2026-11-03 落地的七组新能力（主动性介入治理／交接质量账本／确定性验收断言／主张-回执核验／
-组件库与多目标搜索／探测并发与调度面／派单容量准入）多数只有 HTTP 面、无独立 UI 承载，
-截图采集位采不到。改用端点级探测取证：
+只有 HTTP 面、无独立 UI 承载的新能力（主动性介入治理／交接质量账本／确定性验收断言／主张-回执核验／
+组件库与多目标搜索／探测并发与调度面／派单容量准入，2026-11-04 增：四性四格判据／项目一级状态机
+与拓扑／编码执行记录／环境变量编辑面／权限变更审计／技能导出三道限）截图采集位采不到，改用端点级
+探测取证。驱动 testpass 步（2026-11-04 接线）对生效 studio 自动全量探测；手动补跑：
 
 ```bash
-node mux/mx-capability-probes.mjs --base http://127.0.0.1:8686 --out <run>/evidence --token <JWT>
+node mux/mx-capability-probes.mjs --base http://127.0.0.1:8802 --out <run>/evidence --token <JWT> --profile default
 ```
 
-产物 `capability-probes.json`（七组正例读数＋负例判决）；退出码非 0 即 G4 不通过。
-负例是能力的存在理由——「不可判定不放行」「未引用判未验证」一旦静默放行，能力即失效。
-脚本自身守门：`tests/capability-probes.test.ts`（七组齐、服务不可达时仍写产物并退 1）。
+产物 `capability-probes.json`（十三组正例读数＋负例判决）；退出码非 0 即 G4 不通过（驱动当轮拦截，
+不靠报告期追认）。负例是能力的存在理由——「不可判定不放行」「未引用判未验证」一旦静默放行，能力
+即失效。第 4 组无证据台账、第 9 组无带 project_id 的未终结项目时只跑可得例并写明缺省理由（如实缺省
+而非跳过）；状态机端点只打不落库的拒绝分支（探测纪律：只读不写业务数据）。
+脚本自身守门：`tests/capability-probes.test.ts`（十三组齐、服务不可达时仍写产物并退 1）。
 
 ## 工作台 IA 与采集位（V8.44/V8.55）
 

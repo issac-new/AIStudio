@@ -2277,7 +2277,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | G1 需求上锁 | ①逐条 AC 可机械化判定（≥3，禁空话）②范围外清单③影响面（模块/接口/数据）④涉敏评估（涉敏出 ISO27001 摘要）⑤两轮不齐不得开工 | freeze 文件四要素+AC 编号清单 |
 | G2 架构治理评审 | ①设计五要素（背景/方案/接口/数据/风险）②爆炸半径排查（对照三清单）③验证计划前移④备选方案≥2 且有取舍⑤历史偏差硬性拦截（命中项已显式回应；检索由分组记忆与问题台账面执行） | 评审记录结构化留痕+检索结论 |
 | G3 编码门禁 | ①无设计不编码②需求-代码-测试一一对应③pay-core≥8/其余≥6 全绿④金额分 int64⑤渠道本地 mock⑥testlog 随分支脚本实际核验⑦**前端工程类交付目标运行时可运行**：真实开发者工具自动化通道编译+启动+首帧，runtime-proof（launchOk/screenshot/checkedAt）随分支提交，产品能力=POST /api/hermes/runtime-verify/miniprogram（单测全绿不等于可运行——run14 教训：小程序网络层无基址注入，单测测不到）⑧写入关卡标志 g3_code_pass | DEV 分支+testlog+runtime-proof+标志写入时间戳 |
-| G4 独立验证 | ①测试者≠写码者②缺陷报→修→验全关③只认本轮记录④测试报告六要素⑤执行输出证明实际执行⑥实跑 commit 与基线同祖⑦**跨模块契约测试**：服务应用↔核心模块接口双向实测（方法名/参数形态/返回形状；被消费接口逐条契约用例；测试未执行=缺陷非声明态——run14 实锤 merchant-api↔pay-core 漂移漏网）；**判据 17 执法器**=报告审计器机械检查测试报告含「契约用例」清单（缺失即 FAIL，run 编号 20261102 起适用——run24 实锤：模板已立法而审计器从未检查，G4 通过但报告全文零契约用例）⑧前端工程类运行冒烟（真工具首帧，与 runtime-proof 同源）⑨**评测子门 G4-E**：评测运行+红队（良性误报 ≤20%）+评估器三角（裁判离线不得有 S1 判词）+能力维度覆盖（0/7 记 gap）+集锚点（漂移判 FAIL）；PASS 置 g4_eval_pass，GAP 记录缺口并放行，FAIL 不置 g4_pass；⑩增线上证据回填与失败样本处置链（未关项只记问题单，不改 G4-E 三态）；⑪**新能力探测七组**：`capability-probes.json` 在场且 `failed=0`，负例全红（判据见 §5.11） | 测试报告+契约用例清单+commit 回填关联卡+eval-summary.json+remediations.json |
+| G4 独立验证 | ①测试者≠写码者②缺陷报→修→验全关③只认本轮记录④测试报告六要素⑤执行输出证明实际执行⑥实跑 commit 与基线同祖⑦**跨模块契约测试**：服务应用↔核心模块接口双向实测（方法名/参数形态/返回形状；被消费接口逐条契约用例；测试未执行=缺陷非声明态——run14 实锤 merchant-api↔pay-core 漂移漏网）；**判据 17 执法器**=报告审计器机械检查测试报告含「契约用例」清单（缺失即 FAIL，run 编号 20261102 起适用——run24 实锤：模板已立法而审计器从未检查，G4 通过但报告全文零契约用例）⑧前端工程类运行冒烟（真工具首帧，与 runtime-proof 同源）⑨**评测子门 G4-E**：评测运行+红队（良性误报 ≤20%）+评估器三角（裁判离线不得有 S1 判词）+能力维度覆盖（0/7 记 gap）+集锚点（漂移判 FAIL）；PASS 置 g4_eval_pass，GAP 记录缺口并放行，FAIL 不置 g4_pass；⑩增线上证据回填与失败样本处置链（未关项只记问题单，不改 G4-E 三态）；⑪**新能力探测十三组**：`capability-probes.json` 在场且 `failed=0`，负例全红（判据见 §5.11；2026-11-04 起由驱动 testpass 步自动生成——failed>0 即 g4_pass 不置位，不靠报告期追认） | 测试报告+契约用例清单+commit 回填关联卡+eval-summary.json+remediations.json |
 | G5 发布准出 | ①测试证据挂卡②构建同 commit 可复现③依赖无新增④回滚具体化（数字阈值+命令级+72h 观察窗）⑤灰度三档各档观察期⑥发布说明面向用户收益⑦HumanGate 批准可反查；⑧G4-E 已过或 gap 已登记（g4_eval_pass/g4_eval_gap 二选一）；判词只认评审卡结构化字段；FAIL 即冻结；⑨发布门台账 append-only（台账与评审卡不一致以评审卡为准） | 七项结论行+评审卡 body+批准事件+eval-summary.json+release-gate.jsonl |
 | G6 复盘 | ①三段式②行动项四要素③治理度量实测④问题单 100% DISP 回写⑤经验入分组记忆库；⑥闸键=`retro_done`（步 24），`report_done` 只作步 26 完成键 | 复盘文档+治理报告+台账+gate 键 retro_done |
 
@@ -2899,11 +2899,13 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 3. **采集缺口在步内暴露**：R18 必采证据（对话全文／操作前后帧／环节效果／skill 过程帧／门禁灯帧）的采集失败不得静默（禁 `|| true` 吞错）；每必采步末用 `r18_matrix.step_ok`（与报告审计器同一事实源）复判一次，未达标当场登记 `r18-required-missing`——审计环只做终审，不做首次发现。
 4. **人工件前移到最早可判定点**：逐轮人工正本（PART1 一页读懂）未注册时，收尾链按实测时间线与闸键自动起草（数据真实、标签明示「自动起草·待人工润色」、落 `part1-auto-draft` 问题单），人工注册仍优先——禁止让「缺一个人工件」在末步卡住整轮（run26 白等 58 分钟）。
 
-### 5.11 新能力验证面（2026-11-03 立，七组）
+### 5.11 新能力验证面（2026-11-03 立；2026-11-04 扩组至十三组并接驱动）
 
 > 立条背景：2026-11-03 一天内落了七组新能力（主动性介入治理／交接质量账本／确定性验收断言／主张-回执核验／组件库与多目标搜索／探测并发与调度面／派单容量准入），其中多数**只有 HTTP 面、没有独立 UI 承载**——`capture-plan.env` 的截图采集位采不到。若推演不取证，这些能力就是「写完了没人验」，下一轮又变成新的存量债。
 >
-> 取证工装：`simharness/mux/mx-capability-probes.mjs`（端点级探测，正例取读数、负例必须红），产物 `capability-probes.json` 落 run 证据目录；脚本自身的端到端把关是 `simharness/tests/capability-probes.test.ts`（七组齐、失败可见）。
+> 2026-11-04 扩组：四性四格判据（姿态准入／AC 追溯／阶段交接键／模型指纹，spec 2026-11-03-four-gap-*）与 AgentTeams 吸收四批＋挂账清偿（项目一级状态机与拓扑／编码执行记录／技能导出三道限／profile 环境变量编辑面／权限变更审计，spec 2026-11-04-agentteams-*）同样只有 HTTP 面，并入本表成十三组。同轮补上上轮遗留缺口：探测脚本已立而驱动未接（每轮证据缺席只落审计 WARN）——现由 testpass 步自动对生效 studio 全量探测一次，失败即拦 G4。
+>
+> 取证工装：`simharness/mux/mx-capability-probes.mjs`（端点级探测，正例取读数、负例必须红），产物 `capability-probes.json` 落 run 证据目录；脚本自身的端到端把关是 `simharness/tests/capability-probes.test.ts`（十三组齐、失败可见）。
 
 | # | 能力 | 正例判据（必须可机械核对） | 负例判据（必须红） |
 |---|---|---|---|
@@ -2914,8 +2916,14 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | 5 | 组件库与多目标搜索 | `GET /api/harness/workbench/library` 回 `summary.total` 数值＋`components` 数组；`derived.search` 三面（decomposition/retention/diversity）在每个提案上都在位（空提案表合法） | —— |
 | 6 | 探测并发与调度面 | `GET /api/harness/workbench/schedule` 回 `policy.probeConcurrency` 数值（缺省 2、上限 8） | —— |
 | 7 | 派单容量准入 | 码表 `capacity_exhausted`/`capacity_timeout` 在册且客户端 chip 文案成对（由 `dispatch-capacity.test.ts` 与 `client/zcode/__tests__/zcode-projection.test.ts` 把关） | —— |
+| 8 | 四性四格判据 | `GET /api/governance/posture-admission` 回 `admission.admits` 布尔＋`mode` ∈ {report,require-for-gate,strict}＋`digest` 非空；`POST /lifecycle/ac-trace`（doc＋`@ac` 绑定＋结果齐）回 `judgement.ok=true`；`POST /lifecycle/stage-keys/verify`（结构齐键）回 `chainOk=true` 且未给 root 时 `ioChecked=false`（弱保证不冒充强保证）；`GET /api/harness/trust/model-fingerprint` 回 40 位指纹或 `available:false`＋note（fail-soft 合法） | ①ac-trace：有 AC 无绑定 → `judgement.ok=false` 且 `unbound` 非空；doc 无 AC 条目 → 400；②stage-keys：缺字段坏键 → `chainOk=false`＋problems 点名；required 缺阶段 → `missing` 非空；③model-fingerprint `?profile=../x` → ≥400（不 ok） |
+| 9 | 项目一级状态机与拓扑 | `GET /api/projectworkflow/projects` 回 `projects` 数组（每项 id/status/taskStats.total 数值；SIM 板任务不带 project_id 时空表合法，读数如实记）；有项目时 `GET /projects/:id/graph` 回 `{nodes,edges,next,interrupts}` 四数组、`?format=mermaid` 回 `graph TD` 文本 | 存在未终结任务的项目时必红：无 override complete → 422＋problems 逐卡点名；`?override=true` 无 reason → 400（两分支均不落库）。无此类项目时负例记 skip 理由，全量正负行为由守门测试夹具（临时看板根）确定性验证 |
+| 10 | 编码执行记录 | `GET /api/execution-records?limit=5` 回 `{records,total,hasMore}`（空表合法——按日 JSONL 无记录=没跑过，不造假） | `?kind=bogus` → 400 `invalid_kind`（枚举外不得 200） |
+| 11 | 环境变量编辑面（N01） | `GET /api/userenv/profiles/:name/env` 回 `entries`（每项 `{key,valueMasked}`）＋`missing` 布尔（`.env` 未建=空表不 404） | ①profile 名含路径逃逸 → 400（先于 404 判）；②PUT 新增敏感键不带确认位 → 409 `sensitive_unconfirmed`＋problems 点名键名（不落库）；脱敏正确性由 `custom/server/userenv/__tests__` 把守 |
+| 12 | 权限变更审计（N02） | `GET /api/userperms/audit?limit=5` 回 `{entries,total,hasMore}`（空流合法——无变更即无审计行） | `?action=bogus` → 400 `invalid_action`（白名单外不得 200） |
+| 13 | 技能导出三道限 | `GET /api/hermes/skills?target=hermes` 回 `categories` 数组 | 导出不存在技能 → 404。413 超限／403 外部源分支由 `custom/__tests__/skills-export-contract.test.ts` 契约断言把守（组 7 先例：造 >200MB 目录不可行，常量与分支在补丁文本断言） |
 
-**准出规则**：`capability-probes.json` 必须在场，`failed=0`；任一负例转绿（本该拒的放行了）即判 G4 不通过——负例是这些能力的存在理由，负例失效等于能力失效。七组里第 4 组若无真实证据台账，允许只跑负例并在报告写「正例未跑，理由：本轮无证据写入」，属如实缺省而非跳过。
+**准出规则**：`capability-probes.json` 必须在场，`failed=0`；任一负例转绿（本该拒的放行了）即判 G4 不通过——负例是这些能力的存在理由，负例失效等于能力失效。十三组里第 4 组若无真实证据台账、第 9 组若无带 project_id 的未终结项目，允许只跑可得例并在报告写明缺省理由，属如实缺省而非跳过。**生产方**：testpass 步驱动自动执行（2026-11-04 接线；此前立法无生产方、每轮证据缺席），退出码非 0 → `g4_capability_blocked`＋g4_pass 不置位。
 
 ### 5.10 run25 复盘条款（2026-11-03 立，七条）
 
