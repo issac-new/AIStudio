@@ -14,7 +14,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, unlin
 import { join, resolve } from 'path'
 import { hermesWebUiHome } from '../lib/paths'
 
-export const EXECUTION_RECORDS_VERSION = 1
+export const EXECUTION_RECORDS_VERSION = 2
 export const RETAIN_DAYS = 14
 
 /** 单条执行记录。所有可选字段缺失即未知（不猜数，fail-soft 契约）。 */
@@ -37,6 +37,18 @@ export interface ExecutionRecord {
   endedAt?: number
   promptSha256?: string
   logBytes?: number
+  /**
+   * v2 关联字段（W3 执行观测贯通，2026-11-04；源文 08 节「单条可关联执行记录」）：
+   * 与工具审计行（tool-hooks）、run manifest 同名同义；v1 旧档缺字段=未知。
+   */
+  traceId?: string
+  stepId?: string
+  workflowVersion?: string
+  promptVersion?: string
+  inputRef?: string
+  outputRef?: string
+  retryCount?: number
+  approvalId?: string
 }
 
 export function executionRecordsDir(env: NodeJS.ProcessEnv = process.env): string {

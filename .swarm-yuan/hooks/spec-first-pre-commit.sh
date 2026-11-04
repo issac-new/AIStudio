@@ -129,6 +129,23 @@ if [[ -n "${_approved:-}${_governing:-}" ]]; then
       echo "⚠ swarm-yuan spec-sections（warn）: ${_sec_v}——置 SPEC_SECTIONS_ENFORCE=block 或 conf 同名键即强拦" >&2
     fi
 
+    # 任务卡七项机检（2026-11-04 W3 吸收轮；基线外 spec 缺七项标题即拦/警）。
+    _tc_mode="$(spf_conf_val "$CONF" SPEC_TASKCARD_ENFORCE)"
+    _tc_mode="${_tc_mode:-${SPEC_TASKCARD_ENFORCE:-warn}}"
+    _tc_v="$(spf_taskcard_violation "$ROOT" "$_l2_spec" index)"
+    if [[ -n "$_tc_v" ]]; then
+      if [[ "$_tc_mode" == "block" ]]; then
+        mkdir -p "$ROOT/.swarm-yuan" 2>/dev/null || true
+        _ts2="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        _e2="$(printf '%s' "$_tc_v" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr -d '\r\n')"
+        printf '{"ts":"%s","tool":"git-commit","target":"%s","gates":"spec-taskcard"}\n' "$_ts2" "$_e2" >> "$ROOT/.swarm-yuan/gate-deny.jsonl" 2>/dev/null || true
+        echo "✗ swarm-yuan spec-taskcard（L2 提交时强拦）: ${_tc_v}" >&2
+        echo "  解除方式: 1) 按模板补齐任务卡七项标题（完成条件/输入与来源/工作流边界/工具与副作用/结果与证据/异常与恢复/验收反例）；2) 确属存量债——该 spec 已在 .swarm-yuan/spec-taskcard-baseline.txt（只许减）；3) 逃生门: git commit --no-verify（L3 门禁兜底）。" >&2
+        exit 1
+      fi
+      echo "⚠ swarm-yuan spec-taskcard（warn）: ${_tc_v}——置 SPEC_TASKCARD_ENFORCE=block 或 conf 同名键即强拦" >&2
+    fi
+
     _rc_mode="$(spf_conf_val "$CONF" SPEC_RECEIPT_ENFORCE)"
     _rc_mode="${_rc_mode:-${SPEC_RECEIPT_ENFORCE:-warn}}"
     _rc_v="$(spf_receipt_check "$ROOT" "$_l2_spec" index "$CONF")"

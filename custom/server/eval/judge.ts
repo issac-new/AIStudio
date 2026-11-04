@@ -260,6 +260,144 @@ function applyRedundantRatioRule(rule: { max: number }, evidence: Evidence): Rul
   }
 }
 
+
+// ---------- W3 验收 DSL 四断言（2026-11-04，源文 08 节契约用例） ----------
+
+/** JSONPath 最小子集求值：$.a.b / $.a[0].b / $.a[*].b / 终端 .length。
+ *  [*] 语义=对数组每元素应用剩余路径并聚合（every：任一元素未命中即未命中）。
+ *  聚合值（数组）与比较算子组合时按「每项都满足」判定（源文示例
+ *  $.recommendations[*].evidenceRefs.length > 0 = 每条建议都有证据）。 */
+type PathOp = { t: 'key'; k: string } | { t: 'idx'; i: number } | { t: 'star' }
+
+function parseJsonPath(path: string): PathOp[] | null {
+  if (!path.startsWith('$')) return null
+  const ops: PathOp[] = []
+  const re = /\.(\w+)|\[(\d+|\*)\]/g
+  const body = path.slice(1)
+  let cursor = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(body)) !== null) {
+    // 段间只容空白：出现未消费字符=非法路径（不静默吞）
+    if (body.slice(cursor, m.index).trim() !== '') return null
+    cursor = m.index + m[0].length
+    if (m[1] !== undefined) ops.push({ t: 'key', k: m[1] })
+    else if (m[2] === '*') ops.push({ t: 'star' })
+    else ops.push({ t: 'idx', i: Number(m[2]) })
+  }
+  if (body.slice(cursor).trim() !== '') return null
+  return ops
+}
+
+function walkJsonPath(cur: unknown, ops: PathOp[]): { found: boolean; value?: unknown } {
+  if (ops.length === 0) return { found: true, value: cur }
+  const [op, ...rest] = ops
+  if (op.t === 'key') {
+    if (op.k === 'length' && Array.isArray(cur) && rest.length === 0) return { found: true, value: cur.length }
+    if (cur === null || typeof cur !== 'object' || Array.isArray(cur)) return { found: false }
+    const obj = cur as Record<string, unknown>
+    if (!(op.k in obj)) return { found: false }
+    return walkJsonPath(obj[op.k], rest)
+  }
+  if (op.t === 'idx') {
+    if (!Array.isArray(cur) || op.i < 0 || op.i >= cur.length) return { found: false }
+    return walkJsonPath(cur[op.i], rest)
+  }
+  // star：每元素走剩余路径（every 语义）
+  if (!Array.isArray(cur)) return { found: false }
+  if (cur.length === 0) return { found: false }
+  const results = cur.map((el) => walkJsonPath(el, rest))
+  if (results.some((r) => !r.found)) return { found: false }
+  return { found: true, value: results.map((r) => r.value) }
+}
+
+export function evalJsonPath(root: unknown, path: string): { found: boolean; value?: unknown } {
+  const ops = parseJsonPath(path)
+  if (!ops) return { found: false }
+  return walkJsonPath(root, ops)
+}
+
+function applyForbiddenToolsRule(rule: { tools: string[] }, evidence: Evidence): RuleOutcome {
+  if (!evidence.toolCalls) return { value: 'unknown', reason: 'S0 forbidden_tools：工具调用证据缺席' }
+  const seen = new Set(evidence.toolCalls.map((c) => c.name))
+  const hit = rule.tools.filter((t) => seen.has(t))
+  return {
+    value: hit.length === 0 ? 'yes' : 'no',
+    reason: hit.length === 0
+      ? `S0 forbidden_tools 未出现禁用工具（${rule.tools.join(',')}）`
+      : `S0 forbidden_tools 命中禁用工具：${hit.join(',')}`,
+  }
+}
+
+function applyJsonPathRule(rule: { path: string; operator: string; value?: unknown }, evidence: Evidence): RuleOutcome {
+  if (evidence.resultJson === undefined) {
+    return { value: 'unknown', reason: 'S0 json_path：结构化结果证据缺席' }
+  }
+  const r = evalJsonPath(evidence.resultJson, rule.path)
+  if (rule.operator === 'exists') {
+    return { value: r.found ? 'yes' : 'no', reason: `S0 json_path exists ${rule.path}：${r.found ? '命中' : '未命中'}` }
+  }
+  if (!r.found || r.value === undefined) {
+    return { value: 'no', reason: `S0 json_path ${rule.path}：路径未命中` }
+  }
+  const v = r.value
+  // star 聚合值（数组）：比较按 every 语义——每项都须满足
+  const values = Array.isArray(v) ? v : [v]
+  let ok: boolean
+  switch (rule.operator) {
+    case 'eq': ok = values.every((x) => x === rule.value); break
+    case 'ne': ok = values.every((x) => x !== rule.value); break
+    case 'lt': ok = values.every((x) => typeof x === 'number' && typeof rule.value === 'number' && x < rule.value); break
+    case 'le': ok = values.every((x) => typeof x === 'number' && typeof rule.value === 'number' && x <= rule.value); break
+    case 'gt': ok = values.every((x) => typeof x === 'number' && typeof rule.value === 'number' && x > rule.value); break
+    case 'ge': ok = values.every((x) => typeof x === 'number' && typeof rule.value === 'number' && x >= rule.value); break
+    case 'contains': ok = values.every((x) => typeof x === 'string' && typeof rule.value === 'string' && x.includes(rule.value)); break
+    default: return { value: 'unknown', reason: `S0 json_path 未知算子 ${rule.operator}` }
+  }
+  return { value: ok ? 'yes' : 'no', reason: `S0 json_path ${rule.path} ${rule.operator} ${JSON.stringify(rule.value)}：实际 ${JSON.stringify(v)}` }
+}
+
+function applyResultSchemaRule(rule: { required: Array<{ key: string; type?: string }> }, evidence: Evidence): RuleOutcome {
+  if (evidence.resultJson === undefined) {
+    return { value: 'unknown', reason: 'S0 result_schema：结构化结果证据缺席' }
+  }
+  if (evidence.resultJson === null || typeof evidence.resultJson !== 'object' || Array.isArray(evidence.resultJson)) {
+    return { value: 'no', reason: 'S0 result_schema：结果非对象' }
+  }
+  const obj = evidence.resultJson as Record<string, unknown>
+  const problems: string[] = []
+  for (const req of rule.required) {
+    if (!(req.key in obj) || obj[req.key] === undefined) {
+      problems.push(`缺 ${req.key}`)
+      continue
+    }
+    if (req.type) {
+      const v = obj[req.key]
+      const got = Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v
+      if (got !== req.type) problems.push(`${req.key} 类型 ${got}≠${req.type}`)
+    }
+  }
+  return {
+    value: problems.length === 0 ? 'yes' : 'no',
+    reason: problems.length === 0
+      ? `S0 result_schema 必填键齐备（${rule.required.map((r) => r.key).join(',')}）`
+      : `S0 result_schema 违规：${problems.join('; ')}`,
+  }
+}
+
+function applySideEffectsMaxRule(rule: { counter: string; max: number }, evidence: Evidence): RuleOutcome {
+  if (!evidence.sideEffects) {
+    return { value: 'unknown', reason: 'S0 side_effects_max：副作用计数证据缺席' }
+  }
+  const got = evidence.sideEffects[rule.counter]
+  if (typeof got !== 'number') {
+    return { value: 'unknown', reason: `S0 side_effects_max：计数器 ${rule.counter} 未上报` }
+  }
+  return {
+    value: got <= rule.max ? 'yes' : 'no',
+    reason: `S0 side_effects_max ${rule.counter}=${got}（上限 ${rule.max}）`,
+  }
+}
+
 /** S0 规则分派（正则/阈值/相似度/轨迹三规则）。 */
 function applyRule(task: EvalTask, s0: NonNullable<EvalTask['rubric'][number]['s0']>, evidence: Evidence): RuleOutcome {
   switch (s0.kind) {
@@ -269,6 +407,10 @@ function applyRule(task: EvalTask, s0: NonNullable<EvalTask['rubric'][number]['s
     case 'required_tools': return applyRequiredToolsRule(s0, evidence)
     case 'no_loop': return applyNoLoopRule(s0, evidence)
     case 'redundant_ratio': return applyRedundantRatioRule(s0, evidence)
+    case 'forbidden_tools': return applyForbiddenToolsRule(s0, evidence)
+    case 'json_path': return applyJsonPathRule(s0, evidence)
+    case 'result_schema': return applyResultSchemaRule(s0, evidence)
+    case 'side_effects_max': return applySideEffectsMaxRule(s0, evidence)
     default: return { value: 'unknown', reason: 'S0 未知规则' }
   }
 }
