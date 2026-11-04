@@ -15,6 +15,7 @@
 9. 访问上游树用统一解析序：显式 env（`OVERLAY_UPSTREAM_ROOT`）→ 仓内 `vendor/` → 旧兄弟 `upstream/`（先例 `scripts/build.mjs`、`scripts/serve-server.mjs`）。不要写死 `../upstream` 的层级假设——单仓检出没有兄弟 upstream，写死必坏。
 10. 运行时部署（`scripts/deploy-agent-runtime.mjs`）默认**保留安装树里与模板不同的文件**并报告；确需以模板覆盖时显式 `--force`。模板落后于宿主时应把宿主已知良好态回灌 `runtime/`，不要强推覆盖。
 11. 强制面分三处、都随仓入库：L2 提交强拦的判定库与钩子在 `.swarm-yuan/hooks/`（由 `npm run skill:build` 从 `skills/swarm-yuan/assets/` 渲染——该命令需生成态技能目录，只在主检出生效；worktree/新克隆直接使用已入库副本，字节一致性由 `custom/__tests__/l2-kit-parity.test.ts` 锁）；推送前 `pre-push` 执行 qgate L0 门集（默认只告警，`QGATE_PREPUSH_ENFORCE=1` 拦截，`QGATE_PREPUSH_SKIP=1` 关闭）；四层上下文读取计量由 `custom/qgate/plugin/hooks/post-tool-read.mjs` 落 `.qgate/reads.jsonl`，端点 `/api/harness/obs-signals` 的 `contextReads` 面消费。
+12. 多会话 merge 冲突属主解（2026-11-04 用户裁决）：双活会话下在 main 上发起的 merge 报冲突时，**只有分支属主会话有权解冲突并完成 merge**（唯一例外=属主明确让渡）；非属主发现他人 merge 冲突只通报不动手。依据 v0.22.7 轮实录：代解即使结果优质，同轮 VENDOR.md 台账在 merge 环节被静默回退旧版且无人对 merge 全量内容负责（75af34ee7 回植才闭环）——决策链见 `.swarm-yuan/decisions.jsonl` 同日 UserChallenge 条。
 
 ## 目录导航
 
