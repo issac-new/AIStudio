@@ -40,6 +40,9 @@ from hermes_cli.kanban_decompose import (
     _Routing,
     decompose_task,
 )
+# 739 结构免疫：族跑中有测试会扰动 sys.modules——顶层统一绑定 kd，
+# patch 与调用走同一模块对象，杜绝「运行时 import 拿新副本、顶层函数留在旧副本」的错配。
+import hermes_cli.kanban_decompose as _kd
 
 
 def _routing():
@@ -142,7 +145,7 @@ class TestReplanRound:
         }
 
     def _harness(self, monkeypatch, replies, created):
-        import hermes_cli.kanban_decompose as kd
+        kd = _kd  # 顶层绑定：与 decompose_task 同一模块对象
 
         task = types.SimpleNamespace(
             id="tk-9", title="root", body="b", assignee="orch", status="triage",

@@ -1,0 +1,208 @@
+diff --git a/hermes_cli/subcommands/cron.py b/hermes_cli/subcommands/cron.py
+index 643c09fd3..a92b18420 100644
+--- a/hermes_cli/subcommands/cron.py
++++ b/hermes_cli/subcommands/cron.py
+@@ -44,7 +44,8 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
+     cron_create.add_argument("--deliver",
+         help="Delivery target: origin, local, telegram, discord, signal, "
+             "platform:chat_id, or bot-chat[:profile] (inject output into a "
+-            "local profile's canonical Bot Chat as a message the bot responds to)")
++            "local profile's canonical Bot Chat as a message the bot responds to), "
++            "or room:<room_id>[@profile] (post into a Group Chat; wakes only the Bots it @mentions)")
+     cron_create.add_argument("--failure-deliver", dest="failure_deliver",
+         help="Override target for FAILURE notices only (same grammar as "
+             "--deliver). 'local' suppresses failure notices entirely; run "
+
+diff --git a/gateway/platforms/base.py b/gateway/platforms/base.py
+index 9b243da51..38efbe9fc 100644
+--- a/gateway/platforms/base.py
++++ b/gateway/platforms/base.py
+@@ -431,7 +431,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Any, Callable, Awaitable
+ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+ 
+ from gateway.config import Platform, PlatformConfig
+-from gateway.platforms.helpers import fence_state_after
++from gateway.platforms.helpers import fence_state_after, typing_metadata_for_turn
+ from gateway.platforms.base_post_delivery import run_post_delivery_callback
+ from gateway.platforms.base_exec_approval import (
+     approval_timeout_seconds, ea_action_labels, ea_default_reason_text, ea_header_text,
+@@ -1598,8 +1598,8 @@ class SendResult:
+     success: bool
+     message_id: Optional[str] = None
+     error: Optional[str] = None
+-    # Adapter-specific metadata. Contract: Telegram edit-overflow partials set
+-    # raw_response["partial_overflow"] so the stream consumer sends the missing tail.
++    # Adapter-specific metadata. Contracts: raw_response["partial_overflow"] (Telegram edit-overflow partial: the stream
++    # consumer sends the missing tail); raw_response["failure_notice_sent"] (a failed media send already posted a notice).
+     raw_response: Any = None
+     retryable: bool = False  # transient connection error — base retries automatically
+     retry_after: Optional[float] = None  # server-requested delay (Telegram FloodWait) beats our backoff
+@@ -4260,8 +4260,7 @@ class BasePlatformAdapter(ABC):
+         chat_id = event.source.chat_id
+ 
+         async def _send_one(path: str, *, is_voice: bool, media_tag: bool) -> SendResult:
+-            """MEDIA-tag files (``media_tag``) may route to send_voice; bare local files never
+-            do."""
++            """MEDIA tags may route to send_voice (bare files never); an adapter's own failure notice is not repeated."""
+             ext = Path(path).suffix.lower()
+             if media_tag and should_send_media_as_audio(self.platform, ext, is_voice=is_voice):
+                 result = await self.send_voice(chat_id=chat_id, audio_path=path, metadata=metadata, is_voice=is_voice)
+@@ -4274,7 +4273,8 @@ class BasePlatformAdapter(ABC):
+             if not result.success:
+                 logger.warning("[%s] Failed to send %s (%s): %s", self.name,
+                                "media" if media_tag else "local file", ext, result.error)
+-                await self._notify_media_delivery_failure(chat_id, path, is_voice=is_voice, metadata=metadata)
++                if not (isinstance(result.raw_response, dict) and result.raw_response.get("failure_notice_sent")):
++                    await self._notify_media_delivery_failure(chat_id, path, is_voice=is_voice, metadata=metadata)
+             return result
+         queue = [(p, v, True) for p, v in media_files if v or not _as_image(p)]
+         if queue:
+@@ -4515,7 +4515,9 @@ class BasePlatformAdapter(ABC):
+         interrupt_event = self._active_sessions.get(session_key) or asyncio.Event()
+         self._active_sessions[session_key] = interrupt_event
+         _thread_metadata = _thread_metadata_for_event(event)
+-        typing_task = self._start_typing_refresh(event, interrupt_event, _thread_metadata)
++        _typing_metadata = typing_metadata_for_turn(  # fixed now: a later inbound must not move it
++            self, event.source.chat_id, _reply_anchor_for_event(event), _thread_metadata)
++        typing_task = self._start_typing_refresh(event, interrupt_event, _typing_metadata)
+         try:
+             await self._run_processing_hook("on_processing_start", event)
+             event._turn_marker_handoff = self.gateway_runner is not None  # it can release the marker
+@@ -4602,7 +4604,7 @@ class BasePlatformAdapter(ABC):
+                     self._pending_messages.pop(session_key)
+                 logger.debug("[%s] Processing queued follow-up message", self.name)
+                 self._clear_session_guard(session_key)
+-                await self._stop_typing_refresh(event.source.chat_id, typing_task, metadata=_thread_metadata)
++                await self._stop_typing_refresh(event.source.chat_id, typing_task, metadata=_typing_metadata)
+                 self._spawn_drain_task(pending_event, session_key, delay=delay)
+                 return  # Drain task owns the session now.
+         except asyncio.CancelledError:
+@@ -4614,20 +4616,18 @@ class BasePlatformAdapter(ABC):
+         except BaseException as e:
+             await self._run_processing_hook("on_processing_complete", event, ProcessingOutcome.FAILURE)
+             logger.error("[%s] Error handling message: %s", self.name, e, exc_info=True)
+-            _thread_metadata = (await self._notify_turn_error(event, e)) or _thread_metadata
++            await self._notify_turn_error(event, e)
+             from hermes_cli.config_backend import ConfigBackendUnavailable as _outage  # this turn only
+             if isinstance(e, (SystemExit, KeyboardInterrupt)) and not isinstance(e, _outage):  # rest contained
+                 raise
+         finally:
+             await self._release_turn_marker(event)
+             event._turn_marker_handoff = False  # a later run of this object clears its own marker
+-            # Stop typing BEFORE the post-delivery callback: a stuck callback must not keep it
+-            # alive.
+-            await self._stop_typing_refresh(event.source.chat_id, typing_task, metadata=_thread_metadata)
++            # Stop typing BEFORE the post-delivery callback: a stuck callback must not keep it alive.
++            await self._stop_typing_refresh(event.source.chat_id, typing_task, metadata=_typing_metadata)
+             await self._fire_post_delivery_callback(session_key, interrupt_event)
+             # Callback work or a late refresh may have recreated typing — one final bounded stop.
+-            await self._stop_typing_refresh(
+-                event.source.chat_id, None, metadata=_thread_metadata, stop_attempts=1)
++            await self._stop_typing_refresh(event.source.chat_id, None, metadata=_typing_metadata, stop_attempts=1)
+             # Flush any timer that missed the in-band drain, then reconcile ownership.
+             await self._flush_text_debounce_now(session_key)
+             self._finish_session_task(session_key, interrupt_event)
+
+diff --git a/toolsets.py b/toolsets.py
+index 2cd9481f4..248ba44ea 100644
+--- a/toolsets.py
++++ b/toolsets.py
+@@ -466,6 +466,12 @@ def session_disabled_toolsets(
+     return [*(disabled or ()), *gated] if gated else disabled
+ 
+ 
++def tool_selection_key(enabled: Optional[list[str]], disabled: Optional[list[str]]) -> tuple:
++    """The toolset selection a tools[] snapshot was built from, order-free. Recorded next to the registry
++    generation: the tools[] freeze (``tools.mcp_tool_agent``) holds new tools back only while neither moved."""
++    return frozenset(enabled) if enabled is not None else None, frozenset(disabled or ())
++
++
+ def agent_tool_drops(agent: Any) -> frozenset:
+     """Tool names *agent* never carries, whatever its toolsets resolved to: the side-agent drops and
+     the toolsets its session platform does not get. Applied at load, MCP refresh and prefix restore."""
+
+diff --git a/agent/tool_executor.py b/agent/tool_executor.py
+index 55764cbd6..d81b62557 100644
+--- a/agent/tool_executor.py
++++ b/agent/tool_executor.py
+@@ -421,34 +421,23 @@ def _append_skipped_tool_results(
+ def _tool_search_scoped_names(agent) -> frozenset:
+     """Deferrable tool names the session may invoke via ``tool_call``; the unwrap bypasses
+     the bridge's scope check in ``model_tools.handle_function_call``, so restricted sessions
+-    validate against this set. Cached on the agent, keyed by registry scope/generation."""
++    validate against this set. Read through the ``get_tool_definitions`` memo on every call
++    and never copied onto the agent: the memo expires with the check_fn verdicts it was
++    filtered on, a per-agent copy keyed on registry generation would not, and a recovered
++    MCP server's tools would stay uncallable for the agent's lifetime."""
+     try:
+         import model_tools
+         from tools import tool_search as _ts
+-        from tools.registry import registry as _registry
+     except Exception:
+         return frozenset()
+-
+-    enabled = getattr(agent, "enabled_toolsets", None)
+-    disabled = getattr(agent, "disabled_toolsets", None)
+-    cache_key = (
+-        _registry.current_scope_key(),
+-        getattr(_registry, "_generation", 0),
+-        frozenset(enabled) if enabled is not None else None,
+-        frozenset(disabled) if disabled is not None else None,
+-    )
+-    cached = getattr(agent, "_tool_search_scope_cache", None)
+-    if cached is not None and cached[0] == cache_key:
+-        return cached[1]
+     try:
+-        names = _ts.scoped_deferrable_names(model_tools.get_tool_definitions(
+-            enabled_toolsets=enabled, disabled_toolsets=disabled, quiet_mode=True, skip_tool_search_assembly=True,
++        return _ts.scoped_deferrable_names(model_tools.get_tool_definitions(
++            enabled_toolsets=getattr(agent, "enabled_toolsets", None),
++            disabled_toolsets=getattr(agent, "disabled_toolsets", None),
++            quiet_mode=True, skip_tool_search_assembly=True,
+         ) or [])
+     except Exception:
+-        names = frozenset()
+-    with contextlib.suppress(Exception):
+-        agent._tool_search_scope_cache = (cache_key, names)
+-    return names
++        return frozenset()
+ 
+ 
+ def _canonical_tool_name(function_name: str) -> str:
+diff --git a/gateway/platforms/helpers.py b/gateway/platforms/helpers.py
+index a115e60d6..016bbe75a 100644
+--- a/gateway/platforms/helpers.py
++++ b/gateway/platforms/helpers.py
+@@ -705,3 +705,32 @@ def platform_http_client(**kwargs: Any) -> Any:
+     elif kwargs["limits"] is None:
+         del kwargs["limits"]
+     return create_ssrf_safe_async_client(event_hooks=hooks, **kwargs)
++
++def typing_metadata_for_turn(adapter: Any, chat_id: Any, anchor: Any, metadata: Optional[dict]) -> Any:
++    """A turn's typing/status metadata, fixed when the turn starts and reused for every refresh and
++    clear. ``anchor`` is the turn's own message id: an adapter whose status thread depends on the turn
++    (``status_metadata_for_turn``: a top-level Slack DM's status sits on its triggering message) takes
++    it from here, not from per-chat state that a later inbound in the chat overwrites. Looked up on
++    the class, so a test double's auto-attributes never stand in for the hook."""
++    hook = getattr(type(adapter), "status_metadata_for_turn", None)
++    if anchor is None or not callable(hook):
++        return metadata
++    return hook(adapter, str(chat_id), str(anchor), metadata)
++
++
++# Inline markdown-stripping rules, applied in order: bold, italic, bold/italic
++# underscore, code fence markers, inline code, headings. Links and the newline
++# squeeze run after these, in that order (see ``strip_markdown``).
++_STRIP_RULES = (
++    (re.compile(r"\*\*(.+?)\*\*", re.DOTALL), r"\1"),
++    (re.compile(r"\*(.+?)\*", re.DOTALL), r"\1"),
++    (re.compile(r"\b__(?![\s_])(.+?)(?<![\s_])__\b", re.DOTALL), r"\1"),
++    (re.compile(r"\b_(?![\s_])(.+?)(?<![\s_])_\b", re.DOTALL), r"\1"),
++    (re.compile(r"```[a-zA-Z0-9_+-]*\n?"), ""),
++    (re.compile(r"`(.+?)`"), r"\1"),
++    (re.compile(r"^#{1,6}\s+", re.MULTILINE), ""),
++)
++_MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^\)]+)\)")
++_HTTP_TARGET_RE = re.compile(r"https?://", re.IGNORECASE)
++_NEWLINE_SQUEEZE_RE = re.compile(r"\n{3,}")
++
