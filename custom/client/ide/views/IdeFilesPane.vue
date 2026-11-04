@@ -111,10 +111,26 @@ async function retryRoot(): Promise<void> {
 
 // 文件节点点击 → 走 toolPanel 预览 overlay（IdeChatPane 的 FilePreview 宿主），
 // IDE 没有独立编辑器面板，openEditor 无落点。
+// 打开失败显式提示（2026-11-04 Windows 离线回归批）：openPreview 链对文本/媒体
+// 走 files/read（仅 super_admin），非 super 点文件 403 时原实现裸 await——未捕获
+// rejection、预览不弹且无任何提示；复用本组件权限文案口径给内联提示。
+const openError = ref<'forbidden' | 'failed' | null>(null)
+const openErrorText = computed(() => {
+  if (openError.value === 'forbidden') {
+    return zhUi.value ? '打开文件需要超级管理员权限。' : 'Opening files requires super administrator privileges.'
+  }
+  return zhUi.value ? '文件打开失败，请稍后重试。' : 'Failed to open the file. Try again later.'
+})
+
 async function openEntry(entry: FileEntry): Promise<void> {
   if (entry.isDir) return
   filesStore.closePreview()
-  await filesStore.openPreview(entry, { profile: null })
+  openError.value = null
+  try {
+    await filesStore.openPreview(entry, { profile: null })
+  } catch (err) {
+    openError.value = String((err as { message?: string })?.message || '').includes('API Error 403') ? 'forbidden' : 'failed'
+  }
 }
 </script>
 
@@ -125,6 +141,8 @@ async function openEntry(entry: FileEntry): Promise<void> {
       <button type="button" role="tab" class="ide-files__tab" :class="{ 'is-active': tab === 'git' }" :aria-selected="tab === 'git'" data-testid="ide-files-tab-git" @click="tab = 'git'">Git</button>
     </div>
     <p class="ide-files__scope" :title="root ?? ''" data-testid="ide-files-scope">{{ root ? workspaceLabel(t, root) : t('ide.task.defaultGroup') }}</p>
+    <!-- 打开失败提示（2026-11-04）：403=权限、其余=通用失败；下次点击自动清除 -->
+    <p v-if="openError" class="ide-files__hint" data-testid="ide-files-open-error">{{ openErrorText }}</p>
     <!-- 2026-10-31 回归修复（渲染闸）：有根但校验未完成（checking/idle）不挂 FileTree——
          提前挂载会按 store 里的旧/空 workspaceRoot 发起装载（无 root=默认根），与校验
          后的正确装载赛跑。校验 ok 才挂树，装载单发且根正确。 -->

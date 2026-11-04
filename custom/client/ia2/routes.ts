@@ -135,7 +135,14 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   annex('/hermes/performance', 'hermes.performance', { superAdmin: true }),
   annex('/hermes/profiles', 'hermes.profiles', { superAdmin: true }),
   annex('/hermes/theme', 'hermes.theme'),
-  annex('/hermes/petdex', 'hermes.petdex'),
+  // petdex 随 features.pet 门控（2026-11-04 Windows 离线回归批）：此前只裁剪
+  // 导航入口（gov-settings-registry），深链仍挂 PetdexView 并向外部清单发起
+  // 请求——离线环境白等超时后 502。门关时不能只跳过注册（上游同名路由仍会
+  // 兜底接管深链），须以同名重定向覆盖（hermes.kanban 同款函数式）：落回
+  // 设置页（宠物开关所在地），不发任何外部请求。
+  ...(features.pet
+    ? [annex('/hermes/petdex', 'hermes.petdex')]
+    : [{ path: '/hermes/petdex', name: 'hermes.petdex', redirect: () => ({ name: 'ia2.govSettings' }) }]),
   annex('/hermes/skills-usage', 'hermes.skillsUsage'),
   // Web 终端并入（2026-10-01 上游自用批 A1）：上游路由与 superadmin 门控本就
   // 在线（terminal/mobile-terminal 双 WS），此前零导航入口；并入进壳同域管理

@@ -1,0 +1,71 @@
+diff --git a/packages/server/src/modules/studio/services/notifications/announcements.ts b/packages/server/src/modules/studio/services/notifications/announcements.ts
+index 31225318a..9ed409b3b 100644
+--- a/packages/server/src/modules/studio/services/notifications/announcements.ts
++++ b/packages/server/src/modules/studio/services/notifications/announcements.ts
+@@ -6,7 +6,8 @@ export async function fetchStudioAnnouncements(localeInput: unknown): Promise<un
+   url.searchParams.set('locale', locale)
+   const response = await fetch(url.toString(), {
+     headers: { Accept: 'application/json' },
+-    signal: AbortSignal.timeout(10_000),
++    // 2026-11-04 Windows 离线回归：10s 等满才 502 是页面变慢主因之一，收敛到 6s
++    signal: AbortSignal.timeout(6_000),
+   })
+   if (!response.ok) throw new Error('announcement_fetch_failed')
+   const data = await response.json() as { ok?: boolean; platform?: string; list?: unknown }
+diff --git a/packages/server/src/modules/studio/controllers/announcements.ts b/packages/server/src/modules/studio/controllers/announcements.ts
+index 77b0b904d..83c299b1a 100644
+--- a/packages/server/src/modules/studio/controllers/announcements.ts
++++ b/packages/server/src/modules/studio/controllers/announcements.ts
+@@ -5,10 +5,23 @@ import { filterStaleAnnouncementPayload } from '../../../custom/studio/announcem
+ 
+ // overlay[perf]（2026-09-30 根治批）：远端公告拉取服务端 TTL 缓存——实测
+ // 2.6s/次（外网往返），客户端每次冷启动都请求，页面武装被它拖慢；公告变更
+-// 频率低，按 locale 缓存 5 分钟，失败不缓存（保持 502 语义）。
++// 频率低，按 locale 缓存 5 分钟。
++// overlay[offline]（2026-11-04 Windows 离线回归批）：失败负缓存 60s——原「失败
++// 不缓存」在离线环境意味着每次页面加载都等满 6s 超时再 502（回归实测 10s×N
++// 拖慢多数页面）；负缓存短 TTL 兼顾恢复探测，502 响应体语义不变。
+ const ANNOUNCEMENT_TTL_MS = 300_000
++const ANNOUNCEMENT_FAILURE_TTL_MS = 60_000
+ const ANNOUNCEMENT_CACHE_MAX = 8
+-const announcementCache = new Map<string, { payload: unknown; ts: number }>()
++const announcementCache = new Map<string, { payload: unknown; ts: number; failure: boolean }>()
++
++function storeAnnouncementCache(key: string, payload: unknown, failure: boolean): void {
++  if (announcementCache.size >= ANNOUNCEMENT_CACHE_MAX && !announcementCache.has(key)) {
++    // 淘汰最早入缓存项（Map 保插入序，首键最旧）——TTL 只判新鲜度不清条目
++    const oldest = announcementCache.keys().next().value
++    if (oldest !== undefined) announcementCache.delete(oldest)
++  }
++  announcementCache.set(key, { payload, ts: Date.now(), failure })
++}
+ 
+ async function fetchAnnouncementsCached(localeInput: unknown): Promise<unknown> {
+   // 缓存键必须与 fetchStudioAnnouncements 的归一化同域（zh*/en 两档）：用原始
+@@ -16,15 +29,18 @@ async function fetchAnnouncementsCached(localeInput: unknown): Promise<unknown>
+   // 调用可无界撑 Map + 并发放大回源（24h 审查 P2）
+   const key = typeof localeInput === 'string' && /^zh(?:[-_]|$)/i.test(localeInput) ? 'zh-CN' : 'en'
+   const hit = announcementCache.get(key)
+-  if (hit && Date.now() - hit.ts < ANNOUNCEMENT_TTL_MS) return hit.payload
+-  const payload = await fetchStudioAnnouncements(localeInput)
+-  if (announcementCache.size >= ANNOUNCEMENT_CACHE_MAX) {
+-    // 淘汰最早入缓存项（Map 保插入序，首键最旧）——TTL 只判新鲜度不清条目
+-    const oldest = announcementCache.keys().next().value
+-    if (oldest !== undefined) announcementCache.delete(oldest)
++  if (hit && Date.now() - hit.ts < (hit.failure ? ANNOUNCEMENT_FAILURE_TTL_MS : ANNOUNCEMENT_TTL_MS)) {
++    if (hit.failure) throw new Error('announcement_fetch_failed')
++    return hit.payload
++  }
++  try {
++    const payload = await fetchStudioAnnouncements(localeInput)
++    storeAnnouncementCache(key, payload, false)
++    return payload
++  } catch (err) {
++    storeAnnouncementCache(key, null, true)
++    throw err
+   }
+-  announcementCache.set(key, { payload, ts: Date.now() })
+-  return payload
+ }
+ 
+ export async function getAnnouncements(ctx: Context): Promise<void> {

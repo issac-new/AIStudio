@@ -13,6 +13,7 @@ import { describe, it, expect } from 'vitest'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { buildIaRoutes } from '../routes'
 import { buildIdeRoutes } from '../../ide/routes'
+import { features } from '../../../../config/features'
 
 function flatten(rs: any[], out: any[] = []): any[] {
   for (const r of rs ?? []) { out.push(r); if (r.children) flatten(r.children, out) }
@@ -122,7 +123,12 @@ describe('路由白名单单测（补遗⑤ §13.6-2：快照断言）', () => {
     // 2026-10-20 去重：旧版看板重定向到主看板，不再挂 IaLegacyShell
     const kanban = hermes.find(r => r.name === 'hermes.kanban')
     expect(kanban?.redirect).toBeTruthy()
-    for (const r of hermes.filter(r => r.name !== 'hermes.kanban' && r.name !== 'hermes.journey')) {
+    // 2026-11-04 Windows 离线回归批：features.pet 关时 hermes.petdex 以同名函数
+    // 重定向覆盖（深链跳设置页、不发 manifest 外部请求），与 kanban/journey
+    // 同为重定向例外；门开时恢复 IaLegacyShell 壳页。
+    const redirectOnly = ['hermes.kanban', 'hermes.journey',
+      ...(features.pet ? [] : ['hermes.petdex'])]
+    for (const r of hermes.filter(r => !redirectOnly.includes(r.name))) {
       expect(r.meta?.fullscreen, `${r.name} 并入记录须 fullscreen=true`).toBe(true)
       expect(String(r.component), `${r.name} 并入记录组件须指向 IaLegacyShell`).toContain('IaLegacyShell')
     }

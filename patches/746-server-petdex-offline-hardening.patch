@@ -1,0 +1,63 @@
+diff --git a/packages/server/src/modules/studio/controllers/petdex.ts b/packages/server/src/modules/studio/controllers/petdex.ts
+index 413e46868..8f1a747b7 100644
+--- a/packages/server/src/modules/studio/controllers/petdex.ts
++++ b/packages/server/src/modules/studio/controllers/petdex.ts
+@@ -3,7 +3,15 @@ import { fetchPetdexAsset, fetchPetdexManifest } from '../services/pets/petdex'
+ 
+ export async function manifest(ctx: Context) {
+   const force = ctx.query.force === '1' || ctx.query.force === 'true'
+-  ctx.body = await fetchPetdexManifest({ force })
++  // overlay[offline]（2026-11-04 Windows 离线回归批）：原实现无 try/catch，离线
++  // 拉取异常穿透到 Koa 默认错误处理 → 裸 500 纯文本（回归实测 10.7s 后失败且
++  // 无 JSON 体）；收敛为 502 结构化错误，与 announcements 失败形态对齐。
++  try {
++    ctx.body = await fetchPetdexManifest({ force })
++  } catch {
++    ctx.status = 502
++    ctx.body = { ok: false, error: 'petdex_fetch_failed' }
++  }
+ }
+ 
+ export async function asset(ctx: Context) {
+diff --git a/packages/server/src/modules/studio/services/pets/petdex.ts b/packages/server/src/modules/studio/services/pets/petdex.ts
+index f2113eeb8..6e519ad96 100644
+--- a/packages/server/src/modules/studio/services/pets/petdex.ts
++++ b/packages/server/src/modules/studio/services/pets/petdex.ts
+@@ -17,10 +17,16 @@ export interface PetdexManifest {
+ 
+ const PETDEX_MANIFEST_URL = 'https://assets.petdex.dev/manifests/petdex-v1.json'
+ const CACHE_TTL_MS = 5 * 60 * 1000
+-const FETCH_TIMEOUT_MS = 15_000
++// overlay[offline]（2026-11-04 Windows 离线回归批）：原 15s 等满才失败（离线实测
++// 10.7s 假死后 500）；收敛到 6s，manifest 与 asset 共用同一定义。
++const FETCH_TIMEOUT_MS = 6_000
++// overlay[offline]（2026-11-04 Windows 离线回归批）：manifest 拉取失败负缓存
++// 60s——离线环境不再每次等满超时；force 显式绕过（与成功缓存同口径）。
++const FAILURE_CACHE_TTL_MS = 60 * 1000
+ const MAX_ASSET_BYTES = 10 * 1024 * 1024
+ 
+ let cache: { expiresAt: number; manifest: PetdexManifest } | null = null
++let failureUntil = 0
+ 
+ function asString(value: unknown): string {
+   return typeof value === 'string' ? value : ''
+@@ -86,6 +92,9 @@ export async function fetchPetdexManifest(options: { force?: boolean } = {}): Pr
+   if (!options.force && cache && cache.expiresAt > now) {
+     return cache.manifest
+   }
++  if (!options.force && failureUntil > now) {
++    throw new Error('petdex_fetch_failed')
++  }
+ 
+   const controller = new AbortController()
+   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+@@ -100,6 +109,9 @@ export async function fetchPetdexManifest(options: { force?: boolean } = {}): Pr
+     const manifest = normalizeManifest(await response.json())
+     cache = { expiresAt: now + CACHE_TTL_MS, manifest }
+     return manifest
++  } catch (err) {
++    failureUntil = Date.now() + FAILURE_CACHE_TTL_MS
++    throw err
+   } finally {
+     clearTimeout(timeout)
+   }

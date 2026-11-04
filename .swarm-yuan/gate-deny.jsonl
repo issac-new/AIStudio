@@ -36,3 +36,4 @@
 {"ts":"2026-10-31T14:30:28Z","tool":"git-commit","target":"unfulfilled: docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md 声明 touched 但变更集未含其修订（声明与兑现须同一批——把设计文档修订并入本批或改声明 none 附理由）","gates":"design-sync"}
 {"ts":"2026-11-02T05:57:28Z","tool":"git-commit","target":"vendor/hermes-studio/docs/openapi.json","gates":"spec-required"}
 {"ts":"2026-11-04T07:42:20Z","tool":"git-commit","target":"vendor/hermes-agent/scripts/bundles/bytecode.py","gates":"spec-required"}
+{"ts":"2026-11-04T10:18:06Z","tool":"git-commit","target":"vendor/hermes-studio/packages/desktop/scripts/after-pack-combined.cjs","gates":"spec-required"}
