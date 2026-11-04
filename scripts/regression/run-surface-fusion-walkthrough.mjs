@@ -6,7 +6,8 @@
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'fs'
 
-const BASE = 'http://localhost:8649'
+const BASE = process.env.WALK_BASE || 'http://localhost:8649'
+const API = process.env.WALK_API || 'http://localhost:8647'
 const shots = '/tmp/run-surface-fusion-shots'
 mkdirSync(shots, { recursive: true })
 
@@ -25,6 +26,15 @@ async function waitSel(sel, timeout = 15000) {
   try { await page.waitForSelector(sel, { timeout }); return true } catch { return false }
 }
 
+// 生产链（WALK_BASE 指 dist 服务）无 dev 自动登录：WALK_LOGIN=user:pass 换 JWT 注入
+// localStorage（walk-routes 同款）；dev 链不设变量即原行为（落地自动登录）。
+if (process.env.WALK_LOGIN?.includes(':')) {
+  const [username, password] = process.env.WALK_LOGIN.split(/:(.+)/)
+  const login = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) }).then(r => r.json()).catch(() => null)
+  if (!login?.token) { console.error('WALK_LOGIN 登录失败'); process.exit(1) }
+  await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
+  await page.evaluate(t => { localStorage.setItem('hermes_api_key', t); localStorage.setItem('hermes_locale', 'zh') }, login.token)
+}
 // 落地直进 ia2 壳（#/# 落地可能在登录页/hermes 旧壳——日程按钮在 ia2 壳页头，
 // r26 清偿实录：旧起点 goto #/ 等 ia-header-schedule 超时假红，02 截图 17.6K 空页）
 await page.goto(BASE + '/#/app', { waitUntil: 'domcontentloaded' })

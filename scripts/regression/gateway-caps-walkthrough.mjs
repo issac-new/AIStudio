@@ -5,17 +5,26 @@
 // 旧④ forkBtn>=0 恒真（自我豁免）已改为真实打开链路断言。
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'fs'
-const BASE = 'http://localhost:8649'
+const BASE = process.env.WALK_BASE || 'http://localhost:8649'
+const API = process.env.WALK_API || 'http://localhost:8647'
 const shots = '/tmp/gateway-caps-shots'
 mkdirSync(shots, { recursive: true })
 const results = []
 const ok = (n, c, note = '') => { results.push([n, !!c]); console.log(`${c ? 'PASS' : 'FAIL'} ${n}${note ? ' — ' + note : ''}`) }
 const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch())
 const page = await (await browser.newContext({ viewport: { width: 1600, height: 950 } })).newPage()
-const login = await fetch('http://localhost:8647/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }) }).then(r => r.json())
+const login = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }) }).then(r => r.json())
 if (!login.token) { console.log('login failed'); process.exit(1) }
 await page.goto(BASE + '/')
 await page.evaluate(t => { localStorage.setItem('hermes_api_key', t); localStorage.setItem('hermes_server_url', location.origin); localStorage.setItem('hermes_locale', 'zh') }, login.token)
+  // 生产链冷启动竞态（r26 实录）：注入 token 后 app 可能已按未认证态启动，后续
+  // hash 直达被落地重定向覆盖（connections→chat）。reload 让 app 按认证态重启，
+  // 等 Vue 挂载+启动占位消失再导航（walk-routes ensureLogin 同款判据）。
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForFunction(() => {
+    const el = document.querySelector('#app')
+    return Boolean(el?.__vue_app__) && !(document.body?.innerText || '').includes('AIStudio 加载中')
+  }, undefined, { timeout: 60000 }).catch(() => {})
 try {
   // ① 治理 RuntimeSection（挂 GovRegistryRulesView→StageAssetsPanel，r26 清偿：
   // 旧 /app/board?tab=gov-registry 已失效；metrics 页是 EfficiencyRuntimeSection
@@ -23,7 +32,10 @@ try {
   // gateway 卡是 v-if="gateway && gateway.healthy" 数据条件渲染——8647 未挂
   // runtime-caps 源时为诚实空态（fail-soft），断言=组件挂载不炸＋卡按数据在场。
   await page.goto(BASE + '/#/app/stage/setup?tab=assets', { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(8000)
+  // 生产链首访大 bundle 冷加载慢（r26 实录：固定 8s 后 runtimeEls=0 假红，加长
+  // 等待即 148）——轮询等 RuntimeSection 渲染到位再断言，缺席才算空。
+  await page.waitForSelector('[class*="runtime__"], [class*="gov"]', { timeout: 25000 }).catch(() => {})
+  await page.waitForTimeout(1500)
   for (let i = 0; i < 3; i++) {
     if (!await page.locator('.n-modal-mask').count()) break
     const btn = page.locator('.n-modal .n-base-close').first()

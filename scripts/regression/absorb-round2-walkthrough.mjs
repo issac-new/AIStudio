@@ -5,8 +5,8 @@
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'fs'
 
-const BASE = 'http://localhost:8649'
-const API = 'http://localhost:8647'
+const BASE = process.env.WALK_BASE || 'http://localhost:8649'
+const API = process.env.WALK_API || 'http://localhost:8647'
 const shots = '/tmp/absorb-round2-shots'
 mkdirSync(shots, { recursive: true })
 

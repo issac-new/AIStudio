@@ -570,6 +570,7 @@
 - [2026-11-04-shell-form-control-text-baseline.md](../superpowers/specs/2026-11-04-shell-form-control-text-baseline.md)
 - [2026-11-04-win-regression-p1-fixes.md](../superpowers/specs/2026-11-04-win-regression-p1-fixes.md)
 - [2026-11-04-win-regression-pending-batch.md](../superpowers/specs/2026-11-04-win-regression-pending-batch.md)
+- [2026-11-04-regression-prod-chain.md](../superpowers/specs/2026-11-04-regression-prod-chain.md)
 ## archive（2 份，不计入上述根目录）
 
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
