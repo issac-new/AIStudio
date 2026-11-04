@@ -131,7 +131,11 @@ def main() -> int:
         # 单一事实源：拍摄器（r18-frames --expect）用的期望词就从这里导出，
         # 不另立一份表（2026-11-04 N13：两种表必漂移）。
         for _k, _v in EXPECT.items():
-            print(f'MX_EXPECT_{_k}="{",".join(_v["want"])}"')
+            # 键归一（-→_）：连字符键（如 capture-precheck）不能作 shell 赋值名，
+            # 驱动 source 本输出时按命令解析 127 即死（burn-pre-run27 实锤）；
+            # 消费端 mx-scenario-lib.sh r18_frames 同规则 ${step//-/_} 取值。
+            # 33 键归一后无冲突（2026-11-05 核验）。
+            print(f'MX_EXPECT_{_k.replace("-", "_")}="{",".join(_v["want"])}"')
         return 0
     if not a.run:
         print('需要 --run（或 --dump-expect）', file=sys.stderr)

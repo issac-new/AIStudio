@@ -1208,11 +1208,14 @@ PYM
   if grep -q "frame-capture-failed|step-${step}|" "$EVID_DIR/issues.log" 2>/dev/null; then
     return 0
   fi
+  # 键归一（-→_）：与 frame-verify.py --dump-expect 导出端对齐——连字符步键
+  # （如 capture-precheck）在 bash 里既不能被 source 赋值也不能被 ${!} 反查，
+  # 两端统一归一后期望词才可往返。
   if [[ -n "$action" ]]; then
-    _expvar="MX_EXPECT_${step}"; _expect="${!_expvar:-}"
+    _expvar="MX_EXPECT_${step//-/_}"; _expect="${!_expvar:-}"
     node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --action "$action" --user "$user" ${_expect:+--expect "$_expect"} >/dev/null 2>&1 || rc=$?
   else
-    _expvar="MX_EXPECT_${step}"; _expect="${!_expvar:-}"
+    _expvar="MX_EXPECT_${step//-/_}"; _expect="${!_expvar:-}"
     node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --user "$user" ${_expect:+--expect "$_expect"} >/dev/null 2>&1 || rc=$?
   fi
   if (( rc != 0 )); then
