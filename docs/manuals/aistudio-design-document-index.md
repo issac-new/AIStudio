@@ -562,6 +562,7 @@
 - [2026-11-04-agentteams-pending-batch.md](../superpowers/specs/2026-11-04-agentteams-pending-batch.md)
 - [2026-11-04-ide-workspace-bugs.md](../superpowers/specs/2026-11-04-ide-workspace-bugs.md)
 - [2026-11-04-composer-popups.md](../superpowers/specs/2026-11-04-composer-popups.md)
+- [2026-11-04-message-area-collapse.md](../superpowers/specs/2026-11-04-message-area-collapse.md)
 - [2026-11-04-agentteams-execution-records.md](../superpowers/specs/2026-11-04-agentteams-execution-records.md)
 - [2026-11-04-agentteams-project-graph.md](../superpowers/specs/2026-11-04-agentteams-project-graph.md)
 - [2026-11-04-agentteams-skill-export.md](../superpowers/specs/2026-11-04-agentteams-skill-export.md)
