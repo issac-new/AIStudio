@@ -28,7 +28,7 @@
 
 import type {
   GraphDef, GraphInstance, NodeDef, NodeResult, StateValues, StateUpdate,
-  GraphEvent, GraphDeps, NodeContext,
+  GraphEvent, GraphDeps, NodeContext, GraphRunVerification,
 } from './types'
 import { ChannelStore } from './channel-store'
 import { CheckpointManager } from './checkpoint-manager'
@@ -343,13 +343,21 @@ export class GraphRuntime {
     }
 
     // ---- 主循环 ----
+    // W1 执法轮：run 全程节点结局对账——终态事件携带 verification，反「跑完即成功」。
+    const nodeOutcomes = { completed: 0, failed: 0, errorRouted: 0, interruptsRaised: 0 }
+    const verificationOf = (): GraphRunVerification => ({
+      nodesCompleted: nodeOutcomes.completed,
+      nodesFailed: nodeOutcomes.failed,
+      nodesErrorRouted: nodeOutcomes.errorRouted,
+      interruptsRaised: nodeOutcomes.interruptsRaised,
+    })
     for (let step = startStep; step < graphDef.maxSteps; step++) {
       instance.currentStep = step
 
       if (nextNodes.length === 0) {
         if (pendingInterrupts.length === 0) {
           emitStarvedJoins()
-          return await this.complete(instance, graphDef, store)
+          return await this.complete(instance, graphDef, store, nodeOutcomes, 'no-next-nodes')
         }
         instance.status = 'awaiting-input'
         instance.state = store.snapshot()
@@ -461,6 +469,7 @@ export class GraphRuntime {
         if (result === undefined) continue
         if (result instanceof Error) {
           failedNodes.push({ nodeId, error: result })
+          nodeOutcomes.failed += 1
           this.emitEvent({
             type: 'graph.node-error',
             graphId,
@@ -473,6 +482,7 @@ export class GraphRuntime {
           continue
         }
         succeeded.push(nodeId)
+        nodeOutcomes.completed += 1
         this.emitEvent({
           type: 'graph.node-complete',
           graphId,
@@ -485,6 +495,7 @@ export class GraphRuntime {
         if (result.update) orderedUpdates.push(result.update)
         if (result.interrupt) {
           hasInterrupt = true
+          nodeOutcomes.interruptsRaised += 1
           // raisedAtMs：interrupt 挂起时刻随 checkpoint 持久（P2 台账 h，interrupt 超时策略判定源）
           pendingInterrupts.push({ nodeId, value: result.interrupt.value, id: result.interrupt.id, raisedAtMs: Date.now() })
           this.emitEvent({
@@ -515,6 +526,7 @@ export class GraphRuntime {
         const route = graphDef.nodes.get(nodeId)?.onError
         if (route?.type === 'goto') {
           errorRoutedTargets.push(route.target)
+          nodeOutcomes.errorRouted += 1
           this.emitEvent({
             type: 'node.error-routed',
             graphId, threadId, nodeId,
@@ -528,6 +540,7 @@ export class GraphRuntime {
           errorRouteCounts.set(key, attempts)
           if (attempts < route.maxAttempts) {
             errorRoutedTargets.push(route.target)
+            nodeOutcomes.errorRouted += 1
             this.emitEvent({
               type: 'node.error-routed',
               graphId, threadId, nodeId,
@@ -550,6 +563,8 @@ export class GraphRuntime {
           graphId,
           threadId,
           error: fatalErrors.join('; '),
+          finishReason: 'node-error',
+          verification: verificationOf(),
           ts: new Date().toISOString(),
         })
         return instance
@@ -563,6 +578,8 @@ export class GraphRuntime {
           graphId,
           threadId,
           error: `budget exceeded: totalCost ${instance.totalCost} > maxCost ${graphDef.budget.maxCost}`,
+          finishReason: 'budget-exceeded',
+          verification: verificationOf(),
           ts: new Date().toISOString(),
         })
         return instance
@@ -574,6 +591,8 @@ export class GraphRuntime {
           graphId,
           threadId,
           error: `duration exceeded: ${Date.now() - startedAtMs}ms > maxDurationMs ${graphDef.maxDurationMs}`,
+          finishReason: 'duration-exceeded',
+          verification: verificationOf(),
           ts: new Date().toISOString(),
         })
         return instance
@@ -583,7 +602,7 @@ export class GraphRuntime {
       // n 台账：hasEnd/endCondition 完成路径与 nextNodes 排空路径一致，run 结束前统一扫一次 join 饿死
       if (hasEnd || (graphDef.endCondition && graphDef.endCondition(store.getValues()))) {
         emitStarvedJoins()
-        return await this.complete(instance, graphDef, store)
+        return await this.complete(instance, graphDef, store, nodeOutcomes, hasEnd ? 'node-end' : 'end-condition')
       }
 
       // 计算下一批候选（显式 goto 优先；否则走边 + 守卫 + join 屏障；fail-branch 路由并入）
@@ -678,6 +697,8 @@ export class GraphRuntime {
       graphId,
       threadId,
       error: `Exceeded maxSteps (${graphDef.maxSteps})`,
+      finishReason: 'max-steps-exceeded',
+      verification: verificationOf(),
       ts: new Date().toISOString(),
     })
     return instance
@@ -883,6 +904,8 @@ export class GraphRuntime {
     instance: GraphInstance,
     graphDef: GraphDef,
     store: ChannelStore,
+    nodeOutcomes?: { completed: number; failed: number; errorRouted: number; interruptsRaised: number },
+    finishReason?: 'end-condition' | 'node-end' | 'no-next-nodes',
   ): Promise<GraphInstance> {
     instance.status = 'completed'
     instance.state = store.snapshot()
@@ -894,6 +917,19 @@ export class GraphRuntime {
       threadId: instance.threadId,
       finalState: store.getValues(),
       totalCost: instance.totalCost,
+      // W1 执法轮：completed 不再是裸状态——带成因与节点结局对账，消费方可判
+      // 「失败被路由/中断被挂起」的质量真相，不再跑完即成功。
+      ...(finishReason ? { finishReason } : {}),
+      ...(nodeOutcomes
+        ? {
+            verification: {
+              nodesCompleted: nodeOutcomes.completed,
+              nodesFailed: nodeOutcomes.failed,
+              nodesErrorRouted: nodeOutcomes.errorRouted,
+              interruptsRaised: nodeOutcomes.interruptsRaised,
+            },
+          }
+        : {}),
       ts: new Date().toISOString(),
     })
 

@@ -18,9 +18,11 @@ import { ekkoGuardHook } from '../toolresultguard'
 import { retrievalRelevanceHook } from '../toolresultguard/retrieval-relevance'
 import { ekkoEnforceGateHook } from './enforce-gate'
 import { callgateHook } from '../callgate/callgate-hook'
+import { contractGuardHook, contractIdempotencyKey } from './contract-guard'
 import { sequenceGuardHook } from './sequence-guard'
 import { skillGuardHook } from '../skillgov/skill-guard-hook'
 import { reportLostSuspensionsOnBoot } from './enforce-approvals'
+import { getToolCallCorrelation } from './call-correlation'
 import {
   argDigest,
   CallSignatureTracker,
@@ -28,11 +30,13 @@ import {
   redactSensitive,
   resolveToolContract,
   summarizeArgs,
+  validateAgainstSchema,
   type ErrorCategory,
   type ToolContract,
   type ToolSideEffect,
 } from '../toolcontract/contract'
-import { IdempotencyStore, idempotencyKeyFor } from '../toolcontract/idempotency-store'
+import { normalizeToolOutcome } from '../toolcontract/error-envelope'
+import { IdempotencyStore } from '../toolcontract/idempotency-store'
 import { underWebUi } from '../lib/paths'
 
 export interface ToolExecAuditEntry {
@@ -67,6 +71,21 @@ export interface ToolExecAuditEntry {
   duplicate?: boolean
   /** 幂等键是否命中历史记录（跨重启仍有效）。 */
   idempotencyHit?: boolean
+  /**
+   * 2026-11-04 W1 执法轮（源文 08 节「单条可关联执行记录」）：稳定错误码与
+   * 执行关联字段。关联字段来自 call-correlation ambient 上下文（生产注入点
+   * 后续接线），缺省 undefined——旧日志读取兼容。
+   */
+  errorCode?: string
+  traceId?: string
+  taskId?: string
+  stepId?: string
+  workflowVersion?: string
+  promptVersion?: string
+  inputRef?: string
+  outputRef?: string
+  retryCount?: number
+  approvalId?: string
 }
 
 /** 单日文件行数上限（超限转 .1/.2 后缀，同 agent.log 轮转命名） */
@@ -218,14 +237,8 @@ const auditHook = {
     let idempotencyKey: string | null = null
     let idempotencyHit = false
     if (contract.idempotency.mode === 'key' && contract.sideEffect !== 'read') {
-      idempotencyKey = idempotencyKeyFor({
-        tool: name,
-        args: digestInput,
-        userId: context?.userId,
-        runId: context?.runId,
-        ttlMs: contract.idempotency.ttlMs,
-        keyFields: contract.idempotency.keyFields,
-      })
+      // 键派生收敛到 contract-guard 的唯一实现（W1）：写入与回放读取必须同键。
+      idempotencyKey = contractIdempotencyKey(name, input, contract, context)
       idempotencyHit = idempotencyStore.peek(idempotencyKey) !== null
     }
 
@@ -235,6 +248,7 @@ const auditHook = {
     if (queue.length > PENDING_PER_KEY_CAP) queue.shift()
     pendingCalls.set(key, queue)
 
+    const correlation = getToolCallCorrelation()
     appendEntry({
       ts: Date.now(),
       phase: 'pre',
@@ -255,12 +269,21 @@ const auditHook = {
       userId: context?.userId,
       profileId: context?.profileId,
       runId: context?.runId,
+      traceId: correlation.traceId,
+      taskId: correlation.taskId,
+      stepId: correlation.stepId,
+      workflowVersion: correlation.workflowVersion,
+      promptVersion: correlation.promptVersion,
+      inputRef: correlation.inputRef,
+      outputRef: correlation.outputRef,
+      retryCount: correlation.retryCount,
+      approvalId: correlation.approvalId,
     })
 
     if (repeat.firstDuplicate) emitRepeatWarning(name, repeat.streak, context, repeat.signature)
   },
 
-  async postExecute(name: string, _input: Record<string, unknown>, result: { ok?: boolean; error?: string }, context?: AuditContext) {
+  async postExecute(name: string, _input: Record<string, unknown>, result: { ok?: boolean; error?: string; data?: unknown }, context?: AuditContext) {
     const key = pendingKeyOf(name, context)
     const queue = pendingCalls.get(key)
     const pending = queue?.shift() ?? null
@@ -271,15 +294,32 @@ const auditHook = {
     const failed = ok === false
     const info = failed ? classifyToolError(result?.error ?? result, pending?.contract) : null
 
-    // 成功的幂等键落账：后续同键调用即命中（观测层；跳过执行待执行器改造）。
+    // 出参契约观测（W1 执法轮）：声明 outputSchema 且结果带结构化 data 时校验，
+    // 违规落审计（audit 档不改写结果；strict 档改写在 contractGuardHook）。
+    let outputErrorCode: string | undefined
+    if (pending?.contract.outputSchema && result?.data !== undefined && result?.data !== null) {
+      try {
+        const issues = validateAgainstSchema(result.data, pending.contract.outputSchema, 'data')
+        if (issues.length > 0) outputErrorCode = 'OUTPUT_SCHEMA_INVALID'
+      } catch { /* 校验器异常只记 ok 结局，不误标 */ }
+    }
+
+    // 统一错误信封（W1）：机器可读 code 优先取归一结果，出参违规覆盖为专用码。
+    const normalized = failed ? normalizeToolOutcome(result, pending?.contract, now) : null
+    const errorCode = outputErrorCode ?? normalized?.code
+
+    // 成功的幂等键落账：后续同键调用即命中（观测层；replay:'return' 契约可回放）。
     if (pending?.idempotencyKey && ok !== false) {
       idempotencyStore.complete(pending.idempotencyKey, {
         tool: name,
         ttlMs: pending.contract.idempotency.ttlMs,
         resultDigest: argDigest({ ok: result?.ok, error: result?.error }),
+        // 回放缓存只存 ok + 脱敏 data（content 不缓存——体积大且可能带原文）。
+        result: { ok: true, ...(result?.data !== undefined ? { data: redactSensitive(result.data) } : {}) },
       })
     }
 
+    const correlation = getToolCallCorrelation()
     appendEntry({
       ts: now,
       phase: 'post',
@@ -287,14 +327,24 @@ const auditHook = {
       ok,
       error: typeof result?.error === 'string' ? result.error.slice(0, 200) : undefined,
       durationMs: pending ? Math.max(0, now - pending.startedAt) : undefined,
-      errorCategory: info?.category,
-      retryable: info?.retryable,
+      errorCategory: outputErrorCode ? 'validation' : info?.category,
+      retryable: outputErrorCode ? false : info?.retryable,
+      errorCode,
       sideEffect: pending?.contract.sideEffect,
       idempotencyHit: pending?.idempotencyHit || undefined,
       sessionId: context?.sessionId,
       userId: context?.userId,
       profileId: context?.profileId,
       runId: context?.runId,
+      traceId: correlation.traceId,
+      taskId: correlation.taskId,
+      stepId: correlation.stepId,
+      workflowVersion: correlation.workflowVersion,
+      promptVersion: correlation.promptVersion,
+      inputRef: correlation.inputRef,
+      outputRef: correlation.outputRef,
+      retryCount: correlation.retryCount,
+      approvalId: correlation.approvalId,
     })
   },
 }
@@ -316,7 +366,10 @@ const auditHook = {
 // 调用闸执法（2026-10-27 wx 挂账 #14 清偿）：preExecute 准入 + postExecute 回执，
 // 排执法门后、序列守卫前——限流/熔断/并发三态按资源分键裁决
 // （HERMES_CALLGATE_ENFORCE=1 才生效；kind llm 不在工具瀑布层，保持观测面）。
-export const ekkoToolExecuteHooks = [auditHook, ekkoGuardHook(), retrievalRelevanceHook(), skillGuardHook(), ekkoEnforceGateHook(), callgateHook(), sequenceGuardHook()]
+// W1 契约执法（2026-11-04）：contractGuardHook 排 audit 后——声明 inputSchema 的
+// 工具违规入参在此拒绝（fail-closed），幂等 replay:'return' 契约命中短路；
+// 未声明契约的工具零变化（fail-soft）。audit 仍排首位：被拒调用先留观测行。
+export const ekkoToolExecuteHooks = [auditHook, contractGuardHook(), ekkoGuardHook(), retrievalRelevanceHook(), skillGuardHook(), ekkoEnforceGateHook(), callgateHook(), sequenceGuardHook()]
 
 // H3 中间态（进程面边界缓解）：钩子装配=server 启动面，扫一遍重启遗留挂起单
 // （waitingAt 标记在案→govbus 提醒+清标记；幂等、fail-soft、fire-and-forget）。
