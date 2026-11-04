@@ -186,3 +186,4 @@
 {"at":"2026-11-04T13:21:12Z","spec":"docs/superpowers/specs/2026-11-04-harness-w1-toolcontract-enforcement.md","receipt":"4a1fdec17a8d5ce35cc6b9cd7171733a1b520ab0","commit":"d5201dedc"}
 {"at":"2026-11-04T13:49:24Z","spec":"docs/superpowers/specs/2026-11-04-harness-w3-observability-taskmodel.md","receipt":"d872b198f5b89188538e3d950028c2a5b2b39ca6","commit":"d5201dedc"}
 {"at":"2026-11-04T15:13:23Z","spec":"docs/superpowers/specs/2026-11-04-harness-w4-closeout.md","receipt":"7a11b3bab9d7cfaf2e9edfbd79d69deefdfee94c","commit":"813219c3a"}
+{"at":"2026-11-04T16:20:34Z","spec":"docs/superpowers/specs/2026-11-05-teardown-void-type-fix.md","receipt":"a9bb2aa6709b2868b0e452c77dccdc2fe229e72f","commit":"585858a8f"}
