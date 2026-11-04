@@ -178,3 +178,4 @@
 {"at":"2026-11-04T11:30:55Z","spec":"docs/superpowers/specs/2026-11-04-shell-form-control-text-baseline.md","receipt":"b10407c94dc0271c2b48d5d178fdaa661d24c138","commit":"0a0d0104f"}
 {"at":"2026-11-04T11:39:26Z","spec":"docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md","receipt":"969f27103219004195338021b9124acf3b5d31d8","commit":"79c3b957a"}
 {"at":"2026-11-04T11:42:54Z","spec":"docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md","receipt":"0ed1c33fbdef760479a0e84e12050954b8160058","commit":"dd74f32ec"}
+{"at":"2026-11-04T10:57:55Z","spec":"docs/superpowers/specs/2026-11-04-regression-tooling-r26.md","receipt":"bf5cce0cb982ec41ae0173e61f06bfdd7976842b","commit":"d9c82dc63"}

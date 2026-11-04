@@ -58,11 +58,12 @@ await page.waitForSelector('[data-testid="ia-shell-header"]', { timeout: 20000 }
 
 // ③ 统一检索弹窗：命令行点击直达精确路由（看板命令 → /app/board）
 {
-  // n-modal-mask 拦截点击（版本通知等弹层）——Esc×3 + 物理移除（走查工具箱先例）
-  for (let i = 0; i < 3; i++) { await page.keyboard.press('Escape').catch(() => {}); await page.waitForTimeout(250) }
-  await page.evaluate(() => document.querySelectorAll('.n-modal-mask').forEach(m => m.remove())).catch(() => {})
-  await page.click('[data-testid="ia-header-search-input"]')
-  await page.fill('[data-testid="ia-header-search-input"]', '')
+  // 2026-11-04 r26 清偿：ia-header-search-input 在页头与对话框内（.srch__input）双绑定
+  // （v-model 同源）。「Esc 关→再点页头」序列里对话框实为关闭态，页头 fill('')
+  // 改 q 后 board 行永不渲染——选择器歧义被误报为产品缺陷。改法：对话框保持开着，
+  // 直接 fill 对话框内输入框（键盘清空语义与真实用户一致）。
+  const dlgInput = page.locator('[data-testid="global-search-dialog"] .srch__input')
+  await dlgInput.fill('')
   await page.waitForTimeout(600)
   const boardRow = page.locator('[data-testid="search-command-c:board"]')
   await boardRow.waitFor({ state: 'visible', timeout: 5000 })
