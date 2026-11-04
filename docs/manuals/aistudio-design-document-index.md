@@ -566,6 +566,7 @@
 - [2026-11-04-agentteams-execution-records.md](../superpowers/specs/2026-11-04-agentteams-execution-records.md)
 - [2026-11-04-agentteams-project-graph.md](../superpowers/specs/2026-11-04-agentteams-project-graph.md)
 - [2026-11-04-agentteams-skill-export.md](../superpowers/specs/2026-11-04-agentteams-skill-export.md)
+- [2026-11-04-vendor-upgrade-agent-v0227.md](../superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md)
 ## archive（2 份，不计入上述根目录）
 
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。

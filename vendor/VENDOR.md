@@ -5,7 +5,7 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 | 树 | commit | 版本 | upstream remote | 提取方式 |
 |---|---|---|---|---|
 | hermes-studio | `dad736a93` | v1.0.9（tag 与包版本脱钩：该 tag 的 package.json=0.8.11；台账以 tag 为准） | https://github.com/EKKOLearnAI/ekko-studio.git（旧名 `hermes-studio` 为重定向别名；2026-10-31 实测 full_name=ekko-studio） | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
-| hermes-agent | `f0d94882e` | v0.22.6 | https://github.com/NousResearch/hermes-agent.git | 同上 |
+| hermes-agent | `b200f5bc6` | v0.22.7 | https://github.com/NousResearch/hermes-agent.git | 同上 |
 | zcode | `a9fe401e` | 包版本 3.17.2（谱系 v3.16.1 系列；**同步口径=上游 main 变更，不看版本 tag**，2026-10-25 用户裁定） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
 
 > 2026-10-31 升级轮：hermes-studio 基线已升 v0.8.0（本批，44 失败件重生成/2 退役/4 条迁位，重放零失败）；补丁 329 esp32 段随上游迁移改指 `packages/mcu/esp32-*`。hermes-agent 仍 v0.22.5（main 领先 3087c）。zcode 已于 2026-10-31 同步批升 `a60ba6a7`（v3.17.1 线，8 条活跃补丁重放零失败，002/006 重生成、引擎构建绿）；同步 spec 见 `2026-10-31-zcode-3171-sync.md`。
@@ -17,6 +17,8 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 > 2026-11-03 升级批（spec `2026-11-03-vendor-upgrade-agent-v0226.md`）：hermes-agent 基线升 **v0.22.6**（`f0d94882e`，上游 2026-11-02 发布；v0.22.5→v0.22.6 为 3482 提交/4316 文件）。agent 面 82 补丁新基线重放：**17 枚上下文失配全数重生成**（14 枚 3way 自动合；450/470/725 手解——上游新增 timezone/grace_minutes/catch_up、control_reserve、silence_allowed 包裹分别与我方 base_url/collab_event_id/回合恢复块并集）；clean+inject 全量 434 补丁零 WARN。`.gitignore` 误伤面（electron `*.d.ts`）核验已在位。
 
 > 2026-11-03 同步批（spec `2026-11-03-runtime-deps-refresh.md`）：zcode 基线升 **v3.17.2**（`a9fe401e`，a60ba6a7→a9fe401e 为 1 提交/203 文件）。8 条活跃补丁（002-009）净基线重放零失败零重生成，clean→inject 幂等二连验证过；upstream/zcode 缓存树同批治理 checkout 至新基线（原 HEAD 3c5b2276 违反 pristine 规则）。同批 exa-mcp-server 3.4.1→3.4.3（npm latest 实测，runtime/exa 正身+patch 396 重生成）。
+
+> 2026-11-04 升级批（spec `2026-11-04-vendor-upgrade-agent-v0227.md`）：hermes-agent 基线升 **v0.22.7**（`b200f5bc6`，上游 2026-11-03 发布；v0.22.6→v0.22.7 为 589 提交/554 文件，主题=room lead 路由/plugin-catalog 重 pin/webapp 状态修复）。agent 面 85 补丁新基线重放：**3 枚上下文失配重生成**（408 `_tool_snapshot_selection` 插位致插入块漂移、470 `append_event` payload 延迟解析重构与 collab_event_id 并集改 resolve 包装、593 cache key 追加位上游新增 `check_fn_cache_epoch()` 后移），其余 82 枚 direct；净基线 clean+inject 零 WARN。runtime 覆盖层 5 条目镜像化重灌（cron.py/hosted_rooms.py/platforms/base.py/toolsets.py/tool_executor.py）＋宿主定向部署（宿主基线当日已先行 checkout v0.22.7，overlay 5 件回退态对齐）；manifest 其余 28 件宿主差异为并行会话在途域未动。`.gitignore` 误伤面核验：本轮无新增命中（d.ts 存续、export 无变更）。team 载体链随批进位 v0.22.7-team.1。
 ## zcode 基线差一提交说明（2026-10-24 实测记录）
 
 `zcode-patches/series` 头已于 2026-10-25 升级轮对齐为 `3c5b2276`（当时 7 条活跃补丁在该 pristine 快照上全量重放实测通过，依据 specs/2026-10-24-aistudio-single-repo-integration.md 验证门①；差一提交的历史事实见 git 历史）。2026-10-31 复核：series 现为 8 条活跃补丁（002-009），RELEASE-MANIFEST 的 activePatchCount=8 与之一致。
