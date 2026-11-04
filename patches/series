@@ -1123,3 +1123,9 @@
 # 736（2026-11-04 AgentTeams 吸收批二）：run-manager 出口落痕——pty/print/停止/回收各退出路径
 #      追加统一执行记录 JSONL（outcome/exitCode 结构化，blocked=启动前拒绝；幂等防双记）。
 736-server-coding-run-records.patch
+# 737（2026-11-04 AgentTeams 吸收批四）：技能 ZIP 导出+导入三道限——export 端点插
+#      通配路由前（external 源 403），单 entry 50MB/解压总量 200MB/2 万 entry 上限；客户端导出按钮。
+737-server-skill-export-limits.patch
+# 738（2026-11-04 AgentTeams 吸收批四）：统一 registry URI 解析器——parse_skill_uri
+#      表驱动接分发链最前（nacos:// 具名不静默回落），runtime 镜像+manifest 补位（skills_hub.py 入册）。
+738-agent-skill-hub-uri.patch

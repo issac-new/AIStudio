@@ -297,6 +297,21 @@
       "source": "locales/zh.yaml",
       "dest": "locales/zh.yaml",
       "note": "同上（中文词条）"
+    },
+    {
+      "source": "tools/skills_hub_uri.py",
+      "dest": "tools/skills_hub_uri.py",
+      "note": "737 统一 registry URI 解析器（显式前缀→(source_id, identifier)，含 nacos:// 预留位；纯函数零 IO）——skills_hub.py 分发链消费，缺它安装树 hermes skills install 前缀短路即 ImportError"
+    },
+    {
+      "source": "hermes_cli/skills_hub.py",
+      "dest": "hermes_cli/skills_hub.py",
+      "note": "737 接线：_resolve_source_meta_and_bundle 入口先走解析器（命中已知源等同 --source 固定）+ _registry_from_identifier 优先解析器；该文件此前不在 manifest，本批补入使解析器上宿主"
+    },
+    {
+      "source": "tests/tools/test_skills_hub_uri.py",
+      "dest": "tests/tools/test_skills_hub_uri.py",
+      "note": "737 解析器表驱动测试（随 skills_hub_uri 模块部署，安装树可就地回归，照 732 tests 条目先例）"
     }
   ],
   "notes": [

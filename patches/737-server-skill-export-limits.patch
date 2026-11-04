@@ -1,0 +1,260 @@
+diff --git a/packages/client/src/api/hermes/skills.ts b/packages/client/src/api/hermes/skills.ts
+index 94658e5..35b3cbe 100644
+--- a/packages/client/src/api/hermes/skills.ts
++++ b/packages/client/src/api/hermes/skills.ts
+@@ -1,4 +1,4 @@
+-import { request, getBaseUrlValue, getApiKey, getActiveProfileName } from '../client'
++import { request, getBaseUrlValue, getApiKey, getActiveProfileName, ensureDesktopAuthReady } from '../client'
+ 
+ export type SkillSource = 'builtin' | 'hub' | 'local' | 'external'
+ export type SkillTarget = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity'
+@@ -152,6 +152,22 @@ export async function fetchSkillFiles(category: string, skill: string, target: S
+   return res.files
+ }
+ 
++/** 导出技能 ZIP（736）：带鉴权 fetch→blob（照 api/studio/theme.ts exportThemeArchive
++ *  形态）；鉴权头照本文件 importSkill（Authorization + X-Hermes-Profile）。 */
++export async function exportSkillZip(category: string, skill: string, target: SkillTarget = 'hermes'): Promise<Blob> {
++  await ensureDesktopAuthReady()
++  const headers = new Headers()
++  const token = getApiKey()
++  if (token) headers.set('Authorization', `Bearer ${token}`)
++  const profile = getActiveProfileName()
++  if (profile) headers.set('X-Hermes-Profile', profile)
++  const c = encodeURIComponent(category)
++  const s = encodeURIComponent(skill)
++  const response = await fetch(`${getBaseUrlValue()}/api/hermes/skills/${c}/${s}/export${targetQuery(target)}`, { headers })
++  if (!response.ok) throw new Error(`Failed to export skill (${response.status})`)
++  return response.blob()
++}
++
+ export async function fetchMemory(): Promise<MemoryData> {
+   return request<MemoryData>('/api/hermes/memory')
+ }
+diff --git a/packages/client/src/components/hermes/skills/SkillDetail.vue b/packages/client/src/components/hermes/skills/SkillDetail.vue
+index 539b738..af0cb04 100644
+--- a/packages/client/src/components/hermes/skills/SkillDetail.vue
++++ b/packages/client/src/components/hermes/skills/SkillDetail.vue
+@@ -1,7 +1,7 @@
+ <script setup lang="ts">
+ import { NSpin, useMessage } from 'naive-ui'
+ import { computed, defineAsyncComponent, ref, watch } from 'vue'
+-import { fetchSkillContent, fetchSkillFiles, pinSkillApi, saveSkillContent, type SkillFileEntry, type SkillTarget } from '@/api/hermes/skills'
++import { exportSkillZip, fetchSkillContent, fetchSkillFiles, pinSkillApi, saveSkillContent, type SkillFileEntry, type SkillSource, type SkillTarget } from '@/api/hermes/skills'
+ import { useI18n } from 'vue-i18n'
+ 
+ 
+@@ -21,6 +21,8 @@ const props = defineProps<{
+   target?: SkillTarget
+   readonly?: boolean
+   canPin?: boolean
++  /** 技能来源（736）：builtin/hub/local 显示「导出 ZIP」，external 只读挂载不导出（服务端同名 403 兜底） */
++  source?: SkillSource
+   loadContent?: (category: string, skill: string, filePath?: string) => Promise<string>
+   loadFiles?: (category: string, skill: string) => Promise<SkillFileEntry[]>
+   saveContent?: (category: string, skill: string, content: string) => Promise<void>
+@@ -131,6 +133,30 @@ async function saveSkill() {
+ 
+ const pinLoading = ref(false)
+ 
++// 导出（736）：仅本仓三源可导；external 隐藏按钮（服务端 exportSkill 另有 403 兜底）
++const exporting = ref(false)
++const canExport = computed(() => props.source === 'builtin' || props.source === 'hub' || props.source === 'local')
++
++async function handleExport() {
++  if (exporting.value || !canExport.value) return
++  exporting.value = true
++  try {
++    const blob = await exportSkillZip(props.category, props.skill, props.target || 'hermes')
++    const url = URL.createObjectURL(blob)
++    const link = document.createElement('a')
++    link.href = url
++    link.download = `${props.skill.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')}.zip`
++    document.body.appendChild(link)
++    link.click()
++    link.remove()
++    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
++  } catch (err: any) {
++    message.error(t('skills.exportFailed') + `: ${err.message}`)
++  } finally {
++    exporting.value = false
++  }
++}
++
+ async function handlePinToggle() {
+   if (pinLoading.value) return
+   pinLoading.value = true
+@@ -158,6 +184,10 @@ watch(() => `${props.target || 'hermes'}/${props.category}/${props.skill}`, load
+         <span class="detail-name">{{ skill }}</span>
+       </div>
+       <div class="usage-stats">
++        <button v-if="canExport && !viewingFile" class="detail-action" :disabled="exporting" :title="t('skills.exportZip')" @click="handleExport">
++          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
++          <span>{{ t('skills.exportZip') }}</span>
++        </button>
+         <button v-if="!readonly && !viewingFile && !editing" class="detail-action" :title="t('skills.edit')" @click="startEditing">
+           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+           <span>{{ t('skills.edit') }}</span>
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index fc0d780..e4d92b4 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -4316,6 +4316,8 @@ export default {
+     unpin: 'Unpin skill',
+     pinFailed: 'Failed to change pin status',
+     edit: 'Edit',
++    exportZip: 'Export ZIP',
++    exportFailed: 'Failed to export skill',
+     saving: 'Saving...',
+     editorLabel: 'Skill editor',
+     saveSuccess: 'Skill saved',
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 150da29..88fb194 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -4315,6 +4315,8 @@ export default {
+     unpin: '取消置顶',
+     pinFailed: '更改置顶状态失败',
+     edit: '编辑',
++    exportZip: '导出 ZIP',
++    exportFailed: '导出技能失败',
+     saving: '保存中...',
+     editorLabel: '技能编辑器',
+     saveSuccess: '技能已保存',
+diff --git a/packages/client/src/views/hermes/SkillsView.vue b/packages/client/src/views/hermes/SkillsView.vue
+index a7c7d4d..ddc8e9c 100644
+--- a/packages/client/src/views/hermes/SkillsView.vue
++++ b/packages/client/src/views/hermes/SkillsView.vue
+@@ -295,6 +295,7 @@ function handleSkillSaved() {
+               :target="skillTarget"
+               :readonly="selectedSkillReadonly"
+               :can-pin="isHermesTarget"
++              :source="selectedSkillData?.source"
+               @pin-toggled="handlePinToggled"
+               @saved="handleSkillSaved"
+             />
+diff --git a/packages/server/src/modules/hermes/controllers/skills.ts b/packages/server/src/modules/hermes/controllers/skills.ts
+index b100bd0..92c0109 100644
+--- a/packages/server/src/modules/hermes/controllers/skills.ts
++++ b/packages/server/src/modules/hermes/controllers/skills.ts
+@@ -774,6 +774,48 @@ export async function listFiles(ctx: any) {
+   }
+ }
+ 
++/** GET /api/hermes/skills/:category/:skill/export — 技能目录实时打包为 ZIP 下载（736）。
++ *  来源策略：builtin/hub/local 可导出；external（external_dirs 只读挂载）403——
++ *  getSkillSource 只产 builtin/hub/local 三值，external 判定等价于「解析出的目录
++ *  不在本仓技能树内」（isPathWithin），可能是他人版权资产，导出即再分发。 */
++export async function exportSkill(ctx: any) {
++  const { category } = ctx.params
++  const name = String((ctx.params as any)?.skill || '')
++  try {
++    const skillsDir = requestTargetSkillsDir(ctx)
++    const skillDir = await resolveSkillDirForTarget(ctx, category, name)
++    if (!skillDir) {
++      ctx.status = 404
++      ctx.body = { error: 'Skill not found' }
++      return
++    }
++    if (!isPathWithin(skillDir, skillsDir)) {
++      ctx.status = 403
++      ctx.body = { error: 'External skills (read-only mounted directories) cannot be exported' }
++      return
++    }
++    // 打包前先量体：超限直接 413，不把大目录读进内存（实时打包不缓存，技能可变）
++    let totalBytes = 0
++    for (const f of await listFilesRecursive(skillDir, '')) {
++      totalBytes += (await stat(join(skillDir, f.path))).size
++      if (totalBytes > MAX_SKILL_EXPORT_SIZE) {
++        ctx.status = 413
++        ctx.body = { error: `Skill directory too large to export (max ${MAX_SKILL_EXPORT_SIZE / 1024 / 1024}MB)` }
++        return
++      }
++    }
++    const zip = new AdmZip()
++    zip.addLocalFolder(skillDir, name)
++    ctx.type = 'application/zip'
++    ctx.attachment(`${name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')}.zip`)
++    ctx.set('Cache-Control', 'no-store')
++    ctx.body = await zip.toBufferPromise()
++  } catch (err: any) {
++    ctx.status = 500
++    ctx.body = { error: err.message }
++  }
++}
++
+ export async function readFile_(ctx: any) {
+   const filePath = (ctx.params as any).path
+   const profileSkillsDir = requestTargetSkillsDir(ctx)
+@@ -863,6 +905,13 @@ export async function pin_(ctx: any) {
+ 
+ const MAX_SKILL_UPLOAD_SIZE = 50 * 1024 * 1024 // 50MB
+ const MAX_SKILL_CONTENT_SIZE = 1024 * 1024 // 1MB
++// 导入三道限（736）：既有 MAX_SKILL_UPLOAD_SIZE 只限压缩包上传字节，高压缩比
++// zip 解压后可放大数千倍（zip-bomb），故加单 entry / 解压总量 / entry 数三道闸。
++const MAX_SKILL_ENTRY_SIZE = 50 * 1024 * 1024 // 单 entry 解压上限 50MB
++const MAX_SKILL_UNCOMPRESSED = 200 * 1024 * 1024 // 全包解压累计上限 200MB
++const MAX_SKILL_ENTRIES = 20000 // entry 数上限（防小文件风暴拖垮解包）
++// 导出体积上限（736）：打包前累计目录字节数，超限 413——与导入解压总量同档
++const MAX_SKILL_EXPORT_SIZE = 200 * 1024 * 1024 // 200MB
+ 
+ function isValidSkillName(name: string): boolean {
+   // Reject empty / path traversal / absolute paths
+@@ -1180,7 +1229,17 @@ export async function importSkill(ctx: any) {
+       }
+ 
+       try {
+-        for (const entry of zip.getEntries()) {
++        // 三道限之一（736）：entry 数在解包循环口一次判完（防小文件风暴）
++        const zipEntries = zip.getEntries()
++        if (zipEntries.length > MAX_SKILL_ENTRIES) {
++          ctx.status = 413
++          ctx.body = { error: `Too many zip entries: ${zipEntries.length} (max ${MAX_SKILL_ENTRIES})` }
++          return
++        }
++        // 三道限之二/三：单 entry 头部声明尺寸预检 + 解出实际字节复核并累计总量
++        //（头部声明可伪造，getData 的真实长度才是闸——照 theme archive readEntry 的不信声明原则）
++        let totalUncompressed = 0
++        for (const entry of zipEntries) {
+           // Normalise to forward slashes; adm-zip uses POSIX separators internally
+           // but be defensive.
+           const rel = entry.entryName.replace(/\\/g, '/')
+@@ -1200,8 +1259,25 @@ export async function importSkill(ctx: any) {
+             await mkdir(dest, { recursive: true })
+             continue
+           }
++          if (entry.header.size > MAX_SKILL_ENTRY_SIZE) {
++            ctx.status = 413
++            ctx.body = { error: `Zip entry too large: ${rel} declared ${entry.header.size} bytes (max ${MAX_SKILL_ENTRY_SIZE})` }
++            return
++          }
++          const data = entry.getData()
++          if (data.length > MAX_SKILL_ENTRY_SIZE) {
++            ctx.status = 413
++            ctx.body = { error: `Zip entry too large: ${rel} inflated to ${data.length} bytes (max ${MAX_SKILL_ENTRY_SIZE})` }
++            return
++          }
++          totalUncompressed += data.length
++          if (totalUncompressed > MAX_SKILL_UNCOMPRESSED) {
++            ctx.status = 413
++            ctx.body = { error: `Zip uncompressed total exceeds limit (${totalUncompressed} bytes, max ${MAX_SKILL_UNCOMPRESSED})` }
++            return
++          }
+           await mkdir(dirname(dest), { recursive: true })
+-          await writeFile(dest, entry.getData())
++          await writeFile(dest, data)
+         }
+       } catch (err: any) {
+         ctx.status = 400
+diff --git a/packages/server/src/modules/hermes/routes/skills.ts b/packages/server/src/modules/hermes/routes/skills.ts
+index 72a0f19..dcb8e44 100644
+--- a/packages/server/src/modules/hermes/routes/skills.ts
++++ b/packages/server/src/modules/hermes/routes/skills.ts
+@@ -13,4 +13,7 @@ skillRoutes.post('/api/hermes/skills/import', ctrl.importSkill)
+ skillRoutes.put('/api/hermes/skills/:category/:skill', ctrl.updateSkill)
+ skillRoutes.delete('/api/hermes/skills/:category/:skill', ctrl.deleteSkill)
+ skillRoutes.get('/api/hermes/skills/:category/:skill/files', ctrl.listFiles)
++// 导出（736）必须注册在下方 {*path} 通配之前：Koa Router 按注册序匹配，
++// 通配在前会把 /export 吞成 readFile_ 的路径参数。
++skillRoutes.get('/api/hermes/skills/:category/:skill/export', ctrl.exportSkill)
+ skillRoutes.get('/api/hermes/skills/{*path}', ctrl.readFile_)
