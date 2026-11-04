@@ -567,6 +567,7 @@ async function approvalBridgeFacts(
   profileId: string | undefined,
   rule: string,
   policyRuleId?: string,
+  identity?: { userId?: string; runId?: string },
 ): Promise<{ approved: boolean; callHash: string; ticket?: { id: string; status: 'pending' | 'approved' | 'rejected' } | null }> {
   try {
     const bridge = await import('./enforce-approvals')
@@ -579,6 +580,9 @@ async function approvalBridgeFacts(
       profileId: profileId ?? '', rule,
       risk: risk === 'low' ? 'low' : risk === 'high' ? 'high' : 'medium',
       ...(policyRuleId ? { policyRuleId } : {}),
+      // W2 审批口径：批单钉发起人与运行（裁决端据此禁自批）
+      ...(identity?.userId ? { requestedBy: identity.userId } : {}),
+      ...(identity?.runId ? { runId: identity.runId } : {}),
     })
     return { approved: false, callHash: hash, ticket: { id: rec.id, status: rec.status } }
   } catch {
@@ -697,7 +701,7 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
         })
         // 审批桥只对确认类裁决采事实（避免给硬边界/放行类挂单）
         if (verdict.enforcing && verdict.allow === false && APPROVAL_CLASS_RULES.has(verdict.rule)) {
-          bridgeFacts = await approvalBridgeFacts(name, input, context?.profileId, verdict.rule, verdict.policyRuleId)
+          bridgeFacts = await approvalBridgeFacts(name, input, context?.profileId, verdict.rule, verdict.policyRuleId, { userId: context?.userId, runId: context?.runId })
           verdict = applyApprovalBridge(verdict, bridgeFacts)
         }
       } catch (err) {

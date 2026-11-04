@@ -58,6 +58,14 @@ export interface ApprovalRule {
   /** 产生本规则的决策态（审计：规则从哪来）。 */
   learnedFrom: ApprovalDecision
   createdAt: number
+  /**
+   * 规则过期时刻（W2 审批口径收口，2026-11-04）：allow 规则必带——「一次确认」
+   * 不得成为永久通行证（源文 05 节：授权应有有效范围）。deny 规则不带过期
+   * （保护性规则到期放行=削弱安全边界）。缺省=旧档规则，装载时由 store 补期。
+   */
+  expiresAt?: number
+  /** 旧档无期限规则被补期的时间（审计：区分原生带期与迁移补期）。 */
+  migratedAt?: number
 }
 
 export interface ToolCallRequest {
@@ -214,8 +222,12 @@ export function evaluate(
   rules: readonly ApprovalRule[],
   defaultMode: DefaultMode = 'ask',
   ownership: ScopeOwnershipPredicate = defaultOwnership,
+  now: number = Date.now(),
 ): Verdict {
-  const visible = rules.filter((r) => scopeVisible(r, call) && ownership(r, call) && ruleMatches(r, call))
+  // W2 过期执法：allow 规则带 expiresAt 且已过期=不命中（deny/ask 不过期——
+  // 保护性规则不因时间削弱）。过期规则不删档（审计留痕），只在求值面失效。
+  const effective = rules.filter((r) => !(r.list === 'allow' && r.expiresAt !== undefined && r.expiresAt <= now))
+  const visible = effective.filter((r) => scopeVisible(r, call) && ownership(r, call) && ruleMatches(r, call))
   const denied = visible.find((r) => r.list === 'deny')
   if (denied) return { list: 'deny', rule: denied }
   if (hardAskOverride(call)) return { list: 'ask' } // 不可静态判定的递归删除：allow 也不放行
@@ -225,6 +237,9 @@ export function evaluate(
   if (asked) return { list: 'ask', rule: asked }
   return { list: 'default', mode: defaultMode }
 }
+
+/** allow 规则统一期限（W2）：24h——与 approval-log 里 scoped 决策 24h 口径一致。 */
+export const ALLOW_RULE_TTL_MS = 24 * 60 * 60 * 1000
 
 /** 决策 → 规则学习映射：哪些决策态落什么规则（「批准即学习」核心表）。 */
 export function ruleFromDecision(
@@ -236,8 +251,19 @@ export function ruleFromDecision(
 ): ApprovalRule | null {
   const ownership = owner ? { owner } : {}
   if (decision === 'approved_scoped') {
+    // W2：scoped 批准学成全局 allow 必带 24h 期限——一次确认不再永久放行。
     return { list: 'allow', scope: 'global', tool: candidate.tool, argvPrefix: candidate.argvPrefix,
-             matchDomain: candidate.matchDomain, ...ownership, learnedFrom: decision, createdAt: now }
+             matchDomain: candidate.matchDomain, ...ownership, learnedFrom: decision, createdAt: now,
+             expiresAt: now + ALLOW_RULE_TTL_MS }
+  }
+  if (decision === 'approved_for_session') {
+    // W2 补课：该决策态此前落 null（no-op——UI 提供「本会话允许」但无任何效果）。
+    // 现落 session 档 allow：绑定会话 + 24h 期限；无 sessionId 可绑时不学习
+    //（session 档无绑定的旧语义=全会话可见，宽于「本会话」承诺，不落）。
+    if (!call.sessionId) return null
+    return { list: 'allow', scope: 'session', tool: candidate.tool, argvPrefix: candidate.argvPrefix,
+             ...ownership, sessionId: call.sessionId,
+             learnedFrom: decision, createdAt: now, expiresAt: now + ALLOW_RULE_TTL_MS }
   }
   if (decision === 'denied_for_session') {
     // 会话档拒绝：记 session 档 deny 并绑定会话（X2：只在该会话上下文可见，不再全局生效）。
@@ -245,7 +271,7 @@ export function ruleFromDecision(
              ...ownership, ...(call.sessionId ? { sessionId: call.sessionId } : {}),
              learnedFrom: decision, createdAt: now }
   }
-  if (decision === 'denied_once' || decision === 'approved_once' || decision === 'approved_for_session') {
+  if (decision === 'denied_once' || decision === 'approved_once') {
     return null // 不学习
   }
   return null

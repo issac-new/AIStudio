@@ -30,7 +30,7 @@ import { appendApprovalLog, queryApprovalLog, verifyApprovalChain } from './appr
 import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
 import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotchecks, listResolvedSpotchecks, resolveSpotcheck } from './autopass'
 import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
-import { decideEnforceApproval, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
+import { decideEnforceApprovalGuarded, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
 import { listHumanGatePending, humanGateRouter, decide as humanGateDecide } from './human-gate'
 import { atomicWriteJson } from '../lib/fs-store'
 import { fail, ok } from '../lib/http'
@@ -421,12 +421,14 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: '执法审批决策须为 approve|reject' }
       return
     }
-    const rec = decideEnforceApproval(id, decision, actor)
-    if (!rec) {
-      ctx.status = 404
-      ctx.body = { ok: false, detail: '执法审批单不存在' }
+    // W2 审批口径收口：执法批单走闸门裁决——具名主体必填、发起人不得自批。
+    const guarded = decideEnforceApprovalGuarded(id, decision, actor)
+    if (guarded.tag === 'error') {
+      ctx.status = guarded.code === 'not-found' ? 404 : guarded.code === 'actor-required' ? 401 : 403
+      ctx.body = { ok: false, code: guarded.code, detail: guarded.detail }
       return
     }
+    const rec = guarded.rec
     if (rec.status === 'pending') {
       ctx.status = 409
       ctx.body = { ok: false, detail: '执法审批单状态异常（仍 pending）' }

@@ -183,3 +183,4 @@
 {"at":"2026-11-04T12:13:49Z","spec":"docs/superpowers/specs/2026-11-04-regression-tooling-r26.md","receipt":"c82bbe31d34561d89a9ba5f5806b42c791a346ba","commit":"f19201834"}
 {"at":"2026-11-04T12:49:09Z","spec":"docs/superpowers/specs/2026-11-04-regression-prod-chain.md","receipt":"fc79257b5b60f562703a4f893d74405441bb930a","commit":"6e8c990de"}
 {"at":"2026-11-04T13:21:12Z","spec":"docs/superpowers/specs/2026-11-04-harness-w1-toolcontract-enforcement.md","receipt":"6faedc377fdb6864139f26f9a62841605e4dfea1","commit":"d5201dedc"}
+{"at":"2026-11-04T13:32:19Z","spec":"docs/superpowers/specs/2026-11-04-harness-w2-result-approval.md","receipt":"cd355442353b9c07d839cdac117ece7da868c8bb","commit":"d5201dedc"}
