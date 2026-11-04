@@ -281,3 +281,15 @@ paths:
   - scripts/make-release-packages.mjs
   # 2026-11-03 培训手册版本载体清偿（升版轮漏改，全量测试抓出）
   - docs/manuals/aistudio-training-and-user-guide.md
+  # 2026-11-04 v1.0.11 发布轮（vendor v0.22.7 换血＋AgentTeams 批一~四＋win 回归 P1＋r26 工装清偿；ModelScope 通道暂停待后续令）
+  - docs/superpowers/specs/2026-11-04-release-v1.0.11-overlay.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - package.json
+  - package-lock.json
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md
+  - docs/manuals/aistudio-design-document-guide.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/manuals/aistudio-feature-inventory.md
+  - docs/manuals/aistudio-operations-reference.md
+  - docs/manuals/aistudio-training-and-user-guide.md
