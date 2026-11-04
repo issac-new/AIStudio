@@ -243,7 +243,11 @@ function onPanelJumpTask(taskId: string): void {
 
     <!-- 态势内联面板（v12.3 迁页头；浮层贴页头下方）。
          回归测试 D4（2026-10-17）：容器补 role/aria-modal、遮罩补 aria-hidden——
-         原纯 div 无语义，读屏与 ARIA 快照均不可见（自动化与无障碍双盲区）。 -->
+         原纯 div 无语义，读屏与 ARIA 快照均不可见（自动化与无障碍双盲区）。
+         2026-11-04 修复：遮罩改在面板之前渲染——两者同 z-index（--ia-z-header-panel），
+         DOM 后者盖前者；遮罩在后会把面板整个盖住，面板内任何点击都落在透明遮罩上，
+         弹层一触即关（通知下拉「消息」页签点击即关同根因，同修）。 -->
+    <div v-if="sitPanel" class="cockpit-top__mask" aria-hidden="true" @click="sitPanel = null" />
     <div v-if="sitPanel" class="cockpit-top__sitpanel" role="dialog" aria-modal="true" data-testid="ia-sit-panel">
       <SitDetailPanel
         :segment="sitPanel"
@@ -267,11 +271,9 @@ function onPanelJumpTask(taskId: string): void {
         @open-gov-people="router.push({ name: 'ia2.stage1', query: { tab: 'org' } })"
       />
     </div>
-    <div v-if="sitPanel" class="cockpit-top__mask" aria-hidden="true" @click="sitPanel = null" />
-
-    <!-- 通知下拉（v12.3：双页签，点击遮罩关闭） -->
-    <NotifyDropdownPanel v-if="showNotify" @close="showNotify = false" />
+    <!-- 通知下拉（v12.3：双页签，点击遮罩关闭；遮罩先渲染避免盖住面板，见上） -->
     <div v-if="showNotify" class="cockpit-top__mask" aria-hidden="true" @click="showNotify = false" />
+    <NotifyDropdownPanel v-if="showNotify" @close="showNotify = false" />
 
     <!-- 更新日志（A3：上游 changelog 数据直渲，词条键经 t() 跟随 locale） -->
     <NModal v-model:show="showChangelog" preset="dialog" :title="t('sidebar.changelog')"

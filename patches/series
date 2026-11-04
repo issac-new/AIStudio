@@ -1112,3 +1112,8 @@
 #      单一事实源 custom/server/projectworkflow/config-whitelist.ts（26 项，含 tts/stt 语音面），
 #      未知 section 400。
 733-server-config-section-whitelist.patch
+
+# 734（2026-11-04 IDE 工作区 bug2/3）：任务工作区根放行只读浏览/下载——
+#      list/stat/download 的 super_admin 闸对已知任务工作区（isWithinKnownTaskWorkspace）
+#      放开，非本人的任务工作区只读可打开；写面 8 端点仍 super_admin。
+734-server-files-root-task-workspace-readonly.patch

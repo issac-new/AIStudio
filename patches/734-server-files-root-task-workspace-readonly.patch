@@ -1,0 +1,71 @@
+diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
+--- a/packages/server/src/modules/studio/controllers/files.ts
++++ b/packages/server/src/modules/studio/controllers/files.ts
+@@ -97,10 +97,22 @@
+   }
+   // HERMES_CUSTOM[TaskWorkspaceAllowlist] END
+   // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: 使用 root 时要求 super_admin
++  // HERMES_CUSTOM[TaskWorkspaceReadonlyOpen] BEGIN: 任务工作区根放行只读浏览
++  // 用户令（2026-11-04 spec）：非本人的任务工作区给只读权限允许打开——已知任务
++  // 工作区（isWithinKnownTaskWorkspace，含 coding-agent 工作区）放开 list 只读
++  // 面；写面 8 端点仍 super_admin 不动。非任务根仍走 super_admin 闸。冷缓存时
++  // 先 prime 再复查（同步读接口用旧值会误拒真实任务根）。
+   if (root && ctx.state.user?.role !== 'super_admin') {
++    const candidate = relativePath ? join(root, relativePath) : root
++    if (!isWithinKnownTaskWorkspace(candidate)) {
++      await primeTaskWorkspaceCache()
++      if (!isWithinKnownTaskWorkspace(candidate)) {
++  // HERMES_CUSTOM[TaskWorkspaceReadonlyOpen] END
+     ctx.status = 403
+     ctx.body = { error: 'root parameter requires super administrator privileges', code: 'forbidden' }
+     return
++      }
++    }
+   }
+   // HERMES_CUSTOM[SecFileRootSandbox] END
+   try {
+@@ -127,10 +139,19 @@
+     return
+   }
+   // HERMES_CUSTOM[SecFileRootSandbox] BEGIN: 使用 root 时要求 super_admin
++  // HERMES_CUSTOM[TaskWorkspaceReadonlyOpen] BEGIN: 任务工作区根放行只读浏览（同 list）
+   if (requestedRoot(ctx) && ctx.state.user?.role !== 'super_admin') {
++    const root = requestedRoot(ctx)!
++    const candidate = join(root, relativePath)
++    if (!isWithinKnownTaskWorkspace(candidate)) {
++      await primeTaskWorkspaceCache()
++      if (!isWithinKnownTaskWorkspace(candidate)) {
++  // HERMES_CUSTOM[TaskWorkspaceReadonlyOpen] END
+     ctx.status = 403
+     ctx.body = { error: 'root parameter requires super administrator privileges', code: 'forbidden' }
+     return
++      }
++    }
+   }
+   // HERMES_CUSTOM[SecFileRootSandbox] END
+   try {
+diff --git a/packages/server/src/modules/studio/controllers/download.ts b/packages/server/src/modules/studio/controllers/download.ts
+--- a/packages/server/src/modules/studio/controllers/download.ts
++++ b/packages/server/src/modules/studio/controllers/download.ts
+@@ -105,11 +105,21 @@
+     } else if (isAbsolute(filePath)) {
+       validPath = validatePath(filePath)
+     } else if (root) {
++      // HERMES_CUSTOM[TaskWorkspaceReadonlyOpen] BEGIN: 任务工作区根放行只读下载
++      // 用户令（2026-11-04 spec）：已知任务工作区只读面放开（list/stat 同修）；
++      // 冷缓存先 prime 再复查。非任务根仍要求 super_admin。
+       if (ctx.state.user?.role !== 'super_admin') {
++        const gateCandidate = resolve(root, filePath)
++        if (!isWithinKnownTaskWorkspace(gateCandidate)) {
++          await primeTaskWorkspaceCache()
++          if (!isWithinKnownTaskWorkspace(gateCandidate)) {
+         ctx.status = 403
+         ctx.body = { error: 'root parameter requires super administrator privileges', code: 'forbidden' }
+         return
++          }
++        }
+       }
++      // HERMES_CUSTOM[TaskWorkspaceReadonlyOpen] END
+       const hermesBase = getHermesBaseDir()
+       const candidate = resolve(root, filePath)
+       // HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 越界时放行已知任务 workspace_path

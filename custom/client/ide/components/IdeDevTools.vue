@@ -115,7 +115,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
   &:hover, &.is-open { color: var(--text-primary); background: var(--hover-bg); }
 }
 .ide-devtools__panel {
-  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 60;
+  /* 110：压过三栏分割条 .ide-shell__split 的 z-100（其命中域加宽 ±5px，
+   * 60 时贴边约 16px 宽的工具按钮点不到，2026-11-04 走查实锤） */
+  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 110;
   width: 320px; padding: 8px 10px 10px;
   background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);

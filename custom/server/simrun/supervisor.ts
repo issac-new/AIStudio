@@ -44,8 +44,11 @@ export interface SupervisorDeps {
 }
 
 function defaultHarnessRoot(): string {
-  // simrun/supervisor.ts → custom/server/simrun → 仓根/simharness
-  return resolve(dirname(fileURLToPath(import.meta.url)), '../../../..', 'simharness')
+  // __dirname 双运行时口径（graph/node-executors/task-boundaries.ts 先例）：server
+  // tsconfig 为 commonjs，import.meta 不可用（TS1343，ts-node serve 首次编译即挂）；
+  // vitest 的 SSR 转换注入 __dirname 同源码目录。simrun/supervisor.ts → custom/server/
+  // simrun 三级向上 = 仓根/simharness（原 '../../../..' 落到仓根上一级，越界一层）。
+  return resolve(__dirname, '../../..', 'simharness')
 }
 
 function pidAlive(pid: number): boolean {
