@@ -149,6 +149,9 @@ describe('R9 评审面板', () => {
     }))
     try {
       const w = mount(IdeReviewPanel)
+      // 2026-11-04 消息区挤压修复：空态默认折叠（头行常驻），先展开再见「发起评审」
+      await w.find('[data-testid="ide-review-head"]').trigger('click')
+      await w.vm.$nextTick()
       await w.find('[data-testid="ide-review-start"]').trigger('click')
       await w.vm.$nextTick()
       const post = calls.find((c) => c.url === '/api/review' && c.method === 'POST')
