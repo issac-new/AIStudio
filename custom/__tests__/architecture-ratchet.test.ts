@@ -17,7 +17,9 @@ function grepCount(pattern: string, paths: string[]): number {
   try {
     // 路径已限定在 custom/server（纯 .ts），不再用 --include（git grep 不支持该 GNU grep 选项）。
     // 排除统一出口 lib/http.ts 自身——它的实现里必然有 ctx.body / ok:false，属白名单。
-    const out = execFileSync('git', ['grep', '-rn', pattern, '--', ...paths, ':(exclude)custom/server/lib/http.ts'], { cwd: ROOT, encoding: 'utf8' })
+    // toolcontract/error-envelope.ts 同理（2026-11-04 W1 批起）：它是工具结果的
+    // 统一失败信封出口，信封构造必然出现失败字面量；执法与业务代码照常计数。
+    const out = execFileSync('git', ['grep', '-rn', pattern, '--', ...paths, ':(exclude)custom/server/lib/http.ts', ':(exclude)custom/server/toolcontract/error-envelope.ts'], { cwd: ROOT, encoding: 'utf8' })
     return out.split('\n').filter(Boolean).length
   } catch {
     return 0

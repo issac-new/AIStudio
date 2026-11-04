@@ -84,7 +84,7 @@ describe('W1 审计关联字段与出参观测', () => {
     _resetAuditStateForTests()
     const audit = ekkoToolExecuteHooks[0]!
     await audit.preExecute!('browser_click', { x: 1 })
-    await audit.postExecute!('browser_click', { x: 1 }, { ok: false, error: 'HTTP 403 forbidden' })
+    await audit.postExecute!('browser_click', { x: 1 }, { error: 'HTTP 403 forbidden' })
     const post = readToolExecAudit().find((e) => e.phase === 'post')!
     expect(post.errorCode).toBe('TOOL_PERMISSION')
     expect(post.errorCategory).toBe('permission')
