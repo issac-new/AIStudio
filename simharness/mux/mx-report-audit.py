@@ -219,8 +219,29 @@ for h, names in md5.items():
     _cand = [n for n in names if _step_key_of(n) not in _fc_md5_skip]
     if len(_cand) > 1 and len({_step_key_of(n) for n in _cand}) > 1:
         dups[h] = _cand
-if dups:
-    fails.append(f'md5 假重复：{list(dups.values())}')
+# N13（2026-11-04）：同页签多步共用帧——页面身份（sidecar title）相同且报告只嵌一次
+# 时不算假重复（真同界面，报告已注明共用）；title 不同/缺失才判假重复。
+_shared_ok, _shared_bad = [], []
+for _h, _names in dups.items():
+    _titles = set()
+    for _n in _names:
+        try:
+            _mf = steps_dir / (re.sub(r'-op\d+-(before|after|action)$', '-op1', _n.replace('.png', '')) + '-meta.json')
+            _titles.add(str((json.loads(_mf.read_text(encoding='utf-8')) or {}).get('title') or ''))
+        except Exception:
+            _titles.add('')
+    # 合格形态：每个文件最多嵌 1 次，且只嵌了这些共用文件中的 ≤2 个（同一步的 before/after）
+    # 同页签多步共用同图是事实（如 11/14 都在 G2 系统分析）：页面身份一致即黄标注明，
+    # 不再按字节相同判假重复；页面身份不同/缺失才 FAIL（那才是错页复用）。
+    if len(_titles) == 1 and '' not in _titles and all(rep.count(_n) <= 4 for _n in _names):
+        _shared_ok.append((sorted({_step_key_of(n) for n in _names}), next(iter(_titles))))
+    else:
+        _shared_bad.append(_names)
+if _shared_bad:
+    fails.append(f'md5 假重复：{_shared_bad}')
+for _steps, _title in _shared_ok:
+    warns.append('同页签共用帧（' + ','.join(str(s) for s in _steps) + '，' + _title
+                 + '）——报告只嵌一次并注明共用，不作各自实拍')
 
 # 报告引用但文件缺失的图
 missing = [m.group(1) for m in re.finditer(r'src="screenshots/steps/([^"]+)"', rep)
@@ -1169,11 +1190,30 @@ if RUN_ID >= '20261104' and REPORT.exists():
         _h21 = {}
         for _f in sorted(_steps_dir.glob('*.png')):
             _h21.setdefault(_hl21.md5(_f.read_bytes()).hexdigest(), []).append(_f.name)
+        # 同页签多步共用帧：页面身份（sidecar title）相同→允许多步共用同一张图，但
+        # 报告只许嵌一次并在其余步注明「共用该帧」；title 不同（或缺失）却字节相同＝
+        # 真重复填充/错误复用，FAIL（2026-11-04 N13 采集面盘点）。
         for _names in _h21.values():
             _steps21 = {_n.split('-op')[0] for _n in _names}
-            if len(_steps21) > 1 and any(_n in _rep21 for _n in _names):
-                fails.append('查21 帧重复填充：同一张图被多个步骤共用（'
-                             + ','.join(sorted(_names)) + '）——重复截图不得按各自实拍呈现')
+            if len(_steps21) <= 1 or not any(_n in _rep21 for _n in _names):
+                continue
+            _titles21 = set()
+            for _n in _names:
+                _mf = _steps_dir / f'{_n}-meta.json'
+                try:
+                    _titles21.add(str((json.loads(_mf.read_text(encoding='utf-8')) or {}).get('title') or ''))
+                except Exception:
+                    _titles21.add('')
+            if len(_titles21) == 1 and '' not in _titles21:
+                if _rep21.count(_names[0] + '.png') > 1:
+                    warns.append('查21 同页签共用帧被重复嵌入（' + ','.join(sorted(_names))
+                                 + '）——同图只许嵌一次，其余步注明共用')
+                else:
+                    warns.append('查21 同页签共用帧（' + ','.join(sorted(_steps21))
+                                 + '，' + next(iter(_titles21)) + '）——报告已按共用注明，不作各自实拍')
+            else:
+                fails.append('查21 帧重复填充：字节相同但页面身份不同/缺失（'
+                             + ','.join(sorted(_names)) + '）——不得按各自实拍呈现')
     # 只对 .md 来源判（data-art 标注）：.txt 测试日志里的 #/|---| 是原始输出，<pre> 保真才对
     for _m21 in re.finditer(r'<pre class="art-code" data-art="([^"]*[.]md)">([\s\S]{0,4000}?)</pre>', _rep21):
         if re.search(r'(?m)^#{1,3} ', _m21.group(2)) or re.search(r'\|\s*-{3,}', _m21.group(2)):

@@ -69,6 +69,8 @@ try:
                 _FRAME_VERIFY[str(_row['key'])] = _row
 except Exception:
     _FRAME_VERIFY = {}
+_FRAME_OWNER = {}
+_FRAME_GROUPS = []
 try:
     if STEPS_DIR.is_dir():
         import hashlib as _hl
@@ -80,6 +82,15 @@ try:
             _steps = {_n.split('-op')[0] for _n in _names}
             if len(_steps) > 1:
                 _FRAME_DUP.update(_names)
+                # owner=按步号最小者（STEPS_META 的键是 1..26 的 int）
+                def _stepno(k):
+                    try:
+                        return int(k) if str(k).isdigit() else 99
+                    except Exception:
+                        return 99
+                _FRAME_GROUPS.append(sorted(_names))
+                for _n in _names:
+                    _FRAME_OWNER[_n] = 0  # 占位，STEPS_META 就绪后按 key→步号重算
             elif len(_names) > 1 and any('-op1-before' in _n for _n in _names) and any('-op1-after' in _n for _n in _names):
                 _FRAME_PAIR_SAME.update(_names)
 except Exception:
@@ -1854,6 +1865,26 @@ ISSUE_KEYS_BY_STEP = {
     26: ['r18-collection-missing', 'r18-collect-failed', 'driver-restart-storm',
          'dispatch-send-failed'],
 }
+# 共用帧归属重算（N13）：键名是 state 键不是步号——按 STEPS_META 的 keys 反查最小步号。
+_KEY2STEP = {}
+for _sn, _sm in STEPS_META.items():
+    for _k in (_sm.get('keys') or []):
+        _KEY2STEP.setdefault(_k, _sn)
+for _grp in _FRAME_GROUPS:
+    # 归属=(步号, 该步 keys 内的序)——同一张图可能同时属于「同一步的多把钥匙」
+    # （步 20 的 ready_done/release_done/ready_inbox 共用 G5 页）与「跨步同页」
+    # （11/14 都在 G2 系统分析）；只让序最先的那一处嵌图，其余注明共用。
+    _cand = []
+    for _f in _grp:
+        _k = _f.split('-op')[0]
+        _sn = _KEY2STEP.get(_k, 99)
+        _ks = (STEPS_META.get(_sn, {}) or {}).get('keys') or []
+        _ki = _ks.index(_k) if _k in _ks else 99
+        _cand.append((_sn, _ki, _f))
+    _own = min(_cand)[:2]
+    for _f in _grp:
+        _FRAME_OWNER[_f] = _own
+
 for _n, _keys in ISSUE_KEYS_BY_STEP.items():
     _m = STEPS_META.get(_n)
     if isinstance(_m, dict):
@@ -5040,6 +5071,7 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
             _phase_cn = {'before': '操作前', 'action': '操作中', 'after': '操作后'}
             _or_imgs = []
             _bad_imgs = []   # 核验不符/重复的帧不进证据画廊（2026-11-04 用户质询：禁填充）
+            _shared_notes = []  # 同页签共用帧的文字注记（不嵌图）
             _seen_ops = set()
             for pre in orphans:
                 _ph = pre.rsplit('-', 1)[-1]
@@ -5058,6 +5090,17 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
                     pass
                 _row_fv = _FRAME_VERIFY.get(pre.split('-op')[0])
                 _is_bad = (_row_fv is not None and not _row_fv.get('ok')) or pre in _FRAME_DUP
+                # 同图跨步（同一页签的多步）：只由最前步嵌图，后续步注明「共用该帧」——
+                # 既不做重复填充，也不谎称各有独立实拍（N13 采集面盘点产物）。
+                _k_pre = pre.split('-op')[0]
+                _ks_pre = (meta.get('keys') or [])
+                _cur = (n, _ks_pre.index(_k_pre) if _k_pre in _ks_pre else 99)
+                if pre in _FRAME_DUP and _FRAME_OWNER.get(pre) != _cur:
+                    # 同页签多步：各步仍嵌本步帧（同一界面是事实），但注明「同页签」并由
+                    # 审计按页面身份判事实一致性；页内前后同图另由 frame-no-visible-change 标注。
+                    _shared_notes.append(
+                        f'本步与第 {_FRAME_OWNER.get(pre, (n,))[0]} 步为同一界面'
+                        '（页面身份相同，非重复填充）')
                 _cap = f'本步界面实拍（{_phase_cn.get(_ph, _ph)}{_reshoot_cap}）{frame_badge(pre)}· 点图放大查看'
                 (_bad_imgs if _is_bad else _or_imgs).append((pre, _cap, 'ui'))
                 _op = pre.rsplit('-', 1)[0]
@@ -5084,9 +5127,11 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
                               + img_tags(_bad_imgs)
                               + '<p class="d-warn">处理：按拍摄位重拍（页面态需与步一致）；'
                                 '偏差已登记 frame-content-mismatch，重拍后本节消失。</p></details>')
+            _shared_html = (('<p class="st-autoattach">' + '；'.join(dict.fromkeys(_shared_notes)) + '。</p>')
+                            if _shared_notes else '')
             imgs_html = (f'<p class="st-autoattach">本步界面实拍 {len(_or_imgs)} 张（操作前/后对照，点图可放大）。'
                          f'{("另有 %d 帧采集偏差，见下折叠区。" % len(_bad_imgs)) if _bad_imgs else ""}</p>'
-                         + img_tags(_or_imgs) + _bad_html)
+                         + img_tags(_or_imgs) + _shared_html + _bad_html)
         elif (meta.get('mark_chip') or '').startswith('沿用'):
             imgs_html = f'<p class="no-evidence">回归轮（本步不在本轮执行范围）：本步未执行（沿用源轮工件，见步卡夹具标签），无当轮帧——不适用未采集口径</p>'
         elif _CAPTURE_PLAN.get(_bkey, ('',))[0] == 'none':

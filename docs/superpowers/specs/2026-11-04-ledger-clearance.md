@@ -23,7 +23,16 @@
 2. **帧未核验（根因已修）**：`frame-verify.py` 早已实现「期望词＋空白态」OCR 判据，但①驱动从未调用；②脚本两处硬缺陷使其一跑就崩（`SIM_ROOT` 硬编码无 env 覆盖；`subprocess text=True` 遇非 UTF-8 stderr 抛 UnicodeDecodeError）。已全部修复并在驱动收尾接线：偏差落 `frame-content-mismatch`＋`frame-verify.json`。
 3. **实测结论（必须记在案）**：对 run26 的 32 帧跑核验，**通过 20 / 偏差 12**——偏差含 plan_done「还没有已排期的任务」空态、room_done「未选择对象」、评测/准出/审计/复盘/发布/收件箱 6 个末段页未命中期望词、3 个键缺帧；另有 14 组操作前后两帧完全相同。**根因不在渲染层，在采集层页面态**：拍摄位 URL 只到阶段页签，页面默认子页签/未选中本轮工件，于是拍到壳页（中间一次把「暂无阻塞」顶栏当成空态的误判已修正为只认整页未推进措辞）。
 4. **补录为正确内容（用户 2026-11-04 指令）**：偏差步不再只打标签——用**可核实物三源补录**替换空壳：状态键时间戳（state.env）、交付物实物与 commit 锚（ARTIFACT_VIEWS 解析）、该步对话摘录（r18 载荷），渲染为「补录证据（采集偏差按实物补全，非截图）」。run26 报告已按此重生成：final-report 678KB，补录卡 5 处、偏差折叠 6 处、逐帧徽章（已核验 93 处/未核验 7 处），审计四查全过。偏差帧仍进折叠区（保留可查），但明确「不作实拍证据」。逐帧徽章（✓已核验／未核验／内容不符／跨步同图／前后无可见变化）；报告页首声明改为「逐帧标注核验态」，不再宣称全部为真实截图；审计查 21 对跨步同图直接 FAIL、对偏差与未核验给 WARN 并点名。
-5. **N13 采集层页面态对齐（已完成，2026-11-04 同日晚）**：①射手新增 `--expect` 等内容（期望词单一事实源＝`frame-verify.py --dump-expect`；超时仍拍但写 capture-plan.log）；②`__RUN__` 占位替换（`/app/sim?run=<RUN>` 报告查看面不再是「未选中运行」）；③capture-plan 第四列声明动作——会话画布点开分析群（否则主栏「未选择对象」）、G5 拍「审批历史」而非与 ready 步同页同刻（消 4 张假重复）；④排期步由驱动建并 schedule 一张「排期基线」信息卡（产品 status=scheduled 才有排期页数据；信息卡不派单不影响 devimpl）。run26 重拍后核验 **31/32**（原 20/32），唯一残留 `mp_runtime_proof` 属真缺件（DEV-MP 合入被 revert，run26 已登记 runtime-proof-missing）。
+5. **N13 采集面逐位盘点（2026-11-04，按源码校正）**：以客户源码 `custom/client/ia2/stage-tabs.ts` 的阶段×页签表为唯一事实源，对 30 个拍摄位逐一比对，结论：
+   - **两处错页（已改）**：`g1_frozen` 原 `tab=docs`（文档评审=管理维护区表），G1 冻结记录在 `tab=g1`（StageGatePanel gates:[G1]）→ 改 `?tab=g1`；`testpass_done` 原 `tab=board`（只有卡面），测试与门禁读数在 stage4 `quality`（StageGatePanel gates:[G3,G4]）→ 改 `?tab=quality`。
+   - **两处缺对象（已改）**：`room_done` 停会话列表（主栏「未选择对象」）→ 第四列动作点开分析群；`release_done` 与 `ready_done` 同页同刻产同图 → 点开「审批历史」（正是「批准留痕」语义）。
+   - **一处缺 run（已改）**：`report_view` 原 `/app/sim` 无 run 参数（「运行未选中」）→ `?run=__RUN__`，射手替换本轮 RUN_ID。
+   - **一处产品态未驱动（已改）**：`plan_done` 排期页数据源=看板 `status=scheduled`，驱动此前只写 tasklist → 拍前建/复用「排期基线」信息卡并 `kanban schedule`（不派单，不影响 devimpl）。
+   - **判据升级**：核验从「OCR 关键词」升为「**页面身份**」——拍摄时写 `<step>-op1-meta.json`（`document.title`＋hash，源码 stage-shell 设定 `阶段 · 页签 - AIStudio`），核验以 title 是否含该步页签为准，关键词仅作辅助；无 sidecar 时回落 OCR。这样「拍错页」不再靠侧栏字样蒙混。
+   - **同页签多步共用帧**：11/14 都在 G2 系统分析、18/25 都在 IDE、1/3 都在账号——字节相同但页面身份一致＝事实同一界面，审计按 title 判为「同页签共用」黄标，不再误判假重复；页内前后同图另由 `frame-no-visible-change` 标注。
+   - **实测**：run26 全部 30 个拍摄位按新面重拍后，核验 **31/32 通过**（原 20/32），唯一残留 `mp_runtime_proof` 属真缺件（DEV-MP 合入被 revert）。报告双正本重生成，审计四查全过。
+
+5.1 **N13 采集层页面态对齐（已完成，2026-11-04 同日晚）**：①射手新增 `--expect` 等内容（期望词单一事实源＝`frame-verify.py --dump-expect`；超时仍拍但写 capture-plan.log）；②`__RUN__` 占位替换（`/app/sim?run=<RUN>` 报告查看面不再是「未选中运行」）；③capture-plan 第四列声明动作——会话画布点开分析群（否则主栏「未选择对象」）、G5 拍「审批历史」而非与 ready 步同页同刻（消 4 张假重复）；④排期步由驱动建并 schedule 一张「排期基线」信息卡（产品 status=scheduled 才有排期页数据；信息卡不派单不影响 devimpl）。run26 重拍后核验 **31/32**（原 20/32），唯一残留 `mp_runtime_proof` 属真缺件（DEV-MP 合入被 revert，run26 已登记 runtime-proof-missing）。
 
 ## 决策记录
 

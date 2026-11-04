@@ -34,6 +34,19 @@ SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Users/cuishi/lab/ncwk-sim-
 
 # 每步「必须出现」的关键词（任一命中即可）与「不得出现」的空白态噪声。
 # 语义来源：capture-plan.env 同键行的页签名/注释（见各行末注释）。
+
+# N13 语义判据（2026-11-04）：面包屑＝页面身份，关键词命中可能只是侧栏字样的假阳性。
+# 有 crumb 的键必须同时命中面包屑（去空白后比对），确保「拍的是这一步该在的页面」。
+_FRAME_TAB = {
+ 'smoke_done':'账号','appinit_done':'文档评审','people_done':'组织','login_done':'账号',
+ 'g1_frozen':'质量门 G1','dispatch_done':'任务分解','register_done':'任务分解',
+ 'analysis_done':'G2 系统分析','anexec_done':'G2 系统分析','review_done':'G2 系统分析',
+ 'g2_arch_pass':'任务分解','close_done':'任务分解','plan_done':'排期',
+ 'triage_done':'看板','defect_done':'看板','testpass_done':'质量与测试',
+ 'release_done':'G5 审批','ready_done':'G5 审批','uat_done':'需求追溯',
+ 'workmgr_done':'交付健康','audit_done':'审计与变更','deliver_gate':'交付案例',
+ 'retro_done':'度量检查',
+}
 EXPECT = {
     'smoke_done':    {'want': ['流程总览', '环境准备', 'AIStudio'], 'title': '首页/流程总览'},
     'appinit_done':  {'want': ['应用资产', '治理', '文档评审'], 'title': '⑥治理·文档评审'},
@@ -146,6 +159,21 @@ def main() -> int:
             empties = [m for m in EMPTY_MARKERS if m in text]
             ok = bool(hit) and not empties
             why = ''
+            _tab = _FRAME_TAB.get(key)
+            if _tab:
+                _meta_f = frame.parent / frame.name.replace('-op1-after.png', '-op1-meta.json')
+                _title = ''
+                try:
+                    _title = str((json.loads(_meta_f.read_text(encoding='utf-8')) or {}).get('title') or '')
+                except Exception:
+                    _title = ''
+                if _title:
+                    if _tab.replace(' ', '') not in _title.replace(' ', ''):
+                        ok = False
+                        why = (why + '；' if why else '') + f'页面身份不符（title=「{_title}」缺「{_tab}」）'
+                elif _tab.replace(' ', '') not in text:
+                    ok = False
+                    why = (why + '；' if why else '') + f'页面身份未证（无 sidecar 且 OCR 未见「{_tab}」）'
             if not hit:
                 why = '未命中期望词 ' + '/'.join(exp['want'])
             if empties:

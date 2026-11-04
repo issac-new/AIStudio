@@ -161,6 +161,21 @@ async function dismissPopups() {
   }
 }
 
+// N13 语义 sidecar（2026-11-04）：记录页面身份（document.title＋当前 hash）。
+// 核验据此判「拍的是不是这一步该在的页面」——比 OCR 面包屑确定性高：源码
+// stage-shell 设 title=<阶段> · <页签> - AIStudio，空壳/错页在 title 上直接现形。
+async function writeMeta(pre) {
+  try {
+    const meta = {
+      step: STEP, url: PLAN_URL,
+      title: await page.title().catch(() => ''),
+      hash: await page.evaluate(() => location.hash).catch(() => ''),
+      at: new Date().toISOString(),
+    }
+    writeFileSync(join(OUT, `${pre}-meta.json`), JSON.stringify(meta, null, 1))
+  } catch {}
+}
+
 // /app/search 已是弹窗深链。通用清场会把它一并关闭，拍帧前必须重开并
 // 断言统一弹窗真实可见；standalone 没有顶部入口时重回旧深链恢复。
 async function ensurePlannedSearchDialog() {
@@ -284,10 +299,12 @@ if (EFFECTIVE_ACTION) {
   await dismissPopups()
   await ensurePlannedSearchDialog()
   await page.screenshot({ path: `${OUT}/${pre}-after.png` })
+await writeMeta(pre)
   console.log(`shot: ${pre}-after`)
 } else {
   await page.waitForTimeout(SETTLE)
   await page.screenshot({ path: `${OUT}/${pre}-after.png` })
+  await writeMeta(pre)
   console.log(`shot: ${pre}-after（无 --action：before/after 两帧）`)
 }
 
