@@ -316,7 +316,7 @@ function backToList(): void {
 .prd__topo-head { display: flex; align-items: center; gap: 8px; }
 .prd__topo-head .prd__h { flex: 1; }
 .prd__topo-frame { width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-standard); background: var(--bg-page, #fafafa); }
-.prd__topo-src { margin: 0; padding: 8px 10px; max-height: 320px; overflow: auto; font-family: var(--ia-font-mono, ui-monospace, monospace); font-size: var(--ia-fs-aux, 11px); border: 1px dashed var(--border-color); border-radius: var(--radius-standard); white-space: pre-wrap; word-break: break-all; }
+.prd__topo-src { margin: 0; padding: 8px 10px; max-height: 320px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; /* 不引用未定义 var——幽灵变量守门 */ font-size: var(--ia-fs-aux, 11px); border: 1px dashed var(--border-color); border-radius: var(--radius-standard); white-space: pre-wrap; word-break: break-all; }
 .prd__event { display: flex; gap: 10px; font-size: var(--ia-fs-aux, 11px); }
 .prd__ts { color: var(--text-muted); min-width: 130px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .prd__kind { min-width: 96px; word-break: break-all; }

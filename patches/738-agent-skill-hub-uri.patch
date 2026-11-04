@@ -1,0 +1,190 @@
+diff --git a/hermes_cli/skills_hub.py b/hermes_cli/skills_hub.py
+index 9da626a..c9cb719 100644
+--- a/hermes_cli/skills_hub.py
++++ b/hermes_cli/skills_hub.py
+@@ -258,7 +258,18 @@ def _resolve_short_name(name: str, sources, console: Console, attempt: Optional[
+ def _resolve_source_meta_and_bundle(identifier: str, sources):
+     """(meta, bundle, source) from ONE adapter — mixing skills.sh metadata with a ClawHub zip of
+     a same-named skill once showed the wrong SKILL.md. Falls back to the first meta-only hit.
++
++    overlay[737] 统一 registry URI：带显式前缀的标识符先经 tools.skills_hub_uri
++    解析——命中且源在已知源集合内 → 只对该源 inspect/fetch（等同 --source 固定，
++    省 N-1 次无效探测）；解析不出（无前缀短名/裸路径）或源不在集合（如
++    nacos:// 本仓无实例）→ 完全走下方现状分发链，现有短名行为不变。
+     """
++    from tools.skills_hub_uri import parse_skill_uri
++    parsed = parse_skill_uri(identifier)
++    if parsed is not None:
++        pinned = [src for src in sources if src.source_id() == parsed[0]]
++        if pinned:
++            sources = pinned
+     first_meta = None
+     first_meta_source = None
+     for src in sources:
+@@ -764,6 +775,13 @@ def _registry_prefixes() -> tuple:
+ 
+ 
+ def _registry_from_identifier(identifier: str) -> str:
++    # overlay[737] 先走统一解析器（前缀表与其保持单一事实源）；解析器有意排除
++    # 的形态（well-known 裸 URL、index.json）回落原有判定——除 nacos:// 由
++    # unresolved 变为具名 nacos 外，其余标识符映射等价不变。
++    from tools.skills_hub_uri import parse_skill_uri
++    parsed = parse_skill_uri(identifier)
++    if parsed is not None:
++        return parsed[0]
+     lowered = identifier.lower()
+     if lowered.startswith(("http://", "https://")) and "/.well-known/skills/" in lowered:
+         return "well-known"
+diff --git a/tests/tools/test_skills_hub_uri.py b/tests/tools/test_skills_hub_uri.py
+new file mode 100644
+index 0000000..3521923
+--- /dev/null
++++ b/tests/tools/test_skills_hub_uri.py
+@@ -0,0 +1,73 @@
++#!/usr/bin/env python3
++"""737 统一 registry URI 解析器表驱动测试（照 tests/tools 邻测试：从仓根可直
++接 import tools.*；纯函数零 IO，不需要网络/夹具）。"""
++
++import pytest
++
++from tools.skills_hub_uri import parse_skill_uri
++
++# (raw, expected)：expected=None 即回落现状分发链
++CASES = [
++    # --- 全前缀×2 形态：每个前缀给「浅标识符」和「深标识符」两种形状 ---
++    ("official/foo", ("official", "official/foo")),
++    ("official/mlops/training/trl-fine-tuning", ("official", "official/mlops/training/trl-fine-tuning")),
++    ("github/owner/repo", ("github", "github/owner/repo")),
++    ("github/owner/repo/skills/my-skill", ("github", "github/owner/repo/skills/my-skill")),
++    ("clawhub/blender-bpy", ("clawhub", "clawhub/blender-bpy")),
++    ("clawhub/art/user/pkg", ("clawhub", "clawhub/art/user/pkg")),
++    ("lobehub/thing_search", ("lobehub", "lobehub/thing_search")),
++    ("lobehub/user/plugin-x", ("lobehub", "lobehub/user/plugin-x")),
++    ("browse-sh/airbnb.com/search-listings", ("browse-sh", "browse-sh/airbnb.com/search-listings")),
++    ("browse-sh/site.example/task-id", ("browse-sh", "browse-sh/site.example/task-id")),
++    # skills.sh 双拼写（适配器 _ID_PREFIX_ALIASES 全表，含 typo 拼写）
++    ("skills-sh/owner/skill", ("skills-sh", "skills-sh/owner/skill")),
++    ("skills.sh/owner/skill", ("skills-sh", "skills.sh/owner/skill")),
++    ("skils-sh/owner/skill", ("skills-sh", "skils-sh/owner/skill")),
++    ("skils.sh/owner/skill", ("skills-sh", "skils.sh/owner/skill")),
++    # well-known 包装形式（well-known:<base_url>/<skill>）
++    ("well-known:https://example.com/my-skill", ("well-known", "well-known:https://example.com/my-skill")),
++    ("well-known:https://example.com/a/b", ("well-known", "well-known:https://example.com/a/b")),
++    # --- nacos 形状（预留后端推断位：本仓无 Nacos 实例，具名解析供显式报源不存在） ---
++    ("nacos://market.hiclaw.io/ns/find-skill", ("nacos", "nacos://market.hiclaw.io/ns/find-skill")),
++    ("nacos://cfg.internal/skills/x", ("nacos", "nacos://cfg.internal/skills/x")),
++    # --- 裸 URL 正例（照 UrlSource._matches：http(s) 且 path 以 .md 结尾） ---
++    ("https://example.com/skills/foo/SKILL.md", ("url", "https://example.com/skills/foo/SKILL.md")),
++    ("http://example.com/path/skill.md", ("url", "http://example.com/path/skill.md")),
++    # --- 裸 URL 反例：well-known 端点 / index.json / 非 .md / 非 http(s) ---
++    ("https://example.com/.well-known/skills/foo/SKILL.md", None),   # well-known 适配器自管
++    ("https://example.com/.well-known/skills/index.json", None),     # 索引页非技能页
++    ("https://example.com/.well-known/skills/index.json#foo", None),
++    ("https://example.com/skills/foo/index.json", None),
++    ("https://example.com/skills/foo/", None),                       # 目录不带 .md
++    ("https://example.com/skills/foo/SKILL", None),                  # 缺 .md 后缀
++    ("ftp://example.com/skills/foo/SKILL.md", None),                 # 非 http(s) 协议
++    # --- 大小写：前缀匹配不敏感（照 _registry_from_identifier 的 lowered 匹配），
++    #     identifier 原样保留 ---
++    ("OFFICIAL/Foo", ("official", "OFFICIAL/Foo")),
++    ("GitHub/owner/repo", ("github", "GitHub/owner/repo")),
++    ("Skills.sh/owner/skill", ("skills-sh", "Skills.sh/owner/skill")),
++    ("Well-Known:https://example.com/x", ("well-known", "Well-Known:https://example.com/x")),
++    ("NACOS://host/skill", ("nacos", "NACOS://host/skill")),
++    ("HTTPS://EXAMPLE.COM/SKILL.MD", ("url", "HTTPS://EXAMPLE.COM/SKILL.MD")),
++    # --- None 回落：无前缀短名 / 裸 owner-repo 路径 / 空值 / 非字符串 ---
++    ("my-skill", None),                    # 短名走现状短名解析链
++    ("owner/repo", None),                  # 裸 GitHub 形状不带 github/ 前缀（现状：Bare owner/repo stays unresolved）
++    ("", None),
++    ("well-known", None),                  # 裸前缀词本身不是 URI（缺冒号后的 base）
++    ("official", None),                    # 同上：official 不带 / 不是前缀命中
++]
++
++
++@pytest.mark.parametrize("raw,expected", CASES)
++def test_parse_skill_uri_table(raw, expected):
++    assert parse_skill_uri(raw) == expected
++
++
++@pytest.mark.parametrize("bad", [None, 123, b"https://x/SKILL.md", ["official/x"]])
++def test_parse_skill_uri_non_string_returns_none(bad):
++    assert parse_skill_uri(bad) is None
++
++
++def test_parse_skill_uri_does_not_strip_or_rewrite():
++    """identifier 原样返回：不去空白、不改大小写——认领与否归适配器 _matches。"""
++    assert parse_skill_uri("official/Foo Bar") == ("official", "official/Foo Bar")
+diff --git a/tools/skills_hub_uri.py b/tools/skills_hub_uri.py
+new file mode 100644
+index 0000000..033080c
+--- /dev/null
++++ b/tools/skills_hub_uri.py
+@@ -0,0 +1,68 @@
++#!/usr/bin/env python3
++"""统一 registry URI 解析器（overlay[737]）。
++
++把带显式 registry 前缀的技能标识符解析成 ``(source_id, identifier)``，供
++``hermes_cli.skills_hub`` 分发链在最前面短路——命中已知源即只对该源
++inspect/fetch（等同 ``--source`` 固定）；解析不出返回 None，调用方回落现状
++分发链。纯函数、零 IO、零第三方依赖（仅标准库 urlparse）。
++
++前缀映射的真源（本表与其保持一致，改适配器时同步这里）：
++- ``hermes_cli/skills_hub.py::_registry_prefixes``——``<SOURCE_ID>/`` 家族、
++  skills.sh 拼写族（含 SkillsShSource._ID_PREFIX_ALIASES 接受的 typo 拼写）、
++  ``well-known:`` 包装形式；
++- ``tools/skills_hub_install.py::_SOURCE_ID_ALIASES``——``skills.sh`` →
++  ``skills-sh`` 的别名归一；
++- ``tools/skills_hub_sources.py::UrlSource._matches``——裸 ``http(s)://….md``
++  归 ``url`` 源，排除 ``/.well-known/skills/``（well-known 适配器自管）与
++  ``/index.json``（索引页非技能页）。
++
++``nacos://`` 是预留后端推断位：本仓无 Nacos 实例、skills_hub_sources 无
++nacos 源，解析结果仅用于让分发链显式报「源不存在」（照常走完现状链、无
++适配器认领后由既有失败路径报错），不静默回落其他源。
++"""
++
++from urllib.parse import urlparse
++
++# 显式前缀 → 适配器 SOURCE_ID（大小写不敏感匹配，照 _registry_from_identifier 的 lowered 前置匹配）
++_PREFIX_TO_SOURCE = (
++    # <SOURCE_ID>/ 家族（官方目录/GitHub/ClawHub/LobeHub/browse.sh）
++    ("official/", "official"),
++    ("github/", "github"),
++    ("clawhub/", "clawhub"),
++    ("lobehub/", "lobehub"),
++    ("browse-sh/", "browse-sh"),
++    # skills.sh 双拼写 + 适配器接受的 typo 拼写（照 SkillsShSource._ID_PREFIX_ALIASES）
++    ("skills-sh/", "skills-sh"),
++    ("skills.sh/", "skills-sh"),
++    ("skils-sh/", "skills-sh"),
++    ("skils.sh/", "skills-sh"),
++    # well-known 包装形式（well-known:<base_url>/<skill>）
++    ("well-known:", "well-known"),
++    # 预留后端推断位（本仓无 Nacos 实例，见模块头）
++    ("nacos://", "nacos"),
++)
++
++
++def parse_skill_uri(raw) -> tuple[str, str] | None:
++    """(source_id, identifier)；解析不出（含无前缀短名/裸路径）返回 None。
++
++    identifier 原样返回（不改写大小写/不去空白）——是否认领由各适配器自己的
++    ``_matches`` 决定，本函数只回答「它想从哪个源来」。
++    """
++    if not isinstance(raw, str) or not raw:
++        return None
++    lowered = raw.lower()
++    for prefix, source_id in _PREFIX_TO_SOURCE:
++        if lowered.startswith(prefix):
++            return (source_id, raw)
++    # 裸 http(s)://….md → url 源（照 UrlSource._matches：排除 well-known 端点
++    # 与 index.json 索引页；这两类不是 url 源的标识符形态，回落现状链处理）
++    if lowered.startswith(("http://", "https://")):
++        if "/.well-known/skills/" in lowered or lowered.rstrip("/").endswith("/index.json"):
++            return None
++        try:
++            if urlparse(raw).path.lower().endswith(".md"):
++                return ("url", raw)
++        except ValueError:
++            return None
++    return None
