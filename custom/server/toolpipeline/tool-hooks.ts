@@ -290,8 +290,12 @@ const auditHook = {
     if (queue && queue.length === 0) pendingCalls.delete(key)
 
     const now = Date.now()
-    const ok = typeof result?.ok === 'boolean' ? result.ok : undefined
-    const failed = ok === false
+    // W1 合并轮补正：失败判定与 errorCode 同源——统一走 normalizeToolOutcome 归一，
+    // 显式布尔 ok 之外的存量失败形状（error 自由文本/success:false/status:'error'）
+    // 也如实记为失败；此前只认 ok===false，旧形状失败会被审计面记成成功。
+    const outcome = normalizeToolOutcome(result, pending?.contract, now)
+    const failed = !outcome.ok
+    const ok = failed ? false : (typeof result?.ok === 'boolean' ? result.ok : undefined)
     const info = failed ? classifyToolError(result?.error ?? result, pending?.contract) : null
 
     // 出参契约观测（W1 执法轮）：声明 outputSchema 且结果带结构化 data 时校验，
@@ -305,11 +309,12 @@ const auditHook = {
     }
 
     // 统一错误信封（W1）：机器可读 code 优先取归一结果，出参违规覆盖为专用码。
-    const normalized = failed ? normalizeToolOutcome(result, pending?.contract, now) : null
+    const normalized = failed ? outcome : null
     const errorCode = outputErrorCode ?? normalized?.code
 
     // 成功的幂等键落账：后续同键调用即命中（观测层；replay:'return' 契约可回放）。
-    if (pending?.idempotencyKey && ok !== false) {
+    // 归一判失败（含旧形状）不得写成功缓存。
+    if (pending?.idempotencyKey && !failed) {
       idempotencyStore.complete(pending.idempotencyKey, {
         tool: name,
         ttlMs: pending.contract.idempotency.ttlMs,

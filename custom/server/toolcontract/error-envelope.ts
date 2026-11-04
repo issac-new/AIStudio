@@ -109,3 +109,31 @@ export function outputSchemaViolationEnvelope(issues: Array<{ path: string; rule
     details: { issues: issues.slice(0, 20) },
   }
 }
+
+/**
+ * 幂等回放信封：拒绝重复执行＋携带首次结果（文章「跳转已有记录」语义）。
+ * 信封构造统一收敛在本模块（失败字面量只在统一出口出现）。
+ */
+export function idempotentReplayEnvelope(tool: string, cached: unknown, firstAt: number): string {
+  return JSON.stringify({
+    ok: false,
+    code: 'IDEMPOTENT_REPLAY',
+    replayed: true,
+    tool,
+    firstAt,
+    cached,
+    hint: '同一业务动作已完成（见 cached）；请使用首次结果或改变参数，勿重复调用',
+  })
+}
+
+/**
+ * 出参违规结果改写（strict 档 postExecute 用）：保留原结果字段，结局置为
+ * 失败、content/error 换错误信封——构造细节收敛在本模块，执法钩子只做判定。
+ */
+export function rewriteAsOutputViolation<T extends { ok: boolean; content: string; error?: string }>(
+  result: T,
+  issues: Array<{ path: string; rule: string; detail: string }>,
+): T & { ok: false; content: string; error: string } {
+  const envelope = outputSchemaViolationEnvelope(issues)
+  return { ...result, ok: false, content: JSON.stringify(envelope), error: envelope.error }
+}

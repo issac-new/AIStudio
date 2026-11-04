@@ -164,8 +164,9 @@ describe('normalizeToolOutcome：四形状归一', () => {
     expect(o.retryable).toBe(true) // 无契约时沿用分类器缺省：transient 可重试
   })
 
-  it('ok:false + 403 → permission 不可重试', () => {
-    const o = normalizeToolOutcome({ ok: false, error: 'HTTP 403 forbidden' })
+  it('ok 字段（字符串 false 变体）+ 403 → permission 不可重试', () => {
+    const o = normalizeToolOutcome({ ok: 'false', error: 'HTTP 403 forbidden' })
+    expect(o.ok).toBe(false)
     expect(o.category).toBe('permission')
     expect(o.retryable).toBe(false)
   })
@@ -183,7 +184,7 @@ describe('normalizeToolOutcome：四形状归一', () => {
   })
 
   it('显式 code 优先于类别兜底码', () => {
-    const o = normalizeToolOutcome({ ok: false, error: 'dup', code: 'DUPLICATE_RECORD' })
+    const o = normalizeToolOutcome({ ok: 'false', error: 'dup', code: 'DUPLICATE_RECORD' })
     expect(o.code).toBe('DUPLICATE_RECORD')
   })
 })

@@ -21,7 +21,8 @@ import {
   type ToolContract,
 } from '../toolcontract/contract'
 import {
-  outputSchemaViolationEnvelope,
+  idempotentReplayEnvelope,
+  rewriteAsOutputViolation,
   schemaRejectionEnvelope,
 } from '../toolcontract/error-envelope'
 import { IdempotencyStore } from '../toolcontract/idempotency-store'
@@ -69,19 +70,6 @@ export function contractIdempotencyKey(
     stepId: correlation.stepId,
     windowMs: contract.idempotency.ttlMs,
     keyFields: contract.idempotency.keyFields,
-  })
-}
-
-/** 幂等回放信封：拒绝重复执行 + 携带首次结果（文章「跳转已有记录」语义）。 */
-function idempotentReplayEnvelope(tool: string, cached: unknown, firstAt: number): string {
-  return JSON.stringify({
-    ok: false,
-    code: 'IDEMPOTENT_REPLAY',
-    replayed: true,
-    tool,
-    firstAt,
-    cached,
-    hint: '同一业务动作已完成（见 cached）；请使用首次结果或改变参数，勿重复调用',
   })
 }
 
@@ -154,8 +142,7 @@ export function contractGuardHook(
       try {
         const issues = validateAgainstSchema(result.data, contract.outputSchema, 'data')
         if (issues.length > 0) {
-          const envelope = outputSchemaViolationEnvelope(issues)
-          return { ...result, ok: false, content: JSON.stringify(envelope), error: envelope.error }
+          return rewriteAsOutputViolation(result, issues)
         }
       } catch {
         return // 校验器异常=不改写（fail-soft）
