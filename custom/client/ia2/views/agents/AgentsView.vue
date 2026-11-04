@@ -6,6 +6,7 @@
      设计正本=docs/superpowers/specs/2026-10-17-d20-backlog-clearance.md §一.3/4 -->
 <script setup lang="ts">
 import IaBreadcrumb from '../../components/IaBreadcrumb.vue'
+import ProfileEnvPanel from './ProfileEnvPanel.vue'
 import { onMounted, ref } from 'vue'
 import { authFetch } from '../../../ide/utils/auth-fetch'
 import {
@@ -13,7 +14,7 @@ import {
   type HermesProfile,
 } from '@/api/hermes/profiles'
 
-interface Row extends HermesProfile { busy: boolean; note: string; binding: boolean; bindModel: string; bindProvider: string }
+interface Row extends HermesProfile { busy: boolean; note: string; binding: boolean; bindModel: string; bindProvider: string; env: boolean }
 
 const rows = ref<Row[]>([])
 const loadError = ref('')
@@ -23,7 +24,7 @@ async function load(): Promise<void> {
   loading.value = true; loadError.value = ''
   try {
     const list = await fetchProfiles()
-    rows.value = list.map(p => ({ ...p, busy: false, note: '', binding: false, bindModel: p.model ?? '', bindProvider: '' }))
+    rows.value = list.map(p => ({ ...p, busy: false, note: '', binding: false, bindModel: p.model ?? '', bindProvider: '', env: false }))
   } catch (e) { loadError.value = String(e) } finally { loading.value = false }
 }
 onMounted(() => { void load() })
@@ -31,6 +32,11 @@ onMounted(() => { void load() })
 function toggleBinding(r: Row): void {
   r.binding = !r.binding
   if (r.binding && !r.bindModel) r.bindModel = r.model ?? ''
+}
+
+/** 环境变量折叠区开关（N01：面板自带读/编辑/保存，此处只管开合） */
+function toggleEnv(r: Row): void {
+  r.env = !r.env
 }
 
 async function doRestart(r: Row, kind: 'gateway' | 'runtime'): Promise<void> {
@@ -85,6 +91,7 @@ async function saveBinding(r: Row): Promise<void> {
             <button type="button" :data-testid="`agw-gw-${r.name}`" :disabled="r.busy" @click="doRestart(r, 'gateway')">重启网关</button>
             <button type="button" :data-testid="`agw-rt-${r.name}`" :disabled="r.busy" @click="doRestart(r, 'runtime')">重启运行时</button>
             <button type="button" :data-testid="`agw-bind-${r.name}`" @click="toggleBinding(r)">{{ r.binding ? '收起' : '模型绑定' }}</button>
+            <button type="button" :data-testid="`agw-env-${r.name}`" @click="toggleEnv(r)">{{ r.env ? '收起环境变量' : '环境变量' }}</button>
           </td>
           <td v-if="r.note" class="agw__note" :data-testid="`agw-note-${r.name}`">{{ r.note }}</td>
           <td v-else />
@@ -96,6 +103,9 @@ async function saveBinding(r: Row): Promise<void> {
       <input v-model="r.bindModel" placeholder="model.default（如 glm-4.7）" :data-testid="`agw-bindmodel-${r.name}`" @keyup.enter="saveBinding(r)">
       <input v-model="r.bindProvider" placeholder="model.provider（留空=保持不变）" :data-testid="`agw-bindprov-${r.name}`" @keyup.enter="saveBinding(r)">
       <button type="button" :data-testid="`agw-bindsave-${r.name}`" :disabled="r.busy" @click="saveBinding(r)">保存</button>
+    </div>
+    <div v-for="r in rows.filter(x => x.env)" :key="`e-${r.name}`" :data-testid="`agw-envbox-${r.name}`">
+      <ProfileEnvPanel :profile="r.name" />
     </div>
   </div>
 </template>
