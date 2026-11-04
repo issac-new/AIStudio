@@ -4,25 +4,25 @@
 
 ## 变更
 
-### A. 服务端补丁（743-745，改 vendor 走 patches/）
+### A. 服务端补丁（744-746，改 vendor 走 patches/）
 
-1. `743-server-announcements-offline-hardening.patch`
+1. `744-server-announcements-offline-hardening.patch`
    - `services/notifications/announcements.ts`：外部公告拉取超时 `AbortSignal.timeout(10_000) → 6_000`。
    - `controllers/announcements.ts`（续作补丁 531 的 TTL 缓存）：新增**失败负缓存 60s**——离线环境首次失败后 60s 内直接回 502，不再每次等满超时；成功缓存仍 5min；502 响应体 `{ ok:false, error:'announcement_fetch_failed' }` 结构不变。
-2. `744-server-preview-tags-timeout.patch`
+2. `745-server-preview-tags-timeout.patch`
    - `services/update/version-preview-manager.ts`：`git ls-remote` 超时 `8_000 → 4_000`、GitHub API `AbortSignal.timeout(15_000) → 6_000`（原两级串行叠加即回归实测 20.9s 的根因）；tags 拉取失败**负缓存 60s**，离线时 version-preview 页不再长时间 PageLoading 遮挡。
-3. `745-server-petdex-offline-hardening.patch`
+3. `746-server-petdex-offline-hardening.patch`
    - `controllers/petdex.ts`：manifest 补 try/catch，失败返回 `502 { ok:false, error:'petdex_fetch_failed' }`（消灭原裸 500 纯文本、无 JSON 体的缺陷）。
    - `services/pets/petdex.ts`：`FETCH_TIMEOUT_MS 15_000 → 6_000` + 失败负缓存 60s（成功仍 5min，`?force=1` 仍绕过缓存）。
 
-### B. 客户端补丁（746-748）
+### B. 客户端补丁（747-749）
 
-4. `746-client-files-open-permission-hint.patch`
+4. `747-client-files-open-permission-hint.patch`
    - `FileList.vue` 双击与铅笔按钮、`FilesView.vue` `?file=` 深链的 `openEditor` 链加 catch：403 时明确提示「打开文件需要超级管理员权限」（新增 i18n 键 zh/en），消除 admin 点文件静默无操作——回归唯一用户可感知缺陷。
    - **不放开服务端 `files/read` 权限**（见决策 D1）。
-5. `747-client-accountsettings-lockedips-permission-note.patch`
+5. `748-client-accountsettings-lockedips-permission-note.patch`
    - `AccountSettings.vue` `loadLockedIps` 捕获 403（经 `API Error 403` 消息识别）置 `locksForbidden` 态：403 时显示「仅超级管理员可查看锁定 IP」权限说明，替换误导性的「0 个 IP 被锁定 / 暂无锁定 IP + 重试」；非 403 失败保留重试按钮。
-6. `748-client-petdex-offline-ux.patch`
+6. `749-client-petdex-offline-ux.patch`
    - `PetdexView.vue` 错误分支显示离线友好文案（离线或宠物清单服务不可达）；error 态隐藏误导性「没有符合当前筛选的宠物」空态与筛选行。
 
 ### C. custom/ 直改
@@ -50,7 +50,7 @@
 实测（2026-11-04 本轮真实采集）：
 
 - 目标测试全绿：`npx vitest run custom/__tests__/win-regression-patches-guard.test.ts custom/__tests__/patches-series-guard.test.ts custom/__tests__/docs-ssot-guard.test.ts scripts/regression/api-expected.test.ts scripts/regression/route-manifest.test.ts custom/client/ide/__tests__/files-pane-perm-fallback.test.ts` → **6 文件 33 用例全过**（含 guard 断言 `petdex_fetch_failed`/`6_000` 超时常量/`locksForbidden`/`petdex.offline` 存在于注入后 vendor 树、api-expected 十项判定口径、route-manifest expect 枚举合法性、files-pane 5 例含 openEntry 403/非 403 失败态）。
-- 注入回路：vendor 重置 pristine → `npm run inject` **452 枚全量重放干净**（446 既有＋743-748 新增全部 applied，尾行 `[inject] done`）；重放态树上复跑目标测试仍 33/33。
+- 注入回路：vendor 重置 pristine → `npm run inject` **452 枚全量重放干净**（446 既有＋744-749 新增全部 applied，尾行 `[inject] done`）；重放态树上复跑目标测试仍 33/33。
 - 合并前全量 `npm test` 终跑：**1044 文件（1038 过/6 skip）、7720 用例（7709 过/11 skip/0 失败）**。首轮 3 红为本批触发（route-whitelist 快照契约×2：petdex 门关态改函数式重定向豁免；机械索引×1：`docs/manuals/aistudio-design-document-index.md` 补第三处登记），已当轮清偿后复跑全绿。
 - 未验证项（如实声明）：① 离线端点（api.ekkostudio.xyz / GitHub / assets.petdex.dev）运行时失败路径未在本机模拟（需断网/域名阻断），以 guard 测试＋代码评审覆盖；② UI 三面（files 403 提示 / settings 权限说明 / petdex 深链门）未做浏览器活体走查——组件级行为由 files-pane 测试覆盖，vendor 组件改动由补丁标记 guard 覆盖，待下轮全功能回归活体复核。
 

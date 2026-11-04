@@ -1,5 +1,5 @@
 // Windows 离线回归 P1 修复批补丁守门（2026-11-04，spec 2026-11-04-win-regression-p1-fixes）：
-// 锁注入态 vendor 树含 743-748 六补丁的关键标记——series 漂移/漏注入即红
+// 锁注入态 vendor 树含 744-749 六补丁的关键标记——series 漂移/漏注入即红
 // （B 类补丁源层守门，先例：kanban-patch-409-guard 同套路）。
 import { describe, expect, it } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
@@ -13,7 +13,7 @@ function readVendor(path: string): string {
   return readFileSync(path, 'utf8')
 }
 
-describe('743：announcements 离线加固', () => {
+describe('744：announcements 离线加固', () => {
   it('服务超时 6s + 控制器失败负缓存 60s', () => {
     const svc = readVendor(resolve(SERVER, 'services/notifications/announcements.ts'))
     expect(svc).toContain('AbortSignal.timeout(6_000)')
@@ -26,7 +26,7 @@ describe('743：announcements 离线加固', () => {
   })
 })
 
-describe('744：update/preview/tags 超时收敛 + 失败负缓存', () => {
+describe('745：update/preview/tags 超时收敛 + 失败负缓存', () => {
   it('git 4s / GitHub API 6s / 失败负缓存 60s', () => {
     const mgr = readVendor(resolve(SERVER, 'services/update/version-preview-manager.ts'))
     expect(mgr).toMatch(/timeout: 4_000/)
@@ -40,7 +40,7 @@ describe('744：update/preview/tags 超时收敛 + 失败负缓存', () => {
   })
 })
 
-describe('745：petdex 离线加固', () => {
+describe('746：petdex 离线加固', () => {
   it('控制器 try/catch 502 结构化 + 服务 6s + 失败负缓存', () => {
     const ctrl = readVendor(resolve(SERVER, 'controllers/petdex.ts'))
     const manifestAt = ctrl.indexOf('export async function manifest')
@@ -55,7 +55,7 @@ describe('745：petdex 离线加固', () => {
   })
 })
 
-describe('746：files 打开 403 显式提示', () => {
+describe('747：files 打开 403 显式提示', () => {
   it('FileList 双击/铅笔与 FilesView 深链 catch 403 → 权限文案', () => {
     const list = readVendor(resolve(CLIENT, 'components/hermes/files/FileList.vue'))
     expect(list).toContain('handleOpenEditor')
@@ -71,7 +71,7 @@ describe('746：files 打开 403 显式提示', () => {
   })
 })
 
-describe('747：locked-ips 403 权限说明', () => {
+describe('748：locked-ips 403 权限说明', () => {
   it('AccountSettings 403 态替代「0 个 IP+重试」', () => {
     const comp = readVendor(resolve(CLIENT, 'components/hermes/settings/AccountSettings.vue'))
     expect(comp).toContain('locksForbidden')
@@ -84,7 +84,7 @@ describe('747：locked-ips 403 权限说明', () => {
   })
 })
 
-describe('748：petdex 离线文案', () => {
+describe('749：petdex 离线文案', () => {
   it('错误态离线友好文案 + 隐藏误导空筛选', () => {
     const comp = readVendor(resolve(CLIENT, 'views/hermes/PetdexView.vue'))
     expect(comp).toMatch(/t\('petdex\.offline'\)/)
