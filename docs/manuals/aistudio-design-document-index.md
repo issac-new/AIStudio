@@ -582,3 +582,4 @@
 新增、删除或移动 spec 后，应重新按文件系统核对本清单及计数，不用附录 A 的滚动人工计数代替盘点。判断某份文档是否仍是现行依据时，回到设计导航、整合正本、对应专题 spec 与实现证据交叉核实；不要由本索引的收录动作推断文档状态。
 - [2026-11-04-sim-capability-refresh-round2.md](../superpowers/specs/2026-11-04-sim-capability-refresh-round2.md)
 - [2026-11-04-userenv-route-mount.md](../superpowers/specs/2026-11-04-userenv-route-mount.md)
+- [2026-11-04-regression-tooling-r26.md](../superpowers/specs/2026-11-04-regression-tooling-r26.md)
