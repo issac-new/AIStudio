@@ -1153,3 +1153,5 @@
 747-client-files-open-permission-hint.patch
 748-client-accountsettings-lockedips-permission-note.patch
 749-client-petdex-offline-ux.patch
+# 750=W4 未做项收口：run 开启（claim CAS 路径）写 input_manifest（body sha256+附件行清单）入 task_runs.metadata——历史 run 输入可复现的写侧依据；taskmodel 读侧据此报 inputVersions=true。
+750-agent-run-input-manifest.patch

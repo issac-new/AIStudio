@@ -13,7 +13,7 @@ import { existsSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { readExecutionRecords, type ExecutionRecord } from '../execution-records/record'
-import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
+import { queryToolExecAudit, type ToolExecAuditEntry } from '../toolpipeline/tool-hooks'
 
 export interface ExecutionJoinSource<T> {
   available: boolean
@@ -26,7 +26,7 @@ export interface ExecutionJoinResult {
   runId?: string
   taskId?: string
   executionRecords: ExecutionJoinSource<ExecutionRecord[]>
-  toolAudit: ExecutionJoinSource<ReturnType<typeof queryToolExecAudit>['entries']>
+  toolAudit: ExecutionJoinSource<ToolExecAuditEntry[]>
   enforceApprovals: ExecutionJoinSource<Array<Record<string, unknown>>>
   resultContract: ExecutionJoinSource<Record<string, unknown>>
 }
@@ -75,7 +75,7 @@ export async function executionJoin(query: {
   }
 
   // 2) 工具执行审计（支持 runId 过滤）
-  let toolAudit: ExecutionJoinSource<ExecutionJoinResult['toolAudit']['entries']>
+  let toolAudit: ExecutionJoinSource<ToolExecAuditEntry[]>
   try {
     const audit = queryToolExecAudit({ days, limit, ...(runId ? { runId } : {}) })
     toolAudit = audit.entries.length > 0

@@ -105,6 +105,19 @@ export function recordRunManifest(input: Omit<RunManifest, 'toolContractVersion'
     startedAt: Date.now(),
     ...input,
   }
+  // W4 关联注入（生产者）：run 清单落账即把本 run 的关联面置进工具调用 ambient——
+  // 后续同进程工具审计行自动带 traceId/runId/promptVersion（promptHash 即提示词版本
+  // 的稳定指纹）。clear 留给 run 收尾方（显式换槽），此处只置不猜。
+  try {
+    // 延迟 import 规避环（tool-hooks ← runmanifest 无反向依赖，直引亦可；保守起见动态）
+    void import('../toolpipeline/call-correlation').then(({ setToolCallCorrelation }) => {
+      setToolCallCorrelation({
+        ...(full.sessionId ? { traceId: full.sessionId } : {}),
+        ...(full.runId ? { runId: full.runId } : {}),
+        ...(full.promptHash ? { promptVersion: full.promptHash } : {}),
+      })
+    })
+  } catch { /* 关联面缺席不阻断清单落账 */ }
   try {
     const existing = readManifests().find((m) => m.runId === full.runId)
     if (existing) return existing

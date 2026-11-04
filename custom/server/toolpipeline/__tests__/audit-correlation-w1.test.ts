@@ -47,6 +47,29 @@ describe('W1 审计关联字段与出参观测', () => {
     }
   })
 
+  it('W4 生产者：traceId 兜底=sessionId（无显式关联时），显式值不被覆盖', async () => {
+    const { ekkoToolExecuteHooks, readToolExecAudit, _resetAuditStateForTests } = await import('../tool-hooks')
+    const { setToolCallCorrelation, clearToolCallCorrelation } = await import('../call-correlation')
+    _resetAuditStateForTests()
+    clearToolCallCorrelation()
+    const audit = ekkoToolExecuteHooks[0]!
+    // 无显式：兜底 sessionId
+    await audit.preExecute!('search_files', { q: 'x' }, { sessionId: 'sess-fb' })
+    const pre1 = readToolExecAudit().find((e) => e.phase === 'pre')!
+    expect(pre1.traceId).toBe('sess-fb')
+    _resetAuditStateForTests()
+    // 显式优先：不被 sessionId 覆盖
+    setToolCallCorrelation({ traceId: 'tr-explicit' })
+    try {
+      await audit.preExecute!('search_files', { q: 'x' }, { sessionId: 'sess-fb' })
+      const pre2 = [...readToolExecAudit()].reverse().find((e) => e.phase === 'pre')!
+      expect(pre2.traceId).toBe('tr-explicit')
+    } finally {
+      clearToolCallCorrelation()
+      _resetAuditStateForTests()
+    }
+  })
+
   it('未设关联时字段缺省（旧账本形状兼容）', async () => {
     const { ekkoToolExecuteHooks, readToolExecAudit, _resetAuditStateForTests } = await import('../tool-hooks')
     const { clearToolCallCorrelation } = await import('../call-correlation')

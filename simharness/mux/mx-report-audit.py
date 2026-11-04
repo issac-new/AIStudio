@@ -1155,7 +1155,7 @@ if RUN_ID >= '20261103':
         _probe19 = _f19
         break
     if _probe19 is None:
-        warns.append('查19 判据 18「新能力探测十三组」证据缺席：未见 capability-probes.json'
+        warns.append('查19 判据 18「新能力探测十四组」证据缺席：未见 capability-probes.json'
                      '（脚本 simharness/mux/mx-capability-probes.mjs）——本轮若未跑须在测试报告 §8.1 写明理由，否则 G4 不得放行')
     else:
         try:

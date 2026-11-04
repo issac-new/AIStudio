@@ -110,9 +110,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  *  兼容旧根级布局（<home>/kanban/kanban.db）。返回存在的路径或 null。 */export function boardDbPath(board: string, home = hermesHome()): string | null {
   const slug = board.trim()
   if (!slug) return null
+  // W4 走查实锤修（活体 404 抓出）：default 板主库在 <home>/kanban.db 根级
+  //（与 kanban-overview 快道同三态口径），旧布局两态兜底。
   const candidates = slug === 'default'
-    ? [join(home, 'kanban', 'boards', 'default', 'kanban.db'), join(home, 'kanban', 'kanban.db')]
-    : [join(home, 'kanban', 'boards', slug, 'kanban.db')]
+    ? [join(home, 'kanban.db'), join(home, 'kanban', 'boards', 'default', 'kanban.db'), join(home, 'kanban', 'kanban.db')]
+    : [join(home, 'kanban', 'boards', slug, 'kanban.db'), join(home, 'boards', slug, 'kanban.db')]
   return candidates.find(p => existsSync(p)) ?? null
 }
 

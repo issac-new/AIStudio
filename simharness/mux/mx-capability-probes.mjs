@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// mx-capability-probes.mjs —— 推演期新能力探测（2026-11-03 立，方案 §5.11；2026-11-04 扩组至十三组）。
+// mx-capability-probes.mjs —— 推演期新能力探测（2026-11-03 立，方案 §5.11；2026-11-04 扩组至十三组；同日 W4 未做项收口扩至十四组——harness 契约面）。
 //
 // 为什么单独一支脚本：新能力（主动性介入治理 / 交接质量 / 验收断言 / 主张回执 / 组件库与多目标 /
 // 探测并发与调度面 / 派单容量准入＋四性四格判据 / 项目状态机与拓扑 / 执行记录 / 环境变量编辑面 /
@@ -12,7 +12,7 @@
 //   --out     证据输出目录（默认 $SIM_ROOT/runs/current/evidence 或 ./capability-probes）
 //   --token   可选 Bearer token（服务启用鉴权时）
 //   --profile userenv 组探测的 profile 名（缺省 default；SIM 与测试夹具均有该档）
-// 退出码：0=十三组全绿；1=有探测失败（写 capability-probes.json 后仍退出 1，供门禁判红）。
+// 退出码：0=十四组全绿；1=有探测失败（写 capability-probes.json 后仍退出 1，供门禁判红）。
 //
 // 纪律：脚本只读/只算，不写业务数据；acceptance 探测会在临时目录里造两个文件（探针自带清理）。
 // 状态机类端点（projectworkflow complete/pause）只打「不落库的拒绝分支」——成功路径会写
@@ -398,6 +398,66 @@ results.push(await probe('skills', '负例：导出不存在的技能 → 404（
   const r = await call('GET', `/api/hermes/skills/general/mx-probe-not-a-skill-${Date.now()}/export`)
   expect(r.status === 404, `expected 404, got ${r.status}`)
   return { status: 404 }
+}))
+
+// ── 组 14：Harness 契约面（W1-W4，spec 2026-11-04-harness-w*）──────────────
+// 工具契约执法/结果协议/执行归并/任务模型四件只有 HTTP 面。纪律：全部只读——
+// fault-seed 建集是写操作不探（由 fault-seed.test.ts 与活体走查把守）；taskmodel
+// 正例在空板上如实缺省（组 9 先例），不造假卡。
+results.push(await probe('harness-contract', '执行归并单点四源 fail-soft（缺席必须带原因）', async () => {
+  const r = await call('GET', '/api/harness/execution-join?runId=mx-probe-no-such-run')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(r.body?.ok === true, 'ok!=true')
+  for (const src of ['executionRecords', 'toolAudit', 'enforceApprovals', 'resultContract']) {
+    const face = r.body?.[src]
+    expect(face && typeof face === 'object', `${src} 面缺失`)
+    if (face.available === false) {
+      expect(typeof face.reason === 'string' && face.reason.length > 0, `${src}.available:false 必须带 reason（不猜数）`)
+    }
+  }
+  return { sources: 4, allSoft: true }
+}))
+
+results.push(await probe('harness-contract', '负例：execution-join 无 runId/taskId → 400（参数门）', async () => {
+  const r = await call('GET', '/api/harness/execution-join')
+  expect(r.status === 400, `expected 400, got ${r.status}`)
+  return { status: 400 }
+}))
+
+results.push(await probe('harness-contract', '负例：taskmodel 不存在的任务 → 404（fail-closed 不猜）', async () => {
+  const r = await call('GET', '/api/harness/taskmodel/mx-probe-no-such-task?board=default')
+  expect(r.status === 404, `expected 404, got ${r.status}`)
+  return { status: 404 }
+}))
+
+results.push(await probe('harness-contract', '负例：taskmodel 缺 board → 400（快道按板库直读，板必填）', async () => {
+  const r = await call('GET', '/api/harness/taskmodel/whatever')
+  expect(r.status === 400, `expected 400, got ${r.status}`)
+  return { status: 400 }
+}))
+
+results.push(await probe('harness-contract', '工具契约表在册且版本=W1 执法轮版本', async () => {
+  const r = await call('GET', '/api/harness/tool-contracts')
+  expect(r.status === 200, `status=${r.status}`)
+  const list = r.body?.contracts ?? r.body?.entries
+  expect(Array.isArray(list) && list.length >= 40, `契约数异常：${Array.isArray(list) ? list.length : '非数组'}`)
+  expect(r.body?.version === '2026-11-04.1', `版本未推进到 W1 执法轮：${r.body?.version}`)
+  return { contracts: list.length, version: r.body.version }
+}))
+
+results.push(await probe('harness-contract', 'taskmodel 正例（有卡则投影 schemaVersion=1；空板如实缺省）', async () => {
+  const list = await call('GET', '/api/hermes/kanban?board=default&limit=1')
+  const tasks = list.body?.tasks ?? list.body
+  const first = Array.isArray(tasks) ? tasks[0] : null
+  if (!first?.id) {
+    return { skipped: 'default 板无卡——正例由 taskmodel 单测＋活体走查把守（组 9 缺省先例）' }
+  }
+  const r = await call('GET', `/api/harness/taskmodel/${first.id}?board=default`)
+  expect(r.status === 200, `status=${r.status}`)
+  const m = r.body?.model
+  expect(m?.schemaVersion === 1, `schemaVersion!=1：${m?.schemaVersion}`)
+  expect(m && typeof m.available === 'object' && 'inputVersions' in m.available, 'available 细项缺失（fail-soft 透明度面）')
+  return { taskId: m.taskId, available: m.available }
 }))
 
 // ── 汇总 ────────────────────────────────────────────────────

@@ -44,7 +44,7 @@ import { ledgerPathForDisplay, listEntries, registerEntry } from '../taskledger/
 import { summarizeLedger } from '../taskledger/taskledger'
 import { budgetStatus, listBudgetPolicies, removeBudgetPolicy, setBudgetPolicy, type BudgetAction } from '../tokenbudget/budget-policy'
 import { listLeases, registerLease, startSandboxJanitorIfEnabled, sweepExpiredLeases } from '../sandbox/sandbox-lease'
-import { BUILTIN_CONTRACTS } from '../toolcontract/contract'
+import { TOOL_CONTRACT_VERSION, BUILTIN_CONTRACTS } from '../toolcontract/contract'
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 import { PROFILE_PRESETS, presetsValid, routeTaskProfile, type TaskFacts } from '../goalbudget/task-router'
 import { handoffRoutes } from '../handoff/handoff-controller'
@@ -149,7 +149,8 @@ router.get('/rsi-maturity', async (ctx) => {
 // 工具契约目录（2026-10-18 Harness 可靠性轮）：按工具族声明副作用/超时/重试/
 // 幂等，是审计与执行器共用的单一事实源。只读静态表。
 router.get('/tool-contracts', async (ctx) => {
-  ctx.body = { ok: true, count: BUILTIN_CONTRACTS.length, contracts: BUILTIN_CONTRACTS }
+  // W4：携带版本行——run manifest 记 toolContractVersion，端点自报同源常量可对账
+  ctx.body = { ok: true, version: TOOL_CONTRACT_VERSION, count: BUILTIN_CONTRACTS.length, contracts: BUILTIN_CONTRACTS }
 })
 
 // 工具执行审计查询（v3）：窗口/身份/工具/结果过滤 + 分页与聚合。
@@ -167,12 +168,12 @@ router.get('/execution-join', async (ctx) => {
     }
     const days = Number(q.days)
     const limit = Number(q.limit)
-    ok(ctx, await executionJoin({
+    ok(ctx, { ...(await executionJoin({
       runId, taskId,
       board: typeof q.board === 'string' && q.board ? q.board : undefined,
       days: Number.isFinite(days) ? days : undefined,
       limit: Number.isFinite(limit) ? limit : undefined,
-    }))
+    })) })
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }

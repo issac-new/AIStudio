@@ -58,6 +58,7 @@ import { loadEvalConfig } from './types'
 import { synthesizeProbesForTask } from './synthesize'
 import { compareBaseline, gradeSpecDesign, snapshotBaseline } from './skill-grader'
 import { ENTERPRISE_AXES, ENTERPRISE_SET_NAME, axesCoverage, buildEnterpriseSeedTasks } from './enterprise-seed'
+import { FAULT_CATEGORIES, FAULT_SET_NAME, buildFaultSeedTasks } from './fault-seed'
 import type { EvalRun, EvalSet, EvalTask, LiveEvidence } from './types'
 import { buildRedteamSeedTasks, REDTEAM_SET_NAME, REDTEAM_VECTORS } from './redteam-seed'
 import { buildRedteamVariants } from './redteam-variants'
@@ -281,6 +282,26 @@ router.post('/sets/enterprise-seed', async (ctx) => {
   }
   ctx.status = 201
   ctx.body = { ok: true, existed: false, set: setSummary(result.set), axes: ENTERPRISE_AXES, coverage: axesCoverage(result.set.tasks) }
+})
+
+// W4（2026-11-04）：六类故障样本种子集（判据全 S0 确定性断言；真实执行依赖
+// 判定服务配置，未配置只建不跑——如实呈现）。
+router.post('/sets/fault-seed', async (ctx) => {
+  const existing = listSets().find((s) => s.name === FAULT_SET_NAME)
+  if (existing) {
+    ok(ctx, { existed: true, set: existing, categories: FAULT_CATEGORIES })
+    return
+  }
+  const result = createSet(
+    { name: FAULT_SET_NAME, track: 'e2e', tasks: buildFaultSeedTasks() },
+    actorOf(ctx) ?? 'fault-seed',
+  )
+  if (!result.ok) {
+    fail(ctx, 400, result.problems.join('；'))
+    return
+  }
+  ctx.status = 201
+  ok(ctx, { existed: false, set: setSummary(result.set), categories: FAULT_CATEGORIES })
 })
 
 router.get('/sets/:id', async (ctx) => {

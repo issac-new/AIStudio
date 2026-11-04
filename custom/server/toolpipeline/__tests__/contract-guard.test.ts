@@ -73,7 +73,7 @@ describe('contractGuardHook：幂等回放短路', () => {
     expect(verdict).toBeUndefined() // 只观测不短路
   })
 
-  it('replay:return 契约：账上有缓存时拒绝重复执行并回放首次结果', async () => {
+  it('replay:return 契约：账上有缓存时 {replace} 替换执行（ok:true 回放首次结果，W4）', async () => {
     // BUILTIN 暂无 return 档（灰度：机制就绪、生产表未启用）——经注入口驱动
     const base = resolveToolContract('terminal')
     const replayContract: typeof base = {
@@ -86,11 +86,14 @@ describe('contractGuardHook：幂等回放短路', () => {
     const hook = contractGuardHook({ idempotencyStore: store, contractResolver: () => replayContract })
     const verdict = await hook.preExecute!('terminal', { command: 'deploy' }, undefined)
     expect(verdict).toBeDefined()
-    expect(verdict!.allow).toBe(false)
-    const parsed = JSON.parse(verdict!.error) as { code: string; replayed: boolean; cached: { data: { recordId: string } } }
+    expect((verdict as { allow?: boolean }).allow).toBeUndefined() // 不再是拒绝形态
+    const replaced = (verdict as { replace: { ok: boolean; content: string; data: unknown } }).replace
+    expect(replaced.ok).toBe(true) // ok:true 替换回放（W4）
+    const parsed = JSON.parse(replaced.content) as { code: string; replayed: boolean; cached: { data: { recordId: string } } }
     expect(parsed.code).toBe('IDEMPOTENT_REPLAY')
     expect(parsed.replayed).toBe(true)
     expect(parsed.cached.data.recordId).toBe('r-1')
+    expect((replaced.data as { cached: { data: { recordId: string } } }).cached.data.recordId).toBe('r-1')
   })
 
   it('replay:return 但账上无缓存（或缓存被 8KB 上限丢弃）：不短路', async () => {
