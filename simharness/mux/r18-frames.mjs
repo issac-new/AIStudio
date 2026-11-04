@@ -31,17 +31,21 @@ const MX_HS_URL = process.env.MX_HS || 'http://127.0.0.1:8008'
 // （capture-plan.log，采集时刻/步/页面/账号可审计）。射手是按次启动的 node 工具，
 // 本文件可在推演进行中安全修改（bash 主脚本禁改纪律不受影响）。
 const PLAN_FILE = new URL('./capture-plan.env', import.meta.url)
-let PLAN_URL = RAWURL, PLAN_USER = null
+let PLAN_URL = RAWURL, PLAN_USER = null, PLAN_ACTION = null
 try {
   const plan = readFileSync(PLAN_FILE, 'utf8').split('\n')
   for (const ln of plan) {
     const t = ln.trim()
     if (!t || t.startsWith('#')) continue
     const body = t.replace(/\s+#.*$/, '')  // 剥行内注释（URL 不含 " #" 模式，安全）
-    const [st, u, usr] = body.split('|')
+    const [st, u, usr, act] = body.split('|')
     if (st && st.trim() === STEP && u && u.trim()) {
-      PLAN_URL = u.trim()
+      // __RUN__ 占位替换（run 定位深链：报告查看面等需要 ?run=<RUN_ID>，N13）
+      PLAN_URL = u.trim().replace(/__RUN__/g, RUN)
       PLAN_USER = (usr || '').trim() || null
+      // 第四列 action（N13）：需要先选中对象再拍的步骤（如会话画布点开分析群），
+      // 规划侧声明、射手执行——不再由调用方为个别步硬编码动作。
+      PLAN_ACTION = (act || '').trim() || null
       break
     }
   }
@@ -73,6 +77,11 @@ if (PLAN_URL.startsWith('/') && !PLAN_URL.startsWith('/#')) {
 }
 
 const ACTION = arg('action', ''), ACTION_WAIT = parseInt(arg('action-wait', '400'), 10)
+// N13（2026-11-04）：拍摄前等内容——期望词来自 frame-verify.py --dump-expect（单一
+// 事实源），任何一词出现即认为页面已装载；超时仍拍（frame-verify 会判偏差，不静默），
+// 但把超时写进 capture-plan.log 便于归因。原实现只 sleep 固定 4s，重页面常拍到壳。
+const EXPECT = arg('expect', '').split(',').map((s) => s.trim()).filter(Boolean)
+const EXPECT_WAIT = parseInt(arg('expect-wait', '12000'), 10)
 const USER = PLAN_USER || arg('user', 'fanfan'), SETTLE = parseInt(arg('settle', '4000'), 10)
 if (!STEP || !PLAN_URL) { console.error('需要 --step <n> --url <路由>'); process.exit(1) }
 
@@ -237,10 +246,27 @@ if (await pageLooksBad()) {
   const bad = await pageLooksBad()
   if (bad) writeFileSync(join(OUT, `${pre}.bad.txt`), bad.slice(0, 500), 'utf8')
 }
+if (EXPECT.length) {
+  try {
+    await page.waitForFunction(
+      (words) => {
+        const txt = document.body ? document.body.innerText : ''
+        return words.some((w) => w && txt.includes(w))
+      },
+      EXPECT, { timeout: EXPECT_WAIT, polling: 500 },
+    )
+  } catch {
+    try {
+      appendFileSync(join(OUT, '..', 'capture-plan.log'),
+        `[${new Date().toISOString()}] step=${STEP} expect-timeout url=${PLAN_URL} want=${EXPECT.join('/')}\n`)
+    } catch {}
+  }
+}
 await page.screenshot({ path: `${OUT}/${pre}-before.png` })
 console.log(`shot: ${pre}-before`)
 
-if (ACTION) {
+const EFFECTIVE_ACTION = PLAN_ACTION || ACTION
+if (EFFECTIVE_ACTION) {
   const [kind, rest] = ACTION.split(':')
   try {
     if (kind === 'click') {

@@ -105,10 +105,21 @@ def norm(t: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument('--run', required=True)
+    ap.add_argument('--run', default='')
     ap.add_argument('--out', default='')
     ap.add_argument('--only', default='')
+    ap.add_argument('--dump-expect', action='store_true',
+                    help='打印 EXPECT 的 shell 变量投影（MX_EXPECT_<key>=词1,词2）后退出')
     a = ap.parse_args()
+    if a.dump_expect:
+        # 单一事实源：拍摄器（r18-frames --expect）用的期望词就从这里导出，
+        # 不另立一份表（2026-11-04 N13：两种表必漂移）。
+        for _k, _v in EXPECT.items():
+            print(f'MX_EXPECT_{_k}="{",".join(_v["want"])}"')
+        return 0
+    if not a.run:
+        print('需要 --run（或 --dump-expect）', file=sys.stderr)
+        return 2
     if not shutil.which('tesseract'):
         print('缺 tesseract（brew install tesseract + chi_sim 语言包）', file=sys.stderr)
         return 2

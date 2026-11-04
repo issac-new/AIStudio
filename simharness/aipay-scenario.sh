@@ -30,6 +30,14 @@ source "$SCRIPT_DIR/mux/mx-lib.sh"
 source "$SCRIPT_DIR/mux/mx-scenario-lib.sh"
 # V8.45：评测接线（评测运行/红队/三角/覆盖/锚点/线上证据 → G4 子门）
 source "$SCRIPT_DIR/mux/mx-eval-lib.sh"
+# N13（2026-11-04）：拍摄期望词表——从 frame-verify.py --dump-expect 导出后 source，
+# 作为 r18-frames --expect 的输入（单一事实源；导出失败=零行为，退化为纯 settle）。
+if [[ -f "$SCRIPT_DIR/mux/frame-verify.py" ]]; then
+  _expect_env="$SIM_ROOT/var/frame-expect.env"
+  mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
+  python3 "$SCRIPT_DIR/mux/frame-verify.py" --dump-expect > "$_expect_env" 2>/dev/null || true
+  [[ -s "$_expect_env" ]] && source "$_expect_env"
+fi
 # 融合批二：治理服务客户端——判词/G1/UAT 判读/熔断经产品 lifecycle 端点（判据单源，
 # 语义正本=custom/server/governance/lifecycle；本驱动不再持有第二套判读实现）
 source "$SCRIPT_DIR/mux/governance-client.sh"
@@ -1226,6 +1234,19 @@ if step_reached plan && [[ -z "$(sget plan_done)" ]]; then
   r18_guard 17
   repo_pull
   note "[真值] 排期计划入库 ✓"
+  # 排期页产品态（N13 2026-11-04）：排期页数据源=看板里 status=scheduled 的卡；驱动
+  # 此前只写 tasklist 文档，页面恒「已排期任务 0」——空壳被当实拍。拍前建/复用一张
+  # 「排期基线」信息卡（窗口+人日，来自 tasklist），并调产品 kanban schedule 落
+  # scheduled 状态（信息卡不派单、不进 ready 队列，不影响 devimpl 派发）。
+  _sched_body="计划窗口：$(date +%m-%d) 起 2 个工作日；测试工作量=开发×0.3 独立成项；任务-人-人日见 tasklist.md（本轮 ${RUN_ID}）。"
+  _sched_id="$(kanban_create_as fanfan plan_schedule_card "${RFD_ID} 排期基线（计划窗口与工作量）" "$_sched_body" fanfan-pm-plan fanfan 2>/dev/null || true)"
+  if [[ -n "$_sched_id" ]]; then
+    if HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board fanfan-pm-plan schedule "$_sched_id" "排期基线（${RUN_ID}）" >/dev/null 2>&1; then
+      note "[排期] 产品看板已落 scheduled 卡（${_sched_id}）——排期页有本轮真实对象可拍（N13）"
+    else
+      echo "ISSUE|plan-schedule-card-failed|fanfan|排期基线卡 ${_sched_id} schedule 失败（页面将仍为空态）——按空缺如实呈现" >> "$EVID_DIR/issues.log"
+    fi
+  fi
   capture_step "plan_done" "/app/stage/design?tab=schedule"
 
   sset plan_done 1

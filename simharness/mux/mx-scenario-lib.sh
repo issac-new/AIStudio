@@ -1179,9 +1179,11 @@ capture_step() { # <step> <url> [action] [user]
     return 0
   fi
   if [[ -n "$action" ]]; then
-    node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --action "$action" --user "$user" >/dev/null 2>&1 || rc=$?
+    _expvar="MX_EXPECT_${step}"; _expect="${!_expvar:-}"
+    node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --action "$action" --user "$user" ${_expect:+--expect "$_expect"} >/dev/null 2>&1 || rc=$?
   else
-    node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --user "$user" >/dev/null 2>&1 || rc=$?
+    _expvar="MX_EXPECT_${step}"; _expect="${!_expvar:-}"
+    node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step "$step" --k 1 --url "$url" --user "$user" ${_expect:+--expect "$_expect"} >/dev/null 2>&1 || rc=$?
   fi
   if (( rc != 0 )); then
     # 花括号边界（2026-10-09 run12 实锤）：bash 3.2 在 UTF-8 locale 下把 $rc 后的
