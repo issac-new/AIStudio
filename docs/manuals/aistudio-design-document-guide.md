@@ -5,7 +5,7 @@
 - 快照基线：`e300df9f8`。
 - 当前版本：`1.0.10-overlay`。
 - 核实日期：2026-11-03。
-- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 510 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
+- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 523 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
 
 ## 1. 应该先读哪份，冲突时听谁的
 
@@ -245,7 +245,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 多数差异来自日期和分母，不应直接判为错误：
 
-- 当前工作树根目录实际 510 份，附录 A 的 A.1 当前收 501 份专题设计／规格／决策，另有 9 份导航、正本、数字总账、A-D、合并地图与退役指针，合计同为 510。HEAD 在 `e300df9f8` 跟踪 509 份，当前工作树另有 1 份未提交新增；`archive/` 2 份另计。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4,512-526`；`docs/manuals/aistudio-design-document-index.md:5-10`
+- 当前工作树根目录实际 523 份，附录 A 的 A.1 当前收 514 份专题设计／规格／决策，另有 9 份导航、正本、数字总账、A-D、合并地图与退役指针，合计同为 523；`archive/` 2 份另计。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4,512-526`；`docs/manuals/aistudio-design-document-index.md:5-10`
 - 附录 B 的 55＋32 是 2026-10-23 历史计划与研究索引，不是 specs 根目录总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-b-plans-research.md:1-6,66-68`
 - 附录 C.1 收 57 份方法论，C.2 的 51 是补入前的历史快照；当前数字应读 `facts.conf`，不能拿 51 当现行总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md:70-72,166-180`
 - 附录 D.1 的 43 是运行与方案复盘根因条数，文件头的 21 是推演轮次数，两者不是同一分母。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md:1-5`

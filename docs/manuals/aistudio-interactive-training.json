@@ -3,10 +3,10 @@
   "source_plan": "docs/superpowers/specs/2026-11-03-aistudio-comprehensive-training-manual.md",
   "mode": "evolve",
   "html_file": "docs/manuals/aistudio-interactive-training.html",
-  "pretext_tier": "native-css fallback + optional prepare/layout",
+  "pretext_tier": "native-css",
   "framework": "vanilla",
-  "iterations": 15,
-  "date": "2026-11-03",
+  "iterations": 25,
+  "date": "2026-11-04",
   "screen": "aistudio-training",
   "branch": "docs/aistudio-training-manual"
 }
