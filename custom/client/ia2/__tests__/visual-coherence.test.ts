@@ -37,6 +37,12 @@ describe('三壳 token 单源（Task 11 收敛）', () => {
     // 表单控件边框（WCAG 1.4.11）三壳同规则
     expect(scss).toContain('.ide-shell input')
     expect(scss).toContain('.ia-lshell input')
+    // 表单控件正文色基线（WCAG 1.4.3，2026-11-04 账号绑定表格实锤 #1a1a1a 配近
+    // 黑底全列不可读）：裸控件不吃壳层 color 继承，删基线即复发（125 文件同类面）。
+    // 整行锚定——toContain 子串会被 caret-color 行误满足（变异探针实锤过）
+    expect(scss).toMatch(/^ {2}color: var\(--text-primary\);$/m)
+    expect(scss).toMatch(/^ {2}caret-color: var\(--text-primary\);$/m)
+    expect(scss).toContain('&::placeholder { color: var(--input-placeholder-color); }')
   })
 
   it('壳侧不再重复定义：IdeShell/IaLegacyShell/ia2.scss 无 token 覆盖块', () => {

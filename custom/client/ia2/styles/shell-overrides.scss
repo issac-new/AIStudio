@@ -34,10 +34,20 @@
   --ia-border-control: #808080;
 }
 /* WCAG 1.4.11：表单控件边框是识别输入区的必要视觉信息，需 ≥3:1（2026-10-18
- * 实测旧 --border-color 仅 1.26-1.53；按钮由文字标识，不在此列）。三壳同规则。 */
+ * 实测旧 --border-color 仅 1.26-1.53；按钮由文字标识，不在此列）。三壳同规则。
+ * WCAG 1.4.3（2026-11-04 账号绑定表格实锤）：表单控件 UA 默认不吃壳层 color 继承，
+ * 深色主题走 UA 黑字（实测 rgb(26,26,26) 配近黑底全列不可读，custom/client 125 文件同
+ * 类面）；正文色/光标色兜底 var(--text-primary) 双主题自动取对值，占位符走上游
+ * --input-placeholder-color（:root 引用同元素 --text-muted，.dark 挂 <html> 时
+ * 间接解析正确）。组件 scoped 规则特异性更高，显式设色不受影响（范式先例
+ * IdeCommandPalette）。不引入 color-scheme:dark——会连带改变滚动条/原生弹层等
+ * 全量 UA 渲染，波及面不可控（决策记录见 spec 2026-11-04-shell-form-control-text-baseline）。 */
 .ia-shell input, .ia-shell select, .ia-shell textarea,
 .ide-shell input, .ide-shell select, .ide-shell textarea,
 .ia-lshell input, .ia-lshell select, .ia-lshell textarea {
   --border-color: var(--ia-border-control);
   border-color: var(--ia-border-control);
+  color: var(--text-primary);
+  caret-color: var(--text-primary);
+  &::placeholder { color: var(--input-placeholder-color); }
 }
