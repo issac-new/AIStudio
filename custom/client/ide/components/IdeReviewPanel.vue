@@ -2,7 +2,7 @@
 // IdeReviewPanel — /review 评审面板（复刻 codex-product 两域评审+行内评论回流+
 // codex 计划三选一收口形态；UI 复刻 R9）。数据面=review-store（patch 414：两域/
 // 评论 open→resolved 回流/三裁决一次定音）。
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { authFetch } from '../utils/auth-fetch'
 
@@ -52,6 +52,22 @@ async function refresh(): Promise<void> {
 const open = computed(() => findings.value.filter((f) => !f.resolved))
 const resolvedList = computed(() => findings.value.filter((f) => f.resolved))
 
+// 2026-11-04 走查修复（消息区被工具条挤压）：空态常驻全宽三段（头行+空态块+
+// verdict 行 ≈122px）是中栏底部最大挤占者，消息区被压到 44px、新消息几乎不可
+// 见。改可折叠：头行常驻（~24px，计数+▾/▸），内容段（空态/findings/verdict）
+// 仅展开态渲染。展开为事件驱动而非状态推导——findings 到场自动展开；open 全
+// 部 resolved 后保持展开（verdict 三选一还没点，面板不得抽走——推导式
+// `userUnfolded || open>0` 在最后一例 resolve 时瞬间塌掉，行为测试实锤）；
+// 用户手动折叠后新 findings 再来再自动弹开。
+const unfolded = ref(false)
+watch(open, (list) => {
+  if (list.length > 0) unfolded.value = true
+})
+const expanded = computed(() => unfolded.value)
+function toggleFold(): void {
+  unfolded.value = !unfolded.value
+}
+
 /** 已处理：先本地置 resolved，再回流服务端（patch 414 resolve 端点）；失败如实回退，
  *  避免 UI 显示 resolved 而服务端仍 open、下次 refresh 打回。 */
 async function resolve(id: string): Promise<void> {
@@ -73,8 +89,12 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
 </script>
 
 <template>
-  <div class="ide-review" data-testid="ide-review-panel">
-    <div class="ide-review__head">⎇ 评审 <span class="ide-review__counts">{{ open.length }} open · {{ resolvedList.length }} resolved</span></div>
+  <div class="ide-review" :class="{ 'is-collapsed': !expanded }" data-testid="ide-review-panel">
+    <div class="ide-review__head" data-testid="ide-review-head" :title="expanded ? '折叠评审条' : '展开评审条'" @click="toggleFold">
+      <span class="ide-review__caret" aria-hidden="true">{{ expanded ? '▾' : '▸' }}</span>
+      ⎇ 评审 <span class="ide-review__counts">{{ open.length }} open · {{ resolvedList.length }} resolved</span>
+    </div>
+    <template v-if="expanded">
     <div v-if="!findings.length" class="ui-empty-state ui-empty-state--compact">
       暂无 findings
       <button type="button" class="ide-review__start" data-testid="ide-review-start" @click="startReview">发起评审</button>
@@ -99,12 +119,14 @@ function decide(v: 'accept' | 'reject' | 'conditional'): void {
         @click="decide(v)"
       >{{ v === 'accept' ? '通过' : v === 'reject' ? '打回' : '有条件' }}</button>
     </div>
+    </template>
   </div>
 </template>
 
 <style scoped lang="scss">
 .ide-review { margin: 4px 12px; font-size: 12px; }
-.ide-review__head { font-weight: 600; }
+.ide-review__head { font-weight: 600; cursor: pointer; user-select: none; }
+.ide-review__caret { display: inline-block; width: 12px; color: var(--text-muted); font-size: 10px; }
 .ide-review__counts { color: var(--text-muted); font-weight: 400; font-size: 11px; }
 .ide-review__finding {
   display: flex; gap: 6px; align-items: baseline; padding: 3px 6px; border-radius: 4px; margin: 2px 0;
