@@ -151,3 +151,23 @@ print(json.dumps({
     expect(res.fold_collapsed).toBe(true)
   })
 })
+
+// N13 键归一守门（2026-11-05 burn-pre-run27 实锤）：--dump-expect 曾输出连字符键
+// （capture-precheck），驱动 source 时按命令解析 127 即死——本组断言导出行行合法
+// 且可被 bash 直接 source，防同类回归。
+describe('frame-expect 导出可 source（连字符键归一）', () => {
+  it('--dump-expect 行行匹配合法赋值名且 bash source rc=0', () => {
+    const dump = spawnSync('python3', [join(HARNESS, 'mux', 'frame-verify.py'), '--dump-expect'], { encoding: 'utf8' })
+    expect(dump.status).toBe(0)
+    const lines = dump.stdout.trim().split('\n').filter(Boolean)
+    expect(lines.length).toBeGreaterThan(0)
+    for (const line of lines) {
+      expect(line).toMatch(/^MX_EXPECT_[A-Za-z0-9_]+="[^"]*"$/)
+    }
+    const envFile = join(FIX, 'frame-expect.env')
+    writeFileSync(envFile, dump.stdout, 'utf8')
+    const sourced = spawnSync('bash', ['-c', `set -eu; source '${envFile}'`], { encoding: 'utf8' })
+    expect(sourced.status).toBe(0)
+    expect(sourced.stderr).toBe('')
+  })
+})
