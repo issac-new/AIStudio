@@ -66,4 +66,20 @@ describe('AgentsView — D20 智能体工作台', () => {
     expect(w.find('[data-testid="agw-note-default"]').text()).toContain('网关已重启')
     w.unmount()
   })
+
+  it('N01 环境变量折叠区：点击展开嵌入 ProfileEnvPanel 并发起 GET /api/userenv', async () => {
+    mockedFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true, profile: 'd20-test', entries: [] }) } as unknown as Response)
+    const w = mount(AgentsView, { global: { plugins: [makeRouter()] } })
+    await flushPromises()
+    expect(w.find('[data-testid="agw-envbox-d20-test"]').exists()).toBe(false)
+    await w.find('[data-testid="agw-env-d20-test"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="agw-envbox-d20-test"]').exists()).toBe(true)
+    expect(mockedFetch).toHaveBeenCalledWith('/api/userenv/profiles/d20-test/env')
+    // 再点收起
+    await w.find('[data-testid="agw-env-d20-test"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="agw-envbox-d20-test"]').exists()).toBe(false)
+    w.unmount()
+  })
 })

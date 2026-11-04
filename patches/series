@@ -1129,3 +1129,7 @@
 # 738（2026-11-04 AgentTeams 吸收批四）：统一 registry URI 解析器——parse_skill_uri
 #      表驱动接分发链最前（nacos:// 具名不静默回落），runtime 镜像+manifest 补位（skills_hub.py 入册）。
 738-agent-skill-hub-uri.patch
+# 740（2026-11-04 AgentTeams 挂账清偿 N02）：权限变更审计——userPermsAuditMiddleware
+#      挂 authMiddleware 后（4 端点：users/matrix-users 的 create/update），角色与 profile 授权
+#      变更落 user-perms-audit.jsonl（before 快照 node:sqlite 只读，脱敏不落密码）＋查询端点。
+740-server-userperms-audit.patch

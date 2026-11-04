@@ -1,0 +1,35 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -295,6 +295,12 @@
+ // （过滤/分页）+ /delegate/:taskId 详情（result+log 尾读）+ /coding/:sessionId
+ // webui 三表摘要（sessions/run_usage/workspace_run_changes，只读 fail-soft）。
+ import { executionRecordsRoutes } from '../custom/execution-records/controller'
++// overlay[userperms-audit]: 用户权限变更审计域（N02，spec 2026-11-04-agentteams-ledger-items）——
++// 用户管理端点（/api/auth/users*、/api/auth/matrix-users* 写面）的角色变更与
++// profile 绑定增删落 ~/.hermes-web-ui/user-perms-audit.jsonl；
++// 查询端点 GET /api/userperms/audit（?user=&action=&limit=&offset=）。
++import { userPermsAuditMiddleware } from '../custom/userperms/middleware'
++import { userPermsAuditRoutes } from '../custom/userperms/controller'
+ 
+ let loopStore: any = null
+ const lazyStore = new Proxy({} as any, {
+@@ -425,6 +431,12 @@
+   // --- Auth middleware: all routes below require authentication ---
+   authMiddleware.forEach((middleware) => app.use(middleware))
+ 
++  // overlay[userperms-audit]: 用户管理写面审计中间件——须在 authProtectedRoutes
++  // 之前（先于用户管理路由拦截请求；此处 authMiddleware 已过，ctx.state.user
++  // 已填充可取 actor）。app.use 而非 router.use：@koa/router 的 router.use 只对
++  // 声明之后添加的路由生效，vendor auth 路由在模块加载期已声明完，router.use
++  // 挂不上去（须改 vendor 路由文件，侵入更大）。
++  app.use(userPermsAuditMiddleware)
+   // --- Protected routes (auth required) ---
+   app.use(authProtectedRoutes.routes())
+   app.use(desktopBrowserRoutes.routes())
+@@ -620,4 +632,5 @@
+   initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
+   app.use(projectworkflowRoutes.routes())       // 项目工作流：项目一级状态机+完成守卫（状态面与看板库只读分离）
+   app.use(executionRecordsRoutes.routes())      // 执行记录：双源归并列表+delegate/coding 详情（只读 fail-soft）
++  app.use(userPermsAuditRoutes.routes())        // 用户权限审计查询：GET /api/userperms/audit（只读，fail-soft）
+ }
