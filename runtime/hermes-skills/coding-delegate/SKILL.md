@@ -24,6 +24,7 @@ description: 编码实施委托外部编码引擎（ACP 后端 L1 通道）—�
 
 ## 硬约束
 - 委托日志 `materials/delegate-log.txt` 必须随分支提交——它是"已走后端"的唯一指纹（末行含 `RESULT exit=`），缺失=G3 承载面记单。
+- `materials/runs.jsonl` 由驱动脚本自动追加（每个退出路径一行执行留痕），禁手改、禁代填。
 - 引擎不可用（CLI 缺失/超时 2 次）→ 如实报 BLOCKED 并说明，禁止 silently 回退手写冒充委托。
 - 驱动不代行人工确认：引擎弹权限请求时驱动一律 cancel（无人值守委托会话按 yolo 档自足），需要确认即视为委托失败走重托/BLOCKED。
 - 禁改清单里 upstream/ 与他人任务文件对引擎同样生效（写进实现指令）。

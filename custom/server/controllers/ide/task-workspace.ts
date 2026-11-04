@@ -47,8 +47,17 @@ export interface TaskWorkspaceResolution {
   note: TaskWorkspaceNote
 }
 
-/** 板 workspaces 根（镜像 upstream listWorkspaceFiles：~/.hermes/kanban 约定） */
-export function boardWorkspacesRoot(kanbanHome: string, board: string): string {
+/** 板 workspaces 根（镜像 upstream listWorkspaceFiles：~/.hermes/kanban 约定）。
+ *  env 覆盖：HERMES_KANBAN_WORKSPACES_ROOT 优先（对齐 Python 侧 kanban_db.py
+ *  workspaces_root 的 pin 语义——worker/测试把工作区根钉到任意目录），未设走
+ *  kanbanHome 约定根。 */
+export function boardWorkspacesRoot(
+  kanbanHome: string,
+  board: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const pinned = env.HERMES_KANBAN_WORKSPACES_ROOT?.trim()
+  if (pinned) return resolve(pinned)
   return board === 'default' || !board
     ? resolve(kanbanHome, 'workspaces')
     : resolve(kanbanHome, 'boards', board, 'workspaces')
@@ -63,7 +72,7 @@ export function boardWorkspacesRoot(kanbanHome: string, board: string): string {
  */
 export function resolveTaskWorkspace(
   input: TaskWorkspaceInput,
-  deps: { kanbanHome: string; isDir: (p: string) => boolean },
+  deps: { kanbanHome: string; isDir: (p: string) => boolean; env?: NodeJS.ProcessEnv },
 ): TaskWorkspaceResolution {
   const base: TaskWorkspaceResolution = {
     taskId: input.taskId,
@@ -75,7 +84,7 @@ export function resolveTaskWorkspace(
     status: input.status ?? null,
     note: 'no_workspace',
   }
-  const root = boardWorkspacesRoot(deps.kanbanHome, input.board)
+  const root = boardWorkspacesRoot(deps.kanbanHome, input.board, deps.env)
   let path: string | null = null
   if (input.workspacePath && input.workspacePath.trim()) {
     const raw = input.workspacePath.trim()

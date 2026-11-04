@@ -480,6 +480,21 @@ export function buildIaRoutes(): RouteRecordRaw[] {
           component: () => import('@/custom/loop/runcenter/views/RunDetailView.vue'),
         },
         {
+          // 执行记录列表（AgentTeams 吸收批二）：编码 CLI run 与 delegate 通道的
+          // 统一留痕查询面（/api/execution-records，只读旁路观测）；导航入口=
+          // COMMON_NAVS「执行记录」（IaSideNav 常用组，同项目工作流挂法）。
+          path: 'records',
+          name: 'ia2.records',
+          component: () => import('./views/records/RecordsListView.vue'),
+        },
+        {
+          // 执行记录详情：kind=delegate 按 taskId、kind=coding-run 按 sessionId
+          // 取详情（RecordDetailView 按 kind 分派端点）；独立子路由深链可分享。
+          path: 'records/:kind/:id',
+          name: 'ia2.recordDetail',
+          component: () => import('./views/records/RecordDetailView.vue'),
+        },
+        {
           // hermes 会话历史 / 全局智能体（隐藏直达链接面，上游 PageSidebarNav 依赖）
           path: 'history',
           name: 'ia2.collabHistory',

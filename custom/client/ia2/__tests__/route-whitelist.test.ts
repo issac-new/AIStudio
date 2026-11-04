@@ -81,6 +81,10 @@ const EXPECTED_NAMES = [
   'ia2.loopCanvas',
   'ia2.modelProviders',
   'ia2.notFound',
+  // 执行记录面（AgentTeams 吸收批二）：列表 /app/records + 详情 records/:kind/:id
+  // （只读旁路观测面；本快照变更即新增可达路由的显式变更点）
+  'ia2.recordDetail',
+  'ia2.records',
   'ia2.runDetail',
   'ia2.runs',
   'ia2.search',
