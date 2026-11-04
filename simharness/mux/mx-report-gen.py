@@ -4043,8 +4043,10 @@ def artifact_block(n: int) -> str:
             continue
         truncated = len(raw) > ART_TRUNC
         body = raw[:ART_TRUNC]
-        content = ('<pre class="art-code">' + H.escape(body) + '</pre>') if rel.endswith('.txt') \
-            else art_md_to_html(body)
+        # data-art 标注来源路径：审计查 21 只对 .md 源判「未渲染」；.txt 测试日志
+        # 里的 `#`/表格分隔是原始输出，按 <pre> 呈现才保真（2026-11-04 实证误判）。
+        content = (f'<pre class="art-code" data-art="{H.escape(rel or "")}">' + H.escape(body) + '</pre>') \
+            if rel.endswith('.txt') else art_md_to_html(body)
         # 往轮产物（run20 复盘真值件）：文件头声明轮≠本轮——存在但不得计为本轮
         # 交付物，模版核对照常呈现但判词改「往轮产物」，审计器据此 FAIL。
         if truth.get('stale'):

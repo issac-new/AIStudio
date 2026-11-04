@@ -1174,10 +1174,11 @@ if RUN_ID >= '20261104' and REPORT.exists():
             if len(_steps21) > 1 and any(_n in _rep21 for _n in _names):
                 fails.append('查21 帧重复填充：同一张图被多个步骤共用（'
                              + ','.join(sorted(_names)) + '）——重复截图不得按各自实拍呈现')
-    for _pre21 in re.findall(r'<pre class="art-code">([\s\S]{0,4000}?)</pre>', _rep21):
-        if re.search(r'(?m)^#{1,3} ', _pre21) or re.search(r'\|\s*-{3,}', _pre21):
-            fails.append('查21 markdown 未渲染：<pre class="art-code"> 内出现标题/表格分隔标记'
-                         '——该交付物应按文档渲染而非原文透传')
+    # 只对 .md 来源判（data-art 标注）：.txt 测试日志里的 #/|---| 是原始输出，<pre> 保真才对
+    for _m21 in re.finditer(r'<pre class="art-code" data-art="([^"]*[.]md)">([\s\S]{0,4000}?)</pre>', _rep21):
+        if re.search(r'(?m)^#{1,3} ', _m21.group(2)) or re.search(r'\|\s*-{3,}', _m21.group(2)):
+            fails.append('查21 markdown 未渲染：' + _m21.group(1) + ' 以原文透传呈现'
+                         '（应走文档渲染）——交付物按源码交付=读者不可读')
             break
     _fv21 = EVID / 'frame-verify.json'
     if not _fv21.exists():
