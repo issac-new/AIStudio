@@ -122,11 +122,11 @@ metricPolicyRoutes.get('/audit', (ctx) => {
 
 /** 四类核心指标派生（含缺口态）。 */
 metricPolicyRoutes.get('/core', async (ctx) => {
-  const [autonomy, ratio, minutes, rework, skills] = await Promise.all([
-    autonomyRate(), humanMachineRatio(), humanMinutesPerTask(), reworkRate(), skillUsage(),
+  const [autonomy, ratio, minutes, rework, interfaces, skills] = await Promise.all([
+    autonomyRate(), humanMachineRatio(), humanMinutesPerTask(), reworkRate(), interfaceCount(), skillUsage(),
   ])
   ok(ctx, {
-    readings: [autonomy, ratio, minutes, rework, interfaceCount()],
+    readings: [autonomy, ratio, minutes, rework, interfaces],
     skillUsage: skills,
   })
 })
@@ -149,8 +149,8 @@ metricPolicyRoutes.get('/skill-usage', async (ctx) => {
   ok(ctx, { ...(await skillUsage()) })
 })
 
-metricPolicyRoutes.get('/interface-count', (ctx) => {
-  ok(ctx, { reading: interfaceCount() })
+metricPolicyRoutes.get('/interface-count', async (ctx) => {
+  ok(ctx, { reading: await interfaceCount() })
 })
 
 /** key 前缀与命名空间一致性自检（供前端做即时校验，不必等提交）。 */

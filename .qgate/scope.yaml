@@ -242,7 +242,6 @@ paths:
   - custom/server/autonomygov/__tests__/dualsign.test.ts
   - .qgate/gates/governance.orgscale.yaml
   - .qgate/qgate.yaml
-
   # 2026-11-05 治理可信度修复（cognition-lattice 复盘落地；P0/P1/P2）
   - custom/client/kanban/__tests__/raci-visibility.test.ts
   - .gitignore
@@ -263,3 +262,8 @@ paths:
   - docs/superpowers/specs/2026-11-05-governance-truth-restoration.md
   - docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md
   - simharness/docs/**
+  - custom/server/approval-inbox/pending-controller.ts
+  - custom/server/approval-inbox/__tests__/dual-sign-gate.test.ts
+  - custom/server/metricpolicy/__tests__/derive.test.ts
+  - docs/superpowers/specs/2026-11-05-org-governance-closeout.md
+  - scripts/regression/org-governance-walkthrough.mjs

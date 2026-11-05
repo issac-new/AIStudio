@@ -94,3 +94,98 @@ export function dualSignSatisfied(change: {
 export function highRiskOptions(): { klass: HighRiskClass; title: string }[] {
   return HIGH_RISK_CLASSES.map((klass) => ({ klass, title: HIGH_RISK_TITLES[klass] }))
 }
+
+// ── 审批期双签闸（2026-11-05 收口：从「只判定」升级为「真拦」）──
+
+/** 批准类决策（需双签）；否决类不需要（收紧方向不加门槛）。 */
+export const APPROVE_DECISIONS: readonly string[] = ['approve', 'once', 'session', 'always', 'approved_scoped', 'approved_once']
+export const DENY_DECISIONS: readonly string[] = ['deny', 'reject']
+
+/** 单操作员显式豁免理由（唯一合法 waiver 值——开放的 waiver 字段等于没有闸）。 */
+export const SINGLE_OPERATOR_WAIVER = 'single-operator'
+
+export interface DualSignGateInput {
+  /** 审批目标 id（审批单 / 执法单） */
+  targetId: string
+  /** 本次裁决人 */
+  actor: string
+  /** 服务端重算的风险档（undefined=判不了，本闸不适用） */
+  risk: string | undefined
+  decision: string
+  /** 请求自带豁免理由 */
+  waiver?: string
+  /** 该目标此前已签人（不含本次） */
+  priorSigners: string[]
+  /** 开关（控制器读 env 传入；纯函数不碰 env） */
+  enabled: boolean
+}
+
+export interface DualSignGateResult {
+  /** 是否放行 */
+  allow: boolean
+  /** 本闸是否适用（非高风险 / 判不了档位 / 关闭时为 false） */
+  applicable: boolean
+  /** 拒绝时的机器可读码 */
+  code?: 'dual-sign-required'
+  reason: string
+  /** 记上本次签名后的签署人集合 */
+  signers: string[]
+  /** 是否走了单操作员豁免 */
+  waived?: boolean
+}
+
+/**
+ * 审批期双签闸：高风险批准须两个不同签署人，或单操作员显式豁免。
+ *
+ * 设计取舍（spec D1/D2/D3）：只拦「档位可重算 + 高风险 + 批准」这一格。
+ * 判不了档位的分支不拦——不猜档位，也不假装拦了（响应里的 applicable 会说清）。
+ */
+export function decideDualSignGate(input: DualSignGateInput): DualSignGateResult {
+  const signers = uniqueSigners([...input.priorSigners, input.actor])
+  const base = { signers, applicable: false }
+
+  if (!input.enabled) {
+    return { ...base, allow: true, reason: '双签闸已关闭（AUTONOMY_DUAL_SIGN=off）' }
+  }
+  if (input.risk !== 'high') {
+    return { ...base, allow: true, reason: `风险档非 high（${input.risk ?? '未评级'}），双签不适用` }
+  }
+  if (DENY_DECISIONS.includes(input.decision)) {
+    return { ...base, allow: true, reason: '否决类决策不需要双签（收紧方向不加门槛）' }
+  }
+  if (!APPROVE_DECISIONS.includes(input.decision)) {
+    // 未知决策词：不猜语义，按不适用放过（真正的合法性校验在路由分支里）
+    return { ...base, allow: true, reason: `未知决策词「${input.decision}」，双签不适用` }
+  }
+
+  const applicable = { ...base, applicable: true }
+  if (signers.length >= 2) {
+    return { ...applicable, allow: true, reason: `双签满足：${signers.join(' / ')}` }
+  }
+  if (input.waiver === SINGLE_OPERATOR_WAIVER) {
+    return {
+      ...applicable,
+      allow: true,
+      waived: true,
+      reason: `单操作员显式豁免（${signers.join(' / ') || '匿名'}）——豁免已落账可见`,
+    }
+  }
+  return {
+    ...applicable,
+    allow: false,
+    code: 'dual-sign-required',
+    reason: signers.length === 0
+      ? '高风险批准须双签：当前无签署记录'
+      : `高风险批准须双签：当前仅 ${signers[0]} 签署，缺第二签（或显式声明 waiver='${SINGLE_OPERATOR_WAIVER}'）`,
+  }
+}
+
+/** 签署人归一：去空、去重（同一人签两次不算两个签名）。 */
+export function uniqueSigners(list: string[]): string[] {
+  const out: string[] = []
+  for (const raw of list) {
+    const s = typeof raw === 'string' ? raw.trim() : ''
+    if (s && !out.includes(s)) out.push(s)
+  }
+  return out
+}

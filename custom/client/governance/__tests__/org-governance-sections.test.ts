@@ -160,7 +160,11 @@ describe('MetricDisciplineSection', () => {
         { key: 'measure/autonomy-rate', title: '自主运营比例', value: null, unit: '', sample: 0, available: false, gap: '自治刻度未配置——先登记 AL 等级才谈得上自主运营比例', definition: 'AL>=4 目标承接任务数 / 已派发任务总数', sources: [] },
         { key: 'measure/human-minutes-per-task', title: '单任务人时', value: 42.5, unit: '分钟', sample: 12, available: true, definition: '中位数 / 60', sources: [] },
       ],
-      skillUsage: { available: false, coverage: null, declared: 0, total: 0, top: [], gap: '未找到看板库或任务创建事件' },
+      skillUsage: {
+        available: false, coverage: null, declared: 0, total: 0, top: [],
+        invocations: { available: true, calls: 9, failed: 1, failureRate: 0.1111, byTool: [{ tool: 'skill_view', calls: 8, failed: 0 }], perSkill: null, perSkillGap: '审计面缺技能名（只记工具名与 ok）——按技能分布不可得，不编造' },
+        gap: '未找到看板库或任务创建事件',
+      },
     })
     api.fetchDecorativeMetrics.mockResolvedValue({
       ok: true,
@@ -195,6 +199,11 @@ describe('MetricDisciplineSection', () => {
     expect(stage).toContain('25.0%')
     expect(stage).toContain('10.0%')
     expect(w.text()).toContain('缺阶段 0 条')
+    // 技能调用频次（真数据面）与「按技能不可得」的诚实边界都要出现在界面上
+    const sk = w.find('[data-testid="md-skills"]').text()
+    expect(sk).toContain('技能调用 9 次')
+    expect(sk).toContain('11.1%')
+    expect(sk).toContain('技能名')
   })
 
   it('决策图谱不可用时不把读数当成立', async () => {

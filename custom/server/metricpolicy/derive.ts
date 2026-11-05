@@ -4,9 +4,12 @@
  * 文章给出的四类核心：自主运营比例、人机配比、单任务人时、返工率。
  * 纪律：样本不足或无源时 `available:false` 并写明缺口，不猜数、不返回 0 冒充「无异常」。
  */
+import { existsSync, readFileSync } from 'node:fs'
 import { listIdentities } from '../agentidentity/agent-identity'
 import { listScale } from '../autonomygov/store'
 import { collectAssigneeStats, kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
+import { buildPanorama } from '../workitem/panorama'
+import { underHermes } from '../lib/paths'
 import type { DerivedReading } from './types'
 
 /** 小样本下限：低于此值给 available:false（比例/中位数在小样本上无解释力）。 */
@@ -179,12 +182,83 @@ export async function reworkRate(): Promise<DerivedReading> {
  * 诚实边界：本仓只在任务创建事件里记了 skills 声明，没有技能级调用计数，
  * 因此**不能**算复用率与失败率。这里只报覆盖率与声明分布，并明写缺口。
  */
+/** 工具审计面路径（HERMES_TOOL_AUDIT 可覆盖；缺省 hermes state 下）。 */
+function toolAuditPath(): string {
+  const env = (process.env.HERMES_TOOL_AUDIT ?? '').trim()
+  return env || underHermes('state', 'tool-audit.jsonl')
+}
+
+export interface SkillInvocations {
+  available: boolean
+  /** 技能类工具调用总次数 */
+  calls: number
+  /** 其中失败次数 */
+  failed: number
+  failureRate: number | null
+  byTool: { tool: string; calls: number; failed: number }[]
+  /** 按技能名的分布——审计面不记技能名，故恒为 null（不编造） */
+  perSkill: null
+  perSkillGap: string
+}
+
+/**
+ * 技能类工具调用频次（真实数据，来自 hermes 工具审计面）。
+ *
+ * 诚实边界：该面只记工具名与 ok，不记技能名（argDigest 是哈希、inputKeys 只有键名）。
+ * 因此能答「技能被调用多少次、失败率多少」，不能答「哪个技能用得多」。
+ */
+export function skillInvocations(): SkillInvocations {
+  const empty: SkillInvocations = {
+    available: false, calls: 0, failed: 0, failureRate: null, byTool: [], perSkill: null,
+    perSkillGap: '审计面缺技能名（只记工具名与 ok）——按技能分布不可得，不编造',
+  }
+  const p = toolAuditPath()
+  if (!existsSync(p)) {
+    return { ...empty, perSkillGap: `工具审计面缺席（${p}）——需 hermes 侧开启 tool-audit 落账` }
+  }
+  const byTool = new Map<string, { calls: number; failed: number }>()
+  let calls = 0
+  let failed = 0
+  let text = ''
+  try { text = readFileSync(p, 'utf8') } catch {
+    return { ...empty, perSkillGap: `工具审计面不可读（${p}）` }
+  }
+  for (const line of text.split('\n')) {
+    const t = line.trim()
+    if (!t) continue
+    let row: { tool?: unknown; ok?: unknown }
+    try { row = JSON.parse(t) as { tool?: unknown; ok?: unknown } } catch { continue }
+    const tool = typeof row.tool === 'string' ? row.tool : ''
+    if (!tool.startsWith('skill')) continue
+    calls += 1
+    const ok = row.ok !== false
+    if (!ok) failed += 1
+    const cur = byTool.get(tool) ?? { calls: 0, failed: 0 }
+    cur.calls += 1
+    if (!ok) cur.failed += 1
+    byTool.set(tool, cur)
+  }
+  if (calls === 0) {
+    return { ...empty, perSkillGap: '审计面在档但无技能类调用记录——技能可能未被使用，或调用未走审计面' }
+  }
+  return {
+    available: true,
+    calls,
+    failed,
+    failureRate: Number((failed / calls).toFixed(4)),
+    byTool: [...byTool.entries()].map(([tool, v]) => ({ tool, ...v })).sort((a, b) => b.calls - a.calls),
+    perSkill: null,
+    perSkillGap: '审计面缺技能名（只记工具名与 ok）——按技能分布不可得，不编造',
+  }
+}
+
 export async function skillUsage(): Promise<{
   available: boolean
   coverage: number | null
   declared: number
   total: number
   top: { skill: string; tasks: number }[]
+  invocations: SkillInvocations
   gap?: string
 }> {
   let declared = 0
@@ -215,8 +289,9 @@ export async function skillUsage(): Promise<{
     .map(([skill, tasks]) => ({ skill, tasks }))
     .sort((a, b) => b.tasks - a.tasks)
     .slice(0, 20)
+  const invocations = skillInvocations()
   if (total === 0) {
-    return { available: false, coverage: null, declared: 0, total: 0, top: [], gap: '未找到看板库或任务创建事件' }
+    return { available: false, coverage: null, declared: 0, total: 0, top: [], invocations, gap: '未找到看板库或任务创建事件' }
   }
   const coverage = Number((declared / total).toFixed(4))
   const gaps: string[] = []
@@ -229,20 +304,71 @@ export async function skillUsage(): Promise<{
     declared,
     total,
     top,
+    invocations,
     gap: gaps.join('；'),
   }
 }
 
-/** 反向指标：接口数（一个新任务要跨几个系统取上下文）。当前无统一采集源。 */
-export function interfaceCount(): DerivedReading {
-  return reading({
+/**
+ * 反向指标：接口数 = 一个任务的上下文要从几个系统拼出来。
+ *
+ * 口径：`buildPanorama(taskId)` 九个面（任务卡/看板事件/证据/评测/评审/计划/
+ * 图运行/trace/泳道时间线）中 `available: true` 的面数；取最近 3 个已完成任务的中位数。
+ *
+ * 为什么只取 3 个：每任务跨九面查询，取多了会把治理页签拖成秒级。样本量如实回报。
+ */
+export const INTERFACE_SAMPLE = 3
+
+const PANORAMA_FACES = [
+  'task', 'kanbanEvents', 'evidence', 'evals', 'reviews', 'plans', 'graphRuns', 'traces', 'laneTimeline',
+] as const
+
+/** 最近 N 个已完成任务 id（读侧 fail-soft：库缺席返回空）。 */
+async function recentDoneTaskIds(limit: number): Promise<string[]> {
+  const out: string[] = []
+  for (const file of kanbanDbFiles()) {
+    let db
+    try { db = await openReadonly(file) } catch { continue }
+    try {
+      const rows = db.prepare(
+        "SELECT id FROM tasks WHERE status = 'done' ORDER BY COALESCE(completed_at, created_at) DESC LIMIT ?",
+      ).all(limit) as unknown as { id: string }[]
+      for (const r of rows) if (r?.id && !out.includes(r.id)) out.push(String(r.id))
+    } catch { /* 单库失败跳过 */ }
+    finally { try { db.close() } catch { /* 已关 */ } }
+    if (out.length >= limit) break
+  }
+  return out.slice(0, limit)
+}
+
+export async function interfaceCount(): Promise<DerivedReading> {
+  const base = {
     key: 'measure/interface-count',
     title: '接口数（反向指标）',
-    definition: '一个新任务为取上下文需要跨越的系统数（越小越好）',
-    sources: [],
-    value: null,
-    sample: 0,
-    available: false,
-    gap: '无统一接口计数源——需跨系统调用链采集，本轮只占位不伪造趋势',
+    definition: '一个任务的上下文涉及的系统面数（panorama 九面中可用面数）中位数，越小越好',
+    sources: ['workitem/panorama', 'kanban tasks'],
+  }
+  const ids = await recentDoneTaskIds(INTERFACE_SAMPLE)
+  if (ids.length === 0) {
+    return reading({ ...base, value: null, sample: 0, available: false, gap: '无已完成任务可取样——需至少一个 done 任务' })
+  }
+  const counts: number[] = []
+  let failed = 0
+  for (const id of ids) {
+    try {
+      const pano = await buildPanorama(id)
+      const row = pano as unknown as Record<string, { available?: boolean }>
+      counts.push(PANORAMA_FACES.filter((k) => row[k]?.available === true).length)
+    } catch { failed += 1 }
+  }
+  if (counts.length === 0) {
+    return reading({ ...base, value: null, sample: 0, available: false, gap: `${ids.length} 个任务的面板全部读取失败` })
+  }
+  return reading({
+    ...base,
+    value: median(counts),
+    sample: counts.length,
+    available: true,
+    gap: `取样 ${counts.length}/${ids.length} 个已完成任务${failed ? `（${failed} 个读取失败）` : ''}；面数越少说明上下文越集中`,
   })
 }

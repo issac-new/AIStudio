@@ -21,6 +21,7 @@
  * 挂载：B 类 patch 488 在 bootstrap/routes.ts（与 477/482 同款两行）。
  */
 import Router from '@koa/router'
+import type { Context } from 'koa'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync } from 'fs'
 import { join } from 'path'
 import { buildFleetSnapshotFromTap, respondFleetApproval } from '../services/hermes/fleet-tap'
@@ -31,6 +32,10 @@ import { classifyApprovalRisk, type ApprovalRiskTier } from './risk-tier'
 import { autopassEnabled, isAutopassCandidate, recordAutoPass, listOpenSpotchecks, listResolvedSpotchecks, resolveSpotcheck } from './autopass'
 import { analyzeCommandImpact, type CommandImpact } from './impact-preview'
 import { decideEnforceApprovalGuarded, listPendingEnforceApprovals } from '../toolpipeline/enforce-approvals'
+// overlay[orggov-dualsign]（2026-11-05 收口）：高风险批准双签真拦。
+// 只在「风险档可重算」的审批分支生效（enf:/fleet:）；其余分支判不了档位，不猜也不假装拦。
+import { decideDualSignGate } from '../autonomygov/dualsign'
+import { listDualSignSigners, recordDualSignGap, recordDualSignSigner } from '../autonomygov/store'
 import { listHumanGatePending, humanGateRouter, decide as humanGateDecide } from './human-gate'
 import { atomicWriteJson } from '../lib/fs-store'
 import { fail, ok } from '../lib/http'
@@ -408,8 +413,58 @@ router.get('/pending-summary', async (ctx) => {
 
 const FLEET_CHOICES = new Set(['once', 'session', 'always', 'deny'])
 
+/**
+ * 双签闸（2026-11-05 收口）：高风险批准须两个不同签署人，或单操作员显式豁免。
+ *
+ * 返回 false 时已写好 409 响应；返回 true 时若闸适用则已记下本次签署。
+ * 开关：AUTONOMY_DUAL_SIGN=off 关闭（默认开；真实审批库 high=0 实测不卡存量）。
+ */
+function enforceDualSign(
+  ctx: Context,
+  opts: { targetId: string; risk: string | undefined; decision: string; waiver: unknown },
+): boolean {
+  const enabled = (process.env.AUTONOMY_DUAL_SIGN ?? '').trim().toLowerCase() !== 'off'
+  const actor = actorOf(ctx as never)
+  const gate = decideDualSignGate({
+    targetId: opts.targetId,
+    actor,
+    risk: opts.risk,
+    decision: opts.decision,
+    waiver: typeof opts.waiver === 'string' ? opts.waiver : undefined,
+    priorSigners: listDualSignSigners(opts.targetId),
+    enabled,
+  })
+  if (!gate.allow) {
+    // 关键语义：被拦下的这次「尝试批准」本身就是第一签——必须落账，
+    // 否则第二个人来签时看到的还是 0 签，永远凑不成双签（自锁死）。
+    if (gate.applicable) recordDualSignSigner(opts.targetId, actor)
+    fail(ctx, 409, gate.reason, {
+      code: gate.code,
+      extra: {
+        signers: gate.signers,
+        scope: 'dual-sign 仅覆盖风险档可重算的审批分支（执法门/命令流）；其余分支不判',
+      },
+    })
+    return false
+  }
+  if (gate.applicable) {
+    recordDualSignSigner(opts.targetId, actor)
+    if (gate.waived) {
+      recordDualSignGap({
+        at: Date.now(),
+        changeId: opts.targetId,
+        klass: 'high-risk-approval',
+        signers: gate.signers,
+        reason: gate.reason,
+        source: 'approval-decide/waiver',
+      })
+    }
+  }
+  return true
+}
+
 router.post('/:id/decide', async (ctx) => {
-  const body = ((ctx.request as { body?: unknown }).body ?? {}) as { decision?: unknown; note?: unknown; title?: unknown }
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as { decision?: unknown; note?: unknown; title?: unknown; waiver?: unknown }
   const decision = String(body.decision ?? '')
   const note = typeof body.note === 'string' ? body.note.slice(0, 500) : undefined
   const actor = actorOf(ctx as never)
@@ -421,6 +476,12 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: '执法审批决策须为 approve|reject' }
       return
     }
+    // 2026-11-05 双签闸：先取该批单服务端风险档（判前不落裁决），高风险批准须双签。
+    const pendingRec = listPendingEnforceApprovals(500).find((r) => r.id === id)
+    if (!enforceDualSign(ctx, {
+      targetId: id, risk: pendingRec?.risk, decision, waiver: (body as { waiver?: unknown }).waiver,
+    })) return
+
     // W2 审批口径收口：执法批单走闸门裁决——具名主体必填、发起人不得自批。
     const guarded = decideEnforceApprovalGuarded(id, decision, actor)
     if (guarded.tag === 'error') {
@@ -460,6 +521,11 @@ router.post('/:id/decide', async (ctx) => {
       const appr = sess?.approvals?.find((a) => a.approval_id === approvalId)
       if (appr) risk = classifyApprovalRisk({ kind: 'command', detail: appr.preview || '', title: sess?.title })
     } catch { /* 快照不可用则档位留空，不阻断裁决 */ }
+    // 2026-11-05 双签闸：风险档已在上面服务端重算，高风险批准须双签（不影响 deny）。
+    if (!enforceDualSign(ctx, {
+      targetId: id, risk, decision, waiver: (body as { waiver?: unknown }).waiver,
+    })) return
+
     const result = await respondFleetApproval(approvalId, decision)
     if (!result.resolved) {
       ctx.status = 409

@@ -259,7 +259,7 @@ onMounted(refresh)
       <div v-if="dual.result" class="as__dual-result" :class="dual.result.satisfied ? 'is-ok' : 'is-bad'">
         {{ dual.result.reason }}
       </div>
-      <div class="as__gap-note">判定不阻断审批，只落缺口记录并在本页告警（真拦需改审批裁决路径，单独轮次）</div>
+      <div class="as__gap-note">本组件只做判定预览；真正的拦截在审批裁决链上——高风险批准须两个不同签署人，或显式 waiver=single-operator（豁免落账可见）。判不了风险档的分支不拦，响应里明示范围</div>
     </div>
   </div>
 </template>
