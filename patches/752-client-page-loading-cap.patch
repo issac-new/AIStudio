@@ -1,0 +1,56 @@
+diff --git a/packages/client/src/components/common/PageLoading.vue b/packages/client/src/components/common/PageLoading.vue
+index 040ad05fc..86843f395 100644
+--- a/packages/client/src/components/common/PageLoading.vue
++++ b/packages/client/src/components/common/PageLoading.vue
+@@ -28,14 +28,38 @@ let frame: number | undefined
+ let timer: ReturnType<typeof setTimeout> | undefined
+ let shownAt = performance.now()
+ 
+-onMounted(() => { if (visible.value) shownAt = performance.now() })
++// overlay[win-regression N04]（2026-11-05 挂账总收口）：统一最长遮挡上限——pending 持续
++// 超上限即放行页面内容（overlay 消隐、内容可见），防慢接口长时间遮住可用内容。
++// 默认 10s（与服务端超时收紧后的最差遮挡基线一致）；VITE_PAGE_LOADING_MAX_MS 覆盖，0=不限。
++const PAGE_LOADING_MAX_MS = Number(import.meta.env.VITE_PAGE_LOADING_MAX_MS ?? 10_000)
++let capTimer: ReturnType<typeof setTimeout> | undefined
++let cappedHide = false
++
++onMounted(() => { if (visible.value) { shownAt = performance.now(); armCap() } })
+ watch(visible, show => { if (show) shownAt = performance.now() }, { flush: 'post' })
+ 
+ function cancelHide() {
+   if (frame !== undefined) cancelAnimationFrame(frame)
+   if (timer !== undefined) clearTimeout(timer)
++  if (capTimer !== undefined) clearTimeout(capTimer)
+   frame = undefined
+   timer = undefined
++  capTimer = undefined
++}
++
++/** 上限守卫：本段遮挡超时后强制放行；pending 复真时重新遮挡并重置上限（每次加载独立计）。 */
++function armCap() {
++  if (!(PAGE_LOADING_MAX_MS > 0)) return
++  if (capTimer !== undefined) clearTimeout(capTimer)
++  const remaining = PAGE_LOADING_MAX_MS - (performance.now() - shownAt)
++  capTimer = setTimeout(() => {
++    capTimer = undefined
++    if (pending.value && !parentTask) {
++      cappedHide = true
++      visible.value = false
++      // 不置 initialLoadComplete：cap 是超时放行，首显完成语义留给真实渲染收口。
++    }
++  }, Math.max(0, remaining))
+ }
+ 
+ watch(pending, async show => {
+@@ -43,8 +67,9 @@ watch(pending, async show => {
+   const current = ++sequence
+   cancelHide()
+   if (show) {
+-    if (!visible.value) shownAt = performance.now()
+-    visible.value = true
++    if (!visible.value) { shownAt = performance.now(); cappedHide = false }
++    if (!cappedHide) visible.value = true
++    armCap()
+     return
+   }
+   // Keep the surface mounted and measurable while its final data renders.

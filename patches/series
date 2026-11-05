@@ -1160,3 +1160,8 @@
 #      三新域路由挂载（自治刻度/假设登记簿/度量纪律）——import 三行 + auth 后 app.use 三行，
 #      照 719/740/743 形态。判定在域内纯函数，执行面拦截交 qgate 门 governance.orgscale。
 751-server-org-gov-mount.patch
+
+# 752（2026-11-05 挂账总收口，spec 2026-11-05-pending-ledgers-closeout）：
+#      Win 回归 N04——PageLoading 统一最长遮挡上限（默认 10s，VITE_PAGE_LOADING_MAX_MS
+#      覆盖，0=不限）：pending 持续超限即放行内容，防慢接口长时间遮挡可用内容。
+752-client-page-loading-cap.patch
