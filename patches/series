@@ -1184,3 +1184,8 @@
 #      语义（staleness 代价仍=至多天花板数量的多开，原注释语义不变；EMFILE fail-closed
 #      路径不在降频面）。
 755-readpool-fd-count-throttle.patch
+# 752（2026-11-05 平台重写 P0 Task 2，spec 2026-11-05-platform-rewrite-design）：
+# Matrix 新身份 disabled＋零 profiles＋不签 JWT/不存 session；同 MXID 跨 origin 409；
+# 统一认证拒绝普通 admin 空授权，super_admin 豁免。原拟 751 已被组织治理挂载占用，让号 752。
+# 同时补齐 server tsconfig rootDirs，使 src/custom 链接内的共享 custom/platform 契约可类型解析。
+752-platform-matrix-zero-provisioning.patch

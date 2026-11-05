@@ -1,0 +1,248 @@
+diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
+index 9a5e3f7..f9fccc9 100644
+--- a/packages/server/src/modules/studio/controllers/auth.ts
++++ b/packages/server/src/modules/studio/controllers/auth.ts
+@@ -49,6 +49,7 @@ import { UnsafeUrlError, assertSafeOutboundUrl } from '../../../custom/security/
+ // HERMES_CUSTOM[MatrixSessionStore] BEGIN: R1 每日 Brief 投递身份——登录会话本机落盘
+ import { saveMatrixSession } from '../../../custom/matrix/session-store'
+ // HERMES_CUSTOM[MatrixSessionStore] END
++import { provisionMatrixIdentity } from '../../../custom/platform/identity/matrix-login'
+ import { getLanEndpointKind } from '../services/network/lan-discovery'
+ import { getPublicSystemInfo } from '../public/system-info'
+ import { config } from '../public/config'
+@@ -711,87 +712,54 @@ export async function matrixLogin(ctx: Context) {
+   // Use the user's own token to check their profile; admin status requires admin token
+   const matrixInfo = await getMatrixUserInfo(matrixUserId, matrixAccessToken, safeOrigin)
+ 
+-  // 3. Find or create Hermes user
+-  let user = findByMatrixUserId(matrixUserId)
+-  const now = Date.now()
+-
+-  if (!user) {
+-    const localpart = matrixUserId.replace(/^@/, '').split(':')[0]
+-    // HERMES_CUSTOM[MuxScopedGrant]: 自动建号不再授予 super_admin（多用户收敛为 admin）
+-    const role = 'admin'
+-    user = createFromMatrix({
+-      matrixUserId,
+-      username: localpart,
+-      displayName: matrixInfo?.displayName || localpart,
+-      avatarUrl: matrixInfo?.avatarUrl || '',
+-      homeserverUrl: safeOrigin,
+-      role,
+-    })
+-    if (user) {
+-      // HERMES_CUSTOM[MuxScopedGrant]: 授权收敛——只授本账号同名 profile（找不到则
+-      // default）。多路复用多用户下每个 matrix 账号只见自己的档案，不再全量授权。
+-      const allProfiles = listProfileNamesFromDisk()
+-      const own = allProfiles.includes(localpart) ? localpart : 'default'
+-      replaceUserProfiles(user.id, [own], own)
+-      user = findByMatrixUserId(matrixUserId)
+-    }
+-  } else {
+-    // Update cached metadata
+-    syncMatrixMetadata(user.id, {
+-      displayName: matrixInfo?.displayName || undefined,
+-      avatarUrl: matrixInfo?.avatarUrl || undefined,
+-      lastLoginAt: now,
+-    })
+-    // HERMES_CUSTOM[MuxScopedGrant]: 已存在用户不覆写既有授权——运维授予的多
+-    // profile 不被下次登录静默裁到 own；仅当授权为空时补 own（最小授权收敛）。
+-    const localpart = matrixUserId.replace(/^@/, '').split(':')[0]
+-    const allProfiles = listProfileNamesFromDisk()
+-    const own = allProfiles.includes(localpart) ? localpart : 'default'
+-    if (listUserProfiles(user.id).length === 0) {
+-      replaceUserProfiles(user.id, [own], own)
+-    }
+-    user = findByMatrixUserId(matrixUserId)
+-  }
+-
+-  if (!user) {
++  // 3. 零权限供应与来源绑定；只有 active 且已授权的身份才能进入会话签发段。
++  const result = await provisionMatrixIdentity({
++    matrixAccessToken,
++    matrixUserId,
++    deviceId,
++    homeserverUrl: safeOrigin,
++    matrixInfo,
++  }, {
++    findByMatrixUserId,
++    createFromMatrix,
++    listUserProfiles,
++    syncMatrixMetadata,
++    saveMatrixSession,
++    issueUserJwt,
++  }).catch((err: any) => {
+     ctx.status = 500
+-    ctx.body = { error: 'Failed to create or update user record' }
++    ctx.body = { error: err?.message || 'Failed to issue login token' }
++    return null
++  })
++  if (!result) return
++
++  if (result.kind === 'conflict') {
++    ctx.status = 409
++    ctx.body = { error: 'Matrix identity binding requires administrator review', code: result.code }
+     return
+   }
+-
+-  // HERMES_CUSTOM[MatrixSessionStore] BEGIN: 会话本机落盘（fire-and-forget）
+-  // token 已校验、用户已绑定——把本次登录会话写入 ~/.hermes-web-ui/matrix-session.json，
+-  // 作为 R1 每日 Brief 的 Matrix 投递身份（brief-matrix-delivery 消费）。
+-  // 失败仅 warn 不阻断登录；不落盘只影响 Brief 投递，不影响本请求。
+-  try {
+-    saveMatrixSession({ homeserverUrl: safeOrigin, userId: matrixUserId, accessToken: matrixAccessToken, deviceId })
+-  } catch (err: any) {
+-    console.warn('[matrix] persist matrix session failed:', err?.message || err)
++  if (result.kind === 'pending') {
++    ctx.status = 403
++    ctx.body = { error: 'Account awaits activation and profile grant', code: result.code }
++    return
+   }
+-  // HERMES_CUSTOM[MatrixSessionStore] END
+ 
+-  // 4. Issue Hermes JWT
+-  try {
+-    const token = await issueUserJwt(user)
+-    recordPasswordSuccess(ssrfIp)
+-    ctx.body = { token, user: {
+-      id: user.id,
+-      username: user.username,
+-      role: user.role,
+-      status: user.status,
+-      matrix_user_id: user.matrix_user_id,
+-      matrix_display_name: user.matrix_display_name,
+-      matrix_avatar_url: user.matrix_avatar_url,
+-      matrix_homeserver_url: user.matrix_homeserver_url,
+-      auth_source: user.auth_source,
+-      created_at: user.created_at,
+-      updated_at: user.updated_at,
+-      last_login_at: user.last_login_at,
+-    }}
+-  } catch (err: any) {
+-    ctx.status = 500
+-    ctx.body = { error: err?.message || 'Failed to issue login token' }
+-  }
++  const { token, user } = result
++  recordPasswordSuccess(ssrfIp)
++  ctx.body = { token, user: {
++    id: user.id,
++    username: user.username,
++    role: user.role,
++    status: user.status,
++    matrix_user_id: user.matrix_user_id,
++    matrix_display_name: user.matrix_display_name,
++    matrix_avatar_url: user.matrix_avatar_url,
++    matrix_homeserver_url: user.matrix_homeserver_url,
++    auth_source: user.auth_source,
++    created_at: user.created_at,
++    updated_at: user.updated_at,
++    last_login_at: user.last_login_at,
++  }}
+ }
+ 
+ /**
+diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
+index 7abda63..10021b0 100644
+--- a/packages/server/src/modules/studio/repositories/users-store.ts
++++ b/packages/server/src/modules/studio/repositories/users-store.ts
+@@ -308,6 +308,7 @@ export function createFromMatrix(data: {
+   avatarUrl: string
+   homeserverUrl: string
+   role: UserRole
++  status?: UserStatus
+ }): UserRecord | null {
+   const db = getDb()
+   if (!db) return null
+@@ -319,7 +320,7 @@ export function createFromMatrix(data: {
+     data.username,
+     '', // No local password for Matrix users
+     data.role,
+-    'active',
++    data.status || 'active',
+     now,
+     now,
+     data.matrixUserId,
+@@ -328,9 +329,8 @@ export function createFromMatrix(data: {
+     data.homeserverUrl,
+     'matrix'
+   )
+-  const user = findByMatrixUserId(data.matrixUserId)
+-  if (user) replaceUserProfiles(user.id, [DEFAULT_PROFILE_NAME], DEFAULT_PROFILE_NAME)
+-  return user
++  // Matrix 外部身份默认零授权；管理端如需授权必须显式调用 replaceUserProfiles。
++  return findByMatrixUserId(data.matrixUserId)
+ }
+ 
+ export function updateUser(input: {
+diff --git a/packages/server/src/modules/studio/middleware/auth.ts b/packages/server/src/modules/studio/middleware/auth.ts
+index b5254ae..24cb6d5 100644
+--- a/packages/server/src/modules/studio/middleware/auth.ts
++++ b/packages/server/src/modules/studio/middleware/auth.ts
+@@ -292,6 +292,11 @@ export function toAuthenticatedUser(user: Pick<UserRecord, 'id' | 'username' | '
+   return authenticated
+ }
+ 
++// 空授权普通账号不得进入任何认证通道；下游历史语义会把空 profiles 当作不限制。
++function hasRequiredProfileGrant(user: Pick<UserRecord, 'id' | 'role'>): boolean {
++  return user.role === 'super_admin' || listUserProfiles(user.id).length > 0
++}
++
+ export async function inspectAppUserToken(token: string): Promise<AppUserTokenInspection | null> {
+   const secret = await getJwtSecret()
+   const payload = token ? verifyUserJwtPayload(token, secret, Date.now(), true) : null
+@@ -306,9 +311,10 @@ export async function inspectAppUserToken(token: string): Promise<AppUserTokenIn
+     Number(payload.sub),
+   )
+   const user = findUserById(payload.sub)
++  const accountAllowed = !!user && user.status === 'active' && hasRequiredProfileGrant(user)
+   return {
+-    status: !user || user.status !== 'active' ? 'invalid' : status,
+-    user: user?.status === 'active' ? toAuthenticatedUser(user) : null,
++    status: !accountAllowed ? 'invalid' : status,
++    user: accountAllowed ? toAuthenticatedUser(user) : null,
+     deviceCode,
+     connectionType,
+   }
+@@ -328,7 +334,7 @@ export async function authenticateUserToken(token: string): Promise<Authenticate
+   )) return null
+ 
+   const user = findUserById(payload.sub)
+-  if (!user || user.status !== 'active') return null
++  if (!user || user.status !== 'active' || !hasRequiredProfileGrant(user)) return null
+   return toAuthenticatedUser(user)
+ }
+ 
+@@ -404,6 +410,9 @@ export async function requireUserJwt(ctx: Context, next: Next): Promise<void> {
+       if (!key) throw new ModelApiError('Invalid or revoked API key.', 401)
+       const user = findUserById(key.userId)
+       if (!user || user.status !== 'active') throw new ModelApiError('The key owner is disabled or no longer exists.', 403)
++      if (!hasRequiredProfileGrant(user)) {
++        throw new ModelApiError('The key owner requires a profile grant.', 403, null, 'PROFILE_GRANT_REQUIRED')
++      }
+       ctx.state.user = toAuthenticatedUser(user)
+       ctx.state.modelApiKey = { id: key.id, models: key.models }
+       touchModelApiKey(key.id)
+@@ -487,6 +496,11 @@ export async function requireUserJwt(ctx: Context, next: Next): Promise<void> {
+     ctx.body = { error: 'User is disabled or does not exist' }
+     return
+   }
++  if (!hasRequiredProfileGrant(user)) {
++    ctx.status = 403
++    ctx.body = { error: 'Account requires a profile grant', code: 'PROFILE_GRANT_REQUIRED' }
++    return
++  }
+ 
+   if (workerRefs.length) {
+     try { for (const id of workerRefs) ownedPersonTaskSession(user.id, id) }
+diff --git a/packages/server/tsconfig.json b/packages/server/tsconfig.json
+index 86f9b05..906621d 100644
+--- a/packages/server/tsconfig.json
++++ b/packages/server/tsconfig.json
+@@ -2,6 +2,7 @@
+   "compilerOptions": {
+     "target": "ES2024",
+     "module": "commonjs",
++    "rootDirs": ["src", "../../../../custom"],
+     "strict": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
