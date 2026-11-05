@@ -14,6 +14,7 @@ import PrimitivesSection from '@/custom/governance/components/PrimitivesSection.
 import EvalLayersSection from '@/custom/governance/components/EvalLayersSection.vue'
 import RsiMaturitySection from '@/custom/governance/components/RsiMaturitySection.vue'
 import NineLayersSection from '@/custom/governance/components/NineLayersSection.vue'
+import AiNativeScorecardSection from '@/custom/governance/components/AiNativeScorecardSection.vue'
 import ObsSignalsSection from '@/custom/governance/components/ObsSignalsSection.vue'
 import HarnessRunOpsSection from '@/custom/governance/components/HarnessRunOpsSection.vue'
 // 2026-11-05 组织治理能力批：度量纪律（双轨登记簿/四类核心派生/装饰化判据/技能计量缺口）
@@ -50,6 +51,7 @@ const L = computed(() => {
       <PrimitivesSection />
       <EvalLayersSection />
       <NineLayersSection />
+      <AiNativeScorecardSection />
       <ObsSignalsSection />
       <HarnessRunOpsSection />
       <RsiMaturitySection />

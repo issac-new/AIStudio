@@ -36,6 +36,7 @@ import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest
 import { planResume } from '../resume/resume-planner'
 import { collectProcessQuality } from '../observability/process-quality'
 import { collectTerminations } from '../loop/termination-collect'
+import { buildAiNativeScorecard } from './ai-native-scorecard'
 import { collectObsSignals } from '../obssignals/collect'
 import { collectObsAlerts } from '../obsalerts/collect'
 import { overlayCallgate, parseCallgateRule } from '../callgate/registry'
@@ -296,6 +297,15 @@ router.get('/process-quality', async (ctx) => {
   }
 })
 
+// AI Native 评分卡（2026-11-05 吸收批 T9）：系列五篇「30 秒判断」12 问的可测判据面。
+router.get('/ai-native-scorecard', async (ctx) => {
+  try {
+    ctx.body = { ok: true, ...buildAiNativeScorecard() }
+  } catch (e) {
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
+  }
+})
+
 // 统一终止码分布（2026-11-05 AI Native 吸收批 T2）：四族终态词表映射到十七码
 // 视图（映射不替换），回答「这次 loop 为什么出来」；数据面 fail-soft 不猜数。
 router.get('/terminations', async (ctx) => {
@@ -310,13 +320,15 @@ router.get('/terminations', async (ctx) => {
 // 429 率，按日分桶+窗口合计；trace 目录缺席如实 available:false。
 router.get('/obs-signals', async (ctx) => {
   try {
-    const { report, files, rows, contextReads } = collectObsSignals(daysOf(ctx.query.days))
+    const { report, files, rows, contextReads, contextOverhead } = collectObsSignals(daysOf(ctx.query.days))
     ctx.body = {
       ok: true,
       ...report,
       // 四层上下文读取计量（2026-10-30）：knowledge/harness/specs/hooks 各被读多少次，
       // 与 trace 指标同端点返回；账本缺席时 available:false（fail-soft 不造假）。
       contextReads,
+      // 上下文开销比（T8）：input÷output 比值分布与最贵会话（token 真值口径）
+      contextOverhead,
       sources: { traceFiles: files, traceRows: rows },
     }
   } catch (e) {

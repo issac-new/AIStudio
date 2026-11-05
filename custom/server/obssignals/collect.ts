@@ -10,6 +10,7 @@ import { join, resolve } from 'node:path'
 import { isOTelSpanRow, otelRowToLegacy } from '../eval/trace-sampler'
 import { buildObsSignals, type ObsSignalsReport, type ObsSpanRow } from './signals'
 import { collectContextReads, type ContextReadsReport } from './context-reads'
+import { buildContextOverhead, type ContextOverheadReport } from './context-overhead'
 import { underHermes } from '../lib/paths'
 
 /** 采集上限：单文件行数与总行数双闸，超限采样口径如实标注。 */
@@ -32,6 +33,8 @@ export interface CollectResult {
   truncated: boolean
   /** 四层上下文读取计量（2026-10-30 HelixHarness 吸收轮；来源 .qgate/reads.jsonl）。 */
   contextReads: ContextReadsReport
+  /** 上下文开销比（2026-11-05 AI Native 吸收批 T8）：每会话 input÷output token 真值。 */
+  contextOverhead: ContextOverheadReport
 }
 
 export function tracesDir(): string {
@@ -131,5 +134,6 @@ export function collectObsSignals(
   const report = buildObsSignals(rows, { days })
   report.notes.push(...notes)
   const contextReads = collectContextReads(days, { file: opts.contextReadsFile, now: opts.now })
-  return { report, files, rows: rows.length, skippedOtelFiles, truncated, contextReads }
+  const contextOverhead = buildContextOverhead(rows, { days })
+  return { report, files, rows: rows.length, skippedOtelFiles, truncated, contextReads, contextOverhead }
 }
