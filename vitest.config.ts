@@ -54,9 +54,10 @@ export default defineConfig({
     setupFiles: [resolve(overlayRoot, 'custom/client/test/setup.ts')],
     // environment 由各测试文件头部的 // @vitest-environment jsdom 指令按需指定；
     // store 级测试无需 DOM，config 层不强制全局 environment 以减少开销。
-    // 重型 UI 挂载用例在并发负载下 5s 默认超时不稳定（2026-10-18 实测两例无关挂载
-    // 超时）；统一 20s，断言不变，真实挂起仍会失败。
-    testTimeout: 20000,
+    // 重型 UI 挂载/动态 import 用例在并发负载下 5s 默认超时不稳定（2026-10-18 实测两例
+    // 无关挂载超时）；2026-11-05 主树全量 8030 用例实测 20s 仍有两例超时（raci 卡片渲染
+    // 与 stage-tab loader；单跑均过、全量并发下超），统一 30s；断言不变，真实挂起仍会失败。
+    testTimeout: 30000,
     // 覆盖率（v0.4 治理可信度修复）：只统计 overlay 源文件，不统计测试/上游。
     // 全局阈值留 0——真正的门槛是 scripts/coverage-changed.mjs 的改动行 ≥70%，
     // 避免用全仓覆盖率掩盖新代码零测试。
