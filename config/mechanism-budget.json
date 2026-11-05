@@ -4,15 +4,15 @@
     "gates": 48,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 122,
+    "scripts": 123,
     "ledgers": 6,
     "npmScripts": 49
   },
   "changes": [
     {
       "at": "2026-11-05",
-      "delta": "+1 gate / +2 scripts / +1 npm script / +1 patch（净：gate 0，scripts +1）",
-      "reason": "AI Native 五篇吸收批：L3 spec-fidelity 门、harness-doctor/spec-archive 脚本、doctor npm script、墙钟硬闸补丁；配对退役见 pairedRemovals",
+      "delta": "+2 gate 文件净-1（重复 id 退役） / +2 scripts / +1 npm script / +1 patch",
+      "reason": "AI Native 五篇吸收批：spec-fidelity L3 门、harness-doctor/spec-archive 脚本、doctor npm script、墙钟硬闸补丁 753；配对退役=删 api.contract-alignment 旧版重复 gate（0.1.0）与 dispatchpreview/prefixreuse 两零消费者域（探查+复核零引用后执行）",
       "pairedRemovals": [
         "删除 api.contract-alignment 旧版重复 gate（custom/qgate/gate-packs/api-contract/gates/contract-alignment.yaml，0.1.0；保留 contract/gates/api-alignment.yaml 0.2.0）",
         "删除无生产消费者的 custom/server/dispatchpreview/ 与 custom/server/prefixreuse/ 两域（探查确认零消费者）",
