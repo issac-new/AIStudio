@@ -212,6 +212,13 @@ describe('run25 复盘批：结构性缺口不再复发', () => {
     const exts = new Set(['.sh', '.py', '.mjs', '.js', '.ts', '.vue', '.md'])
     const skipDirs = new Set(['node_modules', 'vendor', 'dist', '.git', '.qgate', '__pycache__', 'archive'])
     const self = join(HARNESS, 'tests', 'mechanism-behavior.test.ts')
+    // 守门测试本体豁免（与 self 同类）：归档守门测试（scripts/__tests__/spec-archive）
+    // 的扫描对象就是归档路径字面量——守门测试引用被禁字面量是职责不是悬空引用；
+    // 不豁免则 fc3c7851f 起该守门自身在 N09 全仓扫描里永远红。
+    const guardSelves = new Set([
+      self,
+      join(REPO, 'scripts', '__tests__', 'spec-archive.test.ts'),
+    ])
     // 代码面禁两类（旧方案名 + 指向归档目录的路径引用）；读者面（docs/manuals）只禁
     // 旧方案名——设计文档索引按职责就是要收录 archive 条目，链接归档不是悬空引用。
     const forbiddenCode = ['2026-09-25-mux-v3-lifecycle-plan', 'superpowers/specs/archive/']
@@ -226,7 +233,7 @@ describe('run25 复盘批：结构性缺口不再复发', () => {
           continue
         }
         if (!exts.has(entry.name.slice(entry.name.lastIndexOf('.')))) continue
-        if (full === self) continue
+        if (guardSelves.has(full)) continue
         const body = readFileSync(full, 'utf8')
         const forbidden = full.includes(`${join('docs', 'manuals')}`) ? forbiddenDocs : forbiddenCode
         for (const needle of forbidden) {
