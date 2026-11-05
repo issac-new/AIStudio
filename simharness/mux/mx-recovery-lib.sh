@@ -46,8 +46,45 @@ mx_defer_restart_policy() {
 # mx_fail_fingerprint <text> → 失败指纹（12 位哈希）；无实质失败行时输出空串
 # 纯函数：run25 空指纹误判（grep 空输出→shasum 空串哈希 da39a3ee→5 轮误判确定性
 # 失败自退）的判定核心，行为测试直调。
+# 时间戳归一化（run27 实锤根治）：FAIL 行含时刻（[mux FAIL 20:29:27] …），不剥则
+# 每轮指纹互异→supervisor 同指纹硬停（5 次）永不触发——G4 楔子 23+ 次秒败监督器
+# 无限刷单 1h+。哈希前剥行内 HH:MM:SS，语义文本（闸名/原因）保持指纹主体。
 mx_fail_fingerprint() {
   local txt="${1:-}"
   [[ -n "$txt" ]] || { printf ''; return 0; }
-  printf '%s' "$txt" | shasum | cut -c1-12
+  printf '%s' "$txt" | sed -E 's/[0-2][0-9]:[0-5][0-9]:[0-5][0-9]//g' | shasum | cut -c1-12
+}
+
+# mx_run_with_heartbeat <logfile> <silence-sec> <interval-sec> <cmd...> → 驱动 rc
+# 静默心跳（run27 实锤根治：网关停摆窗 SEND-FAILED 后驱动 19 分钟 0% CPU 睡死，判词
+# 已落卡无人消费，监督器同步 wait 干等）。后台 spawn 命令并监控其日志 size：连续
+# silence-sec 零增长＝楔死形态（驱动一切健康活动都写日志：等待环 tick/催办/判词读
+# note），精确 kill 断点续跑接力。cmd 必须 exec 成驱动真身（调用方保证），pid 即真身。
+# silence-sec=0 关闭检测。ISSUE 记单走 env MX_ISSUES_LOG（由监督器设置）。
+mx_run_with_heartbeat() {
+  local _log="$1" _sil="${2:-900}" _iv="${3:-120}"; shift 3
+  local _base _cur _silent=0 _pid _rc=0
+  # size 自备回退：本库被独立 source（不经 mx-lib）时 mxp_file_size 缺席
+  _hb_sz() { mxp_file_size "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null || echo 0; }
+  _base=$(_hb_sz "$_log")
+  "$@" >> "$_log" 2>&1 &
+  _pid=$!
+  while kill -0 "$_pid" 2>/dev/null; do
+    sleep "$_iv"
+    kill -0 "$_pid" 2>/dev/null || break
+    _cur=$(_hb_sz "$_log")
+    if (( _cur > _base )); then
+      _base=$_cur; _silent=0
+    else
+      _silent=$((_silent + _iv))
+      if (( _sil > 0 && _silent >= _sil )); then
+        echo "ISSUE|driver-silent-kill|supervisor|驱动日志 ${_silent}s 零增长（阈值 ${_sil}s）＝楔死形态（run27 实锤：SEND-FAILED 后 19 分钟 0% CPU 睡死、判词已落卡无人消费）——精确 kill pid=${_pid}，30s 断点续跑接力" \
+          >> "${MX_ISSUES_LOG:-/tmp/driver-silent-kill.log}" 2>/dev/null || true
+        kill -TERM "$_pid" 2>/dev/null || true
+        break
+      fi
+    fi
+  done
+  wait "$_pid" 2>/dev/null; _rc=$?
+  return "$_rc"
 }

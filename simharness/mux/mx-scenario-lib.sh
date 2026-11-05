@@ -2130,6 +2130,15 @@ kanban_card_body_nonempty() { # <user> <needle> → 0 当匹配卡 body 非空
   [[ -n "$body" ]]
 }
 
+kanban_card_result_contains() { # <user> <needle> <text> → 0 当匹配卡 result 含 text
+  # run27 复盘根治配套谓词：断点重进时读评审卡终判 result（G5 READY-GATE-FAIL 消费）。
+  # 终态卡 result 不随复评更新（run27 挂账），判 FAIL 以 result 为准、PASS 以合并判词为准。
+  local result
+  result=$(kanban_list "$1" 2>/dev/null | jq -r --arg n "$2" \
+    '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .result][0] // ""' 2>/dev/null)
+  printf '%s' "$result" | grep -q -- "$3"
+}
+
 # ── 派发词模板化（PR-7 场景侧，2026-10-16 派发词窄化轮）──
 # 设计：派发词从「百科全书」改「指针」——四段结构，枚举明细归位到计划文档/任务卡
 # （agent 本来就要读的单一事实源），聊天消息只携带触发所需的最小面：

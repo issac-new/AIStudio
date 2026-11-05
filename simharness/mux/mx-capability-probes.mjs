@@ -477,9 +477,18 @@ const report = {
   results,
   note: '负例失败代表能力失效（不可判定放行/未验证主张被当验证），不是脚本问题——先修能力再重跑。',
 }
+// 探测分型（run27 实锤根治）：失败明细全为 fetch failed＝基座不可达（网关/studio
+// 停摆），非能力失效——exit 2 环境态，调用方不冻结能力判定、等基座恢复重试。
+// 本地文件探针（不经 HTTP）在停摆期仍绿属预期，不参与判定；混合失败（语义红与
+// fetch failed 同存）仍 exit 1（能力失效 fail-closed 优先）。
+const unreachable =
+  failed.length > 0 &&
+  failed.every((f) => /fetch failed/i.test(String(f.detail ?? '')))
+if (unreachable) report.note = '全量 fetch failed＝基座不可达（非能力失效）——exit 2 环境态；基座恢复后重跑。'
 mkdirSync(OUT, { recursive: true })
 const outFile = join(OUT, 'capability-probes.json')
 writeFileSync(outFile, JSON.stringify(report, null, 2))
 console.log(`[mx-capability-probes] ${report.passed}/${report.total} passed → ${outFile}`)
 for (const f of failed) console.error(`  ✗ [${f.group}] ${f.name}: ${f.detail}`)
-process.exit(failed.length === 0 ? 0 : 1)
+if (unreachable) console.error('[mx-capability-probes] 全量 fetch failed＝基座不可达（环境态 exit 2，不判能力失效）')
+process.exit(failed.length === 0 ? 0 : unreachable ? 2 : 1)

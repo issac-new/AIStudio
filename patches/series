@@ -1177,3 +1177,10 @@
 #      评审 run_id 守卫四处不再 int() 崩——毒指针按 task_id 关开行并清指针恢复不变量；
 #      建卡面 dir 缺 workspace_path 即拒（消息内给修法），防 spawn 期烧尽重试预算。
 754-agent-kanban-junk-runid-tolerance.patch
+#      readpool fd 计数降频（run27 两连崩根治）：_FD_USAGE_CACHE_SECONDS 0.25→30——
+#      macOS /dev/fd 的 os.listdir 不释放 GIL，读突发期每 250ms 一次×fd 数大时毫秒
+#      级持 GIL → 事件循环饿死 → liveness watchdog exit 75 自灭（19:56 12.5h 老进程、
+#      21:12 新进程仅 1h16m，均大上下文回合高频读期）。fd 压力是慢变量，30s 采样不损
+#      语义（staleness 代价仍=至多天花板数量的多开，原注释语义不变；EMFILE fail-closed
+#      路径不在降频面）。
+755-readpool-fd-count-throttle.patch

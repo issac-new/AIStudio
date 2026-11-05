@@ -2053,11 +2053,20 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   fi
   # ── 新能力探测（方案 §5.11 十三组；2026-11-03 立、2026-11-04 扩组并接线）──
   # 上轮立法（§5.11＋审计查19）但驱动从未生成证据——每轮只能靠审计环 WARN，等于没验。
-  # 本轮接线：G4 段对生效 studio 全量探测一次；failed>0 或不可达 → g4_pass 不置位
+  # 本轮接线：G4 段对生效 studio 全量探测一次；负例红（rc=1）→ g4_pass 不置位
   # （§5.11 准出规则：负例转绿=能力失效，当轮拦截，不靠报告期追认）。
+  # 探测分型（run27 实锤根治）：全量 fetch failed（rc=2）＝基座（网关/studio）停摆的
+  # 环境态，不判能力失效、不写 g4_capability_blocked——不置 testpass_done 即退出，
+  # 监督器断点重进后基座恢复自动重判（run27 当晚两次手工状态键手术的产品化）。
+  # profile=fanfan（run27 实锤：SIM 42 档无 default，404 先于语义判定钉死 userenv 组）。
   _cap_rc=0
   node "$SCRIPT_DIR/mux/mx-capability-probes.mjs" --base "http://127.0.0.1:${STUDIO_PORT:-8802}" \
-    --out "$EVID_DIR" --profile default --token "$(jwt_of fanfan 2>/dev/null || true)" || _cap_rc=$?
+    --out "$EVID_DIR" --profile fanfan --token "$(jwt_of fanfan 2>/dev/null || true)" || _cap_rc=$?
+  if (( _cap_rc == 2 )); then
+    echo "ISSUE|g4-probe-unreachable|drivers|新能力探测全量 fetch failed＝基座（网关/studio）停摆环境态，不判能力失效——不冻结 testpass 段，断点重进待基座恢复重判（run27 复盘根治）" >> "$EVID_DIR/issues.log"
+    note "[G4] 新能力探测基座不可达（环境态）——不置 testpass_done，断点重进重判"
+    fail "G4 能力探测基座不可达（网关/studio 停摆）——等基座恢复后断点重进自动重判"
+  fi
   if (( _cap_rc == 0 )); then
     note "[G4] 新能力探测十四组全绿（evidence/capability-probes.json）"
   else
@@ -2366,6 +2375,19 @@ if [ "$(posture)" = "strict" ]; then
   if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid fanfan)" READY-GATE "$G5_TS" fanfan "${RFD_ID} 发布准出评审")" == "PASS" ]] && g5_pass_finalize; then
     note "[真值] G5 判词复用（本轮既有 PASS 结论行，不重派评审）✓"
   else
+    # run27 复盘根治：断点重进时评审卡已有 FAIL 终判——先消费旧判词走翻绿分派链
+    # （g5_gap_fanout＋熔断等修复证据），不再盲目重派评审。run27 实锤：重进 8 秒重派
+    # 同卡二轮评审，缺陷未修必再 FAIL，纯空转 40 分钟/轮。幂等键防重入循环；修复证据
+    # 变化（integration tip/卡面）后熔断复位，自然回到正常评审链。
+    if [[ -n "$RGID" && "$(sget g5_redispatched_after_fail)" != "1" ]] \
+       && kanban_card_result_contains fanfan "${RFD_ID} 发布准出评审" "READY-GATE-FAIL"; then
+      sset g5_redispatched_after_fail 1
+      issue_once g5-ready-fail fanfan-agent "${RFD_ID} G5 FAIL（重进消费既有终判，缺项见评审卡），翻绿分派先行"
+      mx_gate_breaker_trip g5 "G5 发布准出" 1
+      _G5GAPS="$(g5_real_gaps)"
+      g5_gap_fanout "${RGID}" || note "[G5] 退回自动分派跳过（fanout 内部异常，按 0 条如实记）"
+      fail "G5 重进消费既有 FAIL 判词（缺项 ${_G5GAPS}）——翻绿分派已发，打回熔断等修复证据（run27 复盘根治）"
+    fi
     mx_gate_breaker_check g5 "G5 发布准出"   # 熔断：两轮未过不得发布（跨调用持久；已 PASS 复用不受历史 FAIL 计数拦）
     # run24 复盘批③ 定稿口径：ops 的 early-start 发布说明/灰度表草稿在位时，评审按
     # 「在既有草稿上定稿」执行（不重复索料）；草稿缺席=原派单，零行为变化。

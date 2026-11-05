@@ -219,7 +219,11 @@ while true; do
   [ "$_deferred" -gt 0 ] && note "让位结束（${_deferred}s）——继续重启"
   note "驱动缺席，断点续跑（START_STEP=$START_STEP）"
   _loff=$(mxp_file_size "$LOGS/$RUN_ID-driver.log")
-  ( cd "$SCRIPT_DIR/.." && RUN_ID="$RUN_ID" START_STEP="$START_STEP" bash aipay-scenario.sh >> "$LOGS/$RUN_ID-driver.log" 2>&1 )
+  # 静默心跳 spawn（run27 实锤根治）：驱动楔死（日志零增长≥MX_SILENT_KILL_SEC，缺省
+  # 900s）时精确 kill 断点接力，监督器不再同步 wait 干等。exec 使子进程即驱动真身。
+  MX_ISSUES_LOG="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log" \
+  mx_run_with_heartbeat "$LOGS/$RUN_ID-driver.log" "${MX_SILENT_KILL_SEC:-900}" 120 \
+    bash -c 'cd "$1" && RUN_ID="$2" START_STEP="$3" exec bash aipay-scenario.sh' _ "$SCRIPT_DIR/.." "$RUN_ID" "$START_STEP"
   RC=$?
   # 纪律 8 可执行化（run14 实锤：熔断退出被盲目重启 85 圈——每圈刷单+回灌轰炸 agent）：
   # 驱动因熔断退出=正常退出，不 sleep-30 重启；进入证据等待模式，指纹变化
