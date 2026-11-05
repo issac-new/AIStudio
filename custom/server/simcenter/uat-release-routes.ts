@@ -75,7 +75,7 @@ export function validateUatVerdict(body: unknown):
   const run = typeof b?.run === 'string' ? b.run : ''
   if (!isValidRun(run)) return { ok: false, error: 'run 参数非法' }
   const fields = validateUatVerdictFields(body)
-  if (!fields.ok) return fields
+  if (!fields.ok) return fields as { ok: false; error: string }
   return {
     ok: true, run, ac: fields.ac, verdict: fields.verdict,
     ...(fields.note ? { note: fields.note } : {}),
@@ -262,8 +262,8 @@ router.get('/uat-verdicts', (ctx: Context) => {
 router.post('/uat-verdict', (ctx: Context) => {
   const root = simRootOrNull()
   if (!root) return gateClosed(ctx)
-  const v = validateUatVerdict(ctx.request.body)
-  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const v = validateUatVerdict((ctx.request as { body?: unknown }).body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: (v as { error?: string }).error }; return }
   const runDir = safeRunDir(root, v.run)
   if (!runDir || !existsSync(runDir)) { ctx.status = 400; ctx.body = { error: 'run 参数非法或不存在' }; return }
   const file = safeUatLedgerFile(root, v.run)
@@ -287,11 +287,11 @@ router.get('/release-gate/state', releaseGateStateHandler)
 router.post('/release-gate', (ctx: Context) => {
   const root = simRootOrNull()
   if (!root) return gateClosed(ctx)
-  const body = ctx.request.body as { run?: unknown } | undefined
+  const body = (ctx.request as { body?: unknown }).body as { run?: unknown } | undefined
   const run = typeof body?.run === 'string' ? body.run : ''
   if (!isValidRun(run)) { ctx.status = 400; ctx.body = { error: 'run 参数非法' }; return }
   const v = validateReleaseActionInput(body)
-  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: (v as { error?: string }).error }; return }
   const action = v.value.action
   const caller = callerOf(ctx)
   const can = releasePermissions(caller.role, caller.authenticated)

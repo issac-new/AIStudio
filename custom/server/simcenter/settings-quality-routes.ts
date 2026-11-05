@@ -181,8 +181,8 @@ router.get('/settings', (ctx: Context) => {
   ctx.body = { values: { ...SIM_SETTINGS_DEFAULTS, ...loadSimSettings() }, defaults: SIM_SETTINGS_DEFAULTS }
 })
 router.put('/settings', (ctx: Context) => {
-  const v = validateSimSettings(ctx.request.body)
-  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const v = validateSimSettings((ctx.request as { body?: unknown }).body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: (v as { error?: string }).error }; return }
   const merged = { ...loadSimSettings(), ...v.patch }
   const f = simSettingsFile()
   mkdirSync(resolve(f, '..'), { recursive: true })

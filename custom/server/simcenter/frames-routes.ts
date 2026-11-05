@@ -120,7 +120,6 @@ function framesBase(root: string, run: string): string | null {
 
 
 
-export { router as simcenterRouter }
 export function mountFramesRoutes(router: Router) {
 router.get('/frames', (ctx: Context) => {
   const root = simRootOrNull()

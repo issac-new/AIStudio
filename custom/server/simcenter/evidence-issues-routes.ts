@@ -137,8 +137,8 @@ export function mountEvidenceIssuesRoutes(router: Router) {
 router.post('/evidence/mark', (ctx: Context) => {
   const root = simRootOrNull()
   if (!root) return gateClosed(ctx)
-  const v = validateEvidenceMark(ctx.request.body)
-  if (!v.ok) { ctx.status = 400; ctx.body = { error: v.error }; return }
+  const v = validateEvidenceMark((ctx.request as { body?: unknown }).body)
+  if (!v.ok) { ctx.status = 400; ctx.body = { error: (v as { error?: string }).error }; return }
   const runDir = safeRunDir(root, v.run)
   if (!runDir || !existsSync(runDir)) { ctx.status = 400; ctx.body = { error: 'run 参数非法或不存在' }; return }
   const file = safeEvidenceFile(root, v.run)
