@@ -308,3 +308,20 @@ paths:
   - custom/server/plan/**
   - custom/server/governance/lifecycle/requirements.ts
   - skills/swarm-yuan/assets/gates/**
+  # 2026-11-05 AI Native 吸收批第二三波（T4/T6/T7/T8/T9 与配对退役）
+  - .github/workflows/governance.yml
+  - scripts/harness-doctor.mjs
+  - scripts/spec-archive.mjs
+  - scripts/__tests__/harness-doctor.test.ts
+  - scripts/__tests__/spec-archive.test.ts
+  - docs/superpowers/specs/registry/**
+  - docs/manuals/aistudio-design-document-index.md
+  - custom/server/harness/ai-native-scorecard.ts
+  - custom/server/obssignals/context-overhead.ts
+  - custom/server/obssignals/__tests__/**
+  - custom/client/governance/components/AiNativeScorecardSection.vue
+  - custom/qgate/gate-packs/api-contract/**
+  - custom/server/dispatchpreview/**
+  - custom/server/prefixreuse/**
+  - runtime/tests/agent/**
+  - config/typecheck-client-baseline.json
