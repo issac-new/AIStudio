@@ -134,7 +134,8 @@ export function toolCategoryOf(tool: string): ToolCategory {
 
 // MCP 工具细分类（mcpCategoryOf/isUnknownMcpTool）已迁至平台执行契约
 // custom/platform/contracts/execution.ts（P0 Task 5 单一事实源）：
-//   - 连接器只读目录 + 动词启发式两层信号都判不出 → 未知（null），不再默认 read；
+//   - 分类只看动词启发式一层（连接器只读目录两分支等价，已删——审查 M-1）；
+//   - 动词判不出 → 未知（null），不再默认 read；
 //   - 未知 MCP 由 evaluateEnforcement 的 mcp-unknown 硬拒（先于身份链与审批桥）。
 // 本模块 re-export 保持旧导入面（见文件头 import 段）。
 
@@ -323,7 +324,7 @@ export function evaluateEnforcement(
   if (isUnknownMcpTool(tool)) {
     return {
       enforcing: true, allow: false, rule: 'mcp-unknown',
-      error: `未知 MCP 工具 ${tool}：连接器只读目录与动词启发式均判不出类别，平台无法评估其风险面——请为该连接器登记动词映射或改用已治理工具（本拒绝不可经审批放行）`,
+      error: `未知 MCP 工具 ${tool}：动词启发式判不出类别，平台无法评估其风险面——请为该连接器登记动词映射或改用已治理工具（本拒绝不可经审批放行）`,
     }
   }
 

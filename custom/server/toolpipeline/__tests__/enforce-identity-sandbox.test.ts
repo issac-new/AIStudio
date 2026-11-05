@@ -158,6 +158,27 @@ describe('真实路径沙箱（P0 Task 5：相对路径按真实 cwd 解析 + re
     expect(sandboxPathViolation('read_file', { path: join(root, 'alias', 'f.txt') }, [root])).toBeNull()
   })
 
+  it('悬垂 symlink 逃逸可检出：末段悬垂链（目标不存在）不算「根内名字」', () => {
+    // root/danglink → outside/created.txt（目标不存在）。检查若只按「名字在根内」放行，
+    // open('w') 会经 POSIX 悬垂链接在根外创建文件——这是检查时已存在的恶意状态。
+    const root = tmp('sandbox-dang-')
+    const outside = tmp('sandbox-dang-outside-')
+    symlinkSync(join(outside, 'created.txt'), join(root, 'danglink'))
+    expect(sandboxPathViolation('write_file', { path: join(root, 'danglink') }, [root])).not.toBeNull()
+    expect(sandboxPathViolation('write_file', { path: 'danglink' }, [root], { cwd: root })).not.toBeNull()
+  })
+
+  it('悬垂 symlink 逃逸可检出：中间段悬垂链同样越界', () => {
+    // root/mid → outside/deep（deep 不存在）；经 root/mid/x.txt 写入会落在根外。
+    const root = tmp('sandbox-dang-mid-')
+    const outside = tmp('sandbox-dang-mid-outside-')
+    symlinkSync(join(outside, 'deep'), join(root, 'mid'))
+    expect(sandboxPathViolation('write_file', { path: join(root, 'mid', 'x.txt') }, [root])).not.toBeNull()
+    // 对照：根内悬垂链（目标在根内且不存在）不误伤
+    symlinkSync(join(root, 'pending.txt'), join(root, 'inroot-dang'))
+    expect(sandboxPathViolation('write_file', { path: join(root, 'inroot-dang') }, [root])).toBeNull()
+  })
+
   it('不存在目标回溯最近存在祖先：根内深路径放行，借 .. 越出的不存在路径拒', () => {
     const root = tmp('sandbox-deep-')
     expect(sandboxPathViolation('write_file', { path: join(root, 'a', 'b', 'c.txt') }, [root])).toBeNull()

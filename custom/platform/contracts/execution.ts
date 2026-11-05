@@ -12,18 +12,20 @@
 //     状态（realpathSync.native canonicalize，symlink 逃逸可检出）；terminal/code
 //     本质上能触达任意路径（cd/重定向），路径白名单管不住 shell——没有真实 OS 级
 //     沙箱证明（容器/VM/Seatbelt）就拒绝（sandbox-terminal-unavailable）。
-import { realpathSync } from 'node:fs'
+import { lstatSync, readlinkSync, realpathSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import type { ToolCategory } from '../../server/permmodes/permission-modes'
 
 // ---------- MCP 工具细分类（H3 剩余项③ + P0-5 收口；自 enforce-gate 迁入） ----------
-// 背景：MCP 动态工具（运行时 mcp__{server}__{tool} 形态）无静态类别声明。两层信号：
-//   ① 连接器类别表：65 连接器目录（optional-mcps/manifest.yaml）里经人工判读
-//      标为只读面/检索面的连接器；
-//   ② 工具动词启发式：工具名首/末段动词（get/list/search… 与 create/update…）判类别。
-// P0-5 收口：两层都是启发式而非权威声明——判不出一律算「未知」（返回 null），
-// 由 isUnknownMcpTool 消费走 mcp-unknown 硬拒；不再给未知动词发保守 read/write 通行证。
+// 背景：MCP 动态工具（运行时 mcp__{server}__{tool} 形态）无静态类别声明。分类信号
+// 只有一层：工具动词启发式（工具名首/末段动词 get/list/search… 与 create/update…）。
+// 历史注记：2026-10-16 的 H3③ 版本曾有第二层「连接器只读目录」（MCP_READ_CONNECTORS，
+// 65 连接器目录人工判读），P0-5 收口「未知动词不再默认 read」后两分支完全等价——
+// 目录对分类不再有任何效果（收录与否都只看动词），故删除（审查 M-1）。连接器级
+// 信任面如需重建，应作为显式登记机制而非「收录即默认 read」。
+// 判不出的动词一律算「未知」（返回 null），由 isUnknownMcpTool 消费走 mcp-unknown
+// 硬拒；不给未知动词发任何类别通行证。
 const MCP_PREFIX = 'mcp__'
 
 /** 解析 mcp__{server}__{tool}（tool 自身可含 __，取首段为 server、余为 tool）。 */
@@ -35,16 +37,7 @@ function parseMcpName(tool: string): { server: string; tool: string } | null {
   return { server: rest.slice(0, i).toLowerCase(), tool: rest.slice(i + 2).toLowerCase() }
 }
 
-/** 连接器只读面目录（人工判读，2026-10-16）：检索/分析/文档/只读查询类。
- *  写操作型连接器（airtable/asana…）不列——落入动词启发式或未知硬拒。 */
-const MCP_READ_CONNECTORS = new Set([
-  'algolia', 'amplitude', 'semanticscholar', 'arxiv', 'wikipedia', 'wikidata',
-  'semantica', 'exa', 'tavily', 'brave-search', 'serper', 'perplexity',
-  'github', 'gitlab', 'bitbucket',  // 代码宿主：读面远大于写面，动词层再分
-  'notion', 'confluence', 'googledocs', 'googledrive', 'dropbox',  // 文档：读为主
-])
-
-/** 工具名末段动词→类别（命中即返回；顺序无关，互斥设计）。 */
+/** 工具名首/末段动词→类别（命中即返回；顺序无关，互斥设计）。 */
 const MCP_TOOL_VERBS: { re: RegExp; cat: ToolCategory }[] = [
   // 动词首形态（list_issues/get_user…MCP 主流命名）；末段宾语不限
   { re: /^(?:get|list|search|read|query|fetch|find|describe|show|view|browse|count|check|validate|inspect|export|download|lookup|retrieve|discover)(?:_|$)/, cat: 'read' },
@@ -56,18 +49,11 @@ const MCP_TOOL_VERBS: { re: RegExp; cat: ToolCategory }[] = [
   { re: /(?:^|_)(?:run|execute|call|invoke|trigger|exec|eval|deploy|migrate|sync|import|batch|bulk|apply|submit)$/, cat: 'exec' },
 ]
 
-/** MCP 工具细分类：判不出返回 null（未知——P0-5 起由 isUnknownMcpTool 消费硬拒）。
- *  调用方 toolCategoryOf 对 null 回落保守 write（非 MCP 未知名与 MCP 未知名的
- *  最终防线都是 mcp-unknown/审批链，不是 read）。 */
+/** MCP 工具细分类（仅动词启发式一层）：判不出返回 null（未知——由 isUnknownMcpTool
+ *  消费硬拒）。调用方 toolCategoryOf 对 null 回落保守 write（最终防线是 mcp-unknown）。 */
 export function mcpCategoryOf(tool: string): ToolCategory | null {
   const parsed = parseMcpName(tool)
   if (!parsed) return null
-  if (MCP_READ_CONNECTORS.has(parsed.server)) {
-    // 连接器只读≠工具只读：动词层优先 refine（github__create_issue 仍是 write）；
-    // 未知动词不再默认 read——目录本身是人工判读启发式，发只读通行证等于未评估面放行。
-    const verb = MCP_TOOL_VERBS.find((candidate) => candidate.re.test(parsed.tool))
-    return verb?.cat ?? null
-  }
   const verb = MCP_TOOL_VERBS.find((candidate) => candidate.re.test(parsed.tool))
   return verb?.cat ?? null
 }
@@ -123,7 +109,10 @@ function expandHome(p: string): string {
 }
 
 /** 真实路径 canonicalize（绝对路径输入）：realpathSync.native 优先——解析全部
- *  symlink 链，符号链逃逸在 canonical 空间里现形。目标不存在时向父级回溯到最近
+ *  symlink 链，符号链逃逸在 canonical 空间里现形。目标不存在（ENOENT）时先看
+ *  该段自身是不是符号链：悬垂 symlink 的链接名在盘上存在且指向别处，open('w')
+ *  会经它在目标处创建文件——必须沿 readlink 递归到目标侧再判，不能把链接名当
+ *  「不存在的普通名字」拼回（审查 I-1）。链接名确不存在时才向父级回溯到最近
  *  存在祖先，canonicalize 后拼回剩余段（检查时不存在≠执行时不存在，按「祖先
  *  真实状态+声明的剩余段」判）。不可判定错误（ELOOP/EACCES 等）原样抛出——
  *  调用方按越界处理（fail-closed：配置坏了不降级放行）。 */
@@ -132,6 +121,17 @@ function canonicalizeAbs(abs: string): string {
     return realpathSync.native(abs)
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+    // 悬垂 symlink：realpath 因目标缺失报 ENOENT，但链接本身在盘上——沿 readlink
+    // 到目标侧递归（目标侧再缺失则回溯其最近存在祖先；链环由 realpath 的 ELOOP 兜底）。
+    let linkStat: ReturnType<typeof lstatSync> | null = null
+    try {
+      linkStat = lstatSync(abs)
+    } catch (lerr) {
+      if ((lerr as NodeJS.ErrnoException).code !== 'ENOENT') throw lerr
+    }
+    if (linkStat?.isSymbolicLink()) {
+      return canonicalizeAbs(resolve(dirname(abs), readlinkSync(abs)))
+    }
     const parent = dirname(abs)
     if (parent === abs) throw err  // 防御：'/' 本身 ENOENT 属不可判定
     return join(canonicalizeAbs(parent), abs.slice(parent.length + 1))

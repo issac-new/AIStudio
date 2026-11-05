@@ -52,18 +52,18 @@ describe('工具类别与风险分档', () => {
     expect(toolCategoryOf('totally_unknown_tool')).toBe('write')
   })
 
-  it('MCP 细分类（H3③）：连接器只读面+动词启发式；判不出仍保守 write', () => {
-    // ① 连接器只读面（github 在目录内）+ 只读动词 → read
+  it('MCP 细分类（H3③+P0-5）：动词启发式一层；判不出仍保守 write', () => {
+    // ① 只读动词 → read（连接器只读目录已删——分类只看动词，审查 M-1）
     expect(toolCategoryOf('mcp__github__list_issues')).toBe('read')
     expect(toolCategoryOf('mcp__algolia__search_index')).toBe('read')
-    // ② 连接器只读面但动词是写 → 动词层 refine（github__create_issue 仍 write）
+    // ② 写动词 → write（同一连接器的写工具不被只读动词误放）
     expect(toolCategoryOf('mcp__github__create_issue')).toBe('write')
     expect(toolCategoryOf('mcp__notion__delete_page')).toBe('write')
-    // ③ 目录外连接器靠动词：只读动词 → read；写动词 → write；执行动词 → exec
+    // ③ 执行动词 → exec
     expect(toolCategoryOf('mcp__airtable__list_records')).toBe('read')
     expect(toolCategoryOf('mcp__airtable__create_record')).toBe('write')
     expect(toolCategoryOf('mcp__jenkins__run_build')).toBe('exec')
-    // ④ 判不出（目录外+非常规动词）→ 保守 write（旧行为不回归）
+    // ④ 判不出（非常规动词）→ 保守 write（toolCategoryOf 口径不回归）
     expect(toolCategoryOf('mcp__weird__do_something')).toBe('write')
     // ⑤ 非 MCP 前缀不受影响
     expect(toolCategoryOf('memory_search')).toBe('read')
@@ -84,8 +84,8 @@ describe('工具类别与风险分档', () => {
 })
 
 describe('未知 MCP 硬拒（P0 Task 5）', () => {
-  it('只读连接器内未知动词不再默认 read：判不出即 null（未知）', () => {
-    // merge 不在任何动词表内——连接器目录只是人工判读的启发式，不能给未知动词发只读通行证
+  it('未知动词不再默认 read：判不出即 null（未知）', () => {
+    // merge 不在任何动词表内——不能给未评估动词发只读通行证（连接器目录已删，只看动词）
     expect(mcpCategoryOf('mcp__github__merge_pull_request')).toBeNull()
     // 已知动词分类不回归
     expect(mcpCategoryOf('mcp__github__list_issues')).toBe('read')
