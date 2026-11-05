@@ -9,7 +9,8 @@
  *
  * P0 Task 6：四态判定正本=平台证据适配器（platform/evidence/gate-evidence），
  * 本文件只消费其 status——完成键缺失/空=unknown（未观测不猜首过，旧口径「无记录
- * 即首过」退役）；任一闸 unknown 时首过率分母不完整，不产 M1 行、trend 显 ⬜。
+ * 即首过」退役）；任一闸 unknown 时首过率分母不完整，不产 M1 行、trend 首过率/
+ * 打回率显 ⬜（分母不完整不产率）。
  *
  * 数据源（只读）：runs/<run>/evidence/issues.log、runs/<run>/state.env、
  * runs/<run>/evidence/product-outcome/quality-summary.env、历史轮 governance-report.md。
@@ -17,6 +18,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { gateEvidenceFromState } from '../platform/evidence/gate-evidence'
+import type { GateEvidence } from '../platform/evidence/gate-evidence'
 
 export type GateId = 'G1' | 'G2' | 'G3' | 'G4' | 'G5' | 'G6'
 export type GatePassState = '首过' | '补过' | '打回' | 'unknown'
@@ -31,6 +33,17 @@ const REJECT_WORD_RE = /(fail|FAIL|打回|拒收|熔断|退回)/
 const CREDENTIAL_MISS_RE = /^(receipt-missing|raci-dispatch-missing|anexec-missing|evidence-missing|credential)/
 const ALERT_FAMILY_RE = /^(gw-|capacity-|gateway-|wip-overload|load-|mx-load-)/
 const RUN_DIR_RE = /^\d{8}-v\d+-run\d+$/
+
+/**
+ * 适配器 status → 治理四态中文态（显式分支）：意外 status 抛错而非静默落首过——
+ * 含未来的 waived（豁免闸接入前须扩本映射，闸循环即 fail-fast 不猜态）。
+ */
+export function gateStateFromEvidence(evidence: GateEvidence): GatePassState {
+  if (evidence.status === 'fail') return '打回'
+  if (evidence.status === 'unknown') return 'unknown'
+  if (evidence.status === 'pass') return evidence.supplement ? '补过' : '首过'
+  throw new Error(`gateStateFromEvidence：意外的证据状态 ${evidence.status}（waived 豁免闸接入前须扩映射）`)
+}
 
 export interface GateStat { gate: GateId; state: GatePassState; supplement: boolean; segmentIssues: number }
 export interface MetricsRow { id: 'M1' | 'M3' | 'M4' | 'M5'; csv: string }
@@ -120,16 +133,15 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     const seg = issueLines.filter((l) => l.startsWith(`ISSUE|g${n}-`))
     gateSegmentIssues += seg.length
     // 四态判定正本=平台证据适配器（判定序：FAIL→打回；完成键缺失/空→unknown；
-    // 补证→补过；其余→首过——打回证据优先于完成键，补证不掩盖缺键）
+    // 补证→补过；其余→首过——打回证据优先于完成键，补证不掩盖缺键）；
+    // status→中文态走 gateStateFromEvidence 显式分支（意外 status 抛错不猜态）
     const evidence = gateEvidenceFromState({
       gate,
       completionValue: state[GATE_STATE_KEYS[gate]],
       failed: seg.some((l) => REJECT_WORD_RE.test(l)),
       supplement: state[`g${n}_supplement`] === '1',
     })
-    const gateState: GatePassState = evidence.status === 'fail' ? '打回'
-      : evidence.status === 'unknown' ? 'unknown'
-        : evidence.supplement ? '补过' : '首过'
+    const gateState = gateStateFromEvidence(evidence)
     gateStats.push({ gate, state: gateState, supplement: evidence.supplement, segmentIssues: seg.length })
   }
   // 四态计数一律从 gateStats 正数（禁反推公式：unknown 在场时 6-打回-补过 会虚增首过）
@@ -269,12 +281,13 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
   const trendRuns = [...runDirs.filter((d) => d !== run), run].sort().slice(-5)
   const trend = trendRuns.map((r) => {
     if (r === run) {
-      // 分母不完整（任一闸 unknown）→ 首过率如实 ⬜（渲染读 trend 末项，不拼 0/6）；
-      // 打回数不依赖完成键，保持实数。
+      // 分母不完整（任一闸 unknown）→ 首过率与打回率均如实 ⬜（分母 6 含未观测闸，
+      // 产 X/6 即系统性低估打回面；渲染读 trend 末项，不自拼数字）；打回计数本体
+      // 仍由 rejectGateCount 与 M4 行如实承载。
       return {
         run: r,
         firstPass: unknownGateCount > 0 ? '⬜' : `${firstPass}/6`,
-        rejectRate: `${rejectGateCount}/6`,
+        rejectRate: unknownGateCount > 0 ? '⬜' : `${rejectGateCount}/6`,
         density: defectDensity.includes('⬜') ? '⬜' : defectDensity,
       }
     }

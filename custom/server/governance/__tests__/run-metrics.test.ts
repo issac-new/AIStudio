@@ -2,7 +2,7 @@
 // 移植。钉三态（首过/补过/打回）、证据率、密度双源、告警族、DISP 归桶、metrics
 // CSV 行格式、基线/趋势缺文件=⬜（run13 C3：闸段事故单不计打回）。
 import { describe, expect, it } from 'vitest'
-import { computeRunMetrics, parseStateEnvKeys } from '../run-metrics'
+import { computeRunMetrics, gateStateFromEvidence, parseStateEnvKeys } from '../run-metrics'
 
 const ISSUES = `ISSUE|g1-review|bella|G1 判读缺要素后补齐（首过前补交形态）
 ISSUE|g2-style|arch|设计五要素缺验证计划（闸段观察单）
@@ -153,6 +153,8 @@ describe('unknown 四态（P0 Task 6：完成键缺失=未观测，不产 M1 不
     expect(empty.metricsRows.some((row) => row.id === 'M4')).toBe(true)
     expect(empty.metricsRows.some((row) => row.id === 'M5')).toBe(true)
     expect(empty.trend.at(-1)!.firstPass).toBe('⬜')
+    // 分母不完整不产率：打回率分母 6 同样含未观测闸，unknown 轮不得显 X/6（系统性低估）
+    expect(empty.trend.at(-1)!.rejectRate).toBe('⬜')
   })
 
   it('单闸缺完成键（g2_arch_pass）：unknownGateCount=1、M1 不产、计数全从 gateStats 出', () => {
@@ -166,6 +168,7 @@ describe('unknown 四态（P0 Task 6：完成键缺失=未观测，不产 M1 不
     expect(partial.firstPass + partial.supplementCount + partial.rejectGateCount + partial.unknownGateCount).toBe(6)
     expect(partial.metricsRows.some((row) => row.id === 'M1')).toBe(false)
     expect(partial.trend.at(-1)!.firstPass).toBe('⬜')
+    expect(partial.trend.at(-1)!.rejectRate).toBe('⬜')
   })
 
   it('空串完成键同缺键：g4_pass= → G4 unknown', () => {
@@ -193,6 +196,22 @@ describe('unknown 四态（P0 Task 6：完成键缺失=未观测，不产 M1 不
     expect(m.metricsRows.find((r) => r.id === 'M1')!.csv).toContain('4/6')
     expect(m.trend.at(-1)!.firstPass).toBe('4/6')
     expect(m.trend.at(-1)!.rejectRate).toBe('1/6')
+  })
+})
+
+describe('gateStateFromEvidence（status→四态显式分支；意外 status 抛错不静默落首过）', () => {
+  const rec = (status: 'pass' | 'fail' | 'unknown' | 'waived', supplement = false) =>
+    ({ subject: 'G1', status, source: status === 'unknown' ? null : '1790000000', supplement })
+
+  it('pass±补证 / unknown / fail 各归位（与闸循环判定同源）', () => {
+    expect(gateStateFromEvidence(rec('pass'))).toBe('首过')
+    expect(gateStateFromEvidence(rec('pass', true))).toBe('补过')
+    expect(gateStateFromEvidence(rec('unknown'))).toBe('unknown')
+    expect(gateStateFromEvidence(rec('fail'))).toBe('打回')
+  })
+
+  it('意外 status（含未来 waived）抛错——豁免闸接入前须扩映射，禁静默落首过', () => {
+    expect(() => gateStateFromEvidence(rec('waived'))).toThrow(/waived/)
   })
 })
 

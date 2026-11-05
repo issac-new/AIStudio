@@ -2713,7 +2713,7 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三
     echo "## 六闸四态（治理服务判定：首过/补过/打回/unknown）"
     printf '%s' "$dto" | jq -r '[.gateStats[] | .gate + .state] | join(" ")'
     printf '%s' "$dto" | jq -r 'if .supplementCount > 0 then "（补过 \(.supplementCount)，拆分/补交形态不计首过）" else empty end'
-    printf '%s' "$dto" | jq -r 'if .unknownGateCount > 0 then "（unknown \(.unknownGateCount)：完成键缺失/空——首过率分母不完整，本轮不产 M1 行）" else empty end'
+    printf '%s' "$dto" | jq -r 'if .unknownGateCount > 0 then "（unknown \(.unknownGateCount)：完成键缺失/空——首过率/打回率分母不完整（trend 显 ⬜），本轮不产 M1 行）" else empty end'
     printf '%s' "$dto" | jq -r 'if ([.gateStats[].segmentIssues] | add // 0) > 0 then "（闸段问题单 \([.gateStats[].segmentIssues] | add) 起，不计打回）" else empty end'
     echo
     echo "## 问题单台账（共 $(printf '%s' "$dto" | jq -r '.issuesTotal') 条；DISP $(printf '%s' "$dto" | jq -r '.dispTotal') 条——键=类型·主体，缺行=待处置）"
@@ -2757,6 +2757,8 @@ gov_archive_commit() { # 治理归档落账原子化（P14→R26：metrics-log+I
   # 「产出了没落账」根治：治理报告的 metrics 行与 issues 唯一键在此一并写入中央仓
   # origin/main（docs/governance/metrics-log.csv + docs/issues/ISSUES-LOG.md 单提交），
   # 推送后回读 origin/main 验证——写、提、推、验四环一体，失败记录返回 1 不击杀驱动。
+  # 回读按 DTO 实际产出对账（P0 Task 6 fix）：M1 只在完整轮产出，unknown 轮缺席
+  # 是预期——逐行对账+M4 恒在锚+M1 条件对账，不再硬编码 grep M1（会记假失败单）。
   # 幂等：metrics 行按内容去重；ISSUES-LOG 的 ## <RUN>（ 段存在则替换不追加。
   local run="${RUN_ID:-default}" rfd="${RFD_ID:-RFD-001}"
   local _ilog="$EVID_DIR/issues.log"
@@ -2839,7 +2841,28 @@ PYEOF
   mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true
   if [ "$_rc" = 0 ]; then
     git -C "$DIRECTOR_CLONE" show origin/main:docs/issues/ISSUES-LOG.md 2>/dev/null | grep -qF "## ${run}（" || _rc=1
-    git -C "$DIRECTOR_CLONE" show origin/main:docs/governance/metrics-log.csv 2>/dev/null | grep -qF ",${rfd},M1," || _rc=1
+    # P0 Task 6 fix：回读按 DTO 实际产出对账——M1 只在完整轮（unknownGateCount=0）
+    # 产出，unknown 轮 M1 缺席是预期，旧版硬编码 grep M1 必失败记假
+    # archive-commit-failed 单。对账三条：① DTO metrics 行逐行对账（每行都已落
+    # origin/main=落账面与 DTO 一致）；② M4 恒在行锚（DTO ok 必产 M4，防空壳
+    # metricsRows 静默过验）；③ M1 条件对账（unknownGateCount=0 → M1 必在；
+    # >0 → M1 必缺席）。DTO 不可达（archive-metrics-unavailable 已记单）时
+    # metrics-log 无本轮产出可对账，不叠加假 archive-commit-failed——ISSUES-LOG
+    # 段验证仍恒在。
+    if [[ -n "$_rows" ]]; then
+      local _landed _ugc _m1n
+      _landed=$(git -C "$DIRECTOR_CLONE" show origin/main:docs/governance/metrics-log.csv 2>/dev/null || true)
+      [[ -n "$_landed" ]] || _rc=1
+      while IFS= read -r _row; do
+        [[ -z "$_row" ]] && continue
+        printf '%s\n' "$_landed" | grep -qF -- "$_row" || _rc=1
+      done <<< "$_rows"
+      printf '%s\n' "$_rows" | grep -qF -- ",${rfd},M4," || _rc=1
+      _ugc=$(printf '%s' "$_dto" | jq -r '.unknownGateCount // 0' 2>/dev/null || echo 0)
+      _m1n=$(printf '%s\n' "$_rows" | grep -cF -- ",${rfd},M1," || true)
+      if [[ "$_ugc" == 0 && "$_m1n" == 0 ]]; then _rc=1; fi   # 完整轮：M1 必在场
+      if [[ "$_ugc" != 0 && "$_m1n" != 0 ]]; then _rc=1; fi   # unknown 轮：M1 必缺席
+    fi
   fi
   rm -rf "$_wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true
   if [ "$_rc" != 0 ]; then
