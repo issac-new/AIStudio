@@ -61,6 +61,17 @@ describe('planFromArgv（参数计划）', () => {
   })
 })
 
+describe('gzip 步骤（python 单行，mtime=0 可重现）', () => {
+  it('同输入两次压缩字节一致（资产可重现性前提）', () => {
+    const line = 'import gzip,sys; data=sys.stdin.buffer.read(); sys.stdout.buffer.write(gzip.compress(data, 9, mtime=0))'
+    const run = () => execFileSync('python3', ['-I', '-c', line], { input: Buffer.from('hello incremental'), encoding: 'buffer' })
+    const a = run()
+    const b = run()
+    expect(a.length).toBeGreaterThan(0)
+    expect(Buffer.compare(a, b)).toBe(0)
+  })
+})
+
 describe('仓库实况集成（dry-run，全量 tag 在位时）', () => {
   it('v1.0.10 基线 dry-run 报告真实变更规模（vendor 换血窗口 >4000 项）', () => {
     const tag = 'v1.0.10-overlay'

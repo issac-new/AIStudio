@@ -114,9 +114,9 @@ function main() {
   const patch = git(['diff', '--binary', '--full-index', `${opt.base}..${opt.head}`])
   const outDir = resolve(ROOT, opt.out)
   mkdirSync(outDir, { recursive: true })
-  // gzip（mtime=0 保字节可重现；电文压缩）——用 git 内置可重现压缩：gzip -n 语义经 python gzip mtime=0
+  // gzip（mtime=0 保字节可重现；电文压缩）——gzip -n 语义经 python gzip mtime=0
   const gz = execFileSync('python3', ['-I', '-c',
-    'import gzip,sys,mtime; data=sys.stdin.buffer.read(); sys.stdout.buffer.write(gzip.compress(data, 9, mtime=0))',
+    'import gzip,sys; data=sys.stdin.buffer.read(); sys.stdout.buffer.write(gzip.compress(data, 9, mtime=0))',
   ], { input: patch, maxBuffer: 512 * 1024 * 1024 })
   const out = resolve(outDir, name)
   writeFileSync(out, gz)
