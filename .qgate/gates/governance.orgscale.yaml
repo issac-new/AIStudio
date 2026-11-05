@@ -1,0 +1,65 @@
+# 组织治理刻度契约门（2026-11-05 组织治理能力批，spec 2026-11-05-org-governance-*）。
+#
+# 为什么是"契约在位"而不是"运行时数据合格"：自治刻度/假设登记簿/度量的台账是
+# 运行时状态（~/.hermes-web-ui/ 下），仓内门禁读不到也不该读。本门只核仓内可验证的
+# 那一半——三域的判定面与守门测试在位，且 spec 模板仍保留「批准前六问」。
+# 这是诚实边界，不是偷工：运行时判定由域内纯函数 + 端点负责，其证据在域测试里。
+#
+# 档位：advisory（与 .qgate/qgate.yaml 声明的起步纪律一致），稳定后切 block。
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: governance.orgscale
+  version: 0.1.0-overlay
+  description: 组织治理刻度契约（advisory 起步）：自治判定/假设登记/度量双轨三域在位，spec 模板保留批准前六问。
+spec:
+  domain: L4
+  claims:
+    - orgscale.spec-six-questions
+  appliesWhen:
+    changed:
+      any:
+        - "custom/server/autonomygov/**"
+        - "custom/server/premiselog/**"
+        - "custom/server/metricpolicy/**"
+        - "custom/server/agentidentity/**"
+        - "custom/server/decisiongraph/**"
+        - "skills/swarm-yuan/assets/spec-template.md"
+  triggers: [task_close]
+  executors:
+    - id: orgscale-contract
+      type: files
+      # 三域判定面与守门测试必须在位（缺一个即说明这一域被删空而门还在）
+      require:
+        - "custom/server/autonomygov/rules.ts"
+        - "custom/server/autonomygov/__tests__/rules.test.ts"
+        - "custom/server/premiselog/premise-log.ts"
+        - "custom/server/premiselog/__tests__/premise-log.test.ts"
+        - "custom/server/metricpolicy/policy.ts"
+        - "custom/server/metricpolicy/__tests__/policy.test.ts"
+      mustContain:
+        # 六问不得被静默删除：markers 命中即 exercised 级证据（不是 present 占位）
+        - file: "skills/swarm-yuan/assets/spec-template.md"
+          markers:
+            - "批准前六问"
+            - "失败可逆"
+            - "谁为结果署名"
+            - "什么条件下这个变更应该被停掉"
+        # 自治刻度的两条硬规矩不得被改成恒真：函数名与关键判据串在位
+        - file: "custom/server/autonomygov/rules.ts"
+          markers:
+            - "checkAl5"
+            - "humanScan"
+            - "stopCondition"
+        # 双轨隔离不得被拆：跨轨引用必须报错
+        - file: "custom/server/metricpolicy/policy.ts"
+          markers:
+            - "cross-track-reference"
+      evidenceType: files-check-result
+  evidence:
+    required: [files-check-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

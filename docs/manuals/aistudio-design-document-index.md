@@ -593,3 +593,7 @@
 - [2026-11-05-frame-expect-dash-keys-fix.md](../superpowers/specs/2026-11-05-frame-expect-dash-keys-fix.md)
 - [2026-11-05-release-v1.0.12-overlay.md](../superpowers/specs/2026-11-05-release-v1.0.12-overlay.md)
 - [2026-11-05-review-anchor-pin.md](../superpowers/specs/2026-11-05-review-anchor-pin.md)
+- [2026-11-05-org-governance-autonomy-scale.md](../superpowers/specs/2026-11-05-org-governance-autonomy-scale.md)
+- [2026-11-05-org-governance-premise-log.md](../superpowers/specs/2026-11-05-org-governance-premise-log.md)
+- [2026-11-05-org-governance-metric-discipline.md](../superpowers/specs/2026-11-05-org-governance-metric-discipline.md)
+- [2026-11-05-org-governance-thin-items.md](../superpowers/specs/2026-11-05-org-governance-thin-items.md)

@@ -9,6 +9,8 @@ import KnowledgeGraphSection from '@/custom/governance/components/KnowledgeGraph
 import DecisionGraphSection from '@/custom/governance/components/DecisionGraphSection.vue'
 import ExpertiseSection from './ExpertiseSection.vue'
 import PrecedentSection from './PrecedentSection.vue'
+// 2026-11-05 组织治理能力批：假设登记簿（到期/推翻/影响面/重评队列）
+import PremiseLogSection from '@/custom/governance/components/PremiseLogSection.vue'
 import { useTasksTabsText } from '../../i18n-tasks-tabs'
 
 const tabText = useTasksTabsText()
@@ -30,6 +32,7 @@ const tabText = useTasksTabsText()
       <ExpertiseSection />
       <!-- 判例库检索（2026-10-23 挂账批 D18） -->
       <PrecedentSection />
+      <PremiseLogSection />
     </div>
   </div>
 </template>

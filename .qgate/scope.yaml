@@ -302,3 +302,34 @@ paths:
   - docs/manuals/aistudio-design-document-index.md
   - docs/manuals/aistudio-feature-inventory.md
   - docs/manuals/aistudio-operations-reference.md
+  # 2026-11-05 组织治理能力批（自治刻度/假设登记簿/度量纪律 + 薄项）
+  - custom/server/autonomygov/**
+  - custom/server/premiselog/**
+  - custom/server/metricpolicy/**
+  - custom/server/agentidentity/agent-identity.ts
+  - custom/server/agentidentity/__tests__/roster-gaps.test.ts
+  - custom/server/decisiongraph/semantica-client.ts
+  - custom/server/decisiongraph/stage-ratios.ts
+  - custom/server/decisiongraph/__tests__/stage-ratios.test.ts
+  - custom/client/governance/components/AutonomyScaleSection.vue
+  - custom/client/governance/components/PremiseLogSection.vue
+  - custom/client/governance/components/MetricDisciplineSection.vue
+  - custom/client/governance/components/AgentIdentitySection.vue
+  - custom/client/ia2/views/gov/GovPostureView.vue
+  - custom/client/ia2/views/gov/GovOrgKnowledgeView.vue
+  - custom/client/ia2/views/gov/GovHarnessView.vue
+  - custom/client/governance/api/governance.ts
+  - skills/swarm-yuan/assets/spec-template.md
+  - patches/751-server-org-gov-mount.patch
+  - docs/superpowers/specs/2026-11-05-org-governance-autonomy-scale.md
+  - docs/superpowers/specs/2026-11-05-org-governance-premise-log.md
+  - docs/superpowers/specs/2026-11-05-org-governance-metric-discipline.md
+  - docs/superpowers/specs/2026-11-05-org-governance-thin-items.md
+  - custom/client/governance/__tests__/org-governance-sections.test.ts
+  - custom/server/autonomygov/__tests__/http-projection.test.ts
+  - custom/server/autonomygov/__tests__/dualsign.test.ts
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md
+  - .qgate/gates/governance.orgscale.yaml
+  - .qgate/qgate.yaml
+

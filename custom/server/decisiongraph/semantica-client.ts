@@ -16,6 +16,9 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { underHermes } from '../lib/paths'
 
+/** 介入阶段：发起 / 设计 / 评审 / 实施 / 事后（《断裂与重建》6.1 决策权审计口径）。 */
+export type DecisionStage = 'initiate' | 'design' | 'review' | 'implement' | 'posthoc'
+
 export interface BridgeDecision {
   id: string
   category: string | null
@@ -25,6 +28,9 @@ export interface BridgeDecision {
   decidedBy?: string | null
   reasoning?: string | null
   similarity?: number
+  /** 介入阶段（2026-11-05 组织治理批）：决策权审计按阶段统计两比例；存量记录可缺，
+   *  缺失时单独计入 unstaged，不按类目猜测回填。 */
+  stage?: DecisionStage | null
 }
 
 export function studioKgPath(): string {

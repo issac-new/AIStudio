@@ -44,6 +44,22 @@ export interface DelegationRecord {
   revokedBy?: string
 }
 
+/** 能力边界（设计意图）：被造来做什么、明确不做什么。与 toolAllowlist 的「许可」正交——
+ *  能力边界写宽不等于权限放宽，两者分别维护（2026-11-05 组织治理能力批，户口五要素补齐）。 */
+export interface CapabilityBoundary {
+  can: string[]
+  cannot: string[]
+}
+
+/** 审计要求：抽样比例与留存期。凭证可撤销 ≠ 有审计要求，两件事分别登记。 */
+export interface AuditRequirement {
+  /** 抽样审计比例 0..1 */
+  sampling: number
+  /** 留存天数 */
+  retentionDays: number
+  note?: string
+}
+
 export interface AgentIdentity {
   /** 身份 id（aid-序号；稳定主键） */
   id: string
@@ -53,6 +69,10 @@ export interface AgentIdentity {
   owner: string
   /** 工具白名单（空=未声明，不等于无限制） */
   toolAllowlist: string[]
+  /** 能力边界（2026-11-05 起；存量身份可缺，缺口由 rosterGaps 报出） */
+  capabilityBoundary?: CapabilityBoundary
+  /** 审计要求（2026-11-05 起；存量身份可缺） */
+  auditRequirement?: AuditRequirement
   credentials: CredentialRecord[]
   delegations: DelegationRecord[]
   createdAt: number
@@ -145,8 +165,86 @@ export function getIdentity(id: string): AgentIdentity | null {
   return readStore().identities.find((i) => i.id === id) ?? null
 }
 
+// ── 户口五要素（2026-11-05 组织治理能力批）──
+//
+// 来源：《定义权之争》下篇动作 3「给 Agent 发户口」——名字、能力边界、权限范围、
+// 审计要求、负责人。仓内原有前三项中的名字/负责人/权限范围，能力边界与审计要求缺失。
+//
+// 纪律：缺口**不 fail-closed 拒绝注册**。存量 30 个 profile 身份全部缺这两项，
+// 一次性拒绝会让既有部署立即不可用。改为「注册放行 + 缺口可见 + 门禁拦新增」。
+
+export type RosterField = 'name' | 'capability-boundary-can' | 'capability-boundary-cannot'
+  | 'permission-scope' | 'audit-requirement' | 'owner'
+
+export interface RosterGap {
+  field: RosterField
+  /** 人读说明：缺什么、为什么这条要单独判 */
+  detail: string
+}
+
+/** 单身份的户口缺项（空数组=五要素齐备）。纯函数，不读盘。 */
+export function rosterGaps(identity: Pick<AgentIdentity,
+  'name' | 'owner' | 'toolAllowlist' | 'capabilityBoundary' | 'auditRequirement'>): RosterGap[] {
+  const gaps: RosterGap[] = []
+  if (typeof identity.name !== 'string' || !identity.name.trim()) {
+    gaps.push({ field: 'name', detail: '缺身份名——无名身份无法被派单与追溯' })
+  }
+  const can = Array.isArray(identity.capabilityBoundary?.can) ? identity.capabilityBoundary!.can.filter((c) => c && String(c).trim()) : []
+  const cannot = Array.isArray(identity.capabilityBoundary?.cannot) ? identity.capabilityBoundary!.cannot.filter((c) => c && String(c).trim()) : []
+  if (can.length === 0) {
+    gaps.push({ field: 'capability-boundary-can', detail: '缺能力边界（能做什么）——只写许可不写设计意图，能力与权限会被混同' })
+  }
+  if (cannot.length === 0) {
+    gaps.push({ field: 'capability-boundary-cannot', detail: '缺能力边界（不做什么）——不声明禁区等于默许扩权' })
+  }
+  if (!Array.isArray(identity.toolAllowlist) || identity.toolAllowlist.length === 0) {
+    gaps.push({ field: 'permission-scope', detail: '缺权限范围——空白名单是「未声明」，不等于无限制' })
+  }
+  const sampling = identity.auditRequirement?.sampling
+  if (!identity.auditRequirement || typeof sampling !== 'number' || !Number.isFinite(sampling) || sampling <= 0) {
+    gaps.push({ field: 'audit-requirement', detail: '缺审计要求（抽样比例）——凭证可撤销不等于有审计' })
+  }
+  if (typeof identity.owner !== 'string' || !identity.owner.trim()) {
+    gaps.push({ field: 'owner', detail: '缺负责人——没有人愿意为之负责的结果在组织里等于不存在' })
+  }
+  return gaps
+}
+
+export function rosterStatus(identity: Parameters<typeof rosterGaps>[0]): 'complete' | 'blocked' {
+  return rosterGaps(identity).length === 0 ? 'complete' : 'blocked'
+}
+
+export interface RosterGapRow {
+  id: string
+  name: string
+  kind: IdentityKind
+  status: 'complete' | 'blocked'
+  gaps: RosterGap[]
+}
+
+/** 全量户口体检（读侧）。只读，不改身份。 */
+export function listRosterGaps(): { total: number; blocked: number; rows: RosterGapRow[] } {
+  const identities = readStore().identities
+  const rows: RosterGapRow[] = identities.map((i) => {
+    const gaps = rosterGaps(i)
+    return { id: i.id, name: i.name, kind: i.kind, status: gaps.length === 0 ? 'complete' : 'blocked', gaps }
+  })
+  return {
+    total: rows.length,
+    blocked: rows.filter((r) => r.status === 'blocked').length,
+    rows,
+  }
+}
+
 export function registerIdentity(
-  input: { name: string; kind: IdentityKind; owner: string; toolAllowlist?: string[] },
+  input: {
+    name: string
+    kind: IdentityKind
+    owner: string
+    toolAllowlist?: string[]
+    capabilityBoundary?: CapabilityBoundary
+    auditRequirement?: AuditRequirement
+  },
   actor: string,
 ): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
   const problems = validateIdentityInput(input)
@@ -162,6 +260,8 @@ export function registerIdentity(
     kind: input.kind,
     owner: input.owner.trim(),
     toolAllowlist: input.toolAllowlist ?? [],
+    ...(input.capabilityBoundary ? { capabilityBoundary: normalizeBoundary(input.capabilityBoundary) } : {}),
+    ...(input.auditRequirement ? { auditRequirement: normalizeAudit(input.auditRequirement) } : {}),
     credentials: [],
     delegations: [],
     createdAt: now,
@@ -170,13 +270,38 @@ export function registerIdentity(
   store.nextSeq += 1
   store.identities.push(identity)
   writeStore(store)
-  appendEvent({ actor, action: 'register', targetId: identity.id, detail: `${identity.name}（${identity.kind}，owner=${identity.owner}）` })
+  const gaps = rosterGaps(identity)
+  appendEvent({
+    actor,
+    action: 'register',
+    targetId: identity.id,
+    detail: `${identity.name}（${identity.kind}，owner=${identity.owner}）`
+      + (gaps.length ? `｜户口不齐：${gaps.map((g) => g.field).join(',')}` : ''),
+  })
   return { ok: true, identity }
+}
+
+/** 能力边界/审计要求的字段规范化（空白项剔除、比例夹取到 0..1）。 */
+function normalizeBoundary(b: CapabilityBoundary): CapabilityBoundary {
+  const clean = (xs: unknown): string[] => (Array.isArray(xs) ? xs.map(String).map((s) => s.trim()).filter(Boolean) : [])
+  return { can: clean(b.can), cannot: clean(b.cannot) }
+}
+
+function normalizeAudit(a: AuditRequirement): AuditRequirement {
+  const sampling = Number.isFinite(a.sampling) ? Math.min(1, Math.max(0, a.sampling)) : 0
+  const retentionDays = Number.isFinite(a.retentionDays) && a.retentionDays > 0 ? Math.floor(a.retentionDays) : 0
+  return { sampling, retentionDays, ...(a.note ? { note: a.note } : {}) }
 }
 
 export function updateIdentity(
   id: string,
-  patch: { owner?: string; toolAllowlist?: string[]; kind?: IdentityKind },
+  patch: {
+    owner?: string
+    toolAllowlist?: string[]
+    kind?: IdentityKind
+    capabilityBoundary?: CapabilityBoundary
+    auditRequirement?: AuditRequirement
+  },
   actor: string,
 ): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
   const store = readStore()
@@ -193,6 +318,12 @@ export function updateIdentity(
   if (patch.kind !== undefined) {
     if (!['human', 'agent', 'bot', 'service'].includes(patch.kind)) return { ok: false, problems: ['kind 非法'] }
     identity.kind = patch.kind
+  }
+  if (patch.capabilityBoundary !== undefined) {
+    identity.capabilityBoundary = normalizeBoundary(patch.capabilityBoundary)
+  }
+  if (patch.auditRequirement !== undefined) {
+    identity.auditRequirement = normalizeAudit(patch.auditRequirement)
   }
   identity.updatedAt = Date.now()
   writeStore(store)

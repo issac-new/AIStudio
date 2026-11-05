@@ -1155,3 +1155,8 @@
 749-client-petdex-offline-ux.patch
 # 750=W4 未做项收口：run 开启（claim CAS 路径）写 input_manifest（body sha256+附件行清单）入 task_runs.metadata——历史 run 输入可复现的写侧依据；taskmodel 读侧据此报 inputVersions=true。
 750-agent-run-input-manifest.patch
+
+# 751（2026-11-05 组织治理能力批，spec 2026-11-05-org-governance-{autonomy-scale,premise-log,metric-discipline,thin-items}）：
+#      三新域路由挂载（自治刻度/假设登记簿/度量纪律）——import 三行 + auth 后 app.use 三行，
+#      照 719/740/743 形态。判定在域内纯函数，执行面拦截交 qgate 门 governance.orgscale。
+751-server-org-gov-mount.patch
