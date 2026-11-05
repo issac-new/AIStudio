@@ -302,3 +302,9 @@ paths:
   - docs/USAGE.md
   - docs/superpowers/specs/2026-11-05-four-rsi-papers-absorption.md
   - docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md
+  # 2026-11-05 AI Native 五篇吸收批（feat/ainative-*，spec 2026-11-05-ainative-absorption）
+  - docs/superpowers/specs/2026-11-05-ainative-absorption.md
+  - custom/server/loop/**
+  - custom/server/plan/**
+  - custom/server/governance/lifecycle/requirements.ts
+  - skills/swarm-yuan/assets/gates/**
