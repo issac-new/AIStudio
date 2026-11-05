@@ -1185,13 +1185,14 @@
 #      路径不在降频面）。
 755-readpool-fd-count-throttle.patch
 # 752（2026-11-05 平台重写 P0 Task 2，spec 2026-11-05-platform-rewrite-design）：
+# 755（2026-11-05 平台重写 P0 Task 2，spec 2026-11-05-platform-rewrite-design；原拟 751→752 连续让号，主干 AI Native 批占 752-754 后终让 755）：
 # Matrix 新身份 disabled＋零 profiles＋不签 JWT/不存 session；同 MXID 跨 origin 409；
-# 统一认证拒绝普通 admin 空授权，super_admin 豁免。原拟 751 已被组织治理挂载占用，让号 752。
+# 统一认证拒绝普通 admin 空授权，super_admin 豁免。原拟 751 已被组织治理挂载占用，后 752 又被主干 AI Native 批占用，终让 755。
 # 同时补齐 server tsconfig rootDirs，使 src/custom 链接内的共享 custom/platform 契约可类型解析。
 # 审查修复：激活/角色与 profile 授权以单 SQLite 事务组合写；零 super_admin 返回 reset-default-login 指引。
-752-platform-matrix-zero-provisioning.patch
+755-platform-matrix-zero-provisioning.patch
 
-# 753（2026-11-05 平台重写 P0 Task 3，spec 2026-11-05-platform-rewrite-design）：
+# 756（2026-11-05 平台重写 P0 Task 3，spec 2026-11-05-platform-rewrite-design；原拟 753，让号 756）：
 # 真实 Router stack 启动覆盖对账；公开登录/健康检查显式登记，认证后 userenv/permmode
 # 按 profile 授权，自治与 permmode 写面、审批收件箱限 super_admin；未登记写请求默认 403。
-753-platform-route-authz.patch
+756-platform-route-authz.patch
