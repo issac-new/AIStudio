@@ -86,19 +86,29 @@ function exists(p) { return existsSync(join(ROOT, p)) }
 
 // ── 3 permission ───────────────────────────────────────────────────────────
 {
-  const enforceEnv = process.env.HERMES_TOOL_ENFORCE ?? '0(未设)'
+  // D1（2026-11-05 用户令直接做完）后口径：总闸默认开（env 显式 0 才关）；策略文件
+  // 缺席回落仓内默认包（红线基线随仓分发）；组织锁定面与角色矩阵四子项实测。
+  const enforceEnv = process.env.HERMES_TOOL_ENFORCE ?? '未设(=默认开)'
+  const enforceOn = process.env.HERMES_TOOL_ENFORCE !== '0'
+  const policyPkg = exists('config/default-tool-policies.json')
+  const matrix = exists('team/shared/role-tool-matrix.yaml')
+  let managed = false
+  try { managed = JSON.parse(read('config/managed-settings.json') ?? 'null') != null } catch { managed = false }
   const profiles = exists('team/profiles') ? readdirSync(join(ROOT, 'team/profiles')).filter((d) => existsSync(join(ROOT, 'team/profiles', d, 'config.yaml'))) : []
   let off = 0
   for (const p of profiles) {
     const cfg = read(join('team/profiles', p, 'config.yaml')) ?? ''
     if (/approvals:\s*\n\s*mode:\s*"off"/.test(cfg)) off += 1
   }
-  const enforceOn = process.env.HERMES_TOOL_ENFORCE === '1'
-  if (!enforceOn && off > 0) {
-    report('permission', 'warn',
-      `工具执法总闸未开（HERMES_TOOL_ENFORCE=${enforceEnv}）；${off}/${profiles.length} profile approvals.mode=off 关的是 agent 内置交互审批流——审批实际由推演程序承担（mx-approval-proxy 代批＋HumanGate 闭环），执法拦截面未启用（挂账 N01，2026-11-05 AI Native D1 记账）`)
+  const missing = [
+    !enforceOn && '总闸被 env 显式关闭',
+    !policyPkg && '默认策略包缺席',
+    !matrix && '角色工具矩阵缺席',
+  ].filter(Boolean)
+  if (missing.length > 0) {
+    report('permission', 'warn', `权限面缺口：${missing.join('；')}（HERMES_TOOL_ENFORCE=${enforceEnv}；approvals off=${off}/${profiles.length} 关的是 agent 内置交互流，审批由推演代批承担）`)
   } else {
-    report('permission', 'pass', `HERMES_TOOL_ENFORCE=${enforceEnv}；approvals off=${off}/${profiles.length}`)
+    report('permission', 'pass', `总闸默认开（env=${enforceEnv}）；默认策略包＋角色矩阵${managed ? '＋managed 锁定' : ''}在位；approvals off=${off}/${profiles.length}（审批由推演代批 mx-approval-proxy＋HumanGate 承担）`)
   }
 }
 

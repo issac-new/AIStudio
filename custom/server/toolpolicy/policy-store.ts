@@ -31,7 +31,27 @@ export function toolPolicyFile(): string {
 }
 
 function emptySnapshot(file: string | null): PolicySnapshot {
-  return { exists: false, file, doc: null, problems: [], warnings: [], fatal: false }
+  return { exists: false, file, doc: null, problems: [], warnings: [], fatal: false, source: 'none' }
+}
+
+// 内置默认策略包（2026-11-05 AI Native D1 权限最小化批）：部署侧策略文件缺席时
+// 的基线——deny 三红线（凭证路径/.git 写/破坏性 shell）＋require_approval 两外发
+// （包安装/推送）＋只读放行。permissive 模式=未命中不拦（既有写/执行行为不变，
+// 由阶梯与沙箱继续判定）。正本 config/default-tool-policies.json；一旦部署侧
+// 保存过策略（文件存在），本包即让位。
+let builtinDefaultCache: { doc: ToolPolicyDoc | null; problems: string[] } | null = null
+
+function loadBuiltinDefault(): { doc: ToolPolicyDoc | null; problems: string[] } {
+  if (builtinDefaultCache) return builtinDefaultCache
+  try {
+    const { repoRoot } = require('../lib/upstream') as typeof import('../lib/upstream')
+    const raw = JSON.parse(readFileSync(join(repoRoot(), 'config/default-tool-policies.json'), 'utf8'))
+    const lint = lintPolicyDoc(raw)
+    builtinDefaultCache = { doc: lint.doc, problems: lint.problems }
+  } catch (e) {
+    builtinDefaultCache = { doc: null, problems: [`内置默认策略包不可读：${(e as Error).message}`] }
+  }
+  return builtinDefaultCache
 }
 
 function broken(file: string, problem: string): PolicySnapshot {
@@ -52,7 +72,11 @@ export function loadPolicySnapshot(now = Date.now()): PolicySnapshot {
     stat = statSync(file)
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
-      const snap = emptySnapshot(file)
+      // D1（2026-11-05）：文件缺席≠无治理——回落仓内默认包（红线基线随仓分发）
+      const def = loadBuiltinDefault()
+      const snap: PolicySnapshot = def.doc
+        ? { exists: true, file, doc: def.doc, problems: [], warnings: ['策略文件缺席，生效的是仓内默认策略包 config/default-tool-policies.json（部署侧保存任意策略后即让位）'], fatal: false, source: 'builtin-default' }
+        : { exists: false, file, doc: null, problems: def.problems, warnings: [], fatal: false, source: 'none' }
       cache = { file, at: now, mtimeMs: 0, size: 0, snap }
       return snap
     }
@@ -84,6 +108,7 @@ export function loadPolicySnapshot(now = Date.now()): PolicySnapshot {
     problems: lint.problems,
     warnings: lint.warnings,
     fatal: lint.problems.length > 0,
+    source: 'file',
   }
   cache = { file, at: now, mtimeMs: stat.mtimeMs, size: stat.size, snap }
   return snap

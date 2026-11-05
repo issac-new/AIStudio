@@ -99,9 +99,9 @@
 
 验收：单测覆盖 unknown 分支；端点返回 `criteria[12]`、`score`、`gaps`；前端构建通过。
 
-### D1 记账（本轮不实施）
+### D1 权限最小化（2026-11-05 用户令「直接做完」，同日实施清偿）
 
-权限最小化缺口挂账。口径澄清（2026-11-05 用户纠正）：`approvals.mode: "off"`（30/30 profile）关闭的是 agent 内置逐条交互式审批流；审批实际由推演程序承担——`simharness/mux/mx-approval-proxy.sh` 导演代批（30s 轮询待批令，每笔落代偿台账）＋`mx-scenario-lib.sh` HumanGate 产品闭环（注册→收件箱→decide 留痕），非"零审批裸跑"。真实缺口=工具执法总闸 `HERMES_TOOL_ENFORCE` 默认未启用（审批规则/策略不参与执行拦截）、无 managed-settings、无按角色工具矩阵、`.git` 无护栏、OS 沙箱未接 Agent 主执行面。台账 `docs/superpowers/specs/2026-11-05-ainative-pending-batch.md` 编号 N01 登记，不纳入本批实现。
+口径（用户纠正定谳）：`approvals.mode: "off"`（30/30 profile）关闭的是 agent 内置逐条交互式审批流；审批实际由推演程序承担——`simharness/mux/mx-approval-proxy.sh` 导演代批＋`mx-scenario-lib.sh` HumanGate 产品闭环，非"零审批裸跑"。真实缺口与清偿：执法总闸默认关→默认开（env=0 逃生门，managed 可锁死）；策略文件缺席裸放→回落仓内默认策略包 `config/default-tool-policies.json`（三 deny 红线＋两 require_approval＋只读放行，permissive 未命中不拦）；无组织锁定面→`managedsettings` 域（双源加载＋extraDeniedTools 并入链首＋只读端点）；无角色矩阵→`team/shared/role-tool-matrix.yaml`（8 角色×30/30 profile，守门断言新 profile 必须归角色）；`.git` 无护栏→默认包 deny-git-dir-write；路径沙箱相对路径豁免→exec 按 cwd 解析后判。验收与遗留见台账 `2026-11-05-ainative-pending-batch.md` N01（resolved）。
 
 ## 决策记录
 
@@ -114,6 +114,8 @@
 | D-5 | 墙钟默认 200 迭代 + 显式墙钟 | 三处文案（500/60/sys.maxsize）收敛为 200；墙钟默认不启用（`run_budget_seconds` 仍由调用方显式设置），只在设置后硬生效 |
 | D-6 | delta 归档落 `specs/registry/` | 主规格库与逐份 spec 分离；`archive/` 保持"历史唯一副本"语义不混用 |
 | D-7 | T5 走 patch 不改 vendor 直接改 | 遵守 vendor 钉版基线规则，行为变更只经 patches/ 注入 |
+| D-8 | D1 由记账改同日实施 | 2026-11-05 用户令「直接做完」；总闸默认开＋默认包回落保证未配置环境也有红线基线，env=0 逃生门保留 |
+| D-9 | 默认策略包 permissive 而非 strict | 未命中不拦=既有写/执行行为不变（阶梯/沙箱继续判定）；strict 翻转 fail-open 语义保持 opt-in（文章口径「关键是你知道自己在选什么」） |
 
 ## 验证
 

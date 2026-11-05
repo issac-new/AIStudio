@@ -1,0 +1,85 @@
+# 角色工具权限矩阵（2026-11-05 AI Native D1 权限最小化批立）。
+#
+# 定位：30 个 profile → 8 个角色的工具面声明（allow=默认可用 / ask=需审批 /
+# deny=禁用）。这是「按角色审计谁能用什么」的单一事实源；执法消费面=评分卡
+# least-privilege 判据与 doctor 体检（矩阵在位+全 profile 覆盖）；逐工具运行时
+# 拦截由工具策略（toolpolicy）与执法门承担，本矩阵是治理正本不是第二执法器。
+#
+# 与默认策略包（config/default-tool-policies.json）的关系：策略包管全局红线，
+# 本矩阵管角色差异；两者 deny 面不得冲突（守门测试断言矩阵 deny ⊆ 策略包 deny
+# 或角色特有收紧）。
+version: 1
+roles:
+  coder:
+    description: 开发执行（写码/跑测试/本地构建）
+    allow: [read*, write*, patch, search*, terminal_exec, code_exec, memory*, skill*, update_plan]
+    ask: [git push（经 terminal_exec）, 包安装（经 terminal_exec）]
+    deny: [browser_*, delegate_task]
+  tester:
+    description: 测试执行（跑测/回归/证据采集）
+    allow: [read*, write*, patch, search*, terminal_exec, code_exec, memory*, skill*, update_plan]
+    ask: [包安装（经 terminal_exec）]
+    deny: [browser_*, delegate_task]
+  researcher:
+    description: 调研与信息采集（只读为主＋浏览器检索）
+    allow: [read*, search*, memory*, skill*, browser_navigate, browser_snapshot, browser_vision, update_plan]
+    ask: [browser_click, browser_type]
+    deny: [terminal_exec, code_exec, write_file]
+  orchestrator:
+    description: 编排与派单（读全景＋委派＋消息）
+    allow: [read*, search*, memory*, delegate_task, update_plan, messaging*]
+    ask: [browser_*]
+    deny: [terminal_exec, code_exec, write_file, patch]
+  ops:
+    description: 运维值班（执行诊断/受控修复）
+    allow: [read*, search*, terminal_exec, code_exec, memory*, skill*, update_plan]
+    ask: [write_file, patch, 服务重启类命令（经 terminal_exec）]
+    deny: [browser_*, delegate_task]
+  data:
+    description: 数据工程（管道/查询/仓库写）
+    allow: [read*, write*, patch, search*, terminal_exec, code_exec, memory*, skill*, update_plan]
+    ask: [外部数据源写入（经 terminal_exec）]
+    deny: [browser_*, delegate_task]
+  security:
+    description: 安全审计（只读侦察＋受控验证）
+    allow: [read*, search*, terminal_exec, code_exec, memory*, skill*, update_plan]
+    ask: [write_file, patch]
+    deny: [browser_*, delegate_task]
+  product:
+    description: 产品与知识（需求/文档/本体治理）
+    allow: [read*, write*, search*, memory*, skill*, update_plan]
+    ask: [terminal_exec, code_exec]
+    deny: [browser_*, delegate_task, patch]
+
+# profile → 角色映射（30/30 全覆盖，守门测试断言；新 profile 必须显式归角色）
+profile_roles:
+  worker-coder: coder
+  worker-tester: tester
+  worker-researcher: researcher
+  orchestrator: orchestrator
+  ops-sre: ops
+  ops-devops: ops
+  ops-eval: ops
+  ops-incident-commander: ops
+  data-arch: data
+  data-flink: data
+  data-infra: data
+  data-orchestrator: data
+  hack-auditor: security
+  hack-exploit: security
+  hack-forensics: security
+  hack-recon: security
+  pay-clearing: coder
+  pay-fintech: coder
+  pay-infra: ops
+  pay-orchestrator: orchestrator
+  aiteam-architecture: product
+  aiteam-embodied: researcher
+  aiteam-multimodal: researcher
+  aiteam-orchestrator: orchestrator
+  aiteam-scout: researcher
+  aiteam-training: product
+  platform-ontology-curator: product
+  platform-skill-miner: product
+  product-manager: product
+  product-researcher: researcher

@@ -37,6 +37,8 @@ import { planResume } from '../resume/resume-planner'
 import { collectProcessQuality } from '../observability/process-quality'
 import { collectTerminations } from '../loop/termination-collect'
 import { buildAiNativeScorecard } from './ai-native-scorecard'
+import { loadManagedSettings } from '../managedsettings/managed-settings'
+import { masterSwitchOn } from '../toolpipeline/enforce-gate'
 import { collectObsSignals } from '../obssignals/collect'
 import { collectObsAlerts } from '../obsalerts/collect'
 import { overlayCallgate, parseCallgateRule } from '../callgate/registry'
@@ -292,6 +294,20 @@ router.get('/resume-plan', async (ctx) => {
 router.get('/process-quality', async (ctx) => {
   try {
     ctx.body = { ok: true, ...collectProcessQuality(daysOf(ctx.query.days)) }
+  } catch (e) {
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
+  }
+})
+
+// 组织托管配置（D1 2026-11-05）：只读展示面——锁定状态/来源/额外禁用工具/总闸实效。
+router.get('/managed-settings', async (ctx) => {
+  try {
+    const managed = loadManagedSettings()
+    ok(ctx, {
+      managed,
+      masterSwitchOn: masterSwitchOn(),
+      masterSwitchEnv: process.env.HERMES_TOOL_ENFORCE ?? '(未设=默认开)',
+    } as unknown as Record<string, unknown>)
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
