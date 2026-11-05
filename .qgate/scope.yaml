@@ -325,3 +325,14 @@ paths:
   - custom/server/prefixreuse/**
   - runtime/tests/agent/**
   - config/typecheck-client-baseline.json
+  # AI Native 批遗留四处＋nvme 挂载守卫批（94ded518e 在本推送范围内，机械解堵代声明）
+  - custom/client/governance/api/harness.ts
+  - custom/client/governance/i18n.ts
+  - custom/server/obssignals/collect.ts
+  - skills/swarm-yuan/assets/state-machine.sh
+  - docs/superpowers/specs/2026-11-05-nvme-mount-guards.md
+  - team/profiles/data-infra/scripts/rc-watch-events-monitor.sh
+  - team/profiles/ops-devops/scripts/nightly_radar_supervisor.sh
+  - team/profiles/ops-devops/scripts/protocol_violation_consumer_run.py
+  - team/profiles/platform-skill-miner/scripts/skill-full-backup.sh
+  - runtime/clef/start-clef.sh
