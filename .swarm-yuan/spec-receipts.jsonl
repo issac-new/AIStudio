@@ -214,4 +214,5 @@
 {"at":"2026-11-05T09:59:27Z","spec":"docs/superpowers/specs/2026-11-05-nvme-mount-guards.md","receipt":"2444b41d84b19c1b005c1baaadaae46b9556d01f","commit":"0de003745"}
 {"at":"2026-11-05T09:59:56Z","spec":"docs/superpowers/specs/2026-11-05-nvme-mount-guards.md","receipt":"88125fbd604d3fd038904c90592db4aebc9c773a","commit":"609cb2408"}
 {"at":"2026-11-05T10:10:29Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"2ef52c13eb30b480eef370e5a77e6db19ce43fe8","commit":"7d9b2b4b8"}
-{"at":"2026-11-05T11:10:20Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"fe8553623a4968f567b11b674375f8132472a19a","commit":"9d9d9b65f"}
+{"at":"2026-11-05T11:12:19Z","spec":"docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md","receipt":"f626a7faae436ff02a15e0688a3c1ff8255f972a","commit":"9d9d9b65f"}
+{"at":"2026-11-05T11:47:18Z","spec":"docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md","receipt":"0dc7dac4393117806206fa6fe5afc113c7423b0a","commit":"0a860e5f9"}

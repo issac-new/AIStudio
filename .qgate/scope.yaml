@@ -336,3 +336,10 @@ paths:
   - team/profiles/ops-devops/scripts/protocol_violation_consumer_run.py
   - team/profiles/platform-skill-miner/scripts/skill-full-backup.sh
   - runtime/clef/start-clef.sh
+  # kanban 毒 run 指针免疫批（run27 派单器停滞根治，同批声明）
+  - patches/754-agent-kanban-junk-runid-tolerance.patch
+  - patches/series
+  - docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md
+  - simharness/tests/kanban-junk-runid.test.ts
+  - simharness/tests/fixtures/kanban-junk-runid.py
+  - docs/manuals/aistudio-design-document-index.md
