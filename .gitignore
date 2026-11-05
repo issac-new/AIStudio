@@ -63,3 +63,6 @@ vendor/**/*.tsbuildinfo
 **/*.tmp-*
 **/*.tmp.*
 .qgate/burn/
+
+# 覆盖率产物（v0.4 test:coverage）
+/coverage/

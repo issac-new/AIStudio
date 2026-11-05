@@ -103,11 +103,16 @@ describe('ClusterInspector（冷却去重/重入/fail-soft）', () => {
 
   it('start/stop 幂等', () => {
     const insp = new ClusterInspector({ hermesHome: '/nonexistent' })
+    const timerOf = (i: ClusterInspector) => (i as unknown as { timer: unknown }).timer
     insp.start(60_000)
+    const first = timerOf(insp)
     insp.start(60_000)
+    // 第二次 start 必须是 no-op：同一个 timer 引用，不新建第二个 interval
+    expect(timerOf(insp)).toBe(first)
     insp.stop()
+    expect(timerOf(insp)).toBeNull()
     insp.stop()
-    expect(true).toBe(true)
+    expect(timerOf(insp)).toBeNull()
   })
 })
 

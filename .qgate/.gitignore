@@ -11,3 +11,5 @@ release-report.md
 release-report.json
 junit-report.xml
 observations/
+mutation-probes.jsonl
+test-classes.json

@@ -524,11 +524,20 @@ export function parseRun(raw: unknown): import('./types.js').GateRun | null {
   }
   const conditions = strList(raw.conditions, 20)
   if (verdict === 'CONDITIONAL' && (!conditions || conditions.length === 0)) return null
+  // 判定执行语义（v0.4）：可选字段；旧 run 缺省 undefined，消费端按 legacy CONDITIONAL 处理。
+  const executionStatus = enumOf(raw.executionStatus, ['executed', 'degraded', 'skipped', 'error'] as const)
+  const degradedReason = enumOf(raw.degradedReason, [
+    'failure-tolerated', 'insufficient-evidence', 'executor-error', 'evidence-conditional',
+  ] as const)
   let inputSnapshot: Record<string, string> | undefined
   if (raw.inputSnapshot !== undefined) {
     if (!isRecord(raw.inputSnapshot)) return null
     const keys = Object.keys(raw.inputSnapshot)
-    if (keys.length > 200) return null
+    // 201 = SNAPSHOT_LIMIT(200) + 截断标记键（snapshot.ts 在超限时写
+    // __qgate_snapshot_truncated__）。此前上限写 200，导致「200 文件 + 标记」
+    // 的 run 被 parseRun 拒收——engineering.basic-check 的 PASS 因此读不回来
+    // （2026-11-05 health 体检实锤）。
+    if (keys.length > 201) return null
     inputSnapshot = {}
     for (const k of keys) {
       const v = str(raw.inputSnapshot[k])
@@ -562,6 +571,8 @@ export function parseRun(raw: unknown): import('./types.js').GateRun | null {
     treeHash: str(raw.treeHash),
     changedPaths: strList(raw.changedPaths, 500),
     failureSummary: str(raw.failureSummary),
+    executionStatus,
+    degradedReason,
     inputSnapshot,
     inputsStable,
     sourceSignal,

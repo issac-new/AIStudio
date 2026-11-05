@@ -3,8 +3,8 @@
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
 
 - 快照基线：`b63db00c1`；核实日：2026-11-05；版本线：`1.0.12-overlay`（vivo Harness 吸收 W1-W4 发布批）。
-- 当前工作树根目录：**554 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 101 份；合计 554 份。
+- 当前工作树根目录：**557 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 104 份；合计 557 份。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
@@ -477,8 +477,10 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（96 份）
+## 2026-11（104 份）
 
+- [2026-11-05-governance-truth-restoration.md](../superpowers/specs/2026-11-05-governance-truth-restoration.md)
+- [2026-11-05-file-size-refactor-ledger.md](../superpowers/specs/2026-11-05-file-size-refactor-ledger.md)
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
 - [2026-11-01-dod-kernel-gate-lineage-reclaim.md](../superpowers/specs/2026-11-01-dod-kernel-gate-lineage-reclaim.md)
@@ -570,7 +572,6 @@
 - [2026-11-04-agentteams-ledger-items.md](../superpowers/specs/2026-11-04-agentteams-ledger-items.md)
 - [2026-11-04-vendor-upgrade-agent-v0227.md](../superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md)
 - [2026-11-04-agentteams-dispatch-debt-backport.md](../superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md)
-- [2026-11-04-a4-layout-balance.md](../superpowers/specs/2026-11-04-a4-layout-balance.md)
 - [2026-11-04-shell-form-control-text-baseline.md](../superpowers/specs/2026-11-04-shell-form-control-text-baseline.md)
 - [2026-11-04-win-regression-p1-fixes.md](../superpowers/specs/2026-11-04-win-regression-p1-fixes.md)
 - [2026-11-04-win-regression-pending-batch.md](../superpowers/specs/2026-11-04-win-regression-pending-batch.md)

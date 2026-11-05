@@ -47,7 +47,6 @@ paths:
   - skills/swarm-yuan/CHANGELOG.md
   - docs/superpowers/specs/2026-11-01-emptystream-ladder-classify.md
   - patches/722-agent-emptystream-ladder-classify.patch
-  - patches/series
   - docs/superpowers/specs/2026-11-01-parallel-dispatch-saturation.md
   - docs/superpowers/specs/2026-11-01-release-v1.0.6-overlay.md
   - docs/superpowers/specs/2026-11-01-run24-closure.md
@@ -61,13 +60,11 @@ paths:
   - config/orchestrator.env
   - docs/superpowers/specs/2026-10-31-orchestrator-tick.md
   - docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md
-  - patches/series
   - docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md
   - docs/superpowers/specs/2026-11-02-full-regression-fixes.md
   - scripts/regression/walk-routes.mjs
   - scripts/regression/route-manifest.ts
   - docs/superpowers/specs/2026-11-02-run24-runtime-closeout.md
-  - simharness/docs/2026-11-01-run24-pending-batch.md
   - docs/superpowers/specs/2026-11-02-regression-followup.md
   - scripts/regression/matrix-session-walkthrough.mjs
   - docs/superpowers/specs/2026-11-02-chat-turn-recovery.md
@@ -80,33 +77,22 @@ paths:
   - README.md
   - docs/windows-x64-setup.md
   - docs/superpowers/specs/2026-11-02-offline-windows-package.md
-  - package.json
   - docs/superpowers/specs/2026-11-02-release-v1.0.7-overlay.md
-  - RELEASE-NOTES.md
-  - RELEASE-MANIFEST.json
-  - team/VERSION
-  - team/version.json
-  - package.json
-  - package-lock.json
   # 2026-11-02 第三方依赖升级批（feat/vendor-studio-v109, spec 2026-11-02-vendor-upgrade-studio-v109）
   - vendor/hermes-studio/**
   - vendor/VENDOR.md
   - patches/023-client-store-chat.patch
   - patches/042-desktop-rebrand-swarmstudio-pkg.patch
   - patches/718-brand-v080-new-faces.patch
-  - patches/series
   - .archived-patches/**
   - scripts/vendor-sync.sh
   - AGENTS.md
   - docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md
   # 2026-11-02 agent 存量债复核批（fix/agent-debt-recheck, spec 2026-11-02-agent-debt-recheck）
   - vendor/hermes-agent/**
-  - vendor/VENDOR.md
   - docs/superpowers/specs/2026-11-02-agent-debt-recheck.md
-  - docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md
   # 2026-11-02 测试稳定性 DSL 批（feat/test-stability-dsl, spec 2026-11-02-test-stability-dsl）
   - docs/superpowers/specs/2026-11-02-test-stability-dsl.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - scripts/regression/dsl.mjs
   - scripts/regression/harness.mjs
   - scripts/__tests__/regression-dsl.test.ts
@@ -116,70 +102,40 @@ paths:
   - team/profiles/orchestrator/references/design-doc/**
   # 2026-11-02 失败根因分类器批（feat/failure-taxonomy, spec 2026-11-02-failure-taxonomy）
   - docs/superpowers/specs/2026-11-02-failure-taxonomy.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - skills/swarm-yuan/references/failure-taxonomy.md
   - skills/swarm-yuan/references/capability-map.md
   - skills/swarm-yuan/assets/hooks/failure-detector.sh
   - skills/swarm-yuan/tests/test-failure-detector.sh
   - skills/swarm-yuan/SKILL.md
-  - skills/swarm-yuan/CHANGELOG.md
-  - .qgate/scope.yaml
   # 2026-11-02 MAET+检索协议批（feat/maet-retrieval-ladder, spec 2026-11-02-maet-retrieval-ladder）
   - docs/superpowers/specs/2026-11-02-maet-retrieval-ladder.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - skills/swarm-yuan/assets/spec-template.md
   - skills/swarm-yuan/references/knowledge-retrieval-ladder.md
-  - skills/swarm-yuan/references/capability-map.md
   - skills/swarm-yuan/scripts/generate-skill.sh
   - skills/swarm-yuan/tests/test-spec-template-maet.sh
-  - skills/swarm-yuan/SKILL.md
-  - skills/swarm-yuan/CHANGELOG.md
-  - .qgate/scope.yaml
   # 2026-11-02 测试词汇批（feat/test-vocab, spec 2026-11-02-test-vocab）
   - docs/superpowers/specs/2026-11-02-test-vocab.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - simharness/mux/glossary.txt
-  - skills/swarm-yuan/assets/spec-template.md
-  - skills/swarm-yuan/tests/test-spec-template-maet.sh
-  - skills/swarm-yuan/CHANGELOG.md
-  - .qgate/scope.yaml
   # 2026-11-02 并行批落档代声明（plan-program-latest-sync spec 入 main 未声明，pre-push 解堵）
   - docs/superpowers/specs/2026-11-02-plan-program-latest-sync.md
   # 2026-11-02 Grader 环批（feat/skill-grader, spec 2026-11-02-skill-grader）
   - docs/superpowers/specs/2026-11-02-skill-grader.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - custom/server/eval/skill-grader.ts
   - custom/server/eval/__tests__/skill-grader.test.ts
   - custom/server/eval/controller.ts
-  - package.json
-  - .qgate/scope.yaml
   # 2026-11-02 发布载体对账批（fix/release-carrier-reconcile, spec 2026-11-02-release-carrier-reconcile）
   - docs/superpowers/specs/2026-11-02-release-carrier-reconcile.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - RELEASE-MANIFEST.json
-  - RELEASE-NOTES.md
   # 2026-11-02 技能评估面板批（feat/eval-skill-panel, spec 2026-11-02-eval-skill-panel）
   - docs/superpowers/specs/2026-11-02-eval-skill-panel.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - custom/client/eval/api.ts
   - custom/client/eval/i18n.ts
   - custom/client/eval/components/SkillGradePanel.vue
   - custom/client/eval/views/EvalView.vue
   - custom/client/eval/__tests__/skill-grade-panel.test.ts
-  - .qgate/scope.yaml
   # 2026-11-02 v1.0.8 发布轮（chore/release-v1.0.8, spec 2026-11-02-release-v1.0.8-overlay）
   - docs/superpowers/specs/2026-11-02-release-v1.0.8-overlay.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - RELEASE-MANIFEST.json
-  - RELEASE-NOTES.md
-  - package.json
-  - package-lock.json
-  - team/VERSION
-  - team/version.json
-  - .qgate/scope.yaml
   # 2026-11-02 方案同步批代声明（bb44a7060 并行合入：3ec71fd4d+109a72628，解堵补全非门禁放宽）
   - docs/superpowers/specs/2026-11-02-eval-skill-grade-plan-sync.md
-  - docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md
   - simharness/mux/mx-prelaunch-check.sh
   - simharness/mux/tests/plan-program-sync.test.sh
   - .swarm-yuan/spec-receipts.jsonl
@@ -187,9 +143,6 @@ paths:
   - simharness/mux/mx-clean.sh
   - simharness/mux/mx-lib.sh
   - docs/superpowers/specs/2026-11-02-run25-prelaunch-tooling-hardening.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - RELEASE-MANIFEST.json
-  - RELEASE-NOTES.md
   # 2026-11-02 run25 值守批（G2 熔断现场 B 层根治：补丁 726）
   - docs/superpowers/specs/2026-11-02-chat-recovery-kwarg-fix.md
   - patches/726-agent-chat-recovery-kwarg-fix.patch
@@ -202,7 +155,6 @@ paths:
   - docs/superpowers/specs/2026-11-02-g2-breaker-evidence-main-tip.md
   # 2026-11-02 run25 四启实录批（_sens 重放 unbound）
   - docs/superpowers/specs/2026-11-02-sens-unbound-replay-fix.md
-  - simharness/aipay-scenario.sh
   # 2026-11-02 run25 监督器产品化批
   - docs/superpowers/specs/2026-11-02-mx-run-single-entry.md
   - simharness/mux/mx-run.sh
@@ -222,86 +174,47 @@ paths:
   - simharness/mux/mx-gate-timing.sh
   - simharness/mux/mx-gate-lib.sh
   - simharness/mux/mx-recovery-lib.sh
-  - simharness/mux/run-driver-supervisor.sh
-  - simharness/mux/mx-prelaunch-check.sh
-  - simharness/mux/mx-lib.sh
   - simharness/tests/mechanism-behavior.test.ts
   - simharness/tests/harness-gate-integrity.test.ts
   - simharness/tests/eval-fullflow-integration.test.ts
   - simharness/tests/eval-metrics-template-sync.test.ts
   - simharness/tests/v846-governance-closure.test.ts
   - patches/729-agent-recovery-kwargs-pure.patch
-  - patches/series
   # 2026-11-03 run25 全流程复盘批
   - docs/superpowers/specs/2026-11-03-run25-full-retro.md
-  - docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md
-  - simharness/aipay-scenario.sh
-  - simharness/mux/run-driver-supervisor.sh
-  - simharness/mux/mx-recovery-lib.sh
   - simharness/mux/mx-delivery-lib.sh
   - simharness/mux/r18-collect.py
   - simharness/mux/mx-report-audit.py
   - simharness/mux/mx-report-gen.py
   - simharness/mux/mx-scenario-lib.sh
   - simharness/mux/final-report-merge.py
-  - simharness/tests/mechanism-behavior.test.ts
   # 2026-11-03 v1.0.9 发布轮（run25 收官＋挂账台账）
   - docs/superpowers/specs/2026-11-03-run26-pending-batch.md
-  - docs/superpowers/specs/2026-11-03-run25-full-retro.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - package.json
-  - package-lock.json
-  - RELEASE-MANIFEST.json
-  - RELEASE-NOTES.md
   # 2026-11-03 离线包 everything 全内嵌修订
   - docs/superpowers/specs/2026-11-03-offline-everything-complete.md
   - skills/swarm-yuan/scripts/make-offline-bundle.sh
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   # 2026-11-03 离线包卫生批（R146）
   - docs/superpowers/specs/2026-11-03-bundle-tracked-only.md
-  - skills/swarm-yuan/scripts/make-offline-bundle.sh
   # 2026-11-03 源码包 PAX 头清除（R147）
   - docs/superpowers/specs/2026-11-03-tar-pax-gnu-repack.md
   - scripts/make-release-packages.mjs
   # 2026-11-03 v1.0.10 发布轮（资产口径收窄=只发 full＋yuan everything）
   - docs/superpowers/specs/2026-11-03-release-v1.0.10-overlay.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - package.json
-  - package-lock.json
-  - RELEASE-MANIFEST.json
-  - RELEASE-NOTES.md
   # 2026-11-03 发布资产口径立法（上传面永久收窄=两包）
   - docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - RELEASE-MANIFEST.json
   # 2026-11-03 打包面同口径收窄（spec D1 修订随批）
-  - docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - RELEASE-MANIFEST.json
-  - scripts/make-release-packages.mjs
   # 2026-11-03 培训手册版本载体清偿（升版轮漏改，全量测试抓出）
   - docs/manuals/aistudio-training-and-user-guide.md
   # 2026-11-04 v1.0.11 发布轮（vendor v0.22.7 换血＋AgentTeams 批一~四＋win 回归 P1＋r26 工装清偿；ModelScope 通道暂停待后续令）
   - docs/superpowers/specs/2026-11-04-release-v1.0.11-overlay.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - package.json
-  - package-lock.json
-  - RELEASE-MANIFEST.json
-  - RELEASE-NOTES.md
   - docs/manuals/aistudio-design-document-guide.md
   - docs/manuals/aistudio-design-document-index.md
   - docs/manuals/aistudio-feature-inventory.md
   - docs/manuals/aistudio-operations-reference.md
-  - docs/manuals/aistudio-training-and-user-guide.md
   # 2026-11-05 v1.0.12 发布轮（vivo Harness W1-W4＋生产链走查＋类型门解封；新增增量补丁通道；附录 A 代登记两份漏登 spec）
   - docs/superpowers/specs/2026-11-05-release-v1.0.12-overlay.md
   - scripts/make-incremental-package.mjs
   - scripts/__tests__/make-incremental-package.test.ts
-  - docs/manuals/aistudio-training-and-user-guide.md
-  - docs/manuals/aistudio-design-document-guide.md
-  - docs/manuals/aistudio-design-document-index.md
-  - docs/manuals/aistudio-feature-inventory.md
-  - docs/manuals/aistudio-operations-reference.md
   # 2026-11-05 组织治理能力批（自治刻度/假设登记簿/度量纪律 + 薄项）
   - custom/server/autonomygov/**
   - custom/server/premiselog/**
@@ -319,7 +232,6 @@ paths:
   - custom/client/ia2/views/gov/GovOrgKnowledgeView.vue
   - custom/client/ia2/views/gov/GovHarnessView.vue
   - custom/client/governance/api/governance.ts
-  - skills/swarm-yuan/assets/spec-template.md
   - patches/751-server-org-gov-mount.patch
   - docs/superpowers/specs/2026-11-05-org-governance-autonomy-scale.md
   - docs/superpowers/specs/2026-11-05-org-governance-premise-log.md
@@ -328,8 +240,18 @@ paths:
   - custom/client/governance/__tests__/org-governance-sections.test.ts
   - custom/server/autonomygov/__tests__/http-projection.test.ts
   - custom/server/autonomygov/__tests__/dualsign.test.ts
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md
   - .qgate/gates/governance.orgscale.yaml
   - .qgate/qgate.yaml
 
+  # 2026-11-05 治理可信度修复（cognition-lattice 复盘落地；P0/P1/P2）
+  - .qgate/gates/**
+  - custom/qgate/src/**
+  - custom/qgate/__tests__/**
+  - custom/qgate/gate-packs/**
+  - custom/server/eval/**
+  - custom/server/specs/**
+  - scripts/**
+  - config/**
+  - docs/superpowers/specs/2026-11-05-governance-truth-restoration.md
+  - docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md
+  - simharness/docs/**

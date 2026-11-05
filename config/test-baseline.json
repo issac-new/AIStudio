@@ -1,0 +1,9 @@
+{
+  "recordedAt": "2026-11-05",
+  "source": "npm test (vitest run) in worktree feat/governance-truth",
+  "total": 7890,
+  "passed": 7879,
+  "failed": 0,
+  "skipped": 11,
+  "note": "基线棘轮：只许升不许降。minTotal 7600 是 gate 的静态防缩水阈值；本文件供 governance-lint 做更严格的 passed 对比（>= baseline.passed * 0.98）。"
+}

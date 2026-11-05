@@ -1,0 +1,19 @@
+{
+  "decisions": {
+    "required": ["ts", "type"],
+    "standardRequired": ["phase", "ai_suggestion", "user_action", "outcome", "rationale", "actor"],
+    "strictFrom": "2026-11-05T00:00:00+08:00",
+    "legacyShapes": {
+      "legacy-id-decision": ["ts", "id", "decision", "type"]
+    }
+  },
+  "receipts": {
+    "required": ["at", "spec", "receipt", "commit"]
+  },
+  "gateDeny": {
+    "required": ["ts", "tool", "target", "gates"]
+  },
+  "recurrence": {
+    "required": ["ts", "category", "count"]
+  }
+}

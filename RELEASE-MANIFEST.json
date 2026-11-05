@@ -101,6 +101,7 @@
       "notes": "四模块中发布链最成熟：CHANGELOG semver＋.bundle-version 溯源＋体积预算门禁齐备。"
     }
   },
+  "releaseBatches": [],
   "packaging": {
     "format": "tar.gz",
     "outputDir": "dist/release/",

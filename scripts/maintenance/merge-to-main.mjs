@@ -5,6 +5,7 @@
 //
 // 用法：node scripts/maintenance/merge-to-main.mjs [--message "merge: ..."]
 import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -53,4 +54,19 @@ const message = process.argv.includes('--message')
 const out = execFileSync('git', ['merge', '--no-ff', branch, '-m', message], { cwd: mainPath, encoding: 'utf8' })
 console.log(`[merge] main worktree: ${mainPath}`)
 console.log(out.trim())
+// 合并不变量（v0.4）：post-merge 退出码被 git 忽略，这里是唯一能可靠阻断的合并执行点。
+const invScript = resolve(mainPath, 'scripts/merge-invariants.mjs')
+if (existsSync(invScript)) {
+  try {
+    const inv = execFileSync(process.execPath, [invScript, '--check'], { cwd: mainPath, encoding: 'utf8' })
+    console.log(inv.trim())
+  } catch (e) {
+    console.error('[merge] 合并不变量检查失败（manifest/docs/L2/收据）；merge 已发生但校验未过，请修复后重跑或回滚。')
+    if (e.stdout) console.error(String(e.stdout).slice(-2000))
+    if (e.stderr) console.error(String(e.stderr).slice(-2000))
+    process.exit(1)
+  }
+} else {
+  console.warn('[merge] scripts/merge-invariants.mjs 不在 main，跳过合并不变量检查（旧分支）')
+}
 console.log('[merge] OK')

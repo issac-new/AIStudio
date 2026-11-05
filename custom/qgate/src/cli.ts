@@ -8,8 +8,9 @@ import { existsSync, readdirSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { loadProject } from './core/loader.js'
 import { runGate, gitContext } from './core/run.js'
-import { storePaths, latestRuns, loadRun, loadRunEvidence, isFresh, listRisks, saveWaiver, listWaivers } from './core/store.js'
+import { storePaths, latestRuns, loadRun, loadRunEvidence, isFresh, listRisks, saveWaiver, listWaivers, listRuns } from './core/store.js'
 import { resolveProfile, findProfile, effectivePolicy, isBlockingVerdict } from './core/profile.js'
+import { assessHealth, type HealthState } from './core/health.js'
 import { selectGates, appliesToChanged } from './core/impact.js'
 import { tierOfProfile, VERDICT_TO_DELIVERY } from './core/align.js'
 import { buildReleaseReport, renderReleaseReportMd, FIX_FIRST_DISCIPLINE } from './core/report.js'
@@ -28,6 +29,8 @@ commands:
   plan [--changed p1,p2]              列出适用门（影响分析）
   run <gateId|--all> [--trigger t]    执行门并落证据
   status [--fresh] [--json]           每门最新判定（--fresh 附新鲜度）
+  health [--scope pre-push|release|all] [--require-fresh] [--json]
+                                      健康体检：DEGRADED/SKIP/STALE/NEVER 与连续非 PASS 计数
   explain <gateId>                    解释非 PASS 的原因
   evidence <gateId|runId>             列出证据
   risk                                列出登记的 Risk
@@ -391,6 +394,50 @@ async function main(): Promise<void> {
       return
     }
 
+    case 'health': {
+      const scopeArg = flag(rest, '--scope') ?? 'all'
+      if (scopeArg !== 'pre-push' && scopeArg !== 'release' && scopeArg !== 'all') fail('--scope must be pre-push|release|all')
+      const maxAgeArg = flag(rest, '--max-age-hours')
+      const maxAgeHours = maxAgeArg !== undefined ? Number(maxAgeArg) : 24
+      if (!Number.isFinite(maxAgeHours) || maxAgeHours <= 0) fail('--max-age-hours must be a positive number')
+      const consecutiveArg = flag(rest, '--consecutive')
+      const consecutiveThreshold = consecutiveArg !== undefined ? Number(consecutiveArg) : undefined
+      if (consecutiveThreshold !== undefined && (!Number.isInteger(consecutiveThreshold) || consecutiveThreshold <= 0)) {
+        fail('--consecutive must be a positive integer')
+      }
+      const requireFresh = hasFlag(rest, '--require-fresh')
+      const json = hasFlag(rest, '--json')
+      const state = latestRuns(paths)
+      const runs = listRuns(paths)
+      // pre-push 与 hook 实际执行面一致（L0，含 disabled 门）；release/all 用启用门池。
+      const pool = scopeArg === 'pre-push' ? loaded.gates : enabledGates
+      const failOn: HealthState[] | undefined = requireFresh
+        ? ['degraded', 'fail', 'inconclusive', 'stale', 'never', 'skip']
+        : undefined
+      const report = assessHealth({
+        gates: pool, resolved, state, runs, workspace, scope: scopeArg,
+        maxAgeHours, consecutiveThreshold, failOn,
+      })
+      if (json) {
+        process.stdout.write(JSON.stringify(report, null, 2) + '\n')
+      } else {
+        process.stdout.write(`qgate health (scope=${report.scope}, profile=${resolved.profileId})\n`)
+        for (const row of report.gates) {
+          const icon = row.health === 'ok' ? '✓' : row.health === 'skip' || row.health === 'never' ? '△' : '✗'
+          process.stdout.write(
+            `${icon} ${row.gateId} [${row.domain}]: ${row.health.toUpperCase()}` +
+            ` (verdict=${row.verdict}${row.executionStatus ? `/${row.executionStatus}` : ''}, ${row.freshness})` +
+            (row.reason ? ` — ${row.reason}` : '') +
+            (row.consecutiveNonPass > 0 ? ` — ${row.consecutiveNonPass} consecutive non-PASS` : '') + '\n',
+          )
+        }
+        process.stdout.write(`summary: ${Object.entries(report.summary).map(([k, v]) => `${k}=${v}`).join(' ')}\n`)
+        if (report.exitCode !== 0) process.stdout.write(`fail-on: ${report.failOn.join(', ')}\n`)
+      }
+      process.exit(report.exitCode)
+      return
+    }
+
     case 'status': {
       const fresh = hasFlag(rest, '--fresh')
       const json = hasFlag(rest, '--json')
@@ -427,6 +474,8 @@ async function main(): Promise<void> {
           gateId: g.metadata.id,
           domain: g.spec.domain,
           verdict: entry?.verdict ?? 'INCONCLUSIVE',
+          executionStatus: run?.executionStatus ?? entry?.executionStatus,
+          degradedReason: run?.degradedReason ?? entry?.degradedReason,
           delivery: VERDICT_TO_DELIVERY[entry?.verdict ?? 'INCONCLUSIVE'],
           freshness: fresh ? freshness : undefined,
           blocking: isBlockingVerdict(entry?.verdict ?? 'INCONCLUSIVE', effectivePolicy(g, resolved)),
@@ -435,8 +484,13 @@ async function main(): Promise<void> {
         }
         report.push(row)
         if (!json) {
+          const displayVerdict =
+            row.executionStatus === 'error' ? 'DEGRADED'
+              : row.executionStatus === 'skipped' ? 'SKIP'
+                : row.verdict
           process.stdout.write(
-            `${row.blocking ? '✗' : '✓'} ${row.gateId} [${row.domain}]: ${row.verdict}` +
+            `${row.blocking || row.executionStatus === 'error' ? '✗' : '✓'} ${row.gateId} [${row.domain}]: ${displayVerdict}` +
+            (row.degradedReason ? ` — ${row.degradedReason}` : '') +
             (sourceBucket ? ` [来源 ${SOURCE_LABEL_ZH[sourceBucket]}]` : '') +
             (fresh ? ` (${row.freshness})` : '') +
             (skipCause ? ` — ${skipCause === 'out-of-change-scope' ? '不在变更面（appliesWhen 未命中）' : '从未执行'}` : '') + '\n',

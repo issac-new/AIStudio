@@ -57,5 +57,16 @@ export default defineConfig({
     // 重型 UI 挂载用例在并发负载下 5s 默认超时不稳定（2026-10-18 实测两例无关挂载
     // 超时）；统一 20s，断言不变，真实挂起仍会失败。
     testTimeout: 20000,
+    // 覆盖率（v0.4 治理可信度修复）：只统计 overlay 源文件，不统计测试/上游。
+    // 全局阈值留 0——真正的门槛是 scripts/coverage-changed.mjs 的改动行 ≥70%，
+    // 避免用全仓覆盖率掩盖新代码零测试。
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: 'coverage',
+      include: ['custom/server/**/*.ts', 'custom/client/**/*.ts', 'custom/client/**/*.vue'],
+      exclude: ['**/__tests__/**', '**/*.test.ts', '**/dist/**', 'custom/client/test/**'],
+      thresholds: { lines: 0, functions: 0, branches: 0, statements: 0 },
+    },
   },
 })

@@ -115,16 +115,22 @@ describe('4A 治理层：判定词表与 qgate 六态对齐（strict 7）', () =
 
 describe('4A 治理层：保鲜与存量信号（warn 9/10，只提醒不挡）', () => {
   it('输出 reviewedAt 超期清单与无锚点条目（供治理批复核）', () => {
-    if (!ledgerRes.doc) return
-    const stats = deriveLedgerStats(ledgerRes.doc)
+    // 缺 doc 不是「跳过」而是失败：这条用例的价值就是证明台账可读。
+    const doc = ledgerRes.doc
+    expect(doc).toBeTruthy()
+    if (!doc) throw new Error('ledger doc missing')
+    const stats = deriveLedgerStats(doc)
     if (stats.stale.length > 0) {
       console.warn(`[4A-warn] reviewedAt 超 ${90} 天条目 ${stats.stale.length} 个：${stats.stale.map((s) => `${s.id}(${s.days}d)`).join(', ')}`)
     }
-    const anchorless = ledgerRes.doc.units.filter((u) => u.lifecycle === 'active' && !u.refs?.file && !u.refs?.note)
+    const anchorless = doc.units.filter((u) => u.lifecycle === 'active' && !u.refs?.file && !u.refs?.note)
     if (anchorless.length > 0) {
       console.warn(`[4A-warn] active 但无任何 refs 锚点：${anchorless.map((u) => u.id).join(', ')}`)
     }
-    expect(true).toBe(true)
+    // 真实不变量：stale 是 {id, days} 数组；anchorless 的每条都必须是 active 且无锚点。
+    expect(Array.isArray(stats.stale)).toBe(true)
+    expect(stats.stale.every((s) => typeof s.id === 'string' && typeof s.days === 'number')).toBe(true)
+    expect(anchorless.every((u) => u.lifecycle === 'active' && !u.refs?.file && !u.refs?.note)).toBe(true)
   })
 })
 

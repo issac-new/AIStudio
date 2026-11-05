@@ -14,8 +14,9 @@
 8. 本仓只存源码/脚本/文档/依赖清单；中间产物（node_modules、dist、runs、截图、离线包、evidence 二进制）不入库（.gitignore 立法，2026-10-24 用户指示）。`evidence/` 内 2026-10-28 之前的历史截图按冻结白名单保留、禁新增（守门 `custom/__tests__/evidence-binary-freeze.test.ts`）。
 9. 访问上游树用统一解析序：显式 env（`OVERLAY_UPSTREAM_ROOT`）→ 仓内 `vendor/` → 旧兄弟 `upstream/`（先例 `scripts/build.mjs`、`scripts/serve-server.mjs`）。不要写死 `../upstream` 的层级假设——单仓检出没有兄弟 upstream，写死必坏。
 10. 运行时部署（`scripts/deploy-agent-runtime.mjs`）默认**保留安装树里与模板不同的文件**并报告；确需以模板覆盖时显式 `--force`。模板落后于宿主时应把宿主已知良好态回灌 `runtime/`，不要强推覆盖。
-11. 强制面分三处、都随仓入库：L2 提交强拦的判定库与钩子在 `.swarm-yuan/hooks/`（由 `npm run skill:build` 从 `skills/swarm-yuan/assets/` 渲染——该命令需生成态技能目录，只在主检出生效；worktree/新克隆直接使用已入库副本，字节一致性由 `custom/__tests__/l2-kit-parity.test.ts` 锁）；推送前 `pre-push` 执行 qgate L0 门集（默认只告警，`QGATE_PREPUSH_ENFORCE=1` 拦截，`QGATE_PREPUSH_SKIP=1` 关闭）；四层上下文读取计量由 `custom/qgate/plugin/hooks/post-tool-read.mjs` 落 `.qgate/reads.jsonl`，端点 `/api/harness/obs-signals` 的 `contextReads` 面消费。
+11. 强制面分三处、都随仓入库：L2 提交强拦的判定库与钩子在 `.swarm-yuan/hooks/`（由 `npm run skill:build` 从 `skills/swarm-yuan/assets/` 渲染——该命令需生成态技能目录，只在主检出生效；worktree/新克隆直接使用已入库副本，字节一致性由 `custom/__tests__/l2-kit-parity.test.ts` 锁）；推送前 `pre-push` 执行 qgate L0 门集（默认强制拦截，`QGATE_PREPUSH_ENFORCE=0` 降级为告警，`QGATE_PREPUSH_SKIP=1` 关闭；CONDITIONAL 不再视为通过，`DEGRADED/STALE` 由 `scripts/qgate-health.mjs` 拦下）；四层上下文读取计量由 `custom/qgate/plugin/hooks/post-tool-read.mjs` 落 `.qgate/reads.jsonl`，端点 `/api/harness/obs-signals` 的 `contextReads` 面消费。
 12. 多会话 merge 冲突属主解（2026-11-04 用户裁决）：双活会话下在 main 上发起的 merge 报冲突时，**只有分支属主会话有权解冲突并完成 merge**（唯一例外=属主明确让渡）；非属主发现他人 merge 冲突只通报不动手。依据 v0.22.7 轮实录：代解即使结果优质，同轮 VENDOR.md 台账在 merge 环节被静默回退旧版且无人对 merge 全量内容负责（75af34ee7 回植才闭环）——决策链见 `.swarm-yuan/decisions.jsonl` 同日 UserChallenge 条。
+13. 机制预算与退役条件（2026-11-05 治理可信度修复）：新增门/钩子/脚本/账本必须在 `config/mechanism-budget.json` 登记 `sunset`（owner、reviewBy、retireWhen），并配对一项删除或降级；`node scripts/governance-lint.mjs --budget` 超限即失败。禁止只加不减——上一轮复盘的 D3（治理通胀）就是新增机制没有退役条件。合并后静态不变量（manifest/docs/L2/收据）由 `scripts/merge-invariants.mjs --check` 在 `pre-push` 与 `merge-to-main.mjs` 双点拦截。
 
 ## 目录导航
 

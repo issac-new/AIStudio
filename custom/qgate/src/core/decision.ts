@@ -4,11 +4,18 @@
 import { supportsPass } from './align.js'
 import type { Evidence, EvidenceResult, GateSpec, GateVerdict } from './types.js'
 
+export type ExecutionStatus = 'executed' | 'degraded' | 'skipped' | 'error'
+export type DegradedReason = 'failure-tolerated' | 'insufficient-evidence' | 'executor-error' | 'evidence-conditional'
+
 export interface Decision {
   verdict: GateVerdict
   /** CONDITIONAL 必填解除条件；FAIL/INCONCLUSIVE 附原因摘要（explain 消费）。 */
   conditions?: string[]
   failureSummary?: string
+  /** 判定执行语义（v0.4）：区别于 verdict 本身，回答「门真的跑了吗、跑坏了没有」。 */
+  executionStatus: ExecutionStatus
+  /** executionStatus 的结构化原因；executed 态可缺省。 */
+  degradedReason?: DegradedReason
   /** evidence type → 覆盖情况（缺什么一目了然）。 */
   coverage: Record<string, 'pass' | 'fail' | 'conditional' | 'error' | 'missing' | 'not-exercised'>
 }
@@ -43,31 +50,43 @@ export function decide(spec: GateSpec, evidence: readonly Evidence[], policy: Ga
         verdict: 'CONDITIONAL',
         conditions: [`failing evidence accepted under warn policy: ${parts.join(', ')} — must be cleared before release`],
         coverage,
+        executionStatus: 'degraded',
+        degradedReason: 'failure-tolerated',
       }
     }
-    return { verdict: 'FAIL', failureSummary: parts.join(', '), coverage }
+    return { verdict: 'FAIL', failureSummary: parts.join(', '), coverage, executionStatus: 'executed' }
   }
 
   // 2) 证据不足 → INCONCLUSIVE（不能 PASS）
+  //    error（执行器自身跑不起来）与 missing/not-exercised（没证据）必须分开：
+  //    前者是仪器坏了，后者是没测。CONDITIONAL 时代两者被压成同一句
+  //    "insufficient evidence accepted under warn policy"，这是治理失真的源头。
   if (missing.length > 0) {
     const parts = missing.map(([t, v]) => `${t}:${v}`)
+    const executorError = missing.some(([, v]) => v === 'error')
+    const executionStatus: ExecutionStatus = executorError ? 'error' : 'skipped'
+    const degradedReason: DegradedReason = executorError ? 'executor-error' : 'insufficient-evidence'
     if (policy.inconclusive === 'warn') {
       return {
         verdict: 'CONDITIONAL',
-        conditions: [`insufficient evidence accepted under warn policy: ${parts.join(', ')}`],
+        conditions: [
+          `${executorError ? 'executor error' : 'insufficient evidence'} accepted under warn policy: ${parts.join(', ')}`,
+        ],
         coverage,
+        executionStatus,
+        degradedReason,
       }
     }
-    return { verdict: 'INCONCLUSIVE', failureSummary: parts.join(', '), coverage }
+    return { verdict: 'INCONCLUSIVE', failureSummary: parts.join(', '), coverage, executionStatus, degradedReason }
   }
 
   // 3) 条件型证据 → CONDITIONAL（解除条件 = 各证据条件汇总）
   if (conditional.length > 0) {
     const conds = conditional.map(([t]) => `evidence ${t} is conditional; clear its condition and re-run`)
-    return { verdict: 'CONDITIONAL', conditions: conds, coverage }
+    return { verdict: 'CONDITIONAL', conditions: conds, coverage, executionStatus: 'degraded', degradedReason: 'evidence-conditional' }
   }
 
-  return { verdict: 'PASS', coverage }
+  return { verdict: 'PASS', coverage, executionStatus: 'executed' }
 }
 
 /** evidence result 的通用换算说明（explain 用，供 CLI 拼装人话）。 */

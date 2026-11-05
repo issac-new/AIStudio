@@ -1,0 +1,6 @@
+{
+  "recordedAt": "2026-11-05",
+  "count": 89,
+  "pattern": "^\\s*if \\(.*\\)\\s*return;?\\s*$",
+  "note": "只许减：新增一处 silent-return 即失败；清理后下调 count。2 处 tautology 已改真实断言（cluster-inspector start/stop 幂等、governance-ledger 4A 不变量）；governance-ledger 的 return 改为 throw。"
+}
