@@ -6,6 +6,7 @@
   "description": "AIStudio：单一完整项目仓（产品面+Matrix+hermes agent+Ycode+swarm-yuan 技能+simharness）；vendor/ 钉版基线经构建期注入",
   "scripts": {
     "inject": "node scripts/inject.mjs",
+    "doctor": "node scripts/harness-doctor.mjs",
     "clean": "node scripts/inject.mjs --clean",
     "serve": "node scripts/serve-server.mjs",
     "verify": "node scripts/verify-clean.mjs",

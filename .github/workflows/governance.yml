@@ -1,0 +1,36 @@
+name: governance
+
+# 产品治理门禁（2026-11-05 AI Native 吸收批 T6）：
+# 此前 CI 只测 qgate/swarm-yuan 自身（qgate.yml/swarm-yuan.yml 路径触发），
+# 「CI 绿灯≠产品门禁通过」——governance-lint / merge-invariants / typecheck
+# 只在本地 pre-push 生效。本工作流补可复现最小面：
+#  - lint/invariants：纯 node 零依赖，干净环境直接跑；
+#  - typecheck：仓库无根依赖（node_modules 符号链→vendor 树属本地形态），
+#    CI 内联安装 typescript/@types/node 后按同一命令跑；
+#  - 全量 npm test 依赖本地注入态 vendor 树，不入 CI（qgate.yml 同款结论），
+#    仍在本地合并门与 release:preflight 执行。
+# merge-invariants 的 qgate-health 子项在 dist 缺席时=skip（advisory），CI 不拦。
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  static:
+    name: 治理静态门（lint + invariants + typecheck）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: governance-lint --budget
+        run: node scripts/governance-lint.mjs --budget
+      - name: merge-invariants --check
+        run: node scripts/merge-invariants.mjs --check
+      - name: 安装 typecheck 工具链（仓库无根依赖，CI 内联）
+        run: npm install --no-save --no-package-lock typescript @types/node
+      - name: typecheck:harness
+        run: npm run typecheck:harness

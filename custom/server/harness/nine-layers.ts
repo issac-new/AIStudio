@@ -357,6 +357,16 @@ function findOverlayRoot(): string | null {
   return null
 }
 
+/** 源码级标记断言（2026-11-05 AI Native T4）：文件在位且包含全部标记串。
+ *  用于「接线/身份」类检查——比存在性强、比运行时探针便宜。 */
+function sourceHas(root: string | null, rel: string, markers: string[]): boolean {
+  if (!root) return false
+  try {
+    const text = readFileSync(join(root, rel), 'utf8')
+    return markers.every((m) => text.includes(m))
+  } catch { return false }
+}
+
 function existsUnder(root: string | null, rel: string): boolean {
   if (!root) return false
   return existsSync(join(root, rel))
@@ -503,7 +513,8 @@ export async function collectNineLayersInputs(days = 7): Promise<NineLayersInput
       pathAllowlist: !!process.env.HERMES_TOOL_SANDBOX_ROOTS?.trim(),
       networkAllowlist: existsUnder(root, 'custom/server/browsersec/browser-security.ts')
         && !!(process.env.HERMES_BROWSER_ALLOWLIST?.trim() || process.env.HERMES_BROWSER_DENYLIST?.trim()),
-      secretRedaction: true,
+      // 2026-11-05 AI Native T4：硬编码 true 改实测——脱敏正本=vendor redact.py（补丁集交付）
+      secretRedaction: existsUnder(root, 'vendor/hermes-agent/agent/redact.py'),
       declaredTimeouts: contractsWithTimeout,
       teardown: false,
     },
@@ -515,13 +526,18 @@ export async function collectNineLayersInputs(days = 7): Promise<NineLayersInput
       uiOracle: existsUnder(root, 'custom/server/eval/uioracle.ts'),
     },
     permissions: {
-      enforceWired: existsUnder(root, 'custom/server/toolpipeline/enforce-gate.ts'),
+      // 2026-11-05 AI Native T4：文件存在≠接线——执法钩子须被 tool-hooks 装配（挂载点实测）
+      enforceWired: existsUnder(root, 'custom/server/toolpipeline/enforce-gate.ts')
+        && sourceHas(root, 'custom/server/toolpipeline/tool-hooks.ts', ["from './enforce-gate'"]),
       enforceEnabled,
       approvalRecords,
       // P0-2：新记录自动带 scope/expiresAt/source；存量老记录可能缺，按最新一条判定。
       scopedApprovals,
-      // P0-1：userId 已接入执法链（未登记用户不改变行为）。
-      identityInEnforcement: true,
+      // P0-1：userId 已接入执法链——2026-11-05 AI Native T4 改实测：执法门源码
+      // 须同时含 userId 入参与 identityOf 解析钩（纸面 true 曾虚高）。
+      identityInEnforcement: sourceHas(
+        root, 'custom/server/toolpipeline/enforce-gate.ts',
+        ['userId?: string', 'identityOf?:']),
       // P0-2：每次执法裁决（含放行）落独立决策账。
       allowDecisionsAudited: policyCount > 0,
     },
