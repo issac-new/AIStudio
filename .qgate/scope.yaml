@@ -325,3 +325,11 @@ paths:
   - docs/superpowers/specs/2026-11-05-org-governance-premise-log.md
   - docs/superpowers/specs/2026-11-05-org-governance-metric-discipline.md
   - docs/superpowers/specs/2026-11-05-org-governance-thin-items.md
+  - custom/client/governance/__tests__/org-governance-sections.test.ts
+  - custom/server/autonomygov/__tests__/http-projection.test.ts
+  - custom/server/autonomygov/__tests__/dualsign.test.ts
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md
+  - .qgate/gates/governance.orgscale.yaml
+  - .qgate/qgate.yaml
+
