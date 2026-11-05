@@ -242,6 +242,7 @@ Task 1-8 实施完成后的真实命令与计数（隔离 HOME=/tmp/aistudio-pla
 - `npx vitest run --root simharness tests/harness-gate-integrity.test.ts`：132/132 通过。
 - 变异探针四连（临时改动→对应测试红→还原→绿，探针态不入提交）：①移除 evaluateIdentityBinding 的 origin 等值检查 → matrix-login+policy 3 用例红（跨 origin 认领/来源不同/origin 不可规范化），还原后 39/39 绿；②requireProfileParameterAccess 直通 → route-policy+policy+userenv 6 用例红，还原后 65/65 绿；③禁用 enforce-gate 的 mcp-unknown 硬拒 → enforce-gate 3 用例红（bypass 档也拦/allowlist 不豁免/不属审批类规则），还原后 25/25 绿；④gate-evidence 完成键缺失误判 pass → gate-evidence+run-metrics 5 用例红，还原后 21/21 绿。
 - Task 8 承接的三批审查挂账（负例先行，先红后绿）：Task3①RegExp 写路由启动即抛错（原被字符串过滤静默吞掉）+②启动对账补"悬垂政策"方向（含 method 不一致负例）；Task7-Important 存量债——typecheck-client-baseline `--check` 基线缺席由恒 exit 0 改为 exit 2 INCONCLUSIVE（生成模式仍可建初始基线）；Task5 五处"两层信号"旧注释改单层表述（动词启发式单层分类信号）。
+- Task 8 审查轮（round 2，Critical 1 修复）：悬垂检查使 753 补丁原"两组各传全量政策"的启动对账形态在真实 registerRoutes 必抛（审查探针复现：两方向各判对方组政策悬垂）——patches/753 改为两组并集单次对账（enforce 双链挂载不变），经 inject --clean→inject 真通道重放并以隔离快照 git apply --check + cmp 字节对账；route-policy 生产形态测试升级为执行式（并集对账不抛 + 双链 enforce 可执行）并加旧形态负例锚定；ProactivitySection 安静时段交互面补守门 4 条（开关派生/禁用门控/嵌套载荷/畸形重载不残留）。
 - 未执行项（如实登记）：真实 Matrix/IdP 服务活体链路、桌面构建与 afterPack、SIM 活体烧机、build:full/release:check/release:gate 未在本阶段执行——属 P1/P2 验证面或需外部依赖，不以 mock 结果替代。
 
 ## 风险与回滚

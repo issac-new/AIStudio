@@ -72,14 +72,31 @@ describe('平台路由政策真实覆盖', () => {
       __dirname,
       '../../../../vendor/hermes-studio/packages/server/src/bootstrap/routes.ts',
     ), 'utf8')
-    expect(source).toContain('assertPlatformRoutePolicies(platformPublicRouters, platformRoutePolicies)')
-    expect(source).toContain('assertPlatformRoutePolicies(platformProtectedRouters, platformRoutePolicies)')
+    // 启动对账=两组并集一次完成（政策注册表是全量）；负例锚定旧形态——
+    // 分组各传全量政策时，悬垂检查会把对方组的政策全部判悬垂、真实启动必抛（审查 Critical 1）。
+    expect(source).toContain('assertPlatformRoutePolicies([...platformPublicRouters, ...platformProtectedRouters], platformRoutePolicies)')
+    expect(source).not.toContain('assertPlatformRoutePolicies(platformPublicRouters, platformRoutePolicies)')
+    expect(source).not.toContain('assertPlatformRoutePolicies(platformProtectedRouters, platformRoutePolicies)')
     const publicGuard = source.indexOf('app.use(enforcePlatformRoutePolicy(platformPublicRouters, platformRoutePolicies))')
     const auth = source.indexOf('authMiddleware.forEach((middleware) => app.use(middleware))')
     const protectedGuard = source.indexOf('app.use(enforcePlatformRoutePolicy(platformProtectedRouters, platformRoutePolicies))')
     expect(publicGuard).toBeGreaterThan(-1)
     expect(auth).toBeGreaterThan(publicGuard)
     expect(protectedGuard).toBeGreaterThan(auth)
+  })
+
+  it('生产调用形态真执行：两组并集对账一次不抛，双链 enforce 均可执行（Critical 1 回归，探针取反版）', async () => {
+    // 复刻 753 注入后的生产调用形态：分组与 registry 与 bootstrap/routes.ts 完全一致
+    const platformPublicRouters = [healthRoutes, authPublicRoutes]
+    const platformProtectedRouters = [userenvRoutes, autonomyLadderRoutes, sessionModeRoutes, approvalsRoutes]
+    expect(() => assertPlatformRoutePolicies([...platformPublicRouters, ...platformProtectedRouters], platformRoutePolicies))
+      .not.toThrow()
+    // 双链 enforce 同形态可执行：公开链健康检查直过；受保护链 profile 读走归属判定
+    const pubNext = await runGuard(platformPublicRouters, platformRoutePolicies, contextFor('GET', '/health'))
+    expect(pubNext).toHaveBeenCalledTimes(1)
+    const admin = { id: 1, role: 'admin', status: 'active', profiles: ['alice'] } as const
+    const ownNext = await runGuard(platformProtectedRouters, platformRoutePolicies, contextFor('GET', '/api/userenv/profiles/alice/env', admin))
+    expect(ownNext).toHaveBeenCalledTimes(1)
   })
 
   it('实际写路由缺登记时启动失败并指出方法与路径', () => {

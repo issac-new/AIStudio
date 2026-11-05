@@ -16,8 +16,8 @@
  export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, next: Next) => Promise<void>>) {
 +  const platformPublicRouters = [healthRoutes, authPublicRoutes]
 +  const platformProtectedRouters = [userenvRoutes, autonomyLadderRoutes, sessionModeRoutes, approvalsRoutes]
-+  assertPlatformRoutePolicies(platformPublicRouters, platformRoutePolicies)
-+  assertPlatformRoutePolicies(platformProtectedRouters, platformRoutePolicies)
++  // 对账在两组并集上一次完成——政策注册表是全量，分组各查会把对方组的政策判成悬垂（审查 Critical 1）。
++  assertPlatformRoutePolicies([...platformPublicRouters, ...platformProtectedRouters], platformRoutePolicies)
 +
    app.use(legacyAppApiCompatibility)
 +  app.use(enforcePlatformRoutePolicy(platformPublicRouters, platformRoutePolicies))
