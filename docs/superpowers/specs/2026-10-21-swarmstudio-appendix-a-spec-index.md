@@ -550,7 +550,7 @@
 | 2026-11-04-harness-w4-closeout | Harness 未做项收口（W4：幂等替换/输入冻结/关联注入/eval 通道/活体走查） | patch 565 增 {replace} 判决（ok:true 替换回放、post 钩子配对完整）；补丁 750 run 开启写 input_manifest（body sha256+附件清单入 task_runs.metadata，taskmodel inputVersions 据实）；traceId 兜底=sessionId＋run-manifest 落账置 ambient 关联（promptVersion 生产者）；六类故障样本入 eval seed 通道（store 校验器补四断言——清偿 W3 真缺口）；三端点活体走查抓出快道板库第三态路径缺陷并修（<home>/kanban.db 主态） |
 | 2026-11-05-teardown-void-type-fix | teardown 钩子类型修复（build:full 类型门解封） | afterAll 适配器 async/await 化消 TS2322 首修丢返回值，被显式绑定契约用例否决；二修 () => any 双通（类型过门＋返回值契约保留），spec 重绑留痕 |
 | 2026-11-05-frame-expect-dash-keys-fix | frame-expect 连字符键归一根治 | dump 端 -→_＋消费端 ${step//-/_} 对齐，根治推演驱动 source 127 起跑即死（burn-pre-run27 实锤）；守门测试 v84 同批 |
-| 2026-11-05-release-v1.0.12-overlay | v1.0.12 发布轮（vivo Harness 吸收 W1-W4＋生产链走查＋类型门解封三修；增量补丁通道首件 v1.0.10→v1.0.12） | fullPackage 1.0.11→1.0.12＋cockpit studio.11（声明前进，包不重发）＋agent-teams team.2（runtime W4 实质变更）＋yuan v2.99.2（任务卡七项机检）；GitHub Release 4 资产（full＋everything＋SUMS＋增量补丁）；ModelScope 沿 v1.0.11 先例暂停待后续令 |
+| 2026-11-05-release-v1.0.12-overlay | v1.0.12 发布轮（vivo Harness 吸收 W1-W4＋生产链走查＋类型门解封三修；增量补丁通道首件 v1.0.10→v1.0.12） | fullPackage 1.0.11→1.0.12＋cockpit studio.11（声明前进，包不重发）＋agent-teams team.2（runtime W4 实质变更）＋yuan v2.99.2（任务卡七项机检）；GitHub Release 4 资产（full＋everything＋SUMS＋增量补丁）；ModelScope 发布后用户令恢复已传三件（c640eed，云端对账过） |
 
 ### 角色/排除（非 spec 文档）
 
