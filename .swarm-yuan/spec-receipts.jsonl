@@ -226,3 +226,5 @@
 {"at":"2026-11-06T01:08:09Z","spec":"docs/superpowers/specs/2026-11-06-frame-program-revision.md","receipt":"6c445f20c6c42be411c20197a54c6a05793611b9","commit":"08183ab02"}
 {"at":"2026-11-06T01:13:03Z","spec":"docs/superpowers/specs/2026-11-06-frame-capture-accuracy.md","receipt":"077fa519bc97eb8cf9cb56bc8bf85560945d841b","commit":"08183ab02"}
 {"at":"2026-11-06T02:00:45Z","spec":"docs/superpowers/specs/2026-11-06-ai-friendly-cli-contract.md","receipt":"b8812cbc23159c043e8021e8f28b71664a12eacb","commit":"66cd3bb43"}
+{"at":"2026-11-05T04:53:33Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"a07e46f44e678733e7c9244ccdebcd74609ce910","commit":"32bf92b02"}
+
