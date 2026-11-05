@@ -244,6 +244,13 @@ paths:
   - .qgate/qgate.yaml
 
   # 2026-11-05 治理可信度修复（cognition-lattice 复盘落地；P0/P1/P2）
+  - .gitignore
+  - custom/server/governance/__tests__/governance-ledger.test.ts
+  - custom/server/secaudit/__tests__/secaudit.test.ts
+  - docs/manuals/aistudio-run25-simulation-case.md
+  - docs/superpowers/specs/2026-11-03-run26-pending-clearance.md
+  - skills/swarm-yuan/assets/spec-first-lib.sh
+  - vitest.config.ts
   - .qgate/gates/**
   - custom/qgate/src/**
   - custom/qgate/__tests__/**
