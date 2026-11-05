@@ -269,3 +269,22 @@ paths:
   - docs/superpowers/specs/2026-11-05-org-governance-closeout.md
   - scripts/regression/org-governance-walkthrough.mjs
   - custom/client/governance/api/org-governance.ts
+  - custom/client/ia2/views/gov/harness-improve-panel.ts
+  - custom/client/ide/__tests__/composer-popups-stack-guard.test.ts
+  - custom/client/ide/__tests__/devtools-ui.test.ts
+  - custom/client/ide/__tests__/ide-work-mode-wiring.test.ts
+  - custom/client/ide/__tests__/organize-zcode-merge.test.ts
+  - custom/client/ide/__tests__/session-views.test.ts
+  - custom/client/ide/views/IdeChatPane.vue
+  - custom/client/ide/views/IdeTaskSidebar.vue
+  - custom/client/ide/views/useIdeChatPane.ts
+  - custom/client/ide/views/useTaskSidebar.ts
+  - custom/client/kanban/components/KanbanTaskDrawer.vue
+  - custom/client/kanban/components/useKanbanTaskDrawer.ts
+  - custom/client/matrix-chat/stores/matrix-room-readers.ts
+  - custom/client/matrix-chat/stores/matrix-room.ts
+  - custom/client/shared/store/cockpit-command-slice.ts
+  - custom/client/shared/store/cockpit-history.ts
+  - custom/client/shared/store/cockpit.ts
+  - docs/reports/2026-11-05-independent-audit-opinion.md
+  - docs/superpowers/specs/2026-11-05-governance-residual-closeout.md
