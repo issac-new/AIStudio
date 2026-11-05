@@ -1,0 +1,25 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -146,6 +146,11 @@
+ // overlay[autonomy-ladder]（六文调研轮 H2）：自治阶梯配置面（洞察/辅助/自动执行 +
+ // 人工确认点清单；执行面拦截是 H3 单独轮）。/api/hermes/autonomy-ladder
+ import { autonomyLadderRoutes } from '../custom/autonomyladder/autonomy-ladder-controller'
++// overlay[orggov]: 组织治理能力批（2026-11-05，14 篇调研吸收）——自治刻度与责任边界 /
++// 假设登记簿 / 度量纪律三域挂载。判定全在域内纯函数；执行面拦截在 qgate 门。
++import { autonomyGovRoutes } from '../custom/autonomygov/controller'
++import { premiseLogRoutes } from '../custom/premiselog/controller'
++import { metricPolicyRoutes } from '../custom/metricpolicy/controller'
+ // overlay[report]（报告链落地轮）：报告链能力正本=产品侧——PART1 骨架出稿+报告验收断言
+ // （六闸工件/承载率/QGate 纪律）。/api/hermes/report/*；simharness 为兼容消费壳。
+ import { reportRoutes } from '../custom/report/report-controller'
+@@ -584,6 +589,9 @@
+   app.use(virtualPlRoutes.routes())               // AI 虚拟损益表：单位产出成本 + 日成本异常（六文调研轮 E）
+   app.use(govBusRoutes.routes())                  // 治理事件总线：查询面 + compact（六文调研轮 F）
+   app.use(autonomyLadderRoutes.routes())          // 自治阶梯：配置面 CRUD + govbus 审计（六文调研轮 H2）
++  app.use(autonomyGovRoutes.routes())             // 自治刻度：AL0-AL5/三圈/双签/户口缺口/决策阶段比例（组织治理批）
++  app.use(premiseLogRoutes.routes())              // 假设登记簿：到期/推翻/影响面/重评队列（组织治理批）
++  app.use(metricPolicyRoutes.routes())            // 度量纪律：双轨登记簿/四类核心派生/装饰化判据（组织治理批）
+   app.use(reportRoutes.routes())                  // 报告链：PART1 骨架出稿 + 验收断言（报告链落地轮）
+   app.use(diagramRoutes.routes())                 // 图产物门禁：self_check 机械验收（diagram-design 吸收轮）
+   app.use(sessionModeRoutes.routes())             // 会话权限档：查/切/清 + 引擎 v4 切档（permmodes v4 通道轮）

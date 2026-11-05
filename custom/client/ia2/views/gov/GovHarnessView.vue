@@ -16,6 +16,8 @@ import RsiMaturitySection from '@/custom/governance/components/RsiMaturitySectio
 import NineLayersSection from '@/custom/governance/components/NineLayersSection.vue'
 import ObsSignalsSection from '@/custom/governance/components/ObsSignalsSection.vue'
 import HarnessRunOpsSection from '@/custom/governance/components/HarnessRunOpsSection.vue'
+// 2026-11-05 组织治理能力批：度量纪律（双轨登记簿/四类核心派生/装饰化判据/技能计量缺口）
+import MetricDisciplineSection from '@/custom/governance/components/MetricDisciplineSection.vue'
 import { governanceMessages } from '@/custom/governance/i18n'
 // A0 三中心拆分：标题键 tabGovHarness 已迁 i18n-gov-tabs（⑥治理页签过渡事实源）
 import { useGovTabsText } from '../../i18n-gov-tabs'
@@ -39,6 +41,7 @@ const L = computed(() => {
       </div>
     </header>
     <div class="gov-view__body">
+      <MetricDisciplineSection />
       <EfficiencyRuntimeSection />
       <CapabilityCatalogSection />
       <CostAccountsSection />

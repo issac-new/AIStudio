@@ -5,11 +5,14 @@
 import PostureSection from '@/custom/governance/components/PostureSection.vue'
 import EmergencyStopSection from '@/custom/governance/components/EmergencyStopSection.vue'
 import McpSecuritySection from '@/custom/governance/components/McpSecuritySection.vue'
+// 2026-11-05 组织治理能力批：自治刻度与责任边界（AL0-AL5/三圈/双签/户口缺口）
+import AutonomyScaleSection from '@/custom/governance/components/AutonomyScaleSection.vue'
 </script>
 
 <template>
   <div class="gp" data-testid="gov-posture-view">
     <PostureSection />
+    <AutonomyScaleSection />
     <EmergencyStopSection />
     <McpSecuritySection />
   </div>

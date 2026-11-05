@@ -12,4 +12,9 @@ claims:
     statement: overlay 自身代码通过 lint 与全量测试链。
     domain: L1
     criticality: medium
+  # 2026-11-05 组织治理能力批：治理刻度契约（advisory 起步，见 gates/governance.orgscale.yaml）
+  - id: orgscale.spec-six-questions
+    statement: 自治/假设/度量三域判定面与守门测试在位，且 spec 模板保留批准前六问。
+    domain: L4
+    criticality: medium
 overrides: {}

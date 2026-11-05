@@ -36,10 +36,12 @@ AgentIdentity {
 
 `rosterStatus(identity)` → `'complete' | 'blocked'`。`blocked` 不删除既有身份（存量兼容），但：
 
-- `GET /api/agentidentity/roster-gaps` 列出全部 `blocked` 身份与缺项
+- `GET /api/autonomygov/roster-gaps` 列出全部 `blocked` 身份与缺项（端点在 autonomygov 而非 governance：户口缺口属于「责任边界」面，与自治刻度同屏才有行动意义）
 - 新注册接口在 `blocked` 时返回 201（**仍注册**）但响应体带 `rosterGaps`，并写 `IdentityEvent(action='register', detail='roster-incomplete: …')`
 
 **为什么不 fail-closed 拒绝注册**：存量身份全部缺两项，一次性拒绝会让既有部署不可用。采用"注册放行 + 缺口可见 + 门禁拦"，把强制放在门（见第 4 项），不放在注册路径。这是本项最重要的取舍。
+
+**客户端落点**：缺口清单显示在 `AutonomyScaleSection.vue`（姿态页签）的「Agent 户口缺口」块，**不**在 `AgentIdentitySection.vue` 里重复渲染同一份读——身份面板是台账（登记/委托/撤销），缺口要出现在能采取行动的地方。原计划写在身份面板，实现时改判并记录于此。
 
 ### 2. 决策权审计两比例 → 扩 `custom/server/decisiongraph/`
 
@@ -99,8 +101,8 @@ BridgeDecision {
 - `npx vitest run custom/server/agentidentity/__tests__/` —— `rosterGaps` 五要素逐项缺一命中、`rosterStatus` 两态、存量身份（无新字段）不抛异常。
 - `npx vitest run custom/server/decisiongraph/__tests__/` —— `stageRatios` 各阶段分布、`vetoRate` 不含 `deferred`、`unstaged` 单独计数、`sample < 10` 返回 `available:false`。
 - spec 六问：既有 spec 结构守门测试（`spf_sections_check` 家族）不因模板新增段落而红；新模板生成的 spec 含六问段。
-- 端点探活：`GET /api/agentidentity/roster-gaps`、`GET /api/governance/decision-graph/stage-ratios` 返回 200。
-- 浏览器实物走查：`AgentIdentitySection.vue` 出现缺项标记（缺什么逐条列出）。
+- 端点探活：`GET /api/autonomygov/roster-gaps`、`GET /api/autonomygov/decision-stage-ratios` 返回 200。
+- 浏览器实物走查：姿态页签的「Agent 户口缺口」块列出 blocked 身份与逐条缺项；研发效能页签显示决策阶段两比例（或缺口态）。
 - `npm run typecheck:harness` + 全量 `npm test` 零新增失败。
 
 ## 设计文档影响
