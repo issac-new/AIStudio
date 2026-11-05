@@ -137,3 +137,82 @@ describe('fork resume semantics (fixed)', () => {
     await expect(svc.startRun('plain', undefined, forked)).rejects.toThrow(/belongs to graph/)
   })
 })
+
+// ── P1 Task 8：图运行 UUID 化 + 旧序号记录兼容 ─────────────────────────────
+// P0 审查实锤缺陷的反面：双 service 同 event log 重建后，进程内 seqCounters 归零
+// 会让新 run 复用旧 runId（撞既有日志流）。UUID 化后新 run/fork 永不复用；
+// 旧 run-<graph>-<seq> 记录（老构建写入）rebuild/resume 语义不回归。
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+describe('run UUID identity (P1 Task 8)', () => {
+  it('新 runId 形如 run-<graphId>-<uuid>；fork 形如 run-<graphId>-fork-<uuid>', async () => {
+    const svc = new GraphService({ eventLog: new InMemoryEventLogStore() })
+    svc.registerGraph(approvalGraph())
+    const { runId } = await svc.startRun('approval-flow')
+    const m = /^run-approval-flow-(.+)$/.exec(runId)
+    expect(m).not.toBeNull()
+    expect(UUID_RE.test(m![1])).toBe(true)
+    const { runId: forked } = await svc.forkRun(runId, 1)
+    const fm = /^run-approval-flow-fork-(.+)$/.exec(forked)
+    expect(fm).not.toBeNull()
+    expect(UUID_RE.test(fm![1])).toBe(true)
+  })
+
+  it('双 service 同 event log：重建后新 startRun 不复用旧 runId（P0 审查实锤缺陷的反面）', async () => {
+    const log = new InMemoryEventLogStore()
+    const svc1 = new GraphService({ eventLog: log })
+    svc1.registerGraph(approvalGraph())
+    const { runId: first } = await svc1.startRun('approval-flow')
+    // 进程重启：新 service 重建（旧实现 seqCounters 归零 → 第二个 run 撞 first 的 id）
+    const svc2 = new GraphService({ eventLog: log })
+    svc2.registerGraph(approvalGraph())
+    await svc2.rebuildRegistryFromLog()
+    const { runId: second } = await svc2.startRun('approval-flow')
+    expect(second).not.toBe(first)
+    // 两个 run 同时可读可回放（不串流）
+    expect(svc2.getRun(first)).not.toBeNull()
+    expect(svc2.getRun(second)).not.toBeNull()
+    expect((await svc2.replayRun(first)).length).toBeGreaterThan(0)
+    expect((await svc2.replayRun(second)).length).toBeGreaterThan(0)
+    // 事件流按 runId 分离：first 的事件不带 second 的 runId
+    const firstEvents = await log.query(first)
+    expect(firstEvents.every(e => e.runId === first)).toBe(true)
+  })
+
+  it('旧序号记录 run-<graph>-1：rebuild 可读、resume 真恢复、新 run 不复用其 id', async () => {
+    const log = new InMemoryEventLogStore()
+    const svc = new GraphService({ eventLog: log })
+    svc.registerGraph(approvalGraph())
+    const { runId: liveRun } = await svc.startRun('approval-flow')
+    const cp = await log.getLatestCheckpoint(liveRun)
+    expect(cp).not.toBeNull()
+
+    // 种入老构建形态的序号 run：事件 + checkpoint 内容拷贝自真实 run（runId 改名），
+    // 与旧服务写入的字节形状同构。
+    const legacyId = 'run-approval-flow-1'
+    await log.append({ runId: legacyId, graphId: 'approval-flow', ts: Date.now() - 5000, kind: 'run.started', payload: {} })
+    await log.append({
+      runId: legacyId, graphId: 'approval-flow', ts: Date.now() - 4000, kind: 'interrupt.raised',
+      nodeId: 'gate', payload: { interruptId: cp!.pendingInterrupts[0].id, value: cp!.pendingInterrupts[0].value },
+    })
+    await log.saveCheckpoint({ ...cp!, id: `${legacyId}-cp`, runId: legacyId })
+
+    // 重启重建：旧序号 run 与 UUID run 并存可读
+    const svc2 = new GraphService({ eventLog: log })
+    svc2.registerGraph(approvalGraph())
+    const rebuilt = await svc2.rebuildRegistryFromLog()
+    expect(rebuilt).toBe(2)
+    expect(svc2.getRun(legacyId)?.status).toBe('awaiting-input')
+
+    // resume 真恢复：从 checkpoint 应答 interrupt 走到 completed
+    const legacyCp = await log.getLatestCheckpoint(legacyId)
+    const done = await svc2.resumeRun(legacyId, legacyCp!.pendingInterrupts[0].id, 'legacy-resume')
+    expect(done.status).toBe('completed')
+
+    // 新 run 不复用旧序号 id
+    const { runId: fresh } = await svc2.startRun('approval-flow')
+    expect(fresh).not.toBe(legacyId)
+    expect(UUID_RE.test(/^run-approval-flow-(.+)$/.exec(fresh)![1])).toBe(true)
+  })
+})
