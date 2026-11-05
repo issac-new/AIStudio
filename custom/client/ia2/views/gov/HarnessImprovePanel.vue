@@ -83,6 +83,7 @@ const {
   curve,
   curvePath,
   latestProposalOfSurface,
+  editClassLabel,
 } = useHarnessImprovePanel()
 </script>
 
@@ -174,6 +175,15 @@ const {
             </label>
             <label>{{ L.formBudget }}<input v-model.number="createForm.budgetCapUsd" type="number" min="0" step="0.5" /></label>
             <label>{{ L.formDomain }}<input v-model="createForm.domain" placeholder="general" /></label>
+            <label>{{ L.formEditClass }}
+              <select v-model="createForm.editClass" data-testid="hi-create-edit-class">
+                <option value="">{{ L.editClassUndeclared }}</option>
+                <option value="invariant">{{ L.editClassInvariant }}</option>
+                <option value="domain">{{ L.editClassDomain }}</option>
+                <option value="mixed">{{ L.editClassMixed }}</option>
+              </select>
+              <small>{{ L.formEditClassHint }}</small>
+            </label>
             <label>{{ L.formMode }}
               <select v-model="createForm.mode">
                 <option value="parallel">{{ L.formParallel }}</option>
@@ -225,9 +235,13 @@ const {
           <header class="hi__proposalHead">
             <strong>{{ p.title }}</strong>
             <span class="hi__chip" :class="`hi__chip--status-${p.status}`">{{ statusLabel(p.status) }}</span>
+            <span class="hi__chip" data-testid="hi-proposal-edit-class">{{ editClassLabel(p.editClass) }}</span>
             <span class="hi__meta">{{ surfaceName(p.surfaceKey) }} · {{ p.domain }} · {{ riskLabel(p.risk) }} · {{ fmtUsd(p.budgetCapUsd) }}</span>
           </header>
           <p class="hi__hyp">{{ p.hypothesis }}</p>
+          <div v-if="p.donorRefs && p.donorRefs.length" class="hi__meta" data-testid="hi-proposal-donors">
+            {{ L.donorsLabel }}：<code v-for="id in p.donorRefs" :key="id">{{ id }}</code>
+          </div>
           <div v-if="p.targetPath" class="hi__meta">{{ L.formTarget }}：<code>{{ p.targetPath }}</code></div>
           <div v-if="citedExperiencesOf(p).length" class="hi__meta" data-testid="hi-proposal-cited">
             {{ L.citedExperiences }}：<span v-for="e in citedExperiencesOf(p)" :key="e.id"><code>{{ e.domain || L.general }}/{{ e.statement.slice(0, 24) }}</code> </span>
@@ -567,6 +581,22 @@ const {
           {{ L.evoUnexercised }}：<code v-for="k in data.evolution.unexercised" :key="k">{{ surfaceName(k) }}</code>
         </p>
 
+        <div v-if="data.evolution.classAttribution && data.evolution.classAttribution.length" class="hi__block" data-testid="hi-class-attribution">
+          <h4>{{ L.classAttribution }}</h4>
+          <p v-if="data.evolution.seesawSuspected" class="hi__warn" data-testid="hi-seesaw">{{ L.seesawSuspected }}</p>
+          <table class="hi__table">
+            <thead><tr><th>{{ L.formEditClass }}</th><th>{{ L.regRound }}</th><th>{{ L.evoDelta }}</th><th>{{ L.classRegressed }}</th></tr></thead>
+            <tbody>
+              <tr v-for="row in data.evolution.classAttribution" :key="row.editClass">
+                <td>{{ editClassLabel(row.editClass === 'undeclared' ? null : row.editClass) }}</td>
+                <td>{{ row.rounds }}</td>
+                <td>{{ row.meanDelta == null ? '—' : fmtDelta(row.meanDelta) }}</td>
+                <td>{{ row.regressedTasks }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <details v-if="memoryPolicy && (memoryPolicy.staleAdopted.length || memoryPolicy.orphanCandidates.length)" class="hi__details" data-testid="hi-memory-policy">
           <summary>{{ L.memoryPolicyTitle }}（{{ memoryPolicy.staleAdopted.length + memoryPolicy.orphanCandidates.length }}）</summary>
           <p class="hi__meta">{{ memoryPolicy.hint }}</p>
@@ -590,7 +620,7 @@ const {
           <summary>{{ L.archiveTitle }}（{{ archiveList.length }}）</summary>
           <ul class="hi__list">
             <li v-for="a in archiveList" :key="a.proposalId" :data-testid="`hi-archive-${a.proposalId}`">
-              <code>{{ a.proposalId }}</code>·{{ surfaceName(a.surfaceKey as SurfaceKey) }}·{{ a.title }}
+              <code>{{ a.proposalId }}</code>·{{ surfaceName(a.surfaceKey) }}·{{ a.title }}
               <span v-if="a.bestPassAt1 != null" class="hi__meta">pass@1={{ fmtDelta(a.bestPassAt1) }}<template v-if="a.bestDelta != null">（Δ{{ fmtDelta(a.bestDelta) }}）</template></span>
               <p class="hi__meta">{{ a.hypothesis }}</p>
             </li>

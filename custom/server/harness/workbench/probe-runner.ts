@@ -250,6 +250,18 @@ export interface ProbeTaskRunOptions {
    * >1 时按有界工作池并行跑「题×样本」单元，预算按在途估值预扣，避免并发超支。
    */
   concurrency?: number
+  /**
+   * 执行证迹标记（W1，2026-11-05）：候选引入的 skill/子代理名。给了就在每个单元的
+   * 原始 stream-json stdout 上做包含性扫描，回 markerHits。不给=不采集。
+   */
+  markers?: string[]
+}
+
+/** 执行证迹的采集读数（W1）：命中集合 + 实际扫描字符数。 */
+export interface MarkerHits {
+  markers: string[]
+  hits: string[]
+  scannedChars: number
 }
 
 export interface ProbeTaskRunResult {
@@ -263,6 +275,8 @@ export interface ProbeTaskRunResult {
   homeDir: string
   /** 观测用：本次探测同时在跑的样本数峰值（并发是否真的生效）。 */
   peakInFlight?: number
+  /** 执行证迹采集结果（W1）；未下传 markers 时缺席。 */
+  markerHits?: MarkerHits
 }
 
 /**
@@ -285,6 +299,24 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
   const estimate = opts.estimatePerTaskUsd ?? DEFAULT_TASK_COST_ESTIMATE_USD
   const timeout = opts.timeoutPerTaskMs ?? DEFAULT_TASK_TIMEOUT_MS
   const retryDelay = opts.retryDelayMs ?? 5_000
+  // 执行证迹（W1）：标记去重后逐单元扫原始事件流；单单元与总量双上限，防轨迹把内存吃穿。
+  const markers = [...new Set((opts.markers ?? []).map((m) => String(m ?? '').trim()).filter(Boolean))]
+  const markerHits = new Set<string>()
+  let scannedChars = 0
+  const SCAN_UNIT_CAP = 4 * 1024 * 1024
+  const SCAN_TOTAL_CAP = 32 * 1024 * 1024
+  const scanForMarkers = (text: string): void => {
+    if (markers.length === 0 || scannedChars >= SCAN_TOTAL_CAP) return
+    const room = Math.min(SCAN_UNIT_CAP, SCAN_TOTAL_CAP - scannedChars)
+    const window = text.length > room ? text.slice(0, room) : text
+    scannedChars += window.length
+    for (const m of markers) {
+      if (!markerHits.has(m) && window.includes(m)) markerHits.add(m)
+    }
+  }
+  const markerReport = (): MarkerHits | undefined => (markers.length === 0
+    ? undefined
+    : { markers, hits: [...markerHits].sort(), scannedChars })
   // R4（2026-10-31 D4 匹配预算口径）：每题 k 个样本（缺省 2）
   const k = Math.max(1, Math.trunc(opts.k ?? 2))
   // 并发收敛（2026-11-03 缺省评估）：
@@ -337,6 +369,8 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
     }
     // 证据双通道：stream-json 优先；trace 后备仅在串行时可用（并发会串证据）
     const stream = spawned.stdout ? evidenceFromStreamJson(spawned.stdout) : null
+    // 执行证迹只看原始事件流：工具调用参数只在这里，result.text 只有最终答复。
+    if (spawned.stdout) scanForMarkers(spawned.stdout)
     const trace = stream ? null : readNewestTrace(unitTraceDir, startedAt - 1000)
     const picked = stream ?? trace
     if (!picked) {
@@ -410,10 +444,10 @@ export async function runProbeTasks(opts: ProbeTaskRunOptions): Promise<ProbeTas
   tasksDone = completed
 
   if (failure) {
-    return { ok: false, samples, costUsd, estimatedTasks, tasksDone, error: failure, homeDir, peakInFlight }
+    return { ok: false, samples, costUsd, estimatedTasks, tasksDone, error: failure, homeDir, peakInFlight, markerHits: markerReport() }
   }
   if (budgetStopped || hasNextUnit()) {
-    return { ok: true, stoppedBy: 'budget_stop', samples, costUsd, estimatedTasks, tasksDone, homeDir, peakInFlight }
+    return { ok: true, stoppedBy: 'budget_stop', samples, costUsd, estimatedTasks, tasksDone, homeDir, peakInFlight, markerHits: markerReport() }
   }
-  return { ok: true, samples, costUsd, estimatedTasks, tasksDone, homeDir, peakInFlight }
+  return { ok: true, samples, costUsd, estimatedTasks, tasksDone, homeDir, peakInFlight, markerHits: markerReport() }
 }

@@ -25,12 +25,12 @@ import type { AskFn } from '../../eval/judge'
 import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
 import { nextId, mutateStore, readStore, persistAutoJob, listOrphanAutoJobs } from './store'
-import { listComponents, librarySummary, recordComponent } from './component-library'
+import { listComponents, librarySummary, recordComponent, selectDonors } from './component-library'
 import { ensureScheduleFile, readSchedulePolicy, validateSchedulePolicy, normalizeSchedulePolicy, DEFAULT_SCHEDULE_POLICY, SCHEDULE_REL } from './schedule-policy'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
 import { experienceFreshness, memoryConsolidationPolicy, type ExperienceFreshness } from './experience-freshness'
 import type {
-  BehaviorContrast, Champion, EditableSurface, EvolutionReport, Experience, ExperienceStatus,
+  BehaviorContrast, Champion, EditableSurface, EditClass, EvolutionReport, Experience, ExperienceStatus,
   ConstraintCheck, GateBlocker, ParetoReport, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
   RegularizationDerived, SurfaceKey, Variant,
 } from './types'
@@ -166,6 +166,11 @@ export interface CreateProposalInput {
   treeRoot?: string | null
   mode?: 'parallel' | 'sequential'
   domain?: string
+  /** W2（2026-11-05）：编辑类别；缺省 null=未声明（门给 warning）。 */
+  editClass?: EditClass | null
+  /** W3（2026-11-05）：起草时采用的组件库 donor id。 */
+  donorRefs?: string[]
+  donorSkipped?: Array<{ id: string; reason: string }>
   budgetCapUsd?: number
   evidenceRefs?: string[]
   experienceIds?: string[]
@@ -184,6 +189,13 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
   const rawVariants = Array.isArray(input.variants) ? input.variants : []
   if (rawVariants.length === 0) throw new ServiceError(400, '至少需要一个候选修改')
   if (rawVariants.length > MAX_VARIANTS) throw new ServiceError(400, `候选数上限 ${MAX_VARIANTS}`)
+  // W2：非法类别直接拒（拼错的分类比不分类更坏——会污染归因），缺省允许（门给 warning）。
+  const editClass: EditClass | null = (() => {
+    const raw = input.editClass ?? null
+    if (raw == null) return null
+    if (raw === 'invariant' || raw === 'domain' || raw === 'mixed') return raw
+    throw new ServiceError(400, `未知编辑类别：${String(raw)}（只接受 invariant/domain/mixed）`)
+  })()
 
   let targetPath: string | null = null
   let base: Proposal['base'] = null
@@ -272,6 +284,9 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
       risk: def.risk,
       mode: input.mode === 'sequential' ? 'sequential' : 'parallel',
       domain: String(input.domain ?? 'general').trim().slice(0, 80) || 'general',
+      editClass,
+      donorRefs: Array.isArray(input.donorRefs) ? input.donorRefs.map(String).filter(Boolean).slice(0, 8) : [],
+      donorSkipped: Array.isArray(input.donorSkipped) ? input.donorSkipped.slice(0, 8) : [],
       status: 'draft',
       budgetCapUsd: Number.isFinite(budgetCapUsd) && budgetCapUsd >= 0 ? budgetCapUsd : DEFAULT_BUDGET_CAP_USD,
       evidenceRefs: Array.isArray(input.evidenceRefs) ? input.evidenceRefs.map(String).filter(Boolean).slice(0, 20) : [],
@@ -469,12 +484,25 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
   if (baseContent != null) {
     basePreview = baseContent.length > 6000 ? `${baseContent.slice(0, 6000)}\n…（截断）` : baseContent
   }
+  // W3（2026-11-05）：组件库 donor——已验证的零件可以跨域搬，但已在基线里的不提供（只会诱导重复改写）。
+  const donors = selectDonors({
+    surfaceKey: input.surfaceKey,
+    domain: input.domain ?? 'general',
+    baseContent,
+    limit: 3,
+  })
+  const donorLines = donors.offered.map((d) => {
+    const body = (d.entry.files && d.entry.files.length > 0
+      ? d.entry.files.map((f) => f.content).join('\n')
+      : d.entry.content).slice(0, 600)
+    return `- [${d.entry.id}] ${d.entry.kind}/${d.entry.name}（增益 +${((d.entry.evidence.delta ?? 0) * 100).toFixed(1)}pp${d.crossDomain ? '，跨域' : ''}）：\n${body}`
+  })
 
   const prompt = [
     '你是 Agent Harness 改进提案起草器。只输出一个 JSON 对象，不要任何解释或 markdown 围栏。',
     sectionMode
-      ? 'JSON 字段：title（≤30 字）、hypothesis（一句话：改什么、预期改善什么）、section（一个待追加到目标文件末尾的 markdown 小节，≤2000 字，以「## 」标题开头）。'
-      : 'JSON 字段：title（≤30 字）、hypothesis（一句话：改什么、预期改善什么）、content（完整的新文件全文）。',
+      ? 'JSON 字段：title（≤30 字）、hypothesis（一句话：改什么、预期改善什么）、editClass（invariant/domain/mixed 三选一）、donorIds（采用的 donor id 数组，可为空）、section（一个待追加到目标文件末尾的 markdown 小节，≤2000 字，以「## 」标题开头）。'
+      : 'JSON 字段：title（≤30 字）、hypothesis（一句话：改什么、预期改善什么）、editClass（invariant/domain/mixed 三选一）、donorIds（采用的 donor id 数组，可为空）、content（完整的新文件全文）。',
     '',
     `可编辑面：${def.nameZh}（${input.surfaceKey}，${def.applyMode === 'managed' ? '可写盘' : '只建议'}，风险 ${def.risk}）`,
     input.targetPath ? `目标文件：${input.targetPath}` : '目标文件：无（自由起草）',
@@ -488,11 +516,13 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     staleRefreshList.length ? `\n【记忆整理（D11）】以下 stale 采纳经验建议在本提案中引用以刷新验证：\n${staleRefreshList.slice(0, 5).join('\n')}` : '',
     deletion.suggested ? `\n${deletion.scaffold}` : '',
     (!deletion.suggested && failedHypotheses.length) ? `\n同面已失败假设（禁止换皮重提）：\n${failedHypotheses.join('\n')}` : '',
+    donorLines.length ? `\n【组件库 donor（W3）】以下零件在其他提案里验证有效，可直接借用或改写；用到的把 id 填进 donorIds：\n${donorLines.join('\n')}` : '',
     '',
     '起草纪律：',
     '1. 通用改进——对一类任务普遍有效，禁止引用任何具体评测任务、题目内容或答案（泄漏批评者会拦）。',
     '2. 保持基线结构，最小必要改动；不要堆砌指令（成本规则会拦 token 增长过大的改动）。',
     '3. content 是替换目标文件的完整新全文，不是 diff。',
+    '4. editClass 必须声明：invariant=改「怎么干活」（流程/工具用法/完成判定），domain=改「从业者知道什么」（领域知识/领域规则）；两类混装填 mixed（会收到拆分建议）。',
   ].filter(Boolean).join('\n')
 
   const cli = input.cli ?? defaultSuggestCli
@@ -517,6 +547,15 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
   const assembled = sectionMode
     ? `${baseContent as string}\n\n${(draft.section as string).trim()}\n`
     : (draft.content as string)
+  // W2/W3：只接受起草器显式声明且合法的类别与 donor id（编造 id 不落账）。
+  const offeredIds = new Set(donors.offered.map((d) => d.entry.id))
+  const donorIds = Array.isArray((draft as { donorIds?: unknown }).donorIds)
+    ? ((draft as { donorIds?: unknown[] }).donorIds ?? []).map(String).filter((id) => offeredIds.has(id)).slice(0, 8)
+    : []
+  const rawClass = String((draft as { editClass?: unknown }).editClass ?? '').trim()
+  const editClass: EditClass | null = rawClass === 'invariant' || rawClass === 'domain' || rawClass === 'mixed'
+    ? rawClass
+    : null
   return createProposal({
     title: draft.title.slice(0, 80),
     hypothesis: draft.hypothesis.slice(0, 500),
@@ -524,6 +563,9 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     targetPath: input.targetPath ?? null,
     mode: 'sequential',
     domain: input.domain ?? 'general',
+    editClass,
+    donorRefs: donorIds,
+    donorSkipped: donors.skipped,
     budgetCapUsd: DEFAULT_BUDGET_CAP_USD,
     evidenceRefs: [`draft:rrsi-suggester:${input.actor ?? 'operator'}`],
     variants: [{ label: 'AI 起草 A', content: assembled }],

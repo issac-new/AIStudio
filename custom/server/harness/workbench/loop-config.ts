@@ -41,6 +41,10 @@ export interface RsiConfig {
   requireCounterfactual: boolean
   /** true=未绑定密封留出读数直接拦（R6，缺省 false）。 */
   requireHeldout: boolean
+  /** true=未采集执行证迹直接拦（W1，缺省 false；零命中始终是硬拦，不受此开关影响）。 */
+  requireExecution: boolean
+  /** true=未声明/混装编辑类别直接拦（W2，缺省 false，warning 交人工裁决）。 */
+  requireEditClass: boolean
 }
 
 function envInt(name: string, fallback: number): number {
@@ -75,6 +79,8 @@ export function rsiConfig(): RsiConfig {
     requireConstraints: process.env.HARNESS2_RSI_REQUIRE_CONSTRAINTS === '1',
     requireCounterfactual: process.env.HARNESS2_RSI_REQUIRE_COUNTERFACTUAL === '1',
     requireHeldout: process.env.HARNESS2_RSI_REQUIRE_HELDOUT === '1',
+    requireExecution: process.env.HARNESS2_RSI_REQUIRE_EXECUTION === '1',
+    requireEditClass: process.env.HARNESS2_EDIT_CLASS_STRICT === '1',
   }
 }
 

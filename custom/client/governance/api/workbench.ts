@@ -79,6 +79,18 @@ export interface ProbeMetricsDto {
   steps: number | null
   latencyMs: number | null
   regression?: RegressionDto
+  /** W1（2026-11-05）：执行证迹——增益是否伴随机制真的运行过。 */
+  executionTrace?: {
+    status: 'observed' | 'static' | 'absent'
+    markers: string[]
+    hit: string[]
+    hitRatio: number | null
+    scannedChars: number
+    source: 'stream-json' | 'none'
+    at: string
+  } | null
+  /** W6（2026-11-05）：命令式验收器读数。 */
+  commandChecks?: { total: number; passed: number } | null
 }
 
 export interface BehaviorContrastDto {
@@ -140,6 +152,8 @@ export interface PromotionDto {
   applied: boolean
   targetPath?: string
   backupPath?: string
+  /** R7：'false'=未应用；via-workbench=managed 面直写；via-surface=既有管理面人审应用。 */
+  appliedVia?: 'false' | 'via-workbench' | 'via-surface'
 }
 
 export interface CompositionDto {
@@ -218,6 +232,16 @@ export interface EvolutionDto {
   }
   surfaces: EvolutionSurfaceDto[]
   unexercised: SurfaceKey[]
+  /** W2（2026-11-05）：按编辑类别的归因。 */
+  classAttribution?: Array<{
+    editClass: 'invariant' | 'domain' | 'mixed' | 'undeclared'
+    rounds: number
+    meanDelta: number | null
+    meanCostPct: number | null
+    regressedTasks: number
+  }>
+  /** W2：同一面相邻采纳轮分属 invariant/domain 且增益符号相反。 */
+  seesawSuspected?: boolean
   /** 冠军退役候选（2026-10-23 挂账清偿 G4，advisory）。 */
   retirementCandidates?: Array<{
     surfaceKey: SurfaceKey
@@ -242,6 +266,18 @@ export interface ProposalDto {
   mode: 'parallel' | 'sequential'
   status: ProposalStatus
   domain: string
+  /** W2：编辑类别；null/缺席=未声明。 */
+  editClass?: 'invariant' | 'domain' | 'mixed' | null
+  /** W3：采用的组件库 donor。 */
+  donorRefs?: string[]
+  donorSkipped?: Array<{ id: string; reason: string }>
+  /** D5：约束保持断言记录（面板回显用）。 */
+  constraints?: {
+    checks: Array<{ id: string; statement: string; status: 'pass' | 'fail' | 'unknown'; evidenceRef?: string; detail?: string }>
+    actor: string
+    at: string
+    note?: string
+  } | null
   budgetCapUsd: number
   evidenceRefs: string[]
   experienceIds: string[]
@@ -358,6 +394,8 @@ export interface CreateProposalInput {
   targetPath?: string
   mode: 'parallel' | 'sequential'
   domain?: string
+  /** W2（2026-11-05）：编辑类别；缺省不声明（门给 warning）。 */
+  editClass?: 'invariant' | 'domain' | 'mixed'
   budgetCapUsd: number
   evidenceRefs: string[]
   experienceIds?: string[]

@@ -274,6 +274,8 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
       ...(regression ? attachRegression(metrics, regression) : metrics),
       ...(equalBudget ? { equalBudgetBaseline: equalBudget } : {}),
       ...(counterfactual ? { counterfactual } : {}),
+      // W1（2026-11-05）：执行证迹随探测一起落账；null/缺席=未采集（门按配置处置）。
+      ...(input.executionTrace !== undefined ? { executionTrace: input.executionTrace } : {}),
     }
     const contrast = behaviorContrast(p.baseline, withRegression)
     probe.status = 'recorded'
@@ -301,6 +303,8 @@ export interface RecordProbeInput {
   equalBudgetBaselineRunId?: string | null
   /** CHASE 反事实变体运行（可选；语义保持、协议变换集上的 explicit 真实运行）。 */
   counterfactualRunId?: string | null
+  /** 执行证迹（W1，2026-11-05）：自动探测采集；手填入口不提供该字段。 */
+  executionTrace?: ProbeMetrics['executionTrace']
   note?: string
   actor?: string
 }

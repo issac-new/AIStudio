@@ -58,6 +58,8 @@ Proposal {
   id, title, hypothesis, surfaceKey, targetPath?, risk, mode: 'parallel'|'sequential',
   status: 'draft'|'submitted'|'approved'|'rejected'|'probing'|'composed'|'promoted'|'rolled_back',
   budgetCapUsd, evidenceRefs[], experienceIds[], domain, treeRoot?,
+  editClass?: 'invariant'|'domain'|'mixed'|null,                                    // W2（2026-11-05）
+  donorRefs?: string[], donorSkipped?: {id,reason}[],                                // W3（2026-11-05）
   noise?: { runIds[≥2], setId, delta, method:'half-range', samples[], computedAt },   // S2→R2
   constraints?: { checks[{id,statement,status:'pass'|'fail'|'unknown',detail?}], actor, at }, // D5→R12b
   heldout?: { runId, n, passRate },                                                  // R6
@@ -70,6 +72,8 @@ ProbeMetrics {
   evalRunId, setId, setRevision?, evidenceMode, k, passAt1, passAtK,
   resultPassRate, trajectoryPassRate, unknownRatio, riskVeto, judgeOnline,
   statisticallyInsufficient, tokens, costUsd, steps, latencyMs, regression?,
+  executionTrace?: { status:'observed'|'static'|'absent', markers[], hit[], hitRatio|null, scannedChars, source, at }, // W1
+  commandChecks?: { total, passed },                 // W6（任务声明 outcome.argv 才算）
   equalBudgetBaseline?: { runId, setId, passAt1 },   // HDA→R2
   counterfactual?: { runId, setId, passAt1 },        // CHASE→R2③
   heldout?: { runId, n, passRate }                   // R6
@@ -132,7 +136,7 @@ submitted/approved --reject--> rejected
 
 ## 6. 晋级门禁（三档，逐条带 code）
 
-判定在 `loop.ts` 纯函数层（`evaluatePromotion()`），service 只读证据与编排。分三档：**硬阻塞**（无条件拦）、**证据门**（同一份证据缺省只告警，对应 env 可升为硬闸）、**警告**（人裁决参考，不拦截）。`loop.ts` 现行 64 个 code 全部归入本节，新增 code 必须同时改本节与守门测试。
+判定在 `loop.ts` 纯函数层（`evaluatePromotion()`），service 只读证据与编排。分三档：**硬阻塞**（无条件拦）、**证据门**（同一份证据缺省只告警，对应 env 可升为硬闸）、**警告**（人裁决参考，不拦截）。code 的单一事实源是 `loop-report.ts`，数量由守门测试 `four-paper-absorption.test.ts` 钉住（当前 57 个，含 2026-11-05 新增四个）；新增 code 必须同时改本节与守门测试。
 
 ### 6.1 硬阻塞
 
@@ -142,10 +146,11 @@ submitted/approved --reject--> rejected
 | 质量与回归 | `quality_regressed`、`regression_missing`、`regression_failed`、`budget_exceeded`、`cost_missing`、`champion_drift`、`target_drift`、`surface_not_managed`、`apply_env_disabled` |
 | 泄漏与探索纪律 | `benchmark_leakage`、`pareto_dominated`、`gain_within_noise`（该面首个提案＝结构性探索，降 warning）、`gain_explained_by_compute`、`cost_unjustified`、`edit_budget_exceeded` |
 | 约束保持 | `constraint_regression`（任一约束 fail 即拦——能力改进不得以行为约束退化为代价） |
+| 执行证迹 | `mechanism_not_executed`（候选引入的 skill/子代理在探测轨迹里零命中，增益无法归因——Evo² 纪律置零） |
 
 ### 6.2 证据门（缺省告警，env 升硬闸）
 
-同一条证据缺席在不同环境该不该硬拦，取决于该环境对证据链的成熟度要求；五道门各配一个 env，缺省告警不阻断既有工作流。
+同一条证据缺席在不同环境该不该硬拦，取决于该环境对证据链的成熟度要求；各门各配一个 env，缺省告警不阻断既有工作流。
 
 | 门 | 缺省 code（warning） | 升闸 code（blocker） | env |
 |---|---|---|---|
@@ -154,6 +159,8 @@ submitted/approved --reject--> rejected
 | 约束保持 | `constraint_unchecked`、`constraint_unverified` | `constraint_unchecked` | `HARNESS2_RSI_REQUIRE_CONSTRAINTS=1` |
 | 反事实 | `counterfactual_missing`（含 `counterfactual_unreadable`） | `counterfactual_missing` | `HARNESS2_RSI_REQUIRE_COUNTERFACTUAL=1` |
 | 密封留出 | `heldout_missing` | `heldout_missing` | `HARNESS2_RSI_REQUIRE_HELDOUT=1` |
+| 执行证迹 | `mechanism_trace_missing` | `mechanism_trace_missing` | `HARNESS2_RSI_REQUIRE_EXECUTION=1` |
+| 编辑类别 | `edit_class_undeclared`、`edit_class_mixed` | 同名 code | `HARNESS2_EDIT_CLASS_STRICT=1` |
 
 `heldout_regression`（留出集通过率低于演化通过率−δ）与 `counterfactual_gain_collapse`（语义等价变换下增益崩塌）不受 env 影响，恒为 blocker。
 
@@ -292,3 +299,18 @@ skills 面晋级要求 `skillDifferential`（同集有技能/无技能两态）�
 | 反事实变换类 | `rename_ids` | 其余三类待人工指定 |
 | 存储后端 | JSON 文件 | `HARNESS2_STORE_SQLITE=1` |
 | 断点续跑 | 关闭（重启后 running 判失联） | 后续接 `auto_jobs` 表恢复 |
+
+## 15. 四篇 RSI 论文源码级吸收（2026-11-05）
+
+调研源为 arXiv 2610.14224（Harness²）、2610.13025（Evo²）、2609.24972（RRSI）、2610.28380（OO-Harness），其中 Harness² 与 RRSI 有开源仓，逐行核对过方法层。结论：本仓防过拟合侧已覆盖 RRSI 选择侧全部机制，本轮只补四处真缺口。
+
+| 缺口 | 论文机制 | 本仓落点 |
+|---|---|---|
+| 改动是否真的被执行 | Evo² §3.3.2「未证明运行过的增益置零」；Harness² compose 的 UNSAFE 判定 | `execution-trace.ts` 推导可判定标记（skill/子代理名），探测时扫原始 stream-json 事件流；零命中且增益超 δ → `mechanism_not_executed` |
+| 通用不变量 vs 领域知识 | Harness² INV/DOM 分层（避免跷跷板无法归因） | `Proposal.editClass` + `edit_class_undeclared`/`edit_class_mixed` 门 + 报告 `classAttribution`/`seesawSuspected` |
+| 组件库只存不用 | Evo² donor／PluginRSI 插件库 | `selectDonors()`：只取正增益、同组件取最新版、已在基线里的不提供；起草器注入 donor 清单并记 `donorRefs` |
+| `command` 验证档不可达 | R12a 遗留缺陷 | `ProbeMetrics.commandChecks` 由评测 attempt 的 `outcome.argv` 结构性派生，档位可达 |
+
+**不学的三条**：①整条轨迹逐字不裁剪（Harness² 单条上限 800 万字符）——本仓以 USD 预算为约束，学它会把成本打爆；②匿名盲选 A/B——那是没有评测集时的替代品，本仓有评测集与六层证据，加盲选只会削弱既有门；③权重共演化（Evo² 主表收益来源）——模型冻结是产品前提。
+
+**未实现、记为下一轮设计候选**：OO-Harness 的 base/specialized 继承与失败签名路由。论文自身证据显示相对最强基线 AAH 只有 +2.01/+0.86/+3.13（Workspace 的 +0.86 在标准差内），收益主要来自「专有化本身」而非「面向对象化」；真要落地须先解决多 harness 实例的抽象，成本高于本批。

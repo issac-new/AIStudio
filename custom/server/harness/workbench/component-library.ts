@@ -49,6 +49,8 @@ export interface ComponentEntry {
   promotedAt: string
   promotedBy: string
   label?: string
+  /** 入库时的任务域（W3，2026-11-05）：跨域 donor 才是可迁移经验。旧条目缺席按 general。 */
+  domain?: string | null
 }
 
 export interface ComponentLibrary {
@@ -144,6 +146,7 @@ export function recordComponent(
     promotedAt: opts.at ?? new Date().toISOString(),
     promotedBy: String(opts.actor ?? 'operator'),
     ...(variant.label ? { label: variant.label } : {}),
+    domain: proposal.domain ?? 'general',
   }
   lib.entries.push(entry)
   writeLibrary(lib)
@@ -209,4 +212,85 @@ export function librarySummary(): {
 /** 测试钩子：清空库。 */
 export function _resetLibraryForTests(): void {
   writeLibrary(emptyLibrary())
+}
+
+// ---- W3（2026-11-05 四篇论文吸收）：组件库消费（crossover donor） ----
+//
+// Evo² 的 donor 机制：一条进化路线上验证有效的机制，可以作为另一条路线的候选来源；
+// PluginRSI 的插件库同理。本仓此前只入库不消费，已验证零件闲置。这里补「取件」这一半：
+// 只提供有正增益证据的组件，且**已在基线里的组件不提供**——送进去只会诱导重复改写。
+
+export interface DonorQuery {
+  surfaceKey: SurfaceKey
+  domain?: string | null
+  /** 当前基线正文：用于过滤「已经在基线里」的组件（逐行 Jaccard ≥0.6）。 */
+  baseContent?: string | null
+  limit?: number
+}
+
+export interface DonorCandidate {
+  entry: ComponentEntry
+  /** 排序分：同面可迁移性 + 跨域价值 + 证据强度。 */
+  score: number
+  crossDomain: boolean
+}
+
+export interface DonorSelection {
+  offered: DonorCandidate[]
+  skipped: Array<{ id: string; reason: string }>
+}
+
+/** 逐行集合（去空行与首尾空白）；用于「已在基线里」的判定。 */
+function lineSet(text: string): Set<string> {
+  return new Set(
+    String(text ?? '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean),
+  )
+}
+
+function lineJaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0
+  let inter = 0
+  for (const line of a) if (b.has(line)) inter += 1
+  return inter / (a.size + b.size - inter)
+}
+
+/**
+ * 取可用 donor：同 (kind,name) 只留最新版本，只收 evidence.delta>0 的条目。
+ * 已与基线高度重合的条目不提供（记 skipped，留痕供审计）。
+ */
+export function selectDonors(query: DonorQuery): DonorSelection {
+  const lib = readLibrary()
+  const limit = Math.max(1, Math.min(8, query.limit ?? 3))
+  const baseLines = lineSet(query.baseContent ?? '')
+  const skipped: Array<{ id: string; reason: string }> = []
+  const latest = new Map<string, ComponentEntry>()
+  for (const entry of lib.entries) {
+    if (entry.evidence?.delta == null || entry.evidence.delta <= 0) {
+      skipped.push({ id: entry.id, reason: '无正增益证据（donor 必须是验证有效的零件）' })
+      continue
+    }
+    const key = `${entry.kind}::${entry.name}`
+    const current = latest.get(key)
+    if (!current || entry.version > current.version) latest.set(key, entry)
+  }
+  const offered: DonorCandidate[] = []
+  for (const entry of latest.values()) {
+    const content = entry.files && entry.files.length > 0
+      ? entry.files.map((f) => f.content).join('\n')
+      : entry.content
+    if (baseLines.size > 0 && lineJaccard(lineSet(content), baseLines) >= 0.6) {
+      skipped.push({ id: entry.id, reason: '内容已在当前基线（逐行相似度≥60%），donor 只会诱导重复改写' })
+      continue
+    }
+    const crossDomain = (entry.domain ?? 'general') !== (query.domain ?? 'general')
+    const sameSurface = entry.surfaceKey === query.surfaceKey
+    const delta = entry.evidence.delta ?? 0
+    const score = (sameSurface ? 1.5 : 0.5) + (crossDomain ? 1.5 : 0) + Math.min(2, delta * 20)
+    offered.push({ entry, score, crossDomain })
+  }
+  offered.sort((a, b) => b.score - a.score)
+  return { offered: offered.slice(0, limit), skipped }
 }

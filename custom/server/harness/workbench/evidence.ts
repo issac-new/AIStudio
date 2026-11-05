@@ -30,7 +30,35 @@ export function readEvalEvidence(runId: string): ProbeMetrics | null {
     costUsd: a.byLayer.efficiency.avgCostUsd,
     steps: a.byLayer.efficiency.avgSteps,
     latencyMs: a.byLayer.efficiency.avgDurationMs,
+    commandChecks: commandChecksOf(run),
   }
+}
+
+/**
+ * 命令式验收器读数（W6，2026-11-05）。
+ * 判据是结构性声明而不是 verifier 名字：任务声明了 `outcome.argv` 才算命令验收，
+ * attempt 的 outcome 记录真实退出结果。没有声明或没有 attempt → null（不猜）。
+ */
+function commandChecksOf(run: ReturnType<typeof getRun>): { total: number; passed: number } | null {
+  if (!run) return null
+  const set = getSet(run.setId)
+  if (!set) return null
+  const commandTaskIds = new Set(
+    set.tasks
+      .filter((t) => Array.isArray(t.outcome?.argv) && (t.outcome?.argv?.length ?? 0) > 0)
+      .map((t) => t.id),
+  )
+  if (commandTaskIds.size === 0) return null
+  let total = 0
+  let passed = 0
+  for (const attempt of run.attempts) {
+    if (attempt.sampleIdx !== 1) continue
+    if (!commandTaskIds.has(attempt.taskId)) continue
+    if (!attempt.outcome) continue
+    total += 1
+    if (attempt.outcome.ok) passed += 1
+  }
+  return total > 0 ? { total, passed } : null
 }
 
 /**

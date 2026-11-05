@@ -20,12 +20,9 @@ export function verificationTierOf(proposal: Proposal): VerificationTier {
   const ev = probe?.evidence
   if (!ev) return 'none'
   const tiers: VerificationTier[] = []
-  if (ev.regression != null) {
-    // 回归运行含命令式验收器（eval 侧 outcome command 类型）则升 command 层；
-    // ProbeMetrics 无该直读位——以 regression 存在为 regression 层，command 层由
-    // heldout/command 专用证据位判定（R6 落地后 heldout 进位）。
-    tiers.push('regression')
-  }
+  // W6（2026-11-05）：命令式验收器读数进档——任务声明 outcome.argv 且已有 attempt 结果。
+  if (ev.commandChecks != null && ev.commandChecks.total > 0) tiers.push('command')
+  if (ev.regression != null) tiers.push('regression')
   if (ev.heldout != null) tiers.push('heldout')
   // 判分主导＝无回归/留出硬证据而 judgeOnline（LLM 判分参与）
   if (tiers.length === 0 && ev.judgeOnline) tiers.push('judge')

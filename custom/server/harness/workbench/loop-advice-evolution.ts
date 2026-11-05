@@ -5,7 +5,7 @@ import type { RsiConfig } from './loop-config'
 import { pruneSignal, stallDetection } from './loop-advice-hypothesis'
 import { verificationTierOf } from './loop-advice-tier'
 import type {
-  BehaviorContrast, Champion, EvolutionReport, EvolutionRound, EvolutionSurface, ProbeMetrics,
+  BehaviorContrast, Champion, ClassAttribution, EditClass, EvolutionReport, EvolutionRound, EvolutionSurface, ProbeMetrics,
   Proposal, ProposalStatus, RetirementCandidate, SurfaceKey,
 } from './types'
 
@@ -141,6 +141,68 @@ function selectedEvidenceOf(p: Proposal): { evidence: ProbeMetrics; contrast: Be
   return { evidence: probe.evidence, contrast: probe.contrast ?? null }
 }
 
+// ---- W2（2026-11-05 四篇论文吸收）：编辑类别归因与跷跷板检测 ----
+
+/**
+ * 按 invariant/domain 聚合已采纳轮的增益、成本与回归失败数。
+ * 跷跷板判据：同一面上相邻两个已采纳轮分属 invariant 与 domain，且增益符号相反——
+ * 一类涨、一类跌，说明两类改动在互相抵消，正是 Harness² 要求分层优化的场景。
+ * 只统计未回滚轮；缺读数如实排除，不补零。
+ */
+export function classAttributionOf(
+  surfaces: EvolutionSurface[],
+  proposals: Proposal[],
+): { rows: ClassAttribution[]; seesawSuspected: boolean } {
+  const byId = new Map(proposals.map((p) => [p.id, p]))
+  const buckets = new Map<EditClass | 'undeclared', { deltas: number[]; costs: number[]; regressed: number; rounds: number }>()
+  let seesawSuspected = false
+  for (const surface of surfaces) {
+    const live = surface.timeline.filter((r) => !r.rolledBack)
+    for (let i = 0; i < live.length; i += 1) {
+      const round = live[i]
+      const proposal = byId.get(round.proposalId)
+      const cls: EditClass | 'undeclared' = proposal?.editClass ?? 'undeclared'
+      const slot = buckets.get(cls) ?? { deltas: [], costs: [], regressed: 0, rounds: 0 }
+      slot.rounds += 1
+      if (round.passAt1Delta != null) slot.deltas.push(round.passAt1Delta)
+      const prevRound = i > 0 ? live[i - 1] : null
+      if (prevRound && prevRound.costUsd != null && prevRound.costUsd !== 0 && round.costUsd != null) {
+        slot.costs.push((round.costUsd - prevRound.costUsd) / prevRound.costUsd)
+      }
+      const evidence = proposal ? selectedEvidenceOf(proposal) : null
+      slot.regressed += evidence?.evidence.regression?.failed ?? 0
+      buckets.set(cls, slot)
+
+      if (i > 0) {
+        const prevProposal = byId.get(prevRound!.proposalId)
+        const prevCls = prevProposal?.editClass ?? null
+        const pair = new Set<EditClass | null>([prevCls, proposal?.editClass ?? null])
+        const d0 = prevRound!.passAt1Delta
+        const d1 = round.passAt1Delta
+        if (d0 != null && d1 != null && d0 !== 0 && d1 !== 0
+          && Math.sign(d0) !== Math.sign(d1)
+          && pair.has('invariant') && pair.has('domain')) {
+          seesawSuspected = true
+        }
+      }
+    }
+  }
+  const order: Array<EditClass | 'undeclared'> = ['invariant', 'domain', 'mixed', 'undeclared']
+  const rows: ClassAttribution[] = order
+    .filter((k) => buckets.has(k))
+    .map((k) => {
+      const slot = buckets.get(k)!
+      return {
+        editClass: k,
+        rounds: slot.rounds,
+        meanDelta: slot.deltas.length > 0 ? slot.deltas.reduce((a, b) => a + b, 0) / slot.deltas.length : null,
+        meanCostPct: slot.costs.length > 0 ? slot.costs.reduce((a, b) => a + b, 0) / slot.costs.length : null,
+        regressedTasks: slot.regressed,
+      }
+    })
+  return { rows, seesawSuspected }
+}
+
 export function evolutionSurfaceReport(
   surfaceKey: SurfaceKey,
   proposals: Proposal[],
@@ -205,6 +267,7 @@ export function evolutionReport(
     .map((key) => evolutionSurfaceReport(key, proposals, champions, cfg))
     .filter((s) => s.proposalsTotal > 0 || s.rounds > 0)
   const exercised = new Set(proposals.map((p) => p.surfaceKey))
+  const attribution = classAttributionOf(surfaces, proposals)
   return {
     config: {
       horizon: cfg.horizon, bMin: cfg.bMin, bMax: cfg.bMax, stallWindow: cfg.stallWindow,
@@ -217,6 +280,8 @@ export function evolutionReport(
       .map((s) => ({ surfaceKey: s.surfaceKey, code: 'weak_verification_streak' as const, streak: s.weakVerificationStreak })),
     familyGains: [], // service 层 overview 后处理补（loop 纯函数层拿不到 EvalSet.family）
     retirementCandidates: retirementCandidates(surfaces),
+    classAttribution: attribution.rows,
+    seesawSuspected: attribution.seesawSuspected,
   }
 }
 

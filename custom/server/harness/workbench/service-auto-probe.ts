@@ -25,6 +25,7 @@ import { loadEvalConfig } from '../../eval/types'
 import type { AskFn } from '../../eval/judge'
 import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
+import { computeExecutionTrace, executionMarkersOf } from './execution-trace'
 import { nextId, mutateStore, readStore, persistAutoJob, listOrphanAutoJobs } from './store'
 import { listComponents, librarySummary, recordComponent } from './component-library'
 import { ensureScheduleFile, readSchedulePolicy, validateSchedulePolicy, normalizeSchedulePolicy, DEFAULT_SCHEDULE_POLICY, SCHEDULE_REL } from './schedule-policy'
@@ -171,6 +172,8 @@ async function runAutoProbeJob(
     const probe = p.probes.find((x) => x.variantId === variantId)
     if (!variant || !probe) continue
     const tree = treeOfVariant(variant, p.targetPath)
+    // W1（2026-11-05）：候选引入的 skill/子代理名 → 执行证迹标记；不可观测面为空，不参与判定。
+    const markerInfo = executionMarkersOf(variant)
     const profile = p.profile ?? profileFromTarget(p.targetPath) ?? 'orchestrator'
     const evalSet = getSet(sets.setId)
     if (!evalSet) throw new ServiceError(400, `评测集不存在：${sets.setId}`)
@@ -203,6 +206,7 @@ async function runAutoProbeJob(
       estimatePerTaskUsd: limits.estimate,
       k: affordableK,
       concurrency: readSchedulePolicy().probeConcurrency,
+      markers: markerInfo.markers,
       spawnRun: opts.spawnRun,
       onProgress: (done, costUsd, estimatedTasks) => {
         job.costUsd = costUsd
@@ -311,6 +315,10 @@ async function runAutoProbeJob(
       regressionRunId: regressionRunId ?? null,
       note: `一键自动探测${result.stoppedBy ? `（${result.stoppedBy}）` : ''}`,
       actor: opts.actor ?? 'workbench-auto',
+      // W1：采集到标记才写证迹；未下传标记（纯指令面）如实缺席，由门按配置处置。
+      executionTrace: result.markerHits
+        ? computeExecutionTrace(result.markerHits.markers, result.markerHits.hits, result.markerHits.scannedChars)
+        : null,
     })
 
     // ---- R2（2026-10-31 二批执行）：三类证据自动供给 ----
