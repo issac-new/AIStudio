@@ -13,8 +13,11 @@
  *      指引人走审批流；交互桥接见规格档 H3 待办）
  *   3. 无任何配置 → 放行（未配置不执法——诚实边界，不装已治理）
  *
- * 总闸 HERMES_TOOL_ENFORCE=1 才生效（默认 0=零行为变化，对齐 toolresultguard
- * 先例）；内部任何异常 fail-open；每次拒绝发 govbus security/high 事件留痕。
+ * 总闸（D1 2026-11-05 权限最小化批起）：默认开——HERMES_TOOL_ENFORCE 未设或 =1 即执法，
+ * 显式 =0 关闭（逃生门）；managed-settings 的 toolEnforceLocked 可锁死（env 也改不了）。
+ * 默认开的底气=策略文件缺席时回落仓内默认策略包（policy-store builtin-default，
+ * 红线基线随仓分发），而非无配置裸放。内部任何异常 fail-open；每次拒绝发 govbus
+ * security/high 事件留痕。
  *
  * strict 可选姿态（2026-10-21 AGT 吸收轮 F，用户裁定「全做」）：HERMES_TOOL_ENFORCE_STRICT=1
  * 时把失败语义翻转为 fail-closed——无任何策略配置 → 拒（strict-deny）；裁决面内部
@@ -34,6 +37,7 @@ import { evaluatePolicy, type PolicySnapshot, type PolicyToolCategory } from '..
 import { loadPolicySnapshot } from '../toolpolicy/policy-store'
 import { proactivityPolicyForProfile, type ProactivityPolicyLite } from '../proactivity/enforcement-policy'
 import { assess } from '../proactivity/proactivity-model'
+import { loadManagedSettings } from '../managedsettings/managed-settings'
 
 /** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。 */
 interface PreExecuteVerdict { allow: false; error: string }
@@ -69,6 +73,7 @@ export type EnforceRule =
   | 'proactivity-inform-only' // 两轴 L5（推断目标）非观察面（挂账清偿批 H4）
   | 'proactivity-draft-cap'   // 两轴 L4 无契约上限起草（可走审批桥——人核即起草语义闭环）
   | 'proactivity-goal-drift'  // 两轴目标漂移防线（L4 目标 stale/未确认——须重新确认目标，非批单可豁免）
+  | 'managed-deny'          // 组织托管配置的 extraDeniedTools 命中（D1 2026-11-05）
   | 'sandbox-path'           // 显式路径超出沙箱根（P2-5）
   | 'sandbox-network'        // 浏览器 URL 被网络策略拒绝（P2-5）
   | 'budget-exceeded'        // 当日预算耗尽且策略动作为 block（残余项⑤）
@@ -314,9 +319,20 @@ function normalizeRoot(path: string): string {
 export function sandboxPathViolation(tool: string, input: Record<string, unknown>, rootsInput?: string[]): string | null {
   const roots = (rootsInput ?? envList('HERMES_TOOL_SANDBOX_ROOTS')).map(normalizeRoot)
   if (roots.length === 0) return null
+  // 相对路径基（D1 2026-11-05 补强）：exec 类取入参 cwd/workdir，写类缺基时跳过
+  // （write 的相对路径由 agent 运行时自身 cwd 决定，服务端不可知——不猜数）。
+  const cwdRaw = input.cwd ?? input.workdir
+  const hasCwd = toolCategoryOf(tool) === 'exec' && typeof cwdRaw === 'string' && cwdRaw.trim() !== ''
+  const cwdAbs = hasCwd ? normalizeRoot(cwdRaw as string) : null
   for (const raw of explicitPathsOf(tool, input)) {
-    if (!raw.startsWith('/') && !raw.startsWith('~')) continue
-    const target = normalizeRoot(raw)
+    let target: string | null = null
+    if (raw.startsWith('/') || raw.startsWith('~')) {
+      target = normalizeRoot(raw)
+    } else if (cwdAbs && !raw.startsWith('.')) {
+      // exec 相对路径（如 rm -rf build/）：按其 cwd 解析后再判——相对路径不再是豁免通道
+      target = normalizeRoot(`${cwdAbs}/${raw}`)
+    }
+    if (!target) continue
     const ok = roots.some((root) => target === root || target.startsWith(root.endsWith('/') ? root : `${root}/`))
     if (!ok) return raw
   }
@@ -342,14 +358,35 @@ export function sandboxNetworkViolation(tool: string, input: Record<string, unkn
   return decision.verdict === 'deny' ? `${url}（${decision.reason}）` : null
 }
 
+/** 总闸判定（D1 2026-11-05）：managed-settings 锁定 > env 显式 0 关 > 默认开。
+ *  独立函数便于 doctor/评分卡/测试同口径消费。 */
+export function masterSwitchOn(): boolean {
+  const managed = loadManagedSettings()
+  if (managed && managed.toolEnforceLocked) return managed.toolEnforce === 1
+  return process.env.HERMES_TOOL_ENFORCE !== '0'
+}
+
 export function evaluateEnforcement(
   tool: string,
   input: Record<string, unknown>,
   profileId: string | undefined,
   env: EnforceEnv = {},
 ): EnforceVerdict {
-  const masterOn = env.masterOn ?? (process.env.HERMES_TOOL_ENFORCE === '1')
+  const masterOn = env.masterOn ?? masterSwitchOn()
   if (!masterOn) return { enforcing: false, rule: 'master-off' }
+
+  // 策略链 -1（D1 2026-11-05）：组织托管 extraDeniedTools——优先于一切（含部署侧策略文件），
+  // 组织级禁用面不可被用户策略放宽（Claude Code managed-settings 同语义）。
+  const managed = loadManagedSettings()
+  if (managed?.extraDeniedTools?.length) {
+    const hit = managed.extraDeniedTools.some((p) => (p.endsWith('*') ? tool.startsWith(p.slice(0, -1)) : p === tool))
+    if (hit) {
+      return {
+        enforcing: true, allow: false, rule: 'managed-deny',
+        error: `工具 ${tool} 被组织托管配置禁用（${managed._source}）——用户/项目级配置不可放宽`,
+      }
+    }
+  }
 
   // 策略链 0（P0-1）：发起用户身份白名单。仅当身份已登记且声明了 allowlist 才执法；
   // 未登记/空 allowlist=未声明，不改变既有行为（不把“没登记”当“已治理”）。

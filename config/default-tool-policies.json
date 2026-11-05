@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "mode": "permissive",
+  "updatedAt": 0,
+  "updatedBy": "builtin-default（2026-11-05 AI Native D1 权限最小化批）",
+  "rules": [
+    {
+      "id": "deny-secret-read",
+      "name": "敏感凭证路径禁触",
+      "enabled": true,
+      "priority": 900,
+      "action": "deny",
+      "match": { "argPattern": "(\\.env(\\.|$|/)|\\.ssh/|\\.aws/credentials|\\.git-credentials|id_rsa|\\.pem\\b|service-account.*\\.json)" },
+      "reason": "凭证与环境变量文件属红线路径（AI Native D1 默认策略包）——需要其中的配置请走 env 注入，不要让 agent 读文件"
+    },
+    {
+      "id": "deny-git-dir-write",
+      "name": ".git 目录写护栏",
+      "enabled": true,
+      "priority": 890,
+      "action": "deny",
+      "match": { "categories": ["write", "exec"], "argPattern": "(^|[/\\s\"'])\\.git/" },
+      "reason": "直接改写 .git/ 会绕过一切版本治理（AI Native D1 默认策略包）——分支操作走 git 命令、历史操作走人工"
+    },
+    {
+      "id": "deny-destructive-shell",
+      "name": "破坏性 shell 红线",
+      "enabled": true,
+      "priority": 880,
+      "action": "deny",
+      "match": { "categories": ["exec"], "argPattern": "(sudo\\b|curl[^|;&]*\\|\\s*(ba)?sh|wget[^|;&]*\\|\\s*(ba)?sh|rm\\s+-[^-]*r[^-]*f\\s+/(\\s|$)|mkfs|dd\\s+if=.*of=/dev/|chmod\\s+-R\\s+777\\s+/)" },
+      "reason": "提权/管道执行远端脚本/根递删/格式化属破坏性红线（AI Native D1 默认策略包）"
+    },
+    {
+      "id": "ask-package-install",
+      "name": "包安装需审批",
+      "enabled": true,
+      "priority": 700,
+      "action": "require_approval",
+      "match": { "categories": ["exec"], "argPattern": "(npm\\s+(i|install|ci|update)|pip\\s+install|pip3\\s+install|uv\\s+(pip\\s+)?install|cargo\\s+install|gem\\s+install|apt(-get)?\\s+install|brew\\s+(install|upgrade))" },
+      "reason": "包安装改变依赖面（供应链入口）——推演场景由审批环代批，日常场景批准后重试（AI Native D1 默认策略包）"
+    },
+    {
+      "id": "ask-git-push",
+      "name": "推送远端需审批",
+      "enabled": true,
+      "priority": 690,
+      "action": "require_approval",
+      "match": { "categories": ["exec"], "argPattern": "git\\s+push" },
+      "reason": "推送是外发动作（AI Native D1 默认策略包）——推演场景由审批环代批，日常场景批准后重试"
+    },
+    {
+      "id": "allow-readonly",
+      "name": "只读类放行",
+      "enabled": true,
+      "priority": 100,
+      "action": "allow",
+      "match": { "categories": ["read"] },
+      "reason": "只读工具默认放行（AI Native D1 默认策略包）——写/执行类继续走后续阶梯与沙箱判定"
+    }
+  ]
+}

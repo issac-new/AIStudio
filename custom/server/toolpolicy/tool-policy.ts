@@ -61,6 +61,8 @@ export interface PolicySnapshot {
   /** 可运行的改进建议：不阻断求值。 */
   warnings: string[]
   fatal: boolean
+  /** 来源（D1 2026-11-05）：file=部署侧文件；builtin-default=仓内默认包（文件缺席回落）；none=无任何策略。 */
+  source?: 'file' | 'builtin-default' | 'none'
 }
 
 export interface PolicyLintResult {
@@ -365,7 +367,7 @@ export interface PolicyPosture {
 }
 
 /** 治理姿态：把「未配置 / 坏了 / 只保存不拦截 / 生效中」四态显式化，杜绝仪表盘假 governed。 */
-export function policyPosture(snapshot: PolicySnapshot, masterOn = process.env.HERMES_TOOL_ENFORCE === '1'): PolicyPosture {
+export function policyPosture(snapshot: PolicySnapshot, masterOn = process.env.HERMES_TOOL_ENFORCE !== '0'): PolicyPosture {
   const doc = snapshot.doc
   const rules = doc?.rules ?? []
   const base = {

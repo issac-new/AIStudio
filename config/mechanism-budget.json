@@ -11,6 +11,14 @@
   "changes": [
     {
       "at": "2026-11-05",
+      "delta": "+0 门/钩子/脚本（managedsettings 域模块＋role-tool-matrix 治理正本 yaml＋默认策略包 json，均不在计数类目）",
+      "reason": "D1 权限最小化实施：总闸默认开＋默认策略包回落＋managed 锁定面＋角色工具矩阵＋路径沙箱补强",
+      "pairedRemovals": [
+        "D1 挂账 N01 清偿（pending-batch 台账 resolved）——机制为清偿既有缺口非新增治理面"
+      ]
+    },
+    {
+      "at": "2026-11-05",
       "delta": "+2 gate 文件净-1（重复 id 退役） / +2 scripts / +1 npm script / +1 patch",
       "reason": "AI Native 五篇吸收批：spec-fidelity L3 门、harness-doctor/spec-archive 脚本、doctor npm script、墙钟硬闸补丁 753；配对退役=删 api.contract-alignment 旧版重复 gate（0.1.0）与 dispatchpreview/prefixreuse 两零消费者域（探查+复核零引用后执行）",
       "pairedRemovals": [

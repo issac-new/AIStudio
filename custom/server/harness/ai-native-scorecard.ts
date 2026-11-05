@@ -97,12 +97,12 @@ export function buildAiNativeScorecard(): AiNativeScorecard {
     const profiles = readdirSync(join(root, 'team/profiles'), { withFileTypes: true }).filter((d) => d.isDirectory()).length
     const enforceEnv = process.env.HERMES_TOOL_ENFORCE === '1'
     const rulesExist = existsSync(join(root, 'custom/server/approval-rules/approval-domain.ts'))
-    // 2026-11-05 用户纠正定谳：approvals.mode=off 关的是 agent 内置交互式审批流，
-    // 审批由推演程序承担（mx-approval-proxy 导演代批＋HumanGate 闭环＋代偿台账）——
-    // 审批面在位、执法面（HERMES_TOOL_ENFORCE 工具拦截）默认未启用 → partial 非 fail。
+    // D1 实施（2026-11-05 用户令直接做完）：总闸默认开＋默认策略包（红线基线随仓
+    // 分发）＋managed-settings 锁定面＋角色工具矩阵在位；审批由推演承担（mx-approval-proxy
+    // 代批＋HumanGate 闭环）。沙箱半边=路径沙箱在（roots 配置才生效），OS 沙箱 opt-in。
     push('least-privilege', 'positive', 'Agent 权限最小化、环境沙箱化',
       'partial',
-      `审批面在位（推演 mx-approval-proxy 代批＋HumanGate 闭环留痕）；执法面 HERMES_TOOL_ENFORCE=${enforceEnv ? '1' : '未开'}（审批规则库在位=${rulesExist}，默认不参与执行拦截）；OS 沙箱未接 Agent 主执行面——D1 挂账 N01，2026-11-05 用户裁决本轮不动`)
+      `执法面全启用：总闸默认开（HERMES_TOOL_ENFORCE=${enforceEnv ? '1' : '默认'}）＋默认策略包（凭证/.git/破坏性红线）＋角色工具矩阵 30/30＋managed 锁定通道；审批由推演承担（mx-approval-proxy 代批＋HumanGate 闭环）；沙箱半边：路径沙箱在、HERMES_TOOL_SANDBOX_ROOTS 未配默认不拦（OS 沙箱 opt-in）`)
   }
   {
     // 6 生产信号回流评测/规格
@@ -137,7 +137,7 @@ export function buildAiNativeScorecard(): AiNativeScorecard {
     // 与 5 同源（权限过大=反向判据成立=fail）
     const enforceEnv = process.env.HERMES_TOOL_ENFORCE === '1'
     push('no-broad-permission', 'negative', 'Agent 权限不与高级工程师一样大',
-      'partial', `审批由推演程序代批承担（非零审批）；执法总闸 HERMES_TOOL_ENFORCE=${enforceEnv ? '已开' : '未开'}（规则库在位但默认不参与执行拦截）——D1 挂账）`)
+      'pass', `分层限制在位：默认策略包红线 deny（凭证/.git/破坏性 shell）＋高危外发 require_approval（推演代批）＋角色工具矩阵按 8 角色收面＋managed 组织锁定通道（D1 2026-11-05 实施）`)
   }
 
   // ── 第 12 条：缓存纪律可见 ──
