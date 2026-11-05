@@ -165,6 +165,20 @@ export function computeSpecCoverage(specsDir, receipts) {
   }
 }
 
+/** 历史台账不改写；生成标准形态副本供人工复核（legacy → standard 的默认值显式写 unknown）。 */
+export function normalizeDecisions(rows) {
+  return rows.map(({ row }) => ({
+    ...row,
+    phase: row.phase ?? 'unknown',
+    ai_suggestion: row.ai_suggestion ?? row.decision ?? row.suggestion ?? '',
+    user_action: row.user_action ?? 'unknown',
+    outcome: row.outcome ?? 'unknown',
+    rationale: row.rationale ?? '',
+    actor: row.actor ?? 'unknown',
+    category: row.category ?? 'uncategorized',
+  }))
+}
+
 export function checkCommitTitles(titles, enforce = false) {
   const suspicious = []
   for (const t of titles) {
@@ -292,10 +306,10 @@ export function checkBudget(budget) {
 function main(argv = process.argv.slice(2), out = process.stdout, err = process.stderr) {
   const flags = new Set(argv)
   if (flags.has('--help') || flags.has('-h')) {
-    out.write('usage: node scripts/governance-lint.mjs [--strict] [--budget] [--spec-coverage] [--silent-returns] [--commits] [--only-commits] [--range origin/main..HEAD] [--enforce] [--json]\n')
+    out.write('usage: node scripts/governance-lint.mjs [--strict] [--budget] [--spec-coverage] [--silent-returns] [--normalize-decisions] [--commits] [--only-commits] [--range origin/main..HEAD] [--enforce] [--json]\n')
     return 0
   }
-  const known = new Set(['--strict', '--budget', '--spec-coverage', '--silent-returns', '--commits', '--only-commits', '--enforce', '--json', '--range'])
+  const known = new Set(['--strict', '--budget', '--spec-coverage', '--silent-returns', '--normalize-decisions', '--commits', '--only-commits', '--enforce', '--json', '--range'])
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i]
     if (a === '--range') { i += 1; continue }
@@ -367,6 +381,16 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
     const v = checkSilentReturns(baseline)
     allProblems.push(...v.problems); allWarnings.push(...v.warnings)
     results.silentReturns = { count: v.count }
+  }
+
+  if (flags.has('--normalize-decisions')) {
+    const text = readJsonlFile(LEDGERS.decisions)
+    if (text) {
+      const { rows } = parseJsonl(text, LEDGERS.decisions)
+      const normalized = normalizeDecisions(rows)
+      writeFileSync(join(ROOT, '.swarm-yuan/decisions.normalized.jsonl'), normalized.map((r) => JSON.stringify(r)).join('\n') + '\n')
+      results.normalizeDecisions = { rows: normalized.length, out: '.swarm-yuan/decisions.normalized.jsonl' }
+    }
   }
 
   if (flags.has('--commits')) {

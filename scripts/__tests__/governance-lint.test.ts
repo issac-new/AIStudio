@@ -1,7 +1,7 @@
 // 守门:治理 lint 的纯函数（JSONL/决策形态/提交标题/收据）。
 // spec: docs/superpowers/specs/2026-11-05-governance-truth-restoration.md（批次 B2）
 import { describe, expect, it } from 'vitest'
-import { parseJsonl, validateDecisions, validateReceipts, checkCommitTitles, main } from '../governance-lint.mjs'
+import { parseJsonl, validateDecisions, validateReceipts, checkCommitTitles, normalizeDecisions, main } from '../governance-lint.mjs'
 
 const schema = { required: ['ts', 'type'], standardRequired: ['ts', 'type', 'actor'], strictFrom: '2026-11-05T00:00:00+08:00', legacyShapes: { legacy: ['ts', 'id', 'decision', 'type'] } }
 
@@ -44,6 +44,17 @@ describe('checkCommitTitles', () => {
     expect(warn.problems).toHaveLength(0)
     const hard = checkCommitTitles(titles, true)
     expect(hard.problems).toHaveLength(1)
+  })
+})
+
+describe('normalizeDecisions', () => {
+  it('legacy 行补 unknown/decision→ai_suggestion，不改原行', () => {
+    const rows = [{ row: { ts: 't', id: 'x', decision: 'd', type: 'Mechanical' }, line: 1 }]
+    const out = normalizeDecisions(rows)
+    expect(out[0].ai_suggestion).toBe('d')
+    expect(out[0].actor).toBe('unknown')
+    expect(out[0].category).toBe('uncategorized')
+    expect(rows[0].row.ai_suggestion).toBeUndefined()
   })
 })
 
