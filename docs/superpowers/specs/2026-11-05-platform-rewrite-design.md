@@ -228,6 +228,7 @@ simharness/                      仅保留平台 CLI 的 Shell 适配与场景�
 | deploy 状态面（P1-5） | deploy-agent-runtime 末行 RESULT status=complete|partial|failed；exit 0/2/1；kept/conflict 一律 partial（--force 已覆盖的 conflict 亦然） | 只按 missing 退出非零（旧实现） | 「保留旧文件仍报告成功」是 P0 实锤缺陷；inject 预检/后置同步按退出码消费同一状态 | Mechanical | approved |
 | ensure 假绿路径删除（P1-5） | 删除「cockpit 路由存在即放行 inject 部分失败」与「脏树无清单 exit 0」两条路径：inject 失败即非零；脏树无清单=不可验证=非零 | 保留放行（向后兼容） | 两条路径都是「尝试过伪装成成功」的实锤样本；P1 目标即消灭该语义 | Mechanical | approved |
 | ensure 差量补套单写入门（P1-5） | series 领先 manifest（tail-append）时打印清单后 spawn inject 主链补套（runInjection 事务化+manifest 原子更新），ensure 不再裸 git apply | ensure 侧自建 applyDelta+手写 manifest（旧实现） | 单一写入路径消灭「手工登记 manifest」回退面；ensure 专职判定与守门 | Mechanical | approved |
+| 证据 supplement 落盘口径（P1-9，task-2 审查 I1 清偿） | supplement/declaredMissing 属 producer 层标记不落盘（九字段白名单投影滤除）；release:gate 产证全链携带当前 HEAD 真值（commit 恒非 null），「缺席」语义只在 producer 层表达——测试锚定证据行恰好九键且 commit=HEAD | 扩 store 白名单加第十字段 | 九字段契约是冻结面；准出链 commit 恒传真值，null-缺席路径不在准出链上，扩字段为不存在的消费面预支 | Mechanical | approved |
 
 ## 验证
 

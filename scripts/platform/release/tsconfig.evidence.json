@@ -1,0 +1,12 @@
+{
+  "//": "release-gate 证据 shim 专用最小 tsconfig（P1 Task 9）：ts-node transpile-only 加载 custom/server/platform/evidence/evidence-store.ts——服务端工程 tsconfig 的 rootDirs/include 面不接受仓内其它树的单文件编译，此处独立最小配置（rootDir=仓根覆盖全部输入；module commonjs 供 require 加载）。"
+  , "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2022",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "rootDir": "../../..",
+    "types": ["node"]
+  }
+}

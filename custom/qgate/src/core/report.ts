@@ -16,6 +16,25 @@ import type { LoadResult } from './loader.js'
 export const FIX_FIRST_DISCIPLINE =
   'fix artifacts, not acceptance lines — disabling gates, loosening thresholds, adding waivers or rewriting acceptance criteria is an acceptance change requiring explicit decision and registration (qgate waive/intent), never a fix action'
 
+/**
+ * 严格准出选项（P1 Task 9，release:gate 消费；默认行为不变）：
+ * - requirePass：启用门最新判定必须全 PASS——FAIL/INCONCLUSIVE/CONDITIONAL/WAIVED/
+ *   从未执行（缺席）一律违规（spec §4.4-4：普通准出不接受豁免与条件判定）。
+ * - noCache：最新 run 的证据不得含 cached 执行形态（缓存证据不是本轮观测）。
+ * - since：最新 run 的 startedAt 必须 ≥ since（早于本次准出窗口的历史 PASS 不算数）。
+ */
+export interface StrictReportOptions {
+  requirePass?: boolean
+  noCache?: boolean
+  since?: number
+}
+
+export interface StrictReportResult {
+  /** 严格违规清单（空=通过）；每条点名 gateId 与成因。 */
+  violations: string[]
+  options: StrictReportOptions
+}
+
 export interface ReleaseReportData {
   generatedAt: number
   profile: string
@@ -50,20 +69,32 @@ export interface ReleaseReportData {
   openRisks: Risk[]
   exceptions: Array<ExceptionWaiver & { active: boolean }>
   unresolved: string[]
+  /** 严格准出面（仅当传入 StrictReportOptions 时存在；默认报告不带）。 */
+  strict?: StrictReportResult
 }
 
-export function buildReleaseReport(loaded: LoadResult): ReleaseReportData {
+export function buildReleaseReport(loaded: LoadResult, strictOpts?: StrictReportOptions): ReleaseReportData {
   const paths = storePaths(loaded.qgateDir)
   const profile = findProfile(loaded.profiles, loaded.config.profile)
   const resolved = resolveProfile(loaded.gates, profile, loaded.config.profile)
   const enabledGates = loaded.gates.filter((g) => resolved.enabled.get(g.metadata.id) === true)
   const state = latestRuns(paths)
 
+  /** 严格面行（gates 构建时一并采集，避免二次读盘）。 */
+  const strictRows: Array<{ gateId: string; verdict: GateRun['verdict']; startedAt?: number; hasCachedEvidence: boolean }> = []
+
   const gates: ReleaseReportData['gates'] = enabledGates.map((spec: GateSpec) => {
     const entry = state[spec.metadata.id]
     const run = entry ? loadRun(paths, entry.runId) : undefined
     const evidence = run ? loadRunEvidence(paths, run.runId) : []
     const requiredTypes = spec.spec.evidence.required
+    // 严格面采集（P1 Task 9）：verdict/时戳/cached 执行形态——供 StrictReportOptions 判定
+    strictRows.push({
+      gateId: spec.metadata.id,
+      verdict: run?.verdict ?? 'INCONCLUSIVE',
+      startedAt: run?.startedAt,
+      hasCachedEvidence: evidence.some((e) => e.execution === 'cached'),
+    })
     return {
       gateId: spec.metadata.id,
       domain: spec.spec.domain,
@@ -119,6 +150,29 @@ export function buildReleaseReport(loaded: LoadResult): ReleaseReportData {
       .map((g) => `${g.gateId}: ${g.verdict}${g.failureSummary ? ` — ${g.failureSummary}` : ''}`),
   ]
 
+  // 严格准出判定（P1 Task 9）：仅当调用方传入选项时计算并随报告输出；
+  // 默认（无 strictOpts）行为与既往完全一致。
+  let strict: StrictReportResult | undefined
+  if (strictOpts && (strictOpts.requirePass || strictOpts.noCache || strictOpts.since !== undefined)) {
+    const violations: string[] = []
+    for (const row of strictRows) {
+      if (strictOpts.requirePass && row.verdict !== 'PASS') {
+        violations.push(`${row.gateId}: ${row.verdict}（require-pass：仅 PASS 可准出，CONDITIONAL/WAIVED/缺席一律拦）`)
+      }
+      if (strictOpts.since !== undefined) {
+        if (row.startedAt === undefined) {
+          violations.push(`${row.gateId}: 无执行记录（缺席不可准出）`)
+        } else if (row.startedAt < strictOpts.since) {
+          violations.push(`${row.gateId}: 最新 run 早于 --since（${new Date(row.startedAt).toISOString()} < ${new Date(strictOpts.since).toISOString()}，历史 PASS 不算本轮）`)
+        }
+      }
+      if (strictOpts.noCache && row.hasCachedEvidence) {
+        violations.push(`${row.gateId}: 证据含 cached 执行形态（缓存不是本轮观测，--no-cache 拦截）`)
+      }
+    }
+    strict = { violations, options: strictOpts }
+  }
+
   return {
     generatedAt: now,
     profile: resolved.profileId,
@@ -131,6 +185,7 @@ export function buildReleaseReport(loaded: LoadResult): ReleaseReportData {
     openRisks: listRisks(paths).filter((r) => r.status === 'open'),
     exceptions,
     unresolved,
+    strict,
   }
 }
 
@@ -187,6 +242,18 @@ export function renderReleaseReportMd(data: ReleaseReportData): string {
   lines.push(`## Unresolved (${data.unresolved.length})`, ``)
   if (data.unresolved.length === 0) lines.push(`(none)`)
   for (const u of data.unresolved) lines.push(`- ${u}`)
+
+  if (data.strict) {
+    lines.push(``, `## Strict Admission (${data.strict.violations.length} violations)`, ``)
+    const opts = data.strict.options
+    lines.push(`- 模式: ${[
+      opts.requirePass ? 'require-pass' : null,
+      opts.noCache ? 'no-cache' : null,
+      opts.since !== undefined ? `since=${new Date(opts.since).toISOString()}` : null,
+    ].filter(Boolean).join(' ')}`)
+    if (data.strict.violations.length === 0) lines.push(`- (pass)`)
+    for (const v of data.strict.violations) lines.push(`- ${v}`)
+  }
   lines.push(``, `> ${FIX_FIRST_DISCIPLINE}`, ``)
   return lines.join('\n')
 }

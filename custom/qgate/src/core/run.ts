@@ -33,6 +33,9 @@ export interface RunInput {
   /** profile 覆盖后的有效 policy（缺省用门自带）；贯通 decide——否则 override 只影响
       CLI 阻断计算而 verdict 已被门自带 warn 降级，block 覆盖永远拦不住（v0.3 根治）。 */
   effectivePolicy?: GateSpec['spec']['policy']
+  /** 跳过缓存读（P1 Task 9 --no-cache）：发布准出必须真跑——缓存证据是「输入未变
+   *  复用上轮」的声明，不是本轮观测。缓存写保持（后续常规任务门可复用本轮产物）。 */
+  noCache?: boolean
 }
 
 export interface RunResult {
@@ -103,7 +106,7 @@ export async function runGate(input: RunInput): Promise<RunResult> {
   const maxAgeHours = spec.spec.policy.maxAgeHours ?? 24
   let cached = false
   let evidence: Evidence[] = []
-  const hit = cacheKey ? cacheGet(qgateDir, cacheKey, maxAgeHours) : null
+  const hit = input.noCache ? null : (cacheKey ? cacheGet(qgateDir, cacheKey, maxAgeHours) : null)
   if (hit && hit.evidence.length > 0) {
     cached = true
     evidence = markCached(hit.evidence, cacheKey!)

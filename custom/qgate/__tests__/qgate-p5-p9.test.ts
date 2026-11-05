@@ -329,3 +329,128 @@ describe('CLI 新命令（waive/exceptions/release-report）', () => {
     } finally { rmSync(fx.dir, { recursive: true, force: true }) }
   })
 })
+
+// ── P1 Task 9：严格准出面（--require-pass / --no-cache / --since）──────────────
+// 负例锚定：waived/CONDITIONAL/缓存命中/早于 --since 的历史 PASS/缺席 → strict 违规；
+// 默认行为（无 flags）与既往一致。
+import { loadRunEvidence } from '../src/core/store.js'
+import type { LoadResult } from '../src/core/loader.js'
+
+function mkLoaded(fx: { dir: string; qgateDir: string }, spec: GateSpec): LoadResult {
+  return {
+    config: { claims: [], gates: [], ontology: { provider: 'off', mappings: [] } },
+    gates: [spec],
+    profiles: [],
+    diagnostics: [],
+    projectRoot: fx.dir,
+    qgateDir: fx.qgateDir,
+  }
+}
+
+describe('P9+ 严格准出面（release-report --require-pass/--no-cache/--since）', () => {
+  it('缺席（从未执行）→ violation 点名 INCONCLUSIVE', () => {
+    const fx = tmpProject()
+    try {
+      const data = buildReleaseReport(mkLoaded(fx, gateSpec()), { requirePass: true })
+      expect(data.strict?.violations.some((v) => v.includes('t.gate') && v.includes('INCONCLUSIVE'))).toBe(true)
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('PASS 且晚于 since → 零违规；默认（无 strict 选项）报告不带 strict 面', async () => {
+    const fx = tmpProject()
+    try {
+      const spec = gateSpec({ executors: [{ id: 'e1', type: 'command', command: ['true'], evidenceType: 'x' }] })
+      await runGate({ spec, trigger: 'release', workspace: fx.dir, qgateDir: fx.qgateDir })
+      const loaded = mkLoaded(fx, spec)
+      const strict = buildReleaseReport(loaded, { requirePass: true, noCache: true, since: Date.now() - 60_000 })
+      expect(strict.strict?.violations).toEqual([])
+      const plain = buildReleaseReport(loaded)
+      expect(plain.strict).toBeUndefined()
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('早于 --since 的历史 PASS → violation（历史 PASS 不算本轮）', async () => {
+    const fx = tmpProject()
+    try {
+      const spec = gateSpec({ executors: [{ id: 'e1', type: 'command', command: ['true'], evidenceType: 'x' }] })
+      await runGate({ spec, trigger: 'release', workspace: fx.dir, qgateDir: fx.qgateDir })
+      const data = buildReleaseReport(mkLoaded(fx, spec), { requirePass: true, since: Date.now() + 10_000 })
+      expect(data.strict?.violations.some((v) => v.includes('早于 --since'))).toBe(true)
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('WAIVED → violation（普通准出不接受豁免）', async () => {
+    const fx = tmpProject()
+    try {
+      const spec = gateSpec() // ['false'] → FAIL
+      saveWaiver(storePaths(fx.qgateDir), {
+        id: 'w-strict', gateId: 't.gate', reason: 'known', approver: 'alice',
+        expiresAt: Date.now() + 3_600_000, createdAt: Date.now(),
+      })
+      const r = await runGate({ spec, trigger: 'release', workspace: fx.dir, qgateDir: fx.qgateDir })
+      expect(r.run.verdict).toBe('WAIVED')
+      const data = buildReleaseReport(mkLoaded(fx, spec), { requirePass: true })
+      expect(data.strict?.violations.some((v) => v.includes('t.gate') && v.includes('WAIVED'))).toBe(true)
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('CONDITIONAL（warn 档 FAIL）→ violation', async () => {
+    const fx = tmpProject()
+    try {
+      const spec = gateSpec({ policy: { failure: 'warn', inconclusive: 'warn' } })
+      const r = await runGate({ spec, trigger: 'release', workspace: fx.dir, qgateDir: fx.qgateDir })
+      expect(r.run.verdict).toBe('CONDITIONAL')
+      const data = buildReleaseReport(mkLoaded(fx, spec), { requirePass: true })
+      expect(data.strict?.violations.some((v) => v.includes('t.gate') && v.includes('CONDITIONAL'))).toBe(true)
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('缓存命中 → no-cache violation（缓存不是本轮观测）；--no-cache 重跑不命中', async () => {
+    const fx = tmpProject()
+    try {
+      const spec = gateSpec({ executors: [{ id: 'e1', type: 'command', command: ['true'], evidenceType: 'x' }] })
+      const first = await runGate({ spec, trigger: 'release', workspace: fx.dir, qgateDir: fx.qgateDir })
+      expect(first.run.sourceSignal?.bucket).not.toBe('degraded')
+      const second = await runGate({ spec, trigger: 'release', workspace: fx.dir, qgateDir: fx.qgateDir })
+      // 第二次同输入 → 缓存命中，证据 execution=cached
+      const cachedEv = loadRunEvidence(storePaths(fx.qgateDir), second.run.runId)
+      expect(cachedEv.some((e) => e.execution === 'cached')).toBe(true)
+      const data = buildReleaseReport(mkLoaded(fx, spec), { requirePass: true, noCache: true })
+      expect(data.strict?.violations.some((v) => v.includes('cached'))).toBe(true)
+      // noCache 重跑：真执行，无 cached 形态，strict 通过
+      const third = await runGate({ spec, trigger: 'release', workspace: fx.dir, qgateDir: fx.qgateDir, noCache: true })
+      const thirdEv = loadRunEvidence(storePaths(fx.qgateDir), third.run.runId)
+      expect(thirdEv.some((e) => e.execution === 'cached')).toBe(false)
+      const after = buildReleaseReport(mkLoaded(fx, spec), { requirePass: true, noCache: true, since: Date.now() - 5_000 })
+      expect(after.strict?.violations).toEqual([])
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('CLI：run --require-pass 把 warn 档 FAIL 拦为 exit 1（默认仍 exit 0）；release-report --since 非法即 usage fail', { timeout: 30_000 }, () => {
+    const fx = tmpProject()
+    try {
+      mkdirSync(join(fx.qgateDir, 'gates'), { recursive: true })
+      writeFileSync(join(fx.qgateDir, 'gates', 'mine.yaml'), [
+        'apiVersion: qgate/v1alpha1',
+        'kind: Gate',
+        'metadata: { id: t.mine, version: 0.1.0 }',
+        'spec:',
+        '  domain: L1',
+        '  claims: [c1]',
+        '  triggers: [release]',
+        '  executors:',
+        `    - id: e1\n      type: command\n      command: ["false"]\n      evidenceType: x`,
+        '  evidence: { required: [x] }',
+        '  policy: { failure: warn, inconclusive: warn }',
+      ].join('\n') + '\n')
+      const run = (args: string[]) => spawnSync('node', [distCli, ...args], { cwd: fx.dir, encoding: 'utf8', timeout: 20_000 })
+      const lax = run(['run', 't.mine', '--trigger', 'release'])
+      expect(lax.status).toBe(0) // warn 档默认不阻断
+      const strictRun = run(['run', 't.mine', '--trigger', 'release', '--require-pass'])
+      expect(strictRun.status).toBe(1)
+      expect(strictRun.stdout).toContain('require-pass')
+      const badSince = run(['release-report', '--since', 'not-a-number'])
+      expect(badSince.status).toBe(2) // usage fail
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+})
