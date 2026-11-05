@@ -60,6 +60,8 @@ P0（批次 A）先恢复「通过」的可信度，不新增门；P1（批次 B
 14. **单文件拆分首批**：`custom/server/eval/controller.ts`（1494 行、54 路由）拆为 3 个 handler 模块 `custom/server/eval/routes/{sets,runs,analysis}.ts`＋共享助手 `routes/shared.ts`，`controller.ts` 保留 99 行路由表与 `evalRoutes` 聚合导出；eval 全域 41 文件/397 用例与 4 个 HTTP 测试同批回归；新增 `docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md` 登记 top 10 与后续批次。
 15. **索引自动检查**：新增 `scripts/maintenance/gen-doc-indexes.mjs --check`，复用 `custom/server/specs/specs-index.ts` 的 `listSpecDocs()`；本批修复 554/101/96 vs 555/102 差异与 3 个重复链接；`--write` 留下一批。
 
+16. **合入后收口（2026-11-05）**：主树全量 8030 用例暴露 `custom/client/kanban/__tests__/raci-visibility.test.ts` 卡片渲染用例 15s 超时（单跑 8.6s 通过、全量并发下超），两处提至 30s；断言语义不变。
+
 ## 决策记录
 
 | 决策 | 选择 | 备选 | 理由 | 类型 | 用户裁定 |
