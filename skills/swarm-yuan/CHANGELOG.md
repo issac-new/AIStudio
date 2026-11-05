@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.99.2] - 2026-11-05
+
+v1.0.12 发布轮进位：spec 任务卡七项机检（W3 吸收轮产物，随本版声明前进）。
+
+### Added
+
+- **`spec 任务卡七项机检`（`spf_taskcard_check`＋`SPEC_TASKCARD_ENFORCE`）**：L2 提交时对基线外 spec 校验七项标题（完成条件/输入与来源/工作流边界/工具与副作用/结果与证据/异常与恢复/验收反例），缺项 warn（默认）或 block（gate-deny.jsonl 留痕）；存量债走 `.swarm-yuan/spec-taskcard-baseline.txt` 只许减棘轮；spec 模板 `assets/spec-template.md` 同步七项锚段。
+
 ## [v2.99.1] - 2026-11-03
 
 收官批：分发预算欠账清偿＋Tier-3 行为评测落地（门禁数 59 与变量数 204 不变）。

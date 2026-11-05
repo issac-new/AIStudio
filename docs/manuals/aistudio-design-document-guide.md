@@ -3,7 +3,7 @@
 本导读写给讲师和文档维护者，帮助读者选择正确事实源、按稳定机制授课，并在正本、专题 spec 与实现不一致时作出可核对的表述。它不承担第二份设计正本的职责；系统结构以整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。
 
 - 快照基线：`e300df9f8`。
-- 当前版本：`1.0.11-overlay`。
+- 当前版本：`1.0.12-overlay`。
 - 核实日期：2026-11-03。
 - 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 523 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
 
@@ -178,7 +178,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 | 对象 | 当前值 | 权威载体 |
 |---|---|---|
-| 整体源码包 | `1.0.11-overlay`，tag `v1.0.11-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
+| 整体源码包 | `1.0.12-overlay`，tag `v1.0.12-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
 | 驾驶舱模块声明 | `1.0.9-studio.9` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
 | agent teams | `v0.22.5-team.8` | `team/VERSION`，机器载体 `team/version.json` |
 | Ycode | `3.17.1` | `vendor/zcode/package.json` |
@@ -192,8 +192,8 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 当前两件主资产是：
 
-1. `aistudio-full-1.0.11-overlay-src.tar.gz`。
-2. `swarm-yuan-offline-v1.0.11-overlay-everything.zip`。
+1. `aistudio-full-1.0.12-overlay-src.tar.gz`。
+2. `swarm-yuan-offline-v1.0.12-overlay-everything.zip`。
 
 两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产；ModelScope 的 `aistudio/` 只替换 full 包，仓根放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:104-134`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
 

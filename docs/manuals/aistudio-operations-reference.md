@@ -456,13 +456,13 @@ npm run release:packages -- --dry-run
 ```bash
 cd <本仓根目录>
 npm run release:packages
-SWARM_YUAN_OFFLINE_VER=v1.0.11-overlay \
+SWARM_YUAN_OFFLINE_VER=v1.0.12-overlay \
   bash skills/swarm-yuan/scripts/make-offline-bundle.sh --everything
 cd <本仓根目录>/dist
 shasum -a 256 \
-  release/aistudio-full-1.0.11-overlay-src.tar.gz \
-  swarm-yuan-offline-v1.0.11-overlay-everything.zip \
-  > release/SHA256SUMS-v1.0.11-overlay.txt
+  release/aistudio-full-1.0.12-overlay-src.tar.gz \
+  swarm-yuan-offline-v1.0.12-overlay-everything.zip \
+  > release/SHA256SUMS-v1.0.12-overlay.txt
 ```
 
 full 默认只打整体包并生成 `dist/release/SHA256SUMS`。`scripts/make-release-packages.mjs:49-94`。最后一段命令为两件资产生成配套校验文件，文件名和双通道布局遵循 `docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:7-9`。yuan 的 everything 当前是 `--no-vendor + knowledge + docs + github-src`：**可经 pip/npm 镜像安装的运行时不内嵌**，所以 everything 不等于完全断网自足。`skills/swarm-yuan/scripts/make-offline-bundle.sh:33-47,60-65`、`docs/superpowers/specs/2026-11-03-release-v1.0.10-overlay.md:17-25`。

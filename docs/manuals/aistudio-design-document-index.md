@@ -2,9 +2,9 @@
 
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
 
-- 快照基线：`1508f0ac8`；核实日：2026-11-04；版本线：`1.0.11-overlay`（vendor agent v0.22.6 升级批）。
-- 当前工作树根目录：**551 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 98 份；合计 551 份。
+- 快照基线：`b63db00c1`；核实日：2026-11-05；版本线：`1.0.12-overlay`（vivo Harness 吸收 W1-W4 发布批）。
+- 当前工作树根目录：**554 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 101 份；合计 554 份。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
@@ -591,3 +591,4 @@
 - [2026-11-04-release-v1.0.11-overlay.md](../superpowers/specs/2026-11-04-release-v1.0.11-overlay.md)
 - [2026-11-05-teardown-void-type-fix.md](../superpowers/specs/2026-11-05-teardown-void-type-fix.md)
 - [2026-11-05-frame-expect-dash-keys-fix.md](../superpowers/specs/2026-11-05-frame-expect-dash-keys-fix.md)
+- [2026-11-05-release-v1.0.12-overlay.md](../superpowers/specs/2026-11-05-release-v1.0.12-overlay.md)

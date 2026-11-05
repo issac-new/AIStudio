@@ -293,3 +293,12 @@ paths:
   - docs/manuals/aistudio-feature-inventory.md
   - docs/manuals/aistudio-operations-reference.md
   - docs/manuals/aistudio-training-and-user-guide.md
+  # 2026-11-05 v1.0.12 发布轮（vivo Harness W1-W4＋生产链走查＋类型门解封；新增增量补丁通道；附录 A 代登记两份漏登 spec）
+  - docs/superpowers/specs/2026-11-05-release-v1.0.12-overlay.md
+  - scripts/make-incremental-package.mjs
+  - scripts/__tests__/make-incremental-package.test.ts
+  - docs/manuals/aistudio-training-and-user-guide.md
+  - docs/manuals/aistudio-design-document-guide.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/manuals/aistudio-feature-inventory.md
+  - docs/manuals/aistudio-operations-reference.md
