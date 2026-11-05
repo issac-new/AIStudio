@@ -10,12 +10,13 @@
 //
 // 注意:本脚本用 node 直跑(.mjs),不依赖 ts 加载器,因此路径在此内联计算,
 // 与 config/bootstrap.ts 保持一致(如需改路径,两处同步)。
-import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, realpathSync, mkdirSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, mkdirSync, rmSync } from 'fs';
 import { execSync, spawnSync } from 'child_process';
 import { resolve, relative } from 'path';
 import { pathToFileURL } from 'url';
 // 平台注入核心（P1 Task 3/4/5）：planner 产计划、manifest v2 记逐项真实状态、
-// executor 事务化应用、journal 备份回滚。本脚本=CLI 入口与目标树根解析层。
+// executor 事务化应用、journal 备份回滚。本脚本=CLI 入口与目标树根解析层
+//（根解析自 Task 6 起委托 platform/lib/upstream-root.mjs 单一事实源）。
 import { buildPlan, routePatchTarget } from './platform/inject/planner.mjs';
 import { runInjection } from './platform/inject/executor.mjs';
 import {
@@ -23,32 +24,17 @@ import {
   IncrementRefusedError, isAcceptablePartial,
 } from './platform/inject/manifest.mjs';
 import { isUnder } from './platform/inject/journal.mjs';
+import { resolveUpstreamRoots } from './platform/lib/upstream-root.mjs';
 import { addedFilesFromPatch } from './lib/zcode-patch-manifest.mjs';
 
-// realpathSync：worktree 场景（.claude/worktrees/<feat>/ 经符号链接指回
-// upstream）必须取真实绝对路径，否则 vite 会因 root(realpath) 与输入
-// html(符号链接路径) 不一致而构建失败（emitFile 相对路径逃逸）。
-// 路径不存在时 realpath 抛 ENOENT——回退原样解析，交由 main() 的
-// 存在性守卫输出友好报错（2026-09-17 评审：不得在模块顶层裸抛）。
-const realpathOrSelf = (p) => {
-  try { return realpathSync(p); } catch { return p; }
-};
-const overlayRoot = realpathOrSelf(resolve(import.meta.dirname, '..'));
-const ncwkRoot = resolve(overlayRoot, '..');
-// 上游根解析（AIStudio 单仓整合轮,2026-10-24）:优先仓内 vendor/ 钉版基线
-// (见 vendor/VENDOR.md);无 vendor/ 的旧布局回落 ncwk/upstream 共享树;
-// env 显式指定永远最高(私有上游隔离语义不变)。vendor 树无自身 .git——
-// 其 git 操作经外仓以 --directory 前缀执行(见 treeGitCtx),语义与
-// 自持 .git 的 upstream 树一致。
-const vendorRoot = resolve(overlayRoot, 'vendor');
-const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
-  ? realpathOrSelf(resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim()))
-  : existsSync(resolve(vendorRoot, 'hermes-studio'))
-    ? vendorRoot
-    : realpathOrSelf(resolve(ncwkRoot, 'upstream'));
-const hermesStudioRoot = resolve(upstreamRoot, 'hermes-studio');
-const hermesAgentRoot = resolve(upstreamRoot, 'hermes-agent');
-const zcodeRoot = resolve(upstreamRoot, 'zcode');
+// 上游根解析收敛到平台单一事实源（P1 Task 6）：env 显式 > 仓内 vendor/ 钉版基线
+// (见 vendor/VENDOR.md) > 旧布局 ../upstream 共享树；realpath 规范化（worktree
+// 软链场景 vite root 与输入 html 必须同基）。vendor 树无自身 .git——其 git 操作
+// 经外仓以 --directory 前缀执行(见 treeGitCtx)，语义与自持 .git 的 upstream 树一致。
+const overlayRoot = resolve(import.meta.dirname, '..');
+const {
+  upstreamRoot, hermesStudioRoot, hermesAgentRoot, zcodeRoot,
+} = resolveUpstreamRoots(overlayRoot);
 const zcodePatchDir = process.env.OVERLAY_ZCODE_PATCH_DIR?.trim()
   ? resolve(process.env.OVERLAY_ZCODE_PATCH_DIR.trim())
   : resolve(overlayRoot, 'zcode-patches');

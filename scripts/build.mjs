@@ -5,22 +5,21 @@
 import { execSync } from 'child_process';
 import { cpSync, existsSync } from 'fs';
 import { resolve } from 'path';
+// 上游根解析单一事实源（P1 Task 6）：env > 仓内 vendor > 旧兄弟 upstream（realpath）。
+import { resolveUpstreamRoots } from './platform/lib/upstream-root.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
-const ncwkRoot = resolve(overlayRoot, '..');
-// OVERLAY_UPSTREAM_ROOT：私有上游隔离（与 inject.mjs/ensure-injected.mjs/serve-server.mjs
-// 同一基建）——worktree 布局下 ncwkRoot/../upstream 不存在，构建目标显式指向沙箱。
-// AIStudio 单仓整合轮（2026-10-24）：仓内 vendor/ 基线优先，旧布局回落。
-const upstream = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
-  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'hermes-studio')
-  : existsSync(resolve(overlayRoot, 'vendor', 'hermes-studio'))
-    ? resolve(overlayRoot, 'vendor', 'hermes-studio')
-    : resolve(ncwkRoot, 'upstream/hermes-studio');
+const upstream = resolveUpstreamRoots(overlayRoot).hermesStudioRoot;
 
 function run(cmd, cwd, label) {
   console.log(`\n[overlay-build] ▶ ${label}`);
   execSync(cmd, { cwd, stdio: 'inherit' });
 }
+
+// 0. 注入前置（P1 Task 6）：build:full 直呼 node（不经 npm 生命周期，prebuild 钩子
+// 不触发）——显式 ensure（幂等：noop/差量补套/全量注入），非零即中止构建。
+// 此前依赖调用方自觉先 inject，裸跑 build:full 在未注入树上产物静默缺自定义面。
+run('node scripts/ensure-injected.mjs', overlayRoot, 'ensure-injected（注入前置）');
 
 // 直接指向包内 JS 入口而非 .bin shim:Windows 下 node_modules/.bin/<name> 是
 // cmd-shim 生成的 sh 脚本,`node <shim>` 把 shell 脚本当 JS 解析必炸;统一走
