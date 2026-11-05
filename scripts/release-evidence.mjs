@@ -9,7 +9,7 @@
 //   node scripts/release-evidence.mjs [--check] [--write] [--json]
 // 退出码：0=证据齐全；1=证据缺失/陈旧/判定非 PASS；2=环境错误。
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -24,7 +24,35 @@ function git(args) {
   return res.status === 0 ? res.stdout.trim() : undefined
 }
 
-export function buildEvidence({ now, junitText, junitMtime, state, version, tag, head, tree }) {
+/** 源码最新 mtime：证据必须比它新，否则「改完代码没重跑」也能过。 */
+export function newestSourceMtime(dirs = ['custom', 'scripts', 'patches']) {
+  let newest = 0
+  const visit = (rel) => {
+    let entries
+    try {
+      entries = readdirSync(join(ROOT, rel), { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of entries) {
+      if (e.name === 'node_modules' || e.name === 'dist' || e.name === '.git' || e.name.startsWith('.')) continue
+      const child = `${rel}/${e.name}`
+      if (e.isDirectory()) visit(child)
+      else {
+        try {
+          const m = statSync(join(ROOT, child)).mtimeMs
+          if (m > newest) newest = m
+        } catch {
+          /* 读不了的文件不影响证据新鲜度判定 */
+        }
+      }
+    }
+  }
+  for (const d of dirs) visit(d)
+  return newest
+}
+
+export function buildEvidence({ now, junitText, junitMtime, state, version, tag, head, tree, runStartedAt, sourceNewestMtime }) {
   const problems = []
   const maxAgeMs = 24 * 3600 * 1000
   let junit = null
@@ -40,6 +68,9 @@ export function buildEvidence({ now, junitText, junitMtime, state, version, tag,
   const entry = state?.['engineering.basic-check']
   if (!entry) problems.push('engineering.basic-check no run recorded')
   else if (entry.verdict !== 'PASS') problems.push(`engineering.basic-check verdict=${entry.verdict}`)
+  if (Number.isFinite(runStartedAt) && Number.isFinite(sourceNewestMtime) && runStartedAt < sourceNewestMtime) {
+    problems.push('source newer than test evidence: 先重跑 engineering.basic-check 再发版')
+  }
   return {
     evidenceVersion: 1,
     at: new Date(now).toISOString(),
@@ -48,6 +79,8 @@ export function buildEvidence({ now, junitText, junitMtime, state, version, tag,
     head,
     treeHash: tree,
     junit,
+    runStartedAt,
+    sourceNewestMtime,
     engineeringBasicCheck: entry ? { runId: entry.runId, verdict: entry.verdict, startedAt: entry.startedAt } : null,
     problems,
     pass: problems.length === 0,
@@ -65,6 +98,17 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
   const junitText = existsSync(junitPath) ? readFileSync(junitPath, 'utf8') : null
   const junitMtime = existsSync(junitPath) ? statSync(junitPath).mtimeMs : NaN
   const state = existsSync(join(ROOT, STATE)) ? JSON.parse(readFileSync(join(ROOT, STATE), 'utf8')) : null
+  // 证据必须比源码新：读 engineering.basic-check 的 runStartedAt，和 custom/scripts/patches 的最新 mtime 比。
+  const entry = state?.['engineering.basic-check']
+  const runFile = entry?.runId ? join(ROOT, '.qgate', 'runs', `${entry.runId}.json`) : null
+  let runStartedAt
+  if (runFile && existsSync(runFile)) {
+    try {
+      runStartedAt = JSON.parse(readFileSync(runFile, 'utf8')).startedAt
+    } catch {
+      runStartedAt = undefined
+    }
+  }
   const evidence = buildEvidence({
     now: Date.now(),
     junitText,
@@ -74,6 +118,8 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
     tag: manifest.packaging?.fullPackage?.tag,
     head: git(['rev-parse', 'HEAD']),
     tree: git(['rev-parse', 'HEAD^{tree}']),
+    runStartedAt,
+    sourceNewestMtime: newestSourceMtime(),
   })
   if (argv.includes('--write')) {
     if (!evidence.pass) {

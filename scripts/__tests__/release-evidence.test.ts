@@ -28,6 +28,11 @@ describe('buildEvidence', () => {
     expect(e.pass).toBe(false)
     expect(e.problems.join(' ')).toContain('failures=1')
   })
+  it('源文件比测试证据新 → fail（改完代码没重跑）', () => {
+    const e = buildEvidence({ now: 1000, junitText: JUNIT_OK, junitMtime: 999, state: STATE_OK, version: 'v', tag: 't', head: 'h', tree: 't', runStartedAt: 100, sourceNewestMtime: 200 })
+    expect(e.pass).toBe(false)
+    expect(e.problems.join(' ')).toContain('source newer than test evidence')
+  })
 })
 
 describe('main', () => {
