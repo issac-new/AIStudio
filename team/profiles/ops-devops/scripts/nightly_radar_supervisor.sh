@@ -5,6 +5,11 @@
 # stdout 只在补跑时输出干净摘要（no_agent 模式 stdout 会投递，成功补跑才说话）。
 
 BASE=/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/life-workbench
+# 挂载守卫（2026-11-05 nvme 去依赖批）：低频大件留 nvme，缺席＝常态 SKIP 不报错
+if [ ! -d "$BASE" ]; then
+  echo "$(date -u +%FT%TZ) SKIP: workbench not mounted ($BASE)"
+  exit 0
+fi
 WRAPPER="$BASE/scripts/nightly_radar.py"
 LOG="$BASE/logs/nightly_supervisor.log"
 TODAY=$(date +%F)

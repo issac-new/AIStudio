@@ -20,7 +20,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone, timedelta
 
-WORKDIR = "/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/remediation/F-1-protocol-violation-consumer"
+WORKDIR = "/Volumes/nvme2230/lab/hermes-docker-sandbox/workspace/remediation/F-1-protocol-violation-consumer"  # 低频大件留 nvme（挂载守卫见 main 入口）
 # 10-20: nvme 冻结卷常不挂载, 扫描器(唯一事实源,禁自写SQL)只在该盘——
 # 未挂载时 SKIP(exit 0)防每夜 rc1 噪音; 挂载后自动恢复实跑。对齐 skill-full-backup 的 SKIP 模式。
 import sys as _sys

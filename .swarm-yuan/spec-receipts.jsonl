@@ -211,3 +211,5 @@
 {"at":"2026-11-05T09:13:12Z","spec":"docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md","receipt":"a31434121a090ead6d1daff59b59434512330885","commit":"ef937f75b"}
 {"at":"2026-11-05T09:19:28Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"c2c2b728232b078aa3dfeaec73ca56e8a2733905","commit":"51eeb2d3a"}
 {"at":"2026-11-05T09:33:30Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"607621e466a5b87408a0a31fa995409e32e88fd4","commit":"af3e2909c"}
+{"at":"2026-11-05T09:59:27Z","spec":"docs/superpowers/specs/2026-11-05-nvme-mount-guards.md","receipt":"2444b41d84b19c1b005c1baaadaae46b9556d01f","commit":"0de003745"}
+{"at":"2026-11-05T09:59:56Z","spec":"docs/superpowers/specs/2026-11-05-nvme-mount-guards.md","receipt":"88125fbd604d3fd038904c90592db4aebc9c773a","commit":"609cb2408"}
