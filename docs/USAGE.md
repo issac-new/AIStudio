@@ -120,6 +120,12 @@ npm run clean && npm run inject
 - 前端代理的 agent 健康检查指向 `http://127.0.0.1:8650/health`，agent 运行时未起时该探针报错属预期。
 - 桌面端同版本号覆盖更新不生效：`webuiDir()` 优先用 `~/.hermes-web-ui/webui/<version>/` 副本，删旧副本或递增版本号。
 - 端口占用：起服前先 `lsof -nP -iTCP:<端口> -sTCP:LISTEN` 看占用者，杀进程用精确 PID。
+- 下列可选功能返回 503 且提示「未配置/fail-closed」属设计内行为，不是故障：配置对应环境变量后重启后端即可启用（Win 回归 N06，2026-11-05 补记）。
+
+| 环境变量 | 作用 | 缺席行为 |
+|---|---|---|
+| `ORGLOOP_LEDGER_TSV` | 组织循环清偿台账（TSV）的绝对路径 | orgloop 相关端点 503（`custom/server/orgloop/orgloop-controller.ts:248`） |
+| `OBS_SIM_ROOT` | SIM 推演根目录（观测面/先例面的数据源） | observability 端点 503、precedent 面降级 `available:false`（`custom/server/observability/observability-controller.ts:72`、`custom/server/precedent/precedent-controller.ts:134`） |
 
 ## 5、桌面端构建（可选）
 

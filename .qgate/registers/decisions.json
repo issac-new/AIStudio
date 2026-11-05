@@ -17,7 +17,8 @@
   {
     "id": "D-GOV-4",
     "decision": "releaseBatches 先留空数组，发布证据文件 RELEASE-EVIDENCE.json 为执行点",
-    "status": "deferred",
-    "revisitBy": "2026-12-05"
+    "status": "resolved",
+    "revisitBy": "2026-12-05",
+    "note": "2026-11-05 收尾批清偿：releaseBatches 已落 v1.0.12-overlay 实际批次（tag/commit/treeHash 入 RELEASE-MANIFEST.json）；release:preflight 已串 release-evidence --write 与 audit-sample --record，执行点齐备（spec 2026-11-05-governance-residual-closeout.md）。"
   }
 ]

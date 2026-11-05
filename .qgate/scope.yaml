@@ -294,3 +294,5 @@ paths:
   - custom/client/shared/store/cockpit-history-actions.ts
   - custom/client/shared/store/cockpit-dialog-slice.ts
   - custom/client/shared/store/cockpit-attention-terminal.ts
+  - custom/client/__tests__/page-loading-cap.test.ts
+  - docs/superpowers/specs/2026-11-05-pending-ledgers-closeout.md
