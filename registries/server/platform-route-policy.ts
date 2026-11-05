@@ -32,6 +32,8 @@ export const platformRoutePolicies: PlatformRoutePolicy[] = [
   // 审批六源尚无统一归属协议，收件箱与嵌套 human-gate 整体限平台超级管理员。
   { method: 'GET', pathPattern: '/api/approvals/pending', access: 'super-admin' },
   { method: 'GET', pathPattern: '/api/approvals/pending-summary', access: 'super-admin' },
+  // P0 Task 4（2026-11-05）：自动放行迁入显式写命令——写端点（会放行审批、写响应与台账），access=super-admin。
+  { method: 'POST', pathPattern: '/api/approvals/autopass/scan', access: 'super-admin' },
   { method: 'POST', pathPattern: '/api/approvals/:id/decide', access: 'super-admin' },
   { method: 'GET', pathPattern: '/api/approvals/history', access: 'super-admin' },
   { method: 'GET', pathPattern: '/api/approvals/history/chain', access: 'super-admin' },

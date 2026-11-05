@@ -53,7 +53,20 @@ export interface ApprovalHistoryEntry {
   risk?: ApprovalRiskTier
 }
 
-export function fetchPendingApprovals(): Promise<{ items: PendingApprovalItem[] }> {
+/**
+ * 显式自动放行扫描（P0 Task 4，2026-11-05）：服务端唯一触发点 POST /autopass/scan。
+ * 返回 { ok, acted }（acted=本次实际放行条数；开关关闭或节流窗口内为 0）。
+ */
+export function postAutopassScan(): Promise<{ ok: boolean; acted: number }> {
+  return request('/api/approvals/autopass/scan', { method: 'POST' })
+}
+
+/**
+ * 待审聚合（读面）。P0 Task 4：先显式 POST 扫描再 GET——GET 端点零副作用，
+ * 自动放行只由写命令触发；扫描 POST 失败原样向调用方抛错（不吞错、不伪装成功）。
+ */
+export async function fetchPendingApprovals(): Promise<{ items: PendingApprovalItem[] }> {
+  await postAutopassScan()
   return request<{ items: PendingApprovalItem[] }>('/api/approvals/pending')
 }
 
@@ -118,6 +131,11 @@ export interface PendingSummary {
   ts: number
 }
 
-export function fetchPendingSummary(): Promise<PendingSummary> {
+/**
+ * 审批汇总计数（读面，spec 2026-10-19-studio-p2 §2.3 同一契约）。
+ * P0 Task 4：先显式 POST 扫描再 GET，失败语义与 fetchPendingApprovals 一致。
+ */
+export async function fetchPendingSummary(): Promise<PendingSummary> {
+  await postAutopassScan()
   return request<PendingSummary>('/api/approvals/pending-summary')
 }

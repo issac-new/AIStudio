@@ -360,6 +360,36 @@ describe('审批收件箱 REST（/api/approvals）', () => {
     }
   })
 
+  // P0 Task 4（2026-11-05）：自动放行从 GET 读请求迁入显式写命令 POST /autopass/scan。
+  it('POST /autopass/scan：无身份 401、普通 admin 403 且不落扫描副作用、super_admin 200 返回 {ok,acted}', async () => {
+    const dir = process.env.HERMES_APPROVALS_QUEUE_DIR!
+    writeFileSync(join(dir, 'queue.jsonl'), JSON.stringify({
+      request_id: 'rq-scan-authz', digest: 'd1', command: 'git status',
+      timeout_seconds: 300, enqueued_at: Date.now() - 10_000,
+    }) + '\n')
+    process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS = '0'
+    const { _resetAutopassScanThrottleForTests } = await import('../pending-controller')
+    try {
+      currentUser = undefined
+      expect((await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })).status).toBe(401)
+
+      currentUser = { id: 2, role: 'admin', status: 'active', profiles: ['alice'] }
+      const denied = await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })
+      expect(denied.status).toBe(403)
+      expect(existsSync(join(dir, 'responses', 'rq-scan-authz.json'))).toBe(false)
+
+      currentUser = { id: 1, username: 'qa-lead', role: 'super_admin', status: 'active' }
+      _resetAutopassScanThrottleForTests()
+      const allowed = await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })
+      expect(allowed.status).toBe(200)
+      expect(allowed.body.ok).toBe(true)
+      expect(allowed.body.acted).toBe(1)
+      expect(existsSync(join(dir, 'responses', 'rq-scan-authz.json'))).toBe(true)
+    } finally {
+      delete process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS
+    }
+  })
+
   it('收件箱读面无身份 401，普通 admin 与空授权 admin 均为 403', async () => {
     currentUser = undefined
     expect((await fetchJson(base, '/api/approvals/history')).status).toBe(401)
