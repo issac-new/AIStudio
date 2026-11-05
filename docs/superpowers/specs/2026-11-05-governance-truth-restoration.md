@@ -62,6 +62,8 @@ P0（批次 A）先恢复「通过」的可信度，不新增门；P1（批次 B
 
 16. **合入后收口（2026-11-05）**：主树全量 8030 用例暴露两例重型 UI 用例超时（`raci-visibility` 卡片渲染 15s、`stage-tab-registry` loader 20s；单跑均过、全量并发下超），RACI 两处提至 30s，`vitest.config.ts` 全局 20s→30s；断言语义不变。
 
+17. **pre-push 实测修复（2026-11-05）**：conventions 精确路径纳入扫描（工作区 5000 上限被 vendor 挤占，窄路径 scope-empty）；`isFresh` 对无 `appliesWhen` 的门改为同 commit 即新鲜（meta 门引用不再因推送范围非空永久 stale）。
+
 ## 决策记录
 
 | 决策 | 选择 | 备选 | 理由 | 类型 | 用户裁定 |

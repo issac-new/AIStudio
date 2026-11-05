@@ -234,6 +234,7 @@ describe('存储与新鲜度', () => {
     const aw = { changed: { any: ['src/**'] } }
     expect(isFresh(run, now, { commit: 'c1', treeHash: 't1', changedPaths: ['src/a.ts'] }, 24)).toBe(true) // 同全状态锚，一票定音
     expect(isFresh(run, now, { commit: 'c1', treeHash: 't2', changedPaths: ['docs/a.md'], appliesWhen: aw }, 24)).toBe(true) // 同 commit 路径不相交
+    expect(isFresh(run, now, { commit: 'c1', changedPaths: ['src/a.ts'] }, 24)).toBe(true) // 无 appliesWhen：同 commit 即新鲜（meta 门引用）
     expect(isFresh(run, now, { commit: 'c1', treeHash: 't2', changedPaths: ['src/a.ts'], appliesWhen: aw }, 24)).toBe(false) // 同 commit 路径相交
     expect(isFresh(run, now, { commit: 'c2', changedPaths: [] }, 24)).toBe(false)
     expect(isFresh({ ...run, startedAt: now - 2 * 3_600_000 }, now, { changedPaths: [] }, 1)).toBe(false) // 超 1h 龄
