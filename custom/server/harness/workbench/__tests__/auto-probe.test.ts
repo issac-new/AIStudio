@@ -88,7 +88,7 @@ describe('一键自动探测', () => {
     const id = await approvedProposal()
     const job = await startAutoProbe(id, { setId: (await import('../../../eval/store')).listSets()[0].id, spawnRun: fakeSpawn({ prompt: 100, completion: 50 }), actor: 'tester', judgeAsk: offlineAsk })
     await waitJob(job)
-    expect(job.status).toBe('done')
+    expect(job.status, job.error).toBe('done')
     const p = listProposals().find((x) => x.id === id)!
     const probe = p.probes[0]
     expect(probe.status).toBe('recorded')
@@ -131,7 +131,7 @@ describe('一键自动探测', () => {
         judgeAsk: offlineAsk,
       })
       await waitJob(job)
-      expect(job.status).toBe('done')
+      expect(job.status, job.error).toBe('done')
       expect(job.peakInFlight ?? 1).toBeGreaterThanOrEqual(2)
     } finally {
       fs.rmSync(f, { force: true })
@@ -149,7 +149,7 @@ describe('一键自动探测', () => {
       judgeAsk: offlineAsk,
     })
     await waitJob(job)
-    expect(job.status).toBe('done')
+    expect(job.status, job.error).toBe('done')
     const p = listProposals().find((x) => x.id === id)!
     const probe = p.probes[0]
     expect(probe.autoRun?.status).toBe('stopped')
