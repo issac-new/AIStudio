@@ -6,6 +6,11 @@
 set -e
 MODE="${CLEF_MODEL:-flash}"
 BASE=/Volumes/nvme2230/lm-studio-model/mlx-community
+# 挂载守卫（2026-11-05 nvme 去依赖批）：模型库为低频大件留 nvme，缺席时明确报错
+if [ ! -d "$BASE" ]; then
+  echo "错误：模型库未挂载（$BASE）——请先挂载 /Volumes/nvme2230 或改 BASE 指向本地副本" >&2
+  exit 1
+fi
 PY=/Users/cuishi/lab/clef-runtime/venv/bin/python
 
 if [ "$MODE" = "27b" ]; then
