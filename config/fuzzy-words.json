@@ -1,0 +1,5 @@
+{
+  "note": "模糊词单一事实源（2026-11-05 AI Native 吸收批 T1，spec 2026-11-05-ainative-absorption 决策 D-3）。core=simharness reqgate_judge 四词逐字口径（requirements.ts 消费，双侧一致为退役判据）；extended=spec 保真度门用扩充表（spec-first-lib.sh 消费）。改本文件即同时改两侧判定，禁再建第二张表。",
+  "core": ["性能良好", "体验优秀", "快速", "稳定"],
+  "extended": ["性能良好", "体验优秀", "快速", "稳定", "适当", "合理", "尽量", "必要时", "等等", "诸如", "大概", "若干", "左右"]
+}

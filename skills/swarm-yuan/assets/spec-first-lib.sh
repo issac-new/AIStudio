@@ -592,3 +592,98 @@ spf_receipt_check() {
   printf 'drift:%s' "$_prev"
   return 0
 }
+
+# ===== 规格保真度四维检查（2026-11-05 AI Native 吸收批 T1；spec 2026-11-05-ainative-absorption）=====
+# 判据（《AI Native 工程体系（二）》Spec Fidelity 四维的可机械化子集；模糊税→返工）：
+#   ① 无歧义：正文模糊词 0 命中——词表单一源 config/fuzzy-words.json 的 extended 表
+#      （node 缺席/文件损坏时内嵌同表兜底，判定不因工具缺席放宽）；
+#   ② 一致性：「决策记录」段至少 1 条决策行（列表行或表格数据行；表头/分隔行不算）；
+#   ③ 可验证：「变更」段至少 1 条可验证验收（GIVEN/WHEN/THEN、当…那么…、或含「验收」的行）；
+#   ④ 无占位：全文不含 TBD/待定（「待填充/<占位符>」由四段机检管，不重复）。
+# 扫描范围排除：标题行、``` 围栏内、行内 `code` 片段——规则引用自身不算模糊（自指误报）。
+# 输出契约与 spf_sections_check 一致：stdout 违规描述（空=通过）。
+# 档位 SPEC_FIDELITY_ENFORCE=warn|block（默认 warn）；存量基线
+# .swarm-yuan/spec-fidelity-baseline.txt 只许减（棘轮与四段/任务卡基线同范式）。
+spf_fuzzy_words() {  # $1=项目根（可空）→ stdout 空格分隔的扩展模糊词表
+  local _root="${1:-}" _json="${1:+${1}/config/fuzzy-words.json}" _out=""
+  if [[ -n "$_json" && -f "$_json" ]] && command -v node >/dev/null 2>&1; then
+    _out="$(node -e 'try{const j=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(Array.isArray(j.extended)&&j.extended.length&&j.extended.every(w=>typeof w==="string"&&w&&!/[\t\r\n|\\`$]/.test(w)))process.stdout.write(j.extended.join(" "))}catch{}' "$_json" 2>/dev/null || true)"
+  fi
+  if [[ -n "$_out" ]]; then printf '%s' "$_out"; return 0; fi
+  # 兜底表与 config/fuzzy-words.json 的 extended 保持同值（单一事实源的离线镜像）
+  printf '%s' '性能良好 体验优秀 快速 稳定 适当 合理 尽量 必要时 等等 诸如 大概 若干 左右'
+}
+
+spf_spec_fidelity_check() {  # $1=项目根（可空）；stdin=spec 正文 → stdout 违规描述（空=通过）
+  local _root="${1:-}" _words _w _pattern=""
+  _words="$(spf_fuzzy_words "$_root")"
+  for _w in $_words; do
+    _pattern="${_pattern}${_pattern:+|}${_w}"
+  done
+  # 词表整体缺席（空表）时模糊词维度跳过——防兜底失效把全部 spec 误判
+  [[ -z "$_pattern" ]] && _pattern='__fuzzy_words_unavailable__'
+  LC_ALL=C awk -v pat="$_pattern" '
+    function trim(s) { sub(/^[ \t\r]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
+    /^#+[ \t]/ {
+      h = $0
+      sub(/^#+[ \t]+/, "", h); h = trim(h)
+      seg = ""
+      if (h ~ /^变更/) seg = "变更"
+      else if (h ~ /^决策记录/) seg = "决策记录"
+      if (seg != "") cur = seg
+      next
+    }
+    {
+      line = $0
+      if (line ~ /^```/) { fence = !fence; next }
+      if (fence) next
+      # 行内 code 片段剔除后再扫（规则引用自身不算模糊）
+      scan = line; gsub(/`[^`]*`/, "", scan)
+      if (scan ~ pat) { fuzzy++; if (fuzzy == 1) fuzzySample = substr(trim(line), 1, 30) }
+      if (scan ~ /TBD|待定/) tbd++
+      if (cur == "决策记录") {
+        if (scan ~ /^[[:space:]]*[-*][[:space:]]+[^[:space:]#-]/) dec++
+        else if (scan ~ /^\|/) {
+          c0 = scan; sub(/^\|[[:space:]]*/, "", c0); sub(/[[:space:]]*\|.*$/, "", c0)
+          if (c0 != "" && c0 != "#" && c0 != "编号" && c0 != "序号" && c0 !~ /^[-:]+$/) dec++
+        }
+      }
+      if (cur == "变更" && (scan ~ /GIVEN|WHEN|THEN|当.*那么|验收/)) acc++
+    }
+    END {
+      out = ""
+      if (fuzzy > 0) out = out (out == "" ? "" : "；") "fuzzy:" fuzzy "处（首例: " fuzzySample "）"
+      if (dec == 0)   out = out (out == "" ? "" : "；") "decisions:0"
+      if (acc == 0)   out = out (out == "" ? "" : "；") "acceptance:0"
+      if (tbd > 0)    out = out (out == "" ? "" : "；") "tbd:" tbd "处"
+      printf "%s", out
+    }
+  '
+}
+
+spf_spec_fidelity_baseline() {  # $1=项目根 → stdout 基线条目（缺席=空）
+  local _f="$1/.swarm-yuan/spec-fidelity-baseline.txt"
+  [[ -f "$_f" ]] || return 0
+  grep -v '^[[:space:]]*#' "$_f" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/[[:space:]]*$//'
+  return 0
+}
+
+# 单 spec 的保真度违规（基线内直接放行）。参数同 spf_sections_violation。
+spf_spec_fidelity_violation() {
+  local _root="$1" _spec="$2" _view="${3:-worktree}"
+  local _rel _content
+  _rel="$_spec"
+  case "$_rel" in
+    "${_root}/"*) _rel="${_rel#"${_root}/"}" ;;
+  esac
+  [[ -z "$_rel" ]] && return 0
+  if spf_spec_fidelity_baseline "$_root" | grep -qxF -- "$_rel"; then return 0; fi
+  if [[ "$_view" == "index" ]]; then
+    _content="$(git -C "$_root" show ":${_rel}" 2>/dev/null || true)"
+  else
+    _content="$(cat "${_root}/${_rel}" 2>/dev/null || true)"
+  fi
+  [[ -z "$_content" ]] && return 0
+  printf '%s' "$_content" | spf_spec_fidelity_check "$_root"
+  return 0
+}
