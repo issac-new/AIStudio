@@ -336,3 +336,6 @@ paths:
   - team/profiles/ops-devops/scripts/protocol_violation_consumer_run.py
   - team/profiles/platform-skill-miner/scripts/skill-full-backup.sh
   - runtime/clef/start-clef.sh
+  # SIM 直连 LLM 通道批（c641356）＋并行会话 swarm-yuan 数字口径批（4de56c9c2 在本推送范围内，机械解堵代声明）
+  - docs/superpowers/specs/2026-11-05-sim-direct-llm-channel.md
+  - skills/swarm-yuan/**
