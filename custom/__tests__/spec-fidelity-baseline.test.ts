@@ -56,7 +56,8 @@ describe('spec 保真度四维基线棘轮（只许减；2026-11-05 AI Native T1
     expect(entries.length, '保真度基线缺席或为空——存量豁免必须显式落盘').toBeGreaterThan(0)
   })
 
-  it('基线内条目必须仍然不达标（达标后须删条目，禁永久豁免墙）', () => {
+  // 批量跑 547 份 spec 的 bash 单进程在满载下 >30s——提超时到 180s（实测 37-63s）
+  it('基线内条目必须仍然不达标（达标后须删条目，禁永久豁免墙）', { timeout: 180_000 }, () => {
     const existing = entries.filter((p) => existsSync(resolve(ROOT, p)))
     const stillViolating = new Set(fidelityViolating(existing))
     const nowCompliant = existing.filter((p) => !stillViolating.has(p))
