@@ -43,6 +43,12 @@
 
 走查对象：姿态页签（自治刻度）、协作与知识页签（假设登记簿）、研发效能页签（度量纪律）。判据：三个 `data-testid` 区块存在、缺口/装饰/违规文字可见（不是只有空壳），截图留档。
 
+**实跑结果**：`scripts/regression/org-governance-walkthrough.mjs` **12/12 通过**。截图为 `/tmp/aistudio-gov-research/shots/{1-autonomy-scale,1-posture-full,2-metric-discipline,3-premise-log}.png`（按仓规不入库）。真实读数：单任务人时 23.1 分钟（样本 1118）、返工率 2.9489（样本 1193）、接口数 9（样本 3/3）、技能调用 8 次失败率 0.0%（skill_view 7／skill_manage 1）、声明覆盖率 0.4%（5/1346）。
+
+**走查过程中发现并修掉一处陈旧文案**：姿态页签的双签块仍写着「判定不阻断审批……单独立轮」，与本次实现矛盾，已改为如实描述拦截范围与豁免语义。这条说明走查不是形式——静态测试全绿也发现不了文案与实现脱节。
+
+**已知环境坑（写进脚本注释）**：vite 首次访问会即时编译懒加载 chunk，若在编译窗口内断言「区块存在」会误判为未渲染；脚本改为 `state:'attached'` + 取数轮询等待，第二次起稳定。
+
 ## 决策记录
 
 - **D1（双签只在高风险且档位可重算的分支拦）**：全分支硬拦需要给看板/评审/hgate 各补一套风险分类器，成本与回归面都大，且判定口径会分叉。改为「能判的判、判不了的明说」。代价：拦住的面不完整；收益：不制造第二份风险口径，也不假装全覆盖。
@@ -54,10 +60,10 @@
 
 ## 验证
 
-- `npx vitest run custom/server/autonomygov custom/server/approval-inbox custom/server/metricpolicy` —— 双签闸五态（非 high/否决/双签满足/豁免/拦截）、幂等（同一人二次签不加人）、接口数取样与缺口、技能计量三段（覆盖/调用/失败率）与 perSkillGap。
-- 真库只读核验：`approval-log history.json` 风险分布（high=0）作为「默认开不卡存量」的依据；`tool-audit.jsonl` 技能类调用计数与接口数派生实跑一次（读数写进交付说明）。
-- `npm run typecheck:harness`；全量 `npm test` 零新增失败。
-- 浏览器实物走查三页签，截图与本轮改动一起留档（截图不入库，按仓规只留路径与结论）。
+- `npx vitest run custom/server/autonomygov custom/server/approval-inbox custom/server/metricpolicy`：双签纯函数五态＋7 条审批链集成（第一签 409／换人 200／同人重复仍 409／豁免放行并落账／非法 waiver 拒／否决不需／中风险不适用／开关生效），接口数取样与缺口，技能计量三段与 perSkillGap。
+- 真库只读核验：`approval-log history.json` 500 单风险分布（medium 126、无档 374、**high 0**）作为「默认开不卡存量」依据；`tool-audit.jsonl` 实跑得 skill_view 7／skill_manage 1／失败 0；接口数实跑得 9（3/3 样本）。
+- `npm run typecheck:harness` 通过；全量 `npm test`：7962 passed / 2 failed，两条失败均已定位——**K19 棘轮 875>874**（手写失败体，已改走 `fail()` 后单跑通过）与 **l2-kit-parity 20s 超时**（全量并发下超时，单跑 12/12 通过，属负载抖动，非本轮引入）。
+- 浏览器实物走查 12/12（见 ④）。
 - 附录 A 三处登记（H1 计数 550→551、A.1 逐份行、培训文档机械索引）。
 
 ## 设计文档影响
