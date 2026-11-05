@@ -89,6 +89,7 @@ import {
   assessProactivity,
   confirmProactivityAlignment,
   deleteProactivityPolicy,
+  fetchAttentionPrefs,
   fetchProactivityModel,
   postInterventionFeedback,
   putAttentionPrefs,
@@ -204,6 +205,67 @@ describe('介入治理区', () => {
     expect(w.find('[data-testid="pa-att-save"]').exists()).toBe(false)
     expect(w.find('[data-testid="pa-att-sync"]').exists()).toBe(false)
     expect(w.find('[data-testid="pa-iv-accept-iv-1"]').exists()).toBe(false)
+  })
+})
+
+// 安静时段单源交互面守门（审查 Minor 3/4，P0 Task 8 round 2）：
+// 嵌套 quietHours 是唯一数据源——开关派生、输入经 computed 读写嵌套对象、
+// 保存载荷形状（开=嵌套对象/关=null）、畸形重载不得残留旧值。
+describe('介入治理区——安静时段单源交互面', () => {
+  function lastPrefsPayload(): { quietHours: { startHour: number; endHour: number } | null } {
+    const call = (putAttentionPrefs as unknown as { mock: { calls: unknown[][] } }).mock.calls.at(-1)
+    return call?.[0] as { quietHours: { startHour: number; endHour: number } | null }
+  }
+
+  it('加载派生开关与输入值：quietHours 在案=开关勾选，输入绑定嵌套 start/end', async () => {
+    const w = mount(ProactivitySection)
+    await flushPromises()
+    expect((w.find('[data-testid="pa-att-quiet-enabled"]').element as HTMLInputElement).checked).toBe(true)
+    expect((w.find('[data-testid="pa-att-start"]').element as HTMLInputElement).value).toBe('21')
+    expect((w.find('[data-testid="pa-att-end"]').element as HTMLInputElement).value).toBe('7')
+    expect(w.find('[data-testid="pa-att-start"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('关开关即清 null 并禁用输入；保存载荷 quietHours=null（开关是唯一数据源的写入口）', async () => {
+    const w = mount(ProactivitySection)
+    await flushPromises()
+    await w.find('[data-testid="pa-att-quiet-enabled"]').setValue(false)
+    expect(w.find('[data-testid="pa-att-start"]').attributes('disabled')).toBeDefined()
+    await w.find('[data-testid="pa-att-save"]').trigger('click')
+    await flushPromises()
+    expect(lastPrefsPayload().quietHours).toBeNull()
+  })
+
+  it('关后重开以缺省 22–8 落对象；改值经 computed 写嵌套源，保存载荷为嵌套形状', async () => {
+    const w = mount(ProactivitySection)
+    await flushPromises()
+    await w.find('[data-testid="pa-att-quiet-enabled"]').setValue(false)
+    await w.find('[data-testid="pa-att-quiet-enabled"]').setValue(true)
+    expect((w.find('[data-testid="pa-att-start"]').element as HTMLInputElement).value).toBe('22')
+    expect((w.find('[data-testid="pa-att-end"]').element as HTMLInputElement).value).toBe('8')
+    await w.find('[data-testid="pa-att-start"]').setValue('23')
+    await w.find('[data-testid="pa-att-end"]').setValue('6')
+    await w.find('[data-testid="pa-att-save"]').trigger('click')
+    await flushPromises()
+    expect(lastPrefsPayload().quietHours).toEqual({ startHour: 23, endHour: 6 })
+  })
+
+  it('畸形重载（quietHours 键缺席）不得残留旧值：保存载荷必须 null（Minor 4）', async () => {
+    const w = mount(ProactivitySection)
+    await flushPromises()
+    // 先正常加载（quietHours 21–7 在案），再以键缺席的畸形 prefs 强制重载（经同步建议触发 loadAttention）
+    ;(fetchAttentionPrefs as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      prefs: { dailyBudget: 5, hourlyBudget: 2, cooldownMinutes: 20, rejectionBackoffHours: 8, minScore: 0.15 },
+      defaults: { quietHours: { startHour: 22, endHour: 8 }, dailyBudget: 8, hourlyBudget: 3, cooldownMinutes: 30, rejectionBackoffHours: 12, minScore: 0.2 },
+      file: '/tmp/attention.json',
+    })
+    await w.find('[data-testid="pa-att-sync"]').trigger('click')
+    await flushPromises()
+    expect((w.find('[data-testid="pa-att-quiet-enabled"]').element as HTMLInputElement).checked).toBe(false)
+    await w.find('[data-testid="pa-att-save"]').trigger('click')
+    await flushPromises()
+    expect(lastPrefsPayload().quietHours).toBeNull()
   })
 })
 

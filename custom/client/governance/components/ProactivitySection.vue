@@ -68,6 +68,8 @@ function pct(v: number | null): string {
 function applyPrefs(prefs: AttentionPrefsDto | undefined): void {
   if (!prefs) return
   Object.assign(attForm, prefs)
+  // 键缺席的畸形载荷不得残留旧值（Object.assign 跳过缺席键，须显式归 null）
+  attForm.quietHours = prefs.quietHours ?? null
   attForm.quietHoursEnabled = prefs.quietHours != null
 }
 
