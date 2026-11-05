@@ -140,6 +140,8 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
       completionValue: state[GATE_STATE_KEYS[gate]],
       failed: seg.some((l) => REJECT_WORD_RE.test(l)),
       supplement: state[`g${n}_supplement`] === '1',
+      // P1 Task 9 接线前显式声明 commit 缺席（适配器落 declaredMissing=true）
+      commit: null,
     })
     const gateState = gateStateFromEvidence(evidence)
     gateStats.push({ gate, state: gateState, supplement: evidence.supplement, segmentIssues: seg.length })

@@ -208,6 +208,10 @@ simharness/                      仅保留平台 CLI 的 Shell 适配与场景�
 | 治理事件沙箱观测域（P1-1） | govbus 新增 sandbox 域收相对路径无基准等非拒绝观测事件 | 复用 security 域 | 拒绝留痕（security/high）与放行观测（info）分面，告警流不被观测噪音稀释 | Mechanical | approved |
 | 无基准相对路径（P1-1） | 契约层返回 {skippedNoContext:true} 标记，执法门落事件并放行；fail-closed 拒绝留 P2 执行面统一 | 契约层直接拒绝；维持静默 null | 本任务只加可见性（P0 终审前置②书面裁定）；契约保持纯函数不落事件，事件归执法门（同 deny 事件先例） | Mechanical | approved |
 | 路由重叠守卫接入点（P1-1） | assertNoPolicyPathOverlap 在 assertPlatformRoutePolicies 顶部调用（union assert 同点连带） | 改 patches/756 在 vendor 启动文件加第二处调用 | 启动对账已有 union 调用点，内联接入零补丁改动即覆盖真实启动；patches/ 变更受并行上限约束不必要触发 | Mechanical | approved |
+| 证据记录改名（P1-2） | EvidenceRecord 三字段→九字段，subject→subjectId、source→sourceDigest 直接改名，不留旧字段别名 | 保留 subject/source 作废弃同义字段 | 唯一消费面 run-metrics 只读 status/supplement（grep 实证），旧字段无人消费；别名只留双轨歧义 | Mechanical | approved |
+| commit 缺席口径（P1-2） | commit 键必须在场且取值 string|null（null=如实未绑定）；gate-evidence 产出附 declaredMissing 标记，run-metrics 调用点显式传 null，Task 9 接线传真值 | 允许 commit 键缺席（undefined 视同 null） | 「未绑定」必须与「遗漏」可区分：九字段校验把键缺席判非法，declaredMissing 让接线前的过渡态可审计而非静默 | Mechanical | approved |
+| 证据存储错误面（P1-2） | appendEvidence 校验失败与写失败均向上抛，不吞 | 照 userperms/audit-store best-effort 只计数不抛 | 证据写失败被吞会让「以为记了」复活，与 P1 目标（记录在档不得伪装成功）直接冲突；audit-store 是业务请求面须 fail-soft，证据链是准出面须可见 | Mechanical | approved |
+| 旧三字段行兼容读（P1-2） | 读面把 P0 形状 {subject,status,source} 行归一 LegacyEvidenceRecord（缺席字段 null+legacy 标记）；写面仍只收九字段 | 拒读旧行；或编造字段补齐九字段 | 兼容读取但缺席如实 null，不编造 evidenceId/producer/时戳（不猜原则）；坏行（JSON 损坏/校验不过）跳过不阻断读 | Mechanical | approved |
 
 ## 验证
 
@@ -260,7 +264,13 @@ P1 Task 1（终审前置①②③⑤ 清扫）负例先红后绿的真实命令�
 - 终审前置落点：①osSandboxAttestation 声明+探测+declaredOnly，解锁 terminal 且仅声明时 fire-and-forget autonomy/warn 事件；②skippedNoContext 第三返回形态，执法门落 sandbox/info 观测事件并放行；③assertNoPolicyPathOverlap 静态/参数段同位重叠抛错并接入启动对账；⑤注册表文件头书面化默认拒绝覆盖边界（6 受管 router，harness/eval/orchestrator 写面按 P2 节奏登记）。前置④（EvidenceRecord 九字段）属 Task 2。
 - 宿主差异处理：探测信号可注入（测试注入全 false 保证跨 macOS/Linux/容器确定性）；macOS 宿主 sandbox-exec 在案即有佐证不误报 declaredOnly（osAttestationOf 缺省走真实探测有用例锚定）。
 
-## 风险与回滚
+P1 Task 2（终审前置④：EvidenceRecord 九字段契约与追加式存储）负例先红后绿的真实命令与计数（同一隔离 HOME）：
+
+- 负例先红：`npx vitest run custom/server/platform/evidence/__tests__/evidence-store.test.ts custom/server/platform/evidence/__tests__/gate-evidence.test.ts` 实现前 2 文件全红（`Failed to load url ../evidence-store`——缺关键字段抛错、不存在主体 null 等负例随模块缺失先行咬住）。
+- 实现后证据面：同命令 2 文件 / 22 通过 / 0 失败（evidence-store 14 + gate-evidence 8，负例与兼容读全绿）。
+- 回归面：`npx vitest run custom/server/toolpipeline/ custom/server/platform/ custom/server/mcpcatalog/ custom/server/govbus/ custom/server/governance/` 49 文件 / 463 通过 / 0 失败；`npx vitest run custom/server/permmodes/ custom/server/autonomyladder/ custom/server/userenv/ custom/server/approval-inbox/` 158 通过 / 0 失败。run-metrics 既有用例未改断言即绿（其只读 status/supplement，调用点显式传 commit:null）。
+- `npm run typecheck:harness`：exit 0（清单已补 custom/server/platform/evidence/evidence-store.ts）。
+- 交付面：九字段契约（缺关键字段/非法值抛错点名，键缺席与显式 null 区分）；JSONL 行级原子追加（白名单九字段固定键序，父目录按需创建，写失败抛不吞）；latestEvidenceFor 文件不存在/主体不存在=null、坏行跳过；P0 三字段行归一 LegacyEvidenceRecord（缺席=null 不编造）；路径序 PLATFORM_EVIDENCE_FILE → underWebUi('platform-evidence.jsonl')。
 
 | 风险 | 缓解与回滚 |
 |---|---|

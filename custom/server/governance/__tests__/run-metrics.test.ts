@@ -200,8 +200,13 @@ describe('unknown 四态（P0 Task 6：完成键缺失=未观测，不产 M1 不
 })
 
 describe('gateStateFromEvidence（status→四态显式分支；意外 status 抛错不静默落首过）', () => {
+  // 九字段形状（P1 Task 2）：gateStateFromEvidence 只读 status/supplement，此处手工构造全字段保持类型如实
   const rec = (status: 'pass' | 'fail' | 'unknown' | 'waived', supplement = false) =>
-    ({ subject: 'G1', status, source: status === 'unknown' ? null : '1790000000', supplement })
+    ({
+      evidenceId: 'gev/test/1', subjectId: 'G1', status, producer: 'gate-evidence', commit: null,
+      startedAt: 1, endedAt: 1, sourceDigest: status === 'unknown' ? null : '1790000000',
+      artifactRefs: [], supplement, declaredMissing: true,
+    })
 
   it('pass±补证 / unknown / fail 各归位（与闸循环判定同源）', () => {
     expect(gateStateFromEvidence(rec('pass'))).toBe('首过')

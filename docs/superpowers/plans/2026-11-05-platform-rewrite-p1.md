@@ -52,9 +52,9 @@
 - Produces: `EvidenceRecord { evidenceId, subjectId, status, producer, commit, startedAt, endedAt, sourceDigest, artifactRefs[] }`；`appendEvidence(record)`、`latestEvidenceFor(subjectId)`。
 - Consumes: P0 gate-evidence 的三字段记录（保持向后兼容读取）。
 
-- [ ] **Step 1: 负例**——缺 evidenceId/producer/commit 的记录 `appendEvidence` 抛错；`latestEvidenceFor` 对不存在主体返回 null 不猜。
-- [ ] **Step 2: 红→实现**——九字段 schema 校验（纯函数 `validateEvidenceRecord`）；JSONL 原子追加；gate-evidence 产出时填充 producer='gate-evidence'、commit=process.env 传入或 null+declaredMissing 标记。
-- [ ] **Step 3: 绿后提交** `feat(platform): 证据记录九字段与追加式存储`。
+- [x] **Step 1: 负例**——缺 evidenceId/producer/commit 的记录 `appendEvidence` 抛错；`latestEvidenceFor` 对不存在主体返回 null 不猜。
+- [x] **Step 2: 红→实现**——九字段 schema 校验（纯函数 `validateEvidenceRecord`）；JSONL 原子追加；gate-evidence 产出时填充 producer='gate-evidence'、commit=process.env 传入或 null+declaredMissing 标记。
+- [x] **Step 3: 绿后提交** `feat(platform): 证据记录九字段与追加式存储`。
 
 ### Task 3: 注入 Planner 与 manifest v2 契约（纯函数层）
 
