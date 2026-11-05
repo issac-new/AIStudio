@@ -136,8 +136,9 @@ export const js = (p) => JSON.stringify(p);
 
 // Windows:Git for Windows 默认 core.autocrlf=true 时工作树为 CRLF 而 patch 上下文
 // 为 LF,首个内容 patch 即 does not apply。--ignore-whitespace 仅在 win32 启用,
-// POSIX 保持严格匹配、不放松现有门禁。
-const win32WsFlag = () => (process.platform === 'win32' ? ' --ignore-whitespace' : '');
+// POSIX 保持严格匹配、不放松现有门禁。（platform/inject/executor.mjs 复用——
+// git apply 预检/应用必须与 inject.mjs 主链同一容差口径。）
+export const win32WsFlag = () => (process.platform === 'win32' ? ' --ignore-whitespace' : '');
 
 function readSeries() {
   if (!existsSync(patchSeriesFile)) return [];

@@ -216,6 +216,11 @@ simharness/                      仅保留平台 CLI 的 Shell 适配与场景�
 | 增量拒绝分类次序（P1-3） | planIncrement 先位级前缀比对（rename/reorder/insert/modify），后长度差比对（removed）；集合级删除检查会让「同 sha 异名」误报 removed | 先做集合差再做位级比对 | 改名在集合视角=删旧名+增新名，位级 sha 等值是唯一的改名证据，必须先于集合判定咬住 | Mechanical | approved |
 | 基线比对口径（P1-3） | baseline 记 {upstreamRoot, treeOids 三树}；任一侧为 null（树缺席/无 git）视为未观测不参与比对，双非空且不等才拒绝（root-change/baseline-change） | null 与任何值不等即拒绝 | standalone/无 git 树恒为 null，按不等拒绝会让部分检出永远无法增量；null=未观测不是基线承诺 | Mechanical | approved |
 | v1 manifest 处置（P1-3） | planIncrement 对非 schemaVersion=2 一律 IncrementRefusedError('v1-manifest')，不自动收养 | 自动把 v1 appliedPatches 视作已验证前缀 | v1 只有名字数组无逐项状态/sha/基线，「曾记录」不可证明「已成功」——收养即复活伪装成功 | Mechanical | approved |
+| 回滚域=失败 lane（P1-4） | 补丁失败时回滚该目标树（lane）本次会话已改文件；他 lane 不受牵连继续（既有树间独立语义：agent 失败从不阻断 studio） | 整会话全量回滚（跨树牵连） | studio/agent/zcode 是三棵独立树三个独立事务；agent 补丁失败牵连回滚 300+ studio 项属灾难面，且与历史容错语义冲突 | Mechanical | approved |
+| 郄会话已应用项的回滚后状态（P1-4） | 回滚触及的已应用项改记 rolled-back（reason=after:<失败补丁>）；失败项自身记 failed（携 apply 错误） | 回滚项记 failed 或保留 applied | 回滚项无自身错误（是事务牺牲品），失败项携带真实 apply 错误——二者语义必须可区分；且 rolled-back 不得进 applied 投影 | Mechanical | approved |
+| 部署预检失败不写 manifest（P1-4） | 预检 partial/failed 即中止：零补丁应用、不写 manifest（保留既有 manifest 原状）、results 全记 skipped/runtime-deploy-precheck | 写一个全 skipped 的 failed manifest | 预检失败时树未动——写 failed manifest 会毒化 planIncrement（last-failed）迫使用户无谓 clean；不写=修复部署漂移后可直接重试 | Mechanical | approved |
+| 部署后置 partial/failed 降级（P1-4） | 补丁全部应用后 runtime apply=partial→整体 partial、failed→整体 failed，runtimeDeploy 字段如实记录两阶段 | 只记日志不改整体 status | 「补丁成功但部署 partial」若报 complete 即复活「保留旧文件仍报告成功」的 P0 实锤缺陷 | Mechanical | approved |
+| journal 生命周期（P1-4） | 会话开始 reset（回滚数据只对本会话有效）；成功会话收尾 prune（回滚窗口关闭）；失败会话保留取证 | 永久累积或永不清理 | 失败会话的备份是取证面（对账回滚正确性）；成功会话再无回滚可能，累积=无谓占用 stateOut | Mechanical | approved |
 
 ## 验证
 
@@ -282,6 +287,14 @@ P1 Task 3（注入 Planner 与 manifest v2 契约）负例先红后绿的真实�
 - 实现后：同命令 2 文件 / 23 通过 / 0 失败（planner 7 + manifest 16）。覆盖：中插/重排/改名/删除/改内容/v1 收养/last-failed/基线变/根变九类增量拒绝；尾部纯追加 tail-append；absent-tree partial 可增量（standalone 语义）；applied 投影排除 failed/skipped/rolled-back；原子写无 tmp 残留、读缺席=null。
 - 变异探针：摘除 last-failed 拒绝 → last-failed 负例红；applied 投影放宽为含 skipped → 投影负例红；还原后 23 绿。
 - 相邻回归：`npx vitest run custom/server/__tests__/ensure-injected-delta-guard.test.ts` 5 通过（inject.mjs 未动，接线留 Task 5）。
+
+P1 Task 4（事务化注入 Executor 与 Journal）负例先红后绿的真实命令与计数（同一隔离 HOME）：
+
+- 负例先红：`npx vitest run scripts/__tests__/inject-executor.test.ts` 实现前 1 文件全红（7 用例随 executor.mjs 缺失先行咬住）。
+- 实现后：同命令 1 文件 / 7 通过 / 0 失败。夹具=临时 git 仓双树（studio/agent 各自 init+基线提交）+ 增量差量补丁链（每步提交推进 HEAD，下一补丁 context 建立在前补丁之上）+ 临时 patchDir/stateOut。覆盖：①第 3 补丁强制失败→前 2 项字节级回滚（src.txt equals 基线 Buffer、新增文件删除）、后续 blocked-by-failed、journal 备份留档且字节与基线一致；②部署预检 partial→零应用零 manifest、results 全 skipped/runtime-deploy-precheck:partial；③成功→complete、appliedPatches 与 plan 一致、journal 清理、studio 树 agent/ 同路径既有文件不动；④failed manifest→planIncrement 抛 last-failed 且消息含 clean；⑤agent lane 失败不牵连 studio（lane 独立）；⑥后置部署 partial→整体 partial 非 complete；⑦zcode 缺树→skipped/absent-tree、整体 partial（standalone 语义）。
+- 实现中修复的真实缺陷（红阶段实测）：journal checkpoint 对纯新增文件补丁不建入口目录（__index.json ENOENT）；rollbackLane 按绝对根匹配而调用方传树名（restore 0）——两者均以负例咬住后修复。
+- 变异探针：摘除失败回滚 → 负例①红；预检 partial 放行 → 负例②红；还原后全绿。
+- 相邻回归：`npx vitest run scripts/__tests__/inject-planner.test.ts scripts/__tests__/inject-manifest.test.ts custom/server/__tests__/ensure-injected-delta-guard.test.ts` 与 executor 合跑 4 文件 / 35 通过 / 0 失败。
 
 | 风险 | 缓解与回滚 |
 |---|---|
