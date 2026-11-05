@@ -31,7 +31,7 @@ source "$SCRIPT_DIR/mx-recovery-lib.sh"  # 恢复层让位判定纯函数（同�
 STATE="$SIM_ROOT/runs/$RUN_ID/state.env"
 LOGS="$SIM_ROOT/logs"
 STOPFLAG="$SIM_ROOT/var/$RUN_ID-supervisor.stop"
-LOCKDIR="$SIM_ROOT/.driver.lock.d"
+
 # 监控事件面（2026-10-09 任务层清杀 harness 后台任务实录后并入）：每周期把
 # issues 新行/驱动错误行/服务健康落到 monitor-events.log——harness 任务全灭时，
 # 监控证据仍在，任何一次唤起都能对账追平。
@@ -125,36 +125,36 @@ _br_nudge_g5() { # <waited-sec>——熔断死等催办：以导演账号（fanf
 }
 
 note "启动：RUN_ID=$RUN_ID START_STEP=$START_STEP（report_done 落键即退；stop 文件=$STOPFLAG）"
-# ── 双操作者协同（run15 复盘：三轮神秘杀组+一轮锁竞争互退实锤=两个会话各自起监督器
-# 对同一 RUN 拉锯）。协议=注册表先到先得：启动时原子写 $SIM_ROOT/var/<RUN>-supervisor.owner；
-# 在位且持有人 pid 活着 → 本监督器是后来者，退让退出（不抢不杀——对方在正常值守）；
-# 持有人已死 → 接管覆写。退出前清自己的注册（防止陈尸注册挡后来者）。
-OWNER="$SIM_ROOT/var/$RUN_ID-supervisor.owner"
-_mso_take_or_yield() {
-  local opid
-  if [[ -f "$OWNER" ]]; then
-    opid=$(sed -n 's/^pid=\([0-9]*\).*/\1/p' "$OWNER" 2>/dev/null | head -1)
-    if [[ -n "$opid" ]] && kill -0 "$opid" 2>/dev/null; then
-      note "注册表在位且持有人 pid=$opid 存活——本监督器退让（双操作者先到先得协议；若确认对方僵死：kill $opid 后重启本监督器）"
-      exit 4
-    fi
-  fi
-  { echo "pid=$$ pgid=$(ps -o pgid= -p $$ | tr -d ' ') started=$(date '+%F %T') cmdline=${0##*/}"; } > "$OWNER"
-}
-_mso_take_or_yield
-trap '_myowner=$(sed -n "s/^pid=\\([0-9]*\\).*/\\1/p" "$OWNER" 2>/dev/null | head -1); [[ "$_myowner" == "$$" ]] && rm -f "$OWNER"' EXIT
-# 进程组防御平台分叉（2026-10-12 双模式轮）：mac 用 pgid 精确区分本系/入侵
-# （子 shell 继承本组）；Git Bash 无 POSIX 进程组语义——改「驱动同步执行 + 循环
-# 仅在本系驱动退出后才运行」的事实不变式：循环里发现的任何 aipay-scenario 都不是
-# 本系拉起的（本系在跑时会阻塞在同步 bash 调用里）；为防误杀接力器（mx-relay）
-# 合法拉起的驱动，relay 在跑时让位等待而非击杀。
-MYPGID=""
-if mxp_is_mac; then
-  MYPGID=$(ps -o pgid= -p $$ | tr -d ' ')
-  note "本监督系进程组 pgid=$MYPGID（锁防御：非本组驱动=入侵者，清掉+记账）"
-else
-  note "非 mac 平台：pgid 防御不可用——改用「同步执行不变式 + relay 让位」防御（见循环内）"
+# ── 推演单所有权（P2 Task 1；run15 双操作者拉锯 + run1 双驱动同栈互写的根治件）──
+# owner 协议走 runtime guard CLI（四因子判活：pid+cmdMatcher+instance+规范化
+# simRoot）。三启动顺序（product/bash/relay）全程恰一 owner：在位且活 → 本监督器
+# 让位退出（不抢不杀，事件见 logs/guard-events.jsonl）；持有人死 → CLI 原子接管。
+# 退出前按 pid+instance 释放（防 PID 复用误删他人锁）。
+_mg_root=""
+_d="$(cd "$(dirname "$0")/.." && pwd)"
+while [ "$_d" != "/" ]; do
+  [ -f "$_d/scripts/platform/runtime/guard-cli.mjs" ] && { _mg_root="$_d"; break; }
+  _d="$(dirname "$_d")"
+done
+if [ -z "$_mg_root" ]; then
+  echo "[supervisor FAIL] guard-cli.mjs 未找到（仓根解析失败）——单所有权协议不可用，拒绝无仲裁启动" >&2
+  exit 5
 fi
+MX_GUARD="${MX_GUARD_NODE:-node}"
+GUARD_CLI="$_mg_root/scripts/platform/runtime/guard-cli.mjs"
+_mg() { "$MX_GUARD" "$GUARD_CLI" "$@"; }
+
+OWN_JSON=""
+OWN_JSON="$(_mg owner-acquire --sim-root "$SIM_ROOT" --kind bash-supervisor --run-id "$RUN_ID" --pid $$ --cmd-matcher 'run-driver-supervisor' 2>/dev/null)" || {
+  _orc=$?
+  _hk="$(printf '%s' "$OWN_JSON" | jq -r '.holder.kind // "?"' 2>/dev/null)"
+  _hp="$(printf '%s' "$OWN_JSON" | jq -r '.holder.pid // "?"' 2>/dev/null)"
+  note "owner 在位（kind=${_hk} pid=${_hp}）——本监督器让位退出（单所有权协议；若确认对方僵死，guard 四因子会自动判死接管，事件见 logs/guard-events.jsonl）"
+  exit 4
+}
+MY_INSTANCE="$(printf '%s' "$OWN_JSON" | jq -r '.instance // empty' 2>/dev/null)"
+trap '_mg owner-release --sim-root "$SIM_ROOT" --pid $$ --instance "$MY_INSTANCE" >/dev/null 2>&1' EXIT
+note "owner 取得（instance=${MY_INSTANCE:0:8}…，bash-supervisor pid=$$）"
 # 重启风暴护栏（run16 复盘，fix/run16-report-truth）：驱动非熔断 rc≠0 且无 report_done
 # 时监督器每 30s 重启——run16 实锤 issues.log 混入坏字节致报告链连崩，20 轮循环 67 分钟
 # 零告警单（监控侧无从得知）。护栏三档：连续 ≥3 次=记单 driver-restart-storm（幂等一次，
@@ -169,42 +169,17 @@ while true; do
     note "report_done 已落键，监督器功成身退"
     exit 0
   fi
-  # 锁防御（2026-10-09 双监管拉锯实录：抢驱方反复杀 incumbent+抢窗口启动）——
-  # 只认本监督系的驱动；他系驱动=入侵者，一律 TERM+issues 记账（击杀失效化的
-  # 另一半：不许他方长驻）。
-  if [[ -n "$MYPGID" ]]; then
-    DPIDS=$(ps -axo pid,pgid,command | awk -v g="$MYPGID" '$3=="bash" && /aipay-scenario\.sh/ && !/pgrep|grep|tail|awk|sed/ {print $1":"$2}')
-  else
-    if [[ -n "$(mxp_pgrep_f "mx-relay.sh")" ]]; then
-      note "接力器（mx-relay）在跑——让位等待，不抢驱动（防误杀 relay 拉起的合法驱动）"
-      monitor_events; sleep 30; continue
-    fi
-    DPIDS=$(mxp_pgrep_f "aipay-scenario\.sh" | awk '{print $1":foreign"}')
-  fi
-  for dp in $DPIDS; do
-    dpid="${dp%%:*}"; dpgid="${dp##*:}"
-    if [ "$dpgid" != "$MYPGID" ]; then
-      note "锁防御：入侵驱动 pid=$dpid pgid=$dpgid（非本系 $MYPGID）——TERM"
-      echo "ISSUE|driver-intruder|supervisor|入侵驱动 pid=$dpid pgid=$dpgid 被监督器清除（单驱动锁执行臂；本系 pgid=$MYPGID）" >> "$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
-      kill -TERM "$dpid" 2>/dev/null
-    fi
-  done
-  if [ -n "$DPIDS" ] && echo "$DPIDS" | grep -qE ":(${MYPGID}|foreign)$"; then
+  # 驱动在位判定（P2 Task 1 起「杀外国驱动」退役）：单所有权下不再击杀——
+  # 驱动锁持有人活（guard 四因子：pid+cmdMatcher+instance+规范化 simRoot）=
+  # 有驱动在跑（无论谁拉起，owner 协议保证拉起权唯一），让位等待；
+  # 死/无锁 → 本 owner 负责断点续跑（陈锁接管由驱动自身的 driver-acquire 原子完成）。
+  LSTAT="$(_mg lock-status --sim-root "$SIM_ROOT" 2>/dev/null || true)"
+  if printf '%s' "$LSTAT" | jq -e '.driver.alive == true' >/dev/null 2>&1; then
+    _dlpid="$(printf '%s' "$LSTAT" | jq -r '.driver.pid // "?"' 2>/dev/null)"
+    note "驱动在跑（锁持有人 pid=$_dlpid 活，四因子判活）——让位等待"
     monitor_events
     sleep 15
     continue
-  fi
-  # 陈锁兜底（持锁者已死才清——活锁不动，防误清在跑驱动的锁）
-  if [[ -f "$LOCKDIR/info" ]]; then
-    LPID=$(sed -n 's/^pid=\([0-9]*\).*/\1/p' "$LOCKDIR/info" 2>/dev/null)
-    if [[ -z "$LPID" ]] || ! kill -0 "$LPID" 2>/dev/null; then
-      note "清陈锁（持锁者 ${LPID:-空} 已死）"
-      rm -rf "$LOCKDIR"
-    else
-      note "锁持有者 $LPID 活着但无驱动进程匹配——等待其退出，不抢锁"
-      sleep 30
-      continue
-    fi
   fi
   # 恢复层让位 v1（2026-11-02 机制治理批）：网关正在供应商恢复循环/回合恢复时先不重启——
   # 此刻重启只会再撞一次同样的失败，正是 run25 打架环的第一次回环（见 mechanism-map §3）。

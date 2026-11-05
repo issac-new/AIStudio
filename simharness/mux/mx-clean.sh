@@ -44,12 +44,33 @@ for a in "$@"; do
 done
 say() { echo "[mx-clean $([ "$APPLY" = 1 ] && echo APPLY || echo DRY-RUN)] $*"; }
 
-# 0) 推演在跑则拒绝（单驱动锁判活）
-if [ -f "$SIM_ROOT/.driver.lock.d/info" ]; then
-  LP=$(sed -n 's/^pid=\([0-9]*\).*/\1/p' "$SIM_ROOT/.driver.lock.d/info" 2>/dev/null || true)
-  if [ -n "$LP" ] && kill -0 "$LP" 2>/dev/null; then
-    echo "[mx-clean FAIL] 推演进行中（驱动 pid $LP 活锁）——拒绝清理；结束推演后重试" >&2; exit 3
-  fi
+# 0) 推演在跑则拒绝（P2 Task 1：清场租约 + 活角色断言，四因子判活走 guard CLI）
+#    clean-begin 取租约（租约内任何 owner/driver/resident 注册都被拒——清场中不许
+#    新角色进场）；clean-assert 在第一个停栈/归档/删除动作前列活角色（owner/驱动/
+#    常驻注册任一活即拒）。旧「sed 读 pid + kill -0」单因子判活退役。
+MG_ROOT=""
+_d="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+while [ "$_d" != "/" ]; do
+  [ -f "$_d/scripts/platform/runtime/guard-cli.mjs" ] && { MG_ROOT="$_d"; break; }
+  _d="$(dirname "$_d")"
+done
+if [ -z "$MG_ROOT" ]; then
+  echo "[mx-clean FAIL] guard-cli.mjs 未找到（仓根解析失败）——清场租约不可用，拒绝无仲裁清理" >&2; exit 3
+fi
+MG_CLI="$MG_ROOT/scripts/platform/runtime/guard-cli.mjs"
+_mg() { "${MX_GUARD_NODE:-node}" "$MG_CLI" "$@"; }
+CLEAN_INSTANCE=""
+if ! CLEAN_JSON="$(_mg clean-begin --sim-root "$SIM_ROOT" --pid $$ --cmd-matcher 'mx-clean' 2>/dev/null)"; then
+  echo "[mx-clean FAIL] 清场租约取得失败（另一清场在途或 guard 异常）：$(printf '%s' "$CLEAN_JSON" | head -c 200)" >&2; exit 3
+fi
+CLEAN_INSTANCE="$(printf '%s' "$CLEAN_JSON" | jq -r '.instance // empty' 2>/dev/null)"
+_mg_clean_end() { [ -n "$CLEAN_INSTANCE" ] && _mg clean-end --sim-root "$SIM_ROOT" --pid $$ --instance "$CLEAN_INSTANCE" >/dev/null 2>&1 || true; }
+trap '_mg_clean_end' EXIT
+if ! ASSERT_JSON="$(_mg clean-assert --sim-root "$SIM_ROOT" 2>/dev/null)"; then
+  echo "[mx-clean FAIL] 活角色在位，拒绝清理（首个停栈/归档/删除前拒绝；结束推演/停监督器与 relay 后重试）：" >&2
+  printf '%s' "$ASSERT_JSON" | jq -r '.residents[]? | "  - \(.kind // .role) pid=\(.pid // "?") \(.reason // "")"' 2>/dev/null >&2 || printf '%s\n' "$ASSERT_JSON" >&2
+  _mg_clean_end
+  exit 3
 fi
 # 0a2) 端口兜底（2026-10-19 实测）：pid 复用守卫跳杀后 studio 可能仍活——清场与
 #      活服务互踩（rm "Directory not empty"、sqlite 库锁、半清树）。端口仍在听即中止。

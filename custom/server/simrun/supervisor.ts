@@ -6,10 +6,9 @@
 // （_mx_gate_evidence_sig / run-driver-supervisor 指纹三方一源，防「产品复位驱动不复位」）。
 // 启用门：OBS_SIM_ROOT 在位且 SIM_SUPERVISOR≠off（宿主 studio 不启用）。fail-soft 全程：
 // 文件/进程/git 任一缺席＝该监督面静默降级，不抛错不阻断 studio。
-import { spawn, execFileSync, type ChildProcess } from 'child_process'
+import { spawn, execFileSync, spawnSync, type ChildProcess } from 'child_process'
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync } from 'fs'
 import { join, resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
 
 /** 26 步主链序（aipay-scenario.sh step_reached 全序；断点步=进度表 doneSteps 的下一步） */
 export const DRIVER_STEP_ORDER: readonly string[] = [
@@ -30,6 +29,16 @@ export interface SupervisorState {
   lastEvidenceFp: string | null
   lastEventTs: number | null
   gatewayConsecutiveFails: number
+  /** 当前持有的 owner instance（null=非 owner：让位观察态，不拉驱动） */
+  ownerInstance: string | null
+}
+
+/** owner 抢占结果（guard-cli owner-acquire 投影；测试注入面） */
+export interface OwnerAcquireResult {
+  ok: boolean
+  instance?: string
+  holder?: { kind?: string; pid?: number; runId?: string | null }
+  reason?: string
 }
 
 export interface SupervisorDeps {
@@ -41,6 +50,10 @@ export interface SupervisorDeps {
   probePid?: (pid: number) => boolean
   fetchHealth?: (url: string) => Promise<boolean>
   logSink?: (e: SupervisorEvent) => void
+  /** owner 抢占（P2 Task 1）：缺省经 guard-cli；测试注入替身 */
+  acquireOwner?: (runId: string | null) => OwnerAcquireResult
+  /** owner 释放（pid+instance 双匹配防误删） */
+  releaseOwner?: (instance: string) => void
 }
 
 function defaultHarnessRoot(): string {
@@ -53,6 +66,19 @@ function defaultHarnessRoot(): string {
 
 function pidAlive(pid: number): boolean {
   try { process.kill(pid, 0); return true } catch { return false }
+}
+
+/** guard-cli 路径（custom/server/simrun 三级向上=仓根，与 defaultHarnessRoot 同口径） */
+function guardCliPath(): string {
+  return resolve(__dirname, '../../..', 'scripts/platform/runtime/guard-cli.mjs')
+}
+
+/** 调 guard-cli 子命令：stdout 单行 JSON；非 JSON/失败=null（fail-soft，不抛） */
+function runGuardCli(args: string[]): { result: OwnerAcquireResult | Record<string, unknown> | null; rc: number } {
+  try {
+    const r = spawnSync(process.execPath, [guardCliPath(), ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    try { return { result: JSON.parse(r.stdout || 'null'), rc: r.status ?? 1 } } catch { return { result: null, rc: r.status ?? 1 } }
+  } catch { return { result: null, rc: 1 } }
 }
 
 /** 驱动锁持有人 pid（$SIM_ROOT/.driver.lock.d/info 首字段 pid=<n>；无锁/坏文件=null） */
@@ -103,6 +129,12 @@ class Supervisor {
   readonly state: SupervisorState
   private timer: NodeJS.Timeout | null = null
   private child: ChildProcess | null = null
+  /** tick 互斥（单进程 start/tick 并发面） */
+  private ticking = false
+  /** 手动 start 拉起的驱动在途（二次 start 抑制；child 退出即复位） */
+  private manualStartActive = false
+  /** 让位事件节流键（同 holder 只落一次 owner-yield，防 tick 周期刷屏） */
+  private lastYieldKey: string | null = null
   private readonly d: {
     now: () => number
     tickMs: number
@@ -112,6 +144,8 @@ class Supervisor {
     probePid: (pid: number) => boolean
     fetchHealth: (url: string) => Promise<boolean>
     logSink: (e: SupervisorEvent) => void
+    acquireOwner: (runId: string | null) => OwnerAcquireResult
+    releaseOwner: (instance: string) => void
   }
   private eventLogPath: string | null = null
 
@@ -124,6 +158,7 @@ class Supervisor {
       mode: enabled ? 'idle' : 'off',
       runId: null, driverPid: null, relaunchCount: 0, lastEvidenceFp: null, lastEventTs: null,
       gatewayConsecutiveFails: 0,
+      ownerInstance: null,
     }
     const harnessRoot = deps.harnessRoot ?? process.env.SIM_HARNESS_ROOT?.trim() ?? defaultHarnessRoot()
     this.d = {
@@ -144,6 +179,19 @@ class Supervisor {
         if (!this.eventLogPath) return
         try { appendFileSync(this.eventLogPath, JSON.stringify(e) + '\n') } catch { /* fail-soft */ }
       }),
+      // owner 协议（P2 Task 1）：缺省走 guard-cli；cmdMatcher 与 studio 服务进程命令行
+      // 同源（node 前缀）。测试注入替身（不依赖进程表）。
+      acquireOwner: deps.acquireOwner ?? ((runId) => {
+        const { result } = runGuardCli([
+          'owner-acquire', '--sim-root', simRoot, '--kind', 'product-supervisor',
+          '--run-id', runId ?? '', '--pid', String(process.pid),
+          '--cmd-matcher', process.env.SIM_SUPERVISOR_CMD_MATCHER?.trim() || 'node',
+        ])
+        return (result as OwnerAcquireResult) ?? { ok: false, reason: 'guard-cli 不可用（fail-soft：让位不抢）' }
+      }),
+      releaseOwner: deps.releaseOwner ?? ((instance) => {
+        runGuardCli(['owner-release', '--sim-root', simRoot, '--pid', String(process.pid), '--instance', instance])
+      }),
     }
     if (enabled) {
       this.eventLogPath = join(simRoot, 'logs', 'simrun-supervisor.jsonl')
@@ -157,9 +205,36 @@ class Supervisor {
     this.d.logSink(e)
   }
 
+  /**
+   * 确保持有 owner（P2 Task 1 三启动顺序仲裁）：已持有→true；未持有→尝试抢占，
+   * 失败→按 holder 节流落 owner-yield（让位事件留痕）并返回 false。
+   */
+  private ensureOwner(runId: string | null): boolean {
+    if (this.state.ownerInstance) return true
+    const r = this.d.acquireOwner(runId)
+    if (r.ok && r.instance) {
+      this.state.ownerInstance = r.instance
+      this.lastYieldKey = null
+      this.emit('owner-acquired', `owner 取得（instance=${r.instance.slice(0, 8)}…，product-supervisor）`)
+      return true
+    }
+    const holderKey = `${r.holder?.kind ?? '?'}:${r.holder?.pid ?? '?'}:${r.reason ?? ''}`
+    if (this.lastYieldKey !== holderKey) {
+      this.emit('owner-yield', `owner 在位（kind=${r.holder?.kind ?? '?'} pid=${r.holder?.pid ?? '?'}${r.reason ? '，' + r.reason : ''}）——product supervisor 让位（只观察不拉驱动）`)
+      this.lastYieldKey = holderKey
+    }
+    return false
+  }
+
   /** 认领在跑轮（adopt：进度表在位＋驱动活→只看不拉） */
   async tick(): Promise<void> {
     if (!this.state.enabled || this.state.mode === 'stopped' || this.state.mode === 'terminal') return
+    if (this.ticking) return // 单进程 start/tick 互斥
+    this.ticking = true
+    try { await this.tickInner() } finally { this.ticking = false }
+  }
+
+  private async tickInner(): Promise<void> {
     const runId = this.readRunId()
     if (!runId) { this.state.mode = 'idle'; return }
     this.state.runId = runId
@@ -178,17 +253,28 @@ class Supervisor {
       await this.probeGateway()
       return
     }
-    // 驱动缺席：证据门（与 harness 双侧同源）——指纹相对上次记录变化才重拉
+    // 驱动缺席：证据门（与 harness 双侧同源）——指纹相对上次记录变化才重拉；
+    // 重拉前须持有 owner（败方让位不拉驱动——恰一 owner 恰一 driver）
+    if (!this.ensureOwner(runId)) { this.state.mode = 'idle'; return }
     const fp = evidenceFingerprint(this.d.simRoot, runId)
     const changed = this.state.lastEvidenceFp === null || fp !== this.state.lastEvidenceFp
     if (!changed) { this.emit('wait-evidence', `指纹不变（${fp}）`, { fp }); return }
     const step = this.resumeStepFromProgress()
     this.emit('relaunch', `驱动缺席且证据变化（${fp}）→ START_STEP=${step}`, { fp, step })
+    this.spawnDriverInternal(step, runId, fp)
+  }
+
+  /** spawn 单口（start/tick 共用）。并发互斥由 ticking 标志承担（JS 单线程内
+   * 决策→spawn 无 await 间隙；child 仅供 stop/观测用，不作重复拉判据——上一棒
+   * child 句柄驻留不代表驱动还活着，判活以驱动锁四因子为准）。 */
+  private spawnDriverInternal(step: string, runId: string, fp?: string): void {
     this.child = this.d.spawnDriver(step, runId)
-    this.state.relaunchCount += 1
-    this.state.lastEvidenceFp = fp
-    this.state.mode = 'supervising'
     this.child.unref?.()
+    this.child.on?.('exit', () => { if (this.child) this.child = null })
+    this.state.relaunchCount += 1
+    // 指纹锚定到拉起时刻（tick 传入实测 fp；start 首拉现算）——下轮证据比较基准
+    this.state.lastEvidenceFp = fp ?? evidenceFingerprint(this.d.simRoot, runId)
+    this.state.mode = 'supervising'
   }
 
   private readRunId(): string | null {
@@ -226,13 +312,24 @@ class Supervisor {
 
   start(runId?: string, startStep?: string): void {
     if (!this.state.enabled) throw new Error(`simrun supervisor 未启用：${this.state.reason}`)
+    // P2 Task 1 三启动顺序仲裁：先抢 owner；他人持有→让位（只观察不拉驱动，事件留痕）
+    if (!this.ensureOwner(runId ?? this.state.runId)) {
+      this.state.mode = 'idle'
+      this.startTimer() // 观察者模式继续 tick（owner 空出后可接管）
+      return
+    }
     if (runId) {
+      if (this.manualStartActive) {
+        this.emit('start-suppressed', '手动 start 拉起的驱动仍在途——拒绝重复拉（单进程单驱动）')
+        this.startTimer()
+        return
+      }
       const step = startStep ?? 'smoke'
       this.emit('manual-start', `run=${runId} START_STEP=${step}`)
-      this.child = this.d.spawnDriver(step, runId)
       this.state.runId = runId
-      this.state.mode = 'supervising'
-      this.child.unref?.()
+      this.manualStartActive = true
+      this.spawnDriverInternal(step, runId)
+      this.child?.on?.('exit', () => { this.manualStartActive = false })
     }
     this.startTimer()
   }
@@ -245,7 +342,13 @@ class Supervisor {
       mkdirSync(dirname(stopPath), { recursive: true })
       closeSync(openSync(stopPath, 'a'))
     } catch { /* fail-soft */ }
-    this.emit('stopped', '手动停止（stop 文件已置，兜底监督器同步退场）')
+    // owner 释放（pid+instance 双匹配在 CLI 侧核验；防 PID 复用误删他人锁）
+    if (this.state.ownerInstance) {
+      const inst = this.state.ownerInstance
+      this.state.ownerInstance = null
+      this.d.releaseOwner(inst)
+    }
+    this.emit('stopped', '手动停止（stop 文件已置，兜底监督器同步退场；owner 已释放）')
     this.stopTimer()
   }
 

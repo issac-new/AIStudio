@@ -2416,31 +2416,49 @@ _verify_dispatch_delivery() { # <user> <event-id> <body> <mentions> → 生效 e
   printf '%s' "$ev"
 }
 
-# ── 推演单驱动锁（单一事实源，可单测）────────────────────────
-# 双会话双开推演是实测最高频互踩源（共享 state.env/板库/房间双写）。mkdir 原子锁
-# （macOS 无 flock；mkdir 在各文件系统均原子）：锁不可得即大声拒绝，不静默并发。
-# 陈锁判定根治（2026-09-29 V4-run1 02:26 实锤）：旧版 `sed -n 's/^pid=//p'` 把
-# "pid=84431 start=… host=…" 整段取出，`kill -0 "84431 start=…"` 报 illegal pid
-# 恒失败 → **活锁被误判陈锁、被接管**——run1 ready 续跑误抢 run2 活锁，双驱动同栈
-# 互写 12 分钟。判活只取 pid 数字段；解析不出一律按活锁拒绝（宁停勿抢）。
-mx_lock_holder_pid() { # <info-file> → 持锁 pid（仅数字段；解析不出=空串）
+# ── 推演单驱动锁（P2 Task 1：锁语义正本=scripts/platform/runtime/guard-cli.mjs）──
+# 双会话双开推演是实测最高频互踩源（共享 state.env/板库/房间双写）。判活从「pid 单
+# 因子」升级为四因子（pid+cmdMatcher+instance+规范化 simRoot）——pid 被无关进程复用
+# 不算活、release 匹配 pid+instance 防误删、锁目录跨根搬家不认。本包装保留原签名与
+# 返回码（0 取得 / 1 活锁被占 / 2 接管竞争失败），Bash 侧零改面。
+# 陈锁判定史（2026-09-29 V4-run1 02:26 实锤）：旧版 `sed -n 's/^pid=//p'` 把整段取出
+# 致 kill -0 恒失败、活锁被误接管——判活只取 pid 数字段；解析不出一律按活锁拒绝
+# （宁停勿抢，CLI 正本同语义）。
+mx_guard_root() { # → guard-cli.mjs 所在仓根（MX_OVERLAY_ROOT 优先，其后从本文件位置向上找）
+  local d
+  if [ -n "${MX_OVERLAY_ROOT:-}" ] && [ -f "$MX_OVERLAY_ROOT/scripts/platform/runtime/guard-cli.mjs" ]; then
+    printf '%s\n' "$MX_OVERLAY_ROOT"; return 0
+  fi
+  d="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  while [ "$d" != "/" ]; do
+    if [ -f "$d/scripts/platform/runtime/guard-cli.mjs" ]; then printf '%s\n' "$d"; return 0; fi
+    d="$(dirname "$d")"
+  done
+  return 1
+}
+
+mx_guard_cli() { # <guard-cli 子命令与参数…> → stdout=单行 JSON；退出码透传（0/1/2/64）
+  local root
+  root="$(mx_guard_root)" || { echo '{"ok":false,"code":2,"reason":"guard-cli.mjs 未找到（仓根解析失败）"}' >&2; return 2; }
+  "${MX_GUARD_NODE:-node}" "$root/scripts/platform/runtime/guard-cli.mjs" "$@"
+}
+
+mx_lock_holder_pid() { # <info-file> → 持锁 pid（兼容读：仅数字段；判活/接管一律走 CLI 正本）
   sed -n 's/^pid=\([0-9][0-9]*\).*/\1/p' "$1" 2>/dev/null | head -1
 }
 
-mx_driver_lock_acquire() { # <lock-dir> <pid> → 0 取得 / 1 活锁被占 / 2 接管竞争失败
-  local d="$1" pid="$2" held
-  _mx_lock_info() { printf 'pid=%s start=%s host=%s\n' "$2" "$(date '+%F %T')" "$(hostname -s)" > "$1/info"; }
-  if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; return 0; fi
-  held=$(mx_lock_holder_pid "$d/info")
-  if [[ -n "$held" ]] && ! kill -0 "$held" 2>/dev/null; then
-    # 接管原子化：mv 摘走陈锁再 mkdir，绝不原地 rm——kill -0 判死与 rm 之间第三方
-    # 可新建活锁被误删（双驱动同栈互写）。竞争失败时陈锁归档 ${d}.stale.$$ 可回查。
-    local stale="${d}.stale.$$"
-    mv "$d" "$stale" 2>/dev/null || return 2
-    if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; rm -rf "$stale"; return 0; fi
-    return 2
-  fi
-  return 1
+mx_driver_lock_acquire() { # <lock-dir> <pid> → 0 取得 / 1 活锁被占 / 2 接管竞争失败（正本=guard-cli driver-acquire）
+  local out rc
+  out="$(mx_guard_cli driver-acquire --sim-root "${SIM_ROOT:?}" --lock-dir "$1" \
+    --kind driver --run-id "${RUN_ID:-}" --pid "$2" \
+    --cmd-matcher "${MX_DRIVER_CMD_MATCHER:-aipay-scenario}" 2>/dev/null)" && rc=0 || rc=$?
+  case "$rc" in
+    0|1|2) return "$rc" ;;
+    *) # 用法错/环境坏按竞争失败处理（宁停勿抢，不静默放行）
+      [ -n "$out" ] || out='guard-cli 无输出'
+      echo "[mux] driver-acquire 异常 rc=$rc：$out" >&2
+      return 2 ;;
+  esac
 }
 
 # ── 硬闸打回熔断（融合批二：判定与持久化正本上移治理服务）──────────
