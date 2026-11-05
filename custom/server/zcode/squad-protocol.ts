@@ -16,9 +16,10 @@
 // 原子写 + 哈希文件名 + 坏文件隔离，重启不丢。
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'fs'
-import { dirname, join, resolve } from 'path'
+import { join, resolve } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
+import { resolveRuntimeResource } from '../lib/runtime-resources'
 
 export const SQUAD_EVALUATION_VERDICTS = ['action', 'no_action', 'failed'] as const
 export type SquadEvaluationVerdict = (typeof SQUAD_EVALUATION_VERDICTS)[number]
@@ -55,28 +56,21 @@ export interface SquadBriefing {
 let cachedSquads: Record<string, SquadDefinition> | null = null
 
 /**
- * roster 配置文件多候选探测（P-E）：打包产物里 __dirname 指向 dist，单一相对路径
- * 目标会落到应用外 → 表静默回空。候选序 = 从 fromDir 向上逐级找 <dir>/runtime/<rel>
- * （覆盖 __dirname 同级 runtime/、向上含 runtime/ 的应用根、overlay 源码布局三类形态）。
- * 全 miss 回 null，调用侧 warn 一条（不再无声）。env 覆盖由调用侧先判。
+ * roster 配置文件多候选探测（P-E；P1 Task 7 起降级为兼容 wrapper）：
+ * 实现收敛到 custom/server/lib/runtime-resources.ts 单一解析器（向上探测
+ * <dir>/runtime/<rel>，越界 rel 抛错，全 miss 回 null）。本导出保留供既有
+ * import 面（column-automation/governance-ledger 历史引用），行为与直接调用
+ * resolveRuntimeResource 完全一致。env 覆盖由调用侧先判。
  */
 export function resolveRosterFile(relUnderRuntime: string, fromDir: string = __dirname): string | null {
-  let dir = fromDir
-  for (let i = 0; i <= 6; i++) {
-    const candidate = resolve(dir, 'runtime', relUnderRuntime)
-    if (existsSync(candidate)) return candidate
-    const parent = dirname(dir)
-    if (parent === dir) break
-    dir = parent
-  }
-  return null
+  return resolveRuntimeResource(relUnderRuntime, fromDir)
 }
 
 export function squadsFilePath(): string {
   const env = process.env.HERMES_SQUADS_FILE?.trim()
   if (env) return resolve(env)
   // 多候选探测命中即用；全 miss 回旧默认路径（loadSquads warn + 空表，不再无声）。
-  return resolveRosterFile('roster/squads.yaml') ?? resolve(__dirname, '../../../runtime/roster/squads.yaml')
+  return resolveRuntimeResource('roster/squads.yaml') ?? resolve(__dirname, '../../../runtime/roster/squads.yaml')
 }
 
 export function loadSquads(): Record<string, SquadDefinition> {

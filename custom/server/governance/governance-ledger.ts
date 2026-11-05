@@ -5,13 +5,13 @@
  * 唯一解析面——REST 投影与 vitest 守门共用 loadCapabilityLedger/loadMetricsDefs
  * 与 validate*，防"运行时一套口径、守门一套口径"的第二事实源。
  *
- * 路径解析沿用 resolveRosterFile（向上寻 runtime/，开发树与部署树同款先例）；
- * 读多写少，mtime 缓存（文件不变不重复解析）。文件缺失/坏文件如实返回
- * exists:false/problems，不编造内容（治理中心既有人格化约定）。
+ * 路径解析沿用单一解析器（P1 Task 7 起=lib/runtime-resources，向上寻 runtime/，
+ * 开发树与部署树同款先例）；读多写少，mtime 缓存（文件不变不重复解析）。
+ * 文件缺失/坏文件如实返回 exists:false/problems，不编造内容（治理中心既有人格化约定）。
  */
 import { readFileSync, existsSync, statSync } from 'fs'
 import { resolve } from 'path'
-import { resolveRosterFile } from '../zcode/squad-protocol'
+import { resolveRuntimeResource } from '../lib/runtime-resources'
 
 // ---- 冻结词表（改动=治理事件，须同步守门与视图）----
 export const LEDGER_KINDS = ['lane-specialist', 'roster-role', 'squad', 'coding-agent', 'team', 'service'] as const
@@ -60,13 +60,13 @@ export interface MetricsDoc {
 
 function resolveGovFile(rel: string): string | null {
   // GOVERNANCE_DIR 覆盖优先（对齐 HERMES_COLUMNS_FILE/HERMES_SQUADS_FILE 先例）：
-  // 测试、shim 走查与非常规部署下指向任意治理目录；未设时走 resolveRosterFile。
+  // 测试、shim 走查与非常规部署下指向任意治理目录；未设时走单一解析器。
   const env = process.env.GOVERNANCE_DIR
   if (env) {
     const p = resolve(env, rel)
     if (existsSync(p)) return p
   }
-  return resolveRosterFile(`governance/${rel}`) ?? null
+  return resolveRuntimeResource(`governance/${rel}`)
 }
 
 interface CacheEntry<T> { mtimeMs: number; value: T }

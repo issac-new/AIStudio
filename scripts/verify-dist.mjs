@@ -10,6 +10,7 @@
 // 且 WARN 连续两周零新增后，再提请把 WARN 升为 FAIL（转硬失败的判据见方案
 // 第五节 M8 行）。显式豁免位 VERIFY_DIST_ALLOW_DEFAULT_PASSWORD=1（内部/演练
 // 构建），放过时同样打 WARN 留痕——不提供静默豁免。
+import { createHash } from 'node:crypto';
 import { existsSync, statSync, readdirSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 // 上游根解析单一事实源（P1 Task 6）：env > 仓内 vendor > 旧兄弟 upstream（realpath）。
@@ -17,6 +18,10 @@ import { resolveUpstreamRoots } from './platform/lib/upstream-root.mjs';
 
 const upstreamRoot = resolveUpstreamRoots(resolve(import.meta.dirname, '..')).upstreamRoot;
 const distClient = resolve(upstreamRoot, 'hermes-studio', 'dist', 'client');
+// --server（P1 Task 7）：交付链（build:full/build-dmg）按运行时资产清单校验 server 面；
+// postbuild（npm run build，纯 vite client 构建）保持 client-only——无 server 产物不校验。
+const SERVER_MODE = process.argv.includes('--server');
+const distServer = resolve(upstreamRoot, 'hermes-studio', 'dist', 'server');
 
 const fail = (msg) => {
   console.error(`[verify-dist] FAIL: ${msg}`);
@@ -79,3 +84,37 @@ if (p1.length > 0 || p2.length > 0) {
 }
 
 console.log(`[verify-dist] OK: index.html ${size}B, assets/js ${assets.length} 个`);
+
+// ── server 面（--server）：运行时资产清单逐项校验（P1 Task 7）──
+// 清单（dist/server/runtime-assets.json）是随包资源的事实源：server 入口、价目表、
+// 名册、列配置、semantica bridge 任一缺失或字节漂移即 FAIL——装机产物静默回空表
+// （2026-09-25 审查实证）/ bridge 进程全灭（2026-10-06 重建实锤）都在这条链路上堵。
+if (SERVER_MODE) {
+  const manifestPath = resolve(distServer, 'runtime-assets.json');
+  if (!existsSync(manifestPath)) fail(`server 模式缺运行时资产清单: ${manifestPath}(build.mjs 应随包生成)`);
+  const entry = resolve(distServer, 'index.js');
+  if (!existsSync(entry)) fail(`dist/server/index.js 缺失(server 入口未产出)`);
+
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch (e) {
+    fail(`runtime-assets.json 损坏: ${e.message}`);
+  }
+  if (!manifest || manifest.schemaVersion !== 1 || !Array.isArray(manifest.assets) || manifest.assets.length === 0) {
+    fail('runtime-assets.json 形状非法(schemaVersion=1 + 非空 assets 数组)');
+  }
+  for (const asset of manifest.assets) {
+    if (typeof asset?.rel !== 'string' || typeof asset.sha256 !== 'string') {
+      fail(`runtime-assets.json 条目非法: ${JSON.stringify(asset)}`);
+    }
+    const target = resolve(distServer, asset.rel);
+    if (!existsSync(target)) fail(`清单资产缺失: ${asset.rel} (期望 ${target})`);
+    const bytes = readFileSync(target);
+    const digest = createHash('sha256').update(bytes).digest('hex');
+    if (digest !== asset.sha256) {
+      fail(`清单资产内容漂移: ${asset.rel}（清单 ${asset.sha256.slice(0, 12)}… ≠ 实物 ${digest.slice(0, 12)}…）`);
+    }
+  }
+  console.log(`[verify-dist] OK: runtime 资产清单 ${manifest.assets.length} 项逐项存在且摘要一致`);
+}

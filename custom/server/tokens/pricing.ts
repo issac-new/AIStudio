@@ -9,6 +9,7 @@
 // 计价单位：每百万 token 的价格（per-Mtok），货币单位表级声明。本模块为纯函数域（IO 仅价目加载）。
 import { readFileSync, existsSync } from 'fs'
 import { join, resolve } from 'path'
+import { resolveRuntimeResource } from '../lib/runtime-resources'
 import type { TokenUsage } from './meter-projections'
 
 export interface ModelPrice {
@@ -41,7 +42,10 @@ let cachedTable: PricingTable | null = null
 export function pricingTablePath(): string {
   const env = process.env.HERMES_PRICING_TABLE?.trim()
   if (env) return resolve(env)
-  return resolve(__dirname, '../../../runtime/pricing/models.yaml')
+  // 单一解析器（P1 Task 7）：向上探测 <dir>/runtime/pricing/models.yaml——打包态
+  // 命中 dist/server 同级 runtime/，源码态命中仓根 runtime/。全 miss 回旧默认
+  // 路径（loadPricingTable warn，不再无声）。
+  return resolveRuntimeResource('pricing/models.yaml') ?? resolve(__dirname, '../../../runtime/pricing/models.yaml')
 }
 
 /** 单档单价形状（S-C）：idle/peak 均须非负有限数，缺一即条目作废。 */
