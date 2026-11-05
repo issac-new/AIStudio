@@ -1,9 +1,12 @@
 // 执法门 P0-1/P2-5 守门：身份工具白名单、沙箱路径、浏览器域名、放行决策账。
-import { mkdtempSync, rmSync } from 'node:fs'
+// P0 Task 5 增：真实路径沙箱（cwd 解析/realpath canonicalize/symlink 逃逸）与沙箱终端证明。
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  APPROVAL_CLASS_RULES,
+  applyApprovalBridge,
   ekkoEnforceGateHook,
   evaluateEnforcement,
   sandboxNetworkViolation,
@@ -29,6 +32,7 @@ beforeEach(() => {
   process.env.HERMES_TOOL_ENFORCE = '1'
   delete process.env.HERMES_TOOL_ENFORCE_MODE
   delete process.env.HERMES_TOOL_SANDBOX_ROOTS
+  delete process.env.HERMES_TOOL_OS_SANDBOX_PROOF
   delete process.env.HERMES_BROWSER_ALLOWLIST
   delete process.env.HERMES_BROWSER_DENYLIST
 })
@@ -41,6 +45,7 @@ afterEach(() => {
   delete process.env.HERMES_TOOL_ENFORCE
   delete process.env.HERMES_TOOL_ENFORCE_MODE
   delete process.env.HERMES_TOOL_SANDBOX_ROOTS
+  delete process.env.HERMES_TOOL_OS_SANDBOX_PROOF
   delete process.env.HERMES_BROWSER_ALLOWLIST
   delete process.env.HERMES_BROWSER_DENYLIST
 })
@@ -126,6 +131,101 @@ describe('沙箱硬边界（P2-5）', () => {
     expect(sandboxNetworkViolation('browser_navigate', { url: 'https://other.example' })).toContain('allowlist')
     expect(sandboxNetworkViolation('browser_navigate', { url: 'https://good.example/a' })).toBeNull()
     expect(sandboxNetworkViolation('browser_click', { selector: '#a' })).toBeNull()
+  })
+})
+
+describe('真实路径沙箱（P0 Task 5：相对路径按真实 cwd 解析 + realpath canonicalize）', () => {
+  it('相对路径按真实 cwd 解析：越出根拒、根内放行；无基准仍跳过', () => {
+    const root = tmp('sandbox-rel-')
+    expect(sandboxPathViolation('read_file', { path: '../outside.txt' }, [root], { cwd: root })).not.toBeNull()
+    expect(sandboxPathViolation('read_file', { path: 'notes/a.txt' }, [root], { cwd: root })).toBeNull()
+    // cwd 缺席时 workspaceRoot 兜底（上游 AgentToolContext 两字段都可得）
+    expect(sandboxPathViolation('write_file', { path: '../escape.txt' }, [root], { workspaceRoot: root })).not.toBeNull()
+    expect(sandboxPathViolation('write_file', { path: 'ok.txt' }, [root], { workspaceRoot: root })).toBeNull()
+    // 无基准的相对路径仍跳过（旧语义不回退——裁决层无法确定基准就不猜）
+    expect(sandboxPathViolation('write_file', { path: 'relative/x' }, [root])).toBeNull()
+  })
+
+  it('symlink 逃逸可检出：根内符号链指向根外即越界；根内链不误伤', () => {
+    const root = tmp('sandbox-sym-')
+    const outside = tmp('sandbox-outside-')
+    mkdirSync(join(root, 'real'), { recursive: true })
+    writeFileSync(join(outside, 'secret.txt'), 'x')
+    symlinkSync(outside, join(root, 'leak'))              // 逃逸链：root/leak → 根外目录
+    symlinkSync(join(root, 'real'), join(root, 'alias'))  // 根内链：root/alias → root/real
+    expect(sandboxPathViolation('read_file', { path: join(root, 'leak', 'secret.txt') }, [root])).not.toBeNull()
+    expect(sandboxPathViolation('read_file', { path: 'leak/secret.txt' }, [root], { cwd: root })).not.toBeNull()
+    expect(sandboxPathViolation('read_file', { path: join(root, 'alias', 'f.txt') }, [root])).toBeNull()
+  })
+
+  it('不存在目标回溯最近存在祖先：根内深路径放行，借 .. 越出的不存在路径拒', () => {
+    const root = tmp('sandbox-deep-')
+    expect(sandboxPathViolation('write_file', { path: join(root, 'a', 'b', 'c.txt') }, [root])).toBeNull()
+    expect(sandboxPathViolation('write_file', { path: join(root, '..', '..', 'stash.txt') }, [root])).not.toBeNull()
+  })
+
+  it('~ 展开仍按真实 home 判定（隔离 HOME 必在临时根外）', () => {
+    const root = tmp('sandbox-home-')
+    expect(sandboxPathViolation('read_file', { path: '~/outside-sandbox-probe.txt' }, [root])).not.toBeNull()
+  })
+
+  it('root 不可规范化（symlink 环）时 fail-closed：显式路径一律判越界', () => {
+    const root = tmp('sandbox-loop-')
+    symlinkSync(join(root, 'a'), join(root, 'b'))
+    symlinkSync(join(root, 'b'), join(root, 'a'))
+    expect(sandboxPathViolation('write_file', { path: join(root, 'x.txt') }, [join(root, 'b')])).not.toBeNull()
+  })
+})
+
+describe('沙箱终端证明（P0 Task 5：sandbox-terminal-unavailable）', () => {
+  it('roots 配置即沙箱模式：terminal/code 无真实 OS 沙箱证明硬拒', () => {
+    const root = tmp('sandbox-term-')
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = root
+    const v = evaluateEnforcement('terminal_exec', { command: 'cat /etc/passwd', cwd: root }, 'p1', { masterOn: true })
+    expect(v).toMatchObject({ enforcing: true, allow: false, rule: 'sandbox-terminal-unavailable' })
+    expect(evaluateEnforcement('code_exec', { code: 'print(1)' }, 'p1', { masterOn: true }).rule)
+      .toBe('sandbox-terminal-unavailable')
+    // 路径越界的 terminal 报更具体的 sandbox-path（既有断言语义不回退）
+    expect(evaluateEnforcement('terminal_exec', { command: 'ls', cwd: '/etc' }, 'p1', { masterOn: true }).rule)
+      .toBe('sandbox-path')
+  })
+
+  it('合法证明（container）解锁终端门；Shell 文本检查类声明不算证明', () => {
+    const root = tmp('sandbox-proof-')
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = root
+    process.env.HERMES_TOOL_OS_SANDBOX_PROOF = 'container'
+    // 有证明且无其他策略 → 不再因沙箱拒绝（no-config 不执法）
+    expect(evaluateEnforcement('terminal_exec', { command: 'ls', cwd: root }, 'p1', { masterOn: true }).rule)
+      .toBe('no-config')
+    process.env.HERMES_TOOL_OS_SANDBOX_PROOF = 'shell-audit'  // 命令文本审计≠OS 级隔离
+    expect(evaluateEnforcement('terminal_exec', { command: 'ls', cwd: root }, 'p1', { masterOn: true }).rule)
+      .toBe('sandbox-terminal-unavailable')
+  })
+
+  it('未配置 roots 时无终端证明门（不假装有沙箱）', () => {
+    expect(evaluateEnforcement('terminal_exec', { command: 'ls' }, 'p1', { masterOn: true }).rule).toBe('no-config')
+  })
+
+  it('sandbox-terminal-unavailable 不在审批类规则集，审批桥不放行', () => {
+    const root = tmp('sandbox-term-bridge-')
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = root
+    expect(APPROVAL_CLASS_RULES.has('sandbox-terminal-unavailable')).toBe(false)
+    const deny = evaluateEnforcement('terminal_exec', { command: 'ls', cwd: root }, 'p1', { masterOn: true })
+    const bridged = applyApprovalBridge(deny, { approved: true })
+    expect(bridged).toMatchObject({ allow: false, rule: 'sandbox-terminal-unavailable' })
+  })
+})
+
+describe('执法钩子：真实执行上下文透传（P0 Task 5）', () => {
+  it('钩子透传真实 cwd：相对路径越界在钩子层被拦，根内放行', async () => {
+    const root = tmp('sandbox-hook-')
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = root
+    const hook = ekkoEnforceGateHook()
+    const denied = await hook.preExecute?.('write_file', { path: '../leak.txt' }, { profileId: 'p1', cwd: root })
+    expect(denied).toMatchObject({ allow: false })
+    expect((denied as { error?: string } | undefined)?.error).toContain('../leak.txt')
+    const ok = await hook.preExecute?.('write_file', { path: 'inside.txt' }, { profileId: 'p1', cwd: root })
+    expect(ok).toBeUndefined()  // 根内且无其他策略 → no-config 不拦
   })
 })
 

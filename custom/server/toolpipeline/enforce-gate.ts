@@ -4,6 +4,11 @@
  * 通道早已就绪，缺的只是 overlay 侧把"只观测"升级为"按策略裁决"——本模块即该裁决。
  *
  * 三级策略链（优先级从高到低，先命中先裁决）：
+ *   0. 硬边界（先于身份链与审批桥，批单不可豁免；P0 Task 5 平台重写收口）：
+ *      - 未知 MCP 工具（mcp-unknown）：两层分类信号判不出 → 拒（修复出口=登记映射）；
+ *      - 沙箱路径（sandbox-path）：真实路径判定（cwd 解析+realpath canonicalize）；
+ *      - 沙箱终端（sandbox-terminal-unavailable）：roots 配置即沙箱模式，
+ *        terminal/code 无真实 OS 沙箱证明 → 拒（不用 Shell 文本检查代替）。
  *   1. 自治阶梯（autonomyladder，per profile / workflow:节点）：
  *      - insight 档：只放 read 类工具（只出洞察，人决策人执行）
  *      - assist 档：放行，但命中人工确认点或风险超 maxRiskTier → 拒
@@ -25,8 +30,6 @@
  * 先预警」裁定原样保留）。对齐微软 Agent Governance Toolkit「策略没加载时默认
  * allow 是假 governed」的批评：strict 是唯一能防住该静默失效的配置方式。
  */
-import { homedir } from 'os'
-import { join, resolve } from 'path'
 import { ladderForProfile, type AutonomyLadderEntry } from '../autonomyladder/autonomy-ladder'
 import { classifyApprovalRisk, type ApprovalRiskTier } from '../approval-inbox/risk-tier'
 import { browserVerdict } from '../browsersec/browser-security'
@@ -38,8 +41,23 @@ import { loadPolicySnapshot } from '../toolpolicy/policy-store'
 import { proactivityPolicyForProfile, type ProactivityPolicyLite } from '../proactivity/enforcement-policy'
 import { assess } from '../proactivity/proactivity-model'
 import { loadManagedSettings } from '../managedsettings/managed-settings'
+// P0 Task 5：执行契约单一事实源（未知 MCP 判定 + 真实路径沙箱 + OS 沙箱证明）。
+import {
+  isUnknownMcpTool,
+  mcpCategoryOf,
+  osSandboxProofActive,
+  parseEnvList,
+  sandboxPathViolation,
+  sandboxRootsConfigured,
+} from '../../platform/contracts/execution'
+import type { SandboxPathContext } from '../../platform/contracts/execution'
+// 旧导入面保持（P0-5 前消费者直接从本模块导入这些符号）
+export { isUnknownMcpTool, mcpCategoryOf, osSandboxProofActive, sandboxPathViolation, sandboxRootsConfigured }
+export type { SandboxPathContext }
 
-/** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。 */
+/** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。
+ *  context 字段面=上游 AgentToolContext 的子集（vendor ekko-agent tools/types.ts）；
+ *  cwd/workspaceRoot 为 P0 Task 5 增补——沙箱路径判定需要真实执行基准。 */
 interface PreExecuteVerdict { allow: false; error: string }
 interface StructuralToolHook {
   preExecute?: (name: string, input: Record<string, unknown>, context?: {
@@ -47,6 +65,8 @@ interface StructuralToolHook {
     userId?: string
     sessionId?: string
     runId?: string
+    cwd?: string
+    workspaceRoot?: string
   }) => Promise<PreExecuteVerdict | void> | PreExecuteVerdict | void
 }
 
@@ -74,8 +94,10 @@ export type EnforceRule =
   | 'proactivity-draft-cap'   // 两轴 L4 无契约上限起草（可走审批桥——人核即起草语义闭环）
   | 'proactivity-goal-drift'  // 两轴目标漂移防线（L4 目标 stale/未确认——须重新确认目标，非批单可豁免）
   | 'managed-deny'          // 组织托管配置的 extraDeniedTools 命中（D1 2026-11-05）
-  | 'sandbox-path'           // 显式路径超出沙箱根（P2-5）
+  | 'sandbox-path'           // 显式路径超出沙箱根（P2-5；P0-5 起真实路径判定）
   | 'sandbox-network'        // 浏览器 URL 被网络策略拒绝（P2-5）
+  | 'sandbox-terminal-unavailable' // 沙箱模式下 terminal/code 无真实 OS 沙箱证明（P0-5；不可审批放行）
+  | 'mcp-unknown'            // 未知 MCP 工具两层信号判不出类别（P0-5；不可审批放行）
   | 'budget-exceeded'        // 当日预算耗尽且策略动作为 block（残余项⑤）
 
 /** 策略层透传元数据：决策账/审批单据此回答「当时生效的是哪条策略」。 */
@@ -110,64 +132,11 @@ export function toolCategoryOf(tool: string): ToolCategory {
   return mcpCategoryOf(tool) ?? 'write'  // MCP 细分类（H3 剩余项③）；非 MCP 未知工具仍保守 write
 }
 
-// ---------- MCP 工具细分类（H3 剩余项③，2026-10-16 落地）----------
-// 背景：MCP 动态工具（运行时 mcp__{server}__{tool} 形态，agent 侧
-// tools/mcp_tool_schema.py MCP_TOOL_NAME_PREFIX="mcp__"）原一律按 write 保守
-// 归类——RA 档全拒，只读型连接器（检索/分析/文档）的查询工具被误拦在审批门外。
-// 两层信号（都不改保守默认——判不出即 write，与旧行为一致）：
-//   ① 连接器类别表：65 连接器目录（optional-mcps/manifest.yaml）里经人工判读
-//      标为只读面/检索面的连接器，其工具默认 read；
-//   ② 工具动词启发式：工具名末段的动词（get/list/search/read/query…）判类别，
-//      覆盖类别表未收的连接器。
-// 边界如实声明：manifest 无工具级元数据（只有连接器描述），细分类是启发式而非
-// 权威声明——执法门对 MCP 的最终防线仍是「超权即拒」的硬边界，本模块只修
-// 「只读工具被当写操作拦」这一侧的误伤。
-const MCP_PREFIX = 'mcp__'
-
-/** 解析 mcp__{server}__{tool}（tool 自身可含 __，取首段为 server、余为 tool）。 */
-function parseMcpName(tool: string): { server: string; tool: string } | null {
-  if (!tool.startsWith(MCP_PREFIX)) return null
-  const rest = tool.slice(MCP_PREFIX.length)
-  const i = rest.indexOf('__')
-  if (i <= 0) return null
-  return { server: rest.slice(0, i).toLowerCase(), tool: rest.slice(i + 2).toLowerCase() }
-}
-
-/** 连接器只读面目录（人工判读，2026-10-16）：检索/分析/文档/只读查询类。
- *  写操作型连接器（airtable/notion/github/asana…）不列——落入动词启发式或保守默认。 */
-const MCP_READ_CONNECTORS = new Set([
-  'algolia', 'amplitude', 'semanticscholar', 'arxiv', 'wikipedia', 'wikidata',
-  'semantica', 'exa', 'tavily', 'brave-search', 'serper', 'perplexity',
-  'github', 'gitlab', 'bitbucket',  // 代码宿主：读面远大于写面，动词层再分
-  'notion', 'confluence', 'googledocs', 'googledrive', 'dropbox',  // 文档：读为主
-])
-
-/** 工具名末段动词→类别（命中即返回；顺序无关，互斥设计）。 */
-const MCP_TOOL_VERBS: { re: RegExp; cat: ToolCategory }[] = [
-  // 动词首形态（list_issues/get_user…MCP 主流命名）；末段宾语不限
-  { re: /^(?:get|list|search|read|query|fetch|find|describe|show|view|browse|count|check|validate|inspect|export|download|lookup|retrieve|discover)(?:_|$)/, cat: 'read' },
-  { re: /^(?:create|update|delete|set|write|insert|upsert|remove|drop|patch|put|post|send|publish|upload|move|copy|rename|archive|restore|assign|comment|reply|add|new|edit|modify)(?:_|$)/, cat: 'write' },
-  { re: /^(?:run|execute|call|invoke|trigger|exec|eval|deploy|migrate|sync|import|batch|bulk|apply|submit)(?:_|$)/, cat: 'exec' },
-  // 动词末形态（user_get/record_list…少数连接器命名）
-  { re: /(?:^|_)(?:get|list|search|read|query|fetch|find|describe|show|view|count|check|lookup|retrieve)$/, cat: 'read' },
-  { re: /(?:^|_)(?:create|update|delete|set|write|insert|remove|drop|send|publish|upload|assign|comment|reply|add|edit|modify)$/, cat: 'write' },
-  { re: /(?:^|_)(?:run|execute|call|invoke|trigger|exec|eval|deploy|migrate|sync|import|batch|bulk|apply|submit)$/, cat: 'exec' },
-]
-
-/** MCP 工具细分类：判不出返回 null（调用方落保守 write，与旧行为一致）。 */
-export function mcpCategoryOf(tool: string): ToolCategory | null {
-  const parsed = parseMcpName(tool)
-  if (!parsed) return null
-  // ① 连接器类别（只读面目录）
-  if (MCP_READ_CONNECTORS.has(parsed.server)) {
-    // 连接器只读≠工具只读：动词层优先 refine（如 github__create_issue 仍是 write）
-    const verb = MCP_TOOL_VERBS.find((v) => v.re.test(parsed.tool))
-    return verb ? verb.cat : 'read'
-  }
-  // ② 动词启发式（覆盖类别表未收连接器）
-  const verb = MCP_TOOL_VERBS.find((v) => v.re.test(parsed.tool))
-  return verb ? verb.cat : null
-}
+// MCP 工具细分类（mcpCategoryOf/isUnknownMcpTool）已迁至平台执行契约
+// custom/platform/contracts/execution.ts（P0 Task 5 单一事实源）：
+//   - 连接器只读目录 + 动词启发式两层信号都判不出 → 未知（null），不再默认 read；
+//   - 未知 MCP 由 evaluateEnforcement 的 mcp-unknown 硬拒（先于身份链与审批桥）。
+// 本模块 re-export 保持旧导入面（见文件头 import 段）。
 
 // ---------- 风险分档（复用审批域单一事实源） ----------
 
@@ -277,6 +246,9 @@ export interface EnforceEnv {
   proactivityOn?: boolean
   /** 两轴策略注入（测试用；缺省读 proactivity/enforcement-policy，异常 fail-open）。 */
   proactivityOf?: (profileId?: string) => ProactivityPolicyLite | null
+  /** 真实执行上下文（P0-5）：沙箱路径判定的相对路径解析基准（上游 AgentToolContext
+   *  的 cwd/workspaceRoot，由执法钩子透传；测试直接注入）。 */
+  sandboxContext?: SandboxPathContext
 }
 
 /** 工具白名单匹配：精确名或 `prefix*`。 */
@@ -288,64 +260,20 @@ export function toolAllowedByList(tool: string, list: string[]): boolean {
   })
 }
 
-function envList(name: string): string[] {
-  return (process.env[name] ?? '')
-    .split(/[:,]/)
-    .map((v) => v.trim())
-    .filter(Boolean)
-}
-
-const FILE_PATH_TOOLS = new Set(['read_file', 'write_file', 'patch', 'view_image'])
-
-/** 显式路径提取：只取入参里明确给出的绝对/~路径；相对路径跳过（无法在裁决层确定工作区根）。 */
-function explicitPathsOf(tool: string, input: Record<string, unknown>): string[] {
-  if (tool === 'terminal_exec' || tool === 'code_exec') {
-    const v = input.cwd ?? input.workdir
-    return typeof v === 'string' && v ? [v] : []
-  }
-  if (FILE_PATH_TOOLS.has(tool)) {
-    const v = input.path ?? input.file_path
-    return typeof v === 'string' && v ? [v] : []
-  }
-  return []
-}
-
-function normalizeRoot(path: string): string {
-  const expanded = path.startsWith('~') ? join(homedir(), path.slice(1)) : path
-  return resolve(expanded)
-}
-
-/** 沙箱路径检查：返回越界路径或 null。只检查显式绝对/~路径。 */
-export function sandboxPathViolation(tool: string, input: Record<string, unknown>, rootsInput?: string[]): string | null {
-  const roots = (rootsInput ?? envList('HERMES_TOOL_SANDBOX_ROOTS')).map(normalizeRoot)
-  if (roots.length === 0) return null
-  // 相对路径基（D1 2026-11-05 补强）：exec 类取入参 cwd/workdir，写类缺基时跳过
-  // （write 的相对路径由 agent 运行时自身 cwd 决定，服务端不可知——不猜数）。
-  const cwdRaw = input.cwd ?? input.workdir
-  const hasCwd = toolCategoryOf(tool) === 'exec' && typeof cwdRaw === 'string' && cwdRaw.trim() !== ''
-  const cwdAbs = hasCwd ? normalizeRoot(cwdRaw as string) : null
-  for (const raw of explicitPathsOf(tool, input)) {
-    let target: string | null = null
-    if (raw.startsWith('/') || raw.startsWith('~')) {
-      target = normalizeRoot(raw)
-    } else if (cwdAbs && !raw.startsWith('.')) {
-      // exec 相对路径（如 rm -rf build/）：按其 cwd 解析后再判——相对路径不再是豁免通道
-      target = normalizeRoot(`${cwdAbs}/${raw}`)
-    }
-    if (!target) continue
-    const ok = roots.some((root) => target === root || target.startsWith(root.endsWith('/') ? root : `${root}/`))
-    if (!ok) return raw
-  }
-  return null
-}
+// 沙箱路径检查（sandboxPathViolation）已迁至平台执行契约 execution.ts（P0 Task 5：
+// 相对路径按真实 cwd/workspaceRoot 解析、realpathSync.native canonicalize、symlink
+// 逃逸/不可规范化 fail-closed）。本模块 re-export 保持旧导入面。
+// D1 2026-11-05 的「exec 相对路径按 cwd 解析后再判」补强由契约的 context 解析语义
+// 覆盖并收紧（真实执行 cwd/workspaceRoot 基准 + canonical 判定取代入参 cwd 猜测），
+// 不保留并行实现——路径判定单一事实源在 contracts/execution.ts。
 
 const URL_KEYS = ['url', 'href', 'link', 'target_url', 'navigate_to']
 
 /** 浏览器 URL 检查：配置了 allow/deny 才生效；denylist 优先（browsersec 语义）。 */
 export function sandboxNetworkViolation(tool: string, input: Record<string, unknown>): string | null {
   if (!tool.startsWith('browser_') && tool !== 'delegate_task') return null
-  const allow = envList('HERMES_BROWSER_ALLOWLIST')
-  const deny = envList('HERMES_BROWSER_DENYLIST')
+  const allow = parseEnvList('HERMES_BROWSER_ALLOWLIST')
+  const deny = parseEnvList('HERMES_BROWSER_DENYLIST')
   if (allow.length === 0 && deny.length === 0) return null
   let url: string | null = null
   for (const key of URL_KEYS) {
@@ -375,8 +303,9 @@ export function evaluateEnforcement(
   const masterOn = env.masterOn ?? masterSwitchOn()
   if (!masterOn) return { enforcing: false, rule: 'master-off' }
 
-  // 策略链 -1（D1 2026-11-05）：组织托管 extraDeniedTools——优先于一切（含部署侧策略文件），
-  // 组织级禁用面不可被用户策略放宽（Claude Code managed-settings 同语义）。
+  // 策略链 -1（D1 2026-11-05）：组织托管 extraDeniedTools——优先于一切（含 P0-5 硬边界
+  // 与部署侧策略文件），组织级禁用面不可被用户策略放宽（Claude Code managed-settings
+  // 同语义）。
   const managed = loadManagedSettings()
   if (managed?.extraDeniedTools?.length) {
     const hit = managed.extraDeniedTools.some((p) => (p.endsWith('*') ? tool.startsWith(p.slice(0, -1)) : p === tool))
@@ -385,6 +314,40 @@ export function evaluateEnforcement(
         enforcing: true, allow: false, rule: 'managed-deny',
         error: `工具 ${tool} 被组织托管配置禁用（${managed._source}）——用户/项目级配置不可放宽`,
       }
+    }
+  }
+
+  // 硬边界（P0 Task 5，先于身份链与审批桥——身份 allowlist 与批单都不能豁免）：
+  // 未知 MCP 工具判不出类别=平台未评估的风险面。修复出口是补动词映射/登记连接器，
+  // 不是审批；已知动词（read/write/exec）不受影响。
+  if (isUnknownMcpTool(tool)) {
+    return {
+      enforcing: true, allow: false, rule: 'mcp-unknown',
+      error: `未知 MCP 工具 ${tool}：连接器只读目录与动词启发式均判不出类别，平台无法评估其风险面——请为该连接器登记动词映射或改用已治理工具（本拒绝不可经审批放行）`,
+    }
+  }
+
+  // 沙箱硬边界（P2-5，opt-in）：未配置根 = 不检查，不假装有沙箱。P0-5 起判定走
+  // 真实路径（相对路径按上下文 cwd/workspaceRoot 解析、realpath canonicalize）。
+  const pathViolation = sandboxPathViolation(tool, input, undefined, env.sandboxContext)
+  if (pathViolation) {
+    return {
+      enforcing: true, allow: false, rule: 'sandbox-path',
+      error: `路径 ${pathViolation} 超出沙箱根或沙箱根不可规范化（HERMES_TOOL_SANDBOX_ROOTS）——请改到允许目录或修正沙箱根配置`,
+    }
+  }
+
+  // 硬边界（P0 Task 5）：沙箱模式（roots 已配置）下 terminal/code 本质上能触达任意
+  // 路径（cd/重定向），路径白名单管不住 shell——没有真实 OS 沙箱证明即拒，不用
+  // Shell 文本检查代替（计划书全局约束）。证明口径见 contracts/execution.ts。
+  if (
+    (tool === 'terminal_exec' || tool === 'code_exec') &&
+    sandboxRootsConfigured() &&
+    !osSandboxProofActive()
+  ) {
+    return {
+      enforcing: true, allow: false, rule: 'sandbox-terminal-unavailable',
+      error: `工具 ${tool} 在沙箱模式（HERMES_TOOL_SANDBOX_ROOTS 已配置）下缺少真实 OS 沙箱证明（HERMES_TOOL_OS_SANDBOX_PROOF=container|vm|seatbelt）——路径白名单管不住 shell，请将 agent 运行时置于真实 OS 级隔离或声明证明（本拒绝不可经审批放行）`,
     }
   }
 
@@ -407,14 +370,6 @@ export function evaluateEnforcement(
     }
   }
 
-  // 沙箱硬边界（P2-5，opt-in）：未配置根/域名 = 不检查，不假装有沙箱。
-  const pathViolation = sandboxPathViolation(tool, input)
-  if (pathViolation) {
-    return {
-      enforcing: true, allow: false, rule: 'sandbox-path',
-      error: `显式路径 ${pathViolation} 超出沙箱根（HERMES_TOOL_SANDBOX_ROOTS）——请改到允许目录`,
-    }
-  }
   const networkViolation = sandboxNetworkViolation(tool, input)
   if (networkViolation) {
     return {
@@ -717,6 +672,7 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
   return {
     async preExecute(name: string, input: Record<string, unknown>, context?: {
       profileId?: string; userId?: string; sessionId?: string; runId?: string
+      cwd?: string; workspaceRoot?: string
     }) {
       let verdict: EnforceVerdict
       let bridgeFacts: Awaited<ReturnType<typeof approvalBridgeFacts>> | null = null
@@ -735,6 +691,8 @@ export function ekkoEnforceGateHook(): StructuralToolHook {
           identityOf: () => identity,
           budgetBlocked,
           strictOn,
+          // P0-5：透传真实执行上下文（上游 AgentToolContext 已携带，registry 直传到钩子）
+          sandboxContext: context ? { cwd: context.cwd, workspaceRoot: context.workspaceRoot } : undefined,
         })
         // 审批桥只对确认类裁决采事实（避免给硬边界/放行类挂单）
         if (verdict.enforcing && verdict.allow === false && APPROVAL_CLASS_RULES.has(verdict.rule)) {

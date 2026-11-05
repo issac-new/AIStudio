@@ -186,6 +186,11 @@ interface AuditContext {
   sessionId?: string
   profileId?: string
   runId?: string
+  // P0 Task 5：真实执行上下文（上游 AgentToolContext 携带，registry 直传到每个钩子）。
+  // 审计面只透传不落账（本层无消费）；同链的执法钩子（enforce-gate）据此解析
+  // 沙箱判定的相对路径基准。
+  cwd?: string
+  workspaceRoot?: string
 }
 
 interface PendingCall {

@@ -5,7 +5,8 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-  evaluateEnforcement, ekkoEnforceGateHook, toolCategoryOf, riskOfCall, approvalPointHit,
+  APPROVAL_CLASS_RULES, applyApprovalBridge, evaluateEnforcement, ekkoEnforceGateHook,
+  isUnknownMcpTool, mcpCategoryOf, toolCategoryOf, riskOfCall, approvalPointHit,
 } from '../enforce-gate'
 import { upsertLadder, _useLadderDirForTests, _resetLadderDirForTests, type AutonomyLadderEntry } from '../../autonomyladder/autonomy-ladder'
 import { queryGovEvents, _useGovEventDirForTests, _resetGovEventDirForTests } from '../../govbus/event-log'
@@ -25,6 +26,9 @@ beforeEach(() => {
   _useGovEventDirForTests(govDir)
   delete process.env.HERMES_TOOL_ENFORCE
   delete process.env.HERMES_TOOL_ENFORCE_MODE
+  // P0-5：沙箱/OS 证明 env 只在本文件沙箱用例内显式设置，防跨文件污染
+  delete process.env.HERMES_TOOL_SANDBOX_ROOTS
+  delete process.env.HERMES_TOOL_OS_SANDBOX_PROOF
 })
 
 afterAll(() => {
@@ -32,6 +36,8 @@ afterAll(() => {
   _resetGovEventDirForTests()
   delete process.env.HERMES_TOOL_ENFORCE
   delete process.env.HERMES_TOOL_ENFORCE_MODE
+  delete process.env.HERMES_TOOL_SANDBOX_ROOTS
+  delete process.env.HERMES_TOOL_OS_SANDBOX_PROOF
   rmSync(ladderDir, { recursive: true, force: true })
   rmSync(govDir, { recursive: true, force: true })
 })
@@ -74,6 +80,53 @@ describe('工具类别与风险分档', () => {
     expect(approvalPointHit(fakeLadder, 'terminal_exec', { command: 'sh 生产部署.sh' })).toBe('生产部署')
     expect(approvalPointHit(fakeLadder, 'terminal_exec', { command: 'git push origin main' })).toBe('(高危调用)')
     expect(approvalPointHit(fakeLadder, 'terminal_exec', { command: 'ls' })).toBeNull()
+  })
+})
+
+describe('未知 MCP 硬拒（P0 Task 5）', () => {
+  it('只读连接器内未知动词不再默认 read：判不出即 null（未知）', () => {
+    // merge 不在任何动词表内——连接器目录只是人工判读的启发式，不能给未知动词发只读通行证
+    expect(mcpCategoryOf('mcp__github__merge_pull_request')).toBeNull()
+    // 已知动词分类不回归
+    expect(mcpCategoryOf('mcp__github__list_issues')).toBe('read')
+    expect(mcpCategoryOf('mcp__github__create_issue')).toBe('write')
+    expect(mcpCategoryOf('mcp__jenkins__run_build')).toBe('exec')
+  })
+
+  it('isUnknownMcpTool：mcp__ 前缀且两层信号都判不出；已知动词与非 MCP 名不算', () => {
+    expect(isUnknownMcpTool('mcp__weird__do_something')).toBe(true)
+    expect(isUnknownMcpTool('mcp__github__merge_pull_request')).toBe(true)
+    expect(isUnknownMcpTool('mcp__github__list_issues')).toBe(false)
+    expect(isUnknownMcpTool('mcp__airtable__run_script')).toBe(false)  // exec 动词命中
+    expect(isUnknownMcpTool('read_file')).toBe(false)                  // 非 MCP 工具
+    expect(isUnknownMcpTool('mcp_some_tool')).toBe(false)              // 非 mcp__ 前缀，仍走保守 write
+  })
+
+  it('执法门硬拒未知 MCP：bypass 档也拦，规则 mcp-unknown；已知 read 工具同档不受影响', () => {
+    const bypassEnv = { masterOn: true, globalMode: 'auto' as const, ladderOf }
+    // auto 档本会放行 write 类——未知 MCP 仍拦（硬边界先于档位链）
+    expect(evaluateEnforcement('mcp__weird__do_something', {}, 'p1', bypassEnv))
+      .toMatchObject({ enforcing: true, allow: false, rule: 'mcp-unknown' })
+    // 对照：已知 read 工具同档正常放行（不误伤合法连接器工具）
+    expect(evaluateEnforcement('mcp__github__list_issues', {}, 'p1', bypassEnv))
+      .toMatchObject({ enforcing: true, allow: true, rule: 'mode-pass' })
+  })
+
+  it('身份 allowlist 显式覆盖也拦不住未知 MCP（mcp-unknown 先于身份链）', () => {
+    const v = evaluateEnforcement('mcp__weird__do_something', {}, 'p1', {
+      masterOn: true,
+      userId: 'alice',
+      identityOf: () => ({ id: 'aid-9', name: 'alice', toolAllowlist: ['mcp__weird__do_something'] }),
+      ladderOf,
+    })
+    expect(v).toMatchObject({ enforcing: true, allow: false, rule: 'mcp-unknown' })
+  })
+
+  it('mcp-unknown 不在审批类规则集，审批桥不放行（不可经普通审批放行）', () => {
+    expect(APPROVAL_CLASS_RULES.has('mcp-unknown')).toBe(false)
+    const deny = evaluateEnforcement('mcp__weird__do_something', {}, 'p1', { masterOn: true, globalMode: 'auto', ladderOf })
+    const bridged = applyApprovalBridge(deny, { approved: true })
+    expect(bridged).toMatchObject({ allow: false, rule: 'mcp-unknown' })
   })
 })
 
