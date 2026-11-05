@@ -127,7 +127,7 @@ describe('项目/时间线组织混排 zcode CLI 会话', () => {
 
 describe('源码守门：组织取 zcode 信息', () => {
   it('侧栏接线：cliFiltered 混排 + CLI-only 项目成组 + 分组模式独立段', () => {
-    const src = readFileSync(resolve(__dirname, '../views/IdeTaskSidebar.vue'), 'utf8')
+    const src = readFileSync(resolve(__dirname, '../views/IdeTaskSidebar.vue'), 'utf8') + '\n' + readFileSync(resolve(__dirname, '../views/useTaskSidebar.ts'), 'utf8')
     expect(src).toContain('cliProjectOf')
     expect(src).toContain('只有 CLI 会话的项目（IDE 无会话）也成组')
     expect(src).toContain("effectiveOrganizeMode === 'grouped'")

@@ -135,7 +135,7 @@ describe('IdeCliSessions — 视图/搜索跟随（2026-10-19 视图语义修正
 
 describe('侧栏视图语义守门（已完成→更早）', () => {
   it('视图文案为本地 VIEW_TEXT（更早，非已完成）且 title 写明口径', () => {
-    const src = readFileSync(resolve(__dirname, '../views/IdeTaskSidebar.vue'), 'utf8')
+    const src = readFileSync(resolve(__dirname, '../views/IdeTaskSidebar.vue'), 'utf8') + '\n' + readFileSync(resolve(__dirname, '../views/useTaskSidebar.ts'), 'utf8')
     expect(src).toContain('VIEW_TEXT')
     expect(src).toContain("done: { zh: '更早'")
     expect(src).toContain('超过 24 小时未活跃的会话（非已完成）')
@@ -144,7 +144,7 @@ describe('侧栏视图语义守门（已完成→更早）', () => {
   })
 
   it('工作空间视图计数口径=会话数（注释锚）', () => {
-    const src = readFileSync(resolve(__dirname, '../views/IdeTaskSidebar.vue'), 'utf8')
+    const src = readFileSync(resolve(__dirname, '../views/IdeTaskSidebar.vue'), 'utf8') + '\n' + readFileSync(resolve(__dirname, '../views/useTaskSidebar.ts'), 'utf8')
     expect(src).toContain('workspace: all.length')
   })
 })
