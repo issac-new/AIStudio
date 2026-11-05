@@ -170,25 +170,26 @@ export function pushReeval(item: ReevalItem): ReevalItem {
  * 处置重评项。dismissed 必须带理由——无理由删除等于把闭环重新切断
  * （文章「让失败可见」的直接落地）。
  *
- * 返回形状用可选字段而不是判别联合：本仓 tsc 配置（strict false）下联合窄化
- * 在调用点不稳定，可选字段更省事且不丢信息。
+ * 返回形状用「成功给 item / 失败给 problems」而不是 ok 布尔：
+ * 本仓 tsc 配置（strict false）下判别联合窄化在调用点不稳定；同时 K19 棘轮不允许
+ * 新增 ok 字面量（失败体统一走 lib/http 的 fail），故此处不产出 ok 字段。
  */
 export function resolveReeval(
   id: string,
   state: 'done' | 'dismissed',
   resolution: { by: string; note: string; now?: number },
-): { ok: boolean; item?: ReevalItem; problems?: string[] } {
+): { item?: ReevalItem; problems?: string[] } {
   if (state === 'dismissed' && (!resolution.note || !resolution.note.trim())) {
-    return { ok: false, problems: ['dismissed 必带理由——无理由关闭等于把闭环重新切断'] }
+    return { problems: ['dismissed 必带理由——无理由关闭等于把闭环重新切断'] }
   }
   const store = loadReeval()
   const item = store.items.find((i) => i.id === id)
-  if (!item) return { ok: false, problems: [`重评项不存在：${id}`] }
-  if (item.state !== 'queued') return { ok: false, problems: [`重评项已处置（${item.state}），不可重复处置`] }
+  if (!item) return { problems: [`重评项不存在：${id}`] }
+  if (item.state !== 'queued') return { problems: [`重评项已处置（${item.state}），不可重复处置`] }
   item.state = state
   item.resolution = { by: resolution.by, at: resolution.now ?? Date.now(), note: resolution.note ?? '' }
   saveReeval(store)
-  return { ok: true, item }
+  return { item }
 }
 
 /** 测试隔离。 */

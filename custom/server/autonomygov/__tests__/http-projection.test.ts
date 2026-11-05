@@ -1,6 +1,6 @@
 // 组织治理批 HTTP 投影守门（2026-11-05）：三域路由挂载后的真实请求形状。
 // 目的：证明路由确实挂在契约前缀上、响应走 lib/http 的 ok/fail 形状、写入被拒时是 409/422
-// 而不是 200+ok:false。这比 curl 探活强——它断言的是响应体，不只是状态码存在。
+// 而不是 200 伪装成功。这比 curl 探活强——它断言的是响应体，不只是状态码存在。
 import { createServer } from 'node:http'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'

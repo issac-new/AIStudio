@@ -232,9 +232,9 @@ premiseLogRoutes.post('/reeval/:id/resolve', (ctx) => {
     by: actorOf(ctx),
     note: typeof body.note === 'string' ? body.note : '',
   })
-  if (result.ok) {
-    ok(ctx, { item: result.item })
+  if (result.problems) {
+    fail(ctx, 409, '处置未获准', { code: 'resolve-rejected', problems: result.problems })
     return
   }
-  fail(ctx, 409, '处置未获准', { code: 'resolve-rejected', problems: result.problems })
+  ok(ctx, { item: result.item })
 })

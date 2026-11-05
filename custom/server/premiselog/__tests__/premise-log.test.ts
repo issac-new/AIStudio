@@ -204,14 +204,14 @@ describe('存储链路：新建 → 推翻 → 重评 → 处置', () => {
   it('dismissed 无理由被拒（闭环不可静默切断）', () => {
     const item = { id: 're-1', premiseId: 'p', anchors: [], reason: 'r', queuedAt: NOW, state: 'queued' as const }
     pushReeval(item)
-    expect(resolveReeval('re-1', 'dismissed', { by: 'x', note: '  ' }).ok).toBe(false)
-    expect(resolveReeval('re-1', 'dismissed', { by: 'x', note: '该影响面已随架构重构消失' }).ok).toBe(true)
+    expect(resolveReeval('re-1', 'dismissed', { by: 'x', note: '  ' }).problems).toBeTruthy()
+    expect(resolveReeval('re-1', 'dismissed', { by: 'x', note: '该影响面已随架构重构消失' }).item).toBeTruthy()
   })
 
   it('done 不需要理由；重复处置被拒', () => {
     pushReeval({ id: 're-2', premiseId: 'p', anchors: [], reason: 'r', queuedAt: NOW, state: 'queued' })
-    expect(resolveReeval('re-2', 'done', { by: 'x', note: '' }).ok).toBe(true)
-    expect(resolveReeval('re-2', 'done', { by: 'x', note: '' }).ok).toBe(false)
+    expect(resolveReeval('re-2', 'done', { by: 'x', note: '' }).item).toBeTruthy()
+    expect(resolveReeval('re-2', 'done', { by: 'x', note: '' }).problems).toBeTruthy()
   })
 
   it('按状态过滤列表', () => {
