@@ -65,13 +65,44 @@ except json.JSONDecodeError:
     print('[tri-disp] 治理指标快照不可读——跳过归桶（不盲写）')
     sys.exit(0)
 
-# 幂等基底：同键已有任一三态前缀 DISP 行则跳过（重放不重复追加）
-disp_seen = set()
+# 幂等基底（P2 Task 2 改「末次 DISP」口径）：同键取**末次适用** DISP 行（适用优先级
+# exact＞generic＞single，所选类别内取行序最后——与治理服务 run-metrics.pairing 同构）。
+# 末次适用行已是三态前缀 → 跳过；末次适用行非三态（如原始人工行）→ 仍须追加（旧口径
+# 「存在任一三态行即跳过」会在人工后续回写非三态行后误判已归桶）。
+GENERIC_SUBJECTS = ('director', 'monitor', 'harness', '导演', '监控')
+last_exact = {}    # key -> disp 文本（行序覆盖=末次）
+last_exact_type = {}  # type -> (key, disp)（single 判定用：该 type 末条 exact）
+last_generic = {}  # type -> disp
 for l in lines:
-    if l.startswith('DISP|'):
-        p = l.split('|', 3)
-        if len(p) > 3 and p[3].startswith(TRI):
-            disp_seen.add(f'{p[1]}·{p[2]}')
+    if not l.startswith('DISP|'):
+        continue
+    p = l.split('|', 3)
+    if len(p) <= 3 or not p[3]:
+        continue
+    t, s, d = p[1], p[2], p[3]
+    if s in GENERIC_SUBJECTS:
+        last_generic[t] = d
+    else:
+        last_exact[f'{t}·{s}'] = d
+        last_exact_type[t] = (f'{t}·{s}', d)
+disp_seen = set()
+_keys_of_type = {}
+for row in pairing:
+    _t = row['key'].split('·', 1)[0]
+    _keys_of_type[_t] = _keys_of_type.get(_t, 0) + 1
+for row in pairing:
+    k = row['key']
+    t = k.split('·', 1)[0]
+    # 末次适用行选择（与 run-metrics.pairing 同构：exact＞generic＞single[仅同类型唯一键]）
+    d = None
+    if k in last_exact:
+        d = last_exact[k]
+    elif t in last_generic:
+        d = last_generic[t]
+    elif _keys_of_type.get(t, 0) == 1 and t in last_exact_type:
+        d = last_exact_type[t][1]
+    if d is not None and d.startswith(TRI):
+        disp_seen.add(k)
 
 appendix = []
 n_fixed = n_ok = 0

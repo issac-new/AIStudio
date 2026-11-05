@@ -618,6 +618,19 @@ mx_sync_ledger_link() {
       */runs/*/state.env) [ -f "$cur" ] && target="$(dirname "$cur")/evidence/compensation-ledger.tsv" ;;
     esac
   fi
+  # P2 Task 2 clearance 投影回落：轮台账已被清场归档（runs/ 删）时不新建空表头——
+  # 先看 var/clearance/<RUN>/ 投影（mx-clean 清场前原子写；未闭环债务跨清场存活，
+  # 端点继续可读可 resolve）。轮名解析：RUN_ID → current-state.env 软链 → current 指针。
+  if [ -n "$target" ] && [ ! -f "$target" ]; then
+    _cl_run="${RUN_ID:-}"
+    if [ -z "$_cl_run" ]; then
+      _cl_cur="$(cat "$SIM_ROOT/var/clearance/current" 2>/dev/null || true)"
+      [ -n "$_cl_cur" ] && _cl_run="$_cl_cur"
+    fi
+    if [ -n "$_cl_run" ] && [ -f "$SIM_ROOT/var/clearance/$_cl_run/compensation-ledger.tsv" ]; then
+      target="$SIM_ROOT/var/clearance/$_cl_run/compensation-ledger.tsv"
+    fi
+  fi
   if [ -n "$target" ]; then
     if [ ! -f "$target" ]; then
       mkdir -p "$(dirname "$target")" 2>/dev/null || true

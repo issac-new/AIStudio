@@ -193,10 +193,15 @@ ck "㉙ R18 交付灯帧与 skill 降级登记" "grep -q 'deliver --step 23' '$H
 #    方案正本若仍写 29/31 属口径漂移。
 ck "㉚ 阶段页签 37（reviewGov/improve/proactivity/posture/secAudit/trust）" "grep -q \"key: 'reviewGov'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'improve'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'proactivity'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'posture'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'secAudit'\" '$OV/custom/client/ia2/stage-tabs.ts' && grep -q \"key: 'trust'\" '$OV/custom/client/ia2/stage-tabs.ts' && ! grep -Eq '(29|31) 个页签' '$OV/docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md'" "阶段页签缺治理签，或方案正本仍写 29/31 签"
 
-# ㉛ 烧机测试制度（2026-11-02 机制治理批·方案 D）：触及机制地图任一行的改动（恢复/
-#    催办/闸门等待/熔断）合入前必须跑一次短场景真环境验证；整轮 26 步当试验场的代价
-#    是 4 小时/次，短场景约 40 分钟。此项只查「工具在位且自检可跑」——收据核验在报告面。
-ck "㉛ 烧机测试在位（mx-burn-test.sh 自检）" "[ -x '$HERE/mux/mx-burn-test.sh' ] && bash '$HERE/mux/mx-burn-test.sh' --dry-run >/dev/null 2>&1" "机制类改动缺烧机通道：恢复/催办/闸门等待类补丁合入前须能跑 mx-burn-test.sh（--dry-run 至少要通过前置自检）"
+# ㉛ 烧机收据 digest 绑定（P2 Task 2 收紧：2026-11-02 机制治理批·方案 D 起，但旧判据
+#     只查「工具在位且自检可跑」——机制改了、旧 pass 收据照样认账）。新判据三件：
+#     ① 工具自检（burn 脚本语法+收据件可编译+机制清单在位）；
+#     ② 当前 digest 的最新收据 status=pass（旧 digest 的 pass 不认账、后 fail 覆盖前
+#       pass、坏 JSON fail-closed）；
+#     ③ coverage 达 archgate（短场景 triage 不算覆盖；dry-run 不落件天然被②拦）。
+ck "㉛ 烧机收据（当前 digest 最新 pass+coverage 达 archgate）" \
+  "bash -n '$HERE/mux/mx-burn-test.sh' && python3 -I -m py_compile '$HERE/mux/mx-mechanism-receipt.py' && python3 -I '$HERE/mux/mx-mechanism-receipt.py' selfcheck --root '$HERE/..' && python3 -I '$HERE/mux/mx-mechanism-receipt.py' verify-latest --root '$HERE/..' --receipts '$HERE/../.qgate/burn/burn-receipts.jsonl'" \
+  "当前机制 digest 无 pass 收据：bash mux/mx-burn-test.sh 真跑一次（smoke..archgate 短场景，约 40 分钟）——机制文件改动后旧 pass 不认账；后 fail 覆盖前 pass 须修复重烧；dry-run 不落件"
 
 # ㉜ runtime-verify 探针（run26 N10 接线 2026-11-03，fail-soft 不计数）：18b 目标运行时
 #    验证面的可用性预告——微信开发者工具+automator SDK 缺席只黄字告警不阻断开跑

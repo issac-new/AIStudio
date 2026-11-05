@@ -15,6 +15,7 @@
 #   bash mx-compensation-ledger.sh --run <RUN_ID> waive <id> <reason>
 #   bash mx-compensation-ledger.sh --run <RUN_ID> check-clearance   # 开跑前清偿门：有 open 即非零
 #   bash mx-compensation-ledger.sh --run <RUN_ID> check-issue-clearance  # 开跑前延后清账：DISP 延后桶非零即非零
+#   bash mx-compensation-ledger.sh --run <RUN_ID> append-disp <type> <subject> <text>  # 人工回写处置终态（轮已清场→写 clearance 投影）
 #
 # 台账文件：$SIM_ROOT/runs/<RUN_ID>/evidence/compensation-ledger.tsv
 # 列：id/ts/type/defect/detail/status/resolution（tab 分隔；detail 内 tab 净化为空格）
@@ -45,6 +46,7 @@ _mx_led_run_id() {
   if [ -n "$st" ] && [ -f "$st" ]; then basename "$(dirname "$st")"; return; fi
   local root ln
   root="$(_mx_led_sim_root)"
+  # 软链可悬空（mx-clean 归档后 runs/ 已删）——readlink 仍可解析轮名（投影回落入口）
   ln=$(readlink "$root/var/current-state.env" 2>/dev/null || true)
   # 锚必须指向 runs/<id>/state.env 才算轮次（run27 实锤：var/current-state.env 指向
   # SIM 根 state.env 时旧逻辑取到 basename=sim 根目录名 → runs/ncwk-sim-mux 不存在 →
@@ -61,11 +63,24 @@ _mx_led_run_id() {
   if [ -n "$latest" ]; then basename "$(dirname "$(dirname "$latest")")"; return; fi
   echo ""
 }
+# 台账路径（P2 Task 2 clearance 投影）：轮目录在→轮台账；轮已清场→回落
+# var/clearance/<RUN>/compensation-ledger.tsv（mx-clean 清场前原子写的投影——
+# 未闭环债务跨清场存活，resolve/append-disp 作用于投影）。
 _mx_led_file() {
-  local rid root
+  local rid root live proj
   rid="$(_mx_led_run_id)"; root="$(_mx_led_sim_root)"
   [ -n "$rid" ] || return 1
-  echo "$root/runs/$rid/evidence/compensation-ledger.tsv"
+  live="$root/runs/$rid/evidence/compensation-ledger.tsv"
+  if [ -f "$live" ]; then echo "$live"; return 0; fi
+  proj="$root/var/clearance/$rid/compensation-ledger.tsv"
+  if [ -f "$proj" ]; then echo "$proj"; return 0; fi
+  echo "$live"  # 两者皆无：返回轮位（compensate 首笔会建；check 走「无台账」容错）
+}
+# 台账所在目录（append-disp 落 issues.log 的位置：轮在→evidence；已清→投影目录）
+_mx_led_dir() {
+  local f
+  f="$(_mx_led_file 2>/dev/null)" || return 1
+  dirname "$f"
 }
 
 # 类型→缺陷映射（单一事实源；catalog 命令同源打印）
@@ -169,6 +184,17 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       done
       echo "已豁免 $N 笔（waive，理由：${NOTE}）"
       ;;
+    append-disp)
+      # 人工回写问题单处置终态（P2 Task 2 显式命令）：DISP|<type>|<subject>|<text>
+      # 追加到台账同目录 issues.log——轮在→轮 evidence；轮已清场→clearance 投影
+      # （与 check-issue-clearance 的「末次 DISP」口径闭环：新行即末次=回写终态）。
+      TYPE="${1:-}"; SUBJ="${2:-}"; shift 2 2>/dev/null || true; TEXT="${*:-}"
+      [ -n "$TYPE" ] && [ -n "$SUBJ" ] && [ -n "$TEXT" ] || { echo "usage: append-disp <type> <subject> <text>" >&2; exit 2; }
+      IL_DIR="$(_mx_led_dir 2>/dev/null)" || { echo "SIM_ROOT/RUN_ID 未解析（无 --run 且无锚定轮）" >&2; exit 2; }
+      TEXT="$(printf '%s' "$TEXT" | tr '\t\n' '  ')"
+      printf 'DISP|%s|%s|%s\n' "$TYPE" "$SUBJ" "$TEXT" >> "$IL_DIR/issues.log"
+      echo "DISP 追加 ✓（$IL_DIR/issues.log：$TYPE·$SUBJ）"
+      ;;
     check-clearance)
       # 代偿清偿门：开跑前置检查用。有 open 笔 → 非零退出并逐笔列出。
       if [ ! -f "$F" ]; then
@@ -192,6 +218,8 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       # 原实现把历史任一延后行计入，回写终态后仍恒红）。末次 DISP 首词=延后 的
       # 唯一键非零 → 非零退出并列键。纪律 56「prelaunch 断言上轮结构性延后 key 消失」
       # 的机械执法面——此前只有代偿 open 笔被 check-clearance 拦，结构性延后单可带病开跑。
+      # P2 Task 2：IL 路径随 _mx_led_file 回落（轮已清场→var/clearance/<RUN>/issues.log
+      # 投影，未闭环债务跨清场存活）。
       IL="$(dirname "$F")/issues.log"
       if [ ! -f "$IL" ]; then echo "延后清账 ✓（$(_mx_led_run_id) 无 issues.log）"; exit 0; fi
       KEYS=$(awk -F'|' '$1=="DISP" { k=$2"·"$3; last[k]=$4 } END { for (k in last) if (last[k] ~ /^延后/) print k }' "$IL" | sort)

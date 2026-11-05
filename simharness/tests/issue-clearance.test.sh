@@ -80,4 +80,73 @@ else
   echo "FAIL ④ 末次 DISP 口径未按预期（rc=$RC4）："; printf '%s\n' "$OUT4"; fails=$((fails+1))
 fi
 
+# ── 场景⑤：跨清场存活（P2 Task 2 clearance 投影）──
+# 清场归档删 runs/<RUN>/，但未闭环债务必须跨清场存活：mx-clean 清场前原子写
+# var/clearance/<RUN>/{compensation-ledger.tsv,issues.log}+current；台账/清账检查
+# 在轮目录已清时回落投影；append-disp/resolve 作用于投影。
+R5_RUN="20261105-v8-runP"
+mkdir -p "$SR/var/clearance/$R5_RUN"
+printf 'id\tts\ttype\tdefect\tdetail\tstatus\tresolution\n' > "$SR/var/clearance/$R5_RUN/compensation-ledger.tsv"
+printf 'c1\t2026-11-05 10:00:00\tnudge\tPR-3\t替主管轻推\topen\t\n' >> "$SR/var/clearance/$R5_RUN/compensation-ledger.tsv"
+cat > "$SR/var/clearance/$R5_RUN/issues.log" <<'LOG5'
+ISSUE|g3-local-gate-missing|DEV-PAY|分支缺 testlog
+DISP|g3-local-gate-missing|DEV-PAY|延后（结构性缺陷类别禁自动观察归桶——须下轮开跑前人工处置并带锚点回写）
+LOG5
+ln -sfn "$SR/runs/$R5_RUN/state.env" "$SR/var/current-state.env"  # 软链悬空（runs/ 已清）——锚定轮名仍可解析
+OUT5a="$(AIPAY_SIM_ROOT="$SR" bash "$HERE/mux/mx-compensation-ledger.sh" check-clearance 2>&1)"; RC5a=$?
+OUT5b="$(AIPAY_SIM_ROOT="$SR" bash "$HERE/mux/mx-compensation-ledger.sh" check-issue-clearance 2>&1)"; RC5b=$?
+if [ "$RC5a" -ne 0 ] && printf '%s' "$OUT5a" | grep -q 'c1' \
+   && [ "$RC5b" -ne 0 ] && printf '%s' "$OUT5b" | grep -q 'g3-local-gate-missing·DEV-PAY'; then
+  echo "PASS ⑤ 轮已清场→回落 clearance 投影：open 代偿与延后单仍拦"
+else
+  echo "FAIL ⑤ 投影回落未按预期（clearance rc=$RC5a issue rc=${RC5b}）："; printf '%s\n%s\n' "$OUT5a" "$OUT5b"; fails=$((fails+1))
+fi
+# append-disp 作用于投影：回写终态（带锚）→ 延后桶清零
+AIPAY_SIM_ROOT="$SR" bash "$HERE/mux/mx-compensation-ledger.sh" append-disp g3-local-gate-missing DEV-PAY '已修（testlog 补齐锚 main@abc1234）' >/dev/null 2>&1
+OUT5c="$(AIPAY_SIM_ROOT="$SR" bash "$HERE/mux/mx-compensation-ledger.sh" check-issue-clearance 2>&1)"; RC5c=$?
+if [ "$RC5c" -eq 0 ]; then
+  echo "PASS ⑤b append-disp 回写投影终态→延后清零放行"
+else
+  echo "FAIL ⑤b 投影回写未生效（rc=$RC5c）："; printf '%s\n' "$OUT5c"; fails=$((fails+1))
+fi
+# resolve 作用于投影：open 代偿清偿
+AIPAY_SIM_ROOT="$SR" bash "$HERE/mux/mx-compensation-ledger.sh" resolve c1 'PR-3 已合入（main@abc1234）' >/dev/null 2>&1
+OUT5d="$(AIPAY_SIM_ROOT="$SR" bash "$HERE/mux/mx-compensation-ledger.sh" check-clearance 2>&1)"; RC5d=$?
+if [ "$RC5d" -eq 0 ]; then
+  echo "PASS ⑤c resolve 作用于投影→清偿门放行"
+else
+  echo "FAIL ⑤c 投影 resolve 未生效（rc=$RC5d）："; printf '%s\n' "$OUT5d"; fails=$((fails+1))
+fi
+
+# ── 场景⑥：mx-clean --apply 原子写投影（真跑清场，债务跨清场存活）──
+SIM2="$CTRL/sim2"; RUN2="20261105-v8-runQ"
+mkdir -p "$SIM2/runs/$RUN2/evidence" "$SIM2/var"
+cat > "$SIM2/runs/$RUN2/evidence/compensation-ledger.tsv" <<'LOG6'
+id	ts	type	defect	detail	status	resolution
+c9	2026-11-05 11:00:00	gw-dispatch-bypass	PR-1	绕网关直派一次	open	
+LOG6
+cat > "$SIM2/runs/$RUN2/evidence/issues.log" <<'LOG7'
+ISSUE|conclusion-gap|DEV-QQZ|结论行未发
+DISP|conclusion-gap|DEV-QQZ|延后（人工复核：须下轮带锚回写）
+LOG7
+printf 'report_done=1793900000\n' > "$SIM2/runs/$RUN2/state.env"
+ln -sfn "$SIM2/runs/$RUN2/state.env" "$SIM2/var/current-state.env"
+SIM_ROOT="$SIM2" bash "$HERE/mux/mx-clean.sh" --apply >/dev/null 2>&1
+_proj="$SIM2/var/clearance/$RUN2"
+if [ -f "$_proj/compensation-ledger.tsv" ] && [ -f "$_proj/issues.log" ] \
+   && grep -q 'gw-dispatch-bypass' "$_proj/compensation-ledger.tsv" \
+   && grep -q '延后' "$_proj/issues.log" \
+   && [ "$(cat "$SIM2/var/clearance/current" 2>/dev/null)" = "$RUN2" ]; then
+  echo "PASS ⑥ mx-clean --apply 清场前原子写投影（ledger+issues+current，内容=清前真身）"
+else
+  echo "FAIL ⑥ 投影未落或内容缺失："; ls -la "$SIM2/var/clearance/" 2>/dev/null; fails=$((fails+1))
+fi
+# 归档后 runs/ 已清——延后单跨清场仍拦（prelaunch ⑯b 消费同链路）
+OUT6="$(AIPAY_SIM_ROOT="$SIM2" bash "$HERE/mux/mx-compensation-ledger.sh" check-issue-clearance 2>&1)"; RC6=$?
+if [ "$RC6" -ne 0 ] && printf '%s' "$OUT6" | grep -q 'conclusion-gap·DEV-QQZ'; then
+  echo "PASS ⑥b 清场后延后单仍拦（跨清场存活）"
+else
+  echo "FAIL ⑥b 清场后延后单未拦（rc=${RC6}）——债务随清场蒸发："; printf '%s\n' "$OUT6"; fails=$((fails+1))
+fi
+
 [ "$fails" -eq 0 ] && echo "issue-clearance: ALL-PASS" || { echo "issue-clearance: ${fails} FAIL"; exit 1; }

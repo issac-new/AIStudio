@@ -2737,6 +2737,10 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三
     echo "## 问题单台账（共 $(printf '%s' "$dto" | jq -r '.issuesTotal') 条；DISP $(printf '%s' "$dto" | jq -r '.dispTotal') 条——键=类型·主体，缺行=待处置）"
     awk -F'|' '/^ISSUE\|/{print "- ["$2"] "$3"："$4}' "$EVID_DIR/issues.log" 2>/dev/null | sort | uniq -c | sort -rn
     echo
+    echo "## DISP 终态分计数（P2 严格口径：closed=exact/single 带锚已修·已闭环；deferred=延后；invalid=缺锚/缺理由/表外词/generic 不可批量关）"
+    printf '%s' "$dto" | jq -r '"- closed \(.dispClosure.closed) / deferred \(.dispClosure.deferred) / pending \(.dispClosure.pending) / invalid \(.dispClosure.invalid)（合计 \(.dispClosure.closed + .dispClosure.deferred + .dispClosure.pending + .dispClosure.invalid) = 唯一键数）"' 2>/dev/null \
+      || echo "- dispClosure 缺席（治理服务 DTO 旧版——升级服务后出数）"
+    echo
     echo "## 凭证与回灌"
     echo "- 证据一次通过率：$(printf '%s' "$dto" | jq -r '.evidenceRate.text')"
     echo

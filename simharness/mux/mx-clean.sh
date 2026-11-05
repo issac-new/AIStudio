@@ -139,6 +139,34 @@ if [ -n "$_cur_run" ] && [ -f "$SIM_ROOT/runs/$_cur_run/state.env" ]; then
     echo "ISSUE|integration-retention-guard|$_cur_run|mx-clean 试图删 integration 分支但轮 $_cur_run report_done 未落——保留守卫触发，分支未删（run20 13 件死锚教训的产品化；报告持久化后再清）" >> "$SIM_ROOT/runs/$_cur_run/evidence/issues.log" 2>/dev/null || true
   fi
 fi
+# ── 2 前置·clearance 投影（P2 Task 2）：未闭环债务跨清场存活 ──
+# 归档 tar 是冻结件不回改；开跑前清偿门（⑯/⑯b）与人工 resolve/append-disp 需要
+# 可写载体。清场前把锚定轮（无锚定轮则 runs/ 最新轮）的台账+issues.log 原子写到
+# var/clearance/<RUN>/（temp+mv），并落 current 指针。写在首个 mutation（停栈/归档/
+# 删除）之前——守卫拒绝时投影不写；dry-run 零副作用（APPLY 守卫）。
+if [ "$APPLY" = 1 ]; then
+_cl_proj_run="$_cur_run"
+if [ -z "$_cl_proj_run" ] && [ -d "$SIM_ROOT/runs" ]; then
+  _cl_proj_run="$(ls -1t "$SIM_ROOT/runs" 2>/dev/null | head -1 || true)"
+fi
+if [ -n "$_cl_proj_run" ]; then
+  _cl_src="$SIM_ROOT/runs/$_cl_proj_run/evidence"
+  if [ -d "$_cl_src" ]; then
+    mkdir -p "$SIM_ROOT/var/clearance/$_cl_proj_run"
+    for _cl_f in compensation-ledger.tsv issues.log; do
+      if [ -f "$_cl_src/$_cl_f" ]; then
+        _cl_tmp="$SIM_ROOT/var/clearance/$_cl_proj_run/$_cl_f.tmp.$$"
+        cp "$_cl_src/$_cl_f" "$_cl_tmp" && mv "$_cl_tmp" "$SIM_ROOT/var/clearance/$_cl_proj_run/$_cl_f" \
+          && say "clearance 投影：$_cl_f → var/clearance/$_cl_proj_run/（未闭环债务跨清场存活）" \
+          || say "⚠ clearance 投影写失败（$_cl_f）——人工核验（债务可能随清场失载）"
+      fi
+    done
+    printf '%s\n' "$_cl_proj_run" > "$SIM_ROOT/var/clearance/.current.tmp.$$" \
+      && mv "$SIM_ROOT/var/clearance/.current.tmp.$$" "$SIM_ROOT/var/clearance/current" \
+      || true
+  fi
+fi
+fi
 say "runs/ 与 state.env → ${ARC}（tar 归档后删除原物）"
 if [ "$APPLY" = 1 ]; then
   mkdir -p "$ARC"

@@ -225,3 +225,109 @@ describe('parseStateEnvKeys（首行胜出）', () => {
     expect(parseStateEnvKeys('g1_frozen=1\ng1_frozen=2\n')).toEqual({ g1_frozen: '1' })
   })
 })
+
+// ── P2 Task 2：DISP 终态严格化（每键行序末次适用 + 关闭有效性判定） ──
+describe('DISP 终态严格化（closed/valid/closureError + 分计数）', () => {
+  const mk2 = (issues: string, disps: string) => computeRunMetrics({
+    run: 'r2', rfd: 'R', issuesLog: [issues, disps].filter(Boolean).join('\n'),
+    stateEnv: '', runDirs: [], readPrevReport: () => null, today: '2026-11-06',
+  })
+
+  it('末次适用按行序：同键先「已修」后「观察」→ 观察生效（末次 DISP 口径）', () => {
+    const m = mk2(
+      'ISSUE|g1-review|bella|缺要素',
+      ['DISP|g1-review|bella|已修 补齐后过', 'DISP|g1-review|bella|观察 人工复核改判'].join('\n'),
+    )
+    const row = m.pairing.find((r) => r.key === 'g1-review·bella')!
+    expect(row.bucket).toBe('观察')
+    expect(row.closed).toBe(false)
+    expect(row.valid).toBe(true) // 观察有复核理由
+  })
+
+  it('exact 优先于 generic：exact 在前、generic 在后 → 仍取 exact 末次', () => {
+    const m = mk2(
+      ['ISSUE|gw-restart|studio|网关重启', 'ISSUE|gw-restart|director|泛指'].join('\n'),
+      ['DISP|gw-restart|director|观察 广播处置', 'DISP|gw-restart|studio|已修（合并锚 main@abcdef123）'].join('\n'),
+    )
+    const exact = m.pairing.find((r) => r.key === 'gw-restart·studio')!
+    expect(exact.mode).toBe('exact')
+    expect(exact.closed).toBe(true) // exact 已修带锚 → 关闭
+    const generic = m.pairing.find((r) => r.key === 'gw-restart·director')!
+    expect(generic.mode).toBe('generic')
+    expect(generic.closed).toBe(false) // generic 广播不得关闭
+  })
+
+  it('generic 不批量关不同 subject：泛指「已修（带锚）」也关不掉 exact 键', () => {
+    const m = mk2(
+      'ISSUE|r18-collection-missing|step-23|A 处置',
+      'DISP|r18-collection-missing|monitor|已修（统一修复锚 main@1122334）'.replace('（统一修复锚 main@1122334）', '（统一修复锚 main@1122334）'),
+    )
+    const row = m.pairing.find((r) => r.key === 'r18-collection-missing·step-23')!
+    expect(row.bucket).toBe('已修')
+    expect(row.closed).toBe(false)
+    expect(row.valid).toBe(false)
+    expect(row.closureError).toContain('generic')
+  })
+
+  it('已修/已闭环需证据锚：无锚 invalid；带锚（sha/URL/file:line）closed', () => {
+    const noAnchor = mk2('ISSUE|g5-ready-fail|fanfan|G5 FAIL', 'DISP|g5-ready-fail|fanfan|已修 补齐后过')
+    const rowA = noAnchor.pairing.find((r) => r.key === 'g5-ready-fail·fanfan')!
+    expect(rowA.closed).toBe(false)
+    expect(rowA.valid).toBe(false)
+    expect(rowA.closureError).toContain('锚')
+
+    for (const disp of [
+      '已修（合并锚 main@abcdef123）',
+      '已闭环（证据 https://git.example/commit/abc1234）',
+      '已修（custom/server/x.ts:42 修复）',
+    ]) {
+      const m = mk2('ISSUE|g5-ready-fail|fanfan|G5 FAIL', `DISP|g5-ready-fail|fanfan|${disp}`)
+      const row = m.pairing.find((r) => r.key === 'g5-ready-fail·fanfan')!
+      expect(row.closed, disp).toBe(true)
+      expect(row.valid, disp).toBe(true)
+      expect(row.closureError, disp).toBeNull()
+    }
+  })
+
+  it('观察需复核理由：裸「观察」invalid；有理由 valid 但不 closed', () => {
+    const bare = mk2('ISSUE|gw-restart|studio|重启', 'DISP|gw-restart|studio|观察')
+    const rowBare = bare.pairing[0]
+    expect(rowBare.valid).toBe(false)
+    expect(rowBare.closureError).toContain('理由')
+    const withReason = mk2('ISSUE|gw-restart|studio|重启', 'DISP|gw-restart|studio|观察 重启后自愈，连续两轮无复发')
+    const row = withReason.pairing[0]
+    expect(row.valid).toBe(true)
+    expect(row.closed).toBe(false)
+  })
+
+  it('延后 valid 不 closed（deferred 计数）', () => {
+    const m = mk2('ISSUE|uat-cond|fanfan|有条件', 'DISP|uat-cond|fanfan|延后 放行权归 bella（下轮前置处置）')
+    const row = m.pairing[0]
+    expect(row.valid).toBe(true)
+    expect(row.closed).toBe(false)
+    expect(m.dispClosure.deferred).toBe(1)
+  })
+
+  it('报告分计数 closed/deferred/pending/invalid 分区全量（和=唯一键数）', () => {
+    const m = mk2(
+      [
+        'ISSUE|a-closed|s1|x',        // exact 已修带锚 → closed
+        'ISSUE|a-defer|s2|x',         // exact 延后 → deferred
+        'ISSUE|a-observe|s3|x',       // exact 观察有理由 → pending
+        'ISSUE|a-noanchor|s4|x',      // exact 已修无锚 → invalid
+        'ISSUE|a-none|s5|x',          // 无 DISP → pending
+        'ISSUE|g-gen|director|x',     // generic 观察有理由 → pending
+      ].join('\n'),
+      [
+        'DISP|a-closed|s1|已修（main@abcdef123）',
+        'DISP|a-defer|s2|延后（下轮前置）',
+        'DISP|a-observe|s3|观察 理由在案',
+        'DISP|a-noanchor|s4|已修 无锚声明',
+        'DISP|g-gen|director|观察 理由在案',
+      ].join('\n'),
+    )
+    expect(m.dispClosure).toEqual({ closed: 1, deferred: 1, pending: 3, invalid: 1 })
+    const sum = m.dispClosure.closed + m.dispClosure.deferred + m.dispClosure.pending + m.dispClosure.invalid
+    expect(sum).toBe(m.pairing.length)
+  })
+})

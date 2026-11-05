@@ -13,10 +13,11 @@
 //   2) simharness/mux/mx-gate-lib.sh:mx_nudge_body_for_gate / mx_breaker_gates
 //   3) simharness/mux/mx-recovery-lib.sh:mx_gateway_recovering / mx_defer_restart_policy
 //   4) simharness/mux/mx-gate-timing.sh 的台账判读（fixture state.env + scenario.log）
-import { execFileSync } from 'child_process'
-import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from 'fs'
+import { execFileSync, spawn } from 'child_process'
+import { createHash } from 'crypto'
+import { appendFileSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { afterAll, describe, expect, it } from 'vitest'
 
 const HARNESS = join(__dirname, '..')
@@ -423,5 +424,171 @@ print(json.dumps(report_truth.unregistered_ledger_keys(${JSON.stringify(log)}, r
     const drv = readFileSync(join(REPO, 'simharness/aipay-scenario.sh'), 'utf8')
     expect(drv).toContain('/api/hermes/cluster-inspector/run')
     expect(drv).toContain('zero-delivery.json')
+  })
+})
+
+// ── 8) 烧机收据 digest 绑定（P2 Task 2）：真身对账，不认旧 pass / dry-run / 后 fail
+describe('烧机收据 digest 绑定（mx-mechanism-receipt）', () => {
+  const PY = join(MX, 'mx-mechanism-receipt.py')
+  /** 夹具根：按 MECHANISM_FILES 清单铺最小内容文件（digest 只看内容不看真身） */
+  const fixtureRoot = () => {
+    const root = join(TMP, `mech-${Math.random().toString(36).slice(2)}`)
+    const listed = bash(`python3 -I ${JSON.stringify(PY)} list`)
+    for (const rel of listed.split('\n').filter(Boolean)) {
+      const p = join(root, rel)
+      mkdirSync(dirname(p), { recursive: true })
+      writeFileSync(p, `# fixture ${rel}\n`, 'utf8')
+    }
+    return root
+  }
+  const digestOf = (root: string) =>
+    JSON.parse(bash(`python3 -I ${JSON.stringify(PY)} digest --root ${JSON.stringify(root)}`))
+
+  it('MECHANISM_FILES 清单边界：全部在仓存在；机制地图载体全覆盖；无关面不入清单', () => {
+    const listed = bash(`python3 -I ${JSON.stringify(PY)} list`).split('\n').filter(Boolean)
+    // 清单内文件全部真实存在（守门：清单漂移=收据 digest 失锚）
+    for (const rel of listed) expect(existsSync(join(REPO, rel)), rel).toBe(true)
+    // 机制地图 §4/§1 落点载体必须入清单（恢复链/监督/闸门/熔断四族）
+    for (const must of [
+      'simharness/aipay-scenario.sh', 'simharness/mux/run-driver-supervisor.sh',
+      'simharness/mux/mx-lib.sh', 'simharness/mux/mx-scenario-lib.sh',
+      'simharness/mux/mx-gate-lib.sh', 'simharness/mux/mx-recovery-lib.sh',
+      'simharness/mux/mx-relay.sh',
+      'scripts/platform/runtime/guard.mjs', 'scripts/platform/runtime/guard-cli.mjs',
+      'custom/server/simrun/supervisor.ts', 'custom/server/governance/lifecycle/breaker.ts',
+      'patches/707-agent-codex-terminal-incomplete-retry.patch',
+      'patches/722-agent-emptystream-ladder-classify.patch',
+      'patches/725-agent-chat-turn-recovery.patch',
+      'patches/726-agent-chat-recovery-kwarg-fix.patch',
+      'patches/729-agent-recovery-kwargs-pure.patch',
+    ]) expect(listed, `${must} 不在机制清单`).toContain(must)
+    // 无关面不入清单（报告面/清场工具/构建面——纳入即每次无关改动都烧机）
+    for (const banned of ['mx-report-gen.py', 'mx-clean.sh', 'mx-burn-test.sh', 'package.json', 'vitest.config.ts']) {
+      expect(listed.flatMap((l) => l.split('/')).some(() => listed.some((l) => l.endsWith(banned))), banned).toBe(false)
+    }
+  })
+
+  it('digest=内容身份：同内容同值、内容变即变、mtime 变不变', () => {
+    const root = fixtureRoot()
+    const d1 = digestOf(root)
+    const d2 = digestOf(root)
+    expect(d1.digest).toBe(d2.digest)
+    expect(d1.file_count).toBeGreaterThan(10)
+    // mtime 变 → digest 不变（内容身份，不是时间身份）
+    const now = new Date()
+    utimesSync(join(root, 'simharness/aipay-scenario.sh'), now, now)
+    expect(digestOf(root).digest).toBe(d1.digest)
+    // 任一机制文件内容变化 → digest 失效（负例核心：旧收据不再认账）
+    appendFileSync(join(root, 'simharness/mux/mx-gate-lib.sh'), '# hotfix\n', 'utf8')
+    expect(digestOf(root).digest).not.toBe(d1.digest)
+  })
+
+  it('verify-latest：无当前 digest 收据（旧 pass 不认账）→ 拦', () => {
+    const root = fixtureRoot()
+    const idx = join(TMP, 'burn-idx-old.jsonl')
+    writeFileSync(idx, JSON.stringify({ mechanism_digest: 'deadbeef', status: 'pass', coverage: { until: 'archgate', goal_step_reached: true } }) + '\n', 'utf8')
+    const r = bash(`python3 -I ${JSON.stringify(PY)} verify-latest --root ${JSON.stringify(root)} --receipts ${JSON.stringify(idx)} 2>&1; echo rc=$?`)
+    expect(r).toContain('rc=1')
+    expect(r).toContain('无当前 digest')
+  })
+
+  it('verify-latest：后 fail 覆盖前 pass（同 digest 末行 fail）→ 拦；末行 pass 且 coverage 达标 → 过', () => {
+    const root = fixtureRoot()
+    const d = digestOf(root).digest
+    const idx = join(TMP, 'burn-idx-fail.jsonl')
+    writeFileSync(idx, [
+      JSON.stringify({ mechanism_digest: d, status: 'pass', coverage: { until: 'archgate', goal_step_reached: true }, run_id: 'burn-1' }),
+      JSON.stringify({ mechanism_digest: d, status: 'fail', coverage: { until: 'archgate', goal_step_reached: false }, run_id: 'burn-2' }),
+    ].join('\n') + '\n', 'utf8')
+    const fail = bash(`python3 -I ${JSON.stringify(PY)} verify-latest --root ${JSON.stringify(root)} --receipts ${JSON.stringify(idx)} 2>&1; echo rc=$?`)
+    expect(fail).toContain('rc=1')
+    expect(fail).toContain('fail')
+    // 末行恢复 pass（人工修复后重烧）→ 放行
+    appendFileSync(idx, JSON.stringify({ mechanism_digest: d, status: 'pass', coverage: { until: 'archgate', goal_step_reached: true }, run_id: 'burn-3' }) + '\n', 'utf8')
+    const pass = bash(`python3 -I ${JSON.stringify(PY)} verify-latest --root ${JSON.stringify(root)} --receipts ${JSON.stringify(idx)} 2>&1; echo rc=$?`)
+    expect(pass).toContain('rc=0')
+  })
+
+  it('verify-latest：coverage 不足（triage 短场景）与坏 JSON 行 → 拦（fail-closed）', () => {
+    const root = fixtureRoot()
+    const d = digestOf(root).digest
+    const idx = join(TMP, 'burn-idx-cov.jsonl')
+    writeFileSync(idx, JSON.stringify({ mechanism_digest: d, status: 'pass', coverage: { until: 'triage', goal_step_reached: true }, run_id: 'burn-4' }) + '\n', 'utf8')
+    const cov = bash(`python3 -I ${JSON.stringify(PY)} verify-latest --root ${JSON.stringify(root)} --receipts ${JSON.stringify(idx)} 2>&1; echo rc=$?`)
+    expect(cov).toContain('rc=1')
+    expect(cov).toContain('coverage')
+    // 目标步未达成（goal_step_reached=false）同样拦
+    writeFileSync(idx, JSON.stringify({ mechanism_digest: d, status: 'pass', coverage: { until: 'archgate', goal_step_reached: false }, run_id: 'burn-5' }) + '\n', 'utf8')
+    expect(bash(`python3 -I ${JSON.stringify(PY)} verify-latest --root ${JSON.stringify(root)} --receipts ${JSON.stringify(idx)} 2>&1; echo rc=$?`)).toContain('rc=1')
+    // 坏 JSON 行 → fail-closed 拦（不静默跳过）
+    writeFileSync(idx, '{broken json\n', 'utf8')
+    expect(bash(`python3 -I ${JSON.stringify(PY)} verify-latest --root ${JSON.stringify(root)} --receipts ${JSON.stringify(idx)} 2>&1; echo rc=$?`)).toContain('rc=1')
+  })
+
+  it('emit：schema 2 收据字段齐（digest/coverage/driver_log_sha256）且索引追加一行', () => {
+    const root = fixtureRoot()
+    const outDir = join(TMP, 'burn-out')
+    mkdirSync(outDir, { recursive: true })
+    const receipt = join(outDir, 'burn-test-receipt.json')
+    const idx = join(outDir, 'burn-receipts.jsonl')
+    const drvLog = join(outDir, 'driver.log')
+    writeFileSync(drvLog, '[mux] step smoke ok\n[mux FAIL] x\n', 'utf8')
+    const d = digestOf(root)
+    const out = bash([
+      `python3 -I ${JSON.stringify(PY)} emit`,
+      `--root ${JSON.stringify(root)}`,
+      `--out ${JSON.stringify(receipt)}`,
+      `--index ${JSON.stringify(idx)}`,
+      `--run-id burn-x --until archgate --status pass`,
+      `--driver-rc 0 --fail-lines 0 --done-keys 12 --goal-ok 1`,
+      `--started-at 1793900000 --finished-at 1793902400`,
+      `--log ${JSON.stringify(drvLog)}`,
+      `--reasons none --fail-excerpt ""`,
+    ].join(' '))
+    expect(out).toContain('ok')
+    const rec = JSON.parse(readFileSync(receipt, 'utf8'))
+    expect(rec.schema).toBe(2)
+    expect(rec.mechanism_digest).toBe(d.digest)
+    expect(rec.mechanism_file_count).toBe(d.file_count)
+    expect(rec.coverage).toEqual({ until: 'archgate', goal_step_reached: true })
+    expect(rec.status).toBe('pass')
+    expect(rec.driver_log_sha256).toBe(createHash('sha256').update(readFileSync(drvLog)).digest('hex'))
+    expect(rec.receipt_path).toBe(receipt)
+    const idxLine = JSON.parse(readFileSync(idx, 'utf8').trim())
+    expect(idxLine.mechanism_digest).toBe(d.digest)
+    expect(idxLine.coverage.until).toBe('archgate')
+  })
+
+  it('dry-run 不产收据（活体 --dry-run 走真脚本：夹具 SIM_ROOT + 健康桩，收据面零写入）', async () => {
+    const sim = join(TMP, 'burn-dry-sim')
+    mkdirSync(join(sim, 'var'), { recursive: true })
+    const idxRepo = join(REPO, '.qgate/burn/burn-receipts.jsonl')
+    const before = existsSync(idxRepo) ? readFileSync(idxRepo, 'utf8') : ''
+    // 健康桩：任意路径 200（preflight 第 5 项；http.server 对 /health 会 404 故自写）
+    const stub = spawn('python3', ['-I', '-c', [
+      'import http.server, socketserver',
+      'class H(http.server.BaseHTTPRequestHandler):',
+      '    def do_GET(self):',
+      '        self.send_response(200); self.end_headers(); self.wfile.write(b"ok")',
+      '    def log_message(self, *a): pass',
+      'with socketserver.TCPServer(("127.0.0.1", 0), H) as s:',
+      '    print(s.server_address[1], flush=True)',
+      '    s.serve_forever()',
+    ].join('\n')], { stdio: ['ignore', 'pipe', 'ignore'] })
+    let port = ''
+    stub.stdout.on('data', (c) => { port += String(c) })
+    const deadline = Date.now() + 5000
+    while (!port.trim() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50))
+    try {
+      expect(port.trim()).toMatch(/^\d+$/)
+      const out = bash(`AIPAY_SIM_ROOT=${JSON.stringify(sim)} MX_GATEWAY_HEALTH=http://127.0.0.1:${port.trim()}/health bash ${JSON.stringify(join(MX, 'mx-burn-test.sh'))} --dry-run 2>&1; echo rc=$?`)
+      expect(out).toContain('BURN-DRY-RUN-OK')
+      // 收据面零写入：夹具 SIM_ROOT 无 receipt；仓内索引字节不变
+      expect(existsSync(join(sim, 'runs'))).toBe(false)
+      const after = existsSync(idxRepo) ? readFileSync(idxRepo, 'utf8') : ''
+      expect(after).toBe(before)
+    } finally {
+      stub.kill()
+    }
   })
 })

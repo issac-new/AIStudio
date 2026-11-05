@@ -57,6 +57,14 @@ export interface IssuePairingRow {
   mode: 'exact' | 'generic' | 'single' | 'none'
   disposition: string | null
   bucket: '已修' | '已闭环' | '观察' | '延后' | '表外词' | '待处置'
+  /** P2 Task 2：末次适用 DISP 的行号（1 基，审计锚） */
+  lastDispLine: number | null
+  /** 已修/已闭环且证据锚齐全且 exact|single → 关闭（generic 广播不得批量关） */
+  closed: boolean
+  /** 处置有效性：已修/已闭环须锚、观察须复核理由、延后恒 valid */
+  valid: boolean
+  /** 未关闭/无效的原因（null=无异常） */
+  closureError: string | null
 }
 
 export interface RunMetrics {
@@ -78,6 +86,8 @@ export interface RunMetrics {
   dispBuckets: Array<{ tag: string; n: number }>
   uniqueKeys: string[]
   pairing: IssuePairingRow[]
+  /** P2 Task 2：DISP 终态分计数（closed+deferred+pending+invalid=唯一键数，禁凭空消失） */
+  dispClosure: { closed: number; deferred: number; pending: number; invalid: number }
   /** 悬挂 DISP（处置的类型段无对应 ISSUE 类型——台账卫生观察位，R5b 口径）。 */
   danglingDispTypes: string[]
   gateKeyLines: Array<{ key: string; value: string }>
@@ -196,49 +206,104 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     if (!seen.has(k)) { seen.add(k); uniqueKeys.push(k) }
   }
 
-  // DISP 配对（run13 复盘 A3/C1 修订口径——四变体归一的单实现）：
-  //   ① type·subject 精确命中；② 同类型 DISP 主体为泛指（director/monitor/harness/
-  //   导演/监控）→ 广播到该类型全部键；③ 该类型仅一个唯一键 → 容主体措辞差；
-  //   ④ 其余=待处置（none）。三态+已闭环分桶，首词非桶词=表外词（四桶+表外
-  //   求和=唯一键数，禁凭空消失）。
-  const dispExact = new Map<string, string>()
-  const dispGeneric = new Map<string, string>()
+  // DISP 配对（P2 Task 2 严格化——「每键行序末次适用」+ 关闭有效性判定）：
+  //   ① 适用候选三类：exact（type·subject 精确命中，优先级最高）＞ generic（同类型
+  //   DISP 主体为泛指 director/monitor/harness/导演/监控 → 广播到该类型全部键）＞
+  //   single（该类型仅一个唯一键 → 容主体措辞差）；每键取最高优先级候选集中
+  //   **行序最后**一条（末次适用=人工回写终态由新行承载，与 check-issue-clearance
+  //   的末次 DISP 口径同源）。
+  //   ② 关闭有效性：已修/已闭环须证据锚（commit sha/URL/file:line）；观察须复核
+  //   理由；延后 valid 但不 closed；generic 广播不得批量关不同 subject。
+  //   ③ 分计数 closed/deferred/pending/invalid 分区全量（和=唯一键数，禁凭空消失）。
   const GENERIC_SUBJECTS = ['director', 'monitor', 'harness', '导演', '监控']
-  for (const l of dispLines) {
-    const p = l.split('|')
-    if (p.length > 3) {
-      if (GENERIC_SUBJECTS.includes(p[2])) dispGeneric.set(p[1], p[3])
-      else dispExact.set(`${p[1]}·${p[2]}`, p[3])
-    }
-  }
   const keysByType = new Map<string, string[]>()
   for (const k of uniqueKeys) {
     const ty = k.split('·')[0]
     keysByType.set(ty, [...(keysByType.get(ty) ?? []), k])
   }
+  // 逐行收集（保留行号：审计锚）
+  const dispEntries = dispLines.map((l, idx) => {
+    const p = l.split('|')
+    return { line: idx + 1, type: p[1] ?? '', subject: p[2] ?? '', disp: p.length > 3 ? p[3] : '' }
+  }).filter((e) => e.disp !== '' || e.type !== '')
   const BUCKET_WORDS = ['已修', '已闭环', '观察', '延后']
   const bucketOfDisp = (d: string): IssuePairingRow['bucket'] => (BUCKET_WORDS.find((w) => d.startsWith(w)) ?? '表外词') as IssuePairingRow['bucket']
+  // 证据锚形态（实体判定，非字面词——「无锚声明」含「锚」字不算锚）：commit sha
+  // （7-40 hex）/ URL / file:line 或含扩展名路径
+  const ANCHOR_RE = /\b[0-9a-f]{7,40}\b|https?:\/\/\S+|\S+\.(?:md|ts|tsx|sh|py|mjs|js|vue|json)\b|\S+:\d+/
+  /** 剥掉桶词前缀后的复核理由文本（括号体一并保留） */
+  const reasonOf = (d: string, bucket: string): string => d.slice(bucket.length).replace(/^[（(]\s*/, '').replace(/\s*[）)]\s*$/, '').trim()
+
   const pairing: IssuePairingRow[] = uniqueKeys.map((key): IssuePairingRow => {
     const [type, subject] = key.split('·')
-    const exact = dispExact.get(key)
-    const sameTypeExact = [...dispExact.keys()].filter((k) => k.startsWith(`${type}·`))
-    const mode: IssuePairingRow['mode'] = exact != null ? 'exact'
-      : dispGeneric.has(type) ? 'generic'
-      : sameTypeExact.length > 0 && keysByType.get(type)!.length === 1 ? 'single'
+    const exacts = dispEntries.filter((e) => e.type === type && e.subject === subject && !GENERIC_SUBJECTS.includes(e.subject))
+    const generics = dispEntries.filter((e) => e.type === type && GENERIC_SUBJECTS.includes(e.subject))
+    const singleTypeKeys = keysByType.get(type) ?? []
+    const singles = singleTypeKeys.length === 1 && exacts.length === 0
+      ? dispEntries.filter((e) => e.type === type && !GENERIC_SUBJECTS.includes(e.subject))
+      : []
+    const mode: IssuePairingRow['mode'] = exacts.length > 0 ? 'exact'
+      : generics.length > 0 ? 'generic'
+      : singles.length > 0 ? 'single'
       : 'none'
-    const singleDisp = mode === 'single' ? dispExact.get(sameTypeExact[0]) ?? '' : ''
-    const disp = exact ?? dispGeneric.get(type) ?? singleDisp
+    // 末次适用=所选类别的行序最后一条
+    const chosen = mode === 'exact' ? exacts.at(-1)!
+      : mode === 'generic' ? generics.at(-1)!
+      : mode === 'single' ? singles.at(-1)!
+      : null
+    const disp = chosen?.disp ?? ''
+    const bucket = disp ? bucketOfDisp(disp) : ('待处置' as const)
+
+    // 关闭有效性判定（显式分支；closureError 一律给中文原因）
+    let closed = false
+    let valid = false
+    let closureError: string | null = '无适用 DISP（待处置）'
+    if (chosen) {
+      closureError = null
+      if (bucket === '已修' || bucket === '已闭环') {
+        if (mode === 'generic') {
+          valid = false
+          closureError = 'generic 广播不批量关不同 subject——须逐键 exact/single DISP 关闭'
+        } else if (ANCHOR_RE.test(disp)) {
+          valid = true
+          closed = true
+        } else {
+          valid = false
+          closureError = `${bucket}缺证据锚（commit sha/URL/file:line）——人工带锚回写后关闭`
+        }
+      } else if (bucket === '观察') {
+        const reason = reasonOf(disp, bucket)
+        if (reason) { valid = true } else { valid = false; closureError = '观察缺复核理由（裸「观察」不 valid）' }
+      } else if (bucket === '延后') {
+        valid = true // 延后=合法挂起态，valid 但不 closed
+      } else {
+        valid = false
+        closureError = '表外词（处置首词不在 已修/已闭环/观察/延后 四桶）'
+      }
+    }
     return {
       key, type, subject,
       freq: freq.get(key) ?? 1,
       mode,
       disposition: disp || null,
-      bucket: disp ? bucketOfDisp(disp) : ('待处置' as const),
+      bucket,
+      lastDispLine: chosen?.line ?? null,
+      closed,
+      valid,
+      closureError,
     }
   })
 
+  // 分计数（分区全量：closed+deferred+pending+invalid=唯一键数）
+  const dispClosure = {
+    closed: pairing.filter((r) => r.closed).length,
+    deferred: pairing.filter((r) => r.bucket === '延后' && r.valid).length,
+    pending: pairing.filter((r) => !r.closed && !(r.bucket === '延后' && r.valid) && (r.mode === 'none' || r.valid)).length,
+    invalid: pairing.filter((r) => r.disposition !== null && !r.valid).length,
+  }
+
   const danglingDispTypes = sortedUnique(
-    [...new Set([...[...dispExact.keys()].map((k) => k.split('·')[0]), ...dispGeneric.keys()])]
+    [...new Set([...dispEntries.map((e) => e.type)])]
       .filter((ty) => !keysByType.has(ty)),
   )
 
@@ -311,7 +376,7 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     rejectCount, humanInterventions,
     alertFamily: { count: alertKeys.length, keys: alertKeys },
     defectDensity,
-    dispBuckets, uniqueKeys, pairing, danglingDispTypes, gateKeyLines, metricsRows, baseline, trend,
+    dispBuckets, uniqueKeys, pairing, dispClosure, danglingDispTypes, gateKeyLines, metricsRows, baseline, trend,
   }
 }
 
