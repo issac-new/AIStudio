@@ -35,8 +35,40 @@ function policyMatchesLayer(policy: PlatformRoutePolicy, layer: RouterLayer, met
   return policy.method === method && policy.pathPattern === layer.path
 }
 
-/** 启动期从真实 Router stack 对账；通配、RegExp 写面、悬垂政策与未登记写面都直接阻断启动。 */
+function isParamSegment(segment: string): boolean {
+  return segment.startsWith(':')
+}
+
+/**
+ * P1 Task 1（终审前置③）：同 method 政策路径重叠守卫。两条政策在请求期可同时命中
+ * 同一请求（等长模式且每一同位段「同为相等静态段」或「任一为参数段」）时，
+ * matchingPolicy 按注册表数组顺序取先命中者——授权结果取决于条目顺序而非更具体的
+ * 规则（静态路由会被排前的参数路由遮蔽，反之亦然）。重叠清单直接抛错；由
+ * assertPlatformRoutePolicies 在启动对账点连带调用（union assert 同点）。
+ */
+export function assertNoPolicyPathOverlap(policies: PlatformRoutePolicy[]): void {
+  for (let i = 0; i < policies.length; i++) {
+    for (let j = i + 1; j < policies.length; j++) {
+      const a = policies[i]
+      const b = policies[j]
+      if (a.method !== b.method) continue
+      const sa = a.pathPattern.split('/')
+      const sb = b.pathPattern.split('/')
+      if (sa.length !== sb.length) continue
+      const overlapping = sa.every((seg, k) => seg === sb[k] || isParamSegment(seg) || isParamSegment(sb[k]))
+      if (overlapping) {
+        throw new Error(
+          `Platform route policies overlap: ${a.method} ${a.pathPattern} vs ${b.method} ${b.pathPattern} — 同一请求两者皆可命中，授权取决于注册表顺序；请消除重叠（参数段与静态段互斥改路径）`,
+        )
+      }
+    }
+  }
+}
+
+/** 启动期从真实 Router stack 对账；政策重叠、通配、RegExp 写面、悬垂政策与未登记写面都直接阻断启动。 */
 export function assertPlatformRoutePolicies(routers: Router[], policies: PlatformRoutePolicy[]): void {
+  assertNoPolicyPathOverlap(policies)
+
   for (const policy of policies) {
     if (policy.pathPattern.includes('*') || policy.pathPattern.includes('(.*)')) {
       throw new Error(`Platform route policy wildcard paths are forbidden: ${policy.method} ${policy.pathPattern}`)

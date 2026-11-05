@@ -1,11 +1,12 @@
 // custom/platform/contracts/execution.ts
-// 平台执行契约（P0 Task 5，2026-11-05）：未知 MCP 工具判定 + 真实路径沙箱。
+// 平台执行契约（P0 Task 5，2026-11-05；P1 Task 1 可观测化扩展）：未知 MCP 工具判定
+// + 真实路径沙箱。
 // 定位：跨执法门/控制器共享的执行面单一事实源——「什么算未知工具」「什么算越出
 // 沙箱」只在此定义一次；enforce-gate 消费并 re-export 保持旧导入面（同 identity.ts
 // 先例）。运行时零依赖（type import 不产生耦合），文件系统探测只读。
 //
 // 两条硬边界的产品语义（计划书全局约束：不能用 Shell 文本检查代替真实沙箱）：
-//  1) 未知 MCP 硬拒：mcp__{server}__{tool} 的动词启发式（单层分类信号，见下文
+//  1) 未知 MCP 工具硬拒：mcp__{server}__{tool} 的动词启发式（单层分类信号，见下文
 //     MCP_READ_CONNECTORS 删除注记）判不出类别时，平台无法评估该工具的风险面——
 //     按未治理拒绝（mcp-unknown），不再回落保守 write 让它混进普通审批快道。
 //     修复出口是补动词映射/登记连接器。
@@ -13,7 +14,11 @@
 //     状态（realpathSync.native canonicalize，symlink 逃逸可检出）；terminal/code
 //     本质上能触达任意路径（cd/重定向），路径白名单管不住 shell——没有真实 OS 级
 //     沙箱证明（容器/VM/Seatbelt）就拒绝（sandbox-terminal-unavailable）。
-import { lstatSync, readlinkSync, realpathSync } from 'node:fs'
+//
+// P1 Task 1（2026-11-05 终审前置①②）：OS 证明从布尔升格为 attestation（声明+
+// 三项探测信号+declaredOnly 观测标记）；无 context 相对路径从静默 null 改为显式
+// skippedNoContext 标记——均只加可观测性（执法门落 govbus 事件），判定语义不变。
+import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import type { ToolCategory } from '../../server/permmodes/permission-modes'
@@ -150,18 +155,28 @@ export function pathWithin(parent: string, child: string): boolean {
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
 }
 
-/** 沙箱路径检查：返回越界路径/不可判定的配置（入参原样）或 null。
+/** 「ROOTS 已配置但相对路径无解析基准」的显式标记（P1 Task 1 第三返回形态）：
+ *  旧语义静默 null——ROOTS 配置了却对相对路径不检查，部署者误以为有覆盖。现在返回
+ *  本标记，由调用方（执法门）落观测事件；本契约保持纯函数不落事件。判定仍不猜
+ *  （无基准不虚构解析结果），fail-closed 拒绝留 P2 执行面统一处置。 */
+export interface SkippedNoContext {
+  skippedNoContext: true
+}
+
+/** 沙箱路径检查：返回越界路径/不可判定的配置（入参原样）、无基准跳过标记或 null。
  *  - roots 缺省读 HERMES_TOOL_SANDBOX_ROOTS（:/, 分隔）；未配置=不检查（不假装有沙箱）。
  *  - 显式绝对/~/路径直接判；相对路径按 context 解析（cwd 优先、workspaceRoot 回退），
- *    无 context 时跳过（旧语义：无解析基准不猜）。
+ *    无 context 时不再静默跳过——返回 {skippedNoContext:true}（可见性，判定不猜）。
  *  - 判定在 canonical 空间进行：root 与目标都过 canonicalize；root 不可规范化或
- *    目标不可判定时返回该条目（fail-closed）。 */
+ *    目标不可判定时返回该条目（fail-closed）。
+ *  - 优先级：越界字符串（拒）> skippedNoContext（观测）> null；越界先命中时标记
+ *    信息让位（拒绝是更响的结局，不双返）。 */
 export function sandboxPathViolation(
   tool: string,
   input: Record<string, unknown>,
   rootsInput?: string[],
   context?: SandboxPathContext,
-): string | null {
+): string | SkippedNoContext | null {
   const roots = (rootsInput ?? parseEnvList('HERMES_TOOL_SANDBOX_ROOTS'))
     .map((root) => root.trim())
     .filter(Boolean)
@@ -174,6 +189,7 @@ export function sandboxPathViolation(
     return roots[0] ?? ''
   }
   const baseRaw = context?.cwd?.trim() ? context.cwd : context?.workspaceRoot?.trim() ? context.workspaceRoot : undefined
+  let sawRelativeNoContext = false
   for (const raw of explicitPathsOf(tool, input)) {
     const candidate = raw.trim()
     if (!candidate) continue
@@ -183,7 +199,8 @@ export function sandboxPathViolation(
     } else if (baseRaw) {
       target = resolve(baseRaw, candidate)
     } else {
-      continue  // 相对路径且无解析基准：旧语义跳过
+      sawRelativeNoContext = true  // 相对路径且无解析基准：不猜，但不再静默（P1 Task 1）
+      continue
     }
     try {
       const canonicalTarget = canonicalizeAbs(target)
@@ -193,10 +210,11 @@ export function sandboxPathViolation(
       return raw  // 目标不可判定（ELOOP/EACCES…）=越界（fail-closed）
     }
   }
+  if (sawRelativeNoContext) return { skippedNoContext: true }
   return null
 }
 
-// ---------- OS 沙箱证明（terminal/code 硬边界） ----------
+// ---------- OS 沙箱证明（terminal/code 硬边界；P1 Task 1 可观测化） ----------
 
 /** 合法 OS 沙箱证明口径：部署者声明 agent 运行时进程被哪类真实 OS 级隔离约束，
  *  且文件系统 roots 由该隔离层（而非路径白名单）强制。
@@ -206,7 +224,63 @@ export function sandboxPathViolation(
  *  命令文本审计类声明不算证明——证明的是执行环境，不是命令内容。 */
 const OS_SANDBOX_PROOF_KINDS = new Set(['container', 'vm', 'seatbelt'])
 
-/** OS 沙箱证明是否在案：缺省/未知值=无证明（fail-closed 由执法门拒绝）。 */
-export function osSandboxProofActive(env: NodeJS.ProcessEnv = process.env): boolean {
-  return OS_SANDBOX_PROOF_KINDS.has(String(env.HERMES_TOOL_OS_SANDBOX_PROOF ?? '').trim().toLowerCase())
+/** OS 沙箱探测信号集：三项独立只读文件系统探测，均为「本机存在某种 OS 级隔离
+ *  痕迹/能力」的弱佐证——不构成证明（证明口径仍是部署声明），只用于 declaredOnly
+ *  可观测标记。probes 入参可注入（测试确定性），缺省走真实探测。 */
+export interface OsSandboxProbeSignals {
+  /** Docker 容器标记文件 /.dockerenv 存在。 */
+  dockerenv: boolean
+  /** /proc cgroup（self 与 1 号进程）呈现容器运行时标记（docker/containerd/kubepods…）。 */
+  cgroupContainer: boolean
+  /** macOS sandbox-exec 二进制在标准路径存在（seatbelt 能力信号——能力非激活）。 */
+  sandboxExec: boolean
+}
+
+/** OS 沙箱证明 attestation（P1 Task 1：osSandboxProofActive 升格）。
+ *  declared=部署声明了合法证明口径（原布尔语义）；declaredOnly=声明在案但三项探测
+ *  无一佐证——执法门解锁 terminal 时据此落 autonomy 观测事件（fire-and-forget），
+ *  不改变裁决。跨口径取「任一信号」而非按声明口径匹配：vm 无文件系统级标记，
+ *  按口径匹配会让所有 vm 部署恒报 declaredOnly（噪音），故用粗口径+事件携带全信号
+ *  供运维判读。 */
+export interface OsSandboxAttestation {
+  declared: boolean
+  probeSignals: OsSandboxProbeSignals
+  /** 声明在案且三项探测无一佐证（观测标记，非拒绝依据）。 */
+  declaredOnly: boolean
+}
+
+const CGROUP_CONTAINER_MARKERS = /docker|containerd|kubepods|lxc|machine-rkt|garden/
+
+function probeDockerenv(): boolean {
+  try { return existsSync('/.dockerenv') } catch { return false }
+}
+
+function probeCgroupContainer(): boolean {
+  // macOS 无 /proc（ENOENT 吞掉=无信号）；容器内 cgroup v1/v2 均含运行时路径标记
+  for (const file of ['/proc/self/cgroup', '/proc/1/cgroup']) {
+    try {
+      if (CGROUP_CONTAINER_MARKERS.test(readFileSync(file, 'utf8'))) return true
+    } catch { /* 不可读=无信号 */ }
+  }
+  return false
+}
+
+function probeSandboxExec(): boolean {
+  try { return existsSync('/usr/bin/sandbox-exec') } catch { return false }
+}
+
+/** OS 沙箱证明 attestation：声明口径（env）+ 本机探测信号 → {declared, probeSignals,
+ *  declaredOnly}。执法门消费（无证明仍拒 terminal，declaredOnly 落观测事件）。 */
+export function osSandboxAttestation(
+  env: NodeJS.ProcessEnv = process.env,
+  probes?: OsSandboxProbeSignals,
+): OsSandboxAttestation {
+  const declared = OS_SANDBOX_PROOF_KINDS.has(String(env.HERMES_TOOL_OS_SANDBOX_PROOF ?? '').trim().toLowerCase())
+  const probeSignals = probes ?? {
+    dockerenv: probeDockerenv(),
+    cgroupContainer: probeCgroupContainer(),
+    sandboxExec: probeSandboxExec(),
+  }
+  const declaredOnly = declared && !(probeSignals.dockerenv || probeSignals.cgroupContainer || probeSignals.sandboxExec)
+  return { declared, probeSignals, declaredOnly }
 }

@@ -11,6 +11,7 @@ import { autonomyLadderRoutes } from '../../autonomyladder/autonomy-ladder-contr
 import { sessionModeRoutes } from '../../permmodes/session-mode-controller'
 import { userenvRoutes } from '../../userenv/controller'
 import {
+  assertNoPolicyPathOverlap,
   assertPlatformRoutePolicies,
   enforcePlatformRoutePolicy,
   type PlatformRoutePolicy,
@@ -257,5 +258,58 @@ describe('请求期平台路由政策', () => {
     const next = await runGuard([approvalsRoutes], platformRoutePolicies, ctx)
     expect(next).not.toHaveBeenCalled()
     expect(ctx.status).toBe(403)
+  })
+})
+
+describe('政策路径重叠守卫（P1 Task 1：assertNoPolicyPathOverlap）', () => {
+  const policy = (method: PlatformRoutePolicy['method'], pathPattern: string): PlatformRoutePolicy => ({
+    method, pathPattern, access: 'authenticated',
+  })
+
+  it('静态段与参数段重叠（同 method）→ 抛错并点名两条政策', () => {
+    expect(() => assertNoPolicyPathOverlap([
+      policy('GET', '/api/x/special'),
+      policy('GET', '/api/x/:id'),
+    ])).toThrow(/special.*:id/)
+  })
+
+  it('完全重复的政策（同 method 同路径）也抛（同一请求双命中）', () => {
+    expect(() => assertNoPolicyPathOverlap([
+      policy('POST', '/api/x/act'),
+      policy('POST', '/api/x/act'),
+    ])).toThrow(/\/api\/x\/act.*\/api\/x\/act/)
+  })
+
+  it('同位参数名不同（:id vs :name）也抛——换名不消除双命中', () => {
+    expect(() => assertNoPolicyPathOverlap([
+      policy('GET', '/api/x/:id'),
+      policy('GET', '/api/x/:name'),
+    ])).toThrow(/:id.*:name/)
+  })
+
+  it('不同 method 不算重叠；同位静态段不同不重叠；段数不同不重叠', () => {
+    expect(() => assertNoPolicyPathOverlap([
+      policy('GET', '/api/y/act'),          // 与 POST 同路径：method 隔离
+      policy('POST', '/api/y/act'),
+      policy('GET', '/api/x/alpha'),        // 同 method 同位静态段不同（均静态）
+      policy('GET', '/api/x/beta'),
+      policy('GET', '/api/z/:id'),          // 参数路由与下行段数不同（参数段只吞一段）
+      policy('GET', '/api/z/:id/items'),
+    ])).not.toThrow()
+  })
+
+  it('当前注册表无重叠（存量清单过同一守卫）', () => {
+    expect(() => assertNoPolicyPathOverlap(platformRoutePolicies)).not.toThrow()
+  })
+
+  it('启动对账接入：union assert 同点连带抛重叠错误（重叠先于悬垂/缺登记检查）', () => {
+    const router = new Router()
+    router.get('/api/x/special', async () => {})
+    router.get('/api/x/:id', async () => {})
+    // 两条政策都能对上真实路由（悬垂/缺登记不触发）——唯一失败源是重叠守卫
+    expect(() => assertPlatformRoutePolicies([router], [
+      policy('GET', '/api/x/special'),
+      policy('GET', '/api/x/:id'),
+    ])).toThrow(/overlap/)
   })
 })

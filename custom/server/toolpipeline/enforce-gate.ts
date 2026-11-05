@@ -42,18 +42,22 @@ import { proactivityPolicyForProfile, type ProactivityPolicyLite } from '../proa
 import { assess } from '../proactivity/proactivity-model'
 import { loadManagedSettings } from '../managedsettings/managed-settings'
 // P0 Task 5：执行契约单一事实源（未知 MCP 判定 + 真实路径沙箱 + OS 沙箱证明）。
+// P1 Task 1：osSandboxProofActive 升格为 osSandboxAttestation（声明+探测信号+declaredOnly
+// 观测标记）；sandboxPathViolation 增第三返回形态 skippedNoContext（无基准相对路径
+// 不再静默）——两者均由本模块落 govbus 事件，判定语义不变。
 import {
   isUnknownMcpTool,
   mcpCategoryOf,
-  osSandboxProofActive,
+  osSandboxAttestation,
   parseEnvList,
   sandboxPathViolation,
   sandboxRootsConfigured,
 } from '../../platform/contracts/execution'
-import type { SandboxPathContext } from '../../platform/contracts/execution'
-// 旧导入面保持（P0-5 前消费者直接从本模块导入这些符号）
-export { isUnknownMcpTool, mcpCategoryOf, osSandboxProofActive, sandboxPathViolation, sandboxRootsConfigured }
-export type { SandboxPathContext }
+import type { OsSandboxAttestation, OsSandboxProbeSignals, SandboxPathContext } from '../../platform/contracts/execution'
+// 旧导入面保持（P0-5 前消费者直接从本模块导入这些符号；P1-1 起 osSandboxProofActive
+// 全仓唯一消费方即本模块，已随升格改名——无外部调用方需要过渡别名）
+export { isUnknownMcpTool, mcpCategoryOf, osSandboxAttestation, sandboxPathViolation, sandboxRootsConfigured }
+export type { OsSandboxAttestation, OsSandboxProbeSignals, SandboxPathContext }
 
 /** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。
  *  context 字段面=上游 AgentToolContext 的子集（vendor ekko-agent tools/types.ts）；
@@ -250,6 +254,9 @@ export interface EnforceEnv {
   /** 真实执行上下文（P0-5）：沙箱路径判定的相对路径解析基准（上游 AgentToolContext
    *  的 cwd/workspaceRoot，由执法钩子透传；测试直接注入）。 */
   sandboxContext?: SandboxPathContext
+  /** OS 沙箱证明 attestation 注入（P1 Task 1：测试确定性——真实探测信号依宿主
+   *  macOS/Linux/容器而异；缺省走 osSandboxAttestation() 真实探测）。 */
+  osAttestationOf?: () => OsSandboxAttestation
 }
 
 /** 工具白名单匹配：精确名或 `prefix*`。 */
@@ -330,25 +337,33 @@ export function evaluateEnforcement(
 
   // 沙箱硬边界（P2-5，opt-in）：未配置根 = 不检查，不假装有沙箱。P0-5 起判定走
   // 真实路径（相对路径按上下文 cwd/workspaceRoot 解析、realpath canonicalize）。
+  // P1 Task 1：无基准相对路径返回 skippedNoContext 标记——放行但落观测事件。
   const pathViolation = sandboxPathViolation(tool, input, undefined, env.sandboxContext)
-  if (pathViolation) {
+  if (typeof pathViolation === 'string') {
     return {
       enforcing: true, allow: false, rule: 'sandbox-path',
       error: `路径 ${pathViolation} 超出沙箱根或沙箱根不可规范化（HERMES_TOOL_SANDBOX_ROOTS）——请改到允许目录或修正沙箱根配置`,
     }
   }
+  if (pathViolation) {
+    emitNoContextPathEvent(tool, profileId)
+  }
 
   // 硬边界（P0 Task 5）：沙箱模式（roots 已配置）下 terminal/code 本质上能触达任意
   // 路径（cd/重定向），路径白名单管不住 shell——没有真实 OS 沙箱证明即拒，不用
   // Shell 文本检查代替（计划书全局约束）。证明口径见 contracts/execution.ts。
-  if (
-    (tool === 'terminal_exec' || tool === 'code_exec') &&
-    sandboxRootsConfigured() &&
-    !osSandboxProofActive()
-  ) {
-    return {
-      enforcing: true, allow: false, rule: 'sandbox-terminal-unavailable',
-      error: `工具 ${tool} 在沙箱模式（HERMES_TOOL_SANDBOX_ROOTS 已配置）下缺少真实 OS 沙箱证明（HERMES_TOOL_OS_SANDBOX_PROOF=container|vm|seatbelt）——路径白名单管不住 shell，请将 agent 运行时置于真实 OS 级隔离或声明证明（本拒绝不可经审批放行）`,
+  // P1 Task 1：证明升格 attestation——declared 解锁不变；declaredOnly（声明无探测
+  // 佐证）解锁时落 autonomy 观测事件，提示核实声明真实性（不影响裁决）。
+  if ((tool === 'terminal_exec' || tool === 'code_exec') && sandboxRootsConfigured()) {
+    const attestation = (env.osAttestationOf ?? osSandboxAttestation)()
+    if (!attestation.declared) {
+      return {
+        enforcing: true, allow: false, rule: 'sandbox-terminal-unavailable',
+        error: `工具 ${tool} 在沙箱模式（HERMES_TOOL_SANDBOX_ROOTS 已配置）下缺少真实 OS 沙箱证明（HERMES_TOOL_OS_SANDBOX_PROOF=container|vm|seatbelt）——路径白名单管不住 shell，请将 agent 运行时置于真实 OS 级隔离或声明证明（本拒绝不可经审批放行）`,
+      }
+    }
+    if (attestation.declaredOnly) {
+      emitSandboxAttestationEvent(tool, profileId, attestation)
     }
   }
 
@@ -615,6 +630,43 @@ function emitDenyEvent(tool: string, profileId: string | undefined, v: Extract<E
         summary: `执法门拒绝 ${profileId ? `profile ${profileId} 的 ` : ''}工具调用 ${tool}：${v.error}`,
         refs: profileId ? { profileId } : {},
         payload: { tool, rule: v.rule, ...(v.policyRuleId ? { policyRuleId: v.policyRuleId } : {}) },
+      })
+    })
+    .catch(() => { /* fail-soft */ })
+}
+
+/** P1 Task 1（终审前置①）：terminal 解锁但 OS 沙箱证明「仅声明无探测佐证」→
+ *  autonomy/warn 观测事件（fire-and-forget 同 permmodes session-mode 先例）。
+ *  不改变裁决——declared 已满足证明口径，事件只提示部署者核实声明真实性。 */
+function emitSandboxAttestationEvent(tool: string, profileId: string | undefined, attestation: OsSandboxAttestation): void {
+  import('../govbus/event-log')
+    .then(({ appendGovEvent }) => {
+      appendGovEvent({
+        domain: 'autonomy',
+        severity: 'warn',
+        type: 'sandbox-attestation-declared-only',
+        source: 'toolpipeline/enforce-gate',
+        summary: `沙箱证明仅声明无探测佐证：${profileId ? `profile ${profileId} 的 ` : ''}工具 ${tool} 已按声明解锁，但 /.dockerenv、cgroup 容器标记、sandbox-exec 三项探测无一命中——请核实 HERMES_TOOL_OS_SANDBOX_PROOF 声明与实际运行环境一致`,
+        refs: profileId ? { profileId } : {},
+        payload: { tool, declared: attestation.declared, declaredOnly: attestation.declaredOnly, probeSignals: attestation.probeSignals },
+      })
+    })
+    .catch(() => { /* fail-soft */ })
+}
+
+/** P1 Task 1（终审前置②）：ROOTS 配置但相对路径无解析基准（cwd/workspaceRoot 缺席）
+ *  → sandbox/info 观测事件。只加可见性不断言拒（fail-closed 留 P2 执行面统一）。 */
+function emitNoContextPathEvent(tool: string, profileId: string | undefined): void {
+  import('../govbus/event-log')
+    .then(({ appendGovEvent }) => {
+      appendGovEvent({
+        domain: 'sandbox',
+        severity: 'info',
+        type: 'relative-path-no-context',
+        source: 'toolpipeline/enforce-gate',
+        summary: `相对路径无解析基准：${profileId ? `profile ${profileId} 的 ` : ''}工具 ${tool} 的沙箱路径检查跳过并放行（cwd/workspaceRoot 缺席，判定不猜）——请透传执行上下文或改用绝对路径`,
+        refs: profileId ? { profileId } : {},
+        payload: { tool },
       })
     })
     .catch(() => { /* fail-soft */ })

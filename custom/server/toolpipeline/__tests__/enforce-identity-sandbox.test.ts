@@ -1,5 +1,7 @@
 // 执法门 P0-1/P2-5 守门：身份工具白名单、沙箱路径、浏览器域名、放行决策账。
 // P0 Task 5 增：真实路径沙箱（cwd 解析/realpath canonicalize/symlink 逃逸）与沙箱终端证明。
+// P1 Task 1 增：OS 沙箱证明可观测化（osSandboxAttestation/declaredOnly 事件）与
+// 无 context 相对路径观测事件（skippedNoContext 第三返回形态）。
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,6 +11,7 @@ import {
   applyApprovalBridge,
   ekkoEnforceGateHook,
   evaluateEnforcement,
+  osSandboxAttestation,
   sandboxNetworkViolation,
   sandboxPathViolation,
   toolAllowedByList,
@@ -16,6 +19,7 @@ import {
 } from '../enforce-gate'
 import { queryPolicyDecisions } from '../policy-decisions'
 import { registerIdentity } from '../../agentidentity/agent-identity'
+import { queryGovEvents } from '../../govbus/event-log'
 
 const dirs: string[] = []
 
@@ -100,11 +104,12 @@ describe('身份工具白名单（P0-1）', () => {
 })
 
 describe('沙箱硬边界（P2-5）', () => {
-  it('显式路径超出沙箱根拒绝，根内放行，相对路径不检查', () => {
+  it('显式路径超出沙箱根拒绝，根内放行；相对路径无基准返回 skippedNoContext 标记（P1 Task 1）', () => {
     expect(sandboxPathViolation('terminal_exec', { cwd: '/etc' }, ['/workspace'])).toBe('/etc')
     expect(sandboxPathViolation('terminal_exec', { cwd: '/workspace/repo' }, ['/workspace'])).toBeNull()
     expect(sandboxPathViolation('write_file', { path: '/tmp/x' }, ['/workspace'])).toBe('/tmp/x')
-    expect(sandboxPathViolation('write_file', { path: 'relative/x' }, ['/workspace'])).toBeNull()
+    // P1 Task 1：ROOTS 配置+无 context 不再静默 null——显式标记由调用方落观测事件
+    expect(sandboxPathViolation('write_file', { path: 'relative/x' }, ['/workspace'])).toEqual({ skippedNoContext: true })
   })
 
   it('未配置根时不检查（不假装有沙箱）', () => {
@@ -135,15 +140,16 @@ describe('沙箱硬边界（P2-5）', () => {
 })
 
 describe('真实路径沙箱（P0 Task 5：相对路径按真实 cwd 解析 + realpath canonicalize）', () => {
-  it('相对路径按真实 cwd 解析：越出根拒、根内放行；无基准仍跳过', () => {
+  it('相对路径按真实 cwd 解析：越出根拒、根内放行；无基准返回 skippedNoContext 标记', () => {
     const root = tmp('sandbox-rel-')
     expect(sandboxPathViolation('read_file', { path: '../outside.txt' }, [root], { cwd: root })).not.toBeNull()
     expect(sandboxPathViolation('read_file', { path: 'notes/a.txt' }, [root], { cwd: root })).toBeNull()
     // cwd 缺席时 workspaceRoot 兜底（上游 AgentToolContext 两字段都可得）
     expect(sandboxPathViolation('write_file', { path: '../escape.txt' }, [root], { workspaceRoot: root })).not.toBeNull()
     expect(sandboxPathViolation('write_file', { path: 'ok.txt' }, [root], { workspaceRoot: root })).toBeNull()
-    // 无基准的相对路径仍跳过（旧语义不回退——裁决层无法确定基准就不猜）
-    expect(sandboxPathViolation('write_file', { path: 'relative/x' }, [root])).toBeNull()
+    // 无基准的相对路径返回显式标记（P1 Task 1：可见性——裁决层无法确定基准不猜，
+    // 但不再静默：调用方按 skippedNoContext 落观测事件）
+    expect(sandboxPathViolation('write_file', { path: 'relative/x' }, [root])).toEqual({ skippedNoContext: true })
   })
 
   it('symlink 逃逸可检出：根内符号链指向根外即越界；根内链不误伤', () => {
@@ -264,5 +270,104 @@ describe('执法钩子：身份与放行决策账（P0-2）', () => {
     expect(all.byOutcome).toEqual({ allow: 1, deny: 1 })
     expect(all.entries.some((e) => e.rule === 'identity-pass' && e.allow)).toBe(true)
     expect(all.entries.some((e) => e.rule === 'identity-tool-denied' && !e.allow)).toBe(true)
+  })
+})
+
+describe('OS 沙箱证明可观测化（P1 Task 1：osSandboxAttestation）', () => {
+  // 探测注入统一用「三项全无」——真实探测值依宿主（macOS 有 sandbox-exec、Linux 容器
+  // 有 /.dockerenv），负例必须与宿主无关。
+  const noSignals = { dockerenv: false, cgroupContainer: false, sandboxExec: false }
+
+  it('声明 container 但三项探测无一佐证 → declaredOnly=true', () => {
+    const att = osSandboxAttestation({ HERMES_TOOL_OS_SANDBOX_PROOF: 'container' }, noSignals)
+    expect(att).toEqual({ declared: true, probeSignals: noSignals, declaredOnly: true })
+  })
+
+  it('dockerenv 探测佐证在案 → declaredOnly=false（声明+佐证，不告警）', () => {
+    const att = osSandboxAttestation(
+      { HERMES_TOOL_OS_SANDBOX_PROOF: 'container' },
+      { ...noSignals, dockerenv: true },
+    )
+    expect(att.declared).toBe(true)
+    expect(att.declaredOnly).toBe(false)
+  })
+
+  it('未声明/非法声明 → declared=false 且 declaredOnly=false（无「仅声明」可观测）', () => {
+    expect(osSandboxAttestation({}, noSignals)).toMatchObject({ declared: false, declaredOnly: false })
+    expect(osSandboxAttestation({ HERMES_TOOL_OS_SANDBOX_PROOF: 'shell-audit' }, noSignals))
+      .toMatchObject({ declared: false, declaredOnly: false })
+  })
+
+  it('真实探测缺省可运行：三信号均为布尔（不依赖注入）', () => {
+    const att = osSandboxAttestation({ HERMES_TOOL_OS_SANDBOX_PROOF: 'seatbelt' })
+    expect(typeof att.probeSignals.dockerenv).toBe('boolean')
+    expect(typeof att.probeSignals.cgroupContainer).toBe('boolean')
+    expect(typeof att.probeSignals.sandboxExec).toBe('boolean')
+  })
+
+  it('解锁 terminal 且 declaredOnly=true → 放行同时落 autonomy/sandbox-attestation-declared-only 事件', async () => {
+    const root = tmp('sandbox-attest-ev-')
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = root
+    process.env.HERMES_TOOL_OS_SANDBOX_PROOF = 'container'
+    const attestation = { declared: true, probeSignals: noSignals, declaredOnly: true }
+    // terminal 门解锁（不再 sandbox-terminal-unavailable 拒）
+    const v = evaluateEnforcement('terminal_exec', { command: 'ls', cwd: root }, 'p1', {
+      masterOn: true,
+      osAttestationOf: () => attestation,
+    })
+    expect(v).toMatchObject({ enforcing: false, rule: 'no-config' })
+    await new Promise((r) => setTimeout(r, 25))  // govbus 异步 fire-and-forget
+    const ev = queryGovEvents({ domain: 'autonomy', typePrefix: 'sandbox-attestation' })[0]
+    expect(ev?.type).toBe('sandbox-attestation-declared-only')
+    expect(ev?.severity).toBe('warn')
+    expect(ev?.payload).toMatchObject({ tool: 'terminal_exec', declaredOnly: true, probeSignals: noSignals })
+  })
+
+  it('声明有探测佐证（declaredOnly=false）解锁 terminal 不落事件', async () => {
+    const root = tmp('sandbox-attest-quiet-')
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = root
+    process.env.HERMES_TOOL_OS_SANDBOX_PROOF = 'container'
+    const v = evaluateEnforcement('terminal_exec', { command: 'ls', cwd: root }, 'p1', {
+      masterOn: true,
+      osAttestationOf: () => ({ declared: true, probeSignals: { ...noSignals, dockerenv: true }, declaredOnly: false }),
+    })
+    expect(v).toMatchObject({ rule: 'no-config' })
+    await new Promise((r) => setTimeout(r, 25))
+    expect(queryGovEvents({ domain: 'autonomy', typePrefix: 'sandbox-attestation' })).toHaveLength(0)
+  })
+
+  it('osAttestationOf 缺省走真实探测（macOS 宿主 sandbox-exec 在案不误报 declaredOnly 事件）', async () => {
+    const root = tmp('sandbox-attest-default-')
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = root
+    process.env.HERMES_TOOL_OS_SANDBOX_PROOF = 'container'
+    const v = evaluateEnforcement('terminal_exec', { command: 'ls', cwd: root }, 'p1', { masterOn: true })
+    // 本机（macOS 开发机）sandbox-exec 二进制存在=能力佐证在案 → declaredOnly=false
+    expect(v).toMatchObject({ rule: 'no-config' })
+  })
+})
+
+describe('无 context 相对路径观测事件（P1 Task 1：relative-path-no-context）', () => {
+  it('ROOTS 配置+无 context 的相对路径：执法门放行且落 sandbox/relative-path-no-context 观测事件', async () => {
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = '/workspace'
+    const v = evaluateEnforcement('write_file', { path: 'relative/x' }, 'p1', { masterOn: true })
+    // 只加可见性不断言拒——fail-closed 留 P2 执行面统一
+    expect(v).toMatchObject({ enforcing: false, rule: 'no-config' })
+    await new Promise((r) => setTimeout(r, 25))
+    const ev = queryGovEvents({ domain: 'sandbox', typePrefix: 'relative-path-no-context' })[0]
+    expect(ev?.type).toBe('relative-path-no-context')
+    expect(ev?.severity).toBe('info')
+    expect(ev?.payload).toMatchObject({ tool: 'write_file' })
+  })
+
+  it('有 context（相对路径可解析）时不落 no-context 观测事件', async () => {
+    const root = tmp('sandbox-ctx-quiet-')
+    process.env.HERMES_TOOL_SANDBOX_ROOTS = root
+    const v = evaluateEnforcement('write_file', { path: 'inside.txt' }, 'p1', {
+      masterOn: true,
+      sandboxContext: { cwd: root },
+    })
+    expect(v).toMatchObject({ rule: 'no-config' })
+    await new Promise((r) => setTimeout(r, 25))
+    expect(queryGovEvents({ domain: 'sandbox', typePrefix: 'relative-path-no-context' })).toHaveLength(0)
   })
 })

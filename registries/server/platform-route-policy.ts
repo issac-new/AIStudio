@@ -3,6 +3,14 @@ import type { PlatformRoutePolicy } from '../../custom/server/platform/authz/rou
 /**
  * 平台统一授权清单。路径与 @koa/router stack 中的实际 path 逐字对应；
  * 禁止通配，新增/删除路由必须同步修改本清单并运行 route-policy 真实枚举测试。
+ *
+ * 边界声明（P1 Task 1，处置 P0 终审前置⑤的书面化）：
+ * 当前默认拒绝（写路由未登记即 403）只覆盖 6 个受管 router——health、auth（公开
+ * 登录面）、userenv、autonomy-ladder、permmodes session-mode、approvals。server
+ * 树内其余写面（harness、eval、orchestrator、simcenter、delivery 等域的路由）尚
+ * 未纳入本清单与 enforcePlatformRoutePolicy 守卫范围——它们按 P2 的扩展节奏逐域
+ * 登记进本清单（登记时同步扩 platformProtectedRouters 与启动对账 union），不在
+ * 本清单里的路由不因本文件存在而获得任何默认拒绝保护。
  */
 export const platformRoutePolicies: PlatformRoutePolicy[] = [
   // 公开健康检查与登录入口（认证前挂载）。

@@ -34,11 +34,11 @@
 - Produces: `osSandboxAttestation()`（改名+探测混合：env 置值时附加探测信号并落 govbus 事件）；`sandboxPathViolation` 在 ROOTS 配置但无 context 时返回特殊标记 `{ skippedNoContext: true }` 由调用方记观测事件；`assertNoPolicyPathOverlap(policies)`。
 - Consumes: P0 的 `osSandboxProofActive`、`sandboxPathViolation`、`platformRoutePolicies`。
 
-- [ ] **Step 1: 写负例**——①env 声明 PROOF=container 但本机无 /.dockerenv 时，attestation 记录 `declaredOnly:true` 且 govbus 收到 autonomy/sandbox-attestation 事件；②ROOTS 配置+无 context 的相对路径调用产生观测事件（不断言拒——本任务只加可见性，fail-closed 留 P2 执行面统一）；③构造静态 `/api/x/special` 与参数 `/api/x/:id` 重叠的政策清单时 `assertNoPolicyPathOverlap` 抛错。
-- [ ] **Step 2: 确认红**（新函数不存在/旧行为放行）。
-- [ ] **Step 3: 实现**——`osSandboxAttestation` 返回 `{declared, probeSignals:{dockerenv, cgroupContainer, sandboxExec}, declaredOnly}`；enforce-gate 解锁 terminal 时 `declaredOnly=true` 则附 warning 并 `appendGovEvent`（fire-and-forget，同 permmodes 先例）；`sandboxPathViolation` 增加第三返回形态；启动对账调用 `assertNoPolicyPathOverlap`。
-- [ ] **Step 4: 注册表文件头写边界声明**——"当前默认拒绝覆盖 6 个受管 router；harness/eval/orchestrator 等写面按 P2 扩展节奏登记"（处置前置⑤的书面化）。
-- [ ] **Step 5: 跑 toolpipeline+platform 目标测试绿后提交** `feat(platform): P1 前置——沙箱证明可观测化与路由重叠守卫`。
+- [x] **Step 1: 写负例**——①env 声明 PROOF=container 但本机无 /.dockerenv 时，attestation 记录 `declaredOnly:true` 且 govbus 收到 autonomy/sandbox-attestation 事件；②ROOTS 配置+无 context 的相对路径调用产生观测事件（不断言拒——本任务只加可见性，fail-closed 留 P2 执行面统一）；③构造静态 `/api/x/special` 与参数 `/api/x/:id` 重叠的政策清单时 `assertNoPolicyPathOverlap` 抛错。
+- [x] **Step 2: 确认红**（新函数不存在/旧行为放行）。
+- [x] **Step 3: 实现**——`osSandboxAttestation` 返回 `{declared, probeSignals:{dockerenv, cgroupContainer, sandboxExec}, declaredOnly}`；enforce-gate 解锁 terminal 时 `declaredOnly=true` 则附 warning 并 `appendGovEvent`（fire-and-forget，同 permmodes 先例）；`sandboxPathViolation` 增加第三返回形态；启动对账调用 `assertNoPolicyPathOverlap`。
+- [x] **Step 4: 注册表文件头写边界声明**——"当前默认拒绝覆盖 6 个受管 router；harness/eval/orchestrator 等写面按 P2 扩展节奏登记"（处置前置⑤的书面化）。
+- [x] **Step 5: 跑 toolpipeline+platform 目标测试绿后提交** `feat(platform): P1 前置——沙箱证明可观测化与路由重叠守卫`。
 
 ### Task 2: EvidenceRecord 九字段契约
 

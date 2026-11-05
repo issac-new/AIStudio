@@ -203,6 +203,11 @@ simharness/                      仅保留平台 CLI 的 Shell 适配与场景�
 | 沙箱执行 | 无 OS 沙箱证明即拒绝 | Shell 文黑名单；只查 cwd | 命令展开、重定向和符号链接无法靠词法检查形成硬边界 | Mechanical | approved |
 | 旧证据 | 只读迁移，缺证即 unknown | 自动收养为 pass | 历史记录不能证明当前提交和当前产物 | Mechanical | approved |
 | 交付组织 | 单 worktree 三阶段提交，最终一次合入 | 三 worktree 分别合入 | 用户选择一次性切换，避免中间版本形成混合核心 | Mechanical | approved |
+| OS 证明可观测化（P1-1） | osSandboxProofActive 直接改名 osSandboxAttestation，不留废弃别名 | 保留旧名作 deprecated re-export | 全仓唯一消费方即执法门（grep 实证无其他调用方），别名只留死代码 | Mechanical | approved |
+| declaredOnly 口径（P1-1） | 声明在案且三项探测（dockerenv/cgroup/sandbox-exec）无一命中即置位，不按声明口径匹配信号 | container 声明只认 dockerenv/cgroup 等同类信号 | vm 无文件系统级标记，按口径匹配会让全部 vm 部署恒报 declaredOnly（观测噪音淹没真信号）；事件携带全量探测信号供运维判读 | Mechanical | approved |
+| 治理事件沙箱观测域（P1-1） | govbus 新增 sandbox 域收相对路径无基准等非拒绝观测事件 | 复用 security 域 | 拒绝留痕（security/high）与放行观测（info）分面，告警流不被观测噪音稀释 | Mechanical | approved |
+| 无基准相对路径（P1-1） | 契约层返回 {skippedNoContext:true} 标记，执法门落事件并放行；fail-closed 拒绝留 P2 执行面统一 | 契约层直接拒绝；维持静默 null | 本任务只加可见性（P0 终审前置②书面裁定）；契约保持纯函数不落事件，事件归执法门（同 deny 事件先例） | Mechanical | approved |
+| 路由重叠守卫接入点（P1-1） | assertNoPolicyPathOverlap 在 assertPlatformRoutePolicies 顶部调用（union assert 同点连带） | 改 patches/756 在 vendor 启动文件加第二处调用 | 启动对账已有 union 调用点，内联接入零补丁改动即覆盖真实启动；patches/ 变更受并行上限约束不必要触发 | Mechanical | approved |
 
 ## 验证
 
@@ -244,6 +249,16 @@ Task 1-8 实施完成后的真实命令与计数（隔离 HOME=/tmp/aistudio-pla
 - Task 8 承接的三批审查挂账（负例先行，先红后绿）：Task3①RegExp 写路由启动即抛错（原被字符串过滤静默吞掉）+②启动对账补"悬垂政策"方向（含 method 不一致负例）；Task7-Important 存量债——typecheck-client-baseline `--check` 基线缺席由恒 exit 0 改为 exit 2 INCONCLUSIVE（生成模式仍可建初始基线）；Task5 五处"两层信号"旧注释改单层表述（动词启发式单层分类信号）。
 - Task 8 审查轮（round 2，Critical 1 修复）：悬垂检查使 753 补丁原"两组各传全量政策"的启动对账形态在真实 registerRoutes 必抛（审查探针复现：两方向各判对方组政策悬垂）——patches/753 改为两组并集单次对账（enforce 双链挂载不变），经 inject --clean→inject 真通道重放并以隔离快照 git apply --check + cmp 字节对账；route-policy 生产形态测试升级为执行式（并集对账不抛 + 双链 enforce 可执行）并加旧形态负例锚定；ProactivitySection 安静时段交互面补守门 4 条（开关派生/禁用门控/嵌套载荷/畸形重载不残留）。
 - 未执行项（如实登记）：真实 Matrix/IdP 服务活体链路、桌面构建与 afterPack、SIM 活体烧机、build:full/release:check/release:gate 未在本阶段执行——属 P1/P2 验证面或需外部依赖，不以 mock 结果替代。
+
+### 5. P1 实施验证（2026-11-05）
+
+P1 Task 1（终审前置①②③⑤ 清扫）负例先红后绿的真实命令与计数（同一隔离 HOME）：
+
+- 负例先红：`npx vitest run custom/server/toolpipeline/__tests__/enforce-identity-sandbox.test.ts custom/server/platform/__tests__/route-policy.test.ts` 在实现前 14 用例失败（attestation 契约 4 + declaredOnly 事件 1 + no-context 观测事件 1 + skippedNoContext 旧断言 2 + 重叠守卫 6，失败原因均为新符号不存在/旧行为静默放行）。
+- 实现后目标面 `npx vitest run custom/server/toolpipeline/ custom/server/platform/ custom/server/mcpcatalog/ custom/server/govbus/`：20 文件 / 220 通过 / 0 失败（基线 198 + 新增 22）；相邻面 `npx vitest run custom/server/governance/ custom/server/permmodes/ custom/server/autonomyladder/ custom/server/userenv/ custom/server/approval-inbox/`：383 通过 / 0 失败。
+- `npm run typecheck:harness`：exit 0。
+- 终审前置落点：①osSandboxAttestation 声明+探测+declaredOnly，解锁 terminal 且仅声明时 fire-and-forget autonomy/warn 事件；②skippedNoContext 第三返回形态，执法门落 sandbox/info 观测事件并放行；③assertNoPolicyPathOverlap 静态/参数段同位重叠抛错并接入启动对账；⑤注册表文件头书面化默认拒绝覆盖边界（6 受管 router，harness/eval/orchestrator 写面按 P2 节奏登记）。前置④（EvidenceRecord 九字段）属 Task 2。
+- 宿主差异处理：探测信号可注入（测试注入全 false 保证跨 macOS/Linux/容器确定性）；macOS 宿主 sandbox-exec 在案即有佐证不误报 declaredOnly（osAttestationOf 缺省走真实探测有用例锚定）。
 
 ## 风险与回滚
 
