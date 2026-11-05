@@ -360,3 +360,5 @@ paths:
   - patches/755-readpool-fd-count-throttle.patch
   - simharness/mux/mx-capability-probes.mjs
   - simharness/tests/capability-probes.test.ts
+  # run27 步 21 台账键收编批（879d98e）
+  - docs/superpowers/specs/2026-11-06-run27-steps-ledger-keys.md
