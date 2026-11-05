@@ -227,7 +227,10 @@ export function isFresh(
   }
   if (ctx.treeHash && run.treeHash && ctx.treeHash === run.treeHash) return true
   if (ctx.commit && run.commit === ctx.commit) {
-    if (!ctx.appliesWhen) return ctx.changedPaths.length === 0
+    // 门未声明 appliesWhen = 不受路径影响：同 commit 即新鲜。
+    // 原实现要求 changedPaths 为空，导致 meta 门（requirement-trace）引用无路径门时，
+    // 只要推送范围非空就永远 stale（2026-11-05 主树 pre-push 实测）。
+    if (!ctx.appliesWhen) return true
     // 门适用路径与本次变更不相交 → 旧证据仍有效
     const pats = [...(ctx.appliesWhen.changed.any ?? []), ...(ctx.appliesWhen.changed.all ?? [])]
     if (pats.length === 0) return ctx.changedPaths.length === 0

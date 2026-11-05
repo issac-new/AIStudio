@@ -381,12 +381,16 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
     const rules = Array.isArray(d.value.rules) ? d.value.rules.filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null) : undefined
     if (!rules || rules.length === 0) return done('error', 'conventions file lacks rules[]')
     const problems: string[] = []
-    const files = listWorkspaceFilesSafe(input.workspace)
+    const workspaceFiles = listWorkspaceFilesSafe(input.workspace)
     for (const [i, r] of rules.entries()) {
       const id = typeof r.id === 'string' ? r.id : `rule[${i}]`
       const include = typeof r.include === 'string' ? r.include : null
       if (!include) return done('error', `${id}: include regex required`)
       const paths = Array.isArray(r.paths) ? (r.paths as unknown[]).filter((p): p is string => typeof p === 'string') : ['**/*']
+      // 精确文件路径直接纳入候选：工作区清单有 5000 上限，vendor 大树会挤掉窄路径
+      // （2026-11-05 主树 convention-alignment scope-empty 实测）。
+      const exactFiles = paths.filter((p) => !/[*?[\]]/.test(p) && existsSync(join(input.workspace, p)))
+      const files = [...new Set([...exactFiles, ...workspaceFiles])]
       const severity = r.severity === 'fail' ? 'fail' : 'warn'
       let re: RegExp
       try {
@@ -397,7 +401,7 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
       let hits = 0
       let scanned = 0
       for (const rel of files) {
-        if (!paths.some((p) => globSafe(p, rel))) continue
+        if (!exactFiles.includes(rel) && !paths.some((p) => globSafe(p, rel))) continue
         scanned++
         let content: string
         try {
@@ -422,7 +426,7 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
       if (hard.length > 0) return done('fail', `convention violations (${hard.length}): ${hard.slice(0, 6).join(' | ')}`, hard)
       return done('fail', `convention findings (warn-severity): ${problems.slice(0, 6).join(' | ')}`, problems)
     }
-    return done('pass', `${rules.length} convention rules clean over ${files.length} files`)
+    return done('pass', `${rules.length} convention rules clean over ${workspaceFiles.length} files`)
   }
 
   if (executor.mode === 'consistency') {
