@@ -41,7 +41,7 @@ describe('项目与运行', () => {
     const p = newProject()
     const run = await startRun(p.projectId)
     expect(run.ok).toBe(true)
-    if (!run.ok) return
+    if (!run.ok) throw new Error('expected failure')
     expect(run.value.targetFingerprint).toBe(p.fingerprint)
     expect(run.value.ledger?.summary.total).toBe(15)
     // 自动面（有采集器）应进入 full/partial，不该留在 unchecked
@@ -66,12 +66,12 @@ describe('候选登记与三态裁决', () => {
       surfaceClass: 'tool_exec', title: '审批旁路', detail: 'd', author: 'hunter-1',
     })
     expect(cand.ok).toBe(true)
-    if (!cand.ok) return
+    if (!cand.ok) throw new Error('expected failure')
     const bad = verifyCandidate(p.projectId, cand.value.findingId, {
       verifier: 'verifier-1', status: 'confirmed',
     })
     expect(bad.ok).toBe(false)
-    if (bad.ok) return
+    if (bad.ok) throw new Error('expected failure')
     expect(bad.problems.map((x) => x.code)).toEqual(expect.arrayContaining(['missing_trace_chain', 'missing_observation']))
   })
 
@@ -86,7 +86,7 @@ describe('候选登记与三态裁决', () => {
       verifier: 'hunter-2', status: 'confirmed',
     })
     expect(self.ok).toBe(false)
-    if (self.ok) return
+    if (self.ok) throw new Error('expected failure')
     expect(self.problems.some((x) => x.code === 'self_verification_forbidden')).toBe(true)
   })
 
@@ -105,7 +105,7 @@ describe('候选登记与三态裁决', () => {
       verifier: 'v1', status: 'needs_validation', unknownFact: '该 token 是否真泄露', severity: 'high',
     })
     expect(withSeverity.ok).toBe(false)
-    if (withSeverity.ok) return
+    if (withSeverity.ok) throw new Error('expected failure')
     expect(withSeverity.problems.some((x) => x.code === 'severity_on_needs_validation')).toBe(true)
   })
 
@@ -137,7 +137,7 @@ describe('候选登记与三态裁决', () => {
       verifier: 'v1', status: 'confirmed', severity: 'high', defenseInDepth: true,
     })
     expect(result.ok).toBe(true)
-    if (!result.ok) return
+    if (!result.ok) throw new Error('expected failure')
     expect(result.value.status).toBe('needs_validation')
     expect(result.value.severity).toBeUndefined()
     expect(result.value.defenseInDepth).toBe(true)
@@ -183,7 +183,7 @@ describe('报告', () => {
     // 无候选时 finalize 直接过（无需复核记录）
     const final = finalizeRun(p.projectId, run.value.runId)
     expect(final.ok).toBe(true)
-    if (!final.ok) return
+    if (!final.ok) throw new Error('expected failure')
     expect(validateReportSchema(final.value.report)).toEqual([])
     expect(final.value.markdown).toContain('安全审计报告')
   })
@@ -201,7 +201,7 @@ describe('报告', () => {
 
     const blocked = finalizeRun(p.projectId, run.value.runId)
     expect(blocked.ok).toBe(false)
-    if (blocked.ok) return
+    if (blocked.ok) throw new Error('expected failure')
     expect(blocked.problems.some((x) => x.code === 'record_review_incomplete')).toBe(true)
 
     // 复核后放行

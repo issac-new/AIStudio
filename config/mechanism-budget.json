@@ -1,0 +1,33 @@
+{
+  "recordedAt": "2026-11-05",
+  "limits": {
+    "gates": 48,
+    "patches": 561,
+    "zcodePatches": 14,
+    "scripts": 120,
+    "ledgers": 6,
+    "npmScripts": 48
+  },
+  "changes": [
+    {
+      "at": "2026-11-05",
+      "delta": "+8 scripts / +2 npm scripts / +2 ledgers",
+      "reason": "治理可信度修复 P0-P2：qgate-health、governance-lint、recurrence-report、merge-invariants、audit-sample、mutation-probe、coverage-changed、gen-doc-indexes；release:preflight、test:coverage；recurrence/spec-coverage 账本",
+      "pairedRemovals": [
+        "silent-return 基线棘轮（只许减）",
+        "附录 A/手工索引改为机器检查（减少手工维护）",
+        "run26 台账双源合一（减少一份副本）"
+      ]
+    }
+  ],
+  "sunset": [
+    { "id": "qgate-health", "owner": "quality", "reviewBy": "2026-12-05", "retireWhen": "qgate health 并入 status 且 status 默认输出 DEGRADED 后" },
+    { "id": "governance-lint", "owner": "quality", "reviewBy": "2026-12-05", "retireWhen": "pre-push 内联校验且不再需要独立报告后" },
+    { "id": "recurrence-report", "owner": "quality", "reviewBy": "2026-12-05", "retireWhen": "复发率连续两轮下降并并入复盘模板后" },
+    { "id": "merge-invariants", "owner": "release", "reviewBy": "2026-12-05", "retireWhen": "CI 覆盖合并后不变量检查后" },
+    { "id": "audit-sample", "owner": "audit", "reviewBy": "2026-12-05", "retireWhen": "独立审计代理接管抽样调度后" },
+    { "id": "mutation-probe", "owner": "quality", "reviewBy": "2026-12-05", "retireWhen": "门健康度连续 3 轮全绿后降为季度抽检" },
+    { "id": "coverage-changed", "owner": "quality", "reviewBy": "2026-12-05", "retireWhen": "vitest 原生 changed-line 阈值可用后" },
+    { "id": "gen-doc-indexes", "owner": "docs", "reviewBy": "2026-12-05", "retireWhen": "索引由 docs-ssot-guard 自动生成后" }
+  ]
+}

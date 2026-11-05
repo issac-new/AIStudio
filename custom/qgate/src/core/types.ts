@@ -261,6 +261,11 @@ export interface GateRun {
   treeHash?: string
   changedPaths?: string[]
   failureSummary?: string
+  /** 判定执行语义（v0.4 治理可信度修复）：CONDITIONAL 不再同时代表「失败被 warn 容忍 /
+      证据不足 / 执行器报错」。旧 run 缺省 undefined，消费端按 legacy CONDITIONAL 处理。 */
+  executionStatus?: 'executed' | 'degraded' | 'skipped' | 'error'
+  /** executionStatus 的结构化原因（health/status 消费；degraded/skipped/error 时必填）。 */
+  degradedReason?: 'failure-tolerated' | 'insufficient-evidence' | 'executor-error' | 'evidence-conditional'
   /** 输入快照（v0.3 §3.2，上游 inputSnapshot 本地方言）：门声明输入文件的 sha256（相对路径→哈希）。 */
   inputSnapshot?: Record<string, string>
   /** 执行前后两次快照一致（门自身没有改写自己的输入）。 */

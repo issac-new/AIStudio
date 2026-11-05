@@ -1,0 +1,14 @@
+{"ts":"2026-11-05T03:30:37.801Z","category":"harness","rootCauseClaims":168,"fixes":298,"gateDenies":1,"errorHistoryCount":0,"score":505,"needsDesignReview":true,"count":168}
+{"ts":"2026-11-05T03:30:37.801Z","category":"other","rootCauseClaims":153,"fixes":515,"gateDenies":14,"errorHistoryCount":0,"score":473,"needsDesignReview":true,"count":153}
+{"ts":"2026-11-05T03:30:37.801Z","category":"client","rootCauseClaims":69,"fixes":223,"gateDenies":13,"errorHistoryCount":0,"score":220,"needsDesignReview":true,"count":69}
+{"ts":"2026-11-05T03:30:37.801Z","category":"patches","rootCauseClaims":50,"fixes":153,"gateDenies":0,"errorHistoryCount":0,"score":150,"needsDesignReview":true,"count":50}
+{"ts":"2026-11-05T03:30:37.801Z","category":"report","rootCauseClaims":39,"fixes":129,"gateDenies":0,"errorHistoryCount":0,"score":117,"needsDesignReview":true,"count":39}
+{"ts":"2026-11-05T03:30:37.801Z","category":"docs","rootCauseClaims":31,"fixes":51,"gateDenies":4,"errorHistoryCount":0,"score":97,"needsDesignReview":true,"count":31}
+{"ts":"2026-11-05T03:30:37.801Z","category":"qgate","rootCauseClaims":23,"fixes":49,"gateDenies":0,"errorHistoryCount":0,"score":69,"needsDesignReview":true,"count":23}
+{"ts":"2026-11-05T03:30:37.801Z","category":"aipay","rootCauseClaims":21,"fixes":97,"gateDenies":0,"errorHistoryCount":0,"score":63,"needsDesignReview":true,"count":21}
+{"ts":"2026-11-05T03:30:37.801Z","category":"release","rootCauseClaims":13,"fixes":27,"gateDenies":0,"errorHistoryCount":0,"score":39,"needsDesignReview":true,"count":13}
+{"ts":"2026-11-05T03:30:37.801Z","category":"review","rootCauseClaims":9,"fixes":24,"gateDenies":0,"errorHistoryCount":0,"score":27,"needsDesignReview":true,"count":9}
+{"ts":"2026-11-05T03:30:37.801Z","category":"build","rootCauseClaims":5,"fixes":19,"gateDenies":0,"errorHistoryCount":0,"score":15,"needsDesignReview":true,"count":5}
+{"ts":"2026-11-05T03:30:37.801Z","category":"runtime","rootCauseClaims":4,"fixes":15,"gateDenies":0,"errorHistoryCount":0,"score":12,"needsDesignReview":true,"count":4}
+{"ts":"2026-11-05T03:30:37.801Z","category":"server","rootCauseClaims":1,"fixes":24,"gateDenies":7,"errorHistoryCount":0,"score":10,"needsDesignReview":false,"count":1}
+{"ts":"2026-11-05T03:30:37.801Z","category":"scripts","rootCauseClaims":0,"fixes":0,"gateDenies":1,"errorHistoryCount":0,"score":1,"needsDesignReview":false,"count":0}

@@ -66,6 +66,14 @@ if [ "${QGATE_PREPUSH_SKIP:-0}" != "1" ] && [ -f "$ROOT/custom/qgate/src/cli.ts"
         # 判定输出走 stderr：pre-push 的 stdout 在部分传输下会被透传给远端。
         ( cd "$ROOT" && node "$QG" run "$_g" --trigger pre_commit --include-disabled --changed "$_changed" 1>&2 ) || _qg_rc=1
       done
+      # 健康体检（v0.4 治理可信度修复）：CONDITIONAL 不再等于「没问题」。
+      # 只对 degraded/error/stale/fail 失败；skipped（证据不足）只告警。
+      _qg_health_rc=0
+      ( cd "$ROOT" && node scripts/qgate-health.mjs --scope pre-push 1>&2 ) || _qg_health_rc=$?
+      if [ "$_qg_health_rc" -ne 0 ]; then
+        _qg_rc=1
+        echo "[qgate] pre-push 健康体检存在 DEGRADED/STALE/FAIL（scope=pre-push）；见上。" >&2
+      fi
       if [ "$_qg_rc" -ne 0 ]; then
         if [ "${QGATE_PREPUSH_ENFORCE:-1}" = "1" ]; then
           echo "[qgate] pre-push 存在非 PASS 判定，按默认强制档拒绝推送（QGATE_PREPUSH_ENFORCE=0 可降级为告警）。" >&2
@@ -73,6 +81,24 @@ if [ "${QGATE_PREPUSH_SKIP:-0}" != "1" ] && [ -f "$ROOT/custom/qgate/src/cli.ts"
           exit 1
         fi
         echo "[qgate] pre-push 存在非 PASS 判定（QGATE_PREPUSH_ENFORCE=0 只告警）；置 1 即拦截。" >&2
+      fi
+      # 提交标题 lint（v0.4）：禁止把「根治/根因」单独当完成声明。
+      # 默认只告警；GOVERNANCE_LINT_ENFORCE=1 时随 qgate 强制档一起拦截。
+      if [ -f "$ROOT/scripts/governance-lint.mjs" ]; then
+        _lint_args="--commits --only-commits --range origin/main..HEAD"
+        if [ "${GOVERNANCE_LINT_ENFORCE:-0}" = "1" ]; then _lint_args="$_lint_args --enforce"; fi
+        ( cd "$ROOT" && node scripts/governance-lint.mjs $_lint_args 1>&2 ) || _qg_lint_rc=$?
+        if [ "${_qg_lint_rc:-0}" -ne 0 ] && [ "${GOVERNANCE_LINT_ENFORCE:-0}" = "1" ]; then
+          echo "[qgate] 提交标题 lint 未通过（GOVERNANCE_LINT_ENFORCE=1）；修标题或显式登记后重推。" >&2
+          exit 1
+        fi
+      fi
+      # 合并不变量（v0.4）：manifest/docs/L2/收据静态校验；每次推送都跑，失败即拦。
+      if [ -f "$ROOT/scripts/merge-invariants.mjs" ]; then
+        ( cd "$ROOT" && node scripts/merge-invariants.mjs --check --quiet 1>&2 ) || {
+          echo "[qgate] 合并不变量失败（manifest/docs/L2/收据）；修复后重推。" >&2
+          exit 1
+        }
       fi
     fi
   else

@@ -346,10 +346,12 @@ spf_design_sync_check() {
     return 0
   fi
   [[ -z "$_content" ]] && return 0
-  # 「设计文档影响」段抽取：标题行（# 系列含关键字）到下一个标题行之间
+  # 「设计文档影响」段抽取：标题行（# 系列含关键字）到「同级或更高级」标题之间。
+  # 2026-11-05 修复：原实现遇任意 ^# 即结束，作者用 ### 组织小节时声明会被截断
+  # （DESIGN_SYNC 写在 ### 之后就抽不到）。改为记录标题层级，只在遇到 <= 层级时结束。
   _decl="$(printf '%s\n' "$_content" | LC_ALL=C awk '
-    /^#+[[:space:]].*设计文档影响/ { inseg=1; next }
-    inseg && /^#/ { inseg=0 }
+    /^#+[[:space:]].*设计文档影响/ { match($0, /^#+/); level=RLENGTH; inseg=1; next }
+    inseg && /^#+/ { match($0, /^#+/); if (RLENGTH <= level) { inseg=0; next } }
     inseg { print }
   ')"
   _mode="$(printf '%s\n' "$_decl" | grep -oE 'DESIGN_SYNC:[[:space:]]*(touched|none)' | head -1 | sed 's/.*:[[:space:]]*//' || true)"
@@ -358,6 +360,16 @@ spf_design_sync_check() {
     return 0
   fi
   [[ "$_mode" == "none" ]] && return 0
+  # touched：必须至少列一个 DESIGN_DOCS 路径（2026-11-05 修复：原实现 touched 不列任何路径
+  # 时循环体不进入、_missing 为空 → 静默通过；声明 touched 却不点名 = 空头承诺）。
+  _touched_any=0
+  for _d in $_docs; do
+    if grep -qF -- "$_d" <<< "$_decl"; then _touched_any=1; break; fi
+  done
+  if [[ "$_touched_any" -eq 0 ]]; then
+    printf '%s' "missing-declaration: spec(${_specrel}) 声明 touched 但未列任何 DESIGN_DOCS 路径——touched 必须至少列一个路径并同批修订（否则改 none 附理由）"
+    return 0
+  fi
   # touched：声明段内提及的 DESIGN_DOCS 路径逐个核验变更集（未提及的路径不在本批声明面内）
   _changed="$(spf_changed_files "$_root" "$_faces" "$_conf")"
   _missing=""

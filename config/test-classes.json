@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "rules": [
+    { "prefix": "custom/__tests__/", "class": "pin" },
+    { "prefix": "custom/server/", "class": "behavior" },
+    { "prefix": "custom/client/", "class": "behavior" },
+    { "prefix": "custom/desktop/", "class": "behavior" },
+    { "prefix": "custom/qgate/", "class": "behavior" },
+    { "prefix": "custom/upstream-compat/", "class": "behavior" },
+    { "prefix": "custom/hermes-agent-plugins/", "class": "behavior" },
+    { "prefix": "custom/test/", "class": "behavior" },
+    { "prefix": "scripts/", "class": "behavior" },
+    { "prefix": "simharness/tests/", "class": "behavior" }
+  ],
+  "heuristics": {
+    "contractFilename": "contract",
+    "sourceReadPattern": "readFileSync",
+    "sourceReadOverridesTo": "pin"
+  }
+}

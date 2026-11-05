@@ -152,7 +152,7 @@ G2 环约 4 小时，包含 SFM 隧道 DNS 间歇断流、上游供应商熔断�
 - 补做支付红线对账、双人复核和 G4 字段，完成中央仓分叉仲裁与四后端覆盖率采集。
 - N10-N13 已标记完成，但这不表示 run26 重新走完 26 步。
 
-`simharness/docs/2026-11-03-run26-pending-batch.md:7-23`；`docs/superpowers/specs/2026-11-03-run26-pending-clearance.md:11-36`。
+`simharness/docs/2026-11-03-run26-collection-backfill.md:7-23`；`docs/superpowers/specs/2026-11-03-run26-pending-clearance.md:11-36`。
 
 ### 5.2 清偿又暴露了新债
 
@@ -180,7 +180,7 @@ MP unit 在修复 globals 后实测 **78/163 通过、85 红**，主要是测试
 - [最新版全流程推演方案](../superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步、第五部分验收和 §5.10 七条。
 - [run25 全量复盘](../superpowers/specs/2026-11-03-run25-full-retro.md)：33 唯一键/79 行、根因四层和修复验证。
 - [run25 采集补流](../superpowers/specs/2026-11-03-run25-collection-gaps-backfill.md)：缺失补件、补拍和证据登记。
-- [run26 待办台账](../superpowers/specs/2026-11-03-run26-pending-batch.md)：N01-N09 当前状态。
+- [run26 待办台账](../superpowers/specs/2026-11-03-run26-pending-batch.md)：N01-N13 当前状态。
 - [run26 清偿记录](../superpowers/specs/2026-11-03-run26-pending-clearance.md)：N10-N13、首帧根治、覆盖率和 MP unit 新债。
 - [报告合并器](../../simharness/mux/final-report-merge.py)：PART1 注册、双正本生成和数字实测注入约束。
 

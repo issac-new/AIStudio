@@ -2,7 +2,7 @@
 
 ## 变更
 
-用户令「完成挂账内容」（N10-N13，台账 `simharness/docs/2026-11-03-run26-pending-batch.md`），执行中追加两条用户反馈根治：小程序首帧空白页、方案 HTML 裸文本。
+用户令「完成挂账内容」（N10-N13，当批过程记录 `simharness/docs/2026-11-03-run26-collection-backfill.md`；run26 挂账唯一事实源=`docs/superpowers/specs/2026-11-03-run26-pending-batch.md`），执行中追加两条用户反馈根治：小程序首帧空白页、方案 HTML 裸文本。
 
 ### N12 中央仓分叉仲裁（已完成）
 

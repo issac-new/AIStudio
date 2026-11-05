@@ -22,7 +22,10 @@ export interface ScopeExecutorInput {
   changedPaths?: readonly string[]
 }
 
-function strList(v: unknown, max = 200): string[] | undefined {
+// 上限从 200 提到 2000（v0.4 治理可信度修复）：200 是隐式硬编码，真实 scope 已到 267，
+// 超限时 strList 返回 undefined，被外层当作「paths empty」→ error → warn 放行。
+// 上限提高后仍保留显式拒绝，防止无界声明；超限是配置错误，不是证据不足。
+function strList(v: unknown, max = 2000): string[] | undefined {
   if (!Array.isArray(v) || v.length > max) return undefined
   const out: string[] = []
   for (const x of v) {
@@ -68,7 +71,12 @@ export function runScopeExecutor(executor: ExecutorSpec, input: ScopeExecutorInp
     try {
       const raw = parseYaml(readFileSync(scopeFile, 'utf8')) as Record<string, unknown>
       const paths = strList(raw.paths)
-      if (!paths || paths.length === 0) throw new Error('paths empty')
+      if (!paths) throw new Error('paths must be an array of non-empty strings (max 2000)')
+      // 空声明是配置错误（FAIL），不是「证据不足」（error→INCONCLUSIVE/warn）。
+      // 一个空的 scope 无法约束任何变更；把它当 warn 放过，等于关掉范围门。
+      if (paths.length === 0) {
+        return finish('fail', 'scope.yaml declares paths: [] — an empty scope cannot constrain changes (configuration error)')
+      }
       declared = paths
     } catch (e) {
       return err(`scope.yaml invalid: ${(e as Error).message}`)

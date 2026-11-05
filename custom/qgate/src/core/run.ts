@@ -193,6 +193,8 @@ export async function runGate(input: RunInput): Promise<RunResult> {
     treeHash: git.treeHash,
     changedPaths,
     failureSummary: decision.failureSummary,
+    executionStatus: decision.executionStatus,
+    degradedReason: decision.degradedReason,
     inputSnapshot,
     inputsStable,
     sourceSignal: classifyGateSource({ spec, evidence, cached, verdict }),
@@ -242,6 +244,8 @@ export function recordBudgetExhausted(input: RunInput, declaredMs: number, remai
     conditions: decision.conditions,
     evidenceIds: [evidence.id],
     failureSummary: decision.failureSummary,
+    executionStatus: decision.executionStatus,
+    degradedReason: decision.degradedReason,
   }
   saveRun(storePaths(input.qgateDir), run, [evidence])
   return { run, evidence: [evidence], decision }

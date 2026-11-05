@@ -1,4 +1,9 @@
-# run26 待办台账（采集面补流批挂账，2026-11-03；同日清偿批 N10-N13 全部完成，spec=2026-11-03-run26-pending-clearance）
+# run26 采集面补流批过程记录（2026-11-03；同日清偿批 N10-N13 全部完成，spec=2026-11-03-run26-pending-clearance）
+
+> 本文件是采集面补流批的**过程记录**，不是 run26 挂账唯一事实源；唯一事实源见
+> `docs/superpowers/specs/2026-11-03-run26-pending-batch.md`（N01-N13）。
+> 本文件编号 N10-N13 与正本编号是两套语义（本文件 N10=18b 接线，正本 N10=SEND-FAILED 重试），
+> 阅读与引用时以正本为准；本文件仅保留当批操作证据。
 
 来源：run25 收官后采集面补流批（spec 见 AIStudio `docs/superpowers/specs/2026-11-03-run25-collection-gaps-backfill.md`）。三段结构=待办 / 已裁定不处置 / 计数。
 

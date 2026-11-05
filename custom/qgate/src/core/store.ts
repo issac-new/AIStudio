@@ -72,12 +72,26 @@ export function saveRun(paths: StorePaths, run: GateRun, evidence: readonly Evid
   const state = readState(paths)
   const prev = state[run.gateId]
   if (!prev || prev.startedAt <= run.startedAt) {
-    state[run.gateId] = { runId: run.runId, verdict: run.verdict, startedAt: run.startedAt, conditions: run.conditions }
+    state[run.gateId] = {
+      runId: run.runId,
+      verdict: run.verdict,
+      startedAt: run.startedAt,
+      conditions: run.conditions,
+      executionStatus: run.executionStatus,
+      degradedReason: run.degradedReason,
+    }
     writeJson(paths.stateFile, state)
   }
 }
 
-interface StateEntry { runId: string; verdict: GateRun['verdict']; startedAt: number; conditions?: string[] }
+interface StateEntry {
+  runId: string
+  verdict: GateRun['verdict']
+  startedAt: number
+  conditions?: string[]
+  executionStatus?: GateRun['executionStatus']
+  degradedReason?: GateRun['degradedReason']
+}
 type State = Record<string, StateEntry>
 
 function readState(paths: StorePaths): State {
@@ -91,6 +105,23 @@ function readState(paths: StorePaths): State {
 
 export function latestRuns(paths: StorePaths): Record<string, StateEntry> {
   return readState(paths)
+}
+
+/** 全量 run 历史（健康体检用）：state.json 只留每门最新一条，连续计数必须扫 runs 目录。
+    按 startedAt 倒序；坏文件跳过，单文件坏不影响其余（与 loadRunEvidence 同纪律）。 */
+export function listRuns(paths: StorePaths): GateRun[] {
+  if (!existsSync(paths.runsDir)) return []
+  const out: GateRun[] = []
+  for (const name of readdirSync(paths.runsDir)) {
+    if (!name.endsWith('.json')) continue
+    try {
+      const run = parseRun(JSON.parse(readFileSync(join(paths.runsDir, name), 'utf8')))
+      if (run) out.push(run)
+    } catch {
+      /* 单文件坏不影响其余 */
+    }
+  }
+  return out.sort((a, b) => b.startedAt - a.startedAt)
 }
 
 export function loadRun(paths: StorePaths, runId: string): GateRun | null {

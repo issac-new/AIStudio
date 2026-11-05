@@ -1,0 +1,21 @@
+{
+  "recordedAt": "2026-11-05",
+  "note": "临时豁免只到 reviewBy；到期后 qgate-health 忽略豁免（strict），到期前必须修掉或续期并说明。新出现的 DEGRADED/STALE 不在本表内，仍会被 pre-push 拦下。",
+  "allow": [
+    {
+      "gateId": "L0.registers",
+      "reason": "registers JSON（assumptions/decisions）未建，register executor 返回 error；历史 249 次 0 PASS",
+      "reviewBy": "2026-12-05"
+    },
+    {
+      "gateId": "L0.requirement-trace",
+      "reason": "requirements.json 未建，RTM 元门无输入；历史 249 次 0 PASS",
+      "reviewBy": "2026-12-05"
+    },
+    {
+      "gateId": "L0.convention-alignment",
+      "reason": "约定检查输入缺失；历史 249 次 0 PASS，待补约定清单",
+      "reviewBy": "2026-12-05"
+    }
+  ]
+}
