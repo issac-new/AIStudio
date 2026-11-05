@@ -1,0 +1,120 @@
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+index cd14dc277..cbe715aa9 100644
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -1910,9 +1910,19 @@ def _task_status(conn: sqlite3.Connection, task_id: str) -> Optional[str]:
+     return row["status"] if row else None
+ 
+ 
++def _coerce_run_id(value: Any) -> Optional[int]:
++    """Best-effort integer run id. A non-integer pointer (an external writer
++    stored a run slug, run27) references no ``task_runs.id`` — coerce to
++    ``None`` instead of poisoning every caller with a ValueError."""
++    try:
++        return int(value)
++    except (TypeError, ValueError):
++        return None
++
++
+ def _current_run_id(conn: sqlite3.Connection, task_id: str) -> Optional[int]:
+     row = conn.execute("SELECT current_run_id FROM tasks WHERE id = ?", (task_id,)).fetchone()
+-    return int(row["current_run_id"]) if row and row["current_run_id"] else None
++    return _coerce_run_id(row["current_run_id"]) if row and row["current_run_id"] else None
+ 
+ 
+ # Distinguishes "caller named the acting profile" (which may legitimately be
+@@ -2268,15 +2278,19 @@ def goal_run_status(
+     if task is None:
+         return None
+     if expected_run_id is not None:
++        expected = _coerce_run_id(expected_run_id)
++        if expected is None:
++            # The caller names a run no task_runs row can carry — it owns nothing.
++            return "superseded"
+         row = conn.execute(
+             "SELECT outcome FROM task_runs WHERE id = ? AND task_id = ?",
+-            (int(expected_run_id), task_id),
++            (expected, task_id),
+         ).fetchone()
+         outcome = str(row["outcome"]) if row and row["outcome"] is not None else None
+         terminal_status = _RUN_OUTCOME_TERMINAL_STATUS.get(outcome)
+         if terminal_status is not None:
+             return terminal_status
+-        if outcome is not None or task.current_run_id != int(expected_run_id):
++        if outcome is not None or _coerce_run_id(task.current_run_id) != expected:
+             return "superseded"
+     if task.status in {"ready", "todo"}:
+         event = conn.execute(
+@@ -3424,7 +3438,10 @@ def request_changes(
+         current_run_id = task_row["current_run_id"]
+         if task_row["status"] != "running" or current_run_id is None:
+             return False, "task is not in an active review run"
+-        if expected_run_id is not None and int(current_run_id) != int(expected_run_id):
++        if (
++            expected_run_id is not None
++            and _coerce_run_id(current_run_id) != _coerce_run_id(expected_run_id)
++        ):
+             return False, "run_id mismatch"
+ 
+         claimed_event = _latest_event(conn, task_id, "claimed", current_run_id)
+@@ -3535,6 +3552,28 @@ def _reclaim_dangling_run(
+         (task_id, *statuses),
+     ).fetchone()
+     if stale and stale["current_run_id"]:
++        run_id = _coerce_run_id(stale["current_run_id"])
++        if run_id is None:
++            # Junk pointer (external writer stored a run slug, run27): it cannot
++            # name a task_runs.id, so close whatever run rows are still open for
++            # THIS task and clear the pointer — the invariant must hold again
++            # either way, and a poison value must never kill the caller's
++            # transaction (one slug stalled the dispatcher tick for hours).
++            conn.execute(
++                """
++                UPDATE task_runs
++                   SET status = 'reclaimed', outcome = 'reclaimed',
++                       summary = COALESCE(summary, ?),
++                       ended_at = ?,
++                       claim_lock = NULL, claim_expires = NULL, worker_pid = NULL
++                 WHERE task_id = ? AND ended_at IS NULL
++                """,
++                (note, now, task_id),
++            )
++            conn.execute(
++                "UPDATE tasks SET current_run_id = NULL WHERE id = ?", (task_id,),
++            )
++            return
+         conn.execute(
+             """
+             UPDATE task_runs
+@@ -3544,7 +3583,7 @@ def _reclaim_dangling_run(
+                    claim_lock = NULL, claim_expires = NULL, worker_pid = NULL
+              WHERE id = ? AND ended_at IS NULL
+             """,
+-            (note, now, int(stale["current_run_id"])),
++            (note, now, run_id),
+         )
+ 
+ 
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+index c8b64c095..9614d3318 100644
+--- a/tools/kanban_tools.py
++++ b/tools/kanban_tools.py
+@@ -1104,6 +1104,18 @@ def _handle_create(args: dict, **kw) -> str:
+     # mutate review evidence or race its checkout). Project identity is the one safe thing
+     # to inherit implicitly (the DB turns it into a fresh per-task worktree).
+     workspace_kind, workspace_path = args.get("workspace_kind"), args.get("workspace_path")
++    # A "dir" card without a path can never spawn: the dispatcher resolves the
++    # workspace before starting a worker and refuses a pathless dir (run27: five
++    # defect cards burned their whole retry budget to gave_up at spawn time).
++    # Reject at creation with the fix in the message — same shape as the
++    # placeholder-assignee rejection above.
++    if str(workspace_kind if workspace_kind is not None else "").lower() == "dir" \
++            and not str(workspace_path if workspace_path is not None else "").strip():
++        raise ValueError(
++            "workspace_kind='dir' requires workspace_path — an unpathed dir card "
++            "can never spawn a worker. Pass workspace_path, or omit workspace_kind "
++            "to get a fresh per-task worktree."
++        )
+     # See #67567. ``project=""`` is an explicit "no project" (no ``or`` collapse, #106342).
+     project_id = args["project"] if "project" in args else args.get("project_id")
+     project_source_task_id = None

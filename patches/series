@@ -1172,3 +1172,8 @@
 #      摘要请求；80% wrap-up 提示保留）；迭代默认值三处文案（500/60/unlimited）收敛
 #      为 TURN_LIMIT_DEFAULT=200（显式 none/unlimited/0/-1 拼写仍为无限）。
 753-agent-wallclock-hard-stop-and-turn-default.patch
+#      kanban 毒 run 指针免疫（run27 派单器停滞根治）：外部直写把 run slug 存进
+#      tasks.current_run_id 时，_reclaim_dangling_run/_current_run_id/goal_run_status/
+#      评审 run_id 守卫四处不再 int() 崩——毒指针按 task_id 关开行并清指针恢复不变量；
+#      建卡面 dir 缺 workspace_path 即拒（消息内给修法），防 spawn 期烧尽重试预算。
+754-agent-kanban-junk-runid-tolerance.patch

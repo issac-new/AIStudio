@@ -217,3 +217,5 @@
 {"at":"2026-11-05T11:10:20Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"fe8553623a4968f567b11b674375f8132472a19a","commit":"9d9d9b65f"}
 {"at":"2026-11-05T11:45:49Z","spec":"docs/superpowers/specs/2026-11-05-sim-direct-llm-channel.md","receipt":"ab3ed1aba974732c23f958854e11e2d25aaa8ee8","commit":"9d9d9b65f"}
 {"at":"2026-11-05T11:51:05Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"c6bcf86316a14bb913d3de882d984402fd10f278","commit":"8e4ccb700"}
+{"at":"2026-11-05T11:12:19Z","spec":"docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md","receipt":"f626a7faae436ff02a15e0688a3c1ff8255f972a","commit":"9d9d9b65f"}
+{"at":"2026-11-05T11:47:18Z","spec":"docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md","receipt":"0dc7dac4393117806206fa6fe5afc113c7423b0a","commit":"0a860e5f9"}
