@@ -246,7 +246,8 @@ describe('请求期平台路由政策', () => {
     const next = await runGuard([router], [], ctx)
     expect(next).not.toHaveBeenCalled()
     expect(ctx.status).toBe(403)
-    expect(ctx.body).toMatchObject({ ok: false, code: 'PLATFORM_POLICY_UNREGISTERED' })
+    expect(ctx.body).toMatchObject({ code: 'PLATFORM_POLICY_UNREGISTERED' })
+    expect((ctx.body as { ok: boolean }).ok).toBe(false)
   })
 
   it('审批政策先于裁决处理器拒绝普通 admin', async () => {
