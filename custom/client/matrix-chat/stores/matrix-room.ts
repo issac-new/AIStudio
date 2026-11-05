@@ -9,13 +9,13 @@ import {
   EventType,
   Visibility,
   DeviceVerification,
+  type MatrixClient,
 } from 'matrix-js-sdk'
 import { matrixEventBus } from './matrix-events'
 import { useMatrixClientStore } from './matrix-client'
-import { createRoomReaderFns, type RoomNotificationLevel } from './matrix-room-readers'
+import { createRoomReaderFns } from './matrix-room-readers'
 
-
-export type RoomNotificationLevel = 'highlight' | 'total' | 'none'
+// 类型再导出保留 matrix-room 的既有导入面（实现事实源在 matrix-room-readers）
 export type { RoomNotificationLevel } from './matrix-room-readers'
 export type TimelineLayout = 'group' | 'bubble' | 'irc'
 
@@ -316,12 +316,15 @@ export const useMatrixRoomStore = defineStore('matrix-room', () => {
     getThreadById,
     diagnoseRoom,
   } = createRoomReaderFns({
-    getClient: () => clientStore.client,
+    // 断言依据：clientStore.client 运行时即 MatrixClient（createClient 产物）；
+    // pinia 的 UnwrapRef 会把类实例拍成结构类型，静态层丢失私有成员，故在此单点还原。
+    getClient: () => clientStore.client as MatrixClient | null,
     getActiveRoom: () => activeRoom.value,
     getActiveRoomId: () => activeRoomId.value,
     getMessageList: () => messageList.value,
     getPaginationState: () => paginationState.value,
     bumpRoomVersion,
+    setError: (message) => { clientStore.error = message },
   })
 
   const sortedRooms = computed(() => {
