@@ -212,6 +212,10 @@ simharness/                      仅保留平台 CLI 的 Shell 适配与场景�
 | commit 缺席口径（P1-2） | commit 键必须在场且取值 string|null（null=如实未绑定）；gate-evidence 产出附 declaredMissing 标记，run-metrics 调用点显式传 null，Task 9 接线传真值 | 允许 commit 键缺席（undefined 视同 null） | 「未绑定」必须与「遗漏」可区分：九字段校验把键缺席判非法，declaredMissing 让接线前的过渡态可审计而非静默 | Mechanical | approved |
 | 证据存储错误面（P1-2） | appendEvidence 校验失败与写失败均向上抛，不吞 | 照 userperms/audit-store best-effort 只计数不抛 | 证据写失败被吞会让「以为记了」复活，与 P1 目标（记录在档不得伪装成功）直接冲突；audit-store 是业务请求面须 fail-soft，证据链是准出面须可见 | Mechanical | approved |
 | 旧三字段行兼容读（P1-2） | 读面把 P0 形状 {subject,status,source} 行归一 LegacyEvidenceRecord（缺席字段 null+legacy 标记）；写面仍只收九字段 | 拒读旧行；或编造字段补齐九字段 | 兼容读取但缺席如实 null，不编造 evidenceId/producer/时戳（不猜原则）；坏行（JSON 损坏/校验不过）跳过不阻断读 | Mechanical | approved |
+| manifest 逐项状态集（P1-3） | v2 逐补丁 status ∈ {applied,skipped,failed,rolled-back}，兼容数组只从 applied 派生；rolled-back 表达「本次会话曾应用后被事务回滚」 | 只用 applied/failed 两态（回滚项记 failed） | 回滚与失败语义必须可区分（回滚项无自身错误，失败项携带 apply 错误）；二者都不得进任何 success 投影 | Mechanical | approved |
+| 增量拒绝分类次序（P1-3） | planIncrement 先位级前缀比对（rename/reorder/insert/modify），后长度差比对（removed）；集合级删除检查会让「同 sha 异名」误报 removed | 先做集合差再做位级比对 | 改名在集合视角=删旧名+增新名，位级 sha 等值是唯一的改名证据，必须先于集合判定咬住 | Mechanical | approved |
+| 基线比对口径（P1-3） | baseline 记 {upstreamRoot, treeOids 三树}；任一侧为 null（树缺席/无 git）视为未观测不参与比对，双非空且不等才拒绝（root-change/baseline-change） | null 与任何值不等即拒绝 | standalone/无 git 树恒为 null，按不等拒绝会让部分检出永远无法增量；null=未观测不是基线承诺 | Mechanical | approved |
+| v1 manifest 处置（P1-3） | planIncrement 对非 schemaVersion=2 一律 IncrementRefusedError('v1-manifest')，不自动收养 | 自动把 v1 appliedPatches 视作已验证前缀 | v1 只有名字数组无逐项状态/sha/基线，「曾记录」不可证明「已成功」——收养即复活伪装成功 | Mechanical | approved |
 
 ## 验证
 
@@ -271,6 +275,13 @@ P1 Task 2（终审前置④：EvidenceRecord 九字段契约与追加式存储�
 - 回归面：`npx vitest run custom/server/toolpipeline/ custom/server/platform/ custom/server/mcpcatalog/ custom/server/govbus/ custom/server/governance/` 49 文件 / 463 通过 / 0 失败；`npx vitest run custom/server/permmodes/ custom/server/autonomyladder/ custom/server/userenv/ custom/server/approval-inbox/` 158 通过 / 0 失败。run-metrics 既有用例未改断言即绿（其只读 status/supplement，调用点显式传 commit:null）。
 - `npm run typecheck:harness`：exit 0（清单已补 custom/server/platform/evidence/evidence-store.ts）。
 - 交付面：九字段契约（缺关键字段/非法值抛错点名，键缺席与显式 null 区分）；JSONL 行级原子追加（白名单九字段固定键序，父目录按需创建，写失败抛不吞）；latestEvidenceFor 文件不存在/主体不存在=null、坏行跳过；P0 三字段行归一 LegacyEvidenceRecord（缺席=null 不编造）；路径序 PLATFORM_EVIDENCE_FILE → underWebUi('platform-evidence.jsonl')。
+
+P1 Task 3（注入 Planner 与 manifest v2 契约）负例先红后绿的真实命令与计数（同一隔离 HOME）：
+
+- 负例先红：`npx vitest run scripts/__tests__/inject-planner.test.ts scripts/__tests__/inject-manifest.test.ts` 实现前 2 文件全红（23 用例随模块缺失先行咬住：Failed to load url ../platform/inject/planner.mjs）。
+- 实现后：同命令 2 文件 / 23 通过 / 0 失败（planner 7 + manifest 16）。覆盖：中插/重排/改名/删除/改内容/v1 收养/last-failed/基线变/根变九类增量拒绝；尾部纯追加 tail-append；absent-tree partial 可增量（standalone 语义）；applied 投影排除 failed/skipped/rolled-back；原子写无 tmp 残留、读缺席=null。
+- 变异探针：摘除 last-failed 拒绝 → last-failed 负例红；applied 投影放宽为含 skipped → 投影负例红；还原后 23 绿。
+- 相邻回归：`npx vitest run custom/server/__tests__/ensure-injected-delta-guard.test.ts` 5 通过（inject.mjs 未动，接线留 Task 5）。
 
 | 风险 | 缓解与回滚 |
 |---|---|
