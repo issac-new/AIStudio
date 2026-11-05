@@ -76,7 +76,7 @@ export interface ReleaseReportData {
 export function buildReleaseReport(loaded: LoadResult, strictOpts?: StrictReportOptions): ReleaseReportData {
   const paths = storePaths(loaded.qgateDir)
   const profile = findProfile(loaded.profiles, loaded.config.profile)
-  const resolved = resolveProfile(loaded.gates, profile, loaded.config.profile)
+  const resolved = resolveProfile(loaded.gates, profile, loaded.config.profile, loaded.config.enableGates)
   const enabledGates = loaded.gates.filter((g) => resolved.enabled.get(g.metadata.id) === true)
   const state = latestRuns(paths)
 

@@ -65,6 +65,34 @@ mkdirSync(runtimeResOut, { recursive: true });
 writeFileSync(resolve(runtimeResOut, 'runtime-assets.json'), renderManifestFile(runtimeManifest));
 console.log(`[overlay-build] ▶ 运行时资源+清单 → dist/server/runtime + runtime-assets.json（${runtimeManifest.assets.length} 项）`);
 
+// 5c. bundle 身份（P1 round-2 接线，spec §4.3-1/§4.4-3）：注入 manifest v2 数据面
+//（baseline.treeOids + patches[].sha256）+ runtime 清单 + 当前 HEAD → bundleId，落
+// dist/server/bundle-identity.txt（确定性内容）。release:gate 读它并拦截缺席/过期——
+// 发布门不得无 bundle 身份通过。经 ts-node transpile-only shim 复用服务端 TS 单一
+// 实现（computeBundleIdentity + 装配层），不在脚本侧重写摘要语义。
+{
+  const commit = execSync('git rev-parse HEAD', { cwd: overlayRoot, encoding: 'utf8' }).trim();
+  const stateOut = process.env.OVERLAY_STATE_OUT?.trim() || overlayRoot;
+  const shimDir = resolve(overlayRoot, 'scripts', 'platform', 'release');
+  const buildTs = resolve(overlayRoot, 'custom/server/platform/delivery/bundle-identity-build.ts');
+  const args = JSON.stringify({
+    commit,
+    injectionManifestPath: resolve(stateOut, '.overlay-injected.json'),
+    runtimeManifestPath: resolve(runtimeResOut, 'runtime-assets.json'),
+    outFile: resolve(runtimeResOut, 'bundle-identity.txt'),
+  });
+  execSync(`node -r ts-node/register --eval ${JSON.stringify(`const m = require(${JSON.stringify(buildTs)}); m.writeBundleIdentity(${args});`)}`, {
+    cwd: overlayRoot,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      TS_NODE_PROJECT: resolve(shimDir, 'tsconfig.evidence.json').replace(overlayRoot + '/', ''),
+      TS_NODE_TRANSPILE_ONLY: '1',
+    },
+  });
+  console.log(`[overlay-build] ▶ bundle 身份 → dist/server/bundle-identity.txt（commit ${commit.slice(0, 12)}）`);
+}
+
 console.log('\n[overlay-build] ✓ 完整构建完成:');
 console.log('  dist/client/  — 客户端(含自定义矩阵/看板/品牌)');
 console.log('  dist/server/  — 服务端');

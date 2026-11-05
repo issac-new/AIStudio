@@ -125,7 +125,7 @@ async function main(): Promise<void> {
   if (!loaded) fail(`no .qgate/ directory in ${workspace} — run 'qgate init' first`)
   const paths = storePaths(loaded.qgateDir)
   const profile = findProfile(loaded.profiles, loaded.config.profile)
-  const resolved = resolveProfile(loaded.gates, profile, loaded.config.profile)
+  const resolved = resolveProfile(loaded.gates, profile, loaded.config.profile, loaded.config.enableGates)
   const enabledGates = loaded.gates.filter((g) => resolved.enabled.get(g.metadata.id) === true)
 
   // ── R5 配置生命周期（templates/inspect/leftovers/update；上游本地方言：

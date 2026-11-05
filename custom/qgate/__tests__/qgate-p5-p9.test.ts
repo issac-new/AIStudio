@@ -474,3 +474,76 @@ describe('gitContext 首路径完整性（P1 Task 10 修复锚定）', () => {
     } finally { rmSync(fx.dir, { recursive: true, force: true }) }
   })
 })
+
+// ── Round-2：enableGates 档位后配置覆盖（控制席裁决接线）───────────────────────
+// 负例：claim 已声明、唯一覆盖门被档位禁用且无覆盖 → 孤儿 claim → unresolved；
+// enableGates 复活该门 → claim 有覆盖。这是 release:gate 最终步恒红问题的机制面。
+describe('enableGates 档位后覆盖（round-2）', () => {
+  const gatedSpec = (id: string): GateSpec => ({
+    apiVersion: 'qgate/v1alpha1',
+    kind: 'Gate',
+    metadata: { id, version: '0.1.0' },
+    spec: {
+      domain: 'L4',
+      claims: ['c1'],
+      triggers: ['task_close'],
+      executors: [{ id: 'e1', type: 'command', command: ['true'], evidenceType: 'x' }],
+      evidence: { required: ['x'] },
+      policy: { failure: 'block', inconclusive: 'block' },
+    },
+  })
+  const disablingProfile = {
+    apiVersion: 'qgate/v1alpha1' as const,
+    kind: 'Profile' as const,
+    metadata: { id: 'p-lite' },
+    spec: { enable: [], disable: ['L4'] },
+  }
+  const claimCfg = (enableGates?: string[]) => ({
+    profile: 'p-lite',
+    claims: [{ id: 'c1', statement: 's', domain: 'L4' as const, criticality: 'medium' as const }],
+    gates: [],
+    ontology: { provider: 'off' as const, mappings: [] },
+    ...(enableGates ? { enableGates } : {}),
+  })
+  const mk = (fx: { dir: string; qgateDir: string }, enableGates?: string[]): LoadResult => ({
+    config: claimCfg(enableGates) as never,
+    gates: [gatedSpec('t.l4gate')],
+    profiles: [disablingProfile] as never,
+    diagnostics: [],
+    projectRoot: fx.dir,
+    qgateDir: fx.qgateDir,
+  })
+
+  it('门被档位禁用且无覆盖：claim 孤儿 → unresolved（拦截语义保持）', () => {
+    const fx = tmpProject()
+    try {
+      const data = buildReleaseReport(mk(fx))
+      expect(data.unresolved.some((u) => u.includes('c1') && u.includes('not covered'))).toBe(true)
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('enableGates 复活被禁用门：claim 有覆盖、不再孤儿', async () => {
+    const fx = tmpProject()
+    try {
+      // 先真跑一次被复活的门（command ['true'] → PASS），严格面亦应零 claim 违规
+      const spec = gatedSpec('t.l4gate')
+      await runGate({ spec, trigger: 'release', workspace: fx.dir, qgateDir: fx.qgateDir })
+      const data = buildReleaseReport(mk(fx, ['t.l4gate']), )
+      expect(data.gates.some((g) => g.gateId === 't.l4gate')).toBe(true)
+      expect(data.unresolved.some((u) => u.includes('not covered'))).toBe(false)
+      const strict = buildReleaseReport(mk(fx, ['t.l4gate']), { requirePass: true, since: Date.now() - 60_000 })
+      expect(strict.strict?.violations).toEqual([])
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+
+  it('CLI 解析面：qgate.yaml enableGates 形态非法 → 诊断点名 + validate-config 非零（不静默吞）', { timeout: 30_000 }, () => {
+    const fx = tmpProject()
+    try {
+      writeFileSync(join(fx.qgateDir, 'qgate.yaml'), 'profile: vibe-fast\nenableGates: [123, "x"]\n')
+      const r = spawnSync('node', [distCli, 'validate-config'], { cwd: fx.dir, encoding: 'utf8', timeout: 20_000 })
+      expect(r.status).toBe(2)
+      expect(r.stdout).toContain('DIAG')
+      expect(r.stdout).toContain('qgate.yaml')
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+})

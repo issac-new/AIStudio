@@ -17,6 +17,10 @@ export interface QGateProjectConfig {
   evidenceCommit?: boolean
   /** P6：语义 Provider 配置（off/缺省 = 关闭）。 */
   ontology: OntologyConfig
+  /** 档位后强制启用清单（round-2，控制席裁决 2026-11-06）：profile disable 之后按 id
+   *  逐门复活（发布流需覆盖被档位域级禁用的门，如 vibe-fast 下的 L4 governance.orgscale，
+   *  其 claim 在 qgate.yaml 已声明）。id 不匹配任何门时 no-op（无暗门可开）。 */
+  enableGates?: string[]
 }
 
 export interface LoadResult {
@@ -112,7 +116,13 @@ function parseProjectConfig(raw: unknown): QGateProjectConfig | null {
   }
   const ontology = parseOntologyConfig(rec.ontology)
   if (ontology === null) return null
-  return { profile, claims, gates: [], evidenceCommit, ontology }
+  let enableGates: string[] | undefined
+  if (rec.enableGates !== undefined) {
+    if (!Array.isArray(rec.enableGates) || rec.enableGates.length === 0
+      || !rec.enableGates.every((g) => typeof g === 'string' && g.length > 0)) return null
+    enableGates = rec.enableGates as string[]
+  }
+  return { profile, claims, gates: [], evidenceCommit, ontology, enableGates }
 }
 
 /** 加载项目 QGate 世界：未采纳（无 .qgate/）返回 null。 */

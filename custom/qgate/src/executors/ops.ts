@@ -378,8 +378,13 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
     // 不阻断但可见）——检查器命中是观察数据不是质量失败（上游同款声明）。
     // 扫描面零文件 = error（零文件不构成符合规范的证据，与 scope-empty 同口径）。
     const { checkMarkdown } = await import('../core/writing-style.js')
-    const paths = executor.scan && executor.scan.length > 0 ? executor.scan : ['**/*.md']
-    const walked = listWorkspaceFilesSafe(input.workspace)
+    // 扫描面（round-2 统一）：scanGlobs 声明则优先（与 symbols 同源口径），否则 scan/缺省。
+    // 走读按字面根剪枝 + 截断 fail-closed——截断面上的「干净/命中」都不是证据。
+    const paths = executor.scanGlobs ?? (executor.scan && executor.scan.length > 0 ? executor.scan : ['**/*.md'])
+    const walked = listWorkspaceFilesSafe(input.workspace, 5000, literalRootsOf(paths) ?? undefined)
+    if (walked.truncated) {
+      return done('error', `writing-style workspace walk truncated at limit — scan face incomplete (declare literal-rooted scan/scanGlobs to prune); truncated scans are not evidence`)
+    }
     const files = walked.files.filter((rel) => paths.some((p) => globSafe(p, rel)))
     if (files.length === 0) return done('error', `writing-style scope-empty — 0 files matched ${JSON.stringify(paths)} (zero files are not evidence of compliance)`)
     const findings = []
@@ -413,7 +418,19 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
     const rules = Array.isArray(d.value.rules) ? d.value.rules.filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null) : undefined
     if (!rules || rules.length === 0) return done('error', 'conventions file lacks rules[]')
     const problems: string[] = []
-    const workspaceWalk = listWorkspaceFilesSafe(input.workspace)
+    // 扫描面（round-2 统一）：走读按「全规则 paths ∪ scanGlobs」的字面根剪枝 + 截断
+    // fail-closed——此前全仓走读在 5 万件仓上必触 5000 顶按 readdir 序随机截断，
+    // convention-alignment 门曾基于截断面 PASS（release:gate 池实锤）。
+    const rulePathUnion = new Set<string>()
+    for (const r of rules) {
+      const paths = Array.isArray(r.paths) ? (r.paths as unknown[]).filter((p): p is string => typeof p === 'string') : ['**/*']
+      for (const p of paths) rulePathUnion.add(p)
+    }
+    if (executor.scanGlobs) for (const g of executor.scanGlobs) rulePathUnion.add(g)
+    const workspaceWalk = listWorkspaceFilesSafe(input.workspace, 5000, literalRootsOf([...rulePathUnion]) ?? undefined)
+    if (workspaceWalk.truncated) {
+      return done('error', `conventions workspace walk truncated at limit — scan face incomplete (rule paths lack literal roots; declare literal-rooted paths/scanGlobs to prune); truncated scans are not evidence`)
+    }
     const workspaceFiles = workspaceWalk.files
     for (const [i, r] of rules.entries()) {
       const id = typeof r.id === 'string' ? r.id : `rule[${i}]`

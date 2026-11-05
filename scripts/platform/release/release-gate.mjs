@@ -17,10 +17,11 @@
 //   PLATFORM_EVIDENCE_FILE    证据 JSONL 落点（evidence-store 原生 env）
 //   RELEASE_GATE_JUNIT_FILE   JUnit 复析文件（缺省 .qgate/junit-report.xml）
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
+import { resolveUpstreamRoots } from '../lib/upstream-root.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..', '..', '..');
 const qgateCli = resolve(overlayRoot, 'custom/qgate/dist/cli.js');
@@ -52,6 +53,49 @@ function junitFailureCounts(file) {
   const failureEls = (text.match(/<(?:failure|error)\b/g) ?? []).length;
   if (suites === 0 && failureEls > 0) return { failures: failureEls, errors: 0, suites };
   return { failures, errors, suites };
+}
+
+/**
+ * bundle 身份读取（P1 round-2 接线，spec §4.4-3）：build:full 产 dist/server/
+ * bundle-identity.txt（注入 manifest v2 + runtime 清单 + HEAD → bundleId，确定性）。
+ * 发布门终检要求它**由本次 gate 的构建产出**（mtime ≥ gate 起点）——拿上一轮构建的
+ * 身份当本轮准出证据=证据与产物脱钩。缺席/过期/不可解析一律拦（发布门不得无
+ * bundle 身份通过）。RELEASE_GATE_BUNDLE_IDENTITY_FILE 为测试 seam。
+ */
+function bundleIdentityFile() {
+  return process.env.RELEASE_GATE_BUNDLE_IDENTITY_FILE?.trim()
+    ?? resolve(resolveUpstreamRoots(overlayRoot).hermesStudioRoot, 'dist', 'server', 'bundle-identity.txt');
+}
+
+function readBundleIdentity() {
+  const file = bundleIdentityFile();
+  if (!existsSync(file)) return { ok: false, reason: 'missing', file };
+  let text;
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch (e) {
+    return { ok: false, reason: `unreadable: ${e.message}`, file };
+  }
+  const bundleId = /^bundleId: ([0-9a-f]{64})$/m.exec(text)?.[1];
+  const patchDigestsSha = /^patches: (\d+) sha256:([0-9a-f]{64})$/m.exec(text);
+  const runtimeManifest = /^runtimeManifest: sha256:([0-9a-f]{64}) assets:(\d+)$/m.exec(text);
+  if (!bundleId || !patchDigestsSha || !runtimeManifest) {
+    return { ok: false, reason: 'unparseable（bundleId/patches/runtimeManifest 行缺失或畸形）', file };
+  }
+  const mtimeMs = statSync(file).mtimeMs;
+  // 2s 容差：真构建在 gate 内晚数秒产出，不受影响；上一轮 gate 的产物（分钟级以
+  // 前）仍判 stale——拿旧身份当本轮证据=证据与产物脱钩。容差只吸收夹具/文件系统
+  // 毫秒级时序，不吸收跨轮构建。
+  if (mtimeMs < startedAtMs - 2_000) {
+    return { ok: false, reason: `stale（mtime ${new Date(mtimeMs).toISOString()} 早于 gate 起点 ${new Date(startedAtMs).toISOString()}——非本次构建产物）`, file, bundleId };
+  }
+  return {
+    ok: true, file, bundleId, mtimeMs,
+    patchCount: Number(patchDigestsSha[1]),
+    patchDigestsSha: patchDigestsSha[2],
+    runtimeManifestDigest: runtimeManifest[1],
+    assetCount: Number(runtimeManifest[2]),
+  };
 }
 
 /** 内建步序（argv 中 '{START_TS}' 于执行时替换为 gate 起点时戳）。编排测试锚定：typecheck 双门与严格报告步不得缺席。 */
@@ -168,6 +212,7 @@ const receipt = {
   startedAt: startedAtMs,
   endedAt: null,
   failedStep: null,
+  bundleIdentity: null,
   steps: [],
 };
 
@@ -189,6 +234,15 @@ for (const step of steps) {
     startedAt: result.startedAt, endedAt: result.endedAt,
   });
   // 每步产证：commit=HEAD 真值、sourceDigest=判词（退出码/复析结论），fail 也是证据。
+  // 报告步（build:full 之后）sourceDigest 追加 bundleId+注入摘要引用（P1 round-2，
+  // spec §4.4-3——证据与产物身份绑定；此时身份文件应由本次 build:full 产出）。
+  let sourceDigest = result.failure ?? `exit=0 ${step.label}`;
+  if (step.id === 'release-report') {
+    const idNow = readBundleIdentity();
+    sourceDigest += idNow.ok
+      ? ` | bundleId=${idNow.bundleId} injectPatches=${idNow.patchDigestsSha.slice(0, 12)}…(${idNow.patchCount})`
+      : ' | bundleId=missing（终检将拦截）';
+  }
   try {
     appendEvidence({
       evidenceId: `${evidenceId}/${step.id}`,
@@ -198,7 +252,7 @@ for (const step of steps) {
       commit,
       startedAt: result.startedAt,
       endedAt: result.endedAt,
-      sourceDigest: result.failure ?? `exit=0 ${step.label}`,
+      sourceDigest,
       artifactRefs: [],
     });
   } catch (e) {
@@ -218,6 +272,60 @@ for (const step of steps) {
     console.error(`\n[release:gate] ✗ ${step.id} 失败（${result.failure}）——停止后续步，准出不通过`);
   } else {
     console.log(`[release:gate] ✓ ${step.id}（${((result.endedAt - result.startedAt) / 1000).toFixed(1)}s）`);
+  }
+}
+// ── bundle 身份终检（P1 round-2）：全步绿之后、宣告通过之前——身份缺席/过期/
+// 不可解析即准出失败（发布门不得无 bundle 身份通过，spec §4.4-3）。
+if (!failed) {
+  const identity = readBundleIdentity();
+  const t = Date.now();
+  if (identity.ok) {
+    receipt.bundleIdentity = {
+      bundleId: identity.bundleId, file: identity.file, generatedAtMs: identity.mtimeMs,
+      patchCount: identity.patchCount, assetCount: identity.assetCount,
+      patchDigestsSha: identity.patchDigestsSha, runtimeManifestDigest: identity.runtimeManifestDigest,
+    };
+    try {
+      appendEvidence({
+        evidenceId: `${evidenceId}/bundle-identity`,
+        subjectId: 'release-gate/bundle-identity',
+        status: 'pass',
+        producer: 'release-gate',
+        commit,
+        startedAt: t,
+        endedAt: t,
+        sourceDigest: `bundleId=${identity.bundleId} commit=${commit.slice(0, 12)} patches=${identity.patchCount}(sha256:${identity.patchDigestsSha.slice(0, 12)}…) assets=${identity.assetCount} runtimeManifest=sha256:${identity.runtimeManifestDigest.slice(0, 12)}…`,
+        artifactRefs: [identity.file],
+      });
+      console.log(`[release:gate] ✓ bundle 身份在位（bundleId=${identity.bundleId.slice(0, 12)}…，${identity.patchCount} 补丁/${identity.assetCount} 资产）`);
+    } catch (e) {
+      failed = true;
+      receipt.status = 'failed';
+      receipt.failedStep = 'bundle-identity';
+      receipt.endedAt = Date.now();
+      writeReceipt();
+      console.error(`\n[release:gate] ✗ bundle 身份证据落盘失败：${e.message}`);
+      process.exit(1);
+    }
+  } else {
+    failed = true;
+    receipt.status = 'failed';
+    receipt.failedStep = 'bundle-identity';
+    receipt.bundleIdentity = { missing: true, reason: identity.reason, file: identity.file };
+    try {
+      appendEvidence({
+        evidenceId: `${evidenceId}/bundle-identity`,
+        subjectId: 'release-gate/bundle-identity',
+        status: 'fail',
+        producer: 'release-gate',
+        commit,
+        startedAt: t,
+        endedAt: t,
+        sourceDigest: `missing——${identity.reason}（发布门不得无 bundle 身份通过）`,
+        artifactRefs: [],
+      });
+    } catch { /* 证据失败不掩盖拦截事实 */ }
+    console.error(`\n[release:gate] ✗ bundle 身份终检未通过（${identity.reason}）：${identity.file}`);
   }
 }
 receipt.endedAt = Date.now();

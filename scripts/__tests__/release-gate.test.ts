@@ -6,7 +6,7 @@
 // 另锚定 {START_TS} 替换（严格报告步的 --since 与 gate 起点一致）。
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, utimesSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -18,6 +18,27 @@ let stepsFile: string
 let receiptFile: string
 let evidenceFile: string
 let junitFile: string
+let identityFile: string
+
+/** 造一份新鲜 bundle 身份文件（mtime=当下；可指定 bundleId 与回拨时间）。 */
+function makeIdentity(bundleId = 'b'.repeat(64), ageMs = 0): void {
+  writeFileSync(identityFile, [
+    '# bundle-identity',
+    `bundleId: ${bundleId}`,
+    `commit: ${'c'.repeat(40)}`,
+    'vendorBaseline.hermes-studio: null',
+    'vendorBaseline.hermes-agent: null',
+    'vendorBaseline.zcode: null',
+    `patches: 468 sha256:${'1'.repeat(64)}`,
+    `runtimeManifest: sha256:${'2'.repeat(64)} assets:19`,
+    `assets: sha256:${'3'.repeat(64)}`,
+    '',
+  ].join('\n'))
+  if (ageMs > 0) {
+    const t = new Date(Date.now() - ageMs)
+    utimesSync(identityFile, t, t)
+  }
+}
 
 function stub(name: string, body: string): string {
   const p = join(tmp, `${name}.mjs`)
@@ -55,6 +76,7 @@ function runGate(): { code: number; out: string } {
       RELEASE_GATE_RECEIPT: receiptFile,
       PLATFORM_EVIDENCE_FILE: evidenceFile,
       RELEASE_GATE_JUNIT_FILE: junitFile,
+      RELEASE_GATE_BUNDLE_IDENTITY_FILE: identityFile,
     },
   })
   return { code: r.status ?? -1, out: `${r.stdout ?? ''}${r.stderr ?? ''}` }
@@ -71,6 +93,8 @@ beforeEach(() => {
   receiptFile = join(tmp, 'release-gate.json')
   evidenceFile = join(tmp, 'evidence.jsonl')
   junitFile = join(tmp, 'junit-report.xml')
+  identityFile = join(tmp, 'bundle-identity.txt')
+  makeIdentity() // 缺省提供新鲜身份——单步失败类用例不受身份终检干扰（失败先于终检）
 })
 afterEach(() => rmSync(tmp, { recursive: true, force: true }))
 
@@ -131,14 +155,14 @@ describe('release:gate 编排（stub 命令注入）', () => {
     expect(receipt.commit).toBe(head)
     // I1 锚定：证据行恰好九键、commit=HEAD 真值（非 null）、producer 固定
     const lines = evidenceLines()
-    expect(lines).toHaveLength(2)
+    expect(lines).toHaveLength(3) // 2 步 + 1 bundle 身份终检（round-2 起终检也产证）
     const NINE = ['evidenceId', 'subjectId', 'status', 'producer', 'commit', 'startedAt', 'endedAt', 'sourceDigest', 'artifactRefs']
     for (const line of lines) {
       expect(Object.keys(line).sort()).toEqual([...NINE].sort())
       expect(line.commit).toBe(head)
       expect(line.producer).toBe('release-gate')
       expect(line.status).toBe('pass')
-      expect(line.evidenceId).toMatch(/^release-gate\/\d+\/step-[ab]$/)
+      expect(line.evidenceId).toMatch(/^release-gate\/\d+\/(step-[ab]|bundle-identity)$/)
     }
   })
 
@@ -175,5 +199,58 @@ describe('内建步序完整性（变异探针③锚定：编排不得静默丢�
     for (const flag of ['--require-pass', '--no-cache']) expect(basicArgv).toContain(flag)
     // JUnit 复析只挂在真跑测试的门上
     expect((basic as { junit?: boolean }).junit).toBe(true)
+  })
+})
+
+describe('bundle 身份终检（P1 round-2：发布门不得无 bundle 身份通过）', () => {
+  it('身份文件缺席：全步绿仍拦（failedStep=bundle-identity，证据 fail 行）', () => {
+    writeSteps([stubStep('step-a', 0)])
+    rmSync(identityFile, { force: true })
+    const r = runGate()
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('bundle 身份终检未通过')
+    const receipt = JSON.parse(readFileSync(receiptFile, 'utf8'))
+    expect(receipt.failedStep).toBe('bundle-identity')
+    expect(receipt.bundleIdentity.missing).toBe(true)
+    const idEv = evidenceLines().filter((l) => l.subjectId === 'release-gate/bundle-identity')
+    expect(idEv).toHaveLength(1)
+    expect(idEv[0].status).toBe('fail')
+    expect(String(idEv[0].sourceDigest)).toContain('missing')
+  })
+
+  it('身份文件过期（mtime 早于 gate 起点）：拦（拿上一轮构建身份当本轮证据=脱钩）', () => {
+    writeSteps([stubStep('step-a', 0)])
+    makeIdentity('d'.repeat(64), 60_000) // 一分钟前——必然早于 gate 起点
+    const r = runGate()
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('stale')
+    const receipt = JSON.parse(readFileSync(receiptFile, 'utf8'))
+    expect(receipt.failedStep).toBe('bundle-identity')
+  })
+
+  it('身份畸形（无 bundleId 行）：拦', () => {
+    writeSteps([stubStep('step-a', 0)])
+    writeFileSync(identityFile, 'not an identity file\n')
+    const r = runGate()
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('unparseable')
+  })
+
+  it('新鲜身份：通过 + receipt 携带 bundleId + release-report 步证据 sourceDigest 绑身份', () => {
+    const bid = 'f'.repeat(64)
+    makeIdentity(bid)
+    writeSteps([stubStep('release-report', 0)])
+    const r = runGate()
+    expect(r.code).toBe(0)
+    const receipt = JSON.parse(readFileSync(receiptFile, 'utf8'))
+    expect(receipt.bundleIdentity.bundleId).toBe(bid)
+    expect(receipt.bundleIdentity.patchCount).toBe(468)
+    expect(receipt.bundleIdentity.assetCount).toBe(19)
+    const reportEv = evidenceLines().find((l) => l.subjectId === 'release-gate/release-report')
+    expect(String(reportEv?.sourceDigest)).toContain(`bundleId=${bid}`)
+    expect(String(reportEv?.sourceDigest)).toContain('injectPatches=')
+    const idEv = evidenceLines().find((l) => l.subjectId === 'release-gate/bundle-identity')
+    expect(idEv?.status).toBe('pass')
+    expect(idEv?.artifactRefs).toEqual([identityFile])
   })
 })
