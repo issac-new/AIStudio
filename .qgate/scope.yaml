@@ -267,3 +267,4 @@ paths:
   - custom/server/metricpolicy/__tests__/derive.test.ts
   - docs/superpowers/specs/2026-11-05-org-governance-closeout.md
   - scripts/regression/org-governance-walkthrough.mjs
+  - custom/client/governance/api/org-governance.ts
