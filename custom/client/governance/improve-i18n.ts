@@ -27,6 +27,17 @@ export interface ImproveCopy {
   formTitle: string
   formHypothesis: string
   formSurface: string
+  formEditClass: string
+  formEditClassHint: string
+  editClassInvariant: string
+  editClassDomain: string
+  editClassMixed: string
+  editClassUndeclared: string
+  classAttribution: string
+  seesawSuspected: string
+  evoDelta: string
+  classRegressed: string
+  donorsLabel: string
   formTarget: string
   formTargetHint: string
   formBudget: string
@@ -267,6 +278,17 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     formTitle: '标题',
     formHypothesis: '改进假设（改什么、预期改善什么）',
     formSurface: '可编辑面',
+    formEditClass: '编辑类别',
+    formEditClassHint: 'invariant=怎么干活（流程/工具/完成判定）；domain=领域知识；混装两类会破坏归因。',
+    editClassInvariant: '通用不变量',
+    editClassDomain: '领域知识',
+    editClassMixed: '混装（建议拆分）',
+    editClassUndeclared: '未声明',
+    classAttribution: '分类归因（invariant/domain 各自的增益与代价）',
+    seesawSuspected: '检测到跷跷板：同类任务上一类涨、一类跌，两类改动可能互相抵消。',
+    evoDelta: '平均增益',
+    classRegressed: '回归失败任务',
+    donorsLabel: '组件库 donor',
     formTarget: '目标文件（相对 HERMES_HOME）',
     formTargetHint: '可写面必须填写已存在文件，例如 profiles/orchestrator/SOUL.md；建议面可填锚点或留空。',
     formBudget: '预算上限（美元）',
@@ -506,6 +528,17 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     formTitle: 'Title',
     formHypothesis: 'Hypothesis (what changes, what should improve)',
     formSurface: 'Surface',
+    formEditClass: 'Edit class',
+    formEditClassHint: 'invariant = how the agent works (procedure/tools/completion); domain = practitioner knowledge; mixing both breaks attribution.',
+    editClassInvariant: 'Invariant',
+    editClassDomain: 'Domain knowledge',
+    editClassMixed: 'Mixed (split it)',
+    editClassUndeclared: 'Undeclared',
+    classAttribution: 'Attribution by edit class (gain and cost per class)',
+    seesawSuspected: 'Seesaw detected: one class gained while the other regressed — the two edits may be cancelling out.',
+    evoDelta: 'Mean gain',
+    classRegressed: 'Regression failures',
+    donorsLabel: 'Component-library donor',
     formTarget: 'Target file (relative to HERMES_HOME)',
     formTargetHint: 'Writable surfaces require an existing file, e.g. profiles/orchestrator/SOUL.md; advisory surfaces may leave it empty.',
     formBudget: 'Budget cap (USD)',

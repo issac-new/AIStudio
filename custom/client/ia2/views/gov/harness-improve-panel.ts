@@ -74,6 +74,7 @@ export function useHarnessImprovePanel() {
     title: '',
     hypothesis: '',
     surfaceKey: 'system_prompt' as SurfaceKey,
+    editClass: '' as '' | 'invariant' | 'domain' | 'mixed',
     targetPath: '',
     mode: 'parallel' as 'parallel' | 'sequential',
     domain: 'general',
@@ -148,8 +149,16 @@ export function useHarnessImprovePanel() {
     return probeInputs[probeId]
   }
 
-  function surfaceName(key: SurfaceKey): string {
-    return data.value?.surfaces.find((s) => s.key === key)?.nameZh ?? key
+  function surfaceName(key: SurfaceKey | string): string {
+    return data.value?.surfaces.find((s) => s.key === key)?.nameZh ?? String(key)
+  }
+
+  /** W2（2026-11-05）：编辑类别徽标文案；未声明如实显示。 */
+  function editClassLabel(cls: 'invariant' | 'domain' | 'mixed' | null | undefined): string {
+    if (cls === 'invariant') return L.value.editClassInvariant
+    if (cls === 'domain') return L.value.editClassDomain
+    if (cls === 'mixed') return L.value.editClassMixed
+    return L.value.editClassUndeclared
   }
 
   const STATUS_LABEL: Record<ProposalStatus, keyof typeof improveMessages.zh> = {
@@ -277,6 +286,7 @@ export function useHarnessImprovePanel() {
       targetPath: createForm.targetPath.trim() || undefined,
       mode: createForm.mode,
       domain: createForm.domain.trim() || 'general',
+      ...(createForm.editClass ? { editClass: createForm.editClass } : {}),
       budgetCapUsd: Number(createForm.budgetCapUsd) || 0,
       evidenceRefs: splitRefs(createForm.evidenceRefs),
       ...(createForm.experienceIds.length ? { experienceIds: createForm.experienceIds } : {}),
@@ -289,6 +299,7 @@ export function useHarnessImprovePanel() {
       createForm.targetPath = ''
       createForm.evidenceRefs = ''
       createForm.domain = 'general'
+      createForm.editClass = ''
       createForm.experienceIds = []
       createForm.variants = [{ label: '候选 A', tree: false, content: '', files: [{ path: '', content: '' }], deletions: '' }]
     }
@@ -603,6 +614,6 @@ export function useHarnessImprovePanel() {
   onMounted(() => void refresh())
 
   return {
-    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
+    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
   }
 }

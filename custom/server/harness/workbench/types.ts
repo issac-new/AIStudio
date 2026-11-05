@@ -145,6 +145,32 @@ export interface ConstraintRecord {
   note?: string
 }
 
+/**
+ * 编辑类别（Harness² 的 INV/DOM 分层，2026-11-05 吸收）。
+ * invariant=「Agent 怎么干活」（流程、工具用法、完成判定）；domain=「从业者知道什么」（领域知识、领域专属规则）。
+ * mixed=一个提案同时装两类改动——归因会被污染，门给拆分建议；null=未声明。
+ */
+export type EditClass = 'invariant' | 'domain' | 'mixed'
+
+/**
+ * 执行证迹（Evo² §3.3.2「增益必须能证明新机制真的运行过」）。
+ * 只有可观测面（skills/sub_agents）产出判据；指令面的「执行」就是进提示词，轨迹证不了，记 static。
+ */
+export interface ExecutionTrace {
+  /** observed=有可判定标记；static=仅指令面；absent=未采集。 */
+  status: 'observed' | 'static' | 'absent'
+  /** 候选新增/修改的可判定标记（skill 名、子代理名）。 */
+  markers: string[]
+  /** 轨迹中命中的标记。 */
+  hit: string[]
+  /** hit/markers；无标记时为 null。 */
+  hitRatio: number | null
+  /** 实际扫描的字符数（如实呈现采集强度）。 */
+  scannedChars: number
+  source: 'stream-json' | 'none'
+  at: string
+}
+
 /** 探测证据：全部字段来自 Eval Studio 的真实运行，缺数据为 null。 */
 export interface ProbeMetrics {
   evalRunId: string
@@ -166,6 +192,10 @@ export interface ProbeMetrics {
   steps: number | null
   latencyMs: number | null
   regression?: RegressionEvidence
+  /** 执行证迹（W1，2026-11-05）：增益是否伴随机制真的运行过。缺席=未采集。 */
+  executionTrace?: ExecutionTrace | null
+  /** 命令式验收器读数（W6，2026-11-05）：任务声明了 outcome.argv 才算。 */
+  commandChecks?: { total: number; passed: number } | null
   /** 等预算基线（HDA）；缺席=未测，归因门按配置决定 warning/blocker。 */
   equalBudgetBaseline?: EqualBudgetBaseline | null
   /** 反事实变体运行（CHASE D2）；缺席=未测，门按配置决定 warning/blocker。 */
@@ -309,6 +339,15 @@ export interface Proposal {
   status: ProposalStatus
   /** 经验库的检索单元（源文 per-domain library）；缺省 general。 */
   domain: string
+  /**
+   * 编辑类别（W2，2026-11-05）：invariant/domain/mixed；null=未声明。
+   * 只用于归因与拆分建议，不改变晋级证据链。
+   */
+  editClass?: EditClass | null
+  /** 采用的组件库 donor（W3，2026-11-05）：ComponentEntry.id 列表。 */
+  donorRefs?: string[]
+  /** 起草时被过滤掉的 donor（已在基线里/无正增益），留痕供审计。 */
+  donorSkipped?: Array<{ id: string; reason: string }>
   /** 自动探测运行的基准档案（缺省从 targetPath 的 profiles/<name> 推导）。 */
   profile?: string | null
   budgetCapUsd: number
@@ -472,6 +511,26 @@ export interface EvolutionReport {
   healthWarnings: Array<{ surfaceKey: SurfaceKey; code: 'weak_verification_streak' | 'family_specialization'; streak?: number; detail?: string }>
   /** R10（2026-10-31 三批）：任务族聚合增益——族名→该族探测集的平均 pass@1 增量。 */
   familyGains: Array<{ family: string; avgDelta: number; rounds: number }>
+  /** W2（2026-11-05）：按编辑类别的归因——未声明的历史提案归入 undeclared。 */
+  classAttribution: ClassAttribution[]
+  /**
+   * W2 跷跷板告警（Harness² 分层优化的动机）：同一面上相邻两个已采纳轮分属
+   * invariant/domain 且增益符号相反——一类涨一类跌，说明两类改动在互相抵消。
+   */
+  seesawSuspected: boolean
+}
+
+/** 一个编辑类别的归因读数（W2，2026-11-05）。 */
+export interface ClassAttribution {
+  editClass: EditClass | 'undeclared'
+  /** 该类的已采纳轮数（未回滚）。 */
+  rounds: number
+  /** 该类已采纳轮的平均增益；无读数轮不计入分母。 */
+  meanDelta: number | null
+  /** 该类已采纳轮的平均成本变化（相对量）；无读数轮不计入。 */
+  meanCostPct: number | null
+  /** 该类已采纳轮绑定的回归失败任务数合计。 */
+  regressedTasks: number
 }
 
 /** 退役候选（腾讯文误区九：随模型迭代，当年加的控制组件该被果断拆除）。 */

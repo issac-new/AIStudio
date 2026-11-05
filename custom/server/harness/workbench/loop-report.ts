@@ -77,6 +77,30 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
         })
       }
 
+      // ---- W1 执行证迹（2026-11-05 四篇论文吸收）：增益必须伴随机制真的运行过 ----
+      // Evo² §3.3.2：Reflector 的正增益只有在轨迹里能证明新机制运行过才计入，否则置零。
+      // 本仓判定口径：候选引入的可判定标记（skill/子代理名）在探测轨迹里一次都没出现
+      // ＝该机制大概率没跑，涨的分不能归因给它。只对「有意义增益」判定：噪声带未标定时
+      // 退化为任何正增益；标定后必须超过 δ，避免把探索性提案按噪声分拦死。
+      {
+        const gainNow = contrast?.passAt1Delta ?? null
+        const noiseNow = input.regularization?.noiseDelta ?? null
+        const meaningfulGain = gainNow != null && gainNow > 0 && (noiseNow == null || gainNow > noiseNow)
+        if (meaningfulGain) {
+          const et = probe.evidence.executionTrace ?? null
+          if (!et || et.status === 'absent') {
+            const msg = '未采集执行证迹：无法证明候选引入的机制在探测中真的运行过（Evo² §3.3.2）'
+            if (rsiConfig().requireExecution) blockers.push({ code: 'mechanism_trace_missing', message: msg })
+            else warnings.push({ code: 'mechanism_trace_missing', message: msg })
+          } else if (et.status === 'observed' && et.markers.length > 0 && et.hit.length === 0) {
+            blockers.push({
+              code: 'mechanism_not_executed',
+              message: `候选引入 ${et.markers.join('、')}，但探测轨迹零命中（扫描 ${et.scannedChars} 字符）——增益无法归因到该机制，按 Evo² 纪律置零`,
+            })
+          }
+        }
+      }
+
       // ---- RRSI 选择端正则化（2026-10-23 吸收轮）：噪声地板 + 成本规则 ----
       if (contrast) {
         const cfg = rsiConfig()
@@ -289,6 +313,23 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
       code: 'surface_stalled',
       message: `该面连续 ${reg.stallWindow} 个提案无采纳，搜索停滞——可考虑转向未探索面（RRSI 结构性探索）`,
     })
+  }
+
+  // ---- W2 编辑类别分层（2026-11-05 四篇论文吸收，Harness² INV/DOM） ----
+  // 分层的目的不是分类好看，是让「一类涨、一类跌」的跷跷板效应可归因：
+  // 混装两类改动时，涨跌分不清是谁的功，下一轮也就无法定向修正。
+  {
+    const cfg = rsiConfig()
+    const ec = proposal.editClass ?? null
+    if (ec == null) {
+      const msg = '未声明编辑类别（invariant=怎么干活 / domain=领域知识）：跷跷板效应无法归因到层，建议在提案里声明'
+      if (cfg.requireEditClass) blockers.push({ code: 'edit_class_undeclared', message: msg })
+      else warnings.push({ code: 'edit_class_undeclared', message: msg })
+    } else if (ec === 'mixed') {
+      const msg = '提案混装通用不变量与领域知识改动：两类效果会互相抵消且无法归因，建议拆成两份提案分别验证（Harness² 分层纪律）'
+      if (cfg.requireEditClass) blockers.push({ code: 'edit_class_mixed', message: msg })
+      else warnings.push({ code: 'edit_class_mixed', message: msg })
+    }
   }
 
   // ---- 约束保持门（D5，2026-10-31 吸收轮）：能力涨了，行为约束不许退化 ----

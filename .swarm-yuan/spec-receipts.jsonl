@@ -208,3 +208,4 @@
 {"at":"2026-11-05T06:31:05Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"112f3dd7950d0a9fcd97d456a15f79f56559cea6","commit":"35e7b7890"}
 {"at":"2026-11-05T08:23:10Z","spec":"docs/superpowers/specs/2026-11-05-pending-ledgers-closeout.md","receipt":"9b02aa8e907bbfbb3f81f110ab7129817d942caa","commit":"ef937f75b"}
 {"at":"2026-11-05T08:39:45Z","spec":"docs/superpowers/specs/2026-11-05-pending-ledgers-closeout.md","receipt":"891a4b39b41c17156ae11264b90699d27e73628f","commit":"438559c49"}
+{"at":"2026-11-05T09:13:12Z","spec":"docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md","receipt":"a31434121a090ead6d1daff59b59434512330885","commit":"ef937f75b"}
