@@ -233,7 +233,7 @@ ECC 的 `governance-capture.js` hook 捕获安全相关事件为 `governanceEven
 > 本节是 **swarm-yuan 生成器自身**的兼容性要求——precheck.sh / generate-skill.sh / self-check.sh / state-machine.sh 等脚本必须兼容三平台。生成的目标技能如需三平台兼容，由目标技能自行声明（非强制）。
 
 ### 6.0 硬前置：bash（Windows 用户必读）
-- swarm-yuan 是 **bash 工具**——56 门禁（`check_*` 函数）+ 生成器 + 自检全是 bash 脚本，**Windows 原生 cmd/PowerShell 不支持**（无 `.ps1` 原生实现）。
+- swarm-yuan 是 **bash 工具**——59 门禁（`check_*` 函数）+ 生成器 + 自检全是 bash 脚本，**Windows 原生 cmd/PowerShell 不支持**（无 `.ps1` 原生实现）。
 - 三平台兼容的含义是「macOS/Linux 原生 bash + Windows 经 Git Bash/WSL/MSYS2 的 bash」，**不是**「纯 cmd/PowerShell 可跑」。
 - Windows 上的正确姿势：先装 Git for Windows（`https://git-scm.com/download/win`，自带 Git Bash；这也是 `git clone` 的前提）或 WSL（`wsl --install`），再用 `.bat` 包装器调起 bash 运行 `.sh`。
 - `.bat` 找不到 bash 时硬失败（`exit /b 1`）并明确提示，**不静默降级**——避免用户误以为装上了一个能用的工具却什么都跑不了。

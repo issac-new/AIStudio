@@ -2271,7 +2271,7 @@ check_floor_guard() {
     0) pass "降标守卫通过：${out}" ;;
     1)
       local _ln _lines
-      # 用 here-string 而非管道：管道会让 while 落到子 shell，fail() 的计数增量丢失（门禁假绿）
+      # 用 here-string 而非管道：管道会让 while 落到子 shell，fail() 的计数增量丢失（门禁假阳性通过）
       _lines="$(printf '%s\n' "$out" | grep '^降标' | head -5)"
       if [[ -n "$_lines" ]]; then
         while IFS= read -r _ln; do

@@ -128,12 +128,15 @@ out1=$( run_gate "$P" --mermaid ); rc1=$?
 out2=$( run_gate "$P" --diagram ); rc2=$?
 if [[ "$rc1" -eq 0 && "$rc2" -eq 0 && "$out1" == "$out2" ]]; then ok "mermaid 别名等价"; else bad "mermaid 别名不等价（rc=${rc1}/${rc2}）"; fi
 
-# 13) 多模式并集：--all --shift-left 必须执行 12 个调用
+# 13) 多模式并集：--all --shift-left 执行 ALL_GATES_CORE 全部 + 1 个 shift-left。
+# 旧断言手抄「调用 12」（核心 11 时代）；核心增至 12 后真值为 13，故改由数组项数派生。
+_core_cnt="$(sed -n 's/^ALL_GATES_CORE=(\(.*\))/\1/p' "$assets/precheck.sh" | wc -w | tr -d ' ')"
+_multi_expected=$((_core_cnt + 1))
 P="$T/p-multi"; mkdir -p "$P/src"; printf 'x\n' > "$P/src/a.js"
 write_conf "$P" 'WRITABLE_DIRS=("src")' 'SCAN_DIRS=()'
 out=$( run_gate "$P" --all --shift-left ); rc=$?
 need "$out" "左移检查" "多模式执行 shift-left"
-need "$out" "调用 12" "多模式调用数 12"
+need "$out" "调用 ${_multi_expected}" "多模式调用数 ${_multi_expected}"
 
 # 14) --doctor 必须读入 conf（而非内置默认值）
 P="$T/p-doctor"; mkdir -p "$P"

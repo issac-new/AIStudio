@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `swarm-yuan` is a meta-skill generator: a bash-based tool that, pointed at any code repository, generates a project-specific development "skill" for AI coding assistants.
 
-The generated skill encodes a project's rules as a 17-item feature card（特征卡，即「立法」）and enforces them with 56 quality gates（56 个质量门禁，即「执法」）.
+The generated skill encodes a project's rules as a 17-item feature card（特征卡，即「立法」）and enforces them with 59 quality gates（59 个质量门禁，即「执法」）.
 
 It integrates 15 external runtimes by invoking them, never reimplementing. 接线按深度分三层：深度接线 4、CLI 接线 6、方法论引用 5。其中 mattpocock-skills 与 diagram-design 为 `runtime/` 仓内物化型。每层有自带降级载体，未装不阻塞。
 
@@ -25,8 +25,8 @@ swarm-yuan 现为两体系统（README.md 一章 What）。生成器侧自举仍
 
 - SWARM_YUAN_HOME（AIStudio 的 `skills/swarm-yuan`）— the generator skill itself. This is the primary thing you edit.
   - `SKILL.md` — the AI entry point / operating manual (generation pipeline 编号 = `references/generation-flow.md` Step 1–13，SKILL.md 总览表为同一口径）。
-  - `install.sh` — one-key installer. auto-detects 8 AI runtimes and copies the skill in.
-  - `assets/` — templates + gates, the source of truth for generated skills. `precheck.sh` + `gates-strict.sh` + `gates-warn.sh` + `gates-advisory.sh`（56 个 check_* 门禁函数 19+22+15 全在三个 `gates-*.sh`。`precheck.sh` 为编排入口不含 check_*。self-check 对四文件机械计数。LOC 由 `facts.conf` `FACT_SCRIPT_LOC` 追踪）. `precheck.conf` + `precheck.arch.conf` + `precheck.compliance.conf`（config vars。core/arch/compliance 三文件拆分）. `spec-template.md`（25-section spec。整数节口径，§5.5/5.6/5.7 为子节）. `trace-log.sh`（全链路调用追踪：stdout 公告 + `.swarm-yuan/trace.jsonl`。节点级默认，`SWARM_YUAN_TRACE=verbose` 为调用级）与 `framework-gates/<fw>.sh`（81 个框架门禁片段）.
+  - `install.sh` — one-key installer. auto-detects all supported AI runtimes and copies the skill in.
+  - `assets/` — templates + gates, the source of truth for generated skills. `precheck.sh` + `gates-strict.sh` + `gates-warn.sh` + `gates-advisory.sh`（59 个 check_* 门禁函数全在三个 `gates-*.sh`。`precheck.sh` 为编排入口不含 check_*。self-check 对四文件机械计数。LOC 由 `facts.conf` `FACT_SCRIPT_LOC` 追踪）. `precheck.conf` + `precheck.arch.conf` + `precheck.compliance.conf`（config vars。core/arch/compliance 三文件拆分）. `spec-template.md`（26 个整数节：§0 任务卡七项 + §1-§25；§5.5/5.6/5.7 为子节，真值见 FACT_SPEC_SECTIONS）. `trace-log.sh`（全链路调用追踪：stdout 公告 + `.swarm-yuan/trace.jsonl`。节点级默认，`SWARM_YUAN_TRACE=verbose` 为调用级）与 `framework-gates/<fw>.sh`（81 个框架门禁片段）.
   - `references/` — methodology docs + `references/frameworks/<fw>.md` (81 framework rule sources).
   - `runtime/` — 仓内物化型 CLI 层运行时（`mattpocock-skills` 27 技能、`diagram-design`，MANIFEST 登记上游基线）。
   - `research/` — 15 个外部运行时上游仓库的本地克隆缓存（self-check 版本核对用，1.6GB+，gitignored，勿提交）。

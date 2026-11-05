@@ -1972,7 +1972,7 @@ _fg_emit_workflow() {
 
 **④ 质量门禁：** gstack/OCR 5 审查维度 + AUTO-FIX/ASK；★运维左移（验证 metrics/日志/trace 已埋点）；独立跑单元/接口/集成测试 + `check_test` 第二层（覆盖率阈值 / 零断言 / 断言密度 / 负向用例 / 聚焦测试；配置 `MUTATION_CMD` 时追加变异分数） + 可选复杂度/重复度维度（`COMPLEXITY_MAX` / `DUPLICATION_MIN_BLOCK`，默认关，配置后 warn；语义近似重复用 `DUPLICATION_CMD`）+ `--api` 接口测试覆盖（端点 × 测试映射 + 状态码断言）。
 
-**★质量门禁序列（参考 quality:full 十步模式，fail-fast 串行——任一步 fail 即停不跑后续；项目按形态裁剪，门禁映射到 precheck 既有 flag，不新增 check_*）**：`--build` 构建过 → `check_test`（`--test`：0 用例 / 覆盖率 / 断言质量 / 可选变异）→ `--api` 接口测试覆盖（端点 + 状态码）→ `--contract` 契约 → `--reuse` 复用合规（新增单元不与稳定单元重名）→ `--consistency` 业务/数据勾稽 → `--layer`/`--link-depth` 架构边界 → `--docs-pack` 文档齐备 → `--security` 安全 → `--deps` 版本锁定。串行顺序有讲究：构建/测试先行（跑不了代码谈什么都白搭），接口/契约次之（逻辑对但破坏契约也不行），架构/文档/安全/版本殿后。执行入口：`bash scripts/precheck.sh --all-full`（标准 29 门禁已含上述全部）或按需单跑。
+**★质量门禁序列（参考 quality:full 十步模式，fail-fast 串行——任一步 fail 即停不跑后续；项目按形态裁剪，门禁映射到 precheck 既有 flag，不新增 check_*）**：`--build` 构建过 → `check_test`（`--test`：0 用例 / 覆盖率 / 断言质量 / 可选变异）→ `--api` 接口测试覆盖（端点 + 状态码）→ `--contract` 契约 → `--reuse` 复用合规（新增单元不与稳定单元重名）→ `--consistency` 业务/数据勾稽 → `--layer`/`--link-depth` 架构边界 → `--docs-pack` 文档齐备 → `--security` 安全 → `--deps` 版本锁定。串行顺序有讲究：构建/测试先行（跑不了代码谈什么都白搭），接口/契约次之（逻辑对但破坏契约也不行），架构/文档/安全/版本殿后。执行入口：`bash scripts/precheck.sh --all-full`（标准 32 门禁已含上述全部）或按需单跑。
 
 **⑥ 产出物与调用追踪：** 测试报告（含覆盖率数值/报告路径、接口端点覆盖、断言密度与负向用例数；配变异命令时含 mutation score）+ 门禁序列各步 pass/fail 留痕（gate-runs.jsonl）
 

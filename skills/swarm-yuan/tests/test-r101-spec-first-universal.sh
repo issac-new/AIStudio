@@ -145,7 +145,12 @@ if printf '%s' "$body" | grep -q "写时拦截" ; then bad "4g 空参数应无�
 # ===== ⑤ 成套分发登记（UNIVERSAL_FILES 两新条目） =====
 grep -q '"scripts/spec-first-lib.sh|assets|lite"' scripts/generate-skill.sh && ok "5a UNIVERSAL_FILES 含判定库（lite）" || bad "5a 判定库未登记"
 grep -q '"scripts/spec-first-pre-commit.sh|hook|standard"' scripts/generate-skill.sh && ok "5b UNIVERSAL_FILES 含 pre-commit（standard）" || bad "5b pre-commit 未登记"
-grep -q '^FACT_GATES_BUDGET=56' assets/facts.conf && ok "5c 门禁预算修订登记（56）" || bad "5c 预算键未修订"
+# 预算键不手抄：核对门禁真值 ≤ 预算（预算随门禁数登记上调，见 facts.conf 键注记）。
+_bg="$(sed -n 's/^FACT_GATES_BUDGET=\([0-9][0-9]*\).*/\1/p' assets/facts.conf | head -1)"
+_tg="$(sed -n 's/^FACT_GATES_TOTAL=\([0-9][0-9]*\).*/\1/p' assets/facts.conf | head -1)"
+[[ -n "$_bg" && -n "$_tg" && "$_tg" -le "$_bg" ]] \
+  && ok "5c 门禁预算修订登记（真值=${_tg} ≤ 预算=${_bg}）" \
+  || bad "5c 预算键未修订或真值超预算（真值=${_tg} 预算=${_bg}）"
 grep -q '^FACT_SPEC_WRITE_HOOK_HOSTS=3' assets/facts.conf && ok "5d 写时强拦宿主记账（3）" || bad "5d 宿主记账缺失"
 
 if [[ $FAIL -eq 0 ]]; then echo "test-r101-spec-first-universal: PASS"; else echo "test-r101-spec-first-universal: FAIL" >&2; fi

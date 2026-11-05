@@ -134,3 +134,4 @@ test-secure-fs.sh	2	yes	general	-
 test-growth-transactions.sh	2	yes	general	-
 test-framework-lifecycle.sh	2	no	general	-
 test-integrity-guard.sh	2	yes	general	-
+test-spec-template-maet.sh	1	yes	general	2026-11-02

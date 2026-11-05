@@ -198,7 +198,12 @@ has references/capability-map.md "| regulatory-checkpoint-table |" "capability-m
 has references/task-methodology-router.md "迎检自查/强监管合规类" "task-router 迎检路由行"
 has SKILL.md "compliance-checkpoints（监管执法检查点库" "SKILL.md 路由表接知识件"
 has assets/facts.conf "FACT_UNIVERSAL_FILES=109" "facts FACT_UNIVERSAL_FILES=109"
-has assets/facts.conf "FACT_REFERENCES=58" "facts FACT_REFERENCES=58"
+# 不手抄篇数：读 facts.conf 声明值，与 references/*.md 实存对账（真值唯一源）。
+_ref_decl="$(sed -n 's/^FACT_REFERENCES=\([0-9][0-9]*\).*/\1/p' assets/facts.conf | head -1)"
+_ref_true="$(find references -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')"
+[[ -n "$_ref_decl" && "$_ref_decl" == "$_ref_true" ]] \
+  && ok "facts FACT_REFERENCES=${_ref_decl} == references/*.md 实存" \
+  || bad "FACT_REFERENCES 与实存篇数不符（声明=${_ref_decl} 实存=${_ref_true}）"
 has assets/facts.conf "FACT_INSPECTION_CHECKPOINTS=173" "facts FACT_INSPECTION_CHECKPOINTS=173"
 has assets/facts.conf "FACT_PENALTY_CLAUSES=21" "facts FACT_PENALTY_CLAUSES=21"
 has tests/test-doc-numbers.sh "count_eq \"执法检查主表 TECH 行\"" "doc-numbers 主表计数锁"

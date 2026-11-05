@@ -1041,6 +1041,21 @@ check_spec_first() {
         warn "gate_spec_receipt: ${_approved} 内容与已绑定收据不符（授权修订请 SPEC_REBIND=1 重绑）"
       fi
     fi
+    # 规格保真度四维（2026-11-05 AI Native 吸收批 T1）：模糊词/决策行/可验证验收/TBD。
+    # 判据与基线棘轮同源 spec-first-lib（spf_spec_fidelity_violation）。
+    if command -v spf_spec_fidelity_violation >/dev/null 2>&1; then
+      local _fid_mode _fid_v
+      _fid_mode="$(spf_conf_val "$_CONF_PATH" SPEC_FIDELITY_ENFORCE)"
+      _fid_mode="${_fid_mode:-${SPEC_FIDELITY_ENFORCE:-warn}}"
+      _fid_v="$(spf_spec_fidelity_violation "$_root" "$_approved" worktree)"
+      if [[ -n "$_fid_v" ]]; then
+        if [[ "$_fid_mode" == "block" ]]; then
+          fail "gate_spec_fidelity: ${_approved} ${_fid_v}——消除模糊词（config/fuzzy-words.json）/补决策行/写可验证验收（GIVEN/WHEN/THEN）；存量债入 .swarm-yuan/spec-fidelity-baseline.txt（只许减）"
+          return 0
+        fi
+        warn "gate_spec_fidelity: ${_approved} ${_fid_v}（SPEC_FIDELITY_ENFORCE=block 强拦）"
+      fi
+    fi
     pass "spec-first: 可写区变更有变更集内已批准 spec（${_approved}）"
   else
     fail "gate_spec_first_missing: git 变更触及可写源码区（如 ${_hit}）但本变更集无已批准 spec（须含「## 决策记录」段且非占位；R109-D8 起=spec 须随本分支提交/staged/untracked 携带，历史 spec 不再放行）——先 spec 再编码；四层拦截同判据（L1 写时 hook/L2 提交时 pre-commit/本门/L4 状态机 build 准入）"

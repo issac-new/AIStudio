@@ -377,9 +377,9 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 
 配方引用的复用件路径验真，入口拦下幻觉零件。测试兜底逻辑正确性。任务再小，验证、错误处理、安全检查、无障碍四类不裁剪。自动化能判的全部判，判不了的降为 AI 自查留痕。这条链就是第二章"两类失败、两种工具"的完整展开。
 
-fix 任务在验证层还有一条研发环境取证支线（存量项目排障底座）：日志定位 → 只读查库 → 远程断点复现 → 根因定论 → 修复 → 回归，六步流水线落在目标技能 references/bugfix-runbook.md，每步证据进账本。外部资源访问的三个脚本随技能分发：`tunnel.sh` 经堡垒机（ProxyJump 标准协议，Xshell 图形客户端建的同构隧道也能被 doctor 体检）编排数据库与 JDWP 端口转发；`ops-readonly-guard.sh` 对 AI 发出的每条 SQL/命令做 fail-closed 只读判定（只读放行、写拒绝、未识别默认拒绝），判定落 `.swarm-yuan/ops.jsonl` 账本供回归时对账；远程调试纪律与降级路径见 references/remote-debug-jvm.md（JDWP 无认证无加密，只活在回环绑定 + 隧道里）。设计理由：只读的第一道防线必须在凭证层（数据库只读账号、SSH 受限用户）——静态判定拦不住凭证本身的权限；守卫是第二道防线，账本是第三道。守卫不新增门禁（门禁预算 56 冻结），它在执行时点拦截，比验证时点的门禁更早一步。
+fix 任务在验证层还有一条研发环境取证支线（存量项目排障底座）：日志定位 → 只读查库 → 远程断点复现 → 根因定论 → 修复 → 回归，六步流水线落在目标技能 references/bugfix-runbook.md，每步证据进账本。外部资源访问的三个脚本随技能分发：`tunnel.sh` 经堡垒机（ProxyJump 标准协议，Xshell 图形客户端建的同构隧道也能被 doctor 体检）编排数据库与 JDWP 端口转发；`ops-readonly-guard.sh` 对 AI 发出的每条 SQL/命令做 fail-closed 只读判定（只读放行、写拒绝、未识别默认拒绝），判定落 `.swarm-yuan/ops.jsonl` 账本供回归时对账；远程调试纪律与降级路径见 references/remote-debug-jvm.md（JDWP 无认证无加密，只活在回环绑定 + 隧道里）。设计理由：只读的第一道防线必须在凭证层（数据库只读账号、SSH 受限用户）——静态判定拦不住凭证本身的权限；守卫是第二道防线，账本是第三道。守卫不新增门禁（门禁预算 59 冻结），它在执行时点拦截，比验证时点的门禁更早一步。
 
-强监管项目在合规层还有一条迎检支线（compliance 档随技能分发）：监管执法检查的技术检查点以条目级底稿形态进入目标技能——references/regulatory-checkpoint-table.md 承载 173 条检查点（优先级/控制点/检查点/判断阈值/证据类型/义务条款/处罚编号），references/compliance-checkpoints.md 承载五步判断法（找义务→找系统→找证据→找缺陷→找后果）、成熟度分级 V0～V5、处罚条款库 21 条、法规现行版本基线、智能体安全 6 域 20 项与采购 AI 40 项检查点，以及门禁与检查点的机检映射表。`scripts/inspection-ledger.sh` 把这套知识变成可执行的证据面：`checklist` 按技术域渲染人工核查清单；`ledger` 运行合规门禁套件并把每个门禁结果映射到检查点，输出统一台账（域/编号/检查项/依据/证据/结论）；`agent-audit` 对目标技能自身配置出智能体安全证据（硬编码凭证、沙箱目录、审批门禁、留痕面）。设计理由：机检映射不是判定——门禁通过只代表机检面未见异常，检查点的完整结论仍要按证据类型补齐人工证据，门禁未配置在台账里如实记为未配置；判定只认证据，口头说明不作依据。迎检能力不新增门禁（门禁预算 56 冻结）：机检面复用既有合规门禁，新增的是知识层与台账层。
+强监管项目在合规层还有一条迎检支线（compliance 档随技能分发）：监管执法检查的技术检查点以条目级底稿形态进入目标技能——references/regulatory-checkpoint-table.md 承载 173 条检查点（优先级/控制点/检查点/判断阈值/证据类型/义务条款/处罚编号），references/compliance-checkpoints.md 承载五步判断法（找义务→找系统→找证据→找缺陷→找后果）、成熟度分级 V0～V5、处罚条款库 21 条、法规现行版本基线、智能体安全 6 域 20 项与采购 AI 40 项检查点，以及门禁与检查点的机检映射表。`scripts/inspection-ledger.sh` 把这套知识变成可执行的证据面：`checklist` 按技术域渲染人工核查清单；`ledger` 运行合规门禁套件并把每个门禁结果映射到检查点，输出统一台账（域/编号/检查项/依据/证据/结论）；`agent-audit` 对目标技能自身配置出智能体安全证据（硬编码凭证、沙箱目录、审批门禁、留痕面）。设计理由：机检映射不是判定——门禁通过只代表机检面未见异常，检查点的完整结论仍要按证据类型补齐人工证据，门禁未配置在台账里如实记为未配置；判定只认证据，口头说明不作依据。迎检能力不新增门禁（门禁预算 59 冻结）：机检面复用既有合规门禁，新增的是知识层与台账层。
 
 ## 3.6 成长层：项目变了，技能跟着变
 
@@ -476,12 +476,12 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 
 | 维度 | 口径 |
 |---|---|
-| 门禁总数 / 预算上限 | 56 / 56（冻结，新增须等额删除） |
-| 门禁分层 | 核心 11 + 架构 18 + 合规 19 + advisory-only 6 + FULL 尾部治理 2（合计 56，闭合方程见 facts.conf）。执行序列 `--all` / `--all-full` / `--compliance-suite` |
+| 门禁总数 / 预算上限 | 59 / 59（冻结，新增须等额删除） |
+| 门禁分层 | 核心 12 + 架构 20 + 合规 19 + advisory-only 6 + FULL 尾部治理 2（合计 59，闭合方程见 facts.conf）。执行序列 `--all` / `--all-full` / `--compliance-suite` |
 | 特征卡 | 17 项（P0 六项强制，P1 十一项可增量） |
 | 框架规则集 | 81（规则文档与门禁片段 1:1 配对） |
-| 配置变量 / 上限 | 197 / 200 |
-| 执行面代码行数 / 上限 | 引擎域源 7769 / 7769；框架门禁注入 18469 / 18469（2026-10-24 冻结 18464；sharding 聚合外包检测 +5 行登记上调；超限须等额删减或逐例登记） |
+| 配置变量 / 上限 | 204 / 210 |
+| 执行面代码行数 / 上限 | 引擎域源 ≤FACT_ENGINE_CODE_LOC_MAX（8600）；框架门禁注入 ≤FACT_FRAMEWORK_GATE_LOC_MAX（18469）；逐例上调登记见 facts.conf 键注记 |
 | 目标技能预算 | SKILL.md ≤11392B（≈11KiB 锚，硬顶 20000B——宿主压缩重挂载截断防线，预算可再登记、硬顶不可越）、组件库清单 ≤32KiB、上下文预算 ≤618496B（604KiB，例外逐例登记于 docs/budget-exception-ledger.md 台账）、概念体系 ≤5 |
 | 外部运行时 | 15 个整合（深度 4 + CLI 6 + 方法论 5；CLI 第 5/6 项 mattpocock-skills/diagram-design 为仓内物化运行时）。登记 22（含图谱备选 codegraph、两宿主、机制源 pua/semantica/pi 等）。自动检测 11 |
 | 类型目录 | 实体 17 / 关系 10 / 动作 11（assets/ontology/ 三份） |
@@ -3561,7 +3561,7 @@ Claude Code / Codex / Cursor / Windsurf / OpenCode / Gemini CLI / Kimi——自�
 >
 > **口径权威源**：`assets/facts.conf`（catchphrase 数字单一事实源，self-check 机器执法）。
 >
-> **两体阅读提示**：本文覆盖两个对象——**生成器**（swarm-yuan 本身，"生成"段落操作它）与**目标技能**（生成器产出的项目专属规则包，"日常使用"段落操作它；亦称"生成物"）。17 项特征卡、56 个门禁、四本账都是**目标技能**的资产；生成器是它们的模板来源。
+> **两体阅读提示**：本文覆盖两个对象——**生成器**（swarm-yuan 本身，"生成"段落操作它）与**目标技能**（生成器产出的项目专属规则包，"日常使用"段落操作它；亦称"生成物"）。17 项特征卡、59 个门禁、四本账都是**目标技能**的资产；生成器是它们的模板来源。
 
 ---
 
@@ -3631,7 +3631,7 @@ bash install.sh
 
 **特征卡 → 文件填充（Step 4）：** SKILL.md 的铁律来自第 2/6 项 → codebase.md 的技术栈来自第 4 项 → dev-guide.md 的改造分类来自第 3 项 → reference-manual.md 的组件库来自第 11 项 → release.md 的命令来自第 5 项……17 项特征卡是目标技能所有文件的「数据源」。
 
-**特征卡 → 门禁配置（Step 5）：** precheck.conf 生成期必读文件合计 197 个变量（core 28 + arch 121 + compliance 48；真值 `assets/facts.conf` FACT_CONF_VARS 族），从特征卡推导：
+**特征卡 → 门禁配置（Step 5）：** precheck.conf 生成期必读文件合计 204 个变量（core 30 + arch 126 + compliance 48；真值 `assets/facts.conf` FACT_CONF_VARS 族），从特征卡推导：
 
 | 配置变量 | 来自特征卡第几项 |
 |---------|----------------|
@@ -3645,7 +3645,7 @@ bash install.sh
 | SCAN_DIRS / CONSISTENCY_DIRS | 第 7/12 项（安全/数据） |
 | COG_SPEED_FILES / COG_CUMULATIVE_TODO | 第 13 项（认知框架） |
 
-**特征卡 → 开发流程（日常使用）：** 开始新需求时，AI 从特征卡第 11 项检索可复用单元，预填 spec §5.5 复用约束。编码时 AI 查特征卡第 11 项的组件库清单，拼装优先。提交前 56 个门禁按特征卡配置的规则检查。
+**特征卡 → 开发流程（日常使用）：** 开始新需求时，AI 从特征卡第 11 项检索可复用单元，预填 spec §5.5 复用约束。编码时 AI 查特征卡第 11 项的组件库清单，拼装优先。提交前 59 个门禁按特征卡配置的规则检查。
 
 #### 特征卡探查工具矩阵
 
@@ -3684,20 +3684,20 @@ bash install.sh
 
 #### 门禁与特征卡的关系
 
-特征卡定义了「项目应该是什么样的」，56 个门禁验证「代码是否符合特征卡定义的规则」。
+特征卡定义了「项目应该是什么样的」，59 个门禁验证「代码是否符合特征卡定义的规则」。
 
 #### 门禁分层（决策 19，横切维度）
 
-56 门禁按 `fail()` 调用能力分三档，与 core/standard/compliance 门禁家族正交（一个门禁同时属于 core + strict，或 standard + advisory）。计数真值在 `assets/facts.conf`（FACT_ENFORCE_* 族）：
+59 门禁按 `fail()` 调用能力分三档，与 core/standard/compliance 门禁家族正交（一个门禁同时属于 core + strict，或 standard + advisory）。计数真值在 `assets/facts.conf`（FACT_ENFORCE_* 族）：
 
 | 分层 | 静态计数 | 有效计数 | fail() 能力与行为 |
 |------|------|------|------------|
-| **strict** | 21 | 21 | ≥3 真实 fail()，真 fail 阻断交付 |
-| **warn** | 20 | 17 | 1-2 真实 fail()，能 fail 但触发窄，混合 warn |
+| **strict** | 23 | 23 | ≥3 真实 fail()，真 fail 阻断交付 |
+| **warn** | 21 | 18 | 1-2 真实 fail()，能 fail 但触发窄，混合 warn |
 | **advisory** | 15 | 18 | 0 fail()，永不阻断（认知/观测类；子 shell 内重定义 `fail()`/`warn()` 为纯 echo，"不阻断"语义机器化） |
 
 - **有效 = 静态 + precheck.sh 顶部 `_ENFORCE_OVERRIDE`**（当前 3 项 warn→advisory：stable-diff / knowledge / metrics；名单以 precheck.sh 数组为准，不在此手抄）
-- **查实时名单**：`bash scripts/precheck.sh --list-gates`（输出 flag / gate_fn / enforce / tier 四列）——本节不手抄 56 个门禁名，手抄即漂移（agents-md-audit-round：旧名单表三度失同步后删除）
+- **查实时名单**：`bash scripts/precheck.sh --list-gates`（输出 flag / gate_fn / enforce / tier 四列）——本节不手抄 59 个门禁名，手抄即漂移（agents-md-audit-round：旧名单表三度失同步后删除）
 - **自动归类**：`bash scripts/gen-enforce-level.sh` 扫 precheck.sh fail() 数，重生成 `assets/gate-enforce-level.conf`（幂等，可逐字节再生）
 - **自检**：`self-check.sh` 校验 conf 与 precheck.sh fail 数一致 + strict 门禁必含 ≥1 fail()（防 strict 声明空壳）
 
@@ -3713,7 +3713,7 @@ bash install.sh
 | 第 11 项 稳定层 | STABLE_GLOBS 指定的文件 | `--stable-diff` 检测稳定层是否被改而未声明 |
 | 第 14 项 领域知识 | 密码必须哈希 | `--domain` grep 检测密码明文存储 |
 
-#### 核心门禁（`--all` 跑 11 个，通常 10-20 秒，取决于项目规模与 build/test 命令耗时）
+#### 核心门禁（`--all` 跑 12 个，通常 10-20 秒，取决于项目规模与 build/test 命令耗时）
 
 | 门禁 | 检查什么 | fail 条件 | 特征卡依据 |
 |------|---------|----------|-----------|
@@ -3729,7 +3729,7 @@ bash install.sh
 | `--security` | 安全规范（OWASP Top 10） | 注入/eval/XSS/硬编码密钥/TLS 关闭 | 第 7 项 |
 | `--test` | 测试通过 | 测试失败 | 第 5/9 项 |
 
-#### 架构门禁（`--all-full` 额外跑 18 个，未配置则静默跳过）
+#### 架构门禁（`--all-full` 额外跑 20 个，未配置则静默跳过）
 
 | 门禁 | 检查什么 | 特征卡依据 |
 |------|---------|-----------|
@@ -3806,16 +3806,16 @@ bash install.sh
 | Step 5 | **提取 17 项特征卡**（每项落到真实路径，不用占位符） |
 | Step 6 | 创建骨架（含 hooks / commands / precheck.conf） |
 | Step 7 | AI 填充全部文件——**特征卡驱动，消除全部占位符** |
-| Step 8 | AI 配置 precheck.conf——**197 个变量从特征卡推导** |
+| Step 8 | AI 配置 precheck.conf——**204 个变量从特征卡推导** |
 | Step 9 | AI 生成 hooks / commands / settings.local.json / .mcp.json 集成（generate-skill.sh create 段自动产出骨架，AI 按项目已装运行时激活 MCP server） |
-| Step 10 | AI 运行门禁（--all 核心 11 → --all-full 标准 29；合规 19 按需 --compliance-suite）——**特征卡定义规则，门禁验证合规** |
+| Step 10 | AI 运行门禁（--all 核心 12 → --all-full 标准 32；合规 19 按需 --compliance-suite）——**特征卡定义规则，门禁验证合规** |
 | Step 11 | AI 独立审查——`precheck.sh --review`（ocr 5 维度或 AI 清单）+ review-record 落盘 |
 | Step 12 | AI 写回项目记忆（闭环） |
 | Step 13 | AI 最终检查——运行 `generate-skill.sh --verify-completeness` 脚本确认**无占位符残留 + workflow 每节点含「调用追踪」要素**（命中即列 file:line 并 exit 1，零命中才通过） |
 
 #### 质量门禁序列（quality:full 模式，交付收口用）
 
-多门禁同跑时按序串行、fail-fast（任一步 fail 即停不跑后续），顺序与理由：build（构建能过）→ test（测试真过，0 用例检出）→ contract（契约不破）→ reuse（新增不与稳定单元重名）→ consistency（业务/数据勾稽）→ layer/link-depth（分层与依赖方向）→ docs-pack（文档齐备）→ security（安全）→ deps（版本锁定）。构建测试先行（跑不了代码谈什么都白搭），契约一致性次之，架构文档安全殿后。全部映射 precheck 既有 flag，不新增门禁；执行入口：`--all`（日常核心 11）/ `--all-full`（结构变更标准 29）/ 追加 `--compliance-suite`（强监管合规 19）。每步耗时与 pass/fail 落 `.swarm-yuan/gate-runs.jsonl`；节点⑦独立审查以此确认序列真实跑过。
+多门禁同跑时按序串行、fail-fast（任一步 fail 即停不跑后续），顺序与理由：build（构建能过）→ test（测试真过，0 用例检出）→ contract（契约不破）→ reuse（新增不与稳定单元重名）→ consistency（业务/数据勾稽）→ layer/link-depth（分层与依赖方向）→ docs-pack（文档齐备）→ security（安全）→ deps（版本锁定）。构建测试先行（跑不了代码谈什么都白搭），契约一致性次之，架构文档安全殿后。全部映射 precheck 既有 flag，不新增门禁；执行入口：`--all`（日常核心 12）/ `--all-full`（结构变更标准 32）/ 追加 `--compliance-suite`（强监管合规 19）。每步耗时与 pass/fail 落 `.swarm-yuan/gate-runs.jsonl`；节点⑦独立审查以此确认序列真实跑过。
 
 > **全链路追踪（每步必做，无需确认）**：每步开始先公告 `→ [Step N] 调用 <技能/工具> · <目的>`，节点级落盘 `.swarm-yuan/trace.jsonl`（`SWARM_YUAN_TRACE=verbose` 时含每次具体调用）。
 
@@ -3846,17 +3846,17 @@ AI 自动：创建 spec → 判断规模 → **从特征卡第 11 项检索可�
 
 | 规模 | 填哪些段 | 提交前门禁（任务级自适应） | 典型场景 |
 |------|---------|---------|---------|
-| 简单 | §1-§4 + §5.5 复用约束 + §12 风险回滚 | `--all`（核心 11） | 改 bug / 加字段 |
-| 标准 | §1-§13 + §5.5/§5.6/§5.7 约束段 | `--all-full`（标准 29） | 新功能 / 改接口 |
-| 完整 | spec 全 25 节（含 §14-§18 认知/辩证/领域 + §25 功能点估算，仅 compliance 档保留 §14-§18） | `--all-full` + `--shift-left`；compliance 档项目追加 `--compliance-suite` | 架构变更 / 跨服务 |
+| 简单 | §1-§4 + §5.5 复用约束 + §12 风险回滚 | `--all`（核心 12） | 改 bug / 加字段 |
+| 标准 | §1-§13 + §5.5/§5.6/§5.7 约束段 | `--all-full`（标准 32） | 新功能 / 改接口 |
+| 完整 | spec 内容节 §1-§25 全填（整数节共 26，含 §0 任务卡七项；含 §14-§18 认知/辩证/领域 + §25 功能点估算，仅 compliance 档保留 §14-§18） | `--all-full` + `--shift-left`；compliance 档项目追加 `--compliance-suite` | 架构变更 / 跨服务 |
 
 > **任务级自适应规则（质量优先偏置）**：规模判断不确定时**按更大规模处理**（升档不降级）；涉及公共接口/数据模型/权限的改动，无论规模一律按「完整」执行门禁集；compliance 档项目任意规模都追加 `--compliance-suite`（强监管场景无"简单任务"豁免）。
 
 #### 提交前门禁检查
 
 ```bash
-bash .claude/skills/my-project-dev/scripts/precheck.sh --all         # 核心 11 门禁
-bash .claude/skills/my-project-dev/scripts/precheck.sh --all-full    # 标准 29 门禁（核心 11 + 架构 18）
+bash .claude/skills/my-project-dev/scripts/precheck.sh --all         # 核心 12 门禁
+bash .claude/skills/my-project-dev/scripts/precheck.sh --all-full    # 标准 32 门禁（核心 12 + 架构 20）
 bash .claude/skills/my-project-dev/scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交付按需）
 ```
 
@@ -3889,7 +3889,7 @@ GATE_RUNS_DIR=.gate-runs bash scripts/precheck.sh --all-full
         └→ 有 ⚠ → 评估
 
 架构审查：
-  对 AI 说 "跑全量门禁"（56 个门禁全跑）
+  对 AI 说 "跑全量门禁"（59 个门禁全跑）
 
 升级：
   对 AI 说 "升级 skill"（AI 重新探查 → 更新特征卡 → 更新门禁配置）
@@ -3989,7 +3989,7 @@ bash ~/.claude/skills/swarm-yuan/scripts/generate-skill.sh --upgrade my-project-
 
 ### 9. 数字与口径
 
-全部数字（特征卡 17 / 门禁 56 四族分层 / 运行时 15 / 领域 32 / 认知 5 层 / 兼容 8 工具 / 三平台）不在本文手抄——速览表见 `swarm-yuan/README.md` 附录 A，真值以 `swarm-yuan/assets/facts.conf` 为准（self-check 机器对账，手抄即漂移）。
+全部数字（特征卡 / 门禁四族分层 / 运行时 / 领域 / 认知层数 / 兼容工具 / 三平台）不在本文手抄——速览表见 `swarm-yuan/README.md` 附录 A，真值以 `swarm-yuan/assets/facts.conf` 为准（self-check 机器对账，手抄即漂移）。
 
 ### 框架规则引擎
 
@@ -4014,7 +4014,7 @@ swarm-yuan 内置 81 个框架规则集（references/frameworks/*.md + assets/fr
 
 ```bash
 bash scripts/precheck.sh --framework    # 运行所有激活框架门禁
-bash scripts/precheck.sh --all-full     # 标准 29 门禁（核心 11 + 架构 18，含 --framework）
+bash scripts/precheck.sh --all-full     # 标准 32 门禁（核心 12 + 架构 20，含 --framework）
 bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交付按需）
 ```
 
@@ -4034,8 +4034,8 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 | **门禁家族 vs 严格度 vs 执行序列** | 见 §4「门禁分层」。家族=归哪个套餐管；严格度=会不会阻断；执行序列=怎么触发。三轴正交，互不推出。 |
 | **运行时三口径** | "15"=外部运行时**整合**总数（深度整合 4 + CLI 整合 6 + 纯方法论引用 5）；"11"=自检**可检测可安装**的工具数（codex-security 无独立包可装、impeccable 是纯方法论，不在 11 内）；"8"=**安装目标**（生成器可以装进哪几个 AI 助手——install.sh 装的是生成器，不是目标技能；目标技能是在目标项目里生成的，不经 install.sh）。三个数答三个不同问题。 |
 | **pass / fail / warn / skip** | pass=通过；fail=阻断（退出非零，必须修）；warn=警告（计数不阻断）；skip=未配置该规矩**明示跳过**——skip 不计入 warn 更不算 pass，防止"没配规矩"被当成"合规"。**fail-open** 是另一回事：指某机制失败时不阻塞主流程（只允许在有下层强制兜底的地方使用）。 |
-| **特征卡 vs conf vs spec** | 特征卡=17 项**探查清单**（项目是什么样）；conf=特征卡翻译成的**配置变量**（门禁读它执法）；spec=每个开发任务的**任务规格**（本次需求/决策/测试/规模估算，25 节模板）。三者是"项目立法 → 执法配置 → 任务合同"。 |
-| **门禁 vs rules.d 规则** | 门禁=检查**代码与仓库状态**的 bash 函数（56 个，四结果）；rules.d=判定**命令该不该执行**的数据规则（三值）。前者管"代码合不合规矩"，后者管"命令让不让跑"。 |
+| **特征卡 vs conf vs spec** | 特征卡=17 项**探查清单**（项目是什么样）；conf=特征卡翻译成的**配置变量**（门禁读它执法）；spec=每个开发任务的**任务规格**（本次需求/决策/测试/规模估算，26 个整数节模板：§0 + §1-§25）。三者是"项目立法 → 执法配置 → 任务合同"。 |
+| **门禁 vs rules.d 规则** | 门禁=检查**代码与仓库状态**的 bash 函数（59 个，四结果）；rules.d=判定**命令该不该执行**的数据规则（三值）。前者管"代码合不合规矩"，后者管"命令让不让跑"。 |
 | **hooks/ 目录 vs scripts/ 目录** | 目标技能里：`scripts/` 放全部可执行脚本（含 5 个钩子脚本）；`hooks/` 只放 `hooks.json`（宿主钩子注册配置）。 |
 | **draft vs active** | 目标技能的两个生命周期状态：draft=骨架未填满（禁全量门禁，防半成品错觉）；active=验证无占位符后激活（全量解锁）。 |
 | **WP-/R-/决策编号** | 历史档案（design-evolution/CHANGELOG/docs/research 文件名）中的溯源标签（形如 WP- 工作包号、R 加数字的轮次号、决策加数字的决策号），用于追溯"为什么改成这样"。它们不是系统概念；终态文档正文不使用，读者只在历史档案里会遇到。 |
@@ -4089,7 +4089,7 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 - **档位（profile）**：生成物的轻重配置：lite / standard / compliance / auto。
 - **生成器（generator）**：swarm-yuan 本身，元技能——生成目标技能的技能。
 - **目标技能（project skill / 生成物）**：生成器为某个项目产出的规则包（含 SKILL.md、references、scripts、rules.d、hooks 配置）。"生成物"是同义通称。
-- **门禁（gate）**：检查代码与仓库状态的 bash 函数，56 个，结果为 pass/fail/warn/skip 之一。
+- **门禁（gate）**：检查代码与仓库状态的 bash 函数，59 个，结果为 pass/fail/warn/skip 之一。
 - **骨架（skeleton）**：生成器产出的未填充目标技能（draft 态），AI 填充后转 active。
 - **骨架铁律（无占位符）**：draft 转 active 前必须无"待填充"占位符——防止半成品被当成品。
 - **框架生成期必读文件**：一个技术框架的规则文档 + 门禁片段 + 正反例夹具，三者一致性由 CI 核验。
@@ -4103,10 +4103,10 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 - **facts.conf**：全部招牌数字的唯一权威文件；self-check 用代码真值自动对账。
 - **FAIL-open / fail-closed**：失败时放行 / 失败时拒绝。权限边界一律 fail-closed；fail-open 只用于有下层兜底处。
 - **五层认知（cognition）**：`references/cognition-framework.md` 定义的五层框架（认知递进/思维语言/认知辩证/偏差防范/辩证认知），特征卡第 13 项的认知基底；属建议性体检（`--cognition` 出报告不判违规），不是门禁家族。
-- **spec / spec 模板**：任务规格（每次开发任务的合同），模板 25 节按任务类型裁减（§25 功能点估算 feature 档选填）。
+- **spec / spec 模板**：任务规格（每次开发任务的合同），模板 §1-§25 内容节按任务类型裁减（整数节共 26，含 §0）（§25 功能点估算 feature 档选填）。
 - **生成流程**：生成器把一个仓库变成目标技能的 13 步流程（Step 1-13，逐步详解在 references/generation-flow.md）。
 - **开发工作流**：目标技能里的九节点开发工作流（①需求理解→②探查→③设计 spec→④实施 plan→⑤编码→⑥测试→⑦独立审查→⑧合入→⑨发布，载体是目标技能的 references/workflow.md）。
-- **档（参考文档）**：references/ 目录下按需阅读的参考文档的简称（"57 档"=57 个 .md 文件；每档开头有"何时读我"路由行）。
+- **档（参考文档）**：references/ 目录下按需阅读的参考文档的简称（"61 档"=61 个 .md 文件；每档开头有"何时读我"路由行）。
 - **随技能分发**：随目标技能一起安装分发——generate-skill.sh 的 UNIVERSAL_FILES 清单列出的文件会拷进每个目标技能；不在清单里的文档只存在于生成器仓，目标技能读不到。
 - **整合**：一项被吸收的能力"从哪来、在哪个环节被使用、用不了时怎么降级"的登记关系。
 - **文档索引（capability-map.md）**：吸收内容的总清单——每个参考文档的来源、证据分级、被使用的环节、何时读；生成器侧维护，不随技能分发。
@@ -4128,7 +4128,7 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 3. **重量级是设计选择**：小项目请用 lite 档或更轻的替代（单拷 precheck.sh / 传统 lint 工具链 / 直接对 AI 说需求），不必强上本系统。
 4. **外部有效性未达成**：verifier v2（门禁能否拦截真实缺陷）的语料评测未完成前，对外不说"100% 可靠"；已验证的是"组件测试 + 受约束生成 + 独立校验"三段。
 5. **降级是常态不是异常**：外部工具未装就降级（图谱工具→grep），合规规矩未配置就明示 skip——系统不假装满配运行。
-6. **门禁不抓逻辑错误**：56 个门禁全是词法/结构模式匹配（import 方向、注解模式、文件存在性、命令黑名单）——它们抓"不懂规矩"，不抓"想错逻辑"。逻辑错误的兜底是**测试+审查**，且机器层对兜底本身有核验：①测试兜底要求 spec §11 测试策略段有实质内容（check_shift_left 核验非占位）；check_test 除退出码外核验零用例、覆盖率阈值、零断言/断言密度、负向用例占比与聚焦测试，可选追加 mutation score；`--api` 按 HTTP 方法 × 路径模板核对端点映射，并要求每个已覆盖端点有自己的就近状态码/错误路径断言；②审查兜底要求留痕（check_review 核验 docs/reviews/<日期>.md 存在，三要素：评审人/日期/结论；模板随生成物分发 assets/review-record-template.md）。这是设计边界，不是缺陷（SKILL.md:16"自动脚本不假装能判断质量"）——但"该做的兜底没做"是机器可查的。
+6. **门禁不抓逻辑错误**：59 个门禁全是词法/结构模式匹配（import 方向、注解模式、文件存在性、命令黑名单）——它们抓"不懂规矩"，不抓"想错逻辑"。逻辑错误的兜底是**测试+审查**，且机器层对兜底本身有核验：①测试兜底要求 spec §11 测试策略段有实质内容（check_shift_left 核验非占位）；check_test 除退出码外核验零用例、覆盖率阈值、零断言/断言密度、负向用例占比与聚焦测试，可选追加 mutation score；`--api` 按 HTTP 方法 × 路径模板核对端点映射，并要求每个已覆盖端点有自己的就近状态码/错误路径断言；②审查兜底要求留痕（check_review 核验 docs/reviews/<日期>.md 存在，三要素：评审人/日期/结论；模板随生成物分发 assets/review-record-template.md）。这是设计边界，不是缺陷（SKILL.md:16"自动脚本不假装能判断质量"）——但"该做的兜底没做"是机器可查的。
 7. **流程强制的覆盖边界**：spec 前置门（SPEC_REQUIRED=1）拦"无 spec 写源码区"，门禁失败捕获门（GATE_ENFORCE_DENY）拦"fail 未修复继续写"——但流程节点的**判断质量**（spec 写得对不对、plan 是否合理）仍是 AI/人的责任，机器只管"顺序与存在性"，不管"内容好坏"。
 
 ---
@@ -4139,7 +4139,7 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 |-----------|------|
 | 设计内核（What/Why/How/实现/When/总结+附录） | `swarm-yuan/README.md`（唯一设计文档） |
 | 每个数字的权威值 | `swarm-yuan/assets/facts.conf` |
-| 为什么门禁长这样（改动前必读） | `docs/design-evolution.md` §12 决策史（决策 1-46；1-17 见其 §13 档案 A5） |
+| 为什么门禁长这样（改动前必读） | `docs/design-evolution.md` §12 决策史（决策 1-58；1-17 见其 §13 档案 A5） |
 | 生成流程逐步口径 | `swarm-yuan/references/generation-flow.md`（Step 1-13） |
 | 81 框架各自的规则 | `swarm-yuan/references/frameworks/` |
 | 验收体系怎么运作 | `verifier/README.md` 与 `verifier/v1/acceptance-criteria.md` |
@@ -4173,13 +4173,13 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 #   - references 数 = references/*.md（不含 frameworks/ 子目录）
 
 # ===== 门禁（precheck.sh）=====
-FACT_GATES_TOTAL=56           # check_* 顶层函数总数（field-feedback +check_method_size 54→55；R101 +check_spec_first 55→56）
-FACT_GATES_CORE=11            # ALL_GATES_CORE（R101 +check_spec_first 入核心 10→11——四层拦截模型的门禁面承载）
-FACT_GATES_ARCH=18            # ALL_GATES_STANDARD − CORE（field-feedback +check_method_size 17→18）
+FACT_GATES_TOTAL=59           # check_* 顶层函数总数（field-feedback +check_method_size 54→55；R101 +check_spec_first 55→56）
+FACT_GATES_CORE=12            # ALL_GATES_CORE（R101 +check_spec_first 入核心 10→11——四层拦截模型的门禁面承载）
+FACT_GATES_ARCH=20            # ALL_GATES_STANDARD − CORE（field-feedback +check_method_size 17→18）
 FACT_GATES_COMPLIANCE=19      # ALL_GATES_COMPLIANCE（main 9 + WP-S1 +4安全 + WP-S2 +4质量 + cert/cwe +2——audit-claims-reality 修正：cert_audit/cwe_audit 入列后未同步，长期误标 17）
-FACT_GATES_ADVISORY_ONLY=6    # advisory-only（不在任何执行序列）：operate/learnings/loop-oracle/pr-quality/skill-supply-chain/upstream-baseline（cert/cwe 进 compliance、decision/state-phase 进 FULL、upstream-baseline 挂 precheck 启动、其余挂宿主 hooks/loop-hook；可达率 56/56。audit-claims-reality 修正：旧值 10 未随序列迁移同步）
-FACT_GATES_STANDARD=29        # ALL_GATES_STANDARD = CORE + ARCH（field-feedback +method_size 27→28；R101 +spec_first 28→29）
-FACT_GATES_FULL=50            # ALL_GATES_FULL（field-feedback +method_size 48→49；R101 +spec_first 49→50）
+FACT_GATES_ADVISORY_ONLY=6    # advisory-only（不在任何执行序列）：operate/learnings/loop-oracle/pr-quality/skill-supply-chain/upstream-baseline（cert/cwe 进 compliance、decision/state-phase 进 FULL、upstream-baseline 挂 precheck 启动、其余挂宿主 hooks/loop-hook；可达率 59/59。audit-claims-reality 修正：旧值 10 未随序列迁移同步）
+FACT_GATES_STANDARD=32        # ALL_GATES_STANDARD = CORE + ARCH（field-feedback +method_size 27→28；R101 +spec_first 28→29）
+FACT_GATES_FULL=53            # ALL_GATES_FULL（field-feedback +method_size 48→49；R101 +spec_first 49→50）
 # 闭合方程（self-check 机器断言守）：TOTAL 56 = FULL 50 + ADVISORY_ONLY 6；FULL 50 = STANDARD 29 + COMPLIANCE 19 + 2
 
 # ===== 配置变量（precheck.conf 三件套合计）=====
@@ -4190,10 +4190,10 @@ FACT_GATES_FULL=50            # ALL_GATES_FULL（field-feedback +method_size 48�
 # 决策 28 后：169 → 171（+STABLE_PROPAGATE/STABLE_PROPAGATE_HOPS，Palantir markings-propagate 映射）
 # 七轮复盘后：171 → 173（CORE 12→13 修正历史漂移 e45d253；ARCH 111→112 +EVAL_WHITELIST 七轮误报治理）
 # WP-P2-extension 后：arch.conf +5 框架 globs（SPARK/HIVE/TDENGINE/DORIS/HARMONYOS_SRC_GLOBS）178→183
-FACT_CONF_VARS=199            # core+arch+compliance 合计（WP-P2-extension +5 框架 globs 178→183；P0-5 +BUILD_DEEP_RUNTIMES 183→184；R23 回归 D8 +BASE_BRANCH 184→185；测试质量轮 +8 core 覆盖率/断言/变异 +4 arch 接口测试 185→197；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 197→199）
+FACT_CONF_VARS=204            # core+arch+compliance 合计（WP-P2-extension +5 框架 globs 178→183；P0-5 +BUILD_DEEP_RUNTIMES 183→184；R23 回归 D8 +BASE_BRANCH 184→185；测试质量轮 +8 core 覆盖率/断言/变异 +4 arch 接口测试 185→197；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 197→199）
 FACT_CONF_VARS_USERFACE=20      # R13 conf 收缩：user 面必配项预算（开关/位置/预算类；43 glob 阈值数据已迁 rules.d/framework-globs.rules——物理变量 199 含兼容别名，user 面必配 ≈ 133 中约 20 开关项）
 FACT_CONF_VARS_CORE=30        # precheck.conf（field-feedback +SPEC_REQUIRED/SPEC_GLOB 16→18；P0-5 +BUILD_DEEP_RUNTIMES 18→19；R23 回归 D8 +BASE_BRANCH 19→20；测试质量轮 +8 覆盖率/断言密度/负向/变异 20→28；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 28→30）
-FACT_CONF_VARS_ARCH=121       # precheck.arch.conf（WP-P2-extension +5 框架 globs 112→117；测试质量轮 +4 接口测试 117→121）
+FACT_CONF_VARS_ARCH=126       # precheck.arch.conf（WP-P2-extension +5 框架 globs 112→117；测试质量轮 +4 接口测试 117→121）
 FACT_CONF_VARS_COMPLIANCE=48  # precheck.compliance.conf（WP-S1 30+9 + WP-S2 +7）
 
 # ===== 特征卡 =====
@@ -4227,7 +4227,7 @@ FACT_FRAMEWORKS=81            # references/frameworks/*.md（不含 _template.md
 FACT_FRAMEWORK_GATE_PAIR=81   # assets/framework-gates/*.sh（与规则库 1:1）；R62 +php.sh；R64 +ruby.sh
 
 # ===== references 参考文档 =====
-FACT_REFERENCES=58            # references/*.md（不含 frameworks/ 子目录）；four-theories-methodology（四论闭环：系统论/信息论/科学方法论/控制论，原 engineering-cybernetics-methodology 扩充改名）；R26（2026-09-15）+industry-profile-payment（支付行业业务与技术融合 profile，吸收 hermes pay-team 人格内核，42→43）；功能点估算轮（2026-09-15）+cost-estimation-methodology（NESMA GB/T 42588-2023 成本度量与功能点估算，spec §25 依据，随发执勤侧），43→44；R37（2026-09-18）+lazy-generation-methodology（七层复用阶梯+懒≠偷工，吸收自 DietrichGebert/ponytail，随发执勤侧），44→45；R49（2026-09-24）+knowledge-lifecycle-methodology（知识生产/消费/沉淀/防腐四段协议，吸收自京东海博 AI 知识库实践文章），45→46；R50（2026-09-24）+capability-map（吸收层接线台账单一事实源：46 档逐档 来源/证据/消费节点/触发 + 19 运行时消费侧映射，G25 双向对账孤儿零容忍），46→47；R86（2026-10-03）+mattpocock-skills-methodology（需求到任务链四协议：访谈设计树前沿/spec 测试缝防腐/纵切拆分阻塞边/诊断回路，吸收自 mattpocock/skills v1.2.3，随技能分发 feature/fix 分派面），47→48；R88（2026-10-04）+rsi-evidence-methodology（自改进系统验收证据学：三类证据分离（任务增益/能力保留/改进器增益）/L1-L5 分级/密封评测，清华 RSI 综述+D2I-ai+字节三论文三源，随技能分发验收/交付+升级分派面），48→49；R100（2026-10-09）+controlled-language-methodology（受控语言纪律：ASD-STE100 结构/词汇二分+六结构规则+黑话替代表+回归轮报告格式，人面输出全程适用，随技能分发 lite 档），49→50；R122（2026-10-19）+diagram-production-methodology（图表生产能力：语义模式→视觉类型选型/编辑级设计系统/生产六步/机械自检与九节点接线，吸收自 cathrynlavery/diagram-design v2.6.110，生成器侧档不随目标技能分发），50→51；本体轮（2026-10-22）+business-ontology-methodology（业务本体工程方法论：FIBO 实践蒸馏的五步流程/术语纪律/七个语义模式/十四项校验）+fibo-financial-ontology（FIBO master_2026Q3 源码级术语与 IRI 参考；提交 2d73435，MIT），51→53；运维排障底座轮（2026-10-22）+bugfix-runbook（存量项目排障六步流水线：研发环境日志/数据库/远程断点取证，只读三道防线）+remote-debug-jvm（JDWP 经堡垒机隧道远程调试：前置三件/安全边界/断点纪律/证据回写），# 53→55 → 合规检查能力轮（2026-10-22）+compliance-checkpoints（执法检查方法论/罚则库/智能体安全/采购 AI/机检映射）+regulatory-checkpoint-table（主表 173 条）= 57；ub-mode 吸收轮（2026-10-30）+clean-code-metrics-methodology（洁净代码度量：复杂度/重复度/变异口径与阈值标定纪律，吸收自 unclebob/ub-mode，随技能分发）= 58
+FACT_REFERENCES=61            # references/*.md（不含 frameworks/ 子目录）；four-theories-methodology（四论闭环：系统论/信息论/科学方法论/控制论，原 engineering-cybernetics-methodology 扩充改名）；R26（2026-09-15）+industry-profile-payment（支付行业业务与技术融合 profile，吸收 hermes pay-team 人格内核，42→43）；功能点估算轮（2026-09-15）+cost-estimation-methodology（NESMA GB/T 42588-2023 成本度量与功能点估算，spec §25 依据，随发执勤侧），43→44；R37（2026-09-18）+lazy-generation-methodology（七层复用阶梯+懒≠偷工，吸收自 DietrichGebert/ponytail，随发执勤侧），44→45；R49（2026-09-24）+knowledge-lifecycle-methodology（知识生产/消费/沉淀/防腐四段协议，吸收自京东海博 AI 知识库实践文章），45→46；R50（2026-09-24）+capability-map（吸收层接线台账单一事实源：46 档逐档 来源/证据/消费节点/触发 + 19 运行时消费侧映射，G25 双向对账孤儿零容忍），46→47；R86（2026-10-03）+mattpocock-skills-methodology（需求到任务链四协议：访谈设计树前沿/spec 测试缝防腐/纵切拆分阻塞边/诊断回路，吸收自 mattpocock/skills v1.2.3，随技能分发 feature/fix 分派面），47→48；R88（2026-10-04）+rsi-evidence-methodology（自改进系统验收证据学：三类证据分离（任务增益/能力保留/改进器增益）/L1-L5 分级/密封评测，清华 RSI 综述+D2I-ai+字节三论文三源，随技能分发验收/交付+升级分派面），48→49；R100（2026-10-09）+controlled-language-methodology（受控语言纪律：ASD-STE100 结构/词汇二分+六结构规则+黑话替代表+回归轮报告格式，人面输出全程适用，随技能分发 lite 档），49→50；R122（2026-10-19）+diagram-production-methodology（图表生产能力：语义模式→视觉类型选型/编辑级设计系统/生产六步/机械自检与九节点接线，吸收自 cathrynlavery/diagram-design v2.6.110，生成器侧档不随目标技能分发），50→51；本体轮（2026-10-22）+business-ontology-methodology（业务本体工程方法论：FIBO 实践蒸馏的五步流程/术语纪律/七个语义模式/十四项校验）+fibo-financial-ontology（FIBO master_2026Q3 源码级术语与 IRI 参考；提交 2d73435，MIT），51→53；运维排障底座轮（2026-10-22）+bugfix-runbook（存量项目排障六步流水线：研发环境日志/数据库/远程断点取证，只读三道防线）+remote-debug-jvm（JDWP 经堡垒机隧道远程调试：前置三件/安全边界/断点纪律/证据回写），# 53→55 → 合规检查能力轮（2026-10-22）+compliance-checkpoints（执法检查方法论/罚则库/智能体安全/采购 AI/机检映射）+regulatory-checkpoint-table（主表 173 条）= 57；ub-mode 吸收轮（2026-10-30）+clean-code-metrics-methodology（洁净代码度量：复杂度/重复度/变异口径与阈值标定纪律，吸收自 unclebob/ub-mode，随技能分发）= 58；pstack 吸收批（2026-11-03）+pstack-methodology（验证即生成物/arena 与 swarm 分工/证据强度五级/原则卡引用契约）+补登记 failure-taxonomy 与 knowledge-retrieval-ladder（v2.98.3/v2.98.4 落文件未登记 references.tsv）+pstack-methodology = 61
 
 # ===== 合规检查点库（合规检查能力轮）=====
 FACT_INSPECTION_CHECKPOINTS=173  # 执法检查主表 TECH-001～173 条数（references/regulatory-checkpoint-table.md `^| P[123]·` 行机械计数；inspection-ledger.sh 数据契约）
@@ -4238,23 +4238,23 @@ FACT_PENALTY_CLAUSES=21          # 处罚条款库 P-01～P-21 条数（referenc
 # ===== 治理 agent 拓扑（WP-loop，借鉴 tanweai/pua 四权分离改写）=====
 
 # ===== spec 模板 =====
-FACT_SPEC_SECTIONS=25        # spec-template.md §1-§25 整数节（不含 §5.5/5.6/5.7 子节；+§24 架构映射 TOGAF BDAT，2026-08-27 吸收；+§25 规模与工作量估算 NESMA 功能点法 feature 档选填，2026-09-15 吸收）
+FACT_SPEC_SECTIONS=26        # spec-template.md 整数节机械计数（grep '^## [0-9]+\. '）：§0 任务卡七项（v2.99.2 SPEC_TASKCARD_ENFORCE）+ §1-§25，不含 §5.5/5.6/5.7 子节；+§24 架构映射 TOGAF BDAT，2026-08-27 吸收；+§25 规模与工作量估算 NESMA 功能点法 feature 档选填，2026-09-15 吸收。口径说明：键名与 self-check 断言均按整数节数计，§0 入计故为 26；"spec 全 25 节"类表述是 §1-§25 的内容节数，不同轴，勿混用
 
 # ===== 六段式模板 =====
 
 # ===== enforce_level 三档（gate-enforce-level.conf）=====
 # WP-Z16: Z3 fail-closed 化后严格档扩张（crypto/sast-deep/oss_eval 升 strict，cognition 降 warn）
-FACT_ENFORCE_STRICT=21       # 静态分层（gate-enforce-level.conf 再生）：≥3 真实 fail() 调用（R118 安全门禁 fail 点补全后 authz/crypto/privacy 升 strict；测试质量轮 check_test 覆盖率/断言/聚焦/变异 fail 点 ≥3 后 warn→strict 20→21）
-FACT_ENFORCE_WARN=20         # 静态分层：1-2 真实 fail() 调用（R122 check_diagram 增加机械契约分支后 advisory→warn；测试质量轮 check_test 升 strict 21→20）
+FACT_ENFORCE_STRICT=23       # 静态分层（gate-enforce-level.conf 再生）：≥3 真实 fail() 调用（R118 安全门禁 fail 点补全后 authz/crypto/privacy 升 strict；测试质量轮 check_test 覆盖率/断言/聚焦/变异 fail 点 ≥3 后 warn→strict 20→21）
+FACT_ENFORCE_WARN=21         # 静态分层：1-2 真实 fail() 调用（R122 check_diagram 增加机械契约分支后 advisory→warn；测试质量轮 check_test 升 strict 21→20）
 FACT_ENFORCE_ADVISORY=15     # 静态分层：0 真实 fail() 调用（R122 随 check_diagram 升 warn 由 16→15）
-FACT_ENFORCE_EFFECTIVE_STRICT=21     # 有效分层=静态+precheck _ENFORCE_OVERRIDE（R118 起仅 stable-diff/knowledge/metrics 三项降 advisory）
-FACT_ENFORCE_EFFECTIVE_WARN=17       # 有效分层：静态 21 − override 3
+FACT_ENFORCE_EFFECTIVE_STRICT=23     # 有效分层=静态+precheck _ENFORCE_OVERRIDE（R118 起仅 stable-diff/knowledge/metrics 三项降 advisory）
+FACT_ENFORCE_EFFECTIVE_WARN=18       # 有效分层：静态 21 − override 3
 FACT_ENFORCE_EFFECTIVE_ADVISORY=18   # 有效分层：静态 15 + override 3（self-check check_enforce_facts 重放对账）
 
 # ===== profile 三档 =====
 
 # ===== 生成器骨架文件 =====
-FACT_UNIVERSAL_FILES=105       # generate-skill.sh UNIVERSAL_FILES 清单条目数（C1 机械计数；R13 45 → +memory-writeback+cost-report 等账本族 → R14/R15 +gate-plan+audit-closure → R16 +ontology 三份+ontology-verify → field-feedback +review-record-template = 59 → 全局一致性二轮 +standards-map.conf/framework-globs.rules 随发补齐 = 65（agents-md-audit-round 2026-09-10 补记：5170a0a 改值未改链）→ v2.14.2 自包含轮 +relations-extract/inventory-verify/inventory-dimensions.conf = 68 → v2.14.3 排查 A3 +relations-query.sh = 69 → 功能点估算轮（2026-09-15）+cost-estimation-methodology.md 随发 = 70 → R37（2026-09-18）+lazy-generation-methodology.md 随发 = 71 → R52（2026-09-25）随发补缺 +12（分派表引用的方法论/行为档：knowledge-lifecycle/decision-governance/ai-process-records/agent-skills/codex/mea-loop/togaf/cordis/frontend-design/codex-security/mcp-governance/crypto-spec——分派目标侧可达）= 83 → R72 全量回归轮（2026-09-29）+mine-habits.sh 随发（D6 修复三处引用悬空，v2.14.2 自包含先例对齐）= 84 → R86 新运行时吸收轮（2026-10-03）+mattpocock-skills-methodology.md 随技能分发（feature/fix 路由行分派对齐 G25 ⑥）= 85 → R88（2026-10-04）+rsi-evidence-methodology.md 随发（此前键值 86 已先于链更新，R100 补链）= 86 → R100 受控语言轮（2026-10-09）+controlled-language-methodology.md 随发（人面输出纪律全档适用）= 87 → R98 记忆后端适配轮（2026-10-09）+memory-backends.sh 随发（记忆后端契约单一事实源）= 88 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite，判定单一事实源）+spec-first-pre-commit.sh（standard，L2 提交时强拦）= 90 → R103 五宿主 hooks 整合轮（2026-10-09）+spec-first-bridge.sh（standard，五宿主 L1 写时拦截桥）= 91 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh 随发（目标技能侧结构自检，lite 全档）= 92 → 本体轮（2026-10-22）+business-ontology-methodology.md +fibo-financial-ontology.md 随发（standard 档）= 94 → 运维排障底座轮（2026-10-22）+ops-readonly-guard.sh +tunnel.sh +tunnel.conf（用户可填充）+bugfix-runbook.md +remote-debug-jvm.md 随发（standard 档，存量项目 fix 任务连研发环境取证底座）= 99 → R138（2026-10-22）+assets/lib/files.sh 随发（产物侧 detect-frameworks 运行库）# 100 → 合规检查能力轮（2026-10-22）+compliance-checkpoints.md +regulatory-checkpoint-table.md +inspection-ledger.sh 随发（compliance 档，执法检查知识层+迎检台账）= 103）；ub-mode 吸收轮 +clean-code-metrics-methodology.md 随发 = 105
+FACT_UNIVERSAL_FILES=109       # generate-skill.sh UNIVERSAL_FILES 清单条目数（C1 机械计数；R13 45 → +memory-writeback+cost-report 等账本族 → R14/R15 +gate-plan+audit-closure → R16 +ontology 三份+ontology-verify → field-feedback +review-record-template = 59 → 全局一致性二轮 +standards-map.conf/framework-globs.rules 随发补齐 = 65（agents-md-audit-round 2026-09-10 补记：5170a0a 改值未改链）→ v2.14.2 自包含轮 +relations-extract/inventory-verify/inventory-dimensions.conf = 68 → v2.14.3 排查 A3 +relations-query.sh = 69 → 功能点估算轮（2026-09-15）+cost-estimation-methodology.md 随发 = 70 → R37（2026-09-18）+lazy-generation-methodology.md 随发 = 71 → R52（2026-09-25）随发补缺 +12（分派表引用的方法论/行为档：knowledge-lifecycle/decision-governance/ai-process-records/agent-skills/codex/mea-loop/togaf/cordis/frontend-design/codex-security/mcp-governance/crypto-spec——分派目标侧可达）= 83 → R72 全量回归轮（2026-09-29）+mine-habits.sh 随发（D6 修复三处引用悬空，v2.14.2 自包含先例对齐）= 84 → R86 新运行时吸收轮（2026-10-03）+mattpocock-skills-methodology.md 随技能分发（feature/fix 路由行分派对齐 G25 ⑥）= 85 → R88（2026-10-04）+rsi-evidence-methodology.md 随发（此前键值 86 已先于链更新，R100 补链）= 86 → R100 受控语言轮（2026-10-09）+controlled-language-methodology.md 随发（人面输出纪律全档适用）= 87 → R98 记忆后端适配轮（2026-10-09）+memory-backends.sh 随发（记忆后端契约单一事实源）= 88 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite，判定单一事实源）+spec-first-pre-commit.sh（standard，L2 提交时强拦）= 90 → R103 五宿主 hooks 整合轮（2026-10-09）+spec-first-bridge.sh（standard，五宿主 L1 写时拦截桥）= 91 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh 随发（目标技能侧结构自检，lite 全档）= 92 → 本体轮（2026-10-22）+business-ontology-methodology.md +fibo-financial-ontology.md 随发（standard 档）= 94 → 运维排障底座轮（2026-10-22）+ops-readonly-guard.sh +tunnel.sh +tunnel.conf（用户可填充）+bugfix-runbook.md +remote-debug-jvm.md 随发（standard 档，存量项目 fix 任务连研发环境取证底座）= 99 → R138（2026-10-22）+assets/lib/files.sh 随发（产物侧 detect-frameworks 运行库）# 100 → 合规检查能力轮（2026-10-22）+compliance-checkpoints.md +regulatory-checkpoint-table.md +inspection-ledger.sh 随发（compliance 档，执法检查知识层+迎检台账）= 103）；ub-mode 吸收轮 +clean-code-metrics-methodology.md 随发 = 105 → pstack 吸收批（2026-11-03）+failure-taxonomy 与 knowledge-retrieval-ladder 两档补登 = 107（pstack-methodology 走 gen_only：目标技能拿到的是产物规范而非方法论档，不占分发预算）；预算瘦身轮（2026-11-03）code-graph-tools 转 gen_only（选型研究是生成期决策）= 109
 
 # ===== Oracle Gate 循环（WP-loop，借鉴 tanweai/pua pua-loop + autoresearch Oracle Isolation）=====
 FACT_LOOP_ORACLE=1                   # 1=启用 Stop hook Oracle Gate（verify_command 独立验证 <promise>）
@@ -4311,14 +4311,14 @@ FACT_MEASURE_METADATA_REQUIRED=1   # 1=fail（十一轮复盘：核心 13/13 全
 # ===== 生成管线工具化（WP-P2~P5）=====
 FACT_FRAMEWORK_EVIDENCE=1               # framework-evidence.sh 产出（1=启用，台账 TSV）
 FACT_CONF_RENDER_PROFILES=3             # conf-render.sh profile 档（lite/standard/compliance）
-FACT_UNIVERSAL_FILES_CORE=48            # UNIVERSAL_FILES 标 lite 档的条目数（三 profile 都拷）（C1 机械计数，含带尾注释条目；audit-2026-08-25 修正：30 是行尾锚定 grep 的盲区读数；v2.14.2 自包含轮 +3 边集/核验工具随发=40；v2.14.3 排查 A3 +relations-query.sh=41；R72 全量回归轮 +mine-habits.sh 随发=42；R100 受控语言轮 +controlled-language-methodology.md（lite 档）=43；R98 记忆后端适配轮 +memory-backends.sh 随发（lite 档）=44 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite 档，fail-gate-hook lite 依赖判定库）=45 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh（lite 档，目标技能侧结构自检）=46）
+FACT_UNIVERSAL_FILES_CORE=51            # UNIVERSAL_FILES 标 lite 档的条目数（三 profile 都拷）（C1 机械计数，含带尾注释条目；audit-2026-08-25 修正：30 是行尾锚定 grep 的盲区读数；v2.14.2 自包含轮 +3 边集/核验工具随发=40；v2.14.3 排查 A3 +relations-query.sh=41；R72 全量回归轮 +mine-habits.sh 随发=42；R100 受控语言轮 +controlled-language-methodology.md（lite 档）=43；R98 记忆后端适配轮 +memory-backends.sh 随发（lite 档）=44 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite 档，fail-gate-hook lite 依赖判定库）=45 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh（lite 档，目标技能侧结构自检）=46）
 
 # ===== 复杂度负向预算（决策 26，WP-rhetoric-honesty）=====
 # 范式声称帮项目降复杂度，自身复杂度不可逆上升（门禁 27->52->54）会证伪范式可信度。
 # 预算上限冻结当前规模，新增须等额删除或申请例外（决策 26 记录理由）。
 # self-check.sh 断言：FACT_GATES_TOTAL <= FACT_GATES_BUDGET，否则 fail。
-FACT_GATES_BUDGET=56                    # 门禁数负向预算上限（当前 56 冻结，新增须等额删除或申请例外；决策 26.2 记录）
-FACT_CONF_VARS_BUDGET=200               # conf 变量数预算上限（当前 199，预留 1 增长空间；设计文档同步轮 +2 后逼近上限，下一步新增须与旧变量合并/退役同步）
+FACT_GATES_BUDGET=59                    # 门禁数负向预算上限（当前 59 冻结，新增须等额删除或申请例外；决策 26.2 记录；v2.99.0 +3 门禁时预算同步登记上调 56→59）
+FACT_CONF_VARS_BUDGET=210               # conf 变量数预算上限（当前 204，预留 6 增长空间；v2.99.0 +5 变量时预算同步登记上调 200→210，下一步新增须与旧变量合并/退役同步）
 
 # ===== 上下文表面预算（决策 32，上下文窗口自适应压缩）=====
 # context-surface.sh --gen 计量生成期必读三件套（SKILL.md + exploration-guide + template-spec）字节。
@@ -4329,7 +4329,7 @@ FACT_CONF_VARS_BUDGET=200               # conf 变量数预算上限（当前 19
 # 本轮 template-spec +spec §25 填充指引 714B；此前 vendor-knowledge 轮注记 +451B 未记账，一并归零），
 # warn-only 保持——理由：SKILL.md 仍在吸收新方法论（refs 持续增长），过早翻 fail 会阻断吸收；
 # 推进条件：连续 3 个批次实测不增长后可翻 fail。（audit-claims-reality 修正：旧记录 154088B 未随实测同步）
-FACT_CONTEXT_SURFACE_BUDGET=197632          # 生成期必读三件套字节上限（生成期一次加载，决策 32 税制锚）。v2.14.3 排查轮（2026-09-15）首次例外登记 180000→184000：实测 180189B 超 189B，成因=B1 文档证据源优先级表 + B2 文档转换流程 + A1/A2 字段级边消费指引三处如实功能增量（exploration-guide +3362B、template-spec +1265B，净增方法论文档非注记膨胀）；对齐 FACT_ARTIFACT_BYTES_BUDGET 逐例登记先例，不构成先例。R49 知识生命周期轮（2026-09-24）第二次例外登记 184000→188416（+4KiB，沿决策 38 决定二冻结现状+显式余量形态）：实测 187040B 超 3040B——其中 969B 为 R48 收口时未登记的预存超额（R45-R48 期矛盾裁决节等功能增量沉淀，本轮实测对账发现并补登记），2071B 为本轮五机制接线净增量（页面三角/悬置回填/回归分级/六步协议/三态处置，协议文本为功能本体不可注记化瘦身）；本轮 SKILL.md 两处枚举已瘦（与档重复的六步/三态枚举收敛为档引用）。R58 知识库真机演练轮（2026-09-25）第三次登记 188416→190464（184KiB→186KiB）：实测 189570B 超 1154B，成因=D1 四查契约面/D5 页面三角承载位/D6 悬置清单接线/D8 三态触发双路四处知识协议产品化增量（template-spec +900B、SKILL.md +110B）——演练实弹修复的功能本体，非注记膨胀；不构成先例；R70 CI 修复轮（2026-09-29）第四次登记 190464→194560（186KiB→190KiB，+4KiB）：实测 190690B 超 226B，成因=R70/R71 运行时刷新注记增量（codex/ruflo/dsh 版本注记落入计量面），非内容膨胀；不构成先例。设计文档同步轮（2026-10-26）第五次登记 194560→195584（190KiB→191KiB，+1KiB）：实测 195339B 超 779B，成因=design-sync 机制立法——template-spec 9 节点命名表对齐实际 emit 版（修复既有不同步缺陷）+§20.4/文档左移/合入序列描述、SKILL.md 节点③⑦⑧职责行扩（机制本体描述非注记膨胀）；不构成先例。研发四阶段轮（2026-10-27）第六次登记 195584→197632（+2KiB）：实测 197575B 超 1991B，成因=四阶段顺序立法（决策 57：分支开发→分支测试→主干合并→主干回归）——template-spec §2 四阶段声明+⑤⑥⑧⑨行与详述、SKILL.md description/九节点行/使用块⑤⑥⑧⑨步（流程顺序语义为功能本体非注记膨胀）；不构成先例
+FACT_CONTEXT_SURFACE_BUDGET=199680          # 生成期必读三件套字节上限（生成期一次加载，决策 32 税制锚）。v2.14.3 排查轮（2026-09-15）首次例外登记 180000→184000：实测 180189B 超 189B，成因=B1 文档证据源优先级表 + B2 文档转换流程 + A1/A2 字段级边消费指引三处如实功能增量（exploration-guide +3362B、template-spec +1265B，净增方法论文档非注记膨胀）；对齐 FACT_ARTIFACT_BYTES_BUDGET 逐例登记先例，不构成先例。R49 知识生命周期轮（2026-09-24）第二次例外登记 184000→188416（+4KiB，沿决策 38 决定二冻结现状+显式余量形态）：实测 187040B 超 3040B——其中 969B 为 R48 收口时未登记的预存超额（R45-R48 期矛盾裁决节等功能增量沉淀，本轮实测对账发现并补登记），2071B 为本轮五机制接线净增量（页面三角/悬置回填/回归分级/六步协议/三态处置，协议文本为功能本体不可注记化瘦身）；本轮 SKILL.md 两处枚举已瘦（与档重复的六步/三态枚举收敛为档引用）。R58 知识库真机演练轮（2026-09-25）第三次登记 188416→190464（184KiB→186KiB）：实测 189570B 超 1154B，成因=D1 四查契约面/D5 页面三角承载位/D6 悬置清单接线/D8 三态触发双路四处知识协议产品化增量（template-spec +900B、SKILL.md +110B）——演练实弹修复的功能本体，非注记膨胀；不构成先例；R70 CI 修复轮（2026-09-29）第四次登记 190464→194560（186KiB→190KiB，+4KiB）：实测 190690B 超 226B，成因=R70/R71 运行时刷新注记增量（codex/ruflo/dsh 版本注记落入计量面），非内容膨胀；不构成先例。设计文档同步轮（2026-10-26）第五次登记 194560→195584（190KiB→191KiB，+1KiB）：实测 195339B 超 779B，成因=design-sync 机制立法——template-spec 9 节点命名表对齐实际 emit 版（修复既有不同步缺陷）+§20.4/文档左移/合入序列描述、SKILL.md 节点③⑦⑧职责行扩（机制本体描述非注记膨胀）；不构成先例。研发四阶段轮（2026-10-27）第六次登记 195584→197632（+2KiB）：实测 197575B 超 1991B，成因=四阶段顺序立法（决策 57：分支开发→分支测试→主干合并→主干回归）——template-spec §2 四阶段声明+⑤⑥⑧⑨行与详述、SKILL.md description/九节点行/使用块⑤⑥⑧⑨步（流程顺序语义为功能本体非注记膨胀）；不构成先例
 
 # ===== 脚本行数（LOC）监控 =====
 # precheck.sh + gates-strict/warn/advisory.sh 四文件 wc -l 合计。
@@ -4339,14 +4339,14 @@ FACT_CONTEXT_SURFACE_BUDGET=197632          # 生成期必读三件套字节上�
 # 三轮复盘状态记录（防僵尸开关）：warn-only 长期保持——理由：LOC 增删属正常开发活动，
 # 本 key 的用途是"改脚本后提示同步文档口径"，非"限制脚本规模"（规模由 FACT_GATES_BUDGET 管）。
 # 不设推进条件（无需翻 fail）。
-FACT_SCRIPT_LOC=9752            # 四脚本（assets/precheck+gates-strict/warn/advisory）合计行数（self-check 机械计数；改脚本后同步本值；R141 实测对齐；设计文档同步轮 +9=check_spec_first 域源 design-sync 核验再生；2026-10-26 函数拆分净 0）；2026-10-27 收口合并批（core 尾批并入）后实测 9355
+FACT_SCRIPT_LOC=9972            # 四脚本（assets/precheck+gates-strict/warn/advisory）合计行数（self-check 机械计数；改脚本后同步本值；R141 实测对齐；设计文档同步轮 +9=check_spec_first 域源 design-sync 核验再生；2026-10-26 函数拆分净 0）；2026-10-27 收口合并批（core 尾批并入）后实测 9355；2026-11-05 --gates 重生成补齐 spec-first 规格保真度四维块（域源早于视图，+15 行）
 
 # ===== 执行面复杂度预算（2026-10-24 重构轮，决策 54）=====
 # 事实：门禁/变量有预算，但门禁代码与框架注入代码的行数长期无上限（终态设计 §十已登记为风险）。
 # 口径：引擎 LOC = assets/precheck.sh + assets/gates/_lib.sh + assets/gates/<domain>/*.sh（域源，不含生成的 gates-*.sh 聚合视图，避免双计）；
 #       框架门禁 LOC = assets/framework-gates/*.sh（注入目标技能的执行面）。
 # 强度：超过上限即 fail（与门禁 56 同族）；下降不拦，但应在下一轮把上限收紧到新实测值。
-FACT_ENGINE_CODE_LOC_MAX=7980           # 引擎域源代码行数上限（2026-10-24 实测冻结 7769：precheck 2094 + gates/_lib.sh 778 + gates 域源 4897；2026-10-26 设计文档同步轮登记上调 7769→7800；2026-10-30 ub-mode 吸收轮登记上调 7800→7980：实测 7951，成因=复杂度维度与重复度维度并入既有两门禁（_lib.sh 三个扫描 helper + method-size/reuse 各一段），扩容既有门禁内涵而非新增门禁数，决策 58）
+FACT_ENGINE_CODE_LOC_MAX=8600           # 引擎域源代码行数上限（2026-10-24 实测冻结 7769：precheck 2094 + gates/_lib.sh 778 + gates 域源 4897；2026-10-26 设计文档同步轮登记上调 7769→7800；2026-10-30 ub-mode 吸收轮登记上调 7800→7980：实测 7951，成因=复杂度维度与重复度维度并入既有两门禁（_lib.sh 三个扫描 helper + method-size/reuse 各一段），扩容既有门禁内涵而非新增门禁数，决策 58）
 FACT_FRAMEWORK_GATE_LOC_MAX=18469       # 框架门禁注入代码行数上限（2026-10-24 冻结 18464；R141 sharding 聚合外包检测 +5 行登记上调）
 
 # ===== 版本 oracle 单源真值（G10，claude-mem v13.12.1 吸收）=====
@@ -4431,7 +4431,7 @@ unset _facts_dir
 | cost-estimation-methodology | 人行科技司培训 + GB/T 42588（B） | spec §25 填充 | 规模/工作量估算 |
 | domain-knowledge | 内生速查（A） | 生成流程 Step 4 + --domain 门禁 | 领域规律推导 |
 | business-ontology-methodology | FIBO ONTOLOGY_GUIDE + 2026Q3 源码树（B，MIT） | 生成流程 Step 4/5 探查建模 + 开发工作流 ③ spec 领域段 | 业务领域建模、术语表、跨系统语义对齐 |
-| code-graph-tools | GitNexus/graphify/codegraph 调研（A） | 生成流程 Step 3 图谱优先 | 图谱工具选型 |
+| code-graph-tools | GitNexus/graphify/codegraph 调研（A） | 生成流程 Step 3 图谱优先【生成器侧】 | 图谱工具选型（目标技能不随之分发：选型是生成期决策） |
 | togaf-metamodel-methodology | TOGAF BDAT（B） | §D.0.6 四层视角 | 架构类变更探查 |
 | frontend-design-methodology | pbakaus/impeccable（B） | 生成流程 Step 7 + 开发工作流 ⑤ 前端 | 前端设计任务 |
 | diagram-production-methodology | cathrynlavery/diagram-design v2.6.120（A，MIT；版本真值=runtime/diagram-design/MANIFEST.md，facts.conf FACT_DIAGRAM_DESIGN_VERSION 对账） | 生成流程 Step 7 + 开发工作流 ③ spec/⑦ 审查/⑨ 发布 | 需要可发布架构/流程/时序/状态/ER/依赖/部署图 |
@@ -4478,6 +4478,9 @@ unset _facts_dir
 | rsi-evidence-methodology | 清华 RSI 综述 + D2I-ai + 字节三论文（B） | 生成侧吸收轮收口验收 + 目标技能自成长链证据纪律（⑤⑦） | 改进/自进化系统的验收证据分层、升级已有技能 |
 | bugfix-runbook | 内生（A） | 开发工作流 ②-⑥ fix 任务排障流水线（研发环境取证） | fix 任务连研发环境日志/数据库/远程断点取证 |
 | remote-debug-jvm | 内生（A） | bugfix-runbook 第③步（JDWP 经隧道 + IDE attach + 断点纪律） | fix 任务需断点级取证 |
+| failure-taxonomy | MTSC2026 AI Native 测试工程（极智嘉）六类根因（B） | ⑥ 测试失败处置决策点 + failure-detector `_classify_failure` 规则表正本 | 任何测试/命令/走查失败后先归类再处置，禁无效重试 |
+| knowledge-retrieval-ladder | MTSC2026 四层知识检索本仓化（B） | ② 探查节点检索起点 + 任何「谁依赖/什么语义/怎么改」问题 | 检索纪律：由近及远命中即止、不足升层、跨层佐证、结论带锚 |
+| pstack-methodology | cursor/plugins · pstack v0.15.36（A） | ⑦ 审查（证据强度五级/arena 互证）+ 生成流程 Step 7 目标技能产物规范（验证技能五段、原则卡、拒答库） | 设计验证产物 / 选择 swarm 还是 arena / 写原则卡或审查证据强度 |
 
 ### 族⑤ 安全合规与行业立法（门禁）
 

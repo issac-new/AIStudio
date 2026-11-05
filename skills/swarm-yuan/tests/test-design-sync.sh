@@ -194,7 +194,10 @@ fi
 # ===== ④ 静态锚：调用点落位（L2/L3 消费 lib 单一事实源） =====
 grep -q 'spf_design_sync_check' assets/hooks/spec-first-pre-commit.sh \
   && ok "4a L2 调用 spf_design_sync_check" || bad "4a L2 缺调用点"
-grep -q 'spf_design_sync_check' assets/gates-warn.sh \
+# R128 收敛后 check_spec_first 的 L3 调用点落在 strict 域（assets/gates-strict.sh，
+# 域源 assets/gates/process/spec-first.sh 同源）；gates-warn.sh 本就不含该调用点。
+# 旧静态锚误指 gates-warn，恒不命中 → 长期假红。指向真实落位，验证强度不降。
+grep -q 'spf_design_sync_check' assets/gates-strict.sh \
   && ok "4b L3（check_spec_first）调用 spf_design_sync_check" || bad "4b L3 缺调用点"
 grep -q 'DESIGN_SYNC_REQUIRED' assets/precheck.conf \
   && ok "4c conf 模板含 DESIGN_SYNC_REQUIRED（opt-in 默认关）" || bad "4c conf 模板缺变量"

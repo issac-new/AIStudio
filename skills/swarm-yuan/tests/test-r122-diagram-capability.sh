@@ -184,7 +184,12 @@ fi
 echo "⑥ 文档注册与口径"
 grep -q '^FACT_RUNTIMES=15' "$BASE/assets/facts.conf" && ok "facts FACT_RUNTIMES=15" || bad "FACT_RUNTIMES≠15"
 grep -q '^FACT_RUNTIMES_CLI=6' "$BASE/assets/facts.conf" && ok "facts FACT_RUNTIMES_CLI=6" || bad "FACT_RUNTIMES_CLI≠6"
-grep -q '^FACT_REFERENCES=58' "$BASE/assets/facts.conf" && ok "facts FACT_REFERENCES=58" || bad "FACT_REFERENCES≠58"
+# 不手抄篇数：读 facts.conf 声明值，与 references/*.md 实存对账（真值唯一源）。
+_ref_decl="$(sed -n 's/^FACT_REFERENCES=\([0-9][0-9]*\).*/\1/p' "$BASE/assets/facts.conf" | head -1)"
+_ref_true="$(find "$BASE/references" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')"
+[[ -n "$_ref_decl" && "$_ref_decl" == "$_ref_true" ]] \
+  && ok "facts FACT_REFERENCES=${_ref_decl} == references/*.md 实存" \
+  || bad "FACT_REFERENCES 与实存篇数不符（声明=${_ref_decl} 实存=${_ref_true}）"
 grep -q '^FACT_DIAGRAM_DESIGN_VERSION=2.6.120' "$BASE/assets/facts.conf" \
   && ok "facts FACT_DIAGRAM_DESIGN_VERSION=2.6.120" || bad "FACT_DIAGRAM_DESIGN_VERSION 漂移"
 

@@ -178,7 +178,7 @@
 
 ## 7. 领域知识库锚点（深读路由）
 
-> 知识库实体已镜像入仓 `vendor-knowledge/pay-team/references/`（本目录相对本文件：`../vendor-knowledge/pay-team/references/`），迁移到其它机器后随仓可达。**引用任何限额/阈值/费率/版本数据前，先查 `standards/known-conflicts.md` 的冲突裁决**。
+> 知识库实体已镜像入仓 `vendor-knowledge/pay-team/references/`（本目录相对本文件：`../vendor-knowledge/pay-team/references/`），迁移到其它机器后随仓可达。**仅生成器仓库可达**：`install.sh` 分发边界排除 `vendor-knowledge/`，安装态与目标技能产物内该目录不存在；此时以本档正文与 `assets/industry-profiles/payment.conf` 为准，不假装知识库可查。**引用任何限额/阈值/费率/版本数据前，先查 `standards/known-conflicts.md` 的冲突裁决**。
 >
 > **降级链（诚实降级）**：`standards/` `books/` `fulltext/` 三目录为版权材料、走 git LFS——克隆机须 `git lfs pull` 取回实体；未拉取或仓为公开仓分发（版权材料不入公开仓）时，LFS 指针降级为知识地图，深读材料需另行获取（原始来源：本机 hermes 运行时 `~/.hermes/profiles/pay-orchestrator/references/`）。顶层自研内核（索引/内核框架/监管梳理/known-conflicts 裁决）为普通 git 对象，随仓克隆即可读。
 
@@ -190,7 +190,7 @@
 - **规范全文**：`standards/`（EMV v4.4 四 Book、PBOC 3.0 十三册、EMVCo 标记化、ISO8583 详解、unionpay/ 银联全套）
 - **监管知识**：`中国支付清算体系知识文档.md` + `支付清算国际视角与前沿趋势知识文档.md`
 - **外卡收单专题**：`waika-shoudan-analysis.md`（单/双信息机制、QSP/PF 认证、拒付流程）
-- **共享组织规则**（pay-team SOUL.md 引用）：`../vendor-knowledge/_shared/02-org-orchestration/four-lenses-charter.md`（四论四问）/ `language-standard.md`（语言规范）/ `../vendor-knowledge/_shared/03-evolution-memory/output-contract.md`（输出契约）
+- **共享组织规则**（pay-team SOUL.md 引用）：`../vendor-knowledge/_shared/02-org-orchestration/four-lenses-charter.md`（四论四问）/ `language-standard.md`（语言规范）/ `../vendor-knowledge/_shared/03-evolution-memory/output-contract.md`（输出契约）。同上：三处均为生成器仓档案，安装态与目标技能产物内不可达
 
 ## 8. 与 finance profile 的衔接声明
 

@@ -155,7 +155,12 @@ has references/capability-map.md "| bugfix-runbook |" "capability-map 登记 run
 has references/capability-map.md "| remote-debug-jvm |" "capability-map 登记 JDWP 档"
 has references/task-methodology-router.md "bugfix-runbook（六步流水线" "task-router fix 分派接 runbook"
 has SKILL.md "bugfix-runbook（fix 任务连研发环境排障六步流水线）" "SKILL.md 路由表接 runbook"
-has assets/facts.conf "FACT_REFERENCES=58" "facts FACT_REFERENCES=58"
+# 不手抄篇数：读 facts.conf 声明值，与 references/*.md 实存对账（真值唯一源）。
+_ref_decl="$(sed -n 's/^FACT_REFERENCES=\([0-9][0-9]*\).*/\1/p' assets/facts.conf | head -1)"
+_ref_true="$(find references -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')"
+[[ -n "$_ref_decl" && "$_ref_decl" == "$_ref_true" ]] \
+  && ok "facts FACT_REFERENCES=${_ref_decl} == references/*.md 实存" \
+  || bad "FACT_REFERENCES 与实存篇数不符（声明=${_ref_decl} 实存=${_ref_true}）"
 has assets/facts.conf "FACT_UNIVERSAL_FILES=109" "facts FACT_UNIVERSAL_FILES=109"
 has assets/env-setup.sh "tunnel.sh\" doctor" "env-setup 隧道体检示例"
 

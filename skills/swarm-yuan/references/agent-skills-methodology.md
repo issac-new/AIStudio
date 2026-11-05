@@ -152,7 +152,7 @@ Bug report arrives
 
 - 语料 = 技能名 token（权重 2×）+ description token（1×）；轻量词干化（`-ing/-ed/-ation/-ification` 等）把 "conflicts/conflict" "specification/specify" 归并；停用词表 + 缩写别名表（`docs→document`、`auth→authenticate`）显式登记，**不在描述里堆缩写词作弊**。
 - 打分 = TF-IDF 余弦；正例须排进 `top_k`（默认 3），反例不得排第一。
-- **负例必须声明 `owner`**：`evals/README.md:111` 说明，不声明 owner 的负例可能"vacuous pass"（prompt 与任何技能都不匹配，本技能自然不排第一）。声明后断言 owner **压过**本技能，负例升级为成对路由测试。
+- **负例必须声明 `owner`**：`evals/README.md:111` 说明，不声明 owner 的负例可能"vacuous pass"（prompt 与任何技能都不匹配，本技能自然不排第一）。声明后断言 owner **压过**本技能，负例即构成成对路由测试。
 - 碰撞阈值：两两描述余弦 ≥0.75 报错、≥0.5 警告。
 - **rank-1 棘轮**：CI 用 `--min-rank1 95`，低于下限失败；`evals/README.md:121` 原文 "never lower it to make a regression pass"。
 - 失败处置方向是**改描述，不是改 prompt**（`:123`）："When these evals surface a description-vocabulary gap, fix the description, not the prompt."

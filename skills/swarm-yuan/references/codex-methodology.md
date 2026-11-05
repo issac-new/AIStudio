@@ -92,7 +92,7 @@ Codex Skills 只常载 frontmatter（name/description），正文按触发注入
 
 - **OS 级沙箱**（Seatbelt/bwrap）：运行时职责；swarm-yuan 的 precheck 门禁跑在用户自己的 shell。
 - **模型路由**（mini 干杂活/旗舰主审）：运行时控制模型调用。
-- **Hooks 确定性裁决**：swarm-yuan 已有等价物（56 门禁本来就是确定性 bash 检查 + integrity-guard/failure-detector hooks）。
+- **Hooks 确定性裁决**：swarm-yuan 已有等价物（59 门禁本来就是确定性 bash 检查 + integrity-guard/failure-detector hooks）。
 - **并行子代理调度**（spawn_agent/max_threads=6）：运行时的编排原语；swarm-yuan 的 subagent-orchestration.md 已引用方法论。
 
 ## 五、与其他 references 的关系

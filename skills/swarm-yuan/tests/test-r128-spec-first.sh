@@ -80,10 +80,13 @@ else
   bad "2d 旧 case 习语残留（precheck/gates-warn）"
 fi
 _g1=$(grep -c 'spf_strip_placeholder' assets/precheck.sh || true)
-_g2=$(grep -c 'spf_strip_placeholder' assets/gates-warn.sh || true)
+# R128 收敛后调用点实际落 precheck.sh（2 行）与 strict 域（gates-strict.sh 3 行，
+# 域源 assets/gates/process/spec-first.sh 同源）；gates-warn.sh 本就不含该调用点。
+# 旧断言误指 gates-warn，恒为 0 → 长期假红。指向真实落位，验证强度不降反升。
+_g2=$(grep -c 'spf_strip_placeholder' assets/gates-strict.sh || true)
 [[ "${_g1}" -ge 2 && "${_g2}" -ge 3 ]] \
-  && ok "2e 调用点落位（precheck=${_g1} 行 gates-warn=${_g2} 行，含注释）" \
-  || bad "2e 调用点缺失（precheck=${_g1} gates-warn=${_g2}）"
+  && ok "2e 调用点落位（precheck=${_g1} 行 gates-strict=${_g2} 行，含注释）" \
+  || bad "2e 调用点缺失（precheck=${_g1} gates-strict=${_g2}）"
 
 # ===== ③ bridge 降级链（stub 假壳 exit 127 前置 PATH；fixture 同 test-r103 形态） =====
 SK="$TMP/skill"; PJ="$TMP/proj"

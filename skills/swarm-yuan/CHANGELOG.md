@@ -1,5 +1,25 @@
 # Changelog
 
+## [Unreleased]
+
+口径一致性专项（生成器仓）。门禁 59 / 变量 204 / 框架 81 / 运行时 15 均未变：本轮无新增门禁、无预算上调、无版本号进位。
+
+### Fixed
+
+- **`assets/facts.conf` 三处真值漂移**：`FACT_SPEC_SECTIONS` 25→26（§0 任务卡七项入模板后整数节实为 26，此前 self-check `--check-only` 因此 EXIT=1）；`FACT_GATES_BUDGET` / `FACT_CONF_VARS_BUDGET` 注释中的「当前 56 / 199」改为真值 59 / 204；`FACT_GATES_ADVISORY_ONLY` 注释可达率 56/56→59/59。
+- **用户面文档成片手抄漂移**：README 附录 A、CLAUDE.md、docs/usage-manual.md、references/ 十余档、.claude/commands、scripts/generate-skill.sh 内嵌模板，共 73 组精确短语对齐 facts.conf 真值（56 门禁 / 197 变量 / 核心 11 / 架构 18 / 标准 29 / strict 20 / 57 档 / 决策 1-46 / 预算 598016B 等）。表格编号 56、法规条款号 55-56、历史轮次陈述未动。
+- **`tests/test-doc-numbers.sh` 反锁旧值**：旧版把「当时的新值」硬编码进 present 断言，facts.conf 前进后防漂移脚本反把 56/197/29 锁成新值，而成功摘要仍打印 59/204——自相矛盾的假绿。改为 facts 派生断言 + `scan_numeric` 泛化陈旧扫描（活文档白名单 + 计数型短语模式，已排除分档子集计数等误伤轴），断言数 218→254。
+- **设计汇编陈旧**：`build-compendium.sh --check` 卷五（facts.conf）/卷六（capability-map）此前已失同步，run-sweep ⑦ 必红；`--regen` 重灌六卷后逐字节新鲜。
+- **安装态悬空指针**：`SKILL.md` 把 `docs/usage-manual.md` 当活链接，但 `install.sh` 删除 `docs/`；改为显式标注「仓库档案，不随安装分发」。`references/industry-profile-payment.md` 两处 `vendor-knowledge/` 引用在 `install.sh` 排除该目录后不可达，补诚实降级标注与替代口径。
+- **`verifier/v2/run-v2.sh` 三处小缺陷**：语料文件名 typo、冒烟临时语料未回收、`mktemp` 硬编码 `/tmp` 违反跨平台铁律；改为 TMPDIR 模板 + 退出回收 + 缺语料时明确指引。外部有效性语料本身仍是已登记的 Phase 1 未完成项，不假装已覆盖。
+- **回归基线既有假红四族（本轮定位并修复，均非本轮引入）**：① `test-spec-template-maet.sh` 未登记 `tests/index.tsv`，补元数据；② `test-r68-jargon-free.sh` 报 `assets/gates/process/floor-guard.sh` 与生成视图的「假绿」禁用词、三份方法论档的变迁叙事句，按术语词典替换并改写为现状描述（同步 `dist.tsv` 字节锚 16475→16478）；③ `test-r128-spec-first.sh` 与 `test-design-sync.sh` 的静态锚误指 `assets/gates-warn.sh`——R128 收敛后调用点实落 `assets/gates-strict.sh`，改指真实落位（验证强度不降反升）；④ `test-inspection-ledger.sh` / `test-ops-readonly-guard.sh` / `test-r122-diagram-capability.sh` 硬编码 `FACT_REFERENCES=58`、`test-r101-spec-first-universal.sh` 硬编码 `FACT_GATES_BUDGET=56`，全部改为从 facts.conf 派生并对账（真值 61 / 59）。
+- **渲染纪律欠账（本轮收口）**：`assets/gates/process/spec-first.sh` 的「规格保真度四维」块（2026-11-05 AI Native 吸收批 T1）只改了域源、未重生成视图，`registry-render.sh --check` 与 `test-registry.sh` 长期红。执行 `--gates` 重生成三视图，`FACT_SCRIPT_LOC` 9957→9972（四脚本 +15 行）、`assets/gate-enforce-level.conf` 再生（分层仍 strict 23 / warn 21 / advisory 15 = 59）、汇编卷五 `--regen`。至此域源 ↔ 生成视图逐字节一致。
+- **另两处硬编码旧计数的断言**：`test-r118-gate-hardening.sh` 手抄「调用 12」（核心 11 时代；核心 12 后真值 13），改为从 `ALL_GATES_CORE` 数组项数派生；`test-skill-manifest.sh` 手抄 `gates.total 56` / `frameworks.total 81`，改为 facts.conf 派生。`assets/precheck.sh` 序列注释「核心 11 + 架构 18 = 29」同步为「12 + 20 = 32」。
+
+### Changed
+
+- `README.md` 附录 A「执行面代码行数」行不再手抄实测值，改指向 `FACT_ENGINE_CODE_LOC_MAX` / `FACT_FRAMEWORK_GATE_LOC_MAX` 键；`docs/usage-manual.md` 数字速览句去掉手抄枚举，降为指向 README 附录 A 与 facts.conf。
+
 ## [v2.99.2] - 2026-11-05
 
 v1.0.12 发布轮进位：spec 任务卡七项机检（W3 吸收轮产物，随本版声明前进）。

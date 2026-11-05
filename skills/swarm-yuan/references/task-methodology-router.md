@@ -23,7 +23,7 @@ swarm-yuan 的 13 步生成流程是线性的（Step 1-13，唯一编号口径�
 
 | 任务类型 | 触发信号 | 关键节点序列 | 门禁聚焦 | profile 档 |
 |---------|---------|-------------|---------|-----------|
-| **新项目生成** | `generate-skill.sh <name> <project-dir>`（无 --upgrade） | 全 13 步（Step 1-13） | --all-full（标准 29）+ 按需 --compliance-suite | auto（默认 standard，合规信号→compliance） |
+| **新项目生成** | `generate-skill.sh <name> <project-dir>`（无 --upgrade） | 全 13 步（Step 1-13） | --all-full（标准 32）+ 按需 --compliance-suite | auto（默认 standard，合规信号→compliance） |
 | **框架规则注入** | `--inject-frameworks` 或 ACTIVE_FRAMEWORKS 变更 | Step 3（探查框架）→ Step 4 框架深化与门禁注入→ Step 12（记忆写回） | 框架四要素核验（计数/规则/函数/约束）+ --framework <id> exit 0 | 继承现有 profile |
 | **升级已有技能** | `--upgrade <name> <project-dir>` | Step 4（项目形态重判）→ Step 7（填充，保留 PROJECT_SPECIFIC_FILES）→ Step 12（记忆写回）→ Step 13（最终检查） | --verify-completeness + 维度计数核验 + 框架四要素 | 继承现有 profile |
 | **合规审计** | `--compliance-suite` 或 compliance 档项目 | Step 5（特征卡含合规基线）→ Step 8（合规门禁配置）→ Step 9（四权分离拓扑）→ Step 13（Z3 fail-closed 核验） | --compliance-suite（合规 19：sbom/crypto/dengbao/pia/sast-deep/oss-eval/release-sign）+ 行业 profile | compliance |

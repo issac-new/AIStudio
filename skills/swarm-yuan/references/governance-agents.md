@@ -230,7 +230,7 @@ verifier_focus:
 - `bash scripts/self-check.sh --check-only`（数字漂移 + 运行时检测）
 - `bash scripts/generate-skill.sh --verify-completeness <skill_dir>`（无占位符机器执法）
 - `bash scripts/inventory-verify.sh <项目根> --skill-dir <skill目录> --form <形态>`（维度计数核验）
-- `bash scripts/precheck.sh --all-full`（标准 29 门禁）
+- `bash scripts/precheck.sh --all-full`（标准 32 门禁）
 - `bash scripts/precheck.sh --compliance-suite`（合规 19，compliance 档）
 - `bash scripts/trace-log.sh --verify-chain`（决策审计轨迹哈希链完整性，来源 semantica）
 - `bash verifier/v1/run-verifier.sh`（司法层独立验收）

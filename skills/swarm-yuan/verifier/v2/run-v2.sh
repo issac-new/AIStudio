@@ -13,7 +13,7 @@
 #   git 历史采集，本脚本只消费不采集。
 #
 # 用法:
-#   bash verifier/v2/run-v2.sh [corus.tsv]     # 缺省 verifier/v2/corpus.tsv
+#   bash verifier/v2/run-v2.sh [corpus.tsv]    # 缺省 verifier/v2/corpus.tsv
 #   bash verifier/v2/run-v2.sh --smoke         # 冒烟：用内置 2 行最小语料跑通全链路
 # 输出: verifier/v2/report.md（recall/precision/F1 + 逐 bug 明细 + 失败案例分析占位）
 # 退出码: 0=测量完成（不论是否达阈值）；1=语料/环境错误。达阈值与否只写进报告（Phase 5 断言另做）。
@@ -37,18 +37,19 @@ CORPUS="${1:-$V2DIR/corpus.tsv}"
 if [[ "$SMOKE" -eq 1 ]]; then
   # 冒烟语料：用本仓库自身历史构造（bug=修复 commit 的父引入；此处取一个已知修复轮次做占位，
   # 冒烟只验证"脚本全链路可跑"——clone/checkout/跑门禁/汇总——不构成外部有效性证据）。
-  CORPUS="$(mktemp /tmp/v2smoke.tsv.XXXXXX)"
+  CORPUS="$(mktemp "${TMPDIR:-/tmp}/v2smoke.tsv.XXXXXX")"
   repo="https://github.com/issac-new/Swarm-yuan.git"
   # 2239eeb=十轮 facts 漂移修复（引入=其父）；作为语料行仅冒烟
   printf 'smoke\tSMOKE-1\t%s\t2239eeb^\t2239eeb\tconf-drift\n' "$repo" > "$CORPUS"
   printf 'smoke\tSMOKE-2\t%s\t1914ae6^\t1914ae6\tdocs\n' "$repo" >> "$CORPUS"
 fi
-[[ -f "$CORPUS" ]] || { echo "✗ 语料不存在: ${CORPUS}（Phase 1 标注后生成，格式见本脚本头部注释）" >&2; exit 1; }
+[[ -f "$CORPUS" ]] || { echo "✗ 语料不存在: ${CORPUS}（Phase 1 标注后生成，格式见本脚本头部注释；--smoke 可只验脚本链路，需可访问 GitHub，不构成外部有效性证据）" >&2; exit 1; }
 [[ -f "$PRECHECK" ]] || { echo "✗ 未找到 $PRECHECK" >&2; exit 1; }
 
-echo "=== v2 外部有效性测量（语料: ${CORPUS})==="
-WORK="$(mktemp -d /tmp/v2measure.XXXXXX)"
-trap 'rm -rf "$WORK"' EXIT
+echo "=== v2 外部有效性测量（语料: ${CORPUS}）==="
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/v2measure.XXXXXX")"
+# 冒烟语料是脚本自建的临时文件，退出时一并回收；非冒烟时 CORPUS 是用户资产，绝不删。
+trap 'rm -rf "$WORK"; if [[ "$SMOKE" -eq 1 ]]; then rm -f "$CORPUS"; fi' EXIT
 
 total=0; intercepted=0; clean_pass=0
 : > "$WORK/detail.tsv"

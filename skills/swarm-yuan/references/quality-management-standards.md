@@ -28,7 +28,7 @@
 |---|---|
 | Plan（策划） | Step 1-2 自检+读知识 → Step 3-4 探查 → Step 5 特征卡 → Step 7 spec/plan 填写（spec §1-§25） |
 | Do（实施） | Step 6-9 骨架/填充/conf/hooks 生成 + spec §5.5 复用约束（Step 7 填充期内落 spec） |
-| Check（检查） | Step 10 门禁（56 门禁三档 enforce_level）+ Step 11 独立审查 + verifier/v1 验收 + self-check |
+| Check（检查） | Step 10 门禁（59 门禁三档 enforce_level）+ Step 11 独立审查 + verifier/v1 验收 + self-check |
 | Act（处置） | gate-fixture 正反例回归 + profile 动态升档 + Step 12 记忆写回（memory-persistence 经验沉淀） |
 
 ---
@@ -37,7 +37,7 @@
 
 ### 2.1 成熟度定位：≈ L3 已定义级
 
-swarm-yuan 具备 L3 的两个核心特征：**组织级过程资产**（六段式模板 + 81 框架规则集 + 32 领域知识）与**验证规程**（56 门禁 + verifier/v1 + gate-fixture 正反例）。L4（量化管理）/L5（优化）**不具备**——缺真值度量则量化管理无从谈起，此处显式声明而非假装覆盖。
+swarm-yuan 具备 L3 的两个核心特征：**组织级过程资产**（六段式模板 + 81 框架规则集 + 32 领域知识）与**验证规程**（59 门禁 + verifier/v1 + gate-fixture 正反例）。L4（量化管理）/L5（优化）**不具备**——缺真值度量则量化管理无从谈起，此处显式声明而非假装覆盖。
 
 ### 2.2 过程域 × 机制映射（含缺口声明）
 
@@ -47,7 +47,7 @@ swarm-yuan 具备 L3 的两个核心特征：**组织级过程资产**（六段�
 | PMC 项目监控 | state-machine 阶段管理 + gate-runs.jsonl 执行留痕 | 无量化阈值告警 |
 | REQM 需求管理 | `--requirements` + `--rtm`（ISO/IEC/IEEE 29148，REQ- 唯一编号 + 追溯矩阵） | — |
 | CM 配置管理 | `--deps` 版本锁定 + git worktree 隔离 | 版本基线单一 |
-| PPQA 过程与产品质量保证 | 56 门禁 + enforce_level 三档 + 豁免 5 字段留痕 | — |
+| PPQA 过程与产品质量保证 | 59 门禁 + enforce_level 三档 + 豁免 5 字段留痕 | — |
 | VER 验证 | verifier/v1 + gate-fixture 正反例回归 | — |
 | VAL 确认 | spec §1.2 价值声明 + 验收回路 | 确认判据靠人工 |
 | MA 度量分析 | gate-runs.jsonl + adaptive gating 信号 | **缺真值度量**（认知分数是关键词启发式，非校准真值） |

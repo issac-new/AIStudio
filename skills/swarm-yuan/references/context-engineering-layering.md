@@ -11,7 +11,7 @@
 
 ## 一、定位：填补 swarm-yuan 的"规则该放哪一层"空白
 
-swarm-yuan 当前 17 项特征卡 / 56 门禁 / 81 框架规则集回答了「项目应该是什么样的」与「代码是否合规」，但**没有显式回答「我新加的这条规则，应该放进哪一层上下文」**——是写进 SKILL.md 常驻、还是 precheck.conf 配置、还是 reference 按需读、还是门禁机器执法、还是 hooks 阻断。
+swarm-yuan 当前 17 项特征卡 / 59 门禁 / 81 框架规则集回答了「项目应该是什么样的」与「代码是否合规」，但**没有显式回答「我新加的这条规则，应该放进哪一层上下文」**——是写进 SKILL.md 常驻、还是 precheck.conf 配置、还是 reference 按需读、还是门禁机器执法、还是 hooks 阻断。
 
 文章给出的 U 型曲线证据把这个问题显式化了：
 
@@ -23,7 +23,7 @@ swarm-yuan 当前 17 项特征卡 / 56 门禁 / 81 框架规则集回答了「�
 
 **关键证据解读**：4.8→5 的 System 增长 82.12%，但 System+Tools 只增长 4.14%——围绕提示词长短争论很容易忽略真正占上下文的大块接口层。
 
-**对本系统的价值**：swarm-yuan 的 SKILL.md / references / precheck.conf 生成期必读文件 / 56 门禁 / hooks.json / .mcp.json 本身就是一套分层上下文，但分层原则此前是隐性的。本文把"分层放置规则"的方法论显式化，给 swarm-yuan 一个可引用的元决策框架。
+**对本系统的价值**：swarm-yuan 的 SKILL.md / references / precheck.conf 生成期必读文件 / 59 门禁 / hooks.json / .mcp.json 本身就是一套分层上下文，但分层原则此前是隐性的。本文把"分层放置规则"的方法论显式化，给 swarm-yuan 一个可引用的元决策框架。
 
 ---
 
@@ -56,7 +56,7 @@ Anthropic 对 Context Engineering 的定义：**minimal 并不必然 short，关
 | **CLAUDE.md / 仓库事实** | 仓库目标与代码中推不出的约定 | 目标项目的 `CLAUDE.md` / `AGENTS.md`（第 2/6 项特征卡驱动） | 跨任务通用的产品身份（属 System 层） |
 | **Skills / References（按需加载）** | 专项流程 | swarm-yuan 的 `references/*.md`（30+ 文档）+ 目标技能 的 snippets.md / mcp-tools.md | 常驻规则（按需才读） |
 | **Memory** | 跨会话经验 | swarm-yuan 的 `memory-writeback.sh` / `.swarm-yuan/cognition-metrics.jsonl` + `references/memory-persistence.md` | 当前任务事实（属 CLAUDE.md） |
-| **permissions / sandbox / hooks** | 真正阻断副作用 | 目标技能 的 `hooks.json`（PreToolUse Write 范围检查）+ `precheck.sh` 56 门禁 + `integrity-guard.sh` / `failure-detector.sh` | 软约束（阻断交给门禁，叙事交给 System） |
+| **permissions / sandbox / hooks** | 真正阻断副作用 | 目标技能 的 `hooks.json`（PreToolUse Write 范围检查）+ `precheck.sh` 59 门禁 + `integrity-guard.sh` / `failure-detector.sh` | 软约束（阻断交给门禁，叙事交给 System） |
 
 **关键铁律（文章原话转译）**：permissions、sandbox、hooks 才负责真正阻断副作用——System 不该假装是阻断层，它只是治理内核。
 

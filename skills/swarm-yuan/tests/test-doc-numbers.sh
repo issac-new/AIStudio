@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
-# test-doc-numbers.sh — 用户面文档数字口径防复发测试
+# test-doc-numbers.sh — 用户面文档数字口径防复发测试（事实源派生版）
 #
-# 背景：assets/facts.conf 是数字单一事实源，但用户面文档曾成片漂移
-# （55/56 门禁、79/81 框架、13/14 运行时、10240/11264 预算等）。本测试把已定稿的
-# 口径钉成机械断言：旧值不得残留（grep -n 逐行输出 file:line），新值必须存在。
+# 背景：assets/facts.conf 是数字单一事实源。旧版把「当时的新值」硬编码成
+# present 断言（56 门禁 / 197 变量 / 核心 11 / 标准 29 / strict 20），facts.conf
+# 前进到 59 / 204 / 12 / 32 / strict 23 后，防漂移脚本反把旧值锁成了新值：
+# 测试自己成了漂移源，且成功摘要还打印着新值（自相矛盾的假绿）。
+# 本版两条机制：
+#   ① 与 FACT_ 键对应的期望值一律由 facts.conf 派生，facts 变了断言跟着变；
+#   ② 泛化陈旧扫描（scan_numeric）逐模式核对活文档中的计数型短语，
+#      任一处与真值不符即报红，不再依赖逐条维护的 present 清单。
+# 已退役的历史值仍由 absent 清单兜底，防止回退。
 #
 # 约束：
 #   - bash 3.2 兼容（macOS 默认），set -u，只依赖 grep/sed/wc
 #   - 不联网、不写文件、不修改任何资产
-#   - 不在 run-sweep/CI 中自动执行（是否接入由主线决定）
+#   - 由 tests/run.sh（level 1）与 run-sweep 收集执行
 #
 # 用法：bash tests/test-doc-numbers.sh
 set -u
@@ -50,6 +56,39 @@ count_eq() {
   n="$(grep -cE -- "$ere" "$ROOT/$file" 2>/dev/null || true)"
   n="${n:-0}"
   [ "$n" = "$exp" ] || fail "$file $label 计数=${n}，期望 ${exp}（/$ere/）"
+}
+
+# scan_numeric <说明> <ERE> <期望值>：活文档计数型短语泛化陈旧扫描。
+# 只收「陈述现状」的活文档；历史陈述与调研档案（docs/research/、
+# docs/design-evolution.md、references/dsh-engineering-methodology.md）不在白名单内。
+# ERE 须能匹配一个含数字的短语，取短语内首个数字与真值比对；不匹配的文档跳过。
+STALE_DOCS="README.md CLAUDE.md docs/usage-manual.md scripts/generate-skill.sh \
+.claude/commands/swarm-yuan.md references/standards-compliance.md \
+references/template-spec.md references/four-theories-methodology.md \
+references/case-studies/articulation-orchestration.md references/generation-flow.md \
+references/governance-agents.md references/task-methodology-router.md \
+references/quality-management-standards.md references/security-spec.md \
+references/context-engineering-layering.md references/frontend-design-methodology.md \
+references/business-ontology-methodology.md references/codex-methodology.md \
+references/industry-profile-finance.md"
+
+scan_numeric() {
+  local label="$1" ere="$2" exp="$3" f line ln phrase num
+  CHECKS=$((CHECKS + 1))
+  for f in $STALE_DOCS; do
+    [ -f "$ROOT/$f" ] || continue
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      ln="${line%%:*}"
+      phrase="$(printf '%s\n' "${line#*:}" | grep -oE -- "$ere" | head -1 || true)"
+      [ -n "$phrase" ] || continue
+      num="$(printf '%s\n' "$phrase" | grep -oE '[0-9]+' | head -1)"
+      [ -n "$num" ] || continue
+      if [ "$num" != "$exp" ]; then
+        fail "$f:$ln '$phrase' 计数=${num}，期望 ${exp}（${label}；真值 assets/facts.conf）"
+      fi
+    done < <(grep -nE -- "$ere" "$ROOT/$f" 2>/dev/null || true)
+  done
 }
 
 # facts_eq <KEY> <期望值>：facts.conf 数字源锁（源变了须同步文档与本测试）
@@ -94,6 +133,7 @@ facts_eq FACT_CONF_VARS 204
 facts_eq FACT_CONF_VARS_CORE 30
 facts_eq FACT_CONF_VARS_ARCH 126
 facts_eq FACT_REFERENCES 61
+facts_eq FACT_SPEC_SECTIONS 26
 # 合规检查点库（compliance 档随发）：主表/罚则库条数机械计数对账（口径见 facts.conf 合规检查点库段）
 facts_eq FACT_INSPECTION_CHECKPOINTS 173
 facts_eq FACT_PENALTY_CLAUSES 21
@@ -118,7 +158,7 @@ absent "context-engineering 手抄 FACT_REFERENCES 旧值" "references/context-e
 absent "context-engineering 门禁冻结旧值 55" "references/context-engineering-layering.md" \
   '门禁数保持 55'
 
-# ===== 1. 门禁总数 56（旧值 55 零残留） =====
+# ===== 1. 门禁总数（facts 派生；已退役值 55/56 零残留） =====
 absent "CLAUDE.md 门禁旧值 55" "CLAUDE.md" \
   '55 quality gates|55 个质量门禁|\(55 gates|the 55 gates'
 absent "usage-manual 门禁旧值 55" "docs/usage-manual.md" \
@@ -135,24 +175,38 @@ absent "template-spec 门禁旧值 55" "references/template-spec.md" \
   '门禁 55'
 absent "upstream-baseline 门禁旧值 55" "docs/upstream-baseline.md" \
   '自持 55 门禁|55 门禁预算'
-present "CLAUDE.md 门禁新值 56" "CLAUDE.md" '56 quality gates'
-present "usage-manual 门禁新值 56" "docs/usage-manual.md" '56 个门禁'
-present "case-study 门禁新值 56" "references/case-studies/articulation-orchestration.md" '56 门禁'
-present "four-theories 可达率新值 56" "references/four-theories-methodology.md" '56/56'
+# 56 是旧版测试错锁的「新值」（v2.99.0 起真值 59），本轮退役。
+absent "README 门禁旧值 56" "README.md" '56 / 56|合计 56|门禁预算 56'
+absent "CLAUDE.md 门禁旧值 56" "CLAUDE.md" '56 quality gates'
+absent "usage-manual 门禁旧值 56" "docs/usage-manual.md" '56 个门禁|56 门禁'
+absent "case-study 门禁旧值 56" "references/case-studies/articulation-orchestration.md" '「56 道|56 门禁'
+present "CLAUDE.md 门禁真值（facts 派生）" "CLAUDE.md" "${FACT_GATES_TOTAL} quality gates"
+present "usage-manual 门禁真值（facts 派生）" "docs/usage-manual.md" "${FACT_GATES_TOTAL} 个门禁"
+present "case-study 门禁真值（facts 派生）" \
+  "references/case-studies/articulation-orchestration.md" "${FACT_GATES_TOTAL} 门禁"
+present "four-theories 可达率真值（facts 派生）" \
+  "references/four-theories-methodology.md" "${FACT_GATES_TOTAL}/${FACT_GATES_TOTAL}"
 
-# ===== 2. 核心 11 / 标准 29 / 合规 19 =====
+# ===== 2. 门禁子族（facts 派生；已退役值 10/11/18/28/29 零残留） =====
 absent "usage-manual 核心门禁旧值 10" "docs/usage-manual.md" \
   '跑 10 个|核心 10 |标准 28'
-present "usage-manual 核心门禁 11" "docs/usage-manual.md" '跑 11 个'
+absent "usage-manual 子族旧值" "docs/usage-manual.md" '核心 11|架构 18|标准 29|跑 11 个'
+absent "standards-compliance 子族旧值" "references/standards-compliance.md" \
+  '标准 29|FULL 50|核心 11|架构 18'
+absent "command 子族旧值" ".claude/commands/swarm-yuan.md" \
+  '标准 29|核心 11|架构 18|197 个配置变量'
+present "usage-manual 核心序列（facts 派生）" "docs/usage-manual.md" "跑 ${FACT_GATES_CORE} 个"
 present "usage-manual 核心表含 --spec-first" "docs/usage-manual.md" '--spec-first'
-present "usage-manual 标准 29" "docs/usage-manual.md" '标准 29'
-present "usage-manual 合规 19" "docs/usage-manual.md" '合规 19'
-present "standards-compliance 标准 29（核心 11+架构 18）" \
-  "references/standards-compliance.md" '标准 29（核心 11\+架构 18）'
-present "README 核心 11/架构 18/合规 19" "README.md" \
-  '核心 11 \+ 架构 18 \+ 合规 19'
-present "command 标准 29（核心 11+架构 18）" \
-  ".claude/commands/swarm-yuan.md" '标准 29 门禁（核心 11 \+ 架构 18）'
+present "usage-manual 标准序列（facts 派生）" "docs/usage-manual.md" "标准 ${FACT_GATES_STANDARD}"
+present "usage-manual 合规序列（facts 派生）" "docs/usage-manual.md" "合规 ${FACT_GATES_COMPLIANCE}"
+present "standards-compliance 标准/核心/架构（facts 派生）" \
+  "references/standards-compliance.md" \
+  "标准 ${FACT_GATES_STANDARD}（核心 ${FACT_GATES_CORE}\+架构 ${FACT_GATES_ARCH}）"
+present "README 门禁分层闭合（facts 派生）" "README.md" \
+  "核心 ${FACT_GATES_CORE} \+ 架构 ${FACT_GATES_ARCH} \+ 合规 ${FACT_GATES_COMPLIANCE}"
+present "command 标准序列（facts 派生）" \
+  ".claude/commands/swarm-yuan.md" \
+  "标准 ${FACT_GATES_STANDARD} 门禁（核心 ${FACT_GATES_CORE} \+ 架构 ${FACT_GATES_ARCH}）"
 
 # ===== 3. 框架规则集 81（旧值 79/80 零残留） =====
 absent "CLAUDE.md 框架旧值 79" "CLAUDE.md" \
@@ -222,27 +276,33 @@ present "usage-manual 特征卡第 17 项" "docs/usage-manual.md" \
 present "README 特征卡 17 / P1 11" "README.md" \
   '17 项（P0 六项强制，P1 十一项可增量）'
 
-# ===== 6. 配置变量 197（旧值 173/184/core 19 零残留） =====
+# ===== 6. 配置变量（facts 派生；已退役值 173/184/197/200 零残留） =====
 absent "standards-compliance 变量旧值 173" \
   "references/standards-compliance.md" '173 变量'
 absent "command 变量旧值 184/core 19" \
   ".claude/commands/swarm-yuan.md" '184 个配置变量|core 19 \+'
-present "usage-manual 变量 197" "docs/usage-manual.md" '197 个变量'
-present "standards-compliance 变量 197" \
-  "references/standards-compliance.md" '197 变量'
-present "README 变量 197 / 上限 200" "README.md" \
-  '配置变量 / 上限 \| 197 / 200'
-present "command 变量 197 / core 28" \
+absent "README 变量旧值 197/200" "README.md" '配置变量 / 上限 \| 197 / 200'
+absent "usage-manual 变量旧值 197" "docs/usage-manual.md" '197 个变量|197 变量'
+absent "standards-compliance 变量旧值 197" "references/standards-compliance.md" '197 变量'
+present "usage-manual 变量真值（facts 派生）" "docs/usage-manual.md" \
+  "${FACT_CONF_VARS} 个变量"
+present "standards-compliance 变量真值（facts 派生）" \
+  "references/standards-compliance.md" "${FACT_CONF_VARS} 变量"
+present "README 变量/上限（facts 派生）" "README.md" \
+  "配置变量 / 上限 \| ${FACT_CONF_VARS} / ${FACT_CONF_VARS_BUDGET}"
+present "command 变量/core 拆分（facts 派生）" \
   ".claude/commands/swarm-yuan.md" \
-  '197 个配置变量（precheck.conf 三件套：core 28'
+  "${FACT_CONF_VARS} 个配置变量（precheck.conf 三件套：core ${FACT_CONF_VARS_CORE}"
 
-# ===== 7. references 53 篇（旧值 50/51 档零残留） =====
+# ===== 7. references 篇数（facts 派生；旧值 50/51/53/57 档零残留） =====
 absent "usage-manual references 旧值 51 档" "docs/usage-manual.md" \
   '51 档|51 个 \.md'
 absent "usage-manual references 旧值 53 档" "docs/usage-manual.md" \
   '"53 档"=53 个 \.md'
-present "usage-manual references 57 档" "docs/usage-manual.md" \
+absent "usage-manual references 旧值 57 档" "docs/usage-manual.md" \
   '"57 档"=57 个 \.md'
+present "usage-manual references 真值（facts 派生）" "docs/usage-manual.md" \
+  "\"${FACT_REFERENCES} 档\"=${FACT_REFERENCES} 个 \.md"
 
 # ===== 8. 预算 11392B / 577536B（旧值 10240/11264/8KB/500KiB/512000 零残留） =====
 absent "README 预算旧值" "README.md" \
@@ -295,27 +355,30 @@ absent "codex-methodology 安装目标旧值 7" \
 present "usage-manual 安装表含 --zcode" "docs/usage-manual.md" '--zcode'
 present "usage-manual 安装目标 8" "docs/usage-manual.md" '"8"=\*\*安装目标'
 present "CONTRIBUTING 宿主含 ZCode" "CONTRIBUTING.md" 'Kimi/ZCode'
-present "usage-manual 兼容 8 工具" "docs/usage-manual.md" '兼容 8 工具'
+present "usage-manual 兼容工具口径" "docs/usage-manual.md" '兼容工具'
 count_eq "install.sh 安装分支数" "install.sh" \
   '^[[:space:]]*--(claude|cursor|codex|opencode|windsurf|gemini|kimi|zcode)\)' 8
 
-# ===== 11. 门禁静态分层 20/20/16（旧值 16/18/20 零残留） =====
+# ===== 11. 门禁静态分层（facts 派生；旧值 16/18/20/21 零残留） =====
 absent "template-spec 分层旧值" "references/template-spec.md" \
   '\| strict \| 16 \|| \| warn \| 18 \|| \| advisory \| 20 \|'
-present "template-spec strict 21" "references/template-spec.md" \
+absent "template-spec strict 旧值 20" "references/template-spec.md" \
   '\| strict \| 20 \|'
-present "template-spec warn 21" "references/template-spec.md" \
-  '\| warn \| 21 \|'
-present "template-spec advisory 15" "references/template-spec.md" \
-  '\| advisory \| 15 \|'
-present "case-study strict 21" \
-  "references/case-studies/articulation-orchestration.md" 'strict 21'
-present "case-study warn 21" \
-  "references/case-studies/articulation-orchestration.md" 'warn 21'
+present "template-spec strict（facts 派生）" "references/template-spec.md" \
+  "\| strict \| ${FACT_ENFORCE_STRICT} \|"
+present "template-spec warn（facts 派生）" "references/template-spec.md" \
+  "\| warn \| ${FACT_ENFORCE_WARN} \|"
+present "template-spec advisory（facts 派生）" "references/template-spec.md" \
+  "\| advisory \| ${FACT_ENFORCE_ADVISORY} \|"
+present "case-study strict（facts 派生）" \
+  "references/case-studies/articulation-orchestration.md" "strict ${FACT_ENFORCE_STRICT}"
+present "case-study warn（facts 派生）" \
+  "references/case-studies/articulation-orchestration.md" "warn ${FACT_ENFORCE_WARN}"
 
-# ===== 12. 决策索引 1-46（旧值 1-38 零残留） =====
+# ===== 12. 决策索引 1-58（旧值 1-38/1-46 零残留；上限见 design-evolution.md 决策 58） =====
 absent "usage-manual 决策索引旧值" "docs/usage-manual.md" '决策 1-38'
-present "usage-manual 决策索引新值" "docs/usage-manual.md" '决策 1-46'
+absent "usage-manual 决策索引旧值 46" "docs/usage-manual.md" '决策 1-46'
+present "usage-manual 决策索引真值" "docs/usage-manual.md" '决策 1-58'
 
 # ===== 13. 框架文档终态：轮次标记零残留 =====
 absent "php 轮次标记" "references/frameworks/php.md" 'R62|第九棒'
@@ -360,6 +423,36 @@ for _doc in "docs/design-evolution.md" "docs/design-compendium.md" "docs/design-
             "docs/usage-manual.md" "README.md" "README.md" "CLAUDE.md"; do
   absent "活文档行号引用 ${_doc}" "$_doc" 'generate-skill\.sh:[0-9]'
 done
+
+# ===== 泛化陈旧扫描（事实源派生；覆盖白名单内全部活文档）=====
+# 逐条 present 只能锁已登记的短语；本节按「计数型短语模式」横扫，新写的文档
+# 只要带同类短语就自动入锁。期望值全部取自 facts.conf，facts 前进无需改断言。
+# 不扫裸「N 个门禁」/「N 个质量门禁」：方法论档里的 4/5/16 个门禁是分档子集计数，
+# 不是总数（曾误报）。总数由 quality gates / 门禁三档 / 全 N 门禁 / 预算表四类精确模式覆盖。
+scan_numeric "门禁总数" '[0-9]+ quality gates' "$FACT_GATES_TOTAL"
+scan_numeric "门禁总数" '[0-9]+ 门禁三档' "$FACT_GATES_TOTAL"
+scan_numeric "门禁总数" '全 [0-9]+ 门禁' "$FACT_GATES_TOTAL"
+scan_numeric "门禁总数" '≈ [0-9]+ 门禁' "$FACT_GATES_TOTAL"
+scan_numeric "门禁总数/预算" '门禁总数 / 预算上限 \| [0-9]+' "$FACT_GATES_TOTAL"
+scan_numeric "配置变量" '[0-9]+ 个配置变量' "$FACT_CONF_VARS"
+scan_numeric "配置变量" '[0-9]+ 个变量' "$FACT_CONF_VARS"
+scan_numeric "配置变量" '[0-9]+ 变量真实值' "$FACT_CONF_VARS"
+scan_numeric "配置变量/预算" '配置变量 / 上限 \| [0-9]+' "$FACT_CONF_VARS"
+scan_numeric "核心门禁" '核心 [0-9]+' "$FACT_GATES_CORE"
+scan_numeric "架构门禁" '架构 [0-9]+' "$FACT_GATES_ARCH"
+# 标准/跑 两模式须带后续限定词：否则「标准 9 节点」（工作流节点数）与
+# 「额外跑 20 个」（架构门禁数）会被误判成标准序列/核心序列。
+scan_numeric "标准门禁" '标准 [0-9]+ 门禁' "$FACT_GATES_STANDARD"
+scan_numeric "合规门禁" '合规 [0-9]+' "$FACT_GATES_COMPLIANCE"
+scan_numeric "核心序列" '跑 [0-9]+ 个，通常' "$FACT_GATES_CORE"
+scan_numeric "FULL 序列" 'FULL [0-9]+' "$FACT_GATES_FULL"
+scan_numeric "advisory-only" 'advisory-only [0-9]+' "$FACT_GATES_ADVISORY_ONLY"
+scan_numeric "门禁可达率" '[0-9]+/[0-9]+ 门禁可达率' "$FACT_GATES_TOTAL"
+scan_numeric "门禁可达率" '[0-9]+/[0-9]+ 可达率断言' "$FACT_GATES_TOTAL"
+scan_numeric "references 篇数" '"[0-9]+ 档"=' "$FACT_REFERENCES"
+scan_numeric "strict 分层" 'strict [0-9]+' "$FACT_ENFORCE_STRICT"
+scan_numeric "warn 分层" 'warn [0-9]+' "$FACT_ENFORCE_WARN"
+scan_numeric "advisory 分层" 'advisory [0-9]+' "$FACT_ENFORCE_ADVISORY"
 
 # ===== 汇总 =====
 echo "test-doc-numbers: ${CHECKS} 项断言，${FAILS} 项失败"

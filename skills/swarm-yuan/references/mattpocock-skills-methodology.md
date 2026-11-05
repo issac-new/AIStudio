@@ -118,4 +118,4 @@
 
 ### 9.5 未吸收
 
-`software-factory`（工厂设计：gossary 技能 + GIT-HOSTS/RUNNERS/TICKET-TRACKERS/OBSERVABILITY-PLATFORMS 四份平台对照）位于 `skills/in-progress/`，且本仓已有九节点流程与 worktree/编排纪律，重叠面大于增量——登记不吸收，若将来出现"为团队设计交付流水线"的需求再评估。
+`software-factory`（工厂设计：gossary 技能 + GIT-HOSTS/RUNNERS/TICKET-TRACKERS/OBSERVABILITY-PLATFORMS 四份平台对照）位于 `skills/in-progress/`，且本仓已有九节点流程与 worktree/编排纪律，重叠面大于增量——登记为范围外，若将来出现"为团队设计交付流水线"的需求再评估。
