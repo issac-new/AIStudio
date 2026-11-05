@@ -40,8 +40,12 @@ import { listHumanGatePending, humanGateRouter, decide as humanGateDecide } from
 import { atomicWriteJson } from '../lib/fs-store'
 import { fail, ok } from '../lib/http'
 import { hermesHome } from '../lib/paths'
+import { requirePlatformSuperAdmin } from '../platform/authz/policy'
 
 const router = new Router({ prefix: '/api/approvals' })
+// 六源归属协议未齐前整个收件箱（含嵌套 human-gate）限 super_admin；
+// router.use 必须先于本文件全部路由声明，拒绝先于 pending 自动放行与任何裁决写入。
+router.use(requirePlatformSuperAdmin)
 
 export interface PendingItem {
   id: string

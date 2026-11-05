@@ -1190,3 +1190,8 @@
 # 同时补齐 server tsconfig rootDirs，使 src/custom 链接内的共享 custom/platform 契约可类型解析。
 # 审查修复：激活/角色与 profile 授权以单 SQLite 事务组合写；零 super_admin 返回 reset-default-login 指引。
 752-platform-matrix-zero-provisioning.patch
+
+# 753（2026-11-05 平台重写 P0 Task 3，spec 2026-11-05-platform-rewrite-design）：
+# 真实 Router stack 启动覆盖对账；公开登录/健康检查显式登记，认证后 userenv/permmode
+# 按 profile 授权，自治与 permmode 写面、审批收件箱限 super_admin；未登记写请求默认 403。
+753-platform-route-authz.patch

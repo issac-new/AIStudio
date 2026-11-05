@@ -32,7 +32,7 @@ async function start(): Promise<void> {
   const { approvalsRoutes } = await import('../pending-controller')
   const app = new Koa()
   app.use(async (ctx, next) => {
-    ;(ctx.state as { user?: { username?: string } }).user = { username: currentActor }
+    ;(ctx.state as { user?: { username?: string; role?: string } }).user = { username: currentActor, role: 'super_admin' }
     await next()
   })
   app.use(jsonBody)

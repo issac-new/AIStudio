@@ -6,6 +6,8 @@
 import Router from '@koa/router'
 import { SESSION_PERMISSION_MODES, clearSessionMode, isSessionPermissionMode, sessionModeOf, setSessionMode } from './session-mode-store'
 import { ENGINE_MODE_MAP, toEngineSwitchMode, type PermissionMode } from './permission-modes'
+import { requireProfileParameterAccess } from '../platform/authz/middleware'
+import { requirePlatformSuperAdmin } from '../platform/authz/policy'
 
 export const sessionModeRoutes = new Router({ prefix: '/api/hermes/permmodes/session-mode' })
 
@@ -25,7 +27,7 @@ function emitModeEvent(profileId: string, mode: PermissionMode | null): void {
     .catch(() => { /* fail-soft */ })
 }
 
-sessionModeRoutes.get('/:profileId', (ctx) => {
+sessionModeRoutes.get('/:profileId', requireProfileParameterAccess('profileId'), (ctx) => {
   const pid = ctx.params.profileId
   const mode = sessionModeOf(pid)
   ctx.body = {
@@ -38,7 +40,7 @@ sessionModeRoutes.get('/:profileId', (ctx) => {
   }
 })
 
-sessionModeRoutes.put('/:profileId', async (ctx) => {
+sessionModeRoutes.put('/:profileId', requirePlatformSuperAdmin, async (ctx) => {
   const pid = ctx.params.profileId
   const b = ctx.request.body as { mode?: unknown; sessionId?: unknown; workspacePath?: unknown } | undefined
   if (!isSessionPermissionMode(b?.mode)) {
@@ -98,7 +100,7 @@ sessionModeRoutes.put('/:profileId', async (ctx) => {
   }
 })
 
-sessionModeRoutes.del('/:profileId', (ctx) => {
+sessionModeRoutes.del('/:profileId', requirePlatformSuperAdmin, (ctx) => {
   const pid = ctx.params.profileId
   const removed = clearSessionMode(pid)
   if (removed) emitModeEvent(pid, null)

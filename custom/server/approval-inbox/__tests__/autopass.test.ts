@@ -89,7 +89,7 @@ describe('抽检器 REST（V4.1 §七）：低风险自动放行 + 抽检处置'
     _resetAutopassScanThrottleForTests()
     const app = new Koa()
     app.use(async (ctx, next) => {
-      (ctx.state as { user?: { username?: string } }).user = { username: 'qa-lead' }
+      (ctx.state as { user?: { username?: string; role?: string } }).user = { username: 'qa-lead', role: 'super_admin' }
       await next()
     })
     app.use(async (ctx, next) => {

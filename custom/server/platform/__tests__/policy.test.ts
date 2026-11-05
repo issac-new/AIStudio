@@ -7,6 +7,7 @@ import {
   normalizeIssuerOrigin,
   requirePlatformSuperAdmin,
 } from '../authz/policy'
+import { requireProfileParameterAccess } from '../authz/middleware'
 
 function contextWith(user?: PlatformPrincipal): Context {
   return { state: user ? { user } : {} } as unknown as Context
@@ -116,5 +117,52 @@ describe('requirePlatformSuperAdmin', () => {
     await requirePlatformSuperAdmin(ctx, next)
 
     expect(next).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('requireProfileParameterAccess', () => {
+  function profileContext(user: PlatformPrincipal | undefined, name?: string): Context {
+    const ctx = contextWith(user)
+    ;(ctx as Context & { params: Record<string, string> }).params = name === undefined ? {} : { name }
+    return ctx
+  }
+
+  it('无身份 401，空授权与跨 profile 均为 403', async () => {
+    const anonymous = profileContext(undefined, 'alice')
+    const anonymousNext = vi.fn(async () => {})
+    await requireProfileParameterAccess('name')(anonymous, anonymousNext)
+    expect(anonymous.status).toBe(401)
+    expect(anonymousNext).not.toHaveBeenCalled()
+
+    for (const user of [
+      { id: 1, role: 'admin', status: 'active', profiles: [] },
+      { id: 1, role: 'admin', status: 'active', profiles: ['alice'] },
+    ] as const) {
+      const ctx = profileContext(user, user.profiles.length === 0 ? 'alice' : 'bob')
+      const next = vi.fn(async () => {})
+      await requireProfileParameterAccess('name')(ctx, next)
+      expect(ctx.status).toBe(403)
+      expect(next).not.toHaveBeenCalled()
+    }
+  })
+
+  it('缺失 profile 参数不得被解释成不限制', async () => {
+    const ctx = profileContext({ id: 1, role: 'admin', status: 'active', profiles: ['alice'] })
+    const next = vi.fn(async () => {})
+    await requireProfileParameterAccess('name')(ctx, next)
+    expect(ctx.status).toBe(403)
+    expect(next).not.toHaveBeenCalled()
+  })
+
+  it('active 本人的 name 参数与 super_admin 均可进入后续中间件', async () => {
+    const own = profileContext({ id: 1, role: 'admin', status: 'active', profiles: ['alice'] }, 'alice')
+    const ownNext = vi.fn(async () => {})
+    await requireProfileParameterAccess('name')(own, ownNext)
+    expect(ownNext).toHaveBeenCalledTimes(1)
+
+    const superAdmin = profileContext({ id: 2, role: 'super_admin' }, 'bob')
+    const superNext = vi.fn(async () => {})
+    await requireProfileParameterAccess('name')(superAdmin, superNext)
+    expect(superNext).toHaveBeenCalledTimes(1)
   })
 })

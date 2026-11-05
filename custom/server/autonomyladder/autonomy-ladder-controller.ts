@@ -4,6 +4,7 @@
 import Router from '@koa/router'
 import { getLadder, listLadder, removeLadder, upsertLadder, validateLadderInput, type AutonomyLadderEntry } from './autonomy-ladder'
 import { appendGovEvent } from '../govbus/event-log'
+import { requirePlatformSuperAdmin } from '../platform/authz/policy'
 
 export const autonomyLadderRoutes = new Router({ prefix: '/api/hermes/autonomy-ladder' })
 
@@ -27,7 +28,7 @@ function actorOf(ctx: { state: unknown }): string | undefined {
   return user.username ?? (user.id !== undefined ? String(user.id) : undefined)
 }
 
-autonomyLadderRoutes.put('/:target', (ctx) => {
+autonomyLadderRoutes.put('/:target', requirePlatformSuperAdmin, (ctx) => {
   const body = (ctx.request.body ?? {}) as Record<string, unknown>
   const input = {
     target: ctx.params.target,
@@ -63,7 +64,7 @@ autonomyLadderRoutes.put('/:target', (ctx) => {
   ctx.body = { ok: true, entry }
 })
 
-autonomyLadderRoutes.delete('/:target', (ctx) => {
+autonomyLadderRoutes.delete('/:target', requirePlatformSuperAdmin, (ctx) => {
   const removed = removeLadder(ctx.params.target)
   if (!removed) {
     ctx.status = 404

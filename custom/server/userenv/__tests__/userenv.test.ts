@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import Koa from 'koa'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import type { PlatformPrincipal } from '../../../platform/contracts/identity'
 import {
   EnvValidationError, SensitiveUnconfirmedError,
   auditUserenvChange, isSensitiveEnvKey, isValidProfileName, maskEnvValue,
@@ -228,12 +229,14 @@ describe('auditUserenvChange（best-effort）', () => {
 describe('REST（/api/userenv）', () => {
   let base: string
   let server: ReturnType<typeof createServer>
+  let currentUser: PlatformPrincipal | undefined
 
   beforeEach(async () => {
+    currentUser = { id: 1, username: 'qa-lead', role: 'super_admin', status: 'active' }
     const { userenvRoutes } = await import('../controller')
     const app = new Koa()
     app.use(async (ctx, next) => {
-      (ctx.state as { user?: { username?: string } }).user = { username: 'qa-lead' }
+      if (currentUser) (ctx.state as { user?: PlatformPrincipal }).user = currentUser
       await next()
     })
     app.use(async (ctx, next) => {
@@ -365,5 +368,38 @@ describe('REST（/api/userenv）', () => {
     expect((await fetchJson('/api/userenv/profiles/ghost/env', {
       method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entries: [] }),
     })).status).toBe(404)
+  })
+
+  it('普通 admin 改其他 profile 返回 403，文件、备份和审计均无变化', async () => {
+    const dir = makeProfile('bob', 'MODEL=original\n')
+    const bobEnv = join(dir, '.env')
+    currentUser = { id: 2, username: 'alice-admin', role: 'admin', status: 'active', profiles: ['alice'] }
+
+    const response = await fetchJson('/api/userenv/profiles/bob/env', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ entries: [{ key: 'MODEL', value: 'overwritten' }] }),
+    })
+
+    expect(response.status).toBe(403)
+    expect(readFileSync(bobEnv, 'utf8')).toBe('MODEL=original\n')
+    expect(readdirSync(dir).filter((name) => name.startsWith('.env.bak-'))).toHaveLength(0)
+    expect(() => readFileSync(join(webui, 'userenv-audit.jsonl'), 'utf8')).toThrow()
+  })
+
+  it('未授权读取先于 profile 存在性探测，跨归属与不存在目标都为 403', async () => {
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: ['alice'] }
+    makeProfile('bob', 'MODEL=secret\n')
+    expect((await fetchJson('/api/userenv/profiles/bob/env')).status).toBe(403)
+    expect((await fetchJson('/api/userenv/profiles/ghost/env')).status).toBe(403)
+  })
+
+  it('无身份 401，active 但空授权的 admin 仍为 403', async () => {
+    makeProfile('alice', 'MODEL=m\n')
+    currentUser = undefined
+    expect((await fetchJson('/api/userenv/profiles/alice/env')).status).toBe(401)
+
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: [] }
+    expect((await fetchJson('/api/userenv/profiles/alice/env')).status).toBe(403)
   })
 })
