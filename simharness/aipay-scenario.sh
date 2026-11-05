@@ -1151,8 +1151,13 @@ if [ "$(posture)" = "strict" ]; then
       # 唤醒的判词等待。
       if wait_truth "修订稿落仓（G2 回灌）" ${MX_G2_REV_WAIT:-1800} repo_has "docs/design/${RFD_ID}-architecture-design.md"; then
         _g2_rev_sha="$(git -C "$DIRECTOR_CLONE" log -1 --format=%h origin/main -- "docs/design/${RFD_ID}-architecture-design.md" 2>/dev/null || true)"
-        dispatch_in_room arch "@arch-agent:matrix.test 概设已按评审卡 ${AGID} 缺项修订重推（修订锚 ${_g2_rev_sha:-未取到}），请立即执行 G2 复评：逐条核对缺项是否闭合 → 评审卡 ${AGID} body 更新结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项) → 分析群同步同一结论行（卡面与房间行一致才放行）。不许谎报。" "$(agent_mxid arch)"
-        echo "ISSUE|g2-review-redispatch|arch-agent|修订落仓 ${_g2_rev_sha:-?} 后由驱动直接派复评（run26 复盘：修完无人触发损耗 81min）" >> "$EVID_DIR/issues.log"
+        # 评审对象钉锚（2026-11-05 run27 根治）：修订推仓后秒级派单，评审回合曾读本地
+        # 未 fetch 旧稿——判词锚在旧版→缺项"未闭合"→窗口翻负→两连熔断。派发前把锚版
+        # 评审对象覆写进 arch 工作区，评审人读到的即派单锚版本，不靠 agent 自觉 fetch。
+        _pin_out="$(bash "$SCRIPT_DIR/mux/mx-pin-review-object.sh" "$SIM_ROOT/workspaces/arch/aipaydev" "${_g2_rev_sha}" "docs/design/${RFD_ID}-architecture-design.md" 2>&1)" || true
+        note "[G2] ${_pin_out}"
+        dispatch_in_room arch "@arch-agent:matrix.test 概设已按评审卡 ${AGID} 缺项修订重推（修订锚 ${_g2_rev_sha:-未取到}，已把锚版评审对象钉入你工作区同路径；存疑以 git show ${_g2_rev_sha}:docs/design/${RFD_ID}-architecture-design.md 为准），请立即执行 G2 复评：逐条核对缺项是否闭合 → 评审卡 ${AGID} body 更新结论行 ARCH-GATE-PASS 或 ARCH-GATE-FAIL(附缺项) → 分析群同步同一结论行（卡面与房间行一致才放行）。不许谎报。" "$(agent_mxid arch)"
+        echo "ISSUE|g2-review-redispatch|arch-agent|修订落仓 ${_g2_rev_sha:-?} 后由驱动直接派复评＋钉锚（run26 复盘：修完无人触发损耗 81min；run27 复盘：读旧稿判错轮熔断）" >> "$EVID_DIR/issues.log"
         note "[G2] 修订落仓（${_g2_rev_sha:-?}）——已直接向 arch 派复评（不等被退回者转告）"
       else
         note "[G2] 修订稿 ${MX_G2_REV_WAIT:-1800}s 未见落仓——仍进判词等待（唤醒链会兜底）"
@@ -1168,6 +1173,20 @@ if [ "$(posture)" = "strict" ]; then
           issue_once g2-history-check-missing arch-agent "G2 复审 PASS 但评审卡 ${AGID} body 缺历史偏差检索结论（§5.3 G2⑤）——记问题单，不阻断闸"
         fi
       else
+        # 判词锚守卫（2026-11-05 run27 根治）：判词未引用本轮修订锚＝评审人读旧稿的
+        # 错配判词——不计闸轮（不 trip），重钉锚重派复评后 fail 交监督器续跑重入。
+        # 幂等键防死循环：错配重派每轮只做一次，再错配走正常熔断语义。
+        if [ -n "${_g2_rev_sha:-}" ] && \
+           ! kanban_card_body_contains arch "${RFD_ID} 架构治理评审" "${_g2_rev_sha}" && \
+           [ "$(sget g2_anchor_mismatch_redispatched)" != "1" ]; then
+          sset g2_anchor_mismatch_redispatched 1
+          echo "ISSUE|g2-verdict-anchor-mismatch|arch-agent|判词未引用修订锚 ${_g2_rev_sha}（读旧稿错配判词）——不计闸轮，重钉锚重派复评（run27 两连熔断根治件）" >> "$EVID_DIR/issues.log"
+          note "[G2] 判词锚错配（卡面未引 ${_g2_rev_sha}）——重钉锚重派，不计闸轮"
+          _pin_out="$(bash "$SCRIPT_DIR/mux/mx-pin-review-object.sh" "$SIM_ROOT/workspaces/arch/aipaydev" "${_g2_rev_sha}" "docs/design/${RFD_ID}-architecture-design.md" 2>&1)" || true
+          note "[G2] ${_pin_out}"
+          dispatch_in_room arch "@arch-agent:matrix.test 【重派·锚修正】上一轮判词评审的不是最新修订（锚 ${_g2_rev_sha}）。锚版评审对象已钉入你工作区同路径，存疑以 git show ${_g2_rev_sha}:docs/design/${RFD_ID}-architecture-design.md 为准。请重评：逐条核对缺项闭合 → 评审卡 ${AGID} 更新结论行 → 分析群同步同一行。不许谎报。" "$(agent_mxid arch)"
+          fail "G2 判词锚错配（未引 ${_g2_rev_sha}）——已重钉重派，supervisor 续跑重入复评（不计闸轮）"
+        fi
         mx_gate_breaker_trip g2 "G2 架构治理评审" 1
         # V8.28 用户 21:02 裁定：两轮未过闸不放行不授控。记录留痕，闸键不落——
         # 上游修订+复评 PASS 才进 close（supervisor 续跑重入本段，幂等不重复记录）。

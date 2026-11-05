@@ -592,3 +592,4 @@
 - [2026-11-05-teardown-void-type-fix.md](../superpowers/specs/2026-11-05-teardown-void-type-fix.md)
 - [2026-11-05-frame-expect-dash-keys-fix.md](../superpowers/specs/2026-11-05-frame-expect-dash-keys-fix.md)
 - [2026-11-05-release-v1.0.12-overlay.md](../superpowers/specs/2026-11-05-release-v1.0.12-overlay.md)
+- [2026-11-05-review-anchor-pin.md](../superpowers/specs/2026-11-05-review-anchor-pin.md)
