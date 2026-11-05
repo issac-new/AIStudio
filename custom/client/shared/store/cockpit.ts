@@ -26,7 +26,6 @@ import { parseTenant, tenantFilterValue } from '@/custom/kanban/utils/tenant-par
 import * as historyAdapter from '@/custom/shared/store/../adapters/history-adapter'
 import * as notifyAdapter from '@/custom/shared/store/../adapters/notify-adapter'
 import type { NotifyItem, NotifyKind } from '@/custom/shared/store/../adapters/notify-adapter'
-import type { ChatMessage } from '@/custom/shared/store/../adapters/chat-adapter'
 import type { KanbanTaskDetail } from '@/api/hermes/kanban'
 import type { RouteLocationRaw } from 'vue-router'
 import * as fleetAdapter from '@/custom/shared/store/../adapters/fleet-adapter'
@@ -37,6 +36,10 @@ import * as inboxAdapter from '@/custom/shared/store/../adapters/inbox-adapter'
 import { createCockpitCommandSlice } from './cockpit-command-slice'
 import { createCockpitWorkItemSlice } from './cockpit-workitem-slice'
 import { createCockpitFilterSlice } from './cockpit-filter-slice'
+import { createCockpitChannelSlice } from './cockpit-channel-slice'
+import { createCockpitHistoryActionsSlice } from './cockpit-history-actions'
+import { createCockpitDialogSlice } from './cockpit-dialog-slice'
+import { createCockpitAttentionTerminalSlice } from './cockpit-attention-terminal'
 import type { InboxItem } from '@/custom/shared/store/../adapters/inbox-adapter'
 import { filterCockpitHistory, defaultDateRange } from './cockpit-history'
 import type { HistoryFilters as HistoryFiltersType } from './cockpit-history'
@@ -805,192 +808,41 @@ export const useCockpitStore = defineStore('cockpit', () => {
   // ── 通知 ──
   // 仅 Matrix：进入房间后 SDK 自动清零未读，无需额外操作
 
-  // ── 频道（选中频道时切换到 chat 工作区）──
-  function selectChannel(id: string | null) {
-    activeChannelId.value = id
-    if (id) workspaceMode.value = 'chat' as WorkspaceMode
-  }
-  async function sendMessage(text: string): Promise<void> {
-    const ch = activeChannel.value
-    if (!ch || !text.trim()) return
-    switch (ch.kind) {
-      case 'matrix': await matrixComposer.sendMessage(text); break
-      case 'chat': await chatStore.sendMessage(text); break
-      case 'group': await groupStore.sendMessage(text); break
-    }
-  }
-  const messagesForActiveChannel = computed<ChatMessage[]>(() => {
-    const ch = activeChannel.value
-    if (!ch) return []
-    switch (ch.kind) {
-      case 'matrix': return [] // matrix 消息归一需 currentUserId，由组件层注入 adapter 调用
-      case 'chat': return (chatStore as any).messages?.map?.((m: any) => ({
-        id: m.id, channelId: ch.id, author: m.role === 'user' ? '你' : m.role,
-        isMe: m.role === 'user', text: m.content, ts: m.timestamp,
-      })) ?? []
-      case 'group': return (groupStore as any).sortedMessages?.map?.((m: any) => ({
-        id: m.id, channelId: ch.id, author: m.senderName || m.senderId,
-        isMe: false, text: m.content, ts: m.timestamp,
-      })) ?? []
-    }
-    return []
+  // ── 频道/历史/弹窗/注意力/终端切片（拆分：cockpit-channel-slice 等）──
+  const { selectChannel, sendMessage, messagesForActiveChannel, disconnectOnUnmount } = createCockpitChannelSlice({
+    activeChannelId, workspaceMode,
+    getActiveChannel: () => activeChannel.value,
+    chatStore, groupStore, matrixComposer, kanban,
+    stopFleetStream, stopMcpHealthPoll,
+    resetBootstrapped: () => { _bootstrapped = false },
   })
-  function disconnectOnUnmount() {
-    try { groupStore.disconnect?.() } catch { /* ignore */ }
-    stopFleetStream()
-    stopMcpHealthPoll()
-    // bootstrap 武装的 kanban 单板事件流随壳回收（Task 5）：此前只启不停，
-    // 离壳后 WS 与重连退避定时器整会话泄漏（看板视图自启的流由其 onUnmounted 自停）
-    kanban.stopEventStream?.()
-    _bootstrapped = false // 复位幂等守卫：再次进入 /app 时允许重新 bootstrap
-  }
+  const {
+    openHistory, closeHistory, setHistoryArchivedFilter,
+    toggleHistoryAction, setHistorySearch, setHistoryTimeRange,
+    toggleHistoryCategory, toggleHistoryStatus, recallHistoryItem, clearArchivedMode,
+  } = createCockpitHistoryActionsSlice({
+    historyOpen, history, historyFilters, archivedMode,
+    selectTask, setWorkspaceMode,
+  })
+  const {
+    titleDetailTitle, detailExpanded,
+    openTitleDetail, closeTitleDetail,
+    openRunTrace, closeRunTrace, openRunTraceGlobal,
+    openKanbanDetail, closeKanbanDetail,
+  } = createCockpitDialogSlice({
+    titleDetailOpen, titleDetailText, titleDetailTaskId,
+    runTraceOpen, runTraceTaskId, runTraceSessionId, runTraceRunId,
+    kanbanDetailOpen, kanbanDetailTask,
+    selectTask, detailCache: _detailCache, getTasks: () => tasks.value,
+  })
+  const {
+    _attentionFocusTitle, _attentionFocusDesc, focusOnTaskFromAttention, focusOnTimelineNode,
+    enterTerminal, exitTerminal, sendTerminalCommand,
+  } = createCockpitAttentionTerminalSlice({
+    attentionTaskIds: _attentionTaskIds, selectTask, setWorkspaceMode,
+    detailCache: _detailCache, terminalMode, workspaceMode, terminalLines,
+  })
 
-  // ── 历史 ──
-  async function openHistory() {
-    historyOpen.value = true
-    try {
-      const res = await extras.getTimeline({ limit: 100 })
-      history.value = historyAdapter.mergeTimeline(res.items)
-    } catch {
-      history.value = []
-    }
-  }
-  function closeHistory() { historyOpen.value = false }
-  function setHistoryArchivedFilter(v: 'all' | 'only' | 'exclude') { /* added by feat/history-filters */ }
-  // task title 详情弹窗（双击查看完整 title）（需求 #2）
-  // 通用详情弹窗标题（区分"任务标题"/"事件详情"等）
-  const titleDetailTitle = ref('任务标题')
-  function openTitleDetail(taskId: string, text: string, title: string = '任务标题') {
-    titleDetailTaskId.value = taskId
-    titleDetailText.value = text
-    titleDetailTitle.value = title
-    titleDetailOpen.value = true
-  }
-  function closeTitleDetail() {
-    titleDetailOpen.value = false
-    titleDetailTaskId.value = null
-    titleDetailText.value = ''
-  }
-  function openRunTrace(input: { taskId?: string | null; sessionId: string; runId?: string | null }) {
-    runTraceTaskId.value = input.taskId ?? null
-    runTraceSessionId.value = input.sessionId
-    runTraceRunId.value = input.runId ?? null
-    runTraceOpen.value = true
-  }
-  function closeRunTrace() {
-    runTraceOpen.value = false
-  }
-  /** Open RunTrace from global entry point (TopBar button).
-   * 统一进入全局聚合视图（所有跨任务会话聚合图）；
-   * 由 overview 承载检索与下钻，用户在图中选择会话后切到单会话详细视图。
-   */
-  function openRunTraceGlobal() {
-    openRunTrace({ sessionId: '' }) // Empty sessionId signals "show overview"
-  }
-  // kanban 详情弹窗：取完整 KanbanTaskDetail（含 comments/events/runs 等）
-  // 双击协作图节点打开弹窗时，先 selectTask 联动选中状态——这样右侧 Workspace
-  // 文件面板的 Home 目录会跟随该任务的 workspace_path（CockpitFilePanel 监听
-  // selectionSeq 同步 workspaceRoot），避免「弹窗显示任务 A 的 workspace，
-  // 但文件面板仍停留在之前选中任务 B 的目录」。
-  const detailExpanded = ref(false)  // 弹窗"更多信息"折叠态
-  async function openKanbanDetail(taskId: string) {
-    // 先联动选中：刷新 detail cache（含最新 workspace_path）并触发 workspace 面板同步
-    await selectTask(taskId)
-    const detail = _detailCache.value[taskId]
-    if (detail) {
-      kanbanDetailTask.value = detail
-      kanbanDetailOpen.value = true
-    } else {
-      // selectTask 已尝试拉取 detail；若仍无缓存（拉取失败），用 CockpitTask 基本信息兜底
-      const t = tasks.value.find(x => x.id === taskId)
-      if (t) {
-        kanbanDetailTask.value = {
-          task: {
-            id: t.id, title: t.title, body: null, assignee: t.assignee === '未分配' ? null : t.assignee,
-            status: t.status, priority: 0, created_by: null, created_at: t.createdAt,
-            started_at: null, completed_at: null, workspace_kind: 'dir', workspace_path: t.workspace,
-            tenant: t.tenant, project_id: null, result: null, skills: null, latest_summary: null,
-          } as any,
-          latest_summary: null, comments: [], events: [], runs: [],
-        } as KanbanTaskDetail
-        kanbanDetailOpen.value = true
-      }
-    }
-    detailExpanded.value = false  // 打开时默认折叠"更多信息"
-  }
-  function closeKanbanDetail() {
-    kanbanDetailOpen.value = false
-    kanbanDetailTask.value = null
-  }
-  function toggleHistoryAction(action: string) {
-    const arr = historyFilters.value.actions
-    const i = arr.indexOf(action)
-    if (i >= 0) {
-      arr.splice(i, 1)
-    } else {
-      arr.push(action)
-    }
-  }
-  function setHistorySearch(v: string) { historyFilters.value.search = v }
-  function setHistoryTimeRange(v: 'today' | 'week' | 'month' | null) {
-    historyFilters.value.timeRange = historyFilters.value.timeRange === v ? null : v
-  }
-  function toggleHistoryCategory(v: 'event' | 'comment') {
-    const arr = historyFilters.value.categories
-    const i = arr.indexOf(v)
-    if (i >= 0) arr.splice(i, 1); else arr.push(v)
-  }
-  function toggleHistoryStatus(v: 'active' | 'done' | 'archived') {
-    const arr = historyFilters.value.statuses
-    const i = arr.indexOf(v)
-    if (i >= 0) arr.splice(i, 1); else arr.push(v)
-  }
-  function recallHistoryItem(id: string) {
-    const item = history.value.find(h => h.id === id)
-    if (!item) return
-    selectTask(item.taskId)
-    archivedMode.value = item.archived
-    setWorkspaceMode('work')
-    historyOpen.value = false
-  }
-  function clearArchivedMode() { archivedMode.value = false }
-
-  // ── 联动：注意力/时序 ──
-  const _attentionFocusTitle = ref<string | null>(null)
-  const _attentionFocusDesc = ref<string | null>(null)
-  async function focusOnTaskFromAttention(taskId: string, title?: string, desc?: string) {
-    // 同一任务再次点击 → 切换（清除筛选）
-    if (_attentionTaskIds.value.length === 1 && _attentionTaskIds.value[0] === taskId) {
-      _attentionTaskIds.value = []
-      return
-    }
-    // 保持原有行为
-    await selectTask(taskId)
-    setWorkspaceMode('work')
-    _attentionFocusTitle.value = title ?? null
-    _attentionFocusDesc.value = desc ?? null
-    // 计算关联任务 ID：本身 + parents + children
-    const related = new Set<string>([taskId])
-    const detail = _detailCache.value[taskId]
-    if (detail) {
-      for (const p of detail.parents ?? []) related.add(p)
-      for (const c of detail.children ?? []) related.add(c)
-    }
-    _attentionTaskIds.value = [...related]
-  }
-  function focusOnTimelineNode(_eventId: string) {
-    setWorkspaceMode('work')
-  }
-
-  // ── 终端 ──
-  function enterTerminal() { terminalMode.value = true; workspaceMode.value = 'term' }
-  function exitTerminal() { terminalMode.value = false; workspaceMode.value = 'work' }
-  function sendTerminalCommand(cmd: string) {
-    const c = cmd.trim()
-    if (!c) return
-    terminalLines.value.push({ kind: 'prompt', text: c })
-    terminalLines.value.push({ kind: 'info', text: `ℹ sandbox 内执行：${c}` })
-  }
 
   // ── 日程事件（按日期聚合）──
   const scheduleEvents = computed<Record<string, ScheduleEvent[]>>(() => {

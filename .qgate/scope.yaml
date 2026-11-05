@@ -290,3 +290,7 @@ paths:
   - docs/superpowers/specs/2026-11-05-governance-residual-closeout.md
   - custom/client/shared/store/cockpit-workitem-slice.ts
   - custom/client/shared/store/cockpit-filter-slice.ts
+  - custom/client/shared/store/cockpit-channel-slice.ts
+  - custom/client/shared/store/cockpit-history-actions.ts
+  - custom/client/shared/store/cockpit-dialog-slice.ts
+  - custom/client/shared/store/cockpit-attention-terminal.ts
