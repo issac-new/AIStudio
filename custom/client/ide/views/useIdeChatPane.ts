@@ -741,5 +741,7 @@ export function useIdeChatPane() {
 
   return {
     ide, chatStore, mediaRoot, filesStore, toolPanelStore, tx, modeText, workStarters, showWorkEmpty, startWork, band, modBandSpecs, ready, modelInvalidDismissed, showModelInvalid, goReselectModel, fallbackModelTarget, onFallbackModel, approvalMemoryHint, debugOpen, debugInfo, debugCopied, running, runElapsed, lastCompletedSummary, copyDebugInfo, pendingSubagentId, showOverlay, closeOverlay, newSession, canOpenTrace, openRunTrace, sessionTitle, modelGroupsView, modelDisabled, modelPickerOpen, recoveryOpen, videoFramesOpen, chatInputEl, onVideoFrames, findOpen, findRef, openFind, btwOpen, bgTasksOpen, historyOpen, sideSessionOpen, latestDiff, latestDiffUndoCtx, modelLabel, reselectLabel, onModelClick, pickModel, pickAuto, manageOpen, onManageSaved, computerUseOn, toggleComputerUse, effortOpen, effortLevelLabel, effortDefaultLabel, effortLevels, sessionEffort, effortLabelShort, pickEffort, composerSettingsOpen, zcodeModeState, commitZcodeMode, permModeLabel, labels, t, locale,
+    // IdeChatPane 模板直引的成员：会话钩子（recap/反注入）、工具轨迹开关、工作区根
+    recap, dismissRecap, flaggedSubagents, toolTraceVisible, toggleToolTraceVisible, root,
   }
 }
