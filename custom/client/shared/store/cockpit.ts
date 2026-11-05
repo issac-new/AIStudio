@@ -35,6 +35,8 @@ import * as teamsApi from '@/custom/shared/store/../adapters/teams-adapter'
 import type { TeamRecord } from '@/custom/shared/store/../adapters/teams-adapter'
 import * as inboxAdapter from '@/custom/shared/store/../adapters/inbox-adapter'
 import { createCockpitCommandSlice } from './cockpit-command-slice'
+import { createCockpitWorkItemSlice } from './cockpit-workitem-slice'
+import { createCockpitFilterSlice } from './cockpit-filter-slice'
 import type { InboxItem } from '@/custom/shared/store/../adapters/inbox-adapter'
 import { filterCockpitHistory, defaultDateRange } from './cockpit-history'
 import type { HistoryFilters as HistoryFiltersType } from './cockpit-history'
@@ -775,218 +777,30 @@ export const useCockpitStore = defineStore('cockpit', () => {
 	    })
 	  })
 
-  // ── 工作区/折叠/筛选 ──
-  function toggleCollapsed(col: ColumnKey) { collapsed.value[col] = !collapsed.value[col] }
-  function toggleMidTop() { midTopCollapsed.value = !midTopCollapsed.value }
-  function toggleMidBottom() { midBottomCollapsed.value = !midBottomCollapsed.value }
-  function toggleTimelineActor(actor: string) {
-    const cur = timelineActorFilter.value
-    const i = cur.indexOf(actor)
-    // 新数组赋值（确保 Vue 响应式触发 computed 重算）
-    timelineActorFilter.value = i >= 0 ? cur.filter(a => a !== actor) : [...cur, actor]
-  }
-  // 只对数组型筛选键开放（dateRange 是对象，不参与多选切换）——类型层收窄键集合，运行时同原实现。
-  type ArrayFilterKey = {
-    [K in keyof CockpitFilters]: CockpitFilters[K] extends readonly unknown[] ? K : never
-  }[keyof CockpitFilters]
-  function toggleFilter<K extends ArrayFilterKey>(key: K, value: CockpitFilters[K][number]) {
-    const arr = filters.value[key] as CockpitFilters[K][number][]
-    const i = arr.indexOf(value)
-    if (i >= 0) {
-      arr.splice(i, 1)
-    } else {
-      arr.push(value)
-    }
-  }
-  // 日期范围筛选（需求 #1）：from/to 为 'YYYY-MM-DD' 或 null
-  function setDateRangeFilter(from: string | null, to: string | null) {
-    filters.value = { ...filters.value, dateRange: { from, to } }
-  }
-  function clearDateRangeFilter() {
-    filters.value = { ...filters.value, dateRange: { from: null, to: null } }
-  }
-  function runSearch(q: string) {
-    searchQuery.value = q
-    if (_searchTimer) { clearTimeout(_searchTimer); _searchTimer = undefined }
-    if (!q.trim()) return
-    _searchTimer = setTimeout(async () => {
-      const key = q.trim()
-      const cached = _sessionSearchCache.value[key]
-      if (cached && (Date.now() - cached.ts < 5 * 60 * 1000)) return // 缓存 5min 未过期
-      if (_sessionSearching.value) return
-      _sessionSearching.value = true
-      try {
-        const results = await searchHermesSessions(key)
-        _sessionSearchCache.value = { ..._sessionSearchCache.value, [key]: { ts: Date.now(), results } }
-      } catch { /* 静默：退化为仅本地匹配 */ }
-      finally { _sessionSearching.value = false }
-    }, 300)
-  }
-  function clearSearch() {
-    searchQuery.value = ''
-    if (_searchTimer) { clearTimeout(_searchTimer); _searchTimer = undefined }
-  }
-  function clearAttentionFilter() {
-    _attentionTaskIds.value = []
-  }
-  function setWorkspaceMode(mode: WorkspaceMode) { workspaceMode.value = mode }
-  function toggleMaximized(col: ColumnKey) {
-    // 独占式全屏：任一栏最大化时，其他栏取消
-    const cur = maximized.value[col]
-    maximized.value = { left: false, mid: false, right: false, [col]: !cur }
-  }
-
-  // ── 文件/节点 ──
-  const selectedFileId = ref<string | null>(null)
-  function selectFile(id: string | null) { selectedFileId.value = id }
-  function toggleGraphNode(taskId: string, nodeId: string) {
-    const cur = selectedGraphNodeIds.value[taskId] ?? []
-    const i = cur.indexOf(nodeId)
-    if (i >= 0) {
-      cur.splice(i, 1)
-    } else {
-      cur.push(nodeId)
-    }
-    selectedGraphNodeIds.value = { ...selectedGraphNodeIds.value, [taskId]: cur }
-  }
-  function focusOnGraphNodeForTimeline(nodeId: string) {
-    focusedGraphNodeId.value = focusedGraphNodeId.value === nodeId ? null : nodeId
-  }
-
-  // ── 工作项 ──
-  function updateWorkItem(patch: Partial<DraftWorkItem>) {
-    const id = selectedTaskId.value
-    if (!id) return
-    kv.saveDraft(id, patch)
-    bumpKv()
-  }
-  function toggleRiskTag(tag: string) {
-    const id = selectedTaskId.value
-    if (!id) return
-    const cur = kv.loadDraft(id)
-    if (!cur) return
-    const i = cur.riskTags.indexOf(tag)
-    if (i >= 0) {
-      cur.riskTags.splice(i, 1)
-    } else {
-      cur.riskTags.push(tag)
-    }
-    kv.saveDraft(id, { riskTags: cur.riskTags })
-    bumpKv()
-  }
-
-	  function autoSaveDraft() {
-	    bumpKv()
-	  }
-
-	  /** 一键还原：清除当前任务草稿，恢复原始值 */
-	  function clearDraft() {
-	    const id = selectedTaskId.value
-	    if (!id) return
-	    kv.clearDraft(id)
-	    bumpKv()
-	  }
-
-  // ── Area 2 草稿暂存方法（不调用 API，仅写 localStorage）──
-  function setPendingAssignee(profile: string | null) {
-    const id = selectedTaskId.value
-    if (!id) return
-    kv.saveDraft(id, { pendingAssignee: profile })
-    bumpKv()
-  }
-  function setPendingPriority(p: number) {
-    const id = selectedTaskId.value
-    if (!id) return
-    kv.saveDraft(id, { pendingPriority: p })
-    bumpKv()
-  }
-  function setPendingBody(body: string) {
-    const id = selectedTaskId.value
-    if (!id) return
-    kv.saveDraft(id, { pendingBody: body })
-    bumpKv()
-  }
-  function setPendingTitle(v: string) {
-    const id = selectedTaskId.value
-    if (!id) return
-    kv.saveDraft(id, { pendingTitle: v })
-    bumpKv()
-  }
-  function setPendingComment(v: string) {
-    const id = selectedTaskId.value
-    if (!id) return
-    kv.saveDraft(id, { pendingComment: v })
-    bumpKv()
-  }
-  function addPendingLink(link: kv.PendingLink) {
-    const id = selectedTaskId.value
-    if (!id) return
-    const cur = kv.loadDraft(id)
-    const adds = cur?.pendingLinkAdds ?? []
-    if (!adds.some(l => l.parent === link.parent && l.child === link.child)) {
-      kv.saveDraft(id, { pendingLinkAdds: [...adds, link] })
-      bumpKv()
-    }
-  }
-  function removePendingLink(link: kv.PendingLink) {
-    const id = selectedTaskId.value
-    if (!id) return
-    const cur = kv.loadDraft(id)
-    const removes = cur?.pendingLinkRemoves ?? []
-    if (!removes.some(l => l.parent === link.parent && l.child === link.child)) {
-      kv.saveDraft(id, { pendingLinkRemoves: [...removes, link] })
-      bumpKv()
-    }
-  }
-
-  async function submitWorkItem() {
-    const id = selectedTaskId.value
-    const draft = id ? kv.loadDraft(id) : null
-    if (!id || !draft) return
-    const board = boardSlugOf(id)
-    const boardOpts = board ? { board } : undefined
-    // 收集所有待执行操作，并发提交
-    const ops: Promise<unknown>[] = []
-    // 1. Area 2 字段变更：patchTask（仅在草稿中有 pending 字段时）
-    const patch: kanbanApi.KanbanTaskPatch = {}
-    if (draft.pendingAssignee !== undefined) patch.assignee = draft.pendingAssignee
-    if (draft.pendingPriority !== undefined) patch.priority = draft.pendingPriority
-    if (draft.pendingBody !== undefined) patch.body = draft.pendingBody
-    // 标题（仅当与当前标题不同才提交）
-    if (draft.pendingTitle !== undefined && draft.pendingTitle !== (selectedTask.value?.title ?? '')) {
-      patch.title = draft.pendingTitle
-    }
-    if (Object.keys(patch).length) {
-      ops.push(kanbanApi.patchTask(id, patch, boardOpts))
-    }
-    // 2. 父子关联变更
-    for (const link of draft.pendingLinkAdds ?? []) {
-      ops.push(kanbanApi.linkTasks({ parent_id: link.parent, child_id: link.child }, boardOpts))
-    }
-    for (const link of draft.pendingLinkRemoves ?? []) {
-      ops.push(kanbanApi.unlinkTasks({ parent_id: link.parent, child_id: link.child }, boardOpts))
-    }
-    // 3. 始终提交决策评论
-    const text = `[决策:${draft.decision}] 风险:${draft.riskTags.join(',')} ${draft.opinion}`.trim()
-    ops.push(kanbanApi.addComment(id, { body: text }, boardOpts))
-    // 4. 用户自由评论（非空时额外一条，与决策评论并存）
-    if (draft.pendingComment && draft.pendingComment.trim()) {
-      ops.push(kanbanApi.addComment(id, { body: draft.pendingComment }, boardOpts))
-    }
-    // 并发执行，单个失败不阻塞其他
-    await Promise.allSettled(ops)
-    kv.clearDraft(id)
-    bumpKv()
-    delete _detailCache.value[id]
-    await loadTaskDetail(id)
-    // 刷新附件列表
-    if (taskAttachments.value[id]) {
-      const newVal = { ...taskAttachments.value }
-      delete newVal[id]
-      taskAttachments.value = newVal
-      loadAttachments(id).catch(() => {})
-    }
-  }
+  // ── 工作区/折叠/筛选切片（拆分：cockpit-filter-slice.ts）──
+  const {
+    toggleCollapsed,
+    toggleMidTop,
+    toggleMidBottom,
+    toggleTimelineActor,
+    toggleFilter,
+    setDateRangeFilter,
+    clearDateRangeFilter,
+    runSearch,
+    clearSearch,
+    clearAttentionFilter,
+    setWorkspaceMode,
+    toggleMaximized,
+    selectedFileId,
+    selectFile,
+    toggleGraphNode,
+    focusOnGraphNodeForTimeline,
+  } = createCockpitFilterSlice({
+    collapsed, midTopCollapsed, midBottomCollapsed, timelineActorFilter, filters, searchQuery,
+    sessionSearchCache: _sessionSearchCache, sessionSearching: _sessionSearching,
+    attentionTaskIds: _attentionTaskIds, workspaceMode, maximized,
+    selectedGraphNodeIds, focusedGraphNodeId,
+  })
 
   // ── 通知 ──
   // 仅 Matrix：进入房间后 SDK 自动清零未读，无需额外操作
@@ -1377,6 +1191,31 @@ export const useCockpitStore = defineStore('cockpit', () => {
       await refreshFileTree(tid)
     }
   }
+
+  // ── 工作项草稿切片（拆分：cockpit-workitem-slice.ts）──
+  const {
+    updateWorkItem,
+    toggleRiskTag,
+    autoSaveDraft,
+    clearDraft,
+    setPendingAssignee,
+    setPendingPriority,
+    setPendingBody,
+    setPendingTitle,
+    setPendingComment,
+    addPendingLink,
+    removePendingLink,
+    submitWorkItem,
+  } = createCockpitWorkItemSlice({
+    getSelectedTaskId: () => selectedTaskId.value,
+    getSelectedTask: () => selectedTask.value,
+    boardSlugOf,
+    loadTaskDetail,
+    loadAttachments,
+    bumpKv,
+    detailCache: _detailCache,
+    taskAttachments,
+  })
 
   return {
     // 派生态
