@@ -197,3 +197,4 @@
 {"at":"2026-11-05T04:39:43Z","spec":"docs/superpowers/specs/2026-11-05-org-governance-closeout.md","receipt":"be84f4b734c7580fb89a49927a43b957865425bd","commit":"8f10dde3f"}
 {"at":"2026-11-05T04:49:26Z","spec":"docs/superpowers/specs/2026-11-05-governance-truth-restoration.md","receipt":"b65f85750f7fd5c48aefb78e8d2c4668b9937436","commit":"32bf92b02"}
 {"at":"2026-11-05T04:59:46Z","spec":"docs/superpowers/specs/2026-11-05-governance-truth-restoration.md","receipt":"651eea48abfdfb595028afed0930c76c76d3f1b5","commit":"1f81d2d9d"}
+{"at":"2026-11-05T05:14:48Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"eb1ffd1a04e320e8588f9785aaed3ddc26ee05ec","commit":"3cd3ed1aa"}

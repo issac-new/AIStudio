@@ -14,14 +14,14 @@
 | 2 | `custom/client/ide/views/IdeChatPane.vue` | 1889 | 2 个直接挂载 + 布局测试 | 会话启动/输入区/浮窗宿主拆 composable + 子组件 | 第二批 | 待办 |
 | 3 | `custom/server/harness/workbench/service.ts` | 1856 → 1054 | 2 个直接 import + 18 个域内测试（workbench 全域 201/201 通过） | service-shared / auto-probe / experience 三模块 + 剩余 service.ts | 第二批 | 已完成 |
 | 4 | `custom/client/shared/store/cockpit.ts` | 1669 | 48 个直接用例 + 20+ mock | 按域拆 store 切片 | 第四批（爆炸半径大） | 待办 |
-| 5 | `custom/server/harness/workbench/loop.ts` | 1515 → 3（wrapper） | 55 个直接用例（workbench 全域 201/201 通过） | loop-core / loop-report 两模块 + loop.ts 兼容出口 | 第三批 | 已完成 |
+| 5 | `custom/server/harness/workbench/loop.ts` | 1515 → 7（wrapper） | 55 个直接用例（workbench 全域 201/201 通过） | loop-core / loop-config / loop-pareto / loop-report / loop-advice 五模块 + loop.ts 兼容出口 | 第三/四批 | 已完成 |
 | 6 | `custom/server/eval/controller.ts` | 1494 → 99 | 4 个 HTTP 测试 + 42 个域内测试（eval 全域 41 文件/397 用例通过） | 3 个 handler 模块（sets/runs/analysis），路由表留 controller | 第一批 | 已完成 |
 
 > 首批结果（2026-11-05）：`controller.ts` 99 行（路由表）＋`routes/sets.ts` 430＋`routes/runs.ts` 595＋`routes/analysis.ts` 475＋`routes/shared.ts` 75；最大文件从 1494 降到 595。
 >
 > 第二批结果（2026-11-05）：`routes/runs.ts` 595→232（runs）/389（flywheel）/98（verdicts）；`service.ts` 1856→1054＋`service-shared.ts` 327＋`service-auto-probe.ts` 485＋`service-experience.ts` 124；eval 397/397、workbench 201/201。
 >
-> 第三批结果（2026-11-05）：`loop.ts` 1515→3（兼容出口）＋`loop-core.ts` 484＋`loop-report.ts` 1051；loop 55 用例、workbench 201/201 全过。`loop-report.ts` 仍 >500，下一批可再切帕累托/进化报告。
+> 第三/四批结果（2026-11-05）：`loop.ts` 1515→7（兼容出口）＋`loop-core.ts` 484＋`loop-config.ts` 86＋`loop-pareto.ts` 107＋`loop-report.ts` 406＋`loop-advice.ts` 524；loop 55 用例、workbench 201/201 全过。`loop-advice.ts` 524 仍 >500，下一批可切进化报告。
 | 7 | `custom/client/matrix-chat/stores/matrix-room.ts` | 1372 | 28 个测试提及，仅 1 个真实 import | 事件/成员/时间线三切片 | 第三批 | 待办 |
 | 8 | `custom/server/simcenter/simcenter-controller.ts` | 1349 | 36 个直接用例 + 4 个域内测试 | 帧/观测/会话/发布四路由组 | 第三批 | 待办 |
 | 9 | `custom/client/ide/views/IdeTaskSidebar.vue` | 1321 | 17 个直接用例 | 任务列表/详情/操作三条 | 第三批 | 待办 |
