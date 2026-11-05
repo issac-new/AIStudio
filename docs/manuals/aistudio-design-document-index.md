@@ -3,8 +3,8 @@
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
 
 - 快照基线：`b63db00c1`；核实日：2026-11-05；版本线：`1.0.12-overlay`（vivo Harness 吸收 W1-W4 发布批）。
-- 当前工作树根目录：**561 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 108 份；合计 561 份。
+- 当前工作树根目录：**562 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 109 份；合计 562 份。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
@@ -477,10 +477,8 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（108 份）
+## 2026-11（109 份）
 
-- [2026-11-05-governance-truth-restoration.md](../superpowers/specs/2026-11-05-governance-truth-restoration.md)
-- [2026-11-05-file-size-refactor-ledger.md](../superpowers/specs/2026-11-05-file-size-refactor-ledger.md)
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
 - [2026-11-01-dod-kernel-gate-lineage-reclaim.md](../superpowers/specs/2026-11-01-dod-kernel-gate-lineage-reclaim.md)
@@ -546,36 +544,51 @@
 - [2026-11-03-run25-full-retro.md](../superpowers/specs/2026-11-03-run25-full-retro.md)
 - [2026-11-03-run26-pending-batch.md](../superpowers/specs/2026-11-03-run26-pending-batch.md)
 - [2026-11-03-run26-pending-clearance.md](../superpowers/specs/2026-11-03-run26-pending-clearance.md)
+- [2026-11-03-runtime-deps-refresh.md](../superpowers/specs/2026-11-03-runtime-deps-refresh.md)
 - [2026-11-03-sim-capability-refresh.md](../superpowers/specs/2026-11-03-sim-capability-refresh.md)
 - [2026-11-03-swarm-yuan-absorption-pstack-evals.md](../superpowers/specs/2026-11-03-swarm-yuan-absorption-pstack-evals.md)
 - [2026-11-03-swarm-yuan-budget-tier3.md](../superpowers/specs/2026-11-03-swarm-yuan-budget-tier3.md)
 - [2026-11-03-tar-pax-gnu-repack.md](../superpowers/specs/2026-11-03-tar-pax-gnu-repack.md)
-- [2026-11-04-a4-layout-balance.md](../superpowers/specs/2026-11-04-a4-layout-balance.md)
-
 - [2026-11-03-vendor-upgrade-agent-v0226.md](../superpowers/specs/2026-11-03-vendor-upgrade-agent-v0226.md)
-- [2026-11-03-runtime-deps-refresh.md](../superpowers/specs/2026-11-03-runtime-deps-refresh.md)
-- [2026-11-04-ledger-clearance.md](../superpowers/specs/2026-11-04-ledger-clearance.md)
-- [2026-11-04-run26-retro-hardening.md](../superpowers/specs/2026-11-04-run26-retro-hardening.md)
-- [2026-11-04-runtime-rebase-v0226.md](../superpowers/specs/2026-11-04-runtime-rebase-v0226.md)
-- [2026-11-04-agentteams-project-workflow.md](../superpowers/specs/2026-11-04-agentteams-project-workflow.md)
+- [2026-11-04-a4-layout-balance.md](../superpowers/specs/2026-11-04-a4-layout-balance.md)
+- [2026-11-04-agentteams-dispatch-debt-backport.md](../superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md)
+- [2026-11-04-agentteams-execution-records.md](../superpowers/specs/2026-11-04-agentteams-execution-records.md)
+- [2026-11-04-agentteams-ledger-items.md](../superpowers/specs/2026-11-04-agentteams-ledger-items.md)
 - [2026-11-04-agentteams-pending-batch.md](../superpowers/specs/2026-11-04-agentteams-pending-batch.md)
-- [2026-11-04-ide-workspace-bugs.md](../superpowers/specs/2026-11-04-ide-workspace-bugs.md)
+- [2026-11-04-agentteams-project-graph.md](../superpowers/specs/2026-11-04-agentteams-project-graph.md)
+- [2026-11-04-agentteams-project-workflow.md](../superpowers/specs/2026-11-04-agentteams-project-workflow.md)
+- [2026-11-04-agentteams-skill-export.md](../superpowers/specs/2026-11-04-agentteams-skill-export.md)
 - [2026-11-04-composer-popups.md](../superpowers/specs/2026-11-04-composer-popups.md)
 - [2026-11-04-harness-w1-toolcontract-enforcement.md](../superpowers/specs/2026-11-04-harness-w1-toolcontract-enforcement.md)
 - [2026-11-04-harness-w2-result-approval.md](../superpowers/specs/2026-11-04-harness-w2-result-approval.md)
 - [2026-11-04-harness-w3-observability-taskmodel.md](../superpowers/specs/2026-11-04-harness-w3-observability-taskmodel.md)
 - [2026-11-04-harness-w4-closeout.md](../superpowers/specs/2026-11-04-harness-w4-closeout.md)
+- [2026-11-04-ide-workspace-bugs.md](../superpowers/specs/2026-11-04-ide-workspace-bugs.md)
+- [2026-11-04-ledger-clearance.md](../superpowers/specs/2026-11-04-ledger-clearance.md)
 - [2026-11-04-message-area-collapse.md](../superpowers/specs/2026-11-04-message-area-collapse.md)
-- [2026-11-04-agentteams-execution-records.md](../superpowers/specs/2026-11-04-agentteams-execution-records.md)
-- [2026-11-04-agentteams-project-graph.md](../superpowers/specs/2026-11-04-agentteams-project-graph.md)
-- [2026-11-04-agentteams-skill-export.md](../superpowers/specs/2026-11-04-agentteams-skill-export.md)
-- [2026-11-04-agentteams-ledger-items.md](../superpowers/specs/2026-11-04-agentteams-ledger-items.md)
-- [2026-11-04-vendor-upgrade-agent-v0227.md](../superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md)
-- [2026-11-04-agentteams-dispatch-debt-backport.md](../superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md)
+- [2026-11-04-regression-prod-chain.md](../superpowers/specs/2026-11-04-regression-prod-chain.md)
+- [2026-11-04-regression-tooling-r26.md](../superpowers/specs/2026-11-04-regression-tooling-r26.md)
+- [2026-11-04-release-v1.0.11-overlay.md](../superpowers/specs/2026-11-04-release-v1.0.11-overlay.md)
+- [2026-11-04-run26-retro-hardening.md](../superpowers/specs/2026-11-04-run26-retro-hardening.md)
+- [2026-11-04-runtime-rebase-v0226.md](../superpowers/specs/2026-11-04-runtime-rebase-v0226.md)
 - [2026-11-04-shell-form-control-text-baseline.md](../superpowers/specs/2026-11-04-shell-form-control-text-baseline.md)
+- [2026-11-04-sim-capability-refresh-round2.md](../superpowers/specs/2026-11-04-sim-capability-refresh-round2.md)
+- [2026-11-04-userenv-route-mount.md](../superpowers/specs/2026-11-04-userenv-route-mount.md)
+- [2026-11-04-vendor-upgrade-agent-v0227.md](../superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md)
 - [2026-11-04-win-regression-p1-fixes.md](../superpowers/specs/2026-11-04-win-regression-p1-fixes.md)
 - [2026-11-04-win-regression-pending-batch.md](../superpowers/specs/2026-11-04-win-regression-pending-batch.md)
-- [2026-11-04-regression-prod-chain.md](../superpowers/specs/2026-11-04-regression-prod-chain.md)
+- [2026-11-05-file-size-refactor-ledger.md](../superpowers/specs/2026-11-05-file-size-refactor-ledger.md)
+- [2026-11-05-frame-expect-dash-keys-fix.md](../superpowers/specs/2026-11-05-frame-expect-dash-keys-fix.md)
+- [2026-11-05-governance-truth-restoration.md](../superpowers/specs/2026-11-05-governance-truth-restoration.md)
+- [2026-11-05-org-governance-autonomy-scale.md](../superpowers/specs/2026-11-05-org-governance-autonomy-scale.md)
+- [2026-11-05-org-governance-closeout.md](../superpowers/specs/2026-11-05-org-governance-closeout.md)
+- [2026-11-05-org-governance-metric-discipline.md](../superpowers/specs/2026-11-05-org-governance-metric-discipline.md)
+- [2026-11-05-org-governance-premise-log.md](../superpowers/specs/2026-11-05-org-governance-premise-log.md)
+- [2026-11-05-org-governance-thin-items.md](../superpowers/specs/2026-11-05-org-governance-thin-items.md)
+- [2026-11-05-release-v1.0.12-overlay.md](../superpowers/specs/2026-11-05-release-v1.0.12-overlay.md)
+- [2026-11-05-review-anchor-pin.md](../superpowers/specs/2026-11-05-review-anchor-pin.md)
+- [2026-11-05-teardown-void-type-fix.md](../superpowers/specs/2026-11-05-teardown-void-type-fix.md)
+
 ## archive（2 份，不计入上述根目录）
 
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。

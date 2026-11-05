@@ -185,6 +185,26 @@ for (const key of REQUIRED_MODULES) {
   if (!existsSync(resolve(ROOT, 'scripts/make-release-packages.mjs'))) fail('packaging', '打包脚本缺失：scripts/make-release-packages.mjs')
 }
 
+// ── releaseBatches（v0.4）：批次记录必须可追溯；空数组合法 ──
+if (manifest.releaseBatches !== undefined) {
+  if (!Array.isArray(manifest.releaseBatches)) fail('packaging', 'releaseBatches 必须是数组')
+  else {
+    const seen = new Set()
+    for (const [i, b] of manifest.releaseBatches.entries()) {
+      if (!b || typeof b !== 'object') { fail('packaging', `releaseBatches[${i}] 非对象`); continue }
+      for (const f of ['id', 'tag', 'commit', 'treeHash', 'createdAt']) {
+        if (typeof b[f] !== 'string' || !b[f]) fail('packaging', `releaseBatches[${i}] 缺 ${f}`)
+      }
+      if (typeof b.commit === 'string' && !/^[0-9a-f]{7,40}$/.test(b.commit)) fail('packaging', `releaseBatches[${i}] commit 非十六进制`)
+      if (typeof b.treeHash === 'string' && !/^[0-9a-f]{40}$/.test(b.treeHash)) fail('packaging', `releaseBatches[${i}] treeHash 非 40 位`)
+      if (typeof b.id === 'string') {
+        if (seen.has(b.id)) fail('packaging', `releaseBatches[${i}] id 重复: ${b.id}`)
+        else seen.add(b.id)
+      }
+    }
+  }
+}
+
 // ── 整体包版本三载体对账（2026-10-31 版本归一批）：package.json 真源＋package-lock.json 派生同步 ──
 // v1.0.1–v1.0.4 四轮发布 package-lock 根 version 滞留 1.0.0-overlay（本仓 node_modules 为借用
 // 软链、根从不跑 npm install，无人触发顺带修复）——发布批改 package.json 必须同批同步 lock 两处。

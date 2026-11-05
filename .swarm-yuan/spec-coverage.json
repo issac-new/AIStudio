@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-05T04:40:54.690Z",
-  "total": 561,
-  "covered": 125,
-  "coverage": 0.22281639928698752,
+  "generatedAt": "2026-11-05T04:53:54.608Z",
+  "total": 562,
+  "covered": 126,
+  "coverage": 0.22419928825622776,
   "uncovered": [
     "docs/superpowers/specs/2026-06-18-kanban-advanced-features-design.md",
     "docs/superpowers/specs/2026-06-19-kanban-comment-bar-design.md",

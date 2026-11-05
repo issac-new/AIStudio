@@ -1,0 +1,23 @@
+[
+  {
+    "id": "D-GOV-1",
+    "decision": "保留 GateVerdict 枚举，追加 executionStatus/degradedReason 派生 DEGRADED/SKIP",
+    "status": "resolved"
+  },
+  {
+    "id": "D-GOV-2",
+    "decision": "scope 上限 200→2000；空声明 FAIL；parseRun 允许 201 键截断快照",
+    "status": "resolved"
+  },
+  {
+    "id": "D-GOV-3",
+    "decision": "补齐 registers/requirements/conventions 后移除 config/qgate-health-baseline.json 的三个 L0 豁免",
+    "status": "resolved"
+  },
+  {
+    "id": "D-GOV-4",
+    "decision": "releaseBatches 先留空数组，发布证据文件 RELEASE-EVIDENCE.json 为执行点",
+    "status": "deferred",
+    "revisitBy": "2026-12-05"
+  }
+]
