@@ -1,8 +1,16 @@
 diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
-index 9a5e3f7..f9fccc9 100644
+index 9a5e3f7..ed68f46 100644
 --- a/packages/server/src/modules/studio/controllers/auth.ts
 +++ b/packages/server/src/modules/studio/controllers/auth.ts
-@@ -49,6 +49,7 @@ import { UnsafeUrlError, assertSafeOutboundUrl } from '../../../custom/security/
+@@ -18,6 +18,7 @@ import {
+   replaceUserProfiles,
+   setUserAvatar,
+   syncMatrixMetadata,
++  updateMatrixUserAccess,
+   updateMatrixUserMetadata,
+   updateUser,
+   updateUsername,
+@@ -49,6 +50,7 @@ import { UnsafeUrlError, assertSafeOutboundUrl } from '../../../custom/security/
  // HERMES_CUSTOM[MatrixSessionStore] BEGIN: R1 每日 Brief 投递身份——登录会话本机落盘
  import { saveMatrixSession } from '../../../custom/matrix/session-store'
  // HERMES_CUSTOM[MatrixSessionStore] END
@@ -10,7 +18,7 @@ index 9a5e3f7..f9fccc9 100644
  import { getLanEndpointKind } from '../services/network/lan-discovery'
  import { getPublicSystemInfo } from '../public/system-info'
  import { config } from '../public/config'
-@@ -711,87 +712,54 @@ export async function matrixLogin(ctx: Context) {
+@@ -711,87 +713,55 @@ export async function matrixLogin(ctx: Context) {
    // Use the user's own token to check their profile; admin status requires admin token
    const matrixInfo = await getMatrixUserInfo(matrixUserId, matrixAccessToken, safeOrigin)
  
@@ -71,6 +79,7 @@ index 9a5e3f7..f9fccc9 100644
 +    syncMatrixMetadata,
 +    saveMatrixSession,
 +    issueUserJwt,
++    countActiveSuperAdmins,
 +  }).catch((err: any) => {
      ctx.status = 500
 -    ctx.body = { error: 'Failed to create or update user record' }
@@ -95,7 +104,7 @@ index 9a5e3f7..f9fccc9 100644
 -    console.warn('[matrix] persist matrix session failed:', err?.message || err)
 +  if (result.kind === 'pending') {
 +    ctx.status = 403
-+    ctx.body = { error: 'Account awaits activation and profile grant', code: result.code }
++    ctx.body = { error: result.guidance || 'Account awaits activation and profile grant', code: result.code }
 +    return
    }
 -  // HERMES_CUSTOM[MatrixSessionStore] END
@@ -141,8 +150,31 @@ index 9a5e3f7..f9fccc9 100644
  }
  
  /**
+@@ -930,13 +900,16 @@ export async function updateMatrixUser(ctx: Context) {
+     return
+   }
+ 
+-  // Update Hermes metadata
+-  if (role !== undefined || status !== undefined) {
+-    updateMatrixUserMetadata(matrixUserId, { role: role || undefined, status: status || undefined })
+-  }
+-
++  // 激活/角色与 profile 授权必须同一事务，任一步失败不得留下部分完成状态。
+   if (profiles !== undefined) {
+-    replaceUserProfiles(hermesUser.id, profiles, profiles[0] || null)
++    updateMatrixUserAccess(matrixUserId, {
++      role: role || undefined,
++      status: status || undefined,
++      profiles,
++      defaultProfile: profiles[0] || null,
++    })
++  } else if (role !== undefined || status !== undefined) {
++    updateMatrixUserMetadata(matrixUserId, { role: role || undefined, status: status || undefined })
+   }
+ 
+   // Update Matrix display name if provided
 diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
-index 7abda63..10021b0 100644
+index 7abda63..a6f603b 100644
 --- a/packages/server/src/modules/studio/repositories/users-store.ts
 +++ b/packages/server/src/modules/studio/repositories/users-store.ts
 @@ -308,6 +308,7 @@ export function createFromMatrix(data: {
@@ -174,6 +206,97 @@ index 7abda63..10021b0 100644
  }
  
  export function updateUser(input: {
+@@ -385,30 +385,81 @@ export function deleteUser(userId: UserId): boolean {
+   }
+ }
+ 
++type UserDatabase = NonNullable<ReturnType<typeof getDb>>
++
++function replaceUserProfilesWithDb(
++  db: UserDatabase,
++  id: number,
++  profiles: string[],
++  defaultProfile: string | null | undefined,
++  now: number,
++): void {
++  const uniqueProfiles = [...new Set(profiles.map(profile => profile.trim()).filter(Boolean))]
++  const defaultName = defaultProfile && uniqueProfiles.includes(defaultProfile) ? defaultProfile : uniqueProfiles[0] || null
++  db.prepare(`DELETE FROM ${USER_PROFILES_TABLE} WHERE user_id = ?`).run(id)
++  const stmt = db.prepare(
++    `INSERT INTO ${USER_PROFILES_TABLE} (user_id, profile_name, is_default, created_at) VALUES (?, ?, ?, ?)`
++  )
++  uniqueProfiles.forEach(profile => {
++    stmt.run(id, profile, profile === defaultName ? 1 : 0, now)
++  })
++}
++
+ export function replaceUserProfiles(userId: UserId, profiles: string[], defaultProfile?: string | null): void {
+   const db = getDb()
+   if (!db) return
+   const id = normalizeUserId(userId)
+   if (!id) return
+ 
+-  const uniqueProfiles = [...new Set(profiles.map(profile => profile.trim()).filter(Boolean))]
+-  const defaultName = defaultProfile && uniqueProfiles.includes(defaultProfile) ? defaultProfile : uniqueProfiles[0] || null
++  db.exec('BEGIN')
++  try {
++    replaceUserProfilesWithDb(db, id, profiles, defaultProfile, Date.now())
++    db.exec('COMMIT')
++  } catch (err) {
++    db.exec('ROLLBACK')
++    throw err
++  }
++}
++
++export function updateMatrixUserAccess(
++  matrixUserId: string,
++  data: {
++    role?: UserRole
++    status?: UserStatus
++    profiles: string[]
++    defaultProfile?: string | null
++  },
++): UserRecord | null {
++  const db = getDb()
++  if (!db) return null
++  const current = findByMatrixUserId(matrixUserId)
++  if (!current) return null
++  const sets: string[] = []
++  const values: (string | number)[] = []
++  if (data.role !== undefined) {
++    sets.push('role = ?')
++    values.push(data.role)
++  }
++  if (data.status !== undefined) {
++    sets.push('status = ?')
++    values.push(data.status)
++  }
+   const now = Date.now()
+ 
+   db.exec('BEGIN')
+   try {
+-    db.prepare(`DELETE FROM ${USER_PROFILES_TABLE} WHERE user_id = ?`).run(id)
+-    const stmt = db.prepare(
+-      `INSERT INTO ${USER_PROFILES_TABLE} (user_id, profile_name, is_default, created_at) VALUES (?, ?, ?, ?)`
+-    )
+-    uniqueProfiles.forEach(profile => {
+-      stmt.run(id, profile, profile === defaultName ? 1 : 0, now)
+-    })
++    if (sets.length > 0) {
++      sets.push('updated_at = ?')
++      values.push(now, matrixUserId)
++      db.prepare(`UPDATE ${USERS_TABLE} SET ${sets.join(', ')} WHERE matrix_user_id = ?`).run(...values)
++    }
++    replaceUserProfilesWithDb(db, current.id, data.profiles, data.defaultProfile, now)
+     db.exec('COMMIT')
+   } catch (err) {
+     db.exec('ROLLBACK')
+     throw err
+   }
++  return findByMatrixUserId(matrixUserId)
+ }
+ 
+ export function createSuperAdmin(username: string, password: string): UserRecord | null {
 diff --git a/packages/server/src/modules/studio/middleware/auth.ts b/packages/server/src/modules/studio/middleware/auth.ts
 index b5254ae..24cb6d5 100644
 --- a/packages/server/src/modules/studio/middleware/auth.ts

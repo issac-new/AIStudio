@@ -57,6 +57,7 @@ export interface MatrixIdentityDeps {
     deviceId?: string
   }): void
   issueUserJwt(user: MatrixAccount): Promise<string>
+  countActiveSuperAdmins(): number
 }
 
 export type MatrixProvisioningResult =
@@ -66,6 +67,7 @@ export type MatrixProvisioningResult =
       status: MatrixAccountStatus
       code: 'ACCOUNT_PENDING_ACTIVATION' | 'PROFILE_GRANT_REQUIRED'
       user: MatrixAccount
+      guidance?: string
     }
   | { kind: 'conflict'; code: string; user: MatrixAccount }
 
@@ -73,6 +75,12 @@ function uniqueUsername(localpart: string, issuerOrigin: string, matrixUserId: s
   const safeLocalpart = localpart.replace(/[^A-Za-z0-9._=-]/g, '_').slice(0, 48) || 'matrix'
   const digest = createHash('sha256').update(`${issuerOrigin}\n${matrixUserId}`).digest('hex').slice(0, 12)
   return `${safeLocalpart}-${digest}`
+}
+
+function breakGlassGuidance(deps: MatrixIdentityDeps): string | undefined {
+  return deps.countActiveSuperAdmins() === 0
+    ? 'Create a super administrator with: hermes-web-ui reset-default-login'
+    : undefined
 }
 
 /**
@@ -116,10 +124,22 @@ export async function provisionMatrixIdentity(
   }
 
   if (user.status !== 'active') {
-    return { kind: 'pending', status: user.status, code: 'ACCOUNT_PENDING_ACTIVATION', user }
+    return {
+      kind: 'pending',
+      status: user.status,
+      code: 'ACCOUNT_PENDING_ACTIVATION',
+      user,
+      guidance: breakGlassGuidance(deps),
+    }
   }
   if (user.role !== 'super_admin' && deps.listUserProfiles(user.id).length === 0) {
-    return { kind: 'pending', status: user.status, code: 'PROFILE_GRANT_REQUIRED', user }
+    return {
+      kind: 'pending',
+      status: user.status,
+      code: 'PROFILE_GRANT_REQUIRED',
+      user,
+      guidance: breakGlassGuidance(deps),
+    }
   }
 
   deps.syncMatrixMetadata(user.id, {

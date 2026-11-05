@@ -30,6 +30,7 @@ function makeDeps() {
     syncMatrixMetadata: vi.fn(),
     saveMatrixSession: vi.fn(),
     issueUserJwt: vi.fn(async () => 'jwt-app-token'),
+    countActiveSuperAdmins: vi.fn(() => 1),
   }
 }
 
@@ -53,6 +54,27 @@ describe('Matrix 零权限供应', () => {
       role: 'admin',
       status: 'disabled',
     }))
+    expect(deps.issueUserJwt).not.toHaveBeenCalled()
+    expect(deps.saveMatrixSession).not.toHaveBeenCalled()
+    expect(deps.replaceUserProfiles).not.toHaveBeenCalled()
+    expect(deps.syncMatrixMetadata).not.toHaveBeenCalled()
+  })
+
+  it('零 super_admin 时返回既有 CLI 指引且不签发任何会话', async () => {
+    const deps = makeDeps()
+    deps.findByMatrixUserId.mockReturnValue(null)
+    deps.createFromMatrix.mockReturnValue(matrixUser({ status: 'disabled' }))
+    deps.countActiveSuperAdmins.mockReturnValue(0)
+
+    const result = await provisionMatrixIdentity(validPresentation, deps)
+
+    expect(result).toMatchObject({
+      kind: 'pending',
+      status: 'disabled',
+      code: 'ACCOUNT_PENDING_ACTIVATION',
+      guidance: expect.stringContaining('hermes-web-ui reset-default-login'),
+    })
+    expect(result).not.toHaveProperty('token')
     expect(deps.issueUserJwt).not.toHaveBeenCalled()
     expect(deps.saveMatrixSession).not.toHaveBeenCalled()
     expect(deps.replaceUserProfiles).not.toHaveBeenCalled()
@@ -197,7 +219,7 @@ describe('Matrix 零权限供应', () => {
 const VENDOR_STUDIO = '../../../../../vendor/hermes-studio/packages/server/src/modules/studio'
 const DATABASE_MODULE = `${VENDOR_STUDIO}/infrastructure/database/index`
 const PROFILE_CONFIG_MODULE = `${VENDOR_STUDIO}/public/profile-config`
-let vendorDb: { close(): void } | null = null
+let vendorDb: { close(): void; exec(sql: string): void } | null = null
 
 async function initVendorAuth() {
   vi.resetModules()
@@ -214,7 +236,7 @@ async function initVendorAuth() {
   schemas.initAllHermesTables()
   const users = await import(`${VENDOR_STUDIO}/repositories/users-store`)
   const auth = await import(`${VENDOR_STUDIO}/middleware/auth`)
-  return { schemas, users, auth }
+  return { db: vendorDb, schemas, users, auth }
 }
 
 function jwtContext(token: string) {
@@ -274,6 +296,47 @@ describe('vendor Matrix 存储与统一认证', () => {
 
     expect(user).toMatchObject({ status: 'active' })
     expect(users.listUserProfiles(user!.id)).toEqual([])
+  })
+
+  it('激活与 profile 授权写失败时整体回滚，并可在修复后重试', async () => {
+    const { db, schemas, users } = await initVendorAuth()
+    const user = users.createFromMatrix({
+      matrixUserId: validPresentation.matrixUserId,
+      username: 'alice-transaction',
+      displayName: 'Alice',
+      avatarUrl: '',
+      homeserverUrl: validPresentation.homeserverUrl,
+      role: 'admin',
+      status: 'disabled',
+    })!
+    users.replaceUserProfiles(user.id, ['alice'], 'alice')
+    db!.exec(`
+      CREATE TRIGGER reject_profile_grant
+      BEFORE INSERT ON ${schemas.USER_PROFILES_TABLE}
+      WHEN NEW.profile_name = 'forbidden'
+      BEGIN SELECT RAISE(ABORT, 'forced profile failure'); END;
+    `)
+    const controller = await import(`${VENDOR_STUDIO}/controllers/auth`)
+    const ctx = {
+      params: { id: encodeURIComponent(validPresentation.matrixUserId) },
+      request: { body: { status: 'active', profiles: ['forbidden'] } },
+      state: { user: { id: 999, role: 'super_admin' } },
+      status: 200,
+      body: null,
+    } as any
+
+    await expect(controller.updateMatrixUser(ctx)).rejects.toThrow('forced profile failure')
+
+    expect(users.findByMatrixUserId(validPresentation.matrixUserId)).toMatchObject({ status: 'disabled' })
+    expect(users.listUserProfiles(user.id).map((profile: { profile_name: string }) => profile.profile_name)).toEqual(['alice'])
+
+    db!.exec('DROP TRIGGER reject_profile_grant')
+    ctx.request.body = { status: 'active', profiles: ['alice'] }
+    await controller.updateMatrixUser(ctx)
+
+    expect(ctx.status).toBe(200)
+    expect(users.findByMatrixUserId(validPresentation.matrixUserId)).toMatchObject({ status: 'active' })
+    expect(users.listUserProfiles(user.id).map((profile: { profile_name: string }) => profile.profile_name)).toEqual(['alice'])
   })
 
   it('统一 HTTP 认证拒绝普通 admin 的旧空授权 JWT', async () => {

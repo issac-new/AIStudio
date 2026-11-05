@@ -1188,4 +1188,5 @@
 # Matrix 新身份 disabled＋零 profiles＋不签 JWT/不存 session；同 MXID 跨 origin 409；
 # 统一认证拒绝普通 admin 空授权，super_admin 豁免。原拟 751 已被组织治理挂载占用，让号 752。
 # 同时补齐 server tsconfig rootDirs，使 src/custom 链接内的共享 custom/platform 契约可类型解析。
+# 审查修复：激活/角色与 profile 授权以单 SQLite 事务组合写；零 super_admin 返回 reset-default-login 指引。
 752-platform-matrix-zero-provisioning.patch

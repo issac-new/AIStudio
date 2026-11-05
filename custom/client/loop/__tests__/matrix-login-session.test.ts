@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   syncMatrixMetadata: vi.fn(),
   listUserProfiles: vi.fn(() => []),
   replaceUserProfiles: vi.fn(),
+  countActiveSuperAdmins: vi.fn(() => 1),
+  updateMatrixUserAccess: vi.fn(),
 }))
 
 vi.mock('../../../server/matrix/session-store', () => ({ saveMatrixSession: mocks.saveMatrixSession }))
@@ -61,7 +63,7 @@ vi.mock(`${UPSTREAM}/public/users`, () => ({
   DEFAULT_USERNAME: 'admin',
   DEFAULT_PASSWORD: '123456',
   bootstrapDefaultSuperAdmin: vi.fn(),
-  countActiveSuperAdmins: vi.fn(() => 1),
+  countActiveSuperAdmins: mocks.countActiveSuperAdmins,
   countUsers: vi.fn(() => 1),
   createFromMatrix: mocks.createFromMatrix,
   createUser: vi.fn(),
@@ -75,6 +77,7 @@ vi.mock(`${UPSTREAM}/public/users`, () => ({
   replaceUserProfiles: mocks.replaceUserProfiles,
   setUserAvatar: vi.fn(),
   syncMatrixMetadata: mocks.syncMatrixMetadata,
+  updateMatrixUserAccess: mocks.updateMatrixUserAccess,
   updateMatrixUserMetadata: vi.fn(),
   updateUser: vi.fn(),
   updateUsername: vi.fn(),
@@ -116,6 +119,7 @@ beforeEach(() => {
   mocks.issueUserJwt.mockResolvedValue('jwt-app-token')
   mocks.listUserProfiles.mockReturnValue([])
   mocks.saveMatrixSession.mockImplementation(() => {})
+  mocks.countActiveSuperAdmins.mockReturnValue(1)
 })
 
 const LOGIN_BODY = {
@@ -199,6 +203,25 @@ describe('matrixLogin 零权限供应与来源绑定', () => {
       status: 'disabled',
     }))
     expect(mocks.replaceUserProfiles).not.toHaveBeenCalled()
+    expect(mocks.saveMatrixSession).not.toHaveBeenCalled()
+    expect(mocks.issueUserJwt).not.toHaveBeenCalled()
+  })
+
+  it('零 super_admin 时 pending 返回既有 CLI break-glass 指引', async () => {
+    const pending = { ...USER, role: 'admin', status: 'disabled' }
+    mocks.findByMatrixUserId.mockReturnValueOnce(null).mockReturnValue(pending)
+    mocks.createFromMatrix.mockReturnValue(pending)
+    mocks.countActiveSuperAdmins.mockReturnValue(0)
+    const ctx = makeCtx(LOGIN_BODY)
+
+    await matrixLogin(ctx as never)
+
+    expect(ctx.status).toBe(403)
+    expect(ctx.body).toMatchObject({
+      code: 'ACCOUNT_PENDING_ACTIVATION',
+      error: expect.stringContaining('hermes-web-ui reset-default-login'),
+    })
+    expect(ctx.body).not.toHaveProperty('token')
     expect(mocks.saveMatrixSession).not.toHaveBeenCalled()
     expect(mocks.issueUserJwt).not.toHaveBeenCalled()
   })
