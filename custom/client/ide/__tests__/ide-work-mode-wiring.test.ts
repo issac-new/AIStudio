@@ -8,6 +8,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const read = (rel: string): string => readFileSync(resolve(__dirname, '..', rel), 'utf8')
+// 2026-11-05 第六批拆分：逻辑移入同名 composable；源码级守门取 SFC+伴侣并集，防止搬家即失守。
+const readWired = (rel: string, companion: string): string => read(rel) + '\n' + read(companion)
 
 describe('界面模式（编程/工作）接线', () => {
   it('侧栏辅助面板消费 interfaceModeEffects，隐藏终端/审查并在模式切换时回落', () => {
@@ -44,7 +46,7 @@ describe('界面模式（编程/工作）接线', () => {
   })
 
   it('聊天列按界面模式加 is-ide-work-mode 类（工具卡折叠/代码换行的 CSS 锚）', () => {
-    const src = read('views/IdeChatPane.vue')
+    const src = readWired('views/IdeChatPane.vue', 'views/useIdeChatPane.ts')
     expect(src).toContain("'is-ide-work-mode': Boolean(ide.isWorkMode)")
     expect(src).toContain('.ide-chat.is-ide-work-mode :deep(.tool-details)')
     expect(src).toContain('white-space: pre-wrap')
@@ -56,7 +58,7 @@ describe('界面模式（编程/工作）接线', () => {
 
 describe('任务模式（编程/工作）接线', () => {
   it('侧栏新建任务走 buildNewTaskOptions（不再手写 codingAgent 配方）', () => {
-    const src = read('views/IdeTaskSidebar.vue')
+    const src = readWired('views/IdeTaskSidebar.vue', 'views/useTaskSidebar.ts')
     expect(src).toContain("import { buildNewTaskOptions, sessionTaskMode } from '../utils/task-mode'")
     expect(src).toContain('chat.newChat(buildNewTaskOptions({')
     expect(src).toContain("data-testid=\"ide-task-mode-coding\"")
@@ -65,7 +67,7 @@ describe('任务模式（编程/工作）接线', () => {
   })
 
   it('聊天列 ensureSession 保留工作会话并按任务模式创建', () => {
-    const src = read('views/IdeChatPane.vue')
+    const src = readWired('views/IdeChatPane.vue', 'views/useIdeChatPane.ts')
     expect(src).toContain("from '../utils/task-mode'")
     expect(src).toContain('buildNewTaskOptions')
     expect(src).toContain('explicitTaskMode')
@@ -75,7 +77,7 @@ describe('任务模式（编程/工作）接线', () => {
   })
 
   it('工作会话空态四类起步按钮点击即真实发送', () => {
-    const src = read('views/IdeChatPane.vue')
+    const src = readWired('views/IdeChatPane.vue', 'views/useIdeChatPane.ts')
     expect(src).toContain('data-testid="ide-work-empty"')
     expect(src).toContain('data-testid="`ide-work-starter-${s.key}`"')
     expect(src).toContain('chatStore.sendMessage(prompt)')

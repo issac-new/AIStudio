@@ -34,7 +34,10 @@ import type { FleetSession } from '@/custom/shared/store/../adapters/fleet-adapt
 import * as teamsApi from '@/custom/shared/store/../adapters/teams-adapter'
 import type { TeamRecord } from '@/custom/shared/store/../adapters/teams-adapter'
 import * as inboxAdapter from '@/custom/shared/store/../adapters/inbox-adapter'
+import { createCockpitCommandSlice } from './cockpit-command-slice'
 import type { InboxItem } from '@/custom/shared/store/../adapters/inbox-adapter'
+import { filterCockpitHistory, defaultDateRange } from './cockpit-history'
+import type { HistoryFilters as HistoryFiltersType } from './cockpit-history'
 
 // 重新导出类型（供组件继续从 store 导入）
 export type CockpitTask = taskAdapter.CockpitTask
@@ -47,13 +50,7 @@ export type GraphRelation = topologyAdapter.GraphRelation
 export type GraphNodeRelation = topologyAdapter.GraphNodeRelation
 export type CockpitEvent = eventAdapter.CockpitEvent
 export type HistoryItem = historyAdapter.HistoryItem
-export interface HistoryFilters {
-  search: string
-  timeRange: 'today' | 'week' | 'month' | null
-  categories: ('event' | 'comment')[]
-  actions: string[]
-  statuses: ('active' | 'done' | 'archived')[]
-}
+export type { HistoryFilters } from './cockpit-history'
 export type WorkspaceMode = 'work' | 'term' | 'workspace' | 'chat' | 'fleet'
 export type ChannelKind = 'matrix' | 'chat' | 'group' | 'plain'
 export type WorkDecision = kv.WorkDecision
@@ -186,7 +183,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
     { kind: 'warn', text: '! 输入指令开始编程，如「打开 refresh.ts 看并发问题」' },
   ])
   const historyOpen = ref(false)
-  const historyFilters = ref<HistoryFilters>({
+  const historyFilters = ref<HistoryFiltersType>({
     search: '',
     timeRange: null,
     categories: ['event', 'comment'],
@@ -433,226 +430,42 @@ export const useCockpitStore = defineStore('cockpit', () => {
 
   const notifyCount = computed(() => notifyItems.value.reduce((n, i) => n + i.count, 0))
 
-  // ── 2.13 指挥中心：舰队（跨 profile 会话实时快照）──
-  const fleetSessions = ref<FleetSession[]>([])
-  const fleetConnected = ref(false)
-  let _fleetStream: fleetAdapter.FleetStreamHandle | null = null
-  let _fleetFp = ''
-
-  /** 快照指纹守卫：会话级关键字段（状态/审批/澄清/队列）无变化时跳过赋值——
-   *  服务端 1.5s tick 的快照总是新数组新身份，直接赋值会令 waitItems/online/
-   *  inboxItems 等全量重算重渲染（身份抖动）。子代理明细不在 /app 消费面，不进指纹。 */
-  function applyFleetSnapshot(sessions: FleetSession[]) {
-    const fp = sessions
-      .map(s => [s.id, s.status, s.isAborting, s.queueLength,
-        s.approvals.map(a => a.approval_id).join(','), s.clarifies.map(c => c.clarify_id).join(',')]
-        .join('|'))
-      .join(';')
-    if (fp === _fleetFp) return
-    _fleetFp = fp
-    fleetSessions.value = sessions
-  }
-
-  function initFleetStream() {
-    if (_fleetStream) return
-    _fleetStream = fleetAdapter.connectFleetStream({
-      onSnapshot: snapshot => { applyFleetSnapshot(snapshot.sessions) },
-      onStatus: connected => { fleetConnected.value = connected },
-    })
-    // v12 性能收敛（2026-09-21）：不再开第二条看板聚合 overview WS——该事件流
-    // 由 workspace store 单点持有（useSharedArm 武装），双连接=每个 board 事件双份
-    // 强制刷新 + 双份聚合请求。本 store 的 cockpitTasks 经 tasks computed 读 workspace。
-  }
-
-  function stopFleetStream() {
-    _fleetStream?.close()
-    _fleetStream = null
-    fleetConnected.value = false
-  }
-
-  // ── MCP 连接健康（0.21.1 profile 级健康；60s 轮询，降级项进收件箱）──
-  const mcpHealth = ref<McpHealthSource[]>([])
-  let _mcpHealthTimer: ReturnType<typeof setInterval> | undefined
-
-  async function refreshMcpHealth() {
-    try {
-      const resp = await fetchMcpServers()
-      if (!resp || !Array.isArray(resp.servers)) return
-      const checkedAt = Date.now()
-      if (!resp.ok && resp.error) {
-        // 运行时侧 MCP 模块不可用等整体故障 → 单条合成信号
-        mcpHealth.value = [{ name: 'runtime', connected: false, error: resp.error, checkedAt }]
-        return
-      }
-      mcpHealth.value = resp.servers.map(server => ({
-        name: server.name,
-        connected: server.connected === true,
-        error: server.error ?? null,
-        checkedAt,
-      }))
-    } catch {
-      // 网络失败/接口不可达：保持上次状态，不产生误报
-    }
-  }
-
-  function initMcpHealthPoll() {
-    if (_mcpHealthTimer) return
-    void refreshMcpHealth()
-    _mcpHealthTimer = setInterval(() => { void refreshMcpHealth() }, 60_000)
-  }
-
-  function stopMcpHealthPoll() {
-    if (_mcpHealthTimer) {
-      clearInterval(_mcpHealthTimer)
-      _mcpHealthTimer = undefined
-    }
-    mcpHealth.value = []
-  }
-
-  const fleetSessionsFiltered = computed(() => {
-    const profiles = teamProfileFilter.value
-    if (!profiles) return fleetSessions.value
-    const allow = new Set(profiles)
-    return fleetSessions.value.filter(s => allow.has(s.profile || 'default'))
+  // ── 指挥中心切片（拆分：cockpit-command-slice.ts）──
+  const {
+    fleetSessions,
+    fleetConnected,
+    applyFleetSnapshot,
+    initFleetStream,
+    stopFleetStream,
+    mcpHealth,
+    refreshMcpHealth,
+    initMcpHealthPoll,
+    stopMcpHealthPoll,
+    fleetSessionsFiltered,
+    respondFleetApproval,
+    respondFleetClarify,
+    teams,
+    activeTeamId,
+    activeTeam,
+    teamProfileFilter,
+    _teamBoardSet,
+    loadTeams,
+    setActiveTeam,
+    saveTeam,
+    deleteTeam,
+    inboxItems,
+    inboxCount,
+    channels,
+    channelsForSelectedTask,
+    activeChannel,
+  } = createCockpitCommandSlice({
+    getAttention: () => attention.value,
+    getChatUnreadItems: () => chatUnreadItems.value,
+    getNotifyItems: () => notifyItems.value,
+    getSelectedTask: () => selectedTask.value,
+    activeChannelId,
   })
 
-  /** 就地审批（跨 profile，2.13）：成功后本地摘除该审批，等下一拍快照对齐 */
-  async function respondFleetApproval(sessionId: string, approvalId: string, choice: 'once' | 'session' | 'always' | 'deny') {
-    try {
-      const result = await teamsApi.respondFleetApproval(sessionId, approvalId, choice)
-      if (result.resolved) {
-        fleetSessions.value = fleetSessions.value.map(s => s.id === sessionId
-          ? { ...s, approvals: s.approvals.filter(a => a.approval_id !== approvalId) }
-          : s)
-      }
-      return result
-    } catch (err) {
-      return { resolved: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  async function respondFleetClarify(sessionId: string, clarifyId: string, answer: string) {
-    try {
-      const result = await teamsApi.respondFleetClarify(sessionId, clarifyId, answer)
-      if (result.resolved) {
-        fleetSessions.value = fleetSessions.value.map(s => s.id === sessionId
-          ? { ...s, clarifies: s.clarifies.filter(c => c.clarify_id !== clarifyId) }
-          : s)
-      }
-      return result
-    } catch (err) {
-      return { resolved: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  // ── 2.13 指挥中心：团队注册表 ──
-  const teams = ref<TeamRecord[]>([])
-  const activeTeamId = ref<string | null>(kv.getActiveTeam())
-  const activeTeam = computed(() => teams.value.find(t => t.id === activeTeamId.value) || null)
-  const teamProfileFilter = computed<string[] | null>(() => {
-    const team = activeTeam.value
-    if (!team || !team.profiles.length) return null
-    return team.profiles
-  })
-  const _teamBoardSet = computed<Set<string> | null>(() => {
-    const team = activeTeam.value
-    if (!team || !team.boards.length) return null
-    return new Set(team.boards)
-  })
-
-  async function loadTeams() {
-    try {
-      teams.value = await teamsApi.listTeams()
-    } catch {
-      teams.value = []
-    }
-  }
-
-  function setActiveTeam(id: string | null) {
-    activeTeamId.value = id
-    kv.setActiveTeam(id)
-  }
-
-  async function saveTeam(input: { id: string | null; name: string; description?: string; color?: string; profiles?: string[]; boards?: string[] }) {
-    const { id, ...body } = input
-    const team = id
-      ? await teamsApi.updateTeam(id, body)
-      : await teamsApi.createTeam(body as teamsApi.TeamInput)
-    await loadTeams()
-    if (activeTeamId.value === team.id) setActiveTeam(team.id) // 触发过滤重算
-    return team
-  }
-
-  async function deleteTeam(id: string) {
-    await teamsApi.removeTeam(id)
-    if (activeTeamId.value === id) setActiveTeam(null)
-    await loadTeams()
-  }
-
-  // ── 2.13 指挥中心：统一注意力收件箱 ──
-  const inboxItems = computed<InboxItem[]>(() => inboxAdapter.buildInboxItems({
-    attention: attention.value,
-    fleet: fleetSessionsFiltered.value,
-    chatUnreads: chatUnreadItems.value,
-    notifyItems: notifyItems.value,
-    mcpHealth: mcpHealth.value,
-  }))
-  const inboxCount = computed(() => inboxItems.value.length)
-
-  // ── 频道（按 kanban tenant 解析规则展示 room/session，点击跳转 matrix 房间）──
-  const channels = computed<CollabChannel[]>(() => {
-    const t = selectedTask.value
-    if (!t?.tenant) return []
-
-    // Legacy channel formats used by cockpit tests and older kanban tasks:
-    // matrix:<room_id_with_colons>:<label>
-    // session:<session_id>@<agent>:<label>
-    // group:<room_id_with_colons>:<label>
-    if (t.tenant.startsWith('matrix:')) {
-      const parts = t.tenant.split(':')
-      if (parts.length >= 4) {
-        const label = parts[parts.length - 1] || t.tenant
-        const roomId = parts.slice(1, -1).join(':')
-        return [{
-          id: `ch-${t.id}`,
-          taskId: t.id,
-          kind: 'matrix',
-          label,
-          // 2026-09-18 统一导航 Task 3：matrixChat 家族随 cockpit 退役 → 沟通场景房间
-          routeTarget: { name: 'ia2.commsRoom', params: { roomId } },
-        }]
-      }
-      return []
-    }
-    if (t.tenant.startsWith('session:')) {
-      const parts = t.tenant.split(':')
-      return [{ id: `ch-${t.id}`, taskId: t.id, kind: 'chat', label: parts.slice(2).join(':') || parts[1] || t.tenant }]
-    }
-    if (t.tenant.startsWith('group:')) {
-      const parts = t.tenant.split(':')
-      return [{ id: `ch-${t.id}`, taskId: t.id, kind: 'group', label: parts[parts.length - 1] || t.tenant }]
-    }
-
-    const parsed = parseTenant(t.tenant)
-    // 解析失败或普通 tenant 不展示为协作频道
-    if (parsed.isLegacy || !parsed.roomId) return []
-
-    // Matrix 聊天室（按 roomId + sessionId 拼装跳转）
-    const label = parsed.topic
-      ? `${parsed.groupChat}:${parsed.topic} @${parsed.userId}`
-      : `${parsed.groupChat} @${parsed.userId}`
-    return [{
-      id: `ch-${t.id}`, taskId: t.id, kind: 'matrix',
-      label,
-      routeTarget: {
-        name: 'ia2.commsRoom',
-        params: { roomId: parsed.roomId },
-        query: parsed.sessionId ? { session: parsed.sessionId } : {},
-      },
-    }]
-  })
-  const channelsForSelectedTask = computed(() => channels.value)
-  const activeChannel = computed(() => channels.value.find(c => c.id === activeChannelId.value) ?? null)
 
   // ── 文件树 ──
   const filesForSelectedTask = computed(() =>
@@ -695,52 +508,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
   })
 
   // ── 历史 ──
-  const filteredHistory = computed(() =>
-    history.value.filter(h => {
-      const f = historyFilters.value
-
-      // 搜索：标题模糊匹配
-      const q = f.search.trim().toLowerCase()
-      const searchOk = !q || h.title.toLowerCase().includes(q)
-
-      // 时间片（互斥三选一，null=不限）
-      let timeOk = true
-      if (f.timeRange) {
-        const now = new Date()
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-        if (f.timeRange === 'today') {
-          timeOk = h.ts >= todayStart
-        } else if (f.timeRange === 'week') {
-          const dow = now.getDay()
-          const mondayOffset = dow === 0 ? -6 : 1 - dow
-          const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset).getTime()
-          timeOk = h.ts >= weekStart
-        } else {
-          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
-          timeOk = h.ts >= monthStart
-        }
-      }
-
-      // 类别（多选）
-      const catOk = f.categories.length === 0 || f.categories.includes(h.source)
-
-      // 动作（多选）
-      const actionOk = f.actions.length === 0 || f.actions.includes(h.action)
-
-      // 状态（多选，从本地 tasks 查找任务当前状态）
-      let statusOk = true
-      if (f.statuses.length > 0 && f.statuses.length < 3) {
-        const task = tasks.value.find(t => t.id === h.taskId)
-        const isDone = task?.status === 'done' || task?.status === 'archived'
-        if (f.statuses.includes('active') && !isDone && !h.archived) statusOk = true
-        else if (f.statuses.includes('done') && isDone && !h.archived) statusOk = true
-        else if (f.statuses.includes('archived') && h.archived) statusOk = true
-        else statusOk = false
-      }
-
-      return searchOk && timeOk && catOk && actionOk && statusOk
-    }),
-  )
+  const filteredHistory = computed(() => filterCockpitHistory(history.value, historyFilters.value, tasks.value))
 
 	  // ── bootstrap ──
 	  // 跨 board 聚合：优先服务端聚合端点（1 请求全 board，不触碰 kanban store——
@@ -810,13 +578,7 @@ export const useCockpitStore = defineStore('cockpit', () => {
 	  }
 
   // 默认日期范围：近 2 周（需求 #2）
-  function defaultDateRange(): { from: string; to: string } {
-    const to = new Date()
-    const from = new Date()
-    from.setDate(from.getDate() - 14)
-    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    return { from: fmt(from), to: fmt(to) }
-  }
+
 
 	  // bootstrap 幂等守卫（2026-09-18 统一导航 Task 2）：IaShell onMounted 调
 	  // bootstrap，壳内并发/重复挂载不得重复武装——loadAllBoards/matrixClient.initClient/

@@ -11,6 +11,8 @@ import { describe, expect, it } from 'vitest'
 
 const paneSrc = readFileSync(resolve(__dirname, '../views/IdeChatPane.vue'), 'utf8')
 const permSrc = readFileSync(resolve(__dirname, '../components/IdePermissionSwitcher.vue'), 'utf8')
+// 2026-11-05 第六批拆分：脚本逻辑移入 useIdeChatPane.ts；点外关闭断言取 SFC+伴侣并集。
+const paneAll = paneSrc + '\n' + readFileSync(resolve(__dirname, '../views/useIdeChatPane.ts'), 'utf8')
 
 describe('composer 弹层抬层守门（is-open z≥110）', () => {
   it('IdeChatPane：思考/⚙ 两锚 is-open 抬层 110', () => {
@@ -51,11 +53,11 @@ describe('composer 弹层抬层守门（is-open z≥110）', () => {
 
 describe('composer 弹层点外关闭/互斥守门（文档级 pointerdown）', () => {
   it('IdeChatPane：三弹层（思考/⚙/模型）共享 handler 挂接 document pointerdown', () => {
-    expect(paneSrc).toContain('function onComposerMenuPointerDown')
-    expect(paneSrc).toMatch(/addEventListener\('pointerdown', onComposerMenuPointerDown\)/)
-    expect(paneSrc).toMatch(/removeEventListener\('pointerdown', onComposerMenuPointerDown\)/)
-    expect(paneSrc).toContain("'.ide-chat__model-anchor'")
-    expect(paneSrc).toMatch(/!within\[2\]\) modelPickerOpen\.value = false/)
+    expect(paneAll).toContain('function onComposerMenuPointerDown')
+    expect(paneAll).toMatch(/addEventListener\('pointerdown', onComposerMenuPointerDown\)/)
+    expect(paneAll).toMatch(/removeEventListener\('pointerdown', onComposerMenuPointerDown\)/)
+    expect(paneAll).toContain("'.ide-chat__model-anchor'")
+    expect(paneAll).toMatch(/!within\[2\]\) modelPickerOpen\.value = false/)
   })
 
   it('IdePermissionSwitcher：⛨ 面板 handler 挂接 document pointerdown', () => {

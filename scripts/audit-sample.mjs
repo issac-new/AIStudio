@@ -7,7 +7,7 @@
 //
 // 用法：
 //   node scripts/audit-sample.mjs [--seed <string>] [--count 5] [--json] [--record]
-// 退出码：0=抽样完成（发现项如实列出）；2=setup 错误。
+// 退出码：0=抽样完成（发现项如实列出）；2=参数错误；3=门池不可用/为空（setup 失败）。
 // 纪律：只读 state/runs/specs；不修改证据、不执行门。
 
 import { spawnSync } from 'node:child_process'
@@ -19,6 +19,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SPECS_DIR = 'docs/superpowers/specs'
 const RECEIPTS = '.swarm-yuan/spec-receipts.jsonl'
 const LEDGER = '.swarm-yuan/audit-samples.jsonl'
+const SECTION_BASELINE = '.swarm-yuan/spec-sections-baseline.txt'
 const CLI = 'custom/qgate/dist/cli.js'
 
 function hashSeed(s) {
@@ -74,6 +75,12 @@ function loadReceipts() {
   return covered
 }
 
+function loadSectionBaseline() {
+  const path = join(ROOT, SECTION_BASELINE)
+  if (!existsSync(path)) return new Set()
+  return new Set(readFileSync(path, 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#')))
+}
+
 function sampleGates(count) {
   const cli = join(ROOT, CLI)
   if (!existsSync(cli)) return { available: false, rows: [] }
@@ -90,6 +97,7 @@ function sampleGates(count) {
 function main(argv = process.argv.slice(2), out = process.stdout, err = process.stderr) {
   if (argv.includes('--help') || argv.includes('-h')) {
     out.write('usage: node scripts/audit-sample.mjs [--seed <string>] [--count 5] [--json] [--record]\n')
+    out.write('exit: 0=sample ok (findings listed); 2=bad args; 3=gate pool unavailable/empty\n')
     return 0
   }
   const get = (name, fallback) => {
@@ -107,11 +115,12 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
   const specs = readdirSync(join(ROOT, SPECS_DIR)).filter((f) => f.endsWith('.md')).sort()
   const specSample = sampleDeterministic(specs, count, `${seed}:specs`)
   const covered = loadReceipts()
+  const sectionExempt = loadSectionBaseline()
   const specRows = specSample.map((f) => {
     const rel = `${SPECS_DIR}/${f}`
     const text = readFileSync(join(ROOT, rel), 'utf8')
     const sections = checkSpecSections(text)
-    return { spec: rel, hasReceipt: covered.has(rel), sections }
+    return { spec: rel, hasReceipt: covered.has(rel), sections, sectionsExempt: sectionExempt.has(rel) }
   })
   const report = {
     generatedAt: new Date().toISOString(),
@@ -121,8 +130,9 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
     specs: specRows,
     findings: [
       ...(gateSample.available ? [] : ['qgate dist 缺失，门抽检不可用']),
+      ...(gateSample.available && gates.length === 0 ? ['门池为空：没有 health=ok 的门可抽（样本不能代表治理常态）'] : []),
       ...specRows.filter((s) => !s.hasReceipt).map((s) => `${s.spec}: 无内容收据`),
-      ...specRows.filter((s) => !s.sections.ok).map((s) => `${s.spec}: 缺段 ${s.sections.missing.join(',')}`),
+      ...specRows.filter((s) => !s.sections.ok && !s.sectionsExempt).map((s) => `${s.spec}: 缺段 ${s.sections.missing.join(',')}`),
     ],
   }
   if (argv.includes('--record')) appendFileSync(join(ROOT, LEDGER), JSON.stringify(report) + '\n')
@@ -130,9 +140,11 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
   else {
     out.write(`audit sample: seed=${seed} gates=${gates.length} specs=${specRows.length} findings=${report.findings.length}\n`)
     for (const g of gates) out.write(`  GATE ${g.gateId} verdict=${g.verdict} freshness=${g.freshness}\n`)
-    for (const s of specRows) out.write(`  SPEC ${s.spec} receipt=${s.hasReceipt} sections=${s.sections.ok ? 'ok' : s.sections.missing.join(',')}\n`)
+    for (const s of specRows) out.write(`  SPEC ${s.spec} receipt=${s.hasReceipt} sections=${s.sections.ok ? 'ok' : s.sections.missing.join(',')}${s.sectionsExempt && !s.sections.ok ? ' (baseline-exempt)' : ''}\n`)
     for (const f of report.findings) out.write(`  FINDING ${f}\n`)
   }
+  // 门池不可用/为空是 setup 失败，不能当作「抽样完成」；spec 发现项仍只列出不失败。
+  if (!gateSample.available || gates.length === 0) return 3
   return 0
 }
 

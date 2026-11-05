@@ -41,7 +41,7 @@
     "zcode:ensure": "node scripts/zcode-engine.mjs ensure",
     "zcode:serve": "node scripts/zcode-engine.mjs serve",
     "release:check": "node scripts/verify-release-manifest.mjs",
-    "release:preflight": "node custom/qgate/dist/cli.js run engineering.basic-check --trigger release --include-disabled && node scripts/qgate-health.mjs --scope release --require-fresh && node custom/qgate/dist/cli.js release-report && node scripts/release-evidence.mjs --write",
+    "release:preflight": "node custom/qgate/dist/cli.js run engineering.basic-check --trigger release --include-disabled && node scripts/qgate-health.mjs --scope release --require-fresh && node custom/qgate/dist/cli.js release-report && node scripts/audit-sample.mjs --record && node scripts/release-evidence.mjs --write",
     "release:packages": "npm run release:check && npm run release:preflight && node scripts/make-release-packages.mjs",
     "release:incremental": "npm run release:preflight && node scripts/make-incremental-package.mjs",
     "offline:package": "npm run release:preflight && node scripts/make-offline-package.mjs",

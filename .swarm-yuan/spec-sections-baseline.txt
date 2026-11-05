@@ -1,6 +1,6 @@
 # spec 四段机检存量基线（2026-10-30 HelixHarness 吸收轮建立）
 # 语义：此清单内的 spec 豁免「变更/决策记录/验证/设计文档影响」四段机检（存量债）。
-# 棘轮：只许减——条目达标后必须删除，禁止新增；custom/__tests__/spec-sections-ratchet.test.ts
+# 棘轮：只许减——条目达标后必须删除，禁止新增；custom/__tests__/l2-kit-parity.test.ts
 #       断言「基线内条目全部仍不达标」（防止基线变成永久豁免墙）与「新增条目为零」。
 docs/superpowers/specs/2026-06-18-kanban-advanced-features-design.md
 docs/superpowers/specs/2026-06-19-kanban-comment-bar-design.md

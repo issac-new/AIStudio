@@ -10,10 +10,10 @@
 
 | # | 文件 | 行数 | 现有测试 | 拆分目标 | 批次 | 状态 |
 |---|---|---:|---|---|---|---|
-| 1 | `custom/client/kanban/components/KanbanTaskDrawer.vue` | 2127 | 12 个直接用例，17 处整组件 mock | 抽屉分区块（头部/表单/房间动作/审批区） | 第三批 | 待办 |
-| 2 | `custom/client/ide/views/IdeChatPane.vue` | 1889 | 2 个直接挂载 + 布局测试 | 会话启动/输入区/浮窗宿主拆 composable + 子组件 | 第二批 | 待办 |
+| 1 | `custom/client/kanban/components/KanbanTaskDrawer.vue` | 2127 → 1495 | 12 个直接用例，17 处整组件 mock | 抽屉分区块（头部/表单/房间动作/审批区） | 第六批 | 已完成 |
+| 2 | `custom/client/ide/views/IdeChatPane.vue` | 1889 → 1275 | 2 个直接挂载 + 布局测试 | 会话启动/输入区/浮窗宿主拆 composable + 子组件 | 第六批 | 已完成 |
 | 3 | `custom/server/harness/workbench/service.ts` | 1856 → 1054 | 2 个直接 import + 18 个域内测试（workbench 全域 201/201 通过） | service-shared / auto-probe / experience 三模块 + 剩余 service.ts | 第二批 | 已完成 |
-| 4 | `custom/client/shared/store/cockpit.ts` | 1669 | 48 个直接用例 + 20+ mock | 按域拆 store 切片 | 第四批（爆炸半径大） | 待办 |
+| 4 | `custom/client/shared/store/cockpit.ts` | 1669 → 1432 | 48 个直接用例 + 20+ mock | 按域拆 store 切片 | 第六批（部分） | 进行中 |
 | 5 | `custom/server/harness/workbench/loop.ts` | 1515 → 7（wrapper） | 55 个直接用例（workbench 全域 201/201 通过） | loop-core / loop-config / loop-pareto / loop-report / loop-advice 五模块 + loop.ts 兼容出口 | 第三/四批 | 已完成 |
 | 6 | `custom/server/eval/controller.ts` | 1494 → 99 | 4 个 HTTP 测试 + 42 个域内测试（eval 全域 41 文件/397 用例通过） | 3 个 handler 模块（sets/runs/analysis），路由表留 controller | 第一批 | 已完成 |
 
@@ -25,11 +25,13 @@
 >
 > 第五批收口（2026-11-05）：外部 `custom/server/__tests__/simcenter-quality.test.ts` 从 controller 导入 `parseQualityMetric`；quality 路由模块内实现不变，controller 补重导出保持既有导入路径。
 >
-> 第三/四批结果（2026-11-05）：`loop.ts` 1515→7（兼容出口）＋`loop-core.ts` 484＋`loop-config.ts` 86＋`loop-pareto.ts` 107＋`loop-report.ts` 406＋`loop-advice.ts` 524；loop 55 用例、workbench 201/201 全过。`loop-advice.ts` 524 仍 >500，下一批可切进化报告。
-| 7 | `custom/client/matrix-chat/stores/matrix-room.ts` | 1372 | 28 个测试提及，仅 1 个真实 import | 事件/成员/时间线三切片 | 第三批 | 待办 |
+> 第六批结果（2026-11-05）：`HarnessImprovePanel.vue` 1300→784＋`harness-improve-panel.ts` 608；`IdeTaskSidebar.vue` 1321→824＋`useTaskSidebar.ts` 581；`matrix-room.ts` 1372→943＋`matrix-room-readers.ts` 496；`cockpit.ts` 1669→1432＋`cockpit-command-slice.ts` 251＋`cockpit-history.ts` 61（命令切片与历史筛选先落地，通知/搜索/历史动作三片待续）。ia2 21/21、ide 17/17、matrix-chat 78/78、cockpit 371/371 全过；`IdeChatPane.vue` 1889→1275＋`useIdeChatPane.ts` 746（ide 全域 127 文件/819 用例全过，源码级守门改取 SFC+伴侣并集；`KanbanTaskDrawer.vue` 2127→1495＋`useKanbanTaskDrawer.ts` 773，kanban 60/60＋跨域 116/116）。附带修一处既存漏导入：`HarnessImprovePanel` 的 `ConstraintCheckDto`。
+>
+> 第三/四批结果（2026-11-05）：`loop.ts` 1515→7（兼容出口）＋`loop-core.ts` 484＋`loop-config.ts` 86＋`loop-pareto.ts` 107＋`loop-report.ts` 406＋`loop-advice.ts` 524；loop 55 用例、workbench 201/201 全过。`loop-advice.ts` 524→83（barrel）＋leakage 82＋hypothesis 73＋tier 38＋evolution 262。
+| 7 | `custom/client/matrix-chat/stores/matrix-room.ts` | 1372 → 943 | 28 个测试提及，仅 1 个真实 import | 事件/成员/时间线三切片 | 第六批 | 已完成 |
 | 8 | `custom/server/simcenter/simcenter-controller.ts` | 1349 → 587 | 36 个直接用例 + 4 个域内测试（simcenter 全域 65/65 通过） | observer / uat-release / evidence-issues / settings-quality / frames 五路由模块 + shared + controller | 第五批 | 已完成 |
-| 9 | `custom/client/ide/views/IdeTaskSidebar.vue` | 1321 | 17 个直接用例 | 任务列表/详情/操作三条 | 第三批 | 待办 |
-| 10 | `custom/client/ia2/views/gov/HarnessImprovePanel.vue` | 1300 | 21 个单文件用例 | 面板/提案/证据三块 | 第三批 | 待办 |
+| 9 | `custom/client/ide/views/IdeTaskSidebar.vue` | 1321 → 824 | 17 个直接用例 | 任务列表/详情/操作三条 | 第六批 | 已完成 |
+| 10 | `custom/client/ia2/views/gov/HarnessImprovePanel.vue` | 1300 → 784 | 21 个单文件用例 | 面板/提案/证据三块 | 第六批 | 已完成 |
 | 11 | `custom/server/eval/routes/runs.ts`（首批产物） | 595 → 232 | eval 全域 41 文件/397 用例 | 232（runs）/389（flywheel）/98（verdicts） | 第二批 | 已完成 |
 
 拆分纪律：
