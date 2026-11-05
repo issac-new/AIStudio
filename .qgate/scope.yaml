@@ -332,4 +332,7 @@ paths:
   - docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md
   - .qgate/gates/governance.orgscale.yaml
   - .qgate/qgate.yaml
-
+  - custom/server/approval-inbox/pending-controller.ts
+  - custom/server/approval-inbox/__tests__/dual-sign-gate.test.ts
+  - custom/server/metricpolicy/__tests__/derive.test.ts
+  - docs/superpowers/specs/2026-11-05-org-governance-closeout.md

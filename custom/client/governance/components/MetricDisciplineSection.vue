@@ -15,7 +15,23 @@ const namespaces = ref<{ measure: number; settle: number }>({ measure: 0, settle
 const errorCount = ref(0)
 const decorativeCount = ref(0)
 const issuesByKey = ref<Record<string, MetricIssueDto[]>>({})
-const skillUsage = ref<{ available: boolean; coverage: number | null; declared: number; total: number; top: { skill: string; tasks: number }[]; gap?: string } | null>(null)
+const skillUsage = ref<{
+  available: boolean
+  coverage: number | null
+  declared: number
+  total: number
+  top: { skill: string; tasks: number }[]
+  invocations: {
+    available: boolean
+    calls: number
+    failed: number
+    failureRate: number | null
+    byTool: { tool: string; calls: number; failed: number }[]
+    perSkill: null
+    perSkillGap: string
+  }
+  gap?: string
+} | null>(null)
 const stages = ref<StageRatiosDto | null>(null)
 const stageKg = ref(true)
 const loading = ref(false)
@@ -115,6 +131,12 @@ onMounted(refresh)
           <span class="md__deco-key">{{ s.skill }}</span>
           <span class="md__muted">{{ s.tasks }} 个任务</span>
         </div>
+        <div v-if="skillUsage.invocations" class="md__stage">
+          <span>技能调用 {{ skillUsage.invocations.calls }} 次</span>
+          <span class="md__muted">失败率 {{ pctOrDash(skillUsage.invocations.failureRate) }}</span>
+          <span v-for="t in skillUsage.invocations.byTool.slice(0, 4)" :key="t.tool" class="md__muted">{{ t.tool }} {{ t.calls }}</span>
+        </div>
+        <div v-if="skillUsage.invocations?.perSkillGap" class="md__card-gap">{{ skillUsage.invocations.perSkillGap }}</div>
         <div v-if="skillUsage.gap" class="md__card-gap">{{ skillUsage.gap }}</div>
       </div>
     </div>

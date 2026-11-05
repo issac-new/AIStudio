@@ -597,3 +597,4 @@
 - [2026-11-05-org-governance-premise-log.md](../superpowers/specs/2026-11-05-org-governance-premise-log.md)
 - [2026-11-05-org-governance-metric-discipline.md](../superpowers/specs/2026-11-05-org-governance-metric-discipline.md)
 - [2026-11-05-org-governance-thin-items.md](../superpowers/specs/2026-11-05-org-governance-thin-items.md)
+- [2026-11-05-org-governance-closeout.md](../superpowers/specs/2026-11-05-org-governance-closeout.md)

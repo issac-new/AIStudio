@@ -293,6 +293,16 @@ export function fetchCoreMetrics(): Promise<{
     declared: number
     total: number
     top: { skill: string; tasks: number }[]
+    /** 技能类工具调用频次（审计面真数据；按技能名不可得） */
+    invocations: {
+      available: boolean
+      calls: number
+      failed: number
+      failureRate: number | null
+      byTool: { tool: string; calls: number; failed: number }[]
+      perSkill: null
+      perSkillGap: string
+    }
     gap?: string
   }
 }> {

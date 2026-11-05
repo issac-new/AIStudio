@@ -129,6 +129,54 @@ export function listDualSignGaps(limit = 200): DualSignGap[] {
   return rows.slice(-limit).reverse()
 }
 
+// ── 双签签署台账（2026-11-05 收口：从「只记缺口」到「记签署人」）──
+
+function signPath(): string {
+  return join(storeDir(), 'dual-sign-signatures.json')
+}
+
+export interface SignatureLedger {
+  [targetId: string]: { signers: string[]; updatedAt: number }
+}
+
+function loadSignatures(): SignatureLedger {
+  if (!existsSync(signPath())) return {}
+  try {
+    const parsed = JSON.parse(readFileSync(signPath(), 'utf8')) as SignatureLedger
+    if (parsed && typeof parsed === 'object') return parsed
+  } catch { /* 坏档：隔离留档再从空起步 */ }
+  try { renameSync(signPath(), `${signPath()}.corrupt-${Date.now()}`) } catch { /* 不阻断 */ }
+  return {}
+}
+
+/** 读某目标已签人（读侧 fail-soft：坏档按空处理，闸会要求重签而不是误放行）。 */
+export function listDualSignSigners(targetId: string): string[] {
+  const row = loadSignatures()[targetId]
+  return Array.isArray(row?.signers) ? row!.signers.filter((x) => typeof x === 'string' && x.trim()) : []
+}
+
+/** 追加签署人（幂等：同一人重复签不增加）。 */
+export function recordDualSignSigner(targetId: string, actor: string): string[] {
+  const s = loadSignatures()
+  const prev = Array.isArray(s[targetId]?.signers) ? s[targetId]!.signers : []
+  const next = prev.slice()
+  const name = actor.trim()
+  if (name && !next.includes(name)) next.push(name)
+  s[targetId] = { signers: next, updatedAt: Date.now() }
+  mkdirSync(storeDir(), { recursive: true })
+  atomicWriteJson(signPath(), s)
+  return next
+}
+
+/** 清空某目标签署（测试与重开审批用）。 */
+export function clearDualSignSigners(targetId: string): void {
+  const s = loadSignatures()
+  if (!(targetId in s)) return
+  delete s[targetId]
+  mkdirSync(storeDir(), { recursive: true })
+  atomicWriteJson(signPath(), s)
+}
+
 /** 测试隔离。 */
 export function _useAutonomyGovDirForTests(dir: string): void {
   process.env.HERMES_AUTONOMY_GOV_DIR = dir
