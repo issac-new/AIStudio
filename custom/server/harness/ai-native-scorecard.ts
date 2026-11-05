@@ -97,9 +97,12 @@ export function buildAiNativeScorecard(): AiNativeScorecard {
     const profiles = readdirSync(join(root, 'team/profiles'), { withFileTypes: true }).filter((d) => d.isDirectory()).length
     const enforceEnv = process.env.HERMES_TOOL_ENFORCE === '1'
     const rulesExist = existsSync(join(root, 'custom/server/approval-rules/approval-domain.ts'))
+    // 2026-11-05 用户纠正定谳：approvals.mode=off 关的是 agent 内置交互式审批流，
+    // 审批由推演程序承担（mx-approval-proxy 导演代批＋HumanGate 闭环＋代偿台账）——
+    // 审批面在位、执法面（HERMES_TOOL_ENFORCE 工具拦截）默认未启用 → partial 非 fail。
     push('least-privilege', 'positive', 'Agent 权限最小化、环境沙箱化',
-      enforceEnv ? 'partial' : 'fail',
-      `HERMES_TOOL_ENFORCE=${enforceEnv ? '1' : '未开'}；审批规则库在位=${rulesExist}；profiles=${profiles} 组 approvals 默认 off（D1 挂账 N01，2026-11-05 用户裁决本轮不动）`)
+      'partial',
+      `审批面在位（推演 mx-approval-proxy 代批＋HumanGate 闭环留痕）；执法面 HERMES_TOOL_ENFORCE=${enforceEnv ? '1' : '未开'}（审批规则库在位=${rulesExist}，默认不参与执行拦截）；OS 沙箱未接 Agent 主执行面——D1 挂账 N01，2026-11-05 用户裁决本轮不动`)
   }
   {
     // 6 生产信号回流评测/规格
@@ -134,7 +137,7 @@ export function buildAiNativeScorecard(): AiNativeScorecard {
     // 与 5 同源（权限过大=反向判据成立=fail）
     const enforceEnv = process.env.HERMES_TOOL_ENFORCE === '1'
     push('no-broad-permission', 'negative', 'Agent 权限不与高级工程师一样大',
-      enforceEnv ? 'partial' : 'fail', `执法总闸未开（HERMES_TOOL_ENFORCE≠1）——规则库在位但默认不拦（D1 挂账）`)
+      'partial', `审批由推演程序代批承担（非零审批）；执法总闸 HERMES_TOOL_ENFORCE=${enforceEnv ? '已开' : '未开'}（规则库在位但默认不参与执行拦截）——D1 挂账）`)
   }
 
   // ── 第 12 条：缓存纪律可见 ──

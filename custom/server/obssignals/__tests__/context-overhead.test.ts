@@ -62,10 +62,12 @@ describe('buildAiNativeScorecard（T9 判据面）', () => {
     expect(r.score as number).toBeGreaterThan(0)
     expect(r.score as number).toBeLessThanOrEqual(1)
     expect(r.passed + r.partial + r.failed).toBe(11)
-    // D1 权限最小化：用户裁决本轮不动 → 如实 fail 进 gaps（两处：正向 5 与反向 5 同源）
+    // D1 权限最小化：2026-11-05 用户纠正定谳——审批面在位（推演代批+HumanGate），
+    // 执法面未启用 → partial 非 fail；evidence 必须写清两层事实（禁"零审批裸跑"误读）
     const least = r.criteria.find((c) => c.id === 'least-privilege')
-    expect(least?.status === 'fail' || least?.status === 'partial').toBe(true)
-    expect(r.gaps.some((g) => g.includes('least-privilege') || g.includes('HERMES_TOOL_ENFORCE'))).toBe(true)
+    expect(least?.status).toBe('partial')
+    expect(least?.evidence).toContain('mx-approval-proxy')
+    expect(least?.evidence).toContain('HERMES_TOOL_ENFORCE')
     // 每条都带证据
     expect(r.criteria.every((c) => c.evidence.length > 0)).toBe(true)
   })
