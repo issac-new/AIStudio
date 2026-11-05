@@ -2,6 +2,7 @@
 // 拆分纪律：纯移动，无行为变更；store 状态以 getter/ref 注入。
 import type { Ref } from 'vue'
 import * as kv from '@/custom/shared/store/cockpit-kv'
+import type { DraftWorkItem } from '@/custom/shared/store/cockpit-kv'
 import * as kanbanApi from '@/api/hermes/kanban'
 
 export interface WorkItemSliceDeps {
@@ -9,7 +10,8 @@ export interface WorkItemSliceDeps {
   getSelectedTask: () => any
   boardSlugOf: (id: string) => string | undefined
   loadTaskDetail: (id: string) => Promise<void>
-  loadAttachments: (id: string) => void
+  /** 实现为 cockpit store 的 async loadAttachments（调用方挂 .catch 静默刷新失败） */
+  loadAttachments: (id: string) => Promise<void>
   bumpKv: () => void
   detailCache: Ref<Record<string, any>>
   taskAttachments: Ref<Record<string, any>>

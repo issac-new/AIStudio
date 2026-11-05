@@ -134,7 +134,6 @@ export const useCockpitStore = defineStore('cockpit', () => {
   const attentionActive = computed(() => _attentionTaskIds.value.length > 0)
   const _sessionSearching = ref(false)
   const _sessionSearchCache = ref<Record<string, { ts: number; results: any[] }>>({})
-  let _searchTimer: ReturnType<typeof setTimeout> | undefined
 
   // ── 派生态（computed）──
   // 优先级：workspace 聚合（armed 时唯一数据源，事件驱动刷新）＞ cockpit 自聚合
