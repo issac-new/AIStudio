@@ -40,14 +40,18 @@ describe('zcode-patches 受管机制（R2 守门）', () => {
     }
   })
 
-  it('inject.mjs 双管线接线：目录路由 + manifest 键 + clean 反向', () => {
+  it('inject 主链双通道接线：目录路由 + manifest 派生 + clean 反向（P1 v2 语义）', () => {
     const inject = readOverlay('scripts/inject.mjs')
     expect(inject).toContain('readZcodeSeries')
-    expect(inject).toContain('applyZcodePatches')
+    // P1 平台重写起 zcode apply 不再有独立 applyZcodePatches 函数——走平台 executor
+    // （channel 路由 + 事务化应用），接线断言改为计划构造与 manifest v2 派生面。
+    expect(inject).toContain('buildOverlayPlan')
     expect(inject).toContain('reverseZcodePatches')
-    expect(inject).toContain('appliedZcodePatches')
-    // 容错语义：zcode patch 失败跳过而非 exit(1)（同 hermes-agent）
-    expect(inject).toMatch(/zcode patch 失败,跳过/)
+    const manifestCore = readOverlay('scripts/platform/inject/manifest.mjs')
+    expect(manifestCore).toContain('deriveAppliedZcodePatches')
+    expect(manifestCore).toContain('deriveAppliedPatches')
+    // 容错语义：zcode 是可选树（缺席/失败不牵连 studio 主链）
+    expect(inject).toMatch(/可选树/)
   })
 
   it('接入脚本存在且挂到 npm scripts（zcode:ensure/zcode:serve）', () => {

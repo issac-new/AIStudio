@@ -21,10 +21,35 @@ import type { Evidence, ExecutorSpec } from '../core/types.js'
 import { globMatch } from '../core/impact.js'
 
 /** 工作区文件清单（深度 ≤8，跳 node_modules/.git/dist；conventions/symbols 共用）。 */
-function listWorkspaceFilesSafe(workspace: string, limit = 5000): string[] {
+export interface WorkspaceFileList {
+  files: string[]
+  /** 走读触顶（P1 Task 10 修复）：截断的扫描面不构成证据——调用方必须 fail-closed，
+      不得把「只看了一部分」当「全部干净/全部违规」（2026-11-06 实锤：仓涨到 5.2 万件
+      后 symbol-grounding 每轮随机截 5000 件，违规清单随 readdir 序漂移）。 */
+  truncated: boolean
+}
+
+// glob 清单的字面首段（custom 双星 ts 形态 → 'custom'；'vitest.config.ts' → 根级文件）——
+// 全部 glob 都有字面根时返回根集合（走读按根剪枝，扫描面完整且不触顶）；
+// 任一 glob 以通配开头（双星斜杠 x 形态）返回 null（不可剪枝，全仓走读）。
+function literalRootsOf(globs: readonly string[]): Set<string> | null {
+  const roots = new Set<string>()
+  for (const g of globs) {
+    const first = g.split('/')[0]
+    if (!first || first.includes('*')) return null
+    roots.add(first)
+  }
+  return roots
+}
+
+function listWorkspaceFilesSafe(workspace: string, limit = 5000, pruneRoots?: Set<string>): WorkspaceFileList {
   const out: string[] = []
+  let truncated = false
   const visit = (dir: string, depth: number): void => {
-    if (depth > 8 || out.length >= limit) return
+    if (depth > 8 || out.length >= limit) {
+      if (out.length >= limit) truncated = true
+      return
+    }
     let entries: string[]
     try {
       entries = readdirSync(dir)
@@ -35,7 +60,13 @@ function listWorkspaceFilesSafe(workspace: string, limit = 5000): string[] {
       // 扫描面跳过：依赖/版本库/构建产物/门数据，以及 .claude（worktree 残根——
       // symbol-grounding 主树首跑逮住 2782 条残根误报后加入）
       if (name === 'node_modules' || name === '.git' || name === 'dist' || name === '.qgate' || name === '.claude' || name === '.wxwork') continue
-      if (out.length >= limit) return
+      // 根级剪枝（scanGlobs 字面根）：不在任何声明根下的顶层条目整树跳过——
+      // 走读覆盖完整的声明面而不触顶（截断防护的前提是扫描面完整）。
+      if (depth === 0 && pruneRoots && !pruneRoots.has(name)) continue
+      if (out.length >= limit) {
+        truncated = true
+        return
+      }
       const full = join(dir, name)
       let st
       try {
@@ -48,7 +79,7 @@ function listWorkspaceFilesSafe(workspace: string, limit = 5000): string[] {
     }
   }
   visit(workspace, 0)
-  return out.sort()
+  return { files: out.sort(), truncated }
 }
 
 const globSafe = (pattern: string, path: string): boolean => globMatch(pattern, path)
@@ -348,7 +379,8 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
     // 扫描面零文件 = error（零文件不构成符合规范的证据，与 scope-empty 同口径）。
     const { checkMarkdown } = await import('../core/writing-style.js')
     const paths = executor.scan && executor.scan.length > 0 ? executor.scan : ['**/*.md']
-    const files = listWorkspaceFilesSafe(input.workspace).filter((rel) => paths.some((p) => globSafe(p, rel)))
+    const walked = listWorkspaceFilesSafe(input.workspace)
+    const files = walked.files.filter((rel) => paths.some((p) => globSafe(p, rel)))
     if (files.length === 0) return done('error', `writing-style scope-empty — 0 files matched ${JSON.stringify(paths)} (zero files are not evidence of compliance)`)
     const findings = []
     let truncated = false
@@ -381,7 +413,8 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
     const rules = Array.isArray(d.value.rules) ? d.value.rules.filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null) : undefined
     if (!rules || rules.length === 0) return done('error', 'conventions file lacks rules[]')
     const problems: string[] = []
-    const workspaceFiles = listWorkspaceFilesSafe(input.workspace)
+    const workspaceWalk = listWorkspaceFilesSafe(input.workspace)
+    const workspaceFiles = workspaceWalk.files
     for (const [i, r] of rules.entries()) {
       const id = typeof r.id === 'string' ? r.id : `rule[${i}]`
       const include = typeof r.include === 'string' ? r.include : null
@@ -619,8 +652,20 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
     // 符号接地（上游 symbol-grounding 本地方言）：静态 import 三分类（项目内/依赖清单/内置），
     // 未解析说明符 → FAIL；相对导入的命名成员对账目标模块导出面（词法保守解析）。
     const changed = (executor.observedFile === undefined)
-    const files = listWorkspaceFilesSafe(input.workspace).filter((f) => /\.(ts|tsx|js|mjs|vue)$/.test(f))
-    const target = changed ? files : files // 全仓走读（增量面由 appliesWhen 承担）
+    // 扫描面（P1 Task 10 修复）：缺省全仓走读（历史行为）；声明 scanGlobs（门自己的
+    // 管辖面，如 appliesWhen 变更面）时按字面根剪枝走读——单仓 5.2 万件后全仓走读必触
+    // 5000 件顶、按 readdir 序随机截断，违规清单逐轮漂移（实锤：本批 release:gate 真跑
+    // 前置检查逮住）。截断 fail-closed：触顶=扫描面不完整，error（INCONCLUSIVE）而非
+    // 拿随机子集当判定。
+    const scanGlobs = executor.scanGlobs
+    const pruneRoots = scanGlobs ? literalRootsOf(scanGlobs) ?? undefined : undefined
+    const walked = listWorkspaceFilesSafe(input.workspace, 5000, pruneRoots)
+    if (walked.truncated) {
+      return done('error', `workspace walk truncated at limit (5000 files)——扫描面不完整不构成证据；声明 scanGlobs 收敛到门管辖面后重试`)
+    }
+    let files = walked.files.filter((f) => /\.(ts|tsx|js|mjs|vue)$/.test(f))
+    if (scanGlobs) files = files.filter((f) => scanGlobs.some((p) => globSafe(p, f)))
+    const target = changed ? files : files // 走读面（缺省全仓；scanGlobs 声明后=门管辖面；增量面由 appliesWhen 承担）
     // 零扫描可见性（v0.3.1，上游 v1.28 本地方言）：include/exclude 过滤后零代码文件
     // ＝范围配置失效——零文件不构成"接地干净"的证据（与 conventions scope-empty 同口径）。
     // 依赖清单来源：默认 workspace package.json；depsFile 可指向上游——符号链借用架构

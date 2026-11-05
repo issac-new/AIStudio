@@ -165,6 +165,11 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     const mode = enumOf(raw.mode, modes)
     if (!mode) return null
     out.mode = mode
+    if (type === 'ops' && raw.scanGlobs !== undefined) {
+      const scanGlobs = strList(raw.scanGlobs, 64)
+      if (!scanGlobs || scanGlobs.length === 0) return null
+      out.scanGlobs = scanGlobs
+    }
     if (type !== 'ops') {
       const expectedFile = str(raw.expectedFile)
       if (expectedFile !== undefined) out.expectedFile = expectedFile

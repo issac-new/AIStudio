@@ -25,6 +25,18 @@ spec:
       type: ops
       mode: symbols
       depsFile: "vendor/hermes-studio/package.json"
+      # 扫描面=本门自己的管辖面（P1 Task 10 修复，与 appliesWhen 同源）：单仓涨到
+      # 5.2 万件后全仓走读必触 5000 件顶并按 readdir 序随机截断——simharness/vendor
+      # 等门外语树的文件混进违规清单、门内文件反而被挤出的双向漂移。字面根剪枝后
+      # 走读覆盖完整管辖面（~2.8k 件）不触顶。
+      scanGlobs:
+        - "custom/**/*.ts"
+        - "custom/**/*.vue"
+        - "custom/**/*.mjs"
+        - "custom/**/*.js"
+        - "config/**"
+        - "scripts/**"
+        - "vitest.config.ts"
       aliases:
         "@/custom/": "./custom/client/"
         "@custom/": "./custom/client/"
@@ -37,10 +49,13 @@ spec:
         #   @intlify/message-compiler（vue-i18n 传递依赖，i18n 编译守门测试直接用）
         #   playwright（scripts/aipay mux 走查工具，上游未声明传递依赖）
         #   @vue/compiler-sfc（vue 编译器传递依赖，zcode 投影测试直接用）
+        #   miniprogram-automator（可选 SDK，build-server 补丁 608 起 bundle 期外置、
+        #     运行期按缺席降级 CAPABILITY_ABSENT；声明化属上游职责）
         - "d3-force"
         - "@intlify/message-compiler"
         - "playwright"
         - "@vue/compiler-sfc"
+        - "miniprogram-automator"
       evidenceType: symbol-grounding-result
   evidence:
     required: [symbol-grounding-result]

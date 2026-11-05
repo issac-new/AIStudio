@@ -13,3 +13,5 @@ junit-report.xml
 observations/
 mutation-probes.jsonl
 test-classes.json
+release-gate.json
+release-gate-evidence.jsonl

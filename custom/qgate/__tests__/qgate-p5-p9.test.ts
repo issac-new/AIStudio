@@ -1,13 +1,13 @@
 // P5-P9 单测：豁免（WAIVED）/ Ontology Provider / 语义门 v0 / files executor /
 // release-report / MCP server。全部真执行（tmp 目录夹具 + 子进程），无 mock 内核。
 import { beforeAll, describe, expect, it } from 'vitest'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
-import { runGate } from '../src/core/run.js'
+import { runGate, gitContext } from '../src/core/run.js'
 import { storePaths, saveWaiver, listWaivers, activeWaiverFor } from '../src/core/store.js'
 import { parseOntologyConfig, createProvider, MockOntologyProvider } from '../src/ontology/provider.js'
 import { runOntologyExecutor } from '../src/executors/ontology.js'
@@ -451,6 +451,26 @@ describe('P9+ 严格准出面（release-report --require-pass/--no-cache/--since
       expect(strictRun.stdout).toContain('require-pass')
       const badSince = run(['release-report', '--since', 'not-a-number'])
       expect(badSince.status).toBe(2) // usage fail
+    } finally { rmSync(fx.dir, { recursive: true, force: true }) }
+  })
+})
+
+describe('gitContext 首路径完整性（P1 Task 10 修复锚定）', () => {
+  it('未暂存改动的首条路径不被截字符（trim 前导空格缺陷的反面）', () => {
+    const fx = tmpProject()
+    try {
+      spawnSync('git', ['init', '-q'], { cwd: fx.dir })
+      spawnSync('git', ['config', 'user.email', 't@t'], { cwd: fx.dir })
+      spawnSync('git', ['config', 'user.name', 't'], { cwd: fx.dir })
+      writeFileSync(join(fx.dir, 'alpha.txt'), 'v2\n')
+      spawnSync('git', ['add', 'alpha.txt'], { cwd: fx.dir })
+      spawnSync('git', ['commit', '-qm', 'init'], { cwd: fx.dir })
+      writeFileSync(join(fx.dir, 'alpha.txt'), 'v3\n') // 未暂存改动 → ' M alpha.txt' 首行
+      // macOS mkdtemp 落 /var（真实 /private/var）——git toplevel 走真实路径，
+      // workspace 与 toplevel 必须同基，否则 monorepo 前缀剥离把全部路径滤成 null
+      const g = gitContext(realpathSync(fx.dir))
+      expect(g.changedPaths).toContain('alpha.txt')
+      expect(g.changedPaths.some((p) => p !== 'alpha.txt' && p.includes('lpha'))).toBe(false)
     } finally { rmSync(fx.dir, { recursive: true, force: true }) }
   })
 })

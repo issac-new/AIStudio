@@ -19,12 +19,20 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { realpathSync } from 'node:fs';
 
 const overlayRoot = resolve(import.meta.dirname, '..', '..', '..');
 const qgateCli = resolve(overlayRoot, 'custom/qgate/dist/cli.js');
 
 const startedAtMs = Date.now();
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: overlayRoot, encoding: 'utf8' }).trim();
+
+// 入口守卫：作为模块被导入（编排测试锚定 builtinSteps）时不执行主链。
+const isEntry = (() => {
+  try { return realpathSync(process.argv[1] ?? '') === realpathSync(fileURLToPath(import.meta.url)); }
+  catch { return false; }
+})();
 
 /** JUnit XML 复析：聚合 testsuite(s) 的 failures/errors 属性（编排层独立于门内核）。 */
 function junitFailureCounts(file) {
@@ -46,8 +54,8 @@ function junitFailureCounts(file) {
   return { failures, errors, suites };
 }
 
-/** 内建步序（argv 中 '{START_TS}' 于执行时替换为 gate 起点时戳）。 */
-function builtinSteps() {
+/** 内建步序（argv 中 '{START_TS}' 于执行时替换为 gate 起点时戳）。编排测试锚定：typecheck 双门与严格报告步不得缺席。 */
+export function builtinSteps() {
   const gate = (id) => ['node', qgateCli, 'run', id, '--trigger', 'release', '--include-disabled', '--require-pass', '--no-cache'];
   return [
     { id: 'qgate-build', label: 'qgate 框架构建（tsc）', argv: ['npm', 'run', 'qgate:build'] },
@@ -77,8 +85,9 @@ function poolSteps() {
   }));
 }
 
-/** 解析步序：seam 优先，缺省=内建三步+门池+双类型门+build:full+严格报告。 */
-function resolveSteps() {
+/** 解析步序：seam 优先，缺省=内建三步+门池+双类型门+build:full+严格报告。
+ * withPool=false 跳过门池枚举（编排测试锚定静态步序用——不 spawn status 子进程）。 */
+export function resolveSteps({ withPool = true } = {}) {
   const seam = process.env.RELEASE_GATE_STEPS_FILE?.trim();
   if (seam) {
     const parsed = JSON.parse(readFileSync(resolve(seam), 'utf8'));
@@ -87,7 +96,7 @@ function resolveSteps() {
   }
   return [
     ...builtinSteps(),
-    ...poolSteps(),
+    ...(withPool ? poolSteps() : []),
     { id: 'typecheck-harness', label: '服务端类型门（typecheck:harness）', argv: ['npm', 'run', 'typecheck:harness'] },
     { id: 'typecheck-client', label: '客户端类型棘轮门（typecheck:client:ratchet ≤ 基线）', argv: ['npm', 'run', 'typecheck:client:ratchet'] },
     { id: 'build-full', label: '完整构建（build:full：server tsc + verify-dist --server）', argv: ['npm', 'run', 'build:full'] },
@@ -146,6 +155,8 @@ function runStep(step) {
 }
 
 // ── 主链 ────────────────────────────────────────────────────────────────────
+// 入口守卫下执行（模块导入方只消费导出的步序构造器）。
+export const gateMain = () => {
 const steps = resolveSteps();
 const receiptPath = process.env.RELEASE_GATE_RECEIPT?.trim()
   ?? resolve(overlayRoot, '.qgate', 'release-gate.json');
@@ -213,3 +224,6 @@ receipt.endedAt = Date.now();
 writeReceipt();
 console.log(`\n[release:gate] ${failed ? '✗ 准出未通过' : '✓ 准出通过'}：receipt → ${receiptPath}（${receipt.steps.length} 步，commit ${commit.slice(0, 12)}）`);
 process.exit(failed ? 1 : 0);
+};
+
+if (isEntry) gateMain();

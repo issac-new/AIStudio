@@ -44,14 +44,18 @@ export interface RunResult {
   decision: Decision
 }
 
-/** git 上下文（无 git 或命令失败 → undefined，新鲜度退化为时间判定；stderr 静默防噪声泄漏）。 */
+/** git 上下文（无 git 或命令失败 → undefined，新鲜度退化为时间判定；stderr 静默防噪声泄漏）。
+ * 输出只剥尾部换行（trimEnd）不用 trim——status --porcelain 的首行以「XY 」两态码开头，
+ * 未暂存行是 ' M path'（前导空格是格式的一部分）：trim 会吃掉前导空格，调用方的
+ * l.slice(3) 随即吃掉路径首字符（' M .qgate/x' → 'qgate/x'，2026-11-06 release:gate
+ * 真跑前置检查实锤：首条变更路径按排序序被随机截字符，scope/appliesWhen 判定漂移）。 */
 function gitOut(workspace: string, args: string[]): string | undefined {
   try {
     return execFileSync('git', args, {
       cwd: workspace,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
+    }).trimEnd()
   } catch {
     return undefined
   }

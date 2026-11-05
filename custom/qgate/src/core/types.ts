@@ -159,6 +159,10 @@ export interface ExecutorSpec {
   /** ops symbols：依赖清单来源（默认 package.json）。符号链借用架构下指向借用树清单
       （如 vendor/hermes-studio/package.json 注入态）——事实源在哪，接地就核哪。 */
   depsFile?: string
+  /** ops symbols：扫描面 glob（P1 Task 9/10）。缺省=全仓走读；声明后只扫命中面——
+      门声明 appliesWhen 变更面与扫描面不一致时（全仓走读吃到仓内无关树），以显式
+      scanGlobs 收敛到门自己的管辖面，扫描结果才与门的声明语义一致。 */
+  scanGlobs?: string[]
 
   /** 运行期由 loader 注入：所属 pack 名（场景文件回退解析用）。 */
   packHint?: string

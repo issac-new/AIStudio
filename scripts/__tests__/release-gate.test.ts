@@ -155,3 +155,25 @@ describe('release:gate 编排（stub 命令注入）', () => {
     expect(Number(sinceValue)).toBe(receipt.startedAt)
   })
 })
+
+describe('内建步序完整性（变异探针③锚定：编排不得静默丢步）', () => {
+  it('内建链必含 qgate 构建/测试门/评测门/类型双门/build:full/严格报告，报告步带三旗标', async () => {
+    const { resolveSteps } = await import('../platform/release/release-gate.mjs')
+    const steps = resolveSteps({ withPool: false })
+    const ids = steps.map((s: { id: string }) => s.id)
+    for (const required of ['qgate-build', 'gate-basic-check', 'gate-harness-eval', 'typecheck-harness', 'typecheck-client', 'build-full', 'release-report']) {
+      expect(ids).toContain(required)
+    }
+    // 顺序即准出语义：严格报告必须是最后一步（历史证据/缓存/缺席都逃不过 --since）
+    expect(ids[ids.length - 1]).toBe('release-report')
+    const report = steps.find((s: { id: string }) => s.id === 'release-report')
+    const argv = (report as { argv: string[] }).argv.join(' ')
+    for (const flag of ['--require-pass', '--no-cache', '--since']) expect(argv).toContain(flag)
+    // 测试门必须走 --require-pass --no-cache（真跑真判，不吃缓存/waiver）
+    const basic = steps.find((s: { id: string }) => s.id === 'gate-basic-check')
+    const basicArgv = (basic as { argv: string[] }).argv.join(' ')
+    for (const flag of ['--require-pass', '--no-cache']) expect(basicArgv).toContain(flag)
+    // JUnit 复析只挂在真跑测试的门上
+    expect((basic as { junit?: boolean }).junit).toBe(true)
+  })
+})

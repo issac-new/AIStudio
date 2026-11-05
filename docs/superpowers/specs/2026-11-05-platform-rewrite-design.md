@@ -313,6 +313,38 @@ P1 Task 5（inject/ensure-injected/clean 切换平台核心）负例先红后绿
 - 隔离完整重放（本 worktree 真实 468 补丁链，独立 HOME）：v1 注入态快照 → clean（legacy 分树路径，348 M+87 ?? 全清、dirty=0、v1 manifest 删除）→ inject#1（v2 complete，460 hermes+8 zcode）→ noop inject（exit 0 零重放）→ clean → inject 全量重放；6 关键文件（三树 tracked/untracked 代表+派生 config）+ 归一 manifest 逐字节 cmp 全等；deploy 幂等 62/62 same（RESULT status=complete）；journal 无残留；ensure noop exit 0。
 - 迁移语义实证：本 worktree v1 manifest 已被 clean+inject 迁移为 v2（clean 删旧清单→inject 重建），后续 pretest/ensure 走 v2 noop。
 
+P1 Task 6（统一上游根解析与入口注入前置）负例先红后绿（同一隔离 HOME）：
+
+- 负例先红：`npx vitest run scripts/__tests__/upstream-root.test.ts` 实现前 8/8 红（resolver 模块缺失）。
+- 实现后 8/8：解析序 5（vendor 优先于旧兄弟 upstream——build-dmg 旧实现无 vendor 分支的反面、env 最高、realpath 符号链、无 vendor 回落兄弟、缺省锚本仓）+ serve 干净检出真子进程 3（vendor 路径报错不回落兄弟、ensure 非零拒绝起服且无 starting 行、exit 3 透传）。
+- 五处内联副本收敛（build/build-dmg/serve-server/verify-dist/inject）；build:full 显式 ensure 前置、build-dmg 走 ensure 主链 + treeGitCtx 语义 tracked restore；注入链回归 8 文件 59/59。
+
+P1 Task 7（runtime 资源单一解析器与产物清单校验）负例先红后绿：
+
+- 负例先红：runtime-resources 5 用例 + verify-dist-runtime 6 用例随模块缺失/无 --server 校验先行红。
+- 实现后 19/19（含既有口令扫描回归 7）；消费面回归 44 文件 324/324（tokens/zcode-squad/kanban/governance）。
+- build.mjs 复制落点修正为真 dist/server/runtime（旧落点 packages/server/dist/server 为上游旧布局残影）；真实仓清单 19 项（roster 全目录+pricing+semantica-bridge），canonical digest c847becc…。
+
+P1 Task 8（产物身份与图运行 UUID）负例先红后绿：
+
+- 负例先红：bundle-identity 8 用例随模块缺失、UUID 形态 3 用例随序号实现先行红；实现后 18/18。
+- loop 域回归 52 文件 578/578；typecheck:harness exit 0（清单补 bundle-identity.ts + runtime-resources.ts）。
+- 双 service 同 event log 重建后新 runId 不复用（P0 审查实锤缺陷反面）；旧 run-approval-flow-1 序号记录以真实 checkpoint 拷贝种入，rebuild/resume 语义不回归。
+
+P1 Task 9（release:gate 真实准出执行链）负例先红后绿：
+
+- qgate 严格面 8 用例（缺席/晚于 since 绿/早于 since 拦/WAIVED 拦/CONDITIONAL 拦/缓存命中拦+no-cache 重跑真执行/CLI exit 码/gitContext 首路径完整性）+ release-gate stub 编排 6 用例（步失败即停 marker 证不执行后续、JUnit 复析拦 exit-0 含 1 failed、全绿九键证据+HEAD 真值、{START_TS} 注入、内建步序完整性）。
+- qgate 全套 21 文件 230/230；scripts 全套 31 文件 224/224；附带修复 parse.ts EXECUTIONS 词表补 cached（缓存证据此前落盘不可回读）。
+- spec 决策表补 P1-9 行：supplement/declaredMissing 属 producer 层不落盘，release:gate 全链 commit 真值。
+
+P1 Task 10（集成验收）真跑与变异探针（2026-11-06）：
+
+- 隔离全链重放（真实 468 补丁链）：clean（exit 0，三树 dirty=0）→ inject（exit 0，468 补丁 v2 complete，runtimeDeploy 双 complete）→ 6 代表文件+归一 manifest 逐字节全等 → noop inject exit 0 零重放；deploy 三态真机观测 kept→partial(2)/--apply --force conflict→partial/收敛 complete，测试矩阵另 5/5。
+- 真实 build:full exit 0（产物不入提交）：verify-dist --server 全绿（19 项逐项存在且摘要一致）。
+- release:gate 真跑两轮：第一轮在 gate-basic-check 拦下 1 个存量红（zcode-patches-guard 断言旧实现 applyZcodePatches——批一 Task 5 已切换平台 executor，守门断言迁移 v2 语义后 5/5）；第二轮 13 步中 12 步全绿（含真 npm test 8,406 通过 / JUnit 复析 0 failures、评测门、6 启用门池、typecheck 双门 17≤17、build:full），严格证据面 strict: pass（require-pass/no-cache/since 全满足，8 启用门全 PASS 非缓存晚于起点）；最终 release-report 步非零的唯一未决项=存量治理配置债（claim orgscale.spec-six-questions 的唯一覆盖门 governance.orgscale 属 L4，在现行 vibe-fast 档被域级禁用——2026-11-05 组织治理批引入，任何 release-report 恒红直至裁决：启用该门/撤销该 claim/发布流切 release 档，三选一待用户裁定，未放宽判据）。release:gate 每步九字段证据落平台证据存储（15 行，全部绑定 HEAD 40 位真值）。
+- 真跑前置检查逮住并修复四个存量缺陷（修复实现不放宽判据）：①qgate gitContext 首路径截字符（gitOut .trim() 吃 porcelain 首行前导空格→slice(3) 吃路径首字符，改 trimEnd+回归锚定）；②symbols 扫描面静默截断（仓 5.2 万件超 5000 走读顶按 readdir 序随机截断，executor 增 scanGlobs 字面根剪枝+截断 fail-closed，symbol-grounding 声明管辖面 custom/scripts/config ~2.8k 件）；③scripts/maintenance/graph-migrate-cli.ts 迁址后烂掉的相对 import（接地门逮住修正）；④ai-native-scorecard.ts 历史误植死代码（TS2774 阻断 build:full，P0 未执行项实锤，摘除后 7/7 绿）。
+- 变异探针四连（临时变异→目标测试红→还原→绿，探针态不入提交）：①manifest failed 混入 appliedPatches 投影→inject-manifest 红；②deploy kept 仍 complete→deploy 测试红；③release-gate 内建步序摘除 typecheck-harness→编排测试红；④bundle 身份忽略 runtimeManifestDigest→敏感性测试红。四连全部先红后绿。
+
 | 风险 | 缓解与回滚 |
 |---|---|
 | 一次性切换回归面大 | 单 worktree 三阶段行为测试、完整迁移演练和最终全量回归；失败不切换 |

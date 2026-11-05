@@ -387,3 +387,5 @@ paths:
   - custom/server/kanban/column-automation.ts
   - custom/server/governance/governance-ledger.ts
   - custom/server/decisiongraph/semantica-bridge.py
+  # release:gate 全量走树暴露的缺口（2026-11-06）：zcode 树注入态与另两棵 vendor 树同标准声明
+  - vendor/zcode/**
