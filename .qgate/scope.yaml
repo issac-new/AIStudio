@@ -243,6 +243,7 @@ paths:
   - .qgate/gates/governance.orgscale.yaml
   - .qgate/qgate.yaml
   # 2026-11-05 治理可信度修复（cognition-lattice 复盘落地；P0/P1/P2）
+  - custom/server/simcenter/**
   - custom/client/kanban/__tests__/raci-visibility.test.ts
   - .gitignore
   - custom/server/governance/__tests__/governance-ledger.test.ts
