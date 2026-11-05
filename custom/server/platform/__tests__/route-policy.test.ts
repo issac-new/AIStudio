@@ -100,6 +100,43 @@ describe('平台路由政策真实覆盖', () => {
       .toThrow('POST /api/userenv/profiles/:name/rotate')
   })
 
+  // Task3① 负例：RegExp 写面在 stack 里曾因字符串过滤被静默吞掉（对账不可见）。
+  it('RegExp 写路由无法与政策对账 → 启动直接失败，不再静默过滤', () => {
+    const router = new Router()
+    router.post(/\/api\/userenv\/profiles\/.+\/rotate/, async () => {})
+    expect(() => assertPlatformRoutePolicies([router], [])).toThrow(/RegExp/)
+  })
+
+  it('RegExp 读路由不阻断启动（读面无强制登记，写面才是对账对象）', () => {
+    const router = new Router()
+    router.get(/\/api\/userenv\/profiles\/.+\/env/, async () => {})
+    expect(() => assertPlatformRoutePolicies([router], [])).not.toThrow()
+  })
+
+  // Task3② 负例：启动对账补「多余政策」方向——注册表条目指向不存在路由也要阻断。
+  it('政策指向不存在的路由 → 启动失败（双向对账，注册表不得悬垂）', () => {
+    const ghost: PlatformRoutePolicy = {
+      method: 'PUT',
+      pathPattern: '/api/userenv/profiles/:name/ghost',
+      access: 'profile',
+      profileParam: 'name',
+    }
+    expect(() => assertPlatformRoutePolicies(managedRouters, [...platformRoutePolicies, ghost]))
+      .toThrow(/ghost/)
+  })
+
+  it('政策方法与路由方法不一致也算悬垂（同路径不同 method 不算匹配）', () => {
+    const router = new Router({ prefix: '/api/userenv' })
+    router.put('/profiles/:name/env', async () => {})
+    const wrongMethod: PlatformRoutePolicy = {
+      method: 'POST',
+      pathPattern: '/api/userenv/profiles/:name/env',
+      access: 'profile',
+      profileParam: 'name',
+    }
+    expect(() => assertPlatformRoutePolicies([router], [wrongMethod])).toThrow(/POST \/api\/userenv/)
+  })
+
   it.each(['/**', '/api/userenv/**', '/api/userenv/(.*)'])('拒绝通配政策 %s', (pathPattern) => {
     const wildcard: PlatformRoutePolicy = {
       method: 'PUT',

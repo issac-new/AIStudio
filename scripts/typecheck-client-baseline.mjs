@@ -8,8 +8,9 @@
 //
 // 判据只看「错误总数」：存量允许存在，但只许减少。按域清零时同步下调基线。
 // 退出码契约（2026-11-05 P0 Task 7，spec §判定契约）：0=判定完成且未超基线（或基线已刷新）；
-// 1=错误数超基线；2=INCONCLUSIVE 无法形成判定（工具缺席/崩溃/超时/信号退出/输出截断），
-// 此时绝不写基线、不判定——否则门禁会把工具故障当"通过"放行（PATH=/nonexistent 实录）。
+// 1=错误数超基线；2=INCONCLUSIVE 无法形成判定（工具缺席/崩溃/超时/信号退出/输出截断/
+// --check 基线文件缺席），此时绝不写基线、不判定——否则门禁会把工具故障当"通过"放行
+// （PATH=/nonexistent 实录；基线缺席 Infinity 兜底实录 Task7-Important）。
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -74,7 +75,13 @@ if (!checkMode) {
   process.exit(0)
 }
 
-const baseline = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : { errors: Infinity }
+// Task7-Important 存量债收口：--check 基线缺席曾以 { errors: Infinity } 兜底 → 恒 exit 0
+// （假阴性门，比工具故障更尖）。无基线即无判定 → INCONCLUSIVE exit 2；建基线走生成模式。
+if (!existsSync(BASELINE)) {
+  console.error('[typecheck:client] INCONCLUSIVE：基线文件缺失（config/typecheck-client-baseline.json），--check 无从比较；先运行 node scripts/typecheck-client-baseline.mjs 生成基线')
+  process.exit(2)
+}
+const baseline = JSON.parse(readFileSync(BASELINE, 'utf8'))
 if (errors > baseline.errors) {
   console.error(`✗ typecheck:client 棘轮：错误数 ${errors} > 基线 ${baseline.errors}（新增 ${errors - baseline.errors}）`)
   for (const s of sample) console.error(`  - ${s.trim()}`)

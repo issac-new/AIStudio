@@ -5,7 +5,7 @@
  *
  * 三级策略链（优先级从高到低，先命中先裁决）：
  *   0. 硬边界（先于身份链与审批桥，批单不可豁免；P0 Task 5 平台重写收口）：
- *      - 未知 MCP 工具（mcp-unknown）：两层分类信号判不出 → 拒（修复出口=登记映射）；
+ *      - 未知 MCP 工具（mcp-unknown）：动词启发式（单层分类信号）判不出 → 拒（修复出口=登记映射）；
  *      - 沙箱路径（sandbox-path）：真实路径判定（cwd 解析+realpath canonicalize）；
  *      - 沙箱终端（sandbox-terminal-unavailable）：roots 配置即沙箱模式，
  *        terminal/code 无真实 OS 沙箱证明 → 拒（不用 Shell 文本检查代替）。
@@ -97,7 +97,7 @@ export type EnforceRule =
   | 'sandbox-path'           // 显式路径超出沙箱根（P2-5；P0-5 起真实路径判定）
   | 'sandbox-network'        // 浏览器 URL 被网络策略拒绝（P2-5）
   | 'sandbox-terminal-unavailable' // 沙箱模式下 terminal/code 无真实 OS 沙箱证明（P0-5；不可审批放行）
-  | 'mcp-unknown'            // 未知 MCP 工具两层信号判不出类别（P0-5；不可审批放行）
+  | 'mcp-unknown'            // 未知 MCP 工具动词启发式判不出类别（P0-5；不可审批放行）
   | 'budget-exceeded'        // 当日预算耗尽且策略动作为 block（残余项⑤）
 
 /** 策略层透传元数据：决策账/审批单据此回答「当时生效的是哪条策略」。 */

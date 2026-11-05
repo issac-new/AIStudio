@@ -9,7 +9,7 @@
 // 仅 POSIX：win32 分支取 npx.cmd，CI 也不在 Windows 跑本套件（swarm-yuan.yml 仅 bash -n）。
 import { afterEach, describe, expect, it } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, readFileSync, renameSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -115,6 +115,55 @@ describe.skipIf(process.platform === 'win32')('typecheck:client 工具故障 INC
       prepend: fakeNpxDir('echo "spawn exploded" >&2\nexit 127'),
       args: ['--check'],
     }), 'status=127')
+  })
+
+  // ---------- 基线缺席（Task7-Important 存量债）：--check 无基线不得当 ∞ 容忍放行 ----------
+  // 溯源：scripts/typecheck-client-baseline.mjs 曾以 { errors: Infinity } 兜底缺席基线，
+  // --check 恒 exit 0——比工具故障更尖的假阴性门。无基线即无判定 → exit 2 INCONCLUSIVE。
+  // 临时把真实基线移走再还原（finally 保证测试失败也不丢基线文件）。
+  function withBaselineRemoved<T>(fn: () => T): T {
+    const backup = `${BASELINE}.task8-backup`
+    renameSync(BASELINE, backup)
+    try {
+      return fn()
+    } finally {
+      renameSync(backup, BASELINE)
+    }
+  }
+
+  it('基线缺席 + --check + 干净通过 → exit 2 INCONCLUSIVE，不凭空造基线放行', () => {
+    before = baselineState()
+    withBaselineRemoved(() => {
+      const r = runBaseline({ prepend: fakeNpxDir('exit 0'), args: ['--check'] })
+      expect(r.status, `stdout=${r.stdout}\nstderr=${r.stderr}`).toBe(2)
+      expect(r.stderr).toContain('INCONCLUSIVE')
+      expect(r.stderr).toContain('基线')
+      expect(existsSync(BASELINE), '基线缺席时不得写出新基线').toBe(false)
+    })
+    expect(baselineState()).toEqual(before)
+  })
+
+  it('基线缺席 + --check + 有类型错 → 仍 exit 2 INCONCLUSIVE（无基线无法形成 0/1 判定）', () => {
+    before = baselineState()
+    withBaselineRemoved(() => {
+      const r = runBaseline({ prepend: fakeNpxDir(npxWithErrors(3)), args: ['--check'] })
+      expect(r.status, `stdout=${r.stdout}\nstderr=${r.stderr}`).toBe(2)
+      expect(r.stderr).toContain('INCONCLUSIVE')
+      expect(existsSync(BASELINE)).toBe(false)
+    })
+    expect(baselineState()).toEqual(before)
+  })
+
+  it('基线缺席 + 生成模式 → 仍可写初始基线（建基线通道不受影响）', () => {
+    before = baselineState()
+    withBaselineRemoved(() => {
+      const r = runBaseline({ prepend: fakeNpxDir(npxWithErrors(3)) })
+      expect(r.status, `stdout=${r.stdout}\nstderr=${r.stderr}`).toBe(0)
+      expect(existsSync(BASELINE), '生成模式应写出初始基线').toBe(true)
+      expect(JSON.parse(readFileSync(BASELINE, 'utf8')).errors).toBe(3)
+    })
+    // finally 已把真实基线换回；afterEach 兜底还原内容与 mtime。
+    expect(baselineState()).toEqual(before)
   })
 
   // ---------- 正常类型错误：既有 0/1 棘轮路径不回归 ----------

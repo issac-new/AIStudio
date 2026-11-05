@@ -93,7 +93,7 @@ describe('未知 MCP 硬拒（P0 Task 5）', () => {
     expect(mcpCategoryOf('mcp__jenkins__run_build')).toBe('exec')
   })
 
-  it('isUnknownMcpTool：mcp__ 前缀且两层信号都判不出；已知动词与非 MCP 名不算', () => {
+  it('isUnknownMcpTool：mcp__ 前缀且动词启发式判不出；已知动词与非 MCP 名不算', () => {
     expect(isUnknownMcpTool('mcp__weird__do_something')).toBe(true)
     expect(isUnknownMcpTool('mcp__github__merge_pull_request')).toBe(true)
     expect(isUnknownMcpTool('mcp__github__list_issues')).toBe(false)

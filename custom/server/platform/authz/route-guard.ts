@@ -35,7 +35,7 @@ function policyMatchesLayer(policy: PlatformRoutePolicy, layer: RouterLayer, met
   return policy.method === method && policy.pathPattern === layer.path
 }
 
-/** 启动期从真实 Router stack 对账；通配与未登记写面都直接阻断启动。 */
+/** 启动期从真实 Router stack 对账；通配、RegExp 写面、悬垂政策与未登记写面都直接阻断启动。 */
 export function assertPlatformRoutePolicies(routers: Router[], policies: PlatformRoutePolicy[]): void {
   for (const policy of policies) {
     if (policy.pathPattern.includes('*') || policy.pathPattern.includes('(.*)')) {
@@ -43,8 +43,31 @@ export function assertPlatformRoutePolicies(routers: Router[], policies: Platfor
     }
   }
 
+  // Task3①：RegExp 写面按字符串政策对不上账，此前被 routeLayers 的字符串过滤静默吞掉
+  // （启动对账不可见）——现在直接抛错。读面无强制登记，RegExp 读路由不在此列。
+  const rawLayers = routers.flatMap((router) => router.stack as unknown as RouterLayer[])
+    .filter((layer) => Array.isArray(layer.methods))
+  for (const layer of rawLayers) {
+    if (typeof layer.path === 'string') continue
+    const writes = (layer.methods ?? [])
+      .filter((method) => WRITE_METHODS.has(method as PlatformRouteMethod))
+    if (writes.length > 0) {
+      throw new Error(`Platform write routes with RegExp paths cannot be reconciled against string policies: ${writes.join('/')} ${String(layer.path)}`)
+    }
+  }
+
+  const layers = rawLayers.filter((layer): layer is RouterLayer & { path: string } => typeof layer.path === 'string')
+
+  // Task3②：双向对账——注册表政策也必须指向真实路由（方法+路径都一致），
+  // 悬垂政策此前只有源序测试能发现，现在启动即失败。
+  const dangling = policies.filter((policy) => !layers.some((layer) =>
+    (layer.methods ?? []).includes(policy.method) && policy.pathPattern === layer.path))
+  if (dangling.length > 0) {
+    throw new Error(`Platform route policies without matching routes: ${dangling.map((policy) => `${policy.method} ${policy.pathPattern}`).join(', ')}`)
+  }
+
   const missing = new Set<string>()
-  for (const layer of routeLayers(routers)) {
+  for (const layer of layers) {
     const methods = new Set((layer.methods ?? []) as PlatformRouteMethod[])
     for (const method of methods) {
       if (!POLICY_METHODS.has(method) || !WRITE_METHODS.has(method)) continue

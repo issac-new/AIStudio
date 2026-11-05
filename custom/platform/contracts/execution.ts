@@ -5,9 +5,10 @@
 // 先例）。运行时零依赖（type import 不产生耦合），文件系统探测只读。
 //
 // 两条硬边界的产品语义（计划书全局约束：不能用 Shell 文本检查代替真实沙箱）：
-//  1) 未知 MCP 硬拒：mcp__{server}__{tool} 两层信号（连接器只读目录+动词启发式）
-//     都判不出类别时，平台无法评估该工具的风险面——按未治理拒绝（mcp-unknown），
-//     不再回落保守 write 让它混进普通审批快道。修复出口是补动词映射/登记连接器。
+//  1) 未知 MCP 硬拒：mcp__{server}__{tool} 的动词启发式（单层分类信号，见下文
+//     MCP_READ_CONNECTORS 删除注记）判不出类别时，平台无法评估该工具的风险面——
+//     按未治理拒绝（mcp-unknown），不再回落保守 write 让它混进普通审批快道。
+//     修复出口是补动词映射/登记连接器。
 //  2) 真实路径沙箱：配置 HERMES_TOOL_SANDBOX_ROOTS 后，路径判定基于真实文件系统
 //     状态（realpathSync.native canonicalize，symlink 逃逸可检出）；terminal/code
 //     本质上能触达任意路径（cd/重定向），路径白名单管不住 shell——没有真实 OS 级
@@ -58,7 +59,7 @@ export function mcpCategoryOf(tool: string): ToolCategory | null {
   return verb?.cat ?? null
 }
 
-/** 未知 MCP 工具：mcp__ 前缀且两层信号（连接器目录+动词启发式）都判不出类别。
+/** 未知 MCP 工具：mcp__ 前缀且动词启发式（单层分类信号）判不出类别。
  *  非 mcp__ 前缀的未知工具不算（仍走保守 write + 既有审批链）。 */
 export function isUnknownMcpTool(tool: string): boolean {
   return tool.startsWith(MCP_PREFIX) && mcpCategoryOf(tool) === null
