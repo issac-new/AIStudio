@@ -300,7 +300,7 @@ router.get('/process-quality', async (ctx) => {
 // AI Native 评分卡（2026-11-05 吸收批 T9）：系列五篇「30 秒判断」12 问的可测判据面。
 router.get('/ai-native-scorecard', async (ctx) => {
   try {
-    ctx.body = { ok: true, ...buildAiNativeScorecard() }
+    ok(ctx, buildAiNativeScorecard() as unknown as Record<string, unknown>)
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
@@ -310,7 +310,7 @@ router.get('/ai-native-scorecard', async (ctx) => {
 // 视图（映射不替换），回答「这次 loop 为什么出来」；数据面 fail-soft 不猜数。
 router.get('/terminations', async (ctx) => {
   try {
-    ctx.body = { ok: true, ...collectTerminations(daysOf(ctx.query.days)) }
+    ok(ctx, collectTerminations(daysOf(ctx.query.days)) as unknown as Record<string, unknown>)
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }

@@ -64,23 +64,23 @@ const statusClass: Record<string, string> = { pass: 'ok', partial: 'warn', fail:
 </template>
 
 <style scoped>
-.block { border-top: 1px solid var(--border, #ddd); padding: 12px 0; }
+.block { border-top: 1px solid var(--border-color); padding: 12px 0; }
 .head { display: flex; align-items: center; gap: 8px; }
 .head h3 { margin: 0; font-size: 14px; }
 .score { font-size: 18px; font-weight: 600; margin-left: auto; }
-.sub { color: var(--dim, #888); font-size: 12px; margin: 4px 0 8px; }
+.sub { color: var(--text-secondary); font-size: 12px; margin: 4px 0 8px; }
 .tally { font-size: 12px; margin: 4px 0; }
 .criteria { list-style: none; padding: 0; margin: 0; }
 .criteria li { padding: 4px 0 4px 0; font-size: 12px; }
-.criteria li.ok .status { color: var(--ok, #2e7d32); }
-.criteria li.warn .status { color: var(--warn, #b26a00); }
-.criteria li.bad .status { color: var(--bad, #c62828); }
-.criteria li.dim .status { color: var(--dim, #888); }
-.badge { display: inline-block; min-width: 18px; text-align: center; border: 1px solid var(--border, #ccc); border-radius: 4px; margin-right: 6px; font-size: 11px; }
+.criteria li.ok .status { color: var(--success); }
+.criteria li.warn .status { color: var(--warning); }
+.criteria li.bad .status { color: var(--danger); }
+.criteria li.dim .status { color: var(--text-secondary); }
+.badge { display: inline-block; min-width: 18px; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; margin-right: 6px; font-size: 11px; }
 .title { margin-right: 6px; }
 .status { font-weight: 600; }
-.evidence { margin: 2px 0 0 24px; color: var(--dim, #777); font-size: 11px; }
+.evidence { margin: 2px 0 0 24px; color: var(--text-secondary); font-size: 11px; }
 .gaps { margin-top: 8px; font-size: 12px; }
-.error { color: var(--bad, #c62828); font-size: 12px; }
-.ghost { background: none; border: 1px solid var(--border, #ccc); border-radius: 4px; cursor: pointer; }
+.error { color: var(--danger); font-size: 12px; }
+.ghost { background: none; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; }
 </style>
