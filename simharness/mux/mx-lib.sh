@@ -1020,15 +1020,24 @@ mx_restore_idempotency_fix() {
 }
 
 # ── profile/manifest 生成 ───────────────────────────────
+# 直连通道 helper 目录（mx_model_channel.py 所在；BASH_SOURCE 定位免依赖调用方 SCRIPT_DIR）
+_MX_MUX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+
 write_root_config() {
   mkdir -p "$HERMES_ROOT" "$LOCK_DIR" "$CREDS_DIR" "$PIDS_DIR" "$LOGS_DIR" "$EVID_DIR" "$WEBUI_HOME"
   chmod 700 "$SIM_ROOT"
   _mxpy=$(_mx_yaml_py) || fail "write_root_config：无 yaml 可用解释器（venv 与系统 python3 均缺）——先修环境"
-  GW_PORT="$GW_PORT" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$HERMES_ROOT/config.yaml" <<'PYEOF'
+  GW_PORT="$GW_PORT" MX_MUX_DIR="$_MX_MUX_DIR" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$HERMES_ROOT/config.yaml" <<'PYEOF'
 import sys, yaml, os
 src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
+# 直连通道（2026-11-05 用户指令，run27 烧机实录 cc-switch 代理长流三连熔断）：
+# XGLM 主/SGLM fallback/glm-5.3/1M/anthropic_messages，值运行时从 cc-switch DB 取。
+# 单一事实源 mux/mx_model_channel.py；同构拷贝 ×3（三生成器同步）；MX_MODEL_CHANNEL=host 回滚宿主快照模型段。
+sys.path.insert(0, os.environ.get('MX_MUX_DIR') or '')
+from mx_model_channel import apply_direct_channel
+apply_direct_channel(out)
 out['gateway'] = {'multiplex_profiles': True}   # 单 gateway 多路复用（方案 §2.2 #1）
 # LLM 通道并发闸：run4/run5 时代 MGLM 单池仅耐 1-2 并发（1302 限流 429 重试风暴），
 # 串行闸 1 是当时实证值。2026-10-08 run11 三轮容量事故钉死策略失配：V8 方案 §4.2
@@ -1152,11 +1161,17 @@ write_user_profile() { # <user>：Orchestrator profile——仅账号和配置�
   mkdir -p "$PROF"
   local defboard; defboard=$(first_board_of "$u")
   _mxpy=$(_mx_yaml_py) || fail "write_user_profile：无 yaml 可用解释器——先修环境"
-  GW_PORT="$GW_PORT" DEF_BOARD="$defboard" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$PROF/config.yaml" <<'PYEOF'
+  GW_PORT="$GW_PORT" DEF_BOARD="$defboard" MX_MUX_DIR="$_MX_MUX_DIR" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$PROF/config.yaml" <<'PYEOF'
 import sys, yaml, os
 src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
+# 直连通道（2026-11-05 用户指令，run27 烧机实录 cc-switch 代理长流三连熔断）：
+# XGLM 主/SGLM fallback/glm-5.3/1M/anthropic_messages，值运行时从 cc-switch DB 取。
+# 单一事实源 mux/mx_model_channel.py；同构拷贝 ×3（三生成器同步）；MX_MODEL_CHANNEL=host 回滚宿主快照模型段。
+sys.path.insert(0, os.environ.get('MX_MUX_DIR') or '')
+from mx_model_channel import apply_direct_channel
+apply_direct_channel(out)
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}   # patch 390：钉本账号默认板
 # memory 上限对齐宿主实证值（2026-10-02 run7 实锤）：缺省 2200/1375 太小，
 # consolidation 反复 "would be at 2,26x/2,200 -- over the limit" 每 turn 重试 4 次
@@ -1228,11 +1243,17 @@ write_agent_profile() { # <user> <agent-id>：研发专职 agent profile（无 m
   defboard=$(boards_of "$u" | tr ' ' '\n' | grep ":$a$" | head -1 | cut -d: -f1)
   mkdir -p "$PROF"
   _mxpy=$(_mx_yaml_py) || fail "write_agent_profile：无 yaml 可用解释器——先修环境"
-  DEF_BOARD="$defboard" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$PROF/config.yaml" <<'PYEOF'
+  DEF_BOARD="$defboard" MX_MUX_DIR="$_MX_MUX_DIR" "$_mxpy" - "$HOME/.hermes/config.yaml" > "$PROF/config.yaml" <<'PYEOF'
 import sys, yaml, os
 src = yaml.safe_load(open(sys.argv[1]))
 keys = ('model', 'fallback_providers', 'custom_providers', 'model_catalog', 'toolsets', 'agent')
 out = {k: src[k] for k in keys if k in src}
+# 直连通道（2026-11-05 用户指令，run27 烧机实录 cc-switch 代理长流三连熔断）：
+# XGLM 主/SGLM fallback/glm-5.3/1M/anthropic_messages，值运行时从 cc-switch DB 取。
+# 单一事实源 mux/mx_model_channel.py；同构拷贝 ×3（三生成器同步）；MX_MODEL_CHANNEL=host 回滚宿主快照模型段。
+sys.path.insert(0, os.environ.get('MX_MUX_DIR') or '')
+from mx_model_channel import apply_direct_channel
+apply_direct_channel(out)
 out['kanban'] = {'default_board': os.environ['DEF_BOARD']}
 # memory 上限对齐宿主实证值（2026-10-02 run7 实锤）：缺省 2200/1375 太小，
 # consolidation 反复 "would be at 2,26x/2,200 -- over the limit" 每 turn 重试 4 次

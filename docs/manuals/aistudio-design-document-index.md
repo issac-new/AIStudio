@@ -592,6 +592,7 @@
 - [2026-11-05-pending-ledgers-closeout.md](../superpowers/specs/2026-11-05-pending-ledgers-closeout.md)
 - [2026-11-05-release-v1.0.12-overlay.md](../superpowers/specs/2026-11-05-release-v1.0.12-overlay.md)
 - [2026-11-05-review-anchor-pin.md](../superpowers/specs/2026-11-05-review-anchor-pin.md)
+- [2026-11-05-sim-direct-llm-channel.md](../superpowers/specs/2026-11-05-sim-direct-llm-channel.md)
 - [2026-11-05-teardown-void-type-fix.md](../superpowers/specs/2026-11-05-teardown-void-type-fix.md)
 
 ## archive（2 份，不计入上述根目录）
@@ -618,3 +619,4 @@
 - [2026-11-05-org-governance-thin-items.md](../superpowers/specs/2026-11-05-org-governance-thin-items.md)
 - [2026-11-05-org-governance-closeout.md](../superpowers/specs/2026-11-05-org-governance-closeout.md)
 - [2026-11-05-nvme-mount-guards.md](../superpowers/specs/2026-11-05-nvme-mount-guards.md)
+- [2026-11-05-sim-direct-llm-channel.md](../superpowers/specs/2026-11-05-sim-direct-llm-channel.md)
