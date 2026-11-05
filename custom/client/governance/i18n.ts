@@ -88,6 +88,8 @@ export const governanceMessages = {
         evalGapNote: 'gap 指标不造数：口径已立账，采纳后按口径采集',
         // B7 九层运行体检（2026-10-18 Harness 可靠性轮）
         nineLayersTitle: '九层运行体检',
+        aiNativeScorecardTitle: 'AI Native 评分卡',
+        aiNativeScorecardSub: '系列五篇「30 秒判断」12 问——判据在位性而非运行达标率；unknown 不计分母',
         nineLayersSub: '工具/循环/记忆/上下文/沙箱/验证/权限/可观测/评测——逐层给真实证据；自检清单非认证，数据缺席不造数',
         nineStatusCovered: '已覆盖',
         nineStatusPartial: '部分覆盖',
@@ -700,6 +702,8 @@ export const governanceMessages = {
         evalGapNote: 'Gap metrics are never fabricated: definitions are on record; collect per definition once adopted',
         // B7 nine-layer harness audit (2026-10-18 harness reliability round)
         nineLayersTitle: 'Nine-Layer Harness Audit',
+        aiNativeScorecardTitle: 'AI Native Scorecard',
+        aiNativeScorecardSub: '12-question 30-second audit — mechanism presence, not runtime attainment; unknown excluded from score',
         nineLayersSub: 'Tools / loop / memory / context / sandbox / verification / permissions / observability / evals — evidence per layer; a self-check, not a certification, never fabricated',
         nineStatusCovered: 'Covered',
         nineStatusPartial: 'Partial',

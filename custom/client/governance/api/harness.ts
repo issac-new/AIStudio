@@ -224,6 +224,32 @@ export function fetchNineLayers(days = 7): Promise<NineLayersDto> {
   return request<NineLayersDto>(`/api/harness/nine-layers?days=${encodeURIComponent(String(days))}`)
 }
 
+// ---- AI Native 评分卡（2026-11-05 吸收批 T9）：系列五篇「30 秒判断」12 问 ----
+export interface ScorecardCriterionDto {
+  id: string
+  stance: 'positive' | 'negative'
+  title: string
+  status: 'pass' | 'partial' | 'fail' | 'unknown'
+  evidence: string
+}
+
+export interface AiNativeScorecardDto {
+  ok: boolean
+  generatedAt: string
+  criteria: ScorecardCriterionDto[]
+  score: number | null
+  passed: number
+  partial: number
+  failed: number
+  unknown: number
+  gaps: string[]
+  notes: string[]
+}
+
+export function fetchAiNativeScorecard(): Promise<AiNativeScorecardDto> {
+  return request<AiNativeScorecardDto>('/api/harness/ai-native-scorecard')
+}
+
 // ---- B8 运行运维面（2026-10-18 残余项）：过程质量 / 执法决策 / 运行清单 / 预算 / 恢复判定 ----
 export interface ProcessQualityDto {
   ok: boolean
