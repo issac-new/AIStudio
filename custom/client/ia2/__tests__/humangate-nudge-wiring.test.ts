@@ -51,3 +51,25 @@ describe('催办 owner 动态路由接线', () => {
     expect(api).toContain("authFetch('/api/kanban/nudge/route'")
   })
 })
+
+describe('催办诚实三态文案（P2 Task 3：解析催办路由；未发送消息）', () => {
+  it('看板催办面只宣称路由解析，不得出现已发送/已接收成功语义', () => {
+    const bar = read('../../kanban/components/KanbanBulkBar.vue')
+    const view = read('../../kanban/views/SwarmKanbanView.vue')
+    // 服务端 delivery 契约的消费面：提示语必须携带「未发送消息」
+    expect(view).toContain('解析催办路由')
+    expect(view).toContain('未发送消息')
+    expect(bar).toContain('未发送消息')
+    // 负例锚：两处催办文案面禁止送达语义（已发送/已接收=把路由解析当送达）
+    expect(view).not.toMatch(/已发送|已接收/)
+    expect(bar).not.toMatch(/已发送|已接收/)
+  })
+
+  it('服务端 delivery 契约在位：routed-only + sent/received null 随响应返回', () => {
+    const server = read('../../../server/kanban/owner-routed-nudge.ts')
+    expect(server).toContain("state: 'routed-only'")
+    expect(server).toContain('sent: null')
+    expect(server).toContain('received: null')
+    expect(server).toContain('delivery')
+  })
+})

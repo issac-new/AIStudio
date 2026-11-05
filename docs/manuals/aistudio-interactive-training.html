@@ -186,6 +186,9 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
   #printRoot .topology-svg { height: calc(96mm - 10mm); }
   #printRoot .page-bottom { display: grid; grid-template-rows: 56mm 6mm; }
   #printRoot .lesson-code pre { font-size: 6.6pt; }
+  .code-exec-note { display: block; font-style: normal; font-size: 10px; color: #8a6d3b; letter-spacing: .04em; margin: 2px 0 4px; }
+  .dock-layer { font-size: 11px; color: #55684f; margin: 0 0 4px; }
+  .practice-ref { display: block; font-size: 9pt; color: #65776a; margin-top: 2px; }
   .topology-pulse { display: none; }
 }
 </style>
@@ -216,7 +219,7 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
                   <div class="lesson-more-grid">
                     <section><div class="lesson-inputs"><h2>输入条件</h2><ul id="coachInputs"></ul></div></section>
                     <section><h2>整幕完成判据</h2><p class="dock-proof" id="coachProof"></p></section>
-                    <section><h2>对应手册</h2><div id="coachReferences" class="lesson-references"></div></section>
+                    <section><h2>对应手册</h2><p class="dock-layer" id="coachLayer"></p><div id="coachReferences" class="lesson-references"></div></section>
                   </div>
                 </section>
               </div>
@@ -238,7 +241,7 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
                   <div class="example-result"><strong>应得结果</strong><p id="exampleThen"></p></div>
                   <div class="example-actions"><button id="exampleToggle" type="button" aria-expanded="false" aria-controls="exampleDetail">展开实例</button><button id="codeToggle" type="button" aria-expanded="false" aria-controls="coachCodeWrap" hidden>查看代码</button></div>
                   <dl id="exampleDetail" hidden><dt>背景</dt><dd id="exampleGiven"></dd><dt>操作</dt><dd id="exampleWhen"></dd></dl>
-                  <div class="lesson-code" id="coachCodeWrap" hidden><span id="coachCodeLabel"></span><pre><code id="coachCode"></code></pre></div>
+                  <div class="lesson-code" id="coachCodeWrap" hidden><span id="coachCodeLabel"></span><em class="code-exec-note">示例命令仅对照 · 本页不执行</em><pre><code id="coachCode"></code></pre></div>
                 </section>
               </aside>
             </div>
@@ -272,7 +275,7 @@ const edge = (from, to, flow = false, strong = false) => ({ from, to, flow, stro
 
 const SCENES = [
   {
-    id: 'product-overview', part: 'product', title: '从需求进入 15 步跨团队协作', short: '六团队协作全景', route: '/app', duration: 9000,
+    id: 'product-overview', part: 'product', title: '从需求进入 15 步跨团队协作', short: '六团队协作全景', route: '/app', duration: 9000, layer: 'simulation', practiceRef: '17.3',
     summary: '产品需求分析提供目标、范围、AC 与授权输入；沿主管、Studio、gateway、Kanban、worker/Ycode、独立证据和状态回流理解六团队交接，Matrix 只是可选协作分支。',
     action: '从第 1 步跟踪到第 15 步，指出 3/4 的可选消息、7/9 的技能约束、13 的独立复审和 15 的人工升级。',
     proof: '能说清任务、代码、审批和运行证据各自的权威来源，并能按任务 ID、commit 和证据锚对齐交接双方。',
@@ -312,7 +315,7 @@ const SCENES = [
     edges: [edge('studio', 'gateway', true, true), edge('gateway', 'worker', true, true), edge('worker', 'evidence', true, true), edge('evidence', 'human', true, true)],
   },
   {
-    id: 'product-spec-design', part: 'product', title: '冻结 Spec、AC 与 G1/G2 设计', short: 'Spec 与设计冻结', route: '/app/stage/reqs', duration: 8500,
+    id: 'product-spec-design', part: 'product', title: '冻结 Spec、AC 与 G1/G2 设计', short: 'Spec 与设计冻结', route: '/app/stage/reqs', duration: 8500, layer: 'simulation', practiceRef: '17.3',
     summary: 'G1 核对范围、非目标、依赖、影响面、涉敏评估和至少三条可判 AC；G2 核对职责、接口、爆炸半径、备选取舍及 MAET 验证计划。',
     action: '沿需求、验收规则和人工升级路径检查 G1/G2；模拟一次冻结后变更，重新进入评审和冻结。',
     proof: 'G1/G2 记录对应当前对象；AC 能追溯到设计、任务、测试和 UAT，Termination 不缺席，旧批准不被冻结后变更沿用。',
@@ -352,7 +355,7 @@ const SCENES = [
     edges: [edge('studio', 'g2', true, true), edge('g2', 'maet', true, true), edge('maet', 'uat', true, true)],
   },
   {
-    id: 'project-dispatch', part: 'project', title: '开工派工先核 RACI、依赖与容量', short: '派工与真实认领', route: '/app/board', duration: 8500,
+    id: 'project-dispatch', part: 'project', title: '开工派工先核 RACI、依赖与容量', short: '派工与真实认领', route: '/app/board', duration: 8500, layer: 'simulation', practiceRef: '17.2',
     summary: '先分类 ready、running、blocked、review，再核对 R/A、parent、工作区、板级/home 围栏及容量；routed 和催办都不是 worker 执行证据。',
     action: '选择一张 ready 卡，模拟一次 dispatcher；随后核对 claimed、run、worker 日志，并把催办的路由 decision 与真实评论/房间通知分开。',
     proof: '能解释“谁能领、为何能领、何时能领”；没有把 routed、“催办已路由”或手改 running 当作真实执行，blocked 必须先解除真实原因。',
@@ -392,7 +395,7 @@ const SCENES = [
     edges: [edge('task', 'fence', true, true), edge('fence', 'dispatcher', true, true), edge('dispatcher', 'worker', true, true), edge('blocked', 'task', true)],
   },
   {
-    id: 'project-release-retro', part: 'project', title: '质量门、UAT/G5 与 G6 收口', short: '质量门与发布复盘', route: '/app/stage/accept', duration: 8800,
+    id: 'project-release-retro', part: 'project', title: '质量门、UAT/G5 与 G6 收口', short: '质量门与发布复盘', route: '/app/stage/accept', duration: 8800, layer: 'simulation', practiceRef: '17.2',
     summary: 'G1—G6 各有当前证据、裁决人和 FAIL 动作；任务 done、UAT、G5、实际发布是不同事实，G6 要把问题转成有 owner、期限和验收判据的行动项。',
     action: '用发布案例核对测试、当前 commit、回滚、灰度、HumanGate 和 UAT/G5，作放行或冻结决定，再登记一条 G6 行动项。',
     proof: '日常与 SIM 写面没有混用；实际发布有回执和观察责任；GAP、unknown、零测试未被豁免成 PASS，retro_done 没被 report_done 替代。',
@@ -434,7 +437,7 @@ const SCENES = [
     edges: [edge('g4', 'uat', true), edge('g4', 'g5', true), edge('uat', 'release', true), edge('g5', 'release', true, true), edge('release', 'retro', true, true)],
   },
   {
-    id: 'development-swarm', part: 'development', title: 'swarm-yuan 目标技能必须先于编码', short: 'swarm-yuan 技能先行', route: '/app/ide', duration: 9500,
+    id: 'development-swarm', part: 'development', title: 'swarm-yuan 目标技能必须先于编码', short: 'swarm-yuan 技能先行', route: '/app/ide', duration: 9500, layer: 'simulation', practiceRef: '17.1',
     summary: 'swarm-yuan 是项目技能生成器，不是编码引擎；它生成 <项目>-dev，worker 先准备目标技能，再经 ACP 把任务上下文和 cwd 交给 Ycode。Step 1-13 与日常九节点不能混用。',
     action: '点击高亮的 swarm-yuan，沿“生成器 → 目标技能 → worker → ACP → Ycode”检查；分别确认 active、宿主发现和本次任务实际读取。',
     proof: '能拿出当次 Skill 调用、ACP cwd、测试和审查证据；不会把生成骨架、技能被发现或门禁全绿当作本次编码已受约束或业务已正确。',
@@ -481,7 +484,7 @@ const SCENES = [
     edges: [edge('swarm', 'skill', true, true), edge('skill', 'worker', true, true), edge('worker', 'acp', true, true), edge('acp', 'ycode', true, true), edge('skill', 'ycode', true, true)],
   },
   {
-    id: 'development-delivery', part: 'development', title: 'IDE 交付留下提交、自测与评审锚', short: 'IDE 与可审查交付', route: '/app/ide', duration: 8500,
+    id: 'development-delivery', part: 'development', title: 'IDE 交付留下提交、自测与评审锚', short: 'IDE 与可审查交付', route: '/app/ide', duration: 8500, layer: 'simulation', practiceRef: '17.1',
     summary: '在正确任务、worktree 和分支中按冻结设计编码，保留真实测试输出和窄而完整的 commit；研发完成声明不替代独立评审、状态迁移及后续发布。',
     action: '核对任务 ID、cwd、分支和 diff，运行目标测试，记录退出码和真实 commit，再交给非实现者评审。',
     proof: '任务卡号与真实提交号双凭证齐全，测试可复跑，完成总结能指向剩余风险；批准和状态迁移分别回读，分支测试与主干回归不互相替代。',
@@ -524,7 +527,7 @@ const SCENES = [
     edges: [edge('ide', 'test', true, true), edge('test', 'commit', true, true), edge('commit', 'review', true, true), edge('review', 'main', true, true)],
   },
   {
-    id: 'testing-g4-review', part: 'testing', title: 'G4 独立测试与独立评审', short: 'G4 与独立评审', route: '/app/stage/build?tab=quality', duration: 8500,
+    id: 'testing-g4-review', part: 'testing', title: 'G4 独立测试与独立评审', short: 'G4 与独立评审', route: '/app/stage/build?tab=quality', duration: 8500, layer: 'simulation', practiceRef: '17.4',
     summary: '研发自测、G4 独立测试、独立代码评审是三件事；测试者基于当前 commit 独立执行 MAET 路径，缺陷完成“报—修—验”，评审另核设计、权限和回滚。',
     action: '核对实跑 commit 与基线同祖，执行正常、替代、异常和终止路径，建立缺陷闭环，再核对评审 actor 与实现者不同。',
     proof: '测试报告、缺陷终态和当前 commit 可反查；测试者/评审者与写码者不同，系统存在 verdict 或测试文件存在不等于独立通过。',
@@ -563,7 +566,7 @@ const SCENES = [
     edges: [edge('commit', 'g4', true, true), edge('g4', 'defect', true, true), edge('defect', 'review', true, true)],
   },
   {
-    id: 'testing-eval', part: 'testing', title: 'Eval 同卷复评与 G4-E 判读', short: 'Eval 与同卷复评', route: '/app/eval', duration: 8800,
+    id: 'testing-eval', part: 'testing', title: 'Eval 同卷复评与 G4-E 判读', short: 'Eval 与同卷复评', route: '/app/eval', duration: 8800, layer: 'simulation', practiceRef: '17.4',
     summary: 'Eval 是对既有会话或显式证据的离线判分，不是在线重跑 Agent；失败处置需要同卷同版的新证据，G4-E 的 GAP 和技能评估的 CONDITIONAL 都不是 PASS。',
     action: '保留失败 run，建立处置单，提交 fresh explicit 证据并同卷复评，用 A/B 检查改善和回归；同一页面的“技能评估”检查 spec 第 19 节。',
     proof: '原失败证据仍保留，原证据复现没有用于关闭处置单；k<2 不作门禁统计，unknown/no_data 不算通过，最近复评通过且无红线才关闭。',
@@ -606,7 +609,7 @@ const SCENES = [
     edges: [edge('failed', 'remediation', true, true), edge('remediation', 'rerun', true, true), edge('rerun', 'ab', true, true), edge('rerun', 'g4e', true, true)],
   },
   {
-    id: 'operations-readiness', part: 'operations', title: '部署 readiness 核对真实运行面', short: '服务与 readiness', route: '127.0.0.1 · localhost', duration: 8500,
+    id: 'operations-readiness', part: 'operations', title: '部署 readiness 核对真实运行面', short: '服务与 readiness', route: '127.0.0.1 · localhost', duration: 8500, layer: 'simulation', practiceRef: '17.5',
     summary: '分别核对 8647 Koa、8649 Web、8650 gateway、3030/ws Ycode，以及实际 cwd、绑定地址、GOVERNANCE_REPO、SIM 独立根和状态目录。',
     action: '沿服务拓扑检查监听和各探针，区分 Web /health/ready、custom 路由、gateway basic health 与 Ycode online:true。',
     proof: 'readiness 记录不含秘密原值，每项健康结论有对应探针或日志；没有把 Web shell ready 当成 Matrix、模型、worker、Ycode 和治理仓全部健康。',
@@ -656,7 +659,7 @@ const SCENES = [
     edges: [edge('web', 'koa', true), edge('koa', 'gateway', true, true), edge('gateway', 'ycode', true, true), edge('readiness', 'koa', true), edge('readiness', 'gateway', true), edge('readiness', 'ycode', true, true)],
   },
   {
-    id: 'operations-release', part: 'operations', title: '停滞恢复、发布观察与回滚', short: '恢复与发布观察', route: '/app/stage/govern', duration: 8500,
+    id: 'operations-release', part: 'operations', title: '停滞恢复、发布观察与回滚', short: '恢复与发布观察', route: '/app/stage/govern', duration: 8500, layer: 'simulation', practiceRef: '17.5',
     summary: '恢复先看真实 claim、日志和故障分类，不能手改任务真值；Graph legacy/shadow/on、多 gateway 和进度联邦都有明确边界，发布后仍需观察、复验和必要回滚。',
     action: '对一个停滞案例按 ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 分类，再沿发布回执、观察指标、异常和回滚路径走查。',
     proof: '恢复动作有界且没有扩大权限或伪造 running；实际发布有通道回执，观察、负责人和具体回滚命令齐全，异常能够回流处置。',
@@ -698,7 +701,7 @@ const SCENES = [
     edges: [edge('logs', 'recover', true, true), edge('release', 'observe', true, true), edge('observe', 'rollback', true, true), edge('recover', 'observe', true)],
   },
   {
-    id: 'audit-posture-approval', part: 'audit', title: '安全姿态、HumanGate 与双人会签', short: '姿态与人工批准', route: '/app/stage/govern?tab=posture', duration: 8800,
+    id: 'audit-posture-approval', part: 'audit', title: '安全姿态、HumanGate 与双人会签', short: '姿态与人工批准', route: '/app/stage/govern?tab=posture', duration: 8800, layer: 'simulation', practiceRef: '17.6',
     summary: '审计读取实际生效配置而非 expectations 文件；工具执法、strict、HumanGate、组织 RACI 和双人会签是不同判断面，审计从需求和设计阶段就参与。',
     action: '核对实际角色与开关，回查 HumanGate 的 requestedBy、decidedBy、deciderMode、strength 和有效期，再核验一条 admin 行双人会签。',
     proof: '需要严格异人时已显式配置并证明主体不同；director-proxy、本地标记和聊天 verdict 不计真人批准，紧急通道没有被当作常规绕过方式。',
@@ -740,7 +743,7 @@ const SCENES = [
     edges: [edge('posture', 'human', true, true), edge('human', 'actor', true, true), edge('cosign', 'actor', true, true), edge('proxy', 'actor', false)],
   },
   {
-    id: 'audit-evidence-remediation', part: 'audit', title: '独立审计、整改复验与完成培训', short: '独立审计与整改', route: '/app/stage/govern?tab=secAudit', duration: 9000,
+    id: 'audit-evidence-remediation', part: 'audit', title: '独立审计、整改复验与完成培训', short: '独立审计与整改', route: '/app/stage/govern?tab=secAudit', duration: 9000, layer: 'simulation', practiceRef: '17.6',
     summary: '审计将任务、commit、测试、评审、UAT/G5 和运行证据对齐到同一对象；候选发现由非主张人独立验证，缺口进入整改和复验。',
     action: '检查证据哈希链和源缺席，登记一项有 owner、期限、复验条件的整改，由另一名审计人员复核后完成培训。',
     proof: '审计者与主张人不同，结论有原始证据；未知和缺口没有改写成通过，篡改、历史挤出和锚点悬空没有被混为一谈。',
@@ -1104,6 +1107,10 @@ function renderCoach(scene) {
     $('coachCode').textContent = ''
   }
   syncExampleDisclosure()
+  // 每幕模拟声明 + 实操对照（P2 Task 3 培训分层：本页=模拟层，实操=手册 17.x）
+  $('coachLayer').textContent = scene.layer === 'simulation'
+    ? `本幕为培训模拟（layer=simulation）；实操指引见手册第 ${scene.practiceRef} 节`
+    : `未知幕层级 ${String(scene.layer)}——培训页只承载 simulation 层`
   $('coachReferences').replaceChildren(...scene.references.map(reference => {
     const link = document.createElement('a')
     link.href = reference.href
@@ -1267,8 +1274,8 @@ function printReferences(scene) {
 }
 function printPage(scene, index) {
   const part = PARTS.find(item => item.id === scene.part)
-  const code = scene.example.code ? `<div class="lesson-code"><span>${escapeSvg(scene.example.code.label)}</span><pre><code>${escapeSvg(scene.example.code.content)}</code></pre></div>` : ''
-  return `<article class="a4-page" data-scene-id="${scene.id}"><header class="page-header"><div><div class="eyebrow"><span class="scene-number">${index + 1}</span><span>${escapeSvg(scene.short)}</span></div><h1>${escapeSvg(part.name)}｜${escapeSvg(scene.title)}</h1><p class="coach-summary">${escapeSvg(scene.summary)}</p></div><div class="page-route">真实产品入口<code>${escapeSvg(scene.route)}</code></div></header><div class="lesson-main"><section class="topology-panel"><div class="panel-head"><strong>角色拓扑</strong><span>亮线=本幕路径</span></div><svg class="topology-svg" role="img" aria-label="${escapeSvg(scene.short)}拓扑" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet">${topologySvgContent(TOPO_VIEWS[scene.part], index, false, false, `-${scene.id}`)}</svg></section><section class="lesson-steps"><h2>操作步骤</h2><p class="lesson-goal">${escapeSvg(scene.action)}</p>${printList(scene.steps, true)}</section><section class="lesson-example"><h2>${escapeSvg(scene.example.title)}</h2><dl><dt>背景</dt><dd>${escapeSvg(scene.example.given)}</dd><dt>操作</dt><dd>${escapeSvg(scene.example.when)}</dd><dt>应得结果</dt><dd>${escapeSvg(scene.example.then)}</dd></dl>${code}</section></div><div class="page-bottom"><section class="lesson-more"><div class="lesson-more-grid"><section><div class="lesson-inputs"><h2>输入条件</h2>${printList(scene.inputs)}</div><h2>本幕交付物</h2>${printList(scene.deliverables)}</section><section><h2>验收检查</h2>${printList(scene.checks)}</section><section><h2>常见误操作</h2>${printList(scene.pitfalls)}<div class="proof-box"><h2>整幕完成判据</h2><p>${escapeSvg(scene.proof)}</p></div></section><section><h2>对应手册</h2><div class="lesson-references">${printReferences(scene)}</div></section></div></section><footer class="page-footer"><span>第 ${index + 1} 幕，共 ${SCENES.length} 幕 · ${escapeSvg(scene.target)}</span><span>培训模拟 · 不连接真实数据</span><span>${index + 1} / ${SCENES.length}</span></footer></div></article>`
+  const code = scene.example.code ? `<div class="lesson-code"><span>${escapeSvg(scene.example.code.label)}</span><em class="code-exec-note">本页不执行</em><pre><code>${escapeSvg(scene.example.code.content)}</code></pre></div>` : ''
+  return `<article class="a4-page" data-scene-id="${scene.id}"><header class="page-header"><div><div class="eyebrow"><span class="scene-number">${index + 1}</span><span>${escapeSvg(scene.short)}</span></div><h1>${escapeSvg(part.name)}｜${escapeSvg(scene.title)}</h1><p class="coach-summary">${escapeSvg(scene.summary)}</p></div><div class="page-route">真实产品入口<code>${escapeSvg(scene.route)}</code><span class="practice-ref">培训模拟 · 实操见手册 §${scene.practiceRef}</span></div></header><div class="lesson-main"><section class="topology-panel"><div class="panel-head"><strong>角色拓扑</strong><span>亮线=本幕路径</span></div><svg class="topology-svg" role="img" aria-label="${escapeSvg(scene.short)}拓扑" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet">${topologySvgContent(TOPO_VIEWS[scene.part], index, false, false, `-${scene.id}`)}</svg></section><section class="lesson-steps"><h2>操作步骤</h2><p class="lesson-goal">${escapeSvg(scene.action)}</p>${printList(scene.steps, true)}</section><section class="lesson-example"><h2>${escapeSvg(scene.example.title)}</h2><dl><dt>背景</dt><dd>${escapeSvg(scene.example.given)}</dd><dt>操作</dt><dd>${escapeSvg(scene.example.when)}</dd><dt>应得结果</dt><dd>${escapeSvg(scene.example.then)}</dd></dl>${code}</section></div><div class="page-bottom"><section class="lesson-more"><div class="lesson-more-grid"><section><div class="lesson-inputs"><h2>输入条件</h2>${printList(scene.inputs)}</div><h2>本幕交付物</h2>${printList(scene.deliverables)}</section><section><h2>验收检查</h2>${printList(scene.checks)}</section><section><h2>常见误操作</h2>${printList(scene.pitfalls)}<div class="proof-box"><h2>整幕完成判据</h2><p>${escapeSvg(scene.proof)}</p></div></section><section><h2>对应手册</h2><div class="lesson-references">${printReferences(scene)}</div></section></div></section><footer class="page-footer"><span>第 ${index + 1} 幕，共 ${SCENES.length} 幕 · ${escapeSvg(scene.target)}</span><span>培训模拟 · 不连接真实数据</span><span>${index + 1} / ${SCENES.length}</span></footer></div></article>`
 }
 function preparePrint() {
   setPlaying(false)

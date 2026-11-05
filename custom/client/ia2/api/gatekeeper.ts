@@ -173,6 +173,9 @@ export interface NudgeDecision {
   cardId?: string
   title?: string
   note?: string
+  /** 投递三态（P2 Task 3）：服务端契约随响应返回——只解析路由、未发送消息；
+   *  UI 不得把路由解析当送达（手册 §8.4 三态定义）。 */
+  delivery?: { state: 'routed-only'; sent: null; received: null }
 }
 
 export async function nudgeRoute(cardId: string): Promise<NudgeDecision> {
@@ -182,6 +185,7 @@ export async function nudgeRoute(cardId: string): Promise<NudgeDecision> {
     body: JSON.stringify({ cardId }),
   })
   if (!res.ok) throw new Error(`nudge/route → ${res.status}`)
-  const body = await res.json() as { decision: NudgeDecision }
+  const body = await res.json() as { decision: NudgeDecision; delivery?: NudgeDecision['delivery'] }
+  if (body.delivery) body.decision.delivery = body.delivery
   return body.decision
 }

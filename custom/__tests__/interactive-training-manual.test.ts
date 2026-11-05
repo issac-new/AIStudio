@@ -26,6 +26,7 @@ function courseData() {
     PARTS: Array<{ id: string; name: string }>
     SCENES: Array<{
       id: string; part: string; focus: string; duration: number; proof: string
+      layer: string; practiceRef: string
       nodes: Array<{ id: string }>
       edges: Array<{ from: string; to: string }>
       inputs: string[]
@@ -393,5 +394,95 @@ describe('培训页本地启动器', () => {
     expect((await fetch(`${base}/../package.json`)).status).toBe(404)
     expect((await fetch(`${base}/`, { method: 'POST' })).status).toBe(405)
     expect((await fetch(`${base}/`, { method: 'HEAD' })).status).toBe(200)
+  })
+})
+
+describe('培训分层与诚实催办（P2 Task 3）', () => {
+  const manualText = readFileSync(resolve(root, 'docs/manuals/aistudio-training-and-user-guide.md'), 'utf8')
+
+  it('§1.1 六团队主读章节全部命中真实章节标题（指引不指空）', () => {
+    // 真实章节号集：从 "## N. 标题" 提取
+    const chapters = new Map<number, string>()
+    for (const m of manualText.matchAll(/^## (\d+)\. (.+)$/gm)) chapters.set(Number(m[1]), m[2].trim())
+    expect(chapters.size).toBeGreaterThanOrEqual(17)
+    // §1.1 表六行：团队 → 期望章节号集（2026-11-06 P2 修正：产品 2/7、项目 7-12、
+    // 研发 3-7、测试 6/7、运维 13、审计 14——与各章标题归属一致）
+    const expected: Record<string, number[]> = {
+      '产品需求分析': [2, 7],
+      '项目管理': [7, 8, 9, 10, 11, 12],
+      '研发': [3, 4, 5, 6, 7],
+      '测试': [6, 7],
+      '运维监控': [13],
+      '安全合规及审计内控': [14],
+    }
+    const tableStart = manualText.indexOf('| 团队 | 主读章节 |')
+    const tableEnd = manualText.indexOf('每章都要留下交付物', tableStart)
+    expect(tableStart).toBeGreaterThan(-1)
+    const table = manualText.slice(tableStart, tableEnd)
+    for (const [team, chapterNumbers] of Object.entries(expected)) {
+      const row = table.split('\n').find(line => line.startsWith(`| ${team} |`))
+      expect(row, `§1.1 缺 ${team} 行`).toBeTruthy()
+      const refs = [...row!.matchAll(/第 ([\d、—\-]+) 章/g)]
+        .flatMap(m => m[1].split(/[、]/))
+        .flatMap(part => {
+          const range = part.match(/^(\d+)[—-](\d+)$/)
+          if (range) {
+            const out: number[] = []
+            for (let n = Number(range[1]); n <= Number(range[2]); n++) out.push(n)
+            return out
+          }
+          return [Number(part)]
+        })
+        .sort((a, b) => a - b)
+      expect(refs, `${team} 主读章节与期望不一致`).toEqual(chapterNumbers)
+      for (const n of chapterNumbers) {
+        expect(chapters.has(n), `第 ${n} 章被 ${team} 引用但真实标题不存在`).toBe(true)
+      }
+    }
+  })
+
+  it('手册 §8.4 定义催办三态：routed-only/unassigned/解析失败，未发送是定义不是提示', () => {
+    const section = manualText.slice(
+      manualText.indexOf('### 8.4 `routed` 和催办不等于 worker'),
+      manualText.indexOf('### 8.5'),
+    )
+    expect(section).toContain('routed-only')
+    expect(section).toContain('sent/received 均为 null')
+    expect(section).toContain('unassigned')
+    expect(section).toContain('解析失败')
+    expect(section).toContain('未发送消息')
+    // 三态齐：路由已解析（未发送）/ 显式无人 / 解析失败
+    expect(section).toContain('路由已解析')
+  })
+
+  it('交互页每幕声明 layer=simulation 且 practiceRef 命中手册真实 17.x 小节', () => {
+    const { SCENES } = courseData()
+    // 真实 17.x 小节标题集
+    const sections = new Map<string, string>()
+    for (const m of manualText.matchAll(/^### (17\.\d+) (.+)$/gm)) sections.set(m[1], m[2].trim())
+    expect(sections.size).toBeGreaterThanOrEqual(7)
+    const partToTeam: Record<string, string> = {
+      development: '研发', project: '项目管理团队', product: '产品需求分析团队',
+      testing: '测试团队', operations: '运维监控团队', audit: '安全合规及审计内控团队',
+    }
+    for (const scene of SCENES) {
+      expect(scene.layer, `${scene.id} 缺 layer 声明`).toBe('simulation')
+      expect(scene.practiceRef, `${scene.id} 缺 practiceRef`).toBeTruthy()
+      expect(sections.has(scene.practiceRef), `${scene.id} practiceRef ${scene.practiceRef} 不指向真实 17.x 小节`).toBe(true)
+      expect(sections.get(scene.practiceRef), `${scene.id} practiceRef 指错团队小节`).toContain(partToTeam[scene.part])
+    }
+    // 每幕模拟声明渲染面在位（renderCoach 消费 practiceRef/layer）
+    expect(html).toContain('id="coachLayer"')
+    expect(html).toContain('layer=simulation')
+    expect(html).toContain('scene.practiceRef')
+  })
+
+  it('命令块标注「本页不执行」：交互面板与打印页两处代码块都带标注', () => {
+    expect(html).toContain('本页不执行')
+    // 交互面板代码块（coachCodeWrap）与打印页代码块（printPage lesson-code）各带标注
+    const interactive = html.slice(html.indexOf('<div class="lesson-code" id="coachCodeWrap"'), html.indexOf('</div>', html.indexOf('id="coachCode"')))
+    expect(interactive).toContain('本页不执行')
+    const printFn = html.slice(html.indexOf('function printPage'), html.indexOf('function preparePrint'))
+    expect(printFn).toContain('本页不执行')
   })
 })

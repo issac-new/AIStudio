@@ -133,8 +133,9 @@ function handleApplyAssign() {
       {{ t('kanban.bulk.unblockConfirm', { count: selectedCount }) }}
     </NPopconfirm>
 
-    <!-- 催办 owner 动态路由（run21/22 复盘①；只解析路由不改卡，无需确认） -->
-    <NButton size="small" :title="t('kanban.action.nudgeHint', '按卡的负责人/板归属解析催办对象')"
+    <!-- 催办 owner 动态路由（run21/22 复盘①；只解析路由不改卡，无需确认）。
+         P2 Task 3 诚实三态：只解析路由、未发送消息（服务端 delivery routed-only） -->
+    <NButton size="small" :title="t('kanban.action.nudgeHint', '按卡的负责人/板归属解析催办对象（只解析路由，未发送消息）')"
       @click="handleNudge">
       {{ t('kanban.action.nudge', '催办') }}
     </NButton>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 
 const root = resolve(__dirname, '../..')
@@ -60,5 +61,30 @@ describe('全功能路由清单生成器', () => {
   it('浏览器走查默认使用当前开发端口，WALK_BASE 仍可覆盖', async () => {
     const { BASE } = await import('./harness.mjs')
     expect(BASE).toBe('http://localhost:8649')
+  })
+
+  // P2 Task 3 集成例：真注册链输出 → 文档投影生成器 --check 对真仓手册对账绿。
+  // 手册 marker 块与真实路由集任何漂移（路由增删/计数/版本）在此非零。
+  it('真链投影与培训手册 marker 块一致（docs:check 同口径对账）', () => {
+    const result = spawnSync(process.execPath, [
+      resolve(root, 'node_modules/vite-node/vite-node.mjs'),
+      '--config', resolve(root, 'vitest.config.ts'),
+      manifestScript,
+    ], { cwd: root, encoding: 'utf8', timeout: 60_000 })
+    expect(result.status, result.stderr || result.stdout).toBe(0)
+    const tmpManifest = resolve(tmpdir(), `route-manifest-docs-${Date.now()}.json`)
+    const { writeFileSync, rmSync } = require('node:fs') as typeof import('node:fs')
+    writeFileSync(tmpManifest, result.stdout)
+    try {
+      const check = spawnSync(process.execPath, [
+        resolve(root, 'scripts/platform/docs/sync-training-docs.mjs'), '--check',
+      ], {
+        cwd: root, encoding: 'utf8', timeout: 60_000,
+        env: { ...process.env, DOCS_PROJECTION_MANIFEST_FILE: tmpManifest },
+      })
+      expect(check.status, check.stdout + check.stderr).toBe(0)
+    } finally {
+      rmSync(tmpManifest, { force: true })
+    }
   })
 })
