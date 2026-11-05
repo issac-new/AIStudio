@@ -231,6 +231,19 @@ simharness/                      仅保留平台 CLI 的 Shell 适配与场景�
 4. 整合正本、数字总账、手册、实现和发布清单一致。
 5. 独立审查确认权限、证据和切换回滚没有自指验收。
 
+### 4. P0 实施验证（2026-11-05）
+
+Task 1-8 实施完成后的真实命令与计数（隔离 HOME=/tmp/aistudio-platform-p0-home.cTijpN，仅空 profiles 目录夹具、无凭证）：
+
+- P0 目标测试 `npx vitest run custom/server/platform custom/server/userenv custom/server/autonomyladder custom/server/permmodes custom/server/approval-inbox custom/server/toolpipeline custom/server/mcpcatalog custom/server/governance custom/client/loop custom/client/shared scripts/__tests__/typecheck-client-baseline.test.ts`：103 文件 / 954 通过 / 0 失败 / 0 skip（custom/server/platform/evidence 含于 platform 目录）。
+- `npm run typecheck:harness`：exit 0。
+- 客户端棘轮 `typecheck:client:ratchet`：修复前 29 > 基线 18（新增 11 = ProactivitySection quietHours 双源 5 + HarnessImprovePanel 约束/晋级 DTO 缺字段 6）；Task 8 改 ProactivitySection 以嵌套 quietHours 为唯一数据源、客户端 workbench DTO 对齐服务端（ConstraintRecordDto、constraints、appliedVia/verificationTier）后 18 ≤ 18、exit 0；基线 config/typecheck-client-baseline.json 保持 18 未上调。
+- 全量 `npm test`：1,078 文件通过 / 8 文件 skip；8,159 通过 / 16 skip / 0 失败，exit 0。
+- `npx vitest run --root simharness tests/harness-gate-integrity.test.ts`：132/132 通过。
+- 变异探针四连（临时改动→对应测试红→还原→绿，探针态不入提交）：①移除 evaluateIdentityBinding 的 origin 等值检查 → matrix-login+policy 3 用例红（跨 origin 认领/来源不同/origin 不可规范化），还原后 39/39 绿；②requireProfileParameterAccess 直通 → route-policy+policy+userenv 6 用例红，还原后 65/65 绿；③禁用 enforce-gate 的 mcp-unknown 硬拒 → enforce-gate 3 用例红（bypass 档也拦/allowlist 不豁免/不属审批类规则），还原后 25/25 绿；④gate-evidence 完成键缺失误判 pass → gate-evidence+run-metrics 5 用例红，还原后 21/21 绿。
+- Task 8 承接的三批审查挂账（负例先行，先红后绿）：Task3①RegExp 写路由启动即抛错（原被字符串过滤静默吞掉）+②启动对账补"悬垂政策"方向（含 method 不一致负例）；Task7-Important 存量债——typecheck-client-baseline `--check` 基线缺席由恒 exit 0 改为 exit 2 INCONCLUSIVE（生成模式仍可建初始基线）；Task5 五处"两层信号"旧注释改单层表述（动词启发式单层分类信号）。
+- 未执行项（如实登记）：真实 Matrix/IdP 服务活体链路、桌面构建与 afterPack、SIM 活体烧机、build:full/release:check/release:gate 未在本阶段执行——属 P1/P2 验证面或需外部依赖，不以 mock 结果替代。
+
 ## 风险与回滚
 
 | 风险 | 缓解与回滚 |
