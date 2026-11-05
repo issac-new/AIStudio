@@ -296,3 +296,7 @@ paths:
   - custom/client/shared/store/cockpit-attention-terminal.ts
   - custom/client/__tests__/page-loading-cap.test.ts
   - docs/superpowers/specs/2026-11-05-pending-ledgers-closeout.md
+  - custom/server/kanban/__tests__/specialist-presets.test.ts
+  - docs/superpowers/specs/2026-11-04-agentteams-pending-batch.md
+  - docs/superpowers/specs/2026-11-04-win-regression-pending-batch.md
+  - docs/USAGE.md
