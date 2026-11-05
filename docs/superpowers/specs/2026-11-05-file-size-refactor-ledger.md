@@ -21,9 +21,11 @@
 >
 > 第二批结果（2026-11-05）：`routes/runs.ts` 595→232（runs）/389（flywheel）/98（verdicts）；`service.ts` 1856→1054＋`service-shared.ts` 327＋`service-auto-probe.ts` 485＋`service-experience.ts` 124；eval 397/397、workbench 201/201。
 >
+> 第五批结果（2026-11-05）：`simcenter-controller.ts` 1349→587＋`observer-routes.ts` 243＋`uat-release-routes.ts` 336＋`evidence-issues-routes.ts` 166＋`settings-quality-routes.ts` 210＋`frames-routes.ts` 150＋`shared.ts` 17；simcenter 65/65 全过。
+>
 > 第三/四批结果（2026-11-05）：`loop.ts` 1515→7（兼容出口）＋`loop-core.ts` 484＋`loop-config.ts` 86＋`loop-pareto.ts` 107＋`loop-report.ts` 406＋`loop-advice.ts` 524；loop 55 用例、workbench 201/201 全过。`loop-advice.ts` 524 仍 >500，下一批可切进化报告。
 | 7 | `custom/client/matrix-chat/stores/matrix-room.ts` | 1372 | 28 个测试提及，仅 1 个真实 import | 事件/成员/时间线三切片 | 第三批 | 待办 |
-| 8 | `custom/server/simcenter/simcenter-controller.ts` | 1349 | 36 个直接用例 + 4 个域内测试 | 帧/观测/会话/发布四路由组 | 第三批 | 待办 |
+| 8 | `custom/server/simcenter/simcenter-controller.ts` | 1349 → 587 | 36 个直接用例 + 4 个域内测试（simcenter 全域 65/65 通过） | observer / uat-release / evidence-issues / settings-quality / frames 五路由模块 + shared + controller | 第五批 | 已完成 |
 | 9 | `custom/client/ide/views/IdeTaskSidebar.vue` | 1321 | 17 个直接用例 | 任务列表/详情/操作三条 | 第三批 | 待办 |
 | 10 | `custom/client/ia2/views/gov/HarnessImprovePanel.vue` | 1300 | 21 个单文件用例 | 面板/提案/证据三块 | 第三批 | 待办 |
 | 11 | `custom/server/eval/routes/runs.ts`（首批产物） | 595 → 232 | eval 全域 41 文件/397 用例 | 232（runs）/389（flywheel）/98（verdicts） | 第二批 | 已完成 |
