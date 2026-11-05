@@ -182,10 +182,10 @@ describe('mx-capability-probes', () => {
     expect(hcVersion?.ok, `契约版本锚未过：${hcVersion?.detail}`).toBe(true)
   })
 
-  it('服务不可达时脚本仍写产物并退出 1（失败可见，不静默）', async () => {
+  it('服务不可达时仍写产物并退出 2（run27 分型：环境态≠能力失效，不静默不误冻）', async () => {
     const out = join(dir, 'evidence-down')
     const r = await runProbe(['--base', 'http://127.0.0.1:9', '--out', out])
-    expect(r.code).toBe(1)
+    expect(r.code).toBe(2)   // run27 复盘根治：全失败皆 fetch failed＝基座不可达环境态
     const report = JSON.parse(readFileSync(join(out, 'capability-probes.json'), 'utf8')) as { failed: number }
     expect(report.failed).toBeGreaterThan(0)
   })
