@@ -23,6 +23,8 @@
 >
 > 第五批结果（2026-11-05）：`simcenter-controller.ts` 1349→587＋`observer-routes.ts` 243＋`uat-release-routes.ts` 336＋`evidence-issues-routes.ts` 166＋`settings-quality-routes.ts` 210＋`frames-routes.ts` 150＋`shared.ts` 17；simcenter 65/65 全过。
 >
+> 第五批收口（2026-11-05）：外部 `custom/server/__tests__/simcenter-quality.test.ts` 从 controller 导入 `parseQualityMetric`；quality 路由模块内实现不变，controller 补重导出保持既有导入路径。
+>
 > 第三/四批结果（2026-11-05）：`loop.ts` 1515→7（兼容出口）＋`loop-core.ts` 484＋`loop-config.ts` 86＋`loop-pareto.ts` 107＋`loop-report.ts` 406＋`loop-advice.ts` 524；loop 55 用例、workbench 201/201 全过。`loop-advice.ts` 524 仍 >500，下一批可切进化报告。
 | 7 | `custom/client/matrix-chat/stores/matrix-room.ts` | 1372 | 28 个测试提及，仅 1 个真实 import | 事件/成员/时间线三切片 | 第三批 | 待办 |
 | 8 | `custom/server/simcenter/simcenter-controller.ts` | 1349 → 587 | 36 个直接用例 + 4 个域内测试（simcenter 全域 65/65 通过） | observer / uat-release / evidence-issues / settings-quality / frames 五路由模块 + shared + controller | 第五批 | 已完成 |
