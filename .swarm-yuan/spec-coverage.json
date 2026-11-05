@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-05T03:51:49.981Z",
-  "total": 557,
-  "covered": 122,
-  "coverage": 0.21903052064631956,
+  "generatedAt": "2026-11-05T04:15:53.603Z",
+  "total": 561,
+  "covered": 123,
+  "coverage": 0.2192513368983957,
   "uncovered": [
     "docs/superpowers/specs/2026-06-18-kanban-advanced-features-design.md",
     "docs/superpowers/specs/2026-06-19-kanban-comment-bar-design.md",
@@ -438,6 +438,9 @@
     "docs/superpowers/specs/2026-11-04-win-regression-pending-batch.md",
     "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md",
     "docs/superpowers/specs/2026-11-05-governance-truth-restoration.md",
+    "docs/superpowers/specs/2026-11-05-org-governance-metric-discipline.md",
+    "docs/superpowers/specs/2026-11-05-org-governance-premise-log.md",
+    "docs/superpowers/specs/2026-11-05-org-governance-thin-items.md",
     "docs/superpowers/specs/2026-11-05-release-v1.0.12-overlay.md"
   ]
 }
